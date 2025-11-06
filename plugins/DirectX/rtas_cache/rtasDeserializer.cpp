@@ -125,7 +125,7 @@ bool RtasDeserializer::deserialize(unsigned buildKey,
 
   cleanup();
 
-  auto& it = cacheData_.find(buildKey);
+  auto it = cacheData_.find(buildKey);
   if (it == cacheData_.end()) {
     logW(gits_, "RtasCache - BLAS ", buildKey, " not found in cache");
     return false;

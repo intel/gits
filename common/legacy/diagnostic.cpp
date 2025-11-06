@@ -382,15 +382,15 @@ void gather_diagnostic_info(nlohmann::ordered_json& properties) {
     if (pathLength > 0) {
       try {
         std::filesystem::path exePath(std::wstring(exePathArr, pathLength));
+        auto exePathStr = to_string(exePath.u8string());
         if (std::filesystem::exists(exePath)) {
-          std::string exeName = exePath.filename().u8string();
-          std::string exePathStr = exePath.u8string();
+          auto exeName = to_string(exePath.filename().u8string());
 
           properties["diag"]["app"]["name"] = exeName;
           properties["diag"]["app"]["path"] = exePathStr;
           properties["diag"]["original_app"]["name"] = exeName;
         } else {
-          LOG_ERROR << "Diagnostics: Executable path does not exist: " << exePath.u8string();
+          LOG_ERROR << "Diagnostics: Executable path does not exist: " << exePathStr;
           properties["diag"]["app"]["name"] = "<unknown>";
           properties["diag"]["app"]["path"] = "<unknown>";
           properties["diag"]["original_app"]["name"] = "<unknown>";

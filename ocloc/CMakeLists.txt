@@ -70,7 +70,7 @@ endif()
 
 set_target_properties(ocloc_interceptor PROPERTIES OUTPUT_NAME ${OCLOC_LIBRARY_NAME})
 
-target_link_libraries(ocloc_interceptor PRIVATE gits_recorder_interface common configuration)
+target_link_libraries(ocloc_interceptor PRIVATE gits_recorder_interface common_interface configuration log)
 if ("${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
   target_link_libraries(ocloc_interceptor PRIVATE dl pthread)
 endif()

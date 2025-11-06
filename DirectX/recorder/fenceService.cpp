@@ -41,8 +41,8 @@ void FenceService::destroyFence(unsigned fenceKey) {
   if (it == fences_.end()) {
     return;
   }
-  for (auto& itHandle = fencesByHandle_.begin(); itHandle != fencesByHandle_.end();) {
-    for (auto& it = itHandle->second.begin(); it != itHandle->second.end();) {
+  for (auto itHandle = fencesByHandle_.begin(); itHandle != fencesByHandle_.end();) {
+    for (auto it = itHandle->second.begin(); it != itHandle->second.end();) {
       if (it->first == fenceKey) {
         it = itHandle->second.erase(it);
       } else {

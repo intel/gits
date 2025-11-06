@@ -6,8 +6,6 @@
 #
 # ===================== end_copyright_notice ==============================
 
-set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CXX_STANDARD_REQUIRED True)
 add_library(DirectX_trace STATIC)
 set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 

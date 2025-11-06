@@ -35,6 +35,7 @@ public:
 private:
   bool shadowMemory_{false};
   struct MappedInfo : public gits::noncopyable {
+    MappedInfo() = default;
     ~MappedInfo() {
       if (shadowAddress) {
         VirtualFree(shadowAddress, 0, MEM_RELEASE);

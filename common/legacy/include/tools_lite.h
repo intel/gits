@@ -78,6 +78,11 @@ void sleep_millisec(int duration);
 std::vector<char> GetBinaryFileContents(const std::string& filename);
 void SaveBinaryFileContents(const std::string& filename, const std::vector<char>& data);
 bool StringEndsWith(const std::string& name, const std::string& suffix);
+
+// C++20 u8string uses char8_t which is incompatible with regular char/std::string.
+// This is a helper function for easy conversion
+std::string to_string(const std::u8string& u8str);
+
 /**
    * @brief Clears STL sequence container
    *

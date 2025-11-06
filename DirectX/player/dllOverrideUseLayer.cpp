@@ -93,7 +93,9 @@ void DllOverrideUseLayer::pre(ID3D12SDKConfiguration1CreateDeviceFactoryCommand&
   if (agilitySDKOverrideUsed_) {
     c.SDKPath_.value = const_cast<char*>(dllOverridesRelativePath_.c_str());
   } else {
-    c.SDKPath_.value = "D3D12";
+    c.SDKPath_.value = const_cast<char*>(
+        "D3D12"); // This is unsafe but we need the value member to not be const to do a memcpy on it
+    // Nothing should modify the value after this point so we accept this
     HMODULE d3d12CoreDll = LoadLibrary("D3D12\\D3D12Core.dll");
     if (d3d12CoreDll) {
       UINT sdkVersion = *reinterpret_cast<UINT*>(GetProcAddress(d3d12CoreDll, "D3D12SDKVersion"));

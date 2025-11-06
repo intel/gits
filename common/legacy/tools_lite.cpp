@@ -115,6 +115,10 @@ bool StringEndsWith(const std::string& name, const std::string& suffix) {
   return std::equal(suffix.rbegin(), suffix.rend(), name.rbegin());
 }
 
+std::string to_string(const std::u8string& u8str) {
+  return std::string(u8str.begin(), u8str.end());
+}
+
 void sleep_millisec(int duration) {
   std::this_thread::sleep_for(std::chrono::milliseconds(duration));
 }

@@ -101,7 +101,7 @@ source_group("Generated Files" FILES
   vulkanFunctions.cpp
   REGULAR_EXPRESSION ".*Auto.*")
 
-target_link_libraries(Vulkan_common PRIVATE common configuration)
+target_link_libraries(Vulkan_common PRIVATE common_interface configuration log)
 if(WIN32)
   target_link_libraries(Vulkan_common PUBLIC imgui_win32_vulkan hud)
 endif()

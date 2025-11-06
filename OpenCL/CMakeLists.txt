@@ -148,7 +148,7 @@ source_group("Generated Files" FILES ${OpenCL_DEF} REGULAR_EXPRESSION ".*Auto.*"
 
 set_target_properties(OpenCL_interceptor PROPERTIES OUTPUT_NAME OpenCL)
 
-target_link_libraries(OpenCL_interceptor PRIVATE gits_recorder_interface common configuration)
+target_link_libraries(OpenCL_interceptor PRIVATE gits_recorder_interface common_interface configuration log)
 if ("${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
   target_link_libraries(OpenCL_interceptor PRIVATE dl pthread)
 endif()

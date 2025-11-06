@@ -296,7 +296,7 @@ UpdateInterface<D3D12_STATE_OBJECT_DESC_Argument, D3D12_STATE_OBJECT_DESC>::Upda
           *static_cast<D3D12_SUBOBJECT_TO_EXPORTS_ASSOCIATION*>(
               const_cast<void*>(subobject.pDesc)));
 
-      auto& it = wrappedSubobjectIndexes_.find(
+      auto it = wrappedSubobjectIndexes_.find(
           subobjectToExportsAssociations_.back().pSubobjectToAssociate);
       GITS_ASSERT(it != wrappedSubobjectIndexes_.end());
       unsigned associateIndex = it->second;

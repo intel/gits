@@ -15,7 +15,7 @@ ${IMGUI_BACKEND_DIR}/imgui_impl_vulkan.cpp
 
 target_include_directories(imgui_win32_vulkan PUBLIC ${IMGUI_SOURCE_DIR} ${IMGUI_BACKEND_DIR})
 
-# Since the patched imgui uses our own Vulkan headers, we also need to link to common for other includes
-target_link_libraries(imgui_win32_vulkan PUBLIC imgui_common common)
+# Since the patched imgui uses our own Vulkan headers, we also need to link to common_interface for other includes
+target_link_libraries(imgui_win32_vulkan PUBLIC common_interface imgui_common)
 
 set_target_properties(imgui_win32_vulkan PROPERTIES FOLDER "common/imgui/backends")

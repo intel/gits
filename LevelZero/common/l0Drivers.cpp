@@ -74,6 +74,10 @@ bool GetIntelDriverStoreFullPath(wchar_t* pDriverStorePath,
   wchar_t* pPropertyDevServiceName = nullptr;
   // guid defined for display adapters
   const GUID guid = GUID_DISPLAY_DEVICE_ARRIVAL;
+  unsigned long deviceIndex = 0;
+  unsigned long interfaceIndex = 0;
+  unsigned long propertyDevServiceNameLength = 0;
+  unsigned long driverStorePathLengthInCharacters = 0;
 
   // create device information set containing dispaly adapters which support
   // interfaces and are currently present in the system
@@ -81,16 +85,12 @@ bool GetIntelDriverStoreFullPath(wchar_t* pDriverStorePath,
   if (pDevInfo == INVALID_HANDLE_VALUE) {
     goto END;
   }
-  unsigned long deviceIndex = 0;
   SP_DEVINFO_DATA devInfoData;
   ZeroMemory(&devInfoData, sizeof(SP_DEVINFO_DATA));
-  unsigned long interfaceIndex = 0;
   SP_DEVICE_INTERFACE_DATA deviceInterfaceData;
   ZeroMemory(&deviceInterfaceData, sizeof(SP_DEVICE_INTERFACE_DATA));
   DEVPROPKEY devPropKey;
   ZeroMemory(&devPropKey, sizeof(DEVPROPKEY));
-  unsigned long propertyDevServiceNameLength = 0;
-  unsigned long driverStorePathLengthInCharacters = 0;
 
   // enumerate dispaly adapters
   while (true) {

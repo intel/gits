@@ -390,7 +390,7 @@ public:
     return _data->track.shader_name;
   }
   bool IsAttached() const {
-    return !_data.unique();
+    return !(_data.use_count() == 1);
   }
   void MarkToDelete() {
     _data->track.markedToDelete = true;
@@ -527,7 +527,7 @@ public:
   }
   void Link();
   bool IsPartOfPipeline() const {
-    return !_data.unique();
+    return !(_data.use_count() == 1);
   }
   void MarkToDelete() {
     _data->track.markedToDelete = true;

@@ -101,7 +101,7 @@ public:
     return bindingTablesDump_.getBindingTablesDescriptors();
   }
 
-  unsigned findTlas(KeyOffset& tlas);
+  unsigned findTlas(const KeyOffset& tlas);
   void getTlases(std::set<unsigned>& tlases);
 
 private:

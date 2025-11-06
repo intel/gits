@@ -66,7 +66,7 @@ target_include_directories(OpenGL_interceptor PRIVATE ${OPENGL_INTERCEPTOR_HEADE
 source_group("External Files" FILES ${OpenGL_interceptor_external_cpps})
 source_group("Generated Files" FILES ${OpenGL_DEF} REGULAR_EXPRESSION ".*Auto.*")
 
-target_link_libraries(OpenGL_interceptor PRIVATE gits_recorder_interface gits_recorder OpenGL_recorder_interface common configuration)
+target_link_libraries(OpenGL_interceptor PRIVATE gits_recorder_interface gits_recorder OpenGL_recorder_interface common_interface configuration log)
 if(WIN32)
     target_link_options(OpenGL_interceptor PRIVATE "/DELAYLOAD:gitsRecorder.dll")
 endif()

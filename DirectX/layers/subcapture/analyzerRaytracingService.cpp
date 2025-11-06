@@ -428,7 +428,7 @@ void AnalyzerRaytracingService::loadInstancesArraysOfPointers() {
   }
 }
 
-unsigned AnalyzerRaytracingService::findTlas(KeyOffset& tlas) {
+unsigned AnalyzerRaytracingService::findTlas(const KeyOffset& tlas) {
   auto it = tlasBuildKeys_.find(tlas);
   if (it != tlasBuildKeys_.end()) {
     return it->second;

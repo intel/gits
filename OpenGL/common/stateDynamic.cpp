@@ -212,7 +212,7 @@ void CStateDynamic::WriteClientSizes() {
 
 std::function<void()> CStateDynamic::CreateCArraysRestorePoint() {
   auto& ref = _memTracker;
-  return [=]() mutable { // mutable to be able to use [] on ref
+  return [=, this]() mutable { // mutable to be able to use [] on ref
     for (auto& e : _memTracker) {
       std::copy(ref[e.first].begin(), ref[e.first].end(), e.second.begin());
     }

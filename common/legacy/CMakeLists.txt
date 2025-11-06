@@ -125,3 +125,6 @@ if(UNIX)
   target_link_libraries(common PRIVATE rt dl lua)
 endif()
 
+add_library(common_interface INTERFACE)
+target_include_directories(common_interface INTERFACE ${COMMON_HEADER_DIR})
+

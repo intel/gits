@@ -205,7 +205,7 @@ include_directories(interceptor/include)
 
 set_target_properties(L0_interceptor PROPERTIES OUTPUT_NAME ze_loader)
 
-target_link_libraries(L0_interceptor PRIVATE gits_recorder_interface common configuration)
+target_link_libraries(L0_interceptor PRIVATE gits_recorder_interface common_interface configuration log)
 if ("${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
   target_link_libraries(L0_interceptor PRIVATE dl pthread)
 endif()
@@ -217,8 +217,7 @@ add_dependencies(L0_interceptor L0_codegen config_codegen)
 set_target_properties(
   L0_codegen L0_common L0_recorder L0_interceptor
   PROPERTIES
-  FOLDER LevelZero
-  CXX_STANDARD 17)
+  FOLDER LevelZero)
 set_target_properties(L0_interceptor PROPERTIES FOLDER LevelZero SOVERSION 1)
 
 set(warnings

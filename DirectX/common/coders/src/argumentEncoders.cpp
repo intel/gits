@@ -2289,7 +2289,7 @@ void encode(char* dest, unsigned& offset, const ArrayArgument<D3D12_META_COMMAND
   // D3D12_META_COMMAND_DESC has an LPCWSTR Name field
   // This field is allocated in the driver and we don't need to encode it in the stream since this would break Trace::pre
   for (unsigned i = 0; i < arg.size; ++i) {
-    values[i].Name = '\0';
+    values[i].Name = nullptr;
   }
 }
 

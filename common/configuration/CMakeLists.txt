@@ -64,7 +64,7 @@ SET(PRIVATE_INCLUDE_DIRS)
 
 # Needed for OpenGL types and enums
 target_link_libraries(configuration PUBLIC OpenGL_common_interface)
-target_link_libraries(configuration PRIVATE common yamlcpp)
+target_link_libraries(configuration PRIVATE common_interface yamlcpp log)
 SET(PRIVATE_INCLUDE_DIRS ${ARGS_SOURCE_DIR})
 
 target_include_directories(configuration
