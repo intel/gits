@@ -23,7 +23,7 @@ struct HelloPluginConfig {
 
 class HelloPluginLayer : public Layer {
 public:
-  HelloPluginLayer(CGits& gits, const HelloPluginConfig& cfg);
+  HelloPluginLayer(const HelloPluginConfig& cfg);
   ~HelloPluginLayer() = default;
 
   void post(IDXGISwapChainPresentCommand& c) override;
@@ -33,7 +33,6 @@ public:
 private:
   void newFrame();
 
-  CGits& gits_;
   HelloPluginConfig cfg_;
 };
 

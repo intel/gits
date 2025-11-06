@@ -17,8 +17,8 @@ namespace DirectX {
 
 class RtasSizeCheckPlugin final : public IPlugin {
 public:
-  RtasSizeCheckPlugin(CGits& gits, const char* pluginPath)
-      : IPlugin(gits, pluginPath), gits_(gits), pluginPath_(pluginPath) {}
+  RtasSizeCheckPlugin(IPluginContext context, const char* pluginPath)
+      : IPlugin(context, pluginPath), context_(context), pluginPath_(pluginPath) {}
 
   ~RtasSizeCheckPlugin() = default;
 
@@ -34,13 +34,13 @@ public:
         throw std::runtime_error("Config file did not load correctly");
       }
 
-      pluginLayer_ = std::make_unique<RtasSizeCheckLayer>(gits_);
+      pluginLayer_ = std::make_unique<RtasSizeCheckLayer>(*context_.gits);
     }
     return pluginLayer_.get();
   }
 
 private:
-  CGits& gits_;
+  IPluginContext context_;
   std::filesystem::path pluginPath_;
   std::unique_ptr<RtasSizeCheckLayer> pluginLayer_;
 };
@@ -48,15 +48,15 @@ private:
 } // namespace DirectX
 } // namespace gits
 
-static std::unique_ptr<gits::DirectX::RtasSizeCheckPlugin> g_RtasSizeCheckPlugin = nullptr;
+static std::unique_ptr<gits::DirectX::RtasSizeCheckPlugin> g_plugin = nullptr;
 
-GITS_PLUGIN_API IPlugin* createPlugin(gits::CGits& gits, const char* pluginPath) {
-  if (!g_RtasSizeCheckPlugin) {
-    g_RtasSizeCheckPlugin = std::make_unique<gits::DirectX::RtasSizeCheckPlugin>(gits, pluginPath);
+GITS_PLUGIN_API IPlugin* createPlugin(IPluginContext context, const char* pluginPath) {
+  if (!g_plugin) {
+    g_plugin = std::make_unique<gits::DirectX::RtasSizeCheckPlugin>(context, pluginPath);
   }
-  return g_RtasSizeCheckPlugin.get();
+  return g_plugin.get();
 }
 
 GITS_PLUGIN_API void destroyPlugin() {
-  g_RtasSizeCheckPlugin.reset();
+  g_plugin.reset();
 }

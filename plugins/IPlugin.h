@@ -29,9 +29,20 @@ namespace gits {
 class CGits;
 } // namespace gits
 
+namespace plog {
+class IAppender;
+enum Severity;
+} // namespace plog
+
+struct IPluginContext {
+  gits::CGits* gits;
+  plog::IAppender* logAppender;
+  plog::Severity logSeverity;
+};
+
 class IPlugin {
 public:
-  IPlugin(gits::CGits& gits, const char* pluginPath){};
+  IPlugin(IPluginContext context, const char* pluginPath){};
   virtual ~IPlugin() = default;
 
   virtual const char* getName() = 0;
@@ -41,8 +52,8 @@ public:
 // Plugin DLL exports
 
 extern "C" {
-using CreatePluginPtr = IPlugin* (*)(gits::CGits&, const char*);
-GITS_PLUGIN_API IPlugin* createPlugin(gits::CGits& gits, const char* pluginPath);
+using CreatePluginPtr = IPlugin* (*)(IPluginContext, const char*);
+GITS_PLUGIN_API IPlugin* createPlugin(IPluginContext context, const char* pluginPath);
 using DestroyPluginPtr = void* (*)();
 GITS_PLUGIN_API void destroyPlugin();
 }

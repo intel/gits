@@ -15,12 +15,12 @@
 namespace gits {
 namespace DirectX {
 
-class AdapterSpoof : public IPlugin {
+class AdapterSpoofPlugin : public IPlugin {
 public:
-  AdapterSpoof(CGits& gits, const char* pluginPath)
-      : IPlugin(gits, pluginPath), gits_(gits), pluginPath_(pluginPath) {}
+  AdapterSpoofPlugin(IPluginContext context, const char* pluginPath)
+      : IPlugin(context, pluginPath), context_(context), pluginPath_(pluginPath) {}
 
-  ~AdapterSpoof() = default;
+  ~AdapterSpoofPlugin() = default;
 
   const char* getName() override {
     return "AdapterSpoof";
@@ -39,13 +39,13 @@ public:
       cfg.vendorId = cfgYaml["Config"]["VendorId"].as<unsigned>();
       cfg.deviceId = cfgYaml["Config"]["DeviceId"].as<unsigned>();
 
-      pluginLayer_ = std::make_unique<AdapterSpoofLayer>(gits_, cfg);
+      pluginLayer_ = std::make_unique<AdapterSpoofLayer>(*context_.gits, cfg);
     }
     return pluginLayer_.get();
   }
 
 private:
-  CGits& gits_;
+  IPluginContext context_;
   std::filesystem::path pluginPath_;
   std::unique_ptr<AdapterSpoofLayer> pluginLayer_;
 };
@@ -53,11 +53,11 @@ private:
 } // namespace DirectX
 } // namespace gits
 
-static std::unique_ptr<gits::DirectX::AdapterSpoof> g_plugin = nullptr;
+static std::unique_ptr<gits::DirectX::AdapterSpoofPlugin> g_plugin = nullptr;
 
-GITS_PLUGIN_API IPlugin* createPlugin(gits::CGits& gits, const char* pluginPath) {
+GITS_PLUGIN_API IPlugin* createPlugin(IPluginContext context, const char* pluginPath) {
   if (!g_plugin) {
-    g_plugin = std::make_unique<gits::DirectX::AdapterSpoof>(gits, pluginPath);
+    g_plugin = std::make_unique<gits::DirectX::AdapterSpoofPlugin>(context, pluginPath);
   }
   return g_plugin.get();
 }

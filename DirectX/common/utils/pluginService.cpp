@@ -80,7 +80,6 @@ void PluginService::loadPlugins() {
     pluginsToEnable.insert(toLowerCase(pluginName));
   }
 
-  auto& gits = CGits::Instance();
   for (const auto& entry : std::filesystem::directory_iterator(pluginsPath)) {
     if (!entry.is_directory()) {
       continue;
@@ -127,9 +126,14 @@ void PluginService::loadPlugins() {
       continue;
     }
 
+    IPluginContext pluginContext;
+    pluginContext.gits = &CGits::Instance();
+    pluginContext.logAppender = plog::get();
+    pluginContext.logSeverity = plog::get()->getMaxSeverity();
+
     plugin.destroyPlugin =
         reinterpret_cast<DestroyPluginPtr>(GetProcAddress(plugin.dll, "destroyPlugin"));
-    plugin.impl = createPlugin(gits, plugin.dllPath.string().c_str());
+    plugin.impl = createPlugin(pluginContext, plugin.dllPath.string().c_str());
     if (!plugin.impl) {
       LOG_ERROR << "PluginService - Could not create the plugin instance for DLL: "
                 << plugin.dllPath;

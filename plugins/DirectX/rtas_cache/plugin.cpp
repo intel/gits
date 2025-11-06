@@ -15,12 +15,12 @@
 namespace gits {
 namespace DirectX {
 
-class RtasCache : public IPlugin {
+class RtasCachePlugin : public IPlugin {
 public:
-  RtasCache(CGits& gits, const char* pluginPath)
-      : IPlugin(gits, pluginPath), gits_(gits), pluginPath_(pluginPath) {}
+  RtasCachePlugin(IPluginContext context, const char* pluginPath)
+      : IPlugin(context, pluginPath), context_(context), pluginPath_(pluginPath) {}
 
-  ~RtasCache() = default;
+  ~RtasCachePlugin() = default;
 
   const char* getName() override {
     return "RtasCache";
@@ -40,13 +40,13 @@ public:
       cfg.stateRestoreOnly = cfgYaml["Config"]["StateRestoreOnly"].as<bool>();
       cfg.dumpCacheInfoFile = cfgYaml["Config"]["DumpCacheInfoFile"].as<bool>();
 
-      pluginLayer_ = std::make_unique<RtasCacheLayer>(gits_, cfg);
+      pluginLayer_ = std::make_unique<RtasCacheLayer>(*context_.gits, cfg);
     }
     return pluginLayer_.get();
   }
 
 private:
-  CGits& gits_;
+  IPluginContext context_;
   std::filesystem::path pluginPath_;
   std::unique_ptr<RtasCacheLayer> pluginLayer_;
 };
@@ -54,15 +54,15 @@ private:
 } // namespace DirectX
 } // namespace gits
 
-static std::unique_ptr<gits::DirectX::RtasCache> g_rtasCache = nullptr;
+static std::unique_ptr<gits::DirectX::RtasCachePlugin> g_plugin = nullptr;
 
-GITS_PLUGIN_API IPlugin* createPlugin(gits::CGits& gits, const char* pluginPath) {
-  if (!g_rtasCache) {
-    g_rtasCache = std::make_unique<gits::DirectX::RtasCache>(gits, pluginPath);
+GITS_PLUGIN_API IPlugin* createPlugin(IPluginContext context, const char* pluginPath) {
+  if (!g_plugin) {
+    g_plugin = std::make_unique<gits::DirectX::RtasCachePlugin>(context, pluginPath);
   }
-  return g_rtasCache.get();
+  return g_plugin.get();
 }
 
 GITS_PLUGIN_API void destroyPlugin() {
-  g_rtasCache.reset();
+  g_plugin.reset();
 }

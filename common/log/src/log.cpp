@@ -110,6 +110,10 @@ static plog::ColorConsoleAppender<plog::GitsFormatter> consoleAppender;
 static plog::DynamicAppender dynamicAppender;
 } // namespace
 
+void SetMaxSeverity(gits::LogLevel lvl) {
+  plog::get()->setMaxSeverity(GetSeverity(lvl));
+}
+
 plog::Severity GetSeverity(gits::LogLevel lvl) {
   switch (lvl) {
   case gits::LogLevel::OFF:
@@ -139,6 +143,10 @@ void Initialize(plog::Severity severity) {
   static plog::DebugOutputAppender<plog::MessageOnlyFormatter> debugAppender;
   plog::get()->addAppender(&debugAppender);
 #endif
+}
+
+void Initialize(plog::Severity severity, plog::IAppender* appender) {
+  plog::init(severity, appender);
 }
 
 void AddConsoleAppender() {

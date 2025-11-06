@@ -8,6 +8,8 @@
 
 #include "IPlugin.h"
 #include "layer.h"
+#include "log.h"
+#include "gits.h"
 
 #include "yaml-cpp/yaml.h"
 #include <filesystem>
@@ -17,8 +19,8 @@ namespace DirectX {
 
 class HelloPlugin : public IPlugin {
 public:
-  HelloPlugin(CGits& gits, const char* pluginPath)
-      : IPlugin(gits, pluginPath), gits_(gits), pluginPath_(pluginPath) {}
+  HelloPlugin(IPluginContext context, const char* pluginPath)
+      : IPlugin(context, pluginPath), context_(context), pluginPath_(pluginPath) {}
 
   ~HelloPlugin() = default;
 
@@ -38,13 +40,13 @@ public:
       cfg.printFrames = cfgYaml["Config"]["PrintFrames"].as<bool>();
       cfg.printGPUSubmissions = cfgYaml["Config"]["PrintGPUSubmissions"].as<bool>();
 
-      pluginLayer_ = std::make_unique<HelloPluginLayer>(gits_, cfg);
+      pluginLayer_ = std::make_unique<HelloPluginLayer>(cfg);
     }
     return pluginLayer_.get();
   }
 
 private:
-  CGits& gits_;
+  IPluginContext context_;
   std::filesystem::path pluginPath_;
   std::unique_ptr<HelloPluginLayer> pluginLayer_;
 };
@@ -54,9 +56,12 @@ private:
 
 static std::unique_ptr<gits::DirectX::HelloPlugin> g_plugin = nullptr;
 
-GITS_PLUGIN_API IPlugin* createPlugin(gits::CGits& gits, const char* pluginPath) {
+GITS_PLUGIN_API IPlugin* createPlugin(IPluginContext context, const char* pluginPath) {
+  // Initiliaze Plog for the plugin library
+  gits::log::Initialize(context.logSeverity, context.logAppender);
+
   if (!g_plugin) {
-    g_plugin = std::make_unique<gits::DirectX::HelloPlugin>(gits, pluginPath);
+    g_plugin = std::make_unique<gits::DirectX::HelloPlugin>(context, pluginPath);
   }
   return g_plugin.get();
 }

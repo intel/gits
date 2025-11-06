@@ -41,7 +41,7 @@ This mapping is temporary and will be removed in the future (leaving only the pl
 #include <atomic>
 #include <mutex>
 namespace plog {
-util::nstring LogPrefix(plog::Severity severity);
+PLOG_LINKAGE util::nstring LogPrefix(plog::Severity severity);
 class FormatRawScope {
 public:
   static bool IsRaw();
@@ -66,11 +66,13 @@ private:
 
 namespace gits {
 namespace log {
-plog::Severity GetSeverity(gits::LogLevel lvl);
-void Initialize(plog::Severity severity);
-void AddConsoleAppender();
-void RemoveConsoleAppender();
-void AddFileAppender(const std::filesystem::path& logFilePath);
-bool ShouldLog(gits::LogLevel lvl);
+PLOG_LINKAGE void SetMaxSeverity(gits::LogLevel lvl);
+PLOG_LINKAGE plog::Severity GetSeverity(gits::LogLevel lvl);
+PLOG_LINKAGE void Initialize(plog::Severity severity);
+PLOG_LINKAGE void Initialize(plog::Severity severity, plog::IAppender* appender);
+PLOG_LINKAGE void AddConsoleAppender();
+PLOG_LINKAGE void RemoveConsoleAppender();
+PLOG_LINKAGE void AddFileAppender(const std::filesystem::path& logFilePath);
+PLOG_LINKAGE bool ShouldLog(gits::LogLevel lvl);
 }; // namespace log
 }; // namespace gits
