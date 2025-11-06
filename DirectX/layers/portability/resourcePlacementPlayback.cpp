@@ -21,15 +21,13 @@ void ResourcePlacementPlayback::createHeap(ID3D12Device* device, unsigned heapKe
   if (!initialized_) {
     calculateResourcePlacement(device);
     initialized_ = true;
-    if (!changedHeapSizes_.empty()) {
-      LOG_INFO << "Resource placement changed for " << changedHeapSizes_.size() << " heaps";
+    if (!heapSizeShifts_.empty()) {
+      LOG_INFO << "Resource placement changed for " << heapSizeShifts_.size() << " heaps";
     }
   }
-  auto it = changedHeapSizes_.find(heapKey);
-  if (it != changedHeapSizes_.end()) {
-    if (it->second > size) {
-      size = it->second;
-    }
+  auto it = heapSizeShifts_.find(heapKey);
+  if (it != heapSizeShifts_.end()) {
+    size += it->second;
   }
 }
 
@@ -40,23 +38,42 @@ void ResourcePlacementPlayback::createPlacedResource(unsigned resourceKey, UINT6
   }
 }
 
+void ResourcePlacementPlayback::updateTileMappings(ID3D12CommandQueueUpdateTileMappingsCommand& c) {
+  auto it = infos_.find(c.pHeap_.key);
+  if (it == infos_.end()) {
+    return;
+  }
+  unsigned tileSize = 64 * 1024;
+  std::vector<ResourcePlacementShiftInfo>& infos = it->second;
+  for (unsigned i = 0; i < c.pHeapRangeStartOffsets_.size; ++i) {
+    unsigned& tileOffset = c.pHeapRangeStartOffsets_.value[i];
+    unsigned tileShift{};
+    for (ResourcePlacementShiftInfo& info : infos) {
+      if (info.offset > tileOffset * tileSize) {
+        break;
+      }
+      tileShift = info.shift / tileSize;
+    }
+    tileOffset += tileShift;
+  }
+}
+
 void ResourcePlacementPlayback::calculateResourcePlacement(ID3D12Device* device) {
   std::filesystem::path filePath = Configurator::IsPlayer()
                                        ? Configurator::Get().common.player.streamDir
                                        : Configurator::Get().common.recorder.dumpPath;
   filePath /= "resourcePlacementData.dat";
 
-  std::unordered_map<unsigned, std::vector<ResourcePlacementShiftInfo>> infos;
   std::ifstream file(filePath, std::ios::binary);
   while (true) {
     ResourcePlacementShiftInfo info{};
     if (!file.read(reinterpret_cast<char*>(&info), sizeof(ResourcePlacementInfo))) {
       break;
     }
-    infos[info.heapKey].push_back(info);
+    infos_[info.heapKey].push_back(info);
   }
 
-  for (auto& it : infos) {
+  for (auto& it : infos_) {
     calculateResourcePlacement(device, it.first, it.second);
   }
 }
@@ -121,19 +138,15 @@ void ResourcePlacementPlayback::calculateResourcePlacement(
     }
   }
 
-  UINT64 heapSize = 0;
+  UINT64 heapShift{};
   for (ResourcePlacementShiftInfo& info : infos) {
-    info.offset += info.shift;
-    info.size += info.increment;
     if (info.shift) {
-      changedResourceOffsets_[info.key] = info.offset;
+      changedResourceOffsets_[info.key] = info.offset + info.shift;
     }
-    if (info.offset + info.size > heapSize) {
-      heapSize = info.offset + info.size;
-    }
+    heapShift = info.shift + info.increment;
   }
 
-  changedHeapSizes_[heapKey] = heapSize;
+  heapSizeShifts_[heapKey] = heapShift;
 }
 
 UINT64 ResourcePlacementPlayback::getAlignedOffset(UINT64 alignment, UINT64 offset) {

@@ -12,6 +12,8 @@
 #include "resourcePlacementCapture.h"
 #include "resourcePlacementPlayback.h"
 
+#include <set>
+
 namespace gits {
 namespace DirectX {
 
@@ -37,6 +39,7 @@ public:
   void post(ID3D12GraphicsCommandList4EmitRaytracingAccelerationStructurePostbuildInfoCommand& c)
       override;
   void post(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c) override;
+  void pre(ID3D12CommandQueueUpdateTileMappingsCommand& c) override;
 
 private:
   void configureHeapMemoryPool(ID3D12Device* device, D3D12_HEAP_DESC* heapDesc);

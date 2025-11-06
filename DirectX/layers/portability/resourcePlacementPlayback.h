@@ -9,6 +9,7 @@
 #pragma once
 
 #include "resourcePlacementCapture.h"
+#include "commandsAuto.h"
 
 #include <d3d12.h>
 #include <unordered_map>
@@ -20,6 +21,7 @@ class ResourcePlacementPlayback {
 public:
   void createHeap(ID3D12Device* device, unsigned heapKey, UINT64& size);
   void createPlacedResource(unsigned resourceKey, UINT64& offset);
+  void updateTileMappings(ID3D12CommandQueueUpdateTileMappingsCommand& c);
   void calculateResourcePlacement(ID3D12Device* device);
 
 private:
@@ -30,8 +32,9 @@ private:
 
   std::mutex mutex_;
   std::unordered_map<unsigned, UINT64> changedResourceOffsets_;
-  std::unordered_map<unsigned, UINT64> changedHeapSizes_;
+  std::unordered_map<unsigned, UINT64> heapSizeShifts_;
   bool initialized_{};
+  std::unordered_map<unsigned, std::vector<ResourcePlacementShiftInfo>> infos_;
 
 private:
   void calculateResourcePlacement(ID3D12Device* device,

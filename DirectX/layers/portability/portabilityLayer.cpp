@@ -190,6 +190,12 @@ void PortabilityLayer::post(
   }
 }
 
+void PortabilityLayer::pre(ID3D12CommandQueueUpdateTileMappingsCommand& c) {
+  if (useResourcePlacementData_) {
+    resourcePlacementPlayback_.updateTileMappings(c);
+  }
+}
+
 void PortabilityLayer::configureHeapMemoryPool(ID3D12Device* device, D3D12_HEAP_DESC* heapDesc) {
   D3D12_FEATURE_DATA_ARCHITECTURE1 architectureInfo{0};
   HRESULT result = device->CheckFeatureSupport(D3D12_FEATURE_ARCHITECTURE1, &architectureInfo,
