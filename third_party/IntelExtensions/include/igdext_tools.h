@@ -1,3 +1,4 @@
+
 /*
  *
  * Copyright (C) 2025 Intel Corporation
@@ -424,6 +425,18 @@ typedef HRESULT ( *PFNINTCDX12EXT_API_CALLBACK_CREATEDEVICEEXTENSIONCONTEXT1 )(
     INTCExtensionInfo*                           pExtensionInfo,
     INTCExtensionAppInfo1*                       pExtensionAppInfo );
 
+typedef HRESULT ( *PFNINTCDX12EXT_CREATEDEVICEEXTENSIONCONTEXT2 )(
+    const ID3D12Device*    pDevice,
+    INTCExtensionContext** ppExtensionContext,
+    INTCExtensionInfo1*    pExtensionInfo,
+    INTCExtensionAppInfo1* pExtensionAppInfo );
+typedef HRESULT ( *PFNINTCDX12EXT_API_CALLBACK_CREATEDEVICEEXTENSIONCONTEXT2 )(
+    PFNINTCDX12EXT_CREATEDEVICEEXTENSIONCONTEXT2 pfnCreateDeviceExtensionContext2,
+    const ID3D12Device*                          pDevice,
+    INTCExtensionContext**                       ppExtensionContext,
+    INTCExtensionInfo1*                          pExtensionInfo,
+    INTCExtensionAppInfo1*                       pExtensionAppInfo );
+
 typedef HRESULT ( *PFNINTCDX12EXT_CREATECOMMANDQUEUE )(
     INTCExtensionContext*                pExtensionContext,
     const INTC_D3D12_COMMAND_QUEUE_DESC* pDesc,
@@ -812,6 +825,34 @@ typedef void ( *PFNINTCDX12EXT_API_CALLBACK_SETEVENTMARKER )(
     const void*                   marker,
     uint32_t                      markerSize );
 
+typedef HRESULT ( *PFNINTCDX12EXT_GETCURRENTSHADERHEAPUSAGE )(
+    INTCExtensionContext* pExtensionContext,
+    UINT64*               pShaderHeapUsage );
+typedef HRESULT ( *PFNINTCDX12EXT_API_CALLBACK_GETCURRENTSHADERHEAPUSAGE )(
+    PFNINTCDX12EXT_GETCURRENTSHADERHEAPUSAGE pfnGetCurrentShaderHeapUsage,
+    INTCExtensionContext*                    pExtensionContext,
+    UINT64*                                  pShaderHeapUsage );
+
+typedef HRESULT ( *PFNINTCDX12EXT_SETDEVICEPARAMS )(
+    INTCDeviceParams* pDeviceParams );
+typedef HRESULT ( *PFNINTCDX12EXT_API_CALLBACK_SETDEVICEPARAMS )(
+    PFNINTCDX12EXT_SETDEVICEPARAMS pfnSetDeviceParams,
+    INTCDeviceParams*              pDeviceParams );
+
+typedef HRESULT ( *PFNINTCDX12EXT_GETCACHEDBLOB )(
+    INTCExtensionContext*        pExtensionContext,
+    ID3D12GraphicsCommandList*   pCommandList,
+    ID3D12PipelineState*         pPipelineState,
+    ID3DBlob**                   ppBlob,
+    INTC_D3D12_CACHED_BLOB_FLAGS flags );
+typedef HRESULT ( *PFNINTCDX12EXT_API_CALLBACK_GETCACHEDBLOB )(
+    PFNINTCDX12EXT_GETCACHEDBLOB pfnGetCachedBlob,
+    INTCExtensionContext*        pExtensionContext,
+    ID3D12GraphicsCommandList*   pCommandList,
+    ID3D12PipelineState*         pPipelineState,
+    ID3DBlob**                   ppBlob,
+    INTC_D3D12_CACHED_BLOB_FLAGS flags );
+
 #endif // INTC_IGDEXT_D3D12
 
 typedef HRESULT ( *PFNINTCEXT_DESTROYDEVICEEXTENSIONCONTEXT )(
@@ -863,7 +904,8 @@ struct INTC_D3D11_API_CALLBACKS
 #endif // INTC_IGDEXT_D3D11
 
 #ifdef INTC_IGDEXT_D3D12
-// Function pointers to Device Extension Context D3D12 API functionsstruct INTC_D3D11_API_CALLBACKS
+// Function pointers to Device Extension Context D3D12 API functions
+// Deprecated: Use INTC_D3D12_API_CALLBACKS1 instead
 struct INTC_D3D12_API_CALLBACKS
 {
     PFNINTCDX12EXT_API_CALLBACK_GETSUPPORTEDVERSIONS          INTC_D3D12_GetSupportedVersions;
@@ -905,4 +947,81 @@ struct INTC_D3D12_API_CALLBACKS
     PFNINTCDX12EXT_API_CALLBACK_GETCOMMANDLISTHANDLE                                  INTC_D3D12_GetCommandListHandle;
     PFNINTCDX12EXT_API_CALLBACK_SETEVENTMARKER                                        INTC_D3D12_SetEventMarker;
 };
+
+// Function pointers to Device Extension Context D3D12 API functions
+struct INTC_D3D12_API_CALLBACKS1
+{
+    // Compatibility header (added in version 2)
+    struct
+    {
+        uint32_t structVersion; // Current structure version
+        uint32_t structSize;    // Size of this structure
+        uint32_t reserved[ 2 ]; // Reserved for future use
+    } header;
+
+    // Version 1 function pointers (always present)
+    PFNINTCDX12EXT_API_CALLBACK_GETSUPPORTEDVERSIONS                                  INTC_D3D12_GetSupportedVersions;
+    PFNINTCDX12EXT_API_CALLBACK_CREATEDEVICEEXTENSIONCONTEXT                          INTC_D3D12_CreateDeviceExtensionContext;
+    PFNINTCDX12EXT_API_CALLBACK_CREATEDEVICEEXTENSIONCONTEXT1                         INTC_D3D12_CreateDeviceExtensionContext1;
+    PFNINTCEXT_API_CALLBACK_DESTROYDEVICEEXTENSIONCONTEXT                             INTC_DestroyDeviceExtensionContext;
+    PFNINTCDX12EXT_API_CALLBACK_CREATECOMMANDQUEUE                                    INTC_D3D12_CreateCommandQueue;
+    PFNINTCDX12EXT_API_CALLBACK_CREATECOMPUTEPIPELINESTATE                            INTC_D3D12_CreateComputePipelineState;
+    PFNINTCDX12EXT_API_CALLBACK_CREATERESERVEDRESOURCE                                INTC_D3D12_CreateReservedResource;
+    PFNINTCDX12EXT_API_CALLBACK_CREATECOMMITTEDRESOURCE                               INTC_D3D12_CreateCommittedResource;
+    PFNINTCDX12EXT_API_CALLBACK_CREATECOMMITTEDRESOURCE1                              INTC_D3D12_CreateCommittedResource1;
+    PFNINTCDX12EXT_API_CALLBACK_CREATEHEAP                                            INTC_D3D12_CreateHeap;
+    PFNINTCDX12EXT_API_CALLBACK_CREATEPLACEDRESOURCE                                  INTC_D3D12_CreatePlacedResource;
+    PFNINTCDX12EXT_API_CALLBACK_CREATEHOSTRTASRESOURCE                                INTC_D3D12_CreateHostRTASResource;
+    PFNINTCDX12EXT_API_CALLBACK_BUILDRAYTRACINGACCELERATIONSTRUCTURE_HOST             INTC_D3D12_BuildRaytracingAccelerationStructure_Host;
+    PFNINTCDX12EXT_API_CALLBACK_COPYRAYTRACINGACCELERATIONSTRUCTURE_HOST              INTC_D3D12_CopyRaytracingAccelerationStructure_Host;
+    PFNINTCDX12EXT_API_CALLBACK_EMITRAYTRACINGACCELERATIONSTRUCTUREPOSTBUILDINFO_HOST INTC_D3D12_EmitRaytracingAccelerationStructurePostbuildInfo_Host;
+    PFNINTCDX12EXT_API_CALLBACK_GETRAYTRACINGACCELERATIONSTRUCTUREPREBUILDINFO_HOST   INTC_D3D12_GetRaytracingAccelerationStructurePrebuildInfo_Host;
+    PFNINTCDX12EXT_API_CALLBACK_TRANSFERHOSTRTAS                                      INTC_D3D12_TransferHostRTAS;
+    PFNINTCDX12EXT_API_CALLBACK_SETDRIVEREVENTMETADATA                                INTC_D3D12_SetDriverEventMetadata;
+    PFNINTCDX12EXT_API_CALLBACK_QUERYCPUVISIBLEVIDMEM                                 INTC_D3D12_QueryCpuVisibleVidmem;
+    PFNINTCDX12EXT_API_CALLBACK_CREATESTATEOBJECT                                     INTC_D3D12_CreateStateObject;
+    PFNINTCDX12EXT_API_CALLBACK_BUILDRAYTRACINGACCELERATIONSTRUCTURE                  INTC_D3D12_BuildRaytracingAccelerationStructure;
+    PFNINTCDX12EXT_API_CALLBACK_GETRAYTRACINGACCELERATIONSTRUCTUREPREBUILDINFO        INTC_D3D12_GetRaytracingAccelerationStructurePrebuildInfo;
+    PFNINTCDX12EXT_API_CALLBACK_SETFEATURESUPPORT                                     INTC_D3D12_SetFeatureSupport;
+    PFNINTCDX12EXT_API_CALLBACK_GETRESOURCEALLOCATIONINFO                             INTC_D3D12_GetResourceAllocationInfo;
+    PFNINTCDX12EXT_API_CALLBACK_CHECKFEATURESUPPORT                                   INTC_D3D12_CheckFeatureSupport;
+    PFNINTCDX12EXT_API_CALLBACK_ADDSHADERBINARIESPATH                                 INTC_D3D12_AddShaderBinariesPath;
+    PFNINTCDX12EXT_API_CALLBACK_REMOVESHADERBINARIESPATH                              INTC_D3D12_RemoveShaderBinariesPath;
+    PFNINTCDX12EXT_API_CALLBACK_SETAPPLICATIONINFO                                    INTC_D3D12_SetApplicationInfo;
+    PFNINTCDX12EXT_API_CALLBACK_SETNUMGENERATEDFRAMES                                 INTC_D3D12_SetNumGeneratedFrames;
+    PFNINTCDX12EXT_API_CALLBACK_SETPRESENTSEQUENCENUMBER                              INTC_D3D12_SetPresentSequenceNumber;
+    PFNINTCDX12EXT_API_CALLBACK_GETDISPLAYTELEMETRY                                   INTC_D3D12_GetDisplayTelemetry;
+    PFNINTCDX12EXT_API_CALLBACK_GETLATENCYREDUCTIONSTATUS                             INTC_D3D12_GetLatencyReductionStatus;
+    PFNINTCDX12EXT_API_CALLBACK_LATENCYREDUCTIONEXT                                   INTC_D3D12_LatencyReductionExt;
+    PFNINTCDX12EXT_API_CALLBACK_LATENCYREDUCTIONGETRENDERSUBMITTIMINGSBUFFERS         INTC_D3D12_LatencyReductionGetRenderSubmitTimingsBuffers;
+    PFNINTCDX12EXT_API_CALLBACK_RENDERSUBMITSTART                                     INTC_D3D12_RenderSubmitStart;
+    PFNINTCDX12EXT_API_CALLBACK_GETCOMMANDLISTHANDLE                                  INTC_D3D12_GetCommandListHandle;
+    PFNINTCDX12EXT_API_CALLBACK_SETEVENTMARKER                                        INTC_D3D12_SetEventMarker;
+    PFNINTCDX12EXT_API_CALLBACK_GETCURRENTSHADERHEAPUSAGE                             INTC_D3D12_GetCurrentShaderHeapUsage;
+
+    // Version 2+ function pointers (check header.structVersion >= 2)
+
+    // Version 2 additions
+    PFNINTCDX12EXT_API_CALLBACK_CREATEDEVICEEXTENSIONCONTEXT2 INTC_D3D12_CreateDeviceExtensionContext2;
+    PFNINTCDX12EXT_API_CALLBACK_SETDEVICEPARAMS               INTC_D3D12_SetDeviceParams;
+    PFNINTCDX12EXT_API_CALLBACK_GETCACHEDBLOB                 INTC_D3D12_GetCachedBlob;
+};
+
+// Version constants
+#define INTC_D3D12_API_CALLBACKS_VERSION_CURRENT 2
+#define INTC_D3D12_API_CALLBACKS_SIZE_CURRENT sizeof( INTC_D3D12_API_CALLBACKS )
+
+// Helper macros for version checking
+#define INTC_D3D12_API_CALLBACKS_INIT( callbacks )                                     \
+    do {                                                                               \
+        ( callbacks ).header.structVersion = INTC_D3D12_API_CALLBACKS_VERSION_CURRENT; \
+        ( callbacks ).header.structSize    = INTC_D3D12_API_CALLBACKS_SIZE_CURRENT;    \
+        ( callbacks ).header.reserved[ 0 ] = 0;                                        \
+        ( callbacks ).header.reserved[ 1 ] = 0;                                        \
+    } while( 0 )
+
+#define INTC_D3D12_API_CALLBACKS_CHECK_VERSION( callbacks, min_version ) ( ( callbacks ).header.structVersion >= ( min_version ) )
+
+#define INTC_D3D12_API_CALLBACKS_CHECK_SIZE( callbacks, required_size ) ( ( callbacks ).header.structSize >= ( required_size ) )
+
 #endif // INTC_IGDEXT_D3D12

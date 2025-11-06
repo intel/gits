@@ -605,6 +605,7 @@ void CaptureManager::loadIntelExtension(const uint32_t& vendorID, const uint32_t
   if (FAILED(result)) {
     return;
   }
+  LOGI << "IntelExtensions - Loaded Intel Extensions for device 0x" << std::hex << deviceID;
 
   INTC_D3D12_API_CALLBACKS callbacks{0};
   callbacks.INTC_D3D12_GetSupportedVersions = INTC_D3D12_GetSupportedVersionsWrapper;
@@ -645,8 +646,22 @@ void CaptureManager::loadIntelExtension(const uint32_t& vendorID, const uint32_t
   callbacks.INTC_D3D12_SetApplicationInfo = INTC_D3D12_SetApplicationInfoWrapper;
 
   result = INTC_D3D12_RegisterApplicationCallbacks(&callbacks);
-  if (FAILED(result)) {
-    LOG_ERROR << "IntelExtensions: INTC_D3D12_RegisterApplicationCallbacks failed.";
+  if (SUCCEEDED(result)) {
+    LOGI << "IntelExtensions - Registered INTC_D3D12_API_CALLBACKS";
+  } else {
+    LOG_ERROR << "IntelExtensions - INTC_D3D12_RegisterApplicationCallbacks failed!";
+  }
+
+  INTCParamValue captureMode{0};
+  captureMode.id = INTC_DEVICE_PARAM_CAPTURE_MODE;
+  INTCDeviceParams params{0};
+  params.NumParamValues = 1;
+  params.pParamValues = &captureMode;
+  result = INTC_D3D12_SetDeviceParams(&params);
+  if (SUCCEEDED(result)) {
+    LOGI << "IntelExtensions - Set INTC_DEVICE_PARAM_CAPTURE_MODE";
+  } else {
+    LOG_ERROR << "IntelExtensions - Failed to set INTC_DEVICE_PARAM_CAPTURE_MODE";
   }
 
   intelExtensionLoaded_ = true;

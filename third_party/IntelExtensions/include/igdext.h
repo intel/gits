@@ -35,14 +35,42 @@ struct INTCExtensionContext;
 // Intel(R) Graphics Device detailed information (returned after successful Device Extension Context creation)
 struct INTCDeviceInfo
 {
-    uint32_t GPUMaxFreq;
-    uint32_t GPUMinFreq;
-    uint32_t GTGeneration;
-    uint32_t EUCount;
-    uint32_t PackageTDP;
-    uint32_t MaxFillRate;
-    wchar_t  GTGenerationName[ 64 ];
+    uint32_t GPUMaxFreq;             ///< GPU maximum frequency in MHz
+    uint32_t GPUMinFreq;             ///< GPU minimum frequency in MHz
+    uint32_t GTGeneration;           ///< GPU generation number
+    uint32_t EUCount;                ///< Number of execution units
+    uint32_t PackageTDP;             ///< Package thermal design power in watts
+    uint32_t MaxFillRate;            ///< Maximum fill rate
+    wchar_t  GTGenerationName[ 64 ]; ///< GPU generation name (string)
 };
+
+// Extended Intel(R) Graphics Device detailed information including GMD ID (GT, Media, Display Arch and Release ID)
+struct INTCDeviceInfo1 : INTCDeviceInfo
+{
+    uint32_t GMDID;        ///< GMD ID (GT, Media, Display - Arch and Release ID)
+    uint32_t XeCoresCount; ///< Number of Xe cores in the GPU (might be used to determine performance class)
+};
+
+// Macros to extract GMD Architecture and Release information from GMD_ID
+#define INTC_GMD_ID( arch, release ) ( ( ( ( arch ) & 0x3FF ) << 22 ) | ( ( ( release ) & 0xFF ) << 14 ) )
+#define INTC_GMD_ID_GET_ARCH( gmd_id ) ( ( ( gmd_id ) >> 22 ) & 0x3FF )   ///< Extract GMD Arch (bits 22-31)
+#define INTC_GMD_ID_GET_RELEASE( gmd_id ) ( ( ( gmd_id ) >> 14 ) & 0xFF ) ///< Extract GMD Release (bits 14-21)
+
+// GMD Architecture definitions for use with INTC_GET_GMD_ARCH
+#define INTC_GMD_ARCH_12 12 ///< Xe architecture
+#define INTC_GMD_ARCH_20 20 ///< Xe2 architecture
+
+// GMD Release definitions for Xe LP/LPG (ARCH 12) for use with INTC_GET_GMD_RELEASE
+#define INTC_GMD_ARCH_12_RELEASE_DG2_512 55        ///< (ACM-A770, ACM-A750, ACM-A580, ACM-A770M, ACM-730M, ACM-A550M)
+#define INTC_GMD_ARCH_12_RELEASE_DG2_256 56        ///< (ACM-A530M, ACM-A570M, ACM-A60, ACM-A60M)
+#define INTC_GMD_ARCH_12_RELEASE_DG2_128 57        ///< (ACM-A380, ACM-A310, ACM-A370M, ACM-350M)
+#define INTC_GMD_ARCH_12_RELEASE_XE_LP_MD 70       ///< Xe LP Medium (MTL-U282, MTL-U281, MTL-S, ARL-U, ARL-S)
+#define INTC_GMD_ARCH_12_RELEASE_XE_LP_LG 71       ///< Xe LP Large (MTL-H682)
+#define INTC_GMD_ARCH_12_RELEASE_XE_LPG_PLUS_LG 74 ///< Xe LPG+ Large (MTL-U282, MTL-U281, MTL-S, ARL-U, ARL-S)
+
+// GMD Release definitions for Xe2 (ARCH 20) for use with INTC_GET_GMD_RELEASE
+#define INTC_GMD_ARCH_20_RELEASE_XE2_HPG_X2 1 ///< Xe2 HPG X2 (BMG-B570, BMG-B580)
+#define INTC_GMD_ARCH_20_RELEASE_XE2_LPG 4    ///< Xe2 LPG (LNL-130V, LNL-140V)
 
 // Intel(R) Graphics Extensions version structure
 struct INTCExtensionVersion
@@ -61,6 +89,16 @@ struct INTCExtensionInfo
     const wchar_t* pDeviceDriverDesc;       ///< [out] Intel Graphics Driver description
     const wchar_t* pDeviceDriverVersion;    ///< [out] Intel Graphics Driver version string
     uint32_t       DeviceDriverBuildNumber; ///< [out] Intel Graphics Driver build number
+};
+
+struct INTCExtensionInfo1
+{
+    INTCExtensionVersion RequestedExtensionVersion; ///< [in] Graphics Extension API version requested
+
+    INTCDeviceInfo1 IntelDeviceInfo;         ///< [out] Extended Intel Graphics Device detailed information including GMD ID
+    const wchar_t*  pDeviceDriverDesc;       ///< [out] Intel Graphics Driver description
+    const wchar_t*  pDeviceDriverVersion;    ///< [out] Intel Graphics Driver version string
+    uint32_t        DeviceDriverBuildNumber; ///< [out] Intel Graphics Driver build number
 };
 
 // Application and Engine information structure for the Graphics Extensions and/or Intel Graphics Driver
@@ -98,12 +136,100 @@ struct INTCExtensionAppInfo1
     INTCAppInfoVersion EngineVersion;      ///< [in] Engine version
 };
 
+// Parameter IDs for the INTCParamValue structure
+enum INTCDeviceParamId
+{
+    INTC_DEVICE_PARAM_CAPTURE_MODE = 0x00000001, ///< Hint flag for a Graphics Driver that D3D12 Device is used for capture purposes
+    INTC_DEVICE_PARAM_DEBUG_MODE   = 0x00000002, ///< Enable debug mode for the device
+    INTC_DEVICE_PARAM_CUSTOM       = 0x80000000  ///< Base value for custom parameters
+};
+
+// Value types for the INTCParamValue structure
+enum INTCDeviceParamValueType
+{
+    INTC_DEVICE_VALUE_TYPE_UINT32 = 0, ///< 32-bit unsigned integer
+    INTC_DEVICE_VALUE_TYPE_INT32  = 1, ///< 32-bit signed integer
+    INTC_DEVICE_VALUE_TYPE_FLOAT  = 2, ///< 32-bit float
+    INTC_DEVICE_VALUE_TYPE_UINT64 = 3, ///< 64-bit unsigned integer
+    INTC_DEVICE_VALUE_TYPE_PTR    = 4  ///< Pointer to additional data
+};
+
+// Structure to hold parameter-value pair for device configuration or commands
+struct INTCParamValue
+{
+    uint32_t id;   ///< [in] Parameter identifier (see INTCDeviceParamId)
+    uint32_t type; ///< [in] Type of value stored in the union (see INTCValueType)
+
+    union
+    {
+        uint32_t u32; ///< [in] Unsigned 32-bit integer value
+        int32_t  i32; ///< [in] Signed 32-bit integer value
+        float    f32; ///< [in] 32-bit float value
+        uint64_t u64; ///< [in] Unsigned 64-bit integer value
+        void*    ptr; ///< [in] Pointer to additional data
+    } value;
+
+#ifdef __cplusplus // Helper methods for setting parameter values with type safety        // Member methods to set values on this instance
+    inline void Set( uint32_t paramId, uint32_t val )
+    {
+        id        = paramId;
+        value.u32 = val;
+        type      = INTC_DEVICE_VALUE_TYPE_UINT32;
+    }
+
+    inline void Set( uint32_t paramId, int32_t val )
+    {
+        id        = paramId;
+        value.i32 = val;
+        type      = INTC_DEVICE_VALUE_TYPE_INT32;
+    }
+
+    inline void Set( uint32_t paramId, float val )
+    {
+        id        = paramId;
+        value.f32 = val;
+        type      = INTC_DEVICE_VALUE_TYPE_FLOAT;
+    }
+
+    inline void Set( uint32_t paramId, uint64_t val )
+    {
+        id        = paramId;
+        value.u64 = val;
+        type      = INTC_DEVICE_VALUE_TYPE_UINT64;
+    }
+
+    inline void Set( uint32_t paramId, void* ptr )
+    {
+        id        = paramId;
+        value.ptr = ptr;
+        type      = INTC_DEVICE_VALUE_TYPE_PTR;
+    }
+#endif
+};
+
+// Device information structure for the Intel(R) Graphics Extensions and/or Intel Graphics Driver
+struct INTCDeviceParams
+{
+    // Graphics Driver and Device flags
+    uint32_t        NumParamValues; ///< [in] Number of parameter-value pairs in pParamValues
+    INTCParamValue* pParamValues;   ///< [in] Array of parameter-value pairs for device configuration
+
+    // Command block for sending commands to the device
+    uint32_t CommandBlockSize; ///< [in] Size of the command block in bytes
+    void*    pCommandBlock;    ///< [in] Pointer to the command block data
+
+    // Reserved for future expansion
+    void*    pReserved;      ///< [in/out] Reserved for future use, must be NULL
+    uint32_t Reserved[ 16 ]; ///< [in/out] Reserved for future extensions, must be initialized to 0
+};
+
 // Graphics Extensions Tools Support API callback table (igdext_tools.h)
 #ifdef INTC_IGDEXT_D3D11
 struct INTC_D3D11_API_CALLBACKS;
 #endif // INTC_IGDEXT_D3D11
 #ifdef INTC_IGDEXT_D3D12
 struct INTC_D3D12_API_CALLBACKS;
+struct INTC_D3D12_API_CALLBACKS1;
 #endif // INTC_IGDEXT_D3D12
 
 //////////////////////////////////////////////////////////////////////////
@@ -162,6 +288,14 @@ enum INTC_D3D12_FEATURES
 {
     INTC_D3D12_FEATURE_D3D12_OPTIONS1 = 0, ///< D3D12 Options 1
     INTC_D3D12_FEATURE_D3D12_OPTIONS2 = 1, ///< D3D12 Options 2
+};
+
+// Cached Blob Flags
+enum INTC_D3D12_CACHED_BLOB_FLAGS
+{
+    INTC_D3D12_CACHED_BLOB_FLAG_NONE           = 0, ///< Regular shader blob retrieval
+    INTC_D3D12_CACHED_BLOB_FLAG_STAGE_2        = 1, ///< Stage-2 shader blob retrieval
+    INTC_D3D12_CACHED_BLOB_FLAG_WAIT_FOR_READY = 2, ///< Return only when the shader blob is ready
 };
 
 // Command Queue Descriptor
@@ -923,6 +1057,34 @@ void INTC_D3D12_SetEventMarker(
     const void*                marker,
     uint32_t                   markerSize );
 
+//////////////////////////////////////////////////////////////////////////
+/// @brief Returns the current shader heap usage.
+/// @param pExtensionContext A pointer to the extension context associated with the current Device.
+/// @param pShaderHeapUsage A pointer to a variable that receives the current shader heap usage in bytes.
+HRESULT INTC_D3D12_GetCurrentShaderHeapUsage(
+    INTCExtensionContext* pExtensionContext,
+    UINT64*               pShaderHeapUsage );
+
+//////////////////////////////////////////////////////////////////////////
+/// @brief Sets additional device information for the next/current D3D12 device.
+/// @param pDeviceParams A pointer to a structure containing device params to be set.
+HRESULT INTC_D3D12_SetDeviceParams(
+    INTCDeviceParams* pDeviceParams );
+
+//////////////////////////////////////////////////////////////////////////
+/// @brief Gets the cached blob representing the pipeline state.
+/// @param pExtensionContext A pointer to the extension context associated with the current Device.
+/// @param pCommandList A command list to get the cached blob.
+/// @param pPipelineState A pipeline state object.
+/// @param ppBlob After this method returns, points to the cached blob representing the pipeline state.
+/// @param flags Flags to specify the behavior of the method.
+HRESULT INTC_D3D12_GetCachedBlob(
+    INTCExtensionContext*        pExtensionContext,
+    ID3D12GraphicsCommandList*   pCommandList,
+    ID3D12PipelineState*         pPipelineState,
+    ID3DBlob**                   ppBlob,
+    INTC_D3D12_CACHED_BLOB_FLAGS flags );
+
 #endif // INTC_IGDEXT_D3D12
 
 //////////////////////////////////////////////////////////////////////////
@@ -1060,10 +1222,28 @@ HRESULT INTC_D3D12_CreateDeviceExtensionContext1(
     INTCExtensionAppInfo1* pExtensionAppInfo );
 
 //////////////////////////////////////////////////////////////////////////
+/// @brief Creates D3D12 Graphics Extensions Device Context and returns ppfnExtensionContext Extension Context object and ppfnExtensionFuncs extension function pointers table. This function must be called prior to using extensions.
+/// @param pDevice A pointer to the current Device.
+/// @param ppExtensionContext A pointer to a pointer to the extension context associated with the current Device.
+/// @param pExtensionInfo A pointer to the ExtensionInfo structure. The requestedExtensionVersion member must be set prior to calling this function. The remaining members are filled in with device info about the Intel GPU and info about the graphics driver version.
+/// @param pExtensionAppInfo A pointer to the ExtensionAppInfo1 structure that can optionally be used in the driver to identify workload.
+HRESULT INTC_D3D12_CreateDeviceExtensionContext2(
+    const ID3D12Device*    pDevice,
+    INTCExtensionContext** ppExtensionContext,
+    INTCExtensionInfo1*    pExtensionInfo,
+    INTCExtensionAppInfo1* pExtensionAppInfo );
+
+//////////////////////////////////////////////////////////////////////////
 /// @brief INTC_D3D12_RegisterApplicationCallbacks function sets the callback table for D3D12 API handlers. All registered callbacks will be called when the corresponding original API is called.
 /// @param pCallbacks A pointer to a INTC_D3D12_API_CALLBACKS structure that registers the callbacks to D3D12 API handlers.
 HRESULT INTC_D3D12_RegisterApplicationCallbacks(
     const INTC_D3D12_API_CALLBACKS* pCallbacks );
+
+//////////////////////////////////////////////////////////////////////////
+/// @brief INTC_D3D12_RegisterApplicationCallbacks1 function sets the callback table for D3D12 API handlers. All registered callbacks will be called when the corresponding original API is called.
+/// @param pCallbacks A pointer to a INTC_D3D12_API_CALLBACKS1 structure that registers the callbacks to D3D12 API handlers.
+HRESULT INTC_D3D12_RegisterApplicationCallbacks1(
+    const INTC_D3D12_API_CALLBACKS1* pCallbacks );
 
 #endif // INTC_IGDEXT_D3D12
 
