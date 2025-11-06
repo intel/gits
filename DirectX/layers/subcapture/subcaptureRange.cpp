@@ -99,7 +99,7 @@ bool SubcaptureRange::inRange() {
   if (!executionRangeStart_ || !inFrameRange_) {
     return inFrameRange_;
   }
-  if (!insideExecution_) {
+  if (!insideExecution_ && executionCount_ == executionRangeEnd_) {
     return false;
   }
   return executionCount_ >= executionRangeStart_ && executionCount_ <= executionRangeEnd_;
