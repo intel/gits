@@ -119,12 +119,6 @@ private:
 private:
   static PlayerManager* instance_;
 
-  // These hold pointers to Layers stored in layersOwner_. Layer order is important.
-  std::vector<Layer*> preLayers_;
-  std::vector<Layer*> postLayers_;
-  // Holds ownership of Layers.
-  std::vector<std::unique_ptr<Layer>> layersOwner_;
-
   // Factory classes encapsulate layer creation logic.
   TraceFactory traceFactory_;
   SubcaptureFactory subcaptureFactory_;
@@ -133,6 +127,12 @@ private:
   SkipCallsFactory skipCallsFactory_;
   PortabilityFactory portabilityFactory_;
   AddressPinningFactory addressPinningFactory_;
+
+  // These hold pointers to Layers stored in layersOwner_. Layer order is important.
+  std::vector<Layer*> preLayers_;
+  std::vector<Layer*> postLayers_;
+  // Holds ownership of Layers.
+  std::vector<std::unique_ptr<Layer>> layersOwner_;
 
   bool executeCommands_{true};
   bool multithreadedShaderCompilation_{true};
