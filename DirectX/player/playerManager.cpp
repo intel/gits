@@ -135,10 +135,10 @@ PlayerManager::PlayerManager() {
   };
   enablePreLayer(skipCallsOnConfigLayer);
   enablePreLayer(skipCallsOnResultLayer);
-  enablePreLayer(portabilityLayer);
   enablePreLayer(multithreadedObjectAwaitLayer);
   enablePreLayer(debugHelperLayer);
   enablePreLayer(traceLayer);
+  enablePreLayer(portabilityLayer);
   enablePreLayer(commandPreservationLayer);
   enablePreLayer(dllOverrideUseLayer);
   enablePreLayer(stateTrackingLayer);

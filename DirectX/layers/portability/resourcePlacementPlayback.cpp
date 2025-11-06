@@ -27,7 +27,9 @@ void ResourcePlacementPlayback::createHeap(ID3D12Device* device, unsigned heapKe
   }
   auto it = changedHeapSizes_.find(heapKey);
   if (it != changedHeapSizes_.end()) {
-    size = it->second;
+    if (it->second > size) {
+      size = it->second;
+    }
   }
 }
 
