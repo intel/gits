@@ -933,3 +933,101 @@ void gits::OpenGL::CgitsFlushMappedBufferRange::Run() {
     std::memcpy(((GLubyte*)pointer) + *_offset, *_resource, *_length);
   }
 }
+
+/* ******************************** TOKEN MAKE CURRENT THREAD ****************************** */
+
+gits::OpenGL::CGitsGLTokenMakeCurrentThread::CGitsGLTokenMakeCurrentThread(int threadid)
+    : _threadId(threadid) {
+  CALL_ONCE[] {
+    LOG_INFO << "Recorded Application uses multiple threads.";
+    LOG_WARNING << "Multithreaded applications have to be recorded from beginning. Subcapturing "
+                   "from stream is possible without the --faithfulThreading option.";
+  };
+  LOG_TRACE << "Current thread: " << threadid;
+  CGits::Instance().CurrentThreadId(threadid);
+}
+
+gits::CArgument& gits::OpenGL::CGitsGLTokenMakeCurrentThread::Argument(unsigned idx) {
+  return get_cargument(__FUNCTION__, idx, _threadId);
+}
+
+void gits::OpenGL::CGitsGLTokenMakeCurrentThread::Write(CBinOStream& stream) const {
+  write_to_stream(stream, _threadId);
+}
+
+void gits::OpenGL::CGitsGLTokenMakeCurrentThread::Read(CBinIStream& stream) {
+  read_from_stream(stream, _threadId);
+}
+
+void gits::OpenGL::CGitsGLTokenMakeCurrentThread::Run() {
+  CALL_ONCE[] {
+    LOG_INFO << "Multithreaded stream";
+  };
+  CGits::Instance().CurrentThreadId(_threadId);
+  if (SD().GetCurrentContextStateData().glBeginState &&
+      !Configurator::Get().common.player.faithfulThreading) {
+    LOG_ERROR << "Multithreading bypass failed: Make current thread cannot be emitted between "
+                 "glBegin and glEnd";
+    throw EOperationFailed(EXCEPTION_MESSAGE);
+  }
+
+  // The decision whether to truly switch threads is handled elsewhere by using either CAction or CSequentialExecutor.
+  if (!Configurator::Get().common.player.faithfulThreading) {
+    void* ctxFromThread = OpenGL::SD().GetContextFromThread(_threadId);
+    OpenGL::SetCurrentContext(ctxFromThread);
+    LOG_TRACE << "Make current thread: " << _threadId
+              << " bypassed because option faithfulThreading is not used, set current context for "
+                 "second thread emitted";
+  } else {
+    LOG_TRACE << "Make current thread: " << _threadId;
+  }
+}
+
+uint64_t gits::OpenGL::CGitsGLTokenMakeCurrentThread::Size() const {
+  return CToken::Size() + sizeof(_threadId);
+}
+
+/* ******************************** TOKEN MAKE CURRENT THREAD NO CTX SWITCH ****************************** */
+
+gits::OpenGL::CGitsGLTokenMakeCurrentThreadNoCtxSwitch::CGitsGLTokenMakeCurrentThreadNoCtxSwitch(
+    int threadid)
+    : _threadId(threadid) {
+  CALL_ONCE[] {
+    LOG_INFO << "Recorded Application uses multiple threads.";
+    LOG_WARNING << "Multithreaded applications have to be recorded from beginning. Subcapturing "
+                   "from stream is possible without the --faithfulThreading option.";
+  };
+  LOG_TRACE << "Current thread (no context switch token): " << threadid;
+  CGits::Instance().CurrentThreadId(threadid);
+}
+
+gits::CArgument& gits::OpenGL::CGitsGLTokenMakeCurrentThreadNoCtxSwitch::Argument(unsigned idx) {
+  return get_cargument(__FUNCTION__, idx, _threadId);
+}
+
+void gits::OpenGL::CGitsGLTokenMakeCurrentThreadNoCtxSwitch::Write(CBinOStream& stream) const {
+  write_to_stream(stream, _threadId);
+}
+
+void gits::OpenGL::CGitsGLTokenMakeCurrentThreadNoCtxSwitch::Read(CBinIStream& stream) {
+  read_from_stream(stream, _threadId);
+}
+
+void gits::OpenGL::CGitsGLTokenMakeCurrentThreadNoCtxSwitch::Run() {
+  CALL_ONCE[] {
+    LOG_INFO << "Multithreaded stream.";
+  };
+  CGits::Instance().CurrentThreadId(_threadId);
+
+  // The decision whether to truly switch threads is handled elsewhere by using either CAction or CSequentialExecutor.
+  if (!Configurator::Get().common.player.faithfulThreading) {
+    LOG_TRACE << "Make current thread (no context switch token): " << _threadId
+              << " bypassed because option faithfulThreading is not used.";
+  } else {
+    LOG_TRACE << "Make current thread (no context switch token): " << _threadId;
+  }
+}
+
+uint64_t gits::OpenGL::CGitsGLTokenMakeCurrentThreadNoCtxSwitch::Size() const {
+  return CToken::Size() + sizeof(_threadId);
+}

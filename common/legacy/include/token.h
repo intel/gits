@@ -33,18 +33,18 @@ class CToken {
 public:
   enum TId {
     ID_HELPER_TOKENS = 0 * 0x10000,
-    ID_INIT_START,       /**< @brief new sequence state initialization start */
-    ID_INIT_END,         /**< @brief new sequence state initialization end */
-    ID_FRAME_START,      /**< @brief frame capture has started */
-    ID_FRAME_END,        /**< @brief frame capture has ended */
-    ID_PRE_RECORD_START, /**< @brief prerecording phase start*/
-    ID_PRE_RECORD_END,   /**< @brief prerecording phase end*/
-    ID_PLAYER_RECORDER_SYNC,
-    ID_MAKE_CURRENT_THREAD,
-    ID_REC_SCREEN_RESOLUTION,
-    ID_MAKE_CURRENT_THREAD_NO_CTX_SWITCH,
-    ID_CCODE_FINISH, // DEPRECATED: Kept for backward compatibility only
-    ID_MARKER_UINT64,
+    ID_INIT_START = 1,       /**< @brief new sequence state initialization start */
+    ID_INIT_END = 2,         /**< @brief new sequence state initialization end */
+    ID_FRAME_START = 3,      /**< @brief frame capture has started */
+    ID_FRAME_END = 4,        /**< @brief frame capture has ended */
+    ID_PRE_RECORD_START = 5, /**< @brief prerecording phase start*/
+    ID_PRE_RECORD_END = 6,   /**< @brief prerecording phase end*/
+    ID_PLAYER_RECORDER_SYNC = 7,
+    // Moved to OpenGL tokens
+    ID_REC_SCREEN_RESOLUTION = 9,
+    // Moved to OpenGL tokens
+    ID_CCODE_FINISH = 11, // DEPRECATED: Kept for backward compatibility only
+    ID_MARKER_UINT64 = 12,
 
     ID_OPENGL = 1 * 0x10000,
     ID_GL_HELPER_TOKENS = 2 * 0x10000,
@@ -125,40 +125,6 @@ public:
   CTokenPlayerRecorderSync();
   virtual unsigned Id() const {
     return ID_PLAYER_RECORDER_SYNC;
-  }
-  virtual void Write(CBinOStream& stream) const;
-  virtual void Read(CBinIStream& stream);
-  virtual void Run();
-  virtual uint64_t Size() const;
-};
-
-// In multithreaded playback switches thread, in flattened one switches context.
-class CTokenMakeCurrentThread : public CToken {
-protected:
-  int _threadId = 0;
-
-public:
-  CTokenMakeCurrentThread() = default;
-  CTokenMakeCurrentThread(int threadid);
-  virtual unsigned Id() const {
-    return ID_MAKE_CURRENT_THREAD;
-  }
-  virtual void Write(CBinOStream& stream) const;
-  virtual void Read(CBinIStream& stream);
-  virtual void Run();
-  virtual uint64_t Size() const;
-};
-
-// In multithreaded playback switches thread, in flattened one does nothing.
-class CTokenMakeCurrentThreadNoCtxSwitch : public CToken {
-protected:
-  int _threadId = 0;
-
-public:
-  CTokenMakeCurrentThreadNoCtxSwitch() = default;
-  CTokenMakeCurrentThreadNoCtxSwitch(int threadid);
-  virtual unsigned Id() const {
-    return ID_MAKE_CURRENT_THREAD_NO_CTX_SWITCH;
   }
   virtual void Write(CBinOStream& stream) const;
   virtual void Read(CBinIStream& stream);

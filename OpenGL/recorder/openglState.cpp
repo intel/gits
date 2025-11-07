@@ -2462,11 +2462,11 @@ void gits::OpenGL::CVariableViewport::Schedule(CScheduler& scheduler,
     HWND hwnd = WindowFromDC(drv.wgl.wglGetCurrentDC());
     int windowThread = CStateDynamicNative::Get().GetWindowThread(hwnd);
     int currentThread = CGits::Instance().CurrentThreadId();
-    scheduler.Register(new CTokenMakeCurrentThreadNoCtxSwitch(windowThread));
+    scheduler.Register(new CGitsGLTokenMakeCurrentThreadNoCtxSwitch(windowThread));
 #endif
     scheduler.Register(new OpenGL::CgitsViewportSettings(_x, _y, _width, _height));
 #ifdef GITS_PLATFORM_WINDOWS
-    scheduler.Register(new CTokenMakeCurrentThreadNoCtxSwitch(currentThread));
+    scheduler.Register(new CGitsGLTokenMakeCurrentThreadNoCtxSwitch(currentThread));
 #endif
     scheduler.Register(new OpenGL::CglViewport(_x, _y, _width, _height));
   }

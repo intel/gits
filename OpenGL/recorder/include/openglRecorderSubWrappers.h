@@ -561,11 +561,11 @@ inline void glViewport_RECWRAP(
     HWND hwnd = WindowFromDC(drv.wgl.wglGetCurrentDC());
     int windowThread = CStateDynamicNative::Get().GetWindowThread(hwnd);
     int currentThread = CGits::Instance().CurrentThreadId();
-    recorder.Schedule(new CTokenMakeCurrentThreadNoCtxSwitch(windowThread));
+    recorder.Schedule(new CGitsGLTokenMakeCurrentThreadNoCtxSwitch(windowThread));
 #endif
     recorder.Schedule(new CgitsViewportSettings(x, y, width, height));
 #ifdef GITS_PLATFORM_WINDOWS
-    recorder.Schedule(new CTokenMakeCurrentThreadNoCtxSwitch(currentThread));
+    recorder.Schedule(new CGitsGLTokenMakeCurrentThreadNoCtxSwitch(currentThread));
 #endif
     recorder.Schedule(new CglViewport(x, y, width, height));
   }

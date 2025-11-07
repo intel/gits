@@ -44,6 +44,13 @@ namespace OpenGL {
  * @return OpenGL function call wrapper.
  */
 CFunction* CFunction::Create(unsigned id) {
+  // Backward compatibility
+  if (id == ID_MAKE_CURRENT_THREAD) {
+    id = ID_GITS_GL_MAKE_CURRENT_THREAD;
+  } else if (id == ID_MAKE_CURRENT_THREAD_NO_CTX_SWITCH) {
+    id = ID_GITS_GL_MAKE_CURRENT_THREAD_NO_CTX_SWITCH;
+  }
+
   if (id < CFunction::ID_OPENGL || id >= CFunction::ID_FUNCTION_END) {
     return nullptr;
   }
@@ -598,6 +605,10 @@ CFunction* CFunction::Create(unsigned id) {
     return new CgitsLinkProgramBuffersSetting;
   case ID_UPDATE_MAPPED_TEXTURE:
     return new CUpdateMappedTexture;
+  case ID_GITS_GL_MAKE_CURRENT_THREAD:
+    return new CGitsGLTokenMakeCurrentThread;
+  case ID_GITS_GL_MAKE_CURRENT_THREAD_NO_CTX_SWITCH:
+    return new CGitsGLTokenMakeCurrentThreadNoCtxSwitch;
 
 #include "glIDswitch.h"
   default:;

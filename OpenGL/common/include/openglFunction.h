@@ -66,6 +66,10 @@ public:
   };
 
   enum TId {
+    // Backward compatiblity tokens
+    ID_MAKE_CURRENT_THREAD = 8,
+    ID_MAKE_CURRENT_THREAD_NO_CTX_SWITCH = 10,
+
     BEGIN_GL = CToken::ID_OPENGL,
 #include "glIDs.h"
 
@@ -84,6 +88,8 @@ public:
     ID_GITS_COHERENT_BUFFER_MAPPING,
     ID_HELPER_WGL_UPDATE_WINDOW_THREAD_AWARE, // Buggy token; we're keeping the ID for back-compat.
     ID_GITS_LINK_PROGRAM_BUFFERS_SETTINGS,
+    ID_GITS_GL_MAKE_CURRENT_THREAD,
+    ID_GITS_GL_MAKE_CURRENT_THREAD_NO_CTX_SWITCH,
 
     //WGL
     BEGIN_WGL = CToken::ID_WGL,

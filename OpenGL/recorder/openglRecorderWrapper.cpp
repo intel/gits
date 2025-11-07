@@ -756,7 +756,7 @@ bool CRecorderWrapper::Record() const {
 void CRecorderWrapper::TrackThread() const {
   int threadId = _recorder.TrackThread();
   if (threadId >= 0) {
-    _recorder.Schedule(new CTokenMakeCurrentThread(threadId));
+    _recorder.Schedule(new CGitsGLTokenMakeCurrentThread(threadId));
   }
 }
 
@@ -867,9 +867,9 @@ void CRecorderWrapper::wglMakeCurrent(bool return_value, HDC hdc, HGLRC hglrc) c
         << "Scheduling thread switch for window params update (WA for thread affine winapi)";
 
     HWND hwnd = WindowFromDC(hdc);
-    _recorder.Schedule(new CTokenMakeCurrentThreadNoCtxSwitch(windowThread));
+    _recorder.Schedule(new CGitsGLTokenMakeCurrentThreadNoCtxSwitch(windowThread));
     _recorder.Schedule(new ChelperWglUpdateWindow(hwnd));
-    _recorder.Schedule(new CTokenMakeCurrentThreadNoCtxSwitch(currentThread));
+    _recorder.Schedule(new CGitsGLTokenMakeCurrentThreadNoCtxSwitch(currentThread));
   }
 #endif
   _recorder.Schedule(new CwglMakeCurrent(return_value, hdc, hglrc), true);
@@ -909,9 +909,9 @@ void CRecorderWrapper::wglSwapLayerBuffers(bool return_value, HDC hdc, unsigned 
           << "Scheduling thread switch for window params update (WA for thread affine winapi)";
 
       HWND hwnd = WindowFromDC(hdc);
-      _recorder.Schedule(new CTokenMakeCurrentThreadNoCtxSwitch(windowThread));
+      _recorder.Schedule(new CGitsGLTokenMakeCurrentThreadNoCtxSwitch(windowThread));
       _recorder.Schedule(new ChelperWglUpdateWindow(hwnd));
-      _recorder.Schedule(new CTokenMakeCurrentThreadNoCtxSwitch(currentThread));
+      _recorder.Schedule(new CGitsGLTokenMakeCurrentThreadNoCtxSwitch(currentThread));
     }
     _recorder.Schedule(new CwglSwapLayerBuffers(return_value, hdc, plane));
   }
@@ -935,9 +935,9 @@ void CRecorderWrapper::wglSwapBuffers(bool return_value, HDC hdc) const {
           << "Scheduling thread switch for window params update (WA for thread affine winapi)";
 
       HWND hwnd = WindowFromDC(hdc);
-      _recorder.Schedule(new CTokenMakeCurrentThreadNoCtxSwitch(windowThread));
+      _recorder.Schedule(new CGitsGLTokenMakeCurrentThreadNoCtxSwitch(windowThread));
       _recorder.Schedule(new ChelperWglUpdateWindow(hwnd));
-      _recorder.Schedule(new CTokenMakeCurrentThreadNoCtxSwitch(currentThread));
+      _recorder.Schedule(new CGitsGLTokenMakeCurrentThreadNoCtxSwitch(currentThread));
     }
     _recorder.Schedule(new CwglSwapBuffers(return_value, hdc));
   }

@@ -442,5 +442,59 @@ public:
   virtual void Run();
 };
 
+/* ******************************** TOKEN MAKE CURRENT THREAD ****************************** */
+
+class CGitsGLTokenMakeCurrentThread : public CFunction {
+  static constexpr unsigned ARG_NUM = 1;
+
+protected:
+  int _threadId = 0;
+
+public:
+  CGitsGLTokenMakeCurrentThread() = default;
+  CGitsGLTokenMakeCurrentThread(int threadid);
+  virtual unsigned ArgumentCount() const override {
+    return ARG_NUM;
+  }
+  virtual CArgument& Argument(unsigned idx) override;
+  virtual unsigned Id() const {
+    return ID_GITS_GL_MAKE_CURRENT_THREAD;
+  }
+  virtual const char* Name() const {
+    return "CGitsGLTokenMakeCurrentThread";
+  }
+  virtual void Write(CBinOStream& stream) const;
+  virtual void Read(CBinIStream& stream);
+  virtual void Run();
+  virtual uint64_t Size() const;
+};
+
+/* ******************************** TOKEN MAKE CURRENT THREAD NO CTX SWITCH ****************************** */
+
+class CGitsGLTokenMakeCurrentThreadNoCtxSwitch : public CFunction {
+  static constexpr unsigned ARG_NUM = 1;
+
+protected:
+  int _threadId = 0;
+
+public:
+  CGitsGLTokenMakeCurrentThreadNoCtxSwitch() = default;
+  CGitsGLTokenMakeCurrentThreadNoCtxSwitch(int threadid);
+  virtual unsigned ArgumentCount() const override {
+    return ARG_NUM;
+  }
+  virtual CArgument& Argument(unsigned idx) override;
+  virtual unsigned Id() const {
+    return ID_GITS_GL_MAKE_CURRENT_THREAD_NO_CTX_SWITCH;
+  }
+  virtual const char* Name() const {
+    return "CGitsGLTokenMakeCurrentThreadNoCtxSwitch";
+  }
+  virtual void Write(CBinOStream& stream) const;
+  virtual void Read(CBinIStream& stream);
+  virtual void Run();
+  virtual uint64_t Size() const;
+};
+
 } // namespace OpenGL
 } // namespace gits

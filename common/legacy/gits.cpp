@@ -209,10 +209,6 @@ CToken* CTokenCreate(CId id) {
     return new CTokenMarker(CToken::ID_CCODE_FINISH);
   case CToken::ID_PLAYER_RECORDER_SYNC:
     return new CTokenPlayerRecorderSync;
-  case CToken::ID_MAKE_CURRENT_THREAD:
-    return new CTokenMakeCurrentThread;
-  case CToken::ID_MAKE_CURRENT_THREAD_NO_CTX_SWITCH:
-    return new CTokenMakeCurrentThreadNoCtxSwitch;
   case CToken::ID_REC_SCREEN_RESOLUTION:
     return new CTokenScreenResolution;
   case CToken::ID_MARKER_UINT64:
