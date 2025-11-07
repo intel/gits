@@ -263,9 +263,11 @@ void AnalyzerService::dumpAnalysisFile() {
   }
   for (unsigned key : commandListService_.getObjectsForRestore()) {
     objectKeys.insert(key);
+    findParents(key, objectKeys);
   }
   for (unsigned key : commandListService_.getBindingTablesResources()) {
     objectKeys.insert(key);
+    findParents(key, objectKeys);
   }
   for (unsigned key : objectKeys) {
     if (key) {
