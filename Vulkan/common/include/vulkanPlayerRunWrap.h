@@ -544,8 +544,7 @@ inline void vkQueuePresentKHR_WRAPRUN(CVkResult& recorderSideReturnValue,
   recorderSideReturnValue.Assign(playerSideReturnValue);
   vkQueuePresentKHR_SD(playerSideReturnValue, *queue, &presentInfo);
 
-  LOG_FORMAT_RAW
-  LOG_TRACE << "End of frame #" << CGits::Instance().CurrentFrame();
+  LOG_TRACE_RAW << "End of frame #" << CGits::Instance().CurrentFrame() << std::endl;
 }
 namespace {
 inline void HandleQueueSubmitRenderDocStart() {

@@ -55,8 +55,6 @@ public:
 #endif
 
     try {
-      unsigned sinceLastChk = 0;
-
       // Token creating function.
       auto tokenCtor = [](CId id) -> CToken* {
         CToken* token = CGits::Instance().TokenCreate(id);
@@ -68,7 +66,6 @@ public:
 
       const auto stream = _sched._iBinStream;
       const auto tokenBurstLimit = _sched._tokenLimit;
-      const auto checkpointSize = _sched._checkpointSize;
 #if defined GITS_PLATFORM_WINDOWS
       const uint64_t chunkSize = _sched._chunkSize;
 #endif
@@ -112,13 +109,6 @@ public:
           tokenList.push_back(token);
 
           loaded++;
-          sinceLastChk++;
-
-          if (sinceLastChk == checkpointSize) {
-            LOG_FORMAT_RAW
-            LOG_INFO << "#" << std::flush;
-            sinceLastChk = 0;
-          }
 
           // Stop loading tokens past 'exitFrame'
           if (token->Id() == CToken::ID_FRAME_END) {
@@ -217,7 +207,6 @@ CScheduler::CScheduler(unsigned tokenLimit, unsigned tokenBurstNum)
 #endif
       _nextToPlay(_tokenList.begin()),
       _tokenLimit(tokenLimit),
-      _checkpointSize(10000),
       _streamExhausted(false),
       _oBinStream(nullptr),
       _iBinStream(nullptr) {
@@ -345,20 +334,6 @@ void CScheduler::WriteAll() {
 }
 
 void CScheduler::Stream(CBinIStream* stream) {
-  // Empirically calculated from 'random' stream constant value.
-  const uint32_t averageTokenSize = 13;
-  const uint64_t estimatedTokenNum = std::filesystem::file_size(stream->Path()) / averageTokenSize;
-
-  _checkpointSize = estimatedTokenNum / 30;
-  _checkpointSize = (_checkpointSize == 0) ? 1 : _checkpointSize;
-
-  std::string name = stream->Path().filename().string();
-  if (name.size() > 3 && name.substr(name.size() - 3) == ".gz") {
-    _checkpointSize /= 8;
-  }
-
-  LOG_INFO << "Will output checkpoint character '#' every " << _checkpointSize << " loaded tokens";
-
   _iBinStream = stream;
 }
 

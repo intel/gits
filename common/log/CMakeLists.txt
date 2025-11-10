@@ -19,6 +19,10 @@ set(LOG_SRC_SOURCES
 )
 
 add_library(log STATIC ${LOG_SRC_HEADERS} ${LOG_SRC_SOURCES})
+set_target_properties(log PROPERTIES
+    CXX_VISIBILITY_PRESET default
+    VISIBILITY_INLINES_HIDDEN OFF
+)
 
 target_include_directories(log
 PUBLIC

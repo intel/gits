@@ -84,8 +84,8 @@ VkCommandBuffer CFunction::CommandBuffer() {
 CQueueSubmitFunction::CQueueSubmitFunction() {}
 
 void CQueueSubmitFunction::Trace() {
-  LOG_FORMAT_RAW
-  LOG_TRACE << "QueueSubmit nr: " << CGits::Instance().vkCounters.CurrentQueueSubmitCount() << " ";
+  LOG_TRACE_RAW << "QueueSubmit nr: " << CGits::Instance().vkCounters.CurrentQueueSubmitCount()
+                << " ";
 }
 
 void CQueueSubmitFunction::CountUp() {
@@ -101,8 +101,7 @@ void CQueueSubmitFunction::Run() {
 CImageFunction::CImageFunction() {}
 
 void CImageFunction::Trace() {
-  LOG_FORMAT_RAW
-  LOG_TRACE << "Image nr: " << CGits::Instance().vkCounters.CurrentImageCount() << " ";
+  LOG_TRACE_RAW << "Image nr: " << CGits::Instance().vkCounters.CurrentImageCount() << " ";
 }
 
 void CImageFunction::CountUp() {
@@ -118,8 +117,7 @@ void CImageFunction::Run() {
 CBufferFunction::CBufferFunction() {}
 
 void CBufferFunction::Trace() {
-  LOG_FORMAT_RAW
-  LOG_TRACE << "Buffer nr: " << CGits::Instance().vkCounters.CurrentBufferCount() << " ";
+  LOG_TRACE_RAW << "Buffer nr: " << CGits::Instance().vkCounters.CurrentBufferCount() << " ";
 }
 
 void CBufferFunction::CountUp() {

@@ -743,9 +743,8 @@ NOINLINE void HandleTrace() {
     StatePrinter statePrinter;
     statePrinter.PrintToLog();
   }
-  LOG_FORMAT_RAW
-  LOG_TRACE << "draw: " << drawNum << " frame: " << frameNum << " drawInFrame: " << drawInFrameNum
-            << "  ";
+  LOG_TRACE_RAW << "draw: " << drawNum << " frame: " << frameNum
+                << " drawInFrame: " << drawInFrameNum << "  ";
 }
 
 NOINLINE void HandleCaptureDraws() {

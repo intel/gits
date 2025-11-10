@@ -271,8 +271,7 @@ void checkReturnValue<PFN_vkVoidFunction>(const char*, PFN_vkVoidFunction) {}
     const Configuration& gits_cfg = Configurator::Get();                                           \
     bool doTrace = log::ShouldLog(LogLevel::TRACE);                                                \
     if (doTrace) {                                                                                 \
-      LOG_FORMAT_RAW                                                                               \
-      LOG_TRACE << #function_name;                                                                 \
+      LOG_TRACE_RAW << #function_name;                                                             \
     }                                                                                              \
     return_type gits_ret = (return_type)0;                                                         \
     bool call_shd = true;                                                                          \

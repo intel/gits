@@ -224,7 +224,7 @@ int MainBody(int argc, char* argv[]) {
   });
 
   const auto& cfg = Configurator::Get();
-  plog::get()->setMaxSeverity(log::GetSeverity(cfg.common.shared.thresholdLogLevel));
+  log::SetMaxSeverity(cfg.common.shared.thresholdLogLevel);
   if (!cfg.common.shared.logToConsole) {
     log::RemoveConsoleAppender();
   }

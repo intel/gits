@@ -465,9 +465,8 @@ inline void vkCreateSwapchainKHR_SD(VkResult return_value,
         if (SD().imageCounter.find(image) == SD().imageCounter.end()) {
           CGits::Instance().vkCounters.ImageCountUp();
           SD().imageCounter[image] = CGits::Instance().vkCounters.CurrentImageCount();
-          LOG_FORMAT_RAW
-          LOG_TRACE << "Image nr: " << SD().imageCounter[image] << " (Swapchain image: " << image
-                    << " )\n";
+          LOG_TRACE_RAW << "Image nr: " << SD().imageCounter[image]
+                        << " (Swapchain image: " << image << " )\n";
         }
         auto imageState = std::make_shared<CImageState>(&image, swapchainState);
         SD()._imagestates.emplace(image, imageState);

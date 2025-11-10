@@ -18,14 +18,12 @@ namespace gits {
   template<class T>
   void trace_return_value(T r) {
     using namespace Vulkan;
-    LOG_FORMAT_RAW
-    LOG_TRACE << " = " << ToStr(r) << "\n";
+    LOG_TRACE_RAW << " = " << ToStr(r) << "\n";
   }
 
   template<>
   void trace_return_value<void_t>(void_t) {
-    LOG_FORMAT_RAW
-    LOG_TRACE << "\n";
+    LOG_TRACE_RAW << "\n";
   }
 
 % for token in vk_functions:

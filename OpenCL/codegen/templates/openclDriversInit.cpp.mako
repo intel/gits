@@ -44,12 +44,11 @@ ${get_return_type(func)} STDCALL special_${name}(${make_params(func, with_types=
   ${get_return_type(func)} gits_ret = static_cast<${get_return_type(func)}>(0);
   bool doTrace = log::ShouldLog(LogLevel::TRACE);
   if (doTrace) {
-    LOG_FORMAT_RAW
-    LOG_TRACE << LOG_PREFIX << "${name}(";
+    LOG_TRACE_RAW << LOG_PREFIX << "${name}(";
   %for arg in func['args']:
-    LOG_TRACE << ${format_trace_argument(arg, enums)}${' << ", "' if not loop.last else ""};
+    LOG_TRACE_RAW << ${format_trace_argument(arg, enums)}${' << ", "' if not loop.last else ""};
   %endfor
-    LOG_TRACE << ")${'\\n' if func['type'] == 'void' else ''}";
+    LOG_TRACE_RAW << ")${'\\n' if func['type'] == 'void' else ''}";
   }
   bool call_orig = true;
   if (Configurator::Get().common.shared.useEvents) {
@@ -59,7 +58,7 @@ ${get_return_type(func)} STDCALL special_${name}(${make_params(func, with_types=
       bool exists = lua::FunctionExists("${name}", L);
       if (exists || !doTrace) {
         if(doTrace) {
-          LOG_TRACE << " Lua Begin" << std::endl;
+          LOG_TRACE_RAW << " Lua Begin" << std::endl;
         }
         lua_getglobal(L, "${name}");
         ArgsPusher ap(L);
@@ -72,8 +71,7 @@ ${get_return_type(func)} STDCALL special_${name}(${make_params(func, with_types=
         gits_ret = lua::lua_to<${get_return_type(func)}>(L, top);
         lua_pop(L, top);
         if (doTrace) {
-          LOG_FORMAT_RAW
-          LOG_TRACE << "${name}" << " Lua End";
+          LOG_TRACE_RAW << "${name}" << " Lua End";
           Tracer::TraceRet(gits_ret);
         }
       }
@@ -83,11 +81,10 @@ ${get_return_type(func)} STDCALL special_${name}(${make_params(func, with_types=
   if (call_orig) {
     gits_ret = drvOcl.orig_${name}(${make_params(func, one_line=True)});
     if (doTrace) {
-      LOG_FORMAT_RAW
       Tracer::TraceRet(gits_ret);
       %for arg in func['args']:
         %if 'out' in arg['tag']:
-      LOG_TRACE << ">>>> ${arg['tag']} ${arg['name']}: " << ${format_trace_argument(arg, enums)} << std::endl;
+      LOG_TRACE_RAW << ">>>> ${arg['tag']} ${arg['name']}: " << ${format_trace_argument(arg, enums)} << std::endl;
         %endif
       %endfor
     }

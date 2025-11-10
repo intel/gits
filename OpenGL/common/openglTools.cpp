@@ -1716,8 +1716,7 @@ StatePrinter::FBO::FBO(GLenum target, GLint name) : _name(name), _target(target)
 void StatePrinter::FBO::Write() {
   LOG_TRACE << _target << " - " << _name;
   for (auto& attachm : _attachments) {
-    LOG_FORMAT_RAW
-    LOG_TRACE << "  - " << attachm.first << " - ";
+    LOG_TRACE_RAW << "  - " << attachm.first << " - ";
     attachm.second->Write();
   }
 }

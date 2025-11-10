@@ -30,13 +30,11 @@ struct Tracer {
   template <class T>
   NOINLINE void trace_ret(T r) {
     using namespace gits::OpenGL;
-    LOG_FORMAT_RAW
-    LOG_TRACE << " = " << ToStr(r) << "\n";
+    LOG_TRACE_RAW << " = " << ToStr(r) << "\n";
   }
 
   NOINLINE void trace_ret(void_t r) {
-    LOG_FORMAT_RAW
-    LOG_TRACE << "\n";
+    LOG_TRACE_RAW << "\n";
   }
 
   void print_args(plog::Record& s) {}
@@ -59,12 +57,11 @@ struct Tracer {
   template <class... Args>
   NOINLINE void trace(Args... args) {
     auto log = plog::Record(plog::debug, PLOG_GET_FUNC(), __LINE__, PLOG_GET_FILE(),
-                            PLOG_GET_THIS(), PLOG_DEFAULT_INSTANCE_ID);
+                            PLOG_GET_THIS(), GITS_LOG_INSTANCE_ID_RAW);
     log << name << "(";
     print_args(log, args...);
     log << ")";
-    LOG_FORMAT_RAW
-    plog::get()->operator+=(log);
+    plog::get<GITS_LOG_INSTANCE_ID_RAW>()->operator+=(log);
   }
 
 private:

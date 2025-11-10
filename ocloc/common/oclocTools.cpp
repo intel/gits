@@ -23,43 +23,43 @@ void LogOclocInvokeInput(unsigned int argc,
                          const uint8_t** dataInputHeaders,
                          const uint64_t* lenInputHeaders,
                          const char** nameInputHeaders) {
-  LOG_FORMAT_RAW
-  LOG_TRACE << LOG_PREFIX << "oclocInvoke(";
-  LOG_TRACE << argc << ", { ";
+  LOG_TRACE_RAW << LOG_PREFIX << "oclocInvoke(";
+  LOG_TRACE_RAW << argc << ", { ";
   for (unsigned int i = 0; i < argc; i++) {
-    LOG_TRACE << argv[i] << ((i < argc - 1) ? ", " : " }, ");
+    LOG_TRACE_RAW << argv[i] << ((i < argc - 1) ? ", " : " }, ");
   }
-  LOG_TRACE << numSources << ", ";
+  LOG_TRACE_RAW << numSources << ", ";
   if (numSources != 0U) {
     for (uint32_t i = 0; i < numSources; i++) {
       std::basic_string<uint8_t> str(sources[i], 20);
-      LOG_TRACE << "{ " << str.c_str() << " [...]" << ((i < numSources - 1) ? ", " : " }, { ");
+      LOG_TRACE_RAW << "{ " << str.c_str() << " [...]" << ((i < numSources - 1) ? ", " : " }, { ");
     }
     for (uint32_t i = 0; i < numSources; i++) {
-      LOG_TRACE << sourceLens[i] << ((i < numSources - 1) ? ", " : " }, { ");
+      LOG_TRACE_RAW << sourceLens[i] << ((i < numSources - 1) ? ", " : " }, { ");
     }
     for (uint32_t i = 0; i < numSources; i++) {
-      LOG_TRACE << sourcesNames[i] << ((i < numSources - 1) ? ", " : " }, ");
+      LOG_TRACE_RAW << sourcesNames[i] << ((i < numSources - 1) ? ", " : " }, ");
     }
   } else {
-    LOG_TRACE << sources << ", " << sourceLens << ", " << sourcesNames << ", ";
+    LOG_TRACE_RAW << sources << ", " << sourceLens << ", " << sourcesNames << ", ";
   }
-  LOG_TRACE << numInputHeaders << ", ";
+  LOG_TRACE_RAW << numInputHeaders << ", ";
   if (numInputHeaders != 0U) {
     for (uint32_t i = 0; i < numInputHeaders; i++) {
       std::basic_string<uint8_t> str(dataInputHeaders[i], 20);
-      LOG_TRACE << "{ " << str.c_str() << " [...]" << ((i < numInputHeaders - 1) ? ", " : " }, { ");
+      LOG_TRACE_RAW << "{ " << str.c_str() << " [...]"
+                    << ((i < numInputHeaders - 1) ? ", " : " }, { ");
     }
     for (uint32_t i = 0; i < numInputHeaders; i++) {
-      LOG_TRACE << lenInputHeaders[i] << ((i < numInputHeaders - 1) ? ", " : " }, { ");
+      LOG_TRACE_RAW << lenInputHeaders[i] << ((i < numInputHeaders - 1) ? ", " : " }, { ");
     }
     for (uint32_t i = 0; i < numInputHeaders; i++) {
-      LOG_TRACE << nameInputHeaders[i] << ((i < numInputHeaders - 1) ? ", " : " } ");
+      LOG_TRACE_RAW << nameInputHeaders[i] << ((i < numInputHeaders - 1) ? ", " : " } ");
     }
   } else {
-    LOG_TRACE << dataInputHeaders << ", " << lenInputHeaders << ", " << nameInputHeaders;
+    LOG_TRACE_RAW << dataInputHeaders << ", " << lenInputHeaders << ", " << nameInputHeaders;
   }
-  LOG_TRACE << ", ... )";
+  LOG_TRACE_RAW << ", ... )";
 }
 
 void LogOclocInvokeOutput(int ret,
@@ -67,35 +67,34 @@ void LogOclocInvokeOutput(int ret,
                           uint8_t*** dataOutputs,
                           uint64_t** lenOutputs,
                           char*** nameOutputs) {
-  LOG_FORMAT_RAW
-  LOG_TRACE << " = " << ret << std::endl;
+  LOG_TRACE_RAW << " = " << ret << std::endl;
   if (numOutputs != nullptr) {
-    LOG_TRACEV << ">>>> out numOutputs: " << *numOutputs << std::endl;
+    LOG_TRACEV_RAW << ">>>> out numOutputs: " << *numOutputs << std::endl;
     if (dataOutputs != nullptr) {
-      LOG_TRACEV << ">>>> out dataOutputs: { ";
+      LOG_TRACEV_RAW << ">>>> out dataOutputs: { ";
       for (uint32_t i = 0; i < *numOutputs; i++) {
         const auto nameOutput = std::string(static_cast<const char*>((*nameOutputs)[i]));
         if (StringEndsWith(nameOutput, std::string(".log")) ||
             StringEndsWith(nameOutput, std::string(".txt"))) {
-          LOG_TRACEV << static_cast<const uint8_t*>((*dataOutputs)[i])
-                     << ((i < *numOutputs - 1) ? ", " : " }\n");
+          LOG_TRACEV_RAW << static_cast<const uint8_t*>((*dataOutputs)[i])
+                         << ((i < *numOutputs - 1) ? ", " : " }\n");
         } else {
-          LOG_TRACEV << static_cast<const void*>((*dataOutputs)[i])
-                     << ((i < *numOutputs - 1) ? ", " : " }\n");
+          LOG_TRACEV_RAW << static_cast<const void*>((*dataOutputs)[i])
+                         << ((i < *numOutputs - 1) ? ", " : " }\n");
         }
       }
     }
     if (lenOutputs != nullptr) {
-      LOG_TRACEV << ">>>> out lenOutputs: { ";
+      LOG_TRACEV_RAW << ">>>> out lenOutputs: { ";
       for (uint32_t i = 0; i < *numOutputs; i++) {
-        LOG_TRACEV << (*lenOutputs)[i] << ((i < *numOutputs - 1) ? ", " : " }\n");
+        LOG_TRACEV_RAW << (*lenOutputs)[i] << ((i < *numOutputs - 1) ? ", " : " }\n");
       }
     }
     if (nameOutputs != nullptr) {
-      LOG_TRACEV << ">>>> out nameOutputs: { ";
+      LOG_TRACEV_RAW << ">>>> out nameOutputs: { ";
       for (uint32_t i = 0; i < *numOutputs; i++) {
-        LOG_TRACEV << static_cast<const char*>((*nameOutputs)[i])
-                   << ((i < *numOutputs - 1) ? ", " : " }\n");
+        LOG_TRACEV_RAW << static_cast<const char*>((*nameOutputs)[i])
+                       << ((i < *numOutputs - 1) ? ", " : " }\n");
       }
     }
   }

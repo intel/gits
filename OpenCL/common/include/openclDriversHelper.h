@@ -399,28 +399,28 @@ class Tracer {
 public:
   template <class T>
   NOINLINE static void TraceRet(T r) {
-    LOG_TRACE << " = " << r << std::endl;
+    LOG_TRACE_RAW << " = " << r << std::endl;
   }
 
   template <class T>
   NOINLINE static void TraceRet(T* r) {
     if (r == nullptr) {
-      LOG_TRACE << " = nullptr" << std::endl;
+      LOG_TRACE_RAW << " = nullptr" << std::endl;
     } else {
 #ifdef GITS_PLATFORM_LINUX
-      LOG_TRACE << " = " << r << std::endl;
+      LOG_TRACE_RAW << " = " << r << std::endl;
 #else
-      LOG_TRACE << " = 0x" << r << std::endl;
+      LOG_TRACE_RAW << " = 0x" << r << std::endl;
 #endif
     }
   }
 
   NOINLINE static void TraceRet(cl_int r) {
-    LOG_TRACE << " = " << CLResultToString(r) << std::endl;
+    LOG_TRACE_RAW << " = " << CLResultToString(r) << std::endl;
   }
 
   NOINLINE static void TraceRet(void_t r) {
-    LOG_TRACE << std::endl;
+    LOG_TRACE_RAW << std::endl;
   }
 };
 } // namespace OpenCL

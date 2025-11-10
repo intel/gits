@@ -1317,19 +1317,18 @@ uintptr_t GetPointerDifference(void* ptrRegion, void* ptrStart) {
 }
 
 void Log_clGitsIndirectAllocationOffsets(void* pAlloc, uint32_t numOffsets, size_t* pOffsets) {
-  LOG_FORMAT_RAW
-  LOG_TRACE << LOG_PREFIX << "clGitsIndirectAllocationOffsets(";
-  LOG_TRACE << pAlloc << ", ";
-  LOG_TRACE << numOffsets << ", ";
+  LOG_TRACE_RAW << LOG_PREFIX << "clGitsIndirectAllocationOffsets(";
+  LOG_TRACE_RAW << pAlloc << ", ";
+  LOG_TRACE_RAW << numOffsets << ", ";
   if (numOffsets > 0) {
-    LOG_TRACE << "{";
+    LOG_TRACE_RAW << "{";
     for (uint32_t i = 0U; i < numOffsets; i++) {
-      LOG_TRACE << pOffsets[i] << (i + 1U < numOffsets ? ", " : "}");
+      LOG_TRACE_RAW << pOffsets[i] << (i + 1U < numOffsets ? ", " : "}");
     }
   } else {
-    LOG_TRACE << pOffsets;
+    LOG_TRACE_RAW << pOffsets;
   }
-  LOG_TRACE << ")" << std::endl;
+  LOG_TRACE_RAW << ")" << std::endl;
 }
 
 std::vector<uint64_t> HashBinaryData(const size_t& n,

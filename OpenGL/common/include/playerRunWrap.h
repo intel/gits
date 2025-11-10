@@ -56,8 +56,7 @@ inline void glProgramStringARB_WRAPRUN(CGLenum& target,
   drv.gl.glProgramStringARB(*target, *format, (GLsizei)string.Text().size(), *string);
   if (log::ShouldLog(LogLevel::TRACE)) {
     std::string file_name = string.GetShaderFileName();
-    LOG_FORMAT_RAW
-    LOG_TRACE << "code: " << file_name << "  ";
+    LOG_TRACE_RAW << "code: " << file_name << "  ";
   }
 }
 
@@ -606,8 +605,7 @@ inline void glShaderSource_WRAPRUN(CGLProgram& shader,
   glShaderSource_SD(*shader, *count, *string, *length);
   if (log::ShouldLog(LogLevel::TRACE)) {
     std::string file_name = string.GetShaderFileName();
-    LOG_FORMAT_RAW
-    LOG_TRACE << "code: " << file_name << "  ";
+    LOG_TRACE_RAW << "code: " << file_name << "  ";
     if (*shader != 0 && log::ShouldLog(LogLevel::TRACEV)) {
       SD().GetCurrentSharedStateData().GLSLShaders().Get(*shader)->SetShaderName(file_name);
     }
@@ -621,8 +619,7 @@ inline void glShaderSourceARB_WRAPRUN(CGLProgram& shaderObj,
   glShaderSource_SD(*shaderObj, *count, *string, *length);
   if (log::ShouldLog(LogLevel::TRACE)) {
     std::string file_name = string.GetShaderFileName();
-    LOG_FORMAT_RAW
-    LOG_TRACE << "code: " << file_name << "  ";
+    LOG_TRACE_RAW << "code: " << file_name << "  ";
     if (*shaderObj != 0 && log::ShouldLog(LogLevel::TRACEV)) {
       SD().GetCurrentSharedStateData().GLSLShaders().Get(*shaderObj)->SetShaderName(file_name);
     }
@@ -637,8 +634,7 @@ inline void glCreateShaderProgramv_WRAPRUN(CGLProgram& return_value,
   glCreateShaderProgramv_SD(*return_value, *type, 1, *strings);
   if (log::ShouldLog(LogLevel::TRACE)) {
     std::string file_name = strings.GetShaderFileName();
-    LOG_FORMAT_RAW
-    LOG_TRACE << "code: " << file_name << "  ";
+    LOG_TRACE_RAW << "code: " << file_name << "  ";
   }
 }
 inline void glCreateShaderProgramvEXT_WRAPRUN(CGLProgram& return_value,
@@ -649,8 +645,7 @@ inline void glCreateShaderProgramvEXT_WRAPRUN(CGLProgram& return_value,
   glCreateShaderProgramv_SD(*return_value, *type, 1, *strings);
   if (log::ShouldLog(LogLevel::TRACE)) {
     std::string file_name = strings.GetShaderFileName();
-    LOG_FORMAT_RAW
-    LOG_TRACE << "code: " << file_name << "  ";
+    LOG_TRACE_RAW << "code: " << file_name << "  ";
   }
 }
 inline void glGetCompressedTexImage_WRAPRUN(CGLenum& target, CGLint& level, CGLvoid_ptr& img) {

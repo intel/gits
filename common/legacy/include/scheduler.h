@@ -53,7 +53,6 @@ private:
 
   CTokenList::iterator _nextToPlay;
   unsigned _tokenLimit;
-  uint64_t _checkpointSize;
   bool _streamExhausted;
 
   CBinOStream* _oBinStream;

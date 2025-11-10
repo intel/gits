@@ -100,8 +100,7 @@ int __ocloccall special_oclocInvoke(unsigned int argc,
       auto L = CGits::Instance().GetLua().get();
       bool exists = gits::lua::FunctionExists("oclocInvoke", L);
       if (exists) {
-        LOG_FORMAT_RAW
-        LOG_TRACE << " Lua begin" << std::endl;
+        LOG_TRACE_RAW << " Lua begin" << std::endl;
         lua_getglobal(L, "oclocInvoke");
         gits::lua::lua_push(L, argc);
         lua_push_ext(L, argv, argc, true);
@@ -122,7 +121,7 @@ int __ocloccall special_oclocInvoke(unsigned int argc,
         }
         call_orig = false;
         lua_pop(L, lua_gettop(L));
-        LOG_TRACE << "Lua End" << std::endl;
+        LOG_TRACE_RAW << "Lua End" << std::endl;
       }
     }
   }
@@ -174,8 +173,7 @@ int __ocloccall special_oclocFreeOutput(uint32_t* numOutputs,
       auto L = CGits::Instance().GetLua().get();
       bool exists = gits::lua::FunctionExists("oclocFreeOutput", L);
       if (exists) {
-        LOG_FORMAT_RAW
-        LOG_TRACE << " Lua begin" << std::endl;
+        LOG_TRACE_RAW << " Lua begin" << std::endl;
         lua_getglobal(L, "oclocFreeOutput");
         lua_pushlightuserdata(L, (void*)numOutputs);
         lua_pushlightuserdata(L, (void*)dataOutputs);
@@ -186,16 +184,15 @@ int __ocloccall special_oclocFreeOutput(uint32_t* numOutputs,
         }
         call_orig = false;
         lua_pop(L, lua_gettop(L));
-        LOG_TRACE << "Lua End" << std::endl;
+        LOG_TRACE_RAW << "Lua End" << std::endl;
       }
     }
   }
-  LOG_FORMAT_RAW
-  LOG_TRACE << LOG_PREFIX << "oclocFreeOutput()";
+  LOG_TRACE_RAW << LOG_PREFIX << "oclocFreeOutput()";
   if (call_orig) {
     ret = drv.orig_oclocFreeOutput(numOutputs, dataOutputs, lenOutputs, nameOutputs);
   }
-  LOG_TRACE << " = " << ret << std::endl;
+  LOG_TRACE_RAW << " = " << ret << std::endl;
   return ret;
 }
 

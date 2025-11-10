@@ -525,17 +525,17 @@ def make_argument_log_code(argument: Argument, count_is_a_pointer: bool) -> str:
         result += inspect.cleandoc(f'''
             ;
                 if ({additional_conditions}) {{
-                  LOG_TRACE << "{{";
+                  LOG_TRACE_RAW << "{{";
                   for (uint32_t i = 0; i < (uint32_t){dereference}{argument.count}; ++i) {{
-                    LOG_TRACE << " [" << i << "]:" << ToStr({type_cast}{argument.name}[i]);
+                    LOG_TRACE_RAW << " [" << i << "]:" << ToStr({type_cast}{argument.name}[i]);
                   }}
-                  LOG_TRACE << " }}";
+                  LOG_TRACE_RAW << " }}";
                 }} else {{
-                  LOG_TRACE << "{{ 0 }}";
+                  LOG_TRACE_RAW << "{{ 0 }}";
                 }}
             ''')
         result += '\n'
-        result += '    LOG_TRACE << '
+        result += '    LOG_TRACE_RAW << '
     else:
         result += f' << ToStr({type_cast}{argument.name}) << '
 

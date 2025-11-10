@@ -26,29 +26,6 @@
 #endif
 
 namespace plog {
-
-std::atomic<bool> FormatRawScope::s_isRaw = false;
-std::recursive_mutex FormatRawScope::s_mutex = {};
-unsigned FormatRawScope::s_refCount = 0;
-
-FormatRawScope::FormatRawScope() : lock_(s_mutex) {
-  if (s_refCount == 0) {
-    s_isRaw = true;
-  }
-  ++s_refCount;
-}
-
-FormatRawScope::~FormatRawScope() {
-  --s_refCount;
-  if (s_refCount == 0) {
-    s_isRaw = false;
-  }
-}
-
-bool FormatRawScope::IsRaw() {
-  return s_isRaw;
-}
-
 util::nstring LogPrefix(plog::Severity severity) {
   auto toStr = [](plog::Severity severity) {
     switch (severity) {
@@ -70,8 +47,8 @@ util::nstring LogPrefix(plog::Severity severity) {
   };
 
   auto now = std::chrono::system_clock::now();
-  auto timeT = std::chrono::system_clock::to_time_t(now);
   auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) % 1000;
+  auto timeT = std::chrono::system_clock::to_time_t(now);
 
   // Print formatted date and time on a pre-allocated buffer
   char buffer[32];
@@ -92,10 +69,11 @@ public:
 
   static util::nstring format(const Record& record) {
     util::nostringstream ss;
-    if (FormatRawScope::IsRaw()) {
+    if (record.getInstanceId() == GITS_LOG_INSTANCE_ID_RAW) {
+      // RAW trace logging: Do not add prefix or endl
       ss << record.getMessage();
     } else {
-      ss << LogPrefix(record.getSeverity()) << record.getMessage() << "\n";
+      ss << LogPrefix(record.getSeverity()) << record.getMessage() << std::endl;
     }
     return ss.str();
   }
@@ -111,7 +89,9 @@ static plog::DynamicAppender dynamicAppender;
 } // namespace
 
 void SetMaxSeverity(gits::LogLevel lvl) {
-  plog::get()->setMaxSeverity(GetSeverity(lvl));
+  auto severity = GetSeverity(lvl);
+  plog::get()->setMaxSeverity(severity);
+  plog::get<GITS_LOG_INSTANCE_ID_RAW>()->setMaxSeverity(severity);
 }
 
 plog::Severity GetSeverity(gits::LogLevel lvl) {
@@ -143,10 +123,14 @@ void Initialize(plog::Severity severity) {
   static plog::DebugOutputAppender<plog::MessageOnlyFormatter> debugAppender;
   plog::get()->addAppender(&debugAppender);
 #endif
+
+  // Instance used for RAW trace formatting
+  plog::init<GITS_LOG_INSTANCE_ID_RAW>(severity, plog::get());
 }
 
 void Initialize(plog::Severity severity, plog::IAppender* appender) {
   plog::init(severity, appender);
+  plog::init<GITS_LOG_INSTANCE_ID_RAW>(severity, appender);
 }
 
 void AddConsoleAppender() {
