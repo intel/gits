@@ -2821,57 +2821,6 @@ inline void vkCmdBuildAccelerationStructuresKHR_SD(
   }
 }
 
-inline void vkCmdBuildMicromapsEXT_SD(VkCommandBuffer cmdBuf,
-                                      uint32_t infoCount,
-                                      const VkMicromapBuildInfoEXT* pInfos) {
-  if (!Configurator::IsRecorder()) {
-    return;
-  }
-
-  CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
-
-  auto& cmdBufState = SD()._commandbufferstates[cmdBuf];
-  auto device = cmdBufState->commandPoolStateStore->deviceStateStore->deviceHandle;
-
-  for (uint32_t mm = 0; mm < infoCount; ++mm) {
-    auto* pBuildInfo = &pInfos[mm];
-    auto& mmState = SD()._micromapextstates[pBuildInfo->dstMicromap];
-
-    if (isSubcaptureBeforeRestorationPhase()) {
-      drvVk.vkGetMicromapBuildSizesEXT(device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR,
-                                       pBuildInfo, &mmState->buildSizeInfo);
-    }
-
-    if (pBuildInfo->mode == VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR) {
-      // Full micromap build
-      mmState->buildInfo.reset(new CMicromapEXTState::CBuildInfo(
-          pBuildInfo, prepareAccelerationStructureControlData(cmdBuf)));
-      mmState->copyInfo.reset();
-    }
-  }
-
-  if (!(updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase())) {
-    return;
-  }
-
-  auto& bindingBuffers = SD().bindingBuffers[cmdBuf];
-  auto addBindingBuffer = [&bindingBuffers](VkDeviceAddress deviceAddress) {
-    if (deviceAddress != 0) {
-      auto buffer = findBufferFromDeviceAddress(deviceAddress);
-      insertStateIfFound(SD()._bufferstates, buffer, bindingBuffers);
-    }
-  };
-
-  for (uint32_t mm = 0; mm < infoCount; ++mm) {
-    auto* pBuildInfo = &pInfos[mm];
-
-    insertStateIfFound(SD()._micromapextstates, pBuildInfo->dstMicromap, bindingBuffers);
-    addBindingBuffer(pBuildInfo->data.deviceAddress);
-    addBindingBuffer(pBuildInfo->scratchData.deviceAddress);
-    addBindingBuffer(pBuildInfo->triangleArray.deviceAddress);
-  }
-}
-
 inline void vkCopyAccelerationStructureKHR_SD(VkResult return_value,
                                               VkDevice device,
                                               VkDeferredOperationKHR deferredOperation,
@@ -2930,6 +2879,71 @@ inline void vkDestroyMicromapEXT_SD(VkDevice device,
                                     const VkAllocationCallbacks* pAllocator) {
   if (micromap != VK_NULL_HANDLE) {
     SD()._micromapextstates.erase(micromap);
+  }
+}
+
+inline void vkCmdBuildMicromapsEXT_SD(VkCommandBuffer cmdBuf,
+                                      uint32_t infoCount,
+                                      const VkMicromapBuildInfoEXT* pInfos) {
+  if (!Configurator::IsRecorder()) {
+    return;
+  }
+
+  CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
+
+  auto& cmdBufState = SD()._commandbufferstates[cmdBuf];
+  auto device = cmdBufState->commandPoolStateStore->deviceStateStore->deviceHandle;
+
+  for (uint32_t mm = 0; mm < infoCount; ++mm) {
+    auto* pBuildInfo = &pInfos[mm];
+    auto& mmState = SD()._micromapextstates[pBuildInfo->dstMicromap];
+
+    if (isSubcaptureBeforeRestorationPhase()) {
+      drvVk.vkGetMicromapBuildSizesEXT(device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR,
+                                       pBuildInfo, &mmState->buildSizeInfo);
+    }
+
+    if (pBuildInfo->mode == VK_BUILD_MICROMAP_MODE_BUILD_EXT) {
+      // Full micromap build
+      mmState->buildInfo.reset(new CMicromapEXTState::CBuildInfo(
+          pBuildInfo, prepareAccelerationStructureControlData(cmdBuf)));
+      mmState->copyInfo.reset();
+    }
+  }
+
+  if (!(updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase())) {
+    return;
+  }
+
+  auto& bindingBuffers = SD().bindingBuffers[cmdBuf];
+  auto addBindingBuffer = [&bindingBuffers](VkDeviceAddress deviceAddress) {
+    if (deviceAddress != 0) {
+      auto buffer = findBufferFromDeviceAddress(deviceAddress);
+      insertStateIfFound(SD()._bufferstates, buffer, bindingBuffers);
+    }
+  };
+
+  for (uint32_t mm = 0; mm < infoCount; ++mm) {
+    auto* pBuildInfo = &pInfos[mm];
+
+    insertStateIfFound(SD()._micromapextstates, pBuildInfo->dstMicromap, bindingBuffers);
+    addBindingBuffer(pBuildInfo->data.deviceAddress);
+    addBindingBuffer(pBuildInfo->scratchData.deviceAddress);
+    addBindingBuffer(pBuildInfo->triangleArray.deviceAddress);
+  }
+}
+
+inline void vkCmdCopyMicromapEXT_SD(VkCommandBuffer cmdBuf, const VkCopyMicromapInfoEXT* pInfo) {
+  if (Configurator::IsRecorder() && CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture()) {
+    const auto& srcMicromapState = SD()._micromapextstates[pInfo->src];
+    auto& dstMicromapState = SD()._micromapextstates[pInfo->dst];
+
+    dstMicromapState->buildInfo.reset();
+    dstMicromapState->copyInfo.reset(new CMicromapEXTState::CCopyInfo(pInfo, srcMicromapState));
+    dstMicromapState->buildSizeInfo = srcMicromapState->buildSizeInfo;
+
+    auto& cmdBufState = SD()._commandbufferstates[cmdBuf];
+    cmdBufState->touchedResources.emplace_back((uint64_t)pInfo->dst, ResourceType::MICROMAP);
   }
 }
 
@@ -3001,6 +3015,11 @@ inline void vkQueueSubmit_setTimestamps(std::shared_ptr<CCommandBufferState>& co
       case ResourceType::ACCELERATION_STRUCTURE: {
         SD()._accelerationstructurekhrstates[(VkAccelerationStructureKHR)touchedResource.first]
             ->timestamp = SD().internalResources.timestamp + i;
+        break;
+      }
+      case ResourceType::MICROMAP: {
+        SD()._micromapextstates[(VkMicromapEXT)touchedResource.first]->timestamp =
+            SD().internalResources.timestamp + i;
         break;
       }
       }

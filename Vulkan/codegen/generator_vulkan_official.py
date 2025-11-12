@@ -641,7 +641,7 @@ arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pInfo', type='const VkCopyMemoryToMicromapInfoEXT*')
 )
 
-Function(name='vkCmdCopyMicromapEXT', enabled=False, type=FuncType.PARAM,
+Function(name='vkCmdCopyMicromapEXT', enabled=True, type=FuncType.BLIT, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pInfo', type='const VkCopyMicromapInfoEXT*')
