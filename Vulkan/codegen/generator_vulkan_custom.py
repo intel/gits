@@ -132,15 +132,20 @@ var2=VarDef(name='patchedValue', type='VkBufferDeviceAddressGITS')
 )
 
 Struct(name='VkAccelerationStructureBuildControlDataGITS_', enabled=False,
-var1=VarDef(name='buildCommandIndex', type='uint32_t'),
-var2=VarDef(name='commandBuffer', type='VkCommandBuffer'),
-var3=VarDef(name='executionSide', type='VkCommandExecutionSideGITS')
+var1=VarDef(name='commandBuffer', type='VkCommandBuffer'),
+var2=VarDef(name='executionSide', type='VkCommandExecutionSideGITS')
+)
+
+Struct(name='VkOpacityMicromapCustomDataGITS_', enabled=False,
+var1=VarDef(name='primitiveCount', type='uint32_t'),
+var2=VarDef(name='controlData', type='const VkAccelerationStructureBuildControlDataGITS&')
 )
 
 Struct(name='VkStructStoragePointerGITS_', enabled=False,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
-var3=VarDef(name='pStructStorage', type='const void*')
+var3=VarDef(name='sStructStorageType', type='VkStructureType'),
+var4=VarDef(name='pStructStorage', type='const void*')
 )
 
 Struct(name='VkOriginalShaderGroupHandlesGITS_', enabled=True,

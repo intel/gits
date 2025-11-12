@@ -554,7 +554,7 @@ class CVkGenericArgumentData : gits::noncopyable {
   std::unique_ptr<CBaseDataStruct> _argument;
 
 public:
-  CVkGenericArgumentData(const void* vkgenericargumentdata);
+  CVkGenericArgumentData(const void* pVkGenericArgumentData, const void* pCustomData = nullptr);
 
   const void* Value();
   struct PtrConverter {
@@ -790,8 +790,8 @@ class CpNextWrapperData {
   std::shared_ptr<CVkGenericArgumentData> _ptr;
 
 public:
-  CpNextWrapperData(const void* srcpNext)
-      : _ptr(std::make_shared<CVkGenericArgumentData>(srcpNext)) {}
+  CpNextWrapperData(const void* pNext, const void* pCustomData = nullptr)
+      : _ptr(std::make_shared<CVkGenericArgumentData>(pNext, pCustomData)) {}
   const void* Value() {
     if (_ptr) {
       return _ptr->Value();

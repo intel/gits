@@ -64,6 +64,7 @@ struct CQueryPoolState;
 struct CCommandBufferState;
 struct CDeferredOperationKHRState;
 struct CAccelerationStructureKHRState;
+struct CMicromapEXTState;
 struct CQueueSubmitState;
 struct CMemoryUpdateState;
 
@@ -1588,7 +1589,6 @@ struct CAccelerationStructureKHRState : public UniqueResourceHandle {
   uint64_t timestamp;
 
   static std::unordered_map<VkDeviceAddress, VkAccelerationStructureKHR> deviceAddresses;
-  static uint32_t globalAccelerationStructureBuildCommandIndex; // used for generating hashes
 
   CAccelerationStructureKHRState(VkAccelerationStructureKHR const* _pAccelerationStructure,
                                  VkAccelerationStructureCreateInfoKHR const* _pCreateInfo,
@@ -1597,8 +1597,15 @@ struct CAccelerationStructureKHRState : public UniqueResourceHandle {
         accelerationStructureCreateInfoData(_pCreateInfo),
         deviceAddress(0),
         bufferStateStore(_bufferState),
-        buildSizeInfo{},
-        timestamp(0) {}
+        timestamp(0) {
+    buildSizeInfo = {
+        VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR, // VkStructureType sType;
+        nullptr,                                                       // const void* pNext;
+        0, // VkDeviceSize accelerationStructureSize;
+        0, // VkDeviceSize updateScratchSize;
+        0  // VkDeviceSize buildScratchSize;
+    };
+  }
 
   std::set<uint64_t> GetMappedPointers() {
     std::set<uint64_t> pointers;
@@ -1607,6 +1614,61 @@ struct CAccelerationStructureKHRState : public UniqueResourceHandle {
       pointers.insert((uint64_t)obj);
     }
     for (auto obj : accelerationStructureCreateInfoData.GetMappedPointers()) {
+      pointers.insert((uint64_t)obj);
+    }
+    return pointers;
+  }
+};
+
+// Opacity micromap
+
+struct CMicromapEXTState : public UniqueResourceHandle {
+  struct CBuildInfo {
+    CVkMicromapBuildInfoEXTData micromapBuildInfoData;
+    VkAccelerationStructureBuildControlDataGITS controlData;
+
+    CBuildInfo(const VkMicromapBuildInfoEXT* _pMicromapBuildInfo,
+               VkAccelerationStructureBuildControlDataGITS _controlData)
+        : micromapBuildInfoData(_pMicromapBuildInfo, _controlData), controlData(_controlData) {}
+  };
+
+  struct CCopyInfo {
+    std::shared_ptr<CMicromapEXTState> srcMicromapStateStore;
+    CVkCopyMicromapInfoEXTData copyMicromapInfoData;
+
+    CCopyInfo(const VkCopyMicromapInfoEXT* _pCopyInfo,
+              const std::shared_ptr<CMicromapEXTState>& _srcMicromapState)
+        : srcMicromapStateStore(_srcMicromapState), copyMicromapInfoData(_pCopyInfo) {}
+  };
+
+  VkMicromapEXT micromapHandle;
+  CVkMicromapCreateInfoEXTData micromapCreateInfoData;
+  std::shared_ptr<CBufferState> bufferStateStore;
+  std::shared_ptr<CBuildInfo> buildInfo;
+  std::shared_ptr<CCopyInfo> copyInfo;
+  VkMicromapBuildSizesInfoEXT buildSizeInfo;
+  uint64_t timestamp;
+
+  CMicromapEXTState(VkMicromapEXT const* _pMicromap,
+                    VkMicromapCreateInfoEXT const* _pCreateInfo,
+                    std::shared_ptr<CBufferState>& _bufferState)
+      : micromapHandle(*_pMicromap),
+        micromapCreateInfoData(_pCreateInfo),
+        bufferStateStore(_bufferState),
+        timestamp(0) {
+    buildSizeInfo = {
+        VK_STRUCTURE_TYPE_MICROMAP_BUILD_SIZES_INFO_EXT, // VkStructureType sType;
+        nullptr,                                         // const void* pNext;
+        0,                                               // VkDeviceSize micromapSize;
+        0,                                               // VkDeviceSize buildScratchSize;
+        VK_FALSE                                         // VkBool32 discardable;
+    };
+  }
+
+  std::set<uint64_t> GetMappedPointers() {
+    std::set<uint64_t> pointers;
+    pointers.insert((uint64_t)bufferStateStore->bufferHandle);
+    for (auto obj : bufferStateStore->GetMappedPointers()) {
       pointers.insert((uint64_t)obj);
     }
     return pointers;
@@ -1828,6 +1890,7 @@ public:
   typedef std::unordered_map<VkAccelerationStructureKHR,
                              std::shared_ptr<CAccelerationStructureKHRState>>
       TAccelerationStructureKHRStates;
+  typedef std::unordered_map<VkMicromapEXT, std::shared_ptr<CMicromapEXTState>> TMicromapEXTStates;
 
   THWNDStates _hwndstates;
   TInstanceStates _instancestates;
@@ -1861,6 +1924,7 @@ public:
   TCommandBufferStates _commandbufferstates;
   TDeferredOperationKHRStates _deferredoperationkhrstates;
   TAccelerationStructureKHRStates _accelerationstructurekhrstates;
+  TMicromapEXTStates _micromapextstates;
 
   std::unordered_map<VkCommandBuffer, std::unordered_set<std::shared_ptr<CBufferState>>>
       bindingBuffers;

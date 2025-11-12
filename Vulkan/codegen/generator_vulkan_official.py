@@ -460,11 +460,11 @@ arg3=ArgDef(name='pInfos', type='const VkAccelerationStructureBuildGeometryInfoK
 arg4=ArgDef(name='ppBuildRangeInfos', type='const VkAccelerationStructureBuildRangeInfoKHR* const*', wrapType='CVkAccelerationStructureBuildRangeInfoKHRArrayOfArrays', wrapParams='getRayTracingArraySizes(infoCount, pInfos), ppBuildRangeInfos', count='infoCount')
 )
 
-Function(name='vkCmdBuildMicromapsEXT', enabled=False, type=FuncType.PARAM,
+Function(name='vkCmdBuildMicromapsEXT', enabled=True, type=FuncType.PARAM, stateTrack=True, recWrap=True, execPostRecWrap=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='infoCount', type='uint32_t'),
-arg3=ArgDef(name='pInfos', type='const VkMicromapBuildInfoEXT*')
+arg3=ArgDef(name='pInfos', type='const VkMicromapBuildInfoEXT*', wrapType='CVkMicromapBuildInfoEXTArray', wrapParams='infoCount, pInfos, prepareAccelerationStructureControlData(commandBuffer)', count='infoCount')
 )
 
 Function(name='vkCmdClearAttachments', enabled=True, type=FuncType.BLIT, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
@@ -2435,12 +2435,12 @@ arg4=ArgDef(name='pSurface', type='VkSurfaceKHR*')
 #arg4=ArgDef(name='pSurface', type='VkSurfaceKHR*')
 #)
 
-Function(name='vkCreateMicromapEXT', enabled=False, type=FuncType.PARAM,
+Function(name='vkCreateMicromapEXT', enabled=True, type=FuncType.PARAM, stateTrack=True,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='pCreateInfo', type='const VkMicromapCreateInfoEXT*'),
-arg3=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*'),
-arg4=ArgDef(name='pMicromap', type='VkMicromapEXT*')
+arg3=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*', wrapType='CNullWrapper'),
+arg4=ArgDef(name='pMicromap', type='VkMicromapEXT*', wrapType='CVkMicromapEXT::CSMapArray', wrapParams='1, pMicromap')
 )
 
 Function(name='vkCreateOpticalFlowSessionNV', enabled=False, type=FuncType.PARAM,
@@ -2909,11 +2909,11 @@ arg1=ArgDef(name='instance', type='VkInstance', removeMapping=True),
 arg2=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*', wrapType='CNullWrapper')
 )
 
-Function(name='vkDestroyMicromapEXT', enabled=False, type=FuncType.PARAM,
+Function(name='vkDestroyMicromapEXT', enabled=True, type=FuncType.PARAM, stateTrack=True,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='device', type='VkDevice'),
-arg2=ArgDef(name='micromap', type='VkMicromapEXT'),
-arg3=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*')
+arg2=ArgDef(name='micromap', type='VkMicromapEXT', removeMapping=True),
+arg3=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*', wrapType='CNullWrapper')
 )
 
 Function(name='vkDestroyOpticalFlowSessionNV', enabled=False, type=FuncType.PARAM,
@@ -9965,16 +9965,16 @@ var17=VarDef(name='ppUsageCounts', type='const VkMicromapUsageEXT* const*'),
 var18=VarDef(name='micromap', type='VkMicromapEXT')
 )
 
-Struct(name='VkAccelerationStructureTrianglesOpacityMicromapEXT_', enabled=False,
+Struct(name='VkAccelerationStructureTrianglesOpacityMicromapEXT_', enabled=True, passStructStorage=True, constructorWrap=True, constructorArgs='const VkAccelerationStructureTrianglesOpacityMicromapEXT* accelerationstructuretrianglesopacitymicromapext, const void* pCustomData',
 var1=VarDef(name='sType', type='VkStructureType'),
-var2=VarDef(name='pNext', type='void*'),
+var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='indexType', type='VkIndexType'),
 var4=VarDef(name='indexBuffer', type='VkDeviceOrHostAddressConstKHR'),
 var5=VarDef(name='indexStride', type='VkDeviceSize'),
 var6=VarDef(name='baseTriangle', type='uint32_t'),
 var7=VarDef(name='usageCountsCount', type='uint32_t'),
-var8=VarDef(name='pUsageCounts', type='const VkMicromapUsageEXT*'),
-var9=VarDef(name='ppUsageCounts', type='const VkMicromapUsageEXT* const*'),
+var8=VarDef(name='pUsageCounts', type='const VkMicromapUsageEXT*', wrapType='CVkMicromapUsageEXTArray'),
+var9=VarDef(name='ppUsageCounts', type='const VkMicromapUsageEXT* const*', wrapType='CVkMicromapUsageEXTArrayOfArrays'),
 var10=VarDef(name='micromap', type='VkMicromapEXT')
 )
 
@@ -10889,7 +10889,7 @@ var4=VarDef(name='dst', type='VkMicromapEXT'),
 var5=VarDef(name='mode', type='VkCopyMicromapModeEXT')
 )
 
-Struct(name='VkCopyMicromapInfoEXT_', enabled=False,
+Struct(name='VkCopyMicromapInfoEXT_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='src', type='VkMicromapEXT'),
@@ -13187,7 +13187,7 @@ var3=VarDef(name='memoryTypeBits', type='uint32_t')
 #var4=VarDef(name='pLayer', type='const CAMetalLayer*')
 #)
 
-Struct(name='VkMicromapBuildInfoEXT_', enabled=False,
+Struct(name='VkMicromapBuildInfoEXT_', enabled=True, declareArray=True, passStructStorage=True, constructorWrap=True, constructorArgs='const VkMicromapBuildInfoEXT* micromapbuildinfoext, VkAccelerationStructureBuildControlDataGITS controlData',
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='type', type='VkMicromapTypeEXT'),
@@ -13195,10 +13195,10 @@ var4=VarDef(name='flags', type='VkBuildMicromapFlagsEXT'),
 var5=VarDef(name='mode', type='VkBuildMicromapModeEXT'),
 var6=VarDef(name='dstMicromap', type='VkMicromapEXT'),
 var7=VarDef(name='usageCountsCount', type='uint32_t'),
-var8=VarDef(name='pUsageCounts', type='const VkMicromapUsageEXT*'),
-var9=VarDef(name='ppUsageCounts', type='const VkMicromapUsageEXT* const*'),
+var8=VarDef(name='pUsageCounts', type='const VkMicromapUsageEXT*', wrapType='CVkMicromapUsageEXTArray', wrapParams='micromapbuildinfoext->usageCountsCount, micromapbuildinfoext->pUsageCounts'),
+var9=VarDef(name='ppUsageCounts', type='const VkMicromapUsageEXT* const*', wrapType='CVkMicromapUsageEXTArrayOfArrays', wrapParams='micromapbuildinfoext->usageCountsCount, micromapbuildinfoext->ppUsageCounts'),
 var10=VarDef(name='data', type='VkDeviceOrHostAddressConstKHR'),
-var11=VarDef(name='scratchData', type='VkDeviceOrHostAddressKHR'),
+var11=VarDef(name='scratchData', type='VkDeviceOrHostAddressKHR', wrapParams='micromapbuildinfoext->scratchData, controlData'),
 var12=VarDef(name='triangleArray', type='VkDeviceOrHostAddressConstKHR'),
 var13=VarDef(name='triangleArrayStride', type='VkDeviceSize')
 )
@@ -13211,7 +13211,7 @@ var4=VarDef(name='buildScratchSize', type='VkDeviceSize'),
 var5=VarDef(name='discardable', type='VkBool32')
 )
 
-Struct(name='VkMicromapCreateInfoEXT_', enabled=False,
+Struct(name='VkMicromapCreateInfoEXT_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='createFlags', type='VkMicromapCreateFlagsEXT'),
@@ -13228,7 +13228,7 @@ var2=VarDef(name='subdivisionLevel', type='uint16_t'),
 var3=VarDef(name='format', type='uint16_t')
 )
 
-Struct(name='VkMicromapUsageEXT_', enabled=False,
+Struct(name='VkMicromapUsageEXT_', enabled=True, declareArray=True, declareArrayOfArrays=True,
 var1=VarDef(name='count', type='uint32_t'),
 var2=VarDef(name='subdivisionLevel', type='uint32_t'),
 var3=VarDef(name='format', type='uint32_t')
@@ -15043,7 +15043,7 @@ var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='nonSeamlessCubeMap', type='VkBool32')
 )
 
-Struct(name='VkPhysicalDeviceOpacityMicromapFeaturesEXT_', enabled=False,
+Struct(name='VkPhysicalDeviceOpacityMicromapFeaturesEXT_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='micromap', type='VkBool32'),

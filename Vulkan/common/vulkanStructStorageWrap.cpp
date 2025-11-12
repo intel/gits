@@ -32,6 +32,7 @@ gits::Vulkan::CVkAccelerationStructureGeometryAabbsDataKHRData::
       _baseIn = {
           VK_STRUCTURE_TYPE_STRUCT_STORAGE_POINTER_GITS,    // VkStructureType sType;
           accelerationstructuregeometryaabbsdatakhr->pNext, // const void* pNext;
+          accelerationstructuregeometryaabbsdatakhr->sType, // VkStructureType sStructStorageType
           this                                              // const void* pStructStorage
       };
       const_cast<VkAccelerationStructureGeometryAabbsDataKHR*>(
@@ -56,10 +57,12 @@ gits::Vulkan::CVkAccelerationStructureGeometryTrianglesDataKHRData::
       _AccelerationStructureGeometryTrianglesDataKHR(nullptr),
       _isNullPtr(accelerationstructuregeometrytrianglesdatakhr == nullptr) {
   if (!*_isNullPtr) {
+    VkOpacityMicromapCustomDataGITS ommCustomData = {buildRangeInfo.primitiveCount, controlData};
+
     _sType = std::make_unique<CVkStructureTypeData>(
         accelerationstructuregeometrytrianglesdatakhr->sType);
-    _pNext =
-        std::make_unique<CpNextWrapperData>(accelerationstructuregeometrytrianglesdatakhr->pNext);
+    _pNext = std::make_unique<CpNextWrapperData>(
+        accelerationstructuregeometrytrianglesdatakhr->pNext, &ommCustomData);
     _vertexFormat = std::make_unique<CVkFormatData>(
         accelerationstructuregeometrytrianglesdatakhr->vertexFormat);
     _vertexData = std::make_unique<CDeviceOrHostAddressAccelerationStructureVertexDataGITSData>(
@@ -88,7 +91,9 @@ gits::Vulkan::CVkAccelerationStructureGeometryTrianglesDataKHRData::
       _baseIn = {
           VK_STRUCTURE_TYPE_STRUCT_STORAGE_POINTER_GITS,        // VkStructureType sType;
           accelerationstructuregeometrytrianglesdatakhr->pNext, // const void* pNext;
-          this                                                  // const void* pStructStorage;
+          accelerationstructuregeometrytrianglesdatakhr
+              ->sType, // VkStructureType sStructStorageType
+          this         // const void* pStructStorage;
       };
       const_cast<VkAccelerationStructureGeometryTrianglesDataKHR*>(
           accelerationstructuregeometrytrianglesdatakhr)
@@ -140,12 +145,13 @@ gits::Vulkan::CVkAccelerationStructureBuildGeometryInfoKHRData::
     _scratchData = std::make_unique<CVkDeviceOrHostAddressKHRData>(
         accelerationstructurebuildgeometryinfokhr->scratchData, controlData);
 
-    // Pass data to vulkan arguments class (see VkAccelerationStructureBuildGeometryInfoKHR() constructor)
+    // Pass data to vulkan arguments class (see CVkAccelerationStructureBuildGeometryInfoKHR() constructor)
     if (!isSubcaptureBeforeRestorationPhase()) {
       _baseIn = {
           VK_STRUCTURE_TYPE_STRUCT_STORAGE_POINTER_GITS,    // VkStructureType sType;
           accelerationstructurebuildgeometryinfokhr->pNext, // const void* pNext;
-          this                                              // const void* pStructStorage;
+          VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR, // VkStructureType sStructStorageType;
+          this // const void* pStructStorage;
       };
       const_cast<VkAccelerationStructureBuildGeometryInfoKHR*>(
           accelerationstructurebuildgeometryinfokhr)
@@ -163,5 +169,129 @@ gits::Vulkan::CVkAccelerationStructureBuildGeometryInfoKHRData::
     _pGeometries = nullptr;
     _ppGeometries = nullptr;
     _scratchData = nullptr;
+  }
+}
+
+gits::Vulkan::CVkMicromapBuildInfoEXTData::CVkMicromapBuildInfoEXTData(
+    const VkMicromapBuildInfoEXT* micromapbuildinfoext,
+    VkAccelerationStructureBuildControlDataGITS controlData)
+    : _MicromapBuildInfoEXT(nullptr), _isNullPtr(micromapbuildinfoext == nullptr) {
+  if (!*_isNullPtr) {
+    uint64_t triangleArrayCount = 0;
+    if (micromapbuildinfoext->pUsageCounts) {
+      for (uint32_t i = 0; i < micromapbuildinfoext->usageCountsCount; ++i) {
+        triangleArrayCount += micromapbuildinfoext->pUsageCounts[i].count;
+      }
+    } else if (micromapbuildinfoext->ppUsageCounts) {
+      for (uint32_t i = 0; i < micromapbuildinfoext->usageCountsCount; ++i) {
+        triangleArrayCount += micromapbuildinfoext->ppUsageCounts[i]->count;
+      }
+    }
+    _sType = std::make_unique<CVkStructureTypeData>(micromapbuildinfoext->sType);
+    _pNext = std::make_unique<CpNextWrapperData>(micromapbuildinfoext->pNext);
+    _type = std::make_unique<CVkMicromapTypeEXTData>(micromapbuildinfoext->type);
+    _flags = std::make_unique<Cuint32_tData>(micromapbuildinfoext->flags);
+    _mode = std::make_unique<CVkBuildMicromapModeEXTData>(micromapbuildinfoext->mode);
+    _dstMicromap = std::make_unique<CVkMicromapEXTData>(micromapbuildinfoext->dstMicromap);
+    _usageCountsCount = std::make_unique<Cuint32_tData>(micromapbuildinfoext->usageCountsCount);
+    _pUsageCounts = std::make_unique<CVkMicromapUsageEXTDataArray>(
+        micromapbuildinfoext->usageCountsCount, micromapbuildinfoext->pUsageCounts);
+    _ppUsageCounts = std::make_unique<CVkMicromapUsageEXTDataArrayOfArrays>(
+        micromapbuildinfoext->usageCountsCount, micromapbuildinfoext->ppUsageCounts);
+    _data = std::make_unique<CVkDeviceOrHostAddressConstKHRData>(micromapbuildinfoext->data, 0, 1,
+                                                                 1, controlData);
+    _scratchData = std::make_unique<CVkDeviceOrHostAddressKHRData>(
+        micromapbuildinfoext->scratchData, controlData);
+    _triangleArray = std::make_unique<CVkDeviceOrHostAddressConstKHRData>(
+        micromapbuildinfoext->triangleArray, 0, micromapbuildinfoext->triangleArrayStride,
+        triangleArrayCount, controlData);
+    _triangleArrayStride =
+        std::make_unique<Cuint64_tData>(micromapbuildinfoext->triangleArrayStride);
+
+    // Pass data to vulkan arguments class (see CVkMicromapBuildInfoEXT() constructor)
+    if (!isSubcaptureBeforeRestorationPhase()) {
+      _baseIn = {
+          VK_STRUCTURE_TYPE_STRUCT_STORAGE_POINTER_GITS, // VkStructureType sType;
+          micromapbuildinfoext->pNext,                   // const void* pNext;
+          VK_STRUCTURE_TYPE_MICROMAP_BUILD_INFO_EXT,     // VkStructureType sStructStorageType;
+          this                                           // const void* pStructStorage;
+      };
+      const_cast<VkMicromapBuildInfoEXT*>(micromapbuildinfoext)->pNext = &_baseIn;
+    }
+  } else {
+    _sType = nullptr;
+    _pNext = nullptr;
+    _type = nullptr;
+    _flags = nullptr;
+    _mode = nullptr;
+    _dstMicromap = nullptr;
+    _usageCountsCount = nullptr;
+    _pUsageCounts = nullptr;
+    _ppUsageCounts = nullptr;
+    _data = nullptr;
+    _scratchData = nullptr;
+    _triangleArray = nullptr;
+    _triangleArrayStride = nullptr;
+  }
+}
+
+gits::Vulkan::CVkAccelerationStructureTrianglesOpacityMicromapEXTData::
+    CVkAccelerationStructureTrianglesOpacityMicromapEXTData(
+        const VkAccelerationStructureTrianglesOpacityMicromapEXT*
+            accelerationstructuretrianglesopacitymicromapext,
+        const void* pCustomData)
+    : _AccelerationStructureTrianglesOpacityMicromapEXT(nullptr),
+      _isNullPtr(accelerationstructuretrianglesopacitymicromapext == nullptr) {
+  if (!*_isNullPtr) {
+    auto& ommCustomData = *(VkOpacityMicromapCustomDataGITS*)pCustomData;
+
+    _sType = std::make_unique<CVkStructureTypeData>(
+        accelerationstructuretrianglesopacitymicromapext->sType);
+    _pNext = std::make_unique<CpNextWrapperData>(
+        accelerationstructuretrianglesopacitymicromapext->pNext, &ommCustomData);
+    _indexType = std::make_unique<CVkIndexTypeData>(
+        accelerationstructuretrianglesopacitymicromapext->indexType);
+    _indexBuffer = std::make_unique<CVkDeviceOrHostAddressConstKHRData>(
+        accelerationstructuretrianglesopacitymicromapext->indexBuffer, 0,
+        accelerationstructuretrianglesopacitymicromapext->indexStride, ommCustomData.primitiveCount,
+        ommCustomData.controlData);
+    _indexStride = std::make_unique<Cuint64_tData>(
+        accelerationstructuretrianglesopacitymicromapext->indexStride);
+    _baseTriangle = std::make_unique<Cuint32_tData>(
+        accelerationstructuretrianglesopacitymicromapext->baseTriangle);
+    _usageCountsCount = std::make_unique<Cuint32_tData>(
+        accelerationstructuretrianglesopacitymicromapext->usageCountsCount);
+    _pUsageCounts = std::make_unique<CVkMicromapUsageEXTDataArray>(
+        accelerationstructuretrianglesopacitymicromapext->usageCountsCount,
+        accelerationstructuretrianglesopacitymicromapext->pUsageCounts);
+    _ppUsageCounts = std::make_unique<CVkMicromapUsageEXTDataArrayOfArrays>(
+        accelerationstructuretrianglesopacitymicromapext->usageCountsCount,
+        accelerationstructuretrianglesopacitymicromapext->ppUsageCounts);
+    _micromap = std::make_unique<CVkMicromapEXTData>(
+        accelerationstructuretrianglesopacitymicromapext->micromap);
+
+    // Pass data to vulkan arguments class (see CVkAccelerationStructureBuildGeometryInfoKHR() constructor)
+    if (!isSubcaptureBeforeRestorationPhase()) {
+      _baseIn = {
+          VK_STRUCTURE_TYPE_STRUCT_STORAGE_POINTER_GITS,           // VkStructureType sType;
+          accelerationstructuretrianglesopacitymicromapext->pNext, // const void* pNext;
+          VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_TRIANGLES_OPACITY_MICROMAP_EXT, // VkStructureType sStructStorageType;
+          this // const void* pStructStorage;
+      };
+      const_cast<VkAccelerationStructureTrianglesOpacityMicromapEXT*>(
+          accelerationstructuretrianglesopacitymicromapext)
+          ->pNext = &_baseIn;
+    }
+  } else {
+    _sType = nullptr;
+    _pNext = nullptr;
+    _indexType = nullptr;
+    _indexBuffer = nullptr;
+    _indexStride = nullptr;
+    _baseTriangle = nullptr;
+    _usageCountsCount = nullptr;
+    _pUsageCounts = nullptr;
+    _ppUsageCounts = nullptr;
+    _micromap = nullptr;
   }
 }

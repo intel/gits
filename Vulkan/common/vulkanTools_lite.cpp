@@ -1385,11 +1385,25 @@ const void* getPNextStructure(const void* pNext, VkStructureType structureType) 
   const VkBaseInStructure* pNextPtr = (const VkBaseInStructure*)pNext;
   while (pNextPtr != nullptr) {
     if (pNextPtr->sType == structureType) {
-      break;
+      return pNextPtr;
     }
     pNextPtr = (const VkBaseInStructure*)pNextPtr->pNext;
   }
-  return pNextPtr;
+  return nullptr;
+}
+
+const void* getStructStoragePointer(const void* pNext, VkStructureType structureType) {
+  const VkBaseInStructure* pNextPtr = (const VkBaseInStructure*)pNext;
+  while (pNextPtr != nullptr) {
+    if (pNextPtr->sType == VK_STRUCTURE_TYPE_STRUCT_STORAGE_POINTER_GITS) {
+      const auto* pStructPtr = (const VkStructStoragePointerGITS*)pNextPtr;
+      if (pStructPtr->sStructStorageType == structureType) {
+        return pStructPtr->pStructStorage;
+      }
+    }
+    pNextPtr = (const VkBaseInStructure*)pNextPtr->pNext;
+  }
+  return nullptr;
 }
 
 bool isImagePresentable(const VkImageCreateInfo* pCreateInfo) {

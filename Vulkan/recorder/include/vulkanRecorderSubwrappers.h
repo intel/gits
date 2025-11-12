@@ -1284,53 +1284,21 @@ void vkCmdBuildAccelerationStructuresKHR_RECWRAP(
     const VkAccelerationStructureBuildGeometryInfoKHR* pInfos,
     const VkAccelerationStructureBuildRangeInfoKHR* const* ppBuildRangeInfos,
     CRecorder& recorder) {
-  // When capture/replay features are used, all the device addresses are supposed to remain unchanged,
-  // even during replay, so they don't need to be updated and we don't need to do anything with them...
-  //
-  // unless substreams are recorded. State restoration phase of substream requires contents of input
-  // buffers to be kept for each acceleration structure so building commands can be recreated.
-  //
-  // But when capture/replay features are NOT used and/or when substreams are being recorded, then
-  // metadata for all the device addresses needs to be prepared as well so it is possible to update,
-  // recreate those addresses during a stream replay. Single metadata contains:
-  // - original device address value
-  // - a handle of a buffer from which a device address was retrieved
-  // - an offset from the beggining of a buffer
-  //
-  // How this metadata is acquired depends on the origins of each device address. In most cases, device
-  // addresses point directly to a buffer so metadata acquisition is straightforward - GITS just needs
-  // to find a resource associated with a provided address. But in case of vertex data - final device
-  // address depends also on a value of a vertex index which is added to the base device address.
-  // That's why a vertex index needs to be retrieved before the buffer can be found from the specified
-  // address. The index is copied and the final device address calculations are performed on a CPU -
-  // - acquired vertex index is multiplied by a vertex stride and added to the base device address;
-  // this value is then used to find a source buffer with a vertex data.
-  //
-  // Another exception is an instance data buffer provided for building top-level acceleration structures.
-  // This buffer contains device addresses of all bottom-level acceleration structures built into the TLAS.
-  // When capture/replay features are not used, GITS needs to translate/update those device addresses during
-  // stream replay, so first it needs to gather information about handles of all the bottom-level acceleration
-  // structures. In order to do this, it needs to copy instance data buffer contents from memory locations
-  // pointed to by a device address and then look through it. The buffer contains device addresses, so
-  // acceleration structures associated with them need to be find and their handles need to be acquired.
-
   vkCmdBuildAccelerationStructuresKHR_SD(cmdBuf, infoCount, pInfos, ppBuildRangeInfos);
 
   if (recorder.Running()) {
-    // Schedule a token which updates/patches a list of device addresses
-    if (!useCaptureReplayFeaturesForBuffersAndAccelerationStructures()) {
-      auto& addressPatchers = SD()._commandbufferstates[cmdBuf]->addressPatchers;
-      auto it = addressPatchers.find(
-          CAccelerationStructureKHRState::globalAccelerationStructureBuildCommandIndex);
-      if ((it != addressPatchers.end()) && (it->second.Count() > 0)) {
-        recorder.Schedule(new CGitsVkCmdPatchDeviceAddresses(
-            cmdBuf, it->second,
-            CAccelerationStructureKHRState::globalAccelerationStructureBuildCommandIndex));
-      }
-    }
-
     recorder.Schedule(
         new CvkCmdBuildAccelerationStructuresKHR(cmdBuf, infoCount, pInfos, ppBuildRangeInfos));
+  }
+}
+
+void vkCmdBuildMicromapsEXT_RECWRAP(VkCommandBuffer cmdBuf,
+                                    uint32_t infoCount,
+                                    const VkMicromapBuildInfoEXT* pInfos,
+                                    CRecorder& recorder) {
+  vkCmdBuildMicromapsEXT_SD(cmdBuf, infoCount, pInfos);
+  if (recorder.Running()) {
+    recorder.Schedule(new CvkCmdBuildMicromapsEXT(cmdBuf, infoCount, pInfos));
   }
 }
 

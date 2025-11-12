@@ -531,7 +531,7 @@ public:
   CVkGenericArgument();
   CVkGenericArgument(const void* vkgenericargument);
   void InitArgument(uint32_t type);
-  void CreateArgument(uint32_t type, const void* vkgenericargument);
+  void CreateArgument(const void* vkgenericargument, const void* pCustomData = nullptr);
   virtual const char* Name() const override;
   const void* Value();
   struct PtrConverter {

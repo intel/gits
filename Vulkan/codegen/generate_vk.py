@@ -150,6 +150,7 @@ opaque_nondispatchable_handles: list[str] = [
     'VkVideoSessionParametersKHR',
     'VkAccelerationStructureKHR',
     'VkDeferredOperationKHR',
+    'VkMicromapEXT',
 ]
 
 other_opaque_handles: list[str] = [

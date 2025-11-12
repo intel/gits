@@ -20,24 +20,30 @@ gits::Vulkan::CBinaryResourceData::PointerProxy gits::Vulkan::CBinaryResourceDat
 
 // ------------------------------------------------------------------------------------------------
 
-gits::Vulkan::CVkGenericArgumentData::CVkGenericArgumentData(const void* vkgenericargumentdata)
+gits::Vulkan::CVkGenericArgumentData::CVkGenericArgumentData(const void* pVkGenericArgumentData,
+                                                             const void* pCustomData)
     : _argument(nullptr) {
-  vkgenericargumentdata = ignoreLoaderSpecificStructureTypes(vkgenericargumentdata);
+  pVkGenericArgumentData = ignoreLoaderSpecificStructureTypes(pVkGenericArgumentData);
 
-  if (vkgenericargumentdata) {
-    switch (*(VkStructureType*)vkgenericargumentdata) {
+  if (pVkGenericArgumentData) {
+    switch (*(VkStructureType*)pVkGenericArgumentData) {
 
 #define PNEXT_WRAPPER(STRUCTURE_TYPE, structure, ...)                                              \
   case STRUCTURE_TYPE:                                                                             \
-    _argument = std::make_unique<C##structure##Data>((structure*)vkgenericargumentdata);           \
+    _argument = std::make_unique<C##structure##Data>((structure*)pVkGenericArgumentData);          \
+    break;
+#define PNEXT_EXTENDED_WRAPPER(STRUCTURE_TYPE, structure, ...)                                     \
+  case STRUCTURE_TYPE:                                                                             \
+    _argument =                                                                                    \
+        std::make_unique<C##structure##Data>((structure*)pVkGenericArgumentData, pCustomData);     \
     break;
 
 #include "vulkanPNextWrappers.inl"
 
     default:
-      LOG_ERROR << "Unknown enum value: " << *(VkStructureType*)vkgenericargumentdata
+      LOG_ERROR << "Unknown enum value: " << *(VkStructureType*)pVkGenericArgumentData
                 << " for CVkGenericArgumentData";
-      const void* pNext = ((const VkBaseInStructure*)vkgenericargumentdata)->pNext;
+      const void* pNext = ((const VkBaseInStructure*)pVkGenericArgumentData)->pNext;
       while (pNext != nullptr) {
         LOG_WARNING << "Additional structure pointed to by pNext: " << *(VkStructureType*)pNext;
         pNext = ((const VkBaseInStructure*)pNext)->pNext;
@@ -708,43 +714,6 @@ gits::Vulkan::CVkAccelerationStructureGeometryInstancesDataKHRData::
                        buildRangeInfo.primitiveOffset;
     auto& commandBufferState = SD()._commandbufferstates[controlData.commandBuffer];
 
-    if (!useCaptureReplayFeaturesForBuffersAndAccelerationStructures()) {
-      // Prepare data for device address patching
-      // Multiple AS builds can occur in a single command buffer and many of them may need
-      // address patching. But, additionally, a single AS build will be performed also in
-      // a state restore phase and it also requires device patching but only for a dedicated
-      // set of device addresses.
-
-      auto& sharedPatcher = commandBufferState->addressPatchers[controlData.buildCommandIndex];
-      uint32_t addressOffset =
-          offsetof(VkAccelerationStructureInstanceKHR, accelerationStructureReference);
-
-      uint32_t structureSize = sizeof(VkAccelerationStructureInstanceKHR);
-      if (_arrayOfPointers) {
-        // Device address points to an array of device addresses referencing individual VkAccelerationStructureInstanceKHR structures
-
-        // Update acceleration structure references (device addresses)
-        for (uint32_t i = 0; i < buildRangeInfo.primitiveCount; ++i) {
-          sharedPatcher.AddIndirectAddress(baseAddress + i * structureSize, addressOffset);
-          individualPatcher.AddIndirectAddress(baseAddress + i * structureSize, addressOffset);
-        }
-
-        // Update device addresses pointing to VkAccelerationStructureInstanceKHR structures
-        for (uint32_t i = 0; i < buildRangeInfo.primitiveCount; ++i) {
-          sharedPatcher.AddDirectAddress(baseAddress + i * structureSize);
-          individualPatcher.AddDirectAddress(baseAddress + i * structureSize);
-        }
-      } else {
-        // Device address points to an array of VkAccelerationStructureInstanceKHR structures
-
-        // Update acceleration structure references (device addresses)
-        for (uint32_t i = 0; i < buildRangeInfo.primitiveCount; ++i) {
-          sharedPatcher.AddDirectAddress(baseAddress + i * structureSize + addressOffset);
-          individualPatcher.AddDirectAddress(baseAddress + i * structureSize + addressOffset);
-        }
-      }
-    }
-
     if (isSubcaptureBeforeRestorationPhase() && _bufferDeviceAddress._buffer) {
       // Acquire instance data
       auto commandBuffer = controlData.commandBuffer;
@@ -787,6 +756,7 @@ gits::Vulkan::CVkAccelerationStructureGeometryInstancesDataKHRData::
     _baseIn = {
         VK_STRUCTURE_TYPE_STRUCT_STORAGE_POINTER_GITS,        // VkStructureType sType;
         accelerationstructuregeometryinstancesdatakhr->pNext, // const void* pNext;
+        accelerationstructuregeometryinstancesdatakhr->sType, // VkStructureType sStructStorageType
         this                                                  // const void* pStructStorage;
     };
     const_cast<VkAccelerationStructureGeometryInstancesDataKHR*>(
@@ -824,6 +794,7 @@ VkAccelerationStructureGeometryInstancesDataKHR* gits::Vulkan::
     _baseIn = {
         VK_STRUCTURE_TYPE_STRUCT_STORAGE_POINTER_GITS, // VkStructureType sType;
         **_pNext,                                      // const void* pNext;
+        _sType,                                        // VkStructureType sStructStorageType
         this                                           // const void* pStructStorage;
     };
 

@@ -55,6 +55,7 @@ ${struct.name}* gits::Vulkan::${cnamedata}::Value() {
     _baseIn = {
         VK_STRUCTURE_TYPE_STRUCT_STORAGE_POINTER_GITS, // VkStructureType sType;
         **_pNext,                                      // const void* pNext;
+        **_sType,                                      // VkStructureType sStructStorageType;
         this                                           // const void* pStructStorage;
     };
 

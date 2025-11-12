@@ -3558,10 +3558,8 @@ VkDeviceAddress getAccelerationStructureDeviceAddress(
 VkAccelerationStructureBuildControlDataGITS prepareAccelerationStructureControlData(
     VkCommandBuffer commandBuffer) {
   return {
-      CAccelerationStructureKHRState::
-          globalAccelerationStructureBuildCommandIndex, // uint32_t buildCommandIndex
-      commandBuffer,                                    // VkCommandBuffer commandBuffer;
-      getCommandExecutionSide(commandBuffer)            // VkCommandExecutionSideGITS executionSide;
+      commandBuffer,                         // VkCommandBuffer commandBuffer;
+      getCommandExecutionSide(commandBuffer) // VkCommandExecutionSideGITS executionSide;
   };
 }
 

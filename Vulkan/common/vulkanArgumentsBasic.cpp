@@ -169,6 +169,11 @@ void gits::Vulkan::CVkGenericArgument::InitArgument(uint32_t type) {
     _argument = std::make_unique<C##structure##__VA_ARGS__>();                                     \
     break;
 
+#define PNEXT_EXTENDED_WRAPPER(STRUCTURE_TYPE, structure, ...)                                     \
+  case STRUCTURE_TYPE:                                                                             \
+    _argument = std::make_unique<C##structure##__VA_ARGS__>();                                     \
+    break;
+
 #include "vulkanPNextWrappers.inl"
 
   default:
@@ -178,20 +183,27 @@ void gits::Vulkan::CVkGenericArgument::InitArgument(uint32_t type) {
   }
 }
 
-void gits::Vulkan::CVkGenericArgument::CreateArgument(uint32_t type,
-                                                      const void* vkgenericargument) {
-  switch (type) {
+void gits::Vulkan::CVkGenericArgument::CreateArgument(const void* pVkGenericArgument,
+                                                      const void* pCustomData) {
+  _sType = std::make_unique<CVkStructureType>(*(uint32_t*)pVkGenericArgument);
+  switch (**_sType) {
 
 #define PNEXT_WRAPPER(STRUCTURE_TYPE, structure, ...)                                              \
   case STRUCTURE_TYPE:                                                                             \
-    _argument = std::make_unique<C##structure##__VA_ARGS__>((structure*)vkgenericargument);        \
+    _argument = std::make_unique<C##structure##__VA_ARGS__>((structure*)pVkGenericArgument);       \
+    break;
+
+#define PNEXT_EXTENDED_WRAPPER(STRUCTURE_TYPE, structure, ...)                                     \
+  case STRUCTURE_TYPE:                                                                             \
+    _argument =                                                                                    \
+        std::make_unique<C##structure##__VA_ARGS__>((structure*)pVkGenericArgument, pCustomData);  \
     break;
 
 #include "vulkanPNextWrappers.inl"
 
   default:
     _skipped = std::make_unique<Cbool>(true);
-    LOG_ERROR << "Unknown enum value: " << type << " for CVkGenericArgument";
+    LOG_ERROR << "Unknown enum value: " << **_sType << " for CVkGenericArgument";
     break;
   }
 }
@@ -201,8 +213,7 @@ gits::Vulkan::CVkGenericArgument::CVkGenericArgument(const void* vkgenericargume
   vkgenericargument = ignoreLoaderSpecificStructureTypes(vkgenericargument);
 
   if (!*_isNullPtr) {
-    _sType = std::make_unique<CVkStructureType>(*(uint32_t*)vkgenericargument);
-    CreateArgument(**_sType, vkgenericargument);
+    CreateArgument(vkgenericargument);
     if (!_skipped) {
       _skipped = std::make_unique<Cbool>(false);
     }

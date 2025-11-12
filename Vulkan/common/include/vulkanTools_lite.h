@@ -38,6 +38,7 @@ inline bool isBitSet(VkFlags64 flags, VkFlags64 bit) {
 }
 
 const void* getPNextStructure(const void* pNext, VkStructureType structureType);
+const void* getStructStoragePointer(const void* pNext, VkStructureType structureType);
 bool isImagePresentable(const VkImageCreateInfo* pCreateInfo);
 
 } // namespace Vulkan

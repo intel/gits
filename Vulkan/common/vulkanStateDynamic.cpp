@@ -26,7 +26,6 @@ uint64_t CInternalResources::COffscreenAppsSupport::uniqueHandleCounter = 1;
 
 std::unordered_map<VkDeviceAddress, VkAccelerationStructureKHR>
     CAccelerationStructureKHRState::deviceAddresses;
-uint32_t CAccelerationStructureKHRState::globalAccelerationStructureBuildCommandIndex = 0;
 
 std::set<CBufferState::DeviceAddressRangeState, CBufferState::DeviceAddressRangeState>
     CBufferState::deviceAddresses;

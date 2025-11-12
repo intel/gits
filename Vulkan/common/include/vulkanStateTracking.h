@@ -112,6 +112,16 @@ inline void insertStateIfFound(gits::Vulkan::CStateDynamic::TAccelerationStructu
   }
 }
 
+template <>
+inline void insertStateIfFound(gits::Vulkan::CStateDynamic::TMicromapEXTStates& state,
+                               VkMicromapEXT key,
+                               std::unordered_set<std::shared_ptr<CBufferState>>& dst) {
+  const auto it = state.find(key);
+  if (it != state.end()) {
+    dst.insert(it->second->bufferStateStore);
+  }
+}
+
 } // namespace
 
 inline void vkIAmGITS_SD() {
@@ -2692,8 +2702,6 @@ inline void vkCmdBuildAccelerationStructuresKHR_SD(
     uint32_t infoCount,
     const VkAccelerationStructureBuildGeometryInfoKHR* pInfos,
     const VkAccelerationStructureBuildRangeInfoKHR* const* ppBuildRangeInfos) {
-  CAccelerationStructureKHRState::globalAccelerationStructureBuildCommandIndex++;
-
   if (!Configurator::IsRecorder()) {
     return;
   }
@@ -2705,46 +2713,37 @@ inline void vkCmdBuildAccelerationStructuresKHR_SD(
   for (uint32_t acc = 0; acc < infoCount; ++acc) {
     // Struct storage data is going to be injected into original structures via pNext
     // that's why a pointer to original, app-provided structures is needed here.
-    auto* buildInfo = &pInfos[acc];
+    auto* pBuildInfo = &pInfos[acc];
     auto* pRangeInfos = ppBuildRangeInfos[acc];
     auto& accelerationStructureState =
-        SD()._accelerationstructurekhrstates[buildInfo->dstAccelerationStructure];
+        SD()._accelerationstructurekhrstates[pBuildInfo->dstAccelerationStructure];
 
     if (isSubcaptureBeforeRestorationPhase()) {
-      VkAccelerationStructureBuildSizesInfoKHR buildSizeInfo = {
-          VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR, // VkStructureType sType;
-          nullptr,                                                       // const void* pNext;
-          0, // VkDeviceSize accelerationStructureSize;
-          0, // VkDeviceSize updateScratchSize;
-          0  // VkDeviceSize buildScratchSize;
-      };
+      std::vector<uint32_t> primitivesCount(pBuildInfo->geometryCount);
 
-      std::vector<uint32_t> primitivesCount(buildInfo->geometryCount);
-
-      for (uint32_t g = 0; g < buildInfo->geometryCount; ++g) {
+      for (uint32_t g = 0; g < pBuildInfo->geometryCount; ++g) {
         primitivesCount[g] = pRangeInfos[g].primitiveCount;
       }
 
       drvVk.vkGetAccelerationStructureBuildSizesKHR(
-          device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, buildInfo,
-          primitivesCount.data(), &buildSizeInfo);
-      accelerationStructureState->buildSizeInfo = buildSizeInfo;
-      cmdBufState->touchedResources.emplace_back((uint64_t)buildInfo->dstAccelerationStructure,
+          device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, pBuildInfo,
+          primitivesCount.data(), &accelerationStructureState->buildSizeInfo);
+      cmdBufState->touchedResources.emplace_back((uint64_t)pBuildInfo->dstAccelerationStructure,
                                                  ResourceType::ACCELERATION_STRUCTURE);
     }
 
-    if (buildInfo->mode == VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR) {
+    if (pBuildInfo->mode == VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR) {
       // Full acceleration structure build
       accelerationStructureState->buildInfo.reset(new CAccelerationStructureKHRState::CBuildInfo(
-          buildInfo, pRangeInfos, prepareAccelerationStructureControlData(cmdBuf)));
+          pBuildInfo, pRangeInfos, prepareAccelerationStructureControlData(cmdBuf)));
       accelerationStructureState->updateInfo.reset();
       accelerationStructureState->copyInfo.reset();
-    } else if (buildInfo->mode == VK_BUILD_ACCELERATION_STRUCTURE_MODE_UPDATE_KHR) {
+    } else if (pBuildInfo->mode == VK_BUILD_ACCELERATION_STRUCTURE_MODE_UPDATE_KHR) {
       // Acceleration structure update (full build info left untouched)
       const auto& srcAccelerationStructureState =
-          SD()._accelerationstructurekhrstates[buildInfo->srcAccelerationStructure];
+          SD()._accelerationstructurekhrstates[pBuildInfo->srcAccelerationStructure];
       accelerationStructureState->updateInfo.reset(new CAccelerationStructureKHRState::CBuildInfo(
-          buildInfo, pRangeInfos, prepareAccelerationStructureControlData(cmdBuf),
+          pBuildInfo, pRangeInfos, prepareAccelerationStructureControlData(cmdBuf),
           srcAccelerationStructureState));
     }
   }
@@ -2754,29 +2753,31 @@ inline void vkCmdBuildAccelerationStructuresKHR_SD(
   }
 
   auto& bindingBuffers = SD().bindingBuffers[cmdBuf];
+  auto addBindingBuffer = [&bindingBuffers](VkDeviceAddress deviceAddress, uint64_t offset) {
+    if (deviceAddress != 0) {
+      auto buffer = findBufferFromDeviceAddress(deviceAddress + offset);
+      insertStateIfFound(SD()._bufferstates, buffer, bindingBuffers);
+    }
+  };
 
   for (uint32_t acc = 0; acc < infoCount; ++acc) {
-    auto buildInfo = &pInfos[acc];
+    auto* pBuildInfo = &pInfos[acc];
     auto buildRangeInfos = ppBuildRangeInfos[acc];
 
-    insertStateIfFound(SD()._accelerationstructurekhrstates, buildInfo->dstAccelerationStructure,
+    insertStateIfFound(SD()._accelerationstructurekhrstates, pBuildInfo->dstAccelerationStructure,
                        bindingBuffers);
 
-    if (buildInfo->geometryCount == 0) {
+    // Scratch buffer
+    addBindingBuffer(pBuildInfo->scratchData.deviceAddress, 0);
+
+    if (pBuildInfo->geometryCount == 0) {
       continue;
     }
 
-    auto addBindingBuffer = [&bindingBuffers](VkDeviceAddress deviceAddress, uint64_t offset) {
-      if (deviceAddress != 0) {
-        auto buffer = findBufferFromDeviceAddress(deviceAddress + offset);
-        insertStateIfFound(SD()._bufferstates, buffer, bindingBuffers);
-      }
-    };
-
-    for (uint32_t geom = 0; geom < buildInfo->geometryCount; ++geom) {
-      const VkAccelerationStructureGeometryKHR* pGeometry = (buildInfo->pGeometries != nullptr)
-                                                                ? (&buildInfo->pGeometries[geom])
-                                                                : (buildInfo->ppGeometries[geom]);
+    for (uint32_t geom = 0; geom < pBuildInfo->geometryCount; ++geom) {
+      const VkAccelerationStructureGeometryKHR* pGeometry = (pBuildInfo->pGeometries != nullptr)
+                                                                ? (&pBuildInfo->pGeometries[geom])
+                                                                : (pBuildInfo->ppGeometries[geom]);
       const auto& buildRangeInfo = buildRangeInfos[geom];
 
       switch (pGeometry->geometryType) {
@@ -2820,6 +2821,57 @@ inline void vkCmdBuildAccelerationStructuresKHR_SD(
   }
 }
 
+inline void vkCmdBuildMicromapsEXT_SD(VkCommandBuffer cmdBuf,
+                                      uint32_t infoCount,
+                                      const VkMicromapBuildInfoEXT* pInfos) {
+  if (!Configurator::IsRecorder()) {
+    return;
+  }
+
+  CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
+
+  auto& cmdBufState = SD()._commandbufferstates[cmdBuf];
+  auto device = cmdBufState->commandPoolStateStore->deviceStateStore->deviceHandle;
+
+  for (uint32_t mm = 0; mm < infoCount; ++mm) {
+    auto* pBuildInfo = &pInfos[mm];
+    auto& mmState = SD()._micromapextstates[pBuildInfo->dstMicromap];
+
+    if (isSubcaptureBeforeRestorationPhase()) {
+      drvVk.vkGetMicromapBuildSizesEXT(device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR,
+                                       pBuildInfo, &mmState->buildSizeInfo);
+    }
+
+    if (pBuildInfo->mode == VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR) {
+      // Full micromap build
+      mmState->buildInfo.reset(new CMicromapEXTState::CBuildInfo(
+          pBuildInfo, prepareAccelerationStructureControlData(cmdBuf)));
+      mmState->copyInfo.reset();
+    }
+  }
+
+  if (!(updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase())) {
+    return;
+  }
+
+  auto& bindingBuffers = SD().bindingBuffers[cmdBuf];
+  auto addBindingBuffer = [&bindingBuffers](VkDeviceAddress deviceAddress) {
+    if (deviceAddress != 0) {
+      auto buffer = findBufferFromDeviceAddress(deviceAddress);
+      insertStateIfFound(SD()._bufferstates, buffer, bindingBuffers);
+    }
+  };
+
+  for (uint32_t mm = 0; mm < infoCount; ++mm) {
+    auto* pBuildInfo = &pInfos[mm];
+
+    insertStateIfFound(SD()._micromapextstates, pBuildInfo->dstMicromap, bindingBuffers);
+    addBindingBuffer(pBuildInfo->data.deviceAddress);
+    addBindingBuffer(pBuildInfo->scratchData.deviceAddress);
+    addBindingBuffer(pBuildInfo->triangleArray.deviceAddress);
+  }
+}
+
 inline void vkCopyAccelerationStructureKHR_SD(VkResult return_value,
                                               VkDevice device,
                                               VkDeferredOperationKHR deferredOperation,
@@ -2856,6 +2908,28 @@ inline void vkGetAccelerationStructureDeviceAddressUnifiedGITS_SD(
 
   if (Configurator::IsRecorder()) {
     CAccelerationStructureKHRState::deviceAddresses[return_value] = pInfo->accelerationStructure;
+  }
+}
+
+// Opacity micromap
+
+inline void vkCreateMicromapEXT_SD(VkResult return_value,
+                                   VkDevice device,
+                                   const VkMicromapCreateInfoEXT* pCreateInfo,
+                                   const VkAllocationCallbacks* pAllocator,
+                                   VkMicromapEXT* pMicromap) {
+  if ((return_value == VK_SUCCESS) && (*pMicromap != VK_NULL_HANDLE)) {
+    auto micromapState = std::make_shared<CMicromapEXTState>(
+        pMicromap, pCreateInfo, SD()._bufferstates[pCreateInfo->buffer]);
+    SD()._micromapextstates.emplace(*pMicromap, micromapState);
+  }
+}
+
+inline void vkDestroyMicromapEXT_SD(VkDevice device,
+                                    VkMicromapEXT micromap,
+                                    const VkAllocationCallbacks* pAllocator) {
+  if (micromap != VK_NULL_HANDLE) {
+    SD()._micromapextstates.erase(micromap);
   }
 }
 
