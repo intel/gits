@@ -52,7 +52,6 @@ list(APPEND common_SOURCES
   ${COMMON_HEADER_DIR}/recorder.h
   ${COMMON_HEADER_DIR}/state.h
   ${COMMON_HEADER_DIR}/vectorMapper.h
-  ${COMMON_HEADER_DIR}/eventsData.h
 
   ${COMMON_SOURCE_DIR}/apis_iface.cpp
   ${COMMON_SOURCE_DIR}/argument.cpp

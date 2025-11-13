@@ -17,19 +17,33 @@ namespace DirectX {
 CommonEventsHandler::CommonEventsHandler() {}
 
 void CommonEventsHandler::RegisterEvents() {
-  Configurator::GetMutable().common.shared.useEvents = true;
-  gits::Events events{};
-  events.frameBegin = frameBegin;
-  events.frameEnd = frameEnd;
-  events.loopBegin = loopBegin;
-  events.loopEnd = loopEnd;
-  events.stateRestoreBegin = stateRestoreBegin;
-  events.stateRestoreEnd = stateRestoreEnd;
-  events.programExit = programExit;
-  events.programStart = programStart;
-  events.logging = logging;
-  events.markerUInt64 = markerUInt64;
-  CGits::Instance().RegisterPlaybackEvents(events);
+  auto eventHandler = [](Topic t, const MessagePtr& m) {
+    auto msg = std::dynamic_pointer_cast<GitsEventMessage>(m);
+    if (!msg) {
+      return;
+    }
+
+    auto& data = msg->getData();
+    switch (data.Id) {
+    case CToken::TId::ID_INIT_START:
+      stateRestoreBegin();
+      break;
+    case CToken::TId::ID_INIT_END:
+      stateRestoreEnd();
+      break;
+    case CToken::TId::ID_FRAME_END:
+      frameEnd(data.FrameEndData.FrameNumber);
+      break;
+    case CToken::TId::ID_MARKER_UINT64:
+      markerUInt64(data.MarkerUint64Data.Value);
+      break;
+    default:
+      break;
+    }
+  };
+
+  gits::CGits::Instance().GetMessageBus().subscribe({PUBLISHER_PLAYER, TOPIC_GITS_EVENT},
+                                                    eventHandler);
 }
 
 void CommonEventsHandler::stateRestoreBegin() {

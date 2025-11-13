@@ -12,7 +12,6 @@
 #include "log.h"
 // Used in GitsEventMessage
 #include "token.h"
-#include "eventsData.h"
 
 #include <string>
 #include <vector>
@@ -157,11 +156,30 @@ private:
 
 class GitsEventMessage : public Message {
 public:
+  struct FRAME_START_DATA {
+    uint32_t FrameNumber;
+  };
+
+  struct FRAME_END_DATA {
+    uint32_t FrameNumber;
+  };
+
+  struct INIT_START_DATA {};
+
+  struct INIT_END_DATA {};
+
+  struct MARKER_UINT64_DATA {
+    uint64_t Value;
+  };
+
   struct DATA {
     CToken::TId Id;
     union {
+      INIT_START_DATA InitStartData;
+      INIT_END_DATA InitEndData;
       FRAME_START_DATA FrameStartData;
       FRAME_END_DATA FrameEndData;
+      MARKER_UINT64_DATA MarkerUint64Data;
     };
   };
 

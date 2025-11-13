@@ -104,6 +104,12 @@ void CTokenMarker::Run() {
     CGits::Instance().StateRestoreStarted();
     LOG_INFO << "Restoring state ...";
 
+    GitsEventMessage::DATA data{};
+    data.Id = CToken::TId::ID_INIT_START;
+    data.InitStartData = {};
+    CGits::Instance().GetMessageBus().publish({PUBLISHER_PLAYER, TOPIC_GITS_EVENT},
+                                              std::make_shared<GitsEventMessage>(data));
+
     if (cfg.common.shared.useEvents) {
       CGits::Instance().PlaybackEvents().stateRestoreBegin();
     }
@@ -130,6 +136,12 @@ void CTokenMarker::Run() {
     if (CGits::Instance().apis.HasCompute()) {
       CGits::Instance().apis.IfaceCompute().Play_StateRestoreEnd();
     }
+    GitsEventMessage::DATA data{};
+    data.Id = CToken::TId::ID_INIT_END;
+    data.InitEndData = {};
+    CGits::Instance().GetMessageBus().publish({PUBLISHER_PLAYER, TOPIC_GITS_EVENT},
+                                              std::make_shared<GitsEventMessage>(data));
+
     if (cfg.common.shared.useEvents) {
       CGits::Instance().PlaybackEvents().stateRestoreEnd();
     }
@@ -220,6 +232,13 @@ void CTokenMarkerUInt64::Read(CBinIStream& stream) {
 
 void CTokenMarkerUInt64::Run() {
   auto& cfg = Configurator::Get();
+
+  GitsEventMessage::DATA data{};
+  data.Id = CToken::TId::ID_MARKER_UINT64;
+  data.MarkerUint64Data = {_value};
+  CGits::Instance().GetMessageBus().publish({PUBLISHER_PLAYER, TOPIC_GITS_EVENT},
+                                            std::make_shared<GitsEventMessage>(data));
+
   if (cfg.common.shared.useEvents) {
     CGits::Instance().PlaybackEvents().markerUInt64(_value);
   }
