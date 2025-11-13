@@ -48,6 +48,8 @@ public:
     return "Vulkan";
   }
 
+  void RegisterEvents() override;
+
   class CVulkanCommandBufferTokensBuffer : public CTokensBuffer<Vulkan::CFunction> {
   public:
     std::set<uint64_t> GetMappedPointers();

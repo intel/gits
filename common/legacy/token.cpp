@@ -16,9 +16,6 @@
 #include "platform.h"
 #ifdef GITS_PLATFORM_WINDOWS
 #include <Windows.h>
-#ifdef WITH_VULKAN
-#include "vulkanRenderDocUtil.h"
-#endif
 #endif
 
 #include "token.h"
@@ -101,7 +98,7 @@ void CTokenMarker::Run() {
   auto& cfg = Configurator::Get();
 
   switch (_id) {
-  case CToken::ID_INIT_START:
+  case CToken::ID_INIT_START: {
     CGits::Instance().Timers().init.Pause();
     CGits::Instance().Timers().restoration.Start();
     CGits::Instance().StateRestoreStarted();
@@ -117,8 +114,9 @@ void CTokenMarker::Run() {
       log::SetMaxSeverity(std::max(cfg.common.shared.thresholdLogLevel, LogLevel::INFOV));
     }
     break;
+  }
 
-  case CToken::ID_INIT_END:
+  case CToken::ID_INIT_END: {
     CGits::Instance().StateRestoreFinished();
     LOG_INFO << "Finished restoring state.";
     LOG_TRACE << "State restore end. Total drawcalls: " << CGits::Instance().CurrentDrawCount();
@@ -138,20 +136,19 @@ void CTokenMarker::Run() {
 
     CGits::Instance().Timers().restoration.Pause();
     break;
+  }
 
-  case CToken::ID_FRAME_START:
+  case CToken::ID_FRAME_START: {
     // If this is stream without state restore, init finishes on begin of first frame.
-
-#if defined(GITS_PLATFORM_WINDOWS) && defined(WITH_VULKAN)
-    if (cfg.vulkan.player.renderDoc.mode == TVkRenderDocCaptureMode::FRAMES &&
-        cfg.vulkan.player.renderDoc.captureRange[CGits::Instance().CurrentFrame()]) {
-      Vulkan::RenderDocUtil::GetInstance().StartRecording();
-    }
-#endif
 
     CGits::Instance().Timers().init.Pause();
     CGits::Instance().Timers().playback.Start();
     OnFrameBeginImpl();
+    GitsEventMessage::DATA data{};
+    data.Id = CToken::TId::ID_FRAME_START;
+    data.FrameStartData = {CGits::Instance().CurrentFrame()};
+    CGits::Instance().GetMessageBus().publish({PUBLISHER_PLAYER, TOPIC_GITS_EVENT},
+                                              std::make_shared<GitsEventMessage>(data));
 
     if (cfg.common.shared.useEvents) {
       CGits::Instance().PlaybackEvents().frameBegin(CGits::Instance().CurrentFrame());
@@ -163,9 +160,16 @@ void CTokenMarker::Run() {
       log::SetMaxSeverity(std::max(cfg.common.shared.thresholdLogLevel, LogLevel::INFOV));
     }
     break;
+  }
 
-  case CToken::ID_FRAME_END:
+  case CToken::ID_FRAME_END: {
     OnFrameEndImpl();
+    GitsEventMessage::DATA data{};
+    data.Id = CToken::TId::ID_FRAME_END;
+    data.FrameEndData = {CGits::Instance().CurrentFrame()};
+    CGits::Instance().GetMessageBus().publish({PUBLISHER_PLAYER, TOPIC_GITS_EVENT},
+                                              std::make_shared<GitsEventMessage>(data));
+
 #if defined(GITS_PLATFORM_WINDOWS) || defined(GITS_PLATFORM_X11)
     if (cfg.common.player.showWindowBorder) {
       win_ptr_t window = GetWindowHandle();
@@ -180,20 +184,6 @@ void CTokenMarker::Run() {
     }
 #endif
 
-#if defined(GITS_PLATFORM_WINDOWS) && defined(WITH_VULKAN)
-    if (cfg.vulkan.player.renderDoc.mode == TVkRenderDocCaptureMode::FRAMES &&
-        cfg.vulkan.player.renderDoc.captureRange[CGits::Instance().CurrentFrame()]) {
-      bool isLast = cfg.vulkan.player.renderDoc.captureRange[CGits::Instance().CurrentFrame()] &&
-                    !cfg.vulkan.player.renderDoc
-                         .captureRange[static_cast<uint64_t>(CGits::Instance().CurrentFrame()) + 1];
-      if (!cfg.vulkan.player.renderDoc.continuousCapture || isLast) {
-        Vulkan::RenderDocUtil::GetInstance().StopRecording();
-      }
-      if (cfg.vulkan.player.renderDoc.enableUI && isLast) {
-        Vulkan::RenderDocUtil::GetInstance().LaunchRenderDocUI();
-      }
-    }
-#endif
     if (cfg.common.player.endFrameSleep > 0) {
       sleep_millisec(Configurator::Get().common.player.endFrameSleep);
     }
@@ -208,9 +198,11 @@ void CTokenMarker::Run() {
     CGits::Instance().FrameCountUp();
 #endif
     break;
+  }
 
-  default: //WA - Warning on linux for not handling default case.
+  default: { //WA - Warning on linux for not handling default case.
     break;
+  }
   }
 }
 

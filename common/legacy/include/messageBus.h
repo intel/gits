@@ -10,6 +10,9 @@
 
 #include "tools_lite.h"
 #include "log.h"
+// Used in GitsEventMessage
+#include "token.h"
+#include "eventsData.h"
 
 #include <string>
 #include <vector>
@@ -30,7 +33,9 @@ enum TopicId {
   TOPIC_STREAM_SAVED,
   TOPIC_CLOSE_RECORDER,
   TOPIC_GITS_WORKLOAD_BEGIN,
-  TOPIC_GITS_WORKLOAD_END
+  TOPIC_GITS_WORKLOAD_END,
+  // This topic is a part of playback, GitsEventMessage contains the id of the token associated with the message
+  TOPIC_GITS_EVENT
 };
 struct Topic {
   PublisherId publisherId{};
@@ -148,6 +153,26 @@ private:
   void* context_;
   std::string label_;
   unsigned value_;
+};
+
+class GitsEventMessage : public Message {
+public:
+  struct DATA {
+    CToken::TId Id;
+    union {
+      FRAME_START_DATA FrameStartData;
+      FRAME_END_DATA FrameEndData;
+    };
+  };
+
+  GitsEventMessage(const DATA& data) : Data_(data) {}
+
+  const DATA& getData() const {
+    return Data_;
+  }
+
+private:
+  const DATA Data_;
 };
 
 } // namespace gits

@@ -19,6 +19,8 @@
 #include "vulkanStateDynamic.h"
 #include "vulkanFunctions.h"
 #include "vulkanStateTracking.h"
+#include "messageBus.h"
+#include "vulkanRenderDocUtil.h"
 
 namespace gits {
 namespace Vulkan {
@@ -59,6 +61,48 @@ Vulkan::CFunction* Vulkan::CLibrary::FunctionCreate(unsigned id) const {
 
 CLibrary& CLibrary::Get() {
   return static_cast<CLibrary&>(CGits::Instance().Library(ID_VULKAN));
+}
+
+void CLibrary::RegisterEvents() {
+  auto eventHandler = [](Topic t, const MessagePtr& m) {
+    auto msg = std::dynamic_pointer_cast<GitsEventMessage>(m);
+    if (!msg) {
+      return;
+    }
+
+    auto& cfg = Configurator::Get();
+
+    switch (msg->getData().Id) {
+#if defined(GITS_PLATFORM_WINDOWS)
+    case CToken::TId::ID_FRAME_START:
+      if (cfg.vulkan.player.renderDoc.mode == TVkRenderDocCaptureMode::FRAMES &&
+          cfg.vulkan.player.renderDoc.captureRange[CGits::Instance().CurrentFrame()]) {
+        Vulkan::RenderDocUtil::GetInstance().StartRecording();
+      }
+      break;
+    case CToken::TId::ID_FRAME_END:
+      if (cfg.vulkan.player.renderDoc.mode == TVkRenderDocCaptureMode::FRAMES &&
+          cfg.vulkan.player.renderDoc.captureRange[CGits::Instance().CurrentFrame()]) {
+        bool isLast =
+            cfg.vulkan.player.renderDoc.captureRange[CGits::Instance().CurrentFrame()] &&
+            !cfg.vulkan.player.renderDoc
+                 .captureRange[static_cast<uint64_t>(CGits::Instance().CurrentFrame()) + 1];
+        if (!cfg.vulkan.player.renderDoc.continuousCapture || isLast) {
+          Vulkan::RenderDocUtil::GetInstance().StopRecording();
+        }
+        if (cfg.vulkan.player.renderDoc.enableUI && isLast) {
+          Vulkan::RenderDocUtil::GetInstance().LaunchRenderDocUI();
+        }
+      }
+      break;
+#endif
+    default:
+      break;
+    }
+  };
+
+  gits::CGits::Instance().GetMessageBus().subscribe({PUBLISHER_PLAYER, TOPIC_GITS_EVENT},
+                                                    eventHandler);
 }
 
 std::set<uint64_t> CLibrary::CVulkanCommandBufferTokensBuffer::GetMappedPointers() {

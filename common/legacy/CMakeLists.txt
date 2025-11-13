@@ -52,6 +52,7 @@ list(APPEND common_SOURCES
   ${COMMON_HEADER_DIR}/recorder.h
   ${COMMON_HEADER_DIR}/state.h
   ${COMMON_HEADER_DIR}/vectorMapper.h
+  ${COMMON_HEADER_DIR}/eventsData.h
 
   ${COMMON_SOURCE_DIR}/apis_iface.cpp
   ${COMMON_SOURCE_DIR}/argument.cpp
@@ -116,10 +117,6 @@ add_dependencies(common config_codegen)
 target_include_directories(common PUBLIC ${COMMON_HEADER_DIR})
 target_link_libraries(common PRIVATE OpenGL_common xxhash murmurhash lz4 libzstd_static hud gits_recorder_interface png lua zlib)
 target_link_libraries(common PUBLIC configuration log)
-
-if(WITH_VULKAN)
-  target_link_libraries(common PRIVATE Vulkan_common)
-endif()
 
 if(UNIX)
   target_link_libraries(common PRIVATE rt dl lua)
