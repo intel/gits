@@ -182,16 +182,11 @@ void CTokenMarker::Run() {
     CGits::Instance().GetMessageBus().publish({PUBLISHER_PLAYER, TOPIC_GITS_EVENT},
                                               std::make_shared<GitsEventMessage>(data));
 
-#if defined(GITS_PLATFORM_WINDOWS) || defined(GITS_PLATFORM_X11)
+#if defined(GITS_PLATFORM_WINDOWS)
     if (cfg.common.player.showWindowBorder) {
       win_ptr_t window = GetWindowHandle();
       if (window) {
-#ifdef GITS_PLATFORM_WINDOWS
         WinTitle(window, "Current frame: " + std::to_string(CGits::Instance().CurrentFrame()));
-#elif defined(GITS_PLATFORM_X11) && defined(WITH_VULKAN)
-        Vulkan::WinTitle(window,
-                         "Current frame: " + std::to_string(CGits::Instance().CurrentFrame()));
-#endif
       }
     }
 #endif

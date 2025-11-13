@@ -16,11 +16,11 @@
 #include "gits.h"
 #include "vulkanTools.h"
 #include "vulkanStateDynamic.h"
-#include "vulkanStateDynamic.h"
 #include "vulkanFunctions.h"
 #include "vulkanStateTracking.h"
 #include "messageBus.h"
 #include "vulkanRenderDocUtil.h"
+#include "vkWindowing.h"
 
 namespace gits {
 namespace Vulkan {
@@ -81,6 +81,15 @@ void CLibrary::RegisterEvents() {
       }
       break;
     case CToken::TId::ID_FRAME_END:
+      if (cfg.common.player.showWindowBorder) {
+        win_ptr_t window = GetWindowHandle();
+        if (window) {
+#if defined(GITS_PLATFORM_X11)
+          Vulkan::WinTitle(window,
+                           "Current frame: " + std::to_string(CGits::Instance().CurrentFrame()));
+#endif
+        }
+      }
       if (cfg.vulkan.player.renderDoc.mode == TVkRenderDocCaptureMode::FRAMES &&
           cfg.vulkan.player.renderDoc.captureRange[CGits::Instance().CurrentFrame()]) {
         bool isLast =
