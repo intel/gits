@@ -75,8 +75,7 @@ bool ConfigureRecorder(const std::filesystem::path& configPath) {
 
   // Initialize the logger
   const auto& cfg = Configurator::Get();
-  auto severity = log::GetSeverity(cfg.common.shared.thresholdLogLevel);
-  log::Initialize(severity);
+  log::Initialize(cfg.common.shared.thresholdLogLevel);
   if (!cfg.common.shared.logToConsole) {
     log::RemoveConsoleAppender();
   }

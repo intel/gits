@@ -115,7 +115,8 @@ plog::Severity GetSeverity(gits::LogLevel lvl) {
   }
 }
 
-void Initialize(plog::Severity severity) {
+void Initialize(gits::LogLevel lvl) {
+  auto severity = GetSeverity(lvl);
   plog::init(severity);
   plog::get()->addAppender(&dynamicAppender);
 
@@ -128,7 +129,8 @@ void Initialize(plog::Severity severity) {
   plog::init<GITS_LOG_INSTANCE_ID_RAW>(severity, plog::get());
 }
 
-void Initialize(plog::Severity severity, plog::IAppender* appender) {
+void Initialize(gits::LogLevel lvl, plog::IAppender* appender) {
+  auto severity = GetSeverity(lvl);
   plog::init(severity, appender);
   plog::init<GITS_LOG_INSTANCE_ID_RAW>(severity, appender);
 }

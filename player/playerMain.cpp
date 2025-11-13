@@ -145,7 +145,7 @@ bool argsFilterTagsFunc(const args::Base& item) {
 } // namespace
 
 int MainBody(int argc, char* argv[]) {
-  log::Initialize(plog::info);
+  log::Initialize(gits::LogLevel::INFO);
   log::AddConsoleAppender(); // Will be removed after config parsing if disabled in config.
 
   std::filesystem::path playerPath = "";

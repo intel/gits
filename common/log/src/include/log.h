@@ -63,8 +63,8 @@ namespace gits {
 namespace log {
 PLOG_LINKAGE void SetMaxSeverity(gits::LogLevel lvl);
 PLOG_LINKAGE plog::Severity GetSeverity(gits::LogLevel lvl);
-PLOG_LINKAGE void Initialize(plog::Severity severity);
-PLOG_LINKAGE void Initialize(plog::Severity severity, plog::IAppender* appender);
+PLOG_LINKAGE void Initialize(gits::LogLevel lvl);
+PLOG_LINKAGE void Initialize(gits::LogLevel lvl, plog::IAppender* appender);
 PLOG_LINKAGE void AddConsoleAppender();
 PLOG_LINKAGE void RemoveConsoleAppender();
 PLOG_LINKAGE void AddFileAppender(const std::filesystem::path& logFilePath);

@@ -128,8 +128,8 @@ void PluginService::loadPlugins() {
 
     IPluginContext pluginContext;
     pluginContext.gits = &CGits::Instance();
+    pluginContext.config = &cfg;
     pluginContext.logAppender = plog::get();
-    pluginContext.logSeverity = plog::get()->getMaxSeverity();
 
     plugin.destroyPlugin =
         reinterpret_cast<DestroyPluginPtr>(GetProcAddress(plugin.dll, "destroyPlugin"));

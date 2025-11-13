@@ -27,17 +27,17 @@
 
 namespace gits {
 class CGits;
+struct Configuration;
 } // namespace gits
 
 namespace plog {
 class IAppender;
-enum Severity;
 } // namespace plog
 
 struct IPluginContext {
+  const gits::Configuration* config;
   gits::CGits* gits;
   plog::IAppender* logAppender;
-  plog::Severity logSeverity;
 };
 
 class IPlugin {

@@ -57,8 +57,8 @@ private:
 static std::unique_ptr<gits::DirectX::HelloPlugin> g_plugin = nullptr;
 
 GITS_PLUGIN_API IPlugin* createPlugin(IPluginContext context, const char* pluginPath) {
-  // Initiliaze Plog for the plugin library
-  gits::log::Initialize(context.logSeverity, context.logAppender);
+  // Initialize Plog for the plugin DLL
+  gits::log::Initialize(context.config->common.shared.thresholdLogLevel, context.logAppender);
 
   if (!g_plugin) {
     g_plugin = std::make_unique<gits::DirectX::HelloPlugin>(context, pluginPath);
