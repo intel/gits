@@ -45,12 +45,7 @@ For example, we can enable `HelloPlugin` when running an application without cap
 ```yml
 Common:
   Recorder:
-    RecordingMode: 'None'  
- 
-DirectX:
-  Capture:
-    Record: false
-    Plugins: ['HelloPlugin']
+    Enabled: false  
 ```
 
 ## Plugin List
@@ -68,5 +63,9 @@ Creates a .csv file with the present-to-present frame times (CPU) for the stream
 ### RtasCache
 
 Caches BLASes through serialization/deserialization by CopyRaytracingAccelerationStructure. This plugin is useful to avoid costly BuildRaytracingAccelerationStructure calls.
+
+### AdapterSpoof
+
+Spoof the DXGIAdapter description returned by `IDXGIAdapter::GetDesc`. This plugin can be used to test how an application behaves for a different GPU vendor (or a specific GPU).
 
 
