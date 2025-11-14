@@ -395,6 +395,18 @@ inline void vkCreateDevice_SD(VkResult return_value,
         deviceState->synchronization2 = true;
       }
     }
+    // Capture/replay features for ray tracing pipelines check
+    {
+      auto* rayTracingPipelineFeatures =
+          (VkPhysicalDeviceRayTracingPipelineFeaturesKHR*)getPNextStructure(
+              pCreateInfo->pNext,
+              VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR);
+
+      if (rayTracingPipelineFeatures != nullptr) {
+        deviceState->captureReplayFeaturesForRayTracingPipelines =
+            rayTracingPipelineFeatures->rayTracingPipelineShaderGroupHandleCaptureReplay == VK_TRUE;
+      }
+    }
   }
 }
 
@@ -2235,9 +2247,18 @@ inline void vkCreateRayTracingPipelinesKHR_SD(VkResult return_value,
       originalHandles.resize(shaderGroup.dataSize);
       if (pOriginalHandles) {
         memcpy(originalHandles.data(), pOriginalHandles->pData, shaderGroup.dataSize);
-        shaderGroup.patchingRequired =
-            Configurator::Get().vulkan.player.patchShaderGroupHandles &&
-            (memcmp(originalHandles.data(), currentHandles.data(), shaderGroup.dataSize) != 0);
+        auto patchingEnabled = Configurator::Get().vulkan.player.patchShaderGroupHandles;
+        auto handlesChanged =
+            memcmp(originalHandles.data(), currentHandles.data(), shaderGroup.dataSize) != 0;
+        shaderGroup.patchingRequired = patchingEnabled && handlesChanged;
+        if (handlesChanged && !patchingEnabled &&
+            pipelineState->deviceStateStore->captureReplayFeaturesForRayTracingPipelines) {
+          CALL_ONCE[] {
+            LOG_WARNING
+                << "Shader group handles are different than the ones assigned during stream "
+                   "recording. Stream replay may crash.";
+          };
+        }
       } else {
         originalHandles = currentHandles;
         shaderGroup.patchingRequired = false;

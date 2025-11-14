@@ -327,6 +327,7 @@ struct CDeviceState : public UniqueResourceHandle {
   std::vector<std::shared_ptr<CQueueState>> queueStateStoreList;
   std::vector<std::string> enabledExtensions;
   bool synchronization2;
+  bool captureReplayFeaturesForRayTracingPipelines;
 
   static const uint32_t shaderGroupHandleSize = 32;
 
@@ -336,7 +337,8 @@ struct CDeviceState : public UniqueResourceHandle {
       : deviceHandle(*_pDevice),
         deviceCreateInfoData(_pCreateInfo),
         physicalDeviceStateStore(_physicalDeviceState),
-        synchronization2(false) {}
+        synchronization2(false),
+        captureReplayFeaturesForRayTracingPipelines(false) {}
 
   std::set<uint64_t> GetMappedPointers() {
     std::set<uint64_t> pointers;
