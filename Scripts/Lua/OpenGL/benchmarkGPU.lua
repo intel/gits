@@ -52,7 +52,7 @@ PER_FRAME = 2
 -- Options (these are for you to edit)
 ---------------------------------------------------------------------------------------------------
 FRAME_TO_QUERY = 0   -- Frame to query, or zero to query all.
-MODE = PER_DRAW
+MODE = PER_FRAME
 COLLECT_RESULTS_PER_TIMER_STOP = true -- TODO: seems to help with run-to-run variance.
 PRINT_ON = false -- Prints debug info to stdout (frame number, context creation, etc.)
 
