@@ -2406,6 +2406,18 @@ void gits::Vulkan::RestoreCommandBuffers(CScheduler& scheduler, CStateDynamic& s
       }
     }
 
+    for (auto& renderPassState : commandBufferState->beginRenderPassesList) {
+      if (renderPassState->framebufferStateStore) {
+        auto framebuffer = renderPassState->framebufferStateStore->framebufferHandle;
+        if ((framebuffer != VK_NULL_HANDLE) &&
+            (sd._framebufferstates.find(framebuffer) == sd._framebufferstates.end())) {
+          LOG_WARNING << "Omitting restore of VKCommandBuffer " << commandBuffer
+                      << " because used VkFramebuffer " << framebuffer << " doesn't exist.";
+          return;
+        }
+      }
+    }
+
     for (auto& secondaryCommandBufferState :
          commandBufferState->secondaryCommandBuffersStateStoreList) {
       auto it = sd._commandbufferstates.find(secondaryCommandBufferState.first);
