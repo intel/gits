@@ -10,6 +10,7 @@
 #include "vulkanTools_lite.h"
 
 #include <cmath>
+#include <cstring>
 
 namespace gits {
 namespace Vulkan {
@@ -1164,6 +1165,24 @@ uint32_t getIndexElementSize(VkIndexType indexType) {
     return 2;
   case VK_INDEX_TYPE_UINT32:
     return 4;
+  }
+}
+
+uint32_t getLayerSettingsElementSize(VkLayerSettingTypeEXT layerSettingsType, const void* value) {
+  switch (layerSettingsType) {
+  case VK_LAYER_SETTING_TYPE_BOOL32_EXT:
+  case VK_LAYER_SETTING_TYPE_INT32_EXT:
+  case VK_LAYER_SETTING_TYPE_UINT32_EXT:
+  case VK_LAYER_SETTING_TYPE_FLOAT32_EXT:
+    return 4;
+  case VK_LAYER_SETTING_TYPE_INT64_EXT:
+  case VK_LAYER_SETTING_TYPE_UINT64_EXT:
+  case VK_LAYER_SETTING_TYPE_FLOAT64_EXT:
+    return 8;
+  case VK_LAYER_SETTING_TYPE_STRING_EXT:
+    return strlen((const char*)value);
+  default:
+    throw ENotSupported(EXCEPTION_MESSAGE);
   }
 }
 

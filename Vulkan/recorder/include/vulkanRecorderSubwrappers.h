@@ -977,6 +977,46 @@ inline void vkUnmapMemory_RECWRAP(VkDevice device, VkDeviceMemory memory, CRecor
   vkUnmapMemory_SD(device, memory);
 }
 
+inline void vkUnmapMemory2_RECWRAP(VkResult return_value,
+                                   VkDevice device,
+                                   const VkMemoryUnmapInfoKHR* pMemoryUnmapInfo,
+                                   CRecorder& recorder) {
+  if (recorder.Running()) {
+    if (Configurator::Get().vulkan.recorder.memoryUpdateState != TMemoryUpdateStates::USING_TAGS) {
+      std::vector<VkBufferCopy> updatedRanges;
+      getRangesForMemoryUpdate(pMemoryUnmapInfo->memory, updatedRanges, true);
+      if (updatedRanges.size() > 0) {
+        recorder.Schedule(new CGitsVkMemoryUpdate2(pMemoryUnmapInfo->memory, updatedRanges.size(),
+                                                   updatedRanges.data()));
+      }
+    }
+    recorder.Schedule(new CvkUnmapMemory2(return_value, device, pMemoryUnmapInfo));
+  } else if (Configurator::Get().vulkan.recorder.shadowMemory) {
+    flushShadowMemory(pMemoryUnmapInfo->memory, true);
+  }
+  vkUnmapMemory2_SD(return_value, device, pMemoryUnmapInfo);
+}
+
+inline void vkUnmapMemory2KHR_RECWRAP(VkResult return_value,
+                                      VkDevice device,
+                                      const VkMemoryUnmapInfoKHR* pMemoryUnmapInfo,
+                                      CRecorder& recorder) {
+  if (recorder.Running()) {
+    if (Configurator::Get().vulkan.recorder.memoryUpdateState != TMemoryUpdateStates::USING_TAGS) {
+      std::vector<VkBufferCopy> updatedRanges;
+      getRangesForMemoryUpdate(pMemoryUnmapInfo->memory, updatedRanges, true);
+      if (updatedRanges.size() > 0) {
+        recorder.Schedule(new CGitsVkMemoryUpdate2(pMemoryUnmapInfo->memory, updatedRanges.size(),
+                                                   updatedRanges.data()));
+      }
+    }
+    recorder.Schedule(new CvkUnmapMemory2KHR(return_value, device, pMemoryUnmapInfo));
+  } else if (Configurator::Get().vulkan.recorder.shadowMemory) {
+    flushShadowMemory(pMemoryUnmapInfo->memory, true);
+  }
+  vkUnmapMemory2KHR_SD(return_value, device, pMemoryUnmapInfo);
+}
+
 inline void vkPassPhysicalDeviceMemoryPropertiesGITS_RECWRAP(
     VkPhysicalDevice physicalDevice,
     const VkPhysicalDeviceMemoryProperties* pMemoryProperties,

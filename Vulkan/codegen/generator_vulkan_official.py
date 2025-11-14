@@ -304,6 +304,12 @@ arg7=ArgDef(name='dynamicOffsetCount', type='uint32_t'),
 arg8=ArgDef(name='pDynamicOffsets', type='const uint32_t*', wrapParams='dynamicOffsetCount, pDynamicOffsets', count='dynamicOffsetCount')
 )
 
+Function(name='vkCmdBindDescriptorSets2', enabled=False, type=FuncType.NONE,
+retV=RetDef(type='void'),
+arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
+arg2=ArgDef(name='pBindDescriptorSetsInfo', type='const VkBindDescriptorSetsInfoKHR*')
+)
+
 Function(name='vkCmdBindDescriptorSets2KHR', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
@@ -318,7 +324,16 @@ arg3=ArgDef(name='offset', type='VkDeviceSize'),
 arg4=ArgDef(name='indexType', type='VkIndexType')
 )
 
-Function(name='vkCmdBindIndexBuffer2KHR', enabled=False, type=FuncType.PARAM,
+Function(name='vkCmdBindIndexBuffer2', enabled=True, type=FuncType.COMMAND_BUFFER_BIND, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+retV=RetDef(type='void'),
+arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
+arg2=ArgDef(name='buffer', type='VkBuffer'),
+arg3=ArgDef(name='offset', type='VkDeviceSize'),
+arg4=ArgDef(name='size', type='VkDeviceSize'),
+arg5=ArgDef(name='indexType', type='VkIndexType')
+)
+
+Function(name='vkCmdBindIndexBuffer2KHR', enabled=True, type=FuncType.COMMAND_BUFFER_BIND, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='buffer', type='VkBuffer'),
@@ -1136,16 +1151,38 @@ arg5=ArgDef(name='size', type='uint32_t'),
 arg6=ArgDef(name='pValues', type='const void*', wrapType='Cuint8_t::CSArray', wrapParams='(size_t)(size), (const uint8_t *)pValues')
 )
 
+Function(name='vkCmdPushConstants2', enabled=False, type=FuncType.NONE,
+retV=RetDef(type='void'),
+arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
+arg2=ArgDef(name='pPushConstantsInfo', type='const VkPushConstantsInfo*')
+)
+
 Function(name='vkCmdPushConstants2KHR', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
-arg2=ArgDef(name='pPushConstantsInfo', type='const VkPushConstantsInfoKHR*')
+arg2=ArgDef(name='pPushConstantsInfo', type='const VkPushConstantsInfo*')
+)
+
+Function(name='vkCmdPushDescriptorSet2', enabled=False, type=FuncType.NONE,
+retV=RetDef(type='void'),
+arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
+arg2=ArgDef(name='pPushDescriptorSetInfo', type='const VkPushDescriptorSetInfo*')
 )
 
 Function(name='vkCmdPushDescriptorSet2KHR', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
-arg2=ArgDef(name='pPushDescriptorSetInfo', type='const VkPushDescriptorSetInfoKHR*')
+arg2=ArgDef(name='pPushDescriptorSetInfo', type='const VkPushDescriptorSetInfo*')
+)
+
+Function(name='vkCmdPushDescriptorSet', enabled=True, type=FuncType.COMMAND_BUFFER_PUSH, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+retV=RetDef(type='void'),
+arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
+arg2=ArgDef(name='pipelineBindPoint', type='VkPipelineBindPoint'),
+arg3=ArgDef(name='layout', type='VkPipelineLayout'),
+arg4=ArgDef(name='set', type='uint32_t'),
+arg5=ArgDef(name='descriptorWriteCount', type='uint32_t'),
+arg6=ArgDef(name='pDescriptorWrites', type='const VkWriteDescriptorSet*', wrapType='CVkWriteDescriptorSetArray', wrapParams='descriptorWriteCount, pDescriptorWrites', count='descriptorWriteCount')
 )
 
 Function(name='vkCmdPushDescriptorSetKHR', enabled=True, type=FuncType.COMMAND_BUFFER_PUSH, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
@@ -1158,10 +1195,25 @@ arg5=ArgDef(name='descriptorWriteCount', type='uint32_t'),
 arg6=ArgDef(name='pDescriptorWrites', type='const VkWriteDescriptorSet*', wrapType='CVkWriteDescriptorSetArray', wrapParams='descriptorWriteCount, pDescriptorWrites', count='descriptorWriteCount')
 )
 
+Function(name='vkCmdPushDescriptorSetWithTemplate2', enabled=False, type=FuncType.NONE,
+retV=RetDef(type='void'),
+arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
+arg2=ArgDef(name='pPushDescriptorSetWithTemplateInfo', type='const VkPushDescriptorSetWithTemplateInfo*')
+)
+
 Function(name='vkCmdPushDescriptorSetWithTemplate2KHR', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
-arg2=ArgDef(name='pPushDescriptorSetWithTemplateInfo', type='const VkPushDescriptorSetWithTemplateInfoKHR*')
+arg2=ArgDef(name='pPushDescriptorSetWithTemplateInfo', type='const VkPushDescriptorSetWithTemplateInfo*')
+)
+
+Function(name='vkCmdPushDescriptorSetWithTemplate', enabled=False, type=FuncType.PARAM,
+retV=RetDef(type='void'),
+arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
+arg2=ArgDef(name='descriptorUpdateTemplate', type='VkDescriptorUpdateTemplate'),
+arg3=ArgDef(name='layout', type='VkPipelineLayout'),
+arg4=ArgDef(name='set', type='uint32_t'),
+arg5=ArgDef(name='pData', type='const void*', wrapType='CUpdateDescriptorSetWithTemplateArray', wrapParams='descriptorUpdateTemplate, pData')
 )
 
 Function(name='vkCmdPushDescriptorSetWithTemplateKHR', enabled=False, type=FuncType.PARAM,
@@ -1593,7 +1645,14 @@ arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='lineRasterizationMode', type='VkLineRasterizationModeKHR')
 )
 
-Function(name='vkCmdSetLineStippleEXT', enabled=False, type=FuncType.PARAM,
+Function(name='vkCmdSetLineStipple', enabled=True, type=FuncType.COMMAND_BUFFER_SET, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+retV=RetDef(type='void'),
+arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
+arg2=ArgDef(name='lineStippleFactor', type='uint32_t'),
+arg3=ArgDef(name='lineStipplePattern', type='uint16_t')
+)
+
+Function(name='vkCmdSetLineStippleEXT', enabled=True, type=FuncType.COMMAND_BUFFER_SET, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='lineStippleFactor', type='uint32_t'),
@@ -1606,7 +1665,7 @@ arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='stippledLineEnable', type='VkBool32')
 )
 
-Function(name='vkCmdSetLineStippleKHR', enabled=False, type=FuncType.NONE,
+Function(name='vkCmdSetLineStippleKHR', enabled=True, type=FuncType.COMMAND_BUFFER_SET, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='lineStippleFactor', type='uint32_t'),
@@ -1721,16 +1780,28 @@ arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pipelineStackSize', type='uint32_t')
 )
 
+Function(name='vkCmdSetRenderingAttachmentLocations', enabled=False, type=FuncType.NONE,
+retV=RetDef(type='void'),
+arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
+arg2=ArgDef(name='pLocationInfo', type='const VkRenderingAttachmentLocationInfo*')
+)
+
 Function(name='vkCmdSetRenderingAttachmentLocationsKHR', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
-arg2=ArgDef(name='pLocationInfo', type='const VkRenderingAttachmentLocationInfoKHR*')
+arg2=ArgDef(name='pLocationInfo', type='const VkRenderingAttachmentLocationInfo*')
+)
+
+Function(name='vkCmdSetRenderingInputAttachmentIndices', enabled=False, type=FuncType.NONE,
+retV=RetDef(type='void'),
+arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
+arg2=ArgDef(name='pInputAttachmentIndexInfo', type='const VkRenderingInputAttachmentIndexInfo*')
 )
 
 Function(name='vkCmdSetRenderingInputAttachmentIndicesKHR', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
-arg2=ArgDef(name='pInputAttachmentIndexInfo', type='const VkRenderingInputAttachmentIndexInfoKHR*')
+arg2=ArgDef(name='pInputAttachmentIndexInfo', type='const VkRenderingInputAttachmentIndexInfo*')
 )
 
 Function(name='vkCmdSetRepresentativeFragmentTestEnableNV', enabled=False, type=FuncType.PARAM,
@@ -2098,16 +2169,28 @@ arg2=ArgDef(name='deferredOperation', type='VkDeferredOperationKHR'),
 arg3=ArgDef(name='pInfo', type='const VkCopyAccelerationStructureToMemoryInfoKHR*')
 )
 
+Function(name='vkCopyImageToImage', enabled=False, type=FuncType.PARAM,
+retV=RetDef(type='VkResult'),
+arg1=ArgDef(name='device', type='VkDevice'),
+arg2=ArgDef(name='pCopyImageToImageInfo', type='const VkCopyImageToImageInfo*')
+)
+
 Function(name='vkCopyImageToImageEXT', enabled=False, type=FuncType.PARAM,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='device', type='VkDevice'),
-arg2=ArgDef(name='pCopyImageToImageInfo', type='const VkCopyImageToImageInfoEXT*')
+arg2=ArgDef(name='pCopyImageToImageInfo', type='const VkCopyImageToImageInfo*')
+)
+
+Function(name='vkCopyImageToMemory', enabled=False, type=FuncType.PARAM,
+retV=RetDef(type='VkResult'),
+arg1=ArgDef(name='device', type='VkDevice'),
+arg2=ArgDef(name='pCopyImageToMemoryInfo', type='const VkCopyImageToMemoryInfo*')
 )
 
 Function(name='vkCopyImageToMemoryEXT', enabled=False, type=FuncType.PARAM,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='device', type='VkDevice'),
-arg2=ArgDef(name='pCopyImageToMemoryInfo', type='const VkCopyImageToMemoryInfoEXT*')
+arg2=ArgDef(name='pCopyImageToMemoryInfo', type='const VkCopyImageToMemoryInfo*')
 )
 
 Function(name='vkCopyMemoryToAccelerationStructureKHR', enabled=False, type=FuncType.PARAM,
@@ -2117,10 +2200,16 @@ arg2=ArgDef(name='deferredOperation', type='VkDeferredOperationKHR'),
 arg3=ArgDef(name='pInfo', type='const VkCopyMemoryToAccelerationStructureInfoKHR*')
 )
 
+Function(name='vkCopyMemoryToImage', enabled=False, type=FuncType.PARAM,
+retV=RetDef(type='VkResult'),
+arg1=ArgDef(name='device', type='VkDevice'),
+arg2=ArgDef(name='pCopyMemoryToImageInfo', type='const VkCopyMemoryToImageInfo*')
+)
+
 Function(name='vkCopyMemoryToImageEXT', enabled=False, type=FuncType.PARAM,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='device', type='VkDevice'),
-arg2=ArgDef(name='pCopyMemoryToImageInfo', type='const VkCopyMemoryToImageInfoEXT*')
+arg2=ArgDef(name='pCopyMemoryToImageInfo', type='const VkCopyMemoryToImageInfo*')
 )
 
 Function(name='vkCopyMemoryToMicromapEXT', enabled=False, type=FuncType.PARAM,
@@ -2882,10 +2971,10 @@ arg2=ArgDef(name='imageView', type='VkImageView', removeMapping=True),
 arg3=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*', wrapType='CNullWrapper')
 )
 
-Function(name='vkDestroyIndirectCommandsLayoutNV', enabled=False, type=FuncType.PARAM,
+Function(name='vkDestroyIndirectCommandsLayoutEXT', enabled=False, type=FuncType.PARAM,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='device', type='VkDevice'),
-arg2=ArgDef(name='indirectCommandsLayout', type='VkIndirectCommandsLayoutNV'),
+arg2=ArgDef(name='indirectCommandsLayout', type='VkIndirectCommandsLayoutEXT'),
 arg3=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*')
 )
 
@@ -3481,10 +3570,17 @@ arg3=ArgDef(name='pSparseMemoryRequirementCount', type='uint32_t*'),
 arg4=ArgDef(name='pSparseMemoryRequirements', type='VkSparseImageMemoryRequirements2*')
 )
 
+Function(name='vkGetDeviceImageSubresourceLayout', enabled=False, type=FuncType.NONE,
+retV=RetDef(type='void'),
+arg1=ArgDef(name='device', type='VkDevice'),
+arg2=ArgDef(name='pInfo', type='const VkDeviceImageSubresourceInfo*'),
+arg3=ArgDef(name='pLayout', type='VkSubresourceLayout2KHR*')
+)
+
 Function(name='vkGetDeviceImageSubresourceLayoutKHR', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='device', type='VkDevice'),
-arg2=ArgDef(name='pInfo', type='const VkDeviceImageSubresourceInfoKHR*'),
+arg2=ArgDef(name='pInfo', type='const VkDeviceImageSubresourceInfo*'),
 arg3=ArgDef(name='pLayout', type='VkSubresourceLayout2KHR*')
 )
 
@@ -3743,11 +3839,19 @@ arg3=ArgDef(name='pSubresource', type='const VkImageSubresource*'),
 arg4=ArgDef(name='pLayout', type='VkSubresourceLayout*')
 )
 
+Function(name='vkGetImageSubresourceLayout2', enabled=False, type=FuncType.PARAM,
+retV=RetDef(type='void'),
+arg1=ArgDef(name='device', type='VkDevice'),
+arg2=ArgDef(name='image', type='VkImage'),
+arg3=ArgDef(name='pSubresource', type='const VkImageSubresource2*'),
+arg4=ArgDef(name='pLayout', type='VkSubresourceLayout2KHR*')
+)
+
 Function(name='vkGetImageSubresourceLayout2EXT', enabled=False, type=FuncType.PARAM,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='image', type='VkImage'),
-arg3=ArgDef(name='pSubresource', type='const VkImageSubresource2KHR*'),
+arg3=ArgDef(name='pSubresource', type='const VkImageSubresource2*'),
 arg4=ArgDef(name='pLayout', type='VkSubresourceLayout2KHR*')
 )
 
@@ -3755,7 +3859,7 @@ Function(name='vkGetImageSubresourceLayout2KHR', enabled=False, type=FuncType.NO
 retV=RetDef(type='void'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='image', type='VkImage'),
-arg3=ArgDef(name='pSubresource', type='const VkImageSubresource2KHR*'),
+arg3=ArgDef(name='pSubresource', type='const VkImageSubresource2*'),
 arg4=ArgDef(name='pLayout', type='VkSubresourceLayout2KHR*')
 )
 
@@ -4533,6 +4637,13 @@ arg2=ArgDef(name='renderPass', type='VkRenderPass'),
 arg3=ArgDef(name='pGranularity', type='VkExtent2D*')
 )
 
+Function(name='vkGetRenderingAreaGranularity', enabled=False, type=FuncType.NONE,
+retV=RetDef(type='void'),
+arg1=ArgDef(name='device', type='VkDevice'),
+arg2=ArgDef(name='pRenderingAreaInfo', type='const VkRenderingAreaInfoKHR*'),
+arg3=ArgDef(name='pGranularity', type='VkExtent2D*')
+)
+
 Function(name='vkGetRenderingAreaGranularityKHR', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='device', type='VkDevice'),
@@ -4769,11 +4880,18 @@ arg5=ArgDef(name='flags', type='VkMemoryMapFlags'),
 arg6=ArgDef(name='ppData', type='void**', wrapType='CVoidPtr')
 )
 
-Function(name='vkMapMemory2KHR', enabled=False, type=FuncType.PARAM,
+Function(name='vkMapMemory2', enabled=True, type=FuncType.PARAM, runWrap=True, recExecWrap=True, # vkMapMemory_SD is used for stateTrack
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='device', type='VkDevice'),
-arg2=ArgDef(name='pMemoryMapInfo', type='const VkMemoryMapInfoKHR*'),
-arg3=ArgDef(name='ppData', type='void**')
+arg2=ArgDef(name='pMemoryMapInfo', type='const VkMemoryMapInfo*'),
+arg3=ArgDef(name='ppData', type='void**', wrapType='CVoidPtr')
+)
+
+Function(name='vkMapMemory2KHR', enabled=True, type=FuncType.PARAM, runWrap=True, recExecWrap=True, # vkMapMemory_SD is used for stateTrack
+retV=RetDef(type='VkResult'),
+arg1=ArgDef(name='device', type='VkDevice'),
+arg2=ArgDef(name='pMemoryMapInfo', type='const VkMemoryMapInfo*'),
+arg3=ArgDef(name='ppData', type='void**', wrapType='CVoidPtr')
 )
 
 Function(name='vkMergePipelineCaches', enabled=False, type=FuncType.PARAM,
@@ -5086,11 +5204,18 @@ arg3=ArgDef(name='messageTypes', type='VkDebugUtilsMessageTypeFlagsEXT'),
 arg4=ArgDef(name='pCallbackData', type='const VkDebugUtilsMessengerCallbackDataEXT*')
 )
 
+Function(name='vkTransitionImageLayout', enabled=False, type=FuncType.NONE,
+retV=RetDef(type='VkResult'),
+arg1=ArgDef(name='device', type='VkDevice'),
+arg2=ArgDef(name='transitionCount', type='uint32_t'),
+arg3=ArgDef(name='pTransitions', type='const VkHostImageLayoutTransitionInfo*')
+)
+
 Function(name='vkTransitionImageLayoutEXT', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='transitionCount', type='uint32_t'),
-arg3=ArgDef(name='pTransitions', type='const VkHostImageLayoutTransitionInfoEXT*')
+arg3=ArgDef(name='pTransitions', type='const VkHostImageLayoutTransitionInfo*')
 )
 
 Function(name='vkTrimCommandPool', enabled=False, type=FuncType.PARAM,
@@ -5118,7 +5243,13 @@ arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='memory', type='VkDeviceMemory')
 )
 
-Function(name='vkUnmapMemory2KHR', enabled=False, type=FuncType.PARAM,
+Function(name='vkUnmapMemory2', enabled=True, type=FuncType.PARAM, preToken='CGitsVkMemoryUpdate2(memory, true)', recWrap=True, stateTrack=True, execPostRecWrap=True,
+retV=RetDef(type='VkResult'),
+arg1=ArgDef(name='device', type='VkDevice'),
+arg2=ArgDef(name='pMemoryUnmapInfo', type='const VkMemoryUnmapInfoKHR*')
+)
+
+Function(name='vkUnmapMemory2KHR', enabled=True, type=FuncType.PARAM, preToken='CGitsVkMemoryUpdate2(memory, true)', recWrap=True, stateTrack=True, execPostRecWrap=True,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='pMemoryUnmapInfo', type='const VkMemoryUnmapInfoKHR*')
@@ -10826,7 +10957,7 @@ var6=VarDef(name='regionCount', type='uint32_t'),
 var7=VarDef(name='pRegions', type='const VkBufferImageCopy2*', wrapType='CVkBufferImageCopy2Array', wrapParams='copyimagetobufferinfo2->regionCount, copyimagetobufferinfo2->pRegions', count='regionCount')
 )
 
-Struct(name='VkCopyImageToImageInfoEXT_', enabled=False,
+Struct(name='VkCopyImageToImageInfo_', enabled=False,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='flags', type='VkHostImageCopyFlagsEXT'),
@@ -10838,7 +10969,7 @@ var8=VarDef(name='regionCount', type='uint32_t'),
 var9=VarDef(name='pRegions', type='const VkImageCopy2*')
 )
 
-Struct(name='VkCopyImageToMemoryInfoEXT_', enabled=False,
+Struct(name='VkCopyImageToMemoryInfo_', enabled=False,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='flags', type='VkHostImageCopyFlagsEXT'),
@@ -10871,7 +11002,7 @@ var5=VarDef(name='imageOffset', type='VkOffset3D'),
 var6=VarDef(name='imageExtent', type='VkExtent3D')
 )
 
-Struct(name='VkCopyMemoryToImageInfoEXT_', enabled=False,
+Struct(name='VkCopyMemoryToImageInfo_', enabled=False,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='flags', type='VkHostImageCopyFlagsEXT'),
@@ -11403,11 +11534,11 @@ var3=VarDef(name='pCreateInfo', type='const VkImageCreateInfo*'),
 var4=VarDef(name='planeAspect', type='VkImageAspectFlagBits')
 )
 
-Struct(name='VkDeviceImageSubresourceInfoKHR_', enabled=False,
+Struct(name='VkDeviceImageSubresourceInfo_', enabled=False,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='pCreateInfo', type='const VkImageCreateInfo*'),
-var4=VarDef(name='pSubresource', type='const VkImageSubresource2KHR*')
+var4=VarDef(name='pSubresource', type='const VkImageSubresource2*')
 )
 
 Struct(name='VkDeviceMemoryOpaqueCaptureAddressInfo_', enabled=False,
@@ -12284,7 +12415,7 @@ var3=VarDef(name='optimalDeviceAccess', type='VkBool32'),
 var4=VarDef(name='identicalMemoryLayout', type='VkBool32')
 )
 
-Struct(name='VkHostImageLayoutTransitionInfoEXT_', enabled=False,
+Struct(name='VkHostImageLayoutTransitionInfo_', enabled=False,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='image', type='VkImage'),
@@ -12524,7 +12655,7 @@ var2=VarDef(name='mipLevel', type='uint32_t'),
 var3=VarDef(name='arrayLayer', type='uint32_t')
 )
 
-Struct(name='VkImageSubresource2KHR_', enabled=False,
+Struct(name='VkImageSubresource2_', enabled=False,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='imageSubresource', type='VkImageSubresource')
@@ -12968,19 +13099,19 @@ var3=VarDef(name='implementationVersion', type='uint32_t'),
 var4=VarDef(name='description', type='char[256]')
 )
 
-Struct(name='VkLayerSettingEXT_', enabled=False,
+Struct(name='VkLayerSettingEXT_', enabled=True, declareArray=True,
 var1=VarDef(name='pLayerName', type='const char*'),
 var2=VarDef(name='pSettingName', type='const char*'),
 var3=VarDef(name='type', type='VkLayerSettingTypeEXT'),
 var4=VarDef(name='valueCount', type='uint32_t'),
-var5=VarDef(name='pValues', type='const void*')
+var5=VarDef(name='pValues', type='const void*', wrapType='Cuint8_t::CSArray', wrapParams='getLayerSettingsElementSize(layersettingext->type, layersettingext->pValues), (const uint8_t *)layersettingext->pValues')
 )
 
-Struct(name='VkLayerSettingsCreateInfoEXT_', enabled=False,
+Struct(name='VkLayerSettingsCreateInfoEXT_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='settingCount', type='uint32_t'),
-var4=VarDef(name='pSettings', type='const VkLayerSettingEXT*')
+var4=VarDef(name='pSettings', type='const VkLayerSettingEXT*', wrapType='CVkLayerSettingEXTArray', wrapParams='layersettingscreateinfoext->settingCount, layersettingscreateinfoext->pSettings', count='settingCount')
 )
 
 Struct(name='VkMacOSSurfaceCreateInfoMVK_', enabled=False,
@@ -13100,7 +13231,7 @@ var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='memoryTypeBits', type='uint32_t')
 )
 
-Struct(name='VkMemoryMapInfoKHR_', enabled=False,
+Struct(name='VkMemoryMapInfo_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='flags', type='VkMemoryMapFlags'),
@@ -13161,7 +13292,7 @@ var1=VarDef(name='propertyFlags', type='VkMemoryPropertyFlags'),
 var2=VarDef(name='heapIndex', type='uint32_t')
 )
 
-Struct(name='VkMemoryUnmapInfoKHR_', enabled=False,
+Struct(name='VkMemoryUnmapInfoKHR_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='flags', type='VkMemoryUnmapFlagsKHR'),
@@ -16938,7 +17069,7 @@ var2=VarDef(name='offset', type='uint32_t'),
 var3=VarDef(name='size', type='uint32_t')
 )
 
-Struct(name='VkPushConstantsInfoKHR_', enabled=False,
+Struct(name='VkPushConstantsInfo_', enabled=False,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='layout', type='VkPipelineLayout'),
@@ -16948,7 +17079,7 @@ var6=VarDef(name='size', type='uint32_t'),
 var7=VarDef(name='pValues', type='const void*')
 )
 
-Struct(name='VkPushDescriptorSetInfoKHR_', enabled=False,
+Struct(name='VkPushDescriptorSetInfo_', enabled=False,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='stageFlags', type='VkShaderStageFlags'),
@@ -16958,7 +17089,7 @@ var6=VarDef(name='descriptorWriteCount', type='uint32_t'),
 var7=VarDef(name='pDescriptorWrites', type='const VkWriteDescriptorSet*')
 )
 
-Struct(name='VkPushDescriptorSetWithTemplateInfoKHR_', enabled=False,
+Struct(name='VkPushDescriptorSetWithTemplateInfo_', enabled=False,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='descriptorUpdateTemplate', type='VkDescriptorUpdateTemplate'),
@@ -17306,7 +17437,7 @@ var9=VarDef(name='storeOp', type='VkAttachmentStoreOp'),
 var10=VarDef(name='clearValue', type='VkClearValue')
 )
 
-Struct(name='VkRenderingAttachmentLocationInfoKHR_', enabled=False,
+Struct(name='VkRenderingAttachmentLocationInfo_', enabled=False,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='colorAttachmentCount', type='uint32_t'),
@@ -17341,7 +17472,7 @@ var9=VarDef(name='pDepthAttachment', type='const VkRenderingAttachmentInfo*', wr
 var10=VarDef(name='pStencilAttachment', type='const VkRenderingAttachmentInfo*', wrapType='CVkRenderingAttachmentInfoArray', wrapParams='1, renderinginfo->pStencilAttachment')
 )
 
-Struct(name='VkRenderingInputAttachmentIndexInfoKHR_', enabled=False,
+Struct(name='VkRenderingInputAttachmentIndexInfo_', enabled=False,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='colorAttachmentCount', type='uint32_t'),

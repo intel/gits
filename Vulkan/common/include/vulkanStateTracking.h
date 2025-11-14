@@ -791,6 +791,22 @@ inline void vkMapMemory_SD(VkResult return_value,
   }
 }
 
+inline void vkMapMemory2_SD(VkResult return_value,
+                            VkDevice device,
+                            const VkMemoryMapInfo* pMemoryMapInfo,
+                            void** ppData) {
+  vkMapMemory_SD(return_value, device, pMemoryMapInfo->memory, pMemoryMapInfo->offset,
+                 pMemoryMapInfo->size, pMemoryMapInfo->flags, ppData);
+}
+
+inline void vkMapMemory2KHR_SD(VkResult return_value,
+                               VkDevice device,
+                               const VkMemoryMapInfo* pMemoryMapInfo,
+                               void** ppData) {
+  vkMapMemory_SD(return_value, device, pMemoryMapInfo->memory, pMemoryMapInfo->offset,
+                 pMemoryMapInfo->size, pMemoryMapInfo->flags, ppData);
+}
+
 inline void vkUnmapMemory_SD(VkDevice device, VkDeviceMemory memory) {
   auto& memoryState = SD()._devicememorystates[memory];
 
@@ -809,6 +825,18 @@ inline void vkUnmapMemory_SD(VkDevice device, VkDeviceMemory memory) {
   if (Configurator::IsRecorder() && Configurator::Get().vulkan.recorder.shadowMemory) {
     memoryState->shadowMemory.reset();
   }
+}
+
+inline void vkUnmapMemory2_SD(VkResult return_value,
+                              VkDevice device,
+                              const VkMemoryUnmapInfoKHR* pMemoryUnmapInfo) {
+  vkUnmapMemory_SD(device, pMemoryUnmapInfo->memory);
+}
+
+inline void vkUnmapMemory2KHR_SD(VkResult return_value,
+                                 VkDevice device,
+                                 const VkMemoryUnmapInfoKHR* pMemoryUnmapInfo) {
+  vkUnmapMemory_SD(device, pMemoryUnmapInfo->memory);
 }
 
 inline void vkAllocateMemory_SD(VkResult return_value,
@@ -3641,6 +3669,28 @@ inline void vkCmdBindIndexBuffer_SD(VkCommandBuffer cmdBuf,
   }
 }
 
+inline void vkCmdBindIndexBuffer2_SD(VkCommandBuffer cmdBuf,
+                                     VkBuffer buffer,
+                                     VkDeviceSize offset,
+                                     VkDeviceSize size,
+                                     VkIndexType indexType) {
+  if (Configurator::IsRecorder() &&
+      (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase())) {
+    insertStateIfFound(SD()._bufferstates, buffer, SD().bindingBuffers[cmdBuf]);
+  }
+}
+
+inline void vkCmdBindIndexBuffer2KHR_SD(VkCommandBuffer cmdBuf,
+                                        VkBuffer buffer,
+                                        VkDeviceSize offset,
+                                        VkDeviceSize size,
+                                        VkIndexType indexType) {
+  if (Configurator::IsRecorder() &&
+      (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase())) {
+    insertStateIfFound(SD()._bufferstates, buffer, SD().bindingBuffers[cmdBuf]);
+  }
+}
+
 inline void vkCmdBindTransformFeedbackBuffersEXT_SD(VkCommandBuffer cmdBuf,
                                                     uint32_t firstBinding,
                                                     uint32_t bindingCount,
@@ -3724,19 +3774,14 @@ inline void vkCmdBindDescriptorSets_SD(VkCommandBuffer cmdBuf,
   }
 }
 
-inline void vkCmdPushDescriptorSetKHR_SD(VkCommandBuffer cmdBuf,
-                                         VkPipelineBindPoint pipelineBindPoint,
-                                         VkPipelineLayout layout,
-                                         uint32_t set,
-                                         uint32_t descriptorWriteCount,
-                                         const VkWriteDescriptorSet* pDescriptorWrites) {
-  if (!Configurator::IsRecorder()) {
-    return;
-  }
-  if (!isSubcaptureBeforeRestorationPhase()) {
-    return;
-  }
+namespace {
 
+void PushDescriptorSetHelper(VkCommandBuffer cmdBuf,
+                             VkPipelineBindPoint pipelineBindPoint,
+                             VkPipelineLayout layout,
+                             uint32_t set,
+                             uint32_t descriptorWriteCount,
+                             const VkWriteDescriptorSet* pDescriptorWrites) {
   CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
 
   for (unsigned int i = 0; i < descriptorWriteCount; i++) {
@@ -3871,6 +3916,42 @@ inline void vkCmdPushDescriptorSetKHR_SD(VkCommandBuffer cmdBuf,
       }
     }
   }
+}
+
+} // namespace
+
+inline void vkCmdPushDescriptorSet_SD(VkCommandBuffer cmdBuf,
+                                      VkPipelineBindPoint pipelineBindPoint,
+                                      VkPipelineLayout layout,
+                                      uint32_t set,
+                                      uint32_t descriptorWriteCount,
+                                      const VkWriteDescriptorSet* pDescriptorWrites) {
+  if (!Configurator::IsRecorder()) {
+    return;
+  }
+  if (!isSubcaptureBeforeRestorationPhase()) {
+    return;
+  }
+
+  PushDescriptorSetHelper(cmdBuf, pipelineBindPoint, layout, set, descriptorWriteCount,
+                          pDescriptorWrites);
+}
+
+inline void vkCmdPushDescriptorSetKHR_SD(VkCommandBuffer cmdBuf,
+                                         VkPipelineBindPoint pipelineBindPoint,
+                                         VkPipelineLayout layout,
+                                         uint32_t set,
+                                         uint32_t descriptorWriteCount,
+                                         const VkWriteDescriptorSet* pDescriptorWrites) {
+  if (!Configurator::IsRecorder()) {
+    return;
+  }
+  if (!isSubcaptureBeforeRestorationPhase()) {
+    return;
+  }
+
+  PushDescriptorSetHelper(cmdBuf, pipelineBindPoint, layout, set, descriptorWriteCount,
+                          pDescriptorWrites);
 }
 
 inline void vkCmdDraw_SD(VkCommandBuffer cmdBuf, uint32_t, uint32_t, uint32_t, uint32_t) {

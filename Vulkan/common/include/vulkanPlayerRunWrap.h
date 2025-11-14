@@ -942,6 +942,36 @@ inline void vkMapMemory_WRAPRUN(CVkResult& recorderSideReturnValue,
   vkMapMemory_SD(playerSideReturnValue, *device, *mem, *offset, *size, *flags, &pData);
 }
 
+inline void vkMapMemory2_WRAPRUN(CVkResult& recorderSideReturnValue,
+                                 CVkDevice& device,
+                                 CVkMemoryMapInfo& pMemoryMapInfo,
+                                 CVoidPtr& ppData) {
+  auto pMapInfo = pMemoryMapInfo.Value();
+
+  checkMemoryMappingFeasibility(*device, pMapInfo->memory);
+
+  void* pData;
+  VkResult playerSideReturnValue = drvVk.vkMapMemory2(*device, pMapInfo, &pData);
+  checkReturnValue(playerSideReturnValue, recorderSideReturnValue, "vkMapMemory2");
+  recorderSideReturnValue.Assign(playerSideReturnValue);
+  vkMapMemory2_SD(playerSideReturnValue, *device, *pMemoryMapInfo, &pData);
+}
+
+inline void vkMapMemory2KHR_WRAPRUN(CVkResult& recorderSideReturnValue,
+                                    CVkDevice& device,
+                                    CVkMemoryMapInfo& pMemoryMapInfo,
+                                    CVoidPtr& ppData) {
+  auto pMapInfo = pMemoryMapInfo.Value();
+
+  checkMemoryMappingFeasibility(*device, pMapInfo->memory);
+
+  void* pData;
+  VkResult playerSideReturnValue = drvVk.vkMapMemory2KHR(*device, pMapInfo, &pData);
+  checkReturnValue(playerSideReturnValue, recorderSideReturnValue, "vkMapMemory2KHR");
+  recorderSideReturnValue.Assign(playerSideReturnValue);
+  vkMapMemory2KHR_SD(playerSideReturnValue, *device, *pMemoryMapInfo, &pData);
+}
+
 inline void vkGetFenceStatus_WRAPRUN(CVkResult& return_value, CVkDevice& device, CVkFence& fence) {
   VkResult recRetVal = *return_value;
   return_value.Assign(drvVk.vkGetFenceStatus(*device, *fence));

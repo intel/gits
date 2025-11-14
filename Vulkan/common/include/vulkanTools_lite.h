@@ -23,6 +23,7 @@ uint32_t getFormatChannelCount(VkFormat format);
 VkImageAspectFlags getFormatAspectFlags(VkFormat format);
 VkAccessFlags getLayoutAccessFlags(VkImageLayout layout);
 uint32_t getIndexElementSize(VkIndexType indexType);
+uint32_t getLayerSettingsElementSize(VkLayerSettingTypeEXT layerSettingsType, const void* value);
 bool isFormatFloat(VkFormat format);
 bool isFormatCompressed(VkFormat format);
 const void* ignoreLoaderSpecificStructureTypes(const void* pNext);

@@ -368,6 +368,78 @@ VkResult recExecWrap_vkMapMemory(VkDevice device,
   return return_value;
 }
 
+VkResult recExecWrap_vkMapMemory2(VkDevice device,
+                                  const VkMemoryMapInfo* pMemoryMapInfo,
+                                  void** ppData) {
+  CVkDriver& drvVk = CGitsPluginVulkan::RecorderWrapper().Drivers();
+  VkResult return_value;
+  if (CGitsPluginVulkan::Configuration().common.recorder.enabled &&
+      (CGitsPluginVulkan::Configuration().vulkan.recorder.mode != TVulkanRecorderMode::ALL) &&
+      ((pMemoryMapInfo->offset != 0) || (pMemoryMapInfo->size != 0xFFFFFFFFFFFFFFFF)) &&
+      !CGitsPluginVulkan::_recorderFinished &&
+      !CGitsPluginVulkan::RecorderWrapper().IsUseExternalMemoryExtensionUsed()) {
+    VkDeviceSize wholeSize = 0;
+    wholeSize = CGitsPluginVulkan::RecorderWrapper().GetWholeMemorySize(pMemoryMapInfo->memory);
+    void* pointer = 0;
+    return_value = drvVk.vkMapMemory2(device, pMemoryMapInfo, &pointer);
+
+    if (CGitsPluginVulkan::Configuration().vulkan.recorder.shadowMemory &&
+        CGitsPluginVulkan::Configuration().common.recorder.enabled) {
+      pointer = CGitsPluginVulkan::RecorderWrapper().GetShadowMemory(
+          pMemoryMapInfo->memory, (char*)pointer, (uint64_t)wholeSize, (uint64_t)0);
+    }
+    *ppData = (char*)pointer + pMemoryMapInfo->offset;
+  } else {
+    return_value = drvVk.vkMapMemory2(device, pMemoryMapInfo, ppData);
+
+    if (CGitsPluginVulkan::Configuration().vulkan.recorder.shadowMemory &&
+        CGitsPluginVulkan::Configuration().common.recorder.enabled &&
+        !CGitsPluginVulkan::_recorderFinished &&
+        !CGitsPluginVulkan::RecorderWrapper().IsUseExternalMemoryExtensionUsed()) {
+      *ppData = CGitsPluginVulkan::RecorderWrapper().GetShadowMemory(
+          pMemoryMapInfo->memory, (char*)*ppData, (uint64_t)pMemoryMapInfo->size,
+          (uint64_t)pMemoryMapInfo->offset);
+    }
+  }
+  return return_value;
+}
+
+VkResult recExecWrap_vkMapMemory2KHR(VkDevice device,
+                                     const VkMemoryMapInfo* pMemoryMapInfo,
+                                     void** ppData) {
+  CVkDriver& drvVk = CGitsPluginVulkan::RecorderWrapper().Drivers();
+  VkResult return_value;
+  if (CGitsPluginVulkan::Configuration().common.recorder.enabled &&
+      (CGitsPluginVulkan::Configuration().vulkan.recorder.mode != TVulkanRecorderMode::ALL) &&
+      ((pMemoryMapInfo->offset != 0) || (pMemoryMapInfo->size != 0xFFFFFFFFFFFFFFFF)) &&
+      !CGitsPluginVulkan::_recorderFinished &&
+      !CGitsPluginVulkan::RecorderWrapper().IsUseExternalMemoryExtensionUsed()) {
+    VkDeviceSize wholeSize = 0;
+    wholeSize = CGitsPluginVulkan::RecorderWrapper().GetWholeMemorySize(pMemoryMapInfo->memory);
+    void* pointer = 0;
+    return_value = drvVk.vkMapMemory2KHR(device, pMemoryMapInfo, &pointer);
+
+    if (CGitsPluginVulkan::Configuration().vulkan.recorder.shadowMemory &&
+        CGitsPluginVulkan::Configuration().common.recorder.enabled) {
+      pointer = CGitsPluginVulkan::RecorderWrapper().GetShadowMemory(
+          pMemoryMapInfo->memory, (char*)pointer, (uint64_t)wholeSize, (uint64_t)0);
+    }
+    *ppData = (char*)pointer + pMemoryMapInfo->offset;
+  } else {
+    return_value = drvVk.vkMapMemory2KHR(device, pMemoryMapInfo, ppData);
+
+    if (CGitsPluginVulkan::Configuration().vulkan.recorder.shadowMemory &&
+        CGitsPluginVulkan::Configuration().common.recorder.enabled &&
+        !CGitsPluginVulkan::_recorderFinished &&
+        !CGitsPluginVulkan::RecorderWrapper().IsUseExternalMemoryExtensionUsed()) {
+      *ppData = CGitsPluginVulkan::RecorderWrapper().GetShadowMemory(
+          pMemoryMapInfo->memory, (char*)*ppData, (uint64_t)pMemoryMapInfo->size,
+          (uint64_t)pMemoryMapInfo->offset);
+    }
+  }
+  return return_value;
+}
+
 // vkAllocateMemory
 
 VkResult recExecWrap_vkAllocateMemory(VkDevice device,
