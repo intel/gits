@@ -872,6 +872,11 @@ function glCopyBufferSubData(readTarget, writeTarget, readOffset, writeOffset, s
   drv.glCopyBufferSubData(readTarget, writeTarget, readOffset, writeOffset, size)
   postDrawAction()
 end
+function glCopyNamedBufferSubData(readTarget, writeTarget, readOffset, writeOffset, size)
+  preDrawAction("glCopyBufferSubData")
+  drv.glCopyNamedBufferSubData(readTarget, writeTarget, readOffset, writeOffset, size)
+  postDrawAction()
+end
 function glCopyColorSubTable(target, start, x, y, width)
   preDrawAction("glCopyColorSubTable")
   drv.glCopyColorSubTable(target, start, x, y, width)
