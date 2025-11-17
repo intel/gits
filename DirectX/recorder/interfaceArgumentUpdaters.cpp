@@ -392,12 +392,13 @@ UpdateInterface<D3D12_BARRIER_GROUPs_Argument, D3D12_BARRIER_GROUP>::UpdateInter
   unwrapped_.resize(arg.size);
   arg.value = unwrapped_.data();
 
+  unsigned resourceKeyIndex = 0;
+
   for (unsigned i = 0; i < arg.size; ++i) {
     const D3D12_BARRIER_GROUP& barrierGroup = value[i];
     D3D12_BARRIER_GROUP& barrierGroupUnwrapped = unwrapped_[i];
     barrierGroupUnwrapped = barrierGroup;
 
-    unsigned resourceKeyIndex = 0;
     if (barrierGroup.Type == D3D12_BARRIER_TYPE_GLOBAL) {
       unwrappedGlobalBarrierGroups_.emplace_back(
           std::make_unique<std::vector<D3D12_GLOBAL_BARRIER>>());
