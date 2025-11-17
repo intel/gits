@@ -1098,6 +1098,15 @@ void AnalyzerLayer::post(ID3D12Device5CreateStateObjectCommand& c) {
   }
 }
 
+void AnalyzerLayer::post(ID3D12Device5GetRaytracingAccelerationStructurePrebuildInfoCommand& c) {
+  analyzerService_.notifyObject(c.object_.key);
+  if (optimize_) {
+    for (unsigned key : c.pDesc_.inputKeys) {
+      analyzerService_.notifyObject(key);
+    }
+  }
+}
+
 void AnalyzerLayer::post(ID3D12Device7CreateProtectedResourceSession1Command& c) {
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.ppSession_.key);

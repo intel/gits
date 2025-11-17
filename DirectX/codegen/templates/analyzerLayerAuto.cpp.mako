@@ -128,6 +128,7 @@ custom = [
     'ID3D12Device4CreateReservedResource1',
     'ID3D12Device5CreateLifetimeTracker',
     'ID3D12Device5CreateMetaCommand',
+    'ID3D12Device5GetRaytracingAccelerationStructurePrebuildInfo',
     'ID3D12Device7CreateProtectedResourceSession1',
     'ID3D12Device9CreateShaderCacheSession',
     'ID3D12Device9CreateCommandQueue1',
