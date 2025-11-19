@@ -123,6 +123,25 @@ class ReturnCode(Enum):
         return cls.FAILURE
 
 
+class RepoStatus(Enum):
+    NOT_INSTALLED = 0
+    WRONG_BASE = 1
+    MISMATCHING_PATCHES = 2
+    READY = 3
+
+    def __str__(self):
+        if RepoStatus.READY == self:
+            return "ready"
+        elif RepoStatus.MISMATCHING_PATCHES == self:
+            return "mismatching patches"
+        elif RepoStatus.WRONG_BASE == self:
+            return "based on wrong commit/branch/url/path/..."
+        elif RepoStatus.NOT_INSTALLED == self:
+            return "not installed"
+        else:
+            return "unknown"
+
+
 class RetryError(Exception):
     pass
 
@@ -217,6 +236,7 @@ class GitRepository(Dependency):
         self.branch = yaml_description.get("branch", "master")
         self.commit_id = yaml_description.get("commit_id", "")
         self.modules = []
+        self.patches = []
         if not THIRD_PARTY_PATH.exists():
             THIRD_PARTY_PATH.mkdir()
 
@@ -267,6 +287,7 @@ class GitRepository(Dependency):
         return process
 
     def apply_patches(self, repo_meta_info):
+        self.patches = []
         patches_meta_info = repo_meta_info.get("patches", {})
         for i in self.modules:
             patch_list = list(Path(PATCH_PATH / i).glob("*.patch"))
@@ -296,11 +317,13 @@ class GitRepository(Dependency):
             if len(hash_list) == 0:
                 continue
             for (patch, hash) in patch_hash_list:
+                self.patches.append(patch)
                 self.execute(
                     f"git apply {patch}", cwd=self.repository_path.parent / i
                 )
                 patches_meta_info[str(i)].append(str(hash))
         repo_meta_info["patches"] = patches_meta_info
+        return repo_meta_info
 
     def clone(self):
         try:
@@ -321,24 +344,56 @@ class GitRepository(Dependency):
             return False
         return True
 
-    def scan_repositories(self) -> None:
+    def scan_repositories(self, do_clean=False) -> None:
+        if not self.repository_path.exists():
+            return
+
         modules_paths = self.repository_path.rglob(".git")
         for submodule_path in modules_paths:
-            self.modules.append(
-                submodule_path.relative_to(self.repository_path.parent).parent
-            )
-        self.logger.debug(str(self.modules))
+            path = submodule_path.relative_to(self.repository_path.parent).parent
+            if path not in self.modules:
+                self.modules.append(path)
+            if do_clean:
+                self.execute(
+                    f"git reset --hard",
+                    cwd=self.repository_path.parent / path,
+                    must_pass=True
+                )
+                self.execute(
+                    f"git clean -fdx",
+                    cwd=self.repository_path.parent / path,
+                    must_pass=True
+                )
 
     def last_install_sufficient(self, repo_meta_info):
         if repo_meta_info.get("status", None) != "installed":
-            return False
+            return RepoStatus.NOT_INSTALLED
 
         result = True and self.compare_and_log_difference_path("path", repo_meta_info.get("path", None), str(self.repository_path))
         result = result and self.compare_and_log_difference("branch", repo_meta_info.get("branch", None), self.branch)
         result = result and self.compare_and_log_difference("commit id", repo_meta_info.get("commit_id", None), self.commit_id)
         result = result and self.compare_and_log_difference("URL", repo_meta_info.get("url", None), self.url)
 
-        return result
+        if not result:
+            return RepoStatus.WRONG_BASE
+
+        patches_meta_info = repo_meta_info.get("patches", {})
+        self.patches = []
+        for path_name in self.modules:
+            patch_list = list(Path(PATCH_PATH / path_name).glob("*.patch"))
+            patch_hash_list = [(patch, get_file_hash(patch)) for patch in patch_list]
+            hash_list = [hash for (patch, hash) in patch_hash_list]
+            module_name = str(path_name)
+            module_patches = set(patches_meta_info.get(module_name, []))
+            if set(hash_list) != module_patches:
+                self.logger.warning(f"Mismatch 'patches' for module '{module_name}': local={module_patches}, required={hash_list}")
+                result = False
+            else:
+                self.patches.extend(patch_list)
+        if not result:
+            return RepoStatus.MISMATCHING_PATCHES
+
+        return RepoStatus.READY
 
     def install(self, repo_meta_info, offline_mode):
         if self.check_skip_os():
@@ -346,16 +401,26 @@ class GitRepository(Dependency):
             repo_meta_info["status"] = "skipped"
             return True, repo_meta_info
 
-        if self.last_install_sufficient(repo_meta_info):
+        self.scan_repositories()
+
+        repo_status = self.last_install_sufficient(repo_meta_info)
+
+        if RepoStatus.READY == repo_status:
             if self.repository_path_exists_not_empty():
-                self.logger.info(f"Repository ready @ {self.relative_repository_path()}")
+                msg = f"Found repository ready @ {self.relative_repository_path()}"
+                patch_count = len(self.patches)
+                if patch_count > 0:
+                    msg += f" - {patch_count} patch(es) applied"
+                self.logger.info(msg)
                 return True, repo_meta_info
         else:
-            if offline_mode and repo_meta_info.get("status", None) == "installed":
-                self.logger.error(f"Wrong version installed @ {self.relative_repository_path()}")
-                self.logger.error(f"Details: {repo_meta_info}")
-                self.logger.error(f"Offline mode can not change the installed version!")
-                return False, repo_meta_info
+            self.logger.info(f"Last install status is {repo_status}")
+
+        if RepoStatus.WRONG_BASE == repo_status and offline_mode:
+            self.logger.error(f"Wrong version installed @ {self.relative_repository_path()}")
+            self.logger.error(f"Details: {repo_meta_info}")
+            self.logger.error(f"Offline mode can not change the installed version!")
+            return False, repo_meta_info
 
         repo_meta_info["url"] = self.url
         repo_meta_info["commit_id"] = self.commit_id
@@ -363,14 +428,14 @@ class GitRepository(Dependency):
         repo_meta_info["path"] = str(self.repository_path)
         repo_meta_info["status"] = "required"
 
-        if not offline_mode:
+        needs_install = RepoStatus.WRONG_BASE == repo_status or RepoStatus.NOT_INSTALLED == repo_status
+        if needs_install and not offline_mode:
             if not self.prepare_folder():
                 return False, repo_meta_info
             repo_meta_info["status"] = "folder_prepared"
             if not self.clone():
                 return False, repo_meta_info
-
-        repo_meta_info["status"] = "cloned"
+            repo_meta_info["status"] = "cloned"
 
         if not self.repository_path_exists_not_empty():
             if not offline_mode:
@@ -386,10 +451,15 @@ class GitRepository(Dependency):
             if offline_mode:
                 self.logger.info(f"Found prepared repository @ {self.relative_repository_path()}")
 
-        self.scan_repositories()
-        self.apply_patches(repo_meta_info)
+        self.scan_repositories(RepoStatus.MISMATCHING_PATCHES == repo_status)
+        repo_meta_info = self.apply_patches(repo_meta_info)
         repo_meta_info["status"] = "installed"
 
+        msg = f"Repository ready @ {self.relative_repository_path()}"
+        patch_count = len(self.patches)
+        if patch_count > 0:
+            msg += f" - {patch_count} patch(es) applied"
+        self.logger.info(msg)
         return True, repo_meta_info
 
 
@@ -538,6 +608,7 @@ class Nuget(Dependency):
 
         # Delete the downloaded package file
         os.remove(package_path)
+
 
 def main(arguments=None) -> int:
     result = True
