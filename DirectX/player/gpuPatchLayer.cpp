@@ -204,7 +204,7 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStr
     }
 
     auto itInstances = instancesArraysOfPointers_.find(c.key);
-    GITS_ASSERT(itInstances != instancesArraysOfPointers_.end())
+    GITS_ASSERT(itInstances != instancesArraysOfPointers_.end());
     std::vector<D3D12_GPU_VIRTUAL_ADDRESS>& arrayOfPointers = itInstances->second;
 
     struct InstanceInfo {

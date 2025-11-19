@@ -76,18 +76,6 @@ uint32_t gits::HwCrc32ishHash(const void* data, size_t size, uint32_t hash) {
 #endif
 
 namespace gits {
-void gits_assert(bool condition,
-                 const char* condition_string,
-                 const char* message,
-                 const char* function,
-                 const char* file,
-                 uint32_t line) {
-  if (!condition) {
-    LOG_ERROR << "Assertion failed: " << condition_string << " " << message
-              << "\n  Function: " << function << "\n  File: " << file << "\n  Line: " << line;
-    fast_exit(EXIT_FAILURE);
-  }
-}
 
 uint64_t ComputeHash(const void* data,
                      size_t size,

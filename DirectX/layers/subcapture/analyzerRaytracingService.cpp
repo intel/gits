@@ -190,7 +190,7 @@ void AnalyzerRaytracingService::buildTlas(
 
   } else if (c.pDesc_.value->Inputs.DescsLayout == D3D12_ELEMENTS_LAYOUT_ARRAY_OF_POINTERS) {
     auto itInstances = instancesArraysOfPointers_.find(c.key);
-    GITS_ASSERT(itInstances != instancesArraysOfPointers_.end())
+    GITS_ASSERT(itInstances != instancesArraysOfPointers_.end());
     std::vector<D3D12_GPU_VIRTUAL_ADDRESS>& arrayOfPointers = itInstances->second;
 
     struct InstanceInfo {

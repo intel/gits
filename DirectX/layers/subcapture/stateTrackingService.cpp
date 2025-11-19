@@ -63,7 +63,7 @@ void StateTrackingService::restoreState() {
 
 void StateTrackingService::keepState(unsigned objectKey) {
   auto it = statesByKey_.find(objectKey);
-  GITS_ASSERT(it != statesByKey_.end())
+  GITS_ASSERT(it != statesByKey_.end());
   ObjectState* state = it->second;
   state->keepDestroyed = true;
   if (state->creationCommand.get() &&
@@ -80,7 +80,7 @@ void StateTrackingService::keepState(unsigned objectKey) {
 
 void StateTrackingService::restoreState(unsigned key) {
   auto it = statesByKey_.find(key);
-  GITS_ASSERT(it != statesByKey_.end())
+  GITS_ASSERT(it != statesByKey_.end());
   restoreState(it->second);
 }
 

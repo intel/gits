@@ -25,6 +25,7 @@ Mapping between plog::Severity and gits::LogLevel:
 This mapping is temporary and will be removed in the future (leaving only the plog::Severity).
 */
 
+#include <source_location>
 #include <filesystem>
 
 #define PLOG_ENABLE_WCHAR_INPUT 1
@@ -58,6 +59,13 @@ PLOG_LINKAGE util::nstring LogPrefix(plog::Severity severity);
 
 // Only intended to be used for LOG_TRACE
 #define LOG_PREFIX plog::LogPrefix(plog::Severity::debug)
+
+void GitsAssert(bool condition,
+                const char* conditionStr,
+                const std::string& msg = "",
+                const std::source_location& loc = std::source_location::current());
+
+#define GITS_ASSERT(condition, ...) GitsAssert(condition, #condition, ##__VA_ARGS__)
 
 namespace gits {
 namespace log {

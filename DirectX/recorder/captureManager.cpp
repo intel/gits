@@ -678,7 +678,7 @@ void CaptureManager::interceptNvAPIFunctions() {
       return;
     }
     status = NvAPI_Unload();
-    GITS_ASSERT(status == NVAPI_OK)
+    GITS_ASSERT(status == NVAPI_OK);
   }
 
   LOG_INFO << "Loaded NvAPI";

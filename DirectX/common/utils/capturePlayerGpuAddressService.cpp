@@ -128,7 +128,7 @@ void CapturePlayerGpuAddressService::GpuAddressService::destroyInterface(unsigne
     auto it = resourcesByKey_.find(interfaceKey);
     if (it != resourcesByKey_.end()) {
       auto itAddr = resourcesByAddress_.find(it->second->captureStart);
-      GITS_ASSERT(itAddr != resourcesByAddress_.end())
+      GITS_ASSERT(itAddr != resourcesByAddress_.end());
       if (itAddr->second->key == interfaceKey) {
         resourcesByAddress_.erase(itAddr);
       }
@@ -146,7 +146,7 @@ void CapturePlayerGpuAddressService::GpuAddressService::destroyInterface(unsigne
       placedResourcesByAddress_[info->layer].erase(info->captureStart);
       placedResourcesByKey_.erase(it);
       auto heapIt = heapsByResourceKey_.find(interfaceKey);
-      GITS_ASSERT(heapIt != heapsByResourceKey_.end())
+      GITS_ASSERT(heapIt != heapsByResourceKey_.end());
       heapIt->second->resources.erase(interfaceKey);
       heapsByResourceKey_.erase(heapIt);
       return;

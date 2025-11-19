@@ -162,3 +162,28 @@ bool ShouldLog(gits::LogLevel lvl) {
 }
 } // namespace log
 } // namespace gits
+
+void GitsAssert(bool condition,
+                const char* conditionStr,
+                const std::string& msg,
+                const std::source_location& loc) {
+  if (condition) {
+    return;
+  }
+
+  LOG_ERROR << "Assertion failed: " << conditionStr;
+  if (!msg.empty()) {
+    LOG_ERROR << msg;
+  }
+  LOG_ERROR << "  Function: " << loc.function_name();
+  LOG_ERROR << "  File: " << loc.file_name();
+  LOG_ERROR << "  Line: " << loc.line();
+
+#ifdef NDEBUG
+  // In release mode, use quick_exit to terminate the program immediately
+  std::quick_exit(EXIT_FAILURE);
+#else
+  // In debug mode, use standard assert to trigger debugger break (and optionally ignore)
+  assert(condition);
+#endif
+}
