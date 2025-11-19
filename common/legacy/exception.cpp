@@ -127,15 +127,6 @@ const char* gits::Exception::what() const throw() {
 
   return _buffer.c_str();
 }
-namespace {
-void fast_exit(int code) {
-#if defined GITS_PLATFORM_WINDOWS
-  _exit(code);
-#else
-  _Exit(code);
-#endif
-}
-} // namespace
 
 void topmost_exception_handler(const char* funcName) {
   char msg[1024];
@@ -154,7 +145,7 @@ void topmost_exception_handler(const char* funcName) {
     fprintf(stderr, "topmost_exception_handler: Exception during handling exception:\n    %s\n",
             msg);
   }
-  fast_exit(1);
+  std::quick_exit(EXIT_FAILURE);
 }
 
 #ifdef GITS_PLATFORM_WINDOWS

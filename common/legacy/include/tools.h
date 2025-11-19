@@ -80,8 +80,6 @@ uint64_t ComputeHash(const void* data, size_t size, THashType type);
 
 std::string CommandOutput(const std::string& command, bool isRecorder);
 
-void fast_exit(int);
-
 template <class T>
 size_t GetTermArraySize(const T* arr, const T terminator, const int term_pos = 1) {
   for (int i = 0; i >= 0; i = i + term_pos) {
@@ -425,10 +423,10 @@ public:
       }
     } catch (std::exception& e) {
       LOG_ERROR << "Image writer thread failed: " << e.what();
-      fast_exit(1);
+      std::quick_exit(EXIT_FAILURE);
     } catch (...) {
       LOG_ERROR << "Unknown error in image writer thread";
-      fast_exit(1);
+      std::quick_exit(EXIT_FAILURE);
     }
   }
   // Default constructor

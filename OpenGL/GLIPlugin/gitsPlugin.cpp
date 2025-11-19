@@ -54,16 +54,6 @@ IRecorderWrapper* CGitsPlugin::_recorderWrapper;
 std::unique_ptr<CGitsLoader> CGitsPlugin::_loader;
 std::mutex CGitsPlugin::_mutex;
 
-namespace {
-void fast_exit(int code) {
-#if defined GITS_PLATFORM_WINDOWS
-  _exit(code);
-#else
-  _Exit(code);
-#endif
-}
-} // namespace
-
 void CGitsPlugin::Initialize() {
   static bool initialized = false;
   if (initialized) {
@@ -88,15 +78,15 @@ void CGitsPlugin::Initialize() {
   } catch (const Exception& ex) {
     LOG_ERROR << "Unhandled GITS exception: " << ex.what();
     _loader.reset();
-    fast_exit(EXIT_FAILURE);
+    std::quick_exit(EXIT_FAILURE);
   } catch (const std::exception& ex) {
     LOG_ERROR << "Unhandled STD exception: " << ex.what();
     _loader.reset();
-    fast_exit(EXIT_FAILURE);
+    std::quick_exit(EXIT_FAILURE);
   } catch (...) {
     LOG_ERROR << "Unhandled Unknown exception caught";
     _loader.reset();
-    fast_exit(EXIT_FAILURE);
+    std::quick_exit(EXIT_FAILURE);
   }
 }
 

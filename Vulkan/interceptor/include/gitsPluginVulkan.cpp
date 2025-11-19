@@ -29,16 +29,6 @@ std::unique_ptr<CGitsLoader> CGitsPluginVulkan::_loader;
 std::mutex CGitsPluginVulkan::_mutex;
 std::atomic<bool> CGitsPluginVulkan::_recorderFinished{false};
 
-namespace {
-void fast_exit(int code) {
-#if defined GITS_PLATFORM_WINDOWS
-  _exit(code);
-#else
-  _Exit(code);
-#endif
-}
-} // namespace
-
 void CGitsPluginVulkan::Initialize() {
   static bool initialized = false;
   if (initialized) {
@@ -70,15 +60,15 @@ void CGitsPluginVulkan::Initialize() {
   } catch (const Exception& ex) {
     LOG_ERROR << "Unhandled GITS exception: " << ex.what();
     _loader.reset();
-    fast_exit(EXIT_FAILURE);
+    std::quick_exit(EXIT_FAILURE);
   } catch (const std::exception& ex) {
     LOG_ERROR << "Unhandled STD exception: " << ex.what();
     _loader.reset();
-    fast_exit(EXIT_FAILURE);
+    std::quick_exit(EXIT_FAILURE);
   } catch (...) {
     LOG_ERROR << "Unhandled Unknown exception caught";
     _loader.reset();
-    fast_exit(EXIT_FAILURE);
+    std::quick_exit(EXIT_FAILURE);
   }
 }
 

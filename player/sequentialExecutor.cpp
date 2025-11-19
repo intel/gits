@@ -59,13 +59,13 @@ public:
       }
     } catch (gits::Exception& ex) {
       LOG_ERROR << "Unhandled exception: " << ex.what() << " on thread: " << _threadId;
-      fast_exit(1);
+      std::quick_exit(EXIT_FAILURE);
     } catch (std::exception& ex) {
       LOG_ERROR << "Unhandled system exception: " << ex.what() << " on thread: " << _threadId;
-      fast_exit(1);
+      std::quick_exit(EXIT_FAILURE);
     } catch (...) {
       LOG_ERROR << "Unhandled exception caught on thread: " << _threadId;
-      fast_exit(1);
+      std::quick_exit(EXIT_FAILURE);
     }
   }
 };

@@ -314,14 +314,6 @@ void CheckMinimumAvailableDiskSize() {
   }
 }
 
-void fast_exit(int code) {
-#if defined GITS_PLATFORM_WINDOWS
-  _exit(code);
-#else
-  _Exit(code);
-#endif
-}
-
 #ifdef GITS_PLATFORM_X11
 pid_t GetPIDFromWindow(Display* display, Window w) {
   Atom atomPID, type;

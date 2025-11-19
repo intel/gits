@@ -131,7 +131,7 @@ public:
       }
     } catch (std::exception& e) {
       LOG_ERROR << "Loader reading thread failed: Exiting!!!:" << e.what();
-      fast_exit(1);
+      std::quick_exit(EXIT_FAILURE);
     }
 
     // If we were forced to finish we may still own few tokens
@@ -183,10 +183,10 @@ public:
       }
     } catch (std::exception& e) {
       LOG_ERROR << "Error in writer thread: " << e.what();
-      fast_exit(1);
+      std::quick_exit(EXIT_FAILURE);
     } catch (...) {
       LOG_ERROR << "Unknown error in writer thread";
-      fast_exit(1);
+      std::quick_exit(EXIT_FAILURE);
     }
     LOG_INFO << "Stream writer thread finished.";
   }
