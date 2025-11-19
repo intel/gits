@@ -1,5 +1,7 @@
-# DirectX - Plugins
-
+---
+icon: material/microsoft
+title: Plugins
+---
 GITS supports plugins for both capture and replay. GITS plugins are dynamic libraries loaded at runtime by the `gitsPlayer.exe` or `gitsRecorder.dll`. Plugins are included under `Plugins\DirectX\`.
 
 Each plugin consists of the following:
@@ -8,7 +10,7 @@ Each plugin consists of the following:
 - `config.yml`: Configuration file (may also contain documentation).
 - `dependencies\`: Directory containing all the DLLs the plugin depends on.
 
-## Usage
+# Usage
 
 GITS plugins must be enabled in the configuration file, either under `DirectX.Capture` or `DirectX.Playback`.
 
@@ -32,11 +34,11 @@ DirectX:
     Plugins: ['HelloPlugin']
 ```
 
-### Plugin Names
+## Plugin Names
 
 The plugin name can be found in each plugin's `config.yml` and in the list of plugins [below](#plugin-list).
 
-### Interceptor Only
+## Interceptor Only
 
 GITS plugins are very flexible and may not require full capture (or playback) to be enabled. It is possible to disable stream capture and use a GITS plugin without any limitations or errors.
 
@@ -48,23 +50,23 @@ Common:
     Enabled: false  
 ```
 
-## Plugin List
+# Plugin List
 
 The following DirectX plugins are included with GITS.
 
-### HelloPlugin
+## HelloPlugin
 
 Example starting point for a DirectX GITS plugin. Annotates presents and GPU executions in the log.
 
-### Benchmark
+## Benchmark
 
 Creates a .csv file with the present-to-present frame times (CPU) for the stream.
 
-### RtasCache
+## RtasCache
 
 Caches BLASes through serialization/deserialization by CopyRaytracingAccelerationStructure. This plugin is useful to avoid costly BuildRaytracingAccelerationStructure calls.
 
-### AdapterSpoof
+## AdapterSpoof
 
 Spoof the DXGIAdapter description returned by `IDXGIAdapter::GetDesc`. This plugin can be used to test how an application behaves for a different GPU vendor (or a specific GPU).
 

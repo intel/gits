@@ -1,77 +1,15 @@
 ---
 icon: material/cogs
+title: Args & Config
 ---
 # Configuration & Arguments
 
 The configuration and relevant enums of GITS are created at build time using mako-templates based on the metafiles
 
-- `common\configuration\codegen\metafiles\config.yml`and 
+- `common\configuration\codegen\metafiles\config.yml` and 
 - `common\configuration\codegen\metafiles\enums.yml`. 
 
-## Usage
-
-### Configuration file
-
-The configuration file does not have to be "complete", the loader also supports *partial config files*. This is as every option of the configuration is initialized with the default value set in the configuration metafile.
-
-```YAML
-Common:
-  Player:
-    Fullscreen: true
-```
-
-### CLI Arguments
-
-The CLI argument(s) for an option are defined in the configuration metafile by the attribute `Arguments`, e.g.
-```yaml
-Configuration:
-  - Name: Common
-    Options:
-      - Name: Player
-        Options:
-          - Name: stopAfterFrames
-            Type: BitRange
-            Default: "-"
-            Arguments: [stopAfterFrames]
-          - Name: fullscreen
-            Type: bool
-            Default: false
-            Arguments: [fullscreen, f]
-```
-
-```bash
-gitsPlayer --stopAfterFrames=23
-
-# it's a flag, so presence ==> true
-gitsPlayer -f 
-gitsPlayer --fullscreen
-```
-
-Additionally _every_ option (that is not derived) can be set by a _hidden CLI argument_ in the form of a keypath:
-
-```bash
-gitsPlayer --Common.Player.StopAfterFrames=23
-
-gitsPlayer --Common.Player.Fullscreen # flag again
-```
-
-To offer full flexibility the system also generates a value-argument for every bool flag in the form of another _hidden CLI argument_ that consists of the keypath with the suffix ".Value":
-
-```bash
-gitsPlayer --Common.Player.Fullscreen.Value=0 # 0=false, 1=true
-```
-
-
-### Environment
-
-_Every_ option (that is not derived) can be set by an environment variable in the form of a keypath with prefix `GITS_`:
-
-```bash
-export GITS_COMMON_PLAYER_FULLSCREEN=true
-```
-
-## Developer guide
-### Enums
+## Enums
 
 Here's the structure that defines an enum:
 
@@ -95,9 +33,9 @@ The `Value`-string defines the cpp value name. The system generates a string-to-
   self.labels = [''.join(label_parts)]
   ```
 
-### Configuration
+## Configuration
 
-#### Option
+### Option
 Here's the structure to define a configuration option:
 
 ```yaml
@@ -138,7 +76,7 @@ Here's the structure to define a configuration option:
 | `DefaultsPerPlatform` | Specify defaults for specific platforms. The value set by `Default` is a fallback, when no platform matched.                                                                                                                                |
 | `DefaultCondition`    | Specify defaults if certain conditions are _present_. Is evaluated before `DefaultsPerPlatform`. When unmatched, the value set by `Default` is used.                                                                                        |
 
-#### Group
+### Group
 
 The following defines a configuration option:
 
@@ -163,7 +101,7 @@ The following defines a configuration option:
 | `OSVisibility`    | OS(s) that use the group: `WINDOWS`,`X11`.               |
 
 
-### Generation
+## Generation
 
 The entrypoint for the generation is `common\configuration\codegen\scripts\generate.py`:
 ```
@@ -187,7 +125,7 @@ where `Step` can be one of the following:
 
 *Note: the steps can be run in an arbitrary order. However, the steps with cpp files build up and higher numbered steps require to lower ones to work.*
 
-#### Details
+### Details
 
 The general flow is at follows:
 

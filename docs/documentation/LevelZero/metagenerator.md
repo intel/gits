@@ -1,4 +1,9 @@
-metagenerator works on L0 YAML files.
+---
+icon: simple/intel
+title: Metagenerator
+---
+
+Metagenerator works on L0 YAML files.
 
 1. Clone Level Zero spec from https://github.com/oneapi-src/level-zero-spec
 2. Get contents of `scripts` directory, copy them into ./vendor folder

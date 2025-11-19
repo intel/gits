@@ -1,15 +1,14 @@
 ---
 icon: octicons/file-binary-24
+title: Binary Streams
 ---
-## Binary stream
-
-### Format
+## Format
 
 Binary GITS streams are collections of files produced by GITS recorder.
 Some of those resources may not be created by GITS recorder, depending
 on feature set of application being recorded.
 
-#### Current stream format
+### Current stream format
 
 Current GITS version will produce binary stream where following
 files/directories are created:
@@ -25,7 +24,7 @@ files/directories are created:
 |                   | `gitsPrograms.zip`    | Zip file containing shaders used by the application.                                                 |
 | :material-folder: | `gitsPrograms`        | Directory with shader files. If this directory exists, its content has priority over zipped shaders. |
 
-### Stream integrity
+## Stream integrity
 
 Together with created binary stream, GITS recorder will create a
 signature file `gitsSignature.hash` that contains hashes of the stream
@@ -39,7 +38,7 @@ excessively large it provides essentially free, extra safety against
 environmental problems (like stream corruption during copying from
 remote share).
 
-### Additional diagnostic info
+## Additional diagnostic info
 
 During recording GITS gathers various diagnostic information that can be
 useful later on. This information can be divided in two groups: generic
@@ -51,14 +50,14 @@ version, GITS config used, system specific information is gathered.
 
 On Windows various system information is obtained through WMI services.
 
-### Streams portability
+## Streams portability
 
 Streams recorded on one system are not tied only to this particular
 configuration when playing it back. Gits player gives user a huge degree
 of portability not only between platform driver or OS but also on the
 API level.
 
-#### OpenGL
+### OpenGL
 
 Binary OpenGL/ES streams are portable in five dimensions:
 
@@ -91,7 +90,7 @@ profile (CORE, COMPAT or ES) is possible through `forceGLProfile`
 option. API version may be forced through `forceGLMinorVersion` and
 `forceGLMajorVersion` options.
 
-#### Compute
+### Compute
 
 Binary Compute (OpenCL/RS) streams support only limited portability:
 
@@ -105,7 +104,7 @@ extensions.
 if only architecture match as described above and used API version and
 extensions are supported streams are portable between OSes.
 
-#### Vulkan
+### Vulkan
 
 Binary Vulkan streams support only very limited portability due to the
 low-level nature of the API:
@@ -122,7 +121,7 @@ modified behavior of the recorded application, higher memory consumption
 and/or potentially lower performance. The following options can be used
 to increase stream's cross-platform compatibility:
 
-#### Issues and solutions
+### Issues and solutions
 
 Because of differences between OSes and APIs streams porting is a very
 fragile process. It may lead to unexpected crashes or corruptions which

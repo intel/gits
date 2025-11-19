@@ -1,9 +1,8 @@
 ---
 icon: simple/lua
+title: Lua scripts
 ---
-## Lua scripts {#sec:Lua}
-
-### Introduction
+# Introduction
 
 Both recorder and player have capability of instrumentation of GL and CL
 functions (and limited instrumentation of Vulkan functions) via external
@@ -21,7 +20,7 @@ function glDrawElements(mode, count, type, indices)
 end
 ```
 
-### Event hooks
+# Event hooks
 
 GITS also allows for definition of non API-specific, specially named
 functions that will be called at specific times during stream playback.
@@ -52,7 +51,7 @@ functions that will be called at specific times during stream playback.
 - `gitsProgramExit()`  
   Called just before GITS exits.
 
-### API hooks
+# API hooks
 
 Apart from these, GITS has capability to call any API via structures:
 
@@ -61,10 +60,9 @@ Apart from these, GITS has capability to call any API via structures:
 - `drvCl` for OpenCL,
 
 - `drvVk` for Vulkan.  
-  Note: Vulkan API does not support structures (structure members
-  cannot be used or modified inside scripts).
+  >Note: Vulkan API does not support structures (structure members cannot be used or modified inside scripts).
 
-### Utility functions
+# Utility functions
 
 There is a number of intrinsic functions that GITS exports for some
 operations normally impossible in Lua. All pointers are represented as
@@ -168,7 +166,7 @@ opaque Lua userdata.
 - `drvCl.statusToStr(status)`  
   Converts `cl_int` return code to string.
 
-#### OpenCL callbacks
+## OpenCL callbacks
 
 Some OpenCL calls allow to pass a callback function which will be
 called asynchronously by the driver when certain event occurs.
@@ -198,7 +196,7 @@ functions to support passing Lua functions as callbacks:
   Example usage is shown in `callbackExample.lua` script bundled with
   GITS.
 
-### Example
+# Example
 
 ```lua
 local GL_SCISSOR_TEST = 0x0C11
@@ -237,11 +235,11 @@ function clear_box(x, y, width, height)
 end
 ```
 
-### Included scripts {#sec:includedLuaScripts}
+# Included scripts {#sec:includedLuaScripts}
 
 GITS comes with a set of scripts for common use cases.
 
-#### OpenCL
+## OpenCL
 
 - `clconstants.lua`  
   Contains Lua definitions of OpenCL constants supported by GITS.
@@ -291,7 +289,7 @@ GITS comes with a set of scripts for common use cases.
   Prints statuses from OpenCL functions which return them through
   `errcode_ret` parameter.
 
-#### Vulkan
+## Vulkan
 
 - `vulkanKeepDraws.lua`  
   Performs draw calls filtering (executes only those drawing functions

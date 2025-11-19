@@ -1,5 +1,7 @@
-# Subcapture
-
+---
+icon: simple/intel
+title: Subcapture
+---
 Subcapture is a GITS stream that contains selected subset of API calls.
 It preserves application functionality (input and output data is the
 same) but reduces its scope. Feature supports complicated scenarios when
@@ -17,14 +19,14 @@ required.
 Subcapture not always contain all of the application's API calls. The
 goal is to select minimal portion of the application behavior.
 
-## Activating subcapture mode
+# Activating subcapture mode
 
 Level Zero GITS subcapture mode is activated by changing the
 `gits_config.txt` file, `LevelZero` section. `LevelZero.Capture.Mode`
 must be set to `Kernel` and desired kernel range must be chosen:
 `LevelZero.Kernel.Range`.
 
-## Nomenclature
+# Nomenclature
 
 The main nomenclature is
 `CommandQueueSubmitRange/CommandListRange/AppendKernelsRange`.
@@ -54,7 +56,7 @@ kernel execution. `Basic.LogLevel` must be set to at least `TRACE`.
 Recommended solution is to verify the numbering with a recorder's log
 after whole application was successfully recorded.
 
-## Range subcapture
+# Range subcapture
 
 It is possible to record a subcapture of the given range. To create
 range subcapture specify start and end points of the subcapture.
@@ -62,7 +64,7 @@ Everything within these points will be recorded. The nomenclature for
 range subcapture is as follows
 `StartCommandQueueSubmit-StopCommandQueueSubmit/StartCommandList-StopCommandList/StartAppendKernel-StopAppendKernel`.
 
-### Limitations
+## Limitations
 
 -   It is only possible to specify only one start and one end point for
     the subcapture. For instance, a kernel range such as
@@ -78,9 +80,9 @@ range subcapture is as follows
 Warning: Range subcapture can cause GITS to use a significant amount of
 memory. This could potentially lead to crashes in some workloads.
 
-## Numbering examples
+# Numbering examples
 
-### Example 1:
+## Example 1:
 
 ``` c++
 // CommandQueueSubmit = 0; CommandList = 0; AppendKernels = 0;
@@ -97,7 +99,7 @@ Subcapture creation of the first execution of kernel_2:
 
 `LevelZero.Capture.Kernel 1/2/2`
 
-### Example 2:
+## Example 2:
 
 ``` c++
 // CommandQueueSubmit = 0; CommandList = 0; AppendKernels = 0;
@@ -120,7 +122,7 @@ cmd_list_4(immediate):
 
 `LevelZero.Capture.Kernel 1/4/6`
 
-### Example 3:
+## Example 3:
 
 ``` c++
 // CommandQueueSubmit = 0; CommandList = 0; AppendKernels = 0;
@@ -145,13 +147,11 @@ zeCommandQueueExecuteCommandLists(cmd_queue_3, {cmd_list_2}); //CommandQueueSubm
 // Queue #3 / CommandList #2 / Kernel #3
 ```
 
-To create subcapture from Queue #2 / CommandList #1 / Kernel #1 to Queue
-#3 / CommandList #2 / Kernel #3 set:
+To create subcapture from Queue #2 / CommandList #1 / Kernel #1 to Queue #3 / CommandList #2 / Kernel #3 set:
 
 `LevelZero.Capture.Kernel 2-3/1-2/2-3`
 
-To create subcapture from Queue #2 / CommandList #1 / Kernel #2 to Queue
-#2 / CommandList #3 / Kernel #4 set:
+To create subcapture from Queue #2 / CommandList #1 / Kernel #2 to Queue #2 / CommandList #3 / Kernel #4 set:
 
 `LevelZero.Capture.Kernel 2/1-3/2-4`
 
@@ -161,6 +161,6 @@ the end point is in the middle of the command list and the range
 includes multiple command queues. Attempting to do so could result in
 undefined behavior.
 
-## Recording subcapture by kernel name and execution number 
+# Recording subcapture by kernel name and execution number 
 
 <span style="font-size:30px;">:writing_hand: TODO</span>

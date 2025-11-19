@@ -1,11 +1,15 @@
-# GITS-OCL-generator
+---
+icon: simple/opengl
+title: Generator
+---
+
 Generator for GITS OpenCL
 
-## Prerequisites
-### generate.py
+# Prerequisites
+## generate.py
 1. generator_cl.py - to add new API calls, enums and structures
 
-### generatorCreatorCL.py
+## generatorCreatorCL.py
 
 1. `utils/fake_libc_include` - from pycparser [1]
 2. CL headers to generate definitions from in `CL` directory

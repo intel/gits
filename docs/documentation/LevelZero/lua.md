@@ -1,16 +1,17 @@
 ---
+icon: simple/intel
 title: Lua Scripting
 ---
 
-## Overview {#_overview}
+# Overview {#_overview}
 
 This section documents the usage of Level Zero Lua features in **GITS**.
 
-## Features {#_features}
+# Features {#_features}
 
 Through the defined **Lua global variable** `drvl0` as an API hook Lua scripts can interact with the a **GITS** stream.
 
-### Modify API call behaviour
+## Modify API call behaviour
 You can modify the behavior of an API call with a lua script. Here's an example:
 
 ``` lua
@@ -24,7 +25,7 @@ function zeEventPoolCreate(hContext, desc, numDevices, phDevices, phEventPool)
 end
 ```
 
-### Allocations and deallocations
+## Allocations and deallocations
 
 Level Zero works primarily on **structures** and Lua scripts have the
 ability to **read** and **modify** them. Structures within the API call are
@@ -56,7 +57,7 @@ function CreateGitsEventPool(hContext)
 end
 ```
 
-## Included scripts
+# Included scripts
 
 **GITS** comes with various lua scripts in the folder `<gits-root-folder>\Scripts\Lua\LevelZero`:
 

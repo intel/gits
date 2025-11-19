@@ -1,3 +1,8 @@
+---
+icon: simple/opengl
+title: Indirect Access Pointers Locations
+---
+
 # Notice {#_notice}
 
 Copyright (c) 2023 Intel Corporation.

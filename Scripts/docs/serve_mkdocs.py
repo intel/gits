@@ -32,8 +32,12 @@ sys.path.insert(0, module_dir)
 env = os.environ.copy()
 env['PYTHONPATH'] = module_dir + os.pathsep + env.get('PYTHONPATH', '')
 
-# Run MkDocs and stream the output
-process = subprocess.Popen(['python', '-m', 'mkdocs', 'serve'], env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+# Run MkDocs with livereload and watch flags for better development experience
+# --livereload: Enable automatic browser refreshing when files change
+# --watch: Additional directories/files to watch for changes
+# --dev-addr: Bind to all interfaces for better accessibility
+mkdocs_cmd = ['python', '-m', 'mkdocs', 'serve', '--livereload', '--watch', 'docs', '--watch', 'mkdocs.yml', '--dev-addr', '0.0.0.0:8000']
+process = subprocess.Popen(mkdocs_cmd, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
 
 # Create threads to handle stdout and stderr
 stdout_thread = threading.Thread(target=stream_output, args=(process.stdout, "STDOUT: "))

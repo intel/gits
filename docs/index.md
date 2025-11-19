@@ -1,7 +1,8 @@
 ---
-hide:
-  - navigation
+icon: material/head-question-outline
+title: About GITS
 ---
+
 # Graphics Intercept and Trace Solution (GITS)
 
 **Graphics Intercept and Trace Solution** (**GITS**) is an opensource capture-replay tool by [Intel](https://www.intel.com) for  
@@ -43,20 +44,18 @@ flowchart LR
     class GITS gitsSubgraphStyle
 ```
 
-#### Target audience
+# Target audience
 
 **GITS** is a collection of *command line tools* which has been used for years to help develop and validate *Intel GPU drivers*, but we think it can be useful to other users as well. 
 
 *Please note: if you are a game developer who wants to analyze frames using a graphical tool, [GPA](https://www.intel.com/content/www/us/en/developer/tools/graphics-performance-analyzers/overview.html) or a similar tool is what you should look at.*
 
-## Install & Building
+# Install & Building
 
 Currently we do not provide prebuilt binaries, so you have to [build it yourself](building.md). **GITS** is written in C++ so you will need a *compiler*, a *build system* and *Python 3*. 
 
-## Usage
+# Usage
 
 To **record an application**, you will have to inject our dynamic library (called '*the interceptor*') into it. On *Windows*, this is typically done by copying a DLL into the app directory. On *Linux*, by manipulating loader environment variables. When recording *Vulkan*, it is also possible to use **GITS** as a *Vulkan layer* instead.
 
 To **replay a stream**, pass it as an argument to the **gitsPlayer**-executable. 
-
-We provide a general introduction to [using GITS](usage.md) as well as more detailed information, that can be found in the [documentation](documentation/terminology.md) and/or the [userguides](guides/userguide.md) section.

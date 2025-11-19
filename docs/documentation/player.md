@@ -2,9 +2,9 @@
 icon: octicons/video-24
 title: Player
 ---
-## General information
+# General information
 
-### Resource files handling
+## Resource files handling
 
 To optimize binary data handling, GITS uses memory mapped files to
 access any GL resources (buffers, textures, etc\...). All this data is
@@ -37,7 +37,7 @@ stream will generally overlap with stream playback) and to efficiently
 support playback of long streams (such that won't fit entirely in memory
 during playback).
 
-## Command line options {#sec:PlayerOpts}
+# Command line options {#sec:PlayerOpts}
 
 Long options can be specified with either single or double dash.
 

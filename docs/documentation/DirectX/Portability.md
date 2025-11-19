@@ -1,14 +1,16 @@
-# DirectX - Portability
-
+---
+icon: material/microsoft
+title: Portability
+---
 GITS streams may not be portable accross GPU architectures due to different feature sets or allocation sizes / offsets.
 
-## Placed Resources
+# Placed Resources
 
 [Placed resources](https://learn.microsoft.com/en-us/windows/win32/direct3d12/uploading-resources#placed-resources) are the main source of incompatibility due to platform specific GPU sizes and alignments.
 
 The Portability Layer can be used to help with resource placement compatibility. It can be used to (1) generate a `resourcePlacementData.dat` file containing resource sizes and offsets and to (2) pre-load a `resourcePlacementData.dat` to resize all the placement heaps set the correct offsets for placed resources.
 
-### Usage
+## Usage
 
 To playback a stream from **Platform A** (🖥️) on **Platform B** (💻):
 
@@ -24,7 +26,7 @@ To playback a stream from **Platform A** (🖥️) on **Platform B** (💻):
    - Copy `resourcePlacementData.dat` next to `stream.gits2`
    - Enable Portability Layer in `gits_config.yml` by setting `DirectX.Playback.Portability.ResourcePlacement` to `'use'`
 
-## Ray Tracing (DXR)
+# Ray Tracing (DXR)
 
 Ray Tracing uses acceleration structures which are platform (and driver!) dependendent. The application will query the runtime for the correct sizes to use to store and build such structures (see [GetRayTracingAccelerationStructurePrebuildInfo](https://learn.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12device5-getraytracingaccelerationstructureprebuildinfo)).
 
@@ -32,6 +34,6 @@ GITS will ask the application to allocate extra memory (2x by default) to ensure
 
 Use the `DirectX.Capture.Raytracing` options to change the padding multipliers used.
 
-## Notes
+# Notes
 
 The Portability Layer will not be able to solve all the issues that may occur by playing back streams from different GPU vendors. It is recommended that you capture a separate stream on each platform.

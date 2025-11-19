@@ -1,3 +1,7 @@
+---
+title: Options
+icon: simple/intel
+---
 # Notice {#_notice}
 
 Copyright (c) 2023 Intel Corporation.

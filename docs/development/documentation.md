@@ -1,5 +1,6 @@
 ---
-icon: material/pencil
+icon: fontawesome/solid/pen-to-square
+title: Write Docs
 ---
 
 # Documentation

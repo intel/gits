@@ -8,8 +8,9 @@
 
 site_name: GITS Capture Replay Tool  
 repo_url: https://github.com/intel/gits
-copyright: Copyright &copy; 2024 Intel Corporation All Rights Reserved.
+copyright: Copyright &copy; 2025 Intel Corporation All Rights Reserved.
 theme:
+  logo: assets/images/logoDocs.png
   language: en
   features:
     - announce.dismiss
@@ -20,7 +21,6 @@ theme:
     - content.tooltips
     - navigation.expand
     - navigation.footer
-    - navigation.indexes
     - navigation.prune
     - navigation.sections
     - navigation.tabs
@@ -69,23 +69,25 @@ plugins:
     strict: false
   
 nav:
-  - About GITS: 'index.md'
-  - Build GITS: 'building.md'
-  - Use GITS: 'usage.md'
+  - Home:
+    - 'index.md'
+    - 'building.md'
+    - 'usage.md'
+  - Configuration: 
+    - 'configuration/how_to.md'
+    - Common: 'configuration/CommonAuto.md'
+    - DirectX: 'configuration/DirectXAuto.md'
+    - Level Zero: 'configuration/LevelZeroAuto.md'
+    - OpenCL: 'configuration/OpenCLAuto.md'
+    - OpenGL: 'configuration/OpenGLAuto.md'
+    - Vulkan: 'configuration/VulkanAuto.md'
+    - Enums: 'configuration/EnumsAuto.md'
   - Documentation:
-    - Terminology: 'documentation/terminology.md'
-    - Recorder: 'documentation/recorder.md'
-    - Player: 'documentation/player.md'
+    - 'documentation/recorder.md'
+    - 'documentation/player.md'
+    - 'documentation/terminology.md'
     - Streams:
-      - Binary Streams: 'documentation/streams/binary_stream.md'
-    - Configuration: 
-      - Common: 'documentation/configuration/CommonAuto.md'
-      - DirectX: 'documentation/configuration/DirectXAuto.md'
-      - Level Zero: 'documentation/configuration/LevelZeroAuto.md'
-      - OpenCL: 'documentation/configuration/OpenCLAuto.md'
-      - OpenGL: 'documentation/configuration/OpenGLAuto.md'
-      - Vulkan: 'documentation/configuration/VulkanAuto.md'
-      - Enums: 'documentation/configuration/EnumsAuto.md'
+      - 'documentation/streams/binary_stream.md'
     - API:
       - DirectX: 
         - 'documentation/DirectX/Overview.md'
@@ -93,26 +95,27 @@ nav:
         - 'documentation/DirectX/DirectStorage.md'
         - 'documentation/DirectX/Portability.md'
       - Level Zero:
-        - Indirect Access Pointers Locations: 'documentation/LevelZero/l0_gits_indirect_access_pointers_locations.md'
-        - Lua Scripting: 'documentation/LevelZero/lua.md'
-        - Metagenerator: 'documentation/LevelZero/metagenerator.md'
-        - Options: 'documentation/LevelZero/options_features.md'
-        - Subcapture: 'documentation/LevelZero/subcaptures.md'
+        - 'documentation/LevelZero/l0_gits_indirect_access_pointers_locations.md'
+        - 'documentation/LevelZero/lua.md'
+        - 'documentation/LevelZero/metagenerator.md'
+        - 'documentation/LevelZero/options_features.md'
+        - 'documentation/LevelZero/subcaptures.md'
       - OpenCL:
-          - Generator: 'documentation/OpenCL/Generator.md'
-          - Indirect Access Pointers Locations: 'documentation/OpenCL/cl_gits_indirect_access_pointers_locations.md'
-    - Lua Scripting: 'documentation/lua_scripts.md'        
-  - Guides:
-    - Usage: 'guides/userguide.md'
-    - FAQ: 'guides/FAQ.md'
-  - Community:
-    - Reproducers: 'community/HowToPrepareReproducer.md'
-    - Development:
-      - Documentation: 'community/development/Documentation.md'
-      - Configuration & Arguments: 'community/development/Configuration.md'
-      - Project Setup: 'community/development/ProjectSetup.md'
+          - 'documentation/OpenCL/Generator.md'
+          - 'documentation/OpenCL/cl_gits_indirect_access_pointers_locations.md'
+    - 'documentation/lua_scripts.md'        
+  - Development:
+    - 'development/project.md'
+    - 'development/configuration.md'
+    - 'development/dependencies.md'
+    - 'development/documentation.md'
+    - Community:
+      - 'development/community/how_to_reproducer.md'
+  - 'faq.md'
 
 markdown_extensions:
+  - toc:
+      baselevel: 3
   - pymdownx.striphtml:
       strip_comments: true
   - pymdownx.critic   # {--deleted--}, {++added++}, {~~1~>2 is a pair~~}, {==Highlighting==}, {>>inline comments<<}

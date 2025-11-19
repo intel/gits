@@ -49,6 +49,10 @@ ${header(indentation)} ${group.get_config_path()} { : data-toc-label='${group.na
 ${format_description(group.description)}
 % endif
 
+% if indentation == 1:
+Below is an (auto-generated) list of all configuration options for the current top level group `${meta_data[0]}`.
+% endif
+
 % if len([option for option in group.get_config_options() if not option.is_derived]) > 0:
 | Key | Type | Default |
 |-|-|-|
@@ -90,10 +94,5 @@ ${render_group(subgroup, indentation+1)}
 % endfor
 
 </%def>
-# Options
-
-Below is a list (auto generated) of all configuration options for this group.  
-When invoking the player each option can be either used by its shorthand (if available, e.g. --logLevel), or by its "full path". (e.g. --Common.Shared.ThresholdLogLevel).  
-For each bool flag we also generate corresponding value flag based on the path and suffixed with ".Variable" which can be set to either `0=false` and `1=true`.
 
 ${render_group(get_group_by_name(data, meta_data[0]), 1)}

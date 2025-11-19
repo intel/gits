@@ -1,7 +1,8 @@
 ---
+icon: simple/intel
 title: Indirect Access Pointer Locations
 ---
-## Overview {#_overview}
+# Overview {#_overview}
 
 This extension offers API helper function call that allows **GITS** to
 translate indirect use of pointers inside allocation. Extension is
@@ -12,7 +13,7 @@ via API extension function getter. Application **must** use the API call
 before command buffer submit. This way **GITS** Player shall translate every
 occurrence of pointer inside allocation before kernel execution.
 
-## New API Functions {#_new_api_functions}
+# New API Functions {#_new_api_functions}
 
 ``` c++
 void zeGitsIndirectAllocationOffsets(
@@ -22,7 +23,7 @@ size_t *pOffsets
 );
 ```
 
-## Extension usage {#_extension_usage}
+# Extension usage {#_extension_usage}
 
 **Availability** can be queried via:
 

@@ -1,10 +1,8 @@
 ---
-hide:
-  - navigation
+icon: simple/compilerexplorer
+title: Build GITS
 ---
-# Build GITS
-
-## Prerequisites
+# Prerequisites
 
 You will need:
 
@@ -15,7 +13,7 @@ You will need:
 - [CMake](https://cmake.org/)
 - [Python 3](https://www.python.org/)
 
-### Linux
+## :simple-linux: Linux
 
 On Linux you will also need:
 
@@ -26,7 +24,7 @@ On Linux you will also need:
   - **libwayland** ([`libwayland-dev`](https://packages.debian.org/sid/libwayland-dev) on Ubuntu)
   - **OpenGL** ([`libgl-dev`](https://packages.debian.org/sid/libgl-dev) on Ubuntu)
 
-## Clone the Repository
+# Clone the Repository
 
 ```bash
 git clone https://github.com/intel/gits
@@ -34,7 +32,7 @@ git lfs pull
 cd gits
 ```
 
-## Install Python Modules
+# Install Python Modules
 
 The required Python modules are specified in the `requirements.txt` file (found on the root of the repository):
 
@@ -48,7 +46,7 @@ Additionally, you may want to use mkdocs-material to work easier with GITS docum
 pip install -r Scripts/docs/requirements.txt
 ```
 
-## Generate and Build the Project
+# Generate and Build the Project
 
 Below you can find examples how to build **GITS** for the most common cases. For other configurations (e.g. 32-bit binaries, unusual Python locations, different build systems like Ninja...) please check the relevant documentation on how you need to adjust the commands.
 
@@ -71,7 +69,7 @@ Below you can find examples how to build **GITS** for the most common cases. For
 	cmake --build . --config Release -j
 	```
 
-## Install Binaries
+# Install Binaries
 
 Before you can use **GITS** you need to perform the _install step_. Installing in this case means copying files into their destinations and setting up all paths in the configuration file.
 

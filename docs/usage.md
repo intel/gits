@@ -1,12 +1,11 @@
 ---
-hide:
-  - navigation
+icon: octicons/command-palette-24
+title: Using GITS
 ---
-# Using GITS
 
 This page aims to provide a general overview of how to use gits. For an in-depth look please see the comprehensive [documentation section](documentation/terminology.md).
 
-## GITS Binaries
+# GITS Binaries
 
 **GITS** consists of three parts:
 
@@ -28,7 +27,7 @@ The **Recorder** is split into multiple folders depending on the API you wish to
 | :simple-vulkan: Vulkan         | `FilesToCopyVulkan`  | `Vulkan`      |
 | :simple-vulkan: Vulkan Layer   | `VulkanLayer`        | `VulkanLayer` |
 
-## Record
+# Record
 
 To record the API-calls from an application you first need to identify the *correct folder* for your endeavor by choosen the right API and OS and use it in the recording process.
 
@@ -38,7 +37,7 @@ To record the API-calls from an application you first need to identify the *corr
 
 Once the files are in place you simply start the application normally while GITS initiates the recording. For information on how to adjust parameters of the recording please see the [configuration section](#configuration).
 
-## Playback
+# Playback
 
 To playback a binary stream you can use the commandline to run `gitsPlayer` with the arguments as needed.
 
@@ -60,13 +59,13 @@ Here are some of the most commonly used arguments:
 
 For information on how to adjust parameters of the playback please see the [configuration section](#configuration).
 
-## Configuration
+# Configuration
 
 Aside from various binaries there's also the pre-configured `gits_config.yml` inside the folder containing all default values. This file is used by both `gitsRecorder` as well as `gitsPlayer` and exposes all the dials and knobs the respective application offers. As YAML files are hierarchically structured finding the values/settings you need to customize should not be too dificult.
 
 > <span style="font-size:30px;">:writing_hand: TODO</span>  
 > Talk about the most important settings
 
-### Further Information
+## Further Information
 
-You can find details of the configuration file options in the **Configuration** section of the documentation: e.g [Common](documentation/configuration/CommonAuto.md), [DirectX](documentation/configuration/DirectXAuto.md)
+You can find details of the configuration file options in the **Configuration** section of the documentation: e.g [Common](configuration/CommonAuto.md), [DirectX](configuration/DirectXAuto.md)

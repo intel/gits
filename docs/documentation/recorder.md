@@ -1,9 +1,8 @@
 ---
 icon: octicons/device-camera-24
+title: Recorder
 ---
-# Recorder
-
-## General information
+# General information
 
 Recorder configuration is performed through `gits_config.txt` file.
 Configuration options stored there affect various facets of operation.
@@ -27,7 +26,7 @@ send data to disk much quicker, but will write to disk redundant data if
 such is fed to the API by recorded application. This can cause
 `gitsTextures.dat`/`gitsBuffers.dat` to become very large.
 
-## Configuration options
+# Configuration options
 
 Recorder part of GITS is configured by gits_config.txt configuration
 file. This file will be searched for in the location of recorder

@@ -1,6 +1,9 @@
 ---
 icon: octicons/bug-24
+title: Reproducers
 ---
+
+
 **GITS** is a tool which allows to intercept and serialize APIs called by the application with the intent of later playback. One of the use cases is ability to reproduce driver or HW issues affecting an application by running just a series of API calls, without the original software stack above. 
 
 This short guide explains only how to prepare a **GITS** stream based reproducer. Features unrelated to performing this task are not covered by this document.
@@ -14,7 +17,7 @@ This short guide explains only how to prepare a **GITS** stream based reproducer
 
 **GITS** recorder is based on the shared library being injected into the process of recorded application.
 
-Capturing API stream on Linux:
+## Capturing API stream on Linux
 
 * Initial assumption for default settings:
   * Application shouldn't crash during the recording. 
@@ -23,7 +26,7 @@ Capturing API stream on Linux:
 * Run application and make sure that it exits gracefully.
 * The captured stream should appear in the `<GITS_DIR_PATH>/dump/` folder. Captured stream folders include PID of the captured process in their names.
 
-Captured stream verification:
+## Captured stream verification
 
 * Try to run the captured stream to check if it is valid, by running `<GITS_DIR_PATH>/Player/gitsPlayer <CAPTURED_STREAM_FOLDER>`. Stream should run and finish gracefully.
 * Run stream with `--logLevel TRACEVERBOSE` to get log with all called API calls in the output.
@@ -33,7 +36,7 @@ Captured stream verification:
     * **Render APIs** - use `--captureFrames` to dump framebuffer per frame.
 
 
-Troubleshooting:
+## Troubleshooting
 
 > TODO - This seems not correct!
 

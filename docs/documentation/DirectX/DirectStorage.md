@@ -1,6 +1,9 @@
-# DirectX - DirectStorage
+---
+icon: material/microsoft
+title: DirectStorage
+---
 
-## Overview
+# Overview
 
 **GITS** supports capture and replay of **DirectStorage** commands as part of the **DirectX12** backend.
 
@@ -28,7 +31,7 @@ graph TB
     GITS_DSTORAGE_BIN --File Reads--> GITS_EXE
 ```
 
-## Notes
+# Notes
 
 - Support for this feature can be toggled in the config file by using the `DirectX.Capture.CaptureDirectStorage` option.
 - Custom compression (`DSTORAGE_CUSTOM_COMPRESSION_0`) is not supported.
