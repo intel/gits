@@ -40,7 +40,7 @@ namespace OpenGL {
  * CLibrary class constructor.
  */
 CLibrary::CLibrary(gits::CLibrary::state_creator_t stc)
-    : gits::CLibrary(ID_OPENGL, std::move(stc)), _linkProgramNo(0) {}
+    : gits::CLibrary(ID_OPENGL, std::move(stc)), _linkProgramNo(0), _eventsRegistered(false) {}
 
 CLibrary::~CLibrary() {}
 
@@ -70,6 +70,9 @@ gits::CResourceManager2& gits::OpenGL::CLibrary::ProgramBinaryManager() {
  * @return OpenGL function call wrapper.
  */
 CFunction* CLibrary::FunctionCreate(unsigned id) const {
+  if (!_eventsRegistered) {
+    const_cast<CLibrary*>(this)->RegisterEvents();
+  }
   return OpenGL::CFunction::Create(id);
 }
 
@@ -126,6 +129,7 @@ void CLibrary::RegisterEvents() {
     }
   };
   CGits::Instance().GetMessageBus().subscribe({PUBLISHER_PLAYER, TOPIC_LOOP_BEGIN}, loopHandler);
+  _eventsRegistered = true;
 }
 
 } //namespace OpenGL

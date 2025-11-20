@@ -49,6 +49,7 @@ namespace OpenGL {
 class CLibrary : public gits::CLibrary {
   uint32_t _linkProgramNo;
   std::unique_ptr<CResourceManager2> _progBinManager;
+  bool _eventsRegistered;
 
 public:
   static CLibrary& Get();
