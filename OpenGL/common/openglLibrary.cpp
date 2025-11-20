@@ -80,10 +80,6 @@ CLibrary& CLibrary::Get() {
   return static_cast<CLibrary&>(CGits::Instance().Library(ID_OPENGL));
 }
 
-std::function<void()> CLibrary::CreateRestorePoint() {
-  return SD().CreateCArraysRestorePoint();
-}
-
 void PreSwap() {
   using gits::Config;
 
@@ -95,7 +91,7 @@ void PreSwap() {
 }
 
 void CLibrary::RegisterEvents() {
-  auto eventHandler = [](Topic t, const MessagePtr& m) {
+  auto eventHandler = [this](Topic t, const MessagePtr& m) {
     auto msg = std::dynamic_pointer_cast<GitsEventMessage>(m);
     if (!msg) {
       return;
@@ -106,6 +102,8 @@ void CLibrary::RegisterEvents() {
     switch (data.Id) {
     case CToken::TId::ID_INIT_END:
       break;
+    case CToken::TId::ID_FRAME_START:
+      break;
     default:
       break;
     }
@@ -113,22 +111,6 @@ void CLibrary::RegisterEvents() {
 
   gits::CGits::Instance().GetMessageBus().subscribe({PUBLISHER_PLAYER, TOPIC_GITS_EVENT},
                                                     eventHandler);
-
-  auto createRestorePointFunc = CreateRestorePoint();
-  auto loopHandler = [createRestorePointFunc](Topic t, const MessagePtr& m) {
-    auto msg = std::dynamic_pointer_cast<LoopMessage>(m);
-    if (!msg) {
-      return;
-    }
-
-    auto& cfg = Configurator::Get();
-    if (t.topicId == TOPIC_LOOP_BEGIN) {
-      if (cfg.common.player.loopFrame != 0) {
-        createRestorePointFunc();
-      }
-    }
-  };
-  CGits::Instance().GetMessageBus().subscribe({PUBLISHER_PLAYER, TOPIC_LOOP_BEGIN}, loopHandler);
   _eventsRegistered = true;
 }
 
