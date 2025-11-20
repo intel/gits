@@ -110,6 +110,22 @@ void CLibrary::RegisterEvents() {
 
   gits::CGits::Instance().GetMessageBus().subscribe({PUBLISHER_PLAYER, TOPIC_GITS_EVENT},
                                                     eventHandler);
+
+  auto createRestorePointFunc = CreateRestorePoint();
+  auto loopHandler = [createRestorePointFunc](Topic t, const MessagePtr& m) {
+    auto msg = std::dynamic_pointer_cast<LoopMessage>(m);
+    if (!msg) {
+      return;
+    }
+
+    auto& cfg = Configurator::Get();
+    if (t.topicId == TOPIC_LOOP_BEGIN) {
+      if (cfg.common.player.loopFrame != 0) {
+        createRestorePointFunc();
+      }
+    }
+  };
+  CGits::Instance().GetMessageBus().subscribe({PUBLISHER_PLAYER, TOPIC_LOOP_BEGIN}, loopHandler);
 }
 
 } //namespace OpenGL

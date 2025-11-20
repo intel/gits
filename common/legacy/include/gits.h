@@ -111,22 +111,6 @@ public:
 };
 
 //
-// Events that will be fired at specified time during stream replay.
-//
-struct Events {
-  std::function<void(int)> frameBegin;
-  std::function<void(int)> frameEnd;
-  std::function<void(int)> loopBegin;
-  std::function<void(int)> loopEnd;
-  std::function<void()> stateRestoreBegin;
-  std::function<void()> stateRestoreEnd;
-  std::function<void()> programExit;
-  std::function<void()> programStart;
-  std::function<void(const char*)> logging;
-  std::function<void(uint64_t value)> markerUInt64;
-};
-
-//
 // Be wary when changing order of following members, as they depend on existence
 // of each other in non-obvious ways.
 //
@@ -202,7 +186,6 @@ private:
   uint32_t _frameNo;
   bool _restoringState;
   std::vector<std::function<void()>> _luaFunctionsRegistrators;
-  Events _playbackEvents;
   std::shared_ptr<lua_State> _lua;
   Task<Image> _imageWriter;
   StreamingContext* _sc;
@@ -246,15 +229,8 @@ public:
     }
   }
 
-  void RegisterPlaybackEvents(std::shared_ptr<lua_State>& L, const Events& e) {
+  void SetLua(std::shared_ptr<lua_State>& L) {
     _lua = L;
-    _playbackEvents = e;
-  }
-  void RegisterPlaybackEvents(const Events& e) {
-    _playbackEvents = e;
-  }
-  const Events& PlaybackEvents() const {
-    return _playbackEvents;
   }
   std::shared_ptr<lua_State> GetLua() const {
     return _lua;

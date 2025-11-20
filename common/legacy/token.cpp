@@ -106,9 +106,6 @@ void CTokenMarker::Run() {
     CGits::Instance().GetMessageBus().publish({PUBLISHER_PLAYER, TOPIC_GITS_EVENT},
                                               std::make_shared<GitsEventMessage>(data));
 
-    if (cfg.common.shared.useEvents) {
-      CGits::Instance().PlaybackEvents().stateRestoreBegin();
-    }
     if (cfg.common.player.traceSelectedFrames.empty() ||
         cfg.common.player.traceSelectedFrames[CGits::Instance().CurrentFrame()]) {
       log::SetMaxSeverity(cfg.common.shared.thresholdLogLevel);
@@ -139,10 +136,6 @@ void CTokenMarker::Run() {
     CGits::Instance().GetMessageBus().publish({PUBLISHER_PLAYER, TOPIC_GITS_EVENT},
                                               std::make_shared<GitsEventMessage>(data));
 
-    if (cfg.common.shared.useEvents) {
-      CGits::Instance().PlaybackEvents().stateRestoreEnd();
-    }
-
     CGits::Instance().Timers().restoration.Pause();
     break;
   }
@@ -159,9 +152,6 @@ void CTokenMarker::Run() {
     CGits::Instance().GetMessageBus().publish({PUBLISHER_PLAYER, TOPIC_GITS_EVENT},
                                               std::make_shared<GitsEventMessage>(data));
 
-    if (cfg.common.shared.useEvents) {
-      CGits::Instance().PlaybackEvents().frameBegin(CGits::Instance().CurrentFrame());
-    }
     if (cfg.common.player.traceSelectedFrames.empty() ||
         cfg.common.player.traceSelectedFrames[CGits::Instance().CurrentFrame()]) {
       log::SetMaxSeverity(cfg.common.shared.thresholdLogLevel);
@@ -190,9 +180,6 @@ void CTokenMarker::Run() {
 
     if (cfg.common.player.endFrameSleep > 0) {
       sleep_millisec(Configurator::Get().common.player.endFrameSleep);
-    }
-    if (cfg.common.shared.useEvents) {
-      CGits::Instance().PlaybackEvents().frameEnd(CGits::Instance().CurrentFrame());
     }
 #ifdef GITS_PLATFORM_WINDOWS
     if (!cfg.directx.features.subcapture.enabled) {
@@ -230,10 +217,6 @@ void CTokenMarkerUInt64::Run() {
   data.MarkerUint64Data = {_value};
   CGits::Instance().GetMessageBus().publish({PUBLISHER_PLAYER, TOPIC_GITS_EVENT},
                                             std::make_shared<GitsEventMessage>(data));
-
-  if (cfg.common.shared.useEvents) {
-    CGits::Instance().PlaybackEvents().markerUInt64(_value);
-  }
 }
 
 uint64_t CTokenMarkerUInt64::Size() const {

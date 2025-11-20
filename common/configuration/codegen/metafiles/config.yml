@@ -278,7 +278,6 @@ Configuration:
               * gitsStateRestoreEnd()
               * gitsProgramStart()
               * gitsProgramExit()
-              * gitsLogging(log)
 
               Following functions exposed by GITS may be used inside lua scripts:
 

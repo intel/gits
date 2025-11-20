@@ -568,18 +568,73 @@ void CreateAndRegisterEvents(const char* script) {
                              ". Errors are: " + lua_tostring(L.get(), -1));
   }
 
-  gits::Events events;
-  events.frameBegin = CreateWrapper<int>(L, "gitsFrameBegin");
-  events.frameEnd = CreateWrapper<int>(L, "gitsFrameEnd");
-  events.loopBegin = CreateWrapper<int>(L, "gitsLoopBegin");
-  events.loopEnd = CreateWrapper<int>(L, "gitsLoopEnd");
-  events.stateRestoreBegin = CreateWrapper(L, "gitsStateRestoreBegin");
-  events.stateRestoreEnd = CreateWrapper(L, "gitsStateRestoreEnd");
-  events.programExit = CreateWrapper(L, "gitsProgramExit");
-  events.programStart = CreateWrapper(L, "gitsProgramStart");
-  events.logging = CreateWrapper<const char*>(L, "gitsLogging");
+  auto gitsStateRestoreBeginWrapper = CreateWrapper(L, "gitsStateRestoreBegin");
+  auto gitsStateRestoreEndWrapper = CreateWrapper(L, "gitsStateRestoreEnd");
+  auto gitsFrameBeginWrapper = CreateWrapper<int>(L, "gitsFrameBegin");
+  auto gitsFrameEndWrapper = CreateWrapper<int>(L, "gitsFrameEnd");
+  auto eventHandler = [gitsStateRestoreBeginWrapper, gitsStateRestoreEndWrapper,
+                       gitsFrameBeginWrapper, gitsFrameEndWrapper](Topic t, const MessagePtr& m) {
+    auto msg = std::dynamic_pointer_cast<GitsEventMessage>(m);
+    if (!msg) {
+      return;
+    }
 
-  CGits::Instance().RegisterPlaybackEvents(L, events);
+    auto& data = msg->getData();
+
+    if (data.Id == CToken::TId::ID_INIT_START) {
+      gitsStateRestoreBeginWrapper();
+    } else if (data.Id == CToken::TId::ID_INIT_END) {
+      gitsStateRestoreEndWrapper();
+    } else if (data.Id == CToken::TId::ID_FRAME_START) {
+      gitsFrameBeginWrapper(data.FrameStartData.FrameNumber);
+    } else if (data.Id == CToken::TId::ID_FRAME_END) {
+      gitsFrameEndWrapper(data.FrameEndData.FrameNumber);
+    }
+  };
+  CGits::Instance().GetMessageBus().subscribe({PUBLISHER_PLAYER, TOPIC_GITS_EVENT}, eventHandler);
+
+  auto gitsProgramStartWrapper = CreateWrapper(L, "gitsProgramStart");
+  auto gitsProgramExitWrapper = CreateWrapper(L, "gitsProgramExit");
+  auto programHandler = [gitsProgramStartWrapper, gitsProgramExitWrapper](Topic t,
+                                                                          const MessagePtr& m) {
+    auto msg = std::dynamic_pointer_cast<ProgramMessage>(m);
+    if (!msg) {
+      return;
+    }
+
+    if (t.topicId == TOPIC_PROGRAM_START) {
+      gitsProgramStartWrapper();
+    } else if (t.topicId == TOPIC_PROGRAM_EXIT) {
+      gitsProgramExitWrapper();
+    }
+  };
+  CGits::Instance().GetMessageBus().subscribe({PUBLISHER_PLAYER, TOPIC_PROGRAM_START},
+                                              programHandler);
+  CGits::Instance().GetMessageBus().subscribe({PUBLISHER_PLAYER, TOPIC_PROGRAM_EXIT},
+                                              programHandler);
+  CGits::Instance().GetMessageBus().subscribe({PUBLISHER_RECORDER, TOPIC_PROGRAM_START},
+                                              programHandler);
+  CGits::Instance().GetMessageBus().subscribe({PUBLISHER_RECORDER, TOPIC_PROGRAM_EXIT},
+                                              programHandler);
+
+  auto gitsLoopBeginWrapper = CreateWrapper(L, "gitsLoopBegin");
+  auto gitsLoopEndWrapper = CreateWrapper(L, "gitsLoopEnd");
+  auto loopHandler = [gitsLoopBeginWrapper, gitsLoopEndWrapper](Topic t, const MessagePtr& m) {
+    auto msg = std::dynamic_pointer_cast<LoopMessage>(m);
+    if (!msg) {
+      return;
+    }
+
+    if (t.topicId == TOPIC_LOOP_BEGIN) {
+      gitsLoopBeginWrapper();
+    } else if (t.topicId == TOPIC_LOOP_END) {
+      gitsLoopEndWrapper();
+    }
+  };
+  CGits::Instance().GetMessageBus().subscribe({PUBLISHER_PLAYER, TOPIC_LOOP_BEGIN}, loopHandler);
+  CGits::Instance().GetMessageBus().subscribe({PUBLISHER_PLAYER, TOPIC_LOOP_END}, loopHandler);
+
+  CGits::Instance().SetLua(L);
 }
 
 } // namespace lua

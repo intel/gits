@@ -402,9 +402,8 @@ gits::CBehavior& gits::CRecorder::Behavior() const {
 void gits::CRecorder::Init() {
   Scheduler().Register(new CTokenMarker(CToken::ID_PRE_RECORD_START));
 
-  if (Configurator::Get().common.shared.useEvents) {
-    CGits::Instance().PlaybackEvents().programStart();
-  }
+  CGits::Instance().GetMessageBus().publish({PUBLISHER_RECORDER, TOPIC_PROGRAM_START},
+                                            std::make_shared<ProgramMessage>());
 
   if (Behavior().ShouldCapture()) {
     Start();
@@ -851,9 +850,8 @@ void gits::CRecorder::Close() {
   CALL_ONCE[&] {
     Stop();
     Save();
-    if (Configurator::Get().common.shared.useEvents) {
-      CGits::Instance().PlaybackEvents().programExit();
-    }
+    CGits::Instance().GetMessageBus().publish({PUBLISHER_RECORDER, TOPIC_PROGRAM_EXIT},
+                                              std::make_shared<ProgramMessage>());
     CGits::Instance().GetMessageBus().publish({PUBLISHER_RECORDER, TOPIC_END},
                                               std::make_shared<EndOfRecordingMessage>());
     CRecorder::Dispose();

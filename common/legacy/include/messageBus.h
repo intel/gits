@@ -34,7 +34,11 @@ enum TopicId {
   TOPIC_GITS_WORKLOAD_BEGIN,
   TOPIC_GITS_WORKLOAD_END,
   // This topic is a part of playback, GitsEventMessage contains the id of the token associated with the message
-  TOPIC_GITS_EVENT
+  TOPIC_GITS_EVENT,
+  TOPIC_PROGRAM_START,
+  TOPIC_PROGRAM_EXIT,
+  TOPIC_LOOP_BEGIN,
+  TOPIC_LOOP_END
 };
 struct Topic {
   PublisherId publisherId{};
@@ -196,6 +200,16 @@ private:
 class PlaybackEndMessage : public Message {
 public:
   PlaybackEndMessage() {}
+};
+
+class ProgramMessage : public Message {
+public:
+  ProgramMessage() {}
+};
+
+class LoopMessage : public Message {
+public:
+  LoopMessage() {}
 };
 
 } // namespace gits

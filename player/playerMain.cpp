@@ -351,14 +351,8 @@ int MainBody(int argc, char* argv[]) {
 
     // check if all functions can be run on that system
     LOG_INFO << "Playing...";
-
-    if (Configurator::Get().common.shared.useEvents) {
-      try {
-        CGits::Instance().PlaybackEvents().programStart();
-      } catch (std::runtime_error& e) {
-        LOG_ERROR << e.what();
-      }
-    }
+    CGits::Instance().GetMessageBus().publish({PUBLISHER_PLAYER, TOPIC_PROGRAM_START},
+                                              std::make_shared<ProgramMessage>());
 
     // process events - enter message loop
     GitsMessagePump pump(player);
@@ -425,14 +419,8 @@ int MainBody(int argc, char* argv[]) {
     returnValue = EXIT_FAILURE;
   }
 
-  if (Configurator::Get().common.shared.useEvents) {
-    try {
-      CGits::Instance().PlaybackEvents().programExit();
-    } catch (std::runtime_error& e) {
-      LOG_ERROR << e.what();
-      returnValue = EXIT_FAILURE;
-    }
-  }
+  CGits::Instance().GetMessageBus().publish({PUBLISHER_PLAYER, TOPIC_PROGRAM_EXIT},
+                                            std::make_shared<ProgramMessage>());
 
 #if defined GITS_PLATFORM_WINDOWS
   if (Configurator::Get().directx.features.subcapture.enabled &&
