@@ -7,7 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "layer.h"
-#include "pluginUtils.h"
+#include "log.h"
 
 namespace gits {
 namespace DirectX {
@@ -20,20 +20,19 @@ static std::string getFileSize(const std::string& filePath) {
   return oss.str();
 }
 
-RtasCacheLayer::RtasCacheLayer(CGits& gits, const RtasCacheConfig& cfg)
+RtasCacheLayer::RtasCacheLayer(const RtasCacheConfig& cfg)
     : Layer("RtasCache"),
-      gits_(gits),
       cfg_(cfg),
-      serializer_(gits, cfg_.cacheFile, cfg_.dumpCacheInfoFile),
-      deserializer_(gits, cfg_.cacheFile),
+      serializer_(cfg_.cacheFile, cfg_.dumpCacheInfoFile),
+      deserializer_(cfg_.cacheFile),
       stateRestore_(false) {
-  logI(gits_, "RtasCache - State restore only: ", cfg.stateRestoreOnly ? "true" : "false");
-  logI(gits_, "RtasCache - Cache file: ", cfg.cacheFile);
+  LOG_INFO << "RtasCache - State restore only: " << (cfg.stateRestoreOnly ? "true" : "false");
+  LOG_INFO << "RtasCache - Cache file: " << cfg.cacheFile;
   if (!cfg.record) {
     if (std::filesystem::exists(cfg.cacheFile)) {
-      logI(gits_, "RtasCache - Cache file size is ", getFileSize(cfg_.cacheFile));
+      LOG_INFO << "RtasCache - Cache file size is " << getFileSize(cfg_.cacheFile);
     } else {
-      logE(gits_, "RtasCache - Cache file does not exist!");
+      LOG_ERROR << "RtasCache - Cache file does not exist!";
       isValid_ = false;
     }
   }
@@ -42,11 +41,11 @@ RtasCacheLayer::RtasCacheLayer(CGits& gits, const RtasCacheConfig& cfg)
 RtasCacheLayer::~RtasCacheLayer() {
   try {
     if (cfg_.record) {
-      logI(gits_, "RtasCache - Serialized ", blasCount_, " BLASes");
+      LOG_INFO << "RtasCache - Serialized " << blasCount_ << " BLASes";
       serializer_.writeCache();
-      logI(gits_, "RtasCache - Cache file size is ", getFileSize(cfg_.cacheFile));
+      LOG_INFO << "RtasCache - Cache file size is " << getFileSize(cfg_.cacheFile);
     } else {
-      logI(gits_, "RtasCache - Deserialized ", cachedBlasCount_, "/", blasCount_, " BLASes");
+      LOG_INFO << "RtasCache - Deserialized " << cachedBlasCount_ << "/" << blasCount_ << " BLASes";
     }
   } catch (...) {
     fprintf(stderr, "Exception in RtasCacheLayer::~RtasCacheLayer");
@@ -77,7 +76,7 @@ void RtasCacheLayer::pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationSt
 
       isValid_ = deserializer_.preloadCache(device.Get());
       if (!isValid_) {
-        logE(gits_, "RtasCache - Failed to preload RTAS cache. Will not deserialize.");
+        LOG_ERROR << "RtasCache - Failed to preload RTAS cache. Will not deserialize.";
         return;
       }
     }

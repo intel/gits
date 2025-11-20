@@ -16,12 +16,11 @@
 #include <fstream>
 
 namespace gits {
-class CGits;
 namespace DirectX {
 
 class RtasDeserializer {
 public:
-  RtasDeserializer(CGits&, const std::string& cacheFile);
+  RtasDeserializer(const std::string& cacheFile);
   ~RtasDeserializer();
 
   // Disallow copying (gits::noncopyable is not available here).
@@ -54,7 +53,6 @@ private:
     std::queue<ExecuteInfo> executes;
   };
 
-  CGits& gits_;
   std::string cacheFilePath_;
   std::unordered_map<unsigned, std::vector<uint8_t>> cacheData_;
 

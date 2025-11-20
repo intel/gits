@@ -8,6 +8,8 @@
 
 #include "IPlugin.h"
 #include "layer.h"
+#include "log.h"
+#include "configurationAuto.h"
 
 #include "yaml-cpp/yaml.h"
 #include <filesystem>
@@ -51,6 +53,9 @@ private:
 static std::unique_ptr<gits::DirectX::RtasSizeCheckPlugin> g_plugin = nullptr;
 
 GITS_PLUGIN_API IPlugin* createPlugin(IPluginContext context, const char* pluginPath) {
+  // Initialize Plog for the plugin DLL
+  gits::log::Initialize(context.config->common.shared.thresholdLogLevel, context.logAppender);
+
   if (!g_plugin) {
     g_plugin = std::make_unique<gits::DirectX::RtasSizeCheckPlugin>(context, pluginPath);
   }

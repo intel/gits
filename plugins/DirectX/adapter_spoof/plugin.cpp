@@ -8,6 +8,8 @@
 
 #include "IPlugin.h"
 #include "layer.h"
+#include "log.h"
+#include "configurationAuto.h"
 
 #include "yaml-cpp/yaml.h"
 #include <filesystem>
@@ -39,7 +41,7 @@ public:
       cfg.vendorId = cfgYaml["Config"]["VendorId"].as<unsigned>();
       cfg.deviceId = cfgYaml["Config"]["DeviceId"].as<unsigned>();
 
-      pluginLayer_ = std::make_unique<AdapterSpoofLayer>(*context_.gits, cfg);
+      pluginLayer_ = std::make_unique<AdapterSpoofLayer>(cfg);
     }
     return pluginLayer_.get();
   }
@@ -56,6 +58,9 @@ private:
 static std::unique_ptr<gits::DirectX::AdapterSpoofPlugin> g_plugin = nullptr;
 
 GITS_PLUGIN_API IPlugin* createPlugin(IPluginContext context, const char* pluginPath) {
+  // Initialize Plog for the plugin DLL
+  gits::log::Initialize(context.config->common.shared.thresholdLogLevel, context.logAppender);
+
   if (!g_plugin) {
     g_plugin = std::make_unique<gits::DirectX::AdapterSpoofPlugin>(context, pluginPath);
   }

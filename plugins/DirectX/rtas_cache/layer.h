@@ -13,7 +13,6 @@
 #include "rtasDeserializer.h"
 
 namespace gits {
-class CGits;
 namespace DirectX {
 
 struct RtasCacheConfig {
@@ -25,7 +24,7 @@ struct RtasCacheConfig {
 
 class RtasCacheLayer : public Layer {
 public:
-  RtasCacheLayer(CGits& gits, const RtasCacheConfig& cfg);
+  RtasCacheLayer(const RtasCacheConfig& cfg);
   ~RtasCacheLayer();
 
   void pre(StateRestoreBeginCommand& c) override;
@@ -48,7 +47,6 @@ private:
   }
 
 private:
-  CGits& gits_;
   RtasCacheConfig cfg_;
   RtasSerializer serializer_;
   RtasDeserializer deserializer_;

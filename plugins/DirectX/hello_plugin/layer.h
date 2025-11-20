@@ -11,9 +11,6 @@
 #include "layerAuto.h"
 
 namespace gits {
-
-class CGits;
-
 namespace DirectX {
 
 struct HelloPluginConfig {

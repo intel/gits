@@ -9,6 +9,7 @@
 #include "rtasDeserializer.h"
 #include "pluginUtils.h"
 #include "to_string/toStr.h"
+#include "log.h"
 
 #include <filesystem>
 #include <cassert>
@@ -48,24 +49,23 @@ static std::string IdentifierToStr(
   return oss.str();
 }
 
-RtasDeserializer::RtasDeserializer(CGits& gits, const std::string& cacheFile)
-    : gits_(gits), cacheFilePath_(cacheFile) {}
+RtasDeserializer::RtasDeserializer(const std::string& cacheFile) : cacheFilePath_(cacheFile) {}
 
 RtasDeserializer::~RtasDeserializer() {
-  logI(gits_, "RtasCache - Cleaning up RTAS deserializer...");
-  logI(gits_, "RtasCache - Buffer pool contains ", bufferPool_.size(), " buffers");
+  LOG_INFO << "RtasCache - Cleaning up RTAS deserializer...";
+  LOG_INFO << "RtasCache - Buffer pool contains " << bufferPool_.size() << " buffers";
   cleanup();
 }
 
 bool RtasDeserializer::preloadCache(ID3D12Device5* device) {
   std::ifstream cacheFile(cacheFilePath_, std::ios_base::binary);
   if (!cacheFile) {
-    logE(gits_, "RtasCache - Failed to open ", cacheFilePath_);
+    LOG_ERROR << "RtasCache - Failed to open " << cacheFilePath_;
   }
 
   // Check if the cache file is compatible with the current device
   if (!isCompatible(cacheFile, device)) {
-    logE(gits_, "RtasCache - Cache is not compatible with the current device");
+    LOG_ERROR << "RtasCache - Cache is not compatible with the current device";
     return false;
   }
 
@@ -78,15 +78,15 @@ bool RtasDeserializer::preloadCache(ID3D12Device5* device) {
     std::vector<uint8_t> data(size);
     cacheFile.read(reinterpret_cast<char*>(data.data()), size);
     if (size > 0 && !cacheFile) {
-      logE(gits_, "RtasCache - Error reading BLAS ", key);
+      LOG_ERROR << "RtasCache - Error reading BLAS " << key;
       cacheData_.clear();
       return false;
     }
     cacheData_[key] = std::move(data);
   }
 
-  logI(gits_, "RtasCache - Cache file read successfully, total BLASes: ", cacheData_.size());
-  logI(gits_, "RtasCache - Buffer pool size: ", FormatMemorySize(maxBufferSize_));
+  LOG_INFO << "RtasCache - Cache file read successfully, total BLASes: " << cacheData_.size();
+  LOG_INFO << "RtasCache - Buffer pool size: " << FormatMemorySize(maxBufferSize_);
 
   return true;
 }
@@ -110,10 +110,11 @@ bool RtasDeserializer::isCompatible(std::ifstream& cacheFile, ID3D12Device5* dev
   // Check the driver identifier
   auto status = device->CheckDriverMatchingIdentifier(
       D3D12_SERIALIZED_DATA_RAYTRACING_ACCELERATION_STRUCTURE, &header.DriverMatchingIdentifier);
-  logI(gits_, "RtasCache - Driver identifier check: ", toStr(status));
+  LOG_INFO << "RtasCache - Driver identifier check: " << toStr(status);
   if (status != D3D12_DRIVER_MATCHING_IDENTIFIER_COMPATIBLE_WITH_DEVICE) {
-    logW(gits_, "RtasCache - Driver identifier mismatch for cache!");
-    logW(gits_, "RtasCache - Cache identifier: ", IdentifierToStr(header.DriverMatchingIdentifier));
+    LOG_WARNING << "RtasCache - Driver identifier mismatch for cache!";
+    LOG_WARNING << "RtasCache - Cache identifier: "
+                << IdentifierToStr(header.DriverMatchingIdentifier);
     return false;
   }
   return true;
@@ -127,7 +128,7 @@ bool RtasDeserializer::deserialize(unsigned buildKey,
 
   auto it = cacheData_.find(buildKey);
   if (it == cacheData_.end()) {
-    logW(gits_, "RtasCache - BLAS ", buildKey, " not found in cache");
+    LOG_WARNING << "RtasCache - BLAS " << buildKey << " not found in cache";
     return false;
   }
 
@@ -136,7 +137,7 @@ bool RtasDeserializer::deserialize(unsigned buildKey,
   auto& data = it->second;
 
   if (size == 0 || data.empty()) {
-    logW(gits_, "RtasCache - BLAS ", buildKey, " has no data in cache");
+    LOG_WARNING << "RtasCache - BLAS " << buildKey << " has no data in cache";
     return false;
   }
 
@@ -153,8 +154,8 @@ bool RtasDeserializer::deserialize(unsigned buildKey,
   if (size <= maxBufferSize_) {
     buffer = bufferPool_.acquireBuffer(buildKey);
   } else {
-    logW(gits_, "RtasCache - BLAS ", key, " with size ", FormatMemorySize(size),
-         " does not fit in the buffer pool");
+    LOG_WARNING << "RtasCache - BLAS " << key << " with size " << FormatMemorySize(size)
+                << " does not fit in the buffer pool";
     buffer = createBuffer(device.Get(), size);
     tmpBuffers_[buildKey] = buffer;
   }

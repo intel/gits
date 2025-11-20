@@ -15,12 +15,11 @@
 #include <wrl/client.h>
 
 namespace gits {
-class CGits;
 namespace DirectX {
 
 class RtasSerializer : public ResourceDump {
 public:
-  RtasSerializer(CGits& gits, const std::string& cacheFile, bool dumpCacheInfo);
+  RtasSerializer(const std::string& cacheFile, bool dumpCacheInfo);
   ~RtasSerializer();
 
   // Disallow copying (gits::noncopyable is not available here).
@@ -48,7 +47,6 @@ private:
   void initialize();
   void dumpCacheInfo();
 
-  CGits& gits_;
   bool initialized_{false};
   std::wstring tmpCacheDir_;
   std::filesystem::path cacheFile_;

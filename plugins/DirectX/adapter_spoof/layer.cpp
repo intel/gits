@@ -7,13 +7,13 @@
 // ===================== end_copyright_notice ==============================
 
 #include "layer.h"
-#include "pluginUtils.h"
+#include "log.h"
 
 namespace gits {
 namespace DirectX {
 
 template <typename DescType>
-void spoofAdapterDesc(CGits& gits, AdapterSpoofConfig& cfg, DescType* pDesc) {
+void spoofAdapterDesc(AdapterSpoofConfig& cfg, DescType* pDesc) {
   if (!pDesc) {
     return;
   }
@@ -30,26 +30,26 @@ void spoofAdapterDesc(CGits& gits, AdapterSpoofConfig& cfg, DescType* pDesc) {
       << " DeviceId = 0x" << std::setw(4) << cfg.deviceId << " Description = " << std::setw(4)
       << cfg.description;
 
-  logI(gits, "AdapterSpoof - Adapter spoofed to:", oss.str());
+  LOG_INFO << "AdapterSpoof - Adapter spoofed to: " << oss.str();
 }
 
-AdapterSpoofLayer::AdapterSpoofLayer(CGits& gits, const AdapterSpoofConfig& cfg)
-    : Layer("AdapterSpoof"), gits_(gits), cfg_(cfg) {}
+AdapterSpoofLayer::AdapterSpoofLayer(const AdapterSpoofConfig& cfg)
+    : Layer("AdapterSpoof"), cfg_(cfg) {}
 
 void AdapterSpoofLayer::post(IDXGIAdapterGetDescCommand& c) {
-  spoofAdapterDesc(gits_, cfg_, c.pDesc_.value);
+  spoofAdapterDesc(cfg_, c.pDesc_.value);
 }
 
 void AdapterSpoofLayer::post(IDXGIAdapter1GetDesc1Command& c) {
-  spoofAdapterDesc(gits_, cfg_, c.pDesc_.value);
+  spoofAdapterDesc(cfg_, c.pDesc_.value);
 }
 
 void AdapterSpoofLayer::post(IDXGIAdapter2GetDesc2Command& c) {
-  spoofAdapterDesc(gits_, cfg_, c.pDesc_.value);
+  spoofAdapterDesc(cfg_, c.pDesc_.value);
 }
 
 void AdapterSpoofLayer::post(IDXGIAdapter4GetDesc3Command& c) {
-  spoofAdapterDesc(gits_, cfg_, c.pDesc_.value);
+  spoofAdapterDesc(cfg_, c.pDesc_.value);
 }
 
 } // namespace DirectX

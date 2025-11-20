@@ -13,14 +13,11 @@
 #include "services/cpuFrameBenchmarkService.h"
 
 namespace gits {
-
-class CGits;
-
 namespace DirectX {
 
 class BenchmarkLayer : public Layer {
 public:
-  BenchmarkLayer(CGits& gits, const BenchmarkConfig& cfg);
+  BenchmarkLayer(const BenchmarkConfig& cfg);
   ~BenchmarkLayer() = default;
 
   void pre(ID3D12CommandQueueExecuteCommandListsCommand& command) override;
@@ -28,7 +25,6 @@ public:
   void post(IDXGISwapChain1Present1Command& command) override;
 
 private:
-  CGits& gits_;
   BenchmarkConfig cfg_;
   CpuFrameBenchmarkService cpuFrameBenchmarkService_;
 };

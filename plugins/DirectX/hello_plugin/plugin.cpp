@@ -9,7 +9,7 @@
 #include "IPlugin.h"
 #include "layer.h"
 #include "log.h"
-#include "gits.h"
+#include "configurationAuto.h"
 
 #include "yaml-cpp/yaml.h"
 #include <filesystem>

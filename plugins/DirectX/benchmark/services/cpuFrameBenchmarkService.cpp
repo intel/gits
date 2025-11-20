@@ -45,7 +45,7 @@ void CpuFrameBenchmarkService::writeResult(size_t frameNumber, double cpuTime) {
   if (!fileStream_.is_open()) {
     fileStream_.open(cfg_.output);
     if (!fileStream_.good()) {
-      logAndThrow("Failed to create file: " + cfg_.output);
+      logAndThrow("CpuFrameBenchmarkService - Failed to create file: " + cfg_.output);
     }
     fileStream_ << "Frame #,Time [sec]\n";
   }

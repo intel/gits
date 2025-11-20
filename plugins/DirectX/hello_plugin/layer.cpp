@@ -7,7 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "layer.h"
-#include "pluginUtils.h"
+#include "log.h"
 
 namespace gits {
 namespace DirectX {

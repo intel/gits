@@ -8,6 +8,8 @@
 
 #include "IPlugin.h"
 #include "layer.h"
+#include "log.h"
+#include "configurationAuto.h"
 
 #include "yaml-cpp/yaml.h"
 #include <filesystem>
@@ -38,7 +40,7 @@ public:
       cfg.cpuFrameBenchmarkConfig.enabled = cfgYaml["Config"]["Enabled"].as<bool>();
       cfg.cpuFrameBenchmarkConfig.output = cfgYaml["Config"]["Output"].as<std::string>();
 
-      pluginLayer_ = std::make_unique<BenchmarkLayer>(*context_.gits, cfg);
+      pluginLayer_ = std::make_unique<BenchmarkLayer>(cfg);
     }
     return pluginLayer_.get();
   }
@@ -55,6 +57,9 @@ private:
 static std::unique_ptr<gits::DirectX::BenchmarkPlugin> g_plugin = nullptr;
 
 GITS_PLUGIN_API IPlugin* createPlugin(IPluginContext context, const char* pluginPath) {
+  // Initialize Plog for the plugin DLL
+  gits::log::Initialize(context.config->common.shared.thresholdLogLevel, context.logAppender);
+
   if (!g_plugin) {
     g_plugin = std::make_unique<gits::DirectX::BenchmarkPlugin>(context, pluginPath);
   }

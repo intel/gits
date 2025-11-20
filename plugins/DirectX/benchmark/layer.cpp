@@ -15,13 +15,8 @@
 namespace gits {
 namespace DirectX {
 
-BenchmarkLayer::BenchmarkLayer(CGits& gits, const BenchmarkConfig& cfg)
-    : Layer("Benchmark"),
-      gits_(gits),
-      cfg_(cfg),
-      cpuFrameBenchmarkService_(cfg.cpuFrameBenchmarkConfig) {
-  initializeLog(&gits_);
-}
+BenchmarkLayer::BenchmarkLayer(const BenchmarkConfig& cfg)
+    : Layer("Benchmark"), cfg_(cfg), cpuFrameBenchmarkService_(cfg.cpuFrameBenchmarkConfig) {}
 
 void BenchmarkLayer::pre(ID3D12CommandQueueExecuteCommandListsCommand& command) {
   cpuFrameBenchmarkService_.onPreExecute();

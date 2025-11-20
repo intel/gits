@@ -7,8 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "rtasSerializer.h"
-#include "gits.h"
-#include "pluginUtils.h"
+#include "log.h"
 
 #include <fstream>
 #include <iomanip>
@@ -16,12 +15,8 @@
 namespace gits {
 namespace DirectX {
 
-RtasSerializer::RtasSerializer(CGits& gits, const std::string& cacheFile, bool dumpCacheInfo)
-    : ResourceDump(),
-      gits_(gits),
-      cacheFile_(cacheFile),
-      dumpCacheInfo_(dumpCacheInfo),
-      initialized_(false) {}
+RtasSerializer::RtasSerializer(const std::string& cacheFile, bool dumpCacheInfo)
+    : ResourceDump(), cacheFile_(cacheFile), dumpCacheInfo_(dumpCacheInfo), initialized_(false) {}
 
 RtasSerializer::~RtasSerializer() {
   writeCache();
@@ -164,7 +159,7 @@ void RtasSerializer::writeCache() {
   try {
     waitUntilDumped();
 
-    logI(gits_, "RtasCache - Writing ", cacheFile_);
+    LOG_INFO << "RtasCache - Writing " << cacheFile_;
 
     std::unordered_map<unsigned, unsigned> blases;
     for (std::filesystem::directory_entry file :
@@ -184,7 +179,7 @@ void RtasSerializer::writeCache() {
       std::vector<char> data(size);
       file.read(data.data(), size);
       if (file.fail()) {
-        logE(gits_, "RtasCache - Error reading BLAS ", buildKey);
+        LOG_ERROR << "RtasCache - Error reading BLAS " << buildKey;
         break;
       }
       file.close();
@@ -192,13 +187,13 @@ void RtasSerializer::writeCache() {
       cache.write(reinterpret_cast<char*>(&size), sizeof(size));
       cache.write(data.data(), size);
       if (cache.bad()) {
-        logE(gits_, "RtasCache - Error writing BLAS ", buildKey);
+        LOG_ERROR << "RtasCache - Error writing BLAS " << buildKey;
         break;
       }
     }
     cache.flush();
 
-    logI(gits_, "RtasCache - Writing done");
+    LOG_INFO << "RtasCache - Writing done";
 
     std::filesystem::remove_all(tmpCacheDir_);
 

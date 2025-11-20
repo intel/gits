@@ -11,9 +11,6 @@
 #include "layerAuto.h"
 
 namespace gits {
-
-class CGits;
-
 namespace DirectX {
 
 struct AdapterSpoofConfig {
@@ -24,7 +21,7 @@ struct AdapterSpoofConfig {
 
 class AdapterSpoofLayer : public Layer {
 public:
-  AdapterSpoofLayer(CGits& gits, const AdapterSpoofConfig& cfg);
+  AdapterSpoofLayer(const AdapterSpoofConfig& cfg);
   ~AdapterSpoofLayer() = default;
 
   void post(IDXGIAdapterGetDescCommand& c) override;
@@ -33,7 +30,6 @@ public:
   void post(IDXGIAdapter4GetDesc3Command& c) override;
 
 private:
-  CGits& gits_;
   AdapterSpoofConfig cfg_;
 };
 

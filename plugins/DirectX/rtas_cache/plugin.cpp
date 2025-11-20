@@ -8,6 +8,8 @@
 
 #include "IPlugin.h"
 #include "layer.h"
+#include "log.h"
+#include "configurationAuto.h"
 
 #include "yaml-cpp/yaml.h"
 #include <filesystem>
@@ -40,7 +42,7 @@ public:
       cfg.stateRestoreOnly = cfgYaml["Config"]["StateRestoreOnly"].as<bool>();
       cfg.dumpCacheInfoFile = cfgYaml["Config"]["DumpCacheInfoFile"].as<bool>();
 
-      pluginLayer_ = std::make_unique<RtasCacheLayer>(*context_.gits, cfg);
+      pluginLayer_ = std::make_unique<RtasCacheLayer>(cfg);
     }
     return pluginLayer_.get();
   }
@@ -57,6 +59,9 @@ private:
 static std::unique_ptr<gits::DirectX::RtasCachePlugin> g_plugin = nullptr;
 
 GITS_PLUGIN_API IPlugin* createPlugin(IPluginContext context, const char* pluginPath) {
+  // Initialize Plog for the plugin DLL
+  gits::log::Initialize(context.config->common.shared.thresholdLogLevel, context.logAppender);
+
   if (!g_plugin) {
     g_plugin = std::make_unique<gits::DirectX::RtasCachePlugin>(context, pluginPath);
   }

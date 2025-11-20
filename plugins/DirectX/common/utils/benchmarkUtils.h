@@ -12,14 +12,9 @@
 #include <string>
 
 namespace gits {
-
-class CGits;
-
 namespace DirectX {
 
-void initializeLog(CGits* gits);
 std::string hrToString(HRESULT hr);
-void logError(const std::string& errorMsg);
 void logAndThrow(const std::string& errorMsg);
 void throwIfFailed(HRESULT hr);
 
