@@ -13,8 +13,8 @@
 namespace gits {
 namespace DirectX {
 
-RtasSizeCheckLayer::RtasSizeCheckLayer(CGits& gits)
-    : Layer("RtasSizeCheck"), gits_(gits), lastCaptureTimePrebuildInfo_{} {}
+RtasSizeCheckLayer::RtasSizeCheckLayer(MessageBus* msgBus)
+    : Layer("RtasSizeCheck"), msgBus_(msgBus), lastCaptureTimePrebuildInfo_{} {}
 
 void RtasSizeCheckLayer::pre(
     ID3D12Device5GetRaytracingAccelerationStructurePrebuildInfoCommand& command) {
@@ -38,37 +38,37 @@ void RtasSizeCheckLayer::post(
 
   if (playbackPrebuildInfo.ResultDataMaxSizeInBytes >
       lastCaptureTimePrebuildInfo_.ResultDataMaxSizeInBytes) {
-    logT(gits_,
+    logT(msgBus_,
          "ERROR: RTAS ResultDataMaxSizeInBytes during playback is bigger than during capture on "
          "command ",
          command.key);
-    logT(gits_,
+    logT(msgBus_,
          "Playback ResultDataMaxSizeInBytes: ", playbackPrebuildInfo.ResultDataMaxSizeInBytes);
-    logT(gits_, "Capture ResultDataMaxSizeInBytes: ",
+    logT(msgBus_, "Capture ResultDataMaxSizeInBytes: ",
          lastCaptureTimePrebuildInfo_.ResultDataMaxSizeInBytes);
   }
 
   if (playbackPrebuildInfo.ScratchDataSizeInBytes >
       lastCaptureTimePrebuildInfo_.ScratchDataSizeInBytes) {
-    logT(gits_,
+    logT(msgBus_,
          "ERROR: RTAS ScratchDataSizeInBytes during playback is bigger than during capture on "
          "command ",
          command.key);
-    logT(gits_, "Playback ScratchDataSizeInBytes: ", playbackPrebuildInfo.ScratchDataSizeInBytes);
-    logT(gits_,
+    logT(msgBus_, "Playback ScratchDataSizeInBytes: ", playbackPrebuildInfo.ScratchDataSizeInBytes);
+    logT(msgBus_,
          "Capture ScratchDataSizeInBytes: ", lastCaptureTimePrebuildInfo_.ScratchDataSizeInBytes);
   }
 
   if (playbackPrebuildInfo.UpdateScratchDataSizeInBytes >
       lastCaptureTimePrebuildInfo_.UpdateScratchDataSizeInBytes) {
     logT(
-        gits_,
+        msgBus_,
         "ERROR: RTAS UpdateScratchDataSizeInBytes during playback is bigger than during capture on "
         "command ",
         command.key);
-    logT(gits_, "Playback UpdateScratchDataSizeInBytes: ",
+    logT(msgBus_, "Playback UpdateScratchDataSizeInBytes: ",
          playbackPrebuildInfo.UpdateScratchDataSizeInBytes);
-    logT(gits_, "Capture UpdateScratchDataSizeInBytes: ",
+    logT(msgBus_, "Capture UpdateScratchDataSizeInBytes: ",
          lastCaptureTimePrebuildInfo_.UpdateScratchDataSizeInBytes);
   }
   lastCaptureTimePrebuildInfo_ = {};

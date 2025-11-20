@@ -9,17 +9,15 @@
 #pragma once
 
 #include "layerAuto.h"
+#include "messageBus.h"
 #include <d3d12.h>
 
 namespace gits {
-
-class CGits;
-
 namespace DirectX {
 
 class RtasSizeCheckLayer final : public Layer {
 public:
-  RtasSizeCheckLayer(CGits& gits);
+  RtasSizeCheckLayer(MessageBus* msgBus);
   ~RtasSizeCheckLayer() = default;
 
   // Capture time addresses and output
@@ -28,7 +26,7 @@ public:
   void post(ID3D12Device5GetRaytracingAccelerationStructurePrebuildInfoCommand& command) override;
 
 private:
-  CGits& gits_;
+  MessageBus* msgBus_;
   D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO lastCaptureTimePrebuildInfo_;
 };
 

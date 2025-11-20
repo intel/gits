@@ -27,6 +27,7 @@
 
 namespace gits {
 class CGits;
+class MessageBus;
 struct Configuration;
 } // namespace gits
 
@@ -37,6 +38,7 @@ class IAppender;
 struct IPluginContext {
   const gits::Configuration* config;
   gits::CGits* gits;
+  gits::MessageBus* msgBus;
   plog::IAppender* logAppender;
 };
 

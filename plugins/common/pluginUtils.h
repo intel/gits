@@ -44,6 +44,12 @@ void logT(CGits& gits, Args&&... args) {
       {PUBLISHER_PLUGIN, TOPIC_LOG},
       std::make_shared<LogMessage>(LogLevel::TRACE, std::forward<Args>(args)...));
 }
+template <typename... Args>
+void logT(MessageBus* msgBus, Args&&... args) {
+  GITS_ASSERT(msgBus != nullptr);
+  msgBus->publish({PUBLISHER_PLUGIN, TOPIC_LOG},
+                  std::make_shared<LogMessage>(LogLevel::TRACE, std::forward<Args>(args)...));
+}
 
 } // namespace gits
 

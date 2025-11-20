@@ -36,7 +36,7 @@ public:
         throw std::runtime_error("Config file did not load correctly");
       }
 
-      pluginLayer_ = std::make_unique<RtasSizeCheckLayer>(*context_.gits);
+      pluginLayer_ = std::make_unique<RtasSizeCheckLayer>(context_.msgBus);
     }
     return pluginLayer_.get();
   }

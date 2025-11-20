@@ -128,6 +128,7 @@ void PluginService::loadPlugins() {
 
     IPluginContext pluginContext;
     pluginContext.gits = &CGits::Instance();
+    pluginContext.msgBus = &CGits::Instance().GetMessageBus();
     pluginContext.config = &cfg;
     pluginContext.logAppender = plog::get();
 
