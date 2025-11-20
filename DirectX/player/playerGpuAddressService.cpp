@@ -49,6 +49,7 @@ void PlayerGpuAddressService::createPlacedResource(unsigned resourceKey,
 
   D3D12_GPU_VIRTUAL_ADDRESS resourceStartAddress = heapStartAddress + heapOffset;
   startAddressesByKey_[resourceKey] = resourceStartAddress;
+  placedResources_.insert(resourceKey);
 }
 
 void PlayerGpuAddressService::createHeap(unsigned heapKey, ID3D12Heap* heap) {
@@ -108,30 +109,30 @@ D3D12_GPU_VIRTUAL_ADDRESS PlayerGpuAddressService::getGpuAddress(unsigned resour
   if (!resourceKey) {
     return 0;
   }
-  auto it = startAddressesByKey_.find(resourceKey);
-  GITS_ASSERT(it != startAddressesByKey_.end());
-  return it->second + offset;
+  auto itResource = startAddressesByKey_.find(resourceKey);
+  if (itResource != startAddressesByKey_.end()) {
+    return itResource->second + offset;
+  } else {
+    auto itPlacedResouce = releasedPlacedResources_.find(resourceKey);
+    GITS_ASSERT(itPlacedResouce != releasedPlacedResources_.end());
+    static bool logged = false;
+    if (!logged) {
+      LOG_WARNING << "PlayerGpuAddressService - placed resource already released. Incorrect "
+                     "overlapping resource used.";
+      logged = true;
+    }
+    return itPlacedResouce->second + offset;
+  }
 }
 
 void PlayerGpuAddressService::destroyInterface(unsigned interfaceKey) {
 
-  startAddressesByKey_.erase(interfaceKey);
-
-  auto itHeap = heapByPlacedResource_.find(interfaceKey);
-  if (itHeap != heapByPlacedResource_.end()) {
-
-    auto it = placedResourcesByHeap_.find(itHeap->second);
-    GITS_ASSERT(it != placedResourcesByHeap_.end());
-    it->second.erase(interfaceKey);
-
-    heapByPlacedResource_.erase(itHeap);
-  } else {
-
-    auto it = placedResourcesByHeap_.find(interfaceKey);
-    if (it != placedResourcesByHeap_.end()) {
-      placedResourcesByHeap_.erase(it);
-    }
+  if (placedResources_.contains(interfaceKey)) {
+    releasedPlacedResources_[interfaceKey] = startAddressesByKey_[interfaceKey];
+    placedResources_.erase(interfaceKey);
   }
+
+  startAddressesByKey_.erase(interfaceKey);
 }
 
 } // namespace DirectX

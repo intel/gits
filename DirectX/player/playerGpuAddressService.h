@@ -30,8 +30,8 @@ public:
 
 private:
   std::unordered_map<unsigned, D3D12_GPU_VIRTUAL_ADDRESS> startAddressesByKey_;
-  std::unordered_map<unsigned, std::unordered_set<unsigned>> placedResourcesByHeap_;
-  std::unordered_map<unsigned, unsigned> heapByPlacedResource_;
+  std::unordered_set<unsigned> placedResources_;
+  std::unordered_map<unsigned, D3D12_GPU_VIRTUAL_ADDRESS> releasedPlacedResources_;
 
 private:
   D3D12_GPU_VIRTUAL_ADDRESS getHeapGPUVirtualAddress(ID3D12Heap* heap);
