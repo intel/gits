@@ -168,7 +168,11 @@ D3D12_RESOURCE_STATES ResourceStateTrackingService::getResourceState(D3D12_BARRI
     state = D3D12_RESOURCE_STATE_SHADING_RATE_SOURCE;
     break;
   default:
-    LOG_ERROR << "Barrier layout not handled " << layout << "!";
+    static bool logged = false;
+    if (!logged) {
+      LOG_ERROR << "Barrier layout not handled " << layout << "!";
+      logged = true;
+    }
   }
 
   return state;
