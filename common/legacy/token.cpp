@@ -91,7 +91,6 @@ static void OnFrameEndImpl() {
 }
 
 void CTokenMarker::Run() {
-  using namespace OpenGL;
   auto& cfg = Configurator::Get();
 
   switch (_id) {
@@ -133,6 +132,7 @@ void CTokenMarker::Run() {
     if (CGits::Instance().apis.HasCompute()) {
       CGits::Instance().apis.IfaceCompute().Play_StateRestoreEnd();
     }
+
     GitsEventMessage::DATA data{};
     data.Id = CToken::TId::ID_INIT_END;
     data.InitEndData = {};

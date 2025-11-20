@@ -91,5 +91,26 @@ void PreSwap() {
   LOG_TRACE << "Frame end. Total drawcalls: " << CGits::Instance().CurrentDrawCount();
 }
 
+void CLibrary::RegisterEvents() {
+  auto eventHandler = [](Topic t, const MessagePtr& m) {
+    auto msg = std::dynamic_pointer_cast<GitsEventMessage>(m);
+    if (!msg) {
+      return;
+    }
+
+    auto& cfg = Configurator::Get();
+    auto& data = msg->getData();
+    switch (data.Id) {
+    case CToken::TId::ID_INIT_END:
+      break;
+    default:
+      break;
+    }
+  };
+
+  gits::CGits::Instance().GetMessageBus().subscribe({PUBLISHER_PLAYER, TOPIC_GITS_EVENT},
+                                                    eventHandler);
+}
+
 } //namespace OpenGL
 } //namespace gits

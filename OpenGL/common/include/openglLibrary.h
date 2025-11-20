@@ -61,6 +61,8 @@ public:
     return "OpenGL";
   }
 
+  void RegisterEvents() override;
+
   CResourceManager2& ProgramBinaryManager();
 
   uint32_t GetLinkProgramNumber() const {

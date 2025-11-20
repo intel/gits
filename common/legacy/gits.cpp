@@ -725,6 +725,9 @@ CBinIStream& operator>>(CBinIStream& stream, CFile& file) {
       if (api3D == ApisIface::TApi::Vulkan) {
         CGits::Instance().Library(gits::CLibrary::TId::ID_VULKAN).RegisterEvents();
       }
+      if (api3D == ApisIface::TApi::OpenGL) {
+        CGits::Instance().Library(gits::CLibrary::TId::ID_OPENGL).RegisterEvents();
+      }
     }
 
     ApisIface::TApi apiCompute = ApisIface::TApi::ApiNotSet;
