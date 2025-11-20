@@ -690,8 +690,8 @@ void StateTrackingLayer::post(IDXGISwapChainGetBufferCommand& c) {
   state->creationCommand.reset(new IDXGISwapChainGetBufferCommand(c));
   stateService_.storeState(state);
 
-  resourceStateTrackingService_.addResource(0, static_cast<ID3D12Resource*>(*c.ppSurface_.value),
-                                            state->key, D3D12_RESOURCE_STATE_COMMON, false);
+  resourceStateTrackingService_.addBackBufferResource(
+      static_cast<ID3D12Resource*>(*c.ppSurface_.value), state->key, c.Buffer_.value);
 
   // Keep track of the buffer key
   swapchainBuffers_[c.object_.key].push_back(state->key);

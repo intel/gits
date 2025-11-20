@@ -21,9 +21,15 @@ public:
 
   void record(CToken* token);
   void frameEnd();
+  bool commandListSubcapture() {
+    return commandListSubcapture_;
+  }
 
 private:
   void copyAuxiliaryFiles();
+
+private:
+  bool commandListSubcapture_{};
 };
 
 } // namespace DirectX

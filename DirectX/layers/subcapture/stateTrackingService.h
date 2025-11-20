@@ -213,13 +213,17 @@ private:
   class SwapChainService {
   public:
     SwapChainService(StateTrackingService& stateService) : stateService_(stateService) {}
-    void setSwapChain(unsigned key, IDXGISwapChain* swapChain, unsigned backBuffersCount);
-    void restoreBackBufferSequence();
+    void setSwapChain(unsigned swapChainKey,
+                      unsigned commandQueueKey,
+                      IDXGISwapChain* swapChain,
+                      unsigned backBuffersCount);
+    void restoreBackBufferSequence(bool commandListSubcapture);
     void recordSwapChainPresent();
 
   private:
     StateTrackingService& stateService_;
     unsigned swapChainKey_{};
+    unsigned commandQueueKey_{};
     IDXGISwapChain* swapChain_{};
     unsigned backBufferShift_{};
     unsigned backBuffersCount_{};

@@ -39,6 +39,7 @@ public:
                    unsigned resourceKey,
                    D3D12_BARRIER_LAYOUT initialState,
                    bool recreateState);
+  void addBackBufferResource(ID3D12Resource* resource, unsigned resourceKey, unsigned buffer);
   void resourceBarrier(unsigned commandListKey,
                        D3D12_RESOURCE_BARRIER* barriers,
                        std::vector<unsigned>& resourceKeys,
@@ -50,6 +51,7 @@ public:
   D3D12_RESOURCE_STATES getSubresourceState(unsigned resourceKey, unsigned subresource);
   D3D12_BARRIER_LAYOUT getResourceLayout(unsigned resourceKey);
   void restoreResourceStates(const std::vector<unsigned>& orderedResources);
+  void restoreBackBufferState(unsigned commandQueueKey, unsigned buffer);
 
 private:
   unsigned getSubresourcesCount(ID3D12Resource* resource);
@@ -77,6 +79,7 @@ private:
   std::vector<std::pair<AliasingBarrierKeys, unsigned>> aliasingBarriersOrdered_;
 
   std::unordered_map<DXGI_FORMAT, unsigned> planesByFormat_;
+  std::unordered_map<unsigned, unsigned> backBuffers_;
 };
 
 } // namespace DirectX

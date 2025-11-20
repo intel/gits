@@ -126,6 +126,13 @@ void ResourceStateTrackingService::addResource(unsigned deviceKey,
   addResource(deviceKey, resource, resourceKey, state, recreateState);
 }
 
+void ResourceStateTrackingService::addBackBufferResource(ID3D12Resource* resource,
+                                                         unsigned resourceKey,
+                                                         unsigned buffer) {
+  addResource(0, resource, resourceKey, D3D12_RESOURCE_STATE_COMMON, false);
+  backBuffers_[buffer] = resourceKey;
+}
+
 D3D12_RESOURCE_STATES ResourceStateTrackingService::getResourceState(D3D12_BARRIER_LAYOUT layout) {
 
   D3D12_RESOURCE_STATES state{};
@@ -423,6 +430,117 @@ void ResourceStateTrackingService::restoreResourceStates(
   releaseCommandQueue.key = stateService_.getUniqueCommandKey();
   releaseCommandQueue.object_.key = commandQueueKey;
   stateService_.getRecorder().record(new IUnknownReleaseWriter(releaseCommandQueue));
+}
+
+void ResourceStateTrackingService::restoreBackBufferState(unsigned commandQueueKey,
+                                                          unsigned buffer) {
+  D3D12_RESOURCE_STATES beforeState = D3D12_RESOURCE_STATE_COMMON;
+  unsigned resourceKey = backBuffers_[buffer];
+  if (!resourceKey) {
+    return;
+  }
+  ResourceStates& resourceStates = getResourceStates(resourceKey);
+  D3D12_RESOURCE_STATES afterState = D3D12_RESOURCE_STATE_COMMON;
+  if (!resourceStates.subresourceStates.empty()) {
+    afterState = resourceStates.subresourceStates[0];
+  }
+  if (afterState == D3D12_RESOURCE_STATE_COMMON) {
+    return;
+  }
+
+  unsigned commandAllocatorKey = stateService_.getUniqueObjectKey();
+  ID3D12DeviceCreateCommandAllocatorCommand createCommandAllocator;
+  createCommandAllocator.key = stateService_.getUniqueCommandKey();
+  createCommandAllocator.object_.key = deviceKey_;
+  createCommandAllocator.type_.value = D3D12_COMMAND_LIST_TYPE_DIRECT;
+  createCommandAllocator.riid_.value = IID_ID3D12CommandAllocator;
+  createCommandAllocator.ppCommandAllocator_.key = commandAllocatorKey;
+  stateService_.getRecorder().record(
+      new ID3D12DeviceCreateCommandAllocatorWriter(createCommandAllocator));
+
+  unsigned commandListKey = stateService_.getUniqueObjectKey();
+  ID3D12DeviceCreateCommandListCommand createCommandList;
+  createCommandList.key = stateService_.getUniqueCommandKey();
+  createCommandList.object_.key = deviceKey_;
+  createCommandList.nodeMask_.value = 0;
+  createCommandList.pCommandAllocator_.key = createCommandAllocator.ppCommandAllocator_.key;
+  createCommandList.type_.value = D3D12_COMMAND_LIST_TYPE_DIRECT;
+  createCommandList.pInitialState_.value = nullptr;
+  createCommandList.riid_.value = IID_ID3D12CommandList;
+  createCommandList.ppCommandList_.key = commandListKey;
+  stateService_.getRecorder().record(new ID3D12DeviceCreateCommandListWriter(createCommandList));
+
+  unsigned fenceKey = stateService_.getUniqueObjectKey();
+  ID3D12DeviceCreateFenceCommand createFence;
+  createFence.key = stateService_.getUniqueCommandKey();
+  createFence.object_.key = deviceKey_;
+  createFence.InitialValue_.value = 0;
+  createFence.Flags_.value = D3D12_FENCE_FLAG_NONE;
+  createFence.riid_.value = IID_ID3D12Fence;
+  createFence.ppFence_.key = fenceKey;
+  stateService_.getRecorder().record(new ID3D12DeviceCreateFenceWriter(createFence));
+
+  ID3D12GraphicsCommandListResourceBarrierCommand barrierCommand;
+  barrierCommand.key = stateService_.getUniqueCommandKey();
+  barrierCommand.object_.key = commandListKey;
+  barrierCommand.NumBarriers_.value = 1;
+  D3D12_RESOURCE_BARRIER barrier{};
+  barrierCommand.pBarriers_.value = &barrier;
+  barrierCommand.pBarriers_.size = 1;
+  barrierCommand.pBarriers_.resourceKeys.resize(1);
+  barrierCommand.pBarriers_.resourceAfterKeys.resize(1);
+  barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+  barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+  barrier.Transition.Subresource = 0;
+  barrier.Transition.StateBefore = beforeState;
+  barrier.Transition.StateAfter = afterState;
+  barrierCommand.pBarriers_.resourceKeys[0] = resourceKey;
+  stateService_.getRecorder().record(
+      new ID3D12GraphicsCommandListResourceBarrierWriter(barrierCommand));
+
+  ID3D12GraphicsCommandListCloseCommand commandListClose;
+  commandListClose.key = stateService_.getUniqueCommandKey();
+  commandListClose.object_.key = commandListKey;
+  stateService_.getRecorder().record(new ID3D12GraphicsCommandListCloseWriter(commandListClose));
+
+  ID3D12CommandQueueExecuteCommandListsCommand executeCommandLists;
+  executeCommandLists.key = stateService_.getUniqueCommandKey();
+  executeCommandLists.object_.key = commandQueueKey;
+  executeCommandLists.NumCommandLists_.value = 1;
+  executeCommandLists.ppCommandLists_.value = reinterpret_cast<ID3D12CommandList**>(1);
+  executeCommandLists.ppCommandLists_.size = 1;
+  executeCommandLists.ppCommandLists_.keys.resize(1);
+  executeCommandLists.ppCommandLists_.keys[0] = commandListKey;
+  stateService_.getRecorder().record(
+      new ID3D12CommandQueueExecuteCommandListsWriter(executeCommandLists));
+
+  ID3D12CommandQueueSignalCommand commandQueueSignal;
+  commandQueueSignal.key = stateService_.getUniqueCommandKey();
+  commandQueueSignal.object_.key = commandQueueKey;
+  commandQueueSignal.pFence_.key = fenceKey;
+  commandQueueSignal.Value_.value = 1;
+  stateService_.getRecorder().record(new ID3D12CommandQueueSignalWriter(commandQueueSignal));
+
+  ID3D12FenceGetCompletedValueCommand getCompletedValue;
+  getCompletedValue.key = stateService_.getUniqueCommandKey();
+  getCompletedValue.object_.key = fenceKey;
+  getCompletedValue.result_.value = 1;
+  stateService_.getRecorder().record(new ID3D12FenceGetCompletedValueWriter(getCompletedValue));
+
+  IUnknownReleaseCommand releaseFence;
+  releaseFence.key = stateService_.getUniqueCommandKey();
+  releaseFence.object_.key = fenceKey;
+  stateService_.getRecorder().record(new IUnknownReleaseWriter(releaseFence));
+
+  IUnknownReleaseCommand releaseCommandList;
+  releaseCommandList.key = stateService_.getUniqueCommandKey();
+  releaseCommandList.object_.key = commandListKey;
+  stateService_.getRecorder().record(new IUnknownReleaseWriter(releaseCommandList));
+
+  IUnknownReleaseCommand releaseCommandAllocator;
+  releaseCommandAllocator.key = stateService_.getUniqueCommandKey();
+  releaseCommandAllocator.object_.key = commandAllocatorKey;
+  stateService_.getRecorder().record(new IUnknownReleaseWriter(releaseCommandAllocator));
 }
 
 } // namespace DirectX

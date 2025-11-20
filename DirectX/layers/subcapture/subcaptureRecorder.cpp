@@ -33,6 +33,7 @@ SubcaptureRecorder::SubcaptureRecorder() {
     path += "_frames_" + config.directx.features.subcapture.frames;
     path += "_executions_" + commandListExecutions;
     const_cast<std::filesystem::path&>(config.common.player.subcapturePath) = path;
+    commandListSubcapture_ = true;
   }
 
   CGits::Instance().apis.UseApi3dIface(
