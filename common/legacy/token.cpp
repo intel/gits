@@ -28,8 +28,6 @@
 #include "scheduler.h"
 #include "tools.h"
 
-#include "../../OpenGL/common/include/openglLibrary.h"
-
 #include <iostream>
 #include <string>
 #include <thread>

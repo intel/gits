@@ -114,7 +114,7 @@ add_definitions(-DGITS_COMMON_PROJ)
 
 add_dependencies(common config_codegen)
 target_include_directories(common PUBLIC ${COMMON_HEADER_DIR})
-target_link_libraries(common PRIVATE OpenGL_common xxhash murmurhash lz4 libzstd_static hud gits_recorder_interface png lua zlib)
+target_link_libraries(common PRIVATE xxhash murmurhash lz4 libzstd_static hud gits_recorder_interface png lua zlib)
 target_link_libraries(common PUBLIC configuration log)
 
 if(UNIX)

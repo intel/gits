@@ -97,7 +97,7 @@ add_library(OpenCL_common
   common/openclHelperFunctions.cpp
 )
 
-target_link_libraries(OpenCL_common PRIVATE common configuration)
+target_link_libraries(OpenCL_common PRIVATE common configuration OpenGL_common)
 
 add_library(OpenCL_recorder
   recorder/include/openclRecorderSubwrappers.h
