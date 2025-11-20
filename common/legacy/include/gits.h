@@ -201,7 +201,6 @@ private:
 
   uint32_t _frameNo;
   bool _restoringState;
-  std::vector<std::function<void()>> _endPlaybackEvents;
   std::vector<std::function<void()>> _luaFunctionsRegistrators;
   Events _playbackEvents;
   std::shared_ptr<lua_State> _lua;
@@ -237,15 +236,6 @@ public:
     return _instance;
   }
   void Dispose();
-  void RegisterEndPlaybackEvent(std::function<void()> f) {
-    _endPlaybackEvents.push_back(f);
-  }
-  void ProcessEndPlaybackEvents() {
-    for (auto& f : _endPlaybackEvents) {
-      f();
-    }
-    _endPlaybackEvents.clear();
-  }
 
   void RegisterLuaFunctionsRegistrator(std::function<void()> f) {
     _luaFunctionsRegistrators.push_back(f);

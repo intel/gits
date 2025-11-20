@@ -193,4 +193,9 @@ private:
   const DATA Data_;
 };
 
+class PlaybackEndMessage : public Message {
+public:
+  PlaybackEndMessage() {}
+};
+
 } // namespace gits

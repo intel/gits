@@ -36,7 +36,13 @@ PlayerManager* PlayerManager::instance_ = nullptr;
 PlayerManager& PlayerManager::get() {
   if (!instance_) {
     instance_ = new PlayerManager();
-    gits::CGits::Instance().RegisterEndPlaybackEvent(PlayerManager::destroy);
+    CGits::Instance().GetMessageBus().subscribe(
+        {PUBLISHER_PLAYER, TOPIC_END}, [](Topic t, const MessagePtr& m) {
+          auto msg = std::dynamic_pointer_cast<PlaybackEndMessage>(m);
+          if (msg) {
+            PlayerManager::destroy();
+          }
+        });
   }
   return *instance_;
 }

@@ -100,8 +100,11 @@ void gits::CPlayer::Play() {
   // (so we have played back frame 'exitFrame'.
   if (finished || CGits::Instance().CurrentFrame() == cfgPlayer.exitFrame + 1 ||
       CGits::Instance().Finished() == true) {
-    _state = STATE_FINISHED;
-    CGits::Instance().ProcessEndPlaybackEvents();
+    if (_state != STATE_FINISHED) {
+      _state = STATE_FINISHED;
+      CGits::Instance().GetMessageBus().publish({PUBLISHER_PLAYER, TOPIC_END},
+                                                std::make_shared<PlaybackEndMessage>());
+    }
   }
 
   // Only pause when

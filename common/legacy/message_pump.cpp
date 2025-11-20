@@ -245,7 +245,6 @@ void MessagePump::process_messages() {
 
     if (leave_) {
       gits::CGits::Instance().SetPlayerFinish();
-      gits::CGits::Instance().ProcessEndPlaybackEvents();
       if (gits::Configurator::Get().common.player.windowMode ==
           gits::WindowMode::EXCLUSIVE_FULLSCREEN) {
         ShowCursor(TRUE);
