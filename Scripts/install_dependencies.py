@@ -319,7 +319,7 @@ class GitRepository(Dependency):
             for (patch, hash) in patch_hash_list:
                 self.patches.append(patch)
                 self.execute(
-                    f"git apply {patch}", cwd=self.repository_path.parent / i
+                    f"git apply {patch} --ignore-whitespace", cwd=self.repository_path.parent / i
                 )
                 patches_meta_info[str(i)].append(str(hash))
         repo_meta_info["patches"] = patches_meta_info

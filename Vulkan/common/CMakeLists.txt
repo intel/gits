@@ -58,6 +58,7 @@ SET(Vulkan_common_SOURCES
   include/vulkanPNextWrappers.inl
   include/vulkanInternalShaderModules.h
   include/vulkanRenderDocUtil.h
+  include/imguiPatchHeader.h
 
   vkFunction.cpp
   vkWindowing.cpp
@@ -88,6 +89,13 @@ if(WIN32)
       include/vulkanHudHelper.h
       vulkanHudHelper.cpp
   )
+
+  list(APPEND Vulkan_common_SOURCES
+      ${IMGUI_BACKEND_DIR}/imgui_impl_win32.h
+      ${IMGUI_BACKEND_DIR}/imgui_impl_win32.cpp
+      ${IMGUI_BACKEND_DIR}/imgui_impl_vulkan.h
+      ${IMGUI_BACKEND_DIR}/imgui_impl_vulkan.cpp
+  )
 endif()
 
 add_library(Vulkan_common STATIC ${Vulkan_common_SOURCES})
@@ -103,7 +111,9 @@ source_group("Generated Files" FILES
 
 target_link_libraries(Vulkan_common PRIVATE common_interface configuration log)
 if(WIN32)
-  target_link_libraries(Vulkan_common PUBLIC imgui_win32_vulkan hud)
+  target_include_directories(Vulkan_common PUBLIC ${IMGUI_SOURCE_DIR} ${IMGUI_BACKEND_DIR})
+  target_compile_definitions(Vulkan_common PUBLIC IMGUI_USE_GITS_VULKAN_HEADERS)
+  target_link_libraries(Vulkan_common PUBLIC hud)
 endif()
 
 set_target_properties(Vulkan_common PROPERTIES FOLDER Vulkan)

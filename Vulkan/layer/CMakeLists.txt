@@ -44,7 +44,7 @@ source_group("Generated Files" FILES ${VulkanLayer_DEF} REGULAR_EXPRESSION ".*Au
 
 target_link_libraries(Vulkan_layer PRIVATE gits_recorder_interface common configuration)
 if(WIN32)
-  target_link_libraries(Vulkan_layer PRIVATE imgui_win32_vulkan hud)
+  target_link_libraries(Vulkan_layer PRIVATE hud)
 endif()
 
 if(MSVC)
