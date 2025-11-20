@@ -84,6 +84,7 @@ public:
   ObjectState* getState(unsigned key);
   void restoreState(unsigned key);
   bool stateRestored(unsigned key);
+  void addBackBuffer(unsigned buffer, unsigned resourceKey, ID3D12Resource* resource);
 
   unsigned getUniqueCommandKey() {
     return ++restoreCommandKey_;
@@ -213,20 +214,24 @@ private:
   class SwapChainService {
   public:
     SwapChainService(StateTrackingService& stateService) : stateService_(stateService) {}
-    void setSwapChain(unsigned swapChainKey,
-                      unsigned commandQueueKey,
+    void setSwapChain(unsigned commandQueueKey,
+                      ID3D12CommandQueue* commandQueue,
+                      unsigned swapChainKey,
                       IDXGISwapChain* swapChain,
                       unsigned backBuffersCount);
     void restoreBackBufferSequence(bool commandListSubcapture);
     void recordSwapChainPresent();
+    void addBackBuffer(unsigned buffer, unsigned resourceKey, ID3D12Resource* resource);
 
   private:
     StateTrackingService& stateService_;
     unsigned swapChainKey_{};
+    ID3D12CommandQueue* commandQueue_{};
     unsigned commandQueueKey_{};
     IDXGISwapChain* swapChain_{};
     unsigned backBufferShift_{};
     unsigned backBuffersCount_{};
+    std::unordered_map<unsigned, std::pair<unsigned, ID3D12Resource*>> backBuffers_;
   };
   SwapChainService swapChainService_;
 };

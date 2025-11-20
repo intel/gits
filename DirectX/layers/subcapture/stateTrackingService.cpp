@@ -95,6 +95,12 @@ bool StateTrackingService::stateRestored(unsigned key) {
   }
 }
 
+void StateTrackingService::addBackBuffer(unsigned buffer,
+                                         unsigned resourceKey,
+                                         ID3D12Resource* resource) {
+  swapChainService_.addBackBuffer(buffer, resourceKey, resource);
+}
+
 void StateTrackingService::restoreState(ObjectState* state) {
   if (state->restored) {
     return;
@@ -444,8 +450,9 @@ void StateTrackingService::restoreDXGISwapChain(ObjectState* state) {
     createWindowCommand.height_.value = height;
     recorder_.record(new CreateWindowMetaWriter(createWindowCommand));
 
-    swapChainService_.setSwapChain(state->key, command->pDevice_.key, *command->ppSwapChain_.value,
-                                   command->pDesc_.value->BufferCount);
+    swapChainService_.setSwapChain(
+        command->pDevice_.key, reinterpret_cast<ID3D12CommandQueue*>(command->pDevice_.value),
+        state->key, *command->ppSwapChain_.value, command->pDesc_.value->BufferCount);
   } else if (state->creationCommand->getId() ==
              CommandId::ID_IDXGIFACTORY2_CREATESWAPCHAINFORHWND) {
     auto* command =
@@ -466,8 +473,9 @@ void StateTrackingService::restoreDXGISwapChain(ObjectState* state) {
     createWindowCommand.height_.value = height;
     recorder_.record(new CreateWindowMetaWriter(createWindowCommand));
 
-    swapChainService_.setSwapChain(state->key, command->pDevice_.key, *command->ppSwapChain_.value,
-                                   command->pDesc_.value->BufferCount);
+    swapChainService_.setSwapChain(
+        command->pDevice_.key, reinterpret_cast<ID3D12CommandQueue*>(command->pDevice_.value),
+        state->key, *command->ppSwapChain_.value, command->pDesc_.value->BufferCount);
   }
   recorder_.record(createCommandWriter(state->creationCommand.get()));
 }
@@ -803,12 +811,14 @@ void StateTrackingService::restoreDllContainers() {
   }
 }
 
-void StateTrackingService::SwapChainService::setSwapChain(unsigned swapChainKey,
-                                                          unsigned commandQueueKey,
+void StateTrackingService::SwapChainService::setSwapChain(unsigned commandQueueKey,
+                                                          ID3D12CommandQueue* commandQueue,
+                                                          unsigned swapChainKey,
                                                           IDXGISwapChain* swapChain,
                                                           unsigned backBuffersCount) {
-  swapChainKey_ = swapChainKey;
   commandQueueKey_ = commandQueueKey;
+  commandQueue_ = commandQueue;
+  swapChainKey_ = swapChainKey;
   swapChain_ = swapChain;
   backBuffersCount_ = backBuffersCount;
 
@@ -820,10 +830,6 @@ void StateTrackingService::SwapChainService::setSwapChain(unsigned swapChainKey,
 
 void StateTrackingService::SwapChainService::restoreBackBufferSequence(bool commandListSubcapture) {
 
-  if (commandListSubcapture && !stateService_.analyzerResults_.restoreObject(swapChainKey_)) {
-    return;
-  }
-
   int backBufferShift = backBufferShift_;
   if (!commandListSubcapture) {
     // taking into account one Present that will be always recorded later
@@ -832,12 +838,24 @@ void StateTrackingService::SwapChainService::restoreBackBufferSequence(bool comm
   if (backBufferShift < 0) {
     backBufferShift += backBuffersCount_;
   }
+
+  if (commandListSubcapture) {
+    auto& resource = backBuffers_[backBufferShift];
+    if (!stateService_.analyzerResults_.restoreObject(resource.first)) {
+      return;
+    }
+  }
+
   for (int i = 0; i < backBufferShift; ++i) {
     recordSwapChainPresent();
   }
+
   if (commandListSubcapture) {
-    stateService_.resourceStateTrackingService_.restoreBackBufferState(commandQueueKey_,
-                                                                       backBufferShift);
+    auto& resource = backBuffers_[backBufferShift];
+    stateService_.resourceContentRestore_.restoreBackBuffer(commandQueue_, commandQueueKey_,
+                                                            resource.first, resource.second);
+    stateService_.resourceStateTrackingService_.restoreBackBufferState(
+        commandQueueKey_, resource.first, D3D12_RESOURCE_STATE_COPY_DEST);
   }
 }
 
@@ -848,6 +866,12 @@ void StateTrackingService::SwapChainService::recordSwapChainPresent() {
   presentCommand.SyncInterval_.value = 0;
   presentCommand.Flags_.value = 0;
   stateService_.recorder_.record(new IDXGISwapChainPresentWriter(presentCommand));
+}
+
+void StateTrackingService::SwapChainService::addBackBuffer(unsigned buffer,
+                                                           unsigned resourceKey,
+                                                           ID3D12Resource* resource) {
+  backBuffers_[buffer] = {resourceKey, resource};
 }
 
 void StateTrackingService::NvAPIGlobalStateService::incrementInitialize() {

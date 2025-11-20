@@ -28,8 +28,7 @@ void ResourceContentRestore::addCommittedResourceState(ResourceState* resourceSt
     return;
   }
 
-  ResourceInfo state{static_cast<ID3D12Resource*>(resourceState->object), resourceState->key, 0,
-                     resourceState->deviceKey};
+  ResourceInfo state{static_cast<ID3D12Resource*>(resourceState->object), resourceState->key, 0};
   if (resourceState->isMappable) {
     mappableResourceStates_[state.key] = state;
   } else if (resourceState->dimension == D3D12_RESOURCE_DIMENSION_BUFFER) {
@@ -48,7 +47,7 @@ void ResourceContentRestore::addPlacedResourceState(ResourceState* resourceState
   }
 
   ResourceInfo state{static_cast<ID3D12Resource*>(resourceState->object), resourceState->key,
-                     resourceState->heapKey, resourceState->deviceKey};
+                     resourceState->heapKey};
   if (resourceState->isMappable) {
     mappableResourceStates_[state.key] = state;
   } else if (resourceState->dimension == D3D12_RESOURCE_DIMENSION_BUFFER) {
@@ -58,7 +57,8 @@ void ResourceContentRestore::addPlacedResourceState(ResourceState* resourceState
   }
 }
 
-void ResourceContentRestore::restoreContent(const std::vector<unsigned>& resourceKeys) {
+void ResourceContentRestore::restoreContent(const std::vector<unsigned>& resourceKeys,
+                                            bool backBuffer) {
   enum ResourceBatchType {
     MappableResource,
     UnmappableResourceBuffer,
@@ -117,7 +117,7 @@ void ResourceContentRestore::restoreContent(const std::vector<unsigned>& resourc
           ID3D12Resource* resource = resourceInfos[0].resource;
           HRESULT hr = resource->GetDevice(IID_PPV_ARGS(&device_));
           GITS_ASSERT(hr == S_OK);
-          initRestoreUnmappableResources();
+          initRestoreUnmappableResources(backBuffer);
         }
 
         if (type == UnmappableResourceBuffer) {
@@ -404,7 +404,7 @@ unsigned ResourceContentRestore::restoreUnmappableResources(
 
   // create upload resource with resources contents in subcaptured stream
 
-  unsigned deviceKey = unmappableResourceStates[0].deviceKey;
+  unsigned deviceKey = stateService_.getDeviceKey();
 
   void* mappedData{};
   hr = readbackResource->Map(0, nullptr, &mappedData);
@@ -589,7 +589,7 @@ void ResourceContentRestore::getSubresourceSizes(
   }
 }
 
-void ResourceContentRestore::initRestoreUnmappableResources() {
+void ResourceContentRestore::initRestoreUnmappableResources(bool backBuffer) {
   if (restoreUnmappableResourcesInitialized_) {
     return;
   }
@@ -655,10 +655,13 @@ void ResourceContentRestore::initRestoreUnmappableResources() {
   stateService_.getRecorder().record(
       new ID3D12DeviceCreateCommittedResourceWriter(createUploadResource));
 
-  D3D12_COMMAND_QUEUE_DESC commandQueueDirectDesc{};
-  commandQueueDirectDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
-  HRESULT hr = device_->CreateCommandQueue(&commandQueueDirectDesc, IID_PPV_ARGS(&commandQueue_));
-  GITS_ASSERT(hr == S_OK);
+  HRESULT hr{};
+  if (!backBuffer) {
+    D3D12_COMMAND_QUEUE_DESC commandQueueDirectDesc{};
+    commandQueueDirectDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
+    hr = device_->CreateCommandQueue(&commandQueueDirectDesc, IID_PPV_ARGS(&commandQueue_));
+    GITS_ASSERT(hr == S_OK);
+  }
   hr = device_->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT,
                                        IID_PPV_ARGS(&commandAllocator_));
   GITS_ASSERT(hr == S_OK);
@@ -668,16 +671,19 @@ void ResourceContentRestore::initRestoreUnmappableResources() {
   hr = device_->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence_));
   GITS_ASSERT(hr == S_OK);
 
-  commandQueueKey_ = stateService_.getUniqueObjectKey();
-  D3D12_COMMAND_QUEUE_DESC commandQueueDesc{};
-  commandQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_COPY;
-  ID3D12DeviceCreateCommandQueueCommand createCommandQueue;
-  createCommandQueue.key = stateService_.getUniqueCommandKey();
-  createCommandQueue.object_.key = deviceKey;
-  createCommandQueue.pDesc_.value = &commandQueueDesc;
-  createCommandQueue.riid_.value = IID_ID3D12CommandQueue;
-  createCommandQueue.ppCommandQueue_.key = commandQueueKey_;
-  stateService_.getRecorder().record(new ID3D12DeviceCreateCommandQueueWriter(createCommandQueue));
+  if (!backBuffer) {
+    commandQueueKey_ = stateService_.getUniqueObjectKey();
+    D3D12_COMMAND_QUEUE_DESC commandQueueDesc{};
+    commandQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_COPY;
+    ID3D12DeviceCreateCommandQueueCommand createCommandQueue;
+    createCommandQueue.key = stateService_.getUniqueCommandKey();
+    createCommandQueue.object_.key = deviceKey;
+    createCommandQueue.pDesc_.value = &commandQueueDesc;
+    createCommandQueue.riid_.value = IID_ID3D12CommandQueue;
+    createCommandQueue.ppCommandQueue_.key = commandQueueKey_;
+    stateService_.getRecorder().record(
+        new ID3D12DeviceCreateCommandQueueWriter(createCommandQueue));
+  }
 
   commandAllocatorKey_ = stateService_.getUniqueObjectKey();
   ID3D12DeviceCreateCommandAllocatorCommand createCommandAllocator;
@@ -720,6 +726,8 @@ void ResourceContentRestore::cleanupRestoreUnmappableResources() {
   }
 
   evictPrevResidencyObjects();
+  prevResidencyKeys_.clear();
+  prevResidencyObjects_.clear();
 
   device_->Release();
   commandQueue_->Release();
@@ -751,6 +759,27 @@ void ResourceContentRestore::cleanupRestoreUnmappableResources() {
   releaseUploadResource.key = stateService_.getUniqueCommandKey();
   releaseUploadResource.object_.key = uploadResourceKey_;
   stateService_.getRecorder().record(new IUnknownReleaseWriter(releaseUploadResource));
+
+  restoreUnmappableResourcesInitialized_ = false;
+}
+
+void ResourceContentRestore::restoreBackBuffer(ID3D12CommandQueue* commandQueue,
+                                               unsigned commandQueueKey,
+                                               unsigned resourceKey,
+                                               ID3D12Resource* resource) {
+  commandQueue_ = commandQueue;
+  commandQueueKey_ = commandQueueKey;
+
+  D3D12_RESOURCE_DESC desc = resource->GetDesc();
+  if (desc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER) {
+    unmappableResourceBuffers_[resourceKey] = ResourceInfo{resource, resourceKey};
+  } else {
+    unmappableResourceTextures_[resourceKey] = ResourceInfo{resource, resourceKey};
+  }
+
+  std::vector<unsigned> resourceKeys;
+  resourceKeys.push_back(resourceKey);
+  restoreContent(resourceKeys, true);
 }
 
 UINT64 ResourceContentRestore::getAlignedSize(UINT64 size) {
@@ -761,9 +790,9 @@ UINT64 ResourceContentRestore::getAlignedSize(UINT64 size) {
 }
 
 bool ResourceContentRestore::isBarrierRestricted(unsigned resourceKey) {
-  const ObjectState* resourceObjectState = stateService_.getState(resourceKey);
+  ObjectState* resourceObjectState = stateService_.getState(resourceKey);
   GITS_ASSERT(resourceObjectState);
-  return static_cast<const gits::DirectX::ResourceState*>(resourceObjectState)->isBarrierRestricted;
+  return static_cast<ResourceState*>(resourceObjectState)->isBarrierRestricted;
 }
 
 ID3D12Resource* ResourceContentRestore::createAuxiliaryPlacedResource(unsigned primaryResourceKey) {

@@ -126,13 +126,6 @@ void ResourceStateTrackingService::addResource(unsigned deviceKey,
   addResource(deviceKey, resource, resourceKey, state, recreateState);
 }
 
-void ResourceStateTrackingService::addBackBufferResource(ID3D12Resource* resource,
-                                                         unsigned resourceKey,
-                                                         unsigned buffer) {
-  addResource(0, resource, resourceKey, D3D12_RESOURCE_STATE_COMMON, false);
-  backBuffers_[buffer] = resourceKey;
-}
-
 D3D12_RESOURCE_STATES ResourceStateTrackingService::getResourceState(D3D12_BARRIER_LAYOUT layout) {
 
   D3D12_RESOURCE_STATES state{};
@@ -433,19 +426,12 @@ void ResourceStateTrackingService::restoreResourceStates(
 }
 
 void ResourceStateTrackingService::restoreBackBufferState(unsigned commandQueueKey,
-                                                          unsigned buffer) {
-  D3D12_RESOURCE_STATES beforeState = D3D12_RESOURCE_STATE_COMMON;
-  unsigned resourceKey = backBuffers_[buffer];
-  if (!resourceKey) {
-    return;
-  }
+                                                          unsigned resourceKey,
+                                                          D3D12_RESOURCE_STATES beforeState) {
   ResourceStates& resourceStates = getResourceStates(resourceKey);
   D3D12_RESOURCE_STATES afterState = D3D12_RESOURCE_STATE_COMMON;
   if (!resourceStates.subresourceStates.empty()) {
     afterState = resourceStates.subresourceStates[0];
-  }
-  if (afterState == D3D12_RESOURCE_STATE_COMMON) {
-    return;
   }
 
   unsigned commandAllocatorKey = stateService_.getUniqueObjectKey();
