@@ -27,9 +27,6 @@
 #include "function.h"
 #include "scheduler.h"
 #include "tools.h"
-#if defined(GITS_PLATFORM_X11) && defined(WITH_VULKAN)
-#include "vkWindowing.h"
-#endif
 
 #include "../../OpenGL/common/include/openglLibrary.h"
 
