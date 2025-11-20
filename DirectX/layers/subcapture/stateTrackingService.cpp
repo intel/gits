@@ -38,6 +38,7 @@ void StateTrackingService::restoreState() {
       restoreState(it.second);
     }
   }
+  restoreStateObjectProperties();
   recordStatus(MarkerUInt64Command::Value::STATE_RESTORE_OBJECTS_END);
   nvapiGlobalStateService_.restureInitializeCount();
   xessStateService_.restoreState();
@@ -512,7 +513,8 @@ void StateTrackingService::restoreQueryInterface(ObjectState* state) {
       return;
     }
 
-    recorder_.record(createCommandWriter(state->creationCommand.get()));
+    stateObjectPropertiesCommands_.emplace(
+        std::make_unique<IUnknownQueryInterfaceCommand>(*command));
 
     auto* propertiesState = static_cast<D3D12StateObjectPropertiesState*>(state);
     for (auto& shaderIdentifier : propertiesState->shaderIdentifiers) {
@@ -521,7 +523,8 @@ void StateTrackingService::restoreQueryInterface(ObjectState* state) {
       c.object_.key = state->key;
       c.pExportName_.value = const_cast<wchar_t*>(shaderIdentifier.first.c_str());
       c.result_.value = shaderIdentifier.second.data();
-      recorder_.record(new ID3D12StateObjectPropertiesGetShaderIdentifierWriter(c));
+      stateObjectPropertiesCommands_.emplace(
+          std::make_unique<ID3D12StateObjectPropertiesGetShaderIdentifierCommand>(c));
     }
   } else if (command->riid_.value == __uuidof(IDStorageCustomDecompressionQueue) ||
              command->riid_.value == __uuidof(IDStorageCustomDecompressionQueue1)) {
@@ -808,6 +811,14 @@ void StateTrackingService::restoreD3D12EnableExperimentalFeatures() {
 void StateTrackingService::restoreDllContainers() {
   for (const auto& command : dllContainerCommands_) {
     recorder_.record(createCommandWriter(command.get()));
+  }
+}
+
+void StateTrackingService::restoreStateObjectProperties() {
+  while (!stateObjectPropertiesCommands_.empty()) {
+    const auto& command = stateObjectPropertiesCommands_.front();
+    recorder_.record(createCommandWriter(command.get()));
+    stateObjectPropertiesCommands_.pop();
   }
 }
 

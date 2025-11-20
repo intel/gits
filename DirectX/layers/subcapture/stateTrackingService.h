@@ -162,6 +162,7 @@ private:
   void restoreINTCApplicationInfo();
   void restoreD3D12EnableExperimentalFeatures();
   void restoreDllContainers();
+  void restoreStateObjectProperties();
   void restoreResidencyPriority(unsigned deviceKey,
                                 unsigned objectKey,
                                 D3D12_RESIDENCY_PRIORITY residencyPriority);
@@ -208,6 +209,7 @@ private:
   std::unique_ptr<INTC_D3D12_SetApplicationInfoCommand> setApplicationInfoCommand_;
   std::unique_ptr<D3D12EnableExperimentalFeaturesCommand> enableExperimentalFeaturesCommand_;
   std::vector<std::unique_ptr<DllContainerMetaCommand>> dllContainerCommands_;
+  std::queue<std::unique_ptr<Command>> stateObjectPropertiesCommands_;
   NvAPIGlobalStateService nvapiGlobalStateService_;
 
 private:
