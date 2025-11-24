@@ -126,12 +126,11 @@ void DescriptorService::copyDescriptors(ID3D12DeviceCopyDescriptorsSimpleCommand
   auto& destHeap = statesByHeapIndex_[c.DestDescriptorRangeStart_.interfaceKey];
   for (unsigned i = 0; i < c.NumDescriptors_.value; ++i) {
     auto srcIt = srcHeapIt->second.find(c.SrcDescriptorRangeStart_.index + i);
-    if (srcIt == srcHeapIt->second.end()) {
-      continue;
+    if (srcIt != srcHeapIt->second.end()) {
+      unsigned destHeapIndex = c.DestDescriptorRangeStart_.index + i;
+      destHeap[destHeapIndex].reset(copyDescriptor(
+          srcIt->second.get(), c.DestDescriptorRangeStart_.interfaceKey, destHeapIndex));
     }
-    unsigned destHeapIndex = c.DestDescriptorRangeStart_.index + i;
-    destHeap[destHeapIndex].reset(copyDescriptor(
-        srcIt->second.get(), c.DestDescriptorRangeStart_.interfaceKey, destHeapIndex));
   }
 }
 
