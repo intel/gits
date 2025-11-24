@@ -65,6 +65,7 @@ dependencies:
     - name: renderdoc
       url: https://github.com/baldurk/renderdoc.git
       branch: v1.21
+      sparse_checkout: renderdoc/api/app
     - name: json
       url: https://github.com/nlohmann/json.git
       branch: v3.11.3

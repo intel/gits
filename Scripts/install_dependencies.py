@@ -235,6 +235,7 @@ class GitRepository(Dependency):
         self.url = yaml_description["url"]
         self.branch = yaml_description.get("branch", "master")
         self.commit_id = yaml_description.get("commit_id", "")
+        self.sparse_checkout = yaml_description.get("sparse_checkout", "")
         self.modules = []
         self.patches = []
         if not THIRD_PARTY_PATH.exists():
@@ -332,10 +333,15 @@ class GitRepository(Dependency):
             ]
             if USE_PARALLEL_GIT:
                 clone_cmd.append("-j 8")
+            if self.sparse_checkout:
+                clone_cmd.append("--filter=blob:none --no-checkout")
             self.execute_with_retry(
                 " ".join(clone_cmd),
                 cwd=self.repository_path.parent,
             )
+            if self.sparse_checkout:
+                self.execute(f"git sparse-checkout set --no-cone {self.sparse_checkout}")
+                self.execute(f"git checkout {self.branch}")
             if self.commit_id:
                 self.execute(f"git fetch --depth 1 origin {self.commit_id}")
                 self.execute(f"git checkout {self.commit_id}")
