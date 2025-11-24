@@ -159,9 +159,6 @@ void DescriptorService::copyDescriptors(ID3D12DeviceCopyDescriptorsCommand& c) {
     for (unsigned srcIndex = 0; srcIndex < srcRangeSize; ++srcIndex, ++destIndex) {
       auto srcIt =
           srcHeapIt->second.find(c.pSrcDescriptorRangeStarts_.indexes[srcRangeIndex] + srcIndex);
-      if (srcIt == srcHeapIt->second.end()) {
-        continue;
-      }
       if (destIndex == destRangeSize) {
         destIndex = 0;
         ++destRangeIndex;
@@ -170,9 +167,11 @@ void DescriptorService::copyDescriptors(ID3D12DeviceCopyDescriptorsCommand& c) {
                             : 1;
         destHeapKey = c.pDestDescriptorRangeStarts_.interfaceKeys[destRangeIndex];
       }
-      unsigned destHeapIndex = c.pDestDescriptorRangeStarts_.indexes[destRangeIndex] + destIndex;
-      statesByHeapIndex_[destHeapKey][destHeapIndex].reset(
-          copyDescriptor(srcIt->second.get(), destHeapKey, destHeapIndex));
+      if (srcIt != srcHeapIt->second.end()) {
+        unsigned destHeapIndex = c.pDestDescriptorRangeStarts_.indexes[destRangeIndex] + destIndex;
+        statesByHeapIndex_[destHeapKey][destHeapIndex].reset(
+            copyDescriptor(srcIt->second.get(), destHeapKey, destHeapIndex));
+      }
     }
   }
 }
