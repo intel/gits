@@ -216,13 +216,6 @@ int MainBody(int argc, char* argv[]) {
 
   Configurator::Instance().LogChangedFields();
 
-  inst.GetMessageBus().subscribe({PUBLISHER_PLUGIN, TOPIC_LOG}, [](Topic t, const MessagePtr& m) {
-    auto msg = std::dynamic_pointer_cast<LogMessage>(m);
-    if (msg) {
-      PLOG(log::GetSeverity(msg->getLevel())) << msg->getText();
-    }
-  });
-
   const auto& cfg = Configurator::Get();
   log::SetMaxSeverity(cfg.common.shared.thresholdLogLevel);
   if (!cfg.common.shared.logToConsole) {

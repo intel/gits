@@ -10,7 +10,6 @@
 
 #include "layer.h"
 #include "pluginUtils.h"
-#include "benchmarkUtils.h"
 
 namespace gits {
 namespace DirectX {

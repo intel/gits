@@ -16,8 +16,6 @@ PRIVATE
   ${SRC_DIR}/gpuExecutionTracker.cpp
   ${SRC_DIR}/taskScheduler.h
   ${SRC_DIR}/taskScheduler.cpp
-  ${SRC_DIR}/benchmarkUtils.h
-  ${SRC_DIR}/benchmarkUtils.cpp
 )
 
 target_include_directories(DirectX_plugin_utils

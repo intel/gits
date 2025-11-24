@@ -8,49 +8,17 @@
 
 #pragma once
 
-#include "gits.h"
+#include "messageBus.h"
 
 namespace gits {
-
-// Log message with LogLevel::INFO
-template <typename... Args>
-void logI(CGits& gits, Args&&... args) {
-  gits.GetMessageBus().publish(
-      {PUBLISHER_PLUGIN, TOPIC_LOG},
-      std::make_shared<LogMessage>(LogLevel::INFO, std::forward<Args>(args)...));
-}
-
-// Log message with LogLevel::WARN
-template <typename... Args>
-void logW(CGits& gits, Args&&... args) {
-  gits.GetMessageBus().publish(
-      {PUBLISHER_PLUGIN, TOPIC_LOG},
-      std::make_shared<LogMessage>(LogLevel::WARN, std::forward<Args>(args)...));
-}
-
-// Log message with LogLevel::ERR
-template <typename... Args>
-void logE(CGits& gits, Args&&... args) {
-  gits.GetMessageBus().publish(
-      {PUBLISHER_PLUGIN, TOPIC_LOG},
-      std::make_shared<LogMessage>(LogLevel::ERR, std::forward<Args>(args)...));
-}
-
 // Log message with LogLevel::TRACE
 // The message to be also logged in the trace files if DirectX.Features.Trace is enabled
-template <typename... Args>
-void logT(CGits& gits, Args&&... args) {
-  gits.GetMessageBus().publish(
-      {PUBLISHER_PLUGIN, TOPIC_LOG},
-      std::make_shared<LogMessage>(LogLevel::TRACE, std::forward<Args>(args)...));
-}
 template <typename... Args>
 void logT(MessageBus* msgBus, Args&&... args) {
   GITS_ASSERT(msgBus != nullptr);
   msgBus->publish({PUBLISHER_PLUGIN, TOPIC_LOG},
                   std::make_shared<LogMessage>(LogLevel::TRACE, std::forward<Args>(args)...));
 }
-
 } // namespace gits
 
 namespace {

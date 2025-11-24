@@ -7,7 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "cpuFrameBenchmarkService.h"
-#include "benchmarkUtils.h"
+#include "log.h"
 
 namespace gits {
 namespace DirectX {
@@ -44,9 +44,8 @@ void CpuFrameBenchmarkService::onPostPresent() {
 void CpuFrameBenchmarkService::writeResult(size_t frameNumber, double cpuTime) {
   if (!fileStream_.is_open()) {
     fileStream_.open(cfg_.output);
-    if (!fileStream_.good()) {
-      logAndThrow("CpuFrameBenchmarkService - Failed to create file: " + cfg_.output);
-    }
+    GITS_ASSERT(fileStream_.good(),
+                "CpuFrameBenchmarkService - Failed to create file: " + cfg_.output);
     fileStream_ << "Frame #,Time [sec]\n";
   }
 

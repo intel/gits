@@ -161,13 +161,6 @@ gits::CRecorder::CRecorder()
   LOG_INFO << " GITS Recorder (" << inst.Version() << ")";
   LOG_INFO << "-----------------------------------------------------";
 
-  inst.GetMessageBus().subscribe({PUBLISHER_PLUGIN, TOPIC_LOG}, [](Topic t, const MessagePtr& m) {
-    auto msg = std::dynamic_pointer_cast<LogMessage>(m);
-    if (msg) {
-      PLOG(log::GetSeverity(msg->getLevel())) << msg->getText();
-    }
-  });
-
   inst.GetMessageBus().subscribe({PUBLISHER_PLUGIN, TOPIC_CLOSE_RECORDER},
                                  [](Topic t, const MessagePtr& m) {
                                    auto msg = std::dynamic_pointer_cast<CloseRecorderMessage>(m);
