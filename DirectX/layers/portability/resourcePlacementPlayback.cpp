@@ -143,7 +143,7 @@ void ResourcePlacementPlayback::calculateResourcePlacement(
     if (info.shift) {
       changedResourceOffsets_[info.key] = info.offset + info.shift;
     }
-    heapShift = info.shift + info.increment;
+    heapShift = std::max(heapShift, info.shift + info.increment);
   }
 
   heapSizeShifts_[heapKey] = heapShift;
