@@ -84,7 +84,7 @@ PlayerManager::PlayerManager() {
   std::unique_ptr<Layer> gpuPatchLayer;
   std::unique_ptr<Layer> multithreadedObjectCreationLayer;
   std::unique_ptr<Layer> multithreadedObjectAwaitLayer;
-  std::unique_ptr<Layer> portabilityLayer;
+  std::unique_ptr<Layer> portabilityLayer = portabilityFactory_.getPortabilityLayer();
   std::unique_ptr<Layer> directStorageLayer;
   std::unique_ptr<Layer> traceLayer = traceFactory_.getTraceLayer();
   std::unique_ptr<Layer> showExecutionLayer = traceFactory_.getShowExecutionLayer();
@@ -127,7 +127,6 @@ PlayerManager::PlayerManager() {
       multithreadedObjectCreationLayer = std::make_unique<MultithreadedObjectCreationLayer>(*this);
       multithreadedObjectAwaitLayer = std::make_unique<MultithreadedObjectAwaitLayer>(*this);
     }
-    portabilityLayer = portabilityFactory_.getPortabilityLayer();
     addressPinningLayer = addressPinningFactory_.getAddressPinningLayer();
     dllOverrideUseLayer = std::make_unique<DllOverrideUseLayer>(*this);
   }

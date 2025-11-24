@@ -10,6 +10,7 @@
 
 #include "layerAuto.h"
 #include "resourcePlacementCapture.h"
+#include "resourcePlacementCaptureNoExecute.h"
 #include "resourcePlacementPlayback.h"
 
 #include <set>
@@ -40,6 +41,8 @@ public:
       override;
   void post(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c) override;
   void pre(ID3D12CommandQueueUpdateTileMappingsCommand& c) override;
+  void pre(ID3D12DeviceGetResourceAllocationInfoCommand& c) override;
+  void pre(ID3D12Device4GetResourceAllocationInfo1Command& c) override;
 
 private:
   void configureHeapMemoryPool(ID3D12Device* device, D3D12_HEAP_DESC* heapDesc);
@@ -47,8 +50,10 @@ private:
 
 private:
   ResourcePlacementCapture resourcePlacementCapture_;
+  ResourcePlacementCaptureNoExecute resourcePlacementCaptureNoExecute_;
   ResourcePlacementPlayback resourcePlacementPlayback_;
   bool storeResourcePlacementData_{};
+  bool storeResourcePlacementDataNoExecute_{};
   bool useResourcePlacementData_{};
   bool portabilityChecks_{};
   float accelerationStructurePadding_{};

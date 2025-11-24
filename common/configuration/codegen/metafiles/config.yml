@@ -917,7 +917,7 @@ Configuration:
 
                   * `none`: Don't do anything special (playback the stream as-is)
                   * `use`: Use existing file containing placed resources data
-                  * `store`: Create a file containing placed resources data
+                  * `store`: Create a file containing placed resources data. Disabling execution allows to collect data on incompatible device.
               - Name: portabilityChecks
                 Type: bool
                 Default: false

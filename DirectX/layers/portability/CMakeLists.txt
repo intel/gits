@@ -16,6 +16,8 @@ set(ALL_SRC
   ${SRC_DIR}/portabilityLayer.cpp
   ${SRC_DIR}/resourcePlacementCapture.h
   ${SRC_DIR}/resourcePlacementCapture.cpp
+  ${SRC_DIR}/resourcePlacementCaptureNoExecute.h
+  ${SRC_DIR}/resourcePlacementCaptureNoExecute.cpp
   ${SRC_DIR}/resourcePlacementPlayback.h
   ${SRC_DIR}/resourcePlacementPlayback.cpp
 )
