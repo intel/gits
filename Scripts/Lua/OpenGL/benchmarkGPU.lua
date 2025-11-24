@@ -36,6 +36,7 @@ GL_QUADS          = 0x0007
 GL_QUAD_STRIP     = 0x0008
 GL_POLYGON        = 0x0009
 GL_PATCHES        = 0x000E
+GL_SAMPLES        = 0x80A9
 
 -- API
 WGL_API = 1
@@ -55,6 +56,7 @@ FRAME_TO_QUERY = 0   -- Frame to query, or zero to query all.
 MODE = PER_FRAME
 COLLECT_RESULTS_PER_TIMER_STOP = true -- TODO: seems to help with run-to-run variance.
 PRINT_ON = false -- Prints debug info to stdout (frame number, context creation, etc.)
+QUERY_MSAA_COUNT_PER_DRAW = false -- Query and output MSAA count per draw in per-draw mode
 
 ---------------------------------------------------------------------------------------------------
 -- Globals
@@ -80,6 +82,7 @@ elementCount = 0
 draw_mode = ""
 perTupleIsRecording = false
 triggerId = 0
+msaa_count = 1
 
 apiset = "<default>"
 filename = "<unset>"
@@ -360,6 +363,7 @@ function GPUTimerStart()
   queries:back().result.draw_mode = draw_mode
   queries:back().result.elementCount = string.format("%d", elementCount)
   queries:back().result.triggerId = triggerId
+  queries:back().result.msaaCount = msaa_count
 
   currTimerNr = currTimerNr + 1
 
@@ -471,9 +475,20 @@ end
 function GPUTimerPrintResults()
   io.output(file)
   if (MODE == PER_DRAW) then
-    io.write("Frame,Draw,Program,Draw Type,Draw Mode,Element Count,GPU Time (ms)\n")
+    local header = "Frame,Draw,Program,Draw Type,Draw Mode,Element Count"
+    if (QUERY_MSAA_COUNT_PER_DRAW == true) then
+      header = header .. ",MSAA Count"
+    end
+    header = header .. ",GPU Time (ms)\n"
+    io.write(header)
+    
     for i=0,sizeof(results)-1, 1 do
-      io.write(results[i].frame .. "," .. results[i].timer .. ",".. results[i].programNo .. "," .. results[i].drawType .. "," .. results[i].draw_mode .. "," .. results[i].elementCount .. "," .. (results[i].time/1000000) .. "\n")
+      local row = results[i].frame .. "," .. results[i].timer .. ",".. results[i].programNo .. "," .. results[i].drawType .. "," .. results[i].draw_mode .. "," .. results[i].elementCount
+      if (QUERY_MSAA_COUNT_PER_DRAW == true) then
+        row = row .. "," .. results[i].msaaCount
+      end
+      row = row .. "," .. (results[i].time/1000000) .. "\n"
+      io.write(row)
     end
   elseif (MODE == PER_TUPLE) then
     io.write("Frame,Program,Trigger Id,GPU Time (ms)\n")
@@ -520,6 +535,12 @@ local function preDrawActionImpl(funcName, mode, count)
       perTupleIsRecording = true
     end
   elseif (MODE == PER_DRAW) then
+    if (QUERY_MSAA_COUNT_PER_DRAW == true) then
+      local samples = gits.allocBytes(4)
+      drv.glGetIntegerv(GL_SAMPLES, samples)
+      msaa_count = gits.getInt(samples, 0)
+      gits.freeBytes(samples)
+    end
     drawType = funcName
     elementCount = count
     draw_mode = modeString(mode)
