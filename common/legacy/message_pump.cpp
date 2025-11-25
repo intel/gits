@@ -8,6 +8,7 @@
 
 #include "platform.h"
 #include "apis_iface.h"
+#include "messageBus.h"
 #if defined GITS_PLATFORM_WINDOWS
 #include <Windows.h>
 #include <windowsx.h>
@@ -245,6 +246,11 @@ void MessagePump::process_messages() {
 
     if (leave_) {
       gits::CGits::Instance().SetPlayerFinish();
+      CALL_ONCE[] {
+        gits::CGits::Instance().GetMessageBus().publish(
+            {gits::PUBLISHER_PLAYER, gits::TOPIC_END},
+            std::make_shared<gits::PlaybackEndMessage>());
+      };
       if (gits::Configurator::Get().common.player.windowMode ==
           gits::WindowMode::EXCLUSIVE_FULLSCREEN) {
         ShowCursor(TRUE);
