@@ -48,7 +48,7 @@ void ResourcePlacementCaptureNoExecute::storeResourcePlacement() {
       info.size = allocationInfoIt->second.SizeInBytes;
       info.alignment = allocationInfoIt->second.Alignment;
     } else if (info.desc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER) {
-      auto align = [](unsigned value, unsigned alignment) {
+      auto align = [](uint64_t value, uint64_t alignment) {
         return ((value - 1) / alignment + 1) * alignment;
       };
       info.alignment = std::max(info.desc.Alignment,

@@ -39,6 +39,11 @@ PortabilityLayer::PortabilityLayer() : Layer("Portability") {
       Configurator::Get().directx.player.execute) {
     portabilityChecks_ = true;
   }
+  if (Configurator::IsPlayer() &&
+      Configurator::Get().directx.player.portability.portabilityAssertions &&
+      Configurator::Get().directx.player.execute && !useResourcePlacementData_) {
+    portabilityAssertions_ = true;
+  }
   if (Configurator::IsRecorder()) {
     accelerationStructurePadding_ =
         Configurator::Get().directx.capture.portability.raytracing.accelerationStructurePadding;
@@ -137,6 +142,9 @@ void PortabilityLayer::post(ID3D12DeviceCreatePlacedResourceCommand& c) {
     resourcePlacementCaptureNoExecute_.createPlacedResource(
         c.pHeap_.key, c.ppvResource_.key, c.HeapOffset_.value, c.object_.value, *c.pDesc_.value);
   }
+  if (portabilityAssertions_) {
+    resourcePlacementAssertions_.createPlacedResource(c.ppvResource_.key, *c.pDesc_.value);
+  }
 }
 
 void PortabilityLayer::pre(ID3D12Device8CreatePlacedResource1Command& c) {
@@ -157,6 +165,10 @@ void PortabilityLayer::post(ID3D12Device8CreatePlacedResource1Command& c) {
     resourcePlacementCaptureNoExecute_.createPlacedResource(
         c.pHeap_.key, c.ppvResource_.key, c.HeapOffset_.value, c.object_.value, desc);
   }
+  if (portabilityAssertions_) {
+    resourcePlacementAssertions_.createPlacedResource(c.ppvResource_.key, desc);
+    resourcePlacementAssertions_.createPlacedResource(c.ppvResource_.key, *c.pDesc_.value);
+  }
 }
 
 void PortabilityLayer::pre(ID3D12Device10CreatePlacedResource2Command& c) {
@@ -176,6 +188,10 @@ void PortabilityLayer::post(ID3D12Device10CreatePlacedResource2Command& c) {
   } else if (storeResourcePlacementDataNoExecute_) {
     resourcePlacementCaptureNoExecute_.createPlacedResource(
         c.pHeap_.key, c.ppvResource_.key, c.HeapOffset_.value, c.object_.value, desc);
+  }
+  if (portabilityAssertions_) {
+    resourcePlacementAssertions_.createPlacedResource(c.pHeap_.key, desc);
+    resourcePlacementAssertions_.createPlacedResource(c.ppvResource_.key, *c.pDesc_.value);
   }
 }
 
@@ -223,12 +239,82 @@ void PortabilityLayer::pre(ID3D12DeviceGetResourceAllocationInfoCommand& c) {
           c.pResourceDescs_.value[0], c.result_.value.SizeInBytes, c.result_.value.Alignment);
     }
   }
+
+  if (portabilityAssertions_) {
+    resourcePlacementAssertions_.getResourceAllocationPre(
+        c.pResourceDescs_.value[0], c.result_.value.SizeInBytes, c.result_.value.Alignment);
+  }
+}
+
+void PortabilityLayer::post(ID3D12DeviceGetResourceAllocationInfoCommand& c) {
+  if (portabilityAssertions_) {
+    resourcePlacementAssertions_.getResourceAllocationPost(
+        c.pResourceDescs_.value[0], c.result_.value.SizeInBytes, c.result_.value.Alignment);
+  }
 }
 
 void PortabilityLayer::pre(ID3D12Device4GetResourceAllocationInfo1Command& c) {
   if (storeResourcePlacementDataNoExecute_) {
     for (unsigned i = 0; i < c.numResourceDescs_.value; ++i) {
       resourcePlacementCaptureNoExecute_.getResourceAllocation(
+          c.pResourceDescs_.value[i], c.pResourceAllocationInfo1_.value[i].SizeInBytes,
+          c.pResourceAllocationInfo1_.value[i].Alignment);
+    }
+  }
+
+  if (portabilityAssertions_) {
+    for (unsigned i = 0; i < c.numResourceDescs_.value; ++i) {
+      resourcePlacementAssertions_.getResourceAllocationPre(
+          c.pResourceDescs_.value[i], c.pResourceAllocationInfo1_.value[i].SizeInBytes,
+          c.pResourceAllocationInfo1_.value[i].Alignment);
+    }
+  }
+}
+
+void PortabilityLayer::post(ID3D12Device4GetResourceAllocationInfo1Command& c) {
+  if (portabilityAssertions_) {
+    for (unsigned i = 0; i < c.numResourceDescs_.value; ++i) {
+      resourcePlacementAssertions_.getResourceAllocationPost(
+          c.pResourceDescs_.value[i], c.pResourceAllocationInfo1_.value[i].SizeInBytes,
+          c.pResourceAllocationInfo1_.value[i].Alignment);
+    }
+  }
+}
+
+void PortabilityLayer::pre(ID3D12Device8GetResourceAllocationInfo2Command& c) {
+  if (portabilityAssertions_) {
+    for (unsigned i = 0; i < c.numResourceDescs_.value; ++i) {
+      resourcePlacementAssertions_.getResourceAllocationPre(
+          c.pResourceDescs_.value[i], c.pResourceAllocationInfo1_.value[i].SizeInBytes,
+          c.pResourceAllocationInfo1_.value[i].Alignment);
+    }
+  }
+}
+
+void PortabilityLayer::post(ID3D12Device8GetResourceAllocationInfo2Command& c) {
+  if (portabilityAssertions_) {
+    for (unsigned i = 0; i < c.numResourceDescs_.value; ++i) {
+      resourcePlacementAssertions_.getResourceAllocationPost(
+          c.pResourceDescs_.value[i], c.pResourceAllocationInfo1_.value[i].SizeInBytes,
+          c.pResourceAllocationInfo1_.value[i].Alignment);
+    }
+  }
+}
+
+void PortabilityLayer::pre(ID3D12Device12GetResourceAllocationInfo3Command& c) {
+  if (portabilityAssertions_) {
+    for (unsigned i = 0; i < c.numResourceDescs_.value; ++i) {
+      resourcePlacementAssertions_.getResourceAllocationPre(
+          c.pResourceDescs_.value[i], c.pResourceAllocationInfo1_.value[i].SizeInBytes,
+          c.pResourceAllocationInfo1_.value[i].Alignment);
+    }
+  }
+}
+
+void PortabilityLayer::post(ID3D12Device12GetResourceAllocationInfo3Command& c) {
+  if (portabilityAssertions_) {
+    for (unsigned i = 0; i < c.numResourceDescs_.value; ++i) {
+      resourcePlacementAssertions_.getResourceAllocationPost(
           c.pResourceDescs_.value[i], c.pResourceAllocationInfo1_.value[i].SizeInBytes,
           c.pResourceAllocationInfo1_.value[i].Alignment);
     }

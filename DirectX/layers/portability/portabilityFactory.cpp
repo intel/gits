@@ -19,7 +19,8 @@ PortabilityFactory::PortabilityFactory() {
     portabilityLayer_ = std::make_unique<PortabilityLayer>();
   } else if (Configurator::IsPlayer()) {
     if (Configurator::Get().directx.player.portability.resourcePlacement != "none" ||
-        Configurator::Get().directx.player.portability.portabilityChecks) {
+        Configurator::Get().directx.player.portability.portabilityChecks ||
+        Configurator::Get().directx.player.portability.portabilityAssertions) {
       portabilityLayer_ = std::make_unique<PortabilityLayer>();
     }
   }

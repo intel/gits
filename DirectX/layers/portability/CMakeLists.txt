@@ -20,6 +20,8 @@ set(ALL_SRC
   ${SRC_DIR}/resourcePlacementCaptureNoExecute.cpp
   ${SRC_DIR}/resourcePlacementPlayback.h
   ${SRC_DIR}/resourcePlacementPlayback.cpp
+  ${SRC_DIR}/resourcePlacementAssertions.h
+  ${SRC_DIR}/resourcePlacementAssertions.cpp
 )
 source_group("" FILES ${ALL_SRC})
 

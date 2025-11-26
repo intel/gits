@@ -9,7 +9,6 @@
 #pragma once
 
 #include <d3d12.h>
-#include <mutex>
 #include <vector>
 #include <unordered_set>
 #include <map>
@@ -75,7 +74,6 @@ private:
     }
   };
 
-  std::mutex mutex_;
   std::map<unsigned, ResourcePlacementInfo> resourcePlacementInfos_;
   std::unordered_set<unsigned> placedResources_;
   std::unordered_map<D3D12_RESOURCE_DESC,
