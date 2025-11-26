@@ -33,6 +33,12 @@ public:
   bool inRange() {
     return inRange_;
   }
+  bool beforeRange() {
+    return beforeRange_;
+  }
+  bool afterRange() {
+    return !beforeRange_ && !inRange_;
+  }
 
   void notifyObject(unsigned objectKey);
   void notifyObjects(const std::vector<unsigned>& objectKeys);

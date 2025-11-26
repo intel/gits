@@ -42,6 +42,9 @@ AnalyzerLayer::AnalyzerLayer(SubcaptureRange& subcaptureRange)
 }
 
 void AnalyzerLayer::post(IDXGISwapChainPresentCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   if (c.Flags_.value & DXGI_PRESENT_TEST) {
     return;
@@ -51,6 +54,9 @@ void AnalyzerLayer::post(IDXGISwapChainPresentCommand& c) {
 }
 
 void AnalyzerLayer::post(IDXGISwapChain1Present1Command& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   if (c.PresentFlags_.value & DXGI_PRESENT_TEST) {
     return;
@@ -60,6 +66,9 @@ void AnalyzerLayer::post(IDXGISwapChain1Present1Command& c) {
 }
 
 void AnalyzerLayer::post(ID3D12CommandQueueExecuteCommandListsCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObjects(c.ppCommandLists_.keys);
   analyzerService_.executeCommandLists(c.key, c.object_.key, c.ppCommandLists_.keys);
@@ -73,6 +82,9 @@ void AnalyzerLayer::post(ID3D12CommandQueueExecuteCommandListsCommand& c) {
 }
 
 void AnalyzerLayer::post(ID3D12GraphicsCommandListResetCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.pAllocator_.key);
   analyzerService_.notifyObject(c.pInitialState_.key);
@@ -91,12 +103,18 @@ void AnalyzerLayer::post(ID3D12GraphicsCommandListResetCommand& c) {
 }
 
 void AnalyzerLayer::post(ID3D12FenceGetCompletedValueCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   subcaptureRange_.executionEnd();
   analyzerService_.executionEnd();
 }
 
 void AnalyzerLayer::post(ID3D12CommandQueueWaitCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.pFence_.key);
   if (c.result_.value != S_OK) {
@@ -109,6 +127,9 @@ void AnalyzerLayer::post(ID3D12CommandQueueWaitCommand& c) {
 }
 
 void AnalyzerLayer::post(ID3D12CommandQueueSignalCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.pFence_.key);
   if (c.result_.value != S_OK) {
@@ -121,6 +142,9 @@ void AnalyzerLayer::post(ID3D12CommandQueueSignalCommand& c) {
 }
 
 void AnalyzerLayer::post(ID3D12FenceSignalCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   if (c.result_.value != S_OK) {
     return;
@@ -132,6 +156,9 @@ void AnalyzerLayer::post(ID3D12FenceSignalCommand& c) {
 }
 
 void AnalyzerLayer::post(ID3D12Device3EnqueueMakeResidentCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObjects(c.ppObjects_.keys);
   analyzerService_.notifyObject(c.pFenceToSignal_.key);
@@ -145,6 +172,9 @@ void AnalyzerLayer::post(ID3D12Device3EnqueueMakeResidentCommand& c) {
 }
 
 void AnalyzerLayer::post(ID3D12GraphicsCommandListSetComputeRootSignatureCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.commandListCommand(c.object_.key);
   if (optimize_) {
     commandListService_.command(c);
@@ -152,6 +182,9 @@ void AnalyzerLayer::post(ID3D12GraphicsCommandListSetComputeRootSignatureCommand
 }
 
 void AnalyzerLayer::post(ID3D12GraphicsCommandListSetGraphicsRootSignatureCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.commandListCommand(c.object_.key);
   if (optimize_) {
     commandListService_.command(c);
@@ -159,6 +192,9 @@ void AnalyzerLayer::post(ID3D12GraphicsCommandListSetGraphicsRootSignatureComman
 }
 
 void AnalyzerLayer::post(ID3D12GraphicsCommandListSetComputeRootDescriptorTableCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.commandListCommand(c.object_.key);
   if (optimize_) {
     commandListService_.command(c);
@@ -166,6 +202,9 @@ void AnalyzerLayer::post(ID3D12GraphicsCommandListSetComputeRootDescriptorTableC
 }
 
 void AnalyzerLayer::post(ID3D12GraphicsCommandListSetGraphicsRootDescriptorTableCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.commandListCommand(c.object_.key);
   if (optimize_) {
     commandListService_.command(c);
@@ -173,6 +212,9 @@ void AnalyzerLayer::post(ID3D12GraphicsCommandListSetGraphicsRootDescriptorTable
 }
 
 void AnalyzerLayer::post(ID3D12GraphicsCommandListSetComputeRootConstantBufferViewCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.commandListCommand(c.object_.key);
   if (optimize_) {
     commandListService_.command(c);
@@ -180,6 +222,9 @@ void AnalyzerLayer::post(ID3D12GraphicsCommandListSetComputeRootConstantBufferVi
 }
 
 void AnalyzerLayer::post(ID3D12GraphicsCommandListSetGraphicsRootConstantBufferViewCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.commandListCommand(c.object_.key);
   if (optimize_) {
     commandListService_.command(c);
@@ -187,6 +232,9 @@ void AnalyzerLayer::post(ID3D12GraphicsCommandListSetGraphicsRootConstantBufferV
 }
 
 void AnalyzerLayer::post(ID3D12GraphicsCommandListSetComputeRootShaderResourceViewCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.commandListCommand(c.object_.key);
   if (optimize_) {
     commandListService_.command(c);
@@ -194,6 +242,9 @@ void AnalyzerLayer::post(ID3D12GraphicsCommandListSetComputeRootShaderResourceVi
 }
 
 void AnalyzerLayer::post(ID3D12GraphicsCommandListSetGraphicsRootShaderResourceViewCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.commandListCommand(c.object_.key);
   if (optimize_) {
     commandListService_.command(c);
@@ -201,6 +252,9 @@ void AnalyzerLayer::post(ID3D12GraphicsCommandListSetGraphicsRootShaderResourceV
 }
 
 void AnalyzerLayer::post(ID3D12GraphicsCommandListSetComputeRootUnorderedAccessViewCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.commandListCommand(c.object_.key);
   if (optimize_) {
     commandListService_.command(c);
@@ -208,6 +262,9 @@ void AnalyzerLayer::post(ID3D12GraphicsCommandListSetComputeRootUnorderedAccessV
 }
 
 void AnalyzerLayer::post(ID3D12GraphicsCommandListSetGraphicsRootUnorderedAccessViewCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.commandListCommand(c.object_.key);
   if (optimize_) {
     commandListService_.command(c);
@@ -215,6 +272,9 @@ void AnalyzerLayer::post(ID3D12GraphicsCommandListSetGraphicsRootUnorderedAccess
 }
 
 void AnalyzerLayer::post(ID3D12GraphicsCommandListIASetIndexBufferCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.commandListCommand(c.object_.key);
   if (optimize_) {
     commandListService_.command(c);
@@ -222,6 +282,9 @@ void AnalyzerLayer::post(ID3D12GraphicsCommandListIASetIndexBufferCommand& c) {
 }
 
 void AnalyzerLayer::post(ID3D12GraphicsCommandListIASetVertexBuffersCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.commandListCommand(c.object_.key);
   if (optimize_) {
     commandListService_.command(c);
@@ -229,6 +292,9 @@ void AnalyzerLayer::post(ID3D12GraphicsCommandListIASetVertexBuffersCommand& c) 
 }
 
 void AnalyzerLayer::post(ID3D12GraphicsCommandListSOSetTargetsCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.commandListCommand(c.object_.key);
   if (optimize_) {
     commandListService_.command(c);
@@ -236,6 +302,9 @@ void AnalyzerLayer::post(ID3D12GraphicsCommandListSOSetTargetsCommand& c) {
 }
 
 void AnalyzerLayer::post(ID3D12GraphicsCommandListOMSetRenderTargetsCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.commandListCommand(c.object_.key);
   if (optimize_) {
     commandListService_.command(c);
@@ -243,6 +312,9 @@ void AnalyzerLayer::post(ID3D12GraphicsCommandListOMSetRenderTargetsCommand& c) 
 }
 
 void AnalyzerLayer::post(ID3D12GraphicsCommandListClearDepthStencilViewCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.commandListCommand(c.object_.key);
   if (optimize_) {
     commandListService_.command(c);
@@ -250,6 +322,9 @@ void AnalyzerLayer::post(ID3D12GraphicsCommandListClearDepthStencilViewCommand& 
 }
 
 void AnalyzerLayer::post(ID3D12GraphicsCommandListClearRenderTargetViewCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.commandListCommand(c.object_.key);
   if (optimize_) {
     commandListService_.command(c);
@@ -257,6 +332,9 @@ void AnalyzerLayer::post(ID3D12GraphicsCommandListClearRenderTargetViewCommand& 
 }
 
 void AnalyzerLayer::post(ID3D12GraphicsCommandListClearUnorderedAccessViewUintCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.commandListCommand(c.object_.key);
   if (optimize_) {
     commandListService_.command(c);
@@ -264,6 +342,9 @@ void AnalyzerLayer::post(ID3D12GraphicsCommandListClearUnorderedAccessViewUintCo
 }
 
 void AnalyzerLayer::post(ID3D12GraphicsCommandListClearUnorderedAccessViewFloatCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.commandListCommand(c.object_.key);
   if (optimize_) {
     commandListService_.command(c);
@@ -271,6 +352,9 @@ void AnalyzerLayer::post(ID3D12GraphicsCommandListClearUnorderedAccessViewFloatC
 }
 
 void AnalyzerLayer::post(ID3D12DeviceCopyDescriptorsSimpleCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   if (optimize_) {
     descriptorService_.copyDescriptors(c);
@@ -279,6 +363,9 @@ void AnalyzerLayer::post(ID3D12DeviceCopyDescriptorsSimpleCommand& c) {
 }
 
 void AnalyzerLayer::post(ID3D12DeviceCopyDescriptorsCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   if (optimize_) {
     descriptorService_.copyDescriptors(c);
@@ -287,6 +374,9 @@ void AnalyzerLayer::post(ID3D12DeviceCopyDescriptorsCommand& c) {
 }
 
 void AnalyzerLayer::post(ID3D12DeviceCreateRenderTargetViewCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.pResource_.key);
   analyzerService_.notifyObject(c.DestDescriptor_.interfaceKey);
@@ -305,6 +395,9 @@ void AnalyzerLayer::post(ID3D12DeviceCreateRenderTargetViewCommand& c) {
 }
 
 void AnalyzerLayer::post(ID3D12DeviceCreateDepthStencilViewCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.pResource_.key);
   analyzerService_.notifyObject(c.DestDescriptor_.interfaceKey);
@@ -323,6 +416,9 @@ void AnalyzerLayer::post(ID3D12DeviceCreateDepthStencilViewCommand& c) {
 }
 
 void AnalyzerLayer::post(ID3D12DeviceCreateShaderResourceViewCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.pResource_.key);
   analyzerService_.notifyObject(c.DestDescriptor_.interfaceKey);
@@ -346,6 +442,9 @@ void AnalyzerLayer::post(ID3D12DeviceCreateShaderResourceViewCommand& c) {
 }
 
 void AnalyzerLayer::post(ID3D12DeviceCreateUnorderedAccessViewCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.pResource_.key);
   analyzerService_.notifyObject(c.pCounterResource_.key);
@@ -366,6 +465,9 @@ void AnalyzerLayer::post(ID3D12DeviceCreateUnorderedAccessViewCommand& c) {
 }
 
 void AnalyzerLayer::post(ID3D12DeviceCreateConstantBufferViewCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.pDesc_.bufferLocationKey);
   analyzerService_.notifyObject(c.DestDescriptor_.interfaceKey);
@@ -385,6 +487,9 @@ void AnalyzerLayer::post(ID3D12DeviceCreateConstantBufferViewCommand& c) {
 }
 
 void AnalyzerLayer::post(ID3D12DeviceCreateSamplerCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.DestDescriptor_.interfaceKey);
   if (optimize_) {
@@ -399,6 +504,9 @@ void AnalyzerLayer::post(ID3D12DeviceCreateSamplerCommand& c) {
 }
 
 void AnalyzerLayer::pre(ID3D12StateObjectPropertiesGetShaderIdentifierCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   CapturePlayerShaderIdentifierService::ShaderIdentifier shaderIdentifier;
   memcpy(shaderIdentifier.data(), c.result_.value, shaderIdentifier.size());
   shaderIdentifierService_.addCaptureShaderIdentifier(c.key, shaderIdentifier,
@@ -406,6 +514,9 @@ void AnalyzerLayer::pre(ID3D12StateObjectPropertiesGetShaderIdentifierCommand& c
 }
 
 void AnalyzerLayer::post(ID3D12GraphicsCommandList4SetPipelineState1Command& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.commandListCommand(c.object_.key);
   if (optimize_) {
     commandListService_.command(c);
@@ -413,6 +524,9 @@ void AnalyzerLayer::post(ID3D12GraphicsCommandList4SetPipelineState1Command& c) 
 }
 
 void AnalyzerLayer::post(ID3D12GraphicsCommandListSetDescriptorHeapsCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.commandListCommand(c.object_.key);
   if (optimize_) {
     commandListService_.command(c);
@@ -420,12 +534,18 @@ void AnalyzerLayer::post(ID3D12GraphicsCommandListSetDescriptorHeapsCommand& c) 
 }
 
 void AnalyzerLayer::pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   if (optimize_ || optimizeRaytracing_) {
     commandListService_.command(c);
   }
 }
 
 void AnalyzerLayer::pre(ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   if (optimize_ || optimizeRaytracing_) {
     commandListService_.command(c);
   }
@@ -433,54 +553,81 @@ void AnalyzerLayer::pre(ID3D12GraphicsCommandList4CopyRaytracingAccelerationStru
 
 void AnalyzerLayer::pre(
     ID3D12GraphicsCommandList4EmitRaytracingAccelerationStructurePostbuildInfoCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   if (optimize_ || optimizeRaytracing_) {
     commandListService_.command(c);
   }
 }
 
 void AnalyzerLayer::pre(NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   if (optimize_ || optimizeRaytracing_) {
     commandListService_.command(c);
   }
 }
 
 void AnalyzerLayer::pre(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   if (optimize_ || optimizeRaytracing_) {
     commandListService_.command(c);
   }
 }
 
 void AnalyzerLayer::pre(ID3D12GraphicsCommandList4DispatchRaysCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   if (optimize_) {
     commandListService_.command(c);
   }
 }
 
 void AnalyzerLayer::pre(ID3D12GraphicsCommandListExecuteIndirectCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   if (optimize_) {
     commandListService_.command(c);
   }
 }
 
 void AnalyzerLayer::pre(ID3D12GraphicsCommandListDispatchCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   if (optimize_) {
     commandListService_.command(c);
   }
 }
 
 void AnalyzerLayer::pre(ID3D12GraphicsCommandListDrawIndexedInstancedCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   if (optimize_) {
     commandListService_.command(c);
   }
 }
 
 void AnalyzerLayer::pre(ID3D12GraphicsCommandListDrawInstancedCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   if (optimize_) {
     commandListService_.command(c);
   }
 }
 
 void AnalyzerLayer::pre(ID3D12ResourceGetGPUVirtualAddressCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   if (optimize_ || optimizeRaytracing_) {
     raytracingService_.getGPUVirtualAddress(c);
     D3D12_RESOURCE_DESC desc = c.object_.value->GetDesc();
@@ -490,6 +637,9 @@ void AnalyzerLayer::pre(ID3D12ResourceGetGPUVirtualAddressCommand& c) {
 }
 
 void AnalyzerLayer::post(ID3D12ResourceGetGPUVirtualAddressCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   if (optimize_ || optimizeRaytracing_) {
     analyzerService_.notifyObject(c.object_.key);
     D3D12_RESOURCE_DESC desc = c.object_.value->GetDesc();
@@ -499,12 +649,18 @@ void AnalyzerLayer::post(ID3D12ResourceGetGPUVirtualAddressCommand& c) {
 }
 
 void AnalyzerLayer::pre(ID3D12DescriptorHeapGetGPUDescriptorHandleForHeapStartCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   if (optimize_) {
     descriptorHandleService_.addCaptureHandle(c.object_.value, c.object_.key, c.result_.value);
   }
 }
 
 void AnalyzerLayer::post(ID3D12DescriptorHeapGetGPUDescriptorHandleForHeapStartCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   if (optimize_) {
     analyzerService_.notifyObject(c.object_.key);
     descriptorHandleService_.addPlayerHandle(c.object_.key, c.result_.value);
@@ -512,6 +668,9 @@ void AnalyzerLayer::post(ID3D12DescriptorHeapGetGPUDescriptorHandleForHeapStartC
 }
 
 void AnalyzerLayer::post(IUnknownReleaseCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   if (optimize_ || optimizeRaytracing_) {
     if (c.result_.value == 0) {
@@ -522,14 +681,23 @@ void AnalyzerLayer::post(IUnknownReleaseCommand& c) {
 }
 
 void AnalyzerLayer::post(IUnknownQueryInterfaceCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
 }
 
 void AnalyzerLayer::post(IUnknownAddRefCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
 }
 
 void AnalyzerLayer::post(ID3D12GraphicsCommandList2WriteBufferImmediateCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.commandListCommand(c.object_.key);
   if (optimize_) {
     commandListService_.command(c);
@@ -537,6 +705,9 @@ void AnalyzerLayer::post(ID3D12GraphicsCommandList2WriteBufferImmediateCommand& 
 }
 
 void AnalyzerLayer::post(ID3D12GraphicsCommandListCopyBufferRegionCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.commandListCommand(c.object_.key);
   if (optimize_) {
     commandListService_.command(c);
@@ -544,6 +715,9 @@ void AnalyzerLayer::post(ID3D12GraphicsCommandListCopyBufferRegionCommand& c) {
 }
 
 void AnalyzerLayer::post(ID3D12GraphicsCommandListCopyTextureRegionCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.commandListCommand(c.object_.key);
   if (optimize_) {
     commandListService_.command(c);
@@ -551,6 +725,9 @@ void AnalyzerLayer::post(ID3D12GraphicsCommandListCopyTextureRegionCommand& c) {
 }
 
 void AnalyzerLayer::post(ID3D12GraphicsCommandListCopyResourceCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.commandListCommand(c.object_.key);
   if (optimize_) {
     commandListService_.command(c);
@@ -558,6 +735,9 @@ void AnalyzerLayer::post(ID3D12GraphicsCommandListCopyResourceCommand& c) {
 }
 
 void AnalyzerLayer::post(ID3D12GraphicsCommandListCopyTilesCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.commandListCommand(c.object_.key);
   if (optimize_) {
     commandListService_.command(c);
@@ -565,6 +745,9 @@ void AnalyzerLayer::post(ID3D12GraphicsCommandListCopyTilesCommand& c) {
 }
 
 void AnalyzerLayer::post(ID3D12GraphicsCommandListResolveSubresourceCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.commandListCommand(c.object_.key);
   if (optimize_) {
     commandListService_.command(c);
@@ -572,6 +755,9 @@ void AnalyzerLayer::post(ID3D12GraphicsCommandListResolveSubresourceCommand& c) 
 }
 
 void AnalyzerLayer::post(ID3D12GraphicsCommandListDiscardResourceCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.commandListCommand(c.object_.key);
   if (optimize_) {
     commandListService_.command(c);
@@ -579,6 +765,9 @@ void AnalyzerLayer::post(ID3D12GraphicsCommandListDiscardResourceCommand& c) {
 }
 
 void AnalyzerLayer::post(ID3D12GraphicsCommandListSetPipelineStateCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.commandListCommand(c.object_.key);
   if (optimize_) {
     commandListService_.command(c);
@@ -586,6 +775,9 @@ void AnalyzerLayer::post(ID3D12GraphicsCommandListSetPipelineStateCommand& c) {
 }
 
 void AnalyzerLayer::post(ID3D12GraphicsCommandListResourceBarrierCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.commandListCommand(c.object_.key);
   if (optimize_) {
     resourceStateTracker_.resourceBarrier(c.object_.value, c.pBarriers_.value, c.NumBarriers_.value,
@@ -595,6 +787,9 @@ void AnalyzerLayer::post(ID3D12GraphicsCommandListResourceBarrierCommand& c) {
 }
 
 void AnalyzerLayer::post(ID3D12GraphicsCommandList1ResolveSubresourceRegionCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.commandListCommand(c.object_.key);
   if (optimize_) {
     commandListService_.command(c);
@@ -602,6 +797,9 @@ void AnalyzerLayer::post(ID3D12GraphicsCommandList1ResolveSubresourceRegionComma
 }
 
 void AnalyzerLayer::post(ID3D12GraphicsCommandList3SetProtectedResourceSessionCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.commandListCommand(c.object_.key);
   if (optimize_) {
     commandListService_.command(c);
@@ -609,6 +807,9 @@ void AnalyzerLayer::post(ID3D12GraphicsCommandList3SetProtectedResourceSessionCo
 }
 
 void AnalyzerLayer::post(ID3D12GraphicsCommandList4InitializeMetaCommandCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.commandListCommand(c.object_.key);
   if (optimize_) {
     commandListService_.command(c);
@@ -616,6 +817,9 @@ void AnalyzerLayer::post(ID3D12GraphicsCommandList4InitializeMetaCommandCommand&
 }
 
 void AnalyzerLayer::post(ID3D12GraphicsCommandList4ExecuteMetaCommandCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.commandListCommand(c.object_.key);
   if (optimize_) {
     commandListService_.command(c);
@@ -623,6 +827,9 @@ void AnalyzerLayer::post(ID3D12GraphicsCommandList4ExecuteMetaCommandCommand& c)
 }
 
 void AnalyzerLayer::post(MappedDataMetaCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.resource_.key);
   if (optimize_) {
     analyzerService_.mappedDataMeta(c.resource_.key);
@@ -630,6 +837,9 @@ void AnalyzerLayer::post(MappedDataMetaCommand& c) {
 }
 
 void AnalyzerLayer::post(ID3D12GraphicsCommandList7BarrierCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.commandListCommand(c.object_.key);
   if (optimize_) {
     commandListService_.command(c);
@@ -637,96 +847,147 @@ void AnalyzerLayer::post(ID3D12GraphicsCommandList7BarrierCommand& c) {
 }
 
 void AnalyzerLayer::post(NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.commandListCommand(c.pCommandList_.key);
 }
 
 void AnalyzerLayer::post(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.commandListCommand(c.pCommandList_.key);
 }
 
 void AnalyzerLayer::post(ID3D12GraphicsCommandListClearStateCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.commandListCommand(c.object_.key);
   commandListService_.command(c);
 }
 
 void AnalyzerLayer::post(ID3D12GraphicsCommandListExecuteBundleCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.commandListCommand(c.object_.key);
   commandListService_.command(c);
 }
 
 void AnalyzerLayer::post(ID3D12GraphicsCommandListBeginQueryCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.commandListCommand(c.object_.key);
   commandListService_.command(c);
 }
 
 void AnalyzerLayer::post(ID3D12GraphicsCommandListEndQueryCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.commandListCommand(c.object_.key);
   commandListService_.command(c);
 }
 
 void AnalyzerLayer::post(ID3D12GraphicsCommandListResolveQueryDataCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.commandListCommand(c.object_.key);
   commandListService_.command(c);
 }
 
 void AnalyzerLayer::post(ID3D12GraphicsCommandListSetPredicationCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.commandListCommand(c.object_.key);
   commandListService_.command(c);
 }
 
 void AnalyzerLayer::post(ID3D12GraphicsCommandList1AtomicCopyBufferUINTCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.commandListCommand(c.object_.key);
   commandListService_.command(c);
 }
 
 void AnalyzerLayer::post(ID3D12GraphicsCommandList1AtomicCopyBufferUINT64Command& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.commandListCommand(c.object_.key);
   commandListService_.command(c);
 }
 
 void AnalyzerLayer::post(ID3D12GraphicsCommandList4BeginRenderPassCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.commandListCommand(c.object_.key);
   commandListService_.command(c);
 }
 
 void AnalyzerLayer::post(ID3D12GraphicsCommandList5RSSetShadingRateImageCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.commandListCommand(c.object_.key);
   commandListService_.command(c);
 }
 
 void AnalyzerLayer::post(ID3D12GraphicsCommandList6DispatchMeshCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.commandListCommand(c.object_.key);
   commandListService_.command(c);
 }
 
 void AnalyzerLayer::post(IDMLBindingTableResetCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.desc_.data.cpuDescHandleKey);
   analyzerService_.notifyObject(c.desc_.data.gpuDescHandleKey);
 }
 
 void AnalyzerLayer::post(IDMLBindingTableBindInputsCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObjects(c.bindings_.resourceKeys);
 }
 
 void AnalyzerLayer::post(IDMLBindingTableBindOutputsCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObjects(c.bindings_.resourceKeys);
 }
 
 void AnalyzerLayer::post(xessD3D12InitCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.hContext_.key);
   analyzerService_.notifyObject(c.pInitParams_.key);
   analyzerService_.notifyObject(c.pInitParams_.tempBufferHeapKey);
@@ -735,6 +996,9 @@ void AnalyzerLayer::post(xessD3D12InitCommand& c) {
 }
 
 void AnalyzerLayer::post(xessD3D12GetInitParamsCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.hContext_.key);
   analyzerService_.notifyObject(c.pInitParams_.key);
   analyzerService_.notifyObject(c.pInitParams_.tempBufferHeapKey);
@@ -743,6 +1007,9 @@ void AnalyzerLayer::post(xessD3D12GetInitParamsCommand& c) {
 }
 
 void AnalyzerLayer::post(xessD3D12ExecuteCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.hContext_.key);
   analyzerService_.notifyObject(c.pCommandList_.key);
   analyzerService_.notifyObject(c.pExecParams_.colorTextureKey);
@@ -755,16 +1022,25 @@ void AnalyzerLayer::post(xessD3D12ExecuteCommand& c) {
 }
 
 void AnalyzerLayer::post(IDStorageQueueEnqueueRequestCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.request_.fileKey);
   analyzerService_.notifyObject(c.request_.resourceKey);
 }
 
 void AnalyzerLayer::post(INTC_D3D12_GetSupportedVersionsCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.pDevice_.key);
 }
 
 void AnalyzerLayer::post(INTC_D3D12_CreateDeviceExtensionContextCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.pDevice_.key);
   analyzerService_.notifyObject(c.ppExtensionContext_.key);
   analyzerService_.createDeviceExtensionContext(c);
@@ -772,6 +1048,9 @@ void AnalyzerLayer::post(INTC_D3D12_CreateDeviceExtensionContextCommand& c) {
 }
 
 void AnalyzerLayer::post(INTC_D3D12_CreateDeviceExtensionContext1Command& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.pDevice_.key);
   analyzerService_.notifyObject(c.ppExtensionContext_.key);
   analyzerService_.createDeviceExtensionContext(c);
@@ -779,20 +1058,32 @@ void AnalyzerLayer::post(INTC_D3D12_CreateDeviceExtensionContext1Command& c) {
 }
 
 void AnalyzerLayer::post(INTC_DestroyDeviceExtensionContextCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.ppExtensionContext_.key);
 }
 
 void AnalyzerLayer::post(INTC_D3D12_CheckFeatureSupportCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.pExtensionContext_.key);
 }
 
 void AnalyzerLayer::post(INTC_D3D12_CreateCommandQueueCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.pExtensionContext_.key);
   analyzerService_.notifyObject(c.ppCommandQueue_.key);
   analyzerService_.addParent(c.ppCommandQueue_.key, c.pExtensionContext_.key);
 }
 
 void AnalyzerLayer::post(INTC_D3D12_CreateReservedResourceCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.pExtensionContext_.key);
   analyzerService_.notifyObject(c.ppvResource_.key);
   analyzerService_.addParent(c.ppvResource_.key, c.pExtensionContext_.key);
@@ -800,14 +1091,23 @@ void AnalyzerLayer::post(INTC_D3D12_CreateReservedResourceCommand& c) {
 }
 
 void AnalyzerLayer::post(INTC_D3D12_SetFeatureSupportCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.pExtensionContext_.key);
 }
 
 void AnalyzerLayer::post(INTC_D3D12_GetResourceAllocationInfoCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.pExtensionContext_.key);
 }
 
 void AnalyzerLayer::post(INTC_D3D12_CreateComputePipelineStateCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.pExtensionContext_.key);
   analyzerService_.notifyObject(c.ppPipelineState_.key);
   analyzerService_.notifyObject(c.pDesc_.rootSignatureKey);
@@ -816,6 +1116,9 @@ void AnalyzerLayer::post(INTC_D3D12_CreateComputePipelineStateCommand& c) {
 }
 
 void AnalyzerLayer::post(INTC_D3D12_CreatePlacedResourceCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.pExtensionContext_.key);
   analyzerService_.notifyObject(c.pHeap_.key);
   analyzerService_.notifyObject(c.ppvResource_.key);
@@ -825,6 +1128,9 @@ void AnalyzerLayer::post(INTC_D3D12_CreatePlacedResourceCommand& c) {
 }
 
 void AnalyzerLayer::post(INTC_D3D12_CreateCommittedResourceCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.pExtensionContext_.key);
   analyzerService_.notifyObject(c.ppvResource_.key);
   analyzerService_.addParent(c.ppvResource_.key, c.pExtensionContext_.key);
@@ -832,46 +1138,73 @@ void AnalyzerLayer::post(INTC_D3D12_CreateCommittedResourceCommand& c) {
 }
 
 void AnalyzerLayer::post(INTC_D3D12_CreateHeapCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.pExtensionContext_.key);
   analyzerService_.notifyObject(c.ppvHeap_.key);
   analyzerService_.addParent(c.ppvHeap_.key, c.pExtensionContext_.key);
 }
 
 void AnalyzerLayer::post(NvAPI_D3D12_SetCreatePipelineStateOptionsCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.pDevice_.key);
 }
 
 void AnalyzerLayer::post(NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.pDev_.key);
 }
 
 void AnalyzerLayer::post(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.pDev_.key);
 }
 
 void AnalyzerLayer::post(NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.pCommandList_.key);
 }
 
 void AnalyzerLayer::post(D3D12CreateDeviceCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.pAdapter_.key);
   analyzerService_.notifyObject(c.ppDevice_.key);
   analyzerService_.addParent(c.ppDevice_.key, c.pAdapter_.key);
 }
 
 void AnalyzerLayer::post(DMLCreateDeviceCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.d3d12Device_.key);
   analyzerService_.notifyObject(c.ppv_.key);
   analyzerService_.addParent(c.ppv_.key, c.d3d12Device_.key);
 }
 
 void AnalyzerLayer::post(DMLCreateDevice1Command& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.d3d12Device_.key);
   analyzerService_.notifyObject(c.ppv_.key);
   analyzerService_.addParent(c.ppv_.key, c.d3d12Device_.key);
 }
 
 void AnalyzerLayer::post(xessD3D12CreateContextCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.pDevice_.key);
   analyzerService_.notifyObject(c.phContext_.key);
   analyzerService_.addParent(c.phContext_.key, c.pDevice_.key);
@@ -881,18 +1214,27 @@ void AnalyzerLayer::post(xessD3D12CreateContextCommand& c) {
 }
 
 void AnalyzerLayer::post(ID3D12DeviceCreateCommandQueueCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.ppCommandQueue_.key);
   analyzerService_.addParent(c.ppCommandQueue_.key, c.object_.key);
 }
 
 void AnalyzerLayer::post(ID3D12DeviceCreateCommandAllocatorCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.ppCommandAllocator_.key);
   analyzerService_.addParent(c.ppCommandAllocator_.key, c.object_.key);
 }
 
 void AnalyzerLayer::post(ID3D12DeviceCreateGraphicsPipelineStateCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.ppPipelineState_.key);
   analyzerService_.notifyObject(c.pDesc_.rootSignatureKey);
@@ -901,6 +1243,9 @@ void AnalyzerLayer::post(ID3D12DeviceCreateGraphicsPipelineStateCommand& c) {
 }
 
 void AnalyzerLayer::post(ID3D12DeviceCreateComputePipelineStateCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.ppPipelineState_.key);
   analyzerService_.notifyObject(c.pDesc_.rootSignatureKey);
@@ -909,6 +1254,9 @@ void AnalyzerLayer::post(ID3D12DeviceCreateComputePipelineStateCommand& c) {
 }
 
 void AnalyzerLayer::post(ID3D12DeviceCreateCommandListCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.pCommandAllocator_.key);
   analyzerService_.notifyObject(c.pInitialState_.key);
@@ -919,6 +1267,9 @@ void AnalyzerLayer::post(ID3D12DeviceCreateCommandListCommand& c) {
 }
 
 void AnalyzerLayer::post(ID3D12DeviceCreateDescriptorHeapCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.ppvHeap_.key);
   analyzerService_.addParent(c.ppvHeap_.key, c.object_.key);
@@ -931,6 +1282,9 @@ void AnalyzerLayer::post(ID3D12DeviceCreateDescriptorHeapCommand& c) {
 }
 
 void AnalyzerLayer::post(ID3D12DeviceCreateRootSignatureCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.ppvRootSignature_.key);
   analyzerService_.addParent(c.ppvRootSignature_.key, c.object_.key);
@@ -943,6 +1297,9 @@ void AnalyzerLayer::post(ID3D12DeviceCreateRootSignatureCommand& c) {
 }
 
 void AnalyzerLayer::post(ID3D12DeviceCreateCommittedResourceCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.ppvResource_.key);
   analyzerService_.addParent(c.ppvResource_.key, c.object_.key);
@@ -950,12 +1307,18 @@ void AnalyzerLayer::post(ID3D12DeviceCreateCommittedResourceCommand& c) {
 }
 
 void AnalyzerLayer::post(ID3D12DeviceCreateHeapCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.ppvHeap_.key);
   analyzerService_.addParent(c.ppvHeap_.key, c.object_.key);
 }
 
 void AnalyzerLayer::post(ID3D12DeviceCreatePlacedResourceCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.pHeap_.key);
   analyzerService_.notifyObject(c.ppvResource_.key);
@@ -970,6 +1333,9 @@ void AnalyzerLayer::post(ID3D12DeviceCreatePlacedResourceCommand& c) {
 }
 
 void AnalyzerLayer::post(ID3D12DeviceCreateReservedResourceCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.ppvResource_.key);
   analyzerService_.addParent(c.ppvResource_.key, c.object_.key);
@@ -977,18 +1343,27 @@ void AnalyzerLayer::post(ID3D12DeviceCreateReservedResourceCommand& c) {
 }
 
 void AnalyzerLayer::post(ID3D12DeviceCreateSharedHandleCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.pObject_.key);
   analyzerService_.addParent(c.pObject_.key, c.object_.key);
 }
 
 void AnalyzerLayer::post(ID3D12DeviceOpenSharedHandleCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.ppvObj_.key);
   analyzerService_.addParent(c.ppvObj_.key, c.object_.key);
 }
 
 void AnalyzerLayer::post(ID3D12DeviceCreateFenceCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.ppFence_.key);
   analyzerService_.addParent(c.ppFence_.key, c.object_.key);
@@ -1002,12 +1377,18 @@ void AnalyzerLayer::post(ID3D12DeviceCreateFenceCommand& c) {
 }
 
 void AnalyzerLayer::post(ID3D12DeviceCreateQueryHeapCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.ppvHeap_.key);
   analyzerService_.addParent(c.ppvHeap_.key, c.object_.key);
 }
 
 void AnalyzerLayer::post(ID3D12DeviceCreateCommandSignatureCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.ppvCommandSignature_.key);
   analyzerService_.addParent(c.ppvCommandSignature_.key, c.object_.key);
@@ -1021,11 +1402,17 @@ void AnalyzerLayer::post(ID3D12DeviceCreateCommandSignatureCommand& c) {
 }
 
 void AnalyzerLayer::post(ID3D12Device1CreatePipelineLibraryCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.ppPipelineLibrary_.key);
 }
 
 void AnalyzerLayer::post(ID3D12Device2CreatePipelineStateCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.ppPipelineState_.key);
   analyzerService_.notifyObject(c.pDesc_.rootSignatureKey);
@@ -1034,18 +1421,27 @@ void AnalyzerLayer::post(ID3D12Device2CreatePipelineStateCommand& c) {
 }
 
 void AnalyzerLayer::post(ID3D12Device4CreateCommandList1Command& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.ppCommandList_.key);
   analyzerService_.addParent(c.ppCommandList_.key, c.object_.key);
 }
 
 void AnalyzerLayer::post(ID3D12Device4CreateProtectedResourceSessionCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.ppSession_.key);
   analyzerService_.addParent(c.ppSession_.key, c.object_.key);
 }
 
 void AnalyzerLayer::post(ID3D12Device4CreateCommittedResource1Command& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.ppvResource_.key);
   analyzerService_.addParent(c.ppvResource_.key, c.object_.key);
@@ -1053,6 +1449,9 @@ void AnalyzerLayer::post(ID3D12Device4CreateCommittedResource1Command& c) {
 }
 
 void AnalyzerLayer::post(ID3D12Device4CreateHeap1Command& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.pProtectedSession_.key);
   analyzerService_.notifyObject(c.ppvHeap_.key);
@@ -1061,6 +1460,9 @@ void AnalyzerLayer::post(ID3D12Device4CreateHeap1Command& c) {
 }
 
 void AnalyzerLayer::post(ID3D12Device4CreateReservedResource1Command& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.pProtectedSession_.key);
   analyzerService_.notifyObject(c.ppvResource_.key);
@@ -1070,6 +1472,9 @@ void AnalyzerLayer::post(ID3D12Device4CreateReservedResource1Command& c) {
 }
 
 void AnalyzerLayer::post(ID3D12Device5CreateLifetimeTrackerCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.pOwner_.key);
   analyzerService_.notifyObject(c.ppvTracker_.key);
@@ -1078,12 +1483,18 @@ void AnalyzerLayer::post(ID3D12Device5CreateLifetimeTrackerCommand& c) {
 }
 
 void AnalyzerLayer::post(ID3D12Device5CreateMetaCommandCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.ppMetaCommand_.key);
   analyzerService_.addParent(c.ppMetaCommand_.key, c.object_.key);
 }
 
 void AnalyzerLayer::post(ID3D12Device5CreateStateObjectCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.ppStateObject_.key);
   analyzerService_.addParent(c.ppStateObject_.key, c.object_.key);
@@ -1099,6 +1510,9 @@ void AnalyzerLayer::post(ID3D12Device5CreateStateObjectCommand& c) {
 }
 
 void AnalyzerLayer::post(ID3D12Device5GetRaytracingAccelerationStructurePrebuildInfoCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   if (optimize_) {
     for (unsigned key : c.pDesc_.inputKeys) {
@@ -1108,12 +1522,18 @@ void AnalyzerLayer::post(ID3D12Device5GetRaytracingAccelerationStructurePrebuild
 }
 
 void AnalyzerLayer::post(ID3D12Device7CreateProtectedResourceSession1Command& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.ppSession_.key);
   analyzerService_.addParent(c.ppSession_.key, c.object_.key);
 }
 
 void AnalyzerLayer::post(ID3D12Device8CreateCommittedResource2Command& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.ppvResource_.key);
   analyzerService_.addParent(c.ppvResource_.key, c.object_.key);
@@ -1121,6 +1541,9 @@ void AnalyzerLayer::post(ID3D12Device8CreateCommittedResource2Command& c) {
 }
 
 void AnalyzerLayer::post(ID3D12Device8CreatePlacedResource1Command& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.pHeap_.key);
   analyzerService_.notifyObject(c.ppvResource_.key);
@@ -1135,18 +1558,27 @@ void AnalyzerLayer::post(ID3D12Device8CreatePlacedResource1Command& c) {
 }
 
 void AnalyzerLayer::post(ID3D12Device9CreateShaderCacheSessionCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.ppvSession_.key);
   analyzerService_.addParent(c.ppvSession_.key, c.object_.key);
 }
 
 void AnalyzerLayer::post(ID3D12Device9CreateCommandQueue1Command& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.ppCommandQueue_.key);
   analyzerService_.addParent(c.ppCommandQueue_.key, c.object_.key);
 }
 
 void AnalyzerLayer::post(ID3D12Device10CreateCommittedResource3Command& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.ppvResource_.key);
   analyzerService_.addParent(c.ppvResource_.key, c.object_.key);
@@ -1154,6 +1586,9 @@ void AnalyzerLayer::post(ID3D12Device10CreateCommittedResource3Command& c) {
 }
 
 void AnalyzerLayer::post(ID3D12Device10CreatePlacedResource2Command& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.pHeap_.key);
   analyzerService_.notifyObject(c.ppvResource_.key);
@@ -1168,6 +1603,9 @@ void AnalyzerLayer::post(ID3D12Device10CreatePlacedResource2Command& c) {
 }
 
 void AnalyzerLayer::post(ID3D12Device10CreateReservedResource2Command& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.pProtectedSession_.key);
   analyzerService_.notifyObject(c.ppvResource_.key);
@@ -1177,18 +1615,27 @@ void AnalyzerLayer::post(ID3D12Device10CreateReservedResource2Command& c) {
 }
 
 void AnalyzerLayer::post(ID3D12Device14CreateRootSignatureFromSubobjectInLibraryCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.ppvRootSignature_.key);
   analyzerService_.addParent(c.ppvRootSignature_.key, c.object_.key);
 }
 
 void AnalyzerLayer::post(ID3D12SDKConfiguration1CreateDeviceFactoryCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.ppvFactory_.key);
   analyzerService_.addParent(c.ppvFactory_.key, c.object_.key);
 }
 
 void AnalyzerLayer::post(ID3D12DSRDeviceFactoryCreateDSRDeviceCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.pD3D12Device_.key);
   analyzerService_.notifyObject(c.ppvDSRDevice_.key);
@@ -1197,24 +1644,36 @@ void AnalyzerLayer::post(ID3D12DSRDeviceFactoryCreateDSRDeviceCommand& c) {
 }
 
 void AnalyzerLayer::post(IDXGIFactoryCreateSoftwareAdapterCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.ppAdapter_.key);
   analyzerService_.addParent(c.ppAdapter_.key, c.object_.key);
 }
 
 void AnalyzerLayer::post(IDXGIDeviceCreateSurfaceCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.ppSurface_.key);
   analyzerService_.addParent(c.ppSurface_.key, c.object_.key);
 }
 
 void AnalyzerLayer::post(IDXGIResource1CreateSubresourceSurfaceCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.ppSurface_.key);
   analyzerService_.addParent(c.ppSurface_.key, c.object_.key);
 }
 
 void AnalyzerLayer::post(IDXGIFactory2CreateSwapChainForHwndCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.pDevice_.key);
   analyzerService_.notifyObject(c.pRestrictToOutput_.key);
@@ -1225,6 +1684,9 @@ void AnalyzerLayer::post(IDXGIFactory2CreateSwapChainForHwndCommand& c) {
 }
 
 void AnalyzerLayer::post(IDXGIFactory2CreateSwapChainForCoreWindowCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.pDevice_.key);
   analyzerService_.notifyObject(c.pWindow_.key);
@@ -1237,6 +1699,9 @@ void AnalyzerLayer::post(IDXGIFactory2CreateSwapChainForCoreWindowCommand& c) {
 }
 
 void AnalyzerLayer::post(IDXGIFactory2CreateSwapChainForCompositionCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.pDevice_.key);
   analyzerService_.notifyObject(c.pRestrictToOutput_.key);
@@ -1247,6 +1712,9 @@ void AnalyzerLayer::post(IDXGIFactory2CreateSwapChainForCompositionCommand& c) {
 }
 
 void AnalyzerLayer::post(IDXGIFactoryMediaCreateSwapChainForCompositionSurfaceHandleCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.pDevice_.key);
   analyzerService_.notifyObject(c.pRestrictToOutput_.key);
@@ -1258,6 +1726,9 @@ void AnalyzerLayer::post(IDXGIFactoryMediaCreateSwapChainForCompositionSurfaceHa
 
 void AnalyzerLayer::post(
     IDXGIFactoryMediaCreateDecodeSwapChainForCompositionSurfaceHandleCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.pDevice_.key);
   analyzerService_.notifyObject(c.pYuvDecodeBuffers_.key);
@@ -1270,12 +1741,18 @@ void AnalyzerLayer::post(
 }
 
 void AnalyzerLayer::post(IDMLDeviceCreateOperatorCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.ppv_.key);
   analyzerService_.addParent(c.ppv_.key, c.object_.key);
 }
 
 void AnalyzerLayer::post(IDMLDeviceCreateOperatorInitializerCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObjects(c.operators_.keys);
   analyzerService_.notifyObject(c.ppv_.key);
@@ -1286,12 +1763,18 @@ void AnalyzerLayer::post(IDMLDeviceCreateOperatorInitializerCommand& c) {
 }
 
 void AnalyzerLayer::post(IDMLDeviceCreateCommandRecorderCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.ppv_.key);
   analyzerService_.addParent(c.ppv_.key, c.object_.key);
 }
 
 void AnalyzerLayer::post(IDMLDeviceCreateBindingTableCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.ppv_.key);
   analyzerService_.notifyObject(c.desc_.data.cpuDescHandleKey);
@@ -1302,6 +1785,9 @@ void AnalyzerLayer::post(IDMLDeviceCreateBindingTableCommand& c) {
 }
 
 void AnalyzerLayer::post(IDStorageFactoryCreateQueueCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.ppv_.key);
   analyzerService_.notifyObject(c.desc_.deviceKey);
@@ -1310,18 +1796,27 @@ void AnalyzerLayer::post(IDStorageFactoryCreateQueueCommand& c) {
 }
 
 void AnalyzerLayer::post(IDStorageFactoryCreateStatusArrayCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.ppv_.key);
   analyzerService_.addParent(c.ppv_.key, c.object_.key);
 }
 
 void AnalyzerLayer::post(ID3D12PipelineStateGetCachedBlobCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.ppBlob_.key);
   analyzerService_.addParent(c.ppBlob_.key, c.object_.key);
 }
 
 void AnalyzerLayer::post(ID3D12PipelineLibraryLoadGraphicsPipelineCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.ppPipelineState_.key);
   analyzerService_.notifyObject(c.pDesc_.rootSignatureKey);
@@ -1330,6 +1825,9 @@ void AnalyzerLayer::post(ID3D12PipelineLibraryLoadGraphicsPipelineCommand& c) {
 }
 
 void AnalyzerLayer::post(ID3D12PipelineLibraryLoadComputePipelineCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.ppPipelineState_.key);
   analyzerService_.notifyObject(c.pDesc_.rootSignatureKey);
@@ -1338,6 +1836,9 @@ void AnalyzerLayer::post(ID3D12PipelineLibraryLoadComputePipelineCommand& c) {
 }
 
 void AnalyzerLayer::post(ID3D12PipelineLibrary1LoadPipelineCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.ppPipelineState_.key);
   analyzerService_.notifyObject(c.pDesc_.rootSignatureKey);
@@ -1346,30 +1847,45 @@ void AnalyzerLayer::post(ID3D12PipelineLibrary1LoadPipelineCommand& c) {
 }
 
 void AnalyzerLayer::post(ID3D12Device3OpenExistingHeapFromAddressCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.ppvHeap_.key);
   analyzerService_.addParent(c.ppvHeap_.key, c.object_.key);
 }
 
 void AnalyzerLayer::post(ID3D12Device3OpenExistingHeapFromFileMappingCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.ppvHeap_.key);
   analyzerService_.addParent(c.ppvHeap_.key, c.object_.key);
 }
 
 void AnalyzerLayer::post(ID3D12ProtectedSessionGetStatusFenceCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.ppFence_.key);
   analyzerService_.addParent(c.ppFence_.key, c.object_.key);
 }
 
 void AnalyzerLayer::post(ID3D12SwapChainAssistantGetSwapChainObjectCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.ppv_.key);
   analyzerService_.addParent(c.ppv_.key, c.object_.key);
 }
 
 void AnalyzerLayer::post(ID3D12SwapChainAssistantGetCurrentResourceAndCommandQueueCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.ppvResource_.key);
   analyzerService_.notifyObject(c.ppvQueue_.key);
@@ -1378,6 +1894,9 @@ void AnalyzerLayer::post(ID3D12SwapChainAssistantGetCurrentResourceAndCommandQue
 }
 
 void AnalyzerLayer::post(ID3D12Device7AddToStateObjectCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.pStateObjectToGrowFrom_.key);
   analyzerService_.notifyObject(c.ppNewStateObject_.key);
@@ -1395,24 +1914,36 @@ void AnalyzerLayer::post(ID3D12Device7AddToStateObjectCommand& c) {
 }
 
 void AnalyzerLayer::post(ID3D12Device13OpenExistingHeapFromAddress1Command& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.ppvHeap_.key);
   analyzerService_.addParent(c.ppvHeap_.key, c.object_.key);
 }
 
 void AnalyzerLayer::post(ID3D12DeviceTools1GetApplicationSpecificDriverStateCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.ppBlob_.key);
   analyzerService_.addParent(c.ppBlob_.key, c.object_.key);
 }
 
 void AnalyzerLayer::post(ID3D12DeviceFactoryGetConfigurationInterfaceCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.ppv_.key);
   analyzerService_.addParent(c.ppv_.key, c.object_.key);
 }
 
 void AnalyzerLayer::post(ID3D12DeviceConfigurationSerializeVersionedRootSignatureCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.ppResult_.key);
   analyzerService_.notifyObject(c.ppError_.key);
@@ -1422,6 +1953,9 @@ void AnalyzerLayer::post(ID3D12DeviceConfigurationSerializeVersionedRootSignatur
 
 void AnalyzerLayer::post(
     ID3D12DeviceConfigurationCreateVersionedRootSignatureDeserializerCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.ppvDeserializer_.key);
   analyzerService_.addParent(c.ppvDeserializer_.key, c.object_.key);
@@ -1436,66 +1970,99 @@ void AnalyzerLayer::post(
 }
 
 void AnalyzerLayer::post(IDXGIAdapterEnumOutputsCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.ppOutput_.key);
   analyzerService_.addParent(c.ppOutput_.key, c.object_.key);
 }
 
 void AnalyzerLayer::post(IDXGISwapChainGetBufferCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.ppSurface_.key);
   analyzerService_.addParent(c.ppSurface_.key, c.object_.key);
 }
 
 void AnalyzerLayer::post(IDXGISwapChainGetFullscreenStateCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.ppTarget_.key);
   analyzerService_.addParent(c.ppTarget_.key, c.object_.key);
 }
 
 void AnalyzerLayer::post(IDXGISwapChainGetContainingOutputCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.ppOutput_.key);
   analyzerService_.addParent(c.ppOutput_.key, c.object_.key);
 }
 
 void AnalyzerLayer::post(IDXGIFactoryEnumAdaptersCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.ppAdapter_.key);
   analyzerService_.addParent(c.ppAdapter_.key, c.object_.key);
 }
 
 void AnalyzerLayer::post(IDXGIFactory1EnumAdapters1Command& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.ppAdapter_.key);
   analyzerService_.addParent(c.ppAdapter_.key, c.object_.key);
 }
 
 void AnalyzerLayer::post(IDXGIOutputDuplicationAcquireNextFrameCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.ppDesktopResource_.key);
   analyzerService_.addParent(c.ppDesktopResource_.key, c.object_.key);
 }
 
 void AnalyzerLayer::post(IDXGISurface2GetResourceCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.ppParentResource_.key);
   analyzerService_.addParent(c.ppParentResource_.key, c.object_.key);
 }
 
 void AnalyzerLayer::post(IDXGISwapChain1GetCoreWindowCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.ppUnk_.key);
   analyzerService_.addParent(c.ppUnk_.key, c.object_.key);
 }
 
 void AnalyzerLayer::post(IDXGISwapChain1GetRestrictToOutputCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.ppRestrictToOutput_.key);
   analyzerService_.addParent(c.ppRestrictToOutput_.key, c.object_.key);
 }
 
 void AnalyzerLayer::post(IDXGIOutput1DuplicateOutputCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.pDevice_.key);
   analyzerService_.notifyObject(c.ppOutputDuplication_.key);
@@ -1503,18 +2070,27 @@ void AnalyzerLayer::post(IDXGIOutput1DuplicateOutputCommand& c) {
 }
 
 void AnalyzerLayer::post(IDXGIFactory4EnumAdapterByLuidCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.ppvAdapter_.key);
   analyzerService_.addParent(c.ppvAdapter_.key, c.object_.key);
 }
 
 void AnalyzerLayer::post(IDXGIFactory4EnumWarpAdapterCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.ppvAdapter_.key);
   analyzerService_.addParent(c.ppvAdapter_.key, c.object_.key);
 }
 
 void AnalyzerLayer::post(IDXGIOutput5DuplicateOutput1Command& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.pDevice_.key);
   analyzerService_.notifyObject(c.ppOutputDuplication_.key);
@@ -1522,12 +2098,18 @@ void AnalyzerLayer::post(IDXGIOutput5DuplicateOutput1Command& c) {
 }
 
 void AnalyzerLayer::post(IDXGIFactory6EnumAdapterByGpuPreferenceCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.ppvAdapter_.key);
   analyzerService_.addParent(c.ppvAdapter_.key, c.object_.key);
 }
 
 void AnalyzerLayer::post(IDMLDeviceCompileOperatorCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.op_.key);
   analyzerService_.notifyObject(c.ppv_.key);
@@ -1536,6 +2118,9 @@ void AnalyzerLayer::post(IDMLDeviceCompileOperatorCommand& c) {
 }
 
 void AnalyzerLayer::post(IDMLDevice1CompileGraphCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.ppv_.key);
   analyzerService_.notifyObjects(c.desc_.operatorKeys);
@@ -1546,6 +2131,9 @@ void AnalyzerLayer::post(IDMLDevice1CompileGraphCommand& c) {
 }
 
 void AnalyzerLayer::post(IDStorageFactoryOpenFileCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.ppv_.key);
   analyzerService_.addParent(c.ppv_.key, c.object_.key);

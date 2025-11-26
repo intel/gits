@@ -871,7 +871,7 @@ void AnalyzerCommandListService::command(
         new ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand(c));
   }
   if (c.pDesc_.value->Inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL &&
-      !analyzerService_.inRange() && (firstFrame_ || restoreTlases_ || commandListSubcapture_)) {
+      analyzerService_.beforeRange() && (firstFrame_ || restoreTlases_ || commandListSubcapture_)) {
     tlasBuildKeys_.insert(c.key);
     raytracingService_.buildTlas(c);
   }
