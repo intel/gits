@@ -54,29 +54,36 @@ void CommandPrinter::print(bool flush, bool newLine) {
     stream_ << ")";
   }
 
-  if (command_.key & Command::stateRestoreKeyMask) {
+  if (command_.getId() == CommandId::ID_INIT_START) {
     state_.stateRestorePhase = true;
+  } else if (command_.getId() == CommandId::ID_INIT_END) {
+    state_.stateRestorePhase = false;
+    state_.drawCount = 0;
+    state_.commandListExecutionCount = 0;
   }
+
   if (command_.getId() == CommandId::ID_IDXGISWAPCHAIN_PRESENT &&
           !(static_cast<IDXGISwapChainPresentCommand&>(command_).Flags_.value &
             DXGI_PRESENT_TEST) ||
       command_.getId() == CommandId::ID_IDXGISWAPCHAIN1_PRESENT1 &&
           !(static_cast<IDXGISwapChain1Present1Command&>(command_).PresentFlags_.value &
             DXGI_PRESENT_TEST)) {
-    state_.stateRestorePhase = false;
     stream_ << " Frame #"
             << (command_.key & Command::stateRestoreKeyMask ? 0 : CGits::Instance().CurrentFrame())
             << " end";
-    state_.drawCount = 0;
-    state_.commandListExecutionCount = 0;
   } else if (command_.getId() == CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_DRAWINSTANCED ||
              command_.getId() == CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_DRAWINDEXEDINSTANCED) {
     stream_ << " Draw #" << ++state_.drawCount << " from frame #"
             << (state_.stateRestorePhase ? 0 : CGits::Instance().CurrentFrame());
   } else if (command_.getId() == CommandId::ID_ID3D12COMMANDQUEUE_EXECUTECOMMANDLISTS &&
              command_.key & Command::executionSerializationKeyMask && !state_.stateRestorePhase) {
+    unsigned currentFrame = CGits::Instance().CurrentFrame();
+    // handling command list subcapture without presents
+    if (currentFrame == 0 && !state_.stateRestorePhase) {
+      currentFrame = 1;
+    }
     stream_ << " Execute #" << ++state_.commandListExecutionCount << " from frame #"
-            << CGits::Instance().CurrentFrame();
+            << currentFrame;
   }
   if (newLine) {
     stream_ << "\n";
