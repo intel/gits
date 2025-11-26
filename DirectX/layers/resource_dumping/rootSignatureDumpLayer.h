@@ -22,7 +22,7 @@ public:
 
 private:
   std::wstring dumpPath_;
-  ConfigKeySet configKeySet_;
+  ConfigKeySet rootSignatureKeys_;
   RootSignatureDump rootSignatureDump_;
 };
 

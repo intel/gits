@@ -1081,29 +1081,31 @@ Configuration:
               - Name: bindingTablesPre
                 Type: bool
                 Default: false
-                Description: Dumps binding table buffers before patching
+                Description: Dumps binding table buffers before patching for given DispatchRays calls
               - Name: bindingTablesPost
                 Type: bool
                 Default: false
-                Description: Dumps binding table buffers after patching
+                Description: Dumps binding table buffers after patching for given DispatchRays calls
               - Name: instancesPre
                 Type: bool
                 Default: false
-                Description: Dumps instances buffers before patching
+                Description: Dumps instances buffers before patching for given BuildRaytracingAccelerationStructure TLAS calls
               - Name: instancesPost
                 Type: bool
                 Default: false
-                Description: Dumps instances buffers after patching
+                Description: Dumps instances buffers after patching for given BuildRaytracingAccelerationStructure TLAS calls
               - Name: blases
                 Type: bool
                 Default: false
-                ConfigName: bLASes
+                Description: Dumps bottom level acceleration structures for given BuildRaytracingAccelerationStructure BLAS calls
               - Name: commandKeys
                 Type: std::string
                 Default: ""
+                Description: Comma separated list of DispatchRays or BuildRaytracingAccelerationStructure call keys, empty list means all such calls
               - Name: commandListModuloStep
                 Type: std::string
                 Default: ""
+                Description: start:modulo_step - specifies congruence modulo within command list, if CommandKeys are non empty only they are regarded, e.g. 2:2 dumps all even
           - Name: ExecuteIndirectDump
             Type: Group
             Options:
@@ -1111,26 +1113,27 @@ Configuration:
                 Type: bool
                 Default: false
                 Description:
-                  Dumps arguments buffers for specified ExecuteIndirect calls before
-                  patching
+                  Dumps arguments buffers for specified ExecuteIndirect calls before patching
               - Name: argumentBufferPost
                 Type: bool
                 Default: false
                 Description:
-                  Dumps arguments buffers for specified ExecuteIndirect calls after
-                  patching
+                  Dumps arguments buffers for specified ExecuteIndirect calls after patching
               - Name: commandKeys
                 Type: std::string
                 Default: ""
+                Description: Comma separated list of ExecuteIndirect call keys, empty list means all such calls
           - Name: RootSignatureDump
             Type: Group
             Options:
               - Name: enabled
                 Type: bool
                 Default: false
-              - Name: commandKeys
+                Description: Whether root signatures dumping is enabled or not
+              - Name: rootSignatureKeys
                 Type: std::string
                 Default: ""
+                Description: Comma separated list of root signature object keys, empty list means all such objects
           - Name: SkipCalls
             Type: Group
             Options:
