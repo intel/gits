@@ -128,6 +128,7 @@ private:
   void commandAnalysis(ID3D12GraphicsCommandList4InitializeMetaCommandCommand& c);
   void commandAnalysis(ID3D12GraphicsCommandList4ExecuteMetaCommandCommand& c);
   void commandAnalysis(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c);
+  void commandAnalysis(NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& c);
   void commandAnalysis(
       ID3D12GraphicsCommandList4EmitRaytracingAccelerationStructurePostbuildInfoCommand& c);
   void commandAnalysis(ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& c);
@@ -136,7 +137,6 @@ private:
   void commandAnalysis(ID3D12GraphicsCommandList5RSSetShadingRateImageCommand& c);
   void commandAnalysis(ID3D12GraphicsCommandList6DispatchMeshCommand& c);
   void commandAnalysis(ID3D12GraphicsCommandList7BarrierCommand& c);
-  void commandAnalysis(NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& c);
 
 private:
   AnalyzerService& analyzerService_;

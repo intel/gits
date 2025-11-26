@@ -217,6 +217,10 @@ void AnalyzerCommandListService::commandListRestore(unsigned commandListKey) {
           static_cast<ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand&>(
               *command));
       break;
+    case CommandId::ID_NVAPI_D3D12_BUILDRAYTRACINGACCELERATIONSTRUCTUREEX:
+      commandAnalysis(
+          static_cast<NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand&>(*command));
+      break;
     case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST4_EMITRAYTRACINGACCELERATIONSTRUCTUREPOSTBUILDINFO:
       commandAnalysis(
           static_cast<
@@ -887,6 +891,72 @@ void AnalyzerCommandListService::command(
 }
 
 void AnalyzerCommandListService::commandAnalysis(
+    NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& c) {
+  if (c.pParams.value->pDesc->inputs.type ==
+      D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
+    LOG_ERROR << "NvAPI top level build not handled";
+  } else if (c.pParams.value->pDesc->inputs.type ==
+             D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL) {
+    if (c.pParams.sourceAccelerationStructureKey) {
+      raytracingService_.addAccelerationStructureSource(
+          c.pParams.sourceAccelerationStructureKey, c.pParams.sourceAccelerationStructureOffset);
+    }
+  }
+}
+
+void AnalyzerCommandListService::command(
+    NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& c) {
+  if (analyzerService_.inRange()) {
+    if (!resetCommandLists_[c.pCommandList_.key]) {
+      commandListRestore(c.pCommandList_.key);
+    }
+    commandAnalysis(c);
+  } else if (!commandListSubcapture_) {
+    commandsByCommandList_[c.pCommandList_.key].emplace_back(
+        new NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand(c));
+  }
+  if (c.pParams.value->pDesc->inputs.type ==
+      D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
+    LOG_ERROR << "NvAPI top level build not handled";
+  }
+
+  if (optimize_) {
+    addObjectForRestore(c.pParams.destAccelerationStructureKey);
+    if (c.pParams.sourceAccelerationStructureKey) {
+      addObjectForRestore(c.pParams.sourceAccelerationStructureKey);
+    }
+    if (!(c.pParams.scratchAccelerationStructureKey & Command::stateRestoreKeyMask)) {
+      addObjectForRestore(c.pParams.scratchAccelerationStructureKey);
+    }
+    for (unsigned key : c.pParams.inputKeys) {
+      addObjectForRestore(key);
+    }
+    for (unsigned key : c.pParams.destPostBuildBufferKeys) {
+      addObjectForRestore(key);
+    }
+  }
+}
+
+void AnalyzerCommandListService::command(
+    NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& c) {
+  if (optimize_) {
+    addObjectForRestore(c.pParams.destOpacityMicromapArrayDataKey);
+    if (c.pParams.inputBufferKey) {
+      addObjectForRestore(c.pParams.inputBufferKey);
+    }
+    if (c.pParams.perOMMDescsKey) {
+      addObjectForRestore(c.pParams.perOMMDescsKey);
+    }
+    if (!(c.pParams.scratchOpacityMicromapArrayDataKey & Command::stateRestoreKeyMask)) {
+      addObjectForRestore(c.pParams.scratchOpacityMicromapArrayDataKey);
+    }
+    for (unsigned key : c.pParams.destPostBuildBufferKeys) {
+      addObjectForRestore(key);
+    }
+  }
+}
+
+void AnalyzerCommandListService::commandAnalysis(
     ID3D12GraphicsCommandList4EmitRaytracingAccelerationStructurePostbuildInfoCommand& c) {
   for (unsigned i = 0; i < c.NumSourceAccelerationStructures_.value; ++i) {
     raytracingService_.addAccelerationStructureSource(
@@ -985,62 +1055,6 @@ void AnalyzerCommandListService::commandAnalysis(ID3D12GraphicsCommandList6Dispa
 void AnalyzerCommandListService::commandAnalysis(ID3D12GraphicsCommandList7BarrierCommand& c) {
   for (unsigned key : c.pBarrierGroups_.resourceKeys) {
     addObjectForRestore(key);
-  }
-}
-
-void AnalyzerCommandListService::command(
-    NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& c) {
-  if (analyzerService_.inRange()) {
-    if (!resetCommandLists_[c.pCommandList_.key]) {
-      commandListRestore(c.pCommandList_.key);
-    }
-    commandAnalysis(c);
-  } else if (!commandListSubcapture_) {
-    commandsByCommandList_[c.pCommandList_.key].emplace_back(
-        new NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand(c));
-  }
-  if (c.pParams.value->pDesc->inputs.type ==
-      D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
-    LOG_ERROR << "NvAPI top level build not handled";
-  }
-
-  addObjectForRestore(c.pParams.destAccelerationStructureKey);
-  if (c.pParams.sourceAccelerationStructureKey) {
-    addObjectForRestore(c.pParams.sourceAccelerationStructureKey);
-  }
-  if (!(c.pParams.scratchAccelerationStructureKey & Command::stateRestoreKeyMask)) {
-    addObjectForRestore(c.pParams.scratchAccelerationStructureKey);
-  }
-  for (unsigned key : c.pParams.inputKeys) {
-    addObjectForRestore(key);
-  }
-}
-
-void AnalyzerCommandListService::commandAnalysis(
-    NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& c) {
-  if (c.pParams.value->pDesc->inputs.type ==
-      D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
-    LOG_ERROR << "NvAPI top level build not handled";
-  } else if (c.pParams.value->pDesc->inputs.type ==
-             D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL) {
-    if (c.pParams.sourceAccelerationStructureKey) {
-      raytracingService_.addAccelerationStructureSource(
-          c.pParams.sourceAccelerationStructureKey, c.pParams.sourceAccelerationStructureOffset);
-    }
-  }
-}
-
-void AnalyzerCommandListService::command(
-    NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& c) {
-  addObjectForRestore(c.pParams.destOpacityMicromapArrayDataKey);
-  if (c.pParams.inputBufferKey) {
-    addObjectForRestore(c.pParams.inputBufferKey);
-  }
-  if (c.pParams.perOMMDescsKey) {
-    addObjectForRestore(c.pParams.perOMMDescsKey);
-  }
-  if (!(c.pParams.scratchOpacityMicromapArrayDataKey & Command::stateRestoreKeyMask)) {
-    addObjectForRestore(c.pParams.scratchOpacityMicromapArrayDataKey);
   }
 }
 
