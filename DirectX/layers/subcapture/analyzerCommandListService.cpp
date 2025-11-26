@@ -842,8 +842,10 @@ void AnalyzerCommandListService::commandAnalysis(
 void AnalyzerCommandListService::commandAnalysis(
     ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c) {
   if (c.pDesc_.value->Inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
-    tlasBuildKeys_.insert(c.key);
-    raytracingService_.buildTlas(c);
+    if (tlasBuildKeys_.find(c.key) == tlasBuildKeys_.end()) {
+      tlasBuildKeys_.insert(c.key);
+      raytracingService_.buildTlas(c);
+    }
   } else if (c.pDesc_.value->Inputs.Type ==
              D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL) {
     if (c.pDesc_.sourceAccelerationStructureKey) {
@@ -866,6 +868,7 @@ void AnalyzerCommandListService::command(
   }
   if (c.pDesc_.value->Inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL &&
       !analyzerService_.inRange() && (firstFrame_ || restoreTlases_ || commandListSubcapture_)) {
+    tlasBuildKeys_.insert(c.key);
     raytracingService_.buildTlas(c);
   }
 
