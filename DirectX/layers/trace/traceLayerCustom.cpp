@@ -13,6 +13,7 @@ namespace DirectX {
 
 void TraceLayer::pre(StateRestoreBeginCommand& command) {
   if (printPre_) {
+    CommandPrinter p(streamPre_, statePre_, command, "StateRestoreBegin");
     streamPre_ << "STATE_RESTORE_BEGIN\n";
     if (flush_) {
       streamPre_.flush();
@@ -22,6 +23,7 @@ void TraceLayer::pre(StateRestoreBeginCommand& command) {
 
 void TraceLayer::post(StateRestoreBeginCommand& command) {
   if (printPost_) {
+    CommandPrinter p(streamPost_, statePost_, command, "StateRestoreBegin");
     streamPost_ << "STATE_RESTORE_BEGIN\n";
     if (flush_) {
       streamPost_.flush();
@@ -31,6 +33,7 @@ void TraceLayer::post(StateRestoreBeginCommand& command) {
 
 void TraceLayer::pre(StateRestoreEndCommand& command) {
   if (printPre_) {
+    CommandPrinter p(streamPre_, statePre_, command, "StateRestoreEnd");
     streamPre_ << "STATE_RESTORE_END\n";
     if (flush_) {
       streamPre_.flush();
@@ -40,6 +43,7 @@ void TraceLayer::pre(StateRestoreEndCommand& command) {
 
 void TraceLayer::post(StateRestoreEndCommand& command) {
   if (printPost_) {
+    CommandPrinter p(streamPost_, statePost_, command, "StateRestoreEnd");
     streamPost_ << "STATE_RESTORE_END\n";
     if (flush_) {
       streamPost_.flush();

@@ -33,6 +33,15 @@ CommandPrinter::CommandPrinter(FastOStream& stream,
                                const char* name,
                                unsigned objectId)
     : stream_(stream), state_(state), command_(command), lock_(state.mutex) {
+
+  if (command_.getId() == CommandId::ID_INIT_START) {
+    state_.stateRestorePhase = true;
+  } else if (command_.getId() == CommandId::ID_INIT_END) {
+    state_.stateRestorePhase = false;
+    state_.drawCount = 0;
+    state_.commandListExecutionCount = 0;
+  }
+
   if (Configurator::Get().directx.features.trace.print.timestamp) {
     printDateTime(stream_);
   }
@@ -49,17 +58,8 @@ CommandPrinter::CommandPrinter(FastOStream& stream,
 }
 
 void CommandPrinter::print(bool flush, bool newLine) {
-
   if (!returnPrinted_) {
     stream_ << ")";
-  }
-
-  if (command_.getId() == CommandId::ID_INIT_START) {
-    state_.stateRestorePhase = true;
-  } else if (command_.getId() == CommandId::ID_INIT_END) {
-    state_.stateRestorePhase = false;
-    state_.drawCount = 0;
-    state_.commandListExecutionCount = 0;
   }
 
   if (command_.getId() == CommandId::ID_IDXGISWAPCHAIN_PRESENT &&
