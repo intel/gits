@@ -27,10 +27,12 @@ The Portability Layer can be used to help with resource placement compatibility.
    - Enable Portability Layer in `gits_config.yml` by setting `DirectX.Playback.Portability.ResourcePlacement` to `'use'`
 
 ### **(Experimental)** To playback a stream on **Platform B** (💻) without accessing **Platform A** (🖥️):
+
 1. Generate `resourcePlacementData.dat` on **Platform B** (🖥️)
 
    - Playback: Set `DirectX.Playback.Portability.ResourcePlacement` to `'store'` and `DirectX.Playback.Execute` to `false`
    - `resourcePlacementData.dat` will be written next to `stream.gits2`
+
 2. Playback stream on **Platform B** (💻)
 
    - Same as normal usage
