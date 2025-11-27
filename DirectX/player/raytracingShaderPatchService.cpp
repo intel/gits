@@ -134,7 +134,7 @@ void gits_patch(uint3 gId : SV_GroupID, uint3 dtId : SV_DispatchThreadID,
         mapping.captureStart + mapping.size) {
       uint64_t offset = captureAddress - mapping.captureStart;
       uint64_t playbackAddress = mapping.playerStart + offset;
-      instances[dtId.x].blas = playbackAddress;
+      instances[instancesIndex].blas = playbackAddress;
       break;
     } else if (captureAddress >= mapping.captureStart + mapping.size) {
       first = mid + 1;

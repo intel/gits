@@ -82,7 +82,6 @@ private:
     std::unique_ptr<PointerArgument<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC>> desc{};
     bool update{};
     std::unordered_map<unsigned, ResourceState*> buffers;
-    std::vector<unsigned> uploadBuffers;
     std::unordered_map<unsigned, ReservedResourcesService::TiledResource> tiledResources;
   };
 
@@ -98,7 +97,6 @@ private:
         desc{};
     bool update{};
     std::unordered_map<unsigned, ResourceState*> buffers;
-    std::vector<unsigned> uploadBuffers;
     std::unordered_map<unsigned, ReservedResourcesService::TiledResource> tiledResources;
   };
 
@@ -106,7 +104,6 @@ private:
       : public RaytracingAccelerationStructureState {
     std::unique_ptr<PointerArgument<NVAPI_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_PARAMS>> desc{};
     std::unordered_map<unsigned, ResourceState*> buffers;
-    std::vector<unsigned> uploadBuffers;
     std::unordered_map<unsigned, ReservedResourcesService::TiledResource> tiledResources;
   };
 

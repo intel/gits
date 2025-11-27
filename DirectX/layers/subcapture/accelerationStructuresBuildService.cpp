@@ -96,8 +96,6 @@ void AccelerationStructuresBuildService::buildAccelerationStructure(
     unsigned inputOffset = c.pDesc_.inputOffsets[inputIndex];
     stateService_.keepState(inputKey);
     ResourceState* bufferState = static_cast<ResourceState*>(stateService_.getState(inputKey));
-    unsigned uploadResourceKey = stateService_.getUniqueObjectKey();
-    state->uploadBuffers.push_back(uploadResourceKey);
     D3D12_RESOURCE_STATES resourceState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
     D3D12_RESOURCE_STATES trackedState =
         resourceStateTracker_.getResourceState(c.object_.value, inputKey, 0);
@@ -374,8 +372,6 @@ void AccelerationStructuresBuildService::nvapiBuildAccelerationStructureEx(
     unsigned inputOffset = c.pParams.inputOffsets[inputIndex];
     stateService_.keepState(inputKey);
     ResourceState* bufferState = static_cast<ResourceState*>(stateService_.getState(inputKey));
-    unsigned uploadResourceKey = stateService_.getUniqueObjectKey();
-    state->uploadBuffers.push_back(uploadResourceKey);
     D3D12_RESOURCE_STATES resourceState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
     D3D12_RESOURCE_STATES trackedState =
         resourceStateTracker_.getResourceState(c.pCommandList_.value, inputKey, 0);
@@ -731,8 +727,6 @@ void AccelerationStructuresBuildService::nvapiBuildOpacityMicromapArray(
                          D3D12_GPU_VIRTUAL_ADDRESS address) {
     stateService_.keepState(inputKey);
     ResourceState* bufferState = static_cast<ResourceState*>(stateService_.getState(inputKey));
-    unsigned uploadResourceKey = stateService_.getUniqueObjectKey();
-    state->uploadBuffers.push_back(uploadResourceKey);
     D3D12_RESOURCE_STATES resourceState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
     D3D12_RESOURCE_STATES trackedState =
         resourceStateTracker_.getResourceState(c.pCommandList_.value, inputKey, 0);
@@ -1629,6 +1623,21 @@ void AccelerationStructuresBuildService::storeState(RaytracingAccelerationStruct
     if (state->stateType == RaytracingAccelerationStructureState::Build) {
       BuildRaytracingAccelerationStructureState* buildState =
           static_cast<BuildRaytracingAccelerationStructureState*>(state);
+      if (buildState->update) {
+        auto itPrimarySource = stateSourceByDest_.find(sourceId);
+        if (itPrimarySource != stateSourceByDest_.end()) {
+          sourceId = itPrimarySource->second;
+          auto itPrimarySourceState = statesById_.find(sourceId);
+          GITS_ASSERT(itPrimarySourceState != statesById_.end());
+          buildState->sourceKey = itPrimarySourceState->second->destKey;
+          buildState->sourceOffset = itPrimarySourceState->second->destOffset;
+          buildState->desc->sourceAccelerationStructureKey = buildState->sourceKey;
+          buildState->desc->sourceAccelerationStructureOffset = buildState->sourceOffset;
+        }
+      }
+    } else if (state->stateType == RaytracingAccelerationStructureState::NvAPIBuild) {
+      NvAPIBuildRaytracingAccelerationStructureExState* buildState =
+          static_cast<NvAPIBuildRaytracingAccelerationStructureExState*>(state);
       if (buildState->update) {
         auto itPrimarySource = stateSourceByDest_.find(sourceId);
         if (itPrimarySource != stateSourceByDest_.end()) {
