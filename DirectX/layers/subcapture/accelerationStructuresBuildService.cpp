@@ -48,7 +48,7 @@ void AccelerationStructuresBuildService::buildAccelerationStructure(
         return;
       }
     } else {
-      if (!restoreTLASes_) {
+      if (!recorder_.commandListSubcapture() && !restoreTLASes_) {
         return;
       }
     }
