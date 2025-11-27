@@ -36,10 +36,12 @@ CommandPrinter::CommandPrinter(FastOStream& stream,
 
   if (command_.getId() == CommandId::ID_INIT_START) {
     state_.stateRestorePhase = true;
+    return;
   } else if (command_.getId() == CommandId::ID_INIT_END) {
     state_.stateRestorePhase = false;
     state_.drawCount = 0;
     state_.commandListExecutionCount = 0;
+    return;
   }
 
   if (Configurator::Get().directx.features.trace.print.timestamp) {
