@@ -6,7 +6,6 @@
 #
 # ===================== end_copyright_notice ==============================
 
-
 cmake_minimum_required(VERSION 3.13)
 project(gits)
 
@@ -35,6 +34,11 @@ endif()
 option(SKIP_THIRDPARTY_FETCH "Skip fetching third-party dependencies" OFF)
 if(SKIP_THIRDPARTY_FETCH)
   add_definitions(-DSKIP_THIRDPARTY_FETCH)
+endif()
+
+option(WITH_LAUNCHER "Build Launcher" OFF)
+if(WITH_LAUNCHER)
+  add_definitions(-DWITH_LAUNCHER)
 endif()
 
 if(WIN32 AND "${CMAKE_GENERATOR_PLATFORM}" MATCHES "x64")
@@ -174,6 +178,9 @@ include(import_argshxx)
 include(import_imgui)
 include(import_intel_one_mono)
 include(import_plog)
+include(import_imguicolortextedit)
+include(import_imguifiledialog)
+include(import_implot)
 install_and_setup_thirdparty()
 
 if(WIN32)
@@ -224,6 +231,9 @@ add_subdirectory(recorder)
 if(WITH_DIRECTX)
   add_subdirectory(DIRECTX)
 endif()
+if(WITH_LAUNCHER AND WIN32 AND "${CMAKE_GENERATOR_PLATFORM}" MATCHES "x64")
+  add_subdirectory(launcher)
+endif()
 
 if(ARCH AND NOT MSVC)
   set_target_properties(gits_player PROPERTIES LINK_FLAGS ${ARCH})
@@ -243,6 +253,24 @@ endif()
 if(WITH_OCLOC AND NOT MSVC)
   set_target_properties(ocloc_interceptor PROPERTIES LINK_FLAGS ${ARCH})
 endif()
+
+# Aggregate target for all code generation
+add_custom_target(all_codegen)
+set_target_properties(all_codegen PROPERTIES FOLDER "codegen")
+add_dependencies(all_codegen config_codegen generate_font_header)
+if(WITH_VULKAN)
+  add_dependencies(all_codegen Vulkan_codegen)
+endif()
+if(WITH_OPENCL)
+  add_dependencies(all_codegen OpenCL_codegen)
+endif()
+if(WITH_LEVELZERO)
+  add_dependencies(all_codegen L0_codegen)
+endif()
+if(WITH_DIRECTX)
+  add_dependencies(all_codegen DirectX_codegen)
+endif()
+add_dependencies(all_codegen OpenGL_codegen)
 
 install(DIRECTORY Scripts/Lua/ DESTINATION LuaScripts)
 

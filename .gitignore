@@ -17,6 +17,7 @@ ipch/
 .vscode/
 *.sln
 *.pyproj
+*.aps
 
 # Remains of Git merge conflicts
 *.orig

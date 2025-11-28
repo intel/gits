@@ -95,3 +95,15 @@ dependencies:
     - name: plog
       url: https://github.com/SergiusTheBest/plog.git
       commit_id: 3da4729da2086a2987ce75cd31c4d04e8ca54fcf
+    - name: ImGuiFileDialog
+      url: https://github.com/aiekick/ImGuiFileDialog.git
+      branch: master
+      commit_id: 445ad3f4b6c3654e4842f59020a4c2a67faae7d1
+    - name: ImGuiColorTextEdit
+      url: https://github.com/BalazsJako/ImGuiColorTextEdit
+      branch: master
+      commit_id: 0a88824f7de8d0bd11d8419066caa7d3469395c4
+    - name: implot
+      url: https://github.com/epezent/implot
+      branch: master
+      commit_id: 3da8bd34299965d3b0ab124df743fe3e076fa222

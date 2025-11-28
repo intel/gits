@@ -28,9 +28,9 @@ target_include_directories(log
 PUBLIC
   ${PLOG_SOURCE_DIR}/include
   ${LOG_HEADER_DIR}
+  ${CMAKE_CURRENT_SOURCE_DIR}/../configuration/src/include
 PRIVATE
   ${LOG_SOURCE_DIR}
-  ${CMAKE_CURRENT_SOURCE_DIR}/../configuration/src/include
 )
 
 add_dependencies(log config_codegen)

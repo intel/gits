@@ -25,7 +25,7 @@ add_custom_command(
 
 add_custom_target(
   generate_font_header ALL
-  DEPENDS ${IMGUILIB_FONT_TTF_FILE}
+  DEPENDS ${IMGUILIB_FONT_TTF_HEADER}
 )
 set_target_properties(generate_font_header PROPERTIES FOLDER "common/imgui")
 
@@ -38,10 +38,13 @@ endif()
 # ImGui Lib
 set(IMGUILIB_CPP_FILES
   ${IMGUILIB_SOURCE_DIR}/imGuiHelper.cpp
+  ${IMGUILIB_SOURCE_DIR}/textEditorWidget.cpp
 )
 
 set(IMGUILIB_HEADER_FILES
   ${IMGUILIB_HEADER_DIR}/imGuiHelper.h
+  ${IMGUILIB_HEADER_DIR}/textEditorWidget.h
+  ${IMGUILIB_HEADER_DIR}/buttonGroup.h
   ${IMGUILIB_FONT_C_HEADER}
 )
 
@@ -65,6 +68,7 @@ target_include_directories(
   imgui_common PUBLIC
   ${IMGUILIB_HEADER_DIR}
   ${IMGUI_SOURCE_DIR}/
+  ${IMGUI_COLOR_TEXT_EDIT_DIR} 
 )
 
 target_include_directories(
@@ -79,4 +83,5 @@ if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.20")
   )
 endif()
 
-add_dependencies(imgui_common generate_font_header)
+target_link_libraries(imgui_common PRIVATE yamlcpp log)
+add_dependencies(imgui_common generate_font_header config_codegen)
