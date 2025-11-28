@@ -24,12 +24,8 @@ namespace DirectX {
 class RenderTargetsDumpLayer : public Layer {
 public:
   RenderTargetsDumpLayer();
-  void post(StateRestoreBeginCommand& c) override {
-    stateRestorePhase_ = true;
-  }
-  void post(StateRestoreEndCommand& c) override {
-    stateRestorePhase_ = false;
-  }
+  void post(StateRestoreBeginCommand& c) override;
+  void post(StateRestoreEndCommand& c) override;
   void post(ID3D12DeviceCreateRenderTargetViewCommand& c) override;
   void post(ID3D12DeviceCreateDepthStencilViewCommand& c) override;
   void post(ID3D12DeviceCopyDescriptorsSimpleCommand& c) override;

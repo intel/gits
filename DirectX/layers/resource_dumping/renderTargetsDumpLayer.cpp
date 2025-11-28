@@ -30,7 +30,16 @@ RenderTargetsDumpLayer::RenderTargetsDumpLayer()
     std::filesystem::create_directory(dumpPath);
   }
   dumpPath_ = dumpPath;
-};
+}
+
+void RenderTargetsDumpLayer::post(StateRestoreBeginCommand& c) {
+  stateRestorePhase_ = true;
+}
+void RenderTargetsDumpLayer::post(StateRestoreEndCommand& c) {
+  stateRestorePhase_ = false;
+  drawCount_ = 0;
+  executeCount_ = 0;
+}
 
 void RenderTargetsDumpLayer::post(ID3D12DeviceCreateRenderTargetViewCommand& c) {
   RenderTarget renderTarget{};
