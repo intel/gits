@@ -924,7 +924,7 @@ Configuration:
                 Description: Checks and logs portability issues
               - Name: portabilityAssertions
                 Type: bool
-                Default: false
+                Default: true
                 Description: Ends playback if any incompatibility is detected
           - Name: AddressPinning
             Type: AddressPinningMode
