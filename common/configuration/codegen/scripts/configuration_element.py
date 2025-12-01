@@ -136,7 +136,7 @@ class ConfigurationOption(ConfigurationEntry):
                 namespace_lst = namespace_lst[1:]
         self.namespace_str = '::'.join(namespace)
         self.argument_path = '.'.join(namespace_lst)
-        self.default = option['Default']
+        self.default = get_if_present(option, 'Default', "")
         if 'NumericFormat' in option:
             try:
                 target_format = option['NumericFormat']
@@ -176,6 +176,8 @@ class ConfigurationOption(ConfigurationEntry):
             for d in default_condition_lst:
                 for key, value in d.items():
                     self.default_condition[key] = self.process_default(value)
+
+        self.is_deprecated = get_if_present(option, "Deprecated", False)
 
 
     def __str__(self):

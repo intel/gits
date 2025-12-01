@@ -273,6 +273,33 @@ void DeriveConfigData<Configuration::Common::Recorder>(Configuration::Common::Re
     gits::CGits::Instance().ProcessLuaFunctionsRegistrators();
     obj.useEvents = true;
   }
+
+  // Deprecated option handling
+  // Since CCode was removed, only the binary mode leads to recording being enabled
+  if (config.common.recorder.recordingMode.has_value()) {
+    switch (config.common.recorder.recordingMode.value()) {
+    case RecordingMode::BINARY:
+      LOG_WARNING << "RecordingMode option is deprecated";
+      LOG_WARNING << "Recording will be enabled regardless";
+      LOG_WARNING << "Please use the Common.Recorder.Enabled option set to true";
+      obj.enabled = true;
+      break;
+    case RecordingMode::CCODE:
+      LOG_WARNING
+          << "RecordingMode option is deprecated and CCode recording is no longer available";
+      LOG_WARNING << "Recording will be disabled";
+      obj.enabled = false;
+      break;
+    case RecordingMode::NONE:
+      LOG_WARNING << "RecordingMode option is deprecated";
+      LOG_WARNING << "Recording will be disabled regardless";
+      LOG_WARNING << "Please use the Common.Recorder.Enabled option set to false";
+      obj.enabled = false;
+      break;
+    default:
+      break;
+    }
+  }
 }
 
 template <>

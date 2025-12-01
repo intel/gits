@@ -626,6 +626,11 @@ Configuration:
             Default: /usr/lib/{arch}-linux-gnu/libze_loader.so.1
             DefaultsPerPlatform:
               - win32: C:\Windows\System32\ze_loader.dll
+          - Name: recordingMode
+            Type: RecordingMode
+            Deprecated: true
+            Description:
+              DEPRECATED because CCode was removed. Replaced by the Common.Recorder.Enabled.
           - Name: exitKeysStr
             Type: std::vector<std::string>
             Default: []

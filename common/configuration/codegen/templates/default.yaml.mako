@@ -36,7 +36,7 @@ ${whitespace(indentation)}${data.config_name}:
 ${render_group(option, indentation+1)}\
             % endif
         % else:
-            % if not (option.is_derived or option.argument_only):
+            % if not (option.is_deprecated or option.is_derived or option.argument_only):
                 % if option.needs_quotes_in_yml:
 ${whitespace(indentation + 1)}${option.config_name}: '${option.get_default(platform, installpath, conditions)}'${" # " + option.short_description if option.short_description else ''}
                 % else:

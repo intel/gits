@@ -44,7 +44,7 @@ namespace YAML{
 Node convert<${group.namespace_str}>::encode(const ${group.namespace_str}& rhs) {
   Node node;
 % for option in group.options:
-%   if not option.is_derived:
+%   if not option.is_derived and not (not option.is_group and option.is_deprecated):
   node["${option.config_name}"] = rhs.${option.instance_name};
 %   endif
 % endfor
@@ -95,7 +95,12 @@ bool convert<${group.namespace_str}>::decode(const Node& node, ${group.namespace
   }
 %     else:
   if (node["${option.config_name}"]) {
+%       if not option.is_deprecated:
     const auto& defaultValue = "${option.get_default(platform)}";
+%       else:
+    LOG_WARNING << "Encountered deprecated option: ${option.get_path().replace("Configuration.", "")}, please update your config file";
+    const auto& defaultValue = "";
+%       endif
 %       if not option.is_vector_type:
     const auto& configValue = node["${option.config_name}"].Scalar();
     if (configValue != defaultValue) {

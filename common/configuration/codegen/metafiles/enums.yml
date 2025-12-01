@@ -54,6 +54,13 @@ Enums:
         Description: No logging.
         LongDescription: >
           The `OFF` level disables all logging, ensuring that no log messages are generated or recorded. This setting is useful for scenarios where performance is critical, and logging overhead must be minimized, or when logging is managed externally and not required within the application.
+  - Name: RecordingMode
+    Values:
+      - Value: NONE
+      - Value: BINARY
+      - Value: CCODE
+        Labels: [CCode]
+    Description: DEPRECATED because CCode was removed. Used by the deprecated option Common.Recorder.RecordingMode.
   - Name: OpenGLRecorderMode
     Values:
       - Value: ALL

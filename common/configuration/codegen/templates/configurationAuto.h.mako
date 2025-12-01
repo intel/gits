@@ -15,6 +15,7 @@
 #include <set>
 #include <string>
 #include <vector>
+#include <optional>
 
 #include "enumsAuto.h"
 #include "helper.h"
@@ -36,7 +37,11 @@ ${whitespace(indentation + 1)}void DeriveData(Configuration& config);
     % if option.is_group:
 ${render_group(option, indentation+1)}
     % else:
+      % if not option.is_deprecated:
 ${whitespace(indentation + 1)}${option.type} ${option.instance_name};
+      % else:
+${whitespace(indentation + 1)}std::optional<${option.type}> ${option.instance_name};
+      % endif
     % endif
 % endfor
 

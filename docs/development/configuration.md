@@ -51,6 +51,7 @@ Here's the structure to define a configuration option:
   Arguments: [string]       #     opt. cli argument(s) to set the option
   Tags: [string]            #     opt. tag(s) for help filtering.
   OSVisibility: [string]    #     opt. OSs that support this option.
+  Deprecated: bool          #     opt. Whether the option is deprecated
 
   DefaultsPerPlatform:      #     opt. additional defaults
       - {platform}: string  #     opt. if `platform` matches
@@ -75,10 +76,11 @@ Here's the structure to define a configuration option:
 | `OSVisibility`        | OS(s) that use the option: `WINDOWS`,`X11`.                                                                                                                                                                                                 |
 | `DefaultsPerPlatform` | Specify defaults for specific platforms. The value set by `Default` is a fallback, when no platform matched.                                                                                                                                |
 | `DefaultCondition`    | Specify defaults if certain conditions are _present_. Is evaluated before `DefaultsPerPlatform`. When unmatched, the value set by `Default` is used.                                                                                        |
+| `Deprecated`          | Specifies that the option has been deprecated. Defaults to false if not present. Such option won't be put into the default config file but will be read properly (with a warning) if present - used for backwards compatibility.            |
 
 ### Group
 
-The following defines a configuration option:
+The following defines a configuration options group:
 
 ```yaml
 - Name: string              # req.     cpp and config name
@@ -147,3 +149,8 @@ The codegen consists of 6 scripts:
   Transforms the enum metafile in a structure of python objects that represent either an enum or its values. These objects are filled into the mako files.
 1. `utils.py`  
   Various helper functions used by the scripts.
+
+### Additional Notes
+
+1. `Deprecated options`
+  If a deprecated option was replaced by a different one then Data Deriving (common/configuration/src/DeriveData.cpp) can be used to set the new options value based on the deprecated option.

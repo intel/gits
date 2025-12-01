@@ -29,9 +29,14 @@ void ${group.argument_namespace_str}::UpdateConfiguration(${group.namespace_str}
 %   if option.type != 'Group':
   if (${option.instance_name}) {
     const auto newValue = ${option.instance_name}.Get();
-    Configurator::Instance().AddChangedField("${option.get_path()}",  stringFrom<${option.type}>(newValue),
-                                            stringFrom<${option.type}>(config->${option.instance_name}),
-                                            Configurator::ConfigEntry::Source::ARGUMENT);
+%     if not option.is_deprecated:
+    const auto oldValue = stringFrom<${option.type}>(config->${option.instance_name});
+%     else:
+    LOG_WARNING << "Encountered deprecated option: ${option.get_path().replace("Configuration.", "")}, please update your arguments";
+    const auto oldValue = config->${option.instance_name}.has_value() ? stringFrom<${option.type}>(config->${option.instance_name}.value()) : "";
+%     endif
+    Configurator::Instance().AddChangedField("${option.get_path()}", stringFrom<${option.type}>(newValue),
+                                            oldValue, Configurator::ConfigEntry::Source::ARGUMENT);
     config->${option.instance_name} = newValue;
   }
 %   else:
@@ -39,6 +44,9 @@ void ${group.argument_namespace_str}::UpdateConfiguration(${group.namespace_str}
 %   endif
 %    if option.type == 'bool':
   if (${option.get_bool_value_instance_name()}) {
+%     if option.is_deprecated:
+  LOG_WARNING << "Encountered deprecated option: ${option.get_path().replace("Configuration.", "")}.Value, please update your arguments";
+%     endif
     const auto newValue = ${option.instance_name}.Get();
     Configurator::Instance().AddChangedField("${option.get_path()}",  stringFrom<${option.type}>(config->${option.instance_name}),
                                             stringFrom<${option.type}>(newValue),
