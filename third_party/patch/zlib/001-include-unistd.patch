@@ -1,0 +1,16 @@
+diff --git a/gzguts.h b/gzguts.h
+index eba7208..cfe55bd 100644
+--- a/gzguts.h
++++ b/gzguts.h
+@@ -17,6 +17,11 @@
+ #  define ZLIB_INTERNAL
+ #endif
+ 
++// Required to compile with GCC 15.2.0 (Ubuntu 25.10)
++#ifdef __linux__
++#  include <unistd.h>
++#endif
++
+ #include <stdio.h>
+ #include "zlib.h"
+ #ifdef STDC
