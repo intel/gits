@@ -246,7 +246,7 @@ template <>
 void DeriveConfigData<Configuration::Common::Recorder>(Configuration::Common::Recorder& obj,
                                                        Configuration& config) {
   if (!config.common.recorder.exitKeysStr.empty()) {
-    obj.exitKeys = std::move(gits::parseKeys(config.common.recorder.exitKeysStr));
+    obj.exitKeys = gits::parseKeys(config.common.recorder.exitKeysStr);
   }
 
   obj.dumpPath = PrepareDumpPath(config.common.recorder.dumpPath.string(),
@@ -359,7 +359,7 @@ void DeriveConfigData<Configuration::OpenGL::Recorder>(Configuration::OpenGL::Re
     obj.oglDrawsRange.stopDraw = UINT_MAX;
     obj.oglDrawsRange.frame = UINT_MAX;
     if (!config.opengl.recorder.frames.startKeysStr.empty()) {
-      obj.frames.startKeys = std::move(gits::parseKeys(config.opengl.recorder.frames.startKeysStr));
+      obj.frames.startKeys = gits::parseKeys(config.opengl.recorder.frames.startKeysStr);
     }
   } else if (config.opengl.recorder.mode == OpenGLRecorderMode::SINGLE_DRAW) {
     obj.all.exitFrame = UINT_MAX;
@@ -453,7 +453,7 @@ void DeriveConfigData<Configuration::Vulkan::Recorder>(Configuration::Vulkan::Re
     obj.objRange.rangeSpecial.range = BitRange(false);
     obj.objRange.rangeSpecial.objMode = VulkanObjectMode::MODE_VK_NONE;
     if (!config.vulkan.recorder.frames.startKeysStr.empty()) {
-      obj.frames.startKeys = std::move(gits::parseKeys(config.vulkan.recorder.frames.startKeysStr));
+      obj.frames.startKeys = gits::parseKeys(config.vulkan.recorder.frames.startKeysStr);
     }
   } else if (config.vulkan.recorder.mode == VulkanRecorderMode::QUEUE_SUBMIT) {
     obj.frames.startFrame = UINT_MAX;
@@ -509,6 +509,8 @@ void DeriveConfigData<Configuration::Vulkan::Recorder>(Configuration::Vulkan::Re
 #endif
   case MemoryTrackingMode::FULL_MEMORY_DUMP:
     // everything is already set to false by default.
+    break;
+  default:
     break;
   }
 
