@@ -32,6 +32,11 @@ bool ConfigureRecorder(const std::filesystem::path& configPath) {
     return true;
   }
 
+  // Initialize the logger first with the default logLevel
+  const auto& cfg = Configurator::Get();
+  log::Initialize(cfg.common.shared.thresholdLogLevel);
+  log::AddFileAppender(configPath.parent_path());
+
   Configurator::Instance().UpdateFromEnvironment();
 
   const auto result = Configurator::Instance().Load(configPath);
@@ -73,13 +78,11 @@ bool ConfigureRecorder(const std::filesystem::path& configPath) {
 
   Configurator::Instance().LogChangedFields();
 
-  // Initialize the logger
-  const auto& cfg = Configurator::Get();
-  log::Initialize(cfg.common.shared.thresholdLogLevel);
+  // Update the log parameters after loading in the config
+  log::SetMaxSeverity(cfg.common.shared.thresholdLogLevel);
   if (!cfg.common.shared.logToConsole) {
     log::RemoveConsoleAppender();
   }
-  log::AddFileAppender(configPath.parent_path());
 
   LOG_INFO << "GITS configured for process: " << processNameHUD;
 
