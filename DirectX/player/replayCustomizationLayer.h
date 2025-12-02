@@ -174,8 +174,6 @@ public:
   void pre(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& command) override;
   void pre(NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand& command) override;
   void post(CreateDXGIFactory2Command& command) override;
-  void post(IDXGISwapChainPresentCommand& c) override;
-  void post(IDXGISwapChain1Present1Command& c) override;
 
 private:
   struct NvAPIShaderExtnSlot {
@@ -201,7 +199,7 @@ private:
   HANDLE waitForFenceEvent_{};
   std::vector<NvAPIShaderExtnSlot> nvapiShaderExtnSlotsUsed_;
   bool useAddressPinning_{};
-  bool afterPresent_{};
+  bool afterAddRef_{};
 };
 
 } // namespace DirectX

@@ -60,6 +60,7 @@ void ReplayCustomizationLayer::post(IUnknownReleaseCommand& c) {
 
 void ReplayCustomizationLayer::post(IUnknownAddRefCommand& c) {
   pipelineLibraryService_.addRefPipelineState(c.object_.key);
+  afterAddRef_ = true;
 }
 
 void ReplayCustomizationLayer::pre(D3D12CreateDeviceCommand& c) {
@@ -997,7 +998,8 @@ void ReplayCustomizationLayer::pre(ID3D12GraphicsCommandListResolveQueryDataComm
 void ReplayCustomizationLayer::pre(ID3D12DeviceCreateCommandQueueCommand& c) {
   if (c.ppCommandQueue_.key & Command::stateRestoreKeyMask &&
       c.pDesc_.value->Type == D3D12_COMMAND_LIST_TYPE_COPY &&
-      (!Configurator::Get().directx.player.useCopyQueueOnRestore || afterPresent_)) {
+      (!Configurator::Get().directx.player.useCopyQueueOnRestore || afterAddRef_)) {
+    // AddRefs are at the end of subcapture state restore but before back buffer restore
     c.pDesc_.value->Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
   }
 }
@@ -1005,7 +1007,8 @@ void ReplayCustomizationLayer::pre(ID3D12DeviceCreateCommandQueueCommand& c) {
 void ReplayCustomizationLayer::pre(ID3D12DeviceCreateCommandAllocatorCommand& c) {
   if (c.ppCommandAllocator_.key & Command::stateRestoreKeyMask &&
       c.type_.value == D3D12_COMMAND_LIST_TYPE_COPY &&
-      (!Configurator::Get().directx.player.useCopyQueueOnRestore || afterPresent_)) {
+      (!Configurator::Get().directx.player.useCopyQueueOnRestore || afterAddRef_)) {
+    // AddRefs are at the end of subcapture state restore but before back buffer restore
     c.type_.value = D3D12_COMMAND_LIST_TYPE_DIRECT;
   }
 }
@@ -1013,7 +1016,8 @@ void ReplayCustomizationLayer::pre(ID3D12DeviceCreateCommandAllocatorCommand& c)
 void ReplayCustomizationLayer::pre(ID3D12DeviceCreateCommandListCommand& c) {
   if (c.ppCommandList_.key & Command::stateRestoreKeyMask &&
       c.type_.value == D3D12_COMMAND_LIST_TYPE_COPY &&
-      (!Configurator::Get().directx.player.useCopyQueueOnRestore || afterPresent_)) {
+      (!Configurator::Get().directx.player.useCopyQueueOnRestore || afterAddRef_)) {
+    // AddRefs are at the end of subcapture state restore but before back buffer restore
     c.type_.value = D3D12_COMMAND_LIST_TYPE_DIRECT;
   }
 }
@@ -1524,14 +1528,6 @@ void ReplayCustomizationLayer::post(CreateDXGIFactory2Command& c) {
         << "Make sure that the `Graphics Tools` feature is installed."
         << "On Windows 11 go to Settings->System->Optional features and enable `Graphics Tools`";
   }
-}
-
-void ReplayCustomizationLayer::post(IDXGISwapChainPresentCommand& c) {
-  afterPresent_ = true;
-}
-
-void ReplayCustomizationLayer::post(IDXGISwapChain1Present1Command& c) {
-  afterPresent_ = true;
 }
 
 void ReplayCustomizationLayer::fillGpuAddressArgument(D3D12_GPU_VIRTUAL_ADDRESS_Argument& arg) {
