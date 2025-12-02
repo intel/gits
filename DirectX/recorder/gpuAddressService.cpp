@@ -22,7 +22,7 @@ void GpuAddressService::createResource(unsigned resourceKey, ID3D12Resource* res
     return;
   }
 
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::unique_lock lock(rwMutex_);
 
   ResourceInfo* resourceInfo = new ResourceInfo{};
   resourceInfo->key = resourceKey;
@@ -69,7 +69,7 @@ void GpuAddressService::createPlacedResource(unsigned resourceKey,
     return;
   }
 
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::unique_lock lock(rwMutex_);
 
   auto itHeapByKey = heapsByKey_.find(heapKey);
   GITS_ASSERT(itHeapByKey != heapsByKey_.end());
@@ -133,7 +133,7 @@ void GpuAddressService::createHeap(unsigned heapKey, ID3D12Heap* heap) {
     return;
   }
 
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::unique_lock lock(rwMutex_);
 
   // check for resources intersections
   {
@@ -203,15 +203,15 @@ D3D12_GPU_VIRTUAL_ADDRESS GpuAddressService::getHeapGPUVirtualAddress(ID3D12Heap
 }
 
 GpuAddressService::GpuAddressInfo GpuAddressService::getGpuAddressInfo(
-    D3D12_GPU_VIRTUAL_ADDRESS gpuAddress, bool raytracingAS) {
+    D3D12_GPU_VIRTUAL_ADDRESS gpuAddress, bool raytracingAS) const {
 
   if (!gpuAddress) {
     return GpuAddressInfo{};
   }
 
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::shared_lock lock(rwMutex_);
 
-  ResourceInfo* resourceInfo = nullptr;
+  const ResourceInfo* resourceInfo = nullptr;
 
   auto itResource = resourcesByStartAddress_.upper_bound(gpuAddress);
   if (itResource != resourcesByStartAddress_.begin() && !resourcesByStartAddress_.empty()) {
@@ -266,16 +266,16 @@ GpuAddressService::GpuAddressInfo GpuAddressService::getGpuAddressInfo(
   return info;
 }
 
-GpuAddressService::ResourceInfo* GpuAddressService::getResourceFromHeap(
-    HeapInfoLayered* heapInfo, D3D12_GPU_VIRTUAL_ADDRESS gpuAddress, bool raytracingAS) {
+const GpuAddressService::ResourceInfo* GpuAddressService::getResourceFromHeap(
+    HeapInfoLayered* heapInfo, D3D12_GPU_VIRTUAL_ADDRESS gpuAddress, bool raytracingAS) const {
 
-  PlacedResourceInfo* resourceInfo = nullptr;
+  const PlacedResourceInfo* resourceInfo = nullptr;
   for (unsigned layerIndex = 0; layerIndex < heapInfo->resources.size(); ++layerIndex) {
     auto itResource = heapInfo->resources[layerIndex].upper_bound(gpuAddress);
     if (itResource != heapInfo->resources[layerIndex].begin() &&
         !heapInfo->resources[layerIndex].empty()) {
       --itResource;
-      PlacedResourceInfo* info = itResource->second;
+      const PlacedResourceInfo* info = itResource->second;
       if (gpuAddress >= info->start && gpuAddress < info->end) {
         resourceInfo = info;
         break;
@@ -284,8 +284,8 @@ GpuAddressService::ResourceInfo* GpuAddressService::getResourceFromHeap(
   }
 
   if (resourceInfo && !resourceInfo->intersecting.empty()) {
-    PlacedResourceInfo* selectedResource = resourceInfo;
-    for (PlacedResourceInfo* resource : resourceInfo->intersecting) {
+    const PlacedResourceInfo* selectedResource = resourceInfo;
+    for (const PlacedResourceInfo* resource : resourceInfo->intersecting) {
       if (gpuAddress >= resource->start && gpuAddress < resource->end &&
           resource->raytracingAS == raytracingAS) {
         if (resource->end > selectedResource->end ||
@@ -302,7 +302,7 @@ GpuAddressService::ResourceInfo* GpuAddressService::getResourceFromHeap(
 
 void GpuAddressService::destroyInterface(unsigned interfaceKey) {
 
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::unique_lock lock(rwMutex_);
 
   auto itResource = resourcesByKey_.find(interfaceKey);
   if (itResource != resourcesByKey_.end()) {

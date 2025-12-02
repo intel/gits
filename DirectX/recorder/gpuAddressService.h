@@ -10,7 +10,7 @@
 
 #include "directx.h"
 
-#include <mutex>
+#include <shared_mutex>
 #include <unordered_set>
 #include <map>
 #include <unordered_map>
@@ -33,7 +33,7 @@ public:
                             UINT64 heapOffset,
                             bool raytracingAS);
   void createHeap(unsigned heapKey, ID3D12Heap* heap);
-  GpuAddressInfo getGpuAddressInfo(UINT64 gpuAddress, bool raytracingAS = false);
+  GpuAddressInfo getGpuAddressInfo(UINT64 gpuAddress, bool raytracingAS = false) const;
   void destroyInterface(unsigned interfaceKey);
 
 private:
@@ -67,12 +67,12 @@ private:
   std::unordered_map<unsigned, std::unique_ptr<PlacedResourceInfo>> placedResourcesByKey_;
   std::unordered_map<unsigned, std::unordered_set<unsigned>> placedResourcesByHeap_;
 
-  std::mutex mutex_;
+  mutable std::shared_mutex rwMutex_;
 
 private:
-  ResourceInfo* getResourceFromHeap(HeapInfoLayered* heapInfo,
-                                    D3D12_GPU_VIRTUAL_ADDRESS gpuAddress,
-                                    bool raytracingAS);
+  const ResourceInfo* getResourceFromHeap(HeapInfoLayered* heapInfo,
+                                          D3D12_GPU_VIRTUAL_ADDRESS gpuAddress,
+                                          bool raytracingAS) const;
   D3D12_GPU_VIRTUAL_ADDRESS getHeapGPUVirtualAddress(ID3D12Heap* heap);
 };
 

@@ -17,7 +17,7 @@ namespace DirectX {
 void CaptureDescriptorHandleService::createDescriptorHeap(unsigned descriptorHeapKey,
                                                           ID3D12DescriptorHeap* descriptorHeap,
                                                           const D3D12_DESCRIPTOR_HEAP_DESC* desc) {
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::unique_lock lock(rwMutex_);
 
   if (!initialized_) {
     Microsoft::WRL::ComPtr<ID3D12Device> device;
@@ -51,22 +51,21 @@ void CaptureDescriptorHandleService::createDescriptorHeap(unsigned descriptorHea
 }
 
 CaptureDescriptorHandleService::HandleInfo CaptureDescriptorHandleService::getDescriptorHandleInfo(
-    D3D12_DESCRIPTOR_HEAP_TYPE heapType, HandleType handleType, size_t handle) {
+    D3D12_DESCRIPTOR_HEAP_TYPE heapType, HandleType handleType, size_t handle) const {
 
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::shared_lock lock(rwMutex_);
 
-  std::map<size_t, DescriptorHeapInfo>& descriptorHeaps =
-      handleType == HandleType::CpuHandle
-          ? descriptorHeapsByCpuStartAddress_[heapType]
-                                             [handle % descriptorHeapIncrements_[heapType]]
-          : descriptorHeapsByGpuStartAddress_[heapType];
+  const std::map<size_t, DescriptorHeapInfo>& descriptorHeaps =
+      handleType == HandleType::CpuHandle ? descriptorHeapsByCpuStartAddress_[heapType].at(
+                                                handle % descriptorHeapIncrements_[heapType])
+                                          : descriptorHeapsByGpuStartAddress_[heapType];
 
   HandleInfo handleInfo{};
 
   auto it = descriptorHeaps.upper_bound(handle);
   if (it != descriptorHeaps.begin()) {
     --it;
-    DescriptorHeapInfo& info = it->second;
+    const DescriptorHeapInfo& info = it->second;
     if (handle >= info.start && handle < info.end) {
       handleInfo.interfaceKey = info.interfaceKey;
       handleInfo.index = (handle - info.start) / descriptorHeapIncrements_[heapType];
@@ -78,7 +77,7 @@ CaptureDescriptorHandleService::HandleInfo CaptureDescriptorHandleService::getDe
 
 void CaptureDescriptorHandleService::destroyDescriptorHeap(unsigned descriptorHeapKey) {
 
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::unique_lock lock(rwMutex_);
 
   auto it = descriptorHeapKeys_.find(descriptorHeapKey);
   if (it != descriptorHeapKeys_.end()) {

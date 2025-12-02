@@ -14,7 +14,7 @@
 #include <unordered_set>
 #include <map>
 #include <array>
-#include <mutex>
+#include <shared_mutex>
 
 namespace gits {
 namespace DirectX {
@@ -35,7 +35,7 @@ public:
                             const D3D12_DESCRIPTOR_HEAP_DESC* desc);
   HandleInfo getDescriptorHandleInfo(D3D12_DESCRIPTOR_HEAP_TYPE heapType,
                                      HandleType handleType,
-                                     size_t handle);
+                                     size_t handle) const;
   void destroyDescriptorHeap(unsigned descriptorHeapKey);
 
 private:
@@ -56,7 +56,7 @@ private:
 
   std::unordered_set<unsigned> descriptorHeapKeys_;
 
-  std::mutex mutex_;
+  mutable std::shared_mutex rwMutex_;
 };
 
 } // namespace DirectX
