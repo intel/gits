@@ -90,12 +90,10 @@ public:
   }
 
   unsigned createWrapperKey() {
-    std::lock_guard<std::mutex> lock(uniqueKeyMutex_);
-    return ++wrapperUniqueKey_;
+    return wrapperUniqueKey_.fetch_add(1, std::memory_order_relaxed) + 1;
   }
   unsigned createCommandKey() {
-    std::lock_guard<std::mutex> lock(uniqueKeyMutex_);
-    return ++commandUniqueKey_;
+    return commandUniqueKey_.fetch_add(1, std::memory_order_relaxed) + 1;
   }
 
   void updateCommandKey(Command& command) {
@@ -173,9 +171,8 @@ private:
   std::atomic<unsigned> globalStackDepth_{0};
   static thread_local unsigned localStackDepth_;
 
-  unsigned wrapperUniqueKey_{0};
-  unsigned commandUniqueKey_{0};
-  std::mutex uniqueKeyMutex_;
+  std::atomic<unsigned> wrapperUniqueKey_{0};
+  std::atomic<unsigned> commandUniqueKey_{0};
 
   std::unordered_map<IUnknown*, IUnknownWrapper*> wrappers_;
   std::mutex wrappersMutex_;
