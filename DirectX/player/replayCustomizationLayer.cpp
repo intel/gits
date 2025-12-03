@@ -185,7 +185,7 @@ void ReplayCustomizationLayer::pre(
 void ReplayCustomizationLayer::pre(ID3D12GraphicsCommandListOMSetRenderTargetsCommand& c) {
 
   if (c.pRenderTargetDescriptors_.value) {
-    for (unsigned i = 0; i < c.NumRenderTargetDescriptors_.value; ++i) {
+    for (unsigned i = 0; i < c.pRenderTargetDescriptors_.size; ++i) {
       c.pRenderTargetDescriptors_.value[i].ptr =
           manager_.getDescriptorHandleService().getDescriptorHandle(
               c.pRenderTargetDescriptors_.interfaceKeys[i],

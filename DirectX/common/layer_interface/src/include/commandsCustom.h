@@ -133,7 +133,9 @@ public:
       const D3D12_CPU_DESCRIPTOR_HANDLE* pDepthStencilDescriptor)
       : Command{CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_OMSETRENDERTARGETS, threadId},
         NumRenderTargetDescriptors_{NumRenderTargetDescriptors},
-        pRenderTargetDescriptors_{pRenderTargetDescriptors, NumRenderTargetDescriptors},
+        pRenderTargetDescriptors_{pRenderTargetDescriptors, RTsSingleHandleToDescriptorRange
+                                                                ? 1
+                                                                : NumRenderTargetDescriptors},
         RTsSingleHandleToDescriptorRange_{RTsSingleHandleToDescriptorRange},
         pDepthStencilDescriptor_{pDepthStencilDescriptor, 1} {}
   ID3D12GraphicsCommandListOMSetRenderTargetsCommand()

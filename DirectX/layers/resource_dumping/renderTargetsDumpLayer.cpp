@@ -141,18 +141,26 @@ void RenderTargetsDumpLayer::post(ID3D12GraphicsCommandListOMSetRenderTargetsCom
   auto& renderTargets = renderTargetsByCommandList_[c.object_.key];
   renderTargets.clear();
 
-  for (unsigned i = 0; i < c.NumRenderTargetDescriptors_.value; ++i) {
-    if (c.pRenderTargetDescriptors_.interfaceKeys[i]) {
-      auto it = renderTargetsByDescriptorHandle_.find(std::make_pair(
-          c.pRenderTargetDescriptors_.interfaceKeys[i], c.pRenderTargetDescriptors_.indexes[i]));
-      if (it == renderTargetsByDescriptorHandle_.end()) {
-        LOG_ERROR << "RenderTargetsDumpLayer - cannot find rendertarget O"
-                  << c.pRenderTargetDescriptors_.interfaceKeys[i] << " "
-                  << c.pRenderTargetDescriptors_.indexes[i];
-        continue;
+  {
+    unsigned heapKey{};
+    unsigned heapIndex{};
+    for (unsigned i = 0; i < c.NumRenderTargetDescriptors_.value; ++i) {
+      if (i == 0 || !c.RTsSingleHandleToDescriptorRange_.value) {
+        heapKey = c.pRenderTargetDescriptors_.interfaceKeys[i];
+        heapIndex = c.pRenderTargetDescriptors_.indexes[i];
+      } else {
+        ++heapIndex;
       }
-      it->second.slot = i;
-      renderTargets.push_back(it->second);
+      if (heapKey) {
+        auto it = renderTargetsByDescriptorHandle_.find(std::make_pair(heapKey, heapIndex));
+        if (it == renderTargetsByDescriptorHandle_.end()) {
+          LOG_ERROR << "RenderTargetsDumpLayer - cannot find rendertarget O" << heapKey << " "
+                    << heapIndex;
+          continue;
+        }
+        it->second.slot = i;
+        renderTargets.push_back(it->second);
+      }
     }
   }
 

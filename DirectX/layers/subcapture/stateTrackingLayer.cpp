@@ -2344,13 +2344,23 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandListOMSetRenderTargetsCommand
   }
   CommandListOMSetRenderTargets* command = new CommandListOMSetRenderTargets(c.key);
   command->renderTargetViews.resize(c.NumRenderTargetDescriptors_.value);
-  for (unsigned i = 0; i < c.NumRenderTargetDescriptors_.value; ++i) {
-    if (c.pRenderTargetDescriptors_.interfaceKeys[i]) {
-      DescriptorState* descriptorState = descriptorService_.getDescriptorState(
-          c.pRenderTargetDescriptors_.interfaceKeys[i], c.pRenderTargetDescriptors_.indexes[i]);
-      GITS_ASSERT(descriptorState->id == DescriptorState::D3D12_RENDERTARGETVIEW);
-      command->renderTargetViews[i].reset(new D3D12RenderTargetViewState(
-          *static_cast<D3D12RenderTargetViewState*>(descriptorState)));
+  {
+    unsigned heapKey{};
+    unsigned heapIndex{};
+    for (unsigned i = 0; i < c.NumRenderTargetDescriptors_.value; ++i) {
+      if (i == 0 || !c.RTsSingleHandleToDescriptorRange_.value) {
+        heapKey = c.pRenderTargetDescriptors_.interfaceKeys[i];
+        heapIndex = c.pRenderTargetDescriptors_.indexes[i];
+      } else {
+        ++heapIndex;
+      }
+      if (heapKey) {
+        DescriptorState* descriptorState =
+            descriptorService_.getDescriptorState(heapKey, heapIndex);
+        GITS_ASSERT(descriptorState->id == DescriptorState::D3D12_RENDERTARGETVIEW);
+        command->renderTargetViews[i].reset(new D3D12RenderTargetViewState(
+            *static_cast<D3D12RenderTargetViewState*>(descriptorState)));
+      }
     }
   }
   if (!c.pDepthStencilDescriptor_.interfaceKeys.empty()) {

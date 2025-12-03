@@ -363,6 +363,9 @@ void CaptureCustomizationLayer::pre(ID3D12GraphicsCommandListOMSetRenderTargetsC
               c.pRenderTargetDescriptors_.value[i].ptr);
       c.pRenderTargetDescriptors_.interfaceKeys[i] = info.interfaceKey;
       c.pRenderTargetDescriptors_.indexes[i] = info.index;
+      if (c.RTsSingleHandleToDescriptorRange_.value) {
+        break;
+      }
     }
   }
   if (c.pDepthStencilDescriptor_.value) {
