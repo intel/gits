@@ -115,10 +115,6 @@ private:
     D3D12_RESOURCE_ALLOCATION_INFO post{};
   };
 
-  uint64_t align(uint64_t value, uint64_t alignment) {
-    return ((value - 1) / alignment + 1) * alignment;
-  };
-
   void checkCompatibility(const AllocationInfo& allocationInfo, unsigned resourceKey);
 
   std::unordered_set<unsigned> placedResources_;

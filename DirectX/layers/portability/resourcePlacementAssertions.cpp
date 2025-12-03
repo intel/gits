@@ -54,12 +54,15 @@ void ResourcePlacementAssertions::getResourceAllocationPost(const D3D12_RESOURCE
 
 void ResourcePlacementAssertions::checkCompatibility(const AllocationInfo& allocationInfo,
                                                      unsigned resourceKey) {
-  uint64_t alignedSizePre = align(allocationInfo.pre.SizeInBytes, allocationInfo.pre.Alignment);
-  uint64_t alignedSizePost = align(allocationInfo.post.SizeInBytes, allocationInfo.post.Alignment);
-  if (alignedSizePre < alignedSizePost) {
+  if (allocationInfo.pre.Alignment != allocationInfo.post.Alignment) {
+    LOG_ERROR << "Portability - incompatible alignment for resource: O" << resourceKey;
+  }
+  GITS_ASSERT(allocationInfo.pre.Alignment == allocationInfo.post.Alignment);
+
+  if (allocationInfo.pre.SizeInBytes < allocationInfo.post.SizeInBytes) {
     LOG_ERROR << "Portability - incompatible size for resource: O" << resourceKey;
   }
-  GITS_ASSERT(alignedSizePre >= alignedSizePost);
+  GITS_ASSERT(allocationInfo.pre.SizeInBytes >= allocationInfo.post.SizeInBytes);
 }
 
 } // namespace DirectX
