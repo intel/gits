@@ -36,6 +36,9 @@ set(INTERCEPTOR_SRC
   ${SRC_DIR}/nvapiWrappers.h
   ${SRC_DIR}/nvapiWrappers.cpp
   ${SRC_DIR}/nvapiDispatchTable.h
+  ${SRC_DIR}/d3d11on12Wrappers.h
+  ${SRC_DIR}/d3d11on12Wrappers.cpp
+  ${SRC_DIR}/d3d11on12DispatchTable.h
   ${SRC_DIR}/xessDispatchTableAuto.h
 )
 source_group("interceptor" FILES ${INTERCEPTOR_SRC})

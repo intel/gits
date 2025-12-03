@@ -13,6 +13,7 @@
 #include "intelExtensions.h"
 #include "xessDispatchTableAuto.h"
 #include "nvapiDispatchTable.h"
+#include "d3d11on12DispatchTable.h"
 #include "captureDescriptorHandleService.h"
 #include "mapTrackingService.h"
 #include "rootSignatureService.h"
@@ -67,6 +68,9 @@ public:
   }
   NvAPIDispatchTable& getNvAPIDispatchTable() {
     return nvapiDispatchTable_;
+  }
+  D3D11On12DispatchTable& getd3d11on12DispatchTable() {
+    return d3d11on12DispatchTable_;
   }
 
   std::vector<Layer*>& getPreLayers() {
@@ -142,6 +146,7 @@ private:
   void interceptDirectStorageFunctions();
   void interceptKernelFunctions();
   void interceptNvAPIFunctions();
+  void interceptD3D11On12Functions();
 
 private:
   static CaptureManager* instance_;
@@ -155,6 +160,7 @@ private:
   Kernel32DispatchTable kernel32DispatchTableSystem_{};
   XessDispatchTable xessDispatchTable_{};
   NvAPIDispatchTable nvapiDispatchTable_{};
+  D3D11On12DispatchTable d3d11on12DispatchTable_{};
 
   // These hold pointers to Layers stored in layersOwner_. Layer order is important.
   std::vector<Layer*> preLayers_;
@@ -196,6 +202,7 @@ private:
   bool loadingXessDll_{};
   bool intelExtensionLoaded_{};
   HMODULE nvapiDll_{};
+  HMODULE d3d11Dll_{};
   std::unordered_map<std::string, unsigned int> nvapiFunctionIds_;
 };
 

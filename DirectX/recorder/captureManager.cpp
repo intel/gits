@@ -16,6 +16,7 @@
 #include "intelExtensionsWrappers.h"
 #include "nvapiWrappers.h"
 #include "nvapi_interface.h"
+#include "d3d11on12Wrappers.h"
 #include "captureSynchronizationLayer.h"
 #include "gpuPatchLayer.h"
 #include "portabilityLayer.h"
@@ -52,6 +53,7 @@ CaptureManager& CaptureManager::get() {
     if (Configurator::Get().directx.capture.captureNvAPI) {
       instance_->interceptNvAPIFunctions();
     }
+    instance_->interceptD3D11On12Functions();
   }
 
   return *instance_;
@@ -75,6 +77,9 @@ CaptureManager::~CaptureManager() {
   }
   if (nvapiDll_) {
     FreeLibrary(nvapiDll_);
+  }
+  if (d3d11Dll_) {
+    FreeLibrary(d3d11Dll_);
   }
 }
 
@@ -795,6 +800,34 @@ void CaptureManager::interceptNvAPIFunctions() {
 
   ret = DetourAttach(&nvapiDispatchTable_.NvAPI_D3D12_BuildRaytracingPartitionedTlasIndirect,
                      NvAPI_D3D12_BuildRaytracingPartitionedTlasIndirectWrapper);
+  GITS_ASSERT(ret == NO_ERROR);
+
+  ret = DetourTransactionCommit();
+  GITS_ASSERT(ret == NO_ERROR);
+}
+
+void CaptureManager::interceptD3D11On12Functions() {
+  if (d3d11Dll_) {
+    return;
+  }
+
+  d3d11Dll_ = LoadLibrary("d3d11.dll");
+  if (!d3d11Dll_) {
+    return;
+  }
+
+  {
+    d3d11on12DispatchTable_.D3D11On12CreateDevice =
+        reinterpret_cast<decltype(D3D11On12CreateDevice)*>(
+            GetProcAddress(d3d11Dll_, "D3D11On12CreateDevice"));
+  }
+
+  LONG ret = DetourTransactionBegin();
+  GITS_ASSERT(ret == NO_ERROR);
+  ret = DetourUpdateThread(GetCurrentThread());
+  GITS_ASSERT(ret == NO_ERROR);
+
+  ret = DetourAttach(&d3d11on12DispatchTable_.D3D11On12CreateDevice, D3D11On12CreateDeviceWrapper);
   GITS_ASSERT(ret == NO_ERROR);
 
   ret = DetourTransactionCommit();
