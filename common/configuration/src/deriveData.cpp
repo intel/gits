@@ -110,8 +110,13 @@ void DeriveConfigData<Configuration::Common::Shared>(Configuration::Common::Shar
     obj.libVK = config.common.player.libVK;
     obj.libOcloc = config.common.player.libOcloc;
     obj.libL0 = config.common.player.libL0;
-
-    obj.logToConsole = config.common.player.logToConsole;
+    // We derive the value of the Common.Shared.LogToConsole only if the deprecated option wasn't used
+    if (config.common.shared.logToConsole.has_value()) {
+      LOG_WARNING << "Option Common.Shared.LogToConsole is deprecated, please use the player "
+                     "(Common.Player.LogToConsole) specific option";
+    } else {
+      obj.logToConsole = config.common.player.logToConsole;
+    }
     obj.useEvents = config.common.player.useEvents;
     obj.scriptArgsStr = config.common.player.scriptArgsStr;
   } else {
@@ -123,8 +128,13 @@ void DeriveConfigData<Configuration::Common::Shared>(Configuration::Common::Shar
     obj.libVK = config.common.recorder.libVK;
     obj.libOcloc = config.common.recorder.libOcloc;
     obj.libL0 = config.common.recorder.libL0;
-
-    obj.logToConsole = config.common.recorder.logToConsole;
+    // We derive the value of the Common.Shared.LogToConsole only if the deprecated option wasn't used
+    if (config.common.shared.logToConsole.has_value()) {
+      LOG_WARNING << "Option Common.Shared.LogToConsole is deprecated, please use the recorder "
+                     "(Common.Recorder.LogToConsole) specific option";
+    } else {
+      obj.logToConsole = config.common.recorder.logToConsole;
+    }
     obj.useEvents = config.common.recorder.useEvents;
     obj.scriptArgsStr = config.common.recorder.scriptArgsStr;
   }

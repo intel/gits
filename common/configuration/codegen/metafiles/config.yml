@@ -31,12 +31,12 @@ Configuration:
             ConfigName: LogLevel
           - Name: logToConsole
             Type: bool
-            Default: true
+            Description: DEPRECATED, replaced by Common.Player.LogToConsole and Common.Recorder.LogToConsole.
             LongDescription:
               "High logging volume might slow GITS down, so if you use tracing or add plenty of
               debug logging, disabling logging to console can help you mitigate the performance hit.
               You still need to set up logging to a file if you want to see the output."
-            Accessibility: Derived
+            Deprecated: true
           - Name: useEvents
             Type: bool
             Default: ""
@@ -630,7 +630,7 @@ Configuration:
             Type: RecordingMode
             Deprecated: true
             Description:
-              DEPRECATED because CCode was removed. Replaced by the Common.Recorder.Enabled.
+              DEPRECATED because CCode was removed. Replaced by Common.Recorder.Enabled.
           - Name: exitKeysStr
             Type: std::vector<std::string>
             Default: []
