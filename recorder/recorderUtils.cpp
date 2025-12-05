@@ -36,6 +36,7 @@ bool ConfigureRecorder(const std::filesystem::path& configPath) {
   const auto& cfg = Configurator::Get();
   log::Initialize(cfg.common.shared.thresholdLogLevel);
   log::AddFileAppender(configPath.parent_path());
+  log::AddConsoleAppender(); // Will be removed after config parsing if disabled in config.
 
   Configurator::Instance().UpdateFromEnvironment();
 
