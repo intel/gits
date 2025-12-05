@@ -95,6 +95,11 @@ VarDef(name='VK_COMMAND_EXECUTION_SIDE_DEVICE_GITS', value='0'),
 VarDef(name='VK_COMMAND_EXECUTION_SIDE_HOST_GITS', value='1')
 ])
 
+Enum(name='VkStructureType', enumerators = [
+VarDef(name='VK_STRUCTURE_TYPE_ORIGINAL_SHADER_GROUP_HANDLES_GITS', value='808620001'),
+VarDef(name='VK_STRUCTURE_TYPE_STRUCT_STORAGE_POINTER_GITS', value='808600002'),
+])
+
 ###############################################
 
 Struct(name='VkInitializeImageGITS_', enabled=True, declareArray=True,
