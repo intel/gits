@@ -945,6 +945,7 @@ def mako_write(inpath: str | Path, outpath: str | Path, **kwargs) -> int:
         template = mako.template.Template(filename=str(inpath))
         rendered = template.render(**(common_objects | kwargs))
         rendered = re.sub(r'\r\n', r'\n', rendered)
+        rendered = re.sub(r'\n\n', r'\n', rendered)
 
         destination = Path('..') / outpath
         with destination.open(mode='w') as fout:

@@ -8891,6 +8891,7 @@ VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_ATOMIC_FLOAT16_VECTOR_FEAT
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_ATOMIC_FLOAT_2_FEATURES_EXT', value='1000273000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_ATOMIC_FLOAT_FEATURES_EXT', value='1000260000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_ATOMIC_INT64_FEATURES', value='1000180000'),
+VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_BFLOAT16_FEATURES_KHR', value='1000141000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_CLOCK_FEATURES_KHR', value='1000181000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_CORE_BUILTINS_FEATURES_ARM', value='1000497000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_CORE_BUILTINS_PROPERTIES_ARM', value='1000497001'),
@@ -9260,7 +9261,6 @@ VarDef(name='VK_STRUCTURE_TYPE_RESOLVE_IMAGE_COMPRESSION_INTEL', value='80860003
 VarDef(name='VK_STRUCTURE_TYPE_RESOLVE_IMAGE_COMPRESSION_ON_PRESENT_INTEL', value='808600032'),
 VarDef(name='VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO_3_INTEL', value='808600033'),
 VarDef(name='VK_STRUCTURE_TYPE_SAMPLE_CHROMA_KEY_CREATE_INFO_INTEL', value='808600034'),
-VarDef(name='VK_STRUCTURE_TYPE_SHADER_DXBC_HASH_INTEL', value='808600035'),
 #8086_20_XYZ is a custom structure type numbering used specifically for GITS
 VarDef(name='VK_STRUCTURE_TYPE_ORIGINAL_SHADER_GROUP_HANDLES_GITS', value='808620001'),
 VarDef(name='VK_STRUCTURE_TYPE_MAX_ENUM', value='2147483647'),
@@ -13786,7 +13786,7 @@ var4=VarDef(name='cooperativeMatrixFlexibleDimensionsMaxDimension', type='uint32
 var5=VarDef(name='cooperativeMatrixWorkgroupScopeReservedSharedMemory', type='uint32_t')
 )
 
-Struct(name='VkPhysicalDeviceCooperativeMatrixFeaturesKHR_', enabled=False,
+Struct(name='VkPhysicalDeviceCooperativeMatrixFeaturesKHR_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='cooperativeMatrix', type='VkBool32'),
@@ -15268,7 +15268,7 @@ var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='pipelineCreationCacheControl', type='VkBool32')
 )
 
-Struct(name='VkPhysicalDevicePipelineExecutablePropertiesFeaturesKHR_', enabled=False,
+Struct(name='VkPhysicalDevicePipelineExecutablePropertiesFeaturesKHR_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='pipelineExecutableInfo', type='VkBool32')
@@ -15292,7 +15292,7 @@ var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='pipelineProtectedAccess', type='VkBool32')
 )
 
-Struct(name='VkPhysicalDevicePipelineRobustnessFeaturesEXT_', enabled=False,
+Struct(name='VkPhysicalDevicePipelineRobustnessFeaturesEXT_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='pipelineRobustness', type='VkBool32')
@@ -15672,6 +15672,14 @@ var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='shaderBufferInt64Atomics', type='VkBool32'),
 var4=VarDef(name='shaderSharedInt64Atomics', type='VkBool32')
+)
+
+Struct(name='VkPhysicalDeviceShaderBfloat16FeaturesKHR_', enabled=True,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='void*'),
+var3=VarDef(name='shaderBFloat16Type', type='VkBool32'),
+var4=VarDef(name='shaderBFloat16DotProduct', type='VkBool32'),
+var5=VarDef(name='shaderBFloat16CooperativeMatrix', type='VkBool32')
 )
 
 Struct(name='VkPhysicalDeviceShaderClockFeaturesKHR_', enabled=True,
@@ -16878,7 +16886,7 @@ var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='representativeFragmentTestEnable', type='VkBool32')
 )
 
-Struct(name='VkPipelineRobustnessCreateInfoEXT_', enabled=False,
+Struct(name='VkPipelineRobustnessCreateInfoEXT_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='storageBuffers', type='VkPipelineRobustnessBufferBehaviorEXT'),

@@ -146,6 +146,8 @@ VKATTRIB VISIBLE ${token.return_value.type} VKAPI_CALL ${token.name}(${params}) 
 
 const std::unordered_map<std::string, PFN_vkVoidFunction> interceptorExportedFunctions = {
 % for token in vk_functions:
+<%
+%>\
   {"${token.name}", (PFN_vkVoidFunction)${token.name}},
 % endfor
 };
