@@ -1219,20 +1219,6 @@ FastOStream& operator<<(FastOStream& stream, PointerArgument<D3D12_DISPATCH_RAYS
   return stream;
 }
 
-FastOStream& operator<<(FastOStream& stream, PointerArgument<D3D12_ROOT_SIGNATURE_DESC>& arg) {
-  if (!arg.value) {
-    return stream << "nullptr";
-  }
-  stream << "D3D12_ROOT_SIGNATURE_DESC{";
-  stream << arg.value->NumParameters << ", ";
-  stream << "array, ";
-  stream << arg.value->NumStaticSamplers << ", ";
-  stream << "array, ";
-  stream << arg.value->Flags;
-  stream << "}";
-  return stream;
-}
-
 FastOStream& operator<<(FastOStream& stream,
                         PointerArgument<D3D12_VERSIONED_ROOT_SIGNATURE_DESC>& arg) {
   if (!arg.value) {
