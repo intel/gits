@@ -139,6 +139,9 @@ void AccelerationStructuresBuildService::buildAccelerationStructure(
   if (inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL && inputs.NumDescs) {
     if (inputs.NumDescs) {
       unsigned size = inputs.NumDescs * sizeof(D3D12_RAYTRACING_INSTANCE_DESC);
+      if (inputs.DescsLayout == D3D12_ELEMENTS_LAYOUT_ARRAY_OF_POINTERS) {
+        size = inputs.NumDescs * sizeof(D3D12_GPU_VIRTUAL_ADDRESS);
+      }
       storeBuffer(inputIndex, size, inputs.InstanceDescs);
     }
   } else if (inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL) {
