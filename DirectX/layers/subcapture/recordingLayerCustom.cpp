@@ -54,6 +54,9 @@ void RecordingLayer::post(IDXGISwapChain1Present1Command& command) {
 void RecordingLayer::post(ID3D12GraphicsCommandListResetCommand& command) {
   subcaptureRange_.executionStart();
   if (subcaptureRange_.inRange()) {
+    if (subcaptureRange_.commandListSubcapture()) {
+      recorder_.record(new CTokenMarkerUInt64(MarkerUInt64Command::Value::GPU_EXECUTION_BEGIN));
+    }
     recorder_.record(new ID3D12GraphicsCommandListResetWriter(command));
   }
 }
@@ -61,6 +64,9 @@ void RecordingLayer::post(ID3D12GraphicsCommandListResetCommand& command) {
 void RecordingLayer::post(ID3D12FenceGetCompletedValueCommand& command) {
   if (subcaptureRange_.inRange()) {
     recorder_.record(new ID3D12FenceGetCompletedValueWriter(command));
+    if (subcaptureRange_.commandListSubcapture()) {
+      recorder_.record(new CTokenMarkerUInt64(MarkerUInt64Command::Value::GPU_EXECUTION_END));
+    }
   }
   subcaptureRange_.executionEnd();
 }

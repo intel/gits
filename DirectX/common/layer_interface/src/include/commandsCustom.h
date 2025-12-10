@@ -78,6 +78,8 @@ public:
     STATE_RESTORE_RTAS_END,
     STATE_RESTORE_RESOURCES_BEGIN,
     STATE_RESTORE_RESOURCES_END,
+    GPU_EXECUTION_BEGIN,
+    GPU_EXECUTION_END
   };
   MarkerUInt64Command(uint64_t value) : Command(CommandId::ID_MARKER_UINT64), value_(value) {}
 
