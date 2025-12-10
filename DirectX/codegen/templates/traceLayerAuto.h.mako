@@ -44,6 +44,9 @@ public:
   void pre(StateRestoreEndCommand& command) override;
   void post(StateRestoreEndCommand& command) override;
 
+  void pre(MarkerUInt64Command& command) override;
+  void post(MarkerUInt64Command& command) override;
+
   void pre(CreateWindowMetaCommand& command) override;
   void post(CreateWindowMetaCommand& command) override;
 

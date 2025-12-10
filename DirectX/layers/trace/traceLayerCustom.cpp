@@ -7,9 +7,25 @@
 // ===================== end_copyright_notice ==============================
 
 #include "traceLayerAuto.h"
+#include <unordered_map>
 
 namespace gits {
 namespace DirectX {
+
+static std::string uint64MarkerToStr(uint64_t value) {
+  static const std::unordered_map<uint64_t, std::string> enumMap = {
+      {MarkerUInt64Command::Value::NONE, "NONE"},
+      {MarkerUInt64Command::Value::STATE_RESTORE_OBJECTS_BEGIN, "STATE_RESTORE_OBJECTS_BEGIN"},
+      {MarkerUInt64Command::Value::STATE_RESTORE_OBJECTS_END, "STATE_RESTORE_OBJECTS_END"},
+      {MarkerUInt64Command::Value::STATE_RESTORE_RTAS_BEGIN, "STATE_RESTORE_RTAS_BEGIN"},
+      {MarkerUInt64Command::Value::STATE_RESTORE_RTAS_END, "STATE_RESTORE_RTAS_END"},
+      {MarkerUInt64Command::Value::STATE_RESTORE_RESOURCES_BEGIN, "STATE_RESTORE_RESOURCES_BEGIN"},
+      {MarkerUInt64Command::Value::STATE_RESTORE_RESOURCES_END, "STATE_RESTORE_RESOURCES_END"},
+      {MarkerUInt64Command::Value::GPU_EXECUTION_BEGIN, "GPU_EXECUTION_BEGIN"},
+      {MarkerUInt64Command::Value::GPU_EXECUTION_END, "GPU_EXECUTION_END"}};
+
+  return enumMap.contains(value) ? enumMap.at(value) : "UNKNOWN";
+}
 
 void TraceLayer::pre(StateRestoreBeginCommand& command) {
   if (printPre_) {
@@ -45,6 +61,24 @@ void TraceLayer::post(StateRestoreEndCommand& command) {
   if (printPost_) {
     CommandPrinter p(streamPost_, statePost_, command, "StateRestoreEnd");
     streamPost_ << "STATE_RESTORE_END\n";
+    if (flush_) {
+      streamPost_.flush();
+    }
+  }
+}
+
+void TraceLayer::pre(MarkerUInt64Command& command) {
+  if (printPre_) {
+    streamPre_ << "MARKER_" << uint64MarkerToStr(command.value_) << "\n";
+    if (flush_) {
+      streamPre_.flush();
+    }
+  }
+}
+
+void TraceLayer::post(MarkerUInt64Command& command) {
+  if (printPost_) {
+    streamPost_ << "MARKER_" << uint64MarkerToStr(command.value_) << "\n";
     if (flush_) {
       streamPost_.flush();
     }
