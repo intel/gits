@@ -58,12 +58,13 @@ void CpuDescriptorsService::preserveDescriptor(
       ++heapIndex;
     }
     unsigned preservedIndex = rtvDescriptorHeap_.preserveDescriptor(heapKey, heapIndex);
-    c.pRenderTargetDescriptors_.interfaceKeys[i] = rtvDescriptorHeap_.descriptorHeapKey_;
-    c.pRenderTargetDescriptors_.indexes[i] = preservedIndex;
     descriptorsByCommandList_[c.object_.key].push_back(
         DescriptorHandle{D3D12_DESCRIPTOR_HEAP_TYPE_RTV, preservedIndex});
+    if (i == 0 || !c.RTsSingleHandleToDescriptorRange_.value) {
+      c.pRenderTargetDescriptors_.interfaceKeys[i] = rtvDescriptorHeap_.descriptorHeapKey_;
+      c.pRenderTargetDescriptors_.indexes[i] = preservedIndex;
+    }
   }
-  c.RTsSingleHandleToDescriptorRange_.value = FALSE;
 
   if (c.pDepthStencilDescriptor_.value) {
     unsigned preservedIndex = dsvDescriptorHeap_.preserveDescriptor(
