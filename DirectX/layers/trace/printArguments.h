@@ -141,6 +141,7 @@ FastOStream& operator<<(
 FastOStream& operator<<(FastOStream& stream,
                         PointerArgument<D3D12_UNORDERED_ACCESS_VIEW_DESC>& arg);
 FastOStream& operator<<(FastOStream& stream, D3D12_BARRIER_GROUPs_Argument& arg);
+FastOStream& operator<<(FastOStream& stream, PointerArgument<D3D12_DISPATCH_RAYS_DESC>& arg);
 FastOStream& operator<<(FastOStream& stream, DML_BINDING_TABLE_DESC_Argument& arg);
 FastOStream& operator<<(FastOStream& stream, DML_GRAPH_DESC_Argument& arg);
 FastOStream& operator<<(FastOStream& stream, DML_BINDING_DESC_Argument& arg);
