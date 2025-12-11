@@ -482,6 +482,9 @@ void AnalyzerCommandListService::commandAnalysis(
 
 void AnalyzerCommandListService::commandAnalysis(
     ID3D12GraphicsCommandListSetComputeRootDescriptorTableCommand& c) {
+  if (!c.BaseDescriptor_.value.ptr) {
+    return;
+  }
   unsigned rootSignatureKey = commandListInfos_[c.object_.key].computeRootSignature;
   GITS_ASSERT(rootSignatureKey);
   unsigned numDescriptors = descriptorHeapInfos_[c.BaseDescriptor_.interfaceKey].numDescriptors;
@@ -503,6 +506,9 @@ void AnalyzerCommandListService::commandAnalysis(
 
 void AnalyzerCommandListService::commandAnalysis(
     ID3D12GraphicsCommandListSetGraphicsRootDescriptorTableCommand& c) {
+  if (!c.BaseDescriptor_.value.ptr) {
+    return;
+  }
   unsigned rootSignatureKey = commandListInfos_[c.object_.key].graphicsRootSignature;
   GITS_ASSERT(rootSignatureKey);
   unsigned numDescriptors = descriptorHeapInfos_[c.BaseDescriptor_.interfaceKey].numDescriptors;
