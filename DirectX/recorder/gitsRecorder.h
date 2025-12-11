@@ -10,11 +10,12 @@
 
 #include "recorder.h"
 #include "token.h"
+#include "tbb/concurrent_queue.h"
 
-#include <mutex>
 #include <queue>
 #include <map>
 #include <set>
+#include <thread>
 
 namespace gits {
 namespace DirectX {
@@ -41,6 +42,22 @@ private:
     unsigned endKey;
   };
 
+  struct RecorderTask {
+    union {
+      OrderedToken orderedToken;
+      unsigned skippedKey;
+      unsigned frameEndKey;
+    };
+    enum Type {
+      OrderedToken,
+      SkippedKey,
+      FrameEndKey
+    } type;
+  };
+
+  void processQueue();
+  void frameEndImpl(unsigned tokenKey);
+  void skipImpl(unsigned tokenKey);
   void orderedSchedule(OrderedToken token);
   void updateNextKey();
   void checkPendingTokens();
@@ -48,11 +65,14 @@ private:
   std::map<unsigned, KeyRange>::iterator getRangeIt(unsigned tokenKey);
 
   gits::CRecorder* recorder_{nullptr};
-  std::mutex mutex_;
   unsigned nextKey_{1};
   std::set<unsigned> frameEndKeys_;
   std::map<unsigned, KeyRange> skippedKeyRanges_;
   std::priority_queue<OrderedToken, std::vector<OrderedToken>, std::greater<OrderedToken>> tokens_;
+
+  tbb::concurrent_queue<RecorderTask> concurrentQueue_;
+  std::thread thread_;
+  bool processQueue_{true};
 };
 
 } // namespace DirectX

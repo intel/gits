@@ -10,33 +10,67 @@
 
 #include "gitsRecorder.h"
 
-#include <windows.h>
-
 namespace gits {
 namespace DirectX {
 
+GitsRecorder::GitsRecorder() {
+  recorder_ = &gits::CRecorder::Instance();
+  thread_ = std::thread{&GitsRecorder::processQueue, this};
+}
+
 void GitsRecorder::record(unsigned tokenKey, CToken* token) {
-  std::lock_guard<std::mutex> lock(mutex_);
   if (!recorder_) {
     return;
   } else if (recorder_->IsMarkedForDeletion()) {
+    processQueue_ = false;
+    thread_.join();
     recorder_->Close();
     return;
   }
-  orderedSchedule({tokenKey, token});
-}
 
-GitsRecorder::GitsRecorder() {
-  recorder_ = &gits::CRecorder::Instance();
+  RecorderTask task;
+  task.type = RecorderTask::OrderedToken;
+  task.orderedToken = {tokenKey, token};
+  concurrentQueue_.push(task);
 }
 
 void GitsRecorder::frameEnd(unsigned tokenKey) {
-  std::lock_guard<std::mutex> lock(mutex_);
-  frameEndKeys_.insert(tokenKey);
+  RecorderTask task;
+  task.type = RecorderTask::FrameEndKey;
+  task.frameEndKey = tokenKey;
+  concurrentQueue_.push(task);
 }
 
 void GitsRecorder::skip(unsigned tokenKey) {
-  std::lock_guard<std::mutex> lock(mutex_);
+  RecorderTask task;
+  task.type = RecorderTask::SkippedKey;
+  task.skippedKey = tokenKey;
+  concurrentQueue_.push(task);
+}
+
+void GitsRecorder::processQueue() {
+  while (processQueue_) {
+    RecorderTask task;
+    bool found = concurrentQueue_.try_pop(task);
+    if (found) {
+      if (task.type == RecorderTask::OrderedToken) {
+        orderedSchedule(task.orderedToken);
+      } else if (task.type == RecorderTask::SkippedKey) {
+        skipImpl(task.skippedKey);
+      } else if (task.type == RecorderTask::FrameEndKey) {
+        frameEndImpl(task.skippedKey);
+      }
+    } else {
+      std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+  }
+}
+
+void GitsRecorder::frameEndImpl(unsigned tokenKey) {
+  frameEndKeys_.insert(tokenKey);
+}
+
+void GitsRecorder::skipImpl(unsigned tokenKey) {
   if (tokenKey == nextKey_) {
     updateNextKey();
     checkPendingTokens();
