@@ -107,3 +107,7 @@ dependencies:
       url: https://github.com/epezent/implot
       branch: master
       commit_id: 3da8bd34299965d3b0ab124df743fe3e076fa222
+    - name: tbb
+      url: https://github.com/uxlfoundation/oneTBB.git
+      branch: master
+      commit_id: b96362630241bc29b77df842bc3893b4ff131180
