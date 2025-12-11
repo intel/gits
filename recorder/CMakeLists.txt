@@ -100,6 +100,8 @@ if(WITH_DIRECTX)
   ${DSTORAGE_DIR}/native/lib/x64/dstorage.lib
   hud
   )
+  target_link_options(gits_recorder PRIVATE "/DELAYLOAD:gits_tbb.dll")
+  target_link_options(gits_recorder PRIVATE "/DELAYLOAD:gits_tbb_debug.dll")
 endif()
 
 if(UNIX)

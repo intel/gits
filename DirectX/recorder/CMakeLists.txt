@@ -129,6 +129,7 @@ target_link_libraries(DirectX_recorder PRIVATE
   DirectX_address_pinning
   ${INTEL_EXT_DIR}/lib/igdext64.lib 
   ${NVAPI_DIR}/amd64/nvapi64.lib
+  tbb
 )
 
 set_target_properties(DirectX_recorder PROPERTIES FOLDER DirectX)

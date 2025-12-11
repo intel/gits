@@ -195,6 +195,7 @@ private:
   ContextMapService intelExtensionsContextMap_;
   ContextMapService xessContextMap_;
 
+  HMODULE tbbDll_{};
   HMODULE kernelDll_{};
   HMODULE dmlDll_{};
   HMODULE dStorageDll_{};

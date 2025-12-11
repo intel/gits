@@ -32,6 +32,7 @@
 #include <detours.h>
 #include <setupapi.h>
 #include <ntddvdeo.h>
+#include <filesystem>
 
 namespace gits {
 namespace DirectX {
@@ -96,6 +97,19 @@ void CaptureManager::exchangeD3D12DispatchTables(const D3D12DispatchTable& syste
 }
 
 CaptureManager::CaptureManager() {
+
+#if _DEBUG
+  tbbDll_ = LoadLibrary((std::filesystem::path(Configurator::Get().common.recorder.installPath) /
+                         "gits_tbb_debug.dll")
+                            .string()
+                            .c_str());
+#else
+  tbbDll_ = LoadLibrary(
+      (std::filesystem::path(Configurator::Get().common.recorder.installPath) / "gits_tbb.dll")
+          .string()
+          .c_str());
+#endif
+  GITS_ASSERT(tbbDll_);
 
   gits::CGits::Instance().apis.UseApi3dIface(
       std::shared_ptr<gits::ApisIface::Api3d>(new DirectXApiIfaceRecorder()));
