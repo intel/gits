@@ -17,7 +17,7 @@ namespace DirectX {
 void CaptureDescriptorHandleService::createDescriptorHeap(unsigned descriptorHeapKey,
                                                           ID3D12DescriptorHeap* descriptorHeap,
                                                           const D3D12_DESCRIPTOR_HEAP_DESC* desc) {
-  std::unique_lock lock(rwMutex_);
+  tbb::spin_rw_mutex::scoped_lock lock(rwMutex_);
 
   if (!initialized_) {
     Microsoft::WRL::ComPtr<ID3D12Device> device;
@@ -53,7 +53,7 @@ void CaptureDescriptorHandleService::createDescriptorHeap(unsigned descriptorHea
 CaptureDescriptorHandleService::HandleInfo CaptureDescriptorHandleService::getDescriptorHandleInfo(
     D3D12_DESCRIPTOR_HEAP_TYPE heapType, HandleType handleType, size_t handle) const {
 
-  std::shared_lock lock(rwMutex_);
+  tbb::spin_rw_mutex::scoped_lock lock(rwMutex_, false);
 
   const std::map<size_t, DescriptorHeapInfo>& descriptorHeaps =
       handleType == HandleType::CpuHandle ? descriptorHeapsByCpuStartAddress_[heapType].at(
@@ -77,7 +77,7 @@ CaptureDescriptorHandleService::HandleInfo CaptureDescriptorHandleService::getDe
 
 void CaptureDescriptorHandleService::destroyDescriptorHeap(unsigned descriptorHeapKey) {
 
-  std::unique_lock lock(rwMutex_);
+  tbb::spin_rw_mutex::scoped_lock lock(rwMutex_);
 
   auto it = descriptorHeapKeys_.find(descriptorHeapKey);
   if (it != descriptorHeapKeys_.end()) {

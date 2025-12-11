@@ -9,8 +9,8 @@
 #pragma once
 
 #include "directx.h"
+#include "tbb/spin_rw_mutex.h"
 
-#include <shared_mutex>
 #include <unordered_set>
 #include <map>
 #include <unordered_map>
@@ -67,7 +67,7 @@ private:
   std::unordered_map<unsigned, std::unique_ptr<PlacedResourceInfo>> placedResourcesByKey_;
   std::unordered_map<unsigned, std::unordered_set<unsigned>> placedResourcesByHeap_;
 
-  mutable std::shared_mutex rwMutex_;
+  mutable tbb::spin_rw_mutex rwMutex_;
 
 private:
   const ResourceInfo* getResourceFromHeap(HeapInfoLayered* heapInfo,

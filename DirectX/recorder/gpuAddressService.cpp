@@ -22,7 +22,7 @@ void GpuAddressService::createResource(unsigned resourceKey, ID3D12Resource* res
     return;
   }
 
-  std::unique_lock lock(rwMutex_);
+  tbb::spin_rw_mutex::scoped_lock lock(rwMutex_);
 
   ResourceInfo* resourceInfo = new ResourceInfo{};
   resourceInfo->key = resourceKey;
@@ -69,7 +69,7 @@ void GpuAddressService::createPlacedResource(unsigned resourceKey,
     return;
   }
 
-  std::unique_lock lock(rwMutex_);
+  tbb::spin_rw_mutex::scoped_lock lock(rwMutex_);
 
   auto itHeapByKey = heapsByKey_.find(heapKey);
   GITS_ASSERT(itHeapByKey != heapsByKey_.end());
@@ -133,7 +133,7 @@ void GpuAddressService::createHeap(unsigned heapKey, ID3D12Heap* heap) {
     return;
   }
 
-  std::unique_lock lock(rwMutex_);
+  tbb::spin_rw_mutex::scoped_lock lock(rwMutex_);
 
   // check for resources intersections
   {
@@ -209,7 +209,7 @@ GpuAddressService::GpuAddressInfo GpuAddressService::getGpuAddressInfo(
     return GpuAddressInfo{};
   }
 
-  std::shared_lock lock(rwMutex_);
+  tbb::spin_rw_mutex::scoped_lock lock(rwMutex_, false);
 
   const ResourceInfo* resourceInfo = nullptr;
 
@@ -302,7 +302,7 @@ const GpuAddressService::ResourceInfo* GpuAddressService::getResourceFromHeap(
 
 void GpuAddressService::destroyInterface(unsigned interfaceKey) {
 
-  std::unique_lock lock(rwMutex_);
+  tbb::spin_rw_mutex::scoped_lock lock(rwMutex_);
 
   auto itResource = resourcesByKey_.find(interfaceKey);
   if (itResource != resourcesByKey_.end()) {

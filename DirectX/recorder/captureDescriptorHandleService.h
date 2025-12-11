@@ -9,12 +9,12 @@
 #pragma once
 
 #include "directx.h"
+#include "tbb/spin_rw_mutex.h"
 
 #include <unordered_map>
 #include <unordered_set>
 #include <map>
 #include <array>
-#include <shared_mutex>
 
 namespace gits {
 namespace DirectX {
@@ -56,7 +56,7 @@ private:
 
   std::unordered_set<unsigned> descriptorHeapKeys_;
 
-  mutable std::shared_mutex rwMutex_;
+  mutable tbb::spin_rw_mutex rwMutex_;
 };
 
 } // namespace DirectX
