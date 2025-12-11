@@ -12,6 +12,7 @@
 #include "gpuExecutionTracker.h"
 #include "analyzerCommandListService.h"
 #include "analyzerRaytracingService.h"
+#include "analyzerExecuteIndirectService.h"
 #include "subcaptureRange.h"
 
 #include <set>
@@ -25,7 +26,8 @@ class AnalyzerService {
 public:
   AnalyzerService(SubcaptureRange& subcaptureRange,
                   AnalyzerCommandListService& commandListService,
-                  AnalyzerRaytracingService& raytracingService);
+                  AnalyzerRaytracingService& raytracingService,
+                  AnalyzerExecuteIndirectService& executeIndirectService);
   ~AnalyzerService();
   AnalyzerService(const AnalyzerService&) = delete;
   AnalyzerService& operator=(const AnalyzerService&) = delete;
@@ -66,7 +68,6 @@ public:
   void createDeviceExtensionContext(INTC_D3D12_CreateDeviceExtensionContext1Command& c);
 
   void addParent(unsigned key, unsigned parentKey);
-  std::vector<unsigned>& getParents(unsigned key);
 
 private:
   void findParents(unsigned key, std::set<unsigned>& objectKeys);
@@ -77,6 +78,7 @@ private:
   SubcaptureRange& subcaptureRange_;
   AnalyzerCommandListService& commandListService_;
   AnalyzerRaytracingService& raytracingService_;
+  AnalyzerExecuteIndirectService& executeIndirectService_;
   bool optimize_{};
 
   std::unordered_map<unsigned, std::vector<unsigned>> parentKeys_;

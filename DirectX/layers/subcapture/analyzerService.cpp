@@ -19,10 +19,12 @@ namespace DirectX {
 
 AnalyzerService::AnalyzerService(SubcaptureRange& subcaptureRange,
                                  AnalyzerCommandListService& commandListService,
-                                 AnalyzerRaytracingService& raytracingService)
+                                 AnalyzerRaytracingService& raytracingService,
+                                 AnalyzerExecuteIndirectService& executeIndirectService)
     : subcaptureRange_(subcaptureRange),
       commandListService_(commandListService),
-      raytracingService_(raytracingService) {
+      raytracingService_(raytracingService),
+      executeIndirectService_(executeIndirectService) {
   optimize_ = Configurator::Get().directx.features.subcapture.optimize;
 }
 
@@ -256,6 +258,9 @@ void AnalyzerService::dumpAnalysisFile() {
     }
   }
 
+  raytracingService_.flush();
+  executeIndirectService_.flush();
+
   out << "OBJECTS\n";
   for (unsigned key : objectsForRestore_) {
     objectKeys.insert(key);
@@ -265,7 +270,11 @@ void AnalyzerService::dumpAnalysisFile() {
     objectKeys.insert(key);
     findParents(key, objectKeys);
   }
-  for (unsigned key : commandListService_.getBindingTablesResources()) {
+  for (unsigned key : raytracingService_.getBindingTablesResources()) {
+    objectKeys.insert(key);
+    findParents(key, objectKeys);
+  }
+  for (unsigned key : executeIndirectService_.getArgumentBuffersResources()) {
     objectKeys.insert(key);
     findParents(key, objectKeys);
   }
@@ -280,7 +289,7 @@ void AnalyzerService::dumpAnalysisFile() {
   for (auto& [heapKey, index] : commandListService_.getDescriptors()) {
     descriptors.insert({heapKey, index});
   }
-  for (auto& [heapKey, index] : commandListService_.getBindingTablesDescriptors()) {
+  for (auto& [heapKey, index] : raytracingService_.getBindingTablesDescriptors()) {
     descriptors.insert({heapKey, index});
   }
   for (auto& [heapKey, index] : descriptors) {
@@ -292,7 +301,6 @@ void AnalyzerService::dumpAnalysisFile() {
     out << buildKey << "\n";
   }
 
-  raytracingService_.flush();
   out << "BLASES\n";
   std::set<std::pair<unsigned, unsigned>> ases;
   for (unsigned buildKey : commandListService_.getTlases()) {

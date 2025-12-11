@@ -45,7 +45,6 @@ public:
                         StateObjectInfo* stateObjectInfo,
                         DescriptorHeaps descriptorHeaps,
                         unsigned rootSignatureKey);
-  void dumpBuffer(DumpInfo& dumpInfo, void* data) override;
 
   std::unordered_set<unsigned>& getBindingTablesResources() {
     return bindingTablesResources_;
@@ -55,6 +54,7 @@ public:
   }
 
 private:
+  void dumpBuffer(DumpInfo& dumpInfo, void* data) override;
   unsigned align(unsigned value, unsigned alignment);
 
 private:

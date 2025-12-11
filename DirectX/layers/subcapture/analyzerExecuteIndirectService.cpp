@@ -22,7 +22,8 @@ AnalyzerExecuteIndirectService::AnalyzerExecuteIndirectService(
     AnalyzerCommandListService& commandListService)
     : gpuAddressService_(gpuAddressService),
       raytracingService_(raytracingService),
-      commandListService_(commandListService) {
+      commandListService_(commandListService),
+      executeIndirectDump_(*this) {
   loadExecuteIndirectDispatchRays();
 }
 
@@ -65,43 +66,71 @@ void AnalyzerExecuteIndirectService::executeIndirect(
     }
   }
 
-  if (!view && !raytracing) {
-    return;
-  }
+  if (raytracing) {
+    auto dumpBindingTable = [&](UINT64 address, UINT64 size, UINT64 stride) {
+      if (!address) {
+        return;
+      }
+      CapturePlayerGpuAddressService::ResourceInfo* info =
+          gpuAddressService_.getResourceInfoByCaptureAddress(address);
+      GITS_ASSERT(info);
+      unsigned offset = address - info->captureStart;
+      commandListService_.addObjectForRestore(info->key);
+      raytracingService_.dumpBindingTable(c.object_.value, c.object_.key, info->resource, info->key,
+                                          offset, size, stride, address);
+    };
 
-  if (view) {
-    static bool logged = false;
-    if (!logged) {
-      LOG_ERROR << "Analysis - execute indirect view arguments not handled!";
+    auto it = executeIndirectDispatchRays_.find(c.key);
+    if (it != executeIndirectDispatchRays_.end()) {
+      D3D12_DISPATCH_RAYS_DESC& desc = it->second;
+      dumpBindingTable(desc.RayGenerationShaderRecord.StartAddress,
+                       desc.RayGenerationShaderRecord.SizeInBytes,
+                       desc.RayGenerationShaderRecord.SizeInBytes);
+      dumpBindingTable(desc.MissShaderTable.StartAddress, desc.MissShaderTable.SizeInBytes,
+                       desc.MissShaderTable.StrideInBytes);
+      dumpBindingTable(desc.HitGroupTable.StartAddress, desc.HitGroupTable.SizeInBytes,
+                       desc.HitGroupTable.StrideInBytes);
+      dumpBindingTable(desc.CallableShaderTable.StartAddress, desc.CallableShaderTable.SizeInBytes,
+                       desc.CallableShaderTable.StrideInBytes);
     }
+  } else if (view) {
+    executeIndirectDump_.dumpArgumentBuffer(
+        c.object_.value, &commandSignature, c.MaxCommandCount_.value, c.pArgumentBuffer_.value,
+        c.ArgumentBufferOffset_.value, c.pCountBuffer_.value, c.CountBufferOffset_.value);
   }
+}
 
-  auto dumpBindingTable = [&](UINT64 address, UINT64 size, UINT64 stride) {
-    if (!address) {
-      return;
-    }
-    CapturePlayerGpuAddressService::ResourceInfo* info =
-        gpuAddressService_.getResourceInfoByCaptureAddress(address);
-    GITS_ASSERT(info);
-    unsigned offset = address - info->captureStart;
-    commandListService_.addObjectForRestore(info->key);
-    raytracingService_.dumpBindingTable(c.object_.value, c.object_.key, info->resource, info->key,
-                                        offset, size, stride, address);
-  };
+void AnalyzerExecuteIndirectService::flush() {
+  executeIndirectDump_.waitUntilDumped();
+}
 
-  auto it = executeIndirectDispatchRays_.find(c.key);
-  if (it != executeIndirectDispatchRays_.end()) {
-    D3D12_DISPATCH_RAYS_DESC& desc = it->second;
-    dumpBindingTable(desc.RayGenerationShaderRecord.StartAddress,
-                     desc.RayGenerationShaderRecord.SizeInBytes,
-                     desc.RayGenerationShaderRecord.SizeInBytes);
-    dumpBindingTable(desc.MissShaderTable.StartAddress, desc.MissShaderTable.SizeInBytes,
-                     desc.MissShaderTable.StrideInBytes);
-    dumpBindingTable(desc.HitGroupTable.StartAddress, desc.HitGroupTable.SizeInBytes,
-                     desc.HitGroupTable.StrideInBytes);
-    dumpBindingTable(desc.CallableShaderTable.StartAddress, desc.CallableShaderTable.SizeInBytes,
-                     desc.CallableShaderTable.StrideInBytes);
-  }
+void AnalyzerExecuteIndirectService::executeCommandLists(unsigned key,
+                                                         unsigned commandQueueKey,
+                                                         ID3D12CommandQueue* commandQueue,
+                                                         ID3D12CommandList** commandLists,
+                                                         unsigned commandListNum) {
+  executeIndirectDump_.executeCommandLists(key, commandQueueKey, commandQueue, commandLists,
+                                           commandListNum);
+}
+
+void AnalyzerExecuteIndirectService::commandQueueWait(unsigned key,
+                                                      unsigned commandQueueKey,
+                                                      unsigned fenceKey,
+                                                      UINT64 fenceValue) {
+  executeIndirectDump_.commandQueueWait(key, commandQueueKey, fenceKey, fenceValue);
+}
+
+void AnalyzerExecuteIndirectService::commandQueueSignal(unsigned key,
+                                                        unsigned commandQueueKey,
+                                                        unsigned fenceKey,
+                                                        UINT64 fenceValue) {
+  executeIndirectDump_.commandQueueSignal(key, commandQueueKey, fenceKey, fenceValue);
+}
+
+void AnalyzerExecuteIndirectService::fenceSignal(unsigned key,
+                                                 unsigned fenceKey,
+                                                 UINT64 fenceValue) {
+  executeIndirectDump_.fenceSignal(key, fenceKey, fenceValue);
 }
 
 void AnalyzerExecuteIndirectService::loadExecuteIndirectDispatchRays() {

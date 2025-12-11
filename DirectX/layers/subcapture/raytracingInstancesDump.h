@@ -34,6 +34,8 @@ public:
                                 D3D12_RESOURCE_STATES state,
                                 unsigned buildCall,
                                 std::vector<unsigned>& arrayOfPointersOffsets);
+
+private:
   void dumpBuffer(DumpInfo& dumpInfo, void* data) override;
 
 private:

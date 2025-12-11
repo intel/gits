@@ -9,41 +9,43 @@
 #pragma once
 
 #include "resourceDump.h"
-#include "capturePlayerGpuAddressService.h"
+
+#include <unordered_set>
 
 namespace gits {
 namespace DirectX {
 
-class ExecuteIndirectDump : public ResourceDump {
+class AnalyzerExecuteIndirectService;
+
+class AnalyzerExecuteIndirectDump : public ResourceDump {
 public:
-  ExecuteIndirectDump(CapturePlayerGpuAddressService& addressService)
-      : addressService_(addressService) {}
-  ~ExecuteIndirectDump();
+  AnalyzerExecuteIndirectDump(AnalyzerExecuteIndirectService& executeIndirectService)
+      : executeIndirectService_(executeIndirectService) {}
   void dumpArgumentBuffer(ID3D12GraphicsCommandList* commandList,
                           const D3D12_COMMAND_SIGNATURE_DESC* commandSignature,
                           unsigned maxCommandCount,
                           ID3D12Resource* argumentBuffer,
                           unsigned argumentBufferOffset,
-                          D3D12_RESOURCE_STATES argumentBufferState,
                           ID3D12Resource* countBuffer,
-                          unsigned countBufferOffset,
-                          D3D12_RESOURCE_STATES countBufferState,
-                          const std::wstring& dumpName,
-                          bool fromCapture);
+                          unsigned countBufferOffset);
+
+  std::unordered_set<unsigned>& getArgumentBuffersResources() {
+    return argumentBuffersResources_;
+  }
 
 private:
   struct ExecuteIndirectDumpInfo : public DumpInfo {
     const D3D12_COMMAND_SIGNATURE_DESC* commandSignature{};
     DumpInfo countDumpInfo;
-    bool fromCapture{};
   };
 
   void dumpStagedResource(DumpInfo& dumpInfo) override;
   void dumpArgumentBuffer(ExecuteIndirectDumpInfo& dumpInfo, unsigned argumentCount, void* data);
-  void printGpuAddress(std::ostream& stream, D3D12_GPU_VIRTUAL_ADDRESS address, bool fromCapture);
 
 private:
-  CapturePlayerGpuAddressService& addressService_;
+  AnalyzerExecuteIndirectService& executeIndirectService_;
+  std::mutex mutex_;
+  std::unordered_set<unsigned> argumentBuffersResources_;
 };
 
 } // namespace DirectX

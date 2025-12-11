@@ -19,7 +19,8 @@ namespace DirectX {
 AnalyzerLayer::AnalyzerLayer(SubcaptureRange& subcaptureRange)
     : Layer("Analyzer"),
       subcaptureRange_(subcaptureRange),
-      analyzerService_(subcaptureRange, commandListService_, raytracingService_),
+      analyzerService_(
+          subcaptureRange, commandListService_, raytracingService_, executeIndirectService_),
       commandListService_(analyzerService_,
                           descriptorService_,
                           rootSignatureService_,
@@ -78,6 +79,8 @@ void AnalyzerLayer::post(ID3D12CommandQueueExecuteCommandListsCommand& c) {
         c.NumCommandLists_.value);
     raytracingService_.executeCommandLists(c.key, c.object_.key, c.object_.value,
                                            c.ppCommandLists_.value, c.NumCommandLists_.value);
+    executeIndirectService_.executeCommandLists(c.key, c.object_.key, c.object_.value,
+                                                c.ppCommandLists_.value, c.NumCommandLists_.value);
   }
 }
 
@@ -123,6 +126,7 @@ void AnalyzerLayer::post(ID3D12CommandQueueWaitCommand& c) {
   analyzerService_.commandQueueWait(c.key, c.object_.key, c.pFence_.key, c.Value_.value);
   if (optimize_ || optimizeRaytracing_) {
     raytracingService_.commandQueueWait(c.key, c.object_.key, c.pFence_.key, c.Value_.value);
+    executeIndirectService_.commandQueueWait(c.key, c.object_.key, c.pFence_.key, c.Value_.value);
   }
 }
 
@@ -138,6 +142,7 @@ void AnalyzerLayer::post(ID3D12CommandQueueSignalCommand& c) {
   analyzerService_.commandQueueSignal(c.key, c.object_.key, c.pFence_.key, c.Value_.value);
   if (optimize_ || optimizeRaytracing_) {
     raytracingService_.commandQueueSignal(c.key, c.object_.key, c.pFence_.key, c.Value_.value);
+    executeIndirectService_.commandQueueSignal(c.key, c.object_.key, c.pFence_.key, c.Value_.value);
   }
 }
 
@@ -152,6 +157,7 @@ void AnalyzerLayer::post(ID3D12FenceSignalCommand& c) {
   analyzerService_.fenceSignal(c.key, c.object_.key, c.Value_.value);
   if (optimize_ || optimizeRaytracing_) {
     raytracingService_.fenceSignal(c.key, c.object_.key, c.Value_.value);
+    executeIndirectService_.fenceSignal(c.key, c.object_.key, c.Value_.value);
   }
 }
 
@@ -168,6 +174,7 @@ void AnalyzerLayer::post(ID3D12Device3EnqueueMakeResidentCommand& c) {
   analyzerService_.fenceSignal(c.key, c.pFenceToSignal_.key, c.FenceValueToSignal_.value);
   if (optimize_ || optimizeRaytracing_) {
     raytracingService_.fenceSignal(c.key, c.pFenceToSignal_.key, c.FenceValueToSignal_.value);
+    executeIndirectService_.fenceSignal(c.key, c.pFenceToSignal_.key, c.FenceValueToSignal_.value);
   }
 }
 

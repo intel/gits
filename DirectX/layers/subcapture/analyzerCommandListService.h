@@ -40,12 +40,6 @@ public:
   std::set<std::pair<unsigned, unsigned>>& getDescriptors() {
     return descriptors_;
   }
-  std::unordered_set<unsigned>& getBindingTablesResources() {
-    return raytracingService_.getBindingTablesResources();
-  }
-  std::set<std::pair<unsigned, unsigned>>& getBindingTablesDescriptors() {
-    return raytracingService_.getBindingTablesDescriptors();
-  }
   unsigned getComputeRootSignatureKey(unsigned commandListKey) {
     return commandListInfos_[commandListKey].computeRootSignature;
   }
