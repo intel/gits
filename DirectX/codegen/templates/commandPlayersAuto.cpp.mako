@@ -43,7 +43,7 @@ namespace DirectX {
   %if is_xess_function(function):
   if (manager.executeCommands()${' && command.result_.value == XESS_RESULT_SUCCESS' if function.ret.type == 'xess_result_t' else ''}) {
     if (!command.skip) {
-      ${'command.result_.value = ' if not function.ret.is_void else ''}xessDispatchTable.${function.name}(${command_runner_call_parameters(function, '            ')}
+      ${'command.result_.value = ' if not function.ret.is_void else ''}xessDispatchTable.${function.name}(${command_runner_call_parameters(function)}
     }
     %if is_context_creation(function):
 
@@ -55,7 +55,7 @@ namespace DirectX {
   %else:
   if (manager.executeCommands()) {
     if (!command.skip) {
-      ${'command.result_.value = ' if not function.ret.is_void else ''}${'command.object_.value->' if interfaceName else ''}${function.name}(${command_runner_call_parameters(function, '            ')}
+      ${'command.result_.value = ' if not function.ret.is_void else ''}${'command.object_.value->' if interfaceName else ''}${function.name}(${command_runner_call_parameters(function)}
     }
     %if is_interface_creation(function):
 

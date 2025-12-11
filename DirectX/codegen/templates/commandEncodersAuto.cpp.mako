@@ -15,7 +15,7 @@ namespace DirectX {
 
 %for function in functions:
 unsigned getSize(const ${function.name}Command& command) {
-  return ${command_encoders_sum_sizes(function, False, '                  ')}
+  return ${command_encoders_sum_sizes(function, False)}
 }
 
 void encode(const ${function.name}Command& command, char* dest) {
@@ -35,7 +35,7 @@ void encode(const ${function.name}Command& command, char* dest) {
 %for interface in interfaces:
 %for function in interface.functions:
 unsigned getSize(const ${interface.name}${function.name}Command& command) {
-  return ${command_encoders_sum_sizes(function, True, '                  ')}
+  return ${command_encoders_sum_sizes(function, True)}
 }
 
 void encode(const ${interface.name}${function.name}Command& command, char* dest) {

@@ -13,17 +13,13 @@ from generator_xess_helpers import *
 from intermediates import Parameter
 from intermediates import Api
 
-def wrappers_update_created(function, indent):
+def wrappers_update_created(function):
     str = ''
     if not is_interface_creation(function):
         return str
     previous_param = Parameter()
-    first = True
     for param in function.params:
         if param.is_interface_creation:
-            if not first:
-                str += '\n' + indent
-            first = False
             if not param.sal_size:
                 if previous_param.type == 'REFIID' and param.is_pointer_to_pointer and param.type == 'void':
                     str += f'UpdateOutputInterface<InterfaceOutputArgument<{param.type}>, {param.type}> update_{param.name}(command.{param.name}_, result, command.{previous_param.name}_.value, {param.name});'

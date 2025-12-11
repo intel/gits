@@ -11,12 +11,12 @@
 from generator_helpers import *
 from generator_xess_helpers import *
 
-def command_runner_call_parameters(function, indent):
+def command_runner_call_parameters(function):
     str = ''
     first = True
     for param in function.params:
         if not first:
-            str += ',\n' + indent
+            str += ','
         first = False
         str += 'command.' + param.name + '_.value'
     str += ");"

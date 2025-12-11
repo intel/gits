@@ -24,7 +24,7 @@ namespace DirectX {
 params = generate_params(function)
 args = generate_args(function)
 dispatch_table = get_dispatch_table(function)
-update_created = wrappers_update_created(function, '    ')
+update_created = wrappers_update_created(function)
 xess_d3d12_init = is_xess_d3d12_init(function)
 args_simple = []
 for param in function.params:
@@ -129,7 +129,7 @@ ${generate_return(function)} ${function.name}Wrapper(${'' if params else ') {'}
 <%
 params = generate_params(function)
 args = generate_args(function)
-update_created = wrappers_update_created(function, '    ') 
+update_created = wrappers_update_created(function) 
 args_simple = []
 for param in function.params:
     args_simple.append(param.name)
