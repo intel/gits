@@ -139,6 +139,7 @@ void CaptureLayerManager::loadLayers(CaptureManager& captureManager,
   retainLayer(std::move(imGuiHUDLayer));
   retainLayer(std::move(addressPinningLayer));
   retainLayer(std::move(dllOverrideStoreLayer));
+  retainLayer(std::move(globalSynchronizationLayer));
 }
 
 } // namespace DirectX
