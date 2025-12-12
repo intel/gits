@@ -146,6 +146,12 @@ private:
 
 private:
   static CaptureManager* instance_;
+  struct TBBLoader {
+    TBBLoader();
+
+  private:
+    HMODULE tbbDll_{};
+  } tbbLoader_;
   CaptureLayerManager layerManager_;
 
   DXGIDispatchTable dxgiDispatchTableSystem_{};
@@ -180,7 +186,6 @@ private:
   ContextMapService intelExtensionsContextMap_;
   ContextMapService xessContextMap_;
 
-  HMODULE tbbDll_{};
   HMODULE kernelDll_{};
   HMODULE dmlDll_{};
   HMODULE dStorageDll_{};
