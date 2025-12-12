@@ -15,21 +15,15 @@
 #include "playerGpuAddressService.h"
 #include "heapAllocationService.h"
 #include "pluginService.h"
-#include "traceFactory.h"
 #include "adapterService.h"
 #include "intelExtensionsService.h"
 #include "xessService.h"
 #include "nvapi.h"
-#include "subcaptureFactory.h"
-#include "executionSerializationFactory.h"
-#include "resourceDumpingFactory.h"
-#include "skipCallsFactory.h"
-#include "portabilityFactory.h"
 #include "multithreadedObjectCreationService.h"
 #include "pipelineLibraryService.h"
 #include "contextMapService.h"
 #include "analyzerService.h"
-#include "addressPinningFactory.h"
+#include "playerLayerManager.h"
 
 #include <vector>
 #include <memory>
@@ -50,10 +44,10 @@ public:
   ~PlayerManager();
 
   std::vector<Layer*>& getPreLayers() {
-    return preLayers_;
+    return layerManager_.getPreLayers();
   }
   std::vector<Layer*>& getPostLayers() {
-    return postLayers_;
+    return layerManager_.getPostLayers();
   }
 
   bool executeCommands() {
@@ -112,27 +106,12 @@ public:
 private:
   PlayerManager();
 
-  void loadAdapterOverride();
   void loadDirectML();
   void loadDirectStorage();
 
 private:
   static PlayerManager* instance_;
-
-  // Factory classes encapsulate layer creation logic.
-  TraceFactory traceFactory_;
-  SubcaptureFactory subcaptureFactory_;
-  ExecutionSerializationFactory executionSerializationFactory_;
-  ResourceDumpingFactory resourceDumpingFactory_;
-  SkipCallsFactory skipCallsFactory_;
-  PortabilityFactory portabilityFactory_;
-  AddressPinningFactory addressPinningFactory_;
-
-  // These hold pointers to Layers stored in layersOwner_. Layer order is important.
-  std::vector<Layer*> preLayers_;
-  std::vector<Layer*> postLayers_;
-  // Holds ownership of Layers.
-  std::vector<std::unique_ptr<Layer>> layersOwner_;
+  PlayerLayerManager layerManager_;
 
   bool executeCommands_{true};
   bool multithreadedShaderCompilation_{true};

@@ -20,13 +20,10 @@
 #include "gpuAddressService.h"
 #include "pluginService.h"
 #include "fenceService.h"
-#include "traceFactory.h"
 #include "gitsRecorder.h"
 #include "contextMapService.h"
 #include "directx.h"
-#include "resourceDumpingFactory.h"
-#include "portabilityFactory.h"
-#include "addressPinningFactory.h"
+#include "captureLayerManager.h"
 
 #include <vector>
 #include <memory>
@@ -74,10 +71,10 @@ public:
   }
 
   std::vector<Layer*>& getPreLayers() {
-    return preLayers_;
+    return layerManager_.getPreLayers();
   }
   std::vector<Layer*>& getPostLayers() {
-    return postLayers_;
+    return layerManager_.getPostLayers();
   }
 
   unsigned incrementGlobalStackDepth() {
@@ -141,7 +138,6 @@ private:
   CaptureManager();
   ~CaptureManager();
 
-  void createLayers();
   void interceptDirectMLFunctions();
   void interceptDirectStorageFunctions();
   void interceptKernelFunctions();
@@ -150,6 +146,7 @@ private:
 
 private:
   static CaptureManager* instance_;
+  CaptureLayerManager layerManager_;
 
   DXGIDispatchTable dxgiDispatchTableSystem_{};
   DXGIDispatchTable dxgiDispatchTableWrapper_{};
@@ -161,18 +158,6 @@ private:
   XessDispatchTable xessDispatchTable_{};
   NvAPIDispatchTable nvapiDispatchTable_{};
   D3D11On12DispatchTable d3d11on12DispatchTable_{};
-
-  // These hold pointers to Layers stored in layersOwner_. Layer order is important.
-  std::vector<Layer*> preLayers_;
-  std::vector<Layer*> postLayers_;
-  // Holds ownership of Layers.
-  std::vector<std::unique_ptr<Layer>> layersOwner_;
-
-  // Factory classes encapsulate layer creation logic.
-  TraceFactory traceFactory_;
-  ResourceDumpingFactory resourceDumpingFactory_;
-  PortabilityFactory portabilityFactory_;
-  AddressPinningFactory addressPinningFactory_;
 
   std::atomic<unsigned> globalStackDepth_{0};
   static thread_local unsigned localStackDepth_;

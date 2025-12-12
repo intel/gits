@@ -12,6 +12,8 @@ set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(ROOT_SRC
   ${SRC_DIR}/captureManager.h
   ${SRC_DIR}/captureManager.cpp
+  ${SRC_DIR}/captureLayerManager.h
+  ${SRC_DIR}/captureLayerManager.cpp
 )
 source_group("" FILES ${ROOT_SRC})
 

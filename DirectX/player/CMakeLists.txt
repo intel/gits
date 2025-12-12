@@ -12,6 +12,8 @@ set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(ROOT_SRC
   ${SRC_DIR}/playerManager.h
   ${SRC_DIR}/playerManager.cpp
+  ${SRC_DIR}/playerLayerManager.h
+  ${SRC_DIR}/playerLayerManager.cpp
 )
 source_group("" FILES ${ROOT_SRC})
 
