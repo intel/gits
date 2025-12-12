@@ -10,6 +10,7 @@
 
 #include "layer.h"
 #include "pluginUtils.h"
+#include "keyUtils.h"
 
 namespace gits {
 namespace DirectX {
@@ -23,7 +24,7 @@ void BenchmarkLayer::pre(ID3D12CommandQueueExecuteCommandListsCommand& command) 
 
 void BenchmarkLayer::post(IDXGISwapChainPresentCommand& c) {
   if (c.skip || c.result_.value != S_OK || c.Flags_.value & DXGI_PRESENT_TEST ||
-      c.key & Command::stateRestoreKeyMask) {
+      isStateRestoreKey(c.key)) {
     return;
   }
 
@@ -32,7 +33,7 @@ void BenchmarkLayer::post(IDXGISwapChainPresentCommand& c) {
 
 void BenchmarkLayer::post(IDXGISwapChain1Present1Command& c) {
   if (c.skip || c.result_.value != S_OK || c.PresentFlags_.value & DXGI_PRESENT_TEST ||
-      c.key & Command::stateRestoreKeyMask) {
+      isStateRestoreKey(c.key)) {
     return;
   }
 

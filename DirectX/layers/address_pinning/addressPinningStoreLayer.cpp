@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "addressPinningStoreLayer.h"
+#include "keyUtils.h"
 #include "gits.h"
 #include "tools.h"
 
@@ -61,7 +62,7 @@ void AddressPinningStoreLayer::storeAddressRanges() {
 }
 
 void AddressPinningStoreLayer::post(ID3D12DeviceCreateCommittedResourceCommand& command) {
-  if (command.ppvResource_.key & Command::stateRestoreKeyMask) {
+  if (isStateRestoreKey(command.ppvResource_.key)) {
     return;
   }
   handleResource(command);
@@ -128,7 +129,7 @@ void AddressPinningStoreLayer::pre(ID3D12ResourceGetGPUVirtualAddressCommand& co
     return;
   }
 
-  if (command.object_.key & Command::stateRestoreKeyMask) {
+  if (isStateRestoreKey(command.object_.key)) {
     return;
   }
 

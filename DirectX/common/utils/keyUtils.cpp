@@ -6,8 +6,7 @@
 //
 // ===================== end_copyright_notice ==============================
 
-#include "configKeySet.h"
-#include "command.h"
+#include "keyUtils.h"
 
 namespace gits {
 namespace DirectX {
@@ -24,9 +23,9 @@ ConfigKeySet::ConfigKeySet(const std::string& keys) {
       if (key[0] == 'S' || key[0] == 'E') {
         unsigned k = std::stoi(key.substr(1));
         if (key[0] == 'S') {
-          k |= Command::stateRestoreKeyMask;
+          k |= stateRestoreKeyMask;
         } else if (key[0] == 'E') {
-          k |= Command::executionSerializationKeyMask;
+          k |= executionSerializationKeyMask;
         }
         commandKeys_.insert(k);
       } else {

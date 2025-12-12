@@ -8,6 +8,7 @@
 
 #include "commandPrinter.h"
 #include "layerAuto.h"
+#include "keyUtils.h"
 #include "gits.h"
 
 namespace gits {
@@ -50,7 +51,7 @@ CommandPrinter::CommandPrinter(FastOStream& stream,
   if (command.skip) {
     stream_ << "[SKIPPED] ";
   }
-  stream_ << callKeyToStr(command.key);
+  stream_ << keyToStr(command.key);
   stream_ << " T" << command.threadId;
   if (objectId) {
     stream_ << " ";
@@ -71,14 +72,13 @@ void CommandPrinter::print(bool flush, bool newLine) {
           !(static_cast<IDXGISwapChain1Present1Command&>(command_).PresentFlags_.value &
             DXGI_PRESENT_TEST)) {
     stream_ << " Frame #"
-            << (command_.key & Command::stateRestoreKeyMask ? 0 : CGits::Instance().CurrentFrame())
-            << " end";
+            << (isStateRestoreKey(command_.key) ? 0 : CGits::Instance().CurrentFrame()) << " end";
   } else if (command_.getId() == CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_DRAWINSTANCED ||
              command_.getId() == CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_DRAWINDEXEDINSTANCED) {
     stream_ << " Draw #" << ++state_.drawCount << " from frame #"
             << (state_.stateRestorePhase ? 0 : CGits::Instance().CurrentFrame());
   } else if (command_.getId() == CommandId::ID_ID3D12COMMANDQUEUE_EXECUTECOMMANDLISTS &&
-             command_.key & Command::executionSerializationKeyMask && !state_.stateRestorePhase) {
+             isExecutionSerializationKey(command_.key) && !state_.stateRestorePhase) {
     unsigned currentFrame = CGits::Instance().CurrentFrame();
     // handling command list subcapture without presents
     if (currentFrame == 0 && !state_.stateRestorePhase) {

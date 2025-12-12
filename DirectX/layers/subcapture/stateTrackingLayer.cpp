@@ -11,6 +11,7 @@
 #include "commandWritersAuto.h"
 #include "commandWritersCustom.h"
 #include "configurationLib.h"
+#include "keyUtils.h"
 #include "nvapi.h"
 #include "log.h"
 
@@ -99,7 +100,7 @@ void StateTrackingLayer::post(IDXGISwapChainPresentCommand& c) {
     return;
   }
   if (!subcaptureRange_.commandListSubcapture() &&
-      subcaptureRange_.isFrameRangeStart(c.key & Command::stateRestoreKeyMask)) {
+      subcaptureRange_.isFrameRangeStart(isStateRestoreKey(c.key))) {
     gpuExecutionFlusher_.flushCommandQueues();
     stateService_.restoreState();
     stateRestored_ = true;
@@ -114,7 +115,7 @@ void StateTrackingLayer::post(IDXGISwapChain1Present1Command& c) {
     return;
   }
   if (!subcaptureRange_.commandListSubcapture() &&
-      subcaptureRange_.isFrameRangeStart(c.key & Command::stateRestoreKeyMask)) {
+      subcaptureRange_.isFrameRangeStart(isStateRestoreKey(c.key))) {
     gpuExecutionFlusher_.flushCommandQueues();
     stateService_.restoreState();
     stateRestored_ = true;

@@ -10,6 +10,7 @@
 #include "commandWritersAuto.h"
 #include "commandWritersCustom.h"
 #include "intelExtensions.h"
+#include "keyUtils.h"
 #include "log.h"
 
 namespace gits {
@@ -30,10 +31,9 @@ void RecordingLayer::post(IDXGISwapChainPresentCommand& command) {
     recorder_.record(new IDXGISwapChainPresentWriter(command));
   }
   if (!(command.Flags_.value & DXGI_PRESENT_TEST)) {
-    subcaptureRange_.frameEnd(command.key & Command::stateRestoreKeyMask);
+    subcaptureRange_.frameEnd(isStateRestoreKey(command.key));
   }
-  if (!(command.Flags_.value & DXGI_PRESENT_TEST) &&
-      !(command.key & Command::stateRestoreKeyMask)) {
+  if (!(command.Flags_.value & DXGI_PRESENT_TEST) && !isStateRestoreKey(command.key)) {
     recorder_.frameEnd();
   }
 }
@@ -43,10 +43,9 @@ void RecordingLayer::post(IDXGISwapChain1Present1Command& command) {
     recorder_.record(new IDXGISwapChain1Present1Writer(command));
   }
   if (!(command.PresentFlags_.value & DXGI_PRESENT_TEST)) {
-    subcaptureRange_.frameEnd(command.key & Command::stateRestoreKeyMask);
+    subcaptureRange_.frameEnd(isStateRestoreKey(command.key));
   }
-  if (!(command.PresentFlags_.value & DXGI_PRESENT_TEST) &&
-      !(command.key & Command::stateRestoreKeyMask)) {
+  if (!(command.PresentFlags_.value & DXGI_PRESENT_TEST) && !isStateRestoreKey(command.key)) {
     recorder_.frameEnd();
   }
 }

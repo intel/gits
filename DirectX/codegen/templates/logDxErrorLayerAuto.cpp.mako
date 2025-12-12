@@ -17,7 +17,7 @@ namespace DirectX {
 
 void LogDxErrorLayer::post(ID3D12FenceGetCompletedValueCommand& command) {
   if (command.result_.value == UINT64_MAX) {
-    LOG_ERROR << callKeyToStr(command.key) << " ID3D12Fence::GetCompletedValue failed - device removed";
+    LOG_ERROR << keyToStr(command.key) << " ID3D12Fence::GetCompletedValue failed - device removed";
   }
 }
 
@@ -27,7 +27,7 @@ void LogDxErrorLayer::pre(IUnknownQueryInterfaceCommand& command) {
 
 void LogDxErrorLayer::post(IUnknownQueryInterfaceCommand& command) {
   if (isFailure(command.result_.value)) {
-    LOG_ERROR << callKeyToStr(command.key) << " IUnknown::QueryInterface failed " << printResult(command.result_.value);
+    LOG_ERROR << keyToStr(command.key) << " IUnknown::QueryInterface failed " << printResult(command.result_.value);
   }
 }
 
@@ -39,7 +39,7 @@ void LogDxErrorLayer::pre(${function.name}Command& command) {
 
 void LogDxErrorLayer::post(${function.name}Command& command) {
   if (isFailure(command.result_.value)) {
-    LOG_ERROR << callKeyToStr(command.key) << " ${function.name} failed " << printResult(command.result_.value);
+    LOG_ERROR << keyToStr(command.key) << " ${function.name} failed " << printResult(command.result_.value);
   }
 }
 
@@ -50,7 +50,7 @@ void LogDxErrorLayer::pre(${function.name}Command& command) {
 
 void LogDxErrorLayer::post(${function.name}Command& command) {
   if (isFailureXess(command.result_.value)) {
-    LOG_ERROR << callKeyToStr(command.key) << " ${function.name} failed " << toStr(command.result_.value);
+    LOG_ERROR << keyToStr(command.key) << " ${function.name} failed " << toStr(command.result_.value);
   }
 }
 
@@ -65,7 +65,7 @@ void LogDxErrorLayer::pre(${interface.name}${function.name}Command& command) {
 
 void LogDxErrorLayer::post(${interface.name}${function.name}Command& command) {
   if (isFailure(command.result_.value)) {
-    LOG_ERROR << callKeyToStr(command.key) << " ${interface.name}::${function.name} failed " << printResult(command.result_.value);
+    LOG_ERROR << keyToStr(command.key) << " ${interface.name}::${function.name} failed " << printResult(command.result_.value);
   }
 }
 
@@ -78,7 +78,7 @@ void LogDxErrorLayer::pre(INTC_D3D12_GetSupportedVersionsCommand& command) {
 
 void LogDxErrorLayer::post(INTC_D3D12_GetSupportedVersionsCommand& command) {
   if (isFailure(command.result_.value)) {
-    LOG_ERROR << callKeyToStr(command.key) << " INTC_D3D12_GetSupportedVersions failed " << printResult(command.result_.value);
+    LOG_ERROR << keyToStr(command.key) << " INTC_D3D12_GetSupportedVersions failed " << printResult(command.result_.value);
   }
 }
 
@@ -88,7 +88,7 @@ void LogDxErrorLayer::pre(INTC_D3D12_CreateDeviceExtensionContextCommand& comman
 
 void LogDxErrorLayer::post(INTC_D3D12_CreateDeviceExtensionContextCommand& command) {
   if (isFailure(command.result_.value)) {
-    LOG_ERROR << callKeyToStr(command.key) << " INTC_D3D12_CreateDeviceExtensionContext failed " << printResult(command.result_.value);
+    LOG_ERROR << keyToStr(command.key) << " INTC_D3D12_CreateDeviceExtensionContext failed " << printResult(command.result_.value);
   }
 }
 
@@ -98,7 +98,7 @@ void LogDxErrorLayer::pre(INTC_D3D12_CreateDeviceExtensionContext1Command& comma
 
 void LogDxErrorLayer::post(INTC_D3D12_CreateDeviceExtensionContext1Command& command) {
   if (isFailure(command.result_.value)) {
-    LOG_ERROR << callKeyToStr(command.key) << " INTC_D3D12_CreateDeviceExtensionContext1 failed " << printResult(command.result_.value);
+    LOG_ERROR << keyToStr(command.key) << " INTC_D3D12_CreateDeviceExtensionContext1 failed " << printResult(command.result_.value);
   }
 }
 
@@ -108,7 +108,7 @@ void LogDxErrorLayer::pre(INTC_D3D12_SetApplicationInfoCommand& command) {
 
 void LogDxErrorLayer::post(INTC_D3D12_SetApplicationInfoCommand& command) {
   if (isFailure(command.result_.value)) {
-    LOG_ERROR << callKeyToStr(command.key) << " INTC_D3D12_SetApplicationInfo failed " << printResult(command.result_.value);
+    LOG_ERROR << keyToStr(command.key) << " INTC_D3D12_SetApplicationInfo failed " << printResult(command.result_.value);
   }
 }
 
@@ -118,7 +118,7 @@ void LogDxErrorLayer::pre(INTC_DestroyDeviceExtensionContextCommand& command) {
 
 void LogDxErrorLayer::post(INTC_DestroyDeviceExtensionContextCommand& command) {
   if (isFailure(command.result_.value)) {
-    LOG_ERROR << callKeyToStr(command.key) << " INTC_DestroyDeviceExtensionContextCommand failed " << printResult(command.result_.value);
+    LOG_ERROR << keyToStr(command.key) << " INTC_DestroyDeviceExtensionContextCommand failed " << printResult(command.result_.value);
   }
 }
 
@@ -128,7 +128,7 @@ void LogDxErrorLayer::pre(INTC_D3D12_CheckFeatureSupportCommand& command) {
 
 void LogDxErrorLayer::post(INTC_D3D12_CheckFeatureSupportCommand& command) {
   if (isFailure(command.result_.value)) {
-    LOG_ERROR << callKeyToStr(command.key) << " INTC_D3D12_CheckFeatureSupport failed " << printResult(command.result_.value);
+    LOG_ERROR << keyToStr(command.key) << " INTC_D3D12_CheckFeatureSupport failed " << printResult(command.result_.value);
   }
 }
 
@@ -138,7 +138,7 @@ void LogDxErrorLayer::pre(INTC_D3D12_SetFeatureSupportCommand& command) {
 
 void LogDxErrorLayer::post(INTC_D3D12_SetFeatureSupportCommand& command) {
   if (isFailure(command.result_.value)) {
-    LOG_ERROR << callKeyToStr(command.key) << " INTC_D3D12_SetFeatureSupport failed " << printResult(command.result_.value);
+    LOG_ERROR << keyToStr(command.key) << " INTC_D3D12_SetFeatureSupport failed " << printResult(command.result_.value);
   }
 }
 
@@ -148,7 +148,7 @@ void LogDxErrorLayer::pre(INTC_D3D12_CreateComputePipelineStateCommand& command)
 
 void LogDxErrorLayer::post(INTC_D3D12_CreateComputePipelineStateCommand& command) {
   if (isFailure(command.result_.value)) {
-    LOG_ERROR << callKeyToStr(command.key) << " INTC_D3D12_CreateComputePipelineState failed " << printResult(command.result_.value);
+    LOG_ERROR << keyToStr(command.key) << " INTC_D3D12_CreateComputePipelineState failed " << printResult(command.result_.value);
   }
 }
 
@@ -158,7 +158,7 @@ void LogDxErrorLayer::pre(INTC_D3D12_CreatePlacedResourceCommand& command) {
 
 void LogDxErrorLayer::post(INTC_D3D12_CreatePlacedResourceCommand& command) {
   if (isFailure(command.result_.value)) {
-    LOG_ERROR << callKeyToStr(command.key)<< " INTC_D3D12_CreatePlacedResource failed " << printResult(command.result_.value);
+    LOG_ERROR << keyToStr(command.key)<< " INTC_D3D12_CreatePlacedResource failed " << printResult(command.result_.value);
   }
 }
 
@@ -168,7 +168,7 @@ void LogDxErrorLayer::pre(INTC_D3D12_CreateCommittedResourceCommand& command) {
 
 void LogDxErrorLayer::post(INTC_D3D12_CreateCommittedResourceCommand& command) {
   if (isFailure(command.result_.value)) {
-    LOG_ERROR << callKeyToStr(command.key) << " INTC_D3D12_CreateCommittedResource failed " << printResult(command.result_.value);
+    LOG_ERROR << keyToStr(command.key) << " INTC_D3D12_CreateCommittedResource failed " << printResult(command.result_.value);
   }
 }
 
@@ -178,7 +178,7 @@ void LogDxErrorLayer::pre(INTC_D3D12_CreateCommandQueueCommand& command) {
 
 void LogDxErrorLayer::post(INTC_D3D12_CreateCommandQueueCommand& command) {
   if (isFailure(command.result_.value)) {
-    LOG_ERROR << callKeyToStr(command.key) << " INTC_D3D12_CreateCommandQueueCommand failed " << printResult(command.result_.value);
+    LOG_ERROR << keyToStr(command.key) << " INTC_D3D12_CreateCommandQueueCommand failed " << printResult(command.result_.value);
   }
 }
 
@@ -188,7 +188,7 @@ void LogDxErrorLayer::pre(INTC_D3D12_CreateReservedResourceCommand& command) {
 
 void LogDxErrorLayer::post(INTC_D3D12_CreateReservedResourceCommand& command) {
   if (isFailure(command.result_.value)) {
-    LOG_ERROR << callKeyToStr(command.key) << " INTC_D3D12_CreateReservedResourceCommand failed " << printResult(command.result_.value);
+    LOG_ERROR << keyToStr(command.key) << " INTC_D3D12_CreateReservedResourceCommand failed " << printResult(command.result_.value);
   }
 }
 
@@ -198,7 +198,7 @@ void LogDxErrorLayer::pre(INTC_D3D12_CreateHeapCommand& command) {
 
 void LogDxErrorLayer::post(INTC_D3D12_CreateHeapCommand& command) {
   if (isFailure(command.result_.value)) {
-    LOG_ERROR << callKeyToStr(command.key) << " INTC_D3D12_CreateHeapCommand failed " << printResult(command.result_.value);
+    LOG_ERROR << keyToStr(command.key) << " INTC_D3D12_CreateHeapCommand failed " << printResult(command.result_.value);
   }
 }
 
@@ -208,7 +208,7 @@ void LogDxErrorLayer::pre(NvAPI_InitializeCommand& command) {
 
 void LogDxErrorLayer::post(NvAPI_InitializeCommand& command) {
   if (isFailureNvAPI(command.result_.value)) {
-    LOG_ERROR << callKeyToStr(command.key) << " NvAPI_InitializeCommand failed " << printResult(command.result_.value);
+    LOG_ERROR << keyToStr(command.key) << " NvAPI_InitializeCommand failed " << printResult(command.result_.value);
   }
 }
 
@@ -218,7 +218,7 @@ void LogDxErrorLayer::pre(NvAPI_UnloadCommand& command) {
 
 void LogDxErrorLayer::post(NvAPI_UnloadCommand& command) {
   if (isFailureNvAPI(command.result_.value)) {
-    LOG_ERROR << callKeyToStr(command.key) << " NvAPI_UnloadCommand failed " << printResult(command.result_.value);
+    LOG_ERROR << keyToStr(command.key) << " NvAPI_UnloadCommand failed " << printResult(command.result_.value);
   }
 }
 
@@ -228,7 +228,7 @@ void LogDxErrorLayer::pre(NvAPI_D3D12_SetCreatePipelineStateOptionsCommand& comm
 
 void LogDxErrorLayer::post(NvAPI_D3D12_SetCreatePipelineStateOptionsCommand& command) {
   if (isFailureNvAPI(command.result_.value)) {
-    LOG_ERROR << callKeyToStr(command.key) << " NvAPI_D3D12_SetCreatePipelineStateOptionsCommand failed " << printResult(command.result_.value);
+    LOG_ERROR << keyToStr(command.key) << " NvAPI_D3D12_SetCreatePipelineStateOptionsCommand failed " << printResult(command.result_.value);
   }
 }
 
@@ -238,7 +238,7 @@ void LogDxErrorLayer::pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& command) 
 
 void LogDxErrorLayer::post(NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& command) {
   if (isFailureNvAPI(command.result_.value)) {
-    LOG_ERROR << callKeyToStr(command.key) << " NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand failed " << printResult(command.result_.value);
+    LOG_ERROR << keyToStr(command.key) << " NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand failed " << printResult(command.result_.value);
   }
 }
 
@@ -248,7 +248,7 @@ void LogDxErrorLayer::pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand
 
 void LogDxErrorLayer::post(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& command) {
   if (isFailureNvAPI(command.result_.value)) {
-    LOG_ERROR << callKeyToStr(command.key) << " NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand failed " << printResult(command.result_.value);
+    LOG_ERROR << keyToStr(command.key) << " NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand failed " << printResult(command.result_.value);
   }
 }
 
@@ -258,7 +258,7 @@ void LogDxErrorLayer::pre(NvAPI_D3D12_BuildRaytracingAccelerationStructureExComm
 
 void LogDxErrorLayer::post(NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& command) {
   if (isFailureNvAPI(command.result_.value)) {
-    LOG_ERROR << callKeyToStr(command.key) << " NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand failed " << printResult(command.result_.value);
+    LOG_ERROR << keyToStr(command.key) << " NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand failed " << printResult(command.result_.value);
   }
 }
 
@@ -268,7 +268,7 @@ void LogDxErrorLayer::pre(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand
 
 void LogDxErrorLayer::post(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& command) {
   if (isFailureNvAPI(command.result_.value)) {
-    LOG_ERROR << callKeyToStr(command.key) << " NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand failed " << printResult(command.result_.value);
+    LOG_ERROR << keyToStr(command.key) << " NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand failed " << printResult(command.result_.value);
   }
 }
 
@@ -278,7 +278,7 @@ void LogDxErrorLayer::pre(NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOpera
 
 void LogDxErrorLayer::post(NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand& command) {
   if (isFailureNvAPI(command.result_.value)) {
-    LOG_ERROR << callKeyToStr(command.key) << " NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand failed " << printResult(command.result_.value);
+    LOG_ERROR << keyToStr(command.key) << " NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand failed " << printResult(command.result_.value);
   }
 }
 

@@ -25,6 +25,7 @@
 #include "resourceUsageTrackingService.h"
 #include "analyzerResults.h"
 #include "resourceForCBVRestoreService.h"
+#include "keyUtils.h"
 
 #include <vector>
 #include <unordered_map>
@@ -187,8 +188,8 @@ private:
   SubcaptureRecorder& recorder_;
   ResourceContentRestore resourceContentRestore_;
   std::map<unsigned, ObjectState*> statesByKey_;
-  unsigned restoreCommandKey_{Command::stateRestoreKeyMask};
-  unsigned restoreObjectKey_{Command::stateRestoreKeyMask};
+  unsigned restoreCommandKey_{stateRestoreKeyMask};
+  unsigned restoreObjectKey_{stateRestoreKeyMask};
   unsigned restoreFakePointer_{};
   AnalyzerResults& analyzerResults_;
   FenceTrackingService& fenceTrackingService_;

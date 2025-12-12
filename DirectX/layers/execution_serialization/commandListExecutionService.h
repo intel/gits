@@ -11,7 +11,7 @@
 #include "commandWriter.h"
 #include "executionSerializationRecorder.h"
 #include "gpuExecutionTracker.h"
-#include "command.h"
+#include "keyUtils.h"
 
 #include <unordered_map>
 #include <unordered_set>
@@ -76,8 +76,8 @@ private:
   std::unordered_map<unsigned, unsigned> deviceByCommandQueue_;
   std::unordered_map<unsigned, std::pair<unsigned, UINT64>> fenceByCommandQueue_;
   std::unordered_map<unsigned, unsigned> commandListCreationAllocators_;
-  unsigned restoreCommandKey_{Command::executionSerializationKeyMask};
-  unsigned restoreObjectKey_{Command::executionSerializationKeyMask};
+  unsigned restoreCommandKey_{executionSerializationKeyMask};
+  unsigned restoreObjectKey_{executionSerializationKeyMask};
 };
 
 } // namespace DirectX

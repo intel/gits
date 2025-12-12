@@ -30,7 +30,7 @@ RootSignatureDumpLayer::RootSignatureDumpLayer()
 void RootSignatureDumpLayer::post(ID3D12DeviceCreateRootSignatureCommand& command) {
   if (rootSignatureKeys_.empty() || rootSignatureKeys_.contains(command.ppvRootSignature_.key)) {
     std::wstring dumpName =
-        dumpPath_ + L"/root_signature_O" + callKeyToWStr(command.ppvRootSignature_.key) + L".txt";
+        dumpPath_ + L"/root_signature_O" + keyToWStr(command.ppvRootSignature_.key) + L".txt";
     rootSignatureDump_.DeserializeRootSignature(command.pBlobWithRootSignature_.value,
                                                 command.blobLengthInBytes_.value, dumpName);
   }

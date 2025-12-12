@@ -8,6 +8,7 @@
 
 #include "analyzerCommandListService.h"
 #include "analyzerService.h"
+#include "keyUtils.h"
 #include "gits.h"
 
 namespace gits {
@@ -887,7 +888,7 @@ void AnalyzerCommandListService::command(
     if (c.pDesc_.sourceAccelerationStructureKey) {
       addObjectForRestore(c.pDesc_.sourceAccelerationStructureKey);
     }
-    if (!(c.pDesc_.scratchAccelerationStructureKey & Command::stateRestoreKeyMask)) {
+    if (!isStateRestoreKey(c.pDesc_.scratchAccelerationStructureKey)) {
       addObjectForRestore(c.pDesc_.scratchAccelerationStructureKey);
     }
     for (unsigned key : c.pDesc_.inputKeys) {
@@ -931,7 +932,7 @@ void AnalyzerCommandListService::command(
     if (c.pParams.sourceAccelerationStructureKey) {
       addObjectForRestore(c.pParams.sourceAccelerationStructureKey);
     }
-    if (!(c.pParams.scratchAccelerationStructureKey & Command::stateRestoreKeyMask)) {
+    if (!isStateRestoreKey(c.pParams.scratchAccelerationStructureKey)) {
       addObjectForRestore(c.pParams.scratchAccelerationStructureKey);
     }
     for (unsigned key : c.pParams.inputKeys) {
@@ -953,7 +954,7 @@ void AnalyzerCommandListService::command(
     if (c.pParams.perOMMDescsKey) {
       addObjectForRestore(c.pParams.perOMMDescsKey);
     }
-    if (!(c.pParams.scratchOpacityMicromapArrayDataKey & Command::stateRestoreKeyMask)) {
+    if (!isStateRestoreKey(c.pParams.scratchOpacityMicromapArrayDataKey)) {
       addObjectForRestore(c.pParams.scratchOpacityMicromapArrayDataKey);
     }
     for (unsigned key : c.pParams.destPostBuildBufferKeys) {

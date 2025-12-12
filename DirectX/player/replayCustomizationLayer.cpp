@@ -10,9 +10,10 @@
 #include "configurator.h"
 #include "playerManager.h"
 #include "interfaceArgumentUpdaters.h"
+#include "keyUtils.h"
+#include "to_string/toStr.h"
 #include "gits.h"
 #include "log.h"
-#include "to_string/toStr.h"
 
 #include <d3dx12.h>
 #include <setupapi.h>
@@ -280,7 +281,7 @@ void ReplayCustomizationLayer::pre(WaitForFenceSignaledCommand& c) {
 }
 
 void ReplayCustomizationLayer::post(ID3D12DeviceCreateCommittedResourceCommand& c) {
-  if (useAddressPinning_ && !(c.ppvResource_.key & Command::stateRestoreKeyMask)) {
+  if (useAddressPinning_ && !isStateRestoreKey(c.ppvResource_.key)) {
     return;
   }
 
@@ -996,7 +997,7 @@ void ReplayCustomizationLayer::pre(ID3D12GraphicsCommandListResolveQueryDataComm
 }
 
 void ReplayCustomizationLayer::pre(ID3D12DeviceCreateCommandQueueCommand& c) {
-  if (c.ppCommandQueue_.key & Command::stateRestoreKeyMask &&
+  if (isStateRestoreKey(c.ppCommandQueue_.key) &&
       c.pDesc_.value->Type == D3D12_COMMAND_LIST_TYPE_COPY &&
       (!Configurator::Get().directx.player.useCopyQueueOnRestore || afterAddRef_)) {
     // AddRefs are at the end of subcapture state restore but before back buffer restore
@@ -1005,7 +1006,7 @@ void ReplayCustomizationLayer::pre(ID3D12DeviceCreateCommandQueueCommand& c) {
 }
 
 void ReplayCustomizationLayer::pre(ID3D12DeviceCreateCommandAllocatorCommand& c) {
-  if (c.ppCommandAllocator_.key & Command::stateRestoreKeyMask &&
+  if (isStateRestoreKey(c.ppCommandAllocator_.key) &&
       c.type_.value == D3D12_COMMAND_LIST_TYPE_COPY &&
       (!Configurator::Get().directx.player.useCopyQueueOnRestore || afterAddRef_)) {
     // AddRefs are at the end of subcapture state restore but before back buffer restore
@@ -1014,8 +1015,7 @@ void ReplayCustomizationLayer::pre(ID3D12DeviceCreateCommandAllocatorCommand& c)
 }
 
 void ReplayCustomizationLayer::pre(ID3D12DeviceCreateCommandListCommand& c) {
-  if (c.ppCommandList_.key & Command::stateRestoreKeyMask &&
-      c.type_.value == D3D12_COMMAND_LIST_TYPE_COPY &&
+  if (isStateRestoreKey(c.ppCommandList_.key) && c.type_.value == D3D12_COMMAND_LIST_TYPE_COPY &&
       (!Configurator::Get().directx.player.useCopyQueueOnRestore || afterAddRef_)) {
     // AddRefs are at the end of subcapture state restore but before back buffer restore
     c.type_.value = D3D12_COMMAND_LIST_TYPE_DIRECT;
@@ -1069,7 +1069,7 @@ void ReplayCustomizationLayer::pre(ID3D12GraphicsCommandList4BeginRenderPassComm
 void ReplayCustomizationLayer::pre(
     ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c) {
   if (useAddressPinning_) {
-    if (c.pDesc_.scratchAccelerationStructureKey & Command::stateRestoreKeyMask) {
+    if (isStateRestoreKey(c.pDesc_.scratchAccelerationStructureKey)) {
       c.pDesc_.value->ScratchAccelerationStructureData =
           manager_.getGpuAddressService().getGpuAddress(
               c.pDesc_.scratchAccelerationStructureKey,

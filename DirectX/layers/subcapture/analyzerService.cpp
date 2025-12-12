@@ -8,6 +8,7 @@
 
 #include "analyzerService.h"
 #include "analyzerResults.h"
+#include "keyUtils.h"
 #include "gits.h"
 #include "log.h"
 
@@ -72,11 +73,11 @@ void AnalyzerService::commandListCommand(unsigned commandListKey) {
 void AnalyzerService::present(unsigned callKey, unsigned swapChainKey) {
   if (subcaptureRange_.commandListSubcapture()) {
     objectsForRestore_.insert(swapChainKey);
-    subcaptureRange_.frameEnd(callKey & Command::stateRestoreKeyMask);
+    subcaptureRange_.frameEnd(isStateRestoreKey(callKey));
     return;
   }
 
-  if (subcaptureRange_.isFrameRangeStart(callKey & Command::stateRestoreKeyMask)) {
+  if (subcaptureRange_.isFrameRangeStart(isStateRestoreKey(callKey))) {
     inRange_ = true;
     beforeRange_ = false;
     clearReadyExecutables();
@@ -106,11 +107,11 @@ void AnalyzerService::present(unsigned callKey, unsigned swapChainKey) {
         delete event;
       }
     }
-    subcaptureRange_.frameEnd(callKey & Command::stateRestoreKeyMask);
+    subcaptureRange_.frameEnd(isStateRestoreKey(callKey));
     return;
   }
 
-  subcaptureRange_.frameEnd(callKey & Command::stateRestoreKeyMask);
+  subcaptureRange_.frameEnd(isStateRestoreKey(callKey));
   if (!subcaptureRange_.inRange() && inRange_) {
     commandListService_.commandListsRestore(commandListsForRestore_);
     inRange_ = false;

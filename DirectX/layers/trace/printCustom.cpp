@@ -9,6 +9,8 @@
 #include "printCustom.h"
 #include "command.h"
 #include "to_string/guidToStrAuto.h"
+#include "to_string/toStr.h"
+
 #include <unordered_map>
 
 namespace gits {
@@ -19,15 +21,7 @@ FastOStream& printObjectKey(FastOStream& stream, unsigned key) {
     stream << "nullptr";
   } else {
     stream << "O";
-
-    if (key & Command::stateRestoreKeyMask) {
-      stream << "S";
-      key &= ~Command::stateRestoreKeyMask;
-    } else if (key & Command::executionSerializationKeyMask) {
-      stream << "E";
-      key &= ~Command::executionSerializationKeyMask;
-    }
-    stream << key;
+    stream << keyToStr(key);
   }
   return stream;
 }

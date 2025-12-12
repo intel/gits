@@ -14,6 +14,25 @@
 namespace gits {
 namespace DirectX {
 
+inline constexpr unsigned stateRestoreKeyMask{1u << 31};
+inline constexpr unsigned executionSerializationKeyMask{1u << 30};
+
+inline bool isStateRestoreKey(unsigned key) {
+  return key & stateRestoreKeyMask;
+}
+
+inline unsigned extractStateRestoreKey(unsigned key) {
+  return key & ~stateRestoreKeyMask;
+}
+
+inline bool isExecutionSerializationKey(unsigned key) {
+  return key & executionSerializationKeyMask;
+}
+
+inline unsigned extractExecutionSerializationKey(unsigned key) {
+  return key & ~executionSerializationKeyMask;
+}
+
 class ConfigKeySet {
 public:
   ConfigKeySet(const std::string& keys);

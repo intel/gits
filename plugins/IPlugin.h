@@ -23,7 +23,7 @@
 #endif
 
 #include <string>
-#include <assert.h>
+#include <cassert>
 
 namespace gits {
 class CGits;

@@ -16,8 +16,8 @@ set(UTILS_FILES
   ${SRC_DIR}/resourceDump.cpp
   ${SRC_DIR}/gpuExecutionTracker.h
   ${SRC_DIR}/gpuExecutionTracker.cpp
-  ${SRC_DIR}/configKeySet.h
-  ${SRC_DIR}/configKeySet.cpp
+  ${SRC_DIR}/keyUtils.h
+  ${SRC_DIR}/keyUtils.cpp
   ${SRC_DIR}/capturePlayerGpuAddressService.h
   ${SRC_DIR}/capturePlayerGpuAddressService.cpp
   ${SRC_DIR}/capturePlayerDescriptorHandleService.h

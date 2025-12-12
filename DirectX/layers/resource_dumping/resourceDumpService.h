@@ -11,7 +11,7 @@
 #include "commandsAuto.h"
 #include "resourceStateTracker.h"
 #include "resourceDump.h"
-#include "configKeySet.h"
+#include "keyUtils.h"
 #include "directx.h"
 
 #include <unordered_set>

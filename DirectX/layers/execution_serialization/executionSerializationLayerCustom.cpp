@@ -10,6 +10,7 @@
 #include "commandWritersAuto.h"
 #include "commandWritersCustom.h"
 #include "intelExtensions.h"
+#include "keyUtils.h"
 
 namespace gits {
 namespace DirectX {
@@ -32,7 +33,7 @@ void ExecutionSerializationLayer::pre(IDXGISwapChainPresentCommand& c) {
   if (recorder_.isRunning()) {
     recorder_.record(new IDXGISwapChainPresentWriter(c));
   }
-  if (!(c.Flags_.value & DXGI_PRESENT_TEST) && !(c.key & Command::stateRestoreKeyMask)) {
+  if (!(c.Flags_.value & DXGI_PRESENT_TEST) && !isStateRestoreKey(c.key)) {
     recorder_.frameEnd();
   }
 }
@@ -41,7 +42,7 @@ void ExecutionSerializationLayer::pre(IDXGISwapChain1Present1Command& c) {
   if (recorder_.isRunning()) {
     recorder_.record(new IDXGISwapChain1Present1Writer(c));
   }
-  if (!(c.PresentFlags_.value & DXGI_PRESENT_TEST) && !(c.key & Command::stateRestoreKeyMask)) {
+  if (!(c.PresentFlags_.value & DXGI_PRESENT_TEST) && !isStateRestoreKey(c.key)) {
     recorder_.frameEnd();
   }
 }
