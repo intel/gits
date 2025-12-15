@@ -306,6 +306,16 @@ const unsigned char** gits::OpenCL::CBinariesArray::Value() {
   return _text.data();
 }
 
+uint64_t gits::OpenCL::CBinariesArray::Size() const {
+  uint64_t total = sizeof(uint32_t);
+  for (const auto& bin : _binaries) {
+    if (bin) {
+      total += bin->Size();
+    }
+  }
+  return total;
+}
+
 /***************** CBINARIESARRAY_V1 ******************/
 
 gits::OpenCL::CBinariesArray_V1::CBinariesArray_V1(const cl_uint& count,
@@ -346,6 +356,21 @@ std::vector<std::string> gits::OpenCL::CBinariesArray_V1::FileNames() const {
     }
   }
   return fileNames;
+}
+
+uint64_t gits::OpenCL::CBinariesArray_V1::Size() const {
+  uint64_t total = sizeof(_linkMode);
+  if (_linkMode == ProgramBinaryLink::program) {
+    total += sizeof(_programOriginal);
+  } else {
+    total += sizeof(uint32_t);
+    for (const auto& bin : _binaries) {
+      if (bin) {
+        total += bin->Size();
+      }
+    }
+  }
+  return total;
 }
 
 void gits::OpenCL::CBinariesArray_V1::Write(CBinOStream& stream) const {
@@ -462,6 +487,10 @@ void gits::OpenCL::CCLMappedPtr::SyncBuffer() {
   }
 }
 
+uint64_t gits::OpenCL::CCLMappedPtr::Size() const {
+  return CCLArgObj::Size() + sizeof(_hasData) + (_hasData ? _data.Size() : 0);
+}
+
 /******************** CCLKernelExecInfo ********************/
 
 const char* gits::OpenCL::CCLKernelExecInfo::NAME = "void *";
@@ -514,6 +543,16 @@ void gits::OpenCL::CCLKernelExecInfo::Read(CBinIStream& stream) {
   } else {
     _fineGrainSystemParam.Read(stream);
   }
+}
+
+uint64_t gits::OpenCL::CCLKernelExecInfo::Size() const {
+  uint64_t total = sizeof(bool);
+  if (_svmPtrs) {
+    total += _svmPtrs->Size();
+  } else {
+    total += _fineGrainSystemParam.Size();
+  }
+  return total;
 }
 
 /******************** CCLKernelExecInfo_V1 ********************/
@@ -597,6 +636,25 @@ void gits::OpenCL::CCLKernelExecInfo_V1::Read(CBinIStream& stream) {
   }
 }
 
+uint64_t gits::OpenCL::CCLKernelExecInfo_V1::Size() const {
+  // Serialized as: type + depending on type either bool, uint or array
+  uint64_t total = sizeof(type);
+  switch (type) {
+  case KernelExecInfoType::boolean:
+    total += param_bool.Size();
+    break;
+  case KernelExecInfoType::uint:
+    total += param_uint.Size();
+    break;
+  case KernelExecInfoType::pointers:
+    if (param_ptrs) {
+      total += param_ptrs->Size();
+    }
+    break;
+  }
+  return total;
+}
+
 unsigned gits::OpenCL::CBinaryData::_lastId = 0;
 
 gits::OpenCL::CBinaryData::CBinaryData(const size_t size, const void* buffer)
@@ -634,6 +692,14 @@ void gits::OpenCL::CBinaryData::Read(CBinIStream& stream) {
 
 void gits::OpenCL::CBinaryData::Deallocate() {
   std::vector<char>().swap(_buffer);
+}
+
+uint64_t gits::OpenCL::CBinaryData::Size() const {
+  uint64_t total = sizeof(_size) + sizeof(_ptr);
+  if (!_buffer.empty()) {
+    total += _resource.Size();
+  }
+  return total;
 }
 
 /******************** CKERNELARGVALUE ********************/
@@ -798,6 +864,16 @@ void gits::OpenCL::CAsyncBinaryData::Read(CBinIStream& stream) {
   }
 }
 
+uint64_t gits::OpenCL::CAsyncBinaryData::Size() const {
+  // Serialized via CBinaryResource plus headers for length/appPtr
+  uint64_t total = sizeof(_len);
+  if (_len) {
+    total += sizeof(_appPtr);
+    total += _resource.Size();
+  }
+  return total;
+}
+
 /******************** CSVMPtr ********************/
 
 const char* gits::OpenCL::CSVMPtr::NAME = "void *";
@@ -831,6 +907,12 @@ void gits::OpenCL::CSVMPtr::Read(CBinIStream& stream) {
   } else {
     _hostPtr.Read(stream);
   }
+}
+
+uint64_t gits::OpenCL::CSVMPtr::Size() const {
+  // Mode flag + either mapped ptr size or host resource size
+  return sizeof(_createdByCLSVMAlloc) +
+         (_createdByCLSVMAlloc ? _mappedPtr.Size() : _hostPtr.Size());
 }
 
 /******************** CSVMPtr_V1 ********************/
@@ -883,6 +965,11 @@ void gits::OpenCL::CSVMPtr_V1::Read(CBinIStream& stream) {
   } else {
     _hostPtr.Read(stream);
   }
+}
+uint64_t gits::OpenCL::CSVMPtr_V1::Size() const {
+  // Mode flag + offset + either mapped ptr size or host buffer size
+  return sizeof(_createdByCLSVMAlloc) + sizeof(_offset) +
+         (_createdByCLSVMAlloc ? _mappedPtr.Size() : _hostPtr.Size());
 }
 /******************** CBuildOptions ********************/
 
@@ -950,6 +1037,12 @@ void gits::OpenCL::CUSMPtr::Read(CBinIStream& stream) {
   }
 }
 
+uint64_t gits::OpenCL::CUSMPtr::Size() const {
+  // Mode flag + offset + either mapped ptr size or host buffer size
+  return sizeof(_createdByCLUSMAlloc) + sizeof(_offset) +
+         (_createdByCLUSMAlloc ? _mappedPtr.Size() : _hostPtr.Size());
+}
+
 void* gits::OpenCL::CUSMPtr::Value() {
   if (_createdByCLUSMAlloc) {
     if (_mappedPtr.CheckMapping()) {
@@ -973,6 +1066,11 @@ std::string gits::OpenCL::Ccl_resource_barrier_descriptor_intel::ToString() cons
          << cl_resource_barrier_typeToString(_struct.type) << " }"
          << cl_resource_memory_scopeToString(_struct.scope) << ", ";
   return result.str();
+}
+
+uint64_t gits::OpenCL::Ccl_resource_barrier_descriptor_intel::Size() const {
+  // Struct fields: svm allocation mapped ptr + mem object + type + scope
+  return _svm_allocation_pointer.Size() + _mem_object.Size() + _type.Size() + _scope.Size();
 }
 
 cl_resource_barrier_descriptor_intel* gits::OpenCL::Ccl_resource_barrier_descriptor_intel::Ptr() {

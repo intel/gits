@@ -57,6 +57,11 @@ public:
   const CLType& Value() const {
     return _value;
   }
+
+  // Serialized as the raw name value
+  virtual uint64_t Size() const override {
+    return sizeof(CLType);
+  }
 };
 
 template <class T, class T_WRAP>
@@ -190,6 +195,11 @@ public:
 
   void Assign(T other) {
     AddMapping(other);
+  }
+
+  // Serialized as the raw name value
+  virtual uint64_t Size() const override {
+    return sizeof(T);
   }
 
 private:

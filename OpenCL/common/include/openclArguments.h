@@ -162,6 +162,7 @@ public:
   virtual std::string ToString() const {
     return "binaries";
   }
+  virtual uint64_t Size() const override;
 };
 
 class CBinariesArray_V1 : public CArgument {
@@ -198,6 +199,7 @@ public:
     return "binaries";
   }
   std::vector<std::string> FileNames() const;
+  virtual uint64_t Size() const override;
 };
 
 /* *************************** POINTERS ******************************** */
@@ -277,6 +279,7 @@ public:
     return _data;
   }
   void SyncBuffer();
+  virtual uint64_t Size() const override;
 };
 
 class CCLKernelExecInfo : CCLArg<void*, CCLKernelExecInfo> {
@@ -301,6 +304,7 @@ public:
   }
   virtual void Write(CBinOStream& stream) const;
   virtual void Read(CBinIStream& stream);
+  virtual uint64_t Size() const override;
 };
 
 class CCLKernelExecInfo_V1 : CCLArg<void*, CCLKernelExecInfo_V1> {
@@ -322,6 +326,7 @@ public:
   }
   virtual void Write(CBinOStream& stream) const;
   virtual void Read(CBinIStream& stream);
+  virtual uint64_t Size() const override;
 };
 
 class CCLUserData : public CvoidPtr {
@@ -376,6 +381,7 @@ public:
     return ToStringHelper(_ptr);
   }
   virtual void Deallocate();
+  virtual uint64_t Size() const override;
 };
 
 class CKernelArgValue : public CBinaryData {
@@ -443,6 +449,7 @@ public:
   bool IsMappedPointer() const {
     return _resource.GetResourceHash() == CResourceManager::EmptyHash;
   }
+  virtual uint64_t Size() const override;
 };
 
 class CSVMPtr : CCLArg<void*, CSVMPtr> {
@@ -472,6 +479,7 @@ public:
   virtual std::string ToString() const override {
     return _createdByCLSVMAlloc ? ToStringHelper(*_mappedPtr) : _hostPtr.ToString();
   }
+  virtual uint64_t Size() const override;
 };
 
 class CSVMPtr_V1 : CCLArg<void*, CSVMPtr_V1> {
@@ -500,6 +508,7 @@ public:
   bool IsMappedPointer() {
     return _createdByCLSVMAlloc;
   }
+  virtual uint64_t Size() const override;
 };
 
 std::vector<cl_context_properties> MapContextProperties(
@@ -555,6 +564,7 @@ public:
   virtual void FreeHostMemory() {
     _hostPtr.Deallocate();
   }
+  virtual uint64_t Size() const override;
 };
 
 class Ccl_resource_barrier_descriptor_intel : public CArgument {
@@ -589,6 +599,7 @@ public:
   virtual std::set<uint64_t> GetMappedPointers() {
     return std::set<uint64_t>();
   }
+  virtual uint64_t Size() const override;
 };
 
 } // namespace OpenCL
