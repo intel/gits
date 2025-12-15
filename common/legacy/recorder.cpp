@@ -444,12 +444,7 @@ void gits::CRecorder::Register(std::unique_ptr<CBehavior> behavior) {
   }
 
   if (recEnabled) {
-#if defined GITS_PLATFORM_WINDOWS
-    _sc.scheduler.reset(
-        new CScheduler(rec.tokenBurst, rec.tokenBurstNum, directx.capture.tokenBurstChunkSize));
-#else
-    _sc.scheduler.reset(new CScheduler(rec.tokenBurst, rec.tokenBurstNum));
-#endif
+    _sc.scheduler.reset(new CScheduler(rec.tokenBurst, rec.tokenBurstNum, rec.tokenBurstChunkSize));
   }
 
 #if defined GITS_PLATFORM_WINDOWS

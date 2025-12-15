@@ -241,6 +241,10 @@ Configuration:
             Description:
               Specifies maximum number of 'bursts' loaded, waiting for execution,
               at any one time by player
+          - Name: tokenBurstChunkSize
+            Type: uint64_t
+            Default: 5242880
+            Description: "Default size: 5 MB"
           - Name: exitFrame
             Type: uint32_t
             Default: 1000000
@@ -654,6 +658,9 @@ Configuration:
           - Name: tokenBurstNum
             Type: uint32_t
             Default: 5
+          - Name: tokenBurstChunkSize
+            Type: uint64_t
+            Default: 5242880
           - Name: installPath
             Type: std::filesystem::path
             Default: "{install_path}/Recorder"
@@ -783,9 +790,6 @@ Configuration:
             Type: std::vector<std::string>
             Default: []
             Description: List of plugins to enable
-          - Name: tokenBurstChunkSize
-            Type: uint64_t
-            Default: 5242880
           - Name: Portability
             Type: Group
             Options:
@@ -859,10 +863,6 @@ Configuration:
             Type: std::vector<std::string>
             Default: []
             Description: List of plugins to enable
-          - Name: tokenBurstChunkSize
-            Type: uint64_t
-            Default: 5242880
-            Description: "Default size: 5 MB"
           - Name: AdapterOverride
             Type: Group
             Description:
