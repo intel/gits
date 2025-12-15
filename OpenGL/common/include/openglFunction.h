@@ -375,6 +375,7 @@ public:
   virtual CLibrary::TId LibraryId() const {
     return CLibrary::ID_OPENGL;
   }
+  virtual uint64_t Size() const override;
 };
 
 class CDrawFunction : public CFunction {

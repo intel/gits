@@ -71,6 +71,9 @@ public:
   virtual void Read(CBinIStream& stream) {
     _update.Read(stream);
   }
+  virtual uint64_t Size() const override {
+    return _update.Size();
+  }
 };
 } // namespace OpenGL
 } // namespace gits

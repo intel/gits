@@ -2454,6 +2454,10 @@ void* gits::OpenGL::CDataPtr::Value() {
   }
 }
 
+uint64_t gits::OpenGL::CDataPtr::Size() const {
+  return _ptr.Size() + _isBuff.Size();
+}
+
 /* ********************************** CDataPtrArray ********************************* */
 gits::OpenGL::CDataPtrArray::CDataPtrArray() : _isBuff(false) {}
 
@@ -2540,6 +2544,10 @@ const void** gits::OpenGL::CDataPtrArray::Value() {
   }
 
   return &_ptrsPlayer[0];
+}
+
+uint64_t gits::OpenGL::CDataPtrArray::Size() const {
+  return _ptrsRecorder.Size() + _isBuff.Size();
 }
 
 /* ******************************** CDataUpdate **************************** */
@@ -2777,6 +2785,11 @@ void gits::OpenGL::CDataUpdate::Read(CBinIStream& stream) {
           std::move(gits::CGits::Instance().ResourceManager2().get(_updates.back().hash));
     }
   }
+}
+uint64_t gits::OpenGL::CDataUpdate::Size() const {
+  uint64_t count_header = sizeof(uint32_t);
+  uint64_t per_update = sizeof(uint64_t) * 3; // area + hash + offset
+  return count_header + per_update * _updates.size();
 }
 
 //************************************** CCoherentBufferUpdate ********************************************************
@@ -3150,6 +3163,12 @@ void gits::OpenGL::CCoherentBufferUpdate::Read(CBinIStream& stream) {
   }
 }
 
+uint64_t gits::OpenGL::CCoherentBufferUpdate::Size() const {
+  uint64_t count_header = sizeof(uint32_t);
+  uint64_t per_update = sizeof(uint64_t) + sizeof(uint32_t) * 4;
+  return count_header + per_update * _updates.size();
+}
+
 /* ******************************** CGLSamplerType****************************** */
 const char* gits::OpenGL::CGLSamplerType::NAME = "GLuint";
 
@@ -3222,6 +3241,11 @@ void gits::OpenGL::CGLIndirectCmds::Read(CBinIStream& stream) {
   }
 }
 
+uint64_t gits::OpenGL::CGLIndirectCmds::Size() const {
+  return sizeof(ptr_value_) + sizeof(count_) + sizeof(buffer_) +
+         sizeof(DrawArraysIndirectCommand) * cmds_.size();
+}
+
 gits::OpenGL::CGLGenericResource::CGLGenericResource(const GLvoid* ptr,
                                                      size_t size,
                                                      GLenum sourceTarget,
@@ -3272,6 +3296,16 @@ void gits::OpenGL::CGLGenericResource::Read(CBinIStream& stream) {
   } else {
     stream >> _buffOffset;
   }
+}
+
+uint64_t gits::OpenGL::CGLGenericResource::Size() const {
+  uint64_t total = _isBuff.Size();
+  if (*_isBuff == 0) {
+    total += _resource.Size();
+  } else {
+    total += _buffOffset.Size();
+  }
+  return total;
 }
 
 gits::OpenGL::CGLTexResource::CGLTexResource(

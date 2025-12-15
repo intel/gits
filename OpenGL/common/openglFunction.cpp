@@ -618,6 +618,17 @@ CFunction* CFunction::Create(unsigned id) {
   throw EOperationFailed(EXCEPTION_MESSAGE);
 }
 
+uint64_t CFunction::Size() const {
+  // Sum sizes of all arguments. Base CFunction provides ArgumentCount()/Argument(i).
+  uint64_t total = 0;
+  const unsigned count = ArgumentCount();
+  for (unsigned i = 0; i < count; ++i) {
+    const CArgument& arg = Argument(i);
+    total += arg.Size();
+  }
+  return total;
+}
+
 CArgument& CFunction::Result(unsigned idx) {
   LOG_ERROR << "Results not supported in OpenGL!!!";
   throw EOperationFailed(EXCEPTION_MESSAGE);

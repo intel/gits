@@ -39,7 +39,6 @@
  * @param dumpScreenshots Defines if player should dump screenshot for every replayed frame
  */
 gits::CPlayer::CPlayer() : _state(STATE_RUNNING) {
-  const auto& config = Configurator::Get();
   CGits::Instance().SetSC(&this->_sc);
   const auto& cfg = Configurator::Get();
   _interactive = cfg.common.player.interactive;

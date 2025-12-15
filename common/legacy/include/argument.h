@@ -83,9 +83,15 @@ public:
     return "";
   }
 
-  // Returns number of bytes this argument will serialize into the command payload.
-  // Default is 0; concrete argument wrappers should override if they emit data.
   virtual uint64_t Size() const {
+    if (CGits::Instance().GetApi3D() == ApisIface::ApisIface::OpenGL) {
+      throw std::runtime_error(std::string("Size() not implemented for argument wrapper ") +
+                               Name() + " used in OpenGL API.");
+    } else if (CGits::Instance().GetApi3D() == ApisIface::ApisIface::Vulkan) {
+      throw std::runtime_error(std::string("Size() not implemented for argument wrapper ") +
+                               Name() + " used in Vulkan API.");
+    }
+
     return 0;
   }
 
@@ -152,6 +158,12 @@ public:
   }
   const std::string& operator*() const {
     return _text;
+  }
+
+  // Serialized as: filename length+bytes and text length+bytes
+  virtual uint64_t Size() const override {
+    // Two 32-bit length headers plus raw bytes
+    return sizeof(uint32_t) + _fileName.size() + sizeof(uint32_t) + _text.size();
   }
 };
 

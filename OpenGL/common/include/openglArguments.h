@@ -247,6 +247,15 @@ public:
     }
   }
 
+  virtual uint64_t Size() const override {
+    uint64_t total = sizeof(uint32_t);
+    for (const auto& elem : _array) {
+      CGLtype wrapper_(elem);
+      total += wrapper_.Size();
+    }
+    return total;
+  }
+
   std::vector<T>& Vector() {
     return _array;
   }
@@ -367,6 +376,15 @@ public:
     }
   }
 
+  virtual uint64_t Size() const override {
+    uint64_t total = sizeof(uint32_t);
+    for (const auto& elem : _array) {
+      CGLtype wrapper_(elem);
+      total += wrapper_.Size();
+    }
+    return total;
+  }
+
   std::vector<T>& Vector() {
     return _array;
   }
@@ -477,6 +495,11 @@ public:
   }
   const GLtype& Original() const {
     return _value;
+  }
+
+  // Report bytes serialized by this argument; matches Write() behavior
+  virtual uint64_t Size() const override {
+    return sizeof(WrittenType);
   }
 
 protected:
@@ -1330,6 +1353,9 @@ public:
 
   virtual void Write(CBinOStream& stream) const {}
   virtual void Read(CBinIStream& stream) {}
+  virtual uint64_t Size() const override {
+    return 0;
+  }
 };
 
 //*************************** CDataPtr *************************************
@@ -1375,6 +1401,7 @@ public:
   bool IsBuff() {
     return (bool)*_isBuff;
   }
+  virtual uint64_t Size() const override;
 };
 
 class CDataPtrArray : public CArgument {
@@ -1406,6 +1433,7 @@ public:
   bool IsBuff() {
     return (bool)*_isBuff;
   }
+  virtual uint64_t Size() const override;
 };
 
 class CAttribPtr : public CDataPtr {
@@ -1467,6 +1495,7 @@ public:
   void Apply();
   virtual void Write(CBinOStream& stream) const;
   virtual void Read(CBinIStream& stream);
+  virtual uint64_t Size() const override;
 };
 
 //************************************** CCoherentBufferUpdate **************************************
@@ -1515,6 +1544,7 @@ public:
   void Apply();
   virtual void Write(CBinOStream& stream) const;
   virtual void Read(CBinIStream& stream);
+  virtual uint64_t Size() const override;
 
 private:
   std::vector<TCoherentBufferData> _updates;
@@ -1582,6 +1612,9 @@ public:
       Reset(new CArgumentType);
       stream >> *_heldArg;
     }
+  }
+  virtual uint64_t Size() const override {
+    return _initialized.Size() + ((*_initialized == GL_TRUE && _heldArg) ? _heldArg->Size() : 0);
   }
 };
 
@@ -1720,6 +1753,16 @@ public:
     }
   }
 
+  virtual uint64_t Size() const override {
+    uint64_t sz = CGLint().Size(); // count
+    for (const auto& kv : _data) {
+      CGLchar::CSArray name(kv.first.c_str(), '\0', 1);
+      sz += name.Size();
+      sz += CGLint(kv.second).Size();
+    }
+    return sz;
+  }
+
 private:
   map_t _data;
 };
@@ -1792,6 +1835,16 @@ public:
       throw std::runtime_error(EXCEPTION_MESSAGE);
     }
   }
+
+  virtual uint64_t Size() const override {
+    uint64_t total = sizeof(uint32_t);
+    for (const auto* s : _array) {
+      if (s) {
+        total += s->Size();
+      }
+    }
+    return total;
+  }
 };
 
 /**
@@ -1827,6 +1880,9 @@ public:
     stream >> _access;
     stream >> _mask;
   }
+  virtual uint64_t Size() const override {
+    return _access.Size() + _mask.Size();
+  }
 };
 
 /**
@@ -1855,6 +1911,9 @@ public:
   virtual void Read(CBinIStream& stream) {
     stream >> _flags;
     stream >> _mask;
+  }
+  virtual uint64_t Size() const override {
+    return _flags.Size() + _mask.Size();
   }
 };
 
@@ -1901,6 +1960,9 @@ public:
     read_from_stream(stream, _location);
     read_from_stream(stream, _array_size);
     read_from_stream(stream, _array_index);
+  }
+  virtual uint64_t Size() const override {
+    return sizeof(GLint) * 3;
   }
 };
 
@@ -1994,6 +2056,9 @@ public:
     read_from_stream(stream, _index);
     _name.Read(stream);
   }
+  virtual uint64_t Size() const override {
+    return _program.Size() + sizeof(_programInterface) + sizeof(_index) + _name.Size();
+  }
 };
 
 /**
@@ -2003,9 +2068,9 @@ public:
 class CGLProgramResourceivHelper : public CArgument {
   CGLint::CSArray _params;
   std::vector<CRecUniformLocation> _locations;
-  GLsizei _count; // Not saved to the stream. Only available in recorder!
+
 public:
-  CGLProgramResourceivHelper() : _params(), _locations(), _count(0) {}
+  CGLProgramResourceivHelper() : _params(), _locations() {}
   CGLProgramResourceivHelper(GLuint program,
                              GLenum programInterface,
                              GLuint index,
@@ -2013,7 +2078,7 @@ public:
                              const GLenum* props,
                              GLsizei bufSize,
                              GLint* params)
-      : _params(std::min(propCount, bufSize), params), _locations(), _count(bufSize) {
+      : _params(std::min(propCount, bufSize), params), _locations() {
     GLint nameLength = 0;
     drv.gl.glGetProgramInterfaceiv(program, programInterface, GL_MAX_NAME_LENGTH, &nameLength);
     std::vector<GLchar> name(nameLength);
@@ -2059,6 +2124,11 @@ public:
       throw std::runtime_error(EXCEPTION_MESSAGE);
     }
   }
+  virtual uint64_t Size() const override {
+    uint64_t total = _params.Size() + sizeof(size_t);
+    total += sizeof(GLint) * 3 * _locations.size(); // CRecUniformLocation writes 3 GLint values
+    return total;
+  }
 };
 
 /**
@@ -2096,6 +2166,9 @@ public:
   }
   virtual void Read(CBinIStream& stream) { /* Do nothing */
   }
+  virtual uint64_t Size() const override {
+    return 0;
+  }
 };
 
 struct DrawArraysIndirectCommand {
@@ -2127,6 +2200,7 @@ public:
 
   virtual void Write(CBinOStream& stream) const;
   virtual void Read(CBinIStream& stream);
+  virtual uint64_t Size() const override;
 };
 
 class CGLGenericResource : public CArgument {
@@ -2149,6 +2223,7 @@ public:
   CBinaryResource::PointerProxy operator*();
   virtual void Write(CBinOStream& stream) const;
   virtual void Read(CBinIStream& stream);
+  virtual uint64_t Size() const override;
 };
 
 class CGLTexResource : public CArgument {
@@ -2186,6 +2261,9 @@ public:
   }
   virtual void Read(CBinIStream& stream) {
     stream >> _resource;
+  }
+  virtual uint64_t Size() const override {
+    return _resource.Size();
   }
 };
 
@@ -2232,6 +2310,9 @@ public:
   virtual void Read(CBinIStream& stream) {
     stream >> _resource;
   }
+  virtual uint64_t Size() const override {
+    return _resource.Size();
+  }
 };
 
 class CGLClearTexResource : public CArgument {
@@ -2270,6 +2351,10 @@ public:
       _resource->Read(stream);
     }
   }
+  virtual uint64_t Size() const override {
+    // Emit bool size and, if not null, resource payload
+    return _isNullPtr.Size() + ((*_isNullPtr) ? 0 : (_resource ? _resource->Size() : 0));
+  }
 };
 
 class CGLBitmapResource : public CArgument {
@@ -2296,6 +2381,9 @@ public:
   }
   virtual void Read(CBinIStream& stream) {
     stream >> _resource;
+  }
+  virtual uint64_t Size() const override {
+    return _resource.Size();
   }
 };
 

@@ -259,6 +259,10 @@ public:
     read_name_from_stream(stream, key_);
   }
 
+  virtual uint64_t Size() const override {
+    return sizeof(Type);
+  }
+
   static const char* TypeNameStr() {
     return IdMappedArgMap<MapId>::TypeNameStr();
   }
@@ -454,6 +458,8 @@ public:
   static void AddMapping(GLint program, GLint location, GLint loc_size, GLint actual_location);
   static void RemoveMappings(GLint program);
 
+  virtual uint64_t Size() const override;
+
 private:
   typedef std::unordered_map<GLint, LocationMap<GLint>> program_locations_map_t;
   static program_locations_map_t& getLocationsMap();
@@ -487,6 +493,8 @@ public:
 
   static void AddMapping(
       GLint program, GLenum type, GLint location, GLint loc_size, GLint actual_location);
+
+  virtual uint64_t Size() const override;
 
 private:
   typedef std::unordered_map<GLint, LocationMap<GLint>> shader_locations_map_t;
@@ -533,6 +541,8 @@ public:
 
   static void AddMapping(GLint program, GLint index, GLint actual_index);
 
+  virtual uint64_t Size() const override;
+
 private:
   typedef std::unordered_map<GLint, GLint> indices_map_t;
   typedef std::unordered_map<GLint, indices_map_t> program_indices_map_t;
@@ -559,6 +569,8 @@ public:
   GLuint operator*() const;
 
   static void AddMapping(GLint program, GLuint index, GLuint actual_index);
+
+  virtual uint64_t Size() const override;
 
 private:
   typedef std::unordered_map<GLuint, GLuint> indices_map_t;
