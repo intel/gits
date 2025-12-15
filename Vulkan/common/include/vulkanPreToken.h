@@ -478,6 +478,9 @@ public:
   virtual void Write(CBinOStream& stream) const override;
   virtual void Read(CBinIStream& stream) override;
   virtual void Run() override;
+  // Provide a custom Size implementation. Base CFunction::Size() is not applicable
+  // for this token due to vector-wrapped arguments.
+  virtual uint64_t Size() const override;
   std::set<uint64_t> GetMappedPointers() {
     std::set<uint64_t> returnMap;
     for (auto obj : _mem->GetMappedPointers()) {
@@ -958,6 +961,8 @@ public:
   virtual void Write(CBinOStream& stream) const override;
   virtual void Read(CBinIStream& stream) override;
   virtual void Run() override;
+  // Custom Size implementation to handle unique_ptr argument safely
+  virtual uint64_t Size() const override;
   std::set<uint64_t> GetMappedPointers() {
     std::set<uint64_t> returnMap;
     return returnMap;

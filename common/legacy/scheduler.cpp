@@ -50,8 +50,9 @@ public:
   void operator()(ProducerConsumer<CScheduler::CTokenList>& queue) {
     CScheduler::CTokenList tokenList;
 #if defined GITS_PLATFORM_WINDOWS
-    static bool isDirectX =
-        (CGits::Instance().GetApi3D() == ApisIface::TApi::DirectX); // Static variable for the check
+    static bool isDirectXorVulkan =
+        (CGits::Instance().GetApi3D() == ApisIface::TApi::DirectX) ||
+        (CGits::Instance().GetApi3D() == ApisIface::TApi::Vulkan); // Static variable for the check
 #endif
 
     try {
@@ -78,8 +79,8 @@ public:
                                       (uint64_t)tokenList.max_size());
 #if defined GITS_PLATFORM_WINDOWS
         uint64_t currentChunkSize = 0;
-        while (((isDirectX && currentChunkSize < chunkSize) ||
-                (!isDirectX && loaded < tokenBurstLimit) ||
+        while (((isDirectXorVulkan && currentChunkSize < chunkSize) ||
+                (!isDirectXorVulkan && loaded < tokenBurstLimit) ||
 #else
         while ((loaded < tokenBurstLimit ||
 #endif
@@ -254,10 +255,11 @@ CScheduler::~CScheduler() {
  */
 void CScheduler::Register(CToken* token) {
 #if defined GITS_PLATFORM_WINDOWS
-  static bool isDirectX =
-      (CGits::Instance().GetApi3D() == ApisIface::TApi::DirectX); // Static variable for the check
-  if ((isDirectX && _currentChunkSize > _chunkSize) ||
-      (!isDirectX && _tokenList.size() > _tokenLimit)) {
+  static bool isDirectXorVulkan =
+      (CGits::Instance().GetApi3D() == ApisIface::TApi::DirectX) ||
+      (CGits::Instance().GetApi3D() == ApisIface::TApi::Vulkan); // Static variable for the check
+  if ((isDirectXorVulkan && _currentChunkSize > _chunkSize) ||
+      (!isDirectXorVulkan && _tokenList.size() > _tokenLimit)) {
     _currentChunkSize = 0;
 #else
   if (_tokenList.size() > _tokenLimit) {

@@ -77,6 +77,7 @@ public:
   }
   virtual VkCommandBuffer CommandBuffer();
   virtual std::set<uint64_t> GetMappedPointers() = 0;
+  virtual uint64_t Size() const override;
 };
 
 class CQueueSubmitFunction : public CFunction {

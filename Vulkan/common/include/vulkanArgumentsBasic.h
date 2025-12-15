@@ -178,6 +178,11 @@ public:
     read_name_from_stream(stream, key_);
   }
 
+  // The Write path stores an ordered id derived from the pointer (void* size)
+  virtual uint64_t Size() const override {
+    return sizeof(void*);
+  }
+
   void Assign(T other) {
     AddMapping(other);
   }
@@ -273,6 +278,7 @@ public:
   virtual void Read(CBinIStream& stream) override {
     read_name_from_stream(stream, _uint32);
   }
+  virtual uint64_t Size() const override;
 };
 
 class CNullWrapper : public CArgument {
@@ -339,6 +345,7 @@ public:
   virtual std::set<uint64_t> GetMappedPointers() {
     return {};
   }
+  virtual uint64_t Size() const override;
 };
 
 class CVoidPtr : public CArgument {
@@ -397,6 +404,7 @@ public:
   virtual std::set<uint64_t> GetMappedPointers() {
     return {};
   }
+  virtual uint64_t Size() const override;
 };
 
 class CVulkanShader : public CArgument {
@@ -430,6 +438,7 @@ public:
   virtual std::set<uint64_t> GetMappedPointers() {
     return {};
   }
+  virtual uint64_t Size() const override;
 };
 
 // On 32-bit all nondispatchable handle types are typedef'd to uint64_t.
@@ -490,6 +499,7 @@ public:
   PtrConverter<VkClearColorValue> Original();
   virtual void Write(CBinOStream& stream) const override;
   virtual void Read(CBinIStream& stream) override;
+  virtual uint64_t Size() const override;
 };
 
 class CVkClearValue : public CArgument, gits::noncopyable {
@@ -514,6 +524,7 @@ public:
   PtrConverter<VkClearValue> Original();
   virtual void Write(CBinOStream& stream) const override;
   virtual void Read(CBinIStream& stream) override;
+  virtual uint64_t Size() const override;
 
   virtual std::set<uint64_t> GetMappedPointers() {
     return {};
@@ -734,6 +745,7 @@ public:
   }
   virtual void Write(CBinOStream& stream) const override;
   virtual void Read(CBinIStream& stream) override;
+  virtual uint64_t Size() const override;
 };
 
 class CVkGenericArgumentArray : public CArgument, gits::noncopyable {
@@ -792,6 +804,7 @@ public:
       throw std::runtime_error(EXCEPTION_MESSAGE);
     }
   }
+  virtual uint64_t Size() const override;
 };
 
 class CpNextWrapper : public CArgument, gits::noncopyable {
@@ -846,6 +859,7 @@ public:
       _data->Read(stream);
     }
   }
+  virtual uint64_t Size() const override;
 };
 
 typedef CVulkanEnum<VkDescriptorType> CVkDescriptorType;
@@ -888,6 +902,7 @@ public:
   const char* Name() const override {
     return "CDescriptorUpdateTemplateObject";
   }
+  virtual uint64_t Size() const override;
 };
 
 class CUpdateDescriptorSetWithTemplateArray : public CArgument, gits::noncopyable {
@@ -922,6 +937,7 @@ public:
   virtual std::set<uint64_t> GetMappedPointers() {
     return {};
   }
+  virtual uint64_t Size() const override;
 };
 
 class CVkPipelineCacheCreateInfo_V1 : public CArgument, gits::noncopyable {
@@ -955,6 +971,7 @@ public:
   virtual std::set<uint64_t> GetMappedPointers();
   virtual void Write(CBinOStream& stream) const override;
   virtual void Read(CBinIStream& stream) override;
+  virtual uint64_t Size() const override;
 };
 
 typedef struct VkBuffer_T* VkBufferTypeTag;
@@ -1015,6 +1032,7 @@ public:
   const char* Name() const override {
     return "CBufferDeviceAddressObject";
   }
+  virtual uint64_t Size() const override;
 };
 
 typedef CVulkanEnum<VkCommandExecutionSideGITS> CVkCommandExecutionSideGITS;
@@ -1068,6 +1086,7 @@ public:
   virtual void Write(CBinOStream& stream) const override;
 
   virtual void Read(CBinIStream& stream) override;
+  virtual uint64_t Size() const override;
 };
 
 class CDeviceOrHostAddressAccelerationStructureVertexDataGITS
@@ -1132,6 +1151,7 @@ public:
   virtual void Write(CBinOStream& stream) const override;
 
   virtual void Read(CBinIStream& stream) override;
+  virtual uint64_t Size() const override;
 };
 
 class CVkAccelerationStructureGeometryInstancesDataKHR : public CArgument {
@@ -1189,6 +1209,7 @@ public:
   virtual std::set<uint64_t> GetMappedPointers();
   virtual void Write(CBinOStream& stream) const override;
   virtual void Read(CBinIStream& stream) override;
+  virtual uint64_t Size() const override;
 };
 
 typedef CVulkanEnum<VkGeometryTypeKHR> CVkGeometryTypeKHR;
@@ -1241,6 +1262,7 @@ public:
   virtual std::set<uint64_t> GetMappedPointers();
   virtual void Write(CBinOStream& stream) const override;
   virtual void Read(CBinIStream& stream) override;
+  virtual uint64_t Size() const override;
 };
 
 class CVkMemoryBarrier2;
@@ -1287,6 +1309,7 @@ public:
   uint32_t GetMemoryBarrierCount() const;
   uint32_t GetBufferMemoryBarrierCount() const;
   uint32_t GetImageMemoryBarrierCount() const;
+  virtual uint64_t Size() const override;
 };
 } // namespace Vulkan
 } // namespace gits

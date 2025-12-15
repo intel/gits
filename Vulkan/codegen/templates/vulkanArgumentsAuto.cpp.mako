@@ -136,4 +136,14 @@ void gits::Vulkan::${cname}::Read(CBinIStream& stream) {
   % endfor
   }
 }
+
+uint64_t gits::Vulkan::${cname}::Size() const {
+  uint64_t sz = sizeof(bool);
+  if (!*_isNullPtr) {
+  % for field in struct.fields:
+    sz += _${field.name}->Size();
+  % endfor
+  }
+  return sz;
+}
 % endfor

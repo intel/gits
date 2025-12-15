@@ -81,6 +81,22 @@ VkCommandBuffer CFunction::CommandBuffer() {
   return VK_NULL_HANDLE;
 }
 
+uint64_t CFunction::Size() const {
+  uint64_t total = 0;
+
+  // Optional return value (some recorders embed it)
+  if (const CArgument* ret = Return()) {
+    total += ret->Size();
+  }
+
+  const unsigned count = ArgumentCount();
+  for (unsigned i = 0; i < count; ++i) {
+    total += Argument(i).Size();
+  }
+
+  return total;
+}
+
 CQueueSubmitFunction::CQueueSubmitFunction() {}
 
 void CQueueSubmitFunction::Trace() {

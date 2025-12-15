@@ -49,6 +49,11 @@ void gits::CArgumentBuffer::Write(CBinOStream& stream) const {
   stream << buffer;
 }
 
+// Provide Size() reflecting the number of payload bytes written by Write()
+uint64_t gits::CArgumentBuffer::Size() const {
+  return static_cast<uint64_t>(Length());
+}
+
 /**
  * @brief Loads argument data from a binary file
  *
@@ -169,6 +174,19 @@ void gits::CBinaryResource::Write(CBinOStream& stream) const {
   stream << CBuffer(_resource_hash);
 }
 
+// Size reflects both the hash written to the main stream and the payload bytes
+// stored in the resource manager (external file). Return the total logical size
+// of data emitted: hash + resource data length.
+uint64_t gits::CBinaryResource::Size() const {
+  const uint64_t hashBytes = static_cast<uint64_t>(sizeof(hash_t));
+  // _data contains the resource payload when available on player side.
+  // When recording, data goes to ResourceManager and may not be present here,
+  // but for sizing we should account for the original payload size.
+  uint64_t payloadBytes = static_cast<uint64_t>(_data.size());
+
+  return hashBytes + payloadBytes;
+}
+
 void gits::CBinaryResource::Read(CBinIStream& stream) {
   CBuffer buffer(_resource_hash);
   stream >> buffer;
@@ -205,6 +223,10 @@ gits::Cchar::Cchar(char value) : _value(value) {}
 
 void gits::Cchar::Write(CBinOStream& stream) const {
   write_to_stream(stream, _value);
+}
+
+uint64_t gits::Cchar::Size() const {
+  return sizeof(char);
 }
 
 void gits::Cchar::Read(CBinIStream& stream) {
@@ -304,6 +326,10 @@ void gits::Cint::Write(CBinOStream& stream) const {
   write_to_stream(stream, _value);
 }
 
+uint64_t gits::Cint::Size() const {
+  return sizeof(int);
+}
+
 void gits::Cint::Read(CBinIStream& stream) {
   read_from_stream(stream, _value);
 }
@@ -319,6 +345,43 @@ const char* gits::Cint64_t::NAME = "int64_t";
 const char* gits::Cfloat::NAME = "float";
 const char* gits::Cdouble::NAME = "double";
 const char* gits::Csize_t::NAME = "size_t";
+
+uint64_t gits::Cuint8_t::Size() const {
+  return sizeof(uint8_t);
+}
+uint64_t gits::Cuint16_t::Size() const {
+  return sizeof(uint16_t);
+}
+uint64_t gits::Cuint32_t::Size() const {
+  return sizeof(uint32_t);
+}
+uint64_t gits::Cuint64_t::Size() const {
+  return sizeof(uint64_t);
+}
+uint64_t gits::Cint8_t::Size() const {
+  return sizeof(int8_t);
+}
+uint64_t gits::Cint16_t::Size() const {
+  return sizeof(int16_t);
+}
+uint64_t gits::Cint32_t::Size() const {
+  return sizeof(int32_t);
+}
+uint64_t gits::Cint64_t::Size() const {
+  return sizeof(int64_t);
+}
+uint64_t gits::Cfloat::Size() const {
+  return sizeof(float);
+}
+uint64_t gits::Cdouble::Size() const {
+  return sizeof(double);
+}
+uint64_t gits::Csize_t::Size() const {
+  return sizeof(size_t);
+}
+uint64_t gits::Cbool::Size() const {
+  return sizeof(bool);
+}
 
 gits::CMappedHandle::CMappedHandle() : version_(0), handle_(nullptr) {}
 
@@ -342,6 +405,10 @@ void gits::CMappedHandle::Write(CBinOStream& stream) const {
   assert(*version_ == currentVersion_);
   version_.Write(stream);
   write_name_to_stream(stream, handle_);
+}
+
+uint64_t gits::CMappedHandle::Size() const {
+  return sizeof(uint32_t) + sizeof(void*);
 }
 
 void gits::CMappedHandle::Read(CBinIStream& stream) {

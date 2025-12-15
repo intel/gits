@@ -83,6 +83,12 @@ public:
     return "";
   }
 
+  // Returns number of bytes this argument will serialize into the command payload.
+  // Default is 0; concrete argument wrappers should override if they emit data.
+  virtual uint64_t Size() const {
+    return 0;
+  }
+
   virtual ~CArgument() {}
 };
 
@@ -113,6 +119,7 @@ public:
   virtual char* Buffer() = 0;
   virtual const char* Buffer() const = 0;
   virtual size_t Length() const = 0;
+  virtual uint64_t Size() const override;
 };
 
 class CArgumentFileText : public CArgument {
@@ -193,6 +200,8 @@ public:
   hash_t GetResourceHash() const;
   void Deallocate();
 
+  virtual uint64_t Size() const override;
+
 protected:
   hash_t _resource_hash;
   std::vector<char> _data;
@@ -238,8 +247,17 @@ public:
   }
   virtual void Write(CBinOStream& stream) const;
   virtual void Read(CBinIStream& stream);
-  virtual int Size() const {
+  virtual int ElementCount() const {
     return N;
+  }
+  // Payload size equals sum of wrapped element sizes (no count header emitted)
+  virtual uint64_t Size() const override {
+    uint64_t total = 0;
+    for (int idx = 0; idx < N; ++idx) {
+      T_WRAP wrapper_(_array[idx]);
+      total += wrapper_.Size();
+    }
+    return total;
   }
 };
 
@@ -293,6 +311,26 @@ public:
   }
   virtual void Write(CBinOStream& stream) const;
   virtual void Read(CBinIStream& stream);
+
+  // Payload size: 32-bit element count followed by each element serialized
+  // via its wrapper T_WRAP (for non-floating types) or raw bytes (for floats).
+  virtual uint64_t Size() const override {
+    uint64_t total = sizeof(uint32_t);
+    if (_array.empty()) {
+      return total;
+    }
+
+    if constexpr (std::is_floating_point<T>::value) {
+      // For floats we write raw bytes in Write(), so account for them here
+      total += static_cast<uint64_t>(_array.size()) * sizeof(T);
+    } else {
+      for (const auto& elem : _array) {
+        T_WRAP wrapper_(elem);
+        total += wrapper_.Size();
+      }
+    }
+    return total;
+  }
 };
 
 /**
@@ -355,6 +393,10 @@ public:
   }
   virtual void Read(CBinIStream& stream) {
     _sizedArray.Read(stream);
+  }
+
+  uint64_t Size() const override {
+    return _sizedArray.Size();
   }
 
   virtual std::set<T_GET_MAPPED_POINTERS> GetMappedPointers() {
@@ -430,6 +472,14 @@ public:
 
   virtual std::set<uint64_t> GetMappedPointers() {
     return std::set<uint64_t>();
+  }
+
+  // Size equals null pointer when empty; otherwise pointer + count + bytes
+  virtual uint64_t Size() const override {
+    if (_sizedArray.Vector().empty()) {
+      return sizeof(void*);
+    }
+    return sizeof(void*) + sizeof(uint32_t) + sizeof(char) * _sizedArray.Vector().size();
   }
 };
 
@@ -537,7 +587,7 @@ public:
     }
     return &_array_T_original[0];
   }
-  size_t Size() const {
+  size_t ElementCount() const {
     return _array.size();
   }
   void RemoveMapping() {
@@ -568,6 +618,18 @@ public:
       objects.insert(_array[i]);
     }
     return objects;
+  }
+
+  // Proper payload size: pointer sentinel + count + per-element payloads
+  virtual uint64_t Size() const override {
+    // Matches Write(): we emit a 32-bit size header, then each element via T_WRAP
+    uint64_t total = sizeof(uint32_t);
+    for (const auto& elem : _array) {
+      // T_WRAP wrapper serializes the element
+      T_WRAP wrapper_(elem);
+      total += wrapper_.Size();
+    }
+    return total;
   }
 };
 
@@ -605,6 +667,7 @@ public:
 
   virtual void Read(CBinIStream& stream);
   virtual void Write(CBinOStream& stream) const;
+  virtual uint64_t Size() const override;
 };
 
 template <typename T>
@@ -658,6 +721,16 @@ public:
   }
   virtual std::set<uint64_t> GetMappedPointers() {
     return std::set<uint64_t>();
+  }
+  // Size equals element count header + sum of inner Cchar::CSArray sizes
+  virtual uint64_t Size() const override {
+    uint64_t total = sizeof(uint32_t);
+    for (const auto* arg : _cStringTable) {
+      if (arg) {
+        total += arg->Size();
+      }
+    }
+    return total;
   }
 };
 
@@ -793,6 +866,16 @@ public:
       }
     }
     return returnMap;
+  }
+
+  virtual uint64_t Size() const override {
+    uint64_t sz = sizeof(uint32_t); // element count
+    for (const auto& arg : _cargs) {
+      if (arg) {
+        sz += arg->Size();
+      }
+    }
+    return sz;
   }
 };
 
@@ -989,14 +1072,22 @@ public:
     }
     return returnMap;
   }
+
+  virtual uint64_t Size() const override {
+    uint64_t sz = sizeof(uint32_t); // outer count
+    for (const auto& outer : _cargs) {
+      sz += sizeof(uint32_t); // inner count
+      for (const auto& inner : outer) {
+        if (inner) {
+          sz += inner->Size();
+        }
+      }
+    }
+    return sz;
+  }
 };
 
-/**
-  * @brief Wrapper for int type
-  *
-  * gits::Cint class is a wrapper for int
-  * type value.
-  */
+//************************** Cint ***********************************
 class Cint : public CArgument {
   int _value;
 
@@ -1025,6 +1116,7 @@ public:
 
   virtual void Read(CBinIStream& stream);
   virtual void Write(CBinOStream& stream) const;
+  virtual uint64_t Size() const override;
 };
 
 //************************** Cuint64_t ***********************************
@@ -1051,6 +1143,7 @@ public:
   virtual void Read(CBinIStream& stream) {
     read_name_from_stream(stream, _uint64);
   }
+  virtual uint64_t Size() const override;
 };
 
 //************************** Cint64_t ***********************************
@@ -1077,6 +1170,7 @@ public:
   virtual void Read(CBinIStream& stream) {
     read_name_from_stream(stream, _value);
   }
+  virtual uint64_t Size() const override;
 };
 
 //************************** Cdouble ***********************************
@@ -1103,6 +1197,7 @@ public:
   virtual void Read(CBinIStream& stream) {
     read_name_from_stream(stream, _double);
   }
+  virtual uint64_t Size() const override;
 };
 
 //************************** Cfloat ***********************************
@@ -1129,6 +1224,7 @@ public:
   virtual void Read(CBinIStream& stream) {
     read_name_from_stream(stream, _float);
   }
+  virtual uint64_t Size() const override;
 };
 
 //************************** Cuint8_t ***********************************
@@ -1157,9 +1253,10 @@ public:
   virtual void Read(CBinIStream& stream) {
     read_name_from_stream(stream, _uint8);
   }
+  virtual uint64_t Size() const override;
 };
 
-//************************** Cint32_t ***********************************
+//************************** Cint8_t ***********************************
 class Cint8_t : public CArgument {
 protected:
   int8_t _value;
@@ -1185,6 +1282,7 @@ public:
   virtual void Read(CBinIStream& stream) {
     read_name_from_stream(stream, _value);
   }
+  virtual uint64_t Size() const override;
 };
 
 //************************** Cuint16_t ***********************************
@@ -1213,6 +1311,7 @@ public:
   virtual void Read(CBinIStream& stream) {
     read_name_from_stream(stream, _uint16);
   }
+  virtual uint64_t Size() const override;
 };
 
 //************************** Cint16_t ***********************************
@@ -1240,6 +1339,7 @@ public:
   virtual void Read(CBinIStream& stream) {
     read_name_from_stream(stream, _int);
   }
+  virtual uint64_t Size() const override;
 };
 
 //************************** Cuint32_t ***********************************
@@ -1268,6 +1368,7 @@ public:
   virtual void Read(CBinIStream& stream) {
     read_name_from_stream(stream, _uint32);
   }
+  virtual uint64_t Size() const override;
 };
 
 //************************** Cint32_t ***********************************
@@ -1295,6 +1396,7 @@ public:
   virtual void Read(CBinIStream& stream) {
     read_name_from_stream(stream, _int);
   }
+  virtual uint64_t Size() const override;
 };
 
 //************************** Csize_t ***********************************
@@ -1323,6 +1425,7 @@ public:
   virtual void Read(CBinIStream& stream) {
     read_size_t_from_stream(stream, _size);
   }
+  virtual uint64_t Size() const override;
 };
 
 //**************************  CBOOL ***********************************
@@ -1350,8 +1453,8 @@ public:
   virtual void Read(CBinIStream& stream) {
     read_name_from_stream(stream, _BOOL);
   }
+  virtual uint64_t Size() const override;
 };
-
 // **************************  CMappedHandle  **************************
 // Maps external memory handles used in recorder to player handles.
 class CMappedHandle : public CArgument {
@@ -1380,6 +1483,7 @@ public:
   void* operator*() const;
 
   std::set<uint64_t> GetMappedPointers();
+  virtual uint64_t Size() const override;
 
   // Mapping methods:
   // TODO: the mapping logic should be in one class; every other mapping class should inherit it
@@ -1577,7 +1681,7 @@ void gits::CArgumentFixedArray<T, N, T_WRAP>::Read(CBinIStream& stream) {
 
 template <class T, int N, class T_WRAP>
 void gits::CArgumentFixedArray<T, N, T_WRAP>::Write(CBinOStream& stream) const {
-  for (int idx = 0; idx < Size(); idx++) {
+  for (int idx = 0; idx < ElementCount(); idx++) {
     T_WRAP wrapper_(_array[idx]);
     stream << wrapper_;
   }

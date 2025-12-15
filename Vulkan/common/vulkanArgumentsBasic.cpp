@@ -1229,3 +1229,184 @@ void gits::Vulkan::CVkAccelerationStructureGeometryDataKHR::Read(CBinIStream& st
     }
   }
 }
+
+uint64_t gits::Vulkan::CVkClearColorValue::Size() const {
+  uint64_t sz = sizeof(bool);
+  if (!*_isNullPtr) {
+    // Cuint32_t::CSArray writes count(uint32) + elements (4x uint32)
+    sz += sizeof(uint32_t) + sizeof(uint32_t) * 4;
+  }
+  return sz;
+}
+
+uint64_t gits::Vulkan::CVkClearValue::Size() const {
+  uint64_t sz = sizeof(bool);
+  if (!*_isNullPtr && _color) {
+    sz += _color->Size();
+  }
+  return sz;
+}
+
+uint64_t gits::Vulkan::CVkGenericArgument::Size() const {
+  uint64_t sz = sizeof(bool);
+  if (!*_isNullPtr) {
+    sz += sizeof(int32_t); // sType enum
+    sz += sizeof(bool);    // skipped flag
+    if (!**_skipped && _argument) {
+      sz += _argument->Size();
+    }
+  }
+  return sz;
+}
+
+uint64_t gits::Vulkan::CVkGenericArgumentArray::Size() const {
+  uint64_t sz = sizeof(uint32_t);
+  for (auto& arg : _cgenericargsDict) {
+    sz += arg->Size();
+  }
+  return sz;
+}
+
+uint64_t gits::Vulkan::CpNextWrapper::Size() const {
+  uint64_t sz = sizeof(uint64_t);
+  if (_ptr && _data) {
+    sz += _data->Size();
+  }
+  return sz;
+}
+
+uint64_t gits::Vulkan::CDescriptorUpdateTemplateObject::Size() const {
+  uint64_t sz = 0;
+  sz += sizeof(int32_t);  // descriptor type enum
+  sz += sizeof(uint64_t); // offset
+  sz += sizeof(uint64_t); // size
+  if (_argument) {
+    sz += _argument->Size();
+  }
+  return sz;
+}
+
+uint64_t gits::Vulkan::CUpdateDescriptorSetWithTemplateArray::Size() const {
+  uint64_t sz = sizeof(uint32_t); // count
+  sz += sizeof(uint64_t);         // total size field
+  for (auto& arg : _cgenericargsDict) {
+    sz += arg->Size();
+  }
+  return sz;
+}
+
+uint64_t gits::Vulkan::CVkPipelineCacheCreateInfo_V1::Size() const {
+  uint64_t sz = sizeof(bool);
+  if (!*_isNullPtr) {
+    sz += sizeof(int32_t);       // sType
+    sz += _pNext->Size();        // pNext wrapper
+    sz += sizeof(uint32_t);      // flags
+    sz += sizeof(size_t);        // initialDataSize
+    sz += _pInitialData->Size(); // resource hash
+  }
+  return sz;
+}
+
+uint64_t gits::Vulkan::CBufferDeviceAddressObject::Size() const {
+  return sizeof(uint64_t)   // original device address
+         + sizeof(void*)    // buffer handle id serialization
+         + sizeof(int64_t); // offset
+}
+
+uint64_t gits::Vulkan::CVkDeviceOrHostAddressConstKHR::Size() const {
+  uint64_t sz = sizeof(int32_t); // execution side enum
+  switch (**_commandExecutionSideGITS) {
+  case VK_COMMAND_EXECUTION_SIDE_DEVICE_GITS:
+    sz += _bufferDeviceAddress->Size();
+    break;
+  case VK_COMMAND_EXECUTION_SIDE_HOST_GITS:
+    // currently no payload written (code commented out)
+    break;
+  }
+  return sz;
+}
+
+uint64_t gits::Vulkan::CVkDeviceOrHostAddressKHR::Size() const {
+  uint64_t sz = sizeof(int32_t); // execution side enum
+  switch (**_commandExecutionSideGITS) {
+  case VK_COMMAND_EXECUTION_SIDE_DEVICE_GITS:
+    sz += _bufferDeviceAddress->Size();
+    break;
+  case VK_COMMAND_EXECUTION_SIDE_HOST_GITS:
+    // throws; no payload
+    break;
+  }
+  return sz;
+}
+
+uint64_t gits::Vulkan::CVkAccelerationStructureGeometryInstancesDataKHR::Size() const {
+  uint64_t sz = sizeof(bool);
+  if (!*_isNullPtr) {
+    sz += sizeof(int32_t);  // sType
+    sz += _pNext->Size();   // pNext
+    sz += sizeof(int32_t);  // execution side enum
+    sz += sizeof(uint32_t); // arrayOfPointers
+    switch (**_commandExecutionSideGITS) {
+    case VK_COMMAND_EXECUTION_SIDE_DEVICE_GITS:
+      sz += _bufferDeviceAddress->Size();
+      break;
+    case VK_COMMAND_EXECUTION_SIDE_HOST_GITS:
+      // not supported
+      break;
+    }
+  }
+  return sz;
+}
+
+uint64_t gits::Vulkan::CVkAccelerationStructureGeometryDataKHR::Size() const {
+  uint64_t sz = sizeof(bool);
+  if (!*_isNullPtr) {
+    sz += sizeof(int32_t); // geometryType
+    switch (**_geometryType) {
+    case VK_GEOMETRY_TYPE_TRIANGLES_KHR:
+      sz += _triangles->Size();
+      break;
+    case VK_GEOMETRY_TYPE_AABBS_KHR:
+      sz += _aabbs->Size();
+      break;
+    case VK_GEOMETRY_TYPE_INSTANCES_KHR:
+      sz += _instances->Size();
+      break;
+    default:
+      break;
+    }
+  }
+  return sz;
+}
+
+uint64_t gits::Vulkan::CVkDependencyInfo::Size() const {
+  uint64_t sz = sizeof(bool);
+  if (!*_isNullPtr) {
+    sz += sizeof(int32_t);  // sType
+    sz += _pNext->Size();   // pNext
+    sz += sizeof(uint32_t); // dependencyFlags
+    sz += sizeof(uint32_t); // memoryBarrierCount
+    sz += _pMemoryBarriers->Size();
+    sz += sizeof(uint32_t); // bufferMemoryBarrierCount
+    sz += _pBufferMemoryBarriers->Size();
+    sz += sizeof(uint32_t); // imageMemoryBarrierCount
+    sz += _pImageMemoryBarriers->Size();
+  }
+  return sz;
+}
+
+uint64_t gits::Vulkan::CVkBool32::Size() const {
+  return sizeof(uint32_t);
+}
+
+uint64_t gits::Vulkan::CNullWrapper::Size() const {
+  return sizeof(uint64_t);
+}
+
+uint64_t gits::Vulkan::CVoidPtr::Size() const {
+  return sizeof(uint64_t);
+}
+
+uint64_t gits::Vulkan::CVulkanShader::Size() const {
+  return _data.Size();
+}

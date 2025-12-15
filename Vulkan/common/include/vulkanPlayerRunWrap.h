@@ -390,7 +390,7 @@ inline void vkGetSwapchainImagesKHR_WRAPRUN(CVkResult& recorderSideReturnValue,
   if (dataSizePtr == nullptr) {
     throw std::runtime_error(EXCEPTION_MESSAGE);
   }
-  if (pData.Size() != 0) {
+  if (pData.ElementCount() != 0) {
     uint64_t recorderDataSize = *dataSizePtr;
     drvVk.vkGetSwapchainImagesKHR(*device, *swapChain, dataSizePtr, NULL);
 

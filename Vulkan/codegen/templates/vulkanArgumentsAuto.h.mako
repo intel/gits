@@ -86,6 +86,7 @@ namespace Vulkan {
       virtual std::set<uint64_t> GetMappedPointers();
       virtual void Write(CBinOStream& stream) const override;
       virtual void Read(CBinIStream& stream) override;
+      virtual uint64_t Size() const override;
     };
 
 % endfor

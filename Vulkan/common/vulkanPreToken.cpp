@@ -270,6 +270,25 @@ void gits::Vulkan::CGitsVkMemoryUpdate2::Read(CBinIStream& stream) {
     _resource.push_back(std::move(std::move(binaryPtr)));
   }
 }
+
+// Custom size for CGitsVkMemoryUpdate2 to avoid base-class iteration pitfalls
+uint64_t gits::Vulkan::CGitsVkMemoryUpdate2::Size() const {
+  uint64_t total = 0;
+  // _mem and _size are simple arguments
+  total += _mem ? _mem->Size() : 0;
+  total += _size ? _size->Size() : 0;
+
+  // Each region contributes offset, length and resource sizes
+  const uint64_t count = _size ? **_size : 0;
+  for (uint64_t i = 0;
+       i < count && i < _offset.size() && i < _length.size() && i < _resource.size(); ++i) {
+    total += _offset[i] ? _offset[i]->Size() : 0;
+    total += _length[i] ? _length[i]->Size() : 0;
+    total += _resource[i] ? _resource[i]->Size() : 0;
+  }
+  return total;
+}
+
 void gits::Vulkan::CGitsVkMemoryRestore::GetDiffFromZero(const std::vector<char>& oldData,
                                                          std::uint64_t& length,
                                                          std::uint64_t& offset) {
@@ -808,7 +827,7 @@ void gits::Vulkan::CGitsVkEnumerateDisplayMonitors::Run() {
   std::vector<HMONITOR> monitors;
   EnumDisplayMonitors(NULL, NULL, Monitorenumproc, (LPARAM)&monitors);
 
-  for (size_t i = 0; (i < monitors.size()) && (i < _monitors.Size()); ++i) {
+  for (size_t i = 0; (i < monitors.size()) && (i < _monitors.ElementCount()); ++i) {
     (*_monitors)[i] = monitors[i];
   }
 #endif
@@ -1564,4 +1583,17 @@ void gits::Vulkan::CGitsVkStateRestoreInfo::Read(CBinIStream& stream) {
   _phaseInfo->Read(stream);
   _timerIndex.Read(stream);
   _timerOn.Read(stream);
+}
+
+uint64_t gits::Vulkan::CGitsVkStateRestoreInfo::Size() const {
+  uint64_t total = 0;
+  if (const CArgument* ret = Return()) {
+    total += ret->Size();
+  }
+  if (_phaseInfo) {
+    total += _phaseInfo->Size();
+  }
+  total += _timerIndex.Size();
+  total += _timerOn.Size();
+  return total;
 }
