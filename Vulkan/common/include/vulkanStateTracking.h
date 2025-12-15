@@ -2427,8 +2427,6 @@ inline void vkCreateSemaphore_SD(VkResult return_value,
     auto semaphoreState =
         std::make_shared<CSemaphoreState>(pSemaphore, pCreateInfo, SD()._devicestates[device]);
     SD()._semaphorestates.emplace(*pSemaphore, semaphoreState);
-    auto semaphoreTypeCreateInfo = (VkSemaphoreTypeCreateInfo*)getPNextStructure(
-        pCreateInfo->pNext, VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO);
   }
 }
 
@@ -3071,6 +3069,19 @@ inline void vkQueueSubmit_setTimestamps(std::shared_ptr<CCommandBufferState>& co
             SD().internalResources.timestamp + i;
         break;
       }
+      // Explicitly handle remaining enum values as no-ops to satisfy clang-tidy.
+      case ResourceType::NONE:
+      case ResourceType::STORAGE_IMAGE:
+      case ResourceType::STORAGE_BUFFER:
+      case ResourceType::STORAGE_TEXEL_BUFFER:
+      case ResourceType::STORAGE_BUFFER_DYNAMIC:
+      case ResourceType::BLIT_DESTINATION_BUFFER:
+      case ResourceType::BLIT_DESTINATION_IMAGE:
+        // These represent write classifications or placeholders; timestamp handling is not applicable.
+        break;
+      default:
+        // Future-proof: unknown types are ignored for timestamping.
+        break;
       }
     }
     SD().internalResources.timestamp += commandBufferState->touchedResources.size();

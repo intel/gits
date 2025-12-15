@@ -26,6 +26,7 @@ protected:
 
 public:
   static const char* NAME;
+
   typedef CArgumentMappedSizedArray<T, CVulkanObj, gits::ADD_MAPPING> CSMapArray;
   typedef CArgumentMappedSizedArray<T, CVulkanObj, gits::NO_ACTION> CSArray;
 
