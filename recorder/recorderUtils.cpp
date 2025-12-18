@@ -81,7 +81,7 @@ bool ConfigureRecorder(const std::filesystem::path& configPath) {
 
   // Update the log parameters after loading in the config
   log::SetMaxSeverity(cfg.common.shared.thresholdLogLevel);
-  if (!cfg.common.shared.logToConsole) {
+  if (!cfg.common.shared.logToConsole.value_or(false)) {
     log::RemoveConsoleAppender();
   }
 

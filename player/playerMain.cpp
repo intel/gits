@@ -173,7 +173,7 @@ int MainBody(int argc, char* argv[]) {
   case ParsingSemanticError:
     LOG_ERROR << "Error during command line parsing:\n" << args.Output.str();
     return 1;
-  case ShowHelp:
+  default:
     break;
   }
 
@@ -218,7 +218,7 @@ int MainBody(int argc, char* argv[]) {
 
   const auto& cfg = Configurator::Get();
   log::SetMaxSeverity(cfg.common.shared.thresholdLogLevel);
-  if (!cfg.common.shared.logToConsole) {
+  if (!cfg.common.shared.logToConsole.value_or(true)) {
     log::RemoveConsoleAppender();
   }
   if (!cfg.common.player.outputTracePath.empty()) {
