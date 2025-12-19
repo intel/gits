@@ -11,7 +11,7 @@
 #include "commandsAuto.h"
 #include "commandsCustom.h"
 #include "descriptorService.h"
-#include "rootSignatureService.h"
+#include "descriptorRootSignatureService.h"
 #include "analyzerRaytracingService.h"
 #include "analyzerExecuteIndirectService.h"
 
@@ -29,7 +29,7 @@ class AnalyzerCommandListService {
 public:
   AnalyzerCommandListService(AnalyzerService& analyzerService,
                              DescriptorService& descriptorService,
-                             RootSignatureService& rootSignatureService,
+                             DescriptorRootSignatureService& rootSignatureService,
                              AnalyzerRaytracingService& raytracingService,
                              AnalyzerExecuteIndirectService& executeIndirectService,
                              bool commandListSubcapture);
@@ -135,7 +135,7 @@ private:
 private:
   AnalyzerService& analyzerService_;
   DescriptorService& descriptorService_;
-  RootSignatureService& rootSignatureService_;
+  DescriptorRootSignatureService& rootSignatureService_;
   AnalyzerRaytracingService& raytracingService_;
   AnalyzerExecuteIndirectService& executeIndirectService_;
   bool commandListSubcapture_{};

@@ -17,7 +17,7 @@ namespace DirectX {
 AnalyzerCommandListService::AnalyzerCommandListService(
     AnalyzerService& analyzerService,
     DescriptorService& descriptorService,
-    RootSignatureService& rootSignatureService,
+    DescriptorRootSignatureService& rootSignatureService,
     AnalyzerRaytracingService& raytracingService,
     AnalyzerExecuteIndirectService& executeIndirectService,
     bool commandListSubcapture)

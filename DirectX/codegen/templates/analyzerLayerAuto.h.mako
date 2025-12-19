@@ -13,7 +13,7 @@ ${header}
 #include "analyzerService.h"
 #include "descriptorService.h"
 #include "analyzerCommandListService.h"
-#include "rootSignatureService.h"
+#include "descriptorRootSignatureService.h"
 #include "analyzerRaytracingService.h"
 #include "analyzerExecuteIndirectService.h"
 #include "capturePlayerGpuAddressService.h"
@@ -80,7 +80,7 @@ private:
   SubcaptureRange& subcaptureRange_;
   AnalyzerCommandListService commandListService_;
   DescriptorService descriptorService_;
-  RootSignatureService rootSignatureService_;
+  DescriptorRootSignatureService rootSignatureService_;
   CapturePlayerGpuAddressService gpuAddressService_;
   CapturePlayerDescriptorHandleService descriptorHandleService_;
   CapturePlayerShaderIdentifierService shaderIdentifierService_;

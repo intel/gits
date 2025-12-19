@@ -40,6 +40,14 @@ set(RENDER_TARGETS_DUMP_SRC
 )
 source_group("render_targets_dump" FILES ${RENDER_TARGETS_DUMP_SRC})
 
+set(DISPATCH_OUTPUT_DUMP_SRC
+  ${SRC_DIR}/dispatchOutputsDumpLayer.h
+  ${SRC_DIR}/dispatchOutputsDumpLayer.cpp
+  ${SRC_DIR}/dispatchOutputsDump.h
+  ${SRC_DIR}/dispatchOutputsDump.cpp
+)
+source_group("dispatch_outputs_dump" FILES ${DISPATCH_OUTPUT_DUMP_SRC})
+
 set(ACCELERATION_STRUCTURES_DUMP_SRC
   ${SRC_DIR}/accelerationStructuresDumpLayer.h
   ${SRC_DIR}/accelerationStructuresDumpLayer.cpp
@@ -61,6 +69,7 @@ set(ALL_SRC
   ${SCREENSHOTS_SRC}
   ${RESOURCE_DUMP_SRC}
   ${RENDER_TARGETS_DUMP_SRC}
+  ${DISPATCH_OUTPUT_DUMP_SRC}
   ${ACCELERATION_STRUCTURES_DUMP_SRC}
   ${ROOT_SIGNATURE_DUMP_SRC}
 )

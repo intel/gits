@@ -23,7 +23,7 @@ AnalyzerRaytracingService::AnalyzerRaytracingService(
     CapturePlayerDescriptorHandleService& descriptorHandleService,
     CapturePlayerShaderIdentifierService& shaderIdentifierService,
     AnalyzerCommandListService& commandListService,
-    RootSignatureService& rootSignatureService,
+    DescriptorRootSignatureService& rootSignatureService,
     ResourceStateTracker& resourceStateTracker)
     : gpuAddressService_(gpuAddressService),
       descriptorHandleService_(descriptorHandleService),

@@ -80,8 +80,6 @@ set(ANALYSIS_SRC
   ${SRC_DIR}/analyzerResults.cpp
   ${SRC_DIR}/analyzerCommandListService.h
   ${SRC_DIR}/analyzerCommandListService.cpp
-  ${SRC_DIR}/rootSignatureService.h
-  ${SRC_DIR}/rootSignatureService.cpp
   ${SRC_DIR}/analyzerRaytracingService.h
   ${SRC_DIR}/analyzerRaytracingService.cpp
   ${SRC_DIR}/analyzerExecuteIndirectService.h

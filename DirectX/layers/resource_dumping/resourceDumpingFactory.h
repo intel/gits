@@ -32,6 +32,9 @@ public:
   std::unique_ptr<Layer> getRenderTargetsDumpLayer() {
     return std::move(renderTargetsDumpLayer_);
   }
+  std::unique_ptr<Layer> getDispatchOutputsDumpLayer() {
+    return std::move(dispatchOutputsDumpLayer_);
+  }
   std::unique_ptr<Layer> getAccelerationStructuresDumpLayer() {
     return std::move(accelerationStructuresDumpLayer_);
   }
@@ -43,6 +46,7 @@ private:
   std::unique_ptr<Layer> screenshotsLayer_;
   std::unique_ptr<Layer> resourceDumpLayer_;
   std::unique_ptr<Layer> renderTargetsDumpLayer_;
+  std::unique_ptr<Layer> dispatchOutputsDumpLayer_;
   std::unique_ptr<Layer> accelerationStructuresDumpLayer_;
   std::unique_ptr<Layer> rootSignatureDumpLayer_;
 };

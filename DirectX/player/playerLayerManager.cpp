@@ -53,6 +53,8 @@ void PlayerLayerManager::loadLayers(PlayerManager& playerManager, PluginService&
   std::unique_ptr<Layer> resourceDumpLayer = resourceDumpingFactory_.getResourceDumpLayer();
   std::unique_ptr<Layer> renderTargetsDumpLayer =
       resourceDumpingFactory_.getRenderTargetsDumpLayer();
+  std::unique_ptr<Layer> dispatchOutputsDumpLayer =
+      resourceDumpingFactory_.getDispatchOutputsDumpLayer();
   std::unique_ptr<Layer> accelerationStructuresDumpLayer =
       resourceDumpingFactory_.getAccelerationStructuresDumpLayer();
   std::unique_ptr<Layer> rootSignatureDumpLayer =
@@ -140,6 +142,7 @@ void PlayerLayerManager::loadLayers(PlayerManager& playerManager, PluginService&
   enablePostLayer(screenshotsLayer);
   enablePostLayer(resourceDumpLayer);
   enablePostLayer(renderTargetsDumpLayer);
+  enablePostLayer(dispatchOutputsDumpLayer);
   enablePostLayer(accelerationStructuresDumpLayer);
   enablePostLayer(rootSignatureDumpLayer);
   enablePostLayer(recordingLayer);
@@ -189,6 +192,7 @@ void PlayerLayerManager::loadLayers(PlayerManager& playerManager, PluginService&
   retainLayer(std::move(screenshotsLayer));
   retainLayer(std::move(resourceDumpLayer));
   retainLayer(std::move(renderTargetsDumpLayer));
+  retainLayer(std::move(dispatchOutputsDumpLayer));
   retainLayer(std::move(accelerationStructuresDumpLayer));
   retainLayer(std::move(rootSignatureDumpLayer));
   retainLayer(std::move(directStorageLayer));

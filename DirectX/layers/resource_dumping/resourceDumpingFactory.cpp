@@ -10,6 +10,7 @@
 #include "screenshotsLayer.h"
 #include "resourceDumpLayerAuto.h"
 #include "renderTargetsDumpLayer.h"
+#include "dispatchOutputsDumpLayer.h"
 #include "accelerationStructuresDumpLayer.h"
 #include "rootSignatureDumpLayer.h"
 #include "gits.h"
@@ -29,6 +30,9 @@ ResourceDumpingFactory::ResourceDumpingFactory() {
   }
   if (Configurator::Get().directx.features.renderTargetsDump.enabled) {
     renderTargetsDumpLayer_ = std::make_unique<RenderTargetsDumpLayer>();
+  }
+  if (Configurator::Get().directx.features.dispatchOutputsDump.enabled) {
+    dispatchOutputsDumpLayer_ = std::make_unique<DispatchOutputsDumpLayer>();
   }
   if (Configurator::Get().directx.features.raytracingDump.blases) {
     if (Configurator::Get().directx.player.debugLayer) {

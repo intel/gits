@@ -16,12 +16,12 @@
 namespace gits {
 namespace DirectX {
 
-class RootSignatureService {
+class DescriptorRootSignatureService {
 public:
-  RootSignatureService() {}
-  RootSignatureService(const RootSignatureService&) = delete;
-  RootSignatureService& operator=(const RootSignatureService&) = delete;
-  ~RootSignatureService();
+  DescriptorRootSignatureService() {}
+  DescriptorRootSignatureService(const DescriptorRootSignatureService&) = delete;
+  DescriptorRootSignatureService& operator=(const DescriptorRootSignatureService&) = delete;
+  ~DescriptorRootSignatureService();
   void createRootSignature(ID3D12DeviceCreateRootSignatureCommand& c);
   std::vector<unsigned> getDescriptorTableIndexes(unsigned rootSignatureKey,
                                                   unsigned descriptorHeapKey,

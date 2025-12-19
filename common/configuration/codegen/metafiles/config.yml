@@ -1080,6 +1080,27 @@ Configuration:
                 Type: ImageFormat
                 Default: PNG
                 Description: Format (PNG/JPEG)
+          - Name: DispatchOutputsDump
+            Type: Group
+            Options:
+              - Name: enabled
+                Type: bool
+                Default: false
+                Description: Whether dispatch outputs dumping is enabled or not
+              - Name: frames
+                Type: std::string
+                Default: ""
+                Description: Frame range. For example '3-6'
+              - Name: dispatches
+                Type: std::string
+                Default: ""
+                Description:
+                  Dispatch range (supports multiple ranges and strides). For example
+                  '1-100:5'
+              - Name: format
+                Type: ImageFormat
+                Default: PNG
+                Description: Format (PNG/JPEG)
           - Name: RaytracingDump
             Type: Group
             Options:

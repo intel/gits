@@ -41,6 +41,7 @@ CommandPrinter::CommandPrinter(FastOStream& stream,
   } else if (command_.getId() == CommandId::ID_INIT_END) {
     state_.stateRestorePhase = false;
     state_.drawCount = 0;
+    state_.dispatchCount = 0;
     state_.commandListExecutionCount = 0;
     return;
   }
@@ -76,6 +77,9 @@ void CommandPrinter::print(bool flush, bool newLine) {
   } else if (command_.getId() == CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_DRAWINSTANCED ||
              command_.getId() == CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_DRAWINDEXEDINSTANCED) {
     stream_ << " Draw #" << ++state_.drawCount << " from frame #"
+            << (state_.stateRestorePhase ? 0 : CGits::Instance().CurrentFrame());
+  } else if (command_.getId() == CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_DISPATCH) {
+    stream_ << " Dispatch #" << ++state_.dispatchCount << " from frame #"
             << (state_.stateRestorePhase ? 0 : CGits::Instance().CurrentFrame());
   } else if (command_.getId() == CommandId::ID_ID3D12COMMANDQUEUE_EXECUTECOMMANDLISTS &&
              isExecutionSerializationKey(command_.key) && !state_.stateRestorePhase) {

@@ -6,7 +6,7 @@
 //
 // ===================== end_copyright_notice ==============================
 
-#include "rootSignatureService.h"
+#include "descriptorRootSignatureService.h"
 #include "gits.h"
 
 #include <wrl/client.h>
@@ -14,7 +14,7 @@
 namespace gits {
 namespace DirectX {
 
-RootSignatureService::~RootSignatureService() {
+DescriptorRootSignatureService::~DescriptorRootSignatureService() {
   for (auto& it : rootSignatureDescs_) {
     D3D12_ROOT_SIGNATURE_DESC* desc = it.second;
     for (unsigned i = 0; i < desc->NumParameters; ++i) {
@@ -28,7 +28,8 @@ RootSignatureService::~RootSignatureService() {
   }
 }
 
-void RootSignatureService::createRootSignature(ID3D12DeviceCreateRootSignatureCommand& c) {
+void DescriptorRootSignatureService::createRootSignature(
+    ID3D12DeviceCreateRootSignatureCommand& c) {
 
   Microsoft::WRL::ComPtr<ID3D12VersionedRootSignatureDeserializer> deserializer;
   HRESULT hr = D3D12CreateVersionedRootSignatureDeserializer(
@@ -61,12 +62,13 @@ void RootSignatureService::createRootSignature(ID3D12DeviceCreateRootSignatureCo
   rootSignatureDescs_[c.ppvRootSignature_.key] = desc;
 }
 
-std::vector<unsigned> RootSignatureService::getDescriptorTableIndexes(unsigned rootSignatureKey,
-                                                                      unsigned descriptorHeapKey,
-                                                                      unsigned parameterIndex,
-                                                                      unsigned baseIndex,
-                                                                      unsigned heapNumDescriptors,
-                                                                      bool checkRetrieved) {
+std::vector<unsigned> DescriptorRootSignatureService::getDescriptorTableIndexes(
+    unsigned rootSignatureKey,
+    unsigned descriptorHeapKey,
+    unsigned parameterIndex,
+    unsigned baseIndex,
+    unsigned heapNumDescriptors,
+    bool checkRetrieved) {
   std::lock_guard<std::mutex> lock(mutex_);
 
   std::vector<unsigned> indexes;
@@ -102,7 +104,7 @@ std::vector<unsigned> RootSignatureService::getDescriptorTableIndexes(unsigned r
   return indexes;
 }
 
-std::vector<unsigned> RootSignatureService::getBindlessDescriptorIndexes(
+std::vector<unsigned> DescriptorRootSignatureService::getBindlessDescriptorIndexes(
     unsigned rootSignatureKey,
     unsigned descriptorHeapKey,
     D3D12_DESCRIPTOR_HEAP_TYPE heapType,
@@ -130,12 +132,14 @@ std::vector<unsigned> RootSignatureService::getBindlessDescriptorIndexes(
   return indexes;
 }
 
-D3D12_ROOT_SIGNATURE_DESC* RootSignatureService::getRootSignatureDesc(unsigned rootSignatureKey) {
+D3D12_ROOT_SIGNATURE_DESC* DescriptorRootSignatureService::getRootSignatureDesc(
+    unsigned rootSignatureKey) {
   std::lock_guard<std::mutex> lock(mutex_);
   return rootSignatureDescs_[rootSignatureKey];
 }
 
-bool RootSignatureService::unboundedRetrieved(unsigned descriptorHeapKey, unsigned index) {
+bool DescriptorRootSignatureService::unboundedRetrieved(unsigned descriptorHeapKey,
+                                                        unsigned index) {
   auto it = unboundedRetrieved_.find(descriptorHeapKey);
   if (it != unboundedRetrieved_.end() && it->second <= index) {
     return true;
@@ -144,9 +148,9 @@ bool RootSignatureService::unboundedRetrieved(unsigned descriptorHeapKey, unsign
   return false;
 }
 
-bool RootSignatureService::boundedRetrieved(unsigned descriptorHeapKey,
-                                            unsigned index,
-                                            unsigned numDescriptors) {
+bool DescriptorRootSignatureService::boundedRetrieved(unsigned descriptorHeapKey,
+                                                      unsigned index,
+                                                      unsigned numDescriptors) {
   auto itHeap = boundedRetrieved_.find(descriptorHeapKey);
   if (itHeap != boundedRetrieved_.end()) {
     auto it = itHeap->second.find(index);

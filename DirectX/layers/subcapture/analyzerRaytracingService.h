@@ -15,7 +15,7 @@
 #include "capturePlayerDescriptorHandleService.h"
 #include "capturePlayerShaderIdentifierService.h"
 #include "descriptorService.h"
-#include "rootSignatureService.h"
+#include "descriptorRootSignatureService.h"
 #include "resourceStateTracker.h"
 
 #include <unordered_map>
@@ -34,7 +34,7 @@ public:
                             CapturePlayerDescriptorHandleService& descriptorHandleService,
                             CapturePlayerShaderIdentifierService& shaderIdentifierService,
                             AnalyzerCommandListService& commandListService,
-                            RootSignatureService& rootSignatureService,
+                            DescriptorRootSignatureService& rootSignatureService,
                             ResourceStateTracker& resourceStateTracker);
   void createStateObject(ID3D12Device5CreateStateObjectCommand& c);
   void addToStateObject(ID3D12Device7AddToStateObjectCommand& c);
@@ -82,7 +82,7 @@ public:
   DescriptorService& getDescriptorService() {
     return descriptorService_;
   }
-  RootSignatureService& getRootSignatureService() {
+  DescriptorRootSignatureService& getRootSignatureService() {
     return rootSignatureService_;
   }
 
@@ -115,7 +115,7 @@ private:
   CapturePlayerShaderIdentifierService& shaderIdentifierService_;
   DescriptorService& descriptorService_;
   AnalyzerCommandListService& commandListService_;
-  RootSignatureService& rootSignatureService_;
+  DescriptorRootSignatureService& rootSignatureService_;
   ResourceStateTracker& resourceStateTracker_;
 
   std::unordered_map<unsigned, std::set<unsigned>> stateObjectsDirectSubobjects_;
