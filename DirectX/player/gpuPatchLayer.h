@@ -80,8 +80,11 @@ private:
   void initialize(ID3D12GraphicsCommandList* commandList);
   void initializeInstancesAoP(ID3D12GraphicsCommandList* commandList);
   void addPatchBuffer(ID3D12GraphicsCommandList* commandList);
+  void createOrReplacePatchBufferObjects(ID3D12Device* device, unsigned patchBufferIndex);
   unsigned getMappingBufferIndex(unsigned commandListKey);
-  unsigned getPatchBufferIndex(unsigned commandListKey, ID3D12GraphicsCommandList* commandList);
+  unsigned getPatchBufferIndex(unsigned commandListKey,
+                               ID3D12GraphicsCommandList* commandList,
+                               size_t size);
   unsigned getInstancesAoPPatchBufferIndex(unsigned commandListKey);
   unsigned getInstancesAoPStagingBufferIndex(unsigned commandListKey);
   void getPatchOffsets(const D3D12_COMMAND_SIGNATURE_DESC& commandSignature,
@@ -93,6 +96,7 @@ private:
                          unsigned patchBufferIndex,
                          unsigned mappingBufferIndex,
                          unsigned callKey);
+  size_t getDispatchRaysPatchSize(const D3D12_DISPATCH_RAYS_DESC& desc) const;
 
 private:
   PlayerManager& manager_;
@@ -100,8 +104,10 @@ private:
 
   static const unsigned patchBufferInitialPoolSize_{32};
   unsigned patchBufferPoolSize_{};
-  std::vector<ID3D12Resource*> patchBuffers_{};
-  const unsigned patchBufferSize_{0x1000000};
+  std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> patchBuffers_{};
+  const unsigned patchBufferInitialSize_{0x1000000};
+  unsigned patchBufferSize_{patchBufferInitialSize_};
+  const float patchBufferGrowthFactor_{1.1f};
 
   static const unsigned instancesAoPPatchBufferPoolSize_{8};
   std::array<ID3D12Resource*, instancesAoPPatchBufferPoolSize_> instancesAoPPatchBuffers_{};
@@ -117,16 +123,17 @@ private:
       instancesAoPPatchOffsetsStagingBuffers_{};
   const unsigned instancesAoPPatchOffsetsBufferSize_{0x40000};
 
-  std::vector<ID3D12Resource*> patchOffsetsBuffers_{};
-  std::vector<ID3D12Resource*> patchOffsetsStagingBuffers_{};
+  std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> patchOffsetsBuffers_{};
+  std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> patchOffsetsStagingBuffers_{};
   const unsigned patchOffsetsBufferSize_{0x20000};
 
-  std::vector<ID3D12Resource*> executeIndirectRaytracingPatchBuffers_{};
-  std::vector<ID3D12Resource*> executeIndirectRaytracingPatchStagingBuffers_{};
+  std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> executeIndirectRaytracingPatchBuffers_{};
+  std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>>
+      executeIndirectRaytracingPatchStagingBuffers_{};
   const unsigned executeIndirectRaytracingPatchBufferSize_{0x100};
 
-  std::vector<ID3D12Resource*> executeIndirectCountBuffers_{};
-  std::vector<ID3D12Resource*> executeIndirectCountStagingBuffers_{};
+  std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> executeIndirectCountBuffers_{};
+  std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> executeIndirectCountStagingBuffers_{};
   const unsigned executeIndirectCountBufferSize_{0x10};
 
   static const unsigned mappingBufferPoolSize_{24};
@@ -162,14 +169,18 @@ private:
   unsigned mappingCountBufferSize_{sizeof(MappingCount)};
 
   struct FenceInfo {
-    ID3D12Fence* fence{};
+    Microsoft::WRL::ComPtr<ID3D12Fence> fence{};
     UINT64 fenceValue{};
     bool waitingForExecute{};
+  };
+  struct PatchBufferInfo {
+    FenceInfo fenceInfo;
+    size_t size{};
   };
   std::array<FenceInfo, mappingBufferPoolSize_> mappingFences_{};
   std::unordered_map<unsigned, unsigned> currentMappingsByCommandList_;
 
-  std::vector<FenceInfo> patchBufferFences_{};
+  std::vector<PatchBufferInfo> patchBufferInfos_{};
   std::unordered_map<unsigned, std::vector<unsigned>> currentPatchBuffersByCommandList_;
 
   std::array<FenceInfo, instancesAoPPatchBufferPoolSize_> instancesAoPPatchBufferFences_{};

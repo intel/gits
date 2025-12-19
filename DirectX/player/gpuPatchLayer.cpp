@@ -109,17 +109,13 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStr
 
     unsigned offset = c.pDesc_.inputOffsets[0];
     unsigned size = c.pDesc_.value->Inputs.NumDescs * sizeof(D3D12_RAYTRACING_INSTANCE_DESC);
-    if (size > patchBufferSize_) {
-      LOG_ERROR << "Raytracing patch buffer is too small for instances!";
-      exit(EXIT_FAILURE);
-    }
 
-    unsigned patchBufferIndex = getPatchBufferIndex(c.object_.key, c.object_.value);
+    unsigned patchBufferIndex = getPatchBufferIndex(c.object_.key, c.object_.value, size);
 
     {
       D3D12_RESOURCE_BARRIER barrier{};
       barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-      barrier.Transition.pResource = patchBuffers_[patchBufferIndex];
+      barrier.Transition.pResource = patchBuffers_[patchBufferIndex].Get();
       barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
       barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_DEST;
       commandList->ResourceBarrier(1, &barrier);
@@ -151,11 +147,11 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStr
         commandList->ResourceBarrier(1, &barrier);
       }
 
-      commandList->CopyBufferRegion(patchBuffers_[patchBufferIndex], 0, instanceDescs, offset,
+      commandList->CopyBufferRegion(patchBuffers_[patchBufferIndex].Get(), 0, instanceDescs, offset,
                                     size);
 
       barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-      barrier.Transition.pResource = patchBuffers_[patchBufferIndex];
+      barrier.Transition.pResource = patchBuffers_[patchBufferIndex].Get();
       barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
       barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
       commandList->ResourceBarrier(1, &barrier);
@@ -173,16 +169,16 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStr
         patchBuffers_[patchBufferIndex]->GetGPUVirtualAddress();
     c.pDesc_.value->Inputs.InstanceDescs = patchBufferAddress;
 
-    dumpService_.dumpInstances(commandList, patchBuffers_[patchBufferIndex], instanceDescsKey, size,
-                               c.key, true);
+    dumpService_.dumpInstances(commandList, patchBuffers_[patchBufferIndex].Get(), instanceDescsKey,
+                               size, c.key, true);
 
     raytracingShaderPatchService_.patchInstances(
         commandList, patchBufferAddress, c.pDesc_.value->Inputs.NumDescs,
         gpuAddressBuffers_[mappingBufferIndex]->GetGPUVirtualAddress(),
         mappingCountBuffers_[mappingBufferIndex]->GetGPUVirtualAddress());
 
-    dumpService_.dumpInstances(commandList, patchBuffers_[patchBufferIndex], instanceDescsKey, size,
-                               c.key, false);
+    dumpService_.dumpInstances(commandList, patchBuffers_[patchBufferIndex].Get(), instanceDescsKey,
+                               size, c.key, false);
 
     {
       D3D12_RESOURCE_BARRIER barriers[2]{};
@@ -190,7 +186,7 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStr
       barriers[0].UAV.pResource = nullptr;
 
       barriers[1].Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-      barriers[1].Transition.pResource = patchBuffers_[patchBufferIndex];
+      barriers[1].Transition.pResource = patchBuffers_[patchBufferIndex].Get();
       barriers[1].Transition.StateBefore = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
       barriers[1].Transition.StateAfter = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
 
@@ -283,7 +279,7 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStr
                                                 offset, size, resourceState, c.key, true);
     }
 
-    unsigned patchBufferIndex = getPatchBufferIndex(c.object_.key, c.object_.value);
+    unsigned patchBufferIndex = getPatchBufferIndex(c.object_.key, c.object_.value, size);
 
     D3D12_GPU_VIRTUAL_ADDRESS patchBufferAddress =
         patchBuffers_[patchBufferIndex]->GetGPUVirtualAddress();
@@ -292,23 +288,23 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStr
     {
       D3D12_RESOURCE_BARRIER barrier{};
       barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-      barrier.Transition.pResource = patchBuffers_[patchBufferIndex];
+      barrier.Transition.pResource = patchBuffers_[patchBufferIndex].Get();
       barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
       barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_DEST;
       commandList->ResourceBarrier(1, &barrier);
 
-      commandList->CopyBufferRegion(patchBuffers_[patchBufferIndex], 0,
+      commandList->CopyBufferRegion(patchBuffers_[patchBufferIndex].Get(), 0,
                                     instancesAoPStagingBuffers_[instancesAoPBufferIndex], 0, size);
 
       barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-      barrier.Transition.pResource = patchBuffers_[patchBufferIndex];
+      barrier.Transition.pResource = patchBuffers_[patchBufferIndex].Get();
       barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
       barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
       commandList->ResourceBarrier(1, &barrier);
     }
 
     dumpService_.dumpInstancesArrayOfPointers(
-        commandList, patchBuffers_[patchBufferIndex], instanceDescsKey, 0, size,
+        commandList, patchBuffers_[patchBufferIndex].Get(), instanceDescsKey, 0, size,
         D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, c.key, false);
 
     for (auto& it : instancesByResourceKey) {
@@ -450,7 +446,8 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandList4DispatchRaysCommand& c) {
       {PUBLISHER_PLAYER, TOPIC_GITS_WORKLOAD_BEGIN},
       std::make_shared<GitsWorkloadMessage>(commandList, "GITS_DispatchRays-Patch", c.object_.key));
 
-  unsigned patchBufferIndex = getPatchBufferIndex(c.object_.key, c.object_.value);
+  unsigned patchBufferIndex = getPatchBufferIndex(c.object_.key, c.object_.value,
+                                                  getDispatchRaysPatchSize(*c.pDesc_.value));
 
   unsigned mappingBufferIndex = getMappingBufferIndex(c.object_.key);
   if (!useAddressPinning_) {
@@ -499,15 +496,10 @@ void GpuPatchLayer::patchDispatchRays(ID3D12GraphicsCommandList* commandList,
       unsigned stride = strideInBytes;
       unsigned count = sizeInBytes / strideInBytes;
 
-      if (stride * count > patchBufferSize_) {
-        LOG_ERROR << "Raytracing patch buffer is too small for binding table!";
-        exit(EXIT_FAILURE);
-      }
-
       {
         D3D12_RESOURCE_BARRIER barrier{};
         barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-        barrier.Transition.pResource = patchBuffers_[patchBufferIndex];
+        barrier.Transition.pResource = patchBuffers_[patchBufferIndex].Get();
         barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
         barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_DEST;
         commandList->ResourceBarrier(1, &barrier);
@@ -539,11 +531,11 @@ void GpuPatchLayer::patchDispatchRays(ID3D12GraphicsCommandList* commandList,
           commandList->ResourceBarrier(1, &barrier);
         }
 
-        commandList->CopyBufferRegion(patchBuffers_[patchBufferIndex], patchBufferOffset,
+        commandList->CopyBufferRegion(patchBuffers_[patchBufferIndex].Get(), patchBufferOffset,
                                       info->resource, offset, stride * count);
 
         barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-        barrier.Transition.pResource = patchBuffers_[patchBufferIndex];
+        barrier.Transition.pResource = patchBuffers_[patchBufferIndex].Get();
         barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
         barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
         commandList->ResourceBarrier(1, &barrier);
@@ -559,8 +551,9 @@ void GpuPatchLayer::patchDispatchRays(ID3D12GraphicsCommandList* commandList,
 
       startAddress = patchBufferAddress + patchBufferOffset;
 
-      dumpService_.dumpBindingTable(commandList, patchBuffers_[patchBufferIndex], patchBufferOffset,
-                                    sizeInBytes, stride, callKey, bindingTableType, true);
+      dumpService_.dumpBindingTable(commandList, patchBuffers_[patchBufferIndex].Get(),
+                                    patchBufferOffset, sizeInBytes, stride, callKey,
+                                    bindingTableType, true);
 
       raytracingShaderPatchService_.patchBindingTable(
           commandList, patchBufferAddress + patchBufferOffset, count, stride,
@@ -570,8 +563,9 @@ void GpuPatchLayer::patchDispatchRays(ID3D12GraphicsCommandList* commandList,
           sampleDescriptorBuffers_[mappingBufferIndex]->GetGPUVirtualAddress(),
           mappingCountBuffers_[mappingBufferIndex]->GetGPUVirtualAddress(), !useAddressPinning_);
 
-      dumpService_.dumpBindingTable(commandList, patchBuffers_[patchBufferIndex], patchBufferOffset,
-                                    sizeInBytes, stride, callKey, bindingTableType, false);
+      dumpService_.dumpBindingTable(commandList, patchBuffers_[patchBufferIndex].Get(),
+                                    patchBufferOffset, sizeInBytes, stride, callKey,
+                                    bindingTableType, false);
 
       patchBufferOffset += stride * count;
       patchBufferOffset =
@@ -597,23 +591,48 @@ void GpuPatchLayer::patchDispatchRays(ID3D12GraphicsCommandList* commandList,
                     dispatchRaysDesc.CallableShaderTable.StrideInBytes,
                     GpuPatchDumpService::Callable);
 
-  if (patchBufferOffset > patchBufferSize_) {
-    LOG_ERROR << "Raytracing patch buffer is too small for binding tables!";
-    exit(EXIT_FAILURE);
-  }
-
   {
     D3D12_RESOURCE_BARRIER barriers[2]{};
     barriers[0].Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
     barriers[0].UAV.pResource = nullptr;
 
     barriers[1].Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-    barriers[1].Transition.pResource = patchBuffers_[patchBufferIndex];
+    barriers[1].Transition.pResource = patchBuffers_[patchBufferIndex].Get();
     barriers[1].Transition.StateBefore = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
     barriers[1].Transition.StateAfter = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
 
     commandList->ResourceBarrier(2, barriers);
   }
+}
+
+size_t GpuPatchLayer::getDispatchRaysPatchSize(const D3D12_DISPATCH_RAYS_DESC& desc) const {
+  size_t size{};
+  const auto addBindingTableSize = [&size](D3D12_GPU_VIRTUAL_ADDRESS startAddress,
+                                           UINT64 sizeInBytes, UINT64 strideInBytes) {
+    if (!startAddress) {
+      return;
+    }
+    if (strideInBytes == 0) {
+      strideInBytes = sizeInBytes;
+    }
+    unsigned stride = strideInBytes;
+    unsigned count = sizeInBytes / strideInBytes;
+    size += stride * count;
+    size = size % D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT == 0
+               ? size
+               : ((size / D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT) + 1) *
+                     D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT;
+  };
+  addBindingTableSize(desc.RayGenerationShaderRecord.StartAddress,
+                      desc.RayGenerationShaderRecord.SizeInBytes,
+                      desc.RayGenerationShaderRecord.SizeInBytes);
+  addBindingTableSize(desc.MissShaderTable.StartAddress, desc.MissShaderTable.SizeInBytes,
+                      desc.MissShaderTable.StrideInBytes);
+  addBindingTableSize(desc.HitGroupTable.StartAddress, desc.HitGroupTable.SizeInBytes,
+                      desc.HitGroupTable.StrideInBytes);
+  addBindingTableSize(desc.CallableShaderTable.StartAddress, desc.CallableShaderTable.SizeInBytes,
+                      desc.CallableShaderTable.StrideInBytes);
+  return size;
 }
 
 void GpuPatchLayer::post(ID3D12GraphicsCommandListSetComputeRootSignatureCommand& c) {
@@ -858,10 +877,23 @@ void GpuPatchLayer::initializeInstancesAoP(ID3D12GraphicsCommandList* commandLis
 }
 
 void GpuPatchLayer::addPatchBuffer(ID3D12GraphicsCommandList* commandList) {
+  patchBuffers_.emplace_back();
+  patchOffsetsBuffers_.emplace_back();
+  patchOffsetsStagingBuffers_.emplace_back();
+  executeIndirectRaytracingPatchBuffers_.emplace_back();
+  executeIndirectRaytracingPatchStagingBuffers_.emplace_back();
+  executeIndirectCountBuffers_.emplace_back();
+  executeIndirectCountStagingBuffers_.emplace_back();
+  patchBufferInfos_.emplace_back();
+
   Microsoft::WRL::ComPtr<ID3D12Device> device;
   HRESULT hr = commandList->GetDevice(IID_PPV_ARGS(&device));
   GITS_ASSERT(hr == S_OK);
+  createOrReplacePatchBufferObjects(device.Get(), patchBufferPoolSize_++);
+}
 
+void GpuPatchLayer::createOrReplacePatchBufferObjects(ID3D12Device* device,
+                                                      unsigned patchBufferIndex) {
   D3D12_HEAP_PROPERTIES heapPropertiesDefault{};
   heapPropertiesDefault.Type = D3D12_HEAP_TYPE_DEFAULT;
   heapPropertiesDefault.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
@@ -889,63 +921,57 @@ void GpuPatchLayer::addPatchBuffer(ID3D12GraphicsCommandList* commandList) {
 
   resourceDesc.Width = patchBufferSize_;
   resourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-  patchBuffers_.emplace_back();
+
+  HRESULT hr{};
   hr = device->CreateCommittedResource(&heapPropertiesDefault, D3D12_HEAP_FLAG_NONE, &resourceDesc,
                                        D3D12_RESOURCE_STATE_COMMON, nullptr,
-                                       IID_PPV_ARGS(&patchBuffers_[patchBufferPoolSize_]));
+                                       IID_PPV_ARGS(&patchBuffers_[patchBufferIndex]));
   GITS_ASSERT(hr == S_OK);
 
   resourceDesc.Width = patchOffsetsBufferSize_;
   resourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-  patchOffsetsBuffers_.emplace_back();
   hr = device->CreateCommittedResource(&heapPropertiesDefault, D3D12_HEAP_FLAG_NONE, &resourceDesc,
                                        D3D12_RESOURCE_STATE_COMMON, nullptr,
-                                       IID_PPV_ARGS(&patchOffsetsBuffers_[patchBufferPoolSize_]));
+                                       IID_PPV_ARGS(&patchOffsetsBuffers_[patchBufferIndex]));
   GITS_ASSERT(hr == S_OK);
 
-  patchOffsetsStagingBuffers_.emplace_back();
   resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
   hr = device->CreateCommittedResource(
       &heapPropertiesUpload, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_COMMON,
-      nullptr, IID_PPV_ARGS(&patchOffsetsStagingBuffers_[patchBufferPoolSize_]));
+      nullptr, IID_PPV_ARGS(&patchOffsetsStagingBuffers_[patchBufferIndex]));
   GITS_ASSERT(hr == S_OK);
 
   resourceDesc.Width = executeIndirectRaytracingPatchBufferSize_;
   resourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-  executeIndirectRaytracingPatchBuffers_.emplace_back();
   hr = device->CreateCommittedResource(
       &heapPropertiesDefault, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_COMMON,
-      nullptr, IID_PPV_ARGS(&executeIndirectRaytracingPatchBuffers_[patchBufferPoolSize_]));
+      nullptr, IID_PPV_ARGS(&executeIndirectRaytracingPatchBuffers_[patchBufferIndex]));
   GITS_ASSERT(hr == S_OK);
 
   resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
-  executeIndirectRaytracingPatchStagingBuffers_.emplace_back();
   hr = device->CreateCommittedResource(
       &heapPropertiesUpload, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_COMMON,
-      nullptr, IID_PPV_ARGS(&executeIndirectRaytracingPatchStagingBuffers_[patchBufferPoolSize_]));
+      nullptr, IID_PPV_ARGS(&executeIndirectRaytracingPatchStagingBuffers_[patchBufferIndex]));
   GITS_ASSERT(hr == S_OK);
 
   resourceDesc.Width = executeIndirectCountBufferSize_;
   resourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-  executeIndirectCountBuffers_.emplace_back();
   hr = device->CreateCommittedResource(
       &heapPropertiesDefault, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_COMMON,
-      nullptr, IID_PPV_ARGS(&executeIndirectCountBuffers_[patchBufferPoolSize_]));
+      nullptr, IID_PPV_ARGS(&executeIndirectCountBuffers_[patchBufferIndex]));
   GITS_ASSERT(hr == S_OK);
 
   resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
-  executeIndirectCountStagingBuffers_.emplace_back();
   hr = device->CreateCommittedResource(
       &heapPropertiesUpload, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_COMMON,
-      nullptr, IID_PPV_ARGS(&executeIndirectCountStagingBuffers_[patchBufferPoolSize_]));
+      nullptr, IID_PPV_ARGS(&executeIndirectCountStagingBuffers_[patchBufferIndex]));
   GITS_ASSERT(hr == S_OK);
 
-  patchBufferFences_.emplace_back();
+  patchBufferInfos_[patchBufferIndex] = {};
   hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE,
-                           IID_PPV_ARGS(&patchBufferFences_[patchBufferPoolSize_].fence));
+                           IID_PPV_ARGS(&patchBufferInfos_[patchBufferIndex].fenceInfo.fence));
   GITS_ASSERT(hr == S_OK);
-
-  ++patchBufferPoolSize_;
+  patchBufferInfos_[patchBufferIndex].size = patchBufferSize_;
 }
 
 void GpuPatchLayer::pre(ID3D12CommandQueueExecuteCommandListsCommand& c) {
@@ -1060,7 +1086,7 @@ void GpuPatchLayer::post(ID3D12CommandQueueExecuteCommandListsCommand& c) {
     auto itMappings = currentMappingsByCommandList_.find(key);
     if (itMappings != currentMappingsByCommandList_.end()) {
       unsigned mappingBufferIndex = itMappings->second;
-      HRESULT hr = c.object_.value->Signal(mappingFences_[mappingBufferIndex].fence,
+      HRESULT hr = c.object_.value->Signal(mappingFences_[mappingBufferIndex].fence.Get(),
                                            ++mappingFences_[mappingBufferIndex].fenceValue);
       GITS_ASSERT(hr == S_OK);
       mappingFences_[mappingBufferIndex].waitingForExecute = false;
@@ -1070,10 +1096,11 @@ void GpuPatchLayer::post(ID3D12CommandQueueExecuteCommandListsCommand& c) {
     auto itCurrentBuffers = currentPatchBuffersByCommandList_.find(key);
     if (itCurrentBuffers != currentPatchBuffersByCommandList_.end()) {
       for (unsigned patchBufferIndex : itCurrentBuffers->second) {
-        HRESULT hr = c.object_.value->Signal(patchBufferFences_[patchBufferIndex].fence,
-                                             ++patchBufferFences_[patchBufferIndex].fenceValue);
+        HRESULT hr =
+            c.object_.value->Signal(patchBufferInfos_[patchBufferIndex].fenceInfo.fence.Get(),
+                                    ++patchBufferInfos_[patchBufferIndex].fenceInfo.fenceValue);
         GITS_ASSERT(hr == S_OK);
-        patchBufferFences_[patchBufferIndex].waitingForExecute = false;
+        patchBufferInfos_[patchBufferIndex].fenceInfo.waitingForExecute = false;
       }
       currentPatchBuffersByCommandList_.erase(itCurrentBuffers);
     }
@@ -1083,7 +1110,7 @@ void GpuPatchLayer::post(ID3D12CommandQueueExecuteCommandListsCommand& c) {
       if (itInstancesAoPCurrentBuffers != currentInstancesAoPPatchBuffersByCommandList_.end()) {
         for (unsigned patchBufferIndex : itInstancesAoPCurrentBuffers->second) {
           HRESULT hr = c.object_.value->Signal(
-              instancesAoPPatchBufferFences_[patchBufferIndex].fence,
+              instancesAoPPatchBufferFences_[patchBufferIndex].fence.Get(),
               ++instancesAoPPatchBufferFences_[patchBufferIndex].fenceValue);
           GITS_ASSERT(hr == S_OK);
           instancesAoPPatchBufferFences_[patchBufferIndex].waitingForExecute = false;
@@ -1095,7 +1122,7 @@ void GpuPatchLayer::post(ID3D12CommandQueueExecuteCommandListsCommand& c) {
       if (itCurrentInstancesBuffers != currentInstancesAoPStagingBuffersByCommandList_.end()) {
         for (unsigned patchBufferIndex : itCurrentInstancesBuffers->second) {
           HRESULT hr = c.object_.value->Signal(
-              instancesAoPStagingBufferFences_[patchBufferIndex].fence,
+              instancesAoPStagingBufferFences_[patchBufferIndex].fence.Get(),
               ++instancesAoPStagingBufferFences_[patchBufferIndex].fenceValue);
           GITS_ASSERT(hr == S_OK);
           instancesAoPStagingBufferFences_[patchBufferIndex].waitingForExecute = false;
@@ -1174,7 +1201,8 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandListExecuteIndirectCommand& c) {
                  std::make_shared<GitsWorkloadMessage>(commandList, "GITS_ExecuteIndirect-Patch",
                                                        c.object_.key));
 
-  unsigned patchBufferIndex = getPatchBufferIndex(c.object_.key, c.object_.value);
+  unsigned patchBufferIndex =
+      getPatchBufferIndex(c.object_.key, c.object_.value, patchBufferInitialSize_);
 
   unsigned mappingBufferIndex = getMappingBufferIndex(c.object_.key);
   if (!useAddressPinning_) {
@@ -1195,7 +1223,7 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandListExecuteIndirectCommand& c) {
   {
     D3D12_RESOURCE_BARRIER barriers[2]{};
     barriers[0].Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-    barriers[0].Transition.pResource = patchBuffers_[patchBufferIndex];
+    barriers[0].Transition.pResource = patchBuffers_[patchBufferIndex].Get();
     barriers[0].Transition.StateBefore = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
     barriers[0].Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_DEST;
     barriers[1].Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
@@ -1205,8 +1233,8 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandListExecuteIndirectCommand& c) {
     commandList->ResourceBarrier(2, barriers);
 
     unsigned size = c.MaxCommandCount_.value * commandSignature.ByteStride;
-    commandList->CopyBufferRegion(patchBuffers_[patchBufferIndex], 0, c.pArgumentBuffer_.value,
-                                  c.ArgumentBufferOffset_.value, size);
+    commandList->CopyBufferRegion(patchBuffers_[patchBufferIndex].Get(), 0,
+                                  c.pArgumentBuffer_.value, c.ArgumentBufferOffset_.value, size);
 
     barriers[0].Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
     barriers[0].Transition.StateAfter = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
@@ -1214,13 +1242,13 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandListExecuteIndirectCommand& c) {
     barriers[1].Transition.StateAfter = D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT;
     commandList->ResourceBarrier(2, barriers);
   }
-  c.pArgumentBuffer_.value = patchBuffers_[patchBufferIndex];
+  c.pArgumentBuffer_.value = patchBuffers_[patchBufferIndex].Get();
   c.ArgumentBufferOffset_.value = 0;
 
   if (c.pCountBuffer_.value) {
     D3D12_RESOURCE_BARRIER barriers[2]{};
     barriers[0].Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-    barriers[0].Transition.pResource = executeIndirectCountBuffers_[patchBufferIndex];
+    barriers[0].Transition.pResource = executeIndirectCountBuffers_[patchBufferIndex].Get();
     barriers[0].Transition.StateBefore = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
     barriers[0].Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_DEST;
     barriers[1].Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
@@ -1230,7 +1258,7 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandListExecuteIndirectCommand& c) {
     commandList->ResourceBarrier(2, barriers);
 
     unsigned size = sizeof(unsigned);
-    commandList->CopyBufferRegion(executeIndirectCountBuffers_[patchBufferIndex], 0,
+    commandList->CopyBufferRegion(executeIndirectCountBuffers_[patchBufferIndex].Get(), 0,
                                   c.pCountBuffer_.value, c.CountBufferOffset_.value, size);
 
     barriers[0].Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
@@ -1247,13 +1275,13 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandListExecuteIndirectCommand& c) {
 
     D3D12_RESOURCE_BARRIER barrier{};
     barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-    barrier.Transition.pResource = executeIndirectCountBuffers_[patchBufferIndex];
+    barrier.Transition.pResource = executeIndirectCountBuffers_[patchBufferIndex].Get();
     barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
     barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_DEST;
     commandList->ResourceBarrier(1, &barrier);
 
-    commandList->CopyResource(executeIndirectCountBuffers_[patchBufferIndex],
-                              executeIndirectCountStagingBuffers_[patchBufferIndex]);
+    commandList->CopyResource(executeIndirectCountBuffers_[patchBufferIndex].Get(),
+                              executeIndirectCountStagingBuffers_[patchBufferIndex].Get());
 
     barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
     barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
@@ -1270,8 +1298,8 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandListExecuteIndirectCommand& c) {
     memcpy(data, patchOffsets.data(), sizeof(unsigned) * patchOffsets.size());
     patchOffsetsStagingBuffers_[patchBufferIndex]->Unmap(0, nullptr);
 
-    commandList->CopyResource(patchOffsetsBuffers_[patchBufferIndex],
-                              patchOffsetsStagingBuffers_[patchBufferIndex]);
+    commandList->CopyResource(patchOffsetsBuffers_[patchBufferIndex].Get(),
+                              patchOffsetsStagingBuffers_[patchBufferIndex].Get());
   }
 
   struct RaytracingAddressMapping {
@@ -1284,7 +1312,8 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandListExecuteIndirectCommand& c) {
     if (it != executeIndirectDispatchRays_.end()) {
       D3D12_DISPATCH_RAYS_DESC& desc = it->second;
       D3D12_DISPATCH_RAYS_DESC patchedDesc = desc;
-      unsigned raytracingPatchBufferIndex = getPatchBufferIndex(c.object_.key, c.object_.value);
+      unsigned raytracingPatchBufferIndex =
+          getPatchBufferIndex(c.object_.key, c.object_.value, getDispatchRaysPatchSize(desc));
       patchDispatchRays(commandList, patchedDesc, raytracingPatchBufferIndex, mappingBufferIndex,
                         c.key);
       raytracingPatches.push_back(
@@ -1305,15 +1334,16 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandListExecuteIndirectCommand& c) {
              sizeof(RaytracingAddressMapping) * raytracingPatches.size());
       executeIndirectRaytracingPatchStagingBuffers_[patchBufferIndex]->Unmap(0, nullptr);
 
-      commandList->CopyResource(executeIndirectRaytracingPatchBuffers_[patchBufferIndex],
-                                executeIndirectRaytracingPatchStagingBuffers_[patchBufferIndex]);
+      commandList->CopyResource(
+          executeIndirectRaytracingPatchBuffers_[patchBufferIndex].Get(),
+          executeIndirectRaytracingPatchStagingBuffers_[patchBufferIndex].Get());
     }
   }
 
   {
     D3D12_RESOURCE_BARRIER barrier{};
     barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-    barrier.Transition.pResource = executeIndirectRaytracingPatchBuffers_[patchBufferIndex];
+    barrier.Transition.pResource = executeIndirectRaytracingPatchBuffers_[patchBufferIndex].Get();
     barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
     barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
     commandList->ResourceBarrier(1, &barrier);
@@ -1351,7 +1381,7 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandListExecuteIndirectCommand& c) {
     barriers[0].UAV.pResource = nullptr;
 
     barriers[1].Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-    barriers[1].Transition.pResource = patchBuffers_[patchBufferIndex];
+    barriers[1].Transition.pResource = patchBuffers_[patchBufferIndex].Get();
     barriers[1].Transition.StateBefore = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
     barriers[1].Transition.StateAfter = D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT;
 
@@ -1541,19 +1571,31 @@ unsigned GpuPatchLayer::getMappingBufferIndex(unsigned commandListKey) {
 }
 
 unsigned GpuPatchLayer::getPatchBufferIndex(unsigned commandListKey,
-                                            ID3D12GraphicsCommandList* commandList) {
+                                            ID3D12GraphicsCommandList* commandList,
+                                            size_t size) {
+  if (size > patchBufferSize_) {
+    patchBufferSize_ = size * patchBufferGrowthFactor_;
+    LOG_WARNING << "Gpu patching - patch buffer byte size increased to: " << patchBufferSize_;
+  }
+
   for (unsigned i = 0; i < patchBufferPoolSize_; ++i) {
-    if (patchBufferFences_[i].waitingForExecute) {
+    if (patchBufferInfos_[i].fenceInfo.waitingForExecute) {
       continue;
     }
-    UINT64 value = patchBufferFences_[i].fence->GetCompletedValue();
+    UINT64 value = patchBufferInfos_[i].fenceInfo.fence->GetCompletedValue();
     if (value == UINT64_MAX) {
       LOG_ERROR << "getPatchBufferIndex - device removed!";
       exit(EXIT_FAILURE);
     }
-    if (value == patchBufferFences_[i].fenceValue) {
+    if (value == patchBufferInfos_[i].fenceInfo.fenceValue) {
+      if (size > patchBufferInfos_[i].size) {
+        Microsoft::WRL::ComPtr<ID3D12Device> device;
+        HRESULT hr = commandList->GetDevice(IID_PPV_ARGS(&device));
+        GITS_ASSERT(hr == S_OK);
+        createOrReplacePatchBufferObjects(device.Get(), i);
+      }
       currentPatchBuffersByCommandList_[commandListKey].push_back(i);
-      patchBufferFences_[i].waitingForExecute = true;
+      patchBufferInfos_[i].fenceInfo.waitingForExecute = true;
       return i;
     }
   }
@@ -1561,7 +1603,7 @@ unsigned GpuPatchLayer::getPatchBufferIndex(unsigned commandListKey,
   addPatchBuffer(commandList);
   unsigned newIndex = patchBufferPoolSize_ - 1;
   currentPatchBuffersByCommandList_[commandListKey].push_back(newIndex);
-  patchBufferFences_[newIndex].waitingForExecute = true;
+  patchBufferInfos_[newIndex].fenceInfo.waitingForExecute = true;
 
   return newIndex;
 }
