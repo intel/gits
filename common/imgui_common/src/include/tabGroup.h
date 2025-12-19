@@ -23,30 +23,38 @@ namespace gits {
 namespace ImGuiHelper {
 
 template <typename T>
-class ButtonGroup : public BaseButtonGroup<T> {
+class TabGroup : public BaseButtonGroup<T> {
 public:
-  using BaseButtonGroup<T>::BaseButtonGroup; // boiler-plate constructors be gone!
-  using BaseButtonGroup<T>::Render;          // boiler-plate constructors be gone!
+  using BaseButtonGroup<T>::BaseButtonGroup;
+  using BaseButtonGroup<T>::Render;
 
   bool Render(bool newLine) override;
 };
 
 template <typename T>
-bool ButtonGroup<T>::Render(bool newLine) {
-  bool clicked = false;
+bool TabGroup<T>::Render(bool newLine) {
+  size_t new_selected_tab = this->selectedIndex;
   auto btnSize = this->isHorizontal ? ImVec2(0.0f, 0.0f) : ImVec2(-1.0f, 0.0f);
 
   size_t i = 0;
   for (auto it = this->items.begin(); it != this->items.end(); ++it, ++i) {
-    auto& item = it->second;
-    this->PushButtonStyle(item);
-    ImGui::BeginDisabled(!this->btnEnabled[it->first] && !item.enabled);
+    auto const& item = it->second;
+    auto styleButton = i == this->selectedIndex;
+
+    if (!this->btnEnabled[it->first] || !item.enabled) {
+      continue;
+    }
+
+    if (styleButton) {
+      this->PushButtonStyle(item);
+    }
     if (ImGui::Button(this->GetLabel(item).c_str(), btnSize)) {
-      clicked = true;
+      new_selected_tab = i;
     }
     this->AddTooltip(item);
-    ImGui::EndDisabled();
-    this->PopButtonStyle();
+    if (styleButton) {
+      this->PopButtonStyle();
+    }
     if (this->isHorizontal) {
       ImGui::SameLine();
     }
@@ -54,7 +62,11 @@ bool ButtonGroup<T>::Render(bool newLine) {
   if (newLine) {
     ImGui::NewLine();
   }
-  return clicked;
+  if (new_selected_tab != this->selectedIndex) {
+    this->selectedIndex = new_selected_tab;
+    return true;
+  }
+  return false;
 }
 
 } // namespace ImGuiHelper

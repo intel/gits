@@ -12,6 +12,7 @@
 #include <functional>
 #include <optional>
 #include <mutex>
+#include <memory>
 
 #include <imgui.h>
 #include <TextEditor.h>
@@ -68,6 +69,8 @@ public:
   void AppendText(const std::string& msg, bool addNewLine = true);
   const std::string GetText() const;
 
+  void UpdatePalette();
+
   void SetBreakpoints(const TextEditor::Breakpoints& aMarkers);
   void ScrollToBottom();
 
@@ -90,7 +93,7 @@ private:
   std::optional<std::filesystem::path> m_FilePath;
   Config m_Config;
   mutable std::mutex m_EditorMutex;
-  ImGuiHelper::ButtonGroup<TOOL_BAR_ITEMS>* m_BtnsToolBar;
+  std::unique_ptr<ImGuiHelper::ButtonGroup<TOOL_BAR_ITEMS>> m_BtnsToolBar;
 };
 
 } // namespace ImGuiHelper

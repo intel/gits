@@ -9,10 +9,20 @@
 cmake_minimum_required(VERSION 3.13)
 project(gits)
 
-# workaround for venv detection on windows
+set(WIN64 FALSE)
+if (WIN32)
+  if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+    set(WIN64 TRUE)
+  elseif("${CMAKE_GENERATOR}" MATCHES "(Win64|IA64)")
+    set(WIN64 TRUE)
+  elseif("${CMAKE_GENERATOR_PLATFORM}" MATCHES "x64")
+    set(WIN64 TRUE)
+  endif()
+endif()
+
 if(DEFINED ENV{VIRTUAL_ENV})
-    set(Python3_EXECUTABLE "$ENV{VIRTUAL_ENV}/Scripts/python.exe")
-    message("Detected python venv: $ENV{VIRTUAL_ENV}")
+  message("Python venv detected: $ENV{VIRTUAL_ENV}")
+  set(Python3_FIND_VIRTUALENV FIRST)
 endif()
 
 find_package(Python3 3.10 REQUIRED COMPONENTS Interpreter)
@@ -47,7 +57,7 @@ if(WITH_LAUNCHER)
   add_definitions(-DWITH_LAUNCHER)
 endif()
 
-if(WIN32 AND "${CMAKE_GENERATOR_PLATFORM}" MATCHES "x64")
+if(WIN64)
   # DIRECTX enabled only on Windows x64
   option(WITH_DIRECTX "Build DIRECTX component" ON)
 else()

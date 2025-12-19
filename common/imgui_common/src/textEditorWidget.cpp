@@ -44,12 +44,11 @@ TextEditorWidget::TextEditorWidget(std::string name)
       m_Editor(),
       m_FilePath(std::nullopt),
       m_Config(TextEditorWidget::Config()) {
-  m_BtnsToolBar = new ImGuiHelper::ButtonGroup(TOOL_BAR());
+  m_BtnsToolBar = std::make_unique<ImGuiHelper::ButtonGroup<TOOL_BAR_ITEMS>>(TOOL_BAR());
 }
 
 TextEditorWidget::~TextEditorWidget() {
-  delete m_BtnsToolBar;
-  m_BtnsToolBar = nullptr;
+  m_BtnsToolBar.reset();
 }
 
 TextEditor& TextEditorWidget::GetEditor() {
@@ -101,6 +100,56 @@ void TextEditorWidget::AppendText(const std::string& msg, bool addNewLine) {
   if (m_Config.ScrollToBottom) {
     ScrollToBottom();
   }
+}
+
+void TextEditorWidget::UpdatePalette() {
+  const ImGuiStyle& style = ImGui::GetStyle();
+  auto palette = m_Editor.GetPalette();
+
+  auto setPaletteColor = [&](TextEditor::PaletteIndex paletteIdx, ImGuiCol colorEnum) {
+    palette[(unsigned)paletteIdx] = ImGui::ColorConvertFloat4ToU32(style.Colors[colorEnum]);
+  };
+
+  // Basic text colors
+  setPaletteColor(TextEditor::PaletteIndex::Default, ImGuiCol_Text);
+  setPaletteColor(TextEditor::PaletteIndex::Identifier, ImGuiCol_Text);
+  setPaletteColor(TextEditor::PaletteIndex::Cursor, ImGuiCol_Text);
+
+  // Syntax highlighting colors - use more varied colors
+  setPaletteColor(TextEditor::PaletteIndex::Keyword, ImGuiCol_ButtonActive);
+  setPaletteColor(TextEditor::PaletteIndex::Number, ImGuiCol_PlotHistogram);
+  setPaletteColor(TextEditor::PaletteIndex::String, ImGuiCol_PlotLines);
+  setPaletteColor(TextEditor::PaletteIndex::CharLiteral, ImGuiCol_PlotLines);
+  setPaletteColor(TextEditor::PaletteIndex::Punctuation, ImGuiCol_ButtonActive);
+
+  // Comments - use disabled text color
+  setPaletteColor(TextEditor::PaletteIndex::Comment, ImGuiCol_TextDisabled);
+  setPaletteColor(TextEditor::PaletteIndex::MultiLineComment, ImGuiCol_TextDisabled);
+
+  // Preprocessor - use a distinct color
+  setPaletteColor(TextEditor::PaletteIndex::Preprocessor, ImGuiCol_ButtonHovered);
+
+  // Background and UI elements
+  setPaletteColor(TextEditor::PaletteIndex::Background, ImGuiCol_WindowBg);
+  setPaletteColor(TextEditor::PaletteIndex::Selection, ImGuiCol_Header);
+  setPaletteColor(TextEditor::PaletteIndex::LineNumber, ImGuiCol_TextDisabled);
+  setPaletteColor(TextEditor::PaletteIndex::CurrentLineFill, ImGuiCol_FrameBg);
+  setPaletteColor(TextEditor::PaletteIndex::CurrentLineFillInactive, ImGuiCol_FrameBgHovered);
+  setPaletteColor(TextEditor::PaletteIndex::CurrentLineEdge, ImGuiCol_Border);
+
+  // Error highlighting
+  setPaletteColor(TextEditor::PaletteIndex::ErrorMarker, ImGuiCol_PlotHistogramHovered);
+
+  // Breakpoint colors - create custom colors based on theme
+  bool isDarkTheme = style.Colors[ImGuiCol_WindowBg].x < 0.5f;
+  if (isDarkTheme) {
+    palette[(unsigned)TextEditor::PaletteIndex::Breakpoint] = IM_COL32(128, 0, 0, 255); // Dark red
+  } else {
+    palette[(unsigned)TextEditor::PaletteIndex::Breakpoint] =
+        IM_COL32(255, 100, 100, 255); // Light red
+  }
+
+  m_Editor.SetPalette(palette);
 }
 
 const std::string TextEditorWidget::GetText() const {
@@ -155,7 +204,7 @@ void TextEditorWidget::Render(ImVec2 size) {
 }
 
 void TextEditorWidget::RenderToolbar(ImVec2 size) {
-  auto width = m_BtnsToolBar->GetSize().x - 16;
+  auto width = m_BtnsToolBar->GetSize().x;
   if ((ImGui::GetCursorPosX() + width + ImGui::GetStyle().WindowPadding.x) > size.x) {
     ImGui::NewLine();
   } else {

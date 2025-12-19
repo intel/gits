@@ -38,13 +38,17 @@ endif()
 # ImGui Lib
 set(IMGUILIB_CPP_FILES
   ${IMGUILIB_SOURCE_DIR}/imGuiHelper.cpp
+  ${IMGUILIB_SOURCE_DIR}/imGuiStyle.cpp
   ${IMGUILIB_SOURCE_DIR}/textEditorWidget.cpp
 )
 
 set(IMGUILIB_HEADER_FILES
+  ${IMGUILIB_HEADER_DIR}/imGuiStyle.h
   ${IMGUILIB_HEADER_DIR}/imGuiHelper.h
   ${IMGUILIB_HEADER_DIR}/textEditorWidget.h
+  ${IMGUILIB_HEADER_DIR}/baseButtonGroup.h
   ${IMGUILIB_HEADER_DIR}/buttonGroup.h
+  ${IMGUILIB_HEADER_DIR}/tabGroup.h
   ${IMGUILIB_FONT_C_HEADER}
 )
 
@@ -85,3 +89,33 @@ endif()
 
 target_link_libraries(imgui_common PRIVATE yamlcpp log)
 add_dependencies(imgui_common generate_font_header config_codegen)
+
+list(APPEND IMGUI_ADDONS_SOURCE
+  ${IMGUI_COLOR_TEXT_EDIT_DIR}/TextEditor.cpp
+  ${IMGUI_COLOR_TEXT_EDIT_DIR}/TextEditor.h
+
+  ${IMGUI_FILE_DIALOG_DIR}/ImGuiFileDialog.cpp
+  ${IMGUI_FILE_DIALOG_DIR}/ImGuiFileDialog.h
+  ${IMGUI_FILE_DIALOG_DIR}/ImGuiFileDialogConfig.h
+)
+add_library(imgui_addons STATIC ${IMGUI_ADDONS_SOURCE})
+target_link_libraries(imgui_addons PRIVATE imgui_common)
+set_target_properties(imgui_addons PROPERTIES FOLDER "common/imgui")
+
+target_compile_options(imgui_addons PRIVATE
+  $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:
+    -Wno-deprecated-enum-enum-conversion
+    -Wno-error=reorder
+    -Wno-error=sign-compare
+    -Wno-error=parentheses
+    -Wno-error=sequence-point
+    -Wno-error=unknown-pragmas
+  >
+  $<$<CXX_COMPILER_ID:MSVC>:
+    /wd4996  # deprecated warnings
+    /wd4244  # conversion warnings
+    /wd4267  # size_t conversion warnings
+    /wd4018  # signed/unsigned mismatch
+  >
+)
+

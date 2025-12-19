@@ -11,8 +11,8 @@
 #include <vector>
 #include <string>
 #include <filesystem>
-#include <plog/Log.h>
 #include <thread>
+#include <numeric>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -23,6 +23,8 @@
 #include <fcntl.h>
 #endif
 
+#include "log.h"
+
 namespace fs = std::filesystem;
 
 // plog adaptor for process output
@@ -30,14 +32,14 @@ class ProcessOutputLogger {
 public:
   static void log(const std::string& msg, std::function<void(const std::string&)> onOutput) {
     if (msg.empty()) {
-      PLOG_INFO << "Process output message is empty";
+      LOG_INFO << "Process output message is empty";
       return;
     }
 
     if (onOutput) {
       onOutput(msg);
     } else {
-      PLOG_INFO << msg;
+      LOG_INFO << msg;
     }
   };
 };
@@ -46,10 +48,10 @@ public:
 bool FileActions::CopyFile(const fs::path& source, const fs::path& destination) {
   try {
     fs::copy_file(source, destination, fs::copy_options::overwrite_existing);
-    PLOG_INFO << "Copied: " << source << " -> " << destination;
+    LOG_INFO << "Copied: " << source << " -> " << destination;
     return true;
   } catch (const fs::filesystem_error& e) {
-    PLOG_ERROR << "Error copying file: " << e.what();
+    LOG_ERROR << "Error copying file: " << e.what();
     return false;
   }
 }
@@ -59,13 +61,13 @@ bool FileActions::CopyFiles(const std::vector<fs::path>& sources, const fs::path
 
   // Ensure destination directory exists
   if (!CreateDirectory(destinationDir)) {
-    PLOG_ERROR << "Failed to create destination directory: " << destinationDir;
+    LOG_ERROR << "Failed to create destination directory: " << destinationDir;
     return false;
   }
 
   for (const auto& source : sources) {
     if (!exists(source)) {
-      PLOG_WARNING << "Source file does not exist: " << source;
+      LOG_WARNING << "Source file does not exist: " << source;
       allSucceeded = false;
       continue;
     }
@@ -83,10 +85,27 @@ bool FileActions::CopyDirectory(const fs::path& source, const fs::path& destinat
   try {
     fs::copy(source, destination,
              fs::copy_options::recursive | fs::copy_options::overwrite_existing);
-    PLOG_INFO << "Copied directory: " << source << " -> " << destination;
+    LOG_INFO << "Copied directory: " << source << " -> " << destination;
     return true;
   } catch (const fs::filesystem_error& e) {
-    PLOG_ERROR << "Error copying directory: " << e.what();
+    LOG_ERROR << "Error copying directory: " << e.what();
+    return false;
+  }
+}
+
+bool FileActions::CopyDirectoryContents(const std::filesystem::path& source,
+                                        const std::filesystem::path& destination) {
+  try {
+    for (const auto& item : fs::directory_iterator(source)) {
+      const auto& source_path = item.path();
+      const auto destination_path = destination / source_path.filename();
+      fs::copy(source_path, destination_path,
+               fs::copy_options::recursive | fs::copy_options::overwrite_existing);
+    }
+    LOG_INFO << "Copied contents of directory: " << source << " -> " << destination;
+    return true;
+  } catch (const fs::filesystem_error& e) {
+    LOG_INFO << "Error copying contents of directory: " << source << " Error: " << e.what();
     return false;
   }
 }
@@ -94,15 +113,15 @@ bool FileActions::CopyDirectory(const fs::path& source, const fs::path& destinat
 bool FileActions::DeleteFile(const fs::path& filePath) {
   try {
     if (!exists(filePath)) {
-      PLOG_WARNING << "File does not exist: " << filePath;
+      LOG_WARNING << "File does not exist: " << filePath;
       return true; // Consider non-existent file as successfully "deleted"
     }
 
     fs::remove(filePath);
-    PLOG_INFO << "Deleted file: " << filePath;
+    LOG_INFO << "Deleted file: " << filePath;
     return true;
   } catch (const fs::filesystem_error& e) {
-    PLOG_ERROR << "Error deleting file: " << e.what();
+    LOG_ERROR << "Error deleting file: " << e.what();
     return false;
   }
 }
@@ -122,15 +141,15 @@ bool FileActions::DeleteFiles(const std::vector<fs::path>& filePaths) {
 bool FileActions::DeleteDirectory(const fs::path& directoryPath) {
   try {
     if (!exists(directoryPath)) {
-      PLOG_WARNING << "Directory does not exist: " << directoryPath;
+      LOG_WARNING << "Directory does not exist: " << directoryPath;
       return true; // Consider non-existent directory as successfully "deleted"
     }
 
     std::uintmax_t removedCount = fs::remove_all(directoryPath);
-    PLOG_INFO << "Deleted directory and " << removedCount << " items: " << directoryPath;
+    LOG_INFO << "Deleted directory and " << removedCount << " items: " << directoryPath;
     return true;
   } catch (const fs::filesystem_error& e) {
-    PLOG_ERROR << "Error deleting directory: " << e.what();
+    LOG_ERROR << "Error deleting directory: " << e.what();
     return false;
   }
 }
@@ -140,7 +159,7 @@ bool FileActions::CreateDirectory(const fs::path& path) {
     fs::create_directories(path);
     return true;
   } catch (const fs::filesystem_error& e) {
-    PLOG_ERROR << "Error creating directory: " << e.what();
+    LOG_ERROR << "Error creating directory: " << e.what();
     return false;
   }
 }
@@ -178,6 +197,131 @@ void FileActions::LaunchExecutableAsync(const fs::path& executablePath,
 #endif
 }
 
+void FileActions::LaunchExecutableThreadCallbackOnExit(
+    const std::filesystem::path& executablePath,
+    const std::vector<std::string>& arguments,
+    const std::filesystem::path& workingDirectory,
+    std::function<void(const std::string&)> onOutput,
+    std::function<void()> callback) {
+#ifdef _WIN32
+  std::thread([=]() {
+    LaunchExecutableWindows(executablePath, arguments, true, workingDirectory, onOutput);
+    callback();
+  }).detach();
+#else
+  std::thread([=]() {
+    LaunchExecutableUnix(executablePath, arguments, true, workingDirectory, onOutput);
+    callback();
+  }).detach();
+#endif
+}
+
+namespace {
+// Helper function
+// Since the YAML::Node type is kind of like a pointer
+// Modifying the YAML by the given path is tricky
+// Because of how the assignment operator works, the YAML tree could get corrupted
+// That's why recursion is used here
+bool SetYamlPathValue(YAML::Node node,
+                      const std::vector<std::string>& path,
+                      std::string value,
+                      bool addIfNotPresent = false,
+                      size_t index = 0) {
+  if (index == path.size() - 1) {
+    if (!node[path[index]] && !addIfNotPresent) {
+      return false;
+    }
+    node[path[index]] = value;
+
+    return true;
+  }
+
+  if (!node[path[index]]) {
+    if (addIfNotPresent) {
+      node[path[index]] = YAML::Node();
+    } else {
+      return false;
+    }
+  }
+
+  return SetYamlPathValue(node[path[index]], path, value, addIfNotPresent, index + 1);
+}
+} // namespace
+
+bool FileActions::UpdateConfigYamlPath(std::filesystem::path configPath,
+                                       std::vector<std::string> yamlPath,
+                                       std::string value,
+                                       bool addIfNotPresent) {
+  if (configPath.empty()) {
+    LOG_ERROR << "Couldn't update gits config. Provided config path is empty.";
+
+    return false;
+  }
+
+  if (!std::filesystem::exists(configPath)) {
+    LOG_ERROR << "Couldn't update gits config. Provided config path doesn't exist.";
+
+    return false;
+  }
+
+  if (yamlPath.empty()) {
+    LOG_ERROR << "Couldn't update gits config. YAML path is empty.";
+
+    return false;
+  }
+
+  try {
+    std::ifstream file(configPath);
+    if (!file.is_open()) {
+      LOG_ERROR << "Couldn't update gits config. Couldn't open the config file for reading.";
+
+      return false;
+    }
+
+    std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    file.close();
+
+    YAML::Node yaml = YAML::Load(content);
+
+    if (!SetYamlPathValue(yaml, yamlPath, value, addIfNotPresent)) {
+      auto joined =
+          std::accumulate(std::next(yamlPath.begin()), yamlPath.end(), yamlPath[0],
+                          [](const std::string& a, const std::string& b) { return a + "." + b; });
+
+      LOG_ERROR << "Couldn't update gits config. YAML path: " << joined << " doesn't exist";
+
+      return false;
+    }
+
+    // Write the modified YAML back to the file
+    std::ofstream outFile(configPath);
+    if (!outFile.is_open()) {
+      LOG_ERROR
+          << "Error updating the capture output path. Couldn't open the config file for writing.";
+      return false;
+    }
+
+    YAML::Emitter emitter;
+    emitter << yaml;
+
+    outFile << emitter.c_str();
+    if (outFile.fail()) {
+      LOG_ERROR << "Couldn't update gits config. Failed writing to file.";
+
+      return false;
+    }
+
+    outFile.close();
+
+  } catch (const std::exception& e) {
+    LOG_ERROR << "Couldn't update gits config. Error: " << e.what();
+
+    return false;
+  }
+
+  return true;
+}
+
 #ifdef _WIN32
 bool FileActions::LaunchExecutableWindows(const fs::path& executablePath,
                                           const std::vector<std::string>& arguments,
@@ -186,7 +330,7 @@ bool FileActions::LaunchExecutableWindows(const fs::path& executablePath,
                                           std::function<void(const std::string&)> onOutput) {
   std::string cmdLine = "\"" + executablePath.string() + "\"";
   for (const auto& arg : arguments) {
-    cmdLine += " \"" + arg + "\"";
+    cmdLine += " " + arg;
   }
 
   // Create pipes for stdout/stderr
@@ -210,9 +354,9 @@ bool FileActions::LaunchExecutableWindows(const fs::path& executablePath,
   if (!workingDirectory.empty()) {
     workDirStr = workingDirectory.string();
     workDir = workDirStr.c_str();
-    PLOG_INFO << "Setting working directory to: " << workingDirectory;
+    LOG_INFO << "Setting working directory to: " << workingDirectory;
   } else {
-    PLOG_INFO << "Using current working directory: " << fs::current_path();
+    LOG_INFO << "Using current working directory: " << fs::current_path();
   }
 
   BOOL result = CreateProcessA(nullptr, const_cast<char*>(cmdLine.c_str()), nullptr, nullptr,
@@ -224,21 +368,20 @@ bool FileActions::LaunchExecutableWindows(const fs::path& executablePath,
   CloseHandle(hStdErrWrite);
 
   if (!result) {
-    PLOG_ERROR << "Failed to launch executable: " << executablePath;
-    PLOG_ERROR << "Error code: " << GetLastError();
+    LOG_ERROR << "Failed to launch executable: " << executablePath;
+    LOG_ERROR << "Error code: " << GetLastError();
     CloseHandle(hStdOutRead);
     CloseHandle(hStdErrRead);
     return false;
   }
 
-  PLOG_INFO << "Launched: " << executablePath;
+  LOG_INFO << "Launched: " << executablePath;
 
   // Read output
   char buffer[4096];
   DWORD bytesRead;
   while (ReadFile(hStdOutRead, buffer, sizeof(buffer) - 1, &bytesRead, nullptr) && bytesRead > 0) {
     const std::string msg(buffer, bytesRead);
-    PLOG_INFO << "!" << msg;
     ProcessOutputLogger::log(msg, onOutput);
   }
   while (ReadFile(hStdErrRead, buffer, sizeof(buffer) - 1, &bytesRead, nullptr) && bytesRead > 0) {

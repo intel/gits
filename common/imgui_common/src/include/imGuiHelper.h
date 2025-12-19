@@ -19,6 +19,19 @@ namespace gits {
 enum class HUDAnchor;
 
 namespace ImGuiHelper {
+
+struct Colors {
+  static constexpr const ImVec4 SUCCESS = ImVec4(0.1f, 0.7f, 0.2f, 1.0f);
+  static constexpr const ImVec4 SUCCESS_HOVERED = ImVec4(0.25f, 0.9f, 0.35f, 1.0f);
+  static constexpr const ImVec4 SUCCESS_ACTIVE = ImVec4(0.15f, 0.7f, 0.25f, 1.0f);
+  static constexpr const ImVec4 WARNING = ImVec4(0.8f, 0.7f, 0.1f, 1.0f);
+  static constexpr const ImVec4 WARNING_HOVERED = ImVec4(1.0f, 0.9f, 0.25f, 1.0f);
+  static constexpr const ImVec4 WARNING_ACTIVE = ImVec4(0.7f, 0.6f, 0.15f, 1.0f);
+  static constexpr const ImVec4 FAILURE = ImVec4(0.7f, 0.1f, 0.2f, 1.0f);
+  static constexpr const ImVec4 FAILURE_HOVERED = ImVec4(0.9f, 0.25f, 0.35f, 1.0f);
+  static constexpr const ImVec4 FAILURE_ACTIVE = ImVec4(0.7f, 0.15f, 0.25f, 1.0f);
+};
+
 enum class Widgets {
   Button,
   Input,
@@ -26,12 +39,9 @@ enum class Widgets {
   RadioButton,
   ArrowButton,
   Text,
+  Combo,
   Unknown
 };
-
-bool SetStyleFromFile(const std::filesystem::path filePath);
-
-bool SaveStyleToFile(const std::filesystem::path filePath);
 
 float WidthOf(Widgets widget, const std::string& label = "");
 float LineHeight();
@@ -39,6 +49,8 @@ float LineHeight();
 std::string ToStr(const ImVec2& v);
 
 ImFont* GetIntelFont(float uiScale);
+
+float CurrentUIScale();
 
 bool UpdateUIScaling(float scale);
 

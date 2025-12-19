@@ -9,4 +9,4 @@
 #pragma once
 
 #define APP_ICON    101
-#define APP_VERSION "0.1.0"
+#define APP_VERSION "0.1.5"

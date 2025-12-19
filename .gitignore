@@ -13,11 +13,13 @@
 *.opendb
 *.dat
 ipch/
+.idea/
 .vs/
 .vscode/
 *.sln
 *.pyproj
 *.aps
+*.code-workspace
 
 # Remains of Git merge conflicts
 *.orig
@@ -50,6 +52,10 @@ ipch/
 
 # Klocwork (static code analysis tool)
 .klocwork
+
+# Python project stuff - duplicate to requirements.txt (our usecase), ...
+pyproject.toml
+uv.lock
 
 
 ### GITS-specific rules

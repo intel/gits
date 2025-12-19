@@ -22,6 +22,8 @@ public:
                         const std::filesystem::path& destinationDir);
   static bool CopyDirectory(const std::filesystem::path& source,
                             const std::filesystem::path& destination);
+  static bool CopyDirectoryContents(const std::filesystem::path& source,
+                                    const std::filesystem::path& destination);
   static bool DeleteFile(const std::filesystem::path& filePath);
   static bool DeleteFiles(const std::vector<std::filesystem::path>& filePaths);
   static bool DeleteDirectory(const std::filesystem::path& directoryPath);
@@ -38,6 +40,19 @@ public:
                                     const std::vector<std::string>& arguments = {},
                                     const std::filesystem::path& workingDirectory = "",
                                     std::function<void(const std::string&)> onOutput = nullptr);
+
+  // Launches an executable as blocking but in a separate thread, so that we can easily know when the execution ends without holding up the main thread
+  static void LaunchExecutableThreadCallbackOnExit(
+      const std::filesystem::path& executablePath,
+      const std::vector<std::string>& arguments = {},
+      const std::filesystem::path& workingDirectory = "",
+      std::function<void(const std::string&)> onOutput = nullptr,
+      std::function<void()> callback = nullptr);
+
+  static bool UpdateConfigYamlPath(std::filesystem::path configPath,
+                                   std::vector<std::string> yamlPath,
+                                   std::string value,
+                                   bool addIfNotPresent = false);
 
 private:
 #ifdef _WIN32

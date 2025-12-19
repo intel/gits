@@ -21,194 +21,16 @@ namespace ImGuiHelper {
 
 static float currentUiScale = 1.0f;
 
-bool SetStyleFromFile(const std::filesystem::path filePath) {
-  ImGuiStyle& style = ImGui::GetStyle();
-
-  try {
-    YAML::Node root = YAML::LoadFile(filePath.string());
-
-    // Scalar style properties
-    if (root["Alpha"]) {
-      style.Alpha = root["Alpha"].as<float>();
-    }
-    if (root["WindowPadding"]) {
-      auto v = root["WindowPadding"].as<std::vector<float>>();
-      if (v.size() == 2) {
-        style.WindowPadding = ImVec2(v[0], v[1]);
-      }
-    }
-    if (root["WindowRounding"]) {
-      style.WindowRounding = root["WindowRounding"].as<float>();
-    }
-    if (root["WindowBorderSize"]) {
-      style.WindowBorderSize = root["WindowBorderSize"].as<float>();
-    }
-    if (root["WindowMinSize"]) {
-      auto v = root["WindowMinSize"].as<std::vector<float>>();
-      if (v.size() == 2) {
-        style.WindowMinSize = ImVec2(v[0], v[1]);
-      }
-    }
-    if (root["WindowTitleAlign"]) {
-      auto v = root["WindowTitleAlign"].as<std::vector<float>>();
-      if (v.size() == 2) {
-        style.WindowTitleAlign = ImVec2(v[0], v[1]);
-      }
-    }
-    if (root["ChildRounding"]) {
-      style.ChildRounding = root["ChildRounding"].as<float>();
-    }
-    if (root["ChildBorderSize"]) {
-      style.ChildBorderSize = root["ChildBorderSize"].as<float>();
-    }
-    if (root["PopupRounding"]) {
-      style.PopupRounding = root["PopupRounding"].as<float>();
-    }
-    if (root["PopupBorderSize"]) {
-      style.PopupBorderSize = root["PopupBorderSize"].as<float>();
-    }
-    if (root["FramePadding"]) {
-      auto v = root["FramePadding"].as<std::vector<float>>();
-      if (v.size() == 2) {
-        style.FramePadding = ImVec2(v[0], v[1]);
-      }
-    }
-    if (root["FrameRounding"]) {
-      style.FrameRounding = root["FrameRounding"].as<float>();
-    }
-    if (root["FrameBorderSize"]) {
-      style.FrameBorderSize = root["FrameBorderSize"].as<float>();
-    }
-    if (root["ItemSpacing"]) {
-      auto v = root["ItemSpacing"].as<std::vector<float>>();
-      if (v.size() == 2) {
-        style.ItemSpacing = ImVec2(v[0], v[1]);
-      }
-    }
-    if (root["ItemInnerSpacing"]) {
-      auto v = root["ItemInnerSpacing"].as<std::vector<float>>();
-      if (v.size() == 2) {
-        style.ItemInnerSpacing = ImVec2(v[0], v[1]);
-      }
-    }
-    if (root["IndentSpacing"]) {
-      style.IndentSpacing = root["IndentSpacing"].as<float>();
-    }
-    if (root["ScrollbarSize"]) {
-      style.ScrollbarSize = root["ScrollbarSize"].as<float>();
-    }
-    if (root["ScrollbarRounding"]) {
-      style.ScrollbarRounding = root["ScrollbarRounding"].as<float>();
-    }
-    if (root["GrabMinSize"]) {
-      style.GrabMinSize = root["GrabMinSize"].as<float>();
-    }
-    if (root["GrabRounding"]) {
-      style.GrabRounding = root["GrabRounding"].as<float>();
-    }
-    if (root["TabRounding"]) {
-      style.TabRounding = root["TabRounding"].as<float>();
-    }
-    if (root["TabBorderSize"]) {
-      style.TabBorderSize = root["TabBorderSize"].as<float>();
-    }
-
-    // Colors
-    if (root["Colors"]) {
-      YAML::Node colorsNode = root["Colors"];
-      for (int i = 0; i < ImGuiCol_COUNT; ++i) {
-        char colorName[64];
-        snprintf(colorName, sizeof(colorName), "Color_%d", i);
-        if (colorsNode[colorName]) {
-          auto v = colorsNode[colorName].as<std::vector<float>>();
-          if (v.size() == 4) {
-            style.Colors[i] = ImVec4(v[0], v[1], v[2], v[3]);
-          }
-        }
-      }
-    }
-
-    return true;
-  } catch (const std::exception& e) {
-    PLOG_WARNING << "Error loading style from file '" << filePath.string() << "': " << e.what();
-    return false;
-  }
-}
-
-bool SaveStyleToFile(const std::filesystem::path filePath) {
-  const auto& style = ImGui::GetStyle();
-
-  PLOG_DEBUG << "SaveStyleToFile received path: '" << filePath.string();
-  PLOG_DEBUG << "Path is empty: " << (filePath.empty() ? "YES" : "NO");
-  PLOG_DEBUG << "Has filename: " << (filePath.has_filename() ? "YES" : "NO");
-  PLOG_DEBUG << "Filename: '" << filePath.filename().string();
-  PLOG_DEBUG << "Parent path: '" << filePath.parent_path().string();
-
-  YAML::Node root;
-
-  // Scalar style properties
-  root["Alpha"] = style.Alpha;
-  root["WindowPadding"] = std::vector<float>{style.WindowPadding.x, style.WindowPadding.y};
-  root["WindowRounding"] = style.WindowRounding;
-  root["WindowBorderSize"] = style.WindowBorderSize;
-  root["WindowMinSize"] = std::vector<float>{style.WindowMinSize.x, style.WindowMinSize.y};
-  root["WindowTitleAlign"] = std::vector<float>{style.WindowTitleAlign.x, style.WindowTitleAlign.y};
-  root["ChildRounding"] = style.ChildRounding;
-  root["ChildBorderSize"] = style.ChildBorderSize;
-  root["PopupRounding"] = style.PopupRounding;
-  root["PopupBorderSize"] = style.PopupBorderSize;
-  root["FramePadding"] = std::vector<float>{style.FramePadding.x, style.FramePadding.y};
-  root["FrameRounding"] = style.FrameRounding;
-  root["FrameBorderSize"] = style.FrameBorderSize;
-  root["ItemSpacing"] = std::vector<float>{style.ItemSpacing.x, style.ItemSpacing.y};
-  root["ItemInnerSpacing"] = std::vector<float>{style.ItemInnerSpacing.x, style.ItemInnerSpacing.y};
-  root["IndentSpacing"] = style.IndentSpacing;
-  root["ScrollbarSize"] = style.ScrollbarSize;
-  root["ScrollbarRounding"] = style.ScrollbarRounding;
-  root["GrabMinSize"] = style.GrabMinSize;
-  root["GrabRounding"] = style.GrabRounding;
-  root["TabRounding"] = style.TabRounding;
-  root["TabBorderSize"] = style.TabBorderSize;
-
-  // Colors
-  YAML::Node colorsNode;
-  for (int i = 0; i < ImGuiCol_COUNT; ++i) {
-    const ImVec4& col = style.Colors[i];
-    char colorName[64];
-    snprintf(colorName, sizeof(colorName), "Color_%d", i);
-    colorsNode[colorName] = std::vector<float>{col.x, col.y, col.z, col.w};
-  }
-  root["Colors"] = colorsNode;
-
-  try {
-    // Create parent directories if they don't exist
-    std::filesystem::create_directories(filePath.parent_path());
-
-    // Open file for writing
-    std::ofstream file(filePath);
-    if (!file.is_open()) {
-      PLOG_WARNING << "Failed to open file: " << filePath;
-      return false;
-    }
-
-    // Use YAML::Emitter to write the node
-    YAML::Emitter emitter;
-    emitter << root;
-
-    // Write to file
-    file << emitter.c_str();
-
-    return true;
-  } catch (const std::exception& e) {
-    PLOG_WARNING << "Error saving YAML to " << filePath.string() << ": " << e.what();
-    return false;
-  }
-}
-
 float WidthOf(Widgets widget, const std::string& label) {
+  // remove everything after '###' from label to account for ImGui ID tags
+  std::string cleanLabel = label;
+  size_t idTagPos = cleanLabel.find("###");
+  if (idTagPos != std::string::npos) {
+    cleanLabel = cleanLabel.substr(0, idTagPos);
+  }
   const auto& style = ImGui::GetStyle();
   auto frameHeight = ImGui::GetFrameHeight();
-  auto textWidth = ImGui::CalcTextSize(label.c_str()).x;
+  auto textWidth = ImGui::CalcTextSize(cleanLabel.c_str()).x;
   auto padding = style.FramePadding.x * 2;
   switch (widget) {
   case Widgets::Button:
@@ -222,6 +44,10 @@ float WidthOf(Widgets widget, const std::string& label) {
     return WidthOf(Widgets::Button, "-.-");
   case Widgets::Text:
     return textWidth + padding;
+  case Widgets::Combo:
+    // TODO: Can this be handled better?
+    // Right now the size is based on a "magic string"
+    return ImGui::CalcTextSize("N/A   ").x + style.FramePadding.x * 3 + textWidth;
   default:
     return 0.0f; // Unknown widget type
   }
@@ -239,11 +65,17 @@ ImFont* GetIntelFont(float uiScale) {
   ImGuiIO& io = ImGui::GetIO();
   ImFontConfig font_cfg;
   font_cfg.FontDataOwnedByAtlas = false;
-  return io.Fonts->AddFontFromMemoryTTF(gits::Font::font_data, gits::Font::font_data_size,
-                                        13.0f * uiScale, &font_cfg);
+  return io.Fonts->AddFontFromMemoryTTF(gits::Font::font_data, gits::Font::font_data_size, 24.0f,
+                                        &font_cfg);
+}
+
+float CurrentUIScale() {
+  return currentUiScale;
 }
 
 bool UpdateUIScaling(float scale) {
+  LOG_INFO << "Updateing ui scale to: " << scale;
+
   ImGuiIO& io = ImGui::GetIO();
 
   ImGuiStyle& style = ImGui::GetStyle();
@@ -272,11 +104,12 @@ bool UpdateUIScaling(float scale) {
   style.AntiAliasedLines = true;
   style.AntiAliasedLinesUseTex = true;
 
+  io.Fonts->Clear();
   ImFont* newFont = GetIntelFont(scale);
   if (newFont == nullptr) {
     return false;
   }
-
+  newFont->Scale = scale;
   io.FontDefault = newFont;
   io.Fonts->Build();
 
