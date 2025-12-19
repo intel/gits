@@ -76,7 +76,8 @@ void RtasCacheLayer::pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationSt
 
       isValid_ = deserializer_.preloadCache(device.Get());
       if (!isValid_) {
-        LOG_ERROR << "RtasCache - Failed to preload RTAS cache. Will not deserialize.";
+        LOG_WARNING << "RtasCache - Failed to preload RTAS cache. Will not deserialize. Fallback "
+                       "to performing standard builds.";
         return;
       }
     }
