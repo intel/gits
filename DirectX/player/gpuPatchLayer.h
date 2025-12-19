@@ -33,6 +33,7 @@ class PlayerManager;
 class GpuPatchLayer : public Layer {
 public:
   GpuPatchLayer(PlayerManager& manager);
+  ~GpuPatchLayer();
 
   void pre(IUnknownReleaseCommand& c) override;
   void pre(ID3D12ResourceGetGPUVirtualAddressCommand& c) override;
@@ -97,10 +98,12 @@ private:
                          unsigned mappingBufferIndex,
                          unsigned callKey);
   size_t getDispatchRaysPatchSize(const D3D12_DISPATCH_RAYS_DESC& desc) const;
+  void waitForFence(ID3D12Fence* fence, unsigned fenceValue);
 
 private:
   PlayerManager& manager_;
   bool useAddressPinning_{};
+  HANDLE waitForFenceEvent_{};
 
   static const unsigned patchBufferInitialPoolSize_{32};
   unsigned patchBufferPoolSize_{};

@@ -27,6 +27,12 @@ GpuPatchLayer::GpuPatchLayer(PlayerManager& manager)
   }
 }
 
+GpuPatchLayer::~GpuPatchLayer() {
+  for (const auto& patchBufferInfo : patchBufferInfos_) {
+    waitForFence(patchBufferInfo.fenceInfo.fence.Get(), patchBufferInfo.fenceInfo.fenceValue);
+  }
+}
+
 void GpuPatchLayer::pre(IUnknownReleaseCommand& c) {
   if (c.result_.value == 0) {
     addressService_.destroyInterface(c.object_.key);
@@ -633,6 +639,29 @@ size_t GpuPatchLayer::getDispatchRaysPatchSize(const D3D12_DISPATCH_RAYS_DESC& d
   addBindingTableSize(desc.CallableShaderTable.StartAddress, desc.CallableShaderTable.SizeInBytes,
                       desc.CallableShaderTable.StrideInBytes);
   return size;
+}
+
+void GpuPatchLayer::waitForFence(ID3D12Fence* fence, unsigned fenceValue) {
+  UINT64 value = fence->GetCompletedValue();
+  if (value >= fenceValue) {
+    return;
+  }
+  if (!waitForFenceEvent_) {
+    waitForFenceEvent_ = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+    GITS_ASSERT(waitForFenceEvent_);
+  }
+  HRESULT hr = fence->SetEventOnCompletion(fenceValue, waitForFenceEvent_);
+  GITS_ASSERT(hr == S_OK);
+  DWORD timeout = 60000; // 60 sec
+  if (Configurator::Get().directx.player.infiniteWaitForFence) {
+    timeout = INFINITE;
+  }
+  DWORD ret = WaitForSingleObject(waitForFenceEvent_, timeout);
+  if (ret == WAIT_TIMEOUT) {
+    value = fence->GetCompletedValue();
+    LOG_ERROR << "Gpu patching - timeout while waiting for fence value " << fenceValue
+              << ". Current value " << value;
+  }
 }
 
 void GpuPatchLayer::post(ID3D12GraphicsCommandListSetComputeRootSignatureCommand& c) {
