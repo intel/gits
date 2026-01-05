@@ -30,9 +30,230 @@ void CheckVkResult(VkResult result) {
   }
 }
 
+static PFN_vkVoidFunction ImGuiVulkanLoader(const char* functionName, void* userData) {
+  if (strcmp(functionName, "vkAllocateCommandBuffers") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkAllocateCommandBuffers;
+  }
+  if (strcmp(functionName, "vkAllocateDescriptorSets") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkAllocateDescriptorSets;
+  }
+  if (strcmp(functionName, "vkAllocateMemory") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkAllocateMemory;
+  }
+  if (strcmp(functionName, "vkBeginCommandBuffer") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkBeginCommandBuffer;
+  }
+  if (strcmp(functionName, "vkBindBufferMemory") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkBindBufferMemory;
+  }
+  if (strcmp(functionName, "vkBindImageMemory") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkBindImageMemory;
+  }
+  if (strcmp(functionName, "vkCmdBindDescriptorSets") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkCmdBindDescriptorSets;
+  }
+  if (strcmp(functionName, "vkCmdBindIndexBuffer") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkCmdBindIndexBuffer;
+  }
+  if (strcmp(functionName, "vkCmdBindPipeline") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkCmdBindPipeline;
+  }
+  if (strcmp(functionName, "vkCmdBindVertexBuffers") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkCmdBindVertexBuffers;
+  }
+  if (strcmp(functionName, "vkCmdCopyBufferToImage") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkCmdCopyBufferToImage;
+  }
+  if (strcmp(functionName, "vkCmdDrawIndexed") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkCmdDrawIndexed;
+  }
+  if (strcmp(functionName, "vkCmdPipelineBarrier") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkCmdPipelineBarrier;
+  }
+  if (strcmp(functionName, "vkCmdPushConstants") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkCmdPushConstants;
+  }
+  if (strcmp(functionName, "vkCmdSetScissor") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkCmdSetScissor;
+  }
+  if (strcmp(functionName, "vkCmdSetViewport") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkCmdSetViewport;
+  }
+  if (strcmp(functionName, "vkCreateBuffer") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkCreateBuffer;
+  }
+  if (strcmp(functionName, "vkCreateCommandPool") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkCreateCommandPool;
+  }
+  if (strcmp(functionName, "vkCreateDescriptorPool") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkCreateDescriptorPool;
+  }
+  if (strcmp(functionName, "vkCreateDescriptorSetLayout") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkCreateDescriptorSetLayout;
+  }
+  if (strcmp(functionName, "vkCreateFence") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkCreateFence;
+  }
+  if (strcmp(functionName, "vkCreateFramebuffer") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkCreateFramebuffer;
+  }
+  if (strcmp(functionName, "vkCreateGraphicsPipelines") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkCreateGraphicsPipelines;
+  }
+  if (strcmp(functionName, "vkCreateImage") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkCreateImage;
+  }
+  if (strcmp(functionName, "vkCreateImageView") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkCreateImageView;
+  }
+  if (strcmp(functionName, "vkCreatePipelineLayout") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkCreatePipelineLayout;
+  }
+  if (strcmp(functionName, "vkCreateRenderPass") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkCreateRenderPass;
+  }
+  if (strcmp(functionName, "vkCreateSampler") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkCreateSampler;
+  }
+  if (strcmp(functionName, "vkCreateSemaphore") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkCreateSemaphore;
+  }
+  if (strcmp(functionName, "vkCreateShaderModule") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkCreateShaderModule;
+  }
+  if (strcmp(functionName, "vkCreateSwapchainKHR") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkCreateSwapchainKHR;
+  }
+  if (strcmp(functionName, "vkDestroyBuffer") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkDestroyBuffer;
+  }
+  if (strcmp(functionName, "vkDestroyCommandPool") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkDestroyCommandPool;
+  }
+  if (strcmp(functionName, "vkDestroyDescriptorPool") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkDestroyDescriptorPool;
+  }
+  if (strcmp(functionName, "vkDestroyDescriptorSetLayout") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkDestroyDescriptorSetLayout;
+  }
+  if (strcmp(functionName, "vkDestroyFence") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkDestroyFence;
+  }
+  if (strcmp(functionName, "vkDestroyFramebuffer") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkDestroyFramebuffer;
+  }
+  if (strcmp(functionName, "vkDestroyImage") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkDestroyImage;
+  }
+  if (strcmp(functionName, "vkDestroyImageView") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkDestroyImageView;
+  }
+  if (strcmp(functionName, "vkDestroyPipeline") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkDestroyPipeline;
+  }
+  if (strcmp(functionName, "vkDestroyPipelineLayout") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkDestroyPipelineLayout;
+  }
+  if (strcmp(functionName, "vkDestroyRenderPass") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkDestroyRenderPass;
+  }
+  if (strcmp(functionName, "vkDestroySampler") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkDestroySampler;
+  }
+  if (strcmp(functionName, "vkDestroySemaphore") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkDestroySemaphore;
+  }
+  if (strcmp(functionName, "vkDestroyShaderModule") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkDestroyShaderModule;
+  }
+  if (strcmp(functionName, "vkDestroySurfaceKHR") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkDestroySurfaceKHR;
+  }
+  if (strcmp(functionName, "vkDestroySwapchainKHR") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkDestroySwapchainKHR;
+  }
+  if (strcmp(functionName, "vkDeviceWaitIdle") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkDeviceWaitIdle;
+  }
+  if (strcmp(functionName, "vkEnumeratePhysicalDevices") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkEnumeratePhysicalDevices;
+  }
+  if (strcmp(functionName, "vkEndCommandBuffer") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkEndCommandBuffer;
+  }
+  if (strcmp(functionName, "vkFlushMappedMemoryRanges") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkFlushMappedMemoryRanges;
+  }
+  if (strcmp(functionName, "vkFreeCommandBuffers") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkFreeCommandBuffers;
+  }
+  if (strcmp(functionName, "vkFreeDescriptorSets") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkFreeDescriptorSets;
+  }
+  if (strcmp(functionName, "vkFreeMemory") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkFreeMemory;
+  }
+  if (strcmp(functionName, "vkGetBufferMemoryRequirements") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkGetBufferMemoryRequirements;
+  }
+  if (strcmp(functionName, "vkGetImageMemoryRequirements") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkGetImageMemoryRequirements;
+  }
+  if (strcmp(functionName, "vkGetPhysicalDeviceProperties") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkGetPhysicalDeviceProperties;
+  }
+  if (strcmp(functionName, "vkGetPhysicalDeviceMemoryProperties") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkGetPhysicalDeviceMemoryProperties;
+  }
+  if (strcmp(functionName, "vkGetPhysicalDeviceQueueFamilyProperties") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkGetPhysicalDeviceQueueFamilyProperties;
+  }
+  if (strcmp(functionName, "vkGetPhysicalDeviceSurfaceCapabilitiesKHR") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkGetPhysicalDeviceSurfaceCapabilitiesKHR;
+  }
+  if (strcmp(functionName, "vkGetPhysicalDeviceSurfaceFormatsKHR") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkGetPhysicalDeviceSurfaceFormatsKHR;
+  }
+  if (strcmp(functionName, "vkGetPhysicalDeviceSurfacePresentModesKHR") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkGetPhysicalDeviceSurfacePresentModesKHR;
+  }
+  if (strcmp(functionName, "vkGetSwapchainImagesKHR") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkGetSwapchainImagesKHR;
+  }
+  if (strcmp(functionName, "vkMapMemory") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkMapMemory;
+  }
+  if (strcmp(functionName, "vkQueueSubmit") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkQueueSubmit;
+  }
+  if (strcmp(functionName, "vkQueueWaitIdle") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkQueueWaitIdle;
+  }
+  if (strcmp(functionName, "vkResetCommandPool") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkResetCommandPool;
+  }
+  if (strcmp(functionName, "vkUnmapMemory") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkUnmapMemory;
+  }
+  if (strcmp(functionName, "vkUpdateDescriptorSets") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkUpdateDescriptorSets;
+  }
+  if (strcmp(functionName, "vkCmdBeginRenderingKHR") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkCmdBeginRenderingKHR;
+  }
+  if (strcmp(functionName, "vkCmdEndRenderingKHR") == 0) {
+    return (PFN_vkVoidFunction)drvVk.vkCmdEndRenderingKHR;
+  }
+
+  LOG_WARNING << "ImGui requested unknown Vulkan function: " << functionName;
+  return nullptr;
+}
+
 } // namespace
 
-VulkanHudHelper::VulkanHudHelper() {}
+VulkanHudHelper::VulkanHudHelper() {
+  ImGui_ImplVulkan_LoadFunctions(VK_VERSION_1_4, ImGuiVulkanLoader, nullptr);
+}
 
 void VulkanHudHelper::CreateHudDescriptorPool() {
   if (!Configurator::IsHudEnabledForApi(ApiBool::VK)) {
