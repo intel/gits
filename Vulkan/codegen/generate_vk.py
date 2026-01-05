@@ -10,8 +10,15 @@
 
 from generator_vulkan import (
     get_functions,
+    get_custom_functions,
     get_structs,
-    get_enums,
+    get_custom_structs,
+    get_enums32,
+    get_enums64,
+    get_custom_enums,
+    get_extended_enums,
+    get_flags32,
+    get_flags64,
     FuncType,
     FuncLevel,
     Token,
@@ -53,22 +60,32 @@ AUTO_GENERATED_HEADER = f"""
 # Vulkan types categorized
 # TODO: these are almost constants, should names be in ALL_CAPS?
 
-vulkan_flags: list[str] = []
-vulkan_flags64: list[str] = []
-for enum in get_enums():
+vulkan_flags: list[str] = get_flags32()
+vulkan_flags64: list[str] = get_flags64()
+#for enum in get_enums():
+#    if 'FlagBits' in enum.name:
+#        flags_name = enum.name.replace('FlagBits', 'Flags')
+#        if enum.size == 64:
+#            vulkan_flags64.append(flags_name)
+#        else:
+#            vulkan_flags.append(flags_name)
+
+custom_vulkan_flags: list[str] = []
+custom_vulkan_flags64: list[str] = []
+for enum in get_custom_enums():
     if 'FlagBits' in enum.name:
         flags_name = enum.name.replace('FlagBits', 'Flags')
         if enum.size == 64:
-            vulkan_flags64.append(flags_name)
+            custom_vulkan_flags64.append(flags_name)
         else:
-            vulkan_flags.append(flags_name)
+            custom_vulkan_flags.append(flags_name)
 
-vulkan_uint32: list[str] = vulkan_flags + [
+vulkan_uint32: list[str] = vulkan_flags + custom_vulkan_flags + [
     'uint32_t',
     'bool32_t',
     'VkBool32',
 ]
-vulkan_uint64: list[str] = vulkan_flags64 + [
+vulkan_uint64: list[str] = vulkan_flags64 + custom_vulkan_flags64 + [
     'VkDeviceSize',
     'VkDeviceAddress',
 ]
@@ -94,11 +111,13 @@ vulkan_other_primitives: list[str] = [
     "nullptr",
 ]
 
-vulkan_enums: list[str] = [enum.name for enum in get_enums()]
+vulkan_enums32: list[str] = [enum.name for enum in get_enums32()]
+vulkan_enums64: list[str] = [enum.name for enum in get_enums64()]
 vulkan_structs: list[str] = [struct.name for struct in get_structs()]
 
 primitive_types: list[str] = (
-    vulkan_enums
+    vulkan_enums32
+    + vulkan_enums64
     + vulkan_uint32
     + vulkan_uint64
     + vulkan_unions
@@ -141,8 +160,6 @@ opaque_nondispatchable_handles: list[str] = [
     'VkDisplayKHR',
     'VkDisplayModeKHR',
     'VkDebugReportCallbackEXT',
-    'VkObjectTableNVX',
-    'VkIndirectCommandsLayoutNVX',
     'VkDebugUtilsMessengerEXT',
     'VkValidationCacheEXT',
     'VkPerformanceConfigurationINTEL',
@@ -286,7 +303,7 @@ def categorize_argument(type_name: str) -> str:
 
     if raw_type in opaque_handles:
         return 'OPAQUE_HANDLE'
-    elif raw_type in vulkan_enums:
+    elif raw_type in vulkan_enums32:
         return 'ENUM'
     elif raw_type in primitive_types:
         return 'PRIMITIVE_TYPE'
@@ -439,7 +456,7 @@ def make_flagbits_type_cast(type: str) -> str:
     """
     if 'Flags' in type:
         corresponding_enum = type.replace('Flags', 'FlagBits')
-        if corresponding_enum in vulkan_enums:
+        if corresponding_enum in vulkan_enums32:
             return f'({corresponding_enum})'
 
     return ''
@@ -1013,9 +1030,15 @@ def main() -> None:
     all_unions: list[VkStruct] = [s for s in all_structs if s.type == 'union']
     enabled_unions: list[VkStruct] = [u for u in all_unions if u.enabled]
 
-
-    all_enums: list[VkEnum] = get_enums()
+    enums32: list[VkEnum] = get_enums32()
+    enums64: list[VkEnum] = get_enums64()
+    all_enums: list[VkEnum] = enums32 + enums64
     # Enums are always enabled.
+
+    custom_tokens: list[Token] = get_custom_functions()
+    custom_structs: list[VkStruct] = get_custom_structs()
+    custom_enums: list[VkEnum] = get_custom_enums()
+    extended_enums: list[VkEnum] = get_extended_enums()
 
     update_token_ids('vulkanIDs.h', 'common/include', functions=enabled_tokens)
 
@@ -1070,7 +1093,8 @@ def main() -> None:
         'common/include/vulkanLogAuto.inl',
         version_suffix=version_suffix,
         vk_structs=dependency_ordered(all_structs),
-        vk_enums=all_enums,
+        vk_enums32=enums32,
+        vk_enums64=enums64,
         vulkan_mapped_types_nondisp=vulkan_mapped_types_nondisp,
         vulkan_mapped_types=vulkan_mapped_types,
     )
@@ -1081,7 +1105,8 @@ def main() -> None:
         version_suffix=version_suffix,
         make_struct_log_code=make_struct_log_code,
         vk_structs=dependency_ordered(all_structs),
-        vk_enums=all_enums,
+        vk_enums32=enums32,
+        vk_enums64=enums64,
         vulkan_mapped_types_nondisp=vulkan_mapped_types_nondisp,
         vulkan_mapped_types=vulkan_mapped_types,
     )
@@ -1150,11 +1175,12 @@ def main() -> None:
         args_to_str=args_to_str,
         fields_to_str=fields_to_str,
         dependency_ordered=dependency_ordered,
-        vulkan_flags=vulkan_flags,
-        vulkan_flags64=vulkan_flags64,
-        vk_functions=newest_tokens,
-        vk_structs=newest_structs,
-        vk_enums=all_enums,
+        vulkan_flags=custom_vulkan_flags,
+        vulkan_flags64=custom_vulkan_flags64,
+        vk_functions=custom_tokens,
+        vk_structs=custom_structs,
+        vk_enums=custom_enums,
+        vk_extended_enums=extended_enums
     )
 
     mako_write(
@@ -1176,7 +1202,7 @@ def main() -> None:
         'templates/vulkanLuaEnums.h.mako',
         'common/include/vulkanLuaEnums.h',
         split_arrays_from_name=split_arrays_from_name,
-        vk_enums=all_enums,
+        vk_enums32=enums32,
         vk_unions=enabled_unions,
     )
 
@@ -1186,7 +1212,7 @@ def main() -> None:
         make_cname=make_cname,
         fields_to_str=fields_to_str,
         vk_structs=enabled_structs,
-        vk_enums=all_enums,
+        vk_enums32=enums32,
         vulkan_mapped_types=vulkan_mapped_types,
         vulkan_mapped_types_nondisp=vulkan_mapped_types_nondisp,
     )
@@ -1202,7 +1228,7 @@ def main() -> None:
         split_arrays_from_name=split_arrays_from_name,
         fields_to_str=fields_to_str,
         vk_structs=enabled_structs,
-        vk_enums=all_enums,
+        vk_enums32=enums32,
         vulkan_structs=vulkan_structs,
         primitive_types=primitive_types,
         vulkan_mapped_types=vulkan_mapped_types,

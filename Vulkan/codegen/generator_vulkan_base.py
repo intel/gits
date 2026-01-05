@@ -15,6 +15,7 @@ from typing import Any
 import dataclasses
 import enum
 import operator
+import re
 
 
 
@@ -220,11 +221,18 @@ class VkEnum:  # TODO: Remove the "Vk" prefix here and in VkStruct when Enum is 
     size: int = 32
     enumerators: list[Enumerator]
 
+_typedefs_dict: dict[str, str] = {}
 
 _enums_dict: dict[str, VkEnum] = {}
+_enums_dict32: dict[str, VkEnum] = {}
+_enums_dict64: dict[str, VkEnum] = {}
 _functions_table: list[Token] = []
 _structs_table: list[VkStruct] = []
 
+_custom_enums_dict: dict[str, VkEnum] = {}
+_extended_enums_dict: dict[str, VkEnum] = {}
+_custom_functions_table : list[Token] = []
+_custom_structs_table: list[VkStruct] = []
 
 def _merge_enums(a: VkEnum, b: VkEnum) -> VkEnum:
     """Take two VkEnums different only in enumerators and create one with merged enumerators."""
@@ -302,19 +310,50 @@ def _preprocess_kwargs(dictionary: dict, *, prefix: str, list_name: str) -> dict
     renamed: dict = _rename_keys(dictionary)
     return _gather_list(renamed, prefix=prefix, list_name=list_name)
 
+def Typedef(**kwargs):
+    """Add a typedef to the typedefs dict."""
+    name_: str = kwargs['name']
+    type_: str = kwargs['base_type']
+    _typedefs_dict[name_] = type_
 
 def Enum(**kwargs):
     """Add a VkEnum to the list (or merge enumerators if already present)."""
     enum = VkEnum(**kwargs)
-    if enum.name not in _enums_dict:
-        _enums_dict[enum.name] = enum
+    target_enum_dict = _enums_dict64 if enum.size == 64 else _enums_dict32
+    if enum.name not in target_enum_dict:
+        target_enum_dict[enum.name] = enum
     else:
-        _enums_dict[enum.name] = _merge_enums(_enums_dict[enum.name], enum)
+        target_enum_dict[enum.name] = _merge_enums(target_enum_dict[enum.name], enum)
+
+def CustomEnum(**kwargs):
+    enum = VkEnum(**kwargs)
+    target_enum_dict = _enums_dict64 if enum.size == 64 else _enums_dict32
+    if enum.name not in target_enum_dict:
+        target_enum_dict[enum.name] = enum
+    else:
+        target_enum_dict[enum.name] = _merge_enums(target_enum_dict[enum.name], enum)
+
+    if enum.name not in _custom_enums_dict:
+        _custom_enums_dict[enum.name] = enum
+    else:
+        _custom_enums_dict[enum.name] = _merge_enums(_custom_enums_dict[enum.name], enum)
+
+def ExtendedEnum(**kwargs):
+    enum = VkEnum(**kwargs)
+    if enum.name not in _extended_enums_dict:
+        _extended_enums_dict[enum.name] = enum
+    else:
+        _extended_enums_dict[enum.name] = _merge_enums(_extended_enums_dict[enum.name], enum)
 
 def Function(**kwargs):
     # We want to convert `type` only in Tokens, not in other classes.
     _replace_key(kwargs, 'type', 'function_type')
     _functions_table.append(Token(**_preprocess_kwargs(kwargs, prefix='arg', list_name='args')))
+
+def CustomFunction(**kwargs):
+    _replace_key(kwargs, 'type', 'function_type')
+    _functions_table.append(Token(**_preprocess_kwargs(kwargs, prefix='arg', list_name='args')))
+    _custom_functions_table.append(_functions_table[-1])
 
 def Struct(**kwargs):
     # TODO: restore it here instead of after sorting.
@@ -333,6 +372,20 @@ def Struct(**kwargs):
 
     _structs_table.append(VkStruct(**new_kwargs))
 
+def CustomStruct(**kwargs):
+    new_kwargs: dict = _preprocess_kwargs(kwargs, prefix='var', list_name='fields')
+    type_: str | None = new_kwargs.get('type')
+    is_union: bool = bool(type_) and type_ == 'union'
+    enabled: bool = new_kwargs.get('enabled') or False
+    name: str = new_kwargs['name']
+    if is_union and enabled and 'canonical_union_member' not in new_kwargs:
+        raise ValueError(f"Union {name} has no canonical member set.")
+    elif not is_union and 'canonical_union_member' in new_kwargs:
+        raise ValueError(f"Only unions can have a canonical member set. "
+            f"Please unset it for {name} or make it a union.")
+    _structs_table.append(VkStruct(**new_kwargs))
+    _custom_structs_table.append(_structs_table[-1])
+
 def ArgDef(**kwargs):
     return Argument(**_rename_keys(kwargs))
 
@@ -349,14 +402,31 @@ def VarDef(**kwargs):
     else:
         raise ValueError(f"VarDef is missing both value and type arguments: {kwargs}")
 
-def get_enums():
-    enums = _enums_dict.values()
+def get_enums32():
+    enums = _enums_dict32.values()
     sorted_enums: list[VkEnum] = sorted(enums, key=operator.attrgetter('name'))
     return sorted_enums
+
+def get_enums64():
+    enums = _enums_dict64.values()
+    sorted_enums: list[VkEnum] = sorted(enums, key=operator.attrgetter('name'))
+    return sorted_enums
+
+def get_custom_enums():
+    custom_enums = _custom_enums_dict.values()
+    sorted_custom_enums: list[VkEnum] = sorted(custom_enums, key=operator.attrgetter('name'))
+    return sorted_custom_enums
+
+def get_extended_enums():
+    return _extended_enums_dict.values()
 
 def get_functions():
     _functions_table.sort(key=operator.attrgetter('name', 'version'))
     return _functions_table
+
+def get_custom_functions():
+    _custom_functions_table.sort(key=operator.attrgetter('name', 'version'))
+    return _custom_functions_table
 
 def get_structs():
     _structs_table.sort(key=operator.attrgetter('name', 'version'))
@@ -368,3 +438,28 @@ def get_structs():
         deunderscored_table.append(struct)
     return deunderscored_table
     # return _structs_table
+
+def get_custom_structs():
+    _custom_structs_table.sort(key=operator.attrgetter('name', 'version'))
+    # TODO: This is to match old generator sort order.
+    # TODO: Remove it (and strip _ from struct names in data files) after confirming generated files are identical.
+    custom_deunderscored_table: list[VkStruct] = []
+    for struct in _custom_structs_table:
+        struct = dataclasses.replace(struct, name=struct.name.rstrip('_'))
+        custom_deunderscored_table.append(struct)
+    return custom_deunderscored_table
+    # return _custom_structs_table
+
+def get_flags32():
+    flag32_set = set()
+    for name, base_type in _typedefs_dict.items():
+        if 'Flags' in name and base_type == 'VkFlags':
+            flag32_set.add(name)
+    return list(flag32_set)
+
+def get_flags64():
+    flag64_set = set()
+    for name, base_type in _typedefs_dict.items():
+        if 'Flags' in name and base_type == 'VkFlags64':
+            flag64_set.add(name)
+    return list(flag64_set)

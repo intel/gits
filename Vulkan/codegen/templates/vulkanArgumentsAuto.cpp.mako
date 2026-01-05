@@ -14,18 +14,14 @@ ${AUTO_GENERATED_HEADER}
 %>\
 
 ## ---------------------------------- ENUMS ----------------------------------
-% for enum in vk_enums:
+% for enum in vk_enums32:
 const char* gits::Vulkan::CVulkanEnumTypeTraits<${enum.name}>::Name() {
   return "${enum.name}";
 }
 std::string gits::Vulkan::CVulkanEnumTypeTraits<${enum.name}>::GetVariantName(${enum.name} variant) {
   switch (variant) {
   % for enumerator in sorted(enum.enumerators, key=lambda e: int(e.value)):
-    % if enum.size == 64:
-  case ${enum.name}::${enumerator.name}:
-    % else:
   case ${enumerator.name}:
-    % endif
     return "${enumerator.name}";
   % endfor
   default:
@@ -66,7 +62,6 @@ const char* gits::Vulkan::CVulkanObj<${type_name}, gits::Vulkan::${type_name}Typ
     original_field_inits: str = make_value_field_inits(struct, FieldInitType.ARGUMENT_ORIGINAL)
     original_field_inits = textwrap.indent(original_field_inits, ' ' * 4).strip()
 %>\
-
 gits::Vulkan::${cname}::${cname}(): ${inits}, _${vkless_name}(nullptr), _${vkless_name}Original(nullptr), _isNullPtr(false) {
 }
 

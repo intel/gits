@@ -96,16 +96,6 @@ std::string ToStr(PFN_vkDeviceMemoryReportCallbackEXT c) {
   return oss.str();
 }
 
-std::string ToStr(PFN_vkFaultCallbackFunction c) {
-  std::ostringstream oss;
-  if (c != nullptr) {
-    oss << (void*)c;
-  } else {
-    oss << "0";
-  }
-  return oss.str();
-}
-
 std::string ToStr(PFN_vkVoidFunction c) {
   std::ostringstream oss;
   if (c != nullptr) {

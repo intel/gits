@@ -32,7 +32,7 @@ std::string ToStr(const ${struct.name}* c) {
 }
 
 % endfor
-% for enum in vk_enums:
+% for enum in vk_enums32:
 <%
   sorted_enumerators: list[Enumerator] = sorted(
       enum.enumerators,
@@ -41,7 +41,7 @@ std::string ToStr(const ${struct.name}* c) {
   )
 
   zero_enumerator: Enumerator | None = None
-  if sorted_enumerators[-1].value == '0':
+  if sorted_enumerators and sorted_enumerators[-1].value == '0':
       zero_enumerator = sorted_enumerators[-1]
       sorted_enumerators = sorted_enumerators[:-1]
 %>\

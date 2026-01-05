@@ -29,8 +29,6 @@ set_source_files_properties(
 SET(Vulkan_common_SOURCES
   include/vkFunction.h
   include/vkWindowing.h
-  include/vk_platform.h
-  include/vk_layer.h
   include/vulkanArgumentsAuto.h
   include/vulkanArgumentsBasic.h
   include/vulkanDrivers.h
@@ -52,9 +50,7 @@ SET(Vulkan_common_SOURCES
   include/vulkanTools.h
   include/vulkanTools_lite.h
   include/vulkanTracerAuto.h
-  include/vulkanTypes.h
   include/vulkan_apis_iface.h
-  include/vulkan_basic.h
   include/vulkanPNextWrappers.inl
   include/vulkanInternalShaderModules.h
   include/vulkanRenderDocUtil.h

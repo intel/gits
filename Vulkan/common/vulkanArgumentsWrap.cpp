@@ -243,7 +243,7 @@ gits::Vulkan::CVkAccelerationStructureTrianglesOpacityMicromapEXT::
     if (!isSubcaptureBeforeRestorationPhase()) {
       const_cast<VkAccelerationStructureTrianglesOpacityMicromapEXT*>(
           accelerationstructuretrianglesopacitymicromapext)
-          ->pNext = pStructStorage->_baseIn.pNext;
+          ->pNext = const_cast<void*>(pStructStorage->_baseIn.pNext);
     }
 
     _sType =

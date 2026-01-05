@@ -8,7 +8,7 @@
 
 ${AUTO_GENERATED_HEADER}
 
-% for enum in vk_enums:
+% for enum in vk_enums32:
 template<> inline ${enum.name} lua_to(lua_State* L, int pos) { return static_cast<${enum.name}>(lua_tointeger(L, pos)); }
 % endfor
 

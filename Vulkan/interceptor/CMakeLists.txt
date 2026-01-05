@@ -53,6 +53,7 @@ if(WIN32)
     target_link_options(Vulkan_interceptor PRIVATE "/DELAYLOAD:gitsRecorder.dll")
 endif()
 
+target_include_directories(Vulkan_interceptor PRIVATE ${VULKAN_HEADERS_DIR})
 target_link_libraries(Vulkan_interceptor PRIVATE gits_recorder gits_recorder_interface common_interface configuration log)
 if(WIN32)
   target_link_libraries(Vulkan_interceptor PRIVATE hud)

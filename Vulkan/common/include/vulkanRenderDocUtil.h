@@ -11,7 +11,7 @@
 #ifdef GITS_PLATFORM_WINDOWS
 
 #include "gits.h"
-#include "vulkan_basic.h"
+#include "vulkanHeader.h"
 
 #include <Windows.h>
 #include "renderdoc_app.h"

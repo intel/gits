@@ -1884,7 +1884,7 @@ inline VkResult CreatePipelines_Helper(
     createInfosToUse[i].flags =
         createInfosToUse[i].flags & (~VK_PIPELINE_CREATE_FAIL_ON_PIPELINE_COMPILE_REQUIRED_BIT);
     createInfosToUse[i].basePipelineHandle = VK_NULL_HANDLE;
-    createInfosToUse[i].basePipelineIndex = VK_NULL_HANDLE;
+    createInfosToUse[i].basePipelineIndex = 0;
   }
 
   if (Configurator::Get().vulkan.player.forceMultithreadedPipelineCompilation &&

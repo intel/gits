@@ -9,6 +9,7 @@
 ${AUTO_GENERATED_HEADER}
 
 
+#include "vulkanHeader.h"
 #include "vulkanExecWrap.h"
 #include "vulkanThreadSync.h"
 

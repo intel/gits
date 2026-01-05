@@ -14,7 +14,7 @@ ${AUTO_GENERATED_HEADER}
 
 namespace gits {
 namespace Vulkan {
-% for enum in vk_enums:
+% for enum in vk_enums32:
     typedef CVulkanEnum<${enum.name}> C${enum.name};
     template<>
     class CVulkanEnumTypeTraits<${enum.name}> {
