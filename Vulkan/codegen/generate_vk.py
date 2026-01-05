@@ -62,13 +62,6 @@ AUTO_GENERATED_HEADER = f"""
 
 vulkan_flags: list[str] = get_flags32()
 vulkan_flags64: list[str] = get_flags64()
-#for enum in get_enums():
-#    if 'FlagBits' in enum.name:
-#        flags_name = enum.name.replace('FlagBits', 'Flags')
-#        if enum.size == 64:
-#            vulkan_flags64.append(flags_name)
-#        else:
-#            vulkan_flags.append(flags_name)
 
 custom_vulkan_flags: list[str] = []
 custom_vulkan_flags64: list[str] = []

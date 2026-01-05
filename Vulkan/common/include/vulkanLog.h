@@ -68,7 +68,6 @@ std::string ToStr(PFN_vkFreeFunction c);
 std::string ToStr(PFN_vkInternalAllocationNotification c);
 std::string ToStr(PFN_vkDebugUtilsMessengerCallbackEXT c);
 std::string ToStr(PFN_vkDeviceMemoryReportCallbackEXT c);
-//std::string ToStr(PFN_vkFaultCallbackFunction c);
 std::string ToStr(PFN_vkVoidFunction c);
 std::string ToStr(PFN_vkGetInstanceProcAddr c);
 std::string ToStr(PFN_vkGetDeviceProcAddr c);
