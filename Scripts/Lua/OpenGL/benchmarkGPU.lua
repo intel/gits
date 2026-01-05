@@ -848,6 +848,11 @@ function glBlitFramebufferEXT(srcX0, srcY0, srcX1, srcY1, dstX0, dstY0, dstX1, d
   drv.glBlitFramebufferEXT(srcX0, srcY0, srcX1, srcY1, dstX0, dstY0, dstX1, dstY1, mask, filter)
   postDrawAction()
 end
+function glBlitNamedFramebuffer(readFramebuffer, drawFramebuffer, srcX0, srcY0, srcX1, srcY1, dstX0, dstY0, dstX1, dstY1, mask, filter)
+  preDrawAction("glBlitNamedFramebuffer")
+  drv.glBlitNamedFramebuffer(readFramebuffer, drawFramebuffer, srcX0, srcY0, srcX1, srcY1, dstX0, dstY0, dstX1, dstY1, mask, filter)
+  postDrawAction()
+end
 function glCallList(list)
   preDrawAction("glCallList")
   drv.glCallList(list)
