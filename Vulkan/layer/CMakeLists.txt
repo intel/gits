@@ -1,6 +1,6 @@
 # ===================== begin_copyright_notice ============================
 #
-# Copyright (C) 2023-2025 Intel Corporation
+# Copyright (C) 2023-2026 Intel Corporation
 #
 # SPDX-License-Identifier: MIT
 #
@@ -42,6 +42,7 @@ add_library(Vulkan_layer SHARED
 source_group("External Files" FILES ${Vulkan_layer_external_cpps})
 source_group("Generated Files" FILES ${VulkanLayer_DEF} REGULAR_EXPRESSION ".*Auto.*")
 
+target_include_directories(Vulkan_layer PRIVATE ${VULKAN_HEADERS_DIR})
 target_link_libraries(Vulkan_layer PRIVATE gits_recorder_interface common configuration)
 if(WIN32)
   target_link_libraries(Vulkan_layer PRIVATE hud)

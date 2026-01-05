@@ -1,6 +1,6 @@
 // ===================== begin_copyright_notice ============================
 //
-// Copyright (C) 2023-2025 Intel Corporation
+// Copyright (C) 2023-2026 Intel Corporation
 //
 // SPDX-License-Identifier: MIT
 //
@@ -16,7 +16,7 @@
 
 #define VER_PRODUCT_NAME_STR        "oneAPI Level Zero Loader for Windows(R)"
 
-#define VER_LEGALCOPYRIGHT_STR      "Copyright (C) 2023-2025 Intel Corporation"
+#define VER_LEGALCOPYRIGHT_STR      "Copyright (C) 2023-2026 Intel Corporation"
 
 1 VERSIONINFO
 FILEVERSION     VER_FILEVERSION

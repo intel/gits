@@ -1,6 +1,6 @@
 # ===================== begin_copyright_notice ============================
 #
-# Copyright (C) 2023-2025 Intel Corporation
+# Copyright (C) 2023-2026 Intel Corporation
 #
 # SPDX-License-Identifier: MIT
 #
@@ -109,6 +109,7 @@ source_group("Generated Files" FILES
   vulkanFunctions.cpp
   REGULAR_EXPRESSION ".*Auto.*")
 
+target_include_directories(Vulkan_common PUBLIC ${VULKAN_HEADERS_DIR})
 target_link_libraries(Vulkan_common PRIVATE common_interface configuration log)
 if(WIN32)
   target_include_directories(Vulkan_common PUBLIC ${IMGUI_SOURCE_DIR} ${IMGUI_BACKEND_DIR})

@@ -1,6 +1,6 @@
 # ===================== begin_copyright_notice ============================
 #
-# Copyright (C) 2023-2025 Intel Corporation
+# Copyright (C) 2023-2026 Intel Corporation
 #
 # SPDX-License-Identifier: MIT
 #
@@ -209,6 +209,9 @@ include(import_plog)
 include(import_imguicolortextedit)
 include(import_imguifiledialog)
 include(import_implot)
+if(WITH_VULKAN)
+  include(import_vulkan_headers)
+endif()
 install_and_setup_thirdparty()
 
 if(WIN32)
