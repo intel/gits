@@ -709,8 +709,10 @@ CBinIStream& operator>>(CBinIStream& stream, CFile& file) {
       result = parse_json_recorder_diags(props, *file._properties);
     }
     if (!result) {
-      LOG_ERROR << "Exception thrown when parsing diagnostic information";
-      LOG_ERROR << "Disabling Extras.Utilities.ExtendedDiagnostic might help.";
+      LOG_WARNING << "Error occured when parsing diagnostic information";
+      LOG_WARNING
+          << "Recapturing the stream with option Common.Recorder.ExtendedDiagnostic disabled "
+             "might help.";
     }
   }
 
