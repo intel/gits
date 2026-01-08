@@ -738,6 +738,11 @@ CBinIStream& operator>>(CBinIStream& stream, CFile& file) {
       CGits::Instance().SetApiCompute(apiCompute);
     }
 
+    if (api3D == ApisIface::TApi::ApiNotSet && apiCompute == ApisIface::TApi::ApiNotSet) {
+      LOG_ERROR << "No 3D or Compute API was set";
+      LOG_ERROR << "The stream file is most likely malformed or corrupted";
+    }
+
     SchedulerVersion schedulerVersion;
     stream.ReadHelper(reinterpret_cast<char*>(&schedulerVersion), sizeof(SchedulerVersion));
     CGits::Instance().schedulerVersion = schedulerVersion;
