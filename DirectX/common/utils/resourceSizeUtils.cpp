@@ -24,7 +24,7 @@ void GetCopyableFootprintsSafe(ID3D12Device* device,
                                UINT64* pTotalBytes) {
   device->GetCopyableFootprints(pResourceDesc, FirstSubresource, NumSubresources, BaseOffset,
                                 pLayouts, pNumRows, pRowSizeInBytes, pTotalBytes);
-  if (*pTotalBytes == UINT64_MAX) {
+  if (pTotalBytes && *pTotalBytes == UINT64_MAX) {
     if (!(pResourceDesc->Flags & D3D12_RESOURCE_FLAG_USE_TIGHT_ALIGNMENT)) {
       static bool logged = false;
       if (!logged) {
@@ -37,8 +37,8 @@ void GetCopyableFootprintsSafe(ID3D12Device* device,
     descCopy.Alignment = 0;
     device->GetCopyableFootprints(&descCopy, FirstSubresource, NumSubresources, BaseOffset,
                                   pLayouts, pNumRows, pRowSizeInBytes, pTotalBytes);
+    GITS_ASSERT(*pTotalBytes != UINT64_MAX);
   }
-  GITS_ASSERT(*pTotalBytes != UINT64_MAX);
 }
 
 } // namespace DirectX
