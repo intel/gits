@@ -257,9 +257,9 @@ gits::OpenGL::CgitsLinkProgramAttribsSetting::CgitsLinkProgramAttribsSetting(GLu
         GLenum type_unused;
         std::vector<char> name(max_length);
         drv.gl.glGetActiveAttrib(program, i, max_length, nullptr, &size_unused, &type_unused,
-                                 (char*)&name.at(0));
+                                 (GLchar*)name.data());
 
-        GLint location = drv.gl.glGetAttribLocation(program, (GLchar*)&name[0]);
+        GLint location = drv.gl.glGetAttribLocation(program, (GLchar*)name.data());
 
         _attrib_locations.Map()[name.data()] = location;
         attribs.insert(location);
