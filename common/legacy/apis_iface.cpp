@@ -24,6 +24,7 @@ void ApisIface::UseApi3dIface(std::shared_ptr<Api3d> iface) {
     if (_3d.get() == nullptr) {
       _3d = std::move(iface);
     } else if (iface->Api() != _3d->Api()) {
+      LOG_ERROR << "Only one 3D API can be recorded at a time.";
       throw EOperationFailed(EXCEPTION_MESSAGE);
     }
   } else {
@@ -37,6 +38,7 @@ void ApisIface::UseApiComputeIface(std::shared_ptr<ApiCompute> iface) {
     if (_compute.get() == nullptr) {
       _compute = std::move(iface);
     } else if (iface->Api() != _compute->Api()) {
+      LOG_ERROR << "Only one compute API can be recorded at a time.";
       throw EOperationFailed(EXCEPTION_MESSAGE);
     }
   } else {
