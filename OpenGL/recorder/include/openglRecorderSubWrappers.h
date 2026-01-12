@@ -516,6 +516,33 @@ inline void glIsRenderbufferEXT_RECWRAP(GLboolean return_value,
   }
 }
 
+inline void glLinkProgram_RECWRAP(GLuint program, CRecorder& recorder) {
+  if (Recording(recorder)) {
+    // TODO: Why is CgitsLinkProgramAttribsSetting called before CglLinkProgram?
+    // The comment inside CgitsLinkProgramAttribsSetting says it needs to be called after.
+    recorder.Schedule(new CgitsLinkProgramAttribsSetting(program));
+    recorder.Schedule(new CglLinkProgram(program));
+    if ((curctx::IsOgl() && curctx::Version() >= 430) || (curctx::IsEs31Plus()) ||
+        (drv.gl.HasExtension("GL_ARB_program_interface_query") &&
+         drv.gl.HasExtension("GL_ARB_shader_storage_buffer_object"))) {
+      recorder.Schedule(new CgitsLinkProgramBuffersSetting(program));
+    }
+  }
+  glLinkProgram_SD(program, Recording(recorder));
+}
+inline void glLinkProgramARB_RECWRAP(GLuint program, CRecorder& recorder) {
+  if (Recording(recorder)) {
+    recorder.Schedule(new CgitsLinkProgramAttribsSetting(program));
+    recorder.Schedule(new CglLinkProgramARB(program));
+    if ((curctx::IsOgl() && curctx::Version() >= 430) || (curctx::IsEs31Plus()) ||
+        (drv.gl.HasExtension("GL_ARB_program_interface_query") &&
+         drv.gl.HasExtension("GL_ARB_shader_storage_buffer_object"))) {
+      recorder.Schedule(new CgitsLinkProgramBuffersSetting(program));
+    }
+  }
+  glLinkProgram_SD(program, Recording(recorder));
+}
+
 inline void glRenderbufferStorageEXT_RECWRAP(
     GLenum target, GLenum internalformat, GLsizei width, GLsizei height, CRecorder& recorder) {
   if (isSchedulefboEXTAsCoreWA()) {
@@ -569,30 +596,6 @@ inline void glViewport_RECWRAP(
 #endif
     recorder.Schedule(new CglViewport(x, y, width, height));
   }
-}
-inline void glLinkProgram_RECWRAP(GLuint program, CRecorder& recorder) {
-  if (Recording(recorder)) {
-    recorder.Schedule(new CgitsLinkProgramAttribsSetting(program));
-    recorder.Schedule(new CglLinkProgram(program));
-    if ((curctx::IsOgl() && curctx::Version() >= 430) || (curctx::IsEs31Plus()) ||
-        (drv.gl.HasExtension("GL_ARB_program_interface_query") &&
-         drv.gl.HasExtension("GL_ARB_shader_storage_buffer_object"))) {
-      recorder.Schedule(new CgitsLinkProgramBuffersSetting(program));
-    }
-  }
-  glLinkProgram_SD(program, Recording(recorder));
-}
-inline void glLinkProgramARB_RECWRAP(GLuint program, CRecorder& recorder) {
-  if (Recording(recorder)) {
-    recorder.Schedule(new CgitsLinkProgramAttribsSetting(program));
-    recorder.Schedule(new CglLinkProgramARB(program));
-    if ((curctx::IsOgl() && curctx::Version() >= 430) || (curctx::IsEs31Plus()) ||
-        (drv.gl.HasExtension("GL_ARB_program_interface_query") &&
-         drv.gl.HasExtension("GL_ARB_shader_storage_buffer_object"))) {
-      recorder.Schedule(new CgitsLinkProgramBuffersSetting(program));
-    }
-  }
-  glLinkProgram_SD(program, Recording(recorder));
 }
 } // namespace OpenGL
 } // namespace gits
