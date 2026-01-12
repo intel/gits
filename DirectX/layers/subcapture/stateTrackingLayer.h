@@ -58,7 +58,9 @@ public:
   void post(D3D12GetInterfaceCommand& command) override;
   void post(ID3D12DeviceCreateCommandQueueCommand& c) override;
   void post(ID3D12Device9CreateCommandQueue1Command& c) override;
+  void pre(IDXGIFactoryCreateSwapChainCommand& c) override;
   void post(IDXGIFactoryCreateSwapChainCommand& c) override;
+  void pre(IDXGIFactory2CreateSwapChainForHwndCommand& c) override;
   void post(IDXGIFactory2CreateSwapChainForHwndCommand& c) override;
   void post(IDXGISwapChainResizeBuffersCommand& c) override;
   void post(IDXGISwapChain3ResizeBuffers1Command& c) override;
@@ -277,6 +279,24 @@ private:
   CapturePlayerGpuAddressService gpuAddressService_;
   std::unordered_map<unsigned, std::unordered_set<unsigned>> resourceHeaps_;
   std::unordered_map<unsigned, std::vector<unsigned>> swapchainBuffers_;
+
+  class CommandQueueSwapChainRefCountTracker {
+  public:
+    void preCreateSwapChain(unsigned commandQueueKey,
+                            ID3D12CommandQueue* commandQueue,
+                            unsigned swapChainKey);
+    void postCreateSwapChain(unsigned commandQueueKey,
+                             ID3D12CommandQueue* commandQueue,
+                             unsigned swapChainKey);
+    unsigned destroySwapChain(unsigned swapChainKey);
+
+  private:
+    unsigned refCountPre_{};
+    std::unordered_map<unsigned, std::unordered_map<unsigned, unsigned>> refCountIncrements_;
+    std::unordered_map<unsigned, unsigned> commandQueueBySwapChain_;
+    std::unordered_map<unsigned, ID3D12CommandQueue*> commandQueues_;
+  };
+  CommandQueueSwapChainRefCountTracker commandQueueSwapChainRefCountTracker_;
 };
 
 } // namespace DirectX

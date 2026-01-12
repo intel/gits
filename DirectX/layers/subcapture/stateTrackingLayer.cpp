@@ -157,6 +157,13 @@ void StateTrackingLayer::pre(IUnknownReleaseCommand& c) {
     }
 
     gpuExecutionFlusher_.destroyCommandQueue(c.object_.key);
+
+    unsigned commandQueueKey =
+        commandQueueSwapChainRefCountTracker_.destroySwapChain(c.object_.key);
+    if (commandQueueKey) {
+      stateService_.releaseObject(commandQueueKey, 0);
+      gpuExecutionFlusher_.destroyCommandQueue(commandQueueKey);
+    }
   }
 }
 
@@ -453,6 +460,18 @@ void StateTrackingLayer::post(ID3D12Device9CreateCommandQueue1Command& c) {
       c.ppCommandQueue_.key, *reinterpret_cast<ID3D12CommandQueue**>(c.ppCommandQueue_.value));
 }
 
+void StateTrackingLayer::pre(IDXGIFactoryCreateSwapChainCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
+  if (c.result_.value != S_OK) {
+    return;
+  }
+
+  commandQueueSwapChainRefCountTracker_.preCreateSwapChain(
+      c.pDevice_.key, static_cast<ID3D12CommandQueue*>(c.pDevice_.value), c.ppSwapChain_.key);
+}
+
 void StateTrackingLayer::post(IDXGIFactoryCreateSwapChainCommand& c) {
   if (stateRestored_) {
     return;
@@ -466,6 +485,21 @@ void StateTrackingLayer::post(IDXGIFactoryCreateSwapChainCommand& c) {
   state->object = static_cast<IUnknown*>(*c.ppSwapChain_.value);
   state->creationCommand.reset(new IDXGIFactoryCreateSwapChainCommand(c));
   stateService_.storeState(state);
+
+  commandQueueSwapChainRefCountTracker_.postCreateSwapChain(
+      c.pDevice_.key, static_cast<ID3D12CommandQueue*>(c.pDevice_.value), c.ppSwapChain_.key);
+}
+
+void StateTrackingLayer::pre(IDXGIFactory2CreateSwapChainForHwndCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
+  if (c.result_.value != S_OK) {
+    return;
+  }
+
+  commandQueueSwapChainRefCountTracker_.preCreateSwapChain(
+      c.pDevice_.key, static_cast<ID3D12CommandQueue*>(c.pDevice_.value), c.ppSwapChain_.key);
 }
 
 void StateTrackingLayer::post(IDXGIFactory2CreateSwapChainForHwndCommand& c) {
@@ -481,6 +515,9 @@ void StateTrackingLayer::post(IDXGIFactory2CreateSwapChainForHwndCommand& c) {
   state->object = static_cast<IUnknown*>(*c.ppSwapChain_.value);
   state->creationCommand.reset(new IDXGIFactory2CreateSwapChainForHwndCommand(c));
   stateService_.storeState(state);
+
+  commandQueueSwapChainRefCountTracker_.postCreateSwapChain(
+      c.pDevice_.key, static_cast<ID3D12CommandQueue*>(c.pDevice_.value), c.ppSwapChain_.key);
 }
 
 void StateTrackingLayer::post(IDXGISwapChainResizeBuffersCommand& c) {
@@ -3068,6 +3105,48 @@ void StateTrackingLayer::post(DllContainerMetaCommand& c) {
   }
 
   stateService_.storeDllContainer(c);
+}
+
+void StateTrackingLayer::CommandQueueSwapChainRefCountTracker::preCreateSwapChain(
+    unsigned commandQueueKey, ID3D12CommandQueue* commandQueue, unsigned swapChainKey) {
+  if (!commandQueue) {
+    return;
+  }
+
+  commandQueue->AddRef();
+  refCountPre_ = commandQueue->Release();
+  commandQueueBySwapChain_[swapChainKey] = commandQueueKey;
+  commandQueues_[commandQueueKey] = commandQueue;
+}
+
+void StateTrackingLayer::CommandQueueSwapChainRefCountTracker::postCreateSwapChain(
+    unsigned commandQueueKey, ID3D12CommandQueue* commandQueue, unsigned swapChainKey) {
+  if (!commandQueue) {
+    return;
+  }
+
+  commandQueue->AddRef();
+  unsigned refCountPost = commandQueue->Release();
+  refCountIncrements_[commandQueueKey][swapChainKey] = refCountPost - refCountPre_;
+}
+
+unsigned StateTrackingLayer::CommandQueueSwapChainRefCountTracker::destroySwapChain(
+    unsigned swapChainKey) {
+  const auto it = commandQueueBySwapChain_.find(swapChainKey);
+  if (it == commandQueueBySwapChain_.end()) {
+    return 0;
+  }
+
+  unsigned commandQueueKey = it->second;
+  unsigned refCountIncrement = refCountIncrements_[commandQueueKey][swapChainKey];
+  ID3D12CommandQueue* commandQueue = commandQueues_[commandQueueKey];
+  GITS_ASSERT(commandQueue);
+  commandQueue->AddRef();
+  unsigned refCount = commandQueue->Release();
+  if (refCount == refCountIncrement) {
+    return commandQueueKey;
+  }
+  return 0;
 }
 
 } // namespace DirectX
