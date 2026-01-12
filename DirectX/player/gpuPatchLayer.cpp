@@ -491,95 +491,97 @@ void GpuPatchLayer::patchDispatchRays(ID3D12GraphicsCommandList* commandList,
   auto patchBindingTable = [&](D3D12_GPU_VIRTUAL_ADDRESS& startAddress, UINT64 sizeInBytes,
                                UINT64 strideInBytes,
                                GpuPatchDumpService::BindingTableType bindingTableType) {
-    if (startAddress) {
-      CapturePlayerGpuAddressService::ResourceInfo* info =
-          addressService_.getResourceInfoByCaptureAddress(startAddress);
-      GITS_ASSERT(info);
-      unsigned offset = startAddress - info->captureStart;
-      if (strideInBytes == 0) {
-        strideInBytes = sizeInBytes;
-      }
-      unsigned stride = strideInBytes;
-      unsigned count = sizeInBytes / strideInBytes;
+    if (!startAddress || !sizeInBytes) {
+      return;
+    }
 
-      {
-        D3D12_RESOURCE_BARRIER barrier{};
-        barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-        barrier.Transition.pResource = patchBuffers_[patchBufferIndex].Get();
-        barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
-        barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_DEST;
-        commandList->ResourceBarrier(1, &barrier);
+    CapturePlayerGpuAddressService::ResourceInfo* info =
+        addressService_.getResourceInfoByCaptureAddress(startAddress);
+    GITS_ASSERT(info);
+    unsigned offset = startAddress - info->captureStart;
+    if (strideInBytes == 0) {
+      strideInBytes = sizeInBytes;
+    }
+    unsigned stride = strideInBytes;
+    unsigned count = sizeInBytes / strideInBytes;
 
-        D3D12_RESOURCE_STATES resourceState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
-        D3D12_RESOURCE_STATES trackedState =
-            resourceStateTracker_.getResourceState(commandList, info->key, 0);
-        if (trackedState == D3D12_RESOURCE_STATE_GENERIC_READ ||
-            trackedState == D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE) {
+    {
+      D3D12_RESOURCE_BARRIER barrier{};
+      barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+      barrier.Transition.pResource = patchBuffers_[patchBufferIndex].Get();
+      barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+      barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_DEST;
+      commandList->ResourceBarrier(1, &barrier);
+
+      D3D12_RESOURCE_STATES resourceState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+      D3D12_RESOURCE_STATES trackedState =
+          resourceStateTracker_.getResourceState(commandList, info->key, 0);
+      if (trackedState == D3D12_RESOURCE_STATE_GENERIC_READ ||
+          trackedState == D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE) {
+        resourceState = trackedState;
+      } else if (trackedState != D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE) {
+        CapturePlayerGpuAddressService::ResourceInfo* resourceInfo =
+            addressService_.getResourceInfoByCaptureAddress(startAddress);
+        if (resourceInfo && resourceInfo->overlapping()) {
           resourceState = trackedState;
-        } else if (trackedState != D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE) {
-          CapturePlayerGpuAddressService::ResourceInfo* resourceInfo =
-              addressService_.getResourceInfoByCaptureAddress(startAddress);
-          if (resourceInfo && resourceInfo->overlapping()) {
-            resourceState = trackedState;
-            static bool logged = false;
-            if (!logged) {
-              LOG_WARNING << "Gpu patching - state of overlapped resource different than expected";
-              logged = true;
-            }
+          static bool logged = false;
+          if (!logged) {
+            LOG_WARNING << "Gpu patching - state of overlapped resource different than expected";
+            logged = true;
           }
         }
-
-        if (resourceState != D3D12_RESOURCE_STATE_GENERIC_READ) {
-          barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-          barrier.Transition.pResource = info->resource;
-          barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
-          barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_SOURCE;
-          commandList->ResourceBarrier(1, &barrier);
-        }
-
-        commandList->CopyBufferRegion(patchBuffers_[patchBufferIndex].Get(), patchBufferOffset,
-                                      info->resource, offset, stride * count);
-
-        barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-        barrier.Transition.pResource = patchBuffers_[patchBufferIndex].Get();
-        barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
-        barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
-        commandList->ResourceBarrier(1, &barrier);
-
-        if (resourceState != D3D12_RESOURCE_STATE_GENERIC_READ) {
-          barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-          barrier.Transition.pResource = info->resource;
-          barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_SOURCE;
-          barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
-          commandList->ResourceBarrier(1, &barrier);
-        }
       }
 
-      startAddress = patchBufferAddress + patchBufferOffset;
+      if (resourceState != D3D12_RESOURCE_STATE_GENERIC_READ) {
+        barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+        barrier.Transition.pResource = info->resource;
+        barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+        barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_SOURCE;
+        commandList->ResourceBarrier(1, &barrier);
+      }
 
-      dumpService_.dumpBindingTable(commandList, patchBuffers_[patchBufferIndex].Get(),
-                                    patchBufferOffset, sizeInBytes, stride, callKey,
-                                    bindingTableType, true);
+      commandList->CopyBufferRegion(patchBuffers_[patchBufferIndex].Get(), patchBufferOffset,
+                                    info->resource, offset, stride * count);
 
-      raytracingShaderPatchService_.patchBindingTable(
-          commandList, patchBufferAddress + patchBufferOffset, count, stride,
-          useAddressPinning_ ? 0 : gpuAddressBuffers_[mappingBufferIndex]->GetGPUVirtualAddress(),
-          shaderIdentifierBuffers_[mappingBufferIndex]->GetGPUVirtualAddress(),
-          viewDescriptorBuffers_[mappingBufferIndex]->GetGPUVirtualAddress(),
-          sampleDescriptorBuffers_[mappingBufferIndex]->GetGPUVirtualAddress(),
-          mappingCountBuffers_[mappingBufferIndex]->GetGPUVirtualAddress(), !useAddressPinning_);
+      barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+      barrier.Transition.pResource = patchBuffers_[patchBufferIndex].Get();
+      barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
+      barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+      commandList->ResourceBarrier(1, &barrier);
 
-      dumpService_.dumpBindingTable(commandList, patchBuffers_[patchBufferIndex].Get(),
-                                    patchBufferOffset, sizeInBytes, stride, callKey,
-                                    bindingTableType, false);
-
-      patchBufferOffset += stride * count;
-      patchBufferOffset =
-          patchBufferOffset % D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT == 0
-              ? patchBufferOffset
-              : ((patchBufferOffset / D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT) + 1) *
-                    D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT;
+      if (resourceState != D3D12_RESOURCE_STATE_GENERIC_READ) {
+        barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+        barrier.Transition.pResource = info->resource;
+        barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_SOURCE;
+        barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+        commandList->ResourceBarrier(1, &barrier);
+      }
     }
+
+    startAddress = patchBufferAddress + patchBufferOffset;
+
+    dumpService_.dumpBindingTable(commandList, patchBuffers_[patchBufferIndex].Get(),
+                                  patchBufferOffset, sizeInBytes, stride, callKey, bindingTableType,
+                                  true);
+
+    raytracingShaderPatchService_.patchBindingTable(
+        commandList, patchBufferAddress + patchBufferOffset, count, stride,
+        useAddressPinning_ ? 0 : gpuAddressBuffers_[mappingBufferIndex]->GetGPUVirtualAddress(),
+        shaderIdentifierBuffers_[mappingBufferIndex]->GetGPUVirtualAddress(),
+        viewDescriptorBuffers_[mappingBufferIndex]->GetGPUVirtualAddress(),
+        sampleDescriptorBuffers_[mappingBufferIndex]->GetGPUVirtualAddress(),
+        mappingCountBuffers_[mappingBufferIndex]->GetGPUVirtualAddress(), !useAddressPinning_);
+
+    dumpService_.dumpBindingTable(commandList, patchBuffers_[patchBufferIndex].Get(),
+                                  patchBufferOffset, sizeInBytes, stride, callKey, bindingTableType,
+                                  false);
+
+    patchBufferOffset += stride * count;
+    patchBufferOffset =
+        patchBufferOffset % D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT == 0
+            ? patchBufferOffset
+            : ((patchBufferOffset / D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT) + 1) *
+                  D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT;
   };
 
   patchBindingTable(dispatchRaysDesc.RayGenerationShaderRecord.StartAddress,
@@ -615,7 +617,7 @@ size_t GpuPatchLayer::getDispatchRaysPatchSize(const D3D12_DISPATCH_RAYS_DESC& d
   size_t size{};
   const auto addBindingTableSize = [&size](D3D12_GPU_VIRTUAL_ADDRESS startAddress,
                                            UINT64 sizeInBytes, UINT64 strideInBytes) {
-    if (!startAddress) {
+    if (!startAddress || !sizeInBytes) {
       return;
     }
     if (strideInBytes == 0) {
