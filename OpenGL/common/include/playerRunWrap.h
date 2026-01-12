@@ -206,7 +206,7 @@ inline void glLinkProgram_WRAPRUN(CGLProgram& program) {
         *  data (glVertexAttribPointer index) is impossible in player (2 shaders
         *  refering to the same data in recorder may get different implicit locations
         *  for that attributes in player) we enforce recorder time locations
-        *  by rebinding all shder attributes.
+        *  by rebinding all shader attributes.
         *
         *  This is superflous for cases where glBindAttribLocation is used by
         *  the application, or explicit attrib location is used, but in no case
@@ -243,7 +243,7 @@ inline void glLinkProgramARB_WRAPRUN(CGLProgram& program) {
         *  data (glVertexAttribPointer index) is impossible in player (2 shaders
         *  refering to the same data in recorder may get different implicit locations
         *  for that attributes in player) we enforce recorder time locations
-        *  by rebinding all shder attributes.
+        *  by rebinding all shader attributes.
         *
         *  This is superflous for cases where glBindAttribLocation is used by
         *  the application, or explicit attrib location is used, but in no case
