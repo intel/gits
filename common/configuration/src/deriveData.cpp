@@ -521,7 +521,8 @@ void DeriveConfigData<Configuration::Vulkan::Recorder>(Configuration::Vulkan::Re
     // everything is already set to false by default.
     break;
   default:
-    break;
+    LOG_ERROR << "Unknown memory tracking mode, this is a GITS logic issue.";
+    throw std::logic_error(EXCEPTION_MESSAGE);
   }
 
 #ifdef GITS_PLATFORM_WINDOWS
