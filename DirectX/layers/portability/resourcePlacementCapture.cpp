@@ -28,6 +28,10 @@ void ResourcePlacementCapture::createPlacedResource(unsigned heapKey,
   info.desc = desc;
 
   D3D12_RESOURCE_ALLOCATION_INFO allocInfo = device->GetResourceAllocationInfo(0, 1, &desc);
+  if (allocInfo.SizeInBytes == UINT64_MAX) {
+    LOG_ERROR << "Portability - GetResourceAllocationInfo failed for resource O" << info.key;
+    return;
+  }
   info.size = allocInfo.SizeInBytes;
   info.alignment = allocInfo.Alignment;
 

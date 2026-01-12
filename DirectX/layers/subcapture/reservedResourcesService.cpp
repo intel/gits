@@ -11,6 +11,7 @@
 #include "stateTrackingService.h"
 #include "commandWritersAuto.h"
 #include "commandWritersCustom.h"
+#include "resourceSizeUtils.h"
 #include "log.h"
 
 #include <wrl/client.h>
@@ -964,7 +965,7 @@ void ReservedResourcesService::getSubresourceSizes(
   for (unsigned i = 0; i < subresources; ++i) {
     D3D12_PLACED_SUBRESOURCE_FOOTPRINT& footprint = sizes[i].second;
     UINT64 size{};
-    device->GetCopyableFootprints(&desc, i, 1, 0, &footprint, nullptr, nullptr, &size);
+    GetCopyableFootprintsSafe(device, &desc, i, 1, 0, &footprint, nullptr, nullptr, &size);
     sizes[i].first = size;
   }
 }

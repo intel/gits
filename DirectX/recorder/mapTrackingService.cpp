@@ -10,6 +10,7 @@
 #include "commandWritersCustom.h"
 #include "captureManager.h"
 #include "log.h"
+#include "resourceSizeUtils.h"
 
 #include <processthreadsapi.h>
 #include <wrl/client.h>
@@ -214,7 +215,8 @@ size_t MapTrackingService::getSubresourceSize(ID3D12Resource* resource, unsigned
     GITS_ASSERT(res == S_OK);
 
     D3D12_PLACED_SUBRESOURCE_FOOTPRINT footprint{};
-    device->GetCopyableFootprints(&desc, subresource, 1, 0, &footprint, nullptr, nullptr, nullptr);
+    GetCopyableFootprintsSafe(device.Get(), &desc, subresource, 1, 0, &footprint, nullptr, nullptr,
+                              nullptr);
     size = footprint.Footprint.RowPitch * footprint.Footprint.Height * footprint.Footprint.Depth;
   }
   return size;

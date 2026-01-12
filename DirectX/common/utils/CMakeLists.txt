@@ -30,6 +30,8 @@ set(UTILS_FILES
   ${SRC_DIR}/descriptorRootSignatureService.cpp
   ${SRC_DIR}/descriptorHeapTracker.h
   ${SRC_DIR}/descriptorHeapTracker.cpp
+  ${SRC_DIR}/resourceSizeUtils.h
+  ${SRC_DIR}/resourceSizeUtils.cpp
 )
 source_group("" FILES ${UTILS_FILES})
 

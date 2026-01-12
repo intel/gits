@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "resourceDump.h"
+#include "resourceSizeUtils.h"
 #include "gits.h"
 #include "log.h"
 
@@ -90,8 +91,8 @@ void ResourceDump::stageResource(ID3D12GraphicsCommandList* commandList,
     desc.Alignment = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
 
     UINT64 size{};
-    device->GetCopyableFootprints(&desc, dumpInfo.subresource, 1, 0, &footprint, nullptr, nullptr,
-                                  &size);
+    GetCopyableFootprintsSafe(device.Get(), &desc, dumpInfo.subresource, 1, 0, &footprint, nullptr,
+                              nullptr, &size);
     dumpInfo.size = size;
     dumpInfo.rowPitch = footprint.Footprint.RowPitch;
     dumpInfo.subresourceFormat = getDumpableFormat(footprint.Footprint.Format);

@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "screenshotDump.h"
+#include "resourceSizeUtils.h"
 #include "gits.h"
 #include "log.h"
 #include "configurationLib.h"
@@ -111,8 +112,8 @@ void ScreenshotDump::createStagingBuffer() {
     stagingBuffer_->Release();
   }
 
-  device_->GetCopyableFootprints(&backBufferDesc_, 0, 1, 0, &backBufferFootprint_, nullptr, nullptr,
-                                 nullptr);
+  GetCopyableFootprintsSafe(device_.Get(), &backBufferDesc_, 0, 1, 0, &backBufferFootprint_,
+                            nullptr, nullptr, nullptr);
   UINT size = backBufferFootprint_.Footprint.RowPitch * backBufferFootprint_.Footprint.Height;
 
   D3D12_HEAP_PROPERTIES heapProperties{};
