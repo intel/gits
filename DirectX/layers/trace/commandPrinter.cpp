@@ -9,7 +9,7 @@
 #include "commandPrinter.h"
 #include "layerAuto.h"
 #include "keyUtils.h"
-#include "gits.h"
+#include "configurator.h"
 
 namespace gits {
 namespace DirectX {
@@ -37,9 +37,11 @@ CommandPrinter::CommandPrinter(FastOStream& stream,
 
   if (command_.getId() == CommandId::ID_INIT_START) {
     state_.stateRestorePhase = true;
+    state_.frameCount = 0;
     return;
   } else if (command_.getId() == CommandId::ID_INIT_END) {
     state_.stateRestorePhase = false;
+    state_.frameCount = 1;
     state_.drawCount = 0;
     state_.dispatchCount = 0;
     state_.commandListExecutionCount = 0;
@@ -66,30 +68,26 @@ void CommandPrinter::print(bool flush, bool newLine) {
     stream_ << ")";
   }
 
-  if (command_.getId() == CommandId::ID_IDXGISWAPCHAIN_PRESENT &&
-          !(static_cast<IDXGISwapChainPresentCommand&>(command_).Flags_.value &
-            DXGI_PRESENT_TEST) ||
-      command_.getId() == CommandId::ID_IDXGISWAPCHAIN1_PRESENT1 &&
-          !(static_cast<IDXGISwapChain1Present1Command&>(command_).PresentFlags_.value &
-            DXGI_PRESENT_TEST)) {
-    stream_ << " Frame #"
-            << (isStateRestoreKey(command_.key) ? 0 : CGits::Instance().CurrentFrame()) << " end";
+  if ((command_.getId() == CommandId::ID_IDXGISWAPCHAIN_PRESENT &&
+           !(static_cast<IDXGISwapChainPresentCommand&>(command_).Flags_.value &
+             DXGI_PRESENT_TEST) ||
+       command_.getId() == CommandId::ID_IDXGISWAPCHAIN1_PRESENT1 &&
+           !(static_cast<IDXGISwapChain1Present1Command&>(command_).PresentFlags_.value &
+             DXGI_PRESENT_TEST)) &&
+      !isStateRestoreKey(command_.key)) {
+    stream_ << " Frame #" << state_.frameCount << " end";
+    ++state_.frameCount;
+    state_.drawCount = 0;
+    state_.commandListExecutionCount = 0;
   } else if (command_.getId() == CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_DRAWINSTANCED ||
              command_.getId() == CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_DRAWINDEXEDINSTANCED) {
-    stream_ << " Draw #" << ++state_.drawCount << " from frame #"
-            << (state_.stateRestorePhase ? 0 : CGits::Instance().CurrentFrame());
+    stream_ << " Draw #" << ++state_.drawCount << " from frame #" << state_.frameCount;
   } else if (command_.getId() == CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_DISPATCH) {
-    stream_ << " Dispatch #" << ++state_.dispatchCount << " from frame #"
-            << (state_.stateRestorePhase ? 0 : CGits::Instance().CurrentFrame());
+    stream_ << " Dispatch #" << ++state_.dispatchCount << " from frame #" << state_.frameCount;
   } else if (command_.getId() == CommandId::ID_ID3D12COMMANDQUEUE_EXECUTECOMMANDLISTS &&
              isExecutionSerializationKey(command_.key) && !state_.stateRestorePhase) {
-    unsigned currentFrame = CGits::Instance().CurrentFrame();
-    // handling command list subcapture without presents
-    if (currentFrame == 0 && !state_.stateRestorePhase) {
-      currentFrame = 1;
-    }
     stream_ << " Execute #" << ++state_.commandListExecutionCount << " from frame #"
-            << currentFrame;
+            << state_.frameCount;
   }
   if (newLine) {
     stream_ << "\n";

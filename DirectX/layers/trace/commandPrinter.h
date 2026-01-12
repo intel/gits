@@ -22,6 +22,7 @@ namespace DirectX {
 struct CommandPrinterState {
   CommandPrinterState(std::mutex& m) : mutex(m) {}
   std::mutex& mutex;
+  unsigned frameCount{1};
   unsigned drawCount{};
   unsigned dispatchCount{};
   unsigned commandListExecutionCount{};
