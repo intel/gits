@@ -224,6 +224,10 @@ def postprocess(functions, interfaces, structures):
         'xess_context_handle_t'
     }
 
+    custom_base_name = {
+        'ID3D12CommandList': 'ID3D12GraphicsCommandList'
+    }
+
     for struct in structures:
         for field in struct.fields:
             if isinstance(field, Parameter):
@@ -259,6 +263,8 @@ def postprocess(functions, interfaces, structures):
 
     for interface in interfaces:
         base_name = re.sub('[0-9]+$', '', interface.name)
+        if base_name in custom_base_name:
+            base_name = custom_base_name[base_name]
         interface.latest_interface = base_name
         if base_name in latest_interfaces:
             interface.latest_interface += str(latest_interfaces[base_name])
