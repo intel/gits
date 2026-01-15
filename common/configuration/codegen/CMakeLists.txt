@@ -98,7 +98,7 @@ add_custom_command(
   WORKING_DIRECTORY ${CONFIG_GENERATOR_SCRIPTS_DIR}
 )
 
-set(GENERATED_DOCS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../../docs/documentation/configuration)
+set(GENERATED_DOCS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../../docs/configuration)
 
 set(GENERATED_DOCS
   ${GENERATED_DOCS_DIR}/CommonAuto.md
