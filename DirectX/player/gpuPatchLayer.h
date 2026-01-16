@@ -82,7 +82,9 @@ private:
   void initializeInstancesAoP(ID3D12GraphicsCommandList* commandList);
   void addPatchBuffer(ID3D12GraphicsCommandList* commandList);
   void createOrReplacePatchBufferObjects(ID3D12Device* device, unsigned patchBufferIndex);
-  unsigned getMappingBufferIndex(unsigned commandListKey);
+  void addMappingBuffer(ID3D12GraphicsCommandList* commandList);
+  void createMappingBufferObjects(ID3D12Device* device, unsigned mappingBufferIndex);
+  unsigned getMappingBufferIndex(unsigned commandListKey, ID3D12GraphicsCommandList* commandList);
   unsigned getPatchBufferIndex(unsigned commandListKey,
                                ID3D12GraphicsCommandList* commandList,
                                size_t size);
@@ -139,25 +141,26 @@ private:
   std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> executeIndirectCountStagingBuffers_{};
   const unsigned executeIndirectCountBufferSize_{0x10};
 
-  static const unsigned mappingBufferPoolSize_{24};
+  static const unsigned mappingBufferInitialPoolSize_{24};
+  unsigned mappingBufferPoolSize_{};
 
-  std::array<ID3D12Resource*, mappingBufferPoolSize_> gpuAddressBuffers_{};
-  std::array<ID3D12Resource*, mappingBufferPoolSize_> gpuAddressStagingBuffers_{};
+  std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> gpuAddressBuffers_{};
+  std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> gpuAddressStagingBuffers_{};
   unsigned gpuAddressBufferSize_{sizeof(CapturePlayerGpuAddressService::GpuAddressMapping) *
                                  0x10000};
 
-  std::array<ID3D12Resource*, mappingBufferPoolSize_> shaderIdentifierBuffers_{};
-  std::array<ID3D12Resource*, mappingBufferPoolSize_> shaderIdentifierStagingBuffers_{};
+  std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> shaderIdentifierBuffers_{};
+  std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> shaderIdentifierStagingBuffers_{};
   unsigned shaderIdentifierBufferSize_{
       sizeof(CapturePlayerShaderIdentifierService::ShaderIdentifierMapping) * 0x1000};
 
-  std::array<ID3D12Resource*, mappingBufferPoolSize_> viewDescriptorBuffers_{};
-  std::array<ID3D12Resource*, mappingBufferPoolSize_> viewDescriptorStagingBuffers_{};
+  std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> viewDescriptorBuffers_{};
+  std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> viewDescriptorStagingBuffers_{};
   unsigned viewDescriptorBufferSize_{
       sizeof(CapturePlayerDescriptorHandleService::DescriptorMapping) * 0x10000};
 
-  std::array<ID3D12Resource*, mappingBufferPoolSize_> sampleDescriptorBuffers_{};
-  std::array<ID3D12Resource*, mappingBufferPoolSize_> sampleDescriptorStagingBuffers_{};
+  std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> sampleDescriptorBuffers_{};
+  std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> sampleDescriptorStagingBuffers_{};
   unsigned sampleDescriptorBufferSize_{
       sizeof(CapturePlayerDescriptorHandleService::DescriptorMapping) * 0x1000};
 
@@ -167,8 +170,8 @@ private:
     unsigned viewDescriptorCount;
     unsigned sampleDescriptorCount;
   };
-  std::array<ID3D12Resource*, mappingBufferPoolSize_> mappingCountBuffers_{};
-  std::array<ID3D12Resource*, mappingBufferPoolSize_> mappingCountStagingBuffers_{};
+  std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> mappingCountBuffers_{};
+  std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> mappingCountStagingBuffers_{};
   unsigned mappingCountBufferSize_{sizeof(MappingCount)};
 
   struct FenceInfo {
@@ -180,7 +183,7 @@ private:
     FenceInfo fenceInfo;
     size_t size{};
   };
-  std::array<FenceInfo, mappingBufferPoolSize_> mappingFences_{};
+  std::vector<FenceInfo> mappingFences_{};
   std::unordered_map<unsigned, unsigned> currentMappingsByCommandList_;
 
   std::vector<PatchBufferInfo> patchBufferInfos_{};

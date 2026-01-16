@@ -31,6 +31,18 @@ GpuPatchLayer::~GpuPatchLayer() {
   for (const auto& patchBufferInfo : patchBufferInfos_) {
     waitForFence(patchBufferInfo.fenceInfo.fence.Get(), patchBufferInfo.fenceInfo.fenceValue);
   }
+
+  for (const auto& fenceInfo : mappingFences_) {
+    waitForFence(fenceInfo.fence.Get(), fenceInfo.fenceValue);
+  }
+
+  for (const auto& fenceInfo : instancesAoPPatchBufferFences_) {
+    waitForFence(fenceInfo.fence.Get(), fenceInfo.fenceValue);
+  }
+
+  for (const auto& fenceInfo : instancesAoPStagingBufferFences_) {
+    waitForFence(fenceInfo.fence.Get(), fenceInfo.fenceValue);
+  }
 }
 
 void GpuPatchLayer::pre(IUnknownReleaseCommand& c) {
@@ -101,11 +113,11 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStr
       std::make_shared<GitsWorkloadMessage>(
           commandList, "GITS_BuildRaytracingAccelerationStructure-Patch", c.object_.key));
 
-  unsigned mappingBufferIndex = getMappingBufferIndex(c.object_.key);
-  commandList->CopyResource(gpuAddressBuffers_[mappingBufferIndex],
-                            gpuAddressStagingBuffers_[mappingBufferIndex]);
-  commandList->CopyResource(mappingCountBuffers_[mappingBufferIndex],
-                            mappingCountStagingBuffers_[mappingBufferIndex]);
+  unsigned mappingBufferIndex = getMappingBufferIndex(c.object_.key, c.object_.value);
+  commandList->CopyResource(gpuAddressBuffers_[mappingBufferIndex].Get(),
+                            gpuAddressStagingBuffers_[mappingBufferIndex].Get());
+  commandList->CopyResource(mappingCountBuffers_[mappingBufferIndex].Get(),
+                            mappingCountStagingBuffers_[mappingBufferIndex].Get());
 
   unsigned instanceDescsKey = c.pDesc_.inputKeys[0];
   ID3D12Resource* instanceDescs = resourceByKey_[instanceDescsKey];
@@ -455,19 +467,19 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandList4DispatchRaysCommand& c) {
   unsigned patchBufferIndex = getPatchBufferIndex(c.object_.key, c.object_.value,
                                                   getDispatchRaysPatchSize(*c.pDesc_.value));
 
-  unsigned mappingBufferIndex = getMappingBufferIndex(c.object_.key);
+  unsigned mappingBufferIndex = getMappingBufferIndex(c.object_.key, c.object_.value);
   if (!useAddressPinning_) {
-    commandList->CopyResource(gpuAddressBuffers_[mappingBufferIndex],
-                              gpuAddressStagingBuffers_[mappingBufferIndex]);
+    commandList->CopyResource(gpuAddressBuffers_[mappingBufferIndex].Get(),
+                              gpuAddressStagingBuffers_[mappingBufferIndex].Get());
   }
-  commandList->CopyResource(shaderIdentifierBuffers_[mappingBufferIndex],
-                            shaderIdentifierStagingBuffers_[mappingBufferIndex]);
-  commandList->CopyResource(viewDescriptorBuffers_[mappingBufferIndex],
-                            viewDescriptorStagingBuffers_[mappingBufferIndex]);
-  commandList->CopyResource(sampleDescriptorBuffers_[mappingBufferIndex],
-                            sampleDescriptorStagingBuffers_[mappingBufferIndex]);
-  commandList->CopyResource(mappingCountBuffers_[mappingBufferIndex],
-                            mappingCountStagingBuffers_[mappingBufferIndex]);
+  commandList->CopyResource(shaderIdentifierBuffers_[mappingBufferIndex].Get(),
+                            shaderIdentifierStagingBuffers_[mappingBufferIndex].Get());
+  commandList->CopyResource(viewDescriptorBuffers_[mappingBufferIndex].Get(),
+                            viewDescriptorStagingBuffers_[mappingBufferIndex].Get());
+  commandList->CopyResource(sampleDescriptorBuffers_[mappingBufferIndex].Get(),
+                            sampleDescriptorStagingBuffers_[mappingBufferIndex].Get());
+  commandList->CopyResource(mappingCountBuffers_[mappingBufferIndex].Get(),
+                            mappingCountStagingBuffers_[mappingBufferIndex].Get());
 
   patchDispatchRays(c.object_.value, *c.pDesc_.value, patchBufferIndex, mappingBufferIndex, c.key);
 
@@ -644,6 +656,10 @@ size_t GpuPatchLayer::getDispatchRaysPatchSize(const D3D12_DISPATCH_RAYS_DESC& d
 }
 
 void GpuPatchLayer::waitForFence(ID3D12Fence* fence, unsigned fenceValue) {
+  if (!fence) {
+    return;
+  }
+
   UINT64 value = fence->GetCompletedValue();
   if (value >= fenceValue) {
     return;
@@ -711,115 +727,8 @@ void GpuPatchLayer::post(ID3D12GraphicsCommandListResetCommand& c) {
 }
 
 void GpuPatchLayer::initialize(ID3D12GraphicsCommandList* commandList) {
-  Microsoft::WRL::ComPtr<ID3D12Device> device;
-  HRESULT hr = commandList->GetDevice(IID_PPV_ARGS(&device));
-  GITS_ASSERT(hr == S_OK);
-
-  D3D12_HEAP_PROPERTIES heapPropertiesDefault{};
-  heapPropertiesDefault.Type = D3D12_HEAP_TYPE_DEFAULT;
-  heapPropertiesDefault.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
-  heapPropertiesDefault.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
-  heapPropertiesDefault.CreationNodeMask = 1;
-  heapPropertiesDefault.VisibleNodeMask = 1;
-
-  D3D12_HEAP_PROPERTIES heapPropertiesUpload{};
-  heapPropertiesUpload.Type = D3D12_HEAP_TYPE_UPLOAD;
-  heapPropertiesUpload.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
-  heapPropertiesUpload.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
-  heapPropertiesUpload.CreationNodeMask = 1;
-  heapPropertiesUpload.VisibleNodeMask = 1;
-
-  D3D12_RESOURCE_DESC resourceDesc{};
-  resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-  resourceDesc.Alignment = 0;
-  resourceDesc.Height = 1;
-  resourceDesc.DepthOrArraySize = 1;
-  resourceDesc.MipLevels = 1;
-  resourceDesc.Format = DXGI_FORMAT_UNKNOWN;
-  resourceDesc.SampleDesc.Count = 1;
-  resourceDesc.SampleDesc.Quality = 0;
-  resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-
-  if (!useAddressPinning_) {
-    for (unsigned i = 0; i < mappingBufferPoolSize_; ++i) {
-      resourceDesc.Width = gpuAddressBufferSize_;
-      resourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-      hr = device->CreateCommittedResource(&heapPropertiesDefault, D3D12_HEAP_FLAG_NONE,
-                                           &resourceDesc, D3D12_RESOURCE_STATE_COMMON, nullptr,
-                                           IID_PPV_ARGS(&gpuAddressBuffers_[i]));
-      GITS_ASSERT(hr == S_OK);
-
-      resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
-      hr = device->CreateCommittedResource(&heapPropertiesUpload, D3D12_HEAP_FLAG_NONE,
-                                           &resourceDesc, D3D12_RESOURCE_STATE_COMMON, nullptr,
-                                           IID_PPV_ARGS(&gpuAddressStagingBuffers_[i]));
-      GITS_ASSERT(hr == S_OK);
-    }
-  }
-
-  for (unsigned i = 0; i < mappingBufferPoolSize_; ++i) {
-    resourceDesc.Width = shaderIdentifierBufferSize_;
-    resourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-    hr = device->CreateCommittedResource(&heapPropertiesDefault, D3D12_HEAP_FLAG_NONE,
-                                         &resourceDesc, D3D12_RESOURCE_STATE_COMMON, nullptr,
-                                         IID_PPV_ARGS(&shaderIdentifierBuffers_[i]));
-    GITS_ASSERT(hr == S_OK);
-
-    resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
-    hr = device->CreateCommittedResource(&heapPropertiesUpload, D3D12_HEAP_FLAG_NONE, &resourceDesc,
-                                         D3D12_RESOURCE_STATE_COMMON, nullptr,
-                                         IID_PPV_ARGS(&shaderIdentifierStagingBuffers_[i]));
-    GITS_ASSERT(hr == S_OK);
-  }
-
-  for (unsigned i = 0; i < mappingBufferPoolSize_; ++i) {
-    resourceDesc.Width = viewDescriptorBufferSize_;
-    resourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-    hr = device->CreateCommittedResource(&heapPropertiesDefault, D3D12_HEAP_FLAG_NONE,
-                                         &resourceDesc, D3D12_RESOURCE_STATE_COMMON, nullptr,
-                                         IID_PPV_ARGS(&viewDescriptorBuffers_[i]));
-    GITS_ASSERT(hr == S_OK);
-
-    resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
-    hr = device->CreateCommittedResource(&heapPropertiesUpload, D3D12_HEAP_FLAG_NONE, &resourceDesc,
-                                         D3D12_RESOURCE_STATE_COMMON, nullptr,
-                                         IID_PPV_ARGS(&viewDescriptorStagingBuffers_[i]));
-    GITS_ASSERT(hr == S_OK);
-  }
-
-  for (unsigned i = 0; i < mappingBufferPoolSize_; ++i) {
-    resourceDesc.Width = sampleDescriptorBufferSize_;
-    resourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-    hr = device->CreateCommittedResource(&heapPropertiesDefault, D3D12_HEAP_FLAG_NONE,
-                                         &resourceDesc, D3D12_RESOURCE_STATE_COMMON, nullptr,
-                                         IID_PPV_ARGS(&sampleDescriptorBuffers_[i]));
-    GITS_ASSERT(hr == S_OK);
-
-    resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
-    hr = device->CreateCommittedResource(&heapPropertiesUpload, D3D12_HEAP_FLAG_NONE, &resourceDesc,
-                                         D3D12_RESOURCE_STATE_COMMON, nullptr,
-                                         IID_PPV_ARGS(&sampleDescriptorStagingBuffers_[i]));
-    GITS_ASSERT(hr == S_OK);
-  }
-
-  for (unsigned i = 0; i < mappingBufferPoolSize_; ++i) {
-    resourceDesc.Width = mappingCountBufferSize_;
-    resourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-    hr = device->CreateCommittedResource(&heapPropertiesDefault, D3D12_HEAP_FLAG_NONE,
-                                         &resourceDesc, D3D12_RESOURCE_STATE_COMMON, nullptr,
-                                         IID_PPV_ARGS(&mappingCountBuffers_[i]));
-    GITS_ASSERT(hr == S_OK);
-
-    resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
-    hr = device->CreateCommittedResource(&heapPropertiesUpload, D3D12_HEAP_FLAG_NONE, &resourceDesc,
-                                         D3D12_RESOURCE_STATE_COMMON, nullptr,
-                                         IID_PPV_ARGS(&mappingCountStagingBuffers_[i]));
-    GITS_ASSERT(hr == S_OK);
-  }
-
-  for (unsigned i = 0; i < mappingBufferPoolSize_; ++i) {
-    hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&mappingFences_[i].fence));
-    GITS_ASSERT(hr == S_OK);
+  for (unsigned i = 0; i < mappingBufferInitialPoolSize_; ++i) {
+    addMappingBuffer(commandList);
   }
 
   for (unsigned i = 0; i < patchBufferInitialPoolSize_; ++i) {
@@ -1003,6 +912,125 @@ void GpuPatchLayer::createOrReplacePatchBufferObjects(ID3D12Device* device,
                            IID_PPV_ARGS(&patchBufferInfos_[patchBufferIndex].fenceInfo.fence));
   GITS_ASSERT(hr == S_OK);
   patchBufferInfos_[patchBufferIndex].size = patchBufferSize_;
+}
+
+void GpuPatchLayer::addMappingBuffer(ID3D12GraphicsCommandList* commandList) {
+  gpuAddressBuffers_.emplace_back();
+  gpuAddressStagingBuffers_.emplace_back();
+  shaderIdentifierBuffers_.emplace_back();
+  shaderIdentifierStagingBuffers_.emplace_back();
+  viewDescriptorBuffers_.emplace_back();
+  viewDescriptorStagingBuffers_.emplace_back();
+  sampleDescriptorBuffers_.emplace_back();
+  sampleDescriptorStagingBuffers_.emplace_back();
+  mappingCountBuffers_.emplace_back();
+  mappingCountStagingBuffers_.emplace_back();
+  mappingFences_.emplace_back();
+
+  Microsoft::WRL::ComPtr<ID3D12Device> device;
+  HRESULT hr = commandList->GetDevice(IID_PPV_ARGS(&device));
+  GITS_ASSERT(hr == S_OK);
+  createMappingBufferObjects(device.Get(), mappingBufferPoolSize_++);
+}
+
+void GpuPatchLayer::createMappingBufferObjects(ID3D12Device* device, unsigned mappingBufferIndex) {
+  D3D12_HEAP_PROPERTIES heapPropertiesDefault{};
+  heapPropertiesDefault.Type = D3D12_HEAP_TYPE_DEFAULT;
+  heapPropertiesDefault.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+  heapPropertiesDefault.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+  heapPropertiesDefault.CreationNodeMask = 1;
+  heapPropertiesDefault.VisibleNodeMask = 1;
+
+  D3D12_HEAP_PROPERTIES heapPropertiesUpload{};
+  heapPropertiesUpload.Type = D3D12_HEAP_TYPE_UPLOAD;
+  heapPropertiesUpload.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+  heapPropertiesUpload.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+  heapPropertiesUpload.CreationNodeMask = 1;
+  heapPropertiesUpload.VisibleNodeMask = 1;
+
+  D3D12_RESOURCE_DESC resourceDesc{};
+  resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+  resourceDesc.Alignment = 0;
+  resourceDesc.Height = 1;
+  resourceDesc.DepthOrArraySize = 1;
+  resourceDesc.MipLevels = 1;
+  resourceDesc.Format = DXGI_FORMAT_UNKNOWN;
+  resourceDesc.SampleDesc.Count = 1;
+  resourceDesc.SampleDesc.Quality = 0;
+  resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+
+  HRESULT hr{};
+
+  if (!useAddressPinning_) {
+    resourceDesc.Width = gpuAddressBufferSize_;
+    resourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+    hr = device->CreateCommittedResource(&heapPropertiesDefault, D3D12_HEAP_FLAG_NONE,
+                                         &resourceDesc, D3D12_RESOURCE_STATE_COMMON, nullptr,
+                                         IID_PPV_ARGS(&gpuAddressBuffers_[mappingBufferIndex]));
+    GITS_ASSERT(hr == S_OK);
+
+    resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+    hr = device->CreateCommittedResource(
+        &heapPropertiesUpload, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_COMMON,
+        nullptr, IID_PPV_ARGS(&gpuAddressStagingBuffers_[mappingBufferIndex]));
+    GITS_ASSERT(hr == S_OK);
+  }
+
+  resourceDesc.Width = shaderIdentifierBufferSize_;
+  resourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+  hr = device->CreateCommittedResource(&heapPropertiesDefault, D3D12_HEAP_FLAG_NONE, &resourceDesc,
+                                       D3D12_RESOURCE_STATE_COMMON, nullptr,
+                                       IID_PPV_ARGS(&shaderIdentifierBuffers_[mappingBufferIndex]));
+  GITS_ASSERT(hr == S_OK);
+
+  resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+  hr = device->CreateCommittedResource(
+      &heapPropertiesUpload, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_COMMON,
+      nullptr, IID_PPV_ARGS(&shaderIdentifierStagingBuffers_[mappingBufferIndex]));
+  GITS_ASSERT(hr == S_OK);
+
+  resourceDesc.Width = viewDescriptorBufferSize_;
+  resourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+  hr = device->CreateCommittedResource(&heapPropertiesDefault, D3D12_HEAP_FLAG_NONE, &resourceDesc,
+                                       D3D12_RESOURCE_STATE_COMMON, nullptr,
+                                       IID_PPV_ARGS(&viewDescriptorBuffers_[mappingBufferIndex]));
+  GITS_ASSERT(hr == S_OK);
+
+  resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+  hr = device->CreateCommittedResource(
+      &heapPropertiesUpload, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_COMMON,
+      nullptr, IID_PPV_ARGS(&viewDescriptorStagingBuffers_[mappingBufferIndex]));
+  GITS_ASSERT(hr == S_OK);
+
+  resourceDesc.Width = sampleDescriptorBufferSize_;
+  resourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+  hr = device->CreateCommittedResource(&heapPropertiesDefault, D3D12_HEAP_FLAG_NONE, &resourceDesc,
+                                       D3D12_RESOURCE_STATE_COMMON, nullptr,
+                                       IID_PPV_ARGS(&sampleDescriptorBuffers_[mappingBufferIndex]));
+  GITS_ASSERT(hr == S_OK);
+
+  resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+  hr = device->CreateCommittedResource(
+      &heapPropertiesUpload, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_COMMON,
+      nullptr, IID_PPV_ARGS(&sampleDescriptorStagingBuffers_[mappingBufferIndex]));
+  GITS_ASSERT(hr == S_OK);
+
+  resourceDesc.Width = mappingCountBufferSize_;
+  resourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+  hr = device->CreateCommittedResource(&heapPropertiesDefault, D3D12_HEAP_FLAG_NONE, &resourceDesc,
+                                       D3D12_RESOURCE_STATE_COMMON, nullptr,
+                                       IID_PPV_ARGS(&mappingCountBuffers_[mappingBufferIndex]));
+  GITS_ASSERT(hr == S_OK);
+
+  resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+  hr = device->CreateCommittedResource(
+      &heapPropertiesUpload, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_COMMON,
+      nullptr, IID_PPV_ARGS(&mappingCountStagingBuffers_[mappingBufferIndex]));
+  GITS_ASSERT(hr == S_OK);
+
+  hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE,
+                           IID_PPV_ARGS(&mappingFences_[mappingBufferIndex].fence));
+  GITS_ASSERT(hr == S_OK);
 }
 
 void GpuPatchLayer::pre(ID3D12CommandQueueExecuteCommandListsCommand& c) {
@@ -1235,20 +1263,20 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandListExecuteIndirectCommand& c) {
   unsigned patchBufferIndex =
       getPatchBufferIndex(c.object_.key, c.object_.value, patchBufferInitialSize_);
 
-  unsigned mappingBufferIndex = getMappingBufferIndex(c.object_.key);
+  unsigned mappingBufferIndex = getMappingBufferIndex(c.object_.key, c.object_.value);
   if (!useAddressPinning_) {
-    commandList->CopyResource(gpuAddressBuffers_[mappingBufferIndex],
-                              gpuAddressStagingBuffers_[mappingBufferIndex]);
+    commandList->CopyResource(gpuAddressBuffers_[mappingBufferIndex].Get(),
+                              gpuAddressStagingBuffers_[mappingBufferIndex].Get());
   }
-  commandList->CopyResource(mappingCountBuffers_[mappingBufferIndex],
-                            mappingCountStagingBuffers_[mappingBufferIndex]);
+  commandList->CopyResource(mappingCountBuffers_[mappingBufferIndex].Get(),
+                            mappingCountStagingBuffers_[mappingBufferIndex].Get());
   if (raytracing) {
-    commandList->CopyResource(shaderIdentifierBuffers_[mappingBufferIndex],
-                              shaderIdentifierStagingBuffers_[mappingBufferIndex]);
-    commandList->CopyResource(viewDescriptorBuffers_[mappingBufferIndex],
-                              viewDescriptorStagingBuffers_[mappingBufferIndex]);
-    commandList->CopyResource(sampleDescriptorBuffers_[mappingBufferIndex],
-                              sampleDescriptorStagingBuffers_[mappingBufferIndex]);
+    commandList->CopyResource(shaderIdentifierBuffers_[mappingBufferIndex].Get(),
+                              shaderIdentifierStagingBuffers_[mappingBufferIndex].Get());
+    commandList->CopyResource(viewDescriptorBuffers_[mappingBufferIndex].Get(),
+                              viewDescriptorStagingBuffers_[mappingBufferIndex].Get());
+    commandList->CopyResource(sampleDescriptorBuffers_[mappingBufferIndex].Get(),
+                              sampleDescriptorStagingBuffers_[mappingBufferIndex].Get());
   }
 
   {
@@ -1575,7 +1603,8 @@ void GpuPatchLayer::getPatchOffsets(const D3D12_COMMAND_SIGNATURE_DESC& commandS
   }
 }
 
-unsigned GpuPatchLayer::getMappingBufferIndex(unsigned commandListKey) {
+unsigned GpuPatchLayer::getMappingBufferIndex(unsigned commandListKey,
+                                              ID3D12GraphicsCommandList* commandList) {
   auto it = currentMappingsByCommandList_.find(commandListKey);
   if (it != currentMappingsByCommandList_.end()) {
     return it->second;
@@ -1597,8 +1626,12 @@ unsigned GpuPatchLayer::getMappingBufferIndex(unsigned commandListKey) {
     }
   }
 
-  LOG_ERROR << "Mappings buffer pool is too small!";
-  exit(EXIT_FAILURE);
+  addMappingBuffer(commandList);
+  unsigned newIndex = mappingBufferPoolSize_ - 1;
+  currentMappingsByCommandList_[commandListKey] = newIndex;
+  mappingFences_[newIndex].waitingForExecute = true;
+
+  return newIndex;
 }
 
 unsigned GpuPatchLayer::getPatchBufferIndex(unsigned commandListKey,
