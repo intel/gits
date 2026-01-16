@@ -122,9 +122,11 @@ void ExecuteIndirectDump::dumpArgumentBuffer(ExecuteIndirectDumpInfo& dumpInfo,
         break;
       }
       case D3D12_INDIRECT_ARGUMENT_TYPE_CONSTANT: {
-        UINT& args = *reinterpret_cast<UINT*>(static_cast<uint8_t*>(data) + offset);
-        stream << "  CONSTANT " << args << "\n";
-        offset += sizeof(UINT);
+        for (unsigned i = 0; i < desc.Constant.Num32BitValuesToSet; ++i) {
+          UINT& args = *reinterpret_cast<UINT*>(static_cast<uint8_t*>(data) + offset);
+          stream << "  CONSTANT " << args << "\n";
+          offset += sizeof(UINT);
+        }
         break;
       }
       case D3D12_INDIRECT_ARGUMENT_TYPE_CONSTANT_BUFFER_VIEW: {

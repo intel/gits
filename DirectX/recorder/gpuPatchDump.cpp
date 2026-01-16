@@ -140,7 +140,7 @@ void GpuPatchDump::dumpArgumentBuffer(ExecuteIndirectDumpInfo& dumpInfo,
         break;
       }
       case D3D12_INDIRECT_ARGUMENT_TYPE_CONSTANT: {
-        offset += sizeof(UINT);
+        offset += desc.Constant.Num32BitValuesToSet * sizeof(UINT);
         break;
       }
       case D3D12_INDIRECT_ARGUMENT_TYPE_CONSTANT_BUFFER_VIEW: {
