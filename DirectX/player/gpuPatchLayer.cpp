@@ -51,6 +51,38 @@ void GpuPatchLayer::pre(IUnknownReleaseCommand& c) {
     descriptorHandleService_.destroyHeap(c.object_.key);
     commandListService_.remove(c.object_.key);
     resourceStateTracker_.destroyResource(c.object_.key);
+
+    const auto mappingsIt = currentMappingsByCommandList_.find(c.object_.key);
+    if (mappingsIt != currentMappingsByCommandList_.end()) {
+      mappingFences_[mappingsIt->second].waitingForExecute = false;
+      currentMappingsByCommandList_.erase(mappingsIt);
+    }
+
+    const auto patchBuffersIt = currentPatchBuffersByCommandList_.find(c.object_.key);
+    if (patchBuffersIt != currentPatchBuffersByCommandList_.end()) {
+      for (unsigned patchBufferIndex : patchBuffersIt->second) {
+        patchBufferInfos_[patchBufferIndex].fenceInfo.waitingForExecute = false;
+      }
+      currentPatchBuffersByCommandList_.erase(patchBuffersIt);
+    }
+
+    const auto aoPPatchBuffersIt =
+        currentInstancesAoPPatchBuffersByCommandList_.find(c.object_.key);
+    if (aoPPatchBuffersIt != currentInstancesAoPPatchBuffersByCommandList_.end()) {
+      for (unsigned aoPPatchBuffersIndex : aoPPatchBuffersIt->second) {
+        instancesAoPPatchBufferFences_[aoPPatchBuffersIndex].waitingForExecute = false;
+      }
+      currentInstancesAoPPatchBuffersByCommandList_.erase(aoPPatchBuffersIt);
+    }
+
+    const auto aoPStagingPatchBuffersIt =
+        currentInstancesAoPStagingBuffersByCommandList_.find(c.object_.key);
+    if (aoPStagingPatchBuffersIt != currentInstancesAoPStagingBuffersByCommandList_.end()) {
+      for (unsigned aoPStagingPatchBuffersIndex : aoPStagingPatchBuffersIt->second) {
+        instancesAoPStagingBufferFences_[aoPStagingPatchBuffersIndex].waitingForExecute = false;
+      }
+      currentInstancesAoPStagingBuffersByCommandList_.erase(aoPStagingPatchBuffersIt);
+    }
   }
 }
 
