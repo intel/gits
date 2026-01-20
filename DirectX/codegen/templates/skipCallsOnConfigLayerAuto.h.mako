@@ -11,6 +11,7 @@ ${header}
 
 #include "layerAuto.h"
 #include "configurationLib.h"
+#include "keyUtils.h"
 #include "bit_range.h"
 
 namespace gits {
@@ -19,8 +20,7 @@ namespace DirectX {
 class SkipCallsOnConfigLayer : public Layer {
 public:
   SkipCallsOnConfigLayer() : Layer("SkipCallsOnConfig"),
-      keyRange_(Configurator::Get().directx.features.skipCalls.commandKeys)
-  {}
+      keyRange_(parseConfigKeys(Configurator::Get().directx.features.skipCalls.commandKeys)) {}
 
   virtual void pre(CreateWindowMetaCommand& command) override;
   virtual void pre(MappedDataMetaCommand& command) override;

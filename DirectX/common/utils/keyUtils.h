@@ -33,6 +33,8 @@ inline unsigned extractExecutionSerializationKey(unsigned key) {
   return key & ~executionSerializationKeyMask;
 }
 
+std::string parseConfigKeys(const std::string& keys);
+
 class ConfigKeySet {
 public:
   ConfigKeySet(const std::string& keys);

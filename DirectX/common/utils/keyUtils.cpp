@@ -35,5 +35,28 @@ ConfigKeySet::ConfigKeySet(const std::string& keys) {
   }
 }
 
+std::string parseConfigKeys(const std::string& keys) {
+  std::string result;
+  for (unsigned i = 0; i < keys.size(); ++i) {
+    char c = keys[i];
+    if (c == 'S' || c == 'E') {
+      const char* begin = &keys[++i];
+      while (i < keys.size() && std::isdigit(keys[i])) {
+        ++i;
+      }
+      unsigned k = std::stoi(std::string(begin, &keys[i--]));
+      if (c == 'S') {
+        k |= stateRestoreKeyMask;
+      } else if (c == 'E') {
+        k |= executionSerializationKeyMask;
+      }
+      result += std::to_string(k);
+    } else {
+      result += c;
+    }
+  }
+  return result;
+}
+
 } // namespace DirectX
 } // namespace gits
