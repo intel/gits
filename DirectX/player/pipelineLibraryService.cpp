@@ -47,21 +47,21 @@ void PipelineLibraryService::createPipelineState(unsigned pipelineStateKey) {
   pipelineStateRefCounts_[pipelineStateKey] = 1;
 }
 
-void PipelineLibraryService::loadComputePipeline(
+HRESULT PipelineLibraryService::loadComputePipeline(
     ID3D12PipelineLibraryLoadComputePipelineCommand& c) {
-  loadPipelineState(c.object_.value, c.pName_.value, c.pDesc_.value, c.riid_.value,
-                    c.ppPipelineState_.key, c.ppPipelineState_.value);
+  return loadPipelineState(c.object_.value, c.pName_.value, c.pDesc_.value, c.riid_.value,
+                           c.ppPipelineState_.key, c.ppPipelineState_.value);
 }
 
-void PipelineLibraryService::loadGraphicsPipeline(
+HRESULT PipelineLibraryService::loadGraphicsPipeline(
     ID3D12PipelineLibraryLoadGraphicsPipelineCommand& c) {
-  loadPipelineState(c.object_.value, c.pName_.value, c.pDesc_.value, c.riid_.value,
-                    c.ppPipelineState_.key, c.ppPipelineState_.value);
+  return loadPipelineState(c.object_.value, c.pName_.value, c.pDesc_.value, c.riid_.value,
+                           c.ppPipelineState_.key, c.ppPipelineState_.value);
 }
 
-void PipelineLibraryService::loadPipeline(ID3D12PipelineLibrary1LoadPipelineCommand& c) {
-  loadPipelineState(c.object_.value, c.pName_.value, c.pDesc_.value, c.riid_.value,
-                    c.ppPipelineState_.key, c.ppPipelineState_.value);
+HRESULT PipelineLibraryService::loadPipeline(ID3D12PipelineLibrary1LoadPipelineCommand& c) {
+  return loadPipelineState(c.object_.value, c.pName_.value, c.pDesc_.value, c.riid_.value,
+                           c.ppPipelineState_.key, c.ppPipelineState_.value);
 }
 
 template <typename Desc, typename PipelineLibrary>

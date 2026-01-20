@@ -22,9 +22,9 @@ public:
   void addRefPipelineState(unsigned pipelineStateKey);
   void createPipelineLibrary(ID3D12Device1CreatePipelineLibraryCommand& c);
   void createPipelineState(unsigned pipelineStateKey);
-  void loadComputePipeline(ID3D12PipelineLibraryLoadComputePipelineCommand& c);
-  void loadGraphicsPipeline(ID3D12PipelineLibraryLoadGraphicsPipelineCommand& c);
-  void loadPipeline(ID3D12PipelineLibrary1LoadPipelineCommand& c);
+  HRESULT loadComputePipeline(ID3D12PipelineLibraryLoadComputePipelineCommand& c);
+  HRESULT loadGraphicsPipeline(ID3D12PipelineLibraryLoadGraphicsPipelineCommand& c);
+  HRESULT loadPipeline(ID3D12PipelineLibrary1LoadPipelineCommand& c);
 
   template <typename Desc, typename PipelineLibrary>
   HRESULT loadPipelineState(PipelineLibrary* pipelineLibrary,

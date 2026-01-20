@@ -797,7 +797,7 @@ void ReplayCustomizationLayer::pre(ID3D12PipelineLibraryLoadGraphicsPipelineComm
     return;
   }
   c.skip = true;
-  pipelineLibraryService_.loadGraphicsPipeline(c);
+  c.result_.value = pipelineLibraryService_.loadGraphicsPipeline(c);
 }
 
 void ReplayCustomizationLayer::pre(ID3D12DeviceCreateComputePipelineStateCommand& c) {
@@ -817,7 +817,7 @@ void ReplayCustomizationLayer::pre(ID3D12PipelineLibraryLoadComputePipelineComma
     return;
   }
   c.skip = true;
-  pipelineLibraryService_.loadComputePipeline(c);
+  c.result_.value = pipelineLibraryService_.loadComputePipeline(c);
 }
 
 void ReplayCustomizationLayer::pre(ID3D12Device2CreatePipelineStateCommand& c) {
@@ -837,7 +837,7 @@ void ReplayCustomizationLayer::pre(ID3D12PipelineLibrary1LoadPipelineCommand& c)
     return;
   }
   c.skip = true;
-  pipelineLibraryService_.loadPipeline(c);
+  c.result_.value = pipelineLibraryService_.loadPipeline(c);
 }
 
 void ReplayCustomizationLayer::pre(ID3D12PipelineStateGetCachedBlobCommand& c) {
