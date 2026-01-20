@@ -69,6 +69,18 @@ void AnalyzerExecuteIndirectDump::dumpArgumentBuffer(ExecuteIndirectDumpInfo& du
     for (unsigned j = 0; j < dumpInfo.commandSignature->NumArgumentDescs; ++j) {
       const D3D12_INDIRECT_ARGUMENT_DESC& desc = dumpInfo.commandSignature->pArgumentDescs[j];
       switch (desc.Type) {
+      case D3D12_INDIRECT_ARGUMENT_TYPE_DRAW: {
+        offset += sizeof(D3D12_DRAW_ARGUMENTS);
+        break;
+      }
+      case D3D12_INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED: {
+        offset += sizeof(D3D12_DRAW_INDEXED_ARGUMENTS);
+        break;
+      }
+      case D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH: {
+        offset += sizeof(D3D12_DISPATCH_ARGUMENTS);
+        break;
+      }
       case D3D12_INDIRECT_ARGUMENT_TYPE_VERTEX_BUFFER_VIEW: {
         D3D12_VERTEX_BUFFER_VIEW& args =
             *reinterpret_cast<D3D12_VERTEX_BUFFER_VIEW*>(static_cast<uint8_t*>(data) + offset);
@@ -91,6 +103,10 @@ void AnalyzerExecuteIndirectDump::dumpArgumentBuffer(ExecuteIndirectDumpInfo& du
           argumentBuffersResources_.insert(resourceInfo->key);
         }
         offset += sizeof(D3D12_INDEX_BUFFER_VIEW);
+        break;
+      }
+      case D3D12_INDIRECT_ARGUMENT_TYPE_CONSTANT: {
+        offset += desc.Constant.Num32BitValuesToSet * sizeof(UINT);
         break;
       }
       case D3D12_INDIRECT_ARGUMENT_TYPE_CONSTANT_BUFFER_VIEW: {
@@ -124,6 +140,14 @@ void AnalyzerExecuteIndirectDump::dumpArgumentBuffer(ExecuteIndirectDumpInfo& du
           argumentBuffersResources_.insert(resourceInfo->key);
         }
         offset += sizeof(D3D12_GPU_VIRTUAL_ADDRESS);
+        break;
+      }
+      case D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH_RAYS: {
+        offset += sizeof(D3D12_DISPATCH_RAYS_DESC);
+        break;
+      }
+      case D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH_MESH: {
+        offset += sizeof(D3D12_DISPATCH_MESH_ARGUMENTS);
         break;
       }
       }
