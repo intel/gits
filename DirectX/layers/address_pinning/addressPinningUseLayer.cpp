@@ -34,7 +34,7 @@ void AddressPinningUseLayer::pre(D3D12CreateDeviceCommand& command) {
 }
 
 void AddressPinningUseLayer::post(D3D12CreateDeviceCommand& command) {
-  if (command.result_.value != S_OK) {
+  if (command.skip || command.result_.value != S_OK) {
     return;
   }
 

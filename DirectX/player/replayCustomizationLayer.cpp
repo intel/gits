@@ -49,6 +49,9 @@ ReplayCustomizationLayer::ReplayCustomizationLayer(PlayerManager& manager)
 }
 
 void ReplayCustomizationLayer::post(IUnknownReleaseCommand& c) {
+  if (c.skip) {
+    return;
+  }
   if (c.result_.value == 0) {
     manager_.getDescriptorHandleService().destroyDescriptorHeap(c.object_.key);
     manager_.getMapTrackingService().destroyResource(c.object_.key);
@@ -60,11 +63,17 @@ void ReplayCustomizationLayer::post(IUnknownReleaseCommand& c) {
 }
 
 void ReplayCustomizationLayer::post(IUnknownAddRefCommand& c) {
+  if (c.skip) {
+    return;
+  }
   pipelineLibraryService_.addRefPipelineState(c.object_.key);
   afterAddRef_ = true;
 }
 
 void ReplayCustomizationLayer::pre(D3D12CreateDeviceCommand& c) {
+  if (c.skip) {
+    return;
+  }
   const auto& adapterService = manager_.getAdapterService();
   // Set the adapter override if needed
   if (adapterService.isAdapterOverride()) {
@@ -89,6 +98,9 @@ void ReplayCustomizationLayer::pre(D3D12CreateDeviceCommand& c) {
 }
 
 void ReplayCustomizationLayer::pre(IDXGISwapChainSetFullscreenStateCommand& c) {
+  if (c.skip) {
+    return;
+  }
   if (c.Fullscreen_.value && Configurator::Get().common.player.showWindowBorder) {
     c.Fullscreen_.value = false;
     LOG_INFO << "SetFullscreenState: Force windowed mode due to 'showWindowBorder'";
@@ -96,6 +108,9 @@ void ReplayCustomizationLayer::pre(IDXGISwapChainSetFullscreenStateCommand& c) {
 }
 
 void ReplayCustomizationLayer::pre(IDXGIFactoryCreateSwapChainCommand& c) {
+  if (c.skip) {
+    return;
+  }
   c.pDesc_.value->OutputWindow =
       manager_.getWindowService().getCurrentHwnd(c.pDesc_.value->OutputWindow);
   if (Configurator::Get().common.player.showWindowBorder) {
@@ -105,6 +120,9 @@ void ReplayCustomizationLayer::pre(IDXGIFactoryCreateSwapChainCommand& c) {
 }
 
 void ReplayCustomizationLayer::pre(IDXGIFactory2CreateSwapChainForHwndCommand& c) {
+  if (c.skip) {
+    return;
+  }
   c.hWnd_.value = manager_.getWindowService().getCurrentHwnd(c.hWnd_.value);
   if (c.pFullscreenDesc_.value && Configurator::Get().common.player.showWindowBorder) {
     c.pFullscreenDesc_.value->Windowed = true;
@@ -113,17 +131,22 @@ void ReplayCustomizationLayer::pre(IDXGIFactory2CreateSwapChainForHwndCommand& c
 }
 
 void ReplayCustomizationLayer::pre(IDXGIFactoryMakeWindowAssociationCommand& c) {
+  if (c.skip) {
+    return;
+  }
   c.WindowHandle_.value = manager_.getWindowService().getCurrentHwnd(c.WindowHandle_.value);
 }
 
 void ReplayCustomizationLayer::post(ID3D12ResourceMapCommand& c) {
+  if (c.skip) {
+    return;
+  }
   manager_.getMapTrackingService().mapResource(c.object_.key, c.Subresource_.value,
                                                c.ppData_.captureValue, c.ppData_.value);
 }
 
 void ReplayCustomizationLayer::post(ID3D12DeviceCreateDescriptorHeapCommand& c) {
-
-  if (c.result_.value != S_OK) {
+  if (c.skip || c.result_.value != S_OK) {
     return;
   }
 
@@ -134,10 +157,16 @@ void ReplayCustomizationLayer::post(ID3D12DeviceCreateDescriptorHeapCommand& c) 
 }
 
 void ReplayCustomizationLayer::pre(ID3D12DeviceCreateRenderTargetViewCommand& c) {
+  if (c.skip) {
+    return;
+  }
   fillCpuDescriptorHandleArgument(c.DestDescriptor_);
 }
 
 void ReplayCustomizationLayer::pre(ID3D12DeviceCreateShaderResourceViewCommand& c) {
+  if (c.skip) {
+    return;
+  }
   fillCpuDescriptorHandleArgument(c.DestDescriptor_);
 
   if (useAddressPinning_) {
@@ -153,38 +182,61 @@ void ReplayCustomizationLayer::pre(ID3D12DeviceCreateShaderResourceViewCommand& 
 }
 
 void ReplayCustomizationLayer::pre(ID3D12DeviceCreateUnorderedAccessViewCommand& c) {
+  if (c.skip) {
+    return;
+  }
   fillCpuDescriptorHandleArgument(c.DestDescriptor_);
 }
 
 void ReplayCustomizationLayer::pre(ID3D12DeviceCreateDepthStencilViewCommand& c) {
+  if (c.skip) {
+    return;
+  }
   fillCpuDescriptorHandleArgument(c.DestDescriptor_);
 }
 
 void ReplayCustomizationLayer::pre(
     ID3D12Device8CreateSamplerFeedbackUnorderedAccessViewCommand& c) {
+  if (c.skip) {
+    return;
+  }
   fillCpuDescriptorHandleArgument(c.DestDescriptor_);
 }
 
 void ReplayCustomizationLayer::pre(ID3D12DeviceCreateSamplerCommand& c) {
+  if (c.skip) {
+    return;
+  }
   fillCpuDescriptorHandleArgument(c.DestDescriptor_);
 }
 
 void ReplayCustomizationLayer::pre(ID3D12Device11CreateSampler2Command& c) {
+  if (c.skip) {
+    return;
+  }
   fillCpuDescriptorHandleArgument(c.DestDescriptor_);
 }
 
 void ReplayCustomizationLayer::pre(
     ID3D12GraphicsCommandListSetGraphicsRootDescriptorTableCommand& c) {
+  if (c.skip) {
+    return;
+  }
   fillGpuDescriptorHandleArgument(c.BaseDescriptor_);
 }
 
 void ReplayCustomizationLayer::pre(
     ID3D12GraphicsCommandListSetComputeRootDescriptorTableCommand& c) {
+  if (c.skip) {
+    return;
+  }
   fillGpuDescriptorHandleArgument(c.BaseDescriptor_);
 }
 
 void ReplayCustomizationLayer::pre(ID3D12GraphicsCommandListOMSetRenderTargetsCommand& c) {
-
+  if (c.skip) {
+    return;
+  }
   if (c.pRenderTargetDescriptors_.value) {
     for (unsigned i = 0; i < c.pRenderTargetDescriptors_.size; ++i) {
       c.pRenderTargetDescriptors_.value[i].ptr =
@@ -204,26 +256,41 @@ void ReplayCustomizationLayer::pre(ID3D12GraphicsCommandListOMSetRenderTargetsCo
 }
 
 void ReplayCustomizationLayer::pre(ID3D12GraphicsCommandListClearDepthStencilViewCommand& c) {
+  if (c.skip) {
+    return;
+  }
   fillCpuDescriptorHandleArgument(c.DepthStencilView_);
 }
 
 void ReplayCustomizationLayer::pre(ID3D12GraphicsCommandListClearRenderTargetViewCommand& c) {
+  if (c.skip) {
+    return;
+  }
   fillCpuDescriptorHandleArgument(c.RenderTargetView_);
 }
 
 void ReplayCustomizationLayer::pre(
     ID3D12GraphicsCommandListClearUnorderedAccessViewUintCommand& c) {
+  if (c.skip) {
+    return;
+  }
   fillGpuDescriptorHandleArgument(c.ViewGPUHandleInCurrentHeap_);
   fillCpuDescriptorHandleArgument(c.ViewCPUHandle_);
 }
 
 void ReplayCustomizationLayer::pre(
     ID3D12GraphicsCommandListClearUnorderedAccessViewFloatCommand& c) {
+  if (c.skip) {
+    return;
+  }
   fillGpuDescriptorHandleArgument(c.ViewGPUHandleInCurrentHeap_);
   fillCpuDescriptorHandleArgument(c.ViewCPUHandle_);
 }
 
 void ReplayCustomizationLayer::pre(ID3D12DeviceCopyDescriptorsCommand& c) {
+  if (c.skip) {
+    return;
+  }
   for (unsigned i = 0; i < c.NumDestDescriptorRanges_.value; ++i) {
     c.pDestDescriptorRangeStarts_.value[i].ptr =
         manager_.getDescriptorHandleService().getDescriptorHandle(
@@ -241,6 +308,9 @@ void ReplayCustomizationLayer::pre(ID3D12DeviceCopyDescriptorsCommand& c) {
 }
 
 void ReplayCustomizationLayer::pre(ID3D12DeviceCopyDescriptorsSimpleCommand& c) {
+  if (c.skip) {
+    return;
+  }
   fillCpuDescriptorHandleArgument(c.DestDescriptorRangeStart_);
   fillCpuDescriptorHandleArgument(c.SrcDescriptorRangeStart_);
 }
@@ -255,6 +325,9 @@ void ReplayCustomizationLayer::pre(ID3D12FenceSetEventOnCompletionCommand& c) {
 }
 
 void ReplayCustomizationLayer::pre(ID3D12Device1SetEventOnMultipleFenceCompletionCommand& c) {
+  if (c.skip) {
+    return;
+  }
   if (Configurator::Get().directx.player.waitOnEventCompletion) {
     c.hEvent_.value = NULL;
   }
@@ -270,10 +343,16 @@ void ReplayCustomizationLayer::pre(ID3D12Device1SetEventOnMultipleFenceCompletio
 }
 
 void ReplayCustomizationLayer::pre(ID3D12FenceGetCompletedValueCommand& c) {
+  if (c.skip) {
+    return;
+  }
   waitForFence(c.key, c.object_.value, c.result_.value);
 }
 
 void ReplayCustomizationLayer::pre(WaitForFenceSignaledCommand& c) {
+  if (c.skip) {
+    return;
+  }
   // fence could be removed before wait is signaled
   if (c.fence_.value) {
     waitForFence(c.key, c.fence_.value, c.value_.value);
@@ -281,7 +360,7 @@ void ReplayCustomizationLayer::pre(WaitForFenceSignaledCommand& c) {
 }
 
 void ReplayCustomizationLayer::post(ID3D12DeviceCreateCommittedResourceCommand& c) {
-  if (useAddressPinning_ && !isStateRestoreKey(c.ppvResource_.key)) {
+  if (c.skip || useAddressPinning_ && !isStateRestoreKey(c.ppvResource_.key)) {
     return;
   }
 
@@ -290,7 +369,7 @@ void ReplayCustomizationLayer::post(ID3D12DeviceCreateCommittedResourceCommand& 
 }
 
 void ReplayCustomizationLayer::post(ID3D12Device4CreateCommittedResource1Command& c) {
-  if (useAddressPinning_) {
+  if (c.skip || useAddressPinning_) {
     return;
   }
 
@@ -299,7 +378,7 @@ void ReplayCustomizationLayer::post(ID3D12Device4CreateCommittedResource1Command
 }
 
 void ReplayCustomizationLayer::post(ID3D12Device8CreateCommittedResource2Command& c) {
-  if (useAddressPinning_) {
+  if (c.skip || useAddressPinning_) {
     return;
   }
 
@@ -308,7 +387,7 @@ void ReplayCustomizationLayer::post(ID3D12Device8CreateCommittedResource2Command
 }
 
 void ReplayCustomizationLayer::post(ID3D12Device10CreateCommittedResource3Command& c) {
-  if (useAddressPinning_) {
+  if (c.skip || useAddressPinning_) {
     return;
   }
 
@@ -317,7 +396,7 @@ void ReplayCustomizationLayer::post(ID3D12Device10CreateCommittedResource3Comman
 }
 
 void ReplayCustomizationLayer::post(ID3D12DeviceCreateReservedResourceCommand& c) {
-  if (useAddressPinning_) {
+  if (c.skip || useAddressPinning_) {
     return;
   }
 
@@ -326,7 +405,7 @@ void ReplayCustomizationLayer::post(ID3D12DeviceCreateReservedResourceCommand& c
 }
 
 void ReplayCustomizationLayer::post(ID3D12Device4CreateReservedResource1Command& c) {
-  if (useAddressPinning_) {
+  if (c.skip || useAddressPinning_) {
     return;
   }
 
@@ -335,7 +414,7 @@ void ReplayCustomizationLayer::post(ID3D12Device4CreateReservedResource1Command&
 }
 
 void ReplayCustomizationLayer::post(ID3D12Device10CreateReservedResource2Command& c) {
-  if (useAddressPinning_) {
+  if (c.skip || useAddressPinning_) {
     return;
   }
 
@@ -344,7 +423,7 @@ void ReplayCustomizationLayer::post(ID3D12Device10CreateReservedResource2Command
 }
 
 void ReplayCustomizationLayer::post(ID3D12DeviceCreatePlacedResourceCommand& c) {
-  if (useAddressPinning_) {
+  if (c.skip || useAddressPinning_) {
     return;
   }
 
@@ -355,7 +434,7 @@ void ReplayCustomizationLayer::post(ID3D12DeviceCreatePlacedResourceCommand& c) 
 }
 
 void ReplayCustomizationLayer::post(ID3D12Device8CreatePlacedResource1Command& c) {
-  if (useAddressPinning_) {
+  if (c.skip || useAddressPinning_) {
     return;
   }
 
@@ -366,7 +445,7 @@ void ReplayCustomizationLayer::post(ID3D12Device8CreatePlacedResource1Command& c
 }
 
 void ReplayCustomizationLayer::post(ID3D12Device10CreatePlacedResource2Command& c) {
-  if (useAddressPinning_) {
+  if (c.skip || useAddressPinning_) {
     return;
   }
 
@@ -377,7 +456,7 @@ void ReplayCustomizationLayer::post(ID3D12Device10CreatePlacedResource2Command& 
 }
 
 void ReplayCustomizationLayer::post(ID3D12DeviceCreateHeapCommand& c) {
-  if (useAddressPinning_) {
+  if (c.skip || useAddressPinning_) {
     return;
   }
 
@@ -386,7 +465,7 @@ void ReplayCustomizationLayer::post(ID3D12DeviceCreateHeapCommand& c) {
 }
 
 void ReplayCustomizationLayer::post(ID3D12Device4CreateHeap1Command& c) {
-  if (useAddressPinning_) {
+  if (c.skip || useAddressPinning_) {
     return;
   }
 
@@ -395,7 +474,7 @@ void ReplayCustomizationLayer::post(ID3D12Device4CreateHeap1Command& c) {
 }
 
 void ReplayCustomizationLayer::post(INTC_D3D12_CreateHeapCommand& c) {
-  if (useAddressPinning_) {
+  if (c.skip || useAddressPinning_) {
     return;
   }
 
@@ -404,7 +483,7 @@ void ReplayCustomizationLayer::post(INTC_D3D12_CreateHeapCommand& c) {
 }
 
 void ReplayCustomizationLayer::pre(ID3D12Device3OpenExistingHeapFromAddressCommand& c) {
-  if (useAddressPinning_) {
+  if (c.skip || useAddressPinning_) {
     return;
   }
 
@@ -413,7 +492,7 @@ void ReplayCustomizationLayer::pre(ID3D12Device3OpenExistingHeapFromAddressComma
 }
 
 void ReplayCustomizationLayer::post(ID3D12Device3OpenExistingHeapFromAddressCommand& c) {
-  if (useAddressPinning_) {
+  if (c.skip || useAddressPinning_) {
     return;
   }
 
@@ -422,7 +501,7 @@ void ReplayCustomizationLayer::post(ID3D12Device3OpenExistingHeapFromAddressComm
 }
 
 void ReplayCustomizationLayer::pre(ID3D12Device13OpenExistingHeapFromAddress1Command& c) {
-  if (useAddressPinning_) {
+  if (c.skip || useAddressPinning_) {
     return;
   }
 
@@ -431,7 +510,7 @@ void ReplayCustomizationLayer::pre(ID3D12Device13OpenExistingHeapFromAddress1Com
 }
 
 void ReplayCustomizationLayer::post(ID3D12Device13OpenExistingHeapFromAddress1Command& c) {
-  if (useAddressPinning_) {
+  if (c.skip || useAddressPinning_) {
     return;
   }
 
@@ -441,31 +520,49 @@ void ReplayCustomizationLayer::post(ID3D12Device13OpenExistingHeapFromAddress1Co
 
 void ReplayCustomizationLayer::pre(
     ID3D12GraphicsCommandListSetComputeRootConstantBufferViewCommand& c) {
+  if (c.skip) {
+    return;
+  }
   fillGpuAddressArgument(c.BufferLocation_);
 }
 
 void ReplayCustomizationLayer::pre(
     ID3D12GraphicsCommandListSetGraphicsRootConstantBufferViewCommand& c) {
+  if (c.skip) {
+    return;
+  }
   fillGpuAddressArgument(c.BufferLocation_);
 }
 
 void ReplayCustomizationLayer::pre(
     ID3D12GraphicsCommandListSetComputeRootShaderResourceViewCommand& c) {
+  if (c.skip) {
+    return;
+  }
   fillGpuAddressArgument(c.BufferLocation_);
 }
 
 void ReplayCustomizationLayer::pre(
     ID3D12GraphicsCommandListSetGraphicsRootShaderResourceViewCommand& c) {
+  if (c.skip) {
+    return;
+  }
   fillGpuAddressArgument(c.BufferLocation_);
 }
 
 void ReplayCustomizationLayer::pre(
     ID3D12GraphicsCommandListSetComputeRootUnorderedAccessViewCommand& c) {
+  if (c.skip) {
+    return;
+  }
   fillGpuAddressArgument(c.BufferLocation_);
 }
 
 void ReplayCustomizationLayer::pre(
     ID3D12GraphicsCommandListSetGraphicsRootUnorderedAccessViewCommand& c) {
+  if (c.skip) {
+    return;
+  }
   fillGpuAddressArgument(c.BufferLocation_);
 }
 
@@ -482,6 +579,9 @@ void ReplayCustomizationLayer::pre(ID3D12GraphicsCommandList4SetPipelineState1Co
 }
 
 void ReplayCustomizationLayer::pre(ID3D12DeviceCreateConstantBufferViewCommand& c) {
+  if (c.skip) {
+    return;
+  }
   fillCpuDescriptorHandleArgument(c.DestDescriptor_);
 
   if (useAddressPinning_) {
@@ -495,7 +595,7 @@ void ReplayCustomizationLayer::pre(ID3D12DeviceCreateConstantBufferViewCommand& 
 }
 
 void ReplayCustomizationLayer::pre(ID3D12GraphicsCommandListIASetIndexBufferCommand& c) {
-  if (useAddressPinning_) {
+  if (c.skip || useAddressPinning_) {
     return;
   }
 
@@ -506,7 +606,7 @@ void ReplayCustomizationLayer::pre(ID3D12GraphicsCommandListIASetIndexBufferComm
 }
 
 void ReplayCustomizationLayer::pre(ID3D12GraphicsCommandListIASetVertexBuffersCommand& c) {
-  if (useAddressPinning_) {
+  if (c.skip || useAddressPinning_) {
     return;
   }
 
@@ -522,7 +622,7 @@ void ReplayCustomizationLayer::pre(ID3D12GraphicsCommandListIASetVertexBuffersCo
 }
 
 void ReplayCustomizationLayer::pre(ID3D12GraphicsCommandListSOSetTargetsCommand& c) {
-  if (useAddressPinning_) {
+  if (c.skip || useAddressPinning_) {
     return;
   }
 
@@ -546,7 +646,7 @@ void ReplayCustomizationLayer::pre(ID3D12GraphicsCommandListSOSetTargetsCommand&
 }
 
 void ReplayCustomizationLayer::pre(ID3D12GraphicsCommandList2WriteBufferImmediateCommand& c) {
-  if (useAddressPinning_) {
+  if (c.skip || useAddressPinning_) {
     return;
   }
 
@@ -567,7 +667,7 @@ void ReplayCustomizationLayer::pre(ID3D12DeviceCheckFeatureSupportCommand& c) {
 
 void ReplayCustomizationLayer::pre(
     ID3D12Device5GetRaytracingAccelerationStructurePrebuildInfoCommand& c) {
-  if (useAddressPinning_) {
+  if (c.skip || useAddressPinning_) {
     return;
   }
   unsigned inputIndex = 0;
@@ -638,6 +738,9 @@ void ReplayCustomizationLayer::pre(
 }
 
 void ReplayCustomizationLayer::pre(ID3D12Device1CreatePipelineLibraryCommand& c) {
+  if (c.skip) {
+    return;
+  }
   pipelineLibraryService_.createPipelineLibrary(c);
 }
 
@@ -678,11 +781,17 @@ void ReplayCustomizationLayer::pre(ID3D12PipelineLibraryStorePipelineCommand& c)
 }
 
 void ReplayCustomizationLayer::pre(ID3D12DeviceCreateGraphicsPipelineStateCommand& c) {
+  if (c.skip) {
+    return;
+  }
   c.pDesc_.value->CachedPSO.pCachedBlob = nullptr;
   pipelineLibraryService_.createPipelineState(c.ppPipelineState_.key);
 }
 
 void ReplayCustomizationLayer::pre(ID3D12PipelineLibraryLoadGraphicsPipelineCommand& c) {
+  if (c.skip) {
+    return;
+  }
   c.pDesc_.value->CachedPSO.pCachedBlob = nullptr;
   if (c.result_.value != S_OK || manager_.multithreadedShaderCompilation()) {
     return;
@@ -692,11 +801,17 @@ void ReplayCustomizationLayer::pre(ID3D12PipelineLibraryLoadGraphicsPipelineComm
 }
 
 void ReplayCustomizationLayer::pre(ID3D12DeviceCreateComputePipelineStateCommand& c) {
+  if (c.skip) {
+    return;
+  }
   c.pDesc_.value->CachedPSO.pCachedBlob = nullptr;
   pipelineLibraryService_.createPipelineState(c.ppPipelineState_.key);
 }
 
 void ReplayCustomizationLayer::pre(ID3D12PipelineLibraryLoadComputePipelineCommand& c) {
+  if (c.skip) {
+    return;
+  }
   c.pDesc_.value->CachedPSO.pCachedBlob = nullptr;
   if (c.result_.value != S_OK || manager_.multithreadedShaderCompilation()) {
     return;
@@ -706,11 +821,17 @@ void ReplayCustomizationLayer::pre(ID3D12PipelineLibraryLoadComputePipelineComma
 }
 
 void ReplayCustomizationLayer::pre(ID3D12Device2CreatePipelineStateCommand& c) {
+  if (c.skip) {
+    return;
+  }
   removeCachedPSO(*c.pDesc_.value);
   pipelineLibraryService_.createPipelineState(c.ppPipelineState_.key);
 }
 
 void ReplayCustomizationLayer::pre(ID3D12PipelineLibrary1LoadPipelineCommand& c) {
+  if (c.skip) {
+    return;
+  }
   removeCachedPSO(*c.pDesc_.value);
   if (c.result_.value != S_OK || manager_.multithreadedShaderCompilation()) {
     return;
@@ -736,10 +857,16 @@ void ReplayCustomizationLayer::pre(
 }
 
 void ReplayCustomizationLayer::pre(ID3D12DeviceGetAdapterLuidCommand& c) {
+  if (c.skip) {
+    return;
+  }
   manager_.getAdapterService().setCaptureAdapterLuid(c.object_.key, c.result_.value);
 }
 
 void ReplayCustomizationLayer::post(ID3D12DeviceGetAdapterLuidCommand& c) {
+  if (c.skip) {
+    return;
+  }
   manager_.getAdapterService().setCurrentAdapterLuid(c.object_.key, c.result_.value);
 }
 
@@ -750,6 +877,9 @@ void ReplayCustomizationLayer::pre(IDXGIAdapterEnumOutputsCommand& c) {
 }
 
 void ReplayCustomizationLayer::pre(IDXGIAdapterGetDescCommand& c) {
+  if (c.skip) {
+    return;
+  }
   manager_.getAdapterService().setCaptureAdapterLuid(c.object_.key, c.pDesc_.value->AdapterLuid);
   if (!c.object_.value) {
     c.skip = true;
@@ -757,6 +887,9 @@ void ReplayCustomizationLayer::pre(IDXGIAdapterGetDescCommand& c) {
 }
 
 void ReplayCustomizationLayer::post(IDXGIAdapterGetDescCommand& c) {
+  if (c.skip) {
+    return;
+  }
   manager_.getAdapterService().setCurrentAdapterLuid(c.object_.key, c.pDesc_.value->AdapterLuid);
 }
 
@@ -767,6 +900,9 @@ void ReplayCustomizationLayer::pre(IDXGIAdapterCheckInterfaceSupportCommand& c) 
 }
 
 void ReplayCustomizationLayer::pre(IDXGIAdapter1GetDesc1Command& c) {
+  if (c.skip) {
+    return;
+  }
   manager_.getAdapterService().setCaptureAdapterLuid(c.object_.key, c.pDesc_.value->AdapterLuid);
   if (!c.object_.value) {
     c.skip = true;
@@ -774,10 +910,16 @@ void ReplayCustomizationLayer::pre(IDXGIAdapter1GetDesc1Command& c) {
 }
 
 void ReplayCustomizationLayer::post(IDXGIAdapter1GetDesc1Command& c) {
+  if (c.skip) {
+    return;
+  }
   manager_.getAdapterService().setCurrentAdapterLuid(c.object_.key, c.pDesc_.value->AdapterLuid);
 }
 
 void ReplayCustomizationLayer::pre(IDXGIAdapter2GetDesc2Command& c) {
+  if (c.skip) {
+    return;
+  }
   manager_.getAdapterService().setCaptureAdapterLuid(c.object_.key, c.pDesc_.value->AdapterLuid);
   if (!c.object_.value) {
     c.skip = true;
@@ -785,10 +927,16 @@ void ReplayCustomizationLayer::pre(IDXGIAdapter2GetDesc2Command& c) {
 }
 
 void ReplayCustomizationLayer::post(IDXGIAdapter2GetDesc2Command& c) {
+  if (c.skip) {
+    return;
+  }
   manager_.getAdapterService().setCurrentAdapterLuid(c.object_.key, c.pDesc_.value->AdapterLuid);
 }
 
 void ReplayCustomizationLayer::pre(IDXGIAdapter4GetDesc3Command& c) {
+  if (c.skip) {
+    return;
+  }
   manager_.getAdapterService().setCaptureAdapterLuid(c.object_.key, c.pDesc_.value->AdapterLuid);
   if (!c.object_.value) {
     c.skip = true;
@@ -796,6 +944,9 @@ void ReplayCustomizationLayer::pre(IDXGIAdapter4GetDesc3Command& c) {
 }
 
 void ReplayCustomizationLayer::post(IDXGIAdapter4GetDesc3Command& c) {
+  if (c.skip) {
+    return;
+  }
   manager_.getAdapterService().setCurrentAdapterLuid(c.object_.key, c.pDesc_.value->AdapterLuid);
 }
 
@@ -983,6 +1134,9 @@ void ReplayCustomizationLayer::pre(ID3D12Device12GetResourceAllocationInfo3Comma
 }
 
 void ReplayCustomizationLayer::pre(ID3D12GraphicsCommandListResolveQueryDataCommand& c) {
+  if (c.skip) {
+    return;
+  }
   if (Configurator::Get().directx.player.skipResolveQueryData) {
     c.skip = true;
     if (c.Type_.value == D3D12_QUERY_TYPE_OCCLUSION ||
@@ -997,6 +1151,9 @@ void ReplayCustomizationLayer::pre(ID3D12GraphicsCommandListResolveQueryDataComm
 }
 
 void ReplayCustomizationLayer::pre(ID3D12DeviceCreateCommandQueueCommand& c) {
+  if (c.skip) {
+    return;
+  }
   if (isStateRestoreKey(c.ppCommandQueue_.key) &&
       c.pDesc_.value->Type == D3D12_COMMAND_LIST_TYPE_COPY &&
       (!Configurator::Get().directx.player.useCopyQueueOnRestore || afterAddRef_)) {
@@ -1006,6 +1163,9 @@ void ReplayCustomizationLayer::pre(ID3D12DeviceCreateCommandQueueCommand& c) {
 }
 
 void ReplayCustomizationLayer::pre(ID3D12DeviceCreateCommandAllocatorCommand& c) {
+  if (c.skip) {
+    return;
+  }
   if (isStateRestoreKey(c.ppCommandAllocator_.key) &&
       c.type_.value == D3D12_COMMAND_LIST_TYPE_COPY &&
       (!Configurator::Get().directx.player.useCopyQueueOnRestore || afterAddRef_)) {
@@ -1015,6 +1175,9 @@ void ReplayCustomizationLayer::pre(ID3D12DeviceCreateCommandAllocatorCommand& c)
 }
 
 void ReplayCustomizationLayer::pre(ID3D12DeviceCreateCommandListCommand& c) {
+  if (c.skip) {
+    return;
+  }
   if (isStateRestoreKey(c.ppCommandList_.key) && c.type_.value == D3D12_COMMAND_LIST_TYPE_COPY &&
       (!Configurator::Get().directx.player.useCopyQueueOnRestore || afterAddRef_)) {
     // AddRefs are at the end of subcapture state restore but before back buffer restore
@@ -1023,6 +1186,9 @@ void ReplayCustomizationLayer::pre(ID3D12DeviceCreateCommandListCommand& c) {
 }
 
 void ReplayCustomizationLayer::pre(IDMLDeviceCreateBindingTableCommand& c) {
+  if (c.skip) {
+    return;
+  }
   c.desc_.value->CPUDescriptorHandle.ptr =
       manager_.getDescriptorHandleService().getDescriptorHandle(
           c.desc_.data.cpuDescHandleKey, ReplayDescriptorHandleService::HandleType::CpuHandle,
@@ -1035,6 +1201,9 @@ void ReplayCustomizationLayer::pre(IDMLDeviceCreateBindingTableCommand& c) {
 }
 
 void ReplayCustomizationLayer::pre(IDMLBindingTableResetCommand& c) {
+  if (c.skip) {
+    return;
+  }
   c.desc_.value->CPUDescriptorHandle.ptr =
       manager_.getDescriptorHandleService().getDescriptorHandle(
           c.desc_.data.cpuDescHandleKey, ReplayDescriptorHandleService::HandleType::CpuHandle,
@@ -1051,6 +1220,9 @@ void ReplayCustomizationLayer::pre(D3D12CreateVersionedRootSignatureDeserializer
 }
 
 void ReplayCustomizationLayer::pre(ID3D12GraphicsCommandList4BeginRenderPassCommand& c) {
+  if (c.skip) {
+    return;
+  }
   for (unsigned i = 0; i < c.NumRenderTargets_.value; ++i) {
     c.pRenderTargets_.value[i].cpuDescriptor.ptr =
         manager_.getDescriptorHandleService().getDescriptorHandle(
@@ -1068,7 +1240,7 @@ void ReplayCustomizationLayer::pre(ID3D12GraphicsCommandList4BeginRenderPassComm
 
 void ReplayCustomizationLayer::pre(
     ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c) {
-  if (useAddressPinning_) {
+  if (c.skip || useAddressPinning_) {
     if (isStateRestoreKey(c.pDesc_.scratchAccelerationStructureKey)) {
       c.pDesc_.value->ScratchAccelerationStructureData =
           manager_.getGpuAddressService().getGpuAddress(
@@ -1166,7 +1338,7 @@ void ReplayCustomizationLayer::pre(
 
 void ReplayCustomizationLayer::pre(
     ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& c) {
-  if (useAddressPinning_) {
+  if (c.skip || useAddressPinning_) {
     return;
   }
   c.DestAccelerationStructureData_.value = manager_.getGpuAddressService().getGpuAddress(
@@ -1177,7 +1349,7 @@ void ReplayCustomizationLayer::pre(
 
 void ReplayCustomizationLayer::pre(
     ID3D12GraphicsCommandList4EmitRaytracingAccelerationStructurePostbuildInfoCommand& c) {
-  if (useAddressPinning_) {
+  if (c.skip || useAddressPinning_) {
     return;
   }
   c.pDesc_.value->DestBuffer = manager_.getGpuAddressService().getGpuAddress(
@@ -1211,7 +1383,7 @@ void ReplayCustomizationLayer::pre(ID3D12SDKConfigurationSetSDKVersionCommand& c
 
 void ReplayCustomizationLayer::pre(
     ID3D12GraphicsCommandListPreviewConvertLinearAlgebraMatrixCommand& c) {
-  if (useAddressPinning_) {
+  if (c.skip || useAddressPinning_) {
     return;
   }
   if (c.pDesc_.value) {
@@ -1236,7 +1408,7 @@ void ReplayCustomizationLayer::pre(INTC_D3D12_SetApplicationInfoCommand& c) {
 }
 
 void ReplayCustomizationLayer::pre(INTC_D3D12_CreateDeviceExtensionContextCommand& c) {
-  if (!c.pExtensionAppInfo_.value) {
+  if (c.skip || !c.pExtensionAppInfo_.value) {
     return;
   }
 
@@ -1258,7 +1430,7 @@ void ReplayCustomizationLayer::pre(INTC_D3D12_CreateDeviceExtensionContextComman
 }
 
 void ReplayCustomizationLayer::pre(INTC_D3D12_CreateDeviceExtensionContext1Command& c) {
-  if (!c.pExtensionAppInfo_.value) {
+  if (c.skip || !c.pExtensionAppInfo_.value) {
     return;
   }
 
@@ -1280,14 +1452,14 @@ void ReplayCustomizationLayer::pre(INTC_D3D12_GetSupportedVersionsCommand& c) {
 }
 
 void ReplayCustomizationLayer::pre(NvAPI_D3D12_SetCreatePipelineStateOptionsCommand& c) {
-  if (c.result_.value != NVAPI_OK || !manager_.multithreadedShaderCompilation()) {
+  if (c.skip || c.result_.value != NVAPI_OK || !manager_.multithreadedShaderCompilation()) {
     return;
   }
   manager_.flushMultithreadedShaderCompilation();
 }
 
 void ReplayCustomizationLayer::pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& c) {
-  if (c.result_.value != NVAPI_OK || !manager_.multithreadedShaderCompilation()) {
+  if (c.skip || c.result_.value != NVAPI_OK || !manager_.multithreadedShaderCompilation()) {
     return;
   }
 
@@ -1297,7 +1469,7 @@ void ReplayCustomizationLayer::pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& 
 }
 
 void ReplayCustomizationLayer::pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& c) {
-  if (c.result_.value != NVAPI_OK || !manager_.multithreadedShaderCompilation()) {
+  if (c.skip || c.result_.value != NVAPI_OK || !manager_.multithreadedShaderCompilation()) {
     return;
   }
 
@@ -1316,7 +1488,7 @@ void ReplayCustomizationLayer::pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThre
 }
 
 void ReplayCustomizationLayer::pre(NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& c) {
-  if (useAddressPinning_) {
+  if (c.skip || useAddressPinning_) {
     return;
   }
 
@@ -1450,7 +1622,7 @@ void ReplayCustomizationLayer::pre(NvAPI_D3D12_BuildRaytracingAccelerationStruct
 }
 
 void ReplayCustomizationLayer::pre(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& c) {
-  if (useAddressPinning_) {
+  if (c.skip || useAddressPinning_) {
     return;
   }
   if (c.pParams.value->pDesc) {
@@ -1481,7 +1653,7 @@ void ReplayCustomizationLayer::pre(NvAPI_D3D12_BuildRaytracingOpacityMicromapArr
 
 void ReplayCustomizationLayer::pre(
     NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand& c) {
-  if (useAddressPinning_) {
+  if (c.skip || useAddressPinning_) {
     return;
   }
   if (c.pParams.value->pDesc) {

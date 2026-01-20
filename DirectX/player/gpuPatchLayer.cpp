@@ -46,6 +46,9 @@ GpuPatchLayer::~GpuPatchLayer() {
 }
 
 void GpuPatchLayer::pre(IUnknownReleaseCommand& c) {
+  if (c.skip) {
+    return;
+  }
   if (c.result_.value == 0) {
     addressService_.destroyInterface(c.object_.key);
     descriptorHandleService_.destroyHeap(c.object_.key);
@@ -87,6 +90,9 @@ void GpuPatchLayer::pre(IUnknownReleaseCommand& c) {
 }
 
 void GpuPatchLayer::pre(ID3D12ResourceGetGPUVirtualAddressCommand& c) {
+  if (c.skip) {
+    return;
+  }
   D3D12_RESOURCE_DESC desc = c.object_.value->GetDesc();
   if (desc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER) {
     addressService_.addGpuCaptureAddress(c.object_.value, c.object_.key, desc.Width,
@@ -96,6 +102,9 @@ void GpuPatchLayer::pre(ID3D12ResourceGetGPUVirtualAddressCommand& c) {
 }
 
 void GpuPatchLayer::post(ID3D12ResourceGetGPUVirtualAddressCommand& c) {
+  if (c.skip) {
+    return;
+  }
   D3D12_RESOURCE_DESC desc = c.object_.value->GetDesc();
   if (desc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER) {
     addressService_.addGpuPlayerAddress(c.object_.value, c.object_.key, desc.Width,
@@ -104,6 +113,9 @@ void GpuPatchLayer::post(ID3D12ResourceGetGPUVirtualAddressCommand& c) {
 }
 
 void GpuPatchLayer::pre(ID3D12StateObjectPropertiesGetShaderIdentifierCommand& c) {
+  if (c.skip) {
+    return;
+  }
   CapturePlayerShaderIdentifierService::ShaderIdentifier shaderIdentifier;
   memcpy(shaderIdentifier.data(), c.result_.value, shaderIdentifier.size());
   shaderIdentifierService_.addCaptureShaderIdentifier(c.key, shaderIdentifier,
@@ -111,21 +123,30 @@ void GpuPatchLayer::pre(ID3D12StateObjectPropertiesGetShaderIdentifierCommand& c
 }
 
 void GpuPatchLayer::post(ID3D12StateObjectPropertiesGetShaderIdentifierCommand& c) {
+  if (c.skip) {
+    return;
+  }
   CapturePlayerShaderIdentifierService::ShaderIdentifier shaderIdentifier;
   memcpy(shaderIdentifier.data(), c.result_.value, shaderIdentifier.size());
   shaderIdentifierService_.addPlayerShaderIdentifier(c.key, shaderIdentifier, c.pExportName_.value);
 }
 
 void GpuPatchLayer::pre(ID3D12DescriptorHeapGetGPUDescriptorHandleForHeapStartCommand& c) {
+  if (c.skip) {
+    return;
+  }
   descriptorHandleService_.addCaptureHandle(c.object_.value, c.object_.key, c.result_.value);
 }
 
 void GpuPatchLayer::post(ID3D12DescriptorHeapGetGPUDescriptorHandleForHeapStartCommand& c) {
+  if (c.skip) {
+    return;
+  }
   descriptorHandleService_.addPlayerHandle(c.object_.key, c.result_.value);
 }
 
 void GpuPatchLayer::pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c) {
-  if (useAddressPinning_) {
+  if (c.skip || useAddressPinning_) {
     return;
   }
 
@@ -486,6 +507,9 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStr
 }
 
 void GpuPatchLayer::pre(ID3D12GraphicsCommandList4DispatchRaysCommand& c) {
+  if (c.skip) {
+    return;
+  }
   ID3D12GraphicsCommandList* commandList = c.object_.value;
   if (!initialized_) {
     initialize(commandList);
@@ -715,46 +739,79 @@ void GpuPatchLayer::waitForFence(ID3D12Fence* fence, unsigned fenceValue) {
 }
 
 void GpuPatchLayer::post(ID3D12GraphicsCommandListSetComputeRootSignatureCommand& c) {
+  if (c.skip) {
+    return;
+  }
   commandListService_.storeCommand(c);
 }
 
 void GpuPatchLayer::post(ID3D12GraphicsCommandListSetComputeRootDescriptorTableCommand& c) {
+  if (c.skip) {
+    return;
+  }
   commandListService_.storeCommand(c);
 }
 
 void GpuPatchLayer::post(ID3D12GraphicsCommandListSetComputeRoot32BitConstantCommand& c) {
+  if (c.skip) {
+    return;
+  }
   commandListService_.storeCommand(c);
 }
 
 void GpuPatchLayer::post(ID3D12GraphicsCommandListSetComputeRoot32BitConstantsCommand& c) {
+  if (c.skip) {
+    return;
+  }
   commandListService_.storeCommand(c);
 }
 
 void GpuPatchLayer::post(ID3D12GraphicsCommandListSetComputeRootShaderResourceViewCommand& c) {
+  if (c.skip) {
+    return;
+  }
   commandListService_.storeCommand(c);
 }
 
 void GpuPatchLayer::post(ID3D12GraphicsCommandListSetComputeRootConstantBufferViewCommand& c) {
+  if (c.skip) {
+    return;
+  }
   commandListService_.storeCommand(c);
 }
 
 void GpuPatchLayer::post(ID3D12GraphicsCommandListSetComputeRootUnorderedAccessViewCommand& c) {
+  if (c.skip) {
+    return;
+  }
   commandListService_.storeCommand(c);
 }
 
 void GpuPatchLayer::post(ID3D12GraphicsCommandList4SetPipelineState1Command& c) {
+  if (c.skip) {
+    return;
+  }
   commandListService_.storeCommand(c);
 }
 
 void GpuPatchLayer::post(ID3D12DeviceCreateCommandListCommand& c) {
+  if (c.skip) {
+    return;
+  }
   commandListService_.storeCommand(c);
 }
 
 void GpuPatchLayer::post(ID3D12GraphicsCommandListSetPipelineStateCommand& c) {
+  if (c.skip) {
+    return;
+  }
   commandListService_.storeCommand(c);
 }
 
 void GpuPatchLayer::post(ID3D12GraphicsCommandListResetCommand& c) {
+  if (c.skip) {
+    return;
+  }
   commandListService_.reset(c.object_.key, c.pInitialState_.value);
 }
 
@@ -1066,7 +1123,9 @@ void GpuPatchLayer::createMappingBufferObjects(ID3D12Device* device, unsigned ma
 }
 
 void GpuPatchLayer::pre(ID3D12CommandQueueExecuteCommandListsCommand& c) {
-
+  if (c.skip) {
+    return;
+  }
   std::vector<unsigned> mappingBuffers;
   for (unsigned key : c.ppCommandLists_.keys) {
     auto it = currentMappingsByCommandList_.find(key);
@@ -1172,7 +1231,9 @@ void GpuPatchLayer::pre(ID3D12CommandQueueExecuteCommandListsCommand& c) {
 }
 
 void GpuPatchLayer::post(ID3D12CommandQueueExecuteCommandListsCommand& c) {
-
+  if (c.skip) {
+    return;
+  }
   for (unsigned key : c.ppCommandLists_.keys) {
     auto itMappings = currentMappingsByCommandList_.find(key);
     if (itMappings != currentMappingsByCommandList_.end()) {
@@ -1228,31 +1289,52 @@ void GpuPatchLayer::post(ID3D12CommandQueueExecuteCommandListsCommand& c) {
 }
 
 void GpuPatchLayer::post(ID3D12CommandQueueWaitCommand& c) {
+  if (c.skip) {
+    return;
+  }
   dumpService_.commandQueueWait(c.key, c.object_.key, c.pFence_.key, c.Value_.value);
 }
 
 void GpuPatchLayer::post(ID3D12CommandQueueSignalCommand& c) {
+  if (c.skip) {
+    return;
+  }
   dumpService_.commandQueueSignal(c.key, c.object_.key, c.pFence_.key, c.Value_.value);
 }
 
 void GpuPatchLayer::post(ID3D12FenceSignalCommand& c) {
+  if (c.skip) {
+    return;
+  }
   dumpService_.fenceSignal(c.key, c.object_.key, c.Value_.value);
 }
 
 void GpuPatchLayer::post(ID3D12DeviceCreateFenceCommand& c) {
+  if (c.skip) {
+    return;
+  }
   dumpService_.fenceSignal(c.key, c.ppFence_.key, c.InitialValue_.value);
 }
 
 void GpuPatchLayer::post(ID3D12Device3EnqueueMakeResidentCommand& c) {
+  if (c.skip) {
+    return;
+  }
   dumpService_.fenceSignal(c.key, c.pFenceToSignal_.key, c.FenceValueToSignal_.value);
 }
 
 void GpuPatchLayer::post(ID3D12DeviceCreateCommandSignatureCommand& c) {
+  if (c.skip) {
+    return;
+  }
   commandSignatures_[c.ppvCommandSignature_.key].reset(
       new PointerArgument<D3D12_COMMAND_SIGNATURE_DESC>(c.pDesc_));
 }
 
 void GpuPatchLayer::pre(ID3D12GraphicsCommandListExecuteIndirectCommand& c) {
+  if (c.skip) {
+    return;
+  }
   executeIndirectLastArgumentBufferOffset_ = c.ArgumentBufferOffset_.value;
 
   auto it = commandSignatures_.find(c.pCommandSignature_.key);
@@ -1487,11 +1569,15 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandListExecuteIndirectCommand& c) {
 }
 
 void GpuPatchLayer::post(ID3D12GraphicsCommandListExecuteIndirectCommand& c) {
+  if (c.skip) {
+    return;
+  }
   c.ArgumentBufferOffset_.value = executeIndirectLastArgumentBufferOffset_;
 }
 
 void GpuPatchLayer::post(ID3D12DeviceCreatePlacedResourceCommand& c) {
-  if (c.result_.value != S_OK || c.pDesc_.value->Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
+  if (c.skip || c.result_.value != S_OK ||
+      c.pDesc_.value->Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
     return;
   }
   addressService_.createPlacedResource(c.pHeap_.key, c.ppvResource_.key, c.pDesc_.value->Flags);
@@ -1499,7 +1585,8 @@ void GpuPatchLayer::post(ID3D12DeviceCreatePlacedResourceCommand& c) {
 }
 
 void GpuPatchLayer::post(ID3D12Device8CreatePlacedResource1Command& c) {
-  if (c.result_.value != S_OK || c.pDesc_.value->Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
+  if (c.skip || c.result_.value != S_OK ||
+      c.pDesc_.value->Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
     return;
   }
   addressService_.createPlacedResource(c.pHeap_.key, c.ppvResource_.key, c.pDesc_.value->Flags);
@@ -1507,7 +1594,8 @@ void GpuPatchLayer::post(ID3D12Device8CreatePlacedResource1Command& c) {
 }
 
 void GpuPatchLayer::post(ID3D12Device10CreatePlacedResource2Command& c) {
-  if (c.result_.value != S_OK || c.pDesc_.value->Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
+  if (c.skip || c.result_.value != S_OK ||
+      c.pDesc_.value->Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
     return;
   }
   addressService_.createPlacedResource(c.pHeap_.key, c.ppvResource_.key, c.pDesc_.value->Flags);
@@ -1515,55 +1603,65 @@ void GpuPatchLayer::post(ID3D12Device10CreatePlacedResource2Command& c) {
 }
 
 void GpuPatchLayer::post(ID3D12DeviceCreateCommittedResourceCommand& c) {
-  if (c.result_.value != S_OK || c.pDesc_.value->Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
+  if (c.skip || c.result_.value != S_OK ||
+      c.pDesc_.value->Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
     return;
   }
   resourceStateTracker_.addResource(c.ppvResource_.key, c.InitialResourceState_.value);
 }
 
 void GpuPatchLayer::post(ID3D12Device4CreateCommittedResource1Command& c) {
-  if (c.result_.value != S_OK || c.pDesc_.value->Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
+  if (c.skip || c.result_.value != S_OK ||
+      c.pDesc_.value->Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
     return;
   }
   resourceStateTracker_.addResource(c.ppvResource_.key, c.InitialResourceState_.value);
 }
 
 void GpuPatchLayer::post(ID3D12Device8CreateCommittedResource2Command& c) {
-  if (c.result_.value != S_OK || c.pDesc_.value->Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
+  if (c.skip || c.result_.value != S_OK ||
+      c.pDesc_.value->Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
     return;
   }
   resourceStateTracker_.addResource(c.ppvResource_.key, c.InitialResourceState_.value);
 }
 
 void GpuPatchLayer::post(ID3D12Device10CreateCommittedResource3Command& c) {
-  if (c.result_.value != S_OK || c.pDesc_.value->Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
+  if (c.skip || c.result_.value != S_OK ||
+      c.pDesc_.value->Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
     return;
   }
   resourceStateTracker_.addResource(c.ppvResource_.key, c.InitialLayout_.value);
 }
 
 void GpuPatchLayer::post(ID3D12DeviceCreateReservedResourceCommand& c) {
-  if (c.result_.value != S_OK || c.pDesc_.value->Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
+  if (c.skip || c.result_.value != S_OK ||
+      c.pDesc_.value->Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
     return;
   }
   resourceStateTracker_.addResource(c.ppvResource_.key, c.InitialState_.value);
 }
 
 void GpuPatchLayer::post(ID3D12Device4CreateReservedResource1Command& c) {
-  if (c.result_.value != S_OK || c.pDesc_.value->Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
+  if (c.skip || c.result_.value != S_OK ||
+      c.pDesc_.value->Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
     return;
   }
   resourceStateTracker_.addResource(c.ppvResource_.key, c.InitialState_.value);
 }
 
 void GpuPatchLayer::post(ID3D12Device10CreateReservedResource2Command& c) {
-  if (c.result_.value != S_OK || c.pDesc_.value->Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
+  if (c.skip || c.result_.value != S_OK ||
+      c.pDesc_.value->Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
     return;
   }
   resourceStateTracker_.addResource(c.ppvResource_.key, c.InitialLayout_.value);
 }
 
 void GpuPatchLayer::post(ID3D12GraphicsCommandListResourceBarrierCommand& c) {
+  if (c.skip) {
+    return;
+  }
   resourceStateTracker_.resourceBarrier(c.object_.value, c.pBarriers_.value, c.NumBarriers_.value,
                                         c.pBarriers_.resourceKeys.data());
 }
