@@ -296,7 +296,6 @@ void StateTrackingService::restoreReferenceCount() {
         state->creationCommand->getId() == CommandId::ID_CREATEDXGIFACTORY ||
         state->creationCommand->getId() == CommandId::ID_CREATEDXGIFACTORY1 ||
         state->creationCommand->getId() == CommandId::ID_CREATEDXGIFACTORY2 ||
-        state->creationCommand->getId() == CommandId::ID_IDXGISWAPCHAIN_GETBUFFER ||
         state->creationCommand->getId() == CommandId::ID_IDXGIADAPTER_ENUMOUTPUTS ||
         state->creationCommand->getId() == CommandId::ID_ID3D12DEVICE_CREATEROOTSIGNATURE ||
         state->creationCommand->getId() == CommandId::ID_ID3D12DEVICE1_CREATEPIPELINELIBRARY ||
@@ -306,6 +305,9 @@ void StateTrackingService::restoreReferenceCount() {
             CommandId::ID_ID3D12PIPELINELIBRARY_LOADCOMPUTEPIPELINE ||
         state->creationCommand->getId() == CommandId::ID_ID3D12PIPELINELIBRARY1_LOADPIPELINE) {
       refCount = state->refCount;
+    } else if (state->creationCommand->getId() == CommandId::ID_IDXGISWAPCHAIN_GETBUFFER) {
+      refCount = std::max(
+          state->refCount - static_cast<int>(swapChainService_.getBackBuffersCount()) + 1, 1);
     } else {
       state->object->AddRef();
       refCount = state->object->Release();

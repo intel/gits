@@ -225,6 +225,9 @@ private:
     void restoreBackBufferSequence(bool commandListSubcapture);
     void recordSwapChainPresent();
     void addBackBuffer(unsigned buffer, unsigned resourceKey, ID3D12Resource* resource);
+    unsigned getBackBuffersCount() {
+      return backBuffersCount_;
+    }
 
   private:
     StateTrackingService& stateService_;
