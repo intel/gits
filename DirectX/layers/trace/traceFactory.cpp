@@ -23,7 +23,6 @@ namespace DirectX {
 
 TraceFactory::TraceFactory() {
   std::filesystem::path outputTracePath = Configurator::Get().common.player.outputTracePath;
-  outputTracePath.remove_filename();
 
   if (!outputTracePath.empty() && !std::filesystem::exists(outputTracePath)) {
     std::filesystem::create_directory(outputTracePath);

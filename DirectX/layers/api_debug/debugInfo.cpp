@@ -321,7 +321,6 @@ void DebugInfo::initDredLog() {
   }
 
   std::filesystem::path outputTracePath = Configurator::Get().common.player.outputTracePath;
-  outputTracePath.remove_filename();
   std::string streamDir = Configurator::Get().common.player.streamDir.filename().string();
   std::string filenameBase = outputTracePath.string() + streamDir + "_dred";
   std::string fileNum;

@@ -354,7 +354,7 @@ Configuration:
             Type: std::filesystem::path
             Default: ""
             Arguments: [outputTracePath]
-            Description: Specifies file path where gits traces will be stored.
+            Description: Specifies directory path where gits traces will be stored.
           - Name: logFncs
             Type: bool
             Default: false
