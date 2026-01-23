@@ -12,6 +12,7 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <yaml-cpp/yaml.h>
 
 #include "configurationAuto.h"
 #include "platform.h"
@@ -88,8 +89,12 @@ public: // Singleton
   static const Configuration& Get();
   static Configuration& GetMutable();
 
-  static bool LoadInto(const std::filesystem::path& filepath, Configuration* config);
+  static bool LoadInto(const YAML::Node& node, Configuration* configObj);
+  static bool LoadInto(const std::filesystem::path& filepath, Configuration* configObj);
+  static bool LoadInto(const std::string& config, Configuration* configObj);
   bool Load(const std::filesystem::path& filepath);
+
+  bool Load(const std::string& config);
 
   static bool Save(const std::filesystem::path& filepath, const Configuration& config);
 

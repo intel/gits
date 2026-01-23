@@ -38,17 +38,18 @@ void SubcapturePanel::Render() {
   ImGui::SameLine();
 
   ImGui::SetCursorPosX(indent);
-  ImGui::SetNextItemWidth(widthLabel / 2.0f);
+  ImGui::SetNextItemWidth(widthLabel / 4.0f);
   changed |= ImGui::InputInt(Labels::SUBCAPTURE_START_FRAME, &SubcaptureConfig.StartFrame, 1, 10);
   ImGui::SameLine();
-  ImGui::SetNextItemWidth(widthLabel / 2.0f);
+  ImGui::SetNextItemWidth(widthLabel / 4.0f);
   changed |= ImGui::InputInt(Labels::SUBCAPTURE_END_FRAME, &SubcaptureConfig.EndFrame, 1, 10);
 
   ImGui::SetCursorPosX(indent);
   changed |= ImGui::Checkbox(Labels::SUBCAPTURE_OPTIMIZE, &SubcaptureConfig.Optimize);
 
   ImGui::SetCursorPosX(indent);
-  changed |= ImGui::Checkbox(Labels::SUBCAPTURE_OPTIMIZE_RAY, &SubcaptureConfig.OptimizeRay);
+  changed |= ImGui::Checkbox(Labels::SUBCAPTURE_EXECUTION_SERIALIZATION,
+                             &SubcaptureConfig.ExecutionSerialization);
 
   RowSubcapturePath();
 
@@ -65,13 +66,15 @@ const std::string SubcapturePanel::GetCLIArguments() const {
     args += "--DirectX.Features.Subcapture.Enabled ";
     args += "--DirectX.Features.Subcapture.Frames=\"" + SubcaptureConfig.Range() + "\" ";
     if (!context.SubcapturePath.empty()) {
-      args += "--Common.Player.SubcapturePath=\"" + context.SubcapturePath.string() + "\" ";
+      // We append the special GITS directory name format to the subcapture directory path
+      args += "--Common.Player.SubcapturePath=\"" + (context.SubcapturePath / "%f%_%r%").string() +
+              "\" ";
     }
-    if (SubcaptureConfig.Optimize) {
-      args += "--DirectX.Features.Subcapture.Optimize ";
+    if (!SubcaptureConfig.Optimize) {
+      args += "--DirectX.Features.Subcapture.Optimize.Value=0 ";
     }
-    if (SubcaptureConfig.OptimizeRay) {
-      args += "--DirectX.Features.Subcapture.OptimizeRaytracing ";
+    if (SubcaptureConfig.ExecutionSerialization) {
+      args += "--DirectX.Features.Subcapture.ExecutionSerialization ";
     }
   }
   return args;

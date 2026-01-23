@@ -8,12 +8,37 @@
 
 #include "mainWindow.h"
 
+#include "tabGroup.h"
 #include "labels.h"
 #include "captureActions.h"
 #include "launcherActions.h"
 #include "resource.h"
 
 namespace {
+static const auto& MODE_BUTTONS() {
+  static const std::map<gits::gui::MainWindow::MODE_BUTTON_ITEMS,
+                        gits::ImGuiHelper::ButtonGroupItem>
+      items = {
+          {gits::gui::MainWindow::MODE_BUTTON_ITEMS::PLAYBACK,
+           {"Playback", "Playback a gits stream"}},
+          {gits::gui::MainWindow::MODE_BUTTON_ITEMS::CAPTURE, {"Capture", "Capture a gits stream"}},
+          {gits::gui::MainWindow::MODE_BUTTON_ITEMS::SUBCAPTURE,
+           {"Subcapture", "Subcapture a gits stream"}},
+      };
+  return items;
+}
+
+static const auto& MODE_BUTTONS_VEC() {
+  static const std::vector<std::string> values([] {
+    std::vector<std::string> result;
+    for (const auto& pair : MODE_BUTTONS()) {
+      result.push_back(pair.second.label);
+    }
+    return result;
+  }());
+  return values;
+}
+
 void RenderPlaceholder(const gits::gui::Context& context) {
   // Renders a placeholder text all over the screen
   auto msg = std::string();
@@ -66,6 +91,7 @@ MainWindow::MainWindow(gits::gui::ISharedContext& sharedContext)
   playbackPanel = std::make_unique<gits::gui::PlaybackPanel>(sharedContext);
   capturePanel = std::make_unique<gits::gui::CapturePanel>(sharedContext);
   subcapturePanel = std::make_unique<gits::gui::SubcapturePanel>(sharedContext);
+  tabsToolBar = std::make_unique<ImGuiHelper::TabGroup<MODE_BUTTON_ITEMS>>(MODE_BUTTONS());
 };
 
 MainWindow::~MainWindow() {
@@ -86,6 +112,10 @@ const std::string MainWindow::GetCLIArguments() const {
   return args;
 }
 
+const CapturePanel::CaptureCleanupOptions MainWindow::GetCleanupOptions() const {
+  return capturePanel->GetSelectedCleanupOptions();
+}
+
 void MainWindow::Render() {
   const auto& context = getSharedContext<Context>();
 
@@ -101,13 +131,7 @@ void MainWindow::Render() {
 
   ImGui::SameLine();
 
-  // Position the ModeSelectionButtons in the center
-  float windowWidth = ImGui::GetWindowWidth();
-  float buttonsWidth = ImGuiHelper::WidthOf(ImGuiHelper::Widgets::RadioButton, Labels::PLAYBACK) +
-                       ImGuiHelper::WidthOf(ImGuiHelper::Widgets::RadioButton, Labels::CAPTURE) +
-                       ImGuiHelper::WidthOf(ImGuiHelper::Widgets::RadioButton, Labels::SUBCAPTURE) +
-                       ImGui::GetStyle().ItemSpacing.x;
-  float offsetX = (windowWidth - buttonsWidth) / 2.0f;
+  float offsetX = (ImGui::GetWindowWidth() - tabsToolBar->GetSize().x) / 2.0f;
   ImGui::SetCursorPosX(offsetX);
   ModeSelectionButtons();
   ImGui::SameLine(ImGui::GetWindowWidth() -
@@ -190,6 +214,11 @@ void MainWindow::GITSButton() {
       OpenFolder(context.TargetPath.parent_path());
     }
     ImGui::EndDisabled();
+    ImGui::BeginDisabled(context.CaptureOutputPath.empty());
+    if (ImGui::MenuItem(Labels::GITS_CAPTURE_BUTTON)) {
+      OpenFolder(context.CaptureOutputPath);
+    }
+    ImGui::EndDisabled();
     ImGui::BeginDisabled(context.ScreenshotPath.empty());
     if (ImGui::MenuItem(Labels::GITS_SCREENSHOT_BUTTON)) {
       OpenFolder(context.ScreenshotPath);
@@ -207,6 +236,9 @@ void MainWindow::GITSButton() {
     ImGui::EndDisabled();
 
     ImGui::Separator();
+    if (ImGui::MenuItem(Labels::RESET_BASE_PATHS)) {
+      ResetBasePaths(context);
+    }
     auto versionLabel = std::string(Labels::VERSION) + ": " + APP_VERSION;
     ImGui::MenuItem(versionLabel.c_str());
     ImGui::Separator();
@@ -219,21 +251,23 @@ void MainWindow::GITSButton() {
 
 void MainWindow::ModeSelectionButtons() {
   auto& context = getSharedContext<gui::Context>();
-  int rbModeValue = context.IsPlayback() ? 0 : context.IsCapture() ? 1 : 2;
-  if (ImGui::RadioButton(Labels::PLAYBACK, &rbModeValue, 0)) {
-    context.ChangeMode(gui::Context::Mode::PLAYBACK);
+
+  if (tabsToolBar->Render(true)) {
+    switch (tabsToolBar->Selected()) {
+    case MODE_BUTTON_ITEMS::PLAYBACK: {
+      context.ChangeMode(gui::Context::Mode::PLAYBACK);
+      break;
+    }
+    case MODE_BUTTON_ITEMS::CAPTURE: {
+      context.ChangeMode(gui::Context::Mode::CAPTURE);
+      break;
+    }
+    case MODE_BUTTON_ITEMS::SUBCAPTURE: {
+      context.ChangeMode(gui::Context::Mode::SUBCAPTURE);
+      break;
+    }
+    }
   }
-  ImGuiHelper::AddTooltip(Labels::PLAYBACK_HINT);
-  ImGui::SameLine();
-  if (ImGui::RadioButton(Labels::CAPTURE, &rbModeValue, 1)) {
-    context.ChangeMode(gui::Context::Mode::CAPTURE);
-  }
-  ImGuiHelper::AddTooltip(Labels::CAPTURE_HINT);
-  ImGui::SameLine();
-  if (ImGui::RadioButton(Labels::SUBCAPTURE, &rbModeValue, 2)) {
-    context.ChangeMode(gui::Context::Mode::SUBCAPTURE);
-  }
-  ImGuiHelper::AddTooltip(Labels::SUBCAPTURE_HINT);
 }
 
 void MainWindow::MainActionButton() {
@@ -253,9 +287,6 @@ void MainWindow::MainActionButton() {
       break;
     case Context::MainAction::SUBCAPTURE:
       SubcaptureStream(context);
-      break;
-    case Context::MainAction::STATISTICS:
-      GetTraceStats(context);
       break;
     default:
       break;
@@ -292,11 +323,12 @@ void MainWindow::GITSBaseRow() {
 void MainWindow::GITSPlayerRow() {
   auto& context = getSharedContext<gui::Context>();
 
-  static bool useCustomGITSPlayer = false;
-  ImGui::Checkbox("Custom GITS Player", &useCustomGITSPlayer);
+  if (ImGui::Checkbox("Custom GITS Player", &context.UseCustomGITSPlayer)) {
+    UpdateCLICall(context);
+  }
   ImGuiHelper::AddTooltip("Enable to specify a custom GITS-Player executable path");
 
-  ImGui::BeginDisabled(!useCustomGITSPlayer);
+  ImGui::BeginDisabled(!context.UseCustomGITSPlayer);
   ImGui::SameLine();
 
   auto allocatedWidth =

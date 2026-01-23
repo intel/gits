@@ -32,6 +32,7 @@
 #include "launcherConfig.h"
 #include "ezOptionsPanel.h"
 #include "log.h"
+#include "metaDataPanel.h"
 
 #include <plog/Appenders/IAppender.h>
 #include <plog/Record.h>
@@ -54,7 +55,6 @@ public:
   enum class MainAction {
     PLAYBACK = 0,
     CAPTURE,
-    STATISTICS,
     SUBCAPTURE,
     COUNT
   };
@@ -103,13 +103,23 @@ public:
     COUNT
   };
 
+  enum class MetaDataItems {
+    CONFIG = 0,
+    STATS,
+    DIAGS
+  };
+
   std::unique_ptr<gits::ImGuiHelper::TextEditorWidget> ConfigEditor;
   std::unique_ptr<gits::ImGuiHelper::TextEditorWidget> CLIEditor;
   std::unique_ptr<gits::ImGuiHelper::TextEditorWidget> LogEditor;
   std::unique_ptr<gits::ImGuiHelper::TextEditorWidget> GITSLogEditor;
   std::unique_ptr<gits::ImGuiHelper::TextEditorWidget> TraceInfoEditor;
+  std::unique_ptr<gits::ImGuiHelper::TextEditorWidget> DiagsEditor;
+  std::unique_ptr<gits::ImGuiHelper::TextEditorWidget> TraceConfigEditor;
   std::unique_ptr<gits::ImGuiHelper::TextEditorWidget> TraceStatsEditor;
+
   std::unique_ptr<gits::gui::EzOptionsPanel> EasyOptionsPanel;
+  std::unique_ptr<gits::gui::MetaDataPanel> MetaDataPanel;
 
   std::shared_ptr<MainWindow> TheMainWindow;
 
@@ -117,6 +127,7 @@ public:
 
   ImGuiHelper::TabGroup<SideBarItems>* BtnsSideBar;
   ImGuiHelper::TabGroup<ConfigSectionItems>* BtnsAPI;
+  ImGuiHelper::TabGroup<MetaDataItems>* BtnsMetaData;
 
   Mode AppMode = Mode::PLAYBACK;
   MainAction CurrentMainAction = MainAction::PLAYBACK;
@@ -129,6 +140,7 @@ public:
 
   std::filesystem::path GITSPlayerPath = ".";
   std::filesystem::path GITSBasePath = "";
+  bool UseCustomGITSPlayer = false;
   std::filesystem::path StreamPath = "";
   std::filesystem::path TargetPath = "";
   std::filesystem::path ConfigPath = ".";
@@ -155,8 +167,6 @@ public:
   bool MainActionAllowed();
 
   void GITSLog(const std::string& msg);
-
-  void TraceStats(const std::string& msg);
 
   std::filesystem::path GetPath(Paths path) const;
 

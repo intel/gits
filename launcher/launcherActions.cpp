@@ -14,6 +14,8 @@
 #include "labels.h"
 #include "captureActions.h"
 #include "log.h"
+#include "configurator.h"
+#include "metaDataActions.h"
 
 namespace gits::gui {
 
@@ -46,18 +48,12 @@ const std::string str(FileDialogKeys key) {
   }
 }
 
-bool ValidateGITSConfigFile(std::filesystem::path configPath) {
-  if (!std::filesystem::exists(configPath)) {
-    LOG_ERROR << "Configuration file does not exist: " << configPath;
+bool ValidateGITSConfig(const std::string& config) {
+  const auto result = gits::Configurator::Instance().Load(config);
+  if (!result) {
+    LOG_ERROR << "Error validating configuration from";
     return false;
   }
-
-  //// In the future a more detailed validation can be added here
-  //const auto result = gits::Configurator::Instance().Load(configPath);
-  //if (!result) {
-  //  LOG_ERROR << "Error reading in configuration from: " << configPath;
-  //  return false;
-  //}
 
   return true;
 }
@@ -87,14 +83,22 @@ void UpdateCLICall(gui::Context& context) {
     std::string cliEditorText =
         "# This buffer is write protected, it shows the current command line\n\n";
 
-    cliEditorText += gitsExecutable.string() + "\n";
-    if (!std::filesystem::exists(gitsExecutable)) {
-      cliEditorText += "!!  [Warning: GITS-Player path does not exist]\n";
+    auto executableSpecified = false;
+    if (gitsExecutable.empty()) {
+      cliEditorText += "Error: no GITS-Player specified!\n\n";
+    } else if (!std::filesystem::exists(gitsExecutable)) {
+      cliEditorText += "Error: GITS-Player does not exist\n> " + gitsExecutable.string() + "\n\n";
+    } else {
+      cliEditorText += gitsExecutable.string() + "\n";
+      executableSpecified = true;
     }
-
+    if (!executableSpecified) {
+      cliEditorText += "Arguments for GITS-Player:\n";
+    }
     for (const auto& argument : context.CLIArguments) {
       cliEditorText += "  " + argument + "\n";
     }
+
     context.CLIEditor->SetText(cliEditorText);
     break;
   }
@@ -181,16 +185,6 @@ void SubcaptureStream(gui::Context& context) {
   context.BtnsSideBar->SelectEntry(SideBarItems::LOG);
 }
 
-void GetTraceStats(gui::Context& context) {
-  const auto gitsPlayerPath = context.GetPath(gui::Context::Paths::GITS_PLAYER);
-
-  context.GITSLogEditor->SetText("");
-  FileActions::LaunchExecutableAsync(
-      gitsPlayerPath, {"--stats", context.GetPath(gui::Context::Paths::STREAM).string()},
-      gitsPlayerPath.parent_path(),
-      [&context](const std::string& stats) { context.TraceStats(stats); });
-  context.BtnsSideBar->SelectEntry(SideBarItems::STATS);
-}
 void UpdateConfigSectionPositions(gui::Context* context, const std::vector<std::string>& config) {
   size_t idx = 0;
   for (const auto& item : Labels::CONFIG_SECTIONS()) {
@@ -210,7 +204,15 @@ void UpdateConfigSectionPositions(gui::Context* context, const std::vector<std::
 
 std::optional<std::string> ProcessFileDialog(FileDialogKeys key) {
   std::optional<std::string> result = std::nullopt;
-  if (ImGuiFileDialog::Instance()->Display(str(key), 32, ImVec2(500, 300))) {
+  const auto& parentSize = ImGui::GetWindowSize();
+  const auto defaultScale = 0.75f;
+  const auto minScale = 0.5f;
+  const auto maxScale = 1.0f;
+  ImGui::SetNextWindowSize(ImVec2(parentSize.x * defaultScale, parentSize.y * defaultScale),
+                           ImGuiCond_FirstUseEver);
+  if (ImGuiFileDialog::Instance()->Display(
+          str(key), 32, ImVec2(parentSize.x * minScale, parentSize.y * minScale),
+          ImVec2(parentSize.x * maxScale, parentSize.y * maxScale))) {
     if (ImGuiFileDialog::Instance()->IsOk()) {
       result = ImGuiFileDialog::Instance()->GetFilePathName();
     }
@@ -224,6 +226,9 @@ void FileDialogs(gui::Context& context) {
   if (ProcessFileDialog(FileDialogKeys::PICK_STREAM_PATH)) {
     context.StreamPath = ImGuiFileDialog::Instance()->GetFilePathName();
     update = true;
+    // TODO: This should be acted upon a message (once we have them)
+    context.MetaDataPanel->InvalidateMetaData();
+    ;
   } else if (ProcessFileDialog(FileDialogKeys::PICK_TARGET_PATH)) {
     context.TargetPath = ImGuiFileDialog::Instance()->GetFilePathName();
     update = true;
@@ -274,7 +279,7 @@ void ShowFileDialog(gui::Context* context, FileDialogKeys key) {
     ext = ".gits2";
     break;
   case FileDialogKeys::PICK_TARGET_PATH:
-    dlgConfig.path = context->TargetPath.string();
+    dlgConfig.filePathName = context->TargetPath.string();
     title = "Choose target application";
     ext = ".exe";
     break;
@@ -325,6 +330,11 @@ void ShowFileDialog(gui::Context* context, FileDialogKeys key) {
 void LoadConfigFile(gui::Context* context) {
   auto filePath = context->GetPath(context->IsPlayback() ? gui::Context::Paths::CONFIG
                                                          : gui::Context::Paths::CAPTURE_CONFIG);
+  if (filePath.empty()) {
+    context->ConfigEditor->SetText("// No file specified.");
+    return;
+  }
+
   auto fhandle = std::ifstream(filePath);
   if (fhandle.is_open()) {
     const std::string str((std::istreambuf_iterator<char>(fhandle)),
@@ -342,7 +352,7 @@ void LoadConfigFile(gui::Context* context) {
     context->ConfigEditor->SetFilePath(filePath);
     context->ConfigEditor->SetBreakpoints(breakpoints);
   } else {
-    context->ConfigEditor->SetText("// Could not open file: " + filePath.string());
+    context->ConfigEditor->SetText("// Could not open file:\n> " + filePath.string());
   }
 }
 
@@ -350,6 +360,18 @@ void SetImGuiStyle(gui::Context* context, size_t idx) {
   context->LauncherConfiguration.Theme.SetThemeByIdx(idx);
   context->LauncherConfiguration.Theme.ApplyTheme();
   context->UpdatePalette();
+}
+
+void ResetBasePaths(gui::Context& context) {
+  context.LauncherConfiguration.DetectBasePaths();
+
+  context.GITSPlayerPath = context.LauncherConfiguration.GITSPlayerPath;
+  context.GITSBasePath = context.LauncherConfiguration.GITSBasePath;
+  context.ConfigPath = context.LauncherConfiguration.ConfigPath;
+  context.CaptureConfigPath = context.LauncherConfiguration.CaptureConfigPath;
+
+  UpdateCLICall(context);
+  LoadConfigFile(&context);
 }
 
 void OpenURL(const std::string& url) {

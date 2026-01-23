@@ -27,10 +27,10 @@ private:
 
   struct SubcaptureConfig {
     bool Enabled = true;
+    bool Optimize = true;
+    bool ExecutionSerialization = false;
     int StartFrame = 0;
     int EndFrame = 0;
-    bool Optimize = false;
-    bool OptimizeRay = false;
 
     std::string Range() const {
       return std::to_string(StartFrame) + "-" + std::to_string(EndFrame);

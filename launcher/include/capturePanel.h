@@ -18,11 +18,22 @@ public:
 
   void Render() override;
 
+  struct CaptureCleanupOptions {
+    bool CleanRecorderFiles = true;
+    bool CleanRecorderConfig = true;
+    bool CleanRecorderLog = false;
+  };
+
+  const CaptureCleanupOptions GetSelectedCleanupOptions();
+
 private:
   void RowTargetPath();
+  void RowCleanup();
   void RowConfigPath();
   void RowArguments();
   void RowOutputPath();
+
+  CaptureCleanupOptions CleanupOptions;
 };
 
 } // namespace gits::gui

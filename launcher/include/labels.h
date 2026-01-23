@@ -21,6 +21,7 @@ namespace gits::gui {
 struct Labels {
   using SideBarItems = gits::gui::Context::SideBarItems;
   using ConfigSectionItems = gits::gui::Context::ConfigSectionItems;
+  using MetaDataItems = gits::gui::Context::MetaDataItems;
 
   // main window
   static constexpr const char* VERSION = "Version";
@@ -56,6 +57,7 @@ struct Labels {
   static constexpr const char* CONFIG_HINT = "Path to GITS config file";
   static constexpr const char* CAPTURE_CONFIG = "Config";
   static constexpr const char* CAPTURE_CONFIG_HINT = "Path to GITS config file";
+  static constexpr const char* CLEANUP = "Cleanup";
   static constexpr const char* CHOOSE_STREAM = "Browse###STREAM";
   static constexpr const char* CHOOSE_STREAM_HINT =
       "Open File Dialog to choose a stream file (inside a folder)";
@@ -91,23 +93,38 @@ struct Labels {
   // EZ-Options
   static constexpr const char* HUD_ENABLED = "Show HUD";
   static constexpr const char* SCREENSHOTS = "Screenshots";
-  static constexpr const char* SCREENSHOTS_PATH = "Screenshots Path";
-  static constexpr const char* SCREENSHOTS_RANGES = "Screenshot Range(s)";
+  static constexpr const char* SCREENSHOTS_PATH = "Path";
+  static constexpr const char* SCREENSHOTS_RANGES = "Range";
   static constexpr const char* SCREENSHOTS_START_FRAME = "Start Frame###Screenshot1";
   static constexpr const char* SCREENSHOTS_END_FRAME = "End Frame###Screenshot2";
   static constexpr const char* SCREENSHOTS_ADD_RANGE = "Add Range";
   static constexpr const char* SCREENSHOTS_ADD_FRAME = "Add Start Frame";
   static constexpr const char* TRACE_EXPORT = "Export Trace";
   static constexpr const char* TRACE_PATH = "Trace Path";
+
+  //Subcapture
   static constexpr const char* SUBCAPTURE_RANGE = "Subcapture Range";
   static constexpr const char* SUBCAPTURE_START_FRAME = "Start Frame###Subcapture3";
   static constexpr const char* SUBCAPTURE_END_FRAME = "End Frame###Subcapture4";
   static constexpr const char* SUBCAPTURE_STEP_FRAME = "Step Size###Subcapture5";
-
-  //Subcapture
   static constexpr const char* SUBCAPTURE_PATH = "Subcapture Path";
   static constexpr const char* SUBCAPTURE_OPTIMIZE = "Optimize Subcapture";
-  static constexpr const char* SUBCAPTURE_OPTIMIZE_RAY = "Optimize Subcapture Raytracing";
+  static constexpr const char* SUBCAPTURE_EXECUTION_SERIALIZATION =
+      "Serialize CPU and GPU execution";
+  static constexpr const char* SUBCAPTURE_COMMAND_LIST_EXECUTIONS = "Command lists execution range";
+
+  // Capture cleanup
+  static constexpr const char* CLEAN_RECORDER_FILES = "Recorder files";
+  static constexpr const char* CLEAN_RECORDER_FILES_HINT =
+      "Remove the recorder files (e.g. DLLs) after recording";
+  static constexpr const char* CLEAN_RECORDER_CONFIG = "Config";
+  static constexpr const char* CLEAN_RECORDER_CONFIG_HINT =
+      "Remove the recorder config file after recording";
+  static constexpr const char* CLEAN_RECORDER_LOG = "Log";
+  static constexpr const char* CLEAN_RECORDER_LOG_HINT =
+      "Remove the recorder log file after recording";
+  static constexpr const char* FORCE_CLEANUP = "Force cleanup";
+  static constexpr const char* FORCE_CLEANUP_HINT = "Force cleanup of the selected files";
 
   // main window - text fields
   static constexpr const char* STREAM_INPUT_HINT = "Path to stream";
@@ -122,20 +139,34 @@ struct Labels {
   static constexpr const char* GITS_BASE_BUTTON = "Open GITS Base folder";
   static constexpr const char* GITS_STREAM_BUTTON = "Open Stream folder";
   static constexpr const char* GITS_TARGET_BUTTON = "Open Target folder";
+  static constexpr const char* GITS_CAPTURE_BUTTON = "Open Capture folder";
   static constexpr const char* GITS_SCREENSHOT_BUTTON = "Open Screenshots folder";
   static constexpr const char* GITS_TRACE_BUTTON = "Open Trace folder";
   static constexpr const char* GITS_SUBCAPTURE_BUTTON = "Open Subcapture folder";
+  static constexpr const char* RESET_BASE_PATHS = "Reset gits base path";
+
+  static constexpr const char* API_LABEL = "API";
+  static constexpr const char* API_NAME_DX = "DirectX";
+  static constexpr const char* API_NAME_SHORT_DX = "DX";
+  static constexpr const char* API_NAME_GL = "OpenGL";
+  static constexpr const char* API_NAME_SHORT_GL = "GL";
+  static constexpr const char* API_NAME_VK = "Vulkan";
+  static constexpr const char* API_NAME_SHORT_VK = "VK";
+  static constexpr const char* API_NAME_CL = "OpenCL";
+  static constexpr const char* API_NAME_SHORT_CL = "CL";
+  static constexpr const char* API_NAME_L0 = "LevelZero";
+  static constexpr const char* API_NAME_SHORT_L0 = "L0";
+
+  static constexpr const char* NOT_AVAILABLE = "N/A";
 
   static const std::string MainAction(gits::gui::Context::MainAction action) {
     switch (action) {
     case gits::gui::Context::MainAction::PLAYBACK:
       return "Start Playback";
     case gits::gui::Context::MainAction::CAPTURE:
-      return "Start Capturing";
-    case gits::gui::Context::MainAction::STATISTICS:
-      return "Gather Statistics";
+      return "Start Capture";
     case gits::gui::Context::MainAction::SUBCAPTURE:
-      return "Subcapture Stream";
+      return "Start Subcapture";
     case gits::gui::Context::MainAction::COUNT:
     default:
       return "";
@@ -148,7 +179,7 @@ struct Labels {
         {SideBarItems::OPTIONS, {.label = "Config - UI", .tooltip = "Show easy to setup options"}},
         {SideBarItems::CLI, {"CLI", "Show the full command line call"}},
         {SideBarItems::LOG, {"GITS Log", "Show the GITS output"}},
-        {SideBarItems::STATS, {"Stats", "Show statistics of the stream"}},
+        {SideBarItems::STATS, {"Metadata", "Show the stream metadata"}},
         {SideBarItems::APP_LOG, {"Launcher Log", "Show the launcher log"}},
         {SideBarItems::INFO,
          {.label = "Info", .tooltip = "Show stream information", .enabled = false}},
@@ -173,20 +204,39 @@ struct Labels {
         {ConfigSectionItems::COMMON,
          {"Common", "Common options", ImGuiHelper::ButtonStatus::Default, "Cmn"}},
         {ConfigSectionItems::DIRECTX,
-         {"DirectX", "DirectX API options", ImGuiHelper::ButtonStatus::Default, "DX"}},
+         {API_NAME_DX, "DirectX API options", ImGuiHelper::ButtonStatus::Default,
+          API_NAME_SHORT_DX}},
         {ConfigSectionItems::OPENGL,
-         {"OpenGL", "OpenGL API options", ImGuiHelper::ButtonStatus::Default, "GL"}},
+         {API_NAME_GL, "OpenGL API options", ImGuiHelper::ButtonStatus::Default,
+          API_NAME_SHORT_GL}},
         {ConfigSectionItems::VULKAN,
-         {"Vulkan", "Vulkan API options", ImGuiHelper::ButtonStatus::Default, "VK"}},
+         {API_NAME_VK, "Vulkan API options", ImGuiHelper::ButtonStatus::Default,
+          API_NAME_SHORT_VK}},
         {ConfigSectionItems::OPENCL,
-         {"OpenCL", "OpenCL API options", ImGuiHelper::ButtonStatus::Default, "CL"}},
+         {API_NAME_CL, "OpenCL API options", ImGuiHelper::ButtonStatus::Default,
+          API_NAME_SHORT_CL}},
         {ConfigSectionItems::LEVELZERO,
-         {"LevelZero", "LevelZero API options", ImGuiHelper::ButtonStatus::Default, "L0"}},
+         {API_NAME_L0, "LevelZero API options", ImGuiHelper::ButtonStatus::Default,
+          API_NAME_SHORT_L0}},
         {ConfigSectionItems::OVERRIDES,
          {"Overrides", "Per application overrides", ImGuiHelper::ButtonStatus::Default, "Ovr"}},
     };
     return labels;
   }
+
+  static const auto& META_DATA() {
+    static const std::map<MetaDataItems, ImGuiHelper::ButtonGroupItem> labels = {
+        {MetaDataItems::CONFIG,
+         {"Config", "Config the stream was recorded with", ImGuiHelper::ButtonStatus::Default,
+          "Config"}},
+        {MetaDataItems::STATS,
+         {"Stats", "Stream statistics", ImGuiHelper::ButtonStatus::Default, "Stats"}},
+        {MetaDataItems::DIAGS,
+         {"Diagnostics", "Stream Recorder diagnostics", ImGuiHelper::ButtonStatus::Default,
+          "Diags"}},
+    };
+    return labels;
+  };
 
   float static MaxLength(const std::vector<std::string>& labels) {
     float maximum = std::numeric_limits<float>::min();

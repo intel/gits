@@ -85,6 +85,7 @@ nav:
   - Documentation:
     - 'documentation/recorder.md'
     - 'documentation/player.md'
+    - 'documentation/launcher.md'
     - 'documentation/terminology.md'
     - Streams:
       - 'documentation/streams/binary_stream.md'
@@ -128,6 +129,7 @@ markdown_extensions:
   - footnotes         # here [^1] is the link. later: [^1]: blah blah blah.
   - mdx_truly_sane_lists
   - admonition
+  - pymdownx.blocks.caption
   - pymdownx.tasklist:
       custom_checkbox: true
   - attr_list

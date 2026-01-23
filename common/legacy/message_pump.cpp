@@ -23,7 +23,7 @@
 #ifdef GITS_PLATFORM_WINDOWS
 //********************************* Windows Player Window ***********************************
 
-LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+LRESULT CALLBACK WndProcMessagePump(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
   static bool moving = false;
   static int xInit = 0, yInit = 0;
   int xPos = 0, yPos = 0;
@@ -68,7 +68,7 @@ win_ptr_t CreateWin(int width, int height, int x, int y, bool show) {
     WNDCLASSEX wc;
     wc.cbSize = sizeof(WNDCLASSEX);
     wc.style = 0;
-    wc.lpfnWndProc = WndProc;
+    wc.lpfnWndProc = WndProcMessagePump;
     wc.cbClsExtra = 0;
     wc.cbWndExtra = 0;
     wc.hInstance = hInstance;

@@ -219,6 +219,17 @@ void TextEditorWidget::RenderToolbar(ImVec2 size) {
   m_BtnsToolBar->SetEnabled(TOOL_BAR_ITEMS::REDO, m_Editor.CanRedo());
   m_BtnsToolBar->SetEnabled(TOOL_BAR_ITEMS::CHECK, m_OnCheck != nullptr);
 
+  if (m_LastCheckResult.has_value()) {
+    m_BtnsToolBar->SetStatus(TOOL_BAR_ITEMS::CHECK, m_LastCheckResult.value()
+                                                        ? ButtonStatus::Success
+                                                        : ButtonStatus::Failure);
+    if (m_Editor.IsTextChanged()) {
+      m_LastCheckResult = std::nullopt;
+    }
+  } else {
+    m_BtnsToolBar->SetStatus(TOOL_BAR_ITEMS::CHECK, ButtonStatus::Default);
+  }
+
   if (m_BtnsToolBar->Render(true)) {
     switch (m_BtnsToolBar->Selected()) {
     case TOOL_BAR_ITEMS::SAVE:
@@ -254,6 +265,7 @@ void TextEditorWidget::RenderToolbar(ImVec2 size) {
     case TOOL_BAR_ITEMS::CHECK:
       if (m_OnCheck) {
         bool result = m_OnCheck(m_Editor.GetText());
+        m_LastCheckResult = result;
         LOG_INFO << "Check completed with result: "
                  << (result ? "No issues found." : "Issues detected.");
       }

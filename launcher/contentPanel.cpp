@@ -15,6 +15,7 @@
 #include "launcherActions.h"
 #include "labels.h"
 #include "captureActions.h"
+#include "MainWindow.h"
 
 namespace gits::gui {
 
@@ -25,6 +26,7 @@ float ContentPanel::WidthColumn1(bool resetSize) {
   if (cached_width < 0 || resetSize) {
     const std::vector<std::string> row_labels = {Labels::STREAM,
                                                  Labels::TARGET,
+                                                 Labels::CLEANUP,
                                                  Labels::PLAYER_PATH,
                                                  Labels::BASE_PATH,
                                                  Labels::CONFIG,
@@ -53,16 +55,6 @@ void ContentPanel::Render() {
           context.IsPlayback() ? gui::Context::MainAction::PLAYBACK
                                : (context.IsCapture() ? gui::Context::MainAction::CAPTURE
                                                       : gui::Context::MainAction::SUBCAPTURE);
-      switch (context.BtnsSideBar->Selected()) {
-      case SideBarItems::CONFIG:
-        LoadConfigFile(&context);
-        break;
-      case SideBarItems::STATS:
-        context.CurrentMainAction = gui::Context::MainAction::STATISTICS;
-        break;
-      default:
-        break;
-      }
     }
     float width = ImGui::GetContentRegionAvail().x;
     float remaining = ImGui::GetContentRegionAvail().y;
@@ -112,7 +104,7 @@ void ContentPanel::Render() {
       break;
     case SideBarItems::STATS:
       ImGui::BeginChild("StatsArea", ImVec2(area.x, area.y), true);
-      context.TraceStatsEditor->Render();
+      context.MetaDataPanel->Render();
       ImGui::EndChild();
       break;
     case SideBarItems::OPTIONS:
@@ -152,6 +144,8 @@ void ContentPanel::Render() {
     context.GITSLogEditor->AppendText(content);
 
     context.BtnsSideBar->SelectEntry(gui::Context::SideBarItems::LOG);
+    gui::capture_actions::CleanupRecorderFiles(context, context.SelectedApiForCapture,
+                                               context.TheMainWindow->GetCleanupOptions());
   }
 }
 

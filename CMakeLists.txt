@@ -305,6 +305,7 @@ endif()
 add_dependencies(all_codegen OpenGL_codegen)
 
 install(DIRECTORY Scripts/Lua/ DESTINATION LuaScripts)
+install(DIRECTORY docs/ DESTINATION Documentation)
 
 
 if(WIN32)

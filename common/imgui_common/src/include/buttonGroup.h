@@ -43,6 +43,7 @@ bool ButtonGroup<T>::Render(bool newLine) {
     ImGui::BeginDisabled(!this->btnEnabled[it->first] && !item.enabled);
     if (ImGui::Button(this->GetLabel(item).c_str(), btnSize)) {
       clicked = true;
+      this->selectedIndex = i;
     }
     this->AddTooltip(item);
     ImGui::EndDisabled();

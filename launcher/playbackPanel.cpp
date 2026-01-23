@@ -19,6 +19,22 @@
 
 #include "mainWindow.h"
 
+namespace {
+float WidthLastButton() {
+  auto labels = {gits::gui::Labels::CHOOSE_STREAM, gits::gui::Labels::CLEAR_ARGUMENTS,
+                 gits::gui::Labels::CHOOSE_CONFIG};
+
+  float result = 0;
+  for (const auto& label : labels) {
+    auto width = gits::ImGuiHelper::WidthOf(gits::ImGuiHelper::Widgets::Button, label);
+    if (width > result) {
+      result = width;
+    }
+  }
+  return result;
+}
+} // namespace
+
 namespace gits::gui {
 typedef gits::gui::Context::SideBarItems SideBarItems;
 
@@ -32,32 +48,23 @@ void PlaybackPanel::RowStreamPath() {
   auto& context = getSharedContext<gui::Context>();
   auto availableWidth = ImGui::GetContentRegionAvail().x;
 
-  switch (context.AppMode) {
-  case gui::Context::Mode::CAPTURE:
-    ImGui::Text(Labels::TARGET);
-    break;
-  case gui::Context::Mode::PLAYBACK:
-    ImGui::Text(Labels::STREAM);
-    break;
-  default:
-    break;
-  }
+  ImGui::Text(Labels::STREAM);
 
   ImGui::SameLine();
   ImGui::SetCursorPosX(context.TheMainWindow->WidthLeftColumn);
 
-  auto allocatedWidth =
-      availableWidth - ImGui::GetCursorPosX() -
-      ImGuiHelper::WidthOf(ImGuiHelper::Widgets::Button, Labels::CHOOSE_GITSPLAYER);
+  auto allocatedWidth = availableWidth - ImGui::GetCursorPosX() - WidthLastButton();
 
   if (ImGuiHelper::InputString("###InputPath", context.StreamPath, 0, allocatedWidth)) {
     UpdateCLICall(context);
+    // TODO: This should be acted upon a message (once we have them)
+    context.MetaDataPanel->InvalidateMetaData();
   }
   ImGuiHelper::AddTooltip(Labels::STREAM_INPUT_HINT);
 
   ImGui::SameLine();
   ImGui::PushID(++context.ImguiIDs);
-  if (ImGui::Button(Labels::CHOOSE_STREAM)) {
+  if (ImGui::Button(Labels::CHOOSE_STREAM, ImVec2(WidthLastButton(), 0))) {
     ShowFileDialog(&context, FileDialogKeys::PICK_STREAM_PATH);
   }
   ImGui::PopID();
@@ -71,8 +78,7 @@ void PlaybackPanel::RowArguments() {
   ImGui::SameLine();
   ImGui::SetCursorPosX(context.TheMainWindow->WidthLeftColumn);
 
-  auto remainingWidth = availableWidth - ImGui::GetCursorPosX() -
-                        ImGuiHelper::WidthOf(ImGuiHelper::Widgets::Button, Labels::CLEAR_ARGUMENTS);
+  auto remainingWidth = availableWidth - ImGui::GetCursorPosX() - WidthLastButton();
   if (ImGuiHelper::InputString("###CustomArgumentsInput", context.CustomArguments, 0,
                                remainingWidth)) {
     UpdateCLICall(context);
@@ -81,7 +87,7 @@ void PlaybackPanel::RowArguments() {
 
   ImGui::SameLine();
   ImGui::PushID(++context.ImguiIDs);
-  if (ImGui::Button(Labels::CLEAR_ARGUMENTS)) {
+  if (ImGui::Button(Labels::CLEAR_ARGUMENTS, ImVec2(WidthLastButton(), 0))) {
     context.CustomArguments.clear();
     UpdateCLICall(context);
   }
@@ -97,17 +103,17 @@ void PlaybackPanel::RowConfigPath() {
   ImGui::SetCursorPosX(context.TheMainWindow->WidthLeftColumn);
 
   auto remainingWidth = availableWidth - ImGui::GetCursorPosX();
-  auto allocatedWidth =
-      remainingWidth - ImGuiHelper::WidthOf(ImGuiHelper::Widgets::Button, Labels::CHOOSE_CONFIG);
+  auto allocatedWidth = remainingWidth - WidthLastButton();
 
   if (ImGuiHelper::InputString("###ConfigPathInput", context.ConfigPath, 0, allocatedWidth)) {
     UpdateCLICall(context);
+    LoadConfigFile(&context);
   }
   ImGuiHelper::AddTooltip(Labels::CONFIG_INPUT_HINT);
 
   ImGui::SameLine();
   ImGui::PushID(++context.ImguiIDs);
-  if (ImGui::Button(Labels::CHOOSE_CONFIG)) {
+  if (ImGui::Button(Labels::CHOOSE_CONFIG, ImVec2(WidthLastButton(), 0))) {
     ShowFileDialog(&context, FileDialogKeys::PICK_CONFIG_PATH);
   }
   ImGui::PopID();

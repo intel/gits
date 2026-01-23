@@ -8,18 +8,21 @@ list(APPEND LAUNCHER_SOURCE
   ${LAUNCHER_SOURCE_DIR}/main.cpp
   ${LAUNCHER_SOURCE_DIR}/guiController.cpp
   ${LAUNCHER_SOURCE_DIR}/launcherActions.cpp
+  ${LAUNCHER_SOURCE_DIR}/launcherConfig.cpp
   ${LAUNCHER_SOURCE_DIR}/captureActions.cpp
   ${LAUNCHER_SOURCE_DIR}/context.cpp
+  ${LAUNCHER_SOURCE_DIR}/metaDataActions.cpp
 
-  ${LAUNCHER_HEADER_DIR}/launcherConfig.h
   ${LAUNCHER_HEADER_DIR}/fileActions.h
   ${LAUNCHER_HEADER_DIR}/launcherActions.h
+  ${LAUNCHER_HEADER_DIR}/launcherConfig.h
   ${LAUNCHER_HEADER_DIR}/context.h
   ${LAUNCHER_HEADER_DIR}/resource.h
   ${LAUNCHER_HEADER_DIR}/labels.h
   ${LAUNCHER_HEADER_DIR}/guiController.h
   ${LAUNCHER_HEADER_DIR}/captureActions.h
   ${LAUNCHER_HEADER_DIR}/launcherFormatter.h
+  ${LAUNCHER_HEADER_DIR}/metaDataActions.h
 )
 
 list(APPEND LAUNCHER_PANEL_SOURCE
@@ -29,6 +32,7 @@ list(APPEND LAUNCHER_PANEL_SOURCE
   ${LAUNCHER_SOURCE_DIR}/capturePanel.cpp
   ${LAUNCHER_SOURCE_DIR}/ezOptionsPanel.cpp
   ${LAUNCHER_SOURCE_DIR}/subcapturePanel.cpp
+  ${LAUNCHER_SOURCE_DIR}/metaDataPanel.cpp
 
   ${LAUNCHER_HEADER_DIR}/contentPanel.h
   ${LAUNCHER_HEADER_DIR}/basePanel.h
@@ -37,6 +41,7 @@ list(APPEND LAUNCHER_PANEL_SOURCE
   ${LAUNCHER_HEADER_DIR}/playbackPanel.h
   ${LAUNCHER_HEADER_DIR}/capturePanel.h
   ${LAUNCHER_HEADER_DIR}/subcapturePanel.h
+  ${LAUNCHER_HEADER_DIR}/metaDataPanel.h
   )
 source_group("Panels" FILES ${LAUNCHER_PANEL_SOURCE})
 
@@ -100,7 +105,7 @@ target_compile_options(gits_launcher PRIVATE
   >
 )
 
-target_link_libraries(gits_launcher PRIVATE ${Vulkan_LIBRARIES} imgui_common log)
+target_link_libraries(gits_launcher PRIVATE ${Vulkan_LIBRARIES} imgui_common log common)
 if(NOT WIN64)
 target_link_libraries(gits_launcher PRIVATE glfw)
 endif()

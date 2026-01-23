@@ -74,13 +74,6 @@ void Context::GITSLog(const std::string& msg) {
   }
 }
 
-void Context::TraceStats(const std::string& msg) {
-  if (msg.empty()) {
-    return;
-  }
-  TraceStatsEditor->AppendText(msg, false);
-}
-
 std::filesystem::path Context::GetPath(Paths path) const {
   switch (path) {
   case Paths::STREAM:
@@ -88,7 +81,11 @@ std::filesystem::path Context::GetPath(Paths path) const {
   case Paths::TARGET:
     return TargetPath;
   case Paths::GITS_PLAYER:
-    return GITSPlayerPath;
+    if (UseCustomGITSPlayer) {
+      return GITSPlayerPath;
+    } else {
+      return GITSBasePath / "Player" / "gitsPlayer.exe";
+    }
   case Paths::GITS_BASE:
     return GITSBasePath;
   case Paths::CONFIG:
@@ -125,6 +122,9 @@ void Context::ChangeMode(Mode mode) {
   };
   BtnsSideBar->SetEnabled(Context::SideBarItems::OPTIONS, IsPlayback());
   BtnsSideBar->SetEnabled(Context::SideBarItems::STATS, IsPlayback());
+  if (!BtnsSideBar->IsEnabled(BtnsSideBar->Selected())) {
+    BtnsSideBar->SelectEntry(Context::SideBarItems::CONFIG);
+  }
   UpdateFixedLauncherArguments();
   gits::gui::UpdateCLICall(*this);
   gits::gui::LoadConfigFile(this);
@@ -146,6 +146,12 @@ void Context::UpdatePalette() {
   }
   if (TraceInfoEditor) {
     TraceInfoEditor->UpdatePalette();
+  }
+  if (DiagsEditor) {
+    DiagsEditor->UpdatePalette();
+  }
+  if (TraceConfigEditor) {
+    TraceConfigEditor->UpdatePalette();
   }
   if (TraceStatsEditor) {
     TraceStatsEditor->UpdatePalette();

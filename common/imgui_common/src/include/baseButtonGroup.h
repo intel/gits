@@ -45,15 +45,18 @@ public:
   virtual ~BaseButtonGroup() = default;
 
   void SetEnabled(const T& key, bool enabled);
+  void SetStatus(const T& key, ButtonStatus status);
+  bool IsEnabled(const T& key) const;
+
+  void SelectEntry(T entry);
+  T Selected() const;
+  ButtonGroupItem SelectedItem() const;
+  size_t SelectedIndex() const;
 
   bool Render();
   virtual bool Render(bool newLine) = 0;
 
   ImVec2 GetSize() const;
-  void SelectEntry(T entry);
-  T Selected() const;
-  ButtonGroupItem SelectedItem() const;
-  size_t SelectedIndex() const;
 
 protected:
   void PushButtonStyle(const ButtonGroupItem& item);
@@ -90,13 +93,25 @@ template <typename T>
 void BaseButtonGroup<T>::SetEnabled(const T& key, bool enabled) {
   auto it = btnEnabled.find(key);
   if (it != btnEnabled.end()) {
-    it->second = enabled; //&&items[key];
+    it->second = enabled;
   }
 }
 
 template <typename T>
-bool BaseButtonGroup<T>::Render() {
-  return Render(!isHorizontal);
+void BaseButtonGroup<T>::SetStatus(const T& key, ButtonStatus status) {
+  auto it = items.find(key);
+  if (it != items.end()) {
+    it->second.status = status;
+  }
+}
+
+template <typename T>
+bool BaseButtonGroup<T>::IsEnabled(const T& key) const {
+  auto it = btnEnabled.find(key);
+  if (it != btnEnabled.end()) {
+    return it->second;
+  }
+  return false;
 }
 
 template <typename T>
@@ -129,6 +144,11 @@ ButtonGroupItem BaseButtonGroup<T>::SelectedItem() const {
 template <typename T>
 size_t BaseButtonGroup<T>::SelectedIndex() const {
   return selectedIndex;
+}
+
+template <typename T>
+bool BaseButtonGroup<T>::Render() {
+  return Render(!isHorizontal);
 }
 
 template <typename T>

@@ -158,31 +158,55 @@ void GUIController::SetupGui() {
   m_Context.ConfigEditor = std::make_unique<TextEditorWidget>("ConfigEditor");
   m_Context.ConfigEditor->GetEditor().SetShowWhitespaces(false);
   m_Context.ConfigEditor->GetEditor().SetTabSize(4);
-  //m_Context.ConfigEditor->SetCheckCallback(&ValidateGITSConfigFile);
+  m_Context.ConfigEditor->SetCheckCallback(&ValidateGITSConfig);
 
   m_Context.CLIEditor = std::make_unique<TextEditorWidget>("CLIEditor");
+  m_Context.CLIEditor->SetConfig(TextEditorWidget::Config{.ShowToolbar = false});
   m_Context.CLIEditor->GetEditor().SetReadOnly(true);
   m_Context.CLIEditor->GetEditor().SetShowWhitespaces(false);
   m_Context.CLIEditor->GetEditor().SetTabSize(4);
 
   m_Context.GITSLogEditor = std::make_unique<TextEditorWidget>("GITSLogEditor");
+  m_Context.GITSLogEditor->SetConfig(TextEditorWidget::Config{.ShowToolbar = false});
   m_Context.GITSLogEditor->GetEditor().SetReadOnly(true);
   m_Context.GITSLogEditor->GetEditor().SetShowWhitespaces(false);
   m_Context.GITSLogEditor->GetEditor().SetTabSize(4);
 
   m_Context.LogEditor = std::make_unique<TextEditorWidget>("LogEditor");
+  m_Context.LogEditor->SetConfig(TextEditorWidget::Config{.ShowToolbar = false});
   m_Context.LogEditor->GetEditor().SetReadOnly(true);
   m_Context.LogEditor->GetEditor().SetShowWhitespaces(false);
   m_Context.LogEditor->GetEditor().SetTabSize(4);
 
+  m_Context.DiagsEditor = std::make_unique<TextEditorWidget>("DiagsEditor");
+  m_Context.DiagsEditor->GetEditor().SetReadOnly(true);
+  m_Context.DiagsEditor->GetEditor().SetShowWhitespaces(false);
+  m_Context.DiagsEditor->GetEditor().SetTabSize(4);
+  m_Context.DiagsEditor->SetConfig(
+      TextEditorWidget::Config{.ShowToolbar = false, .ScrollToBottom = true});
+  m_Context.DiagsEditor->GetEditor().SetColorizerEnable(false);
+
+  m_Context.TraceConfigEditor = std::make_unique<TextEditorWidget>("TraceConfigEditor");
+  m_Context.TraceConfigEditor->SetConfig(TextEditorWidget::Config{.ShowToolbar = false});
+  m_Context.TraceConfigEditor->GetEditor().SetReadOnly(true);
+  m_Context.TraceConfigEditor->GetEditor().SetShowWhitespaces(false);
+  m_Context.TraceConfigEditor->GetEditor().SetTabSize(4);
+  m_Context.TraceConfigEditor->SetConfig(
+      TextEditorWidget::Config{.ShowToolbar = false, .ScrollToBottom = true});
+  m_Context.TraceConfigEditor->GetEditor().SetColorizerEnable(false);
+
   m_Context.TraceStatsEditor = std::make_unique<TextEditorWidget>("TraceStatsEditor");
+  m_Context.TraceStatsEditor->SetConfig(TextEditorWidget::Config{.ShowToolbar = false});
   m_Context.TraceStatsEditor->GetEditor().SetReadOnly(true);
   m_Context.TraceStatsEditor->GetEditor().SetShowWhitespaces(false);
   m_Context.TraceStatsEditor->GetEditor().SetTabSize(4);
   m_Context.TraceStatsEditor->SetConfig(
       TextEditorWidget::Config{.ShowToolbar = false, .ScrollToBottom = true});
+  m_Context.TraceStatsEditor->GetEditor().SetColorizerEnable(false);
 
   m_Context.EasyOptionsPanel = std::make_unique<EzOptionsPanel>(m_Context);
+
+  m_Context.MetaDataPanel = std::make_unique<MetaDataPanel>(m_Context);
 
   m_Context.LogAppender = std::make_unique<TextEditorAppender>(m_Context.LogEditor.get());
 
@@ -190,6 +214,7 @@ void GUIController::SetupGui() {
 
   m_Context.BtnsSideBar = new ImGuiHelper::TabGroup(Labels::SIDE_BAR(), false, true);
   m_Context.BtnsAPI = new ImGuiHelper::TabGroup(Labels::CONFIG_SECTIONS(), true, false);
+  m_Context.BtnsMetaData = new ImGuiHelper::TabGroup(Labels::META_DATA(), true, false);
 
   SetImGuiStyle(&m_Context, m_Context.LauncherConfiguration.Theme.CurrentThemeIdx);
 

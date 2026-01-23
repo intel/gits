@@ -74,7 +74,7 @@ float CurrentUIScale() {
 }
 
 bool UpdateUIScaling(float scale) {
-  LOG_INFO << "Updateing ui scale to: " << scale;
+  LOG_INFO << "Updating ui scale to: " << scale;
 
   ImGuiIO& io = ImGui::GetIO();
 

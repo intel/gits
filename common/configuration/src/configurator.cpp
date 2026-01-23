@@ -88,16 +88,9 @@ void Configurator::DeriveData() {
   configuration.DeriveData(configuration);
 }
 
-bool Configurator::LoadInto(const std::filesystem::path& filepath, Configuration* config) {
-  std::ifstream fin(filepath);
-  if (!fin) {
-    LOG_ERROR << "Failed to open file: " << filepath << std::endl;
-    return false;
-  }
-
+bool Configurator::LoadInto(const YAML::Node& node, Configuration* configObj) {
   try {
-    YAML::Node node = YAML::Load(fin);
-    if (YAML::convert<Configuration>::decode(node, *config)) {
+    if (YAML::convert<Configuration>::decode(node, *configObj)) {
       return true;
     } else {
       LOG_ERROR << "Failed to decode YAML to Configuration" << std::endl;
@@ -121,8 +114,62 @@ bool Configurator::LoadInto(const std::filesystem::path& filepath, Configuration
   }
 }
 
+bool Configurator::LoadInto(const std::string& config, Configuration* configObj) {
+  try {
+    const YAML::Node node = YAML::Load(config);
+    return LoadInto(node, configObj);
+  } catch (const YAML::ParserException& e) {
+    LOG_ERROR << "YAML Parser Exception: " << e.what() << std::endl;
+    LOG_ERROR << "Structural inconsistency: please check the syntax and indentation at the "
+                 "specified location."
+              << std::endl;
+    return false;
+  } catch (const YAML::BadConversion& e) {
+    LOG_ERROR << "YAML Bad Conversion Exception: " << e.what() << std::endl;
+    LOG_ERROR << "Ensure the data types in the YAML file match the expected types in the "
+                 "Configuration class."
+              << std::endl;
+    return false;
+  } catch (const YAML::Exception& e) {
+    LOG_ERROR << "YAML Exception: " << e.what() << std::endl;
+    return false;
+  }
+}
+
+bool Configurator::LoadInto(const std::filesystem::path& filepath, Configuration* configObj) {
+  std::ifstream fin(filepath);
+  if (!fin) {
+    LOG_ERROR << "Failed to open file: " << filepath << std::endl;
+    return false;
+  }
+
+  try {
+    YAML::Node node = YAML::Load(fin);
+    return LoadInto(node, configObj);
+  } catch (const YAML::ParserException& e) {
+    LOG_ERROR << "YAML Parser Exception: " << e.what() << std::endl;
+    LOG_ERROR << "Structural inconsistency: please check the syntax and indentation at the "
+                 "specified location."
+              << std::endl;
+    return false;
+  } catch (const YAML::BadConversion& e) {
+    LOG_ERROR << "YAML Bad Conversion Exception: " << e.what() << std::endl;
+    LOG_ERROR << "Ensure the data types in the YAML file match the expected types in the "
+                 "Configuration class."
+              << std::endl;
+    return false;
+  } catch (const YAML::Exception& e) {
+    LOG_ERROR << "YAML Exception: " << e.what() << std::endl;
+    return false;
+  }
+}
+
 bool Configurator::Load(const std::filesystem::path& filepath) {
   return LoadInto(filepath, &configuration);
+}
+
+bool Configurator::Load(const std::string& config) {
+  return LoadInto(config, &configuration);
 }
 
 bool Configurator::Save(const std::filesystem::path& filepath, const Configuration& config) {

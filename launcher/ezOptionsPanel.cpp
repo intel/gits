@@ -34,13 +34,13 @@ namespace gits::gui {
 
 void EzOptionsPanel::Render() {
   auto& context = getSharedContext<gui::Context>();
-  const auto labels = {Labels::SCREENSHOTS_RANGES, Labels::SUBCAPTURE_OPTIMIZE,
-                       Labels::SUBCAPTURE_OPTIMIZE_RAY, Labels::SUBCAPTURE_RANGE};
+  const auto labels = {Labels::SCREENSHOTS_RANGES, Labels::SCREENSHOTS_PATH, Labels::TRACE_PATH};
+  auto indent = ImGuiHelper::WidthOf(ImGuiHelper::Widgets::Button, "  ");
 
   auto width = std::ranges::max(labels | std::views::transform([](const auto& label) {
                                   return ImGuiHelper::WidthOf(ImGuiHelper::Widgets::Text, label);
-                                }));
-  auto indent = ImGuiHelper::WidthOf(ImGuiHelper::Widgets::Button, "  ");
+                                })) +
+               indent;
   auto widthLabel =
       ImGuiHelper::WidthOf(ImGuiHelper::Widgets::Label, "123456789012345678901234567890");
   widthLabel = std::min(widthLabel, ImGui::GetContentRegionAvail().x - indent - width);

@@ -31,7 +31,7 @@ enum class FileDialogKeys {
 
 const std::string str(FileDialogKeys key);
 
-bool ValidateGITSConfigFile(std::filesystem::path configPath);
+bool ValidateGITSConfig(const std::string& config);
 void UpdateCLICall(gui::Context& context);
 void SetImGuiStyle(Context* context, size_t selectedItem);
 void LoadConfigFile(Context* context);
@@ -39,7 +39,8 @@ void FileDialogs(gui::Context& context);
 void ShowFileDialog(gui::Context* context, FileDialogKeys key);
 void PlaybackStream(gui::Context& context);
 void SubcaptureStream(gui::Context& context);
-void GetTraceStats(gui::Context& context);
+
+void ResetBasePaths(gui::Context& context);
 
 void OpenURL(const std::string& url);
 bool OpenFolder(const std::filesystem::path& path);

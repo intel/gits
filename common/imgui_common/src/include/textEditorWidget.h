@@ -94,6 +94,7 @@ private:
   Config m_Config;
   mutable std::mutex m_EditorMutex;
   std::unique_ptr<ImGuiHelper::ButtonGroup<TOOL_BAR_ITEMS>> m_BtnsToolBar;
+  std::optional<bool> m_LastCheckResult = std::nullopt;
 };
 
 } // namespace ImGuiHelper

@@ -29,6 +29,7 @@
 #include "guiController.h"
 #include "resource.h"
 #include "context.h"
+#include "configurator.h"
 
 #ifdef _WIN32
 // Forward declare Win32 ImGui handler and WndProc
