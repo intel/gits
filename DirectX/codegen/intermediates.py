@@ -70,6 +70,7 @@ class Struct:
     type: str = ''
     fields: list[None] = field(default_factory=list) # [Parameter | Union]
     has_interfaces: bool = False
+    has_unions: bool = False
     api: Api = None
 
 @dataclass

@@ -235,6 +235,8 @@ def postprocess(functions, interfaces, structures):
                     field.is_interface = True
                     struct.has_interfaces = True
                     structures_with_interfaces.add(struct.name)
+            else:
+                struct.has_unions = True
 
     for function in functions:
         for param in function.params:

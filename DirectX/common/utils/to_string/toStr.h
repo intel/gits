@@ -22,5 +22,22 @@ std::string toStr(const wchar_t* s);
 std::string keyToStr(unsigned key);
 std::wstring keyToWStr(unsigned key);
 
+std::string toStr(const LARGE_INTEGER& i);
+std::string toStr(const float& f);
+std::string toStr(const wchar_t* s);
+
+template <size_t N>
+std::string toStr(const wchar_t (&s)[N]) {
+  return toStr(s);
+}
+
+template <typename T>
+std::string toStr(const T& value) {
+  if constexpr (std::is_arithmetic_v<T>) {
+    return std::to_string(value);
+  }
+  return "TO_STR_UNKNOWN_TYPE";
+}
+
 } // namespace DirectX
 } // namespace gits

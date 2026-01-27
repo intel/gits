@@ -41,24 +41,20 @@ const std::unordered_map<IID, std::string, IIDHash> g_guidToStringMap {
 };
 
 std::string toStr(REFIID riid) {
-  std::stringstream ss;
   auto it = g_guidToStringMap.find(riid);
   if (it != g_guidToStringMap.end()) {
-    ss << it->second;
+    return it->second;
   } else {
-    ss << std::setfill('0') << std::hex << std::uppercase;
-    ss << std::setw(8) << riid.Data1 << "-";
-    ss << std::setw(4) << riid.Data2 << "-";
-    ss << std::setw(4) << riid.Data3 << "-";
-    for (int i = 0; i < 2; ++i) {
-      ss << std::setw(2) << unsigned(riid.Data4[i]);
-    }
-    ss << "-";
-    for (int i = 2; i < 8; ++i) {
-      ss << std::setw(2) << unsigned(riid.Data4[i]);
-    }
+    char buffer[256];
+    sprintf_s(
+        buffer,
+        "GUID{0x%08X, 0x%04X, 0x%04X, {0x%02X, 0x%02X, 0x%02X, 0x%02X, 0x%02X, 0x%02X, 0x%02X, "
+        "0x%02X}}",
+        riid.Data1, riid.Data2, riid.Data3, riid.Data4[0], riid.Data4[1], riid.Data4[2],
+        riid.Data4[3], riid.Data4[4], riid.Data4[5], riid.Data4[6], riid.Data4[7]);
+    return std::string(buffer);
   }
-  return ss.str();
+  return "UNKNOWN_GUID";
 }
 
 } // namespace DirectX

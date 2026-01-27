@@ -61,8 +61,9 @@ PlayerManager::~PlayerManager() {
 PlayerManager::PlayerManager() {
   auto& cfg = Configurator::Get();
   executeCommands_ = cfg.directx.player.execute;
-  multithreadedShaderCompilation_ =
-      cfg.directx.player.multithreadedShaderCompilation && !cfg.directx.features.subcapture.enabled;
+  multithreadedShaderCompilation_ = cfg.directx.player.multithreadedShaderCompilation &&
+                                    !cfg.directx.features.subcapture.enabled &&
+                                    !cfg.directx.player.cCode.enabled;
 
   // Load DirectX runtimes
   loadDirectML();

@@ -22,6 +22,7 @@
 #include "debugHelperLayer.h"
 #include "logDxErrorLayerAuto.h"
 #include "imguiHudLayer.h"
+#include "ccodeLayerAuto.h"
 #include "gits.h"
 
 namespace gits {
@@ -65,6 +66,10 @@ void PlayerLayerManager::loadLayers(PlayerManager& playerManager, PluginService&
   std::unique_ptr<Layer> printStatusLayer = std::make_unique<PrintStatusLayer>();
   std::unique_ptr<Layer> addressPinningLayer;
   std::unique_ptr<Layer> dllOverrideUseLayer;
+  std::unique_ptr<Layer> ccodeLayer;
+  if (cfg.player.cCode.enabled) {
+    ccodeLayer = std::make_unique<CCodeLayer>();
+  }
 
   if (cfg.player.execute) {
     replayCustomizationLayer = std::make_unique<ReplayCustomizationLayer>(playerManager);
@@ -76,7 +81,8 @@ void PlayerLayerManager::loadLayers(PlayerManager& playerManager, PluginService&
     if (cfg.player.debugLayer) {
       debugInfoLayer = std::make_unique<DebugInfoLayer>();
     }
-    if (cfg.player.multithreadedShaderCompilation && !cfg.features.subcapture.enabled) {
+    if (cfg.player.multithreadedShaderCompilation && !cfg.features.subcapture.enabled &&
+        !cfg.player.cCode.enabled) {
       multithreadedObjectCreationLayer =
           std::make_unique<MultithreadedObjectCreationLayer>(playerManager);
       multithreadedObjectAwaitLayer =
@@ -118,6 +124,7 @@ void PlayerLayerManager::loadLayers(PlayerManager& playerManager, PluginService&
   if (Configurator::IsHudEnabledForApi(ApiBool::DX)) {
     enablePreLayer(imGuiHUDLayer);
   }
+  enablePreLayer(ccodeLayer);
 
   // Enable Post layers
   // Insertion order determines execution order
@@ -151,6 +158,7 @@ void PlayerLayerManager::loadLayers(PlayerManager& playerManager, PluginService&
   if (Configurator::IsHudEnabledForApi(ApiBool::DX)) {
     enablePostLayer(imGuiHUDLayer);
   }
+  enablePostLayer(ccodeLayer);
 
   for (const auto& plugin : pluginService.getPlugins()) {
     Layer* layer = static_cast<Layer*>(plugin.impl->getImpl());
@@ -200,6 +208,7 @@ void PlayerLayerManager::loadLayers(PlayerManager& playerManager, PluginService&
   retainLayer(std::move(printStatusLayer));
   retainLayer(std::move(addressPinningLayer));
   retainLayer(std::move(dllOverrideUseLayer));
+  retainLayer(std::move(ccodeLayer));
 }
 
 } // namespace DirectX

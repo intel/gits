@@ -11,23 +11,26 @@ ${header}
 
 #include "enumToStrAuto.h"
 #include <unordered_map>
+#include <algorithm>
 
 namespace gits {
 namespace DirectX {
 
-static std::string enumToStr(const std::unordered_map<int, std::string>& enumMap, int value) {
+static std::string enumToStr(const std::vector<std::pair<int, std::string>>& enumValues, int value) {
   std::string result;
   bool first = true;
-  for (const auto& [k, name] : enumMap) {
-    if (value & k) {
+  int remainingValue = value;
+  for (const auto& [k, name] : enumValues) {
+    if (k != 0 && (remainingValue & k) == k) {
       if (!first) {
         result += "|";
       }
       result += name;
       first = false;
+      remainingValue &= ~k; // Clear the bits
     }
   }
-  return result.empty() ? "unknown" : result;
+  return result.empty() ? "0" : result;
 }
 
 %for enum in enums:
@@ -46,7 +49,14 @@ std::string toStr(${enum.name} value) {
       {${value}, "${value}"},
 %endfor
     };
-    result = enumToStr(enumMap, value);
+    // Sort map by keys in descending order for proper flag combination handling
+    static const auto sortedMap = []() {
+      std::vector<std::pair<int, std::string>> sorted(enumMap.begin(), enumMap.end());
+      std::sort(sorted.begin(), sorted.end(), 
+                [](const auto& a, const auto& b) { return a.first > b.first; });
+      return sorted;
+    }();
+    result = enumToStr(sortedMap, value);
     break;
   }
   return result;

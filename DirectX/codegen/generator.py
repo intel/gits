@@ -29,6 +29,7 @@ from generator_subcapture import generate_subcapture_files
 from generator_execution_serialization import generate_execution_serialization_files
 from generator_resource_dumping import generate_resource_dumping_files
 from generator_skip_calls import generate_skip_calls_files
+from generator_ccode import generate_ccode_files
 from intermediates import Api
 from header_preprocessor import preprocess_header
 from command_ids import build_command_ids
@@ -122,6 +123,7 @@ def main():
     generate_execution_serialization_files(context, os.path.join(outpath, 'layers/execution_serialization'))
     generate_resource_dumping_files(context, os.path.join(outpath, 'layers/resource_dumping'))
     generate_skip_calls_files(context, os.path.join(outpath, 'layers/skip_calls'))
+    generate_ccode_files(context, os.path.join(outpath, 'layers/ccode'))
 
     plugin_directories = [
         os.path.join(outpath, '../plugins/DirectX'),

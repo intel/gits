@@ -18,9 +18,14 @@ Binary **GITS** streams are collections of files produced by **GITS** recorder. 
 
 Recorder operates, by creating a `token` for each recorder function in the thread that invoked that API function. `Token` represents all the information necessary to play back function it represents. Recorder then passes each newly created `token` to a separate thread which is used to persist data to hdd.
 Normally all IO is done in separate threads of execution to minimize impact on the recorded application.
+
 # Player
 
-The player's main task is to read in the recorded binary stream and play it back on the current machine. It sets a rendering surface, initializes the API and plays back the commands that have been tokenized. 
+The player's main task is to read in the recorded binary stream and play it back on the current machine. It sets a rendering surface, initializes the API and plays back the commands that have been tokenized.
+
+## CCode
+
+GITS can export a stream to code (a standalone C++ project). That feature is called **CCode**. For now **CCode** is only supported by the DirectX backend.
 
 # Configuration
 

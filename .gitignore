@@ -121,3 +121,7 @@ docs/**/*Auto.md
 
 # ThirdParty system
 third_party.meta.yaml
+
+# CCode
+ccode/generated
+ccode/Build

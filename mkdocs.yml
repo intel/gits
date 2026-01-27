@@ -95,6 +95,7 @@ nav:
         - 'documentation/DirectX/Plugins.md'
         - 'documentation/DirectX/DirectStorage.md'
         - 'documentation/DirectX/Portability.md'
+        - 'documentation/DirectX/CCode.md'
       - Level Zero:
         - 'documentation/LevelZero/l0_gits_indirect_access_pointers_locations.md'
         - 'documentation/LevelZero/lua.md'

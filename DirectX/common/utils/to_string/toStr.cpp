@@ -12,6 +12,14 @@
 namespace gits {
 namespace DirectX {
 
+std::string toStr(const LARGE_INTEGER& i) {
+  return std::to_string(i.QuadPart);
+}
+
+std::string toStr(const float& f) {
+  return std::to_string(f) + "f";
+}
+
 std::string toStr(const wchar_t* s) {
   // Convert wide string to narrow string by truncating the characters
   // Note: Will not work for non-ASCII characters

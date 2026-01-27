@@ -100,8 +100,9 @@ void CreateWindowMetaPlayer::Run() {
 
   if (manager.executeCommands() && !command.skip) {
 
-    manager.getWindowService().createWindow(command.hWnd_.value, command.width_.value,
-                                            command.height_.value);
+    HWND hWnd = manager.getWindowService().createWindow(command.hWnd_.value, command.width_.value,
+                                                        command.height_.value);
+    command.hWnd_.value = hWnd;
   }
 
   for (Layer* layer : manager.getPostLayers()) {

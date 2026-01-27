@@ -369,3 +369,8 @@ if(WITH_DIRECTX)
 endif()
 
 install(FILES ${CONFIG_DEFAULT_OUTPUT} DESTINATION Player)
+
+# CCode is only for DirectX for now
+if(WITH_DIRECTX)
+  include(ccode_install)
+endif()

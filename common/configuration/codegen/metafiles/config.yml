@@ -935,6 +935,23 @@ Configuration:
             Type: AddressPinningMode
             Default: None
             Description: None / Use - Recreate resources and heaps at capture-time GPUVAs / Store - Dump file with GPUVAs
+          - Name: CCode
+            Type: Group
+            Description:
+              CCode generation settings. The generated CCode project will be stored in Player.outputDir.
+            Options:
+              - Name: enabled
+                Type: bool
+                Default: false
+                Description: Generate CCode files during playback
+              - Name: CCodePath
+                Type: std::filesystem::path
+                Default: "{install_path}/ccode"
+                Description: Path to base CCode project directory
+              - Name: commandsPerBlock
+                Type: uint32_t
+                Default: 1000
+                Description: Number of API commands per CCode function (and file)
         ConfigName: Playback
       - Name: Features
         Type: Group
