@@ -21,10 +21,6 @@ void ResourceStateTracker::addResource(unsigned resourceKey, D3D12_BARRIER_LAYOU
   addResource(resourceKey, state);
 }
 
-void ResourceStateTracker::destroyResource(unsigned resourceKey) {
-  resourceStates_.erase(resourceKey);
-}
-
 void ResourceStateTracker::resourceBarrier(ID3D12GraphicsCommandList* commandList,
                                            D3D12_RESOURCE_BARRIER* barriers,
                                            unsigned barriersNum,

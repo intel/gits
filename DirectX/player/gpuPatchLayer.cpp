@@ -53,7 +53,6 @@ void GpuPatchLayer::pre(IUnknownReleaseCommand& c) {
     addressService_.destroyInterface(c.object_.key);
     descriptorHandleService_.destroyHeap(c.object_.key);
     commandListService_.remove(c.object_.key);
-    resourceStateTracker_.destroyResource(c.object_.key);
 
     const auto mappingsIt = currentMappingsByCommandList_.find(c.object_.key);
     if (mappingsIt != currentMappingsByCommandList_.end()) {

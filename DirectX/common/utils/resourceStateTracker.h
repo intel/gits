@@ -26,7 +26,6 @@ public:
                        unsigned barriersNum,
                        unsigned* resourceKeys);
   void executeCommandLists(ID3D12GraphicsCommandList** commandLists, unsigned commandListNum);
-  void destroyResource(unsigned resourceKey);
   D3D12_RESOURCE_STATES getResourceState(ID3D12GraphicsCommandList* commandList,
                                          unsigned resourceKey,
                                          unsigned subresource);

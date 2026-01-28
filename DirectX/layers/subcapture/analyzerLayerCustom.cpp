@@ -682,7 +682,6 @@ void AnalyzerLayer::post(IUnknownReleaseCommand& c) {
   if (optimize_ || optimizeRaytracing_) {
     if (c.result_.value == 0) {
       gpuAddressService_.destroyInterface(c.object_.key);
-      resourceStateTracker_.destroyResource(c.object_.key);
     }
   }
 }

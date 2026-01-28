@@ -139,7 +139,6 @@ void StateTrackingLayer::pre(IUnknownReleaseCommand& c) {
     accelerationStructuresSerializeService_.destroyResource(c.object_.key);
     residencyService_.destroyObject(c.object_.key);
     resourceUsageTrackingService_.destroyResource(c.object_.key);
-    resourceStateTracker_.destroyResource(c.object_.key);
     gpuAddressService_.destroyInterface(c.object_.key);
 
     auto it = resourceHeaps_.find(c.object_.key);

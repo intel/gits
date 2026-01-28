@@ -45,7 +45,6 @@ void ResourceDumpService::destroyResource(unsigned resourceKey) {
   if (!resourceKeys_.contains(resourceKey)) {
     return;
   }
-  resourceStateTracker_.destroyResource(resourceKey);
   resources_.erase(resourceKey);
 }
 
