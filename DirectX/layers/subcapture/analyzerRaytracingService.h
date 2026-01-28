@@ -39,7 +39,14 @@ public:
   void createStateObject(ID3D12Device5CreateStateObjectCommand& c);
   void addToStateObject(ID3D12Device7AddToStateObjectCommand& c);
   void setPipelineState(ID3D12GraphicsCommandList4SetPipelineState1Command& c);
-  void setDescriptorHeaps(ID3D12GraphicsCommandListSetDescriptorHeapsCommand& c);
+
+  struct DescriptorHeapInfo {
+    unsigned key{};
+    D3D12_DESCRIPTOR_HEAP_TYPE type{};
+    unsigned numDescriptors{};
+  };
+  void setDescriptorHeaps(unsigned commandListKey, const std::vector<DescriptorHeapInfo>& infos);
+
   void buildTlas(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c);
   void dispatchRays(ID3D12GraphicsCommandList4DispatchRaysCommand& c);
   void dumpBindingTable(ID3D12GraphicsCommandList* commandList,

@@ -137,22 +137,21 @@ void AnalyzerRaytracingService::setPipelineState(
   stateObjectByComandList_[c.object_.key] = c.pStateObject_.key;
 }
 
-void AnalyzerRaytracingService::setDescriptorHeaps(
-    ID3D12GraphicsCommandListSetDescriptorHeapsCommand& c) {
+void AnalyzerRaytracingService::setDescriptorHeaps(unsigned commandListKey,
+                                                   const std::vector<DescriptorHeapInfo>& infos) {
   BindingTablesDump::DescriptorHeaps descriptorHeaps{};
-  for (unsigned i = 0; i < c.NumDescriptorHeaps_.value; ++i) {
-    if (c.ppDescriptorHeaps_.value[i]) {
-      D3D12_DESCRIPTOR_HEAP_DESC desc = c.ppDescriptorHeaps_.value[i]->GetDesc();
-      if (desc.Type == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV) {
-        descriptorHeaps.viewDescriptorHeapKey = c.ppDescriptorHeaps_.keys[i];
-        descriptorHeaps.viewDescriptorHeapSize = desc.NumDescriptors;
-      } else if (desc.Type == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV) {
-        descriptorHeaps.samplerHeapKey = c.ppDescriptorHeaps_.keys[i];
-        descriptorHeaps.samplerHeapSize = desc.NumDescriptors;
+  for (const DescriptorHeapInfo& info : infos) {
+    if (info.key) {
+      if (info.type == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV) {
+        descriptorHeaps.viewDescriptorHeapKey = info.key;
+        descriptorHeaps.viewDescriptorHeapSize = info.numDescriptors;
+      } else if (info.type == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV) {
+        descriptorHeaps.samplerHeapKey = info.key;
+        descriptorHeaps.samplerHeapSize = info.numDescriptors;
       }
     }
   }
-  descriptorHeapsByComandList_[c.object_.key] = descriptorHeaps;
+  descriptorHeapsByComandList_[commandListKey] = descriptorHeaps;
 }
 
 void AnalyzerRaytracingService::buildTlas(

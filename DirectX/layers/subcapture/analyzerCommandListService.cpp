@@ -454,7 +454,19 @@ void AnalyzerCommandListService::commandAnalysis(ID3D12GraphicsCommandListExecut
 
 void AnalyzerCommandListService::commandAnalysis(
     ID3D12GraphicsCommandListSetDescriptorHeapsCommand& c) {
-  raytracingService_.setDescriptorHeaps(c);
+
+  std::vector<AnalyzerRaytracingService::DescriptorHeapInfo> infos;
+  for (unsigned i = 0; i < c.NumDescriptorHeaps_.value; ++i) {
+    AnalyzerRaytracingService::DescriptorHeapInfo info;
+    info.key = c.ppDescriptorHeaps_.keys[i];
+    auto it = descriptorHeapInfos_.find(info.key);
+    GITS_ASSERT(it != descriptorHeapInfos_.end());
+    info.type = it->second.type;
+    info.numDescriptors = it->second.numDescriptors;
+    infos.push_back(info);
+  }
+  raytracingService_.setDescriptorHeaps(c.object_.key, infos);
+
   CommandListInfo& commandListInfo = commandListInfos_[c.object_.key];
   commandListInfo.viewDescriptorHeap = 0;
   commandListInfo.samplerDescriptorHeap = 0;
