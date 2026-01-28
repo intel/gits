@@ -191,7 +191,7 @@ void decode(char* src, unsigned& offset, D3D12_RENDER_PASS_DEPTH_STENCIL_DESC_Ar
 void decode(char* src, unsigned& offset, D3D12_SHADER_RESOURCE_VIEW_DESC_Argument& arg);
 void decode(char* src,
             unsigned& offset,
-            PointerArgument<D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO>& arg);
+            ArrayArgument<D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO>& arg);
 void decode(char* src, unsigned& offset, PointerArgument<INTC_D3D12_RESOURCE_DESC_0001>& arg);
 void decode(char* src, unsigned& offset, xess_d3d12_init_params_t_Argument& arg);
 void decode(char* src, unsigned& offset, xess_d3d12_execute_params_t_Argument& arg);

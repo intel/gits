@@ -23,6 +23,7 @@ custom = [
     'ID3D12StateObjectPropertiesGetShaderIdentifier',
     'ID3D12ResourceWriteToSubresource',
     'ID3D12ResourceReadFromSubresource',
+    'ID3D12GraphicsCommandListPreviewConvertLinearAlgebraMatrix',
     'IDMLDeviceCheckFeatureSupport'
 ]
 %>\

@@ -849,17 +849,23 @@ void CaptureCustomizationLayer::pre(ID3D12GraphicsCommandList4DispatchRaysComman
 void CaptureCustomizationLayer::pre(
     ID3D12GraphicsCommandListPreviewConvertLinearAlgebraMatrixCommand& c) {
   if (c.pDesc_.value) {
-    if (c.pDesc_.value->DataDesc.DestVA) {
-      GpuAddressService::GpuAddressInfo info =
-          manager_.getGpuAddressService().getGpuAddressInfo(c.pDesc_.value->DataDesc.DestVA);
-      c.pDesc_.destKey = info.resourceKey;
-      c.pDesc_.destOffset = info.offset;
-    }
-    if (c.pDesc_.value->DataDesc.SrcVA) {
-      GpuAddressService::GpuAddressInfo info =
-          manager_.getGpuAddressService().getGpuAddressInfo(c.pDesc_.value->DataDesc.SrcVA);
-      c.pDesc_.sourceKey = info.resourceKey;
-      c.pDesc_.sourceOffset = info.offset;
+    c.pDesc_.destKey.resize(c.DescCount_.value);
+    c.pDesc_.destOffset.resize(c.DescCount_.value);
+    c.pDesc_.sourceKey.resize(c.DescCount_.value);
+    c.pDesc_.sourceOffset.resize(c.DescCount_.value);
+    for (unsigned i = 0; i < c.DescCount_.value; ++i) {
+      if (c.pDesc_.value[i].DataDesc.DestVA) {
+        GpuAddressService::GpuAddressInfo info =
+            manager_.getGpuAddressService().getGpuAddressInfo(c.pDesc_.value[i].DataDesc.DestVA);
+        c.pDesc_.destKey[i] = info.resourceKey;
+        c.pDesc_.destOffset[i] = info.offset;
+      }
+      if (c.pDesc_.value->DataDesc.SrcVA) {
+        GpuAddressService::GpuAddressInfo info =
+            manager_.getGpuAddressService().getGpuAddressInfo(c.pDesc_.value[i].DataDesc.SrcVA);
+        c.pDesc_.sourceKey[i] = info.resourceKey;
+        c.pDesc_.sourceOffset[i] = info.offset;
+      }
     }
   }
 }

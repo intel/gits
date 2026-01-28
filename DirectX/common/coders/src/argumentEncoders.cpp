@@ -1870,34 +1870,38 @@ void encode(char* dest, unsigned& offset, const D3D12_BARRIER_GROUPs_Argument& a
   offset += sizeof(unsigned) * arg.resourceKeys.size();
 }
 
-unsigned getSize(const PointerArgument<D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO>& arg) {
+unsigned getSize(const ArrayArgument<D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO>& arg) {
   if (!arg.value) {
     return sizeof(void*);
   }
-  unsigned size = sizeof(void*) + sizeof(D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO);
-  size += sizeof(unsigned) * 4;
+  unsigned size = sizeof(void*) + sizeof(arg.size) +
+                  arg.size * sizeof(D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO);
+  size += 4 * arg.size * sizeof(unsigned);
   return size;
 }
 
 void encode(char* dest,
             unsigned& offset,
-            const PointerArgument<D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO>& arg) {
+            const ArrayArgument<D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO>& arg) {
   if (encodeNullPtr(dest, offset, arg)) {
     return;
   }
 
-  memcpy(dest + offset, arg.value, sizeof(D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO));
-  offset += sizeof(D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO);
+  memcpy(dest + offset, &arg.size, sizeof(arg.size));
+  offset += sizeof(arg.size);
 
-  memcpy(dest + offset, &arg.destKey, sizeof(arg.destKey));
-  offset += sizeof(arg.destKey);
-  memcpy(dest + offset, &arg.destOffset, sizeof(arg.destOffset));
-  offset += sizeof(arg.destOffset);
+  memcpy(dest + offset, arg.value, arg.size * sizeof(D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO));
+  offset += arg.size * sizeof(D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO);
 
-  memcpy(dest + offset, &arg.sourceKey, sizeof(arg.sourceKey));
-  offset += sizeof(arg.sourceKey);
-  memcpy(dest + offset, &arg.sourceOffset, sizeof(arg.sourceOffset));
-  offset += sizeof(arg.sourceOffset);
+  memcpy(dest + offset, arg.destKey.data(), arg.size * sizeof(unsigned));
+  offset += arg.size * sizeof(unsigned);
+  memcpy(dest + offset, arg.destOffset.data(), arg.size * sizeof(unsigned));
+  offset += arg.size * sizeof(unsigned);
+
+  memcpy(dest + offset, arg.sourceKey.data(), arg.size * sizeof(unsigned));
+  offset += arg.size * sizeof(unsigned);
+  memcpy(dest + offset, arg.sourceOffset.data(), arg.size * sizeof(unsigned));
+  offset += arg.size * sizeof(unsigned);
 }
 
 unsigned getSize(const DML_BINDING_DESC_Argument& arg) {

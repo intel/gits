@@ -291,6 +291,27 @@ public:
   PointerArgument<D3D12_BOX> pSrcBox_{};
 };
 
+class ID3D12GraphicsCommandListPreviewConvertLinearAlgebraMatrixCommand : public Command {
+public:
+  ID3D12GraphicsCommandListPreviewConvertLinearAlgebraMatrixCommand(
+      unsigned threadId,
+      ID3D12GraphicsCommandListPreview* object,
+      const D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO* pDesc,
+      UINT DescCount)
+      : Command{CommandId::ID_ID3D12GRAPHICSCOMMANDLISTPREVIEW_CONVERTLINEARALGEBRAMATRIX,
+                threadId},
+        object_{object},
+        pDesc_{pDesc, DescCount},
+        DescCount_{DescCount} {}
+  ID3D12GraphicsCommandListPreviewConvertLinearAlgebraMatrixCommand()
+      : Command(CommandId::ID_ID3D12GRAPHICSCOMMANDLISTPREVIEW_CONVERTLINEARALGEBRAMATRIX) {}
+
+public:
+  InterfaceArgument<ID3D12GraphicsCommandListPreview> object_{};
+  ArrayArgument<D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO> pDesc_{};
+  Argument<UINT> DescCount_{};
+};
+
 class INTC_D3D12_GetSupportedVersionsCommand : public Command {
 public:
   INTC_D3D12_GetSupportedVersionsCommand(unsigned threadId,

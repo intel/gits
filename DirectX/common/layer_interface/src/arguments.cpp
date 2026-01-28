@@ -1613,11 +1613,12 @@ D3D12_BARRIER_GROUPs_Argument::~D3D12_BARRIER_GROUPs_Argument() {
   }
 }
 
-PointerArgument<D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO>::PointerArgument(
-    const PointerArgument<D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO>& arg) {
+ArrayArgument<D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO>::ArrayArgument(
+    const ArrayArgument<D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO>& arg) {
+  size = arg.size;
   if (arg.value) {
-    value = new D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO();
-    *value = *arg.value;
+    value = new D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO[arg.size];
+    memcpy(value, arg.value, size * sizeof(D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO));
   }
   destKey = arg.destKey;
   destOffset = arg.destOffset;
@@ -1626,9 +1627,9 @@ PointerArgument<D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO>::PointerArgument(
   copy = true;
 }
 
-PointerArgument<D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO>::~PointerArgument() {
+ArrayArgument<D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO>::~ArrayArgument() {
   if (copy) {
-    delete value;
+    delete[] value;
   }
 }
 

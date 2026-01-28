@@ -1387,13 +1387,15 @@ void ReplayCustomizationLayer::pre(
     return;
   }
   if (c.pDesc_.value) {
-    if (c.pDesc_.value->DataDesc.DestVA) {
-      c.pDesc_.value->DataDesc.DestVA =
-          manager_.getGpuAddressService().getGpuAddress(c.pDesc_.destKey, c.pDesc_.destOffset);
-    }
-    if (c.pDesc_.value->DataDesc.SrcVA) {
-      c.pDesc_.value->DataDesc.SrcVA =
-          manager_.getGpuAddressService().getGpuAddress(c.pDesc_.sourceKey, c.pDesc_.sourceOffset);
+    for (unsigned i = 0; i < c.DescCount_.value; ++i) {
+      if (c.pDesc_.value[i].DataDesc.DestVA) {
+        c.pDesc_.value[i].DataDesc.DestVA = manager_.getGpuAddressService().getGpuAddress(
+            c.pDesc_.destKey[i], c.pDesc_.destOffset[i]);
+      }
+      if (c.pDesc_.value[i].DataDesc.SrcVA) {
+        c.pDesc_.value[i].DataDesc.SrcVA = manager_.getGpuAddressService().getGpuAddress(
+            c.pDesc_.sourceKey[i], c.pDesc_.sourceOffset[i]);
+      }
     }
   }
 }

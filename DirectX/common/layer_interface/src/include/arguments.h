@@ -635,19 +635,20 @@ struct D3D12_BARRIER_GROUPs_Argument {
 };
 
 template <>
-struct PointerArgument<D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO> {
-  PointerArgument(const D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO* value_)
-      : value(const_cast<D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO*>(value_)) {}
-  PointerArgument() {}
-  PointerArgument(const PointerArgument<D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO>& arg);
-  PointerArgument& operator=(const PointerArgument<D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO>&) =
+struct ArrayArgument<D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO> {
+  ArrayArgument(const D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO* value_, size_t size_)
+      : value(const_cast<D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO*>(value_)), size(size_) {}
+  ArrayArgument() {}
+  ArrayArgument(const ArrayArgument<D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO>& arg);
+  ArrayArgument& operator=(const ArrayArgument<D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO>&) =
       delete;
-  ~PointerArgument();
+  ~ArrayArgument();
   D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO* value{};
-  unsigned destKey{};
-  unsigned destOffset{};
-  unsigned sourceKey{};
-  unsigned sourceOffset{};
+  size_t size{};
+  std::vector<unsigned> destKey{};
+  std::vector<unsigned> destOffset{};
+  std::vector<unsigned> sourceKey{};
+  std::vector<unsigned> sourceOffset{};
   bool copy{};
 };
 

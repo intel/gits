@@ -1308,23 +1308,30 @@ void decode(char* src, unsigned& offset, D3D12_SHADER_RESOURCE_VIEW_DESC_Argumen
 
 void decode(char* src,
             unsigned& offset,
-            PointerArgument<D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO>& arg) {
+            ArrayArgument<D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO>& arg) {
   if (decodeNullPtr(src, offset, arg)) {
     return;
   }
 
+  memcpy(&arg.size, src + offset, sizeof(arg.size));
+  offset += sizeof(arg.size);
+
   arg.value = reinterpret_cast<D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO*>(src + offset);
-  offset += sizeof(D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO);
+  offset += arg.size * sizeof(D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO);
 
-  memcpy(&arg.destKey, src + offset, sizeof(arg.destKey));
-  offset += sizeof(arg.destKey);
-  memcpy(&arg.destOffset, src + offset, sizeof(arg.destOffset));
-  offset += sizeof(arg.destOffset);
+  arg.destKey.resize(arg.size);
+  memcpy(arg.destKey.data(), src + offset, arg.size * sizeof(unsigned));
+  offset += arg.size * sizeof(unsigned);
+  arg.destOffset.resize(arg.size);
+  memcpy(arg.destOffset.data(), src + offset, arg.size * sizeof(unsigned));
+  offset += arg.size * sizeof(unsigned);
 
-  memcpy(&arg.sourceKey, src + offset, sizeof(arg.sourceKey));
-  offset += sizeof(arg.sourceKey);
-  memcpy(&arg.sourceOffset, src + offset, sizeof(arg.sourceOffset));
-  offset += sizeof(arg.sourceOffset);
+  arg.sourceKey.resize(arg.size);
+  memcpy(arg.sourceKey.data(), src + offset, arg.size * sizeof(unsigned));
+  offset += arg.size * sizeof(unsigned);
+  arg.sourceOffset.resize(arg.size);
+  memcpy(arg.sourceOffset.data(), src + offset, arg.size * sizeof(unsigned));
+  offset += arg.size * sizeof(unsigned);
 }
 
 // This decode function does not have a getSize/encode counterpart
