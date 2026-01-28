@@ -11,6 +11,7 @@
 #include "stateTrackingService.h"
 #include "commandWritersAuto.h"
 #include "analyzerResults.h"
+#include "commandWritersFactory.h"
 #include "log.h"
 
 #include <fstream>
@@ -37,19 +38,36 @@ void CommandListService::restoreCommandLists() {
   }
 
   std::map<unsigned, CommandListCommand*> commandsByKey;
+  std::map<unsigned, unsigned> commandListAllocatorsForReset;
 
   for (auto& it : commandListsByKey_) {
     if (!stateService_.getAnalyzerResults().restoreCommandList(it.first)) {
       continue;
     }
     CommandListState* state = it.second;
-    for (CommandListCommand* command : it.second->commands) {
+    if (state->allocatorKey && !state->commands.empty()) {
+      if (state->commands.front()->id != CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_RESET) {
+        commandListAllocatorsForReset[state->key] = state->allocatorKey;
+      }
+    }
+    for (CommandListCommand* command : state->commands) {
       commandsByKey[command->commandKey] = command;
     }
   }
 
   for (auto& it : commandsByKey) {
     CommandListCommand* command = it.second;
+
+    auto itReset = commandListAllocatorsForReset.find(command->commandListKey);
+    if (itReset != commandListAllocatorsForReset.end()) {
+      ID3D12GraphicsCommandListResetCommand reset;
+      reset.key = stateService_.getUniqueCommandKey();
+      reset.object_.key = itReset->first;
+      reset.pAllocator_.key = itReset->second;
+      stateService_.getRecorder().record(createCommandWriter(&reset));
+      commandListAllocatorsForReset.erase(itReset);
+    }
+
     if (command->id == CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_OMSETRENDERTARGETS) {
       restoreCommandState(static_cast<CommandListOMSetRenderTargets*>(command));
     } else if (command->id == CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_CLEARRENDERTARGETVIEW) {

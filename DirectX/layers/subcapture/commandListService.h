@@ -21,34 +21,36 @@ namespace gits {
 namespace DirectX {
 
 struct CommandListCommand {
-  CommandListCommand(CommandId id_, unsigned key) : id(id_), commandKey(key) {}
+  CommandListCommand(CommandId id_, unsigned key, unsigned clKey)
+      : id(id_), commandKey(key), commandListKey(clKey) {}
   CommandId id{};
   unsigned commandKey{};
+  unsigned commandListKey{};
   std::unique_ptr<CommandWriter> commandWriter;
 };
 
 struct CommandListOMSetRenderTargets : public CommandListCommand {
-  CommandListOMSetRenderTargets(unsigned key)
-      : CommandListCommand(CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_OMSETRENDERTARGETS, key) {}
-  unsigned commandListKey{};
+  CommandListOMSetRenderTargets(unsigned key, unsigned commandListKey)
+      : CommandListCommand(
+            CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_OMSETRENDERTARGETS, key, commandListKey) {}
   std::vector<std::unique_ptr<D3D12RenderTargetViewState>> renderTargetViews;
   std::unique_ptr<D3D12DepthStencilViewState> depthStencilView;
   bool rtsSingleHandleToDescriptorRange{};
 };
 
 struct CommandListClearRenderTargetView : public CommandListCommand {
-  CommandListClearRenderTargetView(unsigned key)
-      : CommandListCommand(CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_CLEARRENDERTARGETVIEW, key) {}
-  unsigned commandListKey{};
+  CommandListClearRenderTargetView(unsigned key, unsigned commandListKey)
+      : CommandListCommand(
+            CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_CLEARRENDERTARGETVIEW, key, commandListKey) {}
   std::unique_ptr<D3D12RenderTargetViewState> renderTargetView;
   FLOAT colorRGBA[4]{};
   std::vector<D3D12_RECT> rects{};
 };
 
 struct CommandListClearDepthStencilView : public CommandListCommand {
-  CommandListClearDepthStencilView(unsigned key)
-      : CommandListCommand(CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_CLEARDEPTHSTENCILVIEW, key) {}
-  unsigned commandListKey{};
+  CommandListClearDepthStencilView(unsigned key, unsigned commandListKey)
+      : CommandListCommand(
+            CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_CLEARDEPTHSTENCILVIEW, key, commandListKey) {}
   std::unique_ptr<D3D12DepthStencilViewState> depthStencilView;
   FLOAT depth{};
   UINT8 stencil{};
@@ -56,10 +58,10 @@ struct CommandListClearDepthStencilView : public CommandListCommand {
 };
 
 struct CommandListClearUnorderedAccessViewUint : public CommandListCommand {
-  CommandListClearUnorderedAccessViewUint(unsigned key)
+  CommandListClearUnorderedAccessViewUint(unsigned key, unsigned commandListKey)
       : CommandListCommand(CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_CLEARUNORDEREDACCESSVIEWUINT,
-                           key) {}
-  unsigned commandListKey{};
+                           key,
+                           commandListKey) {}
   std::unique_ptr<D3D12UnorderedAccessViewState> viewGPUHandleInCurrentHeap;
   std::unique_ptr<D3D12UnorderedAccessViewState> viewCPUHandle;
   unsigned resourceKey{};
@@ -68,10 +70,10 @@ struct CommandListClearUnorderedAccessViewUint : public CommandListCommand {
 };
 
 struct CommandListClearUnorderedAccessViewFloat : public CommandListCommand {
-  CommandListClearUnorderedAccessViewFloat(unsigned key)
+  CommandListClearUnorderedAccessViewFloat(unsigned key, unsigned commandListKey)
       : CommandListCommand(CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_CLEARUNORDEREDACCESSVIEWFLOAT,
-                           key) {}
-  unsigned commandListKey{};
+                           key,
+                           commandListKey) {}
   std::unique_ptr<D3D12UnorderedAccessViewState> viewGPUHandleInCurrentHeap;
   std::unique_ptr<D3D12UnorderedAccessViewState> viewCPUHandle;
   unsigned resourceKey{};
@@ -89,7 +91,7 @@ struct CommandListState : public ObjectState, gits::noncopyable {
     }
     commands.clear();
   }
-  unsigned deviceKey{};
+  unsigned allocatorKey{};
   UINT nodeMask{};
   D3D12_COMMAND_LIST_TYPE type{};
   IID iid{};

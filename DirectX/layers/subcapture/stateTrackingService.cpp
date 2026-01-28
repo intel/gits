@@ -563,7 +563,14 @@ void StateTrackingService::restoreD3D12CommandList(ObjectState* state) {
 
   recorder_.record(createCommandWriter(state->creationCommand.get()));
 
-  if (static_cast<CommandListState*>(state)->closed) {
+  CommandListState* commandListState = static_cast<CommandListState*>(state);
+  bool closed = commandListState->closed;
+  if (analyzerResults_.restoreCommandList(state->key)) {
+    if (commandListState && !commandListState->commands.empty()) {
+      closed = true;
+    }
+  }
+  if (closed) {
     ID3D12GraphicsCommandListCloseCommand close;
     close.key = getUniqueCommandKey();
     close.object_.key = state->key;
