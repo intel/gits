@@ -10,7 +10,9 @@
 #include "gits.h"
 #include "log.h"
 #include "configurationLib.h"
+#include "yaml-cpp/yaml.h"
 
+#include <fstream>
 #include <d3dx12.h>
 #include <wrl/client.h>
 
@@ -21,7 +23,8 @@ RenderTargetsDumpLayer::RenderTargetsDumpLayer()
     : Layer("RenderTargetsDump"),
       resourceDump_(Configurator::Get().directx.features.renderTargetsDump.format),
       frameRange_(Configurator::Get().directx.features.renderTargetsDump.frames),
-      drawRange_(Configurator::Get().directx.features.renderTargetsDump.draws) {
+      drawRange_(Configurator::Get().directx.features.renderTargetsDump.draws),
+      dryRun_(Configurator::Get().directx.features.renderTargetsDump.dryRun) {
 
   auto& dumpPath = Configurator::Get().common.player.outputDir.empty()
                        ? Configurator::Get().common.player.streamDir / "render_targets"
@@ -30,6 +33,21 @@ RenderTargetsDumpLayer::RenderTargetsDumpLayer()
     std::filesystem::create_directory(dumpPath);
   }
   dumpPath_ = dumpPath;
+}
+
+RenderTargetsDumpLayer::~RenderTargetsDumpLayer() {
+  if (dryRun_) {
+    YAML::Node output;
+    output["DrawsWithTextureByFrame"] = YAML::Node();
+    for (const auto& [frame, dispatchNumbers] : dryRunInfo_.drawsWithTextureByFrame) {
+      for (unsigned dispatchNumber : dispatchNumbers) {
+        output["DrawsWithTextureByFrame"][frame].push_back(dispatchNumber);
+      }
+      output["DrawsWithTextureByFrame"][frame].SetStyle(YAML::EmitterStyle::Flow);
+    }
+    std::ofstream file("RenderTargetsDumpDryRun.yaml");
+    file << output;
+  }
 }
 
 void RenderTargetsDumpLayer::post(StateRestoreBeginCommand& c) {
@@ -198,7 +216,11 @@ void RenderTargetsDumpLayer::onDraw(ID3D12GraphicsCommandList* commandList,
   if (itRenderTargets != renderTargetsByCommandList_.end()) {
     for (RenderTarget& renderTarget : itRenderTargets->second) {
       if (renderTarget.resource) {
-        dumpRenderTarget(commandList, renderTarget, frame, commandListDrawCount, drawCount_);
+        if (dryRun_) {
+          dryRunInfo_.drawsWithTextureByFrame[frame].insert(drawCount_);
+        } else {
+          dumpRenderTarget(commandList, renderTarget, frame, commandListDrawCount, drawCount_);
+        }
       }
     }
   }
@@ -206,8 +228,12 @@ void RenderTargetsDumpLayer::onDraw(ID3D12GraphicsCommandList* commandList,
   auto itDepthStencil = depthStencilByCommandList_.find(commandListKey);
   if (itDepthStencil != depthStencilByCommandList_.end()) {
     if (itDepthStencil->second.resource) {
-      dumpDepthStencil(commandList, itDepthStencil->second, frame, commandListDrawCount,
-                       drawCount_);
+      if (dryRun_) {
+        dryRunInfo_.drawsWithTextureByFrame[frame].insert(drawCount_);
+      } else {
+        dumpDepthStencil(commandList, itDepthStencil->second, frame, commandListDrawCount,
+                         drawCount_);
+      }
     }
   }
 }

@@ -24,6 +24,7 @@ namespace DirectX {
 class RenderTargetsDumpLayer : public Layer {
 public:
   RenderTargetsDumpLayer();
+  ~RenderTargetsDumpLayer();
   void post(StateRestoreBeginCommand& c) override;
   void post(StateRestoreEndCommand& c) override;
   void post(ID3D12DeviceCreateRenderTargetViewCommand& c) override;
@@ -47,6 +48,7 @@ private:
   RenderTargetsDump resourceDump_;
   BitRange frameRange_;
   BitRange drawRange_;
+  bool dryRun_{};
   unsigned drawCount_{};
   unsigned executeCount_{};
   std::unordered_map<unsigned, unsigned> drawCountByCommandList_;
@@ -70,6 +72,10 @@ private:
   std::map<std::pair<unsigned, unsigned>, DepthStencil> depthStencilsByDescriptorHandle_;
   std::unordered_map<unsigned, std::vector<RenderTarget>> renderTargetsByCommandList_;
   std::unordered_map<unsigned, DepthStencil> depthStencilByCommandList_;
+
+  struct DryRunInfo {
+    std::map<unsigned, std::set<unsigned>> drawsWithTextureByFrame;
+  } dryRunInfo_;
 
 private:
   void onDraw(ID3D12GraphicsCommandList* commandList, unsigned commandListKey);

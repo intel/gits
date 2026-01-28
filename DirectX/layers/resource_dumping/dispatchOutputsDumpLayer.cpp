@@ -10,7 +10,9 @@
 #include "gits.h"
 #include "log.h"
 #include "configurationLib.h"
+#include "yaml-cpp/yaml.h"
 
+#include <fstream>
 #include <d3dx12.h>
 #include <wrl/client.h>
 
@@ -21,7 +23,8 @@ DispatchOutputsDumpLayer::DispatchOutputsDumpLayer()
     : Layer("DispatchOutputsDump"),
       resourceDump_(Configurator::Get().directx.features.dispatchOutputsDump.format),
       frameRange_(Configurator::Get().directx.features.dispatchOutputsDump.frames),
-      dispatchRange_(Configurator::Get().directx.features.dispatchOutputsDump.dispatches) {
+      dispatchRange_(Configurator::Get().directx.features.dispatchOutputsDump.dispatches),
+      dryRun_(Configurator::Get().directx.features.dispatchOutputsDump.dryRun) {
 
   auto& dumpPath = Configurator::Get().common.player.outputDir.empty()
                        ? Configurator::Get().common.player.streamDir / "dispatch_outputs"
@@ -30,6 +33,21 @@ DispatchOutputsDumpLayer::DispatchOutputsDumpLayer()
     std::filesystem::create_directory(dumpPath);
   }
   dumpPath_ = dumpPath;
+}
+
+DispatchOutputsDumpLayer::~DispatchOutputsDumpLayer() {
+  if (dryRun_) {
+    YAML::Node output;
+    output["DispatchesWithTextureByFrame"] = YAML::Node();
+    for (const auto& [frame, dispatchNumbers] : dryRunInfo_.dispatchesWithTextureByFrame) {
+      for (unsigned dispatchNumber : dispatchNumbers) {
+        output["DispatchesWithTextureByFrame"][frame].push_back(dispatchNumber);
+      }
+      output["DispatchesWithTextureByFrame"][frame].SetStyle(YAML::EmitterStyle::Flow);
+    }
+    std::ofstream file("DispatchOutputsDumpDryRun.yaml");
+    file << output;
+  }
 }
 
 void DispatchOutputsDumpLayer::post(ID3D12DeviceCreateCommittedResourceCommand& c) {
@@ -273,7 +291,11 @@ void DispatchOutputsDumpLayer::post(ID3D12GraphicsCommandListDispatchCommand& c)
     for (const auto& [slot, dispatchOutputsByResource] : itDispatchOutputsBySlot->second) {
       for (const auto& [resourceKey, dispatchOutput] : dispatchOutputsByResource) {
         if (dispatchOutput.resource) {
-          dumpComputeOutput(commandList, dispatchOutput, frame, commandListDispatchCount);
+          if (dryRun_) {
+            dryRunInfo_.dispatchesWithTextureByFrame[frame].insert(dispatchCount_);
+          } else {
+            dumpComputeOutput(commandList, dispatchOutput, frame, commandListDispatchCount);
+          }
         }
       }
     }

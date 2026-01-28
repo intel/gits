@@ -1097,6 +1097,10 @@ Configuration:
                 Type: ImageFormat
                 Default: PNG
                 Description: Format (PNG/JPEG)
+              - Name: dryRun
+                Type: bool
+                Default: false
+                Description: Whether dry run is enabled or not
           - Name: DispatchOutputsDump
             Type: Group
             Options:
@@ -1118,6 +1122,10 @@ Configuration:
                 Type: ImageFormat
                 Default: PNG
                 Description: Format (PNG/JPEG)
+              - Name: dryRun
+                Type: bool
+                Default: false
+                Description: Whether dry run is enabled or not
           - Name: RaytracingDump
             Type: Group
             Options:

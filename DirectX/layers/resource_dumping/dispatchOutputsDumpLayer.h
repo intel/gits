@@ -24,6 +24,7 @@ namespace DirectX {
 class DispatchOutputsDumpLayer : public Layer {
 public:
   DispatchOutputsDumpLayer();
+  ~DispatchOutputsDumpLayer();
   void post(ID3D12DeviceCreateCommittedResourceCommand& c) override;
   void post(ID3D12Device4CreateCommittedResource1Command& c) override;
   void post(ID3D12Device8CreateCommittedResource2Command& c) override;
@@ -73,6 +74,7 @@ private:
   DispatchOutputsDump resourceDump_;
   BitRange frameRange_;
   BitRange dispatchRange_;
+  bool dryRun_{};
   unsigned dispatchCount_{};
   unsigned executeCount_{};
   bool stateRestorePhase_{};
@@ -102,6 +104,10 @@ private:
   std::unordered_map<unsigned,
                      std::unordered_map<unsigned, std::unordered_map<unsigned, DispatchOutput>>>
       dispatchOutputsByResourceBySlotByCommandList_;
+
+  struct DryRunInfo {
+    std::map<unsigned, std::set<unsigned>> dispatchesWithTextureByFrame;
+  } dryRunInfo_;
 
 private:
   void createDescriptor(unsigned heapKey,

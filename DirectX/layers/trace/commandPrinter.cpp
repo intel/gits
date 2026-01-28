@@ -78,6 +78,7 @@ void CommandPrinter::print(bool flush, bool newLine) {
     stream_ << " Frame #" << state_.frameCount << " end";
     ++state_.frameCount;
     state_.drawCount = 0;
+    state_.dispatchCount = 0;
     state_.commandListExecutionCount = 0;
   } else if (command_.getId() == CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_DRAWINSTANCED ||
              command_.getId() == CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_DRAWINDEXEDINSTANCED) {
