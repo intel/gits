@@ -841,14 +841,12 @@ typedef HRESULT ( *PFNINTCDX12EXT_API_CALLBACK_SETDEVICEPARAMS )(
 
 typedef HRESULT ( *PFNINTCDX12EXT_GETCACHEDBLOB )(
     INTCExtensionContext*        pExtensionContext,
-    ID3D12GraphicsCommandList*   pCommandList,
     ID3D12PipelineState*         pPipelineState,
     ID3DBlob**                   ppBlob,
     INTC_D3D12_CACHED_BLOB_FLAGS flags );
 typedef HRESULT ( *PFNINTCDX12EXT_API_CALLBACK_GETCACHEDBLOB )(
     PFNINTCDX12EXT_GETCACHEDBLOB pfnGetCachedBlob,
     INTCExtensionContext*        pExtensionContext,
-    ID3D12GraphicsCommandList*   pCommandList,
     ID3D12PipelineState*         pPipelineState,
     ID3DBlob**                   ppBlob,
     INTC_D3D12_CACHED_BLOB_FLAGS flags );

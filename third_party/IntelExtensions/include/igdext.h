@@ -1074,13 +1074,11 @@ HRESULT INTC_D3D12_SetDeviceParams(
 //////////////////////////////////////////////////////////////////////////
 /// @brief Gets the cached blob representing the pipeline state.
 /// @param pExtensionContext A pointer to the extension context associated with the current Device.
-/// @param pCommandList A command list to get the cached blob.
 /// @param pPipelineState A pipeline state object.
 /// @param ppBlob After this method returns, points to the cached blob representing the pipeline state.
 /// @param flags Flags to specify the behavior of the method.
 HRESULT INTC_D3D12_GetCachedBlob(
     INTCExtensionContext*        pExtensionContext,
-    ID3D12GraphicsCommandList*   pCommandList,
     ID3D12PipelineState*         pPipelineState,
     ID3DBlob**                   ppBlob,
     INTC_D3D12_CACHED_BLOB_FLAGS flags );
