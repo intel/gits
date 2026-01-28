@@ -105,7 +105,7 @@ void ImGuiHUDLayer::pre(IDXGISwapChainResizeBuffersCommand& command) {
 }
 
 void ImGuiHUDLayer::post(IDXGISwapChainResizeBuffersCommand& command) {
-  if (!initialized_) {
+  if (!initialized_ || CGits::InstancePtr() == nullptr) {
     return;
   }
 
@@ -137,7 +137,7 @@ void ImGuiHUDLayer::pre(IDXGISwapChain3ResizeBuffers1Command& command) {
 }
 
 void ImGuiHUDLayer::post(IDXGISwapChain3ResizeBuffers1Command& command) {
-  if (!initialized_) {
+  if (!initialized_ || CGits::InstancePtr() == nullptr) {
     return;
   }
 
@@ -288,7 +288,7 @@ void ImGuiHUDLayer::onPrePresent() {
 }
 
 void ImGuiHUDLayer::present() {
-  if (!initialized_) {
+  if (!initialized_ || CGits::InstancePtr() == nullptr) {
     return;
   }
 
