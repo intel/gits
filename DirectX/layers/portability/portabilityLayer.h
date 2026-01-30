@@ -65,8 +65,8 @@ private:
   bool useResourcePlacementData_{};
   bool portabilityChecks_{};
   bool portabilityAssertions_{};
-  float accelerationStructurePadding_{};
-  float accelerationStructureScratchPadding_{};
+  float accelerationStructurePadding_{1.0};
+  float accelerationStructureScratchPadding_{1.0};
 };
 
 } // namespace DirectX
