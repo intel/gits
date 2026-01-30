@@ -78,11 +78,16 @@ private:
     unsigned sourceOffset{};
   };
 
-  struct BuildRaytracingAccelerationStructureState : public RaytracingAccelerationStructureState {
-    std::unique_ptr<PointerArgument<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC>> desc{};
-    bool update{};
+  struct BufferBackedRaytracingAccelerationStructureState
+      : public RaytracingAccelerationStructureState {
     std::unordered_map<unsigned, ResourceState*> buffers;
     std::unordered_map<unsigned, ReservedResourcesService::TiledResource> tiledResources;
+  };
+
+  struct BuildRaytracingAccelerationStructureState
+      : public BufferBackedRaytracingAccelerationStructureState {
+    std::unique_ptr<PointerArgument<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC>> desc{};
+    bool update{};
   };
 
   struct CopyRaytracingAccelerationStructureState : public RaytracingAccelerationStructureState {
@@ -92,19 +97,20 @@ private:
   };
 
   struct NvAPIBuildRaytracingAccelerationStructureExState
-      : public RaytracingAccelerationStructureState {
+      : public BufferBackedRaytracingAccelerationStructureState {
     std::unique_ptr<PointerArgument<NVAPI_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_EX_PARAMS>>
         desc{};
     bool update{};
-    std::unordered_map<unsigned, ResourceState*> buffers;
-    std::unordered_map<unsigned, ReservedResourcesService::TiledResource> tiledResources;
   };
 
   struct NvAPIBuildRaytracingOpacityMicromapArrayState
-      : public RaytracingAccelerationStructureState {
+      : public BufferBackedRaytracingAccelerationStructureState {
     std::unique_ptr<PointerArgument<NVAPI_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_PARAMS>> desc{};
-    std::unordered_map<unsigned, ResourceState*> buffers;
-    std::unordered_map<unsigned, ReservedResourcesService::TiledResource> tiledResources;
+  };
+
+  struct Interval {
+    unsigned start{};
+    unsigned end{};
   };
 
   using KeyOffset = std::pair<unsigned, unsigned>;
@@ -150,6 +156,13 @@ private:
   void optimize();
   void removeSourcesWithoutDestinations();
   void completeSourcesFromAnalysis();
+  void storeBuffer(unsigned inputKey,
+                   unsigned inputOffset,
+                   unsigned size,
+                   unsigned commandKey,
+                   ID3D12GraphicsCommandList* commandList,
+                   BufferBackedRaytracingAccelerationStructureState* state);
+  std::vector<Interval> mergeIntervals(const std::vector<Interval>& intervals);
 };
 
 } // namespace DirectX

@@ -16,6 +16,8 @@
 #include "configurationLib.h"
 #include "nvapi.h"
 
+#include <algorithm>
+
 namespace gits {
 namespace DirectX {
 
@@ -91,49 +93,16 @@ void AccelerationStructuresBuildService::buildAccelerationStructure(
   state->desc.reset(
       new PointerArgument<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC>(c.pDesc_));
 
-  auto storeBuffer = [&](unsigned inputIndex, unsigned size, D3D12_GPU_VIRTUAL_ADDRESS address) {
+  stateService_.keepState(c.pDesc_.destAccelerationStructureKey);
+
+  std::unordered_map<unsigned, std::vector<Interval>> intervalsByInputKey;
+  auto addBufferAccess = [&](unsigned inputIndex, unsigned size) {
     unsigned inputKey = c.pDesc_.inputKeys[inputIndex];
     unsigned inputOffset = c.pDesc_.inputOffsets[inputIndex];
-    stateService_.keepState(inputKey);
-    ResourceState* bufferState = static_cast<ResourceState*>(stateService_.getState(inputKey));
-    D3D12_RESOURCE_STATES resourceState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
-    D3D12_RESOURCE_STATES trackedState =
-        resourceStateTracker_.getResourceState(c.object_.value, inputKey, 0);
-    if (trackedState == D3D12_RESOURCE_STATE_GENERIC_READ ||
-        trackedState == D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE) {
-      resourceState = trackedState;
-    } else if (trackedState != D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE) {
-      CapturePlayerGpuAddressService::ResourceInfo* resourceInfo =
-          gpuAddressService_.getResourceInfoByCaptureAddress(address);
-      if (resourceInfo && resourceInfo->overlapping()) {
-        resourceState = trackedState;
-        static bool logged = false;
-        if (!logged) {
-          LOG_WARNING << "State restore - state of overlapped resource different than expected";
-          logged = true;
-        }
-      }
-    }
-    bufferContentRestore_.storeBuffer(
-        c.object_.value, static_cast<ID3D12Resource*>(bufferState->object), inputKey, inputOffset,
-        size, resourceState, c.key, bufferState->isMappable);
-    state->buffers[inputKey] = bufferState;
-    ReservedResourcesService::TiledResource* tiledResource =
-        reservedResourcesService_.getTiledResource(inputKey);
-    if (tiledResource) {
-      auto it = state->tiledResources.find(inputKey);
-      if (it == state->tiledResources.end()) {
-        state->tiledResources[inputKey] = *tiledResource;
-      }
-      for (ReservedResourcesService::Tile& tile : tiledResource->tiles) {
-        if (tile.heapKey) {
-          stateService_.keepState(tile.heapKey);
-        }
-      }
-    }
-  };
 
-  stateService_.keepState(c.pDesc_.destAccelerationStructureKey);
+    auto& intervals = intervalsByInputKey[inputKey];
+    intervals.push_back({inputOffset, inputOffset + size});
+  };
 
   unsigned inputIndex = 0;
   if (inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL && inputs.NumDescs) {
@@ -142,7 +111,7 @@ void AccelerationStructuresBuildService::buildAccelerationStructure(
       if (inputs.DescsLayout == D3D12_ELEMENTS_LAYOUT_ARRAY_OF_POINTERS) {
         size = inputs.NumDescs * sizeof(D3D12_GPU_VIRTUAL_ADDRESS);
       }
-      storeBuffer(inputIndex, size, inputs.InstanceDescs);
+      addBufferAccess(inputIndex, size);
     }
   } else if (inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL) {
     for (unsigned i = 0; i < inputs.NumDescs; ++i) {
@@ -153,13 +122,13 @@ void AccelerationStructuresBuildService::buildAccelerationStructure(
       if (desc.Type == D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES) {
         if (desc.Triangles.Transform3x4) {
           unsigned size = sizeof(float) * 3 * 4;
-          storeBuffer(inputIndex, size, desc.Triangles.Transform3x4);
+          addBufferAccess(inputIndex, size);
         }
         ++inputIndex;
         if (desc.Triangles.IndexBuffer && desc.Triangles.IndexCount) {
           unsigned size = desc.Triangles.IndexCount *
                           (desc.Triangles.IndexFormat == DXGI_FORMAT_R16_UINT ? 2 : 4);
-          storeBuffer(inputIndex, size, desc.Triangles.IndexBuffer);
+          addBufferAccess(inputIndex, size);
         }
         ++inputIndex;
         if (desc.Triangles.VertexBuffer.StartAddress && desc.Triangles.VertexCount) {
@@ -170,13 +139,13 @@ void AccelerationStructuresBuildService::buildAccelerationStructure(
             }
           }
           unsigned size = desc.Triangles.VertexCount * stride;
-          storeBuffer(inputIndex, size, desc.Triangles.VertexBuffer.StartAddress);
+          addBufferAccess(inputIndex, size);
         }
         ++inputIndex;
       } else if (desc.Type == D3D12_RAYTRACING_GEOMETRY_TYPE_PROCEDURAL_PRIMITIVE_AABBS) {
         if (desc.AABBs.AABBs.StartAddress && desc.AABBs.AABBCount) {
           unsigned size = desc.AABBs.AABBCount * desc.AABBs.AABBs.StrideInBytes;
-          storeBuffer(inputIndex, size, desc.AABBs.AABBs.StartAddress);
+          addBufferAccess(inputIndex, size);
         }
         ++inputIndex;
       } else if (desc.Type == D3D12_RAYTRACING_GEOMETRY_TYPE_OMM_TRIANGLES) {
@@ -184,13 +153,13 @@ void AccelerationStructuresBuildService::buildAccelerationStructure(
           auto& triangles = *desc.OmmTriangles.pTriangles;
           if (triangles.Transform3x4) {
             unsigned size = sizeof(float) * 3 * 4;
-            storeBuffer(inputIndex, size, triangles.Transform3x4);
+            addBufferAccess(inputIndex, size);
           }
           ++inputIndex;
           if (triangles.IndexBuffer && triangles.IndexCount) {
             unsigned size =
                 triangles.IndexCount * (triangles.IndexFormat == DXGI_FORMAT_R16_UINT ? 2 : 4);
-            storeBuffer(inputIndex, size, triangles.IndexBuffer);
+            addBufferAccess(inputIndex, size);
           }
           ++inputIndex;
           if (triangles.VertexBuffer.StartAddress && triangles.VertexCount) {
@@ -201,7 +170,7 @@ void AccelerationStructuresBuildService::buildAccelerationStructure(
               }
             }
             unsigned size = triangles.VertexCount * stride;
-            storeBuffer(inputIndex, size, triangles.VertexBuffer.StartAddress);
+            addBufferAccess(inputIndex, size);
           }
           ++inputIndex;
         }
@@ -240,7 +209,7 @@ void AccelerationStructuresBuildService::buildAccelerationStructure(
             }
             unsigned size = ommCount * stride;
             if (size) {
-              storeBuffer(inputIndex, size, ommLinkage.OpacityMicromapIndexBuffer.StartAddress);
+              addBufferAccess(inputIndex, size);
             }
           }
           ++inputIndex;
@@ -274,7 +243,7 @@ void AccelerationStructuresBuildService::buildAccelerationStructure(
 
       if (ommDesc.InputBuffer) {
         GITS_ASSERT(ommDesc.InputBuffer % 128 == 0);
-        storeBuffer(inputIndex, totalInputSize, ommDesc.InputBuffer);
+        addBufferAccess(inputIndex, totalInputSize);
       }
       ++inputIndex;
       if (ommDesc.PerOmmDescs.StartAddress) {
@@ -285,9 +254,17 @@ void AccelerationStructuresBuildService::buildAccelerationStructure(
         GITS_ASSERT(ommDesc.PerOmmDescs.StartAddress % 4 == 0);
         GITS_ASSERT(stride % 4 == 0);
         unsigned size = totalOmmCount * stride;
-        storeBuffer(inputIndex, size, ommDesc.PerOmmDescs.StartAddress);
+        addBufferAccess(inputIndex, size);
       }
       ++inputIndex;
+    }
+  }
+
+  for (const auto& [inputKey, intervals] : intervalsByInputKey) {
+    std::vector<Interval> merged = mergeIntervals(intervals);
+    for (Interval interval : merged) {
+      storeBuffer(inputKey, interval.start, interval.end - interval.start, c.key, c.object_.value,
+                  state);
     }
   }
 
@@ -370,55 +347,22 @@ void AccelerationStructuresBuildService::nvapiBuildAccelerationStructureEx(
   state->desc.reset(
       new PointerArgument<NVAPI_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_EX_PARAMS>(c.pParams));
 
-  auto storeBuffer = [&](unsigned inputIndex, unsigned size, D3D12_GPU_VIRTUAL_ADDRESS address) {
+  stateService_.keepState(c.pParams.destAccelerationStructureKey);
+
+  std::unordered_map<unsigned, std::vector<Interval>> intervalsByInputKey;
+  auto addBufferAccess = [&](unsigned inputIndex, unsigned size) {
     unsigned inputKey = c.pParams.inputKeys[inputIndex];
     unsigned inputOffset = c.pParams.inputOffsets[inputIndex];
-    stateService_.keepState(inputKey);
-    ResourceState* bufferState = static_cast<ResourceState*>(stateService_.getState(inputKey));
-    D3D12_RESOURCE_STATES resourceState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
-    D3D12_RESOURCE_STATES trackedState =
-        resourceStateTracker_.getResourceState(c.pCommandList_.value, inputKey, 0);
-    if (trackedState == D3D12_RESOURCE_STATE_GENERIC_READ ||
-        trackedState == D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE) {
-      resourceState = trackedState;
-    } else if (trackedState != D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE) {
-      CapturePlayerGpuAddressService::ResourceInfo* resourceInfo =
-          gpuAddressService_.getResourceInfoByCaptureAddress(address);
-      if (resourceInfo && resourceInfo->overlapping()) {
-        resourceState = trackedState;
-        static bool logged = false;
-        if (!logged) {
-          LOG_WARNING << "State restore - state of overlapped resource different than expected";
-          logged = true;
-        }
-      }
-    }
-    bufferContentRestore_.storeBuffer(
-        c.pCommandList_.value, static_cast<ID3D12Resource*>(bufferState->object), inputKey,
-        inputOffset, size, resourceState, c.key, bufferState->isMappable);
-    state->buffers[inputKey] = bufferState;
-    ReservedResourcesService::TiledResource* tiledResource =
-        reservedResourcesService_.getTiledResource(inputKey);
-    if (tiledResource) {
-      auto it = state->tiledResources.find(inputKey);
-      if (it == state->tiledResources.end()) {
-        state->tiledResources[inputKey] = *tiledResource;
-      }
-      for (ReservedResourcesService::Tile& tile : tiledResource->tiles) {
-        if (tile.heapKey) {
-          stateService_.keepState(tile.heapKey);
-        }
-      }
-    }
-  };
 
-  stateService_.keepState(c.pParams.destAccelerationStructureKey);
+    auto& intervals = intervalsByInputKey[inputKey];
+    intervals.push_back({inputOffset, inputOffset + size});
+  };
 
   unsigned inputIndex = 0;
   if (inputs.type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL && inputs.numDescs) {
     if (inputs.numDescs) {
       unsigned size = inputs.numDescs * sizeof(D3D12_RAYTRACING_INSTANCE_DESC);
-      storeBuffer(inputIndex, size, inputs.instanceDescs);
+      addBufferAccess(inputIndex, size);
     }
   } else {
     for (unsigned i = 0; i < inputs.numDescs; ++i) {
@@ -433,13 +377,13 @@ void AccelerationStructuresBuildService::nvapiBuildAccelerationStructureEx(
       if (desc.type == D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES) {
         if (desc.triangles.Transform3x4) {
           unsigned size = sizeof(float) * 3 * 4;
-          storeBuffer(inputIndex, size, desc.triangles.Transform3x4);
+          addBufferAccess(inputIndex, size);
         }
         ++inputIndex;
         if (desc.triangles.IndexBuffer && desc.triangles.IndexCount) {
           unsigned size = desc.triangles.IndexCount *
                           (desc.triangles.IndexFormat == DXGI_FORMAT_R16_UINT ? 2 : 4);
-          storeBuffer(inputIndex, size, desc.triangles.IndexBuffer);
+          addBufferAccess(inputIndex, size);
         }
         ++inputIndex;
         if (desc.triangles.VertexBuffer.StartAddress && desc.triangles.VertexCount) {
@@ -450,25 +394,25 @@ void AccelerationStructuresBuildService::nvapiBuildAccelerationStructureEx(
             }
           }
           unsigned size = desc.triangles.VertexCount * stride;
-          storeBuffer(inputIndex, size, desc.triangles.VertexBuffer.StartAddress);
+          addBufferAccess(inputIndex, size);
         }
         ++inputIndex;
       } else if (desc.type == D3D12_RAYTRACING_GEOMETRY_TYPE_PROCEDURAL_PRIMITIVE_AABBS) {
         if (desc.aabbs.AABBs.StartAddress && desc.aabbs.AABBCount) {
           unsigned size = desc.aabbs.AABBCount * desc.aabbs.AABBs.StrideInBytes;
-          storeBuffer(inputIndex, size, desc.aabbs.AABBs.StartAddress);
+          addBufferAccess(inputIndex, size);
         }
         ++inputIndex;
       } else if (desc.type == NVAPI_D3D12_RAYTRACING_GEOMETRY_TYPE_OMM_TRIANGLES_EX) {
         if (desc.ommTriangles.triangles.Transform3x4) {
           unsigned size = sizeof(float) * 3 * 4;
-          storeBuffer(inputIndex, size, desc.ommTriangles.triangles.Transform3x4);
+          addBufferAccess(inputIndex, size);
         }
         ++inputIndex;
         if (desc.ommTriangles.triangles.IndexBuffer && desc.ommTriangles.triangles.IndexCount) {
           unsigned size = desc.ommTriangles.triangles.IndexCount *
                           (desc.ommTriangles.triangles.IndexFormat == DXGI_FORMAT_R16_UINT ? 2 : 4);
-          storeBuffer(inputIndex, size, desc.ommTriangles.triangles.IndexBuffer);
+          addBufferAccess(inputIndex, size);
         }
         ++inputIndex;
         if (desc.ommTriangles.triangles.VertexBuffer.StartAddress &&
@@ -480,7 +424,7 @@ void AccelerationStructuresBuildService::nvapiBuildAccelerationStructureEx(
             }
           }
           unsigned size = desc.ommTriangles.triangles.VertexCount * stride;
-          storeBuffer(inputIndex, size, desc.ommTriangles.triangles.VertexBuffer.StartAddress);
+          addBufferAccess(inputIndex, size);
         }
         ++inputIndex;
         if (desc.ommTriangles.ommAttachment.opacityMicromapIndexBuffer.StartAddress) {
@@ -499,8 +443,7 @@ void AccelerationStructuresBuildService::nvapiBuildAccelerationStructureEx(
           unsigned ommCount = desc.ommTriangles.triangles.IndexCount / 3;
           unsigned size = ommCount * stride;
           if (size) {
-            storeBuffer(inputIndex, size,
-                        desc.ommTriangles.ommAttachment.opacityMicromapIndexBuffer.StartAddress);
+            addBufferAccess(inputIndex, size);
           }
         }
         ++inputIndex;
@@ -508,13 +451,13 @@ void AccelerationStructuresBuildService::nvapiBuildAccelerationStructureEx(
       } else if (desc.type == NVAPI_D3D12_RAYTRACING_GEOMETRY_TYPE_DMM_TRIANGLES_EX) {
         if (desc.dmmTriangles.triangles.Transform3x4) {
           unsigned size = sizeof(float) * 3 * 4;
-          storeBuffer(inputIndex, size, desc.dmmTriangles.triangles.Transform3x4);
+          addBufferAccess(inputIndex, size);
         }
         ++inputIndex;
         if (desc.dmmTriangles.triangles.IndexBuffer && desc.dmmTriangles.triangles.IndexCount) {
           unsigned size = desc.dmmTriangles.triangles.IndexCount *
                           (desc.dmmTriangles.triangles.IndexFormat == DXGI_FORMAT_R16_UINT ? 2 : 4);
-          storeBuffer(inputIndex, size, desc.dmmTriangles.triangles.IndexBuffer);
+          addBufferAccess(inputIndex, size);
         }
         ++inputIndex;
         if (desc.dmmTriangles.triangles.VertexBuffer.StartAddress &&
@@ -526,7 +469,7 @@ void AccelerationStructuresBuildService::nvapiBuildAccelerationStructureEx(
             }
           }
           unsigned size = desc.dmmTriangles.triangles.VertexCount * stride;
-          storeBuffer(inputIndex, size, desc.dmmTriangles.triangles.VertexBuffer.StartAddress);
+          addBufferAccess(inputIndex, size);
         }
         ++inputIndex;
         if (desc.dmmTriangles.dmmAttachment.triangleMicromapIndexBuffer.StartAddress) {
@@ -551,15 +494,13 @@ void AccelerationStructuresBuildService::nvapiBuildAccelerationStructureEx(
           }
           unsigned size = dmmCount * stride;
           if (size) {
-            storeBuffer(inputIndex, size,
-                        desc.dmmTriangles.dmmAttachment.triangleMicromapIndexBuffer.StartAddress);
+            addBufferAccess(inputIndex, size);
           }
         }
         ++inputIndex;
         if (desc.dmmTriangles.dmmAttachment.trianglePrimitiveFlagsBuffer.StartAddress) {
           unsigned size = desc.dmmTriangles.triangles.VertexCount;
-          storeBuffer(inputIndex, size,
-                      desc.dmmTriangles.dmmAttachment.trianglePrimitiveFlagsBuffer.StartAddress);
+          addBufferAccess(inputIndex, size);
         }
         ++inputIndex;
         if (desc.dmmTriangles.dmmAttachment.vertexBiasAndScaleBuffer.StartAddress) {
@@ -575,8 +516,7 @@ void AccelerationStructuresBuildService::nvapiBuildAccelerationStructureEx(
           }
           GITS_ASSERT(stride);
           unsigned size = desc.dmmTriangles.triangles.VertexCount * stride;
-          storeBuffer(inputIndex, size,
-                      desc.dmmTriangles.dmmAttachment.vertexBiasAndScaleBuffer.StartAddress);
+          addBufferAccess(inputIndex, size);
         }
         ++inputIndex;
         if (desc.dmmTriangles.dmmAttachment.vertexDisplacementVectorBuffer.StartAddress) {
@@ -596,8 +536,7 @@ void AccelerationStructuresBuildService::nvapiBuildAccelerationStructureEx(
           }
           GITS_ASSERT(stride);
           unsigned size = desc.dmmTriangles.triangles.VertexCount * stride;
-          storeBuffer(inputIndex, size,
-                      desc.dmmTriangles.dmmAttachment.vertexDisplacementVectorBuffer.StartAddress);
+          addBufferAccess(inputIndex, size);
         }
         ++inputIndex;
         ++inputIndex;
@@ -612,7 +551,7 @@ void AccelerationStructuresBuildService::nvapiBuildAccelerationStructureEx(
           }
           GITS_ASSERT(stride);
           unsigned size = desc.spheres.vertexCount * stride;
-          storeBuffer(inputIndex, size, desc.spheres.vertexPositionBuffer.StartAddress);
+          addBufferAccess(inputIndex, size);
         }
         ++inputIndex;
         if (desc.spheres.vertexRadiusBuffer.StartAddress) {
@@ -624,7 +563,7 @@ void AccelerationStructuresBuildService::nvapiBuildAccelerationStructureEx(
           }
           GITS_ASSERT(stride);
           unsigned size = desc.spheres.vertexCount * stride;
-          storeBuffer(inputIndex, size, desc.spheres.vertexRadiusBuffer.StartAddress);
+          addBufferAccess(inputIndex, size);
         }
         ++inputIndex;
         if (desc.spheres.indexBuffer.StartAddress) {
@@ -640,7 +579,7 @@ void AccelerationStructuresBuildService::nvapiBuildAccelerationStructureEx(
           }
           GITS_ASSERT(stride);
           unsigned size = desc.spheres.indexCount * stride;
-          storeBuffer(inputIndex, size, desc.spheres.indexBuffer.StartAddress);
+          addBufferAccess(inputIndex, size);
         }
         ++inputIndex;
       } else if (desc.type == NVAPI_D3D12_RAYTRACING_GEOMETRY_TYPE_LSS_EX) {
@@ -654,7 +593,7 @@ void AccelerationStructuresBuildService::nvapiBuildAccelerationStructureEx(
           }
           GITS_ASSERT(stride);
           unsigned size = desc.lss.primitiveCount * stride;
-          storeBuffer(inputIndex, size, desc.lss.vertexPositionBuffer.StartAddress);
+          addBufferAccess(inputIndex, size);
         }
         ++inputIndex;
         if (desc.lss.vertexRadiusBuffer.StartAddress) {
@@ -666,7 +605,7 @@ void AccelerationStructuresBuildService::nvapiBuildAccelerationStructureEx(
           }
           GITS_ASSERT(stride);
           unsigned size = desc.lss.primitiveCount * stride;
-          storeBuffer(inputIndex, size, desc.lss.vertexRadiusBuffer.StartAddress);
+          addBufferAccess(inputIndex, size);
         }
         ++inputIndex;
         if (desc.lss.indexBuffer.StartAddress) {
@@ -682,10 +621,18 @@ void AccelerationStructuresBuildService::nvapiBuildAccelerationStructureEx(
           }
           GITS_ASSERT(stride);
           unsigned size = desc.lss.indexCount * stride;
-          storeBuffer(inputIndex, size, desc.lss.indexBuffer.StartAddress);
+          addBufferAccess(inputIndex, size);
         }
         ++inputIndex;
       }
+    }
+  }
+
+  for (const auto& [inputKey, intervals] : intervalsByInputKey) {
+    std::vector<Interval> merged = mergeIntervals(intervals);
+    for (Interval interval : merged) {
+      storeBuffer(inputKey, interval.start, interval.end - interval.start, c.key,
+                  c.pCommandList_.value, state);
     }
   }
 
@@ -726,48 +673,13 @@ void AccelerationStructuresBuildService::nvapiBuildOpacityMicromapArray(
   state->desc.reset(
       new PointerArgument<NVAPI_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_PARAMS>(c.pParams));
 
-  auto storeBuffer = [&](unsigned inputKey, unsigned inputOffset, unsigned size,
-                         D3D12_GPU_VIRTUAL_ADDRESS address) {
-    stateService_.keepState(inputKey);
-    ResourceState* bufferState = static_cast<ResourceState*>(stateService_.getState(inputKey));
-    D3D12_RESOURCE_STATES resourceState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
-    D3D12_RESOURCE_STATES trackedState =
-        resourceStateTracker_.getResourceState(c.pCommandList_.value, inputKey, 0);
-    if (trackedState == D3D12_RESOURCE_STATE_GENERIC_READ ||
-        trackedState == D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE) {
-      resourceState = trackedState;
-    } else if (trackedState != D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE) {
-      CapturePlayerGpuAddressService::ResourceInfo* resourceInfo =
-          gpuAddressService_.getResourceInfoByCaptureAddress(address);
-      if (resourceInfo && resourceInfo->overlapping()) {
-        resourceState = trackedState;
-        static bool logged = false;
-        if (!logged) {
-          LOG_WARNING << "State restore - state of overlapped resource different than expected";
-          logged = true;
-        }
-      }
-    }
-    bufferContentRestore_.storeBuffer(
-        c.pCommandList_.value, static_cast<ID3D12Resource*>(bufferState->object), inputKey,
-        inputOffset, size, resourceState, c.key, bufferState->isMappable);
-    state->buffers[inputKey] = bufferState;
-    ReservedResourcesService::TiledResource* tiledResource =
-        reservedResourcesService_.getTiledResource(inputKey);
-    if (tiledResource) {
-      auto it = state->tiledResources.find(inputKey);
-      if (it == state->tiledResources.end()) {
-        state->tiledResources[inputKey] = *tiledResource;
-      }
-      for (ReservedResourcesService::Tile& tile : tiledResource->tiles) {
-        if (tile.heapKey) {
-          stateService_.keepState(tile.heapKey);
-        }
-      }
-    }
-  };
-
   stateService_.keepState(c.pParams.destOpacityMicromapArrayDataKey);
+
+  std::unordered_map<unsigned, std::vector<Interval>> intervalsByInputKey;
+  auto addBufferAccess = [&](unsigned inputKey, unsigned inputOffset, unsigned size) {
+    auto& intervals = intervalsByInputKey[inputKey];
+    intervals.push_back({inputOffset, inputOffset + size});
+  };
 
   {
     unsigned ommCount{};
@@ -797,16 +709,22 @@ void AccelerationStructuresBuildService::nvapiBuildOpacityMicromapArray(
     inputSize = alignUp(inputSize, 256);
 
     if (pDesc->inputs.inputBuffer) {
-      storeBuffer(c.pParams.inputBufferKey, c.pParams.inputBufferOffset, inputSize,
-                  pDesc->inputs.inputBuffer);
+      addBufferAccess(c.pParams.inputBufferKey, c.pParams.inputBufferOffset, inputSize);
     }
     if (pDesc->inputs.perOMMDescs.StartAddress) {
       unsigned stride = pDesc->inputs.perOMMDescs.StrideInBytes;
       if (!stride) {
         stride = sizeof(NVAPI_D3D12_RAYTRACING_OPACITY_MICROMAP_USAGE_COUNT);
       }
-      storeBuffer(c.pParams.perOMMDescsKey, c.pParams.perOMMDescsOffset, stride * ommCount,
-                  pDesc->inputs.perOMMDescs.StartAddress);
+      addBufferAccess(c.pParams.perOMMDescsKey, c.pParams.perOMMDescsOffset, stride * ommCount);
+    }
+  }
+
+  for (const auto& [inputKey, intervals] : intervalsByInputKey) {
+    std::vector<Interval> merged = mergeIntervals(intervals);
+    for (Interval interval : merged) {
+      storeBuffer(inputKey, interval.start, interval.end - interval.start, c.key,
+                  c.pCommandList_.value, state);
     }
   }
 
@@ -1888,6 +1806,71 @@ void AccelerationStructuresBuildService::completeSourcesFromAnalysis() {
       stateDestsBySource_[lastState].insert(UINT_MAX);
     }
   }
+}
+
+void AccelerationStructuresBuildService::storeBuffer(
+    unsigned inputKey,
+    unsigned inputOffset,
+    unsigned size,
+    unsigned commandKey,
+    ID3D12GraphicsCommandList* commandList,
+    BufferBackedRaytracingAccelerationStructureState* state) {
+  stateService_.keepState(inputKey);
+  ResourceState* bufferState = static_cast<ResourceState*>(stateService_.getState(inputKey));
+  D3D12_RESOURCE_STATES resourceState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+  D3D12_RESOURCE_STATES trackedState =
+      resourceStateTracker_.getResourceState(commandList, inputKey, 0);
+  if (trackedState == D3D12_RESOURCE_STATE_GENERIC_READ ||
+      trackedState == D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE) {
+    resourceState = trackedState;
+  } else if (trackedState != D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE) {
+    CapturePlayerGpuAddressService::ResourceInfo* resourceInfo =
+        gpuAddressService_.getResourceInfoByCaptureAddress(bufferState->gpuVirtualAddress +
+                                                           inputOffset);
+    if (resourceInfo && resourceInfo->overlapping()) {
+      resourceState = trackedState;
+      static bool logged = false;
+      if (!logged) {
+        LOG_WARNING << "State restore - state of overlapped resource different than expected";
+        logged = true;
+      }
+    }
+  }
+  bufferContentRestore_.storeBuffer(commandList, static_cast<ID3D12Resource*>(bufferState->object),
+                                    inputKey, inputOffset, size, resourceState, commandKey,
+                                    bufferState->isMappable);
+  state->buffers[inputKey] = bufferState;
+  ReservedResourcesService::TiledResource* tiledResource =
+      reservedResourcesService_.getTiledResource(inputKey);
+  if (tiledResource) {
+    auto it = state->tiledResources.find(inputKey);
+    if (it == state->tiledResources.end()) {
+      state->tiledResources[inputKey] = *tiledResource;
+    }
+    for (ReservedResourcesService::Tile& tile : tiledResource->tiles) {
+      if (tile.heapKey) {
+        stateService_.keepState(tile.heapKey);
+      }
+    }
+  }
+}
+
+std::vector<AccelerationStructuresBuildService::Interval> AccelerationStructuresBuildService::
+    mergeIntervals(const std::vector<Interval>& intervals) {
+  std::vector<Interval> intervalsCopy = intervals;
+  std::sort(intervalsCopy.begin(), intervalsCopy.end(),
+            [](const auto& a, const auto& b) { return a.start < b.start; });
+
+  std::vector<Interval> merged;
+  for (auto interval : intervalsCopy) {
+    if (merged.empty() || merged.back().end < interval.start) {
+      merged.push_back(interval);
+    } else {
+      merged.back().end = std::max(merged.back().end, interval.end);
+    }
+  }
+
+  return merged;
 }
 
 } // namespace DirectX
