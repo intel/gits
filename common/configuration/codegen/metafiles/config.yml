@@ -740,76 +740,6 @@ Configuration:
     Type: Group
     OSVisibility: [WINDOWS]
     Options:
-      - Name: Capture
-        Type: Group
-        Options:
-          - Name: shadowMemory
-            Type: bool
-            Default: false
-            Description:
-              Use an extra copy of the resource to track memory updates (Map
-              / Unmap)
-            LongDescription:
-              Use an extra copy of the resource to track memory updates (Map
-              / Unmap). By default GITS uses write watch mechanics to track memory updates.
-          - Name: captureIntelExtensions
-            Type: bool
-            Default: true
-            Description: If false Intel Extensions capture is done on D3D12 level
-            LongDescription:
-              If false Intel Extensions capture is done on D3D12 level. Capturing Intel Extensions 
-              calls is needed to ensure the stream will be compatible with future Intel drivers. Not
-              all applications use Intel Extensions.
-          - Name: captureNvAPI
-            Type: bool
-            Default: true
-            Description: If false NvAPI capture is done on D3D12 level
-          - Name: captureDirectML
-            Type: bool
-            Default: true
-            Description: If false DirectML capture is done on D3D12 level
-          - Name: captureDirectStorage
-            Type: bool
-            Default: false
-          - Name: captureXess
-            Type: bool
-            Default: true
-            Description: If false XeSS capture is done on Intel Extensions level
-          - Name: debugLayer
-            Type: bool
-            Default: false
-            Description: Enable the DirectX Debug Layer
-          - Name: forceGlobalSynchronization
-            Type: bool
-            Default: false
-            Description: All the D3D12 calls are serialized and processed from a single thread
-            LongDescription:
-              All the D3D12 calls are serialized and processed from a single thread. This will 
-              make the capture process very slow. Recommended for GITS developers only.
-          - Name: plugins
-            Type: std::vector<std::string>
-            Default: []
-            Description: List of plugins to enable
-          - Name: Portability
-            Type: Group
-            Options:
-              - Name: resourcePlacementStorage
-                Type: bool
-                Default: false
-                Description: Store the resource placement data on capture
-              - Name: Raytracing
-                Type: Group
-                Options:
-                  - Name: accelerationStructurePadding
-                    Type: float
-                    Default: 1.0
-                  - Name: accelerationStructureScratchPadding
-                    Type: float
-                    Default: 1.0
-          - Name: storeAddressPinning
-            Type: bool
-            Default: true
-            Description: Dump file with GPUVAs
       - Name: Player
         Type: Group
         Options:
@@ -817,52 +747,63 @@ Configuration:
             Type: bool
             Default: true
             Description: Execute the API commands (driver / null driver)
+            LegacyPaths: ["DirectX.Playback.Execute"]
           - Name: debugLayer
             Type: bool
             Default: false
             Description: Enable the DirectX Debug Layer
+            LegacyPaths: ["DirectX.Playback.DebugLayer"]
           - Name: waitOnEventCompletion
             Type: bool
             Default: false
             Description: CPU waits for GPU on SetEventOnCompletion and SetEventOnMultipleFenceCompletion
+            LegacyPaths: ["DirectX.Playback.WaitOnEventCompletion"]
           - Name: useCopyQueueOnRestore
             Type: bool
             Default: false
             Description: Use a D3D12_COMMAND_LIST_TYPE_COPY to restore resource states
+            LegacyPaths: ["DirectX.Playback.UseCopyQueueOnRestore"]
           - Name: skipResolveQueryData
             Type: bool
             Default: true
             Description: Don't replay ID3D12GraphicsCommandList::ResolveQueryData commands
+            LegacyPaths: ["DirectX.Playback.SkipResolveQueryData"]
           - Name: infiniteWaitForFence
             Type: bool
             Default: false
             Description:
               Set the timeout to INFINITE when waiting for fences (GPU to CPU synchronization) instead
               of the default (5sec)
+            LegacyPaths: ["DirectX.Playback.InfiniteWaitForFence"]
           - Name: multithreadedShaderCompilation
             Type: bool
             Default: true
             Description:
               Use a thread pool for D3D12 methods which cause hardware shader
               compilation
+            LegacyPaths: ["DirectX.Playback.MultithreadedShaderCompilation"]
           - Name: enableAgilitySDKDllAppOverride
             Type: bool
             Default: false
             Description: Enable usage of AglitySDK DLL captured from the app
+            LegacyPaths: ["DirectX.Playback.EnableAgilitySDKDllAppOverride"]
           - Name: enableXessDllAppOverride
             Type: bool
             Default: true
             Description: Enable usage of Xess DLL captured from the app
+            LegacyPaths: ["DirectX.Playback.EnableXessDllAppOverride"]
           - Name: patchGpuBuffers
             Type: bool
             Default: true
             Description:
               Enable patching of IABs and SBTs on the GPU.
               This will translate GPUVAs and other runtime data on captured GPU buffers.
+            LegacyPaths: ["DirectX.Playback.PatchGpuBuffers"]
           - Name: plugins
             Type: std::vector<std::string>
             Default: []
             Description: List of plugins to enable
+            LegacyPaths: ["DirectX.Playback.Plugins"]
           - Name: AdapterOverride
             Type: Group
             Description:
@@ -874,14 +815,17 @@ Configuration:
                 Type: bool
                 Default: false
                 Description: Whether adapter override is enabled or not
+                LegacyPaths: ["DirectX.Playback.AdapterOverride.Enabled"]
               - Name: index
                 Type: uint32_t
                 Default: 0
                 Description: Index of the adapter to use
+                LegacyPaths: ["DirectX.Playback.AdapterOverride.Index"]
               - Name: vendor
                 Type: std::string
                 Default: ""
                 Description: Vendor of the adapter (Empty / AMD / NVIDIA / Intel).
+                LegacyPaths: ["DirectX.Playback.AdapterOverride.Vendor"]
           - Name: ApplicationInfoOverride
             Type: Group
             Description:
@@ -893,22 +837,27 @@ Configuration:
                 Type: bool
                 Default: false
                 Description: Whether application info override is enabled or not
+                LegacyPaths: ["DirectX.Playback.ApplicationInfoOverride.Enabled"]
               - Name: applicationName
                 Type: std::string
                 Default: ""
                 Description: Application name
+                LegacyPaths: ["DirectX.Playback.ApplicationInfoOverride.ApplicationName"]
               - Name: applicationVersion
                 Type: std::string
                 Default: 0.0.0
                 Description: "Application version: 'major.minor.patch', Example: '1.2.3'"
+                LegacyPaths: ["DirectX.Playback.ApplicationInfoOverride.ApplicationVersion"]
               - Name: engineName
                 Type: std::string
                 Default: ""
                 Description: Engine name
+                LegacyPaths: ["DirectX.Playback.ApplicationInfoOverride.EngineName"]
               - Name: engineVersion
                 Type: std::string
                 Default: 0.0.0
                 Description: "Engine version: 'major.minor.patch', Example: '1.2.3'"
+                LegacyPaths: ["DirectX.Playback.ApplicationInfoOverride.EngineVersion"]
           - Name: Portability
             Type: Group
             Options:
@@ -923,18 +872,22 @@ Configuration:
                   * `none`: Don't do anything special (playback the stream as-is)
                   * `use`: Use existing file containing placed resources data
                   * `store`: Create a file containing placed resources data. Disabling execution allows to collect data on incompatible device.
+                LegacyPaths: ["DirectX.Playback.Portability.ResourcePlacement"]
               - Name: portabilityChecks
                 Type: bool
                 Default: false
                 Description: Checks and logs portability issues
+                LegacyPaths: ["DirectX.Playback.Portability.PortabilityChecks"]
               - Name: portabilityAssertions
                 Type: bool
                 Default: true
                 Description: Ends playback if any incompatibility is detected
+                LegacyPaths: ["DirectX.Playback.Portability.PortabilityAssertions"]
           - Name: AddressPinning
             Type: AddressPinningMode
             Default: None
             Description: None / Use - Recreate resources and heaps at capture-time GPUVAs / Store - Dump file with GPUVAs
+            LegacyPaths: ["DirectX.Playback.AddressPinning"]
           - Name: CCode
             Type: Group
             Description:
@@ -944,15 +897,100 @@ Configuration:
                 Type: bool
                 Default: false
                 Description: Generate CCode files during playback
+                LegacyPaths: ["DirectX.Playback.CCode.Enabled"]
               - Name: CCodePath
                 Type: std::filesystem::path
                 Default: "{install_path}/ccode"
                 Description: Path to base CCode project directory
+                LegacyPaths: ["DirectX.Playback.CCode.CCodePath"]
               - Name: commandsPerBlock
                 Type: uint32_t
                 Default: 1000
                 Description: Number of API commands per CCode function (and file)
-        ConfigName: Playback
+                LegacyPaths: ["DirectX.Playback.CCode.CommandsPerBlock"]
+      - Name: Recorder
+        Type: Group
+        Options:
+          - Name: shadowMemory
+            Type: bool
+            Default: false
+            Description:
+              Use an extra copy of the resource to track memory updates (Map
+              / Unmap)
+            LongDescription:
+              Use an extra copy of the resource to track memory updates (Map
+              / Unmap). By default GITS uses write watch mechanics to track memory updates.
+            LegacyPaths: ["DirectX.Capture.ShadowMemory"]
+          - Name: captureIntelExtensions
+            Type: bool
+            Default: true
+            Description: If false Intel Extensions capture is done on D3D12 level
+            LongDescription:
+              If false Intel Extensions capture is done on D3D12 level. Capturing Intel Extensions 
+              calls is needed to ensure the stream will be compatible with future Intel drivers. Not
+              all applications use Intel Extensions.
+            LegacyPaths: ["DirectX.Capture.CaptureIntelExtensions"]
+          - Name: captureNvAPI
+            Type: bool
+            Default: true
+            Description: If false NvAPI capture is done on D3D12 level
+            LegacyPaths: ["DirectX.Capture.CaptureNvAPI"]
+          - Name: captureDirectML
+            Type: bool
+            Default: true
+            Description: If false DirectML capture is done on D3D12 level
+            LegacyPaths: ["DirectX.Capture.CaptureDirectML"]
+          - Name: captureDirectStorage
+            Type: bool
+            Default: false
+            LegacyPaths: ["DirectX.Capture.CaptureDirectStorage"]
+          - Name: captureXess
+            Type: bool
+            Default: true
+            Description: If false XeSS capture is done on Intel Extensions level
+            LegacyPaths: ["DirectX.Capture.CaptureXess"]
+          - Name: debugLayer
+            Type: bool
+            Default: false
+            Description: Enable the DirectX Debug Layer
+            LegacyPaths: ["DirectX.Capture.DebugLayer"]
+          - Name: forceGlobalSynchronization
+            Type: bool
+            Default: false
+            Description: All the D3D12 calls are serialized and processed from a single thread
+            LongDescription:
+              All the D3D12 calls are serialized and processed from a single thread. This will 
+              make the capture process very slow. Recommended for GITS developers only.
+            LegacyPaths: ["DirectX.Capture.ForceGlobalSynchronization"]
+          - Name: plugins
+            Type: std::vector<std::string>
+            Default: []
+            Description: List of plugins to enable
+            LegacyPaths: ["DirectX.Capture.Plugins"]
+          - Name: Portability
+            Type: Group
+            Options:
+              - Name: resourcePlacementStorage
+                Type: bool
+                Default: false
+                Description: Store the resource placement data on capture
+                LegacyPaths: ["DirectX.Capture.Portability.ResourcePlacementStorage"]
+              - Name: Raytracing
+                Type: Group
+                Options:
+                  - Name: accelerationStructurePadding
+                    Type: float
+                    Default: 1.0
+                    LegacyPaths: ["DirectX.Capture.Portability.Raytracing.AccelerationStructurePadding"]
+                  - Name: accelerationStructureScratchPadding
+                    Type: float
+                    Default: 1.0
+                    LegacyPaths: ["DirectX.Capture.Portability.Raytracing.AccelerationStructureScratchPadding"]
+          - Name: storeAddressPinning
+            Type: bool
+            Default: true
+            Description: Dump file with GPUVAs
+            LegacyPaths: ["DirectX.Capture.StoreAddressPinning"]
       - Name: Features
         Type: Group
         Options:

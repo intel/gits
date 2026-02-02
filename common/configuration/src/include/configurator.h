@@ -34,6 +34,7 @@ public:
     std::string Value;
     std::string Default;
     Source source;
+    std::string LegacyPath;
 
     static std::string toString(Source source) {
       switch (source) {
@@ -105,7 +106,8 @@ public: // Singleton
   void AddChangedField(const std::string& path,
                        const std::string& value,
                        const std::string& defaultValue,
-                       const ConfigEntry::Source source);
+                       const ConfigEntry::Source source,
+                       const std::string& legacyPath = "");
   void LogChangedFields();
 
 public: // Configuration

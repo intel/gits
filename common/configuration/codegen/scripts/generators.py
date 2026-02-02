@@ -14,7 +14,7 @@ from template_manager import Step
 def generate_argumentparser(task, template_manager):
     print(f"  Reading input(s):{task.get_input_str()}")
 
-    configuration, ordered_groups = parse_config_yaml(
+    configuration, ordered_groups, _ = parse_config_yaml(
         task.input_config, template_manager.root_directory)
     enums = parse_enums_yaml(task.input_enum, template_manager.root_directory)
     types = [enum.name for enum in enums]
@@ -27,9 +27,9 @@ def generate_argumentparser(task, template_manager):
 def generate_configuration(task, template_manager):
     print(f"  Reading input(s):{task.get_input_str()}")
 
-    configuration, ordered_groups = parse_config_yaml(
+    configuration, ordered_groups, all_options = parse_config_yaml(
         task.input_config, template_manager.root_directory)
-    context = {'groups': ordered_groups, 'data': configuration, 'platform': task.platform}
+    context = {'groups': ordered_groups, 'data': configuration, 'all_options': all_options, 'platform': task.platform}
 
     template_manager.render_task(task, context)
 
@@ -45,7 +45,7 @@ def generate_enums(task, template_manager) -> None:
 def generate_default_configuration(task, template_manager):
     print(f"  Reading input(s):{task.get_input_str()}")
 
-    configuration, _ = parse_config_yaml(
+    configuration, _, _ = parse_config_yaml(
         task.input_config, template_manager.root_directory)
     conditions = []
     if task.compute:
@@ -66,7 +66,7 @@ def generate_documentation_enums(task, template_manager):
 def generate_documentation_config(task, template_manager):
     print(f"  Reading input(s):{task.get_input_str()}")
 
-    configuration, ordered_groups = parse_config_yaml(
+    configuration, ordered_groups, _ = parse_config_yaml(
         task.input_config, template_manager.root_directory)
     enums = parse_enums_yaml(task.input_enum, template_manager.root_directory)
     context = {'groups': ordered_groups, 'data': configuration, 'enums': enums}

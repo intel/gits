@@ -34,13 +34,13 @@ CaptureManager& CaptureManager::get() {
   if (!instance_) {
     instance_ = new CaptureManager();
     instance_->interceptKernelFunctions();
-    if (Configurator::Get().directx.capture.captureDirectStorage) {
+    if (Configurator::Get().directx.recorder.captureDirectStorage) {
       instance_->interceptDirectStorageFunctions();
     }
-    if (Configurator::Get().directx.capture.captureDirectML) {
+    if (Configurator::Get().directx.recorder.captureDirectML) {
       instance_->interceptDirectMLFunctions();
     }
-    if (Configurator::Get().directx.capture.captureNvAPI) {
+    if (Configurator::Get().directx.recorder.captureNvAPI) {
       instance_->interceptNvAPIFunctions();
     }
     instance_->interceptD3D11On12Functions();
@@ -270,7 +270,7 @@ void CaptureManager::interceptKernelFunctions() {
 
 void CaptureManager::interceptXessFunctions() {
 
-  if (xessDll_ || loadingXessDll_ || !Configurator::Get().directx.capture.captureXess) {
+  if (xessDll_ || loadingXessDll_ || !Configurator::Get().directx.recorder.captureXess) {
     return;
   }
 
@@ -477,7 +477,7 @@ void CaptureManager::interceptXessFunctions() {
 }
 
 void CaptureManager::loadIntelExtension(const uint32_t& vendorID, const uint32_t& deviceID) {
-  if (intelExtensionLoaded_ || !Configurator::Get().directx.capture.captureIntelExtensions) {
+  if (intelExtensionLoaded_ || !Configurator::Get().directx.recorder.captureIntelExtensions) {
     return;
   }
 

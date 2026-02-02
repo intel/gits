@@ -18,7 +18,7 @@ namespace DirectX {
 
 DirectStorageService::DirectStorageService() {
   const auto& cfg = Configurator::Get();
-  captureDirectStorage_ = cfg.directx.capture.captureDirectStorage;
+  captureDirectStorage_ = cfg.directx.recorder.captureDirectStorage;
   if (captureDirectStorage_) {
     const std::filesystem::path& outFileDir =
         Configurator::IsPlayer() ? cfg.common.player.subcapturePath : cfg.common.recorder.dumpPath;

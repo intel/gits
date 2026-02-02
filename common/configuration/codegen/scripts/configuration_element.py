@@ -10,6 +10,7 @@ import os
 import yaml
 
 from utils import fixCapitalizationName, get_if_present, fixUpCapitalizationInstance
+from typing import Tuple
 
 blank_types = []
 
@@ -136,6 +137,9 @@ class ConfigurationOption(ConfigurationEntry):
                 namespace_lst = namespace_lst[1:]
         self.namespace_str = '::'.join(namespace)
         self.argument_path = '.'.join(namespace_lst)
+        # We need the list for checking validity and the joined path for actually accesing the value
+        self.yaml_path = (namespace_lst, "".join([f"[\"{e}\"]" for e in namespace_lst]))
+        self.instance_path = '.'.join(instance_namespace[1:]) # Without the "Configuration" prefix
         self.default = get_if_present(option, 'Default', "")
         if 'NumericFormat' in option:
             try:
@@ -179,6 +183,14 @@ class ConfigurationOption(ConfigurationEntry):
 
         self.is_deprecated = get_if_present(option, "Deprecated", False)
 
+        self.legacy_paths = []
+        legacy_paths = get_if_present(option, "LegacyPaths", [])
+        # We need the list for checking validity and the joined path for actually accesing the value (YAML)
+        for legacy_path in legacy_paths:
+          path_list = legacy_path.split('.')
+          joined = "".join([f"[\"{component}\"]" for component in path_list])
+          env_path = f"{ConfigurationOption.ENVIRONMENT_PREFIX}{legacy_path.upper().replace('.', '_')}"
+          self.legacy_paths.append((path_list, joined, env_path))
 
     def __str__(self):
         return (f'Name: {self.name}, Type: {self.type}, Default: {self.default}, '
@@ -258,6 +270,8 @@ class ConfigurationOption(ConfigurationEntry):
 
     def get_shorthands(self) -> str:
         tmp_list= [self.argument_path + ConfigurationOption.ARGS_SUFFIX_HIDE_OPTION] + self.shorthands
+        for legacy_path in self.legacy_paths:
+          tmp_list.append('.'.join(legacy_path[0]) + ConfigurationOption.ARGS_SUFFIX_HIDE_OPTION)
         lst = [f"'{item}'" for item in tmp_list if len(item) == 1]
         lst.extend([f'"{item}"' for item in tmp_list if len(item) > 1])
         return ", ".join(lst)
@@ -304,6 +318,11 @@ class ConfigurationOption(ConfigurationEntry):
           raise ValueError('get_bool_value_argument_type called on a non bool option')
         return "args::ValueFlag<bool>"
 
+    def get_yaml_path(self) -> Tuple[str, str]:
+        return self.yaml_path
+
+    def get_legacy_paths(self) -> list[Tuple[str, str]]:
+        return self.legacy_paths
 
 
 class ConfigurationGroup(ConfigurationEntry):
@@ -370,8 +389,10 @@ class ConfigurationGroup(ConfigurationEntry):
         return '.'.join(self.namespace[1:])
 
 
-def parse_group_node(node, parent_namespace=None, parent_instance_namespace=None):
+def parse_group_node(node, parent_namespace=None, parent_instance_namespace=None, all_options=None):
     # assumption: we are called on a group
+    if all_options is None:
+      all_options = []
     options = []
     namespace = [node['Name'][0].upper() + node['Name'][1:]]
     if not parent_namespace is None:
@@ -396,19 +417,20 @@ def parse_group_node(node, parent_namespace=None, parent_instance_namespace=None
     dependencies = []
     for option in node['Options']:
         if option['Type'] == 'Group':
-            entry, new_dependencies = parse_group_node(
-                option, namespace, instance_namespace)
+            entry, new_dependencies, _ = parse_group_node(
+                option, namespace, instance_namespace, all_options)
             dependencies += new_dependencies
         else:
             entry = ConfigurationOption(option, namespace, instance_namespace)
             if is_group_derived:
                 entry.is_derived = True
+            all_options.append(entry)
 
         options.append(entry)
 
     group = ConfigurationGroup(node, options, namespace, instance_namespace)
     dependencies += [group]
-    return group, dependencies
+    return group, dependencies, all_options
 
 
 def parse_config_yaml(yaml_filepath: str, root_directory: str) -> ConfigurationGroup:
@@ -419,10 +441,10 @@ def parse_config_yaml(yaml_filepath: str, root_directory: str) -> ConfigurationG
         configuration_yaml = yaml.safe_load(yaml_file)['Configuration']
         config_node = {'Name': 'Configuration',
                        'Type': 'Group', 'Options': configuration_yaml}
-        configuration, dependencies = parse_group_node(config_node)
+        configuration, dependencies, all_options = parse_group_node(config_node)
 
     global blank_types
     print(
         f"  > Encountered the following types with empty arguments: {list(set(blank_types))}")
 
-    return configuration, dependencies
+    return configuration, dependencies, all_options

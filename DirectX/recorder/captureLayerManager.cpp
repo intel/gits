@@ -44,11 +44,11 @@ void CaptureLayerManager::loadLayers(CaptureManager& captureManager,
   std::unique_ptr<Layer> dllOverrideStoreLayer;
   std::unique_ptr<Layer> globalSynchronizationLayer;
 
-  if (cfg.directx.capture.debugLayer) {
+  if (cfg.directx.recorder.debugLayer) {
     debugInfoLayer = std::make_unique<DebugInfoLayer>();
   }
 
-  if (cfg.directx.capture.forceGlobalSynchronization) {
+  if (cfg.directx.recorder.forceGlobalSynchronization) {
     globalSynchronizationLayer = std::make_unique<GlobalSynchronizationLayer>();
   }
 

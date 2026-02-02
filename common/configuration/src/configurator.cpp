@@ -82,6 +82,7 @@ Configuration& Configurator::GetMutable() {
 
 void Configurator::UpdateFromEnvironment() {
   Instance().configuration.updateFromEnvironment();
+  Instance().configuration.CheckLegacyEnvironmentPaths();
 }
 
 void Configurator::DeriveData() {
@@ -91,6 +92,7 @@ void Configurator::DeriveData() {
 bool Configurator::LoadInto(const YAML::Node& node, Configuration* configObj) {
   try {
     if (YAML::convert<Configuration>::decode(node, *configObj)) {
+      CheckLegacyPaths(node, *configObj);
       return true;
     } else {
       LOG_ERROR << "Failed to decode YAML to Configuration" << std::endl;
@@ -229,8 +231,9 @@ void Configurator::ClearChangedFieldsVector() {
 void Configurator::AddChangedField(const std::string& path,
                                    const std::string& value,
                                    const std::string& defaultValue,
-                                   const ConfigEntry::Source source) {
-  changedFields[source].emplace_back(ConfigEntry{path, value, defaultValue, source});
+                                   const ConfigEntry::Source source,
+                                   const std::string& legacyPath) {
+  changedFields[source].emplace_back(ConfigEntry{path, value, defaultValue, source, legacyPath});
 }
 
 void Configurator::LogChangedFields() {
@@ -247,7 +250,12 @@ void Configurator::LogChangedFields() {
     }
     LOG_INFO << "-- Set via " << ConfigEntry::toString(source) << ":";
     for (const auto& entry : changedFields[source]) {
-      LOG_INFO << "  --" << entry.Path << "=\"" << entry.Value << "\"";
+      if (!entry.LegacyPath.empty()) {
+        LOG_INFO << "--" << entry.Path << "=\"" << entry.Value << "\""
+                 << " (set using deprecated path: " << entry.LegacyPath << ")";
+      } else {
+        LOG_INFO << "--" << entry.Path << "=\"" << entry.Value << "\"";
+      }
     }
   }
 }

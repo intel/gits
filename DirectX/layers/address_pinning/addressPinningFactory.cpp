@@ -18,7 +18,7 @@ namespace DirectX {
 AddressPinningFactory::AddressPinningFactory() {
 
   if ((Configurator::IsRecorder() && Configurator::Get().common.recorder.enabled &&
-       Configurator::Get().directx.capture.storeAddressPinning) ||
+       Configurator::Get().directx.recorder.storeAddressPinning) ||
       (Configurator::IsPlayer() &&
        Configurator::Get().directx.player.addressPinning == AddressPinningMode::STORE)) {
     addressPinningLayer_ = std::make_unique<AddressPinningStoreLayer>();

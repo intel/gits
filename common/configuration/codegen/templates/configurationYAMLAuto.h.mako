@@ -28,3 +28,9 @@ struct convert<gits::${group.namespace_str}> {
 
 %endfor
 }
+
+namespace gits {
+
+void CheckLegacyPaths(const YAML::Node& rootNode, Configuration& rhs);
+
+}

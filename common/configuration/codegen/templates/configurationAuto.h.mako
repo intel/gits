@@ -47,6 +47,7 @@ ${whitespace(indentation + 1)}std::optional<${option.type}> ${option.instance_na
 
 ${whitespace(indentation + 1)}void updateFromEnvironment();
 % if indentation == 0:
+${whitespace(indentation+ 1 )}void CheckLegacyEnvironmentPaths();
 ${whitespace(indentation + 1)}Configuration(bool& validityFlag);
 };
 % else:

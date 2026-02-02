@@ -73,7 +73,7 @@ void DeriveConfigData<Configuration::Vulkan>(Configuration::Vulkan& obj, Configu
 template <>
 void DeriveConfigData<Configuration::DirectX>(Configuration::DirectX& obj, Configuration& config) {
   obj.player.DeriveData(config);
-  obj.capture.DeriveData(config);
+  obj.recorder.DeriveData(config);
 };
 
 template <>

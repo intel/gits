@@ -17,7 +17,7 @@ namespace DirectX {
 
 PortabilityLayer::PortabilityLayer() : Layer("Portability") {
   if (Configurator::IsRecorder() &&
-          Configurator::Get().directx.capture.portability.resourcePlacementStorage ||
+          Configurator::Get().directx.recorder.portability.resourcePlacementStorage ||
       Configurator::IsPlayer() &&
           Configurator::Get().directx.player.portability.resourcePlacement == "store" &&
           Configurator::Get().directx.player.execute) {
@@ -46,13 +46,13 @@ PortabilityLayer::PortabilityLayer() : Layer("Portability") {
   }
   if (Configurator::IsRecorder()) {
     accelerationStructurePadding_ =
-        Configurator::Get().directx.capture.portability.raytracing.accelerationStructurePadding;
+        Configurator::Get().directx.recorder.portability.raytracing.accelerationStructurePadding;
     if (accelerationStructurePadding_ < 1.0) {
       accelerationStructurePadding_ = 1.0;
     }
     accelerationStructureScratchPadding_ =
         Configurator::Get()
-            .directx.capture.portability.raytracing.accelerationStructureScratchPadding;
+            .directx.recorder.portability.raytracing.accelerationStructureScratchPadding;
     if (accelerationStructureScratchPadding_ < 1.0) {
       accelerationStructureScratchPadding_ = 1.0;
     }
