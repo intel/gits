@@ -52,6 +52,7 @@ Here's the structure to define a configuration option:
   Tags: [string]            #     opt. tag(s) for help filtering.
   OSVisibility: [string]    #     opt. OSs that support this option.
   Deprecated: bool          #     opt. Whether the option is deprecated
+  LegacyPaths: [string]     #     opt. List of old paths for the option
 
   DefaultsPerPlatform:      #     opt. additional defaults
       - {platform}: string  #     opt. if `platform` matches
@@ -77,6 +78,7 @@ Here's the structure to define a configuration option:
 | `DefaultsPerPlatform` | Specify defaults for specific platforms. The value set by `Default` is a fallback, when no platform matched.                                                                                                                                |
 | `DefaultCondition`    | Specify defaults if certain conditions are _present_. Is evaluated before `DefaultsPerPlatform`. When unmatched, the value set by `Default` is used.                                                                                        |
 | `Deprecated`          | Specifies that the option has been deprecated. Defaults to false if not present. Such option won't be put into the default config file but will be read properly (with a warning) if present - used for backwards compatibility.            |
+| `LegacyPaths`         | List of old (legacy) paths for the option that will be checked if an option is not found under its regular path. Allows for backward compatibility with old configs / CLI / envars. If found under a legacy path a warning will be printed.            |
 
 ### Group
 
@@ -153,4 +155,7 @@ The codegen consists of 6 scripts:
 ### Additional Notes
 
 1. `Deprecated options`
+  Marking an option as deprecated makes it an std::optional inside the code. Any existing code paths for that change might be affected by this (Silently in some cases, so please keep that in mind).
   If a deprecated option was replaced by a different one then Data Deriving (common/configuration/src/DeriveData.cpp) can be used to set the new options value based on the deprecated option.
+2. `Legacy paths`
+  Legacy paths can be used in cases where we don't want to deprecate the option, but rather its path. Therefore it's useful in cases where an option gets renamed or put under a different group.
