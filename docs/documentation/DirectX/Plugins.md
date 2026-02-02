@@ -12,25 +12,25 @@ Each plugin consists of the following:
 
 # Usage
 
-GITS plugins must be enabled in the configuration file, either under `DirectX.Capture` or `DirectX.Playback`.
+GITS plugins must be enabled in the configuration file, either under `DirectX.Recorder` or `DirectX.Player`.
 
 ```yaml
 DirectX:
-  Capture:
-    Plugins: [] # List of DirectX plugins to enable for Playback
+  Recorder:
+    Plugins: [] # List of plugins to enable
 ```
 
 ```yaml
 DirectX:
-  Playback:
-    Plugins: [] # List of DirectX plugins to enable for Playback
+  Player:
+    Plugins: [] # List of plugins to enable
 ```
 
 To enable a given plugin just add it to the `Plugins[]` list. For example to enable `HelloPlugin` on playback:
 
 ```yaml
 DirectX:
-  Playback:
+  Player:
     Plugins: ['HelloPlugin']
 ```
 

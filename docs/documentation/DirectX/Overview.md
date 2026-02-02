@@ -42,8 +42,8 @@ Frame sub-capture is supported through `gitsPlayer.exe`. The current implementat
 
 For both steps, the `Player/gits_config.yml` file needs to be edited:
 
-1. Set `DirectX12.Subcapture.Enabled` to `true`.
-2. Set `DirectX12.Subcapture.Frames` to the desired range (e.g., `'1800-1803'`).
+1. Set `DirectX12.Features.Subcapture.Enabled` to `true`.
+2. Set `DirectX12.Features.Subcapture.Frames` to the desired range (e.g., `'1800-1803'`).
 
 Run `gitsPlayer.exe` twice (you can use `--exitFrame` to exit right after the subcapture range is completed).
 
@@ -55,7 +55,7 @@ Run `gitsPlayer.exe` twice (you can use `--exitFrame` to exit right after the su
 
 All application-specific configuration overrides can be found under `Overrides` in the configuration file.
 
-The only expected compatibility option to toggle is `DirectX.Capture.ShadowMemory`, which affects how mapped/unmapped resources are tracked and may impact the stability of certain applications. If there is a problem recording (or playing back) a stream for a given application, set `DirectX.Capture.ShadowMemory` to `true` and try again.
+The only expected compatibility option to toggle is `DirectX.Recorder.ShadowMemory`, which affects how mapped/unmapped resources are tracked and may impact the stability of certain applications. If there is a problem recording (or playing back) a stream for a given application, set `DirectX.Recorder.ShadowMemory` to `true` and try again.
 
 # Issues, Comments, and Feedback
 

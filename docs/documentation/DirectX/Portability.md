@@ -17,20 +17,20 @@ The Portability Layer can be used to help with resource placement compatibility.
 1. Generate `resourcePlacementData.dat` on **Platform A** (🖥️)
 
    - `resourcePlacementData.dat` can be generated on capture or playback:
-     - Capture: Set `DirectX.Capture.Portability.ResourcePlacementStorage` to `true`
-     - Playback: Set `DirectX.Playback.Portability.ResourcePlacement` to `'store'`
+     - Capture: Set `DirectX.Recorder.Portability.ResourcePlacementStorage` to `true`
+     - Playback: Set `DirectX.Player.Portability.ResourcePlacement` to `'store'`
    - `resourcePlacementData.dat` will be written next to `stream.gits2`
 
 2. Playback stream on **Platform B** (💻)
 
    - Copy `resourcePlacementData.dat` next to `stream.gits2`
-   - Enable Portability Layer in `gits_config.yml` by setting `DirectX.Playback.Portability.ResourcePlacement` to `'use'`
+   - Enable Portability Layer in `gits_config.yml` by setting `DirectX.Player.Portability.ResourcePlacement` to `'use'`
 
 ### **(Experimental)** To playback a stream on **Platform B** (💻) without accessing **Platform A** (🖥️):
 
 1. Generate `resourcePlacementData.dat` on **Platform B** (🖥️)
 
-   - Playback: Set `DirectX.Playback.Portability.ResourcePlacement` to `'store'` and `DirectX.Playback.Execute` to `false`
+   - Playback: Set `DirectX.Player.Portability.ResourcePlacement` to `'store'` and `DirectX.Player.Execute` to `false`
    - `resourcePlacementData.dat` will be written next to `stream.gits2`
 
 2. Playback stream on **Platform B** (💻)
@@ -43,7 +43,7 @@ Ray Tracing uses acceleration structures which are platform (and driver!) depend
 
 GITS will ask the application to allocate extra memory (2x by default) to ensure that all the D3D12 resources have extra padding to accommodate driver updates.
 
-Use the `DirectX.Capture.Raytracing` options to change the padding multipliers used.
+Use the `DirectX.Recorder.Raytracing` options to change the padding multipliers used.
 
 # Notes
 

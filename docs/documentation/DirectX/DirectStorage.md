@@ -33,7 +33,7 @@ graph TB
 
 # Notes
 
-- Support for this feature can be toggled in the config file by using the `DirectX.Capture.CaptureDirectStorage` option.
+- Support for this feature can be toggled in the config file by using the `DirectX.Recorder.CaptureDirectStorage` option.
 - Custom compression (`DSTORAGE_CUSTOM_COMPRESSION_0`) is not supported.
 - Memory source reads (`DSTORAGE_REQUEST_SOURCE_MEMORY`) are not supported.
 - `IDStorageQueueSubmit` operations are synchronized (cause a Wait) on **gitsPlayer.exe**.
