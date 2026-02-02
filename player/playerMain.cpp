@@ -445,8 +445,7 @@ void ShowCallstack(PEXCEPTION_POINTERS exceptionPtr) {
 LONG WINAPI ExceptionFilter(PEXCEPTION_POINTERS exceptionPtr) {
   ShowExceptionInfo(exceptionPtr);
   ShowCallstack(exceptionPtr);
-  return Configurator::Get().common.player.disableExceptionHandling ? EXCEPTION_CONTINUE_SEARCH
-                                                                    : EXCEPTION_EXECUTE_HANDLER;
+  return EXCEPTION_CONTINUE_SEARCH;
 }
 #endif
 } // namespace gits

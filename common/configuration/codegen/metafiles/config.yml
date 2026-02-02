@@ -387,11 +387,9 @@ Configuration:
             Default: false
             Arguments: [noseh, x]
             Description:
-              If specified, structured exceptions raised during playback  will
-              be passed to system unhandled.
-            LongDescription:
-              If specified, structured exceptions raised during playback
-              will be passed to system unhandled.
+              DEPRECATED. GITS does not handle exceptions during playback. This option was used to disable exception handling.
+              GITS now behaves as if this option is always enabled.
+            Deprecated: true
           - Name: captureScreenshot
             Type: bool
             Default: false
