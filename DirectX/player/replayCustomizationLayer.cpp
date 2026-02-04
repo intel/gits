@@ -343,13 +343,17 @@ void ReplayCustomizationLayer::pre(ID3D12Device1SetEventOnMultipleFenceCompletio
 }
 
 void ReplayCustomizationLayer::pre(ID3D12FenceGetCompletedValueCommand& c) {
+  capturedFenceValue_ = c.result_.value;
+}
+
+void ReplayCustomizationLayer::post(ID3D12FenceGetCompletedValueCommand& c) {
   if (c.skip) {
     return;
   }
-  waitForFence(c.key, c.object_.value, c.result_.value);
+  waitForFence(c.key, c.object_.value, capturedFenceValue_);
 }
 
-void ReplayCustomizationLayer::pre(WaitForFenceSignaledCommand& c) {
+void ReplayCustomizationLayer::post(WaitForFenceSignaledCommand& c) {
   if (c.skip) {
     return;
   }

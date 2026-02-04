@@ -51,7 +51,8 @@ public:
   void pre(ID3D12FenceSetEventOnCompletionCommand& command) override;
   void pre(ID3D12Device1SetEventOnMultipleFenceCompletionCommand& command) override;
   void pre(ID3D12FenceGetCompletedValueCommand& command) override;
-  void pre(WaitForFenceSignaledCommand& command) override;
+  void post(ID3D12FenceGetCompletedValueCommand& command) override;
+  void post(WaitForFenceSignaledCommand& command) override;
   void post(ID3D12DeviceCreateCommittedResourceCommand& command) override;
   void post(ID3D12Device4CreateCommittedResource1Command& command) override;
   void post(ID3D12Device8CreateCommittedResource2Command& command) override;
@@ -197,6 +198,7 @@ private:
   PlayerManager& manager_;
   PipelineLibraryService& pipelineLibraryService_;
   HANDLE waitForFenceEvent_{};
+  UINT64 capturedFenceValue_{};
   std::vector<NvAPIShaderExtnSlot> nvapiShaderExtnSlotsUsed_;
   bool useAddressPinning_{};
   bool afterAddRef_{};
