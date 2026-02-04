@@ -81,7 +81,10 @@ def main():
         CppHeader(path=inpath_xess + 'xess/xess_d3d12.h', api=Api.XESS),
         CppHeader(path=inpath_dstorage + 'dstorage.h', api=Api.DSTORAGE),
         CppHeader(path=inpath_xess + 'xell/xell.h', api=Api.XELL),
-        CppHeader(path=inpath_xess + 'xell/xell_d3d12.h', api=Api.XELL)
+        CppHeader(path=inpath_xess + 'xell/xell_d3d12.h', api=Api.XELL),
+        CppHeader(path=inpath_xess + 'xess_fg/xefg_swapchain.h', api=Api.XEFG),
+        CppHeader(path=inpath_xess + 'xess_fg/xefg_swapchain_d3d12.h', api=Api.XEFG),
+        CppHeader(path=inpath_xess + 'xess_fg/xefg_swapchain_debug.h', api=Api.XEFG)
     ]
 
     enums = []

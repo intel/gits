@@ -128,6 +128,12 @@ enum class CommandId {
   ${f'{cmd_name} = 0x{cmd_id:X},'}
   %endfor
 
+  // ID_XELL_BEGIN + 0x500
+  ID_XEFG_BEGIN = 0xD3C00,
+  %for cmd_name, cmd_id in command_ids[Api.XEFG.name].items():
+  ${f'{cmd_name} = 0x{cmd_id:X},'}
+  %endfor
+
   ID_END
 };
 

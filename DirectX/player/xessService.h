@@ -11,6 +11,7 @@
 #include "gits.h"
 #include "xessDispatchTableAuto.h"
 #include "xellDispatchTableAuto.h"
+#include "xefgDispatchTableAuto.h"
 
 #include <filesystem>
 
@@ -23,6 +24,7 @@ public:
   ~XessService();
   bool loadXess(std::filesystem::path path);
   bool loadXell(std::filesystem::path path);
+  bool loadXefg(std::filesystem::path path);
 
   XessDispatchTable& getXessDispatchTable() {
     return xessDispatchTable_;
@@ -32,11 +34,17 @@ public:
     return xellDispatchTable_;
   }
 
+  XefgDispatchTable& getXefgDispatchTable() {
+    return xefgDispatchTable_;
+  }
+
 private:
   HMODULE xessDll_{};
   XessDispatchTable xessDispatchTable_{};
   HMODULE xellDll_{};
   XellDispatchTable xellDispatchTable_{};
+  HMODULE xefgDll_{};
+  XefgDispatchTable xefgDispatchTable_{};
 };
 
 } // namespace DirectX

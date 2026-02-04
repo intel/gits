@@ -58,11 +58,15 @@ void updateInterface(PlayerManager& manager, xess_d3d12_init_params_t_Argument& 
 void updateInterface(PlayerManager& manager, xess_d3d12_execute_params_t_Argument& arg);
 void updateInterface(PlayerManager& manager, DSTORAGE_QUEUE_DESC_Argument& arg);
 void updateInterface(PlayerManager& manager, DSTORAGE_REQUEST_Argument& arg);
+void updateInterface(PlayerManager& manager, xefg_swapchain_d3d12_init_params_t_Argument& arg);
+void updateInterface(PlayerManager& manager, xefg_swapchain_d3d12_resource_data_t_Argument& arg);
 
 void updateContext(PlayerManager& manager, XESSContextArgument& arg);
 void updateOutputContext(PlayerManager& manager, XESSContextOutputArgument& arg);
 void updateContext(PlayerManager& maanger, XELLContextArgument& arg);
 void updateOutputContext(PlayerManager& manager, XELLContextOutputArgument& arg);
+void updateContext(PlayerManager& manager, XEFGContextArgument& arg);
+void updateOutputContext(PlayerManager& manager, XEFGContextOutputArgument& arg);
 
 } // namespace DirectX
 } // namespace gits

@@ -42,7 +42,6 @@ void StateTrackingService::restoreState() {
   recordStatus(MarkerUInt64Command::Value::STATE_RESTORE_OBJECTS_END);
   nvapiGlobalStateService_.restureInitializeCount();
   xessStateService_.restoreState();
-  xellStateService_.restoreState();
   descriptorService_.restoreState();
   recordStatus(MarkerUInt64Command::Value::STATE_RESTORE_RTAS_BEGIN);
   accelerationStructuresSerializeService_.restoreAccelerationStructures();
@@ -103,6 +102,10 @@ void StateTrackingService::addBackBuffer(unsigned buffer,
   swapChainService_.addBackBuffer(buffer, resourceKey, resource);
 }
 
+void StateTrackingService::setXefgSwapChainFlag() {
+  isXefgSwapChain_ = true;
+}
+
 void StateTrackingService::restoreState(ObjectState* state) {
   if (state->restored) {
     return;
@@ -116,6 +119,7 @@ void StateTrackingService::restoreState(ObjectState* state) {
   switch (state->creationCommand->getId()) {
   case CommandId::ID_IDXGIFACTORY_CREATESWAPCHAIN:
   case CommandId::ID_IDXGIFACTORY2_CREATESWAPCHAINFORHWND:
+  case CommandId::ID_XEFGSWAPCHAIND3D12GETSWAPCHAINPTR:
     restoreDXGISwapChain(state);
     break;
   case CommandId::ID_IDXGIFACTORY_ENUMADAPTERS:
@@ -285,6 +289,10 @@ void StateTrackingService::restoreReferenceCount() {
       c.key = getUniqueCommandKey();
       c.object_.key = it.second->key;
       recorder_.record(new IUnknownReleaseWriter(c));
+      continue;
+    }
+    if (state->creationCommand->getId() == CommandId::ID_IDXGIFACTORY2_CREATESWAPCHAINFORHWND &&
+        isXefgSwapChain_) {
       continue;
     }
 
@@ -477,9 +485,34 @@ void StateTrackingService::restoreDXGISwapChain(ObjectState* state) {
     createWindowCommand.height_.value = height;
     recorder_.record(new CreateWindowMetaWriter(createWindowCommand));
 
-    swapChainService_.setSwapChain(
-        command->pDevice_.key, reinterpret_cast<ID3D12CommandQueue*>(command->pDevice_.value),
-        state->key, *command->ppSwapChain_.value, command->pDesc_.value->BufferCount);
+    if (!isXefgSwapChain_) {
+      swapChainService_.setSwapChain(
+          command->pDevice_.key, reinterpret_cast<ID3D12CommandQueue*>(command->pDevice_.value),
+          state->key, *command->ppSwapChain_.value, command->pDesc_.value->BufferCount);
+    }
+  } else if (state->creationCommand->getId() == CommandId::ID_XEFGSWAPCHAIND3D12GETSWAPCHAINPTR) {
+    auto* command =
+        static_cast<xefgSwapChainD3D12GetSwapChainPtrCommand*>(state->creationCommand.get());
+    auto contextKey = command->hSwapChain_.key;
+    xellStateService_.restoreState();
+    xefgStateService_.restoreState();
+    auto xefgContextState = xefgStateService_.getContextState(contextKey);
+    ID3D12CommandQueue* cmdQueue{};
+    if (xefgContextState->initFromSwapChainParams.has_value()) {
+      auto& initParams = xefgContextState->initFromSwapChainParams.value();
+      cmdQueue = initParams.cmdQueue;
+    } else if (xefgContextState->initFromSwapChainDescParams.has_value()) {
+      auto& initParams = xefgContextState->initFromSwapChainDescParams.value();
+      cmdQueue = initParams.cmdQueue;
+    }
+    auto& swapChainInfo = xefgContextState->swapChain.value();
+    DXGI_SWAP_CHAIN_DESC desc{};
+    swapChainInfo.swapChain->GetDesc(&desc);
+    unsigned bufferCount = desc.BufferCount;
+    swapChainService_.setSwapChain(xefgContextState->deviceKey, cmdQueue,
+                                   swapChainInfo.swapChainKey, swapChainInfo.swapChain,
+                                   bufferCount);
+    return;
   }
   recorder_.record(createCommandWriter(state->creationCommand.get()));
 }

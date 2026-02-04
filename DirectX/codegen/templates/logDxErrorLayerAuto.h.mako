@@ -25,7 +25,7 @@ public:
   virtual void pre(IUnknownQueryInterfaceCommand& command);
   virtual void post(IUnknownQueryInterfaceCommand& command);
   %for function in functions:
-  %if function.ret.type in ['HRESULT', 'xess_result_t', 'xell_result_t']:
+  %if function.ret.type in ['HRESULT', 'xess_result_t', 'xell_result_t', 'xefg_swapchain_result_t']:
   virtual void pre(${function.name}Command& command);
   virtual void post(${function.name}Command& command);
   %endif
@@ -99,12 +99,17 @@ private:
     return result != XELL_RESULT_SUCCESS && (!isPlayer_ || result != preResultXell_);
   }
 
+  bool isFailureXefg(xefg_swapchain_result_t result) {
+    return result != XEFG_SWAPCHAIN_RESULT_SUCCESS && (!isPlayer_ || result != preResultXefg_);
+  }
+
 private:
   bool isPlayer_{};
   HRESULT preResult_{};
   xess_result_t preResultXess_{};
   NvAPI_Status preResultNvAPI_{};
   xell_result_t preResultXell_{};
+  xefg_swapchain_result_t preResultXefg_{};
 };
 
 } // namespace DirectX

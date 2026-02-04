@@ -732,5 +732,49 @@ UpdateInterface<DSTORAGE_REQUEST_Argument, DSTORAGE_REQUEST>::UpdateInterface(
   }
 }
 
+UpdateInterface<xefg_swapchain_d3d12_init_params_t_Argument, xefg_swapchain_d3d12_init_params_t>::
+    UpdateInterface(xefg_swapchain_d3d12_init_params_t_Argument& arg,
+                    const xefg_swapchain_d3d12_init_params_t* value) {
+  arg.value = &unwrapStructure_;
+  *arg.value = *value;
+  if (value->pApplicationSwapChain) {
+    IUnknownWrapper* wrapper = nullptr;
+    if (value->pApplicationSwapChain->QueryInterface(IID_IUnknownWrapper,
+                                                     reinterpret_cast<void**>(&wrapper)) != S_OK) {
+      return;
+    }
+    arg.applicationSwapChainKey = wrapper->getKey();
+    arg.value->pApplicationSwapChain = wrapper->getWrappedObject<IDXGISwapChain>();
+  }
+  if (value->pTempBufferHeap) {
+    IUnknownWrapper* wrapper = reinterpret_cast<IUnknownWrapper*>(value->pTempBufferHeap);
+    arg.tempBufferHeapKey = wrapper->getKey();
+    arg.value->pTempBufferHeap = wrapper->getWrappedObject<ID3D12Heap>();
+  }
+  if (value->pTempTextureHeap) {
+    IUnknownWrapper* wrapper = reinterpret_cast<IUnknownWrapper*>(value->pTempTextureHeap);
+    arg.tempTextureHeapKey = wrapper->getKey();
+    arg.value->pTempTextureHeap = wrapper->getWrappedObject<ID3D12Heap>();
+  }
+  if (value->pPipelineLibrary) {
+    IUnknownWrapper* wrapper = reinterpret_cast<IUnknownWrapper*>(value->pPipelineLibrary);
+    arg.pipelineLibraryKey = wrapper->getKey();
+    arg.value->pPipelineLibrary = wrapper->getWrappedObject<ID3D12PipelineLibrary>();
+  }
+}
+
+UpdateInterface<xefg_swapchain_d3d12_resource_data_t_Argument,
+                xefg_swapchain_d3d12_resource_data_t>::
+    UpdateInterface(xefg_swapchain_d3d12_resource_data_t_Argument& arg,
+                    const xefg_swapchain_d3d12_resource_data_t* value) {
+  arg.value = &unwrapStructure_;
+  *arg.value = *value;
+  if (value->pResource) {
+    IUnknownWrapper* wrapper = reinterpret_cast<IUnknownWrapper*>(value->pResource);
+    arg.resourceKey = wrapper->getKey();
+    arg.value->pResource = wrapper->getWrappedObject<ID3D12Resource>();
+  }
+}
+
 } // namespace DirectX
 } // namespace gits

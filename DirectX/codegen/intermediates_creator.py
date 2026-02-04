@@ -194,6 +194,8 @@ def postprocess(functions, interfaces, structures):
                 param.is_interface = True
                 if param.sal.find('_Out_') >= 0 or param.sal.find('_Outptr_opt_result_maybenull_') >= 0:
                     param.is_interface_creation = True
+            elif function.name == 'xefgSwapChainD3D12GetSwapChainPtr' and param.name == 'ppSwapChain':
+                param.is_interface_creation = True
 
     for interface in interfaces:
         for function in interface.functions:
@@ -222,7 +224,8 @@ def postprocess(functions, interfaces, structures):
 
     context_params = {
         'xess_context_handle_t',
-        'xell_context_handle_t'
+        'xell_context_handle_t',
+        'xefg_swapchain_handle_t'
     }
 
     custom_base_name = {

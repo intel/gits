@@ -38,7 +38,8 @@ StateTrackingLayer::StateTrackingLayer(SubcaptureRecorder& recorder,
                     analyzerResults_,
                     resourceUsageTrackingService_,
                     resourceForCBVRestoreService_,
-                    xellStateService_),
+                    xellStateService_,
+                    xefgStateService_),
       recorder_(recorder),
       subcaptureRange_(subcaptureRange),
       mapStateService_(stateService_),
@@ -50,6 +51,7 @@ StateTrackingLayer::StateTrackingLayer(SubcaptureRecorder& recorder,
       commandQueueService_(stateService_),
       xessStateService_(stateService_, recorder_),
       xellStateService_(stateService_, recorder_),
+      xefgStateService_(stateService_, recorder_),
       accelerationStructuresSerializeService_(stateService_, recorder_),
       accelerationStructuresBuildService_(stateService_,
                                           recorder_,
@@ -138,6 +140,7 @@ void StateTrackingLayer::pre(IUnknownReleaseCommand& c) {
     descriptorService_.removeState(c.object_.key);
     commandListService_.removeCommandList(c.object_.key);
     xessStateService_.destroyDevice(c.object_.key);
+    xefgStateService_.destroyDevice(c.object_.key);
     xellStateService_.destroyDevice(c.object_.key);
     accelerationStructuresSerializeService_.destroyResource(c.object_.key);
     residencyService_.destroyObject(c.object_.key);
@@ -3193,7 +3196,148 @@ void StateTrackingLayer::post(xellSetSleepModeCommand& c) {
     return;
   }
   XellStateService::ContextState* state = xellStateService_.getContextState(c.context_.key);
-  state->sleepParams = c.param_.value;
+  state->sleepParams = *c.param_.value;
+}
+
+void StateTrackingLayer::post(xellAddMarkerDataCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
+  xellStateService_.trackMarker(c.context_.key, c.frame_id_.value, c.marker_.value);
+}
+
+void StateTrackingLayer::post(xefgSwapChainD3D12CreateContextCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
+  if (c.result_.value != XEFG_SWAPCHAIN_RESULT_SUCCESS) {
+    return;
+  }
+  XefgStateService::ContextState* state = new XefgStateService::ContextState();
+  state->key = c.phSwapChain_.key;
+  state->deviceKey = c.pDevice_.key;
+  state->device = c.pDevice_.value;
+  xefgStateService_.storeContextState(state);
+}
+
+void StateTrackingLayer::pre(xefgSwapChainDestroyCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
+  XefgStateService::ContextState* state = xefgStateService_.getContextState(c.hSwapChain_.key);
+  state->device->AddRef();
+}
+
+void StateTrackingLayer::post(xefgSwapChainDestroyCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
+  XefgStateService::ContextState* state = xefgStateService_.getContextState(c.hSwapChain_.key);
+  ULONG ref = state->device->Release();
+  if (ref == 0) {
+    stateService_.releaseObject(state->deviceKey, 0);
+  }
+  xefgStateService_.destroyContext(c.hSwapChain_.key);
+}
+
+void StateTrackingLayer::post(xefgSwapChainSetLatencyReductionCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
+  XefgStateService::ContextState* state = xefgStateService_.getContextState(c.hSwapChain_.key);
+  state->xellContext = c.hXeLLContext_;
+}
+
+void StateTrackingLayer::post(xefgSwapChainSetEnabledCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
+  XefgStateService::ContextState* state = xefgStateService_.getContextState(c.hSwapChain_.key);
+  state->enabled = c.enable_.value;
+}
+
+void StateTrackingLayer::post(xefgSwapChainSetSceneChangeThresholdCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
+  XefgStateService::ContextState* state = xefgStateService_.getContextState(c.hSwapChain_.key);
+  state->threshold = c.threshold_.value;
+}
+
+void StateTrackingLayer::post(xefgSwapChainD3D12InitFromSwapChainCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
+  XefgStateService::ContextState* state = xefgStateService_.getContextState(c.hSwapChain_.key);
+  XefgStateService::InitFromSwapChainState initState{};
+  initState.initParams = c.pInitParams_;
+  initState.cmdQueue = c.pCmdQueue_.value;
+  initState.cmdQueueKey = c.pCmdQueue_.key;
+  state->initFromSwapChainParams.emplace(initState);
+}
+
+void StateTrackingLayer::post(xefgSwapChainD3D12InitFromSwapChainDescCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
+  XefgStateService::ContextState* state = xefgStateService_.getContextState(c.hSwapChain_.key);
+  XefgStateService::InitFromSwapChainDescState initState{};
+  initState.initParams = c.pInitParams_;
+  initState.hWnd = c.hWnd_.value;
+  initState.swapChainDesc = *c.pSwapChainDesc_.value;
+  if (c.pFullscreenDesc_.value) {
+    initState.fullscreenDesc = *c.pFullscreenDesc_.value;
+  }
+  initState.cmdQueue = c.pCmdQueue_.value;
+  initState.cmdQueueKey = c.pCmdQueue_.key;
+  initState.dxgiFactoryKey = c.pDxgiFactory_.key;
+  state->initFromSwapChainDescParams.emplace(initState);
+}
+
+void StateTrackingLayer::post(xefgSwapChainD3D12GetSwapChainPtrCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
+
+  if (c.result_.value != XEFG_SWAPCHAIN_RESULT_SUCCESS) {
+    return;
+  }
+  ObjectState* state = new ObjectState();
+  state->key = c.ppSwapChain_.key;
+  state->object = static_cast<IUnknown*>(*c.ppSwapChain_.value);
+  state->creationCommand.reset(new xefgSwapChainD3D12GetSwapChainPtrCommand(c));
+  stateService_.storeState(state);
+  stateService_.setXefgSwapChainFlag();
+
+  XefgStateService::ContextState* xefgState = xefgStateService_.getContextState(c.hSwapChain_.key);
+  XefgStateService::SwapChainPtrState swapChainPtrState{};
+  swapChainPtrState.riid = c.riid_.value;
+  swapChainPtrState.swapChain = static_cast<IDXGISwapChain*>(*c.ppSwapChain_.value);
+  swapChainPtrState.swapChainKey = c.ppSwapChain_.key;
+  xefgState->swapChain.emplace(swapChainPtrState);
+}
+
+void StateTrackingLayer::post(xefgSwapChainD3D12SetDescriptorHeapCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
+  XefgStateService::ContextState* state = xefgStateService_.getContextState(c.hSwapChain_.key);
+  XefgStateService::DescriptorHeapState descriptorHeapState{};
+  descriptorHeapState.descriptorHeapKey = c.pDescriptorHeap_.key;
+  descriptorHeapState.descriptorHeapOffsetInBytes = c.descriptorHeapOffsetInBytes_.value;
+  state->descriptorHeap.emplace(descriptorHeapState);
+}
+
+void StateTrackingLayer::post(xefgSwapChainEnableDebugFeatureCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
+  XefgStateService::ContextState* state = xefgStateService_.getContextState(c.hSwapChain_.key);
+  XefgStateService::DebugFeatureState debugFeatureState{};
+  debugFeatureState.featureId = c.featureId_.value;
+  debugFeatureState.enable = c.enable_.value;
+  debugFeatureState.argument = c.pArgument_.value;
+  state->debugFeature.emplace(debugFeatureState);
 }
 
 } // namespace DirectX

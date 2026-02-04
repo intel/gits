@@ -21,6 +21,9 @@ XessService::~XessService() {
   if (xellDll_) {
     FreeLibrary(xellDll_);
   }
+  if (xefgDll_) {
+    FreeLibrary(xefgDll_);
+  }
 }
 
 bool XessService::loadXess(std::filesystem::path path) {
@@ -149,6 +152,80 @@ bool XessService::loadXell(std::filesystem::path path) {
   xell_version_t version = {};
   xellDispatchTable_.xellGetVersion(&version);
   LOG_INFO << "Loaded XeLL (version " << version.major << "." << version.minor << "."
+           << version.patch << ")";
+
+  return true;
+}
+
+bool XessService::loadXefg(std::filesystem::path path) {
+  if (!xefgDll_) {
+    xefgDll_ = LoadLibrary(path.string().c_str());
+    if (!xefgDll_) {
+      LOG_ERROR << "Failed to load XeSS FG (" << path.string() << "). Playback issues may occur.";
+      return false;
+    }
+  }
+  GITS_ASSERT(xefgDll_);
+
+  xefgDispatchTable_.xefgSwapChainGetVersion = reinterpret_cast<decltype(xefgSwapChainGetVersion)*>(
+      GetProcAddress(xefgDll_, "xefgSwapChainGetVersion"));
+  xefgDispatchTable_.xefgSwapChainGetProperties =
+      reinterpret_cast<decltype(xefgSwapChainGetProperties)*>(
+          GetProcAddress(xefgDll_, "xefgSwapChainGetProperties"));
+  xefgDispatchTable_.xefgSwapChainTagFrameConstants =
+      reinterpret_cast<decltype(xefgSwapChainTagFrameConstants)*>(
+          GetProcAddress(xefgDll_, "xefgSwapChainTagFrameConstants"));
+  xefgDispatchTable_.xefgSwapChainSetEnabled = reinterpret_cast<decltype(xefgSwapChainSetEnabled)*>(
+      GetProcAddress(xefgDll_, "xefgSwapChainSetEnabled"));
+  xefgDispatchTable_.xefgSwapChainSetPresentId =
+      reinterpret_cast<decltype(xefgSwapChainSetPresentId)*>(
+          GetProcAddress(xefgDll_, "xefgSwapChainSetPresentId"));
+  xefgDispatchTable_.xefgSwapChainGetLastPresentStatus =
+      reinterpret_cast<decltype(xefgSwapChainGetLastPresentStatus)*>(
+          GetProcAddress(xefgDll_, "xefgSwapChainGetLastPresentStatus"));
+  xefgDispatchTable_.xefgSwapChainSetLoggingCallback =
+      reinterpret_cast<decltype(xefgSwapChainSetLoggingCallback)*>(
+          GetProcAddress(xefgDll_, "xefgSwapChainSetLoggingCallback"));
+  xefgDispatchTable_.xefgSwapChainDestroy = reinterpret_cast<decltype(xefgSwapChainDestroy)*>(
+      GetProcAddress(xefgDll_, "xefgSwapChainDestroy"));
+  xefgDispatchTable_.xefgSwapChainSetLatencyReduction =
+      reinterpret_cast<decltype(xefgSwapChainSetLatencyReduction)*>(
+          GetProcAddress(xefgDll_, "xefgSwapChainSetLatencyReduction"));
+  xefgDispatchTable_.xefgSwapChainSetSceneChangeThreshold =
+      reinterpret_cast<decltype(xefgSwapChainSetSceneChangeThreshold)*>(
+          GetProcAddress(xefgDll_, "xefgSwapChainSetSceneChangeThreshold"));
+  xefgDispatchTable_.xefgSwapChainGetPipelineBuildStatus =
+      reinterpret_cast<decltype(xefgSwapChainGetPipelineBuildStatus)*>(
+          GetProcAddress(xefgDll_, "xefgSwapChainGetPipelineBuildStatus"));
+  xefgDispatchTable_.xefgSwapChainD3D12CreateContext =
+      reinterpret_cast<decltype(xefgSwapChainD3D12CreateContext)*>(
+          GetProcAddress(xefgDll_, "xefgSwapChainD3D12CreateContext"));
+  xefgDispatchTable_.xefgSwapChainD3D12BuildPipelines =
+      reinterpret_cast<decltype(xefgSwapChainD3D12BuildPipelines)*>(
+          GetProcAddress(xefgDll_, "xefgSwapChainD3D12BuildPipelines"));
+  xefgDispatchTable_.xefgSwapChainD3D12InitFromSwapChain =
+      reinterpret_cast<decltype(xefgSwapChainD3D12InitFromSwapChain)*>(
+          GetProcAddress(xefgDll_, "xefgSwapChainD3D12InitFromSwapChain"));
+  xefgDispatchTable_.xefgSwapChainD3D12InitFromSwapChainDesc =
+      reinterpret_cast<decltype(xefgSwapChainD3D12InitFromSwapChainDesc)*>(
+          GetProcAddress(xefgDll_, "xefgSwapChainD3D12InitFromSwapChainDesc"));
+  xefgDispatchTable_.xefgSwapChainD3D12GetSwapChainPtr =
+      reinterpret_cast<decltype(xefgSwapChainD3D12GetSwapChainPtr)*>(
+          GetProcAddress(xefgDll_, "xefgSwapChainD3D12GetSwapChainPtr"));
+  xefgDispatchTable_.xefgSwapChainD3D12TagFrameResource =
+      reinterpret_cast<decltype(xefgSwapChainD3D12TagFrameResource)*>(
+          GetProcAddress(xefgDll_, "xefgSwapChainD3D12TagFrameResource"));
+  xefgDispatchTable_.xefgSwapChainD3D12SetDescriptorHeap =
+      reinterpret_cast<decltype(xefgSwapChainD3D12SetDescriptorHeap)*>(
+          GetProcAddress(xefgDll_, "xefgSwapChainD3D12SetDescriptorHeap"));
+  xefgDispatchTable_.xefgSwapChainEnableDebugFeature =
+      reinterpret_cast<decltype(xefgSwapChainEnableDebugFeature)*>(
+          GetProcAddress(xefgDll_, "xefgSwapChainEnableDebugFeature"));
+
+  xefg_swapchain_version_t version{};
+  xefg_swapchain_result_t result = xefgDispatchTable_.xefgSwapChainGetVersion(&version);
+  GITS_ASSERT(result == XEFG_SWAPCHAIN_RESULT_SUCCESS);
+  LOG_INFO << "Loaded XeSS FG (version " << version.major << "." << version.minor << "."
            << version.patch << ")";
 
   return true;

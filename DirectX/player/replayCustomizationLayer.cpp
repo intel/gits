@@ -1708,6 +1708,17 @@ void ReplayCustomizationLayer::post(CreateDXGIFactory2Command& c) {
   }
 }
 
+void ReplayCustomizationLayer::pre(xefgSwapChainD3D12InitFromSwapChainDescCommand& command) {
+  if (command.skip) {
+    return;
+  }
+  command.hWnd_.value = manager_.getWindowService().getCurrentHwnd(command.hWnd_.value);
+  if (command.pFullscreenDesc_.value && Configurator::Get().common.player.showWindowBorder) {
+    command.pFullscreenDesc_.value->Windowed = true;
+    LOG_INFO << "CreateSwapChainForHwnd: Force windowed mode due to 'showWindowBorder'";
+  }
+}
+
 void ReplayCustomizationLayer::fillGpuAddressArgument(D3D12_GPU_VIRTUAL_ADDRESS_Argument& arg) {
   if (useAddressPinning_) {
     return;

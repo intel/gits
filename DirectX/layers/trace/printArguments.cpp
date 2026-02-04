@@ -1834,5 +1834,40 @@ FastOStream& operator<<(FastOStream& stream, xell_frame_report_t_Argument& arg) 
   return stream;
 }
 
+FastOStream& operator<<(FastOStream& stream, xefg_swapchain_d3d12_init_params_t_Argument& arg) {
+  if (!arg.value) {
+    return stream << "nullptr";
+  }
+  stream << "xefg_swapchain_d3d12_init_params_t{";
+  printObjectKey(stream, arg.applicationSwapChainKey);
+  stream << ", " << arg.value->initFlags << ", ";
+  stream << arg.value->maxInterpolatedFrames << ", ";
+  stream << arg.value->creationNodeMask << ", ";
+  stream << arg.value->visibleNodeMask << ", ";
+  printObjectKey(stream, arg.tempBufferHeapKey);
+  stream << ", " << arg.value->bufferHeapOffset << ", ";
+  printObjectKey(stream, arg.tempTextureHeapKey);
+  stream << ", " << arg.value->textureHeapOffset << ", ";
+  printObjectKey(stream, arg.pipelineLibraryKey);
+  stream << ", " << toStr(arg.value->uiMode);
+  stream << "}";
+  return stream;
+}
+
+FastOStream& operator<<(FastOStream& stream, xefg_swapchain_d3d12_resource_data_t_Argument& arg) {
+  if (!arg.value) {
+    return stream << "nullptr";
+  }
+  stream << "xefg_swapchain_d3d12_resource_data_t{";
+  stream << toStr(arg.value->type) << ", ";
+  stream << toStr(arg.value->validity) << ", ";
+  stream << arg.value->resourceBase << ", ";
+  stream << arg.value->resourceSize << ", ";
+  printObjectKey(stream, arg.resourceKey);
+  stream << ", " << toStr(arg.value->incomingState);
+  stream << "}";
+  return stream;
+}
+
 } // namespace DirectX
 } // namespace gits

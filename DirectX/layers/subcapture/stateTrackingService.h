@@ -53,7 +53,8 @@ public:
       AnalyzerResults& analyzerResults,
       ResourceUsageTrackingService& resourceUsageTrackingService,
       ResourceForCBVRestoreService& resourceForCBVRestoreService,
-      XellStateService& xellStateService)
+      XellStateService& xellStateService,
+      XefgStateService& xefgStateService)
       : recorder_(recorder),
         resourceContentRestore_(*this),
         swapChainService_(*this),
@@ -72,7 +73,8 @@ public:
         resourceUsageTrackingService_(resourceUsageTrackingService),
         resourceForCBVRestoreService_(resourceForCBVRestoreService),
         nvapiGlobalStateService_(*this),
-        xellStateService_(xellStateService) {}
+        xellStateService_(xellStateService),
+        xefgStateService_(xefgStateService) {}
   ~StateTrackingService();
   void restoreState();
   void keepState(unsigned objectKey);
@@ -88,6 +90,7 @@ public:
   void restoreState(unsigned key);
   bool stateRestored(unsigned key);
   void addBackBuffer(unsigned buffer, unsigned resourceKey, ID3D12Resource* resource);
+  void setXefgSwapChainFlag();
 
   unsigned getUniqueCommandKey() {
     return ++restoreCommandKey_;
@@ -203,6 +206,7 @@ private:
   CommandQueueService& commandQueueService_;
   XessStateService& xessStateService_;
   XellStateService& xellStateService_;
+  XefgStateService& xefgStateService_;
   AccelerationStructuresSerializeService& accelerationStructuresSerializeService_;
   AccelerationStructuresBuildService& accelerationStructuresBuildService_;
   ResidencyService& residencyService_;
@@ -215,6 +219,7 @@ private:
   std::vector<std::unique_ptr<DllContainerMetaCommand>> dllContainerCommands_;
   std::queue<std::unique_ptr<Command>> stateObjectPropertiesCommands_;
   NvAPIGlobalStateService nvapiGlobalStateService_;
+  bool isXefgSwapChain_{};
 
 private:
   class SwapChainService {

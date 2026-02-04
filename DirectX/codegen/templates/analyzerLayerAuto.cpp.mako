@@ -175,7 +175,12 @@ custom = [
     'IDXGIOutput5DuplicateOutput1',
     'IDXGIFactory6EnumAdapterByGpuPreference',
     'IDMLDeviceCompileOperator',
-    'IDStorageFactoryOpenFile'
+    'IDStorageFactoryOpenFile',
+    'xellD3D12CreateContext',
+    'xefgSwapChainD3D12CreateContext',
+    'xefgSwapChainD3D12InitFromSwapChain',
+    'xefgSwapChainD3D12InitFromSwapChainDesc',
+    'xefgSwapChainD3D12GetSwapChainPtr'
 ]
 %>\
 %for function in functions:

@@ -106,6 +106,8 @@ public:
   void pre(NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand& command) override;
   void post(IDStorageFactoryOpenFileCommand& c) override;
   void pre(IDStorageQueueEnqueueRequestCommand& c) override;
+  void pre(xefgSwapChainD3D12InitFromSwapChainCommand& c) override;
+  void pre(xefgSwapChainD3D12InitFromSwapChainDescCommand& c) override;
 
 private:
   // Heaps (and resources) may require their D3D12_HEAP_PROPERTIES and D3D12_HEAP_FLAGS to be updated (for writewatch)

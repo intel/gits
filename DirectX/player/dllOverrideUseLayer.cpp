@@ -63,6 +63,14 @@ void DllOverrideUseLayer::pre(DllContainerMetaCommand& c) {
       xellLoaded_ = true;
     }
   }
+
+  if (Configurator::Get().directx.player.enableXefgDllAppOverride && !xefgLoaded_ &&
+      wcscmp(c.dllName_.value, L"libxess_fg.dll") == 0) {
+    LOG_INFO << "XeSS FG - Applying app override";
+    if (manager_.getXessService().loadXefg(dllOverridesDirectory_ / "libxess_fg.dll")) {
+      xefgLoaded_ = true;
+    }
+  }
 }
 
 void DllOverrideUseLayer::pre(D3D12CreateDeviceCommand& c) {
@@ -129,6 +137,14 @@ void DllOverrideUseLayer::pre(xellD3D12CreateContextCommand& command) {
   loadXell();
 }
 
+void DllOverrideUseLayer::pre(xefgSwapChainGetVersionCommand& command) {
+  loadXefg();
+}
+
+void DllOverrideUseLayer::pre(xefgSwapChainD3D12CreateContextCommand& command) {
+  loadXefg();
+}
+
 void DllOverrideUseLayer::loadAgilitySDK() {
   if (!agilitySDKLoaded_) {
     if (manager_.loadAgilitySdk("D3D12")) {
@@ -149,6 +165,14 @@ void DllOverrideUseLayer::loadXell() {
   if (!xellLoaded_) {
     if (manager_.getXessService().loadXell("D3D12\\libxell.dll")) {
       xellLoaded_ = true;
+    }
+  }
+}
+
+void DllOverrideUseLayer::loadXefg() {
+  if (!xefgLoaded_) {
+    if (manager_.getXessService().loadXefg("D3D12\\libxess_fg.dll")) {
+      xefgLoaded_ = true;
     }
   }
 }

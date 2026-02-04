@@ -1105,6 +1105,33 @@ void CaptureCustomizationLayer::pre(IDStorageQueueEnqueueRequestCommand& c) {
   directStorageService_.enqueueRequest(c);
 }
 
+void CaptureCustomizationLayer::pre(xefgSwapChainD3D12InitFromSwapChainCommand& c) {
+  LOG_INFO << "xefgSwapChainD3D12InitFromSwapChainCommand: pApplicaitonSwapChain: "
+           << c.pInitParams_.value->pApplicationSwapChain;
+  IDXGISwapChain* swapChain = c.pInitParams_.value->pApplicationSwapChain;
+  IUnknownWrapper* wrapper = manager_.findWrapper(swapChain);
+  manager_.removeWrapper(wrapper);
+  delete wrapper;
+}
+
+void CaptureCustomizationLayer::pre(xefgSwapChainD3D12InitFromSwapChainDescCommand& c) {
+  RECT rect;
+  BOOL ret = GetClientRect(c.hWnd_.value, &rect);
+  GITS_ASSERT(ret);
+
+  CreateWindowMetaCommand createWindowCommand(c.threadId);
+  createWindowCommand.key = manager_.createCommandKey();
+  createWindowCommand.hWnd_ = c.hWnd_;
+  createWindowCommand.width_.value = rect.right - rect.left;
+  createWindowCommand.height_.value = rect.bottom - rect.top;
+  createWindowCommand.width_.value = std::max(
+      static_cast<unsigned>(createWindowCommand.width_.value), c.pSwapChainDesc_.value->Width);
+  createWindowCommand.height_.value = std::max(
+      static_cast<unsigned>(createWindowCommand.height_.value), c.pSwapChainDesc_.value->Height);
+
+  recorder_.record(createWindowCommand.key, new CreateWindowMetaWriter(createWindowCommand));
+}
+
 void CaptureCustomizationLayer::fillGpuAddressArgument(D3D12_GPU_VIRTUAL_ADDRESS_Argument& arg) {
   if (arg.value) {
     GpuAddressService::GpuAddressInfo info =

@@ -207,6 +207,8 @@ void decode(char* src,
             unsigned& offset,
             PointerArgument<NVAPI_RAYTRACING_EXECUTE_MULTI_INDIRECT_CLUSTER_OPERATION_PARAMS>& arg);
 void decode(char* src, unsigned& offset, xell_frame_report_t_Argument& arg);
+void decode(char* src, unsigned& offset, xefg_swapchain_d3d12_init_params_t_Argument& arg);
+void decode(char* src, unsigned& offset, xefg_swapchain_d3d12_resource_data_t_Argument& arg);
 
 } // namespace DirectX
 } // namespace gits

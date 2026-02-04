@@ -244,6 +244,18 @@ public:
   void pre(xellDestroyContextCommand& c) override;
   void post(xellDestroyContextCommand& c) override;
   void post(xellSetSleepModeCommand& c) override;
+  void post(xellAddMarkerDataCommand& c) override;
+  void post(xefgSwapChainD3D12CreateContextCommand& c) override;
+  void pre(xefgSwapChainDestroyCommand& c) override;
+  void post(xefgSwapChainDestroyCommand& c) override;
+  void post(xefgSwapChainSetLatencyReductionCommand& c) override;
+  void post(xefgSwapChainSetEnabledCommand& c) override;
+  void post(xefgSwapChainSetSceneChangeThresholdCommand& c) override;
+  void post(xefgSwapChainD3D12InitFromSwapChainCommand& c) override;
+  void post(xefgSwapChainD3D12InitFromSwapChainDescCommand& c) override;
+  void post(xefgSwapChainD3D12GetSwapChainPtrCommand& c) override;
+  void post(xefgSwapChainD3D12SetDescriptorHeapCommand& c) override;
+  void post(xefgSwapChainEnableDebugFeatureCommand& c) override;
 
 private:
   void setAsChildInParent(unsigned parentKey, unsigned childKey);
@@ -275,6 +287,7 @@ private:
   CommandQueueService commandQueueService_;
   XessStateService xessStateService_;
   XellStateService xellStateService_;
+  XefgStateService xefgStateService_;
   AccelerationStructuresSerializeService accelerationStructuresSerializeService_;
   AccelerationStructuresBuildService accelerationStructuresBuildService_;
   ResidencyService residencyService_;

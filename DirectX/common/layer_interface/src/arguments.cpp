@@ -2371,5 +2371,47 @@ xell_frame_report_t_Argument::~xell_frame_report_t_Argument() {
 
 #pragma endregion
 
+#pragma region XEFG
+
+xefg_swapchain_d3d12_init_params_t_Argument::xefg_swapchain_d3d12_init_params_t_Argument(
+    const xefg_swapchain_d3d12_init_params_t_Argument& arg) {
+  if (!arg.value) {
+    return;
+  }
+  value = new xefg_swapchain_d3d12_init_params_t();
+  *value = *arg.value;
+  key = arg.key;
+  applicationSwapChainKey = arg.applicationSwapChainKey;
+  tempBufferHeapKey = arg.tempBufferHeapKey;
+  tempTextureHeapKey = arg.tempTextureHeapKey;
+  pipelineLibraryKey = arg.pipelineLibraryKey;
+  copy = true;
+}
+
+xefg_swapchain_d3d12_init_params_t_Argument::~xefg_swapchain_d3d12_init_params_t_Argument() {
+  if (copy) {
+    delete value;
+  }
+}
+
+xefg_swapchain_d3d12_resource_data_t_Argument::xefg_swapchain_d3d12_resource_data_t_Argument(
+    const xefg_swapchain_d3d12_resource_data_t_Argument& arg) {
+  if (!arg.value) {
+    return;
+  }
+  value = new xefg_swapchain_d3d12_resource_data_t();
+  *value = *arg.value;
+  resourceKey = arg.resourceKey;
+  copy = true;
+}
+
+xefg_swapchain_d3d12_resource_data_t_Argument::~xefg_swapchain_d3d12_resource_data_t_Argument() {
+  if (copy) {
+    delete value;
+  }
+}
+
+#pragma endregion
+
 } // namespace DirectX
 } // namespace gits

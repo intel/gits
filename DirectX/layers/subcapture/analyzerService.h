@@ -64,6 +64,9 @@ public:
   void fenceSignal(unsigned callKey, unsigned fenceKey, UINT64 fenceValue);
   void mappedDataMeta(unsigned resourceKey);
   void createXessContext(xessD3D12CreateContextCommand& c);
+  void createXellContext(xellD3D12CreateContextCommand& c);
+  void createXefgContext(xefgSwapChainD3D12CreateContextCommand& c);
+  void forceApplicationSwapChainRestore(unsigned key);
   void createDeviceExtensionContext(INTC_D3D12_CreateDeviceExtensionContextCommand& c);
   void createDeviceExtensionContext(INTC_D3D12_CreateDeviceExtensionContext1Command& c);
 

@@ -211,6 +211,18 @@ void AnalyzerService::createXessContext(xessD3D12CreateContextCommand& c) {
   objectsForRestore_.insert(c.phContext_.key);
 }
 
+void AnalyzerService::createXellContext(xellD3D12CreateContextCommand& c) {
+  objectsForRestore_.insert(c.out_context_.key);
+}
+
+void AnalyzerService::createXefgContext(xefgSwapChainD3D12CreateContextCommand& c) {
+  objectsForRestore_.insert(c.phSwapChain_.key);
+}
+
+void AnalyzerService::forceApplicationSwapChainRestore(unsigned key) {
+  objectsForRestore_.insert(key);
+}
+
 void AnalyzerService::createDeviceExtensionContext(
     INTC_D3D12_CreateDeviceExtensionContextCommand& c) {
   objectsForRestore_.insert(c.ppExtensionContext_.key);

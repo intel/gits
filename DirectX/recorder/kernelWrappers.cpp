@@ -98,6 +98,10 @@ HMODULE MyLoadLibraryA(LPCSTR lpLibFileName) {
   std::transform(libStr.begin(), libStr.end(), libStr.begin(), ::tolower);
   if (libStr.find("libxess.dll") != std::string::npos) {
     CaptureManager::get().interceptXessFunctions();
+  } else if (libStr.find("libxell.dll") != std::string::npos) {
+    CaptureManager::get().interceptXellFunctions();
+  } else if (libStr.find("libxess_fg.dll") != std::string::npos) {
+    CaptureManager::get().interceptXefgFunctions();
   }
 
   return hModule;
@@ -113,6 +117,10 @@ HMODULE MyLoadLibraryW(LPCWSTR lpLibFileName) {
   std::transform(libStr.begin(), libStr.end(), libStr.begin(), ::towlower);
   if (libStr.find(L"libxess.dll") != std::string::npos) {
     CaptureManager::get().interceptXessFunctions();
+  } else if (libStr.find(L"libxell.dll") != std::string::npos) {
+    CaptureManager::get().interceptXellFunctions();
+  } else if (libStr.find(L"libxess_fg.dll") != std::string::npos) {
+    CaptureManager::get().interceptXefgFunctions();
   }
 
   return hModule;
@@ -129,6 +137,10 @@ HMODULE MyLoadLibraryExA(LPCSTR lpLibFileName, HANDLE hFile, DWORD dwFlags) {
   std::transform(libStr.begin(), libStr.end(), libStr.begin(), ::tolower);
   if (libStr.find("libxess.dll") != std::string::npos) {
     CaptureManager::get().interceptXessFunctions();
+  } else if (libStr.find("libxell.dll") != std::string::npos) {
+    CaptureManager::get().interceptXellFunctions();
+  } else if (libStr.find("libxess_fg.dll") != std::string::npos) {
+    CaptureManager::get().interceptXefgFunctions();
   }
 
   return hModule;
@@ -145,6 +157,10 @@ HMODULE MyLoadLibraryExW(LPCWSTR lpLibFileName, HANDLE hFile, DWORD dwFlags) {
   std::transform(libStr.begin(), libStr.end(), libStr.begin(), ::towlower);
   if (libStr.find(L"libxess.dll") != std::string::npos) {
     CaptureManager::get().interceptXessFunctions();
+  } else if (libStr.find(L"libxell.dll") != std::string::npos) {
+    CaptureManager::get().interceptXellFunctions();
+  } else if (libStr.find(L"libxess_fg.dll") != std::string::npos) {
+    CaptureManager::get().interceptXefgFunctions();
   }
 
   return hModule;

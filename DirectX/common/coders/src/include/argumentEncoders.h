@@ -371,5 +371,11 @@ void encode(
 unsigned getSize(const xell_frame_report_t_Argument& arg);
 void encode(char* dest, unsigned& offset, const xell_frame_report_t_Argument& arg);
 
+unsigned getSize(const xefg_swapchain_d3d12_init_params_t_Argument& arg);
+void encode(char* dest, unsigned& offset, const xefg_swapchain_d3d12_init_params_t_Argument& arg);
+
+unsigned getSize(const xefg_swapchain_d3d12_resource_data_t_Argument& arg);
+void encode(char* dest, unsigned& offset, const xefg_swapchain_d3d12_resource_data_t_Argument& arg);
+
 } // namespace DirectX
 } // namespace gits

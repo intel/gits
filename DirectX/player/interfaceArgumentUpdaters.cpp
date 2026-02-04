@@ -489,6 +489,37 @@ void updateInterface(PlayerManager& manager, DSTORAGE_REQUEST_Argument& arg) {
   }
 }
 
+void updateInterface(PlayerManager& manager, xefg_swapchain_d3d12_init_params_t_Argument& arg) {
+  if (!manager.executeCommands()) {
+    return;
+  }
+  if (arg.applicationSwapChainKey) {
+    arg.value->pApplicationSwapChain =
+        static_cast<IDXGISwapChain*>(manager.findObject(arg.applicationSwapChainKey));
+  }
+  if (arg.tempBufferHeapKey) {
+    arg.value->pTempBufferHeap =
+        static_cast<ID3D12Heap*>(manager.findObject(arg.tempBufferHeapKey));
+  }
+  if (arg.tempTextureHeapKey) {
+    arg.value->pTempTextureHeap =
+        static_cast<ID3D12Heap*>(manager.findObject(arg.tempTextureHeapKey));
+  }
+  if (arg.pipelineLibraryKey) {
+    arg.value->pPipelineLibrary =
+        static_cast<ID3D12PipelineLibrary*>(manager.findObject(arg.pipelineLibraryKey));
+  }
+}
+
+void updateInterface(PlayerManager& manager, xefg_swapchain_d3d12_resource_data_t_Argument& arg) {
+  if (!manager.executeCommands()) {
+    return;
+  }
+  if (arg.resourceKey) {
+    arg.value->pResource = static_cast<ID3D12Resource*>(manager.findObject(arg.resourceKey));
+  }
+}
+
 void updateContext(PlayerManager& manager, XESSContextArgument& arg) {
   if (!manager.executeCommands()) {
     return;
@@ -512,6 +543,19 @@ void updateContext(PlayerManager& manager, XELLContextArgument& arg) {
 
 void updateOutputContext(PlayerManager& manager, XELLContextOutputArgument& arg) {
   manager.getXellContextMap().setContext(arg.key, reinterpret_cast<std::uintptr_t>(*arg.value));
+  arg.data = *arg.value;
+}
+
+void updateContext(PlayerManager& manager, XEFGContextArgument& arg) {
+  if (!manager.executeCommands()) {
+    return;
+  }
+  arg.value =
+      reinterpret_cast<xefg_swapchain_handle_t>(manager.getXefgContextMap().getContext(arg.key));
+}
+
+void updateOutputContext(PlayerManager& manager, XEFGContextOutputArgument& arg) {
+  manager.getXefgContextMap().setContext(arg.key, reinterpret_cast<std::uintptr_t>(*arg.value));
   arg.data = *arg.value;
 }
 

@@ -299,5 +299,27 @@ private:
   DSTORAGE_REQUEST unwrapStructure_{};
 };
 
+template <>
+class UpdateInterface<xefg_swapchain_d3d12_init_params_t_Argument,
+                      xefg_swapchain_d3d12_init_params_t> {
+public:
+  UpdateInterface(xefg_swapchain_d3d12_init_params_t_Argument& arg,
+                  const xefg_swapchain_d3d12_init_params_t* value);
+
+private:
+  xefg_swapchain_d3d12_init_params_t unwrapStructure_{};
+};
+
+template <>
+class UpdateInterface<xefg_swapchain_d3d12_resource_data_t_Argument,
+                      xefg_swapchain_d3d12_resource_data_t> {
+public:
+  UpdateInterface(xefg_swapchain_d3d12_resource_data_t_Argument& arg,
+                  const xefg_swapchain_d3d12_resource_data_t* value);
+
+private:
+  xefg_swapchain_d3d12_resource_data_t unwrapStructure_{};
+};
+
 } // namespace DirectX
 } // namespace gits

@@ -23,6 +23,9 @@ public:
   ScreenshotsLayer();
   void post(IDXGIFactoryCreateSwapChainCommand& c) override;
   void post(IDXGIFactory2CreateSwapChainForHwndCommand& c) override;
+  void post(xefgSwapChainD3D12InitFromSwapChainCommand& c) override;
+  void post(xefgSwapChainD3D12InitFromSwapChainDescCommand& c) override;
+  void post(xefgSwapChainD3D12GetSwapChainPtrCommand& c) override;
   void pre(IDXGISwapChainPresentCommand& c) override;
   void pre(IDXGISwapChain1Present1Command& c) override;
 
@@ -34,6 +37,7 @@ private:
   std::map<unsigned, std::unique_ptr<ScreenshotDump>> screenshotDump_;
   BitRange screenshotRange_;
   std::wstring dumpPath_;
+  std::unordered_map<unsigned, ID3D12CommandQueue*> xefgToDeviceMap_;
 };
 
 } // namespace DirectX

@@ -103,6 +103,9 @@ public:
   ContextMapService& getXellContextMap() {
     return xellContextMap_;
   }
+  ContextMapService& getXefgContextMap() {
+    return xefgContextMap_;
+  }
 
   bool loadAgilitySdk(const std::filesystem::path& path);
 
@@ -141,6 +144,7 @@ private:
   ContextMapService intelExtensionsContextMap_;
   ContextMapService xessContextMap_;
   ContextMapService xellContextMap_;
+  ContextMapService xefgContextMap_;
 };
 
 } // namespace DirectX

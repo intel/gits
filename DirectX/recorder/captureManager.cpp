@@ -44,12 +44,6 @@ CaptureManager& CaptureManager::get() {
       instance_->interceptNvAPIFunctions();
     }
     instance_->interceptD3D11On12Functions();
-    if (Configurator::Get().directx.capture.captureXess) {
-      instance_->interceptXessFunctions();
-    }
-    if (Configurator::Get().directx.capture.captureXell) {
-      instance_->interceptXellFunctions();
-    }
   }
 
   return *instance_;
@@ -70,6 +64,9 @@ CaptureManager::~CaptureManager() {
   }
   if (xellDll_) {
     FreeLibrary(xellDll_);
+  }
+  if (xefgDll_) {
+    FreeLibrary(xefgDll_);
   }
   if (intelExtensionLoaded_) {
     INTC_UnloadExtensionsLibrary();
@@ -486,11 +483,13 @@ void CaptureManager::interceptXessFunctions() {
 }
 
 void CaptureManager::interceptXellFunctions() {
-  if (xellDll_ || !Configurator::Get().directx.capture.captureXell) {
+  if (xellDll_ || loadingXellDll_ || !Configurator::Get().directx.capture.captureXell) {
     return;
   }
 
+  loadingXellDll_ = true;
   xellDll_ = LoadLibrary("libxell.dll");
+  loadingXellDll_ = false;
   if (!xellDll_) {
     return;
   }
@@ -559,6 +558,181 @@ void CaptureManager::interceptXellFunctions() {
   }
   if (xellDispatchTable_.xellD3D12CreateContext) {
     ret = DetourAttach(&xellDispatchTable_.xellD3D12CreateContext, xellD3D12CreateContextWrapper);
+    GITS_ASSERT(ret == NO_ERROR);
+  }
+
+  ret = DetourTransactionCommit();
+  GITS_ASSERT(ret == NO_ERROR);
+}
+
+void CaptureManager::interceptXefgFunctions() {
+  if (xefgDll_ || loadingXefgDll_ || !Configurator::Get().directx.capture.captureXefg) {
+    return;
+  }
+
+  loadingXefgDll_ = true;
+  xefgDll_ = LoadLibrary("libxess_fg.dll");
+  loadingXefgDll_ = false;
+  if (!xefgDll_) {
+    return;
+  }
+
+  xefgDispatchTable_.xefgSwapChainGetVersion = reinterpret_cast<decltype(xefgSwapChainGetVersion)*>(
+      GetProcAddress(xefgDll_, "xefgSwapChainGetVersion"));
+  xefgDispatchTable_.xefgSwapChainGetProperties =
+      reinterpret_cast<decltype(xefgSwapChainGetProperties)*>(
+          GetProcAddress(xefgDll_, "xefgSwapChainGetProperties"));
+  xefgDispatchTable_.xefgSwapChainTagFrameConstants =
+      reinterpret_cast<decltype(xefgSwapChainTagFrameConstants)*>(
+          GetProcAddress(xefgDll_, "xefgSwapChainTagFrameConstants"));
+  xefgDispatchTable_.xefgSwapChainSetEnabled = reinterpret_cast<decltype(xefgSwapChainSetEnabled)*>(
+      GetProcAddress(xefgDll_, "xefgSwapChainSetEnabled"));
+  xefgDispatchTable_.xefgSwapChainSetPresentId =
+      reinterpret_cast<decltype(xefgSwapChainSetPresentId)*>(
+          GetProcAddress(xefgDll_, "xefgSwapChainSetPresentId"));
+  xefgDispatchTable_.xefgSwapChainGetLastPresentStatus =
+      reinterpret_cast<decltype(xefgSwapChainGetLastPresentStatus)*>(
+          GetProcAddress(xefgDll_, "xefgSwapChainGetLastPresentStatus"));
+  xefgDispatchTable_.xefgSwapChainSetLoggingCallback =
+      reinterpret_cast<decltype(xefgSwapChainSetLoggingCallback)*>(
+          GetProcAddress(xefgDll_, "xefgSwapChainSetLoggingCallback"));
+  xefgDispatchTable_.xefgSwapChainDestroy = reinterpret_cast<decltype(xefgSwapChainDestroy)*>(
+      GetProcAddress(xefgDll_, "xefgSwapChainDestroy"));
+  xefgDispatchTable_.xefgSwapChainSetLatencyReduction =
+      reinterpret_cast<decltype(xefgSwapChainSetLatencyReduction)*>(
+          GetProcAddress(xefgDll_, "xefgSwapChainSetLatencyReduction"));
+  xefgDispatchTable_.xefgSwapChainSetSceneChangeThreshold =
+      reinterpret_cast<decltype(xefgSwapChainSetSceneChangeThreshold)*>(
+          GetProcAddress(xefgDll_, "xefgSwapChainSetSceneChangeThreshold"));
+  xefgDispatchTable_.xefgSwapChainGetPipelineBuildStatus =
+      reinterpret_cast<decltype(xefgSwapChainGetPipelineBuildStatus)*>(
+          GetProcAddress(xefgDll_, "xefgSwapChainGetPipelineBuildStatus"));
+  xefgDispatchTable_.xefgSwapChainD3D12CreateContext =
+      reinterpret_cast<decltype(xefgSwapChainD3D12CreateContext)*>(
+          GetProcAddress(xefgDll_, "xefgSwapChainD3D12CreateContext"));
+  xefgDispatchTable_.xefgSwapChainD3D12BuildPipelines =
+      reinterpret_cast<decltype(xefgSwapChainD3D12BuildPipelines)*>(
+          GetProcAddress(xefgDll_, "xefgSwapChainD3D12BuildPipelines"));
+  xefgDispatchTable_.xefgSwapChainD3D12InitFromSwapChain =
+      reinterpret_cast<decltype(xefgSwapChainD3D12InitFromSwapChain)*>(
+          GetProcAddress(xefgDll_, "xefgSwapChainD3D12InitFromSwapChain"));
+  xefgDispatchTable_.xefgSwapChainD3D12InitFromSwapChainDesc =
+      reinterpret_cast<decltype(xefgSwapChainD3D12InitFromSwapChainDesc)*>(
+          GetProcAddress(xefgDll_, "xefgSwapChainD3D12InitFromSwapChainDesc"));
+  xefgDispatchTable_.xefgSwapChainD3D12GetSwapChainPtr =
+      reinterpret_cast<decltype(xefgSwapChainD3D12GetSwapChainPtr)*>(
+          GetProcAddress(xefgDll_, "xefgSwapChainD3D12GetSwapChainPtr"));
+  xefgDispatchTable_.xefgSwapChainD3D12TagFrameResource =
+      reinterpret_cast<decltype(xefgSwapChainD3D12TagFrameResource)*>(
+          GetProcAddress(xefgDll_, "xefgSwapChainD3D12TagFrameResource"));
+  xefgDispatchTable_.xefgSwapChainD3D12SetDescriptorHeap =
+      reinterpret_cast<decltype(xefgSwapChainD3D12SetDescriptorHeap)*>(
+          GetProcAddress(xefgDll_, "xefgSwapChainD3D12SetDescriptorHeap"));
+  xefgDispatchTable_.xefgSwapChainEnableDebugFeature =
+      reinterpret_cast<decltype(xefgSwapChainEnableDebugFeature)*>(
+          GetProcAddress(xefgDll_, "xefgSwapChainEnableDebugFeature"));
+
+  xefg_swapchain_version_t xefgVersion{};
+  xefg_swapchain_result_t result = xefgDispatchTable_.xefgSwapChainGetVersion(&xefgVersion);
+  GITS_ASSERT(result == XEFG_SWAPCHAIN_RESULT_SUCCESS);
+
+  LOG_INFO << "Loaded XeSS FG (libxess_fg.dll) version: " << xefgVersion.major << "."
+           << xefgVersion.minor << "." << xefgVersion.patch;
+
+  LONG ret = DetourTransactionBegin();
+  GITS_ASSERT(ret == NO_ERROR);
+  ret = DetourUpdateThread(GetCurrentThread());
+  GITS_ASSERT(ret == NO_ERROR);
+
+  ret = DetourAttach(&xefgDispatchTable_.xefgSwapChainGetVersion, xefgSwapChainGetVersionWrapper);
+  GITS_ASSERT(ret == NO_ERROR);
+
+  if (xefgDispatchTable_.xefgSwapChainGetProperties) {
+    ret = DetourAttach(&xefgDispatchTable_.xefgSwapChainGetProperties,
+                       xefgSwapChainGetPropertiesWrapper);
+    GITS_ASSERT(ret == NO_ERROR);
+  }
+  if (xefgDispatchTable_.xefgSwapChainTagFrameConstants) {
+    ret = DetourAttach(&xefgDispatchTable_.xefgSwapChainTagFrameConstants,
+                       xefgSwapChainTagFrameConstantsWrapper);
+    GITS_ASSERT(ret == NO_ERROR);
+  }
+  if (xefgDispatchTable_.xefgSwapChainSetEnabled) {
+    ret = DetourAttach(&xefgDispatchTable_.xefgSwapChainSetEnabled, xefgSwapChainSetEnabledWrapper);
+    GITS_ASSERT(ret == NO_ERROR);
+  }
+  if (xefgDispatchTable_.xefgSwapChainSetPresentId) {
+    ret = DetourAttach(&xefgDispatchTable_.xefgSwapChainSetPresentId,
+                       xefgSwapChainSetPresentIdWrapper);
+    GITS_ASSERT(ret == NO_ERROR);
+  }
+  if (xefgDispatchTable_.xefgSwapChainGetLastPresentStatus) {
+    ret = DetourAttach(&xefgDispatchTable_.xefgSwapChainGetLastPresentStatus,
+                       xefgSwapChainGetLastPresentStatusWrapper);
+    GITS_ASSERT(ret == NO_ERROR);
+  }
+  if (xefgDispatchTable_.xefgSwapChainSetLoggingCallback) {
+    ret = DetourAttach(&xefgDispatchTable_.xefgSwapChainSetLoggingCallback,
+                       xefgSwapChainSetLoggingCallbackWrapper);
+    GITS_ASSERT(ret == NO_ERROR);
+  }
+  if (xefgDispatchTable_.xefgSwapChainDestroy) {
+    ret = DetourAttach(&xefgDispatchTable_.xefgSwapChainDestroy, xefgSwapChainDestroyWrapper);
+    GITS_ASSERT(ret == NO_ERROR);
+  }
+  if (xefgDispatchTable_.xefgSwapChainSetLatencyReduction) {
+    ret = DetourAttach(&xefgDispatchTable_.xefgSwapChainSetLatencyReduction,
+                       xefgSwapChainSetLatencyReductionWrapper);
+    GITS_ASSERT(ret == NO_ERROR);
+  }
+  if (xefgDispatchTable_.xefgSwapChainSetSceneChangeThreshold) {
+    ret = DetourAttach(&xefgDispatchTable_.xefgSwapChainSetSceneChangeThreshold,
+                       xefgSwapChainSetSceneChangeThresholdWrapper);
+    GITS_ASSERT(ret == NO_ERROR);
+  }
+  if (xefgDispatchTable_.xefgSwapChainGetPipelineBuildStatus) {
+    ret = DetourAttach(&xefgDispatchTable_.xefgSwapChainGetPipelineBuildStatus,
+                       xefgSwapChainGetPipelineBuildStatusWrapper);
+    GITS_ASSERT(ret == NO_ERROR);
+  }
+  if (xefgDispatchTable_.xefgSwapChainD3D12CreateContext) {
+    ret = DetourAttach(&xefgDispatchTable_.xefgSwapChainD3D12CreateContext,
+                       xefgSwapChainD3D12CreateContextWrapper);
+    GITS_ASSERT(ret == NO_ERROR);
+  }
+  if (xefgDispatchTable_.xefgSwapChainD3D12BuildPipelines) {
+    ret = DetourAttach(&xefgDispatchTable_.xefgSwapChainD3D12BuildPipelines,
+                       xefgSwapChainD3D12BuildPipelinesWrapper);
+    GITS_ASSERT(ret == NO_ERROR);
+  }
+  if (xefgDispatchTable_.xefgSwapChainD3D12InitFromSwapChain) {
+    ret = DetourAttach(&xefgDispatchTable_.xefgSwapChainD3D12InitFromSwapChain,
+                       xefgSwapChainD3D12InitFromSwapChainWrapper);
+    GITS_ASSERT(ret == NO_ERROR);
+  }
+  if (xefgDispatchTable_.xefgSwapChainD3D12InitFromSwapChainDesc) {
+    ret = DetourAttach(&xefgDispatchTable_.xefgSwapChainD3D12InitFromSwapChainDesc,
+                       xefgSwapChainD3D12InitFromSwapChainDescWrapper);
+    GITS_ASSERT(ret == NO_ERROR);
+  }
+  if (xefgDispatchTable_.xefgSwapChainD3D12GetSwapChainPtr) {
+    ret = DetourAttach(&xefgDispatchTable_.xefgSwapChainD3D12GetSwapChainPtr,
+                       xefgSwapChainD3D12GetSwapChainPtrWrapper);
+    GITS_ASSERT(ret == NO_ERROR);
+  }
+  if (xefgDispatchTable_.xefgSwapChainD3D12TagFrameResource) {
+    ret = DetourAttach(&xefgDispatchTable_.xefgSwapChainD3D12TagFrameResource,
+                       xefgSwapChainD3D12TagFrameResourceWrapper);
+    GITS_ASSERT(ret == NO_ERROR);
+  }
+  if (xefgDispatchTable_.xefgSwapChainD3D12SetDescriptorHeap) {
+    ret = DetourAttach(&xefgDispatchTable_.xefgSwapChainD3D12SetDescriptorHeap,
+                       xefgSwapChainD3D12SetDescriptorHeapWrapper);
+    GITS_ASSERT(ret == NO_ERROR);
+  }
+  if (xefgDispatchTable_.xefgSwapChainEnableDebugFeature) {
+    ret = DetourAttach(&xefgDispatchTable_.xefgSwapChainEnableDebugFeature,
+                       xefgSwapChainEnableDebugFeatureWrapper);
     GITS_ASSERT(ret == NO_ERROR);
   }
 

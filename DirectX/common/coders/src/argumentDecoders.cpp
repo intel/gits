@@ -1815,5 +1815,33 @@ void decode(char* src, unsigned& offset, xell_frame_report_t_Argument& arg) {
   offset += sizeof(xell_frame_report_t) * arg.FRAME_REPORTS_COUNT;
 }
 
+void decode(char* src, unsigned& offset, xefg_swapchain_d3d12_init_params_t_Argument& arg) {
+  if (decodeNullPtr(src, offset, arg)) {
+    return;
+  }
+  arg.value = reinterpret_cast<xefg_swapchain_d3d12_init_params_t*>(src + offset);
+  offset += sizeof(xefg_swapchain_d3d12_init_params_t);
+  memcpy(&arg.key, src + offset, sizeof(arg.key));
+  offset += sizeof(arg.key);
+  memcpy(&arg.applicationSwapChainKey, src + offset, sizeof(arg.applicationSwapChainKey));
+  offset += sizeof(arg.applicationSwapChainKey);
+  memcpy(&arg.tempBufferHeapKey, src + offset, sizeof(arg.tempBufferHeapKey));
+  offset += sizeof(arg.tempBufferHeapKey);
+  memcpy(&arg.tempTextureHeapKey, src + offset, sizeof(arg.tempTextureHeapKey));
+  offset += sizeof(arg.tempTextureHeapKey);
+  memcpy(&arg.pipelineLibraryKey, src + offset, sizeof(arg.pipelineLibraryKey));
+  offset += sizeof(arg.pipelineLibraryKey);
+}
+
+void decode(char* src, unsigned& offset, xefg_swapchain_d3d12_resource_data_t_Argument& arg) {
+  if (decodeNullPtr(src, offset, arg)) {
+    return;
+  }
+  arg.value = reinterpret_cast<xefg_swapchain_d3d12_resource_data_t*>(src + offset);
+  offset += sizeof(xefg_swapchain_d3d12_resource_data_t);
+  memcpy(&arg.resourceKey, src + offset, sizeof(arg.resourceKey));
+  offset += sizeof(arg.resourceKey);
+}
+
 } // namespace DirectX
 } // namespace gits

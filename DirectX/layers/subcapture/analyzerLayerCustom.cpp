@@ -2145,5 +2145,65 @@ void AnalyzerLayer::post(IDStorageFactoryOpenFileCommand& c) {
   analyzerService_.addParent(c.ppv_.key, c.object_.key);
 }
 
+void AnalyzerLayer::post(xellD3D12CreateContextCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
+  analyzerService_.notifyObject(c.device_.key);
+  analyzerService_.notifyObject(c.out_context_.key);
+  analyzerService_.addParent(c.out_context_.key, c.device_.key);
+  if (optimize_) {
+    analyzerService_.createXellContext(c);
+  }
+}
+
+void AnalyzerLayer::post(xefgSwapChainD3D12CreateContextCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
+  analyzerService_.notifyObject(c.pDevice_.key);
+  analyzerService_.notifyObject(c.phSwapChain_.key);
+  analyzerService_.addParent(c.phSwapChain_.key, c.pDevice_.key);
+  if (optimize_) {
+    analyzerService_.createXefgContext(c);
+  }
+}
+
+void AnalyzerLayer::post(xefgSwapChainD3D12InitFromSwapChainCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
+  analyzerService_.notifyObject(c.hSwapChain_.key);
+  analyzerService_.notifyObject(c.pCmdQueue_.key);
+  analyzerService_.notifyObject(c.pInitParams_.key);
+  // Original swapChain is necessary for proper xefg swapChain initialization.
+  analyzerService_.forceApplicationSwapChainRestore(c.pInitParams_.applicationSwapChainKey);
+  analyzerService_.notifyObject(c.pInitParams_.tempBufferHeapKey);
+  analyzerService_.notifyObject(c.pInitParams_.tempTextureHeapKey);
+  analyzerService_.notifyObject(c.pInitParams_.pipelineLibraryKey);
+}
+
+void AnalyzerLayer::post(xefgSwapChainD3D12InitFromSwapChainDescCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
+  analyzerService_.notifyObject(c.hSwapChain_.key);
+  analyzerService_.notifyObject(c.pCmdQueue_.key);
+  analyzerService_.notifyObject(c.pDxgiFactory_.key);
+  analyzerService_.notifyObject(c.pInitParams_.key);
+  analyzerService_.notifyObject(c.pInitParams_.applicationSwapChainKey);
+  analyzerService_.notifyObject(c.pInitParams_.tempBufferHeapKey);
+  analyzerService_.notifyObject(c.pInitParams_.tempTextureHeapKey);
+  analyzerService_.notifyObject(c.pInitParams_.pipelineLibraryKey);
+}
+
+void AnalyzerLayer::post(xefgSwapChainD3D12GetSwapChainPtrCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
+  analyzerService_.notifyObject(c.hSwapChain_.key);
+  analyzerService_.notifyObject(c.ppSwapChain_.key);
+}
+
 } // namespace DirectX
 } // namespace gits

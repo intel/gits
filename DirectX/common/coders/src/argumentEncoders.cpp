@@ -2745,5 +2745,56 @@ void encode(char* dest, unsigned& offset, const xell_frame_report_t_Argument& ar
   offset += sizeof(xell_frame_report_t) * arg.FRAME_REPORTS_COUNT;
 }
 
+unsigned getSize(const xefg_swapchain_d3d12_init_params_t_Argument& arg) {
+  if (!arg.value) {
+    return sizeof(void*);
+  }
+  return sizeof(void*) + sizeof(xefg_swapchain_d3d12_init_params_t) + sizeof(arg.key) +
+         sizeof(arg.applicationSwapChainKey) + sizeof(arg.tempBufferHeapKey) +
+         sizeof(arg.tempTextureHeapKey) + sizeof(arg.pipelineLibraryKey);
+}
+
+void encode(char* dest, unsigned& offset, const xefg_swapchain_d3d12_init_params_t_Argument& arg) {
+  if (encodeNullPtr(dest, offset, arg)) {
+    return;
+  }
+  memcpy(dest + offset, arg.value, sizeof(xefg_swapchain_d3d12_init_params_t));
+  offset += sizeof(xefg_swapchain_d3d12_init_params_t);
+
+  memcpy(dest + offset, &arg.key, sizeof(arg.key));
+  offset += sizeof(arg.key);
+
+  memcpy(dest + offset, &arg.applicationSwapChainKey, sizeof(arg.applicationSwapChainKey));
+  offset += sizeof(arg.applicationSwapChainKey);
+
+  memcpy(dest + offset, &arg.tempBufferHeapKey, sizeof(arg.tempBufferHeapKey));
+  offset += sizeof(arg.tempBufferHeapKey);
+
+  memcpy(dest + offset, &arg.tempTextureHeapKey, sizeof(arg.tempTextureHeapKey));
+  offset += sizeof(arg.tempTextureHeapKey);
+
+  memcpy(dest + offset, &arg.pipelineLibraryKey, sizeof(arg.pipelineLibraryKey));
+  offset += sizeof(arg.pipelineLibraryKey);
+}
+
+unsigned getSize(const xefg_swapchain_d3d12_resource_data_t_Argument& arg) {
+  if (!arg.value) {
+    return sizeof(void*);
+  }
+  return sizeof(void*) + sizeof(xefg_swapchain_d3d12_resource_data_t) + sizeof(arg.resourceKey);
+}
+
+void encode(char* dest,
+            unsigned& offset,
+            const xefg_swapchain_d3d12_resource_data_t_Argument& arg) {
+  if (encodeNullPtr(dest, offset, arg)) {
+    return;
+  }
+  memcpy(dest + offset, arg.value, sizeof(xefg_swapchain_d3d12_resource_data_t));
+  offset += sizeof(xefg_swapchain_d3d12_resource_data_t);
+  memcpy(dest + offset, &arg.resourceKey, sizeof(arg.resourceKey));
+  offset += sizeof(arg.resourceKey);
+}
+
 } // namespace DirectX
 } // namespace gits

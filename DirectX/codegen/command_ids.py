@@ -27,7 +27,8 @@ import os
 #         "DML": 1,
 #         "XESS": 1,
 #         "DSTORAGE": 1,
-#         "XELL": 1
+#         "XELL": 1,
+#         "XEFG": 1
 #     },
 #     "command_ids": {
 #         "COMMON": {},
@@ -37,8 +38,9 @@ import os
 #         "D3D12_DEBUG": {},
 #         "DML": {},
 #         "XESS": {},
-#         "DSTORAGE": {}
-#         "XELL": {}
+#         "DSTORAGE": {},
+#         "XELL": {},
+#         "XEFG": {}
 #     }
 # }
 #
@@ -59,6 +61,7 @@ ID_XESS_BEGIN = ID_INTEL_EXTENSIONS_BEGIN + 0x500
 ID_DSTORAGE_BEGIN = ID_XESS_BEGIN + 0x500
 ID_NVAPI_BEGIN = ID_DSTORAGE_BEGIN + 0x500
 ID_XELL_BEGIN = ID_NVAPI_BEGIN + 0x500
+ID_XEFG_BEGIN = ID_XELL_BEGIN + 0x500
 
 def cache_command(cache, api, cmd_name):
     if cmd_name in cache['command_ids'][api.name]:
@@ -84,6 +87,8 @@ def cache_command(cache, api, cmd_name):
         cmd_id = ID_DSTORAGE_BEGIN
     elif api == Api.XELL:
         cmd_id = ID_XELL_BEGIN
+    elif api == Api.XEFG:
+        cmd_id = ID_XEFG_BEGIN
     cmd_id += cache['command_count'][api.name]
 
     cache['command_count'][api.name] += 1

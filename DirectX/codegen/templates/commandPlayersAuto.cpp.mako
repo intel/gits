@@ -19,7 +19,7 @@ namespace DirectX {
 
 <%def name="run_body(function, interfaceName)">
   auto& manager = PlayerManager::get();
-  %if is_xess_function(function) or is_xell_function(function):
+  %if is_xess_function(function) or is_xell_function(function) or is_xefg_function(function):
   auto& ${function.api.name}DispatchTable = manager.getXessService().${get_xess_dispatch_table(function)};
   %endif
   %if interfaceName:
@@ -31,7 +31,7 @@ namespace DirectX {
   %if param.is_interface and not param.is_interface_creation or param.structure_with_interfaces:
   updateInterface(manager, command.${param.name}_);
   %endif
-  %if param.is_context:
+  %if param.is_context or (param.name == 'hXeLLContext' and function.name == 'xefgSwapChainSetLatencyReduction'):
   updateContext(manager, command.${param.name}_);
   %endif
   %endfor
@@ -40,15 +40,24 @@ namespace DirectX {
     layer->pre(command);
   }
 
-  %if is_xess_function(function) or is_xell_function(function):
-  if (manager.executeCommands() && command.result_.value == ${get_success_return_value(function)}) {
+  %if is_xess_function(function) or is_xell_function(function) or is_xefg_function(function):
+  if (manager.executeCommands()) {
     if (!command.skip) {
-      command.result_.value = ${function.api.name}DispatchTable.${function.name}(${command_runner_call_parameters(function)};
+      command.result_.value = ${function.api.name}DispatchTable.${function.name}(${command_runner_call_parameters(function)}
     }
     %if is_context_creation(function):
 
     if (command.result_.value == ${get_success_return_value(function)}) {
       updateOutputContext(manager, command.${param.name}_);
+    }
+    %elif is_interface_creation(function):
+
+    if (command.result_.value == ${get_success_return_value(function)}) {
+      %for param in function.params:
+      %if param.is_interface_creation:
+      updateOutputInterface(manager, command.${param.name}_);
+      %endif
+      %endfor
     }
     %endif
   }

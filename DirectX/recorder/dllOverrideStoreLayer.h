@@ -36,11 +36,14 @@ public:
   void pre(xessD3D12CreateContextCommand& command) override;
   void pre(xellGetVersionCommand& command) override;
   void pre(xellD3D12CreateContextCommand& command) override;
+  void pre(xefgSwapChainGetVersionCommand& command) override;
+  void pre(xefgSwapChainD3D12CreateContextCommand& command) override;
 
 private:
   void captureAgilitySDKDll(Command& command);
   void captureXessDll(Command& command);
   void captureXellDll(Command& command);
+  void captureXefgDll(Command& command);
   bool captureDll(const std::wstring& dllName, unsigned threadId);
 
   bool agilitySDKDllchecked_{};
@@ -49,6 +52,8 @@ private:
   std::mutex xessDllMutex_{};
   bool xellDllchecked_{};
   std::mutex xellDllMutex_{};
+  bool xefgDllchecked_{};
+  std::mutex xefgDllMutex_{};
   CaptureManager& manager_;
   GitsRecorder& recorder_;
 };

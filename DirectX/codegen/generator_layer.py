@@ -41,7 +41,9 @@ def generate_params_for_function(function):
         'DSTORAGE_QUEUE_DESC',
         'xess_d3d12_init_params_t',
         'xess_d3d12_execute_params_t',
-        'xell_frame_report_t'
+        'xell_frame_report_t',
+        'xefg_swapchain_d3d12_init_params_t',
+        'xefg_swapchain_d3d12_resource_data_t'
     ]
 
     list = []
@@ -76,6 +78,9 @@ def generate_params_for_function(function):
             str += f"{function.api.name}Context"
             if param.is_context_output:
                 str += "Output"
+            customArg = True
+        elif param.name == 'hXeLLContext' and function.name == 'xefgSwapChainSetLatencyReduction':
+            str += 'XELLContext'
             customArg = True
         elif param.is_pointer and param.type == 'void' and param.sal_size:
             str += 'Buffer'

@@ -25,7 +25,6 @@ params = generate_params(function)
 args = generate_args(function)
 dispatch_table = get_dispatch_table(function)
 update_created = wrappers_update_created(function)
-xess_d3d12_init = is_xess_d3d12_init(function)
 args_simple = []
 for param in function.params:
     args_simple.append(param.name)
@@ -42,7 +41,7 @@ ${generate_return(function)} ${function.name}Wrapper(${'' if params else ') {'}
   %endif
 
   auto& manager = CaptureManager::get();
-  %if 'xess' in function.name:
+  %if 'xess' in function.name or 'xell' in function.name or 'xefg' in function.name:
   if (auto atTopOfStack = AtTopOfStackLocal()) {
   %else:
   if (auto atTopOfStack = AtTopOfStackGlobal()) {
@@ -58,6 +57,8 @@ ${generate_return(function)} ${function.name}Wrapper(${'' if params else ') {'}
     %for param in function.params:
     %if param.is_context:
     command.${param.name}_.key = manager.${get_context_map(function)}.getKey(reinterpret_cast<std::uintptr_t>(${param.name}));
+    %elif param.name == 'hXeLLContext' and function.name == 'xefgSwapChainSetLatencyReduction':
+    command.${param.name}_.key = manager.getXellContextMap().getKey(reinterpret_cast<std::uintptr_t>(${param.name}));
     %elif param.is_interface and not param.is_interface_creation and not param.is_const:
     %if not param.sal_size:
     updateInterface(command.${param.name}_, ${param.name});
@@ -69,10 +70,10 @@ ${generate_return(function)} ${function.name}Wrapper(${'' if params else ') {'}
     %elif param.structure_with_interfaces:
     UpdateInterface<${param.type}_Argument, ${param.type}> update_${param.name}(command.${param.name}_, ${param.name});
     %endif
-    %endfor
-    %if xess_d3d12_init:
-    command.pInitParams_.key = manager.createWrapperKey(); // Used for subcapture restore order
+    %if is_xess_sdk_init_param(param):
+    command.${param.name}_.key = manager.createWrapperKey(); // Used for subcapture restore order
     %endif
+    %endfor
 
     for (Layer* layer : manager.getPreLayers()) {
       layer->pre(command);

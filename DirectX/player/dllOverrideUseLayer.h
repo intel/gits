@@ -38,11 +38,14 @@ public:
   void pre(xessD3D12CreateContextCommand& command) override;
   void pre(xellGetVersionCommand& command) override;
   void pre(xellD3D12CreateContextCommand& command) override;
+  void pre(xefgSwapChainGetVersionCommand& command) override;
+  void pre(xefgSwapChainD3D12CreateContextCommand& command) override;
 
 private:
   void loadAgilitySDK();
   void loadXess();
   void loadXell();
+  void loadXefg();
 
   PlayerManager& manager_;
   bool useAddressPinning_{};
@@ -51,6 +54,7 @@ private:
   bool agilitySDKLoaded_{};
   bool xessLoaded_{};
   bool xellLoaded_{};
+  bool xefgLoaded_{};
   bool agilitySDKOverrideUsed_{};
 };
 

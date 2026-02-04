@@ -161,6 +161,8 @@ FastOStream& operator<<(
     FastOStream& stream,
     PointerArgument<NVAPI_RAYTRACING_EXECUTE_MULTI_INDIRECT_CLUSTER_OPERATION_PARAMS>& arg);
 FastOStream& operator<<(FastOStream& stream, xell_frame_report_t_Argument& arg);
+FastOStream& operator<<(FastOStream& stream, xefg_swapchain_d3d12_init_params_t_Argument& arg);
+FastOStream& operator<<(FastOStream& stream, xefg_swapchain_d3d12_resource_data_t_Argument& arg);
 
 } // namespace DirectX
 } // namespace gits

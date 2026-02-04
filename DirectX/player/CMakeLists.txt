@@ -51,6 +51,7 @@ set(SERVICES_SRC
   ${SRC_DIR}/pipelineLibraryService.cpp
   ${SRC_DIR}/xessDispatchTableAuto.h
   ${SRC_DIR}/xellDispatchTableAuto.h
+  ${SRC_DIR}/xefgDispatchTableAuto.h
   ${SRC_DIR}/xessService.h
   ${SRC_DIR}/xessService.cpp
   ${SRC_DIR}/multithreadedObjectCreationService.h
@@ -156,6 +157,7 @@ set(D3D12_RUNTIME_FILES
   ${DXC_DIR}/bin/x64/dxil.dll
   ${XESS_SDK_DIR}/bin/libxess.dll
   ${XESS_SDK_DIR}/bin/libxell.dll
+  ${XESS_SDK_DIR}/bin/libxess_fg.dll
   ${DML_DIR}/bin/x64-win/DirectML.dll
   ${DML_DIR}/bin/x64-win/DirectML.Debug.dll
   ${DSTORAGE_DIR}/native/bin/x64/dstorage.dll

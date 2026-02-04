@@ -67,11 +67,88 @@ public:
     unsigned key{};
     unsigned deviceKey{};
     ID3D12Device* device{};
-    xell_sleep_params_t* sleepParams{nullptr};
+    std::optional<xell_sleep_params_t> sleepParams;
+    std::unordered_map<uint32_t, std::vector<xell_latency_marker_type_t>> registeredMarkers;
   };
 
 public:
   XellStateService(StateTrackingService& stateService, SubcaptureRecorder& recorder)
+      : stateService_(stateService), recorder_(recorder) {}
+  void restoreState();
+  void storeContextState(ContextState* state);
+  ContextState* getContextState(unsigned key) {
+    return contextStatesByContextKey_[key].get();
+  }
+  void trackMarker(unsigned key, uint32_t frame, xell_latency_marker_type_t marker);
+  void destroyDevice(unsigned key);
+  void destroyContext(unsigned key);
+
+private:
+  void restoreContextState(ContextState* state);
+  bool areMarkersRegistered(std::vector<xell_latency_marker_type_t> markers) const;
+
+private:
+  StateTrackingService& stateService_;
+  SubcaptureRecorder& recorder_;
+  std::map<unsigned, std::unique_ptr<ContextState>> contextStatesByContextKey_;
+  std::map<unsigned, ContextState*> contextStatesByDeviceKey_;
+};
+
+#pragma endregion
+
+#pragma region XEFG
+
+class XefgStateService {
+public:
+  struct InitFromSwapChainState {
+    xefg_swapchain_d3d12_init_params_t_Argument initParams;
+    ID3D12CommandQueue* cmdQueue;
+    unsigned cmdQueueKey;
+  };
+
+  struct InitFromSwapChainDescState {
+    xefg_swapchain_d3d12_init_params_t_Argument initParams;
+    HWND hWnd;
+    DXGI_SWAP_CHAIN_DESC1 swapChainDesc;
+    std::optional<DXGI_SWAP_CHAIN_FULLSCREEN_DESC> fullscreenDesc;
+    ID3D12CommandQueue* cmdQueue;
+    unsigned cmdQueueKey;
+    unsigned dxgiFactoryKey;
+  };
+
+  struct SwapChainPtrState {
+    IID riid;
+    IDXGISwapChain* swapChain;
+    unsigned swapChainKey;
+  };
+
+  struct DescriptorHeapState {
+    unsigned descriptorHeapKey;
+    uint32_t descriptorHeapOffsetInBytes;
+  };
+
+  struct DebugFeatureState {
+    xefg_swapchain_debug_feature_t featureId;
+    uint32_t enable;
+    void* argument;
+  };
+
+  struct ContextState {
+    unsigned key{};
+    unsigned deviceKey{};
+    ID3D12Device* device{};
+    bool enabled{};
+    XELLContextArgument xellContext{};
+    std::optional<float> threshold;
+    std::optional<InitFromSwapChainState> initFromSwapChainParams;
+    std::optional<InitFromSwapChainDescState> initFromSwapChainDescParams;
+    std::optional<SwapChainPtrState> swapChain;
+    std::optional<DescriptorHeapState> descriptorHeap;
+    std::optional<DebugFeatureState> debugFeature;
+  };
+
+public:
+  XefgStateService(StateTrackingService& stateService, SubcaptureRecorder& recorder)
       : stateService_(stateService), recorder_(recorder) {}
   void restoreState();
   void storeContextState(ContextState* state);

@@ -65,6 +65,17 @@ void LogDxErrorLayer::post(${function.name}Command& command) {
   }
 }
 
+%elif function.ret.type == 'xefg_swapchain_result_t':
+void LogDxErrorLayer::pre(${function.name}Command& command) {
+  preResultXefg_ = command.result_.value;
+}
+
+void LogDxErrorLayer::post(${function.name}Command& command) {
+  if (isFailureXefg(command.result_.value)) {
+    LOG_ERROR << keyToStr(command.key) << " ${function.name} failed " << toStr(command.result_.value);
+  }
+}
+
 %endif
 %endfor
 %for interface in interfaces:

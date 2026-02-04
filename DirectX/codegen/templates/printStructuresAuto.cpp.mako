@@ -40,7 +40,9 @@ custom = [
   'D3D12_INPUT_ELEMENT_DESC',
   'DSTORAGE_REQUEST',
   'xess_d3d12_init_params_t',
-  'xess_d3d12_execute_params_t'
+  'xess_d3d12_execute_params_t',
+  'xefg_swapchain_d3d12_init_params_t',
+  'xefg_swapchain_d3d12_resource_data_t'
 ]
 %>\
 %for structure in structures:

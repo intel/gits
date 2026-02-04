@@ -658,6 +658,9 @@ struct ArrayArgument<D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO> {
 
 template <typename T>
 struct ContextArgument {
+  ContextArgument(T value_) : value(value_) {}
+  ContextArgument(void* value_) : value(reinterpret_cast<T>(value_)) {}
+  ContextArgument() {}
   T value{};
   unsigned key{};
 };
@@ -684,6 +687,8 @@ using XESSContextArgument = ContextArgument<xess_context_handle_t>;
 using XESSContextOutputArgument = ContextOutputArgument<xess_context_handle_t>;
 using XELLContextArgument = ContextArgument<xell_context_handle_t>;
 using XELLContextOutputArgument = ContextOutputArgument<xell_context_handle_t>;
+using XEFGContextArgument = ContextArgument<xefg_swapchain_handle_t>;
+using XEFGContextOutputArgument = ContextOutputArgument<xefg_swapchain_handle_t>;
 
 template <>
 struct PointerArgument<INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC> {
@@ -1064,6 +1069,42 @@ struct xell_frame_report_t_Argument {
   ~xell_frame_report_t_Argument();
   xell_frame_report_t* value{};
   const size_t FRAME_REPORTS_COUNT = 64;
+  bool copy{};
+};
+
+#pragma endregion
+
+#pragma region XEFG
+
+struct xefg_swapchain_d3d12_init_params_t_Argument {
+  xefg_swapchain_d3d12_init_params_t_Argument(const xefg_swapchain_d3d12_init_params_t* value_)
+      : value(const_cast<xefg_swapchain_d3d12_init_params_t*>(value_)) {}
+  xefg_swapchain_d3d12_init_params_t_Argument() {}
+  xefg_swapchain_d3d12_init_params_t_Argument(
+      const xefg_swapchain_d3d12_init_params_t_Argument& arg);
+  xefg_swapchain_d3d12_init_params_t_Argument& operator=(
+      const xefg_swapchain_d3d12_init_params_t&) = delete;
+  ~xefg_swapchain_d3d12_init_params_t_Argument();
+  xefg_swapchain_d3d12_init_params_t* value{};
+  unsigned key{};
+  unsigned applicationSwapChainKey{};
+  unsigned tempBufferHeapKey{};
+  unsigned tempTextureHeapKey{};
+  unsigned pipelineLibraryKey{};
+  bool copy{};
+};
+
+struct xefg_swapchain_d3d12_resource_data_t_Argument {
+  xefg_swapchain_d3d12_resource_data_t_Argument(const xefg_swapchain_d3d12_resource_data_t* value_)
+      : value(const_cast<xefg_swapchain_d3d12_resource_data_t*>(value_)) {}
+  xefg_swapchain_d3d12_resource_data_t_Argument() {}
+  xefg_swapchain_d3d12_resource_data_t_Argument(
+      const xefg_swapchain_d3d12_resource_data_t_Argument& arg);
+  xefg_swapchain_d3d12_resource_data_t_Argument& operator=(
+      const xefg_swapchain_d3d12_resource_data_t_Argument&) = delete;
+  ~xefg_swapchain_d3d12_resource_data_t_Argument();
+  xefg_swapchain_d3d12_resource_data_t* value{};
+  unsigned resourceKey{};
   bool copy{};
 };
 

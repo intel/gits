@@ -794,6 +794,10 @@ Configuration:
             Type: bool
             Default: true
             Description: Enable usage of Xell DLL captured from the app
+          - Name: enableXefgDllAppOverride
+            Type: bool
+            Default: true
+            Description: Enable usage of XeSS FG DLL captured from the app
           - Name: patchGpuBuffers
             Type: bool
             Default: true
@@ -952,6 +956,9 @@ Configuration:
             Description: If false XeSS capture is done on Intel Extensions level
             LegacyPaths: ["DirectX.Capture.CaptureXess"]
           - Name: captureXell
+            Type: bool
+            Default: true
+          - Name: captureXefg
             Type: bool
             Default: true
           - Name: debugLayer

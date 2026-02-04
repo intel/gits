@@ -49,6 +49,29 @@ void ScreenshotsLayer::post(IDXGIFactory2CreateSwapChainForHwndCommand& c) {
   swapChainCreate(c.ppSwapChain_.key, c.pDevice_.value);
 }
 
+void ScreenshotsLayer::post(xefgSwapChainD3D12InitFromSwapChainCommand& c) {
+  if (c.result_.value != XEFG_SWAPCHAIN_RESULT_SUCCESS) {
+    return;
+  }
+  xefgToDeviceMap_[c.hSwapChain_.key] = c.pCmdQueue_.value;
+}
+
+void ScreenshotsLayer::post(xefgSwapChainD3D12InitFromSwapChainDescCommand& c) {
+  if (c.result_.value != XEFG_SWAPCHAIN_RESULT_SUCCESS) {
+    return;
+  }
+  xefgToDeviceMap_[c.hSwapChain_.key] = c.pCmdQueue_.value;
+}
+
+void ScreenshotsLayer::post(xefgSwapChainD3D12GetSwapChainPtrCommand& c) {
+  if (c.result_.value != XEFG_SWAPCHAIN_RESULT_SUCCESS) {
+    return;
+  }
+  auto cmdQueueIt = xefgToDeviceMap_.find(c.hSwapChain_.key);
+  GITS_ASSERT(cmdQueueIt != xefgToDeviceMap_.end());
+  swapChainCreate(c.ppSwapChain_.key, cmdQueueIt->second);
+}
+
 void ScreenshotsLayer::pre(IDXGISwapChainPresentCommand& c) {
   if (c.Flags_.value & DXGI_PRESENT_TEST) {
     return;

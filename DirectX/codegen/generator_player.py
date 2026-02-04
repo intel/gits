@@ -25,7 +25,8 @@ def command_runner_call_parameters(function):
 def get_xess_dispatch_table(function):
     dispatch_table = {
       Api.XESS: "getXessDispatchTable()",
-      Api.XELL: "getXellDispatchTable()"
+      Api.XELL: "getXellDispatchTable()",
+      Api.XEFG: "getXefgDispatchTable()"
     }
     return dispatch_table[function.api]
 
@@ -34,6 +35,7 @@ def generate_player_files(context, out_path):
         'command_runner_call_parameters': command_runner_call_parameters,
         'is_xess_function': is_xess_function,
         'is_xell_function': is_xell_function,
+        'is_xefg_function': is_xefg_function,
         'get_xess_dispatch_table': get_xess_dispatch_table,
         'get_context_map': get_context_map,
         'get_success_return_value': get_success_return_value

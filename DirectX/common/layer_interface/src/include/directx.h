@@ -29,3 +29,6 @@
 #include <xess/xess_d3d12.h>
 #include <xell/xell.h>
 #include <xell/xell_d3d12.h>
+#include <xess_fg/xefg_swapchain.h>
+#include <xess_fg/xefg_swapchain_d3d12.h>
+#include <xess_fg/xefg_swapchain_debug.h>
