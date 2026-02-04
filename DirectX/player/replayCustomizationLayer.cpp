@@ -351,6 +351,7 @@ void ReplayCustomizationLayer::post(ID3D12FenceGetCompletedValueCommand& c) {
     return;
   }
   waitForFence(c.key, c.object_.value, capturedFenceValue_);
+  c.result_.value = c.object_.value->GetCompletedValue();
 }
 
 void ReplayCustomizationLayer::post(WaitForFenceSignaledCommand& c) {
