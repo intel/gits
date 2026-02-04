@@ -682,6 +682,8 @@ using INTCExtensionContextArgument = ContextArgument<INTCExtensionContext*>;
 using INTCExtensionContextOutputArgument = ContextOutputArgument<INTCExtensionContext*>;
 using XESSContextArgument = ContextArgument<xess_context_handle_t>;
 using XESSContextOutputArgument = ContextOutputArgument<xess_context_handle_t>;
+using XELLContextArgument = ContextArgument<xell_context_handle_t>;
+using XELLContextOutputArgument = ContextOutputArgument<xell_context_handle_t>;
 
 template <>
 struct PointerArgument<INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC> {
@@ -1047,6 +1049,21 @@ struct PointerArgument<NVAPI_RAYTRACING_EXECUTE_MULTI_INDIRECT_CLUSTER_OPERATION
   unsigned indirectArgArrayOffset{};
   unsigned indirectArgCountKey{};
   unsigned indirectArgCountOffset{};
+  bool copy{};
+};
+
+#pragma endregion
+
+#pragma region XELL
+
+struct xell_frame_report_t_Argument {
+  xell_frame_report_t_Argument(xell_frame_report_t* value_) : value(value_) {}
+  xell_frame_report_t_Argument() {}
+  xell_frame_report_t_Argument(const xell_frame_report_t_Argument& arg);
+  xell_frame_report_t_Argument& operator=(const xell_frame_report_t_Argument&) = delete;
+  ~xell_frame_report_t_Argument();
+  xell_frame_report_t* value{};
+  const size_t FRAME_REPORTS_COUNT = 64;
   bool copy{};
 };
 

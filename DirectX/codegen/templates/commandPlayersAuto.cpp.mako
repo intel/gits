@@ -19,8 +19,8 @@ namespace DirectX {
 
 <%def name="run_body(function, interfaceName)">
   auto& manager = PlayerManager::get();
-  %if is_xess_function(function):
-  auto& xessDispatchTable = manager.getXessService().getXessDispatchTable();
+  %if is_xess_function(function) or is_xell_function(function):
+  auto& ${function.api.name}DispatchTable = manager.getXessService().${get_xess_dispatch_table(function)};
   %endif
   %if interfaceName:
 
@@ -40,14 +40,14 @@ namespace DirectX {
     layer->pre(command);
   }
 
-  %if is_xess_function(function):
-  if (manager.executeCommands()${' && command.result_.value == XESS_RESULT_SUCCESS' if function.ret.type == 'xess_result_t' else ''}) {
+  %if is_xess_function(function) or is_xell_function(function):
+  if (manager.executeCommands() && command.result_.value == ${get_success_return_value(function)}) {
     if (!command.skip) {
-      ${'command.result_.value = ' if not function.ret.is_void else ''}xessDispatchTable.${function.name}(${command_runner_call_parameters(function)}
+      command.result_.value = ${function.api.name}DispatchTable.${function.name}(${command_runner_call_parameters(function)};
     }
     %if is_context_creation(function):
 
-    if (command.result_.value == XESS_RESULT_SUCCESS) {
+    if (command.result_.value == ${get_success_return_value(function)}) {
       updateOutputContext(manager, command.${param.name}_);
     }
     %endif

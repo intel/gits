@@ -12,6 +12,7 @@
 #include "functionDispatchTables.h"
 #include "intelExtensions.h"
 #include "xessDispatchTableAuto.h"
+#include "xellDispatchTableAuto.h"
 #include "nvapiDispatchTable.h"
 #include "d3d11on12DispatchTable.h"
 #include "captureDescriptorHandleService.h"
@@ -68,6 +69,9 @@ public:
   }
   D3D11On12DispatchTable& getd3d11on12DispatchTable() {
     return d3d11on12DispatchTable_;
+  }
+  XellDispatchTable& getXellDispatchTable() {
+    return xellDispatchTable_;
   }
 
   std::vector<Layer*>& getPreLayers() {
@@ -127,11 +131,15 @@ public:
   ContextMapService& getXessContextMap() {
     return xessContextMap_;
   }
+  ContextMapService& getXellContextMap() {
+    return xellContextMap_;
+  }
   std::unordered_map<std::string, unsigned int>& getNvAPIFunctionIds() {
     return nvapiFunctionIds_;
   }
 
   void interceptXessFunctions();
+  void interceptXellFunctions();
   void loadIntelExtension(const uint32_t& vendorID, const uint32_t& deviceID);
 
 private:
@@ -162,6 +170,7 @@ private:
   DStorageDispatchTable dstorageDispatchTable_{};
   Kernel32DispatchTable kernel32DispatchTableSystem_{};
   XessDispatchTable xessDispatchTable_{};
+  XellDispatchTable xellDispatchTable_{};
   NvAPIDispatchTable nvapiDispatchTable_{};
   D3D11On12DispatchTable d3d11on12DispatchTable_{};
 
@@ -185,11 +194,13 @@ private:
 
   ContextMapService intelExtensionsContextMap_;
   ContextMapService xessContextMap_;
+  ContextMapService xellContextMap_;
 
   HMODULE kernelDll_{};
   HMODULE dmlDll_{};
   HMODULE dStorageDll_{};
   HMODULE xessDll_{};
+  HMODULE xellDll_{};
   bool loadingXessDll_{};
   bool intelExtensionLoaded_{};
   HMODULE nvapiDll_{};

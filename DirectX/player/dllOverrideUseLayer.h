@@ -36,10 +36,13 @@ public:
 
   void pre(xessGetVersionCommand& command) override;
   void pre(xessD3D12CreateContextCommand& command) override;
+  void pre(xellGetVersionCommand& command) override;
+  void pre(xellD3D12CreateContextCommand& command) override;
 
 private:
   void loadAgilitySDK();
   void loadXess();
+  void loadXell();
 
   PlayerManager& manager_;
   bool useAddressPinning_{};
@@ -47,6 +50,7 @@ private:
   const std::string dllOverridesRelativePath_ = "D3D12\\overrides\\D3D12";
   bool agilitySDKLoaded_{};
   bool xessLoaded_{};
+  bool xellLoaded_{};
   bool agilitySDKOverrideUsed_{};
 };
 

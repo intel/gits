@@ -21,6 +21,8 @@ namespace DirectX {
 
 class StateTrackingService;
 
+#pragma region XESS
+
 class XessStateService {
 public:
   struct ContextState {
@@ -54,6 +56,42 @@ private:
   std::map<unsigned, std::unique_ptr<ContextState>> contextStatesByContextKey_;
   std::map<unsigned, ContextState*> contextStatesByDeviceKey_;
 };
+
+#pragma endregion
+
+#pragma region XELL
+
+class XellStateService {
+public:
+  struct ContextState {
+    unsigned key{};
+    unsigned deviceKey{};
+    ID3D12Device* device{};
+    xell_sleep_params_t* sleepParams{nullptr};
+  };
+
+public:
+  XellStateService(StateTrackingService& stateService, SubcaptureRecorder& recorder)
+      : stateService_(stateService), recorder_(recorder) {}
+  void restoreState();
+  void storeContextState(ContextState* state);
+  ContextState* getContextState(unsigned key) {
+    return contextStatesByContextKey_[key].get();
+  }
+  void destroyDevice(unsigned key);
+  void destroyContext(unsigned key);
+
+private:
+  void restoreContextState(ContextState* state);
+
+private:
+  StateTrackingService& stateService_;
+  SubcaptureRecorder& recorder_;
+  std::map<unsigned, std::unique_ptr<ContextState>> contextStatesByContextKey_;
+  std::map<unsigned, ContextState*> contextStatesByDeviceKey_;
+};
+
+#pragma endregion
 
 } // namespace DirectX
 } // namespace gits

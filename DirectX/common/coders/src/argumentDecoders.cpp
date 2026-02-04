@@ -1807,5 +1807,13 @@ void decode(
   offset += sizeof(arg.indirectArgCountOffset);
 }
 
+void decode(char* src, unsigned& offset, xell_frame_report_t_Argument& arg) {
+  if (decodeNullPtr(src, offset, arg)) {
+    return;
+  }
+  arg.value = reinterpret_cast<xell_frame_report_t*>(src + offset);
+  offset += sizeof(xell_frame_report_t) * arg.FRAME_REPORTS_COUNT;
+}
+
 } // namespace DirectX
 } // namespace gits

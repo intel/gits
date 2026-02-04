@@ -1811,5 +1811,28 @@ FastOStream& operator<<(
   return stream;
 }
 
+FastOStream& operator<<(FastOStream& stream, xell_frame_report_t_Argument& arg) {
+  if (!arg.value) {
+    return stream << "nullptr";
+  }
+  stream << "xell_frame_report_t[";
+  for (unsigned i = 0; i < arg.FRAME_REPORTS_COUNT; ++i) {
+    if (i > 0) {
+      stream << ", ";
+    }
+    stream << "{";
+    stream << arg.value[i].m_frame_id << ", ";
+    stream << arg.value[i].m_sim_start_ts << ", ";
+    stream << arg.value[i].m_sim_end_ts << ", ";
+    stream << arg.value[i].m_render_submit_start_ts << ", ";
+    stream << arg.value[i].m_render_submit_end_ts << ", ";
+    stream << arg.value[i].m_present_start_ts << ", ";
+    stream << arg.value[i].m_present_end_ts;
+    stream << "}";
+  }
+  stream << "]";
+  return stream;
+}
+
 } // namespace DirectX
 } // namespace gits

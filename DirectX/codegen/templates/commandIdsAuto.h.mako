@@ -122,6 +122,12 @@ enum class CommandId {
   ID_NVAPI_D3D12_RAYTRACINGEXECUTEMULTIINDIRECTCLUSTEROPERATION = 0xd3207,
   ID_NVAPI_D3D12_SETCREATEPIPELINESTATEOPTIONS = 0xd3208,
 
+  // ID_NVAPI_BEGIN + 0x500
+  ID_XELL_BEGIN = 0xD3700,
+  %for cmd_name, cmd_id in command_ids[Api.XELL.name].items():
+  ${f'{cmd_name} = 0x{cmd_id:X},'}
+  %endfor
+
   ID_END
 };
 

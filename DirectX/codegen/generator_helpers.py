@@ -110,3 +110,17 @@ def generate_plugin_file(context, file_name, out_path):
     rendered = re.sub(r"\r\n", r"\n", rendered)
     with open(artifact_file, 'w') as file:
         file.write(rendered)
+
+def get_context_map(function):
+    context_map = {
+      Api.XESS: "getXessContextMap()",
+      Api.XELL: "getXellContextMap()"
+    }
+    return context_map[function.api]
+
+def get_success_return_value(function):
+    success_return = {
+      Api.XESS: "XESS_RESULT_SUCCESS",
+      Api.XELL: "XELL_RESULT_SUCCESS",
+    }
+    return success_return[function.api]

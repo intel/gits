@@ -22,10 +22,21 @@ def command_runner_call_parameters(function):
     str += ");"
     return str
 
+def get_xess_dispatch_table(function):
+    dispatch_table = {
+      Api.XESS: "getXessDispatchTable()",
+      Api.XELL: "getXellDispatchTable()"
+    }
+    return dispatch_table[function.api]
+
 def generate_player_files(context, out_path):
     additional_context = { 
         'command_runner_call_parameters': command_runner_call_parameters,
-        'is_xess_function': is_xess_function
+        'is_xess_function': is_xess_function,
+        'is_xell_function': is_xell_function,
+        'get_xess_dispatch_table': get_xess_dispatch_table,
+        'get_context_map': get_context_map,
+        'get_success_return_value': get_success_return_value
     }
     files_to_generate = [
         'commandPlayersAuto.h',

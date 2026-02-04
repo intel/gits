@@ -19,16 +19,19 @@ custom = [
     'IDXGISwapChain1Present1',
     'IDXGIAdapter3QueryVideoMemoryInfo',
     'ID3D12GraphicsCommandListReset',
-    'ID3D12FenceGetCompletedValue'
+    'ID3D12FenceGetCompletedValue',
+    'xellAddMarkerData'
 ]
 %>\
 %for function in functions:
+%if not function.name in custom:
 void RecordingLayer::post(${function.name}Command& command) {
   if (subcaptureRange_.inRange()) {
     recorder_.record(new ${function.name}Writer(command));
   }
 }
 
+%endif
 %endfor
 %for interface in interfaces:
 %for function in interface.functions:

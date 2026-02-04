@@ -79,7 +79,9 @@ def main():
         CppHeader(path=inpath_dml + 'DirectML.h', api=Api.DML),
         CppHeader(path=inpath_xess + 'xess/xess.h', api=Api.XESS),
         CppHeader(path=inpath_xess + 'xess/xess_d3d12.h', api=Api.XESS),
-        CppHeader(path=inpath_dstorage + 'dstorage.h', api=Api.DSTORAGE)
+        CppHeader(path=inpath_dstorage + 'dstorage.h', api=Api.DSTORAGE),
+        CppHeader(path=inpath_xess + 'xell/xell.h', api=Api.XELL),
+        CppHeader(path=inpath_xess + 'xell/xell_d3d12.h', api=Api.XELL)
     ]
 
     enums = []

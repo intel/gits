@@ -37,7 +37,8 @@ StateTrackingLayer::StateTrackingLayer(SubcaptureRecorder& recorder,
                     residencyService_,
                     analyzerResults_,
                     resourceUsageTrackingService_,
-                    resourceForCBVRestoreService_),
+                    resourceForCBVRestoreService_,
+                    xellStateService_),
       recorder_(recorder),
       subcaptureRange_(subcaptureRange),
       mapStateService_(stateService_),
@@ -47,7 +48,8 @@ StateTrackingLayer::StateTrackingLayer(SubcaptureRecorder& recorder,
       descriptorService_(&stateService_, &resourceForCBVRestoreService_),
       commandListService_(stateService_),
       commandQueueService_(stateService_),
-      xessStateService_(stateService_, recorder),
+      xessStateService_(stateService_, recorder_),
+      xellStateService_(stateService_, recorder_),
       accelerationStructuresSerializeService_(stateService_, recorder_),
       accelerationStructuresBuildService_(stateService_,
                                           recorder_,
@@ -136,6 +138,7 @@ void StateTrackingLayer::pre(IUnknownReleaseCommand& c) {
     descriptorService_.removeState(c.object_.key);
     commandListService_.removeCommandList(c.object_.key);
     xessStateService_.destroyDevice(c.object_.key);
+    xellStateService_.destroyDevice(c.object_.key);
     accelerationStructuresSerializeService_.destroyResource(c.object_.key);
     residencyService_.destroyObject(c.object_.key);
     resourceUsageTrackingService_.destroyResource(c.object_.key);
@@ -3149,6 +3152,48 @@ unsigned StateTrackingLayer::CommandQueueSwapChainRefCountTracker::destroySwapCh
     return commandQueueKey;
   }
   return 0;
+}
+
+void StateTrackingLayer::post(xellD3D12CreateContextCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
+  if (c.result_.value != XELL_RESULT_SUCCESS) {
+    return;
+  }
+  XellStateService::ContextState* state = new XellStateService::ContextState();
+  state->key = c.out_context_.key;
+  state->deviceKey = c.device_.key;
+  state->device = c.device_.value;
+  xellStateService_.storeContextState(state);
+}
+
+void StateTrackingLayer::pre(xellDestroyContextCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
+  XellStateService::ContextState* state = xellStateService_.getContextState(c.context_.key);
+  state->device->AddRef();
+}
+
+void StateTrackingLayer::post(xellDestroyContextCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
+  XellStateService::ContextState* state = xellStateService_.getContextState(c.context_.key);
+  ULONG ref = state->device->Release();
+  if (ref == 0) {
+    stateService_.releaseObject(state->deviceKey, 0);
+  }
+  xellStateService_.destroyContext(c.context_.key);
+}
+
+void StateTrackingLayer::post(xellSetSleepModeCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
+  XellStateService::ContextState* state = xellStateService_.getContextState(c.context_.key);
+  state->sleepParams = c.param_.value;
 }
 
 } // namespace DirectX

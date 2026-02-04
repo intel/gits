@@ -502,5 +502,18 @@ void updateOutputContext(PlayerManager& manager, XESSContextOutputArgument& arg)
   arg.data = *arg.value;
 }
 
+void updateContext(PlayerManager& manager, XELLContextArgument& arg) {
+  if (!manager.executeCommands()) {
+    return;
+  }
+  arg.value =
+      reinterpret_cast<xell_context_handle_t>(manager.getXellContextMap().getContext(arg.key));
+}
+
+void updateOutputContext(PlayerManager& manager, XELLContextOutputArgument& arg) {
+  manager.getXellContextMap().setContext(arg.key, reinterpret_cast<std::uintptr_t>(*arg.value));
+  arg.data = *arg.value;
+}
+
 } // namespace DirectX
 } // namespace gits

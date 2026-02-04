@@ -7,7 +7,8 @@
         "D3D12_DEBUG": 75,
         "DML": 28,
         "XESS": 24,
-        "DSTORAGE": 32
+        "DSTORAGE": 32,
+        "XELL": 10
     },
     "command_ids": {
         "COMMON": {
@@ -670,6 +671,17 @@
             "ID_IDSTORAGECOMPRESSIONCODEC_COMPRESSBUFFER": 863517,
             "ID_IDSTORAGECOMPRESSIONCODEC_DECOMPRESSBUFFER": 863518,
             "ID_IDSTORAGECOMPRESSIONCODEC_COMPRESSBUFFERBOUND": 863519
+        },
+        "XELL": {
+            "ID_XELLDESTROYCONTEXT": 866049,
+            "ID_XELLSETSLEEPMODE": 866050,
+            "ID_XELLGETSLEEPMODE": 866051,
+            "ID_XELLSLEEP": 866052,
+            "ID_XELLADDMARKERDATA": 866053,
+            "ID_XELLGETVERSION": 866054,
+            "ID_XELLSETLOGGINGCALLBACK": 866055,
+            "ID_XELLGETFRAMESREPORTS": 866056,
+            "ID_XELLD3D12CREATECONTEXT": 866057
         }
     }
 }

@@ -2351,5 +2351,25 @@ PointerArgument<
 
 #pragma endregion
 
+#pragma region XELL
+
+xell_frame_report_t_Argument::xell_frame_report_t_Argument(
+    const xell_frame_report_t_Argument& arg) {
+  if (!arg.value) {
+    return;
+  }
+  value = new xell_frame_report_t[FRAME_REPORTS_COUNT];
+  memcpy(value, arg.value, FRAME_REPORTS_COUNT * sizeof(xell_frame_report_t));
+  copy = true;
+}
+
+xell_frame_report_t_Argument::~xell_frame_report_t_Argument() {
+  if (copy) {
+    delete[] value;
+  }
+}
+
+#pragma endregion
+
 } // namespace DirectX
 } // namespace gits

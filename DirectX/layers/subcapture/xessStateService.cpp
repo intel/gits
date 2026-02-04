@@ -14,6 +14,8 @@
 namespace gits {
 namespace DirectX {
 
+#pragma region XESS
+
 void XessStateService::restoreState() {
   for (auto& it : contextStatesByContextKey_) {
     restoreContextState(it.second.get());
@@ -92,6 +94,55 @@ void XessStateService::restoreContextState(ContextState* state) {
     c.force_.value = state->forceLegacyScaleFactors.value();
   }
 }
+
+#pragma endregion
+
+#pragma region XELL
+
+void XellStateService::restoreState() {
+  for (auto& it : contextStatesByContextKey_) {
+    restoreContextState(it.second.get());
+  }
+}
+
+void XellStateService::storeContextState(ContextState* state) {
+  contextStatesByContextKey_[state->key].reset(state);
+  contextStatesByDeviceKey_[state->deviceKey] = state;
+}
+
+void XellStateService::destroyDevice(unsigned key) {
+  auto it = contextStatesByDeviceKey_.find(key);
+  if (it != contextStatesByDeviceKey_.end()) {
+    contextStatesByContextKey_.erase(it->second->key);
+    contextStatesByDeviceKey_.erase(it);
+  }
+}
+
+void XellStateService::destroyContext(unsigned key) {
+  auto it = contextStatesByContextKey_.find(key);
+  if (it != contextStatesByContextKey_.end()) {
+    contextStatesByDeviceKey_.erase(it->second->deviceKey);
+    contextStatesByContextKey_.erase(it);
+  }
+}
+
+void XellStateService::restoreContextState(ContextState* state) {
+  xellD3D12CreateContextCommand c;
+  c.key = stateService_.getUniqueCommandKey();
+  c.out_context_.key = state->key;
+  c.device_.key = state->deviceKey;
+  recorder_.record(new xellD3D12CreateContextWriter(c));
+
+  if (state->sleepParams) {
+    xellSetSleepModeCommand c;
+    c.key = stateService_.getUniqueCommandKey();
+    c.context_.key = state->key;
+    c.param_.value = state->sleepParams;
+    recorder_.record(new xellSetSleepModeWriter(c));
+  }
+}
+
+#pragma endregion
 
 } // namespace DirectX
 } // namespace gits

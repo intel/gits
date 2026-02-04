@@ -221,7 +221,8 @@ def postprocess(functions, interfaces, structures):
     }
 
     context_params = {
-        'xess_context_handle_t'
+        'xess_context_handle_t',
+        'xell_context_handle_t'
     }
 
     custom_base_name = {

@@ -61,6 +61,8 @@ void updateInterface(PlayerManager& manager, DSTORAGE_REQUEST_Argument& arg);
 
 void updateContext(PlayerManager& manager, XESSContextArgument& arg);
 void updateOutputContext(PlayerManager& manager, XESSContextOutputArgument& arg);
+void updateContext(PlayerManager& maanger, XELLContextArgument& arg);
+void updateOutputContext(PlayerManager& manager, XELLContextOutputArgument& arg);
 
 } // namespace DirectX
 } // namespace gits

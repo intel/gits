@@ -42,6 +42,7 @@ set(INTERCEPTOR_SRC
   ${SRC_DIR}/d3d11on12Wrappers.cpp
   ${SRC_DIR}/d3d11on12DispatchTable.h
   ${SRC_DIR}/xessDispatchTableAuto.h
+  ${SRC_DIR}/xellDispatchTableAuto.h
 )
 source_group("interceptor" FILES ${INTERCEPTOR_SRC})
 

@@ -267,5 +267,16 @@ void RecordingLayer::post(
   }
 }
 
+void RecordingLayer::post(xellAddMarkerDataCommand& command) {
+  static bool firstPresentEndMarkerSkipped = false;
+  if (subcaptureRange_.inRange()) {
+    if (!firstPresentEndMarkerSkipped && command.marker_.value == XELL_PRESENT_END) {
+      firstPresentEndMarkerSkipped = true;
+      return;
+    }
+    recorder_.record(new xellAddMarkerDataWriter(command));
+  }
+}
+
 } // namespace DirectX
 } // namespace gits

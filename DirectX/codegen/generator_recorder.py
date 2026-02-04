@@ -36,7 +36,8 @@ def get_dispatch_table(function):
         Api.D3D12: "getD3D12DispatchTable()",
         Api.DML: "getDMLDispatchTable()",
         Api.XESS: "getXessDispatchTable()",
-        Api.DSTORAGE: "getDStorageDispatchTable()"
+        Api.DSTORAGE: "getDStorageDispatchTable()",
+        Api.XELL: "getXellDispatchTable()"
     }
     return dispatch_tables[function.api]
 
@@ -44,6 +45,8 @@ def generate_recorder_files(context, out_path):
     additional_context = {
         'wrappers_update_created': wrappers_update_created,
         'get_dispatch_table': get_dispatch_table,
+        'get_context_map': get_context_map,
+        'get_success_return_value': get_success_return_value,
         'is_xess_d3d12_init': is_xess_d3d12_init
     }
     files_to_generate = [

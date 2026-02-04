@@ -57,7 +57,7 @@ ${generate_return(function)} ${function.name}Wrapper(${'' if params else ') {'}
         %endif
     %for param in function.params:
     %if param.is_context:
-    command.${param.name}_.key = manager.getXessContextMap().getKey(reinterpret_cast<std::uintptr_t>(${param.name}));
+    command.${param.name}_.key = manager.${get_context_map(function)}.getKey(reinterpret_cast<std::uintptr_t>(${param.name}));
     %elif param.is_interface and not param.is_interface_creation and not param.is_const:
     %if not param.sal_size:
     updateInterface(command.${param.name}_, ${param.name});
@@ -91,10 +91,10 @@ ${generate_return(function)} ${function.name}Wrapper(${'' if params else ') {'}
 
     %for param in function.params:
     %if param.is_context_output:
-    if (result == XESS_RESULT_SUCCESS) {
+    if (result == ${get_success_return_value(function)}) {
       command.${param.name}_.key = manager.createWrapperKey();
       auto context = reinterpret_cast<std::uintptr_t>(*command.${param.name}_.value);
-      manager.getXessContextMap().setContext(context, command.${param.name}_.key);
+      manager.${get_context_map(function)}.setContext(context, command.${param.name}_.key);
     }
     %endif
     %endfor

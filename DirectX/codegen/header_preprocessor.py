@@ -34,12 +34,12 @@ def replace_dml_declare_interface(in_lines):
 def preprocess_xess_files(in_lines):
     out_lines = []
     for line in in_lines:
-        if line.startswith('XESS_PACK_'):
-            pattern = r'(XESS_PACK_(?:B|E)\(\))'
+        if line.startswith(('XESS_PACK_', 'XELL_PACK_')):
+            pattern = r'(XE([SL]{2})_PACK_(?:B|E)\(\))'
             replacement = r'//\1'
             line = re.sub(pattern, replacement, line)
-        elif line.startswith('XESS_API'):
-            pattern = r'XESS_API '
+        elif line.startswith(('XESS_API', 'XELL_EXPORT')):
+            pattern = r'(XESS_API |XELL_EXPORT )'
             replacement = r''
             line = re.sub(pattern, replacement, line)
         elif 'sizecheck__LINE__' in line:

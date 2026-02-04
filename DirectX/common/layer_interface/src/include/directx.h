@@ -27,3 +27,5 @@
 
 #include <xess/xess.h>
 #include <xess/xess_d3d12.h>
+#include <xell/xell.h>
+#include <xell/xell_d3d12.h>

@@ -2730,5 +2730,20 @@ void encode(
   offset += sizeof(arg.indirectArgCountOffset);
 }
 
+unsigned getSize(const xell_frame_report_t_Argument& arg) {
+  if (!arg.value) {
+    return sizeof(void*);
+  }
+  return sizeof(void*) + sizeof(xell_frame_report_t) * arg.FRAME_REPORTS_COUNT;
+}
+
+void encode(char* dest, unsigned& offset, const xell_frame_report_t_Argument& arg) {
+  if (encodeNullPtr(dest, offset, arg)) {
+    return;
+  }
+  memcpy(dest + offset, arg.value, sizeof(xell_frame_report_t) * arg.FRAME_REPORTS_COUNT);
+  offset += sizeof(xell_frame_report_t) * arg.FRAME_REPORTS_COUNT;
+}
+
 } // namespace DirectX
 } // namespace gits

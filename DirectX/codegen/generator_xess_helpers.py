@@ -10,6 +10,7 @@
 
 from intermediates import Api, Function, Parameter
 
+# XESS
 
 def is_xess_function(function: Function) -> bool:
     return function.api == Api.XESS
@@ -17,3 +18,9 @@ def is_xess_function(function: Function) -> bool:
 
 def is_xess_d3d12_init(function: Function) -> bool:
     return function.name == 'xessD3D12Init'
+
+
+# XELL
+
+def is_xell_function(function: Function) -> bool:
+    return function.api == Api.XELL

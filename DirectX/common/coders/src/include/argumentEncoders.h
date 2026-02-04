@@ -368,5 +368,8 @@ void encode(
     unsigned& offset,
     const PointerArgument<NVAPI_RAYTRACING_EXECUTE_MULTI_INDIRECT_CLUSTER_OPERATION_PARAMS>& arg);
 
+unsigned getSize(const xell_frame_report_t_Argument& arg);
+void encode(char* dest, unsigned& offset, const xell_frame_report_t_Argument& arg);
+
 } // namespace DirectX
 } // namespace gits

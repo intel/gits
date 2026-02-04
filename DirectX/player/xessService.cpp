@@ -18,6 +18,9 @@ XessService::~XessService() {
   if (xessDll_) {
     FreeLibrary(xessDll_);
   }
+  if (xellDll_) {
+    FreeLibrary(xellDll_);
+  }
 }
 
 bool XessService::loadXess(std::filesystem::path path) {
@@ -109,6 +112,43 @@ bool XessService::loadXess(std::filesystem::path path) {
   xess_version_t version = {};
   xessDispatchTable_.xessGetVersion(&version);
   LOG_INFO << "Loaded XeSS (version " << version.major << "." << version.minor << "."
+           << version.patch << ")";
+
+  return true;
+}
+
+bool XessService::loadXell(std::filesystem::path path) {
+  if (!xellDll_) {
+    xellDll_ = LoadLibrary(path.string().c_str());
+    if (!xellDll_) {
+      LOG_ERROR << "Failed to load XeLL (" << path.string() << "). Playback issues may occur.";
+      return false;
+    }
+  }
+  GITS_ASSERT(xellDll_);
+
+  xellDispatchTable_.xellDestroyContext = reinterpret_cast<decltype(xellDestroyContext)*>(
+      GetProcAddress(xellDll_, "xellDestroyContext"));
+  xellDispatchTable_.xellSetSleepMode =
+      reinterpret_cast<decltype(xellSetSleepMode)*>(GetProcAddress(xellDll_, "xellSetSleepMode"));
+  xellDispatchTable_.xellGetSleepMode =
+      reinterpret_cast<decltype(xellGetSleepMode)*>(GetProcAddress(xellDll_, "xellGetSleepMode"));
+  xellDispatchTable_.xellSleep =
+      reinterpret_cast<decltype(xellSleep)*>(GetProcAddress(xellDll_, "xellSleep"));
+  xellDispatchTable_.xellAddMarkerData =
+      reinterpret_cast<decltype(xellAddMarkerData)*>(GetProcAddress(xellDll_, "xellAddMarkerData"));
+  xellDispatchTable_.xellGetVersion =
+      reinterpret_cast<decltype(xellGetVersion)*>(GetProcAddress(xellDll_, "xellGetVersion"));
+  xellDispatchTable_.xellSetLoggingCallback = reinterpret_cast<decltype(xellSetLoggingCallback)*>(
+      GetProcAddress(xellDll_, "xellSetLoggingCallback"));
+  xellDispatchTable_.xellGetFramesReports = reinterpret_cast<decltype(xellGetFramesReports)*>(
+      GetProcAddress(xellDll_, "xellGetFramesReports"));
+  xellDispatchTable_.xellD3D12CreateContext = reinterpret_cast<decltype(xellD3D12CreateContext)*>(
+      GetProcAddress(xellDll_, "xellD3D12CreateContext"));
+
+  xell_version_t version = {};
+  xellDispatchTable_.xellGetVersion(&version);
+  LOG_INFO << "Loaded XeLL (version " << version.major << "." << version.minor << "."
            << version.patch << ")";
 
   return true;

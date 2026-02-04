@@ -240,6 +240,10 @@ public:
   void pre(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& c) override;
   void post(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& c) override;
   void post(DllContainerMetaCommand& c) override;
+  void post(xellD3D12CreateContextCommand& c) override;
+  void pre(xellDestroyContextCommand& c) override;
+  void post(xellDestroyContextCommand& c) override;
+  void post(xellSetSleepModeCommand& c) override;
 
 private:
   void setAsChildInParent(unsigned parentKey, unsigned childKey);
@@ -270,6 +274,7 @@ private:
   CommandListService commandListService_;
   CommandQueueService commandQueueService_;
   XessStateService xessStateService_;
+  XellStateService xellStateService_;
   AccelerationStructuresSerializeService accelerationStructuresSerializeService_;
   AccelerationStructuresBuildService accelerationStructuresBuildService_;
   ResidencyService residencyService_;

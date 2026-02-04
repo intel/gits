@@ -52,7 +52,8 @@ public:
       ResidencyService& residencyService,
       AnalyzerResults& analyzerResults,
       ResourceUsageTrackingService& resourceUsageTrackingService,
-      ResourceForCBVRestoreService& resourceForCBVRestoreService)
+      ResourceForCBVRestoreService& resourceForCBVRestoreService,
+      XellStateService& xellStateService)
       : recorder_(recorder),
         resourceContentRestore_(*this),
         swapChainService_(*this),
@@ -70,7 +71,8 @@ public:
         residencyService_(residencyService),
         resourceUsageTrackingService_(resourceUsageTrackingService),
         resourceForCBVRestoreService_(resourceForCBVRestoreService),
-        nvapiGlobalStateService_(*this) {}
+        nvapiGlobalStateService_(*this),
+        xellStateService_(xellStateService) {}
   ~StateTrackingService();
   void restoreState();
   void keepState(unsigned objectKey);
@@ -200,6 +202,7 @@ private:
   CommandListService& commandListService_;
   CommandQueueService& commandQueueService_;
   XessStateService& xessStateService_;
+  XellStateService& xellStateService_;
   AccelerationStructuresSerializeService& accelerationStructuresSerializeService_;
   AccelerationStructuresBuildService& accelerationStructuresBuildService_;
   ResidencyService& residencyService_;

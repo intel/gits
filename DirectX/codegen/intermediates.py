@@ -21,6 +21,7 @@ class Api(Enum):
     DML = 6
     XESS = 7
     DSTORAGE = 8
+    XELL = 9
 
 @dataclass
 class Parameter:

@@ -44,6 +44,12 @@ CaptureManager& CaptureManager::get() {
       instance_->interceptNvAPIFunctions();
     }
     instance_->interceptD3D11On12Functions();
+    if (Configurator::Get().directx.capture.captureXess) {
+      instance_->interceptXessFunctions();
+    }
+    if (Configurator::Get().directx.capture.captureXell) {
+      instance_->interceptXellFunctions();
+    }
   }
 
   return *instance_;
@@ -61,6 +67,9 @@ CaptureManager::~CaptureManager() {
   }
   if (xessDll_) {
     FreeLibrary(xessDll_);
+  }
+  if (xellDll_) {
+    FreeLibrary(xellDll_);
   }
   if (intelExtensionLoaded_) {
     INTC_UnloadExtensionsLibrary();
@@ -469,6 +478,87 @@ void CaptureManager::interceptXessFunctions() {
   if (xessDispatchTable_.xessGetPipelineBuildStatus) {
     ret = DetourAttach(&xessDispatchTable_.xessGetPipelineBuildStatus,
                        xessGetPipelineBuildStatusWrapper);
+    GITS_ASSERT(ret == NO_ERROR);
+  }
+
+  ret = DetourTransactionCommit();
+  GITS_ASSERT(ret == NO_ERROR);
+}
+
+void CaptureManager::interceptXellFunctions() {
+  if (xellDll_ || !Configurator::Get().directx.capture.captureXell) {
+    return;
+  }
+
+  xellDll_ = LoadLibrary("libxell.dll");
+  if (!xellDll_) {
+    return;
+  }
+
+  xellDispatchTable_.xellDestroyContext = reinterpret_cast<decltype(xellDestroyContext)*>(
+      GetProcAddress(xellDll_, "xellDestroyContext"));
+  xellDispatchTable_.xellSetSleepMode =
+      reinterpret_cast<decltype(xellSetSleepMode)*>(GetProcAddress(xellDll_, "xellSetSleepMode"));
+  xellDispatchTable_.xellGetSleepMode =
+      reinterpret_cast<decltype(xellGetSleepMode)*>(GetProcAddress(xellDll_, "xellGetSleepMode"));
+  xellDispatchTable_.xellSleep =
+      reinterpret_cast<decltype(xellSleep)*>(GetProcAddress(xellDll_, "xellSleep"));
+  xellDispatchTable_.xellAddMarkerData =
+      reinterpret_cast<decltype(xellAddMarkerData)*>(GetProcAddress(xellDll_, "xellAddMarkerData"));
+  xellDispatchTable_.xellGetVersion =
+      reinterpret_cast<decltype(xellGetVersion)*>(GetProcAddress(xellDll_, "xellGetVersion"));
+  xellDispatchTable_.xellSetLoggingCallback = reinterpret_cast<decltype(xellSetLoggingCallback)*>(
+      GetProcAddress(xellDll_, "xellSetLoggingCallback"));
+  xellDispatchTable_.xellGetFramesReports = reinterpret_cast<decltype(xellGetFramesReports)*>(
+      GetProcAddress(xellDll_, "xellGetFramesReports"));
+  xellDispatchTable_.xellD3D12CreateContext = reinterpret_cast<decltype(xellD3D12CreateContext)*>(
+      GetProcAddress(xellDll_, "xellD3D12CreateContext"));
+
+  xell_version_t xellVersion{};
+  xell_result_t res = xellDispatchTable_.xellGetVersion(&xellVersion);
+  GITS_ASSERT(res == XELL_RESULT_SUCCESS);
+
+  LOG_INFO << "Loaded XeLL (libxell.dll) version: " << xellVersion.major << "." << xellVersion.minor
+           << "." << xellVersion.patch;
+
+  LONG ret = DetourTransactionBegin();
+  GITS_ASSERT(ret == NO_ERROR);
+  ret = DetourUpdateThread(GetCurrentThread());
+  GITS_ASSERT(ret == NO_ERROR);
+
+  ret = DetourAttach(&xellDispatchTable_.xellGetVersion, xellGetVersionWrapper);
+  GITS_ASSERT(ret == NO_ERROR);
+
+  if (xellDispatchTable_.xellDestroyContext) {
+    ret = DetourAttach(&xellDispatchTable_.xellDestroyContext, xellDestroyContextWrapper);
+    GITS_ASSERT(ret == NO_ERROR);
+  }
+  if (xellDispatchTable_.xellSetSleepMode) {
+    ret = DetourAttach(&xellDispatchTable_.xellSetSleepMode, xellSetSleepModeWrapper);
+    GITS_ASSERT(ret == NO_ERROR);
+  }
+  if (xellDispatchTable_.xellGetSleepMode) {
+    ret = DetourAttach(&xellDispatchTable_.xellGetSleepMode, xellGetSleepModeWrapper);
+    GITS_ASSERT(ret == NO_ERROR);
+  }
+  if (xellDispatchTable_.xellSleep) {
+    ret = DetourAttach(&xellDispatchTable_.xellSleep, xellSleepWrapper);
+    GITS_ASSERT(ret == NO_ERROR);
+  }
+  if (xellDispatchTable_.xellAddMarkerData) {
+    ret = DetourAttach(&xellDispatchTable_.xellAddMarkerData, xellAddMarkerDataWrapper);
+    GITS_ASSERT(ret == NO_ERROR);
+  }
+  if (xellDispatchTable_.xellSetLoggingCallback) {
+    ret = DetourAttach(&xellDispatchTable_.xellSetLoggingCallback, xellSetLoggingCallbackWrapper);
+    GITS_ASSERT(ret == NO_ERROR);
+  }
+  if (xellDispatchTable_.xellGetFramesReports) {
+    ret = DetourAttach(&xellDispatchTable_.xellGetFramesReports, xellGetFramesReportsWrapper);
+    GITS_ASSERT(ret == NO_ERROR);
+  }
+  if (xellDispatchTable_.xellD3D12CreateContext) {
+    ret = DetourAttach(&xellDispatchTable_.xellD3D12CreateContext, xellD3D12CreateContextWrapper);
     GITS_ASSERT(ret == NO_ERROR);
   }
 

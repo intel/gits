@@ -61,6 +61,14 @@ void DllOverrideStoreLayer::pre(xessD3D12CreateContextCommand& c) {
   captureXessDll(c);
 }
 
+void DllOverrideStoreLayer::pre(xellGetVersionCommand& c) {
+  captureXellDll(c);
+}
+
+void DllOverrideStoreLayer::pre(xellD3D12CreateContextCommand& c) {
+  captureXellDll(c);
+}
+
 void DllOverrideStoreLayer::captureAgilitySDKDll(Command& c) {
   std::lock_guard<std::mutex> lock(agilitySDKDllMutex_);
   if (agilitySDKDllchecked_) {
@@ -82,6 +90,15 @@ void DllOverrideStoreLayer::captureXessDll(Command& c) {
 
   captureDll(L"libxess.dll", c.threadId);
   xessDllchecked_ = true;
+}
+
+void DllOverrideStoreLayer::captureXellDll(Command& c) {
+  std::lock_guard<std::mutex> lock(xellDllMutex_);
+  if (xellDllchecked_) {
+    return;
+  }
+  captureDll(L"libxell.dll", c.threadId);
+  xellDllchecked_ = true;
 }
 
 bool DllOverrideStoreLayer::captureDll(const std::wstring& dllName, unsigned threadId) {
