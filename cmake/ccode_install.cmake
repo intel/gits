@@ -11,16 +11,38 @@ install(DIRECTORY ccode/ DESTINATION CCode)
 install(FILES .clang-format DESTINATION CCode)
 
 # Copy third-party dependencies
-install(DIRECTORY third_party/plog DESTINATION CCode/third_party)
-install(DIRECTORY third_party/argshxx DESTINATION CCode/third_party)
-install(DIRECTORY third_party/AgilitySdk DESTINATION CCode/third_party)
 
-# Copy D3D12 runtime files
-set(D3D12_RUNTIME_FILES
-  ${AGILITY_SDK_DIR}/bin/x64/D3D12Core.dll
-  ${AGILITY_SDK_DIR}/bin/x64/d3d12SDKLayers.dll
+# Plog
+install(DIRECTORY third_party/plog/include/ DESTINATION CCode/third_party/plog/include)
+install(FILES 
+  third_party/plog/README.md
+  third_party/plog/LICENSE
+  DESTINATION CCode/third_party/plog/
 )
 
-install(FILES
-  ${D3D12_RUNTIME_FILES} DESTINATION CCode/D3D12
+# ArgsHxx
+install(FILES 
+  third_party/argshxx/args.hxx
+  third_party/argshxx/README.md
+  third_party/argshxx/LICENSE
+  DESTINATION CCode/third_party/argshxx/
+)
+
+# Agility SDK
+set(AGILITY_SDK_DIRS
+  include
+  src
+  bin/x64
+)
+foreach(DIR ${AGILITY_SDK_DIRS})
+  install(DIRECTORY third_party/AgilitySdk/${DIR}/
+    DESTINATION CCode/third_party/AgilitySdk/${DIR}
+	PATTERN "*.pdb" EXCLUDE
+  )
+endforeach()
+install(FILES 
+  third_party/AgilitySdk/README.md
+  third_party/AgilitySdk/LICENSE.txt
+  third_party/AgilitySdk/LICENSE-CODE.txt
+  DESTINATION CCode/third_party/AgilitySdk/
 )

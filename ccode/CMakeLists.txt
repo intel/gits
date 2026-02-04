@@ -82,10 +82,10 @@ endif()
 
 # Copy D3D12 runtime files
 add_custom_command(TARGET ${EXECUTABLE_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-        "${CMAKE_CURRENT_SOURCE_DIR}/D3D12"
-        "$<TARGET_FILE_DIR:${EXECUTABLE_NAME}>/D3D12"
-    COMMENT "Copying D3D12 runtime files to executable directory"
+  COMMAND ${CMAKE_COMMAND} -E copy_directory
+    "${CMAKE_CURRENT_SOURCE_DIR}/third_party/AgilitySdk/bin/x64"
+    "$<TARGET_FILE_DIR:${EXECUTABLE_NAME}>/D3D12"
+  COMMENT "Copying AgilitySdk (x64) runtime files to D3D12 directory"
 )
 
 # Use clang-format to format generated files on first configuration
