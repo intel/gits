@@ -483,7 +483,7 @@ void CaptureManager::interceptXessFunctions() {
 }
 
 void CaptureManager::interceptXellFunctions() {
-  if (xellDll_ || loadingXellDll_ || !Configurator::Get().directx.capture.captureXell) {
+  if (xellDll_ || loadingXellDll_ || !Configurator::Get().directx.recorder.captureXell) {
     return;
   }
 
@@ -566,7 +566,7 @@ void CaptureManager::interceptXellFunctions() {
 }
 
 void CaptureManager::interceptXefgFunctions() {
-  if (xefgDll_ || loadingXefgDll_ || !Configurator::Get().directx.capture.captureXefg) {
+  if (xefgDll_ || loadingXefgDll_ || !Configurator::Get().directx.recorder.captureXefg) {
     return;
   }
 
