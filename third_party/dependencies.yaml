@@ -56,7 +56,7 @@ dependencies:
       os: WINDOWS
     - name: xess
       url: https://github.com/intel/xess.git
-      branch: v2.1.0
+      branch: v2.1.1
       os: WINDOWS
     - name: fast_io
       argument: fastio
