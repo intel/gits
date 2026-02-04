@@ -28,9 +28,7 @@ void IUnknownQueryInterfacePlayer::Run() {
     layer->pre(command);
   }
 
-  if (manager.executeCommands() && !command.skip && command.object_.value &&
-      command.result_.value == S_OK) {
-
+  if (manager.executeCommands() && !command.skip && command.object_.value) {
     IUnknown* ppvObject = nullptr;
     command.result_.value = command.object_.value->QueryInterface(
         command.riid_.value, reinterpret_cast<void**>(&ppvObject));
@@ -58,9 +56,7 @@ void IUnknownAddRefPlayer::Run() {
   }
 
   if (manager.executeCommands() && !command.skip && command.object_.value) {
-    if (command.object_.value) {
-      command.result_.value = command.object_.value->AddRef();
-    }
+    command.result_.value = command.object_.value->AddRef();
   }
 
   for (Layer* layer : manager.getPostLayers()) {
@@ -78,9 +74,7 @@ void IUnknownReleasePlayer::Run() {
   }
 
   if (manager.executeCommands() && !command.skip && command.object_.value) {
-    if (command.object_.value) {
-      command.result_.value = command.object_.value->Release();
-    }
+    command.result_.value = command.object_.value->Release();
   }
 
   for (Layer* layer : manager.getPostLayers()) {
@@ -99,7 +93,6 @@ void CreateWindowMetaPlayer::Run() {
   }
 
   if (manager.executeCommands() && !command.skip) {
-
     HWND hWnd = manager.getWindowService().createWindow(command.hWnd_.value, command.width_.value,
                                                         command.height_.value);
     command.hWnd_.value = hWnd;
@@ -117,7 +110,6 @@ void MappedDataMetaPlayer::Run() {
   }
 
   if (manager.executeCommands() && !command.skip) {
-
     char* currentAddress = static_cast<char*>(
         manager.getMapTrackingService().getCurrentAddress(command.mappedAddress_.value));
     memcpy(currentAddress + command.offset_.value, command.data_.value, command.data_.size);
@@ -184,7 +176,7 @@ void INTC_D3D12_GetSupportedVersionsPlayer::Run() {
     layer->pre(command);
   }
 
-  if (manager.executeCommands() && command.result_.value == S_OK && !command.skip) {
+  if (manager.executeCommands() && !command.skip) {
     command.result_.value = INTC_D3D12_GetSupportedVersions(
         command.pDevice_.value, command.pSupportedExtVersions_.value,
         command.pSupportedExtVersionsCount_.value);
@@ -204,10 +196,13 @@ void INTC_D3D12_CreateDeviceExtensionContextPlayer::Run() {
     layer->pre(command);
   }
 
-  if (manager.executeCommands() && command.result_.value == S_OK && !command.skip) {
-    command.result_.value = INTC_D3D12_CreateDeviceExtensionContext(
-        command.pDevice_.value, command.ppExtensionContext_.value, command.pExtensionInfo_.value,
-        command.pExtensionAppInfo_.value);
+  if (manager.executeCommands()) {
+    if (!command.skip) {
+      command.result_.value = INTC_D3D12_CreateDeviceExtensionContext(
+          command.pDevice_.value, command.ppExtensionContext_.value, command.pExtensionInfo_.value,
+          command.pExtensionAppInfo_.value);
+    }
+
     if (command.result_.value == S_OK) {
       manager.getIntelExtensionsContextMap().setContext(
           command.ppExtensionContext_.key,
@@ -229,10 +224,12 @@ void INTC_D3D12_CreateDeviceExtensionContext1Player::Run() {
     layer->pre(command);
   }
 
-  if (manager.executeCommands() && command.result_.value == S_OK && !command.skip) {
-    command.result_.value = INTC_D3D12_CreateDeviceExtensionContext1(
-        command.pDevice_.value, command.ppExtensionContext_.value, command.pExtensionInfo_.value,
-        command.pExtensionAppInfo_.value);
+  if (manager.executeCommands()) {
+    if (!command.skip) {
+      command.result_.value = INTC_D3D12_CreateDeviceExtensionContext1(
+          command.pDevice_.value, command.ppExtensionContext_.value, command.pExtensionInfo_.value,
+          command.pExtensionAppInfo_.value);
+    }
 
     if (command.result_.value == S_OK) {
       manager.getIntelExtensionsContextMap().setContext(
@@ -258,7 +255,7 @@ void INTC_D3D12_SetApplicationInfoPlayer::Run() {
     layer->pre(command);
   }
 
-  if (manager.executeCommands() && command.result_.value == S_OK && !command.skip) {
+  if (manager.executeCommands() && !command.skip) {
     command.result_.value = INTC_D3D12_SetApplicationInfo(command.pExtensionAppInfo_.value);
   }
 
@@ -274,8 +271,10 @@ void INTC_DestroyDeviceExtensionContextPlayer::Run() {
     layer->pre(command);
   }
 
-  if (manager.executeCommands() && command.result_.value == S_OK && !command.skip) {
-    command.result_.value = INTC_DestroyDeviceExtensionContext(command.ppExtensionContext_.value);
+  if (manager.executeCommands()) {
+    if (!command.skip) {
+      command.result_.value = INTC_DestroyDeviceExtensionContext(command.ppExtensionContext_.value);
+    }
 
     if (command.result_.value == S_OK) {
       manager.getIntelExtensionsContextMap().removeContext(command.ppExtensionContext_.key);
@@ -293,7 +292,7 @@ void INTC_D3D12_CheckFeatureSupportPlayer::Run() {
     layer->pre(command);
   }
 
-  if (manager.executeCommands() && command.result_.value == S_OK && !command.skip) {
+  if (manager.executeCommands() && !command.skip) {
     auto* context = reinterpret_cast<INTCExtensionContext*>(
         manager.getIntelExtensionsContextMap().getContext(command.pExtensionContext_.key));
     command.result_.value = INTC_D3D12_CheckFeatureSupport(context, command.Feature_.value,
@@ -312,7 +311,7 @@ void INTC_D3D12_SetFeatureSupportPlayer::Run() {
     layer->pre(command);
   }
 
-  if (manager.executeCommands() && command.result_.value == S_OK && !command.skip) {
+  if (manager.executeCommands() && !command.skip) {
     auto* context = reinterpret_cast<INTCExtensionContext*>(
         manager.getIntelExtensionsContextMap().getContext(command.pExtensionContext_.key));
     command.result_.value = INTC_D3D12_SetFeatureSupport(context, command.pFeature_.value);
@@ -351,11 +350,13 @@ void INTC_D3D12_CreateComputePipelineStatePlayer::Run() {
     layer->pre(command);
   }
 
-  if (manager.executeCommands() && command.result_.value == S_OK && !command.skip) {
-    auto* context = reinterpret_cast<INTCExtensionContext*>(
-        manager.getIntelExtensionsContextMap().getContext(command.pExtensionContext_.key));
-    command.result_.value = INTC_D3D12_CreateComputePipelineState(
-        context, command.pDesc_.value, command.riid_.value, command.ppPipelineState_.value);
+  if (manager.executeCommands()) {
+    if (!command.skip) {
+      auto* context = reinterpret_cast<INTCExtensionContext*>(
+          manager.getIntelExtensionsContextMap().getContext(command.pExtensionContext_.key));
+      command.result_.value = INTC_D3D12_CreateComputePipelineState(
+          context, command.pDesc_.value, command.riid_.value, command.ppPipelineState_.value);
+    }
 
     if (command.result_.value == S_OK) {
       updateOutputInterface(manager, command.ppPipelineState_);
@@ -376,13 +377,15 @@ void INTC_D3D12_CreatePlacedResourcePlayer::Run() {
     layer->pre(command);
   }
 
-  if (manager.executeCommands() && command.result_.value == S_OK && !command.skip) {
-    auto* context = reinterpret_cast<INTCExtensionContext*>(
-        manager.getIntelExtensionsContextMap().getContext(command.pExtensionContext_.key));
-    command.result_.value = INTC_D3D12_CreatePlacedResource(
-        context, command.pHeap_.value, command.HeapOffset_.value, command.pDesc_.value,
-        command.InitialState_.value, command.pOptimizedClearValue_.value, command.riid_.value,
-        command.ppvResource_.value);
+  if (manager.executeCommands()) {
+    if (!command.skip) {
+      auto* context = reinterpret_cast<INTCExtensionContext*>(
+          manager.getIntelExtensionsContextMap().getContext(command.pExtensionContext_.key));
+      command.result_.value = INTC_D3D12_CreatePlacedResource(
+          context, command.pHeap_.value, command.HeapOffset_.value, command.pDesc_.value,
+          command.InitialState_.value, command.pOptimizedClearValue_.value, command.riid_.value,
+          command.ppvResource_.value);
+    }
 
     if (command.result_.value == S_OK) {
       updateOutputInterface(manager, command.ppvResource_);
@@ -401,13 +404,15 @@ void INTC_D3D12_CreateCommittedResourcePlayer::Run() {
     layer->pre(command);
   }
 
-  if (manager.executeCommands() && command.result_.value == S_OK && !command.skip) {
-    auto* context = reinterpret_cast<INTCExtensionContext*>(
-        manager.getIntelExtensionsContextMap().getContext(command.pExtensionContext_.key));
-    command.result_.value = INTC_D3D12_CreateCommittedResource(
-        context, command.pHeapProperties_.value, command.HeapFlags_.value, command.pDesc_.value,
-        command.InitialResourceState_.value, command.pOptimizedClearValue_.value,
-        command.riidResource_.value, command.ppvResource_.value);
+  if (manager.executeCommands()) {
+    if (!command.skip) {
+      auto* context = reinterpret_cast<INTCExtensionContext*>(
+          manager.getIntelExtensionsContextMap().getContext(command.pExtensionContext_.key));
+      command.result_.value = INTC_D3D12_CreateCommittedResource(
+          context, command.pHeapProperties_.value, command.HeapFlags_.value, command.pDesc_.value,
+          command.InitialResourceState_.value, command.pOptimizedClearValue_.value,
+          command.riidResource_.value, command.ppvResource_.value);
+    }
 
     if (command.result_.value == S_OK) {
       updateOutputInterface(manager, command.ppvResource_);
@@ -426,11 +431,13 @@ void INTC_D3D12_CreateHeapPlayer::Run() {
     layer->pre(command);
   }
 
-  if (manager.executeCommands() && command.result_.value == S_OK && !command.skip) {
-    auto* context = reinterpret_cast<INTCExtensionContext*>(
-        manager.getIntelExtensionsContextMap().getContext(command.pExtensionContext_.key));
-    command.result_.value = INTC_D3D12_CreateHeap(context, command.pDesc_.value,
-                                                  command.riid_.value, command.ppvHeap_.value);
+  if (manager.executeCommands()) {
+    if (!command.skip) {
+      auto* context = reinterpret_cast<INTCExtensionContext*>(
+          manager.getIntelExtensionsContextMap().getContext(command.pExtensionContext_.key));
+      command.result_.value = INTC_D3D12_CreateHeap(context, command.pDesc_.value,
+                                                    command.riid_.value, command.ppvHeap_.value);
+    }
 
     if (command.result_.value == S_OK) {
       updateOutputInterface(manager, command.ppvHeap_);
@@ -452,7 +459,7 @@ void NvAPI_InitializePlayer::Run() {
     layer->pre(command);
   }
 
-  if (manager.executeCommands() && command.result_.value == NVAPI_OK && !command.skip) {
+  if (manager.executeCommands() && !command.skip) {
     command.result_.value = NvAPI_Initialize();
   }
 
@@ -468,7 +475,7 @@ void NvAPI_UnloadPlayer::Run() {
     layer->pre(command);
   }
 
-  if (manager.executeCommands() && command.result_.value == NVAPI_OK && !command.skip) {
+  if (manager.executeCommands() && !command.skip) {
     command.result_.value = NvAPI_Unload();
   }
 
@@ -486,7 +493,7 @@ void NvAPI_D3D12_SetCreatePipelineStateOptionsPlayer::Run() {
     layer->pre(command);
   }
 
-  if (manager.executeCommands() && command.result_.value == NVAPI_OK && !command.skip) {
+  if (manager.executeCommands() && !command.skip) {
     command.result_.value =
         NvAPI_D3D12_SetCreatePipelineStateOptions(command.pDevice_.value, command.pState_.value);
   }
@@ -505,7 +512,7 @@ void NvAPI_D3D12_SetNvShaderExtnSlotSpacePlayer::Run() {
     layer->pre(command);
   }
 
-  if (manager.executeCommands() && command.result_.value == NVAPI_OK && !command.skip) {
+  if (manager.executeCommands() && !command.skip) {
     command.result_.value = NvAPI_D3D12_SetNvShaderExtnSlotSpace(
         command.pDev_.value, command.uavSlot_.value, command.uavSpace_.value);
   }
@@ -524,7 +531,7 @@ void NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadPlayer::Run() {
     layer->pre(command);
   }
 
-  if (manager.executeCommands() && command.result_.value == NVAPI_OK && !command.skip) {
+  if (manager.executeCommands() && !command.skip) {
     command.result_.value = NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThread(
         command.pDev_.value, command.uavSlot_.value, command.uavSpace_.value);
   }
@@ -543,7 +550,7 @@ void NvAPI_D3D12_BuildRaytracingAccelerationStructureExPlayer::Run() {
     layer->pre(command);
   }
 
-  if (manager.executeCommands() && command.result_.value == NVAPI_OK && !command.skip) {
+  if (manager.executeCommands() && !command.skip) {
     command.result_.value = NvAPI_D3D12_BuildRaytracingAccelerationStructureEx(
         command.pCommandList_.value, command.pParams.value);
   }
@@ -562,7 +569,7 @@ void NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayPlayer::Run() {
     layer->pre(command);
   }
 
-  if (manager.executeCommands() && command.result_.value == NVAPI_OK && !command.skip) {
+  if (manager.executeCommands() && !command.skip) {
     command.result_.value = NvAPI_D3D12_BuildRaytracingOpacityMicromapArray(
         command.pCommandList_.value, command.pParams.value);
   }
@@ -581,7 +588,7 @@ void NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationPlayer::Run() {
     layer->pre(command);
   }
 
-  if (manager.executeCommands() && command.result_.value == NVAPI_OK && !command.skip) {
+  if (manager.executeCommands() && !command.skip) {
     command.result_.value = NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperation(
         command.pCommandList_.value, command.pParams.value);
   }
