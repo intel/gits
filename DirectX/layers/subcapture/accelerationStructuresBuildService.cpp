@@ -1602,6 +1602,11 @@ void AccelerationStructuresBuildService::removeState(unsigned stateId, bool remo
   GITS_ASSERT(itState != statesById_.end());
   if (itState->second->stateType == RaytracingAccelerationStructureState::NvAPIOMM) {
     return;
+  } else if (itState->second->stateType == RaytracingAccelerationStructureState::Build &&
+             static_cast<BuildRaytracingAccelerationStructureState*>(itState->second)
+                     ->desc->value->Inputs.Type ==
+                 D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_OPACITY_MICROMAP_ARRAY) {
+    return;
   }
 
   // remove state sources chain
