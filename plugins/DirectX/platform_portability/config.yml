@@ -1,0 +1,14 @@
+## ===================== begin_copyright_notice ============================
+##
+## Copyright (C) 2023-2026 Intel Corporation
+##
+## SPDX-License-Identifier: MIT
+##
+## ===================== end_copyright_notice ==============================
+
+Info:
+  Name: 'PlatformPortability'
+  Description: 'Skips/modifies certain API calls that might not exist on the target platform.'
+
+Config:
+  # Empty

@@ -70,4 +70,8 @@ Caches BLASes through serialization/deserialization by CopyRaytracingAcceleratio
 
 Spoof the DXGIAdapter description returned by `IDXGIAdapter::GetDesc`. This plugin can be used to test how an application behaves for a different GPU vendor (or a specific GPU).
 
+## PlatformPortability
+
+Skips/modifies certain API calls that might not exist on the target platform.
+
 
