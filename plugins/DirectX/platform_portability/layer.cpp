@@ -57,7 +57,9 @@ void PlatformPortabilityLayer::pre(INTC_D3D12_SetFeatureSupportCommand& c) {
 
 void PlatformPortabilityLayer::pre(INTC_D3D12_CreatePlacedResourceCommand& c) {
   c.skip = true;
+
   if (!c.pHeap_.value) {
+    LOG_ERROR << "PlatformPortability - pHeap is null";
     c.result_.value = E_INVALIDARG;
     return;
   }
@@ -66,12 +68,33 @@ void PlatformPortabilityLayer::pre(INTC_D3D12_CreatePlacedResourceCommand& c) {
   Microsoft::WRL::ComPtr<ID3D12Device> pDevice;
   HRESULT hr = c.pHeap_.value->GetDevice(IID_PPV_ARGS(&pDevice));
   if (FAILED(hr) || !pDevice) {
+    LOG_ERROR << "PlatformPortability - GetDevice failed with HRESULT: 0x" << std::hex << hr
+              << std::dec;
+    c.result_.value = FAILED(hr) ? hr : E_FAIL;
     return;
   }
 
-  // The pDesc_ should already be a standard D3D12_RESOURCE_DESC pointer
-  auto* pDesc = reinterpret_cast<const D3D12_RESOURCE_DESC*>(c.pDesc_.value);
+  // Extract D3D12_RESOURCE_DESC from Intel extended structure
+  // The first member of INTC_D3D12_RESOURCE_DESC_0001 is a pointer to D3D12_RESOURCE_DESC
+  if (!c.pDesc_.value) {
+    LOG_ERROR << "PlatformPortability - Resource descriptor is null";
+    c.result_.value = E_INVALIDARG;
+    return;
+  }
+
+  auto** ppDesc = reinterpret_cast<D3D12_RESOURCE_DESC**>(c.pDesc_.value);
+  auto* pDesc = *ppDesc;
+
   if (!pDesc) {
+    LOG_ERROR << "PlatformPortability - D3D12_RESOURCE_DESC pointer is null";
+    c.result_.value = E_INVALIDARG;
+    return;
+  }
+
+  // Validate descriptor
+  if (pDesc->Dimension > D3D12_RESOURCE_DIMENSION_TEXTURE3D) {
+    LOG_ERROR << "PlatformPortability - Invalid resource dimension: " << pDesc->Dimension;
+    c.result_.value = E_INVALIDARG;
     return;
   }
 
@@ -81,11 +104,16 @@ void PlatformPortabilityLayer::pre(INTC_D3D12_CreatePlacedResourceCommand& c) {
                                      c.pOptimizedClearValue_.value, c.riid_.value,
                                      c.ppvResource_.value);
 
-  GITS_ASSERT(SUCCEEDED(hr), "Failed to create placed resource");
-
-  if (SUCCEEDED(hr)) {
-    c.result_.value = hr;
+  if (FAILED(hr)) {
+    LOG_ERROR << "PlatformPortability - CreatePlacedResource failed with HRESULT: 0x" << std::hex
+              << hr << std::dec;
+    LOG_ERROR << "  Heap: " << c.pHeap_.value << ", Offset: " << c.HeapOffset_.value;
+    LOG_ERROR << "  Dimension: " << pDesc->Dimension << ", Format: " << pDesc->Format;
+    LOG_ERROR << "  Width: " << pDesc->Width << ", Height: " << pDesc->Height;
+    LOG_ERROR << "  Flags: 0x" << std::hex << pDesc->Flags << std::dec;
   }
+
+  c.result_.value = hr;
 }
 
 } // namespace DirectX
