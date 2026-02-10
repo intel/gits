@@ -14,6 +14,16 @@
 extern "C" {
 #endif
 
+<%
+npu_extensions = get_npu_extensions(functions, enums)
+npu_components = [ext[0] for ext in npu_extensions]
+%>\
+%for (_, _, _, extension_functions, _) in npu_extensions:
+  %for func in extension_functions:
+${func.get('type')} __zecall ${func.get('name')}(${make_params(func, with_types=True, with_array=True)});
+  %endfor
+%endfor
+
 %for name, func in functions.items():
   %if not is_latest_version(functions, func):
 <% continue %>
@@ -21,6 +31,59 @@ extern "C" {
 ${"" if func.get('driver_extension') else "VISIBLE "}${func.get('type')} __zecall ${func.get('name')}(${make_params(func, with_types=True, with_array=True)})
 {
   %if func.get('recExecWrap'):
+    %if func.get('name') == 'zeDriverGetExtensionFunctionAddress':
+      %for (_, extension_string, dditable, extension_functions, versions) in npu_extensions:
+  if (strcmp(name, ${extension_string}) == 0) {
+    GITS_ENTRY_L0
+    auto return_value = driver.${func.get('name')}(${make_params(func)});
+    GITS_WRAPPER_PRE
+    wrapper.${func.get('name')}(${make_params(func, with_retval=True)});
+    GITS_WRAPPER_POST
+    if (return_value == ZE_RESULT_SUCCESS) {
+      uint32_t count = 0;
+      return_value = driver.original.zeDriverGetExtensionProperties(hDriver, &count, nullptr);
+      if (return_value != ZE_RESULT_SUCCESS) {
+        LOG_ERROR << "Could not count of extension properties";
+        return return_value;
+      }
+      std::vector<ze_driver_extension_properties_t> extension_props(count);
+      return_value = driver.original.zeDriverGetExtensionProperties(hDriver, &count, extension_props.data());
+      if (return_value != ZE_RESULT_SUCCESS) {
+        LOG_ERROR << "Could not get extension properties";
+        return return_value;
+      }
+      uint32_t ext_version = 0;
+      bool found = false;
+      for (uint32_t i = 0; i < count; i++) {
+        if (strncmp(extension_props[i].name, ${extension_string}, strlen(${extension_string})) == 0) {
+          ext_version = extension_props[i].version;
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        LOG_ERROR << "Could not find " << name << " extension version";
+        return ZE_RESULT_ERROR_UNINITIALIZED;
+      }
+      ${dditable}* ddi = *reinterpret_cast<${dditable}**>(ppFunctionAddress);
+      switch (ext_version) {
+        %for var in versions:
+      case ${var['name']}: {
+          %for ext_func in extension_functions:
+            %if get_api_version_from_string(get_api_version_from_enum(var)) >= get_api_version_from_string(ext_func.get('api_version')):
+        driver.original.${ext_func.get('name')} = ddi->${ext_func.get('name_in_dditable')};
+        ddi->${ext_func.get('name_in_dditable')} = ${ext_func.get('name')};
+            %endif
+          %endfor
+        break;
+      }
+        %endfor
+      }
+    }
+    return return_value;
+  }
+      %endfor
+    %endif
   ${'' if func.get('type') == 'void' else 'return '}${func.get('recExecWrapName')}(${make_params(func)});
   %elif func.get('component') == 'ze_dditable':
   GITS_ENTRY_L0
@@ -31,7 +94,7 @@ ${"" if func.get('driver_extension') else "VISIBLE "}${func.get('type')} __zecal
     switch(version) {
           %for var in value['vars']:
     case ${var['name']}: {
-            %for function in get_ddi_table_functions(func, functions, var['name']):
+            %for function in get_ddi_table_functions(func, functions, var):
       driver.original.${function} = pDdiTable->${function};
       pDdiTable->${function} = ${function};
             %endfor
@@ -90,7 +153,7 @@ void* GetExtensionFunction(const char* function_name) {
   %if not is_latest_version(functions, func):
 <% continue %>
   %endif
-  %if func.get('extension') == True:
+  %if func.get('extension') == True and func.get('component') not in npu_components:
     { "${func.get('name')}", reinterpret_cast<void*>(${func.get('name')}) },
   %endif
 %endfor

@@ -47,6 +47,7 @@
 #define GITS_TOKEN_COMPRESSION        GITS_MAKE_VERSION3(2, 0, 10)
 #define GITS_API_INFO                 GITS_MAKE_VERSION3(2, 0, 11)
 #define GITS_DX12_ENCODING_FIX        GITS_MAKE_VERSION3(2, 0, 12)
+#define GITS_L0_DRIVER_MAPPING        GITS_MAKE_VERSION3(2, 0, 13)
 
 struct lua_State;
 

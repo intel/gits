@@ -160,6 +160,22 @@ template <>
 const typename CPhysicalMemState::states_type& CStateDynamic::Map<CPhysicalMemState>() const {
   return physicalMemStates_;
 }
+template <>
+const typename CSysDriverState::states_type& CStateDynamic::Map<CSysDriverState>() const {
+  return sysDriverStates_;
+}
+template <>
+typename CSysDriverState::states_type& CStateDynamic::Map<CSysDriverState>() {
+  return sysDriverStates_;
+}
+template <>
+const typename CSysDeviceState::states_type& CStateDynamic::Map<CSysDeviceState>() const {
+  return sysDeviceStates_;
+}
+template <>
+typename CSysDeviceState::states_type& CStateDynamic::Map<CSysDeviceState>() {
+  return sysDeviceStates_;
+}
 
 void GlobalSubmissionTracker::Add(ze_command_list_handle_t hCommandList,
                                   std::shared_ptr<CKernelExecutionInfo> currentKernelInfo) {
@@ -357,6 +373,10 @@ CCommandQueueState::CCommandQueueState(ze_context_handle_t hContext,
 CDeviceState::CDeviceState(ze_driver_handle_t hDriver) : hDriver(hDriver) {}
 
 CDeviceState::CDeviceState(ze_device_handle_t hDevice) : hDevice(hDevice) {}
+
+CSysDeviceState::CSysDeviceState(zes_driver_handle_t hDriver) : hDriver(hDriver) {}
+
+CSysDeviceState::CSysDeviceState(zes_device_handle_t hDevice) : hDevice(hDevice) {}
 
 #ifdef WITH_OCLOC
 ProgramInfo::ProgramInfo(const char* buildOptions,

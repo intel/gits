@@ -65,6 +65,7 @@ const char* CArg<T, T_WRAP>::NAME = T_WRAP::NAME;
 
 template <class T, class T_WRAP>
 class CArgHandle : public CArgument {
+protected:
   T key_;
 
 public:
@@ -224,6 +225,11 @@ public:
     explicit ToAnyPtr(void* ptr) : ptr_(ptr) {}
     template <class T>
     operator T*() {
+      if constexpr (std::same_as<std::remove_const_t<T>, void>) {
+        memset(ptr_, 0, sizeof(void*));
+      } else {
+        memset(ptr_, 0, sizeof(T));
+      }
       return (T*)ptr_;
     }
   };
@@ -657,5 +663,86 @@ public:
     return ToStringHelper(_ptr);
   }
 };
+
+class CGraphArgValue : public CArgument {
+protected:
+  const void* _ptr = nullptr;
+  void* _cached = nullptr;
+
+public:
+  CGraphArgValue() = default;
+  CGraphArgValue(const void* ptr);
+
+  virtual const char* Name() const {
+    return "void*";
+  }
+
+  const void* Value() const {
+    return _ptr;
+  }
+
+  const void* operator*();
+  virtual void Write(CBinOStream& stream) const;
+  virtual void Read(CBinIStream& stream);
+};
+
+class Cze_driver_handle_t : public CArgHandle<ze_driver_handle_t, Cze_driver_handle_t> {
+public:
+  static const char* NAME;
+  ze_driver_handle_t driver = nullptr;
+  ze_init_driver_type_flags_t driverType;
+
+  Cze_driver_handle_t() = default;
+  Cze_driver_handle_t(L0Type value) : CArgHandle(value), driver(value) {}
+  Cze_driver_handle_t(L0Type* value) : CArgHandle(*value), driver(*value) {}
+  static void AddMutualMapping(ze_driver_handle_t key, ze_driver_handle_t value);
+  static void RemoveMutualMapping(ze_driver_handle_t key);
+  virtual std::string ToString() const {
+    return ToStringHelper(Value());
+  }
+
+  void Write(CBinOStream& stream) const override {
+    const auto& state = SD().Get<CDriverState>(key_, EXCEPTION_MESSAGE);
+    write_to_stream(stream, key_);
+    write_to_stream(stream, state.driverType);
+  }
+
+  void Read(CBinIStream& stream) override {
+    read_from_stream(stream, key_);
+    if (CGits::Instance().FilePlayer().Version().version() >= GITS_L0_DRIVER_MAPPING) {
+      read_from_stream(stream, driverType);
+    }
+  }
+};
+
+class Czes_driver_handle_t : public CArgHandle<zes_driver_handle_t, Czes_driver_handle_t> {
+public:
+  zes_driver_handle_t driver = nullptr;
+  ze_init_driver_type_flags_t driverType;
+
+  static const char* NAME;
+  Czes_driver_handle_t() = default;
+  Czes_driver_handle_t(L0Type value) : CArgHandle(value), driver(value) {}
+  Czes_driver_handle_t(L0Type* value) : CArgHandle(value), driver(*value) {}
+  static void AddMutualMapping(zes_driver_handle_t key, zes_driver_handle_t value);
+  static void RemoveMutualMapping(zes_driver_handle_t key);
+  virtual std::string ToString() const {
+    return ToStringHelper(Value());
+  }
+
+  void Write(CBinOStream& stream) const override {
+    const auto& state = SD().Get<CSysDriverState>(key_, EXCEPTION_MESSAGE);
+    write_to_stream(stream, key_);
+    write_to_stream(stream, state.driverType);
+  }
+
+  void Read(CBinIStream& stream) override {
+    read_from_stream(stream, key_);
+    if (CGits::Instance().FilePlayer().Version().version() >= GITS_L0_DRIVER_MAPPING) {
+      read_from_stream(stream, driverType);
+    }
+  }
+};
+
 } // namespace l0
 } // namespace gits

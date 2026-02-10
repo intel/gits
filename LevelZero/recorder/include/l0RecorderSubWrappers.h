@@ -1212,7 +1212,7 @@ inline void zeDeviceGet_RECWRAP(CRecorder& recorder,
       recorder.Schedule(new CzeDeviceGet(return_value, hDriver, pCount, phDevices));
     }
   }
-  zeDeviceGet_SD(return_value, hDriver, pCount, phDevices);
+  zeDeviceGet_SD(SD(), return_value, hDriver, pCount, phDevices);
 }
 
 inline void zesDeviceEnumTemperatureSensors_RECWRAP(CRecorder& recorder,
@@ -1553,6 +1553,10 @@ inline void zeContextDestroy_RECWRAP_PRE(CRecorder& recorder,
     if (hEvent != nullptr) {
       drv.inject.zeEventDestroy(hEvent);
     }
+    auto& list = sd.Get<CContextState>(hContext, EXCEPTION_MESSAGE).gitsImmediateList;
+    if (list != nullptr) {
+      drv.inject.zeCommandListDestroy(list);
+    }
   }
 }
 
@@ -1592,6 +1596,32 @@ inline void zeInitDrivers_RECWRAP(CRecorder& recorder,
       LOG_WARNING << "Memory Sniffer installation failed";
     }
   }
+  zeInitDrivers_SD(return_value, pCount, phDrivers, desc);
+}
+
+inline void zesDriverGet_RECWRAP(CRecorder& recorder,
+                                 ze_result_t return_value,
+                                 uint32_t* pCount,
+                                 zes_driver_handle_t* phDrivers) {
+  if (recorder.Running()) {
+    if (phDrivers != nullptr) {
+      recorder.Schedule(new CzesDriverGet(return_value, pCount, phDrivers));
+    }
+  }
+  zesDriverGet_SD(return_value, pCount, phDrivers);
+}
+
+inline void zesDeviceGet_RECWRAP(CRecorder& recorder,
+                                 ze_result_t return_value,
+                                 zes_driver_handle_t hDriver,
+                                 uint32_t* pCount,
+                                 zes_device_handle_t* phDevices) {
+  if (recorder.Running()) {
+    if (phDevices != nullptr) {
+      recorder.Schedule(new CzesDeviceGet(return_value, hDriver, pCount, phDevices));
+    }
+  }
+  zesDeviceGet_SD(return_value, hDriver, pCount, phDevices);
 }
 
 } // namespace l0

@@ -15,7 +15,7 @@ namespace l0 {
   %if not arg.get('enabled', True):
 <% continue %>
   %endif
-const char* C${name}::NAME = "${arg.get('name')}";
+const char* C${name}::NAME = "${arg.get('print_name', arg.get('name'))}";
   %if not arg.get('custom', False):
     %if not arg.get('obj', False):
 C${name}::C${name}() {}
@@ -44,7 +44,7 @@ C${name}::L0Type* C${name}::Ptr() {
         %if '[' not in field['name']:
   ${get_field_name(field, prefix='_struct.')} = ${get_field_name(field, prefix='*_')};
         %else:
-  std::copy_n(${get_field_name(field, prefix='*_')}, ${get_field_array_size(field)}, ${get_field_name(field, '_struct.')});
+  std::copy_n(${get_field_name(field, prefix='*_')}, ${get_field_name(field, prefix='_')}.ArraySize(), reinterpret_cast<${field['type']}*>(${get_field_name(field, '_struct.')}));
         %endif
       %endfor
   return &_struct;
@@ -76,12 +76,12 @@ void C${arg.get('name')}::RemoveMutualMapping(${arg.get('name')} key) {
 %endfor
 
 %for name, enum in enums.items():
-const char* C${name}::NAME = "${enum.get('name')}";
+const char* C${name}::NAME = "${enum.get('print_name', enum.get('name'))}";
 %endfor
 %for name, enum in enums.items():
-  %if "_structure_type_t" in name:
+  %if "_structure_type_" in name:
 template<>
-gits::CArgument *AllocateExtensionStructure(Cuint32_t *version, const ${name} &stype, ${get_namespace(name)}_base_properties_t *extendedProperties) {
+gits::CArgument *AllocateExtensionStructure(Cuint32_t *version, const ${name} &stype, ${enum.get('base', get_namespace(name) + '_base_properties_t')} *extendedProperties) {
   switch (stype) {
       %for structure in enum['vars']:
   case ${structure['name']}: {

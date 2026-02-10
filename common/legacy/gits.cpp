@@ -43,7 +43,7 @@ namespace gits {
 // (denoted by first three components) and build number of 999
 const int version_num_1 = 2;
 const int version_num_2 = 0;
-const int version_num_3 = 12;
+const int version_num_3 = 13;
 const int version_num_4 = VERSION_4;
 
 static_assert(VERSION_4 != 0,

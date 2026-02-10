@@ -174,5 +174,59 @@ public:
   virtual std::vector<std::string> GetProgramSourcesNames();
   void* GetPtrType() override;
 };
+
+class Cze_gits_npu_graph_desc_t : public CArgument {
+private:
+  typedef ze_gits_npu_graph_desc_t L0Type;
+  L0Type _struct = {};
+  Cze_gits_npu_structure_type_graph_ext_t _stype;
+  CExtensionStructCore _pNext;
+  Cze_gits_npu_graph_format_t _format;
+  Csize_t _inputSize;
+  Cuint8_t::CSArray _pInput;
+  Cchar::CSArray _pBuildFlags;
+  std::string _filename;
+
+public:
+  typedef CL0StructArray<L0Type, Cze_gits_npu_graph_desc_t> CSArray;
+  static const char* NAME;
+  Cze_gits_npu_graph_desc_t() = default;
+  Cze_gits_npu_graph_desc_t(const L0Type& value);
+  Cze_gits_npu_graph_desc_t(const L0Type* value);
+  virtual const char* Name() const;
+  virtual void Write(CBinOStream& stream) const;
+  virtual void Read(CBinIStream& stream);
+  L0Type operator*();
+  L0Type* Ptr();
+  virtual std::set<uint64_t> GetMappedPointers();
+};
+
+class Cze_gits_npu_graph_desc_2_t : public CArgument {
+private:
+  typedef ze_gits_npu_graph_desc_2_t L0Type;
+  L0Type _struct = {};
+  Cze_gits_npu_structure_type_graph_ext_t _stype;
+  CExtensionStructCore _pNext;
+  Cze_gits_npu_graph_format_t _format;
+  Csize_t _inputSize;
+  Cuint8_t::CSArray _pInput;
+  Cchar::CSArray _pBuildFlags;
+  Cuint32_t _flags;
+  std::string _filename;
+
+public:
+  typedef CL0StructArray<L0Type, Cze_gits_npu_graph_desc_2_t> CSArray;
+  static const char* NAME;
+  Cze_gits_npu_graph_desc_2_t() = default;
+  Cze_gits_npu_graph_desc_2_t(const L0Type& value);
+  Cze_gits_npu_graph_desc_2_t(const L0Type* value);
+  virtual const char* Name() const;
+  virtual void Write(CBinOStream& stream) const;
+  virtual void Read(CBinIStream& stream);
+  L0Type operator*();
+  L0Type* Ptr();
+  virtual std::set<uint64_t> GetMappedPointers();
+};
+
 } // namespace l0
 } // namespace gits

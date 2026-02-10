@@ -19,6 +19,11 @@ namespace gits {
         static constexpr bool value = std::is_pointer_v<T> || std::is_pointer_v<std::remove_pointer_t<T>>;
     };
     std::string ToStringHelperExtensionStructs(const void* pNext);
+%for name, enum in enums.items():
+  %if "_structure_type_" in name:
+    inline std::string ToStringHelperExtensionStructs(const ${name}* pNext);
+    %endif
+%endfor
     template <typename T,
               std::enable_if_t<std::is_arithmetic<T>::value, bool> = true>
     inline std::string ToStringHelperArithmetic(const T& handle) {
@@ -33,10 +38,10 @@ namespace gits {
       return gits::hex(handle).ToString();
     }
 
-   template <typename T, typename = std::enable_if_t<!IsPtrOrPtrPtr<T>::value>>
-   inline std::string ToStringHelper(const T& handle) { return ToStringHelperArithmetic(handle); }
-   template <typename T, typename = std::enable_if_t<IsPtrOrPtrPtr<T>::value>>
-   inline std::string ToStringHelper(T handle) { return ToStringHelperArithmetic(handle); }
+    template <typename T, typename = std::enable_if_t<!IsPtrOrPtrPtr<T>::value>>
+    inline std::string ToStringHelper(const T& handle) { return ToStringHelperArithmetic(handle); }
+    template <typename T, typename = std::enable_if_t<IsPtrOrPtrPtr<T>::value>>
+    inline std::string ToStringHelper(T handle) { return ToStringHelperArithmetic(handle); }
     template<>
     inline std::string ToStringHelper(void** val) {
       std::stringstream ss;
@@ -83,7 +88,7 @@ namespace gits {
   %else:
       switch (val) {
     %for var in enum['vars']:
-        case ${var['name']}: return "${var['name']}";
+        case ${var['name']}: return "${var.get('print_name', var['name'])}";
     %endfor
         default: return std::to_string(static_cast<unsigned>(val));
       }
@@ -91,15 +96,20 @@ namespace gits {
     }
 %endfor
     template<typename T, typename = std::enable_if_t<(sizeof(T) == 1U || (std::is_array_v<T> && sizeof(std::remove_all_extents_t<T>) == 1))>>
-    inline std::string ToStringHelperArray(const T& handle, int size) {
+    inline std::string ToStringHelperArray(const T& handle, const std::vector<int>& sizes) {
       std::stringstream ss;
       ss << ToStringHelper(reinterpret_cast<const void*>(handle));
+      using U = std::remove_all_extents_t<T>;
+      const U* flatarray = reinterpret_cast<const U*>(handle);
       constexpr auto maxSize = 8;
-      size = maxSize < size ? maxSize : size;
-      ss << " : { ";
-      for (auto i = 0; i < size;) {
-        ss << ToStringHelper(handle[i]);
-        ss << ((++i < size) ? ", " : i >= maxSize ? ", ... }" : " }");
+      int i = 0;
+      for (int size : sizes) {
+        size = maxSize < size ? maxSize : size;
+        ss << " : { ";
+        for (auto j = 0; j < size; i++, j++) {
+          ss << ToStringHelper(flatarray[i]);
+          ss << ((j + 1 < size) ? ", " : " }");
+        }
       }
       return ss.str();
     }
@@ -148,12 +158,17 @@ namespace gits {
         if (gits::log::ShouldLog(LogLevel::TRACEV))
           ss << "${"[" + var['tag'] + "] "}";
         %endif
+        <% val = "val" + ("->" if ptr else ".")%>\
         %if '[' in var['name']:
-        ss << ToStringHelperArray(${"val" + ("->" if ptr else ".") + get_field_name(var) + ", " + get_field_array_size(var)})${'' if loop.last else ' << ", "'};
+        <%
+          array_size = get_field_array_size(var)
+          array_size = array_size[0] if len(array_size) == 1 else "{" + ", ".join(array_size) + "}"
+        %>\
+        ss << ToStringHelperArray(${"val" + ("->" if ptr else ".") + get_field_name(var) + ", " + array_size})${'' if loop.last else ' << ", "'};
         %elif 'pNext' in var['name']:
-        ss << ToStringHelperExtensionStructs(${"val" + ("->" if ptr else ".") + var['name']})${'' if loop.last else ' << ", "'};
+        ss << ToStringHelperExtensionStructs(reinterpret_cast<const decltype(${val}stype)*>(${val + var['name']}))${'' if loop.last else ' << ", "'};
         %else:
-        ss << ToStringHelper(${"val" + ("->" if ptr else ".") + var['name']})${'' if loop.last else ' << ", "'};
+        ss << ToStringHelper(${val + var['name']})${'' if loop.last else ' << ", "'};
         %endif
     %endfor
         ss << " }";
@@ -198,26 +213,24 @@ namespace gits {
     }
   %endif
 %endfor
-    inline std::string ToStringHelperExtensionStructs(const void* pNext) {
+%for name, enum in enums.items():
+  %if "_structure_type_" in name:
+    inline std::string ToStringHelperExtensionStructs(const ${name}* pNext) {
       if (pNext == nullptr) {
         return ToStringHelper(pNext);
       }
-      const auto *extendedProperties =
-          reinterpret_cast<const ze_base_properties_t *>(pNext);
-%for name, enum in enums.items():
-  %if name == "ze_structure_type_t":
-      switch (extendedProperties->stype) {
-      %for structure in enum['vars']:
-      case ${structure['name']}:
-        return ToStringHelper(reinterpret_cast<const ${structure['struct']}*>(pNext));
+      ${name} stype = *pNext;
+      switch (stype) {
+      %for var in enum['vars']:
+      case ${var['name']}:
+        return ToStringHelper(reinterpret_cast<const ${var['struct']}*>(pNext));
       %endfor
       default:
         return ToStringHelper(pNext);
       }
-    %endif
- %endfor
     }
-
+    %endif
+%endfor
     void LogAppendKernel(const uint32_t& kernelNumber, const char* pKernelName);
     void LogKernelExecution(const uint32_t& kernelNumber,
                             const char* kernelName,

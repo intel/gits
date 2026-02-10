@@ -299,6 +299,10 @@ public:
     return _array;
   }
 
+  size_t ArraySize() const {
+    return _array.size();
+  }
+
   virtual bool Array() const {
     return true;
   }
@@ -359,6 +363,8 @@ public:
   CArgumentSizedArray(size_t num = 0) : _sizedArray(num) {}
   template <size_t N>
   CArgumentSizedArray(const T (&array)[N]) : _sizedArray(N, array) {}
+  template <size_t N, size_t M>
+  CArgumentSizedArray(const T (&array)[N][M]) : _sizedArray(N * M, &array[0][0]) {}
   CArgumentSizedArray(size_t num, const T* array) : _sizedArray(num, array) {}
   CArgumentSizedArray(const std::vector<T>& array) : _sizedArray(array) {}
   CArgumentSizedArray(const T* array, T terminator, int term_pos)
@@ -374,6 +380,10 @@ public:
   }
   const std::vector<T>& Vector() const {
     return _sizedArray.Vector();
+  }
+
+  size_t ArraySize() const {
+    return _sizedArray.ArraySize();
   }
 
   virtual bool Array() const {
@@ -424,6 +434,9 @@ public:
   CArgumentSizedArray(size_t num = 0) : _sizedArray(num) {}
   template <size_t N>
   CArgumentSizedArray(const char (&array)[N]) : _sizedArray(N, array) {}
+  template <size_t N, size_t M>
+  CArgumentSizedArray(const char (&array)[N][M])
+      : _sizedArray(N * M, reinterpret_cast<const char*>(array)) {}
   CArgumentSizedArray(size_t num, const char* array) : _sizedArray(num, array) {}
   CArgumentSizedArray(const std::vector<char>& array) : _sizedArray(array) {}
   CArgumentSizedArray(const char* array, char terminator, int term_pos)
@@ -448,6 +461,10 @@ public:
   }
   const std::vector<char>& Vector() const {
     return _sizedArray.Vector();
+  }
+
+  size_t ArraySize() const {
+    return _sizedArray.ArraySize();
   }
 
   virtual bool Array() const {
@@ -525,6 +542,7 @@ public:
   std::vector<T> _array;
   std::vector<T> _mappedArray;
   std::vector<T> _array_T_original;
+  std::vector<T_WRAP> _arrayWrap;
 
   struct ProxyArray {
     std::vector<T>* _mappedArray;
@@ -613,6 +631,14 @@ public:
   }
   const std::vector<T>& Vector() const {
     return _array;
+  }
+
+  size_t ArraySize() const {
+    return _array.size();
+  }
+
+  const T_WRAP& operator[](size_t i) {
+    return _arrayWrap[i];
   }
 
   virtual const char* Name() const {
@@ -808,6 +834,10 @@ public:
   }
   const std::vector<std::shared_ptr<TKeyArg>>& Vector() const {
     return _cargs;
+  }
+
+  size_t ArraySize() const {
+    return _cargs.size();
   }
 
   TKey* Value() {
@@ -1674,10 +1704,12 @@ void gits::CArgumentMappedSizedArray<T, T_WRAP, T_ACTION>::Read(CBinIStream& str
   const auto ret = stream.read((char*)&size, sizeof(size));
   if (size > 0 && size <= UINT32_MAX && ret) {
     _array.resize(size);
+    _arrayWrap.resize(size);
     for (unsigned idx = 0; idx < size; idx++) {
       T_WRAP wrapper_;
       stream >> wrapper_;
       _array[idx] = wrapper_.Original();
+      _arrayWrap[idx] = wrapper_;
     }
   }
 }

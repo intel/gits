@@ -151,9 +151,9 @@ typedef void (__zecall ${func.get('name')})(
   %if func['component'] not in COMPONENTS_TO_OMIT and sorted(current_callbacks[func['component']]) == sorted(all_callbacks[func['component']]):
     %if func['component'] in components[get_namespace(func['component'])]:
 <% current_callbacks.pop(func['component']) %>
-struct ${func['component']}_dditable_t {
+struct ${func.get('dditable', func['component'] + '_dditable_t')} {
         %for function in sort_dditable(all_callbacks[func['component']], callbacks):
-    pfn_${function} ${function};
+    pfn_${function.get('name')} ${function.get('name_in_dditable', function.get('name'))};
         %endfor
 };
     %endif
@@ -175,9 +175,9 @@ typedef ${func.get('type')} (__zecall *pfn_${func.get('name')})(
   %if func['component'] not in COMPONENTS_TO_OMIT and sorted(current_functions[func['component']]) == sorted(all_functions[func['component']]):
     %if func['component'] in components[get_namespace(func['component'])]:
 <% current_functions.pop(func['component']) %>
-struct ${func['component']}_dditable_t {
+struct ${func.get('dditable', func['component'] + '_dditable_t')} {
         %for function in sort_dditable(all_functions[func['component']], functions):
-    pfn_${function} ${function};
+    pfn_${function.get('name')} ${function.get('name_in_dditable', function.get('name'))};
         %endfor
 };
     %endif

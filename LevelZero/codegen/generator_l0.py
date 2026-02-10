@@ -1285,7 +1285,7 @@ var82=VarDef(name='ZE_STRUCTURE_TYPE_MUTABLE_GLOBAL_OFFSET_EXP_DESC',value='0x00
 var83=VarDef(name='ZE_STRUCTURE_TYPE_PITCHED_ALLOC_DEVICE_EXP_PROPERTIES',value='0x0002001D',struct='ze_device_pitched_alloc_exp_properties_t'),
 var84=VarDef(name='ZE_STRUCTURE_TYPE_BINDLESS_IMAGE_EXP_DESC',value='0x0002001E',struct='ze_image_bindless_exp_desc_t'),
 var85=VarDef(name='ZE_STRUCTURE_TYPE_PITCHED_IMAGE_EXP_DESC',value='0x0002001F',struct='ze_image_pitched_exp_desc_t'),
-# var86=VarDef(name='ZE_STRUCTURE_TYPE_MUTABLE_GRAPH_ARGUMENT_EXP_DESC',value='0x00020020',struct='ze_mutable_graph_argument_exp_desc_t'),
+var86=VarDef(name='ZE_STRUCTURE_TYPE_MUTABLE_GRAPH_ARGUMENT_EXP_DESC',value='0x00020020',struct='ze_mutable_graph_argument_exp_desc_t'),
 var87=VarDef(name='ZE_STRUCTURE_TYPE_INIT_DRIVER_TYPE_DESC',value='0x00020021',struct='ze_init_driver_type_desc_t'),
 var88=VarDef(name='ZE_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_EXT_DESC',value='0x00020022',struct='ze_external_semaphore_ext_desc_t'),
 # var89=VarDef(name='ZE_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_WIN32_EXT_DESC',value='0x00020023',struct='ze_external_semaphore_win32_ext_desc_t'),
@@ -2012,7 +2012,7 @@ var1=VarDef(name='ZE_GITS_RECORDING_DEFAULT',value='ZE_BIT(0)'),
 var2=VarDef(name='ZE_GITS_SWITCH_NOMENCLATURE_COUNTING',value='ZE_BIT(1)'),
 )
 
-Argument(name='ze_driver_handle_t',obj=True)
+Argument(name='ze_driver_handle_t',obj=True,custom=True)
 
 Argument(name='ze_device_handle_t',obj=True)
 
@@ -3301,13 +3301,13 @@ var5=VarDef(name='offsetY',type='uint32_t',tag='in'),
 var6=VarDef(name='offsetZ',type='uint32_t',tag='in'),
 )
 
-# Argument(name='ze_mutable_graph_argument_exp_desc_t',
-# var1=VarDef(name='stype',type='ze_structure_type_t',tag='in'),
-# var2=VarDef(name='pNext',type='const void*',tag='in',wrapType='CExtensionStructCore'),
-# var3=VarDef(name='commandId',type='uint64_t',tag='in'),
-# var4=VarDef(name='argIndex',type='uint32_t',tag='in'),
-# var5=VarDef(name='pArgValue',type='const void*',tag='in'),
-# )
+Argument(name='ze_mutable_graph_argument_exp_desc_t',
+var1=VarDef(name='stype',type='ze_structure_type_t',tag='in'),
+var2=VarDef(name='pNext',type='const void*',tag='in',wrapType='CExtensionStructCore'),
+var3=VarDef(name='commandId',type='uint64_t',tag='in'),
+var4=VarDef(name='argIndex',type='uint32_t',tag='in'),
+var5=VarDef(name='pArgValue',type='const void*',tag='in',wrapType='CGraphArgValue'),
+)
 
 Argument(name='zet_driver_handle_t',obj=True,alias='ze_driver_handle_t')
 
@@ -3591,7 +3591,7 @@ Argument(name='zet_metric_programmable_param_value_exp_t',
 var1=VarDef(name='value',type='zet_value_t',tag='in'),
 )
 
-Argument(name='zes_driver_handle_t',obj=True,alias='ze_driver_handle_t')
+Argument(name='zes_driver_handle_t',obj=True,alias='ze_driver_handle_t',custom=True)
 
 Argument(name='zes_device_handle_t',obj=True,alias='ze_device_handle_t')
 
@@ -4817,7 +4817,7 @@ arg3=ArgDef(name='numWaitEvents',type='uint32_t',tag='in',optional=True),
 arg4=ArgDef(name='phWaitEvents',type='ze_event_handle_t*',tag='in',range='0,numWaitEvents',optional=True),
 )
 
-Function(name='zeCommandListUpdateMutableCommandsExp',component='ze_command_list_exp',extension=True,enabled=False,api_version='1.9',ddi_pos=3,
+Function(name='zeCommandListUpdateMutableCommandsExp',component='ze_command_list_exp',extension=True,enabled=True,api_version='1.9',ddi_pos=3,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hCommandList',type='ze_command_list_handle_t',tag='in'),
 arg2=ArgDef(name='desc',type='const ze_mutable_commands_exp_desc_t*',tag='in'),
@@ -5123,7 +5123,7 @@ arg1=ArgDef(name='hDriver',type='ze_driver_handle_t',tag='in'),
 arg2=ArgDef(name='version',type='ze_api_version_t*',tag='out'),
 )
 
-Function(name='zeDriverGetExtensionFunctionAddress',component='ze_driver',enabled=True,api_version='1.1',ddi_pos=5,recExecWrap=True,skipRun=True,
+Function(name='zeDriverGetExtensionFunctionAddress',component='ze_driver',enabled=True,api_version='1.1',ddi_pos=5,recExecWrap=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hDriver',type='ze_driver_handle_t',tag='in'),
 arg2=ArgDef(name='name',type='const char*',tag='in'),
@@ -6184,7 +6184,7 @@ arg1=ArgDef(name='hDevice',type='zes_device_handle_t',tag='in'),
 arg2=ArgDef(name='events',type='zes_event_type_flags_t',tag='in'),
 )
 
-Function(name='zesDeviceGet',component='zes_device',enabled=True,api_version='1.5',ddi_pos=29,
+Function(name='zesDeviceGet',component='zes_device',enabled=True,api_version='1.5',ddi_pos=29,recWrap=True,runWrap=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hDriver',type='zes_driver_handle_t',tag='in'),
 arg2=ArgDef(name='pCount',type='uint32_t*',tag='inout'),
@@ -6348,7 +6348,7 @@ arg5=ArgDef(name='pNumDeviceEvents',type='uint32_t*',tag='inout'),
 arg6=ArgDef(name='pEvents',type='zes_event_type_flags_t*',tag='inout'),
 )
 
-Function(name='zesDriverGet',component='zes_driver',enabled=True,api_version='1.5',ddi_pos=2,
+Function(name='zesDriverGet',component='zes_driver',enabled=True,api_version='1.5',ddi_pos=2,recWrap=True,runWrap=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='pCount',type='uint32_t*',tag='inout'),
 arg2=ArgDef(name='phDrivers',type='zes_driver_handle_t*',tag='inout',range='0,*pCount',optional=True),
@@ -9503,4 +9503,670 @@ arg3=ArgDef(name='pfnUpdateMutableCommandKernelsExpCb',type='ze_pfnCommandListUp
 Function(name='zelTracerResetAllCallbacks',component='zel_tracer_register_cb',enabled=False,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hTracer',type='zel_tracer_handle_t',tag='in'),
+)
+
+# NPU extensions
+
+Constant(name='ZE_GITS_NPU_PROFILING_DATA_EXT_NAME',print_name='ZE_PROFILING_DATA_EXT_NAME',value='"ZE_extension_profiling_data"',component='ze_graph_profiling_ext')
+Constant(name='ZE_GITS_NPU_MAX_GRAPH_PROFILING_LAYER_NAME',print_name='ZE_MAX_GRAPH_PROFILING_LAYER_NAME',value='256',component='ze_graph_profiling_ext')
+Constant(name='ZE_GITS_NPU_MAX_GRAPH_PROFILING_LAYER_TYPE',print_name='ZE_MAX_GRAPH_PROFILING_LAYER_TYPE',value='50',component='ze_graph_profiling_ext')
+Constant(name='ZE_GITS_NPU_COMMAND_QUEUE_NPU_EXT_NAME',print_name='ZE_COMMAND_QUEUE_NPU_EXT_NAME',value='"ZE_extension_command_queue_npu"',component='ze_command_queue_npu_ext')
+Constant(name='ZE_GITS_NPU_DRIVER_NPU_EXT_NAME',print_name='ZE_DRIVER_NPU_EXT_NAME',value='"ZE_extension_driver_npu"',component='ze_driver_npu_ext')
+Constant(name='ZE_GITS_NPU_CONTEXT_NPU_EXT_NAME',print_name='ZE_CONTEXT_NPU_EXT_NAME',value='"ZE_extension_context_npu"',component='ze_context_npu_ext')
+Constant(name='ZE_GITS_NPU_GRAPH_EXT_NAME',print_name='ZE_GRAPH_EXT_NAME',value='"ZE_extension_graph"',component='ze_graph_ext')
+Constant(name='ZE_GITS_NPU_MAX_GRAPH_ARGUMENT_NAME',print_name='ZE_MAX_GRAPH_ARGUMENT_NAME',value='256',component='ze_graph_ext')
+Constant(name='ZE_GITS_NPU_MAX_GRAPH_ARGUMENT_DIMENSIONS_SIZE',print_name='ZE_MAX_GRAPH_ARGUMENT_DIMENSIONS_SIZE',value='5',component='ze_graph_ext')
+Constant(name='ZE_GITS_NPU_MAX_GRAPH_TENSOR_REF_DIMS',print_name='ZE_MAX_GRAPH_TENSOR_REF_DIMS',value='8',component='ze_graph_ext')
+Constant(name='ZE_GITS_NPU_MAX_GRAPH_TENSOR_NAMES_SIZE',print_name='ZE_MAX_GRAPH_TENSOR_NAMES_SIZE',value='32',component='ze_graph_ext')
+
+Enum(name='ze_gits_npu_profiling_data_ext_version_t',
+var1=VarDef(name='ZE_GITS_NPU_PROFILING_DATA_EXT_VERSION_1_0',print_name='ZE_PROFILING_DATA_EXT_VERSION_1_0',value='ZE_MAKE_VERSION( 1, 0 )'),
+)
+Enum(name='ze_gits_npu_structure_type_profiling_data_ext_t',base='ze_gits_npu_profiling_data_ext_base_properties_t',
+var1=VarDef(name='ZE_GITS_NPU_STRUCTURE_TYPE_DEVICE_PROFILING_DATA_PROPERTIES',print_name='ZE_STRUCTURE_TYPE_DEVICE_PROFILING_DATA_PROPERTIES',value='0x1',struct='ze_gits_npu_device_profiling_data_properties_t'),
+)
+Enum(name='ze_gits_npu_graph_profiling_type_t',
+var1=VarDef(name='ZE_GITS_NPU_GRAPH_PROFILING_LAYER_LEVEL',print_name='ZE_GRAPH_PROFILING_LAYER_LEVEL',value='0x1'),
+var2=VarDef(name='ZE_GITS_NPU_GRAPH_PROFILING_TASK_LEVEL',print_name='ZE_GRAPH_PROFILING_TASK_LEVEL',value='0x2'),
+var3=VarDef(name='ZE_GITS_NPU_GRAPH_PROFILING_RAW',print_name='ZE_GRAPH_PROFILING_RAW',value='0x4'),
+)
+Enum(name='ze_gits_npu_layer_status_t',
+var1=VarDef(name='ZE_GITS_NPU_LAYER_STATUS_NOT_RUN',print_name='ZE_LAYER_STATUS_NOT_RUN',value='1'),
+var2=VarDef(name='ZE_GITS_NPU_LAYER_STATUS_OPTIMIZED_OUT',print_name='ZE_LAYER_STATUS_OPTIMIZED_OUT'),
+var3=VarDef(name='ZE_GITS_NPU_LAYER_STATUS_EXECUTED',print_name='ZE_LAYER_STATUS_EXECUTED'),
+)
+Enum(name='ze_gits_npu_task_execute_type_t',
+var1=VarDef(name='ZE_GITS_NPU_TASK_EXECUTE_NONE',print_name='ZE_TASK_EXECUTE_NONE',value='0'),
+var2=VarDef(name='ZE_GITS_NPU_TASK_EXECUTE_DPU',print_name='ZE_TASK_EXECUTE_DPU'),
+var3=VarDef(name='ZE_GITS_NPU_TASK_EXECUTE_SW',print_name='ZE_TASK_EXECUTE_SW'),
+var4=VarDef(name='ZE_GITS_NPU_TASK_EXECUTE_DMA',print_name='ZE_TASK_EXECUTE_DMA'),
+)
+Enum(name='ze_gits_npu_command_queue_npu_ext_version_t',
+var1=VarDef(name='ZE_GITS_NPU_COMMAND_QUEUE_NPU_EXT_VERSION_1_0',print_name='ZE_COMMAND_QUEUE_NPU_EXT_VERSION_1_0',value='ZE_MAKE_VERSION( 1, 0 )'),
+var2=VarDef(name='ZE_GITS_NPU_COMMAND_QUEUE_NPU_EXT_VERSION_1_1',print_name='ZE_COMMAND_QUEUE_NPU_EXT_VERSION_1_1',value='ZE_MAKE_VERSION( 1, 1 )'),
+)
+Enum(name='ze_gits_npu_structure_type_command_queue_npu_ext_t',base='ze_gits_npu_command_queue_npu_ext_base_properties_t',
+var1=VarDef(name='ZE_GITS_NPU_STRUCTURE_TYPE_COMMAND_QUEUE_DESC_NPU_EXT',print_name='ZE_STRUCTURE_TYPE_COMMAND_QUEUE_DESC_NPU_EXT',value='0x1',struct='ze_gits_npu_command_queue_desc_npu_ext_t'),
+var2=VarDef(name='ZE_GITS_NPU_STRUCTURE_TYPE_COMMAND_QUEUE_DESC_NPU_EXT_2',print_name='ZE_STRUCTURE_TYPE_COMMAND_QUEUE_DESC_NPU_EXT_2',value='0x2',struct='ze_gits_npu_command_queue_desc_npu_ext_2_t'),
+)
+Enum(name='ze_gits_npu_command_queue_workload_type_t',
+var1=VarDef(name='ZE_GITS_NPU_WORKLOAD_TYPE_DEFAULT',print_name='ZE_WORKLOAD_TYPE_DEFAULT',value='0x0'),
+var2=VarDef(name='ZE_GITS_NPU_WORKLOAD_TYPE_BACKGROUND',print_name='ZE_WORKLOAD_TYPE_BACKGROUND',value='0x1'),
+)
+Enum(name='ze_gits_npu_npu_command_queue_option_t',
+var1=VarDef(name='ZE_GITS_NPU_NPU_COMMAND_QUEUE_OPTION_TURBO',print_name='ZE_NPU_COMMAND_QUEUE_OPTION_TURBO',value='ZE_BIT(0)'),
+var2=VarDef(name='ZE_GITS_NPU_NPU_COMMAND_QUEUE_OPTION_DEVICE_SYNC',print_name='ZE_NPU_COMMAND_QUEUE_OPTION_DEVICE_SYNC',value='ZE_BIT(1)'),
+)
+Enum(name='ze_gits_npu_driver_npu_ext_version_t',
+var1=VarDef(name='ZE_GITS_NPU_DRIVER_NPU_EXT_VERSION_1_0',print_name='ZE_DRIVER_NPU_EXT_VERSION_1_0',value='ZE_MAKE_VERSION( 1, 0 )'),
+)
+Enum(name='ze_gits_npu_structure_type_driver_npu_ext_t',base='ze_gits_npu_driver_npu_ext_base_properties_t',
+var1=VarDef(name='ZE_GITS_NPU_STRUCTURE_TYPE_DRIVER_EXTENSION_NPU_EXT',print_name='ZE_STRUCTURE_TYPE_DRIVER_EXTENSION_NPU_EXT',value='0x1',struct='ze_gits_npu_driver_extension_npu_ext_t'),
+)
+Enum(name='ze_gits_npu_context_npu_ext_version_t',
+var1=VarDef(name='ZE_GITS_NPU_CONTEXT_NPU_EXT_VERSION_1_0',print_name='ZE_CONTEXT_NPU_EXT_VERSION_1_0',value='ZE_MAKE_VERSION( 1, 0 )'),
+)
+Enum(name='ze_gits_npu_structure_type_context_npu_ext_t',base='ze_gits_npu_context_npu_ext_base_properties_t',
+var1=VarDef(name='ZE_GITS_NPU_STRUCTURE_TYPE_CONTEXT_PROPERTIES_NPU_EXT',print_name='ZE_STRUCTURE_TYPE_CONTEXT_PROPERTIES_NPU_EXT',value='0x1',struct='ze_gits_npu_context_properties_npu_ext_t'),
+)
+Enum(name='ze_gits_npu_npu_context_option_t',
+var1=VarDef(name='ZE_GITS_NPU_NPU_CONTEXT_OPTION_IDLE_OPTIMIZATIONS',print_name='ZE_NPU_CONTEXT_OPTION_IDLE_OPTIMIZATIONS',value='ZE_BIT(0)'),
+)
+Enum(name='ze_gits_npu_graph_ext_version_t',
+var1=VarDef(name='ZE_GITS_NPU_GRAPH_EXT_VERSION_1_0',print_name='ZE_GRAPH_EXT_VERSION_1_0',value='ZE_MAKE_VERSION( 1, 0 )'),
+var2=VarDef(name='ZE_GITS_NPU_GRAPH_EXT_VERSION_1_1',print_name='ZE_GRAPH_EXT_VERSION_1_1',value='ZE_MAKE_VERSION( 1, 1 )'),
+var3=VarDef(name='ZE_GITS_NPU_GRAPH_EXT_VERSION_1_2',print_name='ZE_GRAPH_EXT_VERSION_1_2',value='ZE_MAKE_VERSION( 1, 2 )'),
+var4=VarDef(name='ZE_GITS_NPU_GRAPH_EXT_VERSION_1_3',print_name='ZE_GRAPH_EXT_VERSION_1_3',value='ZE_MAKE_VERSION( 1, 3 )'),
+var5=VarDef(name='ZE_GITS_NPU_GRAPH_EXT_VERSION_1_4',print_name='ZE_GRAPH_EXT_VERSION_1_4',value='ZE_MAKE_VERSION( 1, 4 )'),
+var6=VarDef(name='ZE_GITS_NPU_GRAPH_EXT_VERSION_1_5',print_name='ZE_GRAPH_EXT_VERSION_1_5',value='ZE_MAKE_VERSION( 1, 5 )'),
+var7=VarDef(name='ZE_GITS_NPU_GRAPH_EXT_VERSION_1_6',print_name='ZE_GRAPH_EXT_VERSION_1_6',value='ZE_MAKE_VERSION( 1, 6 )'),
+var8=VarDef(name='ZE_GITS_NPU_GRAPH_EXT_VERSION_1_7',print_name='ZE_GRAPH_EXT_VERSION_1_7',value='ZE_MAKE_VERSION( 1, 7 )'),
+var9=VarDef(name='ZE_GITS_NPU_GRAPH_EXT_VERSION_1_8',print_name='ZE_GRAPH_EXT_VERSION_1_8',value='ZE_MAKE_VERSION( 1, 8 )'),
+var10=VarDef(name='ZE_GITS_NPU_GRAPH_EXT_VERSION_1_9',print_name='ZE_GRAPH_EXT_VERSION_1_9',value='ZE_MAKE_VERSION( 1, 9 )'),
+var11=VarDef(name='ZE_GITS_NPU_GRAPH_EXT_VERSION_1_10',print_name='ZE_GRAPH_EXT_VERSION_1_10',value='ZE_MAKE_VERSION( 1, 10 )'),
+var12=VarDef(name='ZE_GITS_NPU_GRAPH_EXT_VERSION_1_11',print_name='ZE_GRAPH_EXT_VERSION_1_11',value='ZE_MAKE_VERSION( 1, 11 )'),
+var13=VarDef(name='ZE_GITS_NPU_GRAPH_EXT_VERSION_1_12',print_name='ZE_GRAPH_EXT_VERSION_1_12',value='ZE_MAKE_VERSION( 1, 12 )'),
+var14=VarDef(name='ZE_GITS_NPU_GRAPH_EXT_VERSION_1_13',print_name='ZE_GRAPH_EXT_VERSION_1_13',value='ZE_MAKE_VERSION( 1, 13 )'),
+var15=VarDef(name='ZE_GITS_NPU_GRAPH_EXT_VERSION_1_14',print_name='ZE_GRAPH_EXT_VERSION_1_14',value='ZE_MAKE_VERSION( 1, 14)'),
+var16=VarDef(name='ZE_GITS_NPU_GRAPH_EXT_VERSION_1_15',print_name='ZE_GRAPH_EXT_VERSION_1_15',value='ZE_MAKE_VERSION( 1, 15)'),
+var17=VarDef(name='ZE_GITS_NPU_GRAPH_EXT_VERSION_1_16',print_name='ZE_GRAPH_EXT_VERSION_1_16',value='ZE_MAKE_VERSION( 1, 16)'),
+)
+Enum(name='ze_gits_npu_graph_format_t',
+var1=VarDef(name='ZE_GITS_NPU_GRAPH_FORMAT_NATIVE',print_name='ZE_GRAPH_FORMAT_NATIVE',value='0x1'),
+var2=VarDef(name='ZE_GITS_NPU_GRAPH_FORMAT_NGRAPH_LITE',print_name='ZE_GRAPH_FORMAT_NGRAPH_LITE',value='0x2'),
+)
+Enum(name='ze_gits_npu_structure_type_graph_ext_t',base='ze_gits_npu_graph_ext_base_properties_t',
+var1=VarDef(name='ZE_GITS_NPU_STRUCTURE_TYPE_DEVICE_GRAPH_PROPERTIES',print_name='ZE_STRUCTURE_TYPE_DEVICE_GRAPH_PROPERTIES',value='0x1',struct='ze_gits_npu_device_graph_properties_t'),
+var2=VarDef(name='ZE_GITS_NPU_STRUCTURE_TYPE_DEVICE_GRAPH_PROPERTIES_2',print_name='ZE_STRUCTURE_TYPE_DEVICE_GRAPH_PROPERTIES_2',value='0xF',struct='ze_gits_npu_device_graph_properties_2_t'),
+var3=VarDef(name='ZE_GITS_NPU_STRUCTURE_TYPE_GRAPH_DESC',print_name='ZE_STRUCTURE_TYPE_GRAPH_DESC',value='0x2',struct='ze_gits_npu_graph_desc_t'),
+var4=VarDef(name='ZE_GITS_NPU_STRUCTURE_TYPE_GRAPH_DESC_2',print_name='ZE_STRUCTURE_TYPE_GRAPH_DESC_2',value='0xE',struct='ze_gits_npu_graph_desc_2_t'),
+var5=VarDef(name='ZE_GITS_NPU_STRUCTURE_TYPE_GRAPH_PROPERTIES',print_name='ZE_STRUCTURE_TYPE_GRAPH_PROPERTIES',value='0x3',struct='ze_gits_npu_graph_properties_t'),
+var6=VarDef(name='ZE_GITS_NPU_STRUCTURE_TYPE_GRAPH_PROPERTIES_2',print_name='ZE_STRUCTURE_TYPE_GRAPH_PROPERTIES_2',value='0x10',struct='ze_gits_npu_graph_properties_2_t'),
+var7=VarDef(name='ZE_GITS_NPU_STRUCTURE_TYPE_GRAPH_PROPERTIES_3',print_name='ZE_STRUCTURE_TYPE_GRAPH_PROPERTIES_3',value='0x11',struct='ze_gits_npu_graph_properties_3_t'),
+var8=VarDef(name='ZE_GITS_NPU_STRUCTURE_TYPE_GRAPH_ARGUMENT_PROPERTIES',print_name='ZE_STRUCTURE_TYPE_GRAPH_ARGUMENT_PROPERTIES',value='0x4',struct='ze_gits_npu_graph_argument_properties_t'),
+var9=VarDef(name='ZE_GITS_NPU_STRUCTURE_TYPE_GRAPH_ARGUMENT_PROPERTIES_2',print_name='ZE_STRUCTURE_TYPE_GRAPH_ARGUMENT_PROPERTIES_2',value='0xC',struct='ze_gits_npu_graph_argument_properties_2_t'),
+var10=VarDef(name='ZE_GITS_NPU_STRUCTURE_TYPE_GRAPH_ARGUMENT_PROPERTIES_3',print_name='ZE_STRUCTURE_TYPE_GRAPH_ARGUMENT_PROPERTIES_3',value='0xD',struct='ze_gits_npu_graph_argument_properties_3_t'),
+var11=VarDef(name='ZE_GITS_NPU_STRUCTURE_TYPE_GRAPH_ARGUMENT_METADATA',print_name='ZE_STRUCTURE_TYPE_GRAPH_ARGUMENT_METADATA',value='0x6',struct='ze_gits_npu_graph_argument_metadata_t'),
+var12=VarDef(name='ZE_GITS_NPU_STRUCTURE_TYPE_GRAPH_INPUT_HASH',print_name='ZE_STRUCTURE_TYPE_GRAPH_INPUT_HASH',value='0x8',struct='ze_gits_npu_graph_input_hash_t'),
+var13=VarDef(name='ZE_GITS_NPU_STRUCTURE_TYPE_GRAPH_ARGUMENT_PROPERTY_STRIDES',print_name='ZE_STRUCTURE_TYPE_GRAPH_ARGUMENT_PROPERTY_STRIDES',value='0x9',struct='ze_gits_npu_graph_argument_property_strides_t'),
+var14=VarDef(name='ZE_GITS_NPU_STRUCTURE_TYPE_GRAPH_ARGUMENT_TENSOR',print_name='ZE_STRUCTURE_TYPE_GRAPH_ARGUMENT_TENSOR',value='0xA',struct='ze_gits_npu_graph_argument_value_tensor_t'),
+var15=VarDef(name='ZE_GITS_NPU_STRUCTURE_TYPE_GRAPH_ARGUMENT_STRIDES',print_name='ZE_STRUCTURE_TYPE_GRAPH_ARGUMENT_STRIDES',value='0xB',struct='ze_gits_npu_graph_argument_value_strides_t'),
+var16=VarDef(name='ZE_GITS_NPU_STRUCTURE_TYPE_MUTABLE_GRAPH_ARGUMENT_EXP_DESC_DEPRECATED',print_name='ZE_STRUCTURE_TYPE_MUTABLE_GRAPH_ARGUMENT_EXP_DESC_DEPRECATED',value='0x7',struct='ze_mutable_graph_argument_exp_desc_t'),
+)
+Enum(name='ze_gits_npu_graph_argument_precision_t',
+var1=VarDef(name='ZE_GITS_NPU_GRAPH_ARGUMENT_PRECISION_UNKNOWN',print_name='ZE_GRAPH_ARGUMENT_PRECISION_UNKNOWN',value='0x00'),
+var2=VarDef(name='ZE_GITS_NPU_GRAPH_ARGUMENT_PRECISION_FP64',print_name='ZE_GRAPH_ARGUMENT_PRECISION_FP64',value='0x0F'),
+var3=VarDef(name='ZE_GITS_NPU_GRAPH_ARGUMENT_PRECISION_FP32',print_name='ZE_GRAPH_ARGUMENT_PRECISION_FP32',value='0x01'),
+var4=VarDef(name='ZE_GITS_NPU_GRAPH_ARGUMENT_PRECISION_FP16',print_name='ZE_GRAPH_ARGUMENT_PRECISION_FP16',value='0x02'),
+var5=VarDef(name='ZE_GITS_NPU_GRAPH_ARGUMENT_PRECISION_FP8_E4M3',print_name='ZE_GRAPH_ARGUMENT_PRECISION_FP8_E4M3',value='0x13'),
+var6=VarDef(name='ZE_GITS_NPU_GRAPH_ARGUMENT_PRECISION_FP8_E5M2',print_name='ZE_GRAPH_ARGUMENT_PRECISION_FP8_E5M2',value='0x14'),
+var7=VarDef(name='ZE_GITS_NPU_GRAPH_ARGUMENT_PRECISION_FP8_E8M0',print_name='ZE_GRAPH_ARGUMENT_PRECISION_FP8_E8M0',value='0x15'),
+var8=VarDef(name='ZE_GITS_NPU_GRAPH_ARGUMENT_PRECISION_BF16',print_name='ZE_GRAPH_ARGUMENT_PRECISION_BF16',value='0x09'),
+var9=VarDef(name='ZE_GITS_NPU_GRAPH_ARGUMENT_PRECISION_UINT64',print_name='ZE_GRAPH_ARGUMENT_PRECISION_UINT64',value='0x10'),
+var10=VarDef(name='ZE_GITS_NPU_GRAPH_ARGUMENT_PRECISION_UINT32',print_name='ZE_GRAPH_ARGUMENT_PRECISION_UINT32',value='0x0A'),
+var11=VarDef(name='ZE_GITS_NPU_GRAPH_ARGUMENT_PRECISION_UINT16',print_name='ZE_GRAPH_ARGUMENT_PRECISION_UINT16',value='0x03'),
+var12=VarDef(name='ZE_GITS_NPU_GRAPH_ARGUMENT_PRECISION_UINT8',print_name='ZE_GRAPH_ARGUMENT_PRECISION_UINT8',value='0x04'),
+var13=VarDef(name='ZE_GITS_NPU_GRAPH_ARGUMENT_PRECISION_UINT4',print_name='ZE_GRAPH_ARGUMENT_PRECISION_UINT4',value='0x0B'),
+var14=VarDef(name='ZE_GITS_NPU_GRAPH_ARGUMENT_PRECISION_UINT2',print_name='ZE_GRAPH_ARGUMENT_PRECISION_UINT2',value='0x16'),
+var15=VarDef(name='ZE_GITS_NPU_GRAPH_ARGUMENT_PRECISION_INT64',print_name='ZE_GRAPH_ARGUMENT_PRECISION_INT64',value='0x011'),
+var16=VarDef(name='ZE_GITS_NPU_GRAPH_ARGUMENT_PRECISION_INT32',print_name='ZE_GRAPH_ARGUMENT_PRECISION_INT32',value='0x05'),
+var17=VarDef(name='ZE_GITS_NPU_GRAPH_ARGUMENT_PRECISION_INT16',print_name='ZE_GRAPH_ARGUMENT_PRECISION_INT16',value='0x06'),
+var18=VarDef(name='ZE_GITS_NPU_GRAPH_ARGUMENT_PRECISION_INT8',print_name='ZE_GRAPH_ARGUMENT_PRECISION_INT8',value='0x07'),
+var19=VarDef(name='ZE_GITS_NPU_GRAPH_ARGUMENT_PRECISION_INT4',print_name='ZE_GRAPH_ARGUMENT_PRECISION_INT4',value='0x0C'),
+var20=VarDef(name='ZE_GITS_NPU_GRAPH_ARGUMENT_PRECISION_INT2',print_name='ZE_GRAPH_ARGUMENT_PRECISION_INT2',value='0x17'),
+var21=VarDef(name='ZE_GITS_NPU_GRAPH_ARGUMENT_PRECISION_BIN',print_name='ZE_GRAPH_ARGUMENT_PRECISION_BIN',value='0x08'),
+var22=VarDef(name='ZE_GITS_NPU_GRAPH_ARGUMENT_PRECISION_DYNAMIC',print_name='ZE_GRAPH_ARGUMENT_PRECISION_DYNAMIC',value='0x0D'),
+var23=VarDef(name='ZE_GITS_NPU_GRAPH_ARGUMENT_PRECISION_BOOLEAN',print_name='ZE_GRAPH_ARGUMENT_PRECISION_BOOLEAN',value='0x0E'),
+var24=VarDef(name='ZE_GITS_NPU_GRAPH_ARGUMENT_PRECISION_NF4',print_name='ZE_GRAPH_ARGUMENT_PRECISION_NF4',value='0x12'),
+)
+Enum(name='ze_gits_npu_graph_argument_layout_t',
+var1=VarDef(name='ZE_GITS_NPU_GRAPH_ARGUMENT_LAYOUT_ANY',print_name='ZE_GRAPH_ARGUMENT_LAYOUT_ANY',value='0x00'),
+var2=VarDef(name='ZE_GITS_NPU_GRAPH_ARGUMENT_LAYOUT_NCHW',print_name='ZE_GRAPH_ARGUMENT_LAYOUT_NCHW'),
+var3=VarDef(name='ZE_GITS_NPU_GRAPH_ARGUMENT_LAYOUT_NHWC',print_name='ZE_GRAPH_ARGUMENT_LAYOUT_NHWC'),
+var4=VarDef(name='ZE_GITS_NPU_GRAPH_ARGUMENT_LAYOUT_NCDHW',print_name='ZE_GRAPH_ARGUMENT_LAYOUT_NCDHW'),
+var5=VarDef(name='ZE_GITS_NPU_GRAPH_ARGUMENT_LAYOUT_NDHWC',print_name='ZE_GRAPH_ARGUMENT_LAYOUT_NDHWC'),
+var6=VarDef(name='ZE_GITS_NPU_GRAPH_ARGUMENT_LAYOUT_OIHW',print_name='ZE_GRAPH_ARGUMENT_LAYOUT_OIHW',value='0x40'),
+var7=VarDef(name='ZE_GITS_NPU_GRAPH_ARGUMENT_LAYOUT_C',print_name='ZE_GRAPH_ARGUMENT_LAYOUT_C',value='0x60'),
+var8=VarDef(name='ZE_GITS_NPU_GRAPH_ARGUMENT_LAYOUT_CHW',print_name='ZE_GRAPH_ARGUMENT_LAYOUT_CHW',value='0x80'),
+var9=VarDef(name='ZE_GITS_NPU_GRAPH_ARGUMENT_LAYOUT_HW',print_name='ZE_GRAPH_ARGUMENT_LAYOUT_HW',value='0xC0'),
+var10=VarDef(name='ZE_GITS_NPU_GRAPH_ARGUMENT_LAYOUT_NC',print_name='ZE_GRAPH_ARGUMENT_LAYOUT_NC'),
+var11=VarDef(name='ZE_GITS_NPU_GRAPH_ARGUMENT_LAYOUT_CN',print_name='ZE_GRAPH_ARGUMENT_LAYOUT_CN'),
+var12=VarDef(name='ZE_GITS_NPU_GRAPH_ARGUMENT_LAYOUT_BLOCKED',print_name='ZE_GRAPH_ARGUMENT_LAYOUT_BLOCKED',value='0xC8'),
+)
+Enum(name='ze_gits_npu_graph_argument_type_t',
+var1=VarDef(name='ZE_GITS_NPU_GRAPH_ARGUMENT_TYPE_INPUT',print_name='ZE_GRAPH_ARGUMENT_TYPE_INPUT'),
+var2=VarDef(name='ZE_GITS_NPU_GRAPH_ARGUMENT_TYPE_OUTPUT',print_name='ZE_GRAPH_ARGUMENT_TYPE_OUTPUT'),
+)
+Enum(name='ze_gits_npu_graph_metadata_type',
+var1=VarDef(name='ZE_GITS_NPU_GRAPH_METADATA_TYPE_UNDEFINED',print_name='ZE_GRAPH_METADATA_TYPE_UNDEFINED',value='0'),
+var2=VarDef(name='ZE_GITS_NPU_GRAPH_METADATA_TYPE_DYNAMIC',print_name='ZE_GRAPH_METADATA_TYPE_DYNAMIC',value='1'),
+var3=VarDef(name='ZE_GITS_NPU_GRAPH_METADATA_TYPE_BOOLEAN',print_name='ZE_GRAPH_METADATA_TYPE_BOOLEAN',value='2'),
+var4=VarDef(name='ZE_GITS_NPU_GRAPH_METADATA_TYPE_BF16',print_name='ZE_GRAPH_METADATA_TYPE_BF16',value='3'),
+var5=VarDef(name='ZE_GITS_NPU_GRAPH_METADATA_TYPE_F16',print_name='ZE_GRAPH_METADATA_TYPE_F16',value='4'),
+var6=VarDef(name='ZE_GITS_NPU_GRAPH_METADATA_TYPE_F32',print_name='ZE_GRAPH_METADATA_TYPE_F32',value='5'),
+var7=VarDef(name='ZE_GITS_NPU_GRAPH_METADATA_TYPE_F64',print_name='ZE_GRAPH_METADATA_TYPE_F64',value='6'),
+var8=VarDef(name='ZE_GITS_NPU_GRAPH_METADATA_TYPE_I4',print_name='ZE_GRAPH_METADATA_TYPE_I4',value='7'),
+var9=VarDef(name='ZE_GITS_NPU_GRAPH_METADATA_TYPE_I8',print_name='ZE_GRAPH_METADATA_TYPE_I8',value='8'),
+var10=VarDef(name='ZE_GITS_NPU_GRAPH_METADATA_TYPE_I16',print_name='ZE_GRAPH_METADATA_TYPE_I16',value='9'),
+var11=VarDef(name='ZE_GITS_NPU_GRAPH_METADATA_TYPE_I32',print_name='ZE_GRAPH_METADATA_TYPE_I32',value='10'),
+var12=VarDef(name='ZE_GITS_NPU_GRAPH_METADATA_TYPE_I64',print_name='ZE_GRAPH_METADATA_TYPE_I64',value='11'),
+var13=VarDef(name='ZE_GITS_NPU_GRAPH_METADATA_TYPE_U1',print_name='ZE_GRAPH_METADATA_TYPE_U1',value='12'),
+var14=VarDef(name='ZE_GITS_NPU_GRAPH_METADATA_TYPE_U4',print_name='ZE_GRAPH_METADATA_TYPE_U4',value='13'),
+var15=VarDef(name='ZE_GITS_NPU_GRAPH_METADATA_TYPE_U8',print_name='ZE_GRAPH_METADATA_TYPE_U8',value='14'),
+var16=VarDef(name='ZE_GITS_NPU_GRAPH_METADATA_TYPE_U16',print_name='ZE_GRAPH_METADATA_TYPE_U16',value='15'),
+var17=VarDef(name='ZE_GITS_NPU_GRAPH_METADATA_TYPE_U32',print_name='ZE_GRAPH_METADATA_TYPE_U32',value='16'),
+var18=VarDef(name='ZE_GITS_NPU_GRAPH_METADATA_TYPE_U64',print_name='ZE_GRAPH_METADATA_TYPE_U64',value='17'),
+)
+Enum(name='ze_gits_npu_graph_flags_t',
+var1=VarDef(name='ZE_GITS_NPU_GRAPH_FLAG_NONE',print_name='ZE_GRAPH_FLAG_NONE',value='0x0'),
+var2=VarDef(name='ZE_GITS_NPU_GRAPH_FLAG_DISABLE_CACHING',print_name='ZE_GRAPH_FLAG_DISABLE_CACHING',value='ZE_BIT(0)'),
+var3=VarDef(name='ZE_GITS_NPU_GRAPH_FLAG_ENABLE_PROFILING',print_name='ZE_GRAPH_FLAG_ENABLE_PROFILING',value='ZE_BIT(1)'),
+var4=VarDef(name='ZE_GITS_NPU_GRAPH_FLAG_INPUT_GRAPH_PERSISTENT',print_name='ZE_GRAPH_FLAG_INPUT_GRAPH_PERSISTENT',value='ZE_BIT(2)'),
+)
+Enum(name='ze_gits_npu_graph_memory_query_type_t',
+var1=VarDef(name='ZE_GITS_NPU_GRAPH_QUERY_MEMORY_DDR',print_name='ZE_GRAPH_QUERY_MEMORY_DDR',value='0x01'),
+var2=VarDef(name='ZE_GITS_NPU_GRAPH_QUERY_MEMORY_DRIVER_CACHE',print_name='ZE_GRAPH_QUERY_MEMORY_DRIVER_CACHE',value='0x02'),
+var3=VarDef(name='ZE_GITS_NPU_GRAPH_QUERY_MEMORY_PROGRAM_CACHE',print_name='ZE_GRAPH_QUERY_MEMORY_PROGRAM_CACHE',value='0x03'),
+)
+Enum(name='ze_gits_npu_graph_init_stage_t',
+var1=VarDef(name='ZE_GITS_NPU_GRAPH_STAGE_COMMAND_LIST_INITIALIZE',print_name='ZE_GRAPH_STAGE_COMMAND_LIST_INITIALIZE',value='0x1'),
+var2=VarDef(name='ZE_GITS_NPU_GRAPH_STAGE_INITIALIZE',print_name='ZE_GRAPH_STAGE_INITIALIZE',value='0x2'),
+)
+Enum(name='ze_gits_npu_npu_options_type_t',
+var1=VarDef(name='ZE_GITS_NPU_NPU_COMPILER_OPTIONS',print_name='ZE_NPU_COMPILER_OPTIONS',value='0x1'),
+var2=VarDef(name='ZE_GITS_NPU_NPU_DRIVER_OPTIONS',print_name='ZE_NPU_DRIVER_OPTIONS',value='0x2'),
+)
+Enum(name='ze_gits_npu_graph_properties_flag_t',
+var1=VarDef(name='ZE_GITS_NPU_GRAPH_PROPERTIES_FLAG_LOADED_FROM_CACHE',print_name='ZE_GRAPH_PROPERTIES_FLAG_LOADED_FROM_CACHE',value='ZE_BIT(0)'),
+var2=VarDef(name='ZE_GITS_NPU_GRAPH_PROPERTIES_FLAG_COMPILED',print_name='ZE_GRAPH_PROPERTIES_FLAG_COMPILED',value='ZE_BIT(1)'),
+var3=VarDef(name='ZE_GITS_NPU_GRAPH_PROPERTIES_FLAG_PRE_COMPILED',print_name='ZE_GRAPH_PROPERTIES_FLAG_PRE_COMPILED',value='ZE_BIT(2)'),
+var4=VarDef(name='ZE_GITS_NPU_GRAPH_PROPERTIES_FLAG_NO_STANDARD_ALLOCATION',print_name='ZE_GRAPH_PROPERTIES_FLAG_NO_STANDARD_ALLOCATION',value='ZE_BIT(3)'),
+var5=VarDef(name='ZE_GITS_NPU_GRAPH_PROPERTIES_FLAG_PROFILING_ENABLED',print_name='ZE_GRAPH_PROPERTIES_FLAG_PROFILING_ENABLED',value='ZE_BIT(4)'),
+)
+Enum(name='ze_gits_npu_mutable_command_npu_exp_flag_t',
+var1=VarDef(name='ZE_GITS_NPU_MUTABLE_COMMAND_EXP_FLAG_GRAPH_ARGUMENT_DEPRECATED',print_name='ZE_MUTABLE_COMMAND_EXP_FLAG_GRAPH_ARGUMENT_DEPRECATED',value='ZE_BIT(6)'),
+)
+
+Argument(name='ze_gits_npu_graph_handle_t',print_name='ze_graph_handle_t',obj=True,alias='ze_gits_npu_graph_handle_t')
+Argument(name='ze_gits_npu_graph_profiling_pool_handle_t',print_name='ze_graph_profiling_pool_handle_t',obj=True,alias='ze_gits_npu_graph_profiling_pool_handle_t')
+Argument(name='ze_gits_npu_graph_profiling_query_handle_t',print_name='ze_graph_profiling_query_handle_t',obj=True,alias='ze_gits_npu_graph_profiling_query_handle_t')
+Argument(name='ze_gits_npu_graph_query_network_handle_t',print_name='ze_graph_query_network_handle_t',obj=True,alias='ze_gits_npu_graph_query_network_handle_t')
+Argument(name='ze_gits_npu_graph_build_log_handle_t',print_name='ze_graph_build_log_handle_t',obj=True,alias='ze_gits_npu_graph_build_log_handle_t')
+
+Argument(name='ze_gits_npu_command_queue_npu_ext_base_properties_t',print_name='ze_gits_npu_command_queue_npu_ext_base_properties_t',
+var1=VarDef(name='stype',type='ze_gits_npu_structure_type_command_queue_npu_ext_t',tag='in'),
+var2=VarDef(name='pNext',type='void*',tag='inout',wrapType='CExtensionStructCommandQueueNpu'),
+)
+Argument(name='ze_gits_npu_context_npu_ext_base_properties_t',print_name='ze_gits_npu_context_npu_ext_base_properties_t',
+var1=VarDef(name='stype',type='ze_gits_npu_structure_type_context_npu_ext_t',tag='in'),
+var2=VarDef(name='pNext',type='void*',tag='inout',wrapType='CExtensionStructContextNpu'),
+)
+Argument(name='ze_gits_npu_driver_npu_ext_base_properties_t',print_name='ze_gits_npu_driver_npu_ext_base_properties_t',
+var1=VarDef(name='stype',type='ze_gits_npu_structure_type_driver_npu_ext_t',tag='in'),
+var2=VarDef(name='pNext',type='void*',tag='inout',wrapType='CExtensionStructDriverNpu'),
+)
+Argument(name='ze_gits_npu_graph_ext_base_properties_t',print_name='ze_gits_npu_graph_ext_base_properties_t',
+var1=VarDef(name='stype',type='ze_gits_npu_structure_type_graph_ext_t',tag='in'),
+var2=VarDef(name='pNext',type='void*',tag='inout',wrapType='CExtensionStructGraphNpu'),
+)
+Argument(name='ze_gits_npu_profiling_data_ext_base_properties_t',print_name='ze_gits_npu_profiling_data_ext_base_properties_t',
+var1=VarDef(name='stype',type='ze_gits_npu_structure_type_profiling_data_ext_t',tag='in'),
+var2=VarDef(name='pNext',type='void*',tag='inout',wrapType='CExtensionStructGraphProfilingNpu'),
+)
+Argument(name='ze_gits_npu_profiling_layer_info',print_name='ze_profiling_layer_info',
+var1=VarDef(name='name[ZE_GITS_NPU_MAX_GRAPH_PROFILING_LAYER_NAME]',type='char',tag='in'),
+var2=VarDef(name='layer_type[ZE_GITS_NPU_MAX_GRAPH_PROFILING_LAYER_TYPE]',type='char',tag='in'),
+var3=VarDef(name='status',type='ze_gits_npu_layer_status_t',tag='in'),
+var4=VarDef(name='start_time_ns',type='uint64_t',tag='in'),
+var5=VarDef(name='duration_ns',type='uint64_t',tag='in'),
+var6=VarDef(name='layer_id',type='uint32_t',tag='in'),
+var7=VarDef(name='fused_layer_id',type='uint64_t',tag='in'),
+var8=VarDef(name='dpu_ns',type='uint64_t',tag='in'),
+var9=VarDef(name='sw_ns',type='uint64_t',tag='in'),
+var10=VarDef(name='dma_ns',type='uint64_t',tag='in'),
+)
+Argument(name='ze_gits_npu_profiling_task_info',print_name='ze_profiling_task_info',
+var1=VarDef(name='name[ZE_GITS_NPU_MAX_GRAPH_PROFILING_LAYER_NAME]',type='char',tag='in'),
+var2=VarDef(name='layer_type[ZE_GITS_NPU_MAX_GRAPH_PROFILING_LAYER_TYPE]',type='char',tag='in'),
+var3=VarDef(name='exec_type',type='ze_gits_npu_task_execute_type_t',tag='in'),
+var4=VarDef(name='start_time_ns',type='uint64_t',tag='in'),
+var5=VarDef(name='duration_ns',type='uint64_t',tag='in'),
+var6=VarDef(name='active_cycles',type='uint32_t',tag='in'),
+var7=VarDef(name='stall_cycles',type='uint32_t',tag='in'),
+var8=VarDef(name='task_id',type='uint32_t',tag='in'),
+var9=VarDef(name='parent_layer_id',type='uint32_t',tag='in'),
+)
+Argument(name='ze_gits_npu_device_profiling_data_properties_t',print_name='ze_device_profiling_data_properties_t',
+var1=VarDef(name='stype',type='ze_gits_npu_structure_type_profiling_data_ext_t',tag='in'),
+var2=VarDef(name='pNext',type='void*',tag='in,out',wrapType='CExtensionStructGraphProfilingNpu'),
+var3=VarDef(name='extensionVersion',type='ze_gits_npu_profiling_data_ext_version_t',tag='out'),
+)
+Argument(name='ze_gits_npu_command_queue_desc_npu_ext_t',print_name='ze_command_queue_desc_npu_ext_t',
+var1=VarDef(name='stype',type='ze_gits_npu_structure_type_command_queue_npu_ext_t',tag='in'),
+var2=VarDef(name='pNext',type='const void*',tag='in',wrapType='CExtensionStructCommandQueueNpu'),
+var3=VarDef(name='turbo',type='bool',tag='in'),
+)
+Argument(name='ze_gits_npu_command_queue_desc_npu_ext_2_t',print_name='ze_command_queue_desc_npu_ext_2_t',
+var1=VarDef(name='stype',type='ze_gits_npu_structure_type_command_queue_npu_ext_t',tag='in'),
+var2=VarDef(name='pNext',type='const void*',tag='in',wrapType='CExtensionStructCommandQueueNpu'),
+var3=VarDef(name='options',type='uint32_t',tag='in'),
+)
+Argument(name='ze_gits_npu_driver_extension_npu_ext_t',print_name='ze_driver_extension_npu_ext_t',
+var1=VarDef(name='stype',type='ze_gits_npu_structure_type_driver_npu_ext_t',tag='in'),
+var2=VarDef(name='pNext',type='const void*',tag='in',wrapType='CExtensionStructDriverNpu'),
+var3=VarDef(name='name',type='const char*',tag='in'),
+var4=VarDef(name='version',type='uint32_t',tag='in'),
+var5=VarDef(name='ppFunctionAddress',type='void**',tag='out'),
+)
+Argument(name='ze_gits_npu_context_properties_npu_ext_t',print_name='ze_context_properties_npu_ext_t',
+var1=VarDef(name='stype',type='ze_gits_npu_structure_type_context_npu_ext_t',tag='in'),
+var2=VarDef(name='pNext',type='const void*',tag='in',wrapType='CExtensionStructContextNpu'),
+var3=VarDef(name='options',type='uint32_t',tag='in'),
+)
+Argument(name='ze_gits_npu_external_memory_import_system_memory_t',print_name='ze_external_memory_import_system_memory_t',
+var1=VarDef(name='stype',type='ze_structure_type_t',tag='in'),
+var2=VarDef(name='pNext',type='const void*',tag='in',wrapType='CExtensionStructCore'),
+var3=VarDef(name='pSystemMemory',type='void*',tag='in'),
+var4=VarDef(name='size',type='uint64_t',tag='in'),
+)
+Argument(name='ze_gits_npu_graph_compiler_version_info_t',print_name='ze_graph_compiler_version_info_t',
+var1=VarDef(name='major',type='uint16_t',tag='in'),
+var2=VarDef(name='minor',type='uint16_t',tag='in'),
+)
+Argument(name='ze_gits_npu_device_graph_properties_t',print_name='ze_device_graph_properties_t',
+var1=VarDef(name='stype',type='ze_gits_npu_structure_type_graph_ext_t',tag='in'),
+var2=VarDef(name='pNext',type='void*',tag='in,out',wrapType='CExtensionStructGraphNpu'),
+var3=VarDef(name='graphExtensionVersion',type='ze_gits_npu_graph_ext_version_t',tag='out'),
+var4=VarDef(name='compilerVersion',type='ze_gits_npu_graph_compiler_version_info_t',tag='out'),
+var5=VarDef(name='graphFormatsSupported',type='ze_gits_npu_graph_format_t',tag='out'),
+var6=VarDef(name='maxOVOpsetVersionSupported',type='uint32_t',tag='out'),
+)
+Argument(name='ze_gits_npu_graph_desc_t',print_name='ze_graph_desc_t',custom=True,
+var1=VarDef(name='stype',type='ze_gits_npu_structure_type_graph_ext_t',tag='in'),
+var2=VarDef(name='pNext',type='void*',tag='in,out',wrapType='CExtensionStructGraphNpu'),
+var3=VarDef(name='format',type='ze_gits_npu_graph_format_t',tag='in'),
+var4=VarDef(name='inputSize',type='size_t',tag='in'),
+var5=VarDef(name='pInput',type='const uint8_t*',tag='in'),
+var6=VarDef(name='pBuildFlags',type='const char*',tag='in'),
+)
+Argument(name='ze_gits_npu_graph_properties_t',print_name='ze_graph_properties_t',
+var1=VarDef(name='stype',type='ze_gits_npu_structure_type_graph_ext_t',tag='in'),
+var2=VarDef(name='pNext',type='void*',tag='in,out',wrapType='CExtensionStructGraphNpu'),
+var3=VarDef(name='numGraphArgs',type='uint32_t',tag='out'),
+)
+Argument(name='ze_gits_npu_graph_argument_properties_t',print_name='ze_graph_argument_properties_t',
+var1=VarDef(name='stype',type='ze_gits_npu_structure_type_graph_ext_t',tag='in'),
+var2=VarDef(name='pNext',type='void*',tag='in,out',wrapType='CExtensionStructGraphNpu'),
+var3=VarDef(name='name[ZE_GITS_NPU_MAX_GRAPH_ARGUMENT_NAME]',type='char',tag='out'),
+var4=VarDef(name='type',type='ze_gits_npu_graph_argument_type_t',tag='out'),
+var5=VarDef(name='dims[ZE_GITS_NPU_MAX_GRAPH_ARGUMENT_DIMENSIONS_SIZE]',type='uint32_t',tag='out'),
+var6=VarDef(name='networkPrecision',type='ze_gits_npu_graph_argument_precision_t',tag='out'),
+var7=VarDef(name='networkLayout',type='ze_gits_npu_graph_argument_layout_t',tag='out'),
+var8=VarDef(name='devicePrecision',type='ze_gits_npu_graph_argument_precision_t',tag='out'),
+var9=VarDef(name='deviceLayout',type='ze_gits_npu_graph_argument_layout_t',tag='out'),
+)
+Argument(name='ze_gits_npu_graph_argument_metadata_t',print_name='ze_graph_argument_metadata_t',
+var1=VarDef(name='stype',type='ze_gits_npu_structure_type_graph_ext_t',tag='in'),
+var2=VarDef(name='pNext',type='void*',tag='in,out',wrapType='CExtensionStructGraphNpu'),
+var3=VarDef(name='type',type='ze_gits_npu_graph_argument_type_t',tag='out'),
+var4=VarDef(name='friendly_name[ZE_GITS_NPU_MAX_GRAPH_ARGUMENT_NAME]',type='char',tag='out'),
+var5=VarDef(name='data_type',type='ze_gits_npu_graph_metadata_type',tag='out'),
+var6=VarDef(name='shape[ZE_GITS_NPU_MAX_GRAPH_TENSOR_REF_DIMS]',type='uint64_t',tag='out'),
+var7=VarDef(name='shape_size',type='uint32_t',tag='out'),
+var8=VarDef(name='tensor_names[ZE_GITS_NPU_MAX_GRAPH_TENSOR_NAMES_SIZE][ZE_GITS_NPU_MAX_GRAPH_ARGUMENT_NAME]',type='char',tag='out'),
+var9=VarDef(name='tensor_names_count',type='uint32_t',tag='out'),
+var10=VarDef(name='input_name[ZE_GITS_NPU_MAX_GRAPH_ARGUMENT_NAME]',type='char',tag='out'),
+)
+Argument(name='ze_gits_npu_graph_argument_properties_2_t',print_name='ze_graph_argument_properties_2_t',
+var1=VarDef(name='stype',type='ze_gits_npu_structure_type_graph_ext_t',tag='in'),
+var2=VarDef(name='pNext',type='void*',tag='in,out',wrapType='CExtensionStructGraphNpu'),
+var3=VarDef(name='name[ZE_GITS_NPU_MAX_GRAPH_ARGUMENT_NAME]',type='char',tag='out'),
+var4=VarDef(name='type',type='ze_gits_npu_graph_argument_type_t',tag='out'),
+var5=VarDef(name='dims[ZE_GITS_NPU_MAX_GRAPH_ARGUMENT_DIMENSIONS_SIZE]',type='uint32_t',tag='out'),
+var6=VarDef(name='networkPrecision',type='ze_gits_npu_graph_argument_precision_t',tag='out'),
+var7=VarDef(name='networkLayout',type='ze_gits_npu_graph_argument_layout_t',tag='out'),
+var8=VarDef(name='devicePrecision',type='ze_gits_npu_graph_argument_precision_t',tag='out'),
+var9=VarDef(name='deviceLayout',type='ze_gits_npu_graph_argument_layout_t',tag='out'),
+var10=VarDef(name='quantReverseScale',type='float',tag='out'),
+var11=VarDef(name='quantZeroPoint',type='uint8_t',tag='out'),
+)
+Argument(name='ze_gits_npu_graph_argument_properties_3_t',print_name='ze_graph_argument_properties_3_t',
+var1=VarDef(name='stype',type='ze_gits_npu_structure_type_graph_ext_t',tag='in'),
+var2=VarDef(name='pNext',type='void*',tag='in,out',wrapType='CExtensionStructGraphNpu'),
+var3=VarDef(name='name[ZE_GITS_NPU_MAX_GRAPH_ARGUMENT_NAME]',type='char',tag='out'),
+var4=VarDef(name='type',type='ze_gits_npu_graph_argument_type_t',tag='out'),
+var5=VarDef(name='dims[ZE_GITS_NPU_MAX_GRAPH_ARGUMENT_DIMENSIONS_SIZE]',type='uint32_t',tag='out'),
+var6=VarDef(name='networkPrecision',type='ze_gits_npu_graph_argument_precision_t',tag='out'),
+var7=VarDef(name='networkLayout',type='ze_gits_npu_graph_argument_layout_t',tag='out'),
+var8=VarDef(name='devicePrecision',type='ze_gits_npu_graph_argument_precision_t',tag='out'),
+var9=VarDef(name='deviceLayout',type='ze_gits_npu_graph_argument_layout_t',tag='out'),
+var10=VarDef(name='quantReverseScale',type='float',tag='out'),
+var11=VarDef(name='quantZeroPoint',type='uint8_t',tag='out'),
+var12=VarDef(name='dims_count',type='uint32_t',tag='out'),
+var13=VarDef(name='debug_friendly_name[ZE_GITS_NPU_MAX_GRAPH_ARGUMENT_NAME]',type='char',tag='out'),
+var14=VarDef(name='associated_tensor_names[ZE_GITS_NPU_MAX_GRAPH_TENSOR_NAMES_SIZE][ZE_GITS_NPU_MAX_GRAPH_ARGUMENT_NAME]',type='char',tag='out'),
+var15=VarDef(name='associated_tensor_names_count',type='uint32_t',tag='out'),
+)
+Argument(name='ze_gits_npu_graph_desc_2_t',print_name='ze_graph_desc_2_t',custom=True,
+var1=VarDef(name='stype',type='ze_gits_npu_structure_type_graph_ext_t',tag='in'),
+var2=VarDef(name='pNext',type='void*',tag='in,out',wrapType='CExtensionStructGraphNpu'),
+var3=VarDef(name='format',type='ze_gits_npu_graph_format_t',tag='in'),
+var4=VarDef(name='inputSize',type='size_t',tag='in'),
+var5=VarDef(name='pInput',type='const uint8_t*',tag='in'),
+var6=VarDef(name='pBuildFlags',type='const char*',tag='in'),
+var7=VarDef(name='flags',type='uint32_t',tag='in'),
+)
+Argument(name='ze_gits_npu_graph_memory_query_t',print_name='ze_graph_memory_query_t',
+var1=VarDef(name='total',type='uint64_t',tag='in'),
+var2=VarDef(name='allocated',type='uint64_t',tag='in'),
+)
+Argument(name='ze_gits_npu_graph_version_info_t',print_name='ze_graph_version_info_t',
+var1=VarDef(name='major',type='uint32_t',tag='in'),
+var2=VarDef(name='minor',type='uint32_t',tag='in'),
+var3=VarDef(name='patch',type='uint32_t',tag='in'),
+)
+Argument(name='ze_gits_npu_device_graph_properties_2_t',print_name='ze_device_graph_properties_2_t',
+var1=VarDef(name='stype',type='ze_gits_npu_structure_type_graph_ext_t',tag='in'),
+var2=VarDef(name='pNext',type='void*',tag='in,out',wrapType='CExtensionStructGraphNpu'),
+var3=VarDef(name='graphExtensionVersion',type='ze_gits_npu_graph_ext_version_t',tag='out'),
+var4=VarDef(name='compilerVersion',type='ze_gits_npu_graph_compiler_version_info_t',tag='out'),
+var5=VarDef(name='graphFormatsSupported',type='ze_gits_npu_graph_format_t',tag='out'),
+var6=VarDef(name='maxOVOpsetVersionSupported',type='uint32_t',tag='out'),
+var7=VarDef(name='elfVersion',type='ze_gits_npu_graph_version_info_t',tag='out'),
+var8=VarDef(name='runtimeVersion',type='ze_gits_npu_graph_version_info_t',tag='out'),
+)
+Argument(name='ze_gits_npu_graph_properties_2_t',print_name='ze_graph_properties_2_t',
+var1=VarDef(name='stype',type='ze_gits_npu_structure_type_graph_ext_t',tag='in'),
+var2=VarDef(name='pNext',type='void*',tag='in,out',wrapType='CExtensionStructGraphNpu'),
+var3=VarDef(name='numGraphArgs',type='uint32_t',tag='out'),
+var4=VarDef(name='initStageRequired',type='ze_gits_npu_graph_init_stage_t',tag='out'),
+)
+Argument(name='ze_gits_npu_graph_properties_3_t',print_name='ze_graph_properties_3_t',
+var1=VarDef(name='stype',type='ze_gits_npu_structure_type_graph_ext_t',tag='in'),
+var2=VarDef(name='pNext',type='void*',tag='in,out',wrapType='CExtensionStructGraphNpu'),
+var3=VarDef(name='numGraphArgs',type='uint32_t',tag='out'),
+var4=VarDef(name='initStageRequired',type='ze_gits_npu_graph_init_stage_t',tag='out'),
+var5=VarDef(name='flags',type='uint32_t',tag='out'),
+)
+Argument(name='ze_gits_npu_graph_input_hash_t',print_name='ze_graph_input_hash_t',
+var1=VarDef(name='stype',type='ze_gits_npu_structure_type_graph_ext_t',tag='in'),
+var2=VarDef(name='pNext',type='void*',tag='in,out',wrapType='CExtensionStructGraphNpu'),
+var3=VarDef(name='hash',type='uint64_t',tag='in'),
+)
+Argument(name='ze_gits_npu_graph_argument_property_strides_t',print_name='ze_graph_argument_property_strides_t',
+var1=VarDef(name='stype',type='ze_gits_npu_structure_type_graph_ext_t',tag='in'),
+var2=VarDef(name='pNext',type='void*',tag='in,out',wrapType='CExtensionStructGraphNpu'),
+var3=VarDef(name='supportsDynamicStrides',type='bool',tag='out'),
+)
+Argument(name='ze_gits_npu_graph_argument_value_tensor_t',print_name='ze_graph_argument_value_tensor_t',
+var1=VarDef(name='stype',type='ze_gits_npu_structure_type_graph_ext_t',tag='in'),
+var2=VarDef(name='pNext',type='void*',tag='in,out',wrapType='CExtensionStructGraphNpu'),
+var3=VarDef(name='pTensor',type='const void*',tag='in'),
+)
+Argument(name='ze_gits_npu_graph_argument_value_strides_t',print_name='ze_graph_argument_value_strides_t',
+var1=VarDef(name='stype',type='ze_gits_npu_structure_type_graph_ext_t',tag='in'),
+var2=VarDef(name='pNext',type='void*',tag='in,out',wrapType='CExtensionStructGraphNpu'),
+var3=VarDef(name='userStrides[ZE_GITS_NPU_MAX_GRAPH_ARGUMENT_DIMENSIONS_SIZE]',type='uint32_t',tag='in'),
+)
+
+Function(name='zeGitsNpuGraphProfilingPoolCreate',print_name='zeGraphProfilingPoolCreate',driver_extension=True,component='ze_gits_npu_graph_profiling_ext',enabled=True,api_version='1.0',dditable='ze_gits_npu_graph_profiling_dditable_ext_t',ddi_pos=0,name_in_dditable='pfnProfilingPoolCreate',
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='hGraph',type='ze_gits_npu_graph_handle_t',tag='in'),
+arg2=ArgDef(name='count',type='uint32_t',tag='in'),
+arg3=ArgDef(name='phProfilingPool',type='ze_gits_npu_graph_profiling_pool_handle_t*',tag='out'),
+)
+Function(name='zeGitsNpuGraphProfilingPoolDestroy',print_name='zeGraphProfilingPoolDestroy',driver_extension=True,component='ze_gits_npu_graph_profiling_ext',enabled=True,api_version='1.0',dditable='ze_gits_npu_graph_profiling_dditable_ext_t',ddi_pos=1,name_in_dditable='pfnProfilingPoolDestroy',
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='hProfilingPool',type='ze_gits_npu_graph_profiling_pool_handle_t',tag='in'),
+)
+Function(name='zeGitsNpuGraphProfilingQueryCreate',print_name='zeGraphProfilingQueryCreate',driver_extension=True,component='ze_gits_npu_graph_profiling_ext',enabled=True,api_version='1.0',dditable='ze_gits_npu_graph_profiling_dditable_ext_t',ddi_pos=2,name_in_dditable='pfnProfilingQueryCreate',
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='hProfilingPool',type='ze_gits_npu_graph_profiling_pool_handle_t',tag='in'),
+arg2=ArgDef(name='index',type='uint32_t',tag='in'),
+arg3=ArgDef(name='phProfilingQuery',type='ze_gits_npu_graph_profiling_query_handle_t*',tag='out'),
+)
+Function(name='zeGitsNpuGraphProfilingQueryDestroy',print_name='zeGraphProfilingQueryDestroy',driver_extension=True,component='ze_gits_npu_graph_profiling_ext',enabled=True,api_version='1.0',dditable='ze_gits_npu_graph_profiling_dditable_ext_t',ddi_pos=3,name_in_dditable='pfnProfilingQueryDestroy',
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='hProfilingQuery',type='ze_gits_npu_graph_profiling_query_handle_t',tag='in'),
+)
+Function(name='zeGitsNpuGraphProfilingQueryGetData',print_name='zeGraphProfilingQueryGetData',driver_extension=True,component='ze_gits_npu_graph_profiling_ext',enabled=True,api_version='1.0',dditable='ze_gits_npu_graph_profiling_dditable_ext_t',ddi_pos=4,name_in_dditable='pfnProfilingQueryGetData',
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='hProfilingQuery',type='ze_gits_npu_graph_profiling_query_handle_t',tag='in'),
+arg2=ArgDef(name='profilingType',type='ze_gits_npu_graph_profiling_type_t',tag='in'),
+arg3=ArgDef(name='pSize',type='uint32_t*',tag='inout'),
+arg4=ArgDef(name='pData',type='uint8_t*',tag='in',range='0,*pSize'),
+)
+Function(name='zeGitsNpuGraphDeviceGetProfilingDataProperties',print_name='zeGraphDeviceGetProfilingDataProperties',driver_extension=True,component='ze_gits_npu_graph_profiling_ext',enabled=True,api_version='1.0',dditable='ze_gits_npu_graph_profiling_dditable_ext_t',ddi_pos=5,name_in_dditable='pfnDeviceGetProfilingDataProperties',
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='hDevice',type='ze_device_handle_t',tag='in'),
+arg2=ArgDef(name='pDeviceProfilingDataProperties',type='ze_gits_npu_device_profiling_data_properties_t*',tag='out'),
+)
+Function(name='zeGitsNpuGraphProfilingLogGetString',print_name='zeGraphProfilingLogGetString',driver_extension=True,component='ze_gits_npu_graph_profiling_ext',enabled=True,api_version='1.0',dditable='ze_gits_npu_graph_profiling_dditable_ext_t',ddi_pos=6,name_in_dditable='pfnProfilingLogGetString',
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='phProfilingQuery',type='ze_gits_npu_graph_profiling_query_handle_t',tag='in'),
+arg2=ArgDef(name='pSize',type='uint32_t*',tag='inout'),
+arg3=ArgDef(name='pProfilingLog',type='char*',tag='in',range='0,*pSize'),
+)
+Function(name='zeGitsNpuGraphSetWorkloadType',print_name='zeGraphSetWorkloadType',driver_extension=True,component='ze_gits_npu_command_queue_npu_ext',enabled=True,api_version='1.0',dditable='ze_gits_npu_command_queue_npu_dditable_ext_t',ddi_pos=0,name_in_dditable='pfnSetWorkloadType',
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='hCommandQueue',type='ze_command_queue_handle_t',tag='in'),
+arg2=ArgDef(name='workloadType',type='ze_gits_npu_command_queue_workload_type_t',tag='in'),
+)
+Function(name='zeGitsNpuGraphGetExtension',print_name='zeGraphGetExtension',driver_extension=True,component='ze_gits_npu_driver_npu_ext',enabled=True,api_version='1.0',dditable='ze_gits_npu_driver_npu_dditable_ext_t',ddi_pos=0,name_in_dditable='pfnGetExtension',
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='hDriver',type='ze_driver_handle_t',tag='in'),
+arg2=ArgDef(name='pExtension',type='ze_gits_npu_driver_extension_npu_ext_t*',tag='inout'),
+)
+Function(name='zeGitsNpuGraphSetProperties',print_name='zeGraphSetProperties',driver_extension=True,component='ze_gits_npu_context_npu_ext',enabled=True,api_version='1.0',dditable='ze_gits_npu_context_npu_dditable_ext_t',ddi_pos=0,name_in_dditable='pfnSetProperties',
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='hContext',type='ze_context_handle_t',tag='in'),
+arg2=ArgDef(name='ContextProperties',type='ze_gits_npu_context_properties_npu_ext_t*',tag='in'),
+)
+Function(name='zeGitsNpuGraphReleaseMemory',print_name='zeGraphReleaseMemory',driver_extension=True,component='ze_gits_npu_context_npu_ext',enabled=True,api_version='1.0',dditable='ze_gits_npu_context_npu_dditable_ext_t',ddi_pos=1,name_in_dditable='pfnReleaseMemory',
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='hContext',type='ze_context_handle_t',tag='in'),
+)
+Function(name='zeGitsNpuGraphCreate',print_name='zeGraphCreate',driver_extension=True,component='ze_gits_npu_graph_ext',enabled=True,api_version='1.0',dditable='ze_gits_npu_graph_dditable_ext_t',ddi_pos=0,name_in_dditable='pfnCreate',
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='hContext',type='ze_context_handle_t',tag='in'),
+arg2=ArgDef(name='hDevice',type='ze_device_handle_t',tag='in'),
+arg3=ArgDef(name='desc',type='const ze_gits_npu_graph_desc_t*',tag='in'),
+arg4=ArgDef(name='phGraph',type='ze_gits_npu_graph_handle_t*',tag='out'),
+)
+Function(name='zeGitsNpuGraphDestroy',print_name='zeGraphDestroy',driver_extension=True,component='ze_gits_npu_graph_ext',enabled=True,api_version='1.0',dditable='ze_gits_npu_graph_dditable_ext_t',ddi_pos=1,name_in_dditable='pfnDestroy',
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='hGraph',type='ze_gits_npu_graph_handle_t',tag='in'),
+)
+Function(name='zeGitsNpuGraphGetProperties',print_name='zeGraphGetProperties',driver_extension=True,component='ze_gits_npu_graph_ext',enabled=True,api_version='1.0',dditable='ze_gits_npu_graph_dditable_ext_t',ddi_pos=2,name_in_dditable='pfnGetProperties',
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='hGraph',type='ze_gits_npu_graph_handle_t',tag='in'),
+arg2=ArgDef(name='pGraphProperties',type='ze_gits_npu_graph_properties_t*',tag='inout'),
+)
+Function(name='zeGitsNpuGraphGetArgumentProperties',print_name='zeGraphGetArgumentProperties',driver_extension=True,component='ze_gits_npu_graph_ext',enabled=True,api_version='1.0',dditable='ze_gits_npu_graph_dditable_ext_t',ddi_pos=3,name_in_dditable='pfnGetArgumentProperties',
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='hGraph',type='ze_gits_npu_graph_handle_t',tag='in'),
+arg2=ArgDef(name='argIndex',type='uint32_t',tag='in'),
+arg3=ArgDef(name='pGraphArgumentProperties',type='ze_gits_npu_graph_argument_properties_t*',tag='inout'),
+)
+Function(name='zeGitsNpuGraphSetArgumentValue',print_name='zeGraphSetArgumentValue',driver_extension=True,component='ze_gits_npu_graph_ext',enabled=True,api_version='1.0',dditable='ze_gits_npu_graph_dditable_ext_t',ddi_pos=4,name_in_dditable='pfnSetArgumentValue',
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='hGraph',type='ze_gits_npu_graph_handle_t',tag='in'),
+arg2=ArgDef(name='argIndex',type='uint32_t',tag='in'),
+arg3=ArgDef(name='pArgValue',type='const void*',tag='in',wrapType='CGraphArgValue'),
+)
+Function(name='zeGitsNpuAppendGraphInitialize',print_name='zeAppendGraphInitialize',driver_extension=True,component='ze_gits_npu_graph_ext',enabled=True,api_version='1.0',dditable='ze_gits_npu_graph_dditable_ext_t',ddi_pos=5,name_in_dditable='pfnAppendGraphInitialize',
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='hCommandList',type='ze_command_list_handle_t',tag='in'),
+arg2=ArgDef(name='hGraph',type='ze_gits_npu_graph_handle_t',tag='in'),
+arg3=ArgDef(name='hSignalEvent',type='ze_event_handle_t',tag='in'),
+arg4=ArgDef(name='numWaitEvents',type='uint32_t',tag='in'),
+arg5=ArgDef(name='phWaitEvents',type='ze_event_handle_t*',tag='in'),
+)
+Function(name='zeGitsNpuAppendGraphExecute',print_name='zeAppendGraphExecute',driver_extension=True,component='ze_gits_npu_graph_ext',enabled=True,api_version='1.0',dditable='ze_gits_npu_graph_dditable_ext_t',ddi_pos=6,name_in_dditable='pfnAppendGraphExecute',
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='hCommandList',type='ze_command_list_handle_t',tag='in'),
+arg2=ArgDef(name='hGraph',type='ze_gits_npu_graph_handle_t',tag='in'),
+arg3=ArgDef(name='hProfilingQuery',type='ze_gits_npu_graph_profiling_query_handle_t',tag='in'),
+arg4=ArgDef(name='hSignalEvent',type='ze_event_handle_t',tag='in'),
+arg5=ArgDef(name='numWaitEvents',type='uint32_t',tag='in'),
+arg6=ArgDef(name='phWaitEvents',type='ze_event_handle_t*',tag='in'),
+)
+Function(name='zeGitsNpuGraphGetNativeBinary',print_name='zeGraphGetNativeBinary',driver_extension=True,component='ze_gits_npu_graph_ext',enabled=True,api_version='1.0',dditable='ze_gits_npu_graph_dditable_ext_t',ddi_pos=7,name_in_dditable='pfnGetNativeBinary',
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='hGraph',type='ze_gits_npu_graph_handle_t',tag='in'),
+arg2=ArgDef(name='pSize',type='size_t*',tag='inout'),
+arg3=ArgDef(name='pGraphNativeBinary',type='uint8_t*',tag='inout',range='0,*pSize'),
+)
+Function(name='zeGitsNpuDeviceGetGraphProperties',print_name='zeDeviceGetGraphProperties',driver_extension=True,component='ze_gits_npu_graph_ext',enabled=True,api_version='1.0',dditable='ze_gits_npu_graph_dditable_ext_t',ddi_pos=8,name_in_dditable='pfnDeviceGetGraphProperties',
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='hDevice',type='ze_device_handle_t',tag='in'),
+arg2=ArgDef(name='pDeviceGraphProperties',type='ze_gits_npu_device_graph_properties_t*',tag='out'),
+)
+Function(name='zeGitsNpuGraphGetArgumentMetadata',print_name='zeGraphGetArgumentMetadata',driver_extension=True,component='ze_gits_npu_graph_ext',enabled=True,api_version='1.1',dditable='ze_gits_npu_graph_dditable_ext_t',ddi_pos=9,name_in_dditable='pfnGraphGetArgumentMetadata',
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='hGraph',type='ze_gits_npu_graph_handle_t',tag='in'),
+arg2=ArgDef(name='argIndex',type='uint32_t',tag='in'),
+arg3=ArgDef(name='pGraphArgumentMetadata',type='ze_gits_npu_graph_argument_metadata_t*',tag='inout'),
+)
+Function(name='zeGitsNpuGraphGetArgumentProperties2',print_name='zeGraphGetArgumentProperties2',driver_extension=True,component='ze_gits_npu_graph_ext',enabled=True,api_version='1.1',dditable='ze_gits_npu_graph_dditable_ext_t',ddi_pos=10,name_in_dditable='pfnGetArgumentProperties2',
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='hGraph',type='ze_gits_npu_graph_handle_t',tag='in'),
+arg2=ArgDef(name='argIndex',type='uint32_t',tag='in'),
+arg3=ArgDef(name='pGraphArgumentProperties',type='ze_gits_npu_graph_argument_properties_2_t*',tag='inout'),
+)
+Function(name='zeGitsNpuGraphGetArgumentProperties3',print_name='zeGraphGetArgumentProperties3',driver_extension=True,component='ze_gits_npu_graph_ext',enabled=True,api_version='1.2',dditable='ze_gits_npu_graph_dditable_ext_t',ddi_pos=11,name_in_dditable='pfnGetArgumentProperties3',
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='hGraph',type='ze_gits_npu_graph_handle_t',tag='in'),
+arg2=ArgDef(name='argIndex',type='uint32_t',tag='in'),
+arg3=ArgDef(name='pGraphArgumentProperties',type='ze_gits_npu_graph_argument_properties_3_t*',tag='inout'),
+)
+Function(name='zeGitsNpuGraphQueryNetworkCreate',print_name='zeGraphQueryNetworkCreate',driver_extension=True,component='ze_gits_npu_graph_ext',enabled=True,api_version='1.3',dditable='ze_gits_npu_graph_dditable_ext_t',ddi_pos=12,name_in_dditable='pfnQueryNetworkCreate',
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='hContext',type='ze_context_handle_t',tag='in'),
+arg2=ArgDef(name='hDevice',type='ze_device_handle_t',tag='in'),
+arg3=ArgDef(name='desc',type='const ze_gits_npu_graph_desc_t*',tag='in'),
+arg4=ArgDef(name='phGraphQueryNetwork',type='ze_gits_npu_graph_query_network_handle_t*',tag='out'),
+)
+Function(name='zeGitsNpuGraphQueryNetworkDestroy',print_name='zeGraphQueryNetworkDestroy',driver_extension=True,component='ze_gits_npu_graph_ext',enabled=True,api_version='1.3',dditable='ze_gits_npu_graph_dditable_ext_t',ddi_pos=13,name_in_dditable='pfnQueryNetworkDestroy',
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='hGraphQueryNetwork',type='ze_gits_npu_graph_query_network_handle_t',tag='in'),
+)
+Function(name='zeGitsNpuGraphQueryNetworkGetSupportedLayers',print_name='zeGraphQueryNetworkGetSupportedLayers',driver_extension=True,component='ze_gits_npu_graph_ext',enabled=True,api_version='1.3',dditable='ze_gits_npu_graph_dditable_ext_t',ddi_pos=14,name_in_dditable='pfnQueryNetworkGetSupportedLayers',
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='hGraphQueryNetwork',type='ze_gits_npu_graph_query_network_handle_t',tag='in'),
+arg2=ArgDef(name='pSize',type='size_t*',tag='inout'),
+arg3=ArgDef(name='pSupportedLayers',type='char*',tag='inout',range='0,*pSize'),
+)
+Function(name='zeGitsNpuGraphBuildLogGetString',print_name='zeGraphBuildLogGetString',driver_extension=True,component='ze_gits_npu_graph_ext',enabled=True,api_version='1.4',dditable='ze_gits_npu_graph_dditable_ext_t',ddi_pos=15,name_in_dditable='pfnBuildLogGetString',
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='hGraph',type='ze_gits_npu_graph_handle_t',tag='in'),
+arg2=ArgDef(name='pSize',type='uint32_t*',tag='inout'),
+arg3=ArgDef(name='pBuildLog',type='char*',tag='in',range='0,*pSize'),
+)
+Function(name='zeGitsNpuGraphCreate2',print_name='zeGraphCreate2',driver_extension=True,component='ze_gits_npu_graph_ext',enabled=True,api_version='1.5',dditable='ze_gits_npu_graph_dditable_ext_t',ddi_pos=16,name_in_dditable='pfnCreate2',
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='hContext',type='ze_context_handle_t',tag='in'),
+arg2=ArgDef(name='hDevice',type='ze_device_handle_t',tag='in'),
+arg3=ArgDef(name='desc',type='const ze_gits_npu_graph_desc_2_t*',tag='in'),
+arg4=ArgDef(name='phGraph',type='ze_gits_npu_graph_handle_t*',tag='out'),
+)
+Function(name='zeGitsNpuGraphQueryNetworkCreate2',print_name='zeGraphQueryNetworkCreate2',driver_extension=True,component='ze_gits_npu_graph_ext',enabled=True,api_version='1.5',dditable='ze_gits_npu_graph_dditable_ext_t',ddi_pos=17,name_in_dditable='pfnQueryNetworkCreate2',
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='hContext',type='ze_context_handle_t',tag='in'),
+arg2=ArgDef(name='hDevice',type='ze_device_handle_t',tag='in'),
+arg3=ArgDef(name='desc',type='const ze_gits_npu_graph_desc_2_t*',tag='in'),
+arg4=ArgDef(name='phGraphQueryNetwork',type='ze_gits_npu_graph_query_network_handle_t*',tag='out'),
+)
+Function(name='zeGitsNpuGraphQueryContextMemory',print_name='zeGraphQueryContextMemory',driver_extension=True,component='ze_gits_npu_graph_ext',enabled=True,api_version='1.5',dditable='ze_gits_npu_graph_dditable_ext_t',ddi_pos=18,name_in_dditable='pfnQueryContextMemory',
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='hContext',type='ze_context_handle_t',tag='in'),
+arg2=ArgDef(name='type',type='ze_gits_npu_graph_memory_query_type_t',tag='in'),
+arg3=ArgDef(name='query',type='ze_gits_npu_graph_memory_query_t*',tag='out'),
+)
+Function(name='zeGitsNpuDeviceGetGraphProperties2',print_name='zeDeviceGetGraphProperties2',driver_extension=True,component='ze_gits_npu_graph_ext',enabled=True,api_version='1.6',dditable='ze_gits_npu_graph_dditable_ext_t',ddi_pos=19,name_in_dditable='pfnDeviceGetGraphProperties2',
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='hDevice',type='ze_device_handle_t',tag='in'),
+arg2=ArgDef(name='pDeviceGraphProperties',type='ze_gits_npu_device_graph_properties_2_t*',tag='out'),
+)
+Function(name='zeGitsNpuGraphGetNativeBinary2',print_name='zeGraphGetNativeBinary2',driver_extension=True,component='ze_gits_npu_graph_ext',enabled=True,api_version='1.7',dditable='ze_gits_npu_graph_dditable_ext_t',ddi_pos=20,name_in_dditable='pfnGetNativeBinary2',
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='hGraph',type='ze_gits_npu_graph_handle_t',tag='in'),
+arg2=ArgDef(name='pSize',type='size_t*',tag='out'),
+arg3=ArgDef(name='pGraphNativeBinary',type='const uint8_t**',tag='out',range='0,*pSize'),
+)
+Function(name='zeGitsNpuGraphGetProperties2',print_name='zeGraphGetProperties2',driver_extension=True,component='ze_gits_npu_graph_ext',enabled=True,api_version='1.8',dditable='ze_gits_npu_graph_dditable_ext_t',ddi_pos=21,name_in_dditable='pfnGetProperties2',
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='hGraph',type='ze_gits_npu_graph_handle_t',tag='in'),
+arg2=ArgDef(name='pGraphProperties',type='ze_gits_npu_graph_properties_2_t*',tag='inout'),
+)
+Function(name='zeGitsNpuGraphInitialize',print_name='zeGraphInitialize',driver_extension=True,component='ze_gits_npu_graph_ext',enabled=True,api_version='1.8',dditable='ze_gits_npu_graph_dditable_ext_t',ddi_pos=22,name_in_dditable='pfnGraphInitialize',
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='hGraph',type='ze_gits_npu_graph_handle_t',tag='in'),
+)
+Function(name='zeGitsNpuGraphCompilerGetSupportedOptions',print_name='zeGraphCompilerGetSupportedOptions',driver_extension=True,component='ze_gits_npu_graph_ext',enabled=True,api_version='1.11',dditable='ze_gits_npu_graph_dditable_ext_t',ddi_pos=23,name_in_dditable='pfnCompilerGetSupportedOptions',
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='hDevice',type='ze_device_handle_t',tag='in'),
+arg2=ArgDef(name='type',type='ze_gits_npu_npu_options_type_t',tag='in'),
+arg3=ArgDef(name='pSize',type='size_t*',tag='inout'),
+arg4=ArgDef(name='pSupportedOptions',type='char*',tag='in',range='0,*pSize'),
+)
+Function(name='zeGitsNpuGraphCompilerIsOptionSupported',print_name='zeGraphCompilerIsOptionSupported',driver_extension=True,component='ze_gits_npu_graph_ext',enabled=True,api_version='1.11',dditable='ze_gits_npu_graph_dditable_ext_t',ddi_pos=24,name_in_dditable='pfnCompilerIsOptionSupported',
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='hDevice',type='ze_device_handle_t',tag='in'),
+arg2=ArgDef(name='type',type='ze_gits_npu_npu_options_type_t',tag='in'),
+arg3=ArgDef(name='pOption',type='const char*',tag='in'),
+arg4=ArgDef(name='pValue',type='const char*',tag='in'),
+)
+Function(name='zeGitsNpuGraphCreate3',print_name='zeGraphCreate3',driver_extension=True,component='ze_gits_npu_graph_ext',enabled=True,api_version='1.12',dditable='ze_gits_npu_graph_dditable_ext_t',ddi_pos=25,name_in_dditable='pfnCreate3',
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='hContext',type='ze_context_handle_t',tag='in'),
+arg2=ArgDef(name='hDevice',type='ze_device_handle_t',tag='in'),
+arg3=ArgDef(name='desc',type='const ze_gits_npu_graph_desc_2_t*',tag='in'),
+arg4=ArgDef(name='phGraph',type='ze_gits_npu_graph_handle_t*',tag='out'),
+arg5=ArgDef(name='phGraphBuildLog',type='ze_gits_npu_graph_build_log_handle_t*',tag='out'),
+)
+Function(name='zeGitsNpuGraphGetProperties3',print_name='zeGraphGetProperties3',driver_extension=True,component='ze_gits_npu_graph_ext',enabled=True,api_version='1.12',dditable='ze_gits_npu_graph_dditable_ext_t',ddi_pos=26,name_in_dditable='pfnGetProperties3',
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='hGraph',type='ze_gits_npu_graph_handle_t',tag='in'),
+arg2=ArgDef(name='pGraphProperties',type='ze_gits_npu_graph_properties_3_t*',tag='inout'),
+)
+Function(name='zeGitsNpuGraphBuildLogGetString2',print_name='zeGraphBuildLogGetString2',driver_extension=True,component='ze_gits_npu_graph_ext',enabled=True,api_version='1.12',dditable='ze_gits_npu_graph_dditable_ext_t',ddi_pos=27,name_in_dditable='pfnBuildLogGetString2',
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='hGraphBuildLog',type='ze_gits_npu_graph_build_log_handle_t',tag='in'),
+arg2=ArgDef(name='pSize',type='uint32_t*',tag='inout'),
+arg3=ArgDef(name='pBuildLog',type='char*',tag='in',range='0,*pSize'),
+)
+Function(name='zeGitsNpuGraphBuildLogDestroy',print_name='zeGraphBuildLogDestroy',driver_extension=True,component='ze_gits_npu_graph_ext',enabled=True,api_version='1.12',dditable='ze_gits_npu_graph_dditable_ext_t',ddi_pos=28,name_in_dditable='pfnBuildLogDestroy',
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='hGraphBuildLog',type='ze_gits_npu_graph_build_log_handle_t',tag='in'),
+)
+Function(name='zeGitsNpuGraphSetArgumentValue2',print_name='zeGraphSetArgumentValue2',driver_extension=True,component='ze_gits_npu_graph_ext',enabled=True,api_version='1.15',dditable='ze_gits_npu_graph_dditable_ext_t',ddi_pos=29,name_in_dditable='pfnSetArgumentValue2',
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='hGraph',type='ze_gits_npu_graph_handle_t',tag='in'),
+arg2=ArgDef(name='argIndex',type='uint32_t',tag='in'),
+arg3=ArgDef(name='pArgValue',type='const void*',tag='in',wrapType='CExtensionStructGraphNpu'),
+)
+Function(name='zeGitsNpuGraphEvict',print_name='zeGraphEvict',driver_extension=True,component='ze_gits_npu_graph_ext',enabled=True,api_version='1.16',dditable='ze_gits_npu_graph_dditable_ext_t',ddi_pos=30,name_in_dditable='pfnEvict',
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='hGraph',type='ze_gits_npu_graph_handle_t',tag='in'),
 )

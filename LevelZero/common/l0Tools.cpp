@@ -446,7 +446,7 @@ std::vector<ze_device_handle_t> GetDevices(const CDriver& cDriver,
   cDriver.inject.zeDeviceGet(driver, &devCount, nullptr);
   std::vector<ze_device_handle_t> devices(devCount);
   ze_result_t result = cDriver.inject.zeDeviceGet(driver, &devCount, devices.data());
-  zeDeviceGet_SD(result, driver, &devCount, devices.data());
+  zeDeviceGet_SD(SD(), result, driver, &devCount, devices.data());
   return result == ZE_RESULT_SUCCESS ? std::move(devices) : std::vector<ze_device_handle_t>();
 }
 

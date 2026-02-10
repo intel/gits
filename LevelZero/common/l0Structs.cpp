@@ -487,5 +487,120 @@ std::vector<std::string> Cze_module_program_exp_desc_t::GetProgramSourcesNames()
 void* Cze_module_program_exp_desc_t::GetPtrType() {
   return (void*)Ptr();
 }
+
+Cze_gits_npu_graph_desc_t::Cze_gits_npu_graph_desc_t(const L0Type& value)
+    : _stype(value.stype),
+      _pNext(value.pNext),
+      _format(value.format),
+      _inputSize(value.inputSize),
+      _pInput(value.inputSize, value.pInput),
+      _pBuildFlags(value.pBuildFlags, 0, 1) {}
+
+Cze_gits_npu_graph_desc_t::Cze_gits_npu_graph_desc_t(const L0Type* value)
+    : Cze_gits_npu_graph_desc_t(*value) {}
+
+const char* Cze_gits_npu_graph_desc_t::Name() const {
+  return Cze_gits_npu_graph_desc_t::NAME;
+}
+
+void Cze_gits_npu_graph_desc_t::Write(CBinOStream& stream) const {
+  _stype.Write(stream);
+  _pNext.Write(stream);
+  _format.Write(stream);
+  _inputSize.Write(stream);
+  _pInput.Write(stream);
+  _pBuildFlags.Write(stream);
+}
+
+void Cze_gits_npu_graph_desc_t::Read(CBinIStream& stream) {
+  _stype.Read(stream);
+  _pNext.Read(stream);
+  _format.Read(stream);
+  _inputSize.Read(stream);
+  _pInput.Read(stream);
+  _pBuildFlags.Read(stream);
+}
+
+Cze_gits_npu_graph_desc_t::L0Type Cze_gits_npu_graph_desc_t::operator*() {
+  const auto* ptr = Ptr();
+  if (ptr == nullptr) {
+    throw EOperationFailed(EXCEPTION_MESSAGE);
+  }
+  return *ptr;
+}
+
+Cze_gits_npu_graph_desc_t::L0Type* Cze_gits_npu_graph_desc_t::Ptr() {
+  _struct.stype = *_stype;
+  _struct.pNext = *_pNext;
+  _struct.format = *_format;
+  _struct.inputSize = *_inputSize;
+  _struct.pInput = *_pInput;
+  _struct.pBuildFlags = *_pBuildFlags;
+  return &_struct;
+}
+
+std::set<uint64_t> Cze_gits_npu_graph_desc_t::GetMappedPointers() {
+  return std::set<uint64_t>();
+}
+
+Cze_gits_npu_graph_desc_2_t::Cze_gits_npu_graph_desc_2_t(const L0Type& value)
+    : _stype(value.stype),
+      _pNext(value.pNext),
+      _format(value.format),
+      _inputSize(value.inputSize),
+      _pInput(value.inputSize, value.pInput),
+      _pBuildFlags(value.pBuildFlags, 0, 1),
+      _flags(value.flags) {}
+
+Cze_gits_npu_graph_desc_2_t::Cze_gits_npu_graph_desc_2_t(const L0Type* value)
+    : Cze_gits_npu_graph_desc_2_t(*value) {}
+
+const char* Cze_gits_npu_graph_desc_2_t::Name() const {
+  return Cze_gits_npu_graph_desc_2_t::NAME;
+}
+
+void Cze_gits_npu_graph_desc_2_t::Write(CBinOStream& stream) const {
+  _stype.Write(stream);
+  _pNext.Write(stream);
+  _format.Write(stream);
+  _inputSize.Write(stream);
+  _pInput.Write(stream);
+  _pBuildFlags.Write(stream);
+  _flags.Write(stream);
+}
+
+void Cze_gits_npu_graph_desc_2_t::Read(CBinIStream& stream) {
+  _stype.Read(stream);
+  _pNext.Read(stream);
+  _format.Read(stream);
+  _inputSize.Read(stream);
+  _pInput.Read(stream);
+  _pBuildFlags.Read(stream);
+  _flags.Read(stream);
+}
+
+Cze_gits_npu_graph_desc_2_t::L0Type Cze_gits_npu_graph_desc_2_t::operator*() {
+  const auto* ptr = Ptr();
+  if (ptr == nullptr) {
+    throw EOperationFailed(EXCEPTION_MESSAGE);
+  }
+  return *ptr;
+}
+
+Cze_gits_npu_graph_desc_2_t::L0Type* Cze_gits_npu_graph_desc_2_t::Ptr() {
+  _struct.stype = *_stype;
+  _struct.pNext = *_pNext;
+  _struct.format = *_format;
+  _struct.inputSize = *_inputSize;
+  _struct.pInput = *_pInput;
+  _struct.pBuildFlags = *_pBuildFlags;
+  _struct.flags = *_flags;
+  return &_struct;
+}
+
+std::set<uint64_t> Cze_gits_npu_graph_desc_2_t::GetMappedPointers() {
+  return std::set<uint64_t>();
+}
+
 } // namespace l0
 } // namespace gits

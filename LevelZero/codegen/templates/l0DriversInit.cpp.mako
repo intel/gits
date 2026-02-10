@@ -63,6 +63,62 @@ template<class T>
 bool load_l0_function_from_original_library(T& func, const char* name) {
   return load_l0_function_from_original_library_generic(reinterpret_cast<void*&>(func), name);
 }
+
+<%
+npu_extensions = get_npu_extensions(functions, enums)
+npu_components = [ext[0] for ext in npu_extensions]
+%>\
+static ze_result_t set_npu_extension_functions(ze_driver_handle_t hDriver, const char* name, void** ppFunctionAddress) {
+%for (_, extension_string, dditable, extension_functions, versions) in npu_extensions:
+  if (strcmp(name, ${extension_string}) == 0) {
+    if (drv.original.zeDriverGetExtensionProperties == nullptr) {
+      if (!load_l0_function(drv.original.zeDriverGetExtensionProperties, "zeDriverGetExtensionProperties")) {
+        return ZE_RESULT_ERROR_UNINITIALIZED;
+      }
+    }
+    uint32_t count = 0;
+    auto return_value = drv.original.zeDriverGetExtensionProperties(hDriver, &count, nullptr);
+    if (return_value != ZE_RESULT_SUCCESS) {
+      LOG_ERROR << "Could not get extension properties count";
+      return return_value;
+    }
+    std::vector<ze_driver_extension_properties_t> extension_props(count);
+    return_value = drv.original.zeDriverGetExtensionProperties(hDriver, &count, extension_props.data());
+    if (return_value != ZE_RESULT_SUCCESS) {
+      LOG_ERROR << "Could not get extension properties";
+      return return_value;
+    }
+    uint32_t ext_version = 0;
+    bool found = false;
+    for (uint32_t i = 0; i < count; i++) {
+      if (strncmp(extension_props[i].name, ${extension_string}, strlen(${extension_string})) == 0) {
+        ext_version = extension_props[i].version;
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      LOG_ERROR << "Could not find " << name << " extension version";
+      return ZE_RESULT_ERROR_UNINITIALIZED;
+    }
+    ${dditable}* ddi = *reinterpret_cast<${dditable}**>(ppFunctionAddress);
+    switch (ext_version) {
+  %for var in versions:
+    case ${var['name']}: {
+      %for ext_func in extension_functions:
+        %if get_api_version_from_string(get_api_version_from_enum(var)) >= get_api_version_from_string(ext_func.get('api_version')):
+      drv.original.${ext_func.get('name')} = ddi->${ext_func.get('name_in_dditable')};
+      %endif
+    %endfor
+      return ZE_RESULT_SUCCESS;
+    }
+  %endfor
+    }
+  }
+%endfor
+  return ZE_RESULT_ERROR_UNINITIALIZED;
+}
+
 %for name, func in functions.items():
   %if not is_latest_version(functions, func):
 <% continue %>
@@ -100,7 +156,7 @@ ${func.get('type')} __zecall special_${func.get('name')}(
   ${func.get('type')} ret{};
   %endif
   %if func.get('log', True):
-  LOG_TRACE_RAW << LOG_PREFIX << "${func.get('name')}(";
+  LOG_TRACE_RAW << LOG_PREFIX << "${func.get('print_name', func.get('name'))}(";
     %for arg in func['args']:
   LOG_TRACE_RAW << ${f"ToStringHelperArrayRange({get_arg_name(arg['name'])}, {arg['range']})" if arg.get('range') else f"ToStringHelper({get_arg_name(arg['name'])})"}${'' if loop.last else ' << ", "'};
     %endfor
@@ -132,6 +188,9 @@ ${func.get('type')} __zecall special_${func.get('name')}(
   }
   if (call_orig) {
     ret = drv.original.${func.get('name')}(${make_params(func)});
+    %if func.get('name') == "zeDriverGetExtensionFunctionAddress":
+    ret = set_npu_extension_functions(${make_params(func)});
+    %endif
     %if func.get('log', True):
     LOG_TRACE_RAW << " = " << ToStringHelper(ret) << std::endl;
       %for arg in func['args']:
@@ -140,7 +199,20 @@ ${func.get('type')} __zecall special_${func.get('name')}(
           %if arg.get('range'):
 ToStringHelperArrayRange(${get_arg_name(arg['name'])}, ${arg['range']}) << std::endl;
           %else:
+            %if arg['type'] == 'ze_device_handle_t*':
+              %if arg.get('optional', False):
+${get_arg_name(arg['name'])};
+    if (${arg['name']} != nullptr) {
+        LOG_TRACE << " *device " << *${arg['name']} << std::endl;
+    } else {
+        LOG_TRACE << std::endl;
+    }
+              %else:
+${get_arg_name(arg['name'])} << " *device " << *${arg['name']} << std::endl;
+              %endif
+            %else:
 ${get_arg_name(arg['name'])} << std::endl;
+            %endif
           %endif
         %endif
       %endfor
@@ -168,17 +240,43 @@ ${func.get('type')} __zecall default_${func.get('name')}(
   }
   %else:
   if (drv.original.${func.get('name')} == nullptr) {
+    %if func.get('component') not in npu_components:
     if (!load_l0_function(drv.original.${func.get('name')}, "${func.get('name')}")) {
+    %endif
       LOG_ERROR << "Could not load ${func.get('name')} function.";
       return ${'ZE_RESULT_ERROR_UNINITIALIZED' if func.get('type') == 'ze_result_t' else (f'0' if func.get('type') == 'uint32_t' else 'nullptr')};
+    %if func.get('component') not in npu_components:
     }
+    %endif
   }
+  %endif
+  %if func.get('name') == 'zeDriverGetExtensionFunctionAddress':
+  ze_result_t ret;
   %endif
   if (log::ShouldLog(LogLevel::TRACE) || Configurator::Get().common.shared.useEvents) {
     drv.${func.get('name')} = special_${func.get('name')};
+  %if func.get('name') == 'zeDriverGetExtensionFunctionAddress':
+    ret = drv.${func.get('name')}(${make_params(func)});
+  %else:
     return drv.${func.get('name')}(${make_params(func)});
+  %endif
+  %if func.get('name') == 'zeDriverGetExtensionFunctionAddress':
+  } else {
+    ret = drv.original.${func.get('name')}(${make_params(func)});
+  }
+  if (ret != ZE_RESULT_SUCCESS) {
+    return ret;
+  }
+  ret = set_npu_extension_functions(${make_params(func)});
+  if (ret != ZE_RESULT_SUCCESS) {
+    LOG_ERROR << "Could not set " << name << " functions for extension";
+    return ret;
+  }
+  return ret;
+  %else:
   }
   return drv.original.${func.get('name')}(${make_params(func)});
+  %endif
 }
 
 ${func.get('type')} __zecall inject_${func.get('name')}(

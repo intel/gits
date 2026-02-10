@@ -381,6 +381,8 @@ struct CDriverState : public CState {
   using states_type = std::unordered_map<type, std::unique_ptr<CDriverState>>;
 
 public:
+  ze_init_driver_type_flags_t driverType;
+
   CDriverState() = default;
 };
 
@@ -507,6 +509,29 @@ public:
   CFenceState(ze_command_queue_handle_t hCommandQueue, ze_fence_desc_t desc);
 };
 
+struct CSysDriverState : public CState {
+  using type = zes_driver_handle_t;
+  using states_type = std::unordered_map<type, std::unique_ptr<CSysDriverState>>;
+
+public:
+  ze_init_driver_type_flags_t driverType;
+
+  CSysDriverState() = default;
+};
+
+struct CSysDeviceState : public CState {
+  using type = zes_device_handle_t;
+  using states_type = std::unordered_map<type, std::unique_ptr<CSysDeviceState>>;
+  zes_driver_handle_t hDriver = nullptr;
+  zes_device_properties_t properties = {};
+  zes_device_handle_t hDevice = nullptr;
+
+public:
+  CSysDeviceState() = default;
+  explicit CSysDeviceState(zes_driver_handle_t hDriver);
+  explicit CSysDeviceState(zes_device_handle_t hDevice);
+};
+
 class LayoutBuilder {
 private:
   nlohmann::ordered_json layout;
@@ -616,6 +641,8 @@ private:
   typename CFenceState::states_type fenceStates_;
   typename CKernelArgumentDump::states_type kernelArgumentDumps_;
   typename CPhysicalMemState::states_type physicalMemStates_;
+  typename CSysDriverState::states_type sysDriverStates_;
+  typename CSysDeviceState::states_type sysDeviceStates_;
   static CStateDynamic* instance;
 
 public:
@@ -731,6 +758,15 @@ template <>
 const typename CPhysicalMemState::states_type& CStateDynamic::Map<CPhysicalMemState>() const;
 template <>
 const typename CCommandQueueState::states_type& CStateDynamic::Map<CCommandQueueState>() const;
+template <>
+typename CSysDriverState::states_type& CStateDynamic::Map<CSysDriverState>();
+template <>
+const typename CSysDriverState::states_type& CStateDynamic::Map<CSysDriverState>() const;
+template <>
+typename CSysDeviceState::states_type& CStateDynamic::Map<CSysDeviceState>();
+template <>
+const typename CSysDeviceState::states_type& CStateDynamic::Map<CSysDeviceState>() const;
+
 inline CStateDynamic& SD() {
   return CStateDynamic::Instance();
 }

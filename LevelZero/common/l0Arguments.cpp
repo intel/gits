@@ -242,5 +242,61 @@ void CBinaryData::Read(CBinIStream& stream) {
     std::copy_n((const char*)_resource.Data(), _resource.Data().Size(), _buffer.begin());
   }
 }
+
+CGraphArgValue::CGraphArgValue(const void* ptr) : _ptr(ptr) {}
+
+void CGraphArgValue::Write(CBinOStream& stream) const {
+  stream << CBuffer(&_ptr, sizeof(_ptr));
+}
+
+void CGraphArgValue::Read(CBinIStream& stream) {
+  stream >> CBuffer(&_ptr, sizeof(_ptr));
+}
+
+const void* CGraphArgValue::operator*() {
+  if (_cached != nullptr) {
+    return _cached;
+  }
+  const auto allocPair = GetAllocFromOriginalPtr(const_cast<void*>(_ptr), SD());
+  if (allocPair.first != nullptr) {
+    _cached = GetOffsetPointer(allocPair.first, allocPair.second);
+    return _cached;
+  }
+  return nullptr;
+}
+
+void Cze_driver_handle_t::AddMutualMapping(ze_driver_handle_t key, ze_driver_handle_t value) {
+  if (!Czet_driver_handle_t::CheckMapping(reinterpret_cast<zet_driver_handle_t>(key))) {
+    Czet_driver_handle_t::AddMapping(reinterpret_cast<zet_driver_handle_t>(key),
+                                     reinterpret_cast<zet_driver_handle_t>(value));
+  }
+  if (!Czes_driver_handle_t::CheckMapping(reinterpret_cast<zes_driver_handle_t>(key))) {
+    Czes_driver_handle_t::AddMapping(reinterpret_cast<zes_driver_handle_t>(key),
+                                     reinterpret_cast<zes_driver_handle_t>(value));
+  }
+}
+
+void Cze_driver_handle_t::RemoveMutualMapping(ze_driver_handle_t key) {
+  if (Czet_driver_handle_t::CheckMapping(reinterpret_cast<zet_driver_handle_t>(key))) {
+    Czet_driver_handle_t::RemoveMapping(reinterpret_cast<zet_driver_handle_t>(key));
+  }
+  if (Czes_driver_handle_t::CheckMapping(reinterpret_cast<zes_driver_handle_t>(key))) {
+    Czes_driver_handle_t::RemoveMapping(reinterpret_cast<zes_driver_handle_t>(key));
+  }
+}
+
+void Czes_driver_handle_t::AddMutualMapping(zes_driver_handle_t key, zes_driver_handle_t value) {
+  if (!Cze_driver_handle_t::CheckMapping(reinterpret_cast<ze_driver_handle_t>(key))) {
+    Cze_driver_handle_t::AddMapping(reinterpret_cast<ze_driver_handle_t>(key),
+                                    reinterpret_cast<ze_driver_handle_t>(value));
+  }
+}
+
+void Czes_driver_handle_t::RemoveMutualMapping(zes_driver_handle_t key) {
+  if (Cze_driver_handle_t::CheckMapping(reinterpret_cast<ze_driver_handle_t>(key))) {
+    Cze_driver_handle_t::RemoveMapping(reinterpret_cast<ze_driver_handle_t>(key));
+  }
+}
+
 } // namespace l0
 } // namespace gits

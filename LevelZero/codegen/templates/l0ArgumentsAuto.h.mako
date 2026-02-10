@@ -27,9 +27,9 @@ namespace gits {
       virtual std::string ToString() const { return ToStringHelper(Value()); }
       virtual void Write(CBinOStream& stream) const { CArg::Write(stream); }
     };
-  %if "_structure_type_t" in name:
+  %if "_structure_type_" in name:
     template<>
-    gits::CArgument *AllocateExtensionStructure(Cuint32_t *version, const ${name} &stype, ${get_namespace(name)}_base_properties_t *extendedProperties);
+    gits::CArgument *AllocateExtensionStructure(Cuint32_t *version, const ${name} &stype, ${enum.get('base', get_namespace(name) + '_base_properties_t')} *extendedProperties);
   %endif
 %endfor
 
@@ -94,6 +94,21 @@ namespace gits {
     using CExtensionStructSysman = CExtensionStruct<zes_structure_type_t, Czes_structure_type_t, zes_base_properties_t>;
     using CExtensionStructTools = CExtensionStruct<zet_structure_type_t, Czet_structure_type_t, zet_base_properties_t>;
     using CExtensionStructTracer = CExtensionStruct<zel_structure_type_t, Czel_structure_type_t, zel_base_properties_t>;
+    using CExtensionStructCommandQueueNpu = CExtensionStruct<ze_gits_npu_structure_type_command_queue_npu_ext_t,
+                                                             Cze_gits_npu_structure_type_command_queue_npu_ext_t,
+                                                             ze_gits_npu_command_queue_npu_ext_base_properties_t>;
+    using CExtensionStructContextNpu = CExtensionStruct<ze_gits_npu_structure_type_context_npu_ext_t,
+                                                             Cze_gits_npu_structure_type_context_npu_ext_t,
+                                                             ze_gits_npu_context_npu_ext_base_properties_t>;
+    using CExtensionStructDriverNpu = CExtensionStruct<ze_gits_npu_structure_type_driver_npu_ext_t,
+                                                             Cze_gits_npu_structure_type_driver_npu_ext_t,
+                                                             ze_gits_npu_driver_npu_ext_base_properties_t>;
+    using CExtensionStructGraphNpu = CExtensionStruct<ze_gits_npu_structure_type_graph_ext_t,
+                                                             Cze_gits_npu_structure_type_graph_ext_t,
+                                                             ze_gits_npu_graph_ext_base_properties_t>;
+    using CExtensionStructGraphProfilingNpu = CExtensionStruct<ze_gits_npu_structure_type_profiling_data_ext_t,
+                                                             Cze_gits_npu_structure_type_profiling_data_ext_t,
+                                                             ze_gits_npu_profiling_data_ext_base_properties_t>;
 %for name, arg in arguments.items():
   %if not arg.get('enabled', True):
 <% continue %>

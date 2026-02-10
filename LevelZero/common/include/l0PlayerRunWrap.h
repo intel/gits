@@ -590,22 +590,75 @@ inline void zeCommandListAppendQueryKernelTimestamps_RUNWRAP(
                                               *_phEvents, *_dstptr, *_pOffsets, *_hSignalEvent,
                                               *_numWaitEvents, *_phWaitEvents);
 }
+
+static inline void MapDrivers(uint32_t originalCount,
+                              uint32_t currentCount,
+                              Cze_driver_handle_t::CSMapArray& drivers) {
+  if (drivers.ArraySize() == 0) {
+    return;
+  }
+  ze_driver_handle_t first = nullptr;
+  ze_init_driver_type_flags_t firstDriverType = static_cast<ze_init_driver_type_flags_t>(0);
+
+  for (uint32_t i = 0; i < currentCount; i++) {
+    bool mapped = false;
+    for (const auto& [handle, state] : SD().Map<CDriverState>()) {
+      if (!first) {
+        first = handle;
+        firstDriverType = state->driverType;
+      }
+      if (state->driverType == drivers[i].driverType) {
+        Cze_driver_handle_t::AddMapping(drivers[i].Original(), handle);
+        mapped = true;
+        break;
+      }
+    }
+    if (!mapped) {
+      if (firstDriverType != drivers[i].driverType) {
+        LOG_WARNING << "Mapping driver with different type (" << firstDriverType
+                    << ") than original (" << drivers[i].driverType << ")";
+      }
+      Cze_driver_handle_t::AddMapping(drivers[i].Original(), first);
+    }
+  }
+  if (originalCount > currentCount) {
+    auto originalDrivers = drivers.Original();
+    for (auto i = currentCount; i < originalCount; i++) {
+      LOG_WARNING << "Original application was recorded using more drivers.";
+      if (firstDriverType != drivers[i].driverType) {
+        LOG_WARNING << "Mapping driver with different type (" << firstDriverType
+                    << ") than original (" << drivers[i].driverType << ")";
+      }
+      Cze_driver_handle_t::AddMapping(originalDrivers[i], first);
+    }
+  }
+}
+
 inline void zeDriverGet_RUNWRAP(Cze_result_t& _return_value,
                                 Cuint32_t::CSArray& _pCount,
                                 Cze_driver_handle_t::CSMapArray& _phDrivers) {
   const auto originalCount = **_pCount;
-  _return_value.Value() = drv.zeDriverGet(*_pCount, *_phDrivers);
-  const auto currentCount = **_pCount;
-  if (_return_value.Value() == ZE_RESULT_SUCCESS && _phDrivers.Size() > 0U &&
-      originalCount > currentCount) {
-    LOG_WARNING << "Original application was recorded using more drivers.";
-    const auto firstDriver = (*_phDrivers)[0];
-    for (auto i = currentCount; i < originalCount; i++) {
-      const auto originalDrivers = _phDrivers.Original();
-      Cze_driver_handle_t::AddMapping(originalDrivers[i], firstDriver);
+  if (CGits::Instance().FilePlayer().Version().version() < GITS_L0_DRIVER_MAPPING) {
+    _return_value.Value() = drv.zeDriverGet(*_pCount, *_phDrivers);
+    const auto currentCount = **_pCount;
+    if (_return_value.Value() == ZE_RESULT_SUCCESS && _phDrivers.ArraySize() > 0U &&
+        originalCount > currentCount) {
+      LOG_WARNING << "Original application was recorded using more drivers.";
+      const auto firstDriver = (*_phDrivers)[0];
+      for (auto i = currentCount; i < originalCount; i++) {
+        const auto originalDrivers = _phDrivers.Original();
+        Cze_driver_handle_t::AddMapping(originalDrivers[i], firstDriver);
+      }
     }
+    zeDriverGet_SD(*_return_value, *_pCount, *_phDrivers);
+  } else {
+    if (SD().Map<CDriverState>().empty()) {
+      GetDrivers(drv);
+    }
+    _return_value.Value() = drv.zeDriverGet(*_pCount, *_phDrivers);
+    const auto currentCount = **_pCount;
+    MapDrivers(originalCount, currentCount, _phDrivers);
   }
-  zeDriverGet_SD(*_return_value, *_pCount, *_phDrivers);
 }
 
 inline void zeDeviceGet_RUNWRAP(Cze_result_t& _return_value,
@@ -615,16 +668,16 @@ inline void zeDeviceGet_RUNWRAP(Cze_result_t& _return_value,
   const auto originalCount = **_pCount;
   _return_value.Value() = drv.zeDeviceGet(*_hDriver, *_pCount, *_phDevices);
   const auto currentCount = **_pCount;
-  if (_return_value.Value() == ZE_RESULT_SUCCESS && _phDevices.Size() > 0U &&
+  if (_return_value.Value() == ZE_RESULT_SUCCESS && _phDevices.ArraySize() > 0U &&
       originalCount > currentCount) {
     LOG_WARNING << "Original application was recorded using more devices.";
-    const auto gpuDevice = GetGPUDevice(SD(), drv);
+    ze_device_handle_t firstDevice = (*_phDevices)[0];
+    auto originalDevices = _phDevices.Original();
     for (auto i = currentCount; i < originalCount; i++) {
-      const auto originalDevices = _phDevices.Original();
-      Cze_device_handle_t::AddMapping(originalDevices[i], gpuDevice);
+      Cze_device_handle_t::AddMapping(originalDevices[i], firstDevice);
     }
   }
-  zeDeviceGet_SD(*_return_value, *_hDriver, *_pCount, *_phDevices);
+  zeDeviceGet_SD(SD(), *_return_value, *_hDriver, *_pCount, *_phDevices);
 }
 
 inline void zeContextDestroy_RUNWRAP(Cze_result_t& _return_value, Cze_context_handle_t& _hContext) {
@@ -949,21 +1002,108 @@ inline void zeInitDrivers_RUNWRAP(Cze_result_t& _return_value,
                                   Cuint32_t::CSArray& _pCount,
                                   Cze_driver_handle_t::CSMapArray& _phDrivers,
                                   Cze_init_driver_type_desc_t::CSArray& _desc) {
-  drv.Initialize();
   const auto originalCount = **_pCount;
-  _return_value.Value() = drv.zeInitDrivers(*_pCount, *_phDrivers, *_desc);
-  const auto currentCount = **_pCount;
-  if (_return_value.Value() == ZE_RESULT_SUCCESS && _phDrivers.Size() > 0U &&
-      originalCount > currentCount) {
-    LOG_WARNING << "Original application was recorded using more drivers.";
-    const auto firstDriver = (*_phDrivers)[0];
-    for (auto i = currentCount; i < originalCount; i++) {
-      const auto originalDrivers = _phDrivers.Original();
-      Cze_driver_handle_t::AddMapping(originalDrivers[i], firstDriver);
+  if (CGits::Instance().FilePlayer().Version().version() >= GITS_L0_DRIVER_MAPPING) {
+    if (SD().Map<CDriverState>().empty()) {
+      drv.Initialize();
+      uint32_t count = 0;
+      ze_init_driver_type_desc_t desc = {};
+      desc.stype = ZE_STRUCTURE_TYPE_INIT_DRIVER_TYPE_DESC;
+      desc.flags = static_cast<ze_init_driver_type_flags_t>(ZE_INIT_DRIVER_TYPE_FLAG_GPU |
+                                                            ZE_INIT_DRIVER_TYPE_FLAG_NPU);
+      ze_result_t ret = drv.inject.zeInitDrivers(&count, nullptr, &desc);
+      if (ret != ZE_RESULT_SUCCESS) {
+        throw EOperationFailed("Couldn't fetch driver count");
+      }
+      std::vector<ze_driver_handle_t> drivers(count);
+      ret = drv.inject.zeInitDrivers(&count, drivers.data(), &desc);
+      if (ret != ZE_RESULT_SUCCESS) {
+        throw EOperationFailed("Couldn't fetch drivers");
+      }
+      zeInitDrivers_SD(ret, &count, drivers.data(), &desc);
+    }
+    _return_value.Value() = drv.zeInitDrivers(*_pCount, *_phDrivers, *_desc);
+    const auto currentCount = **_pCount;
+    MapDrivers(originalCount, currentCount, _phDrivers);
+  } else {
+    drv.Initialize();
+    _return_value.Value() = drv.zeInitDrivers(*_pCount, *_phDrivers, *_desc);
+    const auto currentCount = **_pCount;
+    if (_return_value.Value() == ZE_RESULT_SUCCESS && _phDrivers.ArraySize() > 0U &&
+        originalCount > currentCount) {
+      LOG_WARNING << "Original application was recorded using more drivers.";
+      const auto firstDriver = (*_phDrivers)[0];
+      for (auto i = currentCount; i < originalCount; i++) {
+        const auto originalDrivers = _phDrivers.Original();
+        Cze_driver_handle_t::AddMapping(originalDrivers[i], firstDriver);
+      }
+    }
+    zeInitDrivers_SD(*_return_value, *_pCount, *_phDrivers, *_desc);
+  }
+}
+
+inline void zesDriverGet_RUNWRAP(Cze_result_t& _return_value,
+                                 Cuint32_t::CSArray& _pCount,
+                                 Czes_driver_handle_t::CSMapArray& _phDrivers) {
+  auto originalCount = **_pCount;
+  if (CGits::Instance().FilePlayer().Version().version() < GITS_L0_DRIVER_MAPPING) {
+    _return_value.Value() = drv.zesDriverGet(*_pCount, *_phDrivers);
+  } else {
+    if (SD().Map<CSysDriverState>().empty()) {
+      uint32_t count = 0;
+      ze_result_t ret = drv.inject.zesDriverGet(&count, nullptr);
+      if (ret != ZE_RESULT_SUCCESS) {
+        throw EOperationFailed("Couldn't fetch sysman driver count");
+      }
+      std::vector<zes_driver_handle_t> drivers(count);
+      ret = drv.inject.zesDriverGet(&count, drivers.data());
+      if (ret != ZE_RESULT_SUCCESS) {
+        throw EOperationFailed("Couldn't fetch sysman driver count");
+      }
+      zesDriverGet_SD(ret, &count, drivers.data());
+    }
+    _return_value.Value() = drv.zesDriverGet(*_pCount, *_phDrivers);
+    auto currentCount = **_pCount;
+    if (_phDrivers.ArraySize() > 0) {
+      zes_driver_handle_t first = (*_phDrivers[0]);
+      for (uint32_t i = 0; i < currentCount; i++) {
+        bool mapped = false;
+        for (const auto& [handle, state] : SD().Map<CSysDriverState>()) {
+          if (state->driverType == _phDrivers[i].driverType) {
+            Czes_driver_handle_t::AddMapping(_phDrivers[i].Original(), handle);
+            mapped = true;
+            break;
+          }
+        }
+        if (!mapped) {
+          Czes_driver_handle_t::AddMapping(_phDrivers[i].Original(), first);
+        }
+      }
+      if (originalCount > currentCount) {
+        auto originalDrivers = _phDrivers.Original();
+        for (uint32_t i = currentCount; i < originalCount; i++) {
+          Czes_driver_handle_t::AddMapping(originalDrivers[i], first);
+        }
+      }
     }
   }
-  _return_value.Value() = drv.zeInitDrivers(*_pCount, *_phDrivers, *_desc);
-  zeInitDrivers_SD(*_return_value, *_pCount, *_phDrivers, *_desc);
+}
+
+inline void zesDeviceGet_RUNWRAP(Cze_result_t& _return_value,
+                                 Czes_driver_handle_t& _hDriver,
+                                 Cuint32_t::CSArray& _pCount,
+                                 Czes_device_handle_t::CSMapArray& _phDevices) {
+  uint32_t originalCount = **_pCount;
+  _return_value.Value() = drv.zesDeviceGet(*_hDriver, *_pCount, *_phDevices);
+  uint32_t currentCount = **_pCount;
+  if (_return_value.Value() == ZE_RESULT_SUCCESS && _phDevices.ArraySize() > 0U &&
+      originalCount > currentCount) {
+    zes_device_handle_t first = (*_phDevices)[0];
+    for (uint32_t i = currentCount; i < originalCount; i++) {
+      Czes_device_handle_t::AddMapping(_phDevices[i].Original(), first);
+    }
+  }
+  zesDeviceGet_SD(_return_value.Value(), *_hDriver, *_pCount, *_phDevices);
 }
 
 inline void zerGetLastErrorDescription_RUNWRAP(Cze_result_t& _return_value,

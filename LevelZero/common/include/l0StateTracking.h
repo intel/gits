@@ -380,6 +380,60 @@ inline void zeMemFree_SD(ze_result_t return_value,
   }
 }
 
+inline void zeDeviceGet_SD(CStateDynamic& sd,
+                           ze_result_t return_value,
+                           ze_driver_handle_t hDriver,
+                           uint32_t* pCount,
+                           ze_device_handle_t* phDevices) {
+  if (return_value == ZE_RESULT_SUCCESS && pCount != nullptr && phDevices != nullptr) {
+    for (auto i = 0u; i < *pCount; i++) {
+      if (sd.Exists<CDeviceState>(phDevices[i])) {
+        continue;
+      }
+      auto& deviceState = sd.Map<CDeviceState>()[phDevices[i]];
+      deviceState = std::make_unique<CDeviceState>(hDriver);
+      deviceState->properties.stype = ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES;
+      ze_result_t ret = drv.inject.zeDeviceGetProperties(phDevices[i], &deviceState->properties);
+      if (ret != ZE_RESULT_SUCCESS) {
+        throw EOperationFailed("Couldn't fetch device properties");
+      }
+    }
+  }
+}
+
+static ze_init_driver_type_flags_t GetDriverType(ze_device_type_t type) {
+  switch (type) {
+  case ZE_DEVICE_TYPE_GPU:
+    return ZE_INIT_DRIVER_TYPE_FLAG_GPU;
+  case ZE_DEVICE_TYPE_VPU:
+    return ZE_INIT_DRIVER_TYPE_FLAG_NPU;
+  default:
+    throw ENotSupported("Unsupported device type");
+  }
+}
+
+static ze_init_driver_type_flags_t GetDriverType(ze_driver_handle_t driver) {
+  auto& sd = SD();
+  for (const auto& [device, state] : sd.Map<CDeviceState>()) {
+    if (state->hDriver != driver) {
+      continue;
+    }
+    return GetDriverType(state->properties.type);
+  }
+  uint32_t count = 1;
+  ze_device_handle_t device = nullptr;
+  ze_result_t ret = drv.inject.zeDeviceGet(driver, &count, &device);
+  if (ret != ZE_RESULT_SUCCESS) {
+    throw EOperationFailed("Couldn't fetch device for driver");
+  }
+  if (count == 0 || device == nullptr) {
+    throw ENotSupported("Driver has no associated devices to determine driver type");
+  }
+  zeDeviceGet_SD(sd, ret, driver, &count, &device);
+  auto& state = sd.Get<CDeviceState>(device, EXCEPTION_MESSAGE);
+  return GetDriverType(state.properties.type);
+}
+
 inline void zeDriverGet_SD(ze_result_t return_value,
                            uint32_t* pCount,
                            ze_driver_handle_t* phDrivers) {
@@ -387,18 +441,7 @@ inline void zeDriverGet_SD(ze_result_t return_value,
     for (auto i = 0u; i < *pCount; i++) {
       auto& driverState = SD().Map<CDriverState>()[phDrivers[i]];
       driverState = std::make_unique<CDriverState>();
-    }
-  }
-}
-
-inline void zeDeviceGet_SD(ze_result_t return_value,
-                           ze_driver_handle_t hDriver,
-                           uint32_t* pCount,
-                           ze_device_handle_t* phDevices) {
-  if (return_value == ZE_RESULT_SUCCESS && phDevices != nullptr) {
-    for (auto i = 0u; i < *pCount; i++) {
-      auto& driverState = SD().Map<CDeviceState>()[phDevices[i]];
-      driverState = std::make_unique<CDeviceState>(hDriver);
+      driverState->driverType = GetDriverType(phDrivers[i]);
     }
   }
 }
@@ -496,10 +539,6 @@ inline void zeKernelSetIndirectAccess_SD(ze_result_t return_value,
 inline void zeContextDestroy_SD(ze_result_t return_value, ze_context_handle_t hContext) {
   if (return_value == ZE_RESULT_SUCCESS) {
     auto& sd = SD();
-    const auto& list = sd.Get<CContextState>(hContext, EXCEPTION_MESSAGE).gitsImmediateList;
-    if (list != nullptr) {
-      drv.inject.zeCommandListDestroy(list);
-    }
     std::vector<ze_command_list_handle_t> commandListsToRelease;
     for (const auto& state : sd.Map<CCommandListState>()) {
       if (state.second->hContext == hContext) {
@@ -1402,6 +1441,7 @@ inline void zeEventHostReset_SD(ze_result_t return_value, ze_event_handle_t hEve
     eventState.immediateCmdListExecutingCmdLists = nullptr;
   }
 }
+
 inline void zeInitDrivers_SD(ze_result_t return_value,
                              uint32_t* pCount,
                              ze_driver_handle_t* phDrivers,
@@ -1410,6 +1450,54 @@ inline void zeInitDrivers_SD(ze_result_t return_value,
     for (auto i = 0u; i < *pCount; i++) {
       auto& driverState = SD().Map<CDriverState>()[phDrivers[i]];
       driverState = std::make_unique<CDriverState>();
+      driverState->driverType = GetDriverType(phDrivers[i]);
+    }
+  }
+}
+
+inline void zesDeviceGet_SD(ze_result_t return_value,
+                            zes_driver_handle_t hDriver,
+                            uint32_t* pCount,
+                            zes_device_handle_t* phDevices) {
+  if (return_value == ZE_RESULT_SUCCESS && pCount != nullptr && phDevices != nullptr) {
+    for (uint32_t i = 0; i < *pCount; i++) {
+      if (SD().Exists<CSysDeviceState>(phDevices[i])) {
+        continue;
+      }
+      auto& deviceState = SD().Map<CSysDeviceState>()[phDevices[i]];
+      deviceState = std::make_unique<CSysDeviceState>(hDriver);
+      deviceState->properties.stype = ZES_STRUCTURE_TYPE_DEVICE_PROPERTIES;
+      ze_result_t ret = drv.inject.zesDeviceGetProperties(phDevices[i], &deviceState->properties);
+      if (ret != ZE_RESULT_SUCCESS) {
+        throw EOperationFailed("Couldn't fetch device properties");
+      }
+    }
+  }
+}
+
+static ze_init_driver_type_flags_t GetSysDriverType(zes_driver_handle_t driver) {
+  for (const auto& [device, state] : SD().Map<CSysDeviceState>()) {
+    if (state->hDriver != driver) {
+      continue;
+    }
+    return GetDriverType(state->properties.core.type);
+  }
+  uint32_t count = 1;
+  zes_device_handle_t device = nullptr;
+  ze_result_t ret = drv.inject.zesDeviceGet(driver, &count, &device);
+  zesDeviceGet_SD(ret, driver, &count, &device);
+  auto& state = SD().Get<CSysDeviceState>(device, EXCEPTION_MESSAGE);
+  return GetDriverType(state.properties.core.type);
+}
+
+inline void zesDriverGet_SD(ze_result_t return_value,
+                            uint32_t* pCount,
+                            zes_driver_handle_t* phDrivers) {
+  if (return_value == ZE_RESULT_SUCCESS && phDrivers != nullptr) {
+    for (auto i = 0u; i < *pCount; i++) {
+      auto& driverState = SD().Map<CSysDriverState>()[phDrivers[i]];
+      driverState = std::make_unique<CSysDriverState>();
+      driverState->driverType = GetSysDriverType(phDrivers[i]);
     }
   }
 }

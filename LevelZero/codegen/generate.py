@@ -51,16 +51,25 @@ def get_namespace(name):
         return "ze"
     return namespace
 
+def get_api_version_from_enum(api_version_enum):
+    if m := re.search('^ZE_MAKE_VERSION\\( *([1-9]+), *([0-9]+) *\\)$', api_version_enum["value"]):
+        return f'{m.group(1)}.{m.group(2)}'
+    raise Exception(f'Failed to match version string {api_version_enum} to graph api version')
+
 def get_api_version_from_string(api_version: str):
-    return api_version.replace('ZE_API_VERSION_', '').replace('_', '.')
+    m = re.match(r'^(\d+)\.(\d+)$', api_version)
+    if not m:
+        raise ValueError(f"API version string '{api_version}' is not in the expected 'major.minor' format")
+    major = int(m.group(1))
+    minor = int(m.group(2))
+    return (major << 16) | (minor & 0xffff)
 
 def is_function_included(api_version:str, function_version :str):
     if function_version == '0.0':
         return True
     api_version = get_api_version_from_string(api_version)
-    major_api, minor_api = api_version.split(".")
-    major_function, minor_function = function_version.split(".")
-    if int(major_api) >= int(major_function) and int(minor_api) >= int(minor_function):
+    function_version = get_api_version_from_string(function_version)
+    if api_version >= function_version:
         return True
     return False
 
@@ -71,7 +80,7 @@ def sort_dditable(functions_to_group, functions):
             if function == name:
                 if "ddi_pos" not in func:
                     raise Exception("Please fill 'ddi_pos' inside generator_l0.py for function name:", function)
-                sorted_dditable[func['ddi_pos']] = function
+                sorted_dditable[func['ddi_pos']] = func
                 continue
     return dict(sorted(sorted_dditable.items(), key=lambda x:x[0])).values()
 
@@ -87,7 +96,7 @@ def get_ddi_table_functions(func, ddi_helper_functions, api_version: str):
         if not is_latest_version(ddi_helper_functions, tmp_func):
             continue
         if tmp_func.get("component") == component and is_function_included(
-            api_version, tmp_func.get("api_version", "0.0")
+            get_api_version_from_enum(api_version), tmp_func.get("api_version", "0.0")
         ):
             component_functions.add(cut_version(name, tmp_func.get("version")))
     return component_functions
@@ -249,7 +258,8 @@ def get_field_name(argument, prefix='', wrap_params=None):
     return prefix + split_field_name(argument['name'])[0]
 
 def get_field_array_size(argument):
-    return split_field_name(argument['name'])[1]
+    sizes = re.findall('\\[[A-Za-z0-9_]+\\]', argument['name'])
+    return [size.replace('[', '').replace(']', '') for size in sizes]
 
 def extract_type(type):
     return (
@@ -310,10 +320,13 @@ def makoWrite(inpath, outpath, **args):
             get_object_versions=get_object_versions,
             get_namespace=get_namespace,
             cut_version=cut_version,
+            get_api_version_from_enum=get_api_version_from_enum,
+            get_api_version_from_string=get_api_version_from_string,
             get_ddi_table_functions=get_ddi_table_functions,
             sort_dditable=sort_dditable,
             get_arg_name=get_arg_name,
             get_arg_type=get_arg_type,
+            get_npu_extensions=get_npu_extensions,
             **args)
         rendered = re.sub(r"\r\n", r"\n", rendered)
 
@@ -341,6 +354,32 @@ def prepare_dev_files(dir):
         source_read = source_read.replace('\n} // namespace l0\n} // namespace gits', '')
         with open(os.path.join(dir, f), 'w') as source_write:
             source_write.write(source_read)
+
+def get_npu_extensions(functions, enums):
+    graph_ext_functions = []
+    graph_profiling_ext_functions = []
+    command_queue_npu_ext_functions = []
+    context_npu_ext_functions = []
+    driver_npu_ext_functions = []
+    for func in functions.values():
+        if func.get('component') == 'ze_gits_npu_graph_ext':
+            graph_ext_functions.append(func)
+        if func.get('component') == 'ze_gits_npu_graph_profiling_ext':
+            graph_profiling_ext_functions.append(func)
+        if func.get('component') == 'ze_gits_npu_command_queue_npu_ext':
+            command_queue_npu_ext_functions.append(func)
+        if func.get('component') == 'ze_gits_npu_context_npu_ext':
+            context_npu_ext_functions.append(func)
+        if func.get('component') == 'ze_gits_npu_driver_npu_ext':
+            driver_npu_ext_functions.append(func)
+    npu_extensions = [
+      ('ze_gits_npu_graph_ext', 'ZE_GITS_NPU_GRAPH_EXT_NAME', 'ze_gits_npu_graph_dditable_ext_t', graph_ext_functions, enums['ze_gits_npu_graph_ext_version_t']['vars']),
+      ('ze_gits_npu_graph_profiling_ext', 'ZE_GITS_NPU_PROFILING_DATA_EXT_NAME', 'ze_gits_npu_graph_profiling_dditable_ext_t', graph_profiling_ext_functions, enums['ze_gits_npu_profiling_data_ext_version_t']['vars']),
+      ('ze_gits_npu_command_queue_npu_ext', 'ZE_GITS_NPU_COMMAND_QUEUE_NPU_EXT_NAME', 'ze_gits_npu_command_queue_npu_dditable_ext_t', command_queue_npu_ext_functions, enums['ze_gits_npu_command_queue_npu_ext_version_t']['vars']),
+      ('ze_gits_npu_context_npu_ext', 'ZE_GITS_NPU_CONTEXT_NPU_EXT_NAME', 'ze_gits_npu_context_npu_dditable_ext_t', context_npu_ext_functions, enums['ze_gits_npu_context_npu_ext_version_t']['vars']),
+      ('ze_gits_npu_driver_npu_ext', 'ZE_GITS_NPU_DRIVER_NPU_EXT_NAME', 'ze_gits_npu_driver_npu_dditable_ext_t', driver_npu_ext_functions, enums['ze_gits_npu_driver_npu_ext_version_t']['vars']),
+    ]
+    return npu_extensions
 
 def main():
     if len(sys.argv) < 2:
