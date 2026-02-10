@@ -168,6 +168,23 @@ Configuration:
             Description:
               Causes player to output diagnostic info gathered during stream
               recording. Then, player exits.
+          - Name: ExecutableNameOverride
+            Type: Group
+            Options:
+              - Name: Enabled
+                Type: bool
+                Default: false
+                Description: Set gitsPlayer executable name to the name of the original executable (if available)
+                LongDescription: |
+                  Before playback, GITS Player will copy its executable and rename it to the original name of the captured application (if available).
+                  Then it will launch a new process using that executable.
+              - Name: CustomName
+                Type: std::string
+                Default: ""
+                Description: Set a custom executable name for gitsPlayer executable
+                LongDescription: |
+                  Before playback, GITS Player will copy its executable and rename it to the given name.
+                  Then it will launch a new process using that executable.
           - Name: libGL
             Type: std::filesystem::path
             Default: libGL.so.1

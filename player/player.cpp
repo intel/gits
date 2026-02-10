@@ -27,6 +27,15 @@
 
 #include <iostream>
 
+#if defined GITS_PLATFORM_WINDOWS
+#include <windows.h>
+#endif
+
+#if defined GITS_PLATFORM_LINUX
+#include <unistd.h>
+#include <sys/wait.h>
+#endif
+
 /* ********************************* P L A Y E R ******************************* */
 
 /**
@@ -146,6 +155,109 @@ void gits::CPlayer::StatisticsPrint() const {
 
   stats.Get(*_sc.scheduler, comp);
   stats.Print();
+}
+
+namespace {
+// OS-specific relaunch helper functions
+#if defined GITS_PLATFORM_WINDOWS
+int RelaunchWindows(const std::filesystem::path& newPlayerPath,
+                    const std::vector<std::string>& args) {
+  std::string cmdLine = "\"" + newPlayerPath.string() + "\"";
+  for (const auto& arg : args) {
+    cmdLine += " \"" + arg + "\"";
+  }
+
+  STARTUPINFOA si = {};
+  PROCESS_INFORMATION pi = {};
+  si.cb = sizeof(si);
+
+  // Create the process
+  BOOL success = CreateProcessA(nullptr,        // lpApplicationName
+                                cmdLine.data(), // lpCommandLine (needs to be mutable)
+                                nullptr,        // lpProcessAttributes
+                                nullptr,        // lpThreadAttributes
+                                FALSE,          // bInheritHandles
+                                0,              // dwCreationFlags
+                                nullptr,        // lpEnvironment
+                                nullptr,        // lpCurrentDirectory
+                                &si,            // lpStartupInfo
+                                &pi             // lpProcessInformation
+  );
+
+  if (!success) {
+    LOG_ERROR << "Failed to create renamed player executable process. Error: " << GetLastError();
+    return 1;
+  }
+
+  // Wait for the process to complete (blocking)
+  WaitForSingleObject(pi.hProcess, INFINITE);
+
+  // Get exit code if needed
+  DWORD exitCode;
+  GetExitCodeProcess(pi.hProcess, &exitCode);
+
+  // Clean up handles
+  CloseHandle(pi.hProcess);
+  CloseHandle(pi.hThread);
+
+  return static_cast<int>(exitCode);
+};
+#endif
+#if defined GITS_PLATFORM_LINUX
+int RelaunchLinux(const std::filesystem::path& newPlayerPath,
+                  const std::vector<std::string>& args) {
+  std::vector<char*> argv;                           // Execv needs char* array
+  auto newPlayerPathString = newPlayerPath.string(); // We need a copy for lifetime purpose
+  argv.push_back(newPlayerPathString.data());
+
+  for (const auto& arg : args) {
+    argv.push_back(const_cast<char*>(arg.c_str()));
+  }
+  argv.push_back(nullptr);
+
+  pid_t pid = fork();
+  if (pid == 0) {
+    // Child process
+    execv(newPlayerPathString.c_str(), argv.data());
+    // If we get here, execv failed
+    _exit(1);
+  } else if (pid > 0) {
+    // Parent process - wait for child
+    int status;
+    waitpid(pid, &status, 0);
+    return WEXITSTATUS(status);
+  } else {
+    LOG_ERROR << "Failed to relaunch the renamed player executable. Failed to fork process";
+    return 1;
+  }
+}
+#endif
+} // namespace
+
+int gits::CPlayer::RenameAndRelaunch(const std::string& newPlayerName,
+                                     const std::filesystem::path& originalPlayerPath,
+                                     std::vector<std::string> args) {
+  const auto newPlayerPath = originalPlayerPath.parent_path() / newPlayerName;
+
+  std::filesystem::copy_file(originalPlayerPath, newPlayerPath,
+                             std::filesystem::copy_options::overwrite_existing);
+
+  int result = 1;
+#if defined GITS_PLATFORM_WINDOWS
+  result = RelaunchWindows(newPlayerPath, args);
+#endif
+#if defined GITS_PLATFORM_LINUX
+  result = RelaunchLinux(newPlayerPath, args);
+#endif
+
+  LOG_INFO << "Removing the renamed player executable: " << newPlayerPath;
+  try {
+    std::filesystem::remove(newPlayerPath);
+  } catch (const std::filesystem::filesystem_error& e) {
+    LOG_ERROR << "Failed to remove the renamed player executable. Error: " << e.what();
+  }
+
+  return result;
 }
 
 void gits::CPlayer::NotSupportedFunctionsPrint() const {

@@ -142,6 +142,26 @@ bool argsFilterTagsFunc(const args::Base& item) {
   }
   return false;
 }
+
+std::string GetRequestedPlayerName() {
+  const auto& cfg = Configurator::Get();
+
+  if (!cfg.common.player.executableNameOverride.enabled) {
+    return std::string();
+  }
+
+  // Custom player name takes priority over the original name
+  if (!cfg.common.player.executableNameOverride.customName.empty()) {
+    return cfg.common.player.executableNameOverride.customName;
+  }
+
+  auto requestedName = CGits::Instance().FilePlayer().GetApplicationName();
+  if (requestedName.empty()) {
+    LOG_WARNING << "Couldn't obtain the original application name, Player will not be renamed.";
+  }
+
+  return requestedName;
+}
 } // namespace
 
 int MainBody(int argc, char* argv[]) {
@@ -297,6 +317,22 @@ int MainBody(int argc, char* argv[]) {
 
     // load function calls from a file
     player.Load(cfg.common.player.streamPath);
+
+    if (cfg.common.player.executableNameOverride.enabled) {
+      const auto requestedPlayerName = GetRequestedPlayerName();
+      if (!requestedPlayerName.empty()) {
+        if (playerPath.filename().string() == requestedPlayerName) {
+          LOG_INFO << "Player name matches requested name.";
+        } else {
+          LOG_INFO << "Player name differs from the requested name, Player will be renamed and "
+                      "relaunched.";
+          player.RenameAndRelaunch(requestedPlayerName, std::filesystem::absolute(playerPath),
+                                   argsVector);
+          return 0;
+        }
+      }
+    }
+
 #if defined WITH_DIRECTX
     if (cfg.directx.features.subcapture.enabled) {
       CGits::Instance().FileRecorder().SetProperty(
