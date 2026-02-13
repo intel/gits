@@ -668,6 +668,10 @@ void ReplayCustomizationLayer::pre(ID3D12GraphicsCommandList2WriteBufferImmediat
 
 void ReplayCustomizationLayer::pre(ID3D12DeviceCheckFeatureSupportCommand& c) {
   c.skip = true;
+  // The data may contain pointers (from capture) that have not been encoded in the stream
+  if (c.Feature_.value == D3D12_FEATURE_FEATURE_LEVELS) {
+    std::memset(c.pFeatureSupportData_.value, 0, c.FeatureSupportDataSize_.value);
+  }
 }
 
 void ReplayCustomizationLayer::pre(
