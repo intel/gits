@@ -52,6 +52,7 @@ D3D12Context g_D3D12Context;
 void SetupEnvironment() {
   LOG_INFO << "CCode - Preparing DirectX 12 environment...";
   g_D3D12Context.d3d12AgilitySdk = directx::LoadAgilitySdk("D3D12/");
+  directx::LoadIntelExtensions();
 }
 
 void TeardownEnvironment() {

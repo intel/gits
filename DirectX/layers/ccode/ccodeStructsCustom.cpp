@@ -18,6 +18,302 @@ namespace gits {
 namespace DirectX {
 namespace ccode {
 
+static void initialize(const INTCDeviceInfo& value,
+                       std::ostringstream& ss,
+                       const std::string& name) {
+  ss << name << ".GPUMaxFreq = " << value.GPUMaxFreq << ";" << std::endl;
+  ss << name << ".GPUMinFreq = " << value.GPUMinFreq << ";" << std::endl;
+  ss << name << ".GTGeneration = " << value.GTGeneration << ";" << std::endl;
+  ss << name << ".EUCount = " << value.EUCount << ";" << std::endl;
+  ss << name << ".PackageTDP = " << value.PackageTDP << ";" << std::endl;
+  ss << name << ".MaxFillRate = " << value.MaxFillRate << ";" << std::endl;
+  ss << "wcscpy_s(" << name << ".GTGenerationName"
+     << ", L\"" << toStr(value.GTGenerationName) << "\");" << std::endl;
+}
+
+void initialize(const INTC_D3D12_RESOURCE_DESC& value,
+                std::ostringstream& ss,
+                const std::string& name,
+                const CppParameterInfo& parentInfo) {
+  CppParameterInfo pD3D12DescInfo("D3D12_RESOURCE_DESC", "pD3D12Desc", parentInfo);
+  pD3D12DescInfo.isPtr = true;
+  CppParameterOutput pD3D12DescOut;
+  toCpp(value.pD3D12Desc, pD3D12DescInfo, pD3D12DescOut);
+  ss << pD3D12DescOut.initialization;
+
+  ss << name << ".pD3D12Desc = &" << pD3D12DescOut.value << ";" << std::endl;
+  ss << name << ".Texture2DArrayMipPack = " << value.Texture2DArrayMipPack << ";" << std::endl;
+}
+
+// Custom structs (Intel Extensions)
+void toCpp(const INTCDeviceInfo& value, CppParameterInfo& info, CppParameterOutput& out) {
+  std::string name = info.getIndexedName();
+  std::ostringstream ss;
+
+  if (!info.isArrayElement) {
+    ss << info.type << " " << name << " = {};" << std::endl;
+  }
+
+  initialize(value, ss, name);
+
+  out.initialization = ss.str();
+  out.value = name;
+  out.decorator = "";
+}
+
+void toCpp(const INTCDeviceInfo1& value, CppParameterInfo& info, CppParameterOutput& out) {
+  std::string name = info.getIndexedName();
+  std::ostringstream ss;
+
+  if (!info.isArrayElement) {
+    ss << info.type << " " << name << " = {};" << std::endl;
+  }
+
+  initialize(value, ss, name);
+  ss << name << ".GMDID = " << value.GMDID << ";" << std::endl;
+  ss << name << ".XeCoresCount = " << value.XeCoresCount << ";" << std::endl;
+
+  out.initialization = ss.str();
+  out.value = name;
+  out.decorator = "";
+}
+
+void toCpp(const INTCExtensionVersion& value, CppParameterInfo& info, CppParameterOutput& out) {
+  std::string name = info.getIndexedName();
+  std::ostringstream ss;
+
+  if (!info.isArrayElement) {
+    ss << info.type << " " << name << " = {};" << std::endl;
+  }
+
+  ss << name << ".HWFeatureLevel = " << value.HWFeatureLevel << ";" << std::endl;
+  ss << name << ".APIVersion = " << value.APIVersion << ";" << std::endl;
+  ss << name << ".Revision = " << value.Revision << ";" << std::endl;
+
+  out.initialization = ss.str();
+  out.value = name;
+  out.decorator = "";
+}
+
+void toCpp(const INTCExtensionInfo& value, CppParameterInfo& info, CppParameterOutput& out) {
+  std::string name = info.getIndexedName();
+  std::ostringstream ss;
+
+  CppParameterInfo versionInfo("INTCExtensionVersion", "RequestedExtensionVersion");
+  CppParameterOutput versionOut;
+  toCpp(value.RequestedExtensionVersion, versionInfo, versionOut);
+  ss << versionOut.initialization;
+
+  CppParameterInfo deviceInfo("INTCDeviceInfo", "IntelDeviceInfo");
+  CppParameterOutput deviceOut;
+  toCpp(value.IntelDeviceInfo, deviceInfo, deviceOut);
+  ss << deviceOut.initialization;
+
+  if (!info.isArrayElement) {
+    ss << info.type << " " << name << " = {};" << std::endl;
+  }
+
+  ss << name << ".RequestedExtensionVersion = " << versionOut.value << ";" << std::endl;
+  ss << name << ".IntelDeviceInfo = " << deviceOut.value << ";" << std::endl;
+  ss << name << ".pDeviceDriverDesc = L\"" << toStr(value.pDeviceDriverDesc) << "\";" << std::endl;
+  ss << name << ".pDeviceDriverVersion = L\"" << toStr(value.pDeviceDriverVersion) << "\";"
+     << std::endl;
+  ss << name << ".DeviceDriverBuildNumber = " << value.DeviceDriverBuildNumber << ";" << std::endl;
+
+  out.initialization = ss.str();
+  out.value = name;
+  out.decorator = "";
+}
+
+void toCpp(const INTCExtensionInfo1& value, CppParameterInfo& info, CppParameterOutput& out) {
+  std::string name = info.getIndexedName();
+  std::ostringstream ss;
+
+  CppParameterInfo versionInfo("INTCExtensionVersion", "RequestedExtensionVersion", info);
+  CppParameterOutput versionOut;
+  toCpp(value.RequestedExtensionVersion, versionInfo, versionOut);
+  ss << versionOut.initialization;
+
+  CppParameterInfo deviceInfo("INTCDeviceInfo1", "IntelDeviceInfo", info);
+  CppParameterOutput deviceOut;
+  toCpp(value.IntelDeviceInfo, deviceInfo, deviceOut);
+  ss << deviceOut.initialization;
+
+  if (!info.isArrayElement) {
+    ss << info.type << " " << name << " = {};" << std::endl;
+  }
+
+  ss << name << ".RequestedExtensionVersion = " << versionOut.value << ";" << std::endl;
+  ss << name << ".IntelDeviceInfo = " << deviceOut.value << ";" << std::endl;
+  ss << name << ".pDeviceDriverDesc = L\"" << toStr(value.pDeviceDriverDesc) << "\";" << std::endl;
+  ss << name << ".pDeviceDriverVersion = L\"" << toStr(value.pDeviceDriverVersion) << "\";"
+     << std::endl;
+  ss << name << ".DeviceDriverBuildNumber = " << value.DeviceDriverBuildNumber << ";" << std::endl;
+
+  out.initialization = ss.str();
+  out.value = name;
+  out.decorator = "";
+}
+
+void toCpp(const INTCExtensionAppInfo& value, CppParameterInfo& info, CppParameterOutput& out) {
+  std::string name = info.getIndexedName();
+  std::ostringstream ss;
+
+  if (!info.isArrayElement) {
+    ss << info.type << " " << name << " = {};" << std::endl;
+  }
+
+  ss << name << ".pApplicationName = L\"" << toStr(value.pApplicationName) << "\";" << std::endl;
+  ss << name << ".ApplicationVersion = " << value.ApplicationVersion << ";" << std::endl;
+  ss << name << ".pEngineName = L\"" << toStr(value.pEngineName) << "\";" << std::endl;
+  ss << name << ".EngineVersion = " << value.EngineVersion << ";" << std::endl;
+
+  out.initialization = ss.str();
+  out.value = name;
+  out.decorator = "";
+}
+
+void toCpp(const INTCExtensionAppInfo1& value, CppParameterInfo& info, CppParameterOutput& out) {
+  std::string name = info.getIndexedName();
+  std::ostringstream ss;
+
+  CppParameterInfo appVersionInfo("INTCAppInfoVersion", "ApplicationVersion", info);
+  CppParameterOutput appVersionOut;
+  toCpp(value.ApplicationVersion, appVersionInfo, appVersionOut);
+  ss << appVersionOut.initialization;
+
+  CppParameterInfo engineVersionInfo("INTCAppInfoVersion", "EngineVersion", info);
+  CppParameterOutput engineVersionOut;
+  toCpp(value.EngineVersion, engineVersionInfo, engineVersionOut);
+  ss << engineVersionOut.initialization;
+
+  if (!info.isArrayElement) {
+    ss << info.type << " " << name << " = {};" << std::endl;
+  }
+
+  ss << name << ".pApplicationName = L\"" << toStr(value.pApplicationName) << "\";" << std::endl;
+  ss << name << ".ApplicationVersion = " << appVersionOut.value << ";" << std::endl;
+  ss << name << ".pEngineName = L\"" << toStr(value.pEngineName) << "\";" << std::endl;
+  ss << name << ".EngineVersion = " << engineVersionOut.value << ";" << std::endl;
+
+  out.initialization = ss.str();
+  out.value = name;
+  out.decorator = "";
+}
+
+void toCpp(const INTCAppInfoVersion& value, CppParameterInfo& info, CppParameterOutput& out) {
+  std::string name = info.getIndexedName();
+  std::ostringstream ss;
+
+  if (!info.isArrayElement) {
+    ss << info.type << " " << name << " = {};" << std::endl;
+  }
+
+  ss << name << ".major = " << value.major << ";" << std::endl;
+  ss << name << ".minor = " << value.minor << ";" << std::endl;
+  ss << name << ".patch = " << value.patch << ";" << std::endl;
+  ss << name << ".reserved = " << value.reserved << ";" << std::endl;
+
+  out.initialization = ss.str();
+  out.value = name;
+  out.decorator = "";
+}
+
+void toCpp(const INTC_D3D12_FEATURE& value, CppParameterInfo& info, CppParameterOutput& out) {
+  std::string name = info.getIndexedName();
+  std::ostringstream ss;
+
+  if (!info.isArrayElement) {
+    ss << info.type << " " << name << " = {};" << std::endl;
+  }
+
+  ss << name << ".EmulatedTyped64bitAtomics = " << toStr(value.EmulatedTyped64bitAtomics) << ";"
+     << std::endl;
+
+  out.initialization = ss.str();
+  out.value = name;
+  out.decorator = "";
+}
+
+void toCpp(const INTC_D3D12_RESOURCE_DESC& value, CppParameterInfo& info, CppParameterOutput& out) {
+  std::string name = info.getIndexedName();
+  std::ostringstream ss;
+
+  if (!info.isArrayElement) {
+    ss << info.type << " " << name << " = {};" << std::endl;
+  }
+
+  initialize(value, ss, name, info);
+
+  out.initialization = ss.str();
+  out.value = name;
+  out.decorator = "";
+}
+
+void toCpp(const INTC_D3D12_RESOURCE_DESC_0001& value,
+           CppParameterInfo& info,
+           CppParameterOutput& out) {
+  std::string name = info.getIndexedName();
+  std::ostringstream ss;
+
+  if (!info.isArrayElement) {
+    ss << info.type << " " << name << " = {};" << std::endl;
+  }
+
+  initialize(value, ss, name, info);
+  ss << name << ".EmulatedTyped64bitAtomics = " << value.EmulatedTyped64bitAtomics << ";"
+     << std::endl;
+
+  out.initialization = ss.str();
+  out.value = name;
+  out.decorator = "";
+}
+
+void toCpp(const INTC_D3D12_HEAP_DESC& value, CppParameterInfo& info, CppParameterOutput& out) {
+  std::string name = info.getIndexedName();
+  std::ostringstream ss;
+
+  CppParameterInfo pD3D12DescInfo("D3D12_HEAP_DESC", "pD3D12Desc", info);
+  pD3D12DescInfo.isPtr = true;
+  CppParameterOutput pD3D12DescOut;
+  toCpp(value.pD3D12Desc, pD3D12DescInfo, pD3D12DescOut);
+  ss << pD3D12DescOut.initialization;
+
+  if (!info.isArrayElement) {
+    ss << info.type << " " << name << " = {};" << std::endl;
+  }
+  ss << name << ".pD3D12Desc = &" << pD3D12DescOut.value << ";" << std::endl;
+  ss << name << ".HeapFlagCpuVisibleVideoMemory = " << value.HeapFlagCpuVisibleVideoMemory << ";"
+     << std::endl;
+
+  out.initialization = ss.str();
+  out.value = name;
+  out.decorator = "";
+}
+
+void toCpp(const INTC_D3D12_COMMAND_QUEUE_DESC& value,
+           CppParameterInfo& info,
+           CppParameterOutput& out) {
+  std::string name = info.getIndexedName();
+  std::ostringstream ss;
+
+  CppParameterInfo pD3D12DescInfo("D3D12_COMMAND_QUEUE_DESC", "pD3D12Desc", info);
+  pD3D12DescInfo.isPtr = true;
+  CppParameterOutput pD3D12DescOut;
+  toCpp(value.pD3D12Desc, pD3D12DescInfo, pD3D12DescOut);
+  ss << pD3D12DescOut.initialization;
+
+  if (!info.isArrayElement) {
+    ss << info.type << " " << name << " = {};" << std::endl;
+  }
+  ss << name << ".pD3D12Desc = &" << pD3D12DescOut.value << ";" << std::endl;
+  ss << name << ".CommandThrottlePolicy = " << value.CommandThrottlePolicy << ";" << std::endl;
+
+  out.initialization = ss.str();
+  out.value = name;
+  out.decorator = "";
+}
+
 void toCpp(const D3D12_CLEAR_VALUE& value, CppParameterInfo& info, CppParameterOutput& out) {
   std::string name = info.getIndexedName();
   std::ostringstream ss;
@@ -32,7 +328,7 @@ void toCpp(const D3D12_CLEAR_VALUE& value, CppParameterInfo& info, CppParameterO
     ssUnion << name << ".DepthStencil = " << depthStencilOut.value << ";" << std::endl;
   } else {
     for (int i = 0; i < 4; ++i) {
-      ssUnion << name << ".Color[" << i << "] = " << value.Color[i] << ";" << std::endl;
+      ssUnion << name << ".Color[" << i << "] = " << toStr(value.Color[i]) << ";" << std::endl;
     }
   }
 
@@ -49,39 +345,32 @@ void toCpp(const D3D12_ROOT_PARAMETER1& value, CppParameterInfo& info, CppParame
   std::ostringstream ss;
   std::ostringstream ssUnion;
 
-  CppParameterInfo paramInfo("", "");
+  CppParameterInfo paramInfo("", "", info);
   CppParameterOutput paramOut;
-
   switch (value.ParameterType) {
   case D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE:
     paramInfo.type = "D3D12_ROOT_DESCRIPTOR_TABLE1";
-    paramInfo.name = "descriptorTable";
+    paramInfo.name = "DescriptorTable";
     toCpp(value.DescriptorTable, paramInfo, paramOut);
-    ss << paramOut.initialization;
-    ssUnion << name << ".DescriptorTable = " << paramOut.value << ";" << std::endl;
     break;
-
   case D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS:
     paramInfo.type = "D3D12_ROOT_CONSTANTS";
-    paramInfo.name = "constants";
+    paramInfo.name = "Constants";
     toCpp(value.Constants, paramInfo, paramOut);
-    ss << paramOut.initialization;
-    ssUnion << name << ".Constants = " << paramOut.value << ";" << std::endl;
     break;
-
   case D3D12_ROOT_PARAMETER_TYPE_CBV:
   case D3D12_ROOT_PARAMETER_TYPE_SRV:
   case D3D12_ROOT_PARAMETER_TYPE_UAV:
     paramInfo.type = "D3D12_ROOT_DESCRIPTOR1";
-    paramInfo.name = "descriptor";
+    paramInfo.name = "Descriptor";
     toCpp(value.Descriptor, paramInfo, paramOut);
-    ss << paramOut.initialization;
-    ssUnion << name << ".Descriptor = " << paramOut.value << ";" << std::endl;
     break;
-
   default:
+    GITS_ASSERT(false, "Unknown ParameterType");
     break;
   }
+  ss << paramOut.initialization;
+  ssUnion << name << "." << paramInfo.name << " = " << paramOut.value << ";" << std::endl;
 
   if (!info.isArrayElement) {
     ss << info.type << " " << name << " = {};" << std::endl;
@@ -102,7 +391,7 @@ void toCpp(const D3D12_VERSIONED_ROOT_SIGNATURE_DESC& value,
   std::ostringstream ss;
 
   // Union parameter
-  CppParameterInfo descInfo("", "");
+  CppParameterInfo descInfo("", "", info);
   CppParameterOutput descOut;
   std::string descName = "";
   if (value.Version == D3D_ROOT_SIGNATURE_VERSION_1_0) {

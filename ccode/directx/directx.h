@@ -21,5 +21,9 @@
 #include <dxgi1_5.h>
 #include <dxgi1_6.h>
 
+// IntelExtensions
+#define INTC_IGDEXT_D3D12
+#include <igdext.h>
+
 template <typename T>
 using ComPtr = Microsoft::WRL::ComPtr<T>;

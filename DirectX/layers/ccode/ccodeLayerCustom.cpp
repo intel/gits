@@ -145,6 +145,346 @@ void CCodeLayer::post(CreateHeapAllocationMetaCommand& c) {
      << ", " << c.data_.size << ");" << std::endl;
 }
 
+void CCodeLayer::post(INTC_D3D12_GetSupportedVersionsCommand& c) {
+  using namespace ccode;
+
+  // Parameter data
+  CppParameterInfo pDeviceInfo("ID3D12Device", "pDevice");
+  CppParameterInfo pSupportedExtVersionsInfo("INTCExtensionVersion", "pSupportedExtVersions");
+  pSupportedExtVersionsInfo.isPtr = true;
+  pSupportedExtVersionsInfo.size = 0;
+  if (c.pSupportedExtVersionsCount_.value) {
+    pSupportedExtVersionsInfo.size = *c.pSupportedExtVersionsCount_.value;
+  }
+
+  // Print command
+  CommandPrinter p(c, "INTC_D3D12_GetSupportedVersions");
+  p.addArgument(c.pDevice_, pDeviceInfo);
+  p.addArgument(c.pSupportedExtVersions_, pSupportedExtVersionsInfo);
+  p.addArgumentValue(c.pSupportedExtVersionsCount_.value);
+  postProcess(p, c);
+  p.print();
+
+  nextCommand();
+}
+
+void CCodeLayer::post(INTC_D3D12_CreateDeviceExtensionContextCommand& c) {
+  using namespace ccode;
+
+  // Parameter data
+  CppParameterInfo pDeviceInfo("ID3D12Device", "pDevice");
+  pDeviceInfo.isPtr = true;
+  CppParameterInfo ppExtensionContextInfo("INTCExtensionContext", "ppExtensionContext");
+  CppParameterInfo pExtensionInfoInfo("INTCExtensionInfo", "pExtensionInfo");
+  pExtensionInfoInfo.isPtr = true;
+  CppParameterInfo pExtensionAppInfoInfo("INTCExtensionAppInfo", "pExtensionAppInfo");
+  pExtensionAppInfoInfo.isPtr = true;
+
+  // Print command
+  CommandPrinter p(c, "INTC_D3D12_CreateDeviceExtensionContext");
+  p.addArgument(c.pDevice_, pDeviceInfo);
+  p.addArgument(c.ppExtensionContext_, ppExtensionContextInfo);
+  p.addArgument(c.pExtensionInfo_, pExtensionInfoInfo);
+  p.addArgument(c.pExtensionAppInfo_, pExtensionAppInfoInfo);
+  postProcess(p, c);
+  p.print();
+
+  nextCommand();
+}
+
+void CCodeLayer::post(INTC_D3D12_CreateDeviceExtensionContext1Command& c) {
+  using namespace ccode;
+
+  // Parameter data
+  CppParameterInfo pDeviceInfo("ID3D12Device", "pDevice");
+  pDeviceInfo.isPtr = true;
+  CppParameterInfo ppExtensionContextInfo("INTCExtensionContext", "ppExtensionContext");
+  CppParameterInfo pExtensionInfoInfo("INTCExtensionInfo", "pExtensionInfo");
+  pExtensionInfoInfo.isPtr = true;
+  CppParameterInfo pExtensionAppInfoInfo("INTCExtensionAppInfo1", "pExtensionAppInfo");
+  pExtensionAppInfoInfo.isPtr = true;
+
+  // Print command
+  CommandPrinter p(c, "INTC_D3D12_CreateDeviceExtensionContext1");
+  p.addArgument(c.pDevice_, pDeviceInfo);
+  p.addArgument(c.ppExtensionContext_, ppExtensionContextInfo);
+  p.addArgument(c.pExtensionInfo_, pExtensionInfoInfo);
+  p.addArgument(c.pExtensionAppInfo_, pExtensionAppInfoInfo);
+  postProcess(p, c);
+  p.print();
+
+  nextCommand();
+}
+
+void CCodeLayer::post(INTC_DestroyDeviceExtensionContextCommand& c) {
+  using namespace ccode;
+
+  // Parameter data
+  CppParameterInfo ppExtensionContextInfo("INTCExtensionContext", "ppExtensionContext");
+
+  // Print command
+  CommandPrinter p(c, "INTC_DestroyDeviceExtensionContext");
+  p.addArgument(c.ppExtensionContext_, ppExtensionContextInfo);
+  postProcess(p, c);
+  p.print();
+
+  nextCommand();
+}
+
+void CCodeLayer::post(INTC_D3D12_SetFeatureSupportCommand& c) {
+  using namespace ccode;
+
+  // Parameter data
+  CppParameterInfo pExtensionContextInfo("INTCExtensionContext", "pExtensionContext");
+  pExtensionContextInfo.isPtr = true;
+  CppParameterInfo pFeatureInfo("INTC_D3D12_FEATURE", "pFeature");
+  pFeatureInfo.isPtr = true;
+
+  // Print command
+  CommandPrinter p(c, "INTC_D3D12_SetFeatureSupport");
+  p.addArgument(c.pExtensionContext_, pExtensionContextInfo);
+  p.addArgument(c.pFeature_, pFeatureInfo);
+  postProcess(p, c);
+  p.print();
+
+  nextCommand();
+}
+
+void CCodeLayer::post(INTC_D3D12_CreatePlacedResourceCommand& c) {
+  using namespace ccode;
+
+  // Declare new object
+  auto& stream = CCodeStream::getInstance();
+  stream.addInterface(c.ppvResource_.key, c.riid_.value);
+
+  // Parameter data
+  CppParameterInfo pExtensionContextInfo("INTCExtensionContext", "pExtensionContext");
+  pExtensionContextInfo.isPtr = true;
+  CppParameterInfo pHeapInfo("ID3D12Heap", "pHeap");
+  pHeapInfo.isPtr = true;
+  CppParameterInfo pDescInfo("INTC_D3D12_RESOURCE_DESC_0001", "pDesc");
+  pDescInfo.isPtr = true;
+  CppParameterInfo pOptimizedClearValueInfo("D3D12_CLEAR_VALUE", "pOptimizedClearValue");
+  pOptimizedClearValueInfo.isPtr = true;
+  CppParameterInfo ppvResourceInfo("void", "ppvResource");
+
+  // Print command
+  CommandPrinter p(c, "INTC_D3D12_CreatePlacedResource");
+  p.addArgument(c.pExtensionContext_, pExtensionContextInfo);
+  p.addArgument(c.pHeap_, pHeapInfo);
+  p.addArgumentValue(c.HeapOffset_.value);
+  p.addArgument(c.pDesc_, pDescInfo);
+  p.addArgumentValue(c.InitialState_.value);
+  p.addArgument(c.pOptimizedClearValue_, pOptimizedClearValueInfo);
+  p.addArgumentValue(c.riid_.value);
+  p.addArgument(c.ppvResource_, ppvResourceInfo);
+  postProcess(p, c);
+  p.print();
+
+  nextCommand();
+}
+
+void CCodeLayer::post(INTC_D3D12_CreateCommittedResourceCommand& c) {
+  using namespace ccode;
+
+  // Declare new object
+  auto& stream = CCodeStream::getInstance();
+  stream.addInterface(c.ppvResource_.key, c.riidResource_.value);
+
+  // Parameter data
+  CppParameterInfo pExtensionContextInfo("INTCExtensionContext", "pExtensionContext");
+  pExtensionContextInfo.isPtr = true;
+  CppParameterInfo pHeapPropertiesInfo("D3D12_HEAP_PROPERTIES", "pHeapProperties");
+  pHeapPropertiesInfo.isPtr = true;
+  CppParameterInfo pDescInfo("INTC_D3D12_RESOURCE_DESC_0001", "pDesc");
+  pDescInfo.isPtr = true;
+  CppParameterInfo pOptimizedClearValueInfo("D3D12_CLEAR_VALUE", "pOptimizedClearValue");
+  pOptimizedClearValueInfo.isPtr = true;
+  CppParameterInfo ppvResourceInfo("void", "ppvResource");
+
+  // Print command
+  CommandPrinter p(c, "INTC_D3D12_CreateCommittedResource");
+  p.addArgument(c.pExtensionContext_, pExtensionContextInfo);
+  p.addArgument(c.pHeapProperties_, pHeapPropertiesInfo);
+  p.addArgumentValue(c.HeapFlags_.value);
+  p.addArgument(c.pDesc_, pDescInfo);
+  p.addArgumentValue(c.InitialResourceState_.value);
+  p.addArgument(c.pOptimizedClearValue_, pOptimizedClearValueInfo);
+  p.addArgumentValue(c.riidResource_.value);
+  p.addArgument(c.ppvResource_, ppvResourceInfo);
+  postProcess(p, c);
+  p.print();
+
+  nextCommand();
+}
+
+void CCodeLayer::post(INTC_D3D12_CreateReservedResourceCommand& c) {
+  using namespace ccode;
+
+  // Declare new object
+  auto& stream = CCodeStream::getInstance();
+  stream.addInterface(c.ppvResource_.key, c.riid_.value);
+
+  // Parameter data
+  CppParameterInfo pExtensionContextInfo("INTCExtensionContext", "pExtensionContext");
+  pExtensionContextInfo.isPtr = true;
+  CppParameterInfo pDescInfo("INTC_D3D12_RESOURCE_DESC", "pDesc");
+  pDescInfo.isPtr = true;
+  CppParameterInfo pOptimizedClearValueInfo("D3D12_CLEAR_VALUE", "pOptimizedClearValue");
+  pOptimizedClearValueInfo.isPtr = true;
+  CppParameterInfo ppvResourceInfo("void", "ppvResource");
+
+  // Print command
+  CommandPrinter p(c, "INTC_D3D12_CreateReservedResource");
+  p.addArgument(c.pExtensionContext_, pExtensionContextInfo);
+  p.addArgument(c.pDesc_, pDescInfo);
+  p.addArgumentValue(c.InitialState_.value);
+  p.addArgument(c.pOptimizedClearValue_, pOptimizedClearValueInfo);
+  p.addArgumentValue(c.riid_.value);
+  p.addArgument(c.ppvResource_, ppvResourceInfo);
+  postProcess(p, c);
+  p.print();
+
+  nextCommand();
+}
+
+void CCodeLayer::post(INTC_D3D12_CreateHeapCommand& c) {
+  using namespace ccode;
+
+  // Declare new object
+  auto& stream = CCodeStream::getInstance();
+  stream.addInterface(c.ppvHeap_.key, c.riid_.value);
+
+  // Parameter data
+  CppParameterInfo pExtensionContextInfo("INTCExtensionContext", "pExtensionContext");
+  pExtensionContextInfo.isPtr = true;
+  CppParameterInfo pDescInfo("INTC_D3D12_HEAP_DESC", "pDesc");
+  pDescInfo.isPtr = true;
+  CppParameterInfo ppvHeapInfo("void", "ppvHeap");
+
+  // Print command
+  CommandPrinter p(c, "INTC_D3D12_CreateHeap");
+  p.addArgument(c.pExtensionContext_, pExtensionContextInfo);
+  p.addArgument(c.pDesc_, pDescInfo);
+  p.addArgumentValue(c.riid_.value);
+  p.addArgument(c.ppvHeap_, ppvHeapInfo);
+  postProcess(p, c);
+  p.print();
+
+  nextCommand();
+}
+
+void CCodeLayer::post(INTC_D3D12_CreateCommandQueueCommand& c) {
+  using namespace ccode;
+
+  // Declare new object
+  auto& stream = CCodeStream::getInstance();
+  stream.addInterface(c.ppCommandQueue_.key, c.riid_.value);
+
+  // Parameter data
+  CppParameterInfo pExtensionContextInfo("INTCExtensionContext", "pExtensionContext");
+  pExtensionContextInfo.isPtr = true;
+  CppParameterInfo pDescInfo("INTC_D3D12_COMMAND_QUEUE_DESC", "pDesc");
+  pDescInfo.isPtr = true;
+  CppParameterInfo ppCommandQueueInfo("void", "ppCommandQueue");
+
+  // Print command
+  CommandPrinter p(c, "INTC_D3D12_CreateCommandQueue");
+  p.addArgument(c.pExtensionContext_, pExtensionContextInfo);
+  p.addArgument(c.pDesc_, pDescInfo);
+  p.addArgumentValue(c.riid_.value);
+  p.addArgument(c.ppCommandQueue_, ppCommandQueueInfo);
+  postProcess(p, c);
+  p.print();
+
+  nextCommand();
+}
+
+void CCodeLayer::post(INTC_D3D12_SetApplicationInfoCommand& c) {
+  using namespace ccode;
+
+  // Parameter data
+  CppParameterInfo pExtensionAppInfoInfo("INTCExtensionAppInfo1", "pExtensionAppInfo");
+  pExtensionAppInfoInfo.isPtr = true;
+
+  // Print command
+  CommandPrinter p(c, "INTC_D3D12_SetApplicationInfo");
+  p.addArgument(c.pExtensionAppInfo_, pExtensionAppInfoInfo);
+  postProcess(p, c);
+  p.print();
+
+  nextCommand();
+}
+
+void CCodeLayer::post(INTC_D3D12_CheckFeatureSupportCommand& c) {
+  using namespace ccode;
+
+  // Parameter data
+  CppParameterInfo pExtensionContextInfo("INTCExtensionContext", "pExtensionContext");
+  pExtensionContextInfo.isPtr = true;
+  CppParameterInfo pFeatureSupportDataInfo("void", "pFeatureSupportData");
+  pFeatureSupportDataInfo.isPtr = true;
+  pFeatureSupportDataInfo.size = c.FeatureSupportDataSize_.value;
+
+  // Print command
+  CommandPrinter p(c, "INTC_D3D12_CheckFeatureSupport");
+  p.addArgument(c.pExtensionContext_, pExtensionContextInfo);
+  p.addArgumentValue(c.Feature_.value);
+  p.addArgument(c.pFeatureSupportData_, pFeatureSupportDataInfo);
+  p.addArgumentValue(c.FeatureSupportDataSize_.value);
+  postProcess(p, c);
+  p.print();
+
+  nextCommand();
+}
+void CCodeLayer::post(INTC_D3D12_GetResourceAllocationInfoCommand& c) {
+  using namespace ccode;
+
+  // Parameter data
+  CppParameterInfo pExtensionContextInfo("INTCExtensionContext", "pExtensionContext");
+  pExtensionContextInfo.isPtr = true;
+  CppParameterInfo pResourceDescsInfo("INTC_D3D12_RESOURCE_DESC_0001", "pResourceDescs");
+  pResourceDescsInfo.isPtr = true;
+  pResourceDescsInfo.size = c.numResourceDescs_.value;
+
+  // Print command
+  CommandPrinter p(c, "INTC_D3D12_GetResourceAllocationInfo");
+  p.addArgument(c.pExtensionContext_, pExtensionContextInfo);
+  p.addArgumentValue(c.visibleMask_.value);
+  p.addArgumentValue(c.numResourceDescs_.value);
+  p.addArgument(c.pResourceDescs_, pResourceDescsInfo);
+  postProcess(p, c);
+  p.print();
+
+  nextCommand();
+}
+
+void CCodeLayer::post(INTC_D3D12_CreateComputePipelineStateCommand& c) {
+  using namespace ccode;
+
+  // Declare new object
+  auto& stream = CCodeStream::getInstance();
+  stream.addInterface(c.ppPipelineState_.key, c.riid_.value);
+
+  // Parameter data
+  CppParameterInfo pExtensionContextInfo("INTCExtensionContext", "pExtensionContext");
+  pExtensionContextInfo.isPtr = true;
+  CppParameterInfo pDescInfo("INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC", "pDesc");
+  pDescInfo.isPtr = true;
+  CppParameterInfo ppPipelineStateInfo("void", "ppPipelineState");
+
+  // Print command
+  CommandPrinter p(c, "INTC_D3D12_CreateComputePipelineState");
+  p.addArgument(c.pExtensionContext_, pExtensionContextInfo);
+  p.addArgument(c.pDesc_, pDescInfo);
+  p.addArgumentValue(c.riid_.value);
+  p.addArgument(c.ppPipelineState_, ppPipelineStateInfo);
+  postProcess(p, c);
+  p.print();
+
+  nextCommand();
+}
+
 void CCodeLayer::postProcess(ccode::CommandPrinter& cmdPrinter,
                              ID3D12FenceGetCompletedValueCommand& c) {
   using namespace ccode;

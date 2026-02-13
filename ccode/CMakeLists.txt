@@ -15,6 +15,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(ARGS_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/argshxx/)
 set(PLOG_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/plog/)
 set(DX12_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/AgilitySDK/)
+set(INTEL_EXT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/IntelExtensions/)
 
 # Set the executable name from config.cmake if it exists)
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/generated/config.cmake")
@@ -61,12 +62,14 @@ target_include_directories(${EXECUTABLE_NAME} PRIVATE
   ${PLOG_SOURCE_DIR}/include
   ${DX12_SOURCE_DIR}/include
   ${ARGS_SOURCE_DIR}
+  ${INTEL_EXT_DIR}/include
 )
 
 target_link_libraries(${EXECUTABLE_NAME} PRIVATE
-  "d3d12.lib" 
-  "dxguid.lib" 
-  "dxgi.lib" 
+  d3d12.lib
+  dxguid.lib
+  dxgi.lib
+  ${INTEL_EXT_DIR}/lib/igdext64.lib
 )
 
 if(MSVC)

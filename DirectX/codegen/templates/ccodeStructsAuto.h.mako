@@ -10,6 +10,7 @@ ${header}
 #pragma once
 
 #include "directx.h"
+#include "intelExtensions.h"
 #include "ccodeParameters.h"
 
 #include <string>
@@ -19,6 +20,21 @@ namespace DirectX {
 namespace ccode {
 
 // Note: Structures with interfaces are handled as arguments
+
+// Custom structs (Intel Extensions)
+void toCpp(const INTCDeviceInfo& value, CppParameterInfo& info, CppParameterOutput& out);
+void toCpp(const INTCDeviceInfo1& value, CppParameterInfo& info, CppParameterOutput& out);
+void toCpp(const INTCExtensionVersion& value, CppParameterInfo& info, CppParameterOutput& out);
+void toCpp(const INTCExtensionInfo& value, CppParameterInfo& info, CppParameterOutput& out);
+void toCpp(const INTCExtensionInfo1& value, CppParameterInfo& info, CppParameterOutput& out);
+void toCpp(const INTCExtensionAppInfo& value, CppParameterInfo& info, CppParameterOutput& out);
+void toCpp(const INTCExtensionAppInfo1& value, CppParameterInfo& info, CppParameterOutput& out);
+void toCpp(const INTCAppInfoVersion& value, CppParameterInfo& info, CppParameterOutput& out);
+void toCpp(const INTC_D3D12_FEATURE& value, CppParameterInfo& info, CppParameterOutput& out);
+void toCpp(const INTC_D3D12_RESOURCE_DESC& value, CppParameterInfo& info, CppParameterOutput& out);
+void toCpp(const INTC_D3D12_RESOURCE_DESC_0001& value, CppParameterInfo& info, CppParameterOutput& out);
+void toCpp(const INTC_D3D12_HEAP_DESC& value, CppParameterInfo& info, CppParameterOutput& out);
+void toCpp(const INTC_D3D12_COMMAND_QUEUE_DESC& value, CppParameterInfo& info, CppParameterOutput& out);
 
 // Custom structs (with unions)
 %for structure in structures:

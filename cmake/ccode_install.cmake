@@ -12,6 +12,9 @@ install(FILES .clang-format DESTINATION CCode)
 
 # Copy third-party dependencies
 
+# Intel Extensions
+install(DIRECTORY third_party/IntelExtensions/ DESTINATION CCode/third_party/IntelExtensions)
+
 # Plog
 install(DIRECTORY third_party/plog/include/ DESTINATION CCode/third_party/plog/include)
 install(FILES 

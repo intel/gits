@@ -15,6 +15,28 @@
 
 namespace directx {
 
+void LoadIntelExtensions() {
+  ComPtr<IDXGIFactory6> factory;
+  HRESULT hr = CreateDXGIFactory2(0, IID_PPV_ARGS(&factory));
+  assert(hr == S_OK);
+
+  ComPtr<IDXGIAdapter1> adapter;
+  hr = factory->EnumAdapters1(0, &adapter);
+  assert(hr == S_OK);
+
+  DXGI_ADAPTER_DESC1 desc{};
+  hr = adapter->GetDesc1(&desc);
+  assert(hr == S_OK);
+
+  // If the extensions cannot be loaded (e.g. not an Intel GPU) just print a warning
+  hr = INTC_LoadExtensionsLibrary(false, desc.VendorId, desc.DeviceId);
+  if (SUCCEEDED(hr)) {
+    LOG_INFO << "CCode - Loaded Intel Extensions (" << desc.Description << ")";
+  } else {
+    LOG_WARNING << "CCode - Failed to load Intel Extensions (" << desc.Description << ")";
+  }
+}
+
 HMODULE LoadAgilitySdk(const std::filesystem::path& path) {
   std::string dllPath = (path / "D3D12Core.dll").string();
   auto hModule = LoadLibrary(dllPath.c_str());

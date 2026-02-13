@@ -21,6 +21,9 @@ std::string toStr(const float& f) {
 }
 
 std::string toStr(const wchar_t* s) {
+  if (!s) {
+    return "";
+  }
   // Convert wide string to narrow string by truncating the characters
   // Note: Will not work for non-ASCII characters
   std::wstring wStr = s;

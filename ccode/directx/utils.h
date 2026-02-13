@@ -13,6 +13,7 @@
 #include <filesystem>
 
 namespace directx {
+void LoadIntelExtensions();
 HMODULE LoadAgilitySdk(const std::filesystem::path& path);
 void WaitForFence(ID3D12Fence* fence, uint64_t fenceValue);
 void PatchPipelineState(D3D12_PIPELINE_STATE_STREAM_DESC& desc,

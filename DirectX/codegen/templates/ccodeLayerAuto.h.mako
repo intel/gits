@@ -34,6 +34,22 @@ public:
   void post(MappedDataMetaCommand& command);
   void post(CreateHeapAllocationMetaCommand& command);
 
+  // Intel Extensions
+  void post(INTC_D3D12_GetSupportedVersionsCommand& command) override;
+  void post(INTC_D3D12_CreateDeviceExtensionContextCommand& command) override;
+  void post(INTC_D3D12_CreateDeviceExtensionContext1Command& command) override;
+  void post(INTC_D3D12_SetApplicationInfoCommand& command) override;
+  void post(INTC_DestroyDeviceExtensionContextCommand& command) override;
+  void post(INTC_D3D12_CheckFeatureSupportCommand& command) override;
+  void post(INTC_D3D12_SetFeatureSupportCommand& command) override;
+  void post(INTC_D3D12_GetResourceAllocationInfoCommand& command) override;
+  void post(INTC_D3D12_CreateComputePipelineStateCommand& command) override;
+  void post(INTC_D3D12_CreatePlacedResourceCommand& command) override;
+  void post(INTC_D3D12_CreateCommittedResourceCommand& command) override;
+  void post(INTC_D3D12_CreateCommandQueueCommand& command) override;
+  void post(INTC_D3D12_CreateReservedResourceCommand& command) override;
+  void post(INTC_D3D12_CreateHeapCommand& command) override;
+
 %for function in functions:
 %if function.api == Api.D3D12 or function.api == Api.DXGI:
 void post(${function.name}Command& command);

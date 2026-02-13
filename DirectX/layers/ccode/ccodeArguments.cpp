@@ -704,6 +704,42 @@ void argumentToCpp(
               "PointerArgument<NVAPI_RAYTRACING_EXECUTE_MULTI_INDIRECT_CLUSTER_OPERATION_PARAMS>");
 }
 
+void argumentToCpp(PointerArgument<INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC>& arg,
+                   CppParameterInfo& info,
+                   CppParameterOutput& out) {
+
+  GITS_ASSERT(arg.value != nullptr);
+  auto& value = *arg.value;
+
+  std::ostringstream ss;
+
+  // Initialize the pD3D12Desc member first by creating a local argument
+  CppParameterInfo pD3D12DescInfo("D3D12_COMPUTE_PIPELINE_STATE_DESC", "pD3D12Desc");
+  pD3D12DescInfo.isPtr = true;
+  CppParameterOutput pD3D12DescOut;
+  {
+    D3D12_COMPUTE_PIPELINE_STATE_DESC_Argument pD3D12DescArg(value.pD3D12Desc);
+    pD3D12DescArg.rootSignatureKey = arg.rootSignatureKey;
+    argumentToCpp(pD3D12DescArg, pD3D12DescInfo, pD3D12DescOut);
+    ss << pD3D12DescOut.initialization;
+  }
+
+  CppParameterInfo csInfo("D3D12_SHADER_BYTECODE", "cs");
+  CppParameterOutput csOut;
+  toCpp(value.CS, csInfo, csOut);
+  ss << csOut.initialization;
+
+  ss << info.type << " " << info.name << " = {};" << std::endl;
+  ss << info.name << ".CS = " << csOut.value << ";" << std::endl;
+  ss << info.name << ".ShaderInputType = " << value.ShaderInputType << ";" << std::endl;
+  ss << info.name << ".CompileOptions = " << value.CompileOptions << ";" << std::endl;
+  ss << info.name << ".InternalOptions = " << value.InternalOptions << ";" << std::endl;
+
+  out.initialization = ss.str();
+  out.value = info.name;
+  out.decorator = "&";
+}
+
 } // namespace ccode
 } // namespace DirectX
 } // namespace gits

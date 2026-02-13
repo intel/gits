@@ -124,12 +124,45 @@ void argumentToCpp(InterfaceArrayArgument<T>& arg,
 
 template <typename T>
 void argumentToCpp(ContextArgument<T>& arg, CppParameterInfo& info, CppParameterOutput& out) {
-  // empty for now
+  out.initialization = "";
+  out.decorator = "";
+  // arg.value may be nullptr but arg.key can still be valid (e.g. for Intel Extension calls)
+  if (arg.key != 0) {
+    out.value = "g_" + objKeyToStr(arg.key);
+  } else {
+    out.value = "nullptr";
+  }
 }
 
 template <typename T>
 void argumentToCpp(ContextOutputArgument<T>& arg, CppParameterInfo& info, CppParameterOutput& out) {
-  // empty for now
+  static std::unordered_set<unsigned> s_declaredKeys;
+  auto& stream = ccode::CCodeStream::getInstance();
+
+  out.initialization = "";
+  out.decorator = "";
+
+  std::string objName = "";
+  if (arg.key != 0) {
+    objName = "g_" + objKeyToStr(arg.key);
+    out.value = objName;
+    out.decorator = "&";
+  } else {
+    out.value = "nullptr";
+    return;
+  }
+
+  auto result = s_declaredKeys.insert(arg.key);
+  if (result.second) {
+    GITS_ASSERT(!objName.empty());
+
+    auto& ss = stream.getObjectsHeader();
+    ss << std::endl;
+    ss << "// " << objKeyToStr(arg.key) << std::endl;
+    ss << "inline constexpr unsigned " << objKeyToStr(arg.key) << " = " << arg.key << ";"
+       << std::endl;
+    ss << "inline " << info.type << "* " << objName << " = nullptr;" << std::endl;
+  }
 }
 
 // Overloads for specific argument types
@@ -247,6 +280,9 @@ void argumentToCpp(
     PointerArgument<NVAPI_RAYTRACING_EXECUTE_MULTI_INDIRECT_CLUSTER_OPERATION_PARAMS>& arg,
     CppParameterInfo& info,
     CppParameterOutput& out);
+void argumentToCpp(PointerArgument<INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC>& arg,
+                   CppParameterInfo& info,
+                   CppParameterOutput& out);
 
 } // namespace ccode
 } // namespace DirectX
