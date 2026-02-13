@@ -210,9 +210,6 @@ void printArgument(
     PointerArgument<D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC>& arg,
     CppParameterInfo& info,
     CppParameterOutput& out);
-void argumentToCpp(PointerArgument<D3D12_UNORDERED_ACCESS_VIEW_DESC>& arg,
-                   CppParameterInfo& info,
-                   CppParameterOutput& out);
 void argumentToCpp(D3D12_BARRIER_GROUPs_Argument& arg,
                    CppParameterInfo& info,
                    CppParameterOutput& out);

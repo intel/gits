@@ -142,6 +142,62 @@ void toCpp(const D3D12_SAMPLER_DESC2& value, CppParameterInfo& info, CppParamete
   out.value = info.name;
 }
 
+void toCpp(const D3D12_UNORDERED_ACCESS_VIEW_DESC& value,
+           CppParameterInfo& info,
+           CppParameterOutput& out) {
+  std::string name = info.getIndexedName();
+  std::ostringstream ss;
+  std::ostringstream ssUnion;
+
+  CppParameterInfo paramInfo("", "");
+  CppParameterOutput paramOut;
+  switch (value.ViewDimension) {
+  case D3D12_UAV_DIMENSION_BUFFER:
+    paramInfo.type = "D3D12_BUFFER_UAV";
+    paramInfo.name = "Buffer";
+    toCpp(value.Buffer, paramInfo, paramOut);
+    break;
+  case D3D12_UAV_DIMENSION_TEXTURE1D:
+    paramInfo.type = "D3D12_TEX1D_UAV";
+    paramInfo.name = "Texture1D";
+    toCpp(value.Texture1D, paramInfo, paramOut);
+    break;
+  case D3D12_UAV_DIMENSION_TEXTURE1DARRAY:
+    paramInfo.type = "D3D12_TEX1D_ARRAY_UAV";
+    paramInfo.name = "Texture1DArray";
+    toCpp(value.Texture1DArray, paramInfo, paramOut);
+    break;
+  case D3D12_UAV_DIMENSION_TEXTURE2D:
+    paramInfo.type = "D3D12_TEX2D_UAV";
+    paramInfo.name = "Texture2D";
+    toCpp(value.Texture2D, paramInfo, paramOut);
+    break;
+  case D3D12_UAV_DIMENSION_TEXTURE2DARRAY:
+    paramInfo.type = "D3D12_TEX2D_ARRAY_UAV";
+    paramInfo.name = "Texture2DArray";
+    toCpp(value.Texture2DArray, paramInfo, paramOut);
+    break;
+  case D3D12_UAV_DIMENSION_TEXTURE3D:
+    paramInfo.type = "D3D12_TEX3D_UAV";
+    paramInfo.name = "Texture3D";
+    toCpp(value.Texture3D, paramInfo, paramOut);
+    break;
+  default:
+    GITS_ASSERT(false, "Unknown D3D12_UNORDERED_ACCESS_VIEW_DESC ViewDimension");
+  }
+  ss << paramOut.initialization;
+  ssUnion << name << "." << paramInfo.name << " = " << paramOut.value << ";" << std::endl;
+
+  ss << info.type << " " << name << " = {};" << std::endl;
+  ss << name << ".Format = " << toStr(value.Format) << ";" << std::endl;
+  ss << name << ".ViewDimension = " << toStr(value.ViewDimension) << ";" << std::endl;
+  ss << ssUnion.str();
+
+  out.initialization = ss.str();
+  out.value = name;
+  out.decorator = "&";
+}
+
 void toCpp(const D3D12_RENDER_TARGET_VIEW_DESC& value,
            CppParameterInfo& info,
            CppParameterOutput& out) {

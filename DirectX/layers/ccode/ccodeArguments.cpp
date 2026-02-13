@@ -491,115 +491,88 @@ void argumentToCpp(D3D12_SHADER_RESOURCE_VIEW_DESC_Argument& arg,
   }
 
   auto& value = *arg.value;
+  std::string name = info.getIndexedName();
   std::ostringstream ss;
+  std::ostringstream ssUnion;
 
-  ss << info.type << " " << info.name << " = {};" << std::endl;
-  ss << info.name << ".Format = " << toStr(value.Format) << ";" << std::endl;
-  ss << info.name << ".ViewDimension = " << toStr(value.ViewDimension) << ";" << std::endl;
-  ss << info.name << ".Shader4ComponentMapping = " << toHex(value.Shader4ComponentMapping) << ";"
-     << std::endl;
-
+  CppParameterInfo paramInfo("", "");
+  CppParameterOutput paramOut;
   switch (value.ViewDimension) {
   case D3D12_SRV_DIMENSION_BUFFER:
-    ss << info.name << ".Buffer.FirstElement = " << value.Buffer.FirstElement << ";" << std::endl;
-    ss << info.name << ".Buffer.NumElements = " << value.Buffer.NumElements << ";" << std::endl;
-    ss << info.name << ".Buffer.StructureByteStride = " << value.Buffer.StructureByteStride << ";"
-       << std::endl;
-    ss << info.name << ".Buffer.Flags = " << toStr(value.Buffer.Flags) << ";" << std::endl;
+    paramInfo.type = "D3D12_BUFFER_SRV";
+    paramInfo.name = "Buffer";
+    toCpp(value.Buffer, paramInfo, paramOut);
     break;
-
   case D3D12_SRV_DIMENSION_TEXTURE1D:
-    ss << info.name << ".Texture1D.MostDetailedMip = " << value.Texture1D.MostDetailedMip << ";"
-       << std::endl;
-    ss << info.name << ".Texture1D.MipLevels = " << value.Texture1D.MipLevels << ";" << std::endl;
-    ss << info.name << ".Texture1D.ResourceMinLODClamp = " << value.Texture1D.ResourceMinLODClamp
-       << ";" << std::endl;
+    paramInfo.type = "D3D12_TEX1D_SRV";
+    paramInfo.name = "Texture1D";
+    toCpp(value.Texture1D, paramInfo, paramOut);
     break;
-
   case D3D12_SRV_DIMENSION_TEXTURE1DARRAY:
-    ss << info.name << ".Texture1DArray.MostDetailedMip = " << value.Texture1DArray.MostDetailedMip
-       << ";" << std::endl;
-    ss << info.name << ".Texture1DArray.MipLevels = " << value.Texture1DArray.MipLevels << ";"
-       << std::endl;
-    ss << info.name << ".Texture1DArray.FirstArraySlice = " << value.Texture1DArray.FirstArraySlice
-       << ";" << std::endl;
-    ss << info.name << ".Texture1DArray.ArraySize = " << value.Texture1DArray.ArraySize << ";"
-       << std::endl;
-    ss << info.name
-       << ".Texture1DArray.ResourceMinLODClamp = " << value.Texture1DArray.ResourceMinLODClamp
-       << ";" << std::endl;
+    paramInfo.type = "D3D12_TEX1D_ARRAY_SRV";
+    paramInfo.name = "Texture1DArray";
+    toCpp(value.Texture1DArray, paramInfo, paramOut);
     break;
-
   case D3D12_SRV_DIMENSION_TEXTURE2D:
-    ss << info.name << ".Texture2D.MostDetailedMip = " << value.Texture2D.MostDetailedMip << ";"
-       << std::endl;
-    ss << info.name << ".Texture2D.MipLevels = " << value.Texture2D.MipLevels << ";" << std::endl;
-    ss << info.name << ".Texture2D.PlaneSlice = " << value.Texture2D.PlaneSlice << ";" << std::endl;
-    ss << info.name << ".Texture2D.ResourceMinLODClamp = " << value.Texture2D.ResourceMinLODClamp
-       << ";" << std::endl;
+    paramInfo.type = "D3D12_TEX2D_SRV";
+    paramInfo.name = "Texture2D";
+    toCpp(value.Texture2D, paramInfo, paramOut);
     break;
-
   case D3D12_SRV_DIMENSION_TEXTURE2DARRAY:
-    ss << info.name << ".Texture2DArray.MostDetailedMip = " << value.Texture2DArray.MostDetailedMip
-       << ";" << std::endl;
-    ss << info.name << ".Texture2DArray.MipLevels = " << value.Texture2DArray.MipLevels << ";"
-       << std::endl;
-    ss << info.name << ".Texture2DArray.FirstArraySlice = " << value.Texture2DArray.FirstArraySlice
-       << ";" << std::endl;
-    ss << info.name << ".Texture2DArray.ArraySize = " << value.Texture2DArray.ArraySize << ";"
-       << std::endl;
-    ss << info.name << ".Texture2DArray.PlaneSlice = " << value.Texture2DArray.PlaneSlice << ";"
-       << std::endl;
-    ss << info.name
-       << ".Texture2DArray.ResourceMinLODClamp = " << value.Texture2DArray.ResourceMinLODClamp
-       << ";" << std::endl;
+    paramInfo.type = "D3D12_TEX2D_ARRAY_SRV";
+    paramInfo.name = "Texture2DArray";
+    toCpp(value.Texture2DArray, paramInfo, paramOut);
     break;
-
+  case D3D12_SRV_DIMENSION_TEXTURE2DMS:
+    paramInfo.type = "D3D12_TEX2DMS_ARRAY_SRV";
+    paramInfo.name = "Texture2DMS";
+    toCpp(value.Texture2DMS, paramInfo, paramOut);
+    break;
+  case D3D12_SRV_DIMENSION_TEXTURE2DMSARRAY:
+    paramInfo.type = "D3D12_TEX2DMS_ARRAY_SRV";
+    paramInfo.name = "Texture2DMSArray";
+    toCpp(value.Texture2DMSArray, paramInfo, paramOut);
+    break;
   case D3D12_SRV_DIMENSION_TEXTURE3D:
-    ss << info.name << ".Texture3D.MostDetailedMip = " << value.Texture3D.MostDetailedMip << ";"
-       << std::endl;
-    ss << info.name << ".Texture3D.MipLevels = " << value.Texture3D.MipLevels << ";" << std::endl;
-    ss << info.name << ".Texture3D.ResourceMinLODClamp = " << value.Texture3D.ResourceMinLODClamp
-       << ";" << std::endl;
+    paramInfo.type = "D3D12_TEX3D_SRV";
+    paramInfo.name = "Texture3D";
+    toCpp(value.Texture3D, paramInfo, paramOut);
     break;
-
   case D3D12_SRV_DIMENSION_TEXTURECUBE:
-    ss << info.name << ".TextureCube.MostDetailedMip = " << value.TextureCube.MostDetailedMip << ";"
-       << std::endl;
-    ss << info.name << ".TextureCube.MipLevels = " << value.TextureCube.MipLevels << ";"
-       << std::endl;
-    ss << info.name
-       << ".TextureCube.ResourceMinLODClamp = " << value.TextureCube.ResourceMinLODClamp << ";"
-       << std::endl;
+    paramInfo.type = "D3D12_TEXCUBE_SRV";
+    paramInfo.name = "TextureCube";
+    toCpp(value.TextureCube, paramInfo, paramOut);
     break;
-
   case D3D12_SRV_DIMENSION_TEXTURECUBEARRAY:
-    ss << info.name
-       << ".TextureCubeArray.MostDetailedMip = " << value.TextureCubeArray.MostDetailedMip << ";"
-       << std::endl;
-    ss << info.name << ".TextureCubeArray.MipLevels = " << value.TextureCubeArray.MipLevels << ";"
-       << std::endl;
-    ss << info.name
-       << ".TextureCubeArray.First2DArrayFace = " << value.TextureCubeArray.First2DArrayFace << ";"
-       << std::endl;
-    ss << info.name << ".TextureCubeArray.NumCubes = " << value.TextureCubeArray.NumCubes << ";"
-       << std::endl;
-    ss << info.name
-       << ".TextureCubeArray.ResourceMinLODClamp = " << value.TextureCubeArray.ResourceMinLODClamp
+    paramInfo.type = "D3D12_TEXCUBE_ARRAY_SRV";
+    paramInfo.name = "TextureCubeArray";
+    toCpp(value.TextureCubeArray, paramInfo, paramOut);
+    break;
+  case D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE:
+    // Write directly to "ss" since this member needs a helper function
+    paramInfo.type = "D3D12_RAYTRACING_ACCELERATION_STRUCTURE_SRV";
+    paramInfo.name = "RaytracingAccelerationStructure";
+    paramOut.initialization = "";
+    ss << paramInfo.type << " " << paramInfo.name << " = {};" << std::endl;
+    ss << paramInfo.name
+       << ".Location = " << gpuAddressStr(arg.raytracingLocationKey, arg.raytracingLocationOffset)
        << ";" << std::endl;
     break;
-
-  case D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE:
-    ss << info.name << ".RaytracingAccelerationStructure.Location = "
-       << toHex(value.RaytracingAccelerationStructure.Location) << ";" << std::endl;
-    break;
-
   default:
-    GITS_ASSERT("Unknown D3D12_SHADER_RESOURCE_VIEW_DESC ViewDimension");
+    GITS_ASSERT(false, "Unknown D3D12_SHADER_RESOURCE_VIEW_DESC ViewDimension");
   }
+  ss << paramOut.initialization;
+  ssUnion << name << "." << paramInfo.name << " = " << paramOut.value << ";" << std::endl;
+
+  ss << info.type << " " << name << " = {};" << std::endl;
+  ss << name << ".Format = " << toStr(value.Format) << ";" << std::endl;
+  ss << name << ".ViewDimension = " << toStr(value.ViewDimension) << ";" << std::endl;
+  ss << name << ".Shader4ComponentMapping = " << toHex(value.Shader4ComponentMapping) << ";"
+     << std::endl;
+  ss << ssUnion.str();
 
   out.initialization = ss.str();
-  out.value = info.name;
+  out.value = name;
   out.decorator = "&";
 }
 void argumentToCpp(ArrayArgument<D3D12_RESIDENCY_PRIORITY>& arg,
@@ -656,78 +629,6 @@ void printArgument(
   GITS_ASSERT(false,
               "argumentToCpp not implemented for "
               "PointerArgument<D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC>");
-}
-void argumentToCpp(PointerArgument<D3D12_UNORDERED_ACCESS_VIEW_DESC>& arg,
-                   CppParameterInfo& info,
-                   CppParameterOutput& out) {
-  if (!arg.value) {
-    out.initialization = "";
-    out.value = "nullptr";
-    out.decorator = "";
-    return;
-  }
-
-  auto& value = *arg.value;
-  std::ostringstream ss;
-
-  ss << info.type << " " << info.name << " = {};" << std::endl;
-  ss << info.name << ".Format = " << toStr(value.Format) << ";" << std::endl;
-  ss << info.name << ".ViewDimension = " << toStr(value.ViewDimension) << ";" << std::endl;
-
-  switch (value.ViewDimension) {
-  case D3D12_UAV_DIMENSION_BUFFER:
-    ss << info.name << ".Buffer.FirstElement = " << value.Buffer.FirstElement << ";" << std::endl;
-    ss << info.name << ".Buffer.NumElements = " << value.Buffer.NumElements << ";" << std::endl;
-    ss << info.name << ".Buffer.StructureByteStride = " << value.Buffer.StructureByteStride << ";"
-       << std::endl;
-    ss << info.name << ".Buffer.CounterOffsetInBytes = " << value.Buffer.CounterOffsetInBytes << ";"
-       << std::endl;
-    ss << info.name << ".Buffer.Flags = " << toStr(value.Buffer.Flags) << ";" << std::endl;
-    break;
-
-  case D3D12_UAV_DIMENSION_TEXTURE1D:
-    ss << info.name << ".Texture1D.MipSlice = " << value.Texture1D.MipSlice << ";" << std::endl;
-    break;
-
-  case D3D12_UAV_DIMENSION_TEXTURE1DARRAY:
-    ss << info.name << ".Texture1DArray.MipSlice = " << value.Texture1DArray.MipSlice << ";"
-       << std::endl;
-    ss << info.name << ".Texture1DArray.FirstArraySlice = " << value.Texture1DArray.FirstArraySlice
-       << ";" << std::endl;
-    ss << info.name << ".Texture1DArray.ArraySize = " << value.Texture1DArray.ArraySize << ";"
-       << std::endl;
-    break;
-
-  case D3D12_UAV_DIMENSION_TEXTURE2D:
-    ss << info.name << ".Texture2D.MipSlice = " << value.Texture2D.MipSlice << ";" << std::endl;
-    ss << info.name << ".Texture2D.PlaneSlice = " << value.Texture2D.PlaneSlice << ";" << std::endl;
-    break;
-
-  case D3D12_UAV_DIMENSION_TEXTURE2DARRAY:
-    ss << info.name << ".Texture2DArray.MipSlice = " << value.Texture2DArray.MipSlice << ";"
-       << std::endl;
-    ss << info.name << ".Texture2DArray.FirstArraySlice = " << value.Texture2DArray.FirstArraySlice
-       << ";" << std::endl;
-    ss << info.name << ".Texture2DArray.ArraySize = " << value.Texture2DArray.ArraySize << ";"
-       << std::endl;
-    ss << info.name << ".Texture2DArray.PlaneSlice = " << value.Texture2DArray.PlaneSlice << ";"
-       << std::endl;
-    break;
-
-  case D3D12_UAV_DIMENSION_TEXTURE3D:
-    ss << info.name << ".Texture3D.MipSlice = " << value.Texture3D.MipSlice << ";" << std::endl;
-    ss << info.name << ".Texture3D.FirstWSlice = " << value.Texture3D.FirstWSlice << ";"
-       << std::endl;
-    ss << info.name << ".Texture3D.WSize = " << value.Texture3D.WSize << ";" << std::endl;
-    break;
-
-  default:
-    GITS_ASSERT("Unknown D3D12_UNORDERED_ACCESS_VIEW_DESC ViewDimension");
-  }
-
-  out.initialization = ss.str();
-  out.value = info.name;
-  out.decorator = "&";
 }
 void argumentToCpp(D3D12_BARRIER_GROUPs_Argument& arg,
                    CppParameterInfo& info,
