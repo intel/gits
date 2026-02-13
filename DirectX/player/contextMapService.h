@@ -24,6 +24,9 @@ public:
   }
 
   std::uintptr_t getContext(unsigned key) {
+    if (!key) {
+      return {};
+    }
     auto it = contextMap_.find(key);
     GITS_ASSERT(it != contextMap_.end());
     return it->second;

@@ -27,6 +27,9 @@ public:
   }
 
   unsigned getKey(std::uintptr_t context) {
+    if (!context) {
+      return 0;
+    }
     std::lock_guard<std::mutex> lock(mutex_);
     auto it = contextMap_.find(context);
     GITS_ASSERT(it != contextMap_.end());
