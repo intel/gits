@@ -92,6 +92,7 @@ private:
   SubcaptureRecorder& recorder_;
   std::map<unsigned, std::unique_ptr<ContextState>> contextStatesByContextKey_;
   std::map<unsigned, ContextState*> contextStatesByDeviceKey_;
+  bool restored_{};
 };
 
 #pragma endregion

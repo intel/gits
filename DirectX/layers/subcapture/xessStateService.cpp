@@ -101,9 +101,13 @@ void XessStateService::restoreContextState(ContextState* state) {
 #pragma region XELL
 
 void XellStateService::restoreState() {
+  if (restored_) {
+    return;
+  }
   for (auto& it : contextStatesByContextKey_) {
     restoreContextState(it.second.get());
   }
+  restored_ = true;
 }
 
 void XellStateService::storeContextState(ContextState* state) {

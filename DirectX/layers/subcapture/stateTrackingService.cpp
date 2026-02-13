@@ -42,6 +42,7 @@ void StateTrackingService::restoreState() {
   recordStatus(MarkerUInt64Command::Value::STATE_RESTORE_OBJECTS_END);
   nvapiGlobalStateService_.restureInitializeCount();
   xessStateService_.restoreState();
+  xellStateService_.restoreState();
   descriptorService_.restoreState();
   recordStatus(MarkerUInt64Command::Value::STATE_RESTORE_RTAS_BEGIN);
   accelerationStructuresSerializeService_.restoreAccelerationStructures();
