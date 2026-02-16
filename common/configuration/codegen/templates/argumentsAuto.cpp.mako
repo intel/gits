@@ -28,12 +28,12 @@ void ${group.argument_namespace_str}::UpdateConfiguration(${group.namespace_str}
 %  if (option.argument_only or not option.is_derived) and option.has_leafs():
 %   if option.type != 'Group':
   if (${option.instance_name}) {
-    const auto newValue = ${option.instance_name}.Get();
+    const auto& newValue = ${option.instance_name}.Get();
 %     if not option.is_deprecated:
-    const auto oldValue = stringFrom<${option.type}>(config->${option.instance_name});
+    const auto& oldValue = stringFrom<${option.type}>(config->${option.instance_name});
 %     else:
     LOG_WARNING << "Encountered deprecated option: ${option.get_path().replace("Configuration.", "")}, please update your arguments";
-    const auto oldValue = config->${option.instance_name}.has_value() ? stringFrom<${option.type}>(config->${option.instance_name}.value()) : "";
+    const auto& oldValue = config->${option.instance_name}.has_value() ? stringFrom<${option.type}>(config->${option.instance_name}.value()) : "";
 %     endif
     Configurator::Instance().AddChangedField("${option.get_path()}", stringFrom<${option.type}>(newValue),
                                             oldValue, Configurator::ConfigEntry::Source::ARGUMENT);
@@ -44,12 +44,12 @@ void ${group.argument_namespace_str}::UpdateConfiguration(${group.namespace_str}
 %   endif
 %    if option.type == 'bool':
   if (${option.get_bool_value_instance_name()}) {
-    const auto newValue = stringFrom<${option.type}>(${option.get_bool_value_instance_name()}.Get());
+    const auto& newValue = stringFrom<${option.type}>(${option.get_bool_value_instance_name()}.Get());
 %     if not option.is_deprecated:
-    const auto oldValue = stringFrom<${option.type}>(config->${option.instance_name});
+    const auto& oldValue = stringFrom<${option.type}>(config->${option.instance_name});
 %     else:
     LOG_WARNING << "Encountered deprecated option: ${option.get_path().replace("Configuration.", "")}.Value, please update your arguments";
-    const auto oldValue = config->${option.instance_name}.has_value() ? stringFrom<${option.type}>(config->${option.instance_name}.value()) : "";
+    const auto& oldValue = config->${option.instance_name}.has_value() ? stringFrom<${option.type}>(config->${option.instance_name}.value()) : "";
 %     endif
     Configurator::Instance().AddChangedField("${option.get_path()}", newValue,
                                             oldValue,
