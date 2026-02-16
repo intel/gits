@@ -63,7 +63,7 @@ void toCpp(const ${structure.name}& value, CppParameterInfo& info, CppParameterO
   %endfor
 
   out.initialization = ss.str();
-  out.value = name;
+  out.value = std::move(name);
   out.decorator = "";
 }
 

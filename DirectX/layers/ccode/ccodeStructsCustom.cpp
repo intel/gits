@@ -336,7 +336,7 @@ void toCpp(const D3D12_CLEAR_VALUE& value, CppParameterInfo& info, CppParameterO
   ss << name << ".Format = " << toStr(value.Format) << ";" << std::endl;
   ss << ssUnion.str();
   out.initialization = ss.str();
-  out.value = name;
+  out.value = std::move(name);
   out.decorator = "";
 }
 
@@ -380,7 +380,7 @@ void toCpp(const D3D12_ROOT_PARAMETER1& value, CppParameterInfo& info, CppParame
   ss << ssUnion.str();
 
   out.initialization = ss.str();
-  out.value = name;
+  out.value = std::move(name);
   out.decorator = "";
 }
 
@@ -419,7 +419,7 @@ void toCpp(const D3D12_VERSIONED_ROOT_SIGNATURE_DESC& value,
   ss << name << "." << descName << " = " << descOut.value << ";" << std::endl;
 
   out.initialization = ss.str();
-  out.value = name;
+  out.value = std::move(name);
   out.decorator = "";
 }
 void toCpp(const D3D12_SAMPLER_DESC2& value, CppParameterInfo& info, CppParameterOutput& out) {
@@ -562,7 +562,7 @@ void toCpp(const D3D12_RENDER_TARGET_VIEW_DESC& value,
   ss << ssUnion.str();
 
   out.initialization = ss.str();
-  out.value = name;
+  out.value = std::move(name);
   out.decorator = "";
 }
 
@@ -626,7 +626,7 @@ void toCpp(const D3D12_DEPTH_STENCIL_VIEW_DESC& value,
   ss << ssUnion.str();
 
   out.initialization = ss.str();
-  out.value = name;
+  out.value = std::move(name);
   out.decorator = "";
 }
 
@@ -638,7 +638,7 @@ void toCpp(const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS& value,
   std::ostringstream ss;
   ss << info.type << " " << name << " = {};" << std::endl;
   out.initialization = ss.str();
-  out.value = name;
+  out.value = std::move(name);
   out.decorator = "";
 }
 
@@ -648,7 +648,7 @@ void toCpp(const D3D12_SET_PROGRAM_DESC& value, CppParameterInfo& info, CppParam
   std::ostringstream ss;
   ss << info.type << " " << name << " = {};" << std::endl;
   out.initialization = ss.str();
-  out.value = name;
+  out.value = std::move(name);
   out.decorator = "";
 }
 
@@ -660,7 +660,7 @@ void toCpp(const D3D12_DISPATCH_GRAPH_DESC& value,
   std::ostringstream ss;
   ss << info.type << " " << name << " = {};" << std::endl;
   out.initialization = ss.str();
-  out.value = name;
+  out.value = std::move(name);
   out.decorator = "";
 }
 
@@ -712,7 +712,7 @@ void toCpp(const D3D12_ROOT_PARAMETER& value, CppParameterInfo& info, CppParamet
   ss << ssUnion.str();
 
   out.initialization = ss.str();
-  out.value = name;
+  out.value = std::move(name);
   out.decorator = "";
 }
 
@@ -780,7 +780,7 @@ void toCpp(const D3D12_INDIRECT_ARGUMENT_DESC& value,
   ss << name << ".Type = " << toStr(value.Type) << ";" << std::endl;
   ss << ssUnion.str();
   out.initialization = ss.str();
-  out.value = name;
+  out.value = std::move(name);
   out.decorator = "";
 }
 
@@ -790,7 +790,7 @@ void toCpp(const D3D12_NODE& value, CppParameterInfo& info, CppParameterOutput& 
   std::ostringstream ss;
   ss << info.type << " " << name << " = {};" << std::endl;
   out.initialization = ss.str();
-  out.value = name;
+  out.value = std::move(name);
   out.decorator = "";
 }
 
@@ -802,7 +802,7 @@ void toCpp(const D3D12_RENDER_PASS_BEGINNING_ACCESS& value,
   std::ostringstream ss;
   ss << info.type << " " << name << " = {};" << std::endl;
   out.initialization = ss.str();
-  out.value = name;
+  out.value = std::move(name);
   out.decorator = "";
 }
 
@@ -814,7 +814,7 @@ void toCpp(const D3D12_RENDER_PASS_ENDING_ACCESS& value,
   std::ostringstream ss;
   ss << info.type << " " << name << " = {};" << std::endl;
   out.initialization = ss.str();
-  out.value = name;
+  out.value = std::move(name);
   out.decorator = "";
 }
 
@@ -833,7 +833,7 @@ void toCpp(const DXGI_FRAME_STATISTICS& value, CppParameterInfo& info, CppParame
   ss << name << ".SyncGPUTime.QuadPart = " << value.SyncGPUTime.QuadPart << ";" << std::endl;
 
   out.initialization = ss.str();
-  out.value = name;
+  out.value = std::move(name);
   out.decorator = "";
 }
 
@@ -1027,7 +1027,7 @@ void toCpp(const D3D12_PIPELINE_STATE_STREAM_DESC& value,
      << pPipelineStateSubobjectStreamOut.value << ";" << std::endl;
 
   out.initialization = ss.str();
-  out.value = name;
+  out.value = std::move(name);
   out.decorator = "";
 }
 
@@ -1039,7 +1039,7 @@ void toCpp(const DSTORAGE_ERROR_FIRST_FAILURE& value,
   std::ostringstream ss;
   ss << info.type << " " << name << " = {};" << std::endl;
   out.initialization = ss.str();
-  out.value = name;
+  out.value = std::move(name);
   out.decorator = "";
 }
 
