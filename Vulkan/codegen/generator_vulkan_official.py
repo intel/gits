@@ -15176,7 +15176,7 @@ var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='commandBufferInheritance', type='VkBool32')
 )
 
-Struct(name='VkPhysicalDeviceComputeShaderDerivativesFeaturesKHR_', enabled=False,
+Struct(name='VkPhysicalDeviceComputeShaderDerivativesFeaturesKHR_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='computeDerivativeGroupQuads', type='VkBool32'),
@@ -17176,7 +17176,7 @@ var3=VarDef(name='spheres', type='VkBool32'),
 var4=VarDef(name='linearSweptSpheres', type='VkBool32')
 )
 
-Struct(name='VkPhysicalDeviceRayTracingMaintenance1FeaturesKHR_', enabled=False,
+Struct(name='VkPhysicalDeviceRayTracingMaintenance1FeaturesKHR_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='rayTracingMaintenance1', type='VkBool32'),
@@ -17213,7 +17213,7 @@ var9=VarDef(name='shaderGroupHandleAlignment', type='uint32_t'),
 var10=VarDef(name='maxRayHitAttributeSize', type='uint32_t')
 )
 
-Struct(name='VkPhysicalDeviceRayTracingPositionFetchFeaturesKHR_', enabled=False,
+Struct(name='VkPhysicalDeviceRayTracingPositionFetchFeaturesKHR_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='rayTracingPositionFetch', type='VkBool32')
