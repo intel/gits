@@ -54,7 +54,6 @@ std::string toStr(REFIID riid) {
         riid.Data4[3], riid.Data4[4], riid.Data4[5], riid.Data4[6], riid.Data4[7]);
     return std::string(buffer);
   }
-  return "UNKNOWN_GUID";
 }
 
 } // namespace DirectX
