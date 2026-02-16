@@ -33,7 +33,7 @@ struct CppParameterInfo {
   CppParameterInfo(std::string type, std::string name)
       : type(std::move(type)), name(std::move(name)) {}
   CppParameterInfo(std::string type, std::string name, const CppParameterInfo& parentInfo)
-      : CppParameterInfo(type, name) {
+      : CppParameterInfo(std::move(type), std::move(name)) {
     setParentIndices(parentInfo);
   }
 
