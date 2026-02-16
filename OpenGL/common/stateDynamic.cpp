@@ -211,8 +211,8 @@ void CStateDynamic::WriteClientSizes() {
 }
 
 std::function<void()> CStateDynamic::CreateCArraysRestorePoint() {
-  auto snapshot = _memTracker;
-  return [snapshot, this]() {
+  TMemoryAreas snapshot = _memTracker;
+  return [snapshot = std::move(snapshot), this]() {
     for (auto& [key, mem] : _memTracker) {
       auto snapshotIt = snapshot.find(key);
       if (snapshotIt == snapshot.end()) {
