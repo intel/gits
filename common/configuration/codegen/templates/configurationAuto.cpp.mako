@@ -61,10 +61,10 @@ ${whitespace(2)}const char* env_${option.name} = getEnvVar("${option.get_environ
 ${whitespace(2)}if (env_${option.name}) {
 ${whitespace(3)}try {
 %   if not option.is_deprecated:
-${whitespace(4)}auto old_${option.instance_name} = stringFrom<${option.type}>(${option.instance_name});
+${whitespace(4)}const auto& old_${option.instance_name} = stringFrom<${option.type}>(${option.instance_name});
 %   else:
 ${whitespace(4)}LOG_WARNING << "Encountered deprecated option: ${option.get_environment_string()}, please update your environment variables";
-${whitespace(4)}auto old_${option.instance_name} = ${option.instance_name}.has_value() ? stringFrom<${option.type}>(${option.instance_name}.value()) : "";
+${whitespace(4)}const auto& old_${option.instance_name} = ${option.instance_name}.has_value() ? stringFrom<${option.type}>(${option.instance_name}.value()) : "";
 %   endif
 ${whitespace(4)}${option.instance_name} = stringTo<${option.type}>(env_${option.name});
 ${whitespace(4)}Configurator::Instance().AddChangedField("${option.get_path()}", env_${option.name},
