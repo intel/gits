@@ -117,8 +117,6 @@ void argumentToCpp(LPCSTR_Argument& arg, CppParameterInfo& info, CppParameterOut
 void argumentToCpp(D3D12_GPU_VIRTUAL_ADDRESS_Argument& arg,
                    CppParameterInfo& info,
                    CppParameterOutput& out) {
-  auto keyStr = arg.interfaceKey ? objKeyToStr(arg.interfaceKey) : "0";
-
   std::ostringstream ss;
   ss << info.type << " " << info.name << " = " << gpuAddressStr(arg.interfaceKey, arg.offset) << ";"
      << std::endl;
