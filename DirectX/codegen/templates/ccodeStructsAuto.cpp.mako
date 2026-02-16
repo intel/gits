@@ -26,7 +26,7 @@ void toCpp(const ${structure.name}& value, CppParameterInfo& info, CppParameterO
     out.decorator = "";
     return;
   }
-  
+
   std::ostringstream ss;
   %for param in structure.fields:
   %if not is_trivial_parameter(param):
@@ -41,7 +41,7 @@ void toCpp(const ${structure.name}& value, CppParameterInfo& info, CppParameterO
   %endif
   %endfor
   std::string name = info.getIndexedName();
-  
+
   if (!info.isArrayElement) {
     ss << info.type << " " << name << " = {};" << std::endl;
   }
