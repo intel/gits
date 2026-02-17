@@ -176,6 +176,7 @@ public:
   void pre(NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand& command) override;
   void post(CreateDXGIFactory2Command& command) override;
   void pre(xefgSwapChainD3D12InitFromSwapChainDescCommand& command) override;
+  void pre(xefgSwapChainSetLoggingCallbackCommand& command) override;
 
 private:
   struct NvAPIShaderExtnSlot {

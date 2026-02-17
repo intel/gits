@@ -1724,6 +1724,18 @@ void ReplayCustomizationLayer::pre(xefgSwapChainD3D12InitFromSwapChainDescComman
   }
 }
 
+void ReplayCustomizationLayer::pre(xefgSwapChainSetLoggingCallbackCommand& command) {
+  command.loggingCallback_.value = nullptr;
+
+  static bool logged = false;
+  if (!logged) {
+
+    LOG_INFO << "[XeSS-FG] xefgSwapChainSetLoggingCallback: Set the callback function pointer to "
+                "nullptr";
+    logged = true;
+  }
+}
+
 void ReplayCustomizationLayer::fillGpuAddressArgument(D3D12_GPU_VIRTUAL_ADDRESS_Argument& arg) {
   if (useAddressPinning_) {
     return;
