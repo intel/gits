@@ -39,6 +39,7 @@ public:
 
   void setPreCommand(const std::string& preCommand);
   void setPostCommand(const std::string& postCommand);
+  void skip();
   void print();
 
 private:
@@ -49,10 +50,15 @@ private:
   std::string cppPreCommand_{};
   std::string cppPostCommand_{};
   unsigned objectId_{};
+  bool skip_{false};
 };
 
 template <typename T>
 inline void CommandPrinter::addArgument(T& arg, CppParameterInfo& info) {
+  if (skip_) {
+    return;
+  }
+
   CppParameterOutput out;
   out.initialization = "DEFAULT_INITIALIZATION\n";
   out.value = "DEFAULT_NAME";
@@ -68,6 +74,9 @@ inline void CommandPrinter::addArgument(T& arg, CppParameterInfo& info) {
 
 template <typename T>
 inline void CommandPrinter::addArgumentValue(T& value) {
+  if (skip_) {
+    return;
+  }
   cppArgValues_.push_back(toStr(value));
 }
 

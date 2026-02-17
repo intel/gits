@@ -27,8 +27,9 @@ ${print_parameter_info(function, param)}
 %endif
 %endfor
 
-// Print command
+// Build command printer
 CommandPrinter p(c, "${function.name}"${obj_key_str});
+preProcess(p, c);
 %for param in function.params:
 %if is_trivial_parameter(param):
 p.addArgumentValue(c.${param.name}_.value);

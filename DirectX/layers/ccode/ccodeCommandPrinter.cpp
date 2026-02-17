@@ -33,9 +33,17 @@ void CommandPrinter::setPostCommand(const std::string& postCommand) {
   cppPostCommand_ = postCommand;
 }
 
+void CommandPrinter::skip() {
+  skip_ = true;
+}
+
 void CommandPrinter::print() {
   auto& stream = ccode::CCodeStream::getInstance();
   auto& ss = stream.getCurrentBlock();
+  if (skip_) {
+    ss << "// [SKIPPED] Command " << keyToStr(command_.key) << " " << name_ << std::endl;
+    return;
+  }
 
   bool needsScope =
       !cppArgInitializations_.empty() || !cppPreCommand_.empty() || !cppPostCommand_.empty();

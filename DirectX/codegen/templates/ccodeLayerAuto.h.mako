@@ -69,45 +69,37 @@ private:
   bool isStateRestore_{false};
   unsigned currentFrame_{0};
 
-  // Custom command post postprocess
-  void postProcess(ccode::CommandPrinter& cmdPrinter, auto& command) {}
-  void postProcess(ccode::CommandPrinter& cmdPrinter, ID3D12FenceGetCompletedValueCommand& command);
-  void postProcess(ccode::CommandPrinter& cmdPrinter, ID3D12DeviceCreateDescriptorHeapCommand& command);
-  void postProcess(ccode::CommandPrinter& cmdPrinter, ID3D12ResourceMapCommand& command);
-  void postProcess(ccode::CommandPrinter& cmdPrinter,
-                             ID3D12DeviceCreateCommittedResourceCommand& command);
-  void postProcess(ccode::CommandPrinter& cmdPrinter,
-                             ID3D12Device4CreateCommittedResource1Command& command);
-  void postProcess(ccode::CommandPrinter& cmdPrinter,
-                             ID3D12Device8CreateCommittedResource2Command& command);
-  void postProcess(ccode::CommandPrinter& cmdPrinter,
-                             ID3D12Device10CreateCommittedResource3Command& command);
-  void postProcess(ccode::CommandPrinter& cmdPrinter,
-                             ID3D12DeviceCreateReservedResourceCommand& command);
-  void postProcess(ccode::CommandPrinter& cmdPrinter,
-                              ID3D12Device4CreateReservedResource1Command& command);
-  void postProcess(ccode::CommandPrinter& cmdPrinter,
-                             ID3D12Device10CreateReservedResource2Command& command);
-  void postProcess(ccode::CommandPrinter& cmdPrinter,
-                             ID3D12DeviceCreatePlacedResourceCommand& command);
-  void postProcess(ccode::CommandPrinter& cmdPrinter,
-                             ID3D12Device8CreatePlacedResource1Command& command);
-  void postProcess(ccode::CommandPrinter& cmdPrinter,
-                             ID3D12Device10CreatePlacedResource2Command& command);
-  void postProcess(ccode::CommandPrinter& cmdPrinter, ID3D12DeviceCreateHeapCommand& command);
-  void postProcess(ccode::CommandPrinter& cmdPrinter,
-                             ID3D12Device4CreateHeap1Command& command);
-  void postProcess(ccode::CommandPrinter& cmdPrinter, INTC_D3D12_CreateHeapCommand& command);
-  void postProcess(ccode::CommandPrinter& cmdPrinter,
-                   ID3D12Device3OpenExistingHeapFromAddressCommand& command);
-  void postProcess(ccode::CommandPrinter& cmdPrinter,
-                   ID3D12Device13OpenExistingHeapFromAddress1Command& command);
-  void postProcess(ccode::CommandPrinter& cmdPrinter,
-                   ID3D12PipelineLibraryLoadGraphicsPipelineCommand& command);
-  void postProcess(ccode::CommandPrinter& cmdPrinter,
-                   ID3D12PipelineLibraryLoadComputePipelineCommand& command);
-  void postProcess(ccode::CommandPrinter& cmdPrinter,
-                   ID3D12PipelineLibrary1LoadPipelineCommand& command);
+  // Custom command pre process
+  // Used before arguments have been processed
+  void preProcess(ccode::CommandPrinter& p, auto& c) {}
+  void preProcess(ccode::CommandPrinter& p, ID3D12FenceSetEventOnCompletionCommand& c);
+  void preProcess(ccode::CommandPrinter& p, ID3D12ObjectGetPrivateDataCommand& c);
+  void preProcess(ccode::CommandPrinter& p, ID3D12ObjectSetPrivateDataCommand& c);
+  
+  // Custom command post process
+  // Used after the arguments have been processed and the command is ready to be printed
+  void postProcess(ccode::CommandPrinter& p, auto& c) {}
+  void postProcess(ccode::CommandPrinter& p, ID3D12FenceGetCompletedValueCommand& c);
+  void postProcess(ccode::CommandPrinter& p, ID3D12DeviceCreateDescriptorHeapCommand& c);
+  void postProcess(ccode::CommandPrinter& p, ID3D12ResourceMapCommand& c);
+  void postProcess(ccode::CommandPrinter& p, ID3D12DeviceCreateCommittedResourceCommand& c);
+  void postProcess(ccode::CommandPrinter& p, ID3D12Device4CreateCommittedResource1Command& c);
+  void postProcess(ccode::CommandPrinter& p, ID3D12Device8CreateCommittedResource2Command& c);
+  void postProcess(ccode::CommandPrinter& p, ID3D12Device10CreateCommittedResource3Command& c);
+  void postProcess(ccode::CommandPrinter& p, ID3D12DeviceCreateReservedResourceCommand& c);
+  void postProcess(ccode::CommandPrinter& p, ID3D12Device4CreateReservedResource1Command& c);
+  void postProcess(ccode::CommandPrinter& p, ID3D12Device10CreateReservedResource2Command& c);
+  void postProcess(ccode::CommandPrinter& p, ID3D12DeviceCreatePlacedResourceCommand& c);
+  void postProcess(ccode::CommandPrinter& p, ID3D12Device8CreatePlacedResource1Command& c);
+  void postProcess(ccode::CommandPrinter& p, ID3D12Device10CreatePlacedResource2Command& c);
+  void postProcess(ccode::CommandPrinter& p, ID3D12DeviceCreateHeapCommand& c);
+  void postProcess(ccode::CommandPrinter& p, ID3D12Device4CreateHeap1Command& c);
+  void postProcess(ccode::CommandPrinter& p, INTC_D3D12_CreateHeapCommand& c);
+  void postProcess(ccode::CommandPrinter& p, ID3D12Device3OpenExistingHeapFromAddressCommand& c);
+  void postProcess(ccode::CommandPrinter& p, ID3D12Device13OpenExistingHeapFromAddress1Command& c);
+  void postProcess(ccode::CommandPrinter& p, ID3D12PipelineLibraryLoadGraphicsPipelineCommand& c);
+  void postProcess(ccode::CommandPrinter& p, ID3D12PipelineLibraryLoadComputePipelineCommand& c);
+  void postProcess(ccode::CommandPrinter& p, ID3D12PipelineLibrary1LoadPipelineCommand& c);
 };
 
 } // namespace DirectX

@@ -16,14 +16,14 @@
 namespace gits {
 namespace DirectX {
 
-static void createResource(ccode::CommandPrinter& cmdPrinter, unsigned resourceKey) {
+static void createResource(ccode::CommandPrinter& p, unsigned resourceKey) {
   std::ostringstream ss;
   ss << "directx::GpuAddressService::Get().CreateResource(" << resourceKey << ", "
      << ccode::objKeyToPtrStr(resourceKey) << ");" << std::endl;
-  cmdPrinter.setPostCommand(ss.str());
+  p.setPostCommand(ss.str());
 }
 
-static void createPlacedResource(ccode::CommandPrinter& cmdPrinter,
+static void createPlacedResource(ccode::CommandPrinter& p,
                                  unsigned resourceKey,
                                  unsigned heapKey,
                                  uint64_t heapOffset) {
@@ -31,14 +31,14 @@ static void createPlacedResource(ccode::CommandPrinter& cmdPrinter,
   ss << "directx::GpuAddressService::Get().CreatePlacedResource(" << resourceKey << ", "
      << ccode::objKeyToPtrStr(resourceKey) << ", " << heapKey << ", "
      << ccode::objKeyToPtrStr(heapKey) << ", " << heapOffset << ");" << std::endl;
-  cmdPrinter.setPostCommand(ss.str());
+  p.setPostCommand(ss.str());
 }
 
-static void createHeap(ccode::CommandPrinter& cmdPrinter, unsigned heapKey) {
+static void createHeap(ccode::CommandPrinter& p, unsigned heapKey) {
   std::ostringstream ss;
   ss << "directx::GpuAddressService::Get().CreateHeap(" << heapKey << ", "
      << ccode::objKeyToPtrStr(heapKey) << ");" << std::endl;
-  cmdPrinter.setPostCommand(ss.str());
+  p.setPostCommand(ss.str());
 }
 
 CCodeLayer::CCodeLayer() : Layer("CCode") {}
@@ -159,6 +159,7 @@ void CCodeLayer::post(INTC_D3D12_GetSupportedVersionsCommand& c) {
 
   // Print command
   CommandPrinter p(c, "INTC_D3D12_GetSupportedVersions");
+  preProcess(p, c);
   p.addArgument(c.pDevice_, pDeviceInfo);
   p.addArgument(c.pSupportedExtVersions_, pSupportedExtVersionsInfo);
   p.addArgumentValue(c.pSupportedExtVersionsCount_.value);
@@ -182,6 +183,7 @@ void CCodeLayer::post(INTC_D3D12_CreateDeviceExtensionContextCommand& c) {
 
   // Print command
   CommandPrinter p(c, "INTC_D3D12_CreateDeviceExtensionContext");
+  preProcess(p, c);
   p.addArgument(c.pDevice_, pDeviceInfo);
   p.addArgument(c.ppExtensionContext_, ppExtensionContextInfo);
   p.addArgument(c.pExtensionInfo_, pExtensionInfoInfo);
@@ -206,6 +208,7 @@ void CCodeLayer::post(INTC_D3D12_CreateDeviceExtensionContext1Command& c) {
 
   // Print command
   CommandPrinter p(c, "INTC_D3D12_CreateDeviceExtensionContext1");
+  preProcess(p, c);
   p.addArgument(c.pDevice_, pDeviceInfo);
   p.addArgument(c.ppExtensionContext_, ppExtensionContextInfo);
   p.addArgument(c.pExtensionInfo_, pExtensionInfoInfo);
@@ -224,6 +227,7 @@ void CCodeLayer::post(INTC_DestroyDeviceExtensionContextCommand& c) {
 
   // Print command
   CommandPrinter p(c, "INTC_DestroyDeviceExtensionContext");
+  preProcess(p, c);
   p.addArgument(c.ppExtensionContext_, ppExtensionContextInfo);
   postProcess(p, c);
   p.print();
@@ -242,6 +246,7 @@ void CCodeLayer::post(INTC_D3D12_SetFeatureSupportCommand& c) {
 
   // Print command
   CommandPrinter p(c, "INTC_D3D12_SetFeatureSupport");
+  preProcess(p, c);
   p.addArgument(c.pExtensionContext_, pExtensionContextInfo);
   p.addArgument(c.pFeature_, pFeatureInfo);
   postProcess(p, c);
@@ -270,6 +275,7 @@ void CCodeLayer::post(INTC_D3D12_CreatePlacedResourceCommand& c) {
 
   // Print command
   CommandPrinter p(c, "INTC_D3D12_CreatePlacedResource");
+  preProcess(p, c);
   p.addArgument(c.pExtensionContext_, pExtensionContextInfo);
   p.addArgument(c.pHeap_, pHeapInfo);
   p.addArgumentValue(c.HeapOffset_.value);
@@ -304,6 +310,7 @@ void CCodeLayer::post(INTC_D3D12_CreateCommittedResourceCommand& c) {
 
   // Print command
   CommandPrinter p(c, "INTC_D3D12_CreateCommittedResource");
+  preProcess(p, c);
   p.addArgument(c.pExtensionContext_, pExtensionContextInfo);
   p.addArgument(c.pHeapProperties_, pHeapPropertiesInfo);
   p.addArgumentValue(c.HeapFlags_.value);
@@ -336,6 +343,7 @@ void CCodeLayer::post(INTC_D3D12_CreateReservedResourceCommand& c) {
 
   // Print command
   CommandPrinter p(c, "INTC_D3D12_CreateReservedResource");
+  preProcess(p, c);
   p.addArgument(c.pExtensionContext_, pExtensionContextInfo);
   p.addArgument(c.pDesc_, pDescInfo);
   p.addArgumentValue(c.InitialState_.value);
@@ -364,6 +372,7 @@ void CCodeLayer::post(INTC_D3D12_CreateHeapCommand& c) {
 
   // Print command
   CommandPrinter p(c, "INTC_D3D12_CreateHeap");
+  preProcess(p, c);
   p.addArgument(c.pExtensionContext_, pExtensionContextInfo);
   p.addArgument(c.pDesc_, pDescInfo);
   p.addArgumentValue(c.riid_.value);
@@ -390,6 +399,7 @@ void CCodeLayer::post(INTC_D3D12_CreateCommandQueueCommand& c) {
 
   // Print command
   CommandPrinter p(c, "INTC_D3D12_CreateCommandQueue");
+  preProcess(p, c);
   p.addArgument(c.pExtensionContext_, pExtensionContextInfo);
   p.addArgument(c.pDesc_, pDescInfo);
   p.addArgumentValue(c.riid_.value);
@@ -409,6 +419,7 @@ void CCodeLayer::post(INTC_D3D12_SetApplicationInfoCommand& c) {
 
   // Print command
   CommandPrinter p(c, "INTC_D3D12_SetApplicationInfo");
+  preProcess(p, c);
   p.addArgument(c.pExtensionAppInfo_, pExtensionAppInfoInfo);
   postProcess(p, c);
   p.print();
@@ -428,6 +439,7 @@ void CCodeLayer::post(INTC_D3D12_CheckFeatureSupportCommand& c) {
 
   // Print command
   CommandPrinter p(c, "INTC_D3D12_CheckFeatureSupport");
+  preProcess(p, c);
   p.addArgument(c.pExtensionContext_, pExtensionContextInfo);
   p.addArgumentValue(c.Feature_.value);
   p.addArgument(c.pFeatureSupportData_, pFeatureSupportDataInfo);
@@ -449,6 +461,7 @@ void CCodeLayer::post(INTC_D3D12_GetResourceAllocationInfoCommand& c) {
 
   // Print command
   CommandPrinter p(c, "INTC_D3D12_GetResourceAllocationInfo");
+  preProcess(p, c);
   p.addArgument(c.pExtensionContext_, pExtensionContextInfo);
   p.addArgumentValue(c.visibleMask_.value);
   p.addArgumentValue(c.numResourceDescs_.value);
@@ -475,6 +488,7 @@ void CCodeLayer::post(INTC_D3D12_CreateComputePipelineStateCommand& c) {
 
   // Print command
   CommandPrinter p(c, "INTC_D3D12_CreateComputePipelineState");
+  preProcess(p, c);
   p.addArgument(c.pExtensionContext_, pExtensionContextInfo);
   p.addArgument(c.pDesc_, pDescInfo);
   p.addArgumentValue(c.riid_.value);
@@ -485,142 +499,155 @@ void CCodeLayer::post(INTC_D3D12_CreateComputePipelineStateCommand& c) {
   nextCommand();
 }
 
-void CCodeLayer::postProcess(ccode::CommandPrinter& cmdPrinter,
-                             ID3D12FenceGetCompletedValueCommand& c) {
+void CCodeLayer::preProcess(ccode::CommandPrinter& p, ID3D12FenceSetEventOnCompletionCommand& c) {
+  // Skip all the non-null SetEventOnCompletion since the events cannot be recorded
+  if (c.hEvent_.value != 0) {
+    p.skip();
+  }
+}
+
+void CCodeLayer::preProcess(ccode::CommandPrinter& p, ID3D12ObjectGetPrivateDataCommand& c) {
+  // Data is not used and may trigger Debug Layer errors
+  p.skip();
+}
+
+void CCodeLayer::preProcess(ccode::CommandPrinter& p, ID3D12ObjectSetPrivateDataCommand& c) {
+  // Data is not used and may trigger Debug Layer errors
+  p.skip();
+}
+
+void CCodeLayer::postProcess(ccode::CommandPrinter& p, ID3D12FenceGetCompletedValueCommand& c) {
   using namespace ccode;
   std::ostringstream ss;
   ss << "directx::WaitForFence(" << objKeyToPtrStr(c.object_.key) << ", " << c.result_.value << ");"
      << std::endl;
-  cmdPrinter.setPostCommand(ss.str());
+  p.setPostCommand(ss.str());
 }
 
-void CCodeLayer::postProcess(ccode::CommandPrinter& cmdPrinter,
-                             ID3D12DeviceCreateDescriptorHeapCommand& c) {
+void CCodeLayer::postProcess(ccode::CommandPrinter& p, ID3D12DeviceCreateDescriptorHeapCommand& c) {
   using namespace ccode;
   std::ostringstream ss;
   ss << "directx::DescriptorHeapService::Get().Create(" << objKeyToStr(c.ppvHeap_.key) << ", "
      << objKeyToPtrStr(c.ppvHeap_.key) << ", &pDescriptorHeapDesc);" << std::endl;
-  cmdPrinter.setPostCommand(ss.str());
+  p.setPostCommand(ss.str());
 }
 
-void CCodeLayer::postProcess(ccode::CommandPrinter& cmdPrinter, ID3D12ResourceMapCommand& c) {
+void CCodeLayer::postProcess(ccode::CommandPrinter& p, ID3D12ResourceMapCommand& c) {
   using namespace ccode;
   std::ostringstream ss;
   ss << "directx::MapTrackingService::Get().MapResource(" << objKeyToStr(c.object_.key) << ", "
      << c.Subresource_.value << ", " << toHex(c.ppData_.captureValue) << ", &ppData);" << std::endl;
-  cmdPrinter.setPostCommand(ss.str());
+  p.setPostCommand(ss.str());
 }
 
-void CCodeLayer::postProcess(ccode::CommandPrinter& cmdPrinter,
+void CCodeLayer::postProcess(ccode::CommandPrinter& p,
                              ID3D12DeviceCreateCommittedResourceCommand& c) {
-  createResource(cmdPrinter, c.ppvResource_.key);
+  createResource(p, c.ppvResource_.key);
 }
 
-void CCodeLayer::postProcess(ccode::CommandPrinter& cmdPrinter,
+void CCodeLayer::postProcess(ccode::CommandPrinter& p,
                              ID3D12Device4CreateCommittedResource1Command& c) {
-  createResource(cmdPrinter, c.ppvResource_.key);
+  createResource(p, c.ppvResource_.key);
 }
 
-void CCodeLayer::postProcess(ccode::CommandPrinter& cmdPrinter,
+void CCodeLayer::postProcess(ccode::CommandPrinter& p,
                              ID3D12Device8CreateCommittedResource2Command& c) {
-  createResource(cmdPrinter, c.ppvResource_.key);
+  createResource(p, c.ppvResource_.key);
 }
 
-void CCodeLayer::postProcess(ccode::CommandPrinter& cmdPrinter,
+void CCodeLayer::postProcess(ccode::CommandPrinter& p,
                              ID3D12Device10CreateCommittedResource3Command& c) {
-  createResource(cmdPrinter, c.ppvResource_.key);
+  createResource(p, c.ppvResource_.key);
 }
 
-void CCodeLayer::postProcess(ccode::CommandPrinter& cmdPrinter,
+void CCodeLayer::postProcess(ccode::CommandPrinter& p,
                              ID3D12DeviceCreateReservedResourceCommand& c) {
-  createResource(cmdPrinter, c.ppvResource_.key);
+  createResource(p, c.ppvResource_.key);
 }
 
-void CCodeLayer::postProcess(ccode::CommandPrinter& cmdPrinter,
+void CCodeLayer::postProcess(ccode::CommandPrinter& p,
                              ID3D12Device4CreateReservedResource1Command& c) {
-  createResource(cmdPrinter, c.ppvResource_.key);
+  createResource(p, c.ppvResource_.key);
 }
 
-void CCodeLayer::postProcess(ccode::CommandPrinter& cmdPrinter,
+void CCodeLayer::postProcess(ccode::CommandPrinter& p,
                              ID3D12Device10CreateReservedResource2Command& c) {
-  createResource(cmdPrinter, c.ppvResource_.key);
+  createResource(p, c.ppvResource_.key);
 }
 
-void CCodeLayer::postProcess(ccode::CommandPrinter& cmdPrinter,
-                             ID3D12DeviceCreatePlacedResourceCommand& c) {
-  createPlacedResource(cmdPrinter, c.ppvResource_.key, c.pHeap_.key, c.HeapOffset_.value);
+void CCodeLayer::postProcess(ccode::CommandPrinter& p, ID3D12DeviceCreatePlacedResourceCommand& c) {
+  createPlacedResource(p, c.ppvResource_.key, c.pHeap_.key, c.HeapOffset_.value);
 }
 
-void CCodeLayer::postProcess(ccode::CommandPrinter& cmdPrinter,
+void CCodeLayer::postProcess(ccode::CommandPrinter& p,
                              ID3D12Device8CreatePlacedResource1Command& c) {
-  createPlacedResource(cmdPrinter, c.ppvResource_.key, c.pHeap_.key, c.HeapOffset_.value);
+  createPlacedResource(p, c.ppvResource_.key, c.pHeap_.key, c.HeapOffset_.value);
 }
 
-void CCodeLayer::postProcess(ccode::CommandPrinter& cmdPrinter,
+void CCodeLayer::postProcess(ccode::CommandPrinter& p,
                              ID3D12Device10CreatePlacedResource2Command& c) {
-  createPlacedResource(cmdPrinter, c.ppvResource_.key, c.pHeap_.key, c.HeapOffset_.value);
+  createPlacedResource(p, c.ppvResource_.key, c.pHeap_.key, c.HeapOffset_.value);
 }
 
-void CCodeLayer::postProcess(ccode::CommandPrinter& cmdPrinter, ID3D12DeviceCreateHeapCommand& c) {
-  createHeap(cmdPrinter, c.ppvHeap_.key);
+void CCodeLayer::postProcess(ccode::CommandPrinter& p, ID3D12DeviceCreateHeapCommand& c) {
+  createHeap(p, c.ppvHeap_.key);
 }
 
-void CCodeLayer::postProcess(ccode::CommandPrinter& cmdPrinter,
-                             ID3D12Device4CreateHeap1Command& c) {
-  createHeap(cmdPrinter, c.ppvHeap_.key);
+void CCodeLayer::postProcess(ccode::CommandPrinter& p, ID3D12Device4CreateHeap1Command& c) {
+  createHeap(p, c.ppvHeap_.key);
 }
 
-void CCodeLayer::postProcess(ccode::CommandPrinter& cmdPrinter, INTC_D3D12_CreateHeapCommand& c) {
-  createHeap(cmdPrinter, c.ppvHeap_.key);
+void CCodeLayer::postProcess(ccode::CommandPrinter& p, INTC_D3D12_CreateHeapCommand& c) {
+  createHeap(p, c.ppvHeap_.key);
 }
 
-void CCodeLayer::postProcess(ccode::CommandPrinter& cmdPrinter,
+void CCodeLayer::postProcess(ccode::CommandPrinter& p,
                              ID3D12Device3OpenExistingHeapFromAddressCommand& c) {
   using namespace ccode;
   std::ostringstream ss;
   ss << "void* pAddress = directx::HeapAllocationService::Get().GetHeapAllocation("
      << objKeyToStr(c.ppvHeap_.key) << ");" << std::endl;
-  cmdPrinter.setPreCommand(ss.str());
-  cmdPrinter.getArgumentValue(0) = "pAddress";
-  createHeap(cmdPrinter, c.ppvHeap_.key);
+  p.setPreCommand(ss.str());
+  p.getArgumentValue(0) = "pAddress";
+  createHeap(p, c.ppvHeap_.key);
 }
 
-void CCodeLayer::postProcess(ccode::CommandPrinter& cmdPrinter,
+void CCodeLayer::postProcess(ccode::CommandPrinter& p,
                              ID3D12Device13OpenExistingHeapFromAddress1Command& c) {
   using namespace ccode;
   std::ostringstream ss;
   ss << "void* pAddress = directx::HeapAllocationService::Get().GetHeapAllocation("
      << objKeyToStr(c.ppvHeap_.key) << ");" << std::endl;
-  cmdPrinter.setPreCommand(ss.str());
-  cmdPrinter.getArgumentValue(0) = "pAddress";
-  createHeap(cmdPrinter, c.ppvHeap_.key);
+  p.setPreCommand(ss.str());
+  p.getArgumentValue(0) = "pAddress";
+  createHeap(p, c.ppvHeap_.key);
 }
 
-void CCodeLayer::postProcess(ccode::CommandPrinter& cmdPrinter,
+void CCodeLayer::postProcess(ccode::CommandPrinter& p,
                              ID3D12PipelineLibraryLoadGraphicsPipelineCommand& c) {
   using namespace ccode;
   std::ostringstream ss;
   ss << "directx::PreloadGraphicsPipeline(" << objKeyToPtrStr(c.object_.key) << ", "
-     << cmdPrinter.getArgumentValue(0) << ", &pDesc);" << std::endl;
-  cmdPrinter.setPreCommand(ss.str());
+     << p.getArgumentValue(0) << ", &pDesc);" << std::endl;
+  p.setPreCommand(ss.str());
 }
 
-void CCodeLayer::postProcess(ccode::CommandPrinter& cmdPrinter,
+void CCodeLayer::postProcess(ccode::CommandPrinter& p,
                              ID3D12PipelineLibraryLoadComputePipelineCommand& c) {
   using namespace ccode;
   std::ostringstream ss;
   ss << "directx::PreloadComputePipeline(" << objKeyToPtrStr(c.object_.key) << ", "
-     << cmdPrinter.getArgumentValue(0) << ", &pDesc);" << std::endl;
-  cmdPrinter.setPreCommand(ss.str());
+     << p.getArgumentValue(0) << ", &pDesc);" << std::endl;
+  p.setPreCommand(ss.str());
 }
 
-void CCodeLayer::postProcess(ccode::CommandPrinter& cmdPrinter,
+void CCodeLayer::postProcess(ccode::CommandPrinter& p,
                              ID3D12PipelineLibrary1LoadPipelineCommand& c) {
   using namespace ccode;
   std::ostringstream ss;
   ss << "directx::PreloadPipeline(" << objKeyToPtrStr(c.object_.key) << ", "
-     << cmdPrinter.getArgumentValue(0) << ", &pDesc);" << std::endl;
-  cmdPrinter.setPreCommand(ss.str());
+     << p.getArgumentValue(0) << ", &pDesc);" << std::endl;
+  p.setPreCommand(ss.str());
 }
 
 } // namespace DirectX
