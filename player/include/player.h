@@ -65,7 +65,7 @@ public:
   void StatisticsPrint() const;
   void NotSupportedFunctionsPrint() const;
   int RenameAndRelaunch(const std::string& newPlayerName,
-                        const std::filesystem::path& originalPlayerPath,
+                        std::filesystem::path originalPlayerPath,
                         std::vector<std::string> args);
 };
 } // namespace gits

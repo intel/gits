@@ -235,9 +235,13 @@ int RelaunchLinux(const std::filesystem::path& newPlayerPath,
 } // namespace
 
 int gits::CPlayer::RenameAndRelaunch(const std::string& newPlayerName,
-                                     const std::filesystem::path& originalPlayerPath,
+                                     std::filesystem::path originalPlayerPath,
                                      std::vector<std::string> args) {
-  const auto newPlayerPath = originalPlayerPath.parent_path() / newPlayerName;
+
+  if (originalPlayerPath.extension() != ".exe") {
+    originalPlayerPath += ".exe";
+  }
+  std::filesystem::path newPlayerPath = originalPlayerPath.parent_path() / newPlayerName;
 
   std::filesystem::copy_file(originalPlayerPath, newPlayerPath,
                              std::filesystem::copy_options::overwrite_existing);
