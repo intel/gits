@@ -74,6 +74,8 @@ private:
   DispatchOutputsDump resourceDump_;
   BitRange frameRange_;
   BitRange dispatchRange_;
+  std::string analysisFileName_;
+  bool inAnalysis_{};
   bool dryRun_{};
   unsigned dispatchCount_{};
   unsigned executeCount_{};
@@ -101,9 +103,20 @@ private:
     ID3D12Resource* resource{};
     unsigned slot{};
   };
+
+  struct IndicesInfo {
+    std::vector<unsigned> indices;
+    unsigned descriptorHeapKey{};
+  };
+  std::unordered_map<unsigned, std::unordered_map<unsigned, unsigned>>
+      resourceKeyFromSetViewBySlotByCommandList;
+  std::unordered_map<unsigned, std::unordered_map<unsigned, IndicesInfo>>
+      indicesBySlotByCommandList_;
   std::unordered_map<unsigned,
-                     std::unordered_map<unsigned, std::unordered_map<unsigned, DispatchOutput>>>
-      dispatchOutputsByResourceBySlotByCommandList_;
+                     std::unordered_map<unsigned, std::unordered_map<unsigned, IndicesInfo>>>
+      indicesBySlotByDispatchByCommandList_;
+  std::map<unsigned, std::unordered_map<unsigned, std::set<unsigned>>>
+      resourceKeysBySlotByDispatch_;
 
   struct DryRunInfo {
     std::map<unsigned, std::set<unsigned>> dispatchesWithTextureByFrame;

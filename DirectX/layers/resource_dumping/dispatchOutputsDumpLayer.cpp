@@ -25,17 +25,54 @@ DispatchOutputsDumpLayer::DispatchOutputsDumpLayer()
       frameRange_(Configurator::Get().directx.features.dispatchOutputsDump.frames),
       dispatchRange_(Configurator::Get().directx.features.dispatchOutputsDump.dispatches),
       dryRun_(Configurator::Get().directx.features.dispatchOutputsDump.dryRun) {
-
-  auto& dumpPath = Configurator::Get().common.player.outputDir.empty()
-                       ? Configurator::Get().common.player.streamDir / "dispatch_outputs"
-                       : Configurator::Get().common.player.outputDir;
+  const auto& config = Configurator::Get();
+  auto& dumpPath = config.common.player.outputDir.empty()
+                       ? config.common.player.streamDir / "dispatch_outputs"
+                       : config.common.player.outputDir;
   if (!dumpPath.empty() && !std::filesystem::exists(dumpPath)) {
-    std::filesystem::create_directory(dumpPath);
+    std::filesystem::create_directories(dumpPath);
   }
   dumpPath_ = dumpPath;
+
+  analysisFileName_ = config.common.player.streamDir.filename().string() + "_frames-" +
+                      config.directx.features.dispatchOutputsDump.frames +
+                      "_DispatchOutputsDumpAnalysis.txt";
+  inAnalysis_ = !std::filesystem::exists(analysisFileName_);
+  if (inAnalysis_) {
+    LOG_INFO << "DISPATCH OUTPUTS DUMP IN ANALYSIS. RUN AGAIN TO DUMP RESOURCES";
+    dryRun_ = false;
+  } else {
+    std::ifstream analysisFile(analysisFileName_);
+    std::string line;
+    while (std::getline(analysisFile, line)) {
+      std::istringstream iss(line);
+      unsigned dispatchKey{};
+      unsigned slot{};
+      unsigned resourceKey{};
+      iss >> dispatchKey;
+      iss >> slot;
+      auto& resourceKeys = resourceKeysBySlotByDispatch_[dispatchKey][slot];
+      while (iss >> resourceKey) {
+        resourceKeys.insert(resourceKey);
+      }
+    }
+  }
 }
 
 DispatchOutputsDumpLayer::~DispatchOutputsDumpLayer() {
+  if (inAnalysis_) {
+    std::ofstream analysisFile(analysisFileName_);
+    for (const auto& [dispatchKey, resourceKeysBySlot] : resourceKeysBySlotByDispatch_) {
+      for (const auto& [slot, resourceKeys] : resourceKeysBySlot) {
+        analysisFile << dispatchKey << " " << slot;
+        for (unsigned resourceKey : resourceKeys) {
+          analysisFile << " " << resourceKey;
+        }
+        analysisFile << "\n";
+      }
+    }
+  }
+
   if (dryRun_) {
     YAML::Node output;
     output["DispatchesWithTextureByFrame"] = YAML::Node();
@@ -45,7 +82,7 @@ DispatchOutputsDumpLayer::~DispatchOutputsDumpLayer() {
       }
       output["DispatchesWithTextureByFrame"][frame].SetStyle(YAML::EmitterStyle::Flow);
     }
-    std::ofstream file("DispatchOutputsDumpDryRun.yaml");
+    std::ofstream file(std::filesystem::path(dumpPath_) / "DispatchOutputsDumpDryRun.yaml");
     file << output;
   }
 }
@@ -187,6 +224,30 @@ void DispatchOutputsDumpLayer::post(ID3D12CommandQueueExecuteCommandListsCommand
 
   for (unsigned i = 0; i < c.NumCommandLists_.value; ++i) {
     dispatchCountByCommandList_.erase(c.ppCommandLists_.keys[i]);
+
+    if (inAnalysis_) {
+      const auto indicesBySlotByDispatchIt =
+          indicesBySlotByDispatchByCommandList_.find(c.ppCommandLists_.keys[i]);
+      if (indicesBySlotByDispatchIt != indicesBySlotByDispatchByCommandList_.end()) {
+        for (const auto& [dispatchKey, indicesBySlot] : indicesBySlotByDispatchIt->second) {
+          for (const auto& [slot, indicesInfo] : indicesBySlot) {
+            for (unsigned index : indicesInfo.indices) {
+              const auto* descriptorInfo =
+                  descriptorService_.getDescriptorInfo(indicesInfo.descriptorHeapKey, index);
+              if (descriptorInfo &&
+                  descriptorInfo->descriptorType == DescriptorHeapTracker::DescriptorInfo::UAV &&
+                  descriptorInfo->resourceKey) {
+                ID3D12Resource* resource = resourceByKey_[descriptorInfo->resourceKey];
+                if (resource && resource->GetDesc().Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
+                  resourceKeysBySlotByDispatch_[dispatchKey][slot].insert(
+                      descriptorInfo->resourceKey);
+                }
+              }
+            }
+          }
+        }
+      }
+    }
   }
 
   resourceDump_.executeCommandLists(c.key, c.object_.key, c.object_.value, c.ppCommandLists_.value,
@@ -214,7 +275,13 @@ void DispatchOutputsDumpLayer::post(ID3D12Device3EnqueueMakeResidentCommand& c) 
 }
 
 void DispatchOutputsDumpLayer::post(ID3D12GraphicsCommandListResetCommand& c) {
-  dispatchOutputsByResourceBySlotByCommandList_.erase(c.object_.key);
+  if (!inAnalysis_) {
+    return;
+  }
+
+  indicesBySlotByCommandList_[c.object_.key].clear();
+  indicesBySlotByDispatchByCommandList_[c.object_.key].clear();
+  resourceKeyFromSetViewBySlotByCommandList[c.object_.key].clear();
 }
 
 void DispatchOutputsDumpLayer::post(ID3D12GraphicsCommandListSetComputeRootSignatureCommand& c) {
@@ -223,25 +290,23 @@ void DispatchOutputsDumpLayer::post(ID3D12GraphicsCommandListSetComputeRootSigna
 
 void DispatchOutputsDumpLayer::post(
     ID3D12GraphicsCommandListSetComputeRootUnorderedAccessViewCommand& c) {
+  if (!inAnalysis_) {
+    return;
+  }
+
   ID3D12Resource* resource = resourceByKey_[c.BufferLocation_.interfaceKey];
   if (!resource || resource->GetDesc().Dimension == D3D12_RESOURCE_DIMENSION_BUFFER) {
     return;
   }
 
-  DispatchOutput dispatchOutput;
-  dispatchOutput.resourceKey = c.BufferLocation_.interfaceKey;
-  dispatchOutput.resource = resource;
-  dispatchOutput.slot = c.RootParameterIndex_.value;
-
-  std::unordered_map<unsigned, DispatchOutput>& dispatchOutputs =
-      dispatchOutputsByResourceBySlotByCommandList_[c.object_.key][c.RootParameterIndex_.value];
-  dispatchOutputs.clear();
-  dispatchOutputs[c.BufferLocation_.interfaceKey] = dispatchOutput;
+  indicesBySlotByCommandList_[c.object_.key][c.RootParameterIndex_.value] = {};
+  resourceKeyFromSetViewBySlotByCommandList[c.object_.key][c.RootParameterIndex_.value] =
+      c.BufferLocation_.interfaceKey;
 }
 
 void DispatchOutputsDumpLayer::post(
     ID3D12GraphicsCommandListSetComputeRootDescriptorTableCommand& c) {
-  if (!c.BaseDescriptor_.value.ptr) {
+  if (!inAnalysis_ || !c.BaseDescriptor_.value.ptr) {
     return;
   }
   unsigned rootSignatureKey = commandListInfos_[c.object_.key].computeRootSignature;
@@ -249,30 +314,13 @@ void DispatchOutputsDumpLayer::post(
   unsigned numDescriptors = descriptorHeapInfos_[c.BaseDescriptor_.interfaceKey].numDescriptors;
   GITS_ASSERT(numDescriptors);
 
-  std::vector<unsigned> indexes = rootSignatureService_.getDescriptorTableIndexes(
+  std::vector<unsigned> indices = rootSignatureService_.getDescriptorTableIndexes(
       rootSignatureKey, c.BaseDescriptor_.interfaceKey, c.RootParameterIndex_.value,
       c.BaseDescriptor_.index, numDescriptors, false);
 
-  std::unordered_map<unsigned, DispatchOutput>& dispatchOutputs =
-      dispatchOutputsByResourceBySlotByCommandList_[c.object_.key][c.RootParameterIndex_.value];
-  dispatchOutputs.clear();
-
-  for (unsigned index : indexes) {
-    const auto* descriptorInfo =
-        descriptorService_.getDescriptorInfo(c.BaseDescriptor_.interfaceKey, index);
-    if (descriptorInfo &&
-        descriptorInfo->descriptorType == DescriptorHeapTracker::DescriptorInfo::UAV &&
-        descriptorInfo->resourceKey) {
-      ID3D12Resource* resource = resourceByKey_[descriptorInfo->resourceKey];
-      if (resource && resource->GetDesc().Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
-        DispatchOutput dispatchOutput{};
-        dispatchOutput.resourceKey = descriptorInfo->resourceKey;
-        dispatchOutput.resource = resource;
-        dispatchOutput.slot = c.RootParameterIndex_.value;
-        dispatchOutputs[descriptorInfo->resourceKey] = dispatchOutput;
-      }
-    }
-  }
+  indicesBySlotByCommandList_[c.object_.key][c.RootParameterIndex_.value].descriptorHeapKey =
+      c.BaseDescriptor_.interfaceKey;
+  indicesBySlotByCommandList_[c.object_.key][c.RootParameterIndex_.value].indices = indices;
 }
 
 void DispatchOutputsDumpLayer::post(ID3D12GraphicsCommandListDispatchCommand& c) {
@@ -282,18 +330,34 @@ void DispatchOutputsDumpLayer::post(ID3D12GraphicsCommandListDispatchCommand& c)
   ++dispatchCount_;
   unsigned commandListDispatchCount = ++dispatchCountByCommandList_[commandListKey];
   unsigned frame = stateRestorePhase_ ? 0 : CGits::Instance().CurrentFrame();
-  if (!frameRange_[frame] || !dispatchRange_[dispatchCount_]) {
+
+  if (!frameRange_[frame]) {
+    return;
+  }
+  if (!dispatchRange_[dispatchCount_] && !inAnalysis_) {
     return;
   }
 
-  auto itDispatchOutputsBySlot = dispatchOutputsByResourceBySlotByCommandList_.find(commandListKey);
-  if (itDispatchOutputsBySlot != dispatchOutputsByResourceBySlotByCommandList_.end()) {
-    for (const auto& [slot, dispatchOutputsByResource] : itDispatchOutputsBySlot->second) {
-      for (const auto& [resourceKey, dispatchOutput] : dispatchOutputsByResource) {
-        if (dispatchOutput.resource) {
+  if (inAnalysis_) {
+    indicesBySlotByDispatchByCommandList_[commandListKey][c.key] =
+        indicesBySlotByCommandList_[commandListKey];
+    auto resourceKeyBySlotIt = resourceKeyFromSetViewBySlotByCommandList.find(commandListKey);
+    if (resourceKeyBySlotIt != resourceKeyFromSetViewBySlotByCommandList.end()) {
+      for (const auto& [slot, resourceKey] : resourceKeyBySlotIt->second) {
+        resourceKeysBySlotByDispatch_[c.key][slot].insert(resourceKey);
+      }
+    }
+  } else {
+    auto resourceKeysBySlotIt = resourceKeysBySlotByDispatch_.find(c.key);
+    if (resourceKeysBySlotIt != resourceKeysBySlotByDispatch_.end()) {
+      for (const auto& [slot, resourceKeys] : resourceKeysBySlotIt->second) {
+        for (unsigned resourceKey : resourceKeys) {
           if (dryRun_) {
             dryRunInfo_.dispatchesWithTextureByFrame[frame].insert(dispatchCount_);
           } else {
+            ID3D12Resource* resource = resourceByKey_[resourceKey];
+            GITS_ASSERT(resource);
+            DispatchOutput dispatchOutput{resourceKey, resource, slot};
             dumpComputeOutput(commandList, dispatchOutput, frame, commandListDispatchCount);
           }
         }
