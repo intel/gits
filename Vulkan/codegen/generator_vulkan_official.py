@@ -2311,9 +2311,9 @@ Function(name='vkCmdSetVertexInputEXT', enabled=True, type=FuncType.COMMAND_BUFF
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='vertexBindingDescriptionCount', type='uint32_t'),
-arg3=ArgDef(name='pVertexBindingDescriptions', type='const VkVertexInputBindingDescription2EXT*'),
+arg3=ArgDef(name='pVertexBindingDescriptions', type='const VkVertexInputBindingDescription2EXT*', wrapType='CVkVertexInputBindingDescription2EXTArray', wrapParams='vertexBindingDescriptionCount, pVertexBindingDescriptions', count='vertexBindingDescriptionCount'),
 arg4=ArgDef(name='vertexAttributeDescriptionCount', type='uint32_t'),
-arg5=ArgDef(name='pVertexAttributeDescriptions', type='const VkVertexInputAttributeDescription2EXT*')
+arg5=ArgDef(name='pVertexAttributeDescriptions', type='const VkVertexInputAttributeDescription2EXT*', wrapType='CVkVertexInputAttributeDescription2EXTArray', wrapParams='vertexAttributeDescriptionCount, pVertexAttributeDescriptions', count='vertexAttributeDescriptionCount')
 )
 
 Function(name='vkCmdSetViewport', enabled=True, type=FuncType.COMMAND_BUFFER_SET, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
