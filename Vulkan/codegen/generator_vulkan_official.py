@@ -2307,7 +2307,7 @@ arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='domainOrigin', type='VkTessellationDomainOrigin')
 )
 
-Function(name='vkCmdSetVertexInputEXT', enabled=False, type=FuncType.PARAM,
+Function(name='vkCmdSetVertexInputEXT', enabled=True, type=FuncType.COMMAND_BUFFER_SET, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='vertexBindingDescriptionCount', type='uint32_t'),
@@ -17968,7 +17968,7 @@ var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='vertexAttributeRobustness', type='VkBool32')
 )
 
-Struct(name='VkPhysicalDeviceVertexInputDynamicStateFeaturesEXT_', enabled=False,
+Struct(name='VkPhysicalDeviceVertexInputDynamicStateFeaturesEXT_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='vertexInputDynamicState', type='VkBool32')
@@ -20539,7 +20539,7 @@ var3=VarDef(name='format', type='VkFormat'),
 var4=VarDef(name='offset', type='uint32_t')
 )
 
-Struct(name='VkVertexInputAttributeDescription2EXT_', enabled=False,
+Struct(name='VkVertexInputAttributeDescription2EXT_', enabled=True, declareArray=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='location', type='uint32_t'),
@@ -20554,7 +20554,7 @@ var2=VarDef(name='stride', type='uint32_t'),
 var3=VarDef(name='inputRate', type='VkVertexInputRate')
 )
 
-Struct(name='VkVertexInputBindingDescription2EXT_', enabled=False,
+Struct(name='VkVertexInputBindingDescription2EXT_', enabled=True, declareArray=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='binding', type='uint32_t'),
