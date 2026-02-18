@@ -486,6 +486,11 @@ var2=VarDef(name='ppCount',type='uint32_t**',tag='inout'),
 var3=VarDef(name='pphDevices',type='ze_device_handle_t**',tag='inout'),
 )
 
+Argument(name='ze_device_get_aggregated_copy_offload_increment_value_params_t',enabled=False,
+var1=VarDef(name='phDevice',type='ze_device_handle_t*',tag='inout'),
+var2=VarDef(name='pincrementValue',type='uint32_t**',tag='inout'),
+)
+
 Argument(name='ze_device_get_cache_properties_params_t',enabled=False,
 var1=VarDef(name='phDevice',type='ze_device_handle_t*',tag='inout'),
 var2=VarDef(name='ppCount',type='uint32_t**',tag='inout'),
@@ -655,6 +660,34 @@ Argument(name='ze_driver_rtas_format_compatibility_check_ext_params_t',enabled=F
 var1=VarDef(name='phDriver',type='ze_driver_handle_t*',tag='inout'),
 var2=VarDef(name='prtasFormatA',type='ze_rtas_format_ext_t*',tag='inout'),
 var3=VarDef(name='prtasFormatB',type='ze_rtas_format_ext_t*',tag='inout'),
+)
+
+Argument(name='ze_event_counter_based_close_ipc_handle_params_t',enabled=False,
+var1=VarDef(name='phEvent',type='ze_event_handle_t*',tag='inout'),
+)
+
+Argument(name='ze_event_counter_based_create_params_t',enabled=False,
+var1=VarDef(name='phContext',type='ze_context_handle_t*',tag='inout'),
+var2=VarDef(name='phDevice',type='ze_device_handle_t*',tag='inout'),
+var3=VarDef(name='pdesc',type='const ze_event_counter_based_desc_t**',tag='inout'),
+var4=VarDef(name='pphEvent',type='ze_event_handle_t**',tag='inout'),
+)
+
+Argument(name='ze_event_counter_based_get_device_address_params_t',enabled=False,
+var1=VarDef(name='phEvent',type='ze_event_handle_t*',tag='inout'),
+var2=VarDef(name='pcompletionValue',type='uint64_t**',tag='inout'),
+var3=VarDef(name='pdeviceAddress',type='uint64_t**',tag='inout'),
+)
+
+Argument(name='ze_event_counter_based_get_ipc_handle_params_t',enabled=False,
+var1=VarDef(name='phEvent',type='ze_event_handle_t*',tag='inout'),
+var2=VarDef(name='pphIpc',type='ze_ipc_event_counter_based_handle_t**',tag='inout'),
+)
+
+Argument(name='ze_event_counter_based_open_ipc_handle_params_t',enabled=False,
+var1=VarDef(name='phContext',type='ze_context_handle_t*',tag='inout'),
+var2=VarDef(name='phIpc',type='ze_ipc_event_counter_based_handle_t*',tag='inout'),
+var3=VarDef(name='pphEvent',type='ze_event_handle_t**',tag='inout'),
 )
 
 Argument(name='ze_event_create_params_t',enabled=False,
@@ -1060,6 +1093,13 @@ var2=VarDef(name='phandle',type='uint64_t*',tag='inout'),
 var3=VarDef(name='ppIpcHandle',type='ze_ipc_mem_handle_t**',tag='inout'),
 )
 
+Argument(name='ze_mem_get_ipc_handle_with_properties_params_t',enabled=False,
+var1=VarDef(name='phContext',type='ze_context_handle_t*',tag='inout'),
+var2=VarDef(name='pptr',type='const void**',tag='inout'),
+var3=VarDef(name='ppNext',type='void**',tag='inout',wrapType='CExtensionStructCore'),
+var4=VarDef(name='ppIpcHandle',type='ze_ipc_mem_handle_t**',tag='inout'),
+)
+
 Argument(name='ze_mem_get_pitch_for2d_image_params_t',enabled=False,
 var1=VarDef(name='phContext',type='ze_context_handle_t*',tag='inout'),
 var2=VarDef(name='phDevice',type='ze_device_handle_t*',tag='inout'),
@@ -1165,6 +1205,12 @@ var4=VarDef(name='pphPhysicalMemory',type='ze_physical_mem_handle_t**',tag='inou
 Argument(name='ze_physical_mem_destroy_params_t',enabled=False,
 var1=VarDef(name='phContext',type='ze_context_handle_t*',tag='inout'),
 var2=VarDef(name='phPhysicalMemory',type='ze_physical_mem_handle_t*',tag='inout'),
+)
+
+Argument(name='ze_physical_mem_get_properties_params_t',enabled=False,
+var1=VarDef(name='phContext',type='ze_context_handle_t*',tag='inout'),
+var2=VarDef(name='phPhysicalMem',type='ze_physical_mem_handle_t*',tag='inout'),
+var3=VarDef(name='ppMemProperties',type='ze_physical_mem_properties_t**',tag='inout'),
 )
 
 Argument(name='ze_rtas_builder_build_exp_params_t',enabled=False,
@@ -1774,6 +1820,13 @@ arg3=ArgDef(name='pTracerUserData',type='void*'),
 arg4=ArgDef(name='ppTracerInstanceUserData',type='void**'),
 )
 
+Callback(name='ze_pfnDeviceGetAggregatedCopyOffloadIncrementValueCb_t',component='ze_device_callbacks_t',
+arg1=ArgDef(name='params',type='ze_device_get_aggregated_copy_offload_increment_value_params_t*'),
+arg2=ArgDef(name='result',type='ze_result_t'),
+arg3=ArgDef(name='pTracerUserData',type='void*'),
+arg4=ArgDef(name='ppTracerInstanceUserData',type='void**'),
+)
+
 Callback(name='ze_pfnDeviceGetCachePropertiesCb_t',component='ze_device_callbacks_t',
 arg1=ArgDef(name='params',type='ze_device_get_cache_properties_params_t*'),
 arg2=ArgDef(name='result',type='ze_result_t'),
@@ -1993,6 +2046,41 @@ arg4=ArgDef(name='ppTracerInstanceUserData',type='void**'),
 
 Callback(name='ze_pfnDriverRTASFormatCompatibilityCheckExtCb_t',component='ze_driver_callbacks_t',
 arg1=ArgDef(name='params',type='ze_driver_rtas_format_compatibility_check_ext_params_t*'),
+arg2=ArgDef(name='result',type='ze_result_t'),
+arg3=ArgDef(name='pTracerUserData',type='void*'),
+arg4=ArgDef(name='ppTracerInstanceUserData',type='void**'),
+)
+
+Callback(name='ze_pfnEventCounterBasedCloseIpcHandleCb_t',component='ze_event_callbacks_t',
+arg1=ArgDef(name='params',type='ze_event_counter_based_close_ipc_handle_params_t*'),
+arg2=ArgDef(name='result',type='ze_result_t'),
+arg3=ArgDef(name='pTracerUserData',type='void*'),
+arg4=ArgDef(name='ppTracerInstanceUserData',type='void**'),
+)
+
+Callback(name='ze_pfnEventCounterBasedCreateCb_t',component='ze_event_callbacks_t',
+arg1=ArgDef(name='params',type='ze_event_counter_based_create_params_t*'),
+arg2=ArgDef(name='result',type='ze_result_t'),
+arg3=ArgDef(name='pTracerUserData',type='void*'),
+arg4=ArgDef(name='ppTracerInstanceUserData',type='void**'),
+)
+
+Callback(name='ze_pfnEventCounterBasedGetDeviceAddressCb_t',component='ze_event_callbacks_t',
+arg1=ArgDef(name='params',type='ze_event_counter_based_get_device_address_params_t*'),
+arg2=ArgDef(name='result',type='ze_result_t'),
+arg3=ArgDef(name='pTracerUserData',type='void*'),
+arg4=ArgDef(name='ppTracerInstanceUserData',type='void**'),
+)
+
+Callback(name='ze_pfnEventCounterBasedGetIpcHandleCb_t',component='ze_event_callbacks_t',
+arg1=ArgDef(name='params',type='ze_event_counter_based_get_ipc_handle_params_t*'),
+arg2=ArgDef(name='result',type='ze_result_t'),
+arg3=ArgDef(name='pTracerUserData',type='void*'),
+arg4=ArgDef(name='ppTracerInstanceUserData',type='void**'),
+)
+
+Callback(name='ze_pfnEventCounterBasedOpenIpcHandleCb_t',component='ze_event_callbacks_t',
+arg1=ArgDef(name='params',type='ze_event_counter_based_open_ipc_handle_params_t*'),
 arg2=ArgDef(name='result',type='ze_result_t'),
 arg3=ArgDef(name='pTracerUserData',type='void*'),
 arg4=ArgDef(name='ppTracerInstanceUserData',type='void**'),
@@ -2488,6 +2576,13 @@ arg3=ArgDef(name='pTracerUserData',type='void*'),
 arg4=ArgDef(name='ppTracerInstanceUserData',type='void**'),
 )
 
+Callback(name='ze_pfnMemGetIpcHandleWithPropertiesCb_t',component='ze_mem_callbacks_t',
+arg1=ArgDef(name='params',type='ze_mem_get_ipc_handle_with_properties_params_t*'),
+arg2=ArgDef(name='result',type='ze_result_t'),
+arg3=ArgDef(name='pTracerUserData',type='void*'),
+arg4=ArgDef(name='ppTracerInstanceUserData',type='void**'),
+)
+
 Callback(name='ze_pfnMemGetPitchFor2dImageCb_t',component='ze_mem_callbacks_t',
 arg1=ArgDef(name='params',type='ze_mem_get_pitch_for2d_image_params_t*'),
 arg2=ArgDef(name='result',type='ze_result_t'),
@@ -2602,6 +2697,13 @@ arg4=ArgDef(name='ppTracerInstanceUserData',type='void**'),
 
 Callback(name='ze_pfnPhysicalMemDestroyCb_t',component='ze_physical_mem_callbacks_t',
 arg1=ArgDef(name='params',type='ze_physical_mem_destroy_params_t*'),
+arg2=ArgDef(name='result',type='ze_result_t'),
+arg3=ArgDef(name='pTracerUserData',type='void*'),
+arg4=ArgDef(name='ppTracerInstanceUserData',type='void**'),
+)
+
+Callback(name='ze_pfnPhysicalMemGetPropertiesCb_t',component='ze_physical_mem_callbacks_t',
+arg1=ArgDef(name='params',type='ze_physical_mem_get_properties_params_t*'),
 arg2=ArgDef(name='result',type='ze_result_t'),
 arg3=ArgDef(name='pTracerUserData',type='void*'),
 arg4=ArgDef(name='ppTracerInstanceUserData',type='void**'),

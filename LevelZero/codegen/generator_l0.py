@@ -79,6 +79,8 @@ Constant(name='ZES_MEMORY_BANDWIDTH_COUNTER_BITS_EXP_PROPERTIES_NAME',value='"ZE
 
 Constant(name='ZES_MEM_PAGE_OFFLINE_STATE_EXP_NAME',value='"ZES_extension_mem_state"')
 
+Constant(name='ZES_PCI_LINK_SPEED_DOWNGRADE_EXT_NAME',value='"ZES_extension_pci_link_speed_downgrade"')
+
 Constant(name='ZES_POWER_DOMAIN_PROPERTIES_EXP_NAME',value='"ZES_extension_power_domain_properties"')
 
 Constant(name='ZES_POWER_LIMITS_EXT_NAME',value='"ZES_extension_power_limits"')
@@ -149,7 +151,7 @@ Constant(name='ZE_APIEXPORT',value='__declspec(dllexport)',condition='defined(_W
 
 Constant(name='ZE_APIEXPORT',value='__attribute__ ((visibility ("default")))',condition='__GNUC__ >= 4')
 
-Constant(name='ZE_API_VERSION_CURRENT_M',value='ZE_MAKE_VERSION( 1, 14 )')
+Constant(name='ZE_API_VERSION_CURRENT_M',value='ZE_MAKE_VERSION( 1, 15 )')
 
 Constant(name='ZE_BANDWIDTH_PROPERTIES_EXP_NAME',value='"ZE_experimental_bandwidth_properties"')
 
@@ -172,6 +174,8 @@ Constant(name='ZE_DEVICE_IP_VERSION_EXT_NAME',value='"ZE_extension_device_ip_ver
 Constant(name='ZE_DEVICE_LUID_EXT_NAME',value='"ZE_extension_device_luid"')
 
 Constant(name='ZE_DEVICE_MEMORY_PROPERTIES_EXT_NAME',value='"ZE_extension_device_memory_properties"')
+
+Constant(name='ZE_DEVICE_USABLEMEM_SIZE_PROPERTIES_EXT_NAME',value='"ZE_extension_device_usablemem_size_properties"')
 
 Constant(name='ZE_DEVICE_VECTOR_SIZES_EXT_NAME',value='"ZE_extension_device_vector_sizes"')
 
@@ -205,6 +209,8 @@ Constant(name='ZE_GLOBAL_OFFSET_EXP_NAME',value='"ZE_experimental_global_offset"
 
 Constant(name='ZE_IMAGE_COPY_EXT_NAME',value='"ZE_extension_image_copy"')
 
+Constant(name='ZE_IMAGE_FORMAT_SUPPORT_EXT_NAME',value='"ZE_extension_image_format_support"')
+
 Constant(name='ZE_IMAGE_MEMORY_PROPERTIES_EXP_NAME',value='"ZE_experimental_image_memory_properties"')
 
 Constant(name='ZE_IMAGE_QUERY_ALLOC_PROPERTIES_EXT_NAME',value='"ZE_extension_image_query_alloc_properties"')
@@ -218,6 +224,8 @@ Constant(name='ZE_IMAGE_VIEW_PLANAR_EXP_NAME',value='"ZE_experimental_image_view
 Constant(name='ZE_IMAGE_VIEW_PLANAR_EXT_NAME',value='"ZE_extension_image_view_planar"')
 
 Constant(name='ZE_IMMEDIATE_COMMAND_LIST_APPEND_EXP_NAME',value='"ZE_experimental_immediate_command_list_append"')
+
+Constant(name='ZE_IPC_MEM_HANDLE_TYPE_EXT_NAME',value='"ZE_extension_ipc_mem_handle_type"')
 
 Constant(name='ZE_KERNEL_MAX_GROUP_SIZE_PROPERTIES_EXT_NAME',value='"ZE_extension_kernel_max_group_size_properties"')
 
@@ -300,7 +308,8 @@ var12=VarDef(name='ZE_API_VERSION_1_11',value='ZE_MAKE_VERSION( 1, 11 )'),
 var13=VarDef(name='ZE_API_VERSION_1_12',value='ZE_MAKE_VERSION( 1, 12 )'),
 var14=VarDef(name='ZE_API_VERSION_1_13',value='ZE_MAKE_VERSION( 1, 13 )'),
 var15=VarDef(name='ZE_API_VERSION_1_14',value='ZE_MAKE_VERSION( 1, 14 )'),
-# var16=VarDef(name='ZE_API_VERSION_CURRENT',value='ZE_MAKE_VERSION( 1, 14 )'),
+var16=VarDef(name='ZE_API_VERSION_1_15',value='ZE_MAKE_VERSION( 1, 15 )'),
+# var17=VarDef(name='ZE_API_VERSION_CURRENT',value='ZE_MAKE_VERSION( 1, 15 )'),
 )
 
 Enum(name='ze_bandwidth_properties_exp_version_t',
@@ -374,6 +383,7 @@ var2=VarDef(name='ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT',value='ZE_BIT(1)'),
 var3=VarDef(name='ZE_COMMAND_LIST_FLAG_EXPLICIT_ONLY',value='ZE_BIT(2)'),
 var4=VarDef(name='ZE_COMMAND_LIST_FLAG_IN_ORDER',value='ZE_BIT(3)'),
 var5=VarDef(name='ZE_COMMAND_LIST_FLAG_EXP_CLONEABLE',value='ZE_BIT(4)'),
+var6=VarDef(name='ZE_COMMAND_LIST_FLAG_COPY_OFFLOAD_HINT',value='ZE_BIT(5)'),
 )
 
 Enum(name='ze_command_queue_flags_t',bitFields=True,
@@ -412,6 +422,13 @@ var1=VarDef(name='ZE_DEVICE_CACHE_LINE_SIZE_EXT_VERSION_1_0',value='ZE_MAKE_VERS
 
 Enum(name='ze_device_cache_property_flags_t',bitFields=True,
 var1=VarDef(name='ZE_DEVICE_CACHE_PROPERTY_FLAG_USER_CONTROL',value='ZE_BIT(0)'),
+)
+
+Enum(name='ze_device_event_properties_flags_t',bitFields=True,
+var1=VarDef(name='ZE_DEVICE_EVENT_PROPERTIES_FLAG_COUNTER_BASED_EXTERNAL_AGGREGATE_STORAGE',value='ZE_BIT(0)'),
+var2=VarDef(name='ZE_DEVICE_EVENT_PROPERTIES_FLAG_COUNTER_BASED_IPC',value='ZE_BIT(1)'),
+var3=VarDef(name='ZE_DEVICE_EVENT_PROPERTIES_FLAG_COUNTER_BASED_EXTERNAL_SYNC_ALLOCATION',value='ZE_BIT(2)'),
+var4=VarDef(name='ZE_DEVICE_EVENT_PROPERTIES_FLAG_COUNTER_BASED_EXTERNAL_INTERRUPT_WAIT',value='ZE_BIT(3)'),
 )
 
 Enum(name='ze_device_fp_atomic_ext_flags_t',bitFields=True,
@@ -519,6 +536,11 @@ var4=VarDef(name='ZE_DEVICE_TYPE_MCA',value='4'),
 var5=VarDef(name='ZE_DEVICE_TYPE_VPU',value='5'),
 )
 
+Enum(name='ze_device_usablemem_size_properties_ext_version_t',
+var1=VarDef(name='ZE_DEVICE_USABLEMEM_SIZE_PROPERTIES_EXT_VERSION_1_0',value='ZE_MAKE_VERSION( 1, 0 )'),
+# var2=VarDef(name='ZE_DEVICE_USABLEMEM_SIZE_PROPERTIES_EXT_VERSION_CURRENT',value='ZE_MAKE_VERSION( 1, 0 )'),
+)
+
 Enum(name='ze_device_vector_sizes_ext_version_t',
 var1=VarDef(name='ZE_DEVICE_VECTOR_SIZES_EXT_VERSION_1_0',value='ZE_MAKE_VERSION( 1, 0 )'),
 # var2=VarDef(name='ZE_DEVICE_VECTOR_SIZES_EXT_VERSION_CURRENT',value='ZE_MAKE_VERSION( 1, 0 )'),
@@ -542,6 +564,15 @@ var2=VarDef(name='ZE_DRIVER_MEMORY_FREE_POLICY_EXT_FLAG_DEFER_FREE',value='ZE_BI
 Enum(name='ze_eu_count_ext_version_t',
 var1=VarDef(name='ZE_EU_COUNT_EXT_VERSION_1_0',value='ZE_MAKE_VERSION( 1, 0 )'),
 # var2=VarDef(name='ZE_EU_COUNT_EXT_VERSION_CURRENT',value='ZE_MAKE_VERSION( 1, 0 )'),
+)
+
+Enum(name='ze_event_counter_based_flags_t',bitFields=True,
+var1=VarDef(name='ZE_EVENT_COUNTER_BASED_FLAG_IMMEDIATE',value='ZE_BIT(0)'),
+var2=VarDef(name='ZE_EVENT_COUNTER_BASED_FLAG_NON_IMMEDIATE',value='ZE_BIT(1)'),
+var3=VarDef(name='ZE_EVENT_COUNTER_BASED_FLAG_HOST_VISIBLE',value='ZE_BIT(2)'),
+var4=VarDef(name='ZE_EVENT_COUNTER_BASED_FLAG_IPC',value='ZE_BIT(3)'),
+var5=VarDef(name='ZE_EVENT_COUNTER_BASED_FLAG_DEVICE_TIMESTAMP',value='ZE_BIT(4)'),
+var6=VarDef(name='ZE_EVENT_COUNTER_BASED_FLAG_HOST_TIMESTAMP',value='ZE_BIT(5)'),
 )
 
 Enum(name='ze_event_pool_counter_based_exp_flags_t',bitFields=True,
@@ -580,6 +611,12 @@ Enum(name='ze_event_scope_flags_t',bitFields=True,
 var1=VarDef(name='ZE_EVENT_SCOPE_FLAG_SUBDEVICE',value='ZE_BIT(0)'),
 var2=VarDef(name='ZE_EVENT_SCOPE_FLAG_DEVICE',value='ZE_BIT(1)'),
 var3=VarDef(name='ZE_EVENT_SCOPE_FLAG_HOST',value='ZE_BIT(2)'),
+)
+
+Enum(name='ze_event_sync_mode_flags_t',bitFields=True,
+var1=VarDef(name='ZE_EVENT_SYNC_MODE_FLAG_LOW_POWER_WAIT',value='ZE_BIT(0)'),
+var2=VarDef(name='ZE_EVENT_SYNC_MODE_FLAG_SIGNAL_INTERRUPT',value='ZE_BIT(1)'),
+var3=VarDef(name='ZE_EVENT_SYNC_MODE_FLAG_EXTERNAL_INTERRUPT_WAIT',value='ZE_BIT(2)'),
 )
 
 Enum(name='ze_external_memmap_sysmem_ext_version_t',
@@ -719,6 +756,11 @@ var45=VarDef(name='ZE_IMAGE_FORMAT_LAYOUT_16_16_16',value='44'),
 var46=VarDef(name='ZE_IMAGE_FORMAT_LAYOUT_32_32_32',value='45'),
 )
 
+Enum(name='ze_image_format_support_ext_version_t',
+var1=VarDef(name='ZE_IMAGE_FORMAT_SUPPORT_EXT_VERSION_1_0',value='ZE_MAKE_VERSION( 1, 0 )'),
+# var2=VarDef(name='ZE_IMAGE_FORMAT_SUPPORT_EXT_VERSION_CURRENT',value='ZE_MAKE_VERSION( 1, 0 )'),
+)
+
 Enum(name='ze_image_format_swizzle_t',
 var1=VarDef(name='ZE_IMAGE_FORMAT_SWIZZLE_R',value='0'),
 var2=VarDef(name='ZE_IMAGE_FORMAT_SWIZZLE_G',value='1'),
@@ -727,6 +769,7 @@ var4=VarDef(name='ZE_IMAGE_FORMAT_SWIZZLE_A',value='3'),
 var5=VarDef(name='ZE_IMAGE_FORMAT_SWIZZLE_0',value='4'),
 var6=VarDef(name='ZE_IMAGE_FORMAT_SWIZZLE_1',value='5'),
 var7=VarDef(name='ZE_IMAGE_FORMAT_SWIZZLE_X',value='6'),
+var8=VarDef(name='ZE_IMAGE_FORMAT_SWIZZLE_D',value='7'),
 )
 
 Enum(name='ze_image_format_type_t',
@@ -794,6 +837,16 @@ var2=VarDef(name='ZE_INIT_DRIVER_TYPE_FLAG_NPU',value='ZE_BIT(1)'),
 Enum(name='ze_init_flags_t',bitFields=True,
 var1=VarDef(name='ZE_INIT_FLAG_GPU_ONLY',value='ZE_BIT(0)'),
 var2=VarDef(name='ZE_INIT_FLAG_VPU_ONLY',value='ZE_BIT(1)'),
+)
+
+Enum(name='ze_ipc_mem_handle_type_ext_version_t',
+var1=VarDef(name='ZE_IPC_MEM_HANDLE_TYPE_EXT_VERSION_1_0',value='ZE_MAKE_VERSION( 1, 0 )'),
+# var2=VarDef(name='ZE_IPC_MEM_HANDLE_TYPE_EXT_VERSION_CURRENT',value='ZE_MAKE_VERSION( 1, 0 )'),
+)
+
+Enum(name='ze_ipc_mem_handle_type_flags_t',bitFields=True,
+var1=VarDef(name='ZE_IPC_MEM_HANDLE_TYPE_FLAG_DEFAULT',value='ZE_BIT(0)'),
+var2=VarDef(name='ZE_IPC_MEM_HANDLE_TYPE_FLAG_FABRIC_ACCESSIBLE',value='ZE_BIT(1)'),
 )
 
 Enum(name='ze_ipc_memory_flags_t',bitFields=True,
@@ -1254,57 +1307,67 @@ var51=VarDef(name='ZE_STRUCTURE_TYPE_IMAGE_VIEW_PLANAR_EXT_DESC',value='0x10010'
 var52=VarDef(name='ZE_STRUCTURE_TYPE_EVENT_QUERY_KERNEL_TIMESTAMPS_EXT_PROPERTIES',value='0x10011',struct='ze_event_query_kernel_timestamps_ext_properties_t'),
 # var53=VarDef(name='ZE_STRUCTURE_TYPE_EVENT_QUERY_KERNEL_TIMESTAMPS_RESULTS_EXT_PROPERTIES',value='0x10012',struct='ze_event_query_kernel_timestamps_results_ext_properties_t'),
 var54=VarDef(name='ZE_STRUCTURE_TYPE_KERNEL_MAX_GROUP_SIZE_EXT_PROPERTIES',value='0x10013',struct='ze_kernel_max_group_size_ext_properties_t'),
-var55=VarDef(name='ZE_STRUCTURE_TYPE_RELAXED_ALLOCATION_LIMITS_EXP_DESC',value='0x00020001',struct='ze_relaxed_allocation_limits_exp_desc_t'),
-var56=VarDef(name='ZE_STRUCTURE_TYPE_MODULE_PROGRAM_EXP_DESC',value='0x00020002',struct='ze_module_program_exp_desc_t'),
-var57=VarDef(name='ZE_STRUCTURE_TYPE_SCHEDULING_HINT_EXP_PROPERTIES',value='0x00020003',struct='ze_scheduling_hint_exp_properties_t'),
-var58=VarDef(name='ZE_STRUCTURE_TYPE_SCHEDULING_HINT_EXP_DESC',value='0x00020004',struct='ze_scheduling_hint_exp_desc_t'),
-var59=VarDef(name='ZE_STRUCTURE_TYPE_IMAGE_VIEW_PLANAR_EXP_DESC',value='0x00020005',struct='ze_image_view_planar_exp_desc_t'),
-var60=VarDef(name='ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES_1_2',value='0x00020006',struct='ze_device_properties_t'),
-var61=VarDef(name='ZE_STRUCTURE_TYPE_IMAGE_MEMORY_EXP_PROPERTIES',value='0x00020007',struct='ze_image_memory_properties_exp_t'),
-var62=VarDef(name='ZE_STRUCTURE_TYPE_POWER_SAVING_HINT_EXP_DESC',value='0x00020008',struct='ze_context_power_saving_hint_exp_desc_t'),
-var63=VarDef(name='ZE_STRUCTURE_TYPE_COPY_BANDWIDTH_EXP_PROPERTIES',value='0x00020009',struct='ze_copy_bandwidth_exp_properties_t'),
-var64=VarDef(name='ZE_STRUCTURE_TYPE_DEVICE_P2P_BANDWIDTH_EXP_PROPERTIES',value='0x0002000A',struct='ze_device_p2p_bandwidth_exp_properties_t'),
-var65=VarDef(name='ZE_STRUCTURE_TYPE_FABRIC_VERTEX_EXP_PROPERTIES',value='0x0002000B',struct='ze_fabric_vertex_exp_properties_t'),
-var66=VarDef(name='ZE_STRUCTURE_TYPE_FABRIC_EDGE_EXP_PROPERTIES',value='0x0002000C',struct='ze_fabric_edge_exp_properties_t'),
-# var67=VarDef(name='ZE_STRUCTURE_TYPE_MEMORY_SUB_ALLOCATIONS_EXP_PROPERTIES',value='0x0002000D',struct='ze_memory_sub_allocations_exp_properties_t'),
-var68=VarDef(name='ZE_STRUCTURE_TYPE_RTAS_BUILDER_EXP_DESC',value='0x0002000E',struct='ze_rtas_builder_exp_desc_t'),
-var69=VarDef(name='ZE_STRUCTURE_TYPE_RTAS_BUILDER_BUILD_OP_EXP_DESC',value='0x0002000F',struct='ze_rtas_builder_build_op_exp_desc_t'),
-var70=VarDef(name='ZE_STRUCTURE_TYPE_RTAS_BUILDER_EXP_PROPERTIES',value='0x00020010',struct='ze_rtas_builder_exp_properties_t'),
-var71=VarDef(name='ZE_STRUCTURE_TYPE_RTAS_PARALLEL_OPERATION_EXP_PROPERTIES',value='0x00020011',struct='ze_rtas_parallel_operation_exp_properties_t'),
-var72=VarDef(name='ZE_STRUCTURE_TYPE_RTAS_DEVICE_EXP_PROPERTIES',value='0x00020012',struct='ze_rtas_device_exp_properties_t'),
-# var73=VarDef(name='ZE_STRUCTURE_TYPE_RTAS_GEOMETRY_AABBS_EXP_CB_PARAMS',value='0x00020013',struct='ze_rtas_geometry_aabbs_exp_cb_params_t'),
-var74=VarDef(name='ZE_STRUCTURE_TYPE_COUNTER_BASED_EVENT_POOL_EXP_DESC',value='0x00020014',struct='ze_event_pool_counter_based_exp_desc_t'),
-var75=VarDef(name='ZE_STRUCTURE_TYPE_MUTABLE_COMMAND_LIST_EXP_PROPERTIES',value='0x00020015',struct='ze_mutable_command_list_exp_properties_t'),
-var76=VarDef(name='ZE_STRUCTURE_TYPE_MUTABLE_COMMAND_LIST_EXP_DESC',value='0x00020016',struct='ze_mutable_command_list_exp_desc_t'),
-var77=VarDef(name='ZE_STRUCTURE_TYPE_MUTABLE_COMMAND_ID_EXP_DESC',value='0x00020017',struct='ze_mutable_command_id_exp_desc_t'),
-var78=VarDef(name='ZE_STRUCTURE_TYPE_MUTABLE_COMMANDS_EXP_DESC',value='0x00020018',struct='ze_mutable_commands_exp_desc_t'),
-var79=VarDef(name='ZE_STRUCTURE_TYPE_MUTABLE_KERNEL_ARGUMENT_EXP_DESC',value='0x00020019',struct='ze_mutable_kernel_argument_exp_desc_t'),
-var80=VarDef(name='ZE_STRUCTURE_TYPE_MUTABLE_GROUP_COUNT_EXP_DESC',value='0x0002001A',struct='ze_mutable_group_count_exp_desc_t'),
-var81=VarDef(name='ZE_STRUCTURE_TYPE_MUTABLE_GROUP_SIZE_EXP_DESC',value='0x0002001B',struct='ze_mutable_group_size_exp_desc_t'),
-var82=VarDef(name='ZE_STRUCTURE_TYPE_MUTABLE_GLOBAL_OFFSET_EXP_DESC',value='0x0002001C',struct='ze_mutable_global_offset_exp_desc_t'),
-var83=VarDef(name='ZE_STRUCTURE_TYPE_PITCHED_ALLOC_DEVICE_EXP_PROPERTIES',value='0x0002001D',struct='ze_device_pitched_alloc_exp_properties_t'),
-var84=VarDef(name='ZE_STRUCTURE_TYPE_BINDLESS_IMAGE_EXP_DESC',value='0x0002001E',struct='ze_image_bindless_exp_desc_t'),
-var85=VarDef(name='ZE_STRUCTURE_TYPE_PITCHED_IMAGE_EXP_DESC',value='0x0002001F',struct='ze_image_pitched_exp_desc_t'),
-var86=VarDef(name='ZE_STRUCTURE_TYPE_MUTABLE_GRAPH_ARGUMENT_EXP_DESC',value='0x00020020',struct='ze_mutable_graph_argument_exp_desc_t'),
-var87=VarDef(name='ZE_STRUCTURE_TYPE_INIT_DRIVER_TYPE_DESC',value='0x00020021',struct='ze_init_driver_type_desc_t'),
-var88=VarDef(name='ZE_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_EXT_DESC',value='0x00020022',struct='ze_external_semaphore_ext_desc_t'),
-# var89=VarDef(name='ZE_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_WIN32_EXT_DESC',value='0x00020023',struct='ze_external_semaphore_win32_ext_desc_t'),
-# var90=VarDef(name='ZE_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_FD_EXT_DESC',value='0x00020024',struct='ze_external_semaphore_fd_ext_desc_t'),
-var91=VarDef(name='ZE_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_SIGNAL_PARAMS_EXT',value='0x00020025',struct='ze_external_semaphore_signal_params_ext_t'),
-var92=VarDef(name='ZE_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_WAIT_PARAMS_EXT',value='0x00020026',struct='ze_external_semaphore_wait_params_ext_t'),
-var93=VarDef(name='ZE_STRUCTURE_TYPE_DRIVER_DDI_HANDLES_EXT_PROPERTIES',value='0x00020027',struct='ze_driver_ddi_handles_ext_properties_t'),
-var94=VarDef(name='ZE_STRUCTURE_TYPE_DEVICE_CACHELINE_SIZE_EXT',value='0x00020028',struct='ze_device_cache_line_size_ext_t'),
-var95=VarDef(name='ZE_STRUCTURE_TYPE_DEVICE_VECTOR_WIDTH_PROPERTIES_EXT',value='0x00020029',struct='ze_device_vector_width_properties_ext_t'),
-var96=VarDef(name='ZE_STRUCTURE_TYPE_RTAS_BUILDER_EXT_DESC',value='0x00020030',struct='ze_rtas_builder_ext_desc_t'),
-var97=VarDef(name='ZE_STRUCTURE_TYPE_RTAS_BUILDER_BUILD_OP_EXT_DESC',value='0x00020031',struct='ze_rtas_builder_build_op_ext_desc_t'),
-var98=VarDef(name='ZE_STRUCTURE_TYPE_RTAS_BUILDER_EXT_PROPERTIES',value='0x00020032',struct='ze_rtas_builder_ext_properties_t'),
-var99=VarDef(name='ZE_STRUCTURE_TYPE_RTAS_PARALLEL_OPERATION_EXT_PROPERTIES',value='0x00020033',struct='ze_rtas_parallel_operation_ext_properties_t'),
-var100=VarDef(name='ZE_STRUCTURE_TYPE_RTAS_DEVICE_EXT_PROPERTIES',value='0x00020034',struct='ze_rtas_device_ext_properties_t'),
-# var101=VarDef(name='ZE_STRUCTURE_TYPE_RTAS_GEOMETRY_AABBS_EXT_CB_PARAMS',value='0x00020035',struct='ze_rtas_geometry_aabbs_ext_cb_params_t'),
-var102=VarDef(name='ZE_STRUCTURE_TYPE_COMMAND_LIST_APPEND_PARAM_COOPERATIVE_DESC',value='0x00020036',struct='ze_command_list_append_launch_kernel_param_cooperative_desc_t'),
-# var103=VarDef(name='ZE_STRUCTURE_TYPE_EXTERNAL_MEMMAP_SYSMEM_EXT_DESC',value='0x00020037',struct='ze_external_memmap_sysmem_ext_desc_t'),
-var104=VarDef(name='ZE_STRUCTURE_TYPE_PITCHED_ALLOC_2DIMAGE_LINEAR_PITCH_EXP_INFO',value='0x00020038',struct='ze_pitched_alloc_2dimage_linear_pitch_exp_info_t'),
-var105=VarDef(name='ZE_STRUCTURE_TYPE_KERNEL_ALLOCATION_PROPERTIES',value='0x00020039',struct='ze_kernel_allocation_exp_properties_t'),
+var55=VarDef(name='ZE_STRUCTURE_TYPE_IMAGE_FORMAT_SUPPORT_EXT_PROPERTIES',value='0x10014',struct='ze_image_format_support_ext_properties_t'),
+var56=VarDef(name='ZE_STRUCTURE_TYPE_RELAXED_ALLOCATION_LIMITS_EXP_DESC',value='0x00020001',struct='ze_relaxed_allocation_limits_exp_desc_t'),
+var57=VarDef(name='ZE_STRUCTURE_TYPE_MODULE_PROGRAM_EXP_DESC',value='0x00020002',struct='ze_module_program_exp_desc_t'),
+var58=VarDef(name='ZE_STRUCTURE_TYPE_SCHEDULING_HINT_EXP_PROPERTIES',value='0x00020003',struct='ze_scheduling_hint_exp_properties_t'),
+var59=VarDef(name='ZE_STRUCTURE_TYPE_SCHEDULING_HINT_EXP_DESC',value='0x00020004',struct='ze_scheduling_hint_exp_desc_t'),
+var60=VarDef(name='ZE_STRUCTURE_TYPE_IMAGE_VIEW_PLANAR_EXP_DESC',value='0x00020005',struct='ze_image_view_planar_exp_desc_t'),
+var61=VarDef(name='ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES_1_2',value='0x00020006',struct='ze_device_properties_t'),
+var62=VarDef(name='ZE_STRUCTURE_TYPE_IMAGE_MEMORY_EXP_PROPERTIES',value='0x00020007',struct='ze_image_memory_properties_exp_t'),
+var63=VarDef(name='ZE_STRUCTURE_TYPE_POWER_SAVING_HINT_EXP_DESC',value='0x00020008',struct='ze_context_power_saving_hint_exp_desc_t'),
+var64=VarDef(name='ZE_STRUCTURE_TYPE_COPY_BANDWIDTH_EXP_PROPERTIES',value='0x00020009',struct='ze_copy_bandwidth_exp_properties_t'),
+var65=VarDef(name='ZE_STRUCTURE_TYPE_DEVICE_P2P_BANDWIDTH_EXP_PROPERTIES',value='0x0002000A',struct='ze_device_p2p_bandwidth_exp_properties_t'),
+var66=VarDef(name='ZE_STRUCTURE_TYPE_FABRIC_VERTEX_EXP_PROPERTIES',value='0x0002000B',struct='ze_fabric_vertex_exp_properties_t'),
+var67=VarDef(name='ZE_STRUCTURE_TYPE_FABRIC_EDGE_EXP_PROPERTIES',value='0x0002000C',struct='ze_fabric_edge_exp_properties_t'),
+# var68=VarDef(name='ZE_STRUCTURE_TYPE_MEMORY_SUB_ALLOCATIONS_EXP_PROPERTIES',value='0x0002000D',struct='ze_memory_sub_allocations_exp_properties_t'),
+var69=VarDef(name='ZE_STRUCTURE_TYPE_RTAS_BUILDER_EXP_DESC',value='0x0002000E',struct='ze_rtas_builder_exp_desc_t'),
+var70=VarDef(name='ZE_STRUCTURE_TYPE_RTAS_BUILDER_BUILD_OP_EXP_DESC',value='0x0002000F',struct='ze_rtas_builder_build_op_exp_desc_t'),
+var71=VarDef(name='ZE_STRUCTURE_TYPE_RTAS_BUILDER_EXP_PROPERTIES',value='0x00020010',struct='ze_rtas_builder_exp_properties_t'),
+var72=VarDef(name='ZE_STRUCTURE_TYPE_RTAS_PARALLEL_OPERATION_EXP_PROPERTIES',value='0x00020011',struct='ze_rtas_parallel_operation_exp_properties_t'),
+var73=VarDef(name='ZE_STRUCTURE_TYPE_RTAS_DEVICE_EXP_PROPERTIES',value='0x00020012',struct='ze_rtas_device_exp_properties_t'),
+# var74=VarDef(name='ZE_STRUCTURE_TYPE_RTAS_GEOMETRY_AABBS_EXP_CB_PARAMS',value='0x00020013',struct='ze_rtas_geometry_aabbs_exp_cb_params_t'),
+var75=VarDef(name='ZE_STRUCTURE_TYPE_COUNTER_BASED_EVENT_POOL_EXP_DESC',value='0x00020014',struct='ze_event_pool_counter_based_exp_desc_t'),
+var76=VarDef(name='ZE_STRUCTURE_TYPE_MUTABLE_COMMAND_LIST_EXP_PROPERTIES',value='0x00020015',struct='ze_mutable_command_list_exp_properties_t'),
+var77=VarDef(name='ZE_STRUCTURE_TYPE_MUTABLE_COMMAND_LIST_EXP_DESC',value='0x00020016',struct='ze_mutable_command_list_exp_desc_t'),
+var78=VarDef(name='ZE_STRUCTURE_TYPE_MUTABLE_COMMAND_ID_EXP_DESC',value='0x00020017',struct='ze_mutable_command_id_exp_desc_t'),
+var79=VarDef(name='ZE_STRUCTURE_TYPE_MUTABLE_COMMANDS_EXP_DESC',value='0x00020018',struct='ze_mutable_commands_exp_desc_t'),
+var80=VarDef(name='ZE_STRUCTURE_TYPE_MUTABLE_KERNEL_ARGUMENT_EXP_DESC',value='0x00020019',struct='ze_mutable_kernel_argument_exp_desc_t'),
+var81=VarDef(name='ZE_STRUCTURE_TYPE_MUTABLE_GROUP_COUNT_EXP_DESC',value='0x0002001A',struct='ze_mutable_group_count_exp_desc_t'),
+var82=VarDef(name='ZE_STRUCTURE_TYPE_MUTABLE_GROUP_SIZE_EXP_DESC',value='0x0002001B',struct='ze_mutable_group_size_exp_desc_t'),
+var83=VarDef(name='ZE_STRUCTURE_TYPE_MUTABLE_GLOBAL_OFFSET_EXP_DESC',value='0x0002001C',struct='ze_mutable_global_offset_exp_desc_t'),
+var84=VarDef(name='ZE_STRUCTURE_TYPE_PITCHED_ALLOC_DEVICE_EXP_PROPERTIES',value='0x0002001D',struct='ze_device_pitched_alloc_exp_properties_t'),
+var85=VarDef(name='ZE_STRUCTURE_TYPE_BINDLESS_IMAGE_EXP_DESC',value='0x0002001E',struct='ze_image_bindless_exp_desc_t'),
+var86=VarDef(name='ZE_STRUCTURE_TYPE_PITCHED_IMAGE_EXP_DESC',value='0x0002001F',struct='ze_image_pitched_exp_desc_t'),
+var87=VarDef(name='ZE_STRUCTURE_TYPE_MUTABLE_GRAPH_ARGUMENT_EXP_DESC',value='0x00020020',struct='ze_mutable_graph_argument_exp_desc_t'),
+var88=VarDef(name='ZE_STRUCTURE_TYPE_INIT_DRIVER_TYPE_DESC',value='0x00020021',struct='ze_init_driver_type_desc_t'),
+var89=VarDef(name='ZE_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_EXT_DESC',value='0x00020022',struct='ze_external_semaphore_ext_desc_t'),
+# var90=VarDef(name='ZE_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_WIN32_EXT_DESC',value='0x00020023',struct='ze_external_semaphore_win32_ext_desc_t'),
+# var91=VarDef(name='ZE_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_FD_EXT_DESC',value='0x00020024',struct='ze_external_semaphore_fd_ext_desc_t'),
+var92=VarDef(name='ZE_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_SIGNAL_PARAMS_EXT',value='0x00020025',struct='ze_external_semaphore_signal_params_ext_t'),
+var93=VarDef(name='ZE_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_WAIT_PARAMS_EXT',value='0x00020026',struct='ze_external_semaphore_wait_params_ext_t'),
+var94=VarDef(name='ZE_STRUCTURE_TYPE_DRIVER_DDI_HANDLES_EXT_PROPERTIES',value='0x00020027',struct='ze_driver_ddi_handles_ext_properties_t'),
+var95=VarDef(name='ZE_STRUCTURE_TYPE_DEVICE_CACHELINE_SIZE_EXT',value='0x00020028',struct='ze_device_cache_line_size_ext_t'),
+var96=VarDef(name='ZE_STRUCTURE_TYPE_DEVICE_VECTOR_WIDTH_PROPERTIES_EXT',value='0x00020029',struct='ze_device_vector_width_properties_ext_t'),
+var97=VarDef(name='ZE_STRUCTURE_TYPE_RTAS_BUILDER_EXT_DESC',value='0x00020030',struct='ze_rtas_builder_ext_desc_t'),
+var98=VarDef(name='ZE_STRUCTURE_TYPE_RTAS_BUILDER_BUILD_OP_EXT_DESC',value='0x00020031',struct='ze_rtas_builder_build_op_ext_desc_t'),
+var99=VarDef(name='ZE_STRUCTURE_TYPE_RTAS_BUILDER_EXT_PROPERTIES',value='0x00020032',struct='ze_rtas_builder_ext_properties_t'),
+var100=VarDef(name='ZE_STRUCTURE_TYPE_RTAS_PARALLEL_OPERATION_EXT_PROPERTIES',value='0x00020033',struct='ze_rtas_parallel_operation_ext_properties_t'),
+var101=VarDef(name='ZE_STRUCTURE_TYPE_RTAS_DEVICE_EXT_PROPERTIES',value='0x00020034',struct='ze_rtas_device_ext_properties_t'),
+# var102=VarDef(name='ZE_STRUCTURE_TYPE_RTAS_GEOMETRY_AABBS_EXT_CB_PARAMS',value='0x00020035',struct='ze_rtas_geometry_aabbs_ext_cb_params_t'),
+var103=VarDef(name='ZE_STRUCTURE_TYPE_COMMAND_LIST_APPEND_PARAM_COOPERATIVE_DESC',value='0x00020036',struct='ze_command_list_append_launch_kernel_param_cooperative_desc_t'),
+# var104=VarDef(name='ZE_STRUCTURE_TYPE_EXTERNAL_MEMMAP_SYSMEM_EXT_DESC',value='0x00020037',struct='ze_external_memmap_sysmem_ext_desc_t'),
+var105=VarDef(name='ZE_STRUCTURE_TYPE_PITCHED_ALLOC_2DIMAGE_LINEAR_PITCH_EXP_INFO',value='0x00020038',struct='ze_pitched_alloc_2dimage_linear_pitch_exp_info_t'),
+var106=VarDef(name='ZE_STRUCTURE_TYPE_KERNEL_ALLOCATION_PROPERTIES',value='0x00020039',struct='ze_kernel_allocation_exp_properties_t'),
+var107=VarDef(name='ZE_STRUCTURE_TYPE_EVENT_COUNTER_BASED_DESC',value='0x0002003A',struct='ze_event_counter_based_desc_t'),
+var108=VarDef(name='ZE_STRUCTURE_TYPE_EVENT_COUNTER_BASED_EXTERNAL_SYNC_ALLOCATION_DESC',value='0x0002003B',struct='ze_event_counter_based_external_sync_allocation_desc_t'),
+var109=VarDef(name='ZE_STRUCTURE_TYPE_EVENT_SYNC_MODE_DESC',value='0x0002003C',struct='ze_event_sync_mode_desc_t'),
+var110=VarDef(name='ZE_STRUCTURE_TYPE_IPC_MEM_HANDLE_TYPE_EXT_DESC',value='0x0002003D',struct='ze_ipc_mem_handle_type_ext_desc_t'),
+var111=VarDef(name='ZE_STRUCTURE_TYPE_DEVICE_EVENT_PROPERTIES',value='0x0002003E',struct='ze_device_event_properties_t'),
+var112=VarDef(name='ZE_STRUCTURE_TYPE_EVENT_COUNTER_BASED_EXTERNAL_AGGREGATE_STORAGE_DESC',value='0x0002003F',struct='ze_event_counter_based_external_aggregate_storage_desc_t'),
+var113=VarDef(name='ZE_STRUCTURE_TYPE_PHYSICAL_MEM_PROPERTIES',value='0x00020040',struct='ze_physical_mem_properties_t'),
+var114=VarDef(name='ZE_STRUCTURE_TYPE_DEVICE_USABLEMEM_SIZE_EXT_PROPERTIES',value='0x00020041',struct='ze_device_usablemem_size_ext_properties_t'),
+var115=VarDef(name='ZE_STRUCTURE_TYPE_CUSTOM_PITCH_EXP_DESC',value='0x00020042',struct='ze_custom_pitch_exp_desc_t'),
 var500=VarDef(name='ZEX_STRUCTURE_COUNTER_BASED_EVENT_DESC',value='0x0003001C',struct='zex_counter_based_event_desc_t'),
 var501=VarDef(name='ZEX_STRUCTURE_COUNTER_BASED_EVENT_EXTERNAL_SYNC_ALLOC_PROPERTIES',value='0x0003001D',struct='zex_counter_based_event_external_sync_alloc_properties_t'),
 var502=VarDef(name='ZE_STRUCTURE_TYPE_QUEUE_PRIORITY_DESC',value='0x00030028',struct='ze_queue_priority_desc_t'),
@@ -1470,6 +1533,9 @@ var4=VarDef(name='ZES_FREQ_THROTTLE_REASON_FLAG_THERMAL_LIMIT',value='ZE_BIT(3)'
 var5=VarDef(name='ZES_FREQ_THROTTLE_REASON_FLAG_PSU_ALERT',value='ZE_BIT(4)'),
 var6=VarDef(name='ZES_FREQ_THROTTLE_REASON_FLAG_SW_RANGE',value='ZE_BIT(5)'),
 var7=VarDef(name='ZES_FREQ_THROTTLE_REASON_FLAG_HW_RANGE',value='ZE_BIT(6)'),
+var8=VarDef(name='ZES_FREQ_THROTTLE_REASON_FLAG_VOLTAGE',value='ZE_BIT(7)'),
+var9=VarDef(name='ZES_FREQ_THROTTLE_REASON_FLAG_THERMAL',value='ZE_BIT(8)'),
+var10=VarDef(name='ZES_FREQ_THROTTLE_REASON_FLAG_POWER',value='ZE_BIT(9)'),
 )
 
 Enum(name='zes_init_flags_t',bitFields=True,
@@ -1579,6 +1645,11 @@ var3=VarDef(name='ZES_PCI_BAR_TYPE_MEM',value='2'),
 Enum(name='zes_pci_link_qual_issue_flags_t',bitFields=True,
 var1=VarDef(name='ZES_PCI_LINK_QUAL_ISSUE_FLAG_REPLAYS',value='ZE_BIT(0)'),
 var2=VarDef(name='ZES_PCI_LINK_QUAL_ISSUE_FLAG_SPEED',value='ZE_BIT(1)'),
+)
+
+Enum(name='zes_pci_link_speed_downgrade_ext_version_t',
+var1=VarDef(name='ZES_PCI_LINK_SPEED_DOWNGRADE_EXT_VERSION_1_0',value='ZE_MAKE_VERSION( 1, 0 )'),
+# var2=VarDef(name='ZES_PCI_LINK_SPEED_DOWNGRADE_EXT_VERSION_CURRENT',value='ZE_MAKE_VERSION( 1, 0 )'),
 )
 
 Enum(name='zes_pci_link_stab_issue_flags_t',bitFields=True,
@@ -1764,6 +1835,8 @@ var55=VarDef(name='ZES_STRUCTURE_TYPE_VF_UTIL_MEM_EXP2',value='0x00020009',struc
 var56=VarDef(name='ZES_STRUCTURE_TYPE_VF_UTIL_ENGINE_EXP2',value='0x00020010',struct='zes_vf_util_engine_exp2_t'),
 # var57=VarDef(name='ZES_STRUCTURE_TYPE_VF_EXP2_CAPABILITIES',value='0x00020011',struct='zes_vf_exp2_capabilities_t'),
 var58=VarDef(name='ZES_STRUCTURE_TYPE_DEVICE_ECC_DEFAULT_PROPERTIES_EXT',value='0x00020012',struct='zes_device_ecc_default_properties_ext_t'),
+var59=VarDef(name='ZES_STRUCTURE_TYPE_PCI_LINK_SPEED_DOWNGRADE_EXT_STATE',value='0x00020013',struct='zes_pci_link_speed_downgrade_ext_state_t'),
+var60=VarDef(name='ZES_STRUCTURE_TYPE_PCI_LINK_SPEED_DOWNGRADE_EXT_PROPERTIES',value='0x00020014',struct='zes_pci_link_speed_downgrade_ext_properties_t'),
 )
 
 Enum(name='zes_sysman_device_mapping_exp_version_t',
@@ -2083,6 +2156,10 @@ var1=VarDef(name='stype',type='ze_structure_type_t',tag='in'),
 var2=VarDef(name='pNext',type='const void*',tag='in',wrapType='CExtensionStructCore'),
 )
 
+Argument(name='ze_ipc_event_counter_based_handle_t',
+var1=VarDef(name='data[ZE_MAX_IPC_HANDLE_SIZE]',type='char',tag='out'),
+)
+
 Argument(name='ze_init_driver_type_desc_t',
 var1=VarDef(name='stype',type='ze_structure_type_t',tag='in'),
 var2=VarDef(name='pNext',type='const void*',tag='in',wrapType='CExtensionStructCore'),
@@ -2241,6 +2318,12 @@ var2=VarDef(name='pNext',type='void*',tag='inout',wrapType='CExtensionStructCore
 var3=VarDef(name='flags',type='ze_device_p2p_property_flags_t',tag='out'),
 )
 
+Argument(name='ze_device_event_properties_t',
+var1=VarDef(name='stype',type='ze_structure_type_t',tag='in'),
+var2=VarDef(name='pNext',type='void*',tag='inout',wrapType='CExtensionStructCore'),
+var3=VarDef(name='flags',type='ze_device_event_properties_flags_t',tag='out'),
+)
+
 Argument(name='ze_context_desc_t',
 var1=VarDef(name='stype',type='ze_structure_type_t',tag='in'),
 var2=VarDef(name='pNext',type='const void*',tag='in',wrapType='CExtensionStructCore'),
@@ -2289,12 +2372,43 @@ var3=VarDef(name='flags',type='ze_event_pool_flags_t',tag='in'),
 var4=VarDef(name='count',type='uint32_t',tag='in'),
 )
 
+Argument(name='ze_event_sync_mode_desc_t',
+var1=VarDef(name='stype',type='ze_structure_type_t',tag='in'),
+var2=VarDef(name='pNext',type='const void*',tag='in',wrapType='CExtensionStructCore'),
+var3=VarDef(name='syncModeFlags',type='ze_event_sync_mode_flags_t',tag='in'),
+var4=VarDef(name='externalInterruptId',type='uint32_t',tag='in'),
+)
+
 Argument(name='ze_event_desc_t',
 var1=VarDef(name='stype',type='ze_structure_type_t',tag='in'),
 var2=VarDef(name='pNext',type='const void*',tag='in',wrapType='CExtensionStructCore'),
 var3=VarDef(name='index',type='uint32_t',tag='in'),
 var4=VarDef(name='signal',type='ze_event_scope_flags_t',tag='in'),
 var5=VarDef(name='wait',type='ze_event_scope_flags_t',tag='in'),
+)
+
+Argument(name='ze_event_counter_based_desc_t',
+var1=VarDef(name='stype',type='ze_structure_type_t',tag='in'),
+var2=VarDef(name='pNext',type='const void*',tag='in',wrapType='CExtensionStructCore'),
+var3=VarDef(name='flags',type='ze_event_counter_based_flags_t',tag='in'),
+var4=VarDef(name='signal',type='ze_event_scope_flags_t',tag='in'),
+var5=VarDef(name='wait',type='ze_event_scope_flags_t',tag='in'),
+)
+
+Argument(name='ze_event_counter_based_external_sync_allocation_desc_t',
+var1=VarDef(name='stype',type='ze_structure_type_t',tag='in'),
+var2=VarDef(name='pNext',type='const void*',tag='in',wrapType='CExtensionStructCore'),
+var3=VarDef(name='deviceAddress',type='uint64_t*',tag='in',wrapType='CUSMPtr'),
+var4=VarDef(name='hostAddress',type='uint64_t*',tag='in',wrapType='CUSMPtr'),
+var5=VarDef(name='completionValue',type='uint64_t',tag='in'),
+)
+
+Argument(name='ze_event_counter_based_external_aggregate_storage_desc_t',
+var1=VarDef(name='stype',type='ze_structure_type_t',tag='in'),
+var2=VarDef(name='pNext',type='const void*',tag='in',wrapType='CExtensionStructCore'),
+var3=VarDef(name='deviceAddress',type='uint64_t*',tag='in',wrapType='CUSMPtr'),
+var4=VarDef(name='incrementValue',type='uint64_t',tag='in'),
+var5=VarDef(name='completionValue',type='uint64_t',tag='in'),
 )
 
 Argument(name='ze_kernel_timestamp_data_t',
@@ -2524,6 +2638,13 @@ var1=VarDef(name='stype',type='ze_structure_type_t',tag='in'),
 var2=VarDef(name='pNext',type='const void*',tag='in',wrapType='CExtensionStructCore'),
 var3=VarDef(name='flags',type='ze_physical_mem_flags_t',tag='in'),
 var4=VarDef(name='size',type='size_t',tag='in'),
+)
+
+Argument(name='ze_physical_mem_properties_t',
+var1=VarDef(name='stype',type='ze_structure_type_t',tag='in'),
+var2=VarDef(name='pNext',type='void*',tag='inout',wrapType='CExtensionStructCore'),
+var3=VarDef(name='id',type='uint64_t',tag='out'),
+var4=VarDef(name='size',type='uint64_t',tag='out'),
 )
 
 Argument(name='ze_float_atomic_ext_properties_t',
@@ -2799,6 +2920,24 @@ var3=VarDef(name='base',type='uint64_t',tag='out'),
 var4=VarDef(name='size',type='size_t',tag='out'),
 var5=VarDef(name='type',type='ze_memory_type_t',tag='out'),
 var6=VarDef(name='argIndex',type='uint32_t',tag='out'),
+)
+
+Argument(name='ze_device_usablemem_size_ext_properties_t',
+var1=VarDef(name='stype',type='ze_structure_type_t',tag='in'),
+var2=VarDef(name='pNext',type='void*',tag='inout',wrapType='CExtensionStructCore'),
+var3=VarDef(name='currUsableMemSize',type='uint64_t',tag='out'),
+)
+
+Argument(name='ze_image_format_support_ext_properties_t',
+var1=VarDef(name='stype',type='ze_structure_type_t',tag='in'),
+var2=VarDef(name='pNext',type='void*',tag='inout',wrapType='CExtensionStructCore'),
+var3=VarDef(name='supported',type='ze_bool_t',tag='out'),
+)
+
+Argument(name='ze_ipc_mem_handle_type_ext_desc_t',
+var1=VarDef(name='stype',type='ze_structure_type_t',tag='in'),
+var2=VarDef(name='pNext',type='const void*',tag='in',wrapType='CExtensionStructCore'),
+var3=VarDef(name='typeFlags',type='ze_ipc_mem_handle_type_flags_t',tag='in'),
 )
 
 Argument(name='ze_cache_reservation_ext_desc_t',
@@ -3240,6 +3379,13 @@ var1=VarDef(name='stype',type='ze_structure_type_t',tag='in'),
 var2=VarDef(name='pNext',type='void*',tag='inout',wrapType='CExtensionStructCore'),
 var3=VarDef(name='pitchAlign',type='size_t',tag='out'),
 var4=VarDef(name='maxSupportedPitch',type='size_t',tag='out'),
+)
+
+Argument(name='ze_custom_pitch_exp_desc_t',
+var1=VarDef(name='stype',type='ze_structure_type_t',tag='in'),
+var2=VarDef(name='pNext',type='const void*',tag='in',wrapType='CExtensionStructCore'),
+var3=VarDef(name='rowPitch',type='size_t',tag='in'),
+var4=VarDef(name='slicePitch',type='size_t',tag='in'),
 )
 
 Argument(name='ze_mutable_command_id_exp_desc_t',
@@ -4192,6 +4338,19 @@ var2=VarDef(name='pNext',type='void*',tag='inout',wrapType='CExtensionStructSysm
 var3=VarDef(name='defaultState',type='zes_device_ecc_state_t',tag='out'),
 )
 
+Argument(name='zes_pci_link_speed_downgrade_ext_state_t',
+var1=VarDef(name='stype',type='zes_structure_type_t',tag='in'),
+var2=VarDef(name='pNext',type='const void*',tag='in',wrapType='CExtensionStructSysman'),
+var3=VarDef(name='pciLinkSpeedDowngradeStatus',type='ze_bool_t',tag='out'),
+)
+
+Argument(name='zes_pci_link_speed_downgrade_ext_properties_t',
+var1=VarDef(name='stype',type='zes_structure_type_t',tag='in'),
+var2=VarDef(name='pNext',type='void*',tag='inout',wrapType='CExtensionStructSysman'),
+var3=VarDef(name='pciLinkSpeedUpdateCapable',type='ze_bool_t',tag='out'),
+var4=VarDef(name='maxPciGenSupported',type='int32_t',tag='out'),
+)
+
 Argument(name='zes_power_limit_ext_desc_t',
 var1=VarDef(name='stype',type='zes_structure_type_t',tag='in'),
 var2=VarDef(name='pNext',type='const void*',tag='in',wrapType='CExtensionStructSysman'),
@@ -4954,6 +5113,12 @@ arg2=ArgDef(name='pCount',type='uint32_t*',tag='inout'),
 arg3=ArgDef(name='phDevices',type='ze_device_handle_t*',tag='inout',range='0,*pCount',optional=True),
 )
 
+Function(name='zeDeviceGetAggregatedCopyOffloadIncrementValue',component='ze_device',enabled=False,api_version='1.15',ddi_pos=23,
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='hDevice',type='ze_device_handle_t',tag='in'),
+arg2=ArgDef(name='incrementValue',type='uint32_t*',tag='out'),
+)
+
 Function(name='zeDeviceGetCacheProperties',component='ze_device',enabled=True,api_version='1.0',ddi_pos=8,recWrap=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hDevice',type='ze_device_handle_t',tag='in'),
@@ -5123,6 +5288,11 @@ arg1=ArgDef(name='hDriver',type='ze_driver_handle_t',tag='in'),
 arg2=ArgDef(name='version',type='ze_api_version_t*',tag='out'),
 )
 
+Function(name='zeDriverGetDefaultContext',component='ze_driver',enabled=True,api_version='1.14',ddi_pos=8,
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='hDriver',type='ze_driver_handle_t',tag='in'),
+)
+
 Function(name='zeDriverGetExtensionFunctionAddress',component='ze_driver',enabled=True,api_version='1.1',ddi_pos=5,recExecWrap=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hDriver',type='ze_driver_handle_t',tag='in'),
@@ -5167,6 +5337,39 @@ retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hDriver',type='ze_driver_handle_t',tag='in'),
 arg2=ArgDef(name='rtasFormatA',type='ze_rtas_format_ext_t',tag='in'),
 arg3=ArgDef(name='rtasFormatB',type='ze_rtas_format_ext_t',tag='in'),
+)
+
+Function(name='zeEventCounterBasedCloseIpcHandle',component='ze_event',enabled=False,api_version='1.15',ddi_pos=14,
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='hEvent',type='ze_event_handle_t',tag='in',release=True),
+)
+
+Function(name='zeEventCounterBasedCreate',component='ze_event',enabled=False,api_version='1.15',ddi_pos=11,
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='hContext',type='ze_context_handle_t',tag='in'),
+arg2=ArgDef(name='hDevice',type='ze_device_handle_t',tag='in'),
+arg3=ArgDef(name='desc',type='const ze_event_counter_based_desc_t*',tag='in'),
+arg4=ArgDef(name='phEvent',type='ze_event_handle_t*',tag='out'),
+)
+
+Function(name='zeEventCounterBasedGetDeviceAddress',component='ze_event',enabled=False,api_version='1.15',ddi_pos=15,
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='hEvent',type='ze_event_handle_t',tag='in'),
+arg2=ArgDef(name='completionValue',type='uint64_t*',tag='in'),
+arg3=ArgDef(name='deviceAddress',type='uint64_t*',tag='in',wrapType='CMappedPtr::CSMapArray'),
+)
+
+Function(name='zeEventCounterBasedGetIpcHandle',component='ze_event',enabled=False,api_version='1.15',ddi_pos=12,
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='hEvent',type='ze_event_handle_t',tag='in'),
+arg2=ArgDef(name='phIpc',type='ze_ipc_event_counter_based_handle_t*',tag='out'),
+)
+
+Function(name='zeEventCounterBasedOpenIpcHandle',component='ze_event',enabled=False,api_version='1.15',ddi_pos=13,
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='hContext',type='ze_context_handle_t',tag='in'),
+arg2=ArgDef(name='hIpc',type='ze_ipc_event_counter_based_handle_t',tag='in'),
+arg3=ArgDef(name='phEvent',type='ze_event_handle_t*',tag='out'),
 )
 
 Function(name='zeEventCreate',component='ze_event',enabled=True,api_version='1.0',ddi_pos=0,stateTrack=True,
@@ -5650,6 +5853,14 @@ arg2=ArgDef(name='handle',type='uint64_t',tag='in'),
 arg3=ArgDef(name='pIpcHandle',type='ze_ipc_mem_handle_t*',tag='out'),
 )
 
+Function(name='zeMemGetIpcHandleWithProperties',component='ze_mem',enabled=False,api_version='1.15',ddi_pos=12,
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='hContext',type='ze_context_handle_t',tag='in'),
+arg2=ArgDef(name='ptr',type='const void*',tag='in'),
+arg3=ArgDef(name='pNext',type='void*',tag='in',optional=True),
+arg4=ArgDef(name='pIpcHandle',type='ze_ipc_mem_handle_t*',tag='out'),
+)
+
 Function(name='zeMemGetPitchFor2dImage',component='ze_mem',enabled=False,api_version='1.9',ddi_pos=11,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hContext',type='ze_context_handle_t',tag='in'),
@@ -5788,6 +5999,13 @@ Function(name='zePhysicalMemDestroy',component='ze_physical_mem',enabled=True,ap
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hContext',type='ze_context_handle_t',tag='in'),
 arg2=ArgDef(name='hPhysicalMemory',type='ze_physical_mem_handle_t',tag='in',release=True),
+)
+
+Function(name='zePhysicalMemGetProperties',component='ze_physical_mem',enabled=False,api_version='1.15',ddi_pos=2,
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='hContext',type='ze_context_handle_t',tag='in'),
+arg2=ArgDef(name='hPhysicalMem',type='ze_physical_mem_handle_t',tag='in'),
+arg3=ArgDef(name='pMemProperties',type='ze_physical_mem_properties_t*',tag='inout'),
 )
 
 Function(name='zeRTASBuilderBuildExp',component='ze_rtas_builder_exp',extension=True,enabled=False,api_version='1.7',ddi_pos=2,
@@ -6258,6 +6476,13 @@ Function(name='zesDevicePciGetStats',component='zes_device',enabled=True,api_ver
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hDevice',type='zes_device_handle_t',tag='in'),
 arg2=ArgDef(name='pStats',type='zes_pci_stats_t*',tag='inout'),
+)
+
+Function(name='zesDevicePciLinkSpeedUpdateExt',component='zes_device',extension=True,enabled=False,api_version='1.15',ddi_pos=37,
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='hDevice',type='zes_device_handle_t',tag='in'),
+arg2=ArgDef(name='shouldDowngrade',type='ze_bool_t',tag='in'),
+arg3=ArgDef(name='pendingAction',type='zes_device_action_t*',tag='out'),
 )
 
 Function(name='zesDeviceProcessesGetState',component='zes_device',enabled=True,api_version='1.0',ddi_pos=3,recWrap=True,
