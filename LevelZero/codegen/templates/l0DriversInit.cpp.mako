@@ -211,7 +211,7 @@ ${get_arg_name(arg['name'])};
 ${get_arg_name(arg['name'])} << " *device " << *${arg['name']} << std::endl;
               %endif
             %else:
-${get_arg_name(arg['name'])} << std::endl;
+ToStringHelper(${get_arg_name(arg['name'])}) << std::endl;
             %endif
           %endif
         %endif
