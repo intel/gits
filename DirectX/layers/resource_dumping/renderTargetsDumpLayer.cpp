@@ -36,17 +36,21 @@ RenderTargetsDumpLayer::RenderTargetsDumpLayer()
 }
 
 RenderTargetsDumpLayer::~RenderTargetsDumpLayer() {
-  if (dryRun_) {
-    YAML::Node output;
-    output["DrawsWithTextureByFrame"] = YAML::Node();
-    for (const auto& [frame, dispatchNumbers] : dryRunInfo_.drawsWithTextureByFrame) {
-      for (unsigned dispatchNumber : dispatchNumbers) {
-        output["DrawsWithTextureByFrame"][frame].push_back(dispatchNumber);
+  try {
+    if (dryRun_) {
+      YAML::Node output;
+      output["DrawsWithTextureByFrame"] = YAML::Node();
+      for (const auto& [frame, dispatchNumbers] : dryRunInfo_.drawsWithTextureByFrame) {
+        for (unsigned dispatchNumber : dispatchNumbers) {
+          output["DrawsWithTextureByFrame"][frame].push_back(dispatchNumber);
+        }
+        output["DrawsWithTextureByFrame"][frame].SetStyle(YAML::EmitterStyle::Flow);
       }
-      output["DrawsWithTextureByFrame"][frame].SetStyle(YAML::EmitterStyle::Flow);
+      std::ofstream file("RenderTargetsDumpDryRun.yaml");
+      file << output;
     }
-    std::ofstream file("RenderTargetsDumpDryRun.yaml");
-    file << output;
+  } catch (const std::exception&) {
+    topmost_exception_handler("RenderTargetsDumpLayer::~RenderTargetsDumpLayer");
   }
 }
 

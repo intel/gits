@@ -60,30 +60,35 @@ DispatchOutputsDumpLayer::DispatchOutputsDumpLayer()
 }
 
 DispatchOutputsDumpLayer::~DispatchOutputsDumpLayer() {
-  if (inAnalysis_) {
-    std::ofstream analysisFile(analysisFileName_);
-    for (const auto& [dispatchKey, resourceKeysBySlot] : resourceKeysBySlotByDispatch_) {
-      for (const auto& [slot, resourceKeys] : resourceKeysBySlot) {
-        analysisFile << dispatchKey << " " << slot;
-        for (unsigned resourceKey : resourceKeys) {
-          analysisFile << " " << resourceKey;
+  try {
+    if (inAnalysis_) {
+      std::ofstream analysisFile(analysisFileName_);
+      for (const auto& [dispatchKey, resourceKeysBySlot] : resourceKeysBySlotByDispatch_) {
+        for (const auto& [slot, resourceKeys] : resourceKeysBySlot) {
+          analysisFile << dispatchKey << " " << slot;
+          for (unsigned resourceKey : resourceKeys) {
+            analysisFile << " " << resourceKey;
+          }
+          analysisFile << "\n";
         }
-        analysisFile << "\n";
       }
     }
-  }
 
-  if (dryRun_) {
-    YAML::Node output;
-    output["DispatchesWithTextureByFrame"] = YAML::Node();
-    for (const auto& [frame, dispatchNumbers] : dryRunInfo_.dispatchesWithTextureByFrame) {
-      for (unsigned dispatchNumber : dispatchNumbers) {
-        output["DispatchesWithTextureByFrame"][frame].push_back(dispatchNumber);
+    if (dryRun_) {
+      YAML::Node output;
+      output["DispatchesWithTextureByFrame"] = YAML::Node();
+      for (const auto& [frame, dispatchNumbers] : dryRunInfo_.dispatchesWithTextureByFrame) {
+        for (unsigned dispatchNumber : dispatchNumbers) {
+          output["DispatchesWithTextureByFrame"][frame].push_back(dispatchNumber);
+        }
+        output["DispatchesWithTextureByFrame"][frame].SetStyle(YAML::EmitterStyle::Flow);
       }
-      output["DispatchesWithTextureByFrame"][frame].SetStyle(YAML::EmitterStyle::Flow);
+      std::ofstream file(std::filesystem::path(dumpPath_) / "DispatchOutputsDumpDryRun.yaml");
+      file << output;
     }
-    std::ofstream file(std::filesystem::path(dumpPath_) / "DispatchOutputsDumpDryRun.yaml");
-    file << output;
+
+  } catch (const std::exception&) {
+    topmost_exception_handler("DispatchOutputsDumpLayer::~DispatchOutputsDumpLayer");
   }
 }
 
