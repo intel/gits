@@ -23,6 +23,8 @@
 #include "openglDrivers.h"
 #include "message_pump.h"
 
+#include <functional>
+#include <map>
 #include <set>
 #include <thread>
 #include <unordered_map>
