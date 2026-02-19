@@ -57,7 +57,7 @@ void toCpp(const INTCDeviceInfo& value, CppParameterInfo& info, CppParameterOutp
   initialize(value, ss, name);
 
   out.initialization = ss.str();
-  out.value = name;
+  out.value = std::move(name);
   out.decorator = "";
 }
 
@@ -74,7 +74,7 @@ void toCpp(const INTCDeviceInfo1& value, CppParameterInfo& info, CppParameterOut
   ss << name << ".XeCoresCount = " << value.XeCoresCount << ";" << std::endl;
 
   out.initialization = ss.str();
-  out.value = name;
+  out.value = std::move(name);
   out.decorator = "";
 }
 
@@ -91,7 +91,7 @@ void toCpp(const INTCExtensionVersion& value, CppParameterInfo& info, CppParamet
   ss << name << ".Revision = " << value.Revision << ";" << std::endl;
 
   out.initialization = ss.str();
-  out.value = name;
+  out.value = std::move(name);
   out.decorator = "";
 }
 
@@ -121,7 +121,7 @@ void toCpp(const INTCExtensionInfo& value, CppParameterInfo& info, CppParameterO
   ss << name << ".DeviceDriverBuildNumber = " << value.DeviceDriverBuildNumber << ";" << std::endl;
 
   out.initialization = ss.str();
-  out.value = name;
+  out.value = std::move(name);
   out.decorator = "";
 }
 
@@ -151,7 +151,7 @@ void toCpp(const INTCExtensionInfo1& value, CppParameterInfo& info, CppParameter
   ss << name << ".DeviceDriverBuildNumber = " << value.DeviceDriverBuildNumber << ";" << std::endl;
 
   out.initialization = ss.str();
-  out.value = name;
+  out.value = std::move(name);
   out.decorator = "";
 }
 
@@ -169,7 +169,7 @@ void toCpp(const INTCExtensionAppInfo& value, CppParameterInfo& info, CppParamet
   ss << name << ".EngineVersion = " << value.EngineVersion << ";" << std::endl;
 
   out.initialization = ss.str();
-  out.value = name;
+  out.value = std::move(name);
   out.decorator = "";
 }
 
@@ -197,7 +197,7 @@ void toCpp(const INTCExtensionAppInfo1& value, CppParameterInfo& info, CppParame
   ss << name << ".EngineVersion = " << engineVersionOut.value << ";" << std::endl;
 
   out.initialization = ss.str();
-  out.value = name;
+  out.value = std::move(name);
   out.decorator = "";
 }
 
@@ -215,7 +215,7 @@ void toCpp(const INTCAppInfoVersion& value, CppParameterInfo& info, CppParameter
   ss << name << ".reserved = " << value.reserved << ";" << std::endl;
 
   out.initialization = ss.str();
-  out.value = name;
+  out.value = std::move(name);
   out.decorator = "";
 }
 
@@ -231,7 +231,7 @@ void toCpp(const INTC_D3D12_FEATURE& value, CppParameterInfo& info, CppParameter
      << std::endl;
 
   out.initialization = ss.str();
-  out.value = name;
+  out.value = std::move(name);
   out.decorator = "";
 }
 
@@ -246,7 +246,7 @@ void toCpp(const INTC_D3D12_RESOURCE_DESC& value, CppParameterInfo& info, CppPar
   initialize(value, ss, name, info);
 
   out.initialization = ss.str();
-  out.value = name;
+  out.value = std::move(name);
   out.decorator = "";
 }
 
@@ -265,7 +265,7 @@ void toCpp(const INTC_D3D12_RESOURCE_DESC_0001& value,
      << std::endl;
 
   out.initialization = ss.str();
-  out.value = name;
+  out.value = std::move(name);
   out.decorator = "";
 }
 
@@ -287,7 +287,7 @@ void toCpp(const INTC_D3D12_HEAP_DESC& value, CppParameterInfo& info, CppParamet
      << std::endl;
 
   out.initialization = ss.str();
-  out.value = name;
+  out.value = std::move(name);
   out.decorator = "";
 }
 
@@ -310,7 +310,7 @@ void toCpp(const INTC_D3D12_COMMAND_QUEUE_DESC& value,
   ss << name << ".CommandThrottlePolicy = " << value.CommandThrottlePolicy << ";" << std::endl;
 
   out.initialization = ss.str();
-  out.value = name;
+  out.value = std::move(name);
   out.decorator = "";
 }
 
@@ -483,7 +483,7 @@ void toCpp(const D3D12_UNORDERED_ACCESS_VIEW_DESC& value,
   ss << ssUnion.str();
 
   out.initialization = ss.str();
-  out.value = name;
+  out.value = std::move(name);
   out.decorator = "&";
 }
 
