@@ -690,11 +690,12 @@ class Cze_driver_handle_t : public CArgHandle<ze_driver_handle_t, Cze_driver_han
 public:
   static const char* NAME;
   ze_driver_handle_t driver = nullptr;
-  ze_init_driver_type_flags_t driverType;
+  ze_init_driver_type_flags_t driverType; // Unused in recorder.
 
   Cze_driver_handle_t() = default;
-  Cze_driver_handle_t(L0Type value) : CArgHandle(value), driver(value) {}
-  Cze_driver_handle_t(L0Type* value) : CArgHandle(*value), driver(*value) {}
+  Cze_driver_handle_t(L0Type value) : CArgHandle(value), driver(value), driverType{/*whatever*/} {}
+  Cze_driver_handle_t(L0Type* value)
+      : CArgHandle(*value), driver(*value), driverType{/*whatever*/} {}
   static void AddMutualMapping(ze_driver_handle_t key, ze_driver_handle_t value);
   static void RemoveMutualMapping(ze_driver_handle_t key);
   virtual std::string ToString() const {
@@ -718,12 +719,13 @@ public:
 class Czes_driver_handle_t : public CArgHandle<zes_driver_handle_t, Czes_driver_handle_t> {
 public:
   zes_driver_handle_t driver = nullptr;
-  ze_init_driver_type_flags_t driverType;
+  ze_init_driver_type_flags_t driverType; // Unused in recorder.
 
   static const char* NAME;
   Czes_driver_handle_t() = default;
-  Czes_driver_handle_t(L0Type value) : CArgHandle(value), driver(value) {}
-  Czes_driver_handle_t(L0Type* value) : CArgHandle(value), driver(*value) {}
+  Czes_driver_handle_t(L0Type value) : CArgHandle(value), driver(value), driverType{/*whatever*/} {}
+  Czes_driver_handle_t(L0Type* value)
+      : CArgHandle(value), driver(*value), driverType{/*whatever*/} {}
   static void AddMutualMapping(zes_driver_handle_t key, zes_driver_handle_t value);
   static void RemoveMutualMapping(zes_driver_handle_t key);
   virtual std::string ToString() const {
