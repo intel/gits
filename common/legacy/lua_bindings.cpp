@@ -572,8 +572,11 @@ void CreateAndRegisterEvents(const char* script) {
   auto gitsStateRestoreEndWrapper = CreateWrapper(L, "gitsStateRestoreEnd");
   auto gitsFrameBeginWrapper = CreateWrapper<int>(L, "gitsFrameBegin");
   auto gitsFrameEndWrapper = CreateWrapper<int>(L, "gitsFrameEnd");
-  auto eventHandler = [gitsStateRestoreBeginWrapper, gitsStateRestoreEndWrapper,
-                       gitsFrameBeginWrapper, gitsFrameEndWrapper](Topic t, const MessagePtr& m) {
+  auto eventHandler = [gitsStateRestoreBeginWrapper = std::move(gitsStateRestoreBeginWrapper),
+                       gitsStateRestoreEndWrapper = std::move(gitsStateRestoreEndWrapper),
+                       gitsFrameBeginWrapper = std::move(gitsFrameBeginWrapper),
+                       gitsFrameEndWrapper = std::move(gitsFrameEndWrapper)](Topic t,
+                                                                             const MessagePtr& m) {
     auto msg = std::dynamic_pointer_cast<GitsEventMessage>(m);
     if (!msg) {
       return;
@@ -595,8 +598,9 @@ void CreateAndRegisterEvents(const char* script) {
 
   auto gitsProgramStartWrapper = CreateWrapper(L, "gitsProgramStart");
   auto gitsProgramExitWrapper = CreateWrapper(L, "gitsProgramExit");
-  auto programHandler = [gitsProgramStartWrapper, gitsProgramExitWrapper](Topic t,
-                                                                          const MessagePtr& m) {
+  auto programHandler = [gitsProgramStartWrapper = std::move(gitsProgramStartWrapper),
+                         gitsProgramExitWrapper =
+                             std::move(gitsProgramExitWrapper)](Topic t, const MessagePtr& m) {
     auto msg = std::dynamic_pointer_cast<ProgramMessage>(m);
     if (!msg) {
       return;
@@ -619,7 +623,9 @@ void CreateAndRegisterEvents(const char* script) {
 
   auto gitsLoopBeginWrapper = CreateWrapper(L, "gitsLoopBegin");
   auto gitsLoopEndWrapper = CreateWrapper(L, "gitsLoopEnd");
-  auto loopHandler = [gitsLoopBeginWrapper, gitsLoopEndWrapper](Topic t, const MessagePtr& m) {
+  auto loopHandler = [gitsLoopBeginWrapper = std::move(gitsLoopBeginWrapper),
+                      gitsLoopEndWrapper = std::move(gitsLoopEndWrapper)](Topic t,
+                                                                          const MessagePtr& m) {
     auto msg = std::dynamic_pointer_cast<LoopMessage>(m);
     if (!msg) {
       return;
