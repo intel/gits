@@ -216,6 +216,8 @@ void GUIController::SetupGui() {
   m_Context.BtnsAPI = new ImGuiHelper::TabGroup(Labels::CONFIG_SECTIONS(), true, false);
   m_Context.BtnsMetaData = new ImGuiHelper::TabGroup(Labels::META_DATA(), true, false);
 
+  m_Context.BtnsSideBar->SelectEntry(Context::SideBarItems::CONFIG);
+
   SetImGuiStyle(&m_Context, m_Context.LauncherConfiguration.Theme.CurrentThemeIdx);
 
   LoadConfigFile(&m_Context);
@@ -224,6 +226,10 @@ void GUIController::SetupGui() {
   mainWindow.reset(m_Context.TheMainWindow.get());
 
   UpdateCLICall(m_Context);
+
+  // Initialize panels in the desired startup state
+  m_Context.ChangeMode(Context::Mode::CAPTURE);
+  m_Context.BtnsSideBar->SelectEntry(Context::SideBarItems::CONFIG);
 }
 
 void GUIController::TeardownGui() {

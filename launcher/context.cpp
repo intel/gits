@@ -109,22 +109,25 @@ bool Context::IsCapture() {
 
 void Context::ChangeMode(Mode mode) {
   AppMode = mode;
+  //based on app mode
+  BtnsSideBar->SetEnabled(Context::SideBarItems::OPTIONS, IsPlayback());
+  BtnsSideBar->SetEnabled(Context::SideBarItems::STATS, IsPlayback());
+
   switch (mode) {
   case Mode::PLAYBACK:
     CurrentMainAction = gui::Context::MainAction::PLAYBACK;
+    BtnsSideBar->SelectEntry(Context::SideBarItems::OPTIONS);
     break;
   case Mode::CAPTURE:
     CurrentMainAction = gui::Context::MainAction::CAPTURE;
+    BtnsSideBar->SelectEntry(Context::SideBarItems::CONFIG);
     break;
   case Mode::SUBCAPTURE:
     CurrentMainAction = gui::Context::MainAction::SUBCAPTURE;
+    BtnsSideBar->SelectEntry(Context::SideBarItems::CONFIG);
     break;
   };
-  BtnsSideBar->SetEnabled(Context::SideBarItems::OPTIONS, IsPlayback());
-  BtnsSideBar->SetEnabled(Context::SideBarItems::STATS, IsPlayback());
-  if (!BtnsSideBar->IsEnabled(BtnsSideBar->Selected())) {
-    BtnsSideBar->SelectEntry(Context::SideBarItems::CONFIG);
-  }
+
   UpdateFixedLauncherArguments();
   gits::gui::UpdateCLICall(*this);
   gits::gui::LoadConfigFile(this);

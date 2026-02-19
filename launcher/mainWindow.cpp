@@ -19,11 +19,11 @@ static const auto& MODE_BUTTONS() {
   static const std::map<gits::gui::MainWindow::MODE_BUTTON_ITEMS,
                         gits::ImGuiHelper::ButtonGroupItem>
       items = {
+          {gits::gui::MainWindow::MODE_BUTTON_ITEMS::CAPTURE, {"Capture", "Capture a GITS stream"}},
           {gits::gui::MainWindow::MODE_BUTTON_ITEMS::PLAYBACK,
-           {"Playback", "Playback a gits stream"}},
-          {gits::gui::MainWindow::MODE_BUTTON_ITEMS::CAPTURE, {"Capture", "Capture a gits stream"}},
+           {"Playback", "Playback a GITS stream"}},
           {gits::gui::MainWindow::MODE_BUTTON_ITEMS::SUBCAPTURE,
-           {"Subcapture", "Subcapture a gits stream"}},
+           {"Subcapture", "Subcapture a GITS stream"}},
       };
   return items;
 }
@@ -326,7 +326,7 @@ void MainWindow::GITSPlayerRow() {
   if (ImGui::Checkbox("Custom GITS Player", &context.UseCustomGITSPlayer)) {
     UpdateCLICall(context);
   }
-  ImGuiHelper::AddTooltip("Enable to specify a custom GITS-Player executable path");
+  ImGuiHelper::AddTooltip("Enable to specify a custom GITS Player executable path");
 
   ImGui::BeginDisabled(!context.UseCustomGITSPlayer);
   ImGui::SameLine();

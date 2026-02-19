@@ -25,8 +25,8 @@ namespace gits::gui {
 class MainWindow : gits::gui::BasePanel {
 public:
   enum class MODE_BUTTON_ITEMS {
-    PLAYBACK = 0,
-    CAPTURE,
+    CAPTURE = 0,
+    PLAYBACK,
     SUBCAPTURE
   };
 

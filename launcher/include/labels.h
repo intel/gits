@@ -143,7 +143,7 @@ struct Labels {
   static constexpr const char* GITS_SCREENSHOT_BUTTON = "Open Screenshots folder";
   static constexpr const char* GITS_TRACE_BUTTON = "Open Trace folder";
   static constexpr const char* GITS_SUBCAPTURE_BUTTON = "Open Subcapture folder";
-  static constexpr const char* RESET_BASE_PATHS = "Reset gits base path";
+  static constexpr const char* RESET_BASE_PATHS = "Reset GITS base path";
 
   static constexpr const char* API_LABEL = "API";
   static constexpr const char* API_NAME_DX = "DirectX";
@@ -175,8 +175,9 @@ struct Labels {
 
   static const auto& SIDE_BAR() {
     static const std::map<SideBarItems, ImGuiHelper::ButtonGroupItem> items = {
-        {SideBarItems::CONFIG, {"Config YML", "Show current GITS config"}},
-        {SideBarItems::OPTIONS, {.label = "Config - UI", .tooltip = "Show easy to setup options"}},
+        {SideBarItems::OPTIONS,
+         {.label = "Configuration", .tooltip = "Show common configuration options"}},
+        {SideBarItems::CONFIG, {"Config YML", "Show current GITS config file"}},
         {SideBarItems::CLI, {"CLI", "Show the full command line call"}},
         {SideBarItems::LOG, {"GITS Log", "Show the GITS output"}},
         {SideBarItems::STATS, {"Metadata", "Show the stream metadata"}},

@@ -71,8 +71,8 @@ public:
   };
 
   enum class SideBarItems {
-    CONFIG = 0,
-    OPTIONS,
+    OPTIONS = 0,
+    CONFIG,
     CLI,
     STATS,
     LOG,
@@ -129,8 +129,8 @@ public:
   ImGuiHelper::TabGroup<ConfigSectionItems>* BtnsAPI;
   ImGuiHelper::TabGroup<MetaDataItems>* BtnsMetaData;
 
-  Mode AppMode = Mode::PLAYBACK;
-  MainAction CurrentMainAction = MainAction::PLAYBACK;
+  Mode AppMode = Mode::CAPTURE;
+  MainAction CurrentMainAction = MainAction::CAPTURE;
   Api SelectedApiForCapture = Api::UNKNOWN;
   std::atomic<bool> CaptureInProgress = false;
   std::atomic<bool> RecordingProcessingPending = false;

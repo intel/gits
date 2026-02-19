@@ -21,7 +21,7 @@ static constexpr const char* STREAM_PATH_DOESNT_EXIST_MESSAGE =
     "Can't get stream metadata, selected stream path doesn't exist";
 static constexpr const char* STATS_GATHERING_IN_PROGRESS_MESSAGE = "Gathering stream stats...";
 static constexpr const char* STATS_GATHERING_PROMPT_MESSAGE =
-    "Click the button below to gather stream stats (this launches the gits player).";
+    "Click the button below to gather stream stats (this launches the GITS player).";
 static constexpr const char* STATS_GATHERING_BUTTON_LABEL = "Gather stats";
 static constexpr const char* UNKNOWN_METADATA_TAB_MESSAGE = "Couldn't get stream meta data";
 static constexpr const char* EMPTY_RECORDER_DIAGS_MESSAGE =
