@@ -38,6 +38,34 @@ static std::string gpuAddressStr(unsigned key, unsigned offset) {
   return ss.str();
 }
 
+void declareObject(const std::string& type, unsigned key) {
+  static std::unordered_set<unsigned> s_declaredKeys;
+  if (key == 0) {
+    return;
+  }
+
+  auto& stream = ccode::CCodeStream::getInstance();
+  auto objectName = objKeyToStr(key);
+  auto objectType = stream.getInterfaceName(key);
+  if (objectType.empty()) {
+    // Type is not an interface (i.e. XeSS or Intel Extensions context)
+    objectType = type;
+  } else if (objectType == "ID3D12CommandList") {
+    // Do not use ID3D12CommandList as it is an abstract interface
+    objectType = "ID3D12GraphicsCommandList7";
+  }
+
+  // Write out the declaration (only for new interfaces)
+  auto result = s_declaredKeys.insert(key);
+  if (result.second) {
+    auto& ss = stream.getObjectsHeader();
+    ss << std::endl;
+    ss << "// " << objectName << std::endl;
+    ss << "inline constexpr unsigned " << objectName << " = " << key << ";" << std::endl;
+    ss << "inline " << objectType << "* g_" << objectName << " = nullptr;" << std::endl;
+  }
+}
+
 void argumentToCpp(Argument<IID>& arg, CppParameterInfo& info, CppParameterOutput& out) {
   out.initialization = "";
   out.value = toStr(arg.value);

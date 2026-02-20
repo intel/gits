@@ -8,6 +8,18 @@
 
 #include "directx/wrappers/ccodeApiWrappers.h"
 
+HRESULT CC_QueryInterface(IUnknown* object, REFIID riid, void** ppvObject) {
+  return object->QueryInterface(riid, ppvObject);
+}
+
+ULONG CC_AddRef(IUnknown* object) {
+  return object->AddRef();
+}
+
+ULONG CC_Release(IUnknown* object) {
+  return object->Release();
+}
+
 HRESULT CC_INTC_D3D12_CreateCommandQueue(INTCExtensionContext* pExtensionContext,
                                          const INTC_D3D12_COMMAND_QUEUE_DESC* pDesc,
                                          REFIID riid,

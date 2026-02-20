@@ -157,7 +157,8 @@ void CCodeStream::addInterface(unsigned key, REFIID iid) {
 }
 
 std::string CCodeStream::getInterfaceName(unsigned key) const {
-  return interfaceMap_.at(key);
+  auto it = interfaceMap_.find(key);
+  return (it != interfaceMap_.end()) ? it->second : std::string();
 }
 
 void CCodeStream::writeBlock(const BlockInfo& info) {

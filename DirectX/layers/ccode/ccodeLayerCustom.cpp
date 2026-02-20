@@ -145,6 +145,47 @@ void CCodeLayer::post(CreateHeapAllocationMetaCommand& c) {
      << ", " << c.data_.size << ");" << std::endl;
 }
 
+void CCodeLayer::post(IUnknownQueryInterfaceCommand& c) {
+  using namespace ccode;
+
+  // Parameter data
+  CppParameterInfo ppvObjectInfo("void", "ppvObject");
+
+  // Print command
+  CommandPrinter p(c, "QueryInterface", c.object_.key);
+  preProcess(p, c);
+  p.addArgumentValue(c.riid_.value);
+  p.addArgument(c.ppvObject_, ppvObjectInfo);
+  postProcess(p, c);
+  p.print();
+
+  nextCommand();
+}
+
+void CCodeLayer::post(IUnknownAddRefCommand& c) {
+  using namespace ccode;
+
+  // Print command
+  CommandPrinter p(c, "AddRef", c.object_.key);
+  preProcess(p, c);
+  postProcess(p, c);
+  p.print();
+
+  nextCommand();
+}
+
+void CCodeLayer::post(IUnknownReleaseCommand& c) {
+  using namespace ccode;
+
+  // Print command
+  CommandPrinter p(c, "Release", c.object_.key);
+  preProcess(p, c);
+  postProcess(p, c);
+  p.print();
+
+  nextCommand();
+}
+
 void CCodeLayer::post(INTC_D3D12_GetSupportedVersionsCommand& c) {
   using namespace ccode;
 

@@ -23,6 +23,8 @@ namespace gits {
 namespace DirectX {
 namespace ccode {
 
+void declareObject(const std::string& type, unsigned key);
+
 template <template <typename> typename Arg, typename T>
 void argumentToCpp(Arg<T>& arg, CppParameterInfo& info, CppParameterOutput& out) {
   toCpp(arg.value, info, out);
@@ -52,7 +54,7 @@ void argumentToCpp(InterfaceArgument<T>& arg, CppParameterInfo& info, CppParamet
   out.initialization = "";
   out.decorator = "";
   if (arg.value) {
-    out.value = "g_" + objKeyToStr(arg.key) + ".Get()";
+    out.value = "g_" + objKeyToStr(arg.key);
   } else {
     out.value = "nullptr";
   }
@@ -62,46 +64,18 @@ template <typename T>
 void argumentToCpp(InterfaceOutputArgument<T>& arg,
                    CppParameterInfo& info,
                    CppParameterOutput& out) {
-  static std::unordered_set<unsigned> s_declaredKeys;
-  auto& stream = ccode::CCodeStream::getInstance();
-
   out.initialization = "";
   out.decorator = "";
 
-  std::string objName = "";
   if (arg.key != 0) {
-    objName = "g_" + objKeyToStr(arg.key);
-    auto type = stream.getInterfaceName(arg.key);
-    if ((info.type == type) || (info.type == "void")) {
-      out.value = objName;
-      out.decorator = "&";
-    } else {
-      // Needed for interface output arguments with specific types (i.e. CreateSwapChainForHwnd)
-      out.value = objName + ".GetAddressOf()";
-      out.decorator = "(" + info.type + "**)";
-    }
+    out.value = "g_" + objKeyToStr(arg.key);
+    out.decorator = "(" + info.type + "**)&";
   } else {
     out.value = "nullptr";
     return;
   }
 
-  // Write out the declaration (only for new interfaces)
-  auto result = s_declaredKeys.insert(arg.key);
-  if (result.second) {
-    GITS_ASSERT(!objName.empty());
-    auto iidStr = stream.getInterfaceName(arg.key);
-    // Do not use ID3D12CommandList as it is an abstract interface
-    if (iidStr == "ID3D12CommandList") {
-      iidStr = "ID3D12GraphicsCommandList7";
-    }
-
-    auto& ss = stream.getObjectsHeader();
-    ss << std::endl;
-    ss << "// " << objKeyToStr(arg.key) << std::endl;
-    ss << "inline constexpr unsigned " << objKeyToStr(arg.key) << " = " << arg.key << ";"
-       << std::endl;
-    ss << "inline ComPtr<" << iidStr << "> " << objName << " = nullptr;" << std::endl;
-  }
+  declareObject(info.type, arg.key);
 }
 
 template <typename T>
@@ -136,33 +110,18 @@ void argumentToCpp(ContextArgument<T>& arg, CppParameterInfo& info, CppParameter
 
 template <typename T>
 void argumentToCpp(ContextOutputArgument<T>& arg, CppParameterInfo& info, CppParameterOutput& out) {
-  static std::unordered_set<unsigned> s_declaredKeys;
-  auto& stream = ccode::CCodeStream::getInstance();
-
   out.initialization = "";
   out.decorator = "";
 
-  std::string objName = "";
   if (arg.key != 0) {
-    objName = "g_" + objKeyToStr(arg.key);
-    out.value = objName;
+    out.value = "g_" + objKeyToStr(arg.key);
     out.decorator = "&";
   } else {
     out.value = "nullptr";
     return;
   }
 
-  auto result = s_declaredKeys.insert(arg.key);
-  if (result.second) {
-    GITS_ASSERT(!objName.empty());
-
-    auto& ss = stream.getObjectsHeader();
-    ss << std::endl;
-    ss << "// " << objKeyToStr(arg.key) << std::endl;
-    ss << "inline constexpr unsigned " << objKeyToStr(arg.key) << " = " << arg.key << ";"
-       << std::endl;
-    ss << "inline " << info.type << "* " << objName << " = nullptr;" << std::endl;
-  }
+  declareObject(info.type, arg.key);
 }
 
 // Overloads for specific argument types

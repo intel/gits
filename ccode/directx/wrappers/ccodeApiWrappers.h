@@ -11,6 +11,10 @@
 #include "directx/directx.h"
 #include "directx/wrappers/ccodeApiWrappersAuto.h"
 
+HRESULT CC_QueryInterface(IUnknown* object, REFIID riid, void** ppvObject);
+ULONG CC_AddRef(IUnknown* object);
+ULONG CC_Release(IUnknown* object);
+
 HRESULT CC_INTC_D3D12_CreateCommandQueue(INTCExtensionContext* pExtensionContext,
                                          const INTC_D3D12_COMMAND_QUEUE_DESC* pDesc,
                                          REFIID riid,

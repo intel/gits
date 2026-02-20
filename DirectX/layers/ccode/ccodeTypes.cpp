@@ -27,7 +27,7 @@ std::string objKeyToPtrStr(unsigned key) {
   if (!key) {
     return "nullptr";
   }
-  return "g_" + objKeyToStr(key) + ".Get()";
+  return "g_" + objKeyToStr(key);
 }
 
 void toCpp(const LARGE_INTEGER& value, CppParameterInfo& info, CppParameterOutput& out) {
