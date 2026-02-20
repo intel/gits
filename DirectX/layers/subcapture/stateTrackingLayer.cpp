@@ -906,6 +906,10 @@ void StateTrackingLayer::post(ID3D12DeviceCreateGraphicsPipelineStateCommand& c)
   state->object = static_cast<IUnknown*>(*c.ppPipelineState_.value);
   state->creationCommand.reset(new ID3D12DeviceCreateGraphicsPipelineStateCommand(c));
   stateService_.storeState(state);
+
+  if (c.pDesc_.rootSignatureKey) {
+    stateService_.keepState(c.pDesc_.rootSignatureKey);
+  }
 }
 
 void StateTrackingLayer::post(ID3D12DeviceCreateComputePipelineStateCommand& c) {
