@@ -974,6 +974,17 @@ void ReplayCustomizationLayer::pre(IDXGIAdapter3SetVideoMemoryReservationCommand
   if (!c.object_.value) {
     c.skip = true;
   }
+  // Clamp reservation to AvailableForReservation to avoid E_INVALIDARG on
+  // machines with less reservable VRAM than the recording machine.
+  DXGI_QUERY_VIDEO_MEMORY_INFO memInfo{};
+  HRESULT hr = c.object_.value->QueryVideoMemoryInfo(c.NodeIndex_.value,
+                                                     c.MemorySegmentGroup_.value, &memInfo);
+  if (SUCCEEDED(hr) && c.Reservation_.value > memInfo.AvailableForReservation) {
+    LOG_WARNING << "SetVideoMemoryReservation: Requested reservation of " << c.Reservation_.value
+                << " bytes exceeds available video memory (" << memInfo.AvailableForReservation
+                << " bytes). Reserving the maximum available amount instead.";
+    c.Reservation_.value = memInfo.AvailableForReservation;
+  }
 }
 
 void ReplayCustomizationLayer::pre(
