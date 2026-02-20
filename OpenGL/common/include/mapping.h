@@ -114,10 +114,10 @@ struct MappedObjectTraits {
   }; // is the object shared in multiple contexts
   enum {
     legacy = Legacy
-  };  // does the object support bind w/o gen in some ctxs
-      // 0 - requires mapping everywhere
-      // 1 - doesn't require mapping in compat desktop
-      // 2 - doesn't require mapping in ES context
+  }; // does the object support bind w/o gen in some ctxs
+  // 0 - requires mapping everywhere
+  // 1 - doesn't require mapping in compat desktop
+  // 2 - doesn't require mapping in ES context
   enum {
     nezero = Nezero
   }; // does the object name 0 map to itself
