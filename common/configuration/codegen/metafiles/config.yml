@@ -920,17 +920,21 @@ Configuration:
                 Type: bool
                 Default: false
                 Description: Generate CCode files during playback
-                LegacyPaths: ["DirectX.Playback.CCode.Enabled"]
               - Name: CCodePath
                 Type: std::filesystem::path
                 Default: "{install_path}/ccode"
                 Description: Path to base CCode project directory
-                LegacyPaths: ["DirectX.Playback.CCode.CCodePath"]
               - Name: commandsPerBlock
                 Type: uint32_t
                 Default: 1000
                 Description: Number of API commands per CCode function (and file)
-                LegacyPaths: ["DirectX.Playback.CCode.CommandsPerBlock"]
+              - Name: wrapApiCalls
+                Type: bool
+                Default: false
+                Description: All the API calls go through a global wrapper
+                LongDescription: |
+                    All the API calls go through a global wrapper. This makes it possible to change the behavior of any
+                    given API call for the entire project.
       - Name: Recorder
         Type: Group
         Options:

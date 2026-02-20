@@ -123,5 +123,7 @@ docs/**/*Auto.md
 third_party.meta.yaml
 
 # CCode
+ccode/**/*Auto.cpp
+ccode/**/*Auto.h
 ccode/generated
 ccode/Build

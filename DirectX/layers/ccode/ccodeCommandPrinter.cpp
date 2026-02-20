@@ -61,13 +61,24 @@ void CommandPrinter::print() {
 
   // Print command (with pre / post)
   ss << cppPreCommand_;
-  // g_OX->Function(a0, a1, ...);
-  if (objectId_ != 0) {
-    ss << "g_" << objKeyToStr(objectId_) << "->";
+  bool hasObjectAsArgument = false;
+  if (Configurator::Get().directx.player.cCode.wrapApiCalls) {
+    // Wrapped: CC_Function(g_OX, a0, a1, ...);
+    ss << "CC_" << name_ << "(";
+    if (objectId_ != 0) {
+      hasObjectAsArgument = true;
+      ss << objKeyToPtrStr(objectId_);
+    }
+  } else {
+    // Default: g_OX->Function(a0, a1, ...);
+    if (objectId_ != 0) {
+      ss << "g_" << objKeyToStr(objectId_) << "->";
+    }
+    ss << name_ << "(";
   }
-  ss << name_ << "(";
+  // Print arguments
   for (size_t i = 0; i < cppArgValues_.size(); ++i) {
-    if (i > 0) {
+    if (hasObjectAsArgument || (i > 0)) {
       ss << ", ";
     }
     ss << cppArgValues_[i];

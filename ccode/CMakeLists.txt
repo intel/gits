@@ -33,12 +33,7 @@ file(GLOB GENERATED_SRC
   "${CMAKE_CURRENT_SOURCE_DIR}/generated/*.h")
 source_group("Generated" FILES ${GENERATED_SRC})
 
-add_executable(${EXECUTABLE_NAME}
-  main.cpp
-  dataService.h
-  dataService.cpp
-  windowService.h
-  windowService.cpp
+set(DX_SRC
   directx/directx.h
   directx/utils.h
   directx/utils.cpp
@@ -50,6 +45,25 @@ add_executable(${EXECUTABLE_NAME}
   directx/mapTrackingService.cpp
   directx/heapAllocationService.h
   directx/heapAllocationService.cpp
+)
+source_group("DirectX" FILES ${DX_SRC})
+
+set(DX_WRAPPERS_SRC
+  directx/wrappers/ccodeApiWrappers.h
+  directx/wrappers/ccodeApiWrappers.cpp
+  directx/wrappers/ccodeApiWrappersAuto.h
+  directx/wrappers/ccodeApiWrappersAuto.cpp
+)
+source_group("DirectX_Wrappers" FILES ${DX_WRAPPERS_SRC})
+
+add_executable(${EXECUTABLE_NAME}
+  main.cpp
+  dataService.h
+  dataService.cpp
+  windowService.h
+  windowService.cpp
+  ${DX_SRC}
+  ${DX_WRAPPERS_SRC}
   ${GENERATED_SRC}
 )
 

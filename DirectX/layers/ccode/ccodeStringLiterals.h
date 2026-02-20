@@ -75,6 +75,7 @@ const std::string g_CommandsXCpp = R"(
 #include "directx/descriptorHeapService.h"
 #include "directx/gpuAddressService.h"
 #include "directx/heapAllocationService.h"
+#include "directx/wrappers/ccodeApiWrappers.h"
 
 #include <plog/Log.h>
 #include <vector>

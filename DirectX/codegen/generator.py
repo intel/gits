@@ -30,6 +30,7 @@ from generator_execution_serialization import generate_execution_serialization_f
 from generator_resource_dumping import generate_resource_dumping_files
 from generator_skip_calls import generate_skip_calls_files
 from generator_ccode import generate_ccode_files
+from generator_ccode_project import generate_ccode_project_files
 from intermediates import Api
 from header_preprocessor import preprocess_header
 from command_ids import build_command_ids
@@ -129,7 +130,8 @@ def main():
     generate_resource_dumping_files(context, os.path.join(outpath, 'layers/resource_dumping'))
     generate_skip_calls_files(context, os.path.join(outpath, 'layers/skip_calls'))
     generate_ccode_files(context, os.path.join(outpath, 'layers/ccode'))
-
+    generate_ccode_project_files(context, os.path.join(outpath, '../ccode/directx/wrappers'))
+    
     plugin_directories = [
         os.path.join(outpath, '../plugins/DirectX'),
         os.path.join(outpath, '../plugins/internal/DirectX')
