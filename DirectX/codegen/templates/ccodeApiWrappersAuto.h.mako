@@ -13,33 +13,16 @@ ${header}
 
 %for function in functions:
 %if function.api == Api.D3D12 or function.api == Api.DXGI:
-<%
-params = generate_params(function)
-%>
-${generate_return(function)} CC_${function.name}(${'' if params else ');'}
-    %if params:
-    %for param in params[:-1]:
-    ${param},
-    %endfor
-    ${params[-1]});
-    %endif
+${function_signature(function)};
+
 %endif
 %endfor
 
 %for interface in interfaces:
 %if interface.api == Api.D3D12 or interface.api == Api.DXGI:
 %for function in interface.functions:
-<%
-params = generate_params(function)
-%>
-${generate_return(function)} CC_${function.name}(
-    ${interface.name}* object${', ' if params else ');'}
-    %if params:
-    %for param in params[:-1]:
-    ${param},
-    %endfor
-    ${params[-1]});
-    %endif
+${function_signature(function, interface.name)};
+
 %endfor
 %endif
 %endfor
