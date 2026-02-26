@@ -559,6 +559,24 @@ void StateTrackingLayer::post(IDXGISwapChainResizeBuffersCommand& c) {
     if (c.NewFormat_.value != DXGI_FORMAT_UNKNOWN) {
       command->pDesc_.value->Format = c.NewFormat_.value;
     }
+  } else if (objectState->creationCommand->getId() ==
+             CommandId::ID_XEFGSWAPCHAIND3D12GETSWAPCHAINPTR) {
+    xefgSwapChainD3D12GetSwapChainPtrCommand* command =
+        static_cast<xefgSwapChainD3D12GetSwapChainPtrCommand*>(objectState->creationCommand.get());
+    auto contextKey = command->hSwapChain_.key;
+    auto xefgContextState = xefgStateService_.getContextState(contextKey);
+    if (xefgContextState->initFromSwapChainDescParams.has_value()) {
+      auto& swapChainDesc = xefgContextState->initFromSwapChainDescParams.value().swapChainDesc;
+      swapChainDesc.Width = c.Width_.value;
+      swapChainDesc.Height = c.Height_.value;
+      swapChainDesc.Flags = c.SwapChainFlags_.value;
+      if (c.BufferCount_.value) {
+        swapChainDesc.BufferCount = c.BufferCount_.value;
+      }
+      if (c.NewFormat_.value != DXGI_FORMAT_UNKNOWN) {
+        swapChainDesc.Format = c.NewFormat_.value;
+      }
+    }
   }
 
   unsigned swapChainKey = c.object_.key;
@@ -603,6 +621,24 @@ void StateTrackingLayer::post(IDXGISwapChain3ResizeBuffers1Command& c) {
     }
     if (c.Format_.value != DXGI_FORMAT_UNKNOWN) {
       command->pDesc_.value->Format = c.Format_.value;
+    }
+  } else if (objectState->creationCommand->getId() ==
+             CommandId::ID_XEFGSWAPCHAIND3D12GETSWAPCHAINPTR) {
+    xefgSwapChainD3D12GetSwapChainPtrCommand* command =
+        static_cast<xefgSwapChainD3D12GetSwapChainPtrCommand*>(objectState->creationCommand.get());
+    auto contextKey = command->hSwapChain_.key;
+    auto xefgContextState = xefgStateService_.getContextState(contextKey);
+    if (xefgContextState->initFromSwapChainDescParams.has_value()) {
+      auto& swapChainDesc = xefgContextState->initFromSwapChainDescParams.value().swapChainDesc;
+      swapChainDesc.Width = c.Width_.value;
+      swapChainDesc.Height = c.Height_.value;
+      swapChainDesc.Flags = c.SwapChainFlags_.value;
+      if (c.BufferCount_.value) {
+        swapChainDesc.BufferCount = c.BufferCount_.value;
+      }
+      if (c.Format_.value != DXGI_FORMAT_UNKNOWN) {
+        swapChainDesc.Format = c.Format_.value;
+      }
     }
   }
 
