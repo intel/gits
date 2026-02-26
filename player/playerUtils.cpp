@@ -24,6 +24,10 @@
 #include <string>
 #include <filesystem>
 
+#ifdef GITS_PLATFORM_WINDOWS
+#include <windows.h>
+#endif
+
 namespace gits {
 bool ends_with(const std::string& str, const std::string& ending) {
   if (str.size() < ending.size()) {
@@ -151,4 +155,54 @@ bool ConfigurePlayer(const std::filesystem::path& playerPath, ArgumentParser& ar
 
   return true;
 }
+
+void CheckSystemMemoryCompatibility() {
+#ifdef GITS_PLATFORM_WINDOWS
+  auto& filePlayer = CGits::Instance().FilePlayer();
+
+  // Read the total physical memory recorded during capture from stream metadata.
+  // This value comes from WMI Win32_ComputerSystem and is stored as a string.
+  auto capturedMemoryOpt =
+      filePlayer.FindProperty("diag.os_specific.Win32_ComputerSystem.TotalPhysicalMemory");
+  if (!capturedMemoryOpt) {
+    LOG_TRACE << "Stream metadata does not contain capture machine memory info.";
+    return;
+  }
+
+  uint64_t capturedMemoryBytes = 0;
+  try {
+    auto capturedMemoryStr = capturedMemoryOpt->get<std::string>();
+    capturedMemoryBytes = std::stoull(capturedMemoryStr);
+  } catch (const std::exception&) {
+    LOG_TRACE << "Could not parse capture machine memory from stream metadata.";
+    return;
+  }
+
+  // Query the current (replay) machine's physical memory.
+  MEMORYSTATUSEX memStatus{};
+  memStatus.dwLength = sizeof(memStatus);
+  if (!GlobalMemoryStatusEx(&memStatus)) {
+    LOG_TRACE << "Failed to query replay machine memory info.";
+    return;
+  }
+
+  uint64_t replayMemoryBytes = memStatus.ullTotalPhys;
+
+  auto toGB = [](uint64_t bytes) {
+    return static_cast<double>(bytes) / (1024.0 * 1024.0 * 1024.0);
+  };
+
+  LOG_INFO << "Capture machine RAM: " << std::fixed << std::setprecision(1)
+           << toGB(capturedMemoryBytes) << " GB, Replay machine RAM: " << toGB(replayMemoryBytes)
+           << " GB";
+
+  if (replayMemoryBytes < capturedMemoryBytes) {
+    LOG_WARNING << "The replay machine has less physical memory (" << std::fixed
+                << std::setprecision(1) << toGB(replayMemoryBytes)
+                << " GB) than the capture machine (" << toGB(capturedMemoryBytes)
+                << " GB). This may cause out-of-memory errors or degraded performance.";
+  }
+#endif
+}
+
 } // namespace gits

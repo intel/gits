@@ -318,6 +318,9 @@ int MainBody(int argc, char* argv[]) {
     // load function calls from a file
     player.Load(cfg.common.player.streamPath);
 
+    // Compare capture vs replay machine RAM and warn if replay has less.
+    CheckSystemMemoryCompatibility();
+
     if (cfg.common.player.executableNameOverride.enabled) {
       const auto requestedPlayerName = GetRequestedPlayerName();
       if (!requestedPlayerName.empty()) {
