@@ -46,7 +46,7 @@ RenderTargetsDumpLayer::~RenderTargetsDumpLayer() {
         }
         output["DrawsWithTextureByFrame"][frame].SetStyle(YAML::EmitterStyle::Flow);
       }
-      std::ofstream file("RenderTargetsDumpDryRun.yaml");
+      std::ofstream file(std::filesystem::path(dumpPath_) / "RenderTargetsDumpDryRun.yaml");
       file << output;
     }
   } catch (const std::exception&) {
