@@ -116,6 +116,13 @@ const CapturePanel::CaptureCleanupOptions MainWindow::GetCleanupOptions() const 
   return capturePanel->GetSelectedCleanupOptions();
 }
 
+void MainWindow::SetPlaybackFile(const std::filesystem::path& filePath) {
+  auto& context = getSharedContext<gui::Context>();
+  context.StreamPath = filePath;
+  context.ChangeMode(gui::Context::Mode::PLAYBACK);
+  tabsToolBar->SelectEntry(MODE_BUTTON_ITEMS::PLAYBACK);
+}
+
 void MainWindow::Render() {
   const auto& context = getSharedContext<Context>();
 

@@ -588,12 +588,19 @@ static bool ProcessEvents() {
 }
 #endif
 
-int main(int, char**) {
+int main(int argc, char** argv) {
   gits::log::Initialize(gits::LogLevel::INFO);
   LOG_INFO << "Starting gitsLauncher GUI";
 
   if (!Setup()) {
     return 1;
+  }
+
+  if (argc > 1) {
+    std::filesystem::path path(argv[1]);
+    if (std::filesystem::exists(path) && std::filesystem::is_regular_file(path)) {
+      g_GUI->GetMainWindow()->SetPlaybackFile(path);
+    }
   }
 
   bool done = false;

@@ -259,6 +259,10 @@ void GUIController::TeardownGui() {
   mainWindow.release();
 }
 
+MainWindow* GUIController::GetMainWindow() const {
+  return mainWindow.get();
+}
+
 void GUIController::DestroyGui() {
   m_Context.LogAppender.reset();
 }

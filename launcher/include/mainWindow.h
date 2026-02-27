@@ -42,6 +42,8 @@ public:
   // TODO: Move this once we have messages in
   const CapturePanel::CaptureCleanupOptions GetCleanupOptions() const;
 
+  void SetPlaybackFile(const std::filesystem::path& filePath);
+
 private:
   std::unique_ptr<gits::gui::ContentPanel> contentPanel;
   std::unique_ptr<gits::gui::PlaybackPanel> playbackPanel;

@@ -63,6 +63,8 @@ public:
 
   bool ShouldQuit = false;
 
+  MainWindow* GetMainWindow() const;
+
 private:
   void RenderUI();
 

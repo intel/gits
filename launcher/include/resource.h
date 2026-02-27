@@ -8,5 +8,6 @@
 
 #pragma once
 
-#define APP_ICON    101
-#define APP_VERSION "0.1.6"
+#define APP_ICON      101
+#define APP_FILE_ICON 102
+#define APP_VERSION   "0.1.6"

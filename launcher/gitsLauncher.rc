@@ -9,3 +9,4 @@
 #include "resource.h"
 
 APP_ICON ICON "assets/gitsLauncher.ico"
+APP_FILE_ICON ICON "assets/gitsStream.ico"
