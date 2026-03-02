@@ -906,6 +906,13 @@ Configuration:
                 Default: true
                 Description: Ends playback if any incompatibility is detected
                 LegacyPaths: ["DirectX.Playback.Portability.PortabilityAssertions"]
+              - Name: useStbImage
+                Type: bool
+                Default: false
+                Description: Use stb_image for resource (and screenshot) dumping
+                LongDescription: |
+                  Use stb_image for resource (and screenshot) dumping. 
+                  By default GITS uses Windows Imaging Component (WIC) to save images. WIC may not always be supported on the target platform.
           - Name: AddressPinning
             Type: AddressPinningMode
             Default: None

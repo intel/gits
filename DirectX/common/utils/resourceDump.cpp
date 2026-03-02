@@ -10,6 +10,7 @@
 #include "resourceSizeUtils.h"
 #include "gits.h"
 #include "log.h"
+#include "imageWriter.h"
 
 #include <fstream>
 #include <wincodec.h>
@@ -415,8 +416,13 @@ void ResourceDump::dumpTexture(DumpInfo& dumpInfo, void* data) {
         hr = rescaleTexture(image, scratchImage);
       } else {
         auto convert = [&]() {
-          hr = ::DirectX::Convert(image, destFormat, ::DirectX::TEX_FILTER_DEFAULT,
-                                  ::DirectX::TEX_THRESHOLD_DEFAULT, scratchImage);
+          auto filter = ::DirectX::TEX_FILTER_DEFAULT;
+          if (Configurator::Get().directx.player.portability.useStbImage) {
+            // If stb_image is used, force non-WIC path since the goal is portability
+            filter = ::DirectX::TEX_FILTER_FORCE_NON_WIC;
+          }
+          hr = ::DirectX::Convert(image, destFormat, filter, ::DirectX::TEX_THRESHOLD_DEFAULT,
+                                  scratchImage);
         };
         convert();
         if (!initialized && hr != S_OK) {
@@ -437,29 +443,8 @@ void ResourceDump::dumpTexture(DumpInfo& dumpInfo, void* data) {
       imageConverted = &image;
     }
 
-    HRESULT hr{};
-    auto codec = ::DirectX::WIC_CODEC_PNG;
-    auto ext = L".png";
-    auto* pixelFormat = &GUID_WICPixelFormat48bppRGB;
-    if (format_ == ImageFormat::JPEG) {
-      codec = ::DirectX::WIC_CODEC_JPEG;
-      ext = L".jpg";
-      pixelFormat = nullptr;
-    }
-    auto saveToWICFile = [&]() {
-      hr = SaveToWICFile(*imageConverted, ::DirectX::WIC_FLAGS_FORCE_SRGB, GetWICCodec(codec),
-                         (dumpNameW + ext).c_str(), pixelFormat);
-    };
-    saveToWICFile();
-    if (!initialized && hr != S_OK) {
-      CoInitializeEx(nullptr, COINIT_MULTITHREADED);
-      saveToWICFile();
-      initialized = true;
-    }
-    if (hr != S_OK) {
-      LOG_ERROR << "Dumping " + dumpNameA + " format " << formatToString(dumpInfo.subresourceFormat)
-                << " failed in SaveToWICFile 0x" << std::hex << hr << std::dec;
-    }
+    writeImage(dumpNameW, format_, imageConverted->pixels, imageConverted->format,
+               imageConverted->width, imageConverted->height, imageConverted->rowPitch);
   }
 }
 

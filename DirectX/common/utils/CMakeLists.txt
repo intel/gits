@@ -32,6 +32,8 @@ set(UTILS_FILES
   ${SRC_DIR}/descriptorHeapTracker.cpp
   ${SRC_DIR}/resourceSizeUtils.h
   ${SRC_DIR}/resourceSizeUtils.cpp
+  ${SRC_DIR}/imageWriter.h
+  ${SRC_DIR}/imageWriter.cpp
 )
 source_group("" FILES ${UTILS_FILES})
 
@@ -64,6 +66,7 @@ PUBLIC
 PRIVATE
   ${PLUGINS_DIR}
   ${CMAKE_SOURCE_DIR}/third_party/DirectXTex/DirectXTex
+  ${STB_DIR}
 )
 
 target_link_libraries(DirectX_utils PRIVATE

@@ -11,9 +11,8 @@
 #include "gits.h"
 #include "log.h"
 #include "configurationLib.h"
+#include "imageWriter.h"
 
-#include <DirectXTex.h>
-#include <wincodec.h>
 #include <set>
 
 namespace gits {
@@ -150,41 +149,9 @@ void ScreenshotDump::dumpStagedResource(std::wstring dumpName) {
   HRESULT hr = stagingBuffer_->Map(0, nullptr, &data);
   GITS_ASSERT(hr == S_OK);
 
-  ::DirectX::Image image{};
-  image.width = backBufferDesc_.Width;
-  image.height = backBufferDesc_.Height;
-  image.format = backBufferDesc_.Format;
-  image.rowPitch = backBufferFootprint_.Footprint.RowPitch;
-  image.slicePitch = backBufferFootprint_.Footprint.RowPitch * backBufferDesc_.Height;
-  image.pixels = reinterpret_cast<uint8_t*>(data) + backBufferFootprint_.Offset;
-
-  auto codec = ::DirectX::WIC_CODEC_PNG;
-  auto ext = L".png";
-  auto* pixelFormat = &GUID_WICPixelFormat48bppRGB;
-  if (format_ == ImageFormat::JPEG) {
-    codec = ::DirectX::WIC_CODEC_JPEG;
-    ext = L".jpg";
-    pixelFormat = nullptr;
-  }
-  auto saveToWICFile = [&]() {
-    hr = SaveToWICFile(image, ::DirectX::WIC_FLAGS_FORCE_SRGB, GetWICCodec(codec),
-                       (dumpName + ext).c_str(), pixelFormat);
-  };
-  saveToWICFile();
-  static thread_local bool initialized = false;
-  if (!initialized && hr != S_OK) {
-    CoInitializeEx(nullptr, COINIT_MULTITHREADED);
-    saveToWICFile();
-    initialized = true;
-  }
-  if (hr != S_OK) {
-    std::string name(dumpName.begin(), dumpName.end());
-    if (hr == 0x80070032) {
-      LOG_ERROR << "Dumping " + name + " failed: format not supported";
-    } else {
-      LOG_ERROR << "Dumping " + name + " failed: 0x" << std::hex << hr << std::dec;
-    }
-  }
+  uint8_t* pixels = reinterpret_cast<uint8_t*>(data) + backBufferFootprint_.Offset;
+  writeImage(dumpName, format_, pixels, backBufferDesc_.Format, backBufferDesc_.Width,
+             backBufferDesc_.Height, backBufferFootprint_.Footprint.RowPitch);
 
   stagingBuffer_->Unmap(0, nullptr);
 }

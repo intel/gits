@@ -114,3 +114,7 @@ dependencies:
     - name: Vulkan-Headers
       url: https://github.com/KhronosGroup/Vulkan-Headers.git
       branch: v1.4.335
+    - name: stb
+      url: https://github.com/nothings/stb.git
+      branch: master
+      commit_id: f1c79c02822848a9bed4315b12c8c8f3761e1296
