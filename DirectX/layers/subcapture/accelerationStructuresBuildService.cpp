@@ -105,14 +105,13 @@ void AccelerationStructuresBuildService::buildAccelerationStructure(
   };
 
   unsigned inputIndex = 0;
-  if (inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL && inputs.NumDescs) {
-    if (inputs.NumDescs) {
-      unsigned size = inputs.NumDescs * sizeof(D3D12_RAYTRACING_INSTANCE_DESC);
-      if (inputs.DescsLayout == D3D12_ELEMENTS_LAYOUT_ARRAY_OF_POINTERS) {
-        size = inputs.NumDescs * sizeof(D3D12_GPU_VIRTUAL_ADDRESS);
-      }
-      addBufferAccess(inputIndex, size);
+  if (inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL &&
+      inputs.InstanceDescs) {
+    unsigned size = inputs.NumDescs * sizeof(D3D12_RAYTRACING_INSTANCE_DESC);
+    if (inputs.DescsLayout == D3D12_ELEMENTS_LAYOUT_ARRAY_OF_POINTERS) {
+      size = inputs.NumDescs * sizeof(D3D12_GPU_VIRTUAL_ADDRESS);
     }
+    addBufferAccess(inputIndex, size);
   } else if (inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL) {
     for (unsigned i = 0; i < inputs.NumDescs; ++i) {
       D3D12_RAYTRACING_GEOMETRY_DESC& desc = const_cast<D3D12_RAYTRACING_GEOMETRY_DESC&>(
