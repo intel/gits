@@ -14,14 +14,15 @@
 #include <algorithm>
 
 #include "imGuiHelper.h"
+#include "common.h"
 #include "context.h"
 
 namespace gits::gui {
 
 struct Labels {
-  using SideBarItems = gits::gui::Context::SideBarItems;
-  using ConfigSectionItems = gits::gui::Context::ConfigSectionItems;
-  using MetaDataItems = gits::gui::Context::MetaDataItems;
+  using SideBarItem = Context::SideBarItem;
+  using ConfigSectionItem = Context::ConfigSectionItem;
+  using MetaDataItem = Context::MetaDataItem;
 
   // main window
   static constexpr const char* VERSION = "Version";
@@ -67,6 +68,9 @@ struct Labels {
   static constexpr const char* CHOOSE_GITSPLAYER = "Browse###GITS_PLAYER";
   static constexpr const char* CHOOSE_GITSPLAYER_HINT =
       "Open File Dialog to choose the GITS-Player to be used";
+  static constexpr const char* USE_CUSTOM_GITSPLAYER = "Custom GITS Player";
+  static constexpr const char* GITSPLAYER_TOOLTIP =
+      "Enable to specify a custom GITS-Player executable path";
   static constexpr const char* CHOOSE_GITS_BASE_PATH = "Browse###GITS_BASE";
   static constexpr const char* CHOOSE_GITS_BASE_PATH_HINT =
       "Open File Dialog to choose the GITS base path to be used";
@@ -137,7 +141,8 @@ struct Labels {
       "Path where to output the stream to";
 
   static constexpr const char* GITS_BASE_BUTTON = "Open GITS Base folder";
-  static constexpr const char* GITS_STREAM_BUTTON = "Open Stream folder";
+  static constexpr const char* GITS_STREAM_PLAYBACK_BUTTON = "Open Playback Stream folder";
+  static constexpr const char* GITS_STREAM_SUBCAPTURE_BUTTON = "Open Subcapture Stream folder";
   static constexpr const char* GITS_TARGET_BUTTON = "Open Target folder";
   static constexpr const char* GITS_CAPTURE_BUTTON = "Open Capture folder";
   static constexpr const char* GITS_SCREENSHOT_BUTTON = "Open Screenshots folder";
@@ -159,32 +164,92 @@ struct Labels {
 
   static constexpr const char* NOT_AVAILABLE = "N/A";
 
-  static const std::string MainAction(gits::gui::Context::MainAction action) {
+  // MetaData
+  static constexpr const char* NULLOPT_STREAM_PATH_MESSAGE = "Couldn't retrieve stream path";
+  static constexpr const char* EMPTY_STREAM_PATH_MESSAGE =
+      "Can't get stream metadata, no stream path was selected";
+  static constexpr const char* STREAM_PATH_DOESNT_EXIST_MESSAGE =
+      "Can't get stream metadata, selected stream path doesn't exist";
+  static constexpr const char* STATS_GATHERING_IN_PROGRESS_MESSAGE = "Gathering stream stats...";
+  static constexpr const char* STATS_GATHERING_PROMPT_MESSAGE =
+      "Click the button below to gather stream stats (this launches the gits player).";
+  static constexpr const char* STATS_GATHERING_BUTTON_LABEL = "Gather stats";
+  static constexpr const char* UNKNOWN_METADATA_TAB_MESSAGE = "Couldn't get stream meta data";
+  static constexpr const char* EMPTY_RECORDER_DIAGS_MESSAGE =
+      "Couldn't get recorder diagnostic information for given trace.";
+  static constexpr const char* EMPTY_RECORDER_CONFIG_MESSAGE =
+      "Couldn't get recorder config for given trace.";
+
+  static const std::string MainAction(Mode action) {
     switch (action) {
-    case gits::gui::Context::MainAction::PLAYBACK:
+    case Mode::PLAYBACK:
       return "Start Playback";
-    case gits::gui::Context::MainAction::CAPTURE:
+    case Mode::CAPTURE:
       return "Start Capture";
-    case gits::gui::Context::MainAction::SUBCAPTURE:
+    case Mode::SUBCAPTURE:
       return "Start Subcapture";
-    case gits::gui::Context::MainAction::COUNT:
+    case Mode::COUNT:
     default:
       return "";
     }
   }
 
+  static const std::string DialogTitle(FileDialogKeys key) {
+    switch (key.Path) {
+    case Path::GITS_BASE:
+      return "Choose GITS installation directory";
+      break;
+    case Path::CUSTOM_PLAYER:
+      return "Choose custom GITS player";
+      break;
+    case Path::SCREENSHOTS:
+      return "Choose directory where to output screenshots";
+      break;
+    case Path::TRACE:
+      return "Choose directory where to output trace info";
+      break;
+    case Path::CAPTURE_TARGET:
+      return "Choose target application";
+      break;
+    case Path::CONFIG:
+      return "Choose GITS config";
+      break;
+    case Path::INPUT_STREAM:
+      return "Choose gits stream";
+      break;
+    case Path::OUTPUT_STREAM:
+      return "Choose directory where to output the stream to";
+    default:
+      return "";
+    };
+  }
+
+  static const std::string PlaceholderText(Mode mode) {
+    switch (mode) {
+    case Mode::PLAYBACK:
+      return "PLAYBACK IN PROGRESS";
+    case Mode::CAPTURE:
+      return "CAPTURE IN PROGRESS";
+    case Mode::SUBCAPTURE:
+      return "SUBCAPTURE IN PROGRESS";
+    case Mode::COUNT:
+    default:
+      return "";
+    };
+  }
+
   static const auto& SIDE_BAR() {
-    static const std::map<SideBarItems, ImGuiHelper::ButtonGroupItem> items = {
-        {SideBarItems::OPTIONS,
+    static const std::map<SideBarItem, ImGuiHelper::ButtonGroupItem> items = {
+        {SideBarItem::OPTIONS,
          {.label = "Configuration", .tooltip = "Show common configuration options"}},
-        {SideBarItems::CONFIG, {"Config YML", "Show current GITS config file"}},
-        {SideBarItems::CLI, {"CLI", "Show the full command line call"}},
-        {SideBarItems::LOG, {"GITS Log", "Show the GITS output"}},
-        {SideBarItems::STATS, {"Metadata", "Show the stream metadata"}},
-        {SideBarItems::APP_LOG, {"Launcher Log", "Show the launcher log"}},
-        {SideBarItems::INFO,
+        {SideBarItem::CONFIG, {"Config YML", "Show current GITS config file"}},
+        {SideBarItem::CLI, {"CLI", "Show the full command line call"}},
+        {SideBarItem::LOG, {"GITS Log", "Show the GITS output"}},
+        {SideBarItem::STATS, {"Metadata", "Show the stream metadata"}},
+        {SideBarItem::APP_LOG, {"Launcher Log", "Show the launcher log"}},
+        {SideBarItem::INFO,
          {.label = "Info", .tooltip = "Show stream information", .enabled = false}},
-        {SideBarItems::API_TRACE,
+        {SideBarItem::API_TRACE,
          {.label = "API-Trace", .tooltip = "Show an API-Trace of the stream", .enabled = false}},
     };
     return items;
@@ -200,39 +265,59 @@ struct Labels {
     return values;
   }
 
+  static const auto& MODE_BUTTONS() {
+    static const std::map<Mode, gits::ImGuiHelper::ButtonGroupItem> items = {
+        {Mode::PLAYBACK, {"Playback", "Playback a gits stream"}},
+        {Mode::CAPTURE, {"Capture", "Capture a gits stream"}},
+        {Mode::SUBCAPTURE, {"Subcapture", "Subcapture a gits stream"}},
+    };
+    return items;
+  }
+
+  static const auto& MODE_BUTTONS_VEC() {
+    static const std::vector<std::string> values([] {
+      std::vector<std::string> result;
+      for (const auto& pair : MODE_BUTTONS()) {
+        result.push_back(pair.second.label);
+      }
+      return result;
+    }());
+    return values;
+  }
+
   static const auto& CONFIG_SECTIONS() {
-    static const std::map<ConfigSectionItems, ImGuiHelper::ButtonGroupItem> labels = {
-        {ConfigSectionItems::COMMON,
+    static const std::map<ConfigSectionItem, ImGuiHelper::ButtonGroupItem> labels = {
+        {ConfigSectionItem::COMMON,
          {"Common", "Common options", ImGuiHelper::ButtonStatus::Default, "Cmn"}},
-        {ConfigSectionItems::DIRECTX,
+        {ConfigSectionItem::DIRECTX,
          {API_NAME_DX, "DirectX API options", ImGuiHelper::ButtonStatus::Default,
           API_NAME_SHORT_DX}},
-        {ConfigSectionItems::OPENGL,
+        {ConfigSectionItem::OPENGL,
          {API_NAME_GL, "OpenGL API options", ImGuiHelper::ButtonStatus::Default,
           API_NAME_SHORT_GL}},
-        {ConfigSectionItems::VULKAN,
+        {ConfigSectionItem::VULKAN,
          {API_NAME_VK, "Vulkan API options", ImGuiHelper::ButtonStatus::Default,
           API_NAME_SHORT_VK}},
-        {ConfigSectionItems::OPENCL,
+        {ConfigSectionItem::OPENCL,
          {API_NAME_CL, "OpenCL API options", ImGuiHelper::ButtonStatus::Default,
           API_NAME_SHORT_CL}},
-        {ConfigSectionItems::LEVELZERO,
+        {ConfigSectionItem::LEVELZERO,
          {API_NAME_L0, "LevelZero API options", ImGuiHelper::ButtonStatus::Default,
           API_NAME_SHORT_L0}},
-        {ConfigSectionItems::OVERRIDES,
+        {ConfigSectionItem::OVERRIDES,
          {"Overrides", "Per application overrides", ImGuiHelper::ButtonStatus::Default, "Ovr"}},
     };
     return labels;
   }
 
   static const auto& META_DATA() {
-    static const std::map<MetaDataItems, ImGuiHelper::ButtonGroupItem> labels = {
-        {MetaDataItems::CONFIG,
+    static const std::map<MetaDataItem, ImGuiHelper::ButtonGroupItem> labels = {
+        {MetaDataItem::CONFIG,
          {"Config", "Config the stream was recorded with", ImGuiHelper::ButtonStatus::Default,
           "Config"}},
-        {MetaDataItems::STATS,
+        {MetaDataItem::STATS,
          {"Stats", "Stream statistics", ImGuiHelper::ButtonStatus::Default, "Stats"}},
-        {MetaDataItems::DIAGS,
+        {MetaDataItem::DIAGS,
          {"Diagnostics", "Stream Recorder diagnostics", ImGuiHelper::ButtonStatus::Default,
           "Diags"}},
     };

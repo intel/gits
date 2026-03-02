@@ -9,6 +9,7 @@
 #pragma once
 
 #include "basePanel.h"
+#include "eventBus.h"
 
 #include <string>
 
@@ -16,7 +17,7 @@ namespace gits::gui {
 
 class SubcapturePanel : public BasePanel {
 public:
-  using BasePanel::BasePanel; // boiler-plate constructors be gone!
+  SubcapturePanel();
 
   void Render() override;
 
@@ -36,6 +37,9 @@ private:
       return std::to_string(StartFrame) + "-" + std::to_string(EndFrame);
     }
   } SubcaptureConfig;
+
+  // Event callbacks
+  void PathCallback(const Event& e);
 };
 
 } // namespace gits::gui

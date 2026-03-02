@@ -20,10 +20,6 @@ using IOTAIntRange = std::ranges::iota_view<int, int>;
 
 class EzOptionsPanel : public BasePanel {
 public:
-  EzOptionsPanel(ISharedContext& sharedContext) : BasePanel(sharedContext) {
-    // todo: read in screenshot paths from config/past
-  }
-
   void Render() override;
 
   const std::string GetCLIArguments() const;

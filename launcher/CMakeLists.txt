@@ -12,7 +12,10 @@ list(APPEND LAUNCHER_SOURCE
   ${LAUNCHER_SOURCE_DIR}/captureActions.cpp
   ${LAUNCHER_SOURCE_DIR}/context.cpp
   ${LAUNCHER_SOURCE_DIR}/metaDataActions.cpp
+  ${LAUNCHER_SOURCE_DIR}/contextHelper.cpp
+  ${LAUNCHER_SOURCE_DIR}/launcherPaths.cpp
 
+  ${LAUNCHER_HEADER_DIR}/common.h
   ${LAUNCHER_HEADER_DIR}/fileActions.h
   ${LAUNCHER_HEADER_DIR}/launcherActions.h
   ${LAUNCHER_HEADER_DIR}/launcherConfig.h
@@ -23,7 +26,11 @@ list(APPEND LAUNCHER_SOURCE
   ${LAUNCHER_HEADER_DIR}/captureActions.h
   ${LAUNCHER_HEADER_DIR}/launcherFormatter.h
   ${LAUNCHER_HEADER_DIR}/metaDataActions.h
-)
+  ${LAUNCHER_HEADER_DIR}/eventBus.h
+  ${LAUNCHER_HEADER_DIR}/contextHelper.h
+  ${LAUNCHER_HEADER_DIR}/contextHelper.h
+  ${LAUNCHER_HEADER_DIR}/launcherPaths.h
+  )
 
 list(APPEND LAUNCHER_PANEL_SOURCE
   ${LAUNCHER_SOURCE_DIR}/contentPanel.cpp

@@ -24,6 +24,7 @@
 #endif
 
 #include "imGuiStyle.h"
+#include "launcherPaths.h"
 
 namespace {
 struct Settings {
@@ -38,15 +39,9 @@ struct Settings {
 namespace gits::gui {
 
 struct LauncherConfig {
-  std::filesystem::path GITSPlayerPath;
-  std::filesystem::path GITSBasePath;
-  std::filesystem::path StreamPath;
-  std::filesystem::path TargetPath;
-  std::filesystem::path ConfigPath;
-  std::filesystem::path CaptureConfigPath;
-  std::string CustomArguments;
-  std::string CaptureCustomArguments;
-  std::filesystem::path CaptureOutputPath;
+
+  LauncherPaths Paths;
+
   std::filesystem::path FileLocation;
 
   ImVec2 WindowSize;

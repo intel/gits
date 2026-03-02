@@ -17,19 +17,17 @@
 #include "guiController.h"
 #include "labels.h"
 #include "captureActions.h"
+#include "contextHelper.h"
 
 #include "mainWindow.h"
 
 namespace {
 using namespace gits::gui;
 
-const std::vector<std::pair<const char*, Context::Api>> apiMappings = {
-    {Labels::NOT_AVAILABLE, Context::Api::UNKNOWN},
-    {Labels::API_NAME_SHORT_DX, Context::Api::DIRECTX},
-    {Labels::API_NAME_SHORT_GL, Context::Api::OPENGL},
-    {Labels::API_NAME_SHORT_VK, Context::Api::VULKAN},
-    {Labels::API_NAME_SHORT_CL, Context::Api::OPENCL},
-    {Labels::API_NAME_SHORT_L0, Context::Api::LEVELZERO},
+const std::vector<std::pair<const char*, Api>> apiMappings = {
+    {Labels::NOT_AVAILABLE, Api::UNKNOWN},    {Labels::API_NAME_SHORT_DX, Api::DIRECTX},
+    {Labels::API_NAME_SHORT_GL, Api::OPENGL}, {Labels::API_NAME_SHORT_VK, Api::VULKAN},
+    {Labels::API_NAME_SHORT_CL, Api::OPENCL}, {Labels::API_NAME_SHORT_L0, Api::LEVELZERO},
 };
 
 std::vector<const char*> GetApiNames() {
@@ -40,8 +38,8 @@ std::vector<const char*> GetApiNames() {
   return names;
 }
 
-std::map<std::string, Context::Api> GetApiMap() {
-  std::map<std::string, Context::Api> apiMap;
+std::map<std::string, Api> GetApiMap() {
+  std::map<std::string, Api> apiMap;
   for (const auto& mapping : apiMappings) {
     apiMap[mapping.first] = mapping.second;
   }
@@ -64,7 +62,12 @@ float WidthLastButton() {
 } // namespace
 
 namespace gits::gui {
-typedef gits::gui::Context::SideBarItems SideBarItems;
+typedef Context::SideBarItem SideBarItem;
+
+CapturePanel::CapturePanel() : BasePanel() {
+  EventBus::GetInstance().subscribe<PathEvent>(
+      std::bind(&CapturePanel::PathCallback, this, std::placeholders::_1));
+}
 
 void CapturePanel::Render() {
   RowTargetPath();
@@ -75,11 +78,11 @@ void CapturePanel::Render() {
 }
 
 void CapturePanel::RowCleanup() {
-  auto& context = getSharedContext<gui::Context>();
+  auto& context = Context::GetInstance();
   auto availableWidth = ImGui::GetContentRegionAvail().x;
   const auto style = ImGui::GetStyle();
 
-  ImGui::Text(gits::gui::Labels::CLEANUP);
+  ImGui::Text(Labels::CLEANUP);
 
   ImGui::SameLine();
   ImGui::SetCursorPosX(context.TheMainWindow->WidthLeftColumn);
@@ -96,8 +99,7 @@ void CapturePanel::RowCleanup() {
 
   ImGui::SameLine();
   if (ImGui::Button(Labels::FORCE_CLEANUP)) {
-    gui::capture_actions::CleanupRecorderFiles(context, context.SelectedApiForCapture,
-                                               CleanupOptions);
+    gui::capture_actions::CleanupRecorderFiles(context.SelectedApiForCapture, CleanupOptions);
   }
   ImGuiHelper::AddTooltip(Labels::FORCE_CLEANUP_HINT);
 }
@@ -109,14 +111,14 @@ const CapturePanel::CaptureCleanupOptions CapturePanel::GetSelectedCleanupOption
 void CapturePanel::RowTargetPath() {
   const auto style = ImGui::GetStyle();
   const std::vector<const char*> apis = GetApiNames();
-  const std::map<std::string, gui::Context::Api> apiForString = GetApiMap();
+  const std::map<std::string, Api> apiForString = GetApiMap();
 
   auto comboWidth = ImGui::CalcTextSize("N/A   ").x + style.FramePadding.x * 2.0f;
 
-  auto& context = getSharedContext<gui::Context>();
+  auto& context = Context::GetInstance();
   auto availableWidth = ImGui::GetContentRegionAvail().x;
 
-  ImGui::Text(gits::gui::Labels::TARGET);
+  ImGui::Text(Labels::TARGET);
 
   ImGui::SameLine();
   ImGui::SetCursorPosX(context.TheMainWindow->WidthLeftColumn);
@@ -125,9 +127,7 @@ void CapturePanel::RowTargetPath() {
                         ImGuiHelper::WidthOf(ImGuiHelper::Widgets::Label, Labels::API_LABEL) -
                         comboWidth - 4.0f;
 
-  if (ImGuiHelper::InputString("###InputPath", context.TargetPath, 0, allocatedWidth)) {
-    UpdateCLICall(context);
-  }
+  context_helper::PathInput("###InputPath", Path::CAPTURE_TARGET, Mode::CAPTURE, 0, allocatedWidth);
   ImGuiHelper::AddTooltip(Labels::TARGET_INPUT_HINT);
 
   static int selectedItem = 0;
@@ -136,30 +136,30 @@ void CapturePanel::RowTargetPath() {
   if (ImGui::Combo(Labels::API_LABEL, &selectedItem, apis.data(), apis.size())) {
     auto selectedApi = apis[selectedItem];
     context.SelectedApiForCapture =
-        apiForString.count(selectedApi) ? apiForString.at(selectedApi) : gui::Context::Api::UNKNOWN;
+        apiForString.count(selectedApi) ? apiForString.at(selectedApi) : Api::UNKNOWN;
   }
 
   ImGui::SameLine();
   ImGui::PushID(++context.ImguiIDs);
   ImGui::SetNextItemWidth(WidthLastButton());
   if (ImGui::Button(Labels::CHOOSE_TARGET, ImVec2(WidthLastButton(), 0))) {
-    ShowFileDialog(&context, FileDialogKeys::PICK_TARGET_PATH);
+    ShowFileDialog(FileDialogKeys{Path::CAPTURE_TARGET, Mode::CAPTURE});
   }
   ImGui::PopID();
   ImGuiHelper::AddTooltip(Labels::CHOOSE_TARGET_HINT);
 }
 
 void CapturePanel::RowArguments() {
-  auto& context = getSharedContext<gui::Context>();
+  auto& context = Context::GetInstance();
   auto availableWidth = ImGui::GetContentRegionAvail().x;
   ImGui::Text(Labels::CUSTOM_ARGS);
   ImGui::SameLine();
   ImGui::SetCursorPosX(context.TheMainWindow->WidthLeftColumn);
 
   auto remainingWidth = availableWidth - ImGui::GetCursorPosX() - WidthLastButton();
-  if (ImGuiHelper::InputString("###CustomArgumentsInput", context.CustomArguments, 0,
+  if (ImGuiHelper::InputString("###CustomArgumentsInput", context.CaptureCustomArguments, 0,
                                remainingWidth)) {
-    UpdateCLICall(context);
+    UpdateCLICall();
   }
   ImGuiHelper::AddTooltip(Labels::CUSTOM_ARGS_INPUT_HINT);
 
@@ -167,14 +167,14 @@ void CapturePanel::RowArguments() {
   ImGui::PushID(++context.ImguiIDs);
   if (ImGui::Button(Labels::CLEAR_ARGUMENTS, ImVec2(WidthLastButton(), 0))) {
     context.CustomArguments.clear();
-    UpdateCLICall(context);
+    UpdateCLICall();
   }
   ImGui::PopID();
   ImGuiHelper::AddTooltip(Labels::CLEAR_ARGUMENTS_HINT);
 }
 
 void CapturePanel::RowConfigPath() {
-  auto& context = getSharedContext<gui::Context>();
+  auto& context = Context::GetInstance();
   auto availableWidth = ImGui::GetContentRegionAvail().x;
   ImGui::Text(Labels::CAPTURE_CONFIG);
   ImGui::SameLine();
@@ -183,25 +183,21 @@ void CapturePanel::RowConfigPath() {
   auto remainingWidth = availableWidth - ImGui::GetCursorPosX();
   auto allocatedWidth = remainingWidth - WidthLastButton();
 
-  if (ImGuiHelper::InputString("###ConfigPathInput", context.CaptureConfigPath, 0,
-                               allocatedWidth)) {
-    UpdateCLICall(context);
-    LoadConfigFile(&context);
-  }
+  context_helper::PathInput("###ConfigPathInput", Path::CONFIG, Mode::CAPTURE, 0, allocatedWidth);
   ImGuiHelper::AddTooltip(Labels::CAPTURE_CONFIG_INPUT_HINT);
 
   ImGui::SameLine();
   ImGui::PushID(++context.ImguiIDs);
   ImGui::SetNextItemWidth(WidthLastButton());
   if (ImGui::Button(Labels::CHOOSE_CAPTURE_CONFIG, ImVec2(WidthLastButton(), 0))) {
-    ShowFileDialog(&context, FileDialogKeys::PICK_CAPTURE_CONFIG_PATH);
+    ShowFileDialog(FileDialogKeys{Path::CONFIG, Mode::CAPTURE});
   }
   ImGui::PopID();
   ImGuiHelper::AddTooltip(Labels::CHOOSE_CAPTURE_CONFIG_HINT);
 }
 
 void CapturePanel::RowOutputPath() {
-  auto& context = getSharedContext<gui::Context>();
+  auto& context = Context::GetInstance();
   auto availableWidth = ImGui::GetContentRegionAvail().x;
   ImGui::Text(Labels::CAPTURE_OUTPUT_PATH);
   ImGui::SameLine();
@@ -213,17 +209,14 @@ void CapturePanel::RowOutputPath() {
       ImGuiHelper::WidthOf(ImGuiHelper::Widgets::Button, Labels::CHOOSE_CAPTURE_OUTPUT_PATH) -
       WidthLastButton() - 8;
 
-  if (ImGuiHelper::InputString("###OutputPathInput", context.CaptureOutputPath, 0,
-                               allocatedWidth)) {
-    UpdateCLICall(context);
-    LoadConfigFile(&context);
-  }
+  context_helper::PathInput("###OutputPathInput", Path::OUTPUT_STREAM, Mode::CAPTURE, 0,
+                            allocatedWidth);
   ImGuiHelper::AddTooltip(Labels::CAPTURE_OUTPUT_PATH_INPUT_HINT);
 
   ImGui::SameLine();
   ImGui::PushID(++context.ImguiIDs);
   if (ImGui::Button(Labels::CHOOSE_CAPTURE_OUTPUT_PATH)) {
-    ShowFileDialog(&context, FileDialogKeys::PICK_CAPTURE_OUTPUT_PATH);
+    ShowFileDialog(FileDialogKeys{Path::OUTPUT_STREAM, Mode::CAPTURE});
   }
   ImGui::PopID();
   ImGuiHelper::AddTooltip(Labels::CHOOSE_CAPTURE_OUTPUT_PATH_HINT);
@@ -232,11 +225,34 @@ void CapturePanel::RowOutputPath() {
   ImGui::PushID(++context.ImguiIDs);
   ImGui::SetNextItemWidth(WidthLastButton());
   if (ImGui::Button(Labels::OPEN_CAPTURE_OUTPUT_PATH, ImVec2(WidthLastButton(), 0))) {
-    OpenFolder(context.GetPath(gui::Context::Paths::CAPTURE_OUTPUT));
+    const auto outputStreamPath = context.GetPathSafe(Path::OUTPUT_STREAM, Mode::CAPTURE);
+    OpenFolder(outputStreamPath);
   }
   ImGui::PopID();
   ImGuiHelper::AddTooltip(Labels::OPEN_CAPTURE_OUTPUT_PATH_HINT);
 #endif
 }
 
+void CapturePanel::PathCallback(const Event& e) {
+  const PathEvent& pathEvent = static_cast<const PathEvent&>(e);
+
+  if (!pathEvent.Mode.has_value() || pathEvent.Mode.value() != Mode::CAPTURE) {
+    return;
+  }
+
+  switch (pathEvent.EventType) {
+  case PathEvent::Type::CONFIG:
+    LoadConfigFile();
+    break;
+  case PathEvent::Type::CAPTURE_TARGET:
+    UpdateCLICall();
+    break;
+  case PathEvent::Type::OUTPUT_STREAM:
+    capture_actions::UpdateConfigDumpPath();
+    LoadConfigFile();
+    break;
+  default:
+    break;
+  }
+}
 } // namespace gits::gui

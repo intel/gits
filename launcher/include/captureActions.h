@@ -16,15 +16,13 @@
 #include "capturePanel.h"
 
 namespace gits::gui::capture_actions {
-bool UpdateConfigDumpPath(gui::Context& context);
-std::string GetRecorderDirectoryNameForApi(gui::Context::Api api);
+bool UpdateConfigDumpPath();
+std::string GetRecorderDirectoryNameForApi(Api api);
 bool CopyRecorderFiles(std::filesystem::path gitsBasePath,
                        std::filesystem::path targetDirectory,
-                       gui::Context::Api api);
+                       Api api);
 std::filesystem::path FindLatestRecorderLog(std::filesystem::path directory);
-void CaptureStream(gui::Context& context);
-std::vector<std::string> GetRecorderFilesForApi(gui::Context& context, gui::Context::Api api);
-bool CleanupRecorderFiles(gui::Context& context,
-                          gui::Context::Api api,
-                          gui::CapturePanel::CaptureCleanupOptions cleanupSelections);
+void CaptureStream();
+std::vector<std::string> GetRecorderFilesForApi(Api api);
+bool CleanupRecorderFiles(Api api, CapturePanel::CaptureCleanupOptions cleanupSelections);
 } // namespace gits::gui::capture_actions

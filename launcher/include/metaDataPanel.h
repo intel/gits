@@ -10,6 +10,7 @@
 
 #include "basePanel.h"
 #include "metaDataActions.h"
+#include "eventBus.h"
 
 #include <string>
 #include <filesystem>
@@ -19,15 +20,19 @@
 namespace gits::gui {
 class MetaDataPanel : public BasePanel {
 public:
-  MetaDataPanel(ISharedContext& sharedContext);
-  void InvalidateMetaData();
+  MetaDataPanel();
   void Render() override;
 
 private:
+  void InvalidateMetaData();
   void LoadMetaData(std::filesystem::path streamPath);
   void ClearStats();
   void AppendStats(std::string str);
   void FillStatsEditor();
+
+  // Event callbacks
+  void StreamPathCallback(const Event& e);
+
   bool MetaDataNeedsUpdating = true;
   STREAM_META_DATA MetaData;
   std::string Stats;

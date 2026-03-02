@@ -17,14 +17,20 @@
 #include "guiController.h"
 #include "labels.h"
 #include "captureActions.h"
+#include "contextHelper.h"
 
 #include "mainWindow.h"
 
 namespace gits::gui {
-typedef gits::gui::Context::SideBarItems SideBarItems;
+typedef gits::gui::Context::SideBarItem SideBarItem;
+
+SubcapturePanel::SubcapturePanel() : BasePanel() {
+  EventBus::GetInstance().subscribe<PathEvent>(
+      std::bind(&SubcapturePanel::PathCallback, this, std::placeholders::_1));
+}
 
 void SubcapturePanel::Render() {
-  auto& context = getSharedContext<gui::Context>();
+  auto& context = Context::GetInstance();
   auto changed = false;
   const float indent = context.TheMainWindow->WidthLeftColumn;
   const float widthLabel = ImGui::CalcTextSize(Labels::SUBCAPTURE_START_FRAME).x * 2.0f + indent;
@@ -54,21 +60,25 @@ void SubcapturePanel::Render() {
   RowSubcapturePath();
 
   if (changed) {
-    UpdateCLICall(getSharedContext<Context>());
+    UpdateCLICall();
   }
 }
 
 const std::string SubcapturePanel::GetCLIArguments() const {
-  auto& context = getSharedContext<gui::Context>();
+  auto& context = Context::GetInstance();
 
   std::string args = "";
   if (SubcaptureConfig.Enabled) {
     args += "--DirectX.Features.Subcapture.Enabled ";
     args += "--DirectX.Features.Subcapture.Frames=\"" + SubcaptureConfig.Range() + "\" ";
-    if (!context.SubcapturePath.empty()) {
-      // We append the special GITS directory name format to the subcapture directory path
-      args += "--Common.Player.SubcapturePath=\"" + (context.SubcapturePath / "%f%_%r%").string() +
-              "\" ";
+    auto optSubcaptureOutPuthPath =
+        Context::GetInstance().GetPath(Path::OUTPUT_STREAM, Mode::SUBCAPTURE);
+    if (optSubcaptureOutPuthPath.has_value()) {
+      auto subcapturePath = optSubcaptureOutPuthPath.value();
+      if (!subcapturePath.empty()) {
+        // We append the special GITS directory name format to the subcapture directory path
+        args += "--Common.Player.SubcapturePath=\"" + (subcapturePath / "%f%_%r%").string() + "\" ";
+      }
     }
     if (!SubcaptureConfig.Optimize) {
       args += "--DirectX.Features.Subcapture.Optimize.Value=0 ";
@@ -81,7 +91,7 @@ const std::string SubcapturePanel::GetCLIArguments() const {
 }
 
 void SubcapturePanel::RowSubcapturePath() {
-  auto& context = getSharedContext<gui::Context>();
+  auto& context = Context::GetInstance();
   auto availableWidth = ImGui::GetContentRegionAvail().x;
 
   ImGui::Text(Labels::SUBCAPTURE_PATH);
@@ -93,17 +103,29 @@ void SubcapturePanel::RowSubcapturePath() {
       availableWidth - ImGuiHelper::WidthOf(ImGuiHelper::Widgets::Label, Labels::SUBCAPTURE_PATH) -
       ImGuiHelper::WidthOf(ImGuiHelper::Widgets::Button, Labels::CHOOSE_TARGET) - 20.0f;
 
-  if (ImGuiHelper::InputString("###SubcaptureInputPath", context.SubcapturePath, 0,
-                               allocatedWidth)) {
-    UpdateCLICall(context);
-  }
+  context_helper::PathInput("###SubcapturePath", Path::OUTPUT_STREAM, Mode::SUBCAPTURE, 0,
+                            allocatedWidth);
 
   ImGui::SameLine();
   ImGui::PushID(++context.ImguiIDs);
   if (ImGui::Button(Labels::CHOOSE_TARGET)) {
-    ShowFileDialog(&context, FileDialogKeys::PICK_SUBCAPTURE_PATH);
+    ShowFileDialog(FileDialogKeys{Path::OUTPUT_STREAM, Mode::SUBCAPTURE});
   }
   ImGui::PopID();
+}
+
+void SubcapturePanel::PathCallback(const Event& e) {
+  const PathEvent& pathEvent = static_cast<const PathEvent&>(e);
+
+  if (!pathEvent.Mode.has_value() || pathEvent.Mode.value() != Mode::SUBCAPTURE) {
+    return;
+  }
+
+  if (pathEvent.EventType == PathEvent::Type::CONFIG) {
+    LoadConfigFile();
+  }
+
+  UpdateCLICall();
 }
 
 } // namespace gits::gui

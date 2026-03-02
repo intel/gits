@@ -10,31 +10,12 @@
 
 namespace gits::gui {
 
-class ISharedContext {
-public:
-  virtual ~ISharedContext() = default;
-};
-
 class BasePanel {
 public:
-  explicit BasePanel(ISharedContext& sharedContext) : sharedContext(sharedContext) {}
+  explicit BasePanel() {}
   virtual ~BasePanel() = default;
 
   virtual void Render() = 0;
-
-  // Helper to cast to specific shared context type
-  template <typename T>
-  T& getSharedContext() {
-    return static_cast<T&>(sharedContext);
-  }
-
-  template <typename T>
-  const T& getSharedContext() const {
-    return static_cast<const T&>(sharedContext);
-  }
-
-protected:
-  ISharedContext& sharedContext;
 };
 
 } // namespace gits::gui

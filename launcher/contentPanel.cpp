@@ -16,10 +16,28 @@
 #include "labels.h"
 #include "captureActions.h"
 #include "MainWindow.h"
+#include "eventBus.h"
 
 namespace gits::gui {
 
-typedef gits::gui::Context::SideBarItems SideBarItems;
+typedef Context::SideBarItem SideBarItem;
+
+ContentPanel::ContentPanel() : CLIEditor("CLIEditor"), m_MetaDataPanel() {
+  CLIEditor.SetConfig(TextEditorWidget::Config{.ShowToolbar = false});
+  CLIEditor.GetEditor().SetReadOnly(true);
+  CLIEditor.GetEditor().SetShowWhitespaces(false);
+  CLIEditor.GetEditor().SetTabSize(4);
+  CLIEditor.UpdatePalette();
+
+  EventBus::GetInstance().subscribe<AppEvent>(
+      std::bind(&ContentPanel::ThemeChangedCallback, this, std::placeholders::_1),
+      {AppEvent::Type::ThemeChanged});
+  EventBus::GetInstance().subscribe<ContextEvent>(
+      std::bind(&ContentPanel::CliUpdatedCallback, this, std::placeholders::_1),
+      {ContextEvent::Type::CLIUpdated});
+  EventBus::GetInstance().subscribe<ActionEvent>(
+      std::bind(&ContentPanel::CaptureActionCallback, this, std::placeholders::_1));
+}
 
 float ContentPanel::WidthColumn1(bool resetSize) {
   static float cached_width = -1.0;
@@ -42,7 +60,7 @@ float ContentPanel::WidthColumn1(bool resetSize) {
 }
 
 void ContentPanel::Render() {
-  auto& context = getSharedContext<Context>();
+  auto& context = Context::GetInstance();
   if (ImGui::BeginTable("MainLayoutTable", 2, ImGuiTableFlags_BordersInnerV)) {
     ImGui::TableSetupColumn("Sidebar", ImGuiTableColumnFlags_WidthFixed, WidthColumn1() - 12.0f);
     ImGui::TableSetupColumn("Content", ImGuiTableColumnFlags_WidthStretch);
@@ -51,10 +69,7 @@ void ContentPanel::Render() {
     ImGui::TableSetColumnIndex(0);
 
     if (context.BtnsSideBar->Render(true)) {
-      context.CurrentMainAction =
-          context.IsPlayback() ? gui::Context::MainAction::PLAYBACK
-                               : (context.IsCapture() ? gui::Context::MainAction::CAPTURE
-                                                      : gui::Context::MainAction::SUBCAPTURE);
+      // nothing
     }
     float width = ImGui::GetContentRegionAvail().x;
     float remaining = ImGui::GetContentRegionAvail().y;
@@ -78,36 +93,36 @@ void ContentPanel::Render() {
       if (ImGui::Combo("##ThemeSelector", &selectedItem,
                        context.LauncherConfiguration.Theme.ThemeLabels.data(),
                        context.LauncherConfiguration.Theme.ThemeLabels.size())) {
-        SetImGuiStyle(&context, selectedItem);
+        SetImGuiStyle(selectedItem);
       }
     }
     ImGui::TableSetColumnIndex(1);
     auto area = ImGui::GetContentRegionAvail();
     switch (context.BtnsSideBar->Selected()) {
-    case SideBarItems::CONFIG:
+    case SideBarItem::CONFIG:
       ChildWindowConfig();
       break;
-    case SideBarItems::LOG:
+    case SideBarItem::LOG:
       ImGui::BeginChild("gitsLogArea", ImVec2(area.x, area.y), true);
       context.GITSLogEditor->Render();
       ImGui::EndChild();
       break;
-    case SideBarItems::CLI:
+    case SideBarItem::CLI:
       ImGui::BeginChild("CLIArea", ImVec2(area.x, area.y), true);
-      context.CLIEditor->Render();
+      CLIEditor.Render();
       ImGui::EndChild();
       break;
-    case SideBarItems::APP_LOG:
+    case SideBarItem::APP_LOG:
       ImGui::BeginChild("LauncherLogArea", ImVec2(area.x, area.y), true);
       context.LogEditor->Render();
       ImGui::EndChild();
       break;
-    case SideBarItems::STATS:
+    case SideBarItem::STATS:
       ImGui::BeginChild("StatsArea", ImVec2(area.x, area.y), true);
-      context.MetaDataPanel->Render();
+      m_MetaDataPanel.Render();
       ImGui::EndChild();
       break;
-    case SideBarItems::OPTIONS:
+    case SideBarItem::OPTIONS:
       ImGui::BeginChild("StatsArea", ImVec2(area.x, area.y), true);
       context.EasyOptionsPanel->Render();
       ImGui::EndChild();
@@ -120,37 +135,10 @@ void ContentPanel::Render() {
     }
     ImGui::EndTable();
   }
-
-  if (context.IsCapture() && context.RecordingProcessingPending) {
-    // TODO: Either move this or replace with a thread safe callback in the capture function?
-    context.RecordingProcessingPending = false;
-    auto logPath = gui::capture_actions::FindLatestRecorderLog(
-        context.GetPath(gui::Context::Paths::TARGET).parent_path());
-
-    if (logPath.empty()) {
-      context.BtnsSideBar->SelectEntry(gui::Context::SideBarItems::APP_LOG);
-
-      return;
-    }
-
-    std::ifstream file(logPath);
-    if (!file.is_open()) {
-      context.BtnsSideBar->SelectEntry(gui::Context::SideBarItems::APP_LOG);
-
-      return;
-    }
-    std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-    file.close();
-    context.GITSLogEditor->AppendText(content);
-
-    context.BtnsSideBar->SelectEntry(gui::Context::SideBarItems::LOG);
-    gui::capture_actions::CleanupRecorderFiles(context, context.SelectedApiForCapture,
-                                               context.TheMainWindow->GetCleanupOptions());
-  }
 }
 
 void ContentPanel::ChildWindowConfig() {
-  auto& context = getSharedContext<gui::Context>();
+  auto& context = Context::GetInstance();
   ImVec2 available = ImGui::GetContentRegionAvail();
   if (ImGui::BeginChild("ContentArea", ImVec2(available.x, available.y), true)) {
 
@@ -169,4 +157,105 @@ void ContentPanel::ChildWindowConfig() {
   }
   ImGui::EndChild();
 }
+
+void ContentPanel::ThemeChangedCallback(const Event& event) {
+  CLIEditor.UpdatePalette();
+}
+
+void ContentPanel::CliUpdatedCallback(const Event& event) {
+  auto& context = Context::GetInstance();
+  const auto gitsExecutable = context.GetGITSPlayerPath();
+
+  switch (context.AppMode) {
+  case Mode::PLAYBACK:
+  // [[fallthrough]]
+  case Mode::SUBCAPTURE: {
+    std::string cliEditorText =
+        "# This buffer is write protected, it shows the current command line\n\n";
+
+    auto executableSpecified = false;
+    if (gitsExecutable.empty()) {
+      cliEditorText += "Error: no GITS-Player specified!\n\n";
+    } else if (!std::filesystem::exists(gitsExecutable)) {
+      cliEditorText += "Error: GITS-Player does not exist\n> " + gitsExecutable.string() + "\n\n";
+    } else {
+      cliEditorText += gitsExecutable.string() + "\n";
+      executableSpecified = true;
+    }
+    if (!executableSpecified) {
+      cliEditorText += "Arguments for GITS-Player:\n";
+    }
+    for (const auto& argument : context.CLIArguments) {
+      cliEditorText += "  " + argument + "\n";
+    }
+
+    CLIEditor.SetText(cliEditorText);
+
+    break;
+  }
+  case Mode::CAPTURE: {
+    const auto targetExecutable = context.GetPathSafe(Path::CAPTURE_TARGET);
+    std::string cliEditorText =
+        "# This buffer is write protected, it shows the current command line\n\n";
+
+    cliEditorText += targetExecutable.string() + "\n";
+    if (!std::filesystem::exists(targetExecutable)) {
+      cliEditorText += "!!  [Warning: Target executable path does not exist]\n";
+    }
+
+    for (const auto& argument : context.CLIArguments) {
+      cliEditorText += "  " + argument + "\n";
+    }
+    CLIEditor.SetText(cliEditorText);
+
+    break;
+  }
+  default:
+    break;
+  }
+}
+
+void ContentPanel::CaptureActionCallback(const Event& e) {
+  const ActionEvent& actionEvent = static_cast<const ActionEvent&>(e);
+
+  if (actionEvent.EventType != ActionEvent::Type::Capture) {
+    return;
+  }
+
+  auto& context = Context::GetInstance();
+
+  switch (actionEvent.ActionState) {
+  case ActionEvent::State::Started: {
+    context.GITSLogEditor->SetText("");
+    break;
+  }
+  case ActionEvent::State::Ended: {
+    auto logPath = capture_actions::FindLatestRecorderLog(
+        context.GetPathSafe(Path::CAPTURE_TARGET).parent_path());
+
+    if (logPath.empty()) {
+      context.BtnsSideBar->SelectEntry(Context::SideBarItem::APP_LOG);
+      return;
+    }
+
+    std::ifstream file(logPath);
+    if (!file.is_open()) {
+      context.BtnsSideBar->SelectEntry(Context::SideBarItem::APP_LOG);
+      return;
+    }
+    std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    file.close();
+    context.GITSLogEditor->AppendText(content);
+
+    context.BtnsSideBar->SelectEntry(Context::SideBarItem::LOG);
+
+    capture_actions::CleanupRecorderFiles(context.SelectedApiForCapture,
+                                          context.TheMainWindow->GetCleanupOptions());
+    break;
+  }
+  default:
+    break;
+  }
+}
+
 } // namespace gits::gui

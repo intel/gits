@@ -8,18 +8,19 @@
 
 #include "launcherConfig.h"
 
+namespace {
+// anonymous namespace for YAML keys to avoid typos and for easier refactoring
+static constexpr const char* WINDOW_SIZE_KEY = "windowSize";
+static constexpr const char* WINDOW_POS_KEY = "windowPos";
+static constexpr const char* UI_SCALE_KEY = "uiScale";
+static constexpr const char* THEME_KEY = "theme";
+} // namespace
+
 namespace gits::gui {
 LauncherConfig::LauncherConfig() {
   WindowPos = ImVec2(::Settings::WINDOW_POS_X, ::Settings::WINDOW_POS_Y);
   WindowSize = ImVec2(::Settings::WINDOW_SIZE_WIDTH, ::Settings::WINDOW_SIZE_HEIGHT);
 
-  StreamPath = "";
-  TargetPath = "";
-
-  GITSPlayerPath = "";
-  ConfigPath = "";
-
-  CustomArguments = "";
   FileLocation = GetGITSLauncherConfigPath();
   UIScale = 1.0f;
 }
@@ -40,31 +41,43 @@ void LauncherConfig::DetectBasePaths() {
   const std::string gitsPlayer = "gitsPlayer.exe";
 
   // Case 1: installation: Player is relative to Launcher
-  GITSPlayerPath = exeDir / "Player" / gitsPlayer;
-  if (std::filesystem::exists(GITSPlayerPath)) {
-    GITSBasePath = exeDir;
+  Paths.CustomPlayerPath = exeDir / "Player" / gitsPlayer;
+  if (std::filesystem::exists(Paths.CustomPlayerPath)) {
+    Paths.BasePath = exeDir;
   } else {
     // Case 2: VS development: Player is in ../GITS/Player relative to Launcher
-    GITSPlayerPath = exeDir.parent_path().parent_path() / "player" / "Debug" / gitsPlayer;
-    if (std::filesystem::exists(GITSPlayerPath)) {
-      GITSBasePath = exeDir.parent_path().parent_path() / "dist";
+    Paths.CustomPlayerPath = exeDir.parent_path().parent_path() / "player" / "Debug" / gitsPlayer;
+    if (std::filesystem::exists(Paths.CustomPlayerPath)) {
+      Paths.BasePath = exeDir.parent_path().parent_path() / "dist";
     } else {
-      GITSPlayerPath = "";
+      Paths.CustomPlayerPath = "";
     }
   }
+
+  if (!Paths.BasePath.empty() && std::filesystem::exists(Paths.BasePath)) {
+    const auto playerConfigPath = Paths.BasePath / "Player" / "gits_config.yml";
+    if (std::filesystem::exists(playerConfigPath)) {
+      Paths.Playback.ConfigPath = playerConfigPath;
+      Paths.Subcapture.ConfigPath = playerConfigPath;
+    }
+  }
+
+  // SAS
+  /*
   ConfigPath = "";
-  if (!GITSPlayerPath.empty()) {
-    ConfigPath = GITSPlayerPath.parent_path() / "gits_config.yml";
+  if (!Paths.CustomPlayerPath.empty()) {
+    ConfigPath = Paths.CustomPlayerPath.parent_path() / "gits_config.yml";
     if (!std::filesystem::exists(ConfigPath)) {
       ConfigPath = "";
     }
   }
-  if (!GITSBasePath.empty() && ConfigPath.empty()) {
-    ConfigPath = GITSBasePath / "Player" / "gits_config.yml";
+  if (!Paths.BasePath.empty() && ConfigPath.empty()) {
+    ConfigPath = Paths.BasePath / "Player" / "gits_config.yml";
     if (!std::filesystem::exists(ConfigPath)) {
       ConfigPath = "";
     }
   }
+  */
 }
 
 std::filesystem::path LauncherConfig::GetGITSLauncherConfigPath() {
@@ -113,78 +126,24 @@ LauncherConfig LauncherConfig::FromFile(const std::filesystem::path& path) {
 
     YAML::Node yaml = YAML::Load(content);
 
-    if (yaml["gitsPlayerPath"]) {
-      const auto gitsPlayerPath = std::filesystem::path(yaml["gitsPlayerPath"].as<std::string>());
-      if (std::filesystem::exists(gitsPlayerPath)) {
-        config.GITSPlayerPath = gitsPlayerPath;
-      }
-    }
-    if (yaml["gitsBasePath"]) {
-      const auto gitsBasePath = std::filesystem::path(yaml["gitsBasePath"].as<std::string>());
-      if (std::filesystem::exists(gitsBasePath)) {
-        config.GITSBasePath = gitsBasePath;
-      }
-    }
-    if (yaml["streamPath"]) {
-      const auto streamPath = std::filesystem::path(yaml["streamPath"].as<std::string>());
-      if (std::filesystem::exists(streamPath)) {
-        config.StreamPath = streamPath;
-      }
-    }
-    if (yaml["targetPath"]) {
-      const auto targetPath = std::filesystem::path(yaml["targetPath"].as<std::string>());
-      if (std::filesystem::exists(targetPath)) {
-        config.TargetPath = targetPath;
-      }
-    }
-    if (yaml["configPath"]) {
-      const auto configPath = std::filesystem::path(yaml["configPath"].as<std::string>());
-      if (std::filesystem::exists(configPath)) {
-        config.ConfigPath = configPath;
-      }
-    }
-    if (yaml["captureConfigPath"]) {
-      const auto captureConfigPath =
-          std::filesystem::path(yaml["captureConfigPath"].as<std::string>());
-      if (std::filesystem::exists(captureConfigPath)) {
-        config.CaptureConfigPath = captureConfigPath;
-      }
-    }
-    if (yaml["customArguments"]) {
-      const auto customArguments = yaml["customArguments"].as<std::string>();
-      if (!customArguments.empty()) {
-        config.CustomArguments = customArguments;
-      }
-    }
-    if (yaml["captureCustomArguments"]) {
-      const auto captureCustomArguments = yaml["captureCustomArguments"].as<std::string>();
-      if (!captureCustomArguments.empty()) {
-        config.CaptureCustomArguments = captureCustomArguments;
-      }
-    }
-    if (yaml["captureOutputPath"]) {
-      const auto captureOutputPath = yaml["captureOutputPath"].as<std::string>();
-      if (!captureOutputPath.empty()) {
-        config.CaptureOutputPath = captureOutputPath;
-      }
-    }
-    if (yaml["windowSize"]) {
-      const auto sizeNode = yaml["windowSize"];
+    config.Paths.Read(yaml);
+    if (yaml[WINDOW_SIZE_KEY]) {
+      const auto sizeNode = yaml[WINDOW_SIZE_KEY];
       if (sizeNode.IsSequence() && sizeNode.size() == 2) {
         config.WindowSize = ImVec2(sizeNode[0].as<double>(), sizeNode[1].as<double>());
       }
     }
-    if (yaml["windowPos"]) {
-      const auto posNode = yaml["windowPos"];
+    if (yaml[WINDOW_POS_KEY]) {
+      const auto posNode = yaml[WINDOW_POS_KEY];
       if (posNode.IsSequence() && posNode.size() == 2) {
         config.WindowPos = ImVec2(posNode[0].as<double>(), posNode[1].as<double>());
       }
     }
-    if (yaml["uiScale"]) {
-      config.UIScale = yaml["uiScale"].as<float>();
+    if (yaml[UI_SCALE_KEY]) {
+      config.UIScale = yaml[UI_SCALE_KEY].as<float>();
     }
-    if (yaml["theme"]) {
-      const auto themeID = yaml["theme"].as<std::string>();
+    if (yaml[THEME_KEY]) {
+      const auto themeID = yaml[THEME_KEY].as<std::string>();
       if (!themeID.empty()) {
         config.Theme.SetThemeByID(themeID);
       }
@@ -206,21 +165,13 @@ bool LauncherConfig::ToFile(const std::filesystem::path& path) {
 
     YAML::Emitter out;
     out << YAML::BeginMap;
-    out << YAML::Key << "gitsPlayerPath" << YAML::Value << GITSPlayerPath.string();
-    out << YAML::Key << "gitsBasePath" << YAML::Value << GITSBasePath.string();
-    out << YAML::Key << "streamPath" << YAML::Value << StreamPath.string();
-    out << YAML::Key << "targetPath" << YAML::Value << TargetPath.string();
-    out << YAML::Key << "configPath" << YAML::Value << ConfigPath.string();
-    out << YAML::Key << "captureConfigPath" << YAML::Value << CaptureConfigPath.string();
-    out << YAML::Key << "customArguments" << YAML::Value << CustomArguments;
-    out << YAML::Key << "captureCustomArguments" << YAML::Value << CaptureCustomArguments;
-    out << YAML::Key << "captureOutputPath" << YAML::Value << CaptureOutputPath.string();
-    out << YAML::Key << "windowSize" << YAML::Value;
+    Paths.Write(out);
+    out << YAML::Key << WINDOW_SIZE_KEY << YAML::Value;
     out << YAML::BeginSeq << WindowSize.x << WindowSize.y << YAML::EndSeq;
-    out << YAML::Key << "windowPos" << YAML::Value;
+    out << YAML::Key << WINDOW_POS_KEY << YAML::Value;
     out << YAML::BeginSeq << WindowPos.x << WindowPos.y << YAML::EndSeq;
-    out << YAML::Key << "uiScale" << YAML::Value << UIScale;
-    out << YAML::Key << "theme" << YAML::Value << Theme.CurThemeID();
+    out << YAML::Key << UI_SCALE_KEY << YAML::Value << UIScale;
+    out << YAML::Key << THEME_KEY << YAML::Value << Theme.CurThemeID();
     out << YAML::EndMap;
 
     std::ofstream file(launcherConfigPath);

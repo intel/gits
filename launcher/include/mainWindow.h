@@ -19,18 +19,13 @@
 #include "playbackPanel.h"
 #include "capturePanel.h"
 #include "subcapturePanel.h"
+#include "eventBus.h"
 
 namespace gits::gui {
 
-class MainWindow : gits::gui::BasePanel {
+class MainWindow : BasePanel {
 public:
-  enum class MODE_BUTTON_ITEMS {
-    CAPTURE = 0,
-    PLAYBACK,
-    SUBCAPTURE
-  };
-
-  MainWindow(gits::gui::ISharedContext& sharedContext);
+  MainWindow();
 
   ~MainWindow();
 
@@ -45,11 +40,13 @@ public:
   void SetPlaybackFile(const std::filesystem::path& filePath);
 
 private:
-  std::unique_ptr<gits::gui::ContentPanel> contentPanel;
-  std::unique_ptr<gits::gui::PlaybackPanel> playbackPanel;
-  std::unique_ptr<gits::gui::CapturePanel> capturePanel;
-  std::unique_ptr<gits::gui::SubcapturePanel> subcapturePanel;
-  std::unique_ptr<gits::ImGuiHelper::TabGroup<MODE_BUTTON_ITEMS>> tabsToolBar;
+  std::unique_ptr<ContentPanel> contentPanel;
+  std::unique_ptr<PlaybackPanel> playbackPanel;
+  std::unique_ptr<CapturePanel> capturePanel;
+  std::unique_ptr<SubcapturePanel> subcapturePanel;
+  std::unique_ptr<gits::ImGuiHelper::TabGroup<Mode>> tabsToolBar;
+
+  bool m_CaptureInProgress = false;
 
   void GITSButton();
   void ModeSelectionButtons();
@@ -57,6 +54,9 @@ private:
 
   void GITSBaseRow();
   void GITSPlayerRow();
+
+  // Event handlers
+  void CaptureActionCallback(const Event& e);
 };
 
 } // namespace gits::gui

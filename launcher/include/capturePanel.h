@@ -9,12 +9,13 @@
 #pragma once
 
 #include "basePanel.h"
+#include "eventBus.h"
 
 namespace gits::gui {
 
 class CapturePanel : public BasePanel {
 public:
-  using BasePanel::BasePanel; // boiler-plate constructors be gone!
+  CapturePanel();
 
   void Render() override;
 
@@ -34,6 +35,9 @@ private:
   void RowOutputPath();
 
   CaptureCleanupOptions CleanupOptions;
+
+  // Event callbacks
+  void PathCallback(const Event& e);
 };
 
 } // namespace gits::gui

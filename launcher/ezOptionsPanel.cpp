@@ -16,6 +16,7 @@
 #include "launcherActions.h"
 #include "labels.h"
 #include "mainWindow.h"
+#include "contextHelper.h"
 
 namespace {
 std::optional<std::filesystem::path> GetPath(bool flag, std::string path) {
@@ -33,7 +34,7 @@ std::optional<std::filesystem::path> GetPath(bool flag, std::string path) {
 namespace gits::gui {
 
 void EzOptionsPanel::Render() {
-  auto& context = getSharedContext<gui::Context>();
+  auto& context = Context::GetInstance();
   const auto labels = {Labels::SCREENSHOTS_RANGES, Labels::SCREENSHOTS_PATH, Labels::TRACE_PATH};
   auto indent = ImGuiHelper::WidthOf(ImGuiHelper::Widgets::Button, "  ");
 
@@ -87,14 +88,13 @@ void EzOptionsPanel::Render() {
                         20.0f;
 
   ImGui::SetCursorPosX(ImGui::GetCursorPosX() + width - indent - labelSize);
-  if (ImGuiHelper::InputString("###ScreenshotsPath", context.ScreenshotPath, 0, allocatedWidth)) {
-    UpdateCLICall(context);
-  }
+  context_helper::PathInput("###ScreenshotsPath", Path::SCREENSHOTS, Mode::PLAYBACK, 0,
+                            allocatedWidth);
 
   ImGui::SameLine();
   ImGui::PushID(++context.ImguiIDs);
   if (ImGui::Button(Labels::CHOOSE_TARGET)) {
-    ShowFileDialog(&context, FileDialogKeys::PICK_SCREENSHOTS_PATH);
+    ShowFileDialog(FileDialogKeys{Path::SCREENSHOTS, Mode::PLAYBACK});
   }
   ImGui::PopID();
 
@@ -104,48 +104,51 @@ void EzOptionsPanel::Render() {
   changed |= ImGui::Checkbox(Labels::TRACE_EXPORT, &TraceConfig.Enabled);
 
   ImGui::BeginDisabled(!TraceConfig.Enabled);
-  ImGui::Indent(indent - 12.0f);
+  ImGui::Indent(indent);
 
   labelSize = ImGuiHelper::WidthOf(ImGuiHelper::Widgets::Label, Labels::TRACE_PATH);
   ImGui::Text(Labels::TRACE_PATH);
   ImGui::SameLine();
   allocatedWidth = availableWidth - labelSize -
-                   ImGuiHelper::WidthOf(ImGuiHelper::Widgets::Button, Labels::CHOOSE_TARGET) -
-                   80.0f;
+                   ImGuiHelper::WidthOf(ImGuiHelper::Widgets::Button, Labels::CHOOSE_TARGET);
 
   ImGui::SetCursorPosX(ImGui::GetCursorPosX() + width - indent - labelSize);
-  if (ImGuiHelper::InputString("###TracePath", context.TracePath, 0, allocatedWidth)) {
-    UpdateCLICall(context);
-  }
+  context_helper::PathInput("###TracePath", Path::TRACE, Mode::PLAYBACK, 0, allocatedWidth);
 
   ImGui::SameLine();
   ImGui::PushID(++context.ImguiIDs);
   if (ImGui::Button(Labels::CHOOSE_TARGET)) {
-    ShowFileDialog(&context, FileDialogKeys::PICK_TRACE_PATH);
+    ShowFileDialog(FileDialogKeys{Path::TRACE, Mode::PLAYBACK});
   }
   ImGui::PopID();
   ImGui::Unindent();
   ImGui::EndDisabled();
 
   if (changed) {
-    UpdateCLICall(getSharedContext<Context>());
+    UpdateCLICall();
   }
 }
 
 const std::string EzOptionsPanel::GetCLIArguments() const {
-  auto& context = getSharedContext<gui::Context>();
+  auto& context = Context::GetInstance();
   std::string args = "";
   if (HUDConfig.Enabled) {
     args += "--hud=DX ";
   }
   if (ScreenshotsConfig.Enabled) {
-    args += "--DirectX.Features.Screenshots.Enabled ";
-    args += "--DirectX.Features.Screenshots.Frames=\"" + ScreenshotsConfig.Range + "\" ";
-    args += "--Common.Player.OutputDir=\"" + context.ScreenshotPath.string() + "\" ";
+    auto screenshotPath = Context::GetInstance().GetPath(Path::SCREENSHOTS, Mode::PLAYBACK);
+    if (screenshotPath.has_value()) {
+      args += "--DirectX.Features.Screenshots.Enabled ";
+      args += "--DirectX.Features.Screenshots.Frames=\"" + ScreenshotsConfig.Range + "\" ";
+      args += "--Common.Player.OutputDir=\"" + screenshotPath.value().string() + "\" ";
+    }
   }
   if (TraceConfig.Enabled) {
-    args += "--DirectX.Features.Trace.Enabled ";
-    args += "--Common.Player.OutputTracePath=\"" + context.TracePath.string() + "\" ";
+    auto tracePath = Context::GetInstance().GetPath(Path::TRACE, Mode::PLAYBACK);
+    if (tracePath.has_value()) {
+      args += "--DirectX.Features.Trace.Enabled ";
+      args += "--Common.Player.OutputTracePath=\"" + tracePath.value().string() + "\" ";
+    }
   }
   return args;
 }

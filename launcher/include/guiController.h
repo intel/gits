@@ -76,7 +76,6 @@ private:
 #endif
   ImVec2 m_WindowSize;
   bool m_CleanUpAfterRecording;
-  Context m_Context;
   std::optional<float> m_UpdateUIScale;
   std::unique_ptr<MainWindow> mainWindow;
 };

@@ -12,16 +12,30 @@
 #include "fileActions.h"
 #include <yaml-cpp/yaml.h>
 #include "launcherActions.h"
+#include "eventBus.h"
 
 namespace {
 constexpr const char* RECORDER_CONFIG_FILENAME = "gits_config.yml";
 }
 
 namespace gits::gui::capture_actions {
-bool UpdateConfigDumpPath(Context& context) {
+bool UpdateConfigDumpPath() {
+  auto& context = Context::GetInstance();
+
   // TODO: Think of a better way of handling modifying the config from different places
-  auto captureConfigPath = context.GetPath(gits::gui::Context::Paths::CAPTURE_CONFIG);
-  auto captureOutputPath = context.GetPath(gits::gui::Context::Paths::CAPTURE_OUTPUT);
+  auto optCaptureConfigPath = context.GetPath(Path::CONFIG, Mode::CAPTURE);
+  auto optCaptureOutputPath = context.GetPath(Path::OUTPUT_STREAM, Mode::CAPTURE);
+
+  if (!optCaptureConfigPath.has_value()) {
+    LOG_ERROR << "Error updating the capture output path. No config file path was specified.";
+    return false;
+  }
+  if (!optCaptureOutputPath.has_value()) {
+    LOG_ERROR << "No capture output path was specified";
+    return false;
+  }
+  const auto captureConfigPath = optCaptureConfigPath.value();
+  const auto captureOutputPath = optCaptureOutputPath.value();
 
   if (captureOutputPath.empty()) {
     LOG_ERROR << "No capture output path was specified";
@@ -48,21 +62,20 @@ bool UpdateConfigDumpPath(Context& context) {
                                            (captureOutputPath / "%n%_%p%").string(), true);
 }
 
-std::string GetRecorderDirectoryNameForApi(gui::Context::Api api) {
-  const std::map<gits::gui::Context::Api, std::string> recorderDirectoryForApi{
-      {gits::gui::Context::Api::UNKNOWN, ""},
-      {gits::gui::Context::Api::DIRECTX, "FilesToCopyDirectX"},
-      {gits::gui::Context::Api::OPENGL, "FilesToCopyOGL"},
-      {gits::gui::Context::Api::VULKAN, "FilesToCopyVulkan"},
-      {gits::gui::Context::Api::OPENCL, "FilesToCopyOCL"},
-      {gits::gui::Context::Api::LEVELZERO, "FilesToCopyL0"}};
+std::string GetRecorderDirectoryNameForApi(Api api) {
+  const std::map<Api, std::string> recorderDirectoryForApi{{Api::UNKNOWN, ""},
+                                                           {Api::DIRECTX, "FilesToCopyDirectX"},
+                                                           {Api::OPENGL, "FilesToCopyOGL"},
+                                                           {Api::VULKAN, "FilesToCopyVulkan"},
+                                                           {Api::OPENCL, "FilesToCopyOCL"},
+                                                           {Api::LEVELZERO, "FilesToCopyL0"}};
 
   return recorderDirectoryForApi.at(api);
 }
 
 bool CopyRecorderFiles(std::filesystem::path gitsBasePath,
                        std::filesystem::path targetDirectory,
-                       gui::Context::Api api) {
+                       Api api) {
   if (!FileActions::Exists(gitsBasePath)) {
     LOG_ERROR << "GITS base path: " << gitsBasePath.string() << " doesn't exist";
 
@@ -124,27 +137,35 @@ std::filesystem::path FindLatestRecorderLog(std::filesystem::path directory) {
   }
 }
 
-void CaptureStream(gui::Context& context) {
-  const auto gitsBasePath = context.GetPath(gui::Context::Paths::GITS_BASE);
-  const auto executablePath = context.GetPath(gui::Context::Paths::TARGET);
+void CaptureStream() {
+  auto& context = Context::GetInstance();
 
   context.GITSLogEditor->SetText("");
 
-  const std::map<gui::Context::Api, std::string> stringForApi = {
-      {gui::Context::Api::UNKNOWN, "N/A"}, {gui::Context::Api::DIRECTX, "DX"},
-      {gui::Context::Api::OPENGL, "GL"},   {gui::Context::Api::VULKAN, "VK"},
-      {gui::Context::Api::OPENCL, "CL"},   {gui::Context::Api::LEVELZERO, "L0"}};
+  const std::map<Api, std::string> stringForApi = {{Api::UNKNOWN, "N/A"}, {Api::DIRECTX, "DX"},
+                                                   {Api::OPENGL, "GL"},   {Api::VULKAN, "VK"},
+                                                   {Api::OPENCL, "CL"},   {Api::LEVELZERO, "L0"}};
 
-  if (context.GetPath(gui::Context::Paths::TARGET).empty()) {
+  std::filesystem::path executablePath = context.GetPathSafe(Path::CAPTURE_TARGET);
+  if (executablePath.empty()) {
     LOG_ERROR << "No target application was selected for capture";
-    context.BtnsSideBar->SelectEntry(gui::Context::SideBarItems::APP_LOG);
+    context.BtnsSideBar->SelectEntry(Context::SideBarItem::APP_LOG);
 
     return;
   }
 
+  std::filesystem::path gitsBasePath = context.GetPathSafe(Path::GITS_BASE);
   if (gitsBasePath.empty()) {
     LOG_ERROR << "No GITS base path for capture was selected";
-    context.BtnsSideBar->SelectEntry(gui::Context::SideBarItems::APP_LOG);
+    context.BtnsSideBar->SelectEntry(Context::SideBarItem::APP_LOG);
+
+    return;
+  }
+
+  std::filesystem::path captureConfigPath = context.GetPathSafe(Path::CONFIG, Mode::CAPTURE);
+  if (captureConfigPath.empty()) {
+    LOG_ERROR << "No config for capture was selected";
+    context.BtnsSideBar->SelectEntry(Context::SideBarItem::APP_LOG);
 
     return;
   }
@@ -152,46 +173,40 @@ void CaptureStream(gui::Context& context) {
   if (!FileActions::Exists(gitsBasePath)) {
     LOG_ERROR << "Selected GITS base path for capture: " << gitsBasePath.string()
               << " doesn't exist";
-    context.BtnsSideBar->SelectEntry(gui::Context::SideBarItems::APP_LOG);
+    context.BtnsSideBar->SelectEntry(Context::SideBarItem::APP_LOG);
 
     return;
   }
 
-  if (context.SelectedApiForCapture == gui::Context::Api::UNKNOWN) {
+  if (context.SelectedApiForCapture == Api::UNKNOWN) {
     LOG_ERROR << "No API was selected for capture";
-    context.BtnsSideBar->SelectEntry(gui::Context::SideBarItems::APP_LOG);
+    context.BtnsSideBar->SelectEntry(Context::SideBarItem::APP_LOG);
 
     return;
   }
 
   LOG_INFO << "Copying recorder files for capture for API: "
            << stringForApi.at(context.SelectedApiForCapture);
-  if (!CopyRecorderFiles(context.GetPath(gui::Context::Paths::GITS_BASE),
-                         context.GetPath(gui::Context::Paths::TARGET).parent_path(),
+  if (!CopyRecorderFiles(gitsBasePath, executablePath.parent_path(),
                          context.SelectedApiForCapture)) {
-    context.BtnsSideBar->SelectEntry(gui::Context::SideBarItems::APP_LOG);
-
-    return;
-  }
-
-  if (context.GetPath(gui::Context::Paths::CAPTURE_CONFIG).empty()) {
-    LOG_ERROR << "No config for capture was selected";
-    context.BtnsSideBar->SelectEntry(gui::Context::SideBarItems::APP_LOG);
+    context.BtnsSideBar->SelectEntry(Context::SideBarItem::APP_LOG);
 
     return;
   }
 
   LOG_INFO << "Copying config file for capture";
-  if (!FileActions::CopyFile(context.GetPath(gui::Context::Paths::CAPTURE_CONFIG),
+  if (!FileActions::CopyFile(captureConfigPath,
                              executablePath.parent_path() /
                                  "gits_config.yml")) { // Recorder needs the hardcoded config name
-    context.BtnsSideBar->SelectEntry(gui::Context::SideBarItems::APP_LOG);
+    context.BtnsSideBar->SelectEntry(Context::SideBarItem::APP_LOG);
 
     return;
   }
 
-  context.GITSLogEditor->SetText("");
-  context.CaptureInProgress = true;
+  ActionEvent event;
+  event.EventType = ActionEvent::Type::Capture;
+  event.ActionState = ActionEvent::State::Started;
+  EventBus::GetInstance().publish(event);
   FileActions::LaunchExecutableThreadCallbackOnExit(
       executablePath, context.CLIArguments, executablePath.parent_path(),
       [](std::string msg) {
@@ -199,14 +214,23 @@ void CaptureStream(gui::Context& context) {
         // TODO: Maybe this could change and play nicely with logToConsole
       },
       [executablePath, &context]() {
-        LOG_INFO << "Application exit";
-        context.CaptureInProgress = false;
-        context.RecordingProcessingPending = true;
+        ActionEvent event;
+        event.EventType = ActionEvent::Type::Capture;
+        event.ActionState = ActionEvent::State::Ended;
+        EventBus::GetInstance().publish(event);
       });
 }
 
-std::vector<std::string> GetRecorderFilesForApi(gui::Context& context, gui::Context::Api api) {
-  const auto gitsBasePath = context.GetPath(gui::Context::Paths::GITS_BASE);
+std::vector<std::string> GetRecorderFilesForApi(Api api) {
+  auto& context = Context::GetInstance();
+  std::filesystem::path gitsBasePath = context.GetPathSafe(Path::GITS_BASE);
+  if (gitsBasePath.empty()) {
+    LOG_ERROR << "No GITS base path for capture was selected";
+    context.BtnsSideBar->SelectEntry(Context::SideBarItem::APP_LOG);
+
+    return std::vector<std::string>();
+  }
+
   const auto recorderDirectory = gitsBasePath / "Recorder";
   const auto apiDirectoryName = GetRecorderDirectoryNameForApi(api);
   if (apiDirectoryName.empty()) {
@@ -227,15 +251,14 @@ std::vector<std::string> GetRecorderFilesForApi(gui::Context& context, gui::Cont
   return filenames;
 }
 
-bool CleanupRecorderFiles(gui::Context& context,
-                          gui::Context::Api api,
-                          gui::CapturePanel::CaptureCleanupOptions cleanupSelections) {
-  if (context.SelectedApiForCapture == gui::Context::Api::UNKNOWN) {
+bool CleanupRecorderFiles(Api api, gui::CapturePanel::CaptureCleanupOptions cleanupSelections) {
+  auto& context = Context::GetInstance();
+  if (context.SelectedApiForCapture == Api::UNKNOWN) {
     LOG_ERROR << "Couldn't perform cleanup. No capture API was selected.";
     return false;
   }
 
-  const auto targetDirectory = context.GetPath(gui::Context::Paths::TARGET).parent_path();
+  std::filesystem::path targetDirectory = context.GetPathSafe(Path::CAPTURE_TARGET);
   if (targetDirectory.empty()) {
     LOG_ERROR << "Couldn't perform cleanup. No target directory was selected.";
     return false;
@@ -246,7 +269,7 @@ bool CleanupRecorderFiles(gui::Context& context,
     return false;
   }
 
-  auto filesToRemove = GetRecorderFilesForApi(context, context.SelectedApiForCapture);
+  auto filesToRemove = GetRecorderFilesForApi(context.SelectedApiForCapture);
 
   if (!cleanupSelections.CleanRecorderFiles) {
     // Recorder files means files other than the config (DLLs etc.)
