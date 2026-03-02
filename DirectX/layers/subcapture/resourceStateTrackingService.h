@@ -14,6 +14,7 @@
 #include <unordered_set>
 #include <vector>
 #include <set>
+#include <optional>
 
 namespace gits {
 namespace DirectX {
@@ -61,6 +62,10 @@ private:
                        std::vector<unsigned>& resourceAfterKeys);
   D3D12_RESOURCE_STATES getResourceState(D3D12_BARRIER_LAYOUT layout);
   D3D12_BARRIER_LAYOUT getResourceLayout(D3D12_RESOURCE_STATES layout);
+  void insertIfNotResident(unsigned resourceKey, std::set<unsigned>& residencyKeys);
+  std::optional<unsigned> getResidencyKeyForNotResidentResource(unsigned key);
+  void recordMakeResident(const std::set<unsigned>& keys);
+  void recordEvict(const std::set<unsigned>& keys);
 
 private:
   struct ResourceBarriers {

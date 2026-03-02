@@ -163,6 +163,10 @@ private:
                    ID3D12GraphicsCommandList* commandList,
                    BufferBackedRaytracingAccelerationStructureState* state);
   std::vector<Interval> mergeIntervals(const std::vector<Interval>& intervals);
+  void insertIfNotResident(unsigned resourceKey, std::set<unsigned>& residencyKeys);
+  std::optional<unsigned> getResidencyKeyForNotResidentResource(unsigned key);
+  void recordMakeResident(const std::set<unsigned>& keys);
+  void recordEvict(const std::set<unsigned>& keys);
 };
 
 } // namespace DirectX

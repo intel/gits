@@ -303,6 +303,8 @@ void ResourceStateTrackingService::restoreResourceStates(
   createFence.ppFence_.key = fenceKey;
   stateService_.getRecorder().record(new ID3D12DeviceCreateFenceWriter(createFence));
 
+  std::set<unsigned> residencyKeys;
+
   for (unsigned resourceKey : orderedResources) {
     if (recreateStateResources_.find(resourceKey) == recreateStateResources_.end()) {
       continue;
@@ -313,6 +315,8 @@ void ResourceStateTrackingService::restoreResourceStates(
 
     auto writeResourceBarrier = [&](unsigned subresource, D3D12_RESOURCE_STATES beforeState,
                                     D3D12_RESOURCE_STATES afterState) {
+      insertIfNotResident(resourceKey, residencyKeys);
+
       ID3D12GraphicsCommandListResourceBarrierCommand barrierCommand;
       barrierCommand.key = stateService_.getUniqueCommandKey();
       barrierCommand.object_.key = commandListKey;
@@ -362,6 +366,10 @@ void ResourceStateTrackingService::restoreResourceStates(
         keys.second && resourceStates_.find(keys.second) == resourceStates_.end()) {
       continue;
     }
+
+    insertIfNotResident(keys.first, residencyKeys);
+    insertIfNotResident(keys.second, residencyKeys);
+
     ID3D12GraphicsCommandListResourceBarrierCommand barrierCommand;
     barrierCommand.key = stateService_.getUniqueCommandKey();
     barrierCommand.object_.key = commandListKey;
@@ -383,6 +391,8 @@ void ResourceStateTrackingService::restoreResourceStates(
   commandListClose.key = stateService_.getUniqueCommandKey();
   commandListClose.object_.key = commandListKey;
   stateService_.getRecorder().record(new ID3D12GraphicsCommandListCloseWriter(commandListClose));
+
+  recordMakeResident(residencyKeys);
 
   ID3D12CommandQueueExecuteCommandListsCommand executeCommandLists;
   executeCommandLists.key = stateService_.getUniqueCommandKey();
@@ -427,6 +437,8 @@ void ResourceStateTrackingService::restoreResourceStates(
   releaseCommandQueue.key = stateService_.getUniqueCommandKey();
   releaseCommandQueue.object_.key = commandQueueKey;
   stateService_.getRecorder().record(new IUnknownReleaseWriter(releaseCommandQueue));
+
+  recordEvict(residencyKeys);
 }
 
 void ResourceStateTrackingService::restoreBackBufferState(unsigned commandQueueKey,
@@ -531,6 +543,134 @@ void ResourceStateTrackingService::restoreBackBufferState(unsigned commandQueueK
   releaseCommandAllocator.key = stateService_.getUniqueCommandKey();
   releaseCommandAllocator.object_.key = commandAllocatorKey;
   stateService_.getRecorder().record(new IUnknownReleaseWriter(releaseCommandAllocator));
+}
+
+void ResourceStateTrackingService::insertIfNotResident(unsigned resourceKey,
+                                                       std::set<unsigned>& residencyKeys) {
+  if (!resourceKey) {
+    return;
+  }
+
+  auto residencyKey = getResidencyKeyForNotResidentResource(resourceKey);
+  if (residencyKey.has_value() && residencyKey.value() != 0) {
+    residencyKeys.insert(residencyKey.value());
+  }
+}
+
+std::optional<unsigned> ResourceStateTrackingService::getResidencyKeyForNotResidentResource(
+    unsigned key) {
+  ObjectState* state = stateService_.getState(key);
+  if (!state) {
+    return std::nullopt;
+  }
+
+  switch (state->creationCommand->getId()) {
+  case CommandId::ID_ID3D12DEVICE_CREATECOMMITTEDRESOURCE: {
+    auto* command =
+        static_cast<ID3D12DeviceCreateCommittedResourceCommand*>(state->creationCommand.get());
+    if (command->HeapFlags_.value & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
+      return key;
+    }
+  } break;
+  case CommandId::ID_ID3D12DEVICE4_CREATECOMMITTEDRESOURCE1: {
+    auto* command =
+        static_cast<ID3D12Device4CreateCommittedResource1Command*>(state->creationCommand.get());
+    if (command->HeapFlags_.value & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
+      return key;
+    }
+  } break;
+  case CommandId::ID_ID3D12DEVICE8_CREATECOMMITTEDRESOURCE2: {
+    auto* command =
+        static_cast<ID3D12Device8CreateCommittedResource2Command*>(state->creationCommand.get());
+    if (command->HeapFlags_.value & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
+      return key;
+    }
+  } break;
+  case CommandId::ID_ID3D12DEVICE10_CREATECOMMITTEDRESOURCE3: {
+    auto* command =
+        static_cast<ID3D12Device10CreateCommittedResource3Command*>(state->creationCommand.get());
+    if (command->HeapFlags_.value & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
+      return key;
+    }
+  } break;
+  case CommandId::INTC_D3D12_CREATECOMMITTEDRESOURCE: {
+    auto* command =
+        static_cast<INTC_D3D12_CreateCommittedResourceCommand*>(state->creationCommand.get());
+    if (command->HeapFlags_.value & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
+      return key;
+    }
+  } break;
+  case CommandId::ID_ID3D12DEVICE_CREATEPLACEDRESOURCE:
+  case CommandId::ID_ID3D12DEVICE8_CREATEPLACEDRESOURCE1:
+  case CommandId::ID_ID3D12DEVICE10_CREATEPLACEDRESOURCE2:
+  case CommandId::INTC_D3D12_CREATEPLACEDRESOURCE: {
+    unsigned heapKey = static_cast<ResourceState*>(state)->heapKey;
+    ObjectState* heapState = stateService_.getState(heapKey);
+    if (!heapState) {
+      return std::nullopt;
+    }
+    switch (heapState->creationCommand->getId()) {
+    case CommandId::ID_ID3D12DEVICE_CREATEHEAP: {
+      auto* command = static_cast<ID3D12DeviceCreateHeapCommand*>(heapState->creationCommand.get());
+      if (command->pDesc_.value->Flags & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
+        return heapKey;
+      }
+    } break;
+    case CommandId::ID_ID3D12DEVICE4_CREATEHEAP1: {
+      auto* command =
+          static_cast<ID3D12Device4CreateHeap1Command*>(heapState->creationCommand.get());
+      if (command->pDesc_.value->Flags & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
+        return heapKey;
+      }
+    } break;
+    case CommandId::INTC_D3D12_CREATEHEAP: {
+      auto* command = static_cast<INTC_D3D12_CreateHeapCommand*>(heapState->creationCommand.get());
+      if (command->pDesc_.value->pD3D12Desc->Flags & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
+        return heapKey;
+      }
+    } break;
+    default:
+      return std::nullopt;
+    }
+  } break;
+  }
+  return std::nullopt;
+}
+
+void ResourceStateTrackingService::recordMakeResident(const std::set<unsigned>& keys) {
+  if (keys.empty()) {
+    return;
+  }
+
+  ID3D12DeviceMakeResidentCommand makeResident;
+  makeResident.key = stateService_.getUniqueCommandKey();
+  makeResident.object_.key = deviceKey_;
+  makeResident.NumObjects_.value = keys.size();
+  ID3D12Pageable* fakePtr = reinterpret_cast<ID3D12Pageable*>(1);
+  makeResident.ppObjects_.value = &fakePtr;
+  makeResident.ppObjects_.size = keys.size();
+  for (unsigned key : keys) {
+    makeResident.ppObjects_.keys.push_back(key);
+  }
+  stateService_.getRecorder().record(new ID3D12DeviceMakeResidentWriter(makeResident));
+}
+
+void ResourceStateTrackingService::recordEvict(const std::set<unsigned>& keys) {
+  if (keys.empty()) {
+    return;
+  }
+
+  ID3D12DeviceEvictCommand evict;
+  evict.key = stateService_.getUniqueCommandKey();
+  evict.object_.key = deviceKey_;
+  evict.NumObjects_.value = keys.size();
+  ID3D12Pageable* fakePtr = reinterpret_cast<ID3D12Pageable*>(1);
+  evict.ppObjects_.value = &fakePtr;
+  evict.ppObjects_.size = keys.size();
+  for (unsigned key : keys) {
+    evict.ppObjects_.keys.push_back(key);
+  }
+  stateService_.getRecorder().record(new ID3D12DeviceEvictWriter(evict));
 }
 
 } // namespace DirectX

@@ -872,11 +872,19 @@ void AccelerationStructuresBuildService::restoreAccelerationStructures() {
       BuildRaytracingAccelerationStructureState* state =
           static_cast<BuildRaytracingAccelerationStructureState*>(itState.second);
 
-      std::unordered_set<unsigned> restoredBuffers;
-      size_t uploadBufferOffset{};
-
       std::vector<AccelerationStructuresBufferContentRestore::BufferRestoreInfo>& restoreInfos =
           bufferContentRestore_.getRestoreInfos(state->commandKey);
+
+      std::set<unsigned> residencyKeys;
+      for (const auto& info : restoreInfos) {
+        insertIfNotResident(info.bufferKey, residencyKeys);
+      }
+      insertIfNotResident(state->desc->destAccelerationStructureKey, residencyKeys);
+      insertIfNotResident(state->desc->sourceAccelerationStructureKey, residencyKeys);
+      recordMakeResident(residencyKeys);
+
+      std::unordered_set<unsigned> restoredBuffers;
+      size_t uploadBufferOffset{};
       for (AccelerationStructuresBufferContentRestore::BufferRestoreInfo& info : restoreInfos) {
         auto itHash = bufferHashesByKeyOffset.find(std::pair(info.bufferKey, info.offset));
         if (itHash != bufferHashesByKeyOffset.end() && itHash->second == info.bufferHash) {
@@ -1037,9 +1045,15 @@ void AccelerationStructuresBuildService::restoreAccelerationStructures() {
         stateService_.getRecorder().record(
             new ID3D12GraphicsCommandListResetWriter(commandListReset));
       }
+      recordEvict(residencyKeys);
     } else if (itState.second->stateType == RaytracingAccelerationStructureState::Copy) {
       CopyRaytracingAccelerationStructureState* state =
           static_cast<CopyRaytracingAccelerationStructureState*>(itState.second);
+
+      std::set<unsigned> residencyKeys;
+      insertIfNotResident(state->destKey, residencyKeys);
+      insertIfNotResident(state->sourceKey, residencyKeys);
+      recordMakeResident(residencyKeys);
 
       ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand copy;
       copy.key = state->commandKey;
@@ -1100,15 +1114,24 @@ void AccelerationStructuresBuildService::restoreAccelerationStructures() {
         stateService_.getRecorder().record(
             new ID3D12GraphicsCommandListResetWriter(commandListReset));
       }
+      recordEvict(residencyKeys);
     } else if (itState.second->stateType == RaytracingAccelerationStructureState::NvAPIBuild) {
       NvAPIBuildRaytracingAccelerationStructureExState* state =
           static_cast<NvAPIBuildRaytracingAccelerationStructureExState*>(itState.second);
 
-      std::unordered_set<unsigned> restoredBuffers;
-      size_t uploadBufferOffset{};
-
       std::vector<AccelerationStructuresBufferContentRestore::BufferRestoreInfo>& restoreInfos =
           bufferContentRestore_.getRestoreInfos(state->commandKey);
+
+      std::set<unsigned> residencyKeys;
+      for (const auto& info : restoreInfos) {
+        insertIfNotResident(info.bufferKey, residencyKeys);
+      }
+      insertIfNotResident(state->desc->destAccelerationStructureKey, residencyKeys);
+      insertIfNotResident(state->desc->sourceAccelerationStructureKey, residencyKeys);
+      recordMakeResident(residencyKeys);
+
+      std::unordered_set<unsigned> restoredBuffers;
+      size_t uploadBufferOffset{};
       for (AccelerationStructuresBufferContentRestore::BufferRestoreInfo& info : restoreInfos) {
         auto itHash = bufferHashesByKeyOffset.find(std::pair(info.bufferKey, info.offset));
         if (itHash != bufferHashesByKeyOffset.end() && itHash->second == info.bufferHash) {
@@ -1270,15 +1293,28 @@ void AccelerationStructuresBuildService::restoreAccelerationStructures() {
         stateService_.getRecorder().record(
             new ID3D12GraphicsCommandListResetWriter(commandListReset));
       }
+      recordEvict(residencyKeys);
     } else if (itState.second->stateType == RaytracingAccelerationStructureState::NvAPIOMM) {
       NvAPIBuildRaytracingOpacityMicromapArrayState* state =
           static_cast<NvAPIBuildRaytracingOpacityMicromapArrayState*>(itState.second);
 
-      std::unordered_set<unsigned> restoredBuffers;
-      size_t uploadBufferOffset{};
-
       std::vector<AccelerationStructuresBufferContentRestore::BufferRestoreInfo>& restoreInfos =
           bufferContentRestore_.getRestoreInfos(state->commandKey);
+
+      std::set<unsigned> residencyKeys;
+      for (const auto& info : restoreInfos) {
+        insertIfNotResident(info.bufferKey, residencyKeys);
+      }
+      insertIfNotResident(state->desc->destOpacityMicromapArrayDataKey, residencyKeys);
+      insertIfNotResident(state->desc->inputBufferKey, residencyKeys);
+      insertIfNotResident(state->desc->perOMMDescsKey, residencyKeys);
+      for (unsigned key : state->desc->destPostBuildBufferKeys) {
+        insertIfNotResident(key, residencyKeys);
+      }
+      recordMakeResident(residencyKeys);
+
+      std::unordered_set<unsigned> restoredBuffers;
+      size_t uploadBufferOffset{};
       for (AccelerationStructuresBufferContentRestore::BufferRestoreInfo& info : restoreInfos) {
         auto itHash = bufferHashesByKeyOffset.find(std::pair(info.bufferKey, info.offset));
         if (itHash != bufferHashesByKeyOffset.end() && itHash->second == info.bufferHash) {
@@ -1440,6 +1476,7 @@ void AccelerationStructuresBuildService::restoreAccelerationStructures() {
         stateService_.getRecorder().record(
             new ID3D12GraphicsCommandListResetWriter(commandListReset));
       }
+      recordEvict(residencyKeys);
     } else {
       GITS_ASSERT(0 && "unknown state");
     }
@@ -1876,6 +1913,134 @@ std::vector<AccelerationStructuresBuildService::Interval> AccelerationStructures
   }
 
   return merged;
+}
+
+void AccelerationStructuresBuildService::insertIfNotResident(unsigned resourceKey,
+                                                             std::set<unsigned>& residencyKeys) {
+  if (!resourceKey) {
+    return;
+  }
+
+  auto residencyKey = getResidencyKeyForNotResidentResource(resourceKey);
+  if (residencyKey.has_value() && residencyKey.value() != 0) {
+    residencyKeys.insert(residencyKey.value());
+  }
+}
+
+std::optional<unsigned> AccelerationStructuresBuildService::getResidencyKeyForNotResidentResource(
+    unsigned key) {
+  ObjectState* state = stateService_.getState(key);
+  if (!state) {
+    return std::nullopt;
+  }
+
+  switch (state->creationCommand->getId()) {
+  case CommandId::ID_ID3D12DEVICE_CREATECOMMITTEDRESOURCE: {
+    auto* command =
+        static_cast<ID3D12DeviceCreateCommittedResourceCommand*>(state->creationCommand.get());
+    if (command->HeapFlags_.value & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
+      return key;
+    }
+  } break;
+  case CommandId::ID_ID3D12DEVICE4_CREATECOMMITTEDRESOURCE1: {
+    auto* command =
+        static_cast<ID3D12Device4CreateCommittedResource1Command*>(state->creationCommand.get());
+    if (command->HeapFlags_.value & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
+      return key;
+    }
+  } break;
+  case CommandId::ID_ID3D12DEVICE8_CREATECOMMITTEDRESOURCE2: {
+    auto* command =
+        static_cast<ID3D12Device8CreateCommittedResource2Command*>(state->creationCommand.get());
+    if (command->HeapFlags_.value & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
+      return key;
+    }
+  } break;
+  case CommandId::ID_ID3D12DEVICE10_CREATECOMMITTEDRESOURCE3: {
+    auto* command =
+        static_cast<ID3D12Device10CreateCommittedResource3Command*>(state->creationCommand.get());
+    if (command->HeapFlags_.value & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
+      return key;
+    }
+  } break;
+  case CommandId::INTC_D3D12_CREATECOMMITTEDRESOURCE: {
+    auto* command =
+        static_cast<INTC_D3D12_CreateCommittedResourceCommand*>(state->creationCommand.get());
+    if (command->HeapFlags_.value & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
+      return key;
+    }
+  } break;
+  case CommandId::ID_ID3D12DEVICE_CREATEPLACEDRESOURCE:
+  case CommandId::ID_ID3D12DEVICE8_CREATEPLACEDRESOURCE1:
+  case CommandId::ID_ID3D12DEVICE10_CREATEPLACEDRESOURCE2:
+  case CommandId::INTC_D3D12_CREATEPLACEDRESOURCE: {
+    unsigned heapKey = static_cast<ResourceState*>(state)->heapKey;
+    ObjectState* heapState = stateService_.getState(heapKey);
+    if (!heapState) {
+      return std::nullopt;
+    }
+    switch (heapState->creationCommand->getId()) {
+    case CommandId::ID_ID3D12DEVICE_CREATEHEAP: {
+      auto* command = static_cast<ID3D12DeviceCreateHeapCommand*>(heapState->creationCommand.get());
+      if (command->pDesc_.value->Flags & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
+        return heapKey;
+      }
+    } break;
+    case CommandId::ID_ID3D12DEVICE4_CREATEHEAP1: {
+      auto* command =
+          static_cast<ID3D12Device4CreateHeap1Command*>(heapState->creationCommand.get());
+      if (command->pDesc_.value->Flags & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
+        return heapKey;
+      }
+    } break;
+    case CommandId::INTC_D3D12_CREATEHEAP: {
+      auto* command = static_cast<INTC_D3D12_CreateHeapCommand*>(heapState->creationCommand.get());
+      if (command->pDesc_.value->pD3D12Desc->Flags & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
+        return heapKey;
+      }
+    } break;
+    default:
+      return std::nullopt;
+    }
+  } break;
+  }
+  return std::nullopt;
+}
+
+void AccelerationStructuresBuildService::recordMakeResident(const std::set<unsigned>& keys) {
+  if (keys.empty()) {
+    return;
+  }
+
+  ID3D12DeviceMakeResidentCommand makeResident;
+  makeResident.key = stateService_.getUniqueCommandKey();
+  makeResident.object_.key = deviceKey_;
+  makeResident.NumObjects_.value = keys.size();
+  ID3D12Pageable* fakePtr = reinterpret_cast<ID3D12Pageable*>(1);
+  makeResident.ppObjects_.value = &fakePtr;
+  makeResident.ppObjects_.size = keys.size();
+  for (unsigned key : keys) {
+    makeResident.ppObjects_.keys.push_back(key);
+  }
+  stateService_.getRecorder().record(new ID3D12DeviceMakeResidentWriter(makeResident));
+}
+
+void AccelerationStructuresBuildService::recordEvict(const std::set<unsigned>& keys) {
+  if (keys.empty()) {
+    return;
+  }
+
+  ID3D12DeviceEvictCommand evict;
+  evict.key = stateService_.getUniqueCommandKey();
+  evict.object_.key = deviceKey_;
+  evict.NumObjects_.value = keys.size();
+  ID3D12Pageable* fakePtr = reinterpret_cast<ID3D12Pageable*>(1);
+  evict.ppObjects_.value = &fakePtr;
+  evict.ppObjects_.size = keys.size();
+  for (unsigned key : keys) {
+    evict.ppObjects_.keys.push_back(key);
+  }
+  stateService_.getRecorder().record(new ID3D12DeviceEvictWriter(evict));
 }
 
 } // namespace DirectX
