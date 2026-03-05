@@ -109,14 +109,14 @@ void PlaybackPanel::RowConfigPath() {
   auto remainingWidth = availableWidth - ImGui::GetCursorPosX();
   auto allocatedWidth = remainingWidth - WidthLastButton();
 
-  context_helper::PathInput("###ConfigPathInput", gui::Path::CONFIG, gui::Mode::PLAYBACK, 0,
+  context_helper::PathInput("###ConfigPathInput", gui::Path::CONFIG, context.AppMode, 0,
                             allocatedWidth);
   ImGuiHelper::AddTooltip(Labels::CONFIG_INPUT_HINT);
 
   ImGui::SameLine();
   ImGui::PushID(++context.ImguiIDs);
   if (ImGui::Button(Labels::CHOOSE_CONFIG, ImVec2(WidthLastButton(), 0))) {
-    ShowFileDialog(FileDialogKeys{Path::CONFIG, Mode::PLAYBACK});
+    ShowFileDialog(FileDialogKeys{Path::CONFIG, context.AppMode});
   }
   ImGui::PopID();
   ImGuiHelper::AddTooltip(Labels::CHOOSE_CONFIG_HINT);
