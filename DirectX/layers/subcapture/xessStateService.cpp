@@ -183,9 +183,13 @@ void XellStateService::restoreContextState(ContextState* state) {
 #pragma region XEFG
 
 void XefgStateService::restoreState() {
+  if (restored_) {
+    return;
+  }
   for (auto& it : contextStatesByContextKey_) {
     restoreContextState(it.second.get());
   }
+  restored_ = true;
 }
 
 void XefgStateService::storeContextState(ContextState* state) {

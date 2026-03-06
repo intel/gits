@@ -2205,5 +2205,82 @@ void AnalyzerLayer::post(xefgSwapChainD3D12GetSwapChainPtrCommand& c) {
   analyzerService_.notifyObject(c.ppSwapChain_.key);
 }
 
+void AnalyzerLayer::post(xefgSwapChainGetPropertiesCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
+  analyzerService_.notifyObject(c.hSwapChain_.key);
+}
+
+void AnalyzerLayer::post(xefgSwapChainTagFrameConstantsCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
+  analyzerService_.notifyObject(c.hSwapChain_.key);
+}
+
+void AnalyzerLayer::post(xefgSwapChainSetEnabledCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
+  analyzerService_.notifyObject(c.hSwapChain_.key);
+}
+
+void AnalyzerLayer::post(xefgSwapChainSetPresentIdCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
+  analyzerService_.notifyObject(c.hSwapChain_.key);
+}
+
+void AnalyzerLayer::post(xefgSwapChainGetLastPresentStatusCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
+  analyzerService_.notifyObject(c.hSwapChain_.key);
+}
+
+void AnalyzerLayer::post(xefgSwapChainSetLoggingCallbackCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
+  analyzerService_.notifyObject(c.hSwapChain_.key);
+}
+
+void AnalyzerLayer::post(xefgSwapChainDestroyCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
+  analyzerService_.notifyObject(c.hSwapChain_.key);
+}
+
+void AnalyzerLayer::post(xefgSwapChainSetLatencyReductionCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
+  analyzerService_.notifyObject(c.hSwapChain_.key);
+}
+
+void AnalyzerLayer::post(xefgSwapChainSetSceneChangeThresholdCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
+  analyzerService_.notifyObject(c.hSwapChain_.key);
+}
+
+void AnalyzerLayer::post(xefgSwapChainGetPipelineBuildStatusCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
+  analyzerService_.notifyObject(c.hSwapChain_.key);
+}
+
+void AnalyzerLayer::post(xefgSwapChainEnableDebugFeatureCommand& c) {
+  if (analyzerService_.afterRange()) {
+    return;
+  }
+  analyzerService_.notifyObject(c.hSwapChain_.key);
+}
+
 } // namespace DirectX
 } // namespace gits

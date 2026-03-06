@@ -180,7 +180,18 @@ custom = [
     'xefgSwapChainD3D12CreateContext',
     'xefgSwapChainD3D12InitFromSwapChain',
     'xefgSwapChainD3D12InitFromSwapChainDesc',
-    'xefgSwapChainD3D12GetSwapChainPtr'
+    'xefgSwapChainD3D12GetSwapChainPtr',
+    'xefgSwapChainGetProperties',
+    'xefgSwapChainTagFrameConstants',
+    'xefgSwapChainSetEnabled',
+    'xefgSwapChainSetPresentId',
+    'xefgSwapChainGetLastPresentStatus',
+    'xefgSwapChainSetLoggingCallback',
+    'xefgSwapChainDestroy',
+    'xefgSwapChainSetLatencyReduction',
+    'xefgSwapChainSetSceneChangeThreshold',
+    'xefgSwapChainGetPipelineBuildStatus',
+    'xefgSwapChainEnableDebugFeature'
 ]
 %>\
 %for function in functions:

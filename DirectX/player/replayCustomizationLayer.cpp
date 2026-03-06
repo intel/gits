@@ -1747,6 +1747,30 @@ void ReplayCustomizationLayer::pre(xefgSwapChainSetLoggingCallbackCommand& comma
   }
 }
 
+void ReplayCustomizationLayer::pre(xessSetLoggingCallbackCommand& command) {
+  command.loggingCallback_.value = nullptr;
+
+  static bool logged = false;
+  if (!logged) {
+
+    LOG_INFO << "[XeSS] xessSetLoggingCallback: Set the callback function pointer to "
+                "nullptr";
+    logged = true;
+  }
+}
+
+void ReplayCustomizationLayer::pre(xellSetLoggingCallbackCommand& command) {
+  command.loggingCallback_.value = nullptr;
+
+  static bool logged = false;
+  if (!logged) {
+
+    LOG_INFO << "[XeLL] xellSetLoggingCallback: Set the callback function pointer to "
+                "nullptr";
+    logged = true;
+  }
+}
+
 void ReplayCustomizationLayer::fillGpuAddressArgument(D3D12_GPU_VIRTUAL_ADDRESS_Argument& arg) {
   if (useAddressPinning_) {
     return;

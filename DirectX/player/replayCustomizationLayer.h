@@ -177,6 +177,8 @@ public:
   void post(CreateDXGIFactory2Command& command) override;
   void pre(xefgSwapChainD3D12InitFromSwapChainDescCommand& command) override;
   void pre(xefgSwapChainSetLoggingCallbackCommand& command) override;
+  void pre(xessSetLoggingCallbackCommand& command) override;
+  void pre(xellSetLoggingCallbackCommand& command) override;
 
 private:
   struct NvAPIShaderExtnSlot {
