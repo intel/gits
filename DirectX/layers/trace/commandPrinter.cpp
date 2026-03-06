@@ -82,13 +82,13 @@ void CommandPrinter::print(bool flush, bool newLine) {
     state_.commandListExecutionCount = 0;
   } else if (command_.getId() == CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_DRAWINSTANCED ||
              command_.getId() == CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_DRAWINDEXEDINSTANCED) {
-    stream_ << " Draw #" << ++state_.drawCount << " from frame #" << state_.frameCount;
+    stream_ << " Frame #" << state_.frameCount << " Frame Draw #" << ++state_.drawCount;
   } else if (command_.getId() == CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_DISPATCH) {
-    stream_ << " Dispatch #" << ++state_.dispatchCount << " from frame #" << state_.frameCount;
+    stream_ << " Frame #" << state_.frameCount << " Frame Dispatch #" << ++state_.dispatchCount;
   } else if (command_.getId() == CommandId::ID_ID3D12COMMANDQUEUE_EXECUTECOMMANDLISTS &&
              isExecutionSerializationKey(command_.key) && !state_.stateRestorePhase) {
-    stream_ << " Execute #" << ++state_.commandListExecutionCount << " from frame #"
-            << state_.frameCount;
+    stream_ << " Frame #" << state_.frameCount << " Frame Execute #"
+            << ++state_.commandListExecutionCount;
   }
   if (newLine) {
     stream_ << "\n";

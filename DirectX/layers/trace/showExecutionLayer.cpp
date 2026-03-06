@@ -59,7 +59,8 @@ void ShowExecutionLayer::post(ID3D12CommandQueueExecuteCommandListsCommand& comm
   ++executeCount;
   p.addArgument(command.NumCommandLists_);
   p.addArgument(command.ppCommandLists_);
-  p.print(false);
+  p.print(false, false);
+  outBuff_ << " Frame #" << printerState_.frameCount << " Frame Execute #" << executeCount << "\n";
 
   std::string type;
   if (commandQueueTypes_.find(command.object_.key) != commandQueueTypes_.end()) {
@@ -79,15 +80,27 @@ void ShowExecutionLayer::post(ID3D12CommandQueueExecuteCommandListsCommand& comm
   for (unsigned i = 0; i < command.NumCommandLists_.value; ++i) {
     auto it = commandListCommands_.find(command.ppCommandLists_.keys[i]);
     if (it != commandListCommands_.end()) {
-      outBuff_ << "    " << type << " CommandList O" << command.ppCommandLists_.keys[i] << ":\n";
-
       unsigned drawCount{};
       unsigned frameCount = printerState_.stateRestorePhase ? 0 : CGits::Instance().CurrentFrame();
+
+      outBuff_ << "    " << type << " CommandList O" << command.ppCommandLists_.keys[i]
+               << " Frame #" << frameCount << " Frame Execute #" << executeCount << " CommandList #"
+               << i + 1 << "\n";
+
       for (Command& c : it->second) {
-        outBuff_ << "      " << c.str;
         if (c.isDraw) {
-          outBuff_ << " execution #" << frameCount << "." << executeCount << "." << i + 1 << "."
-                   << ++drawCount << "\n";
+          std::string baseStr = c.str;
+          std::string frameDrawSuffix;
+          if (auto pos = baseStr.rfind(" Frame Draw #"); pos != std::string::npos) {
+            frameDrawSuffix = baseStr.substr(pos);
+            baseStr.resize(pos);
+          }
+          outBuff_ << "      " << baseStr << " Frame Execute #" << executeCount << " CommandList #"
+                   << i + 1 << " CommandList Draw #" << ++drawCount << " (e_" << frameCount << "_"
+                   << executeCount << "_" << i + 1 << "_" << drawCount << ")" << frameDrawSuffix
+                   << "\n";
+        } else {
+          outBuff_ << "      " << c.str;
         }
       }
     }
