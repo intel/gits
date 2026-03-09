@@ -1881,6 +1881,18 @@ void AccelerationStructuresBuildService::storeBuffer(
         LOG_WARNING << "State restore - state of overlapped resource different than expected";
         logged = true;
       }
+
+      if (commandList->GetType() == D3D12_COMMAND_LIST_TYPE_COMPUTE) {
+        resourceState &= ~D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+        if (resourceState != trackedState) {
+          static bool logged = false;
+          if (!logged) {
+            LOG_WARNING
+                << "State restore - state of overlapped resource adjusted for compute command list";
+            logged = true;
+          }
+        }
+      }
     }
   }
   bufferContentRestore_.storeBuffer(commandList, static_cast<ID3D12Resource*>(bufferState->object),

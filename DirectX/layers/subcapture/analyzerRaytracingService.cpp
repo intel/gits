@@ -182,6 +182,18 @@ void AnalyzerRaytracingService::buildTlas(
           LOG_WARNING << "Analysis - state of overlapped resource different than expected";
           logged = true;
         }
+
+        if (c.object_.value->GetType() == D3D12_COMMAND_LIST_TYPE_COMPUTE) {
+          resourceState &= ~D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+          if (resourceState != trackedState) {
+            static bool logged = false;
+            if (!logged) {
+              LOG_WARNING
+                  << "Analysis - state of overlapped resource adjusted for compute command list";
+              logged = true;
+            }
+          }
+        }
       }
     }
 
@@ -251,6 +263,18 @@ void AnalyzerRaytracingService::buildTlas(
             LOG_WARNING << "Analysis - state of overlapped resource different than expected";
             logged = true;
           }
+
+          if (c.object_.value->GetType() == D3D12_COMMAND_LIST_TYPE_COMPUTE) {
+            resourceState &= ~D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+            if (resourceState != trackedState) {
+              static bool logged = false;
+              if (!logged) {
+                LOG_WARNING
+                    << "Analysis - state of overlapped resource adjusted for compute command list";
+                logged = true;
+              }
+            }
+          }
         }
       }
 
@@ -316,6 +340,18 @@ void AnalyzerRaytracingService::dumpBindingTable(ID3D12GraphicsCommandList* comm
       if (!logged) {
         LOG_WARNING << "Analysis - state of overlapped resource different than expected";
         logged = true;
+      }
+
+      if (commandList->GetType() == D3D12_COMMAND_LIST_TYPE_COMPUTE) {
+        resourceState &= ~D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+        if (resourceState != trackedState) {
+          static bool logged = false;
+          if (!logged) {
+            LOG_WARNING
+                << "Analysis - state of overlapped resource adjusted for compute command list";
+            logged = true;
+          }
+        }
       }
     }
   }

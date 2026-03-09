@@ -206,6 +206,18 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStr
             LOG_WARNING << "Gpu patching - state of overlapped resource different than expected";
             logged = true;
           }
+
+          if (commandList->GetType() == D3D12_COMMAND_LIST_TYPE_COMPUTE) {
+            instanceState &= ~D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+            if (instanceState != trackedState) {
+              static bool logged = false;
+              if (!logged) {
+                LOG_WARNING << "Gpu patching - state of overlapped resource adjusted for compute "
+                               "command list";
+                logged = true;
+              }
+            }
+          }
         }
       }
 
@@ -341,6 +353,18 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStr
             LOG_WARNING << "Gpu patching - state of overlapped resource different than expected";
             logged = true;
           }
+
+          if (commandList->GetType() == D3D12_COMMAND_LIST_TYPE_COMPUTE) {
+            resourceState &= ~D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+            if (resourceState != trackedState) {
+              static bool logged = false;
+              if (!logged) {
+                LOG_WARNING << "Gpu patching - state of overlapped resource adjusted for compute "
+                               "command list";
+                logged = true;
+              }
+            }
+          }
         }
       }
 
@@ -436,6 +460,18 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStr
             if (!logged) {
               LOG_WARNING << "Gpu patching - state of overlapped resource different than expected";
               logged = true;
+            }
+
+            if (commandList->GetType() == D3D12_COMMAND_LIST_TYPE_COMPUTE) {
+              instanceState &= ~D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+              if (instanceState != trackedState) {
+                static bool logged = false;
+                if (!logged) {
+                  LOG_WARNING << "Gpu patching - state of overlapped resource adjusted for compute "
+                                 "command list";
+                  logged = true;
+                }
+              }
             }
           }
         }
@@ -595,6 +631,18 @@ void GpuPatchLayer::patchDispatchRays(ID3D12GraphicsCommandList* commandList,
           if (!logged) {
             LOG_WARNING << "Gpu patching - state of overlapped resource different than expected";
             logged = true;
+          }
+
+          if (commandList->GetType() == D3D12_COMMAND_LIST_TYPE_COMPUTE) {
+            resourceState &= ~D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+            if (resourceState != trackedState) {
+              static bool logged = false;
+              if (!logged) {
+                LOG_WARNING << "Gpu patching - state of overlapped resource adjusted for compute "
+                               "command list";
+                logged = true;
+              }
+            }
           }
         }
       }
