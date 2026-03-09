@@ -1645,6 +1645,10 @@ void AccelerationStructuresBuildService::removeState(unsigned stateId, bool remo
     return;
   }
 
+  if (itState->second->foundInAnalysis) {
+    return;
+  }
+
   // remove state sources chain
   auto itSource = stateSourceByDest_.find(stateId);
   if (itSource != stateSourceByDest_.end()) {
@@ -1812,13 +1816,15 @@ void AccelerationStructuresBuildService::optimize() {
   }
   std::vector<unsigned> removedStates;
   for (auto& [stateId, state] : statesById_) {
-    auto itDests = stateDestsBySource_.find(stateId);
-    if (itDests == stateDestsBySource_.end() || itDests->second.empty()) {
-      if (!stateService_.getAnalyzerResults().restoreBlas(
-              std::make_pair(state->destKey, state->destOffset)) &&
-          !stateService_.getAnalyzerResults().restoreTlas(state->commandKey)) {
+    if (!stateService_.getAnalyzerResults().restoreBlas(
+            std::make_pair(state->destKey, state->destOffset)) &&
+        !stateService_.getAnalyzerResults().restoreTlas(state->commandKey)) {
+      auto itDests = stateDestsBySource_.find(stateId);
+      if (itDests == stateDestsBySource_.end() || itDests->second.empty()) {
         removedStates.push_back(stateId);
       }
+    } else {
+      state->foundInAnalysis = true;
     }
   }
   for (unsigned stateId : removedStates) {

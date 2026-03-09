@@ -76,6 +76,7 @@ private:
     unsigned destOffset{};
     unsigned sourceKey{};
     unsigned sourceOffset{};
+    bool foundInAnalysis{};
   };
 
   struct BufferBackedRaytracingAccelerationStructureState
