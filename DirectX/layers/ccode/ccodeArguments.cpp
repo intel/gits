@@ -32,7 +32,7 @@ static std::string descriptorHeapHandleStr(unsigned key,
 
 // directx::GpuAddressService::Get().GetGpuAddress
 static std::string gpuAddressStr(unsigned key, unsigned offset) {
-  auto keyStr = key ? objKeyToStr(key) : "0";
+  const auto& keyStr = key ? objKeyToStr(key) : "0";
   std::ostringstream ss;
   ss << "directx::GpuAddressService::Get().GetGpuAddress(" << keyStr << ", " << offset << ")";
   return ss.str();

@@ -25,7 +25,7 @@ static std::string enumToStr(const std::unordered_map<int, std::string>& enumMap
       first = false;
     }
   }
-  return result.empty() ? "unknown" : result;
+  return result.empty() ? "unknown" : std::move(result);
 }
 
 std::string toStr(NVAPI_D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS_EX value) {

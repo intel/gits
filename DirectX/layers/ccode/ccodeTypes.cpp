@@ -31,7 +31,7 @@ std::string objKeyToPtrStr(unsigned key) {
 }
 
 void toCpp(const LARGE_INTEGER& value, CppParameterInfo& info, CppParameterOutput& out) {
-  std::string name = info.getIndexedName();
+  std::string name = info.getIndexedName(); // Using const would break the move at the end.
   std::ostringstream ss;
   if (!info.isArrayElement) {
     ss << info.type << " " << name << ";" << std::endl;
@@ -39,7 +39,7 @@ void toCpp(const LARGE_INTEGER& value, CppParameterInfo& info, CppParameterOutpu
   ss << name << ".QuadPart = " << value.QuadPart << ";" << std::endl;
 
   out.initialization = ss.str();
-  out.value = name;
+  out.value = std::move(name);
   out.decorator = "";
 }
 
@@ -57,7 +57,7 @@ void toCpp(const void* value, CppParameterInfo& info, CppParameterOutput& out) {
   auto& ccodeStream = ccode::CCodeStream::getInstance();
   ccodeStream.writeData(value, info.size.value());
 
-  std::string dataName = "data" + std::to_string(count);
+  const std::string dataName = "data" + std::to_string(count);
   std::ostringstream ss;
   ss << "std::vector<std::byte> " << dataName << "(" << info.size.value() << ");" << std::endl;
   ss << "DataService::Get().Read(" << dataName << ".data(), " << dataName << ".size());"
@@ -83,14 +83,14 @@ void toCpp(const wchar_t* s, CppParameterInfo& info, CppParameterOutput& out) {
 }
 
 void toCpp(const HMONITOR& value, CppParameterInfo& info, CppParameterOutput& out) {
-  auto ptrValue = reinterpret_cast<std::uintptr_t>(value);
+  const auto ptrValue = reinterpret_cast<std::uintptr_t>(value);
   out.initialization = "";
   out.value = toHex(ptrValue);
   out.decorator = "(HMONITOR)";
 }
 
 void toCpp(const HWND& value, CppParameterInfo& info, CppParameterOutput& out) {
-  auto ptrValue = reinterpret_cast<std::uintptr_t>(value);
+  const auto ptrValue = reinterpret_cast<std::uintptr_t>(value);
   std::ostringstream ss;
   ss << info.type << " " << info.name << " = "
      << "WindowService::Get().GetHandle(" << ptrValue << ");" << std::endl;
@@ -101,7 +101,7 @@ void toCpp(const HWND& value, CppParameterInfo& info, CppParameterOutput& out) {
 }
 
 void toCpp(const D3D12_RECT& value, CppParameterInfo& info, CppParameterOutput& out) {
-  std::string name = info.getIndexedName();
+  std::string name = info.getIndexedName(); // Using const would break the move at the end.
   std::ostringstream ss;
   if (!info.isArrayElement) {
     ss << info.type << " " << name << ";" << std::endl;
@@ -112,7 +112,7 @@ void toCpp(const D3D12_RECT& value, CppParameterInfo& info, CppParameterOutput& 
   ss << name << ".bottom = " << toStr(value.bottom) << ";" << std::endl;
 
   out.initialization = ss.str();
-  out.value = name;
+  out.value = std::move(name);
   out.decorator = "";
 }
 

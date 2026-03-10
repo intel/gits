@@ -148,12 +148,12 @@ size_t CCodeStream::getDataOffset() const {
 }
 
 void CCodeStream::addInterface(unsigned key, REFIID iid) {
-  auto latestIID = getLatestInterface(iid);
+  const auto& latestIID = getLatestInterface(iid);
   auto iidStr = toStr(latestIID);
   if (iidStr.starts_with("IID_")) {
     iidStr = iidStr.substr(4);
   }
-  interfaceMap_[key] = iidStr;
+  interfaceMap_[key] = std::move(iidStr);
 }
 
 std::string CCodeStream::getInterfaceName(unsigned key) const {
