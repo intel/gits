@@ -52,9 +52,13 @@ static std::string IdentifierToStr(
 RtasDeserializer::RtasDeserializer(const std::string& cacheFile) : cacheFilePath_(cacheFile) {}
 
 RtasDeserializer::~RtasDeserializer() {
-  LOG_INFO << "RtasCache - Cleaning up RTAS deserializer...";
-  LOG_INFO << "RtasCache - Buffer pool contains " << bufferPool_.size() << " buffers";
-  cleanup();
+  try {
+    LOG_INFO << "RtasCache - Cleaning up RTAS deserializer...";
+    LOG_INFO << "RtasCache - Buffer pool contains " << bufferPool_.size() << " buffers";
+    cleanup();
+  } catch (...) {
+    topmost_exception_handler("RtasDeserializer::~RtasDeserializer");
+  }
 }
 
 bool RtasDeserializer::preloadCache(ID3D12Device5* device) {
