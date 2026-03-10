@@ -175,7 +175,7 @@ gits::Vulkan::CVkAccelerationStructureBuildGeometryInfoKHRData::
 gits::Vulkan::CVkMicromapBuildInfoEXTData::CVkMicromapBuildInfoEXTData(
     const VkMicromapBuildInfoEXT* micromapbuildinfoext,
     VkAccelerationStructureBuildControlDataGITS controlData)
-    : _MicromapBuildInfoEXT(nullptr), _isNullPtr(micromapbuildinfoext == nullptr) {
+    : _baseIn(), _MicromapBuildInfoEXT(nullptr), _isNullPtr(micromapbuildinfoext == nullptr) {
   if (!*_isNullPtr) {
     uint64_t triangleArrayCount = 0;
     if (micromapbuildinfoext->pUsageCounts) {
@@ -240,7 +240,8 @@ gits::Vulkan::CVkAccelerationStructureTrianglesOpacityMicromapEXTData::
         const VkAccelerationStructureTrianglesOpacityMicromapEXT*
             accelerationstructuretrianglesopacitymicromapext,
         const void* pCustomData)
-    : _AccelerationStructureTrianglesOpacityMicromapEXT(nullptr),
+    : _baseIn(),
+      _AccelerationStructureTrianglesOpacityMicromapEXT(nullptr),
       _isNullPtr(accelerationstructuretrianglesopacitymicromapext == nullptr) {
   if (!*_isNullPtr) {
     auto& ommCustomData = *(VkOpacityMicromapCustomDataGITS*)pCustomData;
