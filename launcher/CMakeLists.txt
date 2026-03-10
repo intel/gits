@@ -1,8 +1,6 @@
 set(LAUNCHER_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(LAUNCHER_HEADER_DIR ${LAUNCHER_SOURCE_DIR}/include)
 
-find_package(Vulkan REQUIRED)
-
 list(APPEND LAUNCHER_SOURCE
   ${LAUNCHER_SOURCE_DIR}/fileActions.cpp
   ${LAUNCHER_SOURCE_DIR}/main.cpp
@@ -14,6 +12,7 @@ list(APPEND LAUNCHER_SOURCE
   ${LAUNCHER_SOURCE_DIR}/metaDataActions.cpp
   ${LAUNCHER_SOURCE_DIR}/contextHelper.cpp
   ${LAUNCHER_SOURCE_DIR}/launcherPaths.cpp
+  ${LAUNCHER_SOURCE_DIR}/vulkanLoader.cpp
 
   ${LAUNCHER_HEADER_DIR}/common.h
   ${LAUNCHER_HEADER_DIR}/fileActions.h
@@ -30,6 +29,8 @@ list(APPEND LAUNCHER_SOURCE
   ${LAUNCHER_HEADER_DIR}/contextHelper.h
   ${LAUNCHER_HEADER_DIR}/contextHelper.h
   ${LAUNCHER_HEADER_DIR}/launcherPaths.h
+  ${LAUNCHER_HEADER_DIR}/vulkanLoader.h
+  ${LAUNCHER_HEADER_DIR}/vulkanFunctions.inl
   )
 
 list(APPEND LAUNCHER_PANEL_SOURCE
@@ -89,7 +90,7 @@ add_executable(gits_launcher ${LAUNCHER_SOURCE} ${LAUNCHER_PANEL_SOURCE}
 set_target_properties(gits_launcher PROPERTIES OUTPUT_NAME "gitsLauncher")
 
 target_include_directories(gits_launcher PRIVATE ${LAUNCHER_HEADER_DIR} 
-  ${Vulkan_INCLUDE_DIRS}  
+  ${VULKAN_HEADERS_DIR}
   ${IMGUI_BACKEND_DIR} ${IMGUI_COLOR_TEXT_EDIT_DIR} ${IMGUI_FILE_DIALOG_DIR}
   ${PLOG_SOURCE_DIR}/include 
   ${COMMON_HEADER_DIR}
@@ -112,7 +113,9 @@ target_compile_options(gits_launcher PRIVATE
   >
 )
 
-target_link_libraries(gits_launcher PRIVATE ${Vulkan_LIBRARIES} imgui_common log common)
+target_compile_definitions(gits_launcher PRIVATE IMGUI_IMPL_VULKAN_NO_PROTOTYPES)
+
+target_link_libraries(gits_launcher PRIVATE imgui_common log common ${CMAKE_DL_LIBS})
 if(NOT WIN64)
 target_link_libraries(gits_launcher PRIVATE glfw)
 endif()

@@ -52,7 +52,12 @@ if(SKIP_THIRDPARTY_FETCH)
   add_definitions(-DSKIP_THIRDPARTY_FETCH)
 endif()
 
+if(WIN64)
+option(WITH_LAUNCHER "Build Launcher" ON)
+else()
 option(WITH_LAUNCHER "Build Launcher" OFF)
+endif()
+
 if(WITH_LAUNCHER)
   add_definitions(-DWITH_LAUNCHER)
 endif()

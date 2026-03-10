@@ -6,11 +6,11 @@
 //
 // ===================== end_copyright_notice ==============================
 
+#include "vulkanLoader.h"
 #include "imgui.h"
 
 #ifdef _WIN32
 #include "imgui_impl_win32.h"
-#define VK_USE_PLATFORM_WIN32_KHR
 #include "imgui_impl_vulkan.h"
 #include <windows.h>
 #else
@@ -144,6 +144,9 @@ static bool SetupWindow() {
 
   // force X11 for now
   glfwInitHint(GLFW_PLATFORM, GLFW_PLATFORM_X11);
+
+  glfwInitVulkanLoader(vkGetInstanceProcAddr);
+
   if (!glfwInit()) {
     return false;
   }
@@ -202,6 +205,14 @@ static void SetupVulkan() {
     err = vkCreateInstance(&create_info, g_Allocator, &g_Instance);
     CheckVKResult(err);
   }
+
+  if (!LoadVulkanInstanceFunctions(g_Instance)) {
+    LOG_ERROR << "Failed to load Vulkan Instance level functions";
+    return;
+  }
+
+  ImGui_ImplVulkan_LoadFunctions(VK_VERSION_1_4, VulkanLoaderFunction, g_Instance);
+
   g_PhysicalDevice = ImGui_ImplVulkanH_SelectPhysicalDevice(g_Instance);
   IM_ASSERT(g_PhysicalDevice != VK_NULL_HANDLE);
   g_QueueFamily = ImGui_ImplVulkanH_SelectQueueFamilyIndex(g_PhysicalDevice);
@@ -235,6 +246,12 @@ static void SetupVulkan() {
 
     err = vkCreateDevice(g_PhysicalDevice, &create_info, g_Allocator, &g_Device);
     CheckVKResult(err);
+
+    if (!LoadVulkanDeviceFunctions(g_Device)) {
+      LOG_ERROR << "Failed to load Vulkan Device level functions";
+      return;
+    }
+
     vkGetDeviceQueue(g_Device, g_QueueFamily, 0, &g_Queue);
   }
 
@@ -383,6 +400,13 @@ static void CleanUpGUI() {
 }
 
 static bool Setup() {
+  // We need to load the Vulkan library (and the global level functions) before anything
+  // This way we can pass the loading function to glfw (on linux)
+  if (!LoadVulkanLibrary()) {
+    LOG_ERROR << "Failed to load Vulkan library";
+    return false;
+  }
+
   g_LauncherConfig = gits::gui::LauncherConfig::FromFile();
 
   if (!SetupWindow()) {
