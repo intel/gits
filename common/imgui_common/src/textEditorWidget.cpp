@@ -56,15 +56,15 @@ TextEditor& TextEditorWidget::GetEditor() {
 }
 
 void TextEditorWidget::SetSaveCallback(std::function<void(std::filesystem::path)> callback) {
-  m_OnSave = callback;
+  m_OnSave = std::move(callback);
 }
 
 void TextEditorWidget::SetRevertCallback(std::function<void(std::filesystem::path)> callback) {
-  m_OnRevert = callback;
+  m_OnRevert = std::move(callback);
 }
 
 void TextEditorWidget::SetCheckCallback(std::function<bool(const std::string&)> callback) {
-  m_OnCheck = callback;
+  m_OnCheck = std::move(callback);
 }
 
 void TextEditorWidget::SetConfig(const Config& cfg) {
