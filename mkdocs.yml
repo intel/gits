@@ -109,6 +109,7 @@ nav:
     - 'documentation/lua_scripts.md'        
   - Development:
     - 'development/project.md'
+    - 'development/codebase-map.md'
     - 'development/configuration.md'
     - 'development/dependencies.md'
     - 'development/documentation.md'
