@@ -283,7 +283,7 @@ public:
       exhausted_ = true;
     }
 
-    cond_.notify_one();
+    cond_.notify_all();
   }
 
 private:

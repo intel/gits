@@ -21,6 +21,7 @@
 #include <map>
 #include <vector>
 #include <cstdio>
+#include <thread>
 #if defined GITS_PLATFORM_UNIX
 #include <cxxabi.h>
 #include <cstdlib>
@@ -55,13 +56,17 @@ gits::Exception::FCallback gits::Exception::_callback = nullptr;
 void* gits::Exception::_userData = nullptr;
 bool gits::Exception::_inCallback = false;
 
+namespace {
+std::thread::id g_mainThreadId = std::this_thread::get_id();
+} // namespace
+
 void gits::Exception::Callback(FCallback callback, void* userData) {
   _callback = callback;
   _userData = userData;
 }
 
 gits::Exception::Exception() throw() {
-  if (_callback && !_inCallback) {
+  if (_callback && !_inCallback && std::this_thread::get_id() == g_mainThreadId) {
     _inCallback = true;
     try {
       LOG_ERROR << "Exception: " << what();
@@ -75,7 +80,7 @@ gits::Exception::Exception() throw() {
 }
 
 gits::Exception::Exception(std::string message) throw() : _msg(std::move(message)) {
-  if (_callback && !_inCallback) {
+  if (_callback && !_inCallback && std::this_thread::get_id() == g_mainThreadId) {
     _inCallback = true;
     try {
       LOG_ERROR << "Exception: " << what();
