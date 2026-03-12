@@ -8,7 +8,7 @@ title: ResourceDumping
 Dumps render targets and depth stencil on draw commands.
 
 ### Usage
-1. Use trace file to find the desired draw call numbers, which are marked: `Draw #N from frame #M`.
+1. Use trace file to find the desired draw call numbers, which are marked: `Frame #M Frame Draw #N`.
 2. Configure the RenderTargetsDump option using the draw and frame numbers.
 3. Replay the stream. Resources are dumped to stream_dir/render_targets or to `OutputDir`.
 
@@ -27,7 +27,7 @@ Dumps UAV bound textures on dispatch commands.
 Requires an analysis run which analyzes the state of descriptor heaps on execute command lists to determine which resources can be accessed by dispatch calls.
 
 ### Usage
-1. Use trace file to find the desired dispatch call numbers, which are marked: `Dispatch #N from frame #M`.
+1. Use trace file to find the desired dispatch call numbers, which are marked: `Frame #M Frame Dispatch #N`.
 2. Configure the DispatchOutputsDump option using the dispatch and frame numbers.
 3. Replay the stream. Analysis file is generated in current working directory.
 4. Replay the stream. Resources are dumped to stream_dir/dispatch_outputs or to `OutputDir`.
