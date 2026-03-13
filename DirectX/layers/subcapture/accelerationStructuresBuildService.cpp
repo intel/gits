@@ -967,7 +967,7 @@ void AccelerationStructuresBuildService::restoreAccelerationStructures() {
           barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
           barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
           barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
-          barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+          barrier.Transition.StateAfter = it.second->resourceState;
           barrierCommand.pBarriers_.resourceKeys[0] = it.first;
           stateService_.getRecorder().record(
               new ID3D12GraphicsCommandListResourceBarrierWriter(barrierCommand));
@@ -1214,7 +1214,7 @@ void AccelerationStructuresBuildService::restoreAccelerationStructures() {
           barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
           barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
           barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
-          barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+          barrier.Transition.StateAfter = it.second->resourceState;
           barrierCommand.pBarriers_.resourceKeys[0] = it.first;
           stateService_.getRecorder().record(
               new ID3D12GraphicsCommandListResourceBarrierWriter(barrierCommand));
@@ -1397,7 +1397,7 @@ void AccelerationStructuresBuildService::restoreAccelerationStructures() {
           barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
           barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
           barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
-          barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+          barrier.Transition.StateAfter = it.second->resourceState;
           barrierCommand.pBarriers_.resourceKeys[0] = it.first;
           stateService_.getRecorder().record(
               new ID3D12GraphicsCommandListResourceBarrierWriter(barrierCommand));
@@ -1864,27 +1864,30 @@ void AccelerationStructuresBuildService::storeBuffer(
     BufferBackedRaytracingAccelerationStructureState* state) {
   stateService_.keepState(inputKey);
   ResourceState* bufferState = static_cast<ResourceState*>(stateService_.getState(inputKey));
-  D3D12_RESOURCE_STATES resourceState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+  bufferState->resourceState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
   D3D12_RESOURCE_STATES trackedState =
       resourceStateTracker_.getResourceState(commandList, inputKey, 0);
   if (trackedState == D3D12_RESOURCE_STATE_GENERIC_READ ||
       trackedState == D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE) {
-    resourceState = trackedState;
+    bufferState->resourceState = trackedState;
   } else if (trackedState != D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE) {
-    CapturePlayerGpuAddressService::ResourceInfo* resourceInfo =
-        gpuAddressService_.getResourceInfoByCaptureAddress(bufferState->gpuVirtualAddress +
-                                                           inputOffset);
-    if (resourceInfo && resourceInfo->overlapping()) {
-      resourceState = trackedState;
-      static bool logged = false;
-      if (!logged) {
-        LOG_WARNING << "State restore - state of overlapped resource different than expected";
-        logged = true;
+    if (bufferState->denyShaderResource) {
+      bufferState->resourceState = D3D12_RESOURCE_STATE_COMMON;
+    } else {
+      CapturePlayerGpuAddressService::ResourceInfo* resourceInfo =
+          gpuAddressService_.getResourceInfoByCaptureAddress(bufferState->gpuVirtualAddress +
+                                                             inputOffset);
+      if (resourceInfo && resourceInfo->overlapping()) {
+        bufferState->resourceState = trackedState;
+        static bool logged = false;
+        if (!logged) {
+          LOG_WARNING << "State restore - state of overlapped resource different than expected";
+          logged = true;
+        }
       }
-
       if (commandList->GetType() == D3D12_COMMAND_LIST_TYPE_COMPUTE) {
-        resourceState &= ~D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
-        if (resourceState != trackedState) {
+        bufferState->resourceState &= ~D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+        if (bufferState->resourceState != trackedState) {
           static bool logged = false;
           if (!logged) {
             LOG_WARNING
@@ -1896,8 +1899,8 @@ void AccelerationStructuresBuildService::storeBuffer(
     }
   }
   bufferContentRestore_.storeBuffer(commandList, static_cast<ID3D12Resource*>(bufferState->object),
-                                    inputKey, inputOffset, size, resourceState, commandKey,
-                                    bufferState->isMappable);
+                                    inputKey, inputOffset, size, bufferState->resourceState,
+                                    commandKey, bufferState->isMappable);
   state->buffers[inputKey] = bufferState;
   ReservedResourcesService::TiledResource* tiledResource =
       reservedResourcesService_.getTiledResource(inputKey);

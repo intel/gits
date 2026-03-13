@@ -1056,13 +1056,6 @@ void StateTrackingLayer::post(ID3D12Device4CreateCommandList1Command& c) {
   commandListService_.addCommandList(state);
 }
 
-void StateTrackingLayer::pre(ID3D12DeviceCreateCommittedResourceCommand& c) {
-  if (stateRestored_) {
-    return;
-  }
-  c.pDesc_.value->Flags &= ~D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
-}
-
 void StateTrackingLayer::post(ID3D12DeviceCreateCommittedResourceCommand& c) {
   if (stateRestored_) {
     return;
@@ -1081,6 +1074,7 @@ void StateTrackingLayer::post(ID3D12DeviceCreateCommittedResourceCommand& c) {
   state->dimension = c.pDesc_.value->Dimension;
   state->sampleCount = c.pDesc_.value->SampleDesc.Count;
   state->isMappable = isResourceHeapMappable(*c.pHeapProperties_.value, c.pDesc_.value->Layout);
+  state->denyShaderResource = c.pDesc_.value->Flags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
 
   stateService_.storeState(state);
 
@@ -1095,13 +1089,6 @@ void StateTrackingLayer::post(ID3D12DeviceCreateCommittedResourceCommand& c) {
   if (c.HeapFlags_.value & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
     residencyService_.createNotResident(state->key, state->deviceKey);
   }
-}
-
-void StateTrackingLayer::pre(ID3D12Device4CreateCommittedResource1Command& c) {
-  if (stateRestored_) {
-    return;
-  }
-  c.pDesc_.value->Flags &= ~D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
 }
 
 void StateTrackingLayer::post(ID3D12Device4CreateCommittedResource1Command& c) {
@@ -1122,6 +1109,7 @@ void StateTrackingLayer::post(ID3D12Device4CreateCommittedResource1Command& c) {
   state->dimension = c.pDesc_.value->Dimension;
   state->sampleCount = c.pDesc_.value->SampleDesc.Count;
   state->isMappable = isResourceHeapMappable(*c.pHeapProperties_.value, c.pDesc_.value->Layout);
+  state->denyShaderResource = c.pDesc_.value->Flags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
 
   stateService_.storeState(state);
   resourceUsageTrackingService_.addResource(state->key);
@@ -1135,13 +1123,6 @@ void StateTrackingLayer::post(ID3D12Device4CreateCommittedResource1Command& c) {
   if (c.HeapFlags_.value & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
     residencyService_.createNotResident(state->key, state->deviceKey);
   }
-}
-
-void StateTrackingLayer::pre(ID3D12Device8CreateCommittedResource2Command& c) {
-  if (stateRestored_) {
-    return;
-  }
-  c.pDesc_.value->Flags &= ~D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
 }
 
 void StateTrackingLayer::post(ID3D12Device8CreateCommittedResource2Command& c) {
@@ -1162,6 +1143,7 @@ void StateTrackingLayer::post(ID3D12Device8CreateCommittedResource2Command& c) {
   state->dimension = c.pDesc_.value->Dimension;
   state->sampleCount = c.pDesc_.value->SampleDesc.Count;
   state->isMappable = isResourceHeapMappable(*c.pHeapProperties_.value, c.pDesc_.value->Layout);
+  state->denyShaderResource = c.pDesc_.value->Flags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
 
   stateService_.storeState(state);
 
@@ -1176,13 +1158,6 @@ void StateTrackingLayer::post(ID3D12Device8CreateCommittedResource2Command& c) {
   if (c.HeapFlags_.value & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
     residencyService_.createNotResident(state->key, state->deviceKey);
   }
-}
-
-void StateTrackingLayer::pre(ID3D12Device10CreateCommittedResource3Command& c) {
-  if (stateRestored_) {
-    return;
-  }
-  c.pDesc_.value->Flags &= ~D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
 }
 
 void StateTrackingLayer::post(ID3D12Device10CreateCommittedResource3Command& c) {
@@ -1203,6 +1178,7 @@ void StateTrackingLayer::post(ID3D12Device10CreateCommittedResource3Command& c) 
   state->dimension = c.pDesc_.value->Dimension;
   state->sampleCount = c.pDesc_.value->SampleDesc.Count;
   state->isMappable = isResourceHeapMappable(*c.pHeapProperties_.value, c.pDesc_.value->Layout);
+  state->denyShaderResource = c.pDesc_.value->Flags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
 
   stateService_.storeState(state);
 
@@ -1215,13 +1191,6 @@ void StateTrackingLayer::post(ID3D12Device10CreateCommittedResource3Command& c) 
   if (c.HeapFlags_.value & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
     residencyService_.createNotResident(state->key, state->deviceKey);
   }
-}
-
-void StateTrackingLayer::pre(ID3D12DeviceCreatePlacedResourceCommand& c) {
-  if (stateRestored_) {
-    return;
-  }
-  c.pDesc_.value->Flags &= ~D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
 }
 
 void StateTrackingLayer::post(ID3D12DeviceCreatePlacedResourceCommand& c) {
@@ -1242,6 +1211,7 @@ void StateTrackingLayer::post(ID3D12DeviceCreatePlacedResourceCommand& c) {
   state->dimension = c.pDesc_.value->Dimension;
   state->sampleCount = c.pDesc_.value->SampleDesc.Count;
   state->isMappable = isResourceHeapMappable(c.pHeap_.key, c.pDesc_.value->Layout);
+  state->denyShaderResource = c.pDesc_.value->Flags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
   state->isBarrierRestricted = isResourceBarrierRestricted(c.pDesc_.value->Flags);
   state->heapKey = c.pHeap_.key;
 
@@ -1263,13 +1233,6 @@ void StateTrackingLayer::post(ID3D12DeviceCreatePlacedResourceCommand& c) {
   gpuAddressService_.createPlacedResource(c.pHeap_.key, c.ppvResource_.key, c.pDesc_.value->Flags);
 }
 
-void StateTrackingLayer::pre(ID3D12Device8CreatePlacedResource1Command& c) {
-  if (stateRestored_) {
-    return;
-  }
-  c.pDesc_.value->Flags &= ~D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
-}
-
 void StateTrackingLayer::post(ID3D12Device8CreatePlacedResource1Command& c) {
   if (stateRestored_) {
     return;
@@ -1288,6 +1251,7 @@ void StateTrackingLayer::post(ID3D12Device8CreatePlacedResource1Command& c) {
   state->dimension = c.pDesc_.value->Dimension;
   state->sampleCount = c.pDesc_.value->SampleDesc.Count;
   state->isMappable = isResourceHeapMappable(c.pHeap_.key, c.pDesc_.value->Layout);
+  state->denyShaderResource = c.pDesc_.value->Flags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
   state->isBarrierRestricted = isResourceBarrierRestricted(c.pDesc_.value->Flags);
   state->heapKey = c.pHeap_.key;
 
@@ -1309,13 +1273,6 @@ void StateTrackingLayer::post(ID3D12Device8CreatePlacedResource1Command& c) {
   gpuAddressService_.createPlacedResource(c.pHeap_.key, c.ppvResource_.key, c.pDesc_.value->Flags);
 }
 
-void StateTrackingLayer::pre(ID3D12Device10CreatePlacedResource2Command& c) {
-  if (stateRestored_) {
-    return;
-  }
-  c.pDesc_.value->Flags &= ~D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
-}
-
 void StateTrackingLayer::post(ID3D12Device10CreatePlacedResource2Command& c) {
   if (stateRestored_) {
     return;
@@ -1334,6 +1291,7 @@ void StateTrackingLayer::post(ID3D12Device10CreatePlacedResource2Command& c) {
   state->dimension = c.pDesc_.value->Dimension;
   state->sampleCount = c.pDesc_.value->SampleDesc.Count;
   state->isMappable = isResourceHeapMappable(c.pHeap_.key, c.pDesc_.value->Layout);
+  state->denyShaderResource = c.pDesc_.value->Flags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
   state->isBarrierRestricted = isResourceBarrierRestricted(c.pDesc_.value->Flags);
   state->heapKey = c.pHeap_.key;
 
@@ -1353,13 +1311,6 @@ void StateTrackingLayer::post(ID3D12Device10CreatePlacedResource2Command& c) {
   gpuAddressService_.createPlacedResource(c.pHeap_.key, c.ppvResource_.key, c.pDesc_.value->Flags);
 }
 
-void StateTrackingLayer::pre(ID3D12DeviceCreateReservedResourceCommand& c) {
-  if (stateRestored_) {
-    return;
-  }
-  c.pDesc_.value->Flags &= ~D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
-}
-
 void StateTrackingLayer::post(ID3D12DeviceCreateReservedResourceCommand& c) {
   if (stateRestored_) {
     return;
@@ -1377,6 +1328,7 @@ void StateTrackingLayer::post(ID3D12DeviceCreateReservedResourceCommand& c) {
   state->initialState = c.InitialState_.value;
   state->dimension = c.pDesc_.value->Dimension;
   state->sampleCount = c.pDesc_.value->SampleDesc.Count;
+  state->denyShaderResource = c.pDesc_.value->Flags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
 
   stateService_.storeState(state);
 
@@ -1388,13 +1340,6 @@ void StateTrackingLayer::post(ID3D12DeviceCreateReservedResourceCommand& c) {
                                               state->key, state->initialState, !state->isMappable);
     resourceStateTracker_.addResource(c.ppvResource_.key, c.InitialState_.value);
   }
-}
-
-void StateTrackingLayer::pre(ID3D12Device4CreateReservedResource1Command& c) {
-  if (stateRestored_) {
-    return;
-  }
-  c.pDesc_.value->Flags &= ~D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
 }
 
 void StateTrackingLayer::post(ID3D12Device4CreateReservedResource1Command& c) {
@@ -1414,6 +1359,7 @@ void StateTrackingLayer::post(ID3D12Device4CreateReservedResource1Command& c) {
   state->initialState = c.InitialState_.value;
   state->dimension = c.pDesc_.value->Dimension;
   state->sampleCount = c.pDesc_.value->SampleDesc.Count;
+  state->denyShaderResource = c.pDesc_.value->Flags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
 
   stateService_.storeState(state);
 
@@ -1425,13 +1371,6 @@ void StateTrackingLayer::post(ID3D12Device4CreateReservedResource1Command& c) {
                                               state->key, state->initialState, !state->isMappable);
     resourceStateTracker_.addResource(c.ppvResource_.key, c.InitialState_.value);
   }
-}
-
-void StateTrackingLayer::pre(ID3D12Device10CreateReservedResource2Command& c) {
-  if (stateRestored_) {
-    return;
-  }
-  c.pDesc_.value->Flags &= ~D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
 }
 
 void StateTrackingLayer::post(ID3D12Device10CreateReservedResource2Command& c) {
@@ -1451,6 +1390,7 @@ void StateTrackingLayer::post(ID3D12Device10CreateReservedResource2Command& c) {
   state->initialLayout = c.InitialLayout_.value;
   state->dimension = c.pDesc_.value->Dimension;
   state->sampleCount = c.pDesc_.value->SampleDesc.Count;
+  state->denyShaderResource = c.pDesc_.value->Flags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
 
   stateService_.storeState(state);
 

@@ -48,6 +48,8 @@ struct ResourceState : public ObjectState {
   D3D12_GPU_VIRTUAL_ADDRESS gpuVirtualAddress{};
   bool isMappable{};
   bool isBarrierRestricted{};
+  bool denyShaderResource{};
+  D3D12_RESOURCE_STATES resourceState{};
   unsigned heapKey{};
 };
 
