@@ -78,7 +78,7 @@ void ResourceDump::stageResource(ID3D12GraphicsCommandList* commandList,
     dumpInfo.rowPitch = footprint.Footprint.RowPitch;
     dumpInfo.subresourceFormat = footprint.Footprint.Format;
   } else if (!dumpInfo.size) {
-    dumpInfo.size = dumpInfo.desc.Width;
+    dumpInfo.size = dumpInfo.desc.Width - dumpInfo.offset;
   }
   {
     D3D12_HEAP_PROPERTIES heapProperties{};
