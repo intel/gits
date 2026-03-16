@@ -47,16 +47,18 @@ private:
   std::unique_ptr<gits::ImGuiHelper::TabGroup<Mode>> tabsToolBar;
 
   bool m_CaptureInProgress = false;
+  bool m_ShowReleaseNotes = false;
 
   void GITSButton();
   void ModeSelectionButtons();
   void MainActionButton();
+  void ShowReleaseNotesModal();
 
   void GITSBaseRow();
-  void GITSPlayerRow();
 
   // Event handlers
   void CaptureActionCallback(const Event& e);
+  void PathCallback(const Event& e);
 };
 
 } // namespace gits::gui

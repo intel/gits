@@ -19,7 +19,7 @@
 #include <queue>
 #include <mutex>
 
-#include "context.h"
+#include "common.h"
 
 // GITS Common includes
 #include "tools_lite.h"
@@ -46,7 +46,9 @@ struct ContextEvent : Event {
     ConfigValidated,
     CaptureAPIChanged,
     CLIUpdated,
-    AppArgumentsChanged
+    AppArgumentsChanged,
+    PluginsUpdated,
+    MetadataLoaded
   };
 
   Type EventType;
@@ -101,6 +103,11 @@ struct EventType<ContextEvent> {
 template <>
 struct EventType<PathEvent> {
   using Type = PathEvent::Type;
+};
+
+template <>
+struct EventType<ActionEvent> {
+  using Type = ActionEvent::Type;
 };
 
 class EventBus : gits::noncopyable {

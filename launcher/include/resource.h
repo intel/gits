@@ -10,4 +10,26 @@
 
 #define APP_ICON      101
 #define APP_FILE_ICON 102
-#define APP_VERSION   "0.1.7"
+#define APP_VERSION   "0.1.8"
+
+inline const char* RELEASE_NOTES = R"(
+Release Notes v0.1.8
+====================
+- Added release notes window
+- Added system for default paths for screenshots & trace based on playback stream
+- New default path for subcapture output based on original stream path
+- Aded option so enable custom executable name for gitsPlayer
+
+- New system to determine base gits installation path
+- Added buttons to use configuration files from base gits installation
+- Revised system to select capture API & derive required configuration
+
+- Enabled DirectX HUD by default in playback
+- During subcapture: playback stops at the end subcapture frame
+- Read & use metadata when loading playback stream
+
+- Added DirectX plugins panel
+- Added Resource Dump panel
+
+- Removed option to specify custom gitsPlayer.exe
+)";

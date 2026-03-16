@@ -14,7 +14,6 @@
 namespace gits::gui {
 struct LauncherPaths {
   std::filesystem::path BasePath;
-  std::filesystem::path CustomPlayerPath;
 
   struct CapturePaths {
     std::filesystem::path ConfigPath;

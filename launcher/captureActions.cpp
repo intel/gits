@@ -14,10 +14,6 @@
 #include "launcherActions.h"
 #include "eventBus.h"
 
-namespace {
-constexpr const char* RECORDER_CONFIG_FILENAME = "gits_config.yml";
-}
-
 namespace gits::gui::capture_actions {
 bool UpdateConfigDumpPath() {
   auto& context = Context::GetInstance();
@@ -62,17 +58,6 @@ bool UpdateConfigDumpPath() {
                                            (captureOutputPath / "%n%_%p%").string(), true);
 }
 
-std::string GetRecorderDirectoryNameForApi(Api api) {
-  const std::map<Api, std::string> recorderDirectoryForApi{{Api::UNKNOWN, ""},
-                                                           {Api::DIRECTX, "FilesToCopyDirectX"},
-                                                           {Api::OPENGL, "FilesToCopyOGL"},
-                                                           {Api::VULKAN, "FilesToCopyVulkan"},
-                                                           {Api::OPENCL, "FilesToCopyOCL"},
-                                                           {Api::LEVELZERO, "FilesToCopyL0"}};
-
-  return recorderDirectoryForApi.at(api);
-}
-
 bool CopyRecorderFiles(std::filesystem::path gitsBasePath,
                        std::filesystem::path targetDirectory,
                        Api api) {
@@ -82,7 +67,7 @@ bool CopyRecorderFiles(std::filesystem::path gitsBasePath,
     return false;
   }
 
-  auto recorderDirectory = gitsBasePath / "Recorder";
+  auto recorderDirectory = gitsBasePath / filesystem_names::RECORDER_DIRECTORY_NAME;
 
   auto apiDirectory = recorderDirectory / GetRecorderDirectoryNameForApi(api);
 
@@ -195,9 +180,11 @@ void CaptureStream() {
   }
 
   LOG_INFO << "Copying config file for capture";
-  if (!FileActions::CopyFile(captureConfigPath,
-                             executablePath.parent_path() /
-                                 "gits_config.yml")) { // Recorder needs the hardcoded config name
+  if (!FileActions::CopyFile(
+          captureConfigPath,
+          executablePath.parent_path() /
+              filesystem_names::
+                  RECORDER_CONFIG_FILENAME)) { // Recorder needs the hardcoded config name
     context.BtnsSideBar->SelectEntry(Context::SideBarItem::APP_LOG);
 
     return;
@@ -231,7 +218,7 @@ std::vector<std::string> GetRecorderFilesForApi(Api api) {
     return std::vector<std::string>();
   }
 
-  const auto recorderDirectory = gitsBasePath / "Recorder";
+  const auto recorderDirectory = gitsBasePath / filesystem_names::RECORDER_DIRECTORY_NAME;
   const auto apiDirectoryName = GetRecorderDirectoryNameForApi(api);
   if (apiDirectoryName.empty()) {
     return std::vector<std::string>();
@@ -273,14 +260,15 @@ bool CleanupRecorderFiles(Api api, gui::CapturePanel::CaptureCleanupOptions clea
 
   if (!cleanupSelections.CleanRecorderFiles) {
     // Recorder files means files other than the config (DLLs etc.)
-    std::erase_if(filesToRemove,
-                  [](const std::string& filename) { return filename != RECORDER_CONFIG_FILENAME; });
+    std::erase_if(filesToRemove, [](const std::string& filename) {
+      return filename != filesystem_names::RECORDER_CONFIG_FILENAME;
+    });
   }
 
   if (!cleanupSelections.CleanRecorderConfig) {
-    filesToRemove.erase(
-        std::remove(filesToRemove.begin(), filesToRemove.end(), RECORDER_CONFIG_FILENAME),
-        filesToRemove.end());
+    filesToRemove.erase(std::remove(filesToRemove.begin(), filesToRemove.end(),
+                                    filesystem_names::RECORDER_CONFIG_FILENAME),
+                        filesToRemove.end());
   }
 
   if (cleanupSelections.CleanRecorderLog) {

@@ -28,6 +28,7 @@
 #include "tabGroup.h"
 #include "textEditorWidget.h"
 
+#include "captureActions.h"
 #include "fileActions.h"
 #include "launcherConfig.h"
 #include "log.h"
@@ -46,8 +47,11 @@ namespace gits::gui {
 void Context::UpdateFixedLauncherArguments() {
   FixedLauncherArguments = "";
   if (AppMode == Mode::PLAYBACK) {
-    if (EasyOptionsPanel) {
-      FixedLauncherArguments += EasyOptionsPanel->GetCLIArguments();
+    if (PlaybackOptionsPanel) {
+      FixedLauncherArguments += PlaybackOptionsPanel->GetCLIArguments();
+    }
+    if (ResourceDumpPanel) {
+      FixedLauncherArguments += ResourceDumpPanel->GetCLIArguments();
     }
   }
   FixedLauncherArguments += TheMainWindow->GetCLIArguments();
@@ -85,8 +89,6 @@ std::optional<std::filesystem::path> Context::GetPath(Path pathType,
   // universal paths
   case Path::GITS_BASE:
     return Paths.BasePath;
-  case Path::CUSTOM_PLAYER:
-    return Paths.CustomPlayerPath;
 
   // unique paths - independent of mode
   case Path::SCREENSHOTS:
@@ -162,10 +164,6 @@ bool Context::SetPath(std::filesystem::path path, Path pathType, std::optional<M
     switch (mode) {
     case Mode::PLAYBACK:
       switch (pathType) {
-      case Path::CUSTOM_PLAYER:
-        Paths.CustomPlayerPath = path;
-        result = true;
-        break;
       case Path::CONFIG:
         Paths.Playback.ConfigPath = path;
         result = true;
@@ -208,10 +206,6 @@ bool Context::SetPath(std::filesystem::path path, Path pathType, std::optional<M
       break;
     case Mode::SUBCAPTURE:
       switch (pathType) {
-      case Path::CUSTOM_PLAYER:
-        Paths.CustomPlayerPath = path;
-        result = true;
-        break;
       case Path::CONFIG:
         Paths.Subcapture.ConfigPath = path;
         result = true;
@@ -246,11 +240,7 @@ bool Context::SetPath(std::filesystem::path path, Path pathType, std::optional<M
 }
 
 std::filesystem::path Context::GetGITSPlayerPath() const {
-  if (UseCustomGITSPlayer) {
-    return Paths.CustomPlayerPath;
-  } else {
-    return Paths.BasePath / "Player" / "gitsPlayer.exe";
-  }
+  return Paths.BasePath / "Player" / "gitsPlayer.exe";
 }
 
 bool Context::IsPlayback() {
@@ -266,6 +256,7 @@ void Context::ChangeMode(Mode mode) {
   //based on app mode
   BtnsSideBar->SetEnabled(Context::SideBarItem::OPTIONS, IsPlayback());
   BtnsSideBar->SetEnabled(Context::SideBarItem::STATS, IsPlayback());
+  BtnsSideBar->SetEnabled(Context::SideBarItem::RESOURCE_DUMP, IsPlayback());
 
   switch (mode) {
   case Mode::PLAYBACK:
@@ -283,6 +274,8 @@ void Context::ChangeMode(Mode mode) {
   gits::gui::UpdateCLICall();
   gits::gui::LoadConfigFile();
   GITSLogEditor->SetText("");
+
+  EventBus::GetInstance().publish<AppEvent>(AppEvent::Type::ModeChanged);
 }
 
 void Context::UpdatePalette() {
@@ -306,6 +299,61 @@ void Context::UpdatePalette() {
   }
   if (TraceStatsEditor) {
     TraceStatsEditor->UpdatePalette();
+  }
+}
+
+void Context::SendAllPathsSetEvents() {
+  auto& eventBus = EventBus::GetInstance();
+  if (!Paths.BasePath.empty()) {
+    eventBus.publish<PathEvent>(PathEvent::Type::GITS_BASE);
+  }
+
+  if (!Paths.Capture.ConfigPath.empty()) {
+    eventBus.publish(PathEvent::Type::CONFIG, Mode::CAPTURE);
+  }
+  if (!Paths.Capture.CaptureTargetPath.empty()) {
+    eventBus.publish(PathEvent::Type::CAPTURE_TARGET, Mode::CAPTURE);
+  }
+  if (!Paths.Capture.OutputStreamPath.empty()) {
+    eventBus.publish(PathEvent::Type::OUTPUT_STREAM, Mode::CAPTURE);
+  }
+
+  if (!Paths.Playback.ConfigPath.empty()) {
+    eventBus.publish(PathEvent::Type::CONFIG, Mode::PLAYBACK);
+  }
+  if (!Paths.Playback.InputStreamPath.empty()) {
+    eventBus.publish(PathEvent::Type::INPUT_STREAM, Mode::PLAYBACK);
+  }
+  if (!Paths.Playback.ScreenshotsPath.empty()) {
+    eventBus.publish(PathEvent::Type::SCREENSHOTS, Mode::PLAYBACK);
+  }
+  if (!Paths.Playback.TracePath.empty()) {
+    eventBus.publish(PathEvent::Type::TRACE, Mode::PLAYBACK);
+  }
+
+  if (!Paths.Subcapture.ConfigPath.empty()) {
+    eventBus.publish(PathEvent::Type::CONFIG, Mode::SUBCAPTURE);
+  }
+  if (!Paths.Subcapture.InputStreamPath.empty()) {
+    eventBus.publish(PathEvent::Type::INPUT_STREAM, Mode::SUBCAPTURE);
+  }
+  if (!Paths.Subcapture.OutputStreamPath.empty()) {
+    eventBus.publish(PathEvent::Type::OUTPUT_STREAM, Mode::SUBCAPTURE);
+  }
+}
+
+void Context::SetCaptureAPI(Api api) {
+  SelectedApiForCapture = api;
+  auto needsConfigPath = Paths.Capture.ConfigPath.empty();
+  if (!needsConfigPath) {
+    auto basePath = Paths.Capture.ConfigPath.parent_path().parent_path().parent_path();
+    needsConfigPath = basePath == Paths.BasePath;
+  }
+  if (needsConfigPath) {
+    auto configPath = GetRecorderConfigPathForApi(api);
+    if (std::filesystem::exists(configPath)) {
+      SetPath(configPath, Path::CONFIG, Mode::CAPTURE);
+    }
   }
 }
 

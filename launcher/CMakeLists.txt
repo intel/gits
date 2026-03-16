@@ -38,18 +38,22 @@ list(APPEND LAUNCHER_PANEL_SOURCE
   ${LAUNCHER_SOURCE_DIR}/mainWindow.cpp
   ${LAUNCHER_SOURCE_DIR}/playbackPanel.cpp
   ${LAUNCHER_SOURCE_DIR}/capturePanel.cpp
-  ${LAUNCHER_SOURCE_DIR}/ezOptionsPanel.cpp
+  ${LAUNCHER_SOURCE_DIR}/playbackOptionsPanel.cpp
+  ${LAUNCHER_SOURCE_DIR}/resourceDumpPanel.cpp
   ${LAUNCHER_SOURCE_DIR}/subcapturePanel.cpp
   ${LAUNCHER_SOURCE_DIR}/metaDataPanel.cpp
+  ${LAUNCHER_SOURCE_DIR}/pluginsPanel.cpp
 
   ${LAUNCHER_HEADER_DIR}/contentPanel.h
   ${LAUNCHER_HEADER_DIR}/basePanel.h
-  ${LAUNCHER_HEADER_DIR}/ezOptionsPanel.h
+  ${LAUNCHER_HEADER_DIR}/playbackOptionsPanel.h
+  ${LAUNCHER_HEADER_DIR}/resourceDumpPanel.h
   ${LAUNCHER_HEADER_DIR}/mainWindow.h
   ${LAUNCHER_HEADER_DIR}/playbackPanel.h
   ${LAUNCHER_HEADER_DIR}/capturePanel.h
   ${LAUNCHER_HEADER_DIR}/subcapturePanel.h
   ${LAUNCHER_HEADER_DIR}/metaDataPanel.h
+  ${LAUNCHER_HEADER_DIR}/pluginsPanel.h
   )
 source_group("Panels" FILES ${LAUNCHER_PANEL_SOURCE})
 

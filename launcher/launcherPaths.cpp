@@ -8,6 +8,8 @@
 
 #include "launcherPaths.h"
 
+#include "log.h"
+
 namespace {
 // anonymous namespace for YAML keys to avoid typos and for easier refactoring
 static constexpr const char* BASE_PATH_KEY = "BasePath";
@@ -30,13 +32,6 @@ void LauncherPaths::Read(YAML::Node& yaml) {
     const auto basePath = std::filesystem::path(yaml[BASE_PATH_KEY].as<std::string>());
     if (std::filesystem::exists(basePath)) {
       BasePath = basePath;
-    }
-  }
-  if (yaml[CUSTOM_PLAYER_PATH_KEY]) {
-    const auto customPlayerPath =
-        std::filesystem::path(yaml[CUSTOM_PLAYER_PATH_KEY].as<std::string>());
-    if (std::filesystem::exists(customPlayerPath)) {
-      CustomPlayerPath = customPlayerPath;
     }
   }
   if (yaml[CAPTURE_CONFIG_PATH_KEY]) {
@@ -113,7 +108,6 @@ void LauncherPaths::Read(YAML::Node& yaml) {
 
 void LauncherPaths::Write(YAML::Emitter& out) {
   out << YAML::Key << BASE_PATH_KEY << YAML::Value << BasePath.string();
-  out << YAML::Key << CUSTOM_PLAYER_PATH_KEY << YAML::Value << CustomPlayerPath.string();
   out << YAML::Key << CAPTURE_CONFIG_PATH_KEY << YAML::Value << Capture.ConfigPath.string();
   out << YAML::Key << CAPTURE_TARGET_PATH_KEY << YAML::Value << Capture.CaptureTargetPath.string();
   out << YAML::Key << CAPTURE_OUTPUT_STREAM_PATH_KEY << YAML::Value

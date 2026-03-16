@@ -19,11 +19,9 @@ MetaDataPanel::MetaDataPanel() {
   EventBus::GetInstance().subscribe<PathEvent>(
       std::bind(&MetaDataPanel::StreamPathCallback, this, std::placeholders::_1),
       {PathEvent::Type::INPUT_STREAM});
-}
-
-void MetaDataPanel::InvalidateMetaData() {
-  MetaDataNeedsUpdating = true;
-  ClearStats();
+  EventBus::GetInstance().subscribe<ContextEvent>(
+      std::bind(&MetaDataPanel::MetaDataCallback, this, std::placeholders::_1),
+      {ContextEvent::Type::MetadataLoaded});
 }
 
 void MetaDataPanel::Render() {
@@ -45,10 +43,6 @@ void MetaDataPanel::Render() {
   if (!std::filesystem::exists(streamPathValue)) {
     ImGui::Text(Labels::STREAM_PATH_DOESNT_EXIST_MESSAGE);
     return;
-  }
-
-  if (MetaDataNeedsUpdating) {
-    LoadMetaData(streamPathValue);
   }
 
   ImVec2 available = ImGui::GetContentRegionAvail();
@@ -97,9 +91,8 @@ void MetaDataPanel::Render() {
 }
 
 void MetaDataPanel::LoadMetaData(std::filesystem::path streamPath) {
-  MetaDataNeedsUpdating = false;
   auto& context = Context::GetInstance();
-  MetaData = GetStreamMetaData(streamPath);
+  auto MetaData = context.MetaData;
   context.DiagsEditor->SetText(MetaData.RecorderDiags.empty() ? Labels::EMPTY_RECORDER_DIAGS_MESSAGE
                                                               : MetaData.RecorderDiags.dump(2));
   context.TraceConfigEditor->SetText(MetaData.RecorderConfig.empty()
@@ -128,7 +121,18 @@ void MetaDataPanel::FillStatsEditor() {
 
   context.TraceStatsEditor->SetText(Stats);
 }
+
+void MetaDataPanel::MetaDataCallback(const Event& e) {
+  auto& context = Context::GetInstance();
+  auto MetaData = context.MetaData;
+  context.DiagsEditor->SetText(MetaData.RecorderDiags.empty() ? Labels::EMPTY_RECORDER_DIAGS_MESSAGE
+                                                              : MetaData.RecorderDiags.dump(2));
+  context.TraceConfigEditor->SetText(MetaData.RecorderConfig.empty()
+                                         ? Labels::EMPTY_RECORDER_CONFIG_MESSAGE
+                                         : MetaData.RecorderConfig);
+}
+
 void MetaDataPanel::StreamPathCallback(const Event& e) {
-  InvalidateMetaData();
+  ClearStats();
 }
 } // namespace gits::gui

@@ -17,7 +17,6 @@
 
 namespace gits::gui::capture_actions {
 bool UpdateConfigDumpPath();
-std::string GetRecorderDirectoryNameForApi(Api api);
 bool CopyRecorderFiles(std::filesystem::path gitsBasePath,
                        std::filesystem::path targetDirectory,
                        Api api);

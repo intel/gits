@@ -16,6 +16,7 @@
 
 namespace gits::gui {
 
+bool ValidateYaml(const std::string& text);
 bool ValidateGITSConfig(const std::string& config);
 void UpdateCLICall();
 void SetImGuiStyle(size_t selectedItem);
@@ -25,6 +26,11 @@ void ShowFileDialog(FileDialogKeys key);
 void PlaybackStream();
 void SubcaptureStream();
 
+std::string GetRecorderDirectoryNameForApi(Api api);
+std::filesystem::path GetRecorderConfigPathForApi(Api api);
+std::filesystem::path GetPlayerConfigPath();
+bool IsValidGITSBasePath(const std::filesystem::path& path);
+void DetectBasePaths();
 void ResetBasePaths();
 
 void OpenURL(const std::string& url);

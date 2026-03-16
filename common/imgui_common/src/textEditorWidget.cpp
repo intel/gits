@@ -153,7 +153,14 @@ void TextEditorWidget::UpdatePalette() {
 }
 
 const std::string TextEditorWidget::GetText() const {
-  return m_Editor.GetText();
+  auto text = m_Editor.GetText();
+  // For some reason, the GetText function of the third party editor
+  // adds an additional blank line when text is retrieved
+  // Here we work around that
+  if (text.ends_with("\n\n")) {
+    text.resize(text.size() - 1);
+  }
+  return text;
 }
 
 void TextEditorWidget::SetBreakpoints(const TextEditor::Breakpoints& aMarkers) {
@@ -173,7 +180,7 @@ bool TextEditorWidget::SaveToFile(std::filesystem::path filePath) {
     LOG_ERROR << "Failed to open file for saving: " << filePath;
     return false;
   }
-  outFile << m_Editor.GetText();
+  outFile << GetText();
   outFile.close();
   return true;
 }

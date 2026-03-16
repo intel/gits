@@ -14,6 +14,7 @@
 #include "launcherActions.h"
 #include "resource.h"
 #include "contextHelper.h"
+#include "metaDataActions.h"
 
 namespace {
 using namespace gits::gui;
@@ -60,7 +61,10 @@ MainWindow::MainWindow() {
   tabsToolBar = std::make_unique<ImGuiHelper::TabGroup<Mode>>(Labels::MODE_BUTTONS());
 
   EventBus::GetInstance().subscribe<ActionEvent>(
-      std::bind(&MainWindow::CaptureActionCallback, this, std::placeholders::_1));
+      std::bind(&MainWindow::CaptureActionCallback, this, std::placeholders::_1),
+      {ActionEvent::Type::Capture});
+  EventBus::GetInstance().subscribe<PathEvent>(
+      std::bind(&MainWindow::PathCallback, this, std::placeholders::_1));
 };
 
 MainWindow::~MainWindow() {
@@ -125,7 +129,6 @@ void MainWindow::Render() {
   ImGui::PopStyleColor();
 
   GITSBaseRow();
-  GITSPlayerRow();
 
   ImGui::Separator();
 
@@ -157,6 +160,8 @@ void MainWindow::Render() {
     ImGui::Separator();
     contentPanel->Render();
   }
+
+  ShowReleaseNotesModal();
 }
 
 void MainWindow::GITSButton() {
@@ -191,11 +196,11 @@ void MainWindow::GITSButton() {
                                  Mode::SUBCAPTURE);
 
     ImGui::Separator();
-    if (ImGui::MenuItem(Labels::RESET_BASE_PATHS)) {
-      ResetBasePaths();
-    }
     auto versionLabel = std::string(Labels::VERSION) + ": " + APP_VERSION;
     ImGui::MenuItem(versionLabel.c_str());
+    if (ImGui::MenuItem(Labels::RELEASE_NOTES_BUTTON)) {
+      m_ShowReleaseNotes = true;
+    }
     ImGui::Separator();
     if (ImGui::MenuItem("Exit")) {
       context.ShouldQuit = true;
@@ -238,6 +243,57 @@ void MainWindow::MainActionButton() {
   ImGui::PopStyleColor(3);
 }
 
+void MainWindow::ShowReleaseNotesModal() {
+  if (m_ShowReleaseNotes) {
+    ImGui::OpenPopup(Labels::RELEASE_NOTES_WINDOW_TITLE);
+  }
+  // Get the main viewport size
+  ImGuiViewport* viewport = ImGui::GetMainViewport();
+  ImVec2 viewportSize = viewport->Size;
+
+  // Calculate 80% of viewport size
+  ImVec2 modalSize = ImVec2(viewportSize.x * 0.8f, viewportSize.y * 0.8f);
+
+  // Center the modal
+  ImVec2 center = viewport->GetCenter();
+  ImGui::SetNextWindowPos(center, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+  ImGui::SetNextWindowSize(modalSize, ImGuiCond_Always);
+
+  if (ImGui::BeginPopupModal(Labels::RELEASE_NOTES_WINDOW_TITLE, &m_ShowReleaseNotes,
+                             ImGuiWindowFlags_NoResize)) {
+    // Get window dimensions for positioning
+    ImVec2 windowSize = ImGui::GetWindowSize();
+    ImVec2 contentRegion = ImGui::GetContentRegionAvail();
+
+    // Button dimensions
+    float buttonWidth = 120.0f;
+    float buttonHeight = ImGui::GetFrameHeight();
+    float padding = ImGui::GetStyle().WindowPadding.y;
+
+    // Scrollable content area (leave space for button + padding + separator)
+    float contentHeight = contentRegion.y - buttonHeight - padding * 2 - 1; // 1 for separator
+
+    if (ImGui::BeginChild("ReleaseNotesContent", ImVec2(0, contentHeight),
+                          true, // border
+                          ImGuiWindowFlags_AlwaysVerticalScrollbar)) {
+      ImGui::TextWrapped("%s", RELEASE_NOTES);
+    }
+    ImGui::EndChild();
+
+    ImGui::Separator();
+
+    // Position close button at bottom right
+    ImGui::SetCursorPosX(windowSize.x - buttonWidth - ImGui::GetStyle().WindowPadding.x);
+    ImGui::SetCursorPosY(windowSize.y - buttonHeight - ImGui::GetStyle().WindowPadding.y);
+
+    if (ImGui::Button(Labels::RELEASE_NOTES_CLOSE_BUTTON, ImVec2(buttonWidth, 0))) {
+      m_ShowReleaseNotes = false;
+      ImGui::CloseCurrentPopup();
+    }
+    ImGui::EndPopup();
+  }
+}
+
 void MainWindow::GITSBaseRow() {
   auto& context = Context::GetInstance();
 
@@ -260,40 +316,44 @@ void MainWindow::GITSBaseRow() {
     ShowFileDialog(FileDialogKeys{Path::GITS_BASE, Mode::PLAYBACK});
   }
   ImGuiHelper::AddTooltip(Labels::CHOOSE_GITS_BASE_PATH_HINT);
+
+  // Buttons to reset paths and things.
+  ImGui::SetCursorPosX(context.TheMainWindow->WidthLeftColumn);
+  if (ImGui::Button(Labels::DETECT_BASE_PATHS)) {
+    ResetBasePaths();
+  }
+  ImGuiHelper::AddTooltip(Labels::DETECT_BASE_PATHS_HINT);
+
+  ImGui::SameLine();
+  if (ImGui::Button(Labels::UPDATE_CONFIG_PATH)) {
+    std::filesystem::path configPath = "";
+    if (context.AppMode == Mode::CAPTURE) {
+      configPath = GetRecorderConfigPathForApi(context.SelectedApiForCapture);
+    } else if (context.AppMode == Mode::PLAYBACK || context.AppMode == Mode::SUBCAPTURE) {
+      configPath = GetPlayerConfigPath();
+    }
+    if (std::filesystem::exists(configPath)) {
+      context.SetPath(configPath, Path::CONFIG, context.AppMode);
+    }
+  }
+  ImGuiHelper::AddTooltip(Labels::UPDATE_CONFIG_PATH_HINT);
+  ImGui::SameLine();
+  if (ImGui::Button(Labels::USE_ALL_CONFIGS_FROM_BASE_PATH)) {
+    const auto captureConfigPath = GetRecorderConfigPathForApi(context.SelectedApiForCapture);
+    if (std::filesystem::exists(captureConfigPath)) {
+      context.SetPath(captureConfigPath, Path::CONFIG, Mode::CAPTURE);
+    }
+    const auto playbackConfigPath = GetPlayerConfigPath();
+    if (std::filesystem::exists(playbackConfigPath)) {
+      context.SetPath(playbackConfigPath, Path::CONFIG, Mode::PLAYBACK);
+      context.SetPath(playbackConfigPath, Path::CONFIG, Mode::SUBCAPTURE);
+    }
+  }
+  ImGuiHelper::AddTooltip(Labels::USE_ALL_CONFIGS_FROM_BASE_PATH_HINT);
 };
-
-void MainWindow::GITSPlayerRow() {
-  auto& context = Context::GetInstance();
-
-  if (ImGui::Checkbox(Labels::USE_CUSTOM_GITSPLAYER, &context.UseCustomGITSPlayer)) {
-    UpdateCLICall();
-  }
-  ImGuiHelper::AddTooltip(Labels::GITSPLAYER_TOOLTIP);
-
-  ImGui::BeginDisabled(!context.UseCustomGITSPlayer);
-  ImGui::SameLine();
-
-  auto allocatedWidth =
-      ImGui::GetContentRegionAvail().x -
-      ImGuiHelper::WidthOf(ImGuiHelper::Widgets::Button, Labels::CHOOSE_GITSPLAYER) - 8.0f;
-
-  context_helper::PathInput("###PlayerPathInput", Path::CUSTOM_PLAYER, std::nullopt, 0,
-                            allocatedWidth);
-  ImGuiHelper::AddTooltip(Labels::BASE_PATH_INPUT_HINT);
-  ImGui::SameLine();
-  if (ImGui::Button(Labels::CHOOSE_GITSPLAYER)) {
-    ShowFileDialog(FileDialogKeys{Path::CUSTOM_PLAYER, Mode::PLAYBACK});
-  }
-  ImGuiHelper::AddTooltip(Labels::CHOOSE_GITSPLAYER_HINT);
-  ImGui::EndDisabled();
-}
 
 void MainWindow::CaptureActionCallback(const Event& e) {
   const ActionEvent& actionEvent = static_cast<const ActionEvent&>(e);
-
-  if (actionEvent.EventType != ActionEvent::Type::Capture) {
-    return;
-  }
 
   auto& context = Context::GetInstance();
 
@@ -309,4 +369,22 @@ void MainWindow::CaptureActionCallback(const Event& e) {
   }
 }
 
+void MainWindow::PathCallback(const Event& e) {
+  const PathEvent& pathEvent = static_cast<const PathEvent&>(e);
+
+  auto& context = Context::GetInstance();
+  context.LauncherConfiguration.ToFile();
+
+  if (!pathEvent.Mode.has_value() || pathEvent.Mode.value() != Mode::PLAYBACK) {
+    return;
+  }
+
+  if (pathEvent.EventType == PathEvent::Type::INPUT_STREAM) {
+    auto streamPath = context.GetPathSafe(Path::INPUT_STREAM, Mode::PLAYBACK);
+    if (!streamPath.empty()) {
+      context.MetaData = GetStreamMetaData(streamPath);
+      EventBus::GetInstance().publish<ContextEvent>(ContextEvent::Type::MetadataLoaded);
+    }
+  }
+}
 } // namespace gits::gui

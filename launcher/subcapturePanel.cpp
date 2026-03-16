@@ -71,6 +71,7 @@ const std::string SubcapturePanel::GetCLIArguments() const {
   if (SubcaptureConfig.Enabled) {
     args += "--DirectX.Features.Subcapture.Enabled ";
     args += "--DirectX.Features.Subcapture.Frames=\"" + SubcaptureConfig.Range() + "\" ";
+    args += "--Common.Player.ExitFrame=" + std::to_string(SubcaptureConfig.EndFrame) + " ";
     auto optSubcaptureOutPuthPath =
         Context::GetInstance().GetPath(Path::OUTPUT_STREAM, Mode::SUBCAPTURE);
     if (optSubcaptureOutPuthPath.has_value()) {
@@ -123,6 +124,17 @@ void SubcapturePanel::PathCallback(const Event& e) {
 
   if (pathEvent.EventType == PathEvent::Type::CONFIG) {
     LoadConfigFile();
+  }
+
+  if (pathEvent.EventType == PathEvent::Type::INPUT_STREAM) {
+    auto streamPath = Context::GetInstance().GetPathSafe(Path::OUTPUT_STREAM, Mode::SUBCAPTURE);
+    if (streamPath.empty()) {
+      auto parentPath = Context::GetInstance()
+                            .GetPathSafe(Path::INPUT_STREAM, Mode::SUBCAPTURE)
+                            .parent_path()
+                            .parent_path();
+      Context::GetInstance().SetPath(parentPath, Path::OUTPUT_STREAM, Mode::SUBCAPTURE);
+    }
   }
 
   UpdateCLICall();

@@ -18,6 +18,7 @@
 #include "labels.h"
 #include "captureActions.h"
 #include "contextHelper.h"
+#include "eventBus.h"
 
 #include "mainWindow.h"
 
@@ -25,9 +26,9 @@ namespace {
 using namespace gits::gui;
 
 const std::vector<std::pair<const char*, Api>> apiMappings = {
-    {Labels::NOT_AVAILABLE, Api::UNKNOWN},    {Labels::API_NAME_SHORT_DX, Api::DIRECTX},
-    {Labels::API_NAME_SHORT_GL, Api::OPENGL}, {Labels::API_NAME_SHORT_VK, Api::VULKAN},
-    {Labels::API_NAME_SHORT_CL, Api::OPENCL}, {Labels::API_NAME_SHORT_L0, Api::LEVELZERO},
+    {Labels::API_NAME_SHORT_DX, Api::DIRECTX},   {Labels::API_NAME_SHORT_GL, Api::OPENGL},
+    {Labels::API_NAME_SHORT_VK, Api::VULKAN},    {Labels::API_NAME_SHORT_CL, Api::OPENCL},
+    {Labels::API_NAME_SHORT_L0, Api::LEVELZERO},
 };
 
 std::vector<const char*> GetApiNames() {
@@ -67,6 +68,8 @@ typedef Context::SideBarItem SideBarItem;
 CapturePanel::CapturePanel() : BasePanel() {
   EventBus::GetInstance().subscribe<PathEvent>(
       std::bind(&CapturePanel::PathCallback, this, std::placeholders::_1));
+  apiToolBar = std::make_unique<ImGuiHelper::TabGroup<Api>>(Labels::API_BUTTONS());
+  apiToolBar->SelectEntry(Api::DIRECTX);
 }
 
 void CapturePanel::Render() {
@@ -123,21 +126,10 @@ void CapturePanel::RowTargetPath() {
   ImGui::SameLine();
   ImGui::SetCursorPosX(context.TheMainWindow->WidthLeftColumn);
 
-  auto allocatedWidth = availableWidth - ImGui::GetCursorPosX() - WidthLastButton() -
-                        ImGuiHelper::WidthOf(ImGuiHelper::Widgets::Label, Labels::API_LABEL) -
-                        comboWidth - 4.0f;
+  auto allocatedWidth = availableWidth - ImGui::GetCursorPosX() - WidthLastButton();
 
   context_helper::PathInput("###InputPath", Path::CAPTURE_TARGET, Mode::CAPTURE, 0, allocatedWidth);
   ImGuiHelper::AddTooltip(Labels::TARGET_INPUT_HINT);
-
-  static int selectedItem = 0;
-  ImGui::SameLine();
-  ImGui::SetNextItemWidth(comboWidth);
-  if (ImGui::Combo(Labels::API_LABEL, &selectedItem, apis.data(), apis.size())) {
-    auto selectedApi = apis[selectedItem];
-    context.SelectedApiForCapture =
-        apiForString.count(selectedApi) ? apiForString.at(selectedApi) : Api::UNKNOWN;
-  }
 
   ImGui::SameLine();
   ImGui::PushID(++context.ImguiIDs);
@@ -147,6 +139,17 @@ void CapturePanel::RowTargetPath() {
   }
   ImGui::PopID();
   ImGuiHelper::AddTooltip(Labels::CHOOSE_TARGET_HINT);
+
+  ImGui::Text(Labels::API_LABEL);
+  ImGui::SameLine();
+  ImGui::SetCursorPosX(context.TheMainWindow->WidthLeftColumn);
+  if (apiToolBar->Render(true)) {
+    // Update the selected API in context when user changes selection
+    // is the current path based on the BASE path + API?
+    // ==> change it.
+    // otherwise: leave it as is, user is explicitly selecting an API for capture that might be different than the one in the config file
+    context.SetCaptureAPI(apiToolBar->Selected());
+  }
 }
 
 void CapturePanel::RowArguments() {

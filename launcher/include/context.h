@@ -28,10 +28,12 @@
 #include "buttonGroup.h"
 #include "tabGroup.h"
 #include "textEditorWidget.h"
+#include "metaDataActions.h"
 
 #include "fileActions.h"
 #include "launcherConfig.h"
-#include "ezOptionsPanel.h"
+#include "playbackOptionsPanel.h"
+#include "resourceDumpPanel.h"
 #include "log.h"
 #include "launcherPaths.h"
 
@@ -58,6 +60,8 @@ public:
   enum class SideBarItem {
     OPTIONS = 0,
     CONFIG,
+    RESOURCE_DUMP,
+    PLUGINS,
     CLI,
     STATS,
     LOG,
@@ -92,7 +96,8 @@ public:
   std::unique_ptr<gits::ImGuiHelper::TextEditorWidget> TraceConfigEditor;
   std::unique_ptr<gits::ImGuiHelper::TextEditorWidget> TraceStatsEditor;
 
-  std::unique_ptr<gits::gui::EzOptionsPanel> EasyOptionsPanel;
+  std::unique_ptr<gits::gui::PlaybackOptionsPanel> PlaybackOptionsPanel;
+  std::unique_ptr<gits::gui::ResourceDumpPanel> ResourceDumpPanel;
 
   std::shared_ptr<MainWindow> TheMainWindow;
 
@@ -103,17 +108,17 @@ public:
   ImGuiHelper::TabGroup<MetaDataItem>* BtnsMetaData;
 
   Mode AppMode = Mode::CAPTURE;
-  Api SelectedApiForCapture = Api::UNKNOWN;
+  Api SelectedApiForCapture = Api::DIRECTX;
   std::atomic<bool> SubcaptureInProgress = false;
 
   size_t ImguiIDs = 0;
 
-  bool UseCustomGITSPlayer = false;
   std::string FixedLauncherArguments = ""; // Arguments created by the launcher
   std::string CustomArguments = "";        // Custom arguments added by user
   std::vector<std::string> CLIArguments;
   std::string CaptureCustomArguments = "";
   std::vector<std::string> CaptureCLIArguments;
+  STREAM_META_DATA MetaData;
 
   std::map<ConfigSectionItem, int> ConfigSectionLines = {};
 
@@ -142,6 +147,8 @@ public:
   bool IsCapture();
   void ChangeMode(Mode mode);
   void UpdatePalette();
+  void SendAllPathsSetEvents();
+  void SetCaptureAPI(Api api);
 };
 
 class TextEditorAppender : public plog::IAppender {

@@ -22,7 +22,7 @@ namespace gits::gui {
 
 typedef Context::SideBarItem SideBarItem;
 
-ContentPanel::ContentPanel() : CLIEditor("CLIEditor"), m_MetaDataPanel() {
+ContentPanel::ContentPanel() : m_PluginsPanel(), CLIEditor("CLIEditor"), m_MetaDataPanel() {
   CLIEditor.SetConfig(TextEditorWidget::Config{.ShowToolbar = false});
   CLIEditor.GetEditor().SetReadOnly(true);
   CLIEditor.GetEditor().SetShowWhitespaces(false);
@@ -36,7 +36,11 @@ ContentPanel::ContentPanel() : CLIEditor("CLIEditor"), m_MetaDataPanel() {
       std::bind(&ContentPanel::CliUpdatedCallback, this, std::placeholders::_1),
       {ContextEvent::Type::CLIUpdated});
   EventBus::GetInstance().subscribe<ActionEvent>(
-      std::bind(&ContentPanel::CaptureActionCallback, this, std::placeholders::_1));
+      std::bind(&ContentPanel::CaptureActionCallback, this, std::placeholders::_1),
+      {ActionEvent::Type::Capture});
+  EventBus::GetInstance().subscribe<ContextEvent>(
+      std::bind(&ContentPanel::PluginsUpdatedCallback, this, std::placeholders::_1),
+      {ContextEvent::Type::PluginsUpdated});
 }
 
 float ContentPanel::WidthColumn1(bool resetSize) {
@@ -124,14 +128,24 @@ void ContentPanel::Render() {
       break;
     case SideBarItem::OPTIONS:
       ImGui::BeginChild("StatsArea", ImVec2(area.x, area.y), true);
-      context.EasyOptionsPanel->Render();
+      context.PlaybackOptionsPanel->Render();
+      ImGui::EndChild();
+      break;
+    case SideBarItem::PLUGINS:
+      ImGui::BeginChild("Plugins", ImVec2(area.x, area.y), true);
+      m_PluginsPanel.Render();
+      ImGui::EndChild();
+      break;
+    case SideBarItem::RESOURCE_DUMP:
+      ImGui::BeginChild("Resource dump", ImVec2(area.x, area.y), true);
+      context.ResourceDumpPanel->Render();
       ImGui::EndChild();
       break;
     default:
       ImGui::BeginChild("ContentArea", ImVec2(area.x, area.y), true);
       ImGui::Text("Not implemented yet.");
       ImGui::EndChild();
-      return;
+      break;
     }
     ImGui::EndTable();
   }
@@ -218,10 +232,6 @@ void ContentPanel::CliUpdatedCallback(const Event& event) {
 void ContentPanel::CaptureActionCallback(const Event& e) {
   const ActionEvent& actionEvent = static_cast<const ActionEvent&>(e);
 
-  if (actionEvent.EventType != ActionEvent::Type::Capture) {
-    return;
-  }
-
   auto& context = Context::GetInstance();
 
   switch (actionEvent.ActionState) {
@@ -256,6 +266,10 @@ void ContentPanel::CaptureActionCallback(const Event& e) {
   default:
     break;
   }
+}
+
+void ContentPanel::PluginsUpdatedCallback(const Event& e) {
+  LoadConfigFile();
 }
 
 } // namespace gits::gui

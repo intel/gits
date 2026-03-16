@@ -16,13 +16,6 @@
 
 #include <imgui.h>
 
-#ifdef _WIN32
-#include <windows.h>
-#else
-#include <unistd.h>
-#include <limits.h>
-#endif
-
 #include "imGuiStyle.h"
 #include "launcherPaths.h"
 
@@ -52,7 +45,6 @@ struct LauncherConfig {
 
   LauncherConfig();
 
-  void DetectBasePaths();
   static std::filesystem::path GetGITSLauncherConfigPath();
 
   static LauncherConfig FromFile(const std::filesystem::path& path = "");

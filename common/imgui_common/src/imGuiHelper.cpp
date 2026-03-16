@@ -198,5 +198,105 @@ bool LabelInputString(const std::string& label,
   return InputString(labelID, str, flags, widthInput);
 }
 
+bool LabelInputStringTooltip(const std::string& label,
+                             const char* labelID,
+                             const char* tooltip,
+                             std::string& str,
+                             const float widthLabel,
+                             const float widthInput,
+                             ImGuiInputTextFlags flags) {
+  const auto indent = ImGui::GetCursorPosX();
+  if (widthLabel > 0) {
+    ImGui::SetNextItemWidth(static_cast<float>(widthLabel));
+  }
+
+  ImGui::Text(label.c_str());
+  if (ImGui::IsItemHovered()) {
+    ImGui::SetTooltip(tooltip);
+  }
+  ImGui::SameLine();
+
+  // let the input field take the remaining width
+  if (widthLabel > 0) {
+    ImGui::SetCursorPosX(indent + widthLabel);
+  }
+  return InputString(labelID, str, flags, widthInput);
+}
+
+std::string GetLabelWithRangeID(const char* label, const char* id) {
+  return std::string(label) + "###" + id + std::string(label);
+};
+
+bool RangeControls(const char* label,
+                   float labelWidth,
+                   float inputWidth,
+                   float rangeFieldInputWidth,
+                   const char* rangeId,
+                   const char* tooltip,
+                   std::string& rangeString,
+                   int& tmpStart,
+                   int& tmpEnd,
+                   int& tmpStep,
+                   const char* addRangeLabel,
+                   const char* addSingleLabel) {
+  bool localChanged = false;
+
+  // Main range input string
+  localChanged |= ImGuiHelper::LabelInputStringTooltip(label, rangeId, tooltip, rangeString,
+                                                       labelWidth, inputWidth);
+
+  // Individual controls for start/end/step - use consistent inputPosition
+  auto inputPosition = ImGui::GetCursorPosX() + labelWidth;
+  ImGui::SetCursorPosX(inputPosition);
+
+  std::string startLabel = GetLabelWithRangeID("Start", rangeId);
+  ImGui::SetNextItemWidth(rangeFieldInputWidth);
+  localChanged |= ImGui::InputInt(startLabel.c_str(), &tmpStart, 1, 50);
+  ImGui::SameLine();
+
+  std::string endLabel = GetLabelWithRangeID("End", rangeId);
+  ImGui::SetNextItemWidth(rangeFieldInputWidth);
+  localChanged |= ImGui::InputInt(endLabel.c_str(), &tmpEnd, 1, 50);
+  ImGui::SameLine();
+
+  std::string stepLabel = GetLabelWithRangeID("Step", rangeId);
+  ImGui::SetNextItemWidth(rangeFieldInputWidth);
+  localChanged |= ImGui::InputInt(stepLabel.c_str(), &tmpStep, 1, 10);
+  tmpStep = std::max(tmpStep, 1);
+
+  ImGui::SetCursorPosX(inputPosition);
+  std::string addRangeBtn = GetLabelWithRangeID(addRangeLabel, rangeId);
+  if (ImGui::Button(addRangeBtn.c_str())) {
+    // Add range to string (format: "start-end:step")
+    std::string newRange;
+    if (tmpStep == 1) {
+      newRange = std::to_string(tmpStart) + "-" + std::to_string(tmpEnd);
+    } else {
+      newRange =
+          std::to_string(tmpStart) + "-" + std::to_string(tmpEnd) + ":" + std::to_string(tmpStep);
+    }
+
+    if (!rangeString.empty()) {
+      rangeString += ",";
+    }
+    rangeString += newRange;
+    localChanged = true;
+  }
+  ImGui::SameLine();
+
+  std::string addSingleBtn = GetLabelWithRangeID(addSingleLabel, rangeId);
+  if (ImGui::Button(addSingleBtn.c_str())) {
+    // Add single value to string
+    std::string newValue = std::to_string(tmpStart);
+    if (!rangeString.empty()) {
+      rangeString += ",";
+    }
+    rangeString += newValue;
+    localChanged = true;
+  }
+
+  return localChanged;
+}
+
 } // namespace ImGuiHelper
 } // namespace gits

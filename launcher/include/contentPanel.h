@@ -12,6 +12,7 @@
 #include "eventBus.h"
 #include "textEditorWidget.h"
 #include "metaDataPanel.h"
+#include "pluginsPanel.h"
 
 namespace gits::gui {
 
@@ -31,7 +32,9 @@ private:
   void ThemeChangedCallback(const Event& event);
   void CliUpdatedCallback(const Event& event);
   void CaptureActionCallback(const Event& e);
+  void PluginsUpdatedCallback(const Event& e);
 
+  PluginsPanel m_PluginsPanel;
   gits::ImGuiHelper::TextEditorWidget CLIEditor;
   MetaDataPanel m_MetaDataPanel;
 };

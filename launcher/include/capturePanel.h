@@ -8,6 +8,8 @@
 
 #pragma once
 
+#include "tabGroup.h"
+
 #include "basePanel.h"
 #include "eventBus.h"
 
@@ -35,6 +37,7 @@ private:
   void RowOutputPath();
 
   CaptureCleanupOptions CleanupOptions;
+  std::unique_ptr<gits::ImGuiHelper::TabGroup<Api>> apiToolBar;
 
   // Event callbacks
   void PathCallback(const Event& e);

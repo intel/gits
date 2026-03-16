@@ -37,7 +37,7 @@
 #include "log.h"
 
 #include "basePanel.h"
-#include "ezOptionsPanel.h"
+#include "playbackOptionsPanel.h"
 #include "contentPanel.h"
 #include "mainWindow.h"
 #include "launcherActions.h"
@@ -135,6 +135,7 @@ void GUIController::RenderUI() {
 void GUIController::SetupGui() {
   auto& context = Context::GetInstance();
   context.LauncherConfiguration = LauncherConfig::FromFile();
+  DetectBasePaths();
 
   context.Paths = context.LauncherConfiguration.Paths;
   LOG_INFO << "Attempting to restore window size and position from last session: "
@@ -154,6 +155,15 @@ void GUIController::SetupGui() {
   context.ConfigEditor->GetEditor().SetShowWhitespaces(false);
   context.ConfigEditor->GetEditor().SetTabSize(4);
   context.ConfigEditor->SetCheckCallback(&ValidateGITSConfig);
+  // Since we want to publish an event for config being edited, but
+  // we don't want to publish it for all text editors, we use a custom save callback
+  const auto configOnSaveCallback = [](std::filesystem::path configPath) {
+    auto& context = Context::GetInstance();
+    context.ConfigEditor->SaveToFile(configPath);
+
+    EventBus::GetInstance().publish<ContextEvent>(ContextEvent::Type::ConfigEdited);
+  };
+  context.ConfigEditor->SetSaveCallback(configOnSaveCallback);
 
   context.GITSLogEditor = std::make_unique<TextEditorWidget>("GITSLogEditor");
   context.GITSLogEditor->SetConfig(TextEditorWidget::Config{.ShowToolbar = false});
@@ -193,7 +203,8 @@ void GUIController::SetupGui() {
       TextEditorWidget::Config{.ShowToolbar = false, .ScrollToBottom = true});
   context.TraceStatsEditor->GetEditor().SetColorizerEnable(false);
 
-  context.EasyOptionsPanel = std::make_unique<EzOptionsPanel>();
+  context.PlaybackOptionsPanel = std::make_unique<PlaybackOptionsPanel>();
+  context.ResourceDumpPanel = std::make_unique<ResourceDumpPanel>();
 
   context.LogAppender = std::make_unique<TextEditorAppender>(context.LogEditor.get());
 
@@ -205,15 +216,17 @@ void GUIController::SetupGui() {
 
   SetImGuiStyle(context.LauncherConfiguration.Theme.CurrentThemeIdx);
 
-  LoadConfigFile();
-
   context.TheMainWindow = std::make_shared<MainWindow>();
   mainWindow.reset(context.TheMainWindow.get());
 
-  // Initialize panels in the desired startup state
-  Context::GetInstance().Context::GetInstance().ChangeMode(Mode::CAPTURE);
-  Context::GetInstance().BtnsSideBar->SelectEntry(Context::SideBarItem::CONFIG);
+  // Initialize panels and UI in the desired startup state
+  context.ChangeMode(Mode::CAPTURE);
+  context.BtnsSideBar->SelectEntry(Context::SideBarItem::CONFIG);
+
+  context.SendAllPathsSetEvents();
+
   UpdateCLICall();
+  LoadConfigFile();
 }
 
 void GUIController::TeardownGui() {

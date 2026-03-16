@@ -12,6 +12,16 @@
 
 namespace gits::gui {
 
+namespace filesystem_names {
+static constexpr const char* RECORDER_CONFIG_FILENAME = "gits_config.yml";
+static constexpr const char* RECORDER_DIRECTORY_NAME = "Recorder";
+static constexpr const char* PLAYER_CONFIG_FILENAME = "gits_config.yml";
+static constexpr const char* GITS_PLAYER_WIN = "gitsPlayer.exe";
+static constexpr const char* GITS_PLAYER_LINUX = "gitsPlayer";
+static constexpr const char* GITS_RECORDER_WIN = "gitsRecorder.dll";
+static constexpr const char* GITS_RECORDER_LINUX = "libgitsRecorder.so";
+} // namespace filesystem_names
+
 enum class Api {
   UNKNOWN = 0,
   DIRECTX,
@@ -32,7 +42,6 @@ enum class Mode {
 enum class Path {
   // universal paths
   GITS_BASE = 0,
-  CUSTOM_PLAYER,
   // unique paths - independent of mode
   SCREENSHOTS,
   TRACE,

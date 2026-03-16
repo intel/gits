@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "launcherConfig.h"
+#include "log.h"
 
 namespace {
 // anonymous namespace for YAML keys to avoid typos and for easier refactoring
@@ -23,61 +24,6 @@ LauncherConfig::LauncherConfig() {
 
   FileLocation = GetGITSLauncherConfigPath();
   UIScale = 1.0f;
-}
-
-void LauncherConfig::DetectBasePaths() {
-  // the parent folder of the folder in which the executable being run is:
-  // Get the parent folder of the folder in which the executable is being run
-#ifdef _WIN32
-  char exePath[MAX_PATH];
-  GetModuleFileNameA(nullptr, exePath, MAX_PATH);
-  std::filesystem::path exeDir = std::filesystem::path(exePath).parent_path();
-#else
-  char exePath[PATH_MAX];
-  ssize_t count = readlink("/proc/self/exe", exePath, PATH_MAX);
-  std::filesystem::path exeDir =
-      std::filesystem::path(std::string(exePath, (count > 0) ? count : 0)).parent_path();
-#endif
-  const std::string gitsPlayer = "gitsPlayer.exe";
-
-  // Case 1: installation: Player is relative to Launcher
-  Paths.CustomPlayerPath = exeDir / "Player" / gitsPlayer;
-  if (std::filesystem::exists(Paths.CustomPlayerPath)) {
-    Paths.BasePath = exeDir;
-  } else {
-    // Case 2: VS development: Player is in ../GITS/Player relative to Launcher
-    Paths.CustomPlayerPath = exeDir.parent_path().parent_path() / "player" / "Debug" / gitsPlayer;
-    if (std::filesystem::exists(Paths.CustomPlayerPath)) {
-      Paths.BasePath = exeDir.parent_path().parent_path() / "dist";
-    } else {
-      Paths.CustomPlayerPath = "";
-    }
-  }
-
-  if (!Paths.BasePath.empty() && std::filesystem::exists(Paths.BasePath)) {
-    const auto playerConfigPath = Paths.BasePath / "Player" / "gits_config.yml";
-    if (std::filesystem::exists(playerConfigPath)) {
-      Paths.Playback.ConfigPath = playerConfigPath;
-      Paths.Subcapture.ConfigPath = playerConfigPath;
-    }
-  }
-
-  // SAS
-  /*
-  ConfigPath = "";
-  if (!Paths.CustomPlayerPath.empty()) {
-    ConfigPath = Paths.CustomPlayerPath.parent_path() / "gits_config.yml";
-    if (!std::filesystem::exists(ConfigPath)) {
-      ConfigPath = "";
-    }
-  }
-  if (!Paths.BasePath.empty() && ConfigPath.empty()) {
-    ConfigPath = Paths.BasePath / "Player" / "gits_config.yml";
-    if (!std::filesystem::exists(ConfigPath)) {
-      ConfigPath = "";
-    }
-  }
-  */
 }
 
 std::filesystem::path LauncherConfig::GetGITSLauncherConfigPath() {
@@ -110,14 +56,12 @@ LauncherConfig LauncherConfig::FromFile(const std::filesystem::path& path) {
 
   const auto& launcherConfigPath = config.FileLocation;
   if (!std::filesystem::exists(launcherConfigPath)) {
-    config.DetectBasePaths();
     return config;
   }
 
   try {
     std::ifstream file(launcherConfigPath);
     if (!file.is_open()) {
-      config.DetectBasePaths();
       return config;
     }
 
@@ -148,9 +92,11 @@ LauncherConfig LauncherConfig::FromFile(const std::filesystem::path& path) {
         config.Theme.SetThemeByID(themeID);
       }
     }
+    return config;
   } catch (const std::exception& e) {
-    std::cerr << "Error loading launcher config: " << e.what() << std::endl;
+    LOG_ERROR << "Error loading launcher config: " << e.what() << std::endl;
   }
+
   return config;
 }
 
@@ -185,7 +131,7 @@ bool LauncherConfig::ToFile(const std::filesystem::path& path) {
     return true;
 
   } catch (const std::exception& e) {
-    std::cerr << "Error saving launcher config: " << e.what() << std::endl;
+    LOG_ERROR << "Error saving launcher config: " << e.what() << std::endl;
     return false;
   }
 }

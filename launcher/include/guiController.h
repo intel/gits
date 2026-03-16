@@ -27,7 +27,6 @@
 
 #include "context.h"
 #include "mainWindow.h"
-#include "launcherConfig.h"
 
 namespace gits::gui {
 struct Settings {
@@ -45,6 +44,10 @@ struct Settings {
   }
 };
 
+/*
+* Purpose:
+* - Manages the main GUI lifecycle and state, including initialization, rendering, and cleanup.
+*/
 class GUIController {
 public:
 #ifdef _WIN32

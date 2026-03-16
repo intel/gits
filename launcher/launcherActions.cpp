@@ -8,7 +8,15 @@
 
 #include "launcherActions.h"
 
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <unistd.h>
+#include <limits.h>
+#endif
+
 #include "ImGuiFileDialog.h"
+#include "yaml-cpp/yaml.h"
 
 #include "fileActions.h"
 #include "labels.h"
@@ -21,6 +29,19 @@
 namespace gits::gui {
 
 typedef Context::SideBarItem SideBarItem;
+
+bool ValidateYaml(const std::string& text) {
+  try {
+    YAML::Node node = YAML::Load(text);
+    (void)node; // Workaround for unused variable warning
+    return true;
+  } catch (const YAML::Exception& e) {
+    LOG_ERROR << "Error validating YAML: " << e.what();
+    return false;
+  }
+
+  return true;
+}
 
 bool ValidateGITSConfig(const std::string& config) {
   const auto result = gits::Configurator::Instance().Load(config);
@@ -167,8 +188,13 @@ void FileDialogs() {
     return;
   }
 
-  context.SetPath(path, key.Path, key.Mode);
-  //UpdateCLICall();
+  if (key.Path == Path::GITS_BASE) {
+    context.Paths.BasePath = path;
+    DetectBasePaths();
+    context.SendAllPathsSetEvents();
+  } else {
+    context.SetPath(path, key.Path, key.Mode);
+  }
 }
 
 bool SetupFileDialogPath(Path path, Mode mode, IGFD::FileDialogConfig* dlgConfig) {
@@ -196,9 +222,6 @@ void ShowFileDialog(FileDialogKeys key) {
 
   proceed = SetupFileDialogPath(key.Path, key.Mode, &dlgConfig);
   switch (key.Path) {
-  case Path::CUSTOM_PLAYER:
-    ext = ".exe";
-    break;
   case Path::CAPTURE_TARGET:
     ext = ".exe";
     break;
@@ -264,20 +287,99 @@ void SetImGuiStyle(size_t idx) {
   EventBus::GetInstance().publish<AppEvent>(AppEvent::Type::ThemeChanged);
 }
 
+std::string GetRecorderDirectoryNameForApi(Api api) {
+  const std::map<Api, std::string> recorderDirectoryForApi{{Api::UNKNOWN, ""},
+                                                           {Api::DIRECTX, "FilesToCopyDirectX"},
+                                                           {Api::OPENGL, "FilesToCopyOGL"},
+                                                           {Api::VULKAN, "FilesToCopyVulkan"},
+                                                           {Api::OPENCL, "FilesToCopyOCL"},
+                                                           {Api::LEVELZERO, "FilesToCopyL0"}};
+
+  return recorderDirectoryForApi.at(api);
+}
+
+std::filesystem::path GetRecorderConfigPathForApi(Api api) {
+  return Context::GetInstance().Paths.BasePath / filesystem_names::RECORDER_DIRECTORY_NAME /
+         GetRecorderDirectoryNameForApi(api) / filesystem_names::RECORDER_CONFIG_FILENAME;
+}
+
+std::filesystem::path GetPlayerConfigPath() {
+  auto& context = Context::GetInstance();
+  const auto playerConfigPath =
+      context.Paths.BasePath / "Player" / filesystem_names::PLAYER_CONFIG_FILENAME;
+  if (std::filesystem::exists(playerConfigPath)) {
+    return playerConfigPath;
+  }
+  return "";
+}
+
+bool IsValidGITSBasePath(const std::filesystem::path& path) {
+  if (path.empty()) {
+    return false;
+  }
+#ifdef _WIN32
+  const auto playerExecutablePath = path / "Player" / filesystem_names::GITS_PLAYER_WIN;
+  const auto recorderDLLPath = path / "Recorder" / filesystem_names::GITS_RECORDER_WIN;
+#else
+  const auto playerExecutablePath = path / "Player" / filesystem_names::GITS_PLAYER_LINUX;
+  const auto recorderDLLPath = path / "Recorder" / filesystem_names::GITS_RECORDER_LINUX;
+#endif
+
+  return std::filesystem::exists(playerExecutablePath) && std::filesystem::exists(recorderDLLPath);
+}
+
+void DetectBasePaths() {
+  // the parent folder of the folder in which the executable being run is:
+  // Get the parent folder of the folder in which the executable is being run
+#ifdef _WIN32
+  char exePath[MAX_PATH];
+  GetModuleFileNameA(nullptr, exePath, MAX_PATH);
+  std::filesystem::path exeDir = std::filesystem::path(exePath).parent_path();
+#else
+  char exePath[PATH_MAX];
+  ssize_t count = readlink("/proc/self/exe", exePath, PATH_MAX);
+  std::filesystem::path exeDir =
+      std::filesystem::path(std::string(exePath, (count > 0) ? count : 0)).parent_path();
+#endif
+  auto& context = Context::GetInstance();
+  auto detected = !context.Paths.BasePath.empty() && IsValidGITSBasePath(context.Paths.BasePath);
+  if (!detected) {
+    detected = IsValidGITSBasePath(exeDir);
+    if (detected) {
+      context.Paths.BasePath = exeDir;
+      LOG_DEBUG << "Detected base path from executable location: " << context.Paths.BasePath;
+    }
+  }
+  if (!detected) {
+    const auto buildDir = exeDir.parent_path().parent_path();
+    const auto distDir = buildDir / "dist";
+    detected = IsValidGITSBasePath(distDir);
+    if (detected) {
+      context.Paths.BasePath = distDir;
+      LOG_DEBUG << "Detected base path from build/dist relative location: "
+                << context.Paths.BasePath;
+    }
+  }
+  if (!detected) {
+    LOG_WARNING << "Could not detect GITS base path. Please set it manually.";
+    context.Paths.BasePath = "";
+  } else {
+    const auto playerConfigPath =
+        context.Paths.BasePath / "Player" / filesystem_names::PLAYER_CONFIG_FILENAME;
+    if (!std::filesystem::exists(context.Paths.Playback.ConfigPath)) {
+      context.Paths.Playback.ConfigPath = playerConfigPath;
+    }
+    if (!std::filesystem::exists(context.Paths.Subcapture.ConfigPath)) {
+      context.Paths.Subcapture.ConfigPath = playerConfigPath;
+    }
+  }
+}
+
 void ResetBasePaths() {
   auto& context = Context::GetInstance();
-  context.LauncherConfiguration.DetectBasePaths();
-
-  // SAS
-
-  context.SetPath(context.LauncherConfiguration.Paths.BasePath, Path::GITS_BASE);
-  context.SetPath(context.LauncherConfiguration.Paths.CustomPlayerPath, Path::CUSTOM_PLAYER);
-  context.SetPath(context.LauncherConfiguration.Paths.Capture.ConfigPath, Path::CONFIG,
-                  Mode::CAPTURE);
-  context.SetPath(context.LauncherConfiguration.Paths.Subcapture.ConfigPath, Path::CONFIG,
-                  Mode::SUBCAPTURE);
-  context.SetPath(context.LauncherConfiguration.Paths.Playback.ConfigPath, Path::CONFIG,
-                  Mode::PLAYBACK);
+  context.Paths.BasePath = "";
+  DetectBasePaths();
+  context.SendAllPathsSetEvents();
 
   UpdateCLICall();
   LoadConfigFile();

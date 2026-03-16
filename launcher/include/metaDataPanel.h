@@ -24,17 +24,15 @@ public:
   void Render() override;
 
 private:
-  void InvalidateMetaData();
   void LoadMetaData(std::filesystem::path streamPath);
   void ClearStats();
   void AppendStats(std::string str);
   void FillStatsEditor();
 
   // Event callbacks
+  void MetaDataCallback(const Event& e);
   void StreamPathCallback(const Event& e);
 
-  bool MetaDataNeedsUpdating = true;
-  STREAM_META_DATA MetaData;
   std::string Stats;
   std::mutex StatsMutex;
   std::atomic<bool> StatsGatheringInProgress = false;

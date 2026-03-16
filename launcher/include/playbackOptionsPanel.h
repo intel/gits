@@ -16,18 +16,34 @@
 #include "basePanel.h"
 
 namespace gits::gui {
+struct Event;
+
 using IOTAIntRange = std::ranges::iota_view<int, int>;
 
-class EzOptionsPanel : public BasePanel {
+class PlaybackOptionsPanel : public BasePanel {
 public:
+  PlaybackOptionsPanel();
+
   void Render() override;
 
   const std::string GetCLIArguments() const;
 
 private:
+  void SetScreenshotPathFromInputStream();
+  void SetTracePathFromInputStream();
+
+  void ContextCallback(const Event& e);
+  void PathCallback(const Event& e);
+
+  struct ExecutableNameConfig {
+    bool Enabled = true;
+    std::string CustomName = "";
+  } ExecutableNameConfig;
+
   struct HUDConfig {
-    bool Enabled = false;
+    bool Enabled = true;
   } HUDConfig;
+
   struct ScreenshotsConfig {
     bool Enabled = false;
     std::string Range = "";

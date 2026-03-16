@@ -77,5 +77,26 @@ bool LabelInputString(const std::string& label,
                       const float widthInput = -1.0f,
                       ImGuiInputTextFlags flags = 0);
 
+bool LabelInputStringTooltip(const std::string& label,
+                             const char* labelID,
+                             const char* tooltip,
+                             std::string& str,
+                             const float widthLabel = 0.0f,
+                             const float widthInput = -1.0f,
+                             ImGuiInputTextFlags flags = 0);
+
+bool RangeControls(const char* label,
+                   float labelWidth,
+                   float inputWidth,
+                   float rangeFieldInputWidth,
+                   const char* rangeId,
+                   const char* tooltip,
+                   std::string& rangeString,
+                   int& tmpStart,
+                   int& tmpEnd,
+                   int& tmpStep,
+                   const char* addRangeLabel,
+                   const char* addSingleLabel);
+
 }; // namespace ImGuiHelper
 }; // namespace gits
