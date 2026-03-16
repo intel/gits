@@ -443,6 +443,8 @@ void DebugInfo::initNvAPIValidation(ID3D12Device* device) {
     if (status != NVAPI_OK) {
       LOG_ERROR << "NvAPI_D3D12_RegisterRaytracingValidationMessageCallback failed! Status: "
                 << status;
+    } else {
+      nvAPICallbackRegistered_ = true;
     }
   } else if (status == NVAPI_ACCESS_DENIED) {
     LOG_ERROR << "NvAPI_D3D12_EnableRaytracingValidation failed! Environment variables: "
@@ -453,6 +455,10 @@ void DebugInfo::initNvAPIValidation(ID3D12Device* device) {
 }
 
 void DebugInfo::flushNvAPIValidation(IUnknown* object) {
+  if (!nvAPICallbackRegistered_) {
+    return;
+  }
+
   Microsoft::WRL::ComPtr<ID3D12Device> device;
   object->QueryInterface(IID_PPV_ARGS(&device));
   if (!device) {

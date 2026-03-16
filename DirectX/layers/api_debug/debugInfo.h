@@ -53,6 +53,7 @@ private:
 
 private:
   bool d3d12CallbackRegistered_{};
+  bool nvAPICallbackRegistered_{};
   std::ofstream dredFile_{};
 };
 
