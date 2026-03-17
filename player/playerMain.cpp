@@ -56,7 +56,6 @@
 #include "configurationLib.h"
 #include "diagnostic.h"
 #include "playerUtils.h"
-#include "log.h"
 #include "streamPlayer.h"
 #include "streamHeader.h"
 

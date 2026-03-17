@@ -22,7 +22,6 @@
 #include "streams.h"
 #include "resource_manager.h"
 #include "buffer.h"
-#include "exception.h"
 
 #include <vector>
 #include <map>
