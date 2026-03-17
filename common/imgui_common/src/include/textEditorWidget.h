@@ -45,6 +45,7 @@ public:
   };
 
   TextEditorWidget(const TextEditorWidget&) = delete;
+  TextEditorWidget& operator=(const TextEditorWidget&) = delete;
 
   TextEditorWidget(std::string name);
   ~TextEditorWidget();
