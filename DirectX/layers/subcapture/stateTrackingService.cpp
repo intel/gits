@@ -216,7 +216,11 @@ void StateTrackingService::storeState(ObjectState* state) {
 }
 
 void StateTrackingService::removeState(unsigned key) {
-  statesByKey_.erase(key);
+  auto it = statesByKey_.find(key);
+  if (it != statesByKey_.end() && !analyzerResults_.restoreObject(key)) {
+    delete it->second;
+    statesByKey_.erase(it);
+  }
 }
 
 void StateTrackingService::releaseObject(unsigned key, ULONG result) {
@@ -259,7 +263,7 @@ void StateTrackingService::releaseObject(unsigned key, ULONG result) {
     }
   }
 
-  if (!itState->second->keepDestroyed) {
+  if (!itState->second->keepDestroyed && !analyzerResults_.restoreObject(key)) {
     delete itState->second;
     statesByKey_.erase(itState);
   }
