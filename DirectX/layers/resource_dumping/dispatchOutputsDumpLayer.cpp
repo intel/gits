@@ -35,15 +35,25 @@ DispatchOutputsDumpLayer::DispatchOutputsDumpLayer()
   }
   dumpPath_ = dumpPath;
 
-  analysisFileName_ = config.common.player.streamDir.filename().string() + "_frames-" +
-                      config.directx.features.dispatchOutputsDump.frames +
-                      "_DispatchOutputsDumpAnalysis.txt";
-  inAnalysis_ = !std::filesystem::exists(analysisFileName_);
+  if (config.directx.features.dispatchOutputsDump.analysisFilePath == "") {
+    analysisFilePath_ = config.common.player.streamDir.filename().string() + "_frames-" +
+                        config.directx.features.dispatchOutputsDump.frames +
+                        "_DispatchOutputsDumpAnalysis.txt";
+  } else {
+    analysisFilePath_ = config.directx.features.dispatchOutputsDump.analysisFilePath;
+    if (!std::filesystem::exists(analysisFilePath_)) {
+      LOG_ERROR << "DispatchOutputsDump - provided analysis file path does not exist: "
+                << analysisFilePath_;
+      GITS_ASSERT(false && "analysis file path set, but does not exist");
+    }
+  }
+
+  inAnalysis_ = !std::filesystem::exists(analysisFilePath_);
   if (inAnalysis_) {
     LOG_INFO << "DISPATCH OUTPUTS DUMP IN ANALYSIS. RUN AGAIN TO DUMP RESOURCES";
     dryRun_ = false;
   } else {
-    std::ifstream analysisFile(analysisFileName_);
+    std::ifstream analysisFile(analysisFilePath_);
     std::string line;
     while (std::getline(analysisFile, line)) {
       std::istringstream iss(line);
@@ -63,7 +73,7 @@ DispatchOutputsDumpLayer::DispatchOutputsDumpLayer()
 DispatchOutputsDumpLayer::~DispatchOutputsDumpLayer() {
   try {
     if (inAnalysis_) {
-      std::ofstream analysisFile(analysisFileName_);
+      std::ofstream analysisFile(analysisFilePath_);
       for (const auto& [dispatchKey, resourceKeysBySlot] : resourceKeysBySlotByDispatch_) {
         for (const auto& [slot, resourceKeys] : resourceKeysBySlot) {
           analysisFile << dispatchKey << " " << slot;

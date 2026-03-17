@@ -74,7 +74,7 @@ private:
   DispatchOutputsDump resourceDump_;
   BitRange frameRange_;
   BitRange dispatchRange_;
-  std::string analysisFileName_;
+  std::filesystem::path analysisFilePath_;
   bool inAnalysis_{};
   bool dryRun_{};
   unsigned dispatchCount_{};

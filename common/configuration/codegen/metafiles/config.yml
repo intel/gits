@@ -1187,7 +1187,11 @@ Configuration:
               - Name: enabled
                 Type: bool
                 Default: false
-                Description: Whether dispatch outputs dumping is enabled or not
+                Description: Whether dispatch outputs dumping is enabled or not. First run is analysis, run again to dump.
+              - Name: analysisFilePath
+                Type: std::string
+                Default: ""
+                Description: Set analysis file path to read. Empty for default.
               - Name: frames
                 Type: std::string
                 Default: ""
