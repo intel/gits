@@ -297,6 +297,38 @@ void ShowExecutionLayer::post(ID3D12GraphicsCommandListResourceBarrierCommand& c
   commandListCommands_[command.object_.key].emplace_back(outBuff_.extractString());
 }
 
+void ShowExecutionLayer::post(
+    ID3D12GraphicsCommandListClearUnorderedAccessViewFloatCommand& command) {
+  outBuff_.flush();
+  CommandPrinter p(outBuff_, printerState_, command,
+                   "ID3D12GraphicsCommandList::ClearUnorderedAccessViewFloat", command.object_.key);
+  p.addArgument(command.ViewGPUHandleInCurrentHeap_);
+  p.addArgument(command.ViewCPUHandle_);
+  p.addArgument(command.pResource_);
+  p.addArgument(command.Values_);
+  p.addArgument(command.NumRects_);
+  p.addArgument(command.pRects_);
+  p.print(false);
+
+  commandListCommands_[command.object_.key].emplace_back(outBuff_.extractString());
+}
+
+void ShowExecutionLayer::post(
+    ID3D12GraphicsCommandListClearUnorderedAccessViewUintCommand& command) {
+  outBuff_.flush();
+  CommandPrinter p(outBuff_, printerState_, command,
+                   "ID3D12GraphicsCommandList::ClearUnorderedAccessViewUint", command.object_.key);
+  p.addArgument(command.ViewGPUHandleInCurrentHeap_);
+  p.addArgument(command.ViewCPUHandle_);
+  p.addArgument(command.pResource_);
+  p.addArgument(command.Values_);
+  p.addArgument(command.NumRects_);
+  p.addArgument(command.pRects_);
+  p.print(false);
+
+  commandListCommands_[command.object_.key].emplace_back(outBuff_.extractString());
+}
+
 void ShowExecutionLayer::post(ID3D12GraphicsCommandList1ResolveSubresourceRegionCommand& command) {
   outBuff_.flush();
   CommandPrinter p(outBuff_, printerState_, command,

@@ -44,6 +44,8 @@ public:
   void post(ID3D12GraphicsCommandListCopyTilesCommand& command) override;
   void post(ID3D12GraphicsCommandListResolveSubresourceCommand& command) override;
   void post(ID3D12GraphicsCommandListResourceBarrierCommand& command) override;
+  void post(ID3D12GraphicsCommandListClearUnorderedAccessViewFloatCommand& command) override;
+  void post(ID3D12GraphicsCommandListClearUnorderedAccessViewUintCommand& command) override;
   void post(ID3D12GraphicsCommandList1ResolveSubresourceRegionCommand& command) override;
   void post(
       ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& command) override;
