@@ -337,7 +337,7 @@ int MainBody(int argc, char* argv[]) {
           LOG_INFO << "Player name differs from the requested name, Player will be renamed and "
                       "relaunched.";
           player.RenameAndRelaunch(requestedPlayerName, std::filesystem::absolute(playerPath),
-                                   argsVector);
+                                   std::move(argsVector));
           return 0;
         }
       }

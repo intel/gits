@@ -1709,7 +1709,7 @@ void gits::CArgumentMappedSizedArray<T, T_WRAP, T_ACTION>::Read(CBinIStream& str
       T_WRAP wrapper_;
       stream >> wrapper_;
       _array[idx] = wrapper_.Original();
-      _arrayWrap[idx] = wrapper_;
+      _arrayWrap[idx] = std::move(wrapper_);
     }
   }
 }
