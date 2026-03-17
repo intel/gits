@@ -1559,8 +1559,8 @@ void find_min_and_max(std::vector<uint8_t>& data,
                       typename T::comp_fmt::min_max_type& max_value) {
   using comp_type = typename T::comp_fmt::type;
 
-  const auto size = T::size_in_bytes * width * height;
-  for (auto i = 0; i < size; i += T::size_in_bytes) {
+  const size_t size = T::size_in_bytes * width * height;
+  for (size_t i = 0; i < size; i += T::size_in_bytes) {
     comp_type* ptr = reinterpret_cast<comp_type*>(&data[i]);
     min_max_updater<typename T::comp_fmt, T::r, T::g, T::b, T::a>::update(ptr, min_value,
                                                                           max_value);
@@ -1768,8 +1768,8 @@ void scale_colors(std::vector<uint8_t>& data,
                   typename T::comp_fmt::min_max_type max_value) {
   using comp_type = typename T::comp_fmt::type;
 
-  const auto size = T::size_in_bytes * width * height;
-  for (auto i = 0; i < size; i += T::size_in_bytes) {
+  const size_t size = T::size_in_bytes * width * height;
+  for (size_t i = 0; i < size; i += T::size_in_bytes) {
     comp_type* ptr = reinterpret_cast<comp_type*>(&data[i]);
     color_scaler<typename T::comp_fmt, T::r, T::g, T::b, T::a>::scale(ptr, min_value, max_value);
   }
