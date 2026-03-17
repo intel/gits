@@ -8,19 +8,19 @@
 
 #pragma once
 
-#include "gits.h"
-#include "directx.h"
-
+#include <dxgi.h>
 #include <map>
 #include <wrl/client.h>
 
 namespace gits {
 namespace DirectX {
 
-class AdapterService : public gits::noncopyable {
+class AdapterService {
 public:
   AdapterService() = default;
   ~AdapterService() = default;
+  AdapterService(const AdapterService&) = delete;
+  AdapterService& operator=(const AdapterService&) = delete;
 
   void loadAdapters();
   bool isAdapterOverride() const;

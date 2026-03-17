@@ -7,8 +7,8 @@
 // ===================== end_copyright_notice ==============================
 
 #include "raytracingShaderPatchService.h"
-#include "gits.h"
 #include "log.h"
+#include "configurator.h"
 
 #include <string>
 #include <vector>

@@ -25,5 +25,5 @@ bool ends_with(const std::string& str, const std::string& ending);
 
 bool ConfigurePlayer(const std::filesystem::path& playerPath, ArgumentParser& args);
 
-void CheckSystemMemoryCompatibility();
+void CheckSystemMemoryCompatibility(bool legacyMode);
 } // namespace gits

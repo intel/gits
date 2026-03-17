@@ -15,42 +15,18 @@
 
 #pragma once
 
-#include "pragmas.h"
-#include "tools.h"
-
+#include <iostream>
 #include <vector>
-#include <string>
-#include <algorithm>
-#include <map>
-#include <string>
-#include <cstdint>
-#include <optional>
 
 namespace gits {
 class FrameTimeSheet {
 public:
-  FrameTimeSheet() {}
-
-  void add_frame_time(const char* row_id, uint64_t time);
-  void add_frame_data(const char* row_id, const char* data);
-  template <class T>
-  void add_frame_data(const char* row_id, T data) {
-    auto str = std::to_string(data);
-    add_frame_data(row_id, str.c_str());
-  }
-
-  const std::vector<uint64_t>& row_times(const char* row_id) const;
-  const std::vector<std::string>& row_data(const char* row_id) const;
-
-  const std::vector<std::string>& row_names() const;
-
-  void OutputTimeData(std::ostream& stream, bool addFps);
+  void AddFrameTime(uint64_t time);
+  void OutputTimeData(std::ostream& stream);
 
 private:
-  size_t get_name_idx(const char* row_name) const;
-  std::optional<size_t> try_get_name_idx(const char* row_name) const;
-  std::map<size_t, std::vector<uint64_t>> _times;
-  std::map<size_t, std::vector<std::string>> _aux;
-  std::vector<std::string> _rows;
+  unsigned m_FrameNumber{};
+  std::vector<std::pair<unsigned, double>> m_FrameTimes;
 };
+
 } // namespace gits

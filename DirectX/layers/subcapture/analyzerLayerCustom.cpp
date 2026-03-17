@@ -7,7 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "analyzerLayerAuto.h"
-#include "gits.h"
+#include "log.h"
 #include "configurationLib.h"
 
 #include <fstream>

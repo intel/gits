@@ -8,9 +8,8 @@
 
 #include "cpuDescriptorsService.h"
 #include "commandsAuto.h"
-#include "commandWritersAuto.h"
+#include "commandSerializersAuto.h"
 #include "to_string/enumToStrAuto.h"
-#include "gits.h"
 #include "log.h"
 
 namespace gits {
@@ -145,7 +144,7 @@ unsigned CpuDescriptorsService::DescriptorHeap<SIZE>::preserveDescriptor(unsigne
   copy.SrcDescriptorRangeStart_.interfaceKey = heapKey;
   copy.SrcDescriptorRangeStart_.index = heapIndex;
   copy.DescriptorHeapsType_.value = type_;
-  service_.recorder_.record(new ID3D12DeviceCopyDescriptorsSimpleWriter(copy));
+  service_.recorder_.record(new ID3D12DeviceCopyDescriptorsSimpleSerializer(copy));
 
   return preservedIndex;
 }
@@ -166,7 +165,7 @@ void CpuDescriptorsService::DescriptorHeap<SIZE>::createDescriptorHeap() {
   create.pDescriptorHeapDesc_.value = &desc;
   create.riid_.value = IID_ID3D12DescriptorHeap;
   create.ppvHeap_.key = descriptorHeapKey_;
-  service_.recorder_.record(new ID3D12DeviceCreateDescriptorHeapWriter(create));
+  service_.recorder_.record(new ID3D12DeviceCreateDescriptorHeapSerializer(create));
 }
 
 template <unsigned SIZE>

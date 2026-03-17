@@ -8,17 +8,18 @@
 
 #pragma once
 
-#include "tools_lite.h"
-
 #include <d3d12.h>
 
 namespace gits {
 namespace DirectX {
 
-class ExecuteIndirectShaderPatchService : public gits::noncopyable {
+class ExecuteIndirectShaderPatchService {
 public:
   ExecuteIndirectShaderPatchService();
   ~ExecuteIndirectShaderPatchService();
+  ExecuteIndirectShaderPatchService(const ExecuteIndirectShaderPatchService&) = delete;
+  ExecuteIndirectShaderPatchService& operator=(const ExecuteIndirectShaderPatchService&) = delete;
+
   void patchArgumentBuffer(ID3D12GraphicsCommandList* commandList,
                            D3D12_GPU_VIRTUAL_ADDRESS argumentBuffer,
                            D3D12_GPU_VIRTUAL_ADDRESS countBuffer,

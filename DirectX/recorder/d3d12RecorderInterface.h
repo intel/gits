@@ -9,7 +9,6 @@
 #pragma once
 
 #include "functionDispatchTables.h"
-#include "platform.h"
 
 namespace gits {
 namespace DirectX {
@@ -25,8 +24,6 @@ public:
 } // namespace DirectX
 } // namespace gits
 
-typedef gits::DirectX::IRecorderWrapper*(STDCALL* FGITSRecorderD3D12)();
-
 extern "C" {
-gits::DirectX::IRecorderWrapper* STDCALL GITSRecorderD3D12() VISIBLE;
+gits::DirectX::IRecorderWrapper* __stdcall GITSRecorderD3D12();
 }

@@ -11,5 +11,4 @@ Info:
   Description: 'Creates a .csv file with the present-to-present frame times (CPU) for the stream.'
 
 Config:
-  Enabled: false
-  Output: 'benchmarkCPUPerFrame.csv'
+  Output: 'benchmark.csv'

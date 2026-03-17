@@ -61,15 +61,12 @@ set(SERVICES_SRC
 source_group("services" FILES ${SERVICES_SRC})
 
 set(RUNNER_SRC
-  ${SRC_DIR}/commandPlayersCustom.h
-  ${SRC_DIR}/commandPlayersCustom.cpp
-  ${SRC_DIR}/commandPlayer.h
-  ${SRC_DIR}/commandPlayersAuto.h
-  ${SRC_DIR}/commandPlayersAuto.cpp
-  ${SRC_DIR}/directXLibrary.h
-  ${SRC_DIR}/directXLibraryAuto.cpp
-  ${SRC_DIR}/commonEventsHandler.h
-  ${SRC_DIR}/commonEventsHandler.cpp
+  ${SRC_DIR}/commandRunnersCustom.h
+  ${SRC_DIR}/commandRunnersCustom.cpp
+  ${SRC_DIR}/commandRunnersAuto.h
+  ${SRC_DIR}/commandRunnersAuto.cpp
+  ${SRC_DIR}/directXCommandFactory.h
+  ${SRC_DIR}/directXCommandFactoryAuto.cpp
 )
 source_group("runner" FILES ${RUNNER_SRC})
 
@@ -130,6 +127,7 @@ target_include_directories(DirectX_player PRIVATE
 )
 
 target_link_libraries(DirectX_player PRIVATE
+  stream
   DirectX_layer_interface
   DirectX_api_debug
   DirectX_trace

@@ -319,12 +319,7 @@ gits::CRecorder::~CRecorder() {
     if (gits::CGits::Instance().apis.Has3D() && config.common.recorder.benchmark) {
       if (Configurator::IsRecorder() && config.common.recorder.enabled) {
         std::ofstream out_file(config.common.recorder.dumpPath / "benchmark.csv");
-        CGits::Instance().TimeSheet().OutputTimeData(out_file, true);
-#if defined GITS_PLATFORM_WINDOWS
-      } else if (Configurator::IsPlayer() && config.directx.features.subcapture.enabled) {
-        std::ofstream out_file(config.common.player.subcapturePath / "benchmark.csv");
-        CGits::Instance().TimeSheet().OutputTimeData(out_file, true);
-#endif
+        CGits::Instance().TimeSheet().OutputTimeData(out_file);
       }
     }
 
@@ -666,8 +661,7 @@ void gits::CRecorder::FrameEnd() {
 
       //frame end time stamp
       if (Configurator::Get().common.recorder.benchmark) {
-        inst.TimeSheet().add_frame_time("stamp", inst.Timers().program.Get());
-        inst.TimeSheet().add_frame_time("cpu", inst.Timers().frame.Get());
+        inst.TimeSheet().AddFrameTime(inst.Timers().frame.Get());
       }
 
       if (IsMarkedForDeletion()) {

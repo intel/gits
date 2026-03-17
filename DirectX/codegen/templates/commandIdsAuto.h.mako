@@ -9,19 +9,18 @@ ${header}
 
 #pragma once
 
+#include "commandId.h"
+
 namespace gits {
 namespace DirectX {
 
 enum class CommandId {
-  // gits::CToken::ID_HELPER_TOKENS
-  // Note: CommandId does not match token ids (TId in token.h)
-  ID_INIT_START = 0x0,
-  ID_INIT_END = 0x1,
-  ID_FRAME_START = 0x2,
-  ID_FRAME_END = 0x3,
-  ID_MARKER_UINT64 = 0x4,
+  ID_INIT_START = stream::CommonCommandId::ID_INIT_START,
+  ID_INIT_END = stream::CommonCommandId::ID_INIT_END,
+  ID_FRAME_END = stream::CommonCommandId::ID_FRAME_END,
+  ID_MARKER_UINT64 = stream::CommonCommandId::ID_MARKER_UINT64,
 
-  // gits::CToken::ID_DirectX (13 * 0x10000)
+  // gits::ApiId::ID_DIRECTX * 0x10000
   ID_META_BEGIN = 0xD0000,
   ID_META_CREATE_WINDOW = 0xD0001,
   ID_MAPPED_DATA = 0xD0002,

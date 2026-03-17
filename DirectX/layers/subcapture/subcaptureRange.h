@@ -8,10 +8,6 @@
 
 #pragma once
 
-#include "gits.h"
-#include "recorder.h"
-#include "streams.h"
-
 namespace gits {
 namespace DirectX {
 

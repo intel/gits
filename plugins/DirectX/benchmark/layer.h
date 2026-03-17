@@ -10,6 +10,7 @@
 
 #include "layerAuto.h"
 #include "config.h"
+#include "messageBus.h"
 #include "services/cpuFrameBenchmarkService.h"
 
 namespace gits {
@@ -17,10 +18,12 @@ namespace DirectX {
 
 class BenchmarkLayer : public Layer {
 public:
-  BenchmarkLayer(const BenchmarkConfig& cfg);
+  BenchmarkLayer(const BenchmarkConfig& cfg, gits::MessageBus& msgBus);
   ~BenchmarkLayer() = default;
 
-  void pre(ID3D12CommandQueueExecuteCommandListsCommand& command) override;
+  void pre(CreateDXGIFactoryCommand& command) override;
+  void pre(CreateDXGIFactory1Command& command) override;
+  void pre(CreateDXGIFactory2Command& command) override;
   void post(IDXGISwapChainPresentCommand& command) override;
   void post(IDXGISwapChain1Present1Command& command) override;
 

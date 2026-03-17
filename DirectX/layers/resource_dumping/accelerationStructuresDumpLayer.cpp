@@ -7,7 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "accelerationStructuresDumpLayer.h"
-#include "gits.h"
+#include "log.h"
 #include "configurationLib.h"
 
 namespace gits {

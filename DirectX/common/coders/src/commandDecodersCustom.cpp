@@ -12,7 +12,10 @@
 namespace gits {
 namespace DirectX {
 
-#pragma region IUnknown
+void decode(char* src, MarkerUInt64Command& command) {
+  unsigned offset = 0;
+  decode(src, offset, command.value_);
+}
 
 void decode(char* src, IUnknownQueryInterfaceCommand& command) {
   unsigned offset = 0;
@@ -39,8 +42,6 @@ void decode(char* src, IUnknownReleaseCommand& command) {
   decode(src, offset, command.object_.key);
   decode(src, offset, command.result_);
 }
-
-#pragma endregion
 
 void decode(char* src, CreateWindowMetaCommand& command) {
   unsigned offset = 0;

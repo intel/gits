@@ -18,7 +18,6 @@ source_group("" FILES ${ROOT_SRC})
 set(RECORDING_SRC
   ${SRC_DIR}/subcaptureRecorder.h
   ${SRC_DIR}/subcaptureRecorder.cpp
-  ${SRC_DIR}/directXApiIfaceSubcapture.h
   ${SRC_DIR}/recordingLayerAuto.h
   ${SRC_DIR}/recordingLayerAuto.cpp
   ${SRC_DIR}/recordingLayerCustom.cpp
@@ -112,9 +111,10 @@ target_include_directories(DirectX_subcapture PRIVATE
 )
 
 target_link_libraries(DirectX_subcapture PRIVATE
-    DirectX_layer_interface
-    DirectX_utils
-    DirectX_coders
+  stream
+  DirectX_layer_interface
+  DirectX_utils
+  DirectX_coders
 )
 
 set_target_properties(DirectX_subcapture PROPERTIES FOLDER DirectX/DirectX_layers)

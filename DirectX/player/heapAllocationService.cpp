@@ -7,7 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "heapAllocationService.h"
-#include "gits.h"
+#include "log.h"
 
 #include <windows.h>
 

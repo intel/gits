@@ -7,7 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "captureDescriptorHandleService.h"
-#include "gits.h"
+#include "log.h"
 
 #include <wrl/client.h>
 

@@ -26,8 +26,13 @@ namespace DirectX {
 
 class PlayerManager;
 
-class PlayerLayerManager : public gits::noncopyable {
+class PlayerLayerManager {
 public:
+  PlayerLayerManager() = default;
+  ~PlayerLayerManager() = default;
+  PlayerLayerManager(const PlayerLayerManager&) = delete;
+  PlayerLayerManager& operator=(const PlayerLayerManager&) = delete;
+
   void loadLayers(PlayerManager& playerManager, PluginService& pluginService);
 
   std::vector<Layer*>& getPreLayers() {

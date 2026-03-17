@@ -8,7 +8,6 @@
 
 #include "multithreadedObjectCreationService.h"
 #include "log.h"
-#include "gits.h"
 
 #include <processthreadsapi.h> // Used for SetThreadDescription
 

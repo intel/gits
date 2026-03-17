@@ -146,6 +146,7 @@ bool Configurator::LoadInto(const std::filesystem::path& filepath, Configuration
   }
 
   try {
+    configObj->configFilePath = filepath.string();
     YAML::Node node = YAML::Load(fin);
     return LoadInto(node, configObj);
   } catch (const YAML::ParserException& e) {

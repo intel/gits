@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "renderTargetsDumpLayer.h"
+#include "keyUtils.h"
 #include "gits.h"
 #include "log.h"
 #include "configurationLib.h"
@@ -55,12 +56,12 @@ RenderTargetsDumpLayer::~RenderTargetsDumpLayer() {
 }
 
 void RenderTargetsDumpLayer::post(StateRestoreBeginCommand& c) {
-  stateRestorePhase_ = true;
+  currentFrame_ = 0;
 }
 void RenderTargetsDumpLayer::post(StateRestoreEndCommand& c) {
-  stateRestorePhase_ = false;
   drawCount_ = 0;
   executeCount_ = 0;
+  currentFrame_ = 1;
 }
 
 void RenderTargetsDumpLayer::post(ID3D12DeviceCreateRenderTargetViewCommand& c) {
@@ -211,8 +212,7 @@ void RenderTargetsDumpLayer::onDraw(ID3D12GraphicsCommandList* commandList,
                                     unsigned commandListKey) {
   ++drawCount_;
   unsigned commandListDrawCount = ++drawCountByCommandList_[commandListKey];
-  unsigned frame = stateRestorePhase_ ? 0 : CGits::Instance().CurrentFrame();
-  if (!frameRange_[frame] || !drawRange_[drawCount_]) {
+  if (!frameRange_[currentFrame_] || !drawRange_[drawCount_]) {
     return;
   }
 
@@ -221,9 +221,10 @@ void RenderTargetsDumpLayer::onDraw(ID3D12GraphicsCommandList* commandList,
     for (RenderTarget& renderTarget : itRenderTargets->second) {
       if (renderTarget.resource) {
         if (dryRun_) {
-          dryRunInfo_.drawsWithTextureByFrame[frame].insert(drawCount_);
+          dryRunInfo_.drawsWithTextureByFrame[currentFrame_].insert(drawCount_);
         } else {
-          dumpRenderTarget(commandList, renderTarget, frame, commandListDrawCount, drawCount_);
+          dumpRenderTarget(commandList, renderTarget, currentFrame_, commandListDrawCount,
+                           drawCount_);
         }
       }
     }
@@ -233,9 +234,9 @@ void RenderTargetsDumpLayer::onDraw(ID3D12GraphicsCommandList* commandList,
   if (itDepthStencil != depthStencilByCommandList_.end()) {
     if (itDepthStencil->second.resource) {
       if (dryRun_) {
-        dryRunInfo_.drawsWithTextureByFrame[frame].insert(drawCount_);
+        dryRunInfo_.drawsWithTextureByFrame[currentFrame_].insert(drawCount_);
       } else {
-        dumpDepthStencil(commandList, itDepthStencil->second, frame, commandListDrawCount,
+        dumpDepthStencil(commandList, itDepthStencil->second, currentFrame_, commandListDrawCount,
                          drawCount_);
       }
     }
@@ -410,19 +411,15 @@ void RenderTargetsDumpLayer::dumpDepthStencil(ID3D12GraphicsCommandList* command
 }
 
 void RenderTargetsDumpLayer::post(ID3D12CommandQueueExecuteCommandListsCommand& c) {
-
-  ++executeCount_;
-  unsigned frame = stateRestorePhase_ ? 0 : CGits::Instance().CurrentFrame();
-
   for (unsigned i = 0; i < c.NumCommandLists_.value; ++i) {
     unsigned commandListKey = c.ppCommandLists_.keys[i];
     renderTargetsByCommandList_.erase(commandListKey);
     depthStencilByCommandList_.erase(commandListKey);
     drawCountByCommandList_.erase(commandListKey);
   }
-
+  ++executeCount_;
   resourceDump_.executeCommandLists(c.key, c.object_.key, c.object_.value, c.ppCommandLists_.value,
-                                    c.NumCommandLists_.value, frame, executeCount_);
+                                    c.NumCommandLists_.value, currentFrame_, executeCount_);
 }
 
 void RenderTargetsDumpLayer::post(ID3D12CommandQueueWaitCommand& c) {
@@ -449,6 +446,9 @@ void RenderTargetsDumpLayer::post(IDXGISwapChainPresentCommand& c) {
   if (!(c.Flags_.value & DXGI_PRESENT_TEST)) {
     drawCount_ = 0;
     executeCount_ = 0;
+    if (!isStateRestoreKey(c.key)) {
+      ++currentFrame_;
+    }
   }
 }
 
@@ -456,6 +456,9 @@ void RenderTargetsDumpLayer::post(IDXGISwapChain1Present1Command& c) {
   if (!(c.PresentFlags_.value & DXGI_PRESENT_TEST)) {
     drawCount_ = 0;
     executeCount_ = 0;
+    if (!isStateRestoreKey(c.key)) {
+      ++currentFrame_;
+    }
   }
 }
 

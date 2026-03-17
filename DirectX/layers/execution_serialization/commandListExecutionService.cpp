@@ -8,9 +8,9 @@
 
 #include "commandListExecutionService.h"
 #include "commandsAuto.h"
-#include "commandWritersAuto.h"
+#include "commandSerializersAuto.h"
 #include "cpuDescriptorsService.h"
-#include "gits.h"
+#include "log.h"
 
 #include <filesystem>
 
@@ -18,7 +18,7 @@ namespace gits {
 namespace DirectX {
 
 void CommandListExecutionService::commandListCommand(unsigned commandListKey,
-                                                     CommandWriter* command) {
+                                                     stream::CommandSerializer* command) {
   CommandList& commandList = commandListsByKey_[commandListKey];
   commandList.commandListKey = commandListKey;
   commandList.commands.push_back(command);
@@ -48,7 +48,7 @@ void CommandListExecutionService::createCommandList(unsigned commandListKey,
     ID3D12GraphicsCommandListCloseCommand closeCommand;
     closeCommand.key = getUniqueCommandKey();
     closeCommand.object_.key = commandListKey;
-    recorder_.record(new ID3D12GraphicsCommandListCloseWriter(closeCommand));
+    recorder_.record(new ID3D12GraphicsCommandListCloseSerializer(closeCommand));
   }
 }
 
@@ -112,7 +112,7 @@ void CommandListExecutionService::executeExecutable(ExecuteCommandLists& executa
     createFence.Flags_.value = D3D12_FENCE_FLAG_NONE;
     createFence.riid_.value = IID_ID3D12Fence;
     createFence.ppFence_.key = fenceKey;
-    recorder_.record(new ID3D12DeviceCreateFenceWriter(createFence));
+    recorder_.record(new ID3D12DeviceCreateFenceSerializer(createFence));
   } else {
     fenceKey = it->second.first;
   }
@@ -126,17 +126,17 @@ void CommandListExecutionService::executeExecutable(ExecuteCommandLists& executa
         resetCommand.key = getUniqueCommandKey();
         resetCommand.object_.key = commandList.commandListKey;
         resetCommand.pAllocator_.key = it->second;
-        recorder_.record(new ID3D12GraphicsCommandListResetWriter(resetCommand));
+        recorder_.record(new ID3D12GraphicsCommandListResetSerializer(resetCommand));
       }
     }
-    for (CommandWriter* command : commandList.commands) {
+    for (stream::CommandSerializer* command : commandList.commands) {
       recorder_.record(command);
     }
     {
       ID3D12GraphicsCommandListCloseCommand closeCommand;
       closeCommand.key = getUniqueCommandKey();
       closeCommand.object_.key = commandList.commandListKey;
-      recorder_.record(new ID3D12GraphicsCommandListCloseWriter(closeCommand));
+      recorder_.record(new ID3D12GraphicsCommandListCloseSerializer(closeCommand));
     }
     {
       ID3D12CommandQueueExecuteCommandListsCommand executeCommandLists;
@@ -147,7 +147,7 @@ void CommandListExecutionService::executeExecutable(ExecuteCommandLists& executa
       executeCommandLists.ppCommandLists_.size = 1;
       executeCommandLists.ppCommandLists_.keys.resize(1);
       executeCommandLists.ppCommandLists_.keys[0] = commandList.commandListKey;
-      recorder_.record(new ID3D12CommandQueueExecuteCommandListsWriter(executeCommandLists));
+      recorder_.record(new ID3D12CommandQueueExecuteCommandListsSerializer(executeCommandLists));
     }
     {
       ID3D12CommandQueueSignalCommand commandQueueSignal;
@@ -155,14 +155,14 @@ void CommandListExecutionService::executeExecutable(ExecuteCommandLists& executa
       commandQueueSignal.object_.key = executable.commandQueueKey;
       commandQueueSignal.pFence_.key = fenceKey;
       commandQueueSignal.Value_.value = ++fenceValue;
-      recorder_.record(new ID3D12CommandQueueSignalWriter(commandQueueSignal));
+      recorder_.record(new ID3D12CommandQueueSignalSerializer(commandQueueSignal));
     }
     {
       ID3D12FenceGetCompletedValueCommand getCompletedValue;
       getCompletedValue.key = getUniqueCommandKey();
       getCompletedValue.object_.key = fenceKey;
       getCompletedValue.result_.value = fenceValue;
-      recorder_.record(new ID3D12FenceGetCompletedValueWriter(getCompletedValue));
+      recorder_.record(new ID3D12FenceGetCompletedValueSerializer(getCompletedValue));
     }
   }
 

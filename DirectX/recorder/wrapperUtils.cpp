@@ -9,6 +9,7 @@
 #include "wrapperUtils.h"
 #include "wrapperCreatorsAuto.h"
 #include "captureManager.h"
+#include "exception.h"
 
 namespace gits {
 namespace DirectX {

@@ -15,11 +15,19 @@
 namespace gits {
 namespace DirectX {
 
-BenchmarkLayer::BenchmarkLayer(const BenchmarkConfig& cfg)
-    : Layer("Benchmark"), cfg_(cfg), cpuFrameBenchmarkService_(cfg.cpuFrameBenchmarkConfig) {}
+BenchmarkLayer::BenchmarkLayer(const BenchmarkConfig& cfg, gits::MessageBus& msgBus)
+    : Layer("Benchmark"), cfg_(cfg), cpuFrameBenchmarkService_(cfg, msgBus) {}
 
-void BenchmarkLayer::pre(ID3D12CommandQueueExecuteCommandListsCommand& command) {
-  cpuFrameBenchmarkService_.onPreExecute();
+void BenchmarkLayer::pre(CreateDXGIFactoryCommand& command) {
+  cpuFrameBenchmarkService_.onStart();
+}
+
+void BenchmarkLayer::pre(CreateDXGIFactory1Command& command) {
+  cpuFrameBenchmarkService_.onStart();
+}
+
+void BenchmarkLayer::pre(CreateDXGIFactory2Command& command) {
+  cpuFrameBenchmarkService_.onStart();
 }
 
 void BenchmarkLayer::post(IDXGISwapChainPresentCommand& c) {

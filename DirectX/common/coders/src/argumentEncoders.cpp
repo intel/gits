@@ -9,7 +9,7 @@
 #include "argumentEncoders.h"
 #include "intelExtensions.h"
 #include "dmlCodersAuto.h"
-#include "gits.h"
+#include "log.h"
 
 #include <d3dx12/d3dx12_pipeline_state_stream.h>
 

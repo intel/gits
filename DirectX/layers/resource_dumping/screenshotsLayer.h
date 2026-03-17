@@ -37,6 +37,7 @@ private:
   std::map<unsigned, std::unique_ptr<ScreenshotDump>> screenshotDump_;
   BitRange screenshotRange_;
   std::wstring dumpPath_;
+  unsigned currentFrame_{};
   std::unordered_map<unsigned, ID3D12CommandQueue*> xefgToDeviceMap_;
 };
 

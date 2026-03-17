@@ -11,7 +11,8 @@
 #include "configurationLib.h"
 #include "to_string/enumToStrAuto.h"
 #include "to_string/toStr.h"
-#include "gits.h"
+#include "log.h"
+#include "messageBus.h"
 
 #include <sstream>
 #include <memory>
@@ -247,7 +248,7 @@ void DebugInfo::traceMessage(D3D12_MESSAGE_SEVERITY severity, const char* messag
 
   // The message to be logged in the trace files if DirectX.Features.Trace is enabled
   static auto publisherId = Configurator::IsPlayer() ? PUBLISHER_PLAYER : PUBLISHER_RECORDER;
-  CGits::Instance().GetMessageBus().publish(
+  gits::MessageBus::get().publish(
       {publisherId, TOPIC_LOG},
       std::make_shared<LogMessage>(LogLevel::TRACE, severityStr, message));
 }

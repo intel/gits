@@ -10,7 +10,6 @@
 
 #include "gpuExecutionTracker.h"
 #include "configurationLib.h"
-#include "tools_lite.h"
 
 #include <d3d12.h>
 #include <memory>
@@ -25,10 +24,13 @@
 namespace gits {
 namespace DirectX {
 
-class ResourceDump : public gits::noncopyable {
+class ResourceDump {
 public:
   ResourceDump(ImageFormat format = ImageFormat::JPEG, const std::string& textureRescaleRange = "");
   virtual ~ResourceDump();
+  ResourceDump(const ResourceDump&) = delete;
+  ResourceDump& operator=(const ResourceDump&) = delete;
+
   void dumpResource(ID3D12GraphicsCommandList* commandList,
                     ID3D12Resource* resource,
                     unsigned subresource,

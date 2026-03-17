@@ -8,8 +8,8 @@
 
 #include "ccodeCommandPrinter.h"
 #include "layerAuto.h"
-#include "gits.h"
 #include "ccodeArguments.h"
+#include "configurator.h"
 
 namespace gits {
 namespace DirectX {

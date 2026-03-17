@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include "command.h"
+#include "arguments.h"
 #include "intelExtensions.h"
 #include "nvapi.h"
 

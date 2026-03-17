@@ -10,7 +10,7 @@
 
 #include "objectState.h"
 #include "commandIdsAuto.h"
-#include "commandWriter.h"
+#include "commandSerializer.h"
 #include "descriptorService.h"
 
 #include <vector>
@@ -26,7 +26,7 @@ struct CommandListCommand {
   CommandId id{};
   unsigned commandKey{};
   unsigned commandListKey{};
-  std::unique_ptr<CommandWriter> commandWriter;
+  std::unique_ptr<stream::CommandSerializer> commandSerializer;
 };
 
 struct CommandListOMSetRenderTargets : public CommandListCommand {
@@ -81,10 +81,14 @@ struct CommandListClearUnorderedAccessViewFloat : public CommandListCommand {
   std::vector<D3D12_RECT> rects{};
 };
 
-struct CommandListState : public ObjectState, gits::noncopyable {
+struct CommandListState : public ObjectState {
+  CommandListState() = default;
   ~CommandListState() {
     clearCommands();
   }
+  CommandListState(CommandListState&) = delete;
+  CommandListState& operator=(const CommandListState&) = delete;
+
   void clearCommands() {
     for (CommandListCommand* command : commands) {
       delete command;

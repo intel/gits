@@ -38,7 +38,7 @@ namespace DirectX {
 
 class IUnknownWrapper;
 
-class CaptureManager : public gits::noncopyable {
+class CaptureManager {
 public:
   static CaptureManager& get();
 
@@ -153,7 +153,10 @@ public:
 private:
   CaptureManager();
   ~CaptureManager();
+  CaptureManager(const CaptureManager&) = delete;
+  CaptureManager& operator=(const CaptureManager&) = delete;
 
+  void close();
   void interceptDirectMLFunctions();
   void interceptDirectStorageFunctions();
   void interceptKernelFunctions();

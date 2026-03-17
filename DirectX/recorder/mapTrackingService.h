@@ -9,19 +9,21 @@
 #pragma once
 
 #include "gitsRecorder.h"
-#include "command.h"
 
 #include <mutex>
 #include <unordered_map>
 #include <vector>
 #include <memory>
+#include <d3d12.h>
 
 namespace gits {
 namespace DirectX {
 
-class MapTrackingService : public gits::noncopyable {
+class MapTrackingService {
 public:
   MapTrackingService(GitsRecorder& recorder);
+  MapTrackingService(const MapTrackingService&) = delete;
+  MapTrackingService& operator=(const MapTrackingService&) = delete;
 
   void enableWriteWatch(D3D12_HEAP_PROPERTIES& properties, D3D12_HEAP_FLAGS& flags);
   void mapResource(unsigned resourceKey,
@@ -34,13 +36,16 @@ public:
 
 private:
   bool shadowMemory_{false};
-  struct MappedInfo : public gits::noncopyable {
+  struct MappedInfo {
     MappedInfo() = default;
     ~MappedInfo() {
       if (shadowAddress) {
         VirtualFree(shadowAddress, 0, MEM_RELEASE);
       }
     }
+    MappedInfo(const MappedInfo&) = delete;
+    MappedInfo& operator=(const MappedInfo&) = delete;
+
     unsigned resourceKey;
     char* mappedAddress;
     char* shadowAddress;

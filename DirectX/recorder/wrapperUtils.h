@@ -11,8 +11,6 @@
 #include "iunknownWrapper.h"
 #include "arguments.h"
 #include "directx.h"
-#include "tools_lite.h"
-#include "gits.h"
 
 #include <guiddef.h>
 #include <stdint.h>
@@ -24,15 +22,23 @@ namespace DirectX {
 void wrapObject(REFIID riid, void** object);
 bool wrapObjectNoStore(REFIID riid, void** object);
 
-class AtTopOfStackGlobal : public gits::noncopyable {
+class AtTopOfStackGlobal {
 public:
+  AtTopOfStackGlobal() = default;
   ~AtTopOfStackGlobal();
+  AtTopOfStackGlobal(const AtTopOfStackGlobal&) = delete;
+  AtTopOfStackGlobal& operator=(const AtTopOfStackGlobal&) = delete;
+
   operator bool();
 };
 
-class AtTopOfStackLocal : public gits::noncopyable {
+class AtTopOfStackLocal {
 public:
+  AtTopOfStackLocal() = default;
   ~AtTopOfStackLocal();
+  AtTopOfStackLocal(const AtTopOfStackLocal&) = delete;
+  AtTopOfStackLocal& operator=(const AtTopOfStackLocal&) = delete;
+
   operator bool();
 };
 

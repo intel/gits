@@ -7,9 +7,10 @@
 // ===================== end_copyright_notice ==============================
 
 #include "mapTrackingService.h"
-#include "commandWritersCustom.h"
+#include "commandSerializersCustom.h"
 #include "captureManager.h"
 #include "log.h"
+#include "configurator.h"
 #include "resourceSizeUtils.h"
 
 #include <processthreadsapi.h>
@@ -199,7 +200,7 @@ void MapTrackingService::captureData(
   command.data_.value = data;
   command.data_.size = dataSize;
 
-  recorder_.record(command.key, new MappedDataMetaWriter(command));
+  recorder_.record(command.key, new MappedDataMetaSerializer(command));
 }
 
 size_t MapTrackingService::getSubresourceSize(ID3D12Resource* resource, unsigned subresource) {

@@ -12,6 +12,7 @@
 namespace gits {
 namespace DirectX {
 
+void decode(char* src, MarkerUInt64Command& command);
 void decode(char* src, IUnknownQueryInterfaceCommand& command);
 void decode(char* src, IUnknownAddRefCommand& command);
 void decode(char* src, IUnknownReleaseCommand& command);

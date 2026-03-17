@@ -8,7 +8,6 @@
 
 #include "resourceDump.h"
 #include "resourceSizeUtils.h"
-#include "gits.h"
 #include "log.h"
 #include "imageWriter.h"
 
@@ -302,6 +301,8 @@ void ResourceDump::dumpStagedResources(ThreadInfo* threadInfo) {
         it.reset();
       }
     }
+    Cleanup(const Cleanup&) = delete;
+    Cleanup& operator=(const Cleanup&) = delete;
     ThreadInfo* threadInfo;
   } cleanup(threadInfo);
 

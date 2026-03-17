@@ -7,6 +7,8 @@
 // ===================== end_copyright_notice ==============================
 
 #include "subcaptureRange.h"
+#include "configurator.h"
+#include "exception.h"
 
 #include <string>
 

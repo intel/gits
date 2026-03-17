@@ -9,7 +9,6 @@ ${header}
 
 #include "dmlCodersAuto.h"
 #include "dmlCodersCustom.h"
-#include "gits.h"
 
 namespace gits {
 namespace DirectX {

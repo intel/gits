@@ -8,7 +8,6 @@
 
 #include "portabilityFactory.h"
 #include "portabilityLayer.h"
-#include "gits.h"
 #include "configurationLib.h"
 
 namespace gits {

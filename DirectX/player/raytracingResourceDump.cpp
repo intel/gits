@@ -7,7 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "raytracingResourceDump.h"
-#include "gits.h"
+#include "log.h"
 
 #include <fstream>
 

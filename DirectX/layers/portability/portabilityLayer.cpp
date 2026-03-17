@@ -7,10 +7,10 @@
 // ===================== end_copyright_notice ==============================
 
 #include "portabilityLayer.h"
-#include "gits.h"
-#include "log.h"
 #include "to_string/toStr.h"
+#include "log.h"
 #include "configurationLib.h"
+#include "messageBus.h"
 
 namespace gits {
 namespace DirectX {
@@ -59,10 +59,10 @@ PortabilityLayer::PortabilityLayer() : Layer("Portability") {
   }
 
   if (Configurator::IsRecorder() && storeResourcePlacementData_) {
-    gits::CGits::Instance().GetMessageBus().subscribe(
-        {PUBLISHER_RECORDER, TOPIC_END}, [this](Topic t, const MessagePtr& m) {
-          resourcePlacementCapture_.storeResourcePlacement();
-        });
+    gits::MessageBus::get().subscribe({PUBLISHER_RECORDER, TOPIC_STREAM_SAVED},
+                                      [this](Topic t, const MessagePtr& m) {
+                                        resourcePlacementCapture_.storeResourcePlacement();
+                                      });
   }
 }
 

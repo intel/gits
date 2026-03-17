@@ -11,6 +11,7 @@ ${header}
 
 #include "directx.h"
 #include "command.h"
+#include "arguments.h"
 #include "commandIdsAuto.h"
 
 namespace gits {

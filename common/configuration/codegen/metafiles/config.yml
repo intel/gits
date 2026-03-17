@@ -710,11 +710,13 @@ Configuration:
                 Default: LZ4
                 DefaultCondition:
                   - is_compute: ZSTD
+                  - is_directx: LZ4
               - Name: level
                 Type: uint32_t
                 Default: 10
                 DefaultCondition:
                   - is_compute: 5
+                  - is_directx: 3
               - Name: chunkSize
                 Type: uint32_t
                 Default: 2097152
@@ -1004,7 +1006,7 @@ Configuration:
             LegacyPaths: ["DirectX.Capture.ForceGlobalSynchronization"]
           - Name: plugins
             Type: std::vector<std::string>
-            Default: []
+            Default: [Benchmark]
             Description: List of plugins to enable
             LegacyPaths: ["DirectX.Capture.Plugins"]
           - Name: Portability

@@ -8,8 +8,8 @@
 
 #include "addressPinningStoreLayer.h"
 #include "keyUtils.h"
-#include "gits.h"
-#include "tools.h"
+#include "log.h"
+#include "messageBus.h"
 
 #include <fstream>
 
@@ -18,8 +18,8 @@ namespace DirectX {
 
 AddressPinningStoreLayer::AddressPinningStoreLayer() : Layer("AddressPinningStoreLayer") {
   if (Configurator::IsRecorder()) {
-    gits::CGits::Instance().GetMessageBus().subscribe(
-        {PUBLISHER_RECORDER, TOPIC_END},
+    gits::MessageBus::get().subscribe(
+        {PUBLISHER_RECORDER, TOPIC_STREAM_SAVED},
         [this](Topic t, const MessagePtr& m) { storeAddressRanges(); });
   }
 }

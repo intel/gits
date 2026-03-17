@@ -9,7 +9,6 @@
 #pragma once
 
 #include "directx.h"
-#include "tools_lite.h"
 
 #include <future>
 #include <vector>
@@ -21,15 +20,18 @@
 namespace gits {
 namespace DirectX {
 
-class MultithreadedObjectCreationService : public gits::noncopyable {
+class MultithreadedObjectCreationService {
 public:
+  MultithreadedObjectCreationService() = default;
+  ~MultithreadedObjectCreationService();
+  MultithreadedObjectCreationService(const MultithreadedObjectCreationService&) = delete;
+  MultithreadedObjectCreationService& operator=(const MultithreadedObjectCreationService&) = delete;
+
   struct ObjectCreationOutput {
     HRESULT result{};
     void* object{};
   };
   using CreationFunction = std::function<ObjectCreationOutput()>;
-
-  ~MultithreadedObjectCreationService();
 
   void shutdown();
   void schedule(CreationFunction creationFunction, unsigned objectKey);

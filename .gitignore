@@ -111,6 +111,8 @@ Vulkan/recorder/vulkanRecorderWrapperAuto.cpp
 #DirectX
 DirectX/**/*Auto.cpp
 DirectX/**/*Auto.h
+plugins/DirectX/**/*Auto.cpp
+plugins/DirectX/**/*Auto.h
 
 # Configuration
 common/**/*Auto.cpp

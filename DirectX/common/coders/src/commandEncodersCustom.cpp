@@ -12,6 +12,15 @@
 namespace gits {
 namespace DirectX {
 
+unsigned getSize(const MarkerUInt64Command& command) {
+  return getSize(command.value_);
+}
+
+void encode(const MarkerUInt64Command& command, char* dest) {
+  unsigned offset = 0;
+  encode(dest, offset, command.value_);
+}
+
 unsigned getSize(const IUnknownQueryInterfaceCommand& command) {
   return getSize(command.key) + getSize(command.threadId) + getSize(command.object_.key) +
          getSize(command.riid_) + getSize(command.ppvObject_) + getSize(command.result_);

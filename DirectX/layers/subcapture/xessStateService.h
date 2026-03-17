@@ -14,6 +14,7 @@
 #include <memory>
 #include <optional>
 #include <map>
+#include <unordered_map>
 #include <d3d12.h>
 
 namespace gits {

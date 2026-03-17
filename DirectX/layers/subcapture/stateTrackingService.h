@@ -35,7 +35,7 @@ namespace gits {
 namespace DirectX {
 class INTC_D3D12_SetApplicationInfoCommand;
 
-class StateTrackingService : public gits::noncopyable {
+class StateTrackingService {
 public:
   StateTrackingService(
       SubcaptureRecorder& recorder,
@@ -76,6 +76,9 @@ public:
         xellStateService_(xellStateService),
         xefgStateService_(xefgStateService) {}
   ~StateTrackingService();
+  StateTrackingService(StateTrackingService&) = delete;
+  StateTrackingService& operator=(StateTrackingService&) = delete;
+
   void restoreState();
   void keepState(unsigned objectKey);
   void storeState(ObjectState* state);

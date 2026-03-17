@@ -8,7 +8,6 @@
 
 #include "directStorageLayer.h"
 #include "configurationLib.h"
-#include "tools.h"
 
 namespace gits {
 namespace DirectX {

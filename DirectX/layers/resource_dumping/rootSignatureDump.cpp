@@ -7,8 +7,9 @@
 // ===================== end_copyright_notice ==============================
 
 #include "rootSignatureDump.h"
-#include "gits.h"
 #include "to_string/toStr.h"
+#include "log.h"
+
 #include <wrl.h>
 
 namespace gits {

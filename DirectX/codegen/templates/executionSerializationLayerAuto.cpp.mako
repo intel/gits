@@ -8,8 +8,8 @@
 ${header}
 
 #include "executionSerializationLayerAuto.h"
-#include "commandWritersAuto.h"
-#include "commandWritersCustom.h"
+#include "commandSerializersAuto.h"
+#include "commandSerializersCustom.h"
 #include "intelExtensions.h"
 
 namespace gits {
@@ -46,8 +46,8 @@ custom = [
 %for function in interface.functions:
 %if not interface.name + function.name in custom and interface.name.startswith('ID3D12GraphicsCommandList'):
 void ExecutionSerializationLayer::pre(${interface.name}${function.name}Command& c) {
-  if (recorder_.isRunning()) {
-    executionService_.commandListCommand(c.object_.key, new ${interface.name}${function.name}Writer(c));
+  if (inRange()) {
+    executionService_.commandListCommand(c.object_.key, new ${interface.name}${function.name}Serializer(c));
   }
 }
 
@@ -58,8 +58,8 @@ void ExecutionSerializationLayer::pre(${interface.name}${function.name}Command& 
 %for function in functions:
 %if not function.name in custom:
 void ExecutionSerializationLayer::pre(${function.name}Command& c) {
-  if (recorder_.isRunning()) {
-    recorder_.record(new ${function.name}Writer(c));
+  if (inRange()) {
+    recorder_.record(new ${function.name}Serializer(c));
   }
 }
 
@@ -69,8 +69,8 @@ void ExecutionSerializationLayer::pre(${function.name}Command& c) {
 %for function in interface.functions:
 %if not interface.name + function.name in custom and not interface.name.startswith('ID3D12GraphicsCommandList'):
 void ExecutionSerializationLayer::pre(${interface.name}${function.name}Command& c) {
-  if (recorder_.isRunning()) {
-    recorder_.record(new ${interface.name}${function.name}Writer(c));
+  if (inRange()) {
+    recorder_.record(new ${interface.name}${function.name}Serializer(c));
   }
 }
 

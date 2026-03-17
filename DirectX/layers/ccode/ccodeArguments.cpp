@@ -7,7 +7,6 @@
 // ===================== end_copyright_notice ==============================
 
 #include "ccodeArguments.h"
-#include "gits.h"
 #include "nvapi.h"
 
 #include <iomanip>

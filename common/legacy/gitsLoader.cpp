@@ -32,7 +32,7 @@ const char* RECORDER_LIB_NAME = "libGitsRecorder.so";
 
 namespace gits {
 
-CGitsLoader::CGitsLoader(const char* recorderWrapperFactoryName)
+CGitsLoader::CGitsLoader(const char* recorderWrapperFactoryName, bool legacyMode)
     : config_(nullptr), recorderWrapper_(nullptr) {
 
   // Give the user some time to attach the debugger...
@@ -107,7 +107,7 @@ CGitsLoader::CGitsLoader(const char* recorderWrapperFactoryName)
   }
 
   // call the function
-  config_ = configureFunc(configPath.string().c_str());
+  config_ = configureFunc(configPath.string().c_str(), legacyMode);
   if (!config_) {
     LOG_ERROR << "Parsing configuration file: " << configPath << " failed!!!";
     throw EOperationFailed(EXCEPTION_MESSAGE);

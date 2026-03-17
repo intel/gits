@@ -10,29 +10,33 @@
 
 #include "../config.h"
 #include "taskScheduler.h"
+#include "messageBus.h"
 
-#include <fstream>
 #include <chrono>
+#include <atomic>
 
 namespace gits {
 namespace DirectX {
 
 class CpuFrameBenchmarkService {
 public:
-  CpuFrameBenchmarkService(const BenchmarkConfig::CpuFrameBenchmarkConfig& cfg);
-  void onPreExecute();
+  CpuFrameBenchmarkService(const BenchmarkConfig& cfg, gits::MessageBus& msgBus);
+  ~CpuFrameBenchmarkService();
+
+  void onStart();
   void onPostPresent();
 
 private:
-  void writeResult(size_t frameNumber, double cpuTime);
+  void writeResults();
 
 private:
-  const BenchmarkConfig::CpuFrameBenchmarkConfig cfg_;
-  size_t frameNumber_{};
-  std::chrono::steady_clock::time_point prevTimePoint{};
-  bool firstExecute_ = true;
-  std::ofstream fileStream_;
-  TaskScheduler scheduler_;
+  const BenchmarkConfig cfg_;
+  gits::MessageBus& msgBus_;
+  unsigned frameNumber_{};
+  bool start_{true};
+  std::chrono::steady_clock::time_point prevTimePoint_{};
+  std::vector<std::pair<unsigned, double>> frameTimes_;
+  unsigned subscriptionId_{};
 };
 
 } // namespace DirectX

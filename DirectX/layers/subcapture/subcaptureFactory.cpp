@@ -12,7 +12,6 @@
 #include "commandPreservationLayer.h"
 #include "analyzerLayerAuto.h"
 #include "analyzerResults.h"
-#include "gits.h"
 #include "log.h"
 
 namespace gits {

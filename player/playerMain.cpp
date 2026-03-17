@@ -38,9 +38,6 @@
 #if defined WITH_OCLOC
 #include "oclocLibrary.h"
 #endif
-#if defined WITH_DIRECTX
-#include "directXLibrary.h"
-#endif
 
 #include "player.h"
 #include "exception.h"
@@ -60,6 +57,8 @@
 #include "diagnostic.h"
 #include "playerUtils.h"
 #include "log.h"
+#include "streamPlayer.h"
+#include "streamHeader.h"
 
 #if defined GITS_PLATFORM_WINDOWS && (WITH_DIRECTX || WITH_VULKAN)
 #include "imGuiHUD.h"
@@ -73,6 +72,7 @@
 #include <filesystem>
 
 namespace gits {
+
 // Gits player message loop
 //    - play gits, when state is RUNNING
 //    - stop processing messages if state is FINISHED
@@ -143,7 +143,7 @@ bool argsFilterTagsFunc(const args::Base& item) {
   return false;
 }
 
-std::string GetRequestedPlayerName() {
+std::string GetRequestedPlayerName(bool legacyMode) {
   const auto& cfg = Configurator::Get();
 
   if (!cfg.common.player.executableNameOverride.enabled) {
@@ -155,7 +155,12 @@ std::string GetRequestedPlayerName() {
     return cfg.common.player.executableNameOverride.customName;
   }
 
-  auto requestedName = CGits::Instance().FilePlayer().GetApplicationName();
+  std::string requestedName;
+  if (legacyMode) {
+    requestedName = CGits::Instance().FilePlayer().GetApplicationName();
+  } else {
+    requestedName = stream::StreamHeader::Get().GetApplicationName();
+  }
   if (requestedName.empty()) {
     LOG_WARNING << "Couldn't obtain the original application name, Player will not be renamed.";
   }
@@ -247,6 +252,8 @@ int MainBody(int argc, char* argv[]) {
 
   int returnValue = EXIT_SUCCESS;
 
+  bool legacyMode = false;
+
   try {
     if (cfg.common.player.waitForEnter) {
       LOG_NONE << "Waiting for ENTER press ...";
@@ -307,22 +314,22 @@ int MainBody(int argc, char* argv[]) {
 #ifdef WITH_OCLOC
     inst.Register(std::shared_ptr<CLibrary>(new ocloc::CLibrary));
 #endif
-#if defined WITH_DIRECTX
-    inst.Register(std::shared_ptr<CLibrary>(new DirectX::DirectXLibrary));
-#endif
 
+    legacyMode = IsLegacyStream(cfg.common.player.streamPath);
     // create player
     CPlayer player;
     LOG_INFO << "Loading...";
 
-    // load function calls from a file
-    player.Load(cfg.common.player.streamPath);
+    if (legacyMode) {
+      // load function calls from a file
+      player.Load(cfg.common.player.streamPath);
+    }
 
     // Compare capture vs replay machine RAM and warn if replay has less.
-    CheckSystemMemoryCompatibility();
+    CheckSystemMemoryCompatibility(legacyMode);
 
     if (cfg.common.player.executableNameOverride.enabled) {
-      const auto requestedPlayerName = GetRequestedPlayerName();
+      const auto requestedPlayerName = GetRequestedPlayerName(legacyMode);
       if (!requestedPlayerName.empty()) {
         if (playerPath.filename().string() == requestedPlayerName) {
           LOG_INFO << "Player name matches requested name.";
@@ -337,19 +344,25 @@ int MainBody(int argc, char* argv[]) {
     }
 
 #if defined WITH_DIRECTX
-    if (cfg.directx.features.subcapture.enabled) {
+    if (cfg.directx.features.subcapture.enabled && legacyMode) {
       CGits::Instance().FileRecorder().SetProperty(
           "diag.original_app.name", CGits::Instance().FilePlayer().GetApplicationName());
     }
 #endif
 
-    inst.ResourceManagerInit(cfg.common.player.streamDir);
+    if (legacyMode) {
+      inst.ResourceManagerInit(cfg.common.player.streamDir);
+    }
     if (cfg.common.player.diags) {
-      std::cout << CGits::Instance().FilePlayer().ReadProperties();
+      if (legacyMode) {
+        std::cout << CGits::Instance().FilePlayer().ReadProperties();
+      } else {
+        std::cout << stream::StreamHeader::Get().GetPropertiesDump();
+      }
       return 0;
     }
 
-    if (cfg.common.player.stats) {
+    if (cfg.common.player.stats && legacyMode) {
       // print statistics
       player.StatisticsPrint();
       return 0;
@@ -363,7 +376,9 @@ int MainBody(int argc, char* argv[]) {
     }
 
     // print not supported functions if exist
-    player.NotSupportedFunctionsPrint();
+    if (legacyMode) {
+      player.NotSupportedFunctionsPrint();
+    }
 
 #if defined GITS_PLATFORM_WINDOWS && (WITH_DIRECTX || WITH_VULKAN)
     auto pImGuiHUD = std::make_unique<ImGuiHUD>();
@@ -391,37 +406,43 @@ int MainBody(int argc, char* argv[]) {
 
     int64_t tillInitTime = CGits::Instance().Timers().program.Get();
     CGits::Instance().Timers().init.Restart();
-    pump.process_messages();
+    if (legacyMode) {
+      pump.process_messages();
+    } else {
+      PlayStream(cfg.common.player.streamPath);
+    }
     player.GLResourceCleanup();
     player.GLContextsCleanup();
 
-    int64_t playbackTime = CGits::Instance().Timers().playback.Get();
-    int64_t initTime = CGits::Instance().Timers().init.Get();
-    int64_t restorationTime = CGits::Instance().Timers().restoration.Get();
-    int64_t loadingTime = CGits::Instance().Timers().loading.Get();
-    int64_t programTime = CGits::Instance().Timers().program.Get();
+    if (legacyMode) {
+      int64_t playbackTime = CGits::Instance().Timers().playback.Get();
+      int64_t initTime = CGits::Instance().Timers().init.Get();
+      int64_t restorationTime = CGits::Instance().Timers().restoration.Get();
+      int64_t loadingTime = CGits::Instance().Timers().loading.Get();
+      int64_t programTime = CGits::Instance().Timers().program.Get();
 
-    LOG_INFO << "";
-    LOG_INFO << "Startup time: " << tillInitTime / 1e6 << "ms";
-    LOG_INFO << "Initialized in: " << initTime / 1e6 << "ms";
-    LOG_INFO << "State restored in: " << restorationTime / 1e6 << "ms";
-    LOG_INFO << "Stalled loading: " << loadingTime / 1e6 << "ms";
-    LOG_INFO << "Played back in: " << playbackTime / 1e6 << "ms";
-    LOG_INFO << "Total runtime: " << programTime / 1e6 << "ms";
+      LOG_INFO << "";
+      LOG_INFO << "Startup time: " << tillInitTime / 1e6 << "ms";
+      LOG_INFO << "Initialized in: " << initTime / 1e6 << "ms";
+      LOG_INFO << "State restored in: " << restorationTime / 1e6 << "ms";
+      LOG_INFO << "Stalled loading: " << loadingTime / 1e6 << "ms";
+      LOG_INFO << "Played back in: " << playbackTime / 1e6 << "ms";
+      LOG_INFO << "Total runtime: " << programTime / 1e6 << "ms";
+    }
 
     if (gits::CGits::Instance().apis.HasCompute()) {
       gits::CGits::Instance().apis.IfaceCompute().PrintMaxLocalMemoryUsage();
     }
 
     // Writes performance results to .csv file
-    if (cfg.common.player.benchmark) {
+    if (legacyMode && cfg.common.player.benchmark) {
       std::filesystem::path outBench = cfg.common.player.outputDir.empty()
                                            ? cfg.common.player.applicationPath
                                            : cfg.common.player.outputDir;
       std::filesystem::create_directories(outBench);
       outBench /= "benchmark.csv";
       std::ofstream timeDataFile(outBench, std::ios::binary | std::ios::out);
-      CGits::Instance().TimeSheet().OutputTimeData(timeDataFile, true);
+      CGits::Instance().TimeSheet().OutputTimeData(timeDataFile);
     }
 
     // Close OpenGL programs zip file
@@ -455,7 +476,7 @@ int MainBody(int argc, char* argv[]) {
                                             std::make_shared<ProgramMessage>());
 
 #if defined GITS_PLATFORM_WINDOWS
-  if (Configurator::Get().directx.features.subcapture.enabled &&
+  if (legacyMode && Configurator::Get().directx.features.subcapture.enabled &&
       CRecorder::Instance().IsMarkedForDeletion()) {
     CRecorder::Instance().Close();
   }

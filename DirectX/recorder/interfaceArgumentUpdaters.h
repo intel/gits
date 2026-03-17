@@ -79,7 +79,7 @@ private:
 };
 
 template <typename T>
-class UpdateOutputInterface<InterfaceOutputArgument<T>, T> : public gits::noncopyable {
+class UpdateOutputInterface<InterfaceOutputArgument<T>, T> {
 public:
   UpdateOutputInterface(InterfaceOutputArgument<T>& arg, HRESULT hr, REFIID riid, T** object)
       : object_(object) {
@@ -97,6 +97,8 @@ public:
       *object_ = reinterpret_cast<T*>(wrapper_);
     }
   }
+  UpdateOutputInterface(const UpdateOutputInterface&) = delete;
+  UpdateOutputInterface& operator=(const UpdateOutputInterface&) = delete;
 
 private:
   T** object_;

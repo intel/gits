@@ -19,6 +19,8 @@
 #include "function.h"
 #include "../OpenGL/common/include/openglArguments.h"
 
+#include "yaml-cpp/yaml.h"
+#include <filesystem>
 #include <array>
 #include <iomanip>
 #include <iostream>
@@ -120,51 +122,36 @@ void gits::CStatistics::Get(CScheduler& scheduler, CStatsComputer& comp) {
 }
 
 void gits::CStatistics::Print() const {
-  using namespace std;
 
-  cout << endl;
-  cout << "Statistics" << endl;
-  cout << "==========" << endl;
-  cout << "API functions Num             " << _callsIds.size() << endl;
-  if (_framesNum) {
-    cout << "Frames Num                    " << _framesNum << endl;
-  }
-  cout << "Calls Num                     " << _callsNum << endl;
-  cout << "State Init Calls Num          " << _initCallsNum << endl;
-  cout << "Application Calls Num         " << _appCallsNum << endl;
-  cout << "Avg. App. Calls Num per Frame ";
-  if (_framesNum == 0) {
-    cout << "NaN" << endl;
-  } else {
-    cout << _appCallsNum / _framesNum << endl;
-  }
-  cout << endl;
+  std::string filePath("statistics.yml");
+  std::ofstream stream(filePath);
+  GITS_ASSERT(stream.good(), "StatisticsService - failed to create file: " + filePath);
 
-  std::array<string, 5> columnHeaders = {{"Name", "Num", "FrNum", "MINpFr", "MAXpFr"}};
-  CAsciiTable<5> table(columnHeaders);
+  YAML::Node output;
+  YAML::Node stats = output["Statistics"];
+  stats["ApiFunctionsNum"] = _callsIds.size();
+  stats["FramesNum"] = _framesNum;
+  stats["CallsNum"] = _callsNum;
+  stats["StateInitCallsNum"] = _initCallsNum;
+  stats["ApplicationCallsNum"] = _appCallsNum;
+  stats["AvgAppCallsNumPerFrame"] = _appCallsNum / std::max(_framesNum, 1U);
+
   for (const auto& lib : _libraryStats) {
     const auto& library = CGits::Instance().Library(lib.first);
-    table.AddOneCellRow(library.Name()); // Library name is e.g. "Vulkan" or "OpenCL".
-
+    YAML::Node apiCalls = output["ApiCalls"][library.Name()];
     for (const auto& call : lib.second) {
-      std::array<string, 5> row;
-      row[0] = "  " + call.first;
-      row[1] = std::to_string(call.second.num);
-
-      if (call.second.skipped) {
-        row[2] = "???";
-        row[3] = "???";
-        row[4] = "???";
-      } else {
-        row[2] = std::to_string(call.second.framesNum);
-        row[3] = std::to_string(call.second.numPerFrameMin);
-        row[4] = std::to_string(call.second.numPerFrameMax);
-      }
-
-      table.AddRow(row);
+      YAML::Node callNode;
+      callNode["Name"] = call.first;
+      callNode["Num"] = call.second.num;
+      callNode["FrNum"] = call.second.framesNum;
+      callNode["MinPFr"] = call.second.numPerFrameMin;
+      callNode["MaxPFr"] = call.second.numPerFrameMax;
+      apiCalls.push_back(callNode);
     }
   }
-  table.Print(cout);
+
+  stream << output;
+  LOG_INFO << "Statistics printed into statistics.yml file.";
 }
 
 gits::CStatistics::TCall::TCall()

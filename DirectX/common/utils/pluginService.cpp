@@ -7,8 +7,9 @@
 // ===================== end_copyright_notice ==============================
 
 #include "pluginService.h"
-#include "gits.h"
 #include "log.h"
+#include "configurator.h"
+#include "gits.h"
 
 #include <unordered_set>
 
@@ -128,7 +129,7 @@ void PluginService::loadPlugins() {
 
     IPluginContext pluginContext;
     pluginContext.gits = &CGits::Instance();
-    pluginContext.msgBus = &CGits::Instance().GetMessageBus();
+    pluginContext.msgBus = &gits::MessageBus::get();
     pluginContext.config = &cfg;
     pluginContext.logAppender = plog::get();
 

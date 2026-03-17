@@ -9,8 +9,8 @@
 #include "analyzerService.h"
 #include "analyzerResults.h"
 #include "keyUtils.h"
-#include "gits.h"
 #include "log.h"
+#include "exception.h"
 
 #include <fstream>
 #include <sstream>

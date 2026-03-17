@@ -7,7 +7,6 @@
 // ===================== end_copyright_notice ==============================
 
 #include "resourcePlacementPlayback.h"
-#include "gits.h"
 #include "log.h"
 #include "configurationLib.h"
 

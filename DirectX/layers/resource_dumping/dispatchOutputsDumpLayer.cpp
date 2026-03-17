@@ -7,8 +7,9 @@
 // ===================== end_copyright_notice ==============================
 
 #include "dispatchOutputsDumpLayer.h"
-#include "gits.h"
+#include "keyUtils.h"
 #include "log.h"
+#include "exception.h"
 #include "configurationLib.h"
 #include "yaml-cpp/yaml.h"
 
@@ -200,19 +201,22 @@ void DispatchOutputsDumpLayer::post(ID3D12DeviceCreateRootSignatureCommand& c) {
 }
 
 void DispatchOutputsDumpLayer::post(StateRestoreBeginCommand& c) {
-  stateRestorePhase_ = true;
+  currentFrame_ = 0;
 }
 
 void DispatchOutputsDumpLayer::post(StateRestoreEndCommand& c) {
-  stateRestorePhase_ = false;
   dispatchCount_ = 0;
   executeCount_ = 0;
+  currentFrame_ = 1;
 }
 
 void DispatchOutputsDumpLayer::post(IDXGISwapChainPresentCommand& c) {
   if (!(c.Flags_.value & DXGI_PRESENT_TEST)) {
     dispatchCount_ = 0;
     executeCount_ = 0;
+    if (!isStateRestoreKey(c.key)) {
+      ++currentFrame_;
+    }
   }
 }
 
@@ -220,13 +224,13 @@ void DispatchOutputsDumpLayer::post(IDXGISwapChain1Present1Command& c) {
   if (!(c.PresentFlags_.value & DXGI_PRESENT_TEST)) {
     dispatchCount_ = 0;
     executeCount_ = 0;
+    if (!isStateRestoreKey(c.key)) {
+      ++currentFrame_;
+    }
   }
 }
 
 void DispatchOutputsDumpLayer::post(ID3D12CommandQueueExecuteCommandListsCommand& c) {
-  ++executeCount_;
-  unsigned frame = stateRestorePhase_ ? 0 : CGits::Instance().CurrentFrame();
-
   for (unsigned i = 0; i < c.NumCommandLists_.value; ++i) {
     dispatchCountByCommandList_.erase(c.ppCommandLists_.keys[i]);
 
@@ -254,9 +258,9 @@ void DispatchOutputsDumpLayer::post(ID3D12CommandQueueExecuteCommandListsCommand
       }
     }
   }
-
+  ++executeCount_;
   resourceDump_.executeCommandLists(c.key, c.object_.key, c.object_.value, c.ppCommandLists_.value,
-                                    c.NumCommandLists_.value, frame, executeCount_);
+                                    c.NumCommandLists_.value, currentFrame_, executeCount_);
 }
 
 void DispatchOutputsDumpLayer::post(ID3D12CommandQueueWaitCommand& c) {
@@ -334,9 +338,7 @@ void DispatchOutputsDumpLayer::post(ID3D12GraphicsCommandListDispatchCommand& c)
 
   ++dispatchCount_;
   unsigned commandListDispatchCount = ++dispatchCountByCommandList_[commandListKey];
-  unsigned frame = stateRestorePhase_ ? 0 : CGits::Instance().CurrentFrame();
-
-  if (!frameRange_[frame]) {
+  if (!frameRange_[currentFrame_]) {
     return;
   }
   if (!dispatchRange_[dispatchCount_] && !inAnalysis_) {
@@ -358,12 +360,12 @@ void DispatchOutputsDumpLayer::post(ID3D12GraphicsCommandListDispatchCommand& c)
       for (const auto& [slot, resourceKeys] : resourceKeysBySlotIt->second) {
         for (unsigned resourceKey : resourceKeys) {
           if (dryRun_) {
-            dryRunInfo_.dispatchesWithTextureByFrame[frame].insert(dispatchCount_);
+            dryRunInfo_.dispatchesWithTextureByFrame[currentFrame_].insert(dispatchCount_);
           } else {
             ID3D12Resource* resource = resourceByKey_[resourceKey];
             GITS_ASSERT(resource);
             DispatchOutput dispatchOutput{resourceKey, resource, slot};
-            dumpComputeOutput(commandList, dispatchOutput, frame, commandListDispatchCount);
+            dumpComputeOutput(commandList, dispatchOutput, currentFrame_, commandListDispatchCount);
           }
         }
       }

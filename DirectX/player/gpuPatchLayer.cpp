@@ -8,8 +8,8 @@
 
 #include "gpuPatchLayer.h"
 #include "playerManager.h"
-#include "gits.h"
 #include "log.h"
+#include "messageBus.h"
 
 #include <fstream>
 
@@ -159,8 +159,7 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStr
     initialize(commandList);
   }
 
-  auto& msgBus = CGits::Instance().GetMessageBus();
-  msgBus.publish(
+  gits::MessageBus::get().publish(
       {PUBLISHER_PLAYER, TOPIC_GITS_WORKLOAD_BEGIN},
       std::make_shared<GitsWorkloadMessage>(
           commandList, "GITS_BuildRaytracingAccelerationStructure-Patch", c.object_.key));
@@ -535,7 +534,7 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStr
 
   commandListService_.restoreState(c.object_.key, c.object_.value);
 
-  msgBus.publish(
+  gits::MessageBus::get().publish(
       {PUBLISHER_PLAYER, TOPIC_GITS_WORKLOAD_END},
       std::make_shared<GitsWorkloadMessage>(
           commandList, "GITS_BuildRaytracingAccelerationStructure-Patch", c.object_.key));
@@ -550,8 +549,8 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandList4DispatchRaysCommand& c) {
     initialize(commandList);
   }
 
-  auto& msgBus = CGits::Instance().GetMessageBus();
-  msgBus.publish(
+  gits::MessageBus& msgBus = gits::MessageBus::get();
+  gits::MessageBus::get().publish(
       {PUBLISHER_PLAYER, TOPIC_GITS_WORKLOAD_BEGIN},
       std::make_shared<GitsWorkloadMessage>(commandList, "GITS_DispatchRays-Patch", c.object_.key));
 
@@ -576,7 +575,7 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandList4DispatchRaysCommand& c) {
 
   commandListService_.restoreState(c.object_.key, c.object_.value);
 
-  msgBus.publish(
+  gits::MessageBus::get().publish(
       {PUBLISHER_PLAYER, TOPIC_GITS_WORKLOAD_END},
       std::make_shared<GitsWorkloadMessage>(commandList, "GITS_DispatchRays-Patch", c.object_.key));
 }
@@ -1416,10 +1415,9 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandListExecuteIndirectCommand& c) {
     initialize(commandList);
   }
 
-  auto& msgBus = CGits::Instance().GetMessageBus();
-  msgBus.publish({PUBLISHER_PLAYER, TOPIC_GITS_WORKLOAD_BEGIN},
-                 std::make_shared<GitsWorkloadMessage>(commandList, "GITS_ExecuteIndirect-Patch",
-                                                       c.object_.key));
+  gits::MessageBus::get().publish({PUBLISHER_PLAYER, TOPIC_GITS_WORKLOAD_BEGIN},
+                                  std::make_shared<GitsWorkloadMessage>(
+                                      commandList, "GITS_ExecuteIndirect-Patch", c.object_.key));
 
   unsigned patchBufferIndex =
       getPatchBufferIndex(c.object_.key, c.object_.value, patchBufferInitialSize_);
@@ -1610,9 +1608,9 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandListExecuteIndirectCommand& c) {
 
   commandListService_.restoreState(c.object_.key, c.object_.value);
 
-  msgBus.publish({PUBLISHER_PLAYER, TOPIC_GITS_WORKLOAD_END},
-                 std::make_shared<GitsWorkloadMessage>(commandList, "GITS_ExecuteIndirect-Patch",
-                                                       c.object_.key));
+  gits::MessageBus::get().publish({PUBLISHER_PLAYER, TOPIC_GITS_WORKLOAD_END},
+                                  std::make_shared<GitsWorkloadMessage>(
+                                      commandList, "GITS_ExecuteIndirect-Patch", c.object_.key));
 }
 
 void GpuPatchLayer::post(ID3D12GraphicsCommandListExecuteIndirectCommand& c) {

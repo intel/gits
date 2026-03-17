@@ -8,23 +8,20 @@
 
 #pragma once
 
-#include "layerAuto.h"
 #include "windowService.h"
 #include "replayDescriptorHandleService.h"
 #include "mapTrackingService.h"
 #include "playerGpuAddressService.h"
 #include "heapAllocationService.h"
-#include "pluginService.h"
 #include "adapterService.h"
 #include "intelExtensionsService.h"
 #include "xessService.h"
-#include "nvapi.h"
 #include "multithreadedObjectCreationService.h"
 #include "pipelineLibraryService.h"
 #include "contextMapService.h"
-#include "analyzerService.h"
 #include "playerLayerManager.h"
 
+#include "nvapi.h"
 #include <vector>
 #include <memory>
 #include <unordered_map>
@@ -33,7 +30,10 @@
 namespace gits {
 namespace DirectX {
 
-class PlayerManager : public gits::noncopyable {
+class PluginService;
+class Layer;
+
+class PlayerManager {
 public:
   static PlayerManager& get();
   static void destroy() {
@@ -111,6 +111,8 @@ public:
 
 private:
   PlayerManager();
+  PlayerManager(const PlayerManager&) = delete;
+  PlayerManager& operator=(const PlayerManager&) = delete;
 
   void loadDirectML();
   void loadDirectStorage();

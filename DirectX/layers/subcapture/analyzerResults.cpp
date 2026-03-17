@@ -7,7 +7,8 @@
 // ===================== end_copyright_notice ==============================
 
 #include "analyzerResults.h"
-#include "gits.h"
+#include "log.h"
+#include "configurator.h"
 
 #include <filesystem>
 #include <fstream>
@@ -106,7 +107,7 @@ bool AnalyzerResults::isAnalysis() {
 }
 
 std::string AnalyzerResults::getAnalysisFileName() {
-  const Config& config = Configurator::Get();
+  const Configuration& config = Configurator::Get();
   std::stringstream fileName;
   fileName << config.common.player.streamDir.filename().string() << "_frames-"
            << config.directx.features.subcapture.frames;

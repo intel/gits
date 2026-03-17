@@ -7,7 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "mapTrackingService.h"
-#include "gits.h"
+#include "log.h"
 
 namespace gits {
 namespace DirectX {

@@ -10,7 +10,7 @@
 #include "analyzerRaytracingService.h"
 #include "capturePlayerGpuAddressService.h"
 #include "capturePlayerDescriptorHandleService.h"
-#include "gits.h"
+#include "log.h"
 
 namespace gits {
 namespace DirectX {

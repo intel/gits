@@ -11,7 +11,7 @@
 #include "fenceService.h"
 #include "commandsAuto.h"
 #include "captureManager.h"
-#include "commandWritersCustom.h"
+#include "commandSerializersCustom.h"
 #include "log.h"
 
 namespace gits {
@@ -100,7 +100,7 @@ void FenceService::waitSignaled(HANDLE handle) {
     command.fence_.key = fenceInfos[i].fenceKey;
     command.value_.value = fenceInfos[i].fence->GetCompletedValue();
 
-    recorder_.record(command.key, new WaitForFenceSignaledWriter(command));
+    recorder_.record(command.key, new WaitForFenceSignaledSerializer(command));
   }
 }
 
@@ -181,7 +181,7 @@ void FenceService::waitSignaled(DWORD count, const HANDLE* handles) {
     command.fence_.key = fenceInfos[i].fenceKey;
     command.value_.value = fenceInfos[i].fence->GetCompletedValue();
 
-    recorder_.record(command.key, new WaitForFenceSignaledWriter(command));
+    recorder_.record(command.key, new WaitForFenceSignaledSerializer(command));
   }
 }
 

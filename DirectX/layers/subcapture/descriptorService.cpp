@@ -8,7 +8,7 @@
 
 #include "descriptorService.h"
 #include "commandsAuto.h"
-#include "commandWritersAuto.h"
+#include "commandSerializersAuto.h"
 #include "stateTrackingService.h"
 #include "resourceForCBVRestoreService.h"
 #include "log.h"
@@ -204,7 +204,7 @@ void DescriptorService::restoreD3D12RenderTargetView(D3D12RenderTargetViewState*
   c.DestDescriptor_.value = state->destDescriptor;
   c.DestDescriptor_.interfaceKey = state->destDescriptorKey;
   c.DestDescriptor_.index = state->destDescriptorIndex;
-  stateService_->getRecorder().record(new ID3D12DeviceCreateRenderTargetViewWriter(c));
+  stateService_->getRecorder().record(new ID3D12DeviceCreateRenderTargetViewSerializer(c));
 }
 
 void DescriptorService::restoreD3D12DepthStencilView(D3D12DepthStencilViewState* state) {
@@ -222,7 +222,7 @@ void DescriptorService::restoreD3D12DepthStencilView(D3D12DepthStencilViewState*
   c.DestDescriptor_.value = state->destDescriptor;
   c.DestDescriptor_.interfaceKey = state->destDescriptorKey;
   c.DestDescriptor_.index = state->destDescriptorIndex;
-  stateService_->getRecorder().record(new ID3D12DeviceCreateDepthStencilViewWriter(c));
+  stateService_->getRecorder().record(new ID3D12DeviceCreateDepthStencilViewSerializer(c));
 }
 
 void DescriptorService::restoreD3D12ShaderResourceView(D3D12ShaderResourceViewState* state) {
@@ -247,7 +247,7 @@ void DescriptorService::restoreD3D12ShaderResourceView(D3D12ShaderResourceViewSt
   c.DestDescriptor_.value = state->destDescriptor;
   c.DestDescriptor_.interfaceKey = state->destDescriptorKey;
   c.DestDescriptor_.index = state->destDescriptorIndex;
-  stateService_->getRecorder().record(new ID3D12DeviceCreateShaderResourceViewWriter(c));
+  stateService_->getRecorder().record(new ID3D12DeviceCreateShaderResourceViewSerializer(c));
 }
 
 void DescriptorService::restoreD3D12UnorderedAccessView(D3D12UnorderedAccessViewState* state) {
@@ -266,7 +266,7 @@ void DescriptorService::restoreD3D12UnorderedAccessView(D3D12UnorderedAccessView
   c.DestDescriptor_.value = state->destDescriptor;
   c.DestDescriptor_.interfaceKey = state->destDescriptorKey;
   c.DestDescriptor_.index = state->destDescriptorIndex;
-  stateService_->getRecorder().record(new ID3D12DeviceCreateUnorderedAccessViewWriter(c));
+  stateService_->getRecorder().record(new ID3D12DeviceCreateUnorderedAccessViewSerializer(c));
 }
 
 void DescriptorService::restoreD3D12ConstantBufferView(D3D12ConstantBufferViewState* state) {
@@ -288,7 +288,7 @@ void DescriptorService::restoreD3D12ConstantBufferView(D3D12ConstantBufferViewSt
   c.DestDescriptor_.value = state->destDescriptor;
   c.DestDescriptor_.interfaceKey = state->destDescriptorKey;
   c.DestDescriptor_.index = state->destDescriptorIndex;
-  stateService_->getRecorder().record(new ID3D12DeviceCreateConstantBufferViewWriter(c));
+  stateService_->getRecorder().record(new ID3D12DeviceCreateConstantBufferViewSerializer(c));
 }
 
 void DescriptorService::restoreD3D12Sampler(D3D12SamplerState* state) {
@@ -299,7 +299,7 @@ void DescriptorService::restoreD3D12Sampler(D3D12SamplerState* state) {
   c.DestDescriptor_.value = state->destDescriptor;
   c.DestDescriptor_.interfaceKey = state->destDescriptorKey;
   c.DestDescriptor_.index = state->destDescriptorIndex;
-  stateService_->getRecorder().record(new ID3D12DeviceCreateSamplerWriter(c));
+  stateService_->getRecorder().record(new ID3D12DeviceCreateSamplerSerializer(c));
 }
 
 } // namespace DirectX

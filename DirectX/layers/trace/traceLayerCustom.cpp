@@ -69,7 +69,7 @@ void TraceLayer::post(StateRestoreEndCommand& command) {
 
 void TraceLayer::pre(MarkerUInt64Command& command) {
   if (printPre_) {
-    streamPre_ << "MARKER_" << uint64MarkerToStr(command.value_) << "\n";
+    streamPre_ << "MARKER_" << uint64MarkerToStr(command.value_.value) << "\n";
     if (flush_) {
       streamPre_.flush();
     }
@@ -78,7 +78,7 @@ void TraceLayer::pre(MarkerUInt64Command& command) {
 
 void TraceLayer::post(MarkerUInt64Command& command) {
   if (printPost_) {
-    streamPost_ << "MARKER_" << uint64MarkerToStr(command.value_) << "\n";
+    streamPost_ << "MARKER_" << uint64MarkerToStr(command.value_.value) << "\n";
     if (flush_) {
       streamPost_.flush();
     }

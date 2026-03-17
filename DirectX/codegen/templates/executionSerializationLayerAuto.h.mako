@@ -21,14 +21,12 @@ namespace DirectX {
 
 class ExecutionSerializationLayer : public Layer {
 public:
-  ExecutionSerializationLayer(ExecutionSerializationRecorder& recorder)
-      : Layer("ExecutionSerialization"),
-        recorder_(recorder),
-        executionService_(recorder, cpuDescriptorsService_),
-        cpuDescriptorsService_(recorder, executionService_) {}
+  ExecutionSerializationLayer(ExecutionSerializationRecorder& recorder);
+  ~ExecutionSerializationLayer();
   
   void post(StateRestoreBeginCommand& c) override;
   void post(StateRestoreEndCommand& c) override;
+  void post(FrameEndCommand& c) override;
   void post(MarkerUInt64Command& c) override;
   void pre(CreateWindowMetaCommand& c) override;
   void pre(MappedDataMetaCommand& c) override;
@@ -72,9 +70,14 @@ public:
   void pre(NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand& c) override;
 
 private:
+  bool inRange() const;
+
+private:
   ExecutionSerializationRecorder& recorder_;
   CommandListExecutionService executionService_;
   CpuDescriptorsService cpuDescriptorsService_;
+  unsigned currentFrame_{1};
+  unsigned endFrame_{};
 };
 
 } // namespace DirectX

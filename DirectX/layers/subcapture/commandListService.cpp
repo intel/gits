@@ -9,9 +9,9 @@
 #include "commandListService.h"
 #include "commandsAuto.h"
 #include "stateTrackingService.h"
-#include "commandWritersAuto.h"
+#include "commandSerializersAuto.h"
 #include "analyzerResults.h"
-#include "commandWritersFactory.h"
+#include "commandSerializersFactory.h"
 #include "log.h"
 
 #include <fstream>
@@ -64,7 +64,7 @@ void CommandListService::restoreCommandLists() {
       reset.key = stateService_.getUniqueCommandKey();
       reset.object_.key = itReset->first;
       reset.pAllocator_.key = itReset->second;
-      stateService_.getRecorder().record(createCommandWriter(&reset));
+      stateService_.getRecorder().record(createCommandSerializer(&reset));
       commandListAllocatorsForReset.erase(itReset);
     }
 
@@ -81,7 +81,7 @@ void CommandListService::restoreCommandLists() {
                CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_CLEARUNORDEREDACCESSVIEWFLOAT) {
       restoreCommandState(static_cast<CommandListClearUnorderedAccessViewFloat*>(command));
     } else {
-      stateService_.getRecorder().record(command->commandWriter.release());
+      stateService_.getRecorder().record(command->commandSerializer.release());
     }
   }
 }
@@ -137,9 +137,10 @@ void CommandListService::restoreCommandState(CommandListOMSetRenderTargets* comm
       c.pDepthStencilDescriptor_.value =
           static_cast<D3D12_CPU_DESCRIPTOR_HANDLE*>(stateService_.getUniqueFakePointer());
     }
-    stateService_.getRecorder().record(new ID3D12GraphicsCommandListOMSetRenderTargetsWriter(c));
+    stateService_.getRecorder().record(
+        new ID3D12GraphicsCommandListOMSetRenderTargetsSerializer(c));
   } else {
-    stateService_.getRecorder().record(command->commandWriter.release());
+    stateService_.getRecorder().record(command->commandSerializer.release());
   }
 }
 
@@ -169,9 +170,10 @@ void CommandListService::restoreCommandState(CommandListClearRenderTargetView* c
       c.pRects_.size = command->rects.size();
       c.pRects_.value = command->rects.data();
     }
-    stateService_.getRecorder().record(new ID3D12GraphicsCommandListClearRenderTargetViewWriter(c));
+    stateService_.getRecorder().record(
+        new ID3D12GraphicsCommandListClearRenderTargetViewSerializer(c));
   } else {
-    stateService_.getRecorder().record(command->commandWriter.release());
+    stateService_.getRecorder().record(command->commandSerializer.release());
   }
 }
 
@@ -200,9 +202,10 @@ void CommandListService::restoreCommandState(CommandListClearDepthStencilView* c
       c.pRects_.size = command->rects.size();
       c.pRects_.value = command->rects.data();
     }
-    stateService_.getRecorder().record(new ID3D12GraphicsCommandListClearDepthStencilViewWriter(c));
+    stateService_.getRecorder().record(
+        new ID3D12GraphicsCommandListClearDepthStencilViewSerializer(c));
   } else {
-    stateService_.getRecorder().record(command->commandWriter.release());
+    stateService_.getRecorder().record(command->commandSerializer.release());
   }
 }
 
@@ -242,7 +245,8 @@ void CommandListService::restoreCommandState(CommandListClearUnorderedAccessView
       ID3D12DescriptorHeap* fakePointer =
           static_cast<ID3D12DescriptorHeap*>(stateService_.getUniqueFakePointer());
       c.ppDescriptorHeaps_.value = &fakePointer;
-      stateService_.getRecorder().record(new ID3D12GraphicsCommandListSetDescriptorHeapsWriter(c));
+      stateService_.getRecorder().record(
+          new ID3D12GraphicsCommandListSetDescriptorHeapsSerializer(c));
     }
     {
       ID3D12GraphicsCommandListClearUnorderedAccessViewUintCommand c;
@@ -267,7 +271,7 @@ void CommandListService::restoreCommandState(CommandListClearUnorderedAccessView
         c.pRects_.value = command->rects.data();
       }
       stateService_.getRecorder().record(
-          new ID3D12GraphicsCommandListClearUnorderedAccessViewUintWriter(c));
+          new ID3D12GraphicsCommandListClearUnorderedAccessViewUintSerializer(c));
     }
     if (changedGpu) {
       CommandListState* commandListState = commandListsByKey_[command->commandListKey];
@@ -280,10 +284,11 @@ void CommandListService::restoreCommandState(CommandListClearUnorderedAccessView
       ID3D12DescriptorHeap* fakePointer =
           static_cast<ID3D12DescriptorHeap*>(stateService_.getUniqueFakePointer());
       c.ppDescriptorHeaps_.value = &fakePointer;
-      stateService_.getRecorder().record(new ID3D12GraphicsCommandListSetDescriptorHeapsWriter(c));
+      stateService_.getRecorder().record(
+          new ID3D12GraphicsCommandListSetDescriptorHeapsSerializer(c));
     }
   } else {
-    stateService_.getRecorder().record(command->commandWriter.release());
+    stateService_.getRecorder().record(command->commandSerializer.release());
   }
 }
 
@@ -303,7 +308,7 @@ void CommandListService::initAuxiliaryRtvHeap(unsigned deviceKey) {
   c.riid_.value = IID_ID3D12DescriptorHeap;
   auxiliaryRtvDescriptorHeapKey_ = stateService_.getUniqueObjectKey();
   c.ppvHeap_.key = auxiliaryRtvDescriptorHeapKey_;
-  stateService_.getRecorder().record(new ID3D12DeviceCreateDescriptorHeapWriter(c));
+  stateService_.getRecorder().record(new ID3D12DeviceCreateDescriptorHeapSerializer(c));
 }
 
 void CommandListService::initAuxiliaryDsvHeap(unsigned deviceKey) {
@@ -322,7 +327,7 @@ void CommandListService::initAuxiliaryDsvHeap(unsigned deviceKey) {
   c.riid_.value = IID_ID3D12DescriptorHeap;
   auxiliaryDsvDescriptorHeapKey_ = stateService_.getUniqueObjectKey();
   c.ppvHeap_.key = auxiliaryDsvDescriptorHeapKey_;
-  stateService_.getRecorder().record(new ID3D12DeviceCreateDescriptorHeapWriter(c));
+  stateService_.getRecorder().record(new ID3D12DeviceCreateDescriptorHeapSerializer(c));
 }
 
 void CommandListService::initAuxiliaryUavGpuHeap(unsigned deviceKey) {
@@ -341,7 +346,7 @@ void CommandListService::initAuxiliaryUavGpuHeap(unsigned deviceKey) {
   c.riid_.value = IID_ID3D12DescriptorHeap;
   auxiliaryUavGpuDescriptorHeapKey_ = stateService_.getUniqueObjectKey();
   c.ppvHeap_.key = auxiliaryUavGpuDescriptorHeapKey_;
-  stateService_.getRecorder().record(new ID3D12DeviceCreateDescriptorHeapWriter(c));
+  stateService_.getRecorder().record(new ID3D12DeviceCreateDescriptorHeapSerializer(c));
 }
 
 void CommandListService::initAuxiliaryUavCpuHeap(unsigned deviceKey) {
@@ -360,7 +365,7 @@ void CommandListService::initAuxiliaryUavCpuHeap(unsigned deviceKey) {
   c.riid_.value = IID_ID3D12DescriptorHeap;
   auxiliaryUavCpuDescriptorHeapKey_ = stateService_.getUniqueObjectKey();
   c.ppvHeap_.key = auxiliaryUavCpuDescriptorHeapKey_;
-  stateService_.getRecorder().record(new ID3D12DeviceCreateDescriptorHeapWriter(c));
+  stateService_.getRecorder().record(new ID3D12DeviceCreateDescriptorHeapSerializer(c));
 }
 
 void CommandListService::createAuxiliaryRtv(D3D12RenderTargetViewState* view) {
@@ -377,7 +382,7 @@ void CommandListService::createAuxiliaryRtv(D3D12RenderTargetViewState* view) {
   c.pDesc_.value = &view->desc;
   c.DestDescriptor_.interfaceKey = auxiliaryRtvDescriptorHeapKey_;
   c.DestDescriptor_.index = auxiliaryRtvDescriptorHeapIndex_;
-  stateService_.getRecorder().record(new ID3D12DeviceCreateRenderTargetViewWriter(c));
+  stateService_.getRecorder().record(new ID3D12DeviceCreateRenderTargetViewSerializer(c));
   view->destDescriptorKey = auxiliaryRtvDescriptorHeapKey_;
   view->destDescriptorIndex = auxiliaryRtvDescriptorHeapIndex_;
   ++auxiliaryRtvDescriptorHeapIndex_;
@@ -397,7 +402,7 @@ void CommandListService::createAuxiliaryDsv(D3D12DepthStencilViewState* view) {
   c.pDesc_.value = &view->desc;
   c.DestDescriptor_.interfaceKey = auxiliaryDsvDescriptorHeapKey_;
   c.DestDescriptor_.index = auxiliaryDsvDescriptorHeapIndex_;
-  stateService_.getRecorder().record(new ID3D12DeviceCreateDepthStencilViewWriter(c));
+  stateService_.getRecorder().record(new ID3D12DeviceCreateDepthStencilViewSerializer(c));
   view->destDescriptorKey = auxiliaryDsvDescriptorHeapKey_;
   view->destDescriptorIndex = auxiliaryDsvDescriptorHeapIndex_;
   ++auxiliaryDsvDescriptorHeapIndex_;
@@ -417,7 +422,7 @@ void CommandListService::createAuxiliaryUavGpu(D3D12UnorderedAccessViewState* vi
   c.pDesc_.value = &view->desc;
   c.DestDescriptor_.interfaceKey = auxiliaryUavGpuDescriptorHeapKey_;
   c.DestDescriptor_.index = auxiliaryUavGpuDescriptorHeapIndex_;
-  stateService_.getRecorder().record(new ID3D12DeviceCreateUnorderedAccessViewWriter(c));
+  stateService_.getRecorder().record(new ID3D12DeviceCreateUnorderedAccessViewSerializer(c));
   view->destDescriptorKey = auxiliaryUavGpuDescriptorHeapKey_;
   view->destDescriptorIndex = auxiliaryUavGpuDescriptorHeapIndex_;
   ++auxiliaryUavGpuDescriptorHeapIndex_;
@@ -437,7 +442,7 @@ void CommandListService::createAuxiliaryUavCpu(D3D12UnorderedAccessViewState* vi
   c.pDesc_.value = &view->desc;
   c.DestDescriptor_.interfaceKey = auxiliaryUavCpuDescriptorHeapKey_;
   c.DestDescriptor_.index = auxiliaryUavCpuDescriptorHeapIndex_;
-  stateService_.getRecorder().record(new ID3D12DeviceCreateUnorderedAccessViewWriter(c));
+  stateService_.getRecorder().record(new ID3D12DeviceCreateUnorderedAccessViewSerializer(c));
   view->destDescriptorKey = auxiliaryUavCpuDescriptorHeapKey_;
   view->destDescriptorIndex = auxiliaryUavCpuDescriptorHeapIndex_;
   ++auxiliaryUavCpuDescriptorHeapIndex_;

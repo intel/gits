@@ -52,8 +52,8 @@ private:
   unsigned drawCount_{};
   unsigned executeCount_{};
   std::unordered_map<unsigned, unsigned> drawCountByCommandList_;
-  bool stateRestorePhase_{};
   ResourceStateTracker resourceStateTracker_;
+  unsigned currentFrame_{1};
 
   struct RenderTarget {
     unsigned slot;

@@ -7,8 +7,9 @@
 // ===================== end_copyright_notice ==============================
 
 #include "screenshotsLayer.h"
-#include "gits.h"
-#include "configurationLib.h"
+#include "keyUtils.h"
+#include "log.h"
+#include "configurator.h"
 
 #include <wrl/client.h>
 #include <filesystem>
@@ -73,19 +74,21 @@ void ScreenshotsLayer::post(xefgSwapChainD3D12GetSwapChainPtrCommand& c) {
 }
 
 void ScreenshotsLayer::pre(IDXGISwapChainPresentCommand& c) {
-  if (c.Flags_.value & DXGI_PRESENT_TEST) {
+  if (c.Flags_.value & DXGI_PRESENT_TEST || isStateRestoreKey(c.key)) {
     return;
   }
-  if (screenshotRange_[CGits::Instance().CurrentFrame()]) {
+  ++currentFrame_;
+  if (screenshotRange_[currentFrame_]) {
     swapChainPresent(c.object_.key, c.object_.value);
   }
 }
 
 void ScreenshotsLayer::pre(IDXGISwapChain1Present1Command& c) {
-  if (c.PresentFlags_.value & DXGI_PRESENT_TEST) {
+  if (c.PresentFlags_.value & DXGI_PRESENT_TEST || isStateRestoreKey(c.key)) {
     return;
   }
-  if (screenshotRange_[CGits::Instance().CurrentFrame()]) {
+  ++currentFrame_;
+  if (screenshotRange_[currentFrame_]) {
     swapChainPresent(c.object_.key, c.object_.value);
   }
 }
@@ -109,10 +112,8 @@ void ScreenshotsLayer::swapChainPresent(unsigned swapChainKey, IDXGISwapChain* s
   Microsoft::WRL::ComPtr<ID3D12Resource> backBuffer;
   hr = swapChain->GetBuffer(bufferIndex, IID_PPV_ARGS(&backBuffer));
 
-  unsigned currentFrame = CGits::Instance().CurrentFrame();
-
   std::wstringstream outputName;
-  outputName << dumpPath_ << L"/frame" << std::setw(8) << std::setfill(L'0') << currentFrame;
+  outputName << dumpPath_ << L"/frame" << std::setw(8) << std::setfill(L'0') << currentFrame_;
   it->second->dump(backBuffer.Get(), outputName.str());
 }
 

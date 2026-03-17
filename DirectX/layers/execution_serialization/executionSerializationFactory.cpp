@@ -8,6 +8,7 @@
 
 #include "executionSerializationFactory.h"
 #include "log.h"
+#include "configurator.h"
 
 namespace gits {
 namespace DirectX {

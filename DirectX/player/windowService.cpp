@@ -7,10 +7,9 @@
 // ===================== end_copyright_notice ==============================
 
 #include "windowService.h"
-#include "message_pump.h"
-#include "gits.h"
-#include "log.h"
 #include "playerManager.h"
+#include "message_pump.h"
+#include "configurator.h"
 
 namespace gits {
 namespace DirectX {

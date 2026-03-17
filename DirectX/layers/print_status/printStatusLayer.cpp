@@ -40,7 +40,7 @@ void PrintStatusLayer::post(StateRestoreEndCommand& c) {
 
 void PrintStatusLayer::post(MarkerUInt64Command& c) {
   static auto timeBegin = std::chrono::steady_clock::now();
-  switch (c.value_) {
+  switch (c.value_.value) {
   case MarkerUInt64Command::Value::STATE_RESTORE_OBJECTS_BEGIN:
   case MarkerUInt64Command::Value::STATE_RESTORE_RTAS_BEGIN:
   case MarkerUInt64Command::Value::STATE_RESTORE_RESOURCES_BEGIN:

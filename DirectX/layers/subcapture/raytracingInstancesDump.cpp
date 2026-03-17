@@ -9,7 +9,7 @@
 #include "raytracingInstancesDump.h"
 #include "analyzerRaytracingService.h"
 #include "capturePlayerGpuAddressService.h"
-#include "gits.h"
+#include "log.h"
 
 namespace gits {
 namespace DirectX {

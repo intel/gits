@@ -7,9 +7,13 @@
 // ===================== end_copyright_notice ==============================
 
 #include "playerManager.h"
-#include "gits.h"
+#include "layerAuto.h"
+#include "pluginService.h"
 #include "IPlugin.h"
+#include "messageBus.h"
 #include "log.h"
+#include "exception.h"
+#include "gits.h"
 
 #include <wrl/client.h>
 
@@ -21,13 +25,9 @@ PlayerManager* PlayerManager::instance_ = nullptr;
 PlayerManager& PlayerManager::get() {
   if (!instance_) {
     instance_ = new PlayerManager();
-    CGits::Instance().GetMessageBus().subscribe(
-        {PUBLISHER_PLAYER, TOPIC_END}, [](Topic t, const MessagePtr& m) {
-          auto msg = std::dynamic_pointer_cast<PlaybackEndMessage>(m);
-          if (msg) {
-            PlayerManager::destroy();
-          }
-        });
+    gits::MessageBus::get().subscribe(
+        {PUBLISHER_PLAYER, TOPIC_PROGRAM_EXIT},
+        [](Topic t, const MessagePtr& m) { PlayerManager::destroy(); });
   }
   return *instance_;
 }

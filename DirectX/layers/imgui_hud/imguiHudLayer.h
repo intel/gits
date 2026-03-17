@@ -36,7 +36,9 @@ public:
   void post(IDXGIFactory2CreateSwapChainForCoreWindowCommand& c) override;
   void post(IDXGIFactory2CreateSwapChainForCompositionCommand& c) override;
   void pre(IDXGISwapChainPresentCommand& command) override;
+  void post(IDXGISwapChainPresentCommand& command) override;
   void pre(IDXGISwapChain1Present1Command& command) override;
+  void post(IDXGISwapChain1Present1Command& command) override;
   void pre(IDXGISwapChainResizeBuffersCommand& command) override;
   void post(IDXGISwapChainResizeBuffersCommand& command) override;
   void pre(IDXGISwapChain3ResizeBuffers1Command& command) override;

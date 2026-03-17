@@ -10,7 +10,7 @@
 
 #include "commandsAuto.h"
 #include "commandIdsAuto.h"
-#include "commandWriter.h"
+#include "commandSerializer.h"
 
 namespace gits {
 namespace DirectX {
@@ -37,7 +37,7 @@ private:
     CommandQueueCommand(CommandId id_, unsigned key) : id(id_), commandKey(key) {}
     CommandId id{};
     unsigned commandKey{};
-    std::unique_ptr<CommandWriter> commandWriter;
+    std::unique_ptr<stream::CommandSerializer> commandSerializer;
   };
   std::vector<CommandQueueCommand*> commands;
 };

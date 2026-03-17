@@ -17,5 +17,5 @@
 #include <filesystem>
 
 namespace gits {
-bool ConfigureRecorder(const std::filesystem::path& configPath);
+bool ConfigureRecorder(const std::filesystem::path& configPath, bool legacyMode);
 } // namespace gits

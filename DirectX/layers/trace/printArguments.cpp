@@ -10,7 +10,7 @@
 #include "printStructuresAuto.h"
 #include "printCustom.h"
 #include "printEnumsAuto.h"
-#include "gits.h"
+#include "log.h"
 #include "nvapi.h"
 
 #include <iomanip>

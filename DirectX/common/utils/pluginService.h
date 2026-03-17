@@ -9,7 +9,6 @@
 #pragma once
 
 #include "IPlugin.h"
-#include "tools_lite.h"
 
 #include <wrl/client.h>
 #include <vector>
@@ -28,10 +27,12 @@ struct PluginInfo {
   void free();
 };
 
-class PluginService : public gits::noncopyable {
+class PluginService {
 public:
   PluginService() = default;
   ~PluginService();
+  PluginService(const PluginService&) = delete;
+  PluginService& operator=(const PluginService&) = delete;
 
   void loadPlugins();
   const std::vector<PluginInfo>& getPlugins();

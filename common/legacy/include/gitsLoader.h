@@ -23,7 +23,7 @@ namespace gits {
 std::filesystem::path GetConfigPathForLoader();
 class CGitsLoader : public gits::noncopyable {
 public:
-  CGitsLoader(const char* recorderWrapperFactoryName);
+  CGitsLoader(const char* recorderWrapperFactoryName, bool legacyMode = true);
   ~CGitsLoader();
 
   std::filesystem::path GetGitsPath() const;

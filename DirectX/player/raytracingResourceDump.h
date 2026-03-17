@@ -21,7 +21,6 @@
 #include <map>
 #include <vector>
 #include <mutex>
-#include "tools_lite.h"
 
 namespace gits {
 namespace DirectX {

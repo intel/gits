@@ -17,8 +17,8 @@
 #include "platform.h"
 #include "configurationLib.h"
 
-typedef gits::Configuration*(STDCALL* FConfigure)(const char* cfgDir);
+typedef gits::Configuration*(STDCALL* FConfigure)(const char* cfgDir, bool legacyMode);
 
 extern "C" {
-gits::Configuration* STDCALL Configure(const char* cfgDir) VISIBLE;
+gits::Configuration* STDCALL Configure(const char* cfgDir, bool legacyMode) VISIBLE;
 }

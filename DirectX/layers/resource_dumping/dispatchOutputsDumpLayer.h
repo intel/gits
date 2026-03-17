@@ -79,7 +79,7 @@ private:
   bool dryRun_{};
   unsigned dispatchCount_{};
   unsigned executeCount_{};
-  bool stateRestorePhase_{};
+  unsigned currentFrame_{1};
 
   DescriptorRootSignatureService rootSignatureService_;
   DescriptorHeapTracker descriptorService_;

@@ -23,10 +23,24 @@
 
 #if defined GITS_PLATFORM_WINDOWS && (WITH_DIRECTX || WITH_VULKAN)
 #include "imGuiHUD.h"
+#include <windows.h>
 #endif
 
 namespace gits {
-bool ConfigureRecorder(const std::filesystem::path& configPath) {
+
+#ifdef GITS_PLATFORM_WINDOWS
+BOOL CALLBACK CloseWindows(HWND hwnd, LPARAM lParam) {
+  DWORD windowProcessId;
+  GetWindowThreadProcessId(hwnd, &windowProcessId);
+  if (windowProcessId == static_cast<DWORD>(lParam)) {
+    PostMessage(hwnd, WM_CLOSE, 0, 0);
+    return FALSE;
+  }
+  return TRUE;
+}
+#endif
+
+bool ConfigureRecorder(const std::filesystem::path& configPath, bool legacyMode) {
   static bool configured = false;
   if (configured) {
     return true;
@@ -61,15 +75,27 @@ bool ConfigureRecorder(const std::filesystem::path& configPath) {
 
   // TODO: Config - This should store current config, not only the file
 
-  // create file data and register it in GITS
-  gits::CGits& inst = gits::CGits::Instance();
-  std::unique_ptr<gits::CFile> file(new gits::CFile(inst.Version()));
+  if (legacyMode) {
+    // create file data and register it in GITS
+    gits::CGits& inst = gits::CGits::Instance();
+    std::unique_ptr<gits::CFile> file(new gits::CFile(inst.Version()));
 
-  file->SetDiagnosticInfo(configPath);
+    file->SetDiagnosticInfo(configPath);
 
-  file->SetConfig(configPath);
+    file->SetConfig(configPath);
 
-  inst.RegisterFileRecorder(std::move(file));
+    inst.RegisterFileRecorder(std::move(file));
+  }
+
+#ifdef GITS_PLATFORM_WINDOWS
+  if (!legacyMode) {
+    if (Configurator::Get().common.recorder.closeAppOnStopRecording) {
+      MessageBus::get().subscribe(
+          {PUBLISHER_RECORDER, TOPIC_END},
+          [](Topic t, const MessagePtr& m) { EnumWindows(CloseWindows, GetCurrentProcessId()); });
+    }
+  }
+#endif
 
 #if defined GITS_PLATFORM_WINDOWS && (WITH_DIRECTX || WITH_VULKAN)
   auto pImGuiHUD = std::make_unique<ImGuiHUD>();
@@ -90,4 +116,5 @@ bool ConfigureRecorder(const std::filesystem::path& configPath) {
   configured = true;
   return true;
 }
+
 } // namespace gits

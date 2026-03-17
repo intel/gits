@@ -9,7 +9,7 @@
 #pragma once
 
 #include "objectState.h"
-#include "gits.h"
+#include "log.h"
 
 #include <unordered_map>
 

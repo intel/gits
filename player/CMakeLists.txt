@@ -16,12 +16,14 @@ list(APPEND player_SOURCE
   ${PLAYER_HEADER_DIR}/statistics.h
   ${PLAYER_HEADER_DIR}/window.h
   ${PLAYER_HEADER_DIR}/playerUtils.h
+  ${PLAYER_HEADER_DIR}/streamPlayer.h
 
   ${PLAYER_SOURCE_DIR}/player.cpp
   ${PLAYER_SOURCE_DIR}/playerMain.cpp
   ${PLAYER_SOURCE_DIR}/sequentialExecutor.cpp
   ${PLAYER_SOURCE_DIR}/statistics.cpp
   ${PLAYER_SOURCE_DIR}/playerUtils.cpp
+  ${PLAYER_SOURCE_DIR}/streamPlayer.cpp
 )
 
 if(MSVC)
@@ -73,7 +75,7 @@ if(WITH_DIRECTX)
 endif()
 
 target_include_directories(gits_player PRIVATE ${ARGS_SOURCE_DIR})
-target_link_libraries(gits_player PRIVATE configuration)
+target_link_libraries(gits_player PRIVATE configuration stream)
 
 if(MSVC)
   target_link_libraries(gits_player PRIVATE stackwalker)

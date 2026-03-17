@@ -49,6 +49,8 @@ ${whitespace(indentation + 1)}void updateFromEnvironment();
 % if indentation == 0:
 ${whitespace(indentation+ 1 )}void CheckLegacyEnvironmentPaths();
 ${whitespace(indentation + 1)}Configuration(bool& validityFlag);
+
+${whitespace(indentation + 1)}std::string configFilePath;
 };
 % else:
 ${whitespace(indentation)}} ${data.instance_name};

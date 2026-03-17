@@ -13,7 +13,6 @@
 #include "dispatchOutputsDumpLayer.h"
 #include "accelerationStructuresDumpLayer.h"
 #include "rootSignatureDumpLayer.h"
-#include "gits.h"
 #include "log.h"
 #include "configurationLib.h"
 

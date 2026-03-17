@@ -9,7 +9,7 @@ ${header}
 
 #pragma once
 
-#include "commandWriter.h"
+#include "commandSerializer.h"
 #include "commandsAuto.h"
 #include "commandsCustom.h"
 #include "commandIdsAuto.h"
@@ -20,12 +20,12 @@ namespace gits {
 namespace DirectX {
 
 %for function in functions:
-class ${function.name}Writer : public CommandWriter {
+class ${function.name}Serializer : public stream::CommandSerializer {
 public:
-  ${function.name}Writer(${function.name}Command& command) {
-    dataSize_ = getSize(command);
-    data_.reset(new char[dataSize_]);
-    encode(command, data_.get());
+  ${function.name}Serializer(const ${function.name}Command& command) {
+    m_DataSize = getSize(command);
+    m_Data.reset(new char[m_DataSize]);
+    encode(command, m_Data.get());
   }
   unsigned Id() const override {
     return static_cast<unsigned>(CommandId::ID_${function.name.upper()});
@@ -35,12 +35,12 @@ public:
 %endfor
 %for interface in interfaces:
 %for function in interface.functions:
-class ${interface.name}${function.name}Writer : public CommandWriter {
+class ${interface.name}${function.name}Serializer : public stream::CommandSerializer {
 public:
-  ${interface.name}${function.name}Writer(${interface.name}${function.name}Command& command) {
-    dataSize_ = getSize(command);
-    data_.reset(new char[dataSize_]);
-    encode(command, data_.get());
+  ${interface.name}${function.name}Serializer(const ${interface.name}${function.name}Command& command) {
+    m_DataSize = getSize(command);
+    m_Data.reset(new char[m_DataSize]);
+    encode(command, m_Data.get());
   }
   unsigned Id() const override {
     return static_cast<unsigned>(CommandId::ID_${interface.name.upper()}_${function.name.upper()});

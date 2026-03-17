@@ -7,8 +7,9 @@
 // ===================== end_copyright_notice ==============================
 
 #include "adapterService.h"
-#include "log.h"
 #include "to_string/toStr.h"
+#include "log.h"
+#include "configurator.h"
 
 namespace gits {
 namespace DirectX {

@@ -6,8 +6,8 @@
 //
 // ===================== end_copyright_notice ==============================
 
-#include "gits.h"
 #include "resourceUsageTrackingService.h"
+#include "log.h"
 
 namespace gits {
 namespace DirectX {

@@ -8,7 +8,6 @@
 
 #include "analyzerExecuteIndirectService.h"
 #include "analyzerCommandListService.h"
-#include "gits.h"
 #include "log.h"
 
 #include <fstream>

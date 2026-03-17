@@ -7,10 +7,19 @@
 // ===================== end_copyright_notice ==============================
 
 #include "showExecutionLayer.h"
-#include "gits.h"
+#include "log.h"
+#include "keyUtils.h"
 
 namespace gits {
 namespace DirectX {
+
+void ShowExecutionLayer::post(StateRestoreBeginCommand& command) {
+  currentFrame_ = 0;
+}
+
+void ShowExecutionLayer::post(StateRestoreEndCommand& command) {
+  currentFrame_ = 1;
+}
 
 void ShowExecutionLayer::post(ID3D12DeviceCreateCommandQueueCommand& command) {
   commandQueueTypes_[command.ppCommandQueue_.key] = command.pDesc_.value->Type;
@@ -30,6 +39,9 @@ void ShowExecutionLayer::post(IDXGISwapChainPresentCommand& command) {
     p.print(true);
 
     executeCount = 0;
+    if (!isStateRestoreKey(command.key)) {
+      ++currentFrame_;
+    }
   }
 }
 
@@ -43,6 +55,9 @@ void ShowExecutionLayer::post(IDXGISwapChain1Present1Command& command) {
     p.print(true);
 
     executeCount = 0;
+    if (!isStateRestoreKey(command.key)) {
+      ++currentFrame_;
+    }
   }
 }
 
@@ -81,11 +96,10 @@ void ShowExecutionLayer::post(ID3D12CommandQueueExecuteCommandListsCommand& comm
     auto it = commandListCommands_.find(command.ppCommandLists_.keys[i]);
     if (it != commandListCommands_.end()) {
       unsigned drawCount{};
-      unsigned frameCount = printerState_.stateRestorePhase ? 0 : CGits::Instance().CurrentFrame();
 
       outBuff_ << "    " << type << " CommandList O" << command.ppCommandLists_.keys[i]
-               << " Frame #" << frameCount << " Frame Execute #" << executeCount << " CommandList #"
-               << i + 1 << "\n";
+               << " Frame #" << currentFrame_ << " Frame Execute #" << executeCount
+               << " CommandList #" << i + 1 << "\n";
 
       for (Command& c : it->second) {
         if (c.isDraw) {
@@ -96,9 +110,9 @@ void ShowExecutionLayer::post(ID3D12CommandQueueExecuteCommandListsCommand& comm
             baseStr.resize(pos);
           }
           outBuff_ << "      " << baseStr << " Frame Execute #" << executeCount << " CommandList #"
-                   << i + 1 << " CommandList Draw #" << ++drawCount << " (e_" << frameCount << "_"
-                   << executeCount << "_" << i + 1 << "_" << drawCount << ")" << frameDrawSuffix
-                   << "\n";
+                   << i + 1 << " CommandList Draw #" << ++drawCount << " (e_" << currentFrame_
+                   << "_" << executeCount << "_" << i + 1 << "_" << drawCount << ")"
+                   << frameDrawSuffix << "\n";
         } else {
           outBuff_ << "      " << c.str;
         }

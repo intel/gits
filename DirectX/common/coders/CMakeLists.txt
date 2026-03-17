@@ -19,16 +19,15 @@ source_group("common" FILES ${COMMON_SRC})
 
 set(ENCODERS_SRC
   ${SRC_DIR}/include/argumentEncoders.h
-  ${SRC_DIR}/include/commandWriter.h
-  ${SRC_DIR}/include/commandWritersFactory.h
-  ${SRC_DIR}/include/commandWritersCustom.h
+  ${SRC_DIR}/include/commandSerializersFactory.h
+  ${SRC_DIR}/include/commandSerializersCustom.h
   ${SRC_DIR}/include/commandEncodersCustom.h
-  ${SRC_DIR}/include/commandWritersAuto.h
+  ${SRC_DIR}/include/commandSerializersAuto.h
   ${SRC_DIR}/include/commandEncodersAuto.h
   ${SRC_DIR}/argumentEncoders.cpp
   ${SRC_DIR}/commandEncodersAuto.cpp
   ${SRC_DIR}/commandEncodersCustom.cpp
-  ${SRC_DIR}/commandWritersFactoryAuto.cpp
+  ${SRC_DIR}/commandSerializersFactoryAuto.cpp
 )
 source_group("encoders" FILES ${ENCODERS_SRC})
 
@@ -59,6 +58,7 @@ target_include_directories(DirectX_coders PUBLIC
 )
 
 target_link_libraries(DirectX_coders PRIVATE
+  stream
   DirectX_layer_interface
   DirectX_utils
 )

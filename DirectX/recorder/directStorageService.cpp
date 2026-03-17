@@ -7,8 +7,8 @@
 // ===================== end_copyright_notice ==============================
 
 #include "directStorageService.h"
+#include "log.h"
 #include "configurationLib.h"
-#include "gits.h"
 
 #include <fstream>
 #include <iostream>

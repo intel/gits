@@ -7,7 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "commandQueueService.h"
-#include "commandWritersAuto.h"
+#include "commandSerializersAuto.h"
 #include "stateTrackingService.h"
 
 namespace gits {
@@ -22,31 +22,31 @@ CommandQueueService::~CommandQueueService() {
 
 void CommandQueueService::addExecuteCommandLists(ID3D12CommandQueueExecuteCommandListsCommand& c) {
   CommandQueueCommand* command = new CommandQueueCommand(c.getId(), c.key);
-  command->commandWriter.reset(new ID3D12CommandQueueExecuteCommandListsWriter(c));
+  command->commandSerializer.reset(new ID3D12CommandQueueExecuteCommandListsSerializer(c));
   commands.push_back(command);
 }
 
 void CommandQueueService::addUpdateTileMappings(ID3D12CommandQueueUpdateTileMappingsCommand& c) {
   CommandQueueCommand* command = new CommandQueueCommand(c.getId(), c.key);
-  command->commandWriter.reset(new ID3D12CommandQueueUpdateTileMappingsWriter(c));
+  command->commandSerializer.reset(new ID3D12CommandQueueUpdateTileMappingsSerializer(c));
   commands.push_back(command);
 }
 
 void CommandQueueService::addCommandQueueWait(ID3D12CommandQueueWaitCommand& c) {
   CommandQueueCommand* command = new CommandQueueCommand(c.getId(), c.key);
-  command->commandWriter.reset(new ID3D12CommandQueueWaitWriter(c));
+  command->commandSerializer.reset(new ID3D12CommandQueueWaitSerializer(c));
   commands.push_back(command);
 }
 
 void CommandQueueService::addCommandQueueSignal(ID3D12CommandQueueSignalCommand& c) {
   CommandQueueCommand* command = new CommandQueueCommand(c.getId(), c.key);
-  command->commandWriter.reset(new ID3D12CommandQueueSignalWriter(c));
+  command->commandSerializer.reset(new ID3D12CommandQueueSignalSerializer(c));
   commands.push_back(command);
 }
 
 void CommandQueueService::restoreCommandQueues() {
   for (CommandQueueCommand* command : commands) {
-    stateService_.getRecorder().record(command->commandWriter.release());
+    stateService_.getRecorder().record(command->commandSerializer.release());
   }
   clearCommands();
 }

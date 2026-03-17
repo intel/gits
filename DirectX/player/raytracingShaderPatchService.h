@@ -8,17 +8,19 @@
 
 #pragma once
 
-#include "tools_lite.h"
-
+#include <string>
 #include <d3d12.h>
 
 namespace gits {
 namespace DirectX {
 
-class RaytracingShaderPatchService : public gits::noncopyable {
+class RaytracingShaderPatchService {
 public:
   RaytracingShaderPatchService();
   ~RaytracingShaderPatchService();
+  RaytracingShaderPatchService(const RaytracingShaderPatchService&) = delete;
+  RaytracingShaderPatchService& operator=(const RaytracingShaderPatchService&) = delete;
+
   void patchInstances(ID3D12GraphicsCommandList* commandList,
                       D3D12_GPU_VIRTUAL_ADDRESS instancesBuffer,
                       unsigned instancesCount,

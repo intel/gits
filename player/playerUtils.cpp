@@ -17,6 +17,7 @@
 
 #include "configurationLib.h"
 #include "argumentParser.h"
+#include "streamHeader.h"
 #include "tools.h"
 #include "log.h"
 #include "gits.h"
@@ -156,14 +157,13 @@ bool ConfigurePlayer(const std::filesystem::path& playerPath, ArgumentParser& ar
   return true;
 }
 
-void CheckSystemMemoryCompatibility() {
+void CheckSystemMemoryCompatibility(bool legacyMode) {
 #ifdef GITS_PLATFORM_WINDOWS
-  auto& filePlayer = CGits::Instance().FilePlayer();
-
   // Read the total physical memory recorded during capture from stream metadata.
   // This value comes from WMI Win32_ComputerSystem and is stored as a string.
-  auto capturedMemoryOpt =
-      filePlayer.FindProperty("diag.os_specific.Win32_ComputerSystem.TotalPhysicalMemory");
+  std::string property("diag.os_specific.Win32_ComputerSystem.TotalPhysicalMemory");
+  auto capturedMemoryOpt = legacyMode ? CGits::Instance().FilePlayer().FindProperty(property)
+                                      : stream::StreamHeader::Get().FindProperty(property);
   if (!capturedMemoryOpt) {
     LOG_TRACE << "Stream metadata does not contain capture machine memory info.";
     return;

@@ -37,10 +37,15 @@ public:
       }
 
       BenchmarkConfig cfg = {};
-      cfg.cpuFrameBenchmarkConfig.enabled = cfgYaml["Config"]["Enabled"].as<bool>();
-      cfg.cpuFrameBenchmarkConfig.output = cfgYaml["Config"]["Output"].as<std::string>();
+      cfg.output = cfgYaml["Config"]["Output"].as<std::string>();
 
-      pluginLayer_ = std::make_unique<BenchmarkLayer>(cfg);
+      if (context_.config->common.mode == GITSMode::MODE_RECORDER) {
+        std::filesystem::path outputPath = context_.config->common.recorder.dumpPath / cfg.output;
+        cfg.output = outputPath.string();
+        cfg.isCapture = true;
+      }
+      GITS_ASSERT(context_.msgBus);
+      pluginLayer_ = std::make_unique<BenchmarkLayer>(cfg, *context_.msgBus);
     }
     return pluginLayer_.get();
   }

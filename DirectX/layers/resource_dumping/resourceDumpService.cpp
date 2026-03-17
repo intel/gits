@@ -8,7 +8,6 @@
 
 #include "resourceDumpService.h"
 #include "to_string/toStr.h"
-#include "gits.h"
 #include "configurationLib.h"
 
 #include <d3dx12.h>

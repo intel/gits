@@ -10,9 +10,9 @@
 #include "resourceStateTrackingService.h"
 #include "stateTrackingService.h"
 #include "commandsAuto.h"
-#include "commandWritersAuto.h"
+#include "commandSerializersAuto.h"
 #include "commandsCustom.h"
-#include "commandWritersCustom.h"
+#include "commandSerializersCustom.h"
 #include "resourceSizeUtils.h"
 
 #include <limits>
@@ -145,7 +145,7 @@ void ResourceContentRestore::restoreMappableResources(
     mapCommand.pReadRange_.value = nullptr;
     mapCommand.ppData_.captureValue = stateService_.getUniqueFakePointer();
     mapCommand.ppData_.value = &mapCommand.ppData_.captureValue;
-    stateService_.getRecorder().record(new ID3D12ResourceMapWriter(mapCommand));
+    stateService_.getRecorder().record(new ID3D12ResourceMapSerializer(mapCommand));
 
     MappedDataMetaCommand metaCommand;
     metaCommand.key = stateService_.getUniqueCommandKey();
@@ -154,14 +154,14 @@ void ResourceContentRestore::restoreMappableResources(
     metaCommand.offset_.value = 0;
     metaCommand.data_.value = mappedData;
     metaCommand.data_.size = state.resource->GetDesc().Width;
-    stateService_.getRecorder().record(new MappedDataMetaWriter(metaCommand));
+    stateService_.getRecorder().record(new MappedDataMetaSerializer(metaCommand));
 
     ID3D12ResourceUnmapCommand unmapCommand;
     unmapCommand.key = stateService_.getUniqueCommandKey();
     unmapCommand.object_.key = state.key;
     unmapCommand.Subresource_.value = 0;
     unmapCommand.pWrittenRange_.value = nullptr;
-    stateService_.getRecorder().record(new ID3D12ResourceUnmapWriter(unmapCommand));
+    stateService_.getRecorder().record(new ID3D12ResourceUnmapSerializer(unmapCommand));
 
     state.resource->Unmap(0, nullptr);
   }
@@ -417,7 +417,7 @@ unsigned ResourceContentRestore::restoreUnmappableResources(
   mapCommand.pReadRange_.value = nullptr;
   mapCommand.ppData_.captureValue = stateService_.getUniqueFakePointer();
   mapCommand.ppData_.value = &mapCommand.ppData_.captureValue;
-  stateService_.getRecorder().record(new ID3D12ResourceMapWriter(mapCommand));
+  stateService_.getRecorder().record(new ID3D12ResourceMapSerializer(mapCommand));
 
   MappedDataMetaCommand metaCommand;
   metaCommand.key = stateService_.getUniqueCommandKey();
@@ -426,14 +426,14 @@ unsigned ResourceContentRestore::restoreUnmappableResources(
   metaCommand.offset_.value = 0;
   metaCommand.data_.value = mappedData;
   metaCommand.data_.size = resourceDesc.Width;
-  stateService_.getRecorder().record(new MappedDataMetaWriter(metaCommand));
+  stateService_.getRecorder().record(new MappedDataMetaSerializer(metaCommand));
 
   ID3D12ResourceUnmapCommand unmapCommand;
   unmapCommand.key = stateService_.getUniqueCommandKey();
   unmapCommand.object_.key = uploadResourceKey_;
   unmapCommand.Subresource_.value = 0;
   unmapCommand.pWrittenRange_.value = nullptr;
-  stateService_.getRecorder().record(new ID3D12ResourceUnmapWriter(unmapCommand));
+  stateService_.getRecorder().record(new ID3D12ResourceUnmapSerializer(unmapCommand));
 
   readbackResource->Unmap(0, nullptr);
 
@@ -450,7 +450,7 @@ unsigned ResourceContentRestore::restoreUnmappableResources(
     for (unsigned key : residencyKeys) {
       makeResident.ppObjects_.keys.push_back(key);
     }
-    stateService_.getRecorder().record(new ID3D12DeviceMakeResidentWriter(makeResident));
+    stateService_.getRecorder().record(new ID3D12DeviceMakeResidentSerializer(makeResident));
   }
 
   // restore resources contents from upload resource in subcaptured stream
@@ -480,7 +480,7 @@ unsigned ResourceContentRestore::restoreUnmappableResources(
         copyBufferRegion.SrcOffset_.value = offsetUpload;
         copyBufferRegion.NumBytes_.value = subresourceSize;
         stateService_.getRecorder().record(
-            new ID3D12GraphicsCommandListCopyBufferRegionWriter(copyBufferRegion));
+            new ID3D12GraphicsCommandListCopyBufferRegionSerializer(copyBufferRegion));
       } else {
 
         D3D12_TEXTURE_COPY_LOCATION dest{};
@@ -501,7 +501,7 @@ unsigned ResourceContentRestore::restoreUnmappableResources(
         copyTextureRegion.pSrc_.value = &src;
         copyTextureRegion.pSrc_.resourceKey = uploadResourceKey_;
         stateService_.getRecorder().record(
-            new ID3D12GraphicsCommandListCopyTextureRegionWriter(copyTextureRegion));
+            new ID3D12GraphicsCommandListCopyTextureRegionSerializer(copyTextureRegion));
       }
 
       offsetUpload += getAlignedSize(subresourceSize);
@@ -511,7 +511,8 @@ unsigned ResourceContentRestore::restoreUnmappableResources(
   ID3D12GraphicsCommandListCloseCommand commandListClose;
   commandListClose.key = stateService_.getUniqueCommandKey();
   commandListClose.object_.key = commandListKey_;
-  stateService_.getRecorder().record(new ID3D12GraphicsCommandListCloseWriter(commandListClose));
+  stateService_.getRecorder().record(
+      new ID3D12GraphicsCommandListCloseSerializer(commandListClose));
 
   ID3D12CommandQueueExecuteCommandListsCommand executeCommandLists;
   executeCommandLists.key = stateService_.getUniqueCommandKey();
@@ -522,38 +523,40 @@ unsigned ResourceContentRestore::restoreUnmappableResources(
   executeCommandLists.ppCommandLists_.keys.resize(1);
   executeCommandLists.ppCommandLists_.keys[0] = commandListKey_;
   stateService_.getRecorder().record(
-      new ID3D12CommandQueueExecuteCommandListsWriter(executeCommandLists));
+      new ID3D12CommandQueueExecuteCommandListsSerializer(executeCommandLists));
 
   ID3D12CommandQueueSignalCommand commandQueueSignal;
   commandQueueSignal.key = stateService_.getUniqueCommandKey();
   commandQueueSignal.object_.key = commandQueueKey_;
   commandQueueSignal.pFence_.key = fenceKey_;
   commandQueueSignal.Value_.value = ++recordedFenceValue_;
-  stateService_.getRecorder().record(new ID3D12CommandQueueSignalWriter(commandQueueSignal));
+  stateService_.getRecorder().record(new ID3D12CommandQueueSignalSerializer(commandQueueSignal));
 
   ID3D12FenceGetCompletedValueCommand getCompletedValue;
   getCompletedValue.key = stateService_.getUniqueCommandKey();
   getCompletedValue.object_.key = fenceKey_;
   getCompletedValue.result_.value = recordedFenceValue_;
-  stateService_.getRecorder().record(new ID3D12FenceGetCompletedValueWriter(getCompletedValue));
+  stateService_.getRecorder().record(new ID3D12FenceGetCompletedValueSerializer(getCompletedValue));
 
   ID3D12CommandAllocatorResetCommand commandAllocatorReset;
   commandAllocatorReset.key = stateService_.getUniqueCommandKey();
   commandAllocatorReset.object_.key = commandAllocatorKey_;
-  stateService_.getRecorder().record(new ID3D12CommandAllocatorResetWriter(commandAllocatorReset));
+  stateService_.getRecorder().record(
+      new ID3D12CommandAllocatorResetSerializer(commandAllocatorReset));
 
   ID3D12GraphicsCommandListResetCommand commandListReset;
   commandListReset.key = stateService_.getUniqueCommandKey();
   commandListReset.object_.key = commandListKey_;
   commandListReset.pAllocator_.key = commandAllocatorKey_;
   commandListReset.pInitialState_.key = 0;
-  stateService_.getRecorder().record(new ID3D12GraphicsCommandListResetWriter(commandListReset));
+  stateService_.getRecorder().record(
+      new ID3D12GraphicsCommandListResetSerializer(commandListReset));
 
   for (const auto key : auxiliaryPlacedResourceKeys) {
     IUnknownReleaseCommand releaseCommand;
     releaseCommand.key = stateService_.getUniqueCommandKey();
     releaseCommand.object_.key = key;
-    stateService_.getRecorder().record(new IUnknownReleaseWriter(releaseCommand));
+    stateService_.getRecorder().record(new IUnknownReleaseSerializer(releaseCommand));
   }
 
   return resourcesCount;
@@ -654,7 +657,7 @@ void ResourceContentRestore::initRestoreUnmappableResources(bool backBuffer) {
   createUploadResource.riidResource_.value = IID_ID3D12Resource;
   createUploadResource.ppvResource_.key = uploadResourceKey_;
   stateService_.getRecorder().record(
-      new ID3D12DeviceCreateCommittedResourceWriter(createUploadResource));
+      new ID3D12DeviceCreateCommittedResourceSerializer(createUploadResource));
 
   HRESULT hr{};
   if (!backBuffer) {
@@ -683,7 +686,7 @@ void ResourceContentRestore::initRestoreUnmappableResources(bool backBuffer) {
     createCommandQueue.riid_.value = IID_ID3D12CommandQueue;
     createCommandQueue.ppCommandQueue_.key = commandQueueKey_;
     stateService_.getRecorder().record(
-        new ID3D12DeviceCreateCommandQueueWriter(createCommandQueue));
+        new ID3D12DeviceCreateCommandQueueSerializer(createCommandQueue));
   }
 
   commandAllocatorKey_ = stateService_.getUniqueObjectKey();
@@ -694,7 +697,7 @@ void ResourceContentRestore::initRestoreUnmappableResources(bool backBuffer) {
   createCommandAllocator.riid_.value = IID_ID3D12CommandAllocator;
   createCommandAllocator.ppCommandAllocator_.key = commandAllocatorKey_;
   stateService_.getRecorder().record(
-      new ID3D12DeviceCreateCommandAllocatorWriter(createCommandAllocator));
+      new ID3D12DeviceCreateCommandAllocatorSerializer(createCommandAllocator));
 
   commandListKey_ = stateService_.getUniqueObjectKey();
   ID3D12DeviceCreateCommandListCommand createCommandList;
@@ -706,7 +709,8 @@ void ResourceContentRestore::initRestoreUnmappableResources(bool backBuffer) {
   createCommandList.pInitialState_.value = nullptr;
   createCommandList.riid_.value = IID_ID3D12CommandList;
   createCommandList.ppCommandList_.key = commandListKey_;
-  stateService_.getRecorder().record(new ID3D12DeviceCreateCommandListWriter(createCommandList));
+  stateService_.getRecorder().record(
+      new ID3D12DeviceCreateCommandListSerializer(createCommandList));
 
   fenceKey_ = stateService_.getUniqueObjectKey();
   ID3D12DeviceCreateFenceCommand createFence;
@@ -716,7 +720,7 @@ void ResourceContentRestore::initRestoreUnmappableResources(bool backBuffer) {
   createFence.Flags_.value = D3D12_FENCE_FLAG_NONE;
   createFence.riid_.value = IID_ID3D12Fence;
   createFence.ppFence_.key = fenceKey_;
-  stateService_.getRecorder().record(new ID3D12DeviceCreateFenceWriter(createFence));
+  stateService_.getRecorder().record(new ID3D12DeviceCreateFenceSerializer(createFence));
 
   restoreUnmappableResourcesInitialized_ = true;
 }
@@ -739,27 +743,27 @@ void ResourceContentRestore::cleanupRestoreUnmappableResources() {
   IUnknownReleaseCommand releaseFence;
   releaseFence.key = stateService_.getUniqueCommandKey();
   releaseFence.object_.key = fenceKey_;
-  stateService_.getRecorder().record(new IUnknownReleaseWriter(releaseFence));
+  stateService_.getRecorder().record(new IUnknownReleaseSerializer(releaseFence));
 
   IUnknownReleaseCommand releaseCommandList;
   releaseCommandList.key = stateService_.getUniqueCommandKey();
   releaseCommandList.object_.key = commandListKey_;
-  stateService_.getRecorder().record(new IUnknownReleaseWriter(releaseCommandList));
+  stateService_.getRecorder().record(new IUnknownReleaseSerializer(releaseCommandList));
 
   IUnknownReleaseCommand releaseCommandAllocator;
   releaseCommandAllocator.key = stateService_.getUniqueCommandKey();
   releaseCommandAllocator.object_.key = commandAllocatorKey_;
-  stateService_.getRecorder().record(new IUnknownReleaseWriter(releaseCommandAllocator));
+  stateService_.getRecorder().record(new IUnknownReleaseSerializer(releaseCommandAllocator));
 
   IUnknownReleaseCommand releaseCommandQueue;
   releaseCommandQueue.key = stateService_.getUniqueCommandKey();
   releaseCommandQueue.object_.key = commandQueueKey_;
-  stateService_.getRecorder().record(new IUnknownReleaseWriter(releaseCommandQueue));
+  stateService_.getRecorder().record(new IUnknownReleaseSerializer(releaseCommandQueue));
 
   IUnknownReleaseCommand releaseUploadResource;
   releaseUploadResource.key = stateService_.getUniqueCommandKey();
   releaseUploadResource.object_.key = uploadResourceKey_;
-  stateService_.getRecorder().record(new IUnknownReleaseWriter(releaseUploadResource));
+  stateService_.getRecorder().record(new IUnknownReleaseSerializer(releaseUploadResource));
 
   restoreUnmappableResourcesInitialized_ = false;
 }
@@ -871,7 +875,7 @@ unsigned ResourceContentRestore::createSubcaptureAuxiliaryPlacedResource(
     c.pOptimizedClearValue_.value = command->pOptimizedClearValue_.value;
     c.riid_.value = command->riid_.value;
     c.ppvResource_.key = stateService_.getUniqueObjectKey();
-    stateService_.getRecorder().record(new ID3D12DeviceCreatePlacedResourceWriter(c));
+    stateService_.getRecorder().record(new ID3D12DeviceCreatePlacedResourceSerializer(c));
     auxiliaryResourceKey = c.ppvResource_.key;
   } else if (resourceObjectState->creationCommand->getId() ==
              CommandId::ID_ID3D12DEVICE8_CREATEPLACEDRESOURCE1) {
@@ -888,7 +892,7 @@ unsigned ResourceContentRestore::createSubcaptureAuxiliaryPlacedResource(
     c.pOptimizedClearValue_.value = command->pOptimizedClearValue_.value;
     c.riid_.value = command->riid_.value;
     c.ppvResource_.key = stateService_.getUniqueObjectKey();
-    stateService_.getRecorder().record(new ID3D12Device8CreatePlacedResource1Writer(c));
+    stateService_.getRecorder().record(new ID3D12Device8CreatePlacedResource1Serializer(c));
     auxiliaryResourceKey = c.ppvResource_.key;
   } else if (resourceObjectState->creationCommand->getId() ==
              CommandId::ID_ID3D12DEVICE10_CREATEPLACEDRESOURCE2) {
@@ -907,7 +911,7 @@ unsigned ResourceContentRestore::createSubcaptureAuxiliaryPlacedResource(
     c.pCastableFormats_.value = command->pCastableFormats_.value;
     c.riid_.value = command->riid_.value;
     c.ppvResource_.key = stateService_.getUniqueObjectKey();
-    stateService_.getRecorder().record(new ID3D12Device10CreatePlacedResource2Writer(c));
+    stateService_.getRecorder().record(new ID3D12Device10CreatePlacedResource2Serializer(c));
     auxiliaryResourceKey = c.ppvResource_.key;
   } else if (resourceObjectState->creationCommand->getId() ==
              CommandId::INTC_D3D12_CREATEPLACEDRESOURCE) {
@@ -924,7 +928,7 @@ unsigned ResourceContentRestore::createSubcaptureAuxiliaryPlacedResource(
     c.pOptimizedClearValue_.value = command->pOptimizedClearValue_.value;
     c.riid_.value = command->riid_.value;
     c.ppvResource_.key = stateService_.getUniqueObjectKey();
-    stateService_.getRecorder().record(new INTC_D3D12_CreatePlacedResourceWriter(c));
+    stateService_.getRecorder().record(new INTC_D3D12_CreatePlacedResourceSerializer(c));
     auxiliaryResourceKey = c.ppvResource_.key;
   } else {
     GITS_ASSERT(false && "Unhandled ObjectState");
@@ -957,7 +961,7 @@ void ResourceContentRestore::evictPrevResidencyObjects() {
   for (unsigned key : residencyKeys) {
     evict.ppObjects_.keys.push_back(key);
   }
-  stateService_.getRecorder().record(new ID3D12DeviceEvictWriter(evict));
+  stateService_.getRecorder().record(new ID3D12DeviceEvictSerializer(evict));
 }
 
 } // namespace DirectX

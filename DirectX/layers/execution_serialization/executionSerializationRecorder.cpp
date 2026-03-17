@@ -7,7 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "executionSerializationRecorder.h"
-#include "directXApiIfaceExecutionSerialization.h"
+#include "configurator.h"
 
 #include <filesystem>
 
@@ -23,27 +23,24 @@ ExecutionSerializationRecorder::ExecutionSerializationRecorder() {
     return;
   }
 
+  Configurator::PrepareSubcapturePath();
   std::string subcapturePath = config.common.player.subcapturePath.string();
   subcapturePath += "_serialized";
   const_cast<std::filesystem::path&>(config.common.player.subcapturePath) = subcapturePath;
 
-  CGits::Instance().apis.UseApi3dIface(
-      std::shared_ptr<ApisIface::Api3d>(new DirectXApiIfaceExecutionSerialization()));
-  CRecorder::Instance();
+  recorder_.reset(new stream::StreamWriter(subcapturePath));
 
   copyAuxiliaryFiles();
 }
 
-void ExecutionSerializationRecorder::record(CToken* token) {
-  CRecorder::Instance().Schedule(token);
+void ExecutionSerializationRecorder::record(stream::CommandSerializer* commandSerializer) {
+  recorder_->Record(*commandSerializer);
+  delete commandSerializer;
 }
 
-void ExecutionSerializationRecorder::frameEnd() {
-  CRecorder::Instance().FrameEnd();
-}
-
-bool ExecutionSerializationRecorder::isRunning() {
-  return CRecorder::Instance().Running();
+void ExecutionSerializationRecorder::finishRecording() {
+  recorder_->Close();
+  LOG_INFO << "Execution serialization recording finished";
 }
 
 void ExecutionSerializationRecorder::copyAuxiliaryFiles() {

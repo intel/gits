@@ -23,7 +23,7 @@
 #include "logDxErrorLayerAuto.h"
 #include "imguiHudLayer.h"
 #include "ccodeLayerAuto.h"
-#include "gits.h"
+#include "log.h"
 
 namespace gits {
 namespace DirectX {

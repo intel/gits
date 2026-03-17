@@ -7,8 +7,8 @@
 // ===================== end_copyright_notice ==============================
 
 #include "gpuPatchDump.h"
+#include "log.h"
 #include "exception.h"
-#include "gits.h"
 
 #include <fstream>
 #include <iomanip>

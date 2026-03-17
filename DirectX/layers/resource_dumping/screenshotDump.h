@@ -15,15 +15,17 @@
 #include <thread>
 #include <wrl/client.h>
 #include <memory>
-#include "tools_lite.h"
 
 namespace gits {
 namespace DirectX {
 
-class ScreenshotDump : public gits::noncopyable {
+class ScreenshotDump {
 public:
   ScreenshotDump(ID3D12CommandQueue* commandQueue);
   ~ScreenshotDump();
+  ScreenshotDump(const ScreenshotDump&) = delete;
+  ScreenshotDump& operator=(const ScreenshotDump&) = delete;
+
   void dump(ID3D12Resource* backBuffer, const std::wstring& dumpName);
 
 private:

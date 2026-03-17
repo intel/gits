@@ -7,7 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "capturePlayerGpuAddressService.h"
-#include "gits.h"
+#include "log.h"
 
 #include <algorithm>
 

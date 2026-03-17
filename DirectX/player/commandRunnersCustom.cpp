@@ -6,7 +6,7 @@
 //
 // ===================== end_copyright_notice ==============================
 
-#include "commandPlayersCustom.h"
+#include "commandRunnersCustom.h"
 #include "commandsCustom.h"
 #include "layerAuto.h"
 #include "playerManager.h"
@@ -17,9 +17,57 @@
 namespace gits {
 namespace DirectX {
 
+#pragma region Common
+
+void StateRestoreBeginRunner::Run() {
+  auto& manager = PlayerManager::get();
+
+  for (Layer* layer : manager.getPreLayers()) {
+    layer->pre(command);
+  }
+  for (Layer* layer : manager.getPostLayers()) {
+    layer->post(command);
+  }
+}
+
+void StateRestoreEndRunner::Run() {
+  auto& manager = PlayerManager::get();
+
+  for (Layer* layer : manager.getPreLayers()) {
+    layer->pre(command);
+  }
+  for (Layer* layer : manager.getPostLayers()) {
+    layer->post(command);
+  }
+}
+
+void FrameEndRunner::Run() {
+  auto& manager = PlayerManager::get();
+
+  for (Layer* layer : manager.getPreLayers()) {
+    layer->pre(command);
+  }
+  for (Layer* layer : manager.getPostLayers()) {
+    layer->post(command);
+  }
+}
+
+void MarkerUInt64Runner::Run() {
+  auto& manager = PlayerManager::get();
+
+  for (Layer* layer : manager.getPreLayers()) {
+    layer->pre(command);
+  }
+  for (Layer* layer : manager.getPostLayers()) {
+    layer->post(command);
+  }
+}
+
+#pragma endregion
+
 #pragma region IUnknown
 
-void IUnknownQueryInterfacePlayer::Run() {
+void IUnknownQueryInterfaceRunner::Run() {
   auto& manager = PlayerManager::get();
 
   updateInterface(manager, command.object_);
@@ -46,7 +94,7 @@ void IUnknownQueryInterfacePlayer::Run() {
   }
 }
 
-void IUnknownAddRefPlayer::Run() {
+void IUnknownAddRefRunner::Run() {
   auto& manager = PlayerManager::get();
 
   updateInterface(manager, command.object_);
@@ -64,7 +112,7 @@ void IUnknownAddRefPlayer::Run() {
   }
 }
 
-void IUnknownReleasePlayer::Run() {
+void IUnknownReleaseRunner::Run() {
   auto& manager = PlayerManager::get();
 
   updateInterface(manager, command.object_);
@@ -86,7 +134,7 @@ void IUnknownReleasePlayer::Run() {
 
 #pragma region MetaCommands
 
-void CreateWindowMetaPlayer::Run() {
+void CreateWindowMetaRunner::Run() {
   auto& manager = PlayerManager::get();
   for (Layer* layer : manager.getPreLayers()) {
     layer->pre(command);
@@ -103,7 +151,7 @@ void CreateWindowMetaPlayer::Run() {
   }
 }
 
-void MappedDataMetaPlayer::Run() {
+void MappedDataMetaRunner::Run() {
   auto& manager = PlayerManager::get();
   for (Layer* layer : manager.getPreLayers()) {
     layer->pre(command);
@@ -120,7 +168,7 @@ void MappedDataMetaPlayer::Run() {
   }
 }
 
-void CreateHeapAllocationMetaPlayer::Run() {
+void CreateHeapAllocationMetaRunner::Run() {
   auto& manager = PlayerManager::get();
   for (Layer* layer : manager.getPreLayers()) {
     layer->pre(command);
@@ -138,7 +186,7 @@ void CreateHeapAllocationMetaPlayer::Run() {
 
 #pragma endregion
 
-void WaitForFenceSignaledPlayer::Run() {
+void WaitForFenceSignaledRunner::Run() {
   auto& manager = PlayerManager::get();
   updateInterface(manager, command.fence_);
 
@@ -153,7 +201,7 @@ void WaitForFenceSignaledPlayer::Run() {
   }
 }
 
-void DllContainerMetaPlayer::Run() {
+void DllContainerMetaRunner::Run() {
   auto& manager = PlayerManager::get();
 
   for (Layer* layer : manager.getPreLayers()) {
@@ -167,7 +215,7 @@ void DllContainerMetaPlayer::Run() {
   }
 }
 
-void INTC_D3D12_GetSupportedVersionsPlayer::Run() {
+void INTC_D3D12_GetSupportedVersionsRunner::Run() {
   auto& manager = PlayerManager::get();
 
   updateInterface(manager, command.pDevice_);
@@ -187,7 +235,7 @@ void INTC_D3D12_GetSupportedVersionsPlayer::Run() {
   }
 }
 
-void INTC_D3D12_CreateDeviceExtensionContextPlayer::Run() {
+void INTC_D3D12_CreateDeviceExtensionContextRunner::Run() {
   auto& manager = PlayerManager::get();
 
   updateInterface(manager, command.pDevice_);
@@ -215,7 +263,7 @@ void INTC_D3D12_CreateDeviceExtensionContextPlayer::Run() {
   }
 }
 
-void INTC_D3D12_CreateDeviceExtensionContext1Player::Run() {
+void INTC_D3D12_CreateDeviceExtensionContext1Runner::Run() {
   auto& manager = PlayerManager::get();
 
   updateInterface(manager, command.pDevice_);
@@ -248,7 +296,7 @@ void INTC_D3D12_CreateDeviceExtensionContext1Player::Run() {
   }
 }
 
-void INTC_D3D12_SetApplicationInfoPlayer::Run() {
+void INTC_D3D12_SetApplicationInfoRunner::Run() {
   auto& manager = PlayerManager::get();
 
   for (Layer* layer : manager.getPreLayers()) {
@@ -264,7 +312,7 @@ void INTC_D3D12_SetApplicationInfoPlayer::Run() {
   }
 }
 
-void INTC_DestroyDeviceExtensionContextPlayer::Run() {
+void INTC_DestroyDeviceExtensionContextRunner::Run() {
   auto& manager = PlayerManager::get();
 
   for (Layer* layer : manager.getPreLayers()) {
@@ -286,7 +334,7 @@ void INTC_DestroyDeviceExtensionContextPlayer::Run() {
   }
 }
 
-void INTC_D3D12_CheckFeatureSupportPlayer::Run() {
+void INTC_D3D12_CheckFeatureSupportRunner::Run() {
   auto& manager = PlayerManager::get();
   for (Layer* layer : manager.getPreLayers()) {
     layer->pre(command);
@@ -305,7 +353,7 @@ void INTC_D3D12_CheckFeatureSupportPlayer::Run() {
   }
 }
 
-void INTC_D3D12_SetFeatureSupportPlayer::Run() {
+void INTC_D3D12_SetFeatureSupportRunner::Run() {
   auto& manager = PlayerManager::get();
   for (Layer* layer : manager.getPreLayers()) {
     layer->pre(command);
@@ -322,7 +370,7 @@ void INTC_D3D12_SetFeatureSupportPlayer::Run() {
   }
 }
 
-void INTC_D3D12_GetResourceAllocationInfoPlayer::Run() {
+void INTC_D3D12_GetResourceAllocationInfoRunner::Run() {
   auto& manager = PlayerManager::get();
   for (Layer* layer : manager.getPreLayers()) {
     layer->pre(command);
@@ -341,7 +389,7 @@ void INTC_D3D12_GetResourceAllocationInfoPlayer::Run() {
   }
 }
 
-void INTC_D3D12_CreateComputePipelineStatePlayer::Run() {
+void INTC_D3D12_CreateComputePipelineStateRunner::Run() {
   auto& manager = PlayerManager::get();
 
   updateInterface(manager, command.pDesc_);
@@ -368,7 +416,7 @@ void INTC_D3D12_CreateComputePipelineStatePlayer::Run() {
   }
 }
 
-void INTC_D3D12_CreatePlacedResourcePlayer::Run() {
+void INTC_D3D12_CreatePlacedResourceRunner::Run() {
   auto& manager = PlayerManager::get();
 
   updateInterface(manager, command.pHeap_);
@@ -397,7 +445,7 @@ void INTC_D3D12_CreatePlacedResourcePlayer::Run() {
   }
 }
 
-void INTC_D3D12_CreateCommittedResourcePlayer::Run() {
+void INTC_D3D12_CreateCommittedResourceRunner::Run() {
   auto& manager = PlayerManager::get();
 
   for (Layer* layer : manager.getPreLayers()) {
@@ -424,7 +472,7 @@ void INTC_D3D12_CreateCommittedResourcePlayer::Run() {
   }
 }
 
-void INTC_D3D12_CreateHeapPlayer::Run() {
+void INTC_D3D12_CreateHeapRunner::Run() {
   auto& manager = PlayerManager::get();
 
   for (Layer* layer : manager.getPreLayers()) {
@@ -452,7 +500,7 @@ void INTC_D3D12_CreateHeapPlayer::Run() {
 
 #pragma region NVAPI
 
-void NvAPI_InitializePlayer::Run() {
+void NvAPI_InitializeRunner::Run() {
   auto& manager = PlayerManager::get();
 
   for (Layer* layer : manager.getPreLayers()) {
@@ -468,7 +516,7 @@ void NvAPI_InitializePlayer::Run() {
   }
 }
 
-void NvAPI_UnloadPlayer::Run() {
+void NvAPI_UnloadRunner::Run() {
   auto& manager = PlayerManager::get();
 
   for (Layer* layer : manager.getPreLayers()) {
@@ -484,7 +532,7 @@ void NvAPI_UnloadPlayer::Run() {
   }
 }
 
-void NvAPI_D3D12_SetCreatePipelineStateOptionsPlayer::Run() {
+void NvAPI_D3D12_SetCreatePipelineStateOptionsRunner::Run() {
   auto& manager = PlayerManager::get();
 
   updateInterface(manager, command.pDevice_);
@@ -503,7 +551,7 @@ void NvAPI_D3D12_SetCreatePipelineStateOptionsPlayer::Run() {
   }
 }
 
-void NvAPI_D3D12_SetNvShaderExtnSlotSpacePlayer::Run() {
+void NvAPI_D3D12_SetNvShaderExtnSlotSpaceRunner::Run() {
   auto& manager = PlayerManager::get();
 
   updateInterface(manager, command.pDev_);
@@ -522,7 +570,7 @@ void NvAPI_D3D12_SetNvShaderExtnSlotSpacePlayer::Run() {
   }
 }
 
-void NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadPlayer::Run() {
+void NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadRunner::Run() {
   auto& manager = PlayerManager::get();
 
   updateInterface(manager, command.pDev_);
@@ -541,7 +589,7 @@ void NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadPlayer::Run() {
   }
 }
 
-void NvAPI_D3D12_BuildRaytracingAccelerationStructureExPlayer::Run() {
+void NvAPI_D3D12_BuildRaytracingAccelerationStructureExRunner::Run() {
   auto& manager = PlayerManager::get();
 
   updateInterface(manager, command.pCommandList_);
@@ -560,7 +608,7 @@ void NvAPI_D3D12_BuildRaytracingAccelerationStructureExPlayer::Run() {
   }
 }
 
-void NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayPlayer::Run() {
+void NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayRunner::Run() {
   auto& manager = PlayerManager::get();
 
   updateInterface(manager, command.pCommandList_);
@@ -579,7 +627,7 @@ void NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayPlayer::Run() {
   }
 }
 
-void NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationPlayer::Run() {
+void NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationRunner::Run() {
   auto& manager = PlayerManager::get();
 
   updateInterface(manager, command.pCommandList_);

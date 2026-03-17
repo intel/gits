@@ -23,7 +23,8 @@ namespace gits {
 enum PublisherId {
   PUBLISHER_PLAYER = 0,
   PUBLISHER_RECORDER,
-  PUBLISHER_PLUGIN
+  PUBLISHER_PLUGIN,
+  PUBLISHER_COUNT
 };
 enum TopicId {
   TOPIC_NONE = 0,
@@ -38,7 +39,8 @@ enum TopicId {
   TOPIC_PROGRAM_START,
   TOPIC_PROGRAM_EXIT,
   TOPIC_LOOP_BEGIN,
-  TOPIC_LOOP_END
+  TOPIC_LOOP_END,
+  TOPIC_COUNT
 };
 struct Topic {
   PublisherId publisherId{};
@@ -69,6 +71,12 @@ using Subscription = std::pair<unsigned, SubscriberCb>;
 
 class MessageBus : gits::noncopyable {
 public:
+  static MessageBus& get() {
+    static MessageBus instance;
+    return instance;
+  }
+  MessageBus();
+
   unsigned subscribe(Topic topic, SubscriberCb callback);
   void unsubscribe(unsigned id);
   void publish(Topic topic, const MessagePtr& message);

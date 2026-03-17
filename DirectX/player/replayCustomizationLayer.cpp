@@ -12,7 +12,6 @@
 #include "interfaceArgumentUpdaters.h"
 #include "keyUtils.h"
 #include "to_string/toStr.h"
-#include "gits.h"
 #include "log.h"
 
 #include <d3dx12.h>

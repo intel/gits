@@ -7,8 +7,8 @@
 // ===================== end_copyright_notice ==============================
 
 #include "gpuPatchLayer.h"
+#include "log.h"
 #include "exception.h"
-#include "gits.h"
 
 namespace gits {
 namespace DirectX {

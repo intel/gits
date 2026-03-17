@@ -7,7 +7,6 @@
 // ===================== end_copyright_notice ==============================
 
 #include "gpuAddressService.h"
-#include "gits.h"
 #include "log.h"
 
 #include <wrl/client.h>

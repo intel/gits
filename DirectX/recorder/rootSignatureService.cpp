@@ -8,7 +8,6 @@
 
 #include "rootSignatureService.h"
 #include "captureManager.h"
-#include "gits.h"
 
 #include <wrl/client.h>
 

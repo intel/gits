@@ -17,7 +17,6 @@ set(ROOT_SRC
   ${SRC_DIR}/executionSerializationLayerCustom.cpp
   ${SRC_DIR}/executionSerializationRecorder.h
   ${SRC_DIR}/executionSerializationRecorder.cpp
-  ${SRC_DIR}/directXApiIfaceExecutionSerialization.h
   ${SRC_DIR}/commandListExecutionService.h
   ${SRC_DIR}/commandListExecutionService.cpp
   ${SRC_DIR}/cpuDescriptorsService.h
@@ -40,6 +39,7 @@ target_include_directories(DirectX_execution_serialization PRIVATE
 )
 
 target_link_libraries(DirectX_execution_serialization PRIVATE
+  stream
   DirectX_layer_interface
   DirectX_utils
   DirectX_coders

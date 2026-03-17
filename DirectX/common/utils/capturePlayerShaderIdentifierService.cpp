@@ -7,7 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "capturePlayerShaderIdentifierService.h"
-#include "gits.h"
+#include "log.h"
 
 #include <algorithm>
 

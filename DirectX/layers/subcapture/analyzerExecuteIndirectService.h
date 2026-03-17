@@ -18,12 +18,15 @@ namespace DirectX {
 
 class AnalyzerCommandListService;
 
-class AnalyzerExecuteIndirectService : gits::noncopyable {
+class AnalyzerExecuteIndirectService {
 public:
   AnalyzerExecuteIndirectService(CapturePlayerGpuAddressService& gpuAddressService,
                                  AnalyzerRaytracingService& raytracingService,
                                  AnalyzerCommandListService& commandListService);
   ~AnalyzerExecuteIndirectService();
+  AnalyzerExecuteIndirectService(AnalyzerExecuteIndirectService&) = delete;
+  AnalyzerExecuteIndirectService& operator=(AnalyzerExecuteIndirectService&) = delete;
+
   void createCommandSignature(ID3D12DeviceCreateCommandSignatureCommand& c);
   void executeIndirect(ID3D12GraphicsCommandListExecuteIndirectCommand& c);
 

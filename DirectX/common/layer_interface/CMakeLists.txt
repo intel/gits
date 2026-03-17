@@ -43,7 +43,9 @@ add_dependencies(DirectX_layer_interface
 )
 
 target_link_libraries(DirectX_layer_interface PUBLIC
-  common
+  stream
+  log
+  configuration
 )
 
 set_target_properties(DirectX_layer_interface PROPERTIES LINKER_LANGUAGE CXX)

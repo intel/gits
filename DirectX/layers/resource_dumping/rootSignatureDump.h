@@ -8,9 +8,7 @@
 
 #pragma once
 
-#include "tools_lite.h"
 #include <d3d12.h>
-
 #include <fstream>
 
 namespace gits {
@@ -31,8 +29,12 @@ std::ofstream& operator<<(std::ofstream& ofs, const D3D12_ROOT_SIGNATURE_DESC& a
 std::ofstream& operator<<(std::ofstream& ofs, const D3D12_ROOT_SIGNATURE_DESC1& arg);
 std::ofstream& operator<<(std::ofstream& ofs, const D3D12_ROOT_SIGNATURE_DESC2& arg);
 
-class RootSignatureDump : public gits::noncopyable {
+class RootSignatureDump {
 public:
+  RootSignatureDump() = default;
+  RootSignatureDump(const RootSignatureDump&) = delete;
+  RootSignatureDump& operator=(const RootSignatureDump&) = delete;
+
   void DeserializeRootSignature(const void* pBlobWithRootSignature,
                                 size_t blobLengthInBytes,
                                 const std::wstring& dumpName);

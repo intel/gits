@@ -7,7 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "gpuExecutionTracker.h"
-#include "gits.h"
+#include "log.h"
 
 #include <queue>
 

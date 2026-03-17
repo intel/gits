@@ -7,8 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "subcaptureRecorder.h"
-#include "directXApiIfaceSubcapture.h"
-#include "gits.h"
+#include "configurator.h"
 #include "log.h"
 
 #include <filesystem>
@@ -25,6 +24,8 @@ SubcaptureRecorder::SubcaptureRecorder() {
     return;
   }
 
+  Configurator::PrepareSubcapturePath();
+  std::string subcapturePath = config.common.player.subcapturePath.string();
   std::string commandListExecutions = config.directx.features.subcapture.commandListExecutions;
   if (!commandListExecutions.empty()) {
     std::filesystem::path subcapturePath = config.common.player.subcapturePath;
@@ -33,22 +34,27 @@ SubcaptureRecorder::SubcaptureRecorder() {
     path += "_frames_" + config.directx.features.subcapture.frames;
     path += "_executions_" + commandListExecutions;
     const_cast<std::filesystem::path&>(config.common.player.subcapturePath) = path;
+    subcapturePath = path;
     commandListSubcapture_ = true;
   }
 
-  CGits::Instance().apis.UseApi3dIface(
-      std::shared_ptr<ApisIface::Api3d>(new DirectXApiIfaceSubcapture()));
-  CRecorder::Instance();
+  recorder_.reset(new stream::StreamWriter(subcapturePath));
 
   copyAuxiliaryFiles();
 }
 
-void SubcaptureRecorder::record(CToken* token) {
-  CRecorder::Instance().Schedule(token);
+SubcaptureRecorder::~SubcaptureRecorder() {
+  finishRecording();
 }
 
-void SubcaptureRecorder::frameEnd() {
-  CRecorder::Instance().FrameEnd();
+void SubcaptureRecorder::record(stream::CommandSerializer* commandSerializer) {
+  recorder_->Record(*commandSerializer);
+  delete commandSerializer;
+}
+
+void SubcaptureRecorder::finishRecording() {
+  recorder_->Close();
+  LOG_INFO << "Subcapture recording finished";
 }
 
 void SubcaptureRecorder::copyAuxiliaryFiles() {

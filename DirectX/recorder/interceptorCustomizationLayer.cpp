@@ -10,7 +10,7 @@
 #include "wrapperUtils.h"
 #include "captureManager.h"
 #include "intelExtensionsWrappers.h"
-#include "gits.h"
+#include "log.h"
 
 #include <wrl/client.h>
 

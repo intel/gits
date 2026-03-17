@@ -8,9 +8,10 @@
 
 #pragma once
 
-#include "gits.h"
-#include "recorder.h"
-#include "streams.h"
+#include "commandSerializer.h"
+#include "streamWriter.h"
+
+#include <memory>
 
 namespace gits {
 namespace DirectX {
@@ -18,9 +19,10 @@ namespace DirectX {
 class SubcaptureRecorder {
 public:
   SubcaptureRecorder();
+  ~SubcaptureRecorder();
 
-  void record(CToken* token);
-  void frameEnd();
+  void record(stream::CommandSerializer* commandSerializer);
+  void finishRecording();
   bool commandListSubcapture() {
     return commandListSubcapture_;
   }
@@ -29,6 +31,7 @@ private:
   void copyAuxiliaryFiles();
 
 private:
+  std::unique_ptr<stream::StreamWriter> recorder_;
   bool commandListSubcapture_{};
 };
 

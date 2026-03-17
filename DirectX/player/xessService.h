@@ -8,7 +8,6 @@
 
 #pragma once
 
-#include "gits.h"
 #include "xessDispatchTableAuto.h"
 #include "xellDispatchTableAuto.h"
 #include "xefgDispatchTableAuto.h"
@@ -18,10 +17,13 @@
 namespace gits {
 namespace DirectX {
 
-class XessService : public gits::noncopyable {
+class XessService {
 public:
   XessService() = default;
   ~XessService();
+  XessService(const XessService&) = delete;
+  XessService& operator=(const XessService&) = delete;
+
   bool loadXess(std::filesystem::path path);
   bool loadXell(std::filesystem::path path);
   bool loadXefg(std::filesystem::path path);

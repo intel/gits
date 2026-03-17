@@ -25,6 +25,8 @@ public:
   ShowExecutionLayer(FastOStringStream& outBuff)
       : Layer("ShowExecution"), printerState_(mutex_), outBuff_(outBuff) {}
 
+  void post(StateRestoreBeginCommand& command) override;
+  void post(StateRestoreEndCommand& command) override;
   void post(ID3D12DeviceCreateCommandQueueCommand& command) override;
   void post(ID3D12Device9CreateCommandQueue1Command& command) override;
   void post(IDXGISwapChainPresentCommand& command) override;
@@ -89,6 +91,7 @@ private:
   std::map<unsigned, std::vector<Command>> commandListCommands_;
   std::map<unsigned, D3D12_COMMAND_LIST_TYPE> commandQueueTypes_;
   unsigned executeCount{};
+  unsigned currentFrame_{1};
   GpuExecutionTracker gpuExecutionTracker_;
 };
 

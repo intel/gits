@@ -8,8 +8,8 @@
 
 #include "rootSignatureDumpLayer.h"
 #include "rootSignatureDump.h"
-#include "gits.h"
 #include "to_string/toStr.h"
+
 #include "configurationLib.h"
 
 namespace gits {

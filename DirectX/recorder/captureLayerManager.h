@@ -25,8 +25,13 @@ namespace DirectX {
 
 class CaptureManager;
 
-class CaptureLayerManager : public gits::noncopyable {
+class CaptureLayerManager {
 public:
+  CaptureLayerManager() = default;
+  ~CaptureLayerManager() = default;
+  CaptureLayerManager(const CaptureLayerManager&) = delete;
+  CaptureLayerManager& operator=(const CaptureLayerManager&) = delete;
+
   void loadLayers(CaptureManager& captureManager,
                   GitsRecorder& gitsRecorder,
                   GpuAddressService& gpuAddressService,

@@ -6,28 +6,45 @@
 //
 // ===================== end_copyright_notice ==============================
 
-#pragma once
-
 #include "gitsRecorder.h"
-
-#include <windows.h>
+#include "messageBus.h"
+#include "commandSerializersCustom.h"
+#include "configurator.h"
 
 namespace gits {
 namespace DirectX {
 
-void GitsRecorder::record(unsigned tokenKey, CToken* token) {
+GitsRecorder::GitsRecorder() {
+  recorder_.reset(new stream::StreamWriter(Configurator::Get().common.recorder.dumpPath));
+  gits::MessageBus::get().subscribe({PUBLISHER_RECORDER, TOPIC_PROGRAM_EXIT},
+                                    [this](Topic t, const MessagePtr& m) { close(); });
+  gits::MessageBus::get().subscribe({PUBLISHER_PLUGIN, TOPIC_CLOSE_RECORDER},
+                                    [this](Topic t, const MessagePtr& m) { close(); });
+}
+
+void GitsRecorder::record(unsigned tokenKey, stream::CommandSerializer* token) {
   std::lock_guard<std::mutex> lock(mutex_);
-  if (!recorder_) {
-    return;
-  } else if (recorder_->IsMarkedForDeletion()) {
-    recorder_->Close();
+  if (closed_) {
+    delete token;
     return;
   }
   orderedSchedule({tokenKey, token});
 }
 
-GitsRecorder::GitsRecorder() {
-  recorder_ = &gits::CRecorder::Instance();
+void GitsRecorder::close() {
+  std::lock_guard<std::mutex> lock(mutex_);
+  if (closed_) {
+    return;
+  }
+  closed_ = true;
+  checkPendingTokens();
+  recorder_->Close();
+
+  gits::MessageBus::get().publish(
+      {PUBLISHER_RECORDER, TOPIC_STREAM_SAVED},
+      std::make_shared<StreamSavedMessage>(Configurator::Get().common.recorder.dumpPath.string()));
+  gits::MessageBus::get().publish({PUBLISHER_RECORDER, TOPIC_END},
+                                  std::make_shared<EndOfRecordingMessage>());
 }
 
 void GitsRecorder::frameEnd(unsigned tokenKey) {
@@ -52,12 +69,15 @@ void GitsRecorder::skip(unsigned tokenKey) {
 
 void GitsRecorder::orderedSchedule(OrderedToken token) {
   if (token.key == nextKey_) {
-    recorder_->Schedule(token.token);
+    recorder_->Record(*token.token);
+    delete token.token;
     checkFrameEnd(token.key);
     updateNextKey();
     checkPendingTokens();
   } else if (token.key > nextKey_ && getRangeIt(token.key) == skippedKeyRanges_.end()) {
     tokens_.push(token);
+  } else {
+    delete token.token;
   }
 }
 
@@ -84,7 +104,8 @@ void GitsRecorder::checkPendingTokens() {
     if (tokens_.top().key != nextKey_) {
       break;
     }
-    recorder_->Schedule(tokens_.top().token);
+    recorder_->Record(*tokens_.top().token);
+    delete tokens_.top().token;
     checkFrameEnd(tokens_.top().key);
     tokens_.pop();
     updateNextKey();
@@ -94,7 +115,7 @@ void GitsRecorder::checkPendingTokens() {
 void GitsRecorder::checkFrameEnd(unsigned key) {
   auto keyIt = frameEndKeys_.find(key);
   if (keyIt != frameEndKeys_.end()) {
-    recorder_->FrameEnd();
+    recorder_->Record(FrameEndSerializer(FrameEndCommand()));
     frameEndKeys_.erase(keyIt);
   }
 }

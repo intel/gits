@@ -41,9 +41,9 @@ def generate_player_files(context, out_path):
         'get_success_return_value': get_success_return_value
     }
     files_to_generate = [
-        'commandPlayersAuto.h',
-        'commandPlayersAuto.cpp',
-        'directXLibraryAuto.cpp',
+        'commandRunnersAuto.h',
+        'commandRunnersAuto.cpp',
+        'directXCommandFactoryAuto.cpp',
     ]
     for file_name in files_to_generate:
         generate_file(context | additional_context, file_name, out_path)

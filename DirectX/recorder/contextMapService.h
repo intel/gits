@@ -8,19 +8,14 @@
 
 #pragma once
 
-#include "tools.h"
-
 #include <mutex>
 #include <unordered_map>
 
 namespace gits {
 namespace DirectX {
 
-class ContextMapService : public gits::noncopyable {
+class ContextMapService {
 public:
-  ContextMapService() = default;
-  ~ContextMapService() = default;
-
   void setContext(std::uintptr_t context, unsigned key) {
     std::lock_guard<std::mutex> lock(mutex_);
     contextMap_[context] = key;

@@ -7,7 +7,6 @@
 // ===================== end_copyright_notice ==============================
 
 #include "resourcePlacementCapture.h"
-#include "gits.h"
 #include "configurationLib.h"
 
 #include <filesystem>

@@ -7,7 +7,6 @@
 // ===================== end_copyright_notice ==============================
 
 #include "accelerationStructuresDump.h"
-#include "gits.h"
 #include "log.h"
 
 #include <fstream>

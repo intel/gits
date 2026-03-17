@@ -9,48 +9,53 @@
 #include "cpuFrameBenchmarkService.h"
 #include "log.h"
 
+#include <fstream>
+
 namespace gits {
 namespace DirectX {
 
-gits::DirectX::CpuFrameBenchmarkService::CpuFrameBenchmarkService(
-    const BenchmarkConfig::CpuFrameBenchmarkConfig& cfg)
-    : cfg_(cfg), scheduler_("cpu-frame-benchmark") {}
+CpuFrameBenchmarkService::CpuFrameBenchmarkService(const BenchmarkConfig& cfg,
+                                                   gits::MessageBus& msgBus)
+    : cfg_(cfg), msgBus_(msgBus) {
+  if (cfg.isCapture) {
+    subscriptionId_ = msgBus_.subscribe({PUBLISHER_RECORDER, TOPIC_STREAM_SAVED},
+                                        [this](Topic t, const MessagePtr& m) { writeResults(); });
+  } else {
+    subscriptionId_ = msgBus_.subscribe({PUBLISHER_PLAYER, TOPIC_PROGRAM_EXIT},
+                                        [this](Topic t, const MessagePtr& m) { writeResults(); });
+  }
+}
 
-void CpuFrameBenchmarkService::onPreExecute() {
-  if (!firstExecute_) {
+void CpuFrameBenchmarkService::onStart() {
+  if (!start_) {
     return;
   }
+  start_ = false;
+  prevTimePoint_ = std::chrono::steady_clock::now();
+}
 
-  firstExecute_ = false;
-  prevTimePoint = std::chrono::steady_clock::now();
+CpuFrameBenchmarkService::~CpuFrameBenchmarkService() {
+  msgBus_.unsubscribe(subscriptionId_);
 }
 
 void CpuFrameBenchmarkService::onPostPresent() {
-  if (!cfg_.enabled) {
-    return;
-  }
-
   ++frameNumber_;
-  const double durationSec = std::chrono::duration_cast<std::chrono::nanoseconds>(
-                                 std::chrono::steady_clock::now() - prevTimePoint)
-                                 .count() *
-                             0.000'000'001;
-  prevTimePoint = std::chrono::steady_clock::now();
-  const auto frameNumber = frameNumber_;
-  scheduler_.schedule(
-      [this, frameNumber, durationSec]() { writeResult(frameNumber, durationSec); });
+  double durationSec = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                           std::chrono::steady_clock::now() - prevTimePoint_)
+                           .count() *
+                       0.000'000'001;
+  prevTimePoint_ = std::chrono::steady_clock::now();
+  frameTimes_.emplace_back(frameNumber_, durationSec);
 }
 
-void CpuFrameBenchmarkService::writeResult(size_t frameNumber, double cpuTime) {
-  if (!fileStream_.is_open()) {
-    fileStream_.open(cfg_.output);
-    GITS_ASSERT(fileStream_.good(),
-                "CpuFrameBenchmarkService - Failed to create file: " + cfg_.output);
-    fileStream_ << "Frame #,Time [sec]\n";
-  }
+void CpuFrameBenchmarkService::writeResults() {
 
-  fileStream_ << frameNumber << "," << cpuTime << "\n";
-  fileStream_.flush();
+  std::ofstream stream(cfg_.output);
+  GITS_ASSERT(stream.good(), "CpuFrameBenchmarkService - failed to create file: " + cfg_.output);
+  stream << "Frame#,Time[sec]\n";
+  for (auto& [frameNumber, duration] : frameTimes_) {
+    stream << frameNumber << "," << duration << "\n";
+  }
 }
 
 } // namespace DirectX

@@ -8,8 +8,7 @@
 
 #pragma once
 
-#include "directx.h"
-
+#include <d3d12.h>
 #include <array>
 #include <unordered_map>
 

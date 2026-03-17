@@ -7,7 +7,7 @@
 // ===================== end_copyright_notice ==============================
 ${header}
 
-#include "commandPlayersAuto.h"
+#include "commandRunnersAuto.h"
 #include "commandsAuto.h"
 #include "layerAuto.h"
 #include "playerManager.h"
@@ -84,14 +84,14 @@ namespace DirectX {
   }
 </%def>\
 %for function in functions:
-void ${function.name}Player::Run() {
+void ${function.name}Runner::Run() {
   ${run_body(function, '')}\
 }
 
 %endfor
 %for interface in interfaces:
 %for function in interface.functions:
-void ${interface.name}${function.name}Player::Run() {
+void ${interface.name}${function.name}Runner::Run() {
   ${run_body(function, interface.name)}\
 }
 

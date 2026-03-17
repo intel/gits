@@ -83,8 +83,7 @@ static void OnFrameBeginImpl() {
 
 static void OnFrameEndImpl() {
   if (Configurator::Get().common.player.benchmark) {
-    CGits::Instance().TimeSheet().add_frame_time("stamp", CGits::Instance().Timers().program.Get());
-    CGits::Instance().TimeSheet().add_frame_time("cpu", CGits::Instance().Timers().frame.Get());
+    CGits::Instance().TimeSheet().AddFrameTime(CGits::Instance().Timers().frame.Get());
   }
 }
 
@@ -208,8 +207,6 @@ void CTokenMarkerUInt64::Read(CBinIStream& stream) {
 }
 
 void CTokenMarkerUInt64::Run() {
-  auto& cfg = Configurator::Get();
-
   GitsEventMessage::DATA data{};
   data.Id = CToken::TId::ID_MARKER_UINT64;
   data.MarkerUint64Data = {_value};

@@ -8,10 +8,12 @@
 
 #include "accelerationStructuresBufferContentRestore.h"
 #include "commandsAuto.h"
-#include "commandWritersAuto.h"
+#include "commandSerializersAuto.h"
 #include "commandsCustom.h"
-#include "commandWritersCustom.h"
+#include "commandSerializersCustom.h"
 #include "stateTrackingService.h"
+
+#include "xxhash.h"
 
 namespace gits {
 namespace DirectX {
@@ -53,7 +55,7 @@ void AccelerationStructuresBufferContentRestore::dumpBuffer(DumpInfo& dumpInfo, 
   restoreInfo.bufferKey = info.resourceKey;
   restoreInfo.offset = info.offset;
   restoreInfo.isMappable = info.isMappable;
-  restoreInfo.bufferHash = ComputeHash(data, info.size, THashType::XX);
+  restoreInfo.bufferHash = XXH32(data, info.size, 0);
   restoreInfo.bufferData = std::make_unique<std::vector<char>>(
       static_cast<char*>(data), static_cast<char*>(data) + info.size);
 

@@ -9,7 +9,7 @@
 #pragma once
 
 #include "resourceDump.h"
-#include "commandWriter.h"
+#include "commandSerializer.h"
 
 #include <unordered_map>
 #include <unordered_set>
@@ -25,7 +25,7 @@ public:
   struct BufferRestoreInfo {
     unsigned bufferKey{};
     unsigned offset{};
-    uint64_t bufferHash{};
+    unsigned bufferHash{};
     bool isMappable{};
     std::unique_ptr<std::vector<char>> bufferData;
   };

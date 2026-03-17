@@ -7,7 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "descriptorRootSignatureService.h"
-#include "gits.h"
+#include "log.h"
 
 #include <wrl/client.h>
 

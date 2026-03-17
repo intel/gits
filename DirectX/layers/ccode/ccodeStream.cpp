@@ -11,7 +11,7 @@
 #include "ccodeUtilsAuto.h"
 #include "to_string/toStr.h"
 #include "configurator.h"
-#include "gits.h"
+#include "streamHeader.h"
 
 #include <filesystem>
 
@@ -51,7 +51,7 @@ CCodeStream::CCodeStream() {
   }
 
   // Write config.cmake with executable name
-  auto appName = CGits::Instance().FilePlayer().GetApplicationName();
+  auto appName = stream::StreamHeader::Get().GetApplicationName();
   if (appName.ends_with(".exe")) {
     appName.erase(appName.length() - 4);
   }

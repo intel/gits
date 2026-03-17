@@ -12,7 +12,7 @@
 #include <imgui_impl_win32.h>
 #include <imgui_impl_dx12.h>
 
-#include "log.h"
+#include "keyUtils.h"
 #include "gits.h"
 #include "imGuiHUD.h"
 
@@ -86,11 +86,27 @@ void ImGuiHUDLayer::pre(IDXGISwapChainPresentCommand& c) {
   onPrePresent();
 }
 
+void ImGuiHUDLayer::post(IDXGISwapChainPresentCommand& c) {
+  if (c.skip || c.result_.value != S_OK || c.Flags_.value & DXGI_PRESENT_TEST ||
+      isStateRestoreKey(c.key)) {
+    return;
+  }
+  CGits::Instance().FrameCountUp();
+}
+
 void ImGuiHUDLayer::pre(IDXGISwapChain1Present1Command& c) {
   if (c.skip || c.result_.value != S_OK || c.PresentFlags_.value & DXGI_PRESENT_TEST) {
     return;
   }
   onPrePresent();
+}
+
+void ImGuiHUDLayer::post(IDXGISwapChain1Present1Command& c) {
+  if (c.skip || c.result_.value != S_OK || c.PresentFlags_.value & DXGI_PRESENT_TEST ||
+      isStateRestoreKey(c.key)) {
+    return;
+  }
+  CGits::Instance().FrameCountUp();
 }
 
 void ImGuiHUDLayer::pre(IDXGISwapChainResizeBuffersCommand& command) {

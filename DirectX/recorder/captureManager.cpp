@@ -14,8 +14,7 @@
 #include "nvapiWrappers.h"
 #include "nvapi_interface.h"
 #include "d3d11on12Wrappers.h"
-#include "directXApiIfaceRecorder.h"
-#include "gits.h"
+#include "configurator.h"
 #include "log.h"
 
 #include <detours.h>
@@ -92,9 +91,6 @@ void CaptureManager::exchangeD3D12DispatchTables(const D3D12DispatchTable& syste
 }
 
 CaptureManager::CaptureManager() {
-
-  gits::CGits::Instance().apis.UseApi3dIface(
-      std::shared_ptr<gits::ApisIface::Api3d>(new DirectXApiIfaceRecorder()));
 
   dxgiDispatchTableWrapper_.CreateDXGIFactory = CreateDXGIFactoryWrapper;
   dxgiDispatchTableWrapper_.CreateDXGIFactory1 = CreateDXGIFactory1Wrapper;

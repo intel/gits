@@ -8,9 +8,10 @@
 
 #pragma once
 
-#include "gits.h"
-#include "recorder.h"
-#include "streams.h"
+#include "commandSerializer.h"
+#include "streamWriter.h"
+
+#include <memory>
 
 namespace gits {
 namespace DirectX {
@@ -18,12 +19,15 @@ namespace DirectX {
 class ExecutionSerializationRecorder {
 public:
   ExecutionSerializationRecorder();
-  void record(CToken* token);
-  void frameEnd();
-  bool isRunning();
+
+  void record(stream::CommandSerializer* commandSerializer);
+  void finishRecording();
 
 private:
   void copyAuxiliaryFiles();
+
+private:
+  std::unique_ptr<stream::StreamWriter> recorder_;
 };
 
 } // namespace DirectX

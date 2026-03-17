@@ -9,7 +9,7 @@
 #include "mapStateService.h"
 #include "stateTrackingService.h"
 #include "commandsAuto.h"
-#include "commandWritersAuto.h"
+#include "commandSerializersAuto.h"
 
 namespace gits {
 namespace DirectX {
@@ -27,7 +27,7 @@ void MapStateService::restoreMapState() {
       c.pReadRange_.value = nullptr;
       c.ppData_.captureValue = itSubresource.second;
       c.ppData_.value = &itSubresource.second;
-      stateService_.getRecorder().record(new ID3D12ResourceMapWriter(c));
+      stateService_.getRecorder().record(new ID3D12ResourceMapSerializer(c));
     }
   }
 }

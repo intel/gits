@@ -61,11 +61,7 @@ public:
 
 class FrameEndCommand : public Command {
 public:
-  FrameEndCommand(unsigned frameNumber)
-      : Command(CommandId::ID_FRAME_END), frameNumber_(frameNumber) {}
-
-public:
-  unsigned frameNumber_{};
+  FrameEndCommand() : Command(CommandId::ID_FRAME_END) {}
 };
 
 class MarkerUInt64Command : public Command {
@@ -82,9 +78,10 @@ public:
     GPU_EXECUTION_END
   };
   MarkerUInt64Command(uint64_t value) : Command(CommandId::ID_MARKER_UINT64), value_(value) {}
+  MarkerUInt64Command() : Command(CommandId::ID_MARKER_UINT64) {}
 
 public:
-  uint64_t value_{};
+  Argument<uint64_t> value_{};
 };
 
 class IUnknownQueryInterfaceCommand : public Command {

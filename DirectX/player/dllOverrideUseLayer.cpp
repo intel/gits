@@ -7,8 +7,11 @@
 // ===================== end_copyright_notice ==============================
 
 #include "dllOverrideUseLayer.h"
+#include "playerManager.h"
 #include "log.h"
-#include "PlayerManager.h"
+#include "configurator.h"
+
+#include <fstream>
 
 namespace gits {
 namespace DirectX {

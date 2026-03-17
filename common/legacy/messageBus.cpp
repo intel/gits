@@ -10,6 +10,17 @@
 
 namespace gits {
 
+MessageBus::MessageBus() {
+  // workaround for reallocations from plugins dlls
+  for (unsigned i = 0; i < PUBLISHER_COUNT; ++i) {
+    for (unsigned j = 0; j < TOPIC_COUNT; ++j) {
+      subscribers_[{static_cast<PublisherId>(PUBLISHER_PLAYER + i),
+                    static_cast<TopicId>(TOPIC_NONE + j)}]
+          .reserve(8);
+    }
+  }
+}
+
 unsigned MessageBus::subscribe(Topic topic, SubscriberCb callback) {
   unsigned id = currentSubscriptionId_++;
   subscribers_[topic].emplace_back(id, callback);
@@ -17,18 +28,13 @@ unsigned MessageBus::subscribe(Topic topic, SubscriberCb callback) {
 }
 
 void MessageBus::unsubscribe(unsigned id) {
-  auto isEqual = [id](const auto& sub) { return sub.first == id; };
-  std::vector<Topic> topicsToRemove;
-  // Remove all subscriptions with the given id
   for (auto& [topic, subs] : subscribers_) {
-    subs.erase(std::remove_if(subs.begin(), subs.end(), isEqual), subs.end());
-    if (subs.empty()) {
-      topicsToRemove.push_back(topic);
+    for (auto it = subs.begin(); it != subs.end(); ++it) {
+      if (it->first == id) {
+        subs.erase(it);
+        return;
+      }
     }
-  }
-  // Remove all empty topics
-  for (const auto& topic : topicsToRemove) {
-    subscribers_.erase(topic);
   }
 }
 

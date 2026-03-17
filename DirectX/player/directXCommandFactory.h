@@ -6,13 +6,18 @@
 //
 // ===================== end_copyright_notice ==============================
 
-#include "commandWriter.h"
-#include "command.h"
+#pragma once
+
+#include "commandRunner.h"
+#include "commandFactory.h"
 
 namespace gits {
 namespace DirectX {
 
-CommandWriter* createCommandWriter(Command* command);
+class DirectXCommandFactory : public stream::CommandFactory {
+public:
+  stream::CommandRunner* CreateCommand(unsigned id) override;
+};
 
 } // namespace DirectX
 } // namespace gits

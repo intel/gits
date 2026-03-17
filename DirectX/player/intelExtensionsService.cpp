@@ -7,10 +7,10 @@
 // ===================== end_copyright_notice ==============================
 
 #include "intelExtensionsService.h"
-#include "gits.h"
-#include "log.h"
-#include "configurationLib.h"
+#include "streamHeader.h"
 #include "to_string/toStr.h"
+#include "configurator.h"
+#include "log.h"
 
 #include <map>
 #include <setupapi.h>
@@ -66,7 +66,7 @@ void IntelExtensionsService::setApplicationInfo() {
     return {parts[0], parts[1], parts[2]};
   };
 
-  std::string appName = CGits::Instance().FilePlayer().GetApplicationName();
+  std::string appName = stream::StreamHeader::Get().GetApplicationName();
   std::string appVersion = "0.0.0";
   std::string engineName;
   std::string engineVersion = "0.0.0";

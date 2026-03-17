@@ -7,8 +7,6 @@
 // ===================== end_copyright_notice ==============================
 
 #include "gpuPatchDumpService.h"
-#include "gits.h"
-#include "command.h"
 #include "configurationLib.h"
 
 #include <sstream>

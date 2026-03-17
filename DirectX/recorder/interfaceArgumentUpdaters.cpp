@@ -7,7 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "interfaceArgumentUpdaters.h"
-#include "gits.h"
+#include "log.h"
 
 #include <d3dx12/d3dx12_pipeline_state_stream.h>
 

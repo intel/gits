@@ -8,22 +8,25 @@
 
 #pragma once
 
-#include <cstdint>
-
 namespace gits {
-namespace DirectX {
+namespace stream {
 
-class CommonEventsHandler {
+class CommandRunner {
 public:
-  CommonEventsHandler();
-  void RegisterEvents();
+  virtual ~CommandRunner() {}
 
-private:
-  static void stateRestoreBegin();
-  static void stateRestoreEnd();
-  static void frameEnd(int frameNumber);
-  static void markerUInt64(uint64_t value);
+  void DecodeData(char* data) {
+    m_Data = data;
+    DecodeCommand();
+  }
+  virtual void Run() = 0;
+
+protected:
+  virtual void DecodeCommand() {}
+
+protected:
+  char* m_Data{};
 };
 
-} // namespace DirectX
+} // namespace stream
 } // namespace gits

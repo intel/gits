@@ -9,7 +9,7 @@ ${header}
 
 #pragma once
 
-#include "commandPlayer.h"
+#include "commandRunner.h"
 #include "commandsAuto.h"
 #include "commandsCustom.h"
 #include "commandDecodersAuto.h"
@@ -21,19 +21,13 @@ namespace gits {
 namespace DirectX {
 
 %for function in functions:
-class ${function.name}Player : public CommandPlayer {
+class ${function.name}Runner : public stream::CommandRunner {
 public:
-  unsigned Id() const override {
-    return static_cast<unsigned>(CommandId::ID_${function.name.upper()});
-  }
-  const char* Name() const override {
-    return "${function.name}";
-  }
   void Run() override;
 
 protected:
-  void decodeCommand() override {
-    decode(data_.get(), command);
+  void DecodeCommand() override {
+    decode(m_Data, command);
   }
 
 private:
@@ -43,19 +37,13 @@ private:
 %endfor
 %for interface in interfaces:
 %for function in interface.functions:
-class ${interface.name}${function.name}Player : public CommandPlayer {
+class ${interface.name}${function.name}Runner : public stream::CommandRunner {
 public:
-  unsigned Id() const override {
-    return static_cast<unsigned>(CommandId::ID_${interface.name.upper()}_${function.name.upper()});
-  }
-  const char* Name() const override {
-    return "${interface.name}::${function.name}";
-  }
   void Run() override;
 
 protected:
-  void decodeCommand() override {
-    decode(data_.get(), command);
+  void DecodeCommand() override {
+    decode(m_Data, command);
   }
 
 private:

@@ -50,6 +50,8 @@ def generate_default_configuration(task, template_manager):
     conditions = []
     if task.compute:
         conditions = ['is_compute']
+    if task.directx:
+        conditions = ['is_directx']
     context = {'data': configuration, 'platform': task.platform, 'installpath': task.installpath, 'conditions': conditions}
     template_manager.render_task(task, context)
 

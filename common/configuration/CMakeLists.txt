@@ -63,7 +63,7 @@ set_target_properties(configuration PROPERTIES FOLDER "common/config")
 SET(PRIVATE_INCLUDE_DIRS)
 
 # Needed for OpenGL types and enums
-target_link_libraries(configuration PUBLIC OpenGL_common_interface)
+target_link_libraries(configuration PUBLIC OpenGL_common_interface common)
 target_link_libraries(configuration PRIVATE common_interface yamlcpp log)
 SET(PRIVATE_INCLUDE_DIRS ${ARGS_SOURCE_DIR})
 

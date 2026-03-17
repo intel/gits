@@ -53,7 +53,6 @@ set(CAPTURE_SRC
   ${SRC_DIR}/d3d12Recorder.cpp
   ${SRC_DIR}/gitsRecorder.h
   ${SRC_DIR}/gitsRecorder.cpp
-  ${SRC_DIR}/directXApiIfaceRecorder.h
   ${SRC_DIR}/captureCustomizationLayer.h
   ${SRC_DIR}/captureCustomizationLayer.cpp
   ${SRC_DIR}/captureSynchronizationLayer.h
@@ -121,6 +120,7 @@ target_include_directories(DirectX_recorder PRIVATE
 )
 
 target_link_libraries(DirectX_recorder PRIVATE
+  stream
   gits_recorder_interface
   DirectX_layer_interface
   DirectX_api_debug

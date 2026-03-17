@@ -32,6 +32,8 @@ void STDCALL GitsExitProcess(UINT uExitCode) {
   if (gits::CRecorder::InstancePtr()) {
     gits::CRecorder::Instance().Close();
   }
+  gits::MessageBus::get().publish({gits::PUBLISHER_RECORDER, gits::TOPIC_PROGRAM_EXIT},
+                                  std::make_shared<gits::ProgramMessage>());
   LOG_INFO << "Recording done";
 
   // Restore code of ExitProcess, now that we intercepted it.
@@ -58,6 +60,8 @@ void STDCALL GitsTerminateProcess(_In_ HANDLE hProcess, _In_ UINT uExitCode) {
     if (gits::CRecorder::InstancePtr()) {
       gits::CRecorder::Instance().Close();
     }
+    gits::MessageBus::get().publish({gits::PUBLISHER_RECORDER, gits::TOPIC_PROGRAM_EXIT},
+                                    std::make_shared<gits::ProgramMessage>());
     LOG_INFO << "Recording done by TerminateProcess() ";
   }
   RestoreTerminateProcess();

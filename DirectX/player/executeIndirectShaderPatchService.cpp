@@ -7,8 +7,8 @@
 // ===================== end_copyright_notice ==============================
 
 #include "executeIndirectShaderPatchService.h"
-#include "gits.h"
 #include "log.h"
+#include "configurator.h"
 
 #include <wrl/client.h>
 #include <dxcapi.h>

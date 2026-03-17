@@ -8,8 +8,9 @@
 
 #include "traceFactory.h"
 #include "traceLayerAuto.h"
-#include "configurationLib.h"
-#include "gits.h"
+#include "configurator.h"
+#include "streamHeader.h"
+#include "messageBus.h"
 #include "showExecutionLayer.h"
 
 #include <fstream>
@@ -37,7 +38,7 @@ TraceFactory::TraceFactory() {
     const std::string streamDir = Configurator::Get().common.player.streamDir.filename().string();
     filepath = outputTracePath / streamDir;
   } else {
-    std::filesystem::path appName = CGits::Instance().FileRecorder().GetApplicationName();
+    std::filesystem::path appName = stream::StreamHeader::Get().GetApplicationName();
     appName.replace_extension();
     filepath = outputTracePath / appName;
   }
@@ -111,7 +112,7 @@ TraceFactory::TraceFactory() {
       *streamPre << msg->getText() << '\n';
     }
   };
-  auto& msgBus = CGits::Instance().GetMessageBus();
+  gits::MessageBus& msgBus = gits::MessageBus::get();
   msgBus.subscribe({PUBLISHER_RECORDER, TOPIC_LOG},
                    [traceMsg](Topic t, const MessagePtr& m) { traceMsg(m); });
   msgBus.subscribe({PUBLISHER_PLAYER, TOPIC_LOG},

@@ -9,7 +9,7 @@
 #include "analyzerCommandListService.h"
 #include "analyzerService.h"
 #include "keyUtils.h"
-#include "gits.h"
+#include "log.h"
 
 namespace gits {
 namespace DirectX {
