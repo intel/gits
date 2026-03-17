@@ -103,19 +103,23 @@ private:
 class XefgStateService {
 public:
   struct InitFromSwapChainState {
+    InitFromSwapChainState(const xefg_swapchain_d3d12_init_params_t_Argument& initParams_)
+        : initParams(initParams_) {}
     xefg_swapchain_d3d12_init_params_t_Argument initParams;
-    ID3D12CommandQueue* cmdQueue;
-    unsigned cmdQueueKey;
+    ID3D12CommandQueue* cmdQueue{};
+    unsigned cmdQueueKey{};
   };
 
   struct InitFromSwapChainDescState {
+    InitFromSwapChainDescState(const xefg_swapchain_d3d12_init_params_t_Argument& initParams_)
+        : initParams(initParams_) {}
     xefg_swapchain_d3d12_init_params_t_Argument initParams;
-    HWND hWnd;
-    DXGI_SWAP_CHAIN_DESC1 swapChainDesc;
+    HWND hWnd{};
+    DXGI_SWAP_CHAIN_DESC1 swapChainDesc{};
     std::optional<DXGI_SWAP_CHAIN_FULLSCREEN_DESC> fullscreenDesc;
-    ID3D12CommandQueue* cmdQueue;
-    unsigned cmdQueueKey;
-    unsigned dxgiFactoryKey;
+    ID3D12CommandQueue* cmdQueue{};
+    unsigned cmdQueueKey{};
+    unsigned dxgiFactoryKey{};
   };
 
   struct SwapChainPtrState {

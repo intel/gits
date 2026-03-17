@@ -3262,8 +3262,7 @@ void StateTrackingLayer::post(xefgSwapChainD3D12InitFromSwapChainCommand& c) {
     return;
   }
   XefgStateService::ContextState* state = xefgStateService_.getContextState(c.hSwapChain_.key);
-  XefgStateService::InitFromSwapChainState initState{};
-  initState.initParams = c.pInitParams_;
+  XefgStateService::InitFromSwapChainState initState(c.pInitParams_);
   initState.cmdQueue = c.pCmdQueue_.value;
   initState.cmdQueueKey = c.pCmdQueue_.key;
   state->initFromSwapChainParams.emplace(initState);
@@ -3274,8 +3273,7 @@ void StateTrackingLayer::post(xefgSwapChainD3D12InitFromSwapChainDescCommand& c)
     return;
   }
   XefgStateService::ContextState* state = xefgStateService_.getContextState(c.hSwapChain_.key);
-  XefgStateService::InitFromSwapChainDescState initState{};
-  initState.initParams = c.pInitParams_;
+  XefgStateService::InitFromSwapChainDescState initState(c.pInitParams_);
   initState.hWnd = c.hWnd_.value;
   initState.swapChainDesc = *c.pSwapChainDesc_.value;
   if (c.pFullscreenDesc_.value) {

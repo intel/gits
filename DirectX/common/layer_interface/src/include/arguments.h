@@ -1083,7 +1083,7 @@ struct xefg_swapchain_d3d12_init_params_t_Argument {
   xefg_swapchain_d3d12_init_params_t_Argument(
       const xefg_swapchain_d3d12_init_params_t_Argument& arg);
   xefg_swapchain_d3d12_init_params_t_Argument& operator=(
-      const xefg_swapchain_d3d12_init_params_t&) = delete;
+      const xefg_swapchain_d3d12_init_params_t_Argument&) = delete;
   ~xefg_swapchain_d3d12_init_params_t_Argument();
   xefg_swapchain_d3d12_init_params_t* value{};
   unsigned key{};
