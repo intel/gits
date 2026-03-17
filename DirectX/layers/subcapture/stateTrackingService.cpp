@@ -588,6 +588,7 @@ void StateTrackingService::restoreD3D12Fence(ObjectState* state) {
 }
 
 void StateTrackingService::restoreD3D12CommandList(ObjectState* state) {
+  GITS_ASSERT(state);
   auto* command = static_cast<ID3D12DeviceCreateCommandListCommand*>(state->creationCommand.get());
   unsigned allocatorKey = command->pCommandAllocator_.key;
   unsigned initialStateKey = command->pInitialState_.key;
@@ -612,7 +613,7 @@ void StateTrackingService::restoreD3D12CommandList(ObjectState* state) {
   CommandListState* commandListState = static_cast<CommandListState*>(state);
   bool closed = commandListState->closed;
   if (analyzerResults_.restoreCommandList(state->key)) {
-    if (commandListState && !commandListState->commands.empty()) {
+    if (!commandListState->commands.empty()) {
       closed = true;
     }
   }

@@ -1109,8 +1109,10 @@ void CaptureCustomizationLayer::pre(xefgSwapChainD3D12InitFromSwapChainCommand& 
            << c.pInitParams_.value->pApplicationSwapChain;
   IDXGISwapChain* swapChain = c.pInitParams_.value->pApplicationSwapChain;
   IUnknownWrapper* wrapper = manager_.findWrapper(swapChain);
-  manager_.removeWrapper(wrapper);
-  delete wrapper;
+  if (wrapper) {
+    manager_.removeWrapper(wrapper);
+    delete wrapper;
+  }
 }
 
 void CaptureCustomizationLayer::pre(xefgSwapChainD3D12InitFromSwapChainDescCommand& c) {
