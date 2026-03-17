@@ -80,7 +80,7 @@ private:
   ImVec2 m_WindowSize;
   bool m_CleanUpAfterRecording;
   std::optional<float> m_UpdateUIScale;
-  std::unique_ptr<MainWindow> mainWindow;
+  std::shared_ptr<MainWindow> mainWindow;
 };
 
 } // namespace gits::gui

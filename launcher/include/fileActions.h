@@ -52,10 +52,10 @@ public:
       std::function<void()> callback = nullptr);
 
   template <typename T>
-  static bool UpdateConfigYamlPath(std::filesystem::path configPath,
-                                   std::vector<std::string> yamlPath,
-                                   T value,
-                                   bool addIfNotPresent = false) {
+  static bool UpdateConfigYamlPath(const std::filesystem::path configPath,
+                                   const std::vector<std::string> yamlPath,
+                                   const T value,
+                                   const bool addIfNotPresent = false) {
     if (configPath.empty()) {
       LOG_ERROR << "Couldn't update gits config. Provided config path is empty.";
 
@@ -149,9 +149,9 @@ private:
   template <typename T>
   static bool SetYamlPathValue(YAML::Node node,
                                const std::vector<std::string>& path,
-                               T value,
-                               bool addIfNotPresent = false,
-                               size_t index = 0) {
+                               const T value,
+                               const bool addIfNotPresent = false,
+                               const size_t index = 0) {
     if (index == path.size() - 1) {
       if (!node[path[index]] && !addIfNotPresent) {
         return false;

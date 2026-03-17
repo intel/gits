@@ -57,7 +57,8 @@ void MetaDataPanel::Render() {
       ImGui::NewLine();
       context.TraceConfigEditor->Render(available);
       break;
-    case Context::MetaDataItem::STATS:
+    case Context::MetaDataItem::STATS: {
+      std::lock_guard guard{StatsMutex};
       ImGui::NewLine();
       if (StatsGatheringInProgress) {
         ImGui::TextColored(ImVec4(0.8f, 0.15f, 0.15f, 1.0f),
@@ -82,6 +83,7 @@ void MetaDataPanel::Render() {
         }
       }
       break;
+    }
     default:
       ImGui::Text(Labels::UNKNOWN_METADATA_TAB_MESSAGE);
       break;
@@ -92,7 +94,7 @@ void MetaDataPanel::Render() {
 
 void MetaDataPanel::LoadMetaData(std::filesystem::path streamPath) {
   auto& context = Context::GetInstance();
-  auto MetaData = context.MetaData;
+  const auto& MetaData = context.MetaData;
   context.DiagsEditor->SetText(MetaData.RecorderDiags.empty() ? Labels::EMPTY_RECORDER_DIAGS_MESSAGE
                                                               : MetaData.RecorderDiags.dump(2));
   context.TraceConfigEditor->SetText(MetaData.RecorderConfig.empty()
@@ -124,7 +126,7 @@ void MetaDataPanel::FillStatsEditor() {
 
 void MetaDataPanel::MetaDataCallback(const Event& e) {
   auto& context = Context::GetInstance();
-  auto MetaData = context.MetaData;
+  const auto& MetaData = context.MetaData;
   context.DiagsEditor->SetText(MetaData.RecorderDiags.empty() ? Labels::EMPTY_RECORDER_DIAGS_MESSAGE
                                                               : MetaData.RecorderDiags.dump(2));
   context.TraceConfigEditor->SetText(MetaData.RecorderConfig.empty()

@@ -159,7 +159,7 @@ void GUIController::SetupGui() {
   // we don't want to publish it for all text editors, we use a custom save callback
   const auto configOnSaveCallback = [](std::filesystem::path configPath) {
     auto& context = Context::GetInstance();
-    context.ConfigEditor->SaveToFile(configPath);
+    context.ConfigEditor->SaveToFile(std::move(configPath));
 
     EventBus::GetInstance().publish<ContextEvent>(ContextEvent::Type::ConfigEdited);
   };
@@ -217,7 +217,7 @@ void GUIController::SetupGui() {
   SetImGuiStyle(context.LauncherConfiguration.Theme.CurrentThemeIdx);
 
   context.TheMainWindow = std::make_shared<MainWindow>();
-  mainWindow.reset(context.TheMainWindow.get());
+  mainWindow = context.TheMainWindow;
 
   // Initialize panels and UI in the desired startup state
   context.ChangeMode(Mode::CAPTURE);
@@ -245,7 +245,7 @@ void GUIController::TeardownGui() {
   context.BtnsSideBar = nullptr;
   delete context.BtnsAPI;
   context.BtnsAPI = nullptr;
-  mainWindow.release();
+  mainWindow.reset();
 }
 
 MainWindow* GUIController::GetMainWindow() const {

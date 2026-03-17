@@ -30,8 +30,8 @@ bool UpdateConfigDumpPath() {
     LOG_ERROR << "No capture output path was specified";
     return false;
   }
-  const auto captureConfigPath = optCaptureConfigPath.value();
-  const auto captureOutputPath = optCaptureOutputPath.value();
+  const auto& captureConfigPath = optCaptureConfigPath.value();
+  const auto& captureOutputPath = optCaptureOutputPath.value();
 
   if (captureOutputPath.empty()) {
     LOG_ERROR << "No capture output path was specified";
@@ -139,7 +139,7 @@ void CaptureStream() {
     return;
   }
 
-  std::filesystem::path gitsBasePath = context.GetPathSafe(Path::GITS_BASE);
+  const auto gitsBasePath = context.GetPathSafe(Path::GITS_BASE);
   if (gitsBasePath.empty()) {
     LOG_ERROR << "No GITS base path for capture was selected";
     context.BtnsSideBar->SelectEntry(Context::SideBarItem::APP_LOG);

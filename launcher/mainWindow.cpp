@@ -106,7 +106,7 @@ void MainWindow::Render() {
     return;
   }
 
-  WidthLeftColumn = contentPanel->WidthColumn1(false);
+  WidthLeftColumn = contentPanel ? contentPanel->WidthColumn1(false) : 0.0f;
 
   GITSButton();
 
@@ -333,7 +333,7 @@ void MainWindow::GITSBaseRow() {
       configPath = GetPlayerConfigPath();
     }
     if (std::filesystem::exists(configPath)) {
-      context.SetPath(configPath, Path::CONFIG, context.AppMode);
+      context.SetPath(std::move(configPath), Path::CONFIG, context.AppMode);
     }
   }
   ImGuiHelper::AddTooltip(Labels::UPDATE_CONFIG_PATH_HINT);
@@ -380,7 +380,7 @@ void MainWindow::PathCallback(const Event& e) {
   }
 
   if (pathEvent.EventType == PathEvent::Type::INPUT_STREAM) {
-    auto streamPath = context.GetPathSafe(Path::INPUT_STREAM, Mode::PLAYBACK);
+    const auto& streamPath = context.GetPathSafe(Path::INPUT_STREAM, Mode::PLAYBACK);
     if (!streamPath.empty()) {
       context.MetaData = GetStreamMetaData(streamPath);
       EventBus::GetInstance().publish<ContextEvent>(ContextEvent::Type::MetadataLoaded);

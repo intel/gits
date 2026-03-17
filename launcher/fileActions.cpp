@@ -175,10 +175,10 @@ bool FileActions::LaunchExecutable(const fs::path& executablePath,
                                    std::function<void(const std::string&)> onOutput) {
 #ifdef _WIN32
   return LaunchExecutableWindows(executablePath, arguments, waitForCompletion, workingDirectory,
-                                 onOutput);
+                                 std::move(onOutput));
 #else
   return LaunchExecutableUnix(executablePath, arguments, waitForCompletion, workingDirectory,
-                              onOutput);
+                              std::move(onOutput));
 #endif
 }
 
@@ -186,13 +186,15 @@ void FileActions::LaunchExecutableAsync(const fs::path& executablePath,
                                         const std::vector<std::string>& arguments,
                                         const fs::path& workingDirectory,
                                         std::function<void(const std::string&)> onOutput) {
+  const auto sharedArgs = std::make_shared<std::vector<std::string>>(arguments);
 #ifdef _WIN32
-  std::thread([=]() {
-    LaunchExecutableWindows(executablePath, arguments, false, workingDirectory, onOutput);
+  std::thread([executablePath, sharedArgs, workingDirectory, onOutput = std::move(onOutput)]() {
+    LaunchExecutableWindows(executablePath, *sharedArgs, false, workingDirectory,
+                            std::move(onOutput));
   }).detach();
 #else
-  std::thread([=]() {
-    LaunchExecutableUnix(executablePath, arguments, false, workingDirectory, onOutput);
+  std::thread([executablePath, sharedArgs, workingDirectory, onOutput = std::move(onOutput)]() {
+    LaunchExecutableUnix(executablePath, *sharedArgs, false, workingDirectory, std::move(onOutput));
   }).detach();
 #endif
 }
@@ -203,14 +205,18 @@ void FileActions::LaunchExecutableThreadCallbackOnExit(
     const std::filesystem::path& workingDirectory,
     std::function<void(const std::string&)> onOutput,
     std::function<void()> callback) {
+  const auto sharedArgs = std::make_shared<std::vector<std::string>>(arguments);
 #ifdef _WIN32
-  std::thread([=]() {
-    LaunchExecutableWindows(executablePath, arguments, true, workingDirectory, onOutput);
+  std::thread([executablePath, sharedArgs, workingDirectory, onOutput = std::move(onOutput),
+               callback = std::move(callback)]() {
+    LaunchExecutableWindows(executablePath, *sharedArgs, true, workingDirectory,
+                            std::move(onOutput));
     callback();
   }).detach();
 #else
-  std::thread([=]() {
-    LaunchExecutableUnix(executablePath, arguments, true, workingDirectory, onOutput);
+  std::thread([executablePath, sharedArgs, workingDirectory, onOutput = std::move(onOutput),
+               callback = std::move(callback)]() {
+    LaunchExecutableUnix(executablePath, *sharedArgs, true, workingDirectory, std::move(onOutput));
     callback();
   }).detach();
 #endif

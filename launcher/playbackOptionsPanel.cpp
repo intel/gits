@@ -204,7 +204,7 @@ const std::string PlaybackOptionsPanel::GetCLIArguments() const {
 void PlaybackOptionsPanel::SetScreenshotPathFromInputStream() {
   auto& context = Context::GetInstance();
   auto streamPath = context.GetPathSafe(Path::INPUT_STREAM, Mode::PLAYBACK);
-  auto screenshotPath = streamPath.parent_path() / SCREENSHOTS_SUB_PATH;
+  const auto screenshotPath = streamPath.parent_path() / SCREENSHOTS_SUB_PATH;
   context.SetPath(screenshotPath, Path::SCREENSHOTS, Mode::PLAYBACK);
 }
 

@@ -75,13 +75,14 @@ struct ActionEvent : Event {
   };
 
   enum class Status {
+    Unknown,
     Success,
     Failure
   };
 
   Type EventType;
   State ActionState;
-  Status ActionStatus;
+  Status ActionStatus = Status::Unknown;
 
   std::string Details;
 };
@@ -137,9 +138,12 @@ public:
   void subscribe(const EventHandler& handler,
                  const std::vector<typename EventType<T>::Type>& types) {
     static_assert(std::is_base_of_v<Event, T>, "T must derive from Event");
-    auto filteredHandler = [handler, types](const Event& e) {
+
+    const auto sharedTypes = std::make_shared<std::vector<typename EventType<T>::Type>>(types);
+    auto filteredHandler = [handler, sharedTypes](const Event& e) {
       const T& typedEvent = static_cast<const T&>(e);
-      if (std::find(types.begin(), types.end(), typedEvent.EventType) != types.end()) {
+      if (std::find(sharedTypes->begin(), sharedTypes->end(), typedEvent.EventType) !=
+          sharedTypes->end()) {
         handler(e);
       }
     };

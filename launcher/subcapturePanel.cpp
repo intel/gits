@@ -75,7 +75,7 @@ const std::string SubcapturePanel::GetCLIArguments() const {
     auto optSubcaptureOutPuthPath =
         Context::GetInstance().GetPath(Path::OUTPUT_STREAM, Mode::SUBCAPTURE);
     if (optSubcaptureOutPuthPath.has_value()) {
-      auto subcapturePath = optSubcaptureOutPuthPath.value();
+      const auto& subcapturePath = optSubcaptureOutPuthPath.value();
       if (!subcapturePath.empty()) {
         // We append the special GITS directory name format to the subcapture directory path
         args += "--Common.Player.SubcapturePath=\"" + (subcapturePath / "%f%_%r%").string() + "\" ";
@@ -129,10 +129,10 @@ void SubcapturePanel::PathCallback(const Event& e) {
   if (pathEvent.EventType == PathEvent::Type::INPUT_STREAM) {
     auto streamPath = Context::GetInstance().GetPathSafe(Path::OUTPUT_STREAM, Mode::SUBCAPTURE);
     if (streamPath.empty()) {
-      auto parentPath = Context::GetInstance()
-                            .GetPathSafe(Path::INPUT_STREAM, Mode::SUBCAPTURE)
-                            .parent_path()
-                            .parent_path();
+      const auto& parentPath = Context::GetInstance()
+                                   .GetPathSafe(Path::INPUT_STREAM, Mode::SUBCAPTURE)
+                                   .parent_path()
+                                   .parent_path();
       Context::GetInstance().SetPath(parentPath, Path::OUTPUT_STREAM, Mode::SUBCAPTURE);
     }
   }

@@ -350,7 +350,7 @@ void Context::SetCaptureAPI(Api api) {
     needsConfigPath = basePath == Paths.BasePath;
   }
   if (needsConfigPath) {
-    auto configPath = GetRecorderConfigPathForApi(api);
+    const auto configPath = GetRecorderConfigPathForApi(api);
     if (std::filesystem::exists(configPath)) {
       SetPath(configPath, Path::CONFIG, Mode::CAPTURE);
     }
