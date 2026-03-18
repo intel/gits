@@ -112,7 +112,7 @@ void PluginsPanel::InvalidatePluginsList() {
   m_PluginsListNeedsUpdating = true;
 }
 
-bool PluginsPanel::LoadPluginConfig(const std::filesystem::path pluginDirectoryName) {
+bool PluginsPanel::LoadPluginConfig(const std::filesystem::path& pluginDirectoryName) {
   const auto& pluginsPath = GetPluginsDirectory();
   if (pluginsPath.empty() || !std::filesystem::exists(pluginsPath)) {
     m_PluginConfigEditor.SetText(PLUGIN_CONFIG_GENERIC_ERROR_MESSAGE);
@@ -140,7 +140,8 @@ bool PluginsPanel::LoadPluginConfig(const std::filesystem::path pluginDirectoryN
   return true;
 }
 
-std::filesystem::path PluginsPanel::GetPluginConfigPath(std::filesystem::path pluginDirectoryName) {
+std::filesystem::path PluginsPanel::GetPluginConfigPath(
+    const std::filesystem::path& pluginDirectoryName) {
   const auto pluginsPath =
       Context::GetInstance().GetPathSafe(Path::GITS_BASE) / "Plugins" / "DirectX";
 
@@ -157,7 +158,7 @@ std::filesystem::path PluginsPanel::GetPluginConfigPath(std::filesystem::path pl
 }
 
 std::optional<PluginsPanel::PluginListEntry> PluginsPanel::GetPluginListEntry(
-    std::filesystem::path pluginPath) {
+    const std::filesystem::path& pluginPath) {
   std::optional<PluginListEntry> entry = PluginListEntry{};
 
   if (pluginPath.empty() || !std::filesystem::exists(pluginPath)) {
@@ -238,7 +239,7 @@ void PluginsPanel::LoadPluginsList() {
   }
 }
 
-void PluginsPanel::UpdateGitsConfig(const std::string pluginName, const bool enable) {
+void PluginsPanel::UpdateGitsConfig(const std::string& pluginName, const bool enable) {
   const auto& gitsConfigPath = Context::GetInstance().GetPathSafe(Path::CONFIG);
   if (gitsConfigPath.empty() || !std::filesystem::exists(gitsConfigPath)) {
     return;
@@ -258,11 +259,11 @@ void PluginsPanel::UpdateGitsConfig(const std::string pluginName, const bool ena
     std::erase(pluginsList, pluginName);
   }
 
-  const std::string modeString =
-      Context::GetInstance().AppMode == Mode::CAPTURE ? "Recorder" : "Player";
-
-  FileActions::UpdateConfigYamlPath(gitsConfigPath, {"DirectX", modeString, "Plugins"},
-                                    std::move(pluginsList));
+  FileActions::UpdateConfigYamlPath(
+      gitsConfigPath,
+      {"DirectX", Context::GetInstance().AppMode == Mode::CAPTURE ? "Recorder" : "Player",
+       "Plugins"},
+      std::move(pluginsList));
 
   EventBus::GetInstance().publish<ContextEvent>(ContextEvent::Type::PluginsUpdated);
   EventBus::GetInstance().publish<ContextEvent>(ContextEvent::Type::ConfigEdited);

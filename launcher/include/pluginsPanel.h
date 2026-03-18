@@ -32,11 +32,11 @@ private:
   gits::ImGuiHelper::TextEditorWidget m_PluginConfigEditor;
 
   void InvalidatePluginsList();
-  bool LoadPluginConfig(const std::filesystem::path pluginDirectoryName);
-  std::filesystem::path GetPluginConfigPath(std::filesystem::path pluginDirectoryName);
-  std::optional<PluginListEntry> GetPluginListEntry(std::filesystem::path pluginPath);
+  bool LoadPluginConfig(const std::filesystem::path& pluginDirectoryName);
+  std::filesystem::path GetPluginConfigPath(const std::filesystem::path& pluginDirectoryName);
+  std::optional<PluginListEntry> GetPluginListEntry(const std::filesystem::path& pluginPath);
   void LoadPluginsList();
-  void UpdateGitsConfig(const std::string pluginName, const bool enable);
+  void UpdateGitsConfig(const std::string& pluginName, const bool enable);
   void RenderPluginsList();
   void RenderSelectedPluginConfig();
 

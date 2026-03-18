@@ -42,7 +42,14 @@ std::filesystem::path LauncherConfig::GetGITSLauncherConfigPath() {
   }
 #endif
 
-  std::filesystem::create_directories(home);
+  try {
+    std::filesystem::create_directories(home);
+  } catch (const std::exception& e) {
+    LOG_ERROR << "Couldn't create directory for launcher config: " << home
+              << " Error: " << e.what();
+
+    return std::filesystem::path();
+  }
   return home / "gitsLauncherConfig.yaml";
 }
 

@@ -28,81 +28,85 @@ static constexpr const char* SUBCAPTURE_OUTPUT_STREAM_PATH_KEY = "Subcapture.Out
 
 namespace gits::gui {
 void LauncherPaths::Read(YAML::Node& yaml) {
-  if (yaml[BASE_PATH_KEY]) {
-    const auto basePath = std::filesystem::path(yaml[BASE_PATH_KEY].as<std::string>());
-    if (std::filesystem::exists(basePath)) {
-      BasePath = basePath;
+  try {
+    if (yaml[BASE_PATH_KEY]) {
+      const auto basePath = std::filesystem::path(yaml[BASE_PATH_KEY].as<std::string>());
+      if (std::filesystem::exists(basePath)) {
+        BasePath = basePath;
+      }
     }
-  }
-  if (yaml[CAPTURE_CONFIG_PATH_KEY]) {
-    const auto captureConfigPath =
-        std::filesystem::path(yaml[CAPTURE_CONFIG_PATH_KEY].as<std::string>());
-    if (std::filesystem::exists(captureConfigPath)) {
-      Capture.ConfigPath = captureConfigPath;
+    if (yaml[CAPTURE_CONFIG_PATH_KEY]) {
+      const auto captureConfigPath =
+          std::filesystem::path(yaml[CAPTURE_CONFIG_PATH_KEY].as<std::string>());
+      if (std::filesystem::exists(captureConfigPath)) {
+        Capture.ConfigPath = captureConfigPath;
+      }
     }
-  }
-  if (yaml[CAPTURE_TARGET_PATH_KEY]) {
-    const auto captureTargetPath =
-        std::filesystem::path(yaml[CAPTURE_TARGET_PATH_KEY].as<std::string>());
-    if (std::filesystem::exists(captureTargetPath)) {
-      Capture.CaptureTargetPath = captureTargetPath;
+    if (yaml[CAPTURE_TARGET_PATH_KEY]) {
+      const auto captureTargetPath =
+          std::filesystem::path(yaml[CAPTURE_TARGET_PATH_KEY].as<std::string>());
+      if (std::filesystem::exists(captureTargetPath)) {
+        Capture.CaptureTargetPath = captureTargetPath;
+      }
     }
-  }
-  if (yaml[CAPTURE_OUTPUT_STREAM_PATH_KEY]) {
-    const auto captureOutputStreamPath =
-        std::filesystem::path(yaml[CAPTURE_OUTPUT_STREAM_PATH_KEY].as<std::string>());
-    if (std::filesystem::exists(captureOutputStreamPath)) {
-      Capture.OutputStreamPath = captureOutputStreamPath;
+    if (yaml[CAPTURE_OUTPUT_STREAM_PATH_KEY]) {
+      const auto captureOutputStreamPath =
+          std::filesystem::path(yaml[CAPTURE_OUTPUT_STREAM_PATH_KEY].as<std::string>());
+      if (std::filesystem::exists(captureOutputStreamPath)) {
+        Capture.OutputStreamPath = captureOutputStreamPath;
+      }
     }
-  }
-  if (yaml[PLAYBACK_CONFIG_PATH_KEY]) {
-    const auto playbackConfigPath =
-        std::filesystem::path(yaml[PLAYBACK_CONFIG_PATH_KEY].as<std::string>());
-    if (std::filesystem::exists(playbackConfigPath)) {
-      Playback.ConfigPath = playbackConfigPath;
+    if (yaml[PLAYBACK_CONFIG_PATH_KEY]) {
+      const auto playbackConfigPath =
+          std::filesystem::path(yaml[PLAYBACK_CONFIG_PATH_KEY].as<std::string>());
+      if (std::filesystem::exists(playbackConfigPath)) {
+        Playback.ConfigPath = playbackConfigPath;
+      }
     }
-  }
-  if (yaml[PLAYBACK_INPUT_STREAM_PATH_KEY]) {
-    const auto playbackInputStreamPath =
-        std::filesystem::path(yaml[PLAYBACK_INPUT_STREAM_PATH_KEY].as<std::string>());
-    if (std::filesystem::exists(playbackInputStreamPath)) {
-      Playback.InputStreamPath = playbackInputStreamPath;
+    if (yaml[PLAYBACK_INPUT_STREAM_PATH_KEY]) {
+      const auto playbackInputStreamPath =
+          std::filesystem::path(yaml[PLAYBACK_INPUT_STREAM_PATH_KEY].as<std::string>());
+      if (std::filesystem::exists(playbackInputStreamPath)) {
+        Playback.InputStreamPath = playbackInputStreamPath;
+      }
     }
-  }
-  if (yaml[PLAYBACK_SCREENSHOTS_PATH_KEY]) {
-    const auto playbackScreenshotsPath =
-        std::filesystem::path(yaml[PLAYBACK_SCREENSHOTS_PATH_KEY].as<std::string>());
-    if (std::filesystem::exists(playbackScreenshotsPath)) {
-      Playback.ScreenshotsPath = playbackScreenshotsPath;
+    if (yaml[PLAYBACK_SCREENSHOTS_PATH_KEY]) {
+      const auto playbackScreenshotsPath =
+          std::filesystem::path(yaml[PLAYBACK_SCREENSHOTS_PATH_KEY].as<std::string>());
+      if (std::filesystem::exists(playbackScreenshotsPath)) {
+        Playback.ScreenshotsPath = playbackScreenshotsPath;
+      }
     }
-  }
-  if (yaml[PLAYBACK_TRACE_PATH_KEY]) {
-    const auto playbackTracePath =
-        std::filesystem::path(yaml[PLAYBACK_TRACE_PATH_KEY].as<std::string>());
-    if (std::filesystem::exists(playbackTracePath)) {
-      Playback.TracePath = playbackTracePath;
+    if (yaml[PLAYBACK_TRACE_PATH_KEY]) {
+      const auto playbackTracePath =
+          std::filesystem::path(yaml[PLAYBACK_TRACE_PATH_KEY].as<std::string>());
+      if (std::filesystem::exists(playbackTracePath)) {
+        Playback.TracePath = playbackTracePath;
+      }
     }
-  }
-  if (yaml[SUBCAPTURE_CONFIG_PATH_KEY]) {
-    const auto subcaptureConfigPath =
-        std::filesystem::path(yaml[SUBCAPTURE_CONFIG_PATH_KEY].as<std::string>());
-    if (std::filesystem::exists(subcaptureConfigPath)) {
-      Subcapture.ConfigPath = subcaptureConfigPath;
+    if (yaml[SUBCAPTURE_CONFIG_PATH_KEY]) {
+      const auto subcaptureConfigPath =
+          std::filesystem::path(yaml[SUBCAPTURE_CONFIG_PATH_KEY].as<std::string>());
+      if (std::filesystem::exists(subcaptureConfigPath)) {
+        Subcapture.ConfigPath = subcaptureConfigPath;
+      }
     }
-  }
-  if (yaml[SUBCAPTURE_INPUT_STREAM_PATH_KEY]) {
-    const auto subcaptureInputStreamPath =
-        std::filesystem::path(yaml[SUBCAPTURE_INPUT_STREAM_PATH_KEY].as<std::string>());
-    if (std::filesystem::exists(subcaptureInputStreamPath)) {
-      Subcapture.InputStreamPath = subcaptureInputStreamPath;
+    if (yaml[SUBCAPTURE_INPUT_STREAM_PATH_KEY]) {
+      const auto subcaptureInputStreamPath =
+          std::filesystem::path(yaml[SUBCAPTURE_INPUT_STREAM_PATH_KEY].as<std::string>());
+      if (std::filesystem::exists(subcaptureInputStreamPath)) {
+        Subcapture.InputStreamPath = subcaptureInputStreamPath;
+      }
     }
-  }
-  if (yaml[SUBCAPTURE_OUTPUT_STREAM_PATH_KEY]) {
-    const auto subcaptureOutputStreamPath =
-        std::filesystem::path(yaml[SUBCAPTURE_OUTPUT_STREAM_PATH_KEY].as<std::string>());
-    if (std::filesystem::exists(subcaptureOutputStreamPath)) {
-      Subcapture.OutputStreamPath = subcaptureOutputStreamPath;
+    if (yaml[SUBCAPTURE_OUTPUT_STREAM_PATH_KEY]) {
+      const auto subcaptureOutputStreamPath =
+          std::filesystem::path(yaml[SUBCAPTURE_OUTPUT_STREAM_PATH_KEY].as<std::string>());
+      if (std::filesystem::exists(subcaptureOutputStreamPath)) {
+        Subcapture.OutputStreamPath = subcaptureOutputStreamPath;
+      }
     }
+  } catch (const YAML::Exception& e) {
+    LOG_ERROR << "Couldn't read Launcher paths from file. Error: " << e.what();
   }
 }
 

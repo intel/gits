@@ -621,9 +621,13 @@ int main(int argc, char** argv) {
   }
 
   if (argc > 1) {
-    std::filesystem::path path(argv[1]);
-    if (std::filesystem::exists(path) && std::filesystem::is_regular_file(path)) {
-      g_GUI->GetMainWindow()->SetPlaybackFile(path);
+    try {
+      std::filesystem::path path(argv[1]);
+      if (std::filesystem::exists(path) && std::filesystem::is_regular_file(path)) {
+        g_GUI->GetMainWindow()->SetPlaybackFile(path);
+      }
+    } catch (const std::exception& e) {
+      LOG_ERROR << "Couldn't set playback file: " << argv[1] << " Error: " << e.what();
     }
   }
 
