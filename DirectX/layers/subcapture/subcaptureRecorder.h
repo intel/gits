@@ -33,6 +33,7 @@ private:
 private:
   std::unique_ptr<stream::StreamWriter> recorder_;
   bool commandListSubcapture_{};
+  bool finished_{};
 };
 
 } // namespace DirectX

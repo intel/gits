@@ -34,14 +34,21 @@ ExecutionSerializationRecorder::ExecutionSerializationRecorder() {
   copyAuxiliaryFiles();
 }
 
+ExecutionSerializationRecorder::~ExecutionSerializationRecorder() {
+  finishRecording();
+}
+
 void ExecutionSerializationRecorder::record(stream::CommandSerializer* commandSerializer) {
   recorder_->Record(*commandSerializer);
   delete commandSerializer;
 }
 
 void ExecutionSerializationRecorder::finishRecording() {
-  recorder_->Close();
-  LOG_INFO << "Execution serialization recording finished";
+  if (!finished_) {
+    recorder_->Close();
+    LOG_INFO << "Execution serialization recording finished";
+    finished_ = true;
+  }
 }
 
 void ExecutionSerializationRecorder::copyAuxiliaryFiles() {

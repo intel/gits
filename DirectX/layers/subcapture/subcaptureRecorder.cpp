@@ -54,8 +54,11 @@ void SubcaptureRecorder::record(stream::CommandSerializer* commandSerializer) {
 }
 
 void SubcaptureRecorder::finishRecording() {
-  recorder_->Close();
-  LOG_INFO << "Subcapture recording finished";
+  if (!finished_) {
+    recorder_->Close();
+    LOG_INFO << "Subcapture recording finished";
+    finished_ = true;
+  }
 }
 
 void SubcaptureRecorder::copyAuxiliaryFiles() {

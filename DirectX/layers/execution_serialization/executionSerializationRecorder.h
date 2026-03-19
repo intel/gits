@@ -19,6 +19,7 @@ namespace DirectX {
 class ExecutionSerializationRecorder {
 public:
   ExecutionSerializationRecorder();
+  ~ExecutionSerializationRecorder();
 
   void record(stream::CommandSerializer* commandSerializer);
   void finishRecording();
@@ -28,6 +29,7 @@ private:
 
 private:
   std::unique_ptr<stream::StreamWriter> recorder_;
+  bool finished_{};
 };
 
 } // namespace DirectX
