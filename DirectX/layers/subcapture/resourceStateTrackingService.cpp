@@ -268,8 +268,7 @@ void ResourceStateTrackingService::restoreResourceStates(
   createCommandQueue.pDesc_.value = &commandQueueDesc;
   createCommandQueue.riid_.value = IID_ID3D12CommandQueue;
   createCommandQueue.ppCommandQueue_.key = commandQueueKey;
-  stateService_.getRecorder().record(
-      new ID3D12DeviceCreateCommandQueueSerializer(createCommandQueue));
+  stateService_.getRecorder().record(ID3D12DeviceCreateCommandQueueSerializer(createCommandQueue));
 
   unsigned commandAllocatorKey = stateService_.getUniqueObjectKey();
   ID3D12DeviceCreateCommandAllocatorCommand createCommandAllocator;
@@ -279,7 +278,7 @@ void ResourceStateTrackingService::restoreResourceStates(
   createCommandAllocator.riid_.value = IID_ID3D12CommandAllocator;
   createCommandAllocator.ppCommandAllocator_.key = commandAllocatorKey;
   stateService_.getRecorder().record(
-      new ID3D12DeviceCreateCommandAllocatorSerializer(createCommandAllocator));
+      ID3D12DeviceCreateCommandAllocatorSerializer(createCommandAllocator));
 
   unsigned commandListKey = stateService_.getUniqueObjectKey();
   ID3D12DeviceCreateCommandListCommand createCommandList;
@@ -291,8 +290,7 @@ void ResourceStateTrackingService::restoreResourceStates(
   createCommandList.pInitialState_.value = nullptr;
   createCommandList.riid_.value = IID_ID3D12CommandList;
   createCommandList.ppCommandList_.key = commandListKey;
-  stateService_.getRecorder().record(
-      new ID3D12DeviceCreateCommandListSerializer(createCommandList));
+  stateService_.getRecorder().record(ID3D12DeviceCreateCommandListSerializer(createCommandList));
 
   unsigned fenceKey = stateService_.getUniqueObjectKey();
   ID3D12DeviceCreateFenceCommand createFence;
@@ -302,7 +300,7 @@ void ResourceStateTrackingService::restoreResourceStates(
   createFence.Flags_.value = D3D12_FENCE_FLAG_NONE;
   createFence.riid_.value = IID_ID3D12Fence;
   createFence.ppFence_.key = fenceKey;
-  stateService_.getRecorder().record(new ID3D12DeviceCreateFenceSerializer(createFence));
+  stateService_.getRecorder().record(ID3D12DeviceCreateFenceSerializer(createFence));
 
   std::set<unsigned> residencyKeys;
 
@@ -334,7 +332,7 @@ void ResourceStateTrackingService::restoreResourceStates(
       barrier.Transition.StateAfter = afterState;
       barrierCommand.pBarriers_.resourceKeys[0] = resourceKey;
       stateService_.getRecorder().record(
-          new ID3D12GraphicsCommandListResourceBarrierSerializer(barrierCommand));
+          ID3D12GraphicsCommandListResourceBarrierSerializer(barrierCommand));
     };
     ResourceStates& resourceStates = getResourceStates(resourceKey);
     if (resourceStates.allEqual) {
@@ -385,14 +383,13 @@ void ResourceStateTrackingService::restoreResourceStates(
     barrierCommand.pBarriers_.resourceKeys[0] = keys.first;
     barrierCommand.pBarriers_.resourceAfterKeys[0] = keys.second;
     stateService_.getRecorder().record(
-        new ID3D12GraphicsCommandListResourceBarrierSerializer(barrierCommand));
+        ID3D12GraphicsCommandListResourceBarrierSerializer(barrierCommand));
   }
 
   ID3D12GraphicsCommandListCloseCommand commandListClose;
   commandListClose.key = stateService_.getUniqueCommandKey();
   commandListClose.object_.key = commandListKey;
-  stateService_.getRecorder().record(
-      new ID3D12GraphicsCommandListCloseSerializer(commandListClose));
+  stateService_.getRecorder().record(ID3D12GraphicsCommandListCloseSerializer(commandListClose));
 
   recordMakeResident(residencyKeys);
 
@@ -405,40 +402,40 @@ void ResourceStateTrackingService::restoreResourceStates(
   executeCommandLists.ppCommandLists_.keys.resize(1);
   executeCommandLists.ppCommandLists_.keys[0] = commandListKey;
   stateService_.getRecorder().record(
-      new ID3D12CommandQueueExecuteCommandListsSerializer(executeCommandLists));
+      ID3D12CommandQueueExecuteCommandListsSerializer(executeCommandLists));
 
   ID3D12CommandQueueSignalCommand commandQueueSignal;
   commandQueueSignal.key = stateService_.getUniqueCommandKey();
   commandQueueSignal.object_.key = commandQueueKey;
   commandQueueSignal.pFence_.key = fenceKey;
   commandQueueSignal.Value_.value = 1;
-  stateService_.getRecorder().record(new ID3D12CommandQueueSignalSerializer(commandQueueSignal));
+  stateService_.getRecorder().record(ID3D12CommandQueueSignalSerializer(commandQueueSignal));
 
   ID3D12FenceGetCompletedValueCommand getCompletedValue;
   getCompletedValue.key = stateService_.getUniqueCommandKey();
   getCompletedValue.object_.key = fenceKey;
   getCompletedValue.result_.value = 1;
-  stateService_.getRecorder().record(new ID3D12FenceGetCompletedValueSerializer(getCompletedValue));
+  stateService_.getRecorder().record(ID3D12FenceGetCompletedValueSerializer(getCompletedValue));
 
   IUnknownReleaseCommand releaseFence;
   releaseFence.key = stateService_.getUniqueCommandKey();
   releaseFence.object_.key = fenceKey;
-  stateService_.getRecorder().record(new IUnknownReleaseSerializer(releaseFence));
+  stateService_.getRecorder().record(IUnknownReleaseSerializer(releaseFence));
 
   IUnknownReleaseCommand releaseCommandList;
   releaseCommandList.key = stateService_.getUniqueCommandKey();
   releaseCommandList.object_.key = commandListKey;
-  stateService_.getRecorder().record(new IUnknownReleaseSerializer(releaseCommandList));
+  stateService_.getRecorder().record(IUnknownReleaseSerializer(releaseCommandList));
 
   IUnknownReleaseCommand releaseCommandAllocator;
   releaseCommandAllocator.key = stateService_.getUniqueCommandKey();
   releaseCommandAllocator.object_.key = commandAllocatorKey;
-  stateService_.getRecorder().record(new IUnknownReleaseSerializer(releaseCommandAllocator));
+  stateService_.getRecorder().record(IUnknownReleaseSerializer(releaseCommandAllocator));
 
   IUnknownReleaseCommand releaseCommandQueue;
   releaseCommandQueue.key = stateService_.getUniqueCommandKey();
   releaseCommandQueue.object_.key = commandQueueKey;
-  stateService_.getRecorder().record(new IUnknownReleaseSerializer(releaseCommandQueue));
+  stateService_.getRecorder().record(IUnknownReleaseSerializer(releaseCommandQueue));
 
   recordEvict(residencyKeys);
 }
@@ -460,7 +457,7 @@ void ResourceStateTrackingService::restoreBackBufferState(unsigned commandQueueK
   createCommandAllocator.riid_.value = IID_ID3D12CommandAllocator;
   createCommandAllocator.ppCommandAllocator_.key = commandAllocatorKey;
   stateService_.getRecorder().record(
-      new ID3D12DeviceCreateCommandAllocatorSerializer(createCommandAllocator));
+      ID3D12DeviceCreateCommandAllocatorSerializer(createCommandAllocator));
 
   unsigned commandListKey = stateService_.getUniqueObjectKey();
   ID3D12DeviceCreateCommandListCommand createCommandList;
@@ -472,8 +469,7 @@ void ResourceStateTrackingService::restoreBackBufferState(unsigned commandQueueK
   createCommandList.pInitialState_.value = nullptr;
   createCommandList.riid_.value = IID_ID3D12CommandList;
   createCommandList.ppCommandList_.key = commandListKey;
-  stateService_.getRecorder().record(
-      new ID3D12DeviceCreateCommandListSerializer(createCommandList));
+  stateService_.getRecorder().record(ID3D12DeviceCreateCommandListSerializer(createCommandList));
 
   unsigned fenceKey = stateService_.getUniqueObjectKey();
   ID3D12DeviceCreateFenceCommand createFence;
@@ -483,7 +479,7 @@ void ResourceStateTrackingService::restoreBackBufferState(unsigned commandQueueK
   createFence.Flags_.value = D3D12_FENCE_FLAG_NONE;
   createFence.riid_.value = IID_ID3D12Fence;
   createFence.ppFence_.key = fenceKey;
-  stateService_.getRecorder().record(new ID3D12DeviceCreateFenceSerializer(createFence));
+  stateService_.getRecorder().record(ID3D12DeviceCreateFenceSerializer(createFence));
 
   ID3D12GraphicsCommandListResourceBarrierCommand barrierCommand;
   barrierCommand.key = stateService_.getUniqueCommandKey();
@@ -501,13 +497,12 @@ void ResourceStateTrackingService::restoreBackBufferState(unsigned commandQueueK
   barrier.Transition.StateAfter = afterState;
   barrierCommand.pBarriers_.resourceKeys[0] = resourceKey;
   stateService_.getRecorder().record(
-      new ID3D12GraphicsCommandListResourceBarrierSerializer(barrierCommand));
+      ID3D12GraphicsCommandListResourceBarrierSerializer(barrierCommand));
 
   ID3D12GraphicsCommandListCloseCommand commandListClose;
   commandListClose.key = stateService_.getUniqueCommandKey();
   commandListClose.object_.key = commandListKey;
-  stateService_.getRecorder().record(
-      new ID3D12GraphicsCommandListCloseSerializer(commandListClose));
+  stateService_.getRecorder().record(ID3D12GraphicsCommandListCloseSerializer(commandListClose));
 
   ID3D12CommandQueueExecuteCommandListsCommand executeCommandLists;
   executeCommandLists.key = stateService_.getUniqueCommandKey();
@@ -518,35 +513,35 @@ void ResourceStateTrackingService::restoreBackBufferState(unsigned commandQueueK
   executeCommandLists.ppCommandLists_.keys.resize(1);
   executeCommandLists.ppCommandLists_.keys[0] = commandListKey;
   stateService_.getRecorder().record(
-      new ID3D12CommandQueueExecuteCommandListsSerializer(executeCommandLists));
+      ID3D12CommandQueueExecuteCommandListsSerializer(executeCommandLists));
 
   ID3D12CommandQueueSignalCommand commandQueueSignal;
   commandQueueSignal.key = stateService_.getUniqueCommandKey();
   commandQueueSignal.object_.key = commandQueueKey;
   commandQueueSignal.pFence_.key = fenceKey;
   commandQueueSignal.Value_.value = 1;
-  stateService_.getRecorder().record(new ID3D12CommandQueueSignalSerializer(commandQueueSignal));
+  stateService_.getRecorder().record(ID3D12CommandQueueSignalSerializer(commandQueueSignal));
 
   ID3D12FenceGetCompletedValueCommand getCompletedValue;
   getCompletedValue.key = stateService_.getUniqueCommandKey();
   getCompletedValue.object_.key = fenceKey;
   getCompletedValue.result_.value = 1;
-  stateService_.getRecorder().record(new ID3D12FenceGetCompletedValueSerializer(getCompletedValue));
+  stateService_.getRecorder().record(ID3D12FenceGetCompletedValueSerializer(getCompletedValue));
 
   IUnknownReleaseCommand releaseFence;
   releaseFence.key = stateService_.getUniqueCommandKey();
   releaseFence.object_.key = fenceKey;
-  stateService_.getRecorder().record(new IUnknownReleaseSerializer(releaseFence));
+  stateService_.getRecorder().record(IUnknownReleaseSerializer(releaseFence));
 
   IUnknownReleaseCommand releaseCommandList;
   releaseCommandList.key = stateService_.getUniqueCommandKey();
   releaseCommandList.object_.key = commandListKey;
-  stateService_.getRecorder().record(new IUnknownReleaseSerializer(releaseCommandList));
+  stateService_.getRecorder().record(IUnknownReleaseSerializer(releaseCommandList));
 
   IUnknownReleaseCommand releaseCommandAllocator;
   releaseCommandAllocator.key = stateService_.getUniqueCommandKey();
   releaseCommandAllocator.object_.key = commandAllocatorKey;
-  stateService_.getRecorder().record(new IUnknownReleaseSerializer(releaseCommandAllocator));
+  stateService_.getRecorder().record(IUnknownReleaseSerializer(releaseCommandAllocator));
 }
 
 void ResourceStateTrackingService::insertIfNotResident(unsigned resourceKey,
@@ -656,7 +651,7 @@ void ResourceStateTrackingService::recordMakeResident(const std::set<unsigned>& 
   for (unsigned key : keys) {
     makeResident.ppObjects_.keys.push_back(key);
   }
-  stateService_.getRecorder().record(new ID3D12DeviceMakeResidentSerializer(makeResident));
+  stateService_.getRecorder().record(ID3D12DeviceMakeResidentSerializer(makeResident));
 }
 
 void ResourceStateTrackingService::recordEvict(const std::set<unsigned>& keys) {
@@ -674,7 +669,7 @@ void ResourceStateTrackingService::recordEvict(const std::set<unsigned>& keys) {
   for (unsigned key : keys) {
     evict.ppObjects_.keys.push_back(key);
   }
-  stateService_.getRecorder().record(new ID3D12DeviceEvictSerializer(evict));
+  stateService_.getRecorder().record(ID3D12DeviceEvictSerializer(evict));
 }
 
 } // namespace DirectX

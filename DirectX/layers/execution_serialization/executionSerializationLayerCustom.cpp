@@ -51,19 +51,19 @@ bool ExecutionSerializationLayer::inRange() const {
 
 void ExecutionSerializationLayer::post(StateRestoreBeginCommand& c) {
   if (inRange()) {
-    recorder_.record(new StateRestoreBeginSerializer(c));
+    recorder_.record(StateRestoreBeginSerializer(c));
   }
 }
 
 void ExecutionSerializationLayer::post(StateRestoreEndCommand& c) {
   if (inRange()) {
-    recorder_.record(new StateRestoreEndSerializer(c));
+    recorder_.record(StateRestoreEndSerializer(c));
   }
 }
 
 void ExecutionSerializationLayer::post(FrameEndCommand& c) {
   if (inRange()) {
-    recorder_.record(new FrameEndSerializer(c));
+    recorder_.record(FrameEndSerializer(c));
   }
   if (currentFrame_ == endFrame_) {
     recorder_.finishRecording();
@@ -73,19 +73,19 @@ void ExecutionSerializationLayer::post(FrameEndCommand& c) {
 
 void ExecutionSerializationLayer::post(MarkerUInt64Command& c) {
   if (inRange()) {
-    recorder_.record(new MarkerUInt64Serializer(c));
+    recorder_.record(MarkerUInt64Serializer(c));
   }
 }
 
 void ExecutionSerializationLayer::pre(IDXGISwapChainPresentCommand& c) {
   if (inRange()) {
-    recorder_.record(new IDXGISwapChainPresentSerializer(c));
+    recorder_.record(IDXGISwapChainPresentSerializer(c));
   }
 }
 
 void ExecutionSerializationLayer::pre(IDXGISwapChain1Present1Command& c) {
   if (inRange()) {
-    recorder_.record(new IDXGISwapChain1Present1Serializer(c));
+    recorder_.record(IDXGISwapChain1Present1Serializer(c));
   }
 }
 
@@ -98,7 +98,7 @@ void ExecutionSerializationLayer::pre(ID3D12CommandQueueExecuteCommandListsComma
 void ExecutionSerializationLayer::pre(ID3D12DeviceCreateCommandListCommand& c) {
   if (inRange()) {
     cpuDescriptorsService_.createCommandList(c.object_.key);
-    recorder_.record(new ID3D12DeviceCreateCommandListSerializer(c));
+    recorder_.record(ID3D12DeviceCreateCommandListSerializer(c));
     executionService_.createCommandList(c.ppCommandList_.key, c.pCommandAllocator_.key);
   }
 }
@@ -106,15 +106,14 @@ void ExecutionSerializationLayer::pre(ID3D12DeviceCreateCommandListCommand& c) {
 void ExecutionSerializationLayer::pre(ID3D12Device4CreateCommandList1Command& c) {
   if (inRange()) {
     cpuDescriptorsService_.createCommandList(c.object_.key);
-    recorder_.record(new ID3D12Device4CreateCommandList1Serializer(c));
+    recorder_.record(ID3D12Device4CreateCommandList1Serializer(c));
   }
 }
 
 void ExecutionSerializationLayer::pre(ID3D12GraphicsCommandListResetCommand& c) {
   if (inRange()) {
     executionService_.commandListReset(c.key, c.object_.key, c.pAllocator_.key);
-    executionService_.commandListCommand(c.object_.key,
-                                         new ID3D12GraphicsCommandListResetSerializer(c));
+    executionService_.commandListCommand(c.object_.key, c);
   }
 }
 
@@ -131,8 +130,7 @@ void ExecutionSerializationLayer::pre(ID3D12GraphicsCommandListOMSetRenderTarget
 void ExecutionSerializationLayer::post(ID3D12GraphicsCommandListOMSetRenderTargetsCommand& c) {
   if (inRange()) {
     cpuDescriptorsService_.preserveDescriptor(c);
-    executionService_.commandListCommand(
-        c.object_.key, new ID3D12GraphicsCommandListOMSetRenderTargetsSerializer(c));
+    executionService_.commandListCommand(c.object_.key, c);
   }
 }
 
@@ -141,8 +139,7 @@ void ExecutionSerializationLayer::pre(ID3D12GraphicsCommandListClearDepthStencil
 void ExecutionSerializationLayer::post(ID3D12GraphicsCommandListClearDepthStencilViewCommand& c) {
   if (inRange()) {
     cpuDescriptorsService_.preserveDescriptor(c);
-    executionService_.commandListCommand(
-        c.object_.key, new ID3D12GraphicsCommandListClearDepthStencilViewSerializer(c));
+    executionService_.commandListCommand(c.object_.key, c);
   }
 }
 
@@ -151,8 +148,7 @@ void ExecutionSerializationLayer::pre(ID3D12GraphicsCommandListClearRenderTarget
 void ExecutionSerializationLayer::post(ID3D12GraphicsCommandListClearRenderTargetViewCommand& c) {
   if (inRange()) {
     cpuDescriptorsService_.preserveDescriptor(c);
-    executionService_.commandListCommand(
-        c.object_.key, new ID3D12GraphicsCommandListClearRenderTargetViewSerializer(c));
+    executionService_.commandListCommand(c.object_.key, c);
   }
 }
 
@@ -163,8 +159,7 @@ void ExecutionSerializationLayer::post(
     ID3D12GraphicsCommandListClearUnorderedAccessViewUintCommand& c) {
   if (inRange()) {
     cpuDescriptorsService_.preserveDescriptor(c);
-    executionService_.commandListCommand(
-        c.object_.key, new ID3D12GraphicsCommandListClearUnorderedAccessViewUintSerializer(c));
+    executionService_.commandListCommand(c.object_.key, c);
   }
 }
 
@@ -175,14 +170,13 @@ void ExecutionSerializationLayer::post(
     ID3D12GraphicsCommandListClearUnorderedAccessViewFloatCommand& c) {
   if (inRange()) {
     cpuDescriptorsService_.preserveDescriptor(c);
-    executionService_.commandListCommand(
-        c.object_.key, new ID3D12GraphicsCommandListClearUnorderedAccessViewFloatSerializer(c));
+    executionService_.commandListCommand(c.object_.key, c);
   }
 }
 
 void ExecutionSerializationLayer::pre(xessD3D12ExecuteCommand& c) {
   if (inRange()) {
-    executionService_.commandListCommand(c.pCommandList_.key, new xessD3D12ExecuteSerializer(c));
+    executionService_.commandListCommand(c.pCommandList_.key, c);
   }
 }
 
@@ -200,34 +194,34 @@ void ExecutionSerializationLayer::pre(ID3D12FenceSignalCommand& c) {
 
 void ExecutionSerializationLayer::pre(ID3D12DeviceCreateFenceCommand& c) {
   if (inRange()) {
-    recorder_.record(new ID3D12DeviceCreateFenceSerializer(c));
+    recorder_.record(ID3D12DeviceCreateFenceSerializer(c));
     executionService_.fenceSignal(c.key, c.ppFence_.key, c.InitialValue_.value);
   }
 }
 
 void ExecutionSerializationLayer::pre(ID3D12Device3EnqueueMakeResidentCommand& c) {
   if (inRange()) {
-    recorder_.record(new ID3D12Device3EnqueueMakeResidentSerializer(c));
+    recorder_.record(ID3D12Device3EnqueueMakeResidentSerializer(c));
     executionService_.fenceSignal(c.key, c.pFenceToSignal_.key, c.FenceValueToSignal_.value);
 
     ID3D12FenceGetCompletedValueCommand getCompletedValue;
     getCompletedValue.key = executionService_.getUniqueCommandKey();
     getCompletedValue.object_.key = c.pFenceToSignal_.key;
     getCompletedValue.result_.value = c.FenceValueToSignal_.value;
-    recorder_.record(new ID3D12FenceGetCompletedValueSerializer(getCompletedValue));
+    recorder_.record(ID3D12FenceGetCompletedValueSerializer(getCompletedValue));
   }
 }
 
 void ExecutionSerializationLayer::pre(ID3D12DeviceCreateCommandQueueCommand& c) {
   if (inRange()) {
-    recorder_.record(new ID3D12DeviceCreateCommandQueueSerializer(c));
+    recorder_.record(ID3D12DeviceCreateCommandQueueSerializer(c));
     executionService_.createCommandQueue(c.object_.key, c.ppCommandQueue_.key);
   }
 }
 
 void ExecutionSerializationLayer::pre(ID3D12Device9CreateCommandQueue1Command& c) {
   if (inRange()) {
-    recorder_.record(new ID3D12Device9CreateCommandQueue1Serializer(c));
+    recorder_.record(ID3D12Device9CreateCommandQueue1Serializer(c));
     executionService_.createCommandQueue(c.object_.key, c.ppCommandQueue_.key);
   }
 }
@@ -238,19 +232,19 @@ void ExecutionSerializationLayer::pre(ID3D12FenceSetEventOnCompletionCommand& c)
 
 void ExecutionSerializationLayer::pre(CreateWindowMetaCommand& c) {
   if (inRange()) {
-    recorder_.record(new CreateWindowMetaSerializer(c));
+    recorder_.record(CreateWindowMetaSerializer(c));
   }
 }
 
 void ExecutionSerializationLayer::pre(MappedDataMetaCommand& c) {
   if (inRange()) {
-    recorder_.record(new MappedDataMetaSerializer(c));
+    recorder_.record(MappedDataMetaSerializer(c));
   }
 }
 
 void ExecutionSerializationLayer::pre(CreateHeapAllocationMetaCommand& c) {
   if (inRange()) {
-    recorder_.record(new CreateHeapAllocationMetaSerializer(c));
+    recorder_.record(CreateHeapAllocationMetaSerializer(c));
   }
 }
 
@@ -258,91 +252,91 @@ void ExecutionSerializationLayer::pre(WaitForFenceSignaledCommand& c) {}
 
 void ExecutionSerializationLayer::pre(DllContainerMetaCommand& c) {
   if (inRange()) {
-    recorder_.record(new DllContainerMetaSerializer(c));
+    recorder_.record(DllContainerMetaSerializer(c));
   }
 }
 
 void ExecutionSerializationLayer::pre(IUnknownQueryInterfaceCommand& c) {
   if (inRange()) {
-    recorder_.record(new IUnknownQueryInterfaceSerializer(c));
+    recorder_.record(IUnknownQueryInterfaceSerializer(c));
   }
 }
 
 void ExecutionSerializationLayer::pre(IUnknownAddRefCommand& c) {
   if (inRange()) {
-    recorder_.record(new IUnknownAddRefSerializer(c));
+    recorder_.record(IUnknownAddRefSerializer(c));
   }
 }
 
 void ExecutionSerializationLayer::pre(IUnknownReleaseCommand& c) {
   if (inRange()) {
-    recorder_.record(new IUnknownReleaseSerializer(c));
+    recorder_.record(IUnknownReleaseSerializer(c));
   }
 }
 
 void ExecutionSerializationLayer::pre(INTC_D3D12_CreateDeviceExtensionContextCommand& c) {
   if (inRange()) {
-    recorder_.record(new INTC_D3D12_CreateDeviceExtensionContextSerializer(c));
+    recorder_.record(INTC_D3D12_CreateDeviceExtensionContextSerializer(c));
   }
 }
 
 void ExecutionSerializationLayer::pre(INTC_D3D12_CreateDeviceExtensionContext1Command& c) {
   if (inRange()) {
-    recorder_.record(new INTC_D3D12_CreateDeviceExtensionContext1Serializer(c));
+    recorder_.record(INTC_D3D12_CreateDeviceExtensionContext1Serializer(c));
   }
 }
 
 void ExecutionSerializationLayer::pre(INTC_D3D12_SetApplicationInfoCommand& c) {
   if (inRange()) {
-    recorder_.record(new INTC_D3D12_SetApplicationInfoSerializer(c));
+    recorder_.record(INTC_D3D12_SetApplicationInfoSerializer(c));
   }
 }
 
 void ExecutionSerializationLayer::pre(INTC_DestroyDeviceExtensionContextCommand& c) {
   if (inRange()) {
-    recorder_.record(new INTC_DestroyDeviceExtensionContextSerializer(c));
+    recorder_.record(INTC_DestroyDeviceExtensionContextSerializer(c));
   }
 }
 
 void ExecutionSerializationLayer::pre(INTC_D3D12_SetFeatureSupportCommand& c) {
   if (inRange()) {
-    recorder_.record(new INTC_D3D12_SetFeatureSupportSerializer(c));
+    recorder_.record(INTC_D3D12_SetFeatureSupportSerializer(c));
   }
 }
 
 void ExecutionSerializationLayer::pre(INTC_D3D12_CreateComputePipelineStateCommand& c) {
   if (inRange()) {
-    recorder_.record(new INTC_D3D12_CreateComputePipelineStateSerializer(c));
+    recorder_.record(INTC_D3D12_CreateComputePipelineStateSerializer(c));
   }
 }
 
 void ExecutionSerializationLayer::pre(INTC_D3D12_CreatePlacedResourceCommand& c) {
   if (inRange()) {
-    recorder_.record(new INTC_D3D12_CreatePlacedResourceSerializer(c));
+    recorder_.record(INTC_D3D12_CreatePlacedResourceSerializer(c));
   }
 }
 
 void ExecutionSerializationLayer::pre(INTC_D3D12_CreateCommittedResourceCommand& c) {
   if (inRange()) {
-    recorder_.record(new INTC_D3D12_CreateCommittedResourceSerializer(c));
+    recorder_.record(INTC_D3D12_CreateCommittedResourceSerializer(c));
   }
 }
 
 void ExecutionSerializationLayer::pre(INTC_D3D12_CreateReservedResourceCommand& c) {
   if (inRange()) {
-    recorder_.record(new INTC_D3D12_CreateReservedResourceSerializer(c));
+    recorder_.record(INTC_D3D12_CreateReservedResourceSerializer(c));
   }
 }
 
 void ExecutionSerializationLayer::pre(INTC_D3D12_CreateCommandQueueCommand& c) {
   if (inRange()) {
-    recorder_.record(new INTC_D3D12_CreateCommandQueueSerializer(c));
+    recorder_.record(INTC_D3D12_CreateCommandQueueSerializer(c));
   }
 }
 
 void ExecutionSerializationLayer::pre(INTC_D3D12_CreateHeapCommand& c) {
   if (inRange()) {
-    recorder_.record(new INTC_D3D12_CreateHeapSerializer(c));
+    recorder_.record(INTC_D3D12_CreateHeapSerializer(c));
   }
 }
 
@@ -350,55 +344,51 @@ void ExecutionSerializationLayer::pre(IDXGIAdapter3QueryVideoMemoryInfoCommand& 
 
 void ExecutionSerializationLayer::pre(NvAPI_InitializeCommand& c) {
   if (inRange()) {
-    recorder_.record(new NvAPI_InitializeSerializer(c));
+    recorder_.record(NvAPI_InitializeSerializer(c));
   }
 }
 
 void ExecutionSerializationLayer::pre(NvAPI_UnloadCommand& c) {
   if (inRange()) {
-    recorder_.record(new NvAPI_UnloadSerializer(c));
+    recorder_.record(NvAPI_UnloadSerializer(c));
   }
 }
 
 void ExecutionSerializationLayer::pre(NvAPI_D3D12_SetCreatePipelineStateOptionsCommand& c) {
   if (inRange()) {
-    recorder_.record(new NvAPI_D3D12_SetCreatePipelineStateOptionsSerializer(c));
+    recorder_.record(NvAPI_D3D12_SetCreatePipelineStateOptionsSerializer(c));
   }
 }
 
 void ExecutionSerializationLayer::pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& c) {
   if (inRange()) {
-    recorder_.record(new NvAPI_D3D12_SetNvShaderExtnSlotSpaceSerializer(c));
+    recorder_.record(NvAPI_D3D12_SetNvShaderExtnSlotSpaceSerializer(c));
   }
 }
 
 void ExecutionSerializationLayer::pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& c) {
   if (inRange()) {
-    recorder_.record(new NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadSerializer(c));
+    recorder_.record(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadSerializer(c));
   }
 }
 
 void ExecutionSerializationLayer::pre(
     NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& c) {
   if (inRange()) {
-    executionService_.commandListCommand(
-        c.pCommandList_.key, new NvAPI_D3D12_BuildRaytracingAccelerationStructureExSerializer(c));
+    executionService_.commandListCommand(c.pCommandList_.key, c);
   }
 }
 
 void ExecutionSerializationLayer::pre(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& c) {
   if (inRange()) {
-    executionService_.commandListCommand(
-        c.pCommandList_.key, new NvAPI_D3D12_BuildRaytracingOpacityMicromapArraySerializer(c));
+    executionService_.commandListCommand(c.pCommandList_.key, c);
   }
 }
 
 void ExecutionSerializationLayer::pre(
     NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand& c) {
   if (inRange()) {
-    executionService_.commandListCommand(
-        c.pCommandList_.key,
-        new NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationSerializer(c));
+    executionService_.commandListCommand(c.pCommandList_.key, c);
   }
 }
 

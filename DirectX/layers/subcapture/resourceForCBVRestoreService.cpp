@@ -37,7 +37,8 @@ bool ResourceForCBVRestoreService::restoreResourceObject(unsigned resourceKey) {
     return false;
   }
 
-  stateService_.getRecorder().record(createCommandSerializer(infoIt->second.creationCommand.get()));
+  stateService_.getRecorder().record(
+      *createCommandSerializer(infoIt->second.creationCommand.get()));
   restoredResourceObjects_.insert(infoIt->first);
   resourceCreationInfo_.erase(infoIt);
 
@@ -49,7 +50,7 @@ void ResourceForCBVRestoreService::releaseResources() {
     IUnknownReleaseCommand c;
     c.key = stateService_.getUniqueCommandKey();
     c.object_.key = key;
-    stateService_.getRecorder().record(new IUnknownReleaseSerializer(c));
+    stateService_.getRecorder().record(IUnknownReleaseSerializer(c));
   }
 }
 

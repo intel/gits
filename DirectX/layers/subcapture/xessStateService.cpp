@@ -49,7 +49,7 @@ void XessStateService::restoreContextState(ContextState* state) {
   c.key = stateService_.getUniqueCommandKey();
   c.phContext_.key = state->key;
   c.pDevice_.key = state->deviceKey;
-  recorder_.record(new xessD3D12CreateContextSerializer(c));
+  recorder_.record(xessD3D12CreateContextSerializer(c));
 
   if (state->initParams) {
     xessD3D12InitCommand c;
@@ -60,7 +60,7 @@ void XessStateService::restoreContextState(ContextState* state) {
     c.pInitParams_.tempBufferHeapKey = state->initParams.value().tempBufferHeapKey;
     c.pInitParams_.tempTextureHeapKey = state->initParams.value().tempTextureHeapKey;
     c.pInitParams_.pipelineLibraryKey = state->initParams.value().pipelineLibraryKey;
-    recorder_.record(new xessD3D12InitSerializer(c));
+    recorder_.record(xessD3D12InitSerializer(c));
   }
 
   if (state->jitterScale) {
@@ -69,7 +69,7 @@ void XessStateService::restoreContextState(ContextState* state) {
     c.hContext_.key = state->key;
     c.x_.value = state->jitterScale[0];
     c.y_.value = state->jitterScale[1];
-    recorder_.record(new xessSetJitterScaleSerializer(c));
+    recorder_.record(xessSetJitterScaleSerializer(c));
   }
 
   if (state->exposureScale) {
@@ -85,7 +85,7 @@ void XessStateService::restoreContextState(ContextState* state) {
     c.hContext_.key = state->key;
     c.x_.value = state->velocityScale[0];
     c.y_.value = state->velocityScale[1];
-    recorder_.record(new xessSetVelocityScaleSerializer(c));
+    recorder_.record(xessSetVelocityScaleSerializer(c));
   }
 
   if (state->forceLegacyScaleFactors) {
@@ -153,14 +153,14 @@ void XellStateService::restoreContextState(ContextState* state) {
   c.key = stateService_.getUniqueCommandKey();
   c.out_context_.key = state->key;
   c.device_.key = state->deviceKey;
-  recorder_.record(new xellD3D12CreateContextSerializer(c));
+  recorder_.record(xellD3D12CreateContextSerializer(c));
 
   if (state->sleepParams) {
     xellSetSleepModeCommand c;
     c.key = stateService_.getUniqueCommandKey();
     c.context_.key = state->key;
     c.param_.value = &state->sleepParams.value();
-    recorder_.record(new xellSetSleepModeSerializer(c));
+    recorder_.record(xellSetSleepModeSerializer(c));
   }
 
   for (const auto& [frame, markers] : state->registeredMarkers) {
@@ -173,7 +173,7 @@ void XellStateService::restoreContextState(ContextState* state) {
       c.context_.key = state->key;
       c.frame_id_.value = frame;
       c.marker_.value = marker;
-      recorder_.record(new xellAddMarkerDataSerializer(c));
+      recorder_.record(xellAddMarkerDataSerializer(c));
     }
   }
 }
@@ -218,13 +218,13 @@ void XefgStateService::restoreContextState(ContextState* state) {
   c.key = stateService_.getUniqueCommandKey();
   c.phSwapChain_.key = state->key;
   c.pDevice_.key = state->deviceKey;
-  recorder_.record(new xefgSwapChainD3D12CreateContextSerializer(c));
+  recorder_.record(xefgSwapChainD3D12CreateContextSerializer(c));
 
   xefgSwapChainSetLatencyReductionCommand cLatency;
   cLatency.key = stateService_.getUniqueCommandKey();
   cLatency.hSwapChain_.key = state->key;
   cLatency.hXeLLContext_.key = state->xellContext.key;
-  recorder_.record(new xefgSwapChainSetLatencyReductionSerializer(cLatency));
+  recorder_.record(xefgSwapChainSetLatencyReductionSerializer(cLatency));
 
   if (state->initFromSwapChainParams) {
     auto& initParams = state->initFromSwapChainParams.value();
@@ -238,7 +238,7 @@ void XefgStateService::restoreContextState(ContextState* state) {
     c.pInitParams_.tempBufferHeapKey = initParams.initParams.tempBufferHeapKey;
     c.pInitParams_.tempTextureHeapKey = initParams.initParams.tempTextureHeapKey;
     c.pInitParams_.pipelineLibraryKey = initParams.initParams.pipelineLibraryKey;
-    recorder_.record(new xefgSwapChainD3D12InitFromSwapChainSerializer(c));
+    recorder_.record(xefgSwapChainD3D12InitFromSwapChainSerializer(c));
   } else if (state->initFromSwapChainDescParams) {
     auto& initParams = state->initFromSwapChainDescParams.value();
 
@@ -247,7 +247,7 @@ void XefgStateService::restoreContextState(ContextState* state) {
     createWindowCommand.hWnd_.value = initParams.hWnd;
     createWindowCommand.width_.value = initParams.swapChainDesc.Width;
     createWindowCommand.height_.value = initParams.swapChainDesc.Height;
-    recorder_.record(new CreateWindowMetaSerializer(createWindowCommand));
+    recorder_.record(CreateWindowMetaSerializer(createWindowCommand));
 
     xefgSwapChainD3D12InitFromSwapChainDescCommand c;
     c.key = stateService_.getUniqueCommandKey();
@@ -264,7 +264,7 @@ void XefgStateService::restoreContextState(ContextState* state) {
     c.pInitParams_.tempBufferHeapKey = initParams.initParams.tempBufferHeapKey;
     c.pInitParams_.tempTextureHeapKey = initParams.initParams.tempTextureHeapKey;
     c.pInitParams_.pipelineLibraryKey = initParams.initParams.pipelineLibraryKey;
-    recorder_.record(new xefgSwapChainD3D12InitFromSwapChainDescSerializer(c));
+    recorder_.record(xefgSwapChainD3D12InitFromSwapChainDescSerializer(c));
   }
 
   if (state->swapChain) {
@@ -273,7 +273,7 @@ void XefgStateService::restoreContextState(ContextState* state) {
     c.hSwapChain_.key = state->key;
     c.riid_.value = state->swapChain.value().riid;
     c.ppSwapChain_.key = state->swapChain.value().swapChainKey;
-    recorder_.record(new xefgSwapChainD3D12GetSwapChainPtrSerializer(c));
+    recorder_.record(xefgSwapChainD3D12GetSwapChainPtrSerializer(c));
   }
 
   if (state->descriptorHeap) {
@@ -283,7 +283,7 @@ void XefgStateService::restoreContextState(ContextState* state) {
     c.pDescriptorHeap_.key = state->descriptorHeap.value().descriptorHeapKey;
     c.descriptorHeapOffsetInBytes_.value =
         state->descriptorHeap.value().descriptorHeapOffsetInBytes;
-    recorder_.record(new xefgSwapChainD3D12SetDescriptorHeapSerializer(c));
+    recorder_.record(xefgSwapChainD3D12SetDescriptorHeapSerializer(c));
   }
 
   if (state->enabled) {
@@ -291,7 +291,7 @@ void XefgStateService::restoreContextState(ContextState* state) {
     c.key = stateService_.getUniqueCommandKey();
     c.hSwapChain_.key = state->key;
     c.enable_.value = 1;
-    recorder_.record(new xefgSwapChainSetEnabledSerializer(c));
+    recorder_.record(xefgSwapChainSetEnabledSerializer(c));
   }
 
   if (state->threshold) {
@@ -299,7 +299,7 @@ void XefgStateService::restoreContextState(ContextState* state) {
     c.key = stateService_.getUniqueCommandKey();
     c.hSwapChain_.key = state->key;
     c.threshold_.value = state->threshold.value();
-    recorder_.record(new xefgSwapChainSetSceneChangeThresholdSerializer(c));
+    recorder_.record(xefgSwapChainSetSceneChangeThresholdSerializer(c));
   }
 
   if (state->debugFeature) {
@@ -309,7 +309,7 @@ void XefgStateService::restoreContextState(ContextState* state) {
     c.featureId_.value = state->debugFeature.value().featureId;
     c.enable_.value = state->debugFeature.value().enable;
     c.pArgument_.value = state->debugFeature.value().argument;
-    recorder_.record(new xefgSwapChainEnableDebugFeatureSerializer(c));
+    recorder_.record(xefgSwapChainEnableDebugFeatureSerializer(c));
   }
 }
 

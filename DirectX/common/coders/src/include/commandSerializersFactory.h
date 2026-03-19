@@ -12,7 +12,7 @@
 namespace gits {
 namespace DirectX {
 
-stream::CommandSerializer* createCommandSerializer(Command* command);
+std::unique_ptr<stream::CommandSerializer> createCommandSerializer(const Command* command);
 
 } // namespace DirectX
 } // namespace gits

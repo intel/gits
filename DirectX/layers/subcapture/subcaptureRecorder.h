@@ -21,7 +21,7 @@ public:
   SubcaptureRecorder();
   ~SubcaptureRecorder();
 
-  void record(stream::CommandSerializer* commandSerializer);
+  void record(const stream::CommandSerializer& commandSerializer);
   void finishRecording();
   bool commandListSubcapture() {
     return commandListSubcapture_;

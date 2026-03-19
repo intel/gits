@@ -47,7 +47,7 @@ custom = [
 %if not interface.name + function.name in custom and interface.name.startswith('ID3D12GraphicsCommandList'):
 void ExecutionSerializationLayer::pre(${interface.name}${function.name}Command& c) {
   if (inRange()) {
-    executionService_.commandListCommand(c.object_.key, new ${interface.name}${function.name}Serializer(c));
+    executionService_.commandListCommand(c.object_.key, c);
   }
 }
 
@@ -59,7 +59,7 @@ void ExecutionSerializationLayer::pre(${interface.name}${function.name}Command& 
 %if not function.name in custom:
 void ExecutionSerializationLayer::pre(${function.name}Command& c) {
   if (inRange()) {
-    recorder_.record(new ${function.name}Serializer(c));
+    recorder_.record(${function.name}Serializer(c));
   }
 }
 
@@ -70,7 +70,7 @@ void ExecutionSerializationLayer::pre(${function.name}Command& c) {
 %if not interface.name + function.name in custom and not interface.name.startswith('ID3D12GraphicsCommandList'):
 void ExecutionSerializationLayer::pre(${interface.name}${function.name}Command& c) {
   if (inRange()) {
-    recorder_.record(new ${interface.name}${function.name}Serializer(c));
+    recorder_.record(${interface.name}${function.name}Serializer(c));
   }
 }
 

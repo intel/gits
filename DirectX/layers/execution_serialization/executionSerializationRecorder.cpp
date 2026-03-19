@@ -38,9 +38,8 @@ ExecutionSerializationRecorder::~ExecutionSerializationRecorder() {
   finishRecording();
 }
 
-void ExecutionSerializationRecorder::record(stream::CommandSerializer* commandSerializer) {
-  recorder_->Record(*commandSerializer);
-  delete commandSerializer;
+void ExecutionSerializationRecorder::record(const stream::CommandSerializer& commandSerializer) {
+  recorder_->Record(commandSerializer);
 }
 
 void ExecutionSerializationRecorder::finishRecording() {

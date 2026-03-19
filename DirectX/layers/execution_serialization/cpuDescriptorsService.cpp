@@ -144,7 +144,7 @@ unsigned CpuDescriptorsService::DescriptorHeap<SIZE>::preserveDescriptor(unsigne
   copy.SrcDescriptorRangeStart_.interfaceKey = heapKey;
   copy.SrcDescriptorRangeStart_.index = heapIndex;
   copy.DescriptorHeapsType_.value = type_;
-  service_.recorder_.record(new ID3D12DeviceCopyDescriptorsSimpleSerializer(copy));
+  service_.recorder_.record(ID3D12DeviceCopyDescriptorsSimpleSerializer(copy));
 
   return preservedIndex;
 }
@@ -165,7 +165,7 @@ void CpuDescriptorsService::DescriptorHeap<SIZE>::createDescriptorHeap() {
   create.pDescriptorHeapDesc_.value = &desc;
   create.riid_.value = IID_ID3D12DescriptorHeap;
   create.ppvHeap_.key = descriptorHeapKey_;
-  service_.recorder_.record(new ID3D12DeviceCreateDescriptorHeapSerializer(create));
+  service_.recorder_.record(ID3D12DeviceCreateDescriptorHeapSerializer(create));
 }
 
 template <unsigned SIZE>

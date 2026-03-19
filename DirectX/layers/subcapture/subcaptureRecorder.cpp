@@ -47,9 +47,8 @@ SubcaptureRecorder::~SubcaptureRecorder() {
   finishRecording();
 }
 
-void SubcaptureRecorder::record(stream::CommandSerializer* commandSerializer) {
-  recorder_->Record(*commandSerializer);
-  delete commandSerializer;
+void SubcaptureRecorder::record(const stream::CommandSerializer& commandSerializer) {
+  recorder_->Record(commandSerializer);
 }
 
 void SubcaptureRecorder::finishRecording() {

@@ -21,7 +21,7 @@ public:
   ExecutionSerializationRecorder();
   ~ExecutionSerializationRecorder();
 
-  void record(stream::CommandSerializer* commandSerializer);
+  void record(const stream::CommandSerializer& commandSerializer);
   void finishRecording();
 
 private:

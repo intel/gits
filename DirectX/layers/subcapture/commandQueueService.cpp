@@ -46,7 +46,7 @@ void CommandQueueService::addCommandQueueSignal(ID3D12CommandQueueSignalCommand&
 
 void CommandQueueService::restoreCommandQueues() {
   for (CommandQueueCommand* command : commands) {
-    stateService_.getRecorder().record(command->commandSerializer.release());
+    stateService_.getRecorder().record(*command->commandSerializer);
   }
   clearCommands();
 }

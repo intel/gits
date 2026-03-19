@@ -26,7 +26,7 @@ custom = [
 %if not function.name in custom:
 void RecordingLayer::post(${function.name}Command& command) {
   if (subcaptureRange_.inRange()) {
-    recorder_.record(new ${function.name}Serializer(command));
+    recorder_.record(${function.name}Serializer(command));
   }
 }
 
@@ -37,7 +37,7 @@ void RecordingLayer::post(${function.name}Command& command) {
 %if not interface.name + function.name in custom:
 void RecordingLayer::post(${interface.name}${function.name}Command& command) {
   if (subcaptureRange_.inRange()) {
-    recorder_.record(new ${interface.name}${function.name}Serializer(command));
+    recorder_.record(${interface.name}${function.name}Serializer(command));
   }
 }
 

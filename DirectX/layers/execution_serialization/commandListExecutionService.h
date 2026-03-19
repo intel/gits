@@ -8,6 +8,7 @@
 
 #pragma once
 
+#include "command.h"
 #include "commandSerializer.h"
 #include "executionSerializationRecorder.h"
 #include "gpuExecutionTracker.h"
@@ -28,7 +29,7 @@ public:
   CommandListExecutionService(ExecutionSerializationRecorder& recorder,
                               CpuDescriptorsService& cpuDescriptorsService)
       : recorder_(recorder), cpuDescriptorsService_(cpuDescriptorsService) {}
-  void commandListCommand(unsigned commandListKey, stream::CommandSerializer* command);
+  void commandListCommand(unsigned commandListKey, const Command& command);
   void executeCommandLists(unsigned callKey,
                            unsigned commandQueueKey,
                            std::vector<unsigned>& commandListKeys);
@@ -55,7 +56,7 @@ private:
   struct CommandList {
     unsigned commandListKey{};
     bool reset{};
-    std::vector<stream::CommandSerializer*> commands;
+    std::vector<std::unique_ptr<stream::CommandSerializer>> commands;
   };
 
   struct ExecuteCommandLists : public GpuExecutionTracker::Executable {
