@@ -115,21 +115,19 @@ void DescriptorService::copyDescriptors(ID3D12DeviceCopyDescriptorsSimpleCommand
   std::lock_guard<std::mutex> lock(mutex_);
 
   auto srcHeapIt = statesByHeapIndex_.find(c.SrcDescriptorRangeStart_.interfaceKey);
-  if (srcHeapIt == statesByHeapIndex_.end()) {
-    static bool logged = false;
-    if (!logged) {
-      LOG_ERROR << "DescriptorService::copyDescriptors - descriptor states for heap not found";
-      logged = true;
-    }
-    return;
-  }
   auto& destHeap = statesByHeapIndex_[c.DestDescriptorRangeStart_.interfaceKey];
   for (unsigned i = 0; i < c.NumDescriptors_.value; ++i) {
-    auto srcIt = srcHeapIt->second.find(c.SrcDescriptorRangeStart_.index + i);
-    if (srcIt != srcHeapIt->second.end()) {
-      unsigned destHeapIndex = c.DestDescriptorRangeStart_.index + i;
-      destHeap[destHeapIndex].reset(copyDescriptor(
-          srcIt->second.get(), c.DestDescriptorRangeStart_.interfaceKey, destHeapIndex));
+    unsigned destHeapIndex = c.DestDescriptorRangeStart_.index + i;
+    if (srcHeapIt != statesByHeapIndex_.end()) {
+      auto srcIt = srcHeapIt->second.find(c.SrcDescriptorRangeStart_.index + i);
+      if (srcIt != srcHeapIt->second.end()) {
+        destHeap[destHeapIndex].reset(copyDescriptor(
+            srcIt->second.get(), c.DestDescriptorRangeStart_.interfaceKey, destHeapIndex));
+      } else {
+        destHeap.erase(destHeapIndex);
+      }
+    } else {
+      destHeap.erase(destHeapIndex);
     }
   }
 }
@@ -154,7 +152,6 @@ void DescriptorService::copyDescriptors(ID3D12DeviceCopyDescriptorsCommand& c) {
         c.pSrcDescriptorRangeSizes_.value ? c.pSrcDescriptorRangeSizes_.value[srcRangeIndex] : 1;
     auto srcHeapIt =
         statesByHeapIndex_.find(c.pSrcDescriptorRangeStarts_.interfaceKeys[srcRangeIndex]);
-    GITS_ASSERT(srcHeapIt != statesByHeapIndex_.end());
     for (unsigned srcIndex = 0; srcIndex < srcRangeSize; ++srcIndex, ++destIndex) {
       auto srcIt =
           srcHeapIt->second.find(c.pSrcDescriptorRangeStarts_.indexes[srcRangeIndex] + srcIndex);
@@ -166,10 +163,16 @@ void DescriptorService::copyDescriptors(ID3D12DeviceCopyDescriptorsCommand& c) {
                             : 1;
         destHeapKey = c.pDestDescriptorRangeStarts_.interfaceKeys[destRangeIndex];
       }
-      if (srcIt != srcHeapIt->second.end()) {
-        unsigned destHeapIndex = c.pDestDescriptorRangeStarts_.indexes[destRangeIndex] + destIndex;
-        statesByHeapIndex_[destHeapKey][destHeapIndex].reset(
-            copyDescriptor(srcIt->second.get(), destHeapKey, destHeapIndex));
+      unsigned destHeapIndex = c.pDestDescriptorRangeStarts_.indexes[destRangeIndex] + destIndex;
+      if (srcHeapIt != statesByHeapIndex_.end()) {
+        if (srcIt != srcHeapIt->second.end()) {
+          statesByHeapIndex_[destHeapKey][destHeapIndex].reset(
+              copyDescriptor(srcIt->second.get(), destHeapKey, destHeapIndex));
+        } else {
+          statesByHeapIndex_[destHeapKey].erase(destHeapIndex);
+        }
+      } else {
+        statesByHeapIndex_[destHeapKey].erase(destHeapIndex);
       }
     }
   }
