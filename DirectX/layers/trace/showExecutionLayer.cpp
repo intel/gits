@@ -14,10 +14,16 @@ namespace gits {
 namespace DirectX {
 
 void ShowExecutionLayer::post(StateRestoreBeginCommand& command) {
+  CommandPrinter p(outBuff_, printerState_, command, "StateRestoreBegin");
+  outBuff_ << "STATE_RESTORE_BEGIN\n";
+  outBuff_.flush();
   currentFrame_ = 0;
 }
 
 void ShowExecutionLayer::post(StateRestoreEndCommand& command) {
+  CommandPrinter p(outBuff_, printerState_, command, "StateRestoreEnd");
+  outBuff_ << "STATE_RESTORE_END\n";
+  outBuff_.flush();
   currentFrame_ = 1;
 }
 
@@ -75,7 +81,12 @@ void ShowExecutionLayer::post(ID3D12CommandQueueExecuteCommandListsCommand& comm
   p.addArgument(command.NumCommandLists_);
   p.addArgument(command.ppCommandLists_);
   p.print(false, false);
-  outBuff_ << " Frame #" << printerState_.frameCount << " Frame Execute #" << executeCount << "\n";
+  if (!(isExecutionSerializationKey(command.key) && !printerState_.stateRestorePhase)) {
+    outBuff_ << " Frame #" << printerState_.frameCount << " Frame Execute #" << executeCount
+             << "\n";
+  } else {
+    outBuff_ << "\n";
+  }
 
   std::string type;
   if (commandQueueTypes_.find(command.object_.key) != commandQueueTypes_.end()) {
