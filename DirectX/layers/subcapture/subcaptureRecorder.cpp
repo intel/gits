@@ -25,10 +25,9 @@ SubcaptureRecorder::SubcaptureRecorder() {
   }
 
   Configurator::PrepareSubcapturePath();
-  std::string subcapturePath = config.common.player.subcapturePath.string();
+  std::filesystem::path subcapturePath = config.common.player.subcapturePath;
   std::string commandListExecutions = config.directx.features.subcapture.commandListExecutions;
   if (!commandListExecutions.empty()) {
-    std::filesystem::path subcapturePath = config.common.player.subcapturePath;
     std::string path = subcapturePath.parent_path().string();
     path += "/" + config.common.player.streamDir.filename().string();
     path += "_frames_" + config.directx.features.subcapture.frames;
