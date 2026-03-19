@@ -33,7 +33,7 @@ int LZ4StreamDecompressor::Decompress(const char* src, char* dest, int srcSize, 
 }
 
 ZSTDStreamCompressor::ZSTDStreamCompressor() {
-  m_CompressionLevel = Configurator::Get().common.recorder.compression.level;
+  m_CompressionLevel = 3;
   m_ZSTDContext = ZSTD_createCCtx();
 }
 

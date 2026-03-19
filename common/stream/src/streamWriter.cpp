@@ -14,15 +14,14 @@
 namespace gits {
 namespace stream {
 
-StreamWriter::StreamWriter(const std::filesystem::path& streamDir) {
+StreamWriter::StreamWriter(const std::filesystem::path& streamDir,
+                           CompressionType compressionType) {
   m_StreamDir = streamDir.string();
   std::filesystem::create_directories(streamDir);
   m_Stream.exceptions(std::ofstream::failbit | std::ofstream::badbit);
   m_Stream.open(streamDir / "stream.gits2", std::ios::out | std::ios::binary);
 
-  StreamHeader::Get().WriteHeader(m_Stream);
-
-  CompressionType compressionType = Configurator::Get().common.recorder.compression.type;
+  StreamHeader::Get().WriteHeader(m_Stream, compressionType);
 
   for (unsigned i = 0; i < NUMBER_OF_COMPRESSION_THREADS; ++i) {
     m_CompressionThreads[i] = std::thread{&StreamWriter::Compress, this, i};

@@ -10,6 +10,7 @@
 
 #include "commandSerializer.h"
 #include "streamCompressor.h"
+#include "enumsAuto.h"
 
 #include <fstream>
 #include <memory>
@@ -25,7 +26,7 @@ namespace stream {
 
 class StreamWriter {
 public:
-  StreamWriter(const std::filesystem::path& streamDir);
+  StreamWriter(const std::filesystem::path& streamDir, CompressionType compressionType);
   ~StreamWriter();
 
   void Record(const CommandSerializer& commandSerializer);

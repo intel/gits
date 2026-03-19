@@ -27,7 +27,7 @@ const unsigned StreamHeader::VERSION[4] = {2, 0, 12, VERSION_4};
 const unsigned StreamHeader::VERSION_API_INFO[4] = {2, 0, 11, 0};
 const unsigned StreamHeader::SCHEDULER_VERSION = 1;
 
-void StreamHeader::WriteHeader(std::ostream& stream) {
+void StreamHeader::WriteHeader(std::ostream& stream, CompressionType compressionType) {
   WriteVersion(stream);
   unsigned skippedCallCount{};
   stream.write(reinterpret_cast<const char*>(&skippedCallCount), sizeof(skippedCallCount));
@@ -40,7 +40,6 @@ void StreamHeader::WriteHeader(std::ostream& stream) {
   stream.write(reinterpret_cast<const char*>(&apiCompute), sizeof(apiCompute));
   stream.write(reinterpret_cast<const char*>(&SCHEDULER_VERSION), sizeof(SCHEDULER_VERSION));
 
-  CompressionType compressionType = Configurator::Get().common.recorder.compression.type;
   if (compressionType != CompressionType::LZ4 && compressionType != CompressionType::ZSTD) {
     LOG_ERROR << "Cannot use compression type from configuration, only LZ4 or ZSTD compression is "
                  "supported.";

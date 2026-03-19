@@ -1114,6 +1114,10 @@ Configuration:
                 Type: bool
                 Default: true
                 Description: Uses optimization information from subcapture analysis to restore only necessary raytracing acceleration structures
+              - Name: compressionType
+                Type: CompressionType
+                Default: LZ4
+                Description: Compression type (LZ4/ZSTD)
           - Name: Screenshots
             Type: Group
             Options:

@@ -15,7 +15,8 @@ namespace gits {
 namespace DirectX {
 
 GitsRecorder::GitsRecorder() {
-  recorder_.reset(new stream::StreamWriter(Configurator::Get().common.recorder.dumpPath));
+  recorder_.reset(new stream::StreamWriter(Configurator::Get().common.recorder.dumpPath,
+                                           Configurator::Get().common.recorder.compression.type));
   gits::MessageBus::get().subscribe({PUBLISHER_RECORDER, TOPIC_PROGRAM_EXIT},
                                     [this](Topic t, const MessagePtr& m) { close(); });
   gits::MessageBus::get().subscribe({PUBLISHER_PLUGIN, TOPIC_CLOSE_RECORDER},

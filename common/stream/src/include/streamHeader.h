@@ -22,7 +22,7 @@ public:
   static StreamHeader& Get() {
     return m_Instance;
   }
-  void WriteHeader(std::ostream& stream);
+  void WriteHeader(std::ostream& stream, CompressionType compressionType);
   void ReadHeader(std::istream& stream);
   bool IsLegacyStream() const {
     return m_SchedulerVersion == 0;

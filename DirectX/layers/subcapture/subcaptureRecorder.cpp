@@ -38,7 +38,8 @@ SubcaptureRecorder::SubcaptureRecorder() {
     commandListSubcapture_ = true;
   }
 
-  recorder_.reset(new stream::StreamWriter(subcapturePath));
+  recorder_.reset(
+      new stream::StreamWriter(subcapturePath, config.directx.features.subcapture.compressionType));
 
   copyAuxiliaryFiles();
 }
