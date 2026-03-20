@@ -30,6 +30,7 @@ struct DescriptorState {
     D3D12_SAMPLER
   };
   DescriptorState(StateId id_) : id(id_) {}
+  virtual ~DescriptorState() = default;
   StateId id{};
   unsigned deviceKey{};
   D3D12_CPU_DESCRIPTOR_HANDLE destDescriptor{};

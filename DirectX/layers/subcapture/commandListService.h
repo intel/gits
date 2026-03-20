@@ -23,6 +23,7 @@ namespace DirectX {
 struct CommandListCommand {
   CommandListCommand(CommandId id_, unsigned key, unsigned clKey)
       : id(id_), commandKey(key), commandListKey(clKey) {}
+  virtual ~CommandListCommand() = default;
   CommandId id{};
   unsigned commandKey{};
   unsigned commandListKey{};
