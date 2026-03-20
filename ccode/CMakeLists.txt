@@ -16,6 +16,7 @@ set(ARGS_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/argshxx/)
 set(PLOG_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/plog/)
 set(DX12_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/AgilitySDK/)
 set(INTEL_EXT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/IntelExtensions/)
+set(STB_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/stb/)
 
 # Set the executable name from config.cmake if it exists)
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/generated/config.cmake")
@@ -45,6 +46,8 @@ set(DX_SRC
   directx/mapTrackingService.cpp
   directx/heapAllocationService.h
   directx/heapAllocationService.cpp
+  directx/screenshotService.h
+  directx/screenshotService.cpp
 )
 source_group("DirectX" FILES ${DX_SRC})
 
@@ -58,10 +61,14 @@ source_group("DirectX_Wrappers" FILES ${DX_WRAPPERS_SRC})
 
 add_executable(${EXECUTABLE_NAME}
   main.cpp
+  arguments.h
+  arguments.cpp
   dataService.h
   dataService.cpp
   windowService.h
   windowService.cpp
+  imageUtils.h
+  imageUtils.cpp
   ${DX_SRC}
   ${DX_WRAPPERS_SRC}
   ${GENERATED_SRC}
@@ -73,6 +80,7 @@ target_compile_definitions(${EXECUTABLE_NAME} PRIVATE
 
 target_include_directories(${EXECUTABLE_NAME} PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}
+  ${STB_SOURCE_DIR}
   ${PLOG_SOURCE_DIR}/include
   ${DX12_SOURCE_DIR}/include
   ${ARGS_SOURCE_DIR}

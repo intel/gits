@@ -26,9 +26,10 @@ const std::string g_ObjectsH = R"(
 const std::string g_CommandsH = R"(
 #pragma once
 
+#include "arguments.h"
 #include "objects.h"
 
-void SetupEnvironment();
+void SetupEnvironment(Arguments& args);
 void TeardownEnvironment();
 void StateRestore();
 void RunFrames();
@@ -39,6 +40,7 @@ void RunFrames();
 const std::string g_CommandsCpp = R"(
 #include "commands.h"
 #include "directx/utils.h"
+#include "directx/screenshotService.h"
 
 #include <plog/Log.h>
 #include <vector>
@@ -49,10 +51,13 @@ struct D3D12Context {
 };
 D3D12Context g_D3D12Context;
 
-void SetupEnvironment() {
+void SetupEnvironment(Arguments& args) {
   LOG_INFO << "CCode - Preparing DirectX 12 environment...";
   g_D3D12Context.d3d12AgilitySdk = directx::LoadAgilitySdk("D3D12/");
   directx::LoadIntelExtensions();
+  if (args.EnableScreenshots) {
+    directx::ScreenshotService::Get().Initialize(args.OutputDir);
+  }
 }
 
 void TeardownEnvironment() {
@@ -75,6 +80,7 @@ const std::string g_CommandsXCpp = R"(
 #include "directx/descriptorHeapService.h"
 #include "directx/gpuAddressService.h"
 #include "directx/heapAllocationService.h"
+#include "directx/screenshotService.h"
 #include "directx/wrappers/ccodeApiWrappers.h"
 
 #include <plog/Log.h>

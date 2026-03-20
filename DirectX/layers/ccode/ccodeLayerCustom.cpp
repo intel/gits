@@ -41,6 +41,20 @@ static void createHeap(ccode::CommandPrinter& p, unsigned heapKey) {
   p.setPostCommand(ss.str());
 }
 
+static void createSwapChain(ccode::CommandPrinter& p, unsigned swapChainKey, unsigned cmdQueueKey) {
+  using namespace ccode;
+  std::ostringstream ss;
+  ss << "directx::ScreenshotService::Get().RegisterSwapChain(" << swapChainKey << ", "
+     << objKeyToPtrStr(swapChainKey) << ", " << objKeyToPtrStr(cmdQueueKey) << ");" << std::endl;
+  p.setPostCommand(ss.str());
+}
+
+static void present(ccode::CommandPrinter& p, unsigned swapChainKey) {
+  std::ostringstream ss;
+  ss << "directx::ScreenshotService::Get().CaptureFrame(" << swapChainKey << ");" << std::endl;
+  p.setPreCommand(ss.str());
+}
+
 CCodeLayer::CCodeLayer() : Layer("CCode") {}
 
 void CCodeLayer::pre(StateRestoreBeginCommand& c) {
@@ -555,6 +569,33 @@ void CCodeLayer::preProcess(ccode::CommandPrinter& p, ID3D12ObjectGetPrivateData
 void CCodeLayer::preProcess(ccode::CommandPrinter& p, ID3D12ObjectSetPrivateDataCommand& c) {
   // Data is not used and may trigger Debug Layer errors
   p.skip();
+}
+
+void CCodeLayer::postProcess(ccode::CommandPrinter& p, IDXGIFactoryCreateSwapChainCommand& c) {
+  createSwapChain(p, c.ppSwapChain_.key, c.pDevice_.key);
+}
+
+void CCodeLayer::postProcess(ccode::CommandPrinter& p,
+                             IDXGIFactory2CreateSwapChainForHwndCommand& c) {
+  createSwapChain(p, c.ppSwapChain_.key, c.pDevice_.key);
+}
+
+void CCodeLayer::postProcess(ccode::CommandPrinter& p,
+                             IDXGIFactory2CreateSwapChainForCoreWindowCommand& c) {
+  createSwapChain(p, c.ppSwapChain_.key, c.pDevice_.key);
+}
+
+void CCodeLayer::postProcess(ccode::CommandPrinter& p,
+                             IDXGIFactory2CreateSwapChainForCompositionCommand& c) {
+  createSwapChain(p, c.ppSwapChain_.key, c.pDevice_.key);
+}
+
+void CCodeLayer::postProcess(ccode::CommandPrinter& p, IDXGISwapChainPresentCommand& c) {
+  present(p, c.object_.key);
+}
+
+void CCodeLayer::postProcess(ccode::CommandPrinter& p, IDXGISwapChain1Present1Command& c) {
+  present(p, c.object_.key);
 }
 
 void CCodeLayer::postProcess(ccode::CommandPrinter& p, ID3D12FenceGetCompletedValueCommand& c) {

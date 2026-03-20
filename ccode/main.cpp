@@ -14,9 +14,7 @@
 #include <plog/Appenders/ColorConsoleAppender.h>
 #include <plog/Init.h>
 
-// Args
-#include <args.hxx>
-
+#include "arguments.h"
 #include "dataService.h"
 #include "generated/objects.h"
 #include "generated/commands.h"
@@ -37,8 +35,13 @@ int main(int argc, char* argv[]) {
   std::filesystem::path exeDir = std::filesystem::path(argv[0]).parent_path();
   std::filesystem::current_path(exeDir);
 
+  Arguments args;
+  if (!ParseArguments(argc, argv, args)) {
+    return -1;
+  }
+
   // Prepare environment
-  SetupEnvironment();
+  SetupEnvironment(args);
 
   // Locate and open data.bin file
   auto dataFile = std::filesystem::path(DATA_BIN_PATH);

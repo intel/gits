@@ -49,3 +49,12 @@ install(FILES
   third_party/AgilitySdk/LICENSE-CODE.txt
   DESTINATION CCode/third_party/AgilitySdk/
 )
+
+# STB Image
+install(FILES 
+  third_party/stb/stb_image.h
+  third_party/stb/stb_image_write.h
+  third_party/stb/README.md
+  third_party/stb/LICENSE
+  DESTINATION CCode/third_party/stb/
+)

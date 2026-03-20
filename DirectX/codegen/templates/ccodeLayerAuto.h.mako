@@ -86,6 +86,12 @@ private:
   // Custom command post process
   // Used after the arguments have been processed and the command is ready to be printed
   void postProcess(ccode::CommandPrinter& p, auto& c) {}
+  void postProcess(ccode::CommandPrinter& p, IDXGIFactoryCreateSwapChainCommand& c);
+  void postProcess(ccode::CommandPrinter& p, IDXGIFactory2CreateSwapChainForHwndCommand& c);
+  void postProcess(ccode::CommandPrinter& p, IDXGIFactory2CreateSwapChainForCoreWindowCommand& c);
+  void postProcess(ccode::CommandPrinter& p, IDXGIFactory2CreateSwapChainForCompositionCommand& c);
+  void postProcess(ccode::CommandPrinter& p, IDXGISwapChainPresentCommand& c);
+  void postProcess(ccode::CommandPrinter& p, IDXGISwapChain1Present1Command& c);
   void postProcess(ccode::CommandPrinter& p, ID3D12FenceGetCompletedValueCommand& c);
   void postProcess(ccode::CommandPrinter& p, ID3D12DeviceCreateDescriptorHeapCommand& c);
   void postProcess(ccode::CommandPrinter& p, ID3D12ResourceMapCommand& c);
