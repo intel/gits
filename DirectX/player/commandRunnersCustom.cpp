@@ -82,7 +82,8 @@ void IUnknownQueryInterfaceRunner::Run() {
         command.riid_.value, reinterpret_cast<void**>(&ppvObject));
 
     if (command.result_.value == S_OK) {
-      command.ppvObject_.value = reinterpret_cast<void**>(&ppvObject);
+      command.ppvObject_.data = ppvObject;
+      command.ppvObject_.value = &command.ppvObject_.data;
       if (command.ppvObject_.key != command.object_.key) {
         updateOutputInterface(manager, command.ppvObject_);
       }
