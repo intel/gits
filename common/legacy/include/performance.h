@@ -17,6 +17,7 @@
 
 #include <iostream>
 #include <vector>
+#include <cstdint>
 
 namespace gits {
 class FrameTimeSheet {
