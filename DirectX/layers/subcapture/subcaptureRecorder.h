@@ -25,7 +25,7 @@ public:
 
   void record(const stream::CommandSerializer& commandSerializer);
   void finishRecording();
-  bool commandListSubcapture() {
+  bool commandListSubcapture() const {
     return commandListSubcapture_;
   }
 
