@@ -443,6 +443,11 @@ void ResourceDump::dumpTexture(DumpInfo& dumpInfo, void* data) {
     } else {
       imageConverted = &image;
     }
+    if (!imageConverted) {
+      LOG_ERROR << "Dumping " + dumpNameA + " format " << formatToString(dumpInfo.subresourceFormat)
+                << " failed: imageConverted is nullptr";
+      return;
+    }
 
     writeImage(dumpNameW, format_, imageConverted->pixels, imageConverted->format,
                imageConverted->width, imageConverted->height, imageConverted->rowPitch);
