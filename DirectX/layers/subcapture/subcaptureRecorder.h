@@ -20,6 +20,8 @@ class SubcaptureRecorder {
 public:
   SubcaptureRecorder();
   ~SubcaptureRecorder();
+  SubcaptureRecorder(const SubcaptureRecorder&) = delete;
+  SubcaptureRecorder& operator=(const SubcaptureRecorder&) = delete;
 
   void record(const stream::CommandSerializer& commandSerializer);
   void finishRecording();
