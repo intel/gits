@@ -249,16 +249,16 @@ int MainBody(int argc, char* argv[]) {
     log::AddFileAppender(cfg.common.player.outputTracePath);
   }
 
+  if (cfg.common.shared.waitForInput) {
+    LOG_NONE << "Press ENTER to continue...";
+    std::cin.get();
+  }
+
   int returnValue = EXIT_SUCCESS;
 
   bool legacyMode = false;
 
   try {
-    if (cfg.common.player.waitForEnter) {
-      LOG_NONE << "Waiting for ENTER press ...";
-      std::cin.get();
-    }
-
 #if defined GITS_PLATFORM_WINDOWS
     if (cfg.common.player.escalatePriority) {
       if (SetPriorityClass(GetCurrentProcess(), REALTIME_PRIORITY_CLASS)) {
@@ -481,12 +481,6 @@ int MainBody(int argc, char* argv[]) {
   }
 #endif
   CGits::Instance().Dispose();
-
-  if (Configurator::Get().common.player.waitForEnter) {
-    LOG_NONE << "Waiting for ENTER press ...";
-    std::cin.get();
-  }
-
   return returnValue;
 }
 
@@ -512,9 +506,6 @@ LONG WINAPI ExceptionFilter(PEXCEPTION_POINTERS exceptionPtr) {
 int main2(int argc, char* argv[]) {
   using namespace gits;
 #ifdef GITS_PLATFORM_WINDOWS
-#if _DEBUG
-  MessageBox(0, "Waiting for debugger...", "Waiting for debugger...", 0);
-#endif
   // Prevent OS from scaling our windows.
   SetProcessDPIAware();
 #ifdef _NDEBUG

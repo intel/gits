@@ -142,6 +142,11 @@ Configuration:
                 Type: bool
                 Default: true
                 Description: Show the FPS counter in the HUD
+          - Name: waitForInput
+            Type: bool
+            Default: false
+            Arguments: [waitForInput]
+            Description: Wait for user input before starting playback or recording
       - Name: Player
         Type: Group
         Options:
@@ -459,7 +464,8 @@ Configuration:
             Type: bool
             Default: false
             Arguments: [waitForEnter]
-            Description: Before and after playing back the stream, wait for ENTER keypress.
+            Description: DEPRECATED. Use waitForInput. Before and after playing back the stream, wait for ENTER keypress.
+            Deprecated: true
           - Name: cleanResourcesOnExit
             Type: bool
             Default: false

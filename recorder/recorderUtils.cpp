@@ -113,6 +113,19 @@ bool ConfigureRecorder(const std::filesystem::path& configPath, bool legacyMode)
 
   LOG_INFO << "GITS configured for process: " << processNameHUD;
 
+  if (cfg.common.shared.waitForInput) {
+    bool inputHandled = false;
+#ifdef GITS_PLATFORM_WINDOWS
+    // On Windows, show a message box instead of using the console
+    int result = MessageBox(nullptr, "Waiting for input...", "GITS Recorder", MB_OK);
+    inputHandled = (result != 0);
+#endif
+    if (!inputHandled) {
+      LOG_NONE << "Press ENTER to continue... (PID: " << pid << ")";
+      std::cin.get();
+    }
+  }
+
   configured = true;
   return true;
 }

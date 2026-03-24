@@ -91,7 +91,6 @@ void CaptureManager::exchangeD3D12DispatchTables(const D3D12DispatchTable& syste
 }
 
 CaptureManager::CaptureManager() {
-
   dxgiDispatchTableWrapper_.CreateDXGIFactory = CreateDXGIFactoryWrapper;
   dxgiDispatchTableWrapper_.CreateDXGIFactory1 = CreateDXGIFactory1Wrapper;
   dxgiDispatchTableWrapper_.CreateDXGIFactory2 = CreateDXGIFactory2Wrapper;

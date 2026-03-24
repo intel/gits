@@ -34,12 +34,6 @@ namespace gits {
 
 CGitsLoader::CGitsLoader(const char* recorderWrapperFactoryName, bool legacyMode)
     : config_(nullptr), recorderWrapper_(nullptr) {
-
-  // Give the user some time to attach the debugger...
-  if (getenv("GITS_SLEEP")) {
-    std::this_thread::sleep_for(std::chrono::seconds(10));
-  }
-
   const char* envConfigPath = getenv("GITS_CONFIG_DIR");
   std::filesystem::path libPath = dl::this_library_path();
   std::filesystem::path configPath = libPath.parent_path();
