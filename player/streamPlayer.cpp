@@ -23,7 +23,9 @@
 #include <memory>
 
 #if defined GITS_PLATFORM_WINDOWS_X64
+#if defined WITH_DIRECTX
 #include "directXCommandFactory.h"
+#endif
 #include <windows.h>
 #endif
 
@@ -198,12 +200,15 @@ void PlayStream(const std::filesystem::path& streamPath) {
   Timer stateRestoreTimer(true);
   Timer playbackTimer(true);
 
-  DirectX::DirectXCommandFactory directXCommandFactory;
-  CommonCommandFactory commonCommandFactory;
-
   std::vector<stream::CommandFactory*> commandFactories;
+
+  CommonCommandFactory commonCommandFactory;
   commandFactories.push_back(&commonCommandFactory);
+
+#if defined WITH_DIRECTX
+  DirectX::DirectXCommandFactory directXCommandFactory;
   commandFactories.push_back(&directXCommandFactory);
+#endif
 
   std::unique_ptr<stream::BaseStreamReader> streamReader;
   if (stream::StreamHeader::Get().IsLegacyStream()) {
