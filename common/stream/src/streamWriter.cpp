@@ -227,6 +227,11 @@ void StreamWriter::Compress(unsigned threadIndex) {
     compressedBlock->DataSize = m_Compressors[threadIndex]->Compress(
         uncompressedBlock->Data.get(), compressedBlock->Data.get(), uncompressedBlock->DataSize,
         compressedBlock->DataAlloc);
+    if (!compressedBlock->DataSize) {
+      LOG_ERROR << "StreamWriter - cannot compress " << uncompressedBlock->DataSize
+                << " bytes of data.";
+      std::quick_exit(EXIT_FAILURE);
+    }
 
     {
       std::unique_lock<std::mutex> lock(m_Mutex);
