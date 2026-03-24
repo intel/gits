@@ -972,6 +972,7 @@ void ReplayCustomizationLayer::pre(
 void ReplayCustomizationLayer::pre(IDXGIAdapter3SetVideoMemoryReservationCommand& c) {
   if (!c.object_.value) {
     c.skip = true;
+    return;
   }
   // Clamp reservation to AvailableForReservation to avoid E_INVALIDARG on
   // machines with less reservable VRAM than the recording machine.
