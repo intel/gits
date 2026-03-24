@@ -716,7 +716,7 @@ Configuration:
                 Default: LZ4
                 DefaultCondition:
                   - is_compute: ZSTD
-                  - is_directx: LZ4
+                  - is_directx: ZSTD
               - Name: level
                 Type: uint32_t
                 Default: 10
@@ -1122,7 +1122,7 @@ Configuration:
                 Description: Uses optimization information from subcapture analysis to restore only necessary raytracing acceleration structures
               - Name: compressionType
                 Type: CompressionType
-                Default: LZ4
+                Default: ZSTD
                 Description: Compression type (LZ4/ZSTD)
           - Name: Screenshots
             Type: Group
