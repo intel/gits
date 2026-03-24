@@ -50,13 +50,13 @@ private:
     unsigned Index{};
     unsigned Id{};
     std::unique_ptr<char[]> Data;
-    unsigned DataAlloc{};
-    unsigned DataSize{};
+    uint64_t DataAlloc{};
+    uint64_t DataSize{};
     bool Full{};
     bool Compressing{};
   };
   struct CompressedBlock : Block {
-    unsigned UncompressedDataSize{};
+    uint64_t UncompressedDataSize{};
   };
 
   static const unsigned NUMBER_OF_BLOCKS{NUMBER_OF_COMPRESSION_THREADS * 2};
@@ -70,7 +70,7 @@ private:
     bool Waiting{};
     std::condition_variable Condition;
     unsigned BlockId{};
-    unsigned BlockSize{};
+    uint64_t BlockSize{};
   };
   std::array<WaitForWriteDoneInfo, NUMBER_OF_COMPRESSION_THREADS> m_WaitsForWriteDone;
 
@@ -82,13 +82,13 @@ private:
 private:
   void WriteCompressedBlocks();
   void Compress(unsigned threadIndex);
-  Block* FindBlockForRecord(std::unique_lock<std::mutex>& lock, unsigned size);
+  Block* FindBlockForRecord(std::unique_lock<std::mutex>& lock, uint64_t size);
   void WaitForWriteDone(std::unique_lock<std::mutex>& lock,
                         unsigned threadIndex,
                         unsigned blockId,
-                        unsigned blockSize);
-  void NotifyWriteDone(unsigned blockId, unsigned blockAllocSize);
-  unsigned Align(unsigned value);
+                        uint64_t blockSize);
+  void NotifyWriteDone(unsigned blockId, uint64_t blockAllocSize);
+  uint64_t Align(uint64_t value);
 };
 
 } // namespace stream

@@ -55,13 +55,13 @@ private:
     unsigned Index{};
     unsigned Id{};
     std::unique_ptr<char[]> Data;
-    unsigned DataAlloc{};
-    unsigned DataSize{};
+    uint64_t DataAlloc{};
+    uint64_t DataSize{};
     bool Full{};
     bool Decompressing{};
   };
   struct CompressedBlock : Block {
-    unsigned UncompressedDataSize{};
+    uint64_t UncompressedDataSize{};
   };
   struct UncompressedBlock : Block {
     std::vector<std::unique_ptr<CommandRunner>> Runners;
@@ -78,7 +78,7 @@ private:
     bool Waiting{};
     std::condition_variable Condition;
     unsigned BlockId{};
-    unsigned BlockSize{};
+    uint64_t BlockSize{};
   };
   std::array<WaitForRunDoneInfo, NUMBER_OF_DECOMPRESSION_THREADS> m_WaitsForRunDone;
 
@@ -94,15 +94,15 @@ private:
   void ReadCompressedBlocks();
   void Decompress(unsigned threadIndex);
   void DecodeBlock(UncompressedBlock& block);
-  CompressedBlock* FindBlockForRead(std::unique_lock<std::mutex>& lock, unsigned size);
+  CompressedBlock* FindBlockForRead(std::unique_lock<std::mutex>& lock, uint64_t size);
   UncompressedBlock* FindBlockForRun(std::unique_lock<std::mutex>& lock, unsigned blockId);
   void WaitForRunDone(std::unique_lock<std::mutex>& lock,
                       unsigned threadIndex,
                       unsigned blockId,
-                      unsigned blockSize);
-  void NotifyRunDone(unsigned blockId, unsigned blockAllocSize);
+                      uint64_t blockSize);
+  void NotifyRunDone(unsigned blockId, uint64_t blockAllocSize);
   void NotifyRunDoneAll();
-  unsigned Align(unsigned value);
+  uint64_t Align(uint64_t value);
 };
 
 } // namespace stream

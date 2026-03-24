@@ -38,7 +38,7 @@ void StreamReader::Close() {
 void StreamReader::ReadCompressedBlocks() {
   unsigned blockId{};
   while (m_Stream && !m_Closed) {
-    unsigned compressedSize{};
+    uint64_t compressedSize{};
     m_Stream.read(reinterpret_cast<char*>(&compressedSize), sizeof(compressedSize));
     if (!m_Stream) {
       break;
@@ -50,7 +50,7 @@ void StreamReader::ReadCompressedBlocks() {
     }
     GITS_ASSERT(block);
     if (block->DataAlloc < compressedSize) {
-      unsigned size = Align(compressedSize);
+      uint64_t size = Align(compressedSize);
       block->Data.reset(new char[size]);
       block->DataAlloc = size;
     }
@@ -75,9 +75,9 @@ void StreamReader::ReadCompressedBlocks() {
 }
 
 StreamReader::CompressedBlock* StreamReader::FindBlockForRead(std::unique_lock<std::mutex>& lock,
-                                                              unsigned size) {
+                                                              uint64_t size) {
   unsigned blockIndex = 0;
-  unsigned maxAlloc = 0;
+  uint64_t maxAlloc = 0;
   int foundBlock = -1;
   while (!m_ReadFinished) {
     Block& block = m_CompressedBlocks[blockIndex];
@@ -125,7 +125,7 @@ void StreamReader::Decompress(unsigned threadIndex) {
       compressedBlock->Decompressing = true;
 
       unsigned blockIndex = 0;
-      unsigned maxAlloc = 0;
+      uint64_t maxAlloc = 0;
       while (!uncompressedBlock) {
         UncompressedBlock& block = m_UncompressedBlocks[blockIndex];
         if (!block.Full && !block.Decompressing) {
@@ -156,7 +156,7 @@ void StreamReader::Decompress(unsigned threadIndex) {
     }
 
     if (compressedBlock->UncompressedDataSize > uncompressedBlock->DataAlloc) {
-      unsigned size = Align(compressedBlock->UncompressedDataSize);
+      uint64_t size = Align(compressedBlock->UncompressedDataSize);
       uncompressedBlock->Data.reset(new char[size]);
       uncompressedBlock->DataAlloc = size;
     }
@@ -280,18 +280,18 @@ StreamReader::UncompressedBlock* StreamReader::FindBlockForRun(std::unique_lock<
 void StreamReader::WaitForRunDone(std::unique_lock<std::mutex>& lock,
                                   unsigned threadIndex,
                                   unsigned blockId,
-                                  unsigned blockSize) {
+                                  uint64_t blockSize) {
   m_WaitsForRunDone[threadIndex].Waiting = true;
   m_WaitsForRunDone[threadIndex].BlockId = blockId;
   m_WaitsForRunDone[threadIndex].BlockSize = blockSize;
   m_WaitsForRunDone[threadIndex].Condition.wait(lock);
 }
 
-void StreamReader::NotifyRunDone(unsigned blockId, unsigned blockAllocSize) {
+void StreamReader::NotifyRunDone(unsigned blockId, uint64_t blockAllocSize) {
   unsigned minIdThread{};
   unsigned minId = std::numeric_limits<unsigned>::max();
   unsigned maxSizeThread{};
-  unsigned maxBlockSize = 0;
+  uint64_t maxBlockSize = 0;
   unsigned waitingCount = 0;
   for (unsigned i = 0; i < NUMBER_OF_DECOMPRESSION_THREADS; ++i) {
     if (m_WaitsForRunDone[i].Waiting) {
@@ -327,7 +327,7 @@ void StreamReader::NotifyRunDoneAll() {
   }
 }
 
-unsigned StreamReader::Align(unsigned value) {
+uint64_t StreamReader::Align(uint64_t value) {
   return ((value - 1) / 4096 + 1) * 4096;
 }
 

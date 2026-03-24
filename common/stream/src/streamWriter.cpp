@@ -36,7 +36,7 @@ StreamWriter::StreamWriter(const std::filesystem::path& streamDir,
     m_UncompressedBlocks[i].Data.reset(new char[INITIAL_BLOCK_ALLOC]);
     m_UncompressedBlocks[i].DataAlloc = INITIAL_BLOCK_ALLOC;
     m_UncompressedBlocks[i].Index = i;
-    unsigned compressedSize = m_Compressors[0]->CompressBound(INITIAL_BLOCK_ALLOC);
+    uint64_t compressedSize = m_Compressors[0]->CompressBound(INITIAL_BLOCK_ALLOC);
     m_CompressedBlocks[i].Data.reset(new char[Align(compressedSize)]);
     m_CompressedBlocks[i].DataAlloc = compressedSize;
     m_CompressedBlocks[i].Index = i;
@@ -123,7 +123,7 @@ void StreamWriter::Record(const CommandSerializer& commandSerializer) {
 }
 
 StreamWriter::Block* StreamWriter::FindBlockForRecord(std::unique_lock<std::mutex>& lock,
-                                                      unsigned size) {
+                                                      uint64_t size) {
   if (!m_UncompressedBlocks[m_CurrentRecordBlock].Full) {
     return &m_UncompressedBlocks[m_CurrentRecordBlock];
   }
@@ -159,7 +159,7 @@ void StreamWriter::Compress(unsigned threadIndex) {
   while (true) {
     Block* uncompressedBlock{};
     CompressedBlock* compressedBlock{};
-    unsigned compressedSize = 0;
+    uint64_t compressedSize = 0;
 
     {
       std::unique_lock<std::mutex> lock(m_Mutex);
@@ -182,7 +182,7 @@ void StreamWriter::Compress(unsigned threadIndex) {
       compressedSize = m_Compressors[threadIndex]->CompressBound(uncompressedBlock->DataSize);
 
       unsigned blockIndex = 0;
-      unsigned maxAlloc = 0;
+      uint64_t maxAlloc = 0;
       while (!compressedBlock) {
         CompressedBlock& block = m_CompressedBlocks[blockIndex];
         if (!block.Full && !block.Compressing) {
@@ -219,7 +219,7 @@ void StreamWriter::Compress(unsigned threadIndex) {
     }
 
     if (compressedSize > compressedBlock->DataAlloc) {
-      unsigned alignedSize = Align(compressedSize);
+      uint64_t alignedSize = Align(compressedSize);
       compressedBlock->Data.reset(new char[alignedSize]);
       compressedBlock->DataAlloc = alignedSize;
     }
@@ -295,18 +295,18 @@ void StreamWriter::WriteCompressedBlocks() {
 void StreamWriter::WaitForWriteDone(std::unique_lock<std::mutex>& lock,
                                     unsigned threadIndex,
                                     unsigned blockId,
-                                    unsigned blockSize) {
+                                    uint64_t blockSize) {
   m_WaitsForWriteDone[threadIndex].Waiting = true;
   m_WaitsForWriteDone[threadIndex].BlockId = blockId;
   m_WaitsForWriteDone[threadIndex].BlockSize = blockSize;
   m_WaitsForWriteDone[threadIndex].Condition.wait(lock);
 }
 
-void StreamWriter::NotifyWriteDone(unsigned blockId, unsigned blockAllocSize) {
+void StreamWriter::NotifyWriteDone(unsigned blockId, uint64_t blockAllocSize) {
   unsigned minIdThread{};
   unsigned minId = std::numeric_limits<unsigned>::max();
   unsigned maxSizeThread{};
-  unsigned maxBlockSize = 0;
+  uint64_t maxBlockSize = 0;
   unsigned waitingCount = 0;
   for (unsigned i = 0; i < NUMBER_OF_COMPRESSION_THREADS; ++i) {
     if (m_WaitsForWriteDone[i].Waiting) {
@@ -335,7 +335,7 @@ void StreamWriter::NotifyWriteDone(unsigned blockId, unsigned blockAllocSize) {
   }
 }
 
-unsigned StreamWriter::Align(unsigned value) {
+uint64_t StreamWriter::Align(uint64_t value) {
   return ((value - 1) / 4096 + 1) * 4096;
 }
 
