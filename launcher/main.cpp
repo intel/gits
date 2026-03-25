@@ -407,7 +407,13 @@ static bool Setup() {
     return false;
   }
 
-  g_LauncherConfig = gits::gui::LauncherConfig::FromFile();
+  try {
+    g_LauncherConfig = gits::gui::LauncherConfig::FromFile();
+  } catch (std::exception& e) {
+    LOG_WARNING << "Couldn't read the Launcher config from file: " << e.what()
+                << " Default values will be used.";
+    g_LauncherConfig = gits::gui::LauncherConfig();
+  }
 
   if (!SetupWindow()) {
     return false;
@@ -613,58 +619,70 @@ static bool ProcessEvents() {
 #endif
 
 int main(int argc, char** argv) {
-  gits::log::Initialize(gits::LogLevel::INFO);
-  LOG_INFO << "Starting gitsLauncher GUI";
+  try {
+    gits::log::Initialize(gits::LogLevel::INFO);
+    LOG_INFO << "Starting gitsLauncher GUI";
 
-  if (!Setup()) {
+    if (!Setup()) {
+      return 1;
+    }
+
+    if (argc > 1) {
+      try {
+        std::filesystem::path path(argv[1]);
+        if (std::filesystem::exists(path) && std::filesystem::is_regular_file(path)) {
+          g_GUI->GetMainWindow()->SetPlaybackFile(path);
+        }
+      } catch (const std::exception& e) {
+        LOG_ERROR << "Couldn't set playback file: " << argv[1] << " Error: " << e.what();
+      }
+    }
+
+    bool done = false;
+    while (!done) {
+      g_GUI->UpdateUIScale();
+      done = ProcessEvents();
+      if (done || g_GUI->ShouldQuit) {
+        break;
+      }
+
+      ImGui_ImplVulkan_NewFrame();
+#ifdef _WIN32
+      ImGui_ImplWin32_NewFrame();
+#else
+      ImGui_ImplGlfw_NewFrame();
+#endif
+      ImGui::NewFrame();
+
+      g_GUI->DrawGui();
+
+      ImGui::Render();
+      ImDrawData* draw_data = ImGui::GetDrawData();
+      const bool minimized = (draw_data->DisplaySize.x <= 0.0f || draw_data->DisplaySize.y <= 0.0f);
+      if (!minimized) {
+        gits::gui::Settings::SetVKClearColor(&g_MainWindowData.ClearValue);
+        FrameRender(draw_data);
+        FramePresent();
+      }
+    }
+
+    LOG_DEBUG << "Exiting application";
+
+    VkResult res = vkDeviceWaitIdle(g_Device);
+    CheckVKResult(res);
+
+    CleanUp();
+
+    return 0;
+  } catch (const std::exception& e) {
+    // Since the logger itself can throw we try to log, but if it fails we default to fprintf
+    try {
+      LOG_ERROR << "GITS Launcher encountered an exception in main: " << e.what();
+    } catch (...) {
+      fprintf(stderr, "GITS Launcher encountered an exception in main: %s\n", e.what());
+    }
+
     return 1;
   }
-
-  if (argc > 1) {
-    try {
-      std::filesystem::path path(argv[1]);
-      if (std::filesystem::exists(path) && std::filesystem::is_regular_file(path)) {
-        g_GUI->GetMainWindow()->SetPlaybackFile(path);
-      }
-    } catch (const std::exception& e) {
-      LOG_ERROR << "Couldn't set playback file: " << argv[1] << " Error: " << e.what();
-    }
-  }
-
-  bool done = false;
-  while (!done) {
-    g_GUI->UpdateUIScale();
-    done = ProcessEvents();
-    if (done || g_GUI->ShouldQuit) {
-      break;
-    }
-
-    ImGui_ImplVulkan_NewFrame();
-#ifdef _WIN32
-    ImGui_ImplWin32_NewFrame();
-#else
-    ImGui_ImplGlfw_NewFrame();
-#endif
-    ImGui::NewFrame();
-
-    g_GUI->DrawGui();
-
-    ImGui::Render();
-    ImDrawData* draw_data = ImGui::GetDrawData();
-    const bool minimized = (draw_data->DisplaySize.x <= 0.0f || draw_data->DisplaySize.y <= 0.0f);
-    if (!minimized) {
-      gits::gui::Settings::SetVKClearColor(&g_MainWindowData.ClearValue);
-      FrameRender(draw_data);
-      FramePresent();
-    }
-  }
-
-  LOG_DEBUG << "Exiting application";
-
-  VkResult res = vkDeviceWaitIdle(g_Device);
-  CheckVKResult(res);
-
-  CleanUp();
-  return 0;
 }
 #pragma endregion
