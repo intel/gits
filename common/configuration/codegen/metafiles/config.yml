@@ -102,7 +102,7 @@ Configuration:
             Options:
             - Name: Enabled
               Type: std::vector<ApiBool>
-              Default: []
+              Default: [DX]
               Description: APIs for which to show the HUD during playback / recording. Windows DX/VK only. Experimental for VK.
               Arguments: [hud]
             - Name: Position
