@@ -33,6 +33,7 @@ struct ArgumentParser {
   args::HelpFlag Help;
   args::ValueFlag<std::string> HelpMenu;
   args::Flag Version;
+  args::Flag Validate;
   args::Flag SkipEnvironment;
   args::ValueFlag<std::filesystem::path> ConfigFile;
   ArgConfiguration ArgumentConfig;
@@ -47,6 +48,10 @@ struct ArgumentParser {
         HelpMenu(
             Parser, "filter help", "Filter help by sections/platforms/API/operation/...", {"hh"}),
         Version(Parser, "version", "Print version and quit", {'v', "version"}),
+        Validate(Parser,
+                 "validate",
+                 "Validate input (arguments, environment and configuration) and quit",
+                 {"validate"}),
         SkipEnvironment(
             Parser, "skip environment", "Don't use environment variables", {"skip-environment"}),
         ConfigFile(Parser,
@@ -72,7 +77,7 @@ struct ArgumentParser {
     }
 
     if (ParsingResult == ArgumentParsingResult::ParsingSuccess) {
-      if (!Validate()) {
+      if (!ArgumentConfig.Validate()) {
         ParsingResult = ArgumentParsingResult::ParsingSemanticError;
       }
     }
@@ -81,10 +86,6 @@ struct ArgumentParser {
   ArgumentParser(int argc, char* argv[])
       : ArgumentParser(std::vector<std::string>(argv, argv + argc)) {
     //nothing
-  }
-
-  bool Validate() {
-    return ArgumentConfig.Validate();
   }
 };
 } // namespace gits

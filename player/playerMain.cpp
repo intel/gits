@@ -234,6 +234,13 @@ int MainBody(int argc, char* argv[]) {
     return 1;
   }
 
+  // Input (arguments, environment and configuration) validated
+  // Quit if --validate is used
+  if (args.Validate) {
+    LOG_INFO << "Used \"--validate\". Will not start the playback session.";
+    return 0;
+  }
+
   // Print version.
   CGits& inst = CGits::Instance();
   LOG_INFO << inst;
