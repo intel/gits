@@ -23,7 +23,7 @@ namespace DirectX {
 thread_local CaptureCustomizationLayer::HeapInfo CaptureCustomizationLayer::s_heapInfo_;
 
 CaptureCustomizationLayer::CaptureCustomizationLayer(CaptureManager& manager,
-                                                     GitsRecorder& recorder)
+                                                     stream::OrderingRecorder& recorder)
     : Layer("CaptureCustomization"), manager_(manager), recorder_(recorder) {}
 
 void CaptureCustomizationLayer::post(IUnknownReleaseCommand& c) {
@@ -50,7 +50,7 @@ void CaptureCustomizationLayer::pre(IDXGIFactoryCreateSwapChainCommand& c) {
   createWindowCommand.height_.value = std::max(
       static_cast<unsigned>(createWindowCommand.height_.value), c.pDesc_.value->BufferDesc.Height);
 
-  recorder_.record(createWindowCommand.key, new CreateWindowMetaSerializer(createWindowCommand));
+  recorder_.Record(createWindowCommand.key, new CreateWindowMetaSerializer(createWindowCommand));
 }
 
 void CaptureCustomizationLayer::pre(IDXGIFactory2CreateSwapChainForHwndCommand& c) {
@@ -68,7 +68,7 @@ void CaptureCustomizationLayer::pre(IDXGIFactory2CreateSwapChainForHwndCommand& 
   createWindowCommand.height_.value =
       std::max(static_cast<unsigned>(createWindowCommand.height_.value), c.pDesc_.value->Height);
 
-  recorder_.record(createWindowCommand.key, new CreateWindowMetaSerializer(createWindowCommand));
+  recorder_.Record(createWindowCommand.key, new CreateWindowMetaSerializer(createWindowCommand));
 }
 
 void CaptureCustomizationLayer::post(ID3D12DeviceCreateDescriptorHeapCommand& c) {
@@ -259,7 +259,7 @@ void CaptureCustomizationLayer::post(ID3D12Device3OpenExistingHeapFromAddressCom
     command.address_.value = const_cast<void*>(c.pAddress_.value);
     command.data_.value = const_cast<void*>(c.pAddress_.value);
     command.data_.size = desc.SizeInBytes;
-    recorder_.record(command.key, new CreateHeapAllocationMetaSerializer(command));
+    recorder_.Record(command.key, new CreateHeapAllocationMetaSerializer(command));
 
     manager_.updateCommandKey(c);
   }
@@ -278,7 +278,7 @@ void CaptureCustomizationLayer::post(ID3D12Device13OpenExistingHeapFromAddress1C
     command.address_.value = const_cast<void*>(c.pAddress_.value);
     command.data_.value = const_cast<void*>(c.pAddress_.value);
     command.data_.size = desc.SizeInBytes;
-    recorder_.record(command.key, new CreateHeapAllocationMetaSerializer(command));
+    recorder_.Record(command.key, new CreateHeapAllocationMetaSerializer(command));
 
     manager_.updateCommandKey(c);
   }
@@ -571,7 +571,7 @@ void CaptureCustomizationLayer::post(ID3D12FenceGetCompletedValueCommand& c) {
   unsigned value = c.result_.value;
   if (commandKey <= prevCommandKey + maxCommandKeyDifference) {
     if (fenceKey == prevFenceKey && value == prevValue) {
-      recorder_.skip(c.key);
+      recorder_.Skip(c.key);
     }
   }
   prevCommandKey = commandKey;
@@ -616,7 +616,7 @@ void CaptureCustomizationLayer::post(ID3D12DeviceOpenSharedHandleCommand& c) {
     createResource.pOptimizedClearValue_.value = nullptr;
     createResource.riidResource_.value = c.riid_.value;
     createResource.ppvResource_.key = c.ppvObj_.key;
-    recorder_.record(createResource.key,
+    recorder_.Record(createResource.key,
                      new ID3D12DeviceCreateCommittedResourceSerializer(createResource));
 
     manager_.updateCommandKey(c);
@@ -633,7 +633,7 @@ void CaptureCustomizationLayer::post(ID3D12DeviceOpenSharedHandleCommand& c) {
     createFence.Flags_.value = D3D12_FENCE_FLAG_SHARED;
     createFence.riid_.value = c.riid_.value;
     createFence.ppFence_.key = c.ppvObj_.key;
-    recorder_.record(createFence.key, new ID3D12DeviceCreateFenceSerializer(createFence));
+    recorder_.Record(createFence.key, new ID3D12DeviceCreateFenceSerializer(createFence));
 
     manager_.updateCommandKey(c);
   } else {
@@ -1130,7 +1130,7 @@ void CaptureCustomizationLayer::pre(xefgSwapChainD3D12InitFromSwapChainDescComma
   createWindowCommand.height_.value = std::max(
       static_cast<unsigned>(createWindowCommand.height_.value), c.pSwapChainDesc_.value->Height);
 
-  recorder_.record(createWindowCommand.key, new CreateWindowMetaSerializer(createWindowCommand));
+  recorder_.Record(createWindowCommand.key, new CreateWindowMetaSerializer(createWindowCommand));
 }
 
 void CaptureCustomizationLayer::fillGpuAddressArgument(D3D12_GPU_VIRTUAL_ADDRESS_Argument& arg) {

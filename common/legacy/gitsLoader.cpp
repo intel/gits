@@ -26,8 +26,18 @@
 #if defined GITS_PLATFORM_WINDOWS
 #include "Windows.h"
 const char* RECORDER_LIB_NAME = "gitsRecorder.dll";
+#if _DEBUG
+const char* TBB_LIB_NAME = "gits_tbb_debug.dll";
+#else
+const char* TBB_LIB_NAME = "gits_tbb.dll";
+#endif
 #else
 const char* RECORDER_LIB_NAME = "libGitsRecorder.so";
+#if _DEBUG
+const char* TBB_LIB_NAME = "libgits_tbb_debug.so";
+#else
+const char* TBB_LIB_NAME = "libgits_tbb.so";
+#endif
 #endif
 
 namespace gits {
@@ -83,6 +93,16 @@ CGitsLoader::CGitsLoader(const char* recorderWrapperFactoryName, bool legacyMode
     throw std::runtime_error("Failed to find required library");
   }
 
+  auto tbbPath = gitsPath_ / TBB_LIB_NAME;
+  if (std::filesystem::exists(tbbPath)) {
+    tbbLib_ = dl::open_library(tbbPath.string().c_str());
+    if (tbbLib_ == nullptr) {
+      std::cerr << "Cannot load TBB library ('" << tbbPath << "')!!!";
+      std::cerr << dl::last_error();
+      throw std::runtime_error("Failed to load required library");
+    }
+  }
+
   // After loading the recorder library we can start using Plog
   recorderLib_ = dl::open_library(recorderPath.string().c_str());
   if (recorderLib_ == nullptr) {
@@ -125,6 +145,7 @@ CGitsLoader::CGitsLoader(const char* recorderWrapperFactoryName, bool legacyMode
 
 CGitsLoader::~CGitsLoader() {
   dl::close_library(recorderLib_);
+  dl::close_library(tbbLib_);
 }
 
 std::filesystem::path CGitsLoader::GetGitsPath() const {
@@ -146,6 +167,8 @@ void CGitsLoader::ProcessTerminationDetected() {
   config_ = nullptr;
   dl::close_library(recorderLib_);
   recorderLib_ = nullptr;
+  dl::close_library(tbbLib_);
+  tbbLib_ = nullptr;
 }
 
 } // namespace gits

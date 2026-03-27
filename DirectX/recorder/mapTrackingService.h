@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include "gitsRecorder.h"
+#include "orderingRecorder.h"
 
 #include <mutex>
 #include <unordered_map>
@@ -21,7 +21,7 @@ namespace DirectX {
 
 class MapTrackingService {
 public:
-  MapTrackingService(GitsRecorder& recorder);
+  MapTrackingService(stream::OrderingRecorder& recorder);
   MapTrackingService(const MapTrackingService&) = delete;
   MapTrackingService& operator=(const MapTrackingService&) = delete;
 
@@ -58,7 +58,7 @@ private:
   size_t pageSize_{0};
   std::mutex mutex_;
 
-  GitsRecorder& recorder_;
+  stream::OrderingRecorder& recorder_;
 
 private:
   bool isUploadHeap(D3D12_HEAP_TYPE heapType, D3D12_CPU_PAGE_PROPERTY cpuPageProperty);

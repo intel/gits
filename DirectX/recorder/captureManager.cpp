@@ -111,7 +111,7 @@ CaptureManager::CaptureManager() {
   d3d12DispatchTableWrapper_.D3D12SerializeVersionedRootSignature =
       D3D12SerializeVersionedRootSignatureWrapper;
 
-  recorder_.reset(new GitsRecorder());
+  recorder_.reset(new stream::OrderingRecorder());
 
   mapTrackingService_.reset(new MapTrackingService(*recorder_));
   fenceService_.reset(new FenceService(*recorder_));
@@ -966,21 +966,6 @@ void CaptureManager::interceptD3D11On12Functions() {
 
   ret = DetourTransactionCommit();
   GITS_ASSERT(ret == NO_ERROR);
-}
-
-CaptureManager::TBBLoader::TBBLoader() {
-#if _DEBUG
-  tbbDll_ = LoadLibrary((std::filesystem::path(Configurator::Get().common.recorder.installPath) /
-                         "gits_tbb_debug.dll")
-                            .string()
-                            .c_str());
-#else
-  tbbDll_ = LoadLibrary(
-      (std::filesystem::path(Configurator::Get().common.recorder.installPath) / "gits_tbb.dll")
-          .string()
-          .c_str());
-#endif
-  GITS_ASSERT(tbbDll_);
 }
 
 } // namespace DirectX

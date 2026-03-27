@@ -11,6 +11,12 @@ cmake_minimum_required(VERSION 3.10)
 set(STREAM_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 set(STREAM_HEADER_DIR ${STREAM_SOURCE_DIR}/include)
 
+if(NOT "${ARCH}" STREQUAL "-m32")
+  set(TBB_DEPENDENT_HEADERS ${STREAM_HEADER_DIR}/orderingRecorder.h)
+  set(TBB_DEPENDENT_SOURCES ${STREAM_SOURCE_DIR}/orderingRecorder.cpp)
+  set(TBB_DEPENDENT_LIBRARIES tbb)
+endif()
+
 set(STREAM_SRC_HEADERS
   ${STREAM_HEADER_DIR}/streamHeader.h
   ${STREAM_HEADER_DIR}/streamReader.h
@@ -21,6 +27,7 @@ set(STREAM_SRC_HEADERS
   ${STREAM_HEADER_DIR}/streamWriter.h
   ${STREAM_HEADER_DIR}/commandId.h
   ${STREAM_HEADER_DIR}/streamCompressor.h
+  ${TBB_DEPENDENT_HEADERS}
 )
 set(STREAM_SRC_SOURCES
   ${STREAM_SOURCE_DIR}/streamHeader.cpp
@@ -28,6 +35,7 @@ set(STREAM_SRC_SOURCES
   ${STREAM_SOURCE_DIR}/streamLegacyReader.cpp
   ${STREAM_SOURCE_DIR}/streamWriter.cpp
   ${STREAM_SOURCE_DIR}/streamCompressor.cpp
+  ${TBB_DEPENDENT_SOURCES}
 )
 
 add_library(stream STATIC ${STREAM_SRC_HEADERS} ${STREAM_SRC_SOURCES})
@@ -35,6 +43,7 @@ add_library(stream STATIC ${STREAM_SRC_HEADERS} ${STREAM_SRC_SOURCES})
 target_link_libraries(stream PRIVATE 
   log
   configuration
+  ${TBB_DEPENDENT_LIBRARIES}
 )
 
 target_include_directories(stream

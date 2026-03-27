@@ -14,7 +14,7 @@
 #include "resourceDumpingFactory.h"
 #include "portabilityFactory.h"
 #include "addressPinningFactory.h"
-#include "gitsRecorder.h"
+#include "orderingRecorder.h"
 #include "gpuAddressService.h"
 
 #include <vector>
@@ -33,7 +33,7 @@ public:
   CaptureLayerManager& operator=(const CaptureLayerManager&) = delete;
 
   void loadLayers(CaptureManager& captureManager,
-                  GitsRecorder& gitsRecorder,
+                  stream::OrderingRecorder& gitsRecorder,
                   GpuAddressService& gpuAddressService,
                   PluginService& pluginService);
 

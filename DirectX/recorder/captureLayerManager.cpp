@@ -23,7 +23,7 @@ namespace gits {
 namespace DirectX {
 
 void CaptureLayerManager::loadLayers(CaptureManager& captureManager,
-                                     GitsRecorder& gitsRecorder,
+                                     stream::OrderingRecorder& gitsRecorder,
                                      GpuAddressService& gpuAddressService,
                                      PluginService& pluginService) {
   auto& cfg = Configurator::Get();

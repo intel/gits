@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include "gitsRecorder.h"
+#include "orderingRecorder.h"
 #include "directx.h"
 
 #include <mutex>
@@ -20,7 +20,7 @@ namespace DirectX {
 
 class FenceService {
 public:
-  FenceService(GitsRecorder& recorder);
+  FenceService(stream::OrderingRecorder& recorder);
   void setEventOnCompletion(ID3D12Fence* fence, unsigned fenceKey, UINT64 value, HANDLE event);
   void waitSignaled(HANDLE handle);
   void waitSignaled(HANDLE hObjectToWaitOn, HANDLE hObjectToSignal);
@@ -43,7 +43,7 @@ private:
   std::unordered_set<unsigned> fences_;
 
   std::mutex mutex_;
-  GitsRecorder& recorder_;
+  stream::OrderingRecorder& recorder_;
 
   std::mutex globalMutex_;
 };

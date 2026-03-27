@@ -10,14 +10,14 @@ ${header}
 #pragma once
 
 #include "layerAuto.h"
-#include "gitsRecorder.h"
+#include "orderingRecorder.h"
 
 namespace gits {
 namespace DirectX {
 
 class EncoderLayer : public Layer {
 public:
-  EncoderLayer(GitsRecorder& recorder) : Layer("Encoder"), recorder_(recorder) {}
+  EncoderLayer(stream::OrderingRecorder& recorder) : Layer("Encoder"), recorder_(recorder) {}
 
   void post(IUnknownQueryInterfaceCommand& command) override;
   void post(IUnknownAddRefCommand& command) override;
@@ -55,7 +55,7 @@ public:
   %endfor
 
 private:
-  GitsRecorder& recorder_;
+  stream::OrderingRecorder& recorder_;
 };
 
 } // namespace DirectX

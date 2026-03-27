@@ -34,6 +34,7 @@ public:
 
 private:
   Configuration* config_;
+  dl::SharedObject tbbLib_;
   dl::SharedObject recorderLib_;
   std::filesystem::path gitsPath_;
   void* recorderWrapper_;

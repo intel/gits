@@ -13,14 +13,17 @@
 #include <mutex>
 
 namespace gits {
+namespace stream {
+
+class OrderingRecorder;
+}
 namespace DirectX {
 
 class CaptureManager;
-class GitsRecorder;
 
 class DllOverrideStoreLayer : public Layer {
 public:
-  DllOverrideStoreLayer(CaptureManager& manager, GitsRecorder& recorder);
+  DllOverrideStoreLayer(CaptureManager& manager, stream::OrderingRecorder& recorder);
   ~DllOverrideStoreLayer() = default;
 
   void post(D3D12CreateDeviceCommand& command) override;
@@ -55,7 +58,7 @@ private:
   bool xefgDllchecked_{};
   std::mutex xefgDllMutex_{};
   CaptureManager& manager_;
-  GitsRecorder& recorder_;
+  stream::OrderingRecorder& recorder_;
 };
 
 } // namespace DirectX

@@ -15,6 +15,7 @@ function(init_tbb)
   set(TBB_INSTALL OFF)
   set(TBB_TEST OFF)
   set(TBBMALLOC_BUILD OFF)
+  set(TBB_DISABLE_HWLOC_AUTOMATIC_SEARCH ON)
   add_definitions(-D__TBB_NO_IMPLICIT_LINKAGE=1)
   add_subdirectory(${TBB_DIR})
 

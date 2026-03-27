@@ -10,130 +10,134 @@
 #include "commandSerializersAuto.h"
 #include "commandSerializersCustom.h"
 
+#include "captureManager.h"
+
 namespace gits {
 namespace DirectX {
 
 void EncoderLayer::post(IUnknownQueryInterfaceCommand& command) {
-  recorder_.record(command.key, new IUnknownQueryInterfaceSerializer(command));
+  recorder_.Record(command.key, new IUnknownQueryInterfaceSerializer(command));
 }
 
 void EncoderLayer::post(IUnknownAddRefCommand& command) {
-  recorder_.record(command.key, new IUnknownAddRefSerializer(command));
+  recorder_.Record(command.key, new IUnknownAddRefSerializer(command));
 }
 
 void EncoderLayer::post(IUnknownReleaseCommand& command) {
-  recorder_.record(command.key, new IUnknownReleaseSerializer(command));
+  recorder_.Record(command.key, new IUnknownReleaseSerializer(command));
 }
 
 void EncoderLayer::post(INTC_D3D12_GetSupportedVersionsCommand& command) {
-  recorder_.record(command.key, new INTC_D3D12_GetSupportedVersionsSerializer(command));
+  recorder_.Record(command.key, new INTC_D3D12_GetSupportedVersionsSerializer(command));
 }
 
 void EncoderLayer::post(INTC_D3D12_CreateDeviceExtensionContextCommand& command) {
-  recorder_.record(command.key, new INTC_D3D12_CreateDeviceExtensionContextSerializer(command));
+  recorder_.Record(command.key, new INTC_D3D12_CreateDeviceExtensionContextSerializer(command));
 }
 
 void EncoderLayer::post(INTC_D3D12_CreateDeviceExtensionContext1Command& command) {
-  recorder_.record(command.key, new INTC_D3D12_CreateDeviceExtensionContext1Serializer(command));
+  recorder_.Record(command.key, new INTC_D3D12_CreateDeviceExtensionContext1Serializer(command));
 }
 
 void EncoderLayer::post(INTC_D3D12_SetApplicationInfoCommand& command) {
-  recorder_.record(command.key, new INTC_D3D12_SetApplicationInfoSerializer(command));
+  recorder_.Record(command.key, new INTC_D3D12_SetApplicationInfoSerializer(command));
 }
 
 void EncoderLayer::post(INTC_DestroyDeviceExtensionContextCommand& command) {
-  recorder_.record(command.key, new INTC_DestroyDeviceExtensionContextSerializer(command));
+  recorder_.Record(command.key, new INTC_DestroyDeviceExtensionContextSerializer(command));
 }
 
 void EncoderLayer::post(INTC_D3D12_CheckFeatureSupportCommand& command) {
-  recorder_.record(command.key, new INTC_D3D12_CheckFeatureSupportSerializer(command));
+  recorder_.Record(command.key, new INTC_D3D12_CheckFeatureSupportSerializer(command));
 }
 
 void EncoderLayer::post(INTC_D3D12_CreateCommandQueueCommand& command) {
-  recorder_.record(command.key, new INTC_D3D12_CreateCommandQueueSerializer(command));
+  recorder_.Record(command.key, new INTC_D3D12_CreateCommandQueueSerializer(command));
 }
 
 void EncoderLayer::post(INTC_D3D12_CreateReservedResourceCommand& command) {
-  recorder_.record(command.key, new INTC_D3D12_CreateReservedResourceSerializer(command));
+  recorder_.Record(command.key, new INTC_D3D12_CreateReservedResourceSerializer(command));
 }
 
 void EncoderLayer::post(INTC_D3D12_SetFeatureSupportCommand& command) {
-  recorder_.record(command.key, new INTC_D3D12_SetFeatureSupportSerializer(command));
+  recorder_.Record(command.key, new INTC_D3D12_SetFeatureSupportSerializer(command));
 }
 
 void EncoderLayer::post(INTC_D3D12_GetResourceAllocationInfoCommand& command) {
-  recorder_.record(command.key, new INTC_D3D12_GetResourceAllocationInfoSerializer(command));
+  recorder_.Record(command.key, new INTC_D3D12_GetResourceAllocationInfoSerializer(command));
 }
 
 void EncoderLayer::post(INTC_D3D12_CreateComputePipelineStateCommand& command) {
-  recorder_.record(command.key, new INTC_D3D12_CreateComputePipelineStateSerializer(command));
+  recorder_.Record(command.key, new INTC_D3D12_CreateComputePipelineStateSerializer(command));
 }
 
 void EncoderLayer::post(INTC_D3D12_CreatePlacedResourceCommand& command) {
-  recorder_.record(command.key, new INTC_D3D12_CreatePlacedResourceSerializer(command));
+  recorder_.Record(command.key, new INTC_D3D12_CreatePlacedResourceSerializer(command));
 }
 
 void EncoderLayer::post(INTC_D3D12_CreateCommittedResourceCommand& command) {
-  recorder_.record(command.key, new INTC_D3D12_CreateCommittedResourceSerializer(command));
+  recorder_.Record(command.key, new INTC_D3D12_CreateCommittedResourceSerializer(command));
 }
 
 void EncoderLayer::post(INTC_D3D12_CreateHeapCommand& command) {
-  recorder_.record(command.key, new INTC_D3D12_CreateHeapSerializer(command));
+  recorder_.Record(command.key, new INTC_D3D12_CreateHeapSerializer(command));
 }
 
 void EncoderLayer::post(NvAPI_InitializeCommand& command) {
-  recorder_.record(command.key, new NvAPI_InitializeSerializer(command));
+  recorder_.Record(command.key, new NvAPI_InitializeSerializer(command));
 }
 
 void EncoderLayer::post(NvAPI_UnloadCommand& command) {
-  recorder_.record(command.key, new NvAPI_UnloadSerializer(command));
+  recorder_.Record(command.key, new NvAPI_UnloadSerializer(command));
 }
 
 void EncoderLayer::post(NvAPI_D3D12_SetCreatePipelineStateOptionsCommand& command) {
-  recorder_.record(command.key, new NvAPI_D3D12_SetCreatePipelineStateOptionsSerializer(command));
+  recorder_.Record(command.key, new NvAPI_D3D12_SetCreatePipelineStateOptionsSerializer(command));
 }
 
 void EncoderLayer::post(NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& command) {
-  recorder_.record(command.key, new NvAPI_D3D12_SetNvShaderExtnSlotSpaceSerializer(command));
+  recorder_.Record(command.key, new NvAPI_D3D12_SetNvShaderExtnSlotSpaceSerializer(command));
 }
 
 void EncoderLayer::post(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& command) {
-  recorder_.record(command.key,
+  recorder_.Record(command.key,
                    new NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadSerializer(command));
 }
 
 void EncoderLayer::post(NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& command) {
-  recorder_.record(command.key,
+  recorder_.Record(command.key,
                    new NvAPI_D3D12_BuildRaytracingAccelerationStructureExSerializer(command));
 }
 
 void EncoderLayer::post(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& command) {
-  recorder_.record(command.key,
+  recorder_.Record(command.key,
                    new NvAPI_D3D12_BuildRaytracingOpacityMicromapArraySerializer(command));
 }
 
 void EncoderLayer::post(
     NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand& command) {
-  recorder_.record(
+  recorder_.Record(
       command.key,
       new NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationSerializer(command));
 }
 
 void EncoderLayer::post(IDXGISwapChainPresentCommand& c) {
   if (!(c.Flags_.value & DXGI_PRESENT_TEST)) {
-    recorder_.frameEnd(c.key);
+    recorder_.Record(c.key, new FrameEndSerializer(FrameEndCommand()));
+    c.key = CaptureManager::get().createCommandKey();
   }
   if (!c.skip) {
-    recorder_.record(c.key, new IDXGISwapChainPresentSerializer(c));
+    recorder_.Record(c.key, new IDXGISwapChainPresentSerializer(c));
   }
 }
 
 void EncoderLayer::post(IDXGISwapChain1Present1Command& c) {
   if (!(c.PresentFlags_.value & DXGI_PRESENT_TEST)) {
-    recorder_.frameEnd(c.key);
+    recorder_.Record(c.key, new FrameEndSerializer(FrameEndCommand()));
+    c.key = CaptureManager::get().createCommandKey();
   }
   if (!c.skip) {
-    recorder_.record(c.key, new IDXGISwapChain1Present1Serializer(c));
+    recorder_.Record(c.key, new IDXGISwapChain1Present1Serializer(c));
   }
 }
 

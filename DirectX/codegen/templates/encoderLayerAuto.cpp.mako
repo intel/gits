@@ -22,7 +22,7 @@ custom = [
 %for function in functions:
 %if not function.name in custom:
 void EncoderLayer::post(${function.name}Command& command) {
-  recorder_.record(command.key, new ${function.name}Serializer(command));
+  recorder_.Record(command.key, new ${function.name}Serializer(command));
 }
 
 %endif
@@ -31,7 +31,7 @@ void EncoderLayer::post(${function.name}Command& command) {
 %for function in interface.functions:
 %if not interface.name + function.name in custom:
 void EncoderLayer::post(${interface.name}${function.name}Command& command) {
-  recorder_.record(command.key, new ${interface.name}${function.name}Serializer(command));
+  recorder_.Record(command.key, new ${interface.name}${function.name}Serializer(command));
 }
 
 %endif

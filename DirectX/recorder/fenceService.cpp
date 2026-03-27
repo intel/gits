@@ -17,7 +17,7 @@
 namespace gits {
 namespace DirectX {
 
-FenceService::FenceService(GitsRecorder& recorder) : recorder_(recorder) {}
+FenceService::FenceService(stream::OrderingRecorder& recorder) : recorder_(recorder) {}
 
 void FenceService::setEventOnCompletion(ID3D12Fence* fence,
                                         unsigned fenceKey,
@@ -100,7 +100,7 @@ void FenceService::waitSignaled(HANDLE handle) {
     command.fence_.key = fenceInfos[i].fenceKey;
     command.value_.value = fenceInfos[i].fence->GetCompletedValue();
 
-    recorder_.record(command.key, new WaitForFenceSignaledSerializer(command));
+    recorder_.Record(command.key, new WaitForFenceSignaledSerializer(command));
   }
 }
 
@@ -181,7 +181,7 @@ void FenceService::waitSignaled(DWORD count, const HANDLE* handles) {
     command.fence_.key = fenceInfos[i].fenceKey;
     command.value_.value = fenceInfos[i].fence->GetCompletedValue();
 
-    recorder_.record(command.key, new WaitForFenceSignaledSerializer(command));
+    recorder_.Record(command.key, new WaitForFenceSignaledSerializer(command));
   }
 }
 

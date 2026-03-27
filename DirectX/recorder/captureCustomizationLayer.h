@@ -9,7 +9,7 @@
 #pragma once
 
 #include "layerAuto.h"
-#include "gitsRecorder.h"
+#include "orderingRecorder.h"
 #include "directStorageService.h"
 
 namespace gits {
@@ -19,7 +19,7 @@ class CaptureManager;
 
 class CaptureCustomizationLayer : public Layer {
 public:
-  CaptureCustomizationLayer(CaptureManager& manager, GitsRecorder& recorder);
+  CaptureCustomizationLayer(CaptureManager& manager, stream::OrderingRecorder& recorder);
   void post(IUnknownReleaseCommand& command) override;
   void pre(IDXGIFactoryCreateSwapChainCommand& command) override;
   void pre(IDXGIFactory2CreateSwapChainForHwndCommand& command) override;
@@ -140,7 +140,7 @@ private:
 
   static thread_local HeapInfo s_heapInfo_;
   CaptureManager& manager_;
-  GitsRecorder& recorder_;
+  stream::OrderingRecorder& recorder_;
   DirectStorageService directStorageService_;
 };
 

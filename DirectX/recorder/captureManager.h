@@ -22,7 +22,7 @@
 #include "gpuAddressService.h"
 #include "pluginService.h"
 #include "fenceService.h"
-#include "gitsRecorder.h"
+#include "orderingRecorder.h"
 #include "contextMapService.h"
 #include "directx.h"
 #include "captureLayerManager.h"
@@ -106,7 +106,7 @@ public:
   }
 
   void updateCommandKey(Command& command) {
-    recorder_->skip(command.key);
+    recorder_->Skip(command.key);
     command.key = createCommandKey();
   }
 
@@ -165,12 +165,6 @@ private:
 
 private:
   static CaptureManager* instance_;
-  struct TBBLoader {
-    TBBLoader();
-
-  private:
-    HMODULE tbbDll_{};
-  } tbbLoader_;
   CaptureLayerManager layerManager_;
 
   DXGIDispatchTable dxgiDispatchTableSystem_{};
@@ -195,7 +189,7 @@ private:
   std::unordered_map<IUnknown*, IUnknownWrapper*> wrappers_;
   std::mutex wrappersMutex_;
 
-  std::unique_ptr<GitsRecorder> recorder_;
+  std::unique_ptr<stream::OrderingRecorder> recorder_;
 
   CaptureDescriptorHandleService descriptorHandleService_;
   std::unique_ptr<MapTrackingService> mapTrackingService_;

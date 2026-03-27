@@ -8,7 +8,7 @@
 
 #include "DllOverrideStoreLayer.h"
 #include "captureManager.h"
-#include "gitsRecorder.h"
+#include "orderingRecorder.h"
 #include "commandSerializersCustom.h"
 #include "log.h"
 
@@ -18,7 +18,8 @@
 
 namespace gits {
 namespace DirectX {
-DllOverrideStoreLayer::DllOverrideStoreLayer(CaptureManager& manager, GitsRecorder& recorder)
+DllOverrideStoreLayer::DllOverrideStoreLayer(CaptureManager& manager,
+                                             stream::OrderingRecorder& recorder)
     : Layer("DllOverrideStore"), manager_(manager), recorder_(recorder) {}
 
 void DllOverrideStoreLayer::post(D3D12CreateDeviceCommand& c) {
@@ -156,7 +157,7 @@ bool DllOverrideStoreLayer::captureDll(const std::wstring& dllName, unsigned thr
   command.dllName_.value = const_cast<wchar_t*>(dllName.c_str());
   command.dllData_.size = size;
   command.dllData_.value = content.data();
-  recorder_.record(command.key, new DllContainerMetaSerializer(command));
+  recorder_.Record(command.key, new DllContainerMetaSerializer(command));
 
   return true;
 }
