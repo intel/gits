@@ -155,7 +155,7 @@ template <typename T>
 ImVec2 BaseButtonGroup<T>::GetSize() const {
   ImVec2 size(0.0f, 0.0f);
   for (const auto& item : items | std::views::values) {
-    auto label =
+    const auto& label =
         useRegularLabel ? item.label : (item.short_label.empty() ? item.label : item.short_label);
     ImVec2 btnSize = ImGui::CalcTextSize(label.c_str());
     btnSize.x = ImGuiHelper::WidthOf(ImGuiHelper::Widgets::Button, label);
