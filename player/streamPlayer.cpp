@@ -202,13 +202,13 @@ void PlayStream(const std::filesystem::path& streamPath) {
 
   std::vector<stream::CommandFactory*> commandFactories;
 
-  CommonCommandFactory commonCommandFactory;
-  commandFactories.push_back(&commonCommandFactory);
-
 #if defined WITH_DIRECTX
   DirectX::DirectXCommandFactory directXCommandFactory;
   commandFactories.push_back(&directXCommandFactory);
 #endif
+
+  CommonCommandFactory commonCommandFactory;
+  commandFactories.push_back(&commonCommandFactory);
 
   std::unique_ptr<stream::BaseStreamReader> streamReader;
   if (stream::StreamHeader::Get().IsLegacyStream()) {
