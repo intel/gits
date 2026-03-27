@@ -22,8 +22,11 @@ public:
   StreamCompressor(const StreamCompressor&) = delete;
   StreamCompressor& operator=(const StreamCompressor&) = delete;
 
-  virtual int CompressBound(int uncompressedSize) = 0;
-  virtual int Compress(const char* src, char* dest, int srcSize, int destCapacity) = 0;
+  virtual uint64_t CompressBound(uint64_t uncompressedSize) = 0;
+  virtual uint64_t Compress(const char* src,
+                            char* dest,
+                            uint64_t srcSize,
+                            uint64_t destCapacity) = 0;
 };
 
 class StreamDecompressor {
@@ -33,14 +36,17 @@ public:
   StreamDecompressor(const StreamDecompressor&) = delete;
   StreamDecompressor& operator=(const StreamDecompressor&) = delete;
 
-  virtual int Decompress(const char* src, char* dest, int srcSize, int destCapacity) = 0;
+  virtual uint64_t Decompress(const char* src,
+                              char* dest,
+                              uint64_t srcSize,
+                              uint64_t destCapacity) = 0;
 };
 
 class LZ4StreamCompressor : public StreamCompressor {
 public:
   LZ4StreamCompressor();
-  int CompressBound(int uncompressedSize) override;
-  int Compress(const char* src, char* dest, int srcSize, int destCapacity) override;
+  uint64_t CompressBound(uint64_t uncompressedSize) override;
+  uint64_t Compress(const char* src, char* dest, uint64_t srcSize, uint64_t destCapacity) override;
 
 private:
   int m_Acceleration{};
@@ -49,14 +55,17 @@ private:
 
 class LZ4StreamDecompressor : public StreamDecompressor {
 public:
-  int Decompress(const char* src, char* dest, int srcSize, int destCapacity) override;
+  uint64_t Decompress(const char* src,
+                      char* dest,
+                      uint64_t srcSize,
+                      uint64_t destCapacity) override;
 };
 
 class ZSTDStreamCompressor : public StreamCompressor {
 public:
   ZSTDStreamCompressor();
-  int CompressBound(int uncompressedSize) override;
-  int Compress(const char* src, char* dest, int srcSize, int destCapacity) override;
+  uint64_t CompressBound(uint64_t uncompressedSize) override;
+  uint64_t Compress(const char* src, char* dest, uint64_t srcSize, uint64_t destCapacity) override;
 
 private:
   int m_CompressionLevel{};
@@ -65,7 +74,10 @@ private:
 
 class ZSTDStreamDecompressor : public StreamDecompressor {
 public:
-  int Decompress(const char* src, char* dest, int srcSize, int destCapacity) override;
+  uint64_t Decompress(const char* src,
+                      char* dest,
+                      uint64_t srcSize,
+                      uint64_t destCapacity) override;
 };
 
 } // namespace stream

@@ -19,17 +19,24 @@ LZ4StreamCompressor::LZ4StreamCompressor() {
   m_CompressionState.reset(new char[LZ4_sizeofState()]);
 }
 
-int LZ4StreamCompressor::CompressBound(int uncompressedSize) {
+uint64_t LZ4StreamCompressor::CompressBound(uint64_t uncompressedSize) {
   return LZ4_compressBound(uncompressedSize);
 }
 
-int LZ4StreamCompressor::Compress(const char* src, char* dest, int srcSize, int destCapacity) {
+uint64_t LZ4StreamCompressor::Compress(const char* src,
+                                       char* dest,
+                                       uint64_t srcSize,
+                                       uint64_t destCapacity) {
   return LZ4_compress_fast_extState(m_CompressionState.get(), src, dest, srcSize, destCapacity,
                                     m_Acceleration);
 }
 
-int LZ4StreamDecompressor::Decompress(const char* src, char* dest, int srcSize, int destCapacity) {
-  return LZ4_decompress_safe(src, dest, srcSize, destCapacity);
+uint64_t LZ4StreamDecompressor::Decompress(const char* src,
+                                           char* dest,
+                                           uint64_t srcSize,
+                                           uint64_t destCapacity) {
+  int ret = LZ4_decompress_safe(src, dest, srcSize, destCapacity);
+  return ret >= 0 ? ret : 0;
 }
 
 ZSTDStreamCompressor::ZSTDStreamCompressor()
@@ -37,16 +44,22 @@ ZSTDStreamCompressor::ZSTDStreamCompressor()
   GITS_ASSERT(m_ZSTDContext != nullptr, "Failed to create a ZSTD compression context.");
 }
 
-int ZSTDStreamCompressor::CompressBound(int uncompressedSize) {
+uint64_t ZSTDStreamCompressor::CompressBound(uint64_t uncompressedSize) {
   return ZSTD_compressBound(uncompressedSize);
 }
 
-int ZSTDStreamCompressor::Compress(const char* src, char* dest, int srcSize, int destCapacity) {
+uint64_t ZSTDStreamCompressor::Compress(const char* src,
+                                        char* dest,
+                                        uint64_t srcSize,
+                                        uint64_t destCapacity) {
   return ZSTD_compressCCtx(m_ZSTDContext.get(), dest, destCapacity, src, srcSize,
                            m_CompressionLevel);
 }
 
-int ZSTDStreamDecompressor::Decompress(const char* src, char* dest, int srcSize, int destCapacity) {
+uint64_t ZSTDStreamDecompressor::Decompress(const char* src,
+                                            char* dest,
+                                            uint64_t srcSize,
+                                            uint64_t destCapacity) {
   return ZSTD_decompress(dest, destCapacity, src, srcSize);
 }
 
