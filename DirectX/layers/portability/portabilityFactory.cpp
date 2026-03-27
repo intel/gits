@@ -17,9 +17,10 @@ PortabilityFactory::PortabilityFactory() {
   if (Configurator::IsRecorder()) {
     portabilityLayer_ = std::make_unique<PortabilityLayer>();
   } else if (Configurator::IsPlayer()) {
-    if (Configurator::Get().directx.player.portability.resourcePlacement != "none" ||
-        Configurator::Get().directx.player.portability.portabilityChecks ||
-        Configurator::Get().directx.player.portability.portabilityAssertions) {
+    auto& playerConfig = Configurator::Get().directx.player;
+    if (playerConfig.execute && (playerConfig.portability.resourcePlacement != "none" ||
+                                 playerConfig.portability.portabilityChecks ||
+                                 playerConfig.portability.portabilityAssertions)) {
       portabilityLayer_ = std::make_unique<PortabilityLayer>();
     }
   }
