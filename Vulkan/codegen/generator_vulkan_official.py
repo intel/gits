@@ -15256,7 +15256,7 @@ var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='cooperativeMatrixSupportedStages', type='VkShaderStageFlags')
 )
 
-Struct(name='VkPhysicalDeviceCooperativeVectorFeaturesNV_', enabled=False,
+Struct(name='VkPhysicalDeviceCooperativeVectorFeaturesNV_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='cooperativeVector', type='VkBool32'),
@@ -17615,7 +17615,7 @@ var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='shaderRelaxedExtendedInstruction', type='VkBool32')
 )
 
-Struct(name='VkPhysicalDeviceShaderReplicatedCompositesFeaturesEXT_', enabled=False,
+Struct(name='VkPhysicalDeviceShaderReplicatedCompositesFeaturesEXT_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='shaderReplicatedComposites', type='VkBool32')
