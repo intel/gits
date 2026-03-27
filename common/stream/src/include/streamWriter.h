@@ -28,6 +28,8 @@ class StreamWriter {
 public:
   StreamWriter(const std::filesystem::path& streamDir, CompressionType compressionType);
   ~StreamWriter();
+  StreamWriter(const StreamWriter&) = delete;
+  StreamWriter& operator=(const StreamWriter&) = delete;
 
   void Record(const CommandSerializer& commandSerializer);
   void Close();
