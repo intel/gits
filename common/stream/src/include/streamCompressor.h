@@ -60,7 +60,7 @@ public:
 
 private:
   int m_CompressionLevel{};
-  ZSTD_CCtx* m_ZSTDContext{};
+  std::unique_ptr<ZSTD_CCtx, decltype(&ZSTD_freeCCtx)> m_ZSTDContext;
 };
 
 class ZSTDStreamDecompressor : public StreamDecompressor {

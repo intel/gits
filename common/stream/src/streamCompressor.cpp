@@ -32,9 +32,9 @@ int LZ4StreamDecompressor::Decompress(const char* src, char* dest, int srcSize, 
   return LZ4_decompress_safe(src, dest, srcSize, destCapacity);
 }
 
-ZSTDStreamCompressor::ZSTDStreamCompressor() {
-  m_CompressionLevel = 3;
-  m_ZSTDContext = ZSTD_createCCtx();
+ZSTDStreamCompressor::ZSTDStreamCompressor()
+    : m_CompressionLevel{3}, m_ZSTDContext{ZSTD_createCCtx(), ZSTD_freeCCtx} {
+  GITS_ASSERT(m_ZSTDContext != nullptr, "Failed to create a ZSTD compression context.");
 }
 
 int ZSTDStreamCompressor::CompressBound(int uncompressedSize) {
@@ -42,7 +42,8 @@ int ZSTDStreamCompressor::CompressBound(int uncompressedSize) {
 }
 
 int ZSTDStreamCompressor::Compress(const char* src, char* dest, int srcSize, int destCapacity) {
-  return ZSTD_compressCCtx(m_ZSTDContext, dest, destCapacity, src, srcSize, m_CompressionLevel);
+  return ZSTD_compressCCtx(m_ZSTDContext.get(), dest, destCapacity, src, srcSize,
+                           m_CompressionLevel);
 }
 
 int ZSTDStreamDecompressor::Decompress(const char* src, char* dest, int srcSize, int destCapacity) {
