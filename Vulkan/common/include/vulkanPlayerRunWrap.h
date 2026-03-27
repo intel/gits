@@ -25,7 +25,10 @@ namespace Vulkan {
 namespace {
 
 #if defined(GITS_PLATFORM_WINDOWS)
-VulkanHudHelper g_hudHelper;
+VulkanHudHelper& GetHudHelper() {
+  static VulkanHudHelper hudHelper;
+  return hudHelper;
+}
 #endif
 
 inline VkResult AcquireFakeSwapchainImageIndex(uint32_t recorderIndex,
@@ -478,7 +481,7 @@ inline void vkCreateInstance_WRAPRUN(CVkResult& recorderSideReturnValue,
                    "will disable it for this replay.";
   }
 #if defined(GITS_PLATFORM_WINDOWS)
-  g_hudHelper.OnVkCreateInstance(*pCreateInfo, *pAllocator, *pInstance);
+  GetHudHelper().OnVkCreateInstance(*pCreateInfo, *pAllocator, *pInstance);
 #endif
 }
 
@@ -489,7 +492,7 @@ inline void vkQueuePresentKHR_WRAPRUN(CVkResult& recorderSideReturnValue,
     throw std::runtime_error(EXCEPTION_MESSAGE);
   }
 #if defined(GITS_PLATFORM_WINDOWS)
-  g_hudHelper.OnVkQueuePresentKHR(*queue, *pPresentInfo);
+  GetHudHelper().OnVkQueuePresentKHR(*queue, *pPresentInfo);
 #endif
 
   VkPresentInfoKHR presentInfo = *pPresentInfo;
@@ -1726,7 +1729,7 @@ inline void vkCreateDevice_WRAPRUN(CVkResult& recorderSideReturnValue,
     }
   }
 #if defined(GITS_PLATFORM_WINDOWS)
-  g_hudHelper.OnVkCreateDevice(*physicalDevice, *pCreateInfo, *pAllocator, *pDevice);
+  GetHudHelper().OnVkCreateDevice(*physicalDevice, *pCreateInfo, *pAllocator, *pDevice);
 #endif
 }
 
@@ -1743,7 +1746,7 @@ inline void vkGetDeviceQueue_WRAPRUN(CVkDevice& device,
   } else {
     drvVk.vkGetDeviceQueue(*device, *queueFamilyIndex, *queueIndex, *pQueue);
 #if defined(GITS_PLATFORM_WINDOWS)
-    g_hudHelper.OnVkGetDeviceQueue(*device, *queueFamilyIndex, *queueIndex, *pQueue);
+    GetHudHelper().OnVkGetDeviceQueue(*device, *queueFamilyIndex, *queueIndex, *pQueue);
 #endif
   }
 }
@@ -1806,8 +1809,8 @@ inline void vkCreateSwapchainKHR_WRAPRUN(CVkResult& recorderSideReturnValue,
     }
   }
 #if defined(GITS_PLATFORM_WINDOWS)
-  g_hudHelper.SetWindowHandle(GetWindowHandle());
-  g_hudHelper.OnVkCreateSwapchainKHR(*device, *pCreateInfo, *pAllocator, *pSwapchain);
+  GetHudHelper().SetWindowHandle(GetWindowHandle());
+  GetHudHelper().OnVkCreateSwapchainKHR(*device, *pCreateInfo, *pAllocator, *pSwapchain);
 #endif
 }
 
