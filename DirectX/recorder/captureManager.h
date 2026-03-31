@@ -32,6 +32,7 @@
 #include <atomic>
 #include <unordered_map>
 #include <mutex>
+#include <utility>
 
 namespace gits {
 namespace DirectX {
@@ -104,6 +105,7 @@ public:
   unsigned createCommandKey() {
     return commandUniqueKey_.fetch_add(1, std::memory_order_relaxed) + 1;
   }
+  std::pair<unsigned, unsigned> createCommandKeyRange(unsigned rangeSize);
 
   void updateCommandKey(Command& command) {
     recorder_->Skip(command.key);

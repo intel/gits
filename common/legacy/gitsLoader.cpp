@@ -42,8 +42,7 @@ const char* TBB_LIB_NAME = "libgits_tbb.so";
 
 namespace gits {
 
-CGitsLoader::CGitsLoader(const char* recorderWrapperFactoryName, bool legacyMode)
-    : config_(nullptr), recorderWrapper_(nullptr) {
+CGitsLoader::CGitsLoader(const char* recorderWrapperFactoryName, bool legacyMode) {
   const char* envConfigPath = getenv("GITS_CONFIG_DIR");
   std::filesystem::path libPath = dl::this_library_path();
   std::filesystem::path configPath = libPath.parent_path();

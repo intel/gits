@@ -16,6 +16,8 @@
 #include <map>
 #include <memory>
 #include <atomic>
+#include <thread>
+#include <vector>
 
 namespace gits {
 namespace stream {
@@ -23,6 +25,10 @@ namespace stream {
 class OrderingRecorder {
 public:
   OrderingRecorder();
+  ~OrderingRecorder();
+  OrderingRecorder(const OrderingRecorder&) = delete;
+  OrderingRecorder& operator=(const OrderingRecorder&) = delete;
+
   void Record(size_t key, stream::CommandSerializer* serializer);
   void Skip(size_t key);
 

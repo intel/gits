@@ -185,6 +185,13 @@ void CaptureManager::interceptDirectStorageFunctions() {
   GITS_ASSERT(ret == NO_ERROR);
 }
 
+std::pair<unsigned, unsigned> CaptureManager::createCommandKeyRange(unsigned rangeSize) {
+  std::pair<unsigned, unsigned> range;
+  range.first = commandUniqueKey_.fetch_add(rangeSize, std::memory_order_relaxed) + 1;
+  range.second = range.first + rangeSize - 1;
+  return range;
+}
+
 void CaptureManager::addWrapper(IUnknownWrapper* wrapper) {
   std::lock_guard<std::mutex> lock(wrappersMutex_);
   wrappers_[wrapper->getRootIUnknown()] = wrapper;

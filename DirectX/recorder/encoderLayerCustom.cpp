@@ -122,22 +122,36 @@ void EncoderLayer::post(
 }
 
 void EncoderLayer::post(IDXGISwapChainPresentCommand& c) {
-  if (!(c.Flags_.value & DXGI_PRESENT_TEST)) {
-    recorder_.Record(c.key, new FrameEndSerializer(FrameEndCommand()));
-    c.key = CaptureManager::get().createCommandKey();
-  }
+  const auto keys = CaptureManager::get().createCommandKeyRange(2);
+  recorder_.Skip(c.key);
+  c.key = keys.first;
+
   if (!c.skip) {
     recorder_.Record(c.key, new IDXGISwapChainPresentSerializer(c));
+  } else {
+    recorder_.Skip(c.key);
+  }
+  if (!(c.Flags_.value & DXGI_PRESENT_TEST)) {
+    recorder_.Record(keys.second, new FrameEndSerializer(FrameEndCommand()));
+  } else {
+    recorder_.Skip(keys.second);
   }
 }
 
 void EncoderLayer::post(IDXGISwapChain1Present1Command& c) {
-  if (!(c.PresentFlags_.value & DXGI_PRESENT_TEST)) {
-    recorder_.Record(c.key, new FrameEndSerializer(FrameEndCommand()));
-    c.key = CaptureManager::get().createCommandKey();
-  }
+  const auto keys = CaptureManager::get().createCommandKeyRange(2);
+  recorder_.Skip(c.key);
+  c.key = keys.first;
+
   if (!c.skip) {
     recorder_.Record(c.key, new IDXGISwapChain1Present1Serializer(c));
+  } else {
+    recorder_.Skip(c.key);
+  }
+  if (!(c.PresentFlags_.value & DXGI_PRESENT_TEST)) {
+    recorder_.Record(keys.second, new FrameEndSerializer(FrameEndCommand()));
+  } else {
+    recorder_.Skip(keys.second);
   }
 }
 

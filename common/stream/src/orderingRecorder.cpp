@@ -23,6 +23,10 @@ OrderingRecorder::OrderingRecorder() {
   m_Thread = std::thread{&OrderingRecorder::ProcessQueue, this};
 }
 
+OrderingRecorder::~OrderingRecorder() {
+  Close();
+}
+
 void OrderingRecorder::Record(size_t key, stream::CommandSerializer* serializer) {
   if (m_Closed) {
     delete serializer;
@@ -77,6 +81,9 @@ void OrderingRecorder::ConditionalFlush() {
       processedBytes = m_ProcessedBytes;
       scheduledBytes = m_ScheduledBytes;
       GITS_ASSERT(scheduledBytes >= processedBytes);
+      if (scheduledBytes - processedBytes > BYTES_ALLOWED_DIFFERENCE) {
+        std::this_thread::yield();
+      }
     } while (scheduledBytes - processedBytes > BYTES_ALLOWED_DIFFERENCE);
     m_LastCheckedBytes.store(scheduledBytes);
   }
