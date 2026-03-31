@@ -31,6 +31,43 @@ ImGuiHUDLayer::~ImGuiHUDLayer() {
   ImGui_ImplDX12_Shutdown();
 }
 
+void ImGuiHUDLayer::post(IDXGISwapChainGetBufferCommand& c) {
+  if (c.result_.value == S_OK) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    backBufferKeys_.insert(c.ppSurface_.key);
+  }
+}
+
+void ImGuiHUDLayer::pre(IUnknownReleaseCommand& c) {
+  if (!c.object_.value) {
+    return;
+  }
+
+  c.object_.value->AddRef();
+  auto result = c.object_.value->Release();
+  if (result != 1) {
+    return;
+  }
+
+  std::lock_guard<std::mutex> lock(mutex_);
+  if (!backBufferKeys_.contains(c.object_.key)) {
+    return;
+  }
+
+  for (unsigned i = 0; i < frameContext_.size(); ++i) {
+    waitForFrame(i);
+  }
+
+  backBufferKeys_.clear();
+}
+
+void ImGuiHUDLayer::pre(ID3D12CommandQueueExecuteCommandListsCommand& c) {
+  if (firstExecuteInFrame_) {
+    waitForCurrentFrame();
+    firstExecuteInFrame_ = true;
+  }
+}
+
 void ImGuiHUDLayer::post(IDXGIFactoryCreateSwapChainCommand& c) {
   if (c.result_.value != S_OK) {
     return;
@@ -92,6 +129,7 @@ void ImGuiHUDLayer::post(IDXGISwapChainPresentCommand& c) {
     return;
   }
   CGits::Instance().FrameCountUp();
+  firstExecuteInFrame_ = true;
 }
 
 void ImGuiHUDLayer::pre(IDXGISwapChain1Present1Command& c) {
@@ -107,17 +145,7 @@ void ImGuiHUDLayer::post(IDXGISwapChain1Present1Command& c) {
     return;
   }
   CGits::Instance().FrameCountUp();
-}
-
-void ImGuiHUDLayer::pre(IDXGISwapChainResizeBuffersCommand& command) {
-  if (!initialized_) {
-    return;
-  }
-
-  // Release all the backbuffers
-  for (auto& frameCtx : frameContext_) {
-    frameCtx.rtResource.Reset();
-  }
+  firstExecuteInFrame_ = true;
 }
 
 void ImGuiHUDLayer::post(IDXGISwapChainResizeBuffersCommand& command) {
@@ -139,17 +167,6 @@ void ImGuiHUDLayer::post(IDXGISwapChainResizeBuffersCommand& command) {
   }
   CGits::Instance().GetImGuiHUD()->SetBackBufferInfo(command.Width_.value, command.Height_.value,
                                                      bufferCount);
-}
-
-void ImGuiHUDLayer::pre(IDXGISwapChain3ResizeBuffers1Command& command) {
-  if (!initialized_) {
-    return;
-  }
-
-  // Release all the backbuffers
-  for (auto& frameCtx : frameContext_) {
-    frameCtx.rtResource.Reset();
-  }
 }
 
 void ImGuiHUDLayer::post(IDXGISwapChain3ResizeBuffers1Command& command) {
@@ -183,7 +200,10 @@ bool ImGuiHUDLayer::createFrameContext(unsigned bufferCount) {
 
   frameContext_.resize(bufferCount);
   for (UINT i = 0; i < bufferCount; ++i) {
+    waitForFrame(i);
+
     FrameContext& frameCtx = frameContext_[i];
+    frameCtx.fenceValue = 0;
 
     // Get the backBuffer
     Microsoft::WRL::ComPtr<ID3D12Resource> backBuffer;
@@ -300,7 +320,23 @@ void ImGuiHUDLayer::onPrePresent() {
     firstRun = false;
     present(); // assures Hud in a first frame of a stream
   }
+  waitForCurrentFrame();
   present();
+}
+
+void ImGuiHUDLayer::waitForCurrentFrame() {
+  UINT backBufferIdx = swapChain_->GetCurrentBackBufferIndex();
+  waitForFrame(backBufferIdx);
+}
+
+void ImGuiHUDLayer::waitForFrame(unsigned bufferIndex) {
+  FrameContext& frameCtx = frameContext_[bufferIndex];
+
+  if (frameCtx.fenceValue) {
+    if (fence_->GetCompletedValue() < frameCtx.fenceValue) {
+      fence_->SetEventOnCompletion(frameCtx.fenceValue, NULL);
+    }
+  }
 }
 
 void ImGuiHUDLayer::present() {
@@ -316,19 +352,14 @@ void ImGuiHUDLayer::present() {
   CGits::Instance().GetImGuiHUD()->Render();
 
   UINT backBufferIdx = swapChain_->GetCurrentBackBufferIndex();
-  static UINT frameNumber = 0;
-  if (frameNumber > frameContext_.size()) {
-    fence_->SetEventOnCompletion(fenceValue_ - frameContext_.size(), NULL);
-  }
-  ++frameNumber;
-
   FrameContext& frameCtx = frameContext_[backBufferIdx];
+
   frameCtx.commandAllocator->Reset();
 
   D3D12_RESOURCE_BARRIER barrier = {};
   barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
   barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-  barrier.Transition.pResource = frameContext_[backBufferIdx].rtResource.Get();
+  barrier.Transition.pResource = frameCtx.rtResource;
   barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
   barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
   barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
@@ -336,7 +367,7 @@ void ImGuiHUDLayer::present() {
   commandList_->Reset(frameCtx.commandAllocator.Get(), nullptr);
   commandList_->ResourceBarrier(1, &barrier);
 
-  commandList_->OMSetRenderTargets(1, &frameContext_[backBufferIdx].rtvHandle, FALSE, nullptr);
+  commandList_->OMSetRenderTargets(1, &frameCtx.rtvHandle, FALSE, nullptr);
   commandList_->SetDescriptorHeaps(1, srvDescHeap_.GetAddressOf());
 
   ImGui::Render();
@@ -351,7 +382,8 @@ void ImGuiHUDLayer::present() {
   commandQueue_->ExecuteCommandLists(
       1, reinterpret_cast<ID3D12CommandList* const*>(commandList_.GetAddressOf()));
 
-  commandQueue_->Signal(fence_.Get(), ++fenceValue_);
+  frameCtx.fenceValue = ++fenceValue_;
+  commandQueue_->Signal(fence_.Get(), frameCtx.fenceValue);
 }
 
 } // namespace DirectX

@@ -13,6 +13,8 @@
 #include <vector>
 #include <d3d12.h>
 #include <wrl/client.h>
+#include <mutex>
+#include <unordered_set>
 
 namespace gits {
 
@@ -21,8 +23,9 @@ class CGits;
 namespace DirectX {
 
 struct FrameContext {
+  UINT64 fenceValue = {};
   Microsoft::WRL::ComPtr<ID3D12CommandAllocator> commandAllocator;
-  Microsoft::WRL::ComPtr<ID3D12Resource> rtResource = {};
+  ID3D12Resource* rtResource = {};
   D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = {};
 };
 
@@ -31,6 +34,9 @@ public:
   ImGuiHUDLayer();
   ~ImGuiHUDLayer();
 
+  void post(IDXGISwapChainGetBufferCommand& c) override;
+  void pre(IUnknownReleaseCommand& c) override;
+  void pre(ID3D12CommandQueueExecuteCommandListsCommand& c) override;
   void post(IDXGIFactoryCreateSwapChainCommand& c) override;
   void post(IDXGIFactory2CreateSwapChainForHwndCommand& c) override;
   void post(IDXGIFactory2CreateSwapChainForCoreWindowCommand& c) override;
@@ -39,9 +45,7 @@ public:
   void post(IDXGISwapChainPresentCommand& command) override;
   void pre(IDXGISwapChain1Present1Command& command) override;
   void post(IDXGISwapChain1Present1Command& command) override;
-  void pre(IDXGISwapChainResizeBuffersCommand& command) override;
   void post(IDXGISwapChainResizeBuffersCommand& command) override;
-  void pre(IDXGISwapChain3ResizeBuffers1Command& command) override;
   void post(IDXGISwapChain3ResizeBuffers1Command& command) override;
 
 private:
@@ -49,10 +53,15 @@ private:
   bool initializeResources(IUnknown* device, IDXGISwapChain* swapChain);
   void initializeImGui(DXGI_FORMAT format);
   void onPrePresent();
+  void waitForCurrentFrame();
+  void waitForFrame(unsigned bufferIndex);
   void present();
 
 private:
   bool initialized_ = false;
+
+  std::mutex mutex_;
+  std::unordered_set<unsigned> backBufferKeys_;
 
   std::vector<FrameContext> frameContext_ = {};
   Microsoft::WRL::ComPtr<ID3D12Fence> fence_ = nullptr;
@@ -63,8 +72,8 @@ private:
   Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList_ = nullptr;
   Microsoft::WRL::ComPtr<IDXGISwapChain3> swapChain_ = nullptr;
 
-  UINT frameIndex_ = 0;
   UINT64 fenceValue_ = 0;
+  bool firstExecuteInFrame_ = true;
 
   void* window_ = nullptr;
   bool resizeBuffersWarning_ = false;
