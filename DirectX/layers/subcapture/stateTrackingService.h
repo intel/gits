@@ -167,7 +167,8 @@ private:
   D3D12_RESOURCE_STATES getResourceInitialState(ResourceState& state,
                                                 D3D12_RESOURCE_DIMENSION dimension);
   D3D12_BARRIER_LAYOUT getResourceInitialLayout(ResourceState& state,
-                                                D3D12_RESOURCE_DIMENSION dimension);
+                                                D3D12_RESOURCE_DIMENSION dimension,
+                                                D3D12_RESOURCE_FLAGS flags);
   void restoreINTCApplicationInfo();
   void restoreD3D12EnableExperimentalFeatures();
   void restoreDllContainers();

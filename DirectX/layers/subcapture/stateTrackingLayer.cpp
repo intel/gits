@@ -1302,7 +1302,7 @@ void StateTrackingLayer::post(ID3D12Device10CreatePlacedResource2Command& c) {
 
   resourceStateTrackingService_.addResource(
       state->deviceKey, static_cast<ID3D12Resource*>(*c.ppvResource_.value), state->key,
-      state->initialState, !(state->isMappable || state->isBarrierRestricted));
+      state->initialLayout, !(state->isMappable || state->isBarrierRestricted));
   resourceStateTracker_.addResource(c.ppvResource_.key, c.InitialLayout_.value);
   gpuAddressService_.createPlacedResource(c.pHeap_.key, c.ppvResource_.key, c.pDesc_.value->Flags);
 }
@@ -2815,11 +2815,16 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandList7BarrierCommand& c) {
   if (stateRestored_) {
     return;
   }
-  static bool logged = false;
-  if (!logged) {
-    LOG_ERROR << "ID3D12GraphicsCommandList7::Barrier is not supported in subcapture.";
-    logged = true;
-  }
+  resourceUsageTrackingService_.commandListResourceUsage(c.object_.key,
+                                                         c.pBarrierGroups_.resourceKeys);
+
+  resourceStateTrackingService_.resourceBarrier(c.object_.key, c.pBarrierGroups_.value,
+                                                c.NumBarrierGroups_.value,
+                                                c.pBarrierGroups_.resourceKeys);
+  resourceStateTracker_.resourceBarrier(c.object_.value, c.pBarrierGroups_.value,
+                                        c.NumBarrierGroups_.value,
+                                        c.pBarrierGroups_.resourceKeys.data());
+
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key, c.object_.key);
   command->commandSerializer.reset(new ID3D12GraphicsCommandList7BarrierSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(stateService_.getState(c.object_.key));

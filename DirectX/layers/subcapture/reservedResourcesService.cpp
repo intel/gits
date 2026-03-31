@@ -445,37 +445,39 @@ void ReservedResourcesService::restoreContent(const std::vector<unsigned>& resou
     GITS_ASSERT(hr == S_OK);
 
     {
-      std::vector<D3D12_RESOURCE_BARRIER> barriers;
       ResourceStateTrackingService::ResourceStates& resourceStates =
           stateService_.getResourceStateTrackingService().getResourceStates(
               tiledResource->resourceKey);
-      if (resourceStates.allEqual) {
-        if (resourceStates.subresourceStates[0] != D3D12_RESOURCE_STATE_COPY_SOURCE) {
-          D3D12_RESOURCE_BARRIER barrier{};
-          barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-          barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-          barrier.Transition.pResource = tiledResource->resource;
-          barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-          barrier.Transition.StateBefore = resourceStates.subresourceStates[0];
-          barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_SOURCE;
-          barriers.push_back(barrier);
-        }
-      } else {
-        for (unsigned i = 0; i < resourceStates.subresourceStates.size(); ++i) {
-          if (resourceStates.subresourceStates[i] != D3D12_RESOURCE_STATE_COPY_SOURCE) {
+      if (!resourceStates.subresourceStates.empty()) {
+        std::vector<D3D12_RESOURCE_BARRIER> barriers;
+        if (resourceStates.allEqual) {
+          if (resourceStates.subresourceStates[0] != D3D12_RESOURCE_STATE_COPY_SOURCE) {
             D3D12_RESOURCE_BARRIER barrier{};
             barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
             barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
             barrier.Transition.pResource = tiledResource->resource;
-            barrier.Transition.Subresource = i;
-            barrier.Transition.StateBefore = resourceStates.subresourceStates[i];
+            barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+            barrier.Transition.StateBefore = resourceStates.subresourceStates[0];
             barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_SOURCE;
             barriers.push_back(barrier);
           }
+        } else {
+          for (unsigned i = 0; i < resourceStates.subresourceStates.size(); ++i) {
+            if (resourceStates.subresourceStates[i] != D3D12_RESOURCE_STATE_COPY_SOURCE) {
+              D3D12_RESOURCE_BARRIER barrier{};
+              barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+              barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+              barrier.Transition.pResource = tiledResource->resource;
+              barrier.Transition.Subresource = i;
+              barrier.Transition.StateBefore = resourceStates.subresourceStates[i];
+              barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_SOURCE;
+              barriers.push_back(barrier);
+            }
+          }
         }
-      }
-      if (!barriers.empty()) {
-        commandList_->ResourceBarrier(barriers.size(), barriers.data());
+        if (!barriers.empty()) {
+          commandList_->ResourceBarrier(barriers.size(), barriers.data());
+        }
       }
     }
 
@@ -518,37 +520,39 @@ void ReservedResourcesService::restoreContent(const std::vector<unsigned>& resou
     }
 
     {
-      std::vector<D3D12_RESOURCE_BARRIER> barriers;
       ResourceStateTrackingService::ResourceStates& resourceStates =
           stateService_.getResourceStateTrackingService().getResourceStates(
               tiledResource->resourceKey);
-      if (resourceStates.allEqual) {
-        if (resourceStates.subresourceStates[0] != D3D12_RESOURCE_STATE_COPY_SOURCE) {
-          D3D12_RESOURCE_BARRIER barrier{};
-          barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-          barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-          barrier.Transition.pResource = tiledResource->resource;
-          barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-          barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_SOURCE;
-          barrier.Transition.StateAfter = resourceStates.subresourceStates[0];
-          barriers.push_back(barrier);
-        }
-      } else {
-        for (unsigned i = 0; i < resourceStates.subresourceStates.size(); ++i) {
-          if (resourceStates.subresourceStates[i] != D3D12_RESOURCE_STATE_COPY_SOURCE) {
+      if (!resourceStates.subresourceStates.empty()) {
+        std::vector<D3D12_RESOURCE_BARRIER> barriers;
+        if (resourceStates.allEqual) {
+          if (resourceStates.subresourceStates[0] != D3D12_RESOURCE_STATE_COPY_SOURCE) {
             D3D12_RESOURCE_BARRIER barrier{};
             barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
             barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
             barrier.Transition.pResource = tiledResource->resource;
-            barrier.Transition.Subresource = i;
+            barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
             barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_SOURCE;
-            barrier.Transition.StateAfter = resourceStates.subresourceStates[i];
+            barrier.Transition.StateAfter = resourceStates.subresourceStates[0];
             barriers.push_back(barrier);
           }
+        } else {
+          for (unsigned i = 0; i < resourceStates.subresourceStates.size(); ++i) {
+            if (resourceStates.subresourceStates[i] != D3D12_RESOURCE_STATE_COPY_SOURCE) {
+              D3D12_RESOURCE_BARRIER barrier{};
+              barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+              barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+              barrier.Transition.pResource = tiledResource->resource;
+              barrier.Transition.Subresource = i;
+              barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_SOURCE;
+              barrier.Transition.StateAfter = resourceStates.subresourceStates[i];
+              barriers.push_back(barrier);
+            }
+          }
         }
-      }
-      if (!barriers.empty()) {
-        commandList_->ResourceBarrier(barriers.size(), barriers.data());
+        if (!barriers.empty()) {
+          commandList_->ResourceBarrier(barriers.size(), barriers.data());
+        }
       }
     }
 

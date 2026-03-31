@@ -33,12 +33,37 @@ void ResourceStateTrackingService::resourceBarrier(unsigned commandListKey,
   barriersByCommandList_[commandListKey].push_back(std::move(resourceBarriers));
 }
 
+void ResourceStateTrackingService::resourceBarrier(unsigned commandListKey,
+                                                   D3D12_BARRIER_GROUP* barriers,
+                                                   unsigned barriersNum,
+                                                   std::vector<unsigned>& resourceKeys) {
+  ResourceBarriers resourceBarriers;
+  unsigned resourceKeyIndex = 0;
+  for (unsigned i = 0; i < barriersNum; ++i) {
+    D3D12_BARRIER_GROUP& barrierGroup = barriers[i];
+    if (barrierGroup.Type == D3D12_BARRIER_TYPE_TEXTURE) {
+      for (unsigned j = 0; j < barrierGroup.NumBarriers; ++j) {
+        resourceBarriers.layouts.push_back(barrierGroup.pTextureBarriers[j]);
+        resourceBarriers.resourceKeys.push_back(resourceKeys[resourceKeyIndex]);
+        ++resourceKeyIndex;
+      }
+    } else if (barrierGroup.Type == D3D12_BARRIER_TYPE_BUFFER) {
+      ++resourceKeyIndex;
+    }
+  }
+  barriersByCommandList_[commandListKey].push_back(std::move(resourceBarriers));
+}
+
 void ResourceStateTrackingService::executeCommandLists(std::vector<unsigned>& commandListKeys) {
   for (unsigned key : commandListKeys) {
     auto it = barriersByCommandList_.find(key);
     if (it != barriersByCommandList_.end()) {
       for (ResourceBarriers& barriers : it->second) {
-        resourceBarrier(barriers.barriers, barriers.resourceKeys, barriers.resourceAfterKeys);
+        if (!barriers.barriers.empty()) {
+          resourceBarrier(barriers.barriers, barriers.resourceKeys, barriers.resourceAfterKeys);
+        } else {
+          resourceBarrier(barriers.layouts, barriers.resourceKeys);
+        }
       }
       barriersByCommandList_.erase(it);
     }
@@ -82,19 +107,53 @@ void ResourceStateTrackingService::resourceBarrier(std::vector<D3D12_RESOURCE_BA
       unsigned subresource = barriers[i].Transition.Subresource;
       if (subresource == D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES) {
         states.allEqual = true;
-        for (unsigned i = 0; i < states.subresourceStates.size(); ++i) {
-          states.subresourceStates[i] = stateAfter;
+        for (unsigned j = 0; j < states.subresourceStates.size(); ++j) {
+          states.subresourceStates[j] = stateAfter;
         }
       } else {
         states.allEqual = false;
         states.subresourceStates[subresource] = stateAfter;
       }
+      states.subresourceLayouts.clear();
     } else if (barriers[i].Type == D3D12_RESOURCE_BARRIER_TYPE_ALIASING) {
       auto keys = std::make_pair(resourceKeys[i], resourceAfterKeys[i]);
       unsigned& count = aliasingBarriersCounted_[keys];
       ++count;
       aliasingBarriersOrdered_.push_back(std::make_pair(keys, count));
     }
+  }
+}
+
+void ResourceStateTrackingService::resourceBarrier(std::vector<D3D12_TEXTURE_BARRIER>& barriers,
+                                                   std::vector<unsigned>& resourceKeys) {
+  for (unsigned i = 0; i < barriers.size(); ++i) {
+    ResourceStates& states = getResourceStates(resourceKeys[i]);
+    D3D12_BARRIER_SUBRESOURCE_RANGE& range = barriers[i].Subresources;
+    if (range.NumMipLevels == 0) {
+      if (range.IndexOrFirstMipLevel == 0XFFFFFFFF) {
+        states.allEqual = true;
+        for (unsigned j = 0; j < states.subresourceLayouts.size(); ++j) {
+          states.subresourceLayouts[j] = barriers[i].LayoutAfter;
+        }
+      } else {
+        states.allEqual = false;
+        states.subresourceLayouts[range.IndexOrFirstMipLevel] = barriers[i].LayoutAfter;
+      }
+    } else {
+      for (unsigned planeSlice = range.FirstPlane; planeSlice < range.FirstPlane + range.NumPlanes;
+           ++planeSlice) {
+        for (unsigned arraySlice = range.FirstArraySlice;
+             arraySlice < range.FirstArraySlice + range.NumArraySlices; ++arraySlice) {
+          for (unsigned mipLevel = range.IndexOrFirstMipLevel;
+               mipLevel < range.IndexOrFirstMipLevel + range.NumMipLevels; ++mipLevel) {
+            unsigned subresourceIndex = mipLevel + (arraySlice * range.NumMipLevels) +
+                                        (planeSlice * range.NumMipLevels * range.NumArraySlices);
+            states.subresourceLayouts[subresourceIndex] = barriers[i].LayoutAfter;
+          }
+        }
+      }
+    }
+    states.subresourceStates.clear();
   }
 }
 
@@ -121,8 +180,17 @@ void ResourceStateTrackingService::addResource(unsigned deviceKey,
                                                unsigned resourceKey,
                                                D3D12_BARRIER_LAYOUT initialState,
                                                bool recreateState) {
-  D3D12_RESOURCE_STATES state = getResourceState(initialState);
-  addResource(deviceKey, resource, resourceKey, state, recreateState);
+  if (deviceKey) {
+    deviceKey_ = deviceKey;
+  }
+  ResourceStates& states = resourceStates_[resourceKey];
+  states.subresourceLayouts.resize(getSubresourcesCount(resource));
+  for (unsigned i = 0; i < states.subresourceLayouts.size(); ++i) {
+    states.subresourceLayouts[i] = initialState;
+  }
+  if (recreateState) {
+    recreateStateResources_.insert(resourceKey);
+  }
 }
 
 D3D12_RESOURCE_STATES ResourceStateTrackingService::getResourceState(D3D12_BARRIER_LAYOUT layout) {
@@ -239,18 +307,20 @@ ResourceStateTrackingService::ResourceStates& ResourceStateTrackingService::getR
 
 D3D12_RESOURCE_STATES ResourceStateTrackingService::getResourceState(unsigned resourceKey) {
   ResourceStates& states = getResourceStates(resourceKey);
+  if (states.subresourceStates.empty()) {
+    LOG_ERROR << "states.subresourceStates.empty() " << resourceKey;
+  }
+  GITS_ASSERT(!states.subresourceStates.empty());
   return states.subresourceStates[0];
 }
 
-D3D12_RESOURCE_STATES ResourceStateTrackingService::getSubresourceState(unsigned resourceKey,
-                                                                        unsigned subresource) {
-  ResourceStates& states = getResourceStates(resourceKey);
-  return states.subresourceStates[subresource];
-}
-
 D3D12_BARRIER_LAYOUT ResourceStateTrackingService::getResourceLayout(unsigned resourceKey) {
-  D3D12_RESOURCE_STATES state = getResourceState(resourceKey);
-  return getResourceLayout(state);
+  ResourceStates& states = getResourceStates(resourceKey);
+  if (states.subresourceLayouts.empty()) {
+    LOG_ERROR << "states.subresourceLayouts.empty() " << resourceKey;
+  }
+  GITS_ASSERT(!states.subresourceLayouts.empty());
+  return states.subresourceLayouts[0];
 }
 
 void ResourceStateTrackingService::restoreResourceStates(
@@ -336,7 +406,8 @@ void ResourceStateTrackingService::restoreResourceStates(
     };
     ResourceStates& resourceStates = getResourceStates(resourceKey);
     if (resourceStates.allEqual) {
-      if (resourceStates.subresourceStates[0] != D3D12_RESOURCE_STATE_COPY_DEST) {
+      if (!resourceStates.subresourceStates.empty() &&
+          resourceStates.subresourceStates[0] != D3D12_RESOURCE_STATE_COPY_DEST) {
         writeResourceBarrier(D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
                              D3D12_RESOURCE_STATE_COPY_DEST, resourceStates.subresourceStates[0]);
       }

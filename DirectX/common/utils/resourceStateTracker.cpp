@@ -48,6 +48,11 @@ void ResourceStateTracker::resourceBarrier(ID3D12GraphicsCommandList* commandLis
   }
 }
 
+void ResourceStateTracker::resourceBarrier(ID3D12GraphicsCommandList* commandList,
+                                           D3D12_BARRIER_GROUP* barriers,
+                                           unsigned barriersNum,
+                                           unsigned* resourceKeys) {}
+
 void ResourceStateTracker::executeCommandLists(ID3D12GraphicsCommandList** commandLists,
                                                unsigned commandListNum) {
   for (unsigned i = 0; i < commandListNum; ++i) {
@@ -100,7 +105,9 @@ D3D12_RESOURCE_STATES ResourceStateTracker::getResourceState(D3D12_BARRIER_LAYOU
   D3D12_RESOURCE_STATES state{};
 
   switch (layout) {
+  case D3D12_BARRIER_LAYOUT_UNDEFINED:
   case D3D12_BARRIER_LAYOUT_COMMON:
+    state = D3D12_RESOURCE_STATE_COMMON;
     break;
   case D3D12_BARRIER_LAYOUT_GENERIC_READ:
     state = D3D12_RESOURCE_STATE_GENERIC_READ;

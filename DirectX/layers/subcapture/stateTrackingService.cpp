@@ -415,22 +415,24 @@ void StateTrackingService::restoreResources() {
 
 D3D12_RESOURCE_STATES StateTrackingService::getResourceInitialState(
     ResourceState& state, D3D12_RESOURCE_DIMENSION dimension) {
-  if (state.isMappable || state.isBarrierRestricted) {
-    return resourceStateTrackingService_.getResourceState(state.key);
-  }
   if (dimension == D3D12_RESOURCE_DIMENSION_BUFFER) {
     return D3D12_RESOURCE_STATE_COMMON;
+  }
+  if (state.isMappable || state.isBarrierRestricted) {
+    return resourceStateTrackingService_.getResourceState(state.key);
   }
   return D3D12_RESOURCE_STATE_COPY_DEST;
 }
 
 D3D12_BARRIER_LAYOUT StateTrackingService::getResourceInitialLayout(
-    ResourceState& state, D3D12_RESOURCE_DIMENSION dimension) {
+    ResourceState& state, D3D12_RESOURCE_DIMENSION dimension, D3D12_RESOURCE_FLAGS flags) {
+  if (dimension == D3D12_RESOURCE_DIMENSION_BUFFER) {
+    return D3D12_BARRIER_LAYOUT_UNDEFINED;
+  } else if (flags & D3D12_RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS) {
+    return D3D12_BARRIER_LAYOUT_COMMON;
+  }
   if (state.isMappable) {
     return resourceStateTrackingService_.getResourceLayout(state.key);
-  }
-  if (dimension == D3D12_RESOURCE_DIMENSION_BUFFER) {
-    return D3D12_BARRIER_LAYOUT_COMMON;
   }
   return D3D12_BARRIER_LAYOUT_COPY_DEST;
 }
@@ -646,7 +648,6 @@ void StateTrackingService::restoreD3D12CommittedResource(ObjectState* state) {
   ResourceState* resourceState = static_cast<ResourceState*>(state);
   D3D12_RESOURCE_STATES initialState = resourceState->initialState;
   if (initialState != D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE) {
-    initialState = getResourceInitialState(*resourceState, resourceState->dimension);
     if (state->refCount > 0) {
       resourceContentRestore_.addCommittedResourceState(resourceState);
     }
@@ -661,23 +662,26 @@ void StateTrackingService::restoreD3D12CommittedResource(ObjectState* state) {
   case CommandId::ID_ID3D12DEVICE4_CREATECOMMITTEDRESOURCE1: {
     auto* command =
         static_cast<ID3D12Device4CreateCommittedResource1Command*>(state->creationCommand.get());
+    initialState = getResourceInitialState(*resourceState, resourceState->dimension);
     command->InitialResourceState_.value = initialState;
   } break;
   case CommandId::ID_ID3D12DEVICE8_CREATECOMMITTEDRESOURCE2: {
     auto* command =
         static_cast<ID3D12Device8CreateCommittedResource2Command*>(state->creationCommand.get());
+    initialState = getResourceInitialState(*resourceState, resourceState->dimension);
     command->InitialResourceState_.value = initialState;
   } break;
   case CommandId::ID_ID3D12DEVICE10_CREATECOMMITTEDRESOURCE3: {
-    D3D12_BARRIER_LAYOUT initialLayout =
-        getResourceInitialLayout(*resourceState, resourceState->dimension);
     auto* command =
         static_cast<ID3D12Device10CreateCommittedResource3Command*>(state->creationCommand.get());
+    D3D12_BARRIER_LAYOUT initialLayout = getResourceInitialLayout(
+        *resourceState, resourceState->dimension, command->pDesc_.value->Flags);
     command->InitialLayout_.value = initialLayout;
   } break;
   case CommandId::INTC_D3D12_CREATECOMMITTEDRESOURCE: {
     auto* command =
         static_cast<INTC_D3D12_CreateCommittedResourceCommand*>(state->creationCommand.get());
+    initialState = getResourceInitialState(*resourceState, resourceState->dimension);
     command->InitialResourceState_.value = initialState;
   } break;
   }
@@ -692,7 +696,6 @@ void StateTrackingService::restoreD3D12PlacedResource(ObjectState* state) {
   ResourceState* resourceState = static_cast<ResourceState*>(state);
   D3D12_RESOURCE_STATES initialState = resourceState->initialState;
   if (initialState != D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE) {
-    initialState = getResourceInitialState(*resourceState, resourceState->dimension);
     if (state->refCount > 0) {
       resourceContentRestore_.addPlacedResourceState(resourceState);
     }
@@ -702,23 +705,26 @@ void StateTrackingService::restoreD3D12PlacedResource(ObjectState* state) {
   case CommandId::ID_ID3D12DEVICE_CREATEPLACEDRESOURCE: {
     auto* command =
         static_cast<ID3D12DeviceCreatePlacedResourceCommand*>(state->creationCommand.get());
+    initialState = getResourceInitialState(*resourceState, resourceState->dimension);
     command->InitialState_.value = initialState;
   } break;
   case CommandId::ID_ID3D12DEVICE8_CREATEPLACEDRESOURCE1: {
     auto* command =
         static_cast<ID3D12Device8CreatePlacedResource1Command*>(state->creationCommand.get());
+    initialState = getResourceInitialState(*resourceState, resourceState->dimension);
     command->InitialState_.value = initialState;
   } break;
   case CommandId::ID_ID3D12DEVICE10_CREATEPLACEDRESOURCE2: {
-    D3D12_BARRIER_LAYOUT initialLayout =
-        getResourceInitialLayout(*resourceState, resourceState->dimension);
     auto* command =
         static_cast<ID3D12Device10CreatePlacedResource2Command*>(state->creationCommand.get());
+    D3D12_BARRIER_LAYOUT initialLayout = getResourceInitialLayout(
+        *resourceState, resourceState->dimension, command->pDesc_.value->Flags);
     command->InitialLayout_.value = initialLayout;
   } break;
   case CommandId::INTC_D3D12_CREATEPLACEDRESOURCE: {
     auto* command =
         static_cast<INTC_D3D12_CreatePlacedResourceCommand*>(state->creationCommand.get());
+    initialState = getResourceInitialState(*resourceState, resourceState->dimension);
     command->InitialState_.value = initialState;
   } break;
   }
@@ -730,32 +736,34 @@ void StateTrackingService::restoreD3D12PlacedResource(ObjectState* state) {
 
 void StateTrackingService::restoreD3D12ReservedResource(ObjectState* state) {
   ResourceState* resourceState = static_cast<ResourceState*>(state);
-  D3D12_RESOURCE_STATES initialState = resourceState->initialState;
-  if (initialState != D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE) {
-    initialState = getResourceInitialState(*resourceState, resourceState->dimension);
-  }
 
   switch (state->creationCommand->getId()) {
   case CommandId::ID_ID3D12DEVICE_CREATERESERVEDRESOURCE: {
     auto* command =
         static_cast<ID3D12DeviceCreateReservedResourceCommand*>(state->creationCommand.get());
+    D3D12_RESOURCE_STATES initialState =
+        getResourceInitialState(*resourceState, resourceState->dimension);
     command->InitialState_.value = initialState;
   } break;
   case CommandId::ID_ID3D12DEVICE4_CREATERESERVEDRESOURCE1: {
     auto* command =
         static_cast<ID3D12Device4CreateReservedResource1Command*>(state->creationCommand.get());
+    D3D12_RESOURCE_STATES initialState =
+        getResourceInitialState(*resourceState, resourceState->dimension);
     command->InitialState_.value = initialState;
   } break;
   case CommandId::ID_ID3D12DEVICE10_CREATERESERVEDRESOURCE2: {
-    D3D12_BARRIER_LAYOUT initialLayout =
-        getResourceInitialLayout(*resourceState, resourceState->dimension);
     auto* command =
         static_cast<ID3D12Device10CreateReservedResource2Command*>(state->creationCommand.get());
+    D3D12_BARRIER_LAYOUT initialLayout = getResourceInitialLayout(
+        *resourceState, resourceState->dimension, command->pDesc_.value->Flags);
     command->InitialLayout_.value = initialLayout;
   } break;
   case CommandId::INTC_D3D12_CREATERESERVEDRESOURCE: {
     auto* command =
         static_cast<INTC_D3D12_CreateReservedResourceCommand*>(state->creationCommand.get());
+    D3D12_RESOURCE_STATES initialState =
+        getResourceInitialState(*resourceState, resourceState->dimension);
     command->InitialState_.value = initialState;
   } break;
   }

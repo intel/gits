@@ -25,6 +25,10 @@ public:
                        D3D12_RESOURCE_BARRIER* barriers,
                        unsigned barriersNum,
                        unsigned* resourceKeys);
+  void resourceBarrier(ID3D12GraphicsCommandList* commandList,
+                       D3D12_BARRIER_GROUP* barriers,
+                       unsigned barriersNum,
+                       unsigned* resourceKeys);
   void executeCommandLists(ID3D12GraphicsCommandList** commandLists, unsigned commandListNum);
   D3D12_RESOURCE_STATES getResourceState(ID3D12GraphicsCommandList* commandList,
                                          unsigned resourceKey,

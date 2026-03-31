@@ -25,6 +25,7 @@ class ResourceStateTrackingService {
 public:
   struct ResourceStates {
     std::vector<D3D12_RESOURCE_STATES> subresourceStates;
+    std::vector<D3D12_BARRIER_LAYOUT> subresourceLayouts;
     bool allEqual{true};
   };
 
@@ -44,11 +45,14 @@ public:
                        D3D12_RESOURCE_BARRIER* barriers,
                        std::vector<unsigned>& resourceKeys,
                        std::vector<unsigned>& resourceAfterKeys);
+  void resourceBarrier(unsigned commandListKey,
+                       D3D12_BARRIER_GROUP* barriers,
+                       unsigned barriersNum,
+                       std::vector<unsigned>& resourceKeys);
   void executeCommandLists(std::vector<unsigned>& commandListKeys);
   void destroyResource(unsigned resourceKey);
   ResourceStates& getResourceStates(unsigned resourceKey);
   D3D12_RESOURCE_STATES getResourceState(unsigned resourceKey);
-  D3D12_RESOURCE_STATES getSubresourceState(unsigned resourceKey, unsigned subresource);
   D3D12_BARRIER_LAYOUT getResourceLayout(unsigned resourceKey);
   void restoreResourceStates(const std::vector<unsigned>& orderedResources);
   void restoreBackBufferState(unsigned commandQueueKey,
@@ -60,6 +64,8 @@ private:
   void resourceBarrier(std::vector<D3D12_RESOURCE_BARRIER>& barriers,
                        std::vector<unsigned>& resourceKeys,
                        std::vector<unsigned>& resourceAfterKeys);
+  void resourceBarrier(std::vector<D3D12_TEXTURE_BARRIER>& barriers,
+                       std::vector<unsigned>& resourceKeys);
   D3D12_RESOURCE_STATES getResourceState(D3D12_BARRIER_LAYOUT layout);
   D3D12_BARRIER_LAYOUT getResourceLayout(D3D12_RESOURCE_STATES layout);
   void insertIfNotResident(unsigned resourceKey, std::set<unsigned>& residencyKeys);
@@ -70,6 +76,7 @@ private:
 private:
   struct ResourceBarriers {
     std::vector<D3D12_RESOURCE_BARRIER> barriers;
+    std::vector<D3D12_TEXTURE_BARRIER> layouts;
     std::vector<unsigned> resourceKeys;
     std::vector<unsigned> resourceAfterKeys;
   };
