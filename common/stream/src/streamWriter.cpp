@@ -21,8 +21,6 @@ StreamWriter::StreamWriter(const std::filesystem::path& streamDir,
   m_Stream.exceptions(std::ofstream::failbit | std::ofstream::badbit);
   m_Stream.open(streamDir / "stream.gits2", std::ios::out | std::ios::binary);
 
-  StreamHeader::Get().WriteHeader(m_Stream, compressionType);
-
   for (unsigned i = 0; i < NUMBER_OF_COMPRESSION_THREADS; ++i) {
     m_CompressionThreads[i] = std::thread{&StreamWriter::Compress, this, i};
     if (compressionType == CompressionType::ZSTD) {
@@ -31,6 +29,8 @@ StreamWriter::StreamWriter(const std::filesystem::path& streamDir,
       m_Compressors[i].reset(new LZ4StreamCompressor());
     }
   }
+
+  StreamHeader::Get().WriteHeader(m_Stream, compressionType);
 
   for (unsigned i = 0; i < NUMBER_OF_BLOCKS; ++i) {
     m_UncompressedBlocks[i].Data.reset(new char[INITIAL_BLOCK_ALLOC]);
@@ -92,6 +92,13 @@ void StreamWriter::Record(const CommandSerializer& commandSerializer) {
   Block* block{};
   {
     std::unique_lock<std::mutex> lock(m_Mutex);
+    if (!m_ApiWritten) {
+      ApiId apiId = ExtractApiIdentifier(id);
+      if (apiId != ApiId::ID_COMMON) {
+        StreamHeader::Get().WriteApi(m_Stream, apiId);
+        m_ApiWritten = true;
+      }
+    }
     block = FindBlockForRecord(lock, totalSize);
   }
   if (block->DataAlloc - block->DataSize < totalSize) {

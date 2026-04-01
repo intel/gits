@@ -37,6 +37,7 @@ public:
 private:
   std::ofstream m_Stream;
   std::string m_StreamDir;
+  bool m_ApiWritten{};
   const unsigned TRIGGER_BLOCK_SIZE = 1024 * 1024 * 4;
   const unsigned INITIAL_BLOCK_ALLOC = TRIGGER_BLOCK_SIZE * 2;
   unsigned m_RecordedBlockId{};

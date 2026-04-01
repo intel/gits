@@ -241,7 +241,7 @@ public:
     m_StreamReader = streamReader;
   }
   stream::CommandRunner* CreateCommand(unsigned id) override {
-    m_ApiId = static_cast<stream::ApiId>(id / 0x10000);
+    m_ApiId = stream::ExtractApiIdentifier(id);
     if (m_ApiId != stream::ApiId::ID_COMMON) {
       m_StreamReader->Close();
     }

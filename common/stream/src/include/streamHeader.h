@@ -9,8 +9,9 @@
 #pragma once
 
 #include "enumsAuto.h"
+#include "commandId.h"
 
-#include <iostream>
+#include <fstream>
 #include <memory>
 #include "nlohmann/json.hpp"
 
@@ -22,7 +23,6 @@ public:
   static StreamHeader& Get() {
     return m_Instance;
   }
-  void WriteHeader(std::ostream& stream, CompressionType compressionType);
   void ReadHeader(std::istream& stream);
   bool IsLegacyStream() const {
     return m_SchedulerVersion == 0;
@@ -43,9 +43,15 @@ public:
   Api GetApi() const;
 
 private:
+  friend class StreamWriter;
+  void WriteHeader(std::ofstream& stream, CompressionType compressionType);
+  void WriteApi(std::ofstream& stream, ApiId id);
+
+private:
   void WriteVersion(std::ostream& stream);
   void ReadVersion(std::istream& stream);
   void WriteProperties(std::ostream& stream);
+  Api TranslateApi(ApiId id);
 
 private:
   StreamHeader() {}
@@ -59,6 +65,7 @@ private:
   uint64_t m_ChunkSize{};
   nlohmann::ordered_json m_Properties;
   Api m_Api{};
+  std::fstream::pos_type m_ApiPosition{};
 };
 
 } // namespace stream

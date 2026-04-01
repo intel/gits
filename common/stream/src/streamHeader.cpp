@@ -13,7 +13,6 @@
 #include "yaml-cpp/yaml.h"
 
 #include <string>
-#include <fstream>
 
 namespace gits {
 namespace stream {
@@ -27,14 +26,15 @@ const unsigned StreamHeader::VERSION[4] = {2, 0, 12, VERSION_4};
 const unsigned StreamHeader::VERSION_API_INFO[4] = {2, 0, 11, 0};
 const unsigned StreamHeader::SCHEDULER_VERSION = 1;
 
-void StreamHeader::WriteHeader(std::ostream& stream, CompressionType compressionType) {
+void StreamHeader::WriteHeader(std::ofstream& stream, CompressionType compressionType) {
   WriteVersion(stream);
   unsigned skippedCallCount{};
   stream.write(reinterpret_cast<const char*>(&skippedCallCount), sizeof(skippedCallCount));
 
   WriteProperties(stream);
 
-  Api api = Api::API_DIRECTX;
+  Api api = Api::API_NOT_SET;
+  m_ApiPosition = stream.tellp();
   stream.write(reinterpret_cast<const char*>(&api), sizeof(api));
   unsigned apiCompute{};
   stream.write(reinterpret_cast<const char*>(&apiCompute), sizeof(apiCompute));
@@ -49,6 +49,14 @@ void StreamHeader::WriteHeader(std::ostream& stream, CompressionType compression
 
   uint64_t chunkSize{};
   stream.write(reinterpret_cast<const char*>(&chunkSize), sizeof(chunkSize));
+}
+
+void StreamHeader::WriteApi(std::ofstream& stream, ApiId id) {
+  std::fstream::pos_type currentPosition = stream.tellp();
+  stream.seekp(m_ApiPosition);
+  Api api = TranslateApi(id);
+  stream.write(reinterpret_cast<const char*>(&api), sizeof(api));
+  stream.seekp(currentPosition);
 }
 
 void StreamHeader::ReadHeader(std::istream& stream) {
@@ -163,6 +171,30 @@ std::string StreamHeader::GetApplicationName() {
     }
   }
   return appName;
+}
+
+StreamHeader::Api StreamHeader::TranslateApi(ApiId id) {
+  switch (id) {
+  case ApiId::ID_COMMON:
+    return Api::API_NOT_SET;
+  case ApiId::ID_OPENGL:
+  case ApiId::ID_GL_HELPER_TOKENS:
+  case ApiId::ID_WGL:
+  case ApiId::ID_GLX:
+  case ApiId::ID_EGL:
+    return Api::API_OPENGL;
+  case ApiId::ID_OPENCL:
+    return Api::API_OPENCL;
+  case ApiId::ID_VULKAN:
+    return Api::API_VULKAN;
+  case ApiId::ID_LEVELZERO:
+  case ApiId::ID_OCLOC:
+    return Api::API_LEVELZERO;
+  case ApiId::ID_DIRECTX:
+    return Api::API_DIRECTX;
+  default:
+    return Api::API_NOT_SET;
+  }
 }
 
 StreamHeader::Api StreamHeader::GetApi() const {
