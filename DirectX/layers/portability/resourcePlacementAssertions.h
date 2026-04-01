@@ -8,6 +8,8 @@
 
 #pragma once
 
+#include "resourcePlacementCapture.h"
+
 #include <d3d12.h>
 #include <vector>
 #include <unordered_set>
@@ -18,20 +20,14 @@ namespace DirectX {
 
 class ResourcePlacementAssertions {
 public:
-  void createPlacedResource(unsigned resourceKey, D3D12_RESOURCE_DESC& desc);
-  void createPlacedResource(unsigned resourceKey, D3D12_RESOURCE_DESC1& desc);
-  void getResourceAllocationPre(const D3D12_RESOURCE_DESC& desc,
-                                uint64_t sizeInBytes,
-                                uint64_t alignment);
-  void getResourceAllocationPost(const D3D12_RESOURCE_DESC& desc,
-                                 uint64_t sizeInBytes,
-                                 uint64_t alignment);
-  void getResourceAllocationPre(const D3D12_RESOURCE_DESC1& desc,
-                                uint64_t sizeInBytes,
-                                uint64_t alignment);
-  void getResourceAllocationPost(const D3D12_RESOURCE_DESC1& desc,
-                                 uint64_t sizeInBytes,
-                                 uint64_t alignment);
+  ResourcePlacementAssertions();
+
+  void createPlacedResource(unsigned resourceKey,
+                            const D3D12_RESOURCE_DESC& desc,
+                            ID3D12Device* device);
+  void createPlacedResource(unsigned resourceKey,
+                            const D3D12_RESOURCE_DESC1& desc,
+                            ID3D12Device* device);
 
 private:
   struct D3D12_RESOURCE_DESC_Equal {
@@ -117,17 +113,15 @@ private:
 
   void checkCompatibility(const AllocationInfo& allocationInfo, unsigned resourceKey);
 
-  std::unordered_set<unsigned> placedResources_;
-  std::unordered_map<D3D12_RESOURCE_DESC,
-                     AllocationInfo,
-                     D3D12_RESOURCE_DESC_Hash,
-                     D3D12_RESOURCE_DESC_Equal>
-      resourceDescToAllocation_;
-  std::unordered_map<D3D12_RESOURCE_DESC1,
-                     AllocationInfo,
-                     D3D12_RESOURCE_DESC1_Hash,
-                     D3D12_RESOURCE_DESC1_Equal>
-      resourceDesc1ToAllocation_;
+  void loadResourcePlacementData();
+  const ResourcePlacementInfo* findPlacementData(unsigned resourceKey);
+  AllocationInfo queryAllocationFromDevice(ID3D12Device* device,
+                                           const D3D12_RESOURCE_DESC& desc,
+                                           unsigned resourceKey);
+
+  std::mutex mutex_;
+  std::unordered_map<unsigned, ResourcePlacementInfo> placementDataFromFile_;
+  bool placementDataLoaded_{};
 };
 
 } // namespace DirectX
