@@ -23,42 +23,82 @@ ResourcePlacementAssertions::ResourcePlacementAssertions() {
 void ResourcePlacementAssertions::createPlacedResource(unsigned resourceKey,
                                                        const D3D12_RESOURCE_DESC& desc,
                                                        ID3D12Device* device) {
-  const ResourcePlacementInfo* placementInfo = findPlacementData(resourceKey);
-  if (placementInfo && device) {
-    AllocationInfo info{};
-    info.pre = {placementInfo->size, placementInfo->alignment};
-    AllocationInfo deviceInfo = queryAllocationFromDevice(device, desc, resourceKey);
-    info.post = deviceInfo.post;
-    checkCompatibility(info, resourceKey);
+  if (!placementDataLoaded_) {
     return;
   }
-  static bool logged = false;
-  if (!logged) {
-    LOG_ERROR << "Portability - no resource placement data for resource: O" << resourceKey;
-    logged = true;
+
+  const ResourcePlacementInfo* placementInfo = findPlacementData(resourceKey);
+
+  if (!placementInfo) {
+    static bool logged = false;
+    if (!logged) {
+      LOG_ERROR << "Portability - no resource placement data for resource: O" << resourceKey;
+      logged = true;
+    }
+    return;
   }
+
+  AllocationInfo info{};
+  info.pre = {placementInfo->size, placementInfo->alignment};
+  info.post = queryAllocationFromDevice(device, desc, resourceKey);
+  checkCompatibility(info, resourceKey);
 }
 
 void ResourcePlacementAssertions::createPlacedResource(unsigned resourceKey,
                                                        const D3D12_RESOURCE_DESC1& desc,
                                                        ID3D12Device* device) {
-  const ResourcePlacementInfo* placementInfo = findPlacementData(resourceKey);
-  if (placementInfo && device) {
-    D3D12_RESOURCE_DESC baseDesc{
-        desc.Dimension, desc.Alignment, desc.Width,      desc.Height, desc.DepthOrArraySize,
-        desc.MipLevels, desc.Format,    desc.SampleDesc, desc.Layout, desc.Flags};
-    AllocationInfo info{};
-    info.pre = {placementInfo->size, placementInfo->alignment};
-    AllocationInfo deviceInfo = queryAllocationFromDevice(device, baseDesc, resourceKey);
-    info.post = deviceInfo.post;
-    checkCompatibility(info, resourceKey);
+  if (!placementDataLoaded_) {
     return;
   }
-  static bool logged = false;
-  if (!logged) {
-    LOG_ERROR << "Portability - no resource placement data for resource: O" << resourceKey;
-    logged = true;
+
+  const ResourcePlacementInfo* placementInfo = findPlacementData(resourceKey);
+
+  if (!placementInfo) {
+    static bool logged = false;
+    if (!logged) {
+      LOG_ERROR << "Portability - no resource placement data for resource: O" << resourceKey;
+      logged = true;
+    }
+    return;
   }
+
+  if (desc.Format == DXGI_FORMAT_SAMPLER_FEEDBACK_MIN_MIP_OPAQUE ||
+      desc.Format == DXGI_FORMAT_SAMPLER_FEEDBACK_MIP_REGION_USED_OPAQUE) {
+    if (desc.SamplerFeedbackMipRegion.Width || desc.SamplerFeedbackMipRegion.Height ||
+        desc.SamplerFeedbackMipRegion.Depth) {
+      static bool logged = false;
+      if (!logged) {
+        LOG_WARNING << "Portability - incompatibility in SamplerFeedbackMipRegion not checked";
+        logged = true;
+      }
+    }
+  }
+
+  D3D12_RESOURCE_DESC baseDesc{desc.Dimension,        desc.Alignment, desc.Width,  desc.Height,
+                               desc.DepthOrArraySize, desc.MipLevels, desc.Format, desc.SampleDesc,
+                               desc.Layout,           desc.Flags};
+
+  AllocationInfo info{};
+  info.pre = {placementInfo->size, placementInfo->alignment};
+  info.post = queryAllocationFromDevice(device, baseDesc, resourceKey);
+  checkCompatibility(info, resourceKey);
+}
+
+const ResourcePlacementInfo* ResourcePlacementAssertions::findPlacementData(unsigned resourceKey) {
+  const auto it = placementDataFromFile_.find(resourceKey);
+  if (it != placementDataFromFile_.end()) {
+    return &it->second;
+  }
+  return nullptr;
+}
+
+D3D12_RESOURCE_ALLOCATION_INFO ResourcePlacementAssertions::queryAllocationFromDevice(
+    ID3D12Device* device, const D3D12_RESOURCE_DESC& desc, unsigned resourceKey) {
+  D3D12_RESOURCE_ALLOCATION_INFO allocInfo = device->GetResourceAllocationInfo(0, 1, &desc);
+  if (allocInfo.SizeInBytes == UINT64_MAX) {
+    LOG_ERROR << "Portability - GetResourceAllocationInfo failed for resource: O" << resourceKey;
+  }
+  return allocInfo;
 }
 
 void ResourcePlacementAssertions::checkCompatibility(const AllocationInfo& allocationInfo,
@@ -75,14 +115,8 @@ void ResourcePlacementAssertions::checkCompatibility(const AllocationInfo& alloc
 }
 
 void ResourcePlacementAssertions::loadResourcePlacementData() {
-  std::lock_guard<std::mutex> lock(mutex_);
-  if (placementDataLoaded_) {
-    return;
-  }
-  placementDataLoaded_ = true;
-
-  std::filesystem::path filePath = Configurator::Get().common.player.streamDir;
-  filePath /= "resourcePlacementData.dat";
+  std::filesystem::path filePath =
+      Configurator::Get().common.player.streamDir / "resourcePlacementData.dat";
 
   if (!std::filesystem::exists(filePath)) {
     LOG_INFO << "Portability - resourcePlacementData.dat not found, "
@@ -92,7 +126,7 @@ void ResourcePlacementAssertions::loadResourcePlacementData() {
 
   std::ifstream file(filePath, std::ios::binary);
   if (!file.is_open()) {
-    LOG_WARNING << "Portability - failed to open resourcePlacementData.dat";
+    LOG_ERROR << "Portability - failed to open resourcePlacementData.dat";
     return;
   }
 
@@ -101,29 +135,10 @@ void ResourcePlacementAssertions::loadResourcePlacementData() {
     placementDataFromFile_[info.key] = info;
   }
 
+  placementDataLoaded_ = true;
+
   LOG_INFO << "Portability - loaded " << placementDataFromFile_.size()
            << " resource placement entries from resourcePlacementData.dat";
-}
-
-const ResourcePlacementInfo* ResourcePlacementAssertions::findPlacementData(unsigned resourceKey) {
-  const auto it = placementDataFromFile_.find(resourceKey);
-  if (it != placementDataFromFile_.end()) {
-    return &it->second;
-  }
-  return nullptr;
-}
-
-ResourcePlacementAssertions::AllocationInfo ResourcePlacementAssertions::queryAllocationFromDevice(
-    ID3D12Device* device, const D3D12_RESOURCE_DESC& desc, unsigned resourceKey) {
-  AllocationInfo info{};
-  D3D12_RESOURCE_ALLOCATION_INFO allocInfo = device->GetResourceAllocationInfo(0, 1, &desc);
-  if (allocInfo.SizeInBytes == UINT64_MAX) {
-    LOG_ERROR << "Portability - GetResourceAllocationInfo failed for resource: O" << resourceKey;
-    return info;
-  }
-  info.post = allocInfo;
-  info.pre = allocInfo;
-  return info;
 }
 
 } // namespace DirectX

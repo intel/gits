@@ -126,6 +126,10 @@ void PortabilityLayer::post(ID3D12Device4CreateHeap1Command& c) {
 }
 
 void PortabilityLayer::pre(ID3D12DeviceCreatePlacedResourceCommand& c) {
+  if (c.result_.value != S_OK) {
+    return;
+  }
+
   if (useResourcePlacementData_) {
     resourcePlacementPlayback_.createPlacedResource(c.ppvResource_.key, c.HeapOffset_.value);
     return;
@@ -150,6 +154,10 @@ void PortabilityLayer::post(ID3D12DeviceCreatePlacedResourceCommand& c) {
 }
 
 void PortabilityLayer::pre(ID3D12Device8CreatePlacedResource1Command& c) {
+  if (c.result_.value != S_OK) {
+    return;
+  }
+
   if (useResourcePlacementData_) {
     resourcePlacementPlayback_.createPlacedResource(c.ppvResource_.key, c.HeapOffset_.value);
     return;
@@ -176,6 +184,10 @@ void PortabilityLayer::post(ID3D12Device8CreatePlacedResource1Command& c) {
 }
 
 void PortabilityLayer::pre(ID3D12Device10CreatePlacedResource2Command& c) {
+  if (c.result_.value != S_OK) {
+    return;
+  }
+
   if (useResourcePlacementData_) {
     resourcePlacementPlayback_.createPlacedResource(c.ppvResource_.key, c.HeapOffset_.value);
     return;
