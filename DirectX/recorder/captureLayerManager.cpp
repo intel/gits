@@ -39,7 +39,7 @@ void CaptureLayerManager::loadLayers(CaptureManager& captureManager,
   std::unique_ptr<Layer> encoderLayer;
   std::unique_ptr<Layer> gpuPatchLayer;
   std::unique_ptr<Layer> portabilityLayer;
-  std::unique_ptr<Layer> imGuiHUDLayer = std::make_unique<ImGuiHUDLayer>();
+  std::unique_ptr<Layer> imGuiHUDLayer;
   std::unique_ptr<Layer> addressPinningLayer;
   std::unique_ptr<Layer> dllOverrideStoreLayer;
   std::unique_ptr<Layer> globalSynchronizationLayer;
@@ -63,6 +63,10 @@ void CaptureLayerManager::loadLayers(CaptureManager& captureManager,
     dllOverrideStoreLayer = std::make_unique<DllOverrideStoreLayer>(captureManager, gitsRecorder);
   }
 
+  if (Configurator::IsHudEnabledForApi(ApiBool::DX)) {
+    imGuiHUDLayer = std::make_unique<ImGuiHUDLayer>();
+  }
+
   // Enable Pre layers
   // Insertion order determines execution order
   auto enablePreLayer = [this](std::unique_ptr<Layer>& layer) {
@@ -79,9 +83,7 @@ void CaptureLayerManager::loadLayers(CaptureManager& captureManager,
   enablePreLayer(captureSynchronizationLayer);
   enablePreLayer(screenshotsLayer);
   enablePreLayer(portabilityLayer);
-  if (Configurator::IsHudEnabledForApi(ApiBool::DX)) {
-    enablePreLayer(imGuiHUDLayer);
-  }
+  enablePreLayer(imGuiHUDLayer);
 
   // Enable Post layers
   // Insertion order determines execution order
@@ -102,9 +104,7 @@ void CaptureLayerManager::loadLayers(CaptureManager& captureManager,
   enablePostLayer(captureSynchronizationLayer);
   enablePostLayer(traceLayer);
   enablePostLayer(screenshotsLayer);
-  if (Configurator::IsHudEnabledForApi(ApiBool::DX)) {
-    enablePostLayer(imGuiHUDLayer);
-  }
+  enablePostLayer(imGuiHUDLayer);
 
   for (const auto& plugin : pluginService.getPlugins()) {
     Layer* layer = static_cast<Layer*>(plugin.impl->getImpl());

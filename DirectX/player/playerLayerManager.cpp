@@ -62,7 +62,7 @@ void PlayerLayerManager::loadLayers(PlayerManager& playerManager, PluginService&
       resourceDumpingFactory_.getRootSignatureDumpLayer();
   std::unique_ptr<Layer> skipCallsOnConfigLayer = skipCallsFactory_.getSkipCallsOnConfigLayer();
   std::unique_ptr<Layer> skipCallsOnResultLayer = skipCallsFactory_.getSkipCallsOnResultLayer();
-  std::unique_ptr<Layer> imGuiHUDLayer = std::make_unique<ImGuiHUDLayer>();
+  std::unique_ptr<Layer> imGuiHUDLayer;
   std::unique_ptr<Layer> printStatusLayer = std::make_unique<PrintStatusLayer>();
   std::unique_ptr<Layer> addressPinningLayer;
   std::unique_ptr<Layer> dllOverrideUseLayer;
@@ -87,6 +87,9 @@ void PlayerLayerManager::loadLayers(PlayerManager& playerManager, PluginService&
           std::make_unique<MultithreadedObjectCreationLayer>(playerManager);
       multithreadedObjectAwaitLayer =
           std::make_unique<MultithreadedObjectAwaitLayer>(playerManager);
+    }
+    if (Configurator::IsHudEnabledForApi(ApiBool::DX)) {
+      imGuiHUDLayer = std::make_unique<ImGuiHUDLayer>();
     }
     addressPinningLayer = addressPinningFactory_.getAddressPinningLayer();
     dllOverrideUseLayer = std::make_unique<DllOverrideUseLayer>(playerManager);
@@ -121,9 +124,7 @@ void PlayerLayerManager::loadLayers(PlayerManager& playerManager, PluginService&
   enablePreLayer(directStorageLayer);
   enablePreLayer(accelerationStructuresDumpLayer);
   enablePreLayer(printStatusLayer);
-  if (Configurator::IsHudEnabledForApi(ApiBool::DX)) {
-    enablePreLayer(imGuiHUDLayer);
-  }
+  enablePreLayer(imGuiHUDLayer);
   enablePreLayer(ccodeLayer);
 
   // Enable Post layers
@@ -155,9 +156,7 @@ void PlayerLayerManager::loadLayers(PlayerManager& playerManager, PluginService&
   enablePostLayer(recordingLayer);
   enablePostLayer(executionSerializationLayer);
   enablePostLayer(printStatusLayer);
-  if (Configurator::IsHudEnabledForApi(ApiBool::DX)) {
-    enablePostLayer(imGuiHUDLayer);
-  }
+  enablePostLayer(imGuiHUDLayer);
   enablePostLayer(ccodeLayer);
 
   for (const auto& plugin : pluginService.getPlugins()) {
