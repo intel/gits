@@ -10,6 +10,8 @@
 #include "analyzerExecuteIndirectService.h"
 #include "capturePlayerGpuAddressService.h"
 
+#include <algorithm>
+
 namespace gits {
 namespace DirectX {
 
@@ -45,7 +47,7 @@ void AnalyzerExecuteIndirectDump::dumpStagedResource(DumpInfo& dumpInfo) {
     void* data{};
     HRESULT hr = info.countDumpInfo.stagingBuffer->Map(0, nullptr, &data);
     GITS_ASSERT(hr == S_OK);
-    count = *static_cast<unsigned*>(data);
+    count = std::min(count, *static_cast<unsigned*>(data));
     info.countDumpInfo.stagingBuffer->Unmap(0, nullptr);
   }
   void* data{};
