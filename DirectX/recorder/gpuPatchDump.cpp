@@ -10,6 +10,7 @@
 #include "log.h"
 #include "exception.h"
 
+#include <algorithm>
 #include <fstream>
 #include <iomanip>
 
@@ -74,7 +75,7 @@ void GpuPatchDump::dumpStagedResource(DumpInfo& dumpInfo) {
       void* data{};
       HRESULT hr = executeIndirectInfo->countDumpInfo.stagingBuffer->Map(0, nullptr, &data);
       GITS_ASSERT(hr == S_OK);
-      count = *static_cast<unsigned*>(data);
+      count = std::min(count, *static_cast<unsigned*>(data));
       executeIndirectInfo->countDumpInfo.stagingBuffer->Unmap(0, nullptr);
     }
     void* data{};
