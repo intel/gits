@@ -23,10 +23,15 @@ class StateTrackingService;
 
 class ResourceStateTrackingService {
 public:
+  struct SubresourceState {
+    D3D12_RESOURCE_STATES state{};
+    D3D12_BARRIER_LAYOUT layout{};
+    bool enhanced{};
+  };
   struct ResourceStates {
-    std::vector<D3D12_RESOURCE_STATES> subresourceStates;
-    std::vector<D3D12_BARRIER_LAYOUT> subresourceLayouts;
+    std::vector<SubresourceState> subresourceStates;
     bool allEqual{true};
+    bool initialEnhanced{};
   };
 
 public:

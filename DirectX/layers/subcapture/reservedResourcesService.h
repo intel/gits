@@ -71,6 +71,7 @@ private:
       D3D12_RESOURCE_DESC& desc,
       std::vector<std::pair<unsigned, D3D12_PLACED_SUBRESOURCE_FOOTPRINT>>& sizes);
   void initTiledResource(TiledResource& tiledResource);
+  void copySourceBarrier(ID3D12Resource* resource, unsigned resourceKey, bool restoreState);
 
 private:
   StateTrackingService& stateService_;

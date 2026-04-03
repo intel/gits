@@ -230,6 +230,104 @@ void ReservedResourcesService::initTiledResource(TiledResource& tiledResource) {
   }
 }
 
+void ReservedResourcesService::copySourceBarrier(ID3D12Resource* resource,
+                                                 unsigned resourceKey,
+                                                 bool restoreState) {
+  ResourceStateTrackingService::ResourceStates& resourceStates =
+      stateService_.getResourceStateTrackingService().getResourceStates(resourceKey);
+  std::vector<D3D12_RESOURCE_BARRIER> barriers;
+  std::vector<std::unique_ptr<D3D12_TEXTURE_BARRIER>> enhancedBarriers;
+  std::vector<D3D12_BARRIER_GROUP> enhancedBarrierGroups;
+
+  if (resourceStates.allEqual) {
+    if (!resourceStates.subresourceStates[0].enhanced) {
+      if (resourceStates.subresourceStates[0].state != D3D12_RESOURCE_STATE_COPY_SOURCE) {
+        D3D12_RESOURCE_BARRIER barrier{};
+        barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+        barrier.Transition.pResource = resource;
+        barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+        barrier.Transition.StateBefore = restoreState ? D3D12_RESOURCE_STATE_COPY_SOURCE
+                                                      : resourceStates.subresourceStates[0].state;
+        barrier.Transition.StateAfter = restoreState ? resourceStates.subresourceStates[0].state
+                                                     : D3D12_RESOURCE_STATE_COPY_SOURCE;
+        barriers.push_back(barrier);
+      }
+    } else {
+      if (resourceStates.subresourceStates[0].layout != D3D12_BARRIER_LAYOUT_COPY_SOURCE &&
+          resourceStates.subresourceStates[0].layout != D3D12_BARRIER_LAYOUT_UNDEFINED) {
+        D3D12_TEXTURE_BARRIER* barrier = new D3D12_TEXTURE_BARRIER{};
+        barrier->SyncBefore = restoreState ? D3D12_BARRIER_SYNC_ALL : D3D12_BARRIER_SYNC_ALL;
+        barrier->SyncAfter = restoreState ? D3D12_BARRIER_SYNC_ALL : D3D12_BARRIER_SYNC_ALL;
+        barrier->AccessBefore =
+            restoreState ? D3D12_BARRIER_ACCESS_COPY_SOURCE : D3D12_BARRIER_ACCESS_COMMON;
+        barrier->AccessAfter =
+            restoreState ? D3D12_BARRIER_ACCESS_COMMON : D3D12_BARRIER_ACCESS_COPY_SOURCE;
+        barrier->LayoutBefore = restoreState ? D3D12_BARRIER_LAYOUT_COPY_SOURCE
+                                             : resourceStates.subresourceStates[0].layout;
+        barrier->LayoutAfter = restoreState ? resourceStates.subresourceStates[0].layout
+                                            : D3D12_BARRIER_LAYOUT_COPY_SOURCE;
+        barrier->pResource = resource;
+        barrier->Subresources.IndexOrFirstMipLevel = 0;
+        enhancedBarriers.emplace_back(barrier);
+        D3D12_BARRIER_GROUP barrierGroup{};
+        barrierGroup.Type = D3D12_BARRIER_TYPE_TEXTURE;
+        barrierGroup.NumBarriers = 1;
+        barrierGroup.pTextureBarriers = enhancedBarriers.back().get();
+        enhancedBarrierGroups.push_back(barrierGroup);
+      }
+    }
+  } else {
+    for (unsigned i = 0; i < resourceStates.subresourceStates.size(); ++i) {
+      if (!resourceStates.subresourceStates[i].enhanced) {
+        if (resourceStates.subresourceStates[i].state != D3D12_RESOURCE_STATE_COPY_SOURCE) {
+          D3D12_RESOURCE_BARRIER barrier{};
+          barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+          barrier.Transition.pResource = resource;
+          barrier.Transition.Subresource = i;
+          barrier.Transition.StateBefore = restoreState ? D3D12_RESOURCE_STATE_COPY_SOURCE
+                                                        : resourceStates.subresourceStates[i].state;
+          barrier.Transition.StateAfter = restoreState ? resourceStates.subresourceStates[i].state
+                                                       : D3D12_RESOURCE_STATE_COPY_SOURCE;
+          barriers.push_back(barrier);
+        }
+      } else {
+        if (resourceStates.subresourceStates[i].layout != D3D12_BARRIER_LAYOUT_COPY_SOURCE &&
+            resourceStates.subresourceStates[i].layout != D3D12_BARRIER_LAYOUT_UNDEFINED) {
+          D3D12_TEXTURE_BARRIER* barrier = new D3D12_TEXTURE_BARRIER{};
+          barrier->SyncBefore = restoreState ? D3D12_BARRIER_SYNC_ALL : D3D12_BARRIER_SYNC_ALL;
+          barrier->SyncAfter = restoreState ? D3D12_BARRIER_SYNC_ALL : D3D12_BARRIER_SYNC_ALL;
+          barrier->AccessBefore =
+              restoreState ? D3D12_BARRIER_ACCESS_COPY_SOURCE : D3D12_BARRIER_ACCESS_COMMON;
+          barrier->AccessAfter =
+              restoreState ? D3D12_BARRIER_ACCESS_COMMON : D3D12_BARRIER_ACCESS_COPY_SOURCE;
+          barrier->LayoutBefore = restoreState ? D3D12_BARRIER_LAYOUT_COPY_SOURCE
+                                               : resourceStates.subresourceStates[i].layout;
+          barrier->LayoutAfter = restoreState ? resourceStates.subresourceStates[i].layout
+                                              : D3D12_BARRIER_LAYOUT_COPY_SOURCE;
+          barrier->pResource = resource;
+          barrier->Subresources.IndexOrFirstMipLevel = i;
+          enhancedBarriers.emplace_back(barrier);
+          D3D12_BARRIER_GROUP barrierGroup{};
+          barrierGroup.Type = D3D12_BARRIER_TYPE_TEXTURE;
+          barrierGroup.NumBarriers = 1;
+          barrierGroup.pTextureBarriers = enhancedBarriers.back().get();
+          enhancedBarrierGroups.push_back(barrierGroup);
+        }
+      }
+    }
+  }
+
+  if (!barriers.empty()) {
+    commandList_->ResourceBarrier(barriers.size(), barriers.data());
+  }
+  if (!enhancedBarrierGroups.empty()) {
+    Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList7> commandList7;
+    if (SUCCEEDED(commandList_->QueryInterface(IID_PPV_ARGS(&commandList7)))) {
+      commandList7->Barrier(enhancedBarrierGroups.size(), enhancedBarrierGroups.data());
+    }
+  }
+}
+
 void ReservedResourcesService::destroyObject(unsigned objectKey) {
   auto itResource = resources_.find(objectKey);
   if (itResource != resources_.end()) {
@@ -444,42 +542,7 @@ void ReservedResourcesService::restoreContent(const std::vector<unsigned>& resou
         D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&readbackResource));
     GITS_ASSERT(hr == S_OK);
 
-    {
-      ResourceStateTrackingService::ResourceStates& resourceStates =
-          stateService_.getResourceStateTrackingService().getResourceStates(
-              tiledResource->resourceKey);
-      if (!resourceStates.subresourceStates.empty()) {
-        std::vector<D3D12_RESOURCE_BARRIER> barriers;
-        if (resourceStates.allEqual) {
-          if (resourceStates.subresourceStates[0] != D3D12_RESOURCE_STATE_COPY_SOURCE) {
-            D3D12_RESOURCE_BARRIER barrier{};
-            barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-            barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-            barrier.Transition.pResource = tiledResource->resource;
-            barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-            barrier.Transition.StateBefore = resourceStates.subresourceStates[0];
-            barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_SOURCE;
-            barriers.push_back(barrier);
-          }
-        } else {
-          for (unsigned i = 0; i < resourceStates.subresourceStates.size(); ++i) {
-            if (resourceStates.subresourceStates[i] != D3D12_RESOURCE_STATE_COPY_SOURCE) {
-              D3D12_RESOURCE_BARRIER barrier{};
-              barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-              barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-              barrier.Transition.pResource = tiledResource->resource;
-              barrier.Transition.Subresource = i;
-              barrier.Transition.StateBefore = resourceStates.subresourceStates[i];
-              barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_SOURCE;
-              barriers.push_back(barrier);
-            }
-          }
-        }
-        if (!barriers.empty()) {
-          commandList_->ResourceBarrier(barriers.size(), barriers.data());
-        }
-      }
-    }
+    copySourceBarrier(tiledResource->resource, tiledResource->resourceKey, false);
 
     UINT64 offsetReadback = 0;
     for (unsigned subresourceIndex = 0; subresourceIndex < tiledResource->subresources.size();
@@ -519,42 +582,7 @@ void ReservedResourcesService::restoreContent(const std::vector<unsigned>& resou
       }
     }
 
-    {
-      ResourceStateTrackingService::ResourceStates& resourceStates =
-          stateService_.getResourceStateTrackingService().getResourceStates(
-              tiledResource->resourceKey);
-      if (!resourceStates.subresourceStates.empty()) {
-        std::vector<D3D12_RESOURCE_BARRIER> barriers;
-        if (resourceStates.allEqual) {
-          if (resourceStates.subresourceStates[0] != D3D12_RESOURCE_STATE_COPY_SOURCE) {
-            D3D12_RESOURCE_BARRIER barrier{};
-            barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-            barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-            barrier.Transition.pResource = tiledResource->resource;
-            barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-            barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_SOURCE;
-            barrier.Transition.StateAfter = resourceStates.subresourceStates[0];
-            barriers.push_back(barrier);
-          }
-        } else {
-          for (unsigned i = 0; i < resourceStates.subresourceStates.size(); ++i) {
-            if (resourceStates.subresourceStates[i] != D3D12_RESOURCE_STATE_COPY_SOURCE) {
-              D3D12_RESOURCE_BARRIER barrier{};
-              barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-              barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-              barrier.Transition.pResource = tiledResource->resource;
-              barrier.Transition.Subresource = i;
-              barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_SOURCE;
-              barrier.Transition.StateAfter = resourceStates.subresourceStates[i];
-              barriers.push_back(barrier);
-            }
-          }
-        }
-        if (!barriers.empty()) {
-          commandList_->ResourceBarrier(barriers.size(), barriers.data());
-        }
-      }
-    }
+    copySourceBarrier(tiledResource->resource, tiledResource->resourceKey, true);
 
     commandList_->Close();
 

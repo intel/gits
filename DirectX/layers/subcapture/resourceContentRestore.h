@@ -55,6 +55,7 @@ private:
   ID3D12Resource* createAuxiliaryPlacedResource(unsigned primaryResourceKey);
   unsigned createSubcaptureAuxiliaryPlacedResource(unsigned primaryResourceKey);
   void evictPrevResidencyObjects();
+  void copySourceBarrier(ResourceInfo& state, bool restoreState);
 
 private:
   static constexpr size_t texturesMaxBatchSize_{0x1000};

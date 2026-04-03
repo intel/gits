@@ -48,7 +48,9 @@ void ResourceStateTrackingService::resourceBarrier(unsigned commandListKey,
         ++resourceKeyIndex;
       }
     } else if (barrierGroup.Type == D3D12_BARRIER_TYPE_BUFFER) {
-      ++resourceKeyIndex;
+      for (unsigned j = 0; j < barrierGroup.NumBarriers; ++j) {
+        ++resourceKeyIndex;
+      }
     }
   }
   barriersByCommandList_[commandListKey].push_back(std::move(resourceBarriers));
@@ -108,13 +110,14 @@ void ResourceStateTrackingService::resourceBarrier(std::vector<D3D12_RESOURCE_BA
       if (subresource == D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES) {
         states.allEqual = true;
         for (unsigned j = 0; j < states.subresourceStates.size(); ++j) {
-          states.subresourceStates[j] = stateAfter;
+          states.subresourceStates[j].state = stateAfter;
+          states.subresourceStates[j].enhanced = false;
         }
       } else {
         states.allEqual = false;
-        states.subresourceStates[subresource] = stateAfter;
+        states.subresourceStates[subresource].state = stateAfter;
+        states.subresourceStates[subresource].enhanced = false;
       }
-      states.subresourceLayouts.clear();
     } else if (barriers[i].Type == D3D12_RESOURCE_BARRIER_TYPE_ALIASING) {
       auto keys = std::make_pair(resourceKeys[i], resourceAfterKeys[i]);
       unsigned& count = aliasingBarriersCounted_[keys];
@@ -132,12 +135,14 @@ void ResourceStateTrackingService::resourceBarrier(std::vector<D3D12_TEXTURE_BAR
     if (range.NumMipLevels == 0) {
       if (range.IndexOrFirstMipLevel == 0XFFFFFFFF) {
         states.allEqual = true;
-        for (unsigned j = 0; j < states.subresourceLayouts.size(); ++j) {
-          states.subresourceLayouts[j] = barriers[i].LayoutAfter;
+        for (unsigned j = 0; j < states.subresourceStates.size(); ++j) {
+          states.subresourceStates[j].layout = barriers[i].LayoutAfter;
+          states.subresourceStates[j].enhanced = true;
         }
       } else {
         states.allEqual = false;
-        states.subresourceLayouts[range.IndexOrFirstMipLevel] = barriers[i].LayoutAfter;
+        states.subresourceStates[range.IndexOrFirstMipLevel].layout = barriers[i].LayoutAfter;
+        states.subresourceStates[range.IndexOrFirstMipLevel].enhanced = true;
       }
     } else {
       for (unsigned planeSlice = range.FirstPlane; planeSlice < range.FirstPlane + range.NumPlanes;
@@ -148,12 +153,12 @@ void ResourceStateTrackingService::resourceBarrier(std::vector<D3D12_TEXTURE_BAR
                mipLevel < range.IndexOrFirstMipLevel + range.NumMipLevels; ++mipLevel) {
             unsigned subresourceIndex = mipLevel + (arraySlice * range.NumMipLevels) +
                                         (planeSlice * range.NumMipLevels * range.NumArraySlices);
-            states.subresourceLayouts[subresourceIndex] = barriers[i].LayoutAfter;
+            states.subresourceStates[subresourceIndex].layout = barriers[i].LayoutAfter;
+            states.subresourceStates[subresourceIndex].enhanced = true;
           }
         }
       }
     }
-    states.subresourceStates.clear();
   }
 }
 
@@ -168,7 +173,8 @@ void ResourceStateTrackingService::addResource(unsigned deviceKey,
   ResourceStates& states = resourceStates_[resourceKey];
   states.subresourceStates.resize(getSubresourcesCount(resource));
   for (unsigned i = 0; i < states.subresourceStates.size(); ++i) {
-    states.subresourceStates[i] = initialState;
+    states.subresourceStates[i].state = initialState;
+    states.subresourceStates[i].enhanced = false;
   }
   if (recreateState) {
     recreateStateResources_.insert(resourceKey);
@@ -184,9 +190,11 @@ void ResourceStateTrackingService::addResource(unsigned deviceKey,
     deviceKey_ = deviceKey;
   }
   ResourceStates& states = resourceStates_[resourceKey];
-  states.subresourceLayouts.resize(getSubresourcesCount(resource));
-  for (unsigned i = 0; i < states.subresourceLayouts.size(); ++i) {
-    states.subresourceLayouts[i] = initialState;
+  states.initialEnhanced = true;
+  states.subresourceStates.resize(getSubresourcesCount(resource));
+  for (unsigned i = 0; i < states.subresourceStates.size(); ++i) {
+    states.subresourceStates[i].layout = initialState;
+    states.subresourceStates[i].enhanced = true;
   }
   if (recreateState) {
     recreateStateResources_.insert(resourceKey);
@@ -307,20 +315,28 @@ ResourceStateTrackingService::ResourceStates& ResourceStateTrackingService::getR
 
 D3D12_RESOURCE_STATES ResourceStateTrackingService::getResourceState(unsigned resourceKey) {
   ResourceStates& states = getResourceStates(resourceKey);
-  if (states.subresourceStates.empty()) {
-    LOG_ERROR << "states.subresourceStates.empty() " << resourceKey;
+  if (states.subresourceStates[0].enhanced) {
+    static bool logged = false;
+    if (!logged) {
+      LOG_WARNING << "ResourceStateTrackingService - converting enhanced barrier layout to legacy "
+                     "barrier state.";
+    }
+    return getResourceState(states.subresourceStates[0].layout);
   }
-  GITS_ASSERT(!states.subresourceStates.empty());
-  return states.subresourceStates[0];
+  return states.subresourceStates[0].state;
 }
 
 D3D12_BARRIER_LAYOUT ResourceStateTrackingService::getResourceLayout(unsigned resourceKey) {
   ResourceStates& states = getResourceStates(resourceKey);
-  if (states.subresourceLayouts.empty()) {
-    LOG_ERROR << "states.subresourceLayouts.empty() " << resourceKey;
+  if (!states.subresourceStates[0].enhanced) {
+    static bool logged = false;
+    if (!logged) {
+      LOG_WARNING << "ResourceStateTrackingService - converting legacy barrier state to enhanced "
+                     "barrier layout.";
+    }
+    return getResourceLayout(states.subresourceStates[0].state);
   }
-  GITS_ASSERT(!states.subresourceLayouts.empty());
-  return states.subresourceLayouts[0];
+  return states.subresourceStates[0].layout;
 }
 
 void ResourceStateTrackingService::restoreResourceStates(
@@ -404,18 +420,101 @@ void ResourceStateTrackingService::restoreResourceStates(
       stateService_.getRecorder().record(
           ID3D12GraphicsCommandListResourceBarrierSerializer(barrierCommand));
     };
+
+    auto writeResourceEnhancedBarrier = [&](unsigned subresource, D3D12_BARRIER_LAYOUT beforeLayout,
+                                            D3D12_BARRIER_LAYOUT afterLayout) {
+      insertIfNotResident(resourceKey, residencyKeys);
+
+      ID3D12GraphicsCommandList7BarrierCommand barrierCommand;
+      barrierCommand.key = stateService_.getUniqueCommandKey();
+      barrierCommand.object_.key = commandListKey;
+      barrierCommand.NumBarrierGroups_.value = 1;
+
+      D3D12_TEXTURE_BARRIER barrier{};
+      barrier.SyncBefore = D3D12_BARRIER_SYNC_NONE;
+      barrier.SyncAfter = D3D12_BARRIER_SYNC_NONE;
+      barrier.AccessBefore = D3D12_BARRIER_ACCESS_NO_ACCESS;
+      barrier.AccessAfter = D3D12_BARRIER_ACCESS_NO_ACCESS;
+      barrier.LayoutBefore = beforeLayout;
+      barrier.LayoutAfter = afterLayout;
+      barrier.Subresources.IndexOrFirstMipLevel = subresource;
+
+      D3D12_BARRIER_GROUP barrierGroup{};
+      barrierCommand.pBarrierGroups_.value = &barrierGroup;
+      barrierCommand.pBarrierGroups_.size = 1;
+      barrierCommand.pBarrierGroups_.resourceKeys.resize(1);
+      barrierGroup.Type = D3D12_BARRIER_TYPE_TEXTURE;
+      barrierGroup.NumBarriers = 1;
+      barrierGroup.pTextureBarriers = &barrier;
+
+      barrierCommand.pBarrierGroups_.resourceKeys[0] = resourceKey;
+      stateService_.getRecorder().record(
+          ID3D12GraphicsCommandList7BarrierSerializer(barrierCommand));
+    };
+
     ResourceStates& resourceStates = getResourceStates(resourceKey);
+
     if (resourceStates.allEqual) {
-      if (!resourceStates.subresourceStates.empty() &&
-          resourceStates.subresourceStates[0] != D3D12_RESOURCE_STATE_COPY_DEST) {
-        writeResourceBarrier(D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
-                             D3D12_RESOURCE_STATE_COPY_DEST, resourceStates.subresourceStates[0]);
+      if (!resourceStates.initialEnhanced) {
+        if (!resourceStates.subresourceStates[0].enhanced) {
+          if (resourceStates.subresourceStates[0].state != D3D12_RESOURCE_STATE_COPY_DEST) {
+            writeResourceBarrier(D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
+                                 D3D12_RESOURCE_STATE_COPY_DEST,
+                                 resourceStates.subresourceStates[0].state);
+          }
+        } else {
+          if (resourceStates.subresourceStates[0].layout != D3D12_BARRIER_LAYOUT_COPY_DEST &&
+              resourceStates.subresourceStates[0].layout != D3D12_BARRIER_LAYOUT_UNDEFINED) {
+            writeResourceBarrier(D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
+                                 D3D12_RESOURCE_STATE_COPY_DEST,
+                                 getResourceState(resourceStates.subresourceStates[0].layout));
+          }
+        }
+      } else {
+        if (!resourceStates.subresourceStates[0].enhanced) {
+          if (resourceStates.subresourceStates[0].state != D3D12_RESOURCE_STATE_COPY_DEST) {
+            writeResourceEnhancedBarrier(
+                D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_BARRIER_LAYOUT_COPY_DEST,
+                getResourceLayout(resourceStates.subresourceStates[0].state));
+          }
+        } else {
+          if (resourceStates.subresourceStates[0].layout != D3D12_BARRIER_LAYOUT_COPY_DEST &&
+              resourceStates.subresourceStates[0].layout != D3D12_BARRIER_LAYOUT_UNDEFINED) {
+            writeResourceEnhancedBarrier(D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
+                                         D3D12_BARRIER_LAYOUT_COPY_DEST,
+                                         resourceStates.subresourceStates[0].layout);
+          }
+        }
       }
     } else {
       for (unsigned i = 0; i < resourceStates.subresourceStates.size(); ++i) {
-        if (resourceStates.subresourceStates[i] != D3D12_RESOURCE_STATE_COPY_DEST) {
-          writeResourceBarrier(i, D3D12_RESOURCE_STATE_COPY_DEST,
-                               resourceStates.subresourceStates[i]);
+        if (!resourceStates.initialEnhanced) {
+          if (!resourceStates.subresourceStates[i].enhanced) {
+            if (resourceStates.subresourceStates[i].state != D3D12_RESOURCE_STATE_COPY_DEST) {
+              writeResourceBarrier(i, D3D12_RESOURCE_STATE_COPY_DEST,
+                                   resourceStates.subresourceStates[i].state);
+            }
+          } else {
+            if (resourceStates.subresourceStates[i].layout != D3D12_BARRIER_LAYOUT_COPY_DEST &&
+                resourceStates.subresourceStates[i].layout != D3D12_BARRIER_LAYOUT_UNDEFINED) {
+              writeResourceBarrier(i, D3D12_RESOURCE_STATE_COPY_DEST,
+                                   getResourceState(resourceStates.subresourceStates[i].layout));
+            }
+          }
+        } else {
+          if (!resourceStates.subresourceStates[i].enhanced) {
+            if (resourceStates.subresourceStates[i].state != D3D12_RESOURCE_STATE_COPY_DEST) {
+              writeResourceEnhancedBarrier(
+                  i, D3D12_BARRIER_LAYOUT_COPY_DEST,
+                  getResourceLayout(resourceStates.subresourceStates[i].state));
+            }
+          } else {
+            if (resourceStates.subresourceStates[i].layout != D3D12_BARRIER_LAYOUT_COPY_DEST &&
+                resourceStates.subresourceStates[i].layout != D3D12_BARRIER_LAYOUT_UNDEFINED) {
+              writeResourceEnhancedBarrier(i, D3D12_BARRIER_LAYOUT_COPY_DEST,
+                                           resourceStates.subresourceStates[i].layout);
+            }
+          }
         }
       }
     }
@@ -516,8 +615,10 @@ void ResourceStateTrackingService::restoreBackBufferState(unsigned commandQueueK
                                                           D3D12_RESOURCE_STATES beforeState) {
   ResourceStates& resourceStates = getResourceStates(resourceKey);
   D3D12_RESOURCE_STATES afterState = D3D12_RESOURCE_STATE_COMMON;
-  if (!resourceStates.subresourceStates.empty()) {
-    afterState = resourceStates.subresourceStates[0];
+  if (!resourceStates.subresourceStates[0].enhanced) {
+    afterState = resourceStates.subresourceStates[0].state;
+  } else {
+    afterState = getResourceState(resourceStates.subresourceStates[0].layout);
   }
 
   unsigned commandAllocatorKey = stateService_.getUniqueObjectKey();
