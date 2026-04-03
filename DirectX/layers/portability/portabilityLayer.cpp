@@ -11,6 +11,7 @@
 #include "log.h"
 #include "configurationLib.h"
 #include "messageBus.h"
+#include "keyUtils.h"
 
 namespace gits {
 namespace DirectX {
@@ -134,7 +135,7 @@ void PortabilityLayer::pre(ID3D12DeviceCreatePlacedResourceCommand& c) {
     resourcePlacementPlayback_.createPlacedResource(c.ppvResource_.key, c.HeapOffset_.value);
     return;
   }
-  if (portabilityAssertions_) {
+  if (portabilityAssertions_ && !isStateRestoreKey(c.ppvResource_.key)) {
     resourcePlacementAssertions_.createPlacedResource(c.ppvResource_.key, *c.pDesc_.value,
                                                       c.object_.value);
   }
@@ -163,7 +164,7 @@ void PortabilityLayer::pre(ID3D12Device8CreatePlacedResource1Command& c) {
     return;
   }
 
-  if (portabilityAssertions_) {
+  if (portabilityAssertions_ && !isStateRestoreKey(c.ppvResource_.key)) {
     resourcePlacementAssertions_.createPlacedResource(c.ppvResource_.key, *c.pDesc_.value,
                                                       c.object_.value);
   }
@@ -192,7 +193,7 @@ void PortabilityLayer::pre(ID3D12Device10CreatePlacedResource2Command& c) {
     resourcePlacementPlayback_.createPlacedResource(c.ppvResource_.key, c.HeapOffset_.value);
     return;
   }
-  if (portabilityAssertions_) {
+  if (portabilityAssertions_ && !isStateRestoreKey(c.ppvResource_.key)) {
     resourcePlacementAssertions_.createPlacedResource(c.ppvResource_.key, *c.pDesc_.value,
                                                       c.object_.value);
   }
