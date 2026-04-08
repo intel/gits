@@ -39,6 +39,10 @@ bool ButtonGroup<T>::Render(bool newLine) {
   size_t i = 0;
   for (auto it = this->items.begin(); it != this->items.end(); ++it, ++i) {
     auto& item = it->second;
+    if (!item.visible) {
+      continue;
+    }
+
     this->PushButtonStyle(item);
     ImGui::BeginDisabled(!this->btnEnabled[it->first] && !item.enabled);
     if (ImGui::Button(this->GetLabel(item).c_str(), btnSize)) {

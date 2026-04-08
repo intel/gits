@@ -106,9 +106,19 @@ void PlaybackStream() {
   const auto gitsPlayerPath = context.GetGITSPlayerPath();
 
   context.GITSLogEditor->SetText("");
-  FileActions::LaunchExecutableAsync(gitsPlayerPath, context.CLIArguments,
-                                     gitsPlayerPath.parent_path(),
-                                     [&context](const std::string& log) { context.GITSLog(log); });
+
+  FileActions::LaunchExecutableThreadCallbackOnExit(
+      gitsPlayerPath, context.CLIArguments, gitsPlayerPath.parent_path(),
+      [&context](const std::string& log) { context.GITSLog(log); },
+      [&context]() {
+        // Check log for errors and publish result
+        const auto& logText = context.GITSLogEditor->GetText();
+        bool oom = logText.find("E_OUTOFMEMORY") != std::string::npos;
+        EventBus::GetInstance().publish(ActionEvent::Type::Playback, ActionEvent::State::Ended,
+                                        oom ? ActionEvent::Status::Failure
+                                            : ActionEvent::Status::Success,
+                                        oom ? "E_OUTOFMEMORY" : "");
+      });
   context.BtnsSideBar->SelectEntry(SideBarItem::LOG);
 }
 
@@ -130,6 +140,39 @@ void SubcaptureStream() {
     context.SubcaptureInProgress = false;
   }).detach();
 
+  context.BtnsSideBar->SelectEntry(SideBarItem::LOG);
+}
+
+void GenerateCCode(CCodeExport parameters) {
+  auto& context = Context::GetInstance();
+  const auto gitsPlayerPath = context.GetGITSPlayerPath();
+
+  context.GITSLogEditor->SetText("");
+
+  //build arguments based on paramenters:
+  std::vector<std::string> cliArguments;
+
+  cliArguments.push_back("--DirectX.Player.CCode.Enabled");
+
+  cliArguments.push_back("--DirectX.Player.CCode.CommandsPerBlock=" +
+                         std::to_string(parameters.CommandsPerBlock));
+  cliArguments.push_back("--DirectX.Player.CCode.WrapApiCalls.Value=" +
+                         std::to_string(parameters.WrapAPICalls ? 1 : 0));
+  cliArguments.push_back("--DirectX.Player.CCode.CCodePath=" + parameters.CCodePath.string());
+  cliArguments.push_back(parameters.StreamPath.string());
+
+  FileActions::LaunchExecutableThreadCallbackOnExit(
+      gitsPlayerPath, cliArguments, gitsPlayerPath.parent_path(),
+      [&context](const std::string& log) { context.GITSLog(log); },
+      [&context]() {
+        // Check log for errors and publish result
+        const auto& logText = context.GITSLogEditor->GetText();
+        bool oom = logText.find("E_OUTOFMEMORY") != std::string::npos;
+        EventBus::GetInstance().publish(
+            ActionEvent::Type::CCodeGeneration, ActionEvent::State::Ended,
+            oom ? ActionEvent::Status::Failure : ActionEvent::Status::Success,
+            oom ? "E_OUTOFMEMORY" : "");
+      });
   context.BtnsSideBar->SelectEntry(SideBarItem::LOG);
 }
 
@@ -192,25 +235,30 @@ void FileDialogs() {
     context.Paths.BasePath = path;
     DetectBasePaths();
     context.SendAllPathsSetEvents();
+  } else if (key.Path == Path::GITS_LOG) {
+    EventBus::GetInstance().publish(PathEvent(key.Path, key.Mode, path));
   } else {
     context.SetPath(path, key.Path, key.Mode);
   }
 }
 
-bool SetupFileDialogPath(Path path, Mode mode, IGFD::FileDialogConfig* dlgConfig) {
-  auto optPath = Context::GetInstance().GetPath(path, mode);
-  if (optPath.has_value()) {
-    if (optPath->empty()) {
-      dlgConfig->path = "";
-    } else {
-      dlgConfig->path = optPath.value().string();
-    }
-    return true;
+bool SetupFileDialogPath(Path path,
+                         Mode mode,
+                         IGFD::FileDialogConfig* dlgConfig,
+                         std::filesystem::path customPath) {
+  auto contextPath = Context::GetInstance().GetPathSafe(path, mode);
+  if (!customPath.empty()) {
+    contextPath = customPath;
   }
-  return false;
+  if (contextPath.empty()) {
+    dlgConfig->path = "";
+  } else {
+    dlgConfig->path = contextPath.string();
+  }
+  return true;
 }
 
-void ShowFileDialog(FileDialogKeys key) {
+void ShowFileDialog(FileDialogKey key, std::filesystem::path path) {
   auto& context = Context::GetInstance();
 
   context.CurrentFileDialogKey = key;
@@ -220,7 +268,7 @@ void ShowFileDialog(FileDialogKeys key) {
   dlgConfig.flags = ImGuiFileDialogFlags_Modal;
   bool proceed = false;
 
-  proceed = SetupFileDialogPath(key.Path, key.Mode, &dlgConfig);
+  proceed = SetupFileDialogPath(key.Path, key.Mode, &dlgConfig, path);
   switch (key.Path) {
   case Path::CAPTURE_TARGET:
     ext = ".exe";
@@ -230,6 +278,9 @@ void ShowFileDialog(FileDialogKeys key) {
     break;
   case Path::INPUT_STREAM:
     ext = ".gits2";
+    break;
+  case Path::GITS_LOG:
+    ext = ".txt";
     break;
   default:
     break;

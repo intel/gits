@@ -44,12 +44,16 @@ typedef gits::gui::Context::SideBarItem SideBarItem;
 PlaybackPanel::PlaybackPanel() : BasePanel() {
   EventBus::GetInstance().subscribe<PathEvent>(
       std::bind(&PlaybackPanel::PathCallback, this, std::placeholders::_1));
+
+  EventBus::GetInstance().subscribe<FileDropEvent>(
+      std::bind(&PlaybackPanel::FileDropCallback, this, std::placeholders::_1));
 }
 
 void PlaybackPanel::Render() {
   RowStreamPath();
   RowConfigPath();
   RowArguments();
+  DroppedFilePath.reset();
 }
 
 void PlaybackPanel::RowStreamPath() {
@@ -66,10 +70,16 @@ void PlaybackPanel::RowStreamPath() {
   context_helper::PathInput("###InputPath", Path::INPUT_STREAM, context.AppMode, 0, allocatedWidth);
   ImGuiHelper::AddTooltip(Labels::STREAM_INPUT_HINT);
 
+  if (DroppedFilePath.has_value() &&
+      ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem)) {
+    context.SetPath(DroppedFilePath.value(), Path::INPUT_STREAM, context.AppMode);
+    DroppedFilePath.reset();
+  }
+
   ImGui::SameLine();
   ImGui::PushID(++context.ImguiIDs);
   if (ImGui::Button(Labels::CHOOSE_STREAM, ImVec2(WidthLastButton(), 0))) {
-    ShowFileDialog(FileDialogKeys{Path::INPUT_STREAM, context.AppMode});
+    ShowFileDialog(FileDialogKey{Path::INPUT_STREAM, context.AppMode});
   }
   ImGui::PopID();
   ImGuiHelper::AddTooltip(Labels::CHOOSE_STREAM_HINT);
@@ -113,10 +123,16 @@ void PlaybackPanel::RowConfigPath() {
                             allocatedWidth);
   ImGuiHelper::AddTooltip(Labels::CONFIG_INPUT_HINT);
 
+  if (DroppedFilePath.has_value() &&
+      ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem)) {
+    context.SetPath(DroppedFilePath.value(), Path::CONFIG, context.AppMode);
+    DroppedFilePath.reset();
+  }
+
   ImGui::SameLine();
   ImGui::PushID(++context.ImguiIDs);
   if (ImGui::Button(Labels::CHOOSE_CONFIG, ImVec2(WidthLastButton(), 0))) {
-    ShowFileDialog(FileDialogKeys{Path::CONFIG, context.AppMode});
+    ShowFileDialog(FileDialogKey{Path::CONFIG, context.AppMode});
   }
   ImGui::PopID();
   ImGuiHelper::AddTooltip(Labels::CHOOSE_CONFIG_HINT);
@@ -134,6 +150,14 @@ void PlaybackPanel::PathCallback(const Event& e) {
   }
 
   UpdateCLICall();
+}
+
+void PlaybackPanel::FileDropCallback(const Event& e) {
+  const FileDropEvent& fileDropEvent = static_cast<const FileDropEvent&>(e);
+  auto appMode = Context::GetInstance().AppMode;
+  if (appMode == Mode::PLAYBACK || appMode == Mode::SUBCAPTURE) {
+    DroppedFilePath = fileDropEvent.FilePath;
+  }
 }
 
 } // namespace gits::gui

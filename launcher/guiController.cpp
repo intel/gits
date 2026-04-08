@@ -166,10 +166,35 @@ void GUIController::SetupGui() {
   context.ConfigEditor->SetSaveCallback(configOnSaveCallback);
 
   context.GITSLogEditor = std::make_unique<TextEditorWidget>("GITSLogEditor");
-  context.GITSLogEditor->SetConfig(TextEditorWidget::Config{.ShowToolbar = false});
+  auto logConfig = TextEditorWidget::Config{
+      .ShowToolbar = true, .ToolBarItems = {TextEditorWidget::TOOL_BAR_ITEMS::SAVE}};
+  context.GITSLogEditor->SetConfig(logConfig);
   context.GITSLogEditor->GetEditor().SetReadOnly(true);
   context.GITSLogEditor->GetEditor().SetShowWhitespaces(false);
   context.GITSLogEditor->GetEditor().SetTabSize(4);
+  const auto gitsLogOnSaveCallback = [](std::filesystem::path logPath) {
+    auto& context = Context::GetInstance();
+    switch (context.AppMode) {
+    case Mode::CAPTURE:
+      logPath = context.GetPathSafe(Path::OUTPUT_STREAM, Mode::CAPTURE);
+      break;
+    case Mode::PLAYBACK:
+      logPath = context.GetPathSafe(Path::INPUT_STREAM, Mode::PLAYBACK);
+      break;
+    case Mode::SUBCAPTURE:
+      logPath = context.GetPathSafe(Path::INPUT_STREAM, Mode::SUBCAPTURE);
+      break;
+    }
+    if (!logPath.empty()) {
+      logPath = logPath.parent_path();
+      auto timestamp = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+      std::stringstream ss;
+      ss << "gits_log_" << std::put_time(std::localtime(&timestamp), "%Y-%m-%d_%H-%M-%S") << ".txt";
+      logPath /= ss.str();
+    }
+    ShowFileDialog(FileDialogKey{.Path = Path::GITS_LOG, .Mode = context.AppMode}, logPath);
+  };
+  context.GITSLogEditor->SetSaveCallback(gitsLogOnSaveCallback);
 
   context.LogEditor = std::make_unique<TextEditorWidget>("LogEditor");
   context.LogEditor->SetConfig(TextEditorWidget::Config{.ShowToolbar = false});

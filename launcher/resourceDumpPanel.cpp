@@ -1,4 +1,4 @@
-// ===================== begin_copyright_notice ============================
+﻿// ===================== begin_copyright_notice ============================
 //
 // Copyright (C) 2023-2026 Intel Corporation
 //
@@ -23,10 +23,8 @@
 namespace gits::gui {
 
 ResourceDumpPanel::ResourceDumpPanel() : BasePanel() {
-  EventBus::GetInstance().subscribe<ContextEvent>(
-      std::bind(&ResourceDumpPanel::ContextCallback, this, std::placeholders::_1));
-  EventBus::GetInstance().subscribe<PathEvent>(
-      std::bind(&ResourceDumpPanel::PathCallback, this, std::placeholders::_1));
+  EventBus::GetInstance().subscribe<ActionEvent>(
+      std::bind(&ResourceDumpPanel::OnPlaybackEnded, this, std::placeholders::_1));
 }
 
 void ResourceDumpPanel::Render() {
@@ -129,6 +127,10 @@ void ResourceDumpPanel::Render() {
         LB::RENDER_DRAWS_TOOLTIP, RenderTargetsDumpConfig.Draws,
         RenderTargetsDumpConfig.TmpDrawStart, RenderTargetsDumpConfig.TmpDrawEnd,
         RenderTargetsDumpConfig.TmpDrawStep, "Add Draw Range", "Add Draw");
+
+    changed |= ImGui::Checkbox(LB::RENDER_INCREASE_STEP_CHECKBOX,
+                               &RenderTargetsDumpConfig.IncreaseStepOnOutOfMemoryError);
+    ImGuiHelper::AddTooltip(LB::RENDER_INCREASE_STEP_TOOLTIP);
 
     changed |= comboFormat(LB::FORMAT_LABEL, labelWidth, LB::RENDER_FORMAT_ID, LB::FORMAT_TOOLTIP,
                            RenderTargetsDumpConfig.FormatIdx);
@@ -363,7 +365,73 @@ const std::string ResourceDumpPanel::GetCLIArguments() const {
   return args;
 }
 
-void ResourceDumpPanel::ContextCallback(const Event& /*e*/) {}
+std::string ResourceDumpPanel::DoubleRangeSteps(const std::string& rangeString) {
+  if (rangeString.empty()) {
+    return rangeString;
+  }
 
-void ResourceDumpPanel::PathCallback(const Event& /*e*/) {}
+  std::string result;
+  std::istringstream stream(rangeString);
+  std::string segment;
+  while (std::getline(stream, segment, ',')) {
+    if (!result.empty()) {
+      result += ',';
+    }
+    auto dashPos = segment.find('-');
+    if (dashPos == std::string::npos) {
+      // Single value — keep as-is
+      result += segment;
+      continue;
+    }
+    auto colonPos = segment.find(':');
+    if (colonPos != std::string::npos) {
+      int step = std::stoi(segment.substr(colonPos + 1));
+      step *= 2;
+      result += segment.substr(0, colonPos + 1) + std::to_string(step);
+    } else {
+      // Range with implicit step=1 → make it step=2
+      result += segment + ":2";
+    }
+  }
+  return result;
+}
+
+void ResourceDumpPanel::OnPlaybackEnded(const Event& e) {
+  const ActionEvent& action = static_cast<const ActionEvent&>(e);
+  if (action.EventType != ActionEvent::Type::Playback ||
+      action.ActionState != ActionEvent::State::Ended) {
+    return;
+  }
+
+  if (!RenderTargetsDumpConfig.IncreaseStepOnOutOfMemoryError) {
+    return;
+  }
+
+  bool isOom = action.ActionStatus == ActionEvent::Status::Failure &&
+               action.Details.find("E_OUTOFMEMORY") != std::string::npos;
+  if (!isOom) {
+    oomRetryCount_ = 0;
+    return;
+  }
+
+  if (oomRetryCount_ >= kMaxOomRetries) {
+    LOG_ERROR << "OOM retry limit reached (" << kMaxOomRetries << "). Giving up.";
+    return;
+  }
+  oomRetryCount_++;
+
+  bool anyModified = false;
+  if (RenderTargetsDumpConfig.Enabled) {
+    // We change only the draws and leave frames as-is
+    RenderTargetsDumpConfig.Draws = DoubleRangeSteps(RenderTargetsDumpConfig.Draws);
+    anyModified = true;
+  }
+  if (!anyModified) {
+    return;
+  }
+
+  UpdateCLICall();
+  PlaybackStream();
+}
+
 } // namespace gits::gui

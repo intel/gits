@@ -20,6 +20,7 @@
 #include "capturePanel.h"
 #include "subcapturePanel.h"
 #include "eventBus.h"
+#include "launcherActions.h"
 
 namespace gits::gui {
 
@@ -48,11 +49,14 @@ private:
 
   bool m_CaptureInProgress = false;
   bool m_ShowReleaseNotes = false;
+  bool m_ShowCCodeGeneration = false;
+  CCodeExport m_CCodeParameters;
 
   void GITSButton();
   void ModeSelectionButtons();
-  void MainActionButton();
+  void MainActionButtons();
   void ShowReleaseNotesModal();
+  void ShowCCodeModal();
 
   void GITSBaseRow();
 

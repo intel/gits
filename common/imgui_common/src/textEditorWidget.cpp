@@ -40,11 +40,9 @@ static const auto& TOOL_BAR_VEC() {
 }
 
 TextEditorWidget::TextEditorWidget(std::string name)
-    : m_Name(std::move(name)),
-      m_Editor(),
-      m_FilePath(std::nullopt),
-      m_Config(TextEditorWidget::Config()) {
+    : m_Name(std::move(name)), m_Editor(), m_FilePath("") {
   m_BtnsToolBar = std::make_unique<ImGuiHelper::ButtonGroup<TOOL_BAR_ITEMS>>(TOOL_BAR());
+  SetConfig(TextEditorWidget::Config());
 }
 
 TextEditorWidget::~TextEditorWidget() {
@@ -69,6 +67,10 @@ void TextEditorWidget::SetCheckCallback(std::function<bool(const std::string&)> 
 
 void TextEditorWidget::SetConfig(const Config& cfg) {
   m_Config = cfg;
+  for (const auto& item : TOOL_BAR()) {
+    auto contained = cfg.ToolBarItems.contains(item.first);
+    m_BtnsToolBar->SetVisible(item.first, contained);
+  }
 }
 
 TextEditorWidget::Config& TextEditorWidget::GetConfig() {
@@ -78,8 +80,9 @@ TextEditorWidget::Config& TextEditorWidget::GetConfig() {
 void TextEditorWidget::SetFilePath(const std::filesystem::path& path) {
   m_FilePath = path;
 }
+
 const std::filesystem::path& TextEditorWidget::GetFilePath() const {
-  return m_FilePath.value();
+  return m_FilePath;
 }
 
 void TextEditorWidget::SetText(const std::string& msg) {
@@ -218,14 +221,12 @@ void TextEditorWidget::RenderToolbar(ImVec2 size) {
     ImGui::SetCursorPosX(size.x - width - ImGui::GetStyle().WindowPadding.x);
   }
 
-  bool changedContent = m_Editor.IsTextChanged() && m_FilePath.has_value();
+  bool changedContent = m_Editor.IsTextChanged() && !m_FilePath.empty();
 
   m_BtnsToolBar->SetEnabled(TOOL_BAR_ITEMS::SAVE, changedContent);
   m_BtnsToolBar->SetEnabled(TOOL_BAR_ITEMS::REVERT, changedContent);
   m_BtnsToolBar->SetEnabled(TOOL_BAR_ITEMS::UNDO, m_Editor.CanUndo());
   m_BtnsToolBar->SetEnabled(TOOL_BAR_ITEMS::REDO, m_Editor.CanRedo());
-  m_BtnsToolBar->SetEnabled(TOOL_BAR_ITEMS::CHECK, m_OnCheck != nullptr);
-
   if (m_LastCheckResult.has_value()) {
     m_BtnsToolBar->SetStatus(TOOL_BAR_ITEMS::CHECK, m_LastCheckResult.value()
                                                         ? ButtonStatus::Success
@@ -240,25 +241,25 @@ void TextEditorWidget::RenderToolbar(ImVec2 size) {
   if (m_BtnsToolBar->Render(true)) {
     switch (m_BtnsToolBar->Selected()) {
     case TOOL_BAR_ITEMS::SAVE:
-      if (m_FilePath.has_value()) {
-        if (m_OnSave) {
-          m_OnSave(m_FilePath.value());
-        } else {
-          SaveToFile(m_FilePath.value());
-        }
+      if (m_OnSave) {
+        m_OnSave(m_FilePath);
       } else {
-        LOG_WARNING << "Save button clicked but no file path is set.";
+        if (!m_FilePath.empty()) {
+          SaveToFile(m_FilePath);
+        } else {
+          LOG_WARNING << "Save button clicked but no file path is set.";
+        }
       }
       break;
     case TOOL_BAR_ITEMS::REVERT:
-      if (m_FilePath.has_value()) {
-        if (m_OnRevert) {
-          m_OnRevert(m_FilePath.value());
-        } else {
-          LoadFromFile(m_FilePath.value());
-        }
+      if (m_OnRevert) {
+        m_OnRevert(m_FilePath);
       } else {
-        LOG_WARNING << "Revert button clicked but no file path is set.";
+        if (!m_FilePath.empty()) {
+          LoadFromFile(m_FilePath);
+        } else {
+          LOG_WARNING << "Revert button clicked but no file path is set.";
+        }
       }
       break;
     case TOOL_BAR_ITEMS::UNDO:

@@ -16,15 +16,24 @@
 
 namespace gits::gui {
 
+struct CCodeExport {
+  std::filesystem::path StreamPath;
+  std::filesystem::path CCodePath;
+  bool WrapAPICalls = false;
+  int CommandsPerBlock = 1000;
+};
+
 bool ValidateYaml(const std::string& text);
 bool ValidateGITSConfig(const std::string& config);
 void UpdateCLICall();
 void SetImGuiStyle(size_t selectedItem);
 void LoadConfigFile();
 void FileDialogs();
-void ShowFileDialog(FileDialogKeys key);
+void ShowFileDialog(FileDialogKey key, std::filesystem::path path = "");
 void PlaybackStream();
 void SubcaptureStream();
+
+void GenerateCCode(CCodeExport parameters);
 
 std::string GetRecorderDirectoryNameForApi(Api api);
 std::filesystem::path GetRecorderConfigPathForApi(Api api);
@@ -36,4 +45,5 @@ void ResetBasePaths();
 void OpenURL(const std::string& url);
 bool OpenFolder(const std::filesystem::path& path);
 bool OpenFolder(const std::string& path);
+
 } // namespace gits::gui

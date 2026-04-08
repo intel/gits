@@ -37,9 +37,11 @@ private:
       return std::to_string(StartFrame) + "-" + std::to_string(EndFrame);
     }
   } SubcaptureConfig;
+  std::optional<std::filesystem::path> DroppedFilePath;
 
   // Event callbacks
   void PathCallback(const Event& e);
+  void FileDropCallback(const Event& e);
 };
 
 } // namespace gits::gui

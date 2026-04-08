@@ -27,6 +27,9 @@ typedef gits::gui::Context::SideBarItem SideBarItem;
 SubcapturePanel::SubcapturePanel() : BasePanel() {
   EventBus::GetInstance().subscribe<PathEvent>(
       std::bind(&SubcapturePanel::PathCallback, this, std::placeholders::_1));
+
+  EventBus::GetInstance().subscribe<FileDropEvent>(
+      std::bind(&SubcapturePanel::FileDropCallback, this, std::placeholders::_1));
 }
 
 void SubcapturePanel::Render() {
@@ -58,6 +61,7 @@ void SubcapturePanel::Render() {
                              &SubcaptureConfig.ExecutionSerialization);
 
   RowSubcapturePath();
+  DroppedFilePath.reset();
 
   if (changed) {
     UpdateCLICall();
@@ -107,10 +111,16 @@ void SubcapturePanel::RowSubcapturePath() {
   context_helper::PathInput("###SubcapturePath", Path::OUTPUT_STREAM, Mode::SUBCAPTURE, 0,
                             allocatedWidth);
 
+  if (DroppedFilePath.has_value() &&
+      ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem)) {
+    context.SetPath(DroppedFilePath.value(), Path::OUTPUT_STREAM, Mode::SUBCAPTURE);
+    DroppedFilePath.reset();
+  }
+
   ImGui::SameLine();
   ImGui::PushID(++context.ImguiIDs);
   if (ImGui::Button(Labels::CHOOSE_TARGET)) {
-    ShowFileDialog(FileDialogKeys{Path::OUTPUT_STREAM, Mode::SUBCAPTURE});
+    ShowFileDialog(FileDialogKey{Path::OUTPUT_STREAM, Mode::SUBCAPTURE});
   }
   ImGui::PopID();
 }
@@ -138,6 +148,13 @@ void SubcapturePanel::PathCallback(const Event& e) {
   }
 
   UpdateCLICall();
+}
+
+void SubcapturePanel::FileDropCallback(const Event& e) {
+  const FileDropEvent& fileDropEvent = static_cast<const FileDropEvent&>(e);
+  if (Context::GetInstance().AppMode == Mode::SUBCAPTURE) {
+    DroppedFilePath = fileDropEvent.FilePath;
+  }
 }
 
 } // namespace gits::gui

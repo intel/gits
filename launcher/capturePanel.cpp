@@ -70,6 +70,9 @@ CapturePanel::CapturePanel() : BasePanel() {
       std::bind(&CapturePanel::PathCallback, this, std::placeholders::_1));
   apiToolBar = std::make_unique<ImGuiHelper::TabGroup<Api>>(Labels::API_BUTTONS());
   apiToolBar->SelectEntry(Api::DIRECTX);
+
+  EventBus::GetInstance().subscribe<FileDropEvent>(
+      std::bind(&CapturePanel::FileDropCallback, this, std::placeholders::_1));
 }
 
 void CapturePanel::Render() {
@@ -78,6 +81,7 @@ void CapturePanel::Render() {
   RowConfigPath();
   RowArguments();
   RowOutputPath();
+  DroppedFilePath.reset();
 }
 
 void CapturePanel::RowCleanup() {
@@ -131,11 +135,17 @@ void CapturePanel::RowTargetPath() {
   context_helper::PathInput("###InputPath", Path::CAPTURE_TARGET, Mode::CAPTURE, 0, allocatedWidth);
   ImGuiHelper::AddTooltip(Labels::TARGET_INPUT_HINT);
 
+  if (DroppedFilePath.has_value() &&
+      ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem)) {
+    context.SetPath(DroppedFilePath.value(), Path::CAPTURE_TARGET, Mode::CAPTURE);
+    DroppedFilePath.reset();
+  }
+
   ImGui::SameLine();
   ImGui::PushID(++context.ImguiIDs);
   ImGui::SetNextItemWidth(WidthLastButton());
   if (ImGui::Button(Labels::CHOOSE_TARGET, ImVec2(WidthLastButton(), 0))) {
-    ShowFileDialog(FileDialogKeys{Path::CAPTURE_TARGET, Mode::CAPTURE});
+    ShowFileDialog(FileDialogKey{Path::CAPTURE_TARGET, Mode::CAPTURE});
   }
   ImGui::PopID();
   ImGuiHelper::AddTooltip(Labels::CHOOSE_TARGET_HINT);
@@ -189,11 +199,17 @@ void CapturePanel::RowConfigPath() {
   context_helper::PathInput("###ConfigPathInput", Path::CONFIG, Mode::CAPTURE, 0, allocatedWidth);
   ImGuiHelper::AddTooltip(Labels::CAPTURE_CONFIG_INPUT_HINT);
 
+  if (DroppedFilePath.has_value() &&
+      ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem)) {
+    context.SetPath(DroppedFilePath.value(), Path::CONFIG, Mode::CAPTURE);
+    DroppedFilePath.reset();
+  }
+
   ImGui::SameLine();
   ImGui::PushID(++context.ImguiIDs);
   ImGui::SetNextItemWidth(WidthLastButton());
   if (ImGui::Button(Labels::CHOOSE_CAPTURE_CONFIG, ImVec2(WidthLastButton(), 0))) {
-    ShowFileDialog(FileDialogKeys{Path::CONFIG, Mode::CAPTURE});
+    ShowFileDialog(FileDialogKey{Path::CONFIG, Mode::CAPTURE});
   }
   ImGui::PopID();
   ImGuiHelper::AddTooltip(Labels::CHOOSE_CAPTURE_CONFIG_HINT);
@@ -219,7 +235,7 @@ void CapturePanel::RowOutputPath() {
   ImGui::SameLine();
   ImGui::PushID(++context.ImguiIDs);
   if (ImGui::Button(Labels::CHOOSE_CAPTURE_OUTPUT_PATH)) {
-    ShowFileDialog(FileDialogKeys{Path::OUTPUT_STREAM, Mode::CAPTURE});
+    ShowFileDialog(FileDialogKey{Path::OUTPUT_STREAM, Mode::CAPTURE});
   }
   ImGui::PopID();
   ImGuiHelper::AddTooltip(Labels::CHOOSE_CAPTURE_OUTPUT_PATH_HINT);
@@ -256,6 +272,13 @@ void CapturePanel::PathCallback(const Event& e) {
     break;
   default:
     break;
+  }
+}
+
+void CapturePanel::FileDropCallback(const Event& e) {
+  const FileDropEvent& fileDropEvent = static_cast<const FileDropEvent&>(e);
+  if (Context::GetInstance().AppMode == Mode::CAPTURE) {
+    DroppedFilePath = fileDropEvent.FilePath;
   }
 }
 } // namespace gits::gui

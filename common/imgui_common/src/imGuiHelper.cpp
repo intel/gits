@@ -149,6 +149,37 @@ void AddTableRow(const std::string& left, const std::string& right, const int& c
   ImGui::Text(right.c_str());
 }
 
+void PushButtonStyle(const ButtonStyle style) {
+  switch (style) {
+  case ButtonStyle::Success:
+    ImGui::PushStyleColor(ImGuiCol_Button, ImGuiHelper::Colors::SUCCESS);
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGuiHelper::Colors::SUCCESS_HOVERED);
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImGuiHelper::Colors::SUCCESS_ACTIVE);
+    break;
+  case ButtonStyle::Warning:
+    ImGui::PushStyleColor(ImGuiCol_Button, ImGuiHelper::Colors::WARNING);
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGuiHelper::Colors::WARNING_HOVERED);
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImGuiHelper::Colors::WARNING_ACTIVE);
+    break;
+  case ButtonStyle::Failure:
+    ImGui::PushStyleColor(ImGuiCol_Button, ImGuiHelper::Colors::FAILURE);
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGuiHelper::Colors::FAILURE_HOVERED);
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImGuiHelper::Colors::FAILURE_ACTIVE);
+    break;
+  case ButtonStyle::Default:
+    ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGui::GetStyleColorVec4(ImGuiCol_ButtonHovered));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
+    break;
+  default:
+    break;
+  }
+}
+
+void PopButtonStyle() {
+  ImGui::PopStyleColor(3);
+}
+
 bool InputString(const char* labelID,
                  std::string& str,
                  ImGuiInputTextFlags flags,

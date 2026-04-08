@@ -126,7 +126,7 @@ void PlaybackOptionsPanel::Render() {
   ImGui::SameLine();
   ImGui::PushID(++context.ImguiIDs);
   if (ImGui::Button(Labels::CHOOSE_TARGET)) {
-    ShowFileDialog(FileDialogKeys{Path::SCREENSHOTS, Mode::PLAYBACK});
+    ShowFileDialog(FileDialogKey{Path::SCREENSHOTS, Mode::PLAYBACK});
   }
   ImGui::PopID();
 
@@ -159,7 +159,7 @@ void PlaybackOptionsPanel::Render() {
   ImGui::SameLine();
   ImGui::PushID(++context.ImguiIDs);
   if (ImGui::Button(Labels::CHOOSE_TARGET)) {
-    ShowFileDialog(FileDialogKeys{Path::TRACE, Mode::PLAYBACK});
+    ShowFileDialog(FileDialogKey{Path::TRACE, Mode::PLAYBACK});
   }
   ImGui::PopID();
   ImGui::Unindent(indent);

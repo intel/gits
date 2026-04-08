@@ -213,6 +213,12 @@ struct Labels {
     // RenderTargetsDump
     static constexpr const char* RENDER_CHECKBOX = "RenderTargets###RenderTargetsDumpConfigEnabled";
     static constexpr const char* RENDER_CHECKBOX_TOOLTIP = "Enable render targets dumping";
+
+    static constexpr const char* RENDER_INCREASE_STEP_CHECKBOX =
+        "Increase Draws Step On Error###RenderIncreaseStepEnabled";
+    static constexpr const char* RENDER_INCREASE_STEP_TOOLTIP =
+        "Increase the Draws range step incrementally\nwhen E_OUTOFMEMORY error happens.";
+
     static constexpr const char* RENDER_FRAMES_ID = "###RenderTargetsDumpFrames";
     static constexpr const char* RENDER_DRAWS_LABEL = "Draws";
     static constexpr const char* RENDER_DRAWS_ID = "###RenderTargetsDumpDraws";
@@ -298,13 +304,29 @@ struct Labels {
       "Can't get stream metadata, selected stream path doesn't exist";
   static constexpr const char* STATS_GATHERING_IN_PROGRESS_MESSAGE = "Gathering stream stats...";
   static constexpr const char* STATS_GATHERING_PROMPT_MESSAGE =
-      "Click the button below to gather stream stats (this launches the gits player).";
+      "Click the button below to gather stream stats (this launches the GITS player).";
   static constexpr const char* STATS_GATHERING_BUTTON_LABEL = "Gather stats";
   static constexpr const char* UNKNOWN_METADATA_TAB_MESSAGE = "Couldn't get stream meta data";
   static constexpr const char* EMPTY_RECORDER_DIAGS_MESSAGE =
       "Couldn't get recorder diagnostic information for given trace.";
   static constexpr const char* EMPTY_RECORDER_CONFIG_MESSAGE =
       "Couldn't get recorder config for given trace.";
+
+  static constexpr const char* CCODE_GENERATION_BUTTON = "Generate CCode";
+  static constexpr const char* CCODE_GENERATION_BUTTON_HINT =
+      "Generate CCode for the current stream";
+  static constexpr const char* CCODE_GENERATION_WINDOW_TITLE = "CCode Generation";
+  static constexpr const char* CCODE_COMMANDS_PER_BLOCK_INPUT = "Commands per block";
+  static constexpr const char* CCODE_COMMANDS_PER_BLOCK_INPUT_HINT =
+      "Number of API calls per block in the generated CCode";
+  static constexpr const char* CCODE_WRAP_CALLS_CHECKBOX = "Wrap API calls";
+  static constexpr const char* CCODE_WRAP_CALLS_CHECKBOX_HINT =
+      "Whether to wrap API calls in the generated CCode with additional code (for example to "
+      "capture resource states)";
+  static constexpr const char* CCODE_PATH_INPUT = "CCode input path";
+  static constexpr const char* CCODE_PATH_INPUT_HINT = "Path to CCode template folder";
+  static constexpr const char* CCODE_GENERATION_CANCEL_BUTTON = "Cancel";
+  static constexpr const char* CCODE_GENERATION_GO_BUTTON = "Generate";
 
   static const std::string MainAction(Mode action) {
     switch (action) {
@@ -314,13 +336,12 @@ struct Labels {
       return "Start Capture";
     case Mode::SUBCAPTURE:
       return "Start Subcapture";
-    case Mode::COUNT:
     default:
       return "";
     }
   }
 
-  static const std::string DialogTitle(FileDialogKeys key) {
+  static const std::string DialogTitle(FileDialogKey key) {
     switch (key.Path) {
     case Path::GITS_BASE:
       return "Choose GITS installation directory";
@@ -338,10 +359,12 @@ struct Labels {
       return "Choose GITS config";
       break;
     case Path::INPUT_STREAM:
-      return "Choose gits stream";
+      return "Choose GITS stream";
       break;
     case Path::OUTPUT_STREAM:
       return "Choose directory where to output the stream to";
+    case Path::GITS_LOG:
+      return "Choose directory where to write the GITS log to";
     default:
       return "";
     };
@@ -355,7 +378,6 @@ struct Labels {
       return "CAPTURE IN PROGRESS";
     case Mode::SUBCAPTURE:
       return "SUBCAPTURE IN PROGRESS";
-    case Mode::COUNT:
     default:
       return "";
     };
@@ -393,9 +415,9 @@ struct Labels {
 
   static const auto& MODE_BUTTONS() {
     static const std::map<Mode, gits::ImGuiHelper::ButtonGroupItem> items = {
-        {Mode::PLAYBACK, {"Playback", "Playback a gits stream"}},
-        {Mode::CAPTURE, {"Capture", "Capture a gits stream"}},
-        {Mode::SUBCAPTURE, {"Subcapture", "Subcapture a gits stream"}},
+        {Mode::PLAYBACK, {"Playback", "Playback a GITS stream"}},
+        {Mode::CAPTURE, {"Capture", "Capture a GITS stream"}},
+        {Mode::SUBCAPTURE, {"Subcapture", "Subcapture a GITS stream"}},
     };
     return items;
   }

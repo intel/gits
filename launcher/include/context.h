@@ -122,7 +122,7 @@ public:
 
   std::map<ConfigSectionItem, int> ConfigSectionLines = {};
 
-  std::optional<FileDialogKeys> CurrentFileDialogKey = std::nullopt;
+  std::optional<FileDialogKey> CurrentFileDialogKey = std::nullopt;
   LauncherConfig LauncherConfiguration;
   std::optional<float> UIScaleDelta = std::nullopt;
 

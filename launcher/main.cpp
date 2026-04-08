@@ -13,6 +13,7 @@
 #include "imgui_impl_win32.h"
 #include "imgui_impl_vulkan.h"
 #include <windows.h>
+#include <shellapi.h>
 #else
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_vulkan.h"
@@ -25,6 +26,7 @@
 #include <cstdlib>
 #include <cstring>
 
+#include "eventBus.h"
 #include "log.h"
 #include "guiController.h"
 #include "resource.h"
@@ -119,6 +121,7 @@ static bool SetupWindow() {
       static_cast<int>(g_LauncherConfig.WindowSize.y), nullptr, nullptr, g_WC.hInstance, nullptr);
   SendMessage(g_MainWindowHWnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
   SendMessage(g_MainWindowHWnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
+  DragAcceptFiles(g_MainWindowHWnd, TRUE);
   return true;
 }
 
@@ -574,6 +577,16 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
   case WM_DESTROY:
     PostQuitMessage(0);
     return 0;
+  case WM_DROPFILES: {
+    HDROP hDrop = reinterpret_cast<HDROP>(wParam);
+    wchar_t filePath[MAX_PATH] = {};
+    if (DragQueryFileW(hDrop, 0, filePath, MAX_PATH)) {
+      gits::gui::FileDropEvent event{std::filesystem::path(filePath)};
+      gits::gui::EventBus::GetInstance().publish(event);
+    }
+    DragFinish(hDrop);
+    return 0;
+  }
   default:
     break;
   }

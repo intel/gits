@@ -38,9 +38,11 @@ private:
 
   CaptureCleanupOptions CleanupOptions;
   std::unique_ptr<gits::ImGuiHelper::TabGroup<Api>> apiToolBar;
+  std::optional<std::filesystem::path> DroppedFilePath;
 
   // Event callbacks
   void PathCallback(const Event& e);
+  void FileDropCallback(const Event& e);
 };
 
 } // namespace gits::gui

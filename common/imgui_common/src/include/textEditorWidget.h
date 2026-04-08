@@ -13,6 +13,7 @@
 #include <optional>
 #include <mutex>
 #include <memory>
+#include <unordered_set>
 
 #include <imgui.h>
 #include <TextEditor.h>
@@ -34,14 +35,15 @@ public:
     REVERT,
     UNDO,
     REDO,
-    CHECK,
-    COUNT
+    CHECK
   };
 
   struct Config {
     bool ShowToolbar = true;
     bool ShowClearButton = true;
     bool ScrollToBottom = true;
+    std::unordered_set<TOOL_BAR_ITEMS> ToolBarItems = {TOOL_BAR_ITEMS::SAVE, TOOL_BAR_ITEMS::REVERT,
+                                                       TOOL_BAR_ITEMS::UNDO, TOOL_BAR_ITEMS::REDO};
   };
 
   TextEditorWidget(const TextEditorWidget&) = delete;
@@ -91,7 +93,7 @@ private:
 private:
   std::string m_Name;
   TextEditor m_Editor;
-  std::optional<std::filesystem::path> m_FilePath;
+  std::filesystem::path m_FilePath;
   Config m_Config;
   mutable std::mutex m_EditorMutex;
   std::unique_ptr<ImGuiHelper::ButtonGroup<TOOL_BAR_ITEMS>> m_BtnsToolBar;

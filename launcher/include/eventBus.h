@@ -59,6 +59,19 @@ struct PathEvent : Event {
 
   Type EventType;
   std::optional<Mode> Mode = std::nullopt;
+  std::optional<std::filesystem::path> CustomPath = std::nullopt;
+
+  PathEvent() {
+    EventType = Type::GITS_BASE;
+  }
+
+  PathEvent(Path type,
+            std::optional<gits::gui::Mode> mode = std::nullopt,
+            std::optional<std::filesystem::path> path = std::nullopt) {
+    EventType = type;
+    Mode = mode;
+    CustomPath = path;
+  }
 };
 
 struct ActionEvent : Event {
@@ -66,7 +79,8 @@ struct ActionEvent : Event {
     Capture,
     Playback,
     SubcaptureAnalysis,
-    SubcaptureRecording
+    SubcaptureRecording,
+    CCodeGeneration
   };
 
   enum class State {
@@ -85,6 +99,12 @@ struct ActionEvent : Event {
   Status ActionStatus = Status::Unknown;
 
   std::string Details;
+};
+
+struct FileDropEvent : Event {
+  FileDropEvent(const std::filesystem::path& path) : FilePath(path) {}
+
+  std::filesystem::path FilePath;
 };
 
 // Type trait to extract Type type from event classes
@@ -190,10 +210,7 @@ public:
   }
 
   void publish(PathEvent::Type type, std::optional<Mode> mode = std::nullopt) {
-    PathEvent event;
-    event.EventType = type;
-    event.Mode = mode;
-    publish<PathEvent>(event);
+    publish<PathEvent>(PathEvent(type, mode));
   }
 
   void publish(ActionEvent::Type type,

@@ -10,11 +10,11 @@
 
 #include <algorithm>
 
+#include "imGuiHelper.h"
 #include "gits.h"
 #include "enumsAuto.h"
 #include "configurator.h"
 #include "log.h"
-#include "imGuiHelper.h"
 
 namespace gits {
 
@@ -40,7 +40,6 @@ void ImGuiHUD::AddCallback(RenderImGuiFunc callback) {
   std::lock_guard<std::mutex> lock(_callbackMutex);
   _callbacks.push_back(callback);
 
-  auto& cfgHud = Configurator::Get().common.shared.hud;
   _hasExternalCallbacks = !_callbacks.empty();
 }
 
@@ -235,7 +234,6 @@ void ImGuiHUD::SetupImGUI(float dpi_scale) {
 
   ImGui::StyleColorsDark();
   ImGuiStyle& style = ImGui::GetStyle();
-  auto& cfg = Configurator::Get();
   style.Colors[ImGuiCol_WindowBg] = ImVec4(0.0f, 0.0f, 0.0f, cfgHud.opacity);
 
   ImGuiHelper::UpdateUIScaling(dpi_scale * cfgHud.uiScale * Settings::HUD_SCALE);

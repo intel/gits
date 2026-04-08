@@ -230,10 +230,7 @@ bool Context::SetPath(std::filesystem::path path, Path pathType, std::optional<M
   }
 
   if (result) {
-    PathEvent event;
-    event.EventType = pathType;
-    event.Mode = mode;
-    EventBus::GetInstance().publish<PathEvent>(event);
+    EventBus::GetInstance().publish<PathEvent>(PathEvent(pathType, mode));
   }
 
   return result;

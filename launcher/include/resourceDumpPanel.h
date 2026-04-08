@@ -29,8 +29,12 @@ public:
   const std::string GetCLIArguments() const;
 
 private:
-  void ContextCallback(const Event& e);
-  void PathCallback(const Event& e);
+  void OnPlaybackEnded(const Event& e);
+
+  // Doubles the step in each segment of a range string.
+  // Input format: "start-end:step,single,start-end,..."
+  // Output: steps are doubled (minimum 2 for ranges that had implicit step of 1).
+  std::string DoubleRangeSteps(const std::string& rangeString);
 
   struct ResourcesDumpConfig {
     bool Enabled = false;
@@ -42,6 +46,7 @@ private:
 
   struct RenderTargetsDumpConfig {
     bool Enabled = false;
+    bool IncreaseStepOnOutOfMemoryError = true;
     std::string Frames;
     int TmpFrameStart = 1;
     int TmpFrameEnd = 1;
@@ -93,5 +98,8 @@ private:
     bool Enabled = false;
     std::string Keys;
   } RootSignatureDumpConfig;
+
+  int oomRetryCount_ = 0;
+  static constexpr int kMaxOomRetries = 5;
 };
 } // namespace gits::gui

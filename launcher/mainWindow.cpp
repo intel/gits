@@ -8,6 +8,7 @@
 
 #include "mainWindow.h"
 
+#include "imGuiHelper.h"
 #include "tabGroup.h"
 #include "labels.h"
 #include "captureActions.h"
@@ -110,15 +111,9 @@ void MainWindow::Render() {
 
   GITSButton();
 
-  ImGui::SameLine();
-
-  float offsetX = (ImGui::GetWindowWidth() - tabsToolBar->GetSize().x) / 2.0f;
-  ImGui::SetCursorPosX(offsetX);
   ModeSelectionButtons();
-  ImGui::SameLine(
-      ImGui::GetWindowWidth() -
-      ImGuiHelper::WidthOf(ImGuiHelper::Widgets::Button, Labels::MainAction(context.AppMode)) - 8);
-  MainActionButton();
+
+  MainActionButtons();
 
   ImGui::Separator();
   ImGui::SetCursorPosX((ImGui::GetWindowWidth() -
@@ -162,6 +157,7 @@ void MainWindow::Render() {
   }
 
   ShowReleaseNotesModal();
+  ShowCCodeModal();
 }
 
 void MainWindow::GITSButton() {
@@ -212,19 +208,40 @@ void MainWindow::GITSButton() {
 void MainWindow::ModeSelectionButtons() {
   auto& context = Context::GetInstance();
 
+  ImGui::SameLine();
+
+  auto offsetX = (ImGui::GetWindowWidth() - tabsToolBar->GetSize().x) / 2.0f;
+  ImGui::SetCursorPosX(offsetX);
+
   if (tabsToolBar->Render(true)) {
     context.ChangeMode(tabsToolBar->Selected());
   }
 }
 
-void MainWindow::MainActionButton() {
+void MainWindow::MainActionButtons() {
   auto& context = Context::GetInstance();
+  auto mainActionWidth =
+      ImGuiHelper::WidthOf(ImGuiHelper::Widgets::Button, Labels::MainAction(context.AppMode));
 
-  ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.1f, 0.7f, 0.2f, 1.0f));
-  ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.25f, 0.9f, 0.35f, 1.0f));
-  ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.15f, 0.7f, 0.25f, 1.0f));
+  if (context.AppMode == Mode::PLAYBACK) {
+    ImGui::SameLine(
+        ImGui::GetWindowWidth() - mainActionWidth - 8 -
+        ImGuiHelper::WidthOf(ImGuiHelper::Widgets::Button, Labels::CCODE_GENERATION_BUTTON) - 8);
+    ImGuiHelper::PushButtonStyle(ImGuiHelper::ButtonStyle::Success);
+    if (ImGui::Button(Labels::CCODE_GENERATION_BUTTON)) {
+      m_CCodeParameters.StreamPath = context.GetPathSafe(Path::INPUT_STREAM, Mode::PLAYBACK);
+      m_CCodeParameters.CCodePath = context.GetPathSafe(Path::GITS_BASE) / "ccode";
+      m_ShowCCodeGeneration = true;
+    }
+    ImGuiHelper::AddTooltip(Labels::CCODE_GENERATION_BUTTON_HINT);
+    ImGuiHelper::PopButtonStyle();
+  }
+
+  ImGui::SameLine(ImGui::GetWindowWidth() - mainActionWidth - 8);
+
+  ImGuiHelper::PushButtonStyle(ImGuiHelper::ButtonStyle::Success);
+
   const auto label = Labels::MainAction(context.AppMode);
-  auto width = ImGuiHelper::WidthOf(ImGuiHelper::Widgets::Button, label);
   if (ImGui::Button(label.c_str())) {
     switch (context.AppMode) {
     case Mode::PLAYBACK:
@@ -240,37 +257,34 @@ void MainWindow::MainActionButton() {
       break;
     }
   }
-  ImGui::PopStyleColor(3);
+  ImGuiHelper::PopButtonStyle();
 }
 
 void MainWindow::ShowReleaseNotesModal() {
+  if (!m_ShowReleaseNotes) {
+    return;
+  }
   if (m_ShowReleaseNotes) {
     ImGui::OpenPopup(Labels::RELEASE_NOTES_WINDOW_TITLE);
   }
-  // Get the main viewport size
   ImGuiViewport* viewport = ImGui::GetMainViewport();
   ImVec2 viewportSize = viewport->Size;
 
-  // Calculate 80% of viewport size
   ImVec2 modalSize = ImVec2(viewportSize.x * 0.8f, viewportSize.y * 0.8f);
 
-  // Center the modal
   ImVec2 center = viewport->GetCenter();
   ImGui::SetNextWindowPos(center, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
   ImGui::SetNextWindowSize(modalSize, ImGuiCond_Always);
 
   if (ImGui::BeginPopupModal(Labels::RELEASE_NOTES_WINDOW_TITLE, &m_ShowReleaseNotes,
                              ImGuiWindowFlags_NoResize)) {
-    // Get window dimensions for positioning
     ImVec2 windowSize = ImGui::GetWindowSize();
     ImVec2 contentRegion = ImGui::GetContentRegionAvail();
 
-    // Button dimensions
     float buttonWidth = 120.0f;
     float buttonHeight = ImGui::GetFrameHeight();
     float padding = ImGui::GetStyle().WindowPadding.y;
 
-    // Scrollable content area (leave space for button + padding + separator)
     float contentHeight = contentRegion.y - buttonHeight - padding * 2 - 1; // 1 for separator
 
     if (ImGui::BeginChild("ReleaseNotesContent", ImVec2(0, contentHeight),
@@ -282,7 +296,6 @@ void MainWindow::ShowReleaseNotesModal() {
 
     ImGui::Separator();
 
-    // Position close button at bottom right
     ImGui::SetCursorPosX(windowSize.x - buttonWidth - ImGui::GetStyle().WindowPadding.x);
     ImGui::SetCursorPosY(windowSize.y - buttonHeight - ImGui::GetStyle().WindowPadding.y);
 
@@ -290,6 +303,70 @@ void MainWindow::ShowReleaseNotesModal() {
       m_ShowReleaseNotes = false;
       ImGui::CloseCurrentPopup();
     }
+    ImGui::EndPopup();
+  }
+}
+
+void MainWindow::ShowCCodeModal() {
+  auto& context = Context::GetInstance();
+  if (!m_ShowCCodeGeneration || context.AppMode != Mode::PLAYBACK) {
+    return;
+  }
+
+  if (m_ShowCCodeGeneration) {
+    ImGui::OpenPopup(Labels::CCODE_GENERATION_WINDOW_TITLE);
+  }
+  ImGuiViewport* viewport = ImGui::GetMainViewport();
+  ImVec2 viewportSize = viewport->Size;
+
+  ImVec2 modalSize = ImVec2(viewportSize.x * 0.8f, -1.0f);
+
+  ImVec2 center = viewport->GetCenter();
+  ImGui::SetNextWindowPos(center, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+  ImGui::SetNextWindowSize(modalSize, ImGuiCond_Always);
+
+  if (ImGui::BeginPopupModal(Labels::CCODE_GENERATION_WINDOW_TITLE, &m_ShowCCodeGeneration,
+                             ImGuiWindowFlags_NoResize)) {
+
+    const auto labels = {Labels::CCODE_COMMANDS_PER_BLOCK_INPUT, Labels::CCODE_WRAP_CALLS_CHECKBOX,
+                         Labels::CCODE_PATH_INPUT};
+    auto labelWidth =
+        std::ranges::max(labels | std::views::transform([](const auto& label) {
+                           return ImGuiHelper::WidthOf(ImGuiHelper::Widgets::Text, label);
+                         }));
+    auto remainingWidth = ImGui::GetContentRegionAvail().x - labelWidth - 16; // 16 for spacing
+
+    ImGui::Text(Labels::CCODE_COMMANDS_PER_BLOCK_INPUT);
+    ImGui::SameLine(labelWidth + 16); // 16 for spacing
+    ImGui::SetNextItemWidth(remainingWidth);
+    ImGui::InputInt("###1", &m_CCodeParameters.CommandsPerBlock);
+    ImGuiHelper::AddTooltip(Labels::CCODE_COMMANDS_PER_BLOCK_INPUT_HINT);
+
+    ImGui::Text(Labels::CCODE_WRAP_CALLS_CHECKBOX);
+    ImGui::SameLine(labelWidth + 16); // 16 for spacing
+    ImGui::Checkbox("###2", &m_CCodeParameters.WrapAPICalls);
+    ImGuiHelper::AddTooltip(Labels::CCODE_WRAP_CALLS_CHECKBOX_HINT);
+
+    ImGui::Text(Labels::CCODE_PATH_INPUT);
+    ImGui::SameLine(labelWidth + 16); // 16 for spacing
+    ImGuiHelper::InputString("###3", m_CCodeParameters.CCodePath, ImGuiInputTextFlags_ReadOnly,
+                             remainingWidth);
+    ImGuiHelper::AddTooltip(Labels::CCODE_PATH_INPUT_HINT);
+
+    if (ImGui::Button(Labels::CCODE_GENERATION_CANCEL_BUTTON)) {
+      m_ShowCCodeGeneration = false;
+      ImGui::CloseCurrentPopup();
+    }
+
+    ImGuiHelper::PushButtonStyle(ImGuiHelper::ButtonStyle::Success);
+    ImGui::SameLine();
+    if (ImGui::Button(Labels::CCODE_GENERATION_GO_BUTTON)) {
+      GenerateCCode(m_CCodeParameters);
+      m_ShowCCodeGeneration = false;
+      ImGui::CloseCurrentPopup();
+    }
+    ImGuiHelper::PopButtonStyle();
+
     ImGui::EndPopup();
   }
 }
@@ -313,7 +390,7 @@ void MainWindow::GITSBaseRow() {
 
   ImGui::SameLine();
   if (ImGui::Button(Labels::CHOOSE_GITS_BASE_PATH)) {
-    ShowFileDialog(FileDialogKeys{Path::GITS_BASE, Mode::PLAYBACK});
+    ShowFileDialog(FileDialogKey{Path::GITS_BASE, Mode::PLAYBACK});
   }
   ImGuiHelper::AddTooltip(Labels::CHOOSE_GITS_BASE_PATH_HINT);
 
@@ -385,6 +462,8 @@ void MainWindow::PathCallback(const Event& e) {
       context.MetaData = GetStreamMetaData(streamPath);
       EventBus::GetInstance().publish<ContextEvent>(ContextEvent::Type::MetadataLoaded);
     }
+  } else if (pathEvent.EventType == PathEvent::Type::GITS_LOG) {
+    context.GITSLogEditor->SaveToFile(pathEvent.CustomPath.value());
   }
 }
 } // namespace gits::gui

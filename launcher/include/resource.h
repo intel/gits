@@ -10,9 +10,16 @@
 
 #define APP_ICON      101
 #define APP_FILE_ICON 102
-#define APP_VERSION   "0.1.8"
+#define APP_VERSION   "0.1.8.1"
 
 inline const char* RELEASE_NOTES = R"(
+Release Notes v0.1.8.1
+====================
+- Added Resource Dump retry mode
+- Added CCode generation mechanism
+- Added save button for GITS log
+- Added drag and drop support for target executable, config and stream files
+
 Release Notes v0.1.8
 ====================
 - Added release notes window

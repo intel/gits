@@ -36,8 +36,7 @@ enum class Api {
 enum class Mode {
   CAPTURE = 0,
   PLAYBACK,
-  SUBCAPTURE,
-  COUNT
+  SUBCAPTURE
 };
 
 enum class Path {
@@ -51,21 +50,17 @@ enum class Path {
   CONFIG,
   INPUT_STREAM,
   OUTPUT_STREAM,
-  COUNT
+  // Custom
+  GITS_LOG
 };
 
-struct FileDialogKeys {
+struct FileDialogKey {
   Path Path;
   Mode Mode;
-
-  size_t GetValue() const {
-    return static_cast<size_t>(Mode) * static_cast<size_t>(Path::COUNT) + static_cast<size_t>(Path);
-  }
 
   const std::string ImGuiKey() const {
     return "FileDialog_" + std::to_string(static_cast<size_t>(Mode)) + "_" +
            std::to_string(static_cast<size_t>(Path));
   }
 };
-
 } // namespace gits::gui

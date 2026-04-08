@@ -43,6 +43,13 @@ enum class Widgets {
   Unknown
 };
 
+enum class ButtonStyle {
+  Success,
+  Warning,
+  Failure,
+  Default
+};
+
 float WidthOf(Widgets widget, const std::string& label = "");
 float LineHeight();
 
@@ -59,6 +66,10 @@ void AddTooltip(const std::string& message);
 void RenderTableContent(const std::vector<std::array<std::string, 2>>& dataTable);
 
 void AddTableRow(const std::string& left, const std::string& right, const int& col2Width);
+
+void PushButtonStyle(const ButtonStyle style);
+
+void PopButtonStyle();
 
 bool InputString(const char* label,
                  std::string& str,

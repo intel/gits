@@ -34,6 +34,7 @@ struct ButtonGroupItem {
   ButtonStatus status = ButtonStatus::Default;
   std::string short_label = "";
   bool enabled = true;
+  bool visible = true;
 };
 
 template <typename T>
@@ -47,6 +48,9 @@ public:
   void SetEnabled(const T& key, bool enabled);
   void SetStatus(const T& key, ButtonStatus status);
   bool IsEnabled(const T& key) const;
+
+  void SetVisible(const T& key, bool visible);
+  bool IsVisible(const T& key) const;
 
   void SelectEntry(T entry);
   T Selected() const;
@@ -67,6 +71,7 @@ protected:
   const std::string& GetLabel(const ButtonGroupItem& item) const;
 
   std::map<T, bool> btnEnabled;
+  std::map<T, bool> btnVisible;
   size_t selectedIndex = 0;
   bool isHorizontal;
   bool useRegularLabel;
@@ -84,8 +89,10 @@ BaseButtonGroup<T>::BaseButtonGroup(const std::map<T, ButtonGroupItem>& items_,
   useRegularLabel = regularLabel;
   items = items_;
   btnEnabled = std::map<T, bool>();
+  btnVisible = std::map<T, bool>();
   for (const auto& p : items) {
     btnEnabled[p.first] = p.second.enabled;
+    btnVisible[p.first] = p.second.visible;
   }
 }
 
@@ -109,6 +116,23 @@ template <typename T>
 bool BaseButtonGroup<T>::IsEnabled(const T& key) const {
   auto it = btnEnabled.find(key);
   if (it != btnEnabled.end()) {
+    return it->second;
+  }
+  return false;
+}
+
+template <typename T>
+void BaseButtonGroup<T>::SetVisible(const T& key, bool visible) {
+  auto it = items.find(key);
+  if (it != items.end()) {
+    it->second.visible = visible;
+  }
+}
+
+template <typename T>
+bool BaseButtonGroup<T>::IsVisible(const T& key) const {
+  auto it = btnVisible.find(key);
+  if (it != btnVisible.end()) {
     return it->second;
   }
   return false;
@@ -155,6 +179,9 @@ template <typename T>
 ImVec2 BaseButtonGroup<T>::GetSize() const {
   ImVec2 size(0.0f, 0.0f);
   for (const auto& item : items | std::views::values) {
+    if (!item.visible) {
+      continue;
+    }
     const auto& label =
         useRegularLabel ? item.label : (item.short_label.empty() ? item.label : item.short_label);
     ImVec2 btnSize = ImGui::CalcTextSize(label.c_str());
@@ -179,30 +206,22 @@ template <typename T>
 void BaseButtonGroup<T>::PushButtonStyle(const ButtonGroupItem& item) {
   switch (item.status) {
   case ButtonStatus::Success:
-    ImGui::PushStyleColor(ImGuiCol_Button, Colors::SUCCESS);
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, Colors::SUCCESS_HOVERED);
-    ImGui::PushStyleColor(ImGuiCol_ButtonActive, Colors::SUCCESS_ACTIVE);
+    ImGuiHelper::PushButtonStyle(ButtonStyle::Success);
     break;
   case ButtonStatus::Failure:
-    ImGui::PushStyleColor(ImGuiCol_Button, Colors::FAILURE);
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, Colors::FAILURE_HOVERED);
-    ImGui::PushStyleColor(ImGuiCol_ButtonActive, Colors::FAILURE_ACTIVE);
+    ImGuiHelper::PushButtonStyle(ButtonStyle::Failure);
     break;
   case ButtonStatus::Warning:
-    ImGui::PushStyleColor(ImGuiCol_Button, Colors::WARNING);
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, Colors::WARNING_HOVERED);
-    ImGui::PushStyleColor(ImGuiCol_ButtonActive, Colors::WARNING_ACTIVE);
+    ImGuiHelper::PushButtonStyle(ButtonStyle::Warning);
     break;
   default:
-    ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGui::GetStyleColorVec4(ImGuiCol_ButtonHovered));
-    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
+    ImGuiHelper::PushButtonStyle(ButtonStyle::Default);
     break;
   }
 }
 template <typename T>
 void BaseButtonGroup<T>::PopButtonStyle() {
-  ImGui::PopStyleColor(3);
+  ImGuiHelper::PopButtonStyle();
 }
 
 template <typename T>
