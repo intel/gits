@@ -214,6 +214,7 @@ Enums:
     Values:
       - Value: PNG
       - Value: JPEG
+      - Value: DDS
   - Name: AddressPinningMode
     Values:
       - Value: NONE

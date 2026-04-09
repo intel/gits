@@ -12,6 +12,7 @@
 #include "imageWriter.h"
 
 #include <fstream>
+#include <algorithm>
 #include <wincodec.h>
 
 namespace gits {
@@ -375,12 +376,28 @@ void ResourceDump::dumpTexture(DumpInfo& dumpInfo, void* data) {
     format = DXGI_FORMAT_D24_UNORM_S8_UINT;
   }
 
-  DXGI_FORMAT destFormat =
-      ::DirectX::IsSRGB(format) ? DXGI_FORMAT_R8G8B8A8_UNORM_SRGB : DXGI_FORMAT_R8G8B8A8_UNORM;
-
   unsigned depth = dumpInfo.desc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE3D
                        ? dumpInfo.desc.DepthOrArraySize
                        : 1;
+
+  if (format_ == ImageFormat::DDS) {
+    // For DDS, we can write the image directly without conversion
+    size_t slicePitch = dumpInfo.size / depth;
+    for (unsigned slice = 0; slice < depth; ++slice) {
+      std::wstring dumpNameW = dumpInfo.dumpName;
+      if (depth > 1) {
+        dumpNameW += L"_slice_" + std::to_wstring(slice);
+      }
+      uint8_t* pixels = reinterpret_cast<uint8_t*>(data) + slice * slicePitch;
+      size_t width = std::max(dumpInfo.desc.Width >> dumpInfo.mipLevel, 1ull);
+      size_t height = std::max(dumpInfo.desc.Height >> dumpInfo.mipLevel, 1u);
+      writeImage(dumpNameW, ImageFormat::DDS, pixels, format, width, height, dumpInfo.rowPitch);
+    }
+    return;
+  }
+
+  DXGI_FORMAT destFormat =
+      ::DirectX::IsSRGB(format) ? DXGI_FORMAT_R8G8B8A8_UNORM_SRGB : DXGI_FORMAT_R8G8B8A8_UNORM;
 
   for (unsigned slice = 0; slice < depth; ++slice) {
 

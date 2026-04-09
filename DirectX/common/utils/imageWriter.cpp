@@ -12,7 +12,6 @@
 
 #include <DirectXTex.h>
 #include <wincodec.h>
-#include <set>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
@@ -21,6 +20,7 @@
 
 namespace gits {
 namespace DirectX {
+
 static void convertRgba8ToRgb8(
     const uint8_t* src, size_t width, size_t height, size_t rowPitch, uint8_t* dst) {
   uint8_t* dstPtr = dst;
@@ -72,6 +72,38 @@ static void covertRgb10a2ToRgb8(
   }
 }
 
+static bool writeImageToDds(const std::filesystem::path& outputFileName,
+                            uint8_t* pixelData,
+                            DXGI_FORMAT pixelFormat,
+                            size_t width,
+                            size_t height,
+                            size_t rowPitch) {
+  auto outputFile = std::filesystem::path(outputFileName);
+  outputFile += ".dds";
+
+  // Compute (and validate) pitch
+  size_t computedRowPitch = 0;
+  size_t slicePitch = 0;
+  HRESULT hr = ::DirectX::ComputePitch(pixelFormat, width, height, computedRowPitch, slicePitch);
+  GITS_ASSERT(SUCCEEDED(hr));
+  GITS_ASSERT(rowPitch == computedRowPitch);
+
+  ::DirectX::Image image{};
+  image.width = width;
+  image.height = height;
+  image.format = pixelFormat;
+  image.rowPitch = rowPitch;
+  image.slicePitch = slicePitch;
+  image.pixels = pixelData;
+
+  hr = ::DirectX::SaveToDDSFile(image, ::DirectX::DDS_FLAGS_NONE, outputFile.wstring().c_str());
+  if (hr != S_OK) {
+    LOG_ERROR << "Dumping " + outputFile.string() + " failed: 0x" << std::hex << hr << std::dec;
+    return false;
+  }
+  return true;
+}
+
 bool writeImage(const std::filesystem::path& outputFileName,
                 ImageFormat outputFormat,
                 uint8_t* pixelData,
@@ -79,6 +111,11 @@ bool writeImage(const std::filesystem::path& outputFileName,
                 size_t width,
                 size_t height,
                 size_t rowPitch) {
+  // DDS does not require format conversion and can be directly written using DirectXTex
+  if (outputFormat == ImageFormat::DDS) {
+    return writeImageToDds(outputFileName, pixelData, pixelFormat, width, height, rowPitch);
+  }
+
   bool useStbImage =
       Configurator::IsPlayer() && Configurator::Get().directx.player.portability.useStbImage;
   auto outputFile = outputFileName;
