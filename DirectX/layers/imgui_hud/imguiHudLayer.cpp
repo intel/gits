@@ -62,7 +62,7 @@ void ImGuiHUDLayer::pre(IUnknownReleaseCommand& c) {
 }
 
 void ImGuiHUDLayer::pre(ID3D12CommandQueueExecuteCommandListsCommand& c) {
-  if (firstExecuteInFrame_) {
+  if (swapChain_ && firstExecuteInFrame_) {
     waitForCurrentFrame();
     firstExecuteInFrame_ = false;
   }
