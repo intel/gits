@@ -257,7 +257,8 @@ int MainBody(int argc, char* argv[]) {
   }
 
   if (cfg.common.shared.waitForInput) {
-    LOG_NONE << "Press ENTER to continue...";
+    // Always print to console
+    std::cout << "Press ENTER to continue..." << std::endl;
     std::cin.get();
   }
 

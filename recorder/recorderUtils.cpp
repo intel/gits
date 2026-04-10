@@ -121,7 +121,8 @@ bool ConfigureRecorder(const std::filesystem::path& configPath, bool legacyMode)
     inputHandled = (result != 0);
 #endif
     if (!inputHandled) {
-      LOG_NONE << "Press ENTER to continue... (PID: " << pid << ")";
+      // Always print to console
+      std::cout << "Press ENTER to continue... (PID: " << pid << ")" << std::endl;
       std::cin.get();
     }
   }

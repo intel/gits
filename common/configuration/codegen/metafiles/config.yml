@@ -145,7 +145,7 @@ Configuration:
           - Name: waitForInput
             Type: bool
             Default: false
-            Arguments: [waitForInput]
+            Arguments: [waitForInput, waitForEnter]
             Description: Wait for user input before starting playback or recording
       - Name: Player
         Type: Group
@@ -460,12 +460,6 @@ Configuration:
             Description:
               No functions are played back. This option is useful only for characterization
               of GITS player framework performance.
-          - Name: waitForEnter
-            Type: bool
-            Default: false
-            Arguments: [waitForEnter]
-            Description: DEPRECATED. Use waitForInput. Before and after playing back the stream, wait for ENTER keypress.
-            Deprecated: true
           - Name: cleanResourcesOnExit
             Type: bool
             Default: false
