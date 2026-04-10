@@ -127,8 +127,8 @@ public:
 
 private:
   void initializeIpcFlush();
-  static constexpr const char* eventBaseName = "Local\\GitsDirectXTraceEvent";
-  static constexpr const char* sharedMemoryBaseName = "Local\\GitsDirectXTraceSharedMemory";
+  static constexpr const char* eventBaseName = "Local\\GitsGraphicsAPITraceEvent";
+  static constexpr const char* sharedMemoryBaseName = "Local\\GitsGraphicsAPITraceSharedMemory";
   static constexpr double forcedFlushCapacityRatio = 0.9;
   struct FlushInfo {
     bool initialized;

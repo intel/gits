@@ -6,19 +6,19 @@
 #
 # ===================== end_copyright_notice ==============================
 
-add_executable(DirectX_trace_ipc)
+add_executable(trace_ipc)
 
 set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
-target_sources(DirectX_trace_ipc PRIVATE
+target_sources(trace_ipc PRIVATE
   ${SRC_DIR}/common.h
   ${SRC_DIR}/main.cpp
 )
 
-set_target_properties(DirectX_trace_ipc PROPERTIES FOLDER DirectX/DirectX_layers)
+set_target_properties(trace_ipc PROPERTIES FOLDER common/trace)
 
 if(MSVC)
-  install(FILES $<TARGET_PDB_FILE:DirectX_trace_ipc> DESTINATION UtilityTools OPTIONAL)
+  install(FILES $<TARGET_PDB_FILE:trace_ipc> DESTINATION UtilityTools OPTIONAL)
 endif()
 
-install(TARGETS DirectX_trace_ipc DESTINATION UtilityTools)
+install(TARGETS trace_ipc DESTINATION UtilityTools)
