@@ -22,7 +22,10 @@ function(init_tbb)
   # Rename the output to prevent conflicts with other TBB versions/copies in capture
   set_target_properties(tbb PROPERTIES OUTPUT_NAME gits_tbb)
 
-  install(TARGETS tbb RUNTIME DESTINATION Recorder)
+  install(TARGETS tbb
+    RUNTIME DESTINATION Recorder
+    LIBRARY DESTINATION Recorder
+  )
   if(MSVC)
     install(FILES $<TARGET_PDB_FILE:tbb> DESTINATION Recorder OPTIONAL)
   endif()
