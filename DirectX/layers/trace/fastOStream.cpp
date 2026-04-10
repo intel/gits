@@ -79,24 +79,24 @@ void FastOStringStream::initializeIpcFlush() {
 
   auto executablePath =
       std::filesystem::path(Configurator::Get().common.recorder.installPath).parent_path() /
-      "UtilityTools" / "trace_ipc.exe";
+      "UtilityTools" / "DirectX_trace_ipc.exe";
   if (!std::filesystem::exists(executablePath)) {
     std::vector<char> moduleFilename(MAX_PATH + 1, 0);
     GetModuleFileNameA(nullptr, moduleFilename.data(), moduleFilename.size());
 
     // Try to load the trace executable from the directory next to the player
     auto playerPath = std::filesystem::absolute(moduleFilename.data());
-    executablePath =
-        std::filesystem::absolute(playerPath.parent_path() / "UtilityTools" / "trace_ipc.exe");
+    executablePath = std::filesystem::absolute(playerPath.parent_path() / "UtilityTools" /
+                                               "DirectX_trace_ipc.exe");
     if (!std::filesystem::exists(executablePath)) {
       // Try to load the trace executable from the player's parent directory
       executablePath = std::filesystem::absolute(playerPath.parent_path().parent_path() /
-                                                 "UtilityTools" / "trace_ipc.exe");
+                                                 "UtilityTools" / "DirectX_trace_ipc.exe");
     }
   }
 
   if (!std::filesystem::exists(executablePath)) {
-    LOG_ERROR << "Could not locate the trace_ipc.exe";
+    LOG_ERROR << "Could not locate the DirectX_trace_ipc.exe";
     return;
   }
 

@@ -35,6 +35,8 @@ source_group("print" FILES ${PRINT_SRC})
 set(ROOT_SRC
   ${SRC_DIR}/traceFactory.h
   ${SRC_DIR}/traceFactory.cpp
+  ${SRC_DIR}/fastOStream.h
+  ${SRC_DIR}/fastOStream.cpp
 )
 source_group("" FILES ${ROOT_SRC})
 
@@ -50,14 +52,15 @@ target_sources(DirectX_trace PRIVATE
   ${ALL_SRC}
 )
 
+add_subdirectory(ipc)
+
 target_include_directories(DirectX_trace PRIVATE
-  ${FASTOUTPUT_HEADER_DIR}
+  ${FASTIO_DIR}/include
 )
 
 target_link_libraries(DirectX_trace PRIVATE
   DirectX_layer_interface
   DirectX_utils
-  fast_output
 )
 
 set_target_properties(DirectX_trace PROPERTIES FOLDER DirectX/DirectX_layers)
