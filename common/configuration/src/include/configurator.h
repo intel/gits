@@ -90,6 +90,11 @@ public: // Singleton
   static const Configuration& Get();
   static Configuration& GetMutable();
 
+  void Lock();
+  bool IsLocked() const {
+    return m_configurationLocked;
+  }
+
   static bool LoadInto(const YAML::Node& node, Configuration* configObj);
   static bool LoadInto(const std::filesystem::path& filepath, Configuration* configObj);
   static bool LoadInto(const std::string& config, Configuration* configObj);
@@ -118,5 +123,6 @@ private:
 
   Configuration configuration;
   std::map<ConfigEntry::Source, std::vector<ConfigEntry>> changedFields;
+  bool m_configurationLocked{false};
 };
 } // namespace gits

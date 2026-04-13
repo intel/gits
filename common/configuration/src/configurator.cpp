@@ -72,20 +72,30 @@ Configurator& Configurator::Instance() {
   return instance;
 }
 
+void Configurator::Lock() {
+  m_configurationLocked = true;
+}
+
 const Configuration& Configurator::Get() {
   return Instance().configuration;
 }
 
 Configuration& Configurator::GetMutable() {
-  return Instance().configuration;
+  Configurator& inst = Instance();
+  GITS_ASSERT(!inst.m_configurationLocked, "Configurator::GetMutable() called after Lock()");
+  return inst.configuration;
 }
 
 void Configurator::UpdateFromEnvironment() {
-  Instance().configuration.updateFromEnvironment();
-  Instance().configuration.CheckLegacyEnvironmentPaths();
+  Configurator& inst = Instance();
+  GITS_ASSERT(!inst.m_configurationLocked,
+              "Configurator::UpdateFromEnvironment() called after Lock()");
+  inst.configuration.updateFromEnvironment();
+  inst.configuration.CheckLegacyEnvironmentPaths();
 }
 
 void Configurator::DeriveData() {
+  GITS_ASSERT(!m_configurationLocked, "Configurator::DeriveData() called after Lock()");
   configuration.DeriveData(configuration);
 }
 
@@ -168,10 +178,12 @@ bool Configurator::LoadInto(const std::filesystem::path& filepath, Configuration
 }
 
 bool Configurator::Load(const std::filesystem::path& filepath) {
+  GITS_ASSERT(!m_configurationLocked, "Configurator::Load() called after Lock()");
   return LoadInto(filepath, &configuration);
 }
 
 bool Configurator::Load(const std::string& config) {
+  GITS_ASSERT(!m_configurationLocked, "Configurator::Load() called after Lock()");
   return LoadInto(config, &configuration);
 }
 
@@ -194,6 +206,7 @@ bool Configurator::Save(const std::filesystem::path& filepath, const Configurati
 
 bool Configurator::ApplyOverrides(const std::filesystem::path& filepath,
                                   const std::string& processName) {
+  GITS_ASSERT(!m_configurationLocked, "Configurator::ApplyOverrides() called after Lock()");
   std::ifstream fin(filepath);
   if (!fin) {
     LOG_ERROR << "Failed to open file: " << filepath << std::endl;
