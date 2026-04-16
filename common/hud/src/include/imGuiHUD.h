@@ -10,9 +10,11 @@
 
 #include <array>
 #include <chrono>
+#include <deque>
 #include <functional>
 #include <mutex>
 #include <string>
+#include <utility>
 
 #include "imgui.h"
 #include "enumsAuto.h"
@@ -36,6 +38,7 @@ private:
   ImVec2 ComputeHUDSizeHint(float uiScale);
   void PositionHUD(gits::HUDAnchor anchor, const ImVec2& windowSize, const ImVec2& padding);
   void ExecuteCallbacks();
+  double CalculateFPS(std::chrono::high_resolution_clock::time_point now);
 
   std::vector<RenderImGuiFunc> _callbacks;
   std::mutex _callbackMutex;
@@ -49,9 +52,8 @@ private:
   std::string _applicationName = "<unknown>";
   int _applicationPid = -1;
 
-  // Frame timing for FPS measurement
-  std::chrono::high_resolution_clock::time_point _lastFrameTime;
-  double _frameDuration = 0.0;
+  // Render-to-Render frame time samples for FPS calculation, stored as pairs of (timestamp, frame time in seconds)
+  std::deque<std::pair<std::chrono::high_resolution_clock::time_point, double>> _frameTimes;
 };
 
 } // namespace gits

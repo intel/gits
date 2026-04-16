@@ -33,7 +33,6 @@ ImGuiHUD::ImGuiHUD() {
   std::ostringstream oss;
   oss << CGits::Instance().Version();
   _strVersion = oss.str();
-  _lastFrameTime = std::chrono::high_resolution_clock::now();
 }
 
 void ImGuiHUD::AddCallback(RenderImGuiFunc callback) {
@@ -103,10 +102,35 @@ void ImGuiHUD::SetBackBufferInfo(uint64_t width, uint64_t height, size_t count) 
   }
 }
 
+double ImGuiHUD::CalculateFPS(std::chrono::high_resolution_clock::time_point now) {
+  static auto s_previousTime = now;
+
+  // Calculate delta time in seconds
+  double dtSec = std::chrono::duration<double>(now - s_previousTime).count();
+  if (dtSec > 0.0) {
+    _frameTimes.emplace_back(now, dtSec);
+    // Remove time samples older than 1 second (1s window)
+    while (!_frameTimes.empty() && now - _frameTimes.front().first > std::chrono::seconds(1)) {
+      _frameTimes.pop_front();
+    }
+  }
+  s_previousTime = now;
+
+  if (_frameTimes.empty()) {
+    return 0.0;
+  }
+
+  // Calculate average frame time over the collected samples
+  double sumDt = 0.0;
+  for (const auto& sample : _frameTimes) {
+    sumDt += sample.second;
+  }
+  double avgDtSec = sumDt / static_cast<double>(_frameTimes.size());
+  return (avgDtSec > 0.0) ? (1.0 / avgDtSec) : 0.0;
+}
+
 void ImGuiHUD::Render() {
   auto now = std::chrono::high_resolution_clock::now();
-  _frameDuration = std::chrono::duration<double>(now - _lastFrameTime).count();
-  _lastFrameTime = now;
 
   if ((_tableRows == 0) && !_hasExternalCallbacks) {
     return;
@@ -143,11 +167,20 @@ void ImGuiHUD::Render() {
         ++idx;
       }
       if (cfgHud.fields.fps) {
-        double fps = (_frameDuration > 0.0) ? (1.0 / _frameDuration) : 0.0;
-        std::ostringstream oss;
-        oss << std::fixed << std::setprecision(1) << std::setw(5) << fps;
+        static auto s_previousUpdateTime = now;
+        static std::string s_fpsStr = "0.0";
+
+        double fps = CalculateFPS(now);
+
+        // Use a 10Hz update rate for the FPS display
+        if (now - s_previousUpdateTime >= std::chrono::milliseconds(100)) {
+          std::ostringstream oss;
+          oss << std::fixed << std::setprecision(1) << std::setw(5) << fps;
+          s_fpsStr = oss.str();
+          s_previousUpdateTime = now;
+        }
         _dataTable[idx][0] = "FPS";
-        _dataTable[idx][1] = oss.str();
+        _dataTable[idx][1] = s_fpsStr;
         ++idx;
       }
 
