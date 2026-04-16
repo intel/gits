@@ -80,8 +80,10 @@ public:
 private:
   void initialize(ID3D12GraphicsCommandList* commandList);
   void initializeInstancesAoP(ID3D12GraphicsCommandList* commandList);
-  void addPatchBuffer(ID3D12GraphicsCommandList* commandList);
-  void createOrReplacePatchBufferObjects(ID3D12Device* device, unsigned patchBufferIndex);
+  void addPatchBuffer(ID3D12GraphicsCommandList* commandList, unsigned patchBufferSize);
+  void createOrReplacePatchBufferObjects(ID3D12Device* device,
+                                         unsigned patchBufferIndex,
+                                         unsigned patchBufferSize);
   void addMappingBuffer(ID3D12GraphicsCommandList* commandList);
   void createMappingBufferObjects(ID3D12Device* device, unsigned mappingBufferIndex);
   unsigned getMappingBufferIndex(unsigned commandListKey, ID3D12GraphicsCommandList* commandList);
@@ -111,8 +113,7 @@ private:
   unsigned patchBufferPoolSize_{};
   std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> patchBuffers_{};
   const unsigned patchBufferInitialSize_{0x1000000};
-  unsigned patchBufferSize_{patchBufferInitialSize_};
-  const float patchBufferGrowthFactor_{1.1f};
+  const float patchBufferSizeMultiplier_{1.1f};
 
   static const unsigned instancesAoPPatchBufferPoolSize_{8};
   std::array<ID3D12Resource*, instancesAoPPatchBufferPoolSize_> instancesAoPPatchBuffers_{};

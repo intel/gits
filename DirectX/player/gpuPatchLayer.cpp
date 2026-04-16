@@ -12,6 +12,7 @@
 #include "messageBus.h"
 
 #include <fstream>
+#include <optional>
 
 namespace gits {
 namespace DirectX {
@@ -867,7 +868,7 @@ void GpuPatchLayer::initialize(ID3D12GraphicsCommandList* commandList) {
   }
 
   for (unsigned i = 0; i < patchBufferInitialPoolSize_; ++i) {
-    addPatchBuffer(commandList);
+    addPatchBuffer(commandList, patchBufferInitialSize_);
   }
 
   initialized_ = true;
@@ -951,7 +952,8 @@ void GpuPatchLayer::initializeInstancesAoP(ID3D12GraphicsCommandList* commandLis
   initializedInstancesAoP_ = true;
 }
 
-void GpuPatchLayer::addPatchBuffer(ID3D12GraphicsCommandList* commandList) {
+void GpuPatchLayer::addPatchBuffer(ID3D12GraphicsCommandList* commandList,
+                                   unsigned patchBufferSize) {
   patchBuffers_.emplace_back();
   patchOffsetsBuffers_.emplace_back();
   patchOffsetsStagingBuffers_.emplace_back();
@@ -964,11 +966,14 @@ void GpuPatchLayer::addPatchBuffer(ID3D12GraphicsCommandList* commandList) {
   Microsoft::WRL::ComPtr<ID3D12Device> device;
   HRESULT hr = commandList->GetDevice(IID_PPV_ARGS(&device));
   GITS_ASSERT(hr == S_OK);
-  createOrReplacePatchBufferObjects(device.Get(), patchBufferPoolSize_++);
+  createOrReplacePatchBufferObjects(device.Get(), patchBufferPoolSize_++, patchBufferSize);
 }
 
 void GpuPatchLayer::createOrReplacePatchBufferObjects(ID3D12Device* device,
-                                                      unsigned patchBufferIndex) {
+                                                      unsigned patchBufferIndex,
+                                                      unsigned patchBufferSize) {
+  GITS_ASSERT(patchBufferSize > 0);
+
   D3D12_HEAP_PROPERTIES heapPropertiesDefault{};
   heapPropertiesDefault.Type = D3D12_HEAP_TYPE_DEFAULT;
   heapPropertiesDefault.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
@@ -994,7 +999,7 @@ void GpuPatchLayer::createOrReplacePatchBufferObjects(ID3D12Device* device,
   resourceDesc.SampleDesc.Quality = 0;
   resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
 
-  resourceDesc.Width = patchBufferSize_;
+  resourceDesc.Width = patchBufferSize;
   resourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
   HRESULT hr{};
@@ -1046,7 +1051,7 @@ void GpuPatchLayer::createOrReplacePatchBufferObjects(ID3D12Device* device,
   hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE,
                            IID_PPV_ARGS(&patchBufferInfos_[patchBufferIndex].fenceInfo.fence));
   GITS_ASSERT(hr == S_OK);
-  patchBufferInfos_[patchBufferIndex].size = patchBufferSize_;
+  patchBufferInfos_[patchBufferIndex].size = patchBufferSize;
 }
 
 void GpuPatchLayer::addMappingBuffer(ID3D12GraphicsCommandList* commandList) {
@@ -1419,16 +1424,30 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandListExecuteIndirectCommand& c) {
                                   std::make_shared<GitsWorkloadMessage>(
                                       commandList, "GITS_ExecuteIndirect-Patch", c.object_.key));
 
-  unsigned patchBufferIndex =
-      getPatchBufferIndex(c.object_.key, c.object_.value, patchBufferInitialSize_);
-
-  unsigned mappingBufferIndex = getMappingBufferIndex(c.object_.key, c.object_.value);
-  if (!useAddressPinning_) {
-    commandList->CopyResource(gpuAddressBuffers_[mappingBufferIndex].Get(),
-                              gpuAddressStagingBuffers_[mappingBufferIndex].Get());
+  size_t size = c.MaxCommandCount_.value * commandSignature.ByteStride;
+  GITS_ASSERT(c.pArgumentBuffer_.value->GetDesc().Width > c.ArgumentBufferOffset_.value);
+  size_t maxSizeBuffer = c.pArgumentBuffer_.value->GetDesc().Width - c.ArgumentBufferOffset_.value;
+  if (size > maxSizeBuffer) {
+    size = maxSizeBuffer;
   }
-  commandList->CopyResource(mappingCountBuffers_[mappingBufferIndex].Get(),
-                            mappingCountStagingBuffers_[mappingBufferIndex].Get());
+  GITS_ASSERT(size <= patchBufferInitialSize_ &&
+              "ExecuteIndirect estimated argument buffer size larger than expected");
+
+  unsigned patchBufferIndex = getPatchBufferIndex(c.object_.key, c.object_.value, size);
+
+  unsigned mappingBufferIndex{};
+  if (currentMappingsByCommandList_.find(c.object_.key) == currentMappingsByCommandList_.end()) {
+    mappingBufferIndex = getMappingBufferIndex(c.object_.key, c.object_.value);
+    if (!useAddressPinning_) {
+      commandList->CopyResource(gpuAddressBuffers_[mappingBufferIndex].Get(),
+                                gpuAddressStagingBuffers_[mappingBufferIndex].Get());
+    }
+    commandList->CopyResource(mappingCountBuffers_[mappingBufferIndex].Get(),
+                              mappingCountStagingBuffers_[mappingBufferIndex].Get());
+  } else {
+    mappingBufferIndex = getMappingBufferIndex(c.object_.key, c.object_.value);
+  }
+
   if (raytracing) {
     commandList->CopyResource(shaderIdentifierBuffers_[mappingBufferIndex].Get(),
                               shaderIdentifierStagingBuffers_[mappingBufferIndex].Get());
@@ -1450,7 +1469,6 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandListExecuteIndirectCommand& c) {
     barriers[1].Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_SOURCE;
     commandList->ResourceBarrier(2, barriers);
 
-    unsigned size = c.MaxCommandCount_.value * commandSignature.ByteStride;
     commandList->CopyBufferRegion(patchBuffers_[patchBufferIndex].Get(), 0,
                                   c.pArgumentBuffer_.value, c.ArgumentBufferOffset_.value, size);
 
@@ -1812,39 +1830,53 @@ unsigned GpuPatchLayer::getMappingBufferIndex(unsigned commandListKey,
 unsigned GpuPatchLayer::getPatchBufferIndex(unsigned commandListKey,
                                             ID3D12GraphicsCommandList* commandList,
                                             size_t size) {
-  if (size > patchBufferSize_) {
-    patchBufferSize_ = size * patchBufferGrowthFactor_;
-    LOG_WARNING << "Gpu patching - patch buffer byte size increased to: " << patchBufferSize_;
-  }
-
+  std::optional<unsigned> smallestFittingBuffer;
+  std::optional<unsigned> largestNotFittingBuffer;
   for (unsigned i = 0; i < patchBufferPoolSize_; ++i) {
-    if (patchBufferInfos_[i].fenceInfo.waitingForExecute) {
+    const auto& patchBufferInfo = patchBufferInfos_[i];
+    if (patchBufferInfo.fenceInfo.waitingForExecute) {
       continue;
     }
-    UINT64 value = patchBufferInfos_[i].fenceInfo.fence->GetCompletedValue();
+    UINT64 value = patchBufferInfo.fenceInfo.fence->GetCompletedValue();
     if (value == UINT64_MAX) {
       LOG_ERROR << "getPatchBufferIndex - device removed!";
       exit(EXIT_FAILURE);
     }
-    if (value == patchBufferInfos_[i].fenceInfo.fenceValue) {
-      if (size > patchBufferInfos_[i].size) {
-        Microsoft::WRL::ComPtr<ID3D12Device> device;
-        HRESULT hr = commandList->GetDevice(IID_PPV_ARGS(&device));
-        GITS_ASSERT(hr == S_OK);
-        createOrReplacePatchBufferObjects(device.Get(), i);
+    if (value != patchBufferInfo.fenceInfo.fenceValue) {
+      continue;
+    }
+
+    if (patchBufferInfo.size >= size) {
+      if (!smallestFittingBuffer.has_value() ||
+          patchBufferInfos_[smallestFittingBuffer.value()].size > patchBufferInfo.size) {
+        smallestFittingBuffer = i;
       }
-      currentPatchBuffersByCommandList_[commandListKey].push_back(i);
-      patchBufferInfos_[i].fenceInfo.waitingForExecute = true;
-      return i;
+    } else {
+      if (!largestNotFittingBuffer.has_value() ||
+          patchBufferInfos_[largestNotFittingBuffer.value()].size < patchBufferInfo.size) {
+        largestNotFittingBuffer = i;
+      }
     }
   }
 
-  addPatchBuffer(commandList);
-  unsigned newIndex = patchBufferPoolSize_ - 1;
-  currentPatchBuffersByCommandList_[commandListKey].push_back(newIndex);
-  patchBufferInfos_[newIndex].fenceInfo.waitingForExecute = true;
+  unsigned patchBufferIndex{};
+  if (smallestFittingBuffer.has_value()) {
+    patchBufferIndex = smallestFittingBuffer.value();
+  } else if (largestNotFittingBuffer.has_value()) {
+    patchBufferIndex = largestNotFittingBuffer.value();
+    Microsoft::WRL::ComPtr<ID3D12Device> device;
+    HRESULT hr = commandList->GetDevice(IID_PPV_ARGS(&device));
+    GITS_ASSERT(hr == S_OK);
+    createOrReplacePatchBufferObjects(device.Get(), patchBufferIndex,
+                                      size * patchBufferSizeMultiplier_);
+  } else {
+    addPatchBuffer(commandList, size * patchBufferSizeMultiplier_);
+    patchBufferIndex = patchBufferPoolSize_ - 1;
+  }
 
-  return newIndex;
+  currentPatchBuffersByCommandList_[commandListKey].push_back(patchBufferIndex);
+  patchBufferInfos_[patchBufferIndex].fenceInfo.waitingForExecute = true;
+  return patchBufferIndex;
 }
 
 unsigned GpuPatchLayer::getInstancesAoPPatchBufferIndex(unsigned commandListKey) {

@@ -63,7 +63,7 @@ void ExecuteIndirectShaderPatchService::patchArgumentBuffer(
   commandList->SetComputeRoot32BitConstant(8, patchOffsetsCount, 0);
   commandList->SetComputeRoot32BitConstant(9, raytracingPatchCount, 0);
 
-  commandList->Dispatch(1, 1, 1);
+  commandList->Dispatch((maxArgumentCount + 31) / 32, 1, 1);
 }
 
 void ExecuteIndirectShaderPatchService::initialize(ID3D12Device* device) {
@@ -171,57 +171,56 @@ cbuffer RaytracingPatchCount : register(b5)
 };
 
 
-[numthreads(1, 1, 1)]
+[numthreads(32, 1, 1)]
 void gits_patch(uint3 gId : SV_GroupID, uint3 dtId : SV_DispatchThreadID, 
                 uint3 gtId : SV_GroupThreadID, uint gi : SV_GroupIndex)
 {
+  uint argumentIndex = dtId.x;
+  if (argumentIndex >= maxArgumentCount || argumentIndex >= argumentCount) {
+      return;
+  }
+
   for (uint i = 0; i < patchOffsetsCount; ++i) {
     uint commandOffset = patchOffsets[i];
-    uint count = argumentCount;
-    if (count > maxArgumentCount) {
-      count = maxArgumentCount;
-    }
-    for (uint j = 0; j < count; ++j) {
-      uint bufferOffset = j * commandStride + commandOffset;
-      uint2 lowHigh = argumentBuffer.Load2(bufferOffset);
-      uint64_t captureAddress = lowHigh[1];
-      captureAddress <<= 32;
-      captureAddress += lowHigh[0];
+    uint bufferOffset = argumentIndex * commandStride + commandOffset;
+    uint2 lowHigh = argumentBuffer.Load2(bufferOffset);
+    uint64_t captureAddress = lowHigh[1];
+    captureAddress <<= 32;
+    captureAddress += lowHigh[0];
 
-      bool patched = false;
-      for (uint k = 0; k < raytracingPatchCount; ++k) {
-        RaytracingAddressMapping mapping = raytracingMappings[k];
-        if (captureAddress == mapping.captureAddress) {
-          uint2 lowHigh;
-          lowHigh[0] = mapping.playerAddress & 0x00000000FFFFFFFF;
-          lowHigh[1] = mapping.playerAddress >> 32;
-          argumentBuffer.Store2(bufferOffset, lowHigh);
-          patched = true;
-          break;
-        }
+    bool patched = false;
+    for (uint k = 0; k < raytracingPatchCount; ++k) {
+      RaytracingAddressMapping mapping = raytracingMappings[k];
+      if (captureAddress == mapping.captureAddress) {
+        uint2 lowHigh;
+        lowHigh[0] = mapping.playerAddress & 0x00000000FFFFFFFF;
+        lowHigh[1] = mapping.playerAddress >> 32;
+        argumentBuffer.Store2(bufferOffset, lowHigh);
+        patched = true;
+        break;
       }
-      if (!patched) {
-        int first = 0;
-        int last = gpuAddressCount - 1;
-        while (first <= last) {
-          int mid = first + (last - first) / 2;
-          GpuAddressMapping mapping = mappings[mid];
-          if (captureAddress >= mapping.captureStart && captureAddress <
-              mapping.captureStart + mapping.size) {
-            uint64_t offset = captureAddress - mapping.captureStart;
-            uint64_t playbackAddress = mapping.playerStart + offset;
+    }
+    if (!patched) {
+      int first = 0;
+      int last = gpuAddressCount - 1;
+      while (first <= last) {
+        int mid = first + (last - first) / 2;
+        GpuAddressMapping mapping = mappings[mid];
+        if (captureAddress >= mapping.captureStart && captureAddress <
+            mapping.captureStart + mapping.size) {
+          uint64_t offset = captureAddress - mapping.captureStart;
+          uint64_t playbackAddress = mapping.playerStart + offset;
 
-            uint2 lowHigh;
-            lowHigh[0] = playbackAddress & 0x00000000FFFFFFFF;
-            lowHigh[1] = playbackAddress >> 32;
-            argumentBuffer.Store2(bufferOffset, lowHigh);
+          uint2 lowHigh;
+          lowHigh[0] = playbackAddress & 0x00000000FFFFFFFF;
+          lowHigh[1] = playbackAddress >> 32;
+          argumentBuffer.Store2(bufferOffset, lowHigh);
 
-            break;
-          } else if (captureAddress >= mapping.captureStart + mapping.size) {
-            first = mid + 1;
-          } else {
-            last = mid - 1;
-          }
+          break;
+        } else if (captureAddress >= mapping.captureStart + mapping.size) {
+          first = mid + 1;
+        } else {
+          last = mid - 1;
         }
       }
     }
