@@ -29,13 +29,21 @@ namespace DirectX {
 void PlayerLayerManager::loadLayers(PlayerManager& playerManager, PluginService& pluginService) {
   auto& cfg = Configurator::Get().directx;
 
+  auto registerResourceCallback = [&playerManager](unsigned resourceKey, ID3D12Resource* resource) {
+    if (!resource) {
+      return;
+    }
+    playerManager.addObject(resourceKey, resource);
+    playerManager.getGpuAddressService().createResource(resourceKey, resource);
+  };
+
   // Load layers from LayerGroups
   traceLayerGroup_.loadLayers();
   subcaptureLayerGroup_.loadLayers();
   executionSerializationLayerGroup_.loadLayers();
   resourceDumpingLayerGroup_.loadLayers();
   skipCallsLayerGroup_.loadLayers();
-  portabilityLayerGroup_.loadLayers();
+  portabilityLayerGroup_.loadLayers(registerResourceCallback);
   addressPinningLayerGroup_.loadLayers();
 
   // Get layers from LayerGroups

@@ -908,6 +908,10 @@ Configuration:
                 Default: true
                 Description: Ends playback if any incompatibility is detected
                 LegacyPaths: ["DirectX.Playback.Portability.PortabilityAssertions"]
+              - Name: forcePlacedToCommittedResources
+                Type: bool
+                Default: false
+                Description: Force all placed resource creation calls to use committed resources instead                
               - Name: useStbImage
                 Type: bool
                 Default: false

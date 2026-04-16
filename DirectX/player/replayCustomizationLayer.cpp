@@ -364,7 +364,8 @@ void ReplayCustomizationLayer::post(WaitForFenceSignaledCommand& c) {
 }
 
 void ReplayCustomizationLayer::post(ID3D12DeviceCreateCommittedResourceCommand& c) {
-  if (c.skip || useAddressPinning_ && !isStateRestoreKey(c.ppvResource_.key)) {
+  if (c.skip || c.result_.value != S_OK ||
+      (useAddressPinning_ && !isStateRestoreKey(c.ppvResource_.key))) {
     return;
   }
 
@@ -373,7 +374,7 @@ void ReplayCustomizationLayer::post(ID3D12DeviceCreateCommittedResourceCommand& 
 }
 
 void ReplayCustomizationLayer::post(ID3D12Device4CreateCommittedResource1Command& c) {
-  if (c.skip || useAddressPinning_) {
+  if (c.skip || c.result_.value != S_OK || useAddressPinning_) {
     return;
   }
 
@@ -382,7 +383,7 @@ void ReplayCustomizationLayer::post(ID3D12Device4CreateCommittedResource1Command
 }
 
 void ReplayCustomizationLayer::post(ID3D12Device8CreateCommittedResource2Command& c) {
-  if (c.skip || useAddressPinning_) {
+  if (c.skip || c.result_.value != S_OK || useAddressPinning_) {
     return;
   }
 
@@ -391,7 +392,7 @@ void ReplayCustomizationLayer::post(ID3D12Device8CreateCommittedResource2Command
 }
 
 void ReplayCustomizationLayer::post(ID3D12Device10CreateCommittedResource3Command& c) {
-  if (c.skip || useAddressPinning_) {
+  if (c.skip || c.result_.value != S_OK || useAddressPinning_) {
     return;
   }
 
@@ -427,7 +428,7 @@ void ReplayCustomizationLayer::post(ID3D12Device10CreateReservedResource2Command
 }
 
 void ReplayCustomizationLayer::post(ID3D12DeviceCreatePlacedResourceCommand& c) {
-  if (c.skip || useAddressPinning_) {
+  if (c.skip || c.result_.value != S_OK || useAddressPinning_) {
     return;
   }
 
@@ -438,7 +439,7 @@ void ReplayCustomizationLayer::post(ID3D12DeviceCreatePlacedResourceCommand& c) 
 }
 
 void ReplayCustomizationLayer::post(ID3D12Device8CreatePlacedResource1Command& c) {
-  if (c.skip || useAddressPinning_) {
+  if (c.skip || c.result_.value != S_OK || useAddressPinning_) {
     return;
   }
 
@@ -449,7 +450,7 @@ void ReplayCustomizationLayer::post(ID3D12Device8CreatePlacedResource1Command& c
 }
 
 void ReplayCustomizationLayer::post(ID3D12Device10CreatePlacedResource2Command& c) {
-  if (c.skip || useAddressPinning_) {
+  if (c.skip || c.result_.value != S_OK || useAddressPinning_) {
     return;
   }
 

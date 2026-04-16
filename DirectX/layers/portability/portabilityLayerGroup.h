@@ -9,6 +9,7 @@
 #pragma once
 
 #include "layerGroup.h"
+#include "portabilityLayer.h"
 
 namespace gits {
 namespace DirectX {
@@ -19,6 +20,7 @@ public:
   ~PortabilityLayerGroup() override = default;
 
   void loadLayers() override;
+  void loadLayers(PortabilityLayer::ResourceRegistrationCallback registerResource);
 };
 
 } // namespace DirectX
