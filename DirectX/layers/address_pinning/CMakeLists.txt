@@ -10,8 +10,8 @@ add_library(DirectX_address_pinning STATIC)
 set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
 set(ROOT_SRC
-  ${SRC_DIR}/addressPinningFactory.h
-  ${SRC_DIR}/addressPinningFactory.cpp
+  ${SRC_DIR}/addressPinningLayerGroup.h
+  ${SRC_DIR}/addressPinningLayerGroup.cpp
 )
 source_group("" FILES ${ROOT_SRC})
 

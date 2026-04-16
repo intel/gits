@@ -10,8 +10,8 @@ add_library(DirectX_skip_calls STATIC)
 set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
 set(ROOT_SRC
-  ${SRC_DIR}/skipCallsFactory.h
-  ${SRC_DIR}/skipCallsFactory.cpp
+  ${SRC_DIR}/skipCallsLayerGroup.h
+  ${SRC_DIR}/skipCallsLayerGroup.cpp
 )
 source_group("" FILES ${ROOT_SRC})
 

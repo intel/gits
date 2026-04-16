@@ -6,23 +6,26 @@
 //
 // ===================== end_copyright_notice ==============================
 
-#include "traceFactory.h"
+#include "traceLayerGroup.h"
 #include "traceLayerAuto.h"
 #include "configurator.h"
 #include "streamHeader.h"
 #include "messageBus.h"
 #include "showExecutionLayer.h"
+#include "fastOStream.h"
 
 #include <fstream>
 #include <string>
 #include <filesystem>
 
-#include "fastOStream.h"
-
 namespace gits {
 namespace DirectX {
 
-TraceFactory::TraceFactory() {
+// Empty constructor and destructor needed due to the FastIO incomplete type in the header
+TraceLayerGroup::TraceLayerGroup() {}
+TraceLayerGroup::~TraceLayerGroup() {}
+
+void TraceLayerGroup::loadLayers() {
   std::filesystem::path outputTracePath = Configurator::Get().common.player.outputTracePath;
 
   if (!outputTracePath.empty() && !std::filesystem::exists(outputTracePath)) {
@@ -84,17 +87,16 @@ TraceFactory::TraceFactory() {
       }
     }
 
-    traceLayer_ = std::make_unique<TraceLayer>(*traceStreamPre_, *traceStream_, traceMutex_,
-                                               configDirectX.features.trace.flushMethod != "off");
+    addLayer(std::make_unique<TraceLayer>(*traceStreamPre_, *traceStream_, traceMutex_,
+                                          configDirectX.features.trace.flushMethod != "off"));
 
     if (configDirectX.features.trace.print.gpuExecution) {
       showExecutionStream_ =
           std::make_unique<FastOStringStream>(finalOutputPathExecution, flushMethod);
-      showExecutionLayer_ = std::make_unique<ShowExecutionLayer>(*showExecutionStream_);
+      addLayer(std::make_unique<ShowExecutionLayer>(*showExecutionStream_));
     }
   }
 
-  // Log messages with LogLevel::TRACE to trace files
   auto traceMsg = [this](const MessagePtr& m) {
     auto msg = std::dynamic_pointer_cast<LogMessage>(m);
     if (!msg || msg->getLevel() != LogLevel::TRACE) {
@@ -120,8 +122,6 @@ TraceFactory::TraceFactory() {
   msgBus.subscribe({PUBLISHER_PLUGIN, TOPIC_LOG},
                    [traceMsg](Topic t, const MessagePtr& m) { traceMsg(m); });
 }
-
-TraceFactory::~TraceFactory() {}
 
 } // namespace DirectX
 } // namespace gits

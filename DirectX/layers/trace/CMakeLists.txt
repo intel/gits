@@ -33,8 +33,8 @@ set(PRINT_SRC
 source_group("print" FILES ${PRINT_SRC})
 
 set(ROOT_SRC
-  ${SRC_DIR}/traceFactory.h
-  ${SRC_DIR}/traceFactory.cpp
+  ${SRC_DIR}/traceLayerGroup.h
+  ${SRC_DIR}/traceLayerGroup.cpp
   ${SRC_DIR}/fastOStream.h
   ${SRC_DIR}/fastOStream.cpp
 )

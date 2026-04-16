@@ -10,8 +10,8 @@ add_library(DirectX_execution_serialization STATIC)
 set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
 set(ROOT_SRC
-  ${SRC_DIR}/executionSerializationFactory.h
-  ${SRC_DIR}/executionSerializationFactory.cpp
+  ${SRC_DIR}/executionSerializationLayerGroup.h
+  ${SRC_DIR}/executionSerializationLayerGroup.cpp
   ${SRC_DIR}/executionSerializationLayerAuto.h
   ${SRC_DIR}/executionSerializationLayerAuto.cpp
   ${SRC_DIR}/executionSerializationLayerCustom.cpp

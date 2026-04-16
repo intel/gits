@@ -16,7 +16,7 @@
 namespace gits {
 namespace DirectX {
 
-AddressPinningStoreLayer::AddressPinningStoreLayer() : Layer("AddressPinningStoreLayer") {
+AddressPinningStoreLayer::AddressPinningStoreLayer() : Layer("AddressPinningStore") {
   if (Configurator::IsRecorder()) {
     gits::MessageBus::get().subscribe(
         {PUBLISHER_RECORDER, TOPIC_STREAM_SAVED},

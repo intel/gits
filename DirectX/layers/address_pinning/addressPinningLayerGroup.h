@@ -8,20 +8,17 @@
 
 #pragma once
 
-#include "layerAuto.h"
-
-#include <memory>
+#include "layerGroup.h"
 
 namespace gits {
 namespace DirectX {
 
-class AddressPinningFactory {
+class AddressPinningLayerGroup : public LayerGroup {
 public:
-  AddressPinningFactory();
-  std::unique_ptr<Layer> getAddressPinningLayer();
+  AddressPinningLayerGroup() = default;
+  ~AddressPinningLayerGroup() override = default;
 
-private:
-  std::unique_ptr<Layer> addressPinningLayer_;
+  void loadLayers() override;
 };
 
 } // namespace DirectX

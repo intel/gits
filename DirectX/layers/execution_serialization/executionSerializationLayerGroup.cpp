@@ -6,14 +6,15 @@
 //
 // ===================== end_copyright_notice ==============================
 
-#include "executionSerializationFactory.h"
+#include "executionSerializationLayerGroup.h"
 #include "log.h"
 #include "configurator.h"
+#include "executionSerializationLayerAuto.h"
 
 namespace gits {
 namespace DirectX {
 
-ExecutionSerializationFactory::ExecutionSerializationFactory() {
+void ExecutionSerializationLayerGroup::loadLayers() {
 
   if (!Configurator::Get().directx.features.subcapture.enabled ||
       !Configurator::Get().directx.features.subcapture.executionSerialization) {
@@ -34,7 +35,7 @@ ExecutionSerializationFactory::ExecutionSerializationFactory() {
   }
 
   recorder_ = std::make_unique<ExecutionSerializationRecorder>();
-  executionSerializationLayer_ = std::make_unique<ExecutionSerializationLayer>(*recorder_);
+  addLayer(std::make_unique<ExecutionSerializationLayer>(*recorder_));
 }
 
 } // namespace DirectX

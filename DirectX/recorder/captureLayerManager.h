@@ -10,10 +10,10 @@
 
 #include "layerAuto.h"
 #include "pluginService.h"
-#include "traceFactory.h"
-#include "resourceDumpingFactory.h"
-#include "portabilityFactory.h"
-#include "addressPinningFactory.h"
+#include "traceLayerGroup.h"
+#include "resourceDumpingLayerGroup.h"
+#include "portabilityLayerGroup.h"
+#include "addressPinningLayerGroup.h"
 #include "orderingRecorder.h"
 #include "gpuAddressService.h"
 
@@ -45,10 +45,10 @@ public:
   }
 
 private:
-  TraceFactory traceFactory_;
-  ResourceDumpingFactory resourceDumpingFactory_;
-  PortabilityFactory portabilityFactory_;
-  AddressPinningFactory addressPinningFactory_;
+  TraceLayerGroup traceLayerGroup_;
+  ResourceDumpingLayerGroup resourceDumpingLayerGroup_;
+  PortabilityLayerGroup portabilityLayerGroup_;
+  AddressPinningLayerGroup addressPinningLayerGroup_;
 
   std::vector<Layer*> preLayers_;
   std::vector<Layer*> postLayers_;

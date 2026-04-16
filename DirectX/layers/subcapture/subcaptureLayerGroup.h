@@ -8,23 +8,25 @@
 
 #pragma once
 
-#include "layerAuto.h"
+#include "layerGroup.h"
+#include "subcaptureRecorder.h"
+#include "subcaptureRange.h"
 
 #include <memory>
 
 namespace gits {
 namespace DirectX {
 
-class PortabilityFactory {
+class SubcaptureLayerGroup : public LayerGroup {
 public:
-  PortabilityFactory();
+  SubcaptureLayerGroup() = default;
+  ~SubcaptureLayerGroup() override = default;
 
-  std::unique_ptr<Layer> getPortabilityLayer() {
-    return std::move(portabilityLayer_);
-  }
+  void loadLayers() override;
 
 private:
-  std::unique_ptr<Layer> portabilityLayer_;
+  std::unique_ptr<SubcaptureRecorder> recorder_;
+  std::unique_ptr<SubcaptureRange> subcaptureRange_;
 };
 
 } // namespace DirectX

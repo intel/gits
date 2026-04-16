@@ -6,7 +6,7 @@
 //
 // ===================== end_copyright_notice ==============================
 
-#include "addressPinningFactory.h"
+#include "addressPinningLayerGroup.h"
 #include "configurationLib.h"
 
 #include "addressPinningUseLayer.h"
@@ -15,23 +15,17 @@
 namespace gits {
 namespace DirectX {
 
-AddressPinningFactory::AddressPinningFactory() {
+void AddressPinningLayerGroup::loadLayers() {
 
   if ((Configurator::IsRecorder() && Configurator::Get().common.recorder.enabled &&
        Configurator::Get().directx.recorder.storeAddressPinning) ||
       (Configurator::IsPlayer() &&
        Configurator::Get().directx.player.addressPinning == AddressPinningMode::STORE)) {
-    addressPinningLayer_ = std::make_unique<AddressPinningStoreLayer>();
+    addLayer(std::make_unique<AddressPinningStoreLayer>());
   } else if (Configurator::IsPlayer() &&
              Configurator::Get().directx.player.addressPinning == AddressPinningMode::USE) {
-    addressPinningLayer_ = std::make_unique<AddressPinningUseLayer>();
-  } else {
-    addressPinningLayer_ = nullptr;
+    addLayer(std::make_unique<AddressPinningUseLayer>());
   }
-}
-
-std::unique_ptr<Layer> AddressPinningFactory::getAddressPinningLayer() {
-  return std::move(addressPinningLayer_);
 }
 
 } // namespace DirectX

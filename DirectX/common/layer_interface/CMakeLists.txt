@@ -16,6 +16,7 @@ set(ALL_SRC
   ${SRC_DIR}/include/commandsAuto.h
   ${SRC_DIR}/include/commandsCustom.h
   ${SRC_DIR}/include/layerAuto.h
+  ${SRC_DIR}/include/layerGroup.h
   ${SRC_DIR}/include/command.h
   ${SRC_DIR}/include/arguments.h
   ${SRC_DIR}/arguments.cpp

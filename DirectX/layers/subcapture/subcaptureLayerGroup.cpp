@@ -6,7 +6,8 @@
 //
 // ===================== end_copyright_notice ==============================
 
-#include "subcaptureFactory.h"
+#include "subcaptureLayerGroup.h"
+#include "configurator.h"
 #include "stateTrackingLayer.h"
 #include "recordingLayerAuto.h"
 #include "commandPreservationLayer.h"
@@ -17,7 +18,7 @@
 namespace gits {
 namespace DirectX {
 
-SubcaptureFactory::SubcaptureFactory() {
+void SubcaptureLayerGroup::loadLayers() {
 
   if (!Configurator::Get().directx.features.subcapture.enabled ||
       Configurator::Get().directx.features.subcapture.executionSerialization) {
@@ -52,17 +53,16 @@ SubcaptureFactory::SubcaptureFactory() {
 
   if (trimmingMode) {
     recorder_ = std::make_unique<SubcaptureRecorder>();
-    recordingLayer_ = std::make_unique<RecordingLayer>(*recorder_, *subcaptureRange_);
+    addLayer(std::make_unique<RecordingLayer>(*recorder_, *subcaptureRange_));
   } else if (AnalyzerResults::isAnalysis()) {
     recorder_ = std::make_unique<SubcaptureRecorder>();
-    stateTrackingLayer_ = std::make_unique<StateTrackingLayer>(*recorder_, *subcaptureRange_);
-    recordingLayer_ = std::make_unique<RecordingLayer>(*recorder_, *subcaptureRange_);
-    commandPreservationLayer_ = std::make_unique<CommandPreservationLayer>();
+    addLayer(std::make_unique<StateTrackingLayer>(*recorder_, *subcaptureRange_));
+    addLayer(std::make_unique<RecordingLayer>(*recorder_, *subcaptureRange_));
+    addLayer(std::make_unique<CommandPreservationLayer>());
   } else {
     const_cast<gits::Configuration&>(Configurator::Get()).directx.features.subcapture.enabled =
         false;
-    AnalyzerLayer* analyzerLayer = new AnalyzerLayer(*subcaptureRange_);
-    analyzerLayer_.reset(analyzerLayer);
+    addLayer(std::make_unique<AnalyzerLayer>(*subcaptureRange_));
     LOG_INFO << "SUBCAPTURE ANALYSIS. RUN AGAIN FOR SUBCAPTURE RECORDING.";
   }
 }

@@ -7,14 +7,12 @@
 // ===================== end_copyright_notice ==============================
 
 #include "playerLayerManager.h"
+#include "configurator.h"
+#include "configurationLib.h"
 #include "replayCustomizationLayer.h"
-#include "stateTrackingLayer.h"
-#include "recordingLayerAuto.h"
 #include "gpuPatchLayer.h"
 #include "multithreadedObjectCreationLayer.h"
 #include "multithreadedObjectAwaitLayer.h"
-#include "portabilityLayer.h"
-#include "accelerationStructuresDumpLayer.h"
 #include "dstorage/directStorageLayer.h"
 #include "printStatusLayer.h"
 #include "dllOverrideUseLayer.h"
@@ -31,45 +29,55 @@ namespace DirectX {
 void PlayerLayerManager::loadLayers(PlayerManager& playerManager, PluginService& pluginService) {
   auto& cfg = Configurator::Get().directx;
 
-  // Create layers used by Player
+  // Load layers from LayerGroups
+  traceLayerGroup_.loadLayers();
+  subcaptureLayerGroup_.loadLayers();
+  executionSerializationLayerGroup_.loadLayers();
+  resourceDumpingLayerGroup_.loadLayers();
+  skipCallsLayerGroup_.loadLayers();
+  portabilityLayerGroup_.loadLayers();
+  addressPinningLayerGroup_.loadLayers();
+
+  // Get layers from LayerGroups
+  Layer* skipCallsOnConfigLayer = skipCallsLayerGroup_.getLayer("SkipCallsOnConfig");
+  Layer* skipCallsOnResultLayer = skipCallsLayerGroup_.getLayer("SkipCallsOnResult");
+  Layer* traceLayer = traceLayerGroup_.getLayer("Trace");
+  Layer* showExecutionLayer = traceLayerGroup_.getLayer("ShowExecution");
+  Layer* portabilityLayer = portabilityLayerGroup_.getLayer("Portability");
+  Layer* stateTrackingLayer = subcaptureLayerGroup_.getLayer("StateTracking");
+  Layer* recordingLayer = subcaptureLayerGroup_.getLayer("Recording");
+  Layer* commandPreservationLayer = subcaptureLayerGroup_.getLayer("CommandPreservation");
+  Layer* analyzerLayer = subcaptureLayerGroup_.getLayer("Analyzer");
+  Layer* executionSerializationLayer =
+      executionSerializationLayerGroup_.getLayer("ExecutionSerialization");
+  Layer* screenshotsLayer = resourceDumpingLayerGroup_.getLayer("Screenshots");
+  Layer* resourceDumpLayer = resourceDumpingLayerGroup_.getLayer("ResourceDump");
+  Layer* renderTargetsDumpLayer = resourceDumpingLayerGroup_.getLayer("RenderTargetsDump");
+  Layer* dispatchOutputsDumpLayer = resourceDumpingLayerGroup_.getLayer("DispatchOutputsDump");
+  Layer* accelerationStructuresDumpLayer =
+      resourceDumpingLayerGroup_.getLayer("AccelerationStructuresDump");
+  Layer* rootSignatureDumpLayer = resourceDumpingLayerGroup_.getLayer("RootSignatureDump");
+  Layer* addressPinningLayer = nullptr;
+  if (cfg.player.execute) {
+    addressPinningLayer = addressPinningLayerGroup_.getLayer("AddressPinningUse");
+    if (!addressPinningLayer) {
+      addressPinningLayer = addressPinningLayerGroup_.getLayer("AddressPinningStore");
+    }
+  }
+
+  // Create individual layers
   std::unique_ptr<Layer> replayCustomizationLayer;
   std::unique_ptr<Layer> gpuPatchLayer;
   std::unique_ptr<Layer> multithreadedObjectCreationLayer;
   std::unique_ptr<Layer> multithreadedObjectAwaitLayer;
-  std::unique_ptr<Layer> portabilityLayer = portabilityFactory_.getPortabilityLayer();
   std::unique_ptr<Layer> directStorageLayer;
-  std::unique_ptr<Layer> traceLayer = traceFactory_.getTraceLayer();
-  std::unique_ptr<Layer> showExecutionLayer = traceFactory_.getShowExecutionLayer();
   std::unique_ptr<Layer> debugInfoLayer;
   std::unique_ptr<Layer> debugHelperLayer;
   std::unique_ptr<Layer> logDxErrorLayer = std::make_unique<LogDxErrorLayer>();
-  std::unique_ptr<Layer> stateTrackingLayer = subcaptureFactory_.getStateTrackingLayer();
-  std::unique_ptr<Layer> recordingLayer = subcaptureFactory_.getRecordingLayer();
-  std::unique_ptr<Layer> commandPreservationLayer =
-      subcaptureFactory_.getCommandPreservationLayer();
-  std::unique_ptr<Layer> analyzerLayer = subcaptureFactory_.getAnalyzerOldLayer();
-  std::unique_ptr<Layer> executionSerializationLayer =
-      executionSerializationFactory_.getExecutionSerializationLayer();
-  std::unique_ptr<Layer> screenshotsLayer = resourceDumpingFactory_.getScreenshotsLayer();
-  std::unique_ptr<Layer> resourceDumpLayer = resourceDumpingFactory_.getResourceDumpLayer();
-  std::unique_ptr<Layer> renderTargetsDumpLayer =
-      resourceDumpingFactory_.getRenderTargetsDumpLayer();
-  std::unique_ptr<Layer> dispatchOutputsDumpLayer =
-      resourceDumpingFactory_.getDispatchOutputsDumpLayer();
-  std::unique_ptr<Layer> accelerationStructuresDumpLayer =
-      resourceDumpingFactory_.getAccelerationStructuresDumpLayer();
-  std::unique_ptr<Layer> rootSignatureDumpLayer =
-      resourceDumpingFactory_.getRootSignatureDumpLayer();
-  std::unique_ptr<Layer> skipCallsOnConfigLayer = skipCallsFactory_.getSkipCallsOnConfigLayer();
-  std::unique_ptr<Layer> skipCallsOnResultLayer = skipCallsFactory_.getSkipCallsOnResultLayer();
   std::unique_ptr<Layer> imGuiHUDLayer;
   std::unique_ptr<Layer> printStatusLayer = std::make_unique<PrintStatusLayer>();
-  std::unique_ptr<Layer> addressPinningLayer;
   std::unique_ptr<Layer> dllOverrideUseLayer;
   std::unique_ptr<Layer> ccodeLayer;
-  if (cfg.player.cCode.enabled) {
-    ccodeLayer = std::make_unique<CCodeLayer>();
-  }
 
   if (cfg.player.execute) {
     replayCustomizationLayer = std::make_unique<ReplayCustomizationLayer>(playerManager);
@@ -91,59 +99,61 @@ void PlayerLayerManager::loadLayers(PlayerManager& playerManager, PluginService&
     if (Configurator::IsHudEnabledForApi(ApiBool::DX)) {
       imGuiHUDLayer = std::make_unique<ImGuiHUDLayer>();
     }
-    addressPinningLayer = addressPinningFactory_.getAddressPinningLayer();
     dllOverrideUseLayer = std::make_unique<DllOverrideUseLayer>(playerManager);
+    if (cfg.player.cCode.enabled) {
+      ccodeLayer = std::make_unique<CCodeLayer>();
+    }
   }
 
   // Enable Pre layers
   // Insertion order determines execution order
-  auto enablePreLayer = [this](std::unique_ptr<Layer>& layer) {
+  auto enablePreLayer = [this](Layer* layer) {
     if (layer) {
-      preLayers_.push_back(layer.get());
+      preLayers_.push_back(layer);
     }
   };
   enablePreLayer(skipCallsOnConfigLayer);
   enablePreLayer(skipCallsOnResultLayer);
-  enablePreLayer(multithreadedObjectAwaitLayer);
-  enablePreLayer(debugHelperLayer);
+  enablePreLayer(multithreadedObjectAwaitLayer.get());
+  enablePreLayer(debugHelperLayer.get());
   enablePreLayer(traceLayer);
   enablePreLayer(portabilityLayer);
   enablePreLayer(commandPreservationLayer);
-  enablePreLayer(dllOverrideUseLayer);
+  enablePreLayer(dllOverrideUseLayer.get());
   enablePreLayer(stateTrackingLayer);
   enablePreLayer(executionSerializationLayer);
   enablePreLayer(analyzerLayer);
-  enablePreLayer(gpuPatchLayer);
+  enablePreLayer(gpuPatchLayer.get());
   enablePreLayer(addressPinningLayer);
-  enablePreLayer(replayCustomizationLayer);
+  enablePreLayer(replayCustomizationLayer.get());
   enablePreLayer(screenshotsLayer);
-  enablePreLayer(debugInfoLayer);
+  enablePreLayer(debugInfoLayer.get());
   enablePreLayer(recordingLayer);
-  enablePreLayer(logDxErrorLayer);
-  enablePreLayer(multithreadedObjectCreationLayer);
-  enablePreLayer(directStorageLayer);
+  enablePreLayer(logDxErrorLayer.get());
+  enablePreLayer(multithreadedObjectCreationLayer.get());
+  enablePreLayer(directStorageLayer.get());
   enablePreLayer(accelerationStructuresDumpLayer);
-  enablePreLayer(printStatusLayer);
-  enablePreLayer(imGuiHUDLayer);
-  enablePreLayer(ccodeLayer);
+  enablePreLayer(printStatusLayer.get());
+  enablePreLayer(imGuiHUDLayer.get());
+  enablePreLayer(ccodeLayer.get());
 
   // Enable Post layers
   // Insertion order determines execution order
-  auto enablePostLayer = [this](std::unique_ptr<Layer>& layer) {
+  auto enablePostLayer = [this](Layer* layer) {
     if (layer) {
-      postLayers_.push_back(layer.get());
+      postLayers_.push_back(layer);
     }
   };
-  enablePostLayer(debugInfoLayer);
+  enablePostLayer(debugInfoLayer.get());
   enablePostLayer(portabilityLayer);
-  enablePostLayer(logDxErrorLayer);
-  enablePostLayer(directStorageLayer);
+  enablePostLayer(logDxErrorLayer.get());
+  enablePostLayer(directStorageLayer.get());
   enablePostLayer(addressPinningLayer);
-  enablePostLayer(replayCustomizationLayer);
-  enablePostLayer(gpuPatchLayer);
+  enablePostLayer(replayCustomizationLayer.get());
+  enablePostLayer(gpuPatchLayer.get());
   enablePostLayer(traceLayer);
   enablePostLayer(showExecutionLayer);
-  enablePostLayer(debugHelperLayer);
+  enablePostLayer(debugHelperLayer.get());
   enablePostLayer(commandPreservationLayer);
   enablePostLayer(stateTrackingLayer);
   enablePostLayer(analyzerLayer);
@@ -155,23 +165,19 @@ void PlayerLayerManager::loadLayers(PlayerManager& playerManager, PluginService&
   enablePostLayer(rootSignatureDumpLayer);
   enablePostLayer(recordingLayer);
   enablePostLayer(executionSerializationLayer);
-  enablePostLayer(printStatusLayer);
-  enablePostLayer(imGuiHUDLayer);
-  enablePostLayer(ccodeLayer);
+  enablePostLayer(printStatusLayer.get());
+  enablePostLayer(imGuiHUDLayer.get());
+  enablePostLayer(ccodeLayer.get());
 
+  // Enable plugin layers
   for (const auto& plugin : pluginService.getPlugins()) {
     Layer* layer = static_cast<Layer*>(plugin.impl->getImpl());
-    // The enable[Pre|Post]Layer lambdas take unique_ptr<Layer>& instead of
-    // Layer* to avoid littering their each use with a .get() call. This means
-    // we can't use them here, so let's add those layers manually.
-    if (layer) {
-      preLayers_.push_back(layer);
-      postLayers_.push_back(layer);
-    }
+    enablePreLayer(layer);
+    enablePostLayer(layer);
   }
 
-  PLOGI << "PlayerManager: Initialized with " << preLayers_.size() << " pre-layers and "
-        << postLayers_.size() << " post-layers";
+  LOG_INFO << "PlayerManager: Initialized with " << preLayers_.size() << " pre-layers and "
+           << postLayers_.size() << " post-layers";
 
   // Let layersOwner_ take the ownership of layers
   auto retainLayer = [this](std::unique_ptr<Layer>&& layer) {
@@ -179,33 +185,16 @@ void PlayerLayerManager::loadLayers(PlayerManager& playerManager, PluginService&
       layersOwner_.push_back(std::move(layer));
     }
   };
-  retainLayer(std::move(skipCallsOnConfigLayer));
-  retainLayer(std::move(skipCallsOnResultLayer));
   retainLayer(std::move(replayCustomizationLayer));
-  retainLayer(std::move(portabilityLayer));
+  retainLayer(std::move(gpuPatchLayer));
   retainLayer(std::move(multithreadedObjectCreationLayer));
   retainLayer(std::move(multithreadedObjectAwaitLayer));
-  retainLayer(std::move(traceLayer));
-  retainLayer(std::move(showExecutionLayer));
   retainLayer(std::move(debugInfoLayer));
   retainLayer(std::move(debugHelperLayer));
   retainLayer(std::move(logDxErrorLayer));
-  retainLayer(std::move(stateTrackingLayer));
-  retainLayer(std::move(gpuPatchLayer));
-  retainLayer(std::move(recordingLayer));
-  retainLayer(std::move(commandPreservationLayer));
-  retainLayer(std::move(analyzerLayer));
-  retainLayer(std::move(executionSerializationLayer));
-  retainLayer(std::move(screenshotsLayer));
-  retainLayer(std::move(resourceDumpLayer));
-  retainLayer(std::move(renderTargetsDumpLayer));
-  retainLayer(std::move(dispatchOutputsDumpLayer));
-  retainLayer(std::move(accelerationStructuresDumpLayer));
-  retainLayer(std::move(rootSignatureDumpLayer));
   retainLayer(std::move(directStorageLayer));
   retainLayer(std::move(imGuiHUDLayer));
   retainLayer(std::move(printStatusLayer));
-  retainLayer(std::move(addressPinningLayer));
   retainLayer(std::move(dllOverrideUseLayer));
   retainLayer(std::move(ccodeLayer));
 }

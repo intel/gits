@@ -10,8 +10,8 @@ add_library(DirectX_portability STATIC)
 set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
 set(ALL_SRC
-  ${SRC_DIR}/portabilityFactory.h
-  ${SRC_DIR}/portabilityFactory.cpp
+  ${SRC_DIR}/portabilityLayerGroup.h
+  ${SRC_DIR}/portabilityLayerGroup.cpp
   ${SRC_DIR}/portabilityLayer.h
   ${SRC_DIR}/portabilityLayer.cpp
   ${SRC_DIR}/resourcePlacementCapture.h

@@ -6,7 +6,7 @@
 //
 // ===================== end_copyright_notice ==============================
 
-#include "resourceDumpingFactory.h"
+#include "resourceDumpingLayerGroup.h"
 #include "screenshotsLayer.h"
 #include "resourceDumpLayerAuto.h"
 #include "renderTargetsDumpLayer.h"
@@ -19,29 +19,29 @@
 namespace gits {
 namespace DirectX {
 
-ResourceDumpingFactory::ResourceDumpingFactory() {
+void ResourceDumpingLayerGroup::loadLayers() {
   if (Configurator::Get().directx.features.screenshots.enabled ||
       !Configurator::Get().common.player.captureFrames.empty()) {
-    screenshotsLayer_ = std::make_unique<ScreenshotsLayer>();
+    addLayer(std::make_unique<ScreenshotsLayer>());
   }
   if (Configurator::Get().directx.features.resourcesDump.enabled) {
-    resourceDumpLayer_ = std::make_unique<ResourceDumpLayer>();
+    addLayer(std::make_unique<ResourceDumpLayer>());
   }
   if (Configurator::Get().directx.features.renderTargetsDump.enabled) {
-    renderTargetsDumpLayer_ = std::make_unique<RenderTargetsDumpLayer>();
+    addLayer(std::make_unique<RenderTargetsDumpLayer>());
   }
   if (Configurator::Get().directx.features.dispatchOutputsDump.enabled) {
-    dispatchOutputsDumpLayer_ = std::make_unique<DispatchOutputsDumpLayer>();
+    addLayer(std::make_unique<DispatchOutputsDumpLayer>());
   }
   if (Configurator::Get().directx.features.raytracingDump.blases) {
     if (Configurator::Get().directx.player.debugLayer) {
-      accelerationStructuresDumpLayer_ = std::make_unique<AccelerationStructuresDumpLayer>();
+      addLayer(std::make_unique<AccelerationStructuresDumpLayer>());
     } else {
       LOG_ERROR << "Dumping acceleration structures demands directx debug layer turned on.";
     }
   }
   if (Configurator::Get().directx.features.rootSignatureDump.enabled) {
-    rootSignatureDumpLayer_ = std::make_unique<RootSignatureDumpLayer>();
+    addLayer(std::make_unique<RootSignatureDumpLayer>());
   }
 }
 

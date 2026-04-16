@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include "layerAuto.h"
+#include "layerGroup.h"
 
 #include <memory>
 #include <mutex>
@@ -19,31 +19,17 @@ namespace DirectX {
 class FastOStream;
 class FastOStringStream;
 
-/*
- * Encapsulates creation logic of tracing-related Layers.
- * Assembles file paths, creates output streams and decides which layers to create.
- */
-class TraceFactory {
+class TraceLayerGroup : public LayerGroup {
 public:
-  TraceFactory();
-  ~TraceFactory();
+  TraceLayerGroup();
+  ~TraceLayerGroup() override;
 
-  TraceFactory(const TraceFactory&) = delete;
-  TraceFactory& operator=(const TraceFactory&) = delete;
-
-  std::unique_ptr<Layer> getTraceLayer() {
-    return std::move(traceLayer_);
-  }
-  std::unique_ptr<Layer> getShowExecutionLayer() {
-    return std::move(showExecutionLayer_);
-  }
+  void loadLayers() override;
 
 private:
   std::unique_ptr<FastOStream> traceStream_;
   std::unique_ptr<FastOStream> traceStreamPre_;
   std::unique_ptr<FastOStringStream> showExecutionStream_;
-  std::unique_ptr<Layer> traceLayer_;
-  std::unique_ptr<Layer> showExecutionLayer_;
   std::mutex traceMutex_;
 };
 

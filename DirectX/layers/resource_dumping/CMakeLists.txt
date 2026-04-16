@@ -10,8 +10,8 @@ add_library(DirectX_resource_dumping STATIC)
 set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
 set(ROOT_SRC
-  ${SRC_DIR}/resourceDumpingFactory.h
-  ${SRC_DIR}/resourceDumpingFactory.cpp
+  ${SRC_DIR}/resourceDumpingLayerGroup.h
+  ${SRC_DIR}/resourceDumpingLayerGroup.cpp
 )
 source_group("" FILES ${ROOT_SRC})
 

@@ -8,26 +8,23 @@
 
 #pragma once
 
-#include "layerAuto.h"
+#include "layerGroup.h"
 #include "executionSerializationRecorder.h"
-#include "executionSerializationLayerAuto.h"
 
 #include <memory>
 
 namespace gits {
 namespace DirectX {
 
-class ExecutionSerializationFactory {
+class ExecutionSerializationLayerGroup : public LayerGroup {
 public:
-  ExecutionSerializationFactory();
+  ExecutionSerializationLayerGroup() = default;
+  ~ExecutionSerializationLayerGroup() override = default;
 
-  std::unique_ptr<Layer> getExecutionSerializationLayer() {
-    return std::move(executionSerializationLayer_);
-  }
+  void loadLayers() override;
 
 private:
   std::unique_ptr<ExecutionSerializationRecorder> recorder_;
-  std::unique_ptr<Layer> executionSerializationLayer_;
 };
 
 } // namespace DirectX

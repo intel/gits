@@ -6,22 +6,22 @@
 //
 // ===================== end_copyright_notice ==============================
 
-#include "portabilityFactory.h"
+#include "portabilityLayerGroup.h"
 #include "portabilityLayer.h"
 #include "configurationLib.h"
 
 namespace gits {
 namespace DirectX {
 
-PortabilityFactory::PortabilityFactory() {
+void PortabilityLayerGroup::loadLayers() {
   if (Configurator::IsRecorder()) {
-    portabilityLayer_ = std::make_unique<PortabilityLayer>();
+    addLayer(std::make_unique<PortabilityLayer>());
   } else if (Configurator::IsPlayer()) {
     auto& playerConfig = Configurator::Get().directx.player;
     if (playerConfig.execute && (playerConfig.portability.resourcePlacement != "none" ||
                                  playerConfig.portability.portabilityChecks ||
                                  playerConfig.portability.portabilityAssertions)) {
-      portabilityLayer_ = std::make_unique<PortabilityLayer>();
+      addLayer(std::make_unique<PortabilityLayer>());
     }
   }
 }

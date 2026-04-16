@@ -7,12 +7,13 @@
 // ===================== end_copyright_notice ==============================
 
 #include "captureLayerManager.h"
+#include "configurator.h"
+#include "configurationLib.h"
 #include "interceptorCustomizationLayer.h"
 #include "encoderLayerAuto.h"
 #include "captureCustomizationLayer.h"
 #include "captureSynchronizationLayer.h"
 #include "gpuPatchLayer.h"
-#include "portabilityLayer.h"
 #include "debugInfoLayerAuto.h"
 #include "globalSynchronizationLayerAuto.h"
 #include "logDxErrorLayerAuto.h"
@@ -28,19 +29,28 @@ void CaptureLayerManager::loadLayers(CaptureManager& captureManager,
                                      PluginService& pluginService) {
   auto& cfg = Configurator::Get();
 
+  // Load layers from LayerGroups
+  traceLayerGroup_.loadLayers();
+  resourceDumpingLayerGroup_.loadLayers();
+  portabilityLayerGroup_.loadLayers();
+  addressPinningLayerGroup_.loadLayers();
+
+  // Get layers from LayerGroups
+  Layer* traceLayer = traceLayerGroup_.getLayer("Trace");
+  Layer* screenshotsLayer = resourceDumpingLayerGroup_.getLayer("Screenshots");
+  Layer* portabilityLayer = nullptr;
+  Layer* addressPinningLayer = nullptr;
+
+  // Create individual layers
   std::unique_ptr<Layer> interceptorCustomizationLayer =
       std::make_unique<InterceptorCustomizationLayer>();
   std::unique_ptr<Layer> logDxErrorLayer = std::make_unique<LogDxErrorLayer>();
-  std::unique_ptr<Layer> traceLayer = traceFactory_.getTraceLayer();
-  std::unique_ptr<Layer> screenshotsLayer = resourceDumpingFactory_.getScreenshotsLayer();
   std::unique_ptr<Layer> debugInfoLayer;
   std::unique_ptr<Layer> captureCustomizationLayer;
   std::unique_ptr<Layer> captureSynchronizationLayer;
   std::unique_ptr<Layer> encoderLayer;
   std::unique_ptr<Layer> gpuPatchLayer;
-  std::unique_ptr<Layer> portabilityLayer;
   std::unique_ptr<Layer> imGuiHUDLayer;
-  std::unique_ptr<Layer> addressPinningLayer;
   std::unique_ptr<Layer> dllOverrideStoreLayer;
   std::unique_ptr<Layer> globalSynchronizationLayer;
 
@@ -58,8 +68,11 @@ void CaptureLayerManager::loadLayers(CaptureManager& captureManager,
     captureSynchronizationLayer = std::make_unique<CaptureSynchronizationLayer>(captureManager);
     encoderLayer = std::make_unique<EncoderLayer>(gitsRecorder);
     gpuPatchLayer = std::make_unique<GpuPatchLayer>(gpuAddressService);
-    portabilityLayer = portabilityFactory_.getPortabilityLayer();
-    addressPinningLayer = addressPinningFactory_.getAddressPinningLayer();
+    portabilityLayer = portabilityLayerGroup_.getLayer("Portability");
+    addressPinningLayer = addressPinningLayerGroup_.getLayer("AddressPinningStore");
+    if (!addressPinningLayer) {
+      addressPinningLayer = addressPinningLayerGroup_.getLayer("AddressPinningUse");
+    }
     dllOverrideStoreLayer = std::make_unique<DllOverrideStoreLayer>(captureManager, gitsRecorder);
   }
 
@@ -69,56 +82,52 @@ void CaptureLayerManager::loadLayers(CaptureManager& captureManager,
 
   // Enable Pre layers
   // Insertion order determines execution order
-  auto enablePreLayer = [this](std::unique_ptr<Layer>& layer) {
+  auto enablePreLayer = [this](Layer* layer) {
     if (layer) {
-      preLayers_.push_back(layer.get());
+      preLayers_.push_back(layer);
     }
   };
-  enablePreLayer(globalSynchronizationLayer); // keep as first
+  enablePreLayer(globalSynchronizationLayer.get());
   enablePreLayer(traceLayer);
-  enablePreLayer(interceptorCustomizationLayer);
-  enablePreLayer(dllOverrideStoreLayer);
-  enablePreLayer(captureCustomizationLayer);
-  enablePreLayer(debugInfoLayer);
-  enablePreLayer(captureSynchronizationLayer);
+  enablePreLayer(interceptorCustomizationLayer.get());
+  enablePreLayer(dllOverrideStoreLayer.get());
+  enablePreLayer(captureCustomizationLayer.get());
+  enablePreLayer(debugInfoLayer.get());
+  enablePreLayer(captureSynchronizationLayer.get());
   enablePreLayer(screenshotsLayer);
   enablePreLayer(portabilityLayer);
-  enablePreLayer(imGuiHUDLayer);
+  enablePreLayer(imGuiHUDLayer.get());
 
   // Enable Post layers
   // Insertion order determines execution order
-  auto enablePostLayer = [this](std::unique_ptr<Layer>& layer) {
+  auto enablePostLayer = [this](Layer* layer) {
     if (layer) {
-      postLayers_.push_back(layer.get());
-    }
-  };
-  enablePostLayer(logDxErrorLayer);
-  enablePostLayer(interceptorCustomizationLayer);
-  enablePostLayer(dllOverrideStoreLayer);
-  enablePostLayer(captureCustomizationLayer);
-  enablePostLayer(portabilityLayer);
-  enablePostLayer(debugInfoLayer);
-  enablePostLayer(encoderLayer);
-  enablePostLayer(gpuPatchLayer);
-  enablePostLayer(addressPinningLayer);
-  enablePostLayer(captureSynchronizationLayer);
-  enablePostLayer(traceLayer);
-  enablePostLayer(screenshotsLayer);
-  enablePostLayer(imGuiHUDLayer);
-
-  for (const auto& plugin : pluginService.getPlugins()) {
-    Layer* layer = static_cast<Layer*>(plugin.impl->getImpl());
-    // The enable[Pre|Post]Layer lambdas take unique_ptr<Layer>& instead of
-    // Layer* to avoid littering their each use with a .get() call. This means
-    // we can't use them here, so let's add those layers manually.
-    if (layer) {
-      preLayers_.push_back(layer);
       postLayers_.push_back(layer);
     }
+  };
+  enablePostLayer(logDxErrorLayer.get());
+  enablePostLayer(interceptorCustomizationLayer.get());
+  enablePostLayer(dllOverrideStoreLayer.get());
+  enablePostLayer(captureCustomizationLayer.get());
+  enablePostLayer(portabilityLayer);
+  enablePostLayer(debugInfoLayer.get());
+  enablePostLayer(encoderLayer.get());
+  enablePostLayer(gpuPatchLayer.get());
+  enablePostLayer(addressPinningLayer);
+  enablePostLayer(captureSynchronizationLayer.get());
+  enablePostLayer(traceLayer);
+  enablePostLayer(screenshotsLayer);
+  enablePostLayer(imGuiHUDLayer.get());
+
+  // Enable plugin layers
+  for (const auto& plugin : pluginService.getPlugins()) {
+    Layer* layer = static_cast<Layer*>(plugin.impl->getImpl());
+    enablePreLayer(layer);
+    enablePostLayer(layer);
   }
 
   // keep as last
-  enablePostLayer(globalSynchronizationLayer);
+  enablePostLayer(globalSynchronizationLayer.get());
 
   // Retain ownership of layers
   auto retainLayer = [this](std::unique_ptr<Layer>&& layer) {
@@ -131,13 +140,9 @@ void CaptureLayerManager::loadLayers(CaptureManager& captureManager,
   retainLayer(std::move(captureSynchronizationLayer));
   retainLayer(std::move(encoderLayer));
   retainLayer(std::move(gpuPatchLayer));
-  retainLayer(std::move(traceLayer));
   retainLayer(std::move(debugInfoLayer));
   retainLayer(std::move(logDxErrorLayer));
-  retainLayer(std::move(screenshotsLayer));
-  retainLayer(std::move(portabilityLayer));
   retainLayer(std::move(imGuiHUDLayer));
-  retainLayer(std::move(addressPinningLayer));
   retainLayer(std::move(dllOverrideStoreLayer));
   retainLayer(std::move(globalSynchronizationLayer));
 }

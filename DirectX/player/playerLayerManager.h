@@ -9,13 +9,13 @@
 #pragma once
 
 #include "layerAuto.h"
-#include "traceFactory.h"
-#include "subcaptureFactory.h"
-#include "executionSerializationFactory.h"
-#include "resourceDumpingFactory.h"
-#include "skipCallsFactory.h"
-#include "portabilityFactory.h"
-#include "addressPinningFactory.h"
+#include "traceLayerGroup.h"
+#include "subcaptureLayerGroup.h"
+#include "executionSerializationLayerGroup.h"
+#include "resourceDumpingLayerGroup.h"
+#include "skipCallsLayerGroup.h"
+#include "portabilityLayerGroup.h"
+#include "addressPinningLayerGroup.h"
 #include "pluginService.h"
 
 #include <vector>
@@ -43,13 +43,13 @@ public:
   }
 
 private:
-  TraceFactory traceFactory_;
-  SubcaptureFactory subcaptureFactory_;
-  ExecutionSerializationFactory executionSerializationFactory_;
-  ResourceDumpingFactory resourceDumpingFactory_;
-  SkipCallsFactory skipCallsFactory_;
-  PortabilityFactory portabilityFactory_;
-  AddressPinningFactory addressPinningFactory_;
+  TraceLayerGroup traceLayerGroup_;
+  SubcaptureLayerGroup subcaptureLayerGroup_;
+  ExecutionSerializationLayerGroup executionSerializationLayerGroup_;
+  ResourceDumpingLayerGroup resourceDumpingLayerGroup_;
+  SkipCallsLayerGroup skipCallsLayerGroup_;
+  PortabilityLayerGroup portabilityLayerGroup_;
+  AddressPinningLayerGroup addressPinningLayerGroup_;
 
   std::vector<Layer*> preLayers_;
   std::vector<Layer*> postLayers_;

@@ -16,7 +16,7 @@
 namespace gits {
 namespace DirectX {
 
-AddressPinningUseLayer::AddressPinningUseLayer() : Layer("AddressPinningUseLayer") {
+AddressPinningUseLayer::AddressPinningUseLayer() : Layer("AddressPinningUse") {
   readAddressRanges();
 }
 

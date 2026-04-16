@@ -10,8 +10,8 @@ add_library(DirectX_subcapture STATIC)
 set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
 set(ROOT_SRC
-  ${SRC_DIR}/subcaptureFactory.h
-  ${SRC_DIR}/subcaptureFactory.cpp
+  ${SRC_DIR}/subcaptureLayerGroup.h
+  ${SRC_DIR}/subcaptureLayerGroup.cpp
 )
 source_group("" FILES ${ROOT_SRC})
 
