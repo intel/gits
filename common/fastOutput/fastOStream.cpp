@@ -9,104 +9,110 @@
 #include "fastOStream.h"
 #include "log.h"
 #include "configurationLib.h"
-#include "ipc/common.h"
 #include <filesystem>
+#ifdef WIN32
 #include <Windows.h>
+#include "traceIpc/sharedCircularBuffer.h"
+#endif
 #include <thread>
 
 namespace gits {
-namespace DirectX {
 
-void FastOStringStream::open(const std::string& filePath,
+void FastOStringStream::Open(const std::string& filePath,
                              const FlushMethod flushMethod,
                              const size_t bufferCapacity) {
-  if (isOpen_) {
-    close();
+  if (m_IsOpen) {
+    Close();
   }
 
-  filePath_ = filePath;
-  flushMethod_ = flushMethod;
-  bufferCapacity_ = bufferCapacity;
-  forcedFlushThreshold_ = bufferCapacity_ * forcedFlushCapacityRatio;
+  m_FilePath = filePath;
+  m_FlushMethod = flushMethod;
+  m_BufferCapacity = bufferCapacity;
+  m_ForcedFlushThreshold = m_BufferCapacity * FORCED_FLUSH_CAPACITY_RATIO;
 
-  bufferStreamBuffer_.resize(bufferCapacity_);
+  m_BufferStreamBuffer.resize(m_BufferCapacity);
   if (flushMethod == FlushMethod::File) {
-    bufferStreamFile_.open(filePath_);
+    m_BufferStreamFile.open(m_FilePath);
   }
-  bufferStream_ = fast_io::obuffer_view(bufferStreamBuffer_);
+  m_BufferStream = fast_io::obuffer_view(m_BufferStreamBuffer);
 
-  isOpen_ = true;
+  m_IsOpen = true;
 }
 
-void FastOStringStream::close() {
-  isOpen_ = false;
+void FastOStringStream::Close() {
+  m_IsOpen = false;
 
-  flush();
-  bufferStream_.clear();
-  bufferStreamFile_.close();
-  bufferStreamBuffer_.clear();
-  filePath_.clear();
+  Flush();
+  m_BufferStream.clear();
+  m_BufferStreamFile.close();
+  m_BufferStreamBuffer.clear();
+  m_FilePath.clear();
 
-  if (flushInfo_.pBuf) {
-    UnmapViewOfFile(flushInfo_.pBuf);
+#ifdef WIN32
+  if (m_FlushInfo.Buf) {
+    UnmapViewOfFile(m_FlushInfo.Buf);
   }
-  if (flushInfo_.hMapFile) {
-    CloseHandle(flushInfo_.hMapFile);
+  if (m_FlushInfo.MapFile) {
+    CloseHandle(m_FlushInfo.MapFile);
   }
-  if (flushInfo_.hEvent) {
-    CloseHandle(flushInfo_.hEvent);
+  if (m_FlushInfo.Event) {
+    CloseHandle(m_FlushInfo.Event);
   }
-  flushInfo_.initialized = false;
+  m_FlushInfo.Initialized = false;
+#endif
 }
 
-void FastOStringStream::flush() {
-  if (flushMethod_ == FlushMethod::Ipc) {
-    initializeIpcFlush();
-    writeAll(reinterpret_cast<SharedCircularBuffer*>(flushInfo_.pBuf), bufferStream_.cbegin(),
-             bufferStream_.size());
-    bufferStream_.clear();
+void FastOStringStream::Flush() {
+  if (m_FlushMethod == FlushMethod::Ipc) {
+#ifdef WIN32
+    InitializeIpcFlush();
+    WriteAll(reinterpret_cast<SharedCircularBuffer*>(m_FlushInfo.Buf), m_BufferStream.cbegin(),
+             m_BufferStream.size());
+#endif
+    m_BufferStream.clear();
   } else {
-    bufferStreamFile_.write(bufferStream_.cbegin(), bufferStream_.size());
-    bufferStreamFile_.flush();
-    bufferStream_.clear();
+    m_BufferStreamFile.write(m_BufferStream.cbegin(), m_BufferStream.size());
+    m_BufferStreamFile.flush();
+    m_BufferStream.clear();
   }
 }
 
-void FastOStringStream::initializeIpcFlush() {
-  if (flushInfo_.initialized) {
+#ifdef WIN32
+void FastOStringStream::InitializeIpcFlush() {
+  if (m_FlushInfo.Initialized) {
     return;
   }
 
   auto executablePath =
       std::filesystem::path(Configurator::Get().common.recorder.installPath).parent_path() /
-      "UtilityTools" / "DirectX_trace_ipc.exe";
+      "UtilityTools" / "traceIpc.exe";
   if (!std::filesystem::exists(executablePath)) {
     std::vector<char> moduleFilename(MAX_PATH + 1, 0);
     GetModuleFileNameA(nullptr, moduleFilename.data(), moduleFilename.size());
 
     // Try to load the trace executable from the directory next to the player
     auto playerPath = std::filesystem::absolute(moduleFilename.data());
-    executablePath = std::filesystem::absolute(playerPath.parent_path() / "UtilityTools" /
-                                               "DirectX_trace_ipc.exe");
+    executablePath =
+        std::filesystem::absolute(playerPath.parent_path() / "UtilityTools" / "traceIpc.exe");
     if (!std::filesystem::exists(executablePath)) {
       // Try to load the trace executable from the player's parent directory
       executablePath = std::filesystem::absolute(playerPath.parent_path().parent_path() /
-                                                 "UtilityTools" / "DirectX_trace_ipc.exe");
+                                                 "UtilityTools" / "traceIpc.exe");
     }
   }
 
   if (!std::filesystem::exists(executablePath)) {
-    LOG_ERROR << "Could not locate the DirectX_trace_ipc.exe";
+    LOG_ERROR << "Could not locate the traceIpc.exe";
     return;
   }
 
   const std::string eventName =
-      eventBaseName + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
+      EVENT_BASE_NAME + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
   const std::string sharedMemoryName =
-      sharedMemoryBaseName +
+      SHARED_MEMORY_BASE_NAME +
       std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
   std::stringstream ss;
-  ss << '"' << executablePath.string() << "\" \"" << filePath_ << "\" " << GetCurrentProcessId()
+  ss << '"' << executablePath.string() << "\" \"" << m_FilePath << "\" " << GetCurrentProcessId()
      << " \"" << eventName << "\" \"" << sharedMemoryName << '"';
 
   STARTUPINFO si;
@@ -128,10 +134,10 @@ void FastOStringStream::initializeIpcFlush() {
     return;
   }
 
-  flushInfo_.hEvent = OpenEventA(SYNCHRONIZE, FALSE, eventName.c_str());
+  m_FlushInfo.Event = OpenEventA(SYNCHRONIZE, FALSE, eventName.c_str());
   size_t numOfTries = 300;
-  while (!flushInfo_.hEvent) {
-    flushInfo_.hEvent = OpenEventA(SYNCHRONIZE, FALSE, eventName.c_str());
+  while (!m_FlushInfo.Event) {
+    m_FlushInfo.Event = OpenEventA(SYNCHRONIZE, FALSE, eventName.c_str());
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
     if (--numOfTries == 0) {
       LOG_ERROR << "Could not open event: " << GetLastError();
@@ -140,34 +146,34 @@ void FastOStringStream::initializeIpcFlush() {
     }
   }
 
-  if (WaitForSingleObject(flushInfo_.hEvent, 3000) == WAIT_TIMEOUT) {
+  if (WaitForSingleObject(m_FlushInfo.Event, 3000) == WAIT_TIMEOUT) {
     LOG_ERROR << "WaitForSingleObject timed out";
     LOG_ERROR << "Ipc process failed to run, check ipc_log.txt";
     return;
   }
 
-  flushInfo_.hMapFile = OpenFileMappingA(FILE_MAP_ALL_ACCESS, FALSE, sharedMemoryName.c_str());
-  if (flushInfo_.hMapFile == nullptr) {
+  m_FlushInfo.MapFile = OpenFileMappingA(FILE_MAP_ALL_ACCESS, FALSE, sharedMemoryName.c_str());
+  if (m_FlushInfo.MapFile == nullptr) {
     LOG_ERROR << "Could not open file mapping object: " << GetLastError();
-    CloseHandle(flushInfo_.hEvent);
+    CloseHandle(m_FlushInfo.Event);
     return;
   }
 
-  flushInfo_.pBuf =
-      MapViewOfFile(flushInfo_.hMapFile, FILE_MAP_ALL_ACCESS, 0, 0, SHARED_MEMORY_SIZE);
-  if (flushInfo_.pBuf == nullptr) {
+  m_FlushInfo.Buf =
+      MapViewOfFile(m_FlushInfo.MapFile, FILE_MAP_ALL_ACCESS, 0, 0, SHARED_MEMORY_SIZE);
+  if (m_FlushInfo.Buf == nullptr) {
     LOG_ERROR << "Could not map view of file: " << GetLastError();
-    CloseHandle(flushInfo_.hMapFile);
-    CloseHandle(flushInfo_.hEvent);
+    CloseHandle(m_FlushInfo.MapFile);
+    CloseHandle(m_FlushInfo.Event);
     return;
   }
 
-  flushInfo_.initialized = true;
+  m_FlushInfo.Initialized = true;
+}
+#endif
+
+void FastOFileStream::Flush() {
+  fast_io::flush(m_FileStream);
 }
 
-void FastOFileStream::flush() {
-  fast_io::flush(fileStream_);
-}
-
-} // namespace DirectX
 } // namespace gits

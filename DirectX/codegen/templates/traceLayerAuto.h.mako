@@ -34,8 +34,8 @@ public:
         statePost_(mutex),
         streamPre_(streamPre),
         streamPost_(streamPost),
-        printPre_(streamPre.isOpen()),
-        printPost_(streamPost.isOpen()),
+        printPre_(streamPre.IsOpen()),
+        printPost_(streamPost.IsOpen()),
         flush_(flush) {}
 
   void pre(StateRestoreBeginCommand& command) override;

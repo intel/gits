@@ -95,7 +95,7 @@ void CommandPrinter::print(bool flush, bool newLine) {
   }
 
   if (flush) {
-    stream_.flush();
+    stream_.Flush();
   }
 }
 

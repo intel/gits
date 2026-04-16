@@ -107,10 +107,10 @@ void TraceLayerGroup::loadLayers() {
 
     auto* stream = traceStream_.get();
     auto* streamPre = traceStreamPre_.get();
-    if (stream && stream->isOpen()) {
+    if (stream && stream->IsOpen()) {
       *stream << msg->getText() << '\n';
     }
-    if (streamPre && streamPre->isOpen()) {
+    if (streamPre && streamPre->IsOpen()) {
       *streamPre << msg->getText() << '\n';
     }
   };

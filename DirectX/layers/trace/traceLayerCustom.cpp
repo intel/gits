@@ -32,7 +32,7 @@ void TraceLayer::pre(StateRestoreBeginCommand& command) {
     CommandPrinter p(streamPre_, statePre_, command, "StateRestoreBegin");
     streamPre_ << "STATE_RESTORE_BEGIN\n";
     if (flush_) {
-      streamPre_.flush();
+      streamPre_.Flush();
     }
   }
 }
@@ -42,7 +42,7 @@ void TraceLayer::post(StateRestoreBeginCommand& command) {
     CommandPrinter p(streamPost_, statePost_, command, "StateRestoreBegin");
     streamPost_ << "STATE_RESTORE_BEGIN\n";
     if (flush_) {
-      streamPost_.flush();
+      streamPost_.Flush();
     }
   }
 }
@@ -52,7 +52,7 @@ void TraceLayer::pre(StateRestoreEndCommand& command) {
     CommandPrinter p(streamPre_, statePre_, command, "StateRestoreEnd");
     streamPre_ << "STATE_RESTORE_END\n";
     if (flush_) {
-      streamPre_.flush();
+      streamPre_.Flush();
     }
   }
 }
@@ -62,7 +62,7 @@ void TraceLayer::post(StateRestoreEndCommand& command) {
     CommandPrinter p(streamPost_, statePost_, command, "StateRestoreEnd");
     streamPost_ << "STATE_RESTORE_END\n";
     if (flush_) {
-      streamPost_.flush();
+      streamPost_.Flush();
     }
   }
 }
@@ -71,7 +71,7 @@ void TraceLayer::pre(MarkerUInt64Command& command) {
   if (printPre_) {
     streamPre_ << "MARKER_" << uint64MarkerToStr(command.value_.value) << "\n";
     if (flush_) {
-      streamPre_.flush();
+      streamPre_.Flush();
     }
   }
 }
@@ -80,7 +80,7 @@ void TraceLayer::post(MarkerUInt64Command& command) {
   if (printPost_) {
     streamPost_ << "MARKER_" << uint64MarkerToStr(command.value_.value) << "\n";
     if (flush_) {
-      streamPost_.flush();
+      streamPost_.Flush();
     }
   }
 }

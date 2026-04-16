@@ -41,7 +41,7 @@ FastOStream& operator<<(FastOStream& stream, ShaderIdentifierArgument& arg) {
   stream << "ShaderIdentifier{";
   if (arg.value) {
     for (unsigned i = 0; i < D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES; ++i) {
-      printHexFull(stream, *(static_cast<uint8_t*>(arg.value) + i));
+      PrintHexFull(stream, *(static_cast<uint8_t*>(arg.value) + i));
     }
   } else {
     stream << "nullptr";
@@ -771,7 +771,7 @@ FastOStream& operator<<(FastOStream& stream, ArrayArgument<D3D12_RESIDENCY_PRIOR
       break;
     default:
       stream << "0x";
-      printHex(stream, static_cast<unsigned>(arg.value[i]));
+      PrintHex(stream, static_cast<unsigned>(arg.value[i]));
       break;
     }
   }
@@ -933,7 +933,7 @@ FastOStream& operator<<(FastOStream& stream,
   stream << "D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC{{";
   printObjectKey(stream, arg.destAccelerationStructureKey);
   stream << ", " << arg.destAccelerationStructureOffset << "} (0x";
-  printHex(stream, arg.value->DestAccelerationStructureData) << "), {";
+  PrintHex(stream, arg.value->DestAccelerationStructureData) << "), {";
 
   stream << arg.value->Inputs.Type << ", " << arg.value->Inputs.Flags << ", "
          << arg.value->Inputs.NumDescs << ", " << arg.value->Inputs.DescsLayout << ", ";
@@ -1465,7 +1465,7 @@ FastOStream& operator<<(
   stream << arg.value->version << ", {";
   printObjectKey(stream, arg.destAccelerationStructureKey);
   stream << ", " << arg.destAccelerationStructureOffset << "} (0x";
-  printHex(stream, arg.value->pDesc->destAccelerationStructureData) << "), {";
+  PrintHex(stream, arg.value->pDesc->destAccelerationStructureData) << "), {";
 
   stream << arg.value->pDesc->inputs.type << ", " << arg.value->pDesc->inputs.flags << ", "
          << arg.value->pDesc->inputs.numDescs << ", " << arg.value->pDesc->inputs.descsLayout
@@ -1698,7 +1698,7 @@ FastOStream& operator<<(
 
   printObjectKey(stream, arg.destOpacityMicromapArrayDataKey);
   stream << ", " << arg.destOpacityMicromapArrayDataOffset << "} (0x";
-  printHex(stream, arg.value->pDesc->destOpacityMicromapArrayData) << "), {";
+  PrintHex(stream, arg.value->pDesc->destOpacityMicromapArrayData) << "), {";
 
   stream << arg.value->pDesc->inputs.flags << ", " << arg.value->pDesc->inputs.numOMMUsageCounts
          << ", ";

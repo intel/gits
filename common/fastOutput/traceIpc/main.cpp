@@ -6,7 +6,7 @@
 //
 // ===================== end_copyright_notice ==============================
 
-#include "common.h"
+#include "sharedCircularBuffer.h"
 
 #include <windows.h>
 
@@ -23,7 +23,7 @@ std::ofstream& Log() {
   return logFile;
 }
 
-void waitForProcessToEnd(DWORD processID, std::atomic<bool>* ended) {
+void WaitForProcessToEnd(DWORD processID, std::atomic<bool>* ended) {
   while (true) {
     HANDLE hProcess =
         OpenProcess(SYNCHRONIZE | PROCESS_QUERY_LIMITED_INFORMATION, FALSE, processID);
@@ -43,10 +43,10 @@ void waitForProcessToEnd(DWORD processID, std::atomic<bool>* ended) {
   *ended = true;
 }
 
-int main2(const std::string& filepath,
-          const DWORD processId,
-          const std::string& eventName,
-          const std::string& sharedMemoryName) {
+int MainImpl(const std::string& filepath,
+             const DWORD processId,
+             const std::string& eventName,
+             const std::string& sharedMemoryName) {
   HANDLE hEvent = CreateEventA(nullptr, FALSE, FALSE, eventName.c_str());
   if (hEvent == nullptr) {
     Log() << "Could not create event: " << GetLastError() << std::endl;
@@ -71,14 +71,14 @@ int main2(const std::string& filepath,
 
   memset(pBuf, 0, SHARED_MEMORY_SIZE);
 
-  SharedCircularBuffer* sharedBuffer = (SharedCircularBuffer*)pBuf;
-  sharedBuffer->head = 1;
+  auto* sharedBuffer = static_cast<SharedCircularBuffer*>(pBuf);
+  sharedBuffer->Head = 1;
 
   std::ofstream file{filepath, std::ios::binary};
   std::vector<char> writeBuffer(SHARED_MEMORY_SIZE, '\0');
 
   std::atomic<bool> ended;
-  std::thread thread{waitForProcessToEnd, processId, &ended};
+  std::thread thread{WaitForProcessToEnd, processId, &ended};
 
   size_t numEmptyReads = 0;
   constexpr size_t numEmptyReadsToSleep = 1000;
@@ -86,7 +86,7 @@ int main2(const std::string& filepath,
   SetEvent(hEvent);
 
   while (true) {
-    size_t bytes = read(sharedBuffer, writeBuffer.data(), SHARED_MEMORY_SIZE);
+    size_t bytes = Read(sharedBuffer, writeBuffer.data(), SHARED_MEMORY_SIZE);
     if (bytes) {
       file.write(writeBuffer.data(), bytes);
       numEmptyReads = 0;
@@ -115,7 +115,7 @@ int main2(const std::string& filepath,
   return EXIT_SUCCESS;
 }
 
-void topmost_exception_handler(const char* funcName) {
+void TopmostExceptionHandler(const char* funcName) {
   char msg[1024];
 
   try {
@@ -160,8 +160,8 @@ int main(int argc, char* argv[]) {
     const std::string eventName = argv[3];
     const std::string sharedMemoryName = argv[4];
 
-    return main2(filepath, processId, eventName, sharedMemoryName);
+    return MainImpl(filepath, processId, eventName, sharedMemoryName);
   } catch (...) {
-    topmost_exception_handler("main");
+    TopmostExceptionHandler("main");
   }
 }

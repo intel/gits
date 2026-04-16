@@ -14,10 +14,11 @@
 #include <mutex>
 
 namespace gits {
-namespace DirectX {
 
 class FastOStream;
 class FastOStringStream;
+
+namespace DirectX {
 
 class TraceLayerGroup : public LayerGroup {
 public:
