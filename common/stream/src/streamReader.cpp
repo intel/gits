@@ -301,7 +301,7 @@ void StreamReader::NotifyRunDone(unsigned blockId, uint64_t blockAllocSize) {
       }
       if (m_WaitsForRunDone[i].BlockSize > maxBlockSize) {
         maxBlockSize = m_WaitsForRunDone[i].BlockSize;
-        maxBlockSize = i;
+        maxSizeThread = i;
       }
       ++waitingCount;
     }

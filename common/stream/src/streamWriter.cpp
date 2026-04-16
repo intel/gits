@@ -323,7 +323,7 @@ void StreamWriter::NotifyWriteDone(unsigned blockId, uint64_t blockAllocSize) {
       }
       if (m_WaitsForWriteDone[i].BlockSize > maxBlockSize) {
         maxBlockSize = m_WaitsForWriteDone[i].BlockSize;
-        maxBlockSize = i;
+        maxSizeThread = i;
       }
       ++waitingCount;
     }
