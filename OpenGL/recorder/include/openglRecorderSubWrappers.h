@@ -31,8 +31,6 @@
 #include "openglLibrary.h"
 #include "stateDynamic.h"
 #include "stateObjects.h"
-#include "stateObjects.h"
-#include "openglLibrary.h"
 #include "glFunctions.h"
 #include "openglState.h"
 
