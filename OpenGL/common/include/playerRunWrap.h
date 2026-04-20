@@ -199,24 +199,24 @@ inline void glLinkProgram_WRAPRUN(CGLProgram& program) {
     RestoreProgramBinary(*program, linkNo);
   } else {
     /*
-        *  We rebind all the attributes in the shader here. This has to be done
-        *  to correctly handle the case where application does not use explicit
-        *  attribute locations nor does it use glBindAttribLocation itself.
-        *  In such cases application has to depend on driver assigning locations
-        *  (idices?) implicitly (and discover these with glGetAttribLocation)
-        *  which means it does so in vendor dependent way.
-        *  Simple tests at time of writing this show, that nvidia assigns locations
-        *  in order of attributes delcaration, whereas intel in the order of
-        *  attributes usage. Because matching attributes locations to actual
-        *  data (glVertexAttribPointer index) is impossible in player (2 shaders
-        *  refering to the same data in recorder may get different implicit locations
-        *  for that attributes in player) we enforce recorder time locations
-        *  by rebinding all shader attributes.
-        *
-        *  This is superflous for cases where glBindAttribLocation is used by
-        *  the application, or explicit attrib location is used, but in no case
-        *  will invalidate the stream.
-        */
+     *  We rebind all the attributes in the shader here. This has to be done
+     *  to correctly handle the case where application does not use explicit
+     *  attribute locations nor does it use glBindAttribLocation itself.
+     *  In such cases application has to depend on driver assigning locations
+     *  (indices?) implicitly (and discover these with glGetAttribLocation)
+     *  which means it does so in vendor dependent way.
+     *  Simple tests at time of writing this show, that Nvidia assigns locations
+     *  in order of attributes declaration, whereas Intel in the order of
+     *  attributes usage. Because matching attribute locations to actual
+     *  data (glVertexAttribPointer index) is impossible in player (2 shaders
+     *  referring to the same data in recorder may get different implicit locations
+     *  for that attributes in player) we enforce recorder time locations
+     *  by rebinding all shader attributes.
+     *
+     *  This is superfluous for cases where glBindAttribLocation is used by
+     *  the application, or explicit attrib location is used, but in no case
+     *  will invalidate the stream.
+     */
 
     drv.gl.glLinkProgram(*program);
 
