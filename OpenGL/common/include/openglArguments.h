@@ -1277,10 +1277,15 @@ public:
 //*************************** CShaderSource ********************************
 
 class CShaderSource : public CArgumentFileText {
+  // Shader parts are stored in one file, each part terminated by `\0`. This makes it possible to
+  // separate the full shader source back into its original parts. Storing a shader in one file
+  // makes it easier to edit it for debug purposes. Separating it back into original parts allows us
+  // to submit it to the driver the same way the application did. This is important to preserve
+  // shader hashes and to let the driver recognize particular shaders for optimization purposes.
+
   static unsigned _shaderSourceIdx;
   static unsigned _shaderProgramIdx;
   static unsigned _programStringIdx;
-  const char* text_cstr;
 
 public:
   enum ShaderType {
@@ -1288,7 +1293,7 @@ public:
     SHADER_PROGRAM,
     PROGRAM_STRING
   };
-  CShaderSource() : text_cstr(nullptr) {}
+  CShaderSource() {}
   CShaderSource(GLuint shaderObj,
                 GLsizei count,
                 const GLchar* const* string,
@@ -1297,32 +1302,14 @@ public:
   CShaderSource(
       const GLchar* string, GLsizei length, ShaderType shaderType, GLenum target, GLenum format);
   CShaderSource(GLsizei count, const GLchar* const* string, ShaderType shaderType);
+
+  void Read(CBinIStream& stream) override;
+
   std::string GetShaderFileName() const {
     return FileName();
   }
 
-  const char** Value();
-
-  struct PtrConverter {
-  private:
-    const char** _ptr;
-
-  public:
-    explicit PtrConverter(const char** ptr) : _ptr(ptr) {}
-    operator const char*() const {
-      return *_ptr;
-    }
-    operator const char**() const {
-      return _ptr;
-    }
-    operator const void*() const {
-      return *_ptr;
-    }
-  };
-
-  PtrConverter operator*() {
-    return PtrConverter(Value());
-  }
+  std::vector<const GLchar*> Value() const;
 
 private:
   std::string GetFileName(ShaderType shaderType, GLenum target, GLenum format, GLuint shaderObj);

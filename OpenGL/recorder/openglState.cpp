@@ -44,6 +44,7 @@
 #include <cstring>
 #include <memory>
 #include <iomanip>
+#include <limits>
 
 /* ********************************** S T A T E ******************************** */
 
@@ -4447,20 +4448,18 @@ void gits::OpenGL::CVariableGLSLInfo::CreateShader(CScheduler& scheduler,
                                                    GLuint shaderID) {
   scheduler.Register(new CglCreateShader(shaderID, shader.track.type));
 
-  std::stringstream shaderSource(shader.track.source);
-  std::vector<std::string> dataContainer;
-  std::string line;
-  while (std::getline(shaderSource, line)) {
-    dataContainer.push_back(line);
-  }
+  // shader.track.source owns the full source string. Don't copy it, simply keep pointers to every
+  // part. Separating parts with \0 naturally causes them to be null-terminated.
+  const std::string& shaderSource = shader.track.source;
+  assert(shaderSource.find('\0') != std::string::npos &&
+         "Tracked shader source parts should be null-terminated");
+  // Can't use `const GLchar* const` because C++ forbids containers of const elements.
+  std::vector<const char*> shaderParts = SplitShaderIntoParts(shaderSource);
 
-  std::vector<const char*> pointerContainer;
-  for (auto& data : dataContainer) {
-    pointerContainer.push_back(data.c_str());
-  }
-  if (int(pointerContainer.size()) > 0) {
-    scheduler.Register(
-        new CglShaderSource(shaderID, int(pointerContainer.size()), &pointerContainer[0], nullptr));
+  if (!shaderParts.empty()) {
+    assert(shaderParts.size() <= std::numeric_limits<GLsizei>::max());
+    const GLsizei partCount = static_cast<GLsizei>(shaderParts.size());
+    scheduler.Register(new CglShaderSource(shaderID, partCount, shaderParts.data(), nullptr));
     if (shader.track.compiled) {
       scheduler.Register(new CglCompileShader(shaderID));
     }

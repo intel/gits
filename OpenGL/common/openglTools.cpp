@@ -6,7 +6,6 @@
 //
 // ===================== end_copyright_notice ==============================
 
-#include <algorithm>
 #include "openglDrivers.h"
 #if defined GITS_PLATFORM_WINDOWS
 #include <windows.h>
@@ -18,20 +17,25 @@
 #include "openglTools.h"
 #include "openglEnums.h"
 #include "gits.h"
+#include "exception.h"
 #include "stateDynamic.h"
 #include "openglLibrary.h"
 #include "log.h"
 #include "timer.h"
 #include "pragmas.h"
 #include "openglCommon.h"
-#include <cassert>
 #include "ptblLibrary.h"
 #include "ptbl_wglLibrary.h"
 #include "ptbl_glxLibrary.h"
 #include "ptbl_eglLibrary.h"
 #include "windowContextState.h"
 #include "windowing.h"
+
+#include <algorithm>
+#include <cassert>
 #include <filesystem>
+#include <string>
+#include <vector>
 
 namespace gits {
 namespace OpenGL {
@@ -2040,6 +2044,38 @@ std::string ToStr<PIXELFORMATDESCRIPTOR>(const PIXELFORMATDESCRIPTOR& pfd) {
   return std::move(oss).str();
 }
 
+std::vector<const char*> SplitShaderIntoParts(const std::string& shaderSource) {
+  std::vector<const char*> shaderParts;
+  const char* const begin = shaderSource.data();
+  const char* const end = begin + shaderSource.size();
+  for (const char* p = begin; p < end;) {
+    const char* const nullPos = std::find(p, end, '\0');
+    if (nullPos == end) {
+      LOG_ERROR << "Shader source is not null-terminated. If you manually edited shaders, "
+                   "ensure each source part ends with a null character. If not, this is a bug.";
+      throw EOperationFailed(EXCEPTION_MESSAGE);
+    }
+    shaderParts.push_back(p);
+    p = nullPos + 1;
+  }
+  return shaderParts;
+}
+
+std::string ConcatenateShaderFromParts(const GLchar* const* string,
+                                       GLsizei count,
+                                       const GLint* length) {
+  std::string shaderSource;
+  for (GLsizei i = 0; i < count; ++i) {
+    if (length == nullptr || length[i] < 0) {
+      shaderSource.append(string[i]);
+    } else {
+      shaderSource.append(string[i], length[i]);
+    }
+    shaderSource += '\0';
+  }
+  return shaderSource;
+}
+
 std::string GetCurrentProgramShaderText(GLenum shtype) {
   GLuint program = SD().GetCurrentContextStateData().Bindings().GLSLProgram();
   if (program == 0) {
@@ -2056,16 +2092,19 @@ std::string GetCurrentProgramShaderText(GLenum shtype) {
       return "";
     }
   }
-  auto programPtr = SD().GetCurrentSharedStateData().GLSLPrograms().Get(program);
+  const auto programPtr = SD().GetCurrentSharedStateData().GLSLPrograms().Get(program);
   if (programPtr == nullptr) {
     return "";
   }
-  auto& linked_shaders = programPtr->Data().track.linkedShaders;
+  const auto& linked_shaders = programPtr->Data().track.linkedShaders;
 
   if (SD().GetCurrentSharedStateData().GLSLPrograms().Get(program)->Data().track.linked) {
     for (auto& linked_shader : linked_shaders) {
       if (linked_shader.second.track.type == shtype) {
-        return linked_shader.second.track.source;
+        // Shader source is stored with \0 between parts, but here we need them gone.
+        std::string source = linked_shader.second.track.source;
+        source.erase(std::remove(source.begin(), source.end(), '\0'), source.cend());
+        return source;
       }
     }
   }
@@ -2075,7 +2114,10 @@ std::string GetCurrentProgramShaderText(GLenum shtype) {
 std::string GetShaderSource(GLint name) {
   CGLSLShaderStateObj* shader = SD().GetCurrentSharedStateData().GLSLShaders().Get(name);
   if (shader) {
-    return shader->Data().track.source;
+    // Shader source is stored with \0 between parts, but here we need them gone.
+    std::string source = shader->Data().track.source;
+    source.erase(std::remove(source.begin(), source.end(), '\0'), source.cend());
+    return source;
   }
   return "";
 }

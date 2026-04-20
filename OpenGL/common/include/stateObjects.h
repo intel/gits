@@ -338,7 +338,7 @@ struct CGLSLShaderStateData {
     GLuint name;
     GLenum type;
     bool compiled;
-    std::string source;
+    std::string source; // Concatenated shader source code with '\0' added after each part.
     std::string shader_name;
     int uniqueSource; // unique number is assigned during source load
     bool markedToDelete;

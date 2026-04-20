@@ -21,6 +21,8 @@
 #include "ptblLibrary.h"
 #include "playerRunWrapConditions.h"
 
+#include <limits>
+
 namespace gits {
 namespace OpenGL {
 
@@ -53,7 +55,10 @@ inline void glProgramStringARB_WRAPRUN(CGLenum& target,
                                        CGLenum& format,
                                        CGLsizei& len,
                                        CShaderSource& string) {
-  drv.gl.glProgramStringARB(*target, *format, (GLsizei)string.Text().size(), *string);
+  auto shaderParts = string.Value();
+  GITS_ASSERT(shaderParts.size() == 1,
+              "Shader source for glProgramStringARB must be in one piece.");
+  drv.gl.glProgramStringARB(*target, *format, strlen(shaderParts[0]), shaderParts[0]);
   if (log::ShouldLog(LogLevel::TRACE)) {
     std::string file_name = string.GetShaderFileName();
     LOG_TRACE_RAW << "code: " << file_name << "  ";
@@ -601,8 +606,11 @@ inline void glShaderSource_WRAPRUN(CGLProgram& shader,
                                    CGLsizei& count,
                                    CShaderSource& string,
                                    CGLintptrZero& length) {
-  drv.gl.glShaderSource(*shader, *count, *string, *length);
-  glShaderSource_SD(*shader, *count, *string, *length);
+  auto shaderParts = string.Value();
+  assert(shaderParts.size() <= std::numeric_limits<GLsizei>::max());
+  const GLsizei partCount = static_cast<GLsizei>(shaderParts.size());
+  drv.gl.glShaderSource(*shader, partCount, shaderParts.data(), nullptr);
+  glShaderSource_SD(*shader, partCount, shaderParts.data(), nullptr);
   if (log::ShouldLog(LogLevel::TRACE)) {
     std::string file_name = string.GetShaderFileName();
     LOG_TRACE_RAW << "code: " << file_name << "  ";
@@ -615,8 +623,11 @@ inline void glShaderSourceARB_WRAPRUN(CGLProgram& shaderObj,
                                       CGLsizei& count,
                                       CShaderSource& string,
                                       CGLintptrZero& length) {
-  drv.gl.glShaderSourceARB(*shaderObj, *count, *string, *length);
-  glShaderSource_SD(*shaderObj, *count, *string, *length);
+  auto shaderParts = string.Value();
+  assert(shaderParts.size() <= std::numeric_limits<GLsizei>::max());
+  const GLsizei partCount = static_cast<GLsizei>(shaderParts.size());
+  drv.gl.glShaderSourceARB(*shaderObj, partCount, shaderParts.data(), nullptr);
+  glShaderSource_SD(*shaderObj, partCount, shaderParts.data(), nullptr);
   if (log::ShouldLog(LogLevel::TRACE)) {
     std::string file_name = string.GetShaderFileName();
     LOG_TRACE_RAW << "code: " << file_name << "  ";
@@ -630,8 +641,11 @@ inline void glCreateShaderProgramv_WRAPRUN(CGLProgram& return_value,
                                            CGLenum& type,
                                            CGLsizei& count,
                                            CShaderSource& strings) {
-  return_value.Assign(drv.gl.glCreateShaderProgramv(*type, 1, *strings));
-  glCreateShaderProgramv_SD(*return_value, *type, 1, *strings);
+  auto shaderParts = strings.Value();
+  assert(shaderParts.size() <= std::numeric_limits<GLsizei>::max());
+  const GLsizei partCount = static_cast<GLsizei>(shaderParts.size());
+  return_value.Assign(drv.gl.glCreateShaderProgramv(*type, partCount, shaderParts.data()));
+  glCreateShaderProgramv_SD(*return_value, *type, partCount, shaderParts.data());
   if (log::ShouldLog(LogLevel::TRACE)) {
     std::string file_name = strings.GetShaderFileName();
     LOG_TRACE_RAW << "code: " << file_name << "  ";
@@ -641,8 +655,11 @@ inline void glCreateShaderProgramvEXT_WRAPRUN(CGLProgram& return_value,
                                               CGLenum& type,
                                               CGLsizei& count,
                                               CShaderSource& strings) {
-  return_value.Assign(drv.gl.glCreateShaderProgramvEXT(*type, 1, *strings));
-  glCreateShaderProgramv_SD(*return_value, *type, 1, *strings);
+  auto shaderParts = strings.Value();
+  assert(shaderParts.size() <= std::numeric_limits<GLsizei>::max());
+  const GLsizei partCount = static_cast<GLsizei>(shaderParts.size());
+  return_value.Assign(drv.gl.glCreateShaderProgramvEXT(*type, partCount, shaderParts.data()));
+  glCreateShaderProgramv_SD(*return_value, *type, partCount, shaderParts.data());
   if (log::ShouldLog(LogLevel::TRACE)) {
     std::string file_name = strings.GetShaderFileName();
     LOG_TRACE_RAW << "code: " << file_name << "  ";

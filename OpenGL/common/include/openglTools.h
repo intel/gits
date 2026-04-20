@@ -65,6 +65,12 @@ GLint BoundTexture(GLenum target);
 GLenum MapAccessBitFieldToEnum(GLbitfield access);
 GLbitfield MapAccessEnumToBitField(GLenum access);
 
+// Concatenate shader source parts, appending \0 to each, so we can separate them later.
+std::string ConcatenateShaderFromParts(const GLchar* const* string,
+                                       GLsizei count,
+                                       const GLint* length);
+// Get pointers to parts of a concatenated shader source. (Each part must be null-terminated!)
+std::vector<const char*> SplitShaderIntoParts(const std::string& shaderSource);
 std::string GetCurrentProgramShaderText(GLenum shtype);
 std::string GetShaderSource(GLint name);
 void GetUniformArraySizeAndOffset(

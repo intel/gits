@@ -21,8 +21,13 @@
 #include "clientArrays.h"
 #include "eglArguments.h"
 #include "openglLibrary.h"
+#include "openglTools.h"
 #include "stateDynamic.h"
 #include "stateObjects.h"
+
+#include <algorithm>
+#include <string>
+#include <vector>
 
 namespace gits {
 namespace OpenGL {
@@ -2525,20 +2530,12 @@ inline void glShaderSource_SD(GLuint shader,
                               GLboolean recording = 0 /*= false*/) {
   if (Configurator::IsRecorder() || log::ShouldLog(LogLevel::TRACEV) ||
       Configurator::Get().common.shared.useEvents) {
-    // build source string
-    std::stringstream str;
-    for (int i = 0; i < count; ++i) {
-      if (length == 0 || length[i] < 0) {
-        str << std::string(string[i]);
-      } else {
-        str << std::string(string[i], string[i] + length[i]);
-      }
-    }
-    std::string sourceString = str.str();
-    // drop '13' resulting from untranslated newlines
-    sourceString.erase(std::remove(sourceString.begin(), sourceString.end(), 13),
-                       sourceString.end());
-    SD().GetCurrentSharedStateData().GLSLShaders().Get(shader)->Source(sourceString);
+    // Concatenate shader source parts, appending \0 to each, so we can separate them later.
+    std::string shaderSource = ConcatenateShaderFromParts(string, count, length);
+    // Drop '\r' resulting from untranslated newlines.
+    shaderSource.erase(std::remove(shaderSource.begin(), shaderSource.end(), '\r'),
+                       shaderSource.cend());
+    SD().GetCurrentSharedStateData().GLSLShaders().Get(shader)->Source(shaderSource);
   }
 }
 
@@ -2646,17 +2643,17 @@ inline void glCreateShaderProgramv_SD(GLuint return_value,
                                       GLboolean recording = 0 /*= false*/) {
   if (Configurator::IsRecorder() || log::ShouldLog(LogLevel::TRACEV) ||
       Configurator::Get().common.shared.useEvents) {
-    CGLSLShaderStateObj tmpShader(0, type);
     // This shader data will be attached to shader as linked but deleted though
     // unique name will be generated in state restore. This is why here we can
     // assign name 0;
-    // build source string
-    std::stringstream str;
-    for (int i = 0; i < count; ++i) {
-      str << std::string(strings[i]);
-    }
-    std::string sourceString = str.str();
-    tmpShader.Source(sourceString);
+    CGLSLShaderStateObj tmpShader(0, type);
+
+    // Concatenate shader source parts, appending \0 to each, so we can separate them later.
+    std::string shaderSource = ConcatenateShaderFromParts(strings, count, nullptr);
+    // Drop '\r' resulting from untranslated newlines.
+    shaderSource.erase(std::remove(shaderSource.begin(), shaderSource.end(), '\r'),
+                       shaderSource.cend());
+    tmpShader.Source(shaderSource);
     tmpShader.Compile();
 
     SD().GetCurrentSharedStateData().GLSLPrograms().Add(CGLSLProgramStateObj(return_value));
