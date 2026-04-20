@@ -24,17 +24,15 @@
 #include "openglDrivers.h"
 #include "stateDynamic.h"
 #include "mapping.h"
-
-#include <set>
-#include <unordered_map>
-#include <vector>
-
 #include "streams.h"
 #include "gits.h"
 #include "tools.h"
 
-#include <string>
+#include <set>
 #include <stdexcept>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
 namespace gits {
 /**

@@ -13,26 +13,28 @@
 *
 */
 
-#include "mapping.h"
-#include "streams.h"
-#include "openglLibrary.h"
-#include "stateDynamic.h"
-#include "gits.h"
-#include "exception.h"
-#include "log.h"
-#include "openglDrivers.h"
+#include "openglArguments.h"
+
 #include "buffer.h"
-#include "platform.h"
+#include "exception.h"
+#include "gits.h"
 #include "glxArguments.h"
-#include <limits>
-#include <cstring>
+#include "log.h"
+#include "mapping.h"
+#include "openglDrivers.h"
+#include "openglLibrary.h"
+#include "platform.h"
+#include "stateDynamic.h"
+#include "streams.h"
+
 #include <algorithm>
+#include <cstring>
 #include <iomanip>
 #include <iostream>
+#include <limits>
 #include <map>
 #include <set>
 #include <sstream>
-#include <iomanip>
 
 /* *********************************** E N U M ********************************* */
 
