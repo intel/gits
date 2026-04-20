@@ -139,11 +139,11 @@ public:
   CArgumentFileText() {}
   CArgumentFileText(const std::string& fileName, const std::string& text);
   CArgumentFileText(const char* fileName, const char* text, unsigned length);
-  virtual const char* Name() const {
+  virtual const char* Name() const override {
     return _fileName.c_str();
   }
-  virtual void Write(CBinOStream& stream) const;
-  virtual void Read(CBinIStream& stream);
+  virtual void Write(CBinOStream& stream) const override;
+  virtual void Read(CBinIStream& stream) override;
 
   const std::string& FileName() const {
     return _fileName;
