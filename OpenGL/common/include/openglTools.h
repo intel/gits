@@ -13,18 +13,22 @@
   with the OpenGL driver. Utility that captures frame buffer content are one such example.
 */
 
+#include "argument.h"
+#include "log.h"
+#include "openglTypes.h"
 #include "timer.h"
+#include "tools.h"
 
-#include <string>
 #include <deque>
 #include <filesystem>
-#include <utility>
+#include <map>
+#include <memory>
 #include <optional>
-
-#include "openglTypes.h"
-#include "tools.h"
-#include "log.h"
-#include "argument.h"
+#include <sstream>
+#include <string>
+#include <type_traits>
+#include <utility>
+#include <vector>
 
 namespace gits {
 namespace OpenGL {

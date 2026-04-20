@@ -13,38 +13,39 @@
  *
  */
 
+#include "openglState.h"
+
+#include "gits.h"
+#include "log.h"
+#include "openglFunction.h"
+#include "openglLibrary.h"
+#include "openglTools.h"
+#include "scheduler.h"
+#include "stateDynamic.h"
+#include "streams.h"
+#include "tools.h"
+#include "windowContextState.h"
+
+#include "glFunctions.h"
+#include "gitsFunctions.h"
+#include "eglFunctions.h"
+#include "glxFunctions.h"
+#include "wglFunctions.h"
+
 #include "platform.h"
 #ifdef GITS_PLATFORM_WINDOWS
 #include <windows.h>
 #endif
 
-#include "openglLibrary.h"
-#include "stateDynamic.h"
-#include "openglState.h"
-#include "openglFunction.h"
-#include "gits.h"
-#include "scheduler.h"
-#include "streams.h"
-#include "log.h"
-#include "tools.h"
-#include "windowContextState.h"
-
-#include "wglFunctions.h"
-#include "eglFunctions.h"
-#include "glxFunctions.h"
-#include "openglTools.h"
-#include "gitsFunctions.h"
-#include "glFunctions.h"
-
-#include <iostream>
 #include <algorithm>
 #include <cmath>
-#include <fstream>
-#include <sstream>
 #include <cstring>
-#include <memory>
+#include <fstream>
 #include <iomanip>
+#include <iostream>
 #include <limits>
+#include <memory>
+#include <sstream>
 
 /* ********************************** S T A T E ******************************** */
 

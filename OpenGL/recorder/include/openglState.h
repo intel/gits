@@ -15,16 +15,21 @@
 
 #pragma once
 
-#include "state.h"
-#include "platform.h"
-#include "tools.h"
 #include "exception.h"
+#include "openglTypes.h"
+#include "platform.h"
+#include "resource_manager.h"
+#include "scheduler.h"
+#include "state.h"
+#include "stateDynamic.h"
+#include "stateObjects.h"
+#include "tools.h"
 
+#include <array>
 #include <map>
 #include <set>
-#include <vector>
 #include <string>
-#include <array>
+#include <vector>
 
 namespace gits {
 namespace OpenGL {

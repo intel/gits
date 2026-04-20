@@ -14,14 +14,15 @@
 */
 
 #include "stateTracking.h"
-#include "stateObjects.h"
-#include "openglLibrary.h"
-#include "stateDynamic.h"
-#include "gits.h"
+
 #include "exception.h"
+#include "gits.h"
 #include "log.h"
-#include "streams.h"
+#include "openglLibrary.h"
 #include "platform.h"
+#include "stateDynamic.h"
+#include "stateObjects.h"
+#include "streams.h"
 
 #include <memory>
 

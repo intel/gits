@@ -15,11 +15,11 @@
 
 #pragma once
 
+#include "clientArrays.h"
+#include "eglArguments.h"
 #include "gits.h"
 #include "log.h"
 #include "openglFunction.h"
-#include "clientArrays.h"
-#include "eglArguments.h"
 #include "openglLibrary.h"
 #include "openglTools.h"
 #include "stateDynamic.h"

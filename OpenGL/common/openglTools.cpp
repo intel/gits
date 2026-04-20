@@ -6,6 +6,8 @@
 //
 // ===================== end_copyright_notice ==============================
 
+#include "openglTools.h"
+
 #include "openglDrivers.h"
 #if defined GITS_PLATFORM_WINDOWS
 #include <windows.h>
@@ -14,26 +16,27 @@
 #include <X11/Xlib.h>
 #endif
 
-#include "openglTools.h"
-#include "openglEnums.h"
-#include "gits.h"
 #include "exception.h"
-#include "stateDynamic.h"
-#include "openglLibrary.h"
+#include "gits.h"
 #include "log.h"
-#include "timer.h"
-#include "pragmas.h"
 #include "openglCommon.h"
+#include "openglEnums.h"
+#include "openglLibrary.h"
+#include "pragmas.h"
 #include "ptblLibrary.h"
-#include "ptbl_wglLibrary.h"
-#include "ptbl_glxLibrary.h"
 #include "ptbl_eglLibrary.h"
+#include "ptbl_glxLibrary.h"
+#include "ptbl_wglLibrary.h"
+#include "stateDynamic.h"
+#include "timer.h"
 #include "windowContextState.h"
 #include "windowing.h"
 
 #include <algorithm>
 #include <cassert>
 #include <filesystem>
+#include <map>
+#include <memory>
 #include <string>
 #include <vector>
 

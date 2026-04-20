@@ -17,10 +17,11 @@
 
 #include "gits.h"
 #include "openglFunction.h"
-#include "stateTracking.h"
-#include "ptblLibrary.h"
 #include "playerRunWrapConditions.h"
+#include "ptblLibrary.h"
+#include "stateTracking.h"
 
+#include <cstring>
 #include <limits>
 
 namespace gits {
