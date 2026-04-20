@@ -81,7 +81,7 @@ gits::CArgumentFileText::CArgumentFileText(const char* fileName, const char* tex
 
 void gits::CArgumentFileText::init(const char* fileName, const char* text, unsigned length) {
   if (_fileName.find('/') == std::string::npos && _fileName.find('\\') == std::string::npos) {
-    throw std::runtime_error("CArgumentFileText file has to be contained in direcotry, given:" +
+    throw std::runtime_error("CArgumentFileText file has to be contained in directory, given:" +
                              _fileName);
   }
 
@@ -138,7 +138,7 @@ void gits::CArgumentFileText::LoadTextFromFile() {
     _text.assign(std::istreambuf_iterator<char>(textStream), std::istreambuf_iterator<char>());
   } else {
     // Try with zip archive if the file is not found.
-    // We will search in zip archive named the same as top level direcotry of file we search
+    // We will search in zip archive named the same as top level directory of file we search
     // with appended .zip to it.
     auto slash = _fileName.find("/");
     if (slash != 0 && slash != std::string::npos) {
