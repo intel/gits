@@ -23,20 +23,24 @@
 -- Enums
 ---------------------------------------------------------------------------------------------------
 -- GL Defines
-GL_TIME_ELAPSED   = 0x88BF
-GL_QUERY_RESULT   = 0x8866
-GL_POINTS         = 0x0000
-GL_LINES          = 0x0001
-GL_LINE_LOOP      = 0x0002
-GL_LINE_STRIP     = 0x0003
-GL_TRIANGLES      = 0x0004
-GL_TRIANGLE_STRIP = 0x0005
-GL_TRIANGLE_FAN   = 0x0006
-GL_QUADS          = 0x0007
-GL_QUAD_STRIP     = 0x0008
-GL_POLYGON        = 0x0009
-GL_PATCHES        = 0x000E
-GL_SAMPLES        = 0x80A9
+GL_TIME_ELAPSED               = 0x88BF
+GL_QUERY_RESULT               = 0x8866
+GL_POINTS                     = 0x0000
+GL_LINES                      = 0x0001
+GL_LINE_LOOP                  = 0x0002
+GL_LINE_STRIP                 = 0x0003
+GL_TRIANGLES                  = 0x0004
+GL_TRIANGLE_STRIP             = 0x0005
+GL_TRIANGLE_FAN               = 0x0006
+GL_QUADS                      = 0x0007
+GL_QUAD_STRIP                 = 0x0008
+GL_POLYGON                    = 0x0009
+GL_LINES_ADJACENCY            = 0x000A
+GL_LINE_STRIP_ADJACENCY       = 0x000B
+GL_TRIANGLES_ADJACENCY        = 0x000C
+GL_TRIANGLE_STRIP_ADJACENCY   = 0x000D
+GL_PATCHES                    = 0x000E
+GL_SAMPLES                    = 0x80A9
 
 -- API
 WGL_API = 1
@@ -264,6 +268,14 @@ function modeString(mode)
     return "GL_QUAD_STRIP"
   elseif(mode == GL_POLYGON) then
     return "GL_POLYGON"
+  elseif(mode == GL_LINES_ADJACENCY) then
+    return "GL_LINES_ADJACENCY"
+  elseif(mode == GL_LINE_STRIP_ADJACENCY) then
+    return "GL_LINE_STRIP_ADJACENCY"
+  elseif(mode == GL_TRIANGLES_ADJACENCY) then
+    return "GL_TRIANGLES_ADJACENCY"
+  elseif(mode == GL_TRIANGLE_STRIP_ADJACENCY) then
+    return "GL_TRIANGLE_STRIP_ADJACENCY"
   elseif(mode == GL_PATCHES) then
     return "GL_PATCHES"
   else
