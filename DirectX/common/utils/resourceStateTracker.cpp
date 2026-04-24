@@ -8,6 +8,7 @@
 
 #include "resourceStateTracker.h"
 #include "resourceSizeUtils.h"
+#include "resourceStateEnhanced.h"
 #include "log.h"
 
 namespace gits {
@@ -62,6 +63,12 @@ void ResourceStateTracker::ResourceBarrier(ID3D12GraphicsCommandList* commandLis
       } else {
         states = &it->second;
       }
+    } else {
+      auto it = m_ResourceStates.find(resourceKeys[i]);
+      if (it == m_ResourceStates.end()) {
+        continue;
+      }
+      states = &it->second;
     }
 
     if (barriers[i].Type == D3D12_RESOURCE_BARRIER_TYPE_TRANSITION) {
@@ -93,33 +100,46 @@ void ResourceStateTracker::ResourceBarrier(ID3D12GraphicsCommandList* commandLis
   ResourceStatesByKey* resourceStatesByCommandList =
       commandList ? &m_ResourceStatesByCommandList[commandList] : nullptr;
 
-  for (unsigned i = 0; i < barriersNum; ++i) {
-    if (!resourceKeys[i]) {
-      continue;
-    }
+  auto getResourceStates = [&](unsigned resourceKey) {
     ResourceStates* states{};
     if (resourceStatesByCommandList) {
-      auto it = resourceStatesByCommandList->find(resourceKeys[i]);
+      auto it = resourceStatesByCommandList->find(resourceKey);
       if (it == resourceStatesByCommandList->end()) {
-        it = m_ResourceStates.find(resourceKeys[i]);
-        if (it == m_ResourceStates.end()) {
-          continue;
+        it = m_ResourceStates.find(resourceKey);
+        if (it != m_ResourceStates.end()) {
+          states = &resourceStatesByCommandList->insert(std::make_pair(resourceKey, it->second))
+                        .first->second;
         }
-        states = &resourceStatesByCommandList->insert(std::make_pair(resourceKeys[i], it->second))
-                      .first->second;
       } else {
         states = &it->second;
       }
+    } else {
+      auto it = m_ResourceStates.find(resourceKey);
+      if (it != m_ResourceStates.end()) {
+        states = &it->second;
+      }
     }
+    return states;
+  };
 
+  unsigned resourceKeyIndex = 0;
+  for (unsigned i = 0; i < barriersNum; ++i) {
     if (barriers[i].Type == D3D12_BARRIER_TYPE_BUFFER) {
-      for (unsigned j = 0; j < barriers[i].NumBarriers; ++j) {
+      for (unsigned j = 0; j < barriers[i].NumBarriers; ++j, ++resourceKeyIndex) {
+        ResourceStates* states = getResourceStates(resourceKeys[resourceKeyIndex]);
+        if (!states) {
+          continue;
+        }
         const D3D12_BUFFER_BARRIER& barrier = barriers[i].pBufferBarriers[j];
         states->SubresourceStates[0].Sync = barrier.SyncAfter;
         states->SubresourceStates[0].Access = barrier.AccessAfter;
       }
     } else if (barriers[i].Type == D3D12_BARRIER_TYPE_TEXTURE) {
-      for (unsigned j = 0; j < barriers[i].NumBarriers; ++j) {
+      for (unsigned j = 0; j < barriers[i].NumBarriers; ++j, ++resourceKeyIndex) {
+        ResourceStates* states = getResourceStates(resourceKeys[resourceKeyIndex]);
+        if (!states) {
+          continue;
+        }
         const D3D12_TEXTURE_BARRIER& barrier = barriers[i].pTextureBarriers[j];
         const D3D12_BARRIER_SUBRESOURCE_RANGE& range = barrier.Subresources;
         if (range.NumMipLevels == 0) {
@@ -139,15 +159,17 @@ void ResourceStateTracker::ResourceBarrier(ID3D12GraphicsCommandList* commandLis
             states->SubresourceStates[range.IndexOrFirstMipLevel].Enhanced = true;
           }
         } else {
+          D3D12_RESOURCE_DESC desc = barrier.pResource->GetDesc();
+          unsigned arraySize =
+              desc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE3D ? 1 : desc.DepthOrArraySize;
           for (unsigned planeSlice = range.FirstPlane;
                planeSlice < range.FirstPlane + range.NumPlanes; ++planeSlice) {
             for (unsigned arraySlice = range.FirstArraySlice;
                  arraySlice < range.FirstArraySlice + range.NumArraySlices; ++arraySlice) {
               for (unsigned mipLevel = range.IndexOrFirstMipLevel;
                    mipLevel < range.IndexOrFirstMipLevel + range.NumMipLevels; ++mipLevel) {
-                unsigned subresourceIndex =
-                    mipLevel + (arraySlice * range.NumMipLevels) +
-                    (planeSlice * range.NumMipLevels * range.NumArraySlices);
+                unsigned subresourceIndex = mipLevel + (arraySlice * desc.MipLevels) +
+                                            (planeSlice * desc.MipLevels * arraySize);
                 states->SubresourceStates[subresourceIndex].Layout = barrier.LayoutAfter;
                 states->SubresourceStates[subresourceIndex].Sync = barrier.SyncAfter;
                 states->SubresourceStates[subresourceIndex].Access = barrier.AccessAfter;
@@ -225,7 +247,8 @@ BarrierState GetAdjustedCurrentState(ResourceStateTracker& stateTracker,
         barrierState.State = expectedState;
       }
     } else {
-      GITS_ASSERT(false, "Not implemented.");
+      barrierState.Access = ResourceStateEnhanced::GetAccess(expectedState);
+      barrierState.Sync = ResourceStateEnhanced::GetSync(expectedState);
     }
   } else {
     if (!barrierState.Enhanced) {

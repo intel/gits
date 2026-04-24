@@ -119,14 +119,17 @@ void ResourceStateTrackingService::ResourceBarrier(std::vector<D3D12_TEXTURE_BAR
         states.SubresourceStates[range.IndexOrFirstMipLevel].Enhanced = true;
       }
     } else {
+      D3D12_RESOURCE_DESC desc = barriers[i].pResource->GetDesc();
+      unsigned arraySize =
+          desc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE3D ? 1 : desc.DepthOrArraySize;
       for (unsigned planeSlice = range.FirstPlane; planeSlice < range.FirstPlane + range.NumPlanes;
            ++planeSlice) {
         for (unsigned arraySlice = range.FirstArraySlice;
              arraySlice < range.FirstArraySlice + range.NumArraySlices; ++arraySlice) {
           for (unsigned mipLevel = range.IndexOrFirstMipLevel;
                mipLevel < range.IndexOrFirstMipLevel + range.NumMipLevels; ++mipLevel) {
-            unsigned subresourceIndex = mipLevel + (arraySlice * range.NumMipLevels) +
-                                        (planeSlice * range.NumMipLevels * range.NumArraySlices);
+            unsigned subresourceIndex = mipLevel + (arraySlice * desc.MipLevels) +
+                                        (planeSlice * desc.MipLevels * arraySize);
             states.SubresourceStates[subresourceIndex].Layout = barriers[i].LayoutAfter;
             states.SubresourceStates[subresourceIndex].Enhanced = true;
           }

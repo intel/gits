@@ -24,10 +24,9 @@ public:
   void SetState(D3D12_RESOURCE_STATES state);
   void RevertState();
 
-private:
-  D3D12_BARRIER_SYNC GetSync(D3D12_RESOURCE_STATES state);
-  D3D12_BARRIER_ACCESS GetAccess(D3D12_RESOURCE_STATES state);
-  D3D12_BARRIER_LAYOUT GetLayout(D3D12_RESOURCE_STATES state);
+  static D3D12_BARRIER_SYNC GetSync(D3D12_RESOURCE_STATES state);
+  static D3D12_BARRIER_ACCESS GetAccess(D3D12_RESOURCE_STATES state);
+  static D3D12_BARRIER_LAYOUT GetLayout(D3D12_RESOURCE_STATES state);
 
 private:
   ID3D12GraphicsCommandList* m_CommandList;
