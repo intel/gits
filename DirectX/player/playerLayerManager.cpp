@@ -97,8 +97,7 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
     if (cfg.player.debugLayer) {
       debugInfoLayer = std::make_unique<DebugInfoLayer>();
     }
-    if (cfg.player.multithreadedShaderCompilation && !cfg.features.subcapture.enabled &&
-        !cfg.player.cCode.enabled) {
+    if (playerManager.MultithreadedShaderCompilation()) {
       multithreadedObjectCreationLayer =
           std::make_unique<MultithreadedObjectCreationLayer>(playerManager);
       multithreadedObjectAwaitLayer =

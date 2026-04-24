@@ -60,8 +60,6 @@ void SubcaptureLayerGroup::LoadLayers() {
     AddLayer(std::make_unique<RecordingLayer>(*m_Recorder, *m_SubcaptureRange));
     AddLayer(std::make_unique<CommandPreservationLayer>());
   } else {
-    const_cast<gits::Configuration&>(Configurator::Get()).directx.features.subcapture.enabled =
-        false;
     AddLayer(std::make_unique<AnalyzerLayer>(*m_SubcaptureRange));
     LOG_INFO << "SUBCAPTURE ANALYSIS. RUN AGAIN FOR SUBCAPTURE RECORDING.";
   }
