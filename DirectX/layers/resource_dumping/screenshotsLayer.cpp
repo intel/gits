@@ -93,11 +93,11 @@ void ScreenshotsLayer::Pre(IDXGISwapChain1Present1Command& c) {
   }
 }
 
-void ScreenshotsLayer::SwapChainCreate(unsigned swapChainKey, IUnknown* m_CommandQueue) {
-  ID3D12CommandQueue* commandQueue{};
-  HRESULT hr = m_CommandQueue->QueryInterface(IID_PPV_ARGS(&commandQueue));
+void ScreenshotsLayer::SwapChainCreate(unsigned swapChainKey, IUnknown* commandQueue) {
+  Microsoft::WRL::ComPtr<ID3D12CommandQueue> d3d12CommandQueue;
+  HRESULT hr = commandQueue->QueryInterface(IID_PPV_ARGS(&d3d12CommandQueue));
   GITS_ASSERT(hr == S_OK);
-  m_ScreenshotDump[swapChainKey].reset(new ScreenshotDump(commandQueue));
+  m_ScreenshotDump[swapChainKey].reset(new ScreenshotDump(d3d12CommandQueue.Get()));
 }
 
 void ScreenshotsLayer::SwapChainPresent(unsigned swapChainKey, IDXGISwapChain* swapChain) {
