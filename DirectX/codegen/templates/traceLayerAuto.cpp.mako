@@ -25,33 +25,33 @@ custom = [
 <%
 params = []
 for param in function.params:
-    s = 'p.addArgument(command.' + param.name + '_);'
+    s = 'p.addArgument(command.m_' + param.name + ');'
     params.append(s)
 is_result = False if function.ret.is_void else True
 %>
-void TraceLayer::pre(${function.name}Command& command) {
-  if (printPre_) {
-    CommandPrinter p(streamPre_, statePre_, command, "${function.name}");
+void TraceLayer::Pre(${function.name}Command& command) {
+  if (m_PrintPre) {
+    CommandPrinter p(m_StreamPre, m_StatePre, command, "${function.name}");
     %for param in params:
     ${param}
     %endfor
     %if is_result:
-    p.addResult(command.result_);
+    p.addResult(command.m_Result);
     %endif
-    p.print(flush_);
+    p.print(m_Flush);
   }
 }
 
-void TraceLayer::post(${function.name}Command& command) {
-  if (printPost_) {
-    CommandPrinter p(streamPost_, statePost_, command, "${function.name}");
+void TraceLayer::Post(${function.name}Command& command) {
+  if (m_PrintPost) {
+    CommandPrinter p(m_StreamPost, m_StatePost, command, "${function.name}");
     %for param in params:
     ${param}
     %endfor
     %if is_result:
-    p.addResult(command.result_);
+    p.addResult(command.m_Result);
     %endif
-    p.print(flush_);
+    p.print(m_Flush);
   }
 }
 
@@ -64,33 +64,33 @@ void TraceLayer::post(${function.name}Command& command) {
 <%
 params = []
 for param in function.params:
-    s = 'p.addArgument(command.' + param.name + '_);'
+    s = 'p.addArgument(command.m_' + param.name + ');'
     params.append(s)
 is_result = False if function.ret.is_void else True
 %>
-void TraceLayer::pre(${interface.name}${function.name}Command& command) {
-  if (printPre_) {
-    CommandPrinter p(streamPre_, statePre_, command, "${interface.name}::${function.name}", command.object_.key);
+void TraceLayer::Pre(${interface.name}${function.name}Command& command) {
+  if (m_PrintPre) {
+    CommandPrinter p(m_StreamPre, m_StatePre, command, "${interface.name}::${function.name}", command.m_Object.Key);
     %for param in params:
     ${param}
     %endfor
     %if is_result:
-    p.addResult(command.result_);
+    p.addResult(command.m_Result);
     %endif
-    p.print(flush_);
+    p.print(m_Flush);
   }
 }
 
-void TraceLayer::post(${interface.name}${function.name}Command& command) {
-  if (printPost_) {
-    CommandPrinter p(streamPost_, statePost_, command, "${interface.name}::${function.name}", command.object_.key);
+void TraceLayer::Post(${interface.name}${function.name}Command& command) {
+  if (m_PrintPost) {
+    CommandPrinter p(m_StreamPost, m_StatePost, command, "${interface.name}::${function.name}", command.m_Object.Key);
     %for param in params:
     ${param}
     %endfor
     %if is_result:
-    p.addResult(command.result_);
+    p.addResult(command.m_Result);
     %endif
-    p.print(flush_);
+    p.print(m_Flush);
   }
 }
 

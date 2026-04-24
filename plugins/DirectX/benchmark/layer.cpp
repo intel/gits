@@ -18,30 +18,30 @@ namespace DirectX {
 BenchmarkLayer::BenchmarkLayer(const BenchmarkConfig& cfg, gits::MessageBus& msgBus)
     : Layer("Benchmark"), cfg_(cfg), cpuFrameBenchmarkService_(cfg, msgBus) {}
 
-void BenchmarkLayer::pre(CreateDXGIFactoryCommand& command) {
+void BenchmarkLayer::Pre(CreateDXGIFactoryCommand& command) {
   cpuFrameBenchmarkService_.onStart();
 }
 
-void BenchmarkLayer::pre(CreateDXGIFactory1Command& command) {
+void BenchmarkLayer::Pre(CreateDXGIFactory1Command& command) {
   cpuFrameBenchmarkService_.onStart();
 }
 
-void BenchmarkLayer::pre(CreateDXGIFactory2Command& command) {
+void BenchmarkLayer::Pre(CreateDXGIFactory2Command& command) {
   cpuFrameBenchmarkService_.onStart();
 }
 
-void BenchmarkLayer::post(IDXGISwapChainPresentCommand& c) {
-  if (c.skip || c.result_.value != S_OK || c.Flags_.value & DXGI_PRESENT_TEST ||
-      isStateRestoreKey(c.key)) {
+void BenchmarkLayer::Post(IDXGISwapChainPresentCommand& c) {
+  if (c.Skip || c.m_Result.Value != S_OK || c.m_Flags.Value & DXGI_PRESENT_TEST ||
+      IsStateRestoreKey(c.Key)) {
     return;
   }
 
   cpuFrameBenchmarkService_.onPostPresent();
 }
 
-void BenchmarkLayer::post(IDXGISwapChain1Present1Command& c) {
-  if (c.skip || c.result_.value != S_OK || c.PresentFlags_.value & DXGI_PRESENT_TEST ||
-      isStateRestoreKey(c.key)) {
+void BenchmarkLayer::Post(IDXGISwapChain1Present1Command& c) {
+  if (c.Skip || c.m_Result.Value != S_OK || c.m_PresentFlags.Value & DXGI_PRESENT_TEST ||
+      IsStateRestoreKey(c.Key)) {
     return;
   }
 

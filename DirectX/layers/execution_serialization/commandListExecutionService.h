@@ -28,7 +28,7 @@ class CommandListExecutionService {
 public:
   CommandListExecutionService(ExecutionSerializationRecorder& recorder,
                               CpuDescriptorsService& cpuDescriptorsService)
-      : recorder_(recorder), cpuDescriptorsService_(cpuDescriptorsService) {}
+      : m_Recorder(recorder), m_CpuDescriptorsService(cpuDescriptorsService) {}
   void commandListCommand(unsigned commandListKey, const Command& command);
   void executeCommandLists(unsigned callKey,
                            unsigned commandQueueKey,
@@ -44,41 +44,37 @@ public:
                           unsigned fenceKey,
                           UINT64 fenceValue);
   void fenceSignal(unsigned callKey, unsigned fenceKey, UINT64 fenceValue);
-  void createCommandQueue(unsigned deviceKey, unsigned commandQueueKey);
+  void createCommandQueue(unsigned DeviceKey, unsigned commandQueueKey);
   unsigned getUniqueCommandKey() {
-    return ++restoreCommandKey_;
+    return ++m_RestoreCommandKey;
   };
   unsigned getUniqueObjectKey() {
-    return ++restoreObjectKey_;
+    return ++m_RestoreObjectKey;
   };
 
 private:
   struct CommandList {
-    unsigned commandListKey{};
-    bool reset{};
-    std::vector<std::unique_ptr<stream::CommandSerializer>> commands;
+    unsigned m_CommandListKey{};
+    bool m_Reset{};
+    std::vector<std::unique_ptr<stream::CommandSerializer>> m_Commands;
   };
 
   struct ExecuteCommandLists : public GpuExecutionTracker::Executable {
-    unsigned callKey{};
-    unsigned commandQueueKey{};
-    std::vector<CommandList> commandLists;
+    std::vector<CommandList> m_CommandLists;
   };
 
-private:
   void executeReadyExecutables();
   void executeExecutable(ExecuteCommandLists& executeCommandLists);
 
-private:
-  ExecutionSerializationRecorder& recorder_;
-  CpuDescriptorsService& cpuDescriptorsService_;
-  GpuExecutionTracker executionTracker_;
-  std::unordered_map<unsigned, CommandList> commandListsByKey_;
-  std::unordered_map<unsigned, unsigned> deviceByCommandQueue_;
-  std::unordered_map<unsigned, std::pair<unsigned, UINT64>> fenceByCommandQueue_;
-  std::unordered_map<unsigned, unsigned> commandListCreationAllocators_;
-  unsigned restoreCommandKey_{executionSerializationKeyMask};
-  unsigned restoreObjectKey_{executionSerializationKeyMask};
+  ExecutionSerializationRecorder& m_Recorder;
+  CpuDescriptorsService& m_CpuDescriptorsService;
+  GpuExecutionTracker m_ExecutionTracker;
+  std::unordered_map<unsigned, CommandList> m_CommandListsByKey;
+  std::unordered_map<unsigned, unsigned> m_DeviceByCommandQueue;
+  std::unordered_map<unsigned, std::pair<unsigned, UINT64>> m_FenceByCommandQueue;
+  std::unordered_map<unsigned, unsigned> m_CommandListCreationAllocators;
+  unsigned m_RestoreCommandKey{EXECUTION_SERIALIZATION_KEY_MASK};
+  unsigned m_RestoreObjectKey{EXECUTION_SERIALIZATION_KEY_MASK};
 };
 
 } // namespace DirectX

@@ -17,52 +17,52 @@
 namespace gits {
 namespace DirectX {
 
-void InterceptorCustomizationLayer::post(IDXGISwapChainGetBufferCommand& c) {
-  if (c.result_.value == S_OK) {
-    std::lock_guard<std::mutex> lock(mutex_);
-    swapChainByBufferKey_[c.ppSurface_.key] = c.object_.key;
-    buffersBySwapChainKey_[c.object_.key].insert(static_cast<IUnknown*>(*c.ppSurface_.value));
+void InterceptorCustomizationLayer::Post(IDXGISwapChainGetBufferCommand& c) {
+  if (c.m_Result.Value == S_OK) {
+    std::lock_guard<std::mutex> lock(m_Mutex);
+    m_SwapChainByBufferKey[c.m_ppSurface.Key] = c.m_Object.Key;
+    m_BuffersBySwapChainKey[c.m_Object.Key].insert(static_cast<IUnknown*>(*c.m_ppSurface.Value));
   }
 }
 
-void InterceptorCustomizationLayer::pre(IUnknownReleaseCommand& c) {
+void InterceptorCustomizationLayer::Pre(IUnknownReleaseCommand& c) {
   // Handle swap chain buffers shared reference count
   // Needs to be done in pre layer, because objects need to be alive for removeWrapper call
 
-  c.object_.value->AddRef();
-  auto result = c.object_.value->Release();
+  c.m_Object.Value->AddRef();
+  auto result = c.m_Object.Value->Release();
   if (result != 1) {
     return;
   }
 
-  std::lock_guard<std::mutex> lock(mutex_);
-  auto itSwapChain = swapChainByBufferKey_.find(c.object_.key);
-  if (itSwapChain == swapChainByBufferKey_.end()) {
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  auto itSwapChain = m_SwapChainByBufferKey.find(c.m_Object.Key);
+  if (itSwapChain == m_SwapChainByBufferKey.end()) {
     return;
   }
-  auto itBuffers = buffersBySwapChainKey_.find(itSwapChain->second);
-  if (itBuffers == buffersBySwapChainKey_.end()) {
+  auto itBuffers = m_BuffersBySwapChainKey.find(itSwapChain->second);
+  if (itBuffers == m_BuffersBySwapChainKey.end()) {
     return;
   }
 
   for (IUnknown* bufferObject : itBuffers->second) {
     // Buffer which is currently beeing released is removed in IUnknownWrapper::Release
-    if (bufferObject == c.object_.value) {
+    if (bufferObject == c.m_Object.Value) {
       continue;
     }
     auto* bufferWrapper = CaptureManager::get().findWrapper(bufferObject);
     GITS_ASSERT(bufferWrapper != nullptr, "Can't remove a nonexistent buffer wrapper.");
-    swapChainByBufferKey_.erase(bufferWrapper->getKey());
+    m_SwapChainByBufferKey.erase(bufferWrapper->getKey());
     CaptureManager::get().removeWrapper(bufferWrapper);
   }
-  swapChainByBufferKey_.erase(itSwapChain);
-  buffersBySwapChainKey_.erase(itBuffers);
+  m_SwapChainByBufferKey.erase(itSwapChain);
+  m_BuffersBySwapChainKey.erase(itBuffers);
 }
 
-void InterceptorCustomizationLayer::pre(D3D12CreateDeviceCommand& command) {
+void InterceptorCustomizationLayer::Pre(D3D12CreateDeviceCommand& command) {
   Microsoft::WRL::ComPtr<IDXGIAdapter> adapter;
-  if (command.pAdapter_.value) {
-    command.pAdapter_.value->QueryInterface(IID_PPV_ARGS(&adapter));
+  if (command.m_pAdapter.Value) {
+    command.m_pAdapter.Value->QueryInterface(IID_PPV_ARGS(&adapter));
   }
   if (!adapter) {
     Microsoft::WRL::ComPtr<IDXGIFactory1> factory;
@@ -79,7 +79,7 @@ void InterceptorCustomizationLayer::pre(D3D12CreateDeviceCommand& command) {
   CaptureManager::get().loadIntelExtension(desc.VendorId, desc.DeviceId);
 }
 
-void InterceptorCustomizationLayer::post(D3D12CreateDeviceCommand& command) {
+void InterceptorCustomizationLayer::Post(D3D12CreateDeviceCommand& command) {
   CaptureManager::get().interceptXessFunctions();
   CaptureManager::get().interceptXellFunctions();
   CaptureManager::get().interceptXefgFunctions();

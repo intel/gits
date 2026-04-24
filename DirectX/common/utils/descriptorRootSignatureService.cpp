@@ -15,7 +15,7 @@ namespace gits {
 namespace DirectX {
 
 DescriptorRootSignatureService::~DescriptorRootSignatureService() {
-  for (auto& it : rootSignatureDescs_) {
+  for (auto& it : m_RootSignatureDescs) {
     D3D12_ROOT_SIGNATURE_DESC* desc = it.second;
     for (unsigned i = 0; i < desc->NumParameters; ++i) {
       if (desc->pParameters[i].ParameterType == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE) {
@@ -28,12 +28,13 @@ DescriptorRootSignatureService::~DescriptorRootSignatureService() {
   }
 }
 
-void DescriptorRootSignatureService::createRootSignature(
-    ID3D12DeviceCreateRootSignatureCommand& c) {
+void DescriptorRootSignatureService::CreateRootSignature(
+    ID3D12DeviceCreateRootSignatureCommand& command) {
 
   Microsoft::WRL::ComPtr<ID3D12VersionedRootSignatureDeserializer> deserializer;
-  HRESULT hr = D3D12CreateVersionedRootSignatureDeserializer(
-      c.pBlobWithRootSignature_.value, c.blobLengthInBytes_.value, IID_PPV_ARGS(&deserializer));
+  HRESULT hr = D3D12CreateVersionedRootSignatureDeserializer(command.m_pBlobWithRootSignature.Value,
+                                                             command.m_blobLengthInBytes.Value,
+                                                             IID_PPV_ARGS(&deserializer));
   GITS_ASSERT(hr == S_OK);
   const D3D12_VERSIONED_ROOT_SIGNATURE_DESC* versionedDesc{};
   hr = deserializer->GetRootSignatureDescAtVersion(D3D_ROOT_SIGNATURE_VERSION_1, &versionedDesc);
@@ -58,23 +59,23 @@ void DescriptorRootSignatureService::createRootSignature(
          versionedDesc->Desc_1_0.pStaticSamplers,
          desc->NumStaticSamplers * sizeof(D3D12_STATIC_SAMPLER_DESC));
 
-  std::lock_guard<std::mutex> lock(mutex_);
-  rootSignatureDescs_[c.ppvRootSignature_.key] = desc;
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  m_RootSignatureDescs[command.m_ppvRootSignature.Key] = desc;
 }
 
-std::vector<unsigned> DescriptorRootSignatureService::getDescriptorTableIndexes(
+std::vector<unsigned> DescriptorRootSignatureService::GetDescriptorTableIndexes(
     unsigned rootSignatureKey,
     unsigned descriptorHeapKey,
     unsigned parameterIndex,
     unsigned baseIndex,
     unsigned heapNumDescriptors,
     bool checkRetrieved) {
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::lock_guard<std::mutex> lock(m_Mutex);
 
   std::vector<unsigned> indexes;
 
-  auto it = rootSignatureDescs_.find(rootSignatureKey);
-  GITS_ASSERT(it != rootSignatureDescs_.end());
+  auto it = m_RootSignatureDescs.find(rootSignatureKey);
+  GITS_ASSERT(it != m_RootSignatureDescs.end());
   GITS_ASSERT(parameterIndex < it->second->NumParameters);
   const D3D12_ROOT_PARAMETER& param = it->second->pParameters[parameterIndex];
   GITS_ASSERT(param.ParameterType == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE);
@@ -86,12 +87,12 @@ std::vector<unsigned> DescriptorRootSignatureService::getDescriptorTableIndexes(
     }
     unsigned numDescriptors = range.NumDescriptors;
     if (range.NumDescriptors == UINT_MAX) {
-      if (checkRetrieved && unboundedRetrieved(descriptorHeapKey, index)) {
+      if (checkRetrieved && UnboundedRetrieved(descriptorHeapKey, index)) {
         continue;
       }
       numDescriptors = heapNumDescriptors - index;
     } else {
-      if (checkRetrieved && boundedRetrieved(descriptorHeapKey, index, numDescriptors)) {
+      if (checkRetrieved && BoundedRetrieved(descriptorHeapKey, index, numDescriptors)) {
         continue;
       }
     }
@@ -104,24 +105,24 @@ std::vector<unsigned> DescriptorRootSignatureService::getDescriptorTableIndexes(
   return indexes;
 }
 
-std::vector<unsigned> DescriptorRootSignatureService::getBindlessDescriptorIndexes(
+std::vector<unsigned> DescriptorRootSignatureService::GetBindlessDescriptorIndexes(
     unsigned rootSignatureKey,
     unsigned descriptorHeapKey,
     D3D12_DESCRIPTOR_HEAP_TYPE heapType,
     unsigned heapNumDescriptors,
     bool checkRetrieved) {
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::lock_guard<std::mutex> lock(m_Mutex);
 
   std::vector<unsigned> indexes;
 
-  auto it = rootSignatureDescs_.find(rootSignatureKey);
-  GITS_ASSERT(it != rootSignatureDescs_.end());
+  auto it = m_RootSignatureDescs.find(rootSignatureKey);
+  GITS_ASSERT(it != m_RootSignatureDescs.end());
 
   if (it->second->Flags & D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED &&
           heapType == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV ||
       it->second->Flags & D3D12_ROOT_SIGNATURE_FLAG_SAMPLER_HEAP_DIRECTLY_INDEXED &&
           heapType == D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER) {
-    if (checkRetrieved && unboundedRetrieved(descriptorHeapKey, 0)) {
+    if (checkRetrieved && UnboundedRetrieved(descriptorHeapKey, 0)) {
       return indexes;
     }
     for (unsigned i = 0; i < heapNumDescriptors; ++i) {
@@ -132,33 +133,33 @@ std::vector<unsigned> DescriptorRootSignatureService::getBindlessDescriptorIndex
   return indexes;
 }
 
-D3D12_ROOT_SIGNATURE_DESC* DescriptorRootSignatureService::getRootSignatureDesc(
+D3D12_ROOT_SIGNATURE_DESC* DescriptorRootSignatureService::GetRootSignatureDesc(
     unsigned rootSignatureKey) {
-  std::lock_guard<std::mutex> lock(mutex_);
-  return rootSignatureDescs_[rootSignatureKey];
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  return m_RootSignatureDescs[rootSignatureKey];
 }
 
-bool DescriptorRootSignatureService::unboundedRetrieved(unsigned descriptorHeapKey,
+bool DescriptorRootSignatureService::UnboundedRetrieved(unsigned descriptorHeapKey,
                                                         unsigned index) {
-  auto it = unboundedRetrieved_.find(descriptorHeapKey);
-  if (it != unboundedRetrieved_.end() && it->second <= index) {
+  auto it = m_UnboundedRetrieved.find(descriptorHeapKey);
+  if (it != m_UnboundedRetrieved.end() && it->second <= index) {
     return true;
   }
-  unboundedRetrieved_[descriptorHeapKey] = index;
+  m_UnboundedRetrieved[descriptorHeapKey] = index;
   return false;
 }
 
-bool DescriptorRootSignatureService::boundedRetrieved(unsigned descriptorHeapKey,
+bool DescriptorRootSignatureService::BoundedRetrieved(unsigned descriptorHeapKey,
                                                       unsigned index,
                                                       unsigned numDescriptors) {
-  auto itHeap = boundedRetrieved_.find(descriptorHeapKey);
-  if (itHeap != boundedRetrieved_.end()) {
+  auto itHeap = m_BoundedRetrieved.find(descriptorHeapKey);
+  if (itHeap != m_BoundedRetrieved.end()) {
     auto it = itHeap->second.find(index);
     if (it != itHeap->second.end() && it->second >= numDescriptors) {
       return true;
     }
   }
-  boundedRetrieved_[descriptorHeapKey][index] = numDescriptors;
+  m_BoundedRetrieved[descriptorHeapKey][index] = numDescriptors;
   return false;
 }
 

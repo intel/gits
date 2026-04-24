@@ -20,7 +20,7 @@ namespace DirectX {
 class ResourcePlacementCaptureNoExecute {
 public:
   void createPlacedResource(unsigned heapKey,
-                            unsigned resourceKey,
+                            unsigned ResourceKey,
                             UINT64 offset,
                             ID3D12Device* device,
                             D3D12_RESOURCE_DESC& desc);
@@ -77,13 +77,13 @@ private:
     }
   };
 
-  std::map<unsigned, ResourcePlacementInfo> resourcePlacementInfos_;
-  std::unordered_set<unsigned> placedResources_;
+  std::map<unsigned, ResourcePlacementInfo> m_ResourcePlacementInfos;
+  std::unordered_set<unsigned> m_PlacedResources;
   std::unordered_map<D3D12_RESOURCE_DESC,
                      D3D12_RESOURCE_ALLOCATION_INFO,
                      D3D12_RESOURCE_DESC_Hash,
                      D3D12_RESOURCE_DESC_Equal>
-      resourceDescToAllocation_;
+      m_ResourceDescToAllocation;
 };
 
 } // namespace DirectX

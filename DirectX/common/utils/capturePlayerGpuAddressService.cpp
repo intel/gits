@@ -14,175 +14,175 @@
 namespace gits {
 namespace DirectX {
 
-void CapturePlayerGpuAddressService::GpuAddressService::createPlacedResource(
-    unsigned heapKey, unsigned resourceKey, D3D12_RESOURCE_FLAGS flags) {
+void CapturePlayerGpuAddressService::GpuAddressService::CreatePlacedResource(
+    unsigned heapKey, unsigned ResourceKey, D3D12_RESOURCE_FLAGS flags) {
   HeapInfo* heapInfo{};
-  auto it = heapsByKey_.find(heapKey);
-  if (it != heapsByKey_.end()) {
+  auto it = m_HeapsByKey.find(heapKey);
+  if (it != m_HeapsByKey.end()) {
     heapInfo = it->second.get();
   } else {
     heapInfo = new HeapInfo{};
-    heapsByKey_[heapKey].reset(heapInfo);
+    m_HeapsByKey[heapKey].reset(heapInfo);
   }
-  heapInfo->resources.insert(resourceKey);
-  heapsByResourceKey_[resourceKey] = heapInfo;
+  heapInfo->Resources.insert(ResourceKey);
+  m_HeapsByResourceKey[ResourceKey] = heapInfo;
 
   if (flags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE) {
-    deniedShaderResources_.insert(resourceKey);
+    m_DeniedShaderResources.insert(ResourceKey);
   }
 }
 
-void CapturePlayerGpuAddressService::GpuAddressService::addGpuCaptureAddress(
+void CapturePlayerGpuAddressService::GpuAddressService::AddGpuCaptureAddress(
     ID3D12Resource* resource,
-    unsigned resourceKey,
+    unsigned ResourceKey,
     unsigned size,
     D3D12_GPU_VIRTUAL_ADDRESS captureAddress) {
   if (!captureAddress) {
     return;
   }
-  auto itHeap = heapsByResourceKey_.find(resourceKey);
-  if (itHeap != heapsByResourceKey_.end()) {
-    auto it = placedResourcesByKey_.find(resourceKey);
-    if (it != placedResourcesByKey_.end()) {
+  auto itHeap = m_HeapsByResourceKey.find(ResourceKey);
+  if (itHeap != m_HeapsByResourceKey.end()) {
+    auto it = m_PlacedResourcesByKey.find(ResourceKey);
+    if (it != m_PlacedResourcesByKey.end()) {
       return;
     }
 
     PlacedResourceInfo* info = new PlacedResourceInfo{};
-    info->captureStart = captureAddress;
-    info->key = resourceKey;
-    info->size = size;
-    info->resource = resource;
+    info->CaptureStart = captureAddress;
+    info->Key = ResourceKey;
+    info->Size = size;
+    info->Resource = resource;
 
     bool stored = false;
-    for (unsigned layerIndex = 0; layerIndex < placedResourcesByAddress_.size(); ++layerIndex) {
+    for (unsigned layerIndex = 0; layerIndex < m_PlacedResourcesByAddress.size(); ++layerIndex) {
       bool intersecting = false;
-      for (auto& it : placedResourcesByAddress_[layerIndex]) {
-        if (it.second->captureStart + it.second->size > info->captureStart &&
-            it.second->captureStart < info->captureStart + info->size) {
-          info->intersecting.insert(it.second);
+      for (auto& placedIt : m_PlacedResourcesByAddress[layerIndex]) {
+        if (placedIt.second->CaptureStart + placedIt.second->Size > info->CaptureStart &&
+            placedIt.second->CaptureStart < info->CaptureStart + info->Size) {
+          info->Intersecting.insert(placedIt.second);
           intersecting = true;
         }
       }
       if (!intersecting && !stored) {
-        info->layer = layerIndex;
-        placedResourcesByAddress_[layerIndex][info->captureStart] = info;
+        info->Layer = layerIndex;
+        m_PlacedResourcesByAddress[layerIndex][info->CaptureStart] = info;
         stored = true;
       }
     }
 
     if (!stored) {
-      info->layer = static_cast<unsigned>(placedResourcesByAddress_.size());
-      placedResourcesByAddress_.push_back(
+      info->Layer = static_cast<unsigned>(m_PlacedResourcesByAddress.size());
+      m_PlacedResourcesByAddress.push_back(
           std::map<D3D12_GPU_VIRTUAL_ADDRESS, PlacedResourceInfo*>{});
-      placedResourcesByAddress_[placedResourcesByAddress_.size() - 1][info->captureStart] = info;
+      m_PlacedResourcesByAddress[m_PlacedResourcesByAddress.size() - 1][info->CaptureStart] = info;
     }
 
-    for (PlacedResourceInfo* inf : info->intersecting) {
-      inf->intersecting.insert(info);
+    for (PlacedResourceInfo* inf : info->Intersecting) {
+      inf->Intersecting.insert(info);
     }
 
-    placedResourcesByKey_[resourceKey].reset(info);
+    m_PlacedResourcesByKey[ResourceKey].reset(info);
 
   } else {
-    auto it = resourcesByKey_.find(resourceKey);
-    if (it != resourcesByKey_.end()) {
+    auto it = m_ResourcesByKey.find(ResourceKey);
+    if (it != m_ResourcesByKey.end()) {
       return;
     }
 
     ResourceInfo* info = new ResourceInfo{};
-    info->captureStart = captureAddress;
-    info->key = resourceKey;
-    info->size = size;
-    info->resource = resource;
-    resourcesByAddress_[captureAddress] = info;
-    resourcesByKey_[resourceKey].reset(info);
+    info->CaptureStart = captureAddress;
+    info->Key = ResourceKey;
+    info->Size = size;
+    info->Resource = resource;
+    m_ResourcesByAddress[captureAddress] = info;
+    m_ResourcesByKey[ResourceKey].reset(info);
   }
 }
 
-void CapturePlayerGpuAddressService::GpuAddressService::addGpuPlayerAddress(
-    unsigned resourceKey, D3D12_GPU_VIRTUAL_ADDRESS playerAddress) {
-  auto itHeap = heapsByResourceKey_.find(resourceKey);
-  if (itHeap != heapsByResourceKey_.end()) {
-    PlacedResourceInfo* info = placedResourcesByKey_[resourceKey].get();
-    info->playerStart = playerAddress;
+void CapturePlayerGpuAddressService::GpuAddressService::AddGpuPlayerAddress(
+    unsigned ResourceKey, D3D12_GPU_VIRTUAL_ADDRESS playerAddress) {
+  auto itHeap = m_HeapsByResourceKey.find(ResourceKey);
+  if (itHeap != m_HeapsByResourceKey.end()) {
+    PlacedResourceInfo* info = m_PlacedResourcesByKey[ResourceKey].get();
+    info->PlayerStart = playerAddress;
 
     HeapInfo* heapInfo = itHeap->second;
-    if (!heapInfo->captureStart || heapInfo->captureStart > info->captureStart) {
-      heapInfo->captureStart = info->captureStart;
-      heapInfo->playerStart = info->playerStart;
+    if (!heapInfo->CaptureStart || heapInfo->CaptureStart > info->CaptureStart) {
+      heapInfo->CaptureStart = info->CaptureStart;
+      heapInfo->PlayerStart = info->PlayerStart;
     }
-    if (!heapInfo->captureEnd || heapInfo->captureEnd < info->captureStart + info->size) {
-      heapInfo->captureEnd = info->captureStart + info->size;
+    if (!heapInfo->CaptureEnd || heapInfo->CaptureEnd < info->CaptureStart + info->Size) {
+      heapInfo->CaptureEnd = info->CaptureStart + info->Size;
     }
   } else {
-    auto it = resourcesByKey_.find(resourceKey);
-    if (it != resourcesByKey_.end()) {
-      ResourceInfo* info = resourcesByKey_[resourceKey].get();
-      it->second->playerStart = playerAddress;
+    auto it = m_ResourcesByKey.find(ResourceKey);
+    if (it != m_ResourcesByKey.end()) {
+      ResourceInfo* info = m_ResourcesByKey[ResourceKey].get();
+      it->second->PlayerStart = playerAddress;
     }
   }
 }
 
-void CapturePlayerGpuAddressService::GpuAddressService::destroyInterface(unsigned interfaceKey) {
+void CapturePlayerGpuAddressService::GpuAddressService::DestroyInterface(unsigned InterfaceKey) {
   {
-    auto it = resourcesByKey_.find(interfaceKey);
-    if (it != resourcesByKey_.end()) {
-      auto itAddr = resourcesByAddress_.find(it->second->captureStart);
-      GITS_ASSERT(itAddr != resourcesByAddress_.end());
-      if (itAddr->second->key == interfaceKey) {
-        resourcesByAddress_.erase(itAddr);
+    auto it = m_ResourcesByKey.find(InterfaceKey);
+    if (it != m_ResourcesByKey.end()) {
+      auto itAddr = m_ResourcesByAddress.find(it->second->CaptureStart);
+      GITS_ASSERT(itAddr != m_ResourcesByAddress.end());
+      if (itAddr->second->Key == InterfaceKey) {
+        m_ResourcesByAddress.erase(itAddr);
       }
-      resourcesByKey_.erase(it);
+      m_ResourcesByKey.erase(it);
       return;
     }
   }
   {
-    auto it = placedResourcesByKey_.find(interfaceKey);
-    if (it != placedResourcesByKey_.end()) {
+    auto it = m_PlacedResourcesByKey.find(InterfaceKey);
+    if (it != m_PlacedResourcesByKey.end()) {
       PlacedResourceInfo* info = it->second.get();
-      for (PlacedResourceInfo* intersecting : info->intersecting) {
-        intersecting->intersecting.erase(info);
+      for (PlacedResourceInfo* intersecting : info->Intersecting) {
+        intersecting->Intersecting.erase(info);
       }
-      placedResourcesByAddress_[info->layer].erase(info->captureStart);
-      placedResourcesByKey_.erase(it);
-      auto heapIt = heapsByResourceKey_.find(interfaceKey);
-      GITS_ASSERT(heapIt != heapsByResourceKey_.end());
-      heapIt->second->resources.erase(interfaceKey);
-      heapsByResourceKey_.erase(heapIt);
+      m_PlacedResourcesByAddress[info->Layer].erase(info->CaptureStart);
+      m_PlacedResourcesByKey.erase(it);
+      auto heapIt = m_HeapsByResourceKey.find(InterfaceKey);
+      GITS_ASSERT(heapIt != m_HeapsByResourceKey.end());
+      heapIt->second->Resources.erase(InterfaceKey);
+      m_HeapsByResourceKey.erase(heapIt);
       return;
     }
   }
   {
-    auto it = heapsByKey_.find(interfaceKey);
-    if (it != heapsByKey_.end()) {
+    auto it = m_HeapsByKey.find(InterfaceKey);
+    if (it != m_HeapsByKey.end()) {
       HeapInfo* heapInfo = it->second.get();
       std::vector<unsigned> resources;
-      for (unsigned resourceKey : heapInfo->resources) {
-        resources.push_back(resourceKey);
+      for (unsigned ResourceKey : heapInfo->Resources) {
+        resources.push_back(ResourceKey);
       }
-      for (unsigned resourceKey : resources) {
-        destroyInterface(resourceKey);
+      for (unsigned ResourceKey : resources) {
+        DestroyInterface(ResourceKey);
       }
-      heapsByKey_.erase(it);
+      m_HeapsByKey.erase(it);
     }
   }
-  deniedShaderResources_.erase(interfaceKey);
+  m_DeniedShaderResources.erase(InterfaceKey);
 }
 
 CapturePlayerGpuAddressService::ResourceInfo* CapturePlayerGpuAddressService::GpuAddressService::
-    getResourceInfo(D3D12_GPU_VIRTUAL_ADDRESS address) {
+    GetResourceInfo(D3D12_GPU_VIRTUAL_ADDRESS address) {
 
   ResourceInfo* resourceInfo{};
   if (!address) {
     return resourceInfo;
   }
 
-  auto itResource = resourcesByAddress_.upper_bound(address);
-  if (itResource != resourcesByAddress_.begin() && !resourcesByAddress_.empty()) {
+  auto itResource = m_ResourcesByAddress.upper_bound(address);
+  if (itResource != m_ResourcesByAddress.begin() && !m_ResourcesByAddress.empty()) {
     --itResource;
     ResourceInfo* info = itResource->second;
-    D3D12_GPU_VIRTUAL_ADDRESS start = info->captureStart;
-    if (address >= start && address < start + info->size) {
+    D3D12_GPU_VIRTUAL_ADDRESS start = info->CaptureStart;
+    if (address >= start && address < start + info->Size) {
       resourceInfo = info;
     }
   }
@@ -191,30 +191,30 @@ CapturePlayerGpuAddressService::ResourceInfo* CapturePlayerGpuAddressService::Gp
   }
 
   PlacedResourceInfo* placedResourceInfo{};
-  for (unsigned layerIndex = 0; layerIndex < placedResourcesByAddress_.size(); ++layerIndex) {
-    auto itResource = placedResourcesByAddress_[layerIndex].upper_bound(address);
-    if (itResource != placedResourcesByAddress_[layerIndex].begin() &&
-        !placedResourcesByAddress_[layerIndex].empty()) {
-      --itResource;
-      PlacedResourceInfo* info = itResource->second;
-      D3D12_GPU_VIRTUAL_ADDRESS start = info->captureStart;
-      if (address >= start && address < start + info->size) {
+  for (unsigned layerIndex = 0; layerIndex < m_PlacedResourcesByAddress.size(); ++layerIndex) {
+    auto itPlaced = m_PlacedResourcesByAddress[layerIndex].upper_bound(address);
+    if (itPlaced != m_PlacedResourcesByAddress[layerIndex].begin() &&
+        !m_PlacedResourcesByAddress[layerIndex].empty()) {
+      --itPlaced;
+      PlacedResourceInfo* info = itPlaced->second;
+      D3D12_GPU_VIRTUAL_ADDRESS start = info->CaptureStart;
+      if (address >= start && address < start + info->Size) {
         placedResourceInfo = info;
         break;
       }
     }
   }
-  if (placedResourceInfo && !placedResourceInfo->intersecting.empty()) {
+  if (placedResourceInfo && !placedResourceInfo->Intersecting.empty()) {
     PlacedResourceInfo* selectedInfo = placedResourceInfo;
-    for (PlacedResourceInfo* info : placedResourceInfo->intersecting) {
-      D3D12_GPU_VIRTUAL_ADDRESS selectedStart = selectedInfo->captureStart;
-      D3D12_GPU_VIRTUAL_ADDRESS selectedEnd = selectedStart + selectedInfo->size;
-      D3D12_GPU_VIRTUAL_ADDRESS start = info->captureStart;
-      D3D12_GPU_VIRTUAL_ADDRESS end = start + info->size;
+    for (PlacedResourceInfo* info : placedResourceInfo->Intersecting) {
+      D3D12_GPU_VIRTUAL_ADDRESS selectedStart = selectedInfo->CaptureStart;
+      D3D12_GPU_VIRTUAL_ADDRESS selectedEnd = selectedStart + selectedInfo->Size;
+      D3D12_GPU_VIRTUAL_ADDRESS start = info->CaptureStart;
+      D3D12_GPU_VIRTUAL_ADDRESS end = start + info->Size;
       if (address >= start && address < end) {
         if (end > selectedEnd) {
-          auto it = deniedShaderResources_.find(info->key);
-          if (it == deniedShaderResources_.end()) {
+          auto deniedIt = m_DeniedShaderResources.find(info->Key);
+          if (deniedIt == m_DeniedShaderResources.end()) {
             selectedInfo = info;
           }
         }
@@ -225,27 +225,27 @@ CapturePlayerGpuAddressService::ResourceInfo* CapturePlayerGpuAddressService::Gp
   return placedResourceInfo;
 }
 
-void CapturePlayerGpuAddressService::GpuAddressService::getMappings(
+void CapturePlayerGpuAddressService::GpuAddressService::GetMappings(
     std::vector<CapturePlayerGpuAddressService::GpuAddressMapping>& mappings) {
-  mappings.resize(resourcesByAddress_.size() + heapsByKey_.size());
+  mappings.resize(m_ResourcesByAddress.size() + m_HeapsByKey.size());
   unsigned index = 0;
-  for (auto& it : resourcesByAddress_) {
-    mappings[index].captureStart = it.second->captureStart;
-    mappings[index].playerStart = it.second->playerStart;
-    mappings[index].size = it.second->size;
+  for (auto& it : m_ResourcesByAddress) {
+    mappings[index].CaptureStart = it.second->CaptureStart;
+    mappings[index].PlayerStart = it.second->PlayerStart;
+    mappings[index].Size = it.second->Size;
     ++index;
   }
-  for (auto& it : heapsByKey_) {
-    mappings[index].captureStart = it.second->captureStart;
-    mappings[index].playerStart = it.second->playerStart;
-    mappings[index].size = it.second->captureEnd - it.second->captureStart;
+  for (auto& it : m_HeapsByKey) {
+    mappings[index].CaptureStart = it.second->CaptureStart;
+    mappings[index].PlayerStart = it.second->PlayerStart;
+    mappings[index].Size = it.second->CaptureEnd - it.second->CaptureStart;
     ++index;
   }
 
   std::sort(mappings.begin(), mappings.end(),
             [](CapturePlayerGpuAddressService::GpuAddressMapping& m1,
                CapturePlayerGpuAddressService::GpuAddressMapping& m2) {
-              return m1.captureStart < m2.captureStart;
+              return m1.CaptureStart < m2.CaptureStart;
             });
 }
 

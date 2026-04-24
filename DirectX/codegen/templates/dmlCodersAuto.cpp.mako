@@ -20,16 +20,16 @@ pod_field_types = get_pod_field_types(structures)
 %>\
 %for field_type in pod_field_types:
 
-unsigned getSize(const ${field_type}* src, unsigned count) {
-  return getSizeT<${field_type}>(src, count);
+unsigned GetSize(const ${field_type}* src, unsigned count) {
+  return GetSizeT<${field_type}>(src, count);
 }
 
-void encode(const ${field_type}* src, unsigned count, char* dst, unsigned& offset) {
-  encodeT<${field_type}>(src, count, dst, offset);
+void Encode(const ${field_type}* src, unsigned count, char* dst, unsigned& offset) {
+  EncodeT<${field_type}>(src, count, dst, offset);
 }
 
-void decode(const ${field_type}* dst, unsigned count, char* src, unsigned& offset) {
-  decodeT<${field_type}>(dst, count, src, offset);
+void Decode(const ${field_type}* dst, unsigned count, char* src, unsigned& offset) {
+  DecodeT<${field_type}>(dst, count, src, offset);
 }
 %endfor
 %for struct in structures:
@@ -41,7 +41,7 @@ desc_types = dml_enum_get_type(enums, struct.name)
 %>
 // ${struct.name}
 
-unsigned getSize(const ${struct.name}* src, unsigned count) {
+unsigned GetSize(const ${struct.name}* src, unsigned count) {
   if (!src) {
     return 0;
   }
@@ -54,7 +54,7 @@ unsigned getSize(const ${struct.name}* src, unsigned count) {
 %for desc_type in desc_types.values:
 %if dml_enum_is_valid(desc_type):
     case ${desc_type}:
-      blobSize += getSize(castTo<${dml_enum_get_desc_type(desc_type)}>(currentSrcDesc->Desc), 1);
+      blobSize += GetSize(castTo<${dml_enum_get_desc_type(desc_type)}>(currentSrcDesc->Desc), 1);
       break;
 %endif
 %endfor
@@ -66,8 +66,8 @@ unsigned getSize(const ${struct.name}* src, unsigned count) {
   return blobSize;
 }
 
-void encode(const ${struct.name}* src, unsigned count, char* dst, unsigned& offset) {
-  auto blobSize = getSize(src, count);
+void Encode(const ${struct.name}* src, unsigned count, char* dst, unsigned& offset) {
+  auto blobSize = GetSize(src, count);
   auto* srcDesc = src;
   auto* dstDesc = reinterpret_cast<${struct.name}*>(&dst[offset]);
   offset += sizeof(${struct.name}) * count;
@@ -86,7 +86,7 @@ void encode(const ${struct.name}* src, unsigned count, char* dst, unsigned& offs
 %for desc_type in desc_types.values:
 %if dml_enum_is_valid(desc_type):
     case ${desc_type}:
-      encode(castTo<${dml_enum_get_desc_type(desc_type)}>(currentSrcDesc->Desc), 1, dst, offset);
+      Encode(castTo<${dml_enum_get_desc_type(desc_type)}>(currentSrcDesc->Desc), 1, dst, offset);
       break;
 %endif
 %endfor
@@ -96,7 +96,7 @@ void encode(const ${struct.name}* src, unsigned count, char* dst, unsigned& offs
   }
 }
 
-void decode(const ${struct.name}* dst, unsigned count, char* src, unsigned& offset) {
+void Decode(const ${struct.name}* dst, unsigned count, char* src, unsigned& offset) {
   offset += sizeof(${struct.name}) * count;
 
   for (unsigned i = 0; i < count; ++i) {
@@ -110,7 +110,7 @@ void decode(const ${struct.name}* dst, unsigned count, char* src, unsigned& offs
 %for desc_type in desc_types.values:
 %if dml_enum_is_valid(desc_type):
     case ${desc_type}:
-      decode(castTo<${dml_enum_get_desc_type(desc_type)}>(currentDstDesc->Desc), 1, src, offset);
+      Decode(castTo<${dml_enum_get_desc_type(desc_type)}>(currentDstDesc->Desc), 1, src, offset);
       break;
 %endif
 %endfor
@@ -125,7 +125,7 @@ void decode(const ${struct.name}* dst, unsigned count, char* src, unsigned& offs
 %if (not to_serialize(struct)) or (dml_struct_is_custom(struct)):
 <% continue %>
 %endif
-unsigned getSize(const ${struct.name}* src, unsigned count) {
+unsigned GetSize(const ${struct.name}* src, unsigned count) {
   if (!src) {
     return 0;
   }
@@ -138,15 +138,15 @@ unsigned getSize(const ${struct.name}* src, unsigned count) {
 <% continue %>
 %endif
     if (currentSrcDesc->${field.name}) {
-      blobSize += getSize(currentSrcDesc->${field.name}, ${get_field_count(field, 'currentSrcDesc->')});
+      blobSize += GetSize(currentSrcDesc->${field.name}, ${get_field_count(field, 'currentSrcDesc->')});
     }
 %endfor
   }
   return blobSize;
 }
 
-void encode(const ${struct.name}* src, unsigned count, char* dst, unsigned& offset) {
-  auto blobSize = getSize(src, count);
+void Encode(const ${struct.name}* src, unsigned count, char* dst, unsigned& offset) {
+  auto blobSize = GetSize(src, count);
   if (!src || !dst) {
     GITS_ASSERT(0 && "Unexpected input");
     return;
@@ -166,13 +166,13 @@ void encode(const ${struct.name}* src, unsigned count, char* dst, unsigned& offs
 %endif
     if (currentSrcDesc->${field.name}) {
       currentDstDesc->${field.name} = (const ${field.type}*) offset;
-      encode(currentSrcDesc->${field.name}, ${get_field_count(field, 'currentSrcDesc->')}, dst, offset);
+      Encode(currentSrcDesc->${field.name}, ${get_field_count(field, 'currentSrcDesc->')}, dst, offset);
     }
 %endfor
   }
 }
 
-void decode(const ${struct.name}* dst, unsigned count, char* src, unsigned& offset) {
+void Decode(const ${struct.name}* dst, unsigned count, char* src, unsigned& offset) {
   offset += sizeof(${struct.name}) * count;
 
   for (unsigned i = 0; i < count; ++i) {
@@ -184,7 +184,7 @@ void decode(const ${struct.name}* dst, unsigned count, char* src, unsigned& offs
 %endif
     if (currentDstDesc->${field.name}) {
       currentDstDesc->${field.name} = addPtrs(currentDstDesc->${field.name}, src);
-      decode(currentDstDesc->${field.name}, ${get_field_count(field, 'currentDstDesc->')}, src, offset);
+      Decode(currentDstDesc->${field.name}, ${get_field_count(field, 'currentDstDesc->')}, src, offset);
     }
 %endfor
   }

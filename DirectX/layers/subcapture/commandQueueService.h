@@ -23,23 +23,23 @@ public:
   CommandQueueService(const CommandQueueService&) = delete;
   CommandQueueService& operator=(const CommandQueueService&) = delete;
   ~CommandQueueService();
-  void addExecuteCommandLists(ID3D12CommandQueueExecuteCommandListsCommand& c);
-  void addUpdateTileMappings(ID3D12CommandQueueUpdateTileMappingsCommand& c);
-  void addCommandQueueWait(ID3D12CommandQueueWaitCommand& c);
-  void addCommandQueueSignal(ID3D12CommandQueueSignalCommand& c);
-  void restoreCommandQueues();
-  void clearCommands();
+  void AddExecuteCommandLists(ID3D12CommandQueueExecuteCommandListsCommand& c);
+  void AddUpdateTileMappings(ID3D12CommandQueueUpdateTileMappingsCommand& c);
+  void AddCommandQueueWait(ID3D12CommandQueueWaitCommand& c);
+  void AddCommandQueueSignal(ID3D12CommandQueueSignalCommand& c);
+  void RestoreCommandQueues();
+  void ClearCommands();
 
 private:
-  StateTrackingService& stateService_;
+  StateTrackingService& m_StateService;
 
   struct CommandQueueCommand {
-    CommandQueueCommand(CommandId id_, unsigned key) : id(id_), commandKey(key) {}
-    CommandId id{};
-    unsigned commandKey{};
-    std::unique_ptr<stream::CommandSerializer> commandSerializer;
+    CommandQueueCommand(CommandId id_, unsigned key) : Id(id_), CommandKey(key) {}
+    CommandId Id{};
+    unsigned CommandKey{};
+    std::unique_ptr<stream::CommandSerializer> CommandSerializer;
   };
-  std::vector<CommandQueueCommand*> commands;
+  std::vector<CommandQueueCommand*> Commands;
 };
 
 } // namespace DirectX

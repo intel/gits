@@ -14,53 +14,53 @@
 namespace gits {
 namespace DirectX {
 
-void MultithreadedObjectCreationService::initialize() {
-  if (initialized_) {
+void MultithreadedObjectCreationService::Initialize() {
+  if (m_Initialized) {
     return;
   }
 
   // Create worker threads
   unsigned threadCount = std::thread::hardware_concurrency();
   for (decltype(threadCount) i = 0; i < threadCount; ++i) {
-    workers_.emplace_back(&MultithreadedObjectCreationService::workerThread, this);
+    m_Workers.emplace_back(&MultithreadedObjectCreationService::WorkerThread, this);
 
     // Set thread description (for ease of debugging)
     auto description = L"object-creation-worker-" + std::to_wstring(i);
-    auto handle = workers_.back().native_handle();
+    auto handle = m_Workers.back().native_handle();
     auto hr = SetThreadDescription(handle, description.c_str());
     GITS_ASSERT(SUCCEEDED(hr), "MultithreadedObjectCreationService - SetThreadDescription failed!");
   }
 
-  initialized_ = true;
+  m_Initialized = true;
 }
 
 MultithreadedObjectCreationService::~MultithreadedObjectCreationService() {
-  shutdown();
+  Shutdown();
 }
 
-void MultithreadedObjectCreationService::shutdown() {
+void MultithreadedObjectCreationService::Shutdown() {
   {
-    std::unique_lock<std::mutex> lock(mutex_);
-    done_ = true;
+    std::unique_lock<std::mutex> lock(m_Mutex);
+    m_Done = true;
   }
-  cv_.notify_all();
-  for (auto& worker : workers_) {
+  m_Cv.notify_all();
+  for (auto& worker : m_Workers) {
     if (worker.joinable()) {
       worker.join();
     }
   }
 }
 
-void MultithreadedObjectCreationService::schedule(CreationFunction creationFunction,
+void MultithreadedObjectCreationService::Schedule(CreationFunction creationFunction,
                                                   unsigned objectKey) {
-  initialize();
+  Initialize();
 
-  std::lock_guard<std::mutex> guard(mutex_);
-  auto [it, inserted] =
-      tasks_.insert({objectKey, std::make_unique<ObjectCreationTask>(creationFunction, objectKey)});
+  std::lock_guard<std::mutex> guard(m_Mutex);
+  auto [it, inserted] = m_Tasks.insert(
+      {objectKey, std::make_unique<ObjectCreationTask>(creationFunction, objectKey)});
   if (inserted) {
-    tasksQueue_.push_back(it->second.get());
-    cv_.notify_one();
+    m_TasksQueue.push_back(it->second.get());
+    m_Cv.notify_one();
   } else {
     static bool logged = false;
     if (!logged) {
@@ -72,106 +72,106 @@ void MultithreadedObjectCreationService::schedule(CreationFunction creationFunct
   }
 }
 
-void MultithreadedObjectCreationService::addDependency(unsigned providerKey, unsigned consumerKey) {
+void MultithreadedObjectCreationService::AddDependency(unsigned providerKey, unsigned consumerKey) {
   if (!providerKey || !consumerKey) {
     return;
   }
 
-  auto [it, inserted] = dependencies_.insert({providerKey, {}});
+  auto [it, inserted] = m_Dependencies.insert({providerKey, {}});
   it->second.push_back(consumerKey);
 }
 
-std::vector<unsigned> MultithreadedObjectCreationService::collectConsumers(unsigned providerKey) {
-  auto it = dependencies_.find(providerKey);
-  if (it == dependencies_.end()) {
+std::vector<unsigned> MultithreadedObjectCreationService::CollectConsumers(unsigned providerKey) {
+  auto it = m_Dependencies.find(providerKey);
+  if (it == m_Dependencies.end()) {
     return {};
   }
   auto consumers = std::move(it->second);
-  dependencies_.erase(it);
+  m_Dependencies.erase(it);
 
   return consumers;
 }
 
 // Ensure the object has been created (either returns the collected result from a worker thread or creates the object)
 std::optional<MultithreadedObjectCreationService::ObjectCreationOutput>
-MultithreadedObjectCreationService::complete(unsigned objectKey) {
-  std::unique_lock<std::mutex> lock(mutex_);
+MultithreadedObjectCreationService::Complete(unsigned objectKey) {
+  std::unique_lock<std::mutex> lock(m_Mutex);
 
-  auto it = tasks_.find(objectKey);
-  if (it == tasks_.end()) {
+  auto it = m_Tasks.find(objectKey);
+  if (it == m_Tasks.end()) {
     return {};
   }
 
   std::unique_ptr<ObjectCreationTask> task = std::move(it->second);
-  tasks_.erase(it);
+  m_Tasks.erase(it);
 
-  if (task->startedTask_.valid()) {
+  if (task->StartedTask.valid()) {
     lock.unlock();
-    return task->startedTask_.get();
+    return task->StartedTask.get();
   } else {
-    tasksQueue_.erase(std::remove(tasksQueue_.begin(), tasksQueue_.end(), task.get()),
-                      tasksQueue_.end());
+    m_TasksQueue.erase(std::remove(m_TasksQueue.begin(), m_TasksQueue.end(), task.get()),
+                       m_TasksQueue.end());
     lock.unlock();
-    return createObject(task.get());
+    return CreateObject(task.get());
   }
 }
 
 std::vector<std::pair<unsigned, MultithreadedObjectCreationService::ObjectCreationOutput>>
-MultithreadedObjectCreationService::completeAll() {
+MultithreadedObjectCreationService::CompleteAll() {
   std::vector<std::pair<unsigned, ObjectCreationOutput>> results;
-  while (!tasks_.empty()) {
-    unsigned key = tasks_.begin()->first;
-    auto creationOutput = complete(key);
+  while (!m_Tasks.empty()) {
+    unsigned key = m_Tasks.begin()->first;
+    auto creationOutput = Complete(key);
     GITS_ASSERT(creationOutput.has_value());
     results.emplace_back(key, creationOutput.value());
   }
   return results;
 }
 
-bool MultithreadedObjectCreationService::scheduleUpdateRefCount(unsigned objectKey, int count) {
-  std::lock_guard<std::mutex> guard(mutex_);
+bool MultithreadedObjectCreationService::ScheduleUpdateRefCount(unsigned objectKey, int count) {
+  std::lock_guard<std::mutex> guard(m_Mutex);
 
-  auto it = tasks_.find(objectKey);
-  if (it == tasks_.end()) {
+  auto it = m_Tasks.find(objectKey);
+  if (it == m_Tasks.end()) {
     return false;
   }
 
   // Task is not pending
-  if (it->second.get()->startedTask_.valid()) {
+  if (it->second.get()->StartedTask.valid()) {
     return false;
   }
 
   // Update the reference count for pending objects
-  refCounts_[objectKey] += count;
+  m_RefCounts[objectKey] += count;
   return true;
 }
 
-void MultithreadedObjectCreationService::workerThread() {
+void MultithreadedObjectCreationService::WorkerThread() {
   while (true) {
     ObjectCreationTask* task;
     std::promise<CreationFunction::result_type> promise;
 
     {
-      std::unique_lock<std::mutex> lock(mutex_);
-      cv_.wait(lock, [this] { return !tasksQueue_.empty() || done_; });
-      if (done_) {
+      std::unique_lock<std::mutex> lock(m_Mutex);
+      m_Cv.wait(lock, [this] { return !m_TasksQueue.empty() || m_Done; });
+      if (m_Done) {
         return;
       }
 
-      task = tasksQueue_.front();
-      tasksQueue_.pop_front();
+      task = m_TasksQueue.front();
+      m_TasksQueue.pop_front();
 
-      task->startedTask_ = promise.get_future();
+      task->StartedTask = promise.get_future();
     }
 
-    promise.set_value(createObject(task));
+    promise.set_value(CreateObject(task));
   }
 }
 
 MultithreadedObjectCreationService::ObjectCreationOutput MultithreadedObjectCreationService::
-    createObject(ObjectCreationTask* task) {
+    CreateObject(ObjectCreationTask* task) {
   // Create object
-  ObjectCreationOutput r = task->creationFunction_();
+  ObjectCreationOutput r = task->CreationFunctor();
   if (r.result != S_OK) {
     return r;
   }
@@ -179,9 +179,9 @@ MultithreadedObjectCreationService::ObjectCreationOutput MultithreadedObjectCrea
   // Get the reference count and remove it from the map
   int refCount = 0;
   {
-    std::lock_guard<std::mutex> guard(mutex_);
-    refCount = refCounts_[task->objectKey_];
-    refCounts_.erase(task->objectKey_);
+    std::lock_guard<std::mutex> guard(m_Mutex);
+    refCount = m_RefCounts[task->ObjectKey];
+    m_RefCounts.erase(task->ObjectKey);
   }
 
   // Set the reference count on newly created object
@@ -201,7 +201,7 @@ MultithreadedObjectCreationService::ObjectCreationOutput MultithreadedObjectCrea
 
 MultithreadedObjectCreationService::ObjectCreationTask::ObjectCreationTask(
     CreationFunction creationFunction, unsigned objectKey)
-    : creationFunction_{std::move(creationFunction)}, objectKey_{objectKey} {}
+    : CreationFunctor(std::move(creationFunction)), ObjectKey(objectKey) {}
 
 } // namespace DirectX
 } // namespace gits

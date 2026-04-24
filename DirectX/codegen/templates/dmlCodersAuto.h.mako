@@ -20,9 +20,9 @@ namespace dml {
 pod_field_types = get_pod_field_types(structures)
 %>
 %for field_type in pod_field_types:
-unsigned getSize(const ${field_type}* src, unsigned count);
-void encode(const ${field_type}* src, unsigned count, char* dst, unsigned& offset);
-void decode(const ${field_type}* src, unsigned count, char* dst, unsigned& offset);
+unsigned GetSize(const ${field_type}* src, unsigned count);
+void Encode(const ${field_type}* src, unsigned count, char* dst, unsigned& offset);
+void Decode(const ${field_type}* src, unsigned count, char* dst, unsigned& offset);
 
 %endfor
 %for struct in structures:
@@ -31,9 +31,9 @@ void decode(const ${field_type}* src, unsigned count, char* dst, unsigned& offse
 %endif
 // ${struct.name}
 
-unsigned getSize(const ${struct.name}* src, unsigned count);
-void encode(const ${struct.name}* src, unsigned count, char* dst, unsigned& offset);
-void decode(const ${struct.name}* dst, unsigned count, char* src, unsigned& offset);
+unsigned GetSize(const ${struct.name}* src, unsigned count);
+void Encode(const ${struct.name}* src, unsigned count, char* dst, unsigned& offset);
+void Decode(const ${struct.name}* dst, unsigned count, char* src, unsigned& offset);
 
 %endfor
 

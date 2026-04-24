@@ -21,11 +21,11 @@ public:
   BenchmarkLayer(const BenchmarkConfig& cfg, gits::MessageBus& msgBus);
   ~BenchmarkLayer() = default;
 
-  void pre(CreateDXGIFactoryCommand& command) override;
-  void pre(CreateDXGIFactory1Command& command) override;
-  void pre(CreateDXGIFactory2Command& command) override;
-  void post(IDXGISwapChainPresentCommand& command) override;
-  void post(IDXGISwapChain1Present1Command& command) override;
+  void Pre(CreateDXGIFactoryCommand& command) override;
+  void Pre(CreateDXGIFactory1Command& command) override;
+  void Pre(CreateDXGIFactory2Command& command) override;
+  void Post(IDXGISwapChainPresentCommand& command) override;
+  void Post(IDXGISwapChain1Present1Command& command) override;
 
 private:
   BenchmarkConfig cfg_;

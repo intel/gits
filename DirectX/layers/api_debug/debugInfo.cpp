@@ -11,7 +11,6 @@
 #include "configurationLib.h"
 #include "to_string/enumToStrAuto.h"
 #include "to_string/toStr.h"
-#include "log.h"
 #include "messageBus.h"
 
 #include <sstream>
@@ -25,11 +24,11 @@ DebugInfo::DebugInfo() {}
 
 void DebugInfo::createDXGIFactory(CreateDXGIFactoryCommand& command) {
 
-  HRESULT hr =
-      CreateDXGIFactory2(DXGI_CREATE_FACTORY_DEBUG, command.riid_.value, command.ppFactory_.value);
+  HRESULT hr = CreateDXGIFactory2(DXGI_CREATE_FACTORY_DEBUG, command.m_riid.Value,
+                                  command.m_ppFactory.Value);
   if (hr == S_OK) {
-    command.result_.value = hr;
-    command.skip = true;
+    command.m_Result.Value = hr;
+    command.Skip = true;
   } else {
     LOG_ERROR << "CreateDXGIFactory2 with DXGI_CREATE_FACTORY_DEBUG failed.";
   }
@@ -37,18 +36,18 @@ void DebugInfo::createDXGIFactory(CreateDXGIFactoryCommand& command) {
 
 void DebugInfo::createDXGIFactory1(CreateDXGIFactory1Command& command) {
 
-  HRESULT hr =
-      CreateDXGIFactory2(DXGI_CREATE_FACTORY_DEBUG, command.riid_.value, command.ppFactory_.value);
+  HRESULT hr = CreateDXGIFactory2(DXGI_CREATE_FACTORY_DEBUG, command.m_riid.Value,
+                                  command.m_ppFactory.Value);
   if (hr == S_OK) {
-    command.result_.value = hr;
-    command.skip = true;
+    command.m_Result.Value = hr;
+    command.Skip = true;
   } else {
     LOG_ERROR << "CreateDXGIFactory2 with DXGI_CREATE_FACTORY_DEBUG failed.";
   }
 }
 
 void DebugInfo::createDXGIFactory2(CreateDXGIFactory2Command& command) {
-  command.Flags_.value |= DXGI_CREATE_FACTORY_DEBUG;
+  command.m_Flags.Value |= DXGI_CREATE_FACTORY_DEBUG;
 }
 
 void DebugInfo::createD3D12DevicePre(D3D12CreateDeviceCommand& command) {
@@ -74,35 +73,35 @@ void DebugInfo::createD3D12DevicePre(D3D12CreateDeviceCommand& command) {
 }
 
 void DebugInfo::createD3D12DevicePost(D3D12CreateDeviceCommand& command) {
-  if (command.result_.value != S_OK) {
+  if (command.m_Result.Value != S_OK) {
     return;
   }
 
   Microsoft::WRL::ComPtr<ID3D12InfoQueue1> infoQueue;
-  ID3D12Device* device = static_cast<ID3D12Device*>(*command.ppDevice_.value);
+  ID3D12Device* device = static_cast<ID3D12Device*>(*command.m_ppDevice.Value);
   HRESULT hr = device->QueryInterface(IID_PPV_ARGS(&infoQueue));
   if (hr != S_OK) {
     LOG_DEBUG << "QueryInterface to ID3D12InfoQueue1 failed.";
     return;
   }
   DWORD callbackCookie{};
-  hr = infoQueue->RegisterMessageCallback(debugMessageCallback, D3D12_MESSAGE_CALLBACK_FLAG_NONE,
+  hr = infoQueue->RegisterMessageCallback(DebugMessageCallback, D3D12_MESSAGE_CALLBACK_FLAG_NONE,
                                           this, &callbackCookie);
   if (hr != S_OK) {
     LOG_ERROR << "ID3D12InfoQueue1::RegisterMessageCallback failed.";
   }
 
-  d3d12CallbackRegistered_ = true;
+  m_D3d12CallbackRegistered = true;
 
-  initNvAPIValidation(device);
+  InitNvApiValidation(device);
 }
 
 void DebugInfo::createDMLDevicePre(DMLCreateDeviceCommand& command) {
-  command.flags_.value |= DML_CREATE_DEVICE_FLAG_DEBUG;
+  command.m_flags.Value |= DML_CREATE_DEVICE_FLAG_DEBUG;
 }
 
 void DebugInfo::createDMLDevice1Pre(DMLCreateDevice1Command& command) {
-  command.flags_.value |= DML_CREATE_DEVICE_FLAG_DEBUG;
+  command.m_flags.Value |= DML_CREATE_DEVICE_FLAG_DEBUG;
 }
 
 void DebugInfo::checkDXGIDebugInfo(Command& command, IUnknown* object) {
@@ -132,15 +131,15 @@ void DebugInfo::checkDXGIDebugInfo(Command& command, IUnknown* object) {
         reinterpret_cast<DXGI_INFO_QUEUE_MESSAGE*>(messageBytes.get());
     hr = infoQueue->GetMessage(DXGI_DEBUG_ALL, 0, message, &size);
     if (hr == S_OK) {
-      traceMessage(static_cast<D3D12_MESSAGE_SEVERITY>(message->Severity), message->pDescription);
+      TraceMessage(static_cast<D3D12_MESSAGE_SEVERITY>(message->Severity), message->pDescription);
     }
   }
 }
 
 void DebugInfo::checkD3D12DebugInfo(Command& command, IUnknown* object) {
-  flushNvAPIValidation(object);
+  FlushNvApiValidation(object);
 
-  if (d3d12CallbackRegistered_) {
+  if (m_D3d12CallbackRegistered) {
     return;
   }
 
@@ -171,7 +170,7 @@ void DebugInfo::checkD3D12DebugInfo(Command& command, IUnknown* object) {
         D3D12_MESSAGE* message = reinterpret_cast<D3D12_MESSAGE*>(messageBytes.get());
         hr = infoQueue->GetMessage(i, message, &size);
         if (hr == S_OK) {
-          traceMessage(message->Severity, message->pDescription);
+          TraceMessage(message->Severity, message->pDescription);
         }
       }
     }
@@ -179,16 +178,16 @@ void DebugInfo::checkD3D12DebugInfo(Command& command, IUnknown* object) {
   }
 }
 
-void __stdcall DebugInfo::debugMessageCallback(D3D12_MESSAGE_CATEGORY category,
+void __stdcall DebugInfo::DebugMessageCallback(D3D12_MESSAGE_CATEGORY category,
                                                D3D12_MESSAGE_SEVERITY severity,
                                                D3D12_MESSAGE_ID id,
                                                LPCSTR description,
                                                void* context) {
   DebugInfo* debugInfo = static_cast<DebugInfo*>(context);
-  debugInfo->traceMessage(severity, description);
+  debugInfo->TraceMessage(severity, description);
 }
 
-void __stdcall DebugInfo::NvAPIdebugMessageCallback(
+void __stdcall DebugInfo::NvApiDebugMessageCallback(
     void* context,
     NVAPI_D3D12_RAYTRACING_VALIDATION_MESSAGE_SEVERITY severity,
     const char* messageCode,
@@ -212,10 +211,10 @@ void __stdcall DebugInfo::NvAPIdebugMessageCallback(
   }
 
   DebugInfo* debugInfo = static_cast<DebugInfo*>(context);
-  debugInfo->traceMessage(d3d12Severity, description.c_str());
+  debugInfo->TraceMessage(d3d12Severity, description.c_str());
 }
 
-void DebugInfo::traceMessage(D3D12_MESSAGE_SEVERITY severity, const char* message) {
+void DebugInfo::TraceMessage(D3D12_MESSAGE_SEVERITY severity, const char* message) {
   auto& cfg = Configurator::Get();
 
   // Check if the message should be added to the trace file
@@ -288,12 +287,12 @@ void DebugInfo::checkD3D12DeviceRemoval(Command& command, IUnknown* object) {
     }
   }
 
-  initDredLog();
+  InitDredLog();
 
   ID3D12DeviceRemovedExtendedData* dred{};
   if (dred2.Get()) {
     D3D12_DRED_DEVICE_STATE deviceState = dred2->GetDeviceState();
-    dredFile_ << "DRED Device State: " << deviceState << "\n\n";
+    m_DredFile << "DRED Device State: " << deviceState << "\n\n";
     dred = dred2.Get();
   } else {
     dred = dred0.Get();
@@ -303,21 +302,21 @@ void DebugInfo::checkD3D12DeviceRemoval(Command& command, IUnknown* object) {
   GITS_ASSERT(dred != nullptr);
   hr = dred->GetAutoBreadcrumbsOutput(&breadcrumbsOutput);
   if (hr == S_OK) {
-    logDredBreadcrumbs(breadcrumbsOutput.pHeadAutoBreadcrumbNode);
+    LogDredBreadcrumbs(breadcrumbsOutput.pHeadAutoBreadcrumbNode);
   }
 
-  dredFile_ << "\n";
+  m_DredFile << "\n";
 
   D3D12_DRED_PAGE_FAULT_OUTPUT pageFaultOutput;
   hr = dred->GetPageFaultAllocationOutput(&pageFaultOutput);
   if (hr == S_OK) {
-    logDredPageFaults(pageFaultOutput);
+    LogDredPageFaults(pageFaultOutput);
   }
-  dredFile_.flush();
+  m_DredFile.flush();
 }
 
-void DebugInfo::initDredLog() {
-  if (dredFile_.is_open()) {
+void DebugInfo::InitDredLog() {
+  if (m_DredFile.is_open()) {
     return;
   }
 
@@ -332,15 +331,15 @@ void DebugInfo::initDredLog() {
     }
     fileNum = std::to_string(i);
   }
-  dredFile_.open(filenameBase + fileNum + fileExt);
+  m_DredFile.open(filenameBase + fileNum + fileExt);
 }
 
-void DebugInfo::logDredBreadcrumbs(const D3D12_AUTO_BREADCRUMB_NODE* headNode) {
+void DebugInfo::LogDredBreadcrumbs(const D3D12_AUTO_BREADCRUMB_NODE* headNode) {
   if (!headNode) {
     return;
   }
 
-  dredFile_ << "DRED Breadcrumb Report\n";
+  m_DredFile << "DRED Breadcrumb Report\n";
 
   const D3D12_AUTO_BREADCRUMB_NODE* node = headNode;
   while (node) {
@@ -362,34 +361,34 @@ void DebugInfo::logDredBreadcrumbs(const D3D12_AUTO_BREADCRUMB_NODE* headNode) {
       cmdQueueName = std::string(cmdQueueNameW.begin(), cmdQueueNameW.end());
     }
 
-    dredFile_ << "  Breadcrumb Node:\n";
-    dredFile_ << "    Finished: " << (hasFinished ? "Yes" : "No") << "\n";
+    m_DredFile << "  Breadcrumb Node:\n";
+    m_DredFile << "    Finished: " << (hasFinished ? "Yes" : "No") << "\n";
     if (!hasFinished && (nExecuted > 0)) {
-      dredFile_ << "    Last Executed Operation: " << toStr(node->pCommandHistory[nExecuted - 1])
-                << "\n";
+      m_DredFile << "    Last Executed Operation: " << toStr(node->pCommandHistory[nExecuted - 1])
+                 << "\n";
     }
-    dredFile_ << "    Command Queue: " << cmdQueueName << "\n";
-    dredFile_ << "    Command List: " << cmdListName << "\n";
-    dredFile_ << "    Operations Executed: " << nExecuted << " out of " << node->BreadcrumbCount
-              << "\n";
-    dredFile_ << "    Operations (" << node->BreadcrumbCount << "):\n";
+    m_DredFile << "    Command Queue: " << cmdQueueName << "\n";
+    m_DredFile << "    Command List: " << cmdListName << "\n";
+    m_DredFile << "    Operations Executed: " << nExecuted << " out of " << node->BreadcrumbCount
+               << "\n";
+    m_DredFile << "    Operations (" << node->BreadcrumbCount << "):\n";
     unsigned lastExecuted = UINT_MAX;
     if (nExecuted && nExecuted != node->BreadcrumbCount) {
       lastExecuted = nExecuted - 1;
     }
     for (unsigned i = 0; i < node->BreadcrumbCount; ++i) {
       if (node->pCommandHistory[i] != 0) {
-        dredFile_ << "      " << i << ": " << toStr(node->pCommandHistory[i])
-                  << (i == lastExecuted ? " LAST EXECUTED" : "") << "\n";
+        m_DredFile << "      " << i << ": " << toStr(node->pCommandHistory[i])
+                   << (i == lastExecuted ? " LAST EXECUTED" : "") << "\n";
       }
     }
 
     node = node->pNext;
   }
-  dredFile_.flush();
+  m_DredFile.flush();
 }
 
-void DebugInfo::logDredPageFaults(const D3D12_DRED_PAGE_FAULT_OUTPUT& pageFaultOutput) {
+void DebugInfo::LogDredPageFaults(const D3D12_DRED_PAGE_FAULT_OUTPUT& pageFaultOutput) {
   auto printAllocationNodes = [&](const D3D12_DRED_ALLOCATION_NODE* headNode) {
     if (!headNode) {
       return;
@@ -403,23 +402,23 @@ void DebugInfo::logDredPageFaults(const D3D12_DRED_PAGE_FAULT_OUTPUT& pageFaultO
         std::wstring objNameW = std::wstring(node->ObjectNameW);
         objName = std::string(objNameW.begin(), objNameW.end());
       }
-      dredFile_ << "      " << objName << "\n";
-      dredFile_ << "        Type: " << node->AllocationType << "\n";
+      m_DredFile << "      " << objName << "\n";
+      m_DredFile << "        Type: " << node->AllocationType << "\n";
 
       node = node->pNext;
     }
   };
 
-  dredFile_ << "DRED Page Fault Report:\n";
-  dredFile_ << "  GPU Virtual Address: ";
-  dredFile_ << std::hex << pageFaultOutput.PageFaultVA << std::dec << "\n";
-  dredFile_ << "  Recent Freed Allocations:\n";
+  m_DredFile << "DRED Page Fault Report:\n";
+  m_DredFile << "  GPU Virtual Address: ";
+  m_DredFile << std::hex << pageFaultOutput.PageFaultVA << std::dec << "\n";
+  m_DredFile << "  Recent Freed Allocations:\n";
   printAllocationNodes(pageFaultOutput.pHeadRecentFreedAllocationNode);
-  dredFile_ << "  Existing Allocations:\n";
+  m_DredFile << "  Existing Allocations:\n";
   printAllocationNodes(pageFaultOutput.pHeadExistingAllocationNode);
 }
 
-void DebugInfo::initNvAPIValidation(ID3D12Device* device) {
+void DebugInfo::InitNvApiValidation(ID3D12Device* device) {
   auto status = NvAPI_Initialize();
   if (status == NVAPI_LIBRARY_NOT_FOUND || status == NVAPI_NVIDIA_DEVICE_NOT_FOUND) {
     return;
@@ -440,12 +439,12 @@ void DebugInfo::initNvAPIValidation(ID3D12Device* device) {
   if (status == NVAPI_OK) {
     void* handle{};
     status = NvAPI_D3D12_RegisterRaytracingValidationMessageCallback(
-        device5.Get(), NvAPIdebugMessageCallback, this, &handle);
+        device5.Get(), NvApiDebugMessageCallback, this, &handle);
     if (status != NVAPI_OK) {
       LOG_ERROR << "NvAPI_D3D12_RegisterRaytracingValidationMessageCallback failed! Status: "
                 << status;
     } else {
-      nvAPICallbackRegistered_ = true;
+      m_NvApiCallbackRegistered = true;
     }
   } else if (status == NVAPI_ACCESS_DENIED) {
     LOG_ERROR << "NvAPI_D3D12_EnableRaytracingValidation failed! Environment variables: "
@@ -455,8 +454,8 @@ void DebugInfo::initNvAPIValidation(ID3D12Device* device) {
   }
 }
 
-void DebugInfo::flushNvAPIValidation(IUnknown* object) {
-  if (!nvAPICallbackRegistered_) {
+void DebugInfo::FlushNvApiValidation(IUnknown* object) {
+  if (!m_NvApiCallbackRegistered) {
     return;
   }
 

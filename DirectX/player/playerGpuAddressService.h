@@ -17,23 +17,23 @@ namespace DirectX {
 
 class PlayerGpuAddressService {
 public:
-  void createResource(unsigned resourceKey, ID3D12Resource* resource);
-  void createPlacedResource(unsigned resourceKey,
+  void CreateResource(unsigned ResourceKey, ID3D12Resource* resource);
+  void CreatePlacedResource(unsigned ResourceKey,
                             ID3D12Resource* resource,
                             unsigned heapKey,
                             ID3D12Heap* heap,
                             UINT64 heapOffset);
-  void createHeap(unsigned heapKey, ID3D12Heap* heap);
-  D3D12_GPU_VIRTUAL_ADDRESS getGpuAddress(unsigned resourceKey, unsigned offset);
-  void destroyInterface(unsigned interfaceKey);
+  void CreateHeap(unsigned heapKey, ID3D12Heap* heap);
+  D3D12_GPU_VIRTUAL_ADDRESS GetGpuAddress(unsigned ResourceKey, unsigned offset);
+  void DestroyInterface(unsigned InterfaceKey);
 
 private:
-  std::unordered_map<unsigned, D3D12_GPU_VIRTUAL_ADDRESS> startAddressesByKey_;
-  std::unordered_set<unsigned> placedResources_;
-  std::unordered_map<unsigned, D3D12_GPU_VIRTUAL_ADDRESS> releasedPlacedResources_;
+  std::unordered_map<unsigned, D3D12_GPU_VIRTUAL_ADDRESS> m_StartAddressesByKey;
+  std::unordered_set<unsigned> m_PlacedResources;
+  std::unordered_map<unsigned, D3D12_GPU_VIRTUAL_ADDRESS> m_ReleasedPlacedResources;
 
 private:
-  D3D12_GPU_VIRTUAL_ADDRESS getHeapGPUVirtualAddress(ID3D12Heap* heap);
+  D3D12_GPU_VIRTUAL_ADDRESS GetHeapGpuVirtualAddress(ID3D12Heap* heap);
 };
 
 } // namespace DirectX

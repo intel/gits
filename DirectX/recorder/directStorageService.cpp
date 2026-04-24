@@ -18,28 +18,28 @@ namespace DirectX {
 
 DirectStorageService::DirectStorageService() {
   const auto& cfg = Configurator::Get();
-  captureDirectStorage_ = cfg.directx.recorder.captureDirectStorage;
-  if (captureDirectStorage_) {
+  m_CaptureDirectStorage = cfg.directx.recorder.captureDirectStorage;
+  if (m_CaptureDirectStorage) {
     const std::filesystem::path& outFileDir =
         Configurator::IsPlayer() ? cfg.common.player.subcapturePath : cfg.common.recorder.dumpPath;
-    outFilePath_ = outFileDir / "DirectStorageResources.bin";
-    outFile_.open(outFilePath_, std::ios::binary);
+    m_OutFilePath = outFileDir / "DirectStorageResources.bin";
+    m_OutFile.open(m_OutFilePath, std::ios::binary);
   }
 }
 
 void DirectStorageService::openFile(IDStorageFactoryOpenFileCommand& c) {
-  if (captureDirectStorage_) {
-    std::lock_guard<std::mutex> lock(mapMutex_);
-    files_[c.ppv_.key] = c.path_.value;
+  if (m_CaptureDirectStorage) {
+    std::lock_guard<std::mutex> lock(m_MapMutex);
+    m_Files[c.m_ppv.Key] = c.m_path.Value;
   }
 }
 
 void DirectStorageService::enqueueRequest(IDStorageQueueEnqueueRequestCommand& c) {
-  if (!captureDirectStorage_) {
+  if (!m_CaptureDirectStorage) {
     return;
   }
-  GITS_ASSERT(c.request_.value);
-  DSTORAGE_REQUEST& request = *c.request_.value;
+  GITS_ASSERT(c.m_request.Value);
+  DSTORAGE_REQUEST& request = *c.m_request.Value;
   // Custom compression is not supported
   // Memory source is not supported
   if ((request.Options.CompressionFormat & DSTORAGE_CUSTOM_COMPRESSION_0) ||
@@ -47,13 +47,13 @@ void DirectStorageService::enqueueRequest(IDStorageQueueEnqueueRequestCommand& c
     return;
   }
 
-  GITS_ASSERT(c.request_.fileKey);
+  GITS_ASSERT(c.m_request.FileKey);
 
-  std::lock_guard<std::mutex> lock(mapMutex_);
-  const std::filesystem::path& filePath = files_[c.request_.fileKey];
-  Ranges& fileReads = fileReads_[filePath];
+  std::lock_guard<std::mutex> lock(m_MapMutex);
+  const std::filesystem::path& filePath = m_Files[c.m_request.FileKey];
+  Ranges& fileReads = m_FileReads[filePath];
   FileRange range =
-      FileRange(outFile_.tellp(), request.Source.File.Offset, request.Source.File.Size);
+      FileRange(m_OutFile.tellp(), request.Source.File.Offset, request.Source.File.Size);
   auto result = fileReads.insert(range);
   // Assumes that all the chunks accessed are the same size (or smaller) than when originally accessed
   GITS_ASSERT(result.first->size >= request.Source.File.Size);
@@ -63,10 +63,10 @@ void DirectStorageService::enqueueRequest(IDStorageQueueEnqueueRequestCommand& c
     inputFile.seekg(range.oldOffset);
     Buffer buffer(range.size);
     inputFile.read(buffer.data(), range.size);
-    outFile_.write(buffer.data(), range.size);
+    m_OutFile.write(buffer.data(), range.size);
   }
   // Save the DirectStorageResources.bin offset
-  c.request_.newOffset = result.first->newOffset;
+  c.m_request.NewOffset = result.first->NewOffset;
 }
 } // namespace DirectX
 } // namespace gits

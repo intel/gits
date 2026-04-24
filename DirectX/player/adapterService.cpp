@@ -14,7 +14,7 @@
 namespace gits {
 namespace DirectX {
 
-void AdapterService::loadAdapters() {
+void AdapterService::LoadAdapters() {
   const std::unordered_map<std::string, unsigned> adapterMap = {
       {"", 0}, {"intel", 0x8086}, {"amd", 0x1002}, {"nvidia", 0x10de}};
 
@@ -41,8 +41,8 @@ void AdapterService::loadAdapters() {
   Microsoft::WRL::ComPtr<IDXGIAdapter1> adapter;
   while (SUCCEEDED(factory->EnumAdapters1(adapterIndex, &adapter))) {
     // Set the DXGIAdapter at index 0 by default
-    if (!adapter_) {
-      adapter_ = adapter;
+    if (!m_Adapter) {
+      m_Adapter = adapter;
     }
 
     DXGI_ADAPTER_DESC1 adapterDesc{};
@@ -62,7 +62,7 @@ void AdapterService::loadAdapters() {
     }
     if (isMatch) {
       overrideFound = true;
-      adapter_ = adapter;
+      m_Adapter = adapter;
       adapterOverrideIndex = adapterIndex;
     }
 
@@ -80,31 +80,31 @@ void AdapterService::loadAdapters() {
   }
 }
 
-bool AdapterService::isAdapterOverride() const {
+bool AdapterService::IsAdapterOverride() const {
   return Configurator::Get().directx.player.adapterOverride.enabled;
 }
 
-IDXGIAdapter1* AdapterService::getAdapter() const {
-  return adapter_.Get();
+IDXGIAdapter1* AdapterService::GetAdapter() const {
+  return m_Adapter.Get();
 }
 
-void AdapterService::setCaptureAdapterLuid(unsigned key, LUID captureLuid) {
-  captureLuids_[key] = captureLuid;
+void AdapterService::SetCaptureAdapterLuid(unsigned key, LUID captureLuid) {
+  m_CaptureLuids[key] = captureLuid;
 }
 
-void AdapterService::setCurrentAdapterLuid(unsigned key, LUID currentLuid) {
-  auto it = captureLuids_.find(key);
-  GITS_ASSERT(it != captureLuids_.end());
-  luidsByCaptureLuid_[it->second] = currentLuid;
-  captureLuids_.erase(it);
+void AdapterService::SetCurrentAdapterLuid(unsigned key, LUID currentLuid) {
+  auto it = m_CaptureLuids.find(key);
+  GITS_ASSERT(it != m_CaptureLuids.end());
+  m_LuidsByCaptureLuid[it->second] = currentLuid;
+  m_CaptureLuids.erase(it);
 }
 
-LUID AdapterService::getCurrentLuid(LUID captureLuid) {
-  if (luidsByCaptureLuid_.empty()) {
+LUID AdapterService::GetCurrentLuid(LUID captureLuid) {
+  if (m_LuidsByCaptureLuid.empty()) {
     return LUID{0};
   }
-  auto it = luidsByCaptureLuid_.find(captureLuid);
-  GITS_ASSERT(it != luidsByCaptureLuid_.end());
+  auto it = m_LuidsByCaptureLuid.find(captureLuid);
+  GITS_ASSERT(it != m_LuidsByCaptureLuid.end());
   return it->second;
 }
 

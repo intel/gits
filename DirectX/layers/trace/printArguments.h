@@ -21,12 +21,12 @@ namespace DirectX {
 
 template <typename T>
 FastOStream& operator<<(FastOStream& stream, PointerArgument<T>& arg) {
-  return stream << const_cast<const T*>(arg.value);
+  return stream << const_cast<const T*>(arg.Value);
 }
 
 template <template <typename> typename Arg, typename T>
 FastOStream& operator<<(FastOStream& stream, Arg<T>& arg) {
-  stream << arg.value;
+  stream << arg.Value;
   return stream;
 }
 
@@ -38,7 +38,7 @@ FastOStream& operator<<(FastOStream& stream, StaticArrayArgument<T, N>& arg) {
     if (i > 0) {
       stream << ", ";
     }
-    stream << arg.value[i];
+    stream << arg.Value[i];
   }
   stream << "]";
   return stream;
@@ -46,16 +46,16 @@ FastOStream& operator<<(FastOStream& stream, StaticArrayArgument<T, N>& arg) {
 
 template <typename T>
 FastOStream& operator<<(FastOStream& stream, ArrayArgument<T>& arg) {
-  if (!arg.value) {
+  if (!arg.Value) {
     return stream << "nullptr";
   }
 
   stream << "[";
-  for (int i = 0; i < arg.size; ++i) {
+  for (int i = 0; i < arg.Size; ++i) {
     if (i > 0) {
       stream << ", ";
     }
-    stream << arg.value[i];
+    stream << arg.Value[i];
   }
   stream << "]";
   return stream;
@@ -63,28 +63,28 @@ FastOStream& operator<<(FastOStream& stream, ArrayArgument<T>& arg) {
 
 template <typename T>
 FastOStream& operator<<(FastOStream& stream, InterfaceArgument<T>& arg) {
-  printObjectKey(stream, arg.key);
+  printObjectKey(stream, arg.Key);
   return stream;
 }
 
 template <typename T>
 FastOStream& operator<<(FastOStream& stream, InterfaceOutputArgument<T>& arg) {
-  printObjectKey(stream, arg.key);
+  printObjectKey(stream, arg.Key);
   return stream;
 }
 
 template <typename T>
 FastOStream& operator<<(FastOStream& stream, InterfaceArrayArgument<T>& arg) {
-  if (!arg.value) {
+  if (!arg.Value) {
     return stream << "nullptr";
   }
 
   stream << "[";
-  for (unsigned i = 0; i < arg.size; ++i) {
+  for (unsigned i = 0; i < arg.Size; ++i) {
     if (i > 0) {
       stream << ", ";
     }
-    printObjectKey(stream, arg.keys[i]);
+    printObjectKey(stream, arg.Keys[i]);
   }
   stream << "]";
   return stream;
@@ -92,13 +92,13 @@ FastOStream& operator<<(FastOStream& stream, InterfaceArrayArgument<T>& arg) {
 
 template <typename T>
 FastOStream& operator<<(FastOStream& stream, ContextArgument<T>& arg) {
-  printObjectKey(stream, arg.key);
+  printObjectKey(stream, arg.Key);
   return stream;
 }
 
 template <typename T>
 FastOStream& operator<<(FastOStream& stream, ContextOutputArgument<T>& arg) {
-  printObjectKey(stream, arg.key);
+  printObjectKey(stream, arg.Key);
   return stream;
 }
 

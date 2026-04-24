@@ -17,21 +17,21 @@ class StateTrackingService;
 
 class ResidencyService {
 public:
-  ResidencyService(StateTrackingService& stateService) : stateService_(stateService) {}
-  void createNotResident(const unsigned key, const unsigned deviceKey);
-  void makeResident(const std::vector<unsigned>& keys, const unsigned deviceKey);
-  void evict(const std::vector<unsigned>& keys, const unsigned deviceKey);
-  void destroyObject(const unsigned key);
-  void restoreResidency();
+  ResidencyService(StateTrackingService& stateService) : m_StateService(stateService) {}
+  void CreateNotResident(const unsigned key, const unsigned DeviceKey);
+  void MakeResident(const std::vector<unsigned>& keys, const unsigned DeviceKey);
+  void Evict(const std::vector<unsigned>& keys, const unsigned DeviceKey);
+  void DestroyObject(const unsigned key);
+  void RestoreResidency();
 
 private:
   struct ResidencyInfo {
-    unsigned residencyCount{};
-    unsigned deviceKey{};
-    bool createdNotResident{};
+    unsigned ResidencyCount{};
+    unsigned DeviceKey{};
+    bool CreatedNotResident{};
   };
-  StateTrackingService& stateService_;
-  std::unordered_map<unsigned, ResidencyInfo> residency_;
+  StateTrackingService& m_StateService;
+  std::unordered_map<unsigned, ResidencyInfo> m_Residency;
 };
 
 } // namespace DirectX

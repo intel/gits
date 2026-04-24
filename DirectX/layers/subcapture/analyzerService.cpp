@@ -22,274 +22,274 @@ AnalyzerService::AnalyzerService(SubcaptureRange& subcaptureRange,
                                  AnalyzerCommandListService& commandListService,
                                  AnalyzerRaytracingService& raytracingService,
                                  AnalyzerExecuteIndirectService& executeIndirectService)
-    : subcaptureRange_(subcaptureRange),
-      commandListService_(commandListService),
-      raytracingService_(raytracingService),
-      executeIndirectService_(executeIndirectService) {
-  optimize_ = Configurator::Get().directx.features.subcapture.optimize;
+    : m_SubcaptureRange(subcaptureRange),
+      m_CommandListService(commandListService),
+      m_RaytracingService(raytracingService),
+      m_ExecuteIndirectService(executeIndirectService) {
+  m_Optimize = Configurator::Get().directx.features.subcapture.optimize;
 }
 
 AnalyzerService::~AnalyzerService() {
   try {
-    if (inRange_) {
+    if (m_InRange) {
       LOG_ERROR << "Subcapture analysis terminated prematurely";
-      dumpAnalysisFile();
+      DumpAnalysisFile();
     }
   } catch (...) {
     topmost_exception_handler("AnalyzerService::~AnalyzerService");
   }
 }
 
-void AnalyzerService::notifyObject(unsigned objectKey) {
-  if (optimize_ && inRange_) {
+void AnalyzerService::NotifyObject(unsigned objectKey) {
+  if (m_Optimize && m_InRange) {
     if (objectKey) {
-      objectsForRestore_.insert(objectKey);
+      m_ObjectsForRestore.insert(objectKey);
     }
   }
 }
 
-void AnalyzerService::notifyObjects(const std::vector<unsigned>& objectKeys) {
-  if (optimize_ && inRange_) {
+void AnalyzerService::NotifyObjects(const std::vector<unsigned>& objectKeys) {
+  if (m_Optimize && m_InRange) {
     for (unsigned key : objectKeys) {
       if (key) {
-        objectsForRestore_.insert(key);
+        m_ObjectsForRestore.insert(key);
       }
     }
   }
 }
 
-void AnalyzerService::commandListCommand(unsigned commandListKey) {
-  if (subcaptureRange_.commandListSubcapture()) {
+void AnalyzerService::CommandListCommand(unsigned commandListKey) {
+  if (m_SubcaptureRange.CommandListSubcapture()) {
     return;
   }
-  if (inRange_) {
-    auto it = commandListsReset_.find(commandListKey);
-    if (it == commandListsReset_.end()) {
-      commandListsForRestore_.insert(commandListKey);
+  if (m_InRange) {
+    auto it = m_CommandListsReset.find(commandListKey);
+    if (it == m_CommandListsReset.end()) {
+      m_CommandListsForRestore.insert(commandListKey);
     }
   }
 }
 
-void AnalyzerService::present(unsigned callKey, unsigned swapChainKey) {
-  if (subcaptureRange_.commandListSubcapture()) {
-    objectsForRestore_.insert(swapChainKey);
-    subcaptureRange_.frameEnd(isStateRestoreKey(callKey));
+void AnalyzerService::Present(unsigned callKey, unsigned swapChainKey) {
+  if (m_SubcaptureRange.CommandListSubcapture()) {
+    m_ObjectsForRestore.insert(swapChainKey);
+    m_SubcaptureRange.FrameEnd(IsStateRestoreKey(callKey));
     return;
   }
 
-  if (subcaptureRange_.isFrameRangeStart(isStateRestoreKey(callKey))) {
-    inRange_ = true;
-    beforeRange_ = false;
-    clearReadyExecutables();
-    auto& queueEvents = gpuExecutionTracker_.getQueueEvents();
+  if (m_SubcaptureRange.IsFrameRangeStart(IsStateRestoreKey(callKey))) {
+    m_InRange = true;
+    m_BeforeRange = false;
+    ClearReadyExecutables();
+    auto& queueEvents = m_GpuExecutionTracker.GetQueueEvents();
     for (auto& commandQueue : queueEvents) {
       for (GpuExecutionTracker::QueueEvent* event : commandQueue.second) {
-        std::vector<unsigned>& objectKeys = commandQueueCommandsForRestore_[event->callKey];
-        if (event->commandQueueKey) {
-          objectKeys.push_back(event->commandQueueKey);
+        std::vector<unsigned>& objectKeys = m_CommandQueueCommandsForRestore[event->CallKey];
+        if (event->CommandQueueKey) {
+          objectKeys.push_back(event->CommandQueueKey);
         }
-        switch (event->type) {
-        case GpuExecutionTracker::QueueEvent::Execute: {
+        switch (event->Kind) {
+        case GpuExecutionTracker::QueueEventKind::Execute: {
           auto* execute = static_cast<ExecuteCommandListCommand*>(event);
-          for (unsigned commandListKey : execute->commandListKeys) {
-            commandListsForRestore_.insert(commandListKey);
+          for (unsigned commandListKey : execute->CommandListKeys) {
+            m_CommandListsForRestore.insert(commandListKey);
           }
         } break;
-        case GpuExecutionTracker::QueueEvent::Signal: {
+        case GpuExecutionTracker::QueueEventKind::Signal: {
           auto* signal = static_cast<GpuExecutionTracker::SignalEvent*>(event);
-          objectKeys.push_back(signal->fence.key);
+          objectKeys.push_back(signal->Fence.Key);
         } break;
-        case GpuExecutionTracker::QueueEvent::Wait: {
+        case GpuExecutionTracker::QueueEventKind::Wait: {
           auto* wait = static_cast<GpuExecutionTracker::WaitEvent*>(event);
-          objectKeys.push_back(wait->fence.key);
+          objectKeys.push_back(wait->Fence.Key);
         } break;
         }
         delete event;
       }
     }
-    subcaptureRange_.frameEnd(isStateRestoreKey(callKey));
+    m_SubcaptureRange.FrameEnd(IsStateRestoreKey(callKey));
     return;
   }
 
-  subcaptureRange_.frameEnd(isStateRestoreKey(callKey));
-  if (!subcaptureRange_.inRange() && inRange_) {
-    commandListService_.commandListsRestore(commandListsForRestore_);
-    inRange_ = false;
-    dumpAnalysisFile();
+  m_SubcaptureRange.FrameEnd(IsStateRestoreKey(callKey));
+  if (!m_SubcaptureRange.InRange() && m_InRange) {
+    m_CommandListService.CommandListsRestore(m_CommandListsForRestore);
+    m_InRange = false;
+    DumpAnalysisFile();
   }
 }
 
-void AnalyzerService::executeCommandLists(unsigned callKey,
+void AnalyzerService::ExecuteCommandLists(unsigned callKey,
                                           unsigned commandQueueKey,
                                           std::vector<unsigned>& commandListKeys) {
-  if (subcaptureRange_.commandListSubcapture()) {
+  if (m_SubcaptureRange.CommandListSubcapture()) {
     return;
   }
-  if (beforeRange_) {
-    clearReadyExecutables();
-    if (gpuExecutionTracker_.isCommandQueueWaiting(commandQueueKey)) {
+  if (m_BeforeRange) {
+    ClearReadyExecutables();
+    if (m_GpuExecutionTracker.IsCommandQueueWaiting(commandQueueKey)) {
       ExecuteCommandListCommand* executable = new ExecuteCommandListCommand{};
-      executable->commandListKeys = commandListKeys;
-      gpuExecutionTracker_.execute(callKey, commandQueueKey, executable);
+      executable->CommandListKeys = commandListKeys;
+      m_GpuExecutionTracker.Execute(callKey, commandQueueKey, executable);
     }
-  } else if (inRange_) {
+  } else if (m_InRange) {
     for (unsigned commandListKey : commandListKeys) {
-      auto it = commandListsResetBeforeExecution_.find(commandListKey);
-      if (it == commandListsResetBeforeExecution_.end()) {
-        commandListsForRestore_.insert(commandListKey);
+      auto it = m_CommandListsResetBeforeExecution.find(commandListKey);
+      if (it == m_CommandListsResetBeforeExecution.end()) {
+        m_CommandListsForRestore.insert(commandListKey);
       }
-      commandListsExecuted_.insert(commandListKey);
+      m_CommandListsExecuted.insert(commandListKey);
     }
   }
 }
 
-void AnalyzerService::commandListReset(unsigned commandListKey,
+void AnalyzerService::CommandListReset(unsigned commandListKey,
                                        unsigned allocatorKey,
                                        unsigned initialStateKey) {
-  if (subcaptureRange_.commandListSubcapture()) {
-    if (inRange_) {
-      objectsForRestore_.insert(commandListKey);
-      objectsForRestore_.insert(allocatorKey);
-      objectsForRestore_.insert(initialStateKey);
+  if (m_SubcaptureRange.CommandListSubcapture()) {
+    if (m_InRange) {
+      m_ObjectsForRestore.insert(commandListKey);
+      m_ObjectsForRestore.insert(allocatorKey);
+      m_ObjectsForRestore.insert(initialStateKey);
     }
     return;
   }
-  if (inRange_) {
-    auto it = commandListsExecuted_.find(commandListKey);
-    if (it == commandListsExecuted_.end()) {
-      commandListsResetBeforeExecution_.insert(commandListKey);
+  if (m_InRange) {
+    auto it = m_CommandListsExecuted.find(commandListKey);
+    if (it == m_CommandListsExecuted.end()) {
+      m_CommandListsResetBeforeExecution.insert(commandListKey);
     }
-    commandListsReset_.insert(commandListKey);
+    m_CommandListsReset.insert(commandListKey);
   }
 }
 
-void AnalyzerService::executionStart() {
-  if (subcaptureRange_.isExecutionRangeStart()) {
-    inRange_ = true;
-    beforeRange_ = false;
+void AnalyzerService::ExecutionStart() {
+  if (m_SubcaptureRange.IsExecutionRangeStart()) {
+    m_InRange = true;
+    m_BeforeRange = false;
   }
 }
 
-void AnalyzerService::executionEnd() {
-  if (subcaptureRange_.commandListSubcapture() && !subcaptureRange_.inRange() && inRange_) {
-    inRange_ = false;
-    dumpAnalysisFile();
+void AnalyzerService::ExecutionEnd() {
+  if (m_SubcaptureRange.CommandListSubcapture() && !m_SubcaptureRange.InRange() && m_InRange) {
+    m_InRange = false;
+    DumpAnalysisFile();
   }
 }
 
-void AnalyzerService::commandQueueWait(unsigned callKey,
+void AnalyzerService::CommandQueueWait(unsigned callKey,
                                        unsigned commandQueueKey,
                                        unsigned fenceKey,
                                        UINT64 fenceValue) {
-  if (beforeRange_) {
-    gpuExecutionTracker_.commandQueueWait(callKey, commandQueueKey, fenceKey, fenceValue);
+  if (m_BeforeRange) {
+    m_GpuExecutionTracker.CommandQueueWait(callKey, commandQueueKey, fenceKey, fenceValue);
   }
 }
 
-void AnalyzerService::commandQueueSignal(unsigned callKey,
+void AnalyzerService::CommandQueueSignal(unsigned callKey,
                                          unsigned commandQueueKey,
                                          unsigned fenceKey,
                                          UINT64 fenceValue) {
-  if (beforeRange_) {
-    gpuExecutionTracker_.commandQueueSignal(callKey, commandQueueKey, fenceKey, fenceValue);
+  if (m_BeforeRange) {
+    m_GpuExecutionTracker.CommandQueueSignal(callKey, commandQueueKey, fenceKey, fenceValue);
   }
 }
 
-void AnalyzerService::fenceSignal(unsigned callKey, unsigned fenceKey, UINT64 fenceValue) {
-  if (beforeRange_) {
-    gpuExecutionTracker_.fenceSignal(callKey, fenceKey, fenceValue);
+void AnalyzerService::FenceSignal(unsigned callKey, unsigned fenceKey, UINT64 fenceValue) {
+  if (m_BeforeRange) {
+    m_GpuExecutionTracker.FenceSignal(callKey, fenceKey, fenceValue);
   }
 }
 
-void AnalyzerService::mappedDataMeta(unsigned resourceKey) {
-  if (inRange_) {
-    objectsForRestore_.insert(resourceKey);
+void AnalyzerService::MappedDataMeta(unsigned ResourceKey) {
+  if (m_InRange) {
+    m_ObjectsForRestore.insert(ResourceKey);
   }
 }
 
-void AnalyzerService::createXessContext(xessD3D12CreateContextCommand& c) {
-  objectsForRestore_.insert(c.phContext_.key);
+void AnalyzerService::CreateXessContext(xessD3D12CreateContextCommand& c) {
+  m_ObjectsForRestore.insert(c.m_phContext.Key);
 }
 
-void AnalyzerService::createXellContext(xellD3D12CreateContextCommand& c) {
-  objectsForRestore_.insert(c.out_context_.key);
+void AnalyzerService::CreateXellContext(xellD3D12CreateContextCommand& c) {
+  m_ObjectsForRestore.insert(c.m_out_context.Key);
 }
 
-void AnalyzerService::createXefgContext(xefgSwapChainD3D12CreateContextCommand& c) {
-  objectsForRestore_.insert(c.phSwapChain_.key);
+void AnalyzerService::CreateXefgContext(xefgSwapChainD3D12CreateContextCommand& c) {
+  m_ObjectsForRestore.insert(c.m_phSwapChain.Key);
 }
 
-void AnalyzerService::forceApplicationSwapChainRestore(unsigned key) {
-  objectsForRestore_.insert(key);
+void AnalyzerService::ForceApplicationSwapChainRestore(unsigned key) {
+  m_ObjectsForRestore.insert(key);
 }
 
-void AnalyzerService::createDeviceExtensionContext(
+void AnalyzerService::CreateDeviceExtensionContext(
     INTC_D3D12_CreateDeviceExtensionContextCommand& c) {
-  objectsForRestore_.insert(c.ppExtensionContext_.key);
+  m_ObjectsForRestore.insert(c.m_ppExtensionContext.Key);
 }
 
-void AnalyzerService::createDeviceExtensionContext(
+void AnalyzerService::CreateDeviceExtensionContext(
     INTC_D3D12_CreateDeviceExtensionContext1Command& c) {
-  objectsForRestore_.insert(c.ppExtensionContext_.key);
+  m_ObjectsForRestore.insert(c.m_ppExtensionContext.Key);
 }
 
-void AnalyzerService::addParent(unsigned key, unsigned parentKey) {
+void AnalyzerService::AddParent(unsigned key, unsigned parentKey) {
   if (key && parentKey) {
-    parentKeys_[key].push_back(parentKey);
+    m_ParentKeys[key].push_back(parentKey);
   }
 }
 
-void AnalyzerService::clearReadyExecutables() {
+void AnalyzerService::ClearReadyExecutables() {
   std::vector<GpuExecutionTracker::Executable*>& executables =
-      gpuExecutionTracker_.getReadyExecutables();
+      m_GpuExecutionTracker.GetReadyExecutables();
   for (GpuExecutionTracker::Executable* executable : executables) {
     delete executable;
   }
   executables.clear();
 }
 
-void AnalyzerService::dumpAnalysisFile() {
-  std::ofstream out(AnalyzerResults::getAnalysisFileName());
+void AnalyzerService::DumpAnalysisFile() {
+  std::ofstream out(AnalyzerResults::GetAnalysisFileName());
 
   std::set<unsigned> objectKeys;
 
   out << "COMMAND_LIST_KEYS\n";
-  for (unsigned key : commandListsForRestore_) {
+  for (unsigned key : m_CommandListsForRestore) {
     out << key << "\n";
-    if (optimize_) {
+    if (m_Optimize) {
       objectKeys.insert(key);
     }
   }
 
   out << "COMMAND_QUEUE_COMMANDS\n";
-  for (auto& it : commandQueueCommandsForRestore_) {
+  for (auto& it : m_CommandQueueCommandsForRestore) {
     out << it.first << "\n";
-    if (optimize_) {
+    if (m_Optimize) {
       for (unsigned key : it.second) {
         objectKeys.insert(key);
       }
     }
   }
 
-  raytracingService_.flush();
-  executeIndirectService_.flush();
+  m_RaytracingService.Flush();
+  m_ExecuteIndirectService.Flush();
 
   out << "OBJECTS\n";
-  for (unsigned key : objectsForRestore_) {
+  for (unsigned key : m_ObjectsForRestore) {
     objectKeys.insert(key);
-    findParents(key, objectKeys);
+    FindParents(key, objectKeys);
   }
-  for (unsigned key : commandListService_.getObjectsForRestore()) {
+  for (unsigned key : m_CommandListService.GetObjectsForRestore()) {
     objectKeys.insert(key);
-    findParents(key, objectKeys);
+    FindParents(key, objectKeys);
   }
-  for (unsigned key : raytracingService_.getBindingTablesResources()) {
+  for (unsigned key : m_RaytracingService.GetBindingTablesResources()) {
     objectKeys.insert(key);
-    findParents(key, objectKeys);
+    FindParents(key, objectKeys);
   }
-  for (unsigned key : executeIndirectService_.getArgumentBuffersResources()) {
+  for (unsigned key : m_ExecuteIndirectService.GetArgumentBuffersResources()) {
     objectKeys.insert(key);
-    findParents(key, objectKeys);
+    FindParents(key, objectKeys);
   }
   for (unsigned key : objectKeys) {
     if (key) {
@@ -299,10 +299,10 @@ void AnalyzerService::dumpAnalysisFile() {
 
   out << "DESCRIPTORS\n";
   std::set<std::pair<unsigned, unsigned>> descriptors;
-  for (auto& [heapKey, index] : commandListService_.getDescriptors()) {
+  for (auto& [heapKey, index] : m_CommandListService.GetDescriptors()) {
     descriptors.insert({heapKey, index});
   }
-  for (auto& [heapKey, index] : raytracingService_.getBindingTablesDescriptors()) {
+  for (auto& [heapKey, index] : m_RaytracingService.GetBindingTablesDescriptors()) {
     descriptors.insert({heapKey, index});
   }
   for (auto& [heapKey, index] : descriptors) {
@@ -310,35 +310,35 @@ void AnalyzerService::dumpAnalysisFile() {
   }
 
   out << "TLASES\n";
-  for (unsigned buildKey : commandListService_.getTlases()) {
+  for (unsigned buildKey : m_CommandListService.GetTlases()) {
     out << buildKey << "\n";
   }
 
   out << "BLASES\n";
   std::set<std::pair<unsigned, unsigned>> ases;
-  for (unsigned buildKey : commandListService_.getTlases()) {
-    for (auto& blas : raytracingService_.getBlases(buildKey)) {
+  for (unsigned buildKey : m_CommandListService.GetTlases()) {
+    for (auto& blas : m_RaytracingService.GetBlases(buildKey)) {
       ases.insert(blas);
     }
   }
-  for (auto& [resourceKey, offset] : ases) {
-    out << resourceKey << " " << offset << "\n";
+  for (auto& [ResourceKey, offset] : ases) {
+    out << ResourceKey << " " << offset << "\n";
   }
 
   out << "AS_SOURCES\n";
-  std::set<std::pair<unsigned, unsigned>>& sources = raytracingService_.getSources();
-  for (auto& [resourceKey, offset] : sources) {
-    out << resourceKey << " " << offset << "\n";
+  std::set<std::pair<unsigned, unsigned>>& sources = m_RaytracingService.GetSources();
+  for (auto& [ResourceKey, offset] : sources) {
+    out << ResourceKey << " " << offset << "\n";
   }
 }
 
-void AnalyzerService::findParents(unsigned key, std::set<unsigned>& objectKeys) {
-  auto it = parentKeys_.find(key);
-  if (it != parentKeys_.end()) {
+void AnalyzerService::FindParents(unsigned key, std::set<unsigned>& objectKeys) {
+  auto it = m_ParentKeys.find(key);
+  if (it != m_ParentKeys.end()) {
     for (unsigned parentKey : it->second) {
       if (objectKeys.find(parentKey) == objectKeys.end()) {
         objectKeys.insert(parentKey);
-        findParents(parentKey, objectKeys);
+        FindParents(parentKey, objectKeys);
       }
     }
   }

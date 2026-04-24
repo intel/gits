@@ -19,8 +19,8 @@ namespace DirectX {
 template <typename T>
 void updateInterface(InterfaceArgument<T>& arg, IUnknownWrapper* wrapper) {
 
-  arg.key = wrapper->getKey();
-  arg.value = wrapper->getWrappedObject<T>();
+  arg.Key = wrapper->getKey();
+  arg.Value = wrapper->getWrappedObject<T>();
 }
 
 template <typename T>
@@ -34,8 +34,8 @@ void updateInterface(InterfaceArgument<T>& arg, T* object) {
   if (object->QueryInterface(IID_IUnknownWrapper, reinterpret_cast<void**>(&wrapper)) != S_OK) {
     return;
   }
-  arg.key = wrapper->getKey();
-  arg.value = wrapper->getWrappedObject<T>();
+  arg.Key = wrapper->getKey();
+  arg.Value = wrapper->getWrappedObject<T>();
 }
 
 template <typename T, typename Arg>
@@ -53,56 +53,56 @@ public:
       return;
     }
 
-    unwrappedObjects_ = unwrappedObjectsStatic_;
-    if (arg.size > NUM) {
-      unwrappedObjectsDynamic_.resize(arg.size);
-      unwrappedObjects_ = unwrappedObjectsDynamic_.data();
+    m_UnwrappedObjects = m_UnwrappedObjectsStatic;
+    if (arg.Size > NUM) {
+      m_UnwrappedObjectsDynamic.resize(arg.Size);
+      m_UnwrappedObjects = m_UnwrappedObjectsDynamic.data();
     }
 
-    arg.value = unwrappedObjects_;
+    arg.Value = m_UnwrappedObjects;
 
-    for (unsigned i = 0; i < arg.size; ++i) {
+    for (unsigned i = 0; i < arg.Size; ++i) {
       IUnknownWrapper* wrapper = nullptr;
       HRESULT hr =
           objects[i]->QueryInterface(IID_IUnknownWrapper, reinterpret_cast<void**>(&wrapper));
       GITS_ASSERT(hr == S_OK);
-      arg.keys[i] = wrapper->getKey();
-      unwrappedObjects_[i] = wrapper->getWrappedObject<T>();
+      arg.Keys[i] = wrapper->getKey();
+      m_UnwrappedObjects[i] = wrapper->getWrappedObject<T>();
     }
   }
 
 private:
   static constexpr unsigned NUM = 64;
-  T** unwrappedObjects_{nullptr};
-  T* unwrappedObjectsStatic_[NUM]{};
-  std::vector<T*> unwrappedObjectsDynamic_;
+  T** m_UnwrappedObjects{nullptr};
+  T* m_UnwrappedObjectsStatic[NUM]{};
+  std::vector<T*> m_UnwrappedObjectsDynamic;
 };
 
 template <typename T>
 class UpdateOutputInterface<InterfaceOutputArgument<T>, T> {
 public:
   UpdateOutputInterface(InterfaceOutputArgument<T>& arg, HRESULT hr, REFIID riid, T** object)
-      : object_(object) {
+      : m_Object(object) {
 
-    if (hr == S_OK && object_ && *object_) {
-      T* wrappedObject = *object_;
+    if (hr == S_OK && m_Object && *m_Object) {
+      T* wrappedObject = *m_Object;
       wrapObject(riid, reinterpret_cast<void**>(&wrappedObject));
-      wrapper_ = reinterpret_cast<IUnknownWrapper*>(wrappedObject);
+      m_Wrapper = reinterpret_cast<IUnknownWrapper*>(wrappedObject);
 
-      arg.key = wrapper_->getKey();
+      arg.Key = m_Wrapper->getKey();
     }
   }
   ~UpdateOutputInterface() {
-    if (wrapper_) {
-      *object_ = reinterpret_cast<T*>(wrapper_);
+    if (m_Wrapper) {
+      *m_Object = reinterpret_cast<T*>(m_Wrapper);
     }
   }
   UpdateOutputInterface(const UpdateOutputInterface&) = delete;
   UpdateOutputInterface& operator=(const UpdateOutputInterface&) = delete;
 
 private:
-  T** object_;
-  IUnknownWrapper* wrapper_{};
+  T** m_Object;
+  IUnknownWrapper* m_Wrapper{};
 };
 
 template <>
@@ -112,7 +112,7 @@ public:
                   const D3D12_TEXTURE_COPY_LOCATION* value);
 
 private:
-  D3D12_TEXTURE_COPY_LOCATION unwrapStructure_;
+  D3D12_TEXTURE_COPY_LOCATION m_UnwrapStructure;
 };
 
 template <>
@@ -122,9 +122,9 @@ public:
 
 private:
   static constexpr unsigned NUM = 128;
-  D3D12_RESOURCE_BARRIER* unwrapped_{nullptr};
-  D3D12_RESOURCE_BARRIER unwrappedStatic_[NUM];
-  std::vector<D3D12_RESOURCE_BARRIER> unwrappedDynamic_;
+  D3D12_RESOURCE_BARRIER* m_Unwrapped{nullptr};
+  D3D12_RESOURCE_BARRIER m_UnwrappedStatic[NUM];
+  std::vector<D3D12_RESOURCE_BARRIER> m_UnwrappedDynamic;
 };
 
 template <>
@@ -135,7 +135,7 @@ public:
                   const D3D12_GRAPHICS_PIPELINE_STATE_DESC* value);
 
 private:
-  D3D12_GRAPHICS_PIPELINE_STATE_DESC unwrapStructure_{};
+  D3D12_GRAPHICS_PIPELINE_STATE_DESC m_UnwrapStructure{};
 };
 
 template <>
@@ -146,7 +146,7 @@ public:
                   const D3D12_COMPUTE_PIPELINE_STATE_DESC* value);
 
 private:
-  D3D12_COMPUTE_PIPELINE_STATE_DESC unwrapStructure_{};
+  D3D12_COMPUTE_PIPELINE_STATE_DESC m_UnwrapStructure{};
 };
 
 template <>
@@ -156,8 +156,8 @@ public:
                   const D3D12_PIPELINE_STATE_STREAM_DESC* stateObjectDesc);
 
 private:
-  D3D12_PIPELINE_STATE_STREAM_DESC streamDescUnwrapped_{};
-  std::vector<uint8_t> subobjectsUnwrapped_;
+  D3D12_PIPELINE_STATE_STREAM_DESC m_StreamDescUnwrapped{};
+  std::vector<uint8_t> m_SubobjectsUnwrapped;
 };
 
 template <>
@@ -167,13 +167,13 @@ public:
                   const D3D12_STATE_OBJECT_DESC* stateObjectDesc);
 
 private:
-  D3D12_STATE_OBJECT_DESC stateObjectDescUnwrapped_{};
-  std::vector<D3D12_STATE_SUBOBJECT> subobjectsUnwrapped_;
-  D3D12_GLOBAL_ROOT_SIGNATURE globalSignatureUnwrapped_{};
-  std::vector<D3D12_LOCAL_ROOT_SIGNATURE> localSignatures_;
+  D3D12_STATE_OBJECT_DESC m_StateObjectDescUnwrapped{};
+  std::vector<D3D12_STATE_SUBOBJECT> m_SubobjectsUnwrapped;
+  D3D12_GLOBAL_ROOT_SIGNATURE m_GlobalSignatureUnwrapped{};
+  std::vector<D3D12_LOCAL_ROOT_SIGNATURE> m_LocalSignatures;
   std::vector<D3D12_EXISTING_COLLECTION_DESC> existingCollectionDescs;
-  std::vector<D3D12_SUBOBJECT_TO_EXPORTS_ASSOCIATION> subobjectToExportsAssociations_;
-  std::map<const D3D12_STATE_SUBOBJECT*, unsigned> wrappedSubobjectIndexes_;
+  std::vector<D3D12_SUBOBJECT_TO_EXPORTS_ASSOCIATION> m_SubobjectToExportsAssociations;
+  std::map<const D3D12_STATE_SUBOBJECT*, unsigned> m_WrappedSubobjectIndexes;
 };
 
 template <>
@@ -184,7 +184,7 @@ public:
                   const D3D12_RENDER_PASS_RENDER_TARGET_DESC* value);
 
 private:
-  std::vector<D3D12_RENDER_PASS_RENDER_TARGET_DESC> unwrapStructures_;
+  std::vector<D3D12_RENDER_PASS_RENDER_TARGET_DESC> m_UnwrapStructures;
 };
 
 template <>
@@ -195,7 +195,7 @@ public:
                   const D3D12_RENDER_PASS_DEPTH_STENCIL_DESC* value);
 
 private:
-  D3D12_RENDER_PASS_DEPTH_STENCIL_DESC unwrapStructure_{};
+  D3D12_RENDER_PASS_DEPTH_STENCIL_DESC m_UnwrapStructure{};
 };
 
 template <>
@@ -204,10 +204,10 @@ public:
   UpdateInterface(D3D12_BARRIER_GROUPs_Argument& arg, const D3D12_BARRIER_GROUP* value);
 
 private:
-  std::vector<std::unique_ptr<std::vector<D3D12_GLOBAL_BARRIER>>> unwrappedGlobalBarrierGroups_;
-  std::vector<std::unique_ptr<std::vector<D3D12_TEXTURE_BARRIER>>> unwrappedTextureBarrierGroups_;
-  std::vector<std::unique_ptr<std::vector<D3D12_BUFFER_BARRIER>>> unwrappedBufferBarrierGroups_;
-  std::vector<D3D12_BARRIER_GROUP> unwrapped_;
+  std::vector<std::unique_ptr<std::vector<D3D12_GLOBAL_BARRIER>>> m_UnwrappedGlobalBarrierGroups;
+  std::vector<std::unique_ptr<std::vector<D3D12_TEXTURE_BARRIER>>> m_UnwrappedTextureBarrierGroups;
+  std::vector<std::unique_ptr<std::vector<D3D12_BUFFER_BARRIER>>> m_UnwrappedBufferBarrierGroups;
+  std::vector<D3D12_BARRIER_GROUP> m_Unwrapped;
 };
 
 template <>
@@ -218,7 +218,7 @@ public:
                   const INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC* value);
 
 private:
-  INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC unwrapStructure_{};
+  INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC m_UnwrapStructure{};
 };
 
 template <>
@@ -227,7 +227,7 @@ public:
   UpdateInterface(DML_BINDING_TABLE_DESC_Argument& arg, const DML_BINDING_TABLE_DESC* value);
 
 private:
-  DML_BINDING_TABLE_DESC unwrapStructure_{};
+  DML_BINDING_TABLE_DESC m_UnwrapStructure{};
 };
 
 template <>
@@ -236,9 +236,9 @@ public:
   UpdateInterface(DML_BINDING_DESC_Argument& arg, const DML_BINDING_DESC* value);
 
 private:
-  DML_BINDING_DESC unwrapStructure_{};
-  DML_BUFFER_ARRAY_BINDING bindingArray_{};
-  std::vector<DML_BUFFER_BINDING> bindings_;
+  DML_BINDING_DESC m_UnwrapStructure{};
+  DML_BUFFER_ARRAY_BINDING m_BindingArray{};
+  std::vector<DML_BUFFER_BINDING> m_Bindings;
 };
 
 template <>
@@ -247,10 +247,10 @@ public:
   UpdateInterface(DML_BINDING_DESCs_Argument& arg, const DML_BINDING_DESC* value);
 
 private:
-  DML_BINDING_DESC* unwrapStructure_{nullptr};
-  std::vector<DML_BINDING_DESC> unwrapStructures_;
-  std::vector<DML_BUFFER_ARRAY_BINDING> bindingArrays_;
-  std::vector<DML_BUFFER_BINDING> bindings_;
+  DML_BINDING_DESC* m_UnwrapStructure{nullptr};
+  std::vector<DML_BINDING_DESC> m_UnwrapStructures;
+  std::vector<DML_BUFFER_ARRAY_BINDING> m_BindingArrays;
+  std::vector<DML_BUFFER_BINDING> m_Bindings;
 };
 
 template <>
@@ -259,9 +259,9 @@ public:
   UpdateInterface(DML_GRAPH_DESC_Argument& arg, const DML_GRAPH_DESC* value);
 
 private:
-  DML_GRAPH_DESC unwrapStructure_{};
-  std::vector<DML_GRAPH_NODE_DESC> nodes_;
-  std::vector<DML_OPERATOR_GRAPH_NODE_DESC> opNodes_;
+  DML_GRAPH_DESC m_UnwrapStructure{};
+  std::vector<DML_GRAPH_NODE_DESC> m_Nodes;
+  std::vector<DML_OPERATOR_GRAPH_NODE_DESC> m_OpNodes;
 };
 
 template <>
@@ -270,7 +270,7 @@ public:
   UpdateInterface(xess_d3d12_init_params_t_Argument& arg, const xess_d3d12_init_params_t* value);
 
 private:
-  xess_d3d12_init_params_t unwrapStructure_{};
+  xess_d3d12_init_params_t m_UnwrapStructure{};
 };
 
 template <>
@@ -280,7 +280,7 @@ public:
                   const xess_d3d12_execute_params_t* value);
 
 private:
-  xess_d3d12_execute_params_t unwrapStructure_{};
+  xess_d3d12_execute_params_t m_UnwrapStructure{};
 };
 
 template <>
@@ -289,7 +289,7 @@ public:
   UpdateInterface(DSTORAGE_QUEUE_DESC_Argument& arg, const DSTORAGE_QUEUE_DESC* value);
 
 private:
-  DSTORAGE_QUEUE_DESC unwrapStructure_{};
+  DSTORAGE_QUEUE_DESC m_UnwrapStructure{};
 };
 
 template <>
@@ -298,7 +298,7 @@ public:
   UpdateInterface(DSTORAGE_REQUEST_Argument& arg, const DSTORAGE_REQUEST* value);
 
 private:
-  DSTORAGE_REQUEST unwrapStructure_{};
+  DSTORAGE_REQUEST m_UnwrapStructure{};
 };
 
 template <>
@@ -309,7 +309,7 @@ public:
                   const xefg_swapchain_d3d12_init_params_t* value);
 
 private:
-  xefg_swapchain_d3d12_init_params_t unwrapStructure_{};
+  xefg_swapchain_d3d12_init_params_t m_UnwrapStructure{};
 };
 
 template <>
@@ -320,7 +320,7 @@ public:
                   const xefg_swapchain_d3d12_resource_data_t* value);
 
 private:
-  xefg_swapchain_d3d12_resource_data_t unwrapStructure_{};
+  xefg_swapchain_d3d12_resource_data_t m_UnwrapStructure{};
 };
 
 } // namespace DirectX

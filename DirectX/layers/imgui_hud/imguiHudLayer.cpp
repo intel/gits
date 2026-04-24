@@ -24,190 +24,190 @@ ImGuiHUDLayer::ImGuiHUDLayer() : Layer("ImGuiHUDLayer") {
 }
 
 ImGuiHUDLayer::~ImGuiHUDLayer() {
-  if (!initialized_) {
+  if (!m_Initialized) {
     return;
   }
-  fence_->SetEventOnCompletion(fenceValue_, NULL);
+  m_Fence->SetEventOnCompletion(m_FenceValue, NULL);
   ImGui_ImplDX12_Shutdown();
 }
 
-void ImGuiHUDLayer::post(IDXGISwapChainGetBufferCommand& c) {
-  if (c.result_.value == S_OK) {
-    std::lock_guard<std::mutex> lock(mutex_);
-    backBufferKeys_.insert(c.ppSurface_.key);
+void ImGuiHUDLayer::Post(IDXGISwapChainGetBufferCommand& c) {
+  if (c.m_Result.Value == S_OK) {
+    std::lock_guard<std::mutex> lock(m_Mutex);
+    m_BackBufferKeys.insert(c.m_ppSurface.Key);
   }
 }
 
-void ImGuiHUDLayer::pre(IUnknownReleaseCommand& c) {
-  if (!c.object_.value) {
+void ImGuiHUDLayer::Pre(IUnknownReleaseCommand& c) {
+  if (!c.m_Object.Value) {
     return;
   }
 
-  c.object_.value->AddRef();
-  auto result = c.object_.value->Release();
+  c.m_Object.Value->AddRef();
+  auto result = c.m_Object.Value->Release();
   if (result != 1) {
     return;
   }
 
-  std::lock_guard<std::mutex> lock(mutex_);
-  if (!backBufferKeys_.contains(c.object_.key)) {
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  if (!m_BackBufferKeys.contains(c.m_Object.Key)) {
     return;
   }
 
-  for (unsigned i = 0; i < frameContext_.size(); ++i) {
-    waitForFrame(i);
+  for (unsigned i = 0; i < m_FrameContext.size(); ++i) {
+    WaitForFrame(i);
   }
 
-  backBufferKeys_.clear();
+  m_BackBufferKeys.clear();
 }
 
-void ImGuiHUDLayer::pre(ID3D12CommandQueueExecuteCommandListsCommand& c) {
-  if (swapChain_ && firstExecuteInFrame_) {
-    waitForCurrentFrame();
-    firstExecuteInFrame_ = false;
+void ImGuiHUDLayer::Pre(ID3D12CommandQueueExecuteCommandListsCommand& c) {
+  if (m_SwapChain && m_FirstExecuteInFrame) {
+    WaitForCurrentFrame();
+    m_FirstExecuteInFrame = false;
   }
 }
 
-void ImGuiHUDLayer::post(IDXGIFactoryCreateSwapChainCommand& c) {
-  if (c.result_.value != S_OK) {
+void ImGuiHUDLayer::Post(IDXGIFactoryCreateSwapChainCommand& c) {
+  if (c.m_Result.Value != S_OK) {
     return;
   }
 
-  initialized_ = initializeResources(c.pDevice_.value, *c.ppSwapChain_.value);
-  if (!initialized_) {
+  m_Initialized = InitializeResources(c.m_pDevice.Value, *c.m_ppSwapChain.Value);
+  if (!m_Initialized) {
     LOG_ERROR << "ImGui HUD: Failed to initialize resources";
     return;
   }
 }
 
-void ImGuiHUDLayer::post(IDXGIFactory2CreateSwapChainForHwndCommand& c) {
-  if (c.result_.value != S_OK) {
+void ImGuiHUDLayer::Post(IDXGIFactory2CreateSwapChainForHwndCommand& c) {
+  if (c.m_Result.Value != S_OK) {
     return;
   }
 
-  initialized_ = initializeResources(c.pDevice_.value, *c.ppSwapChain_.value);
-  if (!initialized_) {
+  m_Initialized = InitializeResources(c.m_pDevice.Value, *c.m_ppSwapChain.Value);
+  if (!m_Initialized) {
     LOG_ERROR << "ImGui HUD: Failed to initialize resources";
     return;
   }
 }
 
-void ImGuiHUDLayer::post(IDXGIFactory2CreateSwapChainForCoreWindowCommand& c) {
-  if (c.result_.value != S_OK) {
+void ImGuiHUDLayer::Post(IDXGIFactory2CreateSwapChainForCoreWindowCommand& c) {
+  if (c.m_Result.Value != S_OK) {
     return;
   }
 
-  initialized_ = initializeResources(c.pDevice_.value, *c.ppSwapChain_.value);
-  if (!initialized_) {
+  m_Initialized = InitializeResources(c.m_pDevice.Value, *c.m_ppSwapChain.Value);
+  if (!m_Initialized) {
     LOG_ERROR << "ImGui HUD: Failed to initialize resources";
     return;
   }
 }
 
-void ImGuiHUDLayer::post(IDXGIFactory2CreateSwapChainForCompositionCommand& c) {
-  if (c.result_.value != S_OK) {
+void ImGuiHUDLayer::Post(IDXGIFactory2CreateSwapChainForCompositionCommand& c) {
+  if (c.m_Result.Value != S_OK) {
     return;
   }
 
-  initialized_ = initializeResources(c.pDevice_.value, *c.ppSwapChain_.value);
-  if (!initialized_) {
+  m_Initialized = InitializeResources(c.m_pDevice.Value, *c.m_ppSwapChain.Value);
+  if (!m_Initialized) {
     LOG_ERROR << "ImGui HUD: Failed to initialize resources";
     return;
   }
 }
 
-void ImGuiHUDLayer::pre(IDXGISwapChainPresentCommand& c) {
-  if (c.skip || c.result_.value != S_OK || c.Flags_.value & DXGI_PRESENT_TEST) {
+void ImGuiHUDLayer::Pre(IDXGISwapChainPresentCommand& c) {
+  if (c.Skip || c.m_Result.Value != S_OK || c.m_Flags.Value & DXGI_PRESENT_TEST) {
     return;
   }
-  onPrePresent();
+  OnPrePresent();
 }
 
-void ImGuiHUDLayer::post(IDXGISwapChainPresentCommand& c) {
-  if (c.skip || c.result_.value != S_OK || c.Flags_.value & DXGI_PRESENT_TEST ||
-      isStateRestoreKey(c.key)) {
+void ImGuiHUDLayer::Post(IDXGISwapChainPresentCommand& c) {
+  if (c.Skip || c.m_Result.Value != S_OK || c.m_Flags.Value & DXGI_PRESENT_TEST ||
+      IsStateRestoreKey(c.Key)) {
     return;
   }
   CGits::Instance().FrameCountUp();
-  firstExecuteInFrame_ = true;
+  m_FirstExecuteInFrame = true;
 }
 
-void ImGuiHUDLayer::pre(IDXGISwapChain1Present1Command& c) {
-  if (c.skip || c.result_.value != S_OK || c.PresentFlags_.value & DXGI_PRESENT_TEST) {
+void ImGuiHUDLayer::Pre(IDXGISwapChain1Present1Command& c) {
+  if (c.Skip || c.m_Result.Value != S_OK || c.m_PresentFlags.Value & DXGI_PRESENT_TEST) {
     return;
   }
-  onPrePresent();
+  OnPrePresent();
 }
 
-void ImGuiHUDLayer::post(IDXGISwapChain1Present1Command& c) {
-  if (c.skip || c.result_.value != S_OK || c.PresentFlags_.value & DXGI_PRESENT_TEST ||
-      isStateRestoreKey(c.key)) {
+void ImGuiHUDLayer::Post(IDXGISwapChain1Present1Command& c) {
+  if (c.Skip || c.m_Result.Value != S_OK || c.m_PresentFlags.Value & DXGI_PRESENT_TEST ||
+      IsStateRestoreKey(c.Key)) {
     return;
   }
   CGits::Instance().FrameCountUp();
-  firstExecuteInFrame_ = true;
+  m_FirstExecuteInFrame = true;
 }
 
-void ImGuiHUDLayer::post(IDXGISwapChainResizeBuffersCommand& command) {
-  if (!initialized_ || CGits::InstancePtr() == nullptr) {
+void ImGuiHUDLayer::Post(IDXGISwapChainResizeBuffersCommand& command) {
+  if (!m_Initialized || CGits::InstancePtr() == nullptr) {
     return;
   }
 
   // ResizeBuffers can be called with BufferCount set to 0 (to keep the current count)
-  static unsigned currentBufferCount = frameContext_.size();
-  unsigned bufferCount = command.BufferCount_.value;
+  static unsigned currentBufferCount = m_FrameContext.size();
+  unsigned bufferCount = command.m_BufferCount.Value;
   if (bufferCount == 0) {
     bufferCount = currentBufferCount;
   } else {
     currentBufferCount = bufferCount;
   }
 
-  if (!createFrameContext(bufferCount)) {
+  if (!CreateFrameContext(bufferCount)) {
     LOG_ERROR << "ImGui HUD: Failed to correctly create frame context on ResizeBuffers";
   }
-  CGits::Instance().GetImGuiHUD()->SetBackBufferInfo(command.Width_.value, command.Height_.value,
+  CGits::Instance().GetImGuiHUD()->SetBackBufferInfo(command.m_Width.Value, command.m_Height.Value,
                                                      bufferCount);
 }
 
-void ImGuiHUDLayer::post(IDXGISwapChain3ResizeBuffers1Command& command) {
-  if (!initialized_ || CGits::InstancePtr() == nullptr) {
+void ImGuiHUDLayer::Post(IDXGISwapChain3ResizeBuffers1Command& command) {
+  if (!m_Initialized || CGits::InstancePtr() == nullptr) {
     return;
   }
 
   // ResizeBuffers can be called with BufferCount set to 0 (to keep the current count)
-  static unsigned currentBufferCount = frameContext_.size();
-  unsigned bufferCount = command.BufferCount_.value;
+  static unsigned currentBufferCount = m_FrameContext.size();
+  unsigned bufferCount = command.m_BufferCount.Value;
   if (bufferCount == 0) {
     bufferCount = currentBufferCount;
   } else {
     currentBufferCount = bufferCount;
   }
 
-  if (!createFrameContext(bufferCount)) {
+  if (!CreateFrameContext(bufferCount)) {
     LOG_ERROR << "ImGui HUD: Failed to correctly create frame context on ResizeBuffers";
   }
-  CGits::Instance().GetImGuiHUD()->SetBackBufferInfo(command.Width_.value, command.Height_.value,
+  CGits::Instance().GetImGuiHUD()->SetBackBufferInfo(command.m_Width.Value, command.m_Height.Value,
                                                      bufferCount);
 }
 
-bool ImGuiHUDLayer::createFrameContext(unsigned bufferCount) {
-  if (!swapChain_ || !device_) {
+bool ImGuiHUDLayer::CreateFrameContext(unsigned bufferCount) {
+  if (!m_SwapChain || !m_Device) {
     return false;
   }
 
-  auto rtvHandleSize = device_->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-  auto rtvHandle = rtvDescHeap_->GetCPUDescriptorHandleForHeapStart();
+  auto rtvHandleSize = m_Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+  auto rtvHandle = m_RtvDescHeap->GetCPUDescriptorHandleForHeapStart();
 
-  frameContext_.resize(bufferCount);
+  m_FrameContext.resize(bufferCount);
   for (UINT i = 0; i < bufferCount; ++i) {
-    waitForFrame(i);
+    WaitForFrame(i);
 
-    FrameContext& frameCtx = frameContext_[i];
+    FrameContext& frameCtx = m_FrameContext[i];
     frameCtx.fenceValue = 0;
 
     // Get the backBuffer
     Microsoft::WRL::ComPtr<ID3D12Resource> backBuffer;
-    auto hr = swapChain_->GetBuffer(i, IID_PPV_ARGS(&backBuffer));
+    auto hr = m_SwapChain->GetBuffer(i, IID_PPV_ARGS(&backBuffer));
     if (hr != S_OK) {
       LOG_ERROR << "ImGui HUD: Failed to get back buffer";
       return false;
@@ -215,12 +215,12 @@ bool ImGuiHUDLayer::createFrameContext(unsigned bufferCount) {
 
     // Create the RTV for backBuffer
     frameCtx.rtvHandle = rtvHandle;
-    device_->CreateRenderTargetView(backBuffer.Get(), nullptr, frameCtx.rtvHandle);
+    m_Device->CreateRenderTargetView(backBuffer.Get(), nullptr, frameCtx.rtvHandle);
     frameCtx.rtResource = backBuffer.Get();
 
     // Create the CommandAllocators
-    hr = device_->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT,
-                                         IID_PPV_ARGS(&frameCtx.commandAllocator));
+    hr = m_Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT,
+                                          IID_PPV_ARGS(&frameCtx.commandAllocator));
     if (hr != S_OK) {
       LOG_ERROR << "ImGui HUD: Failed to create CommandAllocator";
       return false;
@@ -234,21 +234,21 @@ bool ImGuiHUDLayer::createFrameContext(unsigned bufferCount) {
   return true;
 }
 
-bool ImGuiHUDLayer::initializeResources(IUnknown* device, IDXGISwapChain* swapChain) {
-  device->QueryInterface(IID_PPV_ARGS(&commandQueue_));
-  swapChain->QueryInterface(IID_PPV_ARGS(&swapChain_));
-  swapChain_->GetDevice(IID_PPV_ARGS(&device_));
-  if (!commandQueue_ || !swapChain_ || !device_) {
+bool ImGuiHUDLayer::InitializeResources(IUnknown* device, IDXGISwapChain* swapChain) {
+  device->QueryInterface(IID_PPV_ARGS(&m_CommandQueue));
+  swapChain->QueryInterface(IID_PPV_ARGS(&m_SwapChain));
+  m_SwapChain->GetDevice(IID_PPV_ARGS(&m_Device));
+  if (!m_CommandQueue || !m_SwapChain || !m_Device) {
     return false;
   }
 
   DXGI_SWAP_CHAIN_DESC swapChainDesc;
-  swapChain_->GetDesc(&swapChainDesc);
+  m_SwapChain->GetDesc(&swapChainDesc);
   if (swapChainDesc.BufferCount == 0) {
     return false;
   }
 
-  window_ = swapChainDesc.OutputWindow;
+  m_Window = swapChainDesc.OutputWindow;
 
   // Create RTV Descriptor Heap
   D3D12_DESCRIPTOR_HEAP_DESC desc = {};
@@ -256,91 +256,91 @@ bool ImGuiHUDLayer::initializeResources(IUnknown* device, IDXGISwapChain* swapCh
   desc.NumDescriptors = DXGI_MAX_SWAP_CHAIN_BUFFERS;
   desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
   desc.NodeMask = 1;
-  if (device_->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&rtvDescHeap_)) != S_OK) {
+  if (m_Device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_RtvDescHeap)) != S_OK) {
     LOG_ERROR << "ImGui HUD: Failed to create RTV descriptor heap";
     return false;
   }
-  rtvDescHeap_->SetName(L"ImGuiHUDLayer RTV Descriptor Heap");
+  m_RtvDescHeap->SetName(L"ImGuiHUDLayer RTV Descriptor Heap");
 
   // Create SRV Descriptor Heap
   desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
   desc.NumDescriptors = 1;
   desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-  if (device_->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&srvDescHeap_)) != S_OK) {
+  if (m_Device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_SrvDescHeap)) != S_OK) {
     LOG_ERROR << "ImGui HUD: Failed to create SRV descriptor heap";
     return false;
   }
-  srvDescHeap_->SetName(L"ImGuiHUDLayer SRV Descriptor Heap");
+  m_SrvDescHeap->SetName(L"ImGuiHUDLayer SRV Descriptor Heap");
 
-  if (!createFrameContext(swapChainDesc.BufferCount)) {
+  if (!CreateFrameContext(swapChainDesc.BufferCount)) {
     return false;
   }
 
   // Create Fence
-  fenceValue_ = 0;
-  if (device_->CreateFence(fenceValue_, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence_)) != S_OK) {
+  m_FenceValue = 0;
+  if (m_Device->CreateFence(m_FenceValue, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_Fence)) != S_OK) {
     LOG_ERROR << "ImGui HUD: Failed to create fence";
     return false;
   }
-  fence_->SetName(L"ImGuiHUDLayer Fence");
+  m_Fence->SetName(L"ImGuiHUDLayer Fence");
 
   // Create CommandList (using the first CommandAllocator)
-  if (device_->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT,
-                                 frameContext_[0].commandAllocator.Get(), NULL,
-                                 IID_PPV_ARGS(&commandList_)) != S_OK) {
+  if (m_Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT,
+                                  m_FrameContext[0].commandAllocator.Get(), NULL,
+                                  IID_PPV_ARGS(&m_CommandList)) != S_OK) {
     LOG_ERROR << "ImGui HUD: Failed to create command list";
     return false;
   }
-  commandList_->Close();
-  commandList_->SetName(L"ImGuiHUDLayer Command List");
+  m_CommandList->Close();
+  m_CommandList->SetName(L"ImGuiHUDLayer Command List");
 
-  initializeImGui(swapChainDesc.BufferDesc.Format);
+  InitializeImGui(swapChainDesc.BufferDesc.Format);
   CGits::Instance().GetImGuiHUD()->SetBackBufferInfo(
       swapChainDesc.BufferDesc.Width, swapChainDesc.BufferDesc.Height, swapChainDesc.BufferCount);
 
   return true;
 }
 
-void ImGuiHUDLayer::initializeImGui(DXGI_FORMAT format) {
+void ImGuiHUDLayer::InitializeImGui(DXGI_FORMAT format) {
   ImGui::CreateContext();
 
-  ImGui_ImplWin32_Init(window_);
-  ImGui_ImplDX12_Init(device_.Get(), frameContext_.size(), format, srvDescHeap_.Get(),
-                      srvDescHeap_->GetCPUDescriptorHandleForHeapStart(),
-                      srvDescHeap_->GetGPUDescriptorHandleForHeapStart());
+  ImGui_ImplWin32_Init(m_Window);
+  ImGui_ImplDX12_Init(m_Device.Get(), m_FrameContext.size(), format, m_SrvDescHeap.Get(),
+                      m_SrvDescHeap->GetCPUDescriptorHandleForHeapStart(),
+                      m_SrvDescHeap->GetGPUDescriptorHandleForHeapStart());
 
-  float dpiscale = std::max(1.0f, ImGui_ImplWin32_GetDpiScaleForHwnd(window_));
+  float dpiscale = std::max(1.0f, ImGui_ImplWin32_GetDpiScaleForHwnd(m_Window));
   CGits::Instance().GetImGuiHUD()->SetupImGUI(dpiscale);
   ImGui_ImplDX12_CreateDeviceObjects();
 }
 
-void ImGuiHUDLayer::onPrePresent() {
+void ImGuiHUDLayer::OnPrePresent() {
   static bool firstRun{true};
   if (firstRun) {
     firstRun = false;
-    present(); // assures Hud in a first frame of a stream
+    Present(); // assures Hud in a first frame of a stream
   }
-  waitForCurrentFrame();
-  present();
+  WaitForCurrentFrame();
+  Present();
 }
 
-void ImGuiHUDLayer::waitForCurrentFrame() {
-  UINT backBufferIdx = swapChain_->GetCurrentBackBufferIndex();
-  waitForFrame(backBufferIdx);
+void ImGuiHUDLayer::WaitForCurrentFrame() {
+  UINT backBufferIdx = m_SwapChain->GetCurrentBackBufferIndex();
+  WaitForFrame(backBufferIdx);
 }
 
-void ImGuiHUDLayer::waitForFrame(unsigned bufferIndex) {
-  FrameContext& frameCtx = frameContext_[bufferIndex];
+void ImGuiHUDLayer::WaitForFrame(unsigned bufferIndex) {
+  FrameContext& frameCtx = m_FrameContext[bufferIndex];
 
   if (frameCtx.fenceValue) {
-    if (fence_->GetCompletedValue() < frameCtx.fenceValue) {
-      fence_->SetEventOnCompletion(frameCtx.fenceValue, NULL);
+    if (m_Fence->GetCompletedValue() < frameCtx.fenceValue) {
+      m_Fence->SetEventOnCompletion(frameCtx.fenceValue, NULL);
     }
   }
 }
 
-void ImGuiHUDLayer::present() {
-  if (!initialized_ || CGits::InstancePtr() == nullptr) {
+void ImGuiHUDLayer::Present() {
+  if (!m_Initialized || CGits::InstancePtr() == nullptr) {
     return;
   }
 
@@ -351,8 +351,8 @@ void ImGuiHUDLayer::present() {
 
   CGits::Instance().GetImGuiHUD()->Render();
 
-  UINT backBufferIdx = swapChain_->GetCurrentBackBufferIndex();
-  FrameContext& frameCtx = frameContext_[backBufferIdx];
+  UINT backBufferIdx = m_SwapChain->GetCurrentBackBufferIndex();
+  FrameContext& frameCtx = m_FrameContext[backBufferIdx];
 
   frameCtx.commandAllocator->Reset();
 
@@ -364,26 +364,26 @@ void ImGuiHUDLayer::present() {
   barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
   barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
 
-  commandList_->Reset(frameCtx.commandAllocator.Get(), nullptr);
-  commandList_->ResourceBarrier(1, &barrier);
+  m_CommandList->Reset(frameCtx.commandAllocator.Get(), nullptr);
+  m_CommandList->ResourceBarrier(1, &barrier);
 
-  commandList_->OMSetRenderTargets(1, &frameCtx.rtvHandle, FALSE, nullptr);
-  commandList_->SetDescriptorHeaps(1, srvDescHeap_.GetAddressOf());
+  m_CommandList->OMSetRenderTargets(1, &frameCtx.rtvHandle, FALSE, nullptr);
+  m_CommandList->SetDescriptorHeaps(1, m_SrvDescHeap.GetAddressOf());
 
   ImGui::Render();
-  ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), commandList_.Get());
+  ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), m_CommandList.Get());
 
   barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
   barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
 
-  commandList_->ResourceBarrier(1, &barrier);
-  commandList_->Close();
+  m_CommandList->ResourceBarrier(1, &barrier);
+  m_CommandList->Close();
 
-  commandQueue_->ExecuteCommandLists(
-      1, reinterpret_cast<ID3D12CommandList* const*>(commandList_.GetAddressOf()));
+  m_CommandQueue->ExecuteCommandLists(
+      1, reinterpret_cast<ID3D12CommandList* const*>(m_CommandList.GetAddressOf()));
 
-  frameCtx.fenceValue = ++fenceValue_;
-  commandQueue_->Signal(fence_.Get(), frameCtx.fenceValue);
+  frameCtx.fenceValue = ++m_FenceValue;
+  m_CommandQueue->Signal(m_Fence.Get(), frameCtx.fenceValue);
 }
 
 } // namespace DirectX

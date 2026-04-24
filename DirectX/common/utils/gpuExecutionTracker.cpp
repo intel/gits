@@ -14,65 +14,65 @@
 namespace gits {
 namespace DirectX {
 
-void GpuExecutionTracker::commandQueueWait(unsigned callKey,
+void GpuExecutionTracker::CommandQueueWait(unsigned callKey,
                                            unsigned commandQueueKey,
                                            unsigned fenceKey,
                                            UINT64 fenceValue) {
-  auto it = signaledFences_.find(fenceKey);
-  if (it != signaledFences_.end() && it->second >= fenceValue) {
+  auto it = m_SignaledFences.find(fenceKey);
+  if (it != m_SignaledFences.end() && it->second >= fenceValue) {
     return;
   }
 
   WaitEvent* waitEvent = new WaitEvent();
-  waitEvent->callKey = callKey;
-  waitEvent->commandQueueKey = commandQueueKey;
-  waitEvent->fence.key = fenceKey;
-  waitEvent->fence.value = fenceValue;
-  queueEvents_[commandQueueKey].push_back(waitEvent);
+  waitEvent->CallKey = callKey;
+  waitEvent->CommandQueueKey = commandQueueKey;
+  waitEvent->Fence.Key = fenceKey;
+  waitEvent->Fence.Value = fenceValue;
+  m_QueueEvents[commandQueueKey].push_back(waitEvent);
 }
 
-void GpuExecutionTracker::commandQueueSignal(unsigned callKey,
+void GpuExecutionTracker::CommandQueueSignal(unsigned callKey,
                                              unsigned commandQueueKey,
                                              unsigned fenceKey,
                                              UINT64 fenceValue) {
-  auto it = queueEvents_.find(commandQueueKey);
-  if (it == queueEvents_.end() || it->second.empty()) {
-    fenceSignal(callKey, fenceKey, fenceValue);
+  auto it = m_QueueEvents.find(commandQueueKey);
+  if (it == m_QueueEvents.end() || it->second.empty()) {
+    FenceSignal(callKey, fenceKey, fenceValue);
   } else {
     SignalEvent* signalEvent = new SignalEvent();
-    signalEvent->callKey = callKey;
-    signalEvent->commandQueueKey = commandQueueKey;
-    signalEvent->fence.key = fenceKey;
-    signalEvent->fence.value = fenceValue;
+    signalEvent->CallKey = callKey;
+    signalEvent->CommandQueueKey = commandQueueKey;
+    signalEvent->Fence.Key = fenceKey;
+    signalEvent->Fence.Value = fenceValue;
     it->second.push_back(signalEvent);
   }
 }
 
-void GpuExecutionTracker::fenceSignal(unsigned callKey, unsigned fenceKey, UINT64 fenceValue) {
+void GpuExecutionTracker::FenceSignal(unsigned callKey, unsigned fenceKey, UINT64 fenceValue) {
   std::queue<SignalEvent*> signaled;
   auto* initialSignal = new SignalEvent{};
-  initialSignal->callKey = callKey;
-  initialSignal->fence = {fenceKey, fenceValue};
+  initialSignal->CallKey = callKey;
+  initialSignal->Fence = {fenceKey, fenceValue};
   signaled.push(initialSignal);
 
   while (!signaled.empty()) {
     SignalEvent* signalEvent = signaled.front();
-    signaledFences_[signalEvent->fence.key] = signalEvent->fence.value;
+    m_SignaledFences[signalEvent->Fence.Key] = signalEvent->Fence.Value;
 
-    for (auto& it : queueEvents_) {
+    for (auto& it : m_QueueEvents) {
       while (!it.second.empty()) {
         QueueEvent* queueEvent = it.second.front();
-        if (queueEvent->type == QueueEvent::Wait) {
+        if (queueEvent->Kind == QueueEventKind::Wait) {
           WaitEvent* waitEvent = static_cast<WaitEvent*>(queueEvent);
-          auto itFence = signaledFences_.find(waitEvent->fence.key);
-          if (itFence != signaledFences_.end() && itFence->second >= waitEvent->fence.value) {
+          auto itFence = m_SignaledFences.find(waitEvent->Fence.Key);
+          if (itFence != m_SignaledFences.end() && itFence->second >= waitEvent->Fence.Value) {
             delete queueEvent;
           } else {
             break;
           }
-        } else if (queueEvent->type == QueueEvent::Execute) {
-          readyExecutables_.push_back(static_cast<Executable*>(queueEvent));
-        } else if (queueEvent->type == QueueEvent::Signal) {
+        } else if (queueEvent->Kind == QueueEventKind::Execute) {
+          m_ReadyExecutables.push_back(static_cast<Executable*>(queueEvent));
+        } else if (queueEvent->Kind == QueueEventKind::Signal) {
           signaled.push(static_cast<SignalEvent*>(queueEvent));
         }
         it.second.pop_front();
@@ -84,22 +84,22 @@ void GpuExecutionTracker::fenceSignal(unsigned callKey, unsigned fenceKey, UINT6
   }
 }
 
-bool GpuExecutionTracker::isCommandQueueWaiting(unsigned commandQueueKey) {
-  auto it = queueEvents_.find(commandQueueKey);
-  if (it == queueEvents_.end() || it->second.empty()) {
+bool GpuExecutionTracker::IsCommandQueueWaiting(unsigned commandQueueKey) {
+  auto it = m_QueueEvents.find(commandQueueKey);
+  if (it == m_QueueEvents.end() || it->second.empty()) {
     return false;
   }
   return true;
 }
 
-void GpuExecutionTracker::execute(unsigned callKey,
+void GpuExecutionTracker::Execute(unsigned callKey,
                                   unsigned commandQueueKey,
                                   Executable* executable) {
-  executable->callKey = callKey;
-  executable->commandQueueKey = commandQueueKey;
-  auto it = queueEvents_.find(commandQueueKey);
-  if (it == queueEvents_.end() || it->second.empty()) {
-    readyExecutables_.push_back(executable);
+  executable->CallKey = callKey;
+  executable->CommandQueueKey = commandQueueKey;
+  auto it = m_QueueEvents.find(commandQueueKey);
+  if (it == m_QueueEvents.end() || it->second.empty()) {
+    m_ReadyExecutables.push_back(executable);
   } else {
     it->second.push_back(executable);
   }

@@ -15,94 +15,94 @@
 namespace gits {
 namespace DirectX {
 
-unsigned getSize(const BufferArgument& arg) {
-  if (!arg.value) {
+unsigned GetSize(const BufferArgument& arg) {
+  if (!arg.Value) {
     return sizeof(void*);
   }
-  return sizeof(void*) + sizeof(arg.size) + arg.size;
+  return sizeof(void*) + sizeof(arg.Size) + arg.Size;
 }
 
-void encode(char* dest, unsigned& offset, const BufferArgument& arg) {
-  if (encodeNullPtr(dest, offset, arg)) {
+void Encode(char* dest, unsigned& offset, const BufferArgument& arg) {
+  if (EncodeNullPtr(dest, offset, arg)) {
     return;
   }
-  memcpy(dest + offset, &arg.size, sizeof(arg.size));
-  offset += sizeof(arg.size);
-  memcpy(dest + offset, arg.value, arg.size);
-  offset += arg.size;
+  memcpy(dest + offset, &arg.Size, sizeof(arg.Size));
+  offset += sizeof(arg.Size);
+  memcpy(dest + offset, arg.Value, arg.Size);
+  offset += arg.Size;
 }
 
-unsigned getSize(const OutputBufferArgument& arg) {
+unsigned GetSize(const OutputBufferArgument& arg) {
   return sizeof(void*);
 }
 
-void encode(char* dest, unsigned& offset, const OutputBufferArgument& arg) {
-  memcpy(dest + offset, arg.captureValue ? &arg.captureValue : arg.value, sizeof(void*));
+void Encode(char* dest, unsigned& offset, const OutputBufferArgument& arg) {
+  memcpy(dest + offset, arg.CaptureValue ? &arg.CaptureValue : arg.Value, sizeof(void*));
   offset += sizeof(void*);
 }
 
-unsigned getSize(const LPCWSTR_Argument& arg) {
-  if (!arg.value) {
+unsigned GetSize(const LPCWSTR_Argument& arg) {
+  if (!arg.Value) {
     return sizeof(void*);
   }
-  return sizeof(void*) + sizeof(unsigned) + wcslen(arg.value) * 2 + 2;
+  return sizeof(void*) + sizeof(unsigned) + wcslen(arg.Value) * 2 + 2;
 }
 
-void encode(char* dest, unsigned& offset, const LPCWSTR_Argument& arg) {
-  if (encodeNullPtr(dest, offset, arg)) {
+void Encode(char* dest, unsigned& offset, const LPCWSTR_Argument& arg) {
+  if (EncodeNullPtr(dest, offset, arg)) {
     return;
   }
-  unsigned len = wcslen(arg.value) * 2 + 2;
+  unsigned len = wcslen(arg.Value) * 2 + 2;
   memcpy(dest + offset, &len, sizeof(len));
   offset += sizeof(unsigned);
-  memcpy(dest + offset, arg.value, len);
+  memcpy(dest + offset, arg.Value, len);
   offset += len;
 }
 
-unsigned getSize(const D3D12_GPU_VIRTUAL_ADDRESS_Argument& arg) {
-  return sizeof(arg.value) + sizeof(arg.interfaceKey) + sizeof(arg.offset);
+unsigned GetSize(const D3D12_GPU_VIRTUAL_ADDRESS_Argument& arg) {
+  return sizeof(arg.Value) + sizeof(arg.InterfaceKey) + sizeof(arg.Offset);
 }
 
-void encode(char* dest, unsigned& offset, const D3D12_GPU_VIRTUAL_ADDRESS_Argument& arg) {
-  memcpy(dest + offset, &arg.value, sizeof(arg.value));
-  offset += sizeof(arg.value);
-  memcpy(dest + offset, &arg.interfaceKey, sizeof(arg.interfaceKey));
-  offset += sizeof(arg.interfaceKey);
-  memcpy(dest + offset, &arg.offset, sizeof(arg.offset));
-  offset += sizeof(arg.offset);
+void Encode(char* dest, unsigned& offset, const D3D12_GPU_VIRTUAL_ADDRESS_Argument& arg) {
+  memcpy(dest + offset, &arg.Value, sizeof(arg.Value));
+  offset += sizeof(arg.Value);
+  memcpy(dest + offset, &arg.InterfaceKey, sizeof(arg.InterfaceKey));
+  offset += sizeof(arg.InterfaceKey);
+  memcpy(dest + offset, &arg.Offset, sizeof(arg.Offset));
+  offset += sizeof(arg.Offset);
 }
 
-unsigned getSize(const D3D12_GRAPHICS_PIPELINE_STATE_DESC_Argument& arg) {
-  if (!arg.value) {
+unsigned GetSize(const D3D12_GRAPHICS_PIPELINE_STATE_DESC_Argument& arg) {
+  if (!arg.Value) {
     return sizeof(void*);
   }
   unsigned size = sizeof(void*) + sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC) +
-                  arg.value->VS.BytecodeLength + arg.value->PS.BytecodeLength +
-                  arg.value->DS.BytecodeLength + arg.value->HS.BytecodeLength +
-                  arg.value->GS.BytecodeLength;
+                  arg.Value->VS.BytecodeLength + arg.Value->PS.BytecodeLength +
+                  arg.Value->DS.BytecodeLength + arg.Value->HS.BytecodeLength +
+                  arg.Value->GS.BytecodeLength;
 
-  size += arg.value->StreamOutput.NumEntries * sizeof(D3D12_SO_DECLARATION_ENTRY);
-  for (unsigned i = 0; i < arg.value->StreamOutput.NumEntries; ++i) {
-    size += sizeof(unsigned) + strlen(arg.value->StreamOutput.pSODeclaration[i].SemanticName) + 1;
+  size += arg.Value->StreamOutput.NumEntries * sizeof(D3D12_SO_DECLARATION_ENTRY);
+  for (unsigned i = 0; i < arg.Value->StreamOutput.NumEntries; ++i) {
+    size += sizeof(unsigned) + strlen(arg.Value->StreamOutput.pSODeclaration[i].SemanticName) + 1;
   }
-  size += arg.value->StreamOutput.NumStrides * sizeof(UINT);
+  size += arg.Value->StreamOutput.NumStrides * sizeof(UINT);
 
-  size += sizeof(D3D12_INPUT_ELEMENT_DESC) * arg.value->InputLayout.NumElements;
-  for (unsigned i = 0; i < arg.value->InputLayout.NumElements; ++i) {
+  size += sizeof(D3D12_INPUT_ELEMENT_DESC) * arg.Value->InputLayout.NumElements;
+  for (unsigned i = 0; i < arg.Value->InputLayout.NumElements; ++i) {
     size +=
-        sizeof(unsigned) + strlen(arg.value->InputLayout.pInputElementDescs[i].SemanticName) + 1;
+        sizeof(unsigned) + strlen(arg.Value->InputLayout.pInputElementDescs[i].SemanticName) + 1;
   }
-  size += arg.value->CachedPSO.CachedBlobSizeInBytes;
-  size += sizeof(arg.rootSignatureKey);
+  size += arg.Value->CachedPSO.CachedBlobSizeInBytes;
+  size += sizeof(arg.RootSignatureKey);
   return size;
 }
 
-void encode(char* dest, unsigned& offset, const D3D12_GRAPHICS_PIPELINE_STATE_DESC_Argument& arg) {
-  if (encodeNullPtr(dest, offset, arg)) {
+void Encode(char* dest, unsigned& offset, const D3D12_GRAPHICS_PIPELINE_STATE_DESC_Argument& arg) {
+  if (EncodeNullPtr(dest, offset, arg)) {
     return;
   }
 
-  memcpy(dest + offset, arg.value, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
+  memcpy(dest + offset, arg.Value, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
   offset += sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC);
 
   auto encodeBytecode = [&](D3D12_SHADER_BYTECODE& bytecode) {
@@ -111,37 +111,37 @@ void encode(char* dest, unsigned& offset, const D3D12_GRAPHICS_PIPELINE_STATE_DE
       offset += bytecode.BytecodeLength;
     }
   };
-  encodeBytecode(arg.value->VS);
-  encodeBytecode(arg.value->PS);
-  encodeBytecode(arg.value->DS);
-  encodeBytecode(arg.value->HS);
-  encodeBytecode(arg.value->GS);
+  encodeBytecode(arg.Value->VS);
+  encodeBytecode(arg.Value->PS);
+  encodeBytecode(arg.Value->DS);
+  encodeBytecode(arg.Value->HS);
+  encodeBytecode(arg.Value->GS);
 
-  if (arg.value->StreamOutput.pSODeclaration) {
-    memcpy(dest + offset, arg.value->StreamOutput.pSODeclaration,
-           arg.value->StreamOutput.NumEntries * sizeof(D3D12_SO_DECLARATION_ENTRY));
-    offset += arg.value->StreamOutput.NumEntries * sizeof(D3D12_SO_DECLARATION_ENTRY);
+  if (arg.Value->StreamOutput.pSODeclaration) {
+    memcpy(dest + offset, arg.Value->StreamOutput.pSODeclaration,
+           arg.Value->StreamOutput.NumEntries * sizeof(D3D12_SO_DECLARATION_ENTRY));
+    offset += arg.Value->StreamOutput.NumEntries * sizeof(D3D12_SO_DECLARATION_ENTRY);
 
-    for (unsigned i = 0; i < arg.value->StreamOutput.NumEntries; ++i) {
-      unsigned len = strlen(arg.value->StreamOutput.pSODeclaration[i].SemanticName) + 1;
+    for (unsigned i = 0; i < arg.Value->StreamOutput.NumEntries; ++i) {
+      unsigned len = strlen(arg.Value->StreamOutput.pSODeclaration[i].SemanticName) + 1;
       memcpy(dest + offset, &len, sizeof(len));
       offset += sizeof(len);
-      memcpy(dest + offset, arg.value->StreamOutput.pSODeclaration[i].SemanticName, len);
+      memcpy(dest + offset, arg.Value->StreamOutput.pSODeclaration[i].SemanticName, len);
       offset += len;
     }
   }
-  if (arg.value->StreamOutput.pBufferStrides) {
-    memcpy(dest + offset, arg.value->StreamOutput.pBufferStrides,
-           arg.value->StreamOutput.NumStrides * sizeof(UINT));
-    offset += arg.value->StreamOutput.NumStrides * sizeof(UINT);
+  if (arg.Value->StreamOutput.pBufferStrides) {
+    memcpy(dest + offset, arg.Value->StreamOutput.pBufferStrides,
+           arg.Value->StreamOutput.NumStrides * sizeof(UINT));
+    offset += arg.Value->StreamOutput.NumStrides * sizeof(UINT);
   }
 
-  memcpy(dest + offset, arg.value->InputLayout.pInputElementDescs,
-         sizeof(D3D12_INPUT_ELEMENT_DESC) * arg.value->InputLayout.NumElements);
-  offset += sizeof(D3D12_INPUT_ELEMENT_DESC) * arg.value->InputLayout.NumElements;
+  memcpy(dest + offset, arg.Value->InputLayout.pInputElementDescs,
+         sizeof(D3D12_INPUT_ELEMENT_DESC) * arg.Value->InputLayout.NumElements);
+  offset += sizeof(D3D12_INPUT_ELEMENT_DESC) * arg.Value->InputLayout.NumElements;
 
-  for (unsigned i = 0; i < arg.value->InputLayout.NumElements; ++i) {
-    const D3D12_INPUT_ELEMENT_DESC& inputElement = arg.value->InputLayout.pInputElementDescs[i];
+  for (unsigned i = 0; i < arg.Value->InputLayout.NumElements; ++i) {
+    const D3D12_INPUT_ELEMENT_DESC& inputElement = arg.Value->InputLayout.pInputElementDescs[i];
     unsigned len = strlen(inputElement.SemanticName) + 1;
     memcpy(dest + offset, &len, sizeof(len));
     offset += sizeof(len);
@@ -149,138 +149,138 @@ void encode(char* dest, unsigned& offset, const D3D12_GRAPHICS_PIPELINE_STATE_DE
     offset += len;
   }
 
-  if (arg.value->CachedPSO.pCachedBlob) {
-    memcpy(dest + offset, arg.value->CachedPSO.pCachedBlob,
-           arg.value->CachedPSO.CachedBlobSizeInBytes);
-    offset += arg.value->CachedPSO.CachedBlobSizeInBytes;
+  if (arg.Value->CachedPSO.pCachedBlob) {
+    memcpy(dest + offset, arg.Value->CachedPSO.pCachedBlob,
+           arg.Value->CachedPSO.CachedBlobSizeInBytes);
+    offset += arg.Value->CachedPSO.CachedBlobSizeInBytes;
   }
 
-  memcpy(dest + offset, &arg.rootSignatureKey, sizeof(arg.rootSignatureKey));
-  offset += sizeof(arg.rootSignatureKey);
+  memcpy(dest + offset, &arg.RootSignatureKey, sizeof(arg.RootSignatureKey));
+  offset += sizeof(arg.RootSignatureKey);
 }
 
-unsigned getSize(const D3D12_COMPUTE_PIPELINE_STATE_DESC_Argument& arg) {
-  if (!arg.value) {
+unsigned GetSize(const D3D12_COMPUTE_PIPELINE_STATE_DESC_Argument& arg) {
+  if (!arg.Value) {
     return sizeof(void*);
   }
-  return sizeof(void*) + sizeof(D3D12_COMPUTE_PIPELINE_STATE_DESC) + arg.value->CS.BytecodeLength +
-         arg.value->CachedPSO.CachedBlobSizeInBytes + sizeof(arg.rootSignatureKey);
+  return sizeof(void*) + sizeof(D3D12_COMPUTE_PIPELINE_STATE_DESC) + arg.Value->CS.BytecodeLength +
+         arg.Value->CachedPSO.CachedBlobSizeInBytes + sizeof(arg.RootSignatureKey);
 }
 
-void encode(char* dest, unsigned& offset, const D3D12_COMPUTE_PIPELINE_STATE_DESC_Argument& arg) {
-  if (encodeNullPtr(dest, offset, arg)) {
+void Encode(char* dest, unsigned& offset, const D3D12_COMPUTE_PIPELINE_STATE_DESC_Argument& arg) {
+  if (EncodeNullPtr(dest, offset, arg)) {
     return;
   }
 
-  memcpy(dest + offset, arg.value, sizeof(D3D12_COMPUTE_PIPELINE_STATE_DESC));
+  memcpy(dest + offset, arg.Value, sizeof(D3D12_COMPUTE_PIPELINE_STATE_DESC));
   offset += sizeof(D3D12_COMPUTE_PIPELINE_STATE_DESC);
 
-  if (arg.value->CS.pShaderBytecode) {
-    memcpy(dest + offset, arg.value->CS.pShaderBytecode, arg.value->CS.BytecodeLength);
-    offset += arg.value->CS.BytecodeLength;
+  if (arg.Value->CS.pShaderBytecode) {
+    memcpy(dest + offset, arg.Value->CS.pShaderBytecode, arg.Value->CS.BytecodeLength);
+    offset += arg.Value->CS.BytecodeLength;
   }
 
-  if (arg.value->CachedPSO.pCachedBlob) {
-    memcpy(dest + offset, arg.value->CachedPSO.pCachedBlob,
-           arg.value->CachedPSO.CachedBlobSizeInBytes);
-    offset += arg.value->CachedPSO.CachedBlobSizeInBytes;
+  if (arg.Value->CachedPSO.pCachedBlob) {
+    memcpy(dest + offset, arg.Value->CachedPSO.pCachedBlob,
+           arg.Value->CachedPSO.CachedBlobSizeInBytes);
+    offset += arg.Value->CachedPSO.CachedBlobSizeInBytes;
   }
 
-  memcpy(dest + offset, &arg.rootSignatureKey, sizeof(arg.rootSignatureKey));
-  offset += sizeof(arg.rootSignatureKey);
+  memcpy(dest + offset, &arg.RootSignatureKey, sizeof(arg.RootSignatureKey));
+  offset += sizeof(arg.RootSignatureKey);
 }
 
-unsigned getSize(const D3D12_TEXTURE_COPY_LOCATION_Argument& arg) {
-  return sizeof(D3D12_TEXTURE_COPY_LOCATION) + sizeof(arg.resourceKey);
+unsigned GetSize(const D3D12_TEXTURE_COPY_LOCATION_Argument& arg) {
+  return sizeof(D3D12_TEXTURE_COPY_LOCATION) + sizeof(arg.ResourceKey);
 }
 
-void encode(char* dest, unsigned& offset, const D3D12_TEXTURE_COPY_LOCATION_Argument& arg) {
+void Encode(char* dest, unsigned& offset, const D3D12_TEXTURE_COPY_LOCATION_Argument& arg) {
 
-  memcpy(dest + offset, arg.value, sizeof(D3D12_TEXTURE_COPY_LOCATION));
+  memcpy(dest + offset, arg.Value, sizeof(D3D12_TEXTURE_COPY_LOCATION));
   offset += sizeof(D3D12_TEXTURE_COPY_LOCATION);
 
-  memcpy(dest + offset, &arg.resourceKey, sizeof(arg.resourceKey));
-  offset += sizeof(arg.resourceKey);
+  memcpy(dest + offset, &arg.ResourceKey, sizeof(arg.ResourceKey));
+  offset += sizeof(arg.ResourceKey);
 }
 
-unsigned getSize(const D3D12_RESOURCE_BARRIERs_Argument& arg) {
-  if (!arg.value) {
+unsigned GetSize(const D3D12_RESOURCE_BARRIERs_Argument& arg) {
+  if (!arg.Value) {
     return sizeof(void*);
   }
-  return sizeof(void*) + sizeof(arg.size) + sizeof(D3D12_RESOURCE_BARRIER) * arg.size +
-         sizeof(unsigned) * arg.size * 2;
+  return sizeof(void*) + sizeof(arg.Size) + sizeof(D3D12_RESOURCE_BARRIER) * arg.Size +
+         sizeof(unsigned) * arg.Size * 2;
 }
 
-void encode(char* dest, unsigned& offset, const D3D12_RESOURCE_BARRIERs_Argument& arg) {
-  if (encodeNullPtr(dest, offset, arg)) {
+void Encode(char* dest, unsigned& offset, const D3D12_RESOURCE_BARRIERs_Argument& arg) {
+  if (EncodeNullPtr(dest, offset, arg)) {
     return;
   }
-  memcpy(dest + offset, &arg.size, sizeof(arg.size));
-  offset += sizeof(arg.size);
+  memcpy(dest + offset, &arg.Size, sizeof(arg.Size));
+  offset += sizeof(arg.Size);
 
-  memcpy(dest + offset, arg.value, sizeof(D3D12_RESOURCE_BARRIER) * arg.size);
-  offset += sizeof(D3D12_RESOURCE_BARRIER) * arg.size;
+  memcpy(dest + offset, arg.Value, sizeof(D3D12_RESOURCE_BARRIER) * arg.Size);
+  offset += sizeof(D3D12_RESOURCE_BARRIER) * arg.Size;
 
-  memcpy(dest + offset, arg.resourceKeys.data(), sizeof(unsigned) * arg.size);
-  offset += sizeof(unsigned) * arg.size;
+  memcpy(dest + offset, arg.ResourceKeys.data(), sizeof(unsigned) * arg.Size);
+  offset += sizeof(unsigned) * arg.Size;
 
-  memcpy(dest + offset, arg.resourceAfterKeys.data(), sizeof(unsigned) * arg.size);
-  offset += sizeof(unsigned) * arg.size;
+  memcpy(dest + offset, arg.ResourceAfterKeys.data(), sizeof(unsigned) * arg.Size);
+  offset += sizeof(unsigned) * arg.Size;
 }
 
-unsigned getSize(const PointerArgument<D3D12_ROOT_SIGNATURE_DESC>& arg) {
-  if (!arg.value) {
+unsigned GetSize(const PointerArgument<D3D12_ROOT_SIGNATURE_DESC>& arg) {
+  if (!arg.Value) {
     return sizeof(void*);
   }
   unsigned size = sizeof(void*) + sizeof(D3D12_ROOT_SIGNATURE_DESC);
 
-  size += arg.value->NumStaticSamplers * sizeof(D3D12_STATIC_SAMPLER_DESC);
-  size += arg.value->NumParameters * sizeof(D3D12_ROOT_PARAMETER);
-  for (unsigned i = 0; i < arg.value->NumParameters; ++i) {
-    if (arg.value->pParameters[i].ParameterType == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE) {
-      size += arg.value->pParameters[i].DescriptorTable.NumDescriptorRanges *
+  size += arg.Value->NumStaticSamplers * sizeof(D3D12_STATIC_SAMPLER_DESC);
+  size += arg.Value->NumParameters * sizeof(D3D12_ROOT_PARAMETER);
+  for (unsigned i = 0; i < arg.Value->NumParameters; ++i) {
+    if (arg.Value->pParameters[i].ParameterType == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE) {
+      size += arg.Value->pParameters[i].DescriptorTable.NumDescriptorRanges *
               sizeof(D3D12_DESCRIPTOR_RANGE);
     }
   }
   return size;
 }
 
-void encode(char* dest, unsigned& offset, const PointerArgument<D3D12_ROOT_SIGNATURE_DESC>& arg) {
-  if (encodeNullPtr(dest, offset, arg)) {
+void Encode(char* dest, unsigned& offset, const PointerArgument<D3D12_ROOT_SIGNATURE_DESC>& arg) {
+  if (EncodeNullPtr(dest, offset, arg)) {
     return;
   }
 
-  memcpy(dest + offset, arg.value, sizeof(D3D12_ROOT_SIGNATURE_DESC));
+  memcpy(dest + offset, arg.Value, sizeof(D3D12_ROOT_SIGNATURE_DESC));
   offset += sizeof(D3D12_ROOT_SIGNATURE_DESC);
 
-  memcpy(dest + offset, arg.value->pStaticSamplers,
-         sizeof(D3D12_STATIC_SAMPLER_DESC) * arg.value->NumStaticSamplers);
-  offset += sizeof(D3D12_STATIC_SAMPLER_DESC) * arg.value->NumStaticSamplers;
+  memcpy(dest + offset, arg.Value->pStaticSamplers,
+         sizeof(D3D12_STATIC_SAMPLER_DESC) * arg.Value->NumStaticSamplers);
+  offset += sizeof(D3D12_STATIC_SAMPLER_DESC) * arg.Value->NumStaticSamplers;
 
-  memcpy(dest + offset, arg.value->pParameters,
-         sizeof(D3D12_ROOT_PARAMETER) * arg.value->NumParameters);
-  offset += sizeof(D3D12_ROOT_PARAMETER) * arg.value->NumParameters;
-  for (unsigned i = 0; i < arg.value->NumParameters; ++i) {
-    if (arg.value->pParameters[i].ParameterType == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE) {
+  memcpy(dest + offset, arg.Value->pParameters,
+         sizeof(D3D12_ROOT_PARAMETER) * arg.Value->NumParameters);
+  offset += sizeof(D3D12_ROOT_PARAMETER) * arg.Value->NumParameters;
+  for (unsigned i = 0; i < arg.Value->NumParameters; ++i) {
+    if (arg.Value->pParameters[i].ParameterType == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE) {
 
-      memcpy(dest + offset, arg.value->pParameters[i].DescriptorTable.pDescriptorRanges,
+      memcpy(dest + offset, arg.Value->pParameters[i].DescriptorTable.pDescriptorRanges,
              sizeof(D3D12_DESCRIPTOR_RANGE) *
-                 arg.value->pParameters[i].DescriptorTable.NumDescriptorRanges);
+                 arg.Value->pParameters[i].DescriptorTable.NumDescriptorRanges);
       offset += sizeof(D3D12_DESCRIPTOR_RANGE) *
-                arg.value->pParameters[i].DescriptorTable.NumDescriptorRanges;
+                arg.Value->pParameters[i].DescriptorTable.NumDescriptorRanges;
     }
   }
 }
 
-unsigned getSize(const PointerArgument<D3D12_VERSIONED_ROOT_SIGNATURE_DESC>& arg) {
-  if (!arg.value) {
+unsigned GetSize(const PointerArgument<D3D12_VERSIONED_ROOT_SIGNATURE_DESC>& arg) {
+  if (!arg.Value) {
     return sizeof(void*);
   }
   unsigned size = sizeof(void*) + sizeof(D3D12_VERSIONED_ROOT_SIGNATURE_DESC);
 
-  switch (arg.value->Version) {
+  switch (arg.Value->Version) {
   case D3D_ROOT_SIGNATURE_VERSION_1_0: {
-    D3D12_ROOT_SIGNATURE_DESC& desc0 = arg.value->Desc_1_0;
+    D3D12_ROOT_SIGNATURE_DESC& desc0 = arg.Value->Desc_1_0;
     size += desc0.NumStaticSamplers * sizeof(D3D12_STATIC_SAMPLER_DESC);
     size += desc0.NumParameters * sizeof(D3D12_ROOT_PARAMETER);
     for (unsigned i = 0; i < desc0.NumParameters; ++i) {
@@ -291,7 +291,7 @@ unsigned getSize(const PointerArgument<D3D12_VERSIONED_ROOT_SIGNATURE_DESC>& arg
     }
   } break;
   case D3D_ROOT_SIGNATURE_VERSION_1_1: {
-    D3D12_ROOT_SIGNATURE_DESC1& desc1 = arg.value->Desc_1_1;
+    D3D12_ROOT_SIGNATURE_DESC1& desc1 = arg.Value->Desc_1_1;
     size += desc1.NumStaticSamplers * sizeof(D3D12_STATIC_SAMPLER_DESC);
     size += desc1.NumParameters * sizeof(D3D12_ROOT_PARAMETER1);
     for (unsigned i = 0; i < desc1.NumParameters; ++i) {
@@ -302,7 +302,7 @@ unsigned getSize(const PointerArgument<D3D12_VERSIONED_ROOT_SIGNATURE_DESC>& arg
     }
   } break;
   case D3D_ROOT_SIGNATURE_VERSION_1_2: {
-    D3D12_ROOT_SIGNATURE_DESC2& desc2 = arg.value->Desc_1_2;
+    D3D12_ROOT_SIGNATURE_DESC2& desc2 = arg.Value->Desc_1_2;
     size += desc2.NumStaticSamplers * sizeof(D3D12_STATIC_SAMPLER_DESC1);
     size += desc2.NumParameters * sizeof(D3D12_ROOT_PARAMETER1);
     for (unsigned i = 0; i < desc2.NumParameters; ++i) {
@@ -316,19 +316,19 @@ unsigned getSize(const PointerArgument<D3D12_VERSIONED_ROOT_SIGNATURE_DESC>& arg
   return size;
 }
 
-void encode(char* dest,
+void Encode(char* dest,
             unsigned& offset,
             const PointerArgument<D3D12_VERSIONED_ROOT_SIGNATURE_DESC>& arg) {
-  if (encodeNullPtr(dest, offset, arg)) {
+  if (EncodeNullPtr(dest, offset, arg)) {
     return;
   }
 
-  memcpy(dest + offset, arg.value, sizeof(D3D12_VERSIONED_ROOT_SIGNATURE_DESC));
+  memcpy(dest + offset, arg.Value, sizeof(D3D12_VERSIONED_ROOT_SIGNATURE_DESC));
   offset += sizeof(D3D12_VERSIONED_ROOT_SIGNATURE_DESC);
 
-  switch (arg.value->Version) {
+  switch (arg.Value->Version) {
   case D3D_ROOT_SIGNATURE_VERSION_1_0: {
-    D3D12_ROOT_SIGNATURE_DESC& desc0 = arg.value->Desc_1_0;
+    D3D12_ROOT_SIGNATURE_DESC& desc0 = arg.Value->Desc_1_0;
 
     memcpy(dest + offset, desc0.pStaticSamplers,
            sizeof(D3D12_STATIC_SAMPLER_DESC) * desc0.NumStaticSamplers);
@@ -348,7 +348,7 @@ void encode(char* dest,
     }
   } break;
   case D3D_ROOT_SIGNATURE_VERSION_1_1: {
-    D3D12_ROOT_SIGNATURE_DESC1& desc1 = arg.value->Desc_1_1;
+    D3D12_ROOT_SIGNATURE_DESC1& desc1 = arg.Value->Desc_1_1;
 
     memcpy(dest + offset, desc1.pStaticSamplers,
            sizeof(D3D12_STATIC_SAMPLER_DESC) * desc1.NumStaticSamplers);
@@ -368,7 +368,7 @@ void encode(char* dest,
     }
   } break;
   case D3D_ROOT_SIGNATURE_VERSION_1_2: {
-    D3D12_ROOT_SIGNATURE_DESC2& desc2 = arg.value->Desc_1_2;
+    D3D12_ROOT_SIGNATURE_DESC2& desc2 = arg.Value->Desc_1_2;
 
     memcpy(dest + offset, desc2.pStaticSamplers,
            sizeof(D3D12_STATIC_SAMPLER_DESC1) * desc2.NumStaticSamplers);
@@ -390,168 +390,168 @@ void encode(char* dest,
   }
 }
 
-unsigned getSize(const PointerArgument<D3D12_COMMAND_SIGNATURE_DESC>& arg) {
-  if (!arg.value) {
+unsigned GetSize(const PointerArgument<D3D12_COMMAND_SIGNATURE_DESC>& arg) {
+  if (!arg.Value) {
     return sizeof(void*);
   }
-  return sizeof(void*) + sizeof(D3D12_COMMAND_SIGNATURE_DESC) * arg.value->NumArgumentDescs *
+  return sizeof(void*) + sizeof(D3D12_COMMAND_SIGNATURE_DESC) * arg.Value->NumArgumentDescs *
                              sizeof(D3D12_INDIRECT_ARGUMENT_DESC);
 }
 
-void encode(char* dest,
+void Encode(char* dest,
             unsigned& offset,
             const PointerArgument<D3D12_COMMAND_SIGNATURE_DESC>& arg) {
-  if (encodeNullPtr(dest, offset, arg)) {
+  if (EncodeNullPtr(dest, offset, arg)) {
     return;
   }
 
-  memcpy(dest + offset, arg.value, sizeof(D3D12_COMMAND_SIGNATURE_DESC));
+  memcpy(dest + offset, arg.Value, sizeof(D3D12_COMMAND_SIGNATURE_DESC));
   offset += sizeof(D3D12_COMMAND_SIGNATURE_DESC);
 
-  memcpy(dest + offset, arg.value->pArgumentDescs,
-         sizeof(D3D12_INDIRECT_ARGUMENT_DESC) * arg.value->NumArgumentDescs);
-  offset += sizeof(D3D12_INDIRECT_ARGUMENT_DESC) * arg.value->NumArgumentDescs;
+  memcpy(dest + offset, arg.Value->pArgumentDescs,
+         sizeof(D3D12_INDIRECT_ARGUMENT_DESC) * arg.Value->NumArgumentDescs);
+  offset += sizeof(D3D12_INDIRECT_ARGUMENT_DESC) * arg.Value->NumArgumentDescs;
 }
 
-unsigned getSize(const D3D12_INDEX_BUFFER_VIEW_Argument& arg) {
-  if (!arg.value) {
+unsigned GetSize(const D3D12_INDEX_BUFFER_VIEW_Argument& arg) {
+  if (!arg.Value) {
     return sizeof(void*);
   }
   return sizeof(void*) + sizeof(D3D12_INDEX_BUFFER_VIEW) + sizeof(unsigned) * 2;
 }
 
-void encode(char* dest, unsigned& offset, const D3D12_INDEX_BUFFER_VIEW_Argument& arg) {
-  if (encodeNullPtr(dest, offset, arg)) {
+void Encode(char* dest, unsigned& offset, const D3D12_INDEX_BUFFER_VIEW_Argument& arg) {
+  if (EncodeNullPtr(dest, offset, arg)) {
     return;
   }
 
-  memcpy(dest + offset, arg.value, sizeof(D3D12_INDEX_BUFFER_VIEW));
+  memcpy(dest + offset, arg.Value, sizeof(D3D12_INDEX_BUFFER_VIEW));
   offset += sizeof(D3D12_INDEX_BUFFER_VIEW);
 
-  memcpy(dest + offset, &arg.bufferLocationKey, sizeof(arg.bufferLocationKey));
-  offset += sizeof(arg.bufferLocationKey);
-  memcpy(dest + offset, &arg.bufferLocationOffset, sizeof(arg.bufferLocationOffset));
-  offset += sizeof(arg.bufferLocationOffset);
+  memcpy(dest + offset, &arg.BufferLocationKey, sizeof(arg.BufferLocationKey));
+  offset += sizeof(arg.BufferLocationKey);
+  memcpy(dest + offset, &arg.BufferLocationOffset, sizeof(arg.BufferLocationOffset));
+  offset += sizeof(arg.BufferLocationOffset);
 }
 
-unsigned getSize(const D3D12_CONSTANT_BUFFER_VIEW_DESC_Argument& arg) {
-  if (!arg.value) {
+unsigned GetSize(const D3D12_CONSTANT_BUFFER_VIEW_DESC_Argument& arg) {
+  if (!arg.Value) {
     return sizeof(void*);
   }
   return sizeof(void*) + sizeof(D3D12_CONSTANT_BUFFER_VIEW_DESC) + sizeof(unsigned) * 2;
 }
 
-void encode(char* dest, unsigned& offset, const D3D12_CONSTANT_BUFFER_VIEW_DESC_Argument& arg) {
-  if (encodeNullPtr(dest, offset, arg)) {
+void Encode(char* dest, unsigned& offset, const D3D12_CONSTANT_BUFFER_VIEW_DESC_Argument& arg) {
+  if (EncodeNullPtr(dest, offset, arg)) {
     return;
   }
 
-  memcpy(dest + offset, arg.value, sizeof(D3D12_CONSTANT_BUFFER_VIEW_DESC));
+  memcpy(dest + offset, arg.Value, sizeof(D3D12_CONSTANT_BUFFER_VIEW_DESC));
   offset += sizeof(D3D12_CONSTANT_BUFFER_VIEW_DESC);
 
-  memcpy(dest + offset, &arg.bufferLocationKey, sizeof(arg.bufferLocationKey));
-  offset += sizeof(arg.bufferLocationKey);
-  memcpy(dest + offset, &arg.bufferLocationOffset, sizeof(arg.bufferLocationOffset));
-  offset += sizeof(arg.bufferLocationOffset);
+  memcpy(dest + offset, &arg.BufferLocationKey, sizeof(arg.BufferLocationKey));
+  offset += sizeof(arg.BufferLocationKey);
+  memcpy(dest + offset, &arg.BufferLocationOffset, sizeof(arg.BufferLocationOffset));
+  offset += sizeof(arg.BufferLocationOffset);
 }
 
-unsigned getSize(const D3D12_VERTEX_BUFFER_VIEWs_Argument& arg) {
-  if (!arg.value) {
+unsigned GetSize(const D3D12_VERTEX_BUFFER_VIEWs_Argument& arg) {
+  if (!arg.Value) {
     return sizeof(void*);
   }
-  return sizeof(void*) + sizeof(arg.size) + sizeof(D3D12_VERTEX_BUFFER_VIEW) * arg.size +
-         sizeof(unsigned) * arg.size * 2;
+  return sizeof(void*) + sizeof(arg.Size) + sizeof(D3D12_VERTEX_BUFFER_VIEW) * arg.Size +
+         sizeof(unsigned) * arg.Size * 2;
 }
 
-void encode(char* dest, unsigned& offset, const D3D12_VERTEX_BUFFER_VIEWs_Argument& arg) {
-  if (encodeNullPtr(dest, offset, arg)) {
+void Encode(char* dest, unsigned& offset, const D3D12_VERTEX_BUFFER_VIEWs_Argument& arg) {
+  if (EncodeNullPtr(dest, offset, arg)) {
     return;
   }
 
-  memcpy(dest + offset, &arg.size, sizeof(arg.size));
-  offset += sizeof(arg.size);
+  memcpy(dest + offset, &arg.Size, sizeof(arg.Size));
+  offset += sizeof(arg.Size);
 
-  memcpy(dest + offset, arg.value, sizeof(D3D12_VERTEX_BUFFER_VIEW) * arg.size);
-  offset += sizeof(D3D12_VERTEX_BUFFER_VIEW) * arg.size;
+  memcpy(dest + offset, arg.Value, sizeof(D3D12_VERTEX_BUFFER_VIEW) * arg.Size);
+  offset += sizeof(D3D12_VERTEX_BUFFER_VIEW) * arg.Size;
 
-  memcpy(dest + offset, arg.bufferLocationKeys.data(), sizeof(unsigned) * arg.size);
-  offset += sizeof(unsigned) * arg.size;
+  memcpy(dest + offset, arg.BufferLocationKeys.data(), sizeof(unsigned) * arg.Size);
+  offset += sizeof(unsigned) * arg.Size;
 
-  memcpy(dest + offset, arg.bufferLocationOffsets.data(), sizeof(unsigned) * arg.size);
-  offset += sizeof(unsigned) * arg.size;
+  memcpy(dest + offset, arg.BufferLocationOffsets.data(), sizeof(unsigned) * arg.Size);
+  offset += sizeof(unsigned) * arg.Size;
 }
 
-unsigned getSize(const D3D12_STREAM_OUTPUT_BUFFER_VIEWs_Argument& arg) {
-  if (!arg.value) {
+unsigned GetSize(const D3D12_STREAM_OUTPUT_BUFFER_VIEWs_Argument& arg) {
+  if (!arg.Value) {
     return sizeof(void*);
   }
-  return sizeof(void*) + sizeof(arg.size) + sizeof(D3D12_STREAM_OUTPUT_BUFFER_VIEW) * arg.size +
-         sizeof(unsigned) * arg.size * 4;
+  return sizeof(void*) + sizeof(arg.Size) + sizeof(D3D12_STREAM_OUTPUT_BUFFER_VIEW) * arg.Size +
+         sizeof(unsigned) * arg.Size * 4;
 }
 
-void encode(char* dest, unsigned& offset, const D3D12_STREAM_OUTPUT_BUFFER_VIEWs_Argument& arg) {
-  if (encodeNullPtr(dest, offset, arg)) {
+void Encode(char* dest, unsigned& offset, const D3D12_STREAM_OUTPUT_BUFFER_VIEWs_Argument& arg) {
+  if (EncodeNullPtr(dest, offset, arg)) {
     return;
   }
 
-  memcpy(dest + offset, &arg.size, sizeof(arg.size));
-  offset += sizeof(arg.size);
+  memcpy(dest + offset, &arg.Size, sizeof(arg.Size));
+  offset += sizeof(arg.Size);
 
-  memcpy(dest + offset, arg.value, sizeof(D3D12_STREAM_OUTPUT_BUFFER_VIEW) * arg.size);
-  offset += sizeof(D3D12_STREAM_OUTPUT_BUFFER_VIEW) * arg.size;
+  memcpy(dest + offset, arg.Value, sizeof(D3D12_STREAM_OUTPUT_BUFFER_VIEW) * arg.Size);
+  offset += sizeof(D3D12_STREAM_OUTPUT_BUFFER_VIEW) * arg.Size;
 
-  memcpy(dest + offset, arg.bufferLocationKeys.data(), sizeof(unsigned) * arg.size);
-  offset += sizeof(unsigned) * arg.size;
+  memcpy(dest + offset, arg.BufferLocationKeys.data(), sizeof(unsigned) * arg.Size);
+  offset += sizeof(unsigned) * arg.Size;
 
-  memcpy(dest + offset, arg.bufferLocationOffsets.data(), sizeof(unsigned) * arg.size);
-  offset += sizeof(unsigned) * arg.size;
+  memcpy(dest + offset, arg.BufferLocationOffsets.data(), sizeof(unsigned) * arg.Size);
+  offset += sizeof(unsigned) * arg.Size;
 
-  memcpy(dest + offset, arg.bufferFilledSizeLocationKeys.data(), sizeof(unsigned) * arg.size);
-  offset += sizeof(unsigned) * arg.size;
+  memcpy(dest + offset, arg.BufferFilledSizeLocationKeys.data(), sizeof(unsigned) * arg.Size);
+  offset += sizeof(unsigned) * arg.Size;
 
-  memcpy(dest + offset, arg.bufferFilledSizeLocationOffsets.data(), sizeof(unsigned) * arg.size);
-  offset += sizeof(unsigned) * arg.size;
+  memcpy(dest + offset, arg.BufferFilledSizeLocationOffsets.data(), sizeof(unsigned) * arg.Size);
+  offset += sizeof(unsigned) * arg.Size;
 }
 
-unsigned getSize(const D3D12_WRITEBUFFERIMMEDIATE_PARAMETERs_Argument& arg) {
-  if (!arg.value) {
+unsigned GetSize(const D3D12_WRITEBUFFERIMMEDIATE_PARAMETERs_Argument& arg) {
+  if (!arg.Value) {
     return sizeof(void*);
   }
-  return sizeof(void*) + sizeof(arg.size) +
-         sizeof(D3D12_WRITEBUFFERIMMEDIATE_PARAMETER) * arg.size + sizeof(unsigned) * arg.size * 2;
+  return sizeof(void*) + sizeof(arg.Size) +
+         sizeof(D3D12_WRITEBUFFERIMMEDIATE_PARAMETER) * arg.Size + sizeof(unsigned) * arg.Size * 2;
 }
 
-void encode(char* dest,
+void Encode(char* dest,
             unsigned& offset,
             const D3D12_WRITEBUFFERIMMEDIATE_PARAMETERs_Argument& arg) {
-  if (encodeNullPtr(dest, offset, arg)) {
+  if (EncodeNullPtr(dest, offset, arg)) {
     return;
   }
 
-  memcpy(dest + offset, &arg.size, sizeof(arg.size));
-  offset += sizeof(arg.size);
+  memcpy(dest + offset, &arg.Size, sizeof(arg.Size));
+  offset += sizeof(arg.Size);
 
-  memcpy(dest + offset, arg.value, sizeof(D3D12_WRITEBUFFERIMMEDIATE_PARAMETER) * arg.size);
-  offset += sizeof(D3D12_WRITEBUFFERIMMEDIATE_PARAMETER) * arg.size;
+  memcpy(dest + offset, arg.Value, sizeof(D3D12_WRITEBUFFERIMMEDIATE_PARAMETER) * arg.Size);
+  offset += sizeof(D3D12_WRITEBUFFERIMMEDIATE_PARAMETER) * arg.Size;
 
-  memcpy(dest + offset, arg.destKeys.data(), sizeof(unsigned) * arg.size);
-  offset += sizeof(unsigned) * arg.size;
+  memcpy(dest + offset, arg.DestKeys.data(), sizeof(unsigned) * arg.Size);
+  offset += sizeof(unsigned) * arg.Size;
 
-  memcpy(dest + offset, arg.destOffsets.data(), sizeof(unsigned) * arg.size);
-  offset += sizeof(unsigned) * arg.size;
+  memcpy(dest + offset, arg.DestOffsets.data(), sizeof(unsigned) * arg.Size);
+  offset += sizeof(unsigned) * arg.Size;
 }
 
-unsigned getSize(const D3D12_STATE_OBJECT_DESC_Argument& arg) {
-  if (!arg.value) {
+unsigned GetSize(const D3D12_STATE_OBJECT_DESC_Argument& arg) {
+  if (!arg.Value) {
     return sizeof(void*);
   }
   unsigned size = sizeof(void*) + sizeof(D3D12_STATE_OBJECT_DESC) +
-                  sizeof(D3D12_STATE_SUBOBJECT) * arg.value->NumSubobjects;
+                  sizeof(D3D12_STATE_SUBOBJECT) * arg.Value->NumSubobjects;
 
   unsigned associationsCount = 0;
 
-  for (unsigned index = 0; index < arg.value->NumSubobjects; ++index) {
-    const D3D12_STATE_SUBOBJECT& subobject = arg.value->pSubobjects[index];
+  for (unsigned index = 0; index < arg.Value->NumSubobjects; ++index) {
+    const D3D12_STATE_SUBOBJECT& subobject = arg.Value->pSubobjects[index];
 
     switch (subobject.Type) {
     case D3D12_STATE_SUBOBJECT_TYPE_STATE_OBJECT_CONFIG: {
@@ -639,27 +639,27 @@ unsigned getSize(const D3D12_STATE_OBJECT_DESC_Argument& arg) {
 
   size += sizeof(unsigned) + associationsCount * sizeof(unsigned) * 2;
 
-  size += sizeof(unsigned) + arg.interfaceKeysBySubobject.size() * sizeof(unsigned) * 2;
+  size += sizeof(unsigned) + arg.InterfaceKeysBySubobject.size() * sizeof(unsigned) * 2;
 
   return size;
 }
 
-void encode(char* dest, unsigned& offset, const D3D12_STATE_OBJECT_DESC_Argument& arg) {
-  if (encodeNullPtr(dest, offset, arg)) {
+void Encode(char* dest, unsigned& offset, const D3D12_STATE_OBJECT_DESC_Argument& arg) {
+  if (EncodeNullPtr(dest, offset, arg)) {
     return;
   }
 
-  memcpy(dest + offset, arg.value, sizeof(D3D12_STATE_OBJECT_DESC));
+  memcpy(dest + offset, arg.Value, sizeof(D3D12_STATE_OBJECT_DESC));
   offset += sizeof(D3D12_STATE_OBJECT_DESC);
 
-  memcpy(dest + offset, arg.value->pSubobjects,
-         sizeof(D3D12_STATE_SUBOBJECT) * arg.value->NumSubobjects);
-  offset += sizeof(D3D12_STATE_SUBOBJECT) * arg.value->NumSubobjects;
+  memcpy(dest + offset, arg.Value->pSubobjects,
+         sizeof(D3D12_STATE_SUBOBJECT) * arg.Value->NumSubobjects);
+  offset += sizeof(D3D12_STATE_SUBOBJECT) * arg.Value->NumSubobjects;
 
   std::map<const D3D12_STATE_SUBOBJECT*, unsigned> subobjectIndexes;
 
-  for (unsigned index = 0; index < arg.value->NumSubobjects; ++index) {
-    const D3D12_STATE_SUBOBJECT& subobject = arg.value->pSubobjects[index];
+  for (unsigned index = 0; index < arg.Value->NumSubobjects; ++index) {
+    const D3D12_STATE_SUBOBJECT& subobject = arg.Value->pSubobjects[index];
 
     subobjectIndexes[&subobject] = index;
 
@@ -828,9 +828,9 @@ void encode(char* dest, unsigned& offset, const D3D12_STATE_OBJECT_DESC_Argument
 
   {
     std::map<unsigned, unsigned> subobjectAssociations;
-    for (unsigned index = 0; index < arg.value->NumSubobjects; ++index) {
+    for (unsigned index = 0; index < arg.Value->NumSubobjects; ++index) {
       D3D12_STATE_SUBOBJECT& subobject =
-          const_cast<D3D12_STATE_SUBOBJECT&>(arg.value->pSubobjects[index]);
+          const_cast<D3D12_STATE_SUBOBJECT&>(arg.Value->pSubobjects[index]);
 
       if (subobject.Type == D3D12_STATE_SUBOBJECT_TYPE_SUBOBJECT_TO_EXPORTS_ASSOCIATION) {
         D3D12_SUBOBJECT_TO_EXPORTS_ASSOCIATION* desc =
@@ -855,10 +855,10 @@ void encode(char* dest, unsigned& offset, const D3D12_STATE_OBJECT_DESC_Argument
     }
   }
   {
-    unsigned size = arg.interfaceKeysBySubobject.size();
+    unsigned size = arg.InterfaceKeysBySubobject.size();
     memcpy(dest + offset, &size, sizeof(unsigned));
     offset += sizeof(unsigned);
-    for (auto& it : arg.interfaceKeysBySubobject) {
+    for (auto& it : arg.InterfaceKeysBySubobject) {
       memcpy(dest + offset, &it.first, sizeof(unsigned));
       offset += sizeof(unsigned);
       memcpy(dest + offset, &it.second, sizeof(unsigned));
@@ -867,15 +867,15 @@ void encode(char* dest, unsigned& offset, const D3D12_STATE_OBJECT_DESC_Argument
   }
 }
 
-unsigned getSize(const D3D12_PIPELINE_STATE_STREAM_DESC_Argument& arg) {
-  if (!arg.value) {
+unsigned GetSize(const D3D12_PIPELINE_STATE_STREAM_DESC_Argument& arg) {
+  if (!arg.Value) {
     return sizeof(void*);
   }
-  unsigned size = sizeof(void*) + sizeof(D3D12_PIPELINE_STATE_STREAM_DESC) + arg.value->SizeInBytes;
+  unsigned size = sizeof(void*) + sizeof(D3D12_PIPELINE_STATE_STREAM_DESC) + arg.Value->SizeInBytes;
 
   size_t offset = 0;
-  while (offset < arg.value->SizeInBytes) {
-    void* subobjectData = static_cast<char*>(arg.value->pPipelineStateSubobjectStream) + offset;
+  while (offset < arg.Value->SizeInBytes) {
+    void* subobjectData = static_cast<char*>(arg.Value->pPipelineStateSubobjectStream) + offset;
     D3D12_PIPELINE_STATE_SUBOBJECT_TYPE subobjectType =
         *reinterpret_cast<D3D12_PIPELINE_STATE_SUBOBJECT_TYPE*>(subobjectData);
 
@@ -1013,25 +1013,25 @@ unsigned getSize(const D3D12_PIPELINE_STATE_STREAM_DESC_Argument& arg) {
     }
   }
 
-  size += sizeof(arg.rootSignatureKey);
+  size += sizeof(arg.RootSignatureKey);
   return size;
 }
 
-void encode(char* dest, unsigned& offset, const D3D12_PIPELINE_STATE_STREAM_DESC_Argument& arg) {
-  if (encodeNullPtr(dest, offset, arg)) {
+void Encode(char* dest, unsigned& offset, const D3D12_PIPELINE_STATE_STREAM_DESC_Argument& arg) {
+  if (EncodeNullPtr(dest, offset, arg)) {
     return;
   }
 
-  memcpy(dest + offset, arg.value, sizeof(D3D12_PIPELINE_STATE_STREAM_DESC));
+  memcpy(dest + offset, arg.Value, sizeof(D3D12_PIPELINE_STATE_STREAM_DESC));
   offset += sizeof(D3D12_PIPELINE_STATE_STREAM_DESC);
 
-  memcpy(dest + offset, arg.value->pPipelineStateSubobjectStream, arg.value->SizeInBytes);
-  offset += arg.value->SizeInBytes;
+  memcpy(dest + offset, arg.Value->pPipelineStateSubobjectStream, arg.Value->SizeInBytes);
+  offset += arg.Value->SizeInBytes;
 
   size_t stateOffset = 0;
-  while (stateOffset < arg.value->SizeInBytes) {
+  while (stateOffset < arg.Value->SizeInBytes) {
     void* subobjectData =
-        static_cast<char*>(arg.value->pPipelineStateSubobjectStream) + stateOffset;
+        static_cast<char*>(arg.Value->pPipelineStateSubobjectStream) + stateOffset;
     D3D12_PIPELINE_STATE_SUBOBJECT_TYPE subobjectType =
         *reinterpret_cast<D3D12_PIPELINE_STATE_SUBOBJECT_TYPE*>(subobjectData);
 
@@ -1217,94 +1217,94 @@ void encode(char* dest, unsigned& offset, const D3D12_PIPELINE_STATE_STREAM_DESC
     }
   }
 
-  memcpy(dest + offset, &arg.rootSignatureKey, sizeof(arg.rootSignatureKey));
-  offset += sizeof(arg.rootSignatureKey);
+  memcpy(dest + offset, &arg.RootSignatureKey, sizeof(arg.RootSignatureKey));
+  offset += sizeof(arg.RootSignatureKey);
 }
 
-unsigned getSize(const PointerArgument<D3D12_HEAP_PROPERTIES>& arg) {
-  if (!arg.value) {
+unsigned GetSize(const PointerArgument<D3D12_HEAP_PROPERTIES>& arg) {
+  if (!arg.Value) {
     return sizeof(void*);
   }
   return sizeof(void*) + sizeof(D3D12_HEAP_PROPERTIES);
 }
 
-void encode(char* dest, unsigned& offset, const PointerArgument<D3D12_HEAP_PROPERTIES>& arg) {
-  if (encodeNullPtr(dest, offset, arg)) {
+void Encode(char* dest, unsigned& offset, const PointerArgument<D3D12_HEAP_PROPERTIES>& arg) {
+  if (EncodeNullPtr(dest, offset, arg)) {
     return;
   }
 
-  memcpy(dest + offset, arg.value, sizeof(D3D12_HEAP_PROPERTIES));
+  memcpy(dest + offset, arg.Value, sizeof(D3D12_HEAP_PROPERTIES));
   offset += sizeof(D3D12_HEAP_PROPERTIES);
 }
 
-unsigned getSize(const PointerArgument<D3D12_HEAP_DESC>& arg) {
-  if (!arg.value) {
+unsigned GetSize(const PointerArgument<D3D12_HEAP_DESC>& arg) {
+  if (!arg.Value) {
     return sizeof(void*);
   }
   return sizeof(void*) + sizeof(D3D12_HEAP_DESC);
 }
 
-void encode(char* dest, unsigned& offset, const PointerArgument<D3D12_HEAP_DESC>& arg) {
-  if (encodeNullPtr(dest, offset, arg)) {
+void Encode(char* dest, unsigned& offset, const PointerArgument<D3D12_HEAP_DESC>& arg) {
+  if (EncodeNullPtr(dest, offset, arg)) {
     return;
   }
 
-  memcpy(dest + offset, arg.value, sizeof(D3D12_HEAP_DESC));
+  memcpy(dest + offset, arg.Value, sizeof(D3D12_HEAP_DESC));
   offset += sizeof(D3D12_HEAP_DESC);
 }
 
-unsigned getSize(const Argument<D3D12_HEAP_FLAGS>& arg) {
+unsigned GetSize(const Argument<D3D12_HEAP_FLAGS>& arg) {
   return sizeof(D3D12_HEAP_FLAGS);
 }
 
-void encode(char* dest, unsigned& offset, const Argument<D3D12_HEAP_FLAGS>& arg) {
-  memcpy(dest + offset, &arg.value, sizeof(D3D12_HEAP_FLAGS));
+void Encode(char* dest, unsigned& offset, const Argument<D3D12_HEAP_FLAGS>& arg) {
+  memcpy(dest + offset, &arg.Value, sizeof(D3D12_HEAP_FLAGS));
   offset += sizeof(D3D12_HEAP_FLAGS);
 }
 
-unsigned getSize(const PointerArgument<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC>& arg) {
-  if (!arg.value) {
+unsigned GetSize(const PointerArgument<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC>& arg) {
+  if (!arg.Value) {
     return sizeof(void*);
   }
   unsigned size = sizeof(void*) + sizeof(D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC);
 
-  if (arg.value->Inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL) {
-    if (arg.value->Inputs.DescsLayout == D3D12_ELEMENTS_LAYOUT_ARRAY) {
-      size += arg.value->Inputs.NumDescs * sizeof(D3D12_RAYTRACING_GEOMETRY_DESC);
-    } else if (arg.value->Inputs.DescsLayout == D3D12_ELEMENTS_LAYOUT_ARRAY_OF_POINTERS) {
-      size += arg.value->Inputs.NumDescs * sizeof(D3D12_RAYTRACING_GEOMETRY_DESC*);
-      size += arg.value->Inputs.NumDescs * sizeof(D3D12_RAYTRACING_GEOMETRY_DESC);
+  if (arg.Value->Inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL) {
+    if (arg.Value->Inputs.DescsLayout == D3D12_ELEMENTS_LAYOUT_ARRAY) {
+      size += arg.Value->Inputs.NumDescs * sizeof(D3D12_RAYTRACING_GEOMETRY_DESC);
+    } else if (arg.Value->Inputs.DescsLayout == D3D12_ELEMENTS_LAYOUT_ARRAY_OF_POINTERS) {
+      size += arg.Value->Inputs.NumDescs * sizeof(D3D12_RAYTRACING_GEOMETRY_DESC*);
+      size += arg.Value->Inputs.NumDescs * sizeof(D3D12_RAYTRACING_GEOMETRY_DESC);
     }
   }
 
   return size;
 }
 
-void encode(char* dest,
+void Encode(char* dest,
             unsigned& offset,
             const PointerArgument<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC>& arg) {
-  if (encodeNullPtr(dest, offset, arg)) {
+  if (EncodeNullPtr(dest, offset, arg)) {
     return;
   }
 
-  memcpy(dest + offset, arg.value, sizeof(D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC));
+  memcpy(dest + offset, arg.Value, sizeof(D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC));
   offset += sizeof(D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC);
 
-  if (arg.value->Inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL) {
-    if (arg.value->Inputs.DescsLayout == D3D12_ELEMENTS_LAYOUT_ARRAY) {
-      if (arg.value->Inputs.pGeometryDescs) {
-        memcpy(dest + offset, arg.value->Inputs.pGeometryDescs,
-               sizeof(D3D12_RAYTRACING_GEOMETRY_DESC) * arg.value->Inputs.NumDescs);
-        offset += sizeof(D3D12_RAYTRACING_GEOMETRY_DESC) * arg.value->Inputs.NumDescs;
+  if (arg.Value->Inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL) {
+    if (arg.Value->Inputs.DescsLayout == D3D12_ELEMENTS_LAYOUT_ARRAY) {
+      if (arg.Value->Inputs.pGeometryDescs) {
+        memcpy(dest + offset, arg.Value->Inputs.pGeometryDescs,
+               sizeof(D3D12_RAYTRACING_GEOMETRY_DESC) * arg.Value->Inputs.NumDescs);
+        offset += sizeof(D3D12_RAYTRACING_GEOMETRY_DESC) * arg.Value->Inputs.NumDescs;
       }
-    } else if (arg.value->Inputs.DescsLayout == D3D12_ELEMENTS_LAYOUT_ARRAY_OF_POINTERS) {
-      if (arg.value->Inputs.ppGeometryDescs) {
-        memcpy(dest + offset, arg.value->Inputs.ppGeometryDescs,
-               sizeof(D3D12_RAYTRACING_GEOMETRY_DESC*) * arg.value->Inputs.NumDescs);
-        offset += sizeof(D3D12_RAYTRACING_GEOMETRY_DESC*) * arg.value->Inputs.NumDescs;
+    } else if (arg.Value->Inputs.DescsLayout == D3D12_ELEMENTS_LAYOUT_ARRAY_OF_POINTERS) {
+      if (arg.Value->Inputs.ppGeometryDescs) {
+        memcpy(dest + offset, arg.Value->Inputs.ppGeometryDescs,
+               sizeof(D3D12_RAYTRACING_GEOMETRY_DESC*) * arg.Value->Inputs.NumDescs);
+        offset += sizeof(D3D12_RAYTRACING_GEOMETRY_DESC*) * arg.Value->Inputs.NumDescs;
       }
-      for (unsigned i = 0; i < arg.value->Inputs.NumDescs; ++i) {
-        memcpy(dest + offset, arg.value->Inputs.ppGeometryDescs[i],
+      for (unsigned i = 0; i < arg.Value->Inputs.NumDescs; ++i) {
+        memcpy(dest + offset, arg.Value->Inputs.ppGeometryDescs[i],
                sizeof(D3D12_RAYTRACING_GEOMETRY_DESC));
         offset += sizeof(D3D12_RAYTRACING_GEOMETRY_DESC);
       }
@@ -1312,137 +1312,137 @@ void encode(char* dest,
   }
 }
 
-unsigned getSize(const PointerArgument<INTCExtensionAppInfo>& arg) {
-  if (!arg.value) {
+unsigned GetSize(const PointerArgument<INTCExtensionAppInfo>& arg) {
+  if (!arg.Value) {
     return sizeof(void*);
   }
   unsigned size = sizeof(void*) + sizeof(INTCExtensionAppInfo);
 
-  if (arg.value->pApplicationName) {
-    size += sizeof(unsigned) + wcslen(arg.value->pApplicationName) * 2 + 2;
+  if (arg.Value->pApplicationName) {
+    size += sizeof(unsigned) + wcslen(arg.Value->pApplicationName) * 2 + 2;
   }
-  if (arg.value->pEngineName) {
-    size += sizeof(unsigned) + wcslen(arg.value->pEngineName) * 2 + 2;
+  if (arg.Value->pEngineName) {
+    size += sizeof(unsigned) + wcslen(arg.Value->pEngineName) * 2 + 2;
   }
 
   return size;
 }
 
-void encode(char* dest, unsigned& offset, const PointerArgument<INTCExtensionAppInfo>& arg) {
-  if (encodeNullPtr(dest, offset, arg)) {
+void Encode(char* dest, unsigned& offset, const PointerArgument<INTCExtensionAppInfo>& arg) {
+  if (EncodeNullPtr(dest, offset, arg)) {
     return;
   }
 
-  memcpy(dest + offset, arg.value, sizeof(INTCExtensionAppInfo));
+  memcpy(dest + offset, arg.Value, sizeof(INTCExtensionAppInfo));
   offset += sizeof(INTCExtensionAppInfo);
 
-  if (arg.value->pApplicationName) {
-    unsigned len = wcslen(arg.value->pApplicationName) * 2 + 2;
+  if (arg.Value->pApplicationName) {
+    unsigned len = wcslen(arg.Value->pApplicationName) * 2 + 2;
     memcpy(dest + offset, &len, sizeof(len));
     offset += sizeof(unsigned);
-    memcpy(dest + offset, arg.value->pApplicationName, len);
+    memcpy(dest + offset, arg.Value->pApplicationName, len);
     offset += len;
   }
-  if (arg.value->pEngineName) {
-    unsigned len = wcslen(arg.value->pEngineName) * 2 + 2;
+  if (arg.Value->pEngineName) {
+    unsigned len = wcslen(arg.Value->pEngineName) * 2 + 2;
     memcpy(dest + offset, &len, sizeof(len));
     offset += sizeof(unsigned);
-    memcpy(dest + offset, arg.value->pEngineName, len);
+    memcpy(dest + offset, arg.Value->pEngineName, len);
     offset += len;
   }
 }
 
-unsigned getSize(const PointerArgument<INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC>& arg) {
-  if (!arg.value) {
+unsigned GetSize(const PointerArgument<INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC>& arg) {
+  if (!arg.Value) {
     return sizeof(void*);
   }
   unsigned size = sizeof(void*) + sizeof(INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC) +
-                  sizeof(D3D12_COMPUTE_PIPELINE_STATE_DESC) + arg.value->CS.BytecodeLength;
+                  sizeof(D3D12_COMPUTE_PIPELINE_STATE_DESC) + arg.Value->CS.BytecodeLength;
 
-  if (arg.value->CompileOptions) {
-    size += sizeof(unsigned) + strlen(static_cast<const char*>(arg.compileOptions)) + 1;
+  if (arg.Value->CompileOptions) {
+    size += sizeof(unsigned) + strlen(static_cast<const char*>(arg.CompileOptions)) + 1;
   }
-  if (arg.value->InternalOptions) {
-    size += sizeof(unsigned) + strlen(static_cast<const char*>(arg.internalOptions)) + 1;
+  if (arg.Value->InternalOptions) {
+    size += sizeof(unsigned) + strlen(static_cast<const char*>(arg.InternalOptions)) + 1;
   }
-  size += sizeof(arg.rootSignatureKey);
+  size += sizeof(arg.RootSignatureKey);
 
   return size;
 }
 
-void encode(char* dest,
+void Encode(char* dest,
             unsigned& offset,
             const PointerArgument<INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC>& arg) {
-  if (encodeNullPtr(dest, offset, arg)) {
+  if (EncodeNullPtr(dest, offset, arg)) {
     return;
   }
 
-  memcpy(dest + offset, arg.value, sizeof(INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC));
+  memcpy(dest + offset, arg.Value, sizeof(INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC));
   offset += sizeof(INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC);
 
-  memcpy(dest + offset, arg.value->pD3D12Desc, sizeof(D3D12_COMPUTE_PIPELINE_STATE_DESC));
+  memcpy(dest + offset, arg.Value->pD3D12Desc, sizeof(D3D12_COMPUTE_PIPELINE_STATE_DESC));
   offset += sizeof(D3D12_COMPUTE_PIPELINE_STATE_DESC);
 
-  memcpy(dest + offset, arg.cs, arg.value->CS.BytecodeLength);
-  offset += arg.value->CS.BytecodeLength;
+  memcpy(dest + offset, arg.Cs, arg.Value->CS.BytecodeLength);
+  offset += arg.Value->CS.BytecodeLength;
 
-  if (arg.value->CompileOptions) {
-    unsigned len = strlen(static_cast<const char*>(arg.compileOptions)) + 1;
+  if (arg.Value->CompileOptions) {
+    unsigned len = strlen(static_cast<const char*>(arg.CompileOptions)) + 1;
     memcpy(dest + offset, &len, sizeof(len));
     offset += sizeof(len);
-    memcpy(dest + offset, arg.compileOptions, len);
+    memcpy(dest + offset, arg.CompileOptions, len);
     offset += len;
   }
 
-  if (arg.value->InternalOptions) {
-    unsigned len = strlen(static_cast<const char*>(arg.internalOptions)) + 1;
+  if (arg.Value->InternalOptions) {
+    unsigned len = strlen(static_cast<const char*>(arg.InternalOptions)) + 1;
     memcpy(dest + offset, &len, sizeof(len));
     offset += sizeof(len);
-    memcpy(dest + offset, arg.internalOptions, len);
+    memcpy(dest + offset, arg.InternalOptions, len);
     offset += len;
   }
 
-  memcpy(dest + offset, &arg.rootSignatureKey, sizeof(arg.rootSignatureKey));
-  offset += sizeof(arg.rootSignatureKey);
+  memcpy(dest + offset, &arg.RootSignatureKey, sizeof(arg.RootSignatureKey));
+  offset += sizeof(arg.RootSignatureKey);
 }
 
-unsigned getSize(const PointerArgument<INTC_D3D12_RESOURCE_DESC_0001>& arg) {
-  if (!arg.value) {
+unsigned GetSize(const PointerArgument<INTC_D3D12_RESOURCE_DESC_0001>& arg) {
+  if (!arg.Value) {
     return sizeof(void*);
   }
   return sizeof(void*) + sizeof(INTC_D3D12_RESOURCE_DESC_0001) + sizeof(D3D12_RESOURCE_DESC);
 }
 
-void encode(char* dest,
+void Encode(char* dest,
             unsigned& offset,
             const PointerArgument<INTC_D3D12_RESOURCE_DESC_0001>& arg) {
-  if (encodeNullPtr(dest, offset, arg)) {
+  if (EncodeNullPtr(dest, offset, arg)) {
     return;
   }
 
-  memcpy(dest + offset, arg.value, sizeof(INTC_D3D12_RESOURCE_DESC_0001));
+  memcpy(dest + offset, arg.Value, sizeof(INTC_D3D12_RESOURCE_DESC_0001));
   offset += sizeof(INTC_D3D12_RESOURCE_DESC_0001);
 
-  memcpy(dest + offset, arg.value->pD3D12Desc, sizeof(D3D12_RESOURCE_DESC));
+  memcpy(dest + offset, arg.Value->pD3D12Desc, sizeof(D3D12_RESOURCE_DESC));
   offset += sizeof(D3D12_RESOURCE_DESC);
 }
 
-unsigned getSize(const INTCExtensionContextOutputArgument& arg) {
-  return sizeof(arg.key);
+unsigned GetSize(const INTCExtensionContextOutputArgument& arg) {
+  return sizeof(arg.Key);
 }
 
-void encode(char* dest, unsigned& offset, const INTCExtensionContextOutputArgument& arg) {
-  memcpy(dest + offset, &arg.key, sizeof(arg.key));
-  offset += sizeof(arg.key);
+void Encode(char* dest, unsigned& offset, const INTCExtensionContextOutputArgument& arg) {
+  memcpy(dest + offset, &arg.Key, sizeof(arg.Key));
+  offset += sizeof(arg.Key);
 }
 
-unsigned getSize(const INTCExtensionContextArgument& arg) {
-  return sizeof(arg.key);
+unsigned GetSize(const INTCExtensionContextArgument& arg) {
+  return sizeof(arg.Key);
 }
 
-void encode(char* dest, unsigned& offset, const INTCExtensionContextArgument& arg) {
-  memcpy(dest + offset, &arg.key, sizeof(arg.key));
-  offset += sizeof(arg.key);
+void Encode(char* dest, unsigned& offset, const INTCExtensionContextArgument& arg) {
+  memcpy(dest + offset, &arg.Key, sizeof(arg.Key));
+  offset += sizeof(arg.Key);
 }
 
 } // namespace DirectX

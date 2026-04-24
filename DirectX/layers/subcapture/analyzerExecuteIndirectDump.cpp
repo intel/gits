@@ -15,7 +15,7 @@
 namespace gits {
 namespace DirectX {
 
-void AnalyzerExecuteIndirectDump::dumpArgumentBuffer(
+void AnalyzerExecuteIndirectDump::DumpArgumentBuffer(
     ID3D12GraphicsCommandList* commandList,
     const D3D12_COMMAND_SIGNATURE_DESC* commandSignature,
     unsigned maxCommandCount,
@@ -54,15 +54,15 @@ void AnalyzerExecuteIndirectDump::dumpStagedResource(DumpInfo& dumpInfo) {
   HRESULT hr = info.stagingBuffer->Map(0, nullptr, &data);
   GITS_ASSERT(hr == S_OK);
 
-  dumpArgumentBuffer(info, count, data);
+  DumpArgumentBuffer(info, count, data);
 
   info.stagingBuffer->Unmap(0, nullptr);
 }
 
-void AnalyzerExecuteIndirectDump::dumpArgumentBuffer(ExecuteIndirectDumpInfo& dumpInfo,
+void AnalyzerExecuteIndirectDump::DumpArgumentBuffer(ExecuteIndirectDumpInfo& dumpInfo,
                                                      unsigned argumentCount,
                                                      void* data) {
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::lock_guard<std::mutex> lock(m_Mutex);
 
   unsigned offset = 0;
   for (unsigned i = 0; i < argumentCount; ++i) {
@@ -87,10 +87,10 @@ void AnalyzerExecuteIndirectDump::dumpArgumentBuffer(ExecuteIndirectDumpInfo& du
         D3D12_VERTEX_BUFFER_VIEW& args =
             *reinterpret_cast<D3D12_VERTEX_BUFFER_VIEW*>(static_cast<uint8_t*>(data) + offset);
         CapturePlayerGpuAddressService::ResourceInfo* resourceInfo =
-            executeIndirectService_.getGpuAddressService().getResourceInfoByCaptureAddress(
+            m_ExecuteIndirectService.GetGpuAddressService().GetResourceInfoByCaptureAddress(
                 args.BufferLocation);
         if (resourceInfo) {
-          argumentBuffersResources_.insert(resourceInfo->key);
+          m_ArgumentBuffersResources.insert(resourceInfo->Key);
         }
         offset += sizeof(D3D12_VERTEX_BUFFER_VIEW);
         break;
@@ -99,10 +99,10 @@ void AnalyzerExecuteIndirectDump::dumpArgumentBuffer(ExecuteIndirectDumpInfo& du
         D3D12_INDEX_BUFFER_VIEW& args =
             *reinterpret_cast<D3D12_INDEX_BUFFER_VIEW*>(static_cast<uint8_t*>(data) + offset);
         CapturePlayerGpuAddressService::ResourceInfo* resourceInfo =
-            executeIndirectService_.getGpuAddressService().getResourceInfoByCaptureAddress(
+            m_ExecuteIndirectService.GetGpuAddressService().GetResourceInfoByCaptureAddress(
                 args.BufferLocation);
         if (resourceInfo) {
-          argumentBuffersResources_.insert(resourceInfo->key);
+          m_ArgumentBuffersResources.insert(resourceInfo->Key);
         }
         offset += sizeof(D3D12_INDEX_BUFFER_VIEW);
         break;
@@ -115,9 +115,9 @@ void AnalyzerExecuteIndirectDump::dumpArgumentBuffer(ExecuteIndirectDumpInfo& du
         D3D12_GPU_VIRTUAL_ADDRESS& args =
             *reinterpret_cast<D3D12_GPU_VIRTUAL_ADDRESS*>(static_cast<uint8_t*>(data) + offset);
         CapturePlayerGpuAddressService::ResourceInfo* resourceInfo =
-            executeIndirectService_.getGpuAddressService().getResourceInfoByCaptureAddress(args);
+            m_ExecuteIndirectService.GetGpuAddressService().GetResourceInfoByCaptureAddress(args);
         if (resourceInfo) {
-          argumentBuffersResources_.insert(resourceInfo->key);
+          m_ArgumentBuffersResources.insert(resourceInfo->Key);
         }
         offset += sizeof(D3D12_GPU_VIRTUAL_ADDRESS);
         break;
@@ -126,9 +126,9 @@ void AnalyzerExecuteIndirectDump::dumpArgumentBuffer(ExecuteIndirectDumpInfo& du
         D3D12_GPU_VIRTUAL_ADDRESS& args =
             *reinterpret_cast<D3D12_GPU_VIRTUAL_ADDRESS*>(static_cast<uint8_t*>(data) + offset);
         CapturePlayerGpuAddressService::ResourceInfo* resourceInfo =
-            executeIndirectService_.getGpuAddressService().getResourceInfoByCaptureAddress(args);
+            m_ExecuteIndirectService.GetGpuAddressService().GetResourceInfoByCaptureAddress(args);
         if (resourceInfo) {
-          argumentBuffersResources_.insert(resourceInfo->key);
+          m_ArgumentBuffersResources.insert(resourceInfo->Key);
         }
         offset += sizeof(D3D12_GPU_VIRTUAL_ADDRESS);
         break;
@@ -137,9 +137,9 @@ void AnalyzerExecuteIndirectDump::dumpArgumentBuffer(ExecuteIndirectDumpInfo& du
         D3D12_GPU_VIRTUAL_ADDRESS& args =
             *reinterpret_cast<D3D12_GPU_VIRTUAL_ADDRESS*>(static_cast<uint8_t*>(data) + offset);
         CapturePlayerGpuAddressService::ResourceInfo* resourceInfo =
-            executeIndirectService_.getGpuAddressService().getResourceInfoByCaptureAddress(args);
+            m_ExecuteIndirectService.GetGpuAddressService().GetResourceInfoByCaptureAddress(args);
         if (resourceInfo) {
-          argumentBuffersResources_.insert(resourceInfo->key);
+          m_ArgumentBuffersResources.insert(resourceInfo->Key);
         }
         offset += sizeof(D3D12_GPU_VIRTUAL_ADDRESS);
         break;

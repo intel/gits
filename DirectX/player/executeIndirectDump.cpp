@@ -16,11 +16,11 @@
 namespace gits {
 namespace DirectX {
 
-ExecuteIndirectDump ::~ExecuteIndirectDump() {
+ExecuteIndirectDump::~ExecuteIndirectDump() {
   waitUntilDumped();
 }
 
-void ExecuteIndirectDump::dumpArgumentBuffer(ID3D12GraphicsCommandList* commandList,
+void ExecuteIndirectDump::DumpArgumentBuffer(ID3D12GraphicsCommandList* commandList,
                                              const D3D12_COMMAND_SIGNATURE_DESC* commandSignature,
                                              unsigned maxCommandCount,
                                              ID3D12Resource* argumentBuffer,
@@ -32,52 +32,52 @@ void ExecuteIndirectDump::dumpArgumentBuffer(ID3D12GraphicsCommandList* commandL
                                              const std::wstring& dumpName,
                                              bool fromCapture) {
   ExecuteIndirectDumpInfo* dumpInfo = new ExecuteIndirectDumpInfo();
-  dumpInfo->commandSignature = commandSignature;
+  dumpInfo->CommandSignature = commandSignature;
   dumpInfo->offset = argumentBufferOffset;
   dumpInfo->size = commandSignature->ByteStride * maxCommandCount;
   dumpInfo->dumpName = dumpName;
-  dumpInfo->fromCapture = fromCapture;
+  dumpInfo->FromCapture = fromCapture;
   if (countBuffer) {
-    dumpInfo->countDumpInfo.offset = countBufferOffset;
-    dumpInfo->countDumpInfo.size = sizeof(unsigned);
+    dumpInfo->CountDumpInfo.offset = countBufferOffset;
+    dumpInfo->CountDumpInfo.size = sizeof(unsigned);
   }
 
   stageResource(commandList, argumentBuffer, argumentBufferState, *dumpInfo);
   if (countBuffer) {
-    stageResource(commandList, countBuffer, countBufferState, dumpInfo->countDumpInfo, true);
+    stageResource(commandList, countBuffer, countBufferState, dumpInfo->CountDumpInfo, true);
   }
 }
 
 void ExecuteIndirectDump::dumpStagedResource(DumpInfo& dumpInfo) {
   ExecuteIndirectDumpInfo& info = static_cast<ExecuteIndirectDumpInfo&>(dumpInfo);
-  unsigned count = info.size / info.commandSignature->ByteStride;
-  if (info.countDumpInfo.stagingBuffer) {
+  unsigned count = info.size / info.CommandSignature->ByteStride;
+  if (info.CountDumpInfo.stagingBuffer) {
     void* data{};
-    HRESULT hr = info.countDumpInfo.stagingBuffer->Map(0, nullptr, &data);
+    HRESULT hr = info.CountDumpInfo.stagingBuffer->Map(0, nullptr, &data);
     GITS_ASSERT(hr == S_OK);
     count = std::min(count, *static_cast<unsigned*>(data));
-    info.countDumpInfo.stagingBuffer->Unmap(0, nullptr);
+    info.CountDumpInfo.stagingBuffer->Unmap(0, nullptr);
   }
   void* data{};
   HRESULT hr = info.stagingBuffer->Map(0, nullptr, &data);
   GITS_ASSERT(hr == S_OK);
 
-  dumpArgumentBuffer(info, count, data);
+  DumpArgumentBuffer(info, count, data);
 
   info.stagingBuffer->Unmap(0, nullptr);
 }
 
-void ExecuteIndirectDump::dumpArgumentBuffer(ExecuteIndirectDumpInfo& dumpInfo,
+void ExecuteIndirectDump::DumpArgumentBuffer(ExecuteIndirectDumpInfo& dumpInfo,
                                              unsigned argumentCount,
                                              void* data) {
   std::ofstream stream(dumpInfo.dumpName);
   unsigned offset = 0;
   for (unsigned i = 0; i < argumentCount; ++i) {
     stream << "ARGUMENT " << i + 1 << "\n";
-    offset = i * dumpInfo.commandSignature->ByteStride;
+    offset = i * dumpInfo.CommandSignature->ByteStride;
 
-    for (unsigned j = 0; j < dumpInfo.commandSignature->NumArgumentDescs; ++j) {
-      const D3D12_INDIRECT_ARGUMENT_DESC& desc = dumpInfo.commandSignature->pArgumentDescs[j];
+    for (unsigned j = 0; j < dumpInfo.CommandSignature->NumArgumentDescs; ++j) {
+      const D3D12_INDIRECT_ARGUMENT_DESC& desc = dumpInfo.CommandSignature->pArgumentDescs[j];
       switch (desc.Type) {
       case D3D12_INDIRECT_ARGUMENT_TYPE_DRAW: {
         D3D12_DRAW_ARGUMENTS& args =
@@ -108,7 +108,7 @@ void ExecuteIndirectDump::dumpArgumentBuffer(ExecuteIndirectDumpInfo& dumpInfo,
         D3D12_VERTEX_BUFFER_VIEW& args =
             *reinterpret_cast<D3D12_VERTEX_BUFFER_VIEW*>(static_cast<uint8_t*>(data) + offset);
         stream << "  VERTEX BUFFER VIEW ";
-        printGpuAddress(stream, args.BufferLocation, dumpInfo.fromCapture);
+        PrintGpuAddress(stream, args.BufferLocation, dumpInfo.FromCapture);
         stream << ", " << args.SizeInBytes << ", " << args.StrideInBytes << "\n";
         offset += sizeof(D3D12_VERTEX_BUFFER_VIEW);
         break;
@@ -117,7 +117,7 @@ void ExecuteIndirectDump::dumpArgumentBuffer(ExecuteIndirectDumpInfo& dumpInfo,
         D3D12_INDEX_BUFFER_VIEW& args =
             *reinterpret_cast<D3D12_INDEX_BUFFER_VIEW*>(static_cast<uint8_t*>(data) + offset);
         stream << "  INDEX BUFFER VIEW ";
-        printGpuAddress(stream, args.BufferLocation, dumpInfo.fromCapture);
+        PrintGpuAddress(stream, args.BufferLocation, dumpInfo.FromCapture);
         stream << ", " << args.SizeInBytes << ", " << args.Format << "\n";
         offset += sizeof(D3D12_INDEX_BUFFER_VIEW);
         break;
@@ -134,7 +134,7 @@ void ExecuteIndirectDump::dumpArgumentBuffer(ExecuteIndirectDumpInfo& dumpInfo,
         D3D12_GPU_VIRTUAL_ADDRESS& args =
             *reinterpret_cast<D3D12_GPU_VIRTUAL_ADDRESS*>(static_cast<uint8_t*>(data) + offset);
         stream << "  CONSTANT BUFFER VIEW ";
-        printGpuAddress(stream, args, dumpInfo.fromCapture);
+        PrintGpuAddress(stream, args, dumpInfo.FromCapture);
         stream << "\n";
         offset += sizeof(D3D12_GPU_VIRTUAL_ADDRESS);
         break;
@@ -143,7 +143,7 @@ void ExecuteIndirectDump::dumpArgumentBuffer(ExecuteIndirectDumpInfo& dumpInfo,
         D3D12_GPU_VIRTUAL_ADDRESS& args =
             *reinterpret_cast<D3D12_GPU_VIRTUAL_ADDRESS*>(static_cast<uint8_t*>(data) + offset);
         stream << "  SHADER BUFFER VIEW ";
-        printGpuAddress(stream, args, dumpInfo.fromCapture);
+        PrintGpuAddress(stream, args, dumpInfo.FromCapture);
         stream << "\n";
         offset += sizeof(D3D12_GPU_VIRTUAL_ADDRESS);
         break;
@@ -152,7 +152,7 @@ void ExecuteIndirectDump::dumpArgumentBuffer(ExecuteIndirectDumpInfo& dumpInfo,
         D3D12_GPU_VIRTUAL_ADDRESS& args =
             *reinterpret_cast<D3D12_GPU_VIRTUAL_ADDRESS*>(static_cast<uint8_t*>(data) + offset);
         stream << "  UNORDERED ACCESS VIEW ";
-        printGpuAddress(stream, args, dumpInfo.fromCapture);
+        PrintGpuAddress(stream, args, dumpInfo.FromCapture);
         stream << "\n";
         offset += sizeof(D3D12_GPU_VIRTUAL_ADDRESS);
         break;
@@ -162,18 +162,18 @@ void ExecuteIndirectDump::dumpArgumentBuffer(ExecuteIndirectDumpInfo& dumpInfo,
             *reinterpret_cast<D3D12_DISPATCH_RAYS_DESC*>(static_cast<uint8_t*>(data) + offset);
         stream << "  DISPATCH RAYS\n";
         stream << "    RayGenerationShaderRecord ";
-        printGpuAddress(stream, args.RayGenerationShaderRecord.StartAddress, dumpInfo.fromCapture);
+        PrintGpuAddress(stream, args.RayGenerationShaderRecord.StartAddress, dumpInfo.FromCapture);
         stream << ", " << args.RayGenerationShaderRecord.SizeInBytes << "\n";
         stream << "    MissShaderTable ";
-        printGpuAddress(stream, args.MissShaderTable.StartAddress, dumpInfo.fromCapture);
+        PrintGpuAddress(stream, args.MissShaderTable.StartAddress, dumpInfo.FromCapture);
         stream << ", " << args.MissShaderTable.SizeInBytes << ", "
                << args.MissShaderTable.StrideInBytes << "\n";
         stream << "    HitGroupTable ";
-        printGpuAddress(stream, args.HitGroupTable.StartAddress, dumpInfo.fromCapture);
+        PrintGpuAddress(stream, args.HitGroupTable.StartAddress, dumpInfo.FromCapture);
         stream << ", " << args.HitGroupTable.SizeInBytes << ", " << args.HitGroupTable.StrideInBytes
                << "\n";
         stream << "    CallableShaderTable ";
-        printGpuAddress(stream, args.CallableShaderTable.StartAddress, dumpInfo.fromCapture);
+        PrintGpuAddress(stream, args.CallableShaderTable.StartAddress, dumpInfo.FromCapture);
         stream << ", " << args.CallableShaderTable.SizeInBytes << ", "
                << args.CallableShaderTable.StrideInBytes << "\n";
         stream << "    Width " << args.Width << "\n";
@@ -195,7 +195,7 @@ void ExecuteIndirectDump::dumpArgumentBuffer(ExecuteIndirectDumpInfo& dumpInfo,
   }
 }
 
-void ExecuteIndirectDump::printGpuAddress(std::ostream& stream,
+void ExecuteIndirectDump::PrintGpuAddress(std::ostream& stream,
                                           D3D12_GPU_VIRTUAL_ADDRESS address,
                                           bool fromCapture) {
   std::ios state(nullptr);
@@ -206,19 +206,19 @@ void ExecuteIndirectDump::printGpuAddress(std::ostream& stream,
     CapturePlayerGpuAddressService::ResourceInfo* info{};
     unsigned offset{};
     if (fromCapture) {
-      info = addressService_.getResourceInfoByCaptureAddress(address);
+      info = m_AddressService.GetResourceInfoByCaptureAddress(address);
     } else {
-      info = addressService_.getResourceInfoByPlayerAddress(address);
+      info = m_AddressService.GetResourceInfoByPlayerAddress(address);
     }
     if (!info) {
       stream << ", NOT FOUND";
     } else {
       if (fromCapture) {
-        offset = address - info->captureStart;
+        offset = address - info->CaptureStart;
       } else {
-        offset = address - info->playerStart;
+        offset = address - info->PlayerStart;
       }
-      stream << ", key O" << info->key << ", offset " << offset;
+      stream << ", key O" << info->Key << ", offset " << offset;
     }
   }
   stream << "}";

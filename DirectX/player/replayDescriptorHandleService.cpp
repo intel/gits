@@ -14,48 +14,48 @@
 namespace gits {
 namespace DirectX {
 
-void ReplayDescriptorHandleService::createDescriptorHeap(unsigned descriptorHeapKey,
+void ReplayDescriptorHandleService::CreateDescriptorHeap(unsigned DescriptorHeapKey,
                                                          ID3D12DescriptorHeap* descriptorHeap,
                                                          const D3D12_DESCRIPTOR_HEAP_DESC* desc) {
 
-  if (!initialized_) {
+  if (!m_Initialized) {
     Microsoft::WRL::ComPtr<ID3D12Device> device;
     HRESULT res = descriptorHeap->GetDevice(IID_PPV_ARGS(&device));
     GITS_ASSERT(res == S_OK);
 
     for (unsigned i = 0; i < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES; ++i) {
-      descriptorHeapIncrements_[i] =
+      m_DescriptorHeapIncrements[i] =
           device->GetDescriptorHandleIncrementSize(static_cast<D3D12_DESCRIPTOR_HEAP_TYPE>(i));
     }
-    initialized_ = true;
+    m_Initialized = true;
   }
 
   DescriptorHeapInfo heapInfo;
-  heapInfo.cpuStart = descriptorHeap->GetCPUDescriptorHandleForHeapStart().ptr;
+  heapInfo.CpuStart = descriptorHeap->GetCPUDescriptorHandleForHeapStart().ptr;
   if (desc->Flags & D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE) {
-    heapInfo.gpuStart = descriptorHeap->GetGPUDescriptorHandleForHeapStart().ptr;
+    heapInfo.GpuStart = descriptorHeap->GetGPUDescriptorHandleForHeapStart().ptr;
   }
-  heapInfo.increment = descriptorHeapIncrements_[desc->Type];
+  heapInfo.Increment = m_DescriptorHeapIncrements[desc->Type];
 
-  descriptorHeaps_[descriptorHeapKey] = heapInfo;
+  m_DescriptorHeaps[DescriptorHeapKey] = heapInfo;
 }
 
-size_t ReplayDescriptorHandleService::getDescriptorHandle(unsigned descriptorHeapKey,
+size_t ReplayDescriptorHandleService::GetDescriptorHandle(unsigned DescriptorHeapKey,
                                                           HandleType handleType,
                                                           unsigned index) {
-  if (!descriptorHeapKey) {
+  if (!DescriptorHeapKey) {
     return 0;
   }
 
-  auto it = descriptorHeaps_.find(descriptorHeapKey);
-  GITS_ASSERT(it != descriptorHeaps_.end());
+  auto it = m_DescriptorHeaps.find(DescriptorHeapKey);
+  GITS_ASSERT(it != m_DescriptorHeaps.end());
   DescriptorHeapInfo& info = it->second;
-  size_t start = handleType == HandleType::CpuHandle ? info.cpuStart : info.gpuStart;
-  return start + index * info.increment;
+  size_t start = handleType == HandleType::CpuHandle ? info.CpuStart : info.GpuStart;
+  return start + index * info.Increment;
 }
 
-void ReplayDescriptorHandleService::destroyDescriptorHeap(unsigned descriptorHeapKey) {
-  descriptorHeaps_.erase(descriptorHeapKey);
+void ReplayDescriptorHandleService::DestroyDescriptorHeap(unsigned DescriptorHeapKey) {
+  m_DescriptorHeaps.erase(DescriptorHeapKey);
 }
 
 } // namespace DirectX

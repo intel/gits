@@ -33,21 +33,21 @@ public:
   GpuPatchDumpService(CapturePlayerGpuAddressService& addressService,
                       CapturePlayerShaderIdentifierService& shaderIdentifierService,
                       CapturePlayerDescriptorHandleService& descriptorHandleService);
-  void dumpInstances(ID3D12GraphicsCommandList* commandList,
+  void DumpInstances(ID3D12GraphicsCommandList* commandList,
                      ID3D12Resource* resource,
-                     unsigned resourceKey,
+                     unsigned ResourceKey,
                      unsigned size,
                      unsigned callKey,
                      bool prePatch);
-  void dumpInstancesArrayOfPointers(ID3D12GraphicsCommandList* commandList,
+  void DumpInstancesArrayOfPointers(ID3D12GraphicsCommandList* commandList,
                                     ID3D12Resource* resource,
-                                    unsigned resourceKey,
+                                    unsigned ResourceKey,
                                     unsigned offset,
                                     unsigned size,
                                     D3D12_RESOURCE_STATES resourceState,
                                     unsigned callKey,
                                     bool prePatch);
-  void dumpBindingTable(ID3D12GraphicsCommandList* commandList,
+  void DumpBindingTable(ID3D12GraphicsCommandList* commandList,
                         ID3D12Resource* resource,
                         unsigned offset,
                         unsigned size,
@@ -55,7 +55,7 @@ public:
                         unsigned callKey,
                         BindingTableType bindingTableType,
                         bool prePatch);
-  void dumpExecuteIndirectArgumentBuffer(ID3D12GraphicsCommandList* commandList,
+  void DumpExecuteIndirectArgumentBuffer(ID3D12GraphicsCommandList* commandList,
                                          const D3D12_COMMAND_SIGNATURE_DESC* commandSignature,
                                          unsigned maxCommandCount,
                                          ID3D12Resource* argumentBuffer,
@@ -66,34 +66,34 @@ public:
                                          D3D12_RESOURCE_STATES countBufferState,
                                          unsigned callKey,
                                          bool prePatch);
-  void executeCommandLists(unsigned key,
+  void ExecuteCommandLists(unsigned key,
                            unsigned commandQueueKey,
                            ID3D12CommandQueue* commandQueue,
                            ID3D12CommandList** commandLists,
                            unsigned commandListNum);
-  void commandQueueWait(unsigned key,
+  void CommandQueueWait(unsigned key,
                         unsigned commandQueueKey,
                         unsigned fenceKey,
                         UINT64 fenceValue);
-  void commandQueueSignal(unsigned key,
+  void CommandQueueSignal(unsigned key,
                           unsigned commandQueueKey,
                           unsigned fenceKey,
                           UINT64 fenceValue);
-  void fenceSignal(unsigned key, unsigned fenceKey, UINT64 fenceValue);
+  void FenceSignal(unsigned key, unsigned fenceKey, UINT64 fenceValue);
 
 private:
-  RaytracingResourceDump resourceDump_;
-  std::wstring dumpPath_;
-  ConfigKeySet raytracingKeys_;
-  bool dumpInstancesPre_{};
-  bool dumpInstancesPost_{};
-  bool dumpBindingTablesPre_{};
-  bool dumpBindingTablesPost_{};
+  RaytracingResourceDump m_ResourceDump;
+  std::wstring m_DumpPath;
+  ConfigKeySet m_RaytracingKeys;
+  bool m_DumpInstancesPre{};
+  bool m_DumpInstancesPost{};
+  bool m_DumpBindingTablesPre{};
+  bool m_DumpBindingTablesPost{};
 
-  ConfigKeySet executeIndirectKeys_;
-  ExecuteIndirectDump executeIndirectDump_;
-  bool dumpArgumentBufferPre_{};
-  bool dumpArgumentBufferPost_{};
+  ConfigKeySet m_ExecuteIndirectKeys;
+  ExecuteIndirectDump m_ExecuteIndirectDump;
+  bool m_DumpArgumentBufferPre{};
+  bool m_DumpArgumentBufferPost{};
 };
 
 } // namespace DirectX

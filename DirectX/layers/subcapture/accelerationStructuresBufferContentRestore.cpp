@@ -18,9 +18,9 @@
 namespace gits {
 namespace DirectX {
 
-void AccelerationStructuresBufferContentRestore::storeBuffer(ID3D12GraphicsCommandList* commandList,
+void AccelerationStructuresBufferContentRestore::StoreBuffer(ID3D12GraphicsCommandList* commandList,
                                                              ID3D12Resource* resource,
-                                                             unsigned resourceKey,
+                                                             unsigned ResourceKey,
                                                              unsigned offset,
                                                              unsigned size,
                                                              D3D12_RESOURCE_STATES resourceState,
@@ -29,46 +29,46 @@ void AccelerationStructuresBufferContentRestore::storeBuffer(ID3D12GraphicsComma
   BufferInfo* info = new BufferInfo();
   info->offset = offset;
   info->size = size;
-  info->buildCallKey = buildCallKey;
-  info->resourceKey = resourceKey;
-  info->isMappable = isMappable;
+  info->BuildCallKey = buildCallKey;
+  info->ResourceKey = ResourceKey;
+  info->IsMappable = isMappable;
   info->dumpName = L"BLAS build " + std::to_wstring(buildCallKey) + L" resource O" +
-                   std::to_wstring(resourceKey);
+                   std::to_wstring(ResourceKey);
 
   stageResource(commandList, resource, resourceState, *info);
 
-  std::lock_guard<std::mutex> lock(mutex_);
-  restoreBuilds_.insert(buildCallKey);
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  m_RestoreBuilds.insert(buildCallKey);
 }
 
 void AccelerationStructuresBufferContentRestore::dumpBuffer(DumpInfo& dumpInfo, void* data) {
 
   BufferInfo& info = static_cast<BufferInfo&>(dumpInfo);
   {
-    std::lock_guard<std::mutex> lock(mutex_);
-    if (restoreBuilds_.find(info.buildCallKey) == restoreBuilds_.end()) {
+    std::lock_guard<std::mutex> lock(m_Mutex);
+    if (m_RestoreBuilds.find(info.BuildCallKey) == m_RestoreBuilds.end()) {
       return;
     }
   }
 
   BufferRestoreInfo restoreInfo{};
-  restoreInfo.bufferKey = info.resourceKey;
-  restoreInfo.offset = info.offset;
-  restoreInfo.isMappable = info.isMappable;
-  restoreInfo.bufferHash = XXH32(data, info.size, 0);
-  restoreInfo.bufferData = std::make_unique<std::vector<char>>(
+  restoreInfo.BufferKey = info.ResourceKey;
+  restoreInfo.Offset = info.offset;
+  restoreInfo.IsMappable = info.IsMappable;
+  restoreInfo.BufferHash = XXH32(data, info.size, 0);
+  restoreInfo.BufferData = std::make_unique<std::vector<char>>(
       static_cast<char*>(data), static_cast<char*>(data) + info.size);
 
-  std::lock_guard<std::mutex> lock(mutex_);
-  restoreBuildInfos_[info.buildCallKey].push_back(std::move(restoreInfo));
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  m_RestoreBuildInfos[info.BuildCallKey].push_back(std::move(restoreInfo));
 }
 
-void AccelerationStructuresBufferContentRestore::removeBuild(unsigned buildCallKey) {
-  std::lock_guard<std::mutex> lock(mutex_);
-  restoreBuilds_.erase(buildCallKey);
-  auto it = restoreBuildInfos_.find(buildCallKey);
-  if (it != restoreBuildInfos_.end()) {
-    restoreBuildInfos_.erase(buildCallKey);
+void AccelerationStructuresBufferContentRestore::RemoveBuild(unsigned buildCallKey) {
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  m_RestoreBuilds.erase(buildCallKey);
+  auto it = m_RestoreBuildInfos.find(buildCallKey);
+  if (it != m_RestoreBuildInfos.end()) {
+    m_RestoreBuildInfos.erase(buildCallKey);
   }
 }
 

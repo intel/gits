@@ -12,23 +12,23 @@
 namespace gits {
 namespace DirectX {
 
-void ResourceStateTracker::addResource(unsigned resourceKey, D3D12_RESOURCE_STATES initialState) {
-  resourceStates_[resourceKey][D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES] = initialState;
+void ResourceStateTracker::AddResource(unsigned resourceKey, D3D12_RESOURCE_STATES initialState) {
+  m_ResourceStates[resourceKey][D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES] = initialState;
 }
 
-void ResourceStateTracker::addResource(unsigned resourceKey, D3D12_BARRIER_LAYOUT initialState) {
-  D3D12_RESOURCE_STATES state = getResourceState(initialState);
-  addResource(resourceKey, state);
+void ResourceStateTracker::AddResource(unsigned resourceKey, D3D12_BARRIER_LAYOUT initialState) {
+  D3D12_RESOURCE_STATES state = GetResourceState(initialState);
+  AddResource(resourceKey, state);
 }
 
-void ResourceStateTracker::resourceBarrier(ID3D12GraphicsCommandList* commandList,
+void ResourceStateTracker::ResourceBarrier(ID3D12GraphicsCommandList* commandList,
                                            D3D12_RESOURCE_BARRIER* barriers,
-                                           unsigned barriersNum,
+                                           unsigned barrierCount,
                                            unsigned* resourceKeys) {
   ResourceStatesByKey& resourceStates =
-      commandList ? resourceStatesByCommandList_[commandList] : resourceStates_;
+      commandList ? m_ResourceStatesByCommandList[commandList] : m_ResourceStates;
 
-  for (unsigned i = 0; i < barriersNum; ++i) {
+  for (unsigned i = 0; i < barrierCount; ++i) {
     if (barriers[i].Type == D3D12_RESOURCE_BARRIER_TYPE_TRANSITION) {
       std::map<unsigned, D3D12_RESOURCE_STATES>& subresourceBarriers =
           resourceStates[resourceKeys[i]];
@@ -48,19 +48,19 @@ void ResourceStateTracker::resourceBarrier(ID3D12GraphicsCommandList* commandLis
   }
 }
 
-void ResourceStateTracker::resourceBarrier(ID3D12GraphicsCommandList* commandList,
+void ResourceStateTracker::ResourceBarrier(ID3D12GraphicsCommandList* commandList,
                                            D3D12_BARRIER_GROUP* barriers,
-                                           unsigned barriersNum,
+                                           unsigned barrierCount,
                                            unsigned* resourceKeys) {}
 
-void ResourceStateTracker::executeCommandLists(ID3D12GraphicsCommandList** commandLists,
-                                               unsigned commandListNum) {
-  for (unsigned i = 0; i < commandListNum; ++i) {
-    auto itCommandList = resourceStatesByCommandList_.find(commandLists[i]);
-    if (itCommandList != resourceStatesByCommandList_.end()) {
+void ResourceStateTracker::ExecuteCommandLists(ID3D12GraphicsCommandList** commandLists,
+                                               unsigned commandListCount) {
+  for (unsigned i = 0; i < commandListCount; ++i) {
+    auto itCommandList = m_ResourceStatesByCommandList.find(commandLists[i]);
+    if (itCommandList != m_ResourceStatesByCommandList.end()) {
       for (auto& itResource : itCommandList->second) {
         ResourceStatesBySubresource& resourceStatesOnCommandList = itResource.second;
-        ResourceStatesBySubresource& resourceStates = resourceStates_[itResource.first];
+        ResourceStatesBySubresource& resourceStates = m_ResourceStates[itResource.first];
         for (auto& it : resourceStatesOnCommandList) {
           if (it.first == D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES) {
             resourceStates.clear();
@@ -72,14 +72,14 @@ void ResourceStateTracker::executeCommandLists(ID3D12GraphicsCommandList** comma
   }
 }
 
-D3D12_RESOURCE_STATES ResourceStateTracker::getResourceState(ID3D12GraphicsCommandList* commandList,
+D3D12_RESOURCE_STATES ResourceStateTracker::GetResourceState(ID3D12GraphicsCommandList* commandList,
                                                              unsigned resourceKey,
                                                              unsigned subresource) {
   bool found = false;
   ResourceStatesByKey::iterator itResource;
   if (commandList) {
-    auto itCommandList = resourceStatesByCommandList_.find(commandList);
-    if (itCommandList != resourceStatesByCommandList_.end()) {
+    auto itCommandList = m_ResourceStatesByCommandList.find(commandList);
+    if (itCommandList != m_ResourceStatesByCommandList.end()) {
       itResource = itCommandList->second.find(resourceKey);
       if (itResource != itCommandList->second.end()) {
         found = true;
@@ -87,9 +87,9 @@ D3D12_RESOURCE_STATES ResourceStateTracker::getResourceState(ID3D12GraphicsComma
     }
   }
   if (!found) {
-    itResource = resourceStates_.find(resourceKey);
+    itResource = m_ResourceStates.find(resourceKey);
   }
-  GITS_ASSERT(found || itResource != resourceStates_.end());
+  GITS_ASSERT(found || itResource != m_ResourceStates.end());
 
   auto it = itResource->second.find(subresource);
   if (it == itResource->second.end()) {
@@ -100,7 +100,7 @@ D3D12_RESOURCE_STATES ResourceStateTracker::getResourceState(ID3D12GraphicsComma
   return it->second;
 }
 
-D3D12_RESOURCE_STATES ResourceStateTracker::getResourceState(D3D12_BARRIER_LAYOUT layout) {
+D3D12_RESOURCE_STATES ResourceStateTracker::GetResourceState(D3D12_BARRIER_LAYOUT layout) {
 
   D3D12_RESOURCE_STATES state{};
 

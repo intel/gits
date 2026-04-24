@@ -21,21 +21,21 @@ class StateTrackingService;
 
 class ResourceForCBVRestoreService {
 public:
-  ResourceForCBVRestoreService(StateTrackingService& stateService) : stateService_(stateService) {}
-  void addResourceCreationCommand(unsigned resourceKey, unsigned heapKey, Command* command);
-  bool restoreResourceObject(unsigned resourceKey);
-  void releaseResources();
-  bool resourceRestored(unsigned key);
+  ResourceForCBVRestoreService(StateTrackingService& stateService) : m_StateService(stateService) {}
+  void AddResourceCreationCommand(unsigned resourceKey, unsigned heapKey, Command* creationCommand);
+  bool RestoreResourceObject(unsigned resourceKey);
+  void ReleaseResources();
+  bool ResourceRestored(unsigned resourceKey);
 
 private:
   struct ResourceForCBVRestoreInfo {
-    std::unique_ptr<Command> creationCommand;
-    unsigned heapKey{};
+    std::unique_ptr<Command> CreationCommand;
+    unsigned HeapKey{};
   };
 
-  StateTrackingService& stateService_;
-  std::unordered_map<unsigned, ResourceForCBVRestoreInfo> resourceCreationInfo_;
-  std::set<unsigned> restoredResourceObjects_;
+  StateTrackingService& m_StateService;
+  std::unordered_map<unsigned, ResourceForCBVRestoreInfo> m_ResourceCreationInfo;
+  std::set<unsigned> m_RestoredResourceObjects;
 };
 
 } // namespace DirectX

@@ -33,148 +33,148 @@ namespace DirectX {
 
 template <typename T>
 struct Argument {
-  T value;
+  T Value{};
 };
 
 template <typename T, int N>
 struct StaticArrayArgument {
   StaticArrayArgument(T* value_) {
     for (int i = 0; i < N; ++i) {
-      value[i] = value_[i];
+      Value[i] = value_[i];
     }
   }
   StaticArrayArgument() {}
-  T value[N];
+  T Value[N];
 };
 
 template <typename T>
 struct PointerArgument {
-  PointerArgument(const T* value_) : value(const_cast<T*>(value_)) {}
+  PointerArgument(const T* value_) : Value(const_cast<T*>(value_)) {}
   PointerArgument() {}
   PointerArgument(const PointerArgument<T>& arg) {
-    if (arg.value) {
-      value = new T();
-      *value = *arg.value;
+    if (arg.Value) {
+      Value = new T();
+      *Value = *arg.Value;
     }
-    copy = true;
+    Copy = true;
   }
   PointerArgument& operator=(const PointerArgument<T>&) = delete;
   ~PointerArgument() {
-    if (copy) {
-      delete static_cast<T*>(value);
+    if (Copy) {
+      delete static_cast<T*>(Value);
     }
   }
-  T* value{};
-  bool copy{};
+  T* Value{};
+  bool Copy{};
 };
 
 template <typename T>
 struct ArrayArgument {
-  ArrayArgument(const T* value_, size_t size_) : value(const_cast<T*>(value_)), size(size_) {}
+  ArrayArgument(const T* value_, size_t size_) : Value(const_cast<T*>(value_)), Size(size_) {}
   ArrayArgument() {}
   ArrayArgument(const ArrayArgument<T>& arg) {
-    size = arg.size;
-    if (arg.value) {
-      value = new T[size];
-      memcpy(value, arg.value, size * sizeof(T));
+    Size = arg.Size;
+    if (arg.Value) {
+      Value = new T[Size];
+      memcpy(Value, arg.Value, Size * sizeof(T));
     }
-    copy = true;
+    Copy = true;
   }
   ArrayArgument& operator=(const ArrayArgument<T>&) = delete;
   ~ArrayArgument() {
-    if (copy) {
-      delete[] value;
+    if (Copy) {
+      delete[] Value;
     }
   }
-  T* value{};
-  size_t size{};
-  bool copy{};
+  T* Value{};
+  size_t Size{};
+  bool Copy{};
 };
 
 struct BufferArgument {
   BufferArgument(const void* value_, size_t size_)
-      : value(const_cast<void*>(value_)), size(size_) {}
+      : Value(const_cast<void*>(value_)), Size(size_) {}
   BufferArgument() {}
   BufferArgument(const BufferArgument& arg);
   BufferArgument& operator=(const BufferArgument&) = delete;
   ~BufferArgument();
-  void* value{};
-  size_t size{};
-  bool copy{};
+  void* Value{};
+  size_t Size{};
+  bool Copy{};
 };
 
 struct OutputBufferArgument {
-  OutputBufferArgument(void** value_) : value(value_) {}
+  OutputBufferArgument(void** value_) : Value(value_) {}
   OutputBufferArgument() {}
   OutputBufferArgument(const OutputBufferArgument& arg);
   OutputBufferArgument& operator=(const OutputBufferArgument&) = delete;
   ~OutputBufferArgument() {}
-  void** value{};
-  void* captureValue{};
-  void* data{};
+  void** Value{};
+  void* CaptureValue{};
+  void* Data{};
 };
 
 template <typename T>
 struct InterfaceArgument {
-  T* value{};
-  unsigned key{};
+  T* Value{};
+  unsigned Key{};
 };
 
 template <typename T>
 struct InterfaceArrayArgument {
-  InterfaceArrayArgument(T** value_, size_t size_) : value(value_), size(size_) {
-    keys.resize(size);
+  InterfaceArrayArgument(T** value_, size_t size_) : Value(value_), Size(size_) {
+    Keys.resize(Size);
   }
   InterfaceArrayArgument() {}
   InterfaceArrayArgument(const InterfaceArrayArgument& arg) {
-    size = arg.size;
-    keys = arg.keys;
-    data.resize(size);
-    memcpy(data.data(), arg.value, size * sizeof(T*));
-    value = data.data();
+    Size = arg.Size;
+    Keys = arg.Keys;
+    Data.resize(Size);
+    memcpy(Data.data(), arg.Value, Size * sizeof(T*));
+    Value = Data.data();
   }
   InterfaceArrayArgument& operator=(const InterfaceArrayArgument&) = delete;
   ~InterfaceArrayArgument() {}
-  T** value{};
-  size_t size{};
-  std::vector<unsigned> keys{};
-  std::vector<T*> data;
+  T** Value{};
+  size_t Size{};
+  std::vector<unsigned> Keys{};
+  std::vector<T*> Data;
 };
 
 template <typename T>
 struct InterfaceOutputArgument {
-  InterfaceOutputArgument(T** value_) : value(value_) {}
+  InterfaceOutputArgument(T** value_) : Value(value_) {}
   InterfaceOutputArgument() {}
   InterfaceOutputArgument(const InterfaceOutputArgument& arg) {
-    key = arg.key;
-    data = *arg.value;
-    value = &data;
+    Key = arg.Key;
+    Data = *arg.Value;
+    Value = &Data;
   }
   InterfaceOutputArgument& operator=(const InterfaceOutputArgument&) = delete;
   ~InterfaceOutputArgument() {}
-  T** value{};
-  unsigned key{};
-  T* data{};
+  T** Value{};
+  unsigned Key{};
+  T* Data{};
 };
 
 struct LPCWSTR_Argument {
-  LPCWSTR_Argument(LPCWSTR value_) : value(const_cast<LPWSTR>(value_)) {}
+  LPCWSTR_Argument(LPCWSTR value_) : Value(const_cast<LPWSTR>(value_)) {}
   LPCWSTR_Argument() {}
   LPCWSTR_Argument(const LPCWSTR_Argument& arg);
   LPCWSTR_Argument& operator=(const LPCWSTR_Argument&) = delete;
   ~LPCWSTR_Argument();
-  LPWSTR value{};
-  bool copy{};
+  LPWSTR Value{};
+  bool Copy{};
 };
 
 struct LPCSTR_Argument {
-  LPCSTR_Argument(LPCSTR value_) : value(const_cast<LPSTR>(value_)) {}
+  LPCSTR_Argument(LPCSTR value_) : Value(const_cast<LPSTR>(value_)) {}
   LPCSTR_Argument() {}
   LPCSTR_Argument(const LPCSTR_Argument& arg);
   LPCSTR_Argument& operator=(const LPCSTR_Argument&) = delete;
   ~LPCSTR_Argument();
-  LPSTR value{};
-  bool copy{};
+  LPSTR Value{};
+  bool Copy{};
 };
 
 using PCWSTR_Argument = LPCWSTR_Argument;
@@ -187,238 +187,238 @@ using PCSTR_Argument = LPCSTR_Argument;
 
 template <typename T>
 struct DescriptorHandleArgument {
-  T value{};
-  unsigned interfaceKey{};
-  unsigned index{};
+  T Value{};
+  unsigned InterfaceKey{};
+  unsigned Index{};
 };
 
 template <typename T>
 struct DescriptorHandleArrayArgument {
   DescriptorHandleArrayArgument(const T* value_, size_t size_)
-      : value(const_cast<T*>(value_)), size(size_) {
-    interfaceKeys.resize(size);
-    indexes.resize(size);
+      : Value(const_cast<T*>(value_)), Size(size_) {
+    InterfaceKeys.resize(Size);
+    Indexes.resize(Size);
   }
   DescriptorHandleArrayArgument() {}
   DescriptorHandleArrayArgument(const DescriptorHandleArrayArgument& arg) {
-    size = arg.size;
-    interfaceKeys = arg.interfaceKeys;
-    indexes = arg.indexes;
-    data.resize(size);
-    memcpy(data.data(), arg.value, size * sizeof(T));
-    value = data.data();
+    Size = arg.Size;
+    InterfaceKeys = arg.InterfaceKeys;
+    Indexes = arg.Indexes;
+    Data.resize(Size);
+    memcpy(Data.data(), arg.Value, Size * sizeof(T));
+    Value = Data.data();
   }
   DescriptorHandleArrayArgument& operator=(DescriptorHandleArrayArgument const&) = delete;
   ~DescriptorHandleArrayArgument() {}
-  T* value{};
-  size_t size{};
-  std::vector<unsigned> interfaceKeys{};
-  std::vector<unsigned> indexes{};
-  std::vector<T> data;
+  T* Value{};
+  size_t Size{};
+  std::vector<unsigned> InterfaceKeys{};
+  std::vector<unsigned> Indexes{};
+  std::vector<T> Data;
 };
 
 struct D3D12_GPU_VIRTUAL_ADDRESS_Argument {
-  D3D12_GPU_VIRTUAL_ADDRESS value{};
-  unsigned interfaceKey{};
-  unsigned offset{};
+  D3D12_GPU_VIRTUAL_ADDRESS Value{};
+  unsigned InterfaceKey{};
+  unsigned Offset{};
 };
 
 struct D3D12_GPU_VIRTUAL_ADDRESSs_Argument {
   D3D12_GPU_VIRTUAL_ADDRESSs_Argument(const D3D12_GPU_VIRTUAL_ADDRESS* value_, unsigned size_)
-      : value(const_cast<D3D12_GPU_VIRTUAL_ADDRESS*>(value_)), size(size_) {
-    interfaceKeys.resize(size_);
-    offsets.resize(size_);
+      : Value(const_cast<D3D12_GPU_VIRTUAL_ADDRESS*>(value_)), Size(size_) {
+    InterfaceKeys.resize(size_);
+    Offsets.resize(size_);
   }
   D3D12_GPU_VIRTUAL_ADDRESSs_Argument() {}
   D3D12_GPU_VIRTUAL_ADDRESSs_Argument(const D3D12_GPU_VIRTUAL_ADDRESSs_Argument& arg);
   D3D12_GPU_VIRTUAL_ADDRESSs_Argument& operator=(const D3D12_GPU_VIRTUAL_ADDRESSs_Argument&) =
       delete;
   ~D3D12_GPU_VIRTUAL_ADDRESSs_Argument();
-  D3D12_GPU_VIRTUAL_ADDRESS* value{};
-  size_t size{};
-  std::vector<unsigned> interfaceKeys{};
-  std::vector<unsigned> offsets{};
-  bool copy{};
+  D3D12_GPU_VIRTUAL_ADDRESS* Value{};
+  size_t Size{};
+  std::vector<unsigned> InterfaceKeys{};
+  std::vector<unsigned> Offsets{};
+  bool Copy{};
 };
 
 struct ShaderIdentifierArgument {
-  ShaderIdentifierArgument(const void* value_) : value(const_cast<void*>(value_)) {}
+  ShaderIdentifierArgument(const void* value_) : Value(const_cast<void*>(value_)) {}
   ShaderIdentifierArgument() {}
   ShaderIdentifierArgument(const ShaderIdentifierArgument& arg);
   ShaderIdentifierArgument& operator=(ShaderIdentifierArgument const&) = delete;
   ~ShaderIdentifierArgument() {}
-  void* value{};
-  std::vector<uint8_t> data;
+  void* Value{};
+  std::vector<uint8_t> Data;
 };
 
 template <>
 struct PointerArgument<D3D12_ROOT_SIGNATURE_DESC> {
   PointerArgument(const D3D12_ROOT_SIGNATURE_DESC* value_)
-      : value(const_cast<D3D12_ROOT_SIGNATURE_DESC*>(value_)) {}
+      : Value(const_cast<D3D12_ROOT_SIGNATURE_DESC*>(value_)) {}
   PointerArgument() {}
   PointerArgument(const PointerArgument<D3D12_ROOT_SIGNATURE_DESC>& arg);
   PointerArgument& operator=(const PointerArgument<D3D12_ROOT_SIGNATURE_DESC>&) = delete;
   ~PointerArgument();
-  D3D12_ROOT_SIGNATURE_DESC* value{};
-  bool copy{};
+  D3D12_ROOT_SIGNATURE_DESC* Value{};
+  bool Copy{};
 };
 
 template <>
 struct PointerArgument<D3D12_VERSIONED_ROOT_SIGNATURE_DESC> {
   PointerArgument(const D3D12_VERSIONED_ROOT_SIGNATURE_DESC* value_)
-      : value(const_cast<D3D12_VERSIONED_ROOT_SIGNATURE_DESC*>(value_)) {}
+      : Value(const_cast<D3D12_VERSIONED_ROOT_SIGNATURE_DESC*>(value_)) {}
   PointerArgument() {}
   PointerArgument(const PointerArgument<D3D12_VERSIONED_ROOT_SIGNATURE_DESC>& arg);
   PointerArgument& operator=(const PointerArgument<D3D12_VERSIONED_ROOT_SIGNATURE_DESC>&) = delete;
   ~PointerArgument();
-  D3D12_VERSIONED_ROOT_SIGNATURE_DESC* value{};
-  bool copy{};
+  D3D12_VERSIONED_ROOT_SIGNATURE_DESC* Value{};
+  bool Copy{};
 };
 
 struct D3D12_GRAPHICS_PIPELINE_STATE_DESC_Argument {
   D3D12_GRAPHICS_PIPELINE_STATE_DESC_Argument(const D3D12_GRAPHICS_PIPELINE_STATE_DESC* value_)
-      : value(const_cast<D3D12_GRAPHICS_PIPELINE_STATE_DESC*>(value_)) {}
+      : Value(const_cast<D3D12_GRAPHICS_PIPELINE_STATE_DESC*>(value_)) {}
   D3D12_GRAPHICS_PIPELINE_STATE_DESC_Argument() {}
   D3D12_GRAPHICS_PIPELINE_STATE_DESC_Argument(
       const D3D12_GRAPHICS_PIPELINE_STATE_DESC_Argument& arg);
   D3D12_GRAPHICS_PIPELINE_STATE_DESC_Argument& operator=(
       const D3D12_GRAPHICS_PIPELINE_STATE_DESC_Argument&) = delete;
   ~D3D12_GRAPHICS_PIPELINE_STATE_DESC_Argument();
-  D3D12_GRAPHICS_PIPELINE_STATE_DESC* value{};
-  unsigned rootSignatureKey{};
-  bool copy{};
+  D3D12_GRAPHICS_PIPELINE_STATE_DESC* Value{};
+  unsigned RootSignatureKey{};
+  bool Copy{};
 };
 
 struct D3D12_COMPUTE_PIPELINE_STATE_DESC_Argument {
   D3D12_COMPUTE_PIPELINE_STATE_DESC_Argument(const D3D12_COMPUTE_PIPELINE_STATE_DESC* value_)
-      : value(const_cast<D3D12_COMPUTE_PIPELINE_STATE_DESC*>(value_)) {}
+      : Value(const_cast<D3D12_COMPUTE_PIPELINE_STATE_DESC*>(value_)) {}
   D3D12_COMPUTE_PIPELINE_STATE_DESC_Argument() {}
   D3D12_COMPUTE_PIPELINE_STATE_DESC_Argument(const D3D12_COMPUTE_PIPELINE_STATE_DESC_Argument& arg);
   D3D12_COMPUTE_PIPELINE_STATE_DESC_Argument& operator=(
       const D3D12_COMPUTE_PIPELINE_STATE_DESC_Argument&) = delete;
   ~D3D12_COMPUTE_PIPELINE_STATE_DESC_Argument();
-  D3D12_COMPUTE_PIPELINE_STATE_DESC* value{};
-  unsigned rootSignatureKey{};
-  bool copy{};
+  D3D12_COMPUTE_PIPELINE_STATE_DESC* Value{};
+  unsigned RootSignatureKey{};
+  bool Copy{};
 };
 
 struct D3D12_TEXTURE_COPY_LOCATION_Argument {
   D3D12_TEXTURE_COPY_LOCATION_Argument(const D3D12_TEXTURE_COPY_LOCATION* value_)
-      : value(const_cast<D3D12_TEXTURE_COPY_LOCATION*>(value_)) {}
+      : Value(const_cast<D3D12_TEXTURE_COPY_LOCATION*>(value_)) {}
   D3D12_TEXTURE_COPY_LOCATION_Argument() {}
   D3D12_TEXTURE_COPY_LOCATION_Argument(const D3D12_TEXTURE_COPY_LOCATION_Argument& arg);
   D3D12_TEXTURE_COPY_LOCATION_Argument& operator=(const D3D12_TEXTURE_COPY_LOCATION_Argument&) =
       delete;
   ~D3D12_TEXTURE_COPY_LOCATION_Argument();
-  D3D12_TEXTURE_COPY_LOCATION* value{};
-  unsigned resourceKey{};
-  bool copy{};
+  D3D12_TEXTURE_COPY_LOCATION* Value{};
+  unsigned ResourceKey{};
+  bool Copy{};
 };
 
 struct D3D12_RESOURCE_BARRIERs_Argument {
   D3D12_RESOURCE_BARRIERs_Argument(const D3D12_RESOURCE_BARRIER* value_, unsigned size_)
-      : value(const_cast<D3D12_RESOURCE_BARRIER*>(value_)), size(size_) {
-    resourceKeys.resize(size_);
-    resourceAfterKeys.resize(size_);
+      : Value(const_cast<D3D12_RESOURCE_BARRIER*>(value_)), Size(size_) {
+    ResourceKeys.resize(size_);
+    ResourceAfterKeys.resize(size_);
   }
   D3D12_RESOURCE_BARRIERs_Argument() {}
   D3D12_RESOURCE_BARRIERs_Argument(const D3D12_RESOURCE_BARRIERs_Argument& arg);
   D3D12_RESOURCE_BARRIERs_Argument& operator=(const D3D12_RESOURCE_BARRIERs_Argument&) = delete;
   ~D3D12_RESOURCE_BARRIERs_Argument();
-  D3D12_RESOURCE_BARRIER* value{};
-  size_t size{};
-  std::vector<unsigned> resourceKeys{};
-  std::vector<unsigned> resourceAfterKeys{};
-  bool copy{};
+  D3D12_RESOURCE_BARRIER* Value{};
+  size_t Size{};
+  std::vector<unsigned> ResourceKeys{};
+  std::vector<unsigned> ResourceAfterKeys{};
+  bool Copy{};
 };
 
 struct D3D12_SHADER_RESOURCE_VIEW_DESC_Argument {
   D3D12_SHADER_RESOURCE_VIEW_DESC_Argument(const D3D12_SHADER_RESOURCE_VIEW_DESC* value_)
-      : value(const_cast<D3D12_SHADER_RESOURCE_VIEW_DESC*>(value_)) {}
+      : Value(const_cast<D3D12_SHADER_RESOURCE_VIEW_DESC*>(value_)) {}
   D3D12_SHADER_RESOURCE_VIEW_DESC_Argument() {}
   D3D12_SHADER_RESOURCE_VIEW_DESC_Argument(const D3D12_SHADER_RESOURCE_VIEW_DESC_Argument& arg);
   D3D12_SHADER_RESOURCE_VIEW_DESC_Argument& operator=(
       const D3D12_SHADER_RESOURCE_VIEW_DESC_Argument&) = delete;
   ~D3D12_SHADER_RESOURCE_VIEW_DESC_Argument();
-  D3D12_SHADER_RESOURCE_VIEW_DESC* value{};
-  unsigned raytracingLocationKey{};
-  unsigned raytracingLocationOffset{};
-  bool copy{};
+  D3D12_SHADER_RESOURCE_VIEW_DESC* Value{};
+  unsigned RaytracingLocationKey{};
+  unsigned RaytracingLocationOffset{};
+  bool Copy{};
 };
 
 struct D3D12_INDEX_BUFFER_VIEW_Argument {
   D3D12_INDEX_BUFFER_VIEW_Argument(const D3D12_INDEX_BUFFER_VIEW* value_)
-      : value(const_cast<D3D12_INDEX_BUFFER_VIEW*>(value_)) {}
+      : Value(const_cast<D3D12_INDEX_BUFFER_VIEW*>(value_)) {}
   D3D12_INDEX_BUFFER_VIEW_Argument() {}
   D3D12_INDEX_BUFFER_VIEW_Argument(const D3D12_INDEX_BUFFER_VIEW_Argument& arg);
   D3D12_INDEX_BUFFER_VIEW_Argument& operator=(const D3D12_INDEX_BUFFER_VIEW_Argument&) = delete;
   ~D3D12_INDEX_BUFFER_VIEW_Argument();
-  D3D12_INDEX_BUFFER_VIEW* value{};
-  unsigned bufferLocationKey{};
-  unsigned bufferLocationOffset{};
-  bool copy{};
+  D3D12_INDEX_BUFFER_VIEW* Value{};
+  unsigned BufferLocationKey{};
+  unsigned BufferLocationOffset{};
+  bool Copy{};
 };
 
 struct D3D12_CONSTANT_BUFFER_VIEW_DESC_Argument {
   D3D12_CONSTANT_BUFFER_VIEW_DESC_Argument(const D3D12_CONSTANT_BUFFER_VIEW_DESC* value_)
-      : value(const_cast<D3D12_CONSTANT_BUFFER_VIEW_DESC*>(value_)) {}
+      : Value(const_cast<D3D12_CONSTANT_BUFFER_VIEW_DESC*>(value_)) {}
   D3D12_CONSTANT_BUFFER_VIEW_DESC_Argument() {}
   D3D12_CONSTANT_BUFFER_VIEW_DESC_Argument(const D3D12_CONSTANT_BUFFER_VIEW_DESC_Argument& arg);
   D3D12_CONSTANT_BUFFER_VIEW_DESC_Argument& operator=(
       const D3D12_CONSTANT_BUFFER_VIEW_DESC_Argument&) = delete;
   ~D3D12_CONSTANT_BUFFER_VIEW_DESC_Argument();
-  D3D12_CONSTANT_BUFFER_VIEW_DESC* value{};
-  unsigned bufferLocationKey{};
-  unsigned bufferLocationOffset{};
-  bool copy{};
+  D3D12_CONSTANT_BUFFER_VIEW_DESC* Value{};
+  unsigned BufferLocationKey{};
+  unsigned BufferLocationOffset{};
+  bool Copy{};
 };
 
 struct D3D12_VERTEX_BUFFER_VIEWs_Argument {
   D3D12_VERTEX_BUFFER_VIEWs_Argument(const D3D12_VERTEX_BUFFER_VIEW* value_, unsigned size_)
-      : value(const_cast<D3D12_VERTEX_BUFFER_VIEW*>(value_)), size(size_) {
-    bufferLocationKeys.resize(size_);
-    bufferLocationOffsets.resize(size_);
+      : Value(const_cast<D3D12_VERTEX_BUFFER_VIEW*>(value_)), Size(size_) {
+    BufferLocationKeys.resize(size_);
+    BufferLocationOffsets.resize(size_);
   }
   D3D12_VERTEX_BUFFER_VIEWs_Argument() {}
   D3D12_VERTEX_BUFFER_VIEWs_Argument(const D3D12_VERTEX_BUFFER_VIEWs_Argument& arg);
   D3D12_VERTEX_BUFFER_VIEWs_Argument& operator=(const D3D12_VERTEX_BUFFER_VIEWs_Argument&) = delete;
   ~D3D12_VERTEX_BUFFER_VIEWs_Argument();
-  D3D12_VERTEX_BUFFER_VIEW* value{};
-  size_t size{};
-  std::vector<unsigned> bufferLocationKeys{};
-  std::vector<unsigned> bufferLocationOffsets{};
-  bool copy{};
+  D3D12_VERTEX_BUFFER_VIEW* Value{};
+  size_t Size{};
+  std::vector<unsigned> BufferLocationKeys{};
+  std::vector<unsigned> BufferLocationOffsets{};
+  bool Copy{};
 };
 
 struct D3D12_STREAM_OUTPUT_BUFFER_VIEWs_Argument {
   D3D12_STREAM_OUTPUT_BUFFER_VIEWs_Argument(const D3D12_STREAM_OUTPUT_BUFFER_VIEW* value_,
                                             unsigned size_)
-      : value(const_cast<D3D12_STREAM_OUTPUT_BUFFER_VIEW*>(value_)), size(size_) {
-    bufferLocationKeys.resize(size_);
-    bufferLocationOffsets.resize(size_);
-    bufferFilledSizeLocationKeys.resize(size_);
-    bufferFilledSizeLocationOffsets.resize(size_);
+      : Value(const_cast<D3D12_STREAM_OUTPUT_BUFFER_VIEW*>(value_)), Size(size_) {
+    BufferLocationKeys.resize(size_);
+    BufferLocationOffsets.resize(size_);
+    BufferFilledSizeLocationKeys.resize(size_);
+    BufferFilledSizeLocationOffsets.resize(size_);
   }
   D3D12_STREAM_OUTPUT_BUFFER_VIEWs_Argument() {}
   D3D12_STREAM_OUTPUT_BUFFER_VIEWs_Argument(const D3D12_STREAM_OUTPUT_BUFFER_VIEWs_Argument& arg);
   D3D12_STREAM_OUTPUT_BUFFER_VIEWs_Argument& operator=(
       const D3D12_STREAM_OUTPUT_BUFFER_VIEWs_Argument&) = delete;
   ~D3D12_STREAM_OUTPUT_BUFFER_VIEWs_Argument();
-  D3D12_STREAM_OUTPUT_BUFFER_VIEW* value{};
-  size_t size{};
-  std::vector<unsigned> bufferLocationKeys{};
-  std::vector<unsigned> bufferLocationOffsets{};
-  std::vector<unsigned> bufferFilledSizeLocationKeys{};
-  std::vector<unsigned> bufferFilledSizeLocationOffsets{};
-  bool copy{};
+  D3D12_STREAM_OUTPUT_BUFFER_VIEW* Value{};
+  size_t Size{};
+  std::vector<unsigned> BufferLocationKeys{};
+  std::vector<unsigned> BufferLocationOffsets{};
+  std::vector<unsigned> BufferFilledSizeLocationKeys{};
+  std::vector<unsigned> BufferFilledSizeLocationOffsets{};
+  bool Copy{};
 };
 
 struct D3D12_WRITEBUFFERIMMEDIATE_PARAMETERs_Argument {
   D3D12_WRITEBUFFERIMMEDIATE_PARAMETERs_Argument(const D3D12_WRITEBUFFERIMMEDIATE_PARAMETER* value_,
                                                  unsigned size_)
-      : value(const_cast<D3D12_WRITEBUFFERIMMEDIATE_PARAMETER*>(value_)), size(size_) {
-    destKeys.resize(size_);
-    destOffsets.resize(size_);
+      : Value(const_cast<D3D12_WRITEBUFFERIMMEDIATE_PARAMETER*>(value_)), Size(size_) {
+    DestKeys.resize(size_);
+    DestOffsets.resize(size_);
   }
   D3D12_WRITEBUFFERIMMEDIATE_PARAMETERs_Argument() {}
   D3D12_WRITEBUFFERIMMEDIATE_PARAMETERs_Argument(
@@ -426,230 +426,230 @@ struct D3D12_WRITEBUFFERIMMEDIATE_PARAMETERs_Argument {
   D3D12_WRITEBUFFERIMMEDIATE_PARAMETERs_Argument& operator=(
       const D3D12_WRITEBUFFERIMMEDIATE_PARAMETERs_Argument&) = delete;
   ~D3D12_WRITEBUFFERIMMEDIATE_PARAMETERs_Argument();
-  D3D12_WRITEBUFFERIMMEDIATE_PARAMETER* value{};
-  size_t size{};
-  std::vector<unsigned> destKeys{};
-  std::vector<unsigned> destOffsets{};
-  bool copy{};
+  D3D12_WRITEBUFFERIMMEDIATE_PARAMETER* Value{};
+  size_t Size{};
+  std::vector<unsigned> DestKeys{};
+  std::vector<unsigned> DestOffsets{};
+  bool Copy{};
 };
 
 struct D3D12_PIPELINE_STATE_STREAM_DESC_Argument {
   D3D12_PIPELINE_STATE_STREAM_DESC_Argument(const D3D12_PIPELINE_STATE_STREAM_DESC* value_)
-      : value(const_cast<D3D12_PIPELINE_STATE_STREAM_DESC*>(value_)) {}
+      : Value(const_cast<D3D12_PIPELINE_STATE_STREAM_DESC*>(value_)) {}
   D3D12_PIPELINE_STATE_STREAM_DESC_Argument() {}
   D3D12_PIPELINE_STATE_STREAM_DESC_Argument(const D3D12_PIPELINE_STATE_STREAM_DESC_Argument& arg);
   D3D12_PIPELINE_STATE_STREAM_DESC_Argument& operator=(
       const D3D12_PIPELINE_STATE_STREAM_DESC_Argument&) = delete;
   ~D3D12_PIPELINE_STATE_STREAM_DESC_Argument();
-  D3D12_PIPELINE_STATE_STREAM_DESC* value{};
-  unsigned rootSignatureKey{};
-  bool copy{};
+  D3D12_PIPELINE_STATE_STREAM_DESC* Value{};
+  unsigned RootSignatureKey{};
+  bool Copy{};
 };
 
 struct D3D12_STATE_OBJECT_DESC_Argument {
   D3D12_STATE_OBJECT_DESC_Argument(const D3D12_STATE_OBJECT_DESC* value_)
-      : value(const_cast<D3D12_STATE_OBJECT_DESC*>(value_)) {}
+      : Value(const_cast<D3D12_STATE_OBJECT_DESC*>(value_)) {}
   D3D12_STATE_OBJECT_DESC_Argument() {}
   D3D12_STATE_OBJECT_DESC_Argument(const D3D12_STATE_OBJECT_DESC_Argument& arg);
   D3D12_STATE_OBJECT_DESC_Argument& operator=(const D3D12_STATE_OBJECT_DESC_Argument&) = delete;
   ~D3D12_STATE_OBJECT_DESC_Argument();
-  D3D12_STATE_OBJECT_DESC* value{};
-  std::map<unsigned, unsigned> interfaceKeysBySubobject;
-  bool copy{};
+  D3D12_STATE_OBJECT_DESC* Value{};
+  std::map<unsigned, unsigned> InterfaceKeysBySubobject;
+  bool Copy{};
 };
 
 template <>
 struct PointerArgument<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS> {
   PointerArgument(const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS* value_)
-      : value(const_cast<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS*>(value_)) {}
+      : Value(const_cast<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS*>(value_)) {}
   PointerArgument() {}
   PointerArgument(const PointerArgument<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS>& arg);
   PointerArgument& operator=(
       const PointerArgument<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS>&) = delete;
   ~PointerArgument();
-  D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS* value{};
-  std::vector<unsigned> inputKeys{};
-  std::vector<unsigned> inputOffsets{};
-  bool copy{};
+  D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS* Value{};
+  std::vector<unsigned> InputKeys{};
+  std::vector<unsigned> InputOffsets{};
+  bool Copy{};
 };
 
 template <>
 struct PointerArgument<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC> {
   PointerArgument(const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC* value_)
-      : value(const_cast<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC*>(value_)) {}
+      : Value(const_cast<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC*>(value_)) {}
   PointerArgument() {}
   PointerArgument(const PointerArgument<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC>& arg);
   PointerArgument& operator=(
       const PointerArgument<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC>&) = delete;
   ~PointerArgument();
-  D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC* value{};
-  unsigned destAccelerationStructureKey{};
-  unsigned destAccelerationStructureOffset{};
-  unsigned sourceAccelerationStructureKey{};
-  unsigned sourceAccelerationStructureOffset{};
-  unsigned scratchAccelerationStructureKey{};
-  unsigned scratchAccelerationStructureOffset{};
-  std::vector<unsigned> inputKeys{};
-  std::vector<unsigned> inputOffsets{};
-  bool copy{};
+  D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC* Value{};
+  unsigned DestAccelerationStructureKey{};
+  unsigned DestAccelerationStructureOffset{};
+  unsigned SourceAccelerationStructureKey{};
+  unsigned SourceAccelerationStructureOffset{};
+  unsigned ScratchAccelerationStructureKey{};
+  unsigned ScratchAccelerationStructureOffset{};
+  std::vector<unsigned> InputKeys{};
+  std::vector<unsigned> InputOffsets{};
+  bool Copy{};
 };
 
 template <>
 struct ArrayArgument<D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC> {
   ArrayArgument(const D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC* value_,
                 size_t size_)
-      : value(const_cast<D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC*>(value_)),
-        size(size_) {}
+      : Value(const_cast<D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC*>(value_)),
+        Size(size_) {}
   ArrayArgument() {}
   ArrayArgument(
       const ArrayArgument<D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC>& arg);
   ArrayArgument& operator=(
       const ArrayArgument<D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC>&) = delete;
   ~ArrayArgument();
-  D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC* value{};
-  size_t size{};
-  std::vector<unsigned> destBufferKeys{};
-  std::vector<unsigned> destBufferOffsets{};
-  bool copy{};
+  D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC* Value{};
+  size_t Size{};
+  std::vector<unsigned> DestBufferKeys{};
+  std::vector<unsigned> DestBufferOffsets{};
+  bool Copy{};
 };
 
 template <>
 struct PointerArgument<D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC> {
   PointerArgument(const D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC* value_)
-      : value(const_cast<D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC*>(value_)) {}
+      : Value(const_cast<D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC*>(value_)) {}
   PointerArgument() {}
   PointerArgument(
       const PointerArgument<D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC>& arg);
   PointerArgument& operator=(
       const PointerArgument<D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC>&) = delete;
   ~PointerArgument();
-  D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC* value{};
+  D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC* Value{};
   unsigned destBufferKey{};
   unsigned destBufferOffset{};
-  bool copy{};
+  bool Copy{};
 };
 
 template <>
 struct PointerArgument<D3D12_DISPATCH_RAYS_DESC> {
   PointerArgument(const D3D12_DISPATCH_RAYS_DESC* value_)
-      : value(const_cast<D3D12_DISPATCH_RAYS_DESC*>(value_)) {}
+      : Value(const_cast<D3D12_DISPATCH_RAYS_DESC*>(value_)) {}
   PointerArgument() {}
   PointerArgument(const PointerArgument<D3D12_DISPATCH_RAYS_DESC>& arg);
   PointerArgument& operator=(const PointerArgument<D3D12_DISPATCH_RAYS_DESC>&) = delete;
   ~PointerArgument();
-  D3D12_DISPATCH_RAYS_DESC* value{};
-  unsigned rayGenerationShaderRecordKey{};
-  unsigned rayGenerationShaderRecordOffset{};
-  unsigned missShaderTableKey{};
-  unsigned missShaderTableOffset{};
-  unsigned hitGroupTableKey{};
-  unsigned hitGroupTableOffset{};
-  unsigned callableShaderTableKey{};
-  unsigned callableShaderTableOffset{};
-  bool copy{};
+  D3D12_DISPATCH_RAYS_DESC* Value{};
+  unsigned RayGenerationShaderRecordKey{};
+  unsigned RayGenerationShaderRecordOffset{};
+  unsigned MissShaderTableKey{};
+  unsigned MissShaderTableOffset{};
+  unsigned HitGroupTableKey{};
+  unsigned HitGroupTableOffset{};
+  unsigned CallableShaderTableKey{};
+  unsigned CallableShaderTableOffset{};
+  bool Copy{};
 };
 
 struct D3D12_RENDER_PASS_RENDER_TARGET_DESCs_Argument {
   D3D12_RENDER_PASS_RENDER_TARGET_DESCs_Argument(const D3D12_RENDER_PASS_RENDER_TARGET_DESC* value_,
                                                  size_t size_)
-      : value(const_cast<D3D12_RENDER_PASS_RENDER_TARGET_DESC*>(value_)), size(size_) {}
+      : Value(const_cast<D3D12_RENDER_PASS_RENDER_TARGET_DESC*>(value_)), Size(size_) {}
   D3D12_RENDER_PASS_RENDER_TARGET_DESCs_Argument() {}
   D3D12_RENDER_PASS_RENDER_TARGET_DESCs_Argument(
       const D3D12_RENDER_PASS_RENDER_TARGET_DESCs_Argument& arg);
   D3D12_RENDER_PASS_RENDER_TARGET_DESCs_Argument& operator=(
       const D3D12_RENDER_PASS_RENDER_TARGET_DESCs_Argument&) = delete;
   ~D3D12_RENDER_PASS_RENDER_TARGET_DESCs_Argument();
-  D3D12_RENDER_PASS_RENDER_TARGET_DESC* value{};
-  size_t size{};
-  std::vector<unsigned> descriptorKeys{};
-  std::vector<unsigned> descriptorIndexes{};
-  std::vector<unsigned> resolveSrcResourceKeys{};
-  std::vector<unsigned> resolveDstResourceKeys{};
-  bool copy{};
+  D3D12_RENDER_PASS_RENDER_TARGET_DESC* Value{};
+  size_t Size{};
+  std::vector<unsigned> DescriptorKeys{};
+  std::vector<unsigned> DescriptorIndexes{};
+  std::vector<unsigned> ResolveSrcResourceKeys{};
+  std::vector<unsigned> ResolveDstResourceKeys{};
+  bool Copy{};
 };
 
 struct D3D12_RENDER_PASS_DEPTH_STENCIL_DESC_Argument {
   D3D12_RENDER_PASS_DEPTH_STENCIL_DESC_Argument(const D3D12_RENDER_PASS_DEPTH_STENCIL_DESC* value_)
-      : value(const_cast<D3D12_RENDER_PASS_DEPTH_STENCIL_DESC*>(value_)) {}
+      : Value(const_cast<D3D12_RENDER_PASS_DEPTH_STENCIL_DESC*>(value_)) {}
   D3D12_RENDER_PASS_DEPTH_STENCIL_DESC_Argument() {}
-  D3D12_RENDER_PASS_DEPTH_STENCIL_DESC* value{};
+  D3D12_RENDER_PASS_DEPTH_STENCIL_DESC* Value{};
   D3D12_RENDER_PASS_DEPTH_STENCIL_DESC_Argument(
       const D3D12_RENDER_PASS_DEPTH_STENCIL_DESC_Argument& arg);
   D3D12_RENDER_PASS_DEPTH_STENCIL_DESC_Argument& operator=(
       const D3D12_RENDER_PASS_DEPTH_STENCIL_DESC_Argument&) = delete;
   ~D3D12_RENDER_PASS_DEPTH_STENCIL_DESC_Argument();
-  unsigned descriptorKey{};
-  unsigned descriptorIndex{};
-  unsigned resolveSrcDepthKey{};
-  unsigned resolveDstDepthKey{};
-  unsigned resolveSrcStencilKey{};
-  unsigned resolveDstStencilKey{};
-  bool copy{};
+  unsigned DescriptorKey{};
+  unsigned DescriptorIndex{};
+  unsigned ResolveSrcDepthKey{};
+  unsigned ResolveDstDepthKey{};
+  unsigned ResolveSrcStencilKey{};
+  unsigned ResolveDstStencilKey{};
+  bool Copy{};
 };
 
 template <>
 struct PointerArgument<D3D12_COMMAND_SIGNATURE_DESC> {
   PointerArgument(const D3D12_COMMAND_SIGNATURE_DESC* value_)
-      : value(const_cast<D3D12_COMMAND_SIGNATURE_DESC*>(value_)) {}
+      : Value(const_cast<D3D12_COMMAND_SIGNATURE_DESC*>(value_)) {}
   PointerArgument() {}
   PointerArgument(const PointerArgument<D3D12_COMMAND_SIGNATURE_DESC>& arg);
   PointerArgument& operator=(const PointerArgument<D3D12_COMMAND_SIGNATURE_DESC>&) = delete;
   ~PointerArgument();
-  D3D12_COMMAND_SIGNATURE_DESC* value{};
-  bool copy{};
+  D3D12_COMMAND_SIGNATURE_DESC* Value{};
+  bool Copy{};
 };
 
 template <>
 struct ArrayArgument<D3D12_META_COMMAND_DESC> {
   ArrayArgument(const D3D12_META_COMMAND_DESC* value_, size_t size_)
-      : value(const_cast<D3D12_META_COMMAND_DESC*>(value_)), size(size_) {}
+      : Value(const_cast<D3D12_META_COMMAND_DESC*>(value_)), Size(size_) {}
   ArrayArgument() {}
   ArrayArgument(const ArrayArgument<D3D12_META_COMMAND_DESC>& arg);
   ArrayArgument& operator=(const ArrayArgument<D3D12_META_COMMAND_DESC>&) = delete;
   ~ArrayArgument();
-  D3D12_META_COMMAND_DESC* value{};
-  size_t size{};
-  bool copy{};
+  D3D12_META_COMMAND_DESC* Value{};
+  size_t Size{};
+  bool Copy{};
 };
 
 struct D3D12_BARRIER_GROUPs_Argument {
   D3D12_BARRIER_GROUPs_Argument(const D3D12_BARRIER_GROUP* value_, unsigned size_)
-      : value(const_cast<D3D12_BARRIER_GROUP*>(value_)), size(size_) {
+      : Value(const_cast<D3D12_BARRIER_GROUP*>(value_)), Size(size_) {
     unsigned numResourceKeys{};
-    for (unsigned i = 0; i < size; ++i) {
-      if (value[i].Type == D3D12_BARRIER_TYPE_GLOBAL) {
+    for (unsigned i = 0; i < Size; ++i) {
+      if (Value[i].Type == D3D12_BARRIER_TYPE_GLOBAL) {
         continue;
       }
-      numResourceKeys += value[i].NumBarriers;
+      numResourceKeys += Value[i].NumBarriers;
     }
-    resourceKeys.resize(numResourceKeys);
+    ResourceKeys.resize(numResourceKeys);
   }
   D3D12_BARRIER_GROUPs_Argument() {}
   D3D12_BARRIER_GROUPs_Argument(const D3D12_BARRIER_GROUPs_Argument& arg);
   D3D12_BARRIER_GROUPs_Argument& operator=(const D3D12_BARRIER_GROUPs_Argument&) = delete;
   ~D3D12_BARRIER_GROUPs_Argument();
-  D3D12_BARRIER_GROUP* value{};
-  size_t size{};
-  std::vector<unsigned> resourceKeys{};
-  bool copy{};
+  D3D12_BARRIER_GROUP* Value{};
+  size_t Size{};
+  std::vector<unsigned> ResourceKeys{};
+  bool Copy{};
 };
 
 template <>
 struct ArrayArgument<D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO> {
   ArrayArgument(const D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO* value_, size_t size_)
-      : value(const_cast<D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO*>(value_)), size(size_) {}
+      : Value(const_cast<D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO*>(value_)), Size(size_) {}
   ArrayArgument() {}
   ArrayArgument(const ArrayArgument<D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO>& arg);
   ArrayArgument& operator=(const ArrayArgument<D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO>&) =
       delete;
   ~ArrayArgument();
-  D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO* value{};
-  size_t size{};
-  std::vector<unsigned> destKey{};
-  std::vector<unsigned> destOffset{};
-  std::vector<unsigned> sourceKey{};
-  std::vector<unsigned> sourceOffset{};
-  bool copy{};
+  D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO* Value{};
+  size_t Size{};
+  std::vector<unsigned> DestKey{};
+  std::vector<unsigned> DestOffset{};
+  std::vector<unsigned> SourceKey{};
+  std::vector<unsigned> SourceOffset{};
+  bool Copy{};
 };
 
 #pragma endregion
@@ -658,27 +658,27 @@ struct ArrayArgument<D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO> {
 
 template <typename T>
 struct ContextArgument {
-  ContextArgument(T value_) : value(value_) {}
-  ContextArgument(void* value_) : value(reinterpret_cast<T>(value_)) {}
+  ContextArgument(T value_) : Value(value_) {}
+  ContextArgument(void* value_) : Value(reinterpret_cast<T>(value_)) {}
   ContextArgument() {}
-  T value{};
-  unsigned key{};
+  T Value{};
+  unsigned Key{};
 };
 
 template <typename T>
 struct ContextOutputArgument {
-  ContextOutputArgument(T* value_) : value(value_) {}
+  ContextOutputArgument(T* value_) : Value(value_) {}
   ContextOutputArgument() {}
   ContextOutputArgument(const ContextOutputArgument& arg) {
-    key = arg.key;
-    data = *arg.value;
-    value = &data;
+    Key = arg.Key;
+    Data = *arg.Value;
+    Value = &Data;
   }
   ContextOutputArgument& operator=(const ContextOutputArgument&) = delete;
   ~ContextOutputArgument() {}
-  T* value{};
-  T data{};
-  unsigned key{};
+  T* Value{};
+  T Data{};
+  unsigned Key{};
 };
 
 using INTCExtensionContextArgument = ContextArgument<INTCExtensionContext*>;
@@ -693,133 +693,133 @@ using XEFGContextOutputArgument = ContextOutputArgument<xefg_swapchain_handle_t>
 template <>
 struct PointerArgument<INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC> {
   PointerArgument(const INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC* value_)
-      : value(const_cast<INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC*>(value_)) {}
+      : Value(const_cast<INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC*>(value_)) {}
   PointerArgument() {}
   PointerArgument(const PointerArgument<INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC>& arg);
   PointerArgument& operator=(const PointerArgument<INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC>&) =
       delete;
   ~PointerArgument();
-  INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC* value{};
-  const void* cs{};
-  const void* compileOptions{};
-  const void* internalOptions{};
-  unsigned rootSignatureKey{};
-  bool copy{};
+  INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC* Value{};
+  const void* Cs{};
+  const void* CompileOptions{};
+  const void* InternalOptions{};
+  unsigned RootSignatureKey{};
+  bool Copy{};
 };
 
 template <>
 struct PointerArgument<INTCExtensionAppInfo> {
   PointerArgument(const INTCExtensionAppInfo* value_)
-      : value(const_cast<INTCExtensionAppInfo*>(value_)) {}
+      : Value(const_cast<INTCExtensionAppInfo*>(value_)) {}
   PointerArgument() {}
   PointerArgument(const PointerArgument<INTCExtensionAppInfo>& arg);
   PointerArgument& operator=(const PointerArgument<INTCExtensionAppInfo>&) = delete;
   ~PointerArgument();
-  INTCExtensionAppInfo* value{};
-  const wchar_t* pApplicationName{};
-  const wchar_t* pEngineName{};
-  bool copy{};
+  INTCExtensionAppInfo* Value{};
+  const wchar_t* ApplicationName{};
+  const wchar_t* EngineName{};
+  bool Copy{};
 };
 
 template <>
 struct PointerArgument<INTCExtensionAppInfo1> {
   PointerArgument(const INTCExtensionAppInfo1* value_)
-      : value(const_cast<INTCExtensionAppInfo1*>(value_)) {}
+      : Value(const_cast<INTCExtensionAppInfo1*>(value_)) {}
   PointerArgument() {}
   PointerArgument(const PointerArgument<INTCExtensionAppInfo1>& arg);
   PointerArgument& operator=(const PointerArgument<INTCExtensionAppInfo1>&) = delete;
   ~PointerArgument();
-  INTCExtensionAppInfo1* value{};
-  const wchar_t* pApplicationName{};
-  const wchar_t* pEngineName{};
-  bool copy{};
+  INTCExtensionAppInfo1* Value{};
+  const wchar_t* ApplicationName{};
+  const wchar_t* EngineName{};
+  bool Copy{};
 };
 
 template <>
 struct PointerArgument<INTC_D3D12_HEAP_DESC> {
   PointerArgument(const INTC_D3D12_HEAP_DESC* value_)
-      : value(const_cast<INTC_D3D12_HEAP_DESC*>(value_)) {}
+      : Value(const_cast<INTC_D3D12_HEAP_DESC*>(value_)) {}
   PointerArgument() {}
   PointerArgument(const PointerArgument<INTC_D3D12_HEAP_DESC>& arg);
   PointerArgument& operator=(const PointerArgument<INTC_D3D12_HEAP_DESC>&) = delete;
   ~PointerArgument();
-  INTC_D3D12_HEAP_DESC* value{};
-  bool copy{};
+  INTC_D3D12_HEAP_DESC* Value{};
+  bool Copy{};
 };
 
 template <>
 struct PointerArgument<INTC_D3D12_RESOURCE_DESC_0001> {
   PointerArgument(const INTC_D3D12_RESOURCE_DESC_0001* value_)
-      : value(const_cast<INTC_D3D12_RESOURCE_DESC_0001*>(value_)) {}
+      : Value(const_cast<INTC_D3D12_RESOURCE_DESC_0001*>(value_)) {}
   PointerArgument() {}
   PointerArgument(const PointerArgument<INTC_D3D12_RESOURCE_DESC_0001>& arg);
   PointerArgument& operator=(const PointerArgument<INTC_D3D12_RESOURCE_DESC_0001>&) = delete;
   ~PointerArgument();
-  INTC_D3D12_RESOURCE_DESC_0001* value{};
-  bool copy{};
+  INTC_D3D12_RESOURCE_DESC_0001* Value{};
+  bool Copy{};
 };
 
 template <>
 struct PointerArgument<INTC_D3D12_FEATURE> {
   PointerArgument(const INTC_D3D12_FEATURE* value_)
-      : value(const_cast<INTC_D3D12_FEATURE*>(value_)) {}
+      : Value(const_cast<INTC_D3D12_FEATURE*>(value_)) {}
   PointerArgument() {}
   PointerArgument(const PointerArgument<INTC_D3D12_FEATURE>& arg);
   PointerArgument& operator=(const PointerArgument<INTC_D3D12_FEATURE>&) = delete;
   ~PointerArgument();
-  INTC_D3D12_FEATURE* value{};
-  bool copy{};
+  INTC_D3D12_FEATURE* Value{};
+  bool Copy{};
 };
 
 template <>
 struct PointerArgument<INTC_D3D12_RESOURCE_DESC> {
   PointerArgument(const INTC_D3D12_RESOURCE_DESC* value_)
-      : value(const_cast<INTC_D3D12_RESOURCE_DESC*>(value_)) {}
+      : Value(const_cast<INTC_D3D12_RESOURCE_DESC*>(value_)) {}
   PointerArgument() {}
   PointerArgument(const PointerArgument<INTC_D3D12_RESOURCE_DESC>& arg);
   PointerArgument& operator=(const PointerArgument<INTC_D3D12_RESOURCE_DESC>&) = delete;
   ~PointerArgument();
-  INTC_D3D12_RESOURCE_DESC* value{};
-  bool copy{};
+  INTC_D3D12_RESOURCE_DESC* Value{};
+  bool Copy{};
 };
 
 template <>
 struct PointerArgument<INTC_D3D12_COMMAND_QUEUE_DESC_0001> {
   PointerArgument(const INTC_D3D12_COMMAND_QUEUE_DESC_0001* value_)
-      : value(const_cast<INTC_D3D12_COMMAND_QUEUE_DESC_0001*>(value_)) {}
+      : Value(const_cast<INTC_D3D12_COMMAND_QUEUE_DESC_0001*>(value_)) {}
   PointerArgument() {}
   PointerArgument(const PointerArgument<INTC_D3D12_COMMAND_QUEUE_DESC_0001>& arg);
   PointerArgument& operator=(const PointerArgument<INTC_D3D12_COMMAND_QUEUE_DESC_0001>&) = delete;
   ~PointerArgument();
-  INTC_D3D12_COMMAND_QUEUE_DESC_0001* value{};
-  bool copy{};
+  INTC_D3D12_COMMAND_QUEUE_DESC_0001* Value{};
+  bool Copy{};
 };
 
 template <>
 struct PointerArgument<INTCExtensionInfo> {
   PointerArgument(const INTCExtensionInfo* value_)
-      : value(const_cast<INTCExtensionInfo*>(value_)) {}
+      : Value(const_cast<INTCExtensionInfo*>(value_)) {}
   PointerArgument() {}
   PointerArgument(const PointerArgument<INTCExtensionInfo>& arg);
   PointerArgument& operator=(const PointerArgument<INTCExtensionInfo>&) = delete;
   ~PointerArgument();
-  INTCExtensionInfo* value{};
-  bool copy{};
-  bool copyDeviceDriverDesc{};
-  bool copyDeviceDriverVersion{};
+  INTCExtensionInfo* Value{};
+  bool Copy{};
+  bool CopyDeviceDriverDesc{};
+  bool CopyDeviceDriverVersion{};
 };
 
 template <>
 struct ArrayArgument<INTCExtensionVersion> {
   ArrayArgument(const INTCExtensionVersion* value_, size_t size_)
-      : value(const_cast<INTCExtensionVersion*>(value_)), size(size_) {}
+      : Value(const_cast<INTCExtensionVersion*>(value_)), Size(size_) {}
   ArrayArgument() {}
   ArrayArgument(const ArrayArgument<INTCExtensionVersion>& arg);
   ArrayArgument& operator=(const ArrayArgument<INTCExtensionVersion>&) = delete;
   ~ArrayArgument();
-  INTCExtensionVersion* value{};
-  size_t size{};
-  bool copy{};
+  INTCExtensionVersion* Value{};
+  size_t Size{};
+  bool Copy{};
 };
 
 #pragma endregion
@@ -828,85 +828,85 @@ struct ArrayArgument<INTCExtensionVersion> {
 
 struct DML_BINDING_TABLE_DESC_Argument {
   DML_BINDING_TABLE_DESC_Argument(const DML_BINDING_TABLE_DESC* value_)
-      : value(const_cast<DML_BINDING_TABLE_DESC*>(value_)) {}
+      : Value(const_cast<DML_BINDING_TABLE_DESC*>(value_)) {}
   DML_BINDING_TABLE_DESC_Argument() {}
   DML_BINDING_TABLE_DESC_Argument(const DML_BINDING_TABLE_DESC_Argument& arg);
   DML_BINDING_TABLE_DESC_Argument& operator=(const DML_BINDING_TABLE_DESC_Argument&) = delete;
   ~DML_BINDING_TABLE_DESC_Argument();
-  DML_BINDING_TABLE_DESC* value{};
-  struct Data {
-    unsigned dispatchableKey{};
-    unsigned cpuDescHandleKey{};
-    unsigned cpuDescHandleIndex{};
-    unsigned gpuDescHandleKey{};
-    unsigned gpuDescHandleIndex{};
-  } data;
-  bool copy{};
+  DML_BINDING_TABLE_DESC* Value{};
+  struct BindingTableFields {
+    unsigned DispatchableKey{};
+    unsigned CpuDescHandleKey{};
+    unsigned CpuDescHandleIndex{};
+    unsigned GpuDescHandleKey{};
+    unsigned GpuDescHandleIndex{};
+  } TableFields;
+  bool Copy{};
 };
 
 struct DML_BINDING_DESC_Argument {
   DML_BINDING_DESC_Argument(const DML_BINDING_DESC* value_)
-      : value(const_cast<DML_BINDING_DESC*>(value_)) {}
+      : Value(const_cast<DML_BINDING_DESC*>(value_)) {}
   DML_BINDING_DESC_Argument() {}
   DML_BINDING_DESC_Argument(const DML_BINDING_DESC_Argument& arg);
   DML_BINDING_DESC_Argument& operator=(const DML_BINDING_DESC_Argument&) = delete;
   ~DML_BINDING_DESC_Argument();
-  DML_BINDING_DESC* value{};
-  size_t resourceKeysSize{};
-  std::vector<unsigned> resourceKeys{};
-  bool copy{};
+  DML_BINDING_DESC* Value{};
+  size_t ResourceKeysSize{};
+  std::vector<unsigned> ResourceKeys{};
+  bool Copy{};
 };
 
 struct DML_BINDING_DESCs_Argument {
   DML_BINDING_DESCs_Argument(const DML_BINDING_DESC* value_, unsigned size_)
-      : value(const_cast<DML_BINDING_DESC*>(value_)), size(size_) {}
+      : Value(const_cast<DML_BINDING_DESC*>(value_)), Size(size_) {}
   DML_BINDING_DESCs_Argument() {}
   DML_BINDING_DESCs_Argument(const DML_BINDING_DESCs_Argument& arg);
   DML_BINDING_DESCs_Argument& operator=(const DML_BINDING_DESCs_Argument&) = delete;
   ~DML_BINDING_DESCs_Argument();
-  DML_BINDING_DESC* value{};
-  size_t size{};
-  size_t resourceKeysSize{};
-  std::vector<unsigned> resourceKeys{};
-  bool copy{};
+  DML_BINDING_DESC* Value{};
+  size_t Size{};
+  size_t ResourceKeysSize{};
+  std::vector<unsigned> ResourceKeys{};
+  bool Copy{};
 };
 
 struct DML_GRAPH_DESC_Argument {
   DML_GRAPH_DESC_Argument(const DML_GRAPH_DESC* value_)
-      : value(const_cast<DML_GRAPH_DESC*>(value_)) {}
+      : Value(const_cast<DML_GRAPH_DESC*>(value_)) {}
   DML_GRAPH_DESC_Argument() {}
   DML_GRAPH_DESC_Argument(const DML_GRAPH_DESC_Argument& arg);
   DML_GRAPH_DESC_Argument& operator=(const DML_GRAPH_DESC_Argument&) = delete;
   ~DML_GRAPH_DESC_Argument();
-  DML_GRAPH_DESC* value{};
-  size_t operatorKeysSize{};
-  std::vector<unsigned> operatorKeys{};
-  bool copy{};
+  DML_GRAPH_DESC* Value{};
+  size_t OperatorKeysSize{};
+  std::vector<unsigned> OperatorKeys{};
+  bool Copy{};
 };
 
 struct DML_OPERATOR_DESC_Argument {
   DML_OPERATOR_DESC_Argument(const DML_OPERATOR_DESC* value_)
-      : value(const_cast<DML_OPERATOR_DESC*>(value_)) {}
+      : Value(const_cast<DML_OPERATOR_DESC*>(value_)) {}
   DML_OPERATOR_DESC_Argument() {}
   DML_OPERATOR_DESC_Argument(const DML_OPERATOR_DESC_Argument& arg);
   DML_OPERATOR_DESC_Argument& operator=(const DML_OPERATOR_DESC_Argument&) = delete;
   ~DML_OPERATOR_DESC_Argument();
-  DML_OPERATOR_DESC* value{};
-  bool copy{};
+  DML_OPERATOR_DESC* Value{};
+  bool Copy{};
 };
 
 struct DML_CheckFeatureSupport_BufferArgument {
   DML_CheckFeatureSupport_BufferArgument(const void* value_, size_t size_, DML_FEATURE feat)
-      : value{const_cast<void*>(value_)}, size{size_}, feature{feat} {}
+      : Value{const_cast<void*>(value_)}, Size{size_}, feature{feat} {}
   DML_CheckFeatureSupport_BufferArgument() {}
   DML_CheckFeatureSupport_BufferArgument(const DML_CheckFeatureSupport_BufferArgument& arg);
   DML_CheckFeatureSupport_BufferArgument& operator=(const DML_CheckFeatureSupport_BufferArgument&) =
       delete;
   ~DML_CheckFeatureSupport_BufferArgument();
-  void* value{};
-  size_t size{};
+  void* Value{};
+  size_t Size{};
   DML_FEATURE feature{};
-  bool copy{};
+  bool Copy{};
 };
 
 #pragma endregion
@@ -914,29 +914,29 @@ struct DML_CheckFeatureSupport_BufferArgument {
 #pragma region DStorage
 
 struct DSTORAGE_QUEUE_DESC_Argument {
-  DSTORAGE_QUEUE_DESC_Argument(const DSTORAGE_QUEUE_DESC* value)
-      : value(const_cast<DSTORAGE_QUEUE_DESC*>(value)) {}
+  DSTORAGE_QUEUE_DESC_Argument(const DSTORAGE_QUEUE_DESC* value_)
+      : Value(const_cast<DSTORAGE_QUEUE_DESC*>(value_)) {}
   DSTORAGE_QUEUE_DESC_Argument() {}
   DSTORAGE_QUEUE_DESC_Argument(const DSTORAGE_QUEUE_DESC_Argument& arg);
   DSTORAGE_QUEUE_DESC_Argument& operator=(const DSTORAGE_QUEUE_DESC_Argument&) = delete;
   ~DSTORAGE_QUEUE_DESC_Argument();
-  DSTORAGE_QUEUE_DESC* value{};
-  size_t deviceKey{};
-  bool copy{};
+  DSTORAGE_QUEUE_DESC* Value{};
+  size_t DeviceKey{};
+  bool Copy{};
 };
 
 struct DSTORAGE_REQUEST_Argument {
-  DSTORAGE_REQUEST_Argument(const DSTORAGE_REQUEST* value)
-      : value(const_cast<DSTORAGE_REQUEST*>(value)) {}
+  DSTORAGE_REQUEST_Argument(const DSTORAGE_REQUEST* value_)
+      : Value(const_cast<DSTORAGE_REQUEST*>(value_)) {}
   DSTORAGE_REQUEST_Argument() {}
   DSTORAGE_REQUEST_Argument(const DSTORAGE_REQUEST_Argument& arg);
   DSTORAGE_REQUEST_Argument& operator=(const DSTORAGE_REQUEST_Argument&) = delete;
   ~DSTORAGE_REQUEST_Argument();
-  DSTORAGE_REQUEST* value{};
-  unsigned fileKey{};
-  unsigned resourceKey{};
-  UINT64 newOffset{};
-  bool copy{};
+  DSTORAGE_REQUEST* Value{};
+  unsigned FileKey{};
+  unsigned ResourceKey{};
+  UINT64 NewOffset{};
+  bool Copy{};
 };
 
 #pragma endregion
@@ -945,36 +945,36 @@ struct DSTORAGE_REQUEST_Argument {
 
 struct xess_d3d12_init_params_t_Argument {
   xess_d3d12_init_params_t_Argument(const xess_d3d12_init_params_t* value_)
-      : value(const_cast<xess_d3d12_init_params_t*>(value_)) {}
+      : Value(const_cast<xess_d3d12_init_params_t*>(value_)) {}
   xess_d3d12_init_params_t_Argument() {}
   xess_d3d12_init_params_t_Argument(const xess_d3d12_init_params_t_Argument& arg);
   xess_d3d12_init_params_t_Argument& operator=(const xess_d3d12_init_params_t_Argument&) = delete;
   ~xess_d3d12_init_params_t_Argument();
-  xess_d3d12_init_params_t* value{};
-  unsigned key{}; // Used for subcapture restore order
-  unsigned tempBufferHeapKey{};
-  unsigned tempTextureHeapKey{};
-  unsigned pipelineLibraryKey{};
-  bool copy{};
+  xess_d3d12_init_params_t* Value{};
+  unsigned Key{}; // Used for subcapture restore order
+  unsigned TempBufferHeapKey{};
+  unsigned TempTextureHeapKey{};
+  unsigned PipelineLibraryKey{};
+  bool Copy{};
 };
 
 struct xess_d3d12_execute_params_t_Argument {
   xess_d3d12_execute_params_t_Argument(const xess_d3d12_execute_params_t* value_)
-      : value(const_cast<xess_d3d12_execute_params_t*>(value_)) {}
+      : Value(const_cast<xess_d3d12_execute_params_t*>(value_)) {}
   xess_d3d12_execute_params_t_Argument() {}
   xess_d3d12_execute_params_t_Argument(const xess_d3d12_execute_params_t_Argument& arg);
   xess_d3d12_execute_params_t_Argument& operator=(const xess_d3d12_execute_params_t_Argument&) =
       delete;
   ~xess_d3d12_execute_params_t_Argument();
-  xess_d3d12_execute_params_t* value{};
-  unsigned colorTextureKey{};
-  unsigned velocityTextureKey{};
-  unsigned depthTextureKey{};
-  unsigned exposureScaleTextureKey{};
-  unsigned responsivePixelMaskTextureKey{};
-  unsigned outputTextureKey{};
-  unsigned descriptorHeapKey{};
-  bool copy{};
+  xess_d3d12_execute_params_t* Value{};
+  unsigned ColorTextureKey{};
+  unsigned VelocityTextureKey{};
+  unsigned DepthTextureKey{};
+  unsigned ExposureScaleTextureKey{};
+  unsigned ResponsivePixelMaskTextureKey{};
+  unsigned OutputTextureKey{};
+  unsigned DescriptorHeapKey{};
+  bool Copy{};
 };
 
 #pragma endregion
@@ -984,54 +984,54 @@ struct xess_d3d12_execute_params_t_Argument {
 template <>
 struct PointerArgument<NVAPI_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_EX_PARAMS> {
   PointerArgument(const NVAPI_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_EX_PARAMS* value_)
-      : value(const_cast<NVAPI_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_EX_PARAMS*>(value_)) {}
+      : Value(const_cast<NVAPI_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_EX_PARAMS*>(value_)) {}
   PointerArgument() {}
   PointerArgument(
       const PointerArgument<NVAPI_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_EX_PARAMS>& arg);
   PointerArgument& operator=(
       const PointerArgument<NVAPI_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_EX_PARAMS>&) = delete;
   ~PointerArgument();
-  NVAPI_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_EX_PARAMS* value{};
-  unsigned destAccelerationStructureKey{};
-  unsigned destAccelerationStructureOffset{};
-  unsigned sourceAccelerationStructureKey{};
-  unsigned sourceAccelerationStructureOffset{};
-  unsigned scratchAccelerationStructureKey{};
-  unsigned scratchAccelerationStructureOffset{};
-  std::vector<unsigned> inputKeys{};
-  std::vector<unsigned> inputOffsets{};
-  std::vector<unsigned> destPostBuildBufferKeys{};
-  std::vector<unsigned> destPostBuildBufferOffsets{};
-  bool copy{};
+  NVAPI_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_EX_PARAMS* Value{};
+  unsigned DestAccelerationStructureKey{};
+  unsigned DestAccelerationStructureOffset{};
+  unsigned SourceAccelerationStructureKey{};
+  unsigned SourceAccelerationStructureOffset{};
+  unsigned ScratchAccelerationStructureKey{};
+  unsigned ScratchAccelerationStructureOffset{};
+  std::vector<unsigned> InputKeys{};
+  std::vector<unsigned> InputOffsets{};
+  std::vector<unsigned> DestPostBuildBufferKeys{};
+  std::vector<unsigned> DestPostBuildBufferOffsets{};
+  bool Copy{};
 };
 
 template <>
 struct PointerArgument<NVAPI_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_PARAMS> {
   PointerArgument(const NVAPI_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_PARAMS* value_)
-      : value(const_cast<NVAPI_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_PARAMS*>(value_)) {}
+      : Value(const_cast<NVAPI_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_PARAMS*>(value_)) {}
   PointerArgument() {}
   PointerArgument(const PointerArgument<NVAPI_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_PARAMS>& arg);
   PointerArgument& operator=(
       const PointerArgument<NVAPI_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_PARAMS>&) = delete;
   ~PointerArgument();
-  NVAPI_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_PARAMS* value{};
-  unsigned destOpacityMicromapArrayDataKey{};
-  unsigned destOpacityMicromapArrayDataOffset{};
-  unsigned inputBufferKey{};
-  unsigned inputBufferOffset{};
-  unsigned perOMMDescsKey{};
-  unsigned perOMMDescsOffset{};
-  unsigned scratchOpacityMicromapArrayDataKey{};
-  unsigned scratchOpacityMicromapArrayDataOffset{};
-  std::vector<unsigned> destPostBuildBufferKeys{};
-  std::vector<unsigned> destPostBuildBufferOffsets{};
-  bool copy{};
+  NVAPI_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_PARAMS* Value{};
+  unsigned DestOpacityMicromapArrayDataKey{};
+  unsigned DestOpacityMicromapArrayDataOffset{};
+  unsigned InputBufferKey{};
+  unsigned InputBufferOffset{};
+  unsigned PerOMMDescsKey{};
+  unsigned PerOMMDescsOffset{};
+  unsigned ScratchOpacityMicromapArrayDataKey{};
+  unsigned ScratchOpacityMicromapArrayDataOffset{};
+  std::vector<unsigned> DestPostBuildBufferKeys{};
+  std::vector<unsigned> DestPostBuildBufferOffsets{};
+  bool Copy{};
 };
 
 template <>
 struct PointerArgument<NVAPI_RAYTRACING_EXECUTE_MULTI_INDIRECT_CLUSTER_OPERATION_PARAMS> {
   PointerArgument(const NVAPI_RAYTRACING_EXECUTE_MULTI_INDIRECT_CLUSTER_OPERATION_PARAMS* value_)
-      : value(
+      : Value(
             const_cast<NVAPI_RAYTRACING_EXECUTE_MULTI_INDIRECT_CLUSTER_OPERATION_PARAMS*>(value_)) {
   }
   PointerArgument() {}
@@ -1041,20 +1041,20 @@ struct PointerArgument<NVAPI_RAYTRACING_EXECUTE_MULTI_INDIRECT_CLUSTER_OPERATION
       const PointerArgument<NVAPI_RAYTRACING_EXECUTE_MULTI_INDIRECT_CLUSTER_OPERATION_PARAMS>&) =
       delete;
   ~PointerArgument();
-  NVAPI_RAYTRACING_EXECUTE_MULTI_INDIRECT_CLUSTER_OPERATION_PARAMS* value{};
-  unsigned batchResultDataKey{};
-  unsigned batchResultDataOffset{};
-  unsigned batchScratchDataKey{};
-  unsigned batchScratchDataOffset{};
-  unsigned destinationAddressArrayKey{};
-  unsigned destinationAddressArrayOffset{};
-  unsigned resultSizeArrayKey{};
-  unsigned resultSizeArrayOffset{};
-  unsigned indirectArgArrayKey{};
-  unsigned indirectArgArrayOffset{};
-  unsigned indirectArgCountKey{};
-  unsigned indirectArgCountOffset{};
-  bool copy{};
+  NVAPI_RAYTRACING_EXECUTE_MULTI_INDIRECT_CLUSTER_OPERATION_PARAMS* Value{};
+  unsigned BatchResultDataKey{};
+  unsigned BatchResultDataOffset{};
+  unsigned BatchScratchDataKey{};
+  unsigned BatchScratchDataOffset{};
+  unsigned DestinationAddressArrayKey{};
+  unsigned DestinationAddressArrayOffset{};
+  unsigned ResultSizeArrayKey{};
+  unsigned ResultSizeArrayOffset{};
+  unsigned IndirectArgArrayKey{};
+  unsigned IndirectArgArrayOffset{};
+  unsigned IndirectArgCountKey{};
+  unsigned IndirectArgCountOffset{};
+  bool Copy{};
 };
 
 #pragma endregion
@@ -1062,14 +1062,14 @@ struct PointerArgument<NVAPI_RAYTRACING_EXECUTE_MULTI_INDIRECT_CLUSTER_OPERATION
 #pragma region XELL
 
 struct xell_frame_report_t_Argument {
-  xell_frame_report_t_Argument(xell_frame_report_t* value_) : value(value_) {}
+  xell_frame_report_t_Argument(xell_frame_report_t* value_) : Value(value_) {}
   xell_frame_report_t_Argument() {}
   xell_frame_report_t_Argument(const xell_frame_report_t_Argument& arg);
   xell_frame_report_t_Argument& operator=(const xell_frame_report_t_Argument&) = delete;
   ~xell_frame_report_t_Argument();
-  xell_frame_report_t* value{};
+  xell_frame_report_t* Value{};
   const size_t FRAME_REPORTS_COUNT = 64;
-  bool copy{};
+  bool Copy{};
 };
 
 #pragma endregion
@@ -1078,34 +1078,34 @@ struct xell_frame_report_t_Argument {
 
 struct xefg_swapchain_d3d12_init_params_t_Argument {
   xefg_swapchain_d3d12_init_params_t_Argument(const xefg_swapchain_d3d12_init_params_t* value_)
-      : value(const_cast<xefg_swapchain_d3d12_init_params_t*>(value_)) {}
+      : Value(const_cast<xefg_swapchain_d3d12_init_params_t*>(value_)) {}
   xefg_swapchain_d3d12_init_params_t_Argument() {}
   xefg_swapchain_d3d12_init_params_t_Argument(
       const xefg_swapchain_d3d12_init_params_t_Argument& arg);
   xefg_swapchain_d3d12_init_params_t_Argument& operator=(
       const xefg_swapchain_d3d12_init_params_t_Argument&) = delete;
   ~xefg_swapchain_d3d12_init_params_t_Argument();
-  xefg_swapchain_d3d12_init_params_t* value{};
-  unsigned key{};
-  unsigned applicationSwapChainKey{};
-  unsigned tempBufferHeapKey{};
-  unsigned tempTextureHeapKey{};
-  unsigned pipelineLibraryKey{};
-  bool copy{};
+  xefg_swapchain_d3d12_init_params_t* Value{};
+  unsigned Key{};
+  unsigned ApplicationSwapChainKey{};
+  unsigned TempBufferHeapKey{};
+  unsigned TempTextureHeapKey{};
+  unsigned PipelineLibraryKey{};
+  bool Copy{};
 };
 
 struct xefg_swapchain_d3d12_resource_data_t_Argument {
   xefg_swapchain_d3d12_resource_data_t_Argument(const xefg_swapchain_d3d12_resource_data_t* value_)
-      : value(const_cast<xefg_swapchain_d3d12_resource_data_t*>(value_)) {}
+      : Value(const_cast<xefg_swapchain_d3d12_resource_data_t*>(value_)) {}
   xefg_swapchain_d3d12_resource_data_t_Argument() {}
   xefg_swapchain_d3d12_resource_data_t_Argument(
       const xefg_swapchain_d3d12_resource_data_t_Argument& arg);
   xefg_swapchain_d3d12_resource_data_t_Argument& operator=(
       const xefg_swapchain_d3d12_resource_data_t_Argument&) = delete;
   ~xefg_swapchain_d3d12_resource_data_t_Argument();
-  xefg_swapchain_d3d12_resource_data_t* value{};
-  unsigned resourceKey{};
-  bool copy{};
+  xefg_swapchain_d3d12_resource_data_t* Value{};
+  unsigned ResourceKey{};
+  bool Copy{};
 };
 
 #pragma endregion

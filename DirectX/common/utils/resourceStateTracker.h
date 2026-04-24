@@ -19,29 +19,29 @@ namespace DirectX {
 
 class ResourceStateTracker {
 public:
-  void addResource(unsigned resourceKey, D3D12_RESOURCE_STATES initialState);
-  void addResource(unsigned resourceKey, D3D12_BARRIER_LAYOUT initialState);
-  void resourceBarrier(ID3D12GraphicsCommandList* commandList,
+  void AddResource(unsigned resourceKey, D3D12_RESOURCE_STATES initialState);
+  void AddResource(unsigned resourceKey, D3D12_BARRIER_LAYOUT initialState);
+  void ResourceBarrier(ID3D12GraphicsCommandList* commandList,
                        D3D12_RESOURCE_BARRIER* barriers,
-                       unsigned barriersNum,
+                       unsigned barrierCount,
                        unsigned* resourceKeys);
-  void resourceBarrier(ID3D12GraphicsCommandList* commandList,
+  void ResourceBarrier(ID3D12GraphicsCommandList* commandList,
                        D3D12_BARRIER_GROUP* barriers,
-                       unsigned barriersNum,
+                       unsigned barrierCount,
                        unsigned* resourceKeys);
-  void executeCommandLists(ID3D12GraphicsCommandList** commandLists, unsigned commandListNum);
-  D3D12_RESOURCE_STATES getResourceState(ID3D12GraphicsCommandList* commandList,
+  void ExecuteCommandLists(ID3D12GraphicsCommandList** commandLists, unsigned commandListCount);
+  D3D12_RESOURCE_STATES GetResourceState(ID3D12GraphicsCommandList* commandList,
                                          unsigned resourceKey,
                                          unsigned subresource);
 
 private:
-  D3D12_RESOURCE_STATES getResourceState(D3D12_BARRIER_LAYOUT layout);
+  D3D12_RESOURCE_STATES GetResourceState(D3D12_BARRIER_LAYOUT layout);
 
 private:
   using ResourceStatesBySubresource = std::map<unsigned, D3D12_RESOURCE_STATES>;
   using ResourceStatesByKey = std::unordered_map<unsigned, ResourceStatesBySubresource>;
-  ResourceStatesByKey resourceStates_;
-  std::unordered_map<ID3D12GraphicsCommandList*, ResourceStatesByKey> resourceStatesByCommandList_;
+  ResourceStatesByKey m_ResourceStates;
+  std::unordered_map<ID3D12GraphicsCommandList*, ResourceStatesByKey> m_ResourceStatesByCommandList;
 };
 
 } // namespace DirectX

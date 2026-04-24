@@ -20,12 +20,12 @@ public:
   PrintStatusLayer() : Layer("PrintStatus"){};
   ~PrintStatusLayer() = default;
 
-  void post(StateRestoreBeginCommand& c) override;
-  void post(StateRestoreEndCommand& c) override;
-  void post(MarkerUInt64Command& c) override;
+  void Post(StateRestoreBeginCommand& c) override;
+  void Post(StateRestoreEndCommand& c) override;
+  void Post(MarkerUInt64Command& c) override;
 
 private:
-  std::chrono::steady_clock::time_point initialTime_;
+  std::chrono::steady_clock::time_point m_InitialTime;
 };
 
 } // namespace DirectX

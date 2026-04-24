@@ -18,33 +18,33 @@ namespace DirectX {
 
 class DescriptorRootSignatureService {
 public:
-  DescriptorRootSignatureService() {}
+  DescriptorRootSignatureService() = default;
   DescriptorRootSignatureService(const DescriptorRootSignatureService&) = delete;
   DescriptorRootSignatureService& operator=(const DescriptorRootSignatureService&) = delete;
   ~DescriptorRootSignatureService();
-  void createRootSignature(ID3D12DeviceCreateRootSignatureCommand& c);
-  std::vector<unsigned> getDescriptorTableIndexes(unsigned rootSignatureKey,
+  void CreateRootSignature(ID3D12DeviceCreateRootSignatureCommand& command);
+  std::vector<unsigned> GetDescriptorTableIndexes(unsigned rootSignatureKey,
                                                   unsigned descriptorHeapKey,
                                                   unsigned parameterIndex,
                                                   unsigned baseIndex,
                                                   unsigned heapNumDescriptors,
                                                   bool checkRetrieved = true);
-  std::vector<unsigned> getBindlessDescriptorIndexes(unsigned rootSignatureKey,
+  std::vector<unsigned> GetBindlessDescriptorIndexes(unsigned rootSignatureKey,
                                                      unsigned descriptorHeapKey,
                                                      D3D12_DESCRIPTOR_HEAP_TYPE heapType,
                                                      unsigned heapNumDescriptors,
                                                      bool checkRetrieved = true);
-  D3D12_ROOT_SIGNATURE_DESC* getRootSignatureDesc(unsigned rootSignatureKey);
+  D3D12_ROOT_SIGNATURE_DESC* GetRootSignatureDesc(unsigned rootSignatureKey);
 
 private:
-  bool unboundedRetrieved(unsigned descriptorHeapKey, unsigned index);
-  bool boundedRetrieved(unsigned descriptorHeapKey, unsigned index, unsigned numDescriptors);
+  bool UnboundedRetrieved(unsigned descriptorHeapKey, unsigned index);
+  bool BoundedRetrieved(unsigned descriptorHeapKey, unsigned index, unsigned numDescriptors);
 
 private:
-  std::unordered_map<unsigned, D3D12_ROOT_SIGNATURE_DESC*> rootSignatureDescs_;
-  std::unordered_map<unsigned, unsigned> unboundedRetrieved_;
-  std::unordered_map<unsigned, std::unordered_map<unsigned, unsigned>> boundedRetrieved_;
-  std::mutex mutex_;
+  std::unordered_map<unsigned, D3D12_ROOT_SIGNATURE_DESC*> m_RootSignatureDescs;
+  std::unordered_map<unsigned, unsigned> m_UnboundedRetrieved;
+  std::unordered_map<unsigned, std::unordered_map<unsigned, unsigned>> m_BoundedRetrieved;
+  std::mutex m_Mutex;
 };
 
 } // namespace DirectX

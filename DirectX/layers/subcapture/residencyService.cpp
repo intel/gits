@@ -14,67 +14,67 @@
 namespace gits {
 namespace DirectX {
 
-void ResidencyService::createNotResident(const unsigned key, const unsigned deviceKey) {
-  GITS_ASSERT(residency_.find(key) == residency_.end());
-  residency_[key] = {0, deviceKey, true};
+void ResidencyService::CreateNotResident(const unsigned key, const unsigned DeviceKey) {
+  GITS_ASSERT(m_Residency.find(key) == m_Residency.end());
+  m_Residency[key] = {0, DeviceKey, true};
 }
 
-void ResidencyService::makeResident(const std::vector<unsigned>& keys, const unsigned deviceKey) {
+void ResidencyService::MakeResident(const std::vector<unsigned>& keys, const unsigned DeviceKey) {
   for (const auto key : keys) {
-    if (residency_.find(key) == residency_.end()) {
-      residency_[key] = {2, deviceKey};
+    if (m_Residency.find(key) == m_Residency.end()) {
+      m_Residency[key] = {2, DeviceKey};
     } else {
-      ++residency_[key].residencyCount;
+      ++m_Residency[key].ResidencyCount;
     }
   }
 }
 
-void ResidencyService::evict(const std::vector<unsigned>& keys, const unsigned deviceKey) {
+void ResidencyService::Evict(const std::vector<unsigned>& keys, const unsigned DeviceKey) {
   for (const auto key : keys) {
-    if (residency_.find(key) == residency_.end()) {
-      residency_[key] = {0, deviceKey};
+    if (m_Residency.find(key) == m_Residency.end()) {
+      m_Residency[key] = {0, DeviceKey};
     } else {
-      if (residency_[key].residencyCount > 0) {
-        --residency_[key].residencyCount;
+      if (m_Residency[key].ResidencyCount > 0) {
+        --m_Residency[key].ResidencyCount;
       }
     }
   }
 }
 
-void ResidencyService::destroyObject(const unsigned key) {
-  residency_.erase(key);
+void ResidencyService::DestroyObject(const unsigned key) {
+  m_Residency.erase(key);
 }
 
-void gits::DirectX::ResidencyService::restoreResidency() {
-  for (const auto& [objectKey, residencyInfo] : residency_) {
-    if (!stateService_.stateRestored(objectKey)) {
+void gits::DirectX::ResidencyService::RestoreResidency() {
+  for (const auto& [objectKey, residencyInfo] : m_Residency) {
+    if (!m_StateService.StateRestored(objectKey)) {
       continue;
     }
-    if (residencyInfo.residencyCount >= 2 ||
-        (residencyInfo.createdNotResident && residencyInfo.residencyCount == 1)) {
-      const auto repeatCount = residencyInfo.createdNotResident ? residencyInfo.residencyCount
-                                                                : residencyInfo.residencyCount - 1;
+    if (residencyInfo.ResidencyCount >= 2 ||
+        (residencyInfo.CreatedNotResident && residencyInfo.ResidencyCount == 1)) {
+      const auto repeatCount = residencyInfo.CreatedNotResident ? residencyInfo.ResidencyCount
+                                                                : residencyInfo.ResidencyCount - 1;
       std::vector<unsigned> objectKeyRepeat(repeatCount, objectKey);
 
       ID3D12DeviceMakeResidentCommand c;
-      c.key = stateService_.getUniqueCommandKey();
-      c.object_.key = residencyInfo.deviceKey;
-      c.NumObjects_.value = objectKeyRepeat.size();
-      c.ppObjects_.size = objectKeyRepeat.size();
-      c.ppObjects_.keys = std::move(objectKeyRepeat);
+      c.Key = m_StateService.GetUniqueCommandKey();
+      c.m_Object.Key = residencyInfo.DeviceKey;
+      c.m_NumObjects.Value = objectKeyRepeat.size();
+      c.m_ppObjects.Size = objectKeyRepeat.size();
+      c.m_ppObjects.Keys = std::move(objectKeyRepeat);
       ID3D12Pageable* fakePtr = reinterpret_cast<ID3D12Pageable*>(1);
-      c.ppObjects_.value = &fakePtr;
-      stateService_.getRecorder().record(ID3D12DeviceMakeResidentSerializer(c));
-    } else if (residencyInfo.residencyCount == 0 && !residencyInfo.createdNotResident) {
+      c.m_ppObjects.Value = &fakePtr;
+      m_StateService.GetRecorder().Record(ID3D12DeviceMakeResidentSerializer(c));
+    } else if (residencyInfo.ResidencyCount == 0 && !residencyInfo.CreatedNotResident) {
       ID3D12DeviceEvictCommand c;
-      c.key = stateService_.getUniqueCommandKey();
-      c.object_.key = residencyInfo.deviceKey;
-      c.NumObjects_.value = 1;
-      c.ppObjects_.size = 1;
-      c.ppObjects_.keys = {objectKey};
+      c.Key = m_StateService.GetUniqueCommandKey();
+      c.m_Object.Key = residencyInfo.DeviceKey;
+      c.m_NumObjects.Value = 1;
+      c.m_ppObjects.Size = 1;
+      c.m_ppObjects.Keys = {objectKey};
       ID3D12Pageable* fakePtr = reinterpret_cast<ID3D12Pageable*>(1);
-      c.ppObjects_.value = &fakePtr;
-      stateService_.getRecorder().record(ID3D12DeviceEvictSerializer(c));
+      c.m_ppObjects.Value = &fakePtr;
+      m_StateService.GetRecorder().Record(ID3D12DeviceEvictSerializer(c));
     }
   }
 }

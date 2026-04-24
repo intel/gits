@@ -12,472 +12,473 @@
 namespace gits {
 namespace DirectX {
 
-unsigned getSize(const MarkerUInt64Command& command) {
-  return getSize(command.value_);
+unsigned GetSize(const MarkerUInt64Command& command) {
+  return GetSize(command.m_Value);
 }
 
-void encode(const MarkerUInt64Command& command, char* dest) {
+void Encode(const MarkerUInt64Command& command, char* dest) {
   unsigned offset = 0;
-  encode(dest, offset, command.value_);
+  Encode(dest, offset, command.m_Value);
 }
 
-unsigned getSize(const IUnknownQueryInterfaceCommand& command) {
-  return getSize(command.key) + getSize(command.threadId) + getSize(command.object_.key) +
-         getSize(command.riid_) + getSize(command.ppvObject_) + getSize(command.result_);
+unsigned GetSize(const IUnknownQueryInterfaceCommand& command) {
+  return GetSize(command.Key) + GetSize(command.ThreadId) + GetSize(command.m_Object.Key) +
+         GetSize(command.m_riid) + GetSize(command.m_ppvObject) + GetSize(command.m_Result);
 }
 
-void encode(const IUnknownQueryInterfaceCommand& command, char* dest) {
+void Encode(const IUnknownQueryInterfaceCommand& command, char* dest) {
   unsigned offset = 0;
-  encode(dest, offset, command.key);
-  encode(dest, offset, command.threadId);
-  encode(dest, offset, command.object_.key);
-  encode(dest, offset, command.riid_);
-  encode(dest, offset, command.ppvObject_);
-  encode(dest, offset, command.result_);
+  Encode(dest, offset, command.Key);
+  Encode(dest, offset, command.ThreadId);
+  Encode(dest, offset, command.m_Object.Key);
+  Encode(dest, offset, command.m_riid);
+  Encode(dest, offset, command.m_ppvObject);
+  Encode(dest, offset, command.m_Result);
 }
 
-unsigned getSize(const IUnknownAddRefCommand& command) {
-  return getSize(command.key) + getSize(command.threadId) + getSize(command.object_.key) +
-         getSize(command.result_);
+unsigned GetSize(const IUnknownAddRefCommand& command) {
+  return GetSize(command.Key) + GetSize(command.ThreadId) + GetSize(command.m_Object.Key) +
+         GetSize(command.m_Result);
 }
 
-void encode(const IUnknownAddRefCommand& command, char* dest) {
+void Encode(const IUnknownAddRefCommand& command, char* dest) {
   unsigned offset = 0;
-  encode(dest, offset, command.key);
-  encode(dest, offset, command.threadId);
-  encode(dest, offset, command.object_.key);
-  encode(dest, offset, command.result_);
+  Encode(dest, offset, command.Key);
+  Encode(dest, offset, command.ThreadId);
+  Encode(dest, offset, command.m_Object.Key);
+  Encode(dest, offset, command.m_Result);
 }
 
-unsigned getSize(const IUnknownReleaseCommand& command) {
-  return getSize(command.key) + getSize(command.threadId) + getSize(command.object_.key) +
-         getSize(command.result_);
+unsigned GetSize(const IUnknownReleaseCommand& command) {
+  return GetSize(command.Key) + GetSize(command.ThreadId) + GetSize(command.m_Object.Key) +
+         GetSize(command.m_Result);
 }
 
-void encode(const IUnknownReleaseCommand& command, char* dest) {
+void Encode(const IUnknownReleaseCommand& command, char* dest) {
   unsigned offset = 0;
-  encode(dest, offset, command.key);
-  encode(dest, offset, command.threadId);
-  encode(dest, offset, command.object_.key);
-  encode(dest, offset, command.result_);
+  Encode(dest, offset, command.Key);
+  Encode(dest, offset, command.ThreadId);
+  Encode(dest, offset, command.m_Object.Key);
+  Encode(dest, offset, command.m_Result);
 }
 
-unsigned getSize(const CreateWindowMetaCommand& command) {
-  return getSize(command.key) + getSize(command.threadId) + getSize(command.hWnd_) +
-         getSize(command.width_) + getSize(command.height_);
+unsigned GetSize(const CreateWindowMetaCommand& command) {
+  return GetSize(command.Key) + GetSize(command.ThreadId) + GetSize(command.m_hWnd) +
+         GetSize(command.m_width) + GetSize(command.m_height);
 }
 
-void encode(const CreateWindowMetaCommand& command, char* dest) {
+void Encode(const CreateWindowMetaCommand& command, char* dest) {
   unsigned offset = 0;
-  encode(dest, offset, command.key);
-  encode(dest, offset, command.threadId);
-  encode(dest, offset, command.hWnd_);
-  encode(dest, offset, command.width_);
-  encode(dest, offset, command.height_);
+  Encode(dest, offset, command.Key);
+  Encode(dest, offset, command.ThreadId);
+  Encode(dest, offset, command.m_hWnd);
+  Encode(dest, offset, command.m_width);
+  Encode(dest, offset, command.m_height);
 }
 
-unsigned getSize(const MappedDataMetaCommand& command) {
-  return getSize(command.key) + getSize(command.threadId) + getSize(command.resource_) +
-         getSize(command.mappedAddress_) + getSize(command.offset_) + getSize(command.data_);
+unsigned GetSize(const MappedDataMetaCommand& command) {
+  return GetSize(command.Key) + GetSize(command.ThreadId) + GetSize(command.m_resource) +
+         GetSize(command.m_mappedAddress) + GetSize(command.m_offset) + GetSize(command.m_data);
 }
 
-void encode(const MappedDataMetaCommand& command, char* dest) {
+void Encode(const MappedDataMetaCommand& command, char* dest) {
   unsigned offset = 0;
-  encode(dest, offset, command.key);
-  encode(dest, offset, command.threadId);
-  encode(dest, offset, command.resource_);
-  encode(dest, offset, command.mappedAddress_);
-  encode(dest, offset, command.offset_);
-  encode(dest, offset, command.data_);
+  Encode(dest, offset, command.Key);
+  Encode(dest, offset, command.ThreadId);
+  Encode(dest, offset, command.m_resource);
+  Encode(dest, offset, command.m_mappedAddress);
+  Encode(dest, offset, command.m_offset);
+  Encode(dest, offset, command.m_data);
 }
 
-unsigned getSize(const CreateHeapAllocationMetaCommand& command) {
-  return getSize(command.key) + getSize(command.threadId) + getSize(command.heap_) +
-         getSize(command.address_) + getSize(command.data_);
+unsigned GetSize(const CreateHeapAllocationMetaCommand& command) {
+  return GetSize(command.Key) + GetSize(command.ThreadId) + GetSize(command.m_heap) +
+         GetSize(command.m_address) + GetSize(command.m_data);
 }
 
-void encode(const CreateHeapAllocationMetaCommand& command, char* dest) {
+void Encode(const CreateHeapAllocationMetaCommand& command, char* dest) {
   unsigned offset = 0;
-  encode(dest, offset, command.key);
-  encode(dest, offset, command.threadId);
-  encode(dest, offset, command.heap_);
-  encode(dest, offset, command.address_);
-  encode(dest, offset, command.data_);
+  Encode(dest, offset, command.Key);
+  Encode(dest, offset, command.ThreadId);
+  Encode(dest, offset, command.m_heap);
+  Encode(dest, offset, command.m_address);
+  Encode(dest, offset, command.m_data);
 }
 
-unsigned getSize(const WaitForFenceSignaledCommand& command) {
-  return getSize(command.key) + getSize(command.threadId) + getSize(command.event_) +
-         getSize(command.fence_) + getSize(command.value_);
+unsigned GetSize(const WaitForFenceSignaledCommand& command) {
+  return GetSize(command.Key) + GetSize(command.ThreadId) + GetSize(command.m_event) +
+         GetSize(command.m_fence) + GetSize(command.m_Value);
 }
 
-void encode(const WaitForFenceSignaledCommand& command, char* dest) {
+void Encode(const WaitForFenceSignaledCommand& command, char* dest) {
   unsigned offset = 0;
-  encode(dest, offset, command.key);
-  encode(dest, offset, command.threadId);
-  encode(dest, offset, command.event_);
-  encode(dest, offset, command.fence_);
-  encode(dest, offset, command.value_);
+  Encode(dest, offset, command.Key);
+  Encode(dest, offset, command.ThreadId);
+  Encode(dest, offset, command.m_event);
+  Encode(dest, offset, command.m_fence);
+  Encode(dest, offset, command.m_Value);
 }
 
-unsigned getSize(const DllContainerMetaCommand& command) {
-  return getSize(command.key) + getSize(command.threadId) + getSize(command.dllName_) +
-         getSize(command.dllData_);
+unsigned GetSize(const DllContainerMetaCommand& command) {
+  return GetSize(command.Key) + GetSize(command.ThreadId) + GetSize(command.m_dllName) +
+         GetSize(command.m_dllData);
 }
 
-void encode(const DllContainerMetaCommand& command, char* dest) {
+void Encode(const DllContainerMetaCommand& command, char* dest) {
   unsigned offset = 0;
-  encode(dest, offset, command.key);
-  encode(dest, offset, command.threadId);
-  encode(dest, offset, command.dllName_);
-  encode(dest, offset, command.dllData_);
+  Encode(dest, offset, command.Key);
+  Encode(dest, offset, command.ThreadId);
+  Encode(dest, offset, command.m_dllName);
+  Encode(dest, offset, command.m_dllData);
 }
 
-unsigned getSize(const INTC_D3D12_GetSupportedVersionsCommand& command) {
-  return getSize(command.key) + getSize(command.threadId) + getSize(command.pDevice_) +
-         getSize(command.pSupportedExtVersions_) + getSize(command.pSupportedExtVersionsCount_) +
-         getSize(command.result_);
+unsigned GetSize(const INTC_D3D12_GetSupportedVersionsCommand& command) {
+  return GetSize(command.Key) + GetSize(command.ThreadId) + GetSize(command.m_pDevice) +
+         GetSize(command.m_pSupportedExtVersions) + GetSize(command.m_pSupportedExtVersionsCount) +
+         GetSize(command.m_Result);
 }
 
-void encode(const INTC_D3D12_GetSupportedVersionsCommand& command, char* dest) {
+void Encode(const INTC_D3D12_GetSupportedVersionsCommand& command, char* dest) {
   unsigned offset = 0;
-  encode(dest, offset, command.key);
-  encode(dest, offset, command.threadId);
-  encode(dest, offset, command.pDevice_);
-  encode(dest, offset, command.pSupportedExtVersions_);
-  encode(dest, offset, command.pSupportedExtVersionsCount_);
-  encode(dest, offset, command.result_);
+  Encode(dest, offset, command.Key);
+  Encode(dest, offset, command.ThreadId);
+  Encode(dest, offset, command.m_pDevice);
+  Encode(dest, offset, command.m_pSupportedExtVersions);
+  Encode(dest, offset, command.m_pSupportedExtVersionsCount);
+  Encode(dest, offset, command.m_Result);
 }
 
-unsigned getSize(const INTC_D3D12_CreateDeviceExtensionContextCommand& command) {
-  return getSize(command.key) + getSize(command.threadId) + getSize(command.pDevice_) +
-         getSize(command.ppExtensionContext_) + getSize(command.pExtensionInfo_) +
-         getSize(command.pExtensionAppInfo_) + getSize(command.result_);
+unsigned GetSize(const INTC_D3D12_CreateDeviceExtensionContextCommand& command) {
+  return GetSize(command.Key) + GetSize(command.ThreadId) + GetSize(command.m_pDevice) +
+         GetSize(command.m_ppExtensionContext) + GetSize(command.m_pExtensionInfo) +
+         GetSize(command.m_pExtensionAppInfo) + GetSize(command.m_Result);
 }
 
-void encode(const INTC_D3D12_CreateDeviceExtensionContextCommand& command, char* dest) {
+void Encode(const INTC_D3D12_CreateDeviceExtensionContextCommand& command, char* dest) {
   unsigned offset = 0;
-  encode(dest, offset, command.key);
-  encode(dest, offset, command.threadId);
-  encode(dest, offset, command.pDevice_);
-  encode(dest, offset, command.ppExtensionContext_);
-  encode(dest, offset, command.pExtensionInfo_);
-  encode(dest, offset, command.pExtensionAppInfo_);
-  encode(dest, offset, command.result_);
+  Encode(dest, offset, command.Key);
+  Encode(dest, offset, command.ThreadId);
+  Encode(dest, offset, command.m_pDevice);
+  Encode(dest, offset, command.m_ppExtensionContext);
+  Encode(dest, offset, command.m_pExtensionInfo);
+  Encode(dest, offset, command.m_pExtensionAppInfo);
+  Encode(dest, offset, command.m_Result);
 }
 
-unsigned getSize(const INTC_D3D12_CreateDeviceExtensionContext1Command& command) {
-  return getSize(command.key) + getSize(command.threadId) + getSize(command.pDevice_) +
-         getSize(command.ppExtensionContext_) + getSize(command.pExtensionInfo_) +
-         getSize(command.pExtensionAppInfo_) + getSize(command.result_);
+unsigned GetSize(const INTC_D3D12_CreateDeviceExtensionContext1Command& command) {
+  return GetSize(command.Key) + GetSize(command.ThreadId) + GetSize(command.m_pDevice) +
+         GetSize(command.m_ppExtensionContext) + GetSize(command.m_pExtensionInfo) +
+         GetSize(command.m_pExtensionAppInfo) + GetSize(command.m_Result);
 }
 
-void encode(const INTC_D3D12_CreateDeviceExtensionContext1Command& command, char* dest) {
+void Encode(const INTC_D3D12_CreateDeviceExtensionContext1Command& command, char* dest) {
   unsigned offset = 0;
-  encode(dest, offset, command.key);
-  encode(dest, offset, command.threadId);
-  encode(dest, offset, command.pDevice_);
-  encode(dest, offset, command.ppExtensionContext_);
-  encode(dest, offset, command.pExtensionInfo_);
-  encode(dest, offset, command.pExtensionAppInfo_);
-  encode(dest, offset, command.result_);
+  Encode(dest, offset, command.Key);
+  Encode(dest, offset, command.ThreadId);
+  Encode(dest, offset, command.m_pDevice);
+  Encode(dest, offset, command.m_ppExtensionContext);
+  Encode(dest, offset, command.m_pExtensionInfo);
+  Encode(dest, offset, command.m_pExtensionAppInfo);
+  Encode(dest, offset, command.m_Result);
 }
 
-unsigned getSize(const INTC_D3D12_SetApplicationInfoCommand& command) {
-  return getSize(command.key) + getSize(command.threadId) + getSize(command.pExtensionAppInfo_) +
-         getSize(command.result_);
+unsigned GetSize(const INTC_D3D12_SetApplicationInfoCommand& command) {
+  return GetSize(command.Key) + GetSize(command.ThreadId) + GetSize(command.m_pExtensionAppInfo) +
+         GetSize(command.m_Result);
 }
 
-void encode(const INTC_D3D12_SetApplicationInfoCommand& command, char* dest) {
+void Encode(const INTC_D3D12_SetApplicationInfoCommand& command, char* dest) {
   unsigned offset = 0;
-  encode(dest, offset, command.key);
-  encode(dest, offset, command.threadId);
-  encode(dest, offset, command.pExtensionAppInfo_);
-  encode(dest, offset, command.result_);
+  Encode(dest, offset, command.Key);
+  Encode(dest, offset, command.ThreadId);
+  Encode(dest, offset, command.m_pExtensionAppInfo);
+  Encode(dest, offset, command.m_Result);
 }
 
-unsigned getSize(const INTC_DestroyDeviceExtensionContextCommand& command) {
-  return getSize(command.key) + getSize(command.threadId) + getSize(command.ppExtensionContext_) +
-         getSize(command.result_);
+unsigned GetSize(const INTC_DestroyDeviceExtensionContextCommand& command) {
+  return GetSize(command.Key) + GetSize(command.ThreadId) + GetSize(command.m_ppExtensionContext) +
+         GetSize(command.m_Result);
 }
 
-void encode(const INTC_DestroyDeviceExtensionContextCommand& command, char* dest) {
+void Encode(const INTC_DestroyDeviceExtensionContextCommand& command, char* dest) {
   unsigned offset = 0;
-  encode(dest, offset, command.key);
-  encode(dest, offset, command.threadId);
-  encode(dest, offset, command.ppExtensionContext_);
-  encode(dest, offset, command.result_);
+  Encode(dest, offset, command.Key);
+  Encode(dest, offset, command.ThreadId);
+  Encode(dest, offset, command.m_ppExtensionContext);
+  Encode(dest, offset, command.m_Result);
 }
 
-unsigned getSize(const INTC_D3D12_CheckFeatureSupportCommand& command) {
-  return getSize(command.key) + getSize(command.threadId) + getSize(command.pExtensionContext_) +
-         getSize(command.Feature_) + getSize(command.pFeatureSupportData_) +
-         getSize(command.FeatureSupportDataSize_) + getSize(command.result_);
+unsigned GetSize(const INTC_D3D12_CheckFeatureSupportCommand& command) {
+  return GetSize(command.Key) + GetSize(command.ThreadId) + GetSize(command.m_pExtensionContext) +
+         GetSize(command.m_Feature) + GetSize(command.m_pFeatureSupportData) +
+         GetSize(command.m_FeatureSupportDataSize) + GetSize(command.m_Result);
 }
 
-void encode(const INTC_D3D12_CheckFeatureSupportCommand& command, char* dest) {
+void Encode(const INTC_D3D12_CheckFeatureSupportCommand& command, char* dest) {
   unsigned offset = 0;
-  encode(dest, offset, command.key);
-  encode(dest, offset, command.threadId);
-  encode(dest, offset, command.pExtensionContext_);
-  encode(dest, offset, command.Feature_);
-  encode(dest, offset, command.pFeatureSupportData_);
-  encode(dest, offset, command.FeatureSupportDataSize_);
-  encode(dest, offset, command.result_);
+  Encode(dest, offset, command.Key);
+  Encode(dest, offset, command.ThreadId);
+  Encode(dest, offset, command.m_pExtensionContext);
+  Encode(dest, offset, command.m_Feature);
+  Encode(dest, offset, command.m_pFeatureSupportData);
+  Encode(dest, offset, command.m_FeatureSupportDataSize);
+  Encode(dest, offset, command.m_Result);
 }
 
-unsigned getSize(const INTC_D3D12_CreateCommandQueueCommand& command) {
-  return getSize(command.key) + getSize(command.threadId) + getSize(command.pExtensionContext_) +
-         getSize(command.pDesc_) + getSize(command.riid_) + getSize(command.ppCommandQueue_) +
-         getSize(command.result_);
+unsigned GetSize(const INTC_D3D12_CreateCommandQueueCommand& command) {
+  return GetSize(command.Key) + GetSize(command.ThreadId) + GetSize(command.m_pExtensionContext) +
+         GetSize(command.m_pDesc) + GetSize(command.m_riid) + GetSize(command.m_ppCommandQueue) +
+         GetSize(command.m_Result);
 }
 
-void encode(const INTC_D3D12_CreateCommandQueueCommand& command, char* dest) {
+void Encode(const INTC_D3D12_CreateCommandQueueCommand& command, char* dest) {
   unsigned offset = 0;
-  encode(dest, offset, command.key);
-  encode(dest, offset, command.threadId);
-  encode(dest, offset, command.pExtensionContext_);
-  encode(dest, offset, command.pDesc_);
-  encode(dest, offset, command.riid_);
-  encode(dest, offset, command.ppCommandQueue_);
-  encode(dest, offset, command.result_);
+  Encode(dest, offset, command.Key);
+  Encode(dest, offset, command.ThreadId);
+  Encode(dest, offset, command.m_pExtensionContext);
+  Encode(dest, offset, command.m_pDesc);
+  Encode(dest, offset, command.m_riid);
+  Encode(dest, offset, command.m_ppCommandQueue);
+  Encode(dest, offset, command.m_Result);
 }
 
-unsigned getSize(const INTC_D3D12_CreateReservedResourceCommand& command) {
-  return getSize(command.key) + getSize(command.threadId) + getSize(command.pExtensionContext_) +
-         getSize(command.pDesc_) + getSize(command.InitialState_) +
-         getSize(command.pOptimizedClearValue_) + getSize(command.riid_) +
-         getSize(command.ppvResource_) + getSize(command.result_);
+unsigned GetSize(const INTC_D3D12_CreateReservedResourceCommand& command) {
+  return GetSize(command.Key) + GetSize(command.ThreadId) + GetSize(command.m_pExtensionContext) +
+         GetSize(command.m_pDesc) + GetSize(command.m_InitialState) +
+         GetSize(command.m_pOptimizedClearValue) + GetSize(command.m_riid) +
+         GetSize(command.m_ppvResource) + GetSize(command.m_Result);
 }
 
-void encode(const INTC_D3D12_CreateReservedResourceCommand& command, char* dest) {
+void Encode(const INTC_D3D12_CreateReservedResourceCommand& command, char* dest) {
   unsigned offset = 0;
-  encode(dest, offset, command.key);
-  encode(dest, offset, command.threadId);
-  encode(dest, offset, command.pExtensionContext_);
-  encode(dest, offset, command.pDesc_);
-  encode(dest, offset, command.InitialState_);
-  encode(dest, offset, command.pOptimizedClearValue_);
-  encode(dest, offset, command.riid_);
-  encode(dest, offset, command.ppvResource_);
-  encode(dest, offset, command.result_);
+  Encode(dest, offset, command.Key);
+  Encode(dest, offset, command.ThreadId);
+  Encode(dest, offset, command.m_pExtensionContext);
+  Encode(dest, offset, command.m_pDesc);
+  Encode(dest, offset, command.m_InitialState);
+  Encode(dest, offset, command.m_pOptimizedClearValue);
+  Encode(dest, offset, command.m_riid);
+  Encode(dest, offset, command.m_ppvResource);
+  Encode(dest, offset, command.m_Result);
 }
 
-unsigned getSize(const INTC_D3D12_SetFeatureSupportCommand& command) {
-  return getSize(command.key) + getSize(command.threadId) + getSize(command.pExtensionContext_) +
-         getSize(command.pFeature_) + getSize(command.result_);
+unsigned GetSize(const INTC_D3D12_SetFeatureSupportCommand& command) {
+  return GetSize(command.Key) + GetSize(command.ThreadId) + GetSize(command.m_pExtensionContext) +
+         GetSize(command.m_pFeature) + GetSize(command.m_Result);
 }
 
-void encode(const INTC_D3D12_SetFeatureSupportCommand& command, char* dest) {
+void Encode(const INTC_D3D12_SetFeatureSupportCommand& command, char* dest) {
   unsigned offset = 0;
-  encode(dest, offset, command.key);
-  encode(dest, offset, command.threadId);
-  encode(dest, offset, command.pExtensionContext_);
-  encode(dest, offset, command.pFeature_);
-  encode(dest, offset, command.result_);
+  Encode(dest, offset, command.Key);
+  Encode(dest, offset, command.ThreadId);
+  Encode(dest, offset, command.m_pExtensionContext);
+  Encode(dest, offset, command.m_pFeature);
+  Encode(dest, offset, command.m_Result);
 }
 
-unsigned getSize(const INTC_D3D12_GetResourceAllocationInfoCommand& command) {
-  return getSize(command.key) + getSize(command.threadId) + getSize(command.pExtensionContext_) +
-         getSize(command.visibleMask_) + getSize(command.numResourceDescs_) +
-         getSize(command.pResourceDescs_) + getSize(command.result_);
+unsigned GetSize(const INTC_D3D12_GetResourceAllocationInfoCommand& command) {
+  return GetSize(command.Key) + GetSize(command.ThreadId) + GetSize(command.m_pExtensionContext) +
+         GetSize(command.m_visibleMask) + GetSize(command.m_numResourceDescs) +
+         GetSize(command.m_pResourceDescs) + GetSize(command.m_Result);
 }
 
-void encode(const INTC_D3D12_GetResourceAllocationInfoCommand& command, char* dest) {
+void Encode(const INTC_D3D12_GetResourceAllocationInfoCommand& command, char* dest) {
   unsigned offset = 0;
-  encode(dest, offset, command.key);
-  encode(dest, offset, command.threadId);
-  encode(dest, offset, command.pExtensionContext_);
-  encode(dest, offset, command.visibleMask_);
-  encode(dest, offset, command.numResourceDescs_);
-  encode(dest, offset, command.pResourceDescs_);
-  encode(dest, offset, command.result_);
+  Encode(dest, offset, command.Key);
+  Encode(dest, offset, command.ThreadId);
+  Encode(dest, offset, command.m_pExtensionContext);
+  Encode(dest, offset, command.m_visibleMask);
+  Encode(dest, offset, command.m_numResourceDescs);
+  Encode(dest, offset, command.m_pResourceDescs);
+  Encode(dest, offset, command.m_Result);
 }
 
-unsigned getSize(const INTC_D3D12_CreateComputePipelineStateCommand& command) {
-  return getSize(command.key) + getSize(command.threadId) + getSize(command.pExtensionContext_) +
-         getSize(command.pDesc_) + getSize(command.riid_) + getSize(command.ppPipelineState_) +
-         getSize(command.result_);
+unsigned GetSize(const INTC_D3D12_CreateComputePipelineStateCommand& command) {
+  return GetSize(command.Key) + GetSize(command.ThreadId) + GetSize(command.m_pExtensionContext) +
+         GetSize(command.m_pDesc) + GetSize(command.m_riid) + GetSize(command.m_ppPipelineState) +
+         GetSize(command.m_Result);
 }
 
-void encode(const INTC_D3D12_CreateComputePipelineStateCommand& command, char* dest) {
+void Encode(const INTC_D3D12_CreateComputePipelineStateCommand& command, char* dest) {
   unsigned offset = 0;
-  encode(dest, offset, command.key);
-  encode(dest, offset, command.threadId);
-  encode(dest, offset, command.pExtensionContext_);
-  encode(dest, offset, command.pDesc_);
-  encode(dest, offset, command.riid_);
-  encode(dest, offset, command.ppPipelineState_);
-  encode(dest, offset, command.result_);
+  Encode(dest, offset, command.Key);
+  Encode(dest, offset, command.ThreadId);
+  Encode(dest, offset, command.m_pExtensionContext);
+  Encode(dest, offset, command.m_pDesc);
+  Encode(dest, offset, command.m_riid);
+  Encode(dest, offset, command.m_ppPipelineState);
+  Encode(dest, offset, command.m_Result);
 }
 
-unsigned getSize(const INTC_D3D12_CreatePlacedResourceCommand& command) {
-  return getSize(command.key) + getSize(command.threadId) + getSize(command.pExtensionContext_) +
-         getSize(command.pHeap_) + getSize(command.HeapOffset_) + getSize(command.pDesc_) +
-         getSize(command.InitialState_) + getSize(command.pOptimizedClearValue_) +
-         getSize(command.riid_) + getSize(command.ppvResource_) + getSize(command.result_);
+unsigned GetSize(const INTC_D3D12_CreatePlacedResourceCommand& command) {
+  return GetSize(command.Key) + GetSize(command.ThreadId) + GetSize(command.m_pExtensionContext) +
+         GetSize(command.m_pHeap) + GetSize(command.m_HeapOffset) + GetSize(command.m_pDesc) +
+         GetSize(command.m_InitialState) + GetSize(command.m_pOptimizedClearValue) +
+         GetSize(command.m_riid) + GetSize(command.m_ppvResource) + GetSize(command.m_Result);
 }
 
-void encode(const INTC_D3D12_CreatePlacedResourceCommand& command, char* dest) {
+void Encode(const INTC_D3D12_CreatePlacedResourceCommand& command, char* dest) {
   unsigned offset = 0;
-  encode(dest, offset, command.key);
-  encode(dest, offset, command.threadId);
-  encode(dest, offset, command.pExtensionContext_);
-  encode(dest, offset, command.pHeap_);
-  encode(dest, offset, command.HeapOffset_);
-  encode(dest, offset, command.pDesc_);
-  encode(dest, offset, command.InitialState_);
-  encode(dest, offset, command.pOptimizedClearValue_);
-  encode(dest, offset, command.riid_);
-  encode(dest, offset, command.ppvResource_);
-  encode(dest, offset, command.result_);
+  Encode(dest, offset, command.Key);
+  Encode(dest, offset, command.ThreadId);
+  Encode(dest, offset, command.m_pExtensionContext);
+  Encode(dest, offset, command.m_pHeap);
+  Encode(dest, offset, command.m_HeapOffset);
+  Encode(dest, offset, command.m_pDesc);
+  Encode(dest, offset, command.m_InitialState);
+  Encode(dest, offset, command.m_pOptimizedClearValue);
+  Encode(dest, offset, command.m_riid);
+  Encode(dest, offset, command.m_ppvResource);
+  Encode(dest, offset, command.m_Result);
 }
 
-unsigned getSize(const INTC_D3D12_CreateCommittedResourceCommand& command) {
-  return getSize(command.key) + getSize(command.threadId) + getSize(command.pExtensionContext_) +
-         getSize(command.pHeapProperties_) + getSize(command.HeapFlags_) + getSize(command.pDesc_) +
-         getSize(command.InitialResourceState_) + getSize(command.pOptimizedClearValue_) +
-         getSize(command.riidResource_) + getSize(command.ppvResource_) + getSize(command.result_);
+unsigned GetSize(const INTC_D3D12_CreateCommittedResourceCommand& command) {
+  return GetSize(command.Key) + GetSize(command.ThreadId) + GetSize(command.m_pExtensionContext) +
+         GetSize(command.m_pHeapProperties) + GetSize(command.m_HeapFlags) +
+         GetSize(command.m_pDesc) + GetSize(command.m_InitialResourceState) +
+         GetSize(command.m_pOptimizedClearValue) + GetSize(command.m_riidResource) +
+         GetSize(command.m_ppvResource) + GetSize(command.m_Result);
 }
 
-void encode(const INTC_D3D12_CreateCommittedResourceCommand& command, char* dest) {
+void Encode(const INTC_D3D12_CreateCommittedResourceCommand& command, char* dest) {
   unsigned offset = 0;
-  encode(dest, offset, command.key);
-  encode(dest, offset, command.threadId);
-  encode(dest, offset, command.pExtensionContext_);
-  encode(dest, offset, command.pHeapProperties_);
-  encode(dest, offset, command.HeapFlags_);
-  encode(dest, offset, command.pDesc_);
-  encode(dest, offset, command.InitialResourceState_);
-  encode(dest, offset, command.pOptimizedClearValue_);
-  encode(dest, offset, command.riidResource_);
-  encode(dest, offset, command.ppvResource_);
-  encode(dest, offset, command.result_);
+  Encode(dest, offset, command.Key);
+  Encode(dest, offset, command.ThreadId);
+  Encode(dest, offset, command.m_pExtensionContext);
+  Encode(dest, offset, command.m_pHeapProperties);
+  Encode(dest, offset, command.m_HeapFlags);
+  Encode(dest, offset, command.m_pDesc);
+  Encode(dest, offset, command.m_InitialResourceState);
+  Encode(dest, offset, command.m_pOptimizedClearValue);
+  Encode(dest, offset, command.m_riidResource);
+  Encode(dest, offset, command.m_ppvResource);
+  Encode(dest, offset, command.m_Result);
 }
 
-unsigned getSize(const INTC_D3D12_CreateHeapCommand& command) {
-  return getSize(command.key) + getSize(command.threadId) + getSize(command.pExtensionContext_) +
-         getSize(command.pDesc_) + getSize(command.riid_) + getSize(command.ppvHeap_) +
-         getSize(command.result_);
+unsigned GetSize(const INTC_D3D12_CreateHeapCommand& command) {
+  return GetSize(command.Key) + GetSize(command.ThreadId) + GetSize(command.m_pExtensionContext) +
+         GetSize(command.m_pDesc) + GetSize(command.m_riid) + GetSize(command.m_ppvHeap) +
+         GetSize(command.m_Result);
 }
 
-void encode(const INTC_D3D12_CreateHeapCommand& command, char* dest) {
+void Encode(const INTC_D3D12_CreateHeapCommand& command, char* dest) {
   unsigned offset = 0;
-  encode(dest, offset, command.key);
-  encode(dest, offset, command.threadId);
-  encode(dest, offset, command.pExtensionContext_);
-  encode(dest, offset, command.pDesc_);
-  encode(dest, offset, command.riid_);
-  encode(dest, offset, command.ppvHeap_);
-  encode(dest, offset, command.result_);
+  Encode(dest, offset, command.Key);
+  Encode(dest, offset, command.ThreadId);
+  Encode(dest, offset, command.m_pExtensionContext);
+  Encode(dest, offset, command.m_pDesc);
+  Encode(dest, offset, command.m_riid);
+  Encode(dest, offset, command.m_ppvHeap);
+  Encode(dest, offset, command.m_Result);
 }
 
-unsigned getSize(const NvAPI_InitializeCommand& command) {
-  return getSize(command.key) + getSize(command.threadId) + getSize(command.result_);
+unsigned GetSize(const NvAPI_InitializeCommand& command) {
+  return GetSize(command.Key) + GetSize(command.ThreadId) + GetSize(command.m_Result);
 }
 
-void encode(const NvAPI_InitializeCommand& command, char* dest) {
+void Encode(const NvAPI_InitializeCommand& command, char* dest) {
   unsigned offset = 0;
-  encode(dest, offset, command.key);
-  encode(dest, offset, command.threadId);
-  encode(dest, offset, command.result_);
+  Encode(dest, offset, command.Key);
+  Encode(dest, offset, command.ThreadId);
+  Encode(dest, offset, command.m_Result);
 }
 
-unsigned getSize(const NvAPI_UnloadCommand& command) {
-  return getSize(command.key) + getSize(command.threadId) + getSize(command.result_);
+unsigned GetSize(const NvAPI_UnloadCommand& command) {
+  return GetSize(command.Key) + GetSize(command.ThreadId) + GetSize(command.m_Result);
 }
 
-void encode(const NvAPI_UnloadCommand& command, char* dest) {
+void Encode(const NvAPI_UnloadCommand& command, char* dest) {
   unsigned offset = 0;
-  encode(dest, offset, command.key);
-  encode(dest, offset, command.threadId);
-  encode(dest, offset, command.result_);
+  Encode(dest, offset, command.Key);
+  Encode(dest, offset, command.ThreadId);
+  Encode(dest, offset, command.m_Result);
 }
 
-unsigned getSize(const NvAPI_D3D12_SetCreatePipelineStateOptionsCommand& command) {
-  return getSize(command.key) + getSize(command.threadId) + getSize(command.pDevice_) +
-         getSize(command.pState_) + getSize(command.result_);
+unsigned GetSize(const NvAPI_D3D12_SetCreatePipelineStateOptionsCommand& command) {
+  return GetSize(command.Key) + GetSize(command.ThreadId) + GetSize(command.m_pDevice) +
+         GetSize(command.m_pState) + GetSize(command.m_Result);
 }
 
-void encode(const NvAPI_D3D12_SetCreatePipelineStateOptionsCommand& command, char* dest) {
+void Encode(const NvAPI_D3D12_SetCreatePipelineStateOptionsCommand& command, char* dest) {
   unsigned offset = 0;
-  encode(dest, offset, command.key);
-  encode(dest, offset, command.threadId);
-  encode(dest, offset, command.pDevice_);
-  encode(dest, offset, command.pState_);
-  encode(dest, offset, command.result_);
+  Encode(dest, offset, command.Key);
+  Encode(dest, offset, command.ThreadId);
+  Encode(dest, offset, command.m_pDevice);
+  Encode(dest, offset, command.m_pState);
+  Encode(dest, offset, command.m_Result);
 }
 
-unsigned getSize(const NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& command) {
-  return getSize(command.key) + getSize(command.threadId) + getSize(command.pDev_) +
-         getSize(command.uavSlot_) + getSize(command.uavSpace_) + getSize(command.result_);
+unsigned GetSize(const NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& command) {
+  return GetSize(command.Key) + GetSize(command.ThreadId) + GetSize(command.m_pDev) +
+         GetSize(command.m_uavSlot) + GetSize(command.m_uavSpace) + GetSize(command.m_Result);
 }
 
-void encode(const NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& command, char* dest) {
+void Encode(const NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& command, char* dest) {
   unsigned offset = 0;
-  encode(dest, offset, command.key);
-  encode(dest, offset, command.threadId);
-  encode(dest, offset, command.pDev_);
-  encode(dest, offset, command.uavSlot_);
-  encode(dest, offset, command.uavSpace_);
-  encode(dest, offset, command.result_);
+  Encode(dest, offset, command.Key);
+  Encode(dest, offset, command.ThreadId);
+  Encode(dest, offset, command.m_pDev);
+  Encode(dest, offset, command.m_uavSlot);
+  Encode(dest, offset, command.m_uavSpace);
+  Encode(dest, offset, command.m_Result);
 }
 
-unsigned getSize(const NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& command) {
-  return getSize(command.key) + getSize(command.threadId) + getSize(command.pDev_) +
-         getSize(command.uavSlot_) + getSize(command.uavSpace_) + getSize(command.result_);
+unsigned GetSize(const NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& command) {
+  return GetSize(command.Key) + GetSize(command.ThreadId) + GetSize(command.m_pDev) +
+         GetSize(command.m_uavSlot) + GetSize(command.m_uavSpace) + GetSize(command.m_Result);
 }
 
-void encode(const NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& command, char* dest) {
+void Encode(const NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& command, char* dest) {
   unsigned offset = 0;
-  encode(dest, offset, command.key);
-  encode(dest, offset, command.threadId);
-  encode(dest, offset, command.pDev_);
-  encode(dest, offset, command.uavSlot_);
-  encode(dest, offset, command.uavSpace_);
-  encode(dest, offset, command.result_);
+  Encode(dest, offset, command.Key);
+  Encode(dest, offset, command.ThreadId);
+  Encode(dest, offset, command.m_pDev);
+  Encode(dest, offset, command.m_uavSlot);
+  Encode(dest, offset, command.m_uavSpace);
+  Encode(dest, offset, command.m_Result);
 }
 
-unsigned getSize(const NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& command) {
-  return getSize(command.key) + getSize(command.threadId) + getSize(command.pCommandList_) +
-         getSize(command.pParams) + getSize(command.result_);
+unsigned GetSize(const NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& command) {
+  return GetSize(command.Key) + GetSize(command.ThreadId) + GetSize(command.m_pCommandList) +
+         GetSize(command.m_pParams) + GetSize(command.m_Result);
 }
 
-void encode(const NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& command, char* dest) {
+void Encode(const NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& command, char* dest) {
   unsigned offset = 0;
-  encode(dest, offset, command.key);
-  encode(dest, offset, command.threadId);
-  encode(dest, offset, command.pCommandList_);
-  encode(dest, offset, command.pParams);
-  encode(dest, offset, command.result_);
+  Encode(dest, offset, command.Key);
+  Encode(dest, offset, command.ThreadId);
+  Encode(dest, offset, command.m_pCommandList);
+  Encode(dest, offset, command.m_pParams);
+  Encode(dest, offset, command.m_Result);
 }
 
-unsigned getSize(const NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& command) {
-  return getSize(command.key) + getSize(command.threadId) + getSize(command.pCommandList_) +
-         getSize(command.pParams) + getSize(command.result_);
+unsigned GetSize(const NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& command) {
+  return GetSize(command.Key) + GetSize(command.ThreadId) + GetSize(command.m_pCommandList) +
+         GetSize(command.m_pParams) + GetSize(command.m_Result);
 }
 
-void encode(const NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& command, char* dest) {
+void Encode(const NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& command, char* dest) {
   unsigned offset = 0;
-  encode(dest, offset, command.key);
-  encode(dest, offset, command.threadId);
-  encode(dest, offset, command.pCommandList_);
-  encode(dest, offset, command.pParams);
-  encode(dest, offset, command.result_);
+  Encode(dest, offset, command.Key);
+  Encode(dest, offset, command.ThreadId);
+  Encode(dest, offset, command.m_pCommandList);
+  Encode(dest, offset, command.m_pParams);
+  Encode(dest, offset, command.m_Result);
 }
 
-unsigned getSize(const NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand& command) {
-  return getSize(command.key) + getSize(command.threadId) + getSize(command.pCommandList_) +
-         getSize(command.pParams) + getSize(command.result_);
+unsigned GetSize(const NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand& command) {
+  return GetSize(command.Key) + GetSize(command.ThreadId) + GetSize(command.m_pCommandList) +
+         GetSize(command.m_pParams) + GetSize(command.m_Result);
 }
 
-void encode(const NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand& command,
+void Encode(const NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand& command,
             char* dest) {
   unsigned offset = 0;
-  encode(dest, offset, command.key);
-  encode(dest, offset, command.threadId);
-  encode(dest, offset, command.pCommandList_);
-  encode(dest, offset, command.pParams);
-  encode(dest, offset, command.result_);
+  Encode(dest, offset, command.Key);
+  Encode(dest, offset, command.ThreadId);
+  Encode(dest, offset, command.m_pCommandList);
+  Encode(dest, offset, command.m_pParams);
+  Encode(dest, offset, command.m_Result);
 }
 
 } // namespace DirectX

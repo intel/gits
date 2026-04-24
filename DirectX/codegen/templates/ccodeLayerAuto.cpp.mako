@@ -12,7 +12,7 @@ ${header}
 interface_declaration = get_interface_declaration(function)
 obj_key_str = ""
 if has_obj_key:
-  obj_key_str = ", c.object_.key"
+  obj_key_str = ", c.m_Object.Key"
 %>\
 %if interface_declaration:
 // Declare new object
@@ -32,9 +32,9 @@ CommandPrinter p(c, "${function.name}"${obj_key_str});
 preProcess(p, c);
 %for param in function.params:
 %if is_trivial_parameter(param):
-p.addArgumentValue(c.${param.name}_.value);
+p.addArgumentValue(c.m_${param.name}.Value);
 %else:
-p.addArgument(c.${param.name}_, ${to_lower_camel_case(param.name)}Info);
+p.addArgument(c.m_${param.name}, ${to_lower_camel_case(param.name)}Info);
 %endif
 %endfor
 postProcess(p, c);
@@ -54,7 +54,7 @@ namespace DirectX {
 
 %for function in functions:
 %if function.api == Api.D3D12 or function.api == Api.DXGI:
-void CCodeLayer::post(${function.name}Command& c) {
+void CCodeLayer::Post(${function.name}Command& c) {
 ${print_body(function, False)}
 }
 
@@ -63,7 +63,7 @@ ${print_body(function, False)}
 %for interface in interfaces:
 %if interface.api == Api.D3D12 or interface.api == Api.DXGI:
 %for function in interface.functions:
-void CCodeLayer::post(${interface.name}${function.name}Command& c){
+void CCodeLayer::Post(${interface.name}${function.name}Command& c){
 ${print_body(function, True)}
 }
 

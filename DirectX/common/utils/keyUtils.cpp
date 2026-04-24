@@ -23,19 +23,19 @@ ConfigKeySet::ConfigKeySet(const std::string& keys) {
       if (key[0] == 'S' || key[0] == 'E') {
         unsigned k = std::stoi(key.substr(1));
         if (key[0] == 'S') {
-          k |= stateRestoreKeyMask;
+          k |= STATE_RESTORE_KEY_MASK;
         } else if (key[0] == 'E') {
-          k |= executionSerializationKeyMask;
+          k |= EXECUTION_SERIALIZATION_KEY_MASK;
         }
-        commandKeys_.insert(k);
+        m_CommandKeys.insert(k);
       } else {
-        commandKeys_.insert(std::stoi(key));
+        m_CommandKeys.insert(std::stoi(key));
       }
     } while (*p++);
   }
 }
 
-std::string parseConfigKeys(const std::string& keys) {
+std::string ParseConfigKeys(const std::string& keys) {
   std::string result;
   for (size_t i = 0; i < keys.size(); ++i) {
     char c = keys[i];
@@ -46,9 +46,9 @@ std::string parseConfigKeys(const std::string& keys) {
       }
       unsigned k = std::stoi(std::string(begin, &keys[i--]));
       if (c == 'S') {
-        k |= stateRestoreKeyMask;
+        k |= STATE_RESTORE_KEY_MASK;
       } else if (c == 'E') {
-        k |= executionSerializationKeyMask;
+        k |= EXECUTION_SERIALIZATION_KEY_MASK;
       }
       result += std::to_string(k);
     } else {

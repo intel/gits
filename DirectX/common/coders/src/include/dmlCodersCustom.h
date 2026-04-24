@@ -30,7 +30,7 @@ const T* castTo(const void* buffer) {
 }
 
 template <typename T>
-unsigned getSizeT(const T* src, unsigned count) {
+unsigned GetSizeT(const T* src, unsigned count) {
   if (!src) {
     return 0;
   }
@@ -38,8 +38,8 @@ unsigned getSizeT(const T* src, unsigned count) {
 }
 
 template <typename T>
-void encodeT(const T* src, unsigned count, char* dst, unsigned& offset) {
-  auto blobSize = getSizeT(src, count);
+void EncodeT(const T* src, unsigned count, char* dst, unsigned& offset) {
+  auto blobSize = GetSizeT(src, count);
   if (!src) {
     GITS_ASSERT(0 && "Unexpected input");
   }
@@ -47,31 +47,31 @@ void encodeT(const T* src, unsigned count, char* dst, unsigned& offset) {
 }
 
 template <typename T>
-void decodeT(const T* dst, unsigned count, char* src, unsigned& offset) {
+void DecodeT(const T* dst, unsigned count, char* src, unsigned& offset) {
   // Basic types (copyiable) have already been copied into dst and do not need to be decoded
   // Simply update the offset based on size
-  offset += getSizeT(dst, count);
+  offset += GetSizeT(dst, count);
 }
 
 // Basic type specializations
 
 template <>
-unsigned getSizeT(const void* src, unsigned count);
+unsigned GetSizeT(const void* src, unsigned count);
 
 template <>
-void encodeT(const void* src, unsigned count, char* dst, unsigned& offset);
+void EncodeT(const void* src, unsigned count, char* dst, unsigned& offset);
 
 template <>
-void decodeT(const void* dst, unsigned count, char* src, unsigned& offset);
+void DecodeT(const void* dst, unsigned count, char* src, unsigned& offset);
 
 template <>
-unsigned getSizeT(const char* src, unsigned count);
+unsigned GetSizeT(const char* src, unsigned count);
 
 template <>
-void encodeT(const char* src, unsigned count, char* dst, unsigned& offset);
+void EncodeT(const char* src, unsigned count, char* dst, unsigned& offset);
 
 template <>
-void decodeT(const char* dst, unsigned count, char* src, unsigned& offset);
+void DecodeT(const char* dst, unsigned count, char* src, unsigned& offset);
 
 } // namespace dml
 } // namespace DirectX

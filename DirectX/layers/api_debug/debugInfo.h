@@ -33,28 +33,27 @@ public:
   void checkD3D12DeviceRemoval(Command& command, IUnknown* object);
 
 private:
-  static void __stdcall debugMessageCallback(D3D12_MESSAGE_CATEGORY category,
+  static void __stdcall DebugMessageCallback(D3D12_MESSAGE_CATEGORY category,
                                              D3D12_MESSAGE_SEVERITY severity,
                                              D3D12_MESSAGE_ID id,
                                              LPCSTR description,
                                              void* context);
-  static void __stdcall NvAPIdebugMessageCallback(
-      void* pUserData,
+  static void __stdcall NvApiDebugMessageCallback(
+      void* userData,
       NVAPI_D3D12_RAYTRACING_VALIDATION_MESSAGE_SEVERITY severity,
       const char* messageCode,
       const char* message,
       const char* messageDetails);
-  void traceMessage(D3D12_MESSAGE_SEVERITY severity, const char* message);
-  void initDredLog();
-  void logDredBreadcrumbs(const D3D12_AUTO_BREADCRUMB_NODE* headNode);
-  void logDredPageFaults(const D3D12_DRED_PAGE_FAULT_OUTPUT& pageFaultOutput);
-  void initNvAPIValidation(ID3D12Device* device);
-  void flushNvAPIValidation(IUnknown* object);
+  void TraceMessage(D3D12_MESSAGE_SEVERITY severity, const char* message);
+  void InitDredLog();
+  void LogDredBreadcrumbs(const D3D12_AUTO_BREADCRUMB_NODE* headNode);
+  void LogDredPageFaults(const D3D12_DRED_PAGE_FAULT_OUTPUT& pageFaultOutput);
+  void InitNvApiValidation(ID3D12Device* device);
+  void FlushNvApiValidation(IUnknown* object);
 
-private:
-  bool d3d12CallbackRegistered_{};
-  bool nvAPICallbackRegistered_{};
-  std::ofstream dredFile_{};
+  bool m_D3d12CallbackRegistered{};
+  bool m_NvApiCallbackRegistered{};
+  std::ofstream m_DredFile{};
 };
 
 } // namespace DirectX

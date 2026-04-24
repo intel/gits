@@ -17,35 +17,35 @@ namespace gits {
 namespace DirectX {
 
 void ResourcePlacementPlayback::createHeap(ID3D12Device* device, unsigned heapKey, UINT64& size) {
-  if (!initialized_) {
+  if (!m_Initialized) {
     calculateResourcePlacement(device);
-    initialized_ = true;
-    if (!heapSizeShifts_.empty()) {
-      LOG_INFO << "Resource placement changed for " << heapSizeShifts_.size() << " heaps";
+    m_Initialized = true;
+    if (!m_HeapSizeShifts.empty()) {
+      LOG_INFO << "Resource placement changed for " << m_HeapSizeShifts.size() << " heaps";
     }
   }
-  auto it = heapSizeShifts_.find(heapKey);
-  if (it != heapSizeShifts_.end()) {
+  auto it = m_HeapSizeShifts.find(heapKey);
+  if (it != m_HeapSizeShifts.end()) {
     size += it->second;
   }
 }
 
-void ResourcePlacementPlayback::createPlacedResource(unsigned resourceKey, UINT64& offset) {
-  auto it = changedResourceOffsets_.find(resourceKey);
-  if (it != changedResourceOffsets_.end()) {
+void ResourcePlacementPlayback::createPlacedResource(unsigned ResourceKey, UINT64& offset) {
+  auto it = m_ChangedResourceOffsets.find(ResourceKey);
+  if (it != m_ChangedResourceOffsets.end()) {
     offset = it->second;
   }
 }
 
 void ResourcePlacementPlayback::updateTileMappings(ID3D12CommandQueueUpdateTileMappingsCommand& c) {
-  auto it = infos_.find(c.pHeap_.key);
-  if (it == infos_.end()) {
+  auto it = m_Infos.find(c.m_pHeap.Key);
+  if (it == m_Infos.end()) {
     return;
   }
   unsigned tileSize = 64 * 1024;
   std::vector<ResourcePlacementShiftInfo>& infos = it->second;
-  for (unsigned i = 0; i < c.pHeapRangeStartOffsets_.size; ++i) {
-    unsigned& tileOffset = c.pHeapRangeStartOffsets_.value[i];
+  for (unsigned i = 0; i < c.m_pHeapRangeStartOffsets.Size; ++i) {
+    unsigned& tileOffset = c.m_pHeapRangeStartOffsets.Value[i];
     unsigned tileShift{};
     for (ResourcePlacementShiftInfo& info : infos) {
       if (info.offset > tileOffset * tileSize) {
@@ -69,10 +69,10 @@ void ResourcePlacementPlayback::calculateResourcePlacement(ID3D12Device* device)
     if (!file.read(reinterpret_cast<char*>(&info), sizeof(ResourcePlacementInfo))) {
       break;
     }
-    infos_[info.heapKey].push_back(info);
+    m_Infos[info.heapKey].push_back(info);
   }
 
-  for (auto& it : infos_) {
+  for (auto& it : m_Infos) {
     calculateResourcePlacement(device, it.first, it.second);
   }
 }
@@ -140,12 +140,12 @@ void ResourcePlacementPlayback::calculateResourcePlacement(
   UINT64 heapShift{};
   for (ResourcePlacementShiftInfo& info : infos) {
     if (info.shift) {
-      changedResourceOffsets_[info.key] = info.offset + info.shift;
+      m_ChangedResourceOffsets[info.key] = info.offset + info.shift;
     }
     heapShift = std::max(heapShift, info.shift + info.increment);
   }
 
-  heapSizeShifts_[heapKey] = heapShift;
+  m_HeapSizeShifts[heapKey] = heapShift;
 }
 
 UINT64 ResourcePlacementPlayback::getAlignedOffset(UINT64 alignment, UINT64 offset) {

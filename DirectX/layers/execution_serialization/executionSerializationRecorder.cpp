@@ -15,7 +15,6 @@ namespace gits {
 namespace DirectX {
 
 ExecutionSerializationRecorder::ExecutionSerializationRecorder() {
-
   const gits::Configuration& config = Configurator::Get();
 
   if (!config.directx.features.subcapture.enabled ||
@@ -28,29 +27,29 @@ ExecutionSerializationRecorder::ExecutionSerializationRecorder() {
   subcapturePath += "_serialized";
   const_cast<std::filesystem::path&>(config.common.player.subcapturePath) = subcapturePath;
 
-  recorder_.reset(
+  m_Recorder.reset(
       new stream::StreamWriter(subcapturePath, config.directx.features.subcapture.compressionType));
 
-  copyAuxiliaryFiles();
+  CopyAuxiliaryFiles();
 }
 
 ExecutionSerializationRecorder::~ExecutionSerializationRecorder() {
-  finishRecording();
+  FinishRecording();
 }
 
-void ExecutionSerializationRecorder::record(const stream::CommandSerializer& commandSerializer) {
-  recorder_->Record(commandSerializer);
+void ExecutionSerializationRecorder::Record(const stream::CommandSerializer& commandSerializer) {
+  m_Recorder->Record(commandSerializer);
 }
 
-void ExecutionSerializationRecorder::finishRecording() {
-  if (!finished_) {
-    recorder_->Close();
+void ExecutionSerializationRecorder::FinishRecording() {
+  if (!m_Finished) {
+    m_Recorder->Close();
     LOG_INFO << "Execution serialization recording finished";
-    finished_ = true;
+    m_Finished = true;
   }
 }
 
-void ExecutionSerializationRecorder::copyAuxiliaryFiles() {
+void ExecutionSerializationRecorder::CopyAuxiliaryFiles() {
   std::filesystem::path streamDir = Configurator::Get().common.player.streamDir;
   std::filesystem::path subcapturePath = Configurator::Get().common.player.subcapturePath;
   if (std::filesystem::exists(streamDir / "raytracingArraysOfPointers.dat")) {

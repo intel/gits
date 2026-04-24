@@ -20,8 +20,8 @@ class AnalyzerExecuteIndirectService;
 class AnalyzerExecuteIndirectDump : public ResourceDump {
 public:
   AnalyzerExecuteIndirectDump(AnalyzerExecuteIndirectService& executeIndirectService)
-      : executeIndirectService_(executeIndirectService) {}
-  void dumpArgumentBuffer(ID3D12GraphicsCommandList* commandList,
+      : m_ExecuteIndirectService(executeIndirectService) {}
+  void DumpArgumentBuffer(ID3D12GraphicsCommandList* commandList,
                           const D3D12_COMMAND_SIGNATURE_DESC* commandSignature,
                           unsigned maxCommandCount,
                           ID3D12Resource* argumentBuffer,
@@ -29,8 +29,8 @@ public:
                           ID3D12Resource* countBuffer,
                           unsigned countBufferOffset);
 
-  std::unordered_set<unsigned>& getArgumentBuffersResources() {
-    return argumentBuffersResources_;
+  std::unordered_set<unsigned>& GetArgumentBuffersResources() {
+    return m_ArgumentBuffersResources;
   }
 
 private:
@@ -40,12 +40,12 @@ private:
   };
 
   void dumpStagedResource(DumpInfo& dumpInfo) override;
-  void dumpArgumentBuffer(ExecuteIndirectDumpInfo& dumpInfo, unsigned argumentCount, void* data);
+  void DumpArgumentBuffer(ExecuteIndirectDumpInfo& dumpInfo, unsigned argumentCount, void* data);
 
 private:
-  AnalyzerExecuteIndirectService& executeIndirectService_;
-  std::mutex mutex_;
-  std::unordered_set<unsigned> argumentBuffersResources_;
+  AnalyzerExecuteIndirectService& m_ExecuteIndirectService;
+  std::mutex m_Mutex;
+  std::unordered_set<unsigned> m_ArgumentBuffersResources;
 };
 
 } // namespace DirectX

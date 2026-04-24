@@ -11,103 +11,103 @@
 
 namespace gits {
 namespace DirectX {
-void ResourceUsageTrackingService::addResource(unsigned resourceKey) {
-  usageByResource_[resourceKey] = {};
+void ResourceUsageTrackingService::AddResource(unsigned resourceKey) {
+  m_UsageByResource[resourceKey] = {};
 }
 
-void ResourceUsageTrackingService::commandListResourceUsage(unsigned commandListKey,
+void ResourceUsageTrackingService::CommandListResourceUsage(unsigned commandListKey,
                                                             unsigned resourceKey) {
-  commandListResourceUsage_[commandListKey].push_back(resourceKey);
+  m_CommandListResourceUsage[commandListKey].push_back(resourceKey);
 }
 
-void ResourceUsageTrackingService::commandListResourceUsage(unsigned commandListKey,
+void ResourceUsageTrackingService::CommandListResourceUsage(unsigned commandListKey,
                                                             std::vector<unsigned>& resourceKeys) {
-  commandListResourceUsage_[commandListKey].insert(commandListResourceUsage_[commandListKey].end(),
-                                                   resourceKeys.begin(), resourceKeys.end());
+  m_CommandListResourceUsage[commandListKey].insert(
+      m_CommandListResourceUsage[commandListKey].end(), resourceKeys.begin(), resourceKeys.end());
 }
-void ResourceUsageTrackingService::commandListReset(unsigned commandListKey) {
-  commandListResourceUsage_[commandListKey].clear();
+void ResourceUsageTrackingService::CommandListReset(unsigned commandListKey) {
+  m_CommandListResourceUsage[commandListKey].clear();
 }
 
-void ResourceUsageTrackingService::executeCommandLists(unsigned commandKey,
+void ResourceUsageTrackingService::ExecuteCommandLists(unsigned commandKey,
                                                        unsigned commandQueueKey,
                                                        std::vector<unsigned>& commandListKeys) {
   std::vector<unsigned> usedResources;
   for (unsigned commandListKey : commandListKeys) {
-    auto it = commandListResourceUsage_.find(commandListKey);
-    if (it == commandListResourceUsage_.end()) {
+    auto it = m_CommandListResourceUsage.find(commandListKey);
+    if (it == m_CommandListResourceUsage.end()) {
       continue;
     }
 
     usedResources.insert(usedResources.end(), it->second.begin(), it->second.end());
   }
 
-  const bool isWaiting = gpuExecutionTracker_.isCommandQueueWaiting(commandQueueKey);
+  const bool isWaiting = m_GpuExecutionTracker.IsCommandQueueWaiting(commandQueueKey);
   if (isWaiting) {
     ResourceUsage* executable = new ResourceUsage{};
-    executable->usedResources = std::move(usedResources);
-    gpuExecutionTracker_.execute(commandKey, commandQueueKey, executable);
+    executable->UsedResources = std::move(usedResources);
+    m_GpuExecutionTracker.Execute(commandKey, commandQueueKey, executable);
   } else {
-    updateUsage(usedResources);
+    UpdateUsage(usedResources);
   }
 }
 
-void ResourceUsageTrackingService::destroyResource(unsigned resourceKey) {
-  usageByResource_.erase(resourceKey);
+void ResourceUsageTrackingService::DestroyResource(unsigned resourceKey) {
+  m_UsageByResource.erase(resourceKey);
 }
 
-void ResourceUsageTrackingService::commandQueueWait(unsigned callKey,
+void ResourceUsageTrackingService::CommandQueueWait(unsigned commandKey,
                                                     unsigned commandQueueKey,
                                                     unsigned fenceKey,
                                                     UINT64 fenceValue) {
-  gpuExecutionTracker_.commandQueueWait(callKey, commandQueueKey, fenceKey, fenceValue);
+  m_GpuExecutionTracker.CommandQueueWait(commandKey, commandQueueKey, fenceKey, fenceValue);
 }
 
-void ResourceUsageTrackingService::commandQueueSignal(unsigned callKey,
+void ResourceUsageTrackingService::CommandQueueSignal(unsigned commandKey,
                                                       unsigned commandQueueKey,
                                                       unsigned fenceKey,
                                                       UINT64 fenceValue) {
-  gpuExecutionTracker_.commandQueueSignal(callKey, commandQueueKey, fenceKey, fenceValue);
-  processReadyExecutables();
+  m_GpuExecutionTracker.CommandQueueSignal(commandKey, commandQueueKey, fenceKey, fenceValue);
+  ProcessReadyExecutables();
 }
 
-void ResourceUsageTrackingService::fenceSignal(unsigned callKey,
+void ResourceUsageTrackingService::FenceSignal(unsigned commandKey,
                                                unsigned fenceKey,
                                                UINT64 fenceValue) {
-  gpuExecutionTracker_.fenceSignal(callKey, fenceKey, fenceValue);
-  processReadyExecutables();
+  m_GpuExecutionTracker.FenceSignal(commandKey, fenceKey, fenceValue);
+  ProcessReadyExecutables();
 }
 
-std::vector<unsigned> ResourceUsageTrackingService::getOrderedResources() {
+std::vector<unsigned> ResourceUsageTrackingService::GetOrderedResources() {
   std::map<UsageNumber, std::vector<unsigned>> resourceByCommandKey;
-  for (const auto& [resourceKey, usageNumber] : usageByResource_) {
+  for (const auto& [resourceKey, usageNumber] : m_UsageByResource) {
     resourceByCommandKey[usageNumber].push_back(resourceKey);
   }
 
   std::vector<unsigned> orderedResources;
-  for (const auto& [usageNumber, resourceKeys] : resourceByCommandKey) {
-    orderedResources.insert(orderedResources.end(), resourceKeys.begin(), resourceKeys.end());
+  for (const auto& [usageNumber, keys] : resourceByCommandKey) {
+    orderedResources.insert(orderedResources.end(), keys.begin(), keys.end());
   }
   return orderedResources;
 }
 
-void ResourceUsageTrackingService::processReadyExecutables() {
+void ResourceUsageTrackingService::ProcessReadyExecutables() {
   std::vector<GpuExecutionTracker::Executable*>& executables =
-      gpuExecutionTracker_.getReadyExecutables();
+      m_GpuExecutionTracker.GetReadyExecutables();
   for (GpuExecutionTracker::Executable* executable : executables) {
     ResourceUsage* resourceUsage = static_cast<ResourceUsage*>(executable);
-    updateUsage(resourceUsage->usedResources);
+    UpdateUsage(resourceUsage->UsedResources);
     delete resourceUsage;
   }
   executables.clear();
 }
 
-void ResourceUsageTrackingService::updateUsage(const std::vector<unsigned>& usedResources) {
-  ++executeNumber_;
+void ResourceUsageTrackingService::UpdateUsage(const std::vector<unsigned>& usedResources) {
+  ++m_ExecuteNumber;
 
   unsigned commandNumber{};
   for (unsigned resourceKey : usedResources) {
-    usageByResource_[resourceKey] = {executeNumber_, ++commandNumber};
+    m_UsageByResource[resourceKey] = {m_ExecuteNumber, ++commandNumber};
   }
 }
 

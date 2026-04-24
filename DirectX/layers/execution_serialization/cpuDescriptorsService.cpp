@@ -15,31 +15,31 @@
 namespace gits {
 namespace DirectX {
 
-void CpuDescriptorsService::createCommandList(unsigned deviceKey) {
-  if (deviceKey_ && deviceKey_ != deviceKey) {
+void CpuDescriptorsService::createCommandList(unsigned DeviceKey) {
+  if (m_DeviceKey && m_DeviceKey != DeviceKey) {
     LOG_ERROR << "Execution serialization - multiple devices not handled";
   }
-  deviceKey_ = deviceKey;
+  m_DeviceKey = DeviceKey;
 }
 
 void CpuDescriptorsService::executeCommandLists(std::vector<unsigned>& commandListKeys) {
   for (unsigned key : commandListKeys) {
-    auto it = descriptorsByCommandList_.find(key);
-    if (it != descriptorsByCommandList_.end()) {
+    auto it = m_DescriptorsByCommandList.find(key);
+    if (it != m_DescriptorsByCommandList.end()) {
       for (DescriptorHandle& descriptor : it->second) {
-        switch (descriptor.type) {
+        switch (descriptor.Type) {
         case D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV:
-          uavDescriptorHeap_.clearDescriptor(descriptor.index);
+          m_UavDescriptorHeap.clearDescriptor(descriptor.Index);
           break;
         case D3D12_DESCRIPTOR_HEAP_TYPE_RTV:
-          rtvDescriptorHeap_.clearDescriptor(descriptor.index);
+          m_RtvDescriptorHeap.clearDescriptor(descriptor.Index);
           break;
         case D3D12_DESCRIPTOR_HEAP_TYPE_DSV:
-          dsvDescriptorHeap_.clearDescriptor(descriptor.index);
+          m_DsvDescriptorHeap.clearDescriptor(descriptor.Index);
           break;
         }
       }
-      descriptorsByCommandList_.erase(it);
+      m_DescriptorsByCommandList.erase(it);
     }
   }
 }
@@ -49,128 +49,128 @@ void CpuDescriptorsService::preserveDescriptor(
 
   unsigned heapKey{};
   unsigned heapIndex{};
-  for (unsigned i = 0; i < c.NumRenderTargetDescriptors_.value; ++i) {
-    if (i == 0 || !c.RTsSingleHandleToDescriptorRange_.value) {
-      heapKey = c.pRenderTargetDescriptors_.interfaceKeys[i];
-      heapIndex = c.pRenderTargetDescriptors_.indexes[i];
+  for (unsigned i = 0; i < c.m_NumRenderTargetDescriptors.Value; ++i) {
+    if (i == 0 || !c.m_RTsSingleHandleToDescriptorRange.Value) {
+      heapKey = c.m_pRenderTargetDescriptors.InterfaceKeys[i];
+      heapIndex = c.m_pRenderTargetDescriptors.Indexes[i];
     } else {
       ++heapIndex;
     }
-    unsigned preservedIndex = rtvDescriptorHeap_.preserveDescriptor(heapKey, heapIndex);
-    descriptorsByCommandList_[c.object_.key].push_back(
+    unsigned preservedIndex = m_RtvDescriptorHeap.preserveDescriptor(heapKey, heapIndex);
+    m_DescriptorsByCommandList[c.m_Object.Key].push_back(
         DescriptorHandle{D3D12_DESCRIPTOR_HEAP_TYPE_RTV, preservedIndex});
-    if (i == 0 || !c.RTsSingleHandleToDescriptorRange_.value) {
-      c.pRenderTargetDescriptors_.interfaceKeys[i] = rtvDescriptorHeap_.descriptorHeapKey_;
-      c.pRenderTargetDescriptors_.indexes[i] = preservedIndex;
+    if (i == 0 || !c.m_RTsSingleHandleToDescriptorRange.Value) {
+      c.m_pRenderTargetDescriptors.InterfaceKeys[i] = m_RtvDescriptorHeap.m_DescriptorHeapKey;
+      c.m_pRenderTargetDescriptors.Indexes[i] = preservedIndex;
     }
   }
 
-  if (c.pDepthStencilDescriptor_.value) {
-    unsigned preservedIndex = dsvDescriptorHeap_.preserveDescriptor(
-        c.pDepthStencilDescriptor_.interfaceKeys[0], c.pDepthStencilDescriptor_.indexes[0]);
-    c.pDepthStencilDescriptor_.interfaceKeys[0] = dsvDescriptorHeap_.descriptorHeapKey_;
-    c.pDepthStencilDescriptor_.indexes[0] = preservedIndex;
-    descriptorsByCommandList_[c.object_.key].push_back(
+  if (c.m_pDepthStencilDescriptor.Value) {
+    unsigned preservedIndex = m_DsvDescriptorHeap.preserveDescriptor(
+        c.m_pDepthStencilDescriptor.InterfaceKeys[0], c.m_pDepthStencilDescriptor.Indexes[0]);
+    c.m_pDepthStencilDescriptor.InterfaceKeys[0] = m_DsvDescriptorHeap.m_DescriptorHeapKey;
+    c.m_pDepthStencilDescriptor.Indexes[0] = preservedIndex;
+    m_DescriptorsByCommandList[c.m_Object.Key].push_back(
         DescriptorHandle{D3D12_DESCRIPTOR_HEAP_TYPE_DSV, preservedIndex});
   }
 }
 
 void CpuDescriptorsService::preserveDescriptor(
     ID3D12GraphicsCommandListClearDepthStencilViewCommand& c) {
-  unsigned preservedIndex = dsvDescriptorHeap_.preserveDescriptor(c.DepthStencilView_.interfaceKey,
-                                                                  c.DepthStencilView_.index);
-  c.DepthStencilView_.interfaceKey = dsvDescriptorHeap_.descriptorHeapKey_;
-  c.DepthStencilView_.index = preservedIndex;
-  descriptorsByCommandList_[c.object_.key].push_back(
+  unsigned preservedIndex = m_DsvDescriptorHeap.preserveDescriptor(
+      c.m_DepthStencilView.InterfaceKey, c.m_DepthStencilView.Index);
+  c.m_DepthStencilView.InterfaceKey = m_DsvDescriptorHeap.m_DescriptorHeapKey;
+  c.m_DepthStencilView.Index = preservedIndex;
+  m_DescriptorsByCommandList[c.m_Object.Key].push_back(
       DescriptorHandle{D3D12_DESCRIPTOR_HEAP_TYPE_DSV, preservedIndex});
 }
 
 void CpuDescriptorsService::preserveDescriptor(
     ID3D12GraphicsCommandListClearRenderTargetViewCommand& c) {
-  unsigned preservedIndex = rtvDescriptorHeap_.preserveDescriptor(c.RenderTargetView_.interfaceKey,
-                                                                  c.RenderTargetView_.index);
-  c.RenderTargetView_.interfaceKey = rtvDescriptorHeap_.descriptorHeapKey_;
-  c.RenderTargetView_.index = preservedIndex;
-  descriptorsByCommandList_[c.object_.key].push_back(
+  unsigned preservedIndex = m_RtvDescriptorHeap.preserveDescriptor(
+      c.m_RenderTargetView.InterfaceKey, c.m_RenderTargetView.Index);
+  c.m_RenderTargetView.InterfaceKey = m_RtvDescriptorHeap.m_DescriptorHeapKey;
+  c.m_RenderTargetView.Index = preservedIndex;
+  m_DescriptorsByCommandList[c.m_Object.Key].push_back(
       DescriptorHandle{D3D12_DESCRIPTOR_HEAP_TYPE_RTV, preservedIndex});
 }
 
 void CpuDescriptorsService::preserveDescriptor(
     ID3D12GraphicsCommandListClearUnorderedAccessViewUintCommand& c) {
-  unsigned preservedIndex =
-      uavDescriptorHeap_.preserveDescriptor(c.ViewCPUHandle_.interfaceKey, c.ViewCPUHandle_.index);
-  c.ViewCPUHandle_.interfaceKey = uavDescriptorHeap_.descriptorHeapKey_;
-  c.ViewCPUHandle_.index = preservedIndex;
-  descriptorsByCommandList_[c.object_.key].push_back(
+  unsigned preservedIndex = m_UavDescriptorHeap.preserveDescriptor(c.m_ViewCPUHandle.InterfaceKey,
+                                                                   c.m_ViewCPUHandle.Index);
+  c.m_ViewCPUHandle.InterfaceKey = m_UavDescriptorHeap.m_DescriptorHeapKey;
+  c.m_ViewCPUHandle.Index = preservedIndex;
+  m_DescriptorsByCommandList[c.m_Object.Key].push_back(
       DescriptorHandle{D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, preservedIndex});
 }
 
 void CpuDescriptorsService::preserveDescriptor(
     ID3D12GraphicsCommandListClearUnorderedAccessViewFloatCommand& c) {
-  unsigned preservedIndex =
-      uavDescriptorHeap_.preserveDescriptor(c.ViewCPUHandle_.interfaceKey, c.ViewCPUHandle_.index);
-  c.ViewCPUHandle_.interfaceKey = uavDescriptorHeap_.descriptorHeapKey_;
-  c.ViewCPUHandle_.index = preservedIndex;
-  descriptorsByCommandList_[c.object_.key].push_back(
+  unsigned preservedIndex = m_UavDescriptorHeap.preserveDescriptor(c.m_ViewCPUHandle.InterfaceKey,
+                                                                   c.m_ViewCPUHandle.Index);
+  c.m_ViewCPUHandle.InterfaceKey = m_UavDescriptorHeap.m_DescriptorHeapKey;
+  c.m_ViewCPUHandle.Index = preservedIndex;
+  m_DescriptorsByCommandList[c.m_Object.Key].push_back(
       DescriptorHandle{D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, preservedIndex});
 }
 
 template <unsigned SIZE>
 unsigned CpuDescriptorsService::DescriptorHeap<SIZE>::preserveDescriptor(unsigned heapKey,
                                                                          unsigned heapIndex) {
-  if (!descriptorHeapKey_) {
+  if (!m_DescriptorHeapKey) {
     createDescriptorHeap();
   }
 
   unsigned preservedIndex = 0;
-  for (; preservedIndex < descriptorUsage_.size(); ++preservedIndex) {
-    if (!descriptorUsage_.test(preservedIndex)) {
+  for (; preservedIndex < m_DescriptorUsage.size(); ++preservedIndex) {
+    if (!m_DescriptorUsage.test(preservedIndex)) {
       break;
     }
   }
-  if (preservedIndex == descriptorUsage_.size()) {
-    LOG_ERROR << "Execution serialization - auxiliary descriptor heap " << toStr(type_)
+  if (preservedIndex == m_DescriptorUsage.size()) {
+    LOG_ERROR << "Execution serialization - auxiliary descriptor heap " << toStr(m_Type)
               << " too small!";
   }
 
-  descriptorUsage_.set(preservedIndex);
+  m_DescriptorUsage.set(preservedIndex);
 
   ID3D12DeviceCopyDescriptorsSimpleCommand copy;
-  copy.key = service_.commandListExecutionService_.getUniqueCommandKey();
-  copy.object_.key = service_.deviceKey_;
-  copy.NumDescriptors_.value = 1;
-  copy.DestDescriptorRangeStart_.interfaceKey = descriptorHeapKey_;
-  copy.DestDescriptorRangeStart_.index = preservedIndex;
-  copy.SrcDescriptorRangeStart_.interfaceKey = heapKey;
-  copy.SrcDescriptorRangeStart_.index = heapIndex;
-  copy.DescriptorHeapsType_.value = type_;
-  service_.recorder_.record(ID3D12DeviceCopyDescriptorsSimpleSerializer(copy));
+  copy.Key = m_Service.m_CommandListExecutionService.getUniqueCommandKey();
+  copy.m_Object.Key = m_Service.m_DeviceKey;
+  copy.m_NumDescriptors.Value = 1;
+  copy.m_DestDescriptorRangeStart.InterfaceKey = m_DescriptorHeapKey;
+  copy.m_DestDescriptorRangeStart.Index = preservedIndex;
+  copy.m_SrcDescriptorRangeStart.InterfaceKey = heapKey;
+  copy.m_SrcDescriptorRangeStart.Index = heapIndex;
+  copy.m_DescriptorHeapsType.Value = m_Type;
+  m_Service.m_Recorder.Record(ID3D12DeviceCopyDescriptorsSimpleSerializer(copy));
 
   return preservedIndex;
 }
 
 template <unsigned SIZE>
 void CpuDescriptorsService::DescriptorHeap<SIZE>::createDescriptorHeap() {
-  descriptorHeapKey_ = service_.commandListExecutionService_.getUniqueObjectKey();
+  m_DescriptorHeapKey = m_Service.m_CommandListExecutionService.getUniqueObjectKey();
 
   D3D12_DESCRIPTOR_HEAP_DESC desc{};
-  desc.Type = type_;
-  desc.NumDescriptors = descriptorUsage_.size();
+  desc.Type = m_Type;
+  desc.NumDescriptors = m_DescriptorUsage.size();
   desc.NodeMask = 0;
   desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 
   ID3D12DeviceCreateDescriptorHeapCommand create;
-  create.key = service_.commandListExecutionService_.getUniqueCommandKey();
-  create.object_.key = service_.deviceKey_;
-  create.pDescriptorHeapDesc_.value = &desc;
-  create.riid_.value = IID_ID3D12DescriptorHeap;
-  create.ppvHeap_.key = descriptorHeapKey_;
-  service_.recorder_.record(ID3D12DeviceCreateDescriptorHeapSerializer(create));
+  create.Key = m_Service.m_CommandListExecutionService.getUniqueCommandKey();
+  create.m_Object.Key = m_Service.m_DeviceKey;
+  create.m_pDescriptorHeapDesc.Value = &desc;
+  create.m_riid.Value = IID_ID3D12DescriptorHeap;
+  create.m_ppvHeap.Key = m_DescriptorHeapKey;
+  m_Service.m_Recorder.Record(ID3D12DeviceCreateDescriptorHeapSerializer(create));
 }
 
 template <unsigned SIZE>
 void CpuDescriptorsService::DescriptorHeap<SIZE>::clearDescriptor(unsigned index) {
-  descriptorUsage_.reset(index);
+  m_DescriptorUsage.reset(index);
 }
 
 } // namespace DirectX

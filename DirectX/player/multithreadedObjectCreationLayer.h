@@ -20,22 +20,22 @@ class MultithreadedObjectCreationLayer : public Layer {
 public:
   MultithreadedObjectCreationLayer(PlayerManager& manager);
 
-  void pre(ID3D12DeviceCreateComputePipelineStateCommand& command) override;
-  void pre(ID3D12DeviceCreateGraphicsPipelineStateCommand& command) override;
-  void pre(ID3D12Device2CreatePipelineStateCommand& command) override;
-  void pre(ID3D12PipelineLibraryLoadGraphicsPipelineCommand& command) override;
-  void pre(ID3D12PipelineLibraryLoadComputePipelineCommand& command) override;
-  void pre(ID3D12PipelineLibrary1LoadPipelineCommand& command) override;
-  void pre(ID3D12Device5CreateStateObjectCommand& command) override;
+  void Pre(ID3D12DeviceCreateComputePipelineStateCommand& command) override;
+  void Pre(ID3D12DeviceCreateGraphicsPipelineStateCommand& command) override;
+  void Pre(ID3D12Device2CreatePipelineStateCommand& command) override;
+  void Pre(ID3D12PipelineLibraryLoadGraphicsPipelineCommand& command) override;
+  void Pre(ID3D12PipelineLibraryLoadComputePipelineCommand& command) override;
+  void Pre(ID3D12PipelineLibrary1LoadPipelineCommand& command) override;
+  void Pre(ID3D12Device5CreateStateObjectCommand& command) override;
 
 private:
   template <typename CommandT>
-  void scheduleCreate(CommandT& c);
+  void ScheduleCreate(CommandT& c);
   template <typename CommandT>
-  void scheduleLoad(CommandT& c);
+  void ScheduleLoad(CommandT& c);
 
 private:
-  PlayerManager& manager_;
+  PlayerManager& m_Manager;
 };
 
 } // namespace DirectX

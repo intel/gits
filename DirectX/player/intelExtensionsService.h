@@ -20,17 +20,17 @@ public:
   IntelExtensionsService(const IntelExtensionsService&) = delete;
   IntelExtensionsService& operator=(const IntelExtensionsService&) = delete;
 
-  void loadIntelExtensions(IDXGIAdapter1* adapter);
-  void setApplicationInfo();
-  const INTCExtensionAppInfo1& getAppInfo() const;
+  void LoadIntelExtensions(IDXGIAdapter1* adapter);
+  void SetApplicationInfo();
+  const INTCExtensionAppInfo1& GetAppInfo() const;
 
 private:
-  bool intelExtensionLoaded_{};
-  bool applicationNameSet_{};
+  bool m_IntelExtensionLoaded{};
+  bool m_ApplicationNameSet{};
 
-  std::wstring appName_{};
-  std::wstring engineName_{};
-  INTCExtensionAppInfo1 appInfo_{};
+  std::wstring m_AppName{};
+  std::wstring m_EngineName{};
+  INTCExtensionAppInfo1 m_AppInfo{};
 };
 
 } // namespace DirectX

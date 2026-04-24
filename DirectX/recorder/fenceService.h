@@ -28,24 +28,24 @@ public:
   void destroyFence(unsigned fenceKey);
 
   std::mutex& getGlobalMutex() {
-    return globalMutex_;
+    return m_GlobalMutex;
   }
 
 private:
   struct FenceInfo {
-    ID3D12Fence* fence;
-    unsigned fenceKey;
-    UINT64 value;
-    HANDLE event;
-    bool signaled;
+    ID3D12Fence* Fence;
+    unsigned FenceKey;
+    UINT64 Value;
+    HANDLE Event;
+    bool Signaled;
   };
-  std::unordered_map<HANDLE, std::unordered_map<unsigned, FenceInfo>> fencesByHandle_;
-  std::unordered_set<unsigned> fences_;
+  std::unordered_map<HANDLE, std::unordered_map<unsigned, FenceInfo>> m_FencesByHandle;
+  std::unordered_set<unsigned> m_Fences;
 
-  std::mutex mutex_;
-  stream::OrderingRecorder& recorder_;
+  std::mutex m_Mutex;
+  stream::OrderingRecorder& m_Recorder;
 
-  std::mutex globalMutex_;
+  std::mutex m_GlobalMutex;
 };
 
 } // namespace DirectX

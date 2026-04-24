@@ -12,65 +12,65 @@
 namespace gits {
 namespace DirectX {
 
-void SkipCallsOnResultLayer::pre(IDXGISwapChainPresentCommand& command) {
-  if (FAILED(command.result_.value)) {
-    command.skip = true;
+void SkipCallsOnResultLayer::Pre(IDXGISwapChainPresentCommand& command) {
+  if (FAILED(command.m_Result.Value)) {
+    command.Skip = true;
   }
 }
 
-void SkipCallsOnResultLayer::pre(IDXGISwapChain1Present1Command& command) {
-  if (FAILED(command.result_.value)) {
-    command.skip = true;
+void SkipCallsOnResultLayer::Pre(IDXGISwapChain1Present1Command& command) {
+  if (FAILED(command.m_Result.Value)) {
+    command.Skip = true;
   }
 }
 
-void SkipCallsOnResultLayer::pre(NvAPI_InitializeCommand& command) {
-  if (command.result_.value != NVAPI_OK) {
-    command.skip = true;
+void SkipCallsOnResultLayer::Pre(NvAPI_InitializeCommand& command) {
+  if (command.m_Result.Value != NVAPI_OK) {
+    command.Skip = true;
   }
 }
 
-void SkipCallsOnResultLayer::pre(NvAPI_UnloadCommand& command) {
-  if (command.result_.value != NVAPI_OK) {
-    command.skip = true;
+void SkipCallsOnResultLayer::Pre(NvAPI_UnloadCommand& command) {
+  if (command.m_Result.Value != NVAPI_OK) {
+    command.Skip = true;
   }
 }
 
-void SkipCallsOnResultLayer::pre(NvAPI_D3D12_SetCreatePipelineStateOptionsCommand& command) {
-  if (command.result_.value != NVAPI_OK) {
-    command.skip = true;
+void SkipCallsOnResultLayer::Pre(NvAPI_D3D12_SetCreatePipelineStateOptionsCommand& command) {
+  if (command.m_Result.Value != NVAPI_OK) {
+    command.Skip = true;
   }
 }
 
-void SkipCallsOnResultLayer::pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& command) {
-  if (command.result_.value != NVAPI_OK) {
-    command.skip = true;
+void SkipCallsOnResultLayer::Pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& command) {
+  if (command.m_Result.Value != NVAPI_OK) {
+    command.Skip = true;
   }
 }
 
-void SkipCallsOnResultLayer::pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& command) {
-  if (command.result_.value != NVAPI_OK) {
-    command.skip = true;
+void SkipCallsOnResultLayer::Pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& command) {
+  if (command.m_Result.Value != NVAPI_OK) {
+    command.Skip = true;
   }
 }
 
-void SkipCallsOnResultLayer::pre(
+void SkipCallsOnResultLayer::Pre(
     NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& command) {
-  if (command.result_.value != NVAPI_OK) {
-    command.skip = true;
+  if (command.m_Result.Value != NVAPI_OK) {
+    command.Skip = true;
   }
 }
 
-void SkipCallsOnResultLayer::pre(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& command) {
-  if (command.result_.value != NVAPI_OK) {
-    command.skip = true;
+void SkipCallsOnResultLayer::Pre(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& command) {
+  if (command.m_Result.Value != NVAPI_OK) {
+    command.Skip = true;
   }
 }
 
-void SkipCallsOnResultLayer::pre(
+void SkipCallsOnResultLayer::Pre(
     NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand& command) {
-  if (command.result_.value != NVAPI_OK) {
-    command.skip = true;
+  if (command.m_Result.Value != NVAPI_OK) {
+    command.Skip = true;
   }
 }
 

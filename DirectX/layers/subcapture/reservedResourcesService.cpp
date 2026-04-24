@@ -20,90 +20,90 @@
 namespace gits {
 namespace DirectX {
 
-void ReservedResourcesService::addUpdateTileMappings(
+void ReservedResourcesService::AddUpdateTileMappings(
     ID3D12CommandQueueUpdateTileMappingsCommand& c) {
 
   TiledResource* tiledResource{};
-  auto it = resources_.find(c.pResource_.key);
-  if (it != resources_.end()) {
+  auto it = m_Resources.find(c.m_pResource.Key);
+  if (it != m_Resources.end()) {
     tiledResource = it->second.get();
   } else {
     tiledResource = new TiledResource();
-    resources_[c.pResource_.key].reset(tiledResource);
+    m_Resources[c.m_pResource.Key].reset(tiledResource);
 
-    tiledResource->resource = c.pResource_.value;
-    tiledResource->desc = c.pResource_.value->GetDesc();
-    tiledResource->resourceKey = c.pResource_.key;
+    tiledResource->Resource = c.m_pResource.Value;
+    tiledResource->Desc = c.m_pResource.Value->GetDesc();
+    tiledResource->ResourceKey = c.m_pResource.Key;
 
-    initTiledResource(*tiledResource);
+    InitTiledResource(*tiledResource);
   }
 
-  unsigned heapKey = c.pHeap_.key;
+  unsigned heapKey = c.m_pHeap.Key;
 
   if (heapKey) {
-    resourcesByHeapKey_[heapKey].insert(c.pResource_.key);
+    m_ResourcesByHeapKey[heapKey].insert(c.m_pResource.Key);
   }
 
   unsigned heapRangeIndex = 0;
-  unsigned heapOffset = heapKey && c.pHeapRangeStartOffsets_.value
-                            ? c.pHeapRangeStartOffsets_.value[heapRangeIndex]
+  unsigned heapOffset = heapKey && c.m_pHeapRangeStartOffsets.Value
+                            ? c.m_pHeapRangeStartOffsets.Value[heapRangeIndex]
                             : 0;
   D3D12_TILE_RANGE_FLAGS heapRangeFlag = D3D12_TILE_RANGE_FLAG_NONE;
-  if (c.pRangeFlags_.value) {
-    heapRangeFlag = c.pRangeFlags_.value[heapRangeIndex];
+  if (c.m_pRangeFlags.Value) {
+    heapRangeFlag = c.m_pRangeFlags.Value[heapRangeIndex];
   }
-  unsigned heapRangeSize = tiledResource->tiles.size();
-  if (c.pRangeTileCounts_.value) {
-    heapRangeSize = c.pRangeTileCounts_.value[heapRangeIndex];
+  unsigned heapRangeSize = tiledResource->Tiles.size();
+  if (c.m_pRangeTileCounts.Value) {
+    heapRangeSize = c.m_pRangeTileCounts.Value[heapRangeIndex];
   }
   unsigned tileIndexInHeapRange = 0;
 
-  for (unsigned region = 0; region < c.NumResourceRegions_.value; ++region) {
+  for (unsigned region = 0; region < c.m_NumResourceRegions.Value; ++region) {
     D3D12_TILED_RESOURCE_COORDINATE coord{};
-    if (c.pResourceRegionStartCoordinates_.value) {
-      coord = c.pResourceRegionStartCoordinates_.value[region];
+    if (c.m_pResourceRegionStartCoordinates.Value) {
+      coord = c.m_pResourceRegionStartCoordinates.Value[region];
     }
     D3D12_TILE_REGION_SIZE size{};
-    if (c.pResourceRegionSizes_.value) {
-      size = c.pResourceRegionSizes_.value[region];
-    } else if (c.pResourceRegionStartCoordinates_.value) {
+    if (c.m_pResourceRegionSizes.Value) {
+      size = c.m_pResourceRegionSizes.Value[region];
+    } else if (c.m_pResourceRegionStartCoordinates.Value) {
       size.NumTiles = 1;
-    } else if (c.NumResourceRegions_.value == 1) {
-      size.NumTiles = tiledResource->tiles.size();
+    } else if (c.m_NumResourceRegions.Value == 1) {
+      size.NumTiles = tiledResource->Tiles.size();
     }
 
-    D3D12_SUBRESOURCE_TILING& subresource = tiledResource->subresources[coord.Subresource];
+    D3D12_SUBRESOURCE_TILING& subresource = tiledResource->Subresources[coord.Subresource];
 
     auto updateTile = [&](Tile& tile) {
       if (!heapKey) {
-        tile.heapKey = 0;
-        tile.heapOffset = 0;
+        tile.HeapKey = 0;
+        tile.HeapOffset = 0;
         return;
       }
 
       if (tileIndexInHeapRange == heapRangeSize) {
         tileIndexInHeapRange = 0;
         ++heapRangeIndex;
-        GITS_ASSERT(heapRangeIndex < c.NumRanges_.value);
+        GITS_ASSERT(heapRangeIndex < c.m_NumRanges.Value);
         heapOffset =
-            c.pHeapRangeStartOffsets_.value ? c.pHeapRangeStartOffsets_.value[heapRangeIndex] : 0;
+            c.m_pHeapRangeStartOffsets.Value ? c.m_pHeapRangeStartOffsets.Value[heapRangeIndex] : 0;
         heapRangeFlag = D3D12_TILE_RANGE_FLAG_NONE;
-        if (c.pRangeFlags_.value) {
-          heapRangeFlag = c.pRangeFlags_.value[heapRangeIndex];
+        if (c.m_pRangeFlags.Value) {
+          heapRangeFlag = c.m_pRangeFlags.Value[heapRangeIndex];
         }
-        heapRangeSize = tiledResource->tiles.size();
-        if (c.pRangeTileCounts_.value) {
-          heapRangeSize = c.pRangeTileCounts_.value[heapRangeIndex];
+        heapRangeSize = tiledResource->Tiles.size();
+        if (c.m_pRangeTileCounts.Value) {
+          heapRangeSize = c.m_pRangeTileCounts.Value[heapRangeIndex];
         }
       }
 
       if (heapRangeFlag == D3D12_TILE_RANGE_FLAG_NONE ||
           heapRangeFlag == D3D12_TILE_RANGE_FLAG_REUSE_SINGLE_TILE) {
-        tile.heapKey = heapKey;
-        tile.heapOffset = heapOffset;
+        tile.HeapKey = heapKey;
+        tile.HeapOffset = heapOffset;
       } else if (heapRangeFlag == D3D12_TILE_RANGE_FLAG_NULL) {
-        tile.heapKey = 0;
-        tile.heapOffset = 0;
+        tile.HeapKey = 0;
+        tile.HeapOffset = 0;
       } else if (heapRangeFlag == D3D12_TILE_RANGE_FLAG_SKIP) {
         static bool logged = false;
         if (!logged) {
@@ -125,14 +125,14 @@ void ReservedResourcesService::addUpdateTileMappings(
             unsigned tile = subresource.StartTileIndexInOverallResource +
                             (z + coord.Z) * (subresource.HeightInTiles * subresource.WidthInTiles) +
                             (y + coord.Y) * subresource.WidthInTiles + (x + coord.X);
-            updateTile(tiledResource->tiles[tile]);
+            updateTile(tiledResource->Tiles[tile]);
           }
         }
       }
     } else {
       unsigned startTile = 0;
       if (subresource.StartTileIndexInOverallResource == D3D12_PACKED_TILE) {
-        startTile = tiledResource->packedSubresourcesStartTiles[coord.Subresource] + coord.X;
+        startTile = tiledResource->PackedSubresourcesStartTiles[coord.Subresource] + coord.X;
       } else {
         startTile = subresource.StartTileIndexInOverallResource +
                     coord.Z * (subresource.HeightInTiles * subresource.WidthInTiles) +
@@ -140,35 +140,35 @@ void ReservedResourcesService::addUpdateTileMappings(
       }
       for (unsigned i = 0; i < size.NumTiles; ++i) {
         unsigned tile = startTile + i;
-        updateTile(tiledResource->tiles[tile]);
+        updateTile(tiledResource->Tiles[tile]);
       }
     }
   }
 
-  ++tiledResource->updateId;
+  ++tiledResource->UpdateId;
 }
 
-void ReservedResourcesService::initTiledResource(TiledResource& tiledResource) {
-  HRESULT hr = tiledResource.resource->GetDevice(IID_PPV_ARGS(&device_));
+void ReservedResourcesService::InitTiledResource(TiledResource& tiledResource) {
+  HRESULT hr = tiledResource.Resource->GetDevice(IID_PPV_ARGS(&m_Device));
   GITS_ASSERT(hr == S_OK);
 
   unsigned planes = 1;
-  D3D12_FEATURE_DATA_FORMAT_INFO formatInfo = {tiledResource.desc.Format, 0};
-  if (SUCCEEDED(device_->CheckFeatureSupport(D3D12_FEATURE_FORMAT_INFO, &formatInfo,
-                                             sizeof(formatInfo)))) {
+  D3D12_FEATURE_DATA_FORMAT_INFO formatInfo = {tiledResource.Desc.Format, 0};
+  if (SUCCEEDED(m_Device->CheckFeatureSupport(D3D12_FEATURE_FORMAT_INFO, &formatInfo,
+                                              sizeof(formatInfo)))) {
     planes = formatInfo.PlaneCount;
   }
-  unsigned subresources = tiledResource.desc.MipLevels * planes;
-  if (tiledResource.desc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE2D ||
-      tiledResource.desc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE1D) {
-    subresources *= tiledResource.desc.DepthOrArraySize;
+  unsigned subresources = tiledResource.Desc.MipLevels * planes;
+  if (tiledResource.Desc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE2D ||
+      tiledResource.Desc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE1D) {
+    subresources *= tiledResource.Desc.DepthOrArraySize;
   }
 
   unsigned tilesNum{};
-  tiledResource.subresources.resize(subresources);
-  device_->GetResourceTiling(tiledResource.resource, &tilesNum, &tiledResource.packedMipInfo,
-                             nullptr, &subresources, 0, tiledResource.subresources.data());
-  tiledResource.tiles.resize(tilesNum);
+  tiledResource.Subresources.resize(subresources);
+  m_Device->GetResourceTiling(tiledResource.Resource, &tilesNum, &tiledResource.PackedMipInfo,
+                              nullptr, &subresources, 0, tiledResource.Subresources.data());
+  tiledResource.Tiles.resize(tilesNum);
 
   struct SubresourceRange {
     unsigned subresourceIndex;
@@ -178,9 +178,9 @@ void ReservedResourcesService::initTiledResource(TiledResource& tiledResource) {
   };
   std::vector<SubresourceRange> subresourceRanges;
 
-  for (unsigned subresourceIndex = 0; subresourceIndex < tiledResource.subresources.size();
+  for (unsigned subresourceIndex = 0; subresourceIndex < tiledResource.Subresources.size();
        ++subresourceIndex) {
-    D3D12_SUBRESOURCE_TILING& tiling = tiledResource.subresources[subresourceIndex];
+    D3D12_SUBRESOURCE_TILING& tiling = tiledResource.Subresources[subresourceIndex];
     if (tiling.StartTileIndexInOverallResource != D3D12_PACKED_TILE) {
       SubresourceRange range{};
       range.subresourceIndex = subresourceIndex;
@@ -190,38 +190,38 @@ void ReservedResourcesService::initTiledResource(TiledResource& tiledResource) {
       subresourceRanges.push_back(range);
     }
   }
-  if (tiledResource.packedMipInfo.NumPackedMips) {
-    unsigned arraySize = tiledResource.desc.Dimension != D3D12_RESOURCE_DIMENSION_TEXTURE3D
-                             ? tiledResource.desc.DepthOrArraySize
+  if (tiledResource.PackedMipInfo.NumPackedMips) {
+    unsigned arraySize = tiledResource.Desc.Dimension != D3D12_RESOURCE_DIMENSION_TEXTURE3D
+                             ? tiledResource.Desc.DepthOrArraySize
                              : 1;
     unsigned firstPackedMip =
-        tiledResource.desc.MipLevels - tiledResource.packedMipInfo.NumPackedMips;
-    unsigned arraySliceSize = tiledResource.subresources.size() / arraySize;
+        tiledResource.Desc.MipLevels - tiledResource.PackedMipInfo.NumPackedMips;
+    unsigned arraySliceSize = tiledResource.Subresources.size() / arraySize;
     unsigned tilesPerArraySlice = tilesNum / arraySize;
     for (unsigned arrayIndex = 0; arrayIndex < arraySize; ++arrayIndex) {
       SubresourceRange range{};
       range.subresourceIndex = arrayIndex * arraySliceSize + firstPackedMip;
       range.startTile = arrayIndex * tilesPerArraySlice +
-                        tiledResource.packedMipInfo.StartTileIndexInOverallResource;
-      range.numTiles = tiledResource.packedMipInfo.NumTilesForPackedMips;
+                        tiledResource.PackedMipInfo.StartTileIndexInOverallResource;
+      range.numTiles = tiledResource.PackedMipInfo.NumTilesForPackedMips;
       range.packed = true;
       subresourceRanges.push_back(range);
 
       for (unsigned subresourceInSlice = firstPackedMip; subresourceInSlice < arraySliceSize;
            ++subresourceInSlice) {
         unsigned subresourceIndex = arrayIndex * arraySliceSize + subresourceInSlice;
-        tiledResource.packedSubresourcesStartTiles[subresourceIndex] = range.startTile;
+        tiledResource.PackedSubresourcesStartTiles[subresourceIndex] = range.startTile;
       }
     }
   }
 
   for (unsigned tileIndex = 0; tileIndex < tilesNum; ++tileIndex) {
-    Tile& tile = tiledResource.tiles[tileIndex];
+    Tile& tile = tiledResource.Tiles[tileIndex];
     bool found = false;
     for (SubresourceRange& range : subresourceRanges) {
       if (tileIndex >= range.startTile && tileIndex < range.startTile + range.numTiles) {
-        tile.packed = range.packed;
-        tile.subresourceIndex = range.subresourceIndex;
+        tile.Packed = range.packed;
+        tile.SubresourceIndex = range.subresourceIndex;
         found = true;
         break;
       }
@@ -230,41 +230,41 @@ void ReservedResourcesService::initTiledResource(TiledResource& tiledResource) {
   }
 }
 
-void ReservedResourcesService::copySourceBarrier(ID3D12Resource* resource,
-                                                 unsigned resourceKey,
-                                                 bool restoreState) {
+void ReservedResourcesService::CopySourceBarrier(ID3D12Resource* resource,
+                                                 unsigned ResourceKey,
+                                                 bool RestoreState) {
   ResourceStateTrackingService::ResourceStates& resourceStates =
-      stateService_.getResourceStateTrackingService().getResourceStates(resourceKey);
+      m_StateService.GetResourceStateTrackingService().GetResourceStates(ResourceKey);
   std::vector<D3D12_RESOURCE_BARRIER> barriers;
   std::vector<std::unique_ptr<D3D12_TEXTURE_BARRIER>> enhancedBarriers;
   std::vector<D3D12_BARRIER_GROUP> enhancedBarrierGroups;
 
-  if (resourceStates.allEqual) {
-    if (!resourceStates.subresourceStates[0].enhanced) {
-      if (resourceStates.subresourceStates[0].state != D3D12_RESOURCE_STATE_COPY_SOURCE) {
+  if (resourceStates.AllEqual) {
+    if (!resourceStates.SubresourceStates[0].Enhanced) {
+      if (resourceStates.SubresourceStates[0].State != D3D12_RESOURCE_STATE_COPY_SOURCE) {
         D3D12_RESOURCE_BARRIER barrier{};
         barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
         barrier.Transition.pResource = resource;
         barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-        barrier.Transition.StateBefore = restoreState ? D3D12_RESOURCE_STATE_COPY_SOURCE
-                                                      : resourceStates.subresourceStates[0].state;
-        barrier.Transition.StateAfter = restoreState ? resourceStates.subresourceStates[0].state
+        barrier.Transition.StateBefore = RestoreState ? D3D12_RESOURCE_STATE_COPY_SOURCE
+                                                      : resourceStates.SubresourceStates[0].State;
+        barrier.Transition.StateAfter = RestoreState ? resourceStates.SubresourceStates[0].State
                                                      : D3D12_RESOURCE_STATE_COPY_SOURCE;
         barriers.push_back(barrier);
       }
     } else {
-      if (resourceStates.subresourceStates[0].layout != D3D12_BARRIER_LAYOUT_COPY_SOURCE &&
-          resourceStates.subresourceStates[0].layout != D3D12_BARRIER_LAYOUT_UNDEFINED) {
+      if (resourceStates.SubresourceStates[0].Layout != D3D12_BARRIER_LAYOUT_COPY_SOURCE &&
+          resourceStates.SubresourceStates[0].Layout != D3D12_BARRIER_LAYOUT_UNDEFINED) {
         D3D12_TEXTURE_BARRIER* barrier = new D3D12_TEXTURE_BARRIER{};
-        barrier->SyncBefore = restoreState ? D3D12_BARRIER_SYNC_ALL : D3D12_BARRIER_SYNC_ALL;
-        barrier->SyncAfter = restoreState ? D3D12_BARRIER_SYNC_ALL : D3D12_BARRIER_SYNC_ALL;
+        barrier->SyncBefore = RestoreState ? D3D12_BARRIER_SYNC_ALL : D3D12_BARRIER_SYNC_ALL;
+        barrier->SyncAfter = RestoreState ? D3D12_BARRIER_SYNC_ALL : D3D12_BARRIER_SYNC_ALL;
         barrier->AccessBefore =
-            restoreState ? D3D12_BARRIER_ACCESS_COPY_SOURCE : D3D12_BARRIER_ACCESS_COMMON;
+            RestoreState ? D3D12_BARRIER_ACCESS_COPY_SOURCE : D3D12_BARRIER_ACCESS_COMMON;
         barrier->AccessAfter =
-            restoreState ? D3D12_BARRIER_ACCESS_COMMON : D3D12_BARRIER_ACCESS_COPY_SOURCE;
-        barrier->LayoutBefore = restoreState ? D3D12_BARRIER_LAYOUT_COPY_SOURCE
-                                             : resourceStates.subresourceStates[0].layout;
-        barrier->LayoutAfter = restoreState ? resourceStates.subresourceStates[0].layout
+            RestoreState ? D3D12_BARRIER_ACCESS_COMMON : D3D12_BARRIER_ACCESS_COPY_SOURCE;
+        barrier->LayoutBefore = RestoreState ? D3D12_BARRIER_LAYOUT_COPY_SOURCE
+                                             : resourceStates.SubresourceStates[0].Layout;
+        barrier->LayoutAfter = RestoreState ? resourceStates.SubresourceStates[0].Layout
                                             : D3D12_BARRIER_LAYOUT_COPY_SOURCE;
         barrier->pResource = resource;
         barrier->Subresources.IndexOrFirstMipLevel = 0;
@@ -277,32 +277,32 @@ void ReservedResourcesService::copySourceBarrier(ID3D12Resource* resource,
       }
     }
   } else {
-    for (unsigned i = 0; i < resourceStates.subresourceStates.size(); ++i) {
-      if (!resourceStates.subresourceStates[i].enhanced) {
-        if (resourceStates.subresourceStates[i].state != D3D12_RESOURCE_STATE_COPY_SOURCE) {
+    for (unsigned i = 0; i < resourceStates.SubresourceStates.size(); ++i) {
+      if (!resourceStates.SubresourceStates[i].Enhanced) {
+        if (resourceStates.SubresourceStates[i].State != D3D12_RESOURCE_STATE_COPY_SOURCE) {
           D3D12_RESOURCE_BARRIER barrier{};
           barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
           barrier.Transition.pResource = resource;
           barrier.Transition.Subresource = i;
-          barrier.Transition.StateBefore = restoreState ? D3D12_RESOURCE_STATE_COPY_SOURCE
-                                                        : resourceStates.subresourceStates[i].state;
-          barrier.Transition.StateAfter = restoreState ? resourceStates.subresourceStates[i].state
+          barrier.Transition.StateBefore = RestoreState ? D3D12_RESOURCE_STATE_COPY_SOURCE
+                                                        : resourceStates.SubresourceStates[i].State;
+          barrier.Transition.StateAfter = RestoreState ? resourceStates.SubresourceStates[i].State
                                                        : D3D12_RESOURCE_STATE_COPY_SOURCE;
           barriers.push_back(barrier);
         }
       } else {
-        if (resourceStates.subresourceStates[i].layout != D3D12_BARRIER_LAYOUT_COPY_SOURCE &&
-            resourceStates.subresourceStates[i].layout != D3D12_BARRIER_LAYOUT_UNDEFINED) {
+        if (resourceStates.SubresourceStates[i].Layout != D3D12_BARRIER_LAYOUT_COPY_SOURCE &&
+            resourceStates.SubresourceStates[i].Layout != D3D12_BARRIER_LAYOUT_UNDEFINED) {
           D3D12_TEXTURE_BARRIER* barrier = new D3D12_TEXTURE_BARRIER{};
-          barrier->SyncBefore = restoreState ? D3D12_BARRIER_SYNC_ALL : D3D12_BARRIER_SYNC_ALL;
-          barrier->SyncAfter = restoreState ? D3D12_BARRIER_SYNC_ALL : D3D12_BARRIER_SYNC_ALL;
+          barrier->SyncBefore = RestoreState ? D3D12_BARRIER_SYNC_ALL : D3D12_BARRIER_SYNC_ALL;
+          barrier->SyncAfter = RestoreState ? D3D12_BARRIER_SYNC_ALL : D3D12_BARRIER_SYNC_ALL;
           barrier->AccessBefore =
-              restoreState ? D3D12_BARRIER_ACCESS_COPY_SOURCE : D3D12_BARRIER_ACCESS_COMMON;
+              RestoreState ? D3D12_BARRIER_ACCESS_COPY_SOURCE : D3D12_BARRIER_ACCESS_COMMON;
           barrier->AccessAfter =
-              restoreState ? D3D12_BARRIER_ACCESS_COMMON : D3D12_BARRIER_ACCESS_COPY_SOURCE;
-          barrier->LayoutBefore = restoreState ? D3D12_BARRIER_LAYOUT_COPY_SOURCE
-                                               : resourceStates.subresourceStates[i].layout;
-          barrier->LayoutAfter = restoreState ? resourceStates.subresourceStates[i].layout
+              RestoreState ? D3D12_BARRIER_ACCESS_COMMON : D3D12_BARRIER_ACCESS_COPY_SOURCE;
+          barrier->LayoutBefore = RestoreState ? D3D12_BARRIER_LAYOUT_COPY_SOURCE
+                                               : resourceStates.SubresourceStates[i].Layout;
+          barrier->LayoutAfter = RestoreState ? resourceStates.SubresourceStates[i].Layout
                                               : D3D12_BARRIER_LAYOUT_COPY_SOURCE;
           barrier->pResource = resource;
           barrier->Subresources.IndexOrFirstMipLevel = i;
@@ -318,73 +318,73 @@ void ReservedResourcesService::copySourceBarrier(ID3D12Resource* resource,
   }
 
   if (!barriers.empty()) {
-    commandList_->ResourceBarrier(barriers.size(), barriers.data());
+    m_CommandList->ResourceBarrier(barriers.size(), barriers.data());
   }
   if (!enhancedBarrierGroups.empty()) {
     Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList7> commandList7;
-    if (SUCCEEDED(commandList_->QueryInterface(IID_PPV_ARGS(&commandList7)))) {
+    if (SUCCEEDED(m_CommandList->QueryInterface(IID_PPV_ARGS(&commandList7)))) {
       commandList7->Barrier(enhancedBarrierGroups.size(), enhancedBarrierGroups.data());
     }
   }
 }
 
-void ReservedResourcesService::destroyObject(unsigned objectKey) {
-  auto itResource = resources_.find(objectKey);
-  if (itResource != resources_.end()) {
-    itResource->second->destroyed = true;
+void ReservedResourcesService::DestroyObject(unsigned objectKey) {
+  auto itResource = m_Resources.find(objectKey);
+  if (itResource != m_Resources.end()) {
+    itResource->second->Destroyed = true;
     return;
   }
 
-  auto itHeap = resourcesByHeapKey_.find(objectKey);
-  if (itHeap == resourcesByHeapKey_.end()) {
+  auto itHeap = m_ResourcesByHeapKey.find(objectKey);
+  if (itHeap == m_ResourcesByHeapKey.end()) {
     return;
   }
-  for (unsigned resourceKey : itHeap->second) {
-    auto itResource = resources_.find(resourceKey);
-    if (itResource == resources_.end()) {
+  for (unsigned ResourceKey : itHeap->second) {
+    auto itResource = m_Resources.find(ResourceKey);
+    if (itResource == m_Resources.end()) {
       continue;
     }
-    for (Tile& tile : itResource->second->tiles) {
-      if (tile.heapKey == objectKey) {
-        tile.heapKey = 0;
-        tile.heapOffset = 0;
+    for (Tile& tile : itResource->second->Tiles) {
+      if (tile.HeapKey == objectKey) {
+        tile.HeapKey = 0;
+        tile.HeapOffset = 0;
       }
     }
   }
-  resourcesByHeapKey_.erase(itHeap);
+  m_ResourcesByHeapKey.erase(itHeap);
 }
 
-ReservedResourcesService::TiledResource* ReservedResourcesService::getTiledResource(
-    unsigned resourceKey) {
-  auto it = resources_.find(resourceKey);
-  if (it == resources_.end()) {
+ReservedResourcesService::TiledResource* ReservedResourcesService::GetTiledResource(
+    unsigned ResourceKey) {
+  auto it = m_Resources.find(ResourceKey);
+  if (it == m_Resources.end()) {
     return nullptr;
   }
   return it->second.get();
 }
 
-void ReservedResourcesService::updateTileMappings(TiledResource& tiledResource,
+void ReservedResourcesService::UpdateTileMappings(TiledResource& tiledResource,
                                                   unsigned commandQueueKey,
                                                   TileRegionsBySubresource* tileRegions) {
-  unsigned arraySize = tiledResource.desc.Dimension != D3D12_RESOURCE_DIMENSION_TEXTURE3D
-                           ? tiledResource.desc.DepthOrArraySize
+  unsigned arraySize = tiledResource.Desc.Dimension != D3D12_RESOURCE_DIMENSION_TEXTURE3D
+                           ? tiledResource.Desc.DepthOrArraySize
                            : 1;
 
   std::set<unsigned> heapKeys;
-  for (Tile& tile : tiledResource.tiles) {
-    if (tile.heapKey) {
-      heapKeys.insert(tile.heapKey);
+  for (Tile& tile : tiledResource.Tiles) {
+    if (tile.HeapKey) {
+      heapKeys.insert(tile.HeapKey);
     }
   }
 
   for (unsigned heapKey : heapKeys) {
-    stateService_.restoreState(heapKey);
+    m_StateService.RestoreState(heapKey);
 
-    ID3D12CommandQueueUpdateTileMappingsCommand command;
-    command.key = stateService_.getUniqueCommandKey();
-    command.object_.key = commandQueueKey;
-    command.pResource_.key = tiledResource.resourceKey;
-    command.pHeap_.key = heapKey;
+    ID3D12CommandQueueUpdateTileMappingsCommand Command;
+    Command.Key = m_StateService.GetUniqueCommandKey();
+    Command.m_Object.Key = commandQueueKey;
+    Command.m_pResource.Key = tiledResource.ResourceKey;
+    Command.m_pHeap.Key = heapKey;
 
     std::vector<D3D12_TILED_RESOURCE_COORDINATE> coords;
     std::vector<D3D12_TILE_REGION_SIZE> sizes;
@@ -394,26 +394,26 @@ void ReservedResourcesService::updateTileMappings(TiledResource& tiledResource,
 
     // non packed tiles
     unsigned packedTileIndex = 0;
-    for (unsigned tileIndex = 0; tileIndex < tiledResource.tiles.size(); ++tileIndex) {
+    for (unsigned tileIndex = 0; tileIndex < tiledResource.Tiles.size(); ++tileIndex) {
 
-      if (tileIndex % (tiledResource.tiles.size() / arraySize) == 0) {
+      if (tileIndex % (tiledResource.Tiles.size() / arraySize) == 0) {
         packedTileIndex = 0;
       }
 
-      Tile& tile = tiledResource.tiles[tileIndex];
+      Tile& tile = tiledResource.Tiles[tileIndex];
 
-      if (tile.heapKey == heapKey) {
+      if (tile.HeapKey == heapKey) {
         D3D12_TILED_RESOURCE_COORDINATE coord{};
-        coord.Subresource = tile.subresourceIndex;
-        if (tile.packed) {
+        coord.Subresource = tile.SubresourceIndex;
+        if (tile.Packed) {
           coord.X = packedTileIndex;
           coord.Y = 0;
           coord.Z = 0;
           ++packedTileIndex;
         } else {
           unsigned subresourceFirstTile =
-              tiledResource.subresources[tile.subresourceIndex].StartTileIndexInOverallResource;
-          D3D12_SUBRESOURCE_TILING& subresource = tiledResource.subresources[tile.subresourceIndex];
+              tiledResource.Subresources[tile.SubresourceIndex].StartTileIndexInOverallResource;
+          D3D12_SUBRESOURCE_TILING& subresource = tiledResource.Subresources[tile.SubresourceIndex];
           coord.Z = (tileIndex - subresourceFirstTile) /
                     (subresource.HeightInTiles * subresource.WidthInTiles);
           coord.Y = ((tileIndex - subresourceFirstTile) -
@@ -431,82 +431,82 @@ void ReservedResourcesService::updateTileMappings(TiledResource& tiledResource,
         sizes.push_back(size);
 
         heapRangeFlags.push_back(D3D12_TILE_RANGE_FLAG_NONE);
-        heapRangeOffsets.push_back(tile.heapOffset);
+        heapRangeOffsets.push_back(tile.HeapOffset);
         heapRangeSizes.push_back(1);
 
         if (tileRegions) {
           TileRegion tileRegion{};
-          tileRegion.coord = coord;
-          tileRegion.size = size;
-          tileRegion.packed = tile.packed;
-          (*tileRegions)[tile.subresourceIndex].push_back(tileRegion);
+          tileRegion.Coord = coord;
+          tileRegion.Size = size;
+          tileRegion.Packed = tile.Packed;
+          (*tileRegions)[tile.SubresourceIndex].push_back(tileRegion);
         }
       }
     }
 
-    command.NumResourceRegions_.value = coords.size();
-    command.pResourceRegionStartCoordinates_.value = coords.data();
-    command.pResourceRegionStartCoordinates_.size = coords.size();
-    command.pResourceRegionSizes_.value = sizes.data();
-    command.pResourceRegionSizes_.size = sizes.size();
-    command.NumRanges_.value = heapRangeFlags.size();
-    command.pRangeFlags_.value = heapRangeFlags.data();
-    command.pRangeFlags_.size = heapRangeFlags.size();
-    command.pHeapRangeStartOffsets_.value = heapRangeOffsets.data();
-    command.pHeapRangeStartOffsets_.size = heapRangeOffsets.size();
-    command.pRangeTileCounts_.value = heapRangeSizes.data();
-    command.pRangeTileCounts_.size = heapRangeSizes.size();
-    command.Flags_.value = D3D12_TILE_MAPPING_FLAG_NONE;
-    stateService_.getRecorder().record(ID3D12CommandQueueUpdateTileMappingsSerializer(command));
+    Command.m_NumResourceRegions.Value = coords.size();
+    Command.m_pResourceRegionStartCoordinates.Value = coords.data();
+    Command.m_pResourceRegionStartCoordinates.Size = coords.size();
+    Command.m_pResourceRegionSizes.Value = sizes.data();
+    Command.m_pResourceRegionSizes.Size = sizes.size();
+    Command.m_NumRanges.Value = heapRangeFlags.size();
+    Command.m_pRangeFlags.Value = heapRangeFlags.data();
+    Command.m_pRangeFlags.Size = heapRangeFlags.size();
+    Command.m_pHeapRangeStartOffsets.Value = heapRangeOffsets.data();
+    Command.m_pHeapRangeStartOffsets.Size = heapRangeOffsets.size();
+    Command.m_pRangeTileCounts.Value = heapRangeSizes.data();
+    Command.m_pRangeTileCounts.Size = heapRangeSizes.size();
+    Command.m_Flags.Value = D3D12_TILE_MAPPING_FLAG_NONE;
+    m_StateService.GetRecorder().Record(ID3D12CommandQueueUpdateTileMappingsSerializer(Command));
   }
 }
 
-void ReservedResourcesService::restoreContent(const std::vector<unsigned>& resourceKeys) {
-  if (resources_.empty()) {
+void ReservedResourcesService::RestoreContent(const std::vector<unsigned>& ResourceKeys) {
+  if (m_Resources.empty()) {
     return;
   }
 
-  initRestore();
+  InitRestore();
 
-  for (unsigned resourceKey : resourceKeys) {
-    if (resources_.find(resourceKey) == resources_.end()) {
+  for (unsigned ResourceKey : ResourceKeys) {
+    if (m_Resources.find(ResourceKey) == m_Resources.end()) {
       continue;
     }
-    if (!stateService_.stateRestored(resourceKey)) {
+    if (!m_StateService.StateRestored(ResourceKey)) {
       continue;
     }
-    TiledResource* tiledResource = resources_.at(resourceKey).get();
-    if (tiledResource->destroyed) {
+    TiledResource* tiledResource = m_Resources.at(ResourceKey).get();
+    if (tiledResource->Destroyed) {
       continue;
     }
 
     TileRegionsBySubresource tileRegions;
-    updateTileMappings(*tiledResource, commandQueueKey_, &tileRegions);
+    UpdateTileMappings(*tiledResource, m_CommandQueueKey, &tileRegions);
 
     std::vector<std::pair<unsigned, D3D12_PLACED_SUBRESOURCE_FOOTPRINT>> subresourceSizes;
-    getSubresourceSizes(device_, tiledResource->desc, subresourceSizes);
+    GetSubresourceSizes(m_Device, tiledResource->Desc, subresourceSizes);
 
     // copy resources contents into readback resource
 
-    std::vector<bool> subresourceFullyMappedFlags(tiledResource->subresources.size(), true);
+    std::vector<bool> subresourceFullyMappedFlags(tiledResource->Subresources.size(), true);
     std::set<unsigned> heapKeys;
-    for (const auto& tile : tiledResource->tiles) {
-      if (!tile.heapKey) {
-        subresourceFullyMappedFlags.at(tile.subresourceIndex) = false;
+    for (const auto& tile : tiledResource->Tiles) {
+      if (!tile.HeapKey) {
+        subresourceFullyMappedFlags.at(tile.SubresourceIndex) = false;
       } else {
-        heapKeys.insert(tile.heapKey);
+        heapKeys.insert(tile.HeapKey);
       }
     }
 
     const UINT64 tileSize = 64 * 1024;
     UINT64 totalSize = 0;
-    for (unsigned subresourceIndex = 0; subresourceIndex < tiledResource->subresources.size();
+    for (unsigned subresourceIndex = 0; subresourceIndex < tiledResource->Subresources.size();
          ++subresourceIndex) {
       if (subresourceFullyMappedFlags.at(subresourceIndex)) {
         totalSize += subresourceSizes[subresourceIndex].first;
       } else if (tileRegions.count(subresourceIndex)) {
         for (TileRegion& region : tileRegions.at(subresourceIndex)) {
-          totalSize += region.size.NumTiles * tileSize;
+          totalSize += region.Size.NumTiles * tileSize;
         }
       }
     }
@@ -514,7 +514,7 @@ void ReservedResourcesService::restoreContent(const std::vector<unsigned>& resou
       continue;
     }
 
-    GITS_ASSERT(totalSize <= uploadResourceSize_);
+    GITS_ASSERT(totalSize <= m_UploadResourceSize);
 
     D3D12_HEAP_PROPERTIES heapPropertiesReadback{};
     heapPropertiesReadback.Type = D3D12_HEAP_TYPE_READBACK;
@@ -537,21 +537,21 @@ void ReservedResourcesService::restoreContent(const std::vector<unsigned>& resou
     readbackResourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
 
     Microsoft::WRL::ComPtr<ID3D12Resource> readbackResource;
-    HRESULT hr = device_->CreateCommittedResource(
+    HRESULT hr = m_Device->CreateCommittedResource(
         &heapPropertiesReadback, D3D12_HEAP_FLAG_NONE, &readbackResourceDesc,
         D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&readbackResource));
     GITS_ASSERT(hr == S_OK);
 
-    copySourceBarrier(tiledResource->resource, tiledResource->resourceKey, false);
+    CopySourceBarrier(tiledResource->Resource, tiledResource->ResourceKey, false);
 
     UINT64 offsetReadback = 0;
-    for (unsigned subresourceIndex = 0; subresourceIndex < tiledResource->subresources.size();
+    for (unsigned subresourceIndex = 0; subresourceIndex < tiledResource->Subresources.size();
          ++subresourceIndex) {
       if (subresourceFullyMappedFlags.at(subresourceIndex)) {
-        if (tiledResource->desc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER) {
-          commandList_->CopyBufferRegion(readbackResource.Get(), offsetReadback,
-                                         tiledResource->resource, 0,
-                                         subresourceSizes.at(subresourceIndex).first);
+        if (tiledResource->Desc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER) {
+          m_CommandList->CopyBufferRegion(readbackResource.Get(), offsetReadback,
+                                          tiledResource->Resource, 0,
+                                          subresourceSizes.at(subresourceIndex).first);
         } else {
           D3D12_TEXTURE_COPY_LOCATION dest{};
           dest.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
@@ -560,111 +560,111 @@ void ReservedResourcesService::restoreContent(const std::vector<unsigned>& resou
           dest.PlacedFootprint.Offset = offsetReadback;
           D3D12_TEXTURE_COPY_LOCATION src{};
           src.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-          src.pResource = tiledResource->resource;
+          src.pResource = tiledResource->Resource;
           src.SubresourceIndex = subresourceIndex;
-          commandList_->CopyTextureRegion(&dest, 0, 0, 0, &src, nullptr);
+          m_CommandList->CopyTextureRegion(&dest, 0, 0, 0, &src, nullptr);
         }
         offsetReadback += subresourceSizes.at(subresourceIndex).first;
       } else if (tileRegions.count(subresourceIndex)) {
         for (TileRegion& region : tileRegions.at(subresourceIndex)) {
-          GITS_ASSERT(!region.packed);
-          if (tiledResource->desc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER) {
-            commandList_->CopyBufferRegion(readbackResource.Get(), offsetReadback,
-                                           tiledResource->resource, region.coord.X * tileSize,
-                                           region.size.NumTiles * tileSize);
+          GITS_ASSERT(!region.Packed);
+          if (tiledResource->Desc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER) {
+            m_CommandList->CopyBufferRegion(readbackResource.Get(), offsetReadback,
+                                            tiledResource->Resource, region.Coord.X * tileSize,
+                                            region.Size.NumTiles * tileSize);
           } else {
-            commandList_->CopyTiles(tiledResource->resource, &region.coord, &region.size,
-                                    readbackResource.Get(), offsetReadback,
-                                    D3D12_TILE_COPY_FLAG_SWIZZLED_TILED_RESOURCE_TO_LINEAR_BUFFER);
+            m_CommandList->CopyTiles(tiledResource->Resource, &region.Coord, &region.Size,
+                                     readbackResource.Get(), offsetReadback,
+                                     D3D12_TILE_COPY_FLAG_SWIZZLED_TILED_RESOURCE_TO_LINEAR_BUFFER);
           }
-          offsetReadback += region.size.NumTiles * tileSize;
+          offsetReadback += region.Size.NumTiles * tileSize;
         }
       }
     }
 
-    copySourceBarrier(tiledResource->resource, tiledResource->resourceKey, true);
+    CopySourceBarrier(tiledResource->Resource, tiledResource->ResourceKey, true);
 
-    commandList_->Close();
+    m_CommandList->Close();
 
     // increase residency count or make resident
 
     std::vector<ID3D12Pageable*> residencyObjects;
     for (const auto heapKey : heapKeys) {
-      ObjectState* heapState = stateService_.getState(heapKey);
-      residencyObjects.push_back(static_cast<ID3D12Pageable*>(heapState->object));
+      ObjectState* heapState = m_StateService.GetState(heapKey);
+      residencyObjects.push_back(static_cast<ID3D12Pageable*>(heapState->Object));
     }
     if (!residencyObjects.empty()) {
-      device_->MakeResident(residencyObjects.size(), residencyObjects.data());
+      m_Device->MakeResident(residencyObjects.size(), residencyObjects.data());
     }
 
-    ID3D12CommandList* commandLists[] = {commandList_};
-    commandQueue_->ExecuteCommandLists(1, commandLists);
-    commandQueue_->Signal(fence_, ++currentFenceValue_);
-    while (fence_->GetCompletedValue() < currentFenceValue_) {
+    ID3D12CommandList* commandLists[] = {m_CommandList};
+    m_CommandQueue->ExecuteCommandLists(1, commandLists);
+    m_CommandQueue->Signal(m_Fence, ++m_CurrentFenceValue);
+    while (m_Fence->GetCompletedValue() < m_CurrentFenceValue) {
     }
 
-    hr = commandAllocator_->Reset();
+    hr = m_CommandAllocator->Reset();
     GITS_ASSERT(hr == S_OK);
-    hr = commandList_->Reset(commandAllocator_, nullptr);
+    hr = m_CommandList->Reset(m_CommandAllocator, nullptr);
     GITS_ASSERT(hr == S_OK);
 
-    // decrese residency count or evict
+    // decrese residency count or Evict
 
     if (!residencyObjects.empty()) {
-      HRESULT hr = device_->Evict(residencyObjects.size(), residencyObjects.data());
+      HRESULT hr = m_Device->Evict(residencyObjects.size(), residencyObjects.data());
       GITS_ASSERT(hr == S_OK);
     }
 
     // create upload resource with resources contents in subcaptured stream
 
-    unsigned deviceKey = stateService_.getDeviceKey();
+    unsigned DeviceKey = m_StateService.GetDeviceKey();
 
     void* mappedData{};
     hr = readbackResource->Map(0, nullptr, &mappedData);
 
     ID3D12ResourceMapCommand mapCommand;
-    mapCommand.key = stateService_.getUniqueCommandKey();
-    mapCommand.object_.key = uploadResourceKey_;
-    mapCommand.Subresource_.value = 0;
-    mapCommand.pReadRange_.value = nullptr;
-    mapCommand.ppData_.captureValue = stateService_.getUniqueFakePointer();
-    mapCommand.ppData_.value = &mapCommand.ppData_.captureValue;
-    stateService_.getRecorder().record(ID3D12ResourceMapSerializer(mapCommand));
+    mapCommand.Key = m_StateService.GetUniqueCommandKey();
+    mapCommand.m_Object.Key = m_UploadResourceKey;
+    mapCommand.m_Subresource.Value = 0;
+    mapCommand.m_pReadRange.Value = nullptr;
+    mapCommand.m_ppData.CaptureValue = m_StateService.GetUniqueFakePointer();
+    mapCommand.m_ppData.Value = &mapCommand.m_ppData.CaptureValue;
+    m_StateService.GetRecorder().Record(ID3D12ResourceMapSerializer(mapCommand));
 
     MappedDataMetaCommand metaCommand;
-    metaCommand.key = stateService_.getUniqueCommandKey();
-    metaCommand.resource_.key = uploadResourceKey_;
-    metaCommand.mappedAddress_.value = mapCommand.ppData_.captureValue;
-    metaCommand.offset_.value = 0;
-    metaCommand.data_.value = mappedData;
-    metaCommand.data_.size = readbackResourceDesc.Width;
-    stateService_.getRecorder().record(MappedDataMetaSerializer(metaCommand));
+    metaCommand.Key = m_StateService.GetUniqueCommandKey();
+    metaCommand.m_resource.Key = m_UploadResourceKey;
+    metaCommand.m_mappedAddress.Value = mapCommand.m_ppData.CaptureValue;
+    metaCommand.m_offset.Value = 0;
+    metaCommand.m_data.Value = mappedData;
+    metaCommand.m_data.Size = readbackResourceDesc.Width;
+    m_StateService.GetRecorder().Record(MappedDataMetaSerializer(metaCommand));
 
     ID3D12ResourceUnmapCommand unmapCommand;
-    unmapCommand.key = stateService_.getUniqueCommandKey();
-    unmapCommand.object_.key = uploadResourceKey_;
-    unmapCommand.Subresource_.value = 0;
-    unmapCommand.pWrittenRange_.value = nullptr;
-    stateService_.getRecorder().record(ID3D12ResourceUnmapSerializer(unmapCommand));
+    unmapCommand.Key = m_StateService.GetUniqueCommandKey();
+    unmapCommand.m_Object.Key = m_UploadResourceKey;
+    unmapCommand.m_Subresource.Value = 0;
+    unmapCommand.m_pWrittenRange.Value = nullptr;
+    m_StateService.GetRecorder().Record(ID3D12ResourceUnmapSerializer(unmapCommand));
 
     readbackResource->Unmap(0, nullptr);
 
     // restore resources contents from upload resource in subcaptured stream
 
     UINT64 offsetUpload = 0;
-    for (unsigned subresourceIndex = 0; subresourceIndex < tiledResource->subresources.size();
+    for (unsigned subresourceIndex = 0; subresourceIndex < tiledResource->Subresources.size();
          ++subresourceIndex) {
       if (subresourceFullyMappedFlags.at(subresourceIndex)) {
-        if (tiledResource->desc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER) {
+        if (tiledResource->Desc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER) {
           ID3D12GraphicsCommandListCopyBufferRegionCommand copyBufferRegion;
-          copyBufferRegion.key = stateService_.getUniqueCommandKey();
-          copyBufferRegion.object_.key = commandListKey_;
-          copyBufferRegion.pDstBuffer_.key = tiledResource->resourceKey;
-          copyBufferRegion.DstOffset_.value = 0;
-          copyBufferRegion.pSrcBuffer_.key = uploadResourceKey_;
-          copyBufferRegion.SrcOffset_.value = offsetUpload;
-          copyBufferRegion.NumBytes_.value = subresourceSizes.at(subresourceIndex).first;
-          stateService_.getRecorder().record(
+          copyBufferRegion.Key = m_StateService.GetUniqueCommandKey();
+          copyBufferRegion.m_Object.Key = m_CommandListKey;
+          copyBufferRegion.m_pDstBuffer.Key = tiledResource->ResourceKey;
+          copyBufferRegion.m_DstOffset.Value = 0;
+          copyBufferRegion.m_pSrcBuffer.Key = m_UploadResourceKey;
+          copyBufferRegion.m_SrcOffset.Value = offsetUpload;
+          copyBufferRegion.m_NumBytes.Value = subresourceSizes.at(subresourceIndex).first;
+          m_StateService.GetRecorder().Record(
               ID3D12GraphicsCommandListCopyBufferRegionSerializer(copyBufferRegion));
         } else {
           D3D12_TEXTURE_COPY_LOCATION dest{};
@@ -677,152 +677,152 @@ void ReservedResourcesService::restoreContent(const std::vector<unsigned>& resou
           src.PlacedFootprint.Offset = offsetUpload;
 
           ID3D12GraphicsCommandListCopyTextureRegionCommand copyTextureRegion;
-          copyTextureRegion.key = stateService_.getUniqueCommandKey();
-          copyTextureRegion.object_.key = commandListKey_;
-          copyTextureRegion.pDst_.value = &dest;
-          copyTextureRegion.pDst_.resourceKey = tiledResource->resourceKey;
-          copyTextureRegion.pSrc_.value = &src;
-          copyTextureRegion.pSrc_.resourceKey = uploadResourceKey_;
-          stateService_.getRecorder().record(
+          copyTextureRegion.Key = m_StateService.GetUniqueCommandKey();
+          copyTextureRegion.m_Object.Key = m_CommandListKey;
+          copyTextureRegion.m_pDst.Value = &dest;
+          copyTextureRegion.m_pDst.ResourceKey = tiledResource->ResourceKey;
+          copyTextureRegion.m_pSrc.Value = &src;
+          copyTextureRegion.m_pSrc.ResourceKey = m_UploadResourceKey;
+          m_StateService.GetRecorder().Record(
               ID3D12GraphicsCommandListCopyTextureRegionSerializer(copyTextureRegion));
         }
         offsetUpload += subresourceSizes.at(subresourceIndex).first;
       } else if (tileRegions.count(subresourceIndex)) {
         for (TileRegion& region : tileRegions.at(subresourceIndex)) {
-          GITS_ASSERT(!region.packed);
-          if (tiledResource->desc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER) {
+          GITS_ASSERT(!region.Packed);
+          if (tiledResource->Desc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER) {
             ID3D12GraphicsCommandListCopyBufferRegionCommand copyBufferRegion;
-            copyBufferRegion.key = stateService_.getUniqueCommandKey();
-            copyBufferRegion.object_.key = commandListKey_;
-            copyBufferRegion.pDstBuffer_.key = tiledResource->resourceKey;
-            copyBufferRegion.DstOffset_.value = region.coord.X * tileSize;
-            copyBufferRegion.pSrcBuffer_.key = uploadResourceKey_;
-            copyBufferRegion.SrcOffset_.value = offsetUpload;
-            copyBufferRegion.NumBytes_.value = region.size.NumTiles * tileSize;
-            stateService_.getRecorder().record(
+            copyBufferRegion.Key = m_StateService.GetUniqueCommandKey();
+            copyBufferRegion.m_Object.Key = m_CommandListKey;
+            copyBufferRegion.m_pDstBuffer.Key = tiledResource->ResourceKey;
+            copyBufferRegion.m_DstOffset.Value = region.Coord.X * tileSize;
+            copyBufferRegion.m_pSrcBuffer.Key = m_UploadResourceKey;
+            copyBufferRegion.m_SrcOffset.Value = offsetUpload;
+            copyBufferRegion.m_NumBytes.Value = region.Size.NumTiles * tileSize;
+            m_StateService.GetRecorder().Record(
                 ID3D12GraphicsCommandListCopyBufferRegionSerializer(copyBufferRegion));
           } else {
             ID3D12GraphicsCommandListCopyTilesCommand copyTiles;
-            copyTiles.key = stateService_.getUniqueCommandKey();
-            copyTiles.object_.key = commandListKey_;
-            copyTiles.pTiledResource_.key = tiledResource->resourceKey;
-            copyTiles.pTileRegionStartCoordinate_.value = &region.coord;
-            copyTiles.pTileRegionSize_.value = &region.size;
-            copyTiles.pBuffer_.key = uploadResourceKey_;
-            copyTiles.BufferStartOffsetInBytes_.value = offsetUpload;
-            copyTiles.Flags_.value = D3D12_TILE_COPY_FLAG_LINEAR_BUFFER_TO_SWIZZLED_TILED_RESOURCE;
-            stateService_.getRecorder().record(
+            copyTiles.Key = m_StateService.GetUniqueCommandKey();
+            copyTiles.m_Object.Key = m_CommandListKey;
+            copyTiles.m_pTiledResource.Key = tiledResource->ResourceKey;
+            copyTiles.m_pTileRegionStartCoordinate.Value = &region.Coord;
+            copyTiles.m_pTileRegionSize.Value = &region.Size;
+            copyTiles.m_pBuffer.Key = m_UploadResourceKey;
+            copyTiles.m_BufferStartOffsetInBytes.Value = offsetUpload;
+            copyTiles.m_Flags.Value = D3D12_TILE_COPY_FLAG_LINEAR_BUFFER_TO_SWIZZLED_TILED_RESOURCE;
+            m_StateService.GetRecorder().Record(
                 ID3D12GraphicsCommandListCopyTilesSerializer(copyTiles));
           }
-          offsetUpload += region.size.NumTiles * tileSize;
+          offsetUpload += region.Size.NumTiles * tileSize;
         }
       }
     }
 
     ID3D12GraphicsCommandListCloseCommand commandListClose;
-    commandListClose.key = stateService_.getUniqueCommandKey();
-    commandListClose.object_.key = commandListKey_;
-    stateService_.getRecorder().record(ID3D12GraphicsCommandListCloseSerializer(commandListClose));
+    commandListClose.Key = m_StateService.GetUniqueCommandKey();
+    commandListClose.m_Object.Key = m_CommandListKey;
+    m_StateService.GetRecorder().Record(ID3D12GraphicsCommandListCloseSerializer(commandListClose));
 
     // increase residency count or make resident
 
     if (!heapKeys.empty()) {
-      ID3D12DeviceMakeResidentCommand makeResident;
-      makeResident.key = stateService_.getUniqueCommandKey();
-      makeResident.object_.key = deviceKey;
-      makeResident.NumObjects_.value = heapKeys.size();
+      ID3D12DeviceMakeResidentCommand MakeResident;
+      MakeResident.Key = m_StateService.GetUniqueCommandKey();
+      MakeResident.m_Object.Key = DeviceKey;
+      MakeResident.m_NumObjects.Value = heapKeys.size();
       ID3D12Pageable* fakePtr = reinterpret_cast<ID3D12Pageable*>(1);
-      makeResident.ppObjects_.value = &fakePtr;
-      makeResident.ppObjects_.size = heapKeys.size();
+      MakeResident.m_ppObjects.Value = &fakePtr;
+      MakeResident.m_ppObjects.Size = heapKeys.size();
       for (unsigned key : heapKeys) {
-        makeResident.ppObjects_.keys.push_back(key);
+        MakeResident.m_ppObjects.Keys.push_back(key);
       }
-      stateService_.getRecorder().record(ID3D12DeviceMakeResidentSerializer(makeResident));
+      m_StateService.GetRecorder().Record(ID3D12DeviceMakeResidentSerializer(MakeResident));
     }
 
-    ID3D12CommandQueueExecuteCommandListsCommand executeCommandLists;
-    executeCommandLists.key = stateService_.getUniqueCommandKey();
-    executeCommandLists.object_.key = commandQueueKey_;
-    executeCommandLists.NumCommandLists_.value = 1;
-    executeCommandLists.ppCommandLists_.value = reinterpret_cast<ID3D12CommandList**>(1);
-    executeCommandLists.ppCommandLists_.size = 1;
-    executeCommandLists.ppCommandLists_.keys.resize(1);
-    executeCommandLists.ppCommandLists_.keys[0] = commandListKey_;
-    stateService_.getRecorder().record(
-        ID3D12CommandQueueExecuteCommandListsSerializer(executeCommandLists));
+    ID3D12CommandQueueExecuteCommandListsCommand ExecuteCommandLists;
+    ExecuteCommandLists.Key = m_StateService.GetUniqueCommandKey();
+    ExecuteCommandLists.m_Object.Key = m_CommandQueueKey;
+    ExecuteCommandLists.m_NumCommandLists.Value = 1;
+    ExecuteCommandLists.m_ppCommandLists.Value = reinterpret_cast<ID3D12CommandList**>(1);
+    ExecuteCommandLists.m_ppCommandLists.Size = 1;
+    ExecuteCommandLists.m_ppCommandLists.Keys.resize(1);
+    ExecuteCommandLists.m_ppCommandLists.Keys[0] = m_CommandListKey;
+    m_StateService.GetRecorder().Record(
+        ID3D12CommandQueueExecuteCommandListsSerializer(ExecuteCommandLists));
 
-    ID3D12CommandQueueSignalCommand commandQueueSignal;
-    commandQueueSignal.key = stateService_.getUniqueCommandKey();
-    commandQueueSignal.object_.key = commandQueueKey_;
-    commandQueueSignal.pFence_.key = fenceKey_;
-    commandQueueSignal.Value_.value = ++recordedFenceValue_;
-    stateService_.getRecorder().record(ID3D12CommandQueueSignalSerializer(commandQueueSignal));
+    ID3D12CommandQueueSignalCommand CommandQueueSignal;
+    CommandQueueSignal.Key = m_StateService.GetUniqueCommandKey();
+    CommandQueueSignal.m_Object.Key = m_CommandQueueKey;
+    CommandQueueSignal.m_pFence.Key = m_FenceKey;
+    CommandQueueSignal.m_Value.Value = ++m_RecordedFenceValue;
+    m_StateService.GetRecorder().Record(ID3D12CommandQueueSignalSerializer(CommandQueueSignal));
 
     ID3D12FenceGetCompletedValueCommand getCompletedValue;
-    getCompletedValue.key = stateService_.getUniqueCommandKey();
-    getCompletedValue.object_.key = fenceKey_;
-    getCompletedValue.result_.value = recordedFenceValue_;
-    stateService_.getRecorder().record(ID3D12FenceGetCompletedValueSerializer(getCompletedValue));
+    getCompletedValue.Key = m_StateService.GetUniqueCommandKey();
+    getCompletedValue.m_Object.Key = m_FenceKey;
+    getCompletedValue.m_Result.Value = m_RecordedFenceValue;
+    m_StateService.GetRecorder().Record(ID3D12FenceGetCompletedValueSerializer(getCompletedValue));
 
     ID3D12CommandAllocatorResetCommand commandAllocatorReset;
-    commandAllocatorReset.key = stateService_.getUniqueCommandKey();
-    commandAllocatorReset.object_.key = commandAllocatorKey_;
-    stateService_.getRecorder().record(
+    commandAllocatorReset.Key = m_StateService.GetUniqueCommandKey();
+    commandAllocatorReset.m_Object.Key = m_CommandAllocatorKey;
+    m_StateService.GetRecorder().Record(
         ID3D12CommandAllocatorResetSerializer(commandAllocatorReset));
 
-    ID3D12GraphicsCommandListResetCommand commandListReset;
-    commandListReset.key = stateService_.getUniqueCommandKey();
-    commandListReset.object_.key = commandListKey_;
-    commandListReset.pAllocator_.key = commandAllocatorKey_;
-    commandListReset.pInitialState_.key = 0;
-    stateService_.getRecorder().record(ID3D12GraphicsCommandListResetSerializer(commandListReset));
+    ID3D12GraphicsCommandListResetCommand CommandListReset;
+    CommandListReset.Key = m_StateService.GetUniqueCommandKey();
+    CommandListReset.m_Object.Key = m_CommandListKey;
+    CommandListReset.m_pAllocator.Key = m_CommandAllocatorKey;
+    CommandListReset.m_pInitialState.Key = 0;
+    m_StateService.GetRecorder().Record(ID3D12GraphicsCommandListResetSerializer(CommandListReset));
 
-    // decrese residency count or evict
+    // decrese residency count or Evict
 
     if (!heapKeys.empty()) {
-      ID3D12DeviceEvictCommand evict;
-      evict.key = stateService_.getUniqueCommandKey();
-      evict.object_.key = deviceKey;
-      evict.NumObjects_.value = heapKeys.size();
+      ID3D12DeviceEvictCommand Evict;
+      Evict.Key = m_StateService.GetUniqueCommandKey();
+      Evict.m_Object.Key = DeviceKey;
+      Evict.m_NumObjects.Value = heapKeys.size();
       ID3D12Pageable* fakePtr = reinterpret_cast<ID3D12Pageable*>(1);
-      evict.ppObjects_.value = &fakePtr;
-      evict.ppObjects_.size = heapKeys.size();
+      Evict.m_ppObjects.Value = &fakePtr;
+      Evict.m_ppObjects.Size = heapKeys.size();
       for (unsigned key : heapKeys) {
-        evict.ppObjects_.keys.push_back(key);
+        Evict.m_ppObjects.Keys.push_back(key);
       }
-      stateService_.getRecorder().record(ID3D12DeviceEvictSerializer(evict));
+      m_StateService.GetRecorder().Record(ID3D12DeviceEvictSerializer(Evict));
     }
   }
 }
 
-void ReservedResourcesService::initRestore() {
-  if (contentRestoreInitialized_) {
+void ReservedResourcesService::InitRestore() {
+  if (m_ContentRestoreInitialized) {
     return;
   }
 
   size_t maxUploadSize = 0;
-  for (const auto& tiledResource : resources_) {
-    if (tiledResource.second->destroyed) {
+  for (const auto& tiledResource : m_Resources) {
+    if (tiledResource.second->Destroyed) {
       continue;
     }
 
-    std::vector<bool> subresourceFullyMappedFlags(tiledResource.second->subresources.size(), true);
+    std::vector<bool> subresourceFullyMappedFlags(tiledResource.second->Subresources.size(), true);
     std::map<unsigned, unsigned> numTilesBySubresourceIndex;
-    for (const auto& tile : tiledResource.second->tiles) {
-      if (tile.heapKey) {
-        ++numTilesBySubresourceIndex[tile.subresourceIndex];
+    for (const auto& tile : tiledResource.second->Tiles) {
+      if (tile.HeapKey) {
+        ++numTilesBySubresourceIndex[tile.SubresourceIndex];
       } else {
-        subresourceFullyMappedFlags.at(tile.subresourceIndex) = false;
+        subresourceFullyMappedFlags.at(tile.SubresourceIndex) = false;
       }
     }
 
     std::vector<std::pair<unsigned, D3D12_PLACED_SUBRESOURCE_FOOTPRINT>> subresourceSizes;
-    getSubresourceSizes(device_, tiledResource.second->desc, subresourceSizes);
+    GetSubresourceSizes(m_Device, tiledResource.second->Desc, subresourceSizes);
 
     const size_t tileSize = 64 * 1024;
     size_t uploadSize = 0;
     for (unsigned subresourceIndex = 0;
-         subresourceIndex < tiledResource.second->subresources.size(); ++subresourceIndex) {
+         subresourceIndex < tiledResource.second->Subresources.size(); ++subresourceIndex) {
       if (subresourceFullyMappedFlags.at(subresourceIndex)) {
         uploadSize += subresourceSizes[subresourceIndex].first;
       } else if (numTilesBySubresourceIndex.count(subresourceIndex)) {
@@ -835,17 +835,17 @@ void ReservedResourcesService::initRestore() {
     }
   }
 
-  uploadResourceSize_ = maxUploadSize;
+  m_UploadResourceSize = maxUploadSize;
 
-  unsigned deviceKey = stateService_.getDeviceKey();
+  unsigned DeviceKey = m_StateService.GetDeviceKey();
 
-  if (uploadResourceSize_) {
-    uploadResourceKey_ = stateService_.getUniqueObjectKey();
+  if (m_UploadResourceSize) {
+    m_UploadResourceKey = m_StateService.GetUniqueObjectKey();
 
     D3D12_RESOURCE_DESC resourceDesc{};
     resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
     resourceDesc.Alignment = 0;
-    resourceDesc.Width = uploadResourceSize_;
+    resourceDesc.Width = m_UploadResourceSize;
     resourceDesc.Height = 1;
     resourceDesc.DepthOrArraySize = 1;
     resourceDesc.MipLevels = 1;
@@ -863,118 +863,118 @@ void ReservedResourcesService::initRestore() {
     heapPropertiesUpload.VisibleNodeMask = 1;
 
     ID3D12DeviceCreateCommittedResourceCommand createUploadResource;
-    createUploadResource.key = stateService_.getUniqueCommandKey();
-    createUploadResource.object_.key = deviceKey;
-    createUploadResource.pHeapProperties_.value = &heapPropertiesUpload;
-    createUploadResource.HeapFlags_.value = D3D12_HEAP_FLAG_NONE;
-    createUploadResource.pDesc_.value = &resourceDesc;
-    createUploadResource.InitialResourceState_.value = D3D12_RESOURCE_STATE_GENERIC_READ;
-    createUploadResource.pOptimizedClearValue_.value = nullptr;
-    createUploadResource.riidResource_.value = IID_ID3D12Resource;
-    createUploadResource.ppvResource_.key = uploadResourceKey_;
-    stateService_.getRecorder().record(
+    createUploadResource.Key = m_StateService.GetUniqueCommandKey();
+    createUploadResource.m_Object.Key = DeviceKey;
+    createUploadResource.m_pHeapProperties.Value = &heapPropertiesUpload;
+    createUploadResource.m_HeapFlags.Value = D3D12_HEAP_FLAG_NONE;
+    createUploadResource.m_pDesc.Value = &resourceDesc;
+    createUploadResource.m_InitialResourceState.Value = D3D12_RESOURCE_STATE_GENERIC_READ;
+    createUploadResource.m_pOptimizedClearValue.Value = nullptr;
+    createUploadResource.m_riidResource.Value = IID_ID3D12Resource;
+    createUploadResource.m_ppvResource.Key = m_UploadResourceKey;
+    m_StateService.GetRecorder().Record(
         ID3D12DeviceCreateCommittedResourceSerializer(createUploadResource));
   }
 
   D3D12_COMMAND_QUEUE_DESC commandQueueDirectDesc{};
   commandQueueDirectDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
-  HRESULT hr = device_->CreateCommandQueue(&commandQueueDirectDesc, IID_PPV_ARGS(&commandQueue_));
+  HRESULT hr = m_Device->CreateCommandQueue(&commandQueueDirectDesc, IID_PPV_ARGS(&m_CommandQueue));
   GITS_ASSERT(hr == S_OK);
-  hr = device_->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT,
-                                       IID_PPV_ARGS(&commandAllocator_));
+  hr = m_Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT,
+                                        IID_PPV_ARGS(&m_CommandAllocator));
   GITS_ASSERT(hr == S_OK);
-  hr = device_->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, commandAllocator_, nullptr,
-                                  IID_PPV_ARGS(&commandList_));
+  hr = m_Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_CommandAllocator, nullptr,
+                                   IID_PPV_ARGS(&m_CommandList));
   GITS_ASSERT(hr == S_OK);
-  hr = device_->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence_));
+  hr = m_Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_Fence));
   GITS_ASSERT(hr == S_OK);
 
-  commandQueueKey_ = stateService_.getUniqueObjectKey();
+  m_CommandQueueKey = m_StateService.GetUniqueObjectKey();
   D3D12_COMMAND_QUEUE_DESC commandQueueDesc{};
   commandQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_COPY;
-  ID3D12DeviceCreateCommandQueueCommand createCommandQueue;
-  createCommandQueue.key = stateService_.getUniqueCommandKey();
-  createCommandQueue.object_.key = deviceKey;
-  createCommandQueue.pDesc_.value = &commandQueueDesc;
-  createCommandQueue.riid_.value = IID_ID3D12CommandQueue;
-  createCommandQueue.ppCommandQueue_.key = commandQueueKey_;
-  stateService_.getRecorder().record(ID3D12DeviceCreateCommandQueueSerializer(createCommandQueue));
+  ID3D12DeviceCreateCommandQueueCommand CreateCommandQueue;
+  CreateCommandQueue.Key = m_StateService.GetUniqueCommandKey();
+  CreateCommandQueue.m_Object.Key = DeviceKey;
+  CreateCommandQueue.m_pDesc.Value = &commandQueueDesc;
+  CreateCommandQueue.m_riid.Value = IID_ID3D12CommandQueue;
+  CreateCommandQueue.m_ppCommandQueue.Key = m_CommandQueueKey;
+  m_StateService.GetRecorder().Record(ID3D12DeviceCreateCommandQueueSerializer(CreateCommandQueue));
 
-  commandAllocatorKey_ = stateService_.getUniqueObjectKey();
+  m_CommandAllocatorKey = m_StateService.GetUniqueObjectKey();
   ID3D12DeviceCreateCommandAllocatorCommand createCommandAllocator;
-  createCommandAllocator.key = stateService_.getUniqueCommandKey();
-  createCommandAllocator.object_.key = deviceKey;
-  createCommandAllocator.type_.value = D3D12_COMMAND_LIST_TYPE_COPY;
-  createCommandAllocator.riid_.value = IID_ID3D12CommandAllocator;
-  createCommandAllocator.ppCommandAllocator_.key = commandAllocatorKey_;
-  stateService_.getRecorder().record(
+  createCommandAllocator.Key = m_StateService.GetUniqueCommandKey();
+  createCommandAllocator.m_Object.Key = DeviceKey;
+  createCommandAllocator.m_type.Value = D3D12_COMMAND_LIST_TYPE_COPY;
+  createCommandAllocator.m_riid.Value = IID_ID3D12CommandAllocator;
+  createCommandAllocator.m_ppCommandAllocator.Key = m_CommandAllocatorKey;
+  m_StateService.GetRecorder().Record(
       ID3D12DeviceCreateCommandAllocatorSerializer(createCommandAllocator));
 
-  commandListKey_ = stateService_.getUniqueObjectKey();
+  m_CommandListKey = m_StateService.GetUniqueObjectKey();
   ID3D12DeviceCreateCommandListCommand createCommandList;
-  createCommandList.key = stateService_.getUniqueCommandKey();
-  createCommandList.object_.key = deviceKey;
-  createCommandList.nodeMask_.value = 0;
-  createCommandList.pCommandAllocator_.key = createCommandAllocator.ppCommandAllocator_.key;
-  createCommandList.type_.value = D3D12_COMMAND_LIST_TYPE_COPY;
-  createCommandList.pInitialState_.value = nullptr;
-  createCommandList.riid_.value = IID_ID3D12CommandList;
-  createCommandList.ppCommandList_.key = commandListKey_;
-  stateService_.getRecorder().record(ID3D12DeviceCreateCommandListSerializer(createCommandList));
+  createCommandList.Key = m_StateService.GetUniqueCommandKey();
+  createCommandList.m_Object.Key = DeviceKey;
+  createCommandList.m_nodeMask.Value = 0;
+  createCommandList.m_pCommandAllocator.Key = createCommandAllocator.m_ppCommandAllocator.Key;
+  createCommandList.m_type.Value = D3D12_COMMAND_LIST_TYPE_COPY;
+  createCommandList.m_pInitialState.Value = nullptr;
+  createCommandList.m_riid.Value = IID_ID3D12CommandList;
+  createCommandList.m_ppCommandList.Key = m_CommandListKey;
+  m_StateService.GetRecorder().Record(ID3D12DeviceCreateCommandListSerializer(createCommandList));
 
-  fenceKey_ = stateService_.getUniqueObjectKey();
+  m_FenceKey = m_StateService.GetUniqueObjectKey();
   ID3D12DeviceCreateFenceCommand createFence;
-  createFence.key = stateService_.getUniqueCommandKey();
-  createFence.object_.key = deviceKey;
-  createFence.InitialValue_.value = 0;
-  createFence.Flags_.value = D3D12_FENCE_FLAG_NONE;
-  createFence.riid_.value = IID_ID3D12Fence;
-  createFence.ppFence_.key = fenceKey_;
-  stateService_.getRecorder().record(ID3D12DeviceCreateFenceSerializer(createFence));
+  createFence.Key = m_StateService.GetUniqueCommandKey();
+  createFence.m_Object.Key = DeviceKey;
+  createFence.m_InitialValue.Value = 0;
+  createFence.m_Flags.Value = D3D12_FENCE_FLAG_NONE;
+  createFence.m_riid.Value = IID_ID3D12Fence;
+  createFence.m_ppFence.Key = m_FenceKey;
+  m_StateService.GetRecorder().Record(ID3D12DeviceCreateFenceSerializer(createFence));
 
-  contentRestoreInitialized_ = true;
+  m_ContentRestoreInitialized = true;
 }
 
-void ReservedResourcesService::cleanupRestore() {
-  if (!contentRestoreInitialized_) {
+void ReservedResourcesService::CleanupRestore() {
+  if (!m_ContentRestoreInitialized) {
     return;
   }
 
-  device_->Release();
-  commandQueue_->Release();
-  commandAllocator_->Release();
-  commandList_->Release();
-  fence_->Release();
+  m_Device->Release();
+  m_CommandQueue->Release();
+  m_CommandAllocator->Release();
+  m_CommandList->Release();
+  m_Fence->Release();
 
   IUnknownReleaseCommand releaseFence;
-  releaseFence.key = stateService_.getUniqueCommandKey();
-  releaseFence.object_.key = fenceKey_;
-  stateService_.getRecorder().record(IUnknownReleaseSerializer(releaseFence));
+  releaseFence.Key = m_StateService.GetUniqueCommandKey();
+  releaseFence.m_Object.Key = m_FenceKey;
+  m_StateService.GetRecorder().Record(IUnknownReleaseSerializer(releaseFence));
 
   IUnknownReleaseCommand releaseCommandList;
-  releaseCommandList.key = stateService_.getUniqueCommandKey();
-  releaseCommandList.object_.key = commandListKey_;
-  stateService_.getRecorder().record(IUnknownReleaseSerializer(releaseCommandList));
+  releaseCommandList.Key = m_StateService.GetUniqueCommandKey();
+  releaseCommandList.m_Object.Key = m_CommandListKey;
+  m_StateService.GetRecorder().Record(IUnknownReleaseSerializer(releaseCommandList));
 
   IUnknownReleaseCommand releaseCommandAllocator;
-  releaseCommandAllocator.key = stateService_.getUniqueCommandKey();
-  releaseCommandAllocator.object_.key = commandAllocatorKey_;
-  stateService_.getRecorder().record(IUnknownReleaseSerializer(releaseCommandAllocator));
+  releaseCommandAllocator.Key = m_StateService.GetUniqueCommandKey();
+  releaseCommandAllocator.m_Object.Key = m_CommandAllocatorKey;
+  m_StateService.GetRecorder().Record(IUnknownReleaseSerializer(releaseCommandAllocator));
 
   IUnknownReleaseCommand releaseCommandQueue;
-  releaseCommandQueue.key = stateService_.getUniqueCommandKey();
-  releaseCommandQueue.object_.key = commandQueueKey_;
-  stateService_.getRecorder().record(IUnknownReleaseSerializer(releaseCommandQueue));
+  releaseCommandQueue.Key = m_StateService.GetUniqueCommandKey();
+  releaseCommandQueue.m_Object.Key = m_CommandQueueKey;
+  m_StateService.GetRecorder().Record(IUnknownReleaseSerializer(releaseCommandQueue));
 
-  if (uploadResourceKey_) {
+  if (m_UploadResourceKey) {
     IUnknownReleaseCommand releaseUploadResource;
-    releaseUploadResource.key = stateService_.getUniqueCommandKey();
-    releaseUploadResource.object_.key = uploadResourceKey_;
-    stateService_.getRecorder().record(IUnknownReleaseSerializer(releaseUploadResource));
+    releaseUploadResource.Key = m_StateService.GetUniqueCommandKey();
+    releaseUploadResource.m_Object.Key = m_UploadResourceKey;
+    m_StateService.GetRecorder().Record(IUnknownReleaseSerializer(releaseUploadResource));
   }
 }
 
-void ReservedResourcesService::getSubresourceSizes(
+void ReservedResourcesService::GetSubresourceSizes(
     ID3D12Device* device,
     D3D12_RESOURCE_DESC& desc,
     std::vector<std::pair<unsigned, D3D12_PLACED_SUBRESOURCE_FOOTPRINT>>& sizes) {

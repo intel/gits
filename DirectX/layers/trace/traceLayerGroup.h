@@ -25,13 +25,13 @@ public:
   TraceLayerGroup();
   ~TraceLayerGroup() override;
 
-  void loadLayers() override;
+  void LoadLayers() override;
 
 private:
-  std::unique_ptr<FastOStream> traceStream_;
-  std::unique_ptr<FastOStream> traceStreamPre_;
-  std::unique_ptr<FastOStringStream> showExecutionStream_;
-  std::mutex traceMutex_;
+  std::unique_ptr<FastOStream> m_TraceStream;
+  std::unique_ptr<FastOStream> m_TraceStreamPre;
+  std::unique_ptr<FastOStringStream> m_ShowExecutionStream;
+  std::mutex m_TraceMutex;
 };
 
 } // namespace DirectX

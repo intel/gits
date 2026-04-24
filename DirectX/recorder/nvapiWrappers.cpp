@@ -39,17 +39,17 @@ NvAPI_Status NvAPI_InitializeWrapper() {
 
     NvAPI_InitializeCommand command(GetCurrentThreadId());
 
-    for (Layer* layer : manager.getPreLayers()) {
-      layer->pre(command);
+    for (Layer* layer : manager.GetPreLayers()) {
+      layer->Pre(command);
     }
 
-    command.key = manager.createCommandKey();
-    if (!command.skip) {
+    command.Key = manager.createCommandKey();
+    if (!command.Skip) {
       result = manager.getNvAPIDispatchTable().NvAPI_Initialize();
     }
-    command.result_.value = result;
-    for (Layer* layer : manager.getPostLayers()) {
-      layer->post(command);
+    command.m_Result.Value = result;
+    for (Layer* layer : manager.GetPostLayers()) {
+      layer->Post(command);
     }
   } else {
     result = manager.getNvAPIDispatchTable().NvAPI_Initialize();
@@ -66,17 +66,17 @@ NvAPI_Status NvAPI_UnloadWrapper() {
 
     NvAPI_UnloadCommand command(GetCurrentThreadId());
 
-    for (Layer* layer : manager.getPreLayers()) {
-      layer->pre(command);
+    for (Layer* layer : manager.GetPreLayers()) {
+      layer->Pre(command);
     }
 
-    command.key = manager.createCommandKey();
-    if (!command.skip) {
+    command.Key = manager.createCommandKey();
+    if (!command.Skip) {
       result = manager.getNvAPIDispatchTable().NvAPI_Unload();
     }
-    command.result_.value = result;
-    for (Layer* layer : manager.getPostLayers()) {
-      layer->post(command);
+    command.m_Result.Value = result;
+    for (Layer* layer : manager.GetPostLayers()) {
+      layer->Post(command);
     }
   } else {
     result = manager.getNvAPIDispatchTable().NvAPI_Unload();
@@ -95,19 +95,19 @@ NvAPI_Status NvAPI_D3D12_SetCreatePipelineStateOptionsWrapper(
 
     NvAPI_D3D12_SetCreatePipelineStateOptionsCommand command(GetCurrentThreadId(), pDevice, pState);
 
-    updateInterface(command.pDevice_, pDevice);
-    for (Layer* layer : manager.getPreLayers()) {
-      layer->pre(command);
+    updateInterface(command.m_pDevice, pDevice);
+    for (Layer* layer : manager.GetPreLayers()) {
+      layer->Pre(command);
     }
 
-    command.key = manager.createCommandKey();
-    if (!command.skip) {
+    command.Key = manager.createCommandKey();
+    if (!command.Skip) {
       result = manager.getNvAPIDispatchTable().NvAPI_D3D12_SetCreatePipelineStateOptions(pDevice,
                                                                                          pState);
     }
-    command.result_.value = result;
-    for (Layer* layer : manager.getPostLayers()) {
-      layer->post(command);
+    command.m_Result.Value = result;
+    for (Layer* layer : manager.GetPostLayers()) {
+      layer->Post(command);
     }
   } else {
     result =
@@ -127,19 +127,19 @@ NvAPI_Status NvAPI_D3D12_SetNvShaderExtnSlotSpaceWrapper(IUnknown* pDev,
     NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand command(GetCurrentThreadId(), pDev, uavSlot,
                                                         uavSpace);
 
-    updateInterface(command.pDev_, pDev);
-    for (Layer* layer : manager.getPreLayers()) {
-      layer->pre(command);
+    updateInterface(command.m_pDev, pDev);
+    for (Layer* layer : manager.GetPreLayers()) {
+      layer->Pre(command);
     }
 
-    command.key = manager.createCommandKey();
-    if (!command.skip) {
+    command.Key = manager.createCommandKey();
+    if (!command.Skip) {
       result = manager.getNvAPIDispatchTable().NvAPI_D3D12_SetNvShaderExtnSlotSpace(pDev, uavSlot,
                                                                                     uavSpace);
     }
-    command.result_.value = result;
-    for (Layer* layer : manager.getPostLayers()) {
-      layer->post(command);
+    command.m_Result.Value = result;
+    for (Layer* layer : manager.GetPostLayers()) {
+      layer->Post(command);
     }
   } else {
     result = manager.getNvAPIDispatchTable().NvAPI_D3D12_SetNvShaderExtnSlotSpace(pDev, uavSlot,
@@ -159,19 +159,19 @@ NvAPI_Status NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadWrapper(IUnknown* pD
     NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand command(GetCurrentThreadId(), pDev,
                                                                    uavSlot, uavSpace);
 
-    updateInterface(command.pDev_, pDev);
-    for (Layer* layer : manager.getPreLayers()) {
-      layer->pre(command);
+    updateInterface(command.m_pDev, pDev);
+    for (Layer* layer : manager.GetPreLayers()) {
+      layer->Pre(command);
     }
 
-    command.key = manager.createCommandKey();
-    if (!command.skip) {
+    command.Key = manager.createCommandKey();
+    if (!command.Skip) {
       result = manager.getNvAPIDispatchTable().NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThread(
           pDev, uavSlot, uavSpace);
     }
-    command.result_.value = result;
-    for (Layer* layer : manager.getPostLayers()) {
-      layer->post(command);
+    command.m_Result.Value = result;
+    for (Layer* layer : manager.GetPostLayers()) {
+      layer->Post(command);
     }
   } else {
     result = manager.getNvAPIDispatchTable().NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThread(
@@ -193,19 +193,19 @@ NvAPI_Status NvAPI_D3D12_BuildRaytracingAccelerationStructureExWrapper(
     NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand command(GetCurrentThreadId(),
                                                                       pCommandList, pParams);
 
-    updateInterface(command.pCommandList_, pCommandList);
-    for (Layer* layer : manager.getPreLayers()) {
-      layer->pre(command);
+    updateInterface(command.m_pCommandList, pCommandList);
+    for (Layer* layer : manager.GetPreLayers()) {
+      layer->Pre(command);
     }
 
-    command.key = manager.createCommandKey();
-    if (!command.skip) {
+    command.Key = manager.createCommandKey();
+    if (!command.Skip) {
       result = manager.getNvAPIDispatchTable().NvAPI_D3D12_BuildRaytracingAccelerationStructureEx(
           pCommandList, pParams);
     }
-    command.result_.value = result;
-    for (Layer* layer : manager.getPostLayers()) {
-      layer->post(command);
+    command.m_Result.Value = result;
+    for (Layer* layer : manager.GetPostLayers()) {
+      layer->Post(command);
     }
   } else {
     result = manager.getNvAPIDispatchTable().NvAPI_D3D12_BuildRaytracingAccelerationStructureEx(
@@ -227,19 +227,19 @@ NvAPI_Status NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayWrapper(
     NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand command(GetCurrentThreadId(),
                                                                    pCommandList, pParams);
 
-    updateInterface(command.pCommandList_, pCommandList);
-    for (Layer* layer : manager.getPreLayers()) {
-      layer->pre(command);
+    updateInterface(command.m_pCommandList, pCommandList);
+    for (Layer* layer : manager.GetPreLayers()) {
+      layer->Pre(command);
     }
 
-    command.key = manager.createCommandKey();
-    if (!command.skip) {
+    command.Key = manager.createCommandKey();
+    if (!command.Skip) {
       result = manager.getNvAPIDispatchTable().NvAPI_D3D12_BuildRaytracingOpacityMicromapArray(
           pCommandList, pParams);
     }
-    command.result_.value = result;
-    for (Layer* layer : manager.getPostLayers()) {
-      layer->post(command);
+    command.m_Result.Value = result;
+    for (Layer* layer : manager.GetPostLayers()) {
+      layer->Post(command);
     }
   } else {
     result = manager.getNvAPIDispatchTable().NvAPI_D3D12_BuildRaytracingOpacityMicromapArray(
@@ -288,20 +288,20 @@ NvAPI_Status NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationWrapper(
     NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand command(
         GetCurrentThreadId(), pCommandList, pParams);
 
-    updateInterface(command.pCommandList_, pCommandList);
-    for (Layer* layer : manager.getPreLayers()) {
-      layer->pre(command);
+    updateInterface(command.m_pCommandList, pCommandList);
+    for (Layer* layer : manager.GetPreLayers()) {
+      layer->Pre(command);
     }
 
-    command.key = manager.createCommandKey();
-    if (!command.skip) {
+    command.Key = manager.createCommandKey();
+    if (!command.Skip) {
       result =
           manager.getNvAPIDispatchTable()
               .NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperation(pCommandList, pParams);
     }
-    command.result_.value = result;
-    for (Layer* layer : manager.getPostLayers()) {
-      layer->post(command);
+    command.m_Result.Value = result;
+    for (Layer* layer : manager.GetPostLayers()) {
+      layer->Post(command);
     }
   } else {
     result =

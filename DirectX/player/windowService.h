@@ -16,11 +16,11 @@ namespace DirectX {
 
 class WindowService {
 public:
-  HWND createWindow(HWND captureHwnd, int width, int height);
-  HWND getCurrentHwnd(HWND captureHwnd);
+  HWND CreatePlayerWindow(HWND captureHwnd, int width, int height);
+  HWND GetCurrentHwnd(HWND captureHwnd);
 
 private:
-  std::unordered_map<HWND, HWND> windowMap_;
+  std::unordered_map<HWND, HWND> m_WindowMap;
 };
 
 } // namespace DirectX

@@ -21,17 +21,17 @@ namespace gits {
 namespace DirectX {
 
 IntelExtensionsService::~IntelExtensionsService() {
-  if (intelExtensionLoaded_) {
+  if (m_IntelExtensionLoaded) {
     INTC_UnloadExtensionsLibrary();
   }
 }
 
-void IntelExtensionsService::loadIntelExtensions(IDXGIAdapter1* adapter) {
+void IntelExtensionsService::LoadIntelExtensions(IDXGIAdapter1* adapter) {
   // Intel Extensions DLL is part of the Intel GPU driver and needs to be loaded after the driver DLLs
   // EnumAdapters will load the driver DLLs and is necessary in order to call INTC_LoadExtensionsLibrary
   GITS_ASSERT(adapter != nullptr);
 
-  if (intelExtensionLoaded_) {
+  if (m_IntelExtensionLoaded) {
     return;
   }
 
@@ -45,13 +45,13 @@ void IntelExtensionsService::loadIntelExtensions(IDXGIAdapter1* adapter) {
     LOG_WARNING << "Failed to load Intel Extensions (" << toStr(desc.Description) << ")";
     return;
   }
-  intelExtensionLoaded_ = true;
+  m_IntelExtensionLoaded = true;
   LOG_INFO << "Loaded Intel Extensions (" << toStr(desc.Description) << ")";
 }
 
-void IntelExtensionsService::setApplicationInfo() {
+void IntelExtensionsService::SetApplicationInfo() {
 
-  if (!intelExtensionLoaded_ || applicationNameSet_) {
+  if (!m_IntelExtensionLoaded || m_ApplicationNameSet) {
     return;
   }
 
@@ -76,30 +76,30 @@ void IntelExtensionsService::setApplicationInfo() {
     appName = appInfoConfigOverride.applicationName;
 
     appVersion = appInfoConfigOverride.applicationVersion;
-    appInfo_.ApplicationVersion = parseVersion(appVersion);
+    m_AppInfo.ApplicationVersion = parseVersion(appVersion);
 
     engineName = appInfoConfigOverride.engineName;
-    engineName_ = std::wstring(engineName.begin(), engineName.end());
-    appInfo_.pEngineName = engineName_.c_str();
+    m_EngineName = std::wstring(engineName.begin(), engineName.end());
+    m_AppInfo.pEngineName = m_EngineName.c_str();
 
     engineVersion = appInfoConfigOverride.engineVersion;
-    appInfo_.EngineVersion = parseVersion(engineVersion);
+    m_AppInfo.EngineVersion = parseVersion(engineVersion);
   }
-  appName_ = std::wstring(appName.begin(), appName.end());
-  appInfo_.pApplicationName = appName_.c_str();
+  m_AppName = std::wstring(appName.begin(), appName.end());
+  m_AppInfo.pApplicationName = m_AppName.c_str();
 
-  HRESULT hr = INTC_D3D12_SetApplicationInfo(&appInfo_);
+  HRESULT hr = INTC_D3D12_SetApplicationInfo(&m_AppInfo);
   if (hr != S_OK) {
     LOG_ERROR << "INTC_D3D12_SetApplicationInfo failed - Application name is not set.";
   } else {
     LOG_INFO << "INTC_D3D12_SetApplicationInfo - Application: \"" << appName << "\" (" << appVersion
              << "), Engine: \"" << engineName << "\" (" << engineVersion << ")";
-    applicationNameSet_ = true;
+    m_ApplicationNameSet = true;
   }
 }
 
-const INTCExtensionAppInfo1& IntelExtensionsService::getAppInfo() const {
-  return appInfo_;
+const INTCExtensionAppInfo1& IntelExtensionsService::GetAppInfo() const {
+  return m_AppInfo;
 }
 
 } // namespace DirectX

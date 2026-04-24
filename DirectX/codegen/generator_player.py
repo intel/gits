@@ -18,15 +18,15 @@ def command_runner_call_parameters(function):
         if not first:
             str += ','
         first = False
-        str += 'command.' + param.name + '_.value'
+        str += 'command.m_' + param.name + '.Value'
     str += ");"
     return str
 
 def get_xess_dispatch_table(function):
     dispatch_table = {
-      Api.XESS: "getXessDispatchTable()",
-      Api.XELL: "getXellDispatchTable()",
-      Api.XEFG: "getXefgDispatchTable()"
+      Api.XESS: "GetXessDispatchTable()",
+      Api.XELL: "GetXellDispatchTable()",
+      Api.XEFG: "GetXefgDispatchTable()"
     }
     return dispatch_table[function.api]
 

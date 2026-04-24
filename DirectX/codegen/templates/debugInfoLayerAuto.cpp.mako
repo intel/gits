@@ -12,77 +12,77 @@ ${header}
 namespace gits {
 namespace DirectX {
 
-void DebugInfoLayer::pre(CreateDXGIFactoryCommand& command) {
-  debugInfo_.createDXGIFactory(command);
+void DebugInfoLayer::Pre(CreateDXGIFactoryCommand& command) {
+  m_DebugInfo.createDXGIFactory(command);
 }
 
-void DebugInfoLayer::pre(CreateDXGIFactory1Command& command) {
-  debugInfo_.createDXGIFactory1(command);
+void DebugInfoLayer::Pre(CreateDXGIFactory1Command& command) {
+  m_DebugInfo.createDXGIFactory1(command);
 }
 
-void DebugInfoLayer::post(CreateDXGIFactoryCommand& command) {
-  command.skip = false;
+void DebugInfoLayer::Post(CreateDXGIFactoryCommand& command) {
+  command.Skip = false;
 }
 
-void DebugInfoLayer::post(CreateDXGIFactory1Command& command) {
-  command.skip = false;
+void DebugInfoLayer::Post(CreateDXGIFactory1Command& command) {
+  command.Skip = false;
 }
 
-void DebugInfoLayer::pre(CreateDXGIFactory2Command& command) {
-  debugInfo_.createDXGIFactory2(command);
+void DebugInfoLayer::Pre(CreateDXGIFactory2Command& command) {
+  m_DebugInfo.createDXGIFactory2(command);
 }
 
-void DebugInfoLayer::pre(D3D12CreateDeviceCommand& command) {
-  debugInfo_.createD3D12DevicePre(command);
+void DebugInfoLayer::Pre(D3D12CreateDeviceCommand& command) {
+  m_DebugInfo.createD3D12DevicePre(command);
 }
 
-void DebugInfoLayer::post(D3D12CreateDeviceCommand& command) {
-  debugInfo_.createD3D12DevicePost(command);
+void DebugInfoLayer::Post(D3D12CreateDeviceCommand& command) {
+  m_DebugInfo.createD3D12DevicePost(command);
 }
 
-void DebugInfoLayer::pre(DMLCreateDeviceCommand& command) {
-  debugInfo_.createDMLDevicePre(command);
+void DebugInfoLayer::Pre(DMLCreateDeviceCommand& command) {
+  m_DebugInfo.createDMLDevicePre(command);
 }
 
-void DebugInfoLayer::pre(DMLCreateDevice1Command& command) {
-  debugInfo_.createDMLDevice1Pre(command);
+void DebugInfoLayer::Pre(DMLCreateDevice1Command& command) {
+  m_DebugInfo.createDMLDevice1Pre(command);
 }
 
-void DebugInfoLayer::post(DStorageGetFactoryCommand& command) {
-  if (command.skip || FAILED(command.result_.value) || !command.ppv_.value ||
-      !(*command.ppv_.value)) {
+void DebugInfoLayer::Post(DStorageGetFactoryCommand& command) {
+  if (command.Skip || FAILED(command.m_Result.Value) || !command.m_ppv.Value ||
+      !(*command.m_ppv.Value)) {
     return;
   }
-  IDStorageFactory* factory = (IDStorageFactory*)*command.ppv_.value;
+  IDStorageFactory* factory = (IDStorageFactory*)*command.m_ppv.Value;
   factory->SetDebugFlags(DSTORAGE_DEBUG_SHOW_ERRORS | DSTORAGE_DEBUG_RECORD_OBJECT_NAMES);
 }
 
-void DebugInfoLayer::post(NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& command) {
-  if (!command.skip) {
-    debugInfo_.checkD3D12DebugInfo(command, command.pCommandList_.value);
-    debugInfo_.checkD3D12DeviceRemoval(command, command.pCommandList_.value);
+void DebugInfoLayer::Post(NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& command) {
+  if (!command.Skip) {
+    m_DebugInfo.checkD3D12DebugInfo(command, command.m_pCommandList.Value);
+    m_DebugInfo.checkD3D12DeviceRemoval(command, command.m_pCommandList.Value);
   }
 }
 
-void DebugInfoLayer::post(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& command) {
-  if (!command.skip) {
-    debugInfo_.checkD3D12DebugInfo(command, command.pCommandList_.value);
-    debugInfo_.checkD3D12DeviceRemoval(command, command.pCommandList_.value);
+void DebugInfoLayer::Post(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& command) {
+  if (!command.Skip) {
+    m_DebugInfo.checkD3D12DebugInfo(command, command.m_pCommandList.Value);
+    m_DebugInfo.checkD3D12DeviceRemoval(command, command.m_pCommandList.Value);
   }
 }
 
 %for interface in interfaces:
 %for function in interface.functions:
 %if interface.api == Api.D3D12 or interface.api == Api.DML or interface.api == Api.DXGI:
-void DebugInfoLayer::post(${interface.name}${function.name}Command& command) {
-  if (!command.skip) {
+void DebugInfoLayer::Post(${interface.name}${function.name}Command& command) {
+  if (!command.Skip) {
 %if interface.api == Api.DXGI:
-    debugInfo_.checkDXGIDebugInfo(command, command.object_.value);
+    m_DebugInfo.checkDXGIDebugInfo(command, command.m_Object.Value);
 %elif interface.api == Api.D3D12 or interface.api == Api.DML:
-    debugInfo_.checkD3D12DebugInfo(command, command.object_.value);
+    m_DebugInfo.checkD3D12DebugInfo(command, command.m_Object.Value);
 %endif
 %if interface.api == Api.D3D12 and (not "CommandList" in interface.name):
-    debugInfo_.checkD3D12DeviceRemoval(command, command.object_.value);
+    m_DebugInfo.checkD3D12DeviceRemoval(command, command.m_Object.Value);
 %endif
   }
 }

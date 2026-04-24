@@ -21,54 +21,54 @@ public:
   AddressPinningStoreLayer();
   ~AddressPinningStoreLayer();
 
-  void post(ID3D12DeviceCreateCommittedResourceCommand& command) override;
-  void post(ID3D12Device4CreateCommittedResource1Command& command) override;
-  void post(ID3D12Device8CreateCommittedResource2Command& command) override;
-  void post(ID3D12Device10CreateCommittedResource3Command& command) override;
-  void post(ID3D12DeviceCreateReservedResourceCommand& command) override;
-  void post(ID3D12Device4CreateReservedResource1Command& command) override;
-  void post(ID3D12Device10CreateReservedResource2Command& command) override;
-  void post(ID3D12DeviceCreatePlacedResourceCommand& command) override;
-  void post(ID3D12Device8CreatePlacedResource1Command& command) override;
-  void post(ID3D12Device10CreatePlacedResource2Command& command) override;
-  void post(ID3D12DeviceCreateHeapCommand& command) override;
-  void post(ID3D12Device4CreateHeap1Command& command) override;
-  void post(INTC_D3D12_CreateHeapCommand& command) override;
-  void post(ID3D12Device3OpenExistingHeapFromAddressCommand& command) override;
-  void post(ID3D12Device13OpenExistingHeapFromAddress1Command& command) override;
-  void pre(ID3D12ResourceGetGPUVirtualAddressCommand& command) override;
-  void post(ID3D12ResourceGetGPUVirtualAddressCommand& command) override;
+  void Post(ID3D12DeviceCreateCommittedResourceCommand& command) override;
+  void Post(ID3D12Device4CreateCommittedResource1Command& command) override;
+  void Post(ID3D12Device8CreateCommittedResource2Command& command) override;
+  void Post(ID3D12Device10CreateCommittedResource3Command& command) override;
+  void Post(ID3D12DeviceCreateReservedResourceCommand& command) override;
+  void Post(ID3D12Device4CreateReservedResource1Command& command) override;
+  void Post(ID3D12Device10CreateReservedResource2Command& command) override;
+  void Post(ID3D12DeviceCreatePlacedResourceCommand& command) override;
+  void Post(ID3D12Device8CreatePlacedResource1Command& command) override;
+  void Post(ID3D12Device10CreatePlacedResource2Command& command) override;
+  void Post(ID3D12DeviceCreateHeapCommand& command) override;
+  void Post(ID3D12Device4CreateHeap1Command& command) override;
+  void Post(INTC_D3D12_CreateHeapCommand& command) override;
+  void Post(ID3D12Device3OpenExistingHeapFromAddressCommand& command) override;
+  void Post(ID3D12Device13OpenExistingHeapFromAddress1Command& command) override;
+  void Pre(ID3D12ResourceGetGPUVirtualAddressCommand& command) override;
+  void Post(ID3D12ResourceGetGPUVirtualAddressCommand& command) override;
 
 private:
-  void storeAddressRanges();
+  void StoreAddressRanges();
 
   template <typename CommandT>
-  void handleResource(CommandT& command);
+  void HandleResource(CommandT& command);
 
   template <typename CommandT>
-  void handlePlacedResource(CommandT& command);
+  void HandlePlacedResource(CommandT& command);
 
   template <typename CommandT>
-  void handleHeap(CommandT& command);
+  void HandleHeap(CommandT& command);
 
   template <typename CommandT>
-  void handleGetGPUVirtualAddress(CommandT& command);
+  void HandleGetGPUVirtualAddress(CommandT& command);
 
 private:
-  std::mutex mutex_;
-  std::unordered_map<unsigned, D3D12_GPU_VIRTUAL_ADDRESS_RANGE> resourceAddressRanges_;
+  std::mutex m_Mutex;
+  std::unordered_map<unsigned, D3D12_GPU_VIRTUAL_ADDRESS_RANGE> m_ResourceAddressRanges;
 
   struct HeapAllocationInfo {
-    D3D12_GPU_VIRTUAL_ADDRESS_RANGE addressRange;
-    UINT64 alignment;
+    D3D12_GPU_VIRTUAL_ADDRESS_RANGE m_AddressRange;
+    UINT64 m_Alignment;
   };
-  std::unordered_map<unsigned, HeapAllocationInfo> heapAddressRanges_;
+  std::unordered_map<unsigned, HeapAllocationInfo> m_HeapAddressRanges;
 
   struct HeapInfo {
-    unsigned heapKey;
-    UINT64 offset;
+    unsigned m_HeapKey;
+    UINT64 m_Offset;
   };
-  std::unordered_map<unsigned, HeapInfo> heapInfoByPlacedResource_;
+  std::unordered_map<unsigned, HeapInfo> m_HeapInfoByPlacedResource;
 };
 
 } // namespace DirectX

@@ -33,69 +33,69 @@ CommandPrinter::CommandPrinter(FastOStream& stream,
                                Command& command,
                                const char* name,
                                unsigned objectId)
-    : stream_(stream), state_(state), command_(command), lock_(state.mutex) {
+    : m_Stream(stream), m_State(state), m_Command(command), m_Lock(state.mutex) {
 
-  if (command_.getId() == CommandId::ID_INIT_START) {
-    state_.stateRestorePhase = true;
-    state_.frameCount = 0;
+  if (m_Command.GetId() == CommandId::ID_INIT_START) {
+    m_State.stateRestorePhase = true;
+    m_State.frameCount = 0;
     return;
-  } else if (command_.getId() == CommandId::ID_INIT_END) {
-    state_.stateRestorePhase = false;
-    state_.frameCount = 1;
-    state_.drawCount = 0;
-    state_.dispatchCount = 0;
-    state_.commandListExecutionCount = 0;
+  } else if (m_Command.GetId() == CommandId::ID_INIT_END) {
+    m_State.stateRestorePhase = false;
+    m_State.frameCount = 1;
+    m_State.drawCount = 0;
+    m_State.dispatchCount = 0;
+    m_State.commandListExecutionCount = 0;
     return;
   }
 
   if (Configurator::Get().directx.features.trace.print.timestamp) {
-    printDateTime(stream_);
+    printDateTime(m_Stream);
   }
-  if (command.skip) {
-    stream_ << "[SKIPPED] ";
+  if (command.Skip) {
+    m_Stream << "[SKIPPED] ";
   }
-  stream_ << keyToStr(command.key);
-  stream_ << " T" << command.threadId;
+  m_Stream << keyToStr(command.Key);
+  m_Stream << " T" << command.ThreadId;
   if (objectId) {
-    stream_ << " ";
-    printObjectKey(stream_, objectId);
+    m_Stream << " ";
+    printObjectKey(m_Stream, objectId);
   }
-  stream_ << " " << name << "(";
+  m_Stream << " " << name << "(";
 }
 
 void CommandPrinter::print(bool flush, bool newLine) {
-  if (!returnPrinted_) {
-    stream_ << ")";
+  if (!m_ReturnPrinted) {
+    m_Stream << ")";
   }
 
-  if ((command_.getId() == CommandId::ID_IDXGISWAPCHAIN_PRESENT &&
-           !(static_cast<IDXGISwapChainPresentCommand&>(command_).Flags_.value &
+  if ((m_Command.GetId() == CommandId::ID_IDXGISWAPCHAIN_PRESENT &&
+           !(static_cast<IDXGISwapChainPresentCommand&>(m_Command).m_Flags.Value &
              DXGI_PRESENT_TEST) ||
-       command_.getId() == CommandId::ID_IDXGISWAPCHAIN1_PRESENT1 &&
-           !(static_cast<IDXGISwapChain1Present1Command&>(command_).PresentFlags_.value &
+       m_Command.GetId() == CommandId::ID_IDXGISWAPCHAIN1_PRESENT1 &&
+           !(static_cast<IDXGISwapChain1Present1Command&>(m_Command).m_PresentFlags.Value &
              DXGI_PRESENT_TEST)) &&
-      !isStateRestoreKey(command_.key)) {
-    stream_ << " Frame #" << state_.frameCount << " end";
-    ++state_.frameCount;
-    state_.drawCount = 0;
-    state_.dispatchCount = 0;
-    state_.commandListExecutionCount = 0;
-  } else if (command_.getId() == CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_DRAWINSTANCED ||
-             command_.getId() == CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_DRAWINDEXEDINSTANCED) {
-    stream_ << " Frame #" << state_.frameCount << " Frame Draw #" << ++state_.drawCount;
-  } else if (command_.getId() == CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_DISPATCH) {
-    stream_ << " Frame #" << state_.frameCount << " Frame Dispatch #" << ++state_.dispatchCount;
-  } else if (command_.getId() == CommandId::ID_ID3D12COMMANDQUEUE_EXECUTECOMMANDLISTS &&
-             isExecutionSerializationKey(command_.key) && !state_.stateRestorePhase) {
-    stream_ << " Frame #" << state_.frameCount << " Frame Execute #"
-            << ++state_.commandListExecutionCount;
+      !IsStateRestoreKey(m_Command.Key)) {
+    m_Stream << " Frame #" << m_State.frameCount << " end";
+    ++m_State.frameCount;
+    m_State.drawCount = 0;
+    m_State.dispatchCount = 0;
+    m_State.commandListExecutionCount = 0;
+  } else if (m_Command.GetId() == CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_DRAWINSTANCED ||
+             m_Command.GetId() == CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_DRAWINDEXEDINSTANCED) {
+    m_Stream << " Frame #" << m_State.frameCount << " Frame Draw #" << ++m_State.drawCount;
+  } else if (m_Command.GetId() == CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_DISPATCH) {
+    m_Stream << " Frame #" << m_State.frameCount << " Frame Dispatch #" << ++m_State.dispatchCount;
+  } else if (m_Command.GetId() == CommandId::ID_ID3D12COMMANDQUEUE_EXECUTECOMMANDLISTS &&
+             IsExecutionSerializationKey(m_Command.Key) && !m_State.stateRestorePhase) {
+    m_Stream << " Frame #" << m_State.frameCount << " Frame Execute #"
+             << ++m_State.commandListExecutionCount;
   }
   if (newLine) {
-    stream_ << "\n";
+    m_Stream << "\n";
   }
 
   if (flush) {
-    stream_.Flush();
+    m_Stream.Flush();
   }
 }
 

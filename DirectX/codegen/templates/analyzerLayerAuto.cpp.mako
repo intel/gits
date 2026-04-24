@@ -196,13 +196,13 @@ custom = [
 %>\
 %for function in functions:
 %if not function.name in custom:
-void AnalyzerLayer::post(${function.name}Command& c) {
+void AnalyzerLayer::Post(${function.name}Command& c) {
   %for param in function.params:
   %if param.is_interface or param.is_interface_creation:
   %if not param.sal_size:
-  analyzerService_.notifyObject(c.${param.name}_.key);
+  m_AnalyzerService.NotifyObject(c.m_${param.name}.Key);
   %else:
-  analyzerService_.notifyObjects(c.${param.name}_.keys);
+  m_AnalyzerService.NotifyObjects(c.m_${param.name}.Keys);
   %endif
   %endif
   %endfor
@@ -213,20 +213,20 @@ void AnalyzerLayer::post(${function.name}Command& c) {
 %for interface in interfaces:
 %for function in interface.functions:
 %if not interface.name + function.name in custom:
-void AnalyzerLayer::post(${interface.name}${function.name}Command& c) {
-  analyzerService_.notifyObject(c.object_.key);
+void AnalyzerLayer::Post(${interface.name}${function.name}Command& c) {
+  m_AnalyzerService.NotifyObject(c.m_Object.Key);
   %for param in function.params:
   %if param.is_interface or param.is_interface_creation:
   %if not param.sal_size:
-  analyzerService_.notifyObject(c.${param.name}_.key);
+  m_AnalyzerService.NotifyObject(c.m_${param.name}.Key);
   %else:
-  analyzerService_.notifyObjects(c.${param.name}_.keys);
+  m_AnalyzerService.NotifyObjects(c.m_${param.name}.Keys);
   %endif
   %endif
   %endfor
   %if interface.name.startswith('ID3D12GraphicsCommandList') and not function.name.startswith('SetName') \
     and not interface.name + function.name in custom:
-  analyzerService_.commandListCommand(c.object_.key);
+  m_AnalyzerService.CommandListCommand(c.m_Object.Key);
   %endif
 }
 

@@ -12,14 +12,14 @@
 namespace gits {
 namespace DirectX {
 
-void PortabilityLayerGroup::loadLayers() {
-  loadLayers(nullptr);
+void PortabilityLayerGroup::LoadLayers() {
+  LoadLayers(nullptr);
 }
 
-void PortabilityLayerGroup::loadLayers(
+void PortabilityLayerGroup::LoadLayers(
     PortabilityLayer::ResourceRegistrationCallback registerResource) {
   if (Configurator::IsRecorder()) {
-    addLayer(std::make_unique<PortabilityLayer>());
+    AddLayer(std::make_unique<PortabilityLayer>());
   } else if (Configurator::IsPlayer()) {
     auto& playerConfig = Configurator::Get().directx.player;
     if (playerConfig.execute && (playerConfig.portability.resourcePlacement != "none" ||
@@ -27,9 +27,9 @@ void PortabilityLayerGroup::loadLayers(
                                  playerConfig.portability.portabilityAssertions ||
                                  playerConfig.portability.forcePlacedToCommittedResources)) {
       if (registerResource) {
-        addLayer(std::make_unique<PortabilityLayer>(std::move(registerResource)));
+        AddLayer(std::make_unique<PortabilityLayer>(std::move(registerResource)));
       } else {
-        addLayer(std::make_unique<PortabilityLayer>());
+        AddLayer(std::make_unique<PortabilityLayer>());
       }
     }
   }

@@ -22,41 +22,41 @@ namespace DirectX {
 class CaptureDescriptorHandleService {
 public:
   struct HandleInfo {
-    unsigned interfaceKey;
-    unsigned index;
+    unsigned InterfaceKey;
+    unsigned Index;
   };
   enum class HandleType {
     CpuHandle,
     GpuHandle
   };
 
-  void createDescriptorHeap(unsigned descriptorHeapKey,
+  void createDescriptorHeap(unsigned DescriptorHeapKey,
                             ID3D12DescriptorHeap* descriptorHeap,
                             const D3D12_DESCRIPTOR_HEAP_DESC* desc);
   HandleInfo getDescriptorHandleInfo(D3D12_DESCRIPTOR_HEAP_TYPE heapType,
                                      HandleType handleType,
                                      size_t handle) const;
-  void destroyDescriptorHeap(unsigned descriptorHeapKey);
+  void destroyDescriptorHeap(unsigned DescriptorHeapKey);
 
 private:
   struct DescriptorHeapInfo {
-    unsigned interfaceKey;
-    size_t start{};
-    size_t end{};
+    unsigned InterfaceKey;
+    size_t Start{};
+    size_t End{};
   };
 
   std::array<std::unordered_map<unsigned, std::map<size_t, DescriptorHeapInfo>>,
              D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES>
-      descriptorHeapsByCpuStartAddress_{};
+      m_DescriptorHeapsByCpuStartAddress{};
   std::array<std::map<size_t, DescriptorHeapInfo>, D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES>
-      descriptorHeapsByGpuStartAddress_{};
+      m_DescriptorHeapsByGpuStartAddress{};
 
-  std::array<unsigned, D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES> descriptorHeapIncrements_{};
-  bool initialized_{false};
+  std::array<unsigned, D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES> m_DescriptorHeapIncrements{};
+  bool m_Initialized{false};
 
-  std::unordered_set<unsigned> descriptorHeapKeys_;
+  std::unordered_set<unsigned> m_DescriptorHeapKeys;
 
-  mutable tbb::spin_rw_mutex rwMutex_;
+  mutable tbb::spin_rw_mutex m_RwMutex;
 };
 
 } // namespace DirectX

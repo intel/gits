@@ -55,203 +55,203 @@ public:
       ResourceForCBVRestoreService& resourceForCBVRestoreService,
       XellStateService& xellStateService,
       XefgStateService& xefgStateService)
-      : recorder_(recorder),
-        resourceContentRestore_(*this),
-        swapChainService_(*this),
-        analyzerResults_(analyzerResults),
-        fenceTrackingService_(fenceTrackingService),
-        mapStateService_(mapStateService),
-        resourceStateTrackingService_(resourceStateTrackingService),
-        reservedResourcesService_(reservedResourcesService),
-        descriptorService_(descriptorService),
-        commandListService_(commandListService),
-        commandQueueService_(commandQueueService),
-        xessStateService_(xessStateService),
-        accelerationStructuresSerializeService_(accelerationStructuresSerializeService),
-        accelerationStructuresBuildService_(accelerationStructuresBuildService),
-        residencyService_(residencyService),
-        resourceUsageTrackingService_(resourceUsageTrackingService),
-        resourceForCBVRestoreService_(resourceForCBVRestoreService),
-        nvapiGlobalStateService_(*this),
-        xellStateService_(xellStateService),
-        xefgStateService_(xefgStateService) {}
+      : m_Recorder(recorder),
+        m_ResourceContentRestore(*this),
+        m_SwapChainService(*this),
+        m_AnalyzerResults(analyzerResults),
+        m_FenceTrackingService(fenceTrackingService),
+        m_MapStateService(mapStateService),
+        m_ResourceStateTrackingService(resourceStateTrackingService),
+        m_ReservedResourcesService(reservedResourcesService),
+        m_DescriptorService(descriptorService),
+        m_CommandListService(commandListService),
+        m_CommandQueueService(commandQueueService),
+        m_XessStateService(xessStateService),
+        m_AccelerationStructuresSerializeService(accelerationStructuresSerializeService),
+        m_AccelerationStructuresBuildService(accelerationStructuresBuildService),
+        m_ResidencyService(residencyService),
+        m_ResourceUsageTrackingService(resourceUsageTrackingService),
+        m_ResourceForCBVRestoreService(resourceForCBVRestoreService),
+        m_NvapiGlobalStateService(*this),
+        m_XellStateService(xellStateService),
+        m_XefgStateService(xefgStateService) {}
   ~StateTrackingService();
   StateTrackingService(StateTrackingService&) = delete;
   StateTrackingService& operator=(StateTrackingService&) = delete;
 
-  void restoreState();
-  void keepState(unsigned objectKey);
-  void storeState(ObjectState* state);
-  void removeState(unsigned key);
-  void storeINTCFeature(INTC_D3D12_FEATURE feature);
-  void storeINTCApplicationInfo(INTC_D3D12_SetApplicationInfoCommand& c);
-  void storeD3D12EnableExperimentalFeatures(const D3D12EnableExperimentalFeaturesCommand& c);
-  void storeDllContainer(const DllContainerMetaCommand& c);
-  void releaseObject(unsigned key, ULONG result);
-  void setReferenceCount(unsigned objectKey, ULONG referenceCount);
-  ObjectState* getState(unsigned key);
-  void restoreState(unsigned key);
-  bool stateRestored(unsigned key);
-  void addBackBuffer(unsigned buffer, unsigned resourceKey, ID3D12Resource* resource);
-  void setXefgSwapChainFlag();
+  void RestoreState();
+  void KeepState(unsigned objectKey);
+  void StoreState(ObjectState* state);
+  void RemoveState(unsigned key);
+  void StoreINTCFeature(INTC_D3D12_FEATURE feature);
+  void StoreINTCApplicationInfo(INTC_D3D12_SetApplicationInfoCommand& c);
+  void StoreD3D12EnableExperimentalFeatures(const D3D12EnableExperimentalFeaturesCommand& c);
+  void StoreDllContainer(const DllContainerMetaCommand& c);
+  void ReleaseObject(unsigned key, ULONG result);
+  void SetReferenceCount(unsigned objectKey, ULONG referenceCount);
+  ObjectState* GetState(unsigned key);
+  void RestoreState(unsigned key);
+  bool StateRestored(unsigned key);
+  void AddBackBuffer(unsigned buffer, unsigned ResourceKey, ID3D12Resource* resource);
+  void SetXefgSwapChainFlag();
 
-  unsigned getUniqueCommandKey() {
-    return ++restoreCommandKey_;
+  unsigned GetUniqueCommandKey() {
+    return ++m_RestoreCommandKey;
   };
-  unsigned getUniqueObjectKey() {
-    return ++restoreObjectKey_;
+  unsigned GetUniqueObjectKey() {
+    return ++m_RestoreObjectKey;
   };
-  void* getUniqueFakePointer() {
-    return reinterpret_cast<void*>(++restoreFakePointer_);
+  void* GetUniqueFakePointer() {
+    return reinterpret_cast<void*>(++m_RestoreFakePointer);
   };
-  SubcaptureRecorder& getRecorder() {
-    return recorder_;
+  SubcaptureRecorder& GetRecorder() {
+    return m_Recorder;
   }
-  AnalyzerResults& getAnalyzerResults() {
-    return analyzerResults_;
+  AnalyzerResults& GetAnalyzerResults() {
+    return m_AnalyzerResults;
   }
-  DescriptorService& getDescriptorService() {
-    return descriptorService_;
+  DescriptorService& GetDescriptorService() {
+    return m_DescriptorService;
   }
-  ResourceStateTrackingService& getResourceStateTrackingService() {
-    return resourceStateTrackingService_;
+  ResourceStateTrackingService& GetResourceStateTrackingService() {
+    return m_ResourceStateTrackingService;
   }
-  unsigned getDeviceKey() {
-    return deviceKey_;
+  unsigned GetDeviceKey() {
+    return m_DeviceKey;
   }
 
   class NvAPIGlobalStateService {
   public:
-    NvAPIGlobalStateService(StateTrackingService& stateService) : stateService_(stateService) {}
-    void incrementInitialize();
-    void decrementInitialize();
-    void addSetCreatePipelineStateOptionsCommand(
-        const NvAPI_D3D12_SetCreatePipelineStateOptionsCommand& command);
-    void addSetNvShaderExtnSlotSpaceCommand(
-        const NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& command);
-    void addSetNvShaderExtnSlotSpaceLocalThreadCommand(
-        const NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& command);
-    void restureInitializeCount();
-    void restoreCreatePipelineStateOptionsBeforeCommand(unsigned commandKey);
-    void restoreShaderExtnSlotSpaceBeforeCommand(unsigned commandKey);
-    void finalizeRestore();
+    NvAPIGlobalStateService(StateTrackingService& stateService) : m_StateService(stateService) {}
+    void IncrementInitialize();
+    void DecrementInitialize();
+    void AddSetCreatePipelineStateOptionsCommand(
+        const NvAPI_D3D12_SetCreatePipelineStateOptionsCommand& Command);
+    void AddSetNvShaderExtnSlotSpaceCommand(
+        const NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& Command);
+    void AddSetNvShaderExtnSlotSpaceLocalThreadCommand(
+        const NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& Command);
+    void RestoreInitializeCount();
+    void RestoreCreatePipelineStateOptionsBeforeCommand(unsigned commandKey);
+    void RestoreShaderExtnSlotSpaceBeforeCommand(unsigned commandKey);
+    void FinalizeRestore();
 
   private:
     struct OrderedCommand {
-      unsigned key{};
-      std::unique_ptr<Command> command;
+      unsigned Key{};
+      std::unique_ptr<Command> SerializedCommand;
     };
 
     struct CompareCommand {
       bool operator()(const OrderedCommand& a, const OrderedCommand& b) const {
-        return a.key > b.key; // reverse order for min-heap
+        return a.Key > b.Key; // reverse order for min-heap
       }
     };
 
-    StateTrackingService& stateService_;
-    unsigned nvapiInitializeCount_{};
+    StateTrackingService& m_StateService;
+    unsigned m_NvapiInitializeCount{};
     std::priority_queue<OrderedCommand, std::vector<OrderedCommand>, CompareCommand>
-        setCreatePipelineStateOptionsCommands_;
+        m_SetCreatePipelineStateOptionsCommands;
     std::priority_queue<OrderedCommand, std::vector<OrderedCommand>, CompareCommand>
-        setNvShaderExtnSlotSpaceCommands_;
+        m_SetNvShaderExtnSlotSpaceCommands;
   };
 
-  NvAPIGlobalStateService& getNvAPIGlobalStateService() {
-    return nvapiGlobalStateService_;
+  NvAPIGlobalStateService& GetNvAPIGlobalStateService() {
+    return m_NvapiGlobalStateService;
   }
 
 private:
-  void restoreState(ObjectState* state);
-  void restoreReferenceCount();
-  void restoreResources();
-  D3D12_RESOURCE_STATES getResourceInitialState(ResourceState& state,
+  void RestoreState(ObjectState* state);
+  void RestoreReferenceCount();
+  void RestoreResources();
+  D3D12_RESOURCE_STATES GetResourceInitialState(ResourceState& state,
                                                 D3D12_RESOURCE_DIMENSION dimension);
-  D3D12_BARRIER_LAYOUT getResourceInitialLayout(ResourceState& state,
+  D3D12_BARRIER_LAYOUT GetResourceInitialLayout(ResourceState& state,
                                                 D3D12_RESOURCE_DIMENSION dimension,
                                                 D3D12_RESOURCE_FLAGS flags);
-  void restoreINTCApplicationInfo();
-  void restoreD3D12EnableExperimentalFeatures();
-  void restoreDllContainers();
-  void restoreStateObjectProperties();
-  void restoreResidencyPriority(unsigned deviceKey,
+  void RestoreINTCApplicationInfo();
+  void RestoreD3D12EnableExperimentalFeatures();
+  void RestoreDllContainers();
+  void RestoreStateObjectProperties();
+  void RestoreResidencyPriority(unsigned DeviceKey,
                                 unsigned objectKey,
                                 D3D12_RESIDENCY_PRIORITY residencyPriority);
-  void restoreDXGISwapChain(ObjectState* state);
-  void restoreDXGIAdapter(ObjectState* state);
-  void restoreD3D12DescriptorHeap(ObjectState* state);
-  void restoreD3D12Device(ObjectState* state);
-  void restoreQueryInterface(ObjectState* state);
-  void restoreD3D12Fence(ObjectState* state);
-  void restoreD3D12CommandList(ObjectState* state);
-  void restoreD3D12Heap(ObjectState* state);
-  void restoreD3D12HeapFromAddress(ObjectState* state);
-  void restoreD3D12CommittedResource(ObjectState* state);
-  void restoreD3D12PlacedResource(ObjectState* state);
-  void restoreD3D12ReservedResource(ObjectState* state);
-  void restoreGpuVirtualAddress(ResourceState* state);
-  void restoreD3D12INTCDeviceExtensionContext(ObjectState* state);
-  void restoreD3D12StateObject(ObjectState* state);
-  void restoreD3D12PipelineStateObject(ObjectState* state);
+  void RestoreDXGISwapChain(ObjectState* state);
+  void RestoreDXGIAdapter(ObjectState* state);
+  void RestoreD3D12DescriptorHeap(ObjectState* state);
+  void RestoreD3D12Device(ObjectState* state);
+  void RestoreQueryInterface(ObjectState* state);
+  void RestoreD3D12Fence(ObjectState* state);
+  void RestoreD3D12CommandList(ObjectState* state);
+  void RestoreD3D12Heap(ObjectState* state);
+  void RestoreD3D12HeapFromAddress(ObjectState* state);
+  void RestoreD3D12CommittedResource(ObjectState* state);
+  void RestoreD3D12PlacedResource(ObjectState* state);
+  void RestoreD3D12ReservedResource(ObjectState* state);
+  void RestoreGpuVirtualAddress(ResourceState* state);
+  void RestoreD3D12INTCDeviceExtensionContext(ObjectState* state);
+  void RestoreD3D12StateObject(ObjectState* state);
+  void RestoreD3D12PipelineStateObject(ObjectState* state);
 
 private:
-  SubcaptureRecorder& recorder_;
-  ResourceContentRestore resourceContentRestore_;
-  std::map<unsigned, ObjectState*> statesByKey_;
-  unsigned restoreCommandKey_{stateRestoreKeyMask};
-  unsigned restoreObjectKey_{stateRestoreKeyMask};
-  unsigned restoreFakePointer_{};
-  AnalyzerResults& analyzerResults_;
-  FenceTrackingService& fenceTrackingService_;
-  MapStateService& mapStateService_;
-  ResourceStateTrackingService& resourceStateTrackingService_;
-  ReservedResourcesService& reservedResourcesService_;
-  DescriptorService& descriptorService_;
-  CommandListService& commandListService_;
-  CommandQueueService& commandQueueService_;
-  XessStateService& xessStateService_;
-  XellStateService& xellStateService_;
-  XefgStateService& xefgStateService_;
-  AccelerationStructuresSerializeService& accelerationStructuresSerializeService_;
-  AccelerationStructuresBuildService& accelerationStructuresBuildService_;
-  ResidencyService& residencyService_;
-  ResourceUsageTrackingService& resourceUsageTrackingService_;
-  ResourceForCBVRestoreService& resourceForCBVRestoreService_;
-  unsigned deviceKey_{};
-  INTC_D3D12_FEATURE intcFeature_{};
-  std::unique_ptr<INTC_D3D12_SetApplicationInfoCommand> setApplicationInfoCommand_;
-  std::unique_ptr<D3D12EnableExperimentalFeaturesCommand> enableExperimentalFeaturesCommand_;
-  std::vector<std::unique_ptr<DllContainerMetaCommand>> dllContainerCommands_;
-  std::queue<std::unique_ptr<Command>> stateObjectPropertiesCommands_;
-  NvAPIGlobalStateService nvapiGlobalStateService_;
-  bool isXefgSwapChain_{};
+  SubcaptureRecorder& m_Recorder;
+  ResourceContentRestore m_ResourceContentRestore;
+  std::map<unsigned, ObjectState*> m_StatesByKey;
+  unsigned m_RestoreCommandKey{STATE_RESTORE_KEY_MASK};
+  unsigned m_RestoreObjectKey{STATE_RESTORE_KEY_MASK};
+  unsigned m_RestoreFakePointer{};
+  AnalyzerResults& m_AnalyzerResults;
+  FenceTrackingService& m_FenceTrackingService;
+  MapStateService& m_MapStateService;
+  ResourceStateTrackingService& m_ResourceStateTrackingService;
+  ReservedResourcesService& m_ReservedResourcesService;
+  DescriptorService& m_DescriptorService;
+  CommandListService& m_CommandListService;
+  CommandQueueService& m_CommandQueueService;
+  XessStateService& m_XessStateService;
+  XellStateService& m_XellStateService;
+  XefgStateService& m_XefgStateService;
+  AccelerationStructuresSerializeService& m_AccelerationStructuresSerializeService;
+  AccelerationStructuresBuildService& m_AccelerationStructuresBuildService;
+  ResidencyService& m_ResidencyService;
+  ResourceUsageTrackingService& m_ResourceUsageTrackingService;
+  ResourceForCBVRestoreService& m_ResourceForCBVRestoreService;
+  unsigned m_DeviceKey{};
+  INTC_D3D12_FEATURE m_IntcFeature{};
+  std::unique_ptr<INTC_D3D12_SetApplicationInfoCommand> m_SetApplicationInfoCommand;
+  std::unique_ptr<D3D12EnableExperimentalFeaturesCommand> m_EnableExperimentalFeaturesCommand;
+  std::vector<std::unique_ptr<DllContainerMetaCommand>> m_DllContainerCommands;
+  std::queue<std::unique_ptr<Command>> m_StateObjectPropertiesCommands;
+  NvAPIGlobalStateService m_NvapiGlobalStateService;
+  bool m_IsXefgSwapChain{};
 
 private:
   class SwapChainService {
   public:
-    SwapChainService(StateTrackingService& stateService) : stateService_(stateService) {}
-    void setSwapChain(unsigned commandQueueKey,
+    SwapChainService(StateTrackingService& stateService) : m_StateService(stateService) {}
+    void SetSwapChain(unsigned commandQueueKey,
                       ID3D12CommandQueue* commandQueue,
                       unsigned swapChainKey,
                       IDXGISwapChain* swapChain,
                       unsigned backBuffersCount);
-    void restoreBackBufferSequence(bool commandListSubcapture);
-    void recordSwapChainPresent();
-    void addBackBuffer(unsigned buffer, unsigned resourceKey, ID3D12Resource* resource);
-    unsigned getBackBuffersCount() {
-      return backBuffersCount_;
+    void RestoreBackBufferSequence(bool CommandListSubcapture);
+    void RecordSwapChainPresent();
+    void AddBackBuffer(unsigned buffer, unsigned ResourceKey, ID3D12Resource* resource);
+    unsigned GetBackBuffersCount() {
+      return m_BackBuffersCount;
     }
 
   private:
-    StateTrackingService& stateService_;
-    unsigned swapChainKey_{};
-    ID3D12CommandQueue* commandQueue_{};
-    unsigned commandQueueKey_{};
-    IDXGISwapChain* swapChain_{};
-    unsigned backBufferShift_{};
-    unsigned backBuffersCount_{};
-    std::unordered_map<unsigned, std::pair<unsigned, ID3D12Resource*>> backBuffers_;
+    StateTrackingService& m_StateService;
+    unsigned m_SwapChainKey{};
+    ID3D12CommandQueue* m_CommandQueue{};
+    unsigned m_CommandQueueKey{};
+    IDXGISwapChain* m_SwapChain{};
+    unsigned m_BackBufferShift{};
+    unsigned m_BackBuffersCount{};
+    std::unordered_map<unsigned, std::pair<unsigned, ID3D12Resource*>> m_BackBuffers;
   };
-  SwapChainService swapChainService_;
+  SwapChainService m_SwapChainService;
 };
 
 } // namespace DirectX

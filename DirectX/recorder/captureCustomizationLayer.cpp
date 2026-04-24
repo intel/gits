@@ -20,558 +20,566 @@
 namespace gits {
 namespace DirectX {
 
-thread_local CaptureCustomizationLayer::HeapInfo CaptureCustomizationLayer::s_heapInfo_;
+thread_local CaptureCustomizationLayer::HeapInfo CaptureCustomizationLayer::m_HeapInfo;
 
 CaptureCustomizationLayer::CaptureCustomizationLayer(CaptureManager& manager,
                                                      stream::OrderingRecorder& recorder)
-    : Layer("CaptureCustomization"), manager_(manager), recorder_(recorder) {}
+    : Layer("CaptureCustomization"), m_Manager(manager), m_Recorder(recorder) {}
 
-void CaptureCustomizationLayer::post(IUnknownReleaseCommand& c) {
-  if (c.result_.value == 0) {
-    manager_.getDescriptorHandleService().destroyDescriptorHeap(c.object_.key);
-    manager_.getMapTrackingService().destroyResource(c.object_.key);
-    manager_.getGpuAddressService().destroyInterface(c.object_.key);
-    manager_.getFenceService().destroyFence(c.object_.key);
+void CaptureCustomizationLayer::Post(IUnknownReleaseCommand& c) {
+  if (c.m_Result.Value == 0) {
+    m_Manager.getDescriptorHandleService().destroyDescriptorHeap(c.m_Object.Key);
+    m_Manager.getMapTrackingService().destroyResource(c.m_Object.Key);
+    m_Manager.getGpuAddressService().destroyInterface(c.m_Object.Key);
+    m_Manager.getFenceService().destroyFence(c.m_Object.Key);
   }
 }
 
-void CaptureCustomizationLayer::pre(IDXGIFactoryCreateSwapChainCommand& c) {
+void CaptureCustomizationLayer::Pre(IDXGIFactoryCreateSwapChainCommand& c) {
   RECT rect;
-  BOOL ret = GetClientRect(c.pDesc_.value->OutputWindow, &rect);
+  BOOL ret = GetClientRect(c.m_pDesc.Value->OutputWindow, &rect);
   GITS_ASSERT(ret);
 
-  CreateWindowMetaCommand createWindowCommand(c.threadId);
-  createWindowCommand.key = manager_.createCommandKey();
-  createWindowCommand.hWnd_.value = c.pDesc_.value->OutputWindow;
-  createWindowCommand.width_.value = rect.right - rect.left;
-  createWindowCommand.height_.value = rect.bottom - rect.top;
-  createWindowCommand.width_.value = std::max(
-      static_cast<unsigned>(createWindowCommand.width_.value), c.pDesc_.value->BufferDesc.Width);
-  createWindowCommand.height_.value = std::max(
-      static_cast<unsigned>(createWindowCommand.height_.value), c.pDesc_.value->BufferDesc.Height);
+  CreateWindowMetaCommand createWindowCommand(c.ThreadId);
+  createWindowCommand.Key = m_Manager.createCommandKey();
+  createWindowCommand.m_hWnd.Value = c.m_pDesc.Value->OutputWindow;
+  createWindowCommand.m_width.Value = rect.right - rect.left;
+  createWindowCommand.m_height.Value = rect.bottom - rect.top;
+  createWindowCommand.m_width.Value = std::max(
+      static_cast<unsigned>(createWindowCommand.m_width.Value), c.m_pDesc.Value->BufferDesc.Width);
+  createWindowCommand.m_height.Value =
+      std::max(static_cast<unsigned>(createWindowCommand.m_height.Value),
+               c.m_pDesc.Value->BufferDesc.Height);
 
-  recorder_.Record(createWindowCommand.key, new CreateWindowMetaSerializer(createWindowCommand));
+  m_Recorder.Record(createWindowCommand.Key, new CreateWindowMetaSerializer(createWindowCommand));
 }
 
-void CaptureCustomizationLayer::pre(IDXGIFactory2CreateSwapChainForHwndCommand& c) {
+void CaptureCustomizationLayer::Pre(IDXGIFactory2CreateSwapChainForHwndCommand& c) {
   RECT rect;
-  BOOL ret = GetClientRect(c.hWnd_.value, &rect);
+  BOOL ret = GetClientRect(c.m_hWnd.Value, &rect);
   GITS_ASSERT(ret);
 
-  CreateWindowMetaCommand createWindowCommand(c.threadId);
-  createWindowCommand.key = manager_.createCommandKey();
-  createWindowCommand.hWnd_ = c.hWnd_;
-  createWindowCommand.width_.value = rect.right - rect.left;
-  createWindowCommand.height_.value = rect.bottom - rect.top;
-  createWindowCommand.width_.value =
-      std::max(static_cast<unsigned>(createWindowCommand.width_.value), c.pDesc_.value->Width);
-  createWindowCommand.height_.value =
-      std::max(static_cast<unsigned>(createWindowCommand.height_.value), c.pDesc_.value->Height);
+  CreateWindowMetaCommand createWindowCommand(c.ThreadId);
+  createWindowCommand.Key = m_Manager.createCommandKey();
+  createWindowCommand.m_hWnd.Value = c.m_hWnd.Value;
+  createWindowCommand.m_width.Value = rect.right - rect.left;
+  createWindowCommand.m_height.Value = rect.bottom - rect.top;
+  createWindowCommand.m_width.Value =
+      std::max(static_cast<unsigned>(createWindowCommand.m_width.Value), c.m_pDesc.Value->Width);
+  createWindowCommand.m_height.Value =
+      std::max(static_cast<unsigned>(createWindowCommand.m_height.Value), c.m_pDesc.Value->Height);
 
-  recorder_.Record(createWindowCommand.key, new CreateWindowMetaSerializer(createWindowCommand));
+  m_Recorder.Record(createWindowCommand.Key, new CreateWindowMetaSerializer(createWindowCommand));
 }
 
-void CaptureCustomizationLayer::post(ID3D12DeviceCreateDescriptorHeapCommand& c) {
-  if (c.result_.value != S_OK) {
+void CaptureCustomizationLayer::Post(ID3D12DeviceCreateDescriptorHeapCommand& c) {
+  if (c.m_Result.Value != S_OK) {
     return;
   }
-  ID3D12DescriptorHeap* descriptorHeap = static_cast<ID3D12DescriptorHeap*>(*c.ppvHeap_.value);
-  manager_.getDescriptorHandleService().createDescriptorHeap(c.ppvHeap_.key, descriptorHeap,
-                                                             c.pDescriptorHeapDesc_.value);
+  ID3D12DescriptorHeap* descriptorHeap = static_cast<ID3D12DescriptorHeap*>(*c.m_ppvHeap.Value);
+  m_Manager.getDescriptorHandleService().createDescriptorHeap(c.m_ppvHeap.Key, descriptorHeap,
+                                                              c.m_pDescriptorHeapDesc.Value);
 }
 
-void CaptureCustomizationLayer::pre(ID3D12DeviceCreateCommittedResourceCommand& c) {
-  s_heapInfo_ = HeapInfo(c.pHeapProperties_.value, c.HeapFlags_.value);
-  c.pHeapProperties_.value = &s_heapInfo_.properties;
+void CaptureCustomizationLayer::Pre(ID3D12DeviceCreateCommittedResourceCommand& c) {
+  m_HeapInfo = HeapInfo(c.m_pHeapProperties.Value, c.m_HeapFlags.Value);
+  c.m_pHeapProperties.Value = &m_HeapInfo.Properties;
   // Modify D3D12_HEAP_PROPERTIES and D3D12_HEAP_FLAGS to enable writewatch
-  manager_.getMapTrackingService().enableWriteWatch(*c.pHeapProperties_.value, c.HeapFlags_.value);
+  m_Manager.getMapTrackingService().enableWriteWatch(*c.m_pHeapProperties.Value,
+                                                     c.m_HeapFlags.Value);
 }
 
-void CaptureCustomizationLayer::post(ID3D12DeviceCreateCommittedResourceCommand& c) {
-  if (c.result_.value == S_OK) {
-    ID3D12Resource* resource = static_cast<ID3D12Resource*>(*c.ppvResource_.value);
-    manager_.getGpuAddressService().createResource(c.ppvResource_.key, resource);
+void CaptureCustomizationLayer::Post(ID3D12DeviceCreateCommittedResourceCommand& c) {
+  if (c.m_Result.Value == S_OK) {
+    ID3D12Resource* resource = static_cast<ID3D12Resource*>(*c.m_ppvResource.Value);
+    m_Manager.getGpuAddressService().createResource(c.m_ppvResource.Key, resource);
   }
   // Restore D3D12_HEAP_PROPERTIES and D3D12_HEAP_FLAGS
-  c.pHeapProperties_.value = s_heapInfo_.propertiesPtr;
-  c.HeapFlags_.value = s_heapInfo_.flags;
+  c.m_pHeapProperties.Value = m_HeapInfo.PropertiesPtr;
+  c.m_HeapFlags.Value = m_HeapInfo.Flags;
 }
 
-void CaptureCustomizationLayer::pre(ID3D12Device4CreateCommittedResource1Command& c) {
-  s_heapInfo_ = HeapInfo(c.pHeapProperties_.value, c.HeapFlags_.value);
-  c.pHeapProperties_.value = &s_heapInfo_.properties;
+void CaptureCustomizationLayer::Pre(ID3D12Device4CreateCommittedResource1Command& c) {
+  m_HeapInfo = HeapInfo(c.m_pHeapProperties.Value, c.m_HeapFlags.Value);
+  c.m_pHeapProperties.Value = &m_HeapInfo.Properties;
   // Modify D3D12_HEAP_PROPERTIES and D3D12_HEAP_FLAGS to enable writewatch
-  manager_.getMapTrackingService().enableWriteWatch(*c.pHeapProperties_.value, c.HeapFlags_.value);
+  m_Manager.getMapTrackingService().enableWriteWatch(*c.m_pHeapProperties.Value,
+                                                     c.m_HeapFlags.Value);
 }
 
-void CaptureCustomizationLayer::post(ID3D12Device4CreateCommittedResource1Command& c) {
-  if (c.result_.value == S_OK) {
-    ID3D12Resource* resource = static_cast<ID3D12Resource*>(*c.ppvResource_.value);
-    manager_.getGpuAddressService().createResource(c.ppvResource_.key, resource);
+void CaptureCustomizationLayer::Post(ID3D12Device4CreateCommittedResource1Command& c) {
+  if (c.m_Result.Value == S_OK) {
+    ID3D12Resource* resource = static_cast<ID3D12Resource*>(*c.m_ppvResource.Value);
+    m_Manager.getGpuAddressService().createResource(c.m_ppvResource.Key, resource);
   }
   // Restore D3D12_HEAP_PROPERTIES and D3D12_HEAP_FLAGS
-  c.pHeapProperties_.value = s_heapInfo_.propertiesPtr;
-  c.HeapFlags_.value = s_heapInfo_.flags;
+  c.m_pHeapProperties.Value = m_HeapInfo.PropertiesPtr;
+  c.m_HeapFlags.Value = m_HeapInfo.Flags;
 }
 
-void CaptureCustomizationLayer::pre(ID3D12Device8CreateCommittedResource2Command& c) {
-  s_heapInfo_ = HeapInfo(c.pHeapProperties_.value, c.HeapFlags_.value);
-  c.pHeapProperties_.value = &s_heapInfo_.properties;
+void CaptureCustomizationLayer::Pre(ID3D12Device8CreateCommittedResource2Command& c) {
+  m_HeapInfo = HeapInfo(c.m_pHeapProperties.Value, c.m_HeapFlags.Value);
+  c.m_pHeapProperties.Value = &m_HeapInfo.Properties;
   // Modify D3D12_HEAP_PROPERTIES and D3D12_HEAP_FLAGS to enable writewatch
-  manager_.getMapTrackingService().enableWriteWatch(*c.pHeapProperties_.value, c.HeapFlags_.value);
+  m_Manager.getMapTrackingService().enableWriteWatch(*c.m_pHeapProperties.Value,
+                                                     c.m_HeapFlags.Value);
 }
 
-void CaptureCustomizationLayer::post(ID3D12Device8CreateCommittedResource2Command& c) {
-  if (c.result_.value == S_OK) {
-    ID3D12Resource* resource = static_cast<ID3D12Resource*>(*c.ppvResource_.value);
-    manager_.getGpuAddressService().createResource(c.ppvResource_.key, resource);
+void CaptureCustomizationLayer::Post(ID3D12Device8CreateCommittedResource2Command& c) {
+  if (c.m_Result.Value == S_OK) {
+    ID3D12Resource* resource = static_cast<ID3D12Resource*>(*c.m_ppvResource.Value);
+    m_Manager.getGpuAddressService().createResource(c.m_ppvResource.Key, resource);
   }
   // Restore D3D12_HEAP_PROPERTIES and D3D12_HEAP_FLAGS
-  c.pHeapProperties_.value = s_heapInfo_.propertiesPtr;
-  c.HeapFlags_.value = s_heapInfo_.flags;
+  c.m_pHeapProperties.Value = m_HeapInfo.PropertiesPtr;
+  c.m_HeapFlags.Value = m_HeapInfo.Flags;
 }
 
-void CaptureCustomizationLayer::pre(ID3D12Device10CreateCommittedResource3Command& c) {
-  s_heapInfo_ = HeapInfo(c.pHeapProperties_.value, c.HeapFlags_.value);
-  c.pHeapProperties_.value = &s_heapInfo_.properties;
+void CaptureCustomizationLayer::Pre(ID3D12Device10CreateCommittedResource3Command& c) {
+  m_HeapInfo = HeapInfo(c.m_pHeapProperties.Value, c.m_HeapFlags.Value);
+  c.m_pHeapProperties.Value = &m_HeapInfo.Properties;
   // Modify D3D12_HEAP_PROPERTIES and D3D12_HEAP_FLAGS to enable writewatch
-  manager_.getMapTrackingService().enableWriteWatch(*c.pHeapProperties_.value, c.HeapFlags_.value);
+  m_Manager.getMapTrackingService().enableWriteWatch(*c.m_pHeapProperties.Value,
+                                                     c.m_HeapFlags.Value);
 }
 
-void CaptureCustomizationLayer::post(ID3D12Device10CreateCommittedResource3Command& c) {
-  if (c.result_.value == S_OK) {
-    ID3D12Resource* resource = static_cast<ID3D12Resource*>(*c.ppvResource_.value);
-    manager_.getGpuAddressService().createResource(c.ppvResource_.key, resource);
+void CaptureCustomizationLayer::Post(ID3D12Device10CreateCommittedResource3Command& c) {
+  if (c.m_Result.Value == S_OK) {
+    ID3D12Resource* resource = static_cast<ID3D12Resource*>(*c.m_ppvResource.Value);
+    m_Manager.getGpuAddressService().createResource(c.m_ppvResource.Key, resource);
   }
   // Restore D3D12_HEAP_PROPERTIES and D3D12_HEAP_FLAGS
-  c.pHeapProperties_.value = s_heapInfo_.propertiesPtr;
-  c.HeapFlags_.value = s_heapInfo_.flags;
+  c.m_pHeapProperties.Value = m_HeapInfo.PropertiesPtr;
+  c.m_HeapFlags.Value = m_HeapInfo.Flags;
 }
 
-void CaptureCustomizationLayer::post(ID3D12DeviceCreateReservedResourceCommand& c) {
-  if (c.result_.value == S_OK) {
-    ID3D12Resource* resource = static_cast<ID3D12Resource*>(*c.ppvResource_.value);
-    manager_.getGpuAddressService().createResource(c.ppvResource_.key, resource);
+void CaptureCustomizationLayer::Post(ID3D12DeviceCreateReservedResourceCommand& c) {
+  if (c.m_Result.Value == S_OK) {
+    ID3D12Resource* resource = static_cast<ID3D12Resource*>(*c.m_ppvResource.Value);
+    m_Manager.getGpuAddressService().createResource(c.m_ppvResource.Key, resource);
   }
 }
 
-void CaptureCustomizationLayer::post(ID3D12Device4CreateReservedResource1Command& c) {
-  if (c.result_.value == S_OK) {
-    ID3D12Resource* resource = static_cast<ID3D12Resource*>(*c.ppvResource_.value);
-    manager_.getGpuAddressService().createResource(c.ppvResource_.key, resource);
+void CaptureCustomizationLayer::Post(ID3D12Device4CreateReservedResource1Command& c) {
+  if (c.m_Result.Value == S_OK) {
+    ID3D12Resource* resource = static_cast<ID3D12Resource*>(*c.m_ppvResource.Value);
+    m_Manager.getGpuAddressService().createResource(c.m_ppvResource.Key, resource);
   }
 }
 
-void CaptureCustomizationLayer::post(ID3D12Device10CreateReservedResource2Command& c) {
-  if (c.result_.value == S_OK) {
-    ID3D12Resource* resource = static_cast<ID3D12Resource*>(*c.ppvResource_.value);
-    manager_.getGpuAddressService().createResource(c.ppvResource_.key, resource);
+void CaptureCustomizationLayer::Post(ID3D12Device10CreateReservedResource2Command& c) {
+  if (c.m_Result.Value == S_OK) {
+    ID3D12Resource* resource = static_cast<ID3D12Resource*>(*c.m_ppvResource.Value);
+    m_Manager.getGpuAddressService().createResource(c.m_ppvResource.Key, resource);
   }
 }
 
-void CaptureCustomizationLayer::post(ID3D12DeviceCreatePlacedResourceCommand& c) {
-  if (c.result_.value == S_OK) {
-    ID3D12Resource* resource = static_cast<ID3D12Resource*>(*c.ppvResource_.value);
-    manager_.getGpuAddressService().createPlacedResource(
-        c.ppvResource_.key, resource, c.pHeap_.key, c.pHeap_.value, c.HeapOffset_.value,
-        c.InitialState_.value == D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE);
+void CaptureCustomizationLayer::Post(ID3D12DeviceCreatePlacedResourceCommand& c) {
+  if (c.m_Result.Value == S_OK) {
+    ID3D12Resource* resource = static_cast<ID3D12Resource*>(*c.m_ppvResource.Value);
+    m_Manager.getGpuAddressService().createPlacedResource(
+        c.m_ppvResource.Key, resource, c.m_pHeap.Key, c.m_pHeap.Value, c.m_HeapOffset.Value,
+        c.m_InitialState.Value == D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE);
   }
 }
 
-void CaptureCustomizationLayer::post(ID3D12Device8CreatePlacedResource1Command& c) {
-  if (c.result_.value == S_OK) {
-    ID3D12Resource* resource = static_cast<ID3D12Resource*>(*c.ppvResource_.value);
-    manager_.getGpuAddressService().createPlacedResource(
-        c.ppvResource_.key, resource, c.pHeap_.key, c.pHeap_.value, c.HeapOffset_.value,
-        c.InitialState_.value == D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE);
+void CaptureCustomizationLayer::Post(ID3D12Device8CreatePlacedResource1Command& c) {
+  if (c.m_Result.Value == S_OK) {
+    ID3D12Resource* resource = static_cast<ID3D12Resource*>(*c.m_ppvResource.Value);
+    m_Manager.getGpuAddressService().createPlacedResource(
+        c.m_ppvResource.Key, resource, c.m_pHeap.Key, c.m_pHeap.Value, c.m_HeapOffset.Value,
+        c.m_InitialState.Value == D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE);
   }
 }
 
-void CaptureCustomizationLayer::post(ID3D12Device10CreatePlacedResource2Command& c) {
-  if (c.result_.value == S_OK) {
-    ID3D12Resource* resource = static_cast<ID3D12Resource*>(*c.ppvResource_.value);
-    manager_.getGpuAddressService().createPlacedResource(
-        c.ppvResource_.key, resource, c.pHeap_.key, c.pHeap_.value, c.HeapOffset_.value, false);
+void CaptureCustomizationLayer::Post(ID3D12Device10CreatePlacedResource2Command& c) {
+  if (c.m_Result.Value == S_OK) {
+    ID3D12Resource* resource = static_cast<ID3D12Resource*>(*c.m_ppvResource.Value);
+    m_Manager.getGpuAddressService().createPlacedResource(
+        c.m_ppvResource.Key, resource, c.m_pHeap.Key, c.m_pHeap.Value, c.m_HeapOffset.Value, false);
   }
 }
 
-void CaptureCustomizationLayer::pre(ID3D12DeviceCreateHeapCommand& c) {
-  s_heapInfo_ = HeapInfo(c.pDesc_.value->Properties, c.pDesc_.value->Flags);
+void CaptureCustomizationLayer::Pre(ID3D12DeviceCreateHeapCommand& c) {
+  m_HeapInfo = HeapInfo(c.m_pDesc.Value->Properties, c.m_pDesc.Value->Flags);
   // Modify D3D12_HEAP_PROPERTIES and D3D12_HEAP_FLAGS to enable writewatch
-  manager_.getMapTrackingService().enableWriteWatch(c.pDesc_.value->Properties,
-                                                    c.pDesc_.value->Flags);
+  m_Manager.getMapTrackingService().enableWriteWatch(c.m_pDesc.Value->Properties,
+                                                     c.m_pDesc.Value->Flags);
 }
 
-void CaptureCustomizationLayer::post(ID3D12DeviceCreateHeapCommand& c) {
-  if (c.result_.value == S_OK) {
-    ID3D12Heap* heap = static_cast<ID3D12Heap*>(*c.ppvHeap_.value);
-    manager_.getGpuAddressService().createHeap(c.ppvHeap_.key, heap);
+void CaptureCustomizationLayer::Post(ID3D12DeviceCreateHeapCommand& c) {
+  if (c.m_Result.Value == S_OK) {
+    ID3D12Heap* heap = static_cast<ID3D12Heap*>(*c.m_ppvHeap.Value);
+    m_Manager.getGpuAddressService().createHeap(c.m_ppvHeap.Key, heap);
   }
   // Restore D3D12_HEAP_PROPERTIES and D3D12_HEAP_FLAGS
-  c.pDesc_.value->Properties = s_heapInfo_.properties;
-  c.pDesc_.value->Flags = s_heapInfo_.flags;
+  c.m_pDesc.Value->Properties = m_HeapInfo.Properties;
+  c.m_pDesc.Value->Flags = m_HeapInfo.Flags;
 }
 
-void CaptureCustomizationLayer::pre(ID3D12Device4CreateHeap1Command& c) {
-  s_heapInfo_ = HeapInfo(c.pDesc_.value->Properties, c.pDesc_.value->Flags);
+void CaptureCustomizationLayer::Pre(ID3D12Device4CreateHeap1Command& c) {
+  m_HeapInfo = HeapInfo(c.m_pDesc.Value->Properties, c.m_pDesc.Value->Flags);
   // Modify D3D12_HEAP_PROPERTIES and D3D12_HEAP_FLAGS to enable writewatch
-  manager_.getMapTrackingService().enableWriteWatch(c.pDesc_.value->Properties,
-                                                    c.pDesc_.value->Flags);
+  m_Manager.getMapTrackingService().enableWriteWatch(c.m_pDesc.Value->Properties,
+                                                     c.m_pDesc.Value->Flags);
 }
 
-void CaptureCustomizationLayer::post(ID3D12Device4CreateHeap1Command& c) {
-  if (c.result_.value == S_OK) {
-    ID3D12Heap* heap = static_cast<ID3D12Heap*>(*c.ppvHeap_.value);
-    manager_.getGpuAddressService().createHeap(c.ppvHeap_.key, heap);
+void CaptureCustomizationLayer::Post(ID3D12Device4CreateHeap1Command& c) {
+  if (c.m_Result.Value == S_OK) {
+    ID3D12Heap* heap = static_cast<ID3D12Heap*>(*c.m_ppvHeap.Value);
+    m_Manager.getGpuAddressService().createHeap(c.m_ppvHeap.Key, heap);
   }
   // Restore D3D12_HEAP_PROPERTIES and D3D12_HEAP_FLAGS
-  c.pDesc_.value->Properties = s_heapInfo_.properties;
-  c.pDesc_.value->Flags = s_heapInfo_.flags;
+  c.m_pDesc.Value->Properties = m_HeapInfo.Properties;
+  c.m_pDesc.Value->Flags = m_HeapInfo.Flags;
 }
 
-void CaptureCustomizationLayer::pre(INTC_D3D12_CreateHeapCommand& c) {
-  auto* desc = c.pDesc_.value->pD3D12Desc;
-  s_heapInfo_ = HeapInfo(desc->Properties, desc->Flags);
+void CaptureCustomizationLayer::Pre(INTC_D3D12_CreateHeapCommand& c) {
+  auto* desc = c.m_pDesc.Value->pD3D12Desc;
+  m_HeapInfo = HeapInfo(desc->Properties, desc->Flags);
   // Modify D3D12_HEAP_PROPERTIES and D3D12_HEAP_FLAGS to enable writewatch
-  manager_.getMapTrackingService().enableWriteWatch(desc->Properties, desc->Flags);
+  m_Manager.getMapTrackingService().enableWriteWatch(desc->Properties, desc->Flags);
 }
 
-void CaptureCustomizationLayer::post(INTC_D3D12_CreateHeapCommand& c) {
-  if (c.result_.value == S_OK) {
-    ID3D12Heap* heap = static_cast<ID3D12Heap*>(*c.ppvHeap_.value);
-    manager_.getGpuAddressService().createHeap(c.ppvHeap_.key, heap);
+void CaptureCustomizationLayer::Post(INTC_D3D12_CreateHeapCommand& c) {
+  if (c.m_Result.Value == S_OK) {
+    ID3D12Heap* heap = static_cast<ID3D12Heap*>(*c.m_ppvHeap.Value);
+    m_Manager.getGpuAddressService().createHeap(c.m_ppvHeap.Key, heap);
   }
   // Restore D3D12_HEAP_PROPERTIES and D3D12_HEAP_FLAGS
-  c.pDesc_.value->pD3D12Desc->Properties = s_heapInfo_.properties;
-  c.pDesc_.value->pD3D12Desc->Flags = s_heapInfo_.flags;
+  c.m_pDesc.Value->pD3D12Desc->Properties = m_HeapInfo.Properties;
+  c.m_pDesc.Value->pD3D12Desc->Flags = m_HeapInfo.Flags;
 }
 
-void CaptureCustomizationLayer::post(ID3D12Device3OpenExistingHeapFromAddressCommand& c) {
-  if (c.result_.value == S_OK) {
-    ID3D12Heap* heap = static_cast<ID3D12Heap*>(*c.ppvHeap_.value);
-    manager_.getGpuAddressService().createHeap(c.ppvHeap_.key, heap);
+void CaptureCustomizationLayer::Post(ID3D12Device3OpenExistingHeapFromAddressCommand& c) {
+  if (c.m_Result.Value == S_OK) {
+    ID3D12Heap* heap = static_cast<ID3D12Heap*>(*c.m_ppvHeap.Value);
+    m_Manager.getGpuAddressService().createHeap(c.m_ppvHeap.Key, heap);
 
     D3D12_HEAP_DESC desc = heap->GetDesc();
 
-    CreateHeapAllocationMetaCommand command(c.threadId);
-    command.key = manager_.createCommandKey();
-    command.heap_.key = c.ppvHeap_.key;
-    command.address_.value = const_cast<void*>(c.pAddress_.value);
-    command.data_.value = const_cast<void*>(c.pAddress_.value);
-    command.data_.size = desc.SizeInBytes;
-    recorder_.Record(command.key, new CreateHeapAllocationMetaSerializer(command));
+    CreateHeapAllocationMetaCommand command(c.ThreadId);
+    command.Key = m_Manager.createCommandKey();
+    command.m_heap.Key = c.m_ppvHeap.Key;
+    command.m_address.Value = const_cast<void*>(c.m_pAddress.Value);
+    command.m_data.Value = const_cast<void*>(c.m_pAddress.Value);
+    command.m_data.Size = desc.SizeInBytes;
+    m_Recorder.Record(command.Key, new CreateHeapAllocationMetaSerializer(command));
 
-    manager_.updateCommandKey(c);
+    m_Manager.updateCommandKey(c);
   }
 }
 
-void CaptureCustomizationLayer::post(ID3D12Device13OpenExistingHeapFromAddress1Command& c) {
-  if (c.result_.value == S_OK) {
-    ID3D12Heap* heap = static_cast<ID3D12Heap*>(*c.ppvHeap_.value);
-    manager_.getGpuAddressService().createHeap(c.ppvHeap_.key, heap);
+void CaptureCustomizationLayer::Post(ID3D12Device13OpenExistingHeapFromAddress1Command& c) {
+  if (c.m_Result.Value == S_OK) {
+    ID3D12Heap* heap = static_cast<ID3D12Heap*>(*c.m_ppvHeap.Value);
+    m_Manager.getGpuAddressService().createHeap(c.m_ppvHeap.Key, heap);
 
     D3D12_HEAP_DESC desc = heap->GetDesc();
 
-    CreateHeapAllocationMetaCommand command(c.threadId);
-    command.key = manager_.createCommandKey();
-    command.heap_.key = c.ppvHeap_.key;
-    command.address_.value = const_cast<void*>(c.pAddress_.value);
-    command.data_.value = const_cast<void*>(c.pAddress_.value);
-    command.data_.size = desc.SizeInBytes;
-    recorder_.Record(command.key, new CreateHeapAllocationMetaSerializer(command));
+    CreateHeapAllocationMetaCommand command(c.ThreadId);
+    command.Key = m_Manager.createCommandKey();
+    command.m_heap.Key = c.m_ppvHeap.Key;
+    command.m_address.Value = const_cast<void*>(c.m_pAddress.Value);
+    command.m_data.Value = const_cast<void*>(c.m_pAddress.Value);
+    command.m_data.Size = desc.SizeInBytes;
+    m_Recorder.Record(command.Key, new CreateHeapAllocationMetaSerializer(command));
 
-    manager_.updateCommandKey(c);
+    m_Manager.updateCommandKey(c);
   }
 }
 
-void CaptureCustomizationLayer::post(ID3D12ResourceMapCommand& c) {
-  if (c.result_.value != S_OK) {
+void CaptureCustomizationLayer::Post(ID3D12ResourceMapCommand& c) {
+  if (c.m_Result.Value != S_OK) {
     return;
   }
-  manager_.getMapTrackingService().mapResource(c.object_.key, c.object_.value, c.Subresource_.value,
-                                               c.ppData_.value);
+  m_Manager.getMapTrackingService().mapResource(c.m_Object.Key, c.m_Object.Value,
+                                                c.m_Subresource.Value, c.m_ppData.Value);
 }
 
-void CaptureCustomizationLayer::pre(ID3D12ResourceUnmapCommand& c) {
-  manager_.getMapTrackingService().unmapResource(c.object_.key, c.Subresource_.value);
+void CaptureCustomizationLayer::Pre(ID3D12ResourceUnmapCommand& c) {
+  m_Manager.getMapTrackingService().unmapResource(c.m_Object.Key, c.m_Subresource.Value);
 }
 
-void CaptureCustomizationLayer::pre(ID3D12CommandQueueExecuteCommandListsCommand& c) {
-  manager_.getMapTrackingService().executeCommandLists();
+void CaptureCustomizationLayer::Pre(ID3D12CommandQueueExecuteCommandListsCommand& c) {
+  m_Manager.getMapTrackingService().executeCommandLists();
 }
 
-void CaptureCustomizationLayer::pre(ID3D12DeviceCreateRenderTargetViewCommand& c) {
-  fillCpuDescriptorHandleArgument(c.DestDescriptor_, D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+void CaptureCustomizationLayer::Pre(ID3D12DeviceCreateRenderTargetViewCommand& c) {
+  fillCpuDescriptorHandleArgument(c.m_DestDescriptor, D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 }
 
-void CaptureCustomizationLayer::pre(ID3D12DeviceCreateShaderResourceViewCommand& c) {
-  fillCpuDescriptorHandleArgument(c.DestDescriptor_, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-  if (c.pDesc_.value &&
-      c.pDesc_.value->ViewDimension == D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE) {
-    GpuAddressService::GpuAddressInfo info = manager_.getGpuAddressService().getGpuAddressInfo(
-        c.pDesc_.value->RaytracingAccelerationStructure.Location, true);
-    c.pDesc_.raytracingLocationKey = info.resourceKey;
-    c.pDesc_.raytracingLocationOffset = info.offset;
+void CaptureCustomizationLayer::Pre(ID3D12DeviceCreateShaderResourceViewCommand& c) {
+  fillCpuDescriptorHandleArgument(c.m_DestDescriptor, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+  if (c.m_pDesc.Value &&
+      c.m_pDesc.Value->ViewDimension == D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE) {
+    GpuAddressService::GpuAddressInfo info = m_Manager.getGpuAddressService().getGpuAddressInfo(
+        c.m_pDesc.Value->RaytracingAccelerationStructure.Location, true);
+    c.m_pDesc.RaytracingLocationKey = info.ResourceKey;
+    c.m_pDesc.RaytracingLocationOffset = info.Offset;
   }
 }
 
-void CaptureCustomizationLayer::pre(ID3D12DeviceCreateUnorderedAccessViewCommand& c) {
-  fillCpuDescriptorHandleArgument(c.DestDescriptor_, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+void CaptureCustomizationLayer::Pre(ID3D12DeviceCreateUnorderedAccessViewCommand& c) {
+  fillCpuDescriptorHandleArgument(c.m_DestDescriptor, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 }
 
-void CaptureCustomizationLayer::pre(ID3D12DeviceCreateDepthStencilViewCommand& c) {
-  fillCpuDescriptorHandleArgument(c.DestDescriptor_, D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+void CaptureCustomizationLayer::Pre(ID3D12DeviceCreateDepthStencilViewCommand& c) {
+  fillCpuDescriptorHandleArgument(c.m_DestDescriptor, D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
 }
 
-void CaptureCustomizationLayer::pre(
+void CaptureCustomizationLayer::Pre(
     ID3D12Device8CreateSamplerFeedbackUnorderedAccessViewCommand& c) {
-  fillCpuDescriptorHandleArgument(c.DestDescriptor_, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+  fillCpuDescriptorHandleArgument(c.m_DestDescriptor, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 }
 
-void CaptureCustomizationLayer::pre(ID3D12DeviceCreateSamplerCommand& c) {
-  fillCpuDescriptorHandleArgument(c.DestDescriptor_, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
+void CaptureCustomizationLayer::Pre(ID3D12DeviceCreateSamplerCommand& c) {
+  fillCpuDescriptorHandleArgument(c.m_DestDescriptor, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
 }
 
-void CaptureCustomizationLayer::pre(ID3D12Device11CreateSampler2Command& c) {
-  fillCpuDescriptorHandleArgument(c.DestDescriptor_, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
+void CaptureCustomizationLayer::Pre(ID3D12Device11CreateSampler2Command& c) {
+  fillCpuDescriptorHandleArgument(c.m_DestDescriptor, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
 }
 
-void CaptureCustomizationLayer::pre(
+void CaptureCustomizationLayer::Pre(
     ID3D12GraphicsCommandListSetGraphicsRootDescriptorTableCommand& c) {
   D3D12_DESCRIPTOR_HEAP_TYPE heapType =
-      manager_.getRootSignatureService().getGraphicsRootSignatureDescriptorHeapType(
-          c.object_.key, c.RootParameterIndex_.value);
-  fillGpuDescriptorHandleArgument(c.BaseDescriptor_, heapType);
+      m_Manager.getRootSignatureService().getGraphicsRootSignatureDescriptorHeapType(
+          c.m_Object.Key, c.m_RootParameterIndex.Value);
+  fillGpuDescriptorHandleArgument(c.m_BaseDescriptor, heapType);
 }
 
-void CaptureCustomizationLayer::pre(
+void CaptureCustomizationLayer::Pre(
     ID3D12GraphicsCommandListSetComputeRootDescriptorTableCommand& c) {
   D3D12_DESCRIPTOR_HEAP_TYPE heapType =
-      manager_.getRootSignatureService().getComputeRootSignatureDescriptorHeapType(
-          c.object_.key, c.RootParameterIndex_.value);
-  fillGpuDescriptorHandleArgument(c.BaseDescriptor_, heapType);
+      m_Manager.getRootSignatureService().getComputeRootSignatureDescriptorHeapType(
+          c.m_Object.Key, c.m_RootParameterIndex.Value);
+  fillGpuDescriptorHandleArgument(c.m_BaseDescriptor, heapType);
 }
 
-void CaptureCustomizationLayer::pre(ID3D12GraphicsCommandListOMSetRenderTargetsCommand& c) {
+void CaptureCustomizationLayer::Pre(ID3D12GraphicsCommandListOMSetRenderTargetsCommand& c) {
 
-  if (c.pRenderTargetDescriptors_.value) {
-    for (unsigned i = 0; i < c.NumRenderTargetDescriptors_.value; ++i) {
+  if (c.m_pRenderTargetDescriptors.Value) {
+    for (unsigned i = 0; i < c.m_NumRenderTargetDescriptors.Value; ++i) {
       CaptureDescriptorHandleService::HandleInfo info =
-          manager_.getDescriptorHandleService().getDescriptorHandleInfo(
+          m_Manager.getDescriptorHandleService().getDescriptorHandleInfo(
               D3D12_DESCRIPTOR_HEAP_TYPE_RTV, CaptureDescriptorHandleService::HandleType::CpuHandle,
-              c.pRenderTargetDescriptors_.value[i].ptr);
-      c.pRenderTargetDescriptors_.interfaceKeys[i] = info.interfaceKey;
-      c.pRenderTargetDescriptors_.indexes[i] = info.index;
-      if (c.RTsSingleHandleToDescriptorRange_.value) {
+              c.m_pRenderTargetDescriptors.Value[i].ptr);
+      c.m_pRenderTargetDescriptors.InterfaceKeys[i] = info.InterfaceKey;
+      c.m_pRenderTargetDescriptors.Indexes[i] = info.Index;
+      if (c.m_RTsSingleHandleToDescriptorRange.Value) {
         break;
       }
     }
   }
-  if (c.pDepthStencilDescriptor_.value) {
+  if (c.m_pDepthStencilDescriptor.Value) {
     CaptureDescriptorHandleService::HandleInfo info =
-        manager_.getDescriptorHandleService().getDescriptorHandleInfo(
+        m_Manager.getDescriptorHandleService().getDescriptorHandleInfo(
             D3D12_DESCRIPTOR_HEAP_TYPE_DSV, CaptureDescriptorHandleService::HandleType::CpuHandle,
-            c.pDepthStencilDescriptor_.value[0].ptr);
-    c.pDepthStencilDescriptor_.interfaceKeys[0] = info.interfaceKey;
-    c.pDepthStencilDescriptor_.indexes[0] = info.index;
+            c.m_pDepthStencilDescriptor.Value[0].ptr);
+    c.m_pDepthStencilDescriptor.InterfaceKeys[0] = info.InterfaceKey;
+    c.m_pDepthStencilDescriptor.Indexes[0] = info.Index;
   }
 }
 
-void CaptureCustomizationLayer::pre(ID3D12GraphicsCommandListClearDepthStencilViewCommand& c) {
-  fillCpuDescriptorHandleArgument(c.DepthStencilView_, D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+void CaptureCustomizationLayer::Pre(ID3D12GraphicsCommandListClearDepthStencilViewCommand& c) {
+  fillCpuDescriptorHandleArgument(c.m_DepthStencilView, D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
 }
 
-void CaptureCustomizationLayer::pre(ID3D12GraphicsCommandListClearRenderTargetViewCommand& c) {
-  fillCpuDescriptorHandleArgument(c.RenderTargetView_, D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+void CaptureCustomizationLayer::Pre(ID3D12GraphicsCommandListClearRenderTargetViewCommand& c) {
+  fillCpuDescriptorHandleArgument(c.m_RenderTargetView, D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 }
 
-void CaptureCustomizationLayer::pre(
+void CaptureCustomizationLayer::Pre(
     ID3D12GraphicsCommandListClearUnorderedAccessViewUintCommand& c) {
-  fillGpuDescriptorHandleArgument(c.ViewGPUHandleInCurrentHeap_,
+  fillGpuDescriptorHandleArgument(c.m_ViewGPUHandleInCurrentHeap,
                                   D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-  fillCpuDescriptorHandleArgument(c.ViewCPUHandle_, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+  fillCpuDescriptorHandleArgument(c.m_ViewCPUHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 }
 
-void CaptureCustomizationLayer::pre(
+void CaptureCustomizationLayer::Pre(
     ID3D12GraphicsCommandListClearUnorderedAccessViewFloatCommand& c) {
-  fillGpuDescriptorHandleArgument(c.ViewGPUHandleInCurrentHeap_,
+  fillGpuDescriptorHandleArgument(c.m_ViewGPUHandleInCurrentHeap,
                                   D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-  fillCpuDescriptorHandleArgument(c.ViewCPUHandle_, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+  fillCpuDescriptorHandleArgument(c.m_ViewCPUHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 }
 
-void CaptureCustomizationLayer::pre(ID3D12DeviceCopyDescriptorsCommand& c) {
+void CaptureCustomizationLayer::Pre(ID3D12DeviceCopyDescriptorsCommand& c) {
 
-  for (unsigned i = 0; i < c.NumDestDescriptorRanges_.value; ++i) {
+  for (unsigned i = 0; i < c.m_NumDestDescriptorRanges.Value; ++i) {
     CaptureDescriptorHandleService::HandleInfo info =
-        manager_.getDescriptorHandleService().getDescriptorHandleInfo(
-            c.DescriptorHeapsType_.value, CaptureDescriptorHandleService::HandleType::CpuHandle,
-            c.pDestDescriptorRangeStarts_.value[i].ptr);
+        m_Manager.getDescriptorHandleService().getDescriptorHandleInfo(
+            c.m_DescriptorHeapsType.Value, CaptureDescriptorHandleService::HandleType::CpuHandle,
+            c.m_pDestDescriptorRangeStarts.Value[i].ptr);
 
-    c.pDestDescriptorRangeStarts_.interfaceKeys[i] = info.interfaceKey;
-    c.pDestDescriptorRangeStarts_.indexes[i] = info.index;
+    c.m_pDestDescriptorRangeStarts.InterfaceKeys[i] = info.InterfaceKey;
+    c.m_pDestDescriptorRangeStarts.Indexes[i] = info.Index;
   }
-  for (unsigned i = 0; i < c.NumSrcDescriptorRanges_.value; ++i) {
+  for (unsigned i = 0; i < c.m_NumSrcDescriptorRanges.Value; ++i) {
     CaptureDescriptorHandleService::HandleInfo info =
-        manager_.getDescriptorHandleService().getDescriptorHandleInfo(
-            c.DescriptorHeapsType_.value, CaptureDescriptorHandleService::HandleType::CpuHandle,
-            c.pSrcDescriptorRangeStarts_.value[i].ptr);
+        m_Manager.getDescriptorHandleService().getDescriptorHandleInfo(
+            c.m_DescriptorHeapsType.Value, CaptureDescriptorHandleService::HandleType::CpuHandle,
+            c.m_pSrcDescriptorRangeStarts.Value[i].ptr);
 
-    c.pSrcDescriptorRangeStarts_.interfaceKeys[i] = info.interfaceKey;
-    c.pSrcDescriptorRangeStarts_.indexes[i] = info.index;
+    c.m_pSrcDescriptorRangeStarts.InterfaceKeys[i] = info.InterfaceKey;
+    c.m_pSrcDescriptorRangeStarts.Indexes[i] = info.Index;
   }
 }
 
-void CaptureCustomizationLayer::pre(ID3D12DeviceCopyDescriptorsSimpleCommand& c) {
-  fillCpuDescriptorHandleArgument(c.DestDescriptorRangeStart_, c.DescriptorHeapsType_.value);
-  fillCpuDescriptorHandleArgument(c.SrcDescriptorRangeStart_, c.DescriptorHeapsType_.value);
+void CaptureCustomizationLayer::Pre(ID3D12DeviceCopyDescriptorsSimpleCommand& c) {
+  fillCpuDescriptorHandleArgument(c.m_DestDescriptorRangeStart, c.m_DescriptorHeapsType.Value);
+  fillCpuDescriptorHandleArgument(c.m_SrcDescriptorRangeStart, c.m_DescriptorHeapsType.Value);
 }
 
-void CaptureCustomizationLayer::post(D3D12SerializeRootSignatureCommand& c) {
-  manager_.getRootSignatureService().serializeRootSignature(c.pRootSignature_.value, c.ppBlob_.key);
+void CaptureCustomizationLayer::Post(D3D12SerializeRootSignatureCommand& c) {
+  m_Manager.getRootSignatureService().serializeRootSignature(c.m_pRootSignature.Value,
+                                                             c.m_ppBlob.Key);
 }
 
-void CaptureCustomizationLayer::post(D3D12SerializeVersionedRootSignatureCommand& c) {
-  manager_.getRootSignatureService().serializeVersionedRootSignature(c.pRootSignature_.value,
-                                                                     c.ppBlob_.key);
+void CaptureCustomizationLayer::Post(D3D12SerializeVersionedRootSignatureCommand& c) {
+  m_Manager.getRootSignatureService().serializeVersionedRootSignature(c.m_pRootSignature.Value,
+                                                                      c.m_ppBlob.Key);
 }
 
-void CaptureCustomizationLayer::post(ID3DBlobGetBufferPointerCommand& c) {
-  manager_.getRootSignatureService().setBlobBufferPointer(c.object_.key, c.result_.value);
+void CaptureCustomizationLayer::Post(ID3DBlobGetBufferPointerCommand& c) {
+  m_Manager.getRootSignatureService().setBlobBufferPointer(c.m_Object.Key, c.m_Result.Value);
 }
 
-void CaptureCustomizationLayer::post(ID3D12DeviceCreateRootSignatureCommand& c) {
-  if (c.result_.value == S_OK) {
-    manager_.getRootSignatureService().createRootSignature(
-        c.pBlobWithRootSignature_.value, c.blobLengthInBytes_.value, c.ppvRootSignature_.key);
+void CaptureCustomizationLayer::Post(ID3D12DeviceCreateRootSignatureCommand& c) {
+  if (c.m_Result.Value == S_OK) {
+    m_Manager.getRootSignatureService().createRootSignature(
+        c.m_pBlobWithRootSignature.Value, c.m_blobLengthInBytes.Value, c.m_ppvRootSignature.Key);
   }
 }
 
-void CaptureCustomizationLayer::post(ID3D12GraphicsCommandListSetGraphicsRootSignatureCommand& c) {
+void CaptureCustomizationLayer::Post(ID3D12GraphicsCommandListSetGraphicsRootSignatureCommand& c) {
   // pRootSignature is optional, so it can be nullptr
-  if (!c.pRootSignature_.value) {
+  if (!c.m_pRootSignature.Value) {
     return;
   }
-  manager_.getRootSignatureService().setGraphicsRootSignature(c.object_.key, c.pRootSignature_.key);
+  m_Manager.getRootSignatureService().setGraphicsRootSignature(c.m_Object.Key,
+                                                               c.m_pRootSignature.Key);
 }
 
-void CaptureCustomizationLayer::post(ID3D12GraphicsCommandListSetComputeRootSignatureCommand& c) {
+void CaptureCustomizationLayer::Post(ID3D12GraphicsCommandListSetComputeRootSignatureCommand& c) {
   // pRootSignature is optional, so it can be nullptr
-  if (!c.pRootSignature_.value) {
+  if (!c.m_pRootSignature.Value) {
     return;
   }
-  manager_.getRootSignatureService().setComputeRootSignature(c.object_.key, c.pRootSignature_.key);
+  m_Manager.getRootSignatureService().setComputeRootSignature(c.m_Object.Key,
+                                                              c.m_pRootSignature.Key);
 }
 
-void CaptureCustomizationLayer::post(ID3D12GraphicsCommandListResetCommand& c) {
-  manager_.getRootSignatureService().resetRootSignatures(c.object_.key);
+void CaptureCustomizationLayer::Post(ID3D12GraphicsCommandListResetCommand& c) {
+  m_Manager.getRootSignatureService().resetRootSignatures(c.m_Object.Key);
 }
 
-void CaptureCustomizationLayer::pre(
+void CaptureCustomizationLayer::Pre(
     ID3D12GraphicsCommandListSetComputeRootConstantBufferViewCommand& c) {
-  fillGpuAddressArgument(c.BufferLocation_);
+  fillGpuAddressArgument(c.m_BufferLocation);
 }
 
-void CaptureCustomizationLayer::pre(
+void CaptureCustomizationLayer::Pre(
     ID3D12GraphicsCommandListSetGraphicsRootConstantBufferViewCommand& c) {
-  fillGpuAddressArgument(c.BufferLocation_);
+  fillGpuAddressArgument(c.m_BufferLocation);
 }
 
-void CaptureCustomizationLayer::pre(
+void CaptureCustomizationLayer::Pre(
     ID3D12GraphicsCommandListSetComputeRootShaderResourceViewCommand& c) {
-  fillGpuAddressArgument(c.BufferLocation_);
+  fillGpuAddressArgument(c.m_BufferLocation);
 }
 
-void CaptureCustomizationLayer::pre(
+void CaptureCustomizationLayer::Pre(
     ID3D12GraphicsCommandListSetGraphicsRootShaderResourceViewCommand& c) {
-  fillGpuAddressArgument(c.BufferLocation_);
+  fillGpuAddressArgument(c.m_BufferLocation);
 }
 
-void CaptureCustomizationLayer::pre(
+void CaptureCustomizationLayer::Pre(
     ID3D12GraphicsCommandListSetComputeRootUnorderedAccessViewCommand& c) {
-  fillGpuAddressArgument(c.BufferLocation_);
+  fillGpuAddressArgument(c.m_BufferLocation);
 }
 
-void CaptureCustomizationLayer::pre(
+void CaptureCustomizationLayer::Pre(
     ID3D12GraphicsCommandListSetGraphicsRootUnorderedAccessViewCommand& c) {
-  fillGpuAddressArgument(c.BufferLocation_);
+  fillGpuAddressArgument(c.m_BufferLocation);
 }
 
-void CaptureCustomizationLayer::pre(ID3D12DeviceCreateConstantBufferViewCommand& c) {
-  fillCpuDescriptorHandleArgument(c.DestDescriptor_, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-  if (c.pDesc_.value && c.pDesc_.value->BufferLocation) {
+void CaptureCustomizationLayer::Pre(ID3D12DeviceCreateConstantBufferViewCommand& c) {
+  fillCpuDescriptorHandleArgument(c.m_DestDescriptor, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+  if (c.m_pDesc.Value && c.m_pDesc.Value->BufferLocation) {
     GpuAddressService::GpuAddressInfo info =
-        manager_.getGpuAddressService().getGpuAddressInfo(c.pDesc_.value->BufferLocation);
-    c.pDesc_.bufferLocationKey = info.resourceKey;
-    c.pDesc_.bufferLocationOffset = info.offset;
+        m_Manager.getGpuAddressService().getGpuAddressInfo(c.m_pDesc.Value->BufferLocation);
+    c.m_pDesc.BufferLocationKey = info.ResourceKey;
+    c.m_pDesc.BufferLocationOffset = info.Offset;
   }
 }
 
-void CaptureCustomizationLayer::pre(ID3D12GraphicsCommandListIASetIndexBufferCommand& c) {
-  if (c.pView_.value && c.pView_.value->BufferLocation) {
+void CaptureCustomizationLayer::Pre(ID3D12GraphicsCommandListIASetIndexBufferCommand& c) {
+  if (c.m_pView.Value && c.m_pView.Value->BufferLocation) {
     GpuAddressService::GpuAddressInfo info =
-        manager_.getGpuAddressService().getGpuAddressInfo(c.pView_.value->BufferLocation);
-    c.pView_.bufferLocationKey = info.resourceKey;
-    c.pView_.bufferLocationOffset = info.offset;
+        m_Manager.getGpuAddressService().getGpuAddressInfo(c.m_pView.Value->BufferLocation);
+    c.m_pView.BufferLocationKey = info.ResourceKey;
+    c.m_pView.BufferLocationOffset = info.Offset;
   }
 }
 
-void CaptureCustomizationLayer::pre(ID3D12GraphicsCommandListIASetVertexBuffersCommand& c) {
-  if (c.pViews_.value) {
-    for (unsigned i = 0; i < c.NumViews_.value; ++i) {
-      if (c.pViews_.value[i].BufferLocation) {
+void CaptureCustomizationLayer::Pre(ID3D12GraphicsCommandListIASetVertexBuffersCommand& c) {
+  if (c.m_pViews.Value) {
+    for (unsigned i = 0; i < c.m_NumViews.Value; ++i) {
+      if (c.m_pViews.Value[i].BufferLocation) {
         GpuAddressService::GpuAddressInfo info =
-            manager_.getGpuAddressService().getGpuAddressInfo(c.pViews_.value[i].BufferLocation);
-        c.pViews_.bufferLocationKeys[i] = info.resourceKey;
-        c.pViews_.bufferLocationOffsets[i] = info.offset;
+            m_Manager.getGpuAddressService().getGpuAddressInfo(c.m_pViews.Value[i].BufferLocation);
+        c.m_pViews.BufferLocationKeys[i] = info.ResourceKey;
+        c.m_pViews.BufferLocationOffsets[i] = info.Offset;
       }
     }
   }
 }
 
-void CaptureCustomizationLayer::pre(ID3D12GraphicsCommandListSOSetTargetsCommand& c) {
-  if (c.pViews_.value) {
-    for (unsigned i = 0; i < c.NumViews_.value; ++i) {
-      if (c.pViews_.value[i].BufferLocation) {
+void CaptureCustomizationLayer::Pre(ID3D12GraphicsCommandListSOSetTargetsCommand& c) {
+  if (c.m_pViews.Value) {
+    for (unsigned i = 0; i < c.m_NumViews.Value; ++i) {
+      if (c.m_pViews.Value[i].BufferLocation) {
         GpuAddressService::GpuAddressInfo info =
-            manager_.getGpuAddressService().getGpuAddressInfo(c.pViews_.value[i].BufferLocation);
-        c.pViews_.bufferLocationKeys[i] = info.resourceKey;
-        c.pViews_.bufferLocationOffsets[i] = info.offset;
+            m_Manager.getGpuAddressService().getGpuAddressInfo(c.m_pViews.Value[i].BufferLocation);
+        c.m_pViews.BufferLocationKeys[i] = info.ResourceKey;
+        c.m_pViews.BufferLocationOffsets[i] = info.Offset;
       }
-      if (c.pViews_.value[i].BufferFilledSizeLocation) {
-        GpuAddressService::GpuAddressInfo info = manager_.getGpuAddressService().getGpuAddressInfo(
-            c.pViews_.value[i].BufferFilledSizeLocation);
-        c.pViews_.bufferFilledSizeLocationKeys[i] = info.resourceKey;
-        c.pViews_.bufferFilledSizeLocationOffsets[i] = info.offset;
+      if (c.m_pViews.Value[i].BufferFilledSizeLocation) {
+        GpuAddressService::GpuAddressInfo info = m_Manager.getGpuAddressService().getGpuAddressInfo(
+            c.m_pViews.Value[i].BufferFilledSizeLocation);
+        c.m_pViews.BufferFilledSizeLocationKeys[i] = info.ResourceKey;
+        c.m_pViews.BufferFilledSizeLocationOffsets[i] = info.Offset;
       }
     }
   }
 }
 
-void CaptureCustomizationLayer::pre(ID3D12GraphicsCommandList2WriteBufferImmediateCommand& c) {
-  if (c.pParams_.value) {
-    for (unsigned i = 0; i < c.Count_.value; ++i) {
-      if (c.pParams_.value[i].Dest) {
+void CaptureCustomizationLayer::Pre(ID3D12GraphicsCommandList2WriteBufferImmediateCommand& c) {
+  if (c.m_pParams.Value) {
+    for (unsigned i = 0; i < c.m_Count.Value; ++i) {
+      if (c.m_pParams.Value[i].Dest) {
         GpuAddressService::GpuAddressInfo info =
-            manager_.getGpuAddressService().getGpuAddressInfo(c.pParams_.value[i].Dest);
-        c.pParams_.destKeys[i] = info.resourceKey;
-        c.pParams_.destOffsets[i] = info.offset;
+            m_Manager.getGpuAddressService().getGpuAddressInfo(c.m_pParams.Value[i].Dest);
+        c.m_pParams.DestKeys[i] = info.ResourceKey;
+        c.m_pParams.DestOffsets[i] = info.Offset;
       }
     }
   }
 }
 
-void CaptureCustomizationLayer::post(ID3D12FenceGetCompletedValueCommand& c) {
+void CaptureCustomizationLayer::Post(ID3D12FenceGetCompletedValueCommand& c) {
   static constexpr unsigned maxCommandKeyDifference = 10;
 
   static thread_local unsigned prevCommandKey = 0;
   static thread_local unsigned prevFenceKey = 0;
   static thread_local unsigned prevValue = 0;
-  unsigned commandKey = c.key;
-  unsigned fenceKey = c.object_.key;
-  unsigned value = c.result_.value;
+  unsigned commandKey = c.Key;
+  unsigned fenceKey = c.m_Object.Key;
+  unsigned value = c.m_Result.Value;
   if (commandKey <= prevCommandKey + maxCommandKeyDifference) {
     if (fenceKey == prevFenceKey && value == prevValue) {
-      recorder_.Skip(c.key);
+      m_Recorder.Skip(c.Key);
     }
   }
   prevCommandKey = commandKey;
@@ -579,12 +587,12 @@ void CaptureCustomizationLayer::post(ID3D12FenceGetCompletedValueCommand& c) {
   prevValue = value;
 }
 
-void CaptureCustomizationLayer::pre(ID3D12FenceSetEventOnCompletionCommand& c) {
-  manager_.getFenceService().setEventOnCompletion(c.object_.value, c.object_.key, c.Value_.value,
-                                                  c.hEvent_.value);
+void CaptureCustomizationLayer::Pre(ID3D12FenceSetEventOnCompletionCommand& c) {
+  m_Manager.getFenceService().setEventOnCompletion(c.m_Object.Value, c.m_Object.Key,
+                                                   c.m_Value.Value, c.m_hEvent.Value);
 }
 
-void CaptureCustomizationLayer::pre(ID3D12Device1SetEventOnMultipleFenceCompletionCommand& c) {
+void CaptureCustomizationLayer::Pre(ID3D12Device1SetEventOnMultipleFenceCompletionCommand& c) {
   static bool printed = false;
   if (!printed) {
     LOG_ERROR << "ID3D12Device1::SetEventOnMultipleFenceCompletion not handled!";
@@ -592,13 +600,13 @@ void CaptureCustomizationLayer::pre(ID3D12Device1SetEventOnMultipleFenceCompleti
   }
 }
 
-void CaptureCustomizationLayer::post(ID3D12DeviceOpenSharedHandleCommand& c) {
-  if (c.result_.value != S_OK) {
+void CaptureCustomizationLayer::Post(ID3D12DeviceOpenSharedHandleCommand& c) {
+  if (c.m_Result.Value != S_OK) {
     return;
   }
-  if (c.riid_.value == IID_ID3D12Resource || c.riid_.value == IID_ID3D12Resource1 ||
-      c.riid_.value == IID_ID3D12Resource2) {
-    ID3D12Resource* resource = static_cast<ID3D12Resource*>(*c.ppvObj_.value);
+  if (c.m_riid.Value == IID_ID3D12Resource || c.m_riid.Value == IID_ID3D12Resource1 ||
+      c.m_riid.Value == IID_ID3D12Resource2) {
+    ID3D12Resource* resource = static_cast<ID3D12Resource*>(*c.m_ppvObj.Value);
     D3D12_RESOURCE_DESC desc = resource->GetDesc();
     D3D12_HEAP_PROPERTIES heapProperties{};
     D3D12_HEAP_FLAGS heapFlags{};
@@ -606,85 +614,85 @@ void CaptureCustomizationLayer::post(ID3D12DeviceOpenSharedHandleCommand& c) {
     GITS_ASSERT(hr == S_OK);
 
     ID3D12DeviceCreateCommittedResourceCommand createResource;
-    createResource.key = manager_.createCommandKey();
-    createResource.threadId = c.threadId;
-    createResource.object_.key = c.object_.key;
-    createResource.pHeapProperties_.value = &heapProperties;
-    createResource.HeapFlags_.value = heapFlags;
-    createResource.pDesc_.value = &desc;
-    createResource.InitialResourceState_.value = D3D12_RESOURCE_STATE_COMMON;
-    createResource.pOptimizedClearValue_.value = nullptr;
-    createResource.riidResource_.value = c.riid_.value;
-    createResource.ppvResource_.key = c.ppvObj_.key;
-    recorder_.Record(createResource.key,
-                     new ID3D12DeviceCreateCommittedResourceSerializer(createResource));
+    createResource.Key = m_Manager.createCommandKey();
+    createResource.ThreadId = c.ThreadId;
+    createResource.m_Object.Key = c.m_Object.Key;
+    createResource.m_pHeapProperties.Value = &heapProperties;
+    createResource.m_HeapFlags.Value = heapFlags;
+    createResource.m_pDesc.Value = &desc;
+    createResource.m_InitialResourceState.Value = D3D12_RESOURCE_STATE_COMMON;
+    createResource.m_pOptimizedClearValue.Value = nullptr;
+    createResource.m_riidResource.Value = c.m_riid.Value;
+    createResource.m_ppvResource.Key = c.m_ppvObj.Key;
+    m_Recorder.Record(createResource.Key,
+                      new ID3D12DeviceCreateCommittedResourceSerializer(createResource));
 
-    manager_.updateCommandKey(c);
+    m_Manager.updateCommandKey(c);
 
-  } else if (c.riid_.value == IID_ID3D12Fence || c.riid_.value == IID_ID3D12Fence1) {
-    ID3D12Fence* fence = static_cast<ID3D12Fence*>(*c.ppvObj_.value);
+  } else if (c.m_riid.Value == IID_ID3D12Fence || c.m_riid.Value == IID_ID3D12Fence1) {
+    ID3D12Fence* fence = static_cast<ID3D12Fence*>(*c.m_ppvObj.Value);
     UINT64 fenceValue = fence->GetCompletedValue();
 
     ID3D12DeviceCreateFenceCommand createFence;
-    createFence.key = manager_.createCommandKey();
-    createFence.threadId = c.threadId;
-    createFence.object_.key = c.object_.key;
-    createFence.InitialValue_.value = fenceValue;
-    createFence.Flags_.value = D3D12_FENCE_FLAG_SHARED;
-    createFence.riid_.value = c.riid_.value;
-    createFence.ppFence_.key = c.ppvObj_.key;
-    recorder_.Record(createFence.key, new ID3D12DeviceCreateFenceSerializer(createFence));
+    createFence.Key = m_Manager.createCommandKey();
+    createFence.ThreadId = c.ThreadId;
+    createFence.m_Object.Key = c.m_Object.Key;
+    createFence.m_InitialValue.Value = fenceValue;
+    createFence.m_Flags.Value = D3D12_FENCE_FLAG_SHARED;
+    createFence.m_riid.Value = c.m_riid.Value;
+    createFence.m_ppFence.Key = c.m_ppvObj.Key;
+    m_Recorder.Record(createFence.Key, new ID3D12DeviceCreateFenceSerializer(createFence));
 
-    manager_.updateCommandKey(c);
+    m_Manager.updateCommandKey(c);
   } else {
     LOG_ERROR
         << "ID3D12Device::OpenSharedHandle handled only for ID3D12Resource/1/2 and ID3D12Fence/1.";
   }
 }
 
-void CaptureCustomizationLayer::pre(ID3D12GraphicsCommandList4BeginRenderPassCommand& c) {
-  c.pRenderTargets_.descriptorKeys.resize(c.NumRenderTargets_.value);
-  c.pRenderTargets_.descriptorIndexes.resize(c.NumRenderTargets_.value);
-  for (unsigned i = 0; i < c.NumRenderTargets_.value; ++i) {
-    if (c.pRenderTargets_.value && c.pRenderTargets_.value[i].cpuDescriptor.ptr) {
+void CaptureCustomizationLayer::Pre(ID3D12GraphicsCommandList4BeginRenderPassCommand& c) {
+  c.m_pRenderTargets.DescriptorKeys.resize(c.m_NumRenderTargets.Value);
+  c.m_pRenderTargets.DescriptorIndexes.resize(c.m_NumRenderTargets.Value);
+  for (unsigned i = 0; i < c.m_NumRenderTargets.Value; ++i) {
+    if (c.m_pRenderTargets.Value && c.m_pRenderTargets.Value[i].cpuDescriptor.ptr) {
       CaptureDescriptorHandleService::HandleInfo info =
-          manager_.getDescriptorHandleService().getDescriptorHandleInfo(
+          m_Manager.getDescriptorHandleService().getDescriptorHandleInfo(
               D3D12_DESCRIPTOR_HEAP_TYPE_RTV, CaptureDescriptorHandleService::HandleType::CpuHandle,
-              c.pRenderTargets_.value[i].cpuDescriptor.ptr);
+              c.m_pRenderTargets.Value[i].cpuDescriptor.ptr);
 
-      c.pRenderTargets_.descriptorKeys[i] = info.interfaceKey;
-      c.pRenderTargets_.descriptorIndexes[i] = info.index;
+      c.m_pRenderTargets.DescriptorKeys[i] = info.InterfaceKey;
+      c.m_pRenderTargets.DescriptorIndexes[i] = info.Index;
     }
   }
 
-  if (c.pDepthStencil_.value && c.pDepthStencil_.value->cpuDescriptor.ptr) {
+  if (c.m_pDepthStencil.Value && c.m_pDepthStencil.Value->cpuDescriptor.ptr) {
     CaptureDescriptorHandleService::HandleInfo info =
-        manager_.getDescriptorHandleService().getDescriptorHandleInfo(
+        m_Manager.getDescriptorHandleService().getDescriptorHandleInfo(
             D3D12_DESCRIPTOR_HEAP_TYPE_DSV, CaptureDescriptorHandleService::HandleType::CpuHandle,
-            c.pDepthStencil_.value->cpuDescriptor.ptr);
+            c.m_pDepthStencil.Value->cpuDescriptor.ptr);
 
-    c.pDepthStencil_.descriptorKey = info.interfaceKey;
-    c.pDepthStencil_.descriptorIndex = info.index;
+    c.m_pDepthStencil.DescriptorKey = info.InterfaceKey;
+    c.m_pDepthStencil.DescriptorIndex = info.Index;
   }
 }
 
-void CaptureCustomizationLayer::pre(
+void CaptureCustomizationLayer::Pre(
     ID3D12Device5GetRaytracingAccelerationStructurePrebuildInfoCommand& c) {
   auto resolveInputsGpuAddress = [&](D3D12_GPU_VIRTUAL_ADDRESS address) {
     GpuAddressService::GpuAddressInfo info =
-        manager_.getGpuAddressService().getGpuAddressInfo(address);
-    c.pDesc_.inputKeys.push_back(info.resourceKey);
-    c.pDesc_.inputOffsets.push_back(info.offset);
+        m_Manager.getGpuAddressService().getGpuAddressInfo(address);
+    c.m_pDesc.InputKeys.push_back(info.ResourceKey);
+    c.m_pDesc.InputOffsets.push_back(info.Offset);
   };
 
-  if (c.pDesc_.value->Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
-    resolveInputsGpuAddress(c.pDesc_.value->InstanceDescs);
-  } else if (c.pDesc_.value->Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL) {
-    for (unsigned i = 0; i < c.pDesc_.value->NumDescs; ++i) {
+  if (c.m_pDesc.Value->Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
+    resolveInputsGpuAddress(c.m_pDesc.Value->InstanceDescs);
+  } else if (c.m_pDesc.Value->Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL) {
+    for (unsigned i = 0; i < c.m_pDesc.Value->NumDescs; ++i) {
       const D3D12_RAYTRACING_GEOMETRY_DESC& desc =
-          c.pDesc_.value->DescsLayout == D3D12_ELEMENTS_LAYOUT_ARRAY
-              ? c.pDesc_.value->pGeometryDescs[i]
-              : *c.pDesc_.value->ppGeometryDescs[i];
+          c.m_pDesc.Value->DescsLayout == D3D12_ELEMENTS_LAYOUT_ARRAY
+              ? c.m_pDesc.Value->pGeometryDescs[i]
+              : *c.m_pDesc.Value->ppGeometryDescs[i];
       if (desc.Type == D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES) {
         resolveInputsGpuAddress(desc.Triangles.Transform3x4);
         resolveInputsGpuAddress(desc.Triangles.IndexBuffer);
@@ -704,52 +712,52 @@ void CaptureCustomizationLayer::pre(
         }
       }
     }
-  } else if (c.pDesc_.value->Type ==
+  } else if (c.m_pDesc.Value->Type ==
              D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_OPACITY_MICROMAP_ARRAY) {
-    if (c.pDesc_.value->pOpacityMicromapArrayDesc) {
-      resolveInputsGpuAddress(c.pDesc_.value->pOpacityMicromapArrayDesc->InputBuffer);
-      resolveInputsGpuAddress(c.pDesc_.value->pOpacityMicromapArrayDesc->PerOmmDescs.StartAddress);
+    if (c.m_pDesc.Value->pOpacityMicromapArrayDesc) {
+      resolveInputsGpuAddress(c.m_pDesc.Value->pOpacityMicromapArrayDesc->InputBuffer);
+      resolveInputsGpuAddress(c.m_pDesc.Value->pOpacityMicromapArrayDesc->PerOmmDescs.StartAddress);
     }
   }
 }
 
-void CaptureCustomizationLayer::pre(
+void CaptureCustomizationLayer::Pre(
     ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c) {
   {
-    GpuAddressService::GpuAddressInfo info = manager_.getGpuAddressService().getGpuAddressInfo(
-        c.pDesc_.value->DestAccelerationStructureData, true);
-    c.pDesc_.destAccelerationStructureKey = info.resourceKey;
-    c.pDesc_.destAccelerationStructureOffset = info.offset;
+    GpuAddressService::GpuAddressInfo info = m_Manager.getGpuAddressService().getGpuAddressInfo(
+        c.m_pDesc.Value->DestAccelerationStructureData, true);
+    c.m_pDesc.DestAccelerationStructureKey = info.ResourceKey;
+    c.m_pDesc.DestAccelerationStructureOffset = info.Offset;
   }
-  if (c.pDesc_.value->SourceAccelerationStructureData) {
-    GpuAddressService::GpuAddressInfo info = manager_.getGpuAddressService().getGpuAddressInfo(
-        c.pDesc_.value->SourceAccelerationStructureData, true);
-    c.pDesc_.sourceAccelerationStructureKey = info.resourceKey;
-    c.pDesc_.sourceAccelerationStructureOffset = info.offset;
+  if (c.m_pDesc.Value->SourceAccelerationStructureData) {
+    GpuAddressService::GpuAddressInfo info = m_Manager.getGpuAddressService().getGpuAddressInfo(
+        c.m_pDesc.Value->SourceAccelerationStructureData, true);
+    c.m_pDesc.SourceAccelerationStructureKey = info.ResourceKey;
+    c.m_pDesc.SourceAccelerationStructureOffset = info.Offset;
   }
   {
-    GpuAddressService::GpuAddressInfo info = manager_.getGpuAddressService().getGpuAddressInfo(
-        c.pDesc_.value->ScratchAccelerationStructureData);
-    c.pDesc_.scratchAccelerationStructureKey = info.resourceKey;
-    c.pDesc_.scratchAccelerationStructureOffset = info.offset;
+    GpuAddressService::GpuAddressInfo info = m_Manager.getGpuAddressService().getGpuAddressInfo(
+        c.m_pDesc.Value->ScratchAccelerationStructureData);
+    c.m_pDesc.ScratchAccelerationStructureKey = info.ResourceKey;
+    c.m_pDesc.ScratchAccelerationStructureOffset = info.Offset;
   }
 
   auto resolveInputsGpuAddress = [&](D3D12_GPU_VIRTUAL_ADDRESS address) {
     GpuAddressService::GpuAddressInfo info =
-        manager_.getGpuAddressService().getGpuAddressInfo(address);
-    c.pDesc_.inputKeys.push_back(info.resourceKey);
-    c.pDesc_.inputOffsets.push_back(info.offset);
+        m_Manager.getGpuAddressService().getGpuAddressInfo(address);
+    c.m_pDesc.InputKeys.push_back(info.ResourceKey);
+    c.m_pDesc.InputOffsets.push_back(info.Offset);
   };
 
-  if (c.pDesc_.value->Inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
-    resolveInputsGpuAddress(c.pDesc_.value->Inputs.InstanceDescs);
-  } else if (c.pDesc_.value->Inputs.Type ==
+  if (c.m_pDesc.Value->Inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
+    resolveInputsGpuAddress(c.m_pDesc.Value->Inputs.InstanceDescs);
+  } else if (c.m_pDesc.Value->Inputs.Type ==
              D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL) {
-    for (unsigned i = 0; i < c.pDesc_.value->Inputs.NumDescs; ++i) {
+    for (unsigned i = 0; i < c.m_pDesc.Value->Inputs.NumDescs; ++i) {
       const D3D12_RAYTRACING_GEOMETRY_DESC& desc =
-          c.pDesc_.value->Inputs.DescsLayout == D3D12_ELEMENTS_LAYOUT_ARRAY
-              ? c.pDesc_.value->Inputs.pGeometryDescs[i]
-              : *c.pDesc_.value->Inputs.ppGeometryDescs[i];
+          c.m_pDesc.Value->Inputs.DescsLayout == D3D12_ELEMENTS_LAYOUT_ARRAY
+              ? c.m_pDesc.Value->Inputs.pGeometryDescs[i]
+              : *c.m_pDesc.Value->Inputs.ppGeometryDescs[i];
       if (desc.Type == D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES) {
         resolveInputsGpuAddress(desc.Triangles.Transform3x4);
         resolveInputsGpuAddress(desc.Triangles.IndexBuffer);
@@ -769,201 +777,201 @@ void CaptureCustomizationLayer::pre(
         }
       }
     }
-  } else if (c.pDesc_.value->Inputs.Type ==
+  } else if (c.m_pDesc.Value->Inputs.Type ==
              D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_OPACITY_MICROMAP_ARRAY) {
-    if (c.pDesc_.value->Inputs.pOpacityMicromapArrayDesc) {
-      resolveInputsGpuAddress(c.pDesc_.value->Inputs.pOpacityMicromapArrayDesc->InputBuffer);
+    if (c.m_pDesc.Value->Inputs.pOpacityMicromapArrayDesc) {
+      resolveInputsGpuAddress(c.m_pDesc.Value->Inputs.pOpacityMicromapArrayDesc->InputBuffer);
       resolveInputsGpuAddress(
-          c.pDesc_.value->Inputs.pOpacityMicromapArrayDesc->PerOmmDescs.StartAddress);
+          c.m_pDesc.Value->Inputs.pOpacityMicromapArrayDesc->PerOmmDescs.StartAddress);
     }
   }
 
-  for (unsigned i = 0; i < c.NumPostbuildInfoDescs_.value; ++i) {
-    GpuAddressService::GpuAddressInfo info = manager_.getGpuAddressService().getGpuAddressInfo(
-        c.pPostbuildInfoDescs_.value[i].DestBuffer);
-    c.pPostbuildInfoDescs_.destBufferKeys.push_back(info.resourceKey);
-    c.pPostbuildInfoDescs_.destBufferOffsets.push_back(info.offset);
+  for (unsigned i = 0; i < c.m_NumPostbuildInfoDescs.Value; ++i) {
+    GpuAddressService::GpuAddressInfo info = m_Manager.getGpuAddressService().getGpuAddressInfo(
+        c.m_pPostbuildInfoDescs.Value[i].DestBuffer);
+    c.m_pPostbuildInfoDescs.DestBufferKeys.push_back(info.ResourceKey);
+    c.m_pPostbuildInfoDescs.DestBufferOffsets.push_back(info.Offset);
   }
 }
 
-void CaptureCustomizationLayer::pre(
+void CaptureCustomizationLayer::Pre(
     ID3D12GraphicsCommandList4EmitRaytracingAccelerationStructurePostbuildInfoCommand& c) {
   {
     GpuAddressService::GpuAddressInfo info =
-        manager_.getGpuAddressService().getGpuAddressInfo(c.pDesc_.value->DestBuffer);
-    c.pDesc_.destBufferKey = info.resourceKey;
-    c.pDesc_.destBufferOffset = info.offset;
+        m_Manager.getGpuAddressService().getGpuAddressInfo(c.m_pDesc.Value->DestBuffer);
+    c.m_pDesc.destBufferKey = info.ResourceKey;
+    c.m_pDesc.destBufferOffset = info.Offset;
   }
-  for (unsigned i = 0; i < c.NumSourceAccelerationStructures_.value; ++i) {
-    GpuAddressService::GpuAddressInfo info = manager_.getGpuAddressService().getGpuAddressInfo(
-        c.pSourceAccelerationStructureData_.value[i]);
-    c.pSourceAccelerationStructureData_.interfaceKeys[i] = info.resourceKey;
-    c.pSourceAccelerationStructureData_.offsets[i] = info.offset;
+  for (unsigned i = 0; i < c.m_NumSourceAccelerationStructures.Value; ++i) {
+    GpuAddressService::GpuAddressInfo info = m_Manager.getGpuAddressService().getGpuAddressInfo(
+        c.m_pSourceAccelerationStructureData.Value[i]);
+    c.m_pSourceAccelerationStructureData.InterfaceKeys[i] = info.ResourceKey;
+    c.m_pSourceAccelerationStructureData.Offsets[i] = info.Offset;
   }
 }
 
-void CaptureCustomizationLayer::pre(
+void CaptureCustomizationLayer::Pre(
     ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& c) {
   {
-    GpuAddressService::GpuAddressInfo info = manager_.getGpuAddressService().getGpuAddressInfo(
-        c.DestAccelerationStructureData_.value, true);
-    c.DestAccelerationStructureData_.interfaceKey = info.resourceKey;
-    c.DestAccelerationStructureData_.offset = info.offset;
+    GpuAddressService::GpuAddressInfo info = m_Manager.getGpuAddressService().getGpuAddressInfo(
+        c.m_DestAccelerationStructureData.Value, true);
+    c.m_DestAccelerationStructureData.InterfaceKey = info.ResourceKey;
+    c.m_DestAccelerationStructureData.Offset = info.Offset;
   }
   {
-    GpuAddressService::GpuAddressInfo info = manager_.getGpuAddressService().getGpuAddressInfo(
-        c.SourceAccelerationStructureData_.value, true);
-    c.SourceAccelerationStructureData_.interfaceKey = info.resourceKey;
-    c.SourceAccelerationStructureData_.offset = info.offset;
+    GpuAddressService::GpuAddressInfo info = m_Manager.getGpuAddressService().getGpuAddressInfo(
+        c.m_SourceAccelerationStructureData.Value, true);
+    c.m_SourceAccelerationStructureData.InterfaceKey = info.ResourceKey;
+    c.m_SourceAccelerationStructureData.Offset = info.Offset;
   }
 }
 
-void CaptureCustomizationLayer::pre(ID3D12GraphicsCommandList4DispatchRaysCommand& c) {
+void CaptureCustomizationLayer::Pre(ID3D12GraphicsCommandList4DispatchRaysCommand& c) {
   {
-    GpuAddressService::GpuAddressInfo info = manager_.getGpuAddressService().getGpuAddressInfo(
-        c.pDesc_.value->RayGenerationShaderRecord.StartAddress);
-    c.pDesc_.rayGenerationShaderRecordKey = info.resourceKey;
-    c.pDesc_.rayGenerationShaderRecordOffset = info.offset;
+    GpuAddressService::GpuAddressInfo info = m_Manager.getGpuAddressService().getGpuAddressInfo(
+        c.m_pDesc.Value->RayGenerationShaderRecord.StartAddress);
+    c.m_pDesc.RayGenerationShaderRecordKey = info.ResourceKey;
+    c.m_pDesc.RayGenerationShaderRecordOffset = info.Offset;
   }
   {
-    GpuAddressService::GpuAddressInfo info = manager_.getGpuAddressService().getGpuAddressInfo(
-        c.pDesc_.value->MissShaderTable.StartAddress);
-    c.pDesc_.missShaderTableKey = info.resourceKey;
-    c.pDesc_.missShaderTableOffset = info.offset;
+    GpuAddressService::GpuAddressInfo info = m_Manager.getGpuAddressService().getGpuAddressInfo(
+        c.m_pDesc.Value->MissShaderTable.StartAddress);
+    c.m_pDesc.MissShaderTableKey = info.ResourceKey;
+    c.m_pDesc.MissShaderTableOffset = info.Offset;
   }
   {
-    GpuAddressService::GpuAddressInfo info = manager_.getGpuAddressService().getGpuAddressInfo(
-        c.pDesc_.value->HitGroupTable.StartAddress);
-    c.pDesc_.hitGroupTableKey = info.resourceKey;
-    c.pDesc_.hitGroupTableOffset = info.offset;
+    GpuAddressService::GpuAddressInfo info = m_Manager.getGpuAddressService().getGpuAddressInfo(
+        c.m_pDesc.Value->HitGroupTable.StartAddress);
+    c.m_pDesc.HitGroupTableKey = info.ResourceKey;
+    c.m_pDesc.HitGroupTableOffset = info.Offset;
   }
   {
-    GpuAddressService::GpuAddressInfo info = manager_.getGpuAddressService().getGpuAddressInfo(
-        c.pDesc_.value->CallableShaderTable.StartAddress);
-    c.pDesc_.callableShaderTableKey = info.resourceKey;
-    c.pDesc_.callableShaderTableOffset = info.offset;
+    GpuAddressService::GpuAddressInfo info = m_Manager.getGpuAddressService().getGpuAddressInfo(
+        c.m_pDesc.Value->CallableShaderTable.StartAddress);
+    c.m_pDesc.CallableShaderTableKey = info.ResourceKey;
+    c.m_pDesc.CallableShaderTableOffset = info.Offset;
   }
 }
 
-void CaptureCustomizationLayer::pre(
+void CaptureCustomizationLayer::Pre(
     ID3D12GraphicsCommandListPreviewConvertLinearAlgebraMatrixCommand& c) {
-  if (c.pDesc_.value) {
-    c.pDesc_.destKey.resize(c.DescCount_.value);
-    c.pDesc_.destOffset.resize(c.DescCount_.value);
-    c.pDesc_.sourceKey.resize(c.DescCount_.value);
-    c.pDesc_.sourceOffset.resize(c.DescCount_.value);
-    for (unsigned i = 0; i < c.DescCount_.value; ++i) {
-      if (c.pDesc_.value[i].DataDesc.DestVA) {
+  if (c.m_pDesc.Value) {
+    c.m_pDesc.DestKey.resize(c.m_DescCount.Value);
+    c.m_pDesc.DestOffset.resize(c.m_DescCount.Value);
+    c.m_pDesc.SourceKey.resize(c.m_DescCount.Value);
+    c.m_pDesc.SourceOffset.resize(c.m_DescCount.Value);
+    for (unsigned i = 0; i < c.m_DescCount.Value; ++i) {
+      if (c.m_pDesc.Value[i].DataDesc.DestVA) {
         GpuAddressService::GpuAddressInfo info =
-            manager_.getGpuAddressService().getGpuAddressInfo(c.pDesc_.value[i].DataDesc.DestVA);
-        c.pDesc_.destKey[i] = info.resourceKey;
-        c.pDesc_.destOffset[i] = info.offset;
+            m_Manager.getGpuAddressService().getGpuAddressInfo(c.m_pDesc.Value[i].DataDesc.DestVA);
+        c.m_pDesc.DestKey[i] = info.ResourceKey;
+        c.m_pDesc.DestOffset[i] = info.Offset;
       }
-      if (c.pDesc_.value->DataDesc.SrcVA) {
+      if (c.m_pDesc.Value[i].DataDesc.SrcVA) {
         GpuAddressService::GpuAddressInfo info =
-            manager_.getGpuAddressService().getGpuAddressInfo(c.pDesc_.value[i].DataDesc.SrcVA);
-        c.pDesc_.sourceKey[i] = info.resourceKey;
-        c.pDesc_.sourceOffset[i] = info.offset;
+            m_Manager.getGpuAddressService().getGpuAddressInfo(c.m_pDesc.Value[i].DataDesc.SrcVA);
+        c.m_pDesc.SourceKey[i] = info.ResourceKey;
+        c.m_pDesc.SourceOffset[i] = info.Offset;
       }
     }
   }
 }
 
-void CaptureCustomizationLayer::pre(INTC_D3D12_CreateDeviceExtensionContextCommand& c) {
-  if (c.pExtensionAppInfo_.value) {
-    c.pExtensionAppInfo_.pApplicationName = c.pExtensionAppInfo_.value->pApplicationName;
-    c.pExtensionAppInfo_.pEngineName = c.pExtensionAppInfo_.value->pEngineName;
+void CaptureCustomizationLayer::Pre(INTC_D3D12_CreateDeviceExtensionContextCommand& c) {
+  if (c.m_pExtensionAppInfo.Value) {
+    c.m_pExtensionAppInfo.ApplicationName = c.m_pExtensionAppInfo.Value->pApplicationName;
+    c.m_pExtensionAppInfo.EngineName = c.m_pExtensionAppInfo.Value->pEngineName;
   }
 }
 
-void CaptureCustomizationLayer::pre(INTC_D3D12_CreateDeviceExtensionContext1Command& c) {
-  if (c.pExtensionAppInfo_.value) {
-    c.pExtensionAppInfo_.pApplicationName = c.pExtensionAppInfo_.value->pApplicationName;
-    c.pExtensionAppInfo_.pEngineName = c.pExtensionAppInfo_.value->pEngineName;
+void CaptureCustomizationLayer::Pre(INTC_D3D12_CreateDeviceExtensionContext1Command& c) {
+  if (c.m_pExtensionAppInfo.Value) {
+    c.m_pExtensionAppInfo.ApplicationName = c.m_pExtensionAppInfo.Value->pApplicationName;
+    c.m_pExtensionAppInfo.EngineName = c.m_pExtensionAppInfo.Value->pEngineName;
   }
 }
 
-void CaptureCustomizationLayer::pre(INTC_D3D12_SetApplicationInfoCommand& c) {
-  if (c.pExtensionAppInfo_.value) {
-    c.pExtensionAppInfo_.pApplicationName = c.pExtensionAppInfo_.value->pApplicationName;
-    c.pExtensionAppInfo_.pEngineName = c.pExtensionAppInfo_.value->pEngineName;
+void CaptureCustomizationLayer::Pre(INTC_D3D12_SetApplicationInfoCommand& c) {
+  if (c.m_pExtensionAppInfo.Value) {
+    c.m_pExtensionAppInfo.ApplicationName = c.m_pExtensionAppInfo.Value->pApplicationName;
+    c.m_pExtensionAppInfo.EngineName = c.m_pExtensionAppInfo.Value->pEngineName;
   }
 }
 
-void CaptureCustomizationLayer::pre(INTC_D3D12_CreateComputePipelineStateCommand& c) {
-  c.pDesc_.cs = c.pDesc_.value->CS.pShaderBytecode;
-  c.pDesc_.compileOptions = c.pDesc_.value->CompileOptions;
-  c.pDesc_.internalOptions = c.pDesc_.value->InternalOptions;
+void CaptureCustomizationLayer::Pre(INTC_D3D12_CreateComputePipelineStateCommand& c) {
+  c.m_pDesc.Cs = c.m_pDesc.Value->CS.pShaderBytecode;
+  c.m_pDesc.CompileOptions = c.m_pDesc.Value->CompileOptions;
+  c.m_pDesc.InternalOptions = c.m_pDesc.Value->InternalOptions;
 }
 
-void CaptureCustomizationLayer::pre(IDMLDeviceCreateBindingTableCommand& c) {
+void CaptureCustomizationLayer::Pre(IDMLDeviceCreateBindingTableCommand& c) {
   DescriptorHandleArgument<D3D12_CPU_DESCRIPTOR_HANDLE> cpuDescHandle = {
-      c.desc_.value->CPUDescriptorHandle};
+      c.m_desc.Value->CPUDescriptorHandle};
   fillCpuDescriptorHandleArgument(cpuDescHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-  c.desc_.data.cpuDescHandleKey = cpuDescHandle.interfaceKey;
-  c.desc_.data.cpuDescHandleIndex = cpuDescHandle.index;
+  c.m_desc.TableFields.CpuDescHandleKey = cpuDescHandle.InterfaceKey;
+  c.m_desc.TableFields.CpuDescHandleIndex = cpuDescHandle.Index;
 
   DescriptorHandleArgument<D3D12_GPU_DESCRIPTOR_HANDLE> gpuDescHandle = {
-      c.desc_.value->GPUDescriptorHandle};
+      c.m_desc.Value->GPUDescriptorHandle};
   fillGpuDescriptorHandleArgument(gpuDescHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-  c.desc_.data.gpuDescHandleKey = gpuDescHandle.interfaceKey;
-  c.desc_.data.gpuDescHandleIndex = gpuDescHandle.index;
+  c.m_desc.TableFields.GpuDescHandleKey = gpuDescHandle.InterfaceKey;
+  c.m_desc.TableFields.GpuDescHandleIndex = gpuDescHandle.Index;
 }
 
-void CaptureCustomizationLayer::pre(IDMLBindingTableResetCommand& c) {
+void CaptureCustomizationLayer::Pre(IDMLBindingTableResetCommand& c) {
   DescriptorHandleArgument<D3D12_CPU_DESCRIPTOR_HANDLE> cpuDescHandle = {
-      c.desc_.value->CPUDescriptorHandle};
+      c.m_desc.Value->CPUDescriptorHandle};
   fillCpuDescriptorHandleArgument(cpuDescHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-  c.desc_.data.cpuDescHandleKey = cpuDescHandle.interfaceKey;
-  c.desc_.data.cpuDescHandleIndex = cpuDescHandle.index;
+  c.m_desc.TableFields.CpuDescHandleKey = cpuDescHandle.InterfaceKey;
+  c.m_desc.TableFields.CpuDescHandleIndex = cpuDescHandle.Index;
 
   DescriptorHandleArgument<D3D12_GPU_DESCRIPTOR_HANDLE> gpuDescHandle = {
-      c.desc_.value->GPUDescriptorHandle};
+      c.m_desc.Value->GPUDescriptorHandle};
   fillGpuDescriptorHandleArgument(gpuDescHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-  c.desc_.data.gpuDescHandleKey = gpuDescHandle.interfaceKey;
-  c.desc_.data.gpuDescHandleIndex = gpuDescHandle.index;
+  c.m_desc.TableFields.GpuDescHandleKey = gpuDescHandle.InterfaceKey;
+  c.m_desc.TableFields.GpuDescHandleIndex = gpuDescHandle.Index;
 }
 
-void CaptureCustomizationLayer::pre(NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& c) {
+void CaptureCustomizationLayer::Pre(NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& c) {
   {
-    GpuAddressService::GpuAddressInfo info = manager_.getGpuAddressService().getGpuAddressInfo(
-        c.pParams.value->pDesc->destAccelerationStructureData, true);
-    c.pParams.destAccelerationStructureKey = info.resourceKey;
-    c.pParams.destAccelerationStructureOffset = info.offset;
+    GpuAddressService::GpuAddressInfo info = m_Manager.getGpuAddressService().getGpuAddressInfo(
+        c.m_pParams.Value->pDesc->destAccelerationStructureData, true);
+    c.m_pParams.DestAccelerationStructureKey = info.ResourceKey;
+    c.m_pParams.DestAccelerationStructureOffset = info.Offset;
   }
-  if (c.pParams.value->pDesc->sourceAccelerationStructureData) {
-    GpuAddressService::GpuAddressInfo info = manager_.getGpuAddressService().getGpuAddressInfo(
-        c.pParams.value->pDesc->sourceAccelerationStructureData, true);
-    c.pParams.sourceAccelerationStructureKey = info.resourceKey;
-    c.pParams.sourceAccelerationStructureOffset = info.offset;
+  if (c.m_pParams.Value->pDesc->sourceAccelerationStructureData) {
+    GpuAddressService::GpuAddressInfo info = m_Manager.getGpuAddressService().getGpuAddressInfo(
+        c.m_pParams.Value->pDesc->sourceAccelerationStructureData, true);
+    c.m_pParams.SourceAccelerationStructureKey = info.ResourceKey;
+    c.m_pParams.SourceAccelerationStructureOffset = info.Offset;
   }
   {
-    GpuAddressService::GpuAddressInfo info = manager_.getGpuAddressService().getGpuAddressInfo(
-        c.pParams.value->pDesc->scratchAccelerationStructureData);
-    c.pParams.scratchAccelerationStructureKey = info.resourceKey;
-    c.pParams.scratchAccelerationStructureOffset = info.offset;
+    GpuAddressService::GpuAddressInfo info = m_Manager.getGpuAddressService().getGpuAddressInfo(
+        c.m_pParams.Value->pDesc->scratchAccelerationStructureData);
+    c.m_pParams.ScratchAccelerationStructureKey = info.ResourceKey;
+    c.m_pParams.ScratchAccelerationStructureOffset = info.Offset;
   }
 
   auto resolveInputsGpuAddress = [&](D3D12_GPU_VIRTUAL_ADDRESS address) {
     GpuAddressService::GpuAddressInfo info =
-        manager_.getGpuAddressService().getGpuAddressInfo(address);
-    c.pParams.inputKeys.push_back(info.resourceKey);
-    c.pParams.inputOffsets.push_back(info.offset);
+        m_Manager.getGpuAddressService().getGpuAddressInfo(address);
+    c.m_pParams.InputKeys.push_back(info.ResourceKey);
+    c.m_pParams.InputOffsets.push_back(info.Offset);
   };
 
-  if (c.pParams.value->pDesc->inputs.type ==
+  if (c.m_pParams.Value->pDesc->inputs.type ==
       D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
-    resolveInputsGpuAddress(c.pParams.value->pDesc->inputs.instanceDescs);
+    resolveInputsGpuAddress(c.m_pParams.Value->pDesc->inputs.instanceDescs);
   } else {
-    for (unsigned i = 0; i < c.pParams.value->pDesc->inputs.numDescs; ++i) {
+    for (unsigned i = 0; i < c.m_pParams.Value->pDesc->inputs.numDescs; ++i) {
       const NVAPI_D3D12_RAYTRACING_GEOMETRY_DESC_EX& desc =
-          c.pParams.value->pDesc->inputs.descsLayout == D3D12_ELEMENTS_LAYOUT_ARRAY
-              ? *(NVAPI_D3D12_RAYTRACING_GEOMETRY_DESC_EX*)((char*)(c.pParams.value->pDesc->inputs
+          c.m_pParams.Value->pDesc->inputs.descsLayout == D3D12_ELEMENTS_LAYOUT_ARRAY
+              ? *(NVAPI_D3D12_RAYTRACING_GEOMETRY_DESC_EX*)((char*)(c.m_pParams.Value->pDesc->inputs
                                                                         .pGeometryDescs) +
-                                                            c.pParams.value->pDesc->inputs
+                                                            c.m_pParams.Value->pDesc->inputs
                                                                     .geometryDescStrideInBytes *
                                                                 i)
-              : *c.pParams.value->pDesc->inputs.ppGeometryDescs[i];
+              : *c.m_pParams.Value->pDesc->inputs.ppGeometryDescs[i];
       if (desc.type == NVAPI_D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES_EX) {
         resolveInputsGpuAddress(desc.triangles.Transform3x4);
         resolveInputsGpuAddress(desc.triangles.IndexBuffer);
@@ -1002,143 +1010,143 @@ void CaptureCustomizationLayer::pre(NvAPI_D3D12_BuildRaytracingAccelerationStruc
     }
   }
 
-  for (unsigned i = 0; i < c.pParams.value->numPostbuildInfoDescs; ++i) {
-    GpuAddressService::GpuAddressInfo info = manager_.getGpuAddressService().getGpuAddressInfo(
-        c.pParams.value->pPostbuildInfoDescs[i].DestBuffer);
-    c.pParams.destPostBuildBufferKeys.push_back(info.resourceKey);
-    c.pParams.destPostBuildBufferOffsets.push_back(info.offset);
+  for (unsigned i = 0; i < c.m_pParams.Value->numPostbuildInfoDescs; ++i) {
+    GpuAddressService::GpuAddressInfo info = m_Manager.getGpuAddressService().getGpuAddressInfo(
+        c.m_pParams.Value->pPostbuildInfoDescs[i].DestBuffer);
+    c.m_pParams.DestPostBuildBufferKeys.push_back(info.ResourceKey);
+    c.m_pParams.DestPostBuildBufferOffsets.push_back(info.Offset);
   }
 }
 
-void CaptureCustomizationLayer::pre(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& c) {
-  if (c.pParams.value->pDesc) {
+void CaptureCustomizationLayer::Pre(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& c) {
+  if (c.m_pParams.Value->pDesc) {
     {
-      GpuAddressService::GpuAddressInfo info = manager_.getGpuAddressService().getGpuAddressInfo(
-          c.pParams.value->pDesc->destOpacityMicromapArrayData);
-      c.pParams.destOpacityMicromapArrayDataKey = info.resourceKey;
-      c.pParams.destOpacityMicromapArrayDataOffset = info.offset;
+      GpuAddressService::GpuAddressInfo info = m_Manager.getGpuAddressService().getGpuAddressInfo(
+          c.m_pParams.Value->pDesc->destOpacityMicromapArrayData);
+      c.m_pParams.DestOpacityMicromapArrayDataKey = info.ResourceKey;
+      c.m_pParams.DestOpacityMicromapArrayDataOffset = info.Offset;
     }
 
     {
-      GpuAddressService::GpuAddressInfo info = manager_.getGpuAddressService().getGpuAddressInfo(
-          c.pParams.value->pDesc->inputs.inputBuffer);
-      c.pParams.inputBufferKey = info.resourceKey;
-      c.pParams.inputBufferOffset = info.offset;
+      GpuAddressService::GpuAddressInfo info = m_Manager.getGpuAddressService().getGpuAddressInfo(
+          c.m_pParams.Value->pDesc->inputs.inputBuffer);
+      c.m_pParams.InputBufferKey = info.ResourceKey;
+      c.m_pParams.InputBufferOffset = info.Offset;
     }
 
     {
-      GpuAddressService::GpuAddressInfo info = manager_.getGpuAddressService().getGpuAddressInfo(
-          c.pParams.value->pDesc->inputs.perOMMDescs.StartAddress);
-      c.pParams.perOMMDescsKey = info.resourceKey;
-      c.pParams.perOMMDescsOffset = info.offset;
+      GpuAddressService::GpuAddressInfo info = m_Manager.getGpuAddressService().getGpuAddressInfo(
+          c.m_pParams.Value->pDesc->inputs.perOMMDescs.StartAddress);
+      c.m_pParams.PerOMMDescsKey = info.ResourceKey;
+      c.m_pParams.PerOMMDescsOffset = info.Offset;
     }
 
     {
-      GpuAddressService::GpuAddressInfo info = manager_.getGpuAddressService().getGpuAddressInfo(
-          c.pParams.value->pDesc->scratchOpacityMicromapArrayData);
-      c.pParams.scratchOpacityMicromapArrayDataKey = info.resourceKey;
-      c.pParams.scratchOpacityMicromapArrayDataOffset = info.offset;
+      GpuAddressService::GpuAddressInfo info = m_Manager.getGpuAddressService().getGpuAddressInfo(
+          c.m_pParams.Value->pDesc->scratchOpacityMicromapArrayData);
+      c.m_pParams.ScratchOpacityMicromapArrayDataKey = info.ResourceKey;
+      c.m_pParams.ScratchOpacityMicromapArrayDataOffset = info.Offset;
     }
   }
 
-  for (unsigned i = 0; i < c.pParams.value->numPostbuildInfoDescs; ++i) {
-    GpuAddressService::GpuAddressInfo info = manager_.getGpuAddressService().getGpuAddressInfo(
-        c.pParams.value->pPostbuildInfoDescs[i].destBuffer);
-    c.pParams.destPostBuildBufferKeys.push_back(info.resourceKey);
-    c.pParams.destPostBuildBufferOffsets.push_back(info.offset);
+  for (unsigned i = 0; i < c.m_pParams.Value->numPostbuildInfoDescs; ++i) {
+    GpuAddressService::GpuAddressInfo info = m_Manager.getGpuAddressService().getGpuAddressInfo(
+        c.m_pParams.Value->pPostbuildInfoDescs[i].destBuffer);
+    c.m_pParams.DestPostBuildBufferKeys.push_back(info.ResourceKey);
+    c.m_pParams.DestPostBuildBufferOffsets.push_back(info.Offset);
   }
 }
 
-void CaptureCustomizationLayer::pre(
+void CaptureCustomizationLayer::Pre(
     NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand& c) {
-  if (c.pParams.value->pDesc) {
+  if (c.m_pParams.Value->pDesc) {
     {
-      GpuAddressService::GpuAddressInfo info = manager_.getGpuAddressService().getGpuAddressInfo(
-          c.pParams.value->pDesc->batchResultData);
-      c.pParams.batchResultDataKey = info.resourceKey;
-      c.pParams.batchResultDataOffset = info.offset;
+      GpuAddressService::GpuAddressInfo info = m_Manager.getGpuAddressService().getGpuAddressInfo(
+          c.m_pParams.Value->pDesc->batchResultData);
+      c.m_pParams.BatchResultDataKey = info.ResourceKey;
+      c.m_pParams.BatchResultDataOffset = info.Offset;
     }
 
     {
-      GpuAddressService::GpuAddressInfo info = manager_.getGpuAddressService().getGpuAddressInfo(
-          c.pParams.value->pDesc->batchScratchData);
-      c.pParams.batchScratchDataKey = info.resourceKey;
-      c.pParams.batchScratchDataOffset = info.offset;
+      GpuAddressService::GpuAddressInfo info = m_Manager.getGpuAddressService().getGpuAddressInfo(
+          c.m_pParams.Value->pDesc->batchScratchData);
+      c.m_pParams.BatchScratchDataKey = info.ResourceKey;
+      c.m_pParams.BatchScratchDataOffset = info.Offset;
     }
 
     {
-      GpuAddressService::GpuAddressInfo info = manager_.getGpuAddressService().getGpuAddressInfo(
-          c.pParams.value->pDesc->destinationAddressArray.StartAddress);
-      c.pParams.destinationAddressArrayKey = info.resourceKey;
-      c.pParams.destinationAddressArrayOffset = info.offset;
+      GpuAddressService::GpuAddressInfo info = m_Manager.getGpuAddressService().getGpuAddressInfo(
+          c.m_pParams.Value->pDesc->destinationAddressArray.StartAddress);
+      c.m_pParams.DestinationAddressArrayKey = info.ResourceKey;
+      c.m_pParams.DestinationAddressArrayOffset = info.Offset;
     }
 
     {
-      GpuAddressService::GpuAddressInfo info = manager_.getGpuAddressService().getGpuAddressInfo(
-          c.pParams.value->pDesc->resultSizeArray.StartAddress);
-      c.pParams.resultSizeArrayKey = info.resourceKey;
-      c.pParams.resultSizeArrayOffset = info.offset;
+      GpuAddressService::GpuAddressInfo info = m_Manager.getGpuAddressService().getGpuAddressInfo(
+          c.m_pParams.Value->pDesc->resultSizeArray.StartAddress);
+      c.m_pParams.ResultSizeArrayKey = info.ResourceKey;
+      c.m_pParams.ResultSizeArrayOffset = info.Offset;
     }
 
     {
-      GpuAddressService::GpuAddressInfo info = manager_.getGpuAddressService().getGpuAddressInfo(
-          c.pParams.value->pDesc->indirectArgArray.StartAddress);
-      c.pParams.indirectArgArrayKey = info.resourceKey;
-      c.pParams.indirectArgArrayOffset = info.offset;
+      GpuAddressService::GpuAddressInfo info = m_Manager.getGpuAddressService().getGpuAddressInfo(
+          c.m_pParams.Value->pDesc->indirectArgArray.StartAddress);
+      c.m_pParams.IndirectArgArrayKey = info.ResourceKey;
+      c.m_pParams.IndirectArgArrayOffset = info.Offset;
     }
 
     {
-      GpuAddressService::GpuAddressInfo info = manager_.getGpuAddressService().getGpuAddressInfo(
-          c.pParams.value->pDesc->indirectArgCount);
-      c.pParams.indirectArgCountKey = info.resourceKey;
-      c.pParams.indirectArgCountOffset = info.offset;
+      GpuAddressService::GpuAddressInfo info = m_Manager.getGpuAddressService().getGpuAddressInfo(
+          c.m_pParams.Value->pDesc->indirectArgCount);
+      c.m_pParams.IndirectArgCountKey = info.ResourceKey;
+      c.m_pParams.IndirectArgCountOffset = info.Offset;
     }
   }
 }
 
-void CaptureCustomizationLayer::post(IDStorageFactoryOpenFileCommand& c) {
-  directStorageService_.openFile(c);
+void CaptureCustomizationLayer::Post(IDStorageFactoryOpenFileCommand& c) {
+  m_DirectStorageService.openFile(c);
 }
 
-void CaptureCustomizationLayer::pre(IDStorageQueueEnqueueRequestCommand& c) {
-  directStorageService_.enqueueRequest(c);
+void CaptureCustomizationLayer::Pre(IDStorageQueueEnqueueRequestCommand& c) {
+  m_DirectStorageService.enqueueRequest(c);
 }
 
-void CaptureCustomizationLayer::pre(xefgSwapChainD3D12InitFromSwapChainCommand& c) {
+void CaptureCustomizationLayer::Pre(xefgSwapChainD3D12InitFromSwapChainCommand& c) {
   LOG_INFO << "xefgSwapChainD3D12InitFromSwapChainCommand: pApplicaitonSwapChain: "
-           << c.pInitParams_.value->pApplicationSwapChain;
-  IDXGISwapChain* swapChain = c.pInitParams_.value->pApplicationSwapChain;
-  IUnknownWrapper* wrapper = manager_.findWrapper(swapChain);
+           << c.m_pInitParams.Value->pApplicationSwapChain;
+  IDXGISwapChain* swapChain = c.m_pInitParams.Value->pApplicationSwapChain;
+  IUnknownWrapper* wrapper = m_Manager.findWrapper(swapChain);
   if (wrapper) {
-    manager_.removeWrapper(wrapper);
+    m_Manager.removeWrapper(wrapper);
     delete wrapper;
   }
 }
 
-void CaptureCustomizationLayer::pre(xefgSwapChainD3D12InitFromSwapChainDescCommand& c) {
+void CaptureCustomizationLayer::Pre(xefgSwapChainD3D12InitFromSwapChainDescCommand& c) {
   RECT rect;
-  BOOL ret = GetClientRect(c.hWnd_.value, &rect);
+  BOOL ret = GetClientRect(c.m_hWnd.Value, &rect);
   GITS_ASSERT(ret);
 
-  CreateWindowMetaCommand createWindowCommand(c.threadId);
-  createWindowCommand.key = manager_.createCommandKey();
-  createWindowCommand.hWnd_ = c.hWnd_;
-  createWindowCommand.width_.value = rect.right - rect.left;
-  createWindowCommand.height_.value = rect.bottom - rect.top;
-  createWindowCommand.width_.value = std::max(
-      static_cast<unsigned>(createWindowCommand.width_.value), c.pSwapChainDesc_.value->Width);
-  createWindowCommand.height_.value = std::max(
-      static_cast<unsigned>(createWindowCommand.height_.value), c.pSwapChainDesc_.value->Height);
+  CreateWindowMetaCommand createWindowCommand(c.ThreadId);
+  createWindowCommand.Key = m_Manager.createCommandKey();
+  createWindowCommand.m_hWnd.Value = c.m_hWnd.Value;
+  createWindowCommand.m_width.Value = rect.right - rect.left;
+  createWindowCommand.m_height.Value = rect.bottom - rect.top;
+  createWindowCommand.m_width.Value = std::max(
+      static_cast<unsigned>(createWindowCommand.m_width.Value), c.m_pSwapChainDesc.Value->Width);
+  createWindowCommand.m_height.Value = std::max(
+      static_cast<unsigned>(createWindowCommand.m_height.Value), c.m_pSwapChainDesc.Value->Height);
 
-  recorder_.Record(createWindowCommand.key, new CreateWindowMetaSerializer(createWindowCommand));
+  m_Recorder.Record(createWindowCommand.Key, new CreateWindowMetaSerializer(createWindowCommand));
 }
 
 void CaptureCustomizationLayer::fillGpuAddressArgument(D3D12_GPU_VIRTUAL_ADDRESS_Argument& arg) {
-  if (arg.value) {
+  if (arg.Value) {
     GpuAddressService::GpuAddressInfo info =
-        manager_.getGpuAddressService().getGpuAddressInfo(arg.value);
-    arg.interfaceKey = info.resourceKey;
-    arg.offset = info.offset;
+        m_Manager.getGpuAddressService().getGpuAddressInfo(arg.Value);
+    arg.InterfaceKey = info.ResourceKey;
+    arg.Offset = info.Offset;
   }
 }
 
@@ -1147,11 +1155,11 @@ void CaptureCustomizationLayer::fillGpuDescriptorHandleArgument(
     D3D12_DESCRIPTOR_HEAP_TYPE heapType) {
 
   CaptureDescriptorHandleService::HandleInfo info =
-      manager_.getDescriptorHandleService().getDescriptorHandleInfo(
-          heapType, CaptureDescriptorHandleService::HandleType::GpuHandle, arg.value.ptr);
+      m_Manager.getDescriptorHandleService().getDescriptorHandleInfo(
+          heapType, CaptureDescriptorHandleService::HandleType::GpuHandle, arg.Value.ptr);
 
-  arg.interfaceKey = info.interfaceKey;
-  arg.index = info.index;
+  arg.InterfaceKey = info.InterfaceKey;
+  arg.Index = info.Index;
 }
 
 void CaptureCustomizationLayer::fillCpuDescriptorHandleArgument(
@@ -1159,11 +1167,11 @@ void CaptureCustomizationLayer::fillCpuDescriptorHandleArgument(
     D3D12_DESCRIPTOR_HEAP_TYPE heapType) {
 
   CaptureDescriptorHandleService::HandleInfo info =
-      manager_.getDescriptorHandleService().getDescriptorHandleInfo(
-          heapType, CaptureDescriptorHandleService::HandleType::CpuHandle, arg.value.ptr);
+      m_Manager.getDescriptorHandleService().getDescriptorHandleInfo(
+          heapType, CaptureDescriptorHandleService::HandleType::CpuHandle, arg.Value.ptr);
 
-  arg.interfaceKey = info.interfaceKey;
-  arg.index = info.index;
+  arg.InterfaceKey = info.InterfaceKey;
+  arg.Index = info.Index;
 }
 
 } // namespace DirectX

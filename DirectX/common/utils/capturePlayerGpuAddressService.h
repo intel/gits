@@ -14,6 +14,7 @@
 #include <d3d12.h>
 #include <unordered_set>
 #include <mutex>
+#include <vector>
 
 namespace gits {
 namespace DirectX {
@@ -21,113 +22,112 @@ namespace DirectX {
 class CapturePlayerGpuAddressService {
 public:
   struct GpuAddressMapping {
-    D3D12_GPU_VIRTUAL_ADDRESS captureStart;
-    D3D12_GPU_VIRTUAL_ADDRESS playerStart;
-    UINT64 size;
+    D3D12_GPU_VIRTUAL_ADDRESS CaptureStart;
+    D3D12_GPU_VIRTUAL_ADDRESS PlayerStart;
+    UINT64 Size;
   };
   struct ResourceInfo : public GpuAddressMapping {
     virtual ~ResourceInfo() {}
-    virtual bool overlapping() {
+    virtual bool Overlapping() {
       return false;
     }
-    ID3D12Resource* resource;
-    unsigned key;
+    ID3D12Resource* Resource;
+    unsigned Key;
   };
 
-public:
-  void createPlacedResource(unsigned heapKey, unsigned resourceKey, D3D12_RESOURCE_FLAGS flags) {
-    std::lock_guard<std::mutex> lock(mutex_);
-    gpuAddressService_.createPlacedResource(heapKey, resourceKey, flags);
-    if (gpuPlayerAddress_) {
-      gpuPlayerAddress_->createPlacedResource(heapKey, resourceKey, flags);
+  void CreatePlacedResource(unsigned heapKey, unsigned ResourceKey, D3D12_RESOURCE_FLAGS flags) {
+    std::lock_guard<std::mutex> lock(m_Mutex);
+    m_GpuAddressService.CreatePlacedResource(heapKey, ResourceKey, flags);
+    if (m_GpuPlayerAddress) {
+      m_GpuPlayerAddress->CreatePlacedResource(heapKey, ResourceKey, flags);
     }
   }
-  void addGpuCaptureAddress(ID3D12Resource* resource,
-                            unsigned resourceKey,
+  void AddGpuCaptureAddress(ID3D12Resource* resource,
+                            unsigned ResourceKey,
                             unsigned size,
                             D3D12_GPU_VIRTUAL_ADDRESS captureAddress) {
-    std::lock_guard<std::mutex> lock(mutex_);
-    gpuAddressService_.addGpuCaptureAddress(resource, resourceKey, size, captureAddress);
+    std::lock_guard<std::mutex> lock(m_Mutex);
+    m_GpuAddressService.AddGpuCaptureAddress(resource, ResourceKey, size, captureAddress);
   }
-  void addGpuPlayerAddress(ID3D12Resource* resource,
-                           unsigned resourceKey,
+  void AddGpuPlayerAddress(ID3D12Resource* resource,
+                           unsigned ResourceKey,
                            unsigned size,
                            D3D12_GPU_VIRTUAL_ADDRESS playerAddress) {
-    std::lock_guard<std::mutex> lock(mutex_);
-    gpuAddressService_.addGpuPlayerAddress(resourceKey, playerAddress);
-    if (gpuPlayerAddress_) {
-      gpuPlayerAddress_->addGpuCaptureAddress(resource, resourceKey, size, playerAddress);
-      gpuPlayerAddress_->addGpuPlayerAddress(resourceKey, playerAddress);
+    std::lock_guard<std::mutex> lock(m_Mutex);
+    m_GpuAddressService.AddGpuPlayerAddress(ResourceKey, playerAddress);
+    if (m_GpuPlayerAddress) {
+      m_GpuPlayerAddress->AddGpuCaptureAddress(resource, ResourceKey, size, playerAddress);
+      m_GpuPlayerAddress->AddGpuPlayerAddress(ResourceKey, playerAddress);
     }
   }
-  void destroyInterface(unsigned interfaceKey) {
-    std::lock_guard<std::mutex> lock(mutex_);
-    gpuAddressService_.destroyInterface(interfaceKey);
-    if (gpuPlayerAddress_) {
-      gpuPlayerAddress_->destroyInterface(interfaceKey);
+  void DestroyInterface(unsigned InterfaceKey) {
+    std::lock_guard<std::mutex> lock(m_Mutex);
+    m_GpuAddressService.DestroyInterface(InterfaceKey);
+    if (m_GpuPlayerAddress) {
+      m_GpuPlayerAddress->DestroyInterface(InterfaceKey);
     }
   }
-  ResourceInfo* getResourceInfoByCaptureAddress(D3D12_GPU_VIRTUAL_ADDRESS address) {
-    std::lock_guard<std::mutex> lock(mutex_);
-    return gpuAddressService_.getResourceInfo(address);
+  ResourceInfo* GetResourceInfoByCaptureAddress(D3D12_GPU_VIRTUAL_ADDRESS address) {
+    std::lock_guard<std::mutex> lock(m_Mutex);
+    return m_GpuAddressService.GetResourceInfo(address);
   }
-  ResourceInfo* getResourceInfoByPlayerAddress(D3D12_GPU_VIRTUAL_ADDRESS address) {
-    if (gpuPlayerAddress_) {
-      std::lock_guard<std::mutex> lock(mutex_);
-      return gpuPlayerAddress_->getResourceInfo(address);
-    } else {
-      return nullptr;
+  ResourceInfo* GetResourceInfoByPlayerAddress(D3D12_GPU_VIRTUAL_ADDRESS address) {
+    if (m_GpuPlayerAddress) {
+      std::lock_guard<std::mutex> lock(m_Mutex);
+      return m_GpuPlayerAddress->GetResourceInfo(address);
     }
+    return nullptr;
   }
-  void getMappings(std::vector<GpuAddressMapping>& mappings) {
-    gpuAddressService_.getMappings(mappings);
+  void GetMappings(std::vector<GpuAddressMapping>& mappings) {
+    m_GpuAddressService.GetMappings(mappings);
   }
-  void enablePlayerAddressLookup() {
-    gpuPlayerAddress_.reset(new GpuAddressService());
+  void EnablePlayerAddressLookup() {
+    m_GpuPlayerAddress.reset(new GpuAddressService());
   }
 
 private:
   class GpuAddressService {
   public:
-    void createPlacedResource(unsigned heapKey, unsigned resourceKey, D3D12_RESOURCE_FLAGS flags);
-    void addGpuCaptureAddress(ID3D12Resource* resource,
-                              unsigned resourceKey,
+    void CreatePlacedResource(unsigned heapKey, unsigned ResourceKey, D3D12_RESOURCE_FLAGS flags);
+    void AddGpuCaptureAddress(ID3D12Resource* resource,
+                              unsigned ResourceKey,
                               unsigned size,
                               D3D12_GPU_VIRTUAL_ADDRESS captureAddress);
-    void addGpuPlayerAddress(unsigned resourceKey, D3D12_GPU_VIRTUAL_ADDRESS playerAddress);
-    void destroyInterface(unsigned interfaceKey);
-    void getMappings(std::vector<GpuAddressMapping>& mappings);
-    ResourceInfo* getResourceInfo(D3D12_GPU_VIRTUAL_ADDRESS address);
+    void AddGpuPlayerAddress(unsigned ResourceKey, D3D12_GPU_VIRTUAL_ADDRESS playerAddress);
+    void DestroyInterface(unsigned InterfaceKey);
+    void GetMappings(std::vector<GpuAddressMapping>& mappings);
+    ResourceInfo* GetResourceInfo(D3D12_GPU_VIRTUAL_ADDRESS address);
 
   private:
     struct PlacedResourceInfo : public ResourceInfo {
-      bool overlapping() override {
-        return !intersecting.empty();
+      bool Overlapping() override {
+        return !Intersecting.empty();
       }
-      unsigned layer;
-      std::unordered_set<PlacedResourceInfo*> intersecting;
+      unsigned Layer;
+      std::unordered_set<PlacedResourceInfo*> Intersecting;
     };
 
-    std::map<D3D12_GPU_VIRTUAL_ADDRESS, ResourceInfo*> resourcesByAddress_;
-    std::vector<std::map<D3D12_GPU_VIRTUAL_ADDRESS, PlacedResourceInfo*>> placedResourcesByAddress_;
+    std::map<D3D12_GPU_VIRTUAL_ADDRESS, ResourceInfo*> m_ResourcesByAddress;
+    std::vector<std::map<D3D12_GPU_VIRTUAL_ADDRESS, PlacedResourceInfo*>>
+        m_PlacedResourcesByAddress;
 
     struct HeapInfo {
-      D3D12_GPU_VIRTUAL_ADDRESS captureStart;
-      D3D12_GPU_VIRTUAL_ADDRESS captureEnd;
-      D3D12_GPU_VIRTUAL_ADDRESS playerStart;
-      std::unordered_set<unsigned> resources;
+      D3D12_GPU_VIRTUAL_ADDRESS CaptureStart;
+      D3D12_GPU_VIRTUAL_ADDRESS CaptureEnd;
+      D3D12_GPU_VIRTUAL_ADDRESS PlayerStart;
+      std::unordered_set<unsigned> Resources;
     };
 
-    std::unordered_map<unsigned, std::unique_ptr<HeapInfo>> heapsByKey_;
-    std::unordered_map<unsigned, HeapInfo*> heapsByResourceKey_;
+    std::unordered_map<unsigned, std::unique_ptr<HeapInfo>> m_HeapsByKey;
+    std::unordered_map<unsigned, HeapInfo*> m_HeapsByResourceKey;
 
-    std::unordered_map<unsigned, std::unique_ptr<ResourceInfo>> resourcesByKey_;
-    std::unordered_map<unsigned, std::unique_ptr<PlacedResourceInfo>> placedResourcesByKey_;
-    std::unordered_set<unsigned> deniedShaderResources_;
+    std::unordered_map<unsigned, std::unique_ptr<ResourceInfo>> m_ResourcesByKey;
+    std::unordered_map<unsigned, std::unique_ptr<PlacedResourceInfo>> m_PlacedResourcesByKey;
+    std::unordered_set<unsigned> m_DeniedShaderResources;
   };
-  GpuAddressService gpuAddressService_;
-  std::unique_ptr<GpuAddressService> gpuPlayerAddress_;
-  std::mutex mutex_;
+  GpuAddressService m_GpuAddressService;
+  std::unique_ptr<GpuAddressService> m_GpuPlayerAddress;
+  std::mutex m_Mutex;
 };
 
 } // namespace DirectX

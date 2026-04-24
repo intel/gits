@@ -24,7 +24,7 @@ ResourceDump::~ResourceDump() {
 
 void ResourceDump::waitUntilDumped() {
   std::vector<GpuExecutionTracker::Executable*>& executables =
-      gpuExecutionTracker_.getReadyExecutables();
+      m_GpuExecutionTracker.GetReadyExecutables();
   for (GpuExecutionTracker::Executable* executable : executables) {
     ThreadInfo* threadInfo = static_cast<ThreadInfo*>(executable);
     if (threadInfo->dumpThread->joinable()) {
@@ -232,25 +232,25 @@ void ResourceDump::executeCommandLists(unsigned key,
   threadInfo->dumpThread =
       std::make_unique<std::thread>(&ResourceDump::dumpStagedResources, this, threadInfo);
 
-  gpuExecutionTracker_.execute(key, commandQueueKey, threadInfo);
+  m_GpuExecutionTracker.Execute(key, commandQueueKey, threadInfo);
 }
 
 void ResourceDump::commandQueueWait(unsigned key,
                                     unsigned commandQueueKey,
                                     unsigned fenceKey,
                                     UINT64 fenceValue) {
-  gpuExecutionTracker_.commandQueueWait(key, commandQueueKey, fenceKey, fenceValue);
+  m_GpuExecutionTracker.CommandQueueWait(key, commandQueueKey, fenceKey, fenceValue);
 }
 
 void ResourceDump::commandQueueSignal(unsigned key,
                                       unsigned commandQueueKey,
                                       unsigned fenceKey,
                                       UINT64 fenceValue) {
-  gpuExecutionTracker_.commandQueueSignal(key, commandQueueKey, fenceKey, fenceValue);
+  m_GpuExecutionTracker.CommandQueueSignal(key, commandQueueKey, fenceKey, fenceValue);
 }
 
 void ResourceDump::fenceSignal(unsigned key, unsigned fenceKey, UINT64 fenceValue) {
-  gpuExecutionTracker_.fenceSignal(key, fenceKey, fenceValue);
+  m_GpuExecutionTracker.FenceSignal(key, fenceKey, fenceValue);
 }
 
 void ResourceDump::dumpStagedResources(ThreadInfo* threadInfo) {

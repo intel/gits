@@ -33,27 +33,27 @@ public:
   PlayerLayerManager(const PlayerLayerManager&) = delete;
   PlayerLayerManager& operator=(const PlayerLayerManager&) = delete;
 
-  void loadLayers(PlayerManager& playerManager, PluginService& pluginService);
+  void LoadLayers(PlayerManager& playerManager, PluginService& pluginService);
 
-  std::vector<Layer*>& getPreLayers() {
-    return preLayers_;
+  std::vector<Layer*>& GetPreLayers() {
+    return m_PreLayers;
   }
-  std::vector<Layer*>& getPostLayers() {
-    return postLayers_;
+  std::vector<Layer*>& GetPostLayers() {
+    return m_PostLayers;
   }
 
 private:
-  TraceLayerGroup traceLayerGroup_;
-  SubcaptureLayerGroup subcaptureLayerGroup_;
-  ExecutionSerializationLayerGroup executionSerializationLayerGroup_;
-  ResourceDumpingLayerGroup resourceDumpingLayerGroup_;
-  SkipCallsLayerGroup skipCallsLayerGroup_;
-  PortabilityLayerGroup portabilityLayerGroup_;
-  AddressPinningLayerGroup addressPinningLayerGroup_;
+  TraceLayerGroup m_TraceLayerGroup;
+  SubcaptureLayerGroup m_SubcaptureLayerGroup;
+  ExecutionSerializationLayerGroup m_ExecutionSerializationLayerGroup;
+  ResourceDumpingLayerGroup m_ResourceDumpingLayerGroup;
+  SkipCallsLayerGroup m_SkipCallsLayerGroup;
+  PortabilityLayerGroup m_PortabilityLayerGroup;
+  AddressPinningLayerGroup m_AddressPinningLayerGroup;
 
-  std::vector<Layer*> preLayers_;
-  std::vector<Layer*> postLayers_;
-  std::vector<std::unique_ptr<Layer>> layersOwner_;
+  std::vector<Layer*> m_PreLayers;
+  std::vector<Layer*> m_PostLayers;
+  std::vector<std::unique_ptr<Layer>> m_LayersOwner;
 };
 
 } // namespace DirectX

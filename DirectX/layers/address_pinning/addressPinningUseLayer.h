@@ -21,67 +21,67 @@ class AddressPinningUseLayer : public Layer {
 public:
   AddressPinningUseLayer();
 
-  void pre(D3D12CreateDeviceCommand& command) override;
-  void post(D3D12CreateDeviceCommand& command) override;
-  void pre(ID3D12DeviceCreateHeapCommand& command) override;
-  void post(ID3D12DeviceCreateHeapCommand& command) override;
-  void pre(ID3D12Device4CreateHeap1Command& command) override;
-  void post(ID3D12Device4CreateHeap1Command& command) override;
-  void pre(INTC_D3D12_CreateHeapCommand& command) override;
-  void post(INTC_D3D12_CreateHeapCommand& command) override;
-  void pre(CreateHeapAllocationMetaCommand& command) override;
-  void pre(ID3D12Device3OpenExistingHeapFromAddressCommand& command) override;
-  void pre(ID3D12Device13OpenExistingHeapFromAddress1Command& command) override;
-  void pre(ID3D12DeviceCreateCommittedResourceCommand& command) override;
-  void post(ID3D12DeviceCreateCommittedResourceCommand& command) override;
-  void pre(ID3D12Device4CreateCommittedResource1Command& command) override;
-  void post(ID3D12Device4CreateCommittedResource1Command& command) override;
-  void pre(ID3D12Device8CreateCommittedResource2Command& command) override;
-  void post(ID3D12Device8CreateCommittedResource2Command& command) override;
-  void pre(ID3D12Device10CreateCommittedResource3Command& command) override;
-  void post(ID3D12Device10CreateCommittedResource3Command& command) override;
-  void pre(ID3D12DeviceCreateReservedResourceCommand& command) override;
-  void post(ID3D12DeviceCreateReservedResourceCommand& command) override;
-  void pre(ID3D12Device4CreateReservedResource1Command& command) override;
-  void post(ID3D12Device4CreateReservedResource1Command& command) override;
-  void pre(ID3D12Device10CreateReservedResource2Command& command) override;
-  void post(ID3D12Device10CreateReservedResource2Command& command) override;
-  void pre(ID3D12DeviceCreatePlacedResourceCommand& command) override;
-  void post(ID3D12DeviceCreatePlacedResourceCommand& command) override;
-  void pre(ID3D12Device8CreatePlacedResource1Command& command) override;
-  void post(ID3D12Device8CreatePlacedResource1Command& command) override;
-  void pre(ID3D12Device10CreatePlacedResource2Command& command) override;
-  void post(ID3D12Device10CreatePlacedResource2Command& command) override;
+  void Pre(D3D12CreateDeviceCommand& command) override;
+  void Post(D3D12CreateDeviceCommand& command) override;
+  void Pre(ID3D12DeviceCreateHeapCommand& command) override;
+  void Post(ID3D12DeviceCreateHeapCommand& command) override;
+  void Pre(ID3D12Device4CreateHeap1Command& command) override;
+  void Post(ID3D12Device4CreateHeap1Command& command) override;
+  void Pre(INTC_D3D12_CreateHeapCommand& command) override;
+  void Post(INTC_D3D12_CreateHeapCommand& command) override;
+  void Pre(CreateHeapAllocationMetaCommand& command) override;
+  void Pre(ID3D12Device3OpenExistingHeapFromAddressCommand& command) override;
+  void Pre(ID3D12Device13OpenExistingHeapFromAddress1Command& command) override;
+  void Pre(ID3D12DeviceCreateCommittedResourceCommand& command) override;
+  void Post(ID3D12DeviceCreateCommittedResourceCommand& command) override;
+  void Pre(ID3D12Device4CreateCommittedResource1Command& command) override;
+  void Post(ID3D12Device4CreateCommittedResource1Command& command) override;
+  void Pre(ID3D12Device8CreateCommittedResource2Command& command) override;
+  void Post(ID3D12Device8CreateCommittedResource2Command& command) override;
+  void Pre(ID3D12Device10CreateCommittedResource3Command& command) override;
+  void Post(ID3D12Device10CreateCommittedResource3Command& command) override;
+  void Pre(ID3D12DeviceCreateReservedResourceCommand& command) override;
+  void Post(ID3D12DeviceCreateReservedResourceCommand& command) override;
+  void Pre(ID3D12Device4CreateReservedResource1Command& command) override;
+  void Post(ID3D12Device4CreateReservedResource1Command& command) override;
+  void Pre(ID3D12Device10CreateReservedResource2Command& command) override;
+  void Post(ID3D12Device10CreateReservedResource2Command& command) override;
+  void Pre(ID3D12DeviceCreatePlacedResourceCommand& command) override;
+  void Post(ID3D12DeviceCreatePlacedResourceCommand& command) override;
+  void Pre(ID3D12Device8CreatePlacedResource1Command& command) override;
+  void Post(ID3D12Device8CreatePlacedResource1Command& command) override;
+  void Pre(ID3D12Device10CreatePlacedResource2Command& command) override;
+  void Post(ID3D12Device10CreatePlacedResource2Command& command) override;
 
 private:
-  void readAddressRanges();
+  void ReadAddressRanges();
 
   template <typename CommandT>
-  void preResource(CommandT& command);
+  void PreResource(CommandT& command);
 
   template <typename CommandT>
-  void postResource(CommandT& command);
+  void PostResource(CommandT& command);
 
   template <typename CommandT>
-  void preHeap(CommandT& command);
+  void PreHeap(CommandT& command);
 
   template <typename CommandT>
-  void postHeap(CommandT& command);
+  void PostHeap(CommandT& command);
 
   template <typename CommandT>
-  void preOpenExistingHeap(CommandT& command);
+  void PreOpenExistingHeap(CommandT& command);
 
 private:
-  std::vector<D3D12_GPU_VIRTUAL_ADDRESS_RANGE> addressRanges_;
-  std::unordered_map<unsigned, D3D12_GPU_VIRTUAL_ADDRESS_RANGE> resourceAddressRanges_;
+  std::vector<D3D12_GPU_VIRTUAL_ADDRESS_RANGE> m_AddressRanges;
+  std::unordered_map<unsigned, D3D12_GPU_VIRTUAL_ADDRESS_RANGE> m_ResourceAddressRanges;
   struct HeapAllocationInfo {
-    D3D12_GPU_VIRTUAL_ADDRESS_RANGE addressRange;
-    UINT64 alignment;
+    D3D12_GPU_VIRTUAL_ADDRESS_RANGE m_AddressRange;
+    UINT64 m_Alignment;
   };
-  std::unordered_map<unsigned, HeapAllocationInfo> heapAddressRanges_;
-  std::unordered_set<unsigned> changedHeaps_;
-  Microsoft::WRL::ComPtr<ID3D12Tools1> d3d12Tools_;
-  Microsoft::WRL::ComPtr<ID3D12DeviceTools> deviceTools_;
+  std::unordered_map<unsigned, HeapAllocationInfo> m_HeapAddressRanges;
+  std::unordered_set<unsigned> m_ChangedHeaps;
+  Microsoft::WRL::ComPtr<ID3D12Tools1> m_D3d12Tools;
+  Microsoft::WRL::ComPtr<ID3D12DeviceTools> m_DeviceTools;
 };
 
 } // namespace DirectX

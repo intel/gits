@@ -19,35 +19,35 @@ AnalyzerExecuteIndirectService::AnalyzerExecuteIndirectService(
     CapturePlayerGpuAddressService& gpuAddressService,
     AnalyzerRaytracingService& raytracingService,
     AnalyzerCommandListService& commandListService)
-    : gpuAddressService_(gpuAddressService),
-      raytracingService_(raytracingService),
-      commandListService_(commandListService),
-      executeIndirectDump_(*this) {
-  loadExecuteIndirectDispatchRays();
+    : m_GpuAddressService(gpuAddressService),
+      m_RaytracingService(raytracingService),
+      m_CommandListService(commandListService),
+      m_ExecuteIndirectDump(*this) {
+  LoadExecuteIndirectDispatchRays();
 }
 
 AnalyzerExecuteIndirectService::~AnalyzerExecuteIndirectService() {
-  for (auto& it : commandSignatures_) {
+  for (auto& it : m_CommandSignatures) {
     delete[] it.second.pArgumentDescs;
   }
 }
 
-void AnalyzerExecuteIndirectService::createCommandSignature(
+void AnalyzerExecuteIndirectService::CreateCommandSignature(
     ID3D12DeviceCreateCommandSignatureCommand& c) {
-  D3D12_COMMAND_SIGNATURE_DESC& desc = commandSignatures_[c.ppvCommandSignature_.key] =
-      *c.pDesc_.value;
+  D3D12_COMMAND_SIGNATURE_DESC& desc = m_CommandSignatures[c.m_ppvCommandSignature.Key] =
+      *c.m_pDesc.Value;
   desc.pArgumentDescs = new D3D12_INDIRECT_ARGUMENT_DESC[desc.NumArgumentDescs];
-  std::copy(c.pDesc_.value->pArgumentDescs,
-            c.pDesc_.value->pArgumentDescs + c.pDesc_.value->NumArgumentDescs,
+  std::copy(c.m_pDesc.Value->pArgumentDescs,
+            c.m_pDesc.Value->pArgumentDescs + c.m_pDesc.Value->NumArgumentDescs,
             const_cast<D3D12_INDIRECT_ARGUMENT_DESC*>(desc.pArgumentDescs));
 }
 
-void AnalyzerExecuteIndirectService::executeIndirect(
+void AnalyzerExecuteIndirectService::ExecuteIndirect(
     ID3D12GraphicsCommandListExecuteIndirectCommand& c) {
-  commandListService_.addObjectForRestore(c.pCommandSignature_.key);
+  m_CommandListService.AddObjectForRestore(c.m_pCommandSignature.Key);
 
-  auto itCommandSignature = commandSignatures_.find(c.pCommandSignature_.key);
-  GITS_ASSERT(itCommandSignature != commandSignatures_.end());
+  auto itCommandSignature = m_CommandSignatures.find(c.m_pCommandSignature.Key);
+  GITS_ASSERT(itCommandSignature != m_CommandSignatures.end());
   D3D12_COMMAND_SIGNATURE_DESC& commandSignature = itCommandSignature->second;
 
   bool view = false;
@@ -66,73 +66,73 @@ void AnalyzerExecuteIndirectService::executeIndirect(
   }
 
   if (raytracing) {
-    auto dumpBindingTable = [&](UINT64 address, UINT64 size, UINT64 stride) {
+    auto DumpBindingTable = [&](UINT64 address, UINT64 size, UINT64 stride) {
       if (!address) {
         return;
       }
       CapturePlayerGpuAddressService::ResourceInfo* info =
-          gpuAddressService_.getResourceInfoByCaptureAddress(address);
+          m_GpuAddressService.GetResourceInfoByCaptureAddress(address);
       GITS_ASSERT(info);
-      unsigned offset = address - info->captureStart;
-      commandListService_.addObjectForRestore(info->key);
-      raytracingService_.dumpBindingTable(c.object_.value, c.object_.key, info->resource, info->key,
-                                          offset, size, stride, address);
+      unsigned offset = address - info->CaptureStart;
+      m_CommandListService.AddObjectForRestore(info->Key);
+      m_RaytracingService.DumpBindingTable(c.m_Object.Value, c.m_Object.Key, info->Resource,
+                                           info->Key, offset, size, stride, address);
     };
 
-    auto it = executeIndirectDispatchRays_.find(c.key);
-    if (it != executeIndirectDispatchRays_.end()) {
+    auto it = m_ExecuteIndirectDispatchRays.find(c.Key);
+    if (it != m_ExecuteIndirectDispatchRays.end()) {
       D3D12_DISPATCH_RAYS_DESC& desc = it->second;
-      dumpBindingTable(desc.RayGenerationShaderRecord.StartAddress,
+      DumpBindingTable(desc.RayGenerationShaderRecord.StartAddress,
                        desc.RayGenerationShaderRecord.SizeInBytes,
                        desc.RayGenerationShaderRecord.SizeInBytes);
-      dumpBindingTable(desc.MissShaderTable.StartAddress, desc.MissShaderTable.SizeInBytes,
+      DumpBindingTable(desc.MissShaderTable.StartAddress, desc.MissShaderTable.SizeInBytes,
                        desc.MissShaderTable.StrideInBytes);
-      dumpBindingTable(desc.HitGroupTable.StartAddress, desc.HitGroupTable.SizeInBytes,
+      DumpBindingTable(desc.HitGroupTable.StartAddress, desc.HitGroupTable.SizeInBytes,
                        desc.HitGroupTable.StrideInBytes);
-      dumpBindingTable(desc.CallableShaderTable.StartAddress, desc.CallableShaderTable.SizeInBytes,
+      DumpBindingTable(desc.CallableShaderTable.StartAddress, desc.CallableShaderTable.SizeInBytes,
                        desc.CallableShaderTable.StrideInBytes);
     }
   } else if (view) {
-    executeIndirectDump_.dumpArgumentBuffer(
-        c.object_.value, &commandSignature, c.MaxCommandCount_.value, c.pArgumentBuffer_.value,
-        c.ArgumentBufferOffset_.value, c.pCountBuffer_.value, c.CountBufferOffset_.value);
+    m_ExecuteIndirectDump.DumpArgumentBuffer(
+        c.m_Object.Value, &commandSignature, c.m_MaxCommandCount.Value, c.m_pArgumentBuffer.Value,
+        c.m_ArgumentBufferOffset.Value, c.m_pCountBuffer.Value, c.m_CountBufferOffset.Value);
   }
 }
 
-void AnalyzerExecuteIndirectService::flush() {
-  executeIndirectDump_.waitUntilDumped();
+void AnalyzerExecuteIndirectService::Flush() {
+  m_ExecuteIndirectDump.waitUntilDumped();
 }
 
-void AnalyzerExecuteIndirectService::executeCommandLists(unsigned key,
+void AnalyzerExecuteIndirectService::ExecuteCommandLists(unsigned key,
                                                          unsigned commandQueueKey,
                                                          ID3D12CommandQueue* commandQueue,
                                                          ID3D12CommandList** commandLists,
                                                          unsigned commandListNum) {
-  executeIndirectDump_.executeCommandLists(key, commandQueueKey, commandQueue, commandLists,
-                                           commandListNum);
+  m_ExecuteIndirectDump.executeCommandLists(key, commandQueueKey, commandQueue, commandLists,
+                                            commandListNum);
 }
 
-void AnalyzerExecuteIndirectService::commandQueueWait(unsigned key,
+void AnalyzerExecuteIndirectService::CommandQueueWait(unsigned key,
                                                       unsigned commandQueueKey,
                                                       unsigned fenceKey,
                                                       UINT64 fenceValue) {
-  executeIndirectDump_.commandQueueWait(key, commandQueueKey, fenceKey, fenceValue);
+  m_ExecuteIndirectDump.commandQueueWait(key, commandQueueKey, fenceKey, fenceValue);
 }
 
-void AnalyzerExecuteIndirectService::commandQueueSignal(unsigned key,
+void AnalyzerExecuteIndirectService::CommandQueueSignal(unsigned key,
                                                         unsigned commandQueueKey,
                                                         unsigned fenceKey,
                                                         UINT64 fenceValue) {
-  executeIndirectDump_.commandQueueSignal(key, commandQueueKey, fenceKey, fenceValue);
+  m_ExecuteIndirectDump.commandQueueSignal(key, commandQueueKey, fenceKey, fenceValue);
 }
 
-void AnalyzerExecuteIndirectService::fenceSignal(unsigned key,
+void AnalyzerExecuteIndirectService::FenceSignal(unsigned key,
                                                  unsigned fenceKey,
                                                  UINT64 fenceValue) {
-  executeIndirectDump_.fenceSignal(key, fenceKey, fenceValue);
+  m_ExecuteIndirectDump.fenceSignal(key, fenceKey, fenceValue);
 }
 
-void AnalyzerExecuteIndirectService::loadExecuteIndirectDispatchRays() {
+void AnalyzerExecuteIndirectService::LoadExecuteIndirectDispatchRays() {
   std::filesystem::path dumpPath = Configurator::Get().common.player.streamDir;
   std::ifstream stream(dumpPath / "executeIndirectRaytracing.txt");
   while (true) {
@@ -151,7 +151,7 @@ void AnalyzerExecuteIndirectService::loadExecuteIndirectDispatchRays() {
     stream >> desc.CallableShaderTable.StartAddress >> desc.CallableShaderTable.SizeInBytes >>
         desc.CallableShaderTable.StrideInBytes;
     stream >> desc.Width >> desc.Height >> desc.Depth;
-    executeIndirectDispatchRays_[callKey] = desc;
+    m_ExecuteIndirectDispatchRays[callKey] = desc;
   }
 }
 

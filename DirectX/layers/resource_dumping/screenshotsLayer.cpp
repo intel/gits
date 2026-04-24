@@ -19,7 +19,7 @@ namespace DirectX {
 
 ScreenshotsLayer::ScreenshotsLayer()
     : Layer("Screenshots"),
-      screenshotRange_(Configurator::Get().directx.features.screenshots.frames) {
+      m_ScreenshotRange(Configurator::Get().directx.features.screenshots.frames) {
   auto dumpPath = Configurator::Get().common.player.outputDir;
   if (Configurator::IsRecorder()) {
     dumpPath = Configurator::Get().common.recorder.dumpPath / "gitsScreenshots/gitsRecorder";
@@ -29,80 +29,80 @@ ScreenshotsLayer::ScreenshotsLayer()
   if (!dumpPath.empty() && !std::filesystem::exists(dumpPath)) {
     std::filesystem::create_directories(dumpPath);
   }
-  dumpPath_ = dumpPath;
+  m_DumpPath = dumpPath;
 
   if (!Configurator::Get().common.player.captureFrames.empty()) {
-    screenshotRange_ = Configurator::Get().common.player.captureFrames;
+    m_ScreenshotRange = Configurator::Get().common.player.captureFrames;
   }
 }
 
-void ScreenshotsLayer::post(IDXGIFactoryCreateSwapChainCommand& c) {
-  if (c.result_.value != S_OK) {
+void ScreenshotsLayer::Post(IDXGIFactoryCreateSwapChainCommand& c) {
+  if (c.m_Result.Value != S_OK) {
     return;
   }
-  swapChainCreate(c.ppSwapChain_.key, c.pDevice_.value);
+  SwapChainCreate(c.m_ppSwapChain.Key, c.m_pDevice.Value);
 }
 
-void ScreenshotsLayer::post(IDXGIFactory2CreateSwapChainForHwndCommand& c) {
-  if (c.result_.value != S_OK) {
+void ScreenshotsLayer::Post(IDXGIFactory2CreateSwapChainForHwndCommand& c) {
+  if (c.m_Result.Value != S_OK) {
     return;
   }
-  swapChainCreate(c.ppSwapChain_.key, c.pDevice_.value);
+  SwapChainCreate(c.m_ppSwapChain.Key, c.m_pDevice.Value);
 }
 
-void ScreenshotsLayer::post(xefgSwapChainD3D12InitFromSwapChainCommand& c) {
-  if (c.result_.value != XEFG_SWAPCHAIN_RESULT_SUCCESS) {
+void ScreenshotsLayer::Post(xefgSwapChainD3D12InitFromSwapChainCommand& c) {
+  if (c.m_Result.Value != XEFG_SWAPCHAIN_RESULT_SUCCESS) {
     return;
   }
-  xefgToDeviceMap_[c.hSwapChain_.key] = c.pCmdQueue_.value;
+  m_XefgToDeviceMap[c.m_hSwapChain.Key] = c.m_pCmdQueue.Value;
 }
 
-void ScreenshotsLayer::post(xefgSwapChainD3D12InitFromSwapChainDescCommand& c) {
-  if (c.result_.value != XEFG_SWAPCHAIN_RESULT_SUCCESS) {
+void ScreenshotsLayer::Post(xefgSwapChainD3D12InitFromSwapChainDescCommand& c) {
+  if (c.m_Result.Value != XEFG_SWAPCHAIN_RESULT_SUCCESS) {
     return;
   }
-  xefgToDeviceMap_[c.hSwapChain_.key] = c.pCmdQueue_.value;
+  m_XefgToDeviceMap[c.m_hSwapChain.Key] = c.m_pCmdQueue.Value;
 }
 
-void ScreenshotsLayer::post(xefgSwapChainD3D12GetSwapChainPtrCommand& c) {
-  if (c.result_.value != XEFG_SWAPCHAIN_RESULT_SUCCESS) {
+void ScreenshotsLayer::Post(xefgSwapChainD3D12GetSwapChainPtrCommand& c) {
+  if (c.m_Result.Value != XEFG_SWAPCHAIN_RESULT_SUCCESS) {
     return;
   }
-  auto cmdQueueIt = xefgToDeviceMap_.find(c.hSwapChain_.key);
-  GITS_ASSERT(cmdQueueIt != xefgToDeviceMap_.end());
-  swapChainCreate(c.ppSwapChain_.key, cmdQueueIt->second);
+  auto cmdQueueIt = m_XefgToDeviceMap.find(c.m_hSwapChain.Key);
+  GITS_ASSERT(cmdQueueIt != m_XefgToDeviceMap.end());
+  SwapChainCreate(c.m_ppSwapChain.Key, cmdQueueIt->second);
 }
 
-void ScreenshotsLayer::pre(IDXGISwapChainPresentCommand& c) {
-  if (c.Flags_.value & DXGI_PRESENT_TEST || isStateRestoreKey(c.key)) {
+void ScreenshotsLayer::Pre(IDXGISwapChainPresentCommand& c) {
+  if (c.m_Flags.Value & DXGI_PRESENT_TEST || IsStateRestoreKey(c.Key)) {
     return;
   }
-  ++currentFrame_;
-  if (screenshotRange_[currentFrame_]) {
-    swapChainPresent(c.object_.key, c.object_.value);
+  ++m_CurrentFrame;
+  if (m_ScreenshotRange[m_CurrentFrame]) {
+    SwapChainPresent(c.m_Object.Key, c.m_Object.Value);
   }
 }
 
-void ScreenshotsLayer::pre(IDXGISwapChain1Present1Command& c) {
-  if (c.PresentFlags_.value & DXGI_PRESENT_TEST || isStateRestoreKey(c.key)) {
+void ScreenshotsLayer::Pre(IDXGISwapChain1Present1Command& c) {
+  if (c.m_PresentFlags.Value & DXGI_PRESENT_TEST || IsStateRestoreKey(c.Key)) {
     return;
   }
-  ++currentFrame_;
-  if (screenshotRange_[currentFrame_]) {
-    swapChainPresent(c.object_.key, c.object_.value);
+  ++m_CurrentFrame;
+  if (m_ScreenshotRange[m_CurrentFrame]) {
+    SwapChainPresent(c.m_Object.Key, c.m_Object.Value);
   }
 }
 
-void ScreenshotsLayer::swapChainCreate(unsigned swapChainKey, IUnknown* commandQueue_) {
+void ScreenshotsLayer::SwapChainCreate(unsigned swapChainKey, IUnknown* m_CommandQueue) {
   ID3D12CommandQueue* commandQueue{};
-  HRESULT hr = commandQueue_->QueryInterface(IID_PPV_ARGS(&commandQueue));
+  HRESULT hr = m_CommandQueue->QueryInterface(IID_PPV_ARGS(&commandQueue));
   GITS_ASSERT(hr == S_OK);
-  screenshotDump_[swapChainKey].reset(new ScreenshotDump(commandQueue));
+  m_ScreenshotDump[swapChainKey].reset(new ScreenshotDump(commandQueue));
 }
 
-void ScreenshotsLayer::swapChainPresent(unsigned swapChainKey, IDXGISwapChain* swapChain) {
-  auto it = screenshotDump_.find(swapChainKey);
-  GITS_ASSERT(it != screenshotDump_.end());
+void ScreenshotsLayer::SwapChainPresent(unsigned swapChainKey, IDXGISwapChain* swapChain) {
+  auto it = m_ScreenshotDump.find(swapChainKey);
+  GITS_ASSERT(it != m_ScreenshotDump.end());
 
   Microsoft::WRL::ComPtr<IDXGISwapChain3> swapChain3;
   HRESULT hr = swapChain->QueryInterface(IID_PPV_ARGS(&swapChain3));
@@ -113,7 +113,7 @@ void ScreenshotsLayer::swapChainPresent(unsigned swapChainKey, IDXGISwapChain* s
   hr = swapChain->GetBuffer(bufferIndex, IID_PPV_ARGS(&backBuffer));
 
   std::wstringstream outputName;
-  outputName << dumpPath_ << L"/frame" << std::setw(8) << std::setfill(L'0') << currentFrame_;
+  outputName << m_DumpPath << L"/frame" << std::setw(8) << std::setfill(L'0') << m_CurrentFrame;
   it->second->dump(backBuffer.Get(), outputName.str());
 }
 

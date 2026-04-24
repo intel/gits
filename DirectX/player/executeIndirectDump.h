@@ -17,9 +17,9 @@ namespace DirectX {
 class ExecuteIndirectDump : public ResourceDump {
 public:
   ExecuteIndirectDump(CapturePlayerGpuAddressService& addressService)
-      : addressService_(addressService) {}
+      : m_AddressService(addressService) {}
   ~ExecuteIndirectDump();
-  void dumpArgumentBuffer(ID3D12GraphicsCommandList* commandList,
+  void DumpArgumentBuffer(ID3D12GraphicsCommandList* commandList,
                           const D3D12_COMMAND_SIGNATURE_DESC* commandSignature,
                           unsigned maxCommandCount,
                           ID3D12Resource* argumentBuffer,
@@ -33,17 +33,17 @@ public:
 
 private:
   struct ExecuteIndirectDumpInfo : public DumpInfo {
-    const D3D12_COMMAND_SIGNATURE_DESC* commandSignature{};
-    DumpInfo countDumpInfo;
-    bool fromCapture{};
+    const D3D12_COMMAND_SIGNATURE_DESC* CommandSignature{};
+    DumpInfo CountDumpInfo;
+    bool FromCapture{};
   };
 
   void dumpStagedResource(DumpInfo& dumpInfo) override;
-  void dumpArgumentBuffer(ExecuteIndirectDumpInfo& dumpInfo, unsigned argumentCount, void* data);
-  void printGpuAddress(std::ostream& stream, D3D12_GPU_VIRTUAL_ADDRESS address, bool fromCapture);
+  void DumpArgumentBuffer(ExecuteIndirectDumpInfo& dumpInfo, unsigned argumentCount, void* data);
+  void PrintGpuAddress(std::ostream& stream, D3D12_GPU_VIRTUAL_ADDRESS address, bool fromCapture);
 
 private:
-  CapturePlayerGpuAddressService& addressService_;
+  CapturePlayerGpuAddressService& m_AddressService;
 };
 
 } // namespace DirectX

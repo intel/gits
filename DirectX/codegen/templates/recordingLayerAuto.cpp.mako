@@ -24,9 +24,9 @@ custom = [
 %>\
 %for function in functions:
 %if not function.name in custom:
-void RecordingLayer::post(${function.name}Command& command) {
-  if (subcaptureRange_.inRange()) {
-    recorder_.record(${function.name}Serializer(command));
+void RecordingLayer::Post(${function.name}Command& command) {
+  if (m_SubcaptureRange.InRange()) {
+    m_Recorder.Record(${function.name}Serializer(command));
   }
 }
 
@@ -35,9 +35,9 @@ void RecordingLayer::post(${function.name}Command& command) {
 %for interface in interfaces:
 %for function in interface.functions:
 %if not interface.name + function.name in custom:
-void RecordingLayer::post(${interface.name}${function.name}Command& command) {
-  if (subcaptureRange_.inRange()) {
-    recorder_.record(${interface.name}${function.name}Serializer(command));
+void RecordingLayer::Post(${interface.name}${function.name}Command& command) {
+  if (m_SubcaptureRange.InRange()) {
+    m_Recorder.Record(${interface.name}${function.name}Serializer(command));
   }
 }
 

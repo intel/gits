@@ -18,61 +18,64 @@ namespace gits {
 namespace DirectX {
 
 class GpuExecutionTracker {
-private:
-  struct QueueEvent {
-    enum Type {
-      Wait,
-      Signal,
-      Execute
-    };
-    QueueEvent(Type t) : type(t) {}
-    virtual ~QueueEvent() {}
-    unsigned callKey{};
-    unsigned commandQueueKey{};
-    Type type{};
+public:
+  enum class QueueEventKind {
+    Wait,
+    Signal,
+    Execute
   };
 
-  struct Fence {
-    unsigned key{};
-    UINT64 value{};
+  struct QueueEvent {
+    QueueEvent(QueueEventKind kind) : Kind(kind) {}
+    virtual ~QueueEvent() = default;
+    unsigned CallKey{};
+    unsigned CommandQueueKey{};
+    QueueEventKind Kind{};
+  };
+
+  struct TrackedFence {
+    unsigned Key{};
+    UINT64 Value{};
   };
 
   struct WaitEvent : public QueueEvent {
-    WaitEvent() : QueueEvent(Wait) {}
-    Fence fence{};
+    WaitEvent() : QueueEvent(QueueEventKind::Wait) {}
+    TrackedFence Fence{};
   };
 
   struct SignalEvent : public QueueEvent {
-    SignalEvent() : QueueEvent(Signal) {}
-    Fence fence{};
+    SignalEvent() : QueueEvent(QueueEventKind::Signal) {}
+    TrackedFence Fence{};
   };
 
-public:
   struct Executable : public QueueEvent {
-    Executable() : QueueEvent(Execute) {}
-    virtual ~Executable() {}
+    Executable() : QueueEvent(QueueEventKind::Execute) {}
+    ~Executable() override = default;
   };
 
 public:
-  void commandQueueWait(unsigned callKey,
+  void CommandQueueWait(unsigned callKey,
                         unsigned commandQueueKey,
                         unsigned fenceKey,
                         UINT64 fenceValue);
-  void commandQueueSignal(unsigned callKey,
+  void CommandQueueSignal(unsigned callKey,
                           unsigned commandQueueKey,
                           unsigned fenceKey,
                           UINT64 fenceValue);
-  void fenceSignal(unsigned callKey, unsigned fenceKey, UINT64 fenceValue);
-  bool isCommandQueueWaiting(unsigned commandQueueKey);
-  void execute(unsigned callKey, unsigned commandQueueKey, Executable* executable);
-  std::vector<Executable*>& getReadyExecutables() {
-    return readyExecutables_;
+  void FenceSignal(unsigned callKey, unsigned fenceKey, UINT64 fenceValue);
+  bool IsCommandQueueWaiting(unsigned commandQueueKey);
+  void Execute(unsigned callKey, unsigned commandQueueKey, Executable* executable);
+  std::vector<Executable*>& GetReadyExecutables() {
+    return m_ReadyExecutables;
+  }
+  std::unordered_map<unsigned, std::deque<QueueEvent*>>& GetQueueEvents() {
+    return m_QueueEvents;
   }
 
 private:
-  std::unordered_map<unsigned, std::deque<QueueEvent*>> queueEvents_;
-  std::unordered_map<unsigned, UINT64> signaledFences_;
-  std::vector<Executable*> readyExecutables_;
+  std::unordered_map<unsigned, std::deque<QueueEvent*>> m_QueueEvents;
+  std::unordered_map<unsigned, UINT64> m_SignaledFences;
+  std::vector<Executable*> m_ReadyExecutables;
 };
 
 } // namespace DirectX

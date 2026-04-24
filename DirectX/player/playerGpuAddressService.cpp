@@ -14,7 +14,7 @@
 namespace gits {
 namespace DirectX {
 
-void PlayerGpuAddressService::createResource(unsigned resourceKey, ID3D12Resource* resource) {
+void PlayerGpuAddressService::CreateResource(unsigned ResourceKey, ID3D12Resource* resource) {
 
   D3D12_RESOURCE_DESC desc = resource->GetDesc();
   if (desc.Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
@@ -24,10 +24,10 @@ void PlayerGpuAddressService::createResource(unsigned resourceKey, ID3D12Resourc
   D3D12_GPU_VIRTUAL_ADDRESS startAddress = resource->GetGPUVirtualAddress();
   GITS_ASSERT(startAddress);
 
-  startAddressesByKey_[resourceKey] = startAddress;
+  m_StartAddressesByKey[ResourceKey] = startAddress;
 }
 
-void PlayerGpuAddressService::createPlacedResource(unsigned resourceKey,
+void PlayerGpuAddressService::CreatePlacedResource(unsigned ResourceKey,
                                                    ID3D12Resource* resource,
                                                    unsigned heapKey,
                                                    ID3D12Heap* heap,
@@ -43,27 +43,27 @@ void PlayerGpuAddressService::createPlacedResource(unsigned resourceKey,
     return;
   }
 
-  auto itHeap = startAddressesByKey_.find(heapKey);
-  GITS_ASSERT(itHeap != startAddressesByKey_.end());
+  auto itHeap = m_StartAddressesByKey.find(heapKey);
+  GITS_ASSERT(itHeap != m_StartAddressesByKey.end());
   D3D12_GPU_VIRTUAL_ADDRESS heapStartAddress = itHeap->second;
 
   D3D12_GPU_VIRTUAL_ADDRESS resourceStartAddress = heapStartAddress + heapOffset;
-  startAddressesByKey_[resourceKey] = resourceStartAddress;
-  placedResources_.insert(resourceKey);
+  m_StartAddressesByKey[ResourceKey] = resourceStartAddress;
+  m_PlacedResources.insert(ResourceKey);
 }
 
-void PlayerGpuAddressService::createHeap(unsigned heapKey, ID3D12Heap* heap) {
+void PlayerGpuAddressService::CreateHeap(unsigned heapKey, ID3D12Heap* heap) {
 
   D3D12_HEAP_DESC desc = heap->GetDesc();
   if (desc.Flags & D3D12_HEAP_FLAG_DENY_BUFFERS) {
     return;
   }
 
-  D3D12_GPU_VIRTUAL_ADDRESS startAddress = getHeapGPUVirtualAddress(heap);
-  startAddressesByKey_[heapKey] = startAddress;
+  D3D12_GPU_VIRTUAL_ADDRESS startAddress = GetHeapGpuVirtualAddress(heap);
+  m_StartAddressesByKey[heapKey] = startAddress;
 }
 
-D3D12_GPU_VIRTUAL_ADDRESS PlayerGpuAddressService::getHeapGPUVirtualAddress(ID3D12Heap* heap) {
+D3D12_GPU_VIRTUAL_ADDRESS PlayerGpuAddressService::GetHeapGpuVirtualAddress(ID3D12Heap* heap) {
 
   D3D12_HEAP_DESC heapDesc = heap->GetDesc();
 
@@ -104,17 +104,17 @@ D3D12_GPU_VIRTUAL_ADDRESS PlayerGpuAddressService::getHeapGPUVirtualAddress(ID3D
   return gpuAddress;
 }
 
-D3D12_GPU_VIRTUAL_ADDRESS PlayerGpuAddressService::getGpuAddress(unsigned resourceKey,
+D3D12_GPU_VIRTUAL_ADDRESS PlayerGpuAddressService::GetGpuAddress(unsigned ResourceKey,
                                                                  unsigned offset) {
-  if (!resourceKey) {
+  if (!ResourceKey) {
     return 0;
   }
-  auto itResource = startAddressesByKey_.find(resourceKey);
-  if (itResource != startAddressesByKey_.end()) {
+  auto itResource = m_StartAddressesByKey.find(ResourceKey);
+  if (itResource != m_StartAddressesByKey.end()) {
     return itResource->second + offset;
   } else {
-    auto itPlacedResouce = releasedPlacedResources_.find(resourceKey);
-    GITS_ASSERT(itPlacedResouce != releasedPlacedResources_.end());
+    auto itPlacedResouce = m_ReleasedPlacedResources.find(ResourceKey);
+    GITS_ASSERT(itPlacedResouce != m_ReleasedPlacedResources.end());
     static bool logged = false;
     if (!logged) {
       LOG_WARNING << "PlayerGpuAddressService - placed resource already released. Incorrect "
@@ -125,14 +125,14 @@ D3D12_GPU_VIRTUAL_ADDRESS PlayerGpuAddressService::getGpuAddress(unsigned resour
   }
 }
 
-void PlayerGpuAddressService::destroyInterface(unsigned interfaceKey) {
+void PlayerGpuAddressService::DestroyInterface(unsigned InterfaceKey) {
 
-  if (placedResources_.contains(interfaceKey)) {
-    releasedPlacedResources_[interfaceKey] = startAddressesByKey_[interfaceKey];
-    placedResources_.erase(interfaceKey);
+  if (m_PlacedResources.contains(InterfaceKey)) {
+    m_ReleasedPlacedResources[InterfaceKey] = m_StartAddressesByKey[InterfaceKey];
+    m_PlacedResources.erase(InterfaceKey);
   }
 
-  startAddressesByKey_.erase(interfaceKey);
+  m_StartAddressesByKey.erase(InterfaceKey);
 }
 
 } // namespace DirectX

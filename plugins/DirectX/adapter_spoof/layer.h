@@ -24,10 +24,10 @@ public:
   AdapterSpoofLayer(const AdapterSpoofConfig& cfg);
   ~AdapterSpoofLayer() = default;
 
-  void post(IDXGIAdapterGetDescCommand& c) override;
-  void post(IDXGIAdapter1GetDesc1Command& c) override;
-  void post(IDXGIAdapter2GetDesc2Command& c) override;
-  void post(IDXGIAdapter4GetDesc3Command& c) override;
+  void Post(IDXGIAdapterGetDescCommand& c) override;
+  void Post(IDXGIAdapter1GetDesc1Command& c) override;
+  void Post(IDXGIAdapter2GetDesc2Command& c) override;
+  void Post(IDXGIAdapter4GetDesc3Command& c) override;
 
 private:
   AdapterSpoofConfig cfg_;

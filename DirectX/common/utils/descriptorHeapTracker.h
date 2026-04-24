@@ -19,10 +19,10 @@ namespace DirectX {
 class DescriptorHeapTracker {
 public:
   struct DescriptorInfo {
-    unsigned heapKey{};
-    unsigned descriptorIndex{};
-    unsigned resourceKey{};
-    enum DescriptorType {
+    unsigned HeapKey{};
+    unsigned DescriptorIndex{};
+    unsigned ResourceKey{};
+    enum class DescriptorKind {
       Unknown,
       RTV,
       DSV,
@@ -30,24 +30,25 @@ public:
       UAV,
       CBV,
       Sampler
-    } descriptorType{};
+    };
+    DescriptorKind Kind{};
   };
 
-  void createDescriptor(DescriptorInfo* descriptorInfo);
-  void destroyObject(unsigned key);
-  void copyDescriptors(ID3D12DeviceCopyDescriptorsSimpleCommand& c);
-  void copyDescriptors(ID3D12DeviceCopyDescriptorsCommand& c);
-  DescriptorInfo* getDescriptorInfo(unsigned heapKey, unsigned descriptorIndex) {
-    return descriptorsByHeapIndex_[heapKey][descriptorIndex].get();
+  void CreateDescriptor(DescriptorInfo* descriptorInfo);
+  void DestroyObject(unsigned key);
+  void CopyDescriptors(ID3D12DeviceCopyDescriptorsSimpleCommand& command);
+  void CopyDescriptors(ID3D12DeviceCopyDescriptorsCommand& command);
+  DescriptorInfo* GetDescriptorInfo(unsigned heapKey, unsigned descriptorIndex) {
+    return m_DescriptorsByHeapIndex[heapKey][descriptorIndex].get();
   }
 
 private:
-  DescriptorInfo* copyDescriptor(DescriptorInfo* state,
+  DescriptorInfo* CopyDescriptor(DescriptorInfo* state,
                                  unsigned destHeapKey,
-                                 unsigned destHeapIndex);
+                                 unsigned destDescriptorIndex);
 
 private:
-  std::map<unsigned, std::map<unsigned, std::unique_ptr<DescriptorInfo>>> descriptorsByHeapIndex_;
+  std::map<unsigned, std::map<unsigned, std::unique_ptr<DescriptorInfo>>> m_DescriptorsByHeapIndex;
 };
 
 } // namespace DirectX

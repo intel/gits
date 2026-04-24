@@ -25,7 +25,7 @@ namespace DirectX {
 TraceLayerGroup::TraceLayerGroup() {}
 TraceLayerGroup::~TraceLayerGroup() {}
 
-void TraceLayerGroup::loadLayers() {
+void TraceLayerGroup::LoadLayers() {
   std::filesystem::path outputTracePath = Configurator::Get().common.player.outputTracePath;
 
   if (!outputTracePath.empty() && !std::filesystem::exists(outputTracePath)) {
@@ -69,31 +69,31 @@ void TraceLayerGroup::loadLayers() {
 
   if (configDirectX.features.trace.enabled) {
 
-    traceStream_ = std::make_unique<FastOFileStream>();
-    traceStreamPre_ = std::make_unique<FastOFileStream>();
+    m_TraceStream = std::make_unique<FastOFileStream>();
+    m_TraceStreamPre = std::make_unique<FastOFileStream>();
 
     if (configDirectX.features.trace.print.postCalls) {
       if (configDirectX.features.trace.flushMethod == "ipc") {
-        traceStream_ = std::make_unique<FastOStringStream>(finalOutputPath);
+        m_TraceStream = std::make_unique<FastOStringStream>(finalOutputPath);
       } else {
-        traceStream_ = std::make_unique<FastOFileStream>(finalOutputPath);
+        m_TraceStream = std::make_unique<FastOFileStream>(finalOutputPath);
       }
     }
     if (configDirectX.features.trace.print.preCalls) {
       if (configDirectX.features.trace.flushMethod == "ipc") {
-        traceStreamPre_ = std::make_unique<FastOStringStream>(finalOutputPathPre);
+        m_TraceStreamPre = std::make_unique<FastOStringStream>(finalOutputPathPre);
       } else {
-        traceStreamPre_ = std::make_unique<FastOFileStream>(finalOutputPathPre);
+        m_TraceStreamPre = std::make_unique<FastOFileStream>(finalOutputPathPre);
       }
     }
 
-    addLayer(std::make_unique<TraceLayer>(*traceStreamPre_, *traceStream_, traceMutex_,
+    AddLayer(std::make_unique<TraceLayer>(*m_TraceStreamPre, *m_TraceStream, m_TraceMutex,
                                           configDirectX.features.trace.flushMethod != "off"));
 
     if (configDirectX.features.trace.print.gpuExecution) {
-      showExecutionStream_ =
+      m_ShowExecutionStream =
           std::make_unique<FastOStringStream>(finalOutputPathExecution, flushMethod);
-      addLayer(std::make_unique<ShowExecutionLayer>(*showExecutionStream_));
+      AddLayer(std::make_unique<ShowExecutionLayer>(*m_ShowExecutionStream));
     }
   }
 
@@ -103,10 +103,10 @@ void TraceLayerGroup::loadLayers() {
       return;
     }
 
-    std::lock_guard<std::mutex> lock(traceMutex_);
+    std::lock_guard<std::mutex> lock(m_TraceMutex);
 
-    auto* stream = traceStream_.get();
-    auto* streamPre = traceStreamPre_.get();
+    auto* stream = m_TraceStream.get();
+    auto* streamPre = m_TraceStreamPre.get();
     if (stream && stream->IsOpen()) {
       *stream << msg->getText() << '\n';
     }

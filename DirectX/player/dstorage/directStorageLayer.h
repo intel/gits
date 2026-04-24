@@ -23,22 +23,22 @@ public:
   DirectStorageLayer();
   ~DirectStorageLayer();
 
-  void pre(IDStorageFactoryOpenFileCommand& c) override;
-  void post(IDStorageFactoryCreateQueueCommand& c) override;
-  void pre(IDStorageQueueEnqueueRequestCommand& c) override;
-  void pre(IDStorageQueueSubmitCommand& c) override;
-  void post(IDStorageQueueSubmitCommand& c) override;
+  void Pre(IDStorageFactoryOpenFileCommand& c) override;
+  void Post(IDStorageFactoryCreateQueueCommand& c) override;
+  void Pre(IDStorageQueueEnqueueRequestCommand& c) override;
+  void Pre(IDStorageQueueSubmitCommand& c) override;
+  void Post(IDStorageQueueSubmitCommand& c) override;
 
   // Skip
-  void pre(IDStorageQueue1EnqueueSetEventCommand& c) override;
-  void pre(IDStorageCustomDecompressionQueueSetRequestResultsCommand& c) override;
+  void Pre(IDStorageQueue1EnqueueSetEventCommand& c) override;
+  void Pre(IDStorageCustomDecompressionQueueSetRequestResultsCommand& c) override;
 
 private:
   using Buffer = std::vector<std::byte>;
 
-  std::wstring resourcesFilePath_;
-  std::unordered_map<unsigned, std::list<Buffer>> buffers_;
-  std::unordered_map<unsigned, Microsoft::WRL::Wrappers::Event> events_;
+  std::wstring m_ResourcesFilePath;
+  std::unordered_map<unsigned, std::list<Buffer>> m_Buffers;
+  std::unordered_map<unsigned, Microsoft::WRL::Wrappers::Event> m_Events;
 };
 
 } // namespace DirectX

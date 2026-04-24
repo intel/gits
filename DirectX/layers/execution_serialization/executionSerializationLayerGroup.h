@@ -21,10 +21,10 @@ public:
   ExecutionSerializationLayerGroup() = default;
   ~ExecutionSerializationLayerGroup() override = default;
 
-  void loadLayers() override;
+  void LoadLayers() override;
 
 private:
-  std::unique_ptr<ExecutionSerializationRecorder> recorder_;
+  std::unique_ptr<ExecutionSerializationRecorder> m_Recorder;
 };
 
 } // namespace DirectX

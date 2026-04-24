@@ -17,22 +17,23 @@ namespace DirectX {
 
 RootSignatureDumpLayer::RootSignatureDumpLayer()
     : Layer("RootSignatureDump"),
-      rootSignatureKeys_(Configurator::Get().directx.features.rootSignatureDump.rootSignatureKeys) {
+      m_RootSignatureKeys(
+          Configurator::Get().directx.features.rootSignatureDump.rootSignatureKeys) {
   auto& dumpPath = Configurator::Get().common.player.outputDir.empty()
                        ? Configurator::Get().common.player.streamDir / "rootSignatures"
                        : Configurator::Get().common.player.outputDir;
   if (!dumpPath.empty() && !std::filesystem::exists(dumpPath)) {
     std::filesystem::create_directories(dumpPath);
   }
-  dumpPath_ = dumpPath;
+  m_DumpPath = dumpPath;
 }
 
-void RootSignatureDumpLayer::post(ID3D12DeviceCreateRootSignatureCommand& command) {
-  if (rootSignatureKeys_.empty() || rootSignatureKeys_.contains(command.ppvRootSignature_.key)) {
+void RootSignatureDumpLayer::Post(ID3D12DeviceCreateRootSignatureCommand& command) {
+  if (m_RootSignatureKeys.Empty() || m_RootSignatureKeys.Contains(command.m_ppvRootSignature.Key)) {
     std::wstring dumpName =
-        dumpPath_ + L"/root_signature_O" + keyToWStr(command.ppvRootSignature_.key) + L".txt";
-    rootSignatureDump_.DeserializeRootSignature(command.pBlobWithRootSignature_.value,
-                                                command.blobLengthInBytes_.value, dumpName);
+        m_DumpPath + L"/root_signature_O" + keyToWStr(command.m_ppvRootSignature.Key) + L".txt";
+    m_RootSignatureDump.DeserializeRootSignature(command.m_pBlobWithRootSignature.Value,
+                                                 command.m_blobLengthInBytes.Value, dumpName);
   }
 }
 

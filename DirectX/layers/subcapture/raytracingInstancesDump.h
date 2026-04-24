@@ -20,14 +20,14 @@ class AnalyzerRaytracingService;
 class RaytracingInstancesDump : public ResourceDump {
 public:
   RaytracingInstancesDump(AnalyzerRaytracingService& raytracingService)
-      : raytracingService_(raytracingService) {}
-  void buildTlas(ID3D12GraphicsCommandList* commandList,
+      : m_RaytracingService(raytracingService) {}
+  void BuildTlas(ID3D12GraphicsCommandList* commandList,
                  ID3D12Resource* resource,
                  unsigned offset,
                  unsigned size,
                  D3D12_RESOURCE_STATES state,
                  unsigned buildCall);
-  void buildTlasArrayOfPointers(ID3D12GraphicsCommandList* commandList,
+  void BuildTlasArrayOfPointers(ID3D12GraphicsCommandList* commandList,
                                 ID3D12Resource* resource,
                                 unsigned offset,
                                 unsigned size,
@@ -39,12 +39,12 @@ private:
   void dumpBuffer(DumpInfo& dumpInfo, void* data) override;
 
 private:
-  AnalyzerRaytracingService& raytracingService_;
-  std::mutex mutex_;
+  AnalyzerRaytracingService& m_RaytracingService;
+  std::mutex m_Mutex;
 
   struct InstancesInfo : DumpInfo {
-    unsigned buildCall{};
-    std::vector<unsigned> arrayOfPointersOffsets;
+    unsigned BuildCall{};
+    std::vector<unsigned> ArrayOfPointersOffsets;
   };
 };
 

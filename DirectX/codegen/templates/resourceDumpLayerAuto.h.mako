@@ -20,18 +20,18 @@ class ResourceDumpLayer : public Layer {
 public:
   ResourceDumpLayer() : Layer("ResourceDump"){};
 
-  void post(IUnknownReleaseCommand& c) override;
-  void post(ID3D12CommandQueueExecuteCommandListsCommand& c) override;
-  void post(ID3D12CommandQueueWaitCommand& c) override;
-  void post(ID3D12CommandQueueSignalCommand& c) override;
-  void post(ID3D12FenceSignalCommand& c) override;
-  void post(ID3D12DeviceCreateFenceCommand& c) override;
-  void post(ID3D12Device3EnqueueMakeResidentCommand& c) override;
-  void post(IDXGISwapChainGetBufferCommand& c) override;
+  void Post(IUnknownReleaseCommand& c) override;
+  void Post(ID3D12CommandQueueExecuteCommandListsCommand& c) override;
+  void Post(ID3D12CommandQueueWaitCommand& c) override;
+  void Post(ID3D12CommandQueueSignalCommand& c) override;
+  void Post(ID3D12FenceSignalCommand& c) override;
+  void Post(ID3D12DeviceCreateFenceCommand& c) override;
+  void Post(ID3D12Device3EnqueueMakeResidentCommand& c) override;
+  void Post(IDXGISwapChainGetBufferCommand& c) override;
   %for interface in interfaces:
   %for function in interface.functions:
   %if function.name.startswith('CreateCommittedResource') or function.name.startswith('CreatePlacedResource') or function.name.startswith('CreateReservedResource'):
-  void post(${interface.name}${function.name}Command& c) override;
+  void Post(${interface.name}${function.name}Command& c) override;
   %endif
   %endfor
   %endfor
@@ -39,13 +39,13 @@ public:
   %for interface in interfaces:
   %for function in interface.functions:
   %if interface.name.startswith('ID3D12GraphicsCommandList'):
-  void post(${interface.name}${function.name}Command& c) override;
+  void Post(${interface.name}${function.name}Command& c) override;
   %endif
   %endfor
   %endfor
 
 private:
-  ResourceDumpService resourceDumpService_;
+  ResourceDumpService m_ResourceDumpService;
 };
 
 } // namespace DirectX

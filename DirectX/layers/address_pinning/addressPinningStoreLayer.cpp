@@ -20,212 +20,212 @@ AddressPinningStoreLayer::AddressPinningStoreLayer() : Layer("AddressPinningStor
   if (Configurator::IsRecorder()) {
     gits::MessageBus::get().subscribe(
         {PUBLISHER_RECORDER, TOPIC_STREAM_SAVED},
-        [this](Topic t, const MessagePtr& m) { storeAddressRanges(); });
+        [this](Topic t, const MessagePtr& m) { StoreAddressRanges(); });
   }
 }
 
 AddressPinningStoreLayer::~AddressPinningStoreLayer() {
   try {
     if (Configurator::IsPlayer()) {
-      storeAddressRanges();
+      StoreAddressRanges();
     }
   } catch (...) {
     topmost_exception_handler("AddressPinningStoreLayer::~AddressPinningStoreLayer");
   }
 }
 
-void AddressPinningStoreLayer::storeAddressRanges() {
+void AddressPinningStoreLayer::StoreAddressRanges() {
   const std::filesystem::path& dumpPath =
       Configurator::IsRecorder()
           ? Configurator::Get().common.recorder.dumpPath / "addressRanges.txt"
           : Configurator::Get().common.player.streamDir / "addressRanges.txt";
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::lock_guard<std::mutex> lock(m_Mutex);
   std::ofstream dumpFile(dumpPath);
   GITS_ASSERT(!dumpFile.fail());
   dumpFile << "RESOURCES\n";
-  for (const auto& [key, range] : resourceAddressRanges_) {
+  for (const auto& [key, range] : m_ResourceAddressRanges) {
     if (range.StartAddress == 0) {
       continue;
     }
     dumpFile << key << " " << range.StartAddress << " " << range.SizeInBytes << "\n";
   }
   dumpFile << "HEAPS\n";
-  for (const auto& [key, heapAllocationInfo] : heapAddressRanges_) {
-    if (heapAllocationInfo.addressRange.StartAddress == 0) {
+  for (const auto& [key, heapAllocationInfo] : m_HeapAddressRanges) {
+    if (heapAllocationInfo.m_AddressRange.StartAddress == 0) {
       continue;
     }
-    dumpFile << key << " " << heapAllocationInfo.addressRange.StartAddress << " "
-             << heapAllocationInfo.addressRange.SizeInBytes << " " << heapAllocationInfo.alignment
-             << "\n";
+    dumpFile << key << " " << heapAllocationInfo.m_AddressRange.StartAddress << " "
+             << heapAllocationInfo.m_AddressRange.SizeInBytes << " "
+             << heapAllocationInfo.m_Alignment << "\n";
   }
   dumpFile.flush();
 }
 
-void AddressPinningStoreLayer::post(ID3D12DeviceCreateCommittedResourceCommand& command) {
-  if (isStateRestoreKey(command.ppvResource_.key)) {
+void AddressPinningStoreLayer::Post(ID3D12DeviceCreateCommittedResourceCommand& command) {
+  if (IsStateRestoreKey(command.m_ppvResource.Key)) {
     return;
   }
-  handleResource(command);
+  HandleResource(command);
 }
 
-void AddressPinningStoreLayer::post(ID3D12Device4CreateCommittedResource1Command& command) {
-  handleResource(command);
+void AddressPinningStoreLayer::Post(ID3D12Device4CreateCommittedResource1Command& command) {
+  HandleResource(command);
 }
 
-void AddressPinningStoreLayer::post(ID3D12Device8CreateCommittedResource2Command& command) {
-  handleResource(command);
+void AddressPinningStoreLayer::Post(ID3D12Device8CreateCommittedResource2Command& command) {
+  HandleResource(command);
 }
 
-void AddressPinningStoreLayer::post(ID3D12Device10CreateCommittedResource3Command& command) {
-  handleResource(command);
+void AddressPinningStoreLayer::Post(ID3D12Device10CreateCommittedResource3Command& command) {
+  HandleResource(command);
 }
 
-void AddressPinningStoreLayer::post(ID3D12DeviceCreateReservedResourceCommand& command) {
-  handleResource(command);
+void AddressPinningStoreLayer::Post(ID3D12DeviceCreateReservedResourceCommand& command) {
+  HandleResource(command);
 }
 
-void AddressPinningStoreLayer::post(ID3D12Device4CreateReservedResource1Command& command) {
-  handleResource(command);
+void AddressPinningStoreLayer::Post(ID3D12Device4CreateReservedResource1Command& command) {
+  HandleResource(command);
 }
 
-void AddressPinningStoreLayer::post(ID3D12Device10CreateReservedResource2Command& command) {
-  handleResource(command);
+void AddressPinningStoreLayer::Post(ID3D12Device10CreateReservedResource2Command& command) {
+  HandleResource(command);
 }
 
-void AddressPinningStoreLayer::post(ID3D12DeviceCreatePlacedResourceCommand& command) {
-  handlePlacedResource(command);
+void AddressPinningStoreLayer::Post(ID3D12DeviceCreatePlacedResourceCommand& command) {
+  HandlePlacedResource(command);
 }
 
-void AddressPinningStoreLayer::post(ID3D12Device8CreatePlacedResource1Command& command) {
-  handlePlacedResource(command);
+void AddressPinningStoreLayer::Post(ID3D12Device8CreatePlacedResource1Command& command) {
+  HandlePlacedResource(command);
 }
 
-void AddressPinningStoreLayer::post(ID3D12Device10CreatePlacedResource2Command& command) {
-  handlePlacedResource(command);
+void AddressPinningStoreLayer::Post(ID3D12Device10CreatePlacedResource2Command& command) {
+  HandlePlacedResource(command);
 }
 
-void AddressPinningStoreLayer::post(ID3D12DeviceCreateHeapCommand& command) {
-  handleHeap(command);
+void AddressPinningStoreLayer::Post(ID3D12DeviceCreateHeapCommand& command) {
+  HandleHeap(command);
 }
 
-void AddressPinningStoreLayer::post(ID3D12Device4CreateHeap1Command& command) {
-  handleHeap(command);
+void AddressPinningStoreLayer::Post(ID3D12Device4CreateHeap1Command& command) {
+  HandleHeap(command);
 }
 
-void AddressPinningStoreLayer::post(INTC_D3D12_CreateHeapCommand& command) {
-  handleHeap(command);
+void AddressPinningStoreLayer::Post(INTC_D3D12_CreateHeapCommand& command) {
+  HandleHeap(command);
 }
 
-void AddressPinningStoreLayer::post(ID3D12Device3OpenExistingHeapFromAddressCommand& command) {
-  handleHeap(command);
+void AddressPinningStoreLayer::Post(ID3D12Device3OpenExistingHeapFromAddressCommand& command) {
+  HandleHeap(command);
 }
 
-void AddressPinningStoreLayer::post(ID3D12Device13OpenExistingHeapFromAddress1Command& command) {
-  handleHeap(command);
+void AddressPinningStoreLayer::Post(ID3D12Device13OpenExistingHeapFromAddress1Command& command) {
+  HandleHeap(command);
 }
 
-void AddressPinningStoreLayer::pre(ID3D12ResourceGetGPUVirtualAddressCommand& command) {
+void AddressPinningStoreLayer::Pre(ID3D12ResourceGetGPUVirtualAddressCommand& command) {
   if (Configurator::IsRecorder()) {
     return;
   }
 
-  if (isStateRestoreKey(command.object_.key)) {
+  if (IsStateRestoreKey(command.m_Object.Key)) {
     return;
   }
 
-  handleGetGPUVirtualAddress(command);
+  HandleGetGPUVirtualAddress(command);
 }
 
-void AddressPinningStoreLayer::post(ID3D12ResourceGetGPUVirtualAddressCommand& command) {
+void AddressPinningStoreLayer::Post(ID3D12ResourceGetGPUVirtualAddressCommand& command) {
   if (Configurator::IsPlayer()) {
     return;
   }
 
-  handleGetGPUVirtualAddress(command);
+  HandleGetGPUVirtualAddress(command);
 }
 
 template <typename CommandT>
-void AddressPinningStoreLayer::handleResource(CommandT& command) {
-  if (command.result_.value != S_OK ||
-      command.pDesc_.value->Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
+void AddressPinningStoreLayer::HandleResource(CommandT& command) {
+  if (command.m_Result.Value != S_OK ||
+      command.m_pDesc.Value->Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
     return;
   }
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::lock_guard<std::mutex> lock(m_Mutex);
   D3D12_GPU_VIRTUAL_ADDRESS_RANGE range{};
-  range.SizeInBytes = command.pDesc_.value->Width;
-  resourceAddressRanges_[command.ppvResource_.key] = range;
+  range.SizeInBytes = command.m_pDesc.Value->Width;
+  m_ResourceAddressRanges[command.m_ppvResource.Key] = range;
 }
 
 template <typename CommandT>
-void AddressPinningStoreLayer::handlePlacedResource(CommandT& command) {
-  if (command.result_.value != S_OK ||
-      command.pDesc_.value->Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
+void AddressPinningStoreLayer::HandlePlacedResource(CommandT& command) {
+  if (command.m_Result.Value != S_OK ||
+      command.m_pDesc.Value->Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
     return;
   }
 
-  ID3D12Heap* heap = command.pHeap_.value;
+  ID3D12Heap* heap = command.m_pHeap.Value;
   D3D12_HEAP_DESC heapDesc = heap->GetDesc();
   if (heapDesc.Flags & D3D12_HEAP_FLAG_DENY_BUFFERS) {
     return;
   }
 
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::lock_guard<std::mutex> lock(m_Mutex);
   HeapInfo heapInfo{};
-  heapInfo.heapKey = command.pHeap_.key;
-  heapInfo.offset = command.HeapOffset_.value;
-  heapInfoByPlacedResource_[command.ppvResource_.key] = heapInfo;
+  heapInfo.m_HeapKey = command.m_pHeap.Key;
+  heapInfo.m_Offset = command.m_HeapOffset.Value;
+  m_HeapInfoByPlacedResource[command.m_ppvResource.Key] = heapInfo;
 }
 
 template <typename CommandT>
-void AddressPinningStoreLayer::handleHeap(CommandT& command) {
-  if (command.result_.value != S_OK) {
+void AddressPinningStoreLayer::HandleHeap(CommandT& command) {
+  if (command.m_Result.Value != S_OK) {
     return;
   }
 
-  ID3D12Heap* heap = static_cast<ID3D12Heap*>(*command.ppvHeap_.value);
+  ID3D12Heap* heap = static_cast<ID3D12Heap*>(*command.m_ppvHeap.Value);
   D3D12_HEAP_DESC heapDesc = heap->GetDesc();
 
   if (heapDesc.Flags & D3D12_HEAP_FLAG_DENY_BUFFERS) {
     return;
   }
 
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::lock_guard<std::mutex> lock(m_Mutex);
   HeapAllocationInfo heapAllocationInfo{};
   D3D12_GPU_VIRTUAL_ADDRESS_RANGE range{};
   range.SizeInBytes = heapDesc.SizeInBytes;
-  heapAllocationInfo.addressRange = range;
-  heapAllocationInfo.alignment = heapDesc.Alignment;
-  heapAddressRanges_[command.ppvHeap_.key] = heapAllocationInfo;
+  heapAllocationInfo.m_AddressRange = range;
+  heapAllocationInfo.m_Alignment = heapDesc.Alignment;
+  m_HeapAddressRanges[command.m_ppvHeap.Key] = heapAllocationInfo;
 }
 
 template <typename CommandT>
-void AddressPinningStoreLayer::handleGetGPUVirtualAddress(CommandT& command) {
-  if (!command.object_.value || command.result_.value == 0) {
+void AddressPinningStoreLayer::HandleGetGPUVirtualAddress(CommandT& command) {
+  if (!command.m_Object.Value || command.m_Result.Value == 0) {
     return;
   }
 
-  std::lock_guard<std::mutex> lock(mutex_);
-  auto itResource = resourceAddressRanges_.find(command.object_.key);
-  if (itResource != resourceAddressRanges_.end()) {
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  auto itResource = m_ResourceAddressRanges.find(command.m_Object.Key);
+  if (itResource != m_ResourceAddressRanges.end()) {
     if (itResource->second.StartAddress == 0) {
-      itResource->second.StartAddress = command.result_.value;
+      itResource->second.StartAddress = command.m_Result.Value;
     }
     return;
   }
-  auto itHeapInfo = heapInfoByPlacedResource_.find(command.object_.key);
-  if (itHeapInfo == heapInfoByPlacedResource_.end()) {
+  auto itHeapInfo = m_HeapInfoByPlacedResource.find(command.m_Object.Key);
+  if (itHeapInfo == m_HeapInfoByPlacedResource.end()) {
     return;
   }
-  auto itHeap = heapAddressRanges_.find(itHeapInfo->second.heapKey);
-  if (itHeap == heapAddressRanges_.end()) {
-    LOG_ERROR << "AddressPinningStoreLayer: Heap key " << itHeapInfo->second.heapKey
-              << " not found in addressRanges for placed resource key " << command.object_.key;
+  auto itHeap = m_HeapAddressRanges.find(itHeapInfo->second.m_HeapKey);
+  if (itHeap == m_HeapAddressRanges.end()) {
+    LOG_ERROR << "AddressPinningStoreLayer: Heap key " << itHeapInfo->second.m_HeapKey
+              << " not found in addressRanges for placed resource key " << command.m_Object.Key;
     return;
   }
-  if (itHeap->second.addressRange.StartAddress) {
+  if (itHeap->second.m_AddressRange.StartAddress) {
     return;
   }
-  itHeap->second.addressRange.StartAddress = command.result_.value - itHeapInfo->second.offset;
+  itHeap->second.m_AddressRange.StartAddress = command.m_Result.Value - itHeapInfo->second.m_Offset;
 }
 
 } // namespace DirectX

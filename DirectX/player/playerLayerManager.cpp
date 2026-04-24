@@ -26,50 +26,50 @@
 namespace gits {
 namespace DirectX {
 
-void PlayerLayerManager::loadLayers(PlayerManager& playerManager, PluginService& pluginService) {
+void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService& pluginService) {
   auto& cfg = Configurator::Get().directx;
 
-  auto registerResourceCallback = [&playerManager](unsigned resourceKey, ID3D12Resource* resource) {
+  auto registerResourceCallback = [&playerManager](unsigned ResourceKey, ID3D12Resource* resource) {
     if (!resource) {
       return;
     }
-    playerManager.addObject(resourceKey, resource);
-    playerManager.getGpuAddressService().createResource(resourceKey, resource);
+    playerManager.AddObject(ResourceKey, resource);
+    playerManager.GetGpuAddressService().CreateResource(ResourceKey, resource);
   };
 
   // Load layers from LayerGroups
-  traceLayerGroup_.loadLayers();
-  subcaptureLayerGroup_.loadLayers();
-  executionSerializationLayerGroup_.loadLayers();
-  resourceDumpingLayerGroup_.loadLayers();
-  skipCallsLayerGroup_.loadLayers();
-  portabilityLayerGroup_.loadLayers(registerResourceCallback);
-  addressPinningLayerGroup_.loadLayers();
+  m_TraceLayerGroup.LoadLayers();
+  m_SubcaptureLayerGroup.LoadLayers();
+  m_ExecutionSerializationLayerGroup.LoadLayers();
+  m_ResourceDumpingLayerGroup.LoadLayers();
+  m_SkipCallsLayerGroup.LoadLayers();
+  m_PortabilityLayerGroup.LoadLayers(registerResourceCallback);
+  m_AddressPinningLayerGroup.LoadLayers();
 
   // Get layers from LayerGroups
-  Layer* skipCallsOnConfigLayer = skipCallsLayerGroup_.getLayer("SkipCallsOnConfig");
-  Layer* skipCallsOnResultLayer = skipCallsLayerGroup_.getLayer("SkipCallsOnResult");
-  Layer* traceLayer = traceLayerGroup_.getLayer("Trace");
-  Layer* showExecutionLayer = traceLayerGroup_.getLayer("ShowExecution");
-  Layer* portabilityLayer = portabilityLayerGroup_.getLayer("Portability");
-  Layer* stateTrackingLayer = subcaptureLayerGroup_.getLayer("StateTracking");
-  Layer* recordingLayer = subcaptureLayerGroup_.getLayer("Recording");
-  Layer* commandPreservationLayer = subcaptureLayerGroup_.getLayer("CommandPreservation");
-  Layer* analyzerLayer = subcaptureLayerGroup_.getLayer("Analyzer");
+  Layer* skipCallsOnConfigLayer = m_SkipCallsLayerGroup.GetLayer("SkipCallsOnConfig");
+  Layer* skipCallsOnResultLayer = m_SkipCallsLayerGroup.GetLayer("SkipCallsOnResult");
+  Layer* traceLayer = m_TraceLayerGroup.GetLayer("Trace");
+  Layer* showExecutionLayer = m_TraceLayerGroup.GetLayer("ShowExecution");
+  Layer* portabilityLayer = m_PortabilityLayerGroup.GetLayer("Portability");
+  Layer* stateTrackingLayer = m_SubcaptureLayerGroup.GetLayer("StateTracking");
+  Layer* recordingLayer = m_SubcaptureLayerGroup.GetLayer("Recording");
+  Layer* commandPreservationLayer = m_SubcaptureLayerGroup.GetLayer("CommandPreservation");
+  Layer* analyzerLayer = m_SubcaptureLayerGroup.GetLayer("Analyzer");
   Layer* executionSerializationLayer =
-      executionSerializationLayerGroup_.getLayer("ExecutionSerialization");
-  Layer* screenshotsLayer = resourceDumpingLayerGroup_.getLayer("Screenshots");
-  Layer* resourceDumpLayer = resourceDumpingLayerGroup_.getLayer("ResourceDump");
-  Layer* renderTargetsDumpLayer = resourceDumpingLayerGroup_.getLayer("RenderTargetsDump");
-  Layer* dispatchOutputsDumpLayer = resourceDumpingLayerGroup_.getLayer("DispatchOutputsDump");
+      m_ExecutionSerializationLayerGroup.GetLayer("ExecutionSerialization");
+  Layer* screenshotsLayer = m_ResourceDumpingLayerGroup.GetLayer("Screenshots");
+  Layer* resourceDumpLayer = m_ResourceDumpingLayerGroup.GetLayer("ResourceDump");
+  Layer* renderTargetsDumpLayer = m_ResourceDumpingLayerGroup.GetLayer("RenderTargetsDump");
+  Layer* dispatchOutputsDumpLayer = m_ResourceDumpingLayerGroup.GetLayer("DispatchOutputsDump");
   Layer* accelerationStructuresDumpLayer =
-      resourceDumpingLayerGroup_.getLayer("AccelerationStructuresDump");
-  Layer* rootSignatureDumpLayer = resourceDumpingLayerGroup_.getLayer("RootSignatureDump");
+      m_ResourceDumpingLayerGroup.GetLayer("AccelerationStructuresDump");
+  Layer* rootSignatureDumpLayer = m_ResourceDumpingLayerGroup.GetLayer("RootSignatureDump");
   Layer* addressPinningLayer = nullptr;
   if (cfg.player.execute) {
-    addressPinningLayer = addressPinningLayerGroup_.getLayer("AddressPinningUse");
+    addressPinningLayer = m_AddressPinningLayerGroup.GetLayer("AddressPinningUse");
     if (!addressPinningLayer) {
-      addressPinningLayer = addressPinningLayerGroup_.getLayer("AddressPinningStore");
+      addressPinningLayer = m_AddressPinningLayerGroup.GetLayer("AddressPinningStore");
     }
   }
 
@@ -117,7 +117,7 @@ void PlayerLayerManager::loadLayers(PlayerManager& playerManager, PluginService&
   // Insertion order determines execution order
   auto enablePreLayer = [this](Layer* layer) {
     if (layer) {
-      preLayers_.push_back(layer);
+      m_PreLayers.push_back(layer);
     }
   };
   enablePreLayer(skipCallsOnConfigLayer);
@@ -149,7 +149,7 @@ void PlayerLayerManager::loadLayers(PlayerManager& playerManager, PluginService&
   // Insertion order determines execution order
   auto enablePostLayer = [this](Layer* layer) {
     if (layer) {
-      postLayers_.push_back(layer);
+      m_PostLayers.push_back(layer);
     }
   };
   enablePostLayer(debugInfoLayer.get());
@@ -184,13 +184,13 @@ void PlayerLayerManager::loadLayers(PlayerManager& playerManager, PluginService&
     enablePostLayer(layer);
   }
 
-  LOG_INFO << "PlayerManager: Initialized with " << preLayers_.size() << " pre-layers and "
-           << postLayers_.size() << " post-layers";
+  LOG_INFO << "PlayerManager: Initialized with " << m_PreLayers.size() << " pre-layers and "
+           << m_PostLayers.size() << " post-layers";
 
   // Let layersOwner_ take the ownership of layers
   auto retainLayer = [this](std::unique_ptr<Layer>&& layer) {
     if (layer) {
-      layersOwner_.push_back(std::move(layer));
+      m_LayersOwner.push_back(std::move(layer));
     }
   };
   retainLayer(std::move(replayCustomizationLayer));

@@ -18,16 +18,16 @@ namespace DirectX {
 
 class PipelineLibraryService {
 public:
-  void releasePipelineState(unsigned pipelineStateKey, unsigned refCount);
-  void addRefPipelineState(unsigned pipelineStateKey);
-  void createPipelineLibrary(ID3D12Device1CreatePipelineLibraryCommand& c);
-  void createPipelineState(unsigned pipelineStateKey);
-  HRESULT loadComputePipeline(ID3D12PipelineLibraryLoadComputePipelineCommand& c);
-  HRESULT loadGraphicsPipeline(ID3D12PipelineLibraryLoadGraphicsPipelineCommand& c);
-  HRESULT loadPipeline(ID3D12PipelineLibrary1LoadPipelineCommand& c);
+  void ReleasePipelineState(unsigned pipelineStateKey, unsigned refCount);
+  void AddRefPipelineState(unsigned pipelineStateKey);
+  void CreatePipelineLibrary(ID3D12Device1CreatePipelineLibraryCommand& c);
+  void CreatePipelineState(unsigned pipelineStateKey);
+  HRESULT LoadComputePipeline(ID3D12PipelineLibraryLoadComputePipelineCommand& c);
+  HRESULT LoadGraphicsPipeline(ID3D12PipelineLibraryLoadGraphicsPipelineCommand& c);
+  HRESULT LoadPipeline(ID3D12PipelineLibrary1LoadPipelineCommand& c);
 
   template <typename Desc, typename PipelineLibrary>
-  HRESULT loadPipelineState(PipelineLibrary* pipelineLibrary,
+  HRESULT LoadPipelineState(PipelineLibrary* pipelineLibrary,
                             LPCWSTR name,
                             Desc* desc,
                             REFIID iid,
@@ -35,8 +35,8 @@ public:
                             void** ppPipelineState);
 
 private:
-  std::unordered_map<unsigned, unsigned> pipelineStateRefCounts_;
-  std::mutex mutex_;
+  std::unordered_map<unsigned, unsigned> m_PipelineStateRefCounts;
+  std::mutex m_Mutex;
 };
 
 } // namespace DirectX

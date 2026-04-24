@@ -18,7 +18,7 @@ public:
   SkipCallsLayerGroup() = default;
   ~SkipCallsLayerGroup() override = default;
 
-  void loadLayers() override;
+  void LoadLayers() override;
 };
 
 } // namespace DirectX

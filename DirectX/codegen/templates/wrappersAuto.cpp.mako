@@ -56,31 +56,31 @@ ${generate_return(function)} ${function.name}Wrapper(${'' if params else ') {'}
         %endif
     %for param in function.params:
     %if param.is_context:
-    command.${param.name}_.key = manager.${get_context_map(function)}.getKey(reinterpret_cast<std::uintptr_t>(${param.name}));
+    command.m_${param.name}.Key = manager.${get_context_map(function)}.getKey(reinterpret_cast<std::uintptr_t>(${param.name}));
     %elif param.name == 'hXeLLContext' and function.name == 'xefgSwapChainSetLatencyReduction':
-    command.${param.name}_.key = manager.getXellContextMap().getKey(reinterpret_cast<std::uintptr_t>(${param.name}));
+    command.m_${param.name}.Key = manager.getXellContextMap().getKey(reinterpret_cast<std::uintptr_t>(${param.name}));
     %elif param.is_interface and not param.is_interface_creation and not param.is_const:
     %if not param.sal_size:
-    updateInterface(command.${param.name}_, ${param.name});
+    updateInterface(command.m_${param.name}, ${param.name});
     %else:
-    UpdateInterface<InterfaceArrayArgument<${param.type}>, ${param.type}> update_${param.name}(command.${param.name}_, ${param.name});
+    UpdateInterface<InterfaceArrayArgument<${param.type}>, ${param.type}> update_${param.name}(command.m_${param.name}, ${param.name});
     %endif
     %elif param.structure_with_interfaces and param.sal_size:
-    UpdateInterface<${param.type}s_Argument, ${param.type}> update_${param.name}(command.${param.name}_, ${param.name});
+    UpdateInterface<${param.type}s_Argument, ${param.type}> update_${param.name}(command.m_${param.name}, ${param.name});
     %elif param.structure_with_interfaces:
-    UpdateInterface<${param.type}_Argument, ${param.type}> update_${param.name}(command.${param.name}_, ${param.name});
+    UpdateInterface<${param.type}_Argument, ${param.type}> update_${param.name}(command.m_${param.name}, ${param.name});
     %endif
     %if is_xess_sdk_init_param(param):
-    command.${param.name}_.key = manager.createWrapperKey(); // Used for subcapture restore order
+    command.m_${param.name}.Key = manager.createWrapperKey(); // Used for subcapture restore order
     %endif
     %endfor
 
-    for (Layer* layer : manager.getPreLayers()) {
-      layer->pre(command);
+    for (Layer* layer : manager.GetPreLayers()) {
+      layer->Pre(command);
     }
 
-    command.key = manager.createCommandKey();
-    if (!command.skip) {
+    command.Key = manager.createCommandKey();
+    if (!command.Skip) {
       ${'result = ' if not function.ret.is_void else ''}manager.${dispatch_table}.${function.name}(${'' if args else ');'}
           %if args:
           %for param in args[:-1]:
@@ -93,9 +93,9 @@ ${generate_return(function)} ${function.name}Wrapper(${'' if params else ') {'}
     %for param in function.params:
     %if param.is_context_output:
     if (result == ${get_success_return_value(function)}) {
-      command.${param.name}_.key = manager.createWrapperKey();
-      auto context = reinterpret_cast<std::uintptr_t>(*command.${param.name}_.value);
-      manager.${get_context_map(function)}.setContext(context, command.${param.name}_.key);
+      command.m_${param.name}.Key = manager.createWrapperKey();
+      auto context = reinterpret_cast<std::uintptr_t>(*command.m_${param.name}.Value);
+      manager.${get_context_map(function)}.setContext(context, command.m_${param.name}.Key);
     }
     %endif
     %endfor
@@ -103,11 +103,11 @@ ${generate_return(function)} ${function.name}Wrapper(${'' if params else ') {'}
     %if update_created:
     ${update_created}
     %endif
-    command.result_.value = result;
+    command.m_Result.Value = result;
     %endif
 
-    for (Layer* layer : manager.getPostLayers()) {
-      layer->post(command);
+    for (Layer* layer : manager.GetPostLayers()) {
+      layer->Post(command);
     }
   } else {
       ${'result = ' if not function.ret.is_void else ''}manager.${dispatch_table}.${function.name}(${'' if args else ');'}
@@ -159,28 +159,28 @@ ${generate_return(function)} ${interface.name}Wrapper::${function.name}(${'' if 
         ${args_simple[-1]});
         %endif
 
-    updateInterface(command.object_, this);
+    updateInterface(command.m_Object, this);
     %for param in function.params:
     %if param.is_interface and not param.is_interface_creation and not param.is_const:
     %if not param.sal_size:
-    updateInterface(command.${param.name}_, ${param.name});
+    updateInterface(command.m_${param.name}, ${param.name});
     %else:
-    UpdateInterface<InterfaceArrayArgument<${param.type}>, ${param.type}> update_${param.name}(command.${param.name}_, ${param.name});
+    UpdateInterface<InterfaceArrayArgument<${param.type}>, ${param.type}> update_${param.name}(command.m_${param.name}, ${param.name});
     %endif
     %elif param.structure_with_interfaces and param.sal_size:
-    UpdateInterface<${param.type}s_Argument, ${param.type}> update_${param.name}(command.${param.name}_, ${param.name});
+    UpdateInterface<${param.type}s_Argument, ${param.type}> update_${param.name}(command.m_${param.name}, ${param.name});
     %elif param.structure_with_interfaces:
-    UpdateInterface<${param.type}_Argument, ${param.type}> update_${param.name}(command.${param.name}_, ${param.name});
+    UpdateInterface<${param.type}_Argument, ${param.type}> update_${param.name}(command.m_${param.name}, ${param.name});
     %endif
     %endfor
 
-    for (Layer* layer : manager.getPreLayers()) {
-      layer->pre(command);
+    for (Layer* layer : manager.GetPreLayers()) {
+      layer->Pre(command);
     }
 
-    command.key = manager.createCommandKey();
-    if (!command.skip) {
-      ${'result = ' if not function.ret.is_void else ''}command.object_.value->${function.name}(${'' if args else ');'}
+    command.Key = manager.createCommandKey();
+    if (!command.Skip) {
+      ${'result = ' if not function.ret.is_void else ''}command.m_Object.Value->${function.name}(${'' if args else ');'}
           %if args:
           %for param in args[:-1]:
           ${param},
@@ -193,11 +193,11 @@ ${generate_return(function)} ${interface.name}Wrapper::${function.name}(${'' if 
     %if update_created:
     ${update_created}
     %endif
-    command.result_.value = result;
+    command.m_Result.Value = result;
 
     %endif
-    for (Layer* layer : manager.getPostLayers()) {
-      layer->post(command);
+    for (Layer* layer : manager.GetPostLayers()) {
+      layer->Post(command);
     }
   } else {
       ${'result = ' if not function.ret.is_void else ''}getWrappedObject<${interface.name}>()->${function.name}(${'' if args else ');'}

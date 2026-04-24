@@ -18,12 +18,12 @@ namespace DirectX {
 class RootSignatureDumpLayer : public Layer {
 public:
   RootSignatureDumpLayer();
-  void post(ID3D12DeviceCreateRootSignatureCommand& command) override;
+  void Post(ID3D12DeviceCreateRootSignatureCommand& command) override;
 
 private:
-  std::wstring dumpPath_;
-  ConfigKeySet rootSignatureKeys_;
-  RootSignatureDump rootSignatureDump_;
+  std::wstring m_DumpPath;
+  ConfigKeySet m_RootSignatureKeys;
+  RootSignatureDump m_RootSignatureDump;
 };
 
 } // namespace DirectX

@@ -20,459 +20,477 @@ AnalyzerCommandListService::AnalyzerCommandListService(
     DescriptorRootSignatureService& rootSignatureService,
     AnalyzerRaytracingService& raytracingService,
     AnalyzerExecuteIndirectService& executeIndirectService,
-    bool commandListSubcapture)
-    : analyzerService_(analyzerService),
-      descriptorService_(descriptorService),
-      rootSignatureService_(rootSignatureService),
-      raytracingService_(raytracingService),
-      executeIndirectService_(executeIndirectService),
-      commandListSubcapture_(commandListSubcapture) {
-  restoreTlases_ = Configurator::Get().directx.features.subcapture.restoreTLASes;
-  optimize_ = Configurator::Get().directx.features.subcapture.optimize;
+    bool CommandListSubcapture)
+    : m_AnalyzerService(analyzerService),
+      m_DescriptorService(descriptorService),
+      m_RootSignatureService(rootSignatureService),
+      m_RaytracingService(raytracingService),
+      m_ExecuteIndirectService(executeIndirectService),
+      m_CommandListSubcapture(CommandListSubcapture) {
+  m_RestoreTlases = Configurator::Get().directx.features.subcapture.restoreTLASes;
+  m_Optimize = Configurator::Get().directx.features.subcapture.optimize;
 }
 
-std::set<unsigned>& AnalyzerCommandListService::getTlases() {
-  if (dispatchRays_ && tlasBuildKeys_.empty()) {
-    raytracingService_.getTlases(tlasBuildKeys_);
+std::set<unsigned>& AnalyzerCommandListService::GetTlases() {
+  if (m_DispatchRays && m_TlasBuildKeys.empty()) {
+    m_RaytracingService.GetTlases(m_TlasBuildKeys);
   }
-  return tlasBuildKeys_;
+  return m_TlasBuildKeys;
 }
 
-void AnalyzerCommandListService::commandListsRestore(const std::set<unsigned>& commandLists) {
+void AnalyzerCommandListService::CommandListsRestore(const std::set<unsigned>& commandLists) {
   for (unsigned commandListKey : commandLists) {
-    commandListRestore(commandListKey);
+    CommandListRestore(commandListKey);
   }
 }
 
-void AnalyzerCommandListService::commandListRestore(unsigned commandListKey) {
-  auto itCommandList = commandsByCommandList_.find(commandListKey);
-  if (itCommandList == commandsByCommandList_.end()) {
+void AnalyzerCommandListService::CommandListRestore(unsigned commandListKey) {
+  auto itCommandList = m_CommandsByCommandList.find(commandListKey);
+  if (itCommandList == m_CommandsByCommandList.end()) {
     return;
   }
-  for (auto& command : itCommandList->second) {
-    switch (command->getId()) {
+  for (auto& storedCommand : itCommandList->second) {
+    switch (storedCommand->GetId()) {
     case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_RESET:
-      commandAnalysis(static_cast<ID3D12GraphicsCommandListResetCommand&>(*command));
+      CommandAnalysis(static_cast<ID3D12GraphicsCommandListResetCommand&>(*storedCommand));
       break;
     case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_CLEARSTATE:
-      commandAnalysis(static_cast<ID3D12GraphicsCommandListClearStateCommand&>(*command));
+      CommandAnalysis(static_cast<ID3D12GraphicsCommandListClearStateCommand&>(*storedCommand));
       break;
     case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_DRAWINSTANCED:
-      commandAnalysis(static_cast<ID3D12GraphicsCommandListDrawInstancedCommand&>(*command));
+      CommandAnalysis(static_cast<ID3D12GraphicsCommandListDrawInstancedCommand&>(*storedCommand));
       break;
     case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_DRAWINDEXEDINSTANCED:
-      commandAnalysis(static_cast<ID3D12GraphicsCommandListDrawIndexedInstancedCommand&>(*command));
+      CommandAnalysis(
+          static_cast<ID3D12GraphicsCommandListDrawIndexedInstancedCommand&>(*storedCommand));
       break;
     case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_DISPATCH:
-      commandAnalysis(static_cast<ID3D12GraphicsCommandListDispatchCommand&>(*command));
+      CommandAnalysis(static_cast<ID3D12GraphicsCommandListDispatchCommand&>(*storedCommand));
       break;
     case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_COPYBUFFERREGION:
-      commandAnalysis(static_cast<ID3D12GraphicsCommandListCopyBufferRegionCommand&>(*command));
+      CommandAnalysis(
+          static_cast<ID3D12GraphicsCommandListCopyBufferRegionCommand&>(*storedCommand));
       break;
     case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_COPYTEXTUREREGION:
-      commandAnalysis(static_cast<ID3D12GraphicsCommandListCopyTextureRegionCommand&>(*command));
+      CommandAnalysis(
+          static_cast<ID3D12GraphicsCommandListCopyTextureRegionCommand&>(*storedCommand));
       break;
     case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_COPYRESOURCE:
-      commandAnalysis(static_cast<ID3D12GraphicsCommandListCopyResourceCommand&>(*command));
+      CommandAnalysis(static_cast<ID3D12GraphicsCommandListCopyResourceCommand&>(*storedCommand));
       break;
     case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_COPYTILES:
-      commandAnalysis(static_cast<ID3D12GraphicsCommandListCopyTilesCommand&>(*command));
+      CommandAnalysis(static_cast<ID3D12GraphicsCommandListCopyTilesCommand&>(*storedCommand));
       break;
     case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_RESOLVESUBRESOURCE:
-      commandAnalysis(static_cast<ID3D12GraphicsCommandListResolveSubresourceCommand&>(*command));
+      CommandAnalysis(
+          static_cast<ID3D12GraphicsCommandListResolveSubresourceCommand&>(*storedCommand));
       break;
     case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_SETPIPELINESTATE:
-      commandAnalysis(static_cast<ID3D12GraphicsCommandListSetPipelineStateCommand&>(*command));
+      CommandAnalysis(
+          static_cast<ID3D12GraphicsCommandListSetPipelineStateCommand&>(*storedCommand));
       break;
     case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_RESOURCEBARRIER:
-      commandAnalysis(static_cast<ID3D12GraphicsCommandListResourceBarrierCommand&>(*command));
+      CommandAnalysis(
+          static_cast<ID3D12GraphicsCommandListResourceBarrierCommand&>(*storedCommand));
       break;
     case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_EXECUTEBUNDLE:
-      commandAnalysis(static_cast<ID3D12GraphicsCommandListExecuteBundleCommand&>(*command));
+      CommandAnalysis(static_cast<ID3D12GraphicsCommandListExecuteBundleCommand&>(*storedCommand));
       break;
     case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_SETDESCRIPTORHEAPS:
-      commandAnalysis(static_cast<ID3D12GraphicsCommandListSetDescriptorHeapsCommand&>(*command));
+      CommandAnalysis(
+          static_cast<ID3D12GraphicsCommandListSetDescriptorHeapsCommand&>(*storedCommand));
       break;
     case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_SETCOMPUTEROOTSIGNATURE:
-      commandAnalysis(
-          static_cast<ID3D12GraphicsCommandListSetComputeRootSignatureCommand&>(*command));
+      CommandAnalysis(
+          static_cast<ID3D12GraphicsCommandListSetComputeRootSignatureCommand&>(*storedCommand));
       break;
     case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_SETGRAPHICSROOTSIGNATURE:
-      commandAnalysis(
-          static_cast<ID3D12GraphicsCommandListSetGraphicsRootSignatureCommand&>(*command));
+      CommandAnalysis(
+          static_cast<ID3D12GraphicsCommandListSetGraphicsRootSignatureCommand&>(*storedCommand));
       break;
     case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_SETCOMPUTEROOTDESCRIPTORTABLE:
-      commandAnalysis(
-          static_cast<ID3D12GraphicsCommandListSetComputeRootDescriptorTableCommand&>(*command));
+      CommandAnalysis(static_cast<ID3D12GraphicsCommandListSetComputeRootDescriptorTableCommand&>(
+          *storedCommand));
       break;
     case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_SETGRAPHICSROOTDESCRIPTORTABLE:
-      commandAnalysis(
-          static_cast<ID3D12GraphicsCommandListSetGraphicsRootDescriptorTableCommand&>(*command));
+      CommandAnalysis(static_cast<ID3D12GraphicsCommandListSetGraphicsRootDescriptorTableCommand&>(
+          *storedCommand));
       break;
     case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_SETCOMPUTEROOTCONSTANTBUFFERVIEW:
-      commandAnalysis(
-          static_cast<ID3D12GraphicsCommandListSetComputeRootConstantBufferViewCommand&>(*command));
+      CommandAnalysis(
+          static_cast<ID3D12GraphicsCommandListSetComputeRootConstantBufferViewCommand&>(
+              *storedCommand));
       break;
     case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_SETGRAPHICSROOTCONSTANTBUFFERVIEW:
-      commandAnalysis(
+      CommandAnalysis(
           static_cast<ID3D12GraphicsCommandListSetGraphicsRootConstantBufferViewCommand&>(
-              *command));
+              *storedCommand));
       break;
     case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_SETCOMPUTEROOTSHADERRESOURCEVIEW:
-      commandAnalysis(
-          static_cast<ID3D12GraphicsCommandListSetComputeRootShaderResourceViewCommand&>(*command));
+      CommandAnalysis(
+          static_cast<ID3D12GraphicsCommandListSetComputeRootShaderResourceViewCommand&>(
+              *storedCommand));
       break;
     case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_SETGRAPHICSROOTSHADERRESOURCEVIEW:
-      commandAnalysis(
+      CommandAnalysis(
           static_cast<ID3D12GraphicsCommandListSetGraphicsRootShaderResourceViewCommand&>(
-              *command));
+              *storedCommand));
       break;
     case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_SETCOMPUTEROOTUNORDEREDACCESSVIEW:
-      commandAnalysis(
+      CommandAnalysis(
           static_cast<ID3D12GraphicsCommandListSetComputeRootUnorderedAccessViewCommand&>(
-              *command));
+              *storedCommand));
       break;
     case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_SETGRAPHICSROOTUNORDEREDACCESSVIEW:
-      commandAnalysis(
+      CommandAnalysis(
           static_cast<ID3D12GraphicsCommandListSetGraphicsRootUnorderedAccessViewCommand&>(
-              *command));
+              *storedCommand));
       break;
     case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_IASETINDEXBUFFER:
-      commandAnalysis(static_cast<ID3D12GraphicsCommandListIASetIndexBufferCommand&>(*command));
+      CommandAnalysis(
+          static_cast<ID3D12GraphicsCommandListIASetIndexBufferCommand&>(*storedCommand));
       break;
     case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_IASETVERTEXBUFFERS:
-      commandAnalysis(static_cast<ID3D12GraphicsCommandListIASetVertexBuffersCommand&>(*command));
+      CommandAnalysis(
+          static_cast<ID3D12GraphicsCommandListIASetVertexBuffersCommand&>(*storedCommand));
       break;
     case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_SOSETTARGETS:
-      commandAnalysis(static_cast<ID3D12GraphicsCommandListSOSetTargetsCommand&>(*command));
+      CommandAnalysis(static_cast<ID3D12GraphicsCommandListSOSetTargetsCommand&>(*storedCommand));
       break;
     case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_OMSETRENDERTARGETS:
-      commandAnalysis(static_cast<ID3D12GraphicsCommandListOMSetRenderTargetsCommand&>(*command));
+      CommandAnalysis(
+          static_cast<ID3D12GraphicsCommandListOMSetRenderTargetsCommand&>(*storedCommand));
       break;
     case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_CLEARDEPTHSTENCILVIEW:
-      commandAnalysis(
-          static_cast<ID3D12GraphicsCommandListClearDepthStencilViewCommand&>(*command));
+      CommandAnalysis(
+          static_cast<ID3D12GraphicsCommandListClearDepthStencilViewCommand&>(*storedCommand));
       break;
     case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_CLEARRENDERTARGETVIEW:
-      commandAnalysis(
-          static_cast<ID3D12GraphicsCommandListClearRenderTargetViewCommand&>(*command));
+      CommandAnalysis(
+          static_cast<ID3D12GraphicsCommandListClearRenderTargetViewCommand&>(*storedCommand));
       break;
     case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_CLEARUNORDEREDACCESSVIEWUINT:
-      commandAnalysis(
-          static_cast<ID3D12GraphicsCommandListClearUnorderedAccessViewUintCommand&>(*command));
+      CommandAnalysis(static_cast<ID3D12GraphicsCommandListClearUnorderedAccessViewUintCommand&>(
+          *storedCommand));
       break;
     case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_CLEARUNORDEREDACCESSVIEWFLOAT:
-      commandAnalysis(
-          static_cast<ID3D12GraphicsCommandListClearUnorderedAccessViewFloatCommand&>(*command));
+      CommandAnalysis(static_cast<ID3D12GraphicsCommandListClearUnorderedAccessViewFloatCommand&>(
+          *storedCommand));
       break;
     case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_DISCARDRESOURCE:
-      commandAnalysis(static_cast<ID3D12GraphicsCommandListDiscardResourceCommand&>(*command));
+      CommandAnalysis(
+          static_cast<ID3D12GraphicsCommandListDiscardResourceCommand&>(*storedCommand));
       break;
     case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_BEGINQUERY:
-      commandAnalysis(static_cast<ID3D12GraphicsCommandListBeginQueryCommand&>(*command));
+      CommandAnalysis(static_cast<ID3D12GraphicsCommandListBeginQueryCommand&>(*storedCommand));
       break;
     case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_ENDQUERY:
-      commandAnalysis(static_cast<ID3D12GraphicsCommandListEndQueryCommand&>(*command));
+      CommandAnalysis(static_cast<ID3D12GraphicsCommandListEndQueryCommand&>(*storedCommand));
       break;
     case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_RESOLVEQUERYDATA:
-      commandAnalysis(static_cast<ID3D12GraphicsCommandListResolveQueryDataCommand&>(*command));
+      CommandAnalysis(
+          static_cast<ID3D12GraphicsCommandListResolveQueryDataCommand&>(*storedCommand));
       break;
     case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_SETPREDICATION:
-      commandAnalysis(static_cast<ID3D12GraphicsCommandListSetPredicationCommand&>(*command));
+      CommandAnalysis(static_cast<ID3D12GraphicsCommandListSetPredicationCommand&>(*storedCommand));
       break;
     case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_EXECUTEINDIRECT:
-      commandAnalysis(static_cast<ID3D12GraphicsCommandListExecuteIndirectCommand&>(*command));
+      CommandAnalysis(
+          static_cast<ID3D12GraphicsCommandListExecuteIndirectCommand&>(*storedCommand));
       break;
     case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST1_ATOMICCOPYBUFFERUINT:
-      commandAnalysis(
-          static_cast<ID3D12GraphicsCommandList1AtomicCopyBufferUINTCommand&>(*command));
+      CommandAnalysis(
+          static_cast<ID3D12GraphicsCommandList1AtomicCopyBufferUINTCommand&>(*storedCommand));
       break;
     case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST1_ATOMICCOPYBUFFERUINT64:
-      commandAnalysis(
-          static_cast<ID3D12GraphicsCommandList1AtomicCopyBufferUINT64Command&>(*command));
+      CommandAnalysis(
+          static_cast<ID3D12GraphicsCommandList1AtomicCopyBufferUINT64Command&>(*storedCommand));
       break;
     case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST1_RESOLVESUBRESOURCEREGION:
-      commandAnalysis(
-          static_cast<ID3D12GraphicsCommandList1ResolveSubresourceRegionCommand&>(*command));
+      CommandAnalysis(
+          static_cast<ID3D12GraphicsCommandList1ResolveSubresourceRegionCommand&>(*storedCommand));
       break;
     case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST2_WRITEBUFFERIMMEDIATE:
-      commandAnalysis(
-          static_cast<ID3D12GraphicsCommandList2WriteBufferImmediateCommand&>(*command));
+      CommandAnalysis(
+          static_cast<ID3D12GraphicsCommandList2WriteBufferImmediateCommand&>(*storedCommand));
       break;
     case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST3_SETPROTECTEDRESOURCESESSION:
-      commandAnalysis(
-          static_cast<ID3D12GraphicsCommandList3SetProtectedResourceSessionCommand&>(*command));
+      CommandAnalysis(static_cast<ID3D12GraphicsCommandList3SetProtectedResourceSessionCommand&>(
+          *storedCommand));
       break;
     case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST4_BEGINRENDERPASS:
-      commandAnalysis(static_cast<ID3D12GraphicsCommandList4BeginRenderPassCommand&>(*command));
+      CommandAnalysis(
+          static_cast<ID3D12GraphicsCommandList4BeginRenderPassCommand&>(*storedCommand));
       break;
     case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST4_INITIALIZEMETACOMMAND:
-      commandAnalysis(
-          static_cast<ID3D12GraphicsCommandList4InitializeMetaCommandCommand&>(*command));
+      CommandAnalysis(
+          static_cast<ID3D12GraphicsCommandList4InitializeMetaCommandCommand&>(*storedCommand));
       break;
     case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST4_EXECUTEMETACOMMAND:
-      commandAnalysis(static_cast<ID3D12GraphicsCommandList4ExecuteMetaCommandCommand&>(*command));
+      CommandAnalysis(
+          static_cast<ID3D12GraphicsCommandList4ExecuteMetaCommandCommand&>(*storedCommand));
       break;
     case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST4_BUILDRAYTRACINGACCELERATIONSTRUCTURE:
-      commandAnalysis(
+      CommandAnalysis(
           static_cast<ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand&>(
-              *command));
+              *storedCommand));
       break;
     case CommandId::ID_NVAPI_D3D12_BUILDRAYTRACINGACCELERATIONSTRUCTUREEX:
-      commandAnalysis(
-          static_cast<NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand&>(*command));
+      CommandAnalysis(
+          static_cast<NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand&>(*storedCommand));
       break;
     case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST4_EMITRAYTRACINGACCELERATIONSTRUCTUREPOSTBUILDINFO:
-      commandAnalysis(
+      CommandAnalysis(
           static_cast<
               ID3D12GraphicsCommandList4EmitRaytracingAccelerationStructurePostbuildInfoCommand&>(
-              *command));
+              *storedCommand));
       break;
     case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST4_COPYRAYTRACINGACCELERATIONSTRUCTURE:
-      commandAnalysis(
+      CommandAnalysis(
           static_cast<ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand&>(
-              *command));
+              *storedCommand));
       break;
     case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST4_SETPIPELINESTATE1:
-      commandAnalysis(static_cast<ID3D12GraphicsCommandList4SetPipelineState1Command&>(*command));
+      CommandAnalysis(
+          static_cast<ID3D12GraphicsCommandList4SetPipelineState1Command&>(*storedCommand));
       break;
     case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST4_DISPATCHRAYS:
-      commandAnalysis(static_cast<ID3D12GraphicsCommandList4DispatchRaysCommand&>(*command));
+      CommandAnalysis(static_cast<ID3D12GraphicsCommandList4DispatchRaysCommand&>(*storedCommand));
       break;
     case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST5_RSSETSHADINGRATEIMAGE:
-      commandAnalysis(
-          static_cast<ID3D12GraphicsCommandList5RSSetShadingRateImageCommand&>(*command));
+      CommandAnalysis(
+          static_cast<ID3D12GraphicsCommandList5RSSetShadingRateImageCommand&>(*storedCommand));
       break;
     case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST6_DISPATCHMESH:
-      commandAnalysis(static_cast<ID3D12GraphicsCommandList6DispatchMeshCommand&>(*command));
+      CommandAnalysis(static_cast<ID3D12GraphicsCommandList6DispatchMeshCommand&>(*storedCommand));
       break;
     case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST7_BARRIER:
-      commandAnalysis(static_cast<ID3D12GraphicsCommandList7BarrierCommand&>(*command));
+      CommandAnalysis(static_cast<ID3D12GraphicsCommandList7BarrierCommand&>(*storedCommand));
       break;
     }
   }
-  commandsByCommandList_.erase(itCommandList);
+  m_CommandsByCommandList.erase(itCommandList);
 }
 
-void AnalyzerCommandListService::commandListReset(ID3D12GraphicsCommandListResetCommand& c) {
-  if (!analyzerService_.inRange() && !commandListSubcapture_) {
-    auto& commands = commandsByCommandList_[c.object_.key];
+void AnalyzerCommandListService::CommandListReset(ID3D12GraphicsCommandListResetCommand& c) {
+  if (!m_AnalyzerService.InRange() && !m_CommandListSubcapture) {
+    auto& commands = m_CommandsByCommandList[c.m_Object.Key];
     commands.clear();
     commands.emplace_back(new ID3D12GraphicsCommandListResetCommand(c));
   } else {
-    resetCommandLists_[c.object_.key] = true;
+    m_ResetCommandLists[c.m_Object.Key] = true;
   }
-  commandListInfos_.erase(c.object_.key);
+  m_CommandListInfos.erase(c.m_Object.Key);
 }
 
-void AnalyzerCommandListService::createDescriptorHeap(ID3D12DeviceCreateDescriptorHeapCommand& c) {
-  descriptorHeapInfos_[c.ppvHeap_.key].type = c.pDescriptorHeapDesc_.value->Type;
-  descriptorHeapInfos_[c.ppvHeap_.key].numDescriptors =
-      c.pDescriptorHeapDesc_.value->NumDescriptors;
+void AnalyzerCommandListService::CreateDescriptorHeap(ID3D12DeviceCreateDescriptorHeapCommand& c) {
+  m_DescriptorHeapInfos[c.m_ppvHeap.Key].type = c.m_pDescriptorHeapDesc.Value->Type;
+  m_DescriptorHeapInfos[c.m_ppvHeap.Key].numDescriptors =
+      c.m_pDescriptorHeapDesc.Value->NumDescriptors;
 }
 
-void AnalyzerCommandListService::createCommandSignature(
+void AnalyzerCommandListService::CreateCommandSignature(
     ID3D12DeviceCreateCommandSignatureCommand& c) {
-  D3D12_COMMAND_SIGNATURE_DESC* desc = c.pDesc_.value;
+  D3D12_COMMAND_SIGNATURE_DESC* desc = c.m_pDesc.Value;
   for (unsigned i = 0; i < desc->NumArgumentDescs; ++i) {
     if (desc->pArgumentDescs[i].Type == D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH_RAYS) {
-      dispatchRaysCommandSignatures_.insert(c.ppvCommandSignature_.key);
+      m_DispatchRaysCommandSignatures.insert(c.m_ppvCommandSignature.Key);
       break;
     }
   }
 }
 
-void AnalyzerCommandListService::copyDescriptors(ID3D12DeviceCopyDescriptorsSimpleCommand& c) {
-  if (analyzerService_.inRange()) {
-    for (unsigned i = 0; i < c.NumDescriptors_.value; ++i) {
-      DescriptorState* state = descriptorService_.getDescriptorState(
-          c.SrcDescriptorRangeStart_.interfaceKey, c.SrcDescriptorRangeStart_.index + i);
+void AnalyzerCommandListService::CopyDescriptors(ID3D12DeviceCopyDescriptorsSimpleCommand& c) {
+  if (m_AnalyzerService.InRange()) {
+    for (unsigned i = 0; i < c.m_NumDescriptors.Value; ++i) {
+      DescriptorState* state = m_DescriptorService.GetDescriptorState(
+          c.m_SrcDescriptorRangeStart.InterfaceKey, c.m_SrcDescriptorRangeStart.Index + i);
       if (state) {
-        addObjectForRestore(state->resourceKey);
-        addObjectForRestore(state->auxiliaryResourceKey);
+        AddObjectForRestore(state->ResourceKey);
+        AddObjectForRestore(state->AuxiliaryResourceKey);
       }
-      descriptors_.insert(
-          {c.SrcDescriptorRangeStart_.interfaceKey, c.SrcDescriptorRangeStart_.index + i});
+      m_Descriptors.insert(
+          {c.m_SrcDescriptorRangeStart.InterfaceKey, c.m_SrcDescriptorRangeStart.Index + i});
     }
-    addObjectForRestore(c.SrcDescriptorRangeStart_.interfaceKey);
+    AddObjectForRestore(c.m_SrcDescriptorRangeStart.InterfaceKey);
 
-    addObjectForRestore(c.DestDescriptorRangeStart_.interfaceKey);
+    AddObjectForRestore(c.m_DestDescriptorRangeStart.InterfaceKey);
   }
 }
 
-void AnalyzerCommandListService::copyDescriptors(ID3D12DeviceCopyDescriptorsCommand& c) {
-  if (analyzerService_.inRange()) {
-    for (unsigned i = 0; i < c.NumSrcDescriptorRanges_.value; ++i) {
+void AnalyzerCommandListService::CopyDescriptors(ID3D12DeviceCopyDescriptorsCommand& c) {
+  if (m_AnalyzerService.InRange()) {
+    for (unsigned i = 0; i < c.m_NumSrcDescriptorRanges.Value; ++i) {
       unsigned srcRangeSize =
-          c.pSrcDescriptorRangeSizes_.value ? c.pSrcDescriptorRangeSizes_.value[i] : 1;
+          c.m_pSrcDescriptorRangeSizes.Value ? c.m_pSrcDescriptorRangeSizes.Value[i] : 1;
       for (unsigned j = 0; j < srcRangeSize; ++j) {
         DescriptorState* state =
-            descriptorService_.getDescriptorState(c.pSrcDescriptorRangeStarts_.interfaceKeys[i],
-                                                  c.pSrcDescriptorRangeStarts_.indexes[i] + j);
+            m_DescriptorService.GetDescriptorState(c.m_pSrcDescriptorRangeStarts.InterfaceKeys[i],
+                                                   c.m_pSrcDescriptorRangeStarts.Indexes[i] + j);
         if (state) {
-          addObjectForRestore(state->resourceKey);
-          addObjectForRestore(state->auxiliaryResourceKey);
+          AddObjectForRestore(state->ResourceKey);
+          AddObjectForRestore(state->AuxiliaryResourceKey);
         }
-        descriptors_.insert({c.pSrcDescriptorRangeStarts_.interfaceKeys[i],
-                             c.pSrcDescriptorRangeStarts_.indexes[i] + j});
+        m_Descriptors.insert({c.m_pSrcDescriptorRangeStarts.InterfaceKeys[i],
+                              c.m_pSrcDescriptorRangeStarts.Indexes[i] + j});
       }
-      addObjectForRestore(c.pSrcDescriptorRangeStarts_.interfaceKeys[i]);
+      AddObjectForRestore(c.m_pSrcDescriptorRangeStarts.InterfaceKeys[i]);
     }
 
-    for (unsigned key : c.pDestDescriptorRangeStarts_.interfaceKeys) {
-      addObjectForRestore(key);
+    for (unsigned key : c.m_pDestDescriptorRangeStarts.InterfaceKeys) {
+      AddObjectForRestore(key);
     }
   }
 }
 
-void AnalyzerCommandListService::present() {
-  firstFrame_ = false;
+void AnalyzerCommandListService::Present() {
+  m_FirstFrame = false;
 }
 
-void AnalyzerCommandListService::setBindlessDescriptors(unsigned rootSignatureKey,
-                                                        unsigned descriptorHeapKey,
+void AnalyzerCommandListService::SetBindlessDescriptors(unsigned RootSignatureKey,
+                                                        unsigned DescriptorHeapKey,
                                                         D3D12_DESCRIPTOR_HEAP_TYPE heapType,
                                                         unsigned heapNumDescriptors) {
-  if (!rootSignatureKey || !descriptorHeapKey) {
+  if (!RootSignatureKey || !DescriptorHeapKey) {
     return;
   }
-  std::vector<unsigned> indexes = rootSignatureService_.getBindlessDescriptorIndexes(
-      rootSignatureKey, descriptorHeapKey, heapType, heapNumDescriptors);
-  for (unsigned index : indexes) {
-    DescriptorState* state = descriptorService_.getDescriptorState(descriptorHeapKey, index);
+  std::vector<unsigned> Indexes = m_RootSignatureService.GetBindlessDescriptorIndexes(
+      RootSignatureKey, DescriptorHeapKey, heapType, heapNumDescriptors);
+  for (unsigned index : Indexes) {
+    DescriptorState* state = m_DescriptorService.GetDescriptorState(DescriptorHeapKey, index);
     if (state) {
-      addObjectForRestore(state->resourceKey);
-      addObjectForRestore(state->auxiliaryResourceKey);
+      AddObjectForRestore(state->ResourceKey);
+      AddObjectForRestore(state->AuxiliaryResourceKey);
     }
-    descriptors_.insert({descriptorHeapKey, index});
+    m_Descriptors.insert({DescriptorHeapKey, index});
   }
-  addObjectForRestore(descriptorHeapKey);
+  AddObjectForRestore(DescriptorHeapKey);
 }
 
-bool AnalyzerCommandListService::inRange() {
-  return analyzerService_.inRange();
+bool AnalyzerCommandListService::InRange() {
+  return m_AnalyzerService.InRange();
 }
 
-void AnalyzerCommandListService::commandAnalysis(ID3D12GraphicsCommandListResetCommand& c) {
-  addObjectForRestore(c.pAllocator_.key);
-  addObjectForRestore(c.pInitialState_.key);
+void AnalyzerCommandListService::CommandAnalysis(ID3D12GraphicsCommandListResetCommand& c) {
+  AddObjectForRestore(c.m_pAllocator.Key);
+  AddObjectForRestore(c.m_pInitialState.Key);
 }
 
-void AnalyzerCommandListService::commandAnalysis(ID3D12GraphicsCommandListClearStateCommand& c) {
-  addObjectForRestore(c.pPipelineState_.key);
+void AnalyzerCommandListService::CommandAnalysis(ID3D12GraphicsCommandListClearStateCommand& c) {
+  AddObjectForRestore(c.m_pPipelineState.Key);
 }
 
-void AnalyzerCommandListService::commandAnalysis(ID3D12GraphicsCommandListDrawInstancedCommand& c) {
-  CommandListInfo& info = commandListInfos_[c.object_.key];
+void AnalyzerCommandListService::CommandAnalysis(ID3D12GraphicsCommandListDrawInstancedCommand& c) {
+  CommandListInfo& info = m_CommandListInfos[c.m_Object.Key];
   if (info.viewDescriptorHeap) {
-    DescriptorHeapInfo& heapInfo = descriptorHeapInfos_[info.viewDescriptorHeap];
-    setBindlessDescriptors(info.graphicsRootSignature, info.viewDescriptorHeap, heapInfo.type,
+    DescriptorHeapInfo& heapInfo = m_DescriptorHeapInfos[info.viewDescriptorHeap];
+    SetBindlessDescriptors(info.graphicsRootSignature, info.viewDescriptorHeap, heapInfo.type,
                            heapInfo.numDescriptors);
   }
   if (info.samplerDescriptorHeap) {
-    DescriptorHeapInfo& heapInfo = descriptorHeapInfos_[info.samplerDescriptorHeap];
-    setBindlessDescriptors(info.graphicsRootSignature, info.samplerDescriptorHeap, heapInfo.type,
+    DescriptorHeapInfo& heapInfo = m_DescriptorHeapInfos[info.samplerDescriptorHeap];
+    SetBindlessDescriptors(info.graphicsRootSignature, info.samplerDescriptorHeap, heapInfo.type,
                            heapInfo.numDescriptors);
   }
 }
 
-void AnalyzerCommandListService::commandAnalysis(
+void AnalyzerCommandListService::CommandAnalysis(
     ID3D12GraphicsCommandListDrawIndexedInstancedCommand& c) {
-  CommandListInfo& info = commandListInfos_[c.object_.key];
+  CommandListInfo& info = m_CommandListInfos[c.m_Object.Key];
   if (info.viewDescriptorHeap) {
-    DescriptorHeapInfo& heapInfo = descriptorHeapInfos_[info.viewDescriptorHeap];
-    setBindlessDescriptors(info.graphicsRootSignature, info.viewDescriptorHeap, heapInfo.type,
+    DescriptorHeapInfo& heapInfo = m_DescriptorHeapInfos[info.viewDescriptorHeap];
+    SetBindlessDescriptors(info.graphicsRootSignature, info.viewDescriptorHeap, heapInfo.type,
                            heapInfo.numDescriptors);
   }
   if (info.samplerDescriptorHeap) {
-    DescriptorHeapInfo& heapInfo = descriptorHeapInfos_[info.samplerDescriptorHeap];
-    setBindlessDescriptors(info.graphicsRootSignature, info.samplerDescriptorHeap, heapInfo.type,
+    DescriptorHeapInfo& heapInfo = m_DescriptorHeapInfos[info.samplerDescriptorHeap];
+    SetBindlessDescriptors(info.graphicsRootSignature, info.samplerDescriptorHeap, heapInfo.type,
                            heapInfo.numDescriptors);
   }
 }
 
-void AnalyzerCommandListService::commandAnalysis(ID3D12GraphicsCommandListDispatchCommand& c) {
-  CommandListInfo& info = commandListInfos_[c.object_.key];
+void AnalyzerCommandListService::CommandAnalysis(ID3D12GraphicsCommandListDispatchCommand& c) {
+  CommandListInfo& info = m_CommandListInfos[c.m_Object.Key];
   if (info.viewDescriptorHeap) {
-    DescriptorHeapInfo& heapInfo = descriptorHeapInfos_[info.viewDescriptorHeap];
-    setBindlessDescriptors(info.computeRootSignature, info.viewDescriptorHeap, heapInfo.type,
+    DescriptorHeapInfo& heapInfo = m_DescriptorHeapInfos[info.viewDescriptorHeap];
+    SetBindlessDescriptors(info.computeRootSignature, info.viewDescriptorHeap, heapInfo.type,
                            heapInfo.numDescriptors);
   }
   if (info.samplerDescriptorHeap) {
-    DescriptorHeapInfo& heapInfo = descriptorHeapInfos_[info.samplerDescriptorHeap];
-    setBindlessDescriptors(info.computeRootSignature, info.samplerDescriptorHeap, heapInfo.type,
+    DescriptorHeapInfo& heapInfo = m_DescriptorHeapInfos[info.samplerDescriptorHeap];
+    SetBindlessDescriptors(info.computeRootSignature, info.samplerDescriptorHeap, heapInfo.type,
                            heapInfo.numDescriptors);
   }
 }
 
-void AnalyzerCommandListService::commandAnalysis(
+void AnalyzerCommandListService::CommandAnalysis(
     ID3D12GraphicsCommandListCopyBufferRegionCommand& c) {
-  addObjectForRestore(c.pDstBuffer_.key);
-  addObjectForRestore(c.pSrcBuffer_.key);
+  AddObjectForRestore(c.m_pDstBuffer.Key);
+  AddObjectForRestore(c.m_pSrcBuffer.Key);
 }
 
-void AnalyzerCommandListService::commandAnalysis(
+void AnalyzerCommandListService::CommandAnalysis(
     ID3D12GraphicsCommandListCopyTextureRegionCommand& c) {
-  addObjectForRestore(c.pDst_.resourceKey);
-  addObjectForRestore(c.pSrc_.resourceKey);
+  AddObjectForRestore(c.m_pDst.ResourceKey);
+  AddObjectForRestore(c.m_pSrc.ResourceKey);
 }
 
-void AnalyzerCommandListService::commandAnalysis(ID3D12GraphicsCommandListCopyResourceCommand& c) {
-  addObjectForRestore(c.pDstResource_.key);
-  addObjectForRestore(c.pSrcResource_.key);
+void AnalyzerCommandListService::CommandAnalysis(ID3D12GraphicsCommandListCopyResourceCommand& c) {
+  AddObjectForRestore(c.m_pDstResource.Key);
+  AddObjectForRestore(c.m_pSrcResource.Key);
 }
 
-void AnalyzerCommandListService::commandAnalysis(ID3D12GraphicsCommandListCopyTilesCommand& c) {
-  addObjectForRestore(c.pTiledResource_.key);
-  addObjectForRestore(c.pBuffer_.key);
+void AnalyzerCommandListService::CommandAnalysis(ID3D12GraphicsCommandListCopyTilesCommand& c) {
+  AddObjectForRestore(c.m_pTiledResource.Key);
+  AddObjectForRestore(c.m_pBuffer.Key);
 }
 
-void AnalyzerCommandListService::commandAnalysis(
+void AnalyzerCommandListService::CommandAnalysis(
     ID3D12GraphicsCommandListResolveSubresourceCommand& c) {
-  addObjectForRestore(c.pDstResource_.key);
-  addObjectForRestore(c.pSrcResource_.key);
+  AddObjectForRestore(c.m_pDstResource.Key);
+  AddObjectForRestore(c.m_pSrcResource.Key);
 }
 
-void AnalyzerCommandListService::commandAnalysis(
+void AnalyzerCommandListService::CommandAnalysis(
     ID3D12GraphicsCommandListSetPipelineStateCommand& c) {
-  addObjectForRestore(c.pPipelineState_.key);
+  AddObjectForRestore(c.m_pPipelineState.Key);
 }
 
-void AnalyzerCommandListService::commandAnalysis(
+void AnalyzerCommandListService::CommandAnalysis(
     ID3D12GraphicsCommandListResourceBarrierCommand& c) {
-  for (unsigned key : c.pBarriers_.resourceKeys) {
-    addObjectForRestore(key);
+  for (unsigned key : c.m_pBarriers.ResourceKeys) {
+    AddObjectForRestore(key);
   }
-  for (unsigned key : c.pBarriers_.resourceAfterKeys) {
-    addObjectForRestore(key);
+  for (unsigned key : c.m_pBarriers.ResourceAfterKeys) {
+    AddObjectForRestore(key);
   }
 }
 
-void AnalyzerCommandListService::commandAnalysis(ID3D12GraphicsCommandListExecuteBundleCommand& c) {
-  addObjectForRestore(c.pCommandList_.key);
+void AnalyzerCommandListService::CommandAnalysis(ID3D12GraphicsCommandListExecuteBundleCommand& c) {
+  AddObjectForRestore(c.m_pCommandList.Key);
 }
 
-void AnalyzerCommandListService::commandAnalysis(
+void AnalyzerCommandListService::CommandAnalysis(
     ID3D12GraphicsCommandListSetDescriptorHeapsCommand& c) {
 
   std::vector<AnalyzerRaytracingService::DescriptorHeapInfo> infos;
-  for (unsigned i = 0; i < c.NumDescriptorHeaps_.value; ++i) {
+  for (unsigned i = 0; i < c.m_NumDescriptorHeaps.Value; ++i) {
     AnalyzerRaytracingService::DescriptorHeapInfo info;
-    info.key = c.ppDescriptorHeaps_.keys[i];
-    auto it = descriptorHeapInfos_.find(info.key);
-    GITS_ASSERT(it != descriptorHeapInfos_.end());
-    info.type = it->second.type;
-    info.numDescriptors = it->second.numDescriptors;
+    info.Key = c.m_ppDescriptorHeaps.Keys[i];
+    auto it = m_DescriptorHeapInfos.find(info.Key);
+    GITS_ASSERT(it != m_DescriptorHeapInfos.end());
+    info.Type = it->second.type;
+    info.NumDescriptors = it->second.numDescriptors;
     infos.push_back(info);
   }
-  raytracingService_.setDescriptorHeaps(c.object_.key, infos);
+  m_RaytracingService.SetDescriptorHeaps(c.m_Object.Key, infos);
 
-  CommandListInfo& commandListInfo = commandListInfos_[c.object_.key];
+  CommandListInfo& commandListInfo = m_CommandListInfos[c.m_Object.Key];
   commandListInfo.viewDescriptorHeap = 0;
   commandListInfo.samplerDescriptorHeap = 0;
-  for (unsigned key : c.ppDescriptorHeaps_.keys) {
-    addObjectForRestore(key);
-    DescriptorHeapInfo& info = descriptorHeapInfos_[key];
+  for (unsigned key : c.m_ppDescriptorHeaps.Keys) {
+    AddObjectForRestore(key);
+    DescriptorHeapInfo& info = m_DescriptorHeapInfos[key];
     if (info.type == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV) {
       commandListInfo.viewDescriptorHeap = key;
     } else if (info.type == D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER) {
@@ -481,599 +499,601 @@ void AnalyzerCommandListService::commandAnalysis(
   }
 }
 
-void AnalyzerCommandListService::commandAnalysis(
+void AnalyzerCommandListService::CommandAnalysis(
     ID3D12GraphicsCommandListSetComputeRootSignatureCommand& c) {
-  commandListInfos_[c.object_.key].computeRootSignature = c.pRootSignature_.key;
-  addObjectForRestore(c.pRootSignature_.key);
+  m_CommandListInfos[c.m_Object.Key].computeRootSignature = c.m_pRootSignature.Key;
+  AddObjectForRestore(c.m_pRootSignature.Key);
 }
 
-void AnalyzerCommandListService::commandAnalysis(
+void AnalyzerCommandListService::CommandAnalysis(
     ID3D12GraphicsCommandListSetGraphicsRootSignatureCommand& c) {
-  commandListInfos_[c.object_.key].graphicsRootSignature = c.pRootSignature_.key;
-  addObjectForRestore(c.pRootSignature_.key);
+  m_CommandListInfos[c.m_Object.Key].graphicsRootSignature = c.m_pRootSignature.Key;
+  AddObjectForRestore(c.m_pRootSignature.Key);
 }
 
-void AnalyzerCommandListService::commandAnalysis(
+void AnalyzerCommandListService::CommandAnalysis(
     ID3D12GraphicsCommandListSetComputeRootDescriptorTableCommand& c) {
-  if (!c.BaseDescriptor_.value.ptr) {
+  if (!c.m_BaseDescriptor.Value.ptr) {
     return;
   }
-  unsigned rootSignatureKey = commandListInfos_[c.object_.key].computeRootSignature;
-  GITS_ASSERT(rootSignatureKey);
-  unsigned numDescriptors = descriptorHeapInfos_[c.BaseDescriptor_.interfaceKey].numDescriptors;
+  unsigned RootSignatureKey = m_CommandListInfos[c.m_Object.Key].computeRootSignature;
+  GITS_ASSERT(RootSignatureKey);
+  unsigned numDescriptors = m_DescriptorHeapInfos[c.m_BaseDescriptor.InterfaceKey].numDescriptors;
   GITS_ASSERT(numDescriptors);
-  std::vector<unsigned> indexes = rootSignatureService_.getDescriptorTableIndexes(
-      rootSignatureKey, c.BaseDescriptor_.interfaceKey, c.RootParameterIndex_.value,
-      c.BaseDescriptor_.index, numDescriptors);
-  for (unsigned index : indexes) {
+  std::vector<unsigned> Indexes = m_RootSignatureService.GetDescriptorTableIndexes(
+      RootSignatureKey, c.m_BaseDescriptor.InterfaceKey, c.m_RootParameterIndex.Value,
+      c.m_BaseDescriptor.Index, numDescriptors);
+  for (unsigned index : Indexes) {
     DescriptorState* state =
-        descriptorService_.getDescriptorState(c.BaseDescriptor_.interfaceKey, index);
+        m_DescriptorService.GetDescriptorState(c.m_BaseDescriptor.InterfaceKey, index);
     if (state) {
-      addObjectForRestore(state->resourceKey);
-      addObjectForRestore(state->auxiliaryResourceKey);
+      AddObjectForRestore(state->ResourceKey);
+      AddObjectForRestore(state->AuxiliaryResourceKey);
     }
-    descriptors_.insert({c.BaseDescriptor_.interfaceKey, index});
+    m_Descriptors.insert({c.m_BaseDescriptor.InterfaceKey, index});
   }
-  addObjectForRestore(c.BaseDescriptor_.interfaceKey);
+  AddObjectForRestore(c.m_BaseDescriptor.InterfaceKey);
 }
 
-void AnalyzerCommandListService::commandAnalysis(
+void AnalyzerCommandListService::CommandAnalysis(
     ID3D12GraphicsCommandListSetGraphicsRootDescriptorTableCommand& c) {
-  if (!c.BaseDescriptor_.value.ptr) {
+  if (!c.m_BaseDescriptor.Value.ptr) {
     return;
   }
-  unsigned rootSignatureKey = commandListInfos_[c.object_.key].graphicsRootSignature;
-  GITS_ASSERT(rootSignatureKey);
-  unsigned numDescriptors = descriptorHeapInfos_[c.BaseDescriptor_.interfaceKey].numDescriptors;
+  unsigned RootSignatureKey = m_CommandListInfos[c.m_Object.Key].graphicsRootSignature;
+  GITS_ASSERT(RootSignatureKey);
+  unsigned numDescriptors = m_DescriptorHeapInfos[c.m_BaseDescriptor.InterfaceKey].numDescriptors;
   GITS_ASSERT(numDescriptors);
-  std::vector<unsigned> indexes = rootSignatureService_.getDescriptorTableIndexes(
-      rootSignatureKey, c.BaseDescriptor_.interfaceKey, c.RootParameterIndex_.value,
-      c.BaseDescriptor_.index, numDescriptors);
-  for (unsigned index : indexes) {
+  std::vector<unsigned> Indexes = m_RootSignatureService.GetDescriptorTableIndexes(
+      RootSignatureKey, c.m_BaseDescriptor.InterfaceKey, c.m_RootParameterIndex.Value,
+      c.m_BaseDescriptor.Index, numDescriptors);
+  for (unsigned index : Indexes) {
     DescriptorState* state =
-        descriptorService_.getDescriptorState(c.BaseDescriptor_.interfaceKey, index);
+        m_DescriptorService.GetDescriptorState(c.m_BaseDescriptor.InterfaceKey, index);
     if (state) {
-      addObjectForRestore(state->resourceKey);
-      addObjectForRestore(state->auxiliaryResourceKey);
+      AddObjectForRestore(state->ResourceKey);
+      AddObjectForRestore(state->AuxiliaryResourceKey);
     }
-    descriptors_.insert({c.BaseDescriptor_.interfaceKey, index});
+    m_Descriptors.insert({c.m_BaseDescriptor.InterfaceKey, index});
   }
-  addObjectForRestore(c.BaseDescriptor_.interfaceKey);
+  AddObjectForRestore(c.m_BaseDescriptor.InterfaceKey);
 }
 
-void AnalyzerCommandListService::commandAnalysis(
+void AnalyzerCommandListService::CommandAnalysis(
     ID3D12GraphicsCommandListSetComputeRootConstantBufferViewCommand& c) {
-  addObjectForRestore(c.BufferLocation_.interfaceKey);
+  AddObjectForRestore(c.m_BufferLocation.InterfaceKey);
 }
 
-void AnalyzerCommandListService::commandAnalysis(
+void AnalyzerCommandListService::CommandAnalysis(
     ID3D12GraphicsCommandListSetGraphicsRootConstantBufferViewCommand& c) {
-  addObjectForRestore(c.BufferLocation_.interfaceKey);
+  AddObjectForRestore(c.m_BufferLocation.InterfaceKey);
 }
 
-void AnalyzerCommandListService::commandAnalysis(
+void AnalyzerCommandListService::CommandAnalysis(
     ID3D12GraphicsCommandListSetComputeRootShaderResourceViewCommand& c) {
-  addObjectForRestore(c.BufferLocation_.interfaceKey);
+  AddObjectForRestore(c.m_BufferLocation.InterfaceKey);
 
-  unsigned tlasBuildKey = raytracingService_.findTlas(AnalyzerRaytracingService::KeyOffset(
-      c.BufferLocation_.interfaceKey, c.BufferLocation_.offset));
+  unsigned tlasBuildKey = m_RaytracingService.FindTlas(AnalyzerRaytracingService::KeyOffset(
+      c.m_BufferLocation.InterfaceKey, c.m_BufferLocation.Offset));
   if (tlasBuildKey) {
-    tlasBuildKeys_.insert(tlasBuildKey);
+    m_TlasBuildKeys.insert(tlasBuildKey);
   }
 }
 
-void AnalyzerCommandListService::commandAnalysis(
+void AnalyzerCommandListService::CommandAnalysis(
     ID3D12GraphicsCommandListSetGraphicsRootShaderResourceViewCommand& c) {
-  addObjectForRestore(c.BufferLocation_.interfaceKey);
+  AddObjectForRestore(c.m_BufferLocation.InterfaceKey);
 }
 
-void AnalyzerCommandListService::commandAnalysis(
+void AnalyzerCommandListService::CommandAnalysis(
     ID3D12GraphicsCommandListSetComputeRootUnorderedAccessViewCommand& c) {
-  addObjectForRestore(c.BufferLocation_.interfaceKey);
+  AddObjectForRestore(c.m_BufferLocation.InterfaceKey);
 }
 
-void AnalyzerCommandListService::commandAnalysis(
+void AnalyzerCommandListService::CommandAnalysis(
     ID3D12GraphicsCommandListSetGraphicsRootUnorderedAccessViewCommand& c) {
-  addObjectForRestore(c.BufferLocation_.interfaceKey);
+  AddObjectForRestore(c.m_BufferLocation.InterfaceKey);
 }
 
-void AnalyzerCommandListService::commandAnalysis(
+void AnalyzerCommandListService::CommandAnalysis(
     ID3D12GraphicsCommandListIASetIndexBufferCommand& c) {
-  addObjectForRestore(c.pView_.bufferLocationKey);
+  AddObjectForRestore(c.m_pView.BufferLocationKey);
 }
 
-void AnalyzerCommandListService::commandAnalysis(
+void AnalyzerCommandListService::CommandAnalysis(
     ID3D12GraphicsCommandListIASetVertexBuffersCommand& c) {
-  for (unsigned i = 0; i < c.pViews_.size; ++i) {
-    addObjectForRestore(c.pViews_.bufferLocationKeys[i]);
+  for (unsigned i = 0; i < c.m_pViews.Size; ++i) {
+    AddObjectForRestore(c.m_pViews.BufferLocationKeys[i]);
   }
 }
 
-void AnalyzerCommandListService::commandAnalysis(ID3D12GraphicsCommandListSOSetTargetsCommand& c) {
-  for (unsigned i = 0; i < c.pViews_.size; ++i) {
-    addObjectForRestore(c.pViews_.bufferLocationKeys[i]);
-    addObjectForRestore(c.pViews_.bufferFilledSizeLocationKeys[i]);
+void AnalyzerCommandListService::CommandAnalysis(ID3D12GraphicsCommandListSOSetTargetsCommand& c) {
+  for (unsigned i = 0; i < c.m_pViews.Size; ++i) {
+    AddObjectForRestore(c.m_pViews.BufferLocationKeys[i]);
+    AddObjectForRestore(c.m_pViews.BufferFilledSizeLocationKeys[i]);
   }
 }
 
-void AnalyzerCommandListService::commandAnalysis(
+void AnalyzerCommandListService::CommandAnalysis(
     ID3D12GraphicsCommandListOMSetRenderTargetsCommand& c) {
-  if (!c.RTsSingleHandleToDescriptorRange_.value) {
-    for (unsigned i = 0; i < c.NumRenderTargetDescriptors_.value; ++i) {
-      unsigned key = c.pRenderTargetDescriptors_.interfaceKeys[i];
-      unsigned index = c.pRenderTargetDescriptors_.indexes[i];
+  if (!c.m_RTsSingleHandleToDescriptorRange.Value) {
+    for (unsigned i = 0; i < c.m_NumRenderTargetDescriptors.Value; ++i) {
+      unsigned key = c.m_pRenderTargetDescriptors.InterfaceKeys[i];
+      unsigned index = c.m_pRenderTargetDescriptors.Indexes[i];
       if (key) {
-        addObjectForRestore(key);
-        DescriptorState* state = descriptorService_.getDescriptorState(key, index);
+        AddObjectForRestore(key);
+        DescriptorState* state = m_DescriptorService.GetDescriptorState(key, index);
         if (state) {
-          addObjectForRestore(state->resourceKey);
-          addObjectForRestore(state->auxiliaryResourceKey);
+          AddObjectForRestore(state->ResourceKey);
+          AddObjectForRestore(state->AuxiliaryResourceKey);
         }
-        descriptors_.insert({key, index});
+        m_Descriptors.insert({key, index});
       }
     }
-  } else if (c.NumRenderTargetDescriptors_.value) {
-    unsigned key = c.pRenderTargetDescriptors_.interfaceKeys[0];
-    unsigned index = c.pRenderTargetDescriptors_.indexes[0];
+  } else if (c.m_NumRenderTargetDescriptors.Value) {
+    unsigned key = c.m_pRenderTargetDescriptors.InterfaceKeys[0];
+    unsigned index = c.m_pRenderTargetDescriptors.Indexes[0];
     if (key) {
-      addObjectForRestore(key);
-      for (unsigned i = 0; i < c.NumRenderTargetDescriptors_.value; ++i) {
-        DescriptorState* state = descriptorService_.getDescriptorState(key, index);
+      AddObjectForRestore(key);
+      for (unsigned i = 0; i < c.m_NumRenderTargetDescriptors.Value; ++i) {
+        DescriptorState* state = m_DescriptorService.GetDescriptorState(key, index);
         if (state) {
-          addObjectForRestore(state->resourceKey);
-          addObjectForRestore(state->auxiliaryResourceKey);
+          AddObjectForRestore(state->ResourceKey);
+          AddObjectForRestore(state->AuxiliaryResourceKey);
         }
-        descriptors_.insert({key, index});
+        m_Descriptors.insert({key, index});
         ++index;
       }
     }
   }
-  if (c.pDepthStencilDescriptor_.value) {
-    unsigned key = c.pDepthStencilDescriptor_.interfaceKeys[0];
-    unsigned index = c.pDepthStencilDescriptor_.indexes[0];
+  if (c.m_pDepthStencilDescriptor.Value) {
+    unsigned key = c.m_pDepthStencilDescriptor.InterfaceKeys[0];
+    unsigned index = c.m_pDepthStencilDescriptor.Indexes[0];
     if (key) {
-      addObjectForRestore(key);
-      DescriptorState* state = descriptorService_.getDescriptorState(key, index);
+      AddObjectForRestore(key);
+      DescriptorState* state = m_DescriptorService.GetDescriptorState(key, index);
       if (state) {
-        addObjectForRestore(state->resourceKey);
-        addObjectForRestore(state->auxiliaryResourceKey);
+        AddObjectForRestore(state->ResourceKey);
+        AddObjectForRestore(state->AuxiliaryResourceKey);
       }
-      descriptors_.insert({key, index});
+      m_Descriptors.insert({key, index});
     }
   }
 }
 
-void AnalyzerCommandListService::commandAnalysis(
+void AnalyzerCommandListService::CommandAnalysis(
     ID3D12GraphicsCommandListClearDepthStencilViewCommand& c) {
-  if (c.DepthStencilView_.interfaceKey) {
-    addObjectForRestore(c.DepthStencilView_.interfaceKey);
-    DescriptorState* state = descriptorService_.getDescriptorState(c.DepthStencilView_.interfaceKey,
-                                                                   c.DepthStencilView_.index);
+  if (c.m_DepthStencilView.InterfaceKey) {
+    AddObjectForRestore(c.m_DepthStencilView.InterfaceKey);
+    DescriptorState* state = m_DescriptorService.GetDescriptorState(
+        c.m_DepthStencilView.InterfaceKey, c.m_DepthStencilView.Index);
     if (state) {
-      addObjectForRestore(state->resourceKey);
-      addObjectForRestore(state->auxiliaryResourceKey);
+      AddObjectForRestore(state->ResourceKey);
+      AddObjectForRestore(state->AuxiliaryResourceKey);
     }
-    descriptors_.insert({c.DepthStencilView_.interfaceKey, c.DepthStencilView_.index});
+    m_Descriptors.insert({c.m_DepthStencilView.InterfaceKey, c.m_DepthStencilView.Index});
   }
 }
 
-void AnalyzerCommandListService::commandAnalysis(
+void AnalyzerCommandListService::CommandAnalysis(
     ID3D12GraphicsCommandListClearRenderTargetViewCommand& c) {
-  if (c.RenderTargetView_.interfaceKey) {
-    addObjectForRestore(c.RenderTargetView_.interfaceKey);
-    DescriptorState* state = descriptorService_.getDescriptorState(c.RenderTargetView_.interfaceKey,
-                                                                   c.RenderTargetView_.index);
+  if (c.m_RenderTargetView.InterfaceKey) {
+    AddObjectForRestore(c.m_RenderTargetView.InterfaceKey);
+    DescriptorState* state = m_DescriptorService.GetDescriptorState(
+        c.m_RenderTargetView.InterfaceKey, c.m_RenderTargetView.Index);
     if (state) {
-      addObjectForRestore(state->resourceKey);
-      addObjectForRestore(state->auxiliaryResourceKey);
+      AddObjectForRestore(state->ResourceKey);
+      AddObjectForRestore(state->AuxiliaryResourceKey);
     }
-    descriptors_.insert({c.RenderTargetView_.interfaceKey, c.RenderTargetView_.index});
+    m_Descriptors.insert({c.m_RenderTargetView.InterfaceKey, c.m_RenderTargetView.Index});
   }
 }
 
-void AnalyzerCommandListService::commandAnalysis(
+void AnalyzerCommandListService::CommandAnalysis(
     ID3D12GraphicsCommandListClearUnorderedAccessViewUintCommand& c) {
-  if (c.ViewGPUHandleInCurrentHeap_.interfaceKey) {
-    addObjectForRestore(c.ViewGPUHandleInCurrentHeap_.interfaceKey);
-    DescriptorState* state = descriptorService_.getDescriptorState(
-        c.ViewGPUHandleInCurrentHeap_.interfaceKey, c.ViewGPUHandleInCurrentHeap_.index);
+  if (c.m_ViewGPUHandleInCurrentHeap.InterfaceKey) {
+    AddObjectForRestore(c.m_ViewGPUHandleInCurrentHeap.InterfaceKey);
+    DescriptorState* state = m_DescriptorService.GetDescriptorState(
+        c.m_ViewGPUHandleInCurrentHeap.InterfaceKey, c.m_ViewGPUHandleInCurrentHeap.Index);
     if (state) {
-      addObjectForRestore(state->resourceKey);
-      addObjectForRestore(state->auxiliaryResourceKey);
+      AddObjectForRestore(state->ResourceKey);
+      AddObjectForRestore(state->AuxiliaryResourceKey);
     }
-    descriptors_.insert(
-        {c.ViewGPUHandleInCurrentHeap_.interfaceKey, c.ViewGPUHandleInCurrentHeap_.index});
+    m_Descriptors.insert(
+        {c.m_ViewGPUHandleInCurrentHeap.InterfaceKey, c.m_ViewGPUHandleInCurrentHeap.Index});
   }
-  if (c.ViewCPUHandle_.interfaceKey) {
-    addObjectForRestore(c.ViewCPUHandle_.interfaceKey);
-    DescriptorState* state = descriptorService_.getDescriptorState(c.ViewCPUHandle_.interfaceKey,
-                                                                   c.ViewCPUHandle_.index);
+  if (c.m_ViewCPUHandle.InterfaceKey) {
+    AddObjectForRestore(c.m_ViewCPUHandle.InterfaceKey);
+    DescriptorState* state = m_DescriptorService.GetDescriptorState(c.m_ViewCPUHandle.InterfaceKey,
+                                                                    c.m_ViewCPUHandle.Index);
     if (state) {
-      addObjectForRestore(state->resourceKey);
-      addObjectForRestore(state->auxiliaryResourceKey);
+      AddObjectForRestore(state->ResourceKey);
+      AddObjectForRestore(state->AuxiliaryResourceKey);
     }
-    descriptors_.insert({c.ViewCPUHandle_.interfaceKey, c.ViewCPUHandle_.index});
+    m_Descriptors.insert({c.m_ViewCPUHandle.InterfaceKey, c.m_ViewCPUHandle.Index});
   }
 }
 
-void AnalyzerCommandListService::commandAnalysis(
+void AnalyzerCommandListService::CommandAnalysis(
     ID3D12GraphicsCommandListClearUnorderedAccessViewFloatCommand& c) {
-  if (c.ViewGPUHandleInCurrentHeap_.interfaceKey) {
-    addObjectForRestore(c.ViewGPUHandleInCurrentHeap_.interfaceKey);
-    DescriptorState* state = descriptorService_.getDescriptorState(
-        c.ViewGPUHandleInCurrentHeap_.interfaceKey, c.ViewGPUHandleInCurrentHeap_.index);
+  if (c.m_ViewGPUHandleInCurrentHeap.InterfaceKey) {
+    AddObjectForRestore(c.m_ViewGPUHandleInCurrentHeap.InterfaceKey);
+    DescriptorState* state = m_DescriptorService.GetDescriptorState(
+        c.m_ViewGPUHandleInCurrentHeap.InterfaceKey, c.m_ViewGPUHandleInCurrentHeap.Index);
     if (state) {
-      addObjectForRestore(state->resourceKey);
-      addObjectForRestore(state->auxiliaryResourceKey);
+      AddObjectForRestore(state->ResourceKey);
+      AddObjectForRestore(state->AuxiliaryResourceKey);
     }
-    descriptors_.insert(
-        {c.ViewGPUHandleInCurrentHeap_.interfaceKey, c.ViewGPUHandleInCurrentHeap_.index});
+    m_Descriptors.insert(
+        {c.m_ViewGPUHandleInCurrentHeap.InterfaceKey, c.m_ViewGPUHandleInCurrentHeap.Index});
   }
-  if (c.ViewCPUHandle_.interfaceKey) {
-    addObjectForRestore(c.ViewCPUHandle_.interfaceKey);
-    DescriptorState* state = descriptorService_.getDescriptorState(c.ViewCPUHandle_.interfaceKey,
-                                                                   c.ViewCPUHandle_.index);
+  if (c.m_ViewCPUHandle.InterfaceKey) {
+    AddObjectForRestore(c.m_ViewCPUHandle.InterfaceKey);
+    DescriptorState* state = m_DescriptorService.GetDescriptorState(c.m_ViewCPUHandle.InterfaceKey,
+                                                                    c.m_ViewCPUHandle.Index);
     if (state) {
-      addObjectForRestore(state->resourceKey);
-      addObjectForRestore(state->auxiliaryResourceKey);
+      AddObjectForRestore(state->ResourceKey);
+      AddObjectForRestore(state->AuxiliaryResourceKey);
     }
-    descriptors_.insert({c.ViewCPUHandle_.interfaceKey, c.ViewCPUHandle_.index});
+    m_Descriptors.insert({c.m_ViewCPUHandle.InterfaceKey, c.m_ViewCPUHandle.Index});
   }
 }
 
-void AnalyzerCommandListService::commandAnalysis(
+void AnalyzerCommandListService::CommandAnalysis(
     ID3D12GraphicsCommandListDiscardResourceCommand& c) {
-  addObjectForRestore(c.pResource_.key);
+  AddObjectForRestore(c.m_pResource.Key);
 }
 
-void AnalyzerCommandListService::commandAnalysis(ID3D12GraphicsCommandListBeginQueryCommand& c) {
-  addObjectForRestore(c.pQueryHeap_.key);
+void AnalyzerCommandListService::CommandAnalysis(ID3D12GraphicsCommandListBeginQueryCommand& c) {
+  AddObjectForRestore(c.m_pQueryHeap.Key);
 }
 
-void AnalyzerCommandListService::commandAnalysis(ID3D12GraphicsCommandListEndQueryCommand& c) {
-  addObjectForRestore(c.pQueryHeap_.key);
+void AnalyzerCommandListService::CommandAnalysis(ID3D12GraphicsCommandListEndQueryCommand& c) {
+  AddObjectForRestore(c.m_pQueryHeap.Key);
 }
 
-void AnalyzerCommandListService::commandAnalysis(
+void AnalyzerCommandListService::CommandAnalysis(
     ID3D12GraphicsCommandListResolveQueryDataCommand& c) {
-  addObjectForRestore(c.pQueryHeap_.key);
-  addObjectForRestore(c.pDestinationBuffer_.key);
+  AddObjectForRestore(c.m_pQueryHeap.Key);
+  AddObjectForRestore(c.m_pDestinationBuffer.Key);
 }
 
-void AnalyzerCommandListService::commandAnalysis(
+void AnalyzerCommandListService::CommandAnalysis(
     ID3D12GraphicsCommandListSetPredicationCommand& c) {
-  addObjectForRestore(c.pBuffer_.key);
+  AddObjectForRestore(c.m_pBuffer.Key);
 }
 
-void AnalyzerCommandListService::commandAnalysis(
+void AnalyzerCommandListService::CommandAnalysis(
     ID3D12GraphicsCommandListExecuteIndirectCommand& c) {
 
-  if (dispatchRaysCommandSignatures_.find(c.pCommandSignature_.key) !=
-      dispatchRaysCommandSignatures_.end()) {
-    dispatchRays_ = true;
+  if (m_DispatchRaysCommandSignatures.find(c.m_pCommandSignature.Key) !=
+      m_DispatchRaysCommandSignatures.end()) {
+    m_DispatchRays = true;
   }
 
-  executeIndirectService_.executeIndirect(c);
-  CommandListInfo& info = commandListInfos_[c.object_.key];
+  m_ExecuteIndirectService.ExecuteIndirect(c);
+  CommandListInfo& info = m_CommandListInfos[c.m_Object.Key];
   if (info.viewDescriptorHeap) {
-    DescriptorHeapInfo& heapInfo = descriptorHeapInfos_[info.viewDescriptorHeap];
+    DescriptorHeapInfo& heapInfo = m_DescriptorHeapInfos[info.viewDescriptorHeap];
     if (info.computeRootSignature) {
-      setBindlessDescriptors(info.computeRootSignature, info.viewDescriptorHeap, heapInfo.type,
+      SetBindlessDescriptors(info.computeRootSignature, info.viewDescriptorHeap, heapInfo.type,
                              heapInfo.numDescriptors);
     }
     if (info.graphicsRootSignature) {
-      setBindlessDescriptors(info.graphicsRootSignature, info.viewDescriptorHeap, heapInfo.type,
+      SetBindlessDescriptors(info.graphicsRootSignature, info.viewDescriptorHeap, heapInfo.type,
                              heapInfo.numDescriptors);
     }
   }
   if (info.samplerDescriptorHeap) {
-    DescriptorHeapInfo& heapInfo = descriptorHeapInfos_[info.samplerDescriptorHeap];
+    DescriptorHeapInfo& heapInfo = m_DescriptorHeapInfos[info.samplerDescriptorHeap];
     if (info.computeRootSignature) {
-      setBindlessDescriptors(info.computeRootSignature, info.samplerDescriptorHeap, heapInfo.type,
+      SetBindlessDescriptors(info.computeRootSignature, info.samplerDescriptorHeap, heapInfo.type,
                              heapInfo.numDescriptors);
     }
     if (info.graphicsRootSignature) {
-      setBindlessDescriptors(info.graphicsRootSignature, info.samplerDescriptorHeap, heapInfo.type,
+      SetBindlessDescriptors(info.graphicsRootSignature, info.samplerDescriptorHeap, heapInfo.type,
                              heapInfo.numDescriptors);
     }
   }
 }
 
-void AnalyzerCommandListService::commandAnalysis(
+void AnalyzerCommandListService::CommandAnalysis(
     ID3D12GraphicsCommandList1AtomicCopyBufferUINTCommand& c) {
-  addObjectForRestore(c.pDstBuffer_.key);
-  addObjectForRestore(c.pSrcBuffer_.key);
-  for (unsigned key : c.ppDependentResources_.keys) {
-    addObjectForRestore(key);
+  AddObjectForRestore(c.m_pDstBuffer.Key);
+  AddObjectForRestore(c.m_pSrcBuffer.Key);
+  for (unsigned key : c.m_ppDependentResources.Keys) {
+    AddObjectForRestore(key);
   }
 }
 
-void AnalyzerCommandListService::commandAnalysis(
+void AnalyzerCommandListService::CommandAnalysis(
     ID3D12GraphicsCommandList1AtomicCopyBufferUINT64Command& c) {
-  addObjectForRestore(c.pDstBuffer_.key);
-  addObjectForRestore(c.pSrcBuffer_.key);
-  for (unsigned key : c.ppDependentResources_.keys) {
-    addObjectForRestore(key);
+  AddObjectForRestore(c.m_pDstBuffer.Key);
+  AddObjectForRestore(c.m_pSrcBuffer.Key);
+  for (unsigned key : c.m_ppDependentResources.Keys) {
+    AddObjectForRestore(key);
   }
 }
 
-void AnalyzerCommandListService::commandAnalysis(
+void AnalyzerCommandListService::CommandAnalysis(
     ID3D12GraphicsCommandList1ResolveSubresourceRegionCommand& c) {
-  addObjectForRestore(c.pDstResource_.key);
-  addObjectForRestore(c.pSrcResource_.key);
+  AddObjectForRestore(c.m_pDstResource.Key);
+  AddObjectForRestore(c.m_pSrcResource.Key);
 }
 
-void AnalyzerCommandListService::commandAnalysis(
+void AnalyzerCommandListService::CommandAnalysis(
     ID3D12GraphicsCommandList2WriteBufferImmediateCommand& c) {
-  for (unsigned key : c.pParams_.destKeys) {
-    addObjectForRestore(key);
+  for (unsigned key : c.m_pParams.DestKeys) {
+    AddObjectForRestore(key);
   }
 }
 
-void AnalyzerCommandListService::commandAnalysis(
+void AnalyzerCommandListService::CommandAnalysis(
     ID3D12GraphicsCommandList3SetProtectedResourceSessionCommand& c) {
-  addObjectForRestore(c.pProtectedResourceSession_.key);
+  AddObjectForRestore(c.m_pProtectedResourceSession.Key);
 }
 
-void AnalyzerCommandListService::commandAnalysis(
+void AnalyzerCommandListService::CommandAnalysis(
     ID3D12GraphicsCommandList4BeginRenderPassCommand& c) {
-  for (unsigned i = 0; i < c.pRenderTargets_.size; ++i) {
-    unsigned descriptorKey = c.pRenderTargets_.descriptorKeys[i];
-    if (descriptorKey) {
-      addObjectForRestore(descriptorKey);
-      DescriptorState* state = descriptorService_.getDescriptorState(
-          descriptorKey, c.pRenderTargets_.descriptorIndexes[i]);
+  for (unsigned i = 0; i < c.m_pRenderTargets.Size; ++i) {
+    unsigned DescriptorKey = c.m_pRenderTargets.DescriptorKeys[i];
+    if (DescriptorKey) {
+      AddObjectForRestore(DescriptorKey);
+      DescriptorState* state = m_DescriptorService.GetDescriptorState(
+          DescriptorKey, c.m_pRenderTargets.DescriptorIndexes[i]);
       if (state) {
-        addObjectForRestore(state->resourceKey);
-        addObjectForRestore(state->auxiliaryResourceKey);
+        AddObjectForRestore(state->ResourceKey);
+        AddObjectForRestore(state->AuxiliaryResourceKey);
       }
-      descriptors_.insert({descriptorKey, c.pRenderTargets_.descriptorIndexes[i]});
+      m_Descriptors.insert({DescriptorKey, c.m_pRenderTargets.DescriptorIndexes[i]});
     }
   }
-  for (unsigned key : c.pRenderTargets_.resolveSrcResourceKeys) {
-    addObjectForRestore(key);
+  for (unsigned key : c.m_pRenderTargets.ResolveSrcResourceKeys) {
+    AddObjectForRestore(key);
   }
-  for (unsigned key : c.pRenderTargets_.resolveDstResourceKeys) {
-    addObjectForRestore(key);
+  for (unsigned key : c.m_pRenderTargets.ResolveDstResourceKeys) {
+    AddObjectForRestore(key);
   }
-  if (c.pDepthStencil_.descriptorKey) {
-    addObjectForRestore(c.pDepthStencil_.descriptorKey);
-    DescriptorState* state = descriptorService_.getDescriptorState(
-        c.pDepthStencil_.descriptorKey, c.pDepthStencil_.descriptorIndex);
+  if (c.m_pDepthStencil.DescriptorKey) {
+    AddObjectForRestore(c.m_pDepthStencil.DescriptorKey);
+    DescriptorState* state = m_DescriptorService.GetDescriptorState(
+        c.m_pDepthStencil.DescriptorKey, c.m_pDepthStencil.DescriptorIndex);
     if (state) {
-      addObjectForRestore(state->resourceKey);
-      addObjectForRestore(state->auxiliaryResourceKey);
+      AddObjectForRestore(state->ResourceKey);
+      AddObjectForRestore(state->AuxiliaryResourceKey);
     }
-    descriptors_.insert({c.pDepthStencil_.descriptorKey, c.pDepthStencil_.descriptorIndex});
+    m_Descriptors.insert({c.m_pDepthStencil.DescriptorKey, c.m_pDepthStencil.DescriptorIndex});
   }
-  addObjectForRestore(c.pDepthStencil_.resolveSrcDepthKey);
-  addObjectForRestore(c.pDepthStencil_.resolveDstDepthKey);
-  addObjectForRestore(c.pDepthStencil_.resolveSrcStencilKey);
-  addObjectForRestore(c.pDepthStencil_.resolveDstStencilKey);
+  AddObjectForRestore(c.m_pDepthStencil.ResolveSrcDepthKey);
+  AddObjectForRestore(c.m_pDepthStencil.ResolveDstDepthKey);
+  AddObjectForRestore(c.m_pDepthStencil.ResolveSrcStencilKey);
+  AddObjectForRestore(c.m_pDepthStencil.ResolveDstStencilKey);
 }
 
-void AnalyzerCommandListService::commandAnalysis(
+void AnalyzerCommandListService::CommandAnalysis(
     ID3D12GraphicsCommandList4InitializeMetaCommandCommand& c) {
-  addObjectForRestore(c.pMetaCommand_.key);
+  AddObjectForRestore(c.m_pMetaCommand.Key);
 }
 
-void AnalyzerCommandListService::commandAnalysis(
+void AnalyzerCommandListService::CommandAnalysis(
     ID3D12GraphicsCommandList4ExecuteMetaCommandCommand& c) {
-  addObjectForRestore(c.pMetaCommand_.key);
+  AddObjectForRestore(c.m_pMetaCommand.Key);
 }
 
-void AnalyzerCommandListService::commandAnalysis(
+void AnalyzerCommandListService::CommandAnalysis(
     ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c) {
-  if (c.pDesc_.value->Inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
-    if (tlasBuildKeys_.find(c.key) == tlasBuildKeys_.end()) {
-      tlasBuildKeys_.insert(c.key);
-      raytracingService_.buildTlas(c);
+  if (c.m_pDesc.Value->Inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
+    if (m_TlasBuildKeys.find(c.Key) == m_TlasBuildKeys.end()) {
+      m_TlasBuildKeys.insert(c.Key);
+      m_RaytracingService.BuildTlas(c);
     }
-  } else if (c.pDesc_.value->Inputs.Type ==
+  } else if (c.m_pDesc.Value->Inputs.Type ==
              D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL) {
-    if (c.pDesc_.sourceAccelerationStructureKey) {
-      raytracingService_.addAccelerationStructureSource(c.pDesc_.sourceAccelerationStructureKey,
-                                                        c.pDesc_.sourceAccelerationStructureOffset);
+    if (c.m_pDesc.SourceAccelerationStructureKey) {
+      m_RaytracingService.AddAccelerationStructureSource(
+          c.m_pDesc.SourceAccelerationStructureKey, c.m_pDesc.SourceAccelerationStructureOffset);
     }
   }
 }
 
-void AnalyzerCommandListService::command(
+void AnalyzerCommandListService::Command(
     ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c) {
-  if (analyzerService_.inRange()) {
-    if (!resetCommandLists_[c.object_.key]) {
-      commandListRestore(c.object_.key);
+  if (m_AnalyzerService.InRange()) {
+    if (!m_ResetCommandLists[c.m_Object.Key]) {
+      CommandListRestore(c.m_Object.Key);
     }
-    commandAnalysis(c);
-  } else if (!commandListSubcapture_) {
-    commandsByCommandList_[c.object_.key].emplace_back(
+    CommandAnalysis(c);
+  } else if (!m_CommandListSubcapture) {
+    m_CommandsByCommandList[c.m_Object.Key].emplace_back(
         new ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand(c));
   }
-  if (c.pDesc_.value->Inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL &&
-      analyzerService_.beforeRange() && (firstFrame_ || restoreTlases_ || commandListSubcapture_)) {
-    tlasBuildKeys_.insert(c.key);
-    raytracingService_.buildTlas(c);
+  if (c.m_pDesc.Value->Inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL &&
+      m_AnalyzerService.BeforeRange() &&
+      (m_FirstFrame || m_RestoreTlases || m_CommandListSubcapture)) {
+    m_TlasBuildKeys.insert(c.Key);
+    m_RaytracingService.BuildTlas(c);
   }
 
-  if (optimize_) {
-    addObjectForRestore(c.pDesc_.destAccelerationStructureKey);
-    if (c.pDesc_.sourceAccelerationStructureKey) {
-      addObjectForRestore(c.pDesc_.sourceAccelerationStructureKey);
+  if (m_Optimize) {
+    AddObjectForRestore(c.m_pDesc.DestAccelerationStructureKey);
+    if (c.m_pDesc.SourceAccelerationStructureKey) {
+      AddObjectForRestore(c.m_pDesc.SourceAccelerationStructureKey);
     }
-    if (!isStateRestoreKey(c.pDesc_.scratchAccelerationStructureKey)) {
-      addObjectForRestore(c.pDesc_.scratchAccelerationStructureKey);
+    if (!IsStateRestoreKey(c.m_pDesc.ScratchAccelerationStructureKey)) {
+      AddObjectForRestore(c.m_pDesc.ScratchAccelerationStructureKey);
     }
-    for (unsigned key : c.pDesc_.inputKeys) {
-      addObjectForRestore(key);
+    for (unsigned key : c.m_pDesc.InputKeys) {
+      AddObjectForRestore(key);
     }
   }
 }
 
-void AnalyzerCommandListService::commandAnalysis(
+void AnalyzerCommandListService::CommandAnalysis(
     NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& c) {
-  if (c.pParams.value->pDesc->inputs.type ==
+  if (c.m_pParams.Value->pDesc->inputs.type ==
       D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
     LOG_ERROR << "NvAPI top level build not handled";
-  } else if (c.pParams.value->pDesc->inputs.type ==
+  } else if (c.m_pParams.Value->pDesc->inputs.type ==
              D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL) {
-    if (c.pParams.sourceAccelerationStructureKey) {
-      raytracingService_.addAccelerationStructureSource(
-          c.pParams.sourceAccelerationStructureKey, c.pParams.sourceAccelerationStructureOffset);
+    if (c.m_pParams.SourceAccelerationStructureKey) {
+      m_RaytracingService.AddAccelerationStructureSource(
+          c.m_pParams.SourceAccelerationStructureKey,
+          c.m_pParams.SourceAccelerationStructureOffset);
     }
   }
 }
 
-void AnalyzerCommandListService::command(
+void AnalyzerCommandListService::Command(
     NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& c) {
-  if (analyzerService_.inRange()) {
-    if (!resetCommandLists_[c.pCommandList_.key]) {
-      commandListRestore(c.pCommandList_.key);
+  if (m_AnalyzerService.InRange()) {
+    if (!m_ResetCommandLists[c.m_pCommandList.Key]) {
+      CommandListRestore(c.m_pCommandList.Key);
     }
-    commandAnalysis(c);
-  } else if (!commandListSubcapture_) {
-    commandsByCommandList_[c.pCommandList_.key].emplace_back(
+    CommandAnalysis(c);
+  } else if (!m_CommandListSubcapture) {
+    m_CommandsByCommandList[c.m_pCommandList.Key].emplace_back(
         new NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand(c));
   }
-  if (c.pParams.value->pDesc->inputs.type ==
+  if (c.m_pParams.Value->pDesc->inputs.type ==
       D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
     LOG_ERROR << "NvAPI top level build not handled";
   }
 
-  if (optimize_) {
-    addObjectForRestore(c.pParams.destAccelerationStructureKey);
-    if (c.pParams.sourceAccelerationStructureKey) {
-      addObjectForRestore(c.pParams.sourceAccelerationStructureKey);
+  if (m_Optimize) {
+    AddObjectForRestore(c.m_pParams.DestAccelerationStructureKey);
+    if (c.m_pParams.SourceAccelerationStructureKey) {
+      AddObjectForRestore(c.m_pParams.SourceAccelerationStructureKey);
     }
-    if (!isStateRestoreKey(c.pParams.scratchAccelerationStructureKey)) {
-      addObjectForRestore(c.pParams.scratchAccelerationStructureKey);
+    if (!IsStateRestoreKey(c.m_pParams.ScratchAccelerationStructureKey)) {
+      AddObjectForRestore(c.m_pParams.ScratchAccelerationStructureKey);
     }
-    for (unsigned key : c.pParams.inputKeys) {
-      addObjectForRestore(key);
+    for (unsigned key : c.m_pParams.InputKeys) {
+      AddObjectForRestore(key);
     }
-    for (unsigned key : c.pParams.destPostBuildBufferKeys) {
-      addObjectForRestore(key);
+    for (unsigned key : c.m_pParams.DestPostBuildBufferKeys) {
+      AddObjectForRestore(key);
     }
   }
 }
 
-void AnalyzerCommandListService::command(
+void AnalyzerCommandListService::Command(
     NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& c) {
-  if (optimize_) {
-    addObjectForRestore(c.pParams.destOpacityMicromapArrayDataKey);
-    if (c.pParams.inputBufferKey) {
-      addObjectForRestore(c.pParams.inputBufferKey);
+  if (m_Optimize) {
+    AddObjectForRestore(c.m_pParams.DestOpacityMicromapArrayDataKey);
+    if (c.m_pParams.InputBufferKey) {
+      AddObjectForRestore(c.m_pParams.InputBufferKey);
     }
-    if (c.pParams.perOMMDescsKey) {
-      addObjectForRestore(c.pParams.perOMMDescsKey);
+    if (c.m_pParams.PerOMMDescsKey) {
+      AddObjectForRestore(c.m_pParams.PerOMMDescsKey);
     }
-    if (!isStateRestoreKey(c.pParams.scratchOpacityMicromapArrayDataKey)) {
-      addObjectForRestore(c.pParams.scratchOpacityMicromapArrayDataKey);
+    if (!IsStateRestoreKey(c.m_pParams.ScratchOpacityMicromapArrayDataKey)) {
+      AddObjectForRestore(c.m_pParams.ScratchOpacityMicromapArrayDataKey);
     }
-    for (unsigned key : c.pParams.destPostBuildBufferKeys) {
-      addObjectForRestore(key);
+    for (unsigned key : c.m_pParams.DestPostBuildBufferKeys) {
+      AddObjectForRestore(key);
     }
   }
 }
 
-void AnalyzerCommandListService::commandAnalysis(
+void AnalyzerCommandListService::CommandAnalysis(
     ID3D12GraphicsCommandList4EmitRaytracingAccelerationStructurePostbuildInfoCommand& c) {
-  for (unsigned i = 0; i < c.NumSourceAccelerationStructures_.value; ++i) {
-    raytracingService_.addAccelerationStructureSource(
-        c.pSourceAccelerationStructureData_.interfaceKeys[i],
-        c.pSourceAccelerationStructureData_.offsets[i]);
-    if (optimize_) {
-      addObjectForRestore(c.pSourceAccelerationStructureData_.interfaceKeys[i]);
+  for (unsigned i = 0; i < c.m_NumSourceAccelerationStructures.Value; ++i) {
+    m_RaytracingService.AddAccelerationStructureSource(
+        c.m_pSourceAccelerationStructureData.InterfaceKeys[i],
+        c.m_pSourceAccelerationStructureData.Offsets[i]);
+    if (m_Optimize) {
+      AddObjectForRestore(c.m_pSourceAccelerationStructureData.InterfaceKeys[i]);
     }
   }
-  if (optimize_) {
-    addObjectForRestore(c.pDesc_.destBufferKey);
+  if (m_Optimize) {
+    AddObjectForRestore(c.m_pDesc.destBufferKey);
   }
 }
 
-void AnalyzerCommandListService::command(
+void AnalyzerCommandListService::Command(
     ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& c) {
-  if (analyzerService_.inRange()) {
-    if (!resetCommandLists_[c.object_.key]) {
-      commandListRestore(c.object_.key);
+  if (m_AnalyzerService.InRange()) {
+    if (!m_ResetCommandLists[c.m_Object.Key]) {
+      CommandListRestore(c.m_Object.Key);
     }
-    commandAnalysis(c);
-  } else if (!commandListSubcapture_) {
-    commandsByCommandList_[c.object_.key].emplace_back(
+    CommandAnalysis(c);
+  } else if (!m_CommandListSubcapture) {
+    m_CommandsByCommandList[c.m_Object.Key].emplace_back(
         new ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand(c));
   }
 
-  if (optimize_) {
-    addObjectForRestore(c.DestAccelerationStructureData_.interfaceKey);
-    addObjectForRestore(c.SourceAccelerationStructureData_.interfaceKey);
+  if (m_Optimize) {
+    AddObjectForRestore(c.m_DestAccelerationStructureData.InterfaceKey);
+    AddObjectForRestore(c.m_SourceAccelerationStructureData.InterfaceKey);
   }
 }
 
-void AnalyzerCommandListService::commandAnalysis(
+void AnalyzerCommandListService::CommandAnalysis(
     ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& c) {
-  raytracingService_.addAccelerationStructureSource(c.SourceAccelerationStructureData_.interfaceKey,
-                                                    c.SourceAccelerationStructureData_.offset);
+  m_RaytracingService.AddAccelerationStructureSource(
+      c.m_SourceAccelerationStructureData.InterfaceKey, c.m_SourceAccelerationStructureData.Offset);
 }
 
-void AnalyzerCommandListService::commandAnalysis(
+void AnalyzerCommandListService::CommandAnalysis(
     ID3D12GraphicsCommandList4SetPipelineState1Command& c) {
-  raytracingService_.setPipelineState(c);
+  m_RaytracingService.SetPipelineState(c);
 
-  addObjectForRestore(c.object_.key);
-  addObjectForRestore(c.pStateObject_.key);
-  if (checkedStateObjectSubobjects_.find(c.pStateObject_.key) ==
-      checkedStateObjectSubobjects_.end()) {
+  AddObjectForRestore(c.m_Object.Key);
+  AddObjectForRestore(c.m_pStateObject.Key);
+  if (m_CheckedStateObjectSubobjects.find(c.m_pStateObject.Key) ==
+      m_CheckedStateObjectSubobjects.end()) {
     const std::set<unsigned> subobjects =
-        raytracingService_.getStateObjectAllSubobjects(c.pStateObject_.key);
+        m_RaytracingService.GetStateObjectAllSubobjects(c.m_pStateObject.Key);
     for (unsigned key : subobjects) {
-      addObjectForRestore(key);
+      AddObjectForRestore(key);
     }
-    checkedStateObjectSubobjects_.insert(c.pStateObject_.key);
+    m_CheckedStateObjectSubobjects.insert(c.m_pStateObject.Key);
   }
 }
 
-void AnalyzerCommandListService::commandAnalysis(ID3D12GraphicsCommandList4DispatchRaysCommand& c) {
-  dispatchRays_ = true;
-  raytracingService_.dispatchRays(c);
-  addObjectForRestore(c.pDesc_.rayGenerationShaderRecordKey);
-  addObjectForRestore(c.pDesc_.missShaderTableKey);
-  addObjectForRestore(c.pDesc_.hitGroupTableKey);
-  addObjectForRestore(c.pDesc_.callableShaderTableKey);
+void AnalyzerCommandListService::CommandAnalysis(ID3D12GraphicsCommandList4DispatchRaysCommand& c) {
+  m_DispatchRays = true;
+  m_RaytracingService.DispatchRays(c);
+  AddObjectForRestore(c.m_pDesc.RayGenerationShaderRecordKey);
+  AddObjectForRestore(c.m_pDesc.MissShaderTableKey);
+  AddObjectForRestore(c.m_pDesc.HitGroupTableKey);
+  AddObjectForRestore(c.m_pDesc.CallableShaderTableKey);
 
-  CommandListInfo& info = commandListInfos_[c.object_.key];
+  CommandListInfo& info = m_CommandListInfos[c.m_Object.Key];
   if (info.viewDescriptorHeap) {
-    DescriptorHeapInfo& heapInfo = descriptorHeapInfos_[info.viewDescriptorHeap];
-    setBindlessDescriptors(info.computeRootSignature, info.viewDescriptorHeap, heapInfo.type,
+    DescriptorHeapInfo& heapInfo = m_DescriptorHeapInfos[info.viewDescriptorHeap];
+    SetBindlessDescriptors(info.computeRootSignature, info.viewDescriptorHeap, heapInfo.type,
                            heapInfo.numDescriptors);
   }
   if (info.samplerDescriptorHeap) {
-    DescriptorHeapInfo& heapInfo = descriptorHeapInfos_[info.samplerDescriptorHeap];
-    setBindlessDescriptors(info.computeRootSignature, info.samplerDescriptorHeap, heapInfo.type,
+    DescriptorHeapInfo& heapInfo = m_DescriptorHeapInfos[info.samplerDescriptorHeap];
+    SetBindlessDescriptors(info.computeRootSignature, info.samplerDescriptorHeap, heapInfo.type,
                            heapInfo.numDescriptors);
   }
 }
 
-void AnalyzerCommandListService::commandAnalysis(
+void AnalyzerCommandListService::CommandAnalysis(
     ID3D12GraphicsCommandList5RSSetShadingRateImageCommand& c) {
-  addObjectForRestore(c.shadingRateImage_.key);
+  AddObjectForRestore(c.m_shadingRateImage.Key);
 }
 
-void AnalyzerCommandListService::commandAnalysis(ID3D12GraphicsCommandList6DispatchMeshCommand& c) {
-  CommandListInfo& info = commandListInfos_[c.object_.key];
+void AnalyzerCommandListService::CommandAnalysis(ID3D12GraphicsCommandList6DispatchMeshCommand& c) {
+  CommandListInfo& info = m_CommandListInfos[c.m_Object.Key];
   if (info.viewDescriptorHeap) {
-    DescriptorHeapInfo& heapInfo = descriptorHeapInfos_[info.viewDescriptorHeap];
-    setBindlessDescriptors(info.computeRootSignature, info.viewDescriptorHeap, heapInfo.type,
+    DescriptorHeapInfo& heapInfo = m_DescriptorHeapInfos[info.viewDescriptorHeap];
+    SetBindlessDescriptors(info.computeRootSignature, info.viewDescriptorHeap, heapInfo.type,
                            heapInfo.numDescriptors);
   }
   if (info.samplerDescriptorHeap) {
-    DescriptorHeapInfo& heapInfo = descriptorHeapInfos_[info.samplerDescriptorHeap];
-    setBindlessDescriptors(info.computeRootSignature, info.samplerDescriptorHeap, heapInfo.type,
+    DescriptorHeapInfo& heapInfo = m_DescriptorHeapInfos[info.samplerDescriptorHeap];
+    SetBindlessDescriptors(info.computeRootSignature, info.samplerDescriptorHeap, heapInfo.type,
                            heapInfo.numDescriptors);
   }
 }
 
-void AnalyzerCommandListService::commandAnalysis(ID3D12GraphicsCommandList7BarrierCommand& c) {
-  for (unsigned key : c.pBarrierGroups_.resourceKeys) {
-    addObjectForRestore(key);
+void AnalyzerCommandListService::CommandAnalysis(ID3D12GraphicsCommandList7BarrierCommand& c) {
+  for (unsigned key : c.m_pBarrierGroups.ResourceKeys) {
+    AddObjectForRestore(key);
   }
 }
 

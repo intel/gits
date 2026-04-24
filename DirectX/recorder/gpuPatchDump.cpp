@@ -38,18 +38,18 @@ void GpuPatchDump::dumpArgumentBuffer(ID3D12GraphicsCommandList* commandList,
                                       D3D12_RESOURCE_STATES countBufferState,
                                       unsigned callKey) {
   ExecuteIndirectDumpInfo* dumpInfo = new ExecuteIndirectDumpInfo();
-  dumpInfo->commandSignature = &commandSignature;
+  dumpInfo->CommandSignature = &commandSignature;
   dumpInfo->offset = argumentBufferOffset;
   dumpInfo->size = commandSignature.ByteStride * maxCommandCount;
-  dumpInfo->callKey = callKey;
+  dumpInfo->CallKey = callKey;
   if (countBuffer) {
-    dumpInfo->countDumpInfo.offset = countBufferOffset;
-    dumpInfo->countDumpInfo.size = sizeof(unsigned);
+    dumpInfo->CountDumpInfo.offset = countBufferOffset;
+    dumpInfo->CountDumpInfo.size = sizeof(unsigned);
   }
 
   stageResource(commandList, argumentBuffer, argumentBufferState, *dumpInfo);
   if (countBuffer) {
-    stageResource(commandList, countBuffer, countBufferState, dumpInfo->countDumpInfo, true);
+    stageResource(commandList, countBuffer, countBufferState, dumpInfo->CountDumpInfo, true);
   }
 }
 
@@ -62,7 +62,7 @@ void GpuPatchDump::dumpInstancesArrayOfPointers(ID3D12GraphicsCommandList* comma
   InstancesArrayOfPointersDumpInfo* dumpInfo = new InstancesArrayOfPointersDumpInfo();
   dumpInfo->offset = offset;
   dumpInfo->size = sizeof(D3D12_GPU_VIRTUAL_ADDRESS) * pointersCount;
-  dumpInfo->callKey = callKey;
+  dumpInfo->CallKey = callKey;
 
   stageResource(commandList, instancesBuffer, bufferState, *dumpInfo);
 }
@@ -70,13 +70,13 @@ void GpuPatchDump::dumpInstancesArrayOfPointers(ID3D12GraphicsCommandList* comma
 void GpuPatchDump::dumpStagedResource(DumpInfo& dumpInfo) {
   ExecuteIndirectDumpInfo* executeIndirectInfo = dynamic_cast<ExecuteIndirectDumpInfo*>(&dumpInfo);
   if (executeIndirectInfo) {
-    unsigned count = executeIndirectInfo->size / executeIndirectInfo->commandSignature->ByteStride;
-    if (executeIndirectInfo->countDumpInfo.stagingBuffer) {
+    unsigned count = executeIndirectInfo->size / executeIndirectInfo->CommandSignature->ByteStride;
+    if (executeIndirectInfo->CountDumpInfo.stagingBuffer) {
       void* data{};
-      HRESULT hr = executeIndirectInfo->countDumpInfo.stagingBuffer->Map(0, nullptr, &data);
+      HRESULT hr = executeIndirectInfo->CountDumpInfo.stagingBuffer->Map(0, nullptr, &data);
       GITS_ASSERT(hr == S_OK);
       count = std::min(count, *static_cast<unsigned*>(data));
-      executeIndirectInfo->countDumpInfo.stagingBuffer->Unmap(0, nullptr);
+      executeIndirectInfo->CountDumpInfo.stagingBuffer->Unmap(0, nullptr);
     }
     void* data{};
     HRESULT hr = executeIndirectInfo->stagingBuffer->Map(0, nullptr, &data);
@@ -101,12 +101,12 @@ void GpuPatchDump::dumpStagedResource(DumpInfo& dumpInfo) {
 void GpuPatchDump::flush() {
   waitUntilDumped();
   {
-    std::lock_guard<std::mutex> lock(executeIndirectMutex_);
-    executeIndirectStream_.flush();
+    std::lock_guard<std::mutex> lock(m_ExecuteIndirectMutex);
+    m_ExecuteIndirectStream.flush();
   }
   {
-    std::lock_guard<std::mutex> lock(instancesMutex_);
-    instancesStream_.flush();
+    std::lock_guard<std::mutex> lock(m_InstancesMutex);
+    m_InstancesStream.flush();
   }
 }
 
@@ -115,10 +115,10 @@ void GpuPatchDump::dumpArgumentBuffer(ExecuteIndirectDumpInfo& dumpInfo,
                                       void* data) {
   unsigned offset = 0;
   for (unsigned i = 0; i < argumentCount; ++i) {
-    offset = i * dumpInfo.commandSignature->ByteStride;
+    offset = i * dumpInfo.CommandSignature->ByteStride;
 
-    for (unsigned j = 0; j < dumpInfo.commandSignature->NumArgumentDescs; ++j) {
-      const D3D12_INDIRECT_ARGUMENT_DESC& desc = dumpInfo.commandSignature->pArgumentDescs[j];
+    for (unsigned j = 0; j < dumpInfo.CommandSignature->NumArgumentDescs; ++j) {
+      const D3D12_INDIRECT_ARGUMENT_DESC& desc = dumpInfo.CommandSignature->pArgumentDescs[j];
       switch (desc.Type) {
       case D3D12_INDIRECT_ARGUMENT_TYPE_DRAW: {
         offset += sizeof(D3D12_DRAW_ARGUMENTS);
@@ -157,28 +157,28 @@ void GpuPatchDump::dumpArgumentBuffer(ExecuteIndirectDumpInfo& dumpInfo,
         break;
       }
       case D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH_RAYS: {
-        std::lock_guard<std::mutex> lock(executeIndirectMutex_);
+        std::lock_guard<std::mutex> lock(m_ExecuteIndirectMutex);
         D3D12_DISPATCH_RAYS_DESC& desc =
             *reinterpret_cast<D3D12_DISPATCH_RAYS_DESC*>(static_cast<uint8_t*>(data) + offset);
 
-        if (!executeIndirectStream_.is_open()) {
+        if (!m_ExecuteIndirectStream.is_open()) {
           std::filesystem::path dumpPath = Configurator::Get().common.recorder.dumpPath;
-          executeIndirectStream_.open(dumpPath / "executeIndirectRaytracing.txt");
+          m_ExecuteIndirectStream.open(dumpPath / "executeIndirectRaytracing.txt");
         }
-        executeIndirectStream_ << dumpInfo.callKey << " ";
-        executeIndirectStream_ << desc.RayGenerationShaderRecord.StartAddress << " "
-                               << desc.RayGenerationShaderRecord.SizeInBytes << " ";
-        executeIndirectStream_ << desc.MissShaderTable.StartAddress << " "
-                               << desc.MissShaderTable.SizeInBytes << " "
-                               << desc.MissShaderTable.StrideInBytes << " ";
-        executeIndirectStream_ << desc.HitGroupTable.StartAddress << " "
-                               << desc.HitGroupTable.SizeInBytes << " "
-                               << desc.HitGroupTable.StrideInBytes << " ";
-        executeIndirectStream_ << desc.CallableShaderTable.StartAddress << " "
-                               << desc.CallableShaderTable.SizeInBytes << " "
-                               << desc.CallableShaderTable.StrideInBytes << " ";
-        executeIndirectStream_ << desc.Width << " " << desc.Height << " " << desc.Depth;
-        executeIndirectStream_ << "\n";
+        m_ExecuteIndirectStream << dumpInfo.CallKey << " ";
+        m_ExecuteIndirectStream << desc.RayGenerationShaderRecord.StartAddress << " "
+                                << desc.RayGenerationShaderRecord.SizeInBytes << " ";
+        m_ExecuteIndirectStream << desc.MissShaderTable.StartAddress << " "
+                                << desc.MissShaderTable.SizeInBytes << " "
+                                << desc.MissShaderTable.StrideInBytes << " ";
+        m_ExecuteIndirectStream << desc.HitGroupTable.StartAddress << " "
+                                << desc.HitGroupTable.SizeInBytes << " "
+                                << desc.HitGroupTable.StrideInBytes << " ";
+        m_ExecuteIndirectStream << desc.CallableShaderTable.StartAddress << " "
+                                << desc.CallableShaderTable.SizeInBytes << " "
+                                << desc.CallableShaderTable.StrideInBytes << " ";
+        m_ExecuteIndirectStream << desc.Width << " " << desc.Height << " " << desc.Depth;
+        m_ExecuteIndirectStream << "\n";
 
         offset += sizeof(D3D12_DISPATCH_RAYS_DESC);
         break;
@@ -193,17 +193,18 @@ void GpuPatchDump::dumpArgumentBuffer(ExecuteIndirectDumpInfo& dumpInfo,
 }
 
 void GpuPatchDump::dumpInstancesBuffer(InstancesArrayOfPointersDumpInfo& dumpInfo, void* data) {
-  std::lock_guard<std::mutex> lock(instancesMutex_);
-  if (!instancesStream_.is_open()) {
+  std::lock_guard<std::mutex> lock(m_InstancesMutex);
+  if (!m_InstancesStream.is_open()) {
     std::filesystem::path dumpPath = Configurator::Get().common.recorder.dumpPath;
-    instancesStream_.open(dumpPath / "raytracingArraysOfPointers.dat", std::ios::binary);
+    m_InstancesStream.open(dumpPath / "raytracingArraysOfPointers.dat", std::ios::binary);
   }
-  instancesStream_.write(reinterpret_cast<char*>(&dumpInfo.callKey), sizeof(unsigned));
+  m_InstancesStream.write(reinterpret_cast<char*>(&dumpInfo.CallKey), sizeof(unsigned));
   unsigned count = dumpInfo.size / sizeof(D3D12_GPU_VIRTUAL_ADDRESS);
-  instancesStream_.write(reinterpret_cast<char*>(&count), sizeof(unsigned));
+  m_InstancesStream.write(reinterpret_cast<char*>(&count), sizeof(unsigned));
   D3D12_GPU_VIRTUAL_ADDRESS* address = static_cast<D3D12_GPU_VIRTUAL_ADDRESS*>(data);
   for (unsigned i = 0; i < count; ++i) {
-    instancesStream_.write(reinterpret_cast<char*>(&address[i]), sizeof(D3D12_GPU_VIRTUAL_ADDRESS));
+    m_InstancesStream.write(reinterpret_cast<char*>(&address[i]),
+                            sizeof(D3D12_GPU_VIRTUAL_ADDRESS));
   }
 }
 

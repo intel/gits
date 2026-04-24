@@ -40,12 +40,12 @@ public:
 
 protected:
   struct ExecuteIndirectDumpInfo : public DumpInfo {
-    D3D12_COMMAND_SIGNATURE_DESC* commandSignature{};
-    DumpInfo countDumpInfo;
-    unsigned callKey;
+    D3D12_COMMAND_SIGNATURE_DESC* CommandSignature{};
+    DumpInfo CountDumpInfo;
+    unsigned CallKey;
   };
   struct InstancesArrayOfPointersDumpInfo : public DumpInfo {
-    unsigned callKey;
+    unsigned CallKey;
   };
 
   void dumpStagedResource(DumpInfo& dumpInfo) override;
@@ -53,10 +53,10 @@ protected:
   void dumpInstancesBuffer(InstancesArrayOfPointersDumpInfo& dumpInfo, void* data);
 
 private:
-  std::mutex executeIndirectMutex_;
-  std::ofstream executeIndirectStream_;
-  std::mutex instancesMutex_;
-  std::ofstream instancesStream_;
+  std::mutex m_ExecuteIndirectMutex;
+  std::ofstream m_ExecuteIndirectStream;
+  std::mutex m_InstancesMutex;
+  std::ofstream m_InstancesStream;
 };
 
 } // namespace DirectX

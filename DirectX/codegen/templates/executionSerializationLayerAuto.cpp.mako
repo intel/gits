@@ -45,9 +45,9 @@ custom = [
 %for interface in interfaces:
 %for function in interface.functions:
 %if not interface.name + function.name in custom and interface.name.startswith('ID3D12GraphicsCommandList'):
-void ExecutionSerializationLayer::pre(${interface.name}${function.name}Command& c) {
-  if (inRange()) {
-    executionService_.commandListCommand(c.object_.key, c);
+void ExecutionSerializationLayer::Pre(${interface.name}${function.name}Command& c) {
+  if (InRange()) {
+    m_ExecutionService.commandListCommand(c.m_Object.Key, c);
   }
 }
 
@@ -57,9 +57,9 @@ void ExecutionSerializationLayer::pre(${interface.name}${function.name}Command& 
 
 %for function in functions:
 %if not function.name in custom:
-void ExecutionSerializationLayer::pre(${function.name}Command& c) {
-  if (inRange()) {
-    recorder_.record(${function.name}Serializer(c));
+void ExecutionSerializationLayer::Pre(${function.name}Command& c) {
+  if (InRange()) {
+    m_Recorder.Record(${function.name}Serializer(c));
   }
 }
 
@@ -68,9 +68,9 @@ void ExecutionSerializationLayer::pre(${function.name}Command& c) {
 %for interface in interfaces:
 %for function in interface.functions:
 %if not interface.name + function.name in custom and not interface.name.startswith('ID3D12GraphicsCommandList'):
-void ExecutionSerializationLayer::pre(${interface.name}${function.name}Command& c) {
-  if (inRange()) {
-    recorder_.record(${interface.name}${function.name}Serializer(c));
+void ExecutionSerializationLayer::Pre(${interface.name}${function.name}Command& c) {
+  if (InRange()) {
+    m_Recorder.Record(${interface.name}${function.name}Serializer(c));
   }
 }
 

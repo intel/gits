@@ -19,7 +19,7 @@ namespace DirectX {
 
 RecordingLayer::~RecordingLayer() {
   try {
-    if (subcaptureRange_.inRange()) {
+    if (m_SubcaptureRange.InRange()) {
       LOG_WARNING << "Subcapture recording terminated prematurely";
     }
   } catch (...) {
@@ -27,258 +27,259 @@ RecordingLayer::~RecordingLayer() {
   }
 }
 
-void RecordingLayer::post(IDXGISwapChainPresentCommand& command) {
-  if (subcaptureRange_.inRange()) {
-    recorder_.record(IDXGISwapChainPresentSerializer(command));
-    if (!(command.Flags_.value & DXGI_PRESENT_TEST) && !isStateRestoreKey(command.key)) {
-      recorder_.record(FrameEndSerializer(FrameEndCommand()));
+void RecordingLayer::Post(IDXGISwapChainPresentCommand& Command) {
+  if (m_SubcaptureRange.InRange()) {
+    m_Recorder.Record(IDXGISwapChainPresentSerializer(Command));
+    if (!(Command.m_Flags.Value & DXGI_PRESENT_TEST) && !IsStateRestoreKey(Command.Key)) {
+      m_Recorder.Record(FrameEndSerializer(FrameEndCommand()));
     }
   }
-  bool inRange = subcaptureRange_.inRange();
-  if (!(command.Flags_.value & DXGI_PRESENT_TEST)) {
-    subcaptureRange_.frameEnd(isStateRestoreKey(command.key));
+  bool InRange = m_SubcaptureRange.InRange();
+  if (!(Command.m_Flags.Value & DXGI_PRESENT_TEST)) {
+    m_SubcaptureRange.FrameEnd(IsStateRestoreKey(Command.Key));
   }
-  if (inRange && !subcaptureRange_.inRange()) {
-    recorder_.finishRecording();
+  if (InRange && !m_SubcaptureRange.InRange()) {
+    m_Recorder.FinishRecording();
   }
 }
 
-void RecordingLayer::post(IDXGISwapChain1Present1Command& command) {
-  if (subcaptureRange_.inRange()) {
-    recorder_.record(IDXGISwapChain1Present1Serializer(command));
-    if (!(command.PresentFlags_.value & DXGI_PRESENT_TEST) && !isStateRestoreKey(command.key)) {
-      recorder_.record(FrameEndSerializer(FrameEndCommand()));
+void RecordingLayer::Post(IDXGISwapChain1Present1Command& Command) {
+  if (m_SubcaptureRange.InRange()) {
+    m_Recorder.Record(IDXGISwapChain1Present1Serializer(Command));
+    if (!(Command.m_PresentFlags.Value & DXGI_PRESENT_TEST) && !IsStateRestoreKey(Command.Key)) {
+      m_Recorder.Record(FrameEndSerializer(FrameEndCommand()));
     }
   }
-  bool inRange = subcaptureRange_.inRange();
-  if (!(command.PresentFlags_.value & DXGI_PRESENT_TEST)) {
-    subcaptureRange_.frameEnd(isStateRestoreKey(command.key));
+  bool InRange = m_SubcaptureRange.InRange();
+  if (!(Command.m_PresentFlags.Value & DXGI_PRESENT_TEST)) {
+    m_SubcaptureRange.FrameEnd(IsStateRestoreKey(Command.Key));
   }
-  if (inRange && !subcaptureRange_.inRange()) {
-    recorder_.finishRecording();
+  if (InRange && !m_SubcaptureRange.InRange()) {
+    m_Recorder.FinishRecording();
   }
 }
 
-void RecordingLayer::post(ID3D12GraphicsCommandListResetCommand& command) {
-  subcaptureRange_.executionStart();
-  if (subcaptureRange_.inRange()) {
-    if (subcaptureRange_.commandListSubcapture()) {
-      recorder_.record(MarkerUInt64Serializer(
+void RecordingLayer::Post(ID3D12GraphicsCommandListResetCommand& Command) {
+  m_SubcaptureRange.ExecutionStart();
+  if (m_SubcaptureRange.InRange()) {
+    if (m_SubcaptureRange.CommandListSubcapture()) {
+      m_Recorder.Record(MarkerUInt64Serializer(
           MarkerUInt64Command(MarkerUInt64Command::Value::GPU_EXECUTION_BEGIN)));
     }
-    recorder_.record(ID3D12GraphicsCommandListResetSerializer(command));
+    m_Recorder.Record(ID3D12GraphicsCommandListResetSerializer(Command));
   }
 }
 
-void RecordingLayer::post(ID3D12FenceGetCompletedValueCommand& command) {
-  if (subcaptureRange_.inRange()) {
-    recorder_.record(ID3D12FenceGetCompletedValueSerializer(command));
-    if (subcaptureRange_.commandListSubcapture()) {
-      recorder_.record(MarkerUInt64Serializer(
+void RecordingLayer::Post(ID3D12FenceGetCompletedValueCommand& Command) {
+  if (m_SubcaptureRange.InRange()) {
+    m_Recorder.Record(ID3D12FenceGetCompletedValueSerializer(Command));
+    if (m_SubcaptureRange.CommandListSubcapture()) {
+      m_Recorder.Record(MarkerUInt64Serializer(
           MarkerUInt64Command(MarkerUInt64Command::Value::GPU_EXECUTION_END)));
     }
   }
-  bool inRange = subcaptureRange_.inRange();
-  subcaptureRange_.executionEnd();
-  if (inRange && !subcaptureRange_.inRange()) {
-    recorder_.finishRecording();
+  bool InRange = m_SubcaptureRange.InRange();
+  m_SubcaptureRange.ExecutionEnd();
+  if (InRange && !m_SubcaptureRange.InRange()) {
+    m_Recorder.FinishRecording();
   }
 }
 
-void RecordingLayer::post(StateRestoreBeginCommand& command) {
-  if (subcaptureRange_.inRange()) {
-    recorder_.record(StateRestoreBeginSerializer(command));
+void RecordingLayer::Post(StateRestoreBeginCommand& Command) {
+  if (m_SubcaptureRange.InRange()) {
+    m_Recorder.Record(StateRestoreBeginSerializer(Command));
   }
 }
 
-void RecordingLayer::post(StateRestoreEndCommand& command) {
-  if (subcaptureRange_.inRange()) {
-    recorder_.record(StateRestoreEndSerializer(command));
+void RecordingLayer::Post(StateRestoreEndCommand& Command) {
+  if (m_SubcaptureRange.InRange()) {
+    m_Recorder.Record(StateRestoreEndSerializer(Command));
   }
 }
 
-void RecordingLayer::post(MarkerUInt64Command& command) {
-  if (subcaptureRange_.inRange()) {
-    recorder_.record(MarkerUInt64Serializer(command));
+void RecordingLayer::Post(MarkerUInt64Command& Command) {
+  if (m_SubcaptureRange.InRange()) {
+    m_Recorder.Record(MarkerUInt64Serializer(Command));
   }
 }
 
-void RecordingLayer::post(CreateWindowMetaCommand& command) {
-  if (subcaptureRange_.inRange()) {
-    recorder_.record(CreateWindowMetaSerializer(command));
+void RecordingLayer::Post(CreateWindowMetaCommand& Command) {
+  if (m_SubcaptureRange.InRange()) {
+    m_Recorder.Record(CreateWindowMetaSerializer(Command));
   }
 }
 
-void RecordingLayer::post(MappedDataMetaCommand& command) {
-  if (subcaptureRange_.inRange()) {
-    recorder_.record(MappedDataMetaSerializer(command));
+void RecordingLayer::Post(MappedDataMetaCommand& Command) {
+  if (m_SubcaptureRange.InRange()) {
+    m_Recorder.Record(MappedDataMetaSerializer(Command));
   }
 }
 
-void RecordingLayer::post(CreateHeapAllocationMetaCommand& command) {
-  if (subcaptureRange_.inRange()) {
-    recorder_.record(CreateHeapAllocationMetaSerializer(command));
+void RecordingLayer::Post(CreateHeapAllocationMetaCommand& Command) {
+  if (m_SubcaptureRange.InRange()) {
+    m_Recorder.Record(CreateHeapAllocationMetaSerializer(Command));
   }
 }
 
-void RecordingLayer::post(WaitForFenceSignaledCommand& command) {
-  if (subcaptureRange_.inRange()) {
-    recorder_.record(WaitForFenceSignaledSerializer(command));
+void RecordingLayer::Post(WaitForFenceSignaledCommand& Command) {
+  if (m_SubcaptureRange.InRange()) {
+    m_Recorder.Record(WaitForFenceSignaledSerializer(Command));
   }
 }
 
-void RecordingLayer::post(DllContainerMetaCommand& command) {
-  if (subcaptureRange_.inRange()) {
-    recorder_.record(DllContainerMetaSerializer(command));
+void RecordingLayer::Post(DllContainerMetaCommand& Command) {
+  if (m_SubcaptureRange.InRange()) {
+    m_Recorder.Record(DllContainerMetaSerializer(Command));
   }
 }
 
-void RecordingLayer::post(IUnknownQueryInterfaceCommand& command) {
-  if (subcaptureRange_.inRange()) {
-    recorder_.record(IUnknownQueryInterfaceSerializer(command));
+void RecordingLayer::Post(IUnknownQueryInterfaceCommand& Command) {
+  if (m_SubcaptureRange.InRange()) {
+    m_Recorder.Record(IUnknownQueryInterfaceSerializer(Command));
   }
 }
 
-void RecordingLayer::post(IUnknownAddRefCommand& command) {
-  if (subcaptureRange_.inRange()) {
-    recorder_.record(IUnknownAddRefSerializer(command));
+void RecordingLayer::Post(IUnknownAddRefCommand& Command) {
+  if (m_SubcaptureRange.InRange()) {
+    m_Recorder.Record(IUnknownAddRefSerializer(Command));
   }
 }
 
-void RecordingLayer::post(IUnknownReleaseCommand& command) {
-  if (subcaptureRange_.inRange()) {
-    recorder_.record(IUnknownReleaseSerializer(command));
+void RecordingLayer::Post(IUnknownReleaseCommand& Command) {
+  if (m_SubcaptureRange.InRange()) {
+    m_Recorder.Record(IUnknownReleaseSerializer(Command));
   }
 }
 
-void RecordingLayer::post(INTC_D3D12_CreateDeviceExtensionContextCommand& command) {
-  if (subcaptureRange_.inRange()) {
-    recorder_.record(INTC_D3D12_CreateDeviceExtensionContextSerializer(command));
+void RecordingLayer::Post(INTC_D3D12_CreateDeviceExtensionContextCommand& Command) {
+  if (m_SubcaptureRange.InRange()) {
+    m_Recorder.Record(INTC_D3D12_CreateDeviceExtensionContextSerializer(Command));
   }
 }
 
-void RecordingLayer::post(INTC_D3D12_CreateDeviceExtensionContext1Command& command) {
-  if (subcaptureRange_.inRange()) {
-    recorder_.record(INTC_D3D12_CreateDeviceExtensionContext1Serializer(command));
+void RecordingLayer::Post(INTC_D3D12_CreateDeviceExtensionContext1Command& Command) {
+  if (m_SubcaptureRange.InRange()) {
+    m_Recorder.Record(INTC_D3D12_CreateDeviceExtensionContext1Serializer(Command));
   }
 }
 
-void RecordingLayer::post(INTC_D3D12_SetApplicationInfoCommand& command) {
-  if (subcaptureRange_.inRange()) {
-    recorder_.record(INTC_D3D12_SetApplicationInfoSerializer(command));
+void RecordingLayer::Post(INTC_D3D12_SetApplicationInfoCommand& Command) {
+  if (m_SubcaptureRange.InRange()) {
+    m_Recorder.Record(INTC_D3D12_SetApplicationInfoSerializer(Command));
   }
 }
 
-void RecordingLayer::post(INTC_DestroyDeviceExtensionContextCommand& command) {
-  if (subcaptureRange_.inRange()) {
-    recorder_.record(INTC_DestroyDeviceExtensionContextSerializer(command));
+void RecordingLayer::Post(INTC_DestroyDeviceExtensionContextCommand& Command) {
+  if (m_SubcaptureRange.InRange()) {
+    m_Recorder.Record(INTC_DestroyDeviceExtensionContextSerializer(Command));
   }
 }
 
-void RecordingLayer::post(INTC_D3D12_SetFeatureSupportCommand& command) {
-  if (subcaptureRange_.inRange()) {
-    recorder_.record(INTC_D3D12_SetFeatureSupportSerializer(command));
+void RecordingLayer::Post(INTC_D3D12_SetFeatureSupportCommand& Command) {
+  if (m_SubcaptureRange.InRange()) {
+    m_Recorder.Record(INTC_D3D12_SetFeatureSupportSerializer(Command));
   }
 }
 
-void RecordingLayer::pre(INTC_D3D12_CreateComputePipelineStateCommand& command) {
-  if (subcaptureRange_.inRange()) {
-    command.pDesc_.cs = command.pDesc_.value->CS.pShaderBytecode;
-    command.pDesc_.compileOptions = command.pDesc_.value->CompileOptions;
-    command.pDesc_.internalOptions = command.pDesc_.value->InternalOptions;
+void RecordingLayer::Pre(INTC_D3D12_CreateComputePipelineStateCommand& Command) {
+  if (m_SubcaptureRange.InRange()) {
+    Command.m_pDesc.Cs = Command.m_pDesc.Value->CS.pShaderBytecode;
+    Command.m_pDesc.CompileOptions = Command.m_pDesc.Value->CompileOptions;
+    Command.m_pDesc.InternalOptions = Command.m_pDesc.Value->InternalOptions;
   }
 }
 
-void RecordingLayer::post(INTC_D3D12_CreateComputePipelineStateCommand& command) {
-  if (subcaptureRange_.inRange()) {
-    recorder_.record(INTC_D3D12_CreateComputePipelineStateSerializer(command));
+void RecordingLayer::Post(INTC_D3D12_CreateComputePipelineStateCommand& Command) {
+  if (m_SubcaptureRange.InRange()) {
+    m_Recorder.Record(INTC_D3D12_CreateComputePipelineStateSerializer(Command));
   }
 }
 
-void RecordingLayer::post(INTC_D3D12_CreatePlacedResourceCommand& command) {
-  if (subcaptureRange_.inRange()) {
-    recorder_.record(INTC_D3D12_CreatePlacedResourceSerializer(command));
+void RecordingLayer::Post(INTC_D3D12_CreatePlacedResourceCommand& Command) {
+  if (m_SubcaptureRange.InRange()) {
+    m_Recorder.Record(INTC_D3D12_CreatePlacedResourceSerializer(Command));
   }
 }
 
-void RecordingLayer::post(INTC_D3D12_CreateCommittedResourceCommand& command) {
-  if (subcaptureRange_.inRange()) {
-    recorder_.record(INTC_D3D12_CreateCommittedResourceSerializer(command));
+void RecordingLayer::Post(INTC_D3D12_CreateCommittedResourceCommand& Command) {
+  if (m_SubcaptureRange.InRange()) {
+    m_Recorder.Record(INTC_D3D12_CreateCommittedResourceSerializer(Command));
   }
 }
 
-void RecordingLayer::post(INTC_D3D12_CreateReservedResourceCommand& command) {
-  if (subcaptureRange_.inRange()) {
-    recorder_.record(INTC_D3D12_CreateReservedResourceSerializer(command));
+void RecordingLayer::Post(INTC_D3D12_CreateReservedResourceCommand& Command) {
+  if (m_SubcaptureRange.InRange()) {
+    m_Recorder.Record(INTC_D3D12_CreateReservedResourceSerializer(Command));
   }
 }
 
-void RecordingLayer::post(INTC_D3D12_CreateCommandQueueCommand& command) {
-  if (subcaptureRange_.inRange()) {
-    recorder_.record(INTC_D3D12_CreateCommandQueueSerializer(command));
+void RecordingLayer::Post(INTC_D3D12_CreateCommandQueueCommand& Command) {
+  if (m_SubcaptureRange.InRange()) {
+    m_Recorder.Record(INTC_D3D12_CreateCommandQueueSerializer(Command));
   }
 }
 
-void RecordingLayer::post(INTC_D3D12_CreateHeapCommand& command) {
-  if (subcaptureRange_.inRange()) {
-    recorder_.record(INTC_D3D12_CreateHeapSerializer(command));
+void RecordingLayer::Post(INTC_D3D12_CreateHeapCommand& Command) {
+  if (m_SubcaptureRange.InRange()) {
+    m_Recorder.Record(INTC_D3D12_CreateHeapSerializer(Command));
   }
 }
 
-void RecordingLayer::post(IDXGIAdapter3QueryVideoMemoryInfoCommand& command) {}
+void RecordingLayer::Post(IDXGIAdapter3QueryVideoMemoryInfoCommand& Command) {}
 
-void RecordingLayer::post(NvAPI_InitializeCommand& command) {
-  if (subcaptureRange_.inRange()) {
-    recorder_.record(NvAPI_InitializeSerializer(command));
+void RecordingLayer::Post(NvAPI_InitializeCommand& Command) {
+  if (m_SubcaptureRange.InRange()) {
+    m_Recorder.Record(NvAPI_InitializeSerializer(Command));
   }
 }
 
-void RecordingLayer::post(NvAPI_UnloadCommand& command) {
-  if (subcaptureRange_.inRange()) {
-    recorder_.record(NvAPI_UnloadSerializer(command));
+void RecordingLayer::Post(NvAPI_UnloadCommand& Command) {
+  if (m_SubcaptureRange.InRange()) {
+    m_Recorder.Record(NvAPI_UnloadSerializer(Command));
   }
 }
 
-void RecordingLayer::post(NvAPI_D3D12_SetCreatePipelineStateOptionsCommand& command) {
-  if (subcaptureRange_.inRange()) {
-    recorder_.record(NvAPI_D3D12_SetCreatePipelineStateOptionsSerializer(command));
+void RecordingLayer::Post(NvAPI_D3D12_SetCreatePipelineStateOptionsCommand& Command) {
+  if (m_SubcaptureRange.InRange()) {
+    m_Recorder.Record(NvAPI_D3D12_SetCreatePipelineStateOptionsSerializer(Command));
   }
 }
 
-void RecordingLayer::post(NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& command) {
-  if (subcaptureRange_.inRange()) {
-    recorder_.record(NvAPI_D3D12_SetNvShaderExtnSlotSpaceSerializer(command));
+void RecordingLayer::Post(NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& Command) {
+  if (m_SubcaptureRange.InRange()) {
+    m_Recorder.Record(NvAPI_D3D12_SetNvShaderExtnSlotSpaceSerializer(Command));
   }
 }
 
-void RecordingLayer::post(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& command) {
-  if (subcaptureRange_.inRange()) {
-    recorder_.record(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadSerializer(command));
+void RecordingLayer::Post(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& Command) {
+  if (m_SubcaptureRange.InRange()) {
+    m_Recorder.Record(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadSerializer(Command));
   }
 }
 
-void RecordingLayer::post(NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& command) {
-  if (subcaptureRange_.inRange()) {
-    recorder_.record(NvAPI_D3D12_BuildRaytracingAccelerationStructureExSerializer(command));
+void RecordingLayer::Post(NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& Command) {
+  if (m_SubcaptureRange.InRange()) {
+    m_Recorder.Record(NvAPI_D3D12_BuildRaytracingAccelerationStructureExSerializer(Command));
   }
 }
 
-void RecordingLayer::post(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& command) {
-  if (subcaptureRange_.inRange()) {
-    recorder_.record(NvAPI_D3D12_BuildRaytracingOpacityMicromapArraySerializer(command));
+void RecordingLayer::Post(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& Command) {
+  if (m_SubcaptureRange.InRange()) {
+    m_Recorder.Record(NvAPI_D3D12_BuildRaytracingOpacityMicromapArraySerializer(Command));
   }
 }
 
-void RecordingLayer::post(
-    NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand& command) {
+void RecordingLayer::Post(
+    NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand& Command) {
   static bool logged = false;
   if (!logged) {
     LOG_ERROR << "NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand not handled in "
                  "subcapture";
     logged = true;
   }
-  if (subcaptureRange_.inRange()) {
-    recorder_.record(NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationSerializer(command));
+  if (m_SubcaptureRange.InRange()) {
+    m_Recorder.Record(
+        NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationSerializer(Command));
   }
 }
 

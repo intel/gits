@@ -20,67 +20,67 @@ namespace DirectX {
 class CapturePlayerDescriptorHandleService {
 public:
   struct DescriptorHeapInfo {
-    UINT64 captureStart;
-    UINT64 playerStart;
-    UINT64 size;
-    unsigned key;
+    UINT64 CaptureStart{};
+    UINT64 PlayerStart{};
+    UINT64 Size{};
+    unsigned Key{};
   };
   struct DescriptorMapping {
-    UINT64 captureStart;
-    UINT64 playerStart;
-    UINT64 size;
+    UINT64 CaptureStart{};
+    UINT64 PlayerStart{};
+    UINT64 Size{};
   };
 
 public:
-  void addCaptureHandle(ID3D12DescriptorHeap* heap,
+  void AddCaptureHandle(ID3D12DescriptorHeap* heap,
                         unsigned heapKey,
                         D3D12_GPU_DESCRIPTOR_HANDLE captureHandle);
-  void addPlayerHandle(unsigned heapKey, D3D12_GPU_DESCRIPTOR_HANDLE playerHandle);
-  void destroyHeap(unsigned heapKey);
-  bool getViewMappings(std::vector<DescriptorMapping>& mappings);
-  bool getSamplerMappings(std::vector<DescriptorMapping>& mappings);
-  DescriptorHeapInfo* getViewDescriptorHeapInfoByCaptureHandle(UINT64 handle) {
-    return getViewDescriptorHeapInfo(viewHeapsByCaptureHandle_, handle, true);
+  void AddPlayerHandle(unsigned heapKey, D3D12_GPU_DESCRIPTOR_HANDLE playerHandle);
+  void DestroyHeap(unsigned heapKey);
+  bool GetViewMappings(std::vector<DescriptorMapping>& mappings);
+  bool GetSamplerMappings(std::vector<DescriptorMapping>& mappings);
+  DescriptorHeapInfo* GetViewDescriptorHeapInfoByCaptureHandle(UINT64 handle) {
+    return GetViewDescriptorHeapInfo(m_ViewHeapsByCaptureHandle, handle, true);
   }
-  DescriptorHeapInfo* getSamplerDescriptorHeapInfoByCaptureHandle(UINT64 handle) {
-    std::lock_guard<std::mutex> lock(mutex_);
-    return getViewDescriptorHeapInfo(samplerHeapsByCaptureHandle_, handle, true);
+  DescriptorHeapInfo* GetSamplerDescriptorHeapInfoByCaptureHandle(UINT64 handle) {
+    std::lock_guard<std::mutex> lock(m_Mutex);
+    return GetViewDescriptorHeapInfo(m_SamplerHeapsByCaptureHandle, handle, true);
   }
-  DescriptorHeapInfo* getViewDescriptorHeapInfoByPlayerHandle(UINT64 handle) {
-    std::lock_guard<std::mutex> lock(mutex_);
-    return getViewDescriptorHeapInfo(viewHeapsByPlayerHandle_, handle, false);
+  DescriptorHeapInfo* GetViewDescriptorHeapInfoByPlayerHandle(UINT64 handle) {
+    std::lock_guard<std::mutex> lock(m_Mutex);
+    return GetViewDescriptorHeapInfo(m_ViewHeapsByPlayerHandle, handle, false);
   }
-  DescriptorHeapInfo* getSamplerDescriptorHeapInfoByPlayerHandle(UINT64 handle) {
-    std::lock_guard<std::mutex> lock(mutex_);
-    return getViewDescriptorHeapInfo(samplerHeapsByPlayerHandle_, handle, false);
+  DescriptorHeapInfo* GetSamplerDescriptorHeapInfoByPlayerHandle(UINT64 handle) {
+    std::lock_guard<std::mutex> lock(m_Mutex);
+    return GetViewDescriptorHeapInfo(m_SamplerHeapsByPlayerHandle, handle, false);
   }
-  unsigned viewHeapIncrement() {
-    return viewHeapIncrement_;
+  unsigned ViewHeapIncrement() {
+    return m_ViewHeapIncrement;
   }
-  unsigned samplerHeapIncrement() {
-    return samplerHeapIncrement_;
+  unsigned SamplerHeapIncrement() {
+    return m_SamplerHeapIncrement;
   }
-  void enablePlayerHandleLookup() {
-    dumpLookup_ = true;
+  void EnablePlayerHandleLookup() {
+    m_DumpLookup = true;
   }
 
 private:
   using DescriptorHandleMap = std::map<UINT64, DescriptorHeapInfo*>;
-  DescriptorHandleMap viewHeapsByCaptureHandle_;
-  DescriptorHandleMap samplerHeapsByCaptureHandle_;
-  DescriptorHandleMap viewHeapsByPlayerHandle_;
-  DescriptorHandleMap samplerHeapsByPlayerHandle_;
-  std::unordered_map<unsigned, std::unique_ptr<DescriptorHeapInfo>> viewHeapsByKey_;
-  std::unordered_map<unsigned, std::unique_ptr<DescriptorHeapInfo>> samplerHeapsByKey_;
-  unsigned viewHeapIncrement_{};
-  unsigned samplerHeapIncrement_{};
-  bool viewHeapsChanged_{};
-  bool samplerHeapsChanged_{};
-  bool dumpLookup_{};
-  std::mutex mutex_;
+  DescriptorHandleMap m_ViewHeapsByCaptureHandle;
+  DescriptorHandleMap m_SamplerHeapsByCaptureHandle;
+  DescriptorHandleMap m_ViewHeapsByPlayerHandle;
+  DescriptorHandleMap m_SamplerHeapsByPlayerHandle;
+  std::unordered_map<unsigned, std::unique_ptr<DescriptorHeapInfo>> m_ViewHeapsByKey;
+  std::unordered_map<unsigned, std::unique_ptr<DescriptorHeapInfo>> m_SamplerHeapsByKey;
+  unsigned m_ViewHeapIncrement{};
+  unsigned m_SamplerHeapIncrement{};
+  bool m_ViewHeapsChanged{};
+  bool m_SamplerHeapsChanged{};
+  bool m_DumpLookup{};
+  std::mutex m_Mutex;
 
 private:
-  DescriptorHeapInfo* getViewDescriptorHeapInfo(DescriptorHandleMap& descriptorHandleMap,
+  DescriptorHeapInfo* GetViewDescriptorHeapInfo(DescriptorHandleMap& descriptorHandleMap,
                                                 UINT64 handle,
                                                 bool fromCapture);
 };

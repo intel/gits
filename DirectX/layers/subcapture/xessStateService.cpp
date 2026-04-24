@@ -17,82 +17,82 @@ namespace DirectX {
 
 #pragma region XESS
 
-void XessStateService::restoreState() {
-  for (auto& it : contextStatesByContextKey_) {
-    restoreContextState(it.second.get());
+void XessStateService::RestoreState() {
+  for (auto& it : m_ContextStatesByContextKey) {
+    RestoreContextState(it.second.get());
   }
 }
 
-void XessStateService::storeContextState(ContextState* state) {
-  contextStatesByContextKey_[state->key].reset(state);
-  contextStatesByDeviceKey_[state->deviceKey] = state;
+void XessStateService::StoreContextState(ContextState* state) {
+  m_ContextStatesByContextKey[state->Key].reset(state);
+  m_ContextStatesByDeviceKey[state->DeviceKey] = state;
 }
 
-void XessStateService::destroyDevice(unsigned key) {
-  auto it = contextStatesByDeviceKey_.find(key);
-  if (it != contextStatesByDeviceKey_.end()) {
-    contextStatesByContextKey_.erase(it->second->key);
-    contextStatesByDeviceKey_.erase(it);
+void XessStateService::DestroyDevice(unsigned key) {
+  auto it = m_ContextStatesByDeviceKey.find(key);
+  if (it != m_ContextStatesByDeviceKey.end()) {
+    m_ContextStatesByContextKey.erase(it->second->Key);
+    m_ContextStatesByDeviceKey.erase(it);
   }
 }
 
-void XessStateService::destroyContext(unsigned key) {
-  auto it = contextStatesByContextKey_.find(key);
-  if (it != contextStatesByContextKey_.end()) {
-    contextStatesByDeviceKey_.erase(it->second->deviceKey);
-    contextStatesByContextKey_.erase(it);
+void XessStateService::DestroyContext(unsigned key) {
+  auto it = m_ContextStatesByContextKey.find(key);
+  if (it != m_ContextStatesByContextKey.end()) {
+    m_ContextStatesByDeviceKey.erase(it->second->DeviceKey);
+    m_ContextStatesByContextKey.erase(it);
   }
 }
 
-void XessStateService::restoreContextState(ContextState* state) {
+void XessStateService::RestoreContextState(ContextState* state) {
   xessD3D12CreateContextCommand c;
-  c.key = stateService_.getUniqueCommandKey();
-  c.phContext_.key = state->key;
-  c.pDevice_.key = state->deviceKey;
-  recorder_.record(xessD3D12CreateContextSerializer(c));
+  c.Key = m_StateService.GetUniqueCommandKey();
+  c.m_phContext.Key = state->Key;
+  c.m_pDevice.Key = state->DeviceKey;
+  m_Recorder.Record(xessD3D12CreateContextSerializer(c));
 
-  if (state->initParams) {
+  if (state->InitParams) {
     xessD3D12InitCommand c;
-    c.key = stateService_.getUniqueCommandKey();
-    c.hContext_.key = state->key;
-    c.pInitParams_.value = state->initParams.value().value;
-    c.pInitParams_.key = state->initParams.value().key;
-    c.pInitParams_.tempBufferHeapKey = state->initParams.value().tempBufferHeapKey;
-    c.pInitParams_.tempTextureHeapKey = state->initParams.value().tempTextureHeapKey;
-    c.pInitParams_.pipelineLibraryKey = state->initParams.value().pipelineLibraryKey;
-    recorder_.record(xessD3D12InitSerializer(c));
+    c.Key = m_StateService.GetUniqueCommandKey();
+    c.m_hContext.Key = state->Key;
+    c.m_pInitParams.Value = state->InitParams.value().Value;
+    c.m_pInitParams.Key = state->InitParams.value().Key;
+    c.m_pInitParams.TempBufferHeapKey = state->InitParams.value().TempBufferHeapKey;
+    c.m_pInitParams.TempTextureHeapKey = state->InitParams.value().TempTextureHeapKey;
+    c.m_pInitParams.PipelineLibraryKey = state->InitParams.value().PipelineLibraryKey;
+    m_Recorder.Record(xessD3D12InitSerializer(c));
   }
 
-  if (state->jitterScale) {
+  if (state->JitterScale) {
     xessSetJitterScaleCommand c;
-    c.key = stateService_.getUniqueCommandKey();
-    c.hContext_.key = state->key;
-    c.x_.value = state->jitterScale[0];
-    c.y_.value = state->jitterScale[1];
-    recorder_.record(xessSetJitterScaleSerializer(c));
+    c.Key = m_StateService.GetUniqueCommandKey();
+    c.m_hContext.Key = state->Key;
+    c.m_x.Value = state->JitterScale[0];
+    c.m_y.Value = state->JitterScale[1];
+    m_Recorder.Record(xessSetJitterScaleSerializer(c));
   }
 
-  if (state->exposureScale) {
+  if (state->ExposureScale) {
     xessSetExposureMultiplierCommand c;
-    c.key = stateService_.getUniqueCommandKey();
-    c.hContext_.key = state->key;
-    c.scale_.value = state->exposureScale.value();
+    c.Key = m_StateService.GetUniqueCommandKey();
+    c.m_hContext.Key = state->Key;
+    c.m_scale.Value = state->ExposureScale.value();
   }
 
-  if (state->velocityScale) {
+  if (state->VelocityScale) {
     xessSetVelocityScaleCommand c;
-    c.key = stateService_.getUniqueCommandKey();
-    c.hContext_.key = state->key;
-    c.x_.value = state->velocityScale[0];
-    c.y_.value = state->velocityScale[1];
-    recorder_.record(xessSetVelocityScaleSerializer(c));
+    c.Key = m_StateService.GetUniqueCommandKey();
+    c.m_hContext.Key = state->Key;
+    c.m_x.Value = state->VelocityScale[0];
+    c.m_y.Value = state->VelocityScale[1];
+    m_Recorder.Record(xessSetVelocityScaleSerializer(c));
   }
 
-  if (state->forceLegacyScaleFactors) {
+  if (state->ForceLegacyScaleFactors) {
     xessForceLegacyScaleFactorsCommand c;
-    c.key = stateService_.getUniqueCommandKey();
-    c.hContext_.key = state->key;
-    c.force_.value = state->forceLegacyScaleFactors.value();
+    c.Key = m_StateService.GetUniqueCommandKey();
+    c.m_hContext.Key = state->Key;
+    c.m_force.Value = state->ForceLegacyScaleFactors.value();
   }
 }
 
@@ -100,80 +100,80 @@ void XessStateService::restoreContextState(ContextState* state) {
 
 #pragma region XELL
 
-void XellStateService::restoreState() {
-  if (restored_) {
+void XellStateService::RestoreState() {
+  if (m_Restored) {
     return;
   }
-  for (auto& it : contextStatesByContextKey_) {
-    restoreContextState(it.second.get());
+  for (auto& it : m_ContextStatesByContextKey) {
+    RestoreContextState(it.second.get());
   }
-  restored_ = true;
+  m_Restored = true;
 }
 
-void XellStateService::storeContextState(ContextState* state) {
-  contextStatesByContextKey_[state->key].reset(state);
-  contextStatesByDeviceKey_[state->deviceKey] = state;
+void XellStateService::StoreContextState(ContextState* state) {
+  m_ContextStatesByContextKey[state->Key].reset(state);
+  m_ContextStatesByDeviceKey[state->DeviceKey] = state;
 }
 
-void XellStateService::trackMarker(unsigned key,
+void XellStateService::TrackMarker(unsigned key,
                                    uint32_t frame,
                                    xell_latency_marker_type_t marker) {
-  auto it = contextStatesByContextKey_.find(key);
-  if (it == contextStatesByContextKey_.end()) {
+  auto it = m_ContextStatesByContextKey.find(key);
+  if (it == m_ContextStatesByContextKey.end()) {
     return;
   }
   auto& state = it->second;
-  auto& frameMarkers = state->registeredMarkers[frame];
+  auto& frameMarkers = state->RegisteredMarkers[frame];
   frameMarkers.push_back(marker);
 }
 
-bool XellStateService::areMarkersRegistered(std::vector<xell_latency_marker_type_t> markers) const {
+bool XellStateService::AreMarkersRegistered(std::vector<xell_latency_marker_type_t> markers) const {
   std::set<xell_latency_marker_type_t> markerTypes(markers.begin(), markers.end());
   return markerTypes.count(XELL_RENDERSUBMIT_END) && markerTypes.count(XELL_PRESENT_END);
 }
 
-void XellStateService::destroyDevice(unsigned key) {
-  auto it = contextStatesByDeviceKey_.find(key);
-  if (it != contextStatesByDeviceKey_.end()) {
-    contextStatesByContextKey_.erase(it->second->key);
-    contextStatesByDeviceKey_.erase(it);
+void XellStateService::DestroyDevice(unsigned key) {
+  auto it = m_ContextStatesByDeviceKey.find(key);
+  if (it != m_ContextStatesByDeviceKey.end()) {
+    m_ContextStatesByContextKey.erase(it->second->Key);
+    m_ContextStatesByDeviceKey.erase(it);
   }
 }
 
-void XellStateService::destroyContext(unsigned key) {
-  auto it = contextStatesByContextKey_.find(key);
-  if (it != contextStatesByContextKey_.end()) {
-    contextStatesByDeviceKey_.erase(it->second->deviceKey);
-    contextStatesByContextKey_.erase(it);
+void XellStateService::DestroyContext(unsigned key) {
+  auto it = m_ContextStatesByContextKey.find(key);
+  if (it != m_ContextStatesByContextKey.end()) {
+    m_ContextStatesByDeviceKey.erase(it->second->DeviceKey);
+    m_ContextStatesByContextKey.erase(it);
   }
 }
 
-void XellStateService::restoreContextState(ContextState* state) {
+void XellStateService::RestoreContextState(ContextState* state) {
   xellD3D12CreateContextCommand c;
-  c.key = stateService_.getUniqueCommandKey();
-  c.out_context_.key = state->key;
-  c.device_.key = state->deviceKey;
-  recorder_.record(xellD3D12CreateContextSerializer(c));
+  c.Key = m_StateService.GetUniqueCommandKey();
+  c.m_out_context.Key = state->Key;
+  c.m_device.Key = state->DeviceKey;
+  m_Recorder.Record(xellD3D12CreateContextSerializer(c));
 
-  if (state->sleepParams) {
+  if (state->SleepParams) {
     xellSetSleepModeCommand c;
-    c.key = stateService_.getUniqueCommandKey();
-    c.context_.key = state->key;
-    c.param_.value = &state->sleepParams.value();
-    recorder_.record(xellSetSleepModeSerializer(c));
+    c.Key = m_StateService.GetUniqueCommandKey();
+    c.m_context.Key = state->Key;
+    c.m_param.Value = &state->SleepParams.value();
+    m_Recorder.Record(xellSetSleepModeSerializer(c));
   }
 
-  for (const auto& [frame, markers] : state->registeredMarkers) {
-    if (areMarkersRegistered(markers)) {
+  for (const auto& [frame, markers] : state->RegisteredMarkers) {
+    if (AreMarkersRegistered(markers)) {
       continue;
     }
     for (const auto& marker : markers) {
       xellAddMarkerDataCommand c;
-      c.key = stateService_.getUniqueCommandKey();
-      c.context_.key = state->key;
-      c.frame_id_.value = frame;
-      c.marker_.value = marker;
-      recorder_.record(xellAddMarkerDataSerializer(c));
+      c.Key = m_StateService.GetUniqueCommandKey();
+      c.m_context.Key = state->Key;
+      c.m_frame_id.Value = frame;
+      c.m_marker.Value = marker;
+      m_Recorder.Record(xellAddMarkerDataSerializer(c));
     }
   }
 }
@@ -182,134 +182,134 @@ void XellStateService::restoreContextState(ContextState* state) {
 
 #pragma region XEFG
 
-void XefgStateService::restoreState() {
-  if (restored_) {
+void XefgStateService::RestoreState() {
+  if (m_Restored) {
     return;
   }
-  for (auto& it : contextStatesByContextKey_) {
-    restoreContextState(it.second.get());
+  for (auto& it : m_ContextStatesByContextKey) {
+    RestoreContextState(it.second.get());
   }
-  restored_ = true;
+  m_Restored = true;
 }
 
-void XefgStateService::storeContextState(ContextState* state) {
-  contextStatesByContextKey_[state->key].reset(state);
-  contextStatesByDeviceKey_[state->deviceKey] = state;
+void XefgStateService::StoreContextState(ContextState* state) {
+  m_ContextStatesByContextKey[state->Key].reset(state);
+  m_ContextStatesByDeviceKey[state->DeviceKey] = state;
 }
 
-void XefgStateService::destroyDevice(unsigned key) {
-  auto it = contextStatesByDeviceKey_.find(key);
-  if (it != contextStatesByDeviceKey_.end()) {
-    contextStatesByContextKey_.erase(it->second->key);
-    contextStatesByDeviceKey_.erase(it);
-  }
-}
-
-void XefgStateService::destroyContext(unsigned key) {
-  auto it = contextStatesByContextKey_.find(key);
-  if (it != contextStatesByContextKey_.end()) {
-    contextStatesByDeviceKey_.erase(it->second->deviceKey);
-    contextStatesByContextKey_.erase(it);
+void XefgStateService::DestroyDevice(unsigned key) {
+  auto it = m_ContextStatesByDeviceKey.find(key);
+  if (it != m_ContextStatesByDeviceKey.end()) {
+    m_ContextStatesByContextKey.erase(it->second->Key);
+    m_ContextStatesByDeviceKey.erase(it);
   }
 }
 
-void XefgStateService::restoreContextState(ContextState* state) {
+void XefgStateService::DestroyContext(unsigned key) {
+  auto it = m_ContextStatesByContextKey.find(key);
+  if (it != m_ContextStatesByContextKey.end()) {
+    m_ContextStatesByDeviceKey.erase(it->second->DeviceKey);
+    m_ContextStatesByContextKey.erase(it);
+  }
+}
+
+void XefgStateService::RestoreContextState(ContextState* state) {
   xefgSwapChainD3D12CreateContextCommand c;
-  c.key = stateService_.getUniqueCommandKey();
-  c.phSwapChain_.key = state->key;
-  c.pDevice_.key = state->deviceKey;
-  recorder_.record(xefgSwapChainD3D12CreateContextSerializer(c));
+  c.Key = m_StateService.GetUniqueCommandKey();
+  c.m_phSwapChain.Key = state->Key;
+  c.m_pDevice.Key = state->DeviceKey;
+  m_Recorder.Record(xefgSwapChainD3D12CreateContextSerializer(c));
 
   xefgSwapChainSetLatencyReductionCommand cLatency;
-  cLatency.key = stateService_.getUniqueCommandKey();
-  cLatency.hSwapChain_.key = state->key;
-  cLatency.hXeLLContext_.key = state->xellContext.key;
-  recorder_.record(xefgSwapChainSetLatencyReductionSerializer(cLatency));
+  cLatency.Key = m_StateService.GetUniqueCommandKey();
+  cLatency.m_hSwapChain.Key = state->Key;
+  cLatency.m_hXeLLContext.Key = state->XellContext.Key;
+  m_Recorder.Record(xefgSwapChainSetLatencyReductionSerializer(cLatency));
 
-  if (state->initFromSwapChainParams) {
-    auto& initParams = state->initFromSwapChainParams.value();
+  if (state->InitFromSwapChainParams) {
+    auto& initParams = state->InitFromSwapChainParams.value();
     xefgSwapChainD3D12InitFromSwapChainCommand c;
-    c.key = stateService_.getUniqueCommandKey();
-    c.hSwapChain_.key = state->key;
-    c.pCmdQueue_.key = initParams.cmdQueueKey;
-    c.pInitParams_.value = initParams.initParams.value;
-    c.pInitParams_.key = initParams.initParams.key;
-    c.pInitParams_.applicationSwapChainKey = initParams.initParams.applicationSwapChainKey;
-    c.pInitParams_.tempBufferHeapKey = initParams.initParams.tempBufferHeapKey;
-    c.pInitParams_.tempTextureHeapKey = initParams.initParams.tempTextureHeapKey;
-    c.pInitParams_.pipelineLibraryKey = initParams.initParams.pipelineLibraryKey;
-    recorder_.record(xefgSwapChainD3D12InitFromSwapChainSerializer(c));
-  } else if (state->initFromSwapChainDescParams) {
-    auto& initParams = state->initFromSwapChainDescParams.value();
+    c.Key = m_StateService.GetUniqueCommandKey();
+    c.m_hSwapChain.Key = state->Key;
+    c.m_pCmdQueue.Key = initParams.CmdQueueKey;
+    c.m_pInitParams.Value = initParams.InitParams.Value;
+    c.m_pInitParams.Key = initParams.InitParams.Key;
+    c.m_pInitParams.ApplicationSwapChainKey = initParams.InitParams.ApplicationSwapChainKey;
+    c.m_pInitParams.TempBufferHeapKey = initParams.InitParams.TempBufferHeapKey;
+    c.m_pInitParams.TempTextureHeapKey = initParams.InitParams.TempTextureHeapKey;
+    c.m_pInitParams.PipelineLibraryKey = initParams.InitParams.PipelineLibraryKey;
+    m_Recorder.Record(xefgSwapChainD3D12InitFromSwapChainSerializer(c));
+  } else if (state->InitFromSwapChainDescParams) {
+    auto& initParams = state->InitFromSwapChainDescParams.value();
 
     CreateWindowMetaCommand createWindowCommand;
-    createWindowCommand.key = stateService_.getUniqueCommandKey();
-    createWindowCommand.hWnd_.value = initParams.hWnd;
-    createWindowCommand.width_.value = initParams.swapChainDesc.Width;
-    createWindowCommand.height_.value = initParams.swapChainDesc.Height;
-    recorder_.record(CreateWindowMetaSerializer(createWindowCommand));
+    createWindowCommand.Key = m_StateService.GetUniqueCommandKey();
+    createWindowCommand.m_hWnd.Value = initParams.HWnd;
+    createWindowCommand.m_width.Value = initParams.SwapChainDesc.Width;
+    createWindowCommand.m_height.Value = initParams.SwapChainDesc.Height;
+    m_Recorder.Record(CreateWindowMetaSerializer(createWindowCommand));
 
     xefgSwapChainD3D12InitFromSwapChainDescCommand c;
-    c.key = stateService_.getUniqueCommandKey();
-    c.hSwapChain_.key = state->key;
-    c.hWnd_.value = initParams.hWnd;
-    c.pSwapChainDesc_.value = &initParams.swapChainDesc;
-    c.pFullscreenDesc_.value =
-        initParams.fullscreenDesc.has_value() ? &initParams.fullscreenDesc.value() : nullptr;
-    c.pCmdQueue_.key = initParams.cmdQueueKey;
-    c.pDxgiFactory_.key = initParams.dxgiFactoryKey;
-    c.pInitParams_.value = initParams.initParams.value;
-    c.pInitParams_.key = initParams.initParams.key;
-    c.pInitParams_.applicationSwapChainKey = initParams.initParams.applicationSwapChainKey;
-    c.pInitParams_.tempBufferHeapKey = initParams.initParams.tempBufferHeapKey;
-    c.pInitParams_.tempTextureHeapKey = initParams.initParams.tempTextureHeapKey;
-    c.pInitParams_.pipelineLibraryKey = initParams.initParams.pipelineLibraryKey;
-    recorder_.record(xefgSwapChainD3D12InitFromSwapChainDescSerializer(c));
+    c.Key = m_StateService.GetUniqueCommandKey();
+    c.m_hSwapChain.Key = state->Key;
+    c.m_hWnd.Value = initParams.HWnd;
+    c.m_pSwapChainDesc.Value = &initParams.SwapChainDesc;
+    c.m_pFullscreenDesc.Value =
+        initParams.FullscreenDesc.has_value() ? &initParams.FullscreenDesc.value() : nullptr;
+    c.m_pCmdQueue.Key = initParams.CmdQueueKey;
+    c.m_pDxgiFactory.Key = initParams.DxgiFactoryKey;
+    c.m_pInitParams.Value = initParams.InitParams.Value;
+    c.m_pInitParams.Key = initParams.InitParams.Key;
+    c.m_pInitParams.ApplicationSwapChainKey = initParams.InitParams.ApplicationSwapChainKey;
+    c.m_pInitParams.TempBufferHeapKey = initParams.InitParams.TempBufferHeapKey;
+    c.m_pInitParams.TempTextureHeapKey = initParams.InitParams.TempTextureHeapKey;
+    c.m_pInitParams.PipelineLibraryKey = initParams.InitParams.PipelineLibraryKey;
+    m_Recorder.Record(xefgSwapChainD3D12InitFromSwapChainDescSerializer(c));
   }
 
-  if (state->swapChain) {
+  if (state->SwapChain) {
     xefgSwapChainD3D12GetSwapChainPtrCommand c;
-    c.key = stateService_.getUniqueCommandKey();
-    c.hSwapChain_.key = state->key;
-    c.riid_.value = state->swapChain.value().riid;
-    c.ppSwapChain_.key = state->swapChain.value().swapChainKey;
-    recorder_.record(xefgSwapChainD3D12GetSwapChainPtrSerializer(c));
+    c.Key = m_StateService.GetUniqueCommandKey();
+    c.m_hSwapChain.Key = state->Key;
+    c.m_riid.Value = state->SwapChain.value().Riid;
+    c.m_ppSwapChain.Key = state->SwapChain.value().SwapChainKey;
+    m_Recorder.Record(xefgSwapChainD3D12GetSwapChainPtrSerializer(c));
   }
 
-  if (state->descriptorHeap) {
+  if (state->DescriptorHeap) {
     xefgSwapChainD3D12SetDescriptorHeapCommand c;
-    c.key = stateService_.getUniqueCommandKey();
-    c.hSwapChain_.key = state->key;
-    c.pDescriptorHeap_.key = state->descriptorHeap.value().descriptorHeapKey;
-    c.descriptorHeapOffsetInBytes_.value =
-        state->descriptorHeap.value().descriptorHeapOffsetInBytes;
-    recorder_.record(xefgSwapChainD3D12SetDescriptorHeapSerializer(c));
+    c.Key = m_StateService.GetUniqueCommandKey();
+    c.m_hSwapChain.Key = state->Key;
+    c.m_pDescriptorHeap.Key = state->DescriptorHeap.value().DescriptorHeapKey;
+    c.m_descriptorHeapOffsetInBytes.Value =
+        state->DescriptorHeap.value().DescriptorHeapOffsetInBytes;
+    m_Recorder.Record(xefgSwapChainD3D12SetDescriptorHeapSerializer(c));
   }
 
-  if (state->enabled) {
+  if (state->Enabled) {
     xefgSwapChainSetEnabledCommand c;
-    c.key = stateService_.getUniqueCommandKey();
-    c.hSwapChain_.key = state->key;
-    c.enable_.value = 1;
-    recorder_.record(xefgSwapChainSetEnabledSerializer(c));
+    c.Key = m_StateService.GetUniqueCommandKey();
+    c.m_hSwapChain.Key = state->Key;
+    c.m_enable.Value = 1;
+    m_Recorder.Record(xefgSwapChainSetEnabledSerializer(c));
   }
 
-  if (state->threshold) {
+  if (state->Threshold) {
     xefgSwapChainSetSceneChangeThresholdCommand c;
-    c.key = stateService_.getUniqueCommandKey();
-    c.hSwapChain_.key = state->key;
-    c.threshold_.value = state->threshold.value();
-    recorder_.record(xefgSwapChainSetSceneChangeThresholdSerializer(c));
+    c.Key = m_StateService.GetUniqueCommandKey();
+    c.m_hSwapChain.Key = state->Key;
+    c.m_threshold.Value = state->Threshold.value();
+    m_Recorder.Record(xefgSwapChainSetSceneChangeThresholdSerializer(c));
   }
 
-  if (state->debugFeature) {
+  if (state->DebugFeature) {
     xefgSwapChainEnableDebugFeatureCommand c;
-    c.key = stateService_.getUniqueCommandKey();
-    c.hSwapChain_.key = state->key;
-    c.featureId_.value = state->debugFeature.value().featureId;
-    c.enable_.value = state->debugFeature.value().enable;
-    c.pArgument_.value = state->debugFeature.value().argument;
-    recorder_.record(xefgSwapChainEnableDebugFeatureSerializer(c));
+    c.Key = m_StateService.GetUniqueCommandKey();
+    c.m_hSwapChain.Key = state->Key;
+    c.m_featureId.Value = state->DebugFeature.value().FeatureId;
+    c.m_enable.Value = state->DebugFeature.value().Enable;
+    c.m_pArgument.Value = state->DebugFeature.value().Argument;
+    m_Recorder.Record(xefgSwapChainEnableDebugFeatureSerializer(c));
   }
 }
 

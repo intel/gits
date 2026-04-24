@@ -23,25 +23,25 @@ void writeData(const char* src, unsigned srcSize, char* dst, unsigned& offset) {
 }
 
 template <>
-unsigned getSizeT(const void* src, unsigned count) {
+unsigned GetSizeT(const void* src, unsigned count) {
   // Treat void* as char* (used in DML_CONSTANT_DATA_GRAPH_NODE_DESC)
-  return getSizeT<std::byte>((std::byte*)src, count);
+  return GetSizeT<std::byte>((std::byte*)src, count);
 }
 
 template <>
-void encodeT(const void* src, unsigned count, char* dst, unsigned& offset) {
+void EncodeT(const void* src, unsigned count, char* dst, unsigned& offset) {
   // Treat void* as std::byte* (used in DML_CONSTANT_DATA_GRAPH_NODE_DESC)
-  encodeT<std::byte>((std::byte*)src, count, dst, offset);
+  EncodeT<std::byte>((std::byte*)src, count, dst, offset);
 }
 
 template <>
-void decodeT(const void* dst, unsigned count, char* src, unsigned& offset) {
+void DecodeT(const void* dst, unsigned count, char* src, unsigned& offset) {
   // Treat void* as std::byte* (used in DML_CONSTANT_DATA_GRAPH_NODE_DESC)
-  decodeT<std::byte>((std::byte*)dst, count, src, offset);
+  DecodeT<std::byte>((std::byte*)dst, count, src, offset);
 }
 
 template <>
-unsigned getSizeT(const char* src, unsigned count) {
+unsigned GetSizeT(const char* src, unsigned count) {
   GITS_ASSERT(count == 1);
   if (!src) {
     return 0;
@@ -50,15 +50,15 @@ unsigned getSizeT(const char* src, unsigned count) {
 }
 
 template <>
-void encodeT(const char* src, unsigned count, char* dst, unsigned& offset) {
+void EncodeT(const char* src, unsigned count, char* dst, unsigned& offset) {
   GITS_ASSERT(count == 1);
-  encodeT<std::byte>((std::byte*)src, strnlen_s(src, DML_MAX_NAME_LENGTH) + 1, dst, offset);
+  EncodeT<std::byte>((std::byte*)src, strnlen_s(src, DML_MAX_NAME_LENGTH) + 1, dst, offset);
 }
 
 template <>
-void decodeT(const char* dst, unsigned count, char* src, unsigned& offset) {
+void DecodeT(const char* dst, unsigned count, char* src, unsigned& offset) {
   GITS_ASSERT(count == 1);
-  decodeT<std::byte>((std::byte*)dst, strnlen_s(dst, DML_MAX_NAME_LENGTH) + 1, src, offset);
+  DecodeT<std::byte>((std::byte*)dst, strnlen_s(dst, DML_MAX_NAME_LENGTH) + 1, src, offset);
 }
 
 } // namespace dml

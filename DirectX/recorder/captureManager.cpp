@@ -25,121 +25,121 @@
 namespace gits {
 namespace DirectX {
 
-CaptureManager* CaptureManager::instance_ = nullptr;
+CaptureManager* CaptureManager::m_Instance = nullptr;
 
-thread_local unsigned CaptureManager::localStackDepth_ = 0;
+thread_local unsigned CaptureManager::m_LocalStackDepth = 0;
 
 CaptureManager& CaptureManager::get() {
-  if (!instance_) {
-    instance_ = new CaptureManager();
-    instance_->interceptKernelFunctions();
+  if (!m_Instance) {
+    m_Instance = new CaptureManager();
+    m_Instance->interceptKernelFunctions();
     if (Configurator::Get().directx.recorder.captureDirectStorage) {
-      instance_->interceptDirectStorageFunctions();
+      m_Instance->interceptDirectStorageFunctions();
     }
     if (Configurator::Get().directx.recorder.captureDirectML) {
-      instance_->interceptDirectMLFunctions();
+      m_Instance->interceptDirectMLFunctions();
     }
     if (Configurator::Get().directx.recorder.captureNvAPI) {
-      instance_->interceptNvAPIFunctions();
+      m_Instance->interceptNvAPIFunctions();
     }
-    instance_->interceptD3D11On12Functions();
+    m_Instance->interceptD3D11On12Functions();
   }
 
-  return *instance_;
+  return *m_Instance;
 }
 
 CaptureManager::~CaptureManager() {
-  if (kernelDll_) {
-    FreeLibrary(kernelDll_);
+  if (m_KernelDll) {
+    FreeLibrary(m_KernelDll);
   }
-  if (dmlDll_) {
-    FreeLibrary(dmlDll_);
+  if (m_DmlDll) {
+    FreeLibrary(m_DmlDll);
   }
-  if (dStorageDll_) {
-    FreeLibrary(dStorageDll_);
+  if (m_DstorageDll) {
+    FreeLibrary(m_DstorageDll);
   }
-  if (xessDll_) {
-    FreeLibrary(xessDll_);
+  if (m_XessDll) {
+    FreeLibrary(m_XessDll);
   }
-  if (xellDll_) {
-    FreeLibrary(xellDll_);
+  if (m_XellDll) {
+    FreeLibrary(m_XellDll);
   }
-  if (xefgDll_) {
-    FreeLibrary(xefgDll_);
+  if (m_XefgDll) {
+    FreeLibrary(m_XefgDll);
   }
-  if (intelExtensionLoaded_) {
+  if (m_IntelExtensionLoaded) {
     INTC_UnloadExtensionsLibrary();
   }
-  if (nvapiDll_) {
-    FreeLibrary(nvapiDll_);
+  if (m_NvapiDll) {
+    FreeLibrary(m_NvapiDll);
   }
-  if (d3d11Dll_) {
-    FreeLibrary(d3d11Dll_);
+  if (m_D3D11Dll) {
+    FreeLibrary(m_D3D11Dll);
   }
 }
 
 void CaptureManager::exchangeDXGIDispatchTables(const DXGIDispatchTable& systemTable,
                                                 DXGIDispatchTable& wrapperTable) {
-  dxgiDispatchTableSystem_ = systemTable;
-  wrapperTable = dxgiDispatchTableWrapper_;
+  m_DxgiDispatchTableSystem = systemTable;
+  wrapperTable = m_DxgiDispatchTableWrapper;
 }
 
 void CaptureManager::exchangeD3D12DispatchTables(const D3D12DispatchTable& systemTable,
                                                  D3D12DispatchTable& wrapperTable) {
-  d3d12DispatchTableSystem_ = systemTable;
-  wrapperTable = d3d12DispatchTableWrapper_;
+  m_D3D12DispatchTableSystem = systemTable;
+  wrapperTable = m_D3D12DispatchTableWrapper;
 }
 
 CaptureManager::CaptureManager() {
-  dxgiDispatchTableWrapper_.CreateDXGIFactory = CreateDXGIFactoryWrapper;
-  dxgiDispatchTableWrapper_.CreateDXGIFactory1 = CreateDXGIFactory1Wrapper;
-  dxgiDispatchTableWrapper_.CreateDXGIFactory2 = CreateDXGIFactory2Wrapper;
-  dxgiDispatchTableWrapper_.DXGIDeclareAdapterRemovalSupport =
+  m_DxgiDispatchTableWrapper.CreateDXGIFactory = CreateDXGIFactoryWrapper;
+  m_DxgiDispatchTableWrapper.CreateDXGIFactory1 = CreateDXGIFactory1Wrapper;
+  m_DxgiDispatchTableWrapper.CreateDXGIFactory2 = CreateDXGIFactory2Wrapper;
+  m_DxgiDispatchTableWrapper.DXGIDeclareAdapterRemovalSupport =
       DXGIDeclareAdapterRemovalSupportWrapper;
-  dxgiDispatchTableWrapper_.DXGIGetDebugInterface1 = DXGIGetDebugInterface1Wrapper;
+  m_DxgiDispatchTableWrapper.DXGIGetDebugInterface1 = DXGIGetDebugInterface1Wrapper;
 
-  d3d12DispatchTableWrapper_.D3D12CreateDevice = D3D12CreateDeviceWrapper;
-  d3d12DispatchTableWrapper_.D3D12GetDebugInterface = D3D12GetDebugInterfaceWrapper;
-  d3d12DispatchTableWrapper_.D3D12CreateRootSignatureDeserializer =
+  m_D3D12DispatchTableWrapper.D3D12CreateDevice = D3D12CreateDeviceWrapper;
+  m_D3D12DispatchTableWrapper.D3D12GetDebugInterface = D3D12GetDebugInterfaceWrapper;
+  m_D3D12DispatchTableWrapper.D3D12CreateRootSignatureDeserializer =
       D3D12CreateRootSignatureDeserializerWrapper;
-  d3d12DispatchTableWrapper_.D3D12CreateVersionedRootSignatureDeserializer =
+  m_D3D12DispatchTableWrapper.D3D12CreateVersionedRootSignatureDeserializer =
       D3D12CreateVersionedRootSignatureDeserializerWrapper;
-  d3d12DispatchTableWrapper_.D3D12EnableExperimentalFeatures =
+  m_D3D12DispatchTableWrapper.D3D12EnableExperimentalFeatures =
       D3D12EnableExperimentalFeaturesWrapper;
-  d3d12DispatchTableWrapper_.D3D12GetInterface = D3D12GetInterfaceWrapper;
-  d3d12DispatchTableWrapper_.D3D12SerializeRootSignature = D3D12SerializeRootSignatureWrapper;
-  d3d12DispatchTableWrapper_.D3D12SerializeVersionedRootSignature =
+  m_D3D12DispatchTableWrapper.D3D12GetInterface = D3D12GetInterfaceWrapper;
+  m_D3D12DispatchTableWrapper.D3D12SerializeRootSignature = D3D12SerializeRootSignatureWrapper;
+  m_D3D12DispatchTableWrapper.D3D12SerializeVersionedRootSignature =
       D3D12SerializeVersionedRootSignatureWrapper;
 
-  recorder_.reset(new stream::OrderingRecorder());
+  m_Recorder.reset(new stream::OrderingRecorder());
 
-  mapTrackingService_.reset(new MapTrackingService(*recorder_));
-  fenceService_.reset(new FenceService(*recorder_));
+  m_MapTrackingService.reset(new MapTrackingService(*m_Recorder));
+  m_FenceService.reset(new FenceService(*m_Recorder));
 
-  pluginService_.loadPlugins();
+  m_PluginService.loadPlugins();
 
-  layerManager_.loadLayers(*this, *recorder_.get(), gpuAddressService_, pluginService_);
+  m_LayerManager.LoadLayers(*this, *m_Recorder.get(), m_GpuAddressService, m_PluginService);
 }
 
 void CaptureManager::interceptDirectMLFunctions() {
   // Load DirectML.dll from the current directory or System32
   // Most DirectML applications include the DirectML runtime
-  dmlDll_ = LoadLibrary("DirectML.dll");
-  GITS_ASSERT(dmlDll_);
+  m_DmlDll = LoadLibrary("DirectML.dll");
+  GITS_ASSERT(m_DmlDll);
 
-  dmlDispatchTable_.DMLCreateDevice =
-      reinterpret_cast<decltype(DMLCreateDevice)*>(GetProcAddress(dmlDll_, "DMLCreateDevice"));
-  dmlDispatchTable_.DMLCreateDevice1 =
-      reinterpret_cast<decltype(DMLCreateDevice1)*>(GetProcAddress(dmlDll_, "DMLCreateDevice1"));
+  m_DmlDispatchTable.DMLCreateDevice =
+      reinterpret_cast<decltype(DMLCreateDevice)*>(GetProcAddress(m_DmlDll, "DMLCreateDevice"));
+  m_DmlDispatchTable.DMLCreateDevice1 =
+      reinterpret_cast<decltype(DMLCreateDevice1)*>(GetProcAddress(m_DmlDll, "DMLCreateDevice1"));
 
   LONG ret = DetourTransactionBegin();
   GITS_ASSERT(ret == NO_ERROR);
   ret = DetourUpdateThread(GetCurrentThread());
   GITS_ASSERT(ret == NO_ERROR);
 
-  ret = DetourAttach(&dmlDispatchTable_.DMLCreateDevice, DMLCreateDeviceWrapper);
+  ret = DetourAttach(&m_DmlDispatchTable.DMLCreateDevice, DMLCreateDeviceWrapper);
   GITS_ASSERT(ret == NO_ERROR);
-  ret = DetourAttach(&dmlDispatchTable_.DMLCreateDevice1, DMLCreateDevice1Wrapper);
+  ret = DetourAttach(&m_DmlDispatchTable.DMLCreateDevice1, DMLCreateDevice1Wrapper);
   GITS_ASSERT(ret == NO_ERROR);
 
   ret = DetourTransactionCommit();
@@ -149,35 +149,35 @@ void CaptureManager::interceptDirectMLFunctions() {
 void CaptureManager::interceptDirectStorageFunctions() {
   // Load directstorage.dll from the current directory
   // If not available the game does not use directstorage.dll so no need to do anything
-  dStorageDll_ = LoadLibrary("dstorage.dll");
-  GITS_ASSERT(dStorageDll_);
+  m_DstorageDll = LoadLibrary("dstorage.dll");
+  GITS_ASSERT(m_DstorageDll);
 
-  dstorageDispatchTable_.DStorageSetConfiguration =
+  m_DstorageDispatchTable.DStorageSetConfiguration =
       reinterpret_cast<decltype(DStorageSetConfiguration)*>(
-          GetProcAddress(dStorageDll_, "DStorageSetConfiguration"));
-  dstorageDispatchTable_.DStorageSetConfiguration1 =
+          GetProcAddress(m_DstorageDll, "DStorageSetConfiguration"));
+  m_DstorageDispatchTable.DStorageSetConfiguration1 =
       reinterpret_cast<decltype(DStorageSetConfiguration1)*>(
-          GetProcAddress(dStorageDll_, "DStorageSetConfiguration1"));
-  dstorageDispatchTable_.DStorageGetFactory = reinterpret_cast<decltype(DStorageGetFactory)*>(
-      GetProcAddress(dStorageDll_, "DStorageGetFactory"));
-  dstorageDispatchTable_.DStorageCreateCompressionCodec =
+          GetProcAddress(m_DstorageDll, "DStorageSetConfiguration1"));
+  m_DstorageDispatchTable.DStorageGetFactory = reinterpret_cast<decltype(DStorageGetFactory)*>(
+      GetProcAddress(m_DstorageDll, "DStorageGetFactory"));
+  m_DstorageDispatchTable.DStorageCreateCompressionCodec =
       reinterpret_cast<decltype(DStorageCreateCompressionCodec)*>(
-          GetProcAddress(dStorageDll_, "DStorageCreateCompressionCodec"));
+          GetProcAddress(m_DstorageDll, "DStorageCreateCompressionCodec"));
 
   LONG ret = DetourTransactionBegin();
   GITS_ASSERT(ret == NO_ERROR);
   ret = DetourUpdateThread(GetCurrentThread());
   GITS_ASSERT(ret == NO_ERROR);
 
-  ret = DetourAttach(&dstorageDispatchTable_.DStorageSetConfiguration,
+  ret = DetourAttach(&m_DstorageDispatchTable.DStorageSetConfiguration,
                      DStorageSetConfigurationWrapper);
   GITS_ASSERT(ret == NO_ERROR);
-  ret = DetourAttach(&dstorageDispatchTable_.DStorageSetConfiguration1,
+  ret = DetourAttach(&m_DstorageDispatchTable.DStorageSetConfiguration1,
                      DStorageSetConfiguration1Wrapper);
   GITS_ASSERT(ret == NO_ERROR);
-  ret = DetourAttach(&dstorageDispatchTable_.DStorageGetFactory, DStorageGetFactoryWrapper);
+  ret = DetourAttach(&m_DstorageDispatchTable.DStorageGetFactory, DStorageGetFactoryWrapper);
   GITS_ASSERT(ret == NO_ERROR);
-  ret = DetourAttach(&dstorageDispatchTable_.DStorageCreateCompressionCodec,
+  ret = DetourAttach(&m_DstorageDispatchTable.DStorageCreateCompressionCodec,
                      DStorageCreateCompressionCodecWrapper);
   GITS_ASSERT(ret == NO_ERROR);
 
@@ -187,89 +187,89 @@ void CaptureManager::interceptDirectStorageFunctions() {
 
 std::pair<unsigned, unsigned> CaptureManager::createCommandKeyRange(unsigned rangeSize) {
   std::pair<unsigned, unsigned> range;
-  range.first = commandUniqueKey_.fetch_add(rangeSize, std::memory_order_relaxed) + 1;
+  range.first = m_CommandUniqueKey.fetch_add(rangeSize, std::memory_order_relaxed) + 1;
   range.second = range.first + rangeSize - 1;
   return range;
 }
 
 void CaptureManager::addWrapper(IUnknownWrapper* wrapper) {
-  std::lock_guard<std::mutex> lock(wrappersMutex_);
-  wrappers_[wrapper->getRootIUnknown()] = wrapper;
+  std::lock_guard<std::mutex> lock(m_WrappersMutex);
+  m_Wrappers[wrapper->getRootIUnknown()] = wrapper;
 }
 void CaptureManager::removeWrapper(IUnknownWrapper* wrapper) {
-  std::lock_guard<std::mutex> lock(wrappersMutex_);
-  wrappers_.erase(wrapper->getRootIUnknown());
+  std::lock_guard<std::mutex> lock(m_WrappersMutex);
+  m_Wrappers.erase(wrapper->getRootIUnknown());
 }
 IUnknownWrapper* CaptureManager::findWrapper(IUnknown* object) {
-  std::lock_guard<std::mutex> lock(wrappersMutex_);
-  auto it = wrappers_.find(IUnknownWrapper::getRootIUnknown(object));
-  return it != wrappers_.end() ? it->second : nullptr;
+  std::lock_guard<std::mutex> lock(m_WrappersMutex);
+  auto it = m_Wrappers.find(IUnknownWrapper::getRootIUnknown(object));
+  return it != m_Wrappers.end() ? it->second : nullptr;
 }
 
 void CaptureManager::interceptKernelFunctions() {
 
-  if (kernelDll_) {
+  if (m_KernelDll) {
     return;
   }
 
-  kernelDll_ = LoadLibrary("C:\\Windows\\System32\\kernel32.dll");
-  GITS_ASSERT(kernelDll_);
+  m_KernelDll = LoadLibrary("C:\\Windows\\System32\\kernel32.dll");
+  GITS_ASSERT(m_KernelDll);
 
-  kernel32DispatchTableSystem_.WaitForSingleObject =
+  m_Kernel32DispatchTableSystem.WaitForSingleObject =
       reinterpret_cast<decltype(WaitForSingleObject)*>(
-          GetProcAddress(kernelDll_, "WaitForSingleObject"));
+          GetProcAddress(m_KernelDll, "WaitForSingleObject"));
 
-  kernel32DispatchTableSystem_.WaitForSingleObjectEx =
+  m_Kernel32DispatchTableSystem.WaitForSingleObjectEx =
       reinterpret_cast<decltype(WaitForSingleObjectEx)*>(
-          GetProcAddress(kernelDll_, "WaitForSingleObjectEx"));
+          GetProcAddress(m_KernelDll, "WaitForSingleObjectEx"));
 
-  kernel32DispatchTableSystem_.WaitForMultipleObjects =
+  m_Kernel32DispatchTableSystem.WaitForMultipleObjects =
       reinterpret_cast<decltype(WaitForMultipleObjects)*>(
-          GetProcAddress(kernelDll_, "WaitForMultipleObjects"));
+          GetProcAddress(m_KernelDll, "WaitForMultipleObjects"));
 
-  kernel32DispatchTableSystem_.WaitForMultipleObjectsEx =
+  m_Kernel32DispatchTableSystem.WaitForMultipleObjectsEx =
       reinterpret_cast<decltype(WaitForMultipleObjectsEx)*>(
-          GetProcAddress(kernelDll_, "WaitForMultipleObjectsEx"));
+          GetProcAddress(m_KernelDll, "WaitForMultipleObjectsEx"));
 
-  kernel32DispatchTableSystem_.SignalObjectAndWait =
+  m_Kernel32DispatchTableSystem.SignalObjectAndWait =
       reinterpret_cast<decltype(SignalObjectAndWait)*>(
-          GetProcAddress(kernelDll_, "SignalObjectAndWait"));
+          GetProcAddress(m_KernelDll, "SignalObjectAndWait"));
 
-  kernel32DispatchTableSystem_.LoadLibraryA =
-      reinterpret_cast<decltype(LoadLibraryA)*>(GetProcAddress(kernelDll_, "LoadLibraryA"));
+  m_Kernel32DispatchTableSystem.LoadLibraryA =
+      reinterpret_cast<decltype(LoadLibraryA)*>(GetProcAddress(m_KernelDll, "LoadLibraryA"));
 
-  kernel32DispatchTableSystem_.LoadLibraryW =
-      reinterpret_cast<decltype(LoadLibraryW)*>(GetProcAddress(kernelDll_, "LoadLibraryW"));
+  m_Kernel32DispatchTableSystem.LoadLibraryW =
+      reinterpret_cast<decltype(LoadLibraryW)*>(GetProcAddress(m_KernelDll, "LoadLibraryW"));
 
-  kernel32DispatchTableSystem_.LoadLibraryExA =
-      reinterpret_cast<decltype(LoadLibraryExA)*>(GetProcAddress(kernelDll_, "LoadLibraryExA"));
+  m_Kernel32DispatchTableSystem.LoadLibraryExA =
+      reinterpret_cast<decltype(LoadLibraryExA)*>(GetProcAddress(m_KernelDll, "LoadLibraryExA"));
 
-  kernel32DispatchTableSystem_.LoadLibraryExW =
-      reinterpret_cast<decltype(LoadLibraryExW)*>(GetProcAddress(kernelDll_, "LoadLibraryExW"));
+  m_Kernel32DispatchTableSystem.LoadLibraryExW =
+      reinterpret_cast<decltype(LoadLibraryExW)*>(GetProcAddress(m_KernelDll, "LoadLibraryExW"));
 
   LONG ret = DetourTransactionBegin();
   GITS_ASSERT(ret == NO_ERROR);
   ret = DetourUpdateThread(GetCurrentThread());
   GITS_ASSERT(ret == NO_ERROR);
 
-  ret = DetourAttach(&kernel32DispatchTableSystem_.WaitForSingleObject, WaitForSingleObject);
+  ret = DetourAttach(&m_Kernel32DispatchTableSystem.WaitForSingleObject, WaitForSingleObject);
   GITS_ASSERT(ret == NO_ERROR);
-  ret = DetourAttach(&kernel32DispatchTableSystem_.WaitForSingleObjectEx, WaitForSingleObjectEx);
+  ret = DetourAttach(&m_Kernel32DispatchTableSystem.WaitForSingleObjectEx, WaitForSingleObjectEx);
   GITS_ASSERT(ret == NO_ERROR);
-  ret = DetourAttach(&kernel32DispatchTableSystem_.WaitForMultipleObjects, WaitForMultipleObjects);
+  ret = DetourAttach(&m_Kernel32DispatchTableSystem.WaitForMultipleObjects, WaitForMultipleObjects);
   GITS_ASSERT(ret == NO_ERROR);
-  ret = DetourAttach(&kernel32DispatchTableSystem_.WaitForMultipleObjectsEx,
+  ret = DetourAttach(&m_Kernel32DispatchTableSystem.WaitForMultipleObjectsEx,
                      WaitForMultipleObjectsEx);
   GITS_ASSERT(ret == NO_ERROR);
-  ret = DetourAttach(&kernel32DispatchTableSystem_.SignalObjectAndWait, SignalObjectAndWait);
+  ret = DetourAttach(&m_Kernel32DispatchTableSystem.SignalObjectAndWait, SignalObjectAndWait);
   GITS_ASSERT(ret == NO_ERROR);
-  ret = DetourAttach(&kernel32DispatchTableSystem_.LoadLibraryA, MyLoadLibraryA);
+  ret = DetourAttach(&m_Kernel32DispatchTableSystem.LoadLibraryA, MyLoadLibraryA);
   GITS_ASSERT(ret == NO_ERROR);
-  ret = DetourAttach(&kernel32DispatchTableSystem_.LoadLibraryW, MyLoadLibraryW);
+  ret = DetourAttach(&m_Kernel32DispatchTableSystem.LoadLibraryW, MyLoadLibraryW);
   GITS_ASSERT(ret == NO_ERROR);
-  ret = DetourAttach(&kernel32DispatchTableSystem_.LoadLibraryExA, MyLoadLibraryExA);
+  ret = DetourAttach(&m_Kernel32DispatchTableSystem.LoadLibraryExA, MyLoadLibraryExA);
   GITS_ASSERT(ret == NO_ERROR);
-  ret = DetourAttach(&kernel32DispatchTableSystem_.LoadLibraryExW, MyLoadLibraryExW);
+  ret = DetourAttach(&m_Kernel32DispatchTableSystem.LoadLibraryExW, MyLoadLibraryExW);
   GITS_ASSERT(ret == NO_ERROR);
 
   ret = DetourTransactionCommit();
@@ -278,99 +278,103 @@ void CaptureManager::interceptKernelFunctions() {
 
 void CaptureManager::interceptXessFunctions() {
 
-  if (xessDll_ || loadingXessDll_ || !Configurator::Get().directx.recorder.captureXess) {
+  if (m_XessDll || m_LoadingXessDll || !Configurator::Get().directx.recorder.captureXess) {
     return;
   }
 
-  loadingXessDll_ = true;
-  xessDll_ = LoadLibrary("libxess.dll");
-  loadingXessDll_ = false;
-  if (!xessDll_) {
+  m_LoadingXessDll = true;
+  m_XessDll = LoadLibrary("libxess.dll");
+  m_LoadingXessDll = false;
+  if (!m_XessDll) {
     return;
   }
 
   {
-    xessDispatchTable_.xessGetVersion =
-        reinterpret_cast<decltype(xessGetVersion)*>(GetProcAddress(xessDll_, "xessGetVersion"));
+    m_XessDispatchTable.xessGetVersion =
+        reinterpret_cast<decltype(xessGetVersion)*>(GetProcAddress(m_XessDll, "xessGetVersion"));
 
-    xessDispatchTable_.xessGetIntelXeFXVersion =
+    m_XessDispatchTable.xessGetIntelXeFXVersion =
         reinterpret_cast<decltype(xessGetIntelXeFXVersion)*>(
-            GetProcAddress(xessDll_, "xessGetIntelXeFXVersion"));
+            GetProcAddress(m_XessDll, "xessGetIntelXeFXVersion"));
 
-    xessDispatchTable_.xessGetProperties = reinterpret_cast<decltype(xessGetProperties)*>(
-        GetProcAddress(xessDll_, "xessGetProperties"));
+    m_XessDispatchTable.xessGetProperties = reinterpret_cast<decltype(xessGetProperties)*>(
+        GetProcAddress(m_XessDll, "xessGetProperties"));
 
-    xessDispatchTable_.xessGetInputResolution = reinterpret_cast<decltype(xessGetInputResolution)*>(
-        GetProcAddress(xessDll_, "xessGetInputResolution"));
+    m_XessDispatchTable.xessGetInputResolution =
+        reinterpret_cast<decltype(xessGetInputResolution)*>(
+            GetProcAddress(m_XessDll, "xessGetInputResolution"));
 
-    xessDispatchTable_.xessGetOptimalInputResolution =
+    m_XessDispatchTable.xessGetOptimalInputResolution =
         reinterpret_cast<decltype(xessGetOptimalInputResolution)*>(
-            GetProcAddress(xessDll_, "xessGetOptimalInputResolution"));
+            GetProcAddress(m_XessDll, "xessGetOptimalInputResolution"));
 
-    xessDispatchTable_.xessGetJitterScale = reinterpret_cast<decltype(xessGetJitterScale)*>(
-        GetProcAddress(xessDll_, "xessGetJitterScale"));
+    m_XessDispatchTable.xessGetJitterScale = reinterpret_cast<decltype(xessGetJitterScale)*>(
+        GetProcAddress(m_XessDll, "xessGetJitterScale"));
 
-    xessDispatchTable_.xessGetVelocityScale = reinterpret_cast<decltype(xessGetVelocityScale)*>(
-        GetProcAddress(xessDll_, "xessGetVelocityScale"));
+    m_XessDispatchTable.xessGetVelocityScale = reinterpret_cast<decltype(xessGetVelocityScale)*>(
+        GetProcAddress(m_XessDll, "xessGetVelocityScale"));
 
-    xessDispatchTable_.xessDestroyContext = reinterpret_cast<decltype(xessDestroyContext)*>(
-        GetProcAddress(xessDll_, "xessDestroyContext"));
+    m_XessDispatchTable.xessDestroyContext = reinterpret_cast<decltype(xessDestroyContext)*>(
+        GetProcAddress(m_XessDll, "xessDestroyContext"));
 
-    xessDispatchTable_.xessSetJitterScale = reinterpret_cast<decltype(xessSetJitterScale)*>(
-        GetProcAddress(xessDll_, "xessSetJitterScale"));
+    m_XessDispatchTable.xessSetJitterScale = reinterpret_cast<decltype(xessSetJitterScale)*>(
+        GetProcAddress(m_XessDll, "xessSetJitterScale"));
 
-    xessDispatchTable_.xessSetVelocityScale = reinterpret_cast<decltype(xessSetVelocityScale)*>(
-        GetProcAddress(xessDll_, "xessSetVelocityScale"));
+    m_XessDispatchTable.xessSetVelocityScale = reinterpret_cast<decltype(xessSetVelocityScale)*>(
+        GetProcAddress(m_XessDll, "xessSetVelocityScale"));
 
-    xessDispatchTable_.xessSetExposureMultiplier =
+    m_XessDispatchTable.xessSetExposureMultiplier =
         reinterpret_cast<decltype(xessSetExposureMultiplier)*>(
-            GetProcAddress(xessDll_, "xessSetExposureMultiplier"));
+            GetProcAddress(m_XessDll, "xessSetExposureMultiplier"));
 
-    xessDispatchTable_.xessGetExposureMultiplier =
+    m_XessDispatchTable.xessGetExposureMultiplier =
         reinterpret_cast<decltype(xessGetExposureMultiplier)*>(
-            GetProcAddress(xessDll_, "xessGetExposureMultiplier"));
+            GetProcAddress(m_XessDll, "xessGetExposureMultiplier"));
 
-    xessDispatchTable_.xessIsOptimalDriver = reinterpret_cast<decltype(xessIsOptimalDriver)*>(
-        GetProcAddress(xessDll_, "xessIsOptimalDriver"));
+    m_XessDispatchTable.xessIsOptimalDriver = reinterpret_cast<decltype(xessIsOptimalDriver)*>(
+        GetProcAddress(m_XessDll, "xessIsOptimalDriver"));
 
-    xessDispatchTable_.xessForceLegacyScaleFactors =
+    m_XessDispatchTable.xessForceLegacyScaleFactors =
         reinterpret_cast<decltype(xessForceLegacyScaleFactors)*>(
-            GetProcAddress(xessDll_, "xessForceLegacyScaleFactors"));
+            GetProcAddress(m_XessDll, "xessForceLegacyScaleFactors"));
 
-    xessDispatchTable_.xessSetLoggingCallback = reinterpret_cast<decltype(xessSetLoggingCallback)*>(
-        GetProcAddress(xessDll_, "xessSetLoggingCallback"));
+    m_XessDispatchTable.xessSetLoggingCallback =
+        reinterpret_cast<decltype(xessSetLoggingCallback)*>(
+            GetProcAddress(m_XessDll, "xessSetLoggingCallback"));
 
-    xessDispatchTable_.xessD3D12CreateContext = reinterpret_cast<decltype(xessD3D12CreateContext)*>(
-        GetProcAddress(xessDll_, "xessD3D12CreateContext"));
+    m_XessDispatchTable.xessD3D12CreateContext =
+        reinterpret_cast<decltype(xessD3D12CreateContext)*>(
+            GetProcAddress(m_XessDll, "xessD3D12CreateContext"));
 
-    xessDispatchTable_.xessD3D12BuildPipelines =
+    m_XessDispatchTable.xessD3D12BuildPipelines =
         reinterpret_cast<decltype(xessD3D12BuildPipelines)*>(
-            GetProcAddress(xessDll_, "xessD3D12BuildPipelines"));
+            GetProcAddress(m_XessDll, "xessD3D12BuildPipelines"));
 
-    xessDispatchTable_.xessD3D12Init =
-        reinterpret_cast<decltype(xessD3D12Init)*>(GetProcAddress(xessDll_, "xessD3D12Init"));
+    m_XessDispatchTable.xessD3D12Init =
+        reinterpret_cast<decltype(xessD3D12Init)*>(GetProcAddress(m_XessDll, "xessD3D12Init"));
 
-    xessDispatchTable_.xessD3D12GetInitParams = reinterpret_cast<decltype(xessD3D12GetInitParams)*>(
-        GetProcAddress(xessDll_, "xessD3D12GetInitParams"));
+    m_XessDispatchTable.xessD3D12GetInitParams =
+        reinterpret_cast<decltype(xessD3D12GetInitParams)*>(
+            GetProcAddress(m_XessDll, "xessD3D12GetInitParams"));
 
-    xessDispatchTable_.xessD3D12Execute =
-        reinterpret_cast<decltype(xessD3D12Execute)*>(GetProcAddress(xessDll_, "xessD3D12Execute"));
+    m_XessDispatchTable.xessD3D12Execute = reinterpret_cast<decltype(xessD3D12Execute)*>(
+        GetProcAddress(m_XessDll, "xessD3D12Execute"));
 
-    xessDispatchTable_.xessSetMaxResponsiveMaskValue =
+    m_XessDispatchTable.xessSetMaxResponsiveMaskValue =
         reinterpret_cast<decltype(xessSetMaxResponsiveMaskValue)*>(
-            GetProcAddress(xessDll_, "xessSetMaxResponsiveMaskValue"));
+            GetProcAddress(m_XessDll, "xessSetMaxResponsiveMaskValue"));
 
-    xessDispatchTable_.xessGetMaxResponsiveMaskValue =
+    m_XessDispatchTable.xessGetMaxResponsiveMaskValue =
         reinterpret_cast<decltype(xessGetMaxResponsiveMaskValue)*>(
-            GetProcAddress(xessDll_, "xessGetMaxResponsiveMaskValue"));
+            GetProcAddress(m_XessDll, "xessGetMaxResponsiveMaskValue"));
 
-    xessDispatchTable_.xessGetPipelineBuildStatus =
+    m_XessDispatchTable.xessGetPipelineBuildStatus =
         reinterpret_cast<decltype(xessGetPipelineBuildStatus)*>(
-            GetProcAddress(xessDll_, "xessGetPipelineBuildStatus"));
+            GetProcAddress(m_XessDll, "xessGetPipelineBuildStatus"));
   }
 
   xess_version_t xessVersion{};
-  xess_result_t res = xessDispatchTable_.xessGetVersion(&xessVersion);
+  xess_result_t res = m_XessDispatchTable.xessGetVersion(&xessVersion);
   GITS_ASSERT(res == XESS_RESULT_SUCCESS);
 
   LOG_INFO << "Loaded XeSS (libxess.dll) version: " << xessVersion.major << "." << xessVersion.minor
@@ -381,101 +385,103 @@ void CaptureManager::interceptXessFunctions() {
   ret = DetourUpdateThread(GetCurrentThread());
   GITS_ASSERT(ret == NO_ERROR);
 
-  ret = DetourAttach(&xessDispatchTable_.xessGetVersion, xessGetVersionWrapper);
+  ret = DetourAttach(&m_XessDispatchTable.xessGetVersion, xessGetVersionWrapper);
   GITS_ASSERT(ret == NO_ERROR);
 
-  if (xessDispatchTable_.xessGetIntelXeFXVersion) {
-    ret = DetourAttach(&xessDispatchTable_.xessGetIntelXeFXVersion, xessGetIntelXeFXVersionWrapper);
+  if (m_XessDispatchTable.xessGetIntelXeFXVersion) {
+    ret =
+        DetourAttach(&m_XessDispatchTable.xessGetIntelXeFXVersion, xessGetIntelXeFXVersionWrapper);
     GITS_ASSERT(ret == NO_ERROR);
   }
-  if (xessDispatchTable_.xessGetProperties) {
-    ret = DetourAttach(&xessDispatchTable_.xessGetProperties, xessGetPropertiesWrapper);
+  if (m_XessDispatchTable.xessGetProperties) {
+    ret = DetourAttach(&m_XessDispatchTable.xessGetProperties, xessGetPropertiesWrapper);
     GITS_ASSERT(ret == NO_ERROR);
   }
-  if (xessDispatchTable_.xessGetInputResolution) {
-    ret = DetourAttach(&xessDispatchTable_.xessGetInputResolution, xessGetInputResolutionWrapper);
+  if (m_XessDispatchTable.xessGetInputResolution) {
+    ret = DetourAttach(&m_XessDispatchTable.xessGetInputResolution, xessGetInputResolutionWrapper);
     GITS_ASSERT(ret == NO_ERROR);
   }
-  if (xessDispatchTable_.xessDestroyContext) {
-    ret = DetourAttach(&xessDispatchTable_.xessDestroyContext, xessDestroyContextWrapper);
+  if (m_XessDispatchTable.xessDestroyContext) {
+    ret = DetourAttach(&m_XessDispatchTable.xessDestroyContext, xessDestroyContextWrapper);
     GITS_ASSERT(ret == NO_ERROR);
   }
-  if (xessDispatchTable_.xessSetJitterScale) {
-    ret = DetourAttach(&xessDispatchTable_.xessSetJitterScale, xessSetJitterScaleWrapper);
+  if (m_XessDispatchTable.xessSetJitterScale) {
+    ret = DetourAttach(&m_XessDispatchTable.xessSetJitterScale, xessSetJitterScaleWrapper);
     GITS_ASSERT(ret == NO_ERROR);
   }
-  if (xessDispatchTable_.xessSetVelocityScale) {
-    ret = DetourAttach(&xessDispatchTable_.xessSetVelocityScale, xessSetVelocityScaleWrapper);
+  if (m_XessDispatchTable.xessSetVelocityScale) {
+    ret = DetourAttach(&m_XessDispatchTable.xessSetVelocityScale, xessSetVelocityScaleWrapper);
     GITS_ASSERT(ret == NO_ERROR);
   }
-  if (xessDispatchTable_.xessGetJitterScale) {
-    ret = DetourAttach(&xessDispatchTable_.xessGetJitterScale, xessGetJitterScaleWrapper);
+  if (m_XessDispatchTable.xessGetJitterScale) {
+    ret = DetourAttach(&m_XessDispatchTable.xessGetJitterScale, xessGetJitterScaleWrapper);
     GITS_ASSERT(ret == NO_ERROR);
   }
-  if (xessDispatchTable_.xessGetVelocityScale) {
-    ret = DetourAttach(&xessDispatchTable_.xessGetVelocityScale, xessGetVelocityScaleWrapper);
+  if (m_XessDispatchTable.xessGetVelocityScale) {
+    ret = DetourAttach(&m_XessDispatchTable.xessGetVelocityScale, xessGetVelocityScaleWrapper);
     GITS_ASSERT(ret == NO_ERROR);
   }
-  if (xessDispatchTable_.xessIsOptimalDriver) {
-    ret = DetourAttach(&xessDispatchTable_.xessIsOptimalDriver, xessIsOptimalDriverWrapper);
+  if (m_XessDispatchTable.xessIsOptimalDriver) {
+    ret = DetourAttach(&m_XessDispatchTable.xessIsOptimalDriver, xessIsOptimalDriverWrapper);
     GITS_ASSERT(ret == NO_ERROR);
   }
-  if (xessDispatchTable_.xessGetOptimalInputResolution) {
-    ret = DetourAttach(&xessDispatchTable_.xessGetOptimalInputResolution,
+  if (m_XessDispatchTable.xessGetOptimalInputResolution) {
+    ret = DetourAttach(&m_XessDispatchTable.xessGetOptimalInputResolution,
                        xessGetOptimalInputResolutionWrapper);
     GITS_ASSERT(ret == NO_ERROR);
   }
-  if (xessDispatchTable_.xessSetExposureMultiplier) {
-    ret = DetourAttach(&xessDispatchTable_.xessSetExposureMultiplier,
+  if (m_XessDispatchTable.xessSetExposureMultiplier) {
+    ret = DetourAttach(&m_XessDispatchTable.xessSetExposureMultiplier,
                        xessSetExposureMultiplierWrapper);
     GITS_ASSERT(ret == NO_ERROR);
   }
-  if (xessDispatchTable_.xessGetExposureMultiplier) {
-    ret = DetourAttach(&xessDispatchTable_.xessGetExposureMultiplier,
+  if (m_XessDispatchTable.xessGetExposureMultiplier) {
+    ret = DetourAttach(&m_XessDispatchTable.xessGetExposureMultiplier,
                        xessGetExposureMultiplierWrapper);
     GITS_ASSERT(ret == NO_ERROR);
   }
-  if (xessDispatchTable_.xessForceLegacyScaleFactors) {
-    ret = DetourAttach(&xessDispatchTable_.xessForceLegacyScaleFactors,
+  if (m_XessDispatchTable.xessForceLegacyScaleFactors) {
+    ret = DetourAttach(&m_XessDispatchTable.xessForceLegacyScaleFactors,
                        xessForceLegacyScaleFactorsWrapper);
     GITS_ASSERT(ret == NO_ERROR);
   }
-  if (xessDispatchTable_.xessSetLoggingCallback) {
-    ret = DetourAttach(&xessDispatchTable_.xessSetLoggingCallback, xessSetLoggingCallbackWrapper);
+  if (m_XessDispatchTable.xessSetLoggingCallback) {
+    ret = DetourAttach(&m_XessDispatchTable.xessSetLoggingCallback, xessSetLoggingCallbackWrapper);
     GITS_ASSERT(ret == NO_ERROR);
   }
-  if (xessDispatchTable_.xessD3D12CreateContext) {
-    ret = DetourAttach(&xessDispatchTable_.xessD3D12CreateContext, xessD3D12CreateContextWrapper);
+  if (m_XessDispatchTable.xessD3D12CreateContext) {
+    ret = DetourAttach(&m_XessDispatchTable.xessD3D12CreateContext, xessD3D12CreateContextWrapper);
     GITS_ASSERT(ret == NO_ERROR);
   }
-  if (xessDispatchTable_.xessD3D12Init) {
-    ret = DetourAttach(&xessDispatchTable_.xessD3D12Init, xessD3D12InitWrapper);
+  if (m_XessDispatchTable.xessD3D12Init) {
+    ret = DetourAttach(&m_XessDispatchTable.xessD3D12Init, xessD3D12InitWrapper);
     GITS_ASSERT(ret == NO_ERROR);
   }
-  if (xessDispatchTable_.xessD3D12BuildPipelines) {
-    ret = DetourAttach(&xessDispatchTable_.xessD3D12BuildPipelines, xessD3D12BuildPipelinesWrapper);
+  if (m_XessDispatchTable.xessD3D12BuildPipelines) {
+    ret =
+        DetourAttach(&m_XessDispatchTable.xessD3D12BuildPipelines, xessD3D12BuildPipelinesWrapper);
     GITS_ASSERT(ret == NO_ERROR);
   }
-  if (xessDispatchTable_.xessD3D12GetInitParams) {
-    ret = DetourAttach(&xessDispatchTable_.xessD3D12GetInitParams, xessD3D12GetInitParamsWrapper);
+  if (m_XessDispatchTable.xessD3D12GetInitParams) {
+    ret = DetourAttach(&m_XessDispatchTable.xessD3D12GetInitParams, xessD3D12GetInitParamsWrapper);
     GITS_ASSERT(ret == NO_ERROR);
   }
-  if (xessDispatchTable_.xessD3D12Execute) {
-    ret = DetourAttach(&xessDispatchTable_.xessD3D12Execute, xessD3D12ExecuteWrapper);
+  if (m_XessDispatchTable.xessD3D12Execute) {
+    ret = DetourAttach(&m_XessDispatchTable.xessD3D12Execute, xessD3D12ExecuteWrapper);
     GITS_ASSERT(ret == NO_ERROR);
   }
-  if (xessDispatchTable_.xessSetMaxResponsiveMaskValue) {
-    ret = DetourAttach(&xessDispatchTable_.xessSetMaxResponsiveMaskValue,
+  if (m_XessDispatchTable.xessSetMaxResponsiveMaskValue) {
+    ret = DetourAttach(&m_XessDispatchTable.xessSetMaxResponsiveMaskValue,
                        xessSetMaxResponsiveMaskValueWrapper);
     GITS_ASSERT(ret == NO_ERROR);
   }
-  if (xessDispatchTable_.xessGetMaxResponsiveMaskValue) {
-    ret = DetourAttach(&xessDispatchTable_.xessGetMaxResponsiveMaskValue,
+  if (m_XessDispatchTable.xessGetMaxResponsiveMaskValue) {
+    ret = DetourAttach(&m_XessDispatchTable.xessGetMaxResponsiveMaskValue,
                        xessGetMaxResponsiveMaskValueWrapper);
     GITS_ASSERT(ret == NO_ERROR);
   }
-  if (xessDispatchTable_.xessGetPipelineBuildStatus) {
-    ret = DetourAttach(&xessDispatchTable_.xessGetPipelineBuildStatus,
+  if (m_XessDispatchTable.xessGetPipelineBuildStatus) {
+    ret = DetourAttach(&m_XessDispatchTable.xessGetPipelineBuildStatus,
                        xessGetPipelineBuildStatusWrapper);
     GITS_ASSERT(ret == NO_ERROR);
   }
@@ -485,38 +491,38 @@ void CaptureManager::interceptXessFunctions() {
 }
 
 void CaptureManager::interceptXellFunctions() {
-  if (xellDll_ || loadingXellDll_ || !Configurator::Get().directx.recorder.captureXell) {
+  if (m_XellDll || m_LoadingXellDll || !Configurator::Get().directx.recorder.captureXell) {
     return;
   }
 
-  loadingXellDll_ = true;
-  xellDll_ = LoadLibrary("libxell.dll");
-  loadingXellDll_ = false;
-  if (!xellDll_) {
+  m_LoadingXellDll = true;
+  m_XellDll = LoadLibrary("libxell.dll");
+  m_LoadingXellDll = false;
+  if (!m_XellDll) {
     return;
   }
 
-  xellDispatchTable_.xellDestroyContext = reinterpret_cast<decltype(xellDestroyContext)*>(
-      GetProcAddress(xellDll_, "xellDestroyContext"));
-  xellDispatchTable_.xellSetSleepMode =
-      reinterpret_cast<decltype(xellSetSleepMode)*>(GetProcAddress(xellDll_, "xellSetSleepMode"));
-  xellDispatchTable_.xellGetSleepMode =
-      reinterpret_cast<decltype(xellGetSleepMode)*>(GetProcAddress(xellDll_, "xellGetSleepMode"));
-  xellDispatchTable_.xellSleep =
-      reinterpret_cast<decltype(xellSleep)*>(GetProcAddress(xellDll_, "xellSleep"));
-  xellDispatchTable_.xellAddMarkerData =
-      reinterpret_cast<decltype(xellAddMarkerData)*>(GetProcAddress(xellDll_, "xellAddMarkerData"));
-  xellDispatchTable_.xellGetVersion =
-      reinterpret_cast<decltype(xellGetVersion)*>(GetProcAddress(xellDll_, "xellGetVersion"));
-  xellDispatchTable_.xellSetLoggingCallback = reinterpret_cast<decltype(xellSetLoggingCallback)*>(
-      GetProcAddress(xellDll_, "xellSetLoggingCallback"));
-  xellDispatchTable_.xellGetFramesReports = reinterpret_cast<decltype(xellGetFramesReports)*>(
-      GetProcAddress(xellDll_, "xellGetFramesReports"));
-  xellDispatchTable_.xellD3D12CreateContext = reinterpret_cast<decltype(xellD3D12CreateContext)*>(
-      GetProcAddress(xellDll_, "xellD3D12CreateContext"));
+  m_XellDispatchTable.xellDestroyContext = reinterpret_cast<decltype(xellDestroyContext)*>(
+      GetProcAddress(m_XellDll, "xellDestroyContext"));
+  m_XellDispatchTable.xellSetSleepMode =
+      reinterpret_cast<decltype(xellSetSleepMode)*>(GetProcAddress(m_XellDll, "xellSetSleepMode"));
+  m_XellDispatchTable.xellGetSleepMode =
+      reinterpret_cast<decltype(xellGetSleepMode)*>(GetProcAddress(m_XellDll, "xellGetSleepMode"));
+  m_XellDispatchTable.xellSleep =
+      reinterpret_cast<decltype(xellSleep)*>(GetProcAddress(m_XellDll, "xellSleep"));
+  m_XellDispatchTable.xellAddMarkerData = reinterpret_cast<decltype(xellAddMarkerData)*>(
+      GetProcAddress(m_XellDll, "xellAddMarkerData"));
+  m_XellDispatchTable.xellGetVersion =
+      reinterpret_cast<decltype(xellGetVersion)*>(GetProcAddress(m_XellDll, "xellGetVersion"));
+  m_XellDispatchTable.xellSetLoggingCallback = reinterpret_cast<decltype(xellSetLoggingCallback)*>(
+      GetProcAddress(m_XellDll, "xellSetLoggingCallback"));
+  m_XellDispatchTable.xellGetFramesReports = reinterpret_cast<decltype(xellGetFramesReports)*>(
+      GetProcAddress(m_XellDll, "xellGetFramesReports"));
+  m_XellDispatchTable.xellD3D12CreateContext = reinterpret_cast<decltype(xellD3D12CreateContext)*>(
+      GetProcAddress(m_XellDll, "xellD3D12CreateContext"));
 
   xell_version_t xellVersion{};
-  xell_result_t res = xellDispatchTable_.xellGetVersion(&xellVersion);
+  xell_result_t res = m_XellDispatchTable.xellGetVersion(&xellVersion);
   GITS_ASSERT(res == XELL_RESULT_SUCCESS);
 
   LOG_INFO << "Loaded XeLL (libxell.dll) version: " << xellVersion.major << "." << xellVersion.minor
@@ -527,39 +533,39 @@ void CaptureManager::interceptXellFunctions() {
   ret = DetourUpdateThread(GetCurrentThread());
   GITS_ASSERT(ret == NO_ERROR);
 
-  ret = DetourAttach(&xellDispatchTable_.xellGetVersion, xellGetVersionWrapper);
+  ret = DetourAttach(&m_XellDispatchTable.xellGetVersion, xellGetVersionWrapper);
   GITS_ASSERT(ret == NO_ERROR);
 
-  if (xellDispatchTable_.xellDestroyContext) {
-    ret = DetourAttach(&xellDispatchTable_.xellDestroyContext, xellDestroyContextWrapper);
+  if (m_XellDispatchTable.xellDestroyContext) {
+    ret = DetourAttach(&m_XellDispatchTable.xellDestroyContext, xellDestroyContextWrapper);
     GITS_ASSERT(ret == NO_ERROR);
   }
-  if (xellDispatchTable_.xellSetSleepMode) {
-    ret = DetourAttach(&xellDispatchTable_.xellSetSleepMode, xellSetSleepModeWrapper);
+  if (m_XellDispatchTable.xellSetSleepMode) {
+    ret = DetourAttach(&m_XellDispatchTable.xellSetSleepMode, xellSetSleepModeWrapper);
     GITS_ASSERT(ret == NO_ERROR);
   }
-  if (xellDispatchTable_.xellGetSleepMode) {
-    ret = DetourAttach(&xellDispatchTable_.xellGetSleepMode, xellGetSleepModeWrapper);
+  if (m_XellDispatchTable.xellGetSleepMode) {
+    ret = DetourAttach(&m_XellDispatchTable.xellGetSleepMode, xellGetSleepModeWrapper);
     GITS_ASSERT(ret == NO_ERROR);
   }
-  if (xellDispatchTable_.xellSleep) {
-    ret = DetourAttach(&xellDispatchTable_.xellSleep, xellSleepWrapper);
+  if (m_XellDispatchTable.xellSleep) {
+    ret = DetourAttach(&m_XellDispatchTable.xellSleep, xellSleepWrapper);
     GITS_ASSERT(ret == NO_ERROR);
   }
-  if (xellDispatchTable_.xellAddMarkerData) {
-    ret = DetourAttach(&xellDispatchTable_.xellAddMarkerData, xellAddMarkerDataWrapper);
+  if (m_XellDispatchTable.xellAddMarkerData) {
+    ret = DetourAttach(&m_XellDispatchTable.xellAddMarkerData, xellAddMarkerDataWrapper);
     GITS_ASSERT(ret == NO_ERROR);
   }
-  if (xellDispatchTable_.xellSetLoggingCallback) {
-    ret = DetourAttach(&xellDispatchTable_.xellSetLoggingCallback, xellSetLoggingCallbackWrapper);
+  if (m_XellDispatchTable.xellSetLoggingCallback) {
+    ret = DetourAttach(&m_XellDispatchTable.xellSetLoggingCallback, xellSetLoggingCallbackWrapper);
     GITS_ASSERT(ret == NO_ERROR);
   }
-  if (xellDispatchTable_.xellGetFramesReports) {
-    ret = DetourAttach(&xellDispatchTable_.xellGetFramesReports, xellGetFramesReportsWrapper);
+  if (m_XellDispatchTable.xellGetFramesReports) {
+    ret = DetourAttach(&m_XellDispatchTable.xellGetFramesReports, xellGetFramesReportsWrapper);
     GITS_ASSERT(ret == NO_ERROR);
   }
-  if (xellDispatchTable_.xellD3D12CreateContext) {
-    ret = DetourAttach(&xellDispatchTable_.xellD3D12CreateContext, xellD3D12CreateContextWrapper);
+  if (m_XellDispatchTable.xellD3D12CreateContext) {
+    ret = DetourAttach(&m_XellDispatchTable.xellD3D12CreateContext, xellD3D12CreateContextWrapper);
     GITS_ASSERT(ret == NO_ERROR);
   }
 
@@ -568,74 +574,76 @@ void CaptureManager::interceptXellFunctions() {
 }
 
 void CaptureManager::interceptXefgFunctions() {
-  if (xefgDll_ || loadingXefgDll_ || !Configurator::Get().directx.recorder.captureXefg) {
+  if (m_XefgDll || m_LoadingXefgDll || !Configurator::Get().directx.recorder.captureXefg) {
     return;
   }
 
-  loadingXefgDll_ = true;
-  xefgDll_ = LoadLibrary("libxess_fg.dll");
-  loadingXefgDll_ = false;
-  if (!xefgDll_) {
+  m_LoadingXefgDll = true;
+  m_XefgDll = LoadLibrary("libxess_fg.dll");
+  m_LoadingXefgDll = false;
+  if (!m_XefgDll) {
     return;
   }
 
-  xefgDispatchTable_.xefgSwapChainGetVersion = reinterpret_cast<decltype(xefgSwapChainGetVersion)*>(
-      GetProcAddress(xefgDll_, "xefgSwapChainGetVersion"));
-  xefgDispatchTable_.xefgSwapChainGetProperties =
+  m_XefgDispatchTable.xefgSwapChainGetVersion =
+      reinterpret_cast<decltype(xefgSwapChainGetVersion)*>(
+          GetProcAddress(m_XefgDll, "xefgSwapChainGetVersion"));
+  m_XefgDispatchTable.xefgSwapChainGetProperties =
       reinterpret_cast<decltype(xefgSwapChainGetProperties)*>(
-          GetProcAddress(xefgDll_, "xefgSwapChainGetProperties"));
-  xefgDispatchTable_.xefgSwapChainTagFrameConstants =
+          GetProcAddress(m_XefgDll, "xefgSwapChainGetProperties"));
+  m_XefgDispatchTable.xefgSwapChainTagFrameConstants =
       reinterpret_cast<decltype(xefgSwapChainTagFrameConstants)*>(
-          GetProcAddress(xefgDll_, "xefgSwapChainTagFrameConstants"));
-  xefgDispatchTable_.xefgSwapChainSetEnabled = reinterpret_cast<decltype(xefgSwapChainSetEnabled)*>(
-      GetProcAddress(xefgDll_, "xefgSwapChainSetEnabled"));
-  xefgDispatchTable_.xefgSwapChainSetPresentId =
+          GetProcAddress(m_XefgDll, "xefgSwapChainTagFrameConstants"));
+  m_XefgDispatchTable.xefgSwapChainSetEnabled =
+      reinterpret_cast<decltype(xefgSwapChainSetEnabled)*>(
+          GetProcAddress(m_XefgDll, "xefgSwapChainSetEnabled"));
+  m_XefgDispatchTable.xefgSwapChainSetPresentId =
       reinterpret_cast<decltype(xefgSwapChainSetPresentId)*>(
-          GetProcAddress(xefgDll_, "xefgSwapChainSetPresentId"));
-  xefgDispatchTable_.xefgSwapChainGetLastPresentStatus =
+          GetProcAddress(m_XefgDll, "xefgSwapChainSetPresentId"));
+  m_XefgDispatchTable.xefgSwapChainGetLastPresentStatus =
       reinterpret_cast<decltype(xefgSwapChainGetLastPresentStatus)*>(
-          GetProcAddress(xefgDll_, "xefgSwapChainGetLastPresentStatus"));
-  xefgDispatchTable_.xefgSwapChainSetLoggingCallback =
+          GetProcAddress(m_XefgDll, "xefgSwapChainGetLastPresentStatus"));
+  m_XefgDispatchTable.xefgSwapChainSetLoggingCallback =
       reinterpret_cast<decltype(xefgSwapChainSetLoggingCallback)*>(
-          GetProcAddress(xefgDll_, "xefgSwapChainSetLoggingCallback"));
-  xefgDispatchTable_.xefgSwapChainDestroy = reinterpret_cast<decltype(xefgSwapChainDestroy)*>(
-      GetProcAddress(xefgDll_, "xefgSwapChainDestroy"));
-  xefgDispatchTable_.xefgSwapChainSetLatencyReduction =
+          GetProcAddress(m_XefgDll, "xefgSwapChainSetLoggingCallback"));
+  m_XefgDispatchTable.xefgSwapChainDestroy = reinterpret_cast<decltype(xefgSwapChainDestroy)*>(
+      GetProcAddress(m_XefgDll, "xefgSwapChainDestroy"));
+  m_XefgDispatchTable.xefgSwapChainSetLatencyReduction =
       reinterpret_cast<decltype(xefgSwapChainSetLatencyReduction)*>(
-          GetProcAddress(xefgDll_, "xefgSwapChainSetLatencyReduction"));
-  xefgDispatchTable_.xefgSwapChainSetSceneChangeThreshold =
+          GetProcAddress(m_XefgDll, "xefgSwapChainSetLatencyReduction"));
+  m_XefgDispatchTable.xefgSwapChainSetSceneChangeThreshold =
       reinterpret_cast<decltype(xefgSwapChainSetSceneChangeThreshold)*>(
-          GetProcAddress(xefgDll_, "xefgSwapChainSetSceneChangeThreshold"));
-  xefgDispatchTable_.xefgSwapChainGetPipelineBuildStatus =
+          GetProcAddress(m_XefgDll, "xefgSwapChainSetSceneChangeThreshold"));
+  m_XefgDispatchTable.xefgSwapChainGetPipelineBuildStatus =
       reinterpret_cast<decltype(xefgSwapChainGetPipelineBuildStatus)*>(
-          GetProcAddress(xefgDll_, "xefgSwapChainGetPipelineBuildStatus"));
-  xefgDispatchTable_.xefgSwapChainD3D12CreateContext =
+          GetProcAddress(m_XefgDll, "xefgSwapChainGetPipelineBuildStatus"));
+  m_XefgDispatchTable.xefgSwapChainD3D12CreateContext =
       reinterpret_cast<decltype(xefgSwapChainD3D12CreateContext)*>(
-          GetProcAddress(xefgDll_, "xefgSwapChainD3D12CreateContext"));
-  xefgDispatchTable_.xefgSwapChainD3D12BuildPipelines =
+          GetProcAddress(m_XefgDll, "xefgSwapChainD3D12CreateContext"));
+  m_XefgDispatchTable.xefgSwapChainD3D12BuildPipelines =
       reinterpret_cast<decltype(xefgSwapChainD3D12BuildPipelines)*>(
-          GetProcAddress(xefgDll_, "xefgSwapChainD3D12BuildPipelines"));
-  xefgDispatchTable_.xefgSwapChainD3D12InitFromSwapChain =
+          GetProcAddress(m_XefgDll, "xefgSwapChainD3D12BuildPipelines"));
+  m_XefgDispatchTable.xefgSwapChainD3D12InitFromSwapChain =
       reinterpret_cast<decltype(xefgSwapChainD3D12InitFromSwapChain)*>(
-          GetProcAddress(xefgDll_, "xefgSwapChainD3D12InitFromSwapChain"));
-  xefgDispatchTable_.xefgSwapChainD3D12InitFromSwapChainDesc =
+          GetProcAddress(m_XefgDll, "xefgSwapChainD3D12InitFromSwapChain"));
+  m_XefgDispatchTable.xefgSwapChainD3D12InitFromSwapChainDesc =
       reinterpret_cast<decltype(xefgSwapChainD3D12InitFromSwapChainDesc)*>(
-          GetProcAddress(xefgDll_, "xefgSwapChainD3D12InitFromSwapChainDesc"));
-  xefgDispatchTable_.xefgSwapChainD3D12GetSwapChainPtr =
+          GetProcAddress(m_XefgDll, "xefgSwapChainD3D12InitFromSwapChainDesc"));
+  m_XefgDispatchTable.xefgSwapChainD3D12GetSwapChainPtr =
       reinterpret_cast<decltype(xefgSwapChainD3D12GetSwapChainPtr)*>(
-          GetProcAddress(xefgDll_, "xefgSwapChainD3D12GetSwapChainPtr"));
-  xefgDispatchTable_.xefgSwapChainD3D12TagFrameResource =
+          GetProcAddress(m_XefgDll, "xefgSwapChainD3D12GetSwapChainPtr"));
+  m_XefgDispatchTable.xefgSwapChainD3D12TagFrameResource =
       reinterpret_cast<decltype(xefgSwapChainD3D12TagFrameResource)*>(
-          GetProcAddress(xefgDll_, "xefgSwapChainD3D12TagFrameResource"));
-  xefgDispatchTable_.xefgSwapChainD3D12SetDescriptorHeap =
+          GetProcAddress(m_XefgDll, "xefgSwapChainD3D12TagFrameResource"));
+  m_XefgDispatchTable.xefgSwapChainD3D12SetDescriptorHeap =
       reinterpret_cast<decltype(xefgSwapChainD3D12SetDescriptorHeap)*>(
-          GetProcAddress(xefgDll_, "xefgSwapChainD3D12SetDescriptorHeap"));
-  xefgDispatchTable_.xefgSwapChainEnableDebugFeature =
+          GetProcAddress(m_XefgDll, "xefgSwapChainD3D12SetDescriptorHeap"));
+  m_XefgDispatchTable.xefgSwapChainEnableDebugFeature =
       reinterpret_cast<decltype(xefgSwapChainEnableDebugFeature)*>(
-          GetProcAddress(xefgDll_, "xefgSwapChainEnableDebugFeature"));
+          GetProcAddress(m_XefgDll, "xefgSwapChainEnableDebugFeature"));
 
   xefg_swapchain_version_t xefgVersion{};
-  xefg_swapchain_result_t result = xefgDispatchTable_.xefgSwapChainGetVersion(&xefgVersion);
+  xefg_swapchain_result_t result = m_XefgDispatchTable.xefgSwapChainGetVersion(&xefgVersion);
   GITS_ASSERT(result == XEFG_SWAPCHAIN_RESULT_SUCCESS);
 
   LOG_INFO << "Loaded XeSS FG (libxess_fg.dll) version: " << xefgVersion.major << "."
@@ -646,94 +654,95 @@ void CaptureManager::interceptXefgFunctions() {
   ret = DetourUpdateThread(GetCurrentThread());
   GITS_ASSERT(ret == NO_ERROR);
 
-  ret = DetourAttach(&xefgDispatchTable_.xefgSwapChainGetVersion, xefgSwapChainGetVersionWrapper);
+  ret = DetourAttach(&m_XefgDispatchTable.xefgSwapChainGetVersion, xefgSwapChainGetVersionWrapper);
   GITS_ASSERT(ret == NO_ERROR);
 
-  if (xefgDispatchTable_.xefgSwapChainGetProperties) {
-    ret = DetourAttach(&xefgDispatchTable_.xefgSwapChainGetProperties,
+  if (m_XefgDispatchTable.xefgSwapChainGetProperties) {
+    ret = DetourAttach(&m_XefgDispatchTable.xefgSwapChainGetProperties,
                        xefgSwapChainGetPropertiesWrapper);
     GITS_ASSERT(ret == NO_ERROR);
   }
-  if (xefgDispatchTable_.xefgSwapChainTagFrameConstants) {
-    ret = DetourAttach(&xefgDispatchTable_.xefgSwapChainTagFrameConstants,
+  if (m_XefgDispatchTable.xefgSwapChainTagFrameConstants) {
+    ret = DetourAttach(&m_XefgDispatchTable.xefgSwapChainTagFrameConstants,
                        xefgSwapChainTagFrameConstantsWrapper);
     GITS_ASSERT(ret == NO_ERROR);
   }
-  if (xefgDispatchTable_.xefgSwapChainSetEnabled) {
-    ret = DetourAttach(&xefgDispatchTable_.xefgSwapChainSetEnabled, xefgSwapChainSetEnabledWrapper);
+  if (m_XefgDispatchTable.xefgSwapChainSetEnabled) {
+    ret =
+        DetourAttach(&m_XefgDispatchTable.xefgSwapChainSetEnabled, xefgSwapChainSetEnabledWrapper);
     GITS_ASSERT(ret == NO_ERROR);
   }
-  if (xefgDispatchTable_.xefgSwapChainSetPresentId) {
-    ret = DetourAttach(&xefgDispatchTable_.xefgSwapChainSetPresentId,
+  if (m_XefgDispatchTable.xefgSwapChainSetPresentId) {
+    ret = DetourAttach(&m_XefgDispatchTable.xefgSwapChainSetPresentId,
                        xefgSwapChainSetPresentIdWrapper);
     GITS_ASSERT(ret == NO_ERROR);
   }
-  if (xefgDispatchTable_.xefgSwapChainGetLastPresentStatus) {
-    ret = DetourAttach(&xefgDispatchTable_.xefgSwapChainGetLastPresentStatus,
+  if (m_XefgDispatchTable.xefgSwapChainGetLastPresentStatus) {
+    ret = DetourAttach(&m_XefgDispatchTable.xefgSwapChainGetLastPresentStatus,
                        xefgSwapChainGetLastPresentStatusWrapper);
     GITS_ASSERT(ret == NO_ERROR);
   }
-  if (xefgDispatchTable_.xefgSwapChainSetLoggingCallback) {
-    ret = DetourAttach(&xefgDispatchTable_.xefgSwapChainSetLoggingCallback,
+  if (m_XefgDispatchTable.xefgSwapChainSetLoggingCallback) {
+    ret = DetourAttach(&m_XefgDispatchTable.xefgSwapChainSetLoggingCallback,
                        xefgSwapChainSetLoggingCallbackWrapper);
     GITS_ASSERT(ret == NO_ERROR);
   }
-  if (xefgDispatchTable_.xefgSwapChainDestroy) {
-    ret = DetourAttach(&xefgDispatchTable_.xefgSwapChainDestroy, xefgSwapChainDestroyWrapper);
+  if (m_XefgDispatchTable.xefgSwapChainDestroy) {
+    ret = DetourAttach(&m_XefgDispatchTable.xefgSwapChainDestroy, xefgSwapChainDestroyWrapper);
     GITS_ASSERT(ret == NO_ERROR);
   }
-  if (xefgDispatchTable_.xefgSwapChainSetLatencyReduction) {
-    ret = DetourAttach(&xefgDispatchTable_.xefgSwapChainSetLatencyReduction,
+  if (m_XefgDispatchTable.xefgSwapChainSetLatencyReduction) {
+    ret = DetourAttach(&m_XefgDispatchTable.xefgSwapChainSetLatencyReduction,
                        xefgSwapChainSetLatencyReductionWrapper);
     GITS_ASSERT(ret == NO_ERROR);
   }
-  if (xefgDispatchTable_.xefgSwapChainSetSceneChangeThreshold) {
-    ret = DetourAttach(&xefgDispatchTable_.xefgSwapChainSetSceneChangeThreshold,
+  if (m_XefgDispatchTable.xefgSwapChainSetSceneChangeThreshold) {
+    ret = DetourAttach(&m_XefgDispatchTable.xefgSwapChainSetSceneChangeThreshold,
                        xefgSwapChainSetSceneChangeThresholdWrapper);
     GITS_ASSERT(ret == NO_ERROR);
   }
-  if (xefgDispatchTable_.xefgSwapChainGetPipelineBuildStatus) {
-    ret = DetourAttach(&xefgDispatchTable_.xefgSwapChainGetPipelineBuildStatus,
+  if (m_XefgDispatchTable.xefgSwapChainGetPipelineBuildStatus) {
+    ret = DetourAttach(&m_XefgDispatchTable.xefgSwapChainGetPipelineBuildStatus,
                        xefgSwapChainGetPipelineBuildStatusWrapper);
     GITS_ASSERT(ret == NO_ERROR);
   }
-  if (xefgDispatchTable_.xefgSwapChainD3D12CreateContext) {
-    ret = DetourAttach(&xefgDispatchTable_.xefgSwapChainD3D12CreateContext,
+  if (m_XefgDispatchTable.xefgSwapChainD3D12CreateContext) {
+    ret = DetourAttach(&m_XefgDispatchTable.xefgSwapChainD3D12CreateContext,
                        xefgSwapChainD3D12CreateContextWrapper);
     GITS_ASSERT(ret == NO_ERROR);
   }
-  if (xefgDispatchTable_.xefgSwapChainD3D12BuildPipelines) {
-    ret = DetourAttach(&xefgDispatchTable_.xefgSwapChainD3D12BuildPipelines,
+  if (m_XefgDispatchTable.xefgSwapChainD3D12BuildPipelines) {
+    ret = DetourAttach(&m_XefgDispatchTable.xefgSwapChainD3D12BuildPipelines,
                        xefgSwapChainD3D12BuildPipelinesWrapper);
     GITS_ASSERT(ret == NO_ERROR);
   }
-  if (xefgDispatchTable_.xefgSwapChainD3D12InitFromSwapChain) {
-    ret = DetourAttach(&xefgDispatchTable_.xefgSwapChainD3D12InitFromSwapChain,
+  if (m_XefgDispatchTable.xefgSwapChainD3D12InitFromSwapChain) {
+    ret = DetourAttach(&m_XefgDispatchTable.xefgSwapChainD3D12InitFromSwapChain,
                        xefgSwapChainD3D12InitFromSwapChainWrapper);
     GITS_ASSERT(ret == NO_ERROR);
   }
-  if (xefgDispatchTable_.xefgSwapChainD3D12InitFromSwapChainDesc) {
-    ret = DetourAttach(&xefgDispatchTable_.xefgSwapChainD3D12InitFromSwapChainDesc,
+  if (m_XefgDispatchTable.xefgSwapChainD3D12InitFromSwapChainDesc) {
+    ret = DetourAttach(&m_XefgDispatchTable.xefgSwapChainD3D12InitFromSwapChainDesc,
                        xefgSwapChainD3D12InitFromSwapChainDescWrapper);
     GITS_ASSERT(ret == NO_ERROR);
   }
-  if (xefgDispatchTable_.xefgSwapChainD3D12GetSwapChainPtr) {
-    ret = DetourAttach(&xefgDispatchTable_.xefgSwapChainD3D12GetSwapChainPtr,
+  if (m_XefgDispatchTable.xefgSwapChainD3D12GetSwapChainPtr) {
+    ret = DetourAttach(&m_XefgDispatchTable.xefgSwapChainD3D12GetSwapChainPtr,
                        xefgSwapChainD3D12GetSwapChainPtrWrapper);
     GITS_ASSERT(ret == NO_ERROR);
   }
-  if (xefgDispatchTable_.xefgSwapChainD3D12TagFrameResource) {
-    ret = DetourAttach(&xefgDispatchTable_.xefgSwapChainD3D12TagFrameResource,
+  if (m_XefgDispatchTable.xefgSwapChainD3D12TagFrameResource) {
+    ret = DetourAttach(&m_XefgDispatchTable.xefgSwapChainD3D12TagFrameResource,
                        xefgSwapChainD3D12TagFrameResourceWrapper);
     GITS_ASSERT(ret == NO_ERROR);
   }
-  if (xefgDispatchTable_.xefgSwapChainD3D12SetDescriptorHeap) {
-    ret = DetourAttach(&xefgDispatchTable_.xefgSwapChainD3D12SetDescriptorHeap,
+  if (m_XefgDispatchTable.xefgSwapChainD3D12SetDescriptorHeap) {
+    ret = DetourAttach(&m_XefgDispatchTable.xefgSwapChainD3D12SetDescriptorHeap,
                        xefgSwapChainD3D12SetDescriptorHeapWrapper);
     GITS_ASSERT(ret == NO_ERROR);
   }
-  if (xefgDispatchTable_.xefgSwapChainEnableDebugFeature) {
-    ret = DetourAttach(&xefgDispatchTable_.xefgSwapChainEnableDebugFeature,
+  if (m_XefgDispatchTable.xefgSwapChainEnableDebugFeature) {
+    ret = DetourAttach(&m_XefgDispatchTable.xefgSwapChainEnableDebugFeature,
                        xefgSwapChainEnableDebugFeatureWrapper);
     GITS_ASSERT(ret == NO_ERROR);
   }
@@ -743,7 +752,7 @@ void CaptureManager::interceptXefgFunctions() {
 }
 
 void CaptureManager::loadIntelExtension(const uint32_t& vendorID, const uint32_t& deviceID) {
-  if (intelExtensionLoaded_ || !Configurator::Get().directx.recorder.captureIntelExtensions) {
+  if (m_IntelExtensionLoaded || !Configurator::Get().directx.recorder.captureIntelExtensions) {
     return;
   }
 
@@ -810,7 +819,7 @@ void CaptureManager::loadIntelExtension(const uint32_t& vendorID, const uint32_t
     LOG_ERROR << "IntelExtensions - Failed to set INTC_DEVICE_PARAM_CAPTURE_MODE";
   }
 
-  intelExtensionLoaded_ = true;
+  m_IntelExtensionLoaded = true;
 }
 
 void CaptureManager::interceptNvAPIFunctions() {
@@ -819,8 +828,8 @@ void CaptureManager::interceptNvAPIFunctions() {
     if (status != NVAPI_OK) {
       return;
     }
-    nvapiDll_ = LoadLibrary("nvapi64.dll");
-    if (!nvapiDll_) {
+    m_NvapiDll = LoadLibrary("nvapi64.dll");
+    if (!m_NvapiDll) {
       return;
     }
     status = NvAPI_Unload();
@@ -830,65 +839,65 @@ void CaptureManager::interceptNvAPIFunctions() {
   LOG_INFO << "Loaded NvAPI";
 
   for (const auto& iface : nvapi_interface_table) {
-    nvapiFunctionIds_[iface.func] = iface.id;
+    m_NvapiFunctionIds[iface.func] = iface.id;
   }
 
   {
-    nvapiDispatchTable_.nvapi_QueryInterface =
+    m_NvapiDispatchTable.nvapi_QueryInterface =
         reinterpret_cast<decltype(nvapi_QueryInterfaceWrapper)*>(
-            GetProcAddress(nvapiDll_, "nvapi_QueryInterface"));
+            GetProcAddress(m_NvapiDll, "nvapi_QueryInterface"));
 
-    nvapiDispatchTable_.NvAPI_Initialize =
-        (decltype(NvAPI_Initialize)*)nvapiDispatchTable_.nvapi_QueryInterface(
-            nvapiFunctionIds_.at("NvAPI_Initialize"));
+    m_NvapiDispatchTable.NvAPI_Initialize =
+        (decltype(NvAPI_Initialize)*)m_NvapiDispatchTable.nvapi_QueryInterface(
+            m_NvapiFunctionIds.at("NvAPI_Initialize"));
 
-    nvapiDispatchTable_.NvAPI_Unload =
-        (decltype(NvAPI_Unload)*)nvapiDispatchTable_.nvapi_QueryInterface(
-            nvapiFunctionIds_.at("NvAPI_Unload"));
+    m_NvapiDispatchTable.NvAPI_Unload =
+        (decltype(NvAPI_Unload)*)m_NvapiDispatchTable.nvapi_QueryInterface(
+            m_NvapiFunctionIds.at("NvAPI_Unload"));
 
-    nvapiDispatchTable_.NvAPI_D3D12_SetCreatePipelineStateOptions =
+    m_NvapiDispatchTable.NvAPI_D3D12_SetCreatePipelineStateOptions =
         (decltype(NvAPI_D3D12_SetCreatePipelineStateOptions)*)
-            nvapiDispatchTable_.nvapi_QueryInterface(
-                nvapiFunctionIds_.at("NvAPI_D3D12_SetCreatePipelineStateOptions"));
+            m_NvapiDispatchTable.nvapi_QueryInterface(
+                m_NvapiFunctionIds.at("NvAPI_D3D12_SetCreatePipelineStateOptions"));
 
-    nvapiDispatchTable_.NvAPI_D3D12_SetNvShaderExtnSlotSpace =
-        (decltype(NvAPI_D3D12_SetNvShaderExtnSlotSpace)*)nvapiDispatchTable_.nvapi_QueryInterface(
-            nvapiFunctionIds_.at("NvAPI_D3D12_SetNvShaderExtnSlotSpace"));
+    m_NvapiDispatchTable.NvAPI_D3D12_SetNvShaderExtnSlotSpace =
+        (decltype(NvAPI_D3D12_SetNvShaderExtnSlotSpace)*)m_NvapiDispatchTable.nvapi_QueryInterface(
+            m_NvapiFunctionIds.at("NvAPI_D3D12_SetNvShaderExtnSlotSpace"));
 
-    nvapiDispatchTable_.NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThread =
+    m_NvapiDispatchTable.NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThread =
         (decltype(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThread)*)
-            nvapiDispatchTable_.nvapi_QueryInterface(
-                nvapiFunctionIds_.at("NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThread"));
+            m_NvapiDispatchTable.nvapi_QueryInterface(
+                m_NvapiFunctionIds.at("NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThread"));
 
-    nvapiDispatchTable_.NvAPI_D3D12_BuildRaytracingAccelerationStructureEx =
+    m_NvapiDispatchTable.NvAPI_D3D12_BuildRaytracingAccelerationStructureEx =
         (decltype(NvAPI_D3D12_BuildRaytracingAccelerationStructureEx)*)
-            nvapiDispatchTable_.nvapi_QueryInterface(
-                nvapiFunctionIds_.at("NvAPI_D3D12_BuildRaytracingAccelerationStructureEx"));
+            m_NvapiDispatchTable.nvapi_QueryInterface(
+                m_NvapiFunctionIds.at("NvAPI_D3D12_BuildRaytracingAccelerationStructureEx"));
 
-    nvapiDispatchTable_.NvAPI_D3D12_BuildRaytracingOpacityMicromapArray =
+    m_NvapiDispatchTable.NvAPI_D3D12_BuildRaytracingOpacityMicromapArray =
         (decltype(NvAPI_D3D12_BuildRaytracingOpacityMicromapArray)*)
-            nvapiDispatchTable_.nvapi_QueryInterface(
-                nvapiFunctionIds_.at("NvAPI_D3D12_BuildRaytracingOpacityMicromapArray"));
+            m_NvapiDispatchTable.nvapi_QueryInterface(
+                m_NvapiFunctionIds.at("NvAPI_D3D12_BuildRaytracingOpacityMicromapArray"));
 
-    nvapiDispatchTable_.NvAPI_D3D12_RelocateRaytracingOpacityMicromapArray =
+    m_NvapiDispatchTable.NvAPI_D3D12_RelocateRaytracingOpacityMicromapArray =
         (decltype(NvAPI_D3D12_RelocateRaytracingOpacityMicromapArray)*)
-            nvapiDispatchTable_.nvapi_QueryInterface(
-                nvapiFunctionIds_.at("NvAPI_D3D12_RelocateRaytracingOpacityMicromapArray"));
+            m_NvapiDispatchTable.nvapi_QueryInterface(
+                m_NvapiFunctionIds.at("NvAPI_D3D12_RelocateRaytracingOpacityMicromapArray"));
 
-    nvapiDispatchTable_.NvAPI_D3D12_EmitRaytracingOpacityMicromapArrayPostbuildInfo =
+    m_NvapiDispatchTable.NvAPI_D3D12_EmitRaytracingOpacityMicromapArrayPostbuildInfo =
         (decltype(NvAPI_D3D12_EmitRaytracingOpacityMicromapArrayPostbuildInfo)*)
-            nvapiDispatchTable_.nvapi_QueryInterface(nvapiFunctionIds_.at(
+            m_NvapiDispatchTable.nvapi_QueryInterface(m_NvapiFunctionIds.at(
                 "NvAPI_D3D12_EmitRaytracingOpacityMicromapArrayPostbuildInfo"));
 
-    nvapiDispatchTable_.NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperation =
+    m_NvapiDispatchTable.NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperation =
         (decltype(NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperation)*)
-            nvapiDispatchTable_.nvapi_QueryInterface(
-                nvapiFunctionIds_.at("NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperation"));
+            m_NvapiDispatchTable.nvapi_QueryInterface(m_NvapiFunctionIds.at(
+                "NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperation"));
 
-    nvapiDispatchTable_.NvAPI_D3D12_BuildRaytracingPartitionedTlasIndirect =
+    m_NvapiDispatchTable.NvAPI_D3D12_BuildRaytracingPartitionedTlasIndirect =
         (decltype(NvAPI_D3D12_BuildRaytracingPartitionedTlasIndirect)*)
-            nvapiDispatchTable_.nvapi_QueryInterface(
-                nvapiFunctionIds_.at("NvAPI_D3D12_BuildRaytracingPartitionedTlasIndirect"));
+            m_NvapiDispatchTable.nvapi_QueryInterface(
+                m_NvapiFunctionIds.at("NvAPI_D3D12_BuildRaytracingPartitionedTlasIndirect"));
   }
 
   LONG ret = DetourTransactionBegin();
@@ -896,50 +905,50 @@ void CaptureManager::interceptNvAPIFunctions() {
   ret = DetourUpdateThread(GetCurrentThread());
   GITS_ASSERT(ret == NO_ERROR);
 
-  ret = DetourAttach(&nvapiDispatchTable_.nvapi_QueryInterface, nvapi_QueryInterfaceWrapper);
+  ret = DetourAttach(&m_NvapiDispatchTable.nvapi_QueryInterface, nvapi_QueryInterfaceWrapper);
   GITS_ASSERT(ret == NO_ERROR);
 
-  ret = DetourAttach(&nvapiDispatchTable_.NvAPI_Initialize, NvAPI_InitializeWrapper);
+  ret = DetourAttach(&m_NvapiDispatchTable.NvAPI_Initialize, NvAPI_InitializeWrapper);
   GITS_ASSERT(ret == NO_ERROR);
 
-  ret = DetourAttach(&nvapiDispatchTable_.NvAPI_Unload, NvAPI_UnloadWrapper);
+  ret = DetourAttach(&m_NvapiDispatchTable.NvAPI_Unload, NvAPI_UnloadWrapper);
   GITS_ASSERT(ret == NO_ERROR);
 
-  ret = DetourAttach(&nvapiDispatchTable_.NvAPI_D3D12_SetNvShaderExtnSlotSpace,
+  ret = DetourAttach(&m_NvapiDispatchTable.NvAPI_D3D12_SetNvShaderExtnSlotSpace,
                      NvAPI_D3D12_SetNvShaderExtnSlotSpaceWrapper);
   GITS_ASSERT(ret == NO_ERROR);
 
-  ret = DetourAttach(&nvapiDispatchTable_.NvAPI_D3D12_SetCreatePipelineStateOptions,
+  ret = DetourAttach(&m_NvapiDispatchTable.NvAPI_D3D12_SetCreatePipelineStateOptions,
                      NvAPI_D3D12_SetCreatePipelineStateOptionsWrapper);
   GITS_ASSERT(ret == NO_ERROR);
 
-  ret = DetourAttach(&nvapiDispatchTable_.NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThread,
+  ret = DetourAttach(&m_NvapiDispatchTable.NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThread,
                      NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadWrapper);
   GITS_ASSERT(ret == NO_ERROR);
 
-  ret = DetourAttach(&nvapiDispatchTable_.NvAPI_D3D12_BuildRaytracingAccelerationStructureEx,
+  ret = DetourAttach(&m_NvapiDispatchTable.NvAPI_D3D12_BuildRaytracingAccelerationStructureEx,
                      NvAPI_D3D12_BuildRaytracingAccelerationStructureExWrapper);
   GITS_ASSERT(ret == NO_ERROR);
 
-  ret = DetourAttach(&nvapiDispatchTable_.NvAPI_D3D12_BuildRaytracingOpacityMicromapArray,
+  ret = DetourAttach(&m_NvapiDispatchTable.NvAPI_D3D12_BuildRaytracingOpacityMicromapArray,
                      NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayWrapper);
   GITS_ASSERT(ret == NO_ERROR);
 
-  ret = DetourAttach(&nvapiDispatchTable_.NvAPI_D3D12_RelocateRaytracingOpacityMicromapArray,
+  ret = DetourAttach(&m_NvapiDispatchTable.NvAPI_D3D12_RelocateRaytracingOpacityMicromapArray,
                      NvAPI_D3D12_RelocateRaytracingOpacityMicromapArrayWrapper);
   GITS_ASSERT(ret == NO_ERROR);
 
-  ret =
-      DetourAttach(&nvapiDispatchTable_.NvAPI_D3D12_EmitRaytracingOpacityMicromapArrayPostbuildInfo,
-                   NvAPI_D3D12_EmitRaytracingOpacityMicromapArrayPostbuildInfoWrapper);
+  ret = DetourAttach(
+      &m_NvapiDispatchTable.NvAPI_D3D12_EmitRaytracingOpacityMicromapArrayPostbuildInfo,
+      NvAPI_D3D12_EmitRaytracingOpacityMicromapArrayPostbuildInfoWrapper);
   GITS_ASSERT(ret == NO_ERROR);
 
   ret =
-      DetourAttach(&nvapiDispatchTable_.NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperation,
+      DetourAttach(&m_NvapiDispatchTable.NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperation,
                    NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationWrapper);
   GITS_ASSERT(ret == NO_ERROR);
 
-  ret = DetourAttach(&nvapiDispatchTable_.NvAPI_D3D12_BuildRaytracingPartitionedTlasIndirect,
+  ret = DetourAttach(&m_NvapiDispatchTable.NvAPI_D3D12_BuildRaytracingPartitionedTlasIndirect,
                      NvAPI_D3D12_BuildRaytracingPartitionedTlasIndirectWrapper);
   GITS_ASSERT(ret == NO_ERROR);
 
@@ -948,19 +957,19 @@ void CaptureManager::interceptNvAPIFunctions() {
 }
 
 void CaptureManager::interceptD3D11On12Functions() {
-  if (d3d11Dll_) {
+  if (m_D3D11Dll) {
     return;
   }
 
-  d3d11Dll_ = LoadLibrary("d3d11.dll");
-  if (!d3d11Dll_) {
+  m_D3D11Dll = LoadLibrary("d3d11.dll");
+  if (!m_D3D11Dll) {
     return;
   }
 
   {
-    d3d11on12DispatchTable_.D3D11On12CreateDevice =
+    m_D3D11On12DispatchTable.D3D11On12CreateDevice =
         reinterpret_cast<decltype(D3D11On12CreateDevice)*>(
-            GetProcAddress(d3d11Dll_, "D3D11On12CreateDevice"));
+            GetProcAddress(m_D3D11Dll, "D3D11On12CreateDevice"));
   }
 
   LONG ret = DetourTransactionBegin();
@@ -968,7 +977,7 @@ void CaptureManager::interceptD3D11On12Functions() {
   ret = DetourUpdateThread(GetCurrentThread());
   GITS_ASSERT(ret == NO_ERROR);
 
-  ret = DetourAttach(&d3d11on12DispatchTable_.D3D11On12CreateDevice, D3D11On12CreateDeviceWrapper);
+  ret = DetourAttach(&m_D3D11On12DispatchTable.D3D11On12CreateDevice, D3D11On12CreateDeviceWrapper);
   GITS_ASSERT(ret == NO_ERROR);
 
   ret = DetourTransactionCommit();

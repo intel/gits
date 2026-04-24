@@ -73,7 +73,7 @@ protected:
   std::unordered_map<ID3D12CommandList*, std::vector<DumpInfo*>> stagedResources_;
 
 private:
-  GpuExecutionTracker gpuExecutionTracker_;
+  GpuExecutionTracker m_GpuExecutionTracker;
 
   struct ThreadInfo : public GpuExecutionTracker::Executable {
     UINT64 fenceValue{};

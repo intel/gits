@@ -20,76 +20,74 @@ namespace DirectX {
 
 void CommandListExecutionService::commandListCommand(unsigned commandListKey,
                                                      const Command& command) {
-  CommandList& commandList = commandListsByKey_[commandListKey];
-  commandList.commandListKey = commandListKey;
-  commandList.commands.push_back(createCommandSerializer(&command));
+  CommandList& commandList = m_CommandListsByKey[commandListKey];
+  commandList.m_CommandListKey = commandListKey;
+  commandList.m_Commands.push_back(createCommandSerializer(&command));
 }
 
 void CommandListExecutionService::executeCommandLists(unsigned callKey,
                                                       unsigned commandQueueKey,
                                                       std::vector<unsigned>& commandListKeys) {
   ExecuteCommandLists* execute = new ExecuteCommandLists();
-  execute->callKey = callKey;
-  execute->commandQueueKey = commandQueueKey;
   for (unsigned commandListKey : commandListKeys) {
-    auto it = commandListsByKey_.find(commandListKey);
-    if (it != commandListsByKey_.end()) {
-      execute->commandLists.push_back(std::move(it->second));
-      commandListsByKey_.erase(commandListKey);
+    auto it = m_CommandListsByKey.find(commandListKey);
+    if (it != m_CommandListsByKey.end()) {
+      execute->m_CommandLists.push_back(std::move(it->second));
+      m_CommandListsByKey.erase(commandListKey);
     }
   }
-  executionTracker_.execute(callKey, commandQueueKey, execute);
+  m_ExecutionTracker.Execute(callKey, commandQueueKey, execute);
   executeReadyExecutables();
 }
 
 void CommandListExecutionService::createCommandList(unsigned commandListKey,
                                                     unsigned allocatorKey) {
-  commandListCreationAllocators_[commandListKey] = allocatorKey;
+  m_CommandListCreationAllocators[commandListKey] = allocatorKey;
   {
     ID3D12GraphicsCommandListCloseCommand closeCommand;
-    closeCommand.key = getUniqueCommandKey();
-    closeCommand.object_.key = commandListKey;
-    recorder_.record(ID3D12GraphicsCommandListCloseSerializer(closeCommand));
+    closeCommand.Key = getUniqueCommandKey();
+    closeCommand.m_Object.Key = commandListKey;
+    m_Recorder.Record(ID3D12GraphicsCommandListCloseSerializer(closeCommand));
   }
 }
 
 void CommandListExecutionService::commandListReset(unsigned commandKey,
                                                    unsigned commandListKey,
                                                    unsigned allocatorKey) {
-  CommandList& commandList = commandListsByKey_[commandListKey];
-  commandList.commands.clear();
-  commandList.reset = true;
+  CommandList& commandList = m_CommandListsByKey[commandListKey];
+  commandList.m_Commands.clear();
+  commandList.m_Reset = true;
 }
 
 void CommandListExecutionService::commandQueueWait(unsigned callKey,
                                                    unsigned commandQueueKey,
                                                    unsigned fenceKey,
                                                    UINT64 fenceValue) {
-  executionTracker_.commandQueueWait(callKey, commandQueueKey, fenceKey, fenceValue);
+  m_ExecutionTracker.CommandQueueWait(callKey, commandQueueKey, fenceKey, fenceValue);
 }
 
 void CommandListExecutionService::commandQueueSignal(unsigned callKey,
                                                      unsigned commandQueueKey,
                                                      unsigned fenceKey,
                                                      UINT64 fenceValue) {
-  executionTracker_.commandQueueSignal(callKey, commandQueueKey, fenceKey, fenceValue);
+  m_ExecutionTracker.CommandQueueSignal(callKey, commandQueueKey, fenceKey, fenceValue);
   executeReadyExecutables();
 }
 
 void CommandListExecutionService::fenceSignal(unsigned callKey,
                                               unsigned fenceKey,
                                               UINT64 fenceValue) {
-  executionTracker_.fenceSignal(callKey, fenceKey, fenceValue);
+  m_ExecutionTracker.FenceSignal(callKey, fenceKey, fenceValue);
   executeReadyExecutables();
 }
 
-void CommandListExecutionService::createCommandQueue(unsigned deviceKey, unsigned commandQueueKey) {
-  deviceByCommandQueue_[commandQueueKey] = deviceKey;
+void CommandListExecutionService::createCommandQueue(unsigned DeviceKey, unsigned commandQueueKey) {
+  m_DeviceByCommandQueue[commandQueueKey] = DeviceKey;
 }
 
 void CommandListExecutionService::executeReadyExecutables() {
   std::vector<GpuExecutionTracker::Executable*>& executables =
-      executionTracker_.getReadyExecutables();
+      m_ExecutionTracker.GetReadyExecutables();
   for (GpuExecutionTracker::Executable* executable : executables) {
     ExecuteCommandLists* executeCommandLists = static_cast<ExecuteCommandLists*>(executable);
     executeExecutable(*executeCommandLists);
@@ -100,79 +98,79 @@ void CommandListExecutionService::executeReadyExecutables() {
 
 void CommandListExecutionService::executeExecutable(ExecuteCommandLists& executable) {
   unsigned fenceKey{};
-  auto it = fenceByCommandQueue_.find(executable.commandQueueKey);
-  if (it == fenceByCommandQueue_.end()) {
+  auto it = m_FenceByCommandQueue.find(executable.CommandQueueKey);
+  if (it == m_FenceByCommandQueue.end()) {
     fenceKey = getUniqueObjectKey();
-    fenceByCommandQueue_[executable.commandQueueKey].first = fenceKey;
-    unsigned deviceKey = deviceByCommandQueue_[executable.commandQueueKey];
-    GITS_ASSERT(deviceKey);
+    m_FenceByCommandQueue[executable.CommandQueueKey].first = fenceKey;
+    unsigned DeviceKey = m_DeviceByCommandQueue[executable.CommandQueueKey];
+    GITS_ASSERT(DeviceKey);
     ID3D12DeviceCreateFenceCommand createFence;
-    createFence.key = getUniqueCommandKey();
-    createFence.object_.key = deviceKey;
-    createFence.InitialValue_.value = 0;
-    createFence.Flags_.value = D3D12_FENCE_FLAG_NONE;
-    createFence.riid_.value = IID_ID3D12Fence;
-    createFence.ppFence_.key = fenceKey;
-    recorder_.record(ID3D12DeviceCreateFenceSerializer(createFence));
+    createFence.Key = getUniqueCommandKey();
+    createFence.m_Object.Key = DeviceKey;
+    createFence.m_InitialValue.Value = 0;
+    createFence.m_Flags.Value = D3D12_FENCE_FLAG_NONE;
+    createFence.m_riid.Value = IID_ID3D12Fence;
+    createFence.m_ppFence.Key = fenceKey;
+    m_Recorder.Record(ID3D12DeviceCreateFenceSerializer(createFence));
   } else {
     fenceKey = it->second.first;
   }
 
-  UINT64& fenceValue = fenceByCommandQueue_[executable.commandQueueKey].second;
-  for (CommandList& commandList : executable.commandLists) {
-    if (!commandList.reset) {
-      auto it = commandListCreationAllocators_.find(commandList.commandListKey);
-      if (it != commandListCreationAllocators_.end()) {
+  UINT64& fenceValue = m_FenceByCommandQueue[executable.CommandQueueKey].second;
+  for (CommandList& commandList : executable.m_CommandLists) {
+    if (!commandList.m_Reset) {
+      auto it = m_CommandListCreationAllocators.find(commandList.m_CommandListKey);
+      if (it != m_CommandListCreationAllocators.end()) {
         ID3D12GraphicsCommandListResetCommand resetCommand;
-        resetCommand.key = getUniqueCommandKey();
-        resetCommand.object_.key = commandList.commandListKey;
-        resetCommand.pAllocator_.key = it->second;
-        recorder_.record(ID3D12GraphicsCommandListResetSerializer(resetCommand));
+        resetCommand.Key = getUniqueCommandKey();
+        resetCommand.m_Object.Key = commandList.m_CommandListKey;
+        resetCommand.m_pAllocator.Key = it->second;
+        m_Recorder.Record(ID3D12GraphicsCommandListResetSerializer(resetCommand));
       }
     }
-    for (const auto& command : commandList.commands) {
-      recorder_.record(*command);
+    for (const auto& command : commandList.m_Commands) {
+      m_Recorder.Record(*command);
     }
-    commandList.commands.clear();
+    commandList.m_Commands.clear();
     {
       ID3D12GraphicsCommandListCloseCommand closeCommand;
-      closeCommand.key = getUniqueCommandKey();
-      closeCommand.object_.key = commandList.commandListKey;
-      recorder_.record(ID3D12GraphicsCommandListCloseSerializer(closeCommand));
+      closeCommand.Key = getUniqueCommandKey();
+      closeCommand.m_Object.Key = commandList.m_CommandListKey;
+      m_Recorder.Record(ID3D12GraphicsCommandListCloseSerializer(closeCommand));
     }
     {
       ID3D12CommandQueueExecuteCommandListsCommand executeCommandLists;
-      executeCommandLists.key = getUniqueCommandKey();
-      executeCommandLists.object_.key = executable.commandQueueKey;
-      executeCommandLists.NumCommandLists_.value = 1;
-      executeCommandLists.ppCommandLists_.value = reinterpret_cast<ID3D12CommandList**>(1);
-      executeCommandLists.ppCommandLists_.size = 1;
-      executeCommandLists.ppCommandLists_.keys.resize(1);
-      executeCommandLists.ppCommandLists_.keys[0] = commandList.commandListKey;
-      recorder_.record(ID3D12CommandQueueExecuteCommandListsSerializer(executeCommandLists));
+      executeCommandLists.Key = getUniqueCommandKey();
+      executeCommandLists.m_Object.Key = executable.CommandQueueKey;
+      executeCommandLists.m_NumCommandLists.Value = 1;
+      executeCommandLists.m_ppCommandLists.Value = reinterpret_cast<ID3D12CommandList**>(1);
+      executeCommandLists.m_ppCommandLists.Size = 1;
+      executeCommandLists.m_ppCommandLists.Keys.resize(1);
+      executeCommandLists.m_ppCommandLists.Keys[0] = commandList.m_CommandListKey;
+      m_Recorder.Record(ID3D12CommandQueueExecuteCommandListsSerializer(executeCommandLists));
     }
     {
       ID3D12CommandQueueSignalCommand commandQueueSignal;
-      commandQueueSignal.key = getUniqueCommandKey();
-      commandQueueSignal.object_.key = executable.commandQueueKey;
-      commandQueueSignal.pFence_.key = fenceKey;
-      commandQueueSignal.Value_.value = ++fenceValue;
-      recorder_.record(ID3D12CommandQueueSignalSerializer(commandQueueSignal));
+      commandQueueSignal.Key = getUniqueCommandKey();
+      commandQueueSignal.m_Object.Key = executable.CommandQueueKey;
+      commandQueueSignal.m_pFence.Key = fenceKey;
+      commandQueueSignal.m_Value.Value = ++fenceValue;
+      m_Recorder.Record(ID3D12CommandQueueSignalSerializer(commandQueueSignal));
     }
     {
       ID3D12FenceGetCompletedValueCommand getCompletedValue;
-      getCompletedValue.key = getUniqueCommandKey();
-      getCompletedValue.object_.key = fenceKey;
-      getCompletedValue.result_.value = fenceValue;
-      recorder_.record(ID3D12FenceGetCompletedValueSerializer(getCompletedValue));
+      getCompletedValue.Key = getUniqueCommandKey();
+      getCompletedValue.m_Object.Key = fenceKey;
+      getCompletedValue.m_Result.Value = fenceValue;
+      m_Recorder.Record(ID3D12FenceGetCompletedValueSerializer(getCompletedValue));
     }
   }
 
   std::vector<unsigned> commandListKeys;
-  for (CommandList& commandList : executable.commandLists) {
-    commandListKeys.push_back(commandList.commandListKey);
+  for (CommandList& commandList : executable.m_CommandLists) {
+    commandListKeys.push_back(commandList.m_CommandListKey);
   }
-  cpuDescriptorsService_.executeCommandLists(commandListKeys);
+  m_CpuDescriptorsService.executeCommandLists(commandListKeys);
 }
 
 } // namespace DirectX

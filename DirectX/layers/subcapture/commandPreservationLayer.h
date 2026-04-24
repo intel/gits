@@ -19,53 +19,52 @@ class CommandPreservationLayer : public Layer {
 public:
   CommandPreservationLayer() : Layer("CommandPreservation") {}
 
-  void pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& command) override;
-  void post(
-      ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& command) override;
-  void pre(ID3D12GraphicsCommandList4DispatchRaysCommand& c) override;
-  void post(ID3D12GraphicsCommandList4DispatchRaysCommand& c) override;
-  void pre(ID3D12ResourceGetGPUVirtualAddressCommand& c) override;
-  void post(ID3D12ResourceGetGPUVirtualAddressCommand& c) override;
-  void pre(ID3D12StateObjectPropertiesGetShaderIdentifierCommand& c) override;
-  void post(ID3D12StateObjectPropertiesGetShaderIdentifierCommand& c) override;
-  void pre(ID3D12DescriptorHeapGetGPUDescriptorHandleForHeapStartCommand& c) override;
-  void post(ID3D12DescriptorHeapGetGPUDescriptorHandleForHeapStartCommand& c) override;
-  void pre(INTC_D3D12_CreateComputePipelineStateCommand& c) override;
-  void pre(ID3D12DeviceCreateConstantBufferViewCommand& c) override;
-  void post(ID3D12DeviceCreateConstantBufferViewCommand& c) override;
-  void pre(ID3D12GraphicsCommandListIASetIndexBufferCommand& c) override;
-  void post(ID3D12GraphicsCommandListIASetIndexBufferCommand& c) override;
-  void pre(ID3D12GraphicsCommandListIASetVertexBuffersCommand& c) override;
-  void post(ID3D12GraphicsCommandListIASetVertexBuffersCommand& c) override;
-  void pre(ID3D12GraphicsCommandListSOSetTargetsCommand& c) override;
-  void post(ID3D12GraphicsCommandListSOSetTargetsCommand& c) override;
-  void pre(ID3D12GraphicsCommandList2WriteBufferImmediateCommand& c) override;
-  void post(ID3D12GraphicsCommandList2WriteBufferImmediateCommand& c) override;
-  void pre(ID3D12DeviceCreateShaderResourceViewCommand& c) override;
-  void post(ID3D12DeviceCreateShaderResourceViewCommand& c) override;
-  void pre(ID3D12GraphicsCommandListSetComputeRootConstantBufferViewCommand& c) override;
-  void post(ID3D12GraphicsCommandListSetComputeRootConstantBufferViewCommand& c) override;
-  void pre(ID3D12GraphicsCommandListSetGraphicsRootConstantBufferViewCommand& c) override;
-  void post(ID3D12GraphicsCommandListSetGraphicsRootConstantBufferViewCommand& c) override;
-  void pre(ID3D12GraphicsCommandListSetComputeRootShaderResourceViewCommand& c) override;
-  void post(ID3D12GraphicsCommandListSetComputeRootShaderResourceViewCommand& c) override;
-  void pre(ID3D12GraphicsCommandListSetGraphicsRootShaderResourceViewCommand& c) override;
-  void post(ID3D12GraphicsCommandListSetGraphicsRootShaderResourceViewCommand& c) override;
-  void pre(ID3D12GraphicsCommandListSetComputeRootUnorderedAccessViewCommand& c) override;
-  void post(ID3D12GraphicsCommandListSetComputeRootUnorderedAccessViewCommand& c) override;
-  void pre(ID3D12GraphicsCommandListSetGraphicsRootUnorderedAccessViewCommand& c) override;
-  void post(ID3D12GraphicsCommandListSetGraphicsRootUnorderedAccessViewCommand& c) override;
-  void pre(ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& c) override;
-  void post(ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& c) override;
-  void pre(ID3D12GraphicsCommandList4EmitRaytracingAccelerationStructurePostbuildInfoCommand& c)
+  void Pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c) override;
+  void Post(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c) override;
+  void Pre(ID3D12GraphicsCommandList4DispatchRaysCommand& c) override;
+  void Post(ID3D12GraphicsCommandList4DispatchRaysCommand& c) override;
+  void Pre(ID3D12ResourceGetGPUVirtualAddressCommand& c) override;
+  void Post(ID3D12ResourceGetGPUVirtualAddressCommand& c) override;
+  void Pre(ID3D12StateObjectPropertiesGetShaderIdentifierCommand& c) override;
+  void Post(ID3D12StateObjectPropertiesGetShaderIdentifierCommand& c) override;
+  void Pre(ID3D12DescriptorHeapGetGPUDescriptorHandleForHeapStartCommand& c) override;
+  void Post(ID3D12DescriptorHeapGetGPUDescriptorHandleForHeapStartCommand& c) override;
+  void Pre(INTC_D3D12_CreateComputePipelineStateCommand& c) override;
+  void Pre(ID3D12DeviceCreateConstantBufferViewCommand& c) override;
+  void Post(ID3D12DeviceCreateConstantBufferViewCommand& c) override;
+  void Pre(ID3D12GraphicsCommandListIASetIndexBufferCommand& c) override;
+  void Post(ID3D12GraphicsCommandListIASetIndexBufferCommand& c) override;
+  void Pre(ID3D12GraphicsCommandListIASetVertexBuffersCommand& c) override;
+  void Post(ID3D12GraphicsCommandListIASetVertexBuffersCommand& c) override;
+  void Pre(ID3D12GraphicsCommandListSOSetTargetsCommand& c) override;
+  void Post(ID3D12GraphicsCommandListSOSetTargetsCommand& c) override;
+  void Pre(ID3D12GraphicsCommandList2WriteBufferImmediateCommand& c) override;
+  void Post(ID3D12GraphicsCommandList2WriteBufferImmediateCommand& c) override;
+  void Pre(ID3D12DeviceCreateShaderResourceViewCommand& c) override;
+  void Post(ID3D12DeviceCreateShaderResourceViewCommand& c) override;
+  void Pre(ID3D12GraphicsCommandListSetComputeRootConstantBufferViewCommand& c) override;
+  void Post(ID3D12GraphicsCommandListSetComputeRootConstantBufferViewCommand& c) override;
+  void Pre(ID3D12GraphicsCommandListSetGraphicsRootConstantBufferViewCommand& c) override;
+  void Post(ID3D12GraphicsCommandListSetGraphicsRootConstantBufferViewCommand& c) override;
+  void Pre(ID3D12GraphicsCommandListSetComputeRootShaderResourceViewCommand& c) override;
+  void Post(ID3D12GraphicsCommandListSetComputeRootShaderResourceViewCommand& c) override;
+  void Pre(ID3D12GraphicsCommandListSetGraphicsRootShaderResourceViewCommand& c) override;
+  void Post(ID3D12GraphicsCommandListSetGraphicsRootShaderResourceViewCommand& c) override;
+  void Pre(ID3D12GraphicsCommandListSetComputeRootUnorderedAccessViewCommand& c) override;
+  void Post(ID3D12GraphicsCommandListSetComputeRootUnorderedAccessViewCommand& c) override;
+  void Pre(ID3D12GraphicsCommandListSetGraphicsRootUnorderedAccessViewCommand& c) override;
+  void Post(ID3D12GraphicsCommandListSetGraphicsRootUnorderedAccessViewCommand& c) override;
+  void Pre(ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& c) override;
+  void Post(ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& c) override;
+  void Pre(ID3D12GraphicsCommandList4EmitRaytracingAccelerationStructurePostbuildInfoCommand& c)
       override;
-  void post(ID3D12GraphicsCommandList4EmitRaytracingAccelerationStructurePostbuildInfoCommand& c)
+  void Post(ID3D12GraphicsCommandList4EmitRaytracingAccelerationStructurePostbuildInfoCommand& c)
       override;
 
 private:
-  std::vector<D3D12_GPU_VIRTUAL_ADDRESS> captureGpuAddresses_;
-  std::array<uint8_t, D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES> captureShaderIdentifier_;
-  D3D12_GPU_DESCRIPTOR_HANDLE captureGpuDescriptorHandle_{};
+  std::vector<D3D12_GPU_VIRTUAL_ADDRESS> m_CaptureGpuAddresses;
+  std::array<uint8_t, D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES> m_CaptureShaderIdentifier;
+  D3D12_GPU_DESCRIPTOR_HANDLE m_CaptureGpuDescriptorHandle{};
 };
 
 } // namespace DirectX

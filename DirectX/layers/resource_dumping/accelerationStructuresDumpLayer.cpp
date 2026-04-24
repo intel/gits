@@ -15,153 +15,154 @@ namespace DirectX {
 
 AccelerationStructuresDumpLayer::AccelerationStructuresDumpLayer()
     : Layer("AccelerationStructuresDump"),
-      callKeys_(Configurator::Get().directx.features.raytracingDump.commandKeys) {
+      m_CallKeys(Configurator::Get().directx.features.raytracingDump.commandKeys) {
   auto& dumpPath = Configurator::Get().common.player.outputDir.empty()
                        ? Configurator::Get().common.player.streamDir / "acceleration_structures"
                        : Configurator::Get().common.player.outputDir;
   if (!dumpPath.empty() && !std::filesystem::exists(dumpPath)) {
     std::filesystem::create_directory(dumpPath);
   }
-  dumpPath_ = dumpPath;
+  m_DumpPath = dumpPath;
 
-  commandListModuloStep_.parse(
+  m_CommandListModuloStep.Parse(
       Configurator::Get().directx.features.raytracingDump.commandListModuloStep);
 }
 
-void AccelerationStructuresDumpLayer::pre(ID3D12DeviceCreateCommandQueueCommand& c) {
-  if (c.pDesc_.value->Type == D3D12_COMMAND_LIST_TYPE_COMPUTE) {
-    c.pDesc_.value->Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
+void AccelerationStructuresDumpLayer::Pre(ID3D12DeviceCreateCommandQueueCommand& c) {
+  if (c.m_pDesc.Value->Type == D3D12_COMMAND_LIST_TYPE_COMPUTE) {
+    c.m_pDesc.Value->Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
   }
 }
 
-void AccelerationStructuresDumpLayer::pre(ID3D12DeviceCreateCommandListCommand& c) {
-  if (c.type_.value == D3D12_COMMAND_LIST_TYPE_COMPUTE) {
-    c.type_.value = D3D12_COMMAND_LIST_TYPE_DIRECT;
+void AccelerationStructuresDumpLayer::Pre(ID3D12DeviceCreateCommandListCommand& c) {
+  if (c.m_type.Value == D3D12_COMMAND_LIST_TYPE_COMPUTE) {
+    c.m_type.Value = D3D12_COMMAND_LIST_TYPE_DIRECT;
   }
 }
 
-void AccelerationStructuresDumpLayer::pre(ID3D12Device4CreateCommandList1Command& c) {
-  if (c.type_.value == D3D12_COMMAND_LIST_TYPE_COMPUTE) {
-    c.type_.value = D3D12_COMMAND_LIST_TYPE_DIRECT;
+void AccelerationStructuresDumpLayer::Pre(ID3D12Device4CreateCommandList1Command& c) {
+  if (c.m_type.Value == D3D12_COMMAND_LIST_TYPE_COMPUTE) {
+    c.m_type.Value = D3D12_COMMAND_LIST_TYPE_DIRECT;
   }
 }
 
-void AccelerationStructuresDumpLayer::pre(ID3D12DeviceCreateCommandAllocatorCommand& c) {
-  if (c.type_.value == D3D12_COMMAND_LIST_TYPE_COMPUTE) {
-    c.type_.value = D3D12_COMMAND_LIST_TYPE_DIRECT;
+void AccelerationStructuresDumpLayer::Pre(ID3D12DeviceCreateCommandAllocatorCommand& c) {
+  if (c.m_type.Value == D3D12_COMMAND_LIST_TYPE_COMPUTE) {
+    c.m_type.Value = D3D12_COMMAND_LIST_TYPE_DIRECT;
   }
 }
 
-void AccelerationStructuresDumpLayer::pre(
+void AccelerationStructuresDumpLayer::Pre(
     ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c) {
-  if (!callKeys_.empty() && !callKeys_.contains(c.key) ||
-      !commandListModuloStep_.checkNextCommandListCall(c.object_.key)) {
+  if (!m_CallKeys.Empty() && !m_CallKeys.Contains(c.Key) ||
+      !m_CommandListModuloStep.CheckNextCommandListCall(c.m_Object.Key)) {
     return;
   }
-  if (c.pDesc_.value->Inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
+  if (c.m_pDesc.Value->Inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
     return;
   }
-  dumpCurrentBuild_ = true;
+  m_DumpCurrentBuild = true;
 
-  c.pDesc_.value->Inputs.Flags &=
+  c.m_pDesc.Value->Inputs.Flags &=
       ~(D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_BUILD |
         D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE);
 
-  if (c.pDesc_.value->Inputs.Flags &
+  if (c.m_pDesc.Value->Inputs.Flags &
       D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PERFORM_UPDATE) {
-    c.pDesc_.value->Inputs.Flags &=
+    c.m_pDesc.Value->Inputs.Flags &=
         ~D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PERFORM_UPDATE;
     D3D12_GPU_VIRTUAL_ADDRESS sourceAccelerationStructureData =
-        c.pDesc_.value->SourceAccelerationStructureData;
-    c.pDesc_.value->SourceAccelerationStructureData = 0;
+        c.m_pDesc.Value->SourceAccelerationStructureData;
+    c.m_pDesc.Value->SourceAccelerationStructureData = 0;
 
-    c.object_.value->BuildRaytracingAccelerationStructure(
-        c.pDesc_.value, c.NumPostbuildInfoDescs_.value, c.pPostbuildInfoDescs_.value);
+    c.m_Object.Value->BuildRaytracingAccelerationStructure(
+        c.m_pDesc.Value, c.m_NumPostbuildInfoDescs.Value, c.m_pPostbuildInfoDescs.Value);
 
-    std::wstring dumpName = dumpPath_ + L"/build_blas_" + std::to_wstring(c.key) + L".txt";
-    accelerationStructuresDump_.dumpAccelerationStructure(
-        c.object_.value, c.pDesc_.value->DestAccelerationStructureData, dumpName);
+    std::wstring dumpName = m_DumpPath + L"/build_blas_" + std::to_wstring(c.Key) + L".txt";
+    m_AccelerationStructuresDump.dumpAccelerationStructure(
+        c.m_Object.Value, c.m_pDesc.Value->DestAccelerationStructureData, dumpName);
 
-    c.pDesc_.value->Inputs.Flags |=
+    c.m_pDesc.Value->Inputs.Flags |=
         D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PERFORM_UPDATE;
-    c.pDesc_.value->SourceAccelerationStructureData = sourceAccelerationStructureData;
+    c.m_pDesc.Value->SourceAccelerationStructureData = sourceAccelerationStructureData;
   }
 }
 
-void AccelerationStructuresDumpLayer::post(
+void AccelerationStructuresDumpLayer::Post(
     ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c) {
 
-  if (!dumpCurrentBuild_) {
+  if (!m_DumpCurrentBuild) {
     return;
   }
-  dumpCurrentBuild_ = false;
+  m_DumpCurrentBuild = false;
 
-  if (c.pDesc_.value->Inputs.Flags &
+  if (c.m_pDesc.Value->Inputs.Flags &
       D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PERFORM_UPDATE) {
     return;
   }
-  std::wstring dumpName = dumpPath_ + L"/build_blas_" + std::to_wstring(c.key) + L".txt";
-  accelerationStructuresDump_.dumpAccelerationStructure(
-      c.object_.value, c.pDesc_.value->DestAccelerationStructureData, dumpName);
+  std::wstring dumpName = m_DumpPath + L"/build_blas_" + std::to_wstring(c.Key) + L".txt";
+  m_AccelerationStructuresDump.dumpAccelerationStructure(
+      c.m_Object.Value, c.m_pDesc.Value->DestAccelerationStructureData, dumpName);
 }
 
-void AccelerationStructuresDumpLayer::post(ID3D12CommandQueueExecuteCommandListsCommand& c) {
-  accelerationStructuresDump_.executeCommandLists(
-      c.key, c.object_.key, c.object_.value, c.ppCommandLists_.value, c.NumCommandLists_.value);
+void AccelerationStructuresDumpLayer::Post(ID3D12CommandQueueExecuteCommandListsCommand& c) {
+  m_AccelerationStructuresDump.executeCommandLists(
+      c.Key, c.m_Object.Key, c.m_Object.Value, c.m_ppCommandLists.Value, c.m_NumCommandLists.Value);
 }
 
-void AccelerationStructuresDumpLayer::post(ID3D12GraphicsCommandListResetCommand& c) {
-  commandListModuloStep_.resetCommandList(c.object_.key);
+void AccelerationStructuresDumpLayer::Post(ID3D12GraphicsCommandListResetCommand& c) {
+  m_CommandListModuloStep.ResetCommandList(c.m_Object.Key);
 }
 
-void AccelerationStructuresDumpLayer::post(ID3D12CommandQueueWaitCommand& c) {
-  accelerationStructuresDump_.commandQueueWait(c.key, c.object_.key, c.pFence_.key, c.Value_.value);
+void AccelerationStructuresDumpLayer::Post(ID3D12CommandQueueWaitCommand& c) {
+  m_AccelerationStructuresDump.commandQueueWait(c.Key, c.m_Object.Key, c.m_pFence.Key,
+                                                c.m_Value.Value);
 }
 
-void AccelerationStructuresDumpLayer::post(ID3D12CommandQueueSignalCommand& c) {
-  accelerationStructuresDump_.commandQueueSignal(c.key, c.object_.key, c.pFence_.key,
-                                                 c.Value_.value);
+void AccelerationStructuresDumpLayer::Post(ID3D12CommandQueueSignalCommand& c) {
+  m_AccelerationStructuresDump.commandQueueSignal(c.Key, c.m_Object.Key, c.m_pFence.Key,
+                                                  c.m_Value.Value);
 }
 
-void AccelerationStructuresDumpLayer::post(ID3D12FenceSignalCommand& c) {
-  accelerationStructuresDump_.fenceSignal(c.key, c.object_.key, c.Value_.value);
+void AccelerationStructuresDumpLayer::Post(ID3D12FenceSignalCommand& c) {
+  m_AccelerationStructuresDump.fenceSignal(c.Key, c.m_Object.Key, c.m_Value.Value);
 }
 
-void AccelerationStructuresDumpLayer::post(ID3D12DeviceCreateFenceCommand& c) {
-  accelerationStructuresDump_.fenceSignal(c.key, c.ppFence_.key, c.InitialValue_.value);
+void AccelerationStructuresDumpLayer::Post(ID3D12DeviceCreateFenceCommand& c) {
+  m_AccelerationStructuresDump.fenceSignal(c.Key, c.m_ppFence.Key, c.m_InitialValue.Value);
 }
 
-void AccelerationStructuresDumpLayer::post(ID3D12Device3EnqueueMakeResidentCommand& c) {
-  accelerationStructuresDump_.fenceSignal(c.key, c.pFenceToSignal_.key,
-                                          c.FenceValueToSignal_.value);
+void AccelerationStructuresDumpLayer::Post(ID3D12Device3EnqueueMakeResidentCommand& c) {
+  m_AccelerationStructuresDump.fenceSignal(c.Key, c.m_pFenceToSignal.Key,
+                                           c.m_FenceValueToSignal.Value);
 }
 
-void AccelerationStructuresDumpLayer::CommandListModuloStep::parse(const std::string& range) {
+void AccelerationStructuresDumpLayer::CommandListModuloStep::Parse(const std::string& range) {
   if (range.empty()) {
     return;
   }
-  start_ = std::stoi(range);
+  m_Start = std::stoi(range);
   size_t pos = range.find(':');
   GITS_ASSERT(pos != std::string::npos);
-  step_ = std::stoi(range.substr(pos + 1));
+  m_Step = std::stoi(range.substr(pos + 1));
 }
 
-bool AccelerationStructuresDumpLayer::CommandListModuloStep::checkNextCommandListCall(
+bool AccelerationStructuresDumpLayer::CommandListModuloStep::CheckNextCommandListCall(
     unsigned commandListKey) {
-  if (!step_) {
+  if (!m_Step) {
     return true;
   }
-  unsigned& index = commandListCalls_[commandListKey];
+  unsigned& index = m_CommandListCalls[commandListKey];
   ++index;
-  if (index % step_ == start_) {
+  if (index % m_Step == m_Start) {
     return true;
   }
   return false;
 }
 
-void AccelerationStructuresDumpLayer::CommandListModuloStep::resetCommandList(
+void AccelerationStructuresDumpLayer::CommandListModuloStep::ResetCommandList(
     unsigned commandListKey) {
-  commandListCalls_.erase(commandListKey);
+  m_CommandListCalls.erase(commandListKey);
 }
 
 } // namespace DirectX

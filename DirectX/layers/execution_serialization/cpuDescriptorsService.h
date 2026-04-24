@@ -23,13 +23,13 @@ class CpuDescriptorsService {
 public:
   CpuDescriptorsService(ExecutionSerializationRecorder& recorder,
                         CommandListExecutionService& commandListExecutionService)
-      : recorder_(recorder),
-        commandListExecutionService_(commandListExecutionService),
-        uavDescriptorHeap_(*this, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV),
-        rtvDescriptorHeap_(*this, D3D12_DESCRIPTOR_HEAP_TYPE_RTV),
-        dsvDescriptorHeap_(*this, D3D12_DESCRIPTOR_HEAP_TYPE_DSV) {}
+      : m_Recorder(recorder),
+        m_CommandListExecutionService(commandListExecutionService),
+        m_UavDescriptorHeap(*this, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV),
+        m_RtvDescriptorHeap(*this, D3D12_DESCRIPTOR_HEAP_TYPE_RTV),
+        m_DsvDescriptorHeap(*this, D3D12_DESCRIPTOR_HEAP_TYPE_DSV) {}
 
-  void createCommandList(unsigned deviceKey);
+  void createCommandList(unsigned DeviceKey);
   void executeCommandLists(std::vector<unsigned>& commandListKeys);
   void preserveDescriptor(ID3D12GraphicsCommandListOMSetRenderTargetsCommand& c);
   void preserveDescriptor(ID3D12GraphicsCommandListClearDepthStencilViewCommand& c);
@@ -38,41 +38,41 @@ public:
   void preserveDescriptor(ID3D12GraphicsCommandListClearUnorderedAccessViewFloatCommand& c);
 
 private:
-  ExecutionSerializationRecorder& recorder_;
-  CommandListExecutionService& commandListExecutionService_;
-  unsigned deviceKey_{};
+  ExecutionSerializationRecorder& m_Recorder;
+  CommandListExecutionService& m_CommandListExecutionService;
+  unsigned m_DeviceKey{};
 
   template <unsigned SIZE>
   class DescriptorHeap {
   public:
     DescriptorHeap(CpuDescriptorsService& service, D3D12_DESCRIPTOR_HEAP_TYPE type)
-        : service_(service), type_(type) {}
+        : m_Service(service), m_Type(type) {}
     unsigned preserveDescriptor(unsigned heapKey, unsigned heapIndex);
     void clearDescriptor(unsigned index);
 
   public:
-    unsigned descriptorHeapKey_{};
+    unsigned m_DescriptorHeapKey{};
 
   private:
     void createDescriptorHeap();
 
   private:
-    CpuDescriptorsService& service_;
-    D3D12_DESCRIPTOR_HEAP_TYPE type_;
-    std::bitset<SIZE> descriptorUsage_;
+    CpuDescriptorsService& m_Service;
+    D3D12_DESCRIPTOR_HEAP_TYPE m_Type;
+    std::bitset<SIZE> m_DescriptorUsage;
   };
 
-  static const unsigned uavDescriptorSize_{0x1000};
-  DescriptorHeap<uavDescriptorSize_> uavDescriptorHeap_;
-  static const unsigned rtvDsvDescriptorSize_{0x1000};
-  DescriptorHeap<rtvDsvDescriptorSize_> rtvDescriptorHeap_;
-  DescriptorHeap<rtvDsvDescriptorSize_> dsvDescriptorHeap_;
+  static constexpr unsigned UavDescriptorSize = 0x1000;
+  DescriptorHeap<UavDescriptorSize> m_UavDescriptorHeap;
+  static constexpr unsigned RtvDsvDescriptorSize = 0x1000;
+  DescriptorHeap<RtvDsvDescriptorSize> m_RtvDescriptorHeap;
+  DescriptorHeap<RtvDsvDescriptorSize> m_DsvDescriptorHeap;
 
   struct DescriptorHandle {
-    D3D12_DESCRIPTOR_HEAP_TYPE type;
-    unsigned index;
+    D3D12_DESCRIPTOR_HEAP_TYPE Type;
+    unsigned Index;
   };
-  std::unordered_map<unsigned, std::vector<DescriptorHandle>> descriptorsByCommandList_;
+  std::unordered_map<unsigned, std::vector<DescriptorHandle>> m_DescriptorsByCommandList;
 };
 
 } // namespace DirectX

@@ -67,13 +67,13 @@ void declareObject(const std::string& type, unsigned key) {
 
 void argumentToCpp(Argument<IID>& arg, CppParameterInfo& info, CppParameterOutput& out) {
   out.initialization = "";
-  out.value = toStr(arg.value);
+  out.value = toStr(arg.Value);
   out.decorator = "";
 }
 
 void argumentToCpp(BufferArgument& arg, CppParameterInfo& info, CppParameterOutput& out) {
-  info.size = arg.size;
-  toCpp(arg.value, info, out);
+  info.size = arg.Size;
+  toCpp(arg.Value, info, out);
 }
 void argumentToCpp(OutputBufferArgument& arg, CppParameterInfo& info, CppParameterOutput& out) {
   std::ostringstream ss;
@@ -87,7 +87,7 @@ void argumentToCpp(ShaderIdentifierArgument& arg, CppParameterInfo& info, CppPar
 void argumentToCpp(DescriptorHandleArrayArgument<D3D12_CPU_DESCRIPTOR_HANDLE>& arg,
                    CppParameterInfo& info,
                    CppParameterOutput& out) {
-  if (arg.size == 0) {
+  if (arg.Size == 0) {
     out.initialization = "";
     out.value = "nullptr";
     out.decorator = "";
@@ -96,10 +96,10 @@ void argumentToCpp(DescriptorHandleArrayArgument<D3D12_CPU_DESCRIPTOR_HANDLE>& a
 
   std::ostringstream ss;
 
-  ss << info.type << " " << info.name << "[" << arg.size << "] = {};" << std::endl;
-  for (size_t i = 0; i < arg.size; ++i) {
+  ss << info.type << " " << info.name << "[" << arg.Size << "] = {};" << std::endl;
+  for (size_t i = 0; i < arg.Size; ++i) {
     ss << info.name << "[" << i
-       << "].ptr = " << descriptorHeapHandleStr(arg.interfaceKeys[i], arg.indexes[i], "CpuHandle")
+       << "].ptr = " << descriptorHeapHandleStr(arg.InterfaceKeys[i], arg.Indexes[i], "CpuHandle")
        << ";" << std::endl;
   }
 
@@ -113,7 +113,7 @@ void argumentToCpp(DescriptorHandleArgument<D3D12_CPU_DESCRIPTOR_HANDLE>& arg,
                    CppParameterOutput& out) {
   std::ostringstream ss;
   ss << info.type << " " << info.name << " = {};" << std::endl;
-  ss << info.name << ".ptr = " << descriptorHeapHandleStr(arg.interfaceKey, arg.index, "CpuHandle")
+  ss << info.name << ".ptr = " << descriptorHeapHandleStr(arg.InterfaceKey, arg.Index, "CpuHandle")
      << ";" << std::endl;
 
   out.initialization = ss.str();
@@ -125,7 +125,7 @@ void argumentToCpp(DescriptorHandleArgument<D3D12_GPU_DESCRIPTOR_HANDLE>& arg,
                    CppParameterOutput& out) {
   std::ostringstream ss;
   ss << info.type << " " << info.name << " = {};" << std::endl;
-  ss << info.name << ".ptr = " << descriptorHeapHandleStr(arg.interfaceKey, arg.index, "GpuHandle")
+  ss << info.name << ".ptr = " << descriptorHeapHandleStr(arg.InterfaceKey, arg.Index, "GpuHandle")
      << ";" << std::endl;
 
   out.initialization = ss.str();
@@ -134,18 +134,18 @@ void argumentToCpp(DescriptorHandleArgument<D3D12_GPU_DESCRIPTOR_HANDLE>& arg,
 }
 
 void argumentToCpp(LPCWSTR_Argument& arg, CppParameterInfo& info, CppParameterOutput& out) {
-  toCpp(arg.value, info, out);
+  toCpp(arg.Value, info, out);
 }
 
 void argumentToCpp(LPCSTR_Argument& arg, CppParameterInfo& info, CppParameterOutput& out) {
-  toCpp(arg.value, info, out);
+  toCpp(arg.Value, info, out);
 }
 
 void argumentToCpp(D3D12_GPU_VIRTUAL_ADDRESS_Argument& arg,
                    CppParameterInfo& info,
                    CppParameterOutput& out) {
   std::ostringstream ss;
-  ss << info.type << " " << info.name << " = " << gpuAddressStr(arg.interfaceKey, arg.offset) << ";"
+  ss << info.type << " " << info.name << " = " << gpuAddressStr(arg.InterfaceKey, arg.Offset) << ";"
      << std::endl;
 
   out.initialization = ss.str();
@@ -157,9 +157,9 @@ void argumentToCpp(D3D12_GPU_VIRTUAL_ADDRESSs_Argument& arg,
                    CppParameterInfo& info,
                    CppParameterOutput& out) {
   std::ostringstream ss;
-  ss << info.type << " " << info.name << "[" << arg.size << "] = {};" << std::endl;
-  for (size_t i = 0; i < arg.size; ++i) {
-    ss << info.name << "[" << i << "] = " << gpuAddressStr(arg.interfaceKeys[i], arg.offsets[i])
+  ss << info.type << " " << info.name << "[" << arg.Size << "] = {};" << std::endl;
+  for (size_t i = 0; i < arg.Size; ++i) {
+    ss << info.name << "[" << i << "] = " << gpuAddressStr(arg.InterfaceKeys[i], arg.Offsets[i])
        << ";" << std::endl;
   }
 
@@ -171,8 +171,8 @@ void argumentToCpp(D3D12_GPU_VIRTUAL_ADDRESSs_Argument& arg,
 void argumentToCpp(D3D12_GRAPHICS_PIPELINE_STATE_DESC_Argument& arg,
                    CppParameterInfo& info,
                    CppParameterOutput& out) {
-  GITS_ASSERT(arg.value != nullptr);
-  auto& value = *arg.value;
+  GITS_ASSERT(arg.Value != nullptr);
+  auto& value = *arg.Value;
 
   std::ostringstream ss;
 
@@ -227,7 +227,7 @@ void argumentToCpp(D3D12_GRAPHICS_PIPELINE_STATE_DESC_Argument& arg,
   ss << inputLayoutOut.initialization;
 
   ss << info.type << " " << info.name << " = {};" << std::endl;
-  ss << info.name << ".pRootSignature = " << objKeyToPtrStr(arg.rootSignatureKey) << ";"
+  ss << info.name << ".pRootSignature = " << objKeyToPtrStr(arg.RootSignatureKey) << ";"
      << std::endl;
 
   ss << info.name << ".VS = " << vsOut.value << ";" << std::endl;
@@ -267,8 +267,8 @@ void argumentToCpp(D3D12_GRAPHICS_PIPELINE_STATE_DESC_Argument& arg,
 void argumentToCpp(D3D12_COMPUTE_PIPELINE_STATE_DESC_Argument& arg,
                    CppParameterInfo& info,
                    CppParameterOutput& out) {
-  GITS_ASSERT(arg.value != nullptr);
-  auto& value = *arg.value;
+  GITS_ASSERT(arg.Value != nullptr);
+  auto& value = *arg.Value;
 
   std::ostringstream ss;
 
@@ -278,7 +278,7 @@ void argumentToCpp(D3D12_COMPUTE_PIPELINE_STATE_DESC_Argument& arg,
   ss << csOut.initialization;
 
   ss << info.type << " " << info.name << " = {};" << std::endl;
-  ss << info.name << ".pRootSignature = " << objKeyToPtrStr(arg.rootSignatureKey) << ";"
+  ss << info.name << ".pRootSignature = " << objKeyToPtrStr(arg.RootSignatureKey) << ";"
      << std::endl;
   ss << info.name << ".CS = " << csOut.value << ";" << std::endl;
   ss << info.name << ".NodeMask = " << value.NodeMask << ";" << std::endl;
@@ -297,8 +297,8 @@ void argumentToCpp(D3D12_COMPUTE_PIPELINE_STATE_DESC_Argument& arg,
 void argumentToCpp(D3D12_TEXTURE_COPY_LOCATION_Argument& arg,
                    CppParameterInfo& info,
                    CppParameterOutput& out) {
-  GITS_ASSERT(arg.value != nullptr);
-  auto& value = *arg.value;
+  GITS_ASSERT(arg.Value != nullptr);
+  auto& value = *arg.Value;
 
   std::ostringstream ss;
   std::ostringstream ssUnion;
@@ -314,7 +314,7 @@ void argumentToCpp(D3D12_TEXTURE_COPY_LOCATION_Argument& arg,
   }
 
   ss << info.type << " " << info.name << " = {};" << std::endl;
-  ss << info.name << ".pResource = " << objKeyToPtrStr(arg.resourceKey) << ";" << std::endl;
+  ss << info.name << ".pResource = " << objKeyToPtrStr(arg.ResourceKey) << ";" << std::endl;
   ss << info.name << ".Type = " << toStr(value.Type) << ";" << std::endl;
   ss << ssUnion.str();
   out.initialization = ss.str();
@@ -325,17 +325,17 @@ void argumentToCpp(D3D12_TEXTURE_COPY_LOCATION_Argument& arg,
 void argumentToCpp(D3D12_RESOURCE_BARRIERs_Argument& arg,
                    CppParameterInfo& info,
                    CppParameterOutput& out) {
-  auto* value = arg.value;
+  auto* value = arg.Value;
 
   std::ostringstream ss;
-  ss << info.type << " " << info.name << "[" << arg.size << "] = {};" << std::endl;
-  for (unsigned i = 0; i < arg.size; ++i) {
+  ss << info.type << " " << info.name << "[" << arg.Size << "] = {};" << std::endl;
+  for (unsigned i = 0; i < arg.Size; ++i) {
     std::ostringstream ssUnion;
     // Handle union members
     switch (value[i].Type) {
     case D3D12_RESOURCE_BARRIER_TYPE_TRANSITION: {
       ssUnion << info.name << "[" << i
-              << "].Transition.pResource = " << objKeyToPtrStr(arg.resourceKeys[i]) << ";"
+              << "].Transition.pResource = " << objKeyToPtrStr(arg.ResourceKeys[i]) << ";"
               << std::endl;
       ssUnion << info.name << "[" << i
               << "].Transition.Subresource = " << toHex(value[i].Transition.Subresource) << ";"
@@ -349,15 +349,15 @@ void argumentToCpp(D3D12_RESOURCE_BARRIERs_Argument& arg,
     } break;
     case D3D12_RESOURCE_BARRIER_TYPE_ALIASING: {
       ssUnion << info.name << "[" << i
-              << "].Aliasing.pResourceBefore = " << objKeyToPtrStr(arg.resourceKeys[i]) << ";"
+              << "].Aliasing.pResourceBefore = " << objKeyToPtrStr(arg.ResourceKeys[i]) << ";"
               << std::endl;
       ssUnion << info.name << "[" << i
-              << "].Aliasing.pResourceAfter = " << objKeyToPtrStr(arg.resourceAfterKeys[i]) << ";"
+              << "].Aliasing.pResourceAfter = " << objKeyToPtrStr(arg.ResourceAfterKeys[i]) << ";"
               << std::endl;
     } break;
     case D3D12_RESOURCE_BARRIER_TYPE_UAV:
       ssUnion << info.name << "[" << i
-              << "].UAV.pResource = " << objKeyToPtrStr(arg.resourceKeys[i]) << ";" << std::endl;
+              << "].UAV.pResource = " << objKeyToPtrStr(arg.ResourceKeys[i]) << ";" << std::endl;
       break;
     default:
       GITS_ASSERT("Unknown D3D12_RESOURCE_BARRIER type");
@@ -376,19 +376,19 @@ void argumentToCpp(D3D12_RESOURCE_BARRIERs_Argument& arg,
 void argumentToCpp(D3D12_INDEX_BUFFER_VIEW_Argument& arg,
                    CppParameterInfo& info,
                    CppParameterOutput& out) {
-  if (!arg.value) {
+  if (!arg.Value) {
     out.initialization = "";
     out.value = "nullptr";
     out.decorator = "";
     return;
   }
 
-  auto& value = *arg.value;
+  auto& value = *arg.Value;
 
   std::ostringstream ss;
   ss << info.type << " " << info.name << " = {};" << std::endl;
   ss << info.name
-     << ".BufferLocation = " << gpuAddressStr(arg.bufferLocationKey, arg.bufferLocationOffset)
+     << ".BufferLocation = " << gpuAddressStr(arg.BufferLocationKey, arg.BufferLocationOffset)
      << ";" << std::endl;
   ss << info.name << ".SizeInBytes = " << value.SizeInBytes << ";" << std::endl;
   ss << info.name << ".Format = " << toStr(value.Format) << ";" << std::endl;
@@ -401,18 +401,18 @@ void argumentToCpp(D3D12_INDEX_BUFFER_VIEW_Argument& arg,
 void argumentToCpp(D3D12_CONSTANT_BUFFER_VIEW_DESC_Argument& arg,
                    CppParameterInfo& info,
                    CppParameterOutput& out) {
-  if (!arg.value) {
+  if (!arg.Value) {
     out.initialization = "";
     out.value = "nullptr";
     out.decorator = "";
     return;
   }
 
-  auto& value = *arg.value;
+  auto& value = *arg.Value;
   std::ostringstream ss;
   ss << info.type << " " << info.name << " = {};" << std::endl;
   ss << info.name
-     << ".BufferLocation = " << gpuAddressStr(arg.bufferLocationKey, arg.bufferLocationOffset)
+     << ".BufferLocation = " << gpuAddressStr(arg.BufferLocationKey, arg.BufferLocationOffset)
      << ";" << std::endl;
   ss << info.name << ".SizeInBytes = " << value.SizeInBytes << ";" << std::endl;
 
@@ -424,7 +424,7 @@ void argumentToCpp(D3D12_CONSTANT_BUFFER_VIEW_DESC_Argument& arg,
 void argumentToCpp(D3D12_VERTEX_BUFFER_VIEWs_Argument& arg,
                    CppParameterInfo& info,
                    CppParameterOutput& out) {
-  if (arg.value == nullptr || arg.size == 0) {
+  if (arg.Value == nullptr || arg.Size == 0) {
     out.initialization = "";
     out.value = "nullptr";
     out.decorator = "";
@@ -432,15 +432,15 @@ void argumentToCpp(D3D12_VERTEX_BUFFER_VIEWs_Argument& arg,
   }
 
   std::ostringstream ss;
-  ss << info.type << " " << info.name << "[" << arg.size << "] = {};" << std::endl;
+  ss << info.type << " " << info.name << "[" << arg.Size << "] = {};" << std::endl;
 
-  for (unsigned i = 0; i < arg.size; ++i) {
+  for (unsigned i = 0; i < arg.Size; ++i) {
     ss << info.name << "[" << i << "].BufferLocation = "
-       << gpuAddressStr(arg.bufferLocationKeys[i], arg.bufferLocationOffsets[i]) << ";"
+       << gpuAddressStr(arg.BufferLocationKeys[i], arg.BufferLocationOffsets[i]) << ";"
        << std::endl;
-    ss << info.name << "[" << i << "].SizeInBytes = " << arg.value[i].SizeInBytes << ";"
+    ss << info.name << "[" << i << "].SizeInBytes = " << arg.Value[i].SizeInBytes << ";"
        << std::endl;
-    ss << info.name << "[" << i << "].StrideInBytes = " << arg.value[i].StrideInBytes << ";"
+    ss << info.name << "[" << i << "].StrideInBytes = " << arg.Value[i].StrideInBytes << ";"
        << std::endl;
   }
 
@@ -458,7 +458,7 @@ void argumentToCpp(D3D12_STREAM_OUTPUT_BUFFER_VIEWs_Argument& arg,
 void argumentToCpp(D3D12_WRITEBUFFERIMMEDIATE_PARAMETERs_Argument& arg,
                    CppParameterInfo& info,
                    CppParameterOutput& out) {
-  if (!arg.value || arg.size == 0) {
+  if (!arg.Value || arg.Size == 0) {
     out.initialization = "";
     out.value = "nullptr";
     out.decorator = "";
@@ -466,12 +466,12 @@ void argumentToCpp(D3D12_WRITEBUFFERIMMEDIATE_PARAMETERs_Argument& arg,
   }
 
   std::ostringstream ss;
-  ss << info.type << " " << info.name << "[" << arg.size << "] = {};" << std::endl;
+  ss << info.type << " " << info.name << "[" << arg.Size << "] = {};" << std::endl;
 
-  for (unsigned i = 0; i < arg.size; ++i) {
-    ss << info.name << "[" << i << "].Dest = " << gpuAddressStr(arg.destKeys[i], arg.destOffsets[i])
+  for (unsigned i = 0; i < arg.Size; ++i) {
+    ss << info.name << "[" << i << "].Dest = " << gpuAddressStr(arg.DestKeys[i], arg.DestOffsets[i])
        << ";" << std::endl;
-    ss << info.name << "[" << i << "].Value = " << arg.value[i].Value << ";" << std::endl;
+    ss << info.name << "[" << i << "].Value = " << arg.Value[i].Value << ";" << std::endl;
   }
 
   out.initialization = ss.str();
@@ -482,18 +482,18 @@ void argumentToCpp(D3D12_WRITEBUFFERIMMEDIATE_PARAMETERs_Argument& arg,
 void argumentToCpp(D3D12_PIPELINE_STATE_STREAM_DESC_Argument& arg,
                    CppParameterInfo& info,
                    CppParameterOutput& out) {
-  if (!arg.value) {
+  if (!arg.Value) {
     out.initialization = "";
     out.value = "nullptr";
     out.decorator = "";
     return;
   }
 
-  toCpp(arg.value, info, out);
+  toCpp(arg.Value, info, out);
 
   std::ostringstream ss;
   ss << out.initialization;
-  ss << "directx::PatchPipelineState(" << out.value << "," << objKeyToPtrStr(arg.rootSignatureKey)
+  ss << "directx::PatchPipelineState(" << out.value << "," << objKeyToPtrStr(arg.RootSignatureKey)
      << ", subobjectData.data(), subobjectData.size());" << std::endl;
 
   out.initialization = ss.str();
@@ -508,14 +508,14 @@ void argumentToCpp(D3D12_STATE_OBJECT_DESC_Argument& arg,
 void argumentToCpp(D3D12_SHADER_RESOURCE_VIEW_DESC_Argument& arg,
                    CppParameterInfo& info,
                    CppParameterOutput& out) {
-  if (!arg.value) {
+  if (!arg.Value) {
     out.initialization = "";
     out.value = "nullptr";
     out.decorator = "";
     return;
   }
 
-  auto& value = *arg.value;
+  auto& value = *arg.Value;
   std::string name = info.getIndexedName();
   std::ostringstream ss;
   std::ostringstream ssUnion;
@@ -580,7 +580,7 @@ void argumentToCpp(D3D12_SHADER_RESOURCE_VIEW_DESC_Argument& arg,
     paramOut.initialization = "";
     ss << paramInfo.type << " " << paramInfo.name << " = {};" << std::endl;
     ss << paramInfo.name
-       << ".Location = " << gpuAddressStr(arg.raytracingLocationKey, arg.raytracingLocationOffset)
+       << ".Location = " << gpuAddressStr(arg.RaytracingLocationKey, arg.RaytracingLocationOffset)
        << ";" << std::endl;
     break;
   default:
@@ -603,7 +603,7 @@ void argumentToCpp(D3D12_SHADER_RESOURCE_VIEW_DESC_Argument& arg,
 void argumentToCpp(ArrayArgument<D3D12_RESIDENCY_PRIORITY>& arg,
                    CppParameterInfo& info,
                    CppParameterOutput& out) {
-  if (!arg.value) {
+  if (!arg.Value) {
     out.initialization = "";
     out.value = "nullptr";
     out.decorator = "";
@@ -611,10 +611,10 @@ void argumentToCpp(ArrayArgument<D3D12_RESIDENCY_PRIORITY>& arg,
   }
 
   std::ostringstream ss;
-  ss << info.type << " " << info.name << "[" << arg.size << "] = {};" << std::endl;
-  for (size_t i = 0; i < arg.size; ++i) {
+  ss << info.type << " " << info.name << "[" << arg.Size << "] = {};" << std::endl;
+  for (size_t i = 0; i < arg.Size; ++i) {
     // D3D12_RESIDENCY_PRIORITY is an enum but the values can be arbitrary
-    ss << info.name << "[" << i << "] = D3D12_RESIDENCY_PRIORITY(" << std::to_string(arg.value[i])
+    ss << info.name << "[" << i << "] = D3D12_RESIDENCY_PRIORITY(" << std::to_string(arg.Value[i])
        << ");" << std::endl;
   }
 
@@ -733,8 +733,8 @@ void argumentToCpp(PointerArgument<INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC>& arg,
                    CppParameterInfo& info,
                    CppParameterOutput& out) {
 
-  GITS_ASSERT(arg.value != nullptr);
-  auto& value = *arg.value;
+  GITS_ASSERT(arg.Value != nullptr);
+  auto& value = *arg.Value;
 
   std::ostringstream ss;
 
@@ -744,7 +744,7 @@ void argumentToCpp(PointerArgument<INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC>& arg,
   CppParameterOutput pD3D12DescOut;
   {
     D3D12_COMPUTE_PIPELINE_STATE_DESC_Argument pD3D12DescArg(value.pD3D12Desc);
-    pD3D12DescArg.rootSignatureKey = arg.rootSignatureKey;
+    pD3D12DescArg.RootSignatureKey = arg.RootSignatureKey;
     argumentToCpp(pD3D12DescArg, pD3D12DescInfo, pD3D12DescOut);
     ss << pD3D12DescOut.initialization;
   }

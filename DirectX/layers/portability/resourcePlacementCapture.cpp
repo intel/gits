@@ -16,13 +16,13 @@ namespace gits {
 namespace DirectX {
 
 void ResourcePlacementCapture::createPlacedResource(unsigned heapKey,
-                                                    unsigned resourceKey,
+                                                    unsigned ResourceKey,
                                                     UINT64 offset,
                                                     ID3D12Device* device,
                                                     D3D12_RESOURCE_DESC& desc) {
   ResourcePlacementInfo info{};
   info.heapKey = heapKey;
-  info.key = resourceKey;
+  info.key = ResourceKey;
   info.offset = offset;
   info.desc = desc;
 
@@ -34,8 +34,8 @@ void ResourcePlacementCapture::createPlacedResource(unsigned heapKey,
   info.size = allocInfo.SizeInBytes;
   info.alignment = allocInfo.Alignment;
 
-  std::lock_guard<std::mutex> lock(mutex_);
-  resourcePlacementInfos_.push_back(info);
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  m_ResourcePlacementInfos.push_back(info);
 }
 
 void ResourcePlacementCapture::storeResourcePlacement() {
@@ -44,9 +44,9 @@ void ResourcePlacementCapture::storeResourcePlacement() {
                                        : Configurator::Get().common.recorder.dumpPath;
   filePath /= "resourcePlacementData.dat";
 
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::lock_guard<std::mutex> lock(m_Mutex);
   std::ofstream file(filePath, std::ios::binary);
-  for (ResourcePlacementInfo& info : resourcePlacementInfos_) {
+  for (ResourcePlacementInfo& info : m_ResourcePlacementInfos) {
     file.write(reinterpret_cast<char*>(&info), sizeof(info));
   }
 }

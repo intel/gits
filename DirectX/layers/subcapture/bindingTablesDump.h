@@ -23,20 +23,20 @@ class AnalyzerRaytracingService;
 class BindingTablesDump : public ResourceDump {
 public:
   struct StateObjectInfo {
-    unsigned globalRootSignature;
-    std::unordered_map<std::wstring, unsigned> exportToRootSignature;
+    unsigned GlobalRootSignature;
+    std::unordered_map<std::wstring, unsigned> ExportToRootSignature;
   };
   struct DescriptorHeaps {
-    unsigned viewDescriptorHeapKey;
-    unsigned viewDescriptorHeapSize;
-    unsigned samplerHeapKey;
-    unsigned samplerHeapSize;
+    unsigned ViewDescriptorHeapKey;
+    unsigned ViewDescriptorHeapSize;
+    unsigned SamplerHeapKey;
+    unsigned SamplerHeapSize;
   };
 
 public:
   BindingTablesDump(AnalyzerRaytracingService& raytracingService)
-      : raytracingService_(raytracingService) {}
-  void dumpBindingTable(ID3D12GraphicsCommandList* commandList,
+      : m_RaytracingService(raytracingService) {}
+  void DumpBindingTable(ID3D12GraphicsCommandList* commandList,
                         ID3D12Resource* resource,
                         unsigned offset,
                         unsigned size,
@@ -44,30 +44,30 @@ public:
                         D3D12_RESOURCE_STATES state,
                         StateObjectInfo* stateObjectInfo,
                         DescriptorHeaps descriptorHeaps,
-                        unsigned rootSignatureKey);
+                        unsigned RootSignatureKey);
 
-  std::unordered_set<unsigned>& getBindingTablesResources() {
-    return bindingTablesResources_;
+  std::unordered_set<unsigned>& GetBindingTablesResources() {
+    return m_BindingTablesResources;
   }
-  std::set<std::pair<unsigned, unsigned>>& getBindingTablesDescriptors() {
-    return bindingTablesDescriptors_;
+  std::set<std::pair<unsigned, unsigned>>& GetBindingTablesDescriptors() {
+    return m_BindingTablesDescriptors;
   }
 
 private:
   void dumpBuffer(DumpInfo& dumpInfo, void* data) override;
-  unsigned align(unsigned value, unsigned alignment);
+  unsigned Align(unsigned value, unsigned alignment);
 
 private:
-  AnalyzerRaytracingService& raytracingService_;
-  std::mutex mutex_;
-  std::unordered_set<unsigned> bindingTablesResources_;
-  std::set<std::pair<unsigned, unsigned>> bindingTablesDescriptors_;
+  AnalyzerRaytracingService& m_RaytracingService;
+  std::mutex m_Mutex;
+  std::unordered_set<unsigned> m_BindingTablesResources;
+  std::set<std::pair<unsigned, unsigned>> m_BindingTablesDescriptors;
 
   struct BindingTablesInfo : DumpInfo {
     unsigned stride{};
     StateObjectInfo* stateObjectInfo{};
     DescriptorHeaps descriptorHeaps{};
-    unsigned rootSignatureKey{};
+    unsigned RootSignatureKey{};
   };
 };
 

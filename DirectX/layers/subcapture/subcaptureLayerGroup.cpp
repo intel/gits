@@ -18,7 +18,7 @@
 namespace gits {
 namespace DirectX {
 
-void SubcaptureLayerGroup::loadLayers() {
+void SubcaptureLayerGroup::LoadLayers() {
 
   if (!Configurator::Get().directx.features.subcapture.enabled ||
       Configurator::Get().directx.features.subcapture.executionSerialization) {
@@ -39,7 +39,7 @@ void SubcaptureLayerGroup::loadLayers() {
       }
     } else {
       if (frames.find("-") != std::string::npos) {
-        LOG_ERROR << "Subcapture of command list executions must have one frame range";
+        LOG_ERROR << "Subcapture of Command list executions must have one frame range";
         exit(EXIT_FAILURE);
       }
     }
@@ -49,20 +49,20 @@ void SubcaptureLayerGroup::loadLayers() {
     exit(EXIT_FAILURE);
   }
 
-  subcaptureRange_ = std::make_unique<SubcaptureRange>();
+  m_SubcaptureRange = std::make_unique<SubcaptureRange>();
 
   if (trimmingMode) {
-    recorder_ = std::make_unique<SubcaptureRecorder>();
-    addLayer(std::make_unique<RecordingLayer>(*recorder_, *subcaptureRange_));
-  } else if (AnalyzerResults::isAnalysis()) {
-    recorder_ = std::make_unique<SubcaptureRecorder>();
-    addLayer(std::make_unique<StateTrackingLayer>(*recorder_, *subcaptureRange_));
-    addLayer(std::make_unique<RecordingLayer>(*recorder_, *subcaptureRange_));
-    addLayer(std::make_unique<CommandPreservationLayer>());
+    m_Recorder = std::make_unique<SubcaptureRecorder>();
+    AddLayer(std::make_unique<RecordingLayer>(*m_Recorder, *m_SubcaptureRange));
+  } else if (AnalyzerResults::IsAnalysis()) {
+    m_Recorder = std::make_unique<SubcaptureRecorder>();
+    AddLayer(std::make_unique<StateTrackingLayer>(*m_Recorder, *m_SubcaptureRange));
+    AddLayer(std::make_unique<RecordingLayer>(*m_Recorder, *m_SubcaptureRange));
+    AddLayer(std::make_unique<CommandPreservationLayer>());
   } else {
     const_cast<gits::Configuration&>(Configurator::Get()).directx.features.subcapture.enabled =
         false;
-    addLayer(std::make_unique<AnalyzerLayer>(*subcaptureRange_));
+    AddLayer(std::make_unique<AnalyzerLayer>(*m_SubcaptureRange));
     LOG_INFO << "SUBCAPTURE ANALYSIS. RUN AGAIN FOR SUBCAPTURE RECORDING.";
   }
 }

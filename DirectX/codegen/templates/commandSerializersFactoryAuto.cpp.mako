@@ -17,7 +17,7 @@ namespace gits {
 namespace DirectX {
 
 std::unique_ptr<stream::CommandSerializer> createCommandSerializer(const Command* command) {
-  switch (command->getId()) {
+  switch (command->GetId()) {
   case CommandId::ID_INIT_START:
     return std::make_unique<StateRestoreBeginSerializer>(*static_cast<const StateRestoreBeginCommand*>(command));
   case CommandId::ID_INIT_END:

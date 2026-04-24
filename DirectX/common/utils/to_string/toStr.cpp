@@ -32,12 +32,12 @@ std::string toStr(const wchar_t* s) {
 
 std::string keyToStr(unsigned key) {
   std::string result;
-  if (isStateRestoreKey(key)) {
+  if (IsStateRestoreKey(key)) {
     result += 'S';
-    key = extractStateRestoreKey(key);
-  } else if (isExecutionSerializationKey(key)) {
+    key = ExtractStateRestoreKey(key);
+  } else if (IsExecutionSerializationKey(key)) {
     result += 'E';
-    key = extractExecutionSerializationKey(key);
+    key = ExtractExecutionSerializationKey(key);
   }
   return result + std::to_string(key);
 }

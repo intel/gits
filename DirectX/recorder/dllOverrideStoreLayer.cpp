@@ -20,103 +20,103 @@ namespace gits {
 namespace DirectX {
 DllOverrideStoreLayer::DllOverrideStoreLayer(CaptureManager& manager,
                                              stream::OrderingRecorder& recorder)
-    : Layer("DllOverrideStore"), manager_(manager), recorder_(recorder) {}
+    : Layer("DllOverrideStore"), m_Manager(manager), m_Recorder(recorder) {}
 
-void DllOverrideStoreLayer::post(D3D12CreateDeviceCommand& c) {
+void DllOverrideStoreLayer::Post(D3D12CreateDeviceCommand& c) {
   captureAgilitySDKDll(c);
 }
 
-void DllOverrideStoreLayer::post(D3D12GetDebugInterfaceCommand& c) {
+void DllOverrideStoreLayer::Post(D3D12GetDebugInterfaceCommand& c) {
   captureAgilitySDKDll(c);
 }
 
-void DllOverrideStoreLayer::post(D3D12CreateRootSignatureDeserializerCommand& c) {
+void DllOverrideStoreLayer::Post(D3D12CreateRootSignatureDeserializerCommand& c) {
   captureAgilitySDKDll(c);
 }
 
-void DllOverrideStoreLayer::post(D3D12CreateVersionedRootSignatureDeserializerCommand& c) {
+void DllOverrideStoreLayer::Post(D3D12CreateVersionedRootSignatureDeserializerCommand& c) {
   captureAgilitySDKDll(c);
 }
 
-void DllOverrideStoreLayer::post(D3D12EnableExperimentalFeaturesCommand& c) {
+void DllOverrideStoreLayer::Post(D3D12EnableExperimentalFeaturesCommand& c) {
   captureAgilitySDKDll(c);
 }
 
-void DllOverrideStoreLayer::post(D3D12GetInterfaceCommand& c) {
+void DllOverrideStoreLayer::Post(D3D12GetInterfaceCommand& c) {
   captureAgilitySDKDll(c);
 }
 
-void DllOverrideStoreLayer::post(D3D12SerializeRootSignatureCommand& c) {
+void DllOverrideStoreLayer::Post(D3D12SerializeRootSignatureCommand& c) {
   captureAgilitySDKDll(c);
 }
 
-void DllOverrideStoreLayer::post(D3D12SerializeVersionedRootSignatureCommand& c) {
+void DllOverrideStoreLayer::Post(D3D12SerializeVersionedRootSignatureCommand& c) {
   captureAgilitySDKDll(c);
 }
 
-void DllOverrideStoreLayer::pre(xessGetVersionCommand& c) {
+void DllOverrideStoreLayer::Pre(xessGetVersionCommand& c) {
   captureXessDll(c);
 }
 
-void DllOverrideStoreLayer::pre(xessD3D12CreateContextCommand& c) {
+void DllOverrideStoreLayer::Pre(xessD3D12CreateContextCommand& c) {
   captureXessDll(c);
 }
 
-void DllOverrideStoreLayer::pre(xellGetVersionCommand& c) {
+void DllOverrideStoreLayer::Pre(xellGetVersionCommand& c) {
   captureXellDll(c);
 }
 
-void DllOverrideStoreLayer::pre(xellD3D12CreateContextCommand& c) {
+void DllOverrideStoreLayer::Pre(xellD3D12CreateContextCommand& c) {
   captureXellDll(c);
 }
 
-void DllOverrideStoreLayer::pre(xefgSwapChainGetVersionCommand& c) {
+void DllOverrideStoreLayer::Pre(xefgSwapChainGetVersionCommand& c) {
   captureXefgDll(c);
 }
 
-void DllOverrideStoreLayer::pre(xefgSwapChainD3D12CreateContextCommand& c) {
+void DllOverrideStoreLayer::Pre(xefgSwapChainD3D12CreateContextCommand& c) {
   captureXefgDll(c);
 }
 
 void DllOverrideStoreLayer::captureAgilitySDKDll(Command& c) {
-  std::lock_guard<std::mutex> lock(agilitySDKDllMutex_);
-  if (agilitySDKDllchecked_) {
+  std::lock_guard<std::mutex> lock(m_AgilitySdkDllMutex);
+  if (m_AgilitySdkDllChecked) {
     return;
   }
 
-  if (captureDll(L"D3D12Core.dll", c.threadId)) {
-    manager_.updateCommandKey(c);
+  if (captureDll(L"D3D12Core.dll", c.ThreadId)) {
+    m_Manager.updateCommandKey(c);
   }
 
-  agilitySDKDllchecked_ = true;
+  m_AgilitySdkDllChecked = true;
 }
 
 void DllOverrideStoreLayer::captureXessDll(Command& c) {
-  std::lock_guard<std::mutex> lock(xessDllMutex_);
-  if (xessDllchecked_) {
+  std::lock_guard<std::mutex> lock(m_XessDllMutex);
+  if (m_XessDllChecked) {
     return;
   }
 
-  captureDll(L"libxess.dll", c.threadId);
-  xessDllchecked_ = true;
+  captureDll(L"libxess.dll", c.ThreadId);
+  m_XessDllChecked = true;
 }
 
 void DllOverrideStoreLayer::captureXellDll(Command& c) {
-  std::lock_guard<std::mutex> lock(xellDllMutex_);
-  if (xellDllchecked_) {
+  std::lock_guard<std::mutex> lock(m_XellDllMutex);
+  if (m_XellDllChecked) {
     return;
   }
-  captureDll(L"libxell.dll", c.threadId);
-  xellDllchecked_ = true;
+  captureDll(L"libxell.dll", c.ThreadId);
+  m_XellDllChecked = true;
 }
 
 void DllOverrideStoreLayer::captureXefgDll(Command& c) {
-  std::lock_guard<std::mutex> lock(xefgDllMutex_);
-  if (xefgDllchecked_) {
+  std::lock_guard<std::mutex> lock(m_XefgDllMutex);
+  if (m_XefgDllChecked) {
     return;
   }
-  captureDll(L"libxess_fg.dll", c.threadId);
-  xefgDllchecked_ = true;
+  captureDll(L"libxess_fg.dll", c.ThreadId);
+  m_XefgDllChecked = true;
 }
 
 bool DllOverrideStoreLayer::captureDll(const std::wstring& dllName, unsigned threadId) {
@@ -153,11 +153,11 @@ bool DllOverrideStoreLayer::captureDll(const std::wstring& dllName, unsigned thr
   }
 
   DllContainerMetaCommand command(threadId);
-  command.key = manager_.createCommandKey();
-  command.dllName_.value = const_cast<wchar_t*>(dllName.c_str());
-  command.dllData_.size = size;
-  command.dllData_.value = content.data();
-  recorder_.Record(command.key, new DllContainerMetaSerializer(command));
+  command.Key = m_Manager.createCommandKey();
+  command.m_dllName.Value = const_cast<wchar_t*>(dllName.c_str());
+  command.m_dllData.Size = size;
+  command.m_dllData.Value = content.data();
+  m_Recorder.Record(command.Key, new DllContainerMetaSerializer(command));
 
   return true;
 }

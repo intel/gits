@@ -21,12 +21,12 @@ namespace DirectX {
 class GpuAddressService {
 public:
   struct GpuAddressInfo {
-    unsigned resourceKey;
-    unsigned offset;
+    unsigned ResourceKey;
+    unsigned Offset;
   };
 
-  void createResource(unsigned resourceKey, ID3D12Resource* resource);
-  void createPlacedResource(unsigned resourceKey,
+  void createResource(unsigned ResourceKey, ID3D12Resource* resource);
+  void createPlacedResource(unsigned ResourceKey,
                             ID3D12Resource* resource,
                             unsigned heapKey,
                             ID3D12Heap* heap,
@@ -34,7 +34,7 @@ public:
                             bool raytracingAS);
   void createHeap(unsigned heapKey, ID3D12Heap* heap);
   GpuAddressInfo getGpuAddressInfo(UINT64 gpuAddress, bool raytracingAS = false) const;
-  void destroyInterface(unsigned interfaceKey);
+  void destroyInterface(unsigned InterfaceKey);
 
 private:
   struct HeapInfo {
@@ -59,15 +59,15 @@ private:
     std::vector<std::map<D3D12_GPU_VIRTUAL_ADDRESS, PlacedResourceInfo*>> resources;
   };
 
-  std::map<D3D12_GPU_VIRTUAL_ADDRESS, ResourceInfo*> resourcesByStartAddress_;
-  std::map<D3D12_GPU_VIRTUAL_ADDRESS, HeapInfoLayered*> heapsByStartAddress_;
+  std::map<D3D12_GPU_VIRTUAL_ADDRESS, ResourceInfo*> m_ResourcesByStartAddress;
+  std::map<D3D12_GPU_VIRTUAL_ADDRESS, HeapInfoLayered*> m_HeapsByStartAddress;
 
-  std::unordered_map<unsigned, std::unique_ptr<ResourceInfo>> resourcesByKey_;
-  std::unordered_map<unsigned, std::unique_ptr<HeapInfoLayered>> heapsByKey_;
-  std::unordered_map<unsigned, std::unique_ptr<PlacedResourceInfo>> placedResourcesByKey_;
-  std::unordered_map<unsigned, std::unordered_set<unsigned>> placedResourcesByHeap_;
+  std::unordered_map<unsigned, std::unique_ptr<ResourceInfo>> m_ResourcesByKey;
+  std::unordered_map<unsigned, std::unique_ptr<HeapInfoLayered>> m_HeapsByKey;
+  std::unordered_map<unsigned, std::unique_ptr<PlacedResourceInfo>> m_PlacedResourcesByKey;
+  std::unordered_map<unsigned, std::unordered_set<unsigned>> m_PlacedResourcesByHeap;
 
-  mutable tbb::spin_rw_mutex rwMutex_;
+  mutable tbb::spin_rw_mutex m_RwMutex;
 
 private:
   const ResourceInfo* getResourceFromHeap(HeapInfoLayered* heapInfo,

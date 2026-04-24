@@ -14,35 +14,35 @@
 namespace gits {
 namespace DirectX {
 
-void HeapAllocationService::createHeapAllocation(unsigned heapKey,
+void HeapAllocationService::CreateHeapAllocation(unsigned heapKey,
                                                  void* captureAddress,
                                                  void* data,
                                                  size_t size) {
   void* replayAddress = VirtualAlloc(nullptr, size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
   GITS_ASSERT(replayAddress);
-  heapAllocationsByCaptureAddress_[captureAddress] = replayAddress;
-  heapAllocationsByReplayAddress_[replayAddress] = captureAddress;
-  heapAllocationsCaptureAddressByHeapKey_[heapKey] = captureAddress;
+  m_HeapAllocationsByCaptureAddress[captureAddress] = replayAddress;
+  m_HeapAllocationsByReplayAddress[replayAddress] = captureAddress;
+  m_HeapAllocationsCaptureAddressByHeapKey[heapKey] = captureAddress;
 }
 
-void* HeapAllocationService::getHeapAllocation(void* captureAddress) {
-  auto it = heapAllocationsByCaptureAddress_.find(captureAddress);
-  GITS_ASSERT(it != heapAllocationsByCaptureAddress_.end());
+void* HeapAllocationService::GetHeapAllocation(void* captureAddress) {
+  auto it = m_HeapAllocationsByCaptureAddress.find(captureAddress);
+  GITS_ASSERT(it != m_HeapAllocationsByCaptureAddress.end());
   return it->second;
 }
 
-void HeapAllocationService::destroyHeapAllocation(unsigned heapKey) {
-  auto itCaptureAddress = heapAllocationsCaptureAddressByHeapKey_.find(heapKey);
-  if (itCaptureAddress == heapAllocationsCaptureAddressByHeapKey_.end()) {
+void HeapAllocationService::DestroyHeapAllocation(unsigned heapKey) {
+  auto itCaptureAddress = m_HeapAllocationsCaptureAddressByHeapKey.find(heapKey);
+  if (itCaptureAddress == m_HeapAllocationsCaptureAddressByHeapKey.end()) {
     return;
   }
 
-  auto itReplayAddress = heapAllocationsByCaptureAddress_.find(itCaptureAddress->second);
-  GITS_ASSERT(itReplayAddress != heapAllocationsByCaptureAddress_.end());
+  auto itReplayAddress = m_HeapAllocationsByCaptureAddress.find(itCaptureAddress->second);
+  GITS_ASSERT(itReplayAddress != m_HeapAllocationsByCaptureAddress.end());
 
   VirtualFree(itReplayAddress->second, 0, MEM_RELEASE);
-  heapAllocationsByReplayAddress_.erase(itReplayAddress->second);
-  heapAllocationsByCaptureAddress_.erase(itCaptureAddress->second);
+  m_HeapAllocationsByReplayAddress.erase(itReplayAddress->second);
+  m_HeapAllocationsByCaptureAddress.erase(itCaptureAddress->second);
 }
 
 } // namespace DirectX

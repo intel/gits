@@ -46,6 +46,14 @@ The code style for GITS is based on the following rules:
 | Clang-Format              |                   | \.clang-format                               |
 | Clang-Tidy                |                   | \.clang-tidy                                 |
 
+#### DirectX recorded `Command` types
+
+Types derived from `gits::DirectX::Command` (generated in `DirectX/common/.../commandsAuto.h` and custom commands in `commandsCustom.h`) expose API parameters as **`m_`-prefixed PascalCase** data members. In hand-written code, use those names—for example `command.m_pDevice`, `command.m_Object`, `createWindowCommand.m_width`—not the legacy bare parameter spellings (`command.pDevice`, `command.Object`, `createWindowCommand.width`).
+
+The base `Command` class (`DirectX/common/layer_interface/src/include/command.h`) uses **PascalCase without `m_`** for public stream metadata (`Key`, `ThreadId`, `Skip`) and `GetId()` for the command id (the id itself remains a private `m_Id` member).
+
+This applies wherever those command types are filled in or read (for example subcapture state restore in `DirectX/layers/subcapture/stateTrackingService.cpp`).
+
 Newly contributed code to a module should adhere to the style of the existing code. However there's an ongoing effort to update the code style of old modules.
 New modules/projects should always use the code style.
 

@@ -35,36 +35,36 @@ SubcaptureRecorder::SubcaptureRecorder() {
     path += "_executions_" + commandListExecutions;
     const_cast<std::filesystem::path&>(config.common.player.subcapturePath) = path;
     subcapturePath = path;
-    commandListSubcapture_ = true;
+    m_CommandListSubcapture = true;
   }
 
-  recorder_.reset(
+  m_Recorder.reset(
       new stream::StreamWriter(subcapturePath, config.directx.features.subcapture.compressionType));
 
-  copyAuxiliaryFiles();
+  CopyAuxiliaryFiles();
 }
 
 SubcaptureRecorder::~SubcaptureRecorder() {
   try {
-    finishRecording();
+    FinishRecording();
   } catch (...) {
     topmost_exception_handler("SubcaptureRecorder::~SubcaptureRecorder");
   }
 }
 
-void SubcaptureRecorder::record(const stream::CommandSerializer& commandSerializer) {
-  recorder_->Record(commandSerializer);
+void SubcaptureRecorder::Record(const stream::CommandSerializer& commandSerializer) {
+  m_Recorder->Record(commandSerializer);
 }
 
-void SubcaptureRecorder::finishRecording() {
-  if (!finished_) {
-    recorder_->Close();
+void SubcaptureRecorder::FinishRecording() {
+  if (!m_Finished) {
+    m_Recorder->Close();
     LOG_INFO << "Subcapture recording finished";
-    finished_ = true;
+    m_Finished = true;
   }
 }
 
-void SubcaptureRecorder::copyAuxiliaryFiles() {
+void SubcaptureRecorder::CopyAuxiliaryFiles() {
   std::filesystem::path streamDir = Configurator::Get().common.player.streamDir;
   std::filesystem::path subcapturePath = Configurator::Get().common.player.subcapturePath;
   if (std::filesystem::exists(streamDir / "raytracingArraysOfPointers.dat")) {

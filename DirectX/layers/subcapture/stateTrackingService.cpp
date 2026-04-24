@@ -21,329 +21,329 @@ namespace gits {
 namespace DirectX {
 
 StateTrackingService::~StateTrackingService() {
-  for (auto& it : statesByKey_) {
+  for (auto& it : m_StatesByKey) {
     delete it.second;
   }
 }
 
-void StateTrackingService::restoreState() {
+void StateTrackingService::RestoreState() {
   auto recordStatus = [this](MarkerUInt64Command::Value state) {
-    recorder_.record(MarkerUInt64Serializer(MarkerUInt64Command(state)));
+    m_Recorder.Record(MarkerUInt64Serializer(MarkerUInt64Command(state)));
   };
 
-  recorder_.record(StateRestoreBeginSerializer(StateRestoreBeginCommand()));
-  restoreDllContainers();
+  m_Recorder.Record(StateRestoreBeginSerializer(StateRestoreBeginCommand()));
+  RestoreDllContainers();
   recordStatus(MarkerUInt64Command::Value::STATE_RESTORE_OBJECTS_BEGIN);
-  for (auto& it : statesByKey_) {
-    if (analyzerResults_.restoreObject(it.first)) {
-      restoreState(it.second);
+  for (auto& it : m_StatesByKey) {
+    if (m_AnalyzerResults.RestoreObject(it.first)) {
+      RestoreState(it.second);
     }
   }
-  restoreStateObjectProperties();
+  RestoreStateObjectProperties();
   recordStatus(MarkerUInt64Command::Value::STATE_RESTORE_OBJECTS_END);
-  nvapiGlobalStateService_.restureInitializeCount();
-  xessStateService_.restoreState();
-  xellStateService_.restoreState();
-  xefgStateService_.restoreState();
-  descriptorService_.restoreState();
+  m_NvapiGlobalStateService.RestoreInitializeCount();
+  m_XessStateService.RestoreState();
+  m_XellStateService.RestoreState();
+  m_XefgStateService.RestoreState();
+  m_DescriptorService.RestoreState();
   recordStatus(MarkerUInt64Command::Value::STATE_RESTORE_RTAS_BEGIN);
-  accelerationStructuresSerializeService_.restoreAccelerationStructures();
-  accelerationStructuresBuildService_.restoreAccelerationStructures();
+  m_AccelerationStructuresSerializeService.RestoreAccelerationStructures();
+  m_AccelerationStructuresBuildService.RestoreAccelerationStructures();
   recordStatus(MarkerUInt64Command::Value::STATE_RESTORE_RTAS_END);
   recordStatus(MarkerUInt64Command::Value::STATE_RESTORE_RESOURCES_BEGIN);
-  restoreResources();
+  RestoreResources();
   recordStatus(MarkerUInt64Command::Value::STATE_RESTORE_RESOURCES_END);
-  mapStateService_.restoreMapState();
-  residencyService_.restoreResidency();
-  commandListService_.restoreCommandLists();
-  commandQueueService_.restoreCommandQueues();
-  restoreReferenceCount();
-  nvapiGlobalStateService_.finalizeRestore();
-  swapChainService_.restoreBackBufferSequence(recorder_.commandListSubcapture());
-  recorder_.record(StateRestoreEndSerializer(StateRestoreEndCommand()));
-  if (!recorder_.commandListSubcapture()) {
+  m_MapStateService.RestoreMapState();
+  m_ResidencyService.RestoreResidency();
+  m_CommandListService.RestoreCommandLists();
+  m_CommandQueueService.RestoreCommandQueues();
+  RestoreReferenceCount();
+  m_NvapiGlobalStateService.FinalizeRestore();
+  m_SwapChainService.RestoreBackBufferSequence(m_Recorder.CommandListSubcapture());
+  m_Recorder.Record(StateRestoreEndSerializer(StateRestoreEndCommand()));
+  if (!m_Recorder.CommandListSubcapture()) {
     // one Present after ID_INIT_END to enable PIX first frame capture in gits interactive mode
-    swapChainService_.recordSwapChainPresent();
+    m_SwapChainService.RecordSwapChainPresent();
   }
 }
 
-void StateTrackingService::keepState(unsigned objectKey) {
-  auto it = statesByKey_.find(objectKey);
-  GITS_ASSERT(it != statesByKey_.end());
+void StateTrackingService::KeepState(unsigned objectKey) {
+  auto it = m_StatesByKey.find(objectKey);
+  GITS_ASSERT(it != m_StatesByKey.end());
   ObjectState* state = it->second;
-  state->keepDestroyed = true;
-  if (state->creationCommand.get() &&
-      (state->creationCommand->getId() == CommandId::ID_ID3D12DEVICE_CREATEPLACEDRESOURCE ||
-       state->creationCommand->getId() == CommandId::ID_ID3D12DEVICE8_CREATEPLACEDRESOURCE1 ||
-       state->creationCommand->getId() == CommandId::ID_ID3D12DEVICE10_CREATEPLACEDRESOURCE2)) {
+  state->KeepDestroyed = true;
+  if (state->CreationCommand.get() &&
+      (state->CreationCommand->GetId() == CommandId::ID_ID3D12DEVICE_CREATEPLACEDRESOURCE ||
+       state->CreationCommand->GetId() == CommandId::ID_ID3D12DEVICE8_CREATEPLACEDRESOURCE1 ||
+       state->CreationCommand->GetId() == CommandId::ID_ID3D12DEVICE10_CREATEPLACEDRESOURCE2)) {
     ResourceState* resourceState = static_cast<ResourceState*>(state);
-    keepState(resourceState->heapKey);
+    KeepState(resourceState->HeapKey);
   }
-  if (state->parentKey) {
-    keepState(state->parentKey);
+  if (state->ParentKey) {
+    KeepState(state->ParentKey);
   }
 }
 
-void StateTrackingService::restoreState(unsigned key) {
-  auto it = statesByKey_.find(key);
-  GITS_ASSERT(it != statesByKey_.end());
-  restoreState(it->second);
+void StateTrackingService::RestoreState(unsigned key) {
+  auto it = m_StatesByKey.find(key);
+  GITS_ASSERT(it != m_StatesByKey.end());
+  RestoreState(it->second);
 }
 
-bool StateTrackingService::stateRestored(unsigned key) {
-  auto it = statesByKey_.find(key);
-  if (it != statesByKey_.end()) {
-    return it->second->restored;
+bool StateTrackingService::StateRestored(unsigned key) {
+  auto it = m_StatesByKey.find(key);
+  if (it != m_StatesByKey.end()) {
+    return it->second->Restored;
   } else {
-    return resourceForCBVRestoreService_.resourceRestored(key);
+    return m_ResourceForCBVRestoreService.ResourceRestored(key);
   }
 }
 
-void StateTrackingService::addBackBuffer(unsigned buffer,
-                                         unsigned resourceKey,
+void StateTrackingService::AddBackBuffer(unsigned buffer,
+                                         unsigned ResourceKey,
                                          ID3D12Resource* resource) {
-  swapChainService_.addBackBuffer(buffer, resourceKey, resource);
+  m_SwapChainService.AddBackBuffer(buffer, ResourceKey, resource);
 }
 
-void StateTrackingService::setXefgSwapChainFlag() {
-  isXefgSwapChain_ = true;
+void StateTrackingService::SetXefgSwapChainFlag() {
+  m_IsXefgSwapChain = true;
 }
 
-void StateTrackingService::restoreState(ObjectState* state) {
-  if (state->restored) {
+void StateTrackingService::RestoreState(ObjectState* state) {
+  if (state->Restored) {
     return;
   }
-  state->restored = true;
-  if (state->parentKey) {
-    ObjectState* parentState = getState(state->parentKey);
+  state->Restored = true;
+  if (state->ParentKey) {
+    ObjectState* parentState = GetState(state->ParentKey);
     GITS_ASSERT(parentState);
-    restoreState(parentState);
+    RestoreState(parentState);
   }
-  switch (state->creationCommand->getId()) {
+  switch (state->CreationCommand->GetId()) {
   case CommandId::ID_IDXGIFACTORY_CREATESWAPCHAIN:
   case CommandId::ID_IDXGIFACTORY2_CREATESWAPCHAINFORHWND:
   case CommandId::ID_XEFGSWAPCHAIND3D12GETSWAPCHAINPTR:
-    restoreDXGISwapChain(state);
+    RestoreDXGISwapChain(state);
     break;
   case CommandId::ID_IDXGIFACTORY_ENUMADAPTERS:
   case CommandId::ID_IDXGIFACTORY1_ENUMADAPTERS1:
   case CommandId::ID_IDXGIFACTORY6_ENUMADAPTERBYGPUPREFERENCE:
   case CommandId::ID_IDXGIFACTORY4_ENUMADAPTERBYLUID:
-    restoreDXGIAdapter(state);
+    RestoreDXGIAdapter(state);
     break;
   case CommandId::ID_D3D12CREATEDEVICE:
   case CommandId::ID_ID3D12DEVICEFACTORY_CREATEDEVICE:
-    restoreD3D12Device(state);
+    RestoreD3D12Device(state);
     break;
   case CommandId::ID_IUNKNOWN_QUERYINTERFACE:
-    restoreQueryInterface(state);
+    RestoreQueryInterface(state);
     break;
   case CommandId::ID_ID3D12DEVICE_CREATEFENCE:
-    restoreD3D12Fence(state);
+    RestoreD3D12Fence(state);
     break;
   case CommandId::ID_ID3D12DEVICE_CREATEDESCRIPTORHEAP:
-    restoreD3D12DescriptorHeap(state);
+    RestoreD3D12DescriptorHeap(state);
     break;
   case CommandId::ID_ID3D12DEVICE_CREATECOMMANDLIST:
-    restoreD3D12CommandList(state);
+    RestoreD3D12CommandList(state);
     break;
   case CommandId::ID_ID3D12DEVICE_CREATEHEAP:
   case CommandId::ID_ID3D12DEVICE4_CREATEHEAP1:
   case CommandId::INTC_D3D12_CREATEHEAP:
-    restoreD3D12Heap(state);
+    RestoreD3D12Heap(state);
     break;
   case CommandId::ID_CREATE_HEAP_ALLOCATION:
-    restoreD3D12HeapFromAddress(state);
+    RestoreD3D12HeapFromAddress(state);
     break;
   case CommandId::ID_ID3D12DEVICE_CREATECOMMITTEDRESOURCE:
   case CommandId::ID_ID3D12DEVICE4_CREATECOMMITTEDRESOURCE1:
   case CommandId::ID_ID3D12DEVICE8_CREATECOMMITTEDRESOURCE2:
   case CommandId::ID_ID3D12DEVICE10_CREATECOMMITTEDRESOURCE3:
   case CommandId::INTC_D3D12_CREATECOMMITTEDRESOURCE:
-    restoreD3D12CommittedResource(state);
+    RestoreD3D12CommittedResource(state);
     break;
   case CommandId::ID_ID3D12DEVICE_CREATEPLACEDRESOURCE:
   case CommandId::ID_ID3D12DEVICE8_CREATEPLACEDRESOURCE1:
   case CommandId::ID_ID3D12DEVICE10_CREATEPLACEDRESOURCE2:
   case CommandId::INTC_D3D12_CREATEPLACEDRESOURCE:
-    restoreD3D12PlacedResource(state);
+    RestoreD3D12PlacedResource(state);
     break;
   case CommandId::ID_ID3D12DEVICE_CREATERESERVEDRESOURCE:
   case CommandId::ID_ID3D12DEVICE4_CREATERESERVEDRESOURCE1:
   case CommandId::ID_ID3D12DEVICE10_CREATERESERVEDRESOURCE2:
   case CommandId::INTC_D3D12_CREATERESERVEDRESOURCE:
-    restoreD3D12ReservedResource(state);
+    RestoreD3D12ReservedResource(state);
     break;
   case CommandId::INTC_D3D12_CREATEDEVICEEXTENSIONCONTEXT:
   case CommandId::INTC_D3D12_CREATEDEVICEEXTENSIONCONTEXT1:
-    restoreD3D12INTCDeviceExtensionContext(state);
+    RestoreD3D12INTCDeviceExtensionContext(state);
     break;
   case CommandId::ID_ID3D12DEVICE5_CREATESTATEOBJECT:
   case CommandId::ID_ID3D12DEVICE7_ADDTOSTATEOBJECT:
-    restoreD3D12StateObject(state);
+    RestoreD3D12StateObject(state);
     break;
   case CommandId::ID_ID3D12DEVICE_CREATEGRAPHICSPIPELINESTATE:
   case CommandId::ID_ID3D12DEVICE_CREATECOMPUTEPIPELINESTATE:
   case CommandId::ID_ID3D12DEVICE2_CREATEPIPELINESTATE:
-    restoreD3D12PipelineStateObject(state);
+    RestoreD3D12PipelineStateObject(state);
     break;
   default:
-    recorder_.record(*createCommandSerializer(state->creationCommand.get()));
+    m_Recorder.Record(*createCommandSerializer(state->CreationCommand.get()));
   }
 
-  if (!state->name.empty()) {
+  if (!state->Name.empty()) {
     ID3D12ObjectSetNameCommand c;
-    c.key = getUniqueCommandKey();
-    c.object_.key = state->key;
-    c.Name_.value = state->name.data();
-    recorder_.record(ID3D12ObjectSetNameSerializer(c));
+    c.Key = GetUniqueCommandKey();
+    c.m_Object.Key = state->Key;
+    c.m_Name.Value = state->Name.data();
+    m_Recorder.Record(ID3D12ObjectSetNameSerializer(c));
   }
 }
 
-void StateTrackingService::storeState(ObjectState* state) {
-  auto it = statesByKey_.find(state->key);
-  if (it == statesByKey_.end()) {
-    statesByKey_[state->key] = state;
+void StateTrackingService::StoreState(ObjectState* state) {
+  auto it = m_StatesByKey.find(state->Key);
+  if (it == m_StatesByKey.end()) {
+    m_StatesByKey[state->Key] = state;
   } else {
     // if the same objects in capture are not the same in replay
-    it->second->object = state->object;
+    it->second->Object = state->Object;
     delete state;
     state = it->second;
   }
-  if (!state->refCount) {
-    state->refCount = 1;
+  if (!state->RefCount) {
+    state->RefCount = 1;
   }
 }
 
-void StateTrackingService::removeState(unsigned key) {
-  auto it = statesByKey_.find(key);
-  if (it != statesByKey_.end() && !analyzerResults_.restoreObject(key)) {
+void StateTrackingService::RemoveState(unsigned key) {
+  auto it = m_StatesByKey.find(key);
+  if (it != m_StatesByKey.end() && !m_AnalyzerResults.RestoreObject(key)) {
     delete it->second;
-    statesByKey_.erase(it);
+    m_StatesByKey.erase(it);
   }
 }
 
-void StateTrackingService::releaseObject(unsigned key, ULONG result) {
-  auto itState = statesByKey_.find(key);
-  if (itState == statesByKey_.end()) {
+void StateTrackingService::ReleaseObject(unsigned key, ULONG result) {
+  auto itState = m_StatesByKey.find(key);
+  if (itState == m_StatesByKey.end()) {
     return;
   }
 
-  itState->second->refCount = result;
+  itState->second->RefCount = result;
 
   if (result != 0) {
     return;
   }
 
-  itState->second->destroyed = true;
+  itState->second->Destroyed = true;
 
-  if (itState->second->creationCommand->getId() ==
+  if (itState->second->CreationCommand->GetId() ==
       CommandId::ID_ID3D12DEVICE1_CREATEPIPELINELIBRARY) {
     return;
   }
 
-  unsigned linkedLifetimeKey = itState->second->linkedLifetimeKey;
+  unsigned linkedLifetimeKey = itState->second->LinkedLifetimeKey;
   if (linkedLifetimeKey) {
-    auto itLinkedLifetimeState = statesByKey_.find(linkedLifetimeKey);
-    if (itLinkedLifetimeState != statesByKey_.end()) {
-      itLinkedLifetimeState->second->object->AddRef();
-      ULONG refCount = itLinkedLifetimeState->second->object->Release();
-      if (refCount == 1 && !itLinkedLifetimeState->second->destroyed) {
-        releaseObject(itLinkedLifetimeState->first, 0);
+    auto itLinkedLifetimeState = m_StatesByKey.find(linkedLifetimeKey);
+    if (itLinkedLifetimeState != m_StatesByKey.end()) {
+      itLinkedLifetimeState->second->Object->AddRef();
+      ULONG refCount = itLinkedLifetimeState->second->Object->Release();
+      if (refCount == 1 && !itLinkedLifetimeState->second->Destroyed) {
+        ReleaseObject(itLinkedLifetimeState->first, 0);
       }
     }
   }
 
-  for (unsigned childKey : itState->second->childrenKeys) {
+  for (unsigned childKey : itState->second->ChildrenKeys) {
     if (childKey) {
-      auto itChildState = statesByKey_.find(childKey);
-      if (itChildState != statesByKey_.end() && !itChildState->second->destroyed) {
-        releaseObject(itChildState->first, 0);
+      auto itChildState = m_StatesByKey.find(childKey);
+      if (itChildState != m_StatesByKey.end() && !itChildState->second->Destroyed) {
+        ReleaseObject(itChildState->first, 0);
       }
     }
   }
 
-  if (!itState->second->keepDestroyed && !analyzerResults_.restoreObject(key)) {
+  if (!itState->second->KeepDestroyed && !m_AnalyzerResults.RestoreObject(key)) {
     delete itState->second;
-    statesByKey_.erase(itState);
+    m_StatesByKey.erase(itState);
   }
 }
 
-void StateTrackingService::setReferenceCount(unsigned objectKey, ULONG referenceCount) {
-  auto itState = statesByKey_.find(objectKey);
-  if (itState == statesByKey_.end()) {
+void StateTrackingService::SetReferenceCount(unsigned objectKey, ULONG referenceCount) {
+  auto itState = m_StatesByKey.find(objectKey);
+  if (itState == m_StatesByKey.end()) {
     return;
   }
-  itState->second->refCount = referenceCount;
+  itState->second->RefCount = referenceCount;
 }
 
-ObjectState* StateTrackingService::getState(unsigned key) {
-  auto it = statesByKey_.find(key);
-  if (it == statesByKey_.end()) {
+ObjectState* StateTrackingService::GetState(unsigned key) {
+  auto it = m_StatesByKey.find(key);
+  if (it == m_StatesByKey.end()) {
     return nullptr;
   }
   return it->second;
 }
 
-void StateTrackingService::restoreReferenceCount() {
-  for (auto& it : statesByKey_) {
+void StateTrackingService::RestoreReferenceCount() {
+  for (auto& it : m_StatesByKey) {
     ObjectState* state = it.second;
-    if (!state->object || !state->restored) {
+    if (!state->Object || !state->Restored) {
       continue;
     }
-    if (it.second->destroyed) {
+    if (it.second->Destroyed) {
       IUnknownReleaseCommand c;
-      c.key = getUniqueCommandKey();
-      c.object_.key = it.second->key;
-      recorder_.record(IUnknownReleaseSerializer(c));
+      c.Key = GetUniqueCommandKey();
+      c.m_Object.Key = it.second->Key;
+      m_Recorder.Record(IUnknownReleaseSerializer(c));
       continue;
     }
-    if (state->creationCommand->getId() == CommandId::ID_IDXGIFACTORY2_CREATESWAPCHAINFORHWND &&
-        isXefgSwapChain_) {
+    if (state->CreationCommand->GetId() == CommandId::ID_IDXGIFACTORY2_CREATESWAPCHAINFORHWND &&
+        m_IsXefgSwapChain) {
       continue;
     }
-    if (state->creationCommand->getId() == CommandId::ID_IDXGIFACTORY2_CREATESWAPCHAINFORHWND &&
-        isXefgSwapChain_) {
+    if (state->CreationCommand->GetId() == CommandId::ID_IDXGIFACTORY2_CREATESWAPCHAINFORHWND &&
+        m_IsXefgSwapChain) {
       continue;
     }
 
     int refCount = 0;
-    if (state->refCount <= 0 ||
-        state->creationCommand->getId() == CommandId::ID_IDXGIFACTORY_ENUMADAPTERS ||
-        state->creationCommand->getId() == CommandId::ID_IDXGIFACTORY1_ENUMADAPTERS1 ||
-        state->creationCommand->getId() == CommandId::ID_IDXGIFACTORY6_ENUMADAPTERBYGPUPREFERENCE ||
-        state->creationCommand->getId() == CommandId::ID_IDXGIFACTORY4_ENUMADAPTERBYLUID ||
-        state->creationCommand->getId() == CommandId::ID_CREATEDXGIFACTORY ||
-        state->creationCommand->getId() == CommandId::ID_CREATEDXGIFACTORY1 ||
-        state->creationCommand->getId() == CommandId::ID_CREATEDXGIFACTORY2 ||
-        state->creationCommand->getId() == CommandId::ID_IDXGIADAPTER_ENUMOUTPUTS ||
-        state->creationCommand->getId() == CommandId::ID_ID3D12DEVICE_CREATEROOTSIGNATURE ||
-        state->creationCommand->getId() == CommandId::ID_ID3D12DEVICE1_CREATEPIPELINELIBRARY ||
-        state->creationCommand->getId() ==
+    if (state->RefCount <= 0 ||
+        state->CreationCommand->GetId() == CommandId::ID_IDXGIFACTORY_ENUMADAPTERS ||
+        state->CreationCommand->GetId() == CommandId::ID_IDXGIFACTORY1_ENUMADAPTERS1 ||
+        state->CreationCommand->GetId() == CommandId::ID_IDXGIFACTORY6_ENUMADAPTERBYGPUPREFERENCE ||
+        state->CreationCommand->GetId() == CommandId::ID_IDXGIFACTORY4_ENUMADAPTERBYLUID ||
+        state->CreationCommand->GetId() == CommandId::ID_CREATEDXGIFACTORY ||
+        state->CreationCommand->GetId() == CommandId::ID_CREATEDXGIFACTORY1 ||
+        state->CreationCommand->GetId() == CommandId::ID_CREATEDXGIFACTORY2 ||
+        state->CreationCommand->GetId() == CommandId::ID_IDXGIADAPTER_ENUMOUTPUTS ||
+        state->CreationCommand->GetId() == CommandId::ID_ID3D12DEVICE_CREATEROOTSIGNATURE ||
+        state->CreationCommand->GetId() == CommandId::ID_ID3D12DEVICE1_CREATEPIPELINELIBRARY ||
+        state->CreationCommand->GetId() ==
             CommandId::ID_ID3D12PIPELINELIBRARY_LOADGRAPHICSPIPELINE ||
-        state->creationCommand->getId() ==
+        state->CreationCommand->GetId() ==
             CommandId::ID_ID3D12PIPELINELIBRARY_LOADCOMPUTEPIPELINE ||
-        state->creationCommand->getId() == CommandId::ID_ID3D12PIPELINELIBRARY1_LOADPIPELINE) {
-      refCount = state->refCount;
-    } else if (state->creationCommand->getId() == CommandId::ID_IDXGISWAPCHAIN_GETBUFFER) {
+        state->CreationCommand->GetId() == CommandId::ID_ID3D12PIPELINELIBRARY1_LOADPIPELINE) {
+      refCount = state->RefCount;
+    } else if (state->CreationCommand->GetId() == CommandId::ID_IDXGISWAPCHAIN_GETBUFFER) {
       refCount = std::max(
-          state->refCount - static_cast<int>(swapChainService_.getBackBuffersCount()) + 1, 1);
+          state->RefCount - static_cast<int>(m_SwapChainService.GetBackBuffersCount()) + 1, 1);
     } else {
-      state->object->AddRef();
-      refCount = state->object->Release();
+      state->Object->AddRef();
+      refCount = state->Object->Release();
     }
 
     for (int i = 1; i < refCount; ++i) {
       IUnknownAddRefCommand c;
-      c.key = getUniqueCommandKey();
-      c.object_.key = state->key;
-      recorder_.record(IUnknownAddRefSerializer(c));
+      c.Key = GetUniqueCommandKey();
+      c.m_Object.Key = state->Key;
+      m_Recorder.Record(IUnknownAddRefSerializer(c));
     }
   }
 }
 
-void StateTrackingService::restoreResources() {
-  std::vector<unsigned> orderedResources = resourceUsageTrackingService_.getOrderedResources();
+void StateTrackingService::RestoreResources() {
+  std::vector<unsigned> orderedResources = m_ResourceUsageTrackingService.GetOrderedResources();
 
   enum ResourceBatchType {
     ReservedResourceBuffer,
@@ -357,14 +357,14 @@ void StateTrackingService::restoreResources() {
   // prepare batches
   {
     ResourceBatchType prevType{};
-    for (unsigned resourceKey : orderedResources) {
-      ResourceState* state = static_cast<ResourceState*>(getState(resourceKey));
+    for (unsigned ResourceKey : orderedResources) {
+      ResourceState* state = static_cast<ResourceState*>(GetState(ResourceKey));
       if (!state) {
         continue;
       }
 
       ResourceBatchType type{};
-      CommandId commandId = state->creationCommand->getId();
+      CommandId commandId = state->CreationCommand->GetId();
       bool isReservedResource = commandId == CommandId::ID_ID3D12DEVICE_CREATERESERVEDRESOURCE ||
                                 commandId == CommandId::ID_ID3D12DEVICE4_CREATERESERVEDRESOURCE1 ||
                                 commandId == CommandId::ID_ID3D12DEVICE10_CREATERESERVEDRESOURCE2 ||
@@ -372,7 +372,7 @@ void StateTrackingService::restoreResources() {
 
       if (isReservedResource) {
         type = ReservedResourceTexture;
-        if (state->dimension == D3D12_RESOURCE_DIMENSION_BUFFER) {
+        if (state->Dimension == D3D12_RESOURCE_DIMENSION_BUFFER) {
           type = ReservedResourceBuffer;
         }
       } else {
@@ -380,11 +380,11 @@ void StateTrackingService::restoreResources() {
       }
 
       if (type == ReservedResourceBuffer) {
-        reservedResourceBuffers.push_back(resourceKey);
+        reservedResourceBuffers.push_back(ResourceKey);
       } else if (batches.empty() || type != prevType) {
-        batches.push_back({type, {resourceKey}});
+        batches.push_back({type, {ResourceKey}});
       } else {
-        batches.back().second.push_back(resourceKey);
+        batches.back().second.push_back(ResourceKey);
       }
 
       prevType = type;
@@ -394,632 +394,647 @@ void StateTrackingService::restoreResources() {
   // restore batches
   {
     // restore reserved resource buffers first
-    reservedResourcesService_.restoreContent(reservedResourceBuffers);
+    m_ReservedResourcesService.RestoreContent(reservedResourceBuffers);
 
     // restore batches in the order of usage
-    for (const auto& [type, resourceKeys] : batches) {
+    for (const auto& [type, ResourceKeys] : batches) {
       if (type == CommittedOrPlacedResource) {
-        resourceContentRestore_.restoreContent(resourceKeys);
+        m_ResourceContentRestore.RestoreContent(ResourceKeys);
       } else if (type == ReservedResourceTexture) {
-        reservedResourcesService_.restoreContent(resourceKeys);
+        m_ReservedResourcesService.RestoreContent(ResourceKeys);
       }
     }
   }
 
-  reservedResourcesService_.cleanupRestore();
-  resourceContentRestore_.cleanupRestoreUnmappableResources();
+  m_ReservedResourcesService.CleanupRestore();
+  m_ResourceContentRestore.CleanupRestoreUnmappableResources();
 
   // restore states
-  resourceStateTrackingService_.restoreResourceStates(orderedResources);
+  m_ResourceStateTrackingService.RestoreResourceStates(orderedResources);
 }
 
-D3D12_RESOURCE_STATES StateTrackingService::getResourceInitialState(
+D3D12_RESOURCE_STATES StateTrackingService::GetResourceInitialState(
     ResourceState& state, D3D12_RESOURCE_DIMENSION dimension) {
   if (dimension == D3D12_RESOURCE_DIMENSION_BUFFER) {
     return D3D12_RESOURCE_STATE_COMMON;
   }
-  if (state.isMappable || state.isBarrierRestricted) {
-    return resourceStateTrackingService_.getResourceState(state.key);
+  if (state.IsMappable || state.BarrierRestricted) {
+    return m_ResourceStateTrackingService.GetResourceState(state.Key);
   }
   return D3D12_RESOURCE_STATE_COPY_DEST;
 }
 
-D3D12_BARRIER_LAYOUT StateTrackingService::getResourceInitialLayout(
+D3D12_BARRIER_LAYOUT StateTrackingService::GetResourceInitialLayout(
     ResourceState& state, D3D12_RESOURCE_DIMENSION dimension, D3D12_RESOURCE_FLAGS flags) {
   if (dimension == D3D12_RESOURCE_DIMENSION_BUFFER) {
     return D3D12_BARRIER_LAYOUT_UNDEFINED;
   } else if (flags & D3D12_RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS) {
     return D3D12_BARRIER_LAYOUT_COMMON;
   }
-  if (state.isMappable) {
-    return resourceStateTrackingService_.getResourceLayout(state.key);
+  if (state.IsMappable) {
+    return m_ResourceStateTrackingService.GetResourceLayout(state.Key);
   }
   return D3D12_BARRIER_LAYOUT_COPY_DEST;
 }
 
-void StateTrackingService::restoreResidencyPriority(unsigned deviceKey,
+void StateTrackingService::RestoreResidencyPriority(unsigned DeviceKey,
                                                     unsigned objectKey,
                                                     D3D12_RESIDENCY_PRIORITY residencyPriority) {
   if (!residencyPriority) {
     return;
   }
   ID3D12Device1SetResidencyPriorityCommand c;
-  c.key = getUniqueCommandKey();
-  c.object_.key = deviceKey;
-  c.NumObjects_.value = 1;
+  c.Key = GetUniqueCommandKey();
+  c.m_Object.Key = DeviceKey;
+  c.m_NumObjects.Value = 1;
   ID3D12Pageable* fakePtr = reinterpret_cast<ID3D12Pageable*>(1);
-  c.ppObjects_.value = &fakePtr;
-  c.ppObjects_.size = 1;
-  c.ppObjects_.keys.push_back(objectKey);
-  c.pPriorities_.size = 1;
-  c.pPriorities_.value = &residencyPriority;
-  recorder_.record(ID3D12Device1SetResidencyPrioritySerializer(c));
+  c.m_ppObjects.Value = &fakePtr;
+  c.m_ppObjects.Size = 1;
+  c.m_ppObjects.Keys.push_back(objectKey);
+  c.m_pPriorities.Size = 1;
+  c.m_pPriorities.Value = &residencyPriority;
+  m_Recorder.Record(ID3D12Device1SetResidencyPrioritySerializer(c));
 }
 
-void StateTrackingService::restoreDXGISwapChain(ObjectState* state) {
-  if (state->creationCommand->getId() == CommandId::ID_IDXGIFACTORY_CREATESWAPCHAIN) {
-    auto* command = static_cast<IDXGIFactoryCreateSwapChainCommand*>(state->creationCommand.get());
-    restoreState(command->pDevice_.key);
-    int width = command->pDesc_.value->BufferDesc.Width;
-    int height = command->pDesc_.value->BufferDesc.Height;
+void StateTrackingService::RestoreDXGISwapChain(ObjectState* state) {
+  if (state->CreationCommand->GetId() == CommandId::ID_IDXGIFACTORY_CREATESWAPCHAIN) {
+    auto* Command = static_cast<IDXGIFactoryCreateSwapChainCommand*>(state->CreationCommand.get());
+    RestoreState(Command->m_pDevice.Key);
+    int width = Command->m_pDesc.Value->BufferDesc.Width;
+    int height = Command->m_pDesc.Value->BufferDesc.Height;
     if (!width || !height) {
       DXGI_SWAP_CHAIN_DESC desc{};
-      (*command->ppSwapChain_.value)->GetDesc(&desc);
+      (*Command->m_ppSwapChain.Value)->GetDesc(&desc);
       width = desc.BufferDesc.Width;
       height = desc.BufferDesc.Height;
     }
     CreateWindowMetaCommand createWindowCommand;
-    createWindowCommand.key = getUniqueCommandKey();
-    createWindowCommand.hWnd_.value = command->pDesc_.value->OutputWindow;
-    createWindowCommand.width_.value = width;
-    createWindowCommand.height_.value = height;
-    recorder_.record(CreateWindowMetaSerializer(createWindowCommand));
+    createWindowCommand.Key = GetUniqueCommandKey();
+    createWindowCommand.m_hWnd.Value = Command->m_pDesc.Value->OutputWindow;
+    createWindowCommand.m_width.Value = width;
+    createWindowCommand.m_height.Value = height;
+    m_Recorder.Record(CreateWindowMetaSerializer(createWindowCommand));
 
-    swapChainService_.setSwapChain(
-        command->pDevice_.key, reinterpret_cast<ID3D12CommandQueue*>(command->pDevice_.value),
-        state->key, *command->ppSwapChain_.value, command->pDesc_.value->BufferCount);
-  } else if (state->creationCommand->getId() ==
+    m_SwapChainService.SetSwapChain(
+        Command->m_pDevice.Key, reinterpret_cast<ID3D12CommandQueue*>(Command->m_pDevice.Value),
+        state->Key, *Command->m_ppSwapChain.Value, Command->m_pDesc.Value->BufferCount);
+  } else if (state->CreationCommand->GetId() ==
              CommandId::ID_IDXGIFACTORY2_CREATESWAPCHAINFORHWND) {
-    auto* command =
-        static_cast<IDXGIFactory2CreateSwapChainForHwndCommand*>(state->creationCommand.get());
-    restoreState(command->pDevice_.key);
-    int width = command->pDesc_.value->Width;
-    int height = command->pDesc_.value->Height;
+    auto* Command =
+        static_cast<IDXGIFactory2CreateSwapChainForHwndCommand*>(state->CreationCommand.get());
+    RestoreState(Command->m_pDevice.Key);
+    int width = Command->m_pDesc.Value->Width;
+    int height = Command->m_pDesc.Value->Height;
     if (!width || !height) {
       DXGI_SWAP_CHAIN_DESC1 desc{};
-      (*command->ppSwapChain_.value)->GetDesc1(&desc);
+      (*Command->m_ppSwapChain.Value)->GetDesc1(&desc);
       width = desc.Width;
       height = desc.Height;
     }
     CreateWindowMetaCommand createWindowCommand;
-    createWindowCommand.key = getUniqueCommandKey();
-    createWindowCommand.hWnd_.value = command->hWnd_.value;
-    createWindowCommand.width_.value = width;
-    createWindowCommand.height_.value = height;
-    recorder_.record(CreateWindowMetaSerializer(createWindowCommand));
+    createWindowCommand.Key = GetUniqueCommandKey();
+    createWindowCommand.m_hWnd.Value = Command->m_hWnd.Value;
+    createWindowCommand.m_width.Value = width;
+    createWindowCommand.m_height.Value = height;
+    m_Recorder.Record(CreateWindowMetaSerializer(createWindowCommand));
 
-    if (!isXefgSwapChain_) {
-      swapChainService_.setSwapChain(
-          command->pDevice_.key, reinterpret_cast<ID3D12CommandQueue*>(command->pDevice_.value),
-          state->key, *command->ppSwapChain_.value, command->pDesc_.value->BufferCount);
+    if (!m_IsXefgSwapChain) {
+      m_SwapChainService.SetSwapChain(
+          Command->m_pDevice.Key, reinterpret_cast<ID3D12CommandQueue*>(Command->m_pDevice.Value),
+          state->Key, *Command->m_ppSwapChain.Value, Command->m_pDesc.Value->BufferCount);
     }
-  } else if (state->creationCommand->getId() == CommandId::ID_XEFGSWAPCHAIND3D12GETSWAPCHAINPTR) {
-    auto* command =
-        static_cast<xefgSwapChainD3D12GetSwapChainPtrCommand*>(state->creationCommand.get());
-    auto contextKey = command->hSwapChain_.key;
-    xellStateService_.restoreState();
-    xefgStateService_.restoreState();
-    auto xefgContextState = xefgStateService_.getContextState(contextKey);
+  } else if (state->CreationCommand->GetId() == CommandId::ID_XEFGSWAPCHAIND3D12GETSWAPCHAINPTR) {
+    auto* Command =
+        static_cast<xefgSwapChainD3D12GetSwapChainPtrCommand*>(state->CreationCommand.get());
+    auto contextKey = Command->m_hSwapChain.Key;
+    m_XellStateService.RestoreState();
+    m_XefgStateService.RestoreState();
+    auto xefgContextState = m_XefgStateService.GetContextState(contextKey);
     ID3D12CommandQueue* cmdQueue{};
-    if (xefgContextState->initFromSwapChainParams.has_value()) {
-      auto& initParams = xefgContextState->initFromSwapChainParams.value();
-      cmdQueue = initParams.cmdQueue;
-    } else if (xefgContextState->initFromSwapChainDescParams.has_value()) {
-      auto& initParams = xefgContextState->initFromSwapChainDescParams.value();
-      cmdQueue = initParams.cmdQueue;
+    if (xefgContextState->InitFromSwapChainParams.has_value()) {
+      auto& initParams = xefgContextState->InitFromSwapChainParams.value();
+      cmdQueue = initParams.CmdQueue;
+    } else if (xefgContextState->InitFromSwapChainDescParams.has_value()) {
+      auto& initParams = xefgContextState->InitFromSwapChainDescParams.value();
+      cmdQueue = initParams.CmdQueue;
     }
-    auto& swapChainInfo = xefgContextState->swapChain.value();
+    auto& swapChainInfo = xefgContextState->SwapChain.value();
     DXGI_SWAP_CHAIN_DESC desc{};
-    swapChainInfo.swapChain->GetDesc(&desc);
+    swapChainInfo.SwapChain->GetDesc(&desc);
     unsigned bufferCount = desc.BufferCount;
-    swapChainService_.setSwapChain(xefgContextState->deviceKey, cmdQueue,
-                                   swapChainInfo.swapChainKey, swapChainInfo.swapChain,
-                                   bufferCount);
+    m_SwapChainService.SetSwapChain(xefgContextState->DeviceKey, cmdQueue,
+                                    swapChainInfo.SwapChainKey, swapChainInfo.SwapChain,
+                                    bufferCount);
     return;
   }
-  recorder_.record(*createCommandSerializer(state->creationCommand.get()));
+  m_Recorder.Record(*createCommandSerializer(state->CreationCommand.get()));
 }
 
-void StateTrackingService::restoreDXGIAdapter(ObjectState* state) {
-  recorder_.record(*createCommandSerializer(state->creationCommand.get()));
+void StateTrackingService::RestoreDXGIAdapter(ObjectState* state) {
+  m_Recorder.Record(*createCommandSerializer(state->CreationCommand.get()));
 }
 
-void StateTrackingService::restoreD3D12DescriptorHeap(ObjectState* state) {
-  recorder_.record(*createCommandSerializer(state->creationCommand.get()));
+void StateTrackingService::RestoreD3D12DescriptorHeap(ObjectState* state) {
+  m_Recorder.Record(*createCommandSerializer(state->CreationCommand.get()));
 
   D3D12DescriptorHeapState* descriptorHeapState = static_cast<D3D12DescriptorHeapState*>(state);
-  if (descriptorHeapState->gpuDescriptorHandle.ptr) {
+  if (descriptorHeapState->GpuDescriptorHandle.ptr) {
     ID3D12DescriptorHeapGetGPUDescriptorHandleForHeapStartCommand getCommand;
-    getCommand.key = getUniqueCommandKey();
-    getCommand.object_.key = state->key;
-    getCommand.result_.value = descriptorHeapState->gpuDescriptorHandle;
-    recorder_.record(ID3D12DescriptorHeapGetGPUDescriptorHandleForHeapStartSerializer(getCommand));
+    getCommand.Key = GetUniqueCommandKey();
+    getCommand.m_Object.Key = state->Key;
+    getCommand.m_Result.Value = descriptorHeapState->GpuDescriptorHandle;
+    m_Recorder.Record(ID3D12DescriptorHeapGetGPUDescriptorHandleForHeapStartSerializer(getCommand));
   }
 }
 
-void StateTrackingService::restoreD3D12Device(ObjectState* state) {
-  restoreINTCApplicationInfo();
-  restoreD3D12EnableExperimentalFeatures();
-  deviceKey_ = state->key;
-  recorder_.record(*createCommandSerializer(state->creationCommand.get()));
+void StateTrackingService::RestoreD3D12Device(ObjectState* state) {
+  RestoreINTCApplicationInfo();
+  RestoreD3D12EnableExperimentalFeatures();
+  m_DeviceKey = state->Key;
+  m_Recorder.Record(*createCommandSerializer(state->CreationCommand.get()));
 }
 
-void StateTrackingService::restoreQueryInterface(ObjectState* state) {
-  auto* command = static_cast<IUnknownQueryInterfaceCommand*>(state->creationCommand.get());
-  if (command->riid_.value == IID_ID3D12StateObjectProperties) {
-    ObjectState* stateObjectState = getState(state->parentKey);
-    if (!stateObjectState || !stateObjectState->restored) {
+void StateTrackingService::RestoreQueryInterface(ObjectState* state) {
+  auto* Command = static_cast<IUnknownQueryInterfaceCommand*>(state->CreationCommand.get());
+  if (Command->m_riid.Value == IID_ID3D12StateObjectProperties) {
+    ObjectState* stateObjectState = GetState(state->ParentKey);
+    if (!stateObjectState || !stateObjectState->Restored) {
       return;
     }
 
-    stateObjectPropertiesCommands_.emplace(
-        std::make_unique<IUnknownQueryInterfaceCommand>(*command));
+    m_StateObjectPropertiesCommands.emplace(
+        std::make_unique<IUnknownQueryInterfaceCommand>(*Command));
 
     auto* propertiesState = static_cast<D3D12StateObjectPropertiesState*>(state);
-    for (auto& shaderIdentifier : propertiesState->shaderIdentifiers) {
+    for (auto& shaderIdentifier : propertiesState->ShaderIdentifiers) {
       ID3D12StateObjectPropertiesGetShaderIdentifierCommand c;
-      c.key = getUniqueCommandKey();
-      c.object_.key = state->key;
-      c.pExportName_.value = const_cast<wchar_t*>(shaderIdentifier.first.c_str());
-      c.result_.value = shaderIdentifier.second.data();
-      stateObjectPropertiesCommands_.emplace(
+      c.Key = GetUniqueCommandKey();
+      c.m_Object.Key = state->Key;
+      c.m_pExportName.Value = const_cast<wchar_t*>(shaderIdentifier.first.c_str());
+      c.m_Result.Value = shaderIdentifier.second.data();
+      m_StateObjectPropertiesCommands.emplace(
           std::make_unique<ID3D12StateObjectPropertiesGetShaderIdentifierCommand>(c));
     }
-  } else if (command->riid_.value == __uuidof(IDStorageCustomDecompressionQueue) ||
-             command->riid_.value == __uuidof(IDStorageCustomDecompressionQueue1)) {
-    recorder_.record(*createCommandSerializer(state->creationCommand.get()));
+  } else if (Command->m_riid.Value == __uuidof(IDStorageCustomDecompressionQueue) ||
+             Command->m_riid.Value == __uuidof(IDStorageCustomDecompressionQueue1)) {
+    m_Recorder.Record(*createCommandSerializer(state->CreationCommand.get()));
   }
 }
 
-void StateTrackingService::restoreD3D12Fence(ObjectState* state) {
-  ID3D12DeviceCreateFenceCommand* command =
-      static_cast<ID3D12DeviceCreateFenceCommand*>(state->creationCommand.get());
-  command->InitialValue_.value = fenceTrackingService_.getFenceValue(state->key);
-  recorder_.record(*createCommandSerializer(state->creationCommand.get()));
+void StateTrackingService::RestoreD3D12Fence(ObjectState* state) {
+  ID3D12DeviceCreateFenceCommand* Command =
+      static_cast<ID3D12DeviceCreateFenceCommand*>(state->CreationCommand.get());
+  Command->m_InitialValue.Value = m_FenceTrackingService.GetFenceValue(state->Key);
+  m_Recorder.Record(*createCommandSerializer(state->CreationCommand.get()));
 }
 
-void StateTrackingService::restoreD3D12CommandList(ObjectState* state) {
+void StateTrackingService::RestoreD3D12CommandList(ObjectState* state) {
   GITS_ASSERT(state);
-  auto* command = static_cast<ID3D12DeviceCreateCommandListCommand*>(state->creationCommand.get());
-  unsigned allocatorKey = command->pCommandAllocator_.key;
-  unsigned initialStateKey = command->pInitialState_.key;
-
-  ObjectState* allocatorState = getState(allocatorKey);
-  if (!allocatorState) {
-    return;
-  }
-  restoreState(allocatorState);
-  if (initialStateKey) {
-    ObjectState* initialState = getState(initialStateKey);
-    restoreState(initialState);
-  }
-
-  ID3D12CommandAllocatorResetCommand reset;
-  reset.key = getUniqueCommandKey();
-  reset.object_.key = allocatorKey;
-  recorder_.record(ID3D12CommandAllocatorResetSerializer(reset));
-
-  recorder_.record(*createCommandSerializer(state->creationCommand.get()));
-
   CommandListState* commandListState = static_cast<CommandListState*>(state);
-  bool closed = commandListState->closed;
-  if (analyzerResults_.restoreCommandList(state->key)) {
-    if (!commandListState->commands.empty()) {
+  Command* creationCmd = state->CreationCommand.get();
+  const CommandId creationId = creationCmd->GetId();
+
+  unsigned allocatorKey = commandListState->m_AllocatorKey;
+  unsigned initialStateKey = 0;
+  if (creationId == CommandId::ID_ID3D12DEVICE_CREATECOMMANDLIST) {
+    auto* Command = static_cast<ID3D12DeviceCreateCommandListCommand*>(creationCmd);
+    if (!allocatorKey) {
+      allocatorKey = Command->m_pCommandAllocator.Key;
+    }
+    initialStateKey = Command->m_pInitialState.Key;
+  } else if (creationId == CommandId::ID_ID3D12DEVICE4_CREATECOMMANDLIST1) {
+    // Allocator is supplied on Reset; tracked in CommandListState::m_AllocatorKey.
+  } else {
+    GITS_ASSERT(false && "Unhandled Command list creation Command");
+  }
+
+  if (allocatorKey) {
+    ObjectState* allocatorState = GetState(allocatorKey);
+    if (!allocatorState) {
+      return;
+    }
+    RestoreState(allocatorState);
+    if (initialStateKey) {
+      ObjectState* initialState = GetState(initialStateKey);
+      RestoreState(initialState);
+    }
+
+    ID3D12CommandAllocatorResetCommand reset;
+    reset.Key = GetUniqueCommandKey();
+    reset.m_Object.Key = allocatorKey;
+    m_Recorder.Record(ID3D12CommandAllocatorResetSerializer(reset));
+  }
+
+  m_Recorder.Record(*createCommandSerializer(creationCmd));
+
+  bool closed = commandListState->m_Closed;
+  if (m_AnalyzerResults.RestoreCommandList(state->Key)) {
+    if (!commandListState->m_Commands.empty()) {
       closed = true;
     }
   }
   if (closed) {
     ID3D12GraphicsCommandListCloseCommand close;
-    close.key = getUniqueCommandKey();
-    close.object_.key = state->key;
-    recorder_.record(ID3D12GraphicsCommandListCloseSerializer(close));
+    close.Key = GetUniqueCommandKey();
+    close.m_Object.Key = state->Key;
+    m_Recorder.Record(ID3D12GraphicsCommandListCloseSerializer(close));
   }
 }
 
-void StateTrackingService::restoreD3D12Heap(ObjectState* state) {
-  recorder_.record(*createCommandSerializer(state->creationCommand.get()));
+void StateTrackingService::RestoreD3D12Heap(ObjectState* state) {
+  m_Recorder.Record(*createCommandSerializer(state->CreationCommand.get()));
   HeapState* heapState = static_cast<HeapState*>(state);
-  restoreResidencyPriority(heapState->deviceKey, state->key, state->residencyPriority);
+  RestoreResidencyPriority(heapState->DeviceKey, state->Key, state->ResidencyPriority);
 }
 
-void StateTrackingService::restoreD3D12HeapFromAddress(ObjectState* state) {
-  auto* createHeap = static_cast<CreateHeapAllocationMetaCommand*>(state->creationCommand.get());
+void StateTrackingService::RestoreD3D12HeapFromAddress(ObjectState* state) {
+  auto* createHeap = static_cast<CreateHeapAllocationMetaCommand*>(state->CreationCommand.get());
   auto* heapFromAddressState = static_cast<D3D12HeapFromAddressState*>(state);
   auto* openHeap = static_cast<ID3D12Device3OpenExistingHeapFromAddressCommand*>(
-      heapFromAddressState->openExistingHeapFromAddressCommand.get());
+      heapFromAddressState->OpenExistingHeapFromAddressCommand.get());
 
-  openHeap->pAddress_.value = createHeap->address_.value;
+  openHeap->m_pAddress.Value = createHeap->m_address.Value;
 
-  recorder_.record(*createCommandSerializer(createHeap));
-  recorder_.record(*createCommandSerializer(openHeap));
+  m_Recorder.Record(*createCommandSerializer(createHeap));
+  m_Recorder.Record(*createCommandSerializer(openHeap));
 }
 
-void StateTrackingService::restoreD3D12CommittedResource(ObjectState* state) {
+void StateTrackingService::RestoreD3D12CommittedResource(ObjectState* state) {
   ResourceState* resourceState = static_cast<ResourceState*>(state);
-  D3D12_RESOURCE_STATES initialState = resourceState->initialState;
+  D3D12_RESOURCE_STATES initialState = resourceState->InitialState;
   if (initialState != D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE) {
-    if (state->refCount > 0) {
-      resourceContentRestore_.addCommittedResourceState(resourceState);
+    if (state->RefCount > 0) {
+      m_ResourceContentRestore.AddCommittedResourceState(resourceState);
     }
   }
 
-  switch (state->creationCommand->getId()) {
+  switch (state->CreationCommand->GetId()) {
   case CommandId::ID_ID3D12DEVICE_CREATECOMMITTEDRESOURCE: {
-    auto* command =
-        static_cast<ID3D12DeviceCreateCommittedResourceCommand*>(state->creationCommand.get());
-    command->InitialResourceState_.value = initialState;
+    auto* Command =
+        static_cast<ID3D12DeviceCreateCommittedResourceCommand*>(state->CreationCommand.get());
+    Command->m_InitialResourceState.Value = initialState;
   } break;
   case CommandId::ID_ID3D12DEVICE4_CREATECOMMITTEDRESOURCE1: {
-    auto* command =
-        static_cast<ID3D12Device4CreateCommittedResource1Command*>(state->creationCommand.get());
-    initialState = getResourceInitialState(*resourceState, resourceState->dimension);
-    command->InitialResourceState_.value = initialState;
+    auto* Command =
+        static_cast<ID3D12Device4CreateCommittedResource1Command*>(state->CreationCommand.get());
+    initialState = GetResourceInitialState(*resourceState, resourceState->Dimension);
+    Command->m_InitialResourceState.Value = initialState;
   } break;
   case CommandId::ID_ID3D12DEVICE8_CREATECOMMITTEDRESOURCE2: {
-    auto* command =
-        static_cast<ID3D12Device8CreateCommittedResource2Command*>(state->creationCommand.get());
-    initialState = getResourceInitialState(*resourceState, resourceState->dimension);
-    command->InitialResourceState_.value = initialState;
+    auto* Command =
+        static_cast<ID3D12Device8CreateCommittedResource2Command*>(state->CreationCommand.get());
+    initialState = GetResourceInitialState(*resourceState, resourceState->Dimension);
+    Command->m_InitialResourceState.Value = initialState;
   } break;
   case CommandId::ID_ID3D12DEVICE10_CREATECOMMITTEDRESOURCE3: {
-    auto* command =
-        static_cast<ID3D12Device10CreateCommittedResource3Command*>(state->creationCommand.get());
-    D3D12_BARRIER_LAYOUT initialLayout = getResourceInitialLayout(
-        *resourceState, resourceState->dimension, command->pDesc_.value->Flags);
-    command->InitialLayout_.value = initialLayout;
+    auto* Command =
+        static_cast<ID3D12Device10CreateCommittedResource3Command*>(state->CreationCommand.get());
+    D3D12_BARRIER_LAYOUT initialLayout = GetResourceInitialLayout(
+        *resourceState, resourceState->Dimension, Command->m_pDesc.Value->Flags);
+    Command->m_InitialLayout.Value = initialLayout;
   } break;
   case CommandId::INTC_D3D12_CREATECOMMITTEDRESOURCE: {
-    auto* command =
-        static_cast<INTC_D3D12_CreateCommittedResourceCommand*>(state->creationCommand.get());
-    initialState = getResourceInitialState(*resourceState, resourceState->dimension);
-    command->InitialResourceState_.value = initialState;
+    auto* Command =
+        static_cast<INTC_D3D12_CreateCommittedResourceCommand*>(state->CreationCommand.get());
+    initialState = GetResourceInitialState(*resourceState, resourceState->Dimension);
+    Command->m_InitialResourceState.Value = initialState;
   } break;
   }
 
-  recorder_.record(*createCommandSerializer(state->creationCommand.get()));
+  m_Recorder.Record(*createCommandSerializer(state->CreationCommand.get()));
 
-  restoreResidencyPriority(resourceState->deviceKey, state->key, state->residencyPriority);
-  restoreGpuVirtualAddress(resourceState);
+  RestoreResidencyPriority(resourceState->DeviceKey, state->Key, state->ResidencyPriority);
+  RestoreGpuVirtualAddress(resourceState);
 }
 
-void StateTrackingService::restoreD3D12PlacedResource(ObjectState* state) {
+void StateTrackingService::RestoreD3D12PlacedResource(ObjectState* state) {
   ResourceState* resourceState = static_cast<ResourceState*>(state);
-  D3D12_RESOURCE_STATES initialState = resourceState->initialState;
+  D3D12_RESOURCE_STATES initialState = resourceState->InitialState;
   if (initialState != D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE) {
-    if (state->refCount > 0) {
-      resourceContentRestore_.addPlacedResourceState(resourceState);
+    if (state->RefCount > 0) {
+      m_ResourceContentRestore.AddPlacedResourceState(resourceState);
     }
   }
 
-  switch (state->creationCommand->getId()) {
+  switch (state->CreationCommand->GetId()) {
   case CommandId::ID_ID3D12DEVICE_CREATEPLACEDRESOURCE: {
-    auto* command =
-        static_cast<ID3D12DeviceCreatePlacedResourceCommand*>(state->creationCommand.get());
-    initialState = getResourceInitialState(*resourceState, resourceState->dimension);
-    command->InitialState_.value = initialState;
+    auto* Command =
+        static_cast<ID3D12DeviceCreatePlacedResourceCommand*>(state->CreationCommand.get());
+    initialState = GetResourceInitialState(*resourceState, resourceState->Dimension);
+    Command->m_InitialState.Value = initialState;
   } break;
   case CommandId::ID_ID3D12DEVICE8_CREATEPLACEDRESOURCE1: {
-    auto* command =
-        static_cast<ID3D12Device8CreatePlacedResource1Command*>(state->creationCommand.get());
-    initialState = getResourceInitialState(*resourceState, resourceState->dimension);
-    command->InitialState_.value = initialState;
+    auto* Command =
+        static_cast<ID3D12Device8CreatePlacedResource1Command*>(state->CreationCommand.get());
+    initialState = GetResourceInitialState(*resourceState, resourceState->Dimension);
+    Command->m_InitialState.Value = initialState;
   } break;
   case CommandId::ID_ID3D12DEVICE10_CREATEPLACEDRESOURCE2: {
-    auto* command =
-        static_cast<ID3D12Device10CreatePlacedResource2Command*>(state->creationCommand.get());
-    D3D12_BARRIER_LAYOUT initialLayout = getResourceInitialLayout(
-        *resourceState, resourceState->dimension, command->pDesc_.value->Flags);
-    command->InitialLayout_.value = initialLayout;
+    auto* Command =
+        static_cast<ID3D12Device10CreatePlacedResource2Command*>(state->CreationCommand.get());
+    D3D12_BARRIER_LAYOUT initialLayout = GetResourceInitialLayout(
+        *resourceState, resourceState->Dimension, Command->m_pDesc.Value->Flags);
+    Command->m_InitialLayout.Value = initialLayout;
   } break;
   case CommandId::INTC_D3D12_CREATEPLACEDRESOURCE: {
-    auto* command =
-        static_cast<INTC_D3D12_CreatePlacedResourceCommand*>(state->creationCommand.get());
-    initialState = getResourceInitialState(*resourceState, resourceState->dimension);
-    command->InitialState_.value = initialState;
+    auto* Command =
+        static_cast<INTC_D3D12_CreatePlacedResourceCommand*>(state->CreationCommand.get());
+    initialState = GetResourceInitialState(*resourceState, resourceState->Dimension);
+    Command->m_InitialState.Value = initialState;
   } break;
   }
 
-  recorder_.record(*createCommandSerializer(state->creationCommand.get()));
+  m_Recorder.Record(*createCommandSerializer(state->CreationCommand.get()));
 
-  restoreGpuVirtualAddress(resourceState);
+  RestoreGpuVirtualAddress(resourceState);
 }
 
-void StateTrackingService::restoreD3D12ReservedResource(ObjectState* state) {
+void StateTrackingService::RestoreD3D12ReservedResource(ObjectState* state) {
   ResourceState* resourceState = static_cast<ResourceState*>(state);
 
-  switch (state->creationCommand->getId()) {
+  switch (state->CreationCommand->GetId()) {
   case CommandId::ID_ID3D12DEVICE_CREATERESERVEDRESOURCE: {
-    auto* command =
-        static_cast<ID3D12DeviceCreateReservedResourceCommand*>(state->creationCommand.get());
+    auto* Command =
+        static_cast<ID3D12DeviceCreateReservedResourceCommand*>(state->CreationCommand.get());
     D3D12_RESOURCE_STATES initialState =
-        getResourceInitialState(*resourceState, resourceState->dimension);
-    command->InitialState_.value = initialState;
+        GetResourceInitialState(*resourceState, resourceState->Dimension);
+    Command->m_InitialState.Value = initialState;
   } break;
   case CommandId::ID_ID3D12DEVICE4_CREATERESERVEDRESOURCE1: {
-    auto* command =
-        static_cast<ID3D12Device4CreateReservedResource1Command*>(state->creationCommand.get());
+    auto* Command =
+        static_cast<ID3D12Device4CreateReservedResource1Command*>(state->CreationCommand.get());
     D3D12_RESOURCE_STATES initialState =
-        getResourceInitialState(*resourceState, resourceState->dimension);
-    command->InitialState_.value = initialState;
+        GetResourceInitialState(*resourceState, resourceState->Dimension);
+    Command->m_InitialState.Value = initialState;
   } break;
   case CommandId::ID_ID3D12DEVICE10_CREATERESERVEDRESOURCE2: {
-    auto* command =
-        static_cast<ID3D12Device10CreateReservedResource2Command*>(state->creationCommand.get());
-    D3D12_BARRIER_LAYOUT initialLayout = getResourceInitialLayout(
-        *resourceState, resourceState->dimension, command->pDesc_.value->Flags);
-    command->InitialLayout_.value = initialLayout;
+    auto* Command =
+        static_cast<ID3D12Device10CreateReservedResource2Command*>(state->CreationCommand.get());
+    D3D12_BARRIER_LAYOUT initialLayout = GetResourceInitialLayout(
+        *resourceState, resourceState->Dimension, Command->m_pDesc.Value->Flags);
+    Command->m_InitialLayout.Value = initialLayout;
   } break;
   case CommandId::INTC_D3D12_CREATERESERVEDRESOURCE: {
-    auto* command =
-        static_cast<INTC_D3D12_CreateReservedResourceCommand*>(state->creationCommand.get());
+    auto* Command =
+        static_cast<INTC_D3D12_CreateReservedResourceCommand*>(state->CreationCommand.get());
     D3D12_RESOURCE_STATES initialState =
-        getResourceInitialState(*resourceState, resourceState->dimension);
-    command->InitialState_.value = initialState;
+        GetResourceInitialState(*resourceState, resourceState->Dimension);
+    Command->m_InitialState.Value = initialState;
   } break;
   }
 
-  recorder_.record(*createCommandSerializer(state->creationCommand.get()));
+  m_Recorder.Record(*createCommandSerializer(state->CreationCommand.get()));
 
-  restoreGpuVirtualAddress(resourceState);
+  RestoreGpuVirtualAddress(resourceState);
 }
 
-void StateTrackingService::restoreGpuVirtualAddress(ResourceState* state) {
-  if (state->gpuVirtualAddress) {
+void StateTrackingService::RestoreGpuVirtualAddress(ResourceState* state) {
+  if (state->GpuVirtualAddress) {
     ID3D12ResourceGetGPUVirtualAddressCommand c;
-    c.key = getUniqueCommandKey();
-    c.object_.key = state->key;
-    c.result_.value = state->gpuVirtualAddress;
-    recorder_.record(ID3D12ResourceGetGPUVirtualAddressSerializer(c));
+    c.Key = GetUniqueCommandKey();
+    c.m_Object.Key = state->Key;
+    c.m_Result.Value = state->GpuVirtualAddress;
+    m_Recorder.Record(ID3D12ResourceGetGPUVirtualAddressSerializer(c));
   }
 }
 
-void StateTrackingService::restoreD3D12INTCDeviceExtensionContext(ObjectState* state) {
-  recorder_.record(*createCommandSerializer(state->creationCommand.get()));
-  if (intcFeature_.EmulatedTyped64bitAtomics) {
+void StateTrackingService::RestoreD3D12INTCDeviceExtensionContext(ObjectState* state) {
+  m_Recorder.Record(*createCommandSerializer(state->CreationCommand.get()));
+  if (m_IntcFeature.EmulatedTyped64bitAtomics) {
     INTC_D3D12_SetFeatureSupportCommand c;
-    c.key = getUniqueCommandKey();
-    c.pExtensionContext_.key = state->key;
-    c.pFeature_.value = &intcFeature_;
-    recorder_.record(INTC_D3D12_SetFeatureSupportSerializer(c));
+    c.Key = GetUniqueCommandKey();
+    c.m_pExtensionContext.Key = state->Key;
+    c.m_pFeature.Value = &m_IntcFeature;
+    m_Recorder.Record(INTC_D3D12_SetFeatureSupportSerializer(c));
   }
 }
 
-void StateTrackingService::restoreD3D12StateObject(ObjectState* state) {
-  if (state->creationCommand->getId() == CommandId::ID_ID3D12DEVICE5_CREATESTATEOBJECT) {
-    auto* command =
-        static_cast<ID3D12Device5CreateStateObjectCommand*>(state->creationCommand.get());
-    for (auto& it : command->pDesc_.interfaceKeysBySubobject) {
-      auto itState = statesByKey_.find(it.second);
-      GITS_ASSERT(itState != statesByKey_.end());
-      restoreState(itState->second);
+void StateTrackingService::RestoreD3D12StateObject(ObjectState* state) {
+  if (state->CreationCommand->GetId() == CommandId::ID_ID3D12DEVICE5_CREATESTATEOBJECT) {
+    auto* Command =
+        static_cast<ID3D12Device5CreateStateObjectCommand*>(state->CreationCommand.get());
+    for (auto& it : Command->m_pDesc.InterfaceKeysBySubobject) {
+      auto itState = m_StatesByKey.find(it.second);
+      GITS_ASSERT(itState != m_StatesByKey.end());
+      RestoreState(itState->second);
     }
-  } else if (state->creationCommand->getId() == CommandId::ID_ID3D12DEVICE7_ADDTOSTATEOBJECT) {
-    auto* command =
-        static_cast<ID3D12Device7AddToStateObjectCommand*>(state->creationCommand.get());
-    for (auto& it : command->pAddition_.interfaceKeysBySubobject) {
-      auto itState = statesByKey_.find(it.second);
-      GITS_ASSERT(itState != statesByKey_.end());
-      restoreState(itState->second);
+  } else if (state->CreationCommand->GetId() == CommandId::ID_ID3D12DEVICE7_ADDTOSTATEOBJECT) {
+    auto* Command =
+        static_cast<ID3D12Device7AddToStateObjectCommand*>(state->CreationCommand.get());
+    for (auto& it : Command->m_pAddition.InterfaceKeysBySubobject) {
+      auto itState = m_StatesByKey.find(it.second);
+      GITS_ASSERT(itState != m_StatesByKey.end());
+      RestoreState(itState->second);
     }
   }
-  nvapiGlobalStateService_.restoreCreatePipelineStateOptionsBeforeCommand(
-      state->creationCommand->key);
-  nvapiGlobalStateService_.restoreShaderExtnSlotSpaceBeforeCommand(state->creationCommand->key);
-  recorder_.record(*createCommandSerializer(state->creationCommand.get()));
-  for (unsigned key : state->childrenKeys) {
-    auto it = statesByKey_.find(key);
-    GITS_ASSERT(it != statesByKey_.end());
-    restoreState(it->second);
+  m_NvapiGlobalStateService.RestoreCreatePipelineStateOptionsBeforeCommand(
+      state->CreationCommand->Key);
+  m_NvapiGlobalStateService.RestoreShaderExtnSlotSpaceBeforeCommand(state->CreationCommand->Key);
+  m_Recorder.Record(*createCommandSerializer(state->CreationCommand.get()));
+  for (unsigned key : state->ChildrenKeys) {
+    auto it = m_StatesByKey.find(key);
+    GITS_ASSERT(it != m_StatesByKey.end());
+    RestoreState(it->second);
   }
 }
 
-void StateTrackingService::restoreD3D12PipelineStateObject(ObjectState* state) {
-  if (state->creationCommand->getId() == CommandId::ID_ID3D12DEVICE_CREATEGRAPHICSPIPELINESTATE) {
-    auto* command =
-        static_cast<ID3D12DeviceCreateGraphicsPipelineStateCommand*>(state->creationCommand.get());
-    restoreState(command->pDesc_.rootSignatureKey);
-  } else if (state->creationCommand->getId() ==
+void StateTrackingService::RestoreD3D12PipelineStateObject(ObjectState* state) {
+  if (state->CreationCommand->GetId() == CommandId::ID_ID3D12DEVICE_CREATEGRAPHICSPIPELINESTATE) {
+    auto* Command =
+        static_cast<ID3D12DeviceCreateGraphicsPipelineStateCommand*>(state->CreationCommand.get());
+    RestoreState(Command->m_pDesc.RootSignatureKey);
+  } else if (state->CreationCommand->GetId() ==
              CommandId::ID_ID3D12DEVICE_CREATECOMPUTEPIPELINESTATE) {
-    auto* command =
-        static_cast<ID3D12DeviceCreateComputePipelineStateCommand*>(state->creationCommand.get());
-    restoreState(command->pDesc_.rootSignatureKey);
-  } else if (state->creationCommand->getId() == CommandId::ID_ID3D12DEVICE2_CREATEPIPELINESTATE) {
-    auto* command =
-        static_cast<ID3D12Device2CreatePipelineStateCommand*>(state->creationCommand.get());
-    restoreState(command->pDesc_.rootSignatureKey);
+    auto* Command =
+        static_cast<ID3D12DeviceCreateComputePipelineStateCommand*>(state->CreationCommand.get());
+    RestoreState(Command->m_pDesc.RootSignatureKey);
+  } else if (state->CreationCommand->GetId() == CommandId::ID_ID3D12DEVICE2_CREATEPIPELINESTATE) {
+    auto* Command =
+        static_cast<ID3D12Device2CreatePipelineStateCommand*>(state->CreationCommand.get());
+    RestoreState(Command->m_pDesc.RootSignatureKey);
   }
-  recorder_.record(*createCommandSerializer(state->creationCommand.get()));
+  m_Recorder.Record(*createCommandSerializer(state->CreationCommand.get()));
 }
 
-void StateTrackingService::storeINTCFeature(INTC_D3D12_FEATURE feature) {
-  intcFeature_ = feature;
+void StateTrackingService::StoreINTCFeature(INTC_D3D12_FEATURE feature) {
+  m_IntcFeature = feature;
 }
 
-void StateTrackingService::storeINTCApplicationInfo(INTC_D3D12_SetApplicationInfoCommand& c) {
-  setApplicationInfoCommand_.reset(new INTC_D3D12_SetApplicationInfoCommand(c));
+void StateTrackingService::StoreINTCApplicationInfo(INTC_D3D12_SetApplicationInfoCommand& c) {
+  m_SetApplicationInfoCommand.reset(new INTC_D3D12_SetApplicationInfoCommand(c));
 }
 
-void StateTrackingService::storeD3D12EnableExperimentalFeatures(
+void StateTrackingService::StoreD3D12EnableExperimentalFeatures(
     const D3D12EnableExperimentalFeaturesCommand& c) {
-  enableExperimentalFeaturesCommand_.reset(new D3D12EnableExperimentalFeaturesCommand(c));
+  m_EnableExperimentalFeaturesCommand.reset(new D3D12EnableExperimentalFeaturesCommand(c));
 }
 
-void StateTrackingService::storeDllContainer(const DllContainerMetaCommand& c) {
-  dllContainerCommands_.emplace_back(new DllContainerMetaCommand(c));
+void StateTrackingService::StoreDllContainer(const DllContainerMetaCommand& c) {
+  m_DllContainerCommands.emplace_back(new DllContainerMetaCommand(c));
 }
 
-void StateTrackingService::restoreINTCApplicationInfo() {
-  if (setApplicationInfoCommand_) {
-    recorder_.record(*createCommandSerializer(setApplicationInfoCommand_.get()));
+void StateTrackingService::RestoreINTCApplicationInfo() {
+  if (m_SetApplicationInfoCommand) {
+    m_Recorder.Record(*createCommandSerializer(m_SetApplicationInfoCommand.get()));
   }
 }
 
-void StateTrackingService::restoreD3D12EnableExperimentalFeatures() {
-  if (enableExperimentalFeaturesCommand_) {
-    recorder_.record(*createCommandSerializer(enableExperimentalFeaturesCommand_.get()));
-    enableExperimentalFeaturesCommand_.reset();
+void StateTrackingService::RestoreD3D12EnableExperimentalFeatures() {
+  if (m_EnableExperimentalFeaturesCommand) {
+    m_Recorder.Record(*createCommandSerializer(m_EnableExperimentalFeaturesCommand.get()));
+    m_EnableExperimentalFeaturesCommand.reset();
   }
 }
 
-void StateTrackingService::restoreDllContainers() {
-  for (const auto& command : dllContainerCommands_) {
-    recorder_.record(*createCommandSerializer(command.get()));
+void StateTrackingService::RestoreDllContainers() {
+  for (const auto& Command : m_DllContainerCommands) {
+    m_Recorder.Record(*createCommandSerializer(Command.get()));
   }
 }
 
-void StateTrackingService::restoreStateObjectProperties() {
-  while (!stateObjectPropertiesCommands_.empty()) {
-    const auto& command = stateObjectPropertiesCommands_.front();
-    recorder_.record(*createCommandSerializer(command.get()));
-    stateObjectPropertiesCommands_.pop();
+void StateTrackingService::RestoreStateObjectProperties() {
+  while (!m_StateObjectPropertiesCommands.empty()) {
+    const auto& Command = m_StateObjectPropertiesCommands.front();
+    m_Recorder.Record(*createCommandSerializer(Command.get()));
+    m_StateObjectPropertiesCommands.pop();
   }
 }
 
-void StateTrackingService::SwapChainService::setSwapChain(unsigned commandQueueKey,
+void StateTrackingService::SwapChainService::SetSwapChain(unsigned commandQueueKey,
                                                           ID3D12CommandQueue* commandQueue,
                                                           unsigned swapChainKey,
                                                           IDXGISwapChain* swapChain,
                                                           unsigned backBuffersCount) {
-  commandQueueKey_ = commandQueueKey;
-  commandQueue_ = commandQueue;
-  swapChainKey_ = swapChainKey;
-  swapChain_ = swapChain;
-  backBuffersCount_ = backBuffersCount;
+  m_CommandQueueKey = commandQueueKey;
+  m_CommandQueue = commandQueue;
+  m_SwapChainKey = swapChainKey;
+  m_SwapChain = swapChain;
+  m_BackBuffersCount = backBuffersCount;
 
   Microsoft::WRL::ComPtr<IDXGISwapChain3> swapChain3;
-  HRESULT hr = swapChain_->QueryInterface(IID_PPV_ARGS(&swapChain3));
+  HRESULT hr = m_SwapChain->QueryInterface(IID_PPV_ARGS(&swapChain3));
   GITS_ASSERT(hr == S_OK);
-  backBufferShift_ = swapChain3->GetCurrentBackBufferIndex();
+  m_BackBufferShift = swapChain3->GetCurrentBackBufferIndex();
 }
 
-void StateTrackingService::SwapChainService::restoreBackBufferSequence(bool commandListSubcapture) {
+void StateTrackingService::SwapChainService::RestoreBackBufferSequence(bool CommandListSubcapture) {
 
-  int backBufferShift = backBufferShift_;
-  if (!commandListSubcapture) {
+  int backBufferShift = m_BackBufferShift;
+  if (!CommandListSubcapture) {
     // taking into account one Present that will be always recorded later
     backBufferShift -= 1;
   }
   if (backBufferShift < 0) {
-    backBufferShift += backBuffersCount_;
+    backBufferShift += m_BackBuffersCount;
   }
 
-  if (commandListSubcapture) {
-    auto& resource = backBuffers_[backBufferShift];
-    if (!stateService_.analyzerResults_.restoreObject(resource.first)) {
+  if (CommandListSubcapture) {
+    auto& resource = m_BackBuffers[backBufferShift];
+    if (!m_StateService.m_AnalyzerResults.RestoreObject(resource.first)) {
       return;
     }
   }
 
   for (int i = 0; i < backBufferShift; ++i) {
-    recordSwapChainPresent();
+    RecordSwapChainPresent();
   }
 
-  if (commandListSubcapture) {
-    auto& resource = backBuffers_[backBufferShift];
-    stateService_.resourceContentRestore_.restoreBackBuffer(commandQueue_, commandQueueKey_,
-                                                            resource.first, resource.second);
-    stateService_.resourceStateTrackingService_.restoreBackBufferState(
-        commandQueueKey_, resource.first, D3D12_RESOURCE_STATE_COPY_DEST);
+  if (CommandListSubcapture) {
+    auto& resource = m_BackBuffers[backBufferShift];
+    m_StateService.m_ResourceContentRestore.RestoreBackBuffer(m_CommandQueue, m_CommandQueueKey,
+                                                              resource.first, resource.second);
+    m_StateService.m_ResourceStateTrackingService.RestoreBackBufferState(
+        m_CommandQueueKey, resource.first, D3D12_RESOURCE_STATE_COPY_DEST);
   }
 }
 
-void StateTrackingService::SwapChainService::recordSwapChainPresent() {
+void StateTrackingService::SwapChainService::RecordSwapChainPresent() {
   IDXGISwapChainPresentCommand presentCommand;
-  presentCommand.key = stateService_.getUniqueCommandKey();
-  presentCommand.object_.key = swapChainKey_;
-  presentCommand.SyncInterval_.value = 0;
-  presentCommand.Flags_.value = 0;
-  stateService_.recorder_.record(IDXGISwapChainPresentSerializer(presentCommand));
+  presentCommand.Key = m_StateService.GetUniqueCommandKey();
+  presentCommand.m_Object.Key = m_SwapChainKey;
+  presentCommand.m_SyncInterval.Value = 0;
+  presentCommand.m_Flags.Value = 0;
+  m_StateService.m_Recorder.Record(IDXGISwapChainPresentSerializer(presentCommand));
 }
 
-void StateTrackingService::SwapChainService::addBackBuffer(unsigned buffer,
-                                                           unsigned resourceKey,
+void StateTrackingService::SwapChainService::AddBackBuffer(unsigned buffer,
+                                                           unsigned ResourceKey,
                                                            ID3D12Resource* resource) {
-  backBuffers_[buffer] = {resourceKey, resource};
+  m_BackBuffers[buffer] = {ResourceKey, resource};
 }
 
-void StateTrackingService::NvAPIGlobalStateService::incrementInitialize() {
-  ++nvapiInitializeCount_;
+void StateTrackingService::NvAPIGlobalStateService::IncrementInitialize() {
+  ++m_NvapiInitializeCount;
 }
 
-void StateTrackingService::NvAPIGlobalStateService::decrementInitialize() {
-  if (nvapiInitializeCount_ > 0) {
-    --nvapiInitializeCount_;
+void StateTrackingService::NvAPIGlobalStateService::DecrementInitialize() {
+  if (m_NvapiInitializeCount > 0) {
+    --m_NvapiInitializeCount;
   }
 }
 
-void StateTrackingService::NvAPIGlobalStateService::addSetCreatePipelineStateOptionsCommand(
-    const NvAPI_D3D12_SetCreatePipelineStateOptionsCommand& command) {
-  setCreatePipelineStateOptionsCommands_.push(OrderedCommand{
-      command.key, std::make_unique<NvAPI_D3D12_SetCreatePipelineStateOptionsCommand>(command)});
+void StateTrackingService::NvAPIGlobalStateService::AddSetCreatePipelineStateOptionsCommand(
+    const NvAPI_D3D12_SetCreatePipelineStateOptionsCommand& Command) {
+  m_SetCreatePipelineStateOptionsCommands.push(OrderedCommand{
+      Command.Key, std::make_unique<NvAPI_D3D12_SetCreatePipelineStateOptionsCommand>(Command)});
 }
 
-void StateTrackingService::NvAPIGlobalStateService::addSetNvShaderExtnSlotSpaceCommand(
-    const NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& command) {
-  setNvShaderExtnSlotSpaceCommands_.push(OrderedCommand{
-      command.key, std::make_unique<NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand>(command)});
+void StateTrackingService::NvAPIGlobalStateService::AddSetNvShaderExtnSlotSpaceCommand(
+    const NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& Command) {
+  m_SetNvShaderExtnSlotSpaceCommands.push(OrderedCommand{
+      Command.Key, std::make_unique<NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand>(Command)});
 }
 
-void StateTrackingService::NvAPIGlobalStateService::addSetNvShaderExtnSlotSpaceLocalThreadCommand(
-    const NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& command) {
-  setNvShaderExtnSlotSpaceCommands_.push(OrderedCommand{
-      command.key,
-      std::make_unique<NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand>(command)});
+void StateTrackingService::NvAPIGlobalStateService::AddSetNvShaderExtnSlotSpaceLocalThreadCommand(
+    const NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& Command) {
+  m_SetNvShaderExtnSlotSpaceCommands.push(OrderedCommand{
+      Command.Key,
+      std::make_unique<NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand>(Command)});
 }
 
-void StateTrackingService::NvAPIGlobalStateService::restureInitializeCount() {
-  for (unsigned i = 0; i < nvapiInitializeCount_; ++i) {
+void StateTrackingService::NvAPIGlobalStateService::RestoreInitializeCount() {
+  for (unsigned i = 0; i < m_NvapiInitializeCount; ++i) {
     NvAPI_InitializeCommand initializeCommand;
-    initializeCommand.key = stateService_.getUniqueCommandKey();
-    stateService_.recorder_.record(NvAPI_InitializeSerializer(initializeCommand));
+    initializeCommand.Key = m_StateService.GetUniqueCommandKey();
+    m_StateService.m_Recorder.Record(NvAPI_InitializeSerializer(initializeCommand));
   }
 }
 
-void StateTrackingService::NvAPIGlobalStateService::restoreCreatePipelineStateOptionsBeforeCommand(
+void StateTrackingService::NvAPIGlobalStateService::RestoreCreatePipelineStateOptionsBeforeCommand(
     unsigned commandKey) {
-  while (!setCreatePipelineStateOptionsCommands_.empty()) {
-    const auto& command = setCreatePipelineStateOptionsCommands_.top();
-    if (command.key >= commandKey) {
+  while (!m_SetCreatePipelineStateOptionsCommands.empty()) {
+    const auto& ordered = m_SetCreatePipelineStateOptionsCommands.top();
+    if (ordered.Key >= commandKey) {
       break;
     }
-    stateService_.recorder_.record(*createCommandSerializer(command.command.get()));
-    setCreatePipelineStateOptionsCommands_.pop();
+    m_StateService.m_Recorder.Record(*createCommandSerializer(ordered.SerializedCommand.get()));
+    m_SetCreatePipelineStateOptionsCommands.pop();
   }
 }
 
-void StateTrackingService::NvAPIGlobalStateService::restoreShaderExtnSlotSpaceBeforeCommand(
+void StateTrackingService::NvAPIGlobalStateService::RestoreShaderExtnSlotSpaceBeforeCommand(
     unsigned commandKey) {
-  while (!setNvShaderExtnSlotSpaceCommands_.empty()) {
-    const auto& command = setNvShaderExtnSlotSpaceCommands_.top();
-    if (command.key >= commandKey) {
+  while (!m_SetNvShaderExtnSlotSpaceCommands.empty()) {
+    const auto& ordered = m_SetNvShaderExtnSlotSpaceCommands.top();
+    if (ordered.Key >= commandKey) {
       break;
     }
-    stateService_.recorder_.record(*createCommandSerializer(command.command.get()));
-    setNvShaderExtnSlotSpaceCommands_.pop();
+    m_StateService.m_Recorder.Record(*createCommandSerializer(ordered.SerializedCommand.get()));
+    m_SetNvShaderExtnSlotSpaceCommands.pop();
   }
 }
 
-void StateTrackingService::NvAPIGlobalStateService::finalizeRestore() {
-  while (!setNvShaderExtnSlotSpaceCommands_.empty()) {
-    const auto& command = setNvShaderExtnSlotSpaceCommands_.top();
-    stateService_.recorder_.record(*createCommandSerializer(command.command.get()));
-    setNvShaderExtnSlotSpaceCommands_.pop();
+void StateTrackingService::NvAPIGlobalStateService::FinalizeRestore() {
+  while (!m_SetNvShaderExtnSlotSpaceCommands.empty()) {
+    const auto& ordered = m_SetNvShaderExtnSlotSpaceCommands.top();
+    m_StateService.m_Recorder.Record(*createCommandSerializer(ordered.SerializedCommand.get()));
+    m_SetNvShaderExtnSlotSpaceCommands.pop();
   }
 
-  while (!setCreatePipelineStateOptionsCommands_.empty()) {
-    const auto& command = setCreatePipelineStateOptionsCommands_.top();
-    stateService_.recorder_.record(*createCommandSerializer(command.command.get()));
-    setCreatePipelineStateOptionsCommands_.pop();
+  while (!m_SetCreatePipelineStateOptionsCommands.empty()) {
+    const auto& ordered = m_SetCreatePipelineStateOptionsCommands.top();
+    m_StateService.m_Recorder.Record(*createCommandSerializer(ordered.SerializedCommand.get()));
+    m_SetCreatePipelineStateOptionsCommands.pop();
   }
 }
 

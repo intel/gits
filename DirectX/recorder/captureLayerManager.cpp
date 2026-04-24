@@ -23,21 +23,21 @@
 namespace gits {
 namespace DirectX {
 
-void CaptureLayerManager::loadLayers(CaptureManager& captureManager,
+void CaptureLayerManager::LoadLayers(CaptureManager& captureManager,
                                      stream::OrderingRecorder& gitsRecorder,
                                      GpuAddressService& gpuAddressService,
                                      PluginService& pluginService) {
   auto& cfg = Configurator::Get();
 
   // Load layers from LayerGroups
-  traceLayerGroup_.loadLayers();
-  resourceDumpingLayerGroup_.loadLayers();
-  portabilityLayerGroup_.loadLayers();
-  addressPinningLayerGroup_.loadLayers();
+  m_TraceLayerGroup.LoadLayers();
+  m_ResourceDumpingLayerGroup.LoadLayers();
+  m_PortabilityLayerGroup.LoadLayers();
+  m_AddressPinningLayerGroup.LoadLayers();
 
   // Get layers from LayerGroups
-  Layer* traceLayer = traceLayerGroup_.getLayer("Trace");
-  Layer* screenshotsLayer = resourceDumpingLayerGroup_.getLayer("Screenshots");
+  Layer* traceLayer = m_TraceLayerGroup.GetLayer("Trace");
+  Layer* screenshotsLayer = m_ResourceDumpingLayerGroup.GetLayer("Screenshots");
   Layer* portabilityLayer = nullptr;
   Layer* addressPinningLayer = nullptr;
 
@@ -68,10 +68,10 @@ void CaptureLayerManager::loadLayers(CaptureManager& captureManager,
     captureSynchronizationLayer = std::make_unique<CaptureSynchronizationLayer>(captureManager);
     encoderLayer = std::make_unique<EncoderLayer>(gitsRecorder);
     gpuPatchLayer = std::make_unique<GpuPatchLayer>(gpuAddressService);
-    portabilityLayer = portabilityLayerGroup_.getLayer("Portability");
-    addressPinningLayer = addressPinningLayerGroup_.getLayer("AddressPinningStore");
+    portabilityLayer = m_PortabilityLayerGroup.GetLayer("Portability");
+    addressPinningLayer = m_AddressPinningLayerGroup.GetLayer("AddressPinningStore");
     if (!addressPinningLayer) {
-      addressPinningLayer = addressPinningLayerGroup_.getLayer("AddressPinningUse");
+      addressPinningLayer = m_AddressPinningLayerGroup.GetLayer("AddressPinningUse");
     }
     dllOverrideStoreLayer = std::make_unique<DllOverrideStoreLayer>(captureManager, gitsRecorder);
   }
@@ -84,7 +84,7 @@ void CaptureLayerManager::loadLayers(CaptureManager& captureManager,
   // Insertion order determines execution order
   auto enablePreLayer = [this](Layer* layer) {
     if (layer) {
-      preLayers_.push_back(layer);
+      m_PreLayers.push_back(layer);
     }
   };
   enablePreLayer(globalSynchronizationLayer.get());
@@ -102,7 +102,7 @@ void CaptureLayerManager::loadLayers(CaptureManager& captureManager,
   // Insertion order determines execution order
   auto enablePostLayer = [this](Layer* layer) {
     if (layer) {
-      postLayers_.push_back(layer);
+      m_PostLayers.push_back(layer);
     }
   };
   enablePostLayer(logDxErrorLayer.get());
@@ -132,7 +132,7 @@ void CaptureLayerManager::loadLayers(CaptureManager& captureManager,
   // Retain ownership of layers
   auto retainLayer = [this](std::unique_ptr<Layer>&& layer) {
     if (layer) {
-      layersOwner_.push_back(std::move(layer));
+      m_LayersOwner.push_back(std::move(layer));
     }
   };
   retainLayer(std::move(interceptorCustomizationLayer));

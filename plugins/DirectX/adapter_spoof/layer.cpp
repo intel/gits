@@ -36,20 +36,20 @@ void spoofAdapterDesc(AdapterSpoofConfig& cfg, DescType* pDesc) {
 AdapterSpoofLayer::AdapterSpoofLayer(const AdapterSpoofConfig& cfg)
     : Layer("AdapterSpoof"), cfg_(cfg) {}
 
-void AdapterSpoofLayer::post(IDXGIAdapterGetDescCommand& c) {
-  spoofAdapterDesc(cfg_, c.pDesc_.value);
+void AdapterSpoofLayer::Post(IDXGIAdapterGetDescCommand& c) {
+  spoofAdapterDesc(cfg_, c.m_pDesc.Value);
 }
 
-void AdapterSpoofLayer::post(IDXGIAdapter1GetDesc1Command& c) {
-  spoofAdapterDesc(cfg_, c.pDesc_.value);
+void AdapterSpoofLayer::Post(IDXGIAdapter1GetDesc1Command& c) {
+  spoofAdapterDesc(cfg_, c.m_pDesc.Value);
 }
 
-void AdapterSpoofLayer::post(IDXGIAdapter2GetDesc2Command& c) {
-  spoofAdapterDesc(cfg_, c.pDesc_.value);
+void AdapterSpoofLayer::Post(IDXGIAdapter2GetDesc2Command& c) {
+  spoofAdapterDesc(cfg_, c.m_pDesc.Value);
 }
 
-void AdapterSpoofLayer::post(IDXGIAdapter4GetDesc3Command& c) {
-  spoofAdapterDesc(cfg_, c.pDesc_.value);
+void AdapterSpoofLayer::Post(IDXGIAdapter4GetDesc3Command& c) {
+  spoofAdapterDesc(cfg_, c.m_pDesc.Value);
 }
 
 } // namespace DirectX

@@ -29,11 +29,11 @@ public:
 
 private:
   struct FileRange {
-    uint64_t newOffset{};
+    uint64_t NewOffset{};
     uint64_t oldOffset{};
     uint64_t size{};
-    FileRange(uint64_t newOffset, uint64_t oldOffset, uint64_t size)
-        : newOffset(newOffset), oldOffset(oldOffset), size(size) {}
+    FileRange(uint64_t NewOffset, uint64_t oldOffset, uint64_t size)
+        : NewOffset(NewOffset), oldOffset(oldOffset), size(size) {}
   };
   struct CompareFileRange {
     bool operator()(const FileRange& lhs, const FileRange& rhs) const {
@@ -43,12 +43,12 @@ private:
   using Buffer = std::vector<char>;
   using Ranges = std::set<FileRange, CompareFileRange>;
 
-  bool captureDirectStorage_{};
-  std::filesystem::path outFilePath_{};
-  std::ofstream outFile_{};
-  std::mutex mapMutex_{};
-  std::unordered_map<unsigned, std::filesystem::path> files_{};
-  std::unordered_map<std::filesystem::path, Ranges> fileReads_{};
+  bool m_CaptureDirectStorage{};
+  std::filesystem::path m_OutFilePath{};
+  std::ofstream m_OutFile{};
+  std::mutex m_MapMutex{};
+  std::unordered_map<unsigned, std::filesystem::path> m_Files{};
+  std::unordered_map<std::filesystem::path, Ranges> m_FileReads{};
 };
 
 } // namespace DirectX

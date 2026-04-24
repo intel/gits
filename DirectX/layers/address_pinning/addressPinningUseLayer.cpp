@@ -17,290 +17,292 @@ namespace gits {
 namespace DirectX {
 
 AddressPinningUseLayer::AddressPinningUseLayer() : Layer("AddressPinningUse") {
-  readAddressRanges();
+  ReadAddressRanges();
 }
 
-void AddressPinningUseLayer::pre(D3D12CreateDeviceCommand& command) {
-  if (command.result_.value != S_OK) {
+void AddressPinningUseLayer::Pre(D3D12CreateDeviceCommand& command) {
+  if (command.m_Result.Value != S_OK) {
     return;
   }
 
-  HRESULT hr = D3D12GetInterface(CLSID_D3D12Tools, IID_PPV_ARGS(&d3d12Tools_));
+  HRESULT hr = D3D12GetInterface(CLSID_D3D12Tools, IID_PPV_ARGS(&m_D3d12Tools));
   GITS_ASSERT(hr == S_OK);
-  hr = d3d12Tools_->ReserveGPUVARangesAtCreate(addressRanges_.data(),
-                                               static_cast<UINT>(addressRanges_.size()));
+  hr = m_D3d12Tools->ReserveGPUVARangesAtCreate(m_AddressRanges.data(),
+                                                static_cast<UINT>(m_AddressRanges.size()));
   GITS_ASSERT(hr == S_OK);
 }
 
-void AddressPinningUseLayer::post(D3D12CreateDeviceCommand& command) {
-  if (command.skip || command.result_.value != S_OK) {
+void AddressPinningUseLayer::Post(D3D12CreateDeviceCommand& command) {
+  if (command.Skip || command.m_Result.Value != S_OK) {
     return;
   }
 
-  ID3D12Device* device = static_cast<ID3D12Device*>(*command.ppDevice_.value);
-  HRESULT hr = device->QueryInterface(IID_PPV_ARGS(&deviceTools_));
+  ID3D12Device* device = static_cast<ID3D12Device*>(*command.m_ppDevice.Value);
+  HRESULT hr = device->QueryInterface(IID_PPV_ARGS(&m_DeviceTools));
   GITS_ASSERT(hr == S_OK);
 }
 
-void AddressPinningUseLayer::pre(ID3D12DeviceCreateHeapCommand& command) {
-  preHeap(command);
+void AddressPinningUseLayer::Pre(ID3D12DeviceCreateHeapCommand& command) {
+  PreHeap(command);
 }
 
-void AddressPinningUseLayer::post(ID3D12DeviceCreateHeapCommand& command) {
-  postHeap(command);
+void AddressPinningUseLayer::Post(ID3D12DeviceCreateHeapCommand& command) {
+  PostHeap(command);
 }
 
-void AddressPinningUseLayer::pre(ID3D12Device4CreateHeap1Command& command) {
-  preHeap(command);
+void AddressPinningUseLayer::Pre(ID3D12Device4CreateHeap1Command& command) {
+  PreHeap(command);
 }
 
-void AddressPinningUseLayer::post(ID3D12Device4CreateHeap1Command& command) {
-  postHeap(command);
+void AddressPinningUseLayer::Post(ID3D12Device4CreateHeap1Command& command) {
+  PostHeap(command);
 }
 
-void AddressPinningUseLayer::pre(INTC_D3D12_CreateHeapCommand& command) {
-  if (command.result_.value != S_OK) {
+void AddressPinningUseLayer::Pre(INTC_D3D12_CreateHeapCommand& command) {
+  if (command.m_Result.Value != S_OK) {
     return;
   }
-  D3D12_HEAP_DESC* desc = command.pDesc_.value->pD3D12Desc;
+  D3D12_HEAP_DESC* desc = command.m_pDesc.Value->pD3D12Desc;
   if (desc->Flags & D3D12_HEAP_FLAG_DENY_BUFFERS) {
     return;
   }
-  auto it = heapAddressRanges_.find(command.ppvHeap_.key);
-  if (it == heapAddressRanges_.end()) {
+  auto it = m_HeapAddressRanges.find(command.m_ppvHeap.Key);
+  if (it == m_HeapAddressRanges.end()) {
     return;
   }
-  deviceTools_->SetNextAllocationAddress(it->second.addressRange.StartAddress);
+  m_DeviceTools->SetNextAllocationAddress(it->second.m_AddressRange.StartAddress);
 }
 
-void AddressPinningUseLayer::post(INTC_D3D12_CreateHeapCommand& command) {
-  if (command.result_.value != S_OK) {
+void AddressPinningUseLayer::Post(INTC_D3D12_CreateHeapCommand& command) {
+  if (command.m_Result.Value != S_OK) {
     return;
   }
-  D3D12_HEAP_DESC* desc = command.pDesc_.value->pD3D12Desc;
+  D3D12_HEAP_DESC* desc = command.m_pDesc.Value->pD3D12Desc;
   if (desc->Flags & D3D12_HEAP_FLAG_DENY_BUFFERS) {
     return;
   }
-  auto it = heapAddressRanges_.find(command.ppvHeap_.key);
-  if (it == heapAddressRanges_.end()) {
+  auto it = m_HeapAddressRanges.find(command.m_ppvHeap.Key);
+  if (it == m_HeapAddressRanges.end()) {
     return;
   }
-  ID3D12Heap* heap = static_cast<ID3D12Heap*>(*command.ppvHeap_.value);
+  ID3D12Heap* heap = static_cast<ID3D12Heap*>(*command.m_ppvHeap.Value);
   ID3D12PageableTools* pPageableTools = nullptr;
   HRESULT hr = heap->QueryInterface(IID_PPV_ARGS(&pPageableTools));
   GITS_ASSERT(hr == S_OK);
   D3D12_GPU_VIRTUAL_ADDRESS_RANGE range{};
   hr = pPageableTools->GetAllocation(&range);
   GITS_ASSERT(hr == S_OK);
-  GITS_ASSERT(it->second.addressRange.StartAddress == range.StartAddress);
+  GITS_ASSERT(it->second.m_AddressRange.StartAddress == range.StartAddress);
 }
 
-void AddressPinningUseLayer::pre(CreateHeapAllocationMetaCommand& command) {
-  command.skip = true;
+void AddressPinningUseLayer::Pre(CreateHeapAllocationMetaCommand& command) {
+  command.Skip = true;
 }
 
-void AddressPinningUseLayer::pre(ID3D12Device3OpenExistingHeapFromAddressCommand& command) {
-  preOpenExistingHeap(command);
+void AddressPinningUseLayer::Pre(ID3D12Device3OpenExistingHeapFromAddressCommand& command) {
+  PreOpenExistingHeap(command);
 }
 
-void AddressPinningUseLayer::pre(ID3D12Device13OpenExistingHeapFromAddress1Command& command) {
-  preOpenExistingHeap(command);
+void AddressPinningUseLayer::Pre(ID3D12Device13OpenExistingHeapFromAddress1Command& command) {
+  PreOpenExistingHeap(command);
 }
 
-void AddressPinningUseLayer::pre(ID3D12DeviceCreateCommittedResourceCommand& command) {
-  preResource(command);
+void AddressPinningUseLayer::Pre(ID3D12DeviceCreateCommittedResourceCommand& command) {
+  PreResource(command);
 }
 
-void AddressPinningUseLayer::post(ID3D12DeviceCreateCommittedResourceCommand& command) {
-  postResource(command);
+void AddressPinningUseLayer::Post(ID3D12DeviceCreateCommittedResourceCommand& command) {
+  PostResource(command);
 }
 
-void AddressPinningUseLayer::pre(ID3D12Device4CreateCommittedResource1Command& command) {
-  preResource(command);
+void AddressPinningUseLayer::Pre(ID3D12Device4CreateCommittedResource1Command& command) {
+  PreResource(command);
 }
 
-void AddressPinningUseLayer::post(ID3D12Device4CreateCommittedResource1Command& command) {
-  postResource(command);
+void AddressPinningUseLayer::Post(ID3D12Device4CreateCommittedResource1Command& command) {
+  PostResource(command);
 }
 
-void AddressPinningUseLayer::pre(ID3D12Device8CreateCommittedResource2Command& command) {
-  preResource(command);
+void AddressPinningUseLayer::Pre(ID3D12Device8CreateCommittedResource2Command& command) {
+  PreResource(command);
 }
 
-void AddressPinningUseLayer::post(ID3D12Device8CreateCommittedResource2Command& command) {
-  postResource(command);
+void AddressPinningUseLayer::Post(ID3D12Device8CreateCommittedResource2Command& command) {
+  PostResource(command);
 }
 
-void AddressPinningUseLayer::pre(ID3D12Device10CreateCommittedResource3Command& command) {
-  preResource(command);
+void AddressPinningUseLayer::Pre(ID3D12Device10CreateCommittedResource3Command& command) {
+  PreResource(command);
 }
 
-void AddressPinningUseLayer::post(ID3D12Device10CreateCommittedResource3Command& command) {
-  postResource(command);
+void AddressPinningUseLayer::Post(ID3D12Device10CreateCommittedResource3Command& command) {
+  PostResource(command);
 }
 
-void AddressPinningUseLayer::pre(ID3D12DeviceCreateReservedResourceCommand& command) {
-  preResource(command);
+void AddressPinningUseLayer::Pre(ID3D12DeviceCreateReservedResourceCommand& command) {
+  PreResource(command);
 }
 
-void AddressPinningUseLayer::post(ID3D12DeviceCreateReservedResourceCommand& command) {
-  postResource(command);
+void AddressPinningUseLayer::Post(ID3D12DeviceCreateReservedResourceCommand& command) {
+  PostResource(command);
 }
 
-void AddressPinningUseLayer::pre(ID3D12Device4CreateReservedResource1Command& command) {
-  preResource(command);
+void AddressPinningUseLayer::Pre(ID3D12Device4CreateReservedResource1Command& command) {
+  PreResource(command);
 }
 
-void AddressPinningUseLayer::post(ID3D12Device4CreateReservedResource1Command& command) {
-  postResource(command);
+void AddressPinningUseLayer::Post(ID3D12Device4CreateReservedResource1Command& command) {
+  PostResource(command);
 }
 
-void AddressPinningUseLayer::pre(ID3D12Device10CreateReservedResource2Command& command) {
-  preResource(command);
+void AddressPinningUseLayer::Pre(ID3D12Device10CreateReservedResource2Command& command) {
+  PreResource(command);
 }
 
-void AddressPinningUseLayer::post(ID3D12Device10CreateReservedResource2Command& command) {
-  postResource(command);
+void AddressPinningUseLayer::Post(ID3D12Device10CreateReservedResource2Command& command) {
+  PostResource(command);
 }
 
-void AddressPinningUseLayer::pre(ID3D12DeviceCreatePlacedResourceCommand& command) {
-  if (command.result_.value != S_OK) {
+void AddressPinningUseLayer::Pre(ID3D12DeviceCreatePlacedResourceCommand& command) {
+  if (command.m_Result.Value != S_OK) {
     return;
   }
 
-  if (changedHeaps_.count(command.pHeap_.key)) {
-    command.pDesc_.value->Flags &= ~D3D12_RESOURCE_FLAG_ALLOW_CROSS_ADAPTER;
+  if (m_ChangedHeaps.count(command.m_pHeap.Key)) {
+    command.m_pDesc.Value->Flags &= ~D3D12_RESOURCE_FLAG_ALLOW_CROSS_ADAPTER;
   }
 }
 
-void AddressPinningUseLayer::post(ID3D12DeviceCreatePlacedResourceCommand& command) {
-  if (command.result_.value != S_OK) {
+void AddressPinningUseLayer::Post(ID3D12DeviceCreatePlacedResourceCommand& command) {
+  if (command.m_Result.Value != S_OK) {
     return;
   }
 
-  if (changedHeaps_.count(command.pHeap_.key)) {
-    command.pDesc_.value->Flags |= D3D12_RESOURCE_FLAG_ALLOW_CROSS_ADAPTER;
+  if (m_ChangedHeaps.count(command.m_pHeap.Key)) {
+    command.m_pDesc.Value->Flags |= D3D12_RESOURCE_FLAG_ALLOW_CROSS_ADAPTER;
   }
 }
 
-void AddressPinningUseLayer::pre(ID3D12Device8CreatePlacedResource1Command& command) {
-  if (command.result_.value != S_OK) {
+void AddressPinningUseLayer::Pre(ID3D12Device8CreatePlacedResource1Command& command) {
+  if (command.m_Result.Value != S_OK) {
     return;
   }
 
-  if (changedHeaps_.count(command.pHeap_.key)) {
-    command.pDesc_.value->Flags &= ~D3D12_RESOURCE_FLAG_ALLOW_CROSS_ADAPTER;
+  if (m_ChangedHeaps.count(command.m_pHeap.Key)) {
+    command.m_pDesc.Value->Flags &= ~D3D12_RESOURCE_FLAG_ALLOW_CROSS_ADAPTER;
   }
 }
 
-void AddressPinningUseLayer::post(ID3D12Device8CreatePlacedResource1Command& command) {
-  if (command.result_.value != S_OK) {
+void AddressPinningUseLayer::Post(ID3D12Device8CreatePlacedResource1Command& command) {
+  if (command.m_Result.Value != S_OK) {
     return;
   }
 
-  if (changedHeaps_.count(command.pHeap_.key)) {
-    command.pDesc_.value->Flags |= D3D12_RESOURCE_FLAG_ALLOW_CROSS_ADAPTER;
+  if (m_ChangedHeaps.count(command.m_pHeap.Key)) {
+    command.m_pDesc.Value->Flags |= D3D12_RESOURCE_FLAG_ALLOW_CROSS_ADAPTER;
   }
 }
 
-void AddressPinningUseLayer::pre(ID3D12Device10CreatePlacedResource2Command& command) {
-  if (command.result_.value != S_OK) {
+void AddressPinningUseLayer::Pre(ID3D12Device10CreatePlacedResource2Command& command) {
+  if (command.m_Result.Value != S_OK) {
     return;
   }
 
-  if (changedHeaps_.count(command.pHeap_.key)) {
-    command.pDesc_.value->Flags &= ~D3D12_RESOURCE_FLAG_ALLOW_CROSS_ADAPTER;
+  if (m_ChangedHeaps.count(command.m_pHeap.Key)) {
+    command.m_pDesc.Value->Flags &= ~D3D12_RESOURCE_FLAG_ALLOW_CROSS_ADAPTER;
   }
 }
 
-void AddressPinningUseLayer::post(ID3D12Device10CreatePlacedResource2Command& command) {
-  if (command.result_.value != S_OK) {
+void AddressPinningUseLayer::Post(ID3D12Device10CreatePlacedResource2Command& command) {
+  if (command.m_Result.Value != S_OK) {
     return;
   }
 
-  if (changedHeaps_.count(command.pHeap_.key)) {
-    command.pDesc_.value->Flags |= D3D12_RESOURCE_FLAG_ALLOW_CROSS_ADAPTER;
+  if (m_ChangedHeaps.count(command.m_pHeap.Key)) {
+    command.m_pDesc.Value->Flags |= D3D12_RESOURCE_FLAG_ALLOW_CROSS_ADAPTER;
   }
 }
 
 template <typename CommandT>
-void AddressPinningUseLayer::preResource(CommandT& command) {
-  if (command.result_.value != S_OK ||
-      command.pDesc_.value->Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
+void AddressPinningUseLayer::PreResource(CommandT& command) {
+  if (command.m_Result.Value != S_OK ||
+      command.m_pDesc.Value->Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
     return;
   }
 
-  auto it = resourceAddressRanges_.find(command.ppvResource_.key);
-  if (it == resourceAddressRanges_.end()) {
+  auto it = m_ResourceAddressRanges.find(command.m_ppvResource.Key);
+  if (it == m_ResourceAddressRanges.end()) {
     return;
   }
-  deviceTools_->SetNextAllocationAddress(it->second.StartAddress);
+  m_DeviceTools->SetNextAllocationAddress(it->second.StartAddress);
 }
 
 template <typename CommandT>
-void AddressPinningUseLayer::postResource(CommandT& command) {
-  if (command.result_.value != S_OK ||
-      command.pDesc_.value->Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
+void AddressPinningUseLayer::PostResource(CommandT& command) {
+  if (command.m_Result.Value != S_OK ||
+      command.m_pDesc.Value->Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
     return;
   }
 
-  auto it = resourceAddressRanges_.find(command.ppvResource_.key);
-  if (it == resourceAddressRanges_.end()) {
+  auto it = m_ResourceAddressRanges.find(command.m_ppvResource.Key);
+  if (it == m_ResourceAddressRanges.end()) {
     return;
   }
-  ID3D12Resource* resource = static_cast<ID3D12Resource*>(*command.ppvResource_.value);
+  ID3D12Resource* resource = static_cast<ID3D12Resource*>(*command.m_ppvResource.Value);
   GITS_ASSERT(it->second.StartAddress == resource->GetGPUVirtualAddress());
 }
 
 template <typename CommandT>
-void AddressPinningUseLayer::preHeap(CommandT& command) {
-  if (command.result_.value != S_OK || command.pDesc_.value->Flags & D3D12_HEAP_FLAG_DENY_BUFFERS) {
+void AddressPinningUseLayer::PreHeap(CommandT& command) {
+  if (command.m_Result.Value != S_OK ||
+      command.m_pDesc.Value->Flags & D3D12_HEAP_FLAG_DENY_BUFFERS) {
     return;
   }
 
-  auto it = heapAddressRanges_.find(command.ppvHeap_.key);
-  if (it == heapAddressRanges_.end()) {
+  auto it = m_HeapAddressRanges.find(command.m_ppvHeap.Key);
+  if (it == m_HeapAddressRanges.end()) {
     return;
   }
-  deviceTools_->SetNextAllocationAddress(it->second.addressRange.StartAddress);
+  m_DeviceTools->SetNextAllocationAddress(it->second.m_AddressRange.StartAddress);
 }
 
 template <typename CommandT>
-void AddressPinningUseLayer::postHeap(CommandT& command) {
-  if (command.result_.value != S_OK || command.pDesc_.value->Flags & D3D12_HEAP_FLAG_DENY_BUFFERS) {
+void AddressPinningUseLayer::PostHeap(CommandT& command) {
+  if (command.m_Result.Value != S_OK ||
+      command.m_pDesc.Value->Flags & D3D12_HEAP_FLAG_DENY_BUFFERS) {
     return;
   }
-  auto it = heapAddressRanges_.find(command.ppvHeap_.key);
-  if (it == heapAddressRanges_.end()) {
+  auto it = m_HeapAddressRanges.find(command.m_ppvHeap.Key);
+  if (it == m_HeapAddressRanges.end()) {
     return;
   }
-  ID3D12Heap* heap = static_cast<ID3D12Heap*>(*command.ppvHeap_.value);
+  ID3D12Heap* heap = static_cast<ID3D12Heap*>(*command.m_ppvHeap.Value);
   ID3D12PageableTools* pPageableTools = nullptr;
   HRESULT hr = heap->QueryInterface(IID_PPV_ARGS(&pPageableTools));
   GITS_ASSERT(hr == S_OK);
   D3D12_GPU_VIRTUAL_ADDRESS_RANGE range{};
   hr = pPageableTools->GetAllocation(&range);
   GITS_ASSERT(hr == S_OK);
-  GITS_ASSERT(it->second.addressRange.StartAddress == range.StartAddress);
+  GITS_ASSERT(it->second.m_AddressRange.StartAddress == range.StartAddress);
 }
 
 template <typename CommandT>
-void AddressPinningUseLayer::preOpenExistingHeap(CommandT& command) {
-  if (command.result_.value != S_OK) {
+void AddressPinningUseLayer::PreOpenExistingHeap(CommandT& command) {
+  if (command.m_Result.Value != S_OK) {
     return;
   }
 
-  auto it = heapAddressRanges_.find(command.ppvHeap_.key);
-  if (it == heapAddressRanges_.end()) {
+  auto it = m_HeapAddressRanges.find(command.m_ppvHeap.Key);
+  if (it == m_HeapAddressRanges.end()) {
     return;
   }
 
-  auto* device = command.object_.value;
+  auto* device = command.m_Object.Value;
   ID3D12Heap* heap = nullptr;
   D3D12_HEAP_DESC heapDesc{};
   HRESULT hr{};
 
-  heapDesc.SizeInBytes = it->second.addressRange.SizeInBytes;
+  heapDesc.SizeInBytes = it->second.m_AddressRange.SizeInBytes;
   heapDesc.Properties.Type = D3D12_HEAP_TYPE_CUSTOM;
   heapDesc.Properties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_WRITE_BACK;
   heapDesc.Properties.MemoryPoolPreference = D3D12_MEMORY_POOL_L0;
@@ -309,7 +311,7 @@ void AddressPinningUseLayer::preOpenExistingHeap(CommandT& command) {
   heapDesc.Alignment = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
   heapDesc.Flags = D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS;
 
-  deviceTools_->SetNextAllocationAddress(it->second.addressRange.StartAddress);
+  m_DeviceTools->SetNextAllocationAddress(it->second.m_AddressRange.StartAddress);
   hr = device->CreateHeap(&heapDesc, IID_PPV_ARGS(&heap));
   GITS_ASSERT(hr == S_OK);
 
@@ -319,15 +321,15 @@ void AddressPinningUseLayer::preOpenExistingHeap(CommandT& command) {
   D3D12_GPU_VIRTUAL_ADDRESS_RANGE range{};
   hr = pPageableTools->GetAllocation(&range);
   GITS_ASSERT(hr == S_OK);
-  GITS_ASSERT(it->second.addressRange.StartAddress == range.StartAddress);
+  GITS_ASSERT(it->second.m_AddressRange.StartAddress == range.StartAddress);
 
-  changedHeaps_.insert(command.ppvHeap_.key);
-  *command.ppvHeap_.value = heap;
-  command.result_.value = S_OK;
-  command.skip = true;
+  m_ChangedHeaps.insert(command.m_ppvHeap.Key);
+  *command.m_ppvHeap.Value = heap;
+  command.m_Result.Value = S_OK;
+  command.Skip = true;
 }
 
-void AddressPinningUseLayer::readAddressRanges() {
+void AddressPinningUseLayer::ReadAddressRanges() {
   const std::filesystem::path inputPath =
       Configurator::Get().common.player.streamDir / "addressRanges.txt";
   std::ifstream inputFile(inputPath);
@@ -360,8 +362,8 @@ void AddressPinningUseLayer::readAddressRanges() {
 
     if (currentSection == Section::RESOURCES) {
       if (lineStream >> key >> range.StartAddress >> range.SizeInBytes) {
-        addressRanges_.push_back(range);
-        resourceAddressRanges_[key] = range;
+        m_AddressRanges.push_back(range);
+        m_ResourceAddressRanges[key] = range;
       } else {
         LOG_ERROR << "AddressPinningUseLayer: Failed to parse resource address range line: "
                   << line;
@@ -383,11 +385,11 @@ void AddressPinningUseLayer::readAddressRanges() {
             range.SizeInBytes = alignedSize;
           }
         }
-        addressRanges_.push_back(range);
+        m_AddressRanges.push_back(range);
         HeapAllocationInfo heapAllocationInfo{};
-        heapAllocationInfo.addressRange = range;
-        heapAllocationInfo.alignment = alignment;
-        heapAddressRanges_[key] = heapAllocationInfo;
+        heapAllocationInfo.m_AddressRange = range;
+        heapAllocationInfo.m_Alignment = alignment;
+        m_HeapAddressRanges[key] = heapAllocationInfo;
       } else {
         LOG_ERROR << "AddressPinningUseLayer: Failed to parse heap address range line: " << line;
         return;

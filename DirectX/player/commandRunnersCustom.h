@@ -49,7 +49,7 @@ public:
 
 protected:
   void DecodeCommand() override {
-    decode(m_Data, command);
+    Decode(m_Data, command);
   }
 
 private:
@@ -66,7 +66,7 @@ public:
 
 protected:
   void DecodeCommand() override {
-    decode(m_Data, command);
+    Decode(m_Data, command);
   }
 
 private:
@@ -79,7 +79,7 @@ public:
 
 protected:
   void DecodeCommand() override {
-    decode(m_Data, command);
+    Decode(m_Data, command);
   }
 
 private:
@@ -92,7 +92,7 @@ public:
 
 protected:
   void DecodeCommand() override {
-    decode(m_Data, command);
+    Decode(m_Data, command);
   }
 
 private:
@@ -109,7 +109,7 @@ public:
 
 protected:
   void DecodeCommand() override {
-    decode(m_Data, command);
+    Decode(m_Data, command);
   }
 
 private:
@@ -122,7 +122,7 @@ public:
 
 protected:
   void DecodeCommand() override {
-    decode(m_Data, command);
+    Decode(m_Data, command);
   }
 
 private:
@@ -135,7 +135,7 @@ public:
 
 protected:
   void DecodeCommand() override {
-    decode(m_Data, command);
+    Decode(m_Data, command);
   }
 
 private:
@@ -148,7 +148,7 @@ public:
 
 protected:
   void DecodeCommand() override {
-    decode(m_Data, command);
+    Decode(m_Data, command);
   }
 
 private:
@@ -161,7 +161,7 @@ public:
 
 protected:
   void DecodeCommand() override {
-    decode(m_Data, command);
+    Decode(m_Data, command);
   }
 
 private:
@@ -178,7 +178,7 @@ public:
 
 protected:
   void DecodeCommand() override {
-    decode(m_Data, command);
+    Decode(m_Data, command);
   }
 
 private:
@@ -191,7 +191,7 @@ public:
 
 protected:
   void DecodeCommand() override {
-    decode(m_Data, command);
+    Decode(m_Data, command);
   }
 
 private:
@@ -204,7 +204,7 @@ public:
 
 protected:
   void DecodeCommand() override {
-    decode(m_Data, command);
+    Decode(m_Data, command);
   }
 
 private:
@@ -217,7 +217,7 @@ public:
 
 protected:
   void DecodeCommand() override {
-    decode(m_Data, command);
+    Decode(m_Data, command);
   }
 
 private:
@@ -230,7 +230,7 @@ public:
 
 protected:
   void DecodeCommand() override {
-    decode(m_Data, command);
+    Decode(m_Data, command);
   }
 
 private:
@@ -243,7 +243,7 @@ public:
 
 protected:
   void DecodeCommand() override {
-    decode(m_Data, command);
+    Decode(m_Data, command);
   }
 
 private:
@@ -256,7 +256,7 @@ public:
 
 protected:
   void DecodeCommand() override {
-    decode(m_Data, command);
+    Decode(m_Data, command);
   }
 
 private:
@@ -269,7 +269,7 @@ public:
 
 protected:
   void DecodeCommand() override {
-    decode(m_Data, command);
+    Decode(m_Data, command);
   }
 
 private:
@@ -282,7 +282,7 @@ public:
 
 protected:
   void DecodeCommand() override {
-    decode(m_Data, command);
+    Decode(m_Data, command);
   }
 
 private:
@@ -295,7 +295,7 @@ public:
 
 protected:
   void DecodeCommand() override {
-    decode(m_Data, command);
+    Decode(m_Data, command);
   }
 
 private:
@@ -308,7 +308,7 @@ public:
 
 protected:
   void DecodeCommand() override {
-    decode(m_Data, command);
+    Decode(m_Data, command);
   }
 
 private:
@@ -321,7 +321,7 @@ public:
 
 protected:
   void DecodeCommand() override {
-    decode(m_Data, command);
+    Decode(m_Data, command);
   }
 
 private:
@@ -334,7 +334,7 @@ public:
 
 protected:
   void DecodeCommand() override {
-    decode(m_Data, command);
+    Decode(m_Data, command);
   }
 
 private:
@@ -347,7 +347,7 @@ public:
 
 protected:
   void DecodeCommand() override {
-    decode(m_Data, command);
+    Decode(m_Data, command);
   }
 
 private:
@@ -360,7 +360,7 @@ public:
 
 protected:
   void DecodeCommand() override {
-    decode(m_Data, command);
+    Decode(m_Data, command);
   }
 
 private:
@@ -373,7 +373,7 @@ public:
 
 protected:
   void DecodeCommand() override {
-    decode(m_Data, command);
+    Decode(m_Data, command);
   }
 
 private:
@@ -386,7 +386,7 @@ public:
 
 protected:
   void DecodeCommand() override {
-    decode(m_Data, command);
+    Decode(m_Data, command);
   }
 
 private:
@@ -399,7 +399,7 @@ public:
 
 protected:
   void DecodeCommand() override {
-    decode(m_Data, command);
+    Decode(m_Data, command);
   }
 
 private:
@@ -412,7 +412,7 @@ public:
 
 protected:
   void DecodeCommand() override {
-    decode(m_Data, command);
+    Decode(m_Data, command);
   }
 
 private:
@@ -425,7 +425,7 @@ public:
 
 protected:
   void DecodeCommand() override {
-    decode(m_Data, command);
+    Decode(m_Data, command);
   }
 
 private:
@@ -438,7 +438,7 @@ public:
 
 protected:
   void DecodeCommand() override {
-    decode(m_Data, command);
+    Decode(m_Data, command);
   }
 
 private:
@@ -452,7 +452,7 @@ public:
 
 protected:
   void DecodeCommand() override {
-    decode(m_Data, command);
+    Decode(m_Data, command);
   }
 
 private:

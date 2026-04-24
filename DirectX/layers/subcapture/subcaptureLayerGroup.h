@@ -22,11 +22,11 @@ public:
   SubcaptureLayerGroup() = default;
   ~SubcaptureLayerGroup() override = default;
 
-  void loadLayers() override;
+  void LoadLayers() override;
 
 private:
-  std::unique_ptr<SubcaptureRecorder> recorder_;
-  std::unique_ptr<SubcaptureRange> subcaptureRange_;
+  std::unique_ptr<SubcaptureRecorder> m_Recorder;
+  std::unique_ptr<SubcaptureRange> m_SubcaptureRange;
 };
 
 } // namespace DirectX

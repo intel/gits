@@ -34,34 +34,34 @@ public:
                                      ReservedResourcesService& reservedResourcesService,
                                      ResourceStateTracker& resourceStateTracker,
                                      CapturePlayerGpuAddressService& gpuAddressService);
-  void buildAccelerationStructure(
-      ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& command);
-  void copyAccelerationStructure(
-      ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& command);
-  void nvapiBuildAccelerationStructureEx(
-      NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& command);
-  void nvapiBuildOpacityMicromapArray(
-      NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& command);
-  void setDeviceKey(unsigned deviceKey) {
-    deviceKey_ = deviceKey;
-    bufferContentRestore_.setDeviceKey(deviceKey);
+  void BuildAccelerationStructure(
+      ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& Command);
+  void CopyAccelerationStructure(
+      ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& Command);
+  void NvapiBuildAccelerationStructureEx(
+      NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& Command);
+  void NvapiBuildOpacityMicromapArray(
+      NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& Command);
+  void SetDeviceKey(unsigned DeviceKey) {
+    m_DeviceKey = DeviceKey;
+    m_BufferContentRestore.SetDeviceKey(DeviceKey);
   }
-  void restoreAccelerationStructures();
-  void executeCommandLists(ID3D12CommandQueueExecuteCommandListsCommand& command);
-  void commandQueueWait(ID3D12CommandQueueWaitCommand& command);
-  void commandQueueSignal(ID3D12CommandQueueSignalCommand& command);
-  void fenceSignal(unsigned key, unsigned fenceKey, UINT64 fenceValue);
+  void RestoreAccelerationStructures();
+  void ExecuteCommandLists(ID3D12CommandQueueExecuteCommandListsCommand& Command);
+  void CommandQueueWait(ID3D12CommandQueueWaitCommand& Command);
+  void CommandQueueSignal(ID3D12CommandQueueSignalCommand& Command);
+  void FenceSignal(unsigned key, unsigned fenceKey, UINT64 fenceValue);
 
 private:
-  StateTrackingService& stateService_;
-  SubcaptureRecorder& recorder_;
-  ReservedResourcesService& reservedResourcesService_;
-  AccelerationStructuresBufferContentRestore bufferContentRestore_;
-  ResourceStateTracker& resourceStateTracker_;
-  CapturePlayerGpuAddressService& gpuAddressService_;
+  StateTrackingService& m_StateService;
+  SubcaptureRecorder& m_Recorder;
+  ReservedResourcesService& m_ReservedResourcesService;
+  AccelerationStructuresBufferContentRestore m_BufferContentRestore;
+  ResourceStateTracker& m_ResourceStateTracker;
+  CapturePlayerGpuAddressService& m_GpuAddressService;
 
   struct RaytracingAccelerationStructureState {
-    enum StateType {
+    enum class StateKind {
       Build,
       Copy,
       NvAPIBuild,
@@ -69,105 +69,104 @@ private:
     };
 
     virtual ~RaytracingAccelerationStructureState() {}
-    unsigned commandKey{};
-    unsigned commandListKey{};
-    StateType stateType{};
-    unsigned destKey{};
-    unsigned destOffset{};
-    unsigned sourceKey{};
-    unsigned sourceOffset{};
-    bool foundInAnalysis{};
+    unsigned CommandKey{};
+    unsigned CommandListKey{};
+    StateKind StateKind{};
+    unsigned DestKey{};
+    unsigned DestOffset{};
+    unsigned SourceKey{};
+    unsigned SourceOffset{};
+    bool FoundInAnalysis{};
   };
 
   struct BufferBackedRaytracingAccelerationStructureState
       : public RaytracingAccelerationStructureState {
-    std::unordered_map<unsigned, ResourceState*> buffers;
-    std::unordered_map<unsigned, ReservedResourcesService::TiledResource> tiledResources;
+    std::unordered_map<unsigned, ResourceState*> Buffers;
+    std::unordered_map<unsigned, ReservedResourcesService::TiledResource> TiledResources;
   };
 
   struct BuildRaytracingAccelerationStructureState
       : public BufferBackedRaytracingAccelerationStructureState {
-    std::unique_ptr<PointerArgument<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC>> desc{};
-    bool update{};
+    std::unique_ptr<PointerArgument<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC>> Desc{};
+    bool Update{};
   };
 
   struct CopyRaytracingAccelerationStructureState : public RaytracingAccelerationStructureState {
-    D3D12_GPU_VIRTUAL_ADDRESS destAccelerationStructureData{};
-    D3D12_GPU_VIRTUAL_ADDRESS sourceAccelerationStructureData{};
-    D3D12_RAYTRACING_ACCELERATION_STRUCTURE_COPY_MODE mode{};
+    D3D12_GPU_VIRTUAL_ADDRESS DestAccelerationStructureData{};
+    D3D12_GPU_VIRTUAL_ADDRESS SourceAccelerationStructureData{};
+    D3D12_RAYTRACING_ACCELERATION_STRUCTURE_COPY_MODE Mode{};
   };
 
   struct NvAPIBuildRaytracingAccelerationStructureExState
       : public BufferBackedRaytracingAccelerationStructureState {
     std::unique_ptr<PointerArgument<NVAPI_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_EX_PARAMS>>
-        desc{};
-    bool update{};
+        Desc{};
+    bool Update{};
   };
 
   struct NvAPIBuildRaytracingOpacityMicromapArrayState
       : public BufferBackedRaytracingAccelerationStructureState {
-    std::unique_ptr<PointerArgument<NVAPI_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_PARAMS>> desc{};
+    std::unique_ptr<PointerArgument<NVAPI_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_PARAMS>> Desc{};
   };
 
   struct Interval {
-    unsigned start{};
-    unsigned end{};
+    unsigned Start{};
+    unsigned End{};
   };
 
   using KeyOffset = std::pair<unsigned, unsigned>;
-  std::set<KeyOffset> tlases_;
+  std::set<KeyOffset> m_Tlases;
 
   std::unordered_map<unsigned, std::vector<RaytracingAccelerationStructureState*>>
-      statesByCommandList_;
+      m_StatesByCommandList;
 
-  std::map<unsigned, RaytracingAccelerationStructureState*> statesById_;
+  std::map<unsigned, RaytracingAccelerationStructureState*> m_StatesById;
 
-  std::map<KeyOffset, std::set<unsigned>> stateByKeyOffset_;
-  std::unordered_map<unsigned, unsigned> stateSourceByDest_;
-  std::unordered_map<unsigned, std::unordered_set<unsigned>> stateDestsBySource_;
-  std::unordered_set<unsigned> sourcesWithoutDestinations_;
+  std::map<KeyOffset, std::set<unsigned>> m_StateByKeyOffset;
+  std::unordered_map<unsigned, unsigned> m_StateSourceByDest;
+  std::unordered_map<unsigned, std::unordered_set<unsigned>> m_StateDestsBySource;
+  std::unordered_set<unsigned> m_SourcesWithoutDestinations;
 
-  unsigned stateUniqueId_{};
-  unsigned maxBuildScratchSpace_{};
-  unsigned deviceKey_{};
+  unsigned m_StateUniqueId{};
+  unsigned m_MaxBuildScratchSpace{};
+  unsigned m_DeviceKey{};
 
-  unsigned commandQueueCopyKey_{};
-  unsigned commandAllocatorCopyKey_{};
-  unsigned commandListCopyKey_{};
-  unsigned commandQueueDirectKey_{};
-  unsigned commandAllocatorDirectKey_{};
-  unsigned commandListDirectKey_{};
-  unsigned fenceKey_{};
-  unsigned uploadBufferKey_{};
-  UINT64 recordedFenceValue_{};
-  size_t uploadBufferSize_{};
-  bool restored_{};
-  bool serializeMode_{};
-  bool restoreTLASes_{};
-  bool optimize_{};
+  unsigned m_CommandQueueCopyKey{};
+  unsigned m_CommandAllocatorCopyKey{};
+  unsigned m_CommandListCopyKey{};
+  unsigned m_CommandQueueDirectKey{};
+  unsigned m_CommandAllocatorDirectKey{};
+  unsigned m_CommandListDirectKey{};
+  unsigned m_FenceKey{};
+  unsigned m_UploadBufferKey{};
+  UINT64 m_RecordedFenceValue{};
+  size_t m_UploadBufferSize{};
+  bool m_Restored{};
+  bool m_SerializeMode{};
+  bool m_RestoreTlas{};
+  bool m_Optimize{};
 
-private:
-  void storeState(RaytracingAccelerationStructureState* state);
-  unsigned getState(unsigned key, unsigned offset);
-  void removeState(unsigned stateId, bool removeSource = false);
-  void initUploadBuffer();
-  size_t restoreBuffer(
+  void StoreState(RaytracingAccelerationStructureState* state);
+  unsigned GetState(unsigned key, unsigned offset);
+  void RemoveState(unsigned stateId, bool removeSource = false);
+  void InitUploadBuffer();
+  size_t RestoreBuffer(
       const AccelerationStructuresBufferContentRestore::BufferRestoreInfo& restoreInfo,
       size_t uploadBufferOffset);
-  void optimize();
-  void removeSourcesWithoutDestinations();
-  void completeSourcesFromAnalysis();
-  void storeBuffer(unsigned inputKey,
+  void Optimize();
+  void RemoveSourcesWithoutDestinations();
+  void CompleteSourcesFromAnalysis();
+  void StoreBuffer(unsigned inputKey,
                    unsigned inputOffset,
                    unsigned size,
                    unsigned commandKey,
                    ID3D12GraphicsCommandList* commandList,
                    BufferBackedRaytracingAccelerationStructureState* state);
-  std::vector<Interval> mergeIntervals(const std::vector<Interval>& intervals);
-  void insertIfNotResident(unsigned resourceKey, std::set<unsigned>& residencyKeys);
-  std::optional<unsigned> getResidencyKeyForNotResidentResource(unsigned key);
-  void recordMakeResident(const std::set<unsigned>& keys);
-  void recordEvict(const std::set<unsigned>& keys);
+  std::vector<Interval> MergeIntervals(const std::vector<Interval>& intervals);
+  void InsertIfNotResident(unsigned ResourceKey, std::set<unsigned>& residencyKeys);
+  std::optional<unsigned> GetResidencyKeyForNotResidentResource(unsigned key);
+  void RecordMakeResident(const std::set<unsigned>& keys);
+  void RecordEvict(const std::set<unsigned>& keys);
 };
 
 } // namespace DirectX

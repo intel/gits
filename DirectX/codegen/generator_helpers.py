@@ -31,6 +31,7 @@ def generate_return(function):
         print('ERROR param not handled: ' + function.ret)
     return str
 
+
 def generate_params(function):
     list = []
     for param in function.params:
@@ -54,7 +55,7 @@ def generate_params(function):
 def generate_args(function):
     list = []
     for param in function.params:
-        str = f'command.{param.name}_.value'
+        str = f'command.m_{param.name}.Value'
         list.append(str)
     return list
 
@@ -81,7 +82,7 @@ def generate_file(context, file_name, out_path):
         'generate_params': generate_params,
         'generate_args': generate_args,
         'is_interface_creation': is_interface_creation,
-        'is_context_creation': is_context_creation
+        'is_context_creation': is_context_creation,
     }
 
     print('Generating file: ' + out_file)
@@ -102,7 +103,7 @@ def generate_plugin_file(context, file_name, out_path):
         'generate_params': generate_params,
         'generate_args': generate_args,
         'is_interface_creation': is_interface_creation,
-        'is_context_creation': is_context_creation
+        'is_context_creation': is_context_creation,
     }
 
     print('Generating file: ' + artifact_file)

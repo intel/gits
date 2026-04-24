@@ -18,19 +18,19 @@ class CaptureManager;
 class CaptureSynchronizationLayer : public Layer {
 public:
   CaptureSynchronizationLayer(CaptureManager& manager)
-      : Layer("CaptureSynchronization"), manager_(manager) {}
+      : Layer("CaptureSynchronization"), m_Manager(manager) {}
 
-  void pre(ID3D12FenceSignalCommand& command) override;
-  void post(ID3D12FenceSignalCommand& command) override;
-  void pre(ID3D12CommandQueueSignalCommand& command) override;
-  void post(ID3D12CommandQueueSignalCommand& command) override;
-  void pre(ID3D12CommandQueueWaitCommand& command) override;
-  void post(ID3D12CommandQueueWaitCommand& command) override;
-  void pre(ID3D12FenceGetCompletedValueCommand& command) override;
-  void post(ID3D12FenceGetCompletedValueCommand& command) override;
+  void Pre(ID3D12FenceSignalCommand& command) override;
+  void Post(ID3D12FenceSignalCommand& command) override;
+  void Pre(ID3D12CommandQueueSignalCommand& command) override;
+  void Post(ID3D12CommandQueueSignalCommand& command) override;
+  void Pre(ID3D12CommandQueueWaitCommand& command) override;
+  void Post(ID3D12CommandQueueWaitCommand& command) override;
+  void Pre(ID3D12FenceGetCompletedValueCommand& command) override;
+  void Post(ID3D12FenceGetCompletedValueCommand& command) override;
 
 private:
-  CaptureManager& manager_;
+  CaptureManager& m_Manager;
 };
 
 } // namespace DirectX

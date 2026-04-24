@@ -32,76 +32,76 @@ public:
   AnalyzerService(const AnalyzerService&) = delete;
   AnalyzerService& operator=(const AnalyzerService&) = delete;
 
-  bool inRange() {
-    return inRange_;
+  bool InRange() {
+    return m_InRange;
   }
-  bool beforeRange() {
-    return beforeRange_;
+  bool BeforeRange() {
+    return m_BeforeRange;
   }
-  bool afterRange() {
-    return !beforeRange_ && !inRange_;
+  bool AfterRange() {
+    return !m_BeforeRange && !m_InRange;
   }
 
-  void notifyObject(unsigned objectKey);
-  void notifyObjects(const std::vector<unsigned>& objectKeys);
+  void NotifyObject(unsigned objectKey);
+  void NotifyObjects(const std::vector<unsigned>& objectKeys);
 
-  void commandListCommand(unsigned commandListKey);
-  void present(unsigned callKey, unsigned swapChainKey);
-  void executeCommandLists(unsigned callKey,
+  void CommandListCommand(unsigned commandListKey);
+  void Present(unsigned callKey, unsigned swapChainKey);
+  void ExecuteCommandLists(unsigned callKey,
                            unsigned commandQueueKey,
                            std::vector<unsigned>& commandListKeys);
-  void commandListReset(unsigned commandListKey, unsigned allocatorKey, unsigned initialStateKey);
-  void executionStart();
-  void executionEnd();
-  void commandQueueWait(unsigned callKey,
+  void CommandListReset(unsigned commandListKey, unsigned allocatorKey, unsigned initialStateKey);
+  void ExecutionStart();
+  void ExecutionEnd();
+  void CommandQueueWait(unsigned callKey,
                         unsigned commandQueueKey,
                         unsigned fenceKey,
                         UINT64 fenceValue);
-  void commandQueueSignal(unsigned callKey,
+  void CommandQueueSignal(unsigned callKey,
                           unsigned commandQueueKey,
                           unsigned fenceKey,
                           UINT64 fenceValue);
-  void fenceSignal(unsigned callKey, unsigned fenceKey, UINT64 fenceValue);
-  void mappedDataMeta(unsigned resourceKey);
-  void createXessContext(xessD3D12CreateContextCommand& c);
-  void createXellContext(xellD3D12CreateContextCommand& c);
-  void createXefgContext(xefgSwapChainD3D12CreateContextCommand& c);
-  void forceApplicationSwapChainRestore(unsigned key);
-  void createDeviceExtensionContext(INTC_D3D12_CreateDeviceExtensionContextCommand& c);
-  void createDeviceExtensionContext(INTC_D3D12_CreateDeviceExtensionContext1Command& c);
+  void FenceSignal(unsigned callKey, unsigned fenceKey, UINT64 fenceValue);
+  void MappedDataMeta(unsigned ResourceKey);
+  void CreateXessContext(xessD3D12CreateContextCommand& c);
+  void CreateXellContext(xellD3D12CreateContextCommand& c);
+  void CreateXefgContext(xefgSwapChainD3D12CreateContextCommand& c);
+  void ForceApplicationSwapChainRestore(unsigned key);
+  void CreateDeviceExtensionContext(INTC_D3D12_CreateDeviceExtensionContextCommand& c);
+  void CreateDeviceExtensionContext(INTC_D3D12_CreateDeviceExtensionContext1Command& c);
 
-  void addParent(unsigned key, unsigned parentKey);
-
-private:
-  void findParents(unsigned key, std::set<unsigned>& objectKeys);
-  void clearReadyExecutables();
-  void dumpAnalysisFile();
+  void AddParent(unsigned key, unsigned parentKey);
 
 private:
-  SubcaptureRange& subcaptureRange_;
-  AnalyzerCommandListService& commandListService_;
-  AnalyzerRaytracingService& raytracingService_;
-  AnalyzerExecuteIndirectService& executeIndirectService_;
-  bool optimize_{};
+  void FindParents(unsigned key, std::set<unsigned>& objectKeys);
+  void ClearReadyExecutables();
+  void DumpAnalysisFile();
 
-  std::unordered_map<unsigned, std::vector<unsigned>> parentKeys_;
+private:
+  SubcaptureRange& m_SubcaptureRange;
+  AnalyzerCommandListService& m_CommandListService;
+  AnalyzerRaytracingService& m_RaytracingService;
+  AnalyzerExecuteIndirectService& m_ExecuteIndirectService;
+  bool m_Optimize{};
+
+  std::unordered_map<unsigned, std::vector<unsigned>> m_ParentKeys;
 
   struct ExecuteCommandListCommand : public GpuExecutionTracker::Executable {
-    std::vector<unsigned> commandListKeys;
+    std::vector<unsigned> CommandListKeys;
   };
 
-  GpuExecutionTracker gpuExecutionTracker_;
-  bool beforeRange_{true};
-  bool inRange_{};
+  GpuExecutionTracker m_GpuExecutionTracker;
+  bool m_BeforeRange{true};
+  bool m_InRange{};
 
-  std::set<unsigned> commandListsResetBeforeExecution_;
-  std::set<unsigned> commandListsExecuted_;
-  std::set<unsigned> commandListsReset_;
-  std::set<unsigned> commandListsForRestore_;
+  std::set<unsigned> m_CommandListsResetBeforeExecution;
+  std::set<unsigned> m_CommandListsExecuted;
+  std::set<unsigned> m_CommandListsReset;
+  std::set<unsigned> m_CommandListsForRestore;
 
-  std::map<unsigned, std::vector<unsigned>> commandQueueCommandsForRestore_;
+  std::map<unsigned, std::vector<unsigned>> m_CommandQueueCommandsForRestore;
 
-  std::set<unsigned> objectsForRestore_;
+  std::set<unsigned> m_ObjectsForRestore;
 };
 
 } // namespace DirectX

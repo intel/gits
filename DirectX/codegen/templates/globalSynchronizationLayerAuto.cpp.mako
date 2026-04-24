@@ -12,223 +12,223 @@ ${header}
 namespace gits {
 namespace DirectX {
 
-void GlobalSynchronizationLayer::pre(IUnknownQueryInterfaceCommand& command) {
+void GlobalSynchronizationLayer::Pre(IUnknownQueryInterfaceCommand& command) {
   mutex_.lock();
 }
 
-void GlobalSynchronizationLayer::post(IUnknownQueryInterfaceCommand& command) {
+void GlobalSynchronizationLayer::Post(IUnknownQueryInterfaceCommand& command) {
   mutex_.unlock();
 }
 
-void GlobalSynchronizationLayer::pre(IUnknownAddRefCommand& command) {
+void GlobalSynchronizationLayer::Pre(IUnknownAddRefCommand& command) {
   mutex_.lock();
 }
 
-void GlobalSynchronizationLayer::post(IUnknownAddRefCommand& command) {
+void GlobalSynchronizationLayer::Post(IUnknownAddRefCommand& command) {
   mutex_.unlock();
 }
 
-void GlobalSynchronizationLayer::pre(IUnknownReleaseCommand& command) {
+void GlobalSynchronizationLayer::Pre(IUnknownReleaseCommand& command) {
   mutex_.lock();
 }
 
-void GlobalSynchronizationLayer::post(IUnknownReleaseCommand& command) {
+void GlobalSynchronizationLayer::Post(IUnknownReleaseCommand& command) {
   mutex_.unlock();
 }
 
-void GlobalSynchronizationLayer::pre(INTC_D3D12_GetSupportedVersionsCommand& command) {
+void GlobalSynchronizationLayer::Pre(INTC_D3D12_GetSupportedVersionsCommand& command) {
   mutex_.lock();
 }
 
-void GlobalSynchronizationLayer::post(INTC_D3D12_GetSupportedVersionsCommand& command) {
+void GlobalSynchronizationLayer::Post(INTC_D3D12_GetSupportedVersionsCommand& command) {
   mutex_.unlock();
 }
 
-void GlobalSynchronizationLayer::pre(INTC_D3D12_CreateDeviceExtensionContextCommand& command) {
+void GlobalSynchronizationLayer::Pre(INTC_D3D12_CreateDeviceExtensionContextCommand& command) {
   mutex_.lock();
 }
 
-void GlobalSynchronizationLayer::post(INTC_D3D12_CreateDeviceExtensionContextCommand& command) {
+void GlobalSynchronizationLayer::Post(INTC_D3D12_CreateDeviceExtensionContextCommand& command) {
   mutex_.unlock();
 }
 
-void GlobalSynchronizationLayer::pre(INTC_D3D12_CreateDeviceExtensionContext1Command& command) {
+void GlobalSynchronizationLayer::Pre(INTC_D3D12_CreateDeviceExtensionContext1Command& command) {
   mutex_.lock();
 }
 
-void GlobalSynchronizationLayer::post(INTC_D3D12_CreateDeviceExtensionContext1Command& command) {
+void GlobalSynchronizationLayer::Post(INTC_D3D12_CreateDeviceExtensionContext1Command& command) {
   mutex_.unlock();
 }
 
-void GlobalSynchronizationLayer::pre(INTC_D3D12_SetApplicationInfoCommand& command) {
+void GlobalSynchronizationLayer::Pre(INTC_D3D12_SetApplicationInfoCommand& command) {
   mutex_.lock();
 }
 
-void GlobalSynchronizationLayer::post(INTC_D3D12_SetApplicationInfoCommand& command) {
+void GlobalSynchronizationLayer::Post(INTC_D3D12_SetApplicationInfoCommand& command) {
   mutex_.unlock();
 }
 
-void GlobalSynchronizationLayer::pre(INTC_DestroyDeviceExtensionContextCommand& command) {
+void GlobalSynchronizationLayer::Pre(INTC_DestroyDeviceExtensionContextCommand& command) {
   mutex_.lock();
 }
 
-void GlobalSynchronizationLayer::post(INTC_DestroyDeviceExtensionContextCommand& command) {
+void GlobalSynchronizationLayer::Post(INTC_DestroyDeviceExtensionContextCommand& command) {
   mutex_.unlock();
 }
 
-void GlobalSynchronizationLayer::pre(INTC_D3D12_CheckFeatureSupportCommand& command) {
+void GlobalSynchronizationLayer::Pre(INTC_D3D12_CheckFeatureSupportCommand& command) {
   mutex_.lock();
 }
 
-void GlobalSynchronizationLayer::post(INTC_D3D12_CheckFeatureSupportCommand& command) {
+void GlobalSynchronizationLayer::Post(INTC_D3D12_CheckFeatureSupportCommand& command) {
   mutex_.unlock();
 }
 
-void GlobalSynchronizationLayer::pre(INTC_D3D12_CreateCommandQueueCommand& command) {
+void GlobalSynchronizationLayer::Pre(INTC_D3D12_CreateCommandQueueCommand& command) {
   mutex_.lock();
 }
 
-void GlobalSynchronizationLayer::post(INTC_D3D12_CreateCommandQueueCommand& command) {
+void GlobalSynchronizationLayer::Post(INTC_D3D12_CreateCommandQueueCommand& command) {
   mutex_.unlock();
 }
 
-void GlobalSynchronizationLayer::pre(INTC_D3D12_CreateReservedResourceCommand& command) {
+void GlobalSynchronizationLayer::Pre(INTC_D3D12_CreateReservedResourceCommand& command) {
   mutex_.lock();
 }
 
-void GlobalSynchronizationLayer::post(INTC_D3D12_CreateReservedResourceCommand& command) {
+void GlobalSynchronizationLayer::Post(INTC_D3D12_CreateReservedResourceCommand& command) {
   mutex_.unlock();
 }
 
-void GlobalSynchronizationLayer::pre(INTC_D3D12_SetFeatureSupportCommand& command) {
+void GlobalSynchronizationLayer::Pre(INTC_D3D12_SetFeatureSupportCommand& command) {
   mutex_.lock();
 }
 
-void GlobalSynchronizationLayer::post(INTC_D3D12_SetFeatureSupportCommand& command) {
+void GlobalSynchronizationLayer::Post(INTC_D3D12_SetFeatureSupportCommand& command) {
   mutex_.unlock();
 }
 
-void GlobalSynchronizationLayer::pre(INTC_D3D12_GetResourceAllocationInfoCommand& command) {
+void GlobalSynchronizationLayer::Pre(INTC_D3D12_GetResourceAllocationInfoCommand& command) {
   mutex_.lock();
 }
 
-void GlobalSynchronizationLayer::post(INTC_D3D12_GetResourceAllocationInfoCommand& command) {
+void GlobalSynchronizationLayer::Post(INTC_D3D12_GetResourceAllocationInfoCommand& command) {
   mutex_.unlock();
 }
 
-void GlobalSynchronizationLayer::pre(INTC_D3D12_CreateComputePipelineStateCommand& command) {
+void GlobalSynchronizationLayer::Pre(INTC_D3D12_CreateComputePipelineStateCommand& command) {
   mutex_.lock();
 }
 
-void GlobalSynchronizationLayer::post(INTC_D3D12_CreateComputePipelineStateCommand& command) {
+void GlobalSynchronizationLayer::Post(INTC_D3D12_CreateComputePipelineStateCommand& command) {
   mutex_.unlock();
 }
 
-void GlobalSynchronizationLayer::pre(INTC_D3D12_CreatePlacedResourceCommand& command) {
+void GlobalSynchronizationLayer::Pre(INTC_D3D12_CreatePlacedResourceCommand& command) {
   mutex_.lock();
 }
 
-void GlobalSynchronizationLayer::post(INTC_D3D12_CreatePlacedResourceCommand& command) {
+void GlobalSynchronizationLayer::Post(INTC_D3D12_CreatePlacedResourceCommand& command) {
   mutex_.unlock();
 }
 
-void GlobalSynchronizationLayer::pre(INTC_D3D12_CreateCommittedResourceCommand& command) {
+void GlobalSynchronizationLayer::Pre(INTC_D3D12_CreateCommittedResourceCommand& command) {
   mutex_.lock();
 }
 
-void GlobalSynchronizationLayer::post(INTC_D3D12_CreateCommittedResourceCommand& command) {
+void GlobalSynchronizationLayer::Post(INTC_D3D12_CreateCommittedResourceCommand& command) {
   mutex_.unlock();
 }
 
-void GlobalSynchronizationLayer::pre(INTC_D3D12_CreateHeapCommand& command) {
+void GlobalSynchronizationLayer::Pre(INTC_D3D12_CreateHeapCommand& command) {
   mutex_.lock();
 }
 
-void GlobalSynchronizationLayer::post(INTC_D3D12_CreateHeapCommand& command) {
+void GlobalSynchronizationLayer::Post(INTC_D3D12_CreateHeapCommand& command) {
   mutex_.unlock();
 }
 
-void GlobalSynchronizationLayer::pre(NvAPI_InitializeCommand& command) {
+void GlobalSynchronizationLayer::Pre(NvAPI_InitializeCommand& command) {
   mutex_.lock();
 }
 
-void GlobalSynchronizationLayer::post(NvAPI_InitializeCommand& command) {
+void GlobalSynchronizationLayer::Post(NvAPI_InitializeCommand& command) {
   mutex_.unlock();
 }
 
-void GlobalSynchronizationLayer::pre(NvAPI_UnloadCommand& command) {
+void GlobalSynchronizationLayer::Pre(NvAPI_UnloadCommand& command) {
   mutex_.lock();
 }
 
-void GlobalSynchronizationLayer::post(NvAPI_UnloadCommand& command) {
+void GlobalSynchronizationLayer::Post(NvAPI_UnloadCommand& command) {
   mutex_.unlock();
 }
 
-void GlobalSynchronizationLayer::pre(NvAPI_D3D12_SetCreatePipelineStateOptionsCommand& command) {
+void GlobalSynchronizationLayer::Pre(NvAPI_D3D12_SetCreatePipelineStateOptionsCommand& command) {
   mutex_.lock();
 }
 
-void GlobalSynchronizationLayer::post(NvAPI_D3D12_SetCreatePipelineStateOptionsCommand& command) {
+void GlobalSynchronizationLayer::Post(NvAPI_D3D12_SetCreatePipelineStateOptionsCommand& command) {
   mutex_.unlock();
 }
 
-void GlobalSynchronizationLayer::pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& command) {
+void GlobalSynchronizationLayer::Pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& command) {
   mutex_.lock();
 }
 
-void GlobalSynchronizationLayer::post(NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& command) {
+void GlobalSynchronizationLayer::Post(NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& command) {
   mutex_.unlock();
 }
 
-void GlobalSynchronizationLayer::pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& command) {
+void GlobalSynchronizationLayer::Pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& command) {
   mutex_.lock();
 }
 
-void GlobalSynchronizationLayer::post(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& command) {
+void GlobalSynchronizationLayer::Post(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& command) {
   mutex_.unlock();
 }
 
-void GlobalSynchronizationLayer::pre(NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& command) {
+void GlobalSynchronizationLayer::Pre(NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& command) {
   mutex_.lock();
 }
 
-void GlobalSynchronizationLayer::post(NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& command) {
+void GlobalSynchronizationLayer::Post(NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& command) {
   mutex_.unlock();
 }
 
-void GlobalSynchronizationLayer::pre(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& command) {
+void GlobalSynchronizationLayer::Pre(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& command) {
   mutex_.lock();
 }
 
-void GlobalSynchronizationLayer::post(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& command) {
+void GlobalSynchronizationLayer::Post(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& command) {
   mutex_.unlock();
 }
 
-void GlobalSynchronizationLayer::pre(NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand& command) {
+void GlobalSynchronizationLayer::Pre(NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand& command) {
   mutex_.lock();
 }
 
-void GlobalSynchronizationLayer::post(NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand& command) {
+void GlobalSynchronizationLayer::Post(NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand& command) {
   mutex_.unlock();
 }
 %for function in functions:
 
-void GlobalSynchronizationLayer::pre(${function.name}Command& command) {
+void GlobalSynchronizationLayer::Pre(${function.name}Command& command) {
   mutex_.lock();
 }
 
-void GlobalSynchronizationLayer::post(${function.name}Command& command) {
+void GlobalSynchronizationLayer::Post(${function.name}Command& command) {
   mutex_.unlock();
 }
 %endfor
 %for interface in interfaces:
 %for function in interface.functions:
 
-void GlobalSynchronizationLayer::pre(${interface.name}${function.name}Command& command) {
+void GlobalSynchronizationLayer::Pre(${interface.name}${function.name}Command& command) {
   mutex_.lock();
 }
 
-void GlobalSynchronizationLayer::post(${interface.name}${function.name}Command& command) {
+void GlobalSynchronizationLayer::Post(${interface.name}${function.name}Command& command) {
   mutex_.unlock();
 }
 %endfor

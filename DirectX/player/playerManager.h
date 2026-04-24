@@ -35,118 +35,118 @@ class Layer;
 
 class PlayerManager {
 public:
-  static PlayerManager& get();
-  static void destroy() {
-    delete instance_;
-    instance_ = nullptr;
+  static PlayerManager& Get();
+  static void Destroy() {
+    delete m_Instance;
+    m_Instance = nullptr;
   }
 
   ~PlayerManager();
 
-  std::vector<Layer*>& getPreLayers() {
-    return layerManager_.getPreLayers();
+  std::vector<Layer*>& GetPreLayers() {
+    return m_LayerManager.GetPreLayers();
   }
-  std::vector<Layer*>& getPostLayers() {
-    return layerManager_.getPostLayers();
-  }
-
-  bool executeCommands() {
-    return executeCommands_;
+  std::vector<Layer*>& GetPostLayers() {
+    return m_LayerManager.GetPostLayers();
   }
 
-  bool multithreadedShaderCompilation() {
-    return multithreadedShaderCompilation_;
+  bool ExecuteCommands() {
+    return m_ExecuteCommands;
   }
 
-  WindowService& getWindowService() {
-    return windowService_;
-  }
-  ReplayDescriptorHandleService& getDescriptorHandleService() {
-    return descriptorHandleService_;
-  }
-  MapTrackingService& getMapTrackingService() {
-    return mapTrackingService_;
-  }
-  PlayerGpuAddressService& getGpuAddressService() {
-    return gpuAddressService_;
-  }
-  HeapAllocationService& getHeapAllocationService() {
-    return heapAllocationService_;
-  }
-  AdapterService& getAdapterService() {
-    return adapterService_;
-  }
-  IntelExtensionsService& getIntelExtensionsService() {
-    return intelExtensionsService_;
-  }
-  XessService& getXessService() {
-    return xessService_;
-  }
-  MultithreadedObjectCreationService& getMultithreadedObjectCreationService() {
-    return multithreadedObjectCreationService_;
-  }
-  void flushMultithreadedShaderCompilation();
-  PipelineLibraryService& getPipelineLibraryService() {
-    return pipelineLibraryService_;
+  bool MultithreadedShaderCompilation() {
+    return m_MultithreadedShaderCompilation;
   }
 
-  void addObject(unsigned objectKey, IUnknown* object);
-  void removeObject(unsigned objectKey);
-  IUnknown* findObject(unsigned objectKey);
+  WindowService& GetWindowService() {
+    return m_WindowService;
+  }
+  ReplayDescriptorHandleService& GetDescriptorHandleService() {
+    return m_DescriptorHandleService;
+  }
+  MapTrackingService& GetMapTrackingService() {
+    return m_MapTrackingService;
+  }
+  PlayerGpuAddressService& GetGpuAddressService() {
+    return m_GpuAddressService;
+  }
+  HeapAllocationService& GetHeapAllocationService() {
+    return m_HeapAllocationService;
+  }
+  AdapterService& GetAdapterService() {
+    return m_AdapterService;
+  }
+  IntelExtensionsService& GetIntelExtensionsService() {
+    return m_IntelExtensionsService;
+  }
+  XessService& GetXessService() {
+    return m_XessService;
+  }
+  MultithreadedObjectCreationService& GetMultithreadedObjectCreationService() {
+    return m_MultithreadedObjectCreationService;
+  }
+  void FlushMultithreadedShaderCompilation();
+  PipelineLibraryService& GetPipelineLibraryService() {
+    return m_PipelineLibraryService;
+  }
 
-  ContextMapService& getIntelExtensionsContextMap() {
-    return intelExtensionsContextMap_;
+  void AddObject(unsigned objectKey, IUnknown* object);
+  void RemoveObject(unsigned objectKey);
+  IUnknown* FindObject(unsigned objectKey);
+
+  ContextMapService& GetIntelExtensionsContextMap() {
+    return m_IntelExtensionsContextMap;
   }
-  ContextMapService& getXessContextMap() {
-    return xessContextMap_;
+  ContextMapService& GetXessContextMap() {
+    return m_XessContextMap;
   }
-  ContextMapService& getXellContextMap() {
-    return xellContextMap_;
+  ContextMapService& GetXellContextMap() {
+    return m_XellContextMap;
   }
-  ContextMapService& getXefgContextMap() {
-    return xefgContextMap_;
+  ContextMapService& GetXefgContextMap() {
+    return m_XefgContextMap;
   }
 
-  bool loadAgilitySdk(const std::filesystem::path& path);
+  bool LoadAgilitySdk(const std::filesystem::path& path);
 
 private:
   PlayerManager();
   PlayerManager(const PlayerManager&) = delete;
   PlayerManager& operator=(const PlayerManager&) = delete;
 
-  void loadDirectML();
-  void loadDirectStorage();
+  void LoadDirectML();
+  void LoadDirectStorage();
 
 private:
-  static PlayerManager* instance_;
-  PlayerLayerManager layerManager_;
+  static PlayerManager* m_Instance;
+  PlayerLayerManager m_LayerManager;
 
-  bool executeCommands_{true};
-  bool multithreadedShaderCompilation_{true};
+  bool m_ExecuteCommands{true};
+  bool m_MultithreadedShaderCompilation{true};
 
-  WindowService windowService_;
-  ReplayDescriptorHandleService descriptorHandleService_;
-  MapTrackingService mapTrackingService_;
-  PlayerGpuAddressService gpuAddressService_;
-  HeapAllocationService heapAllocationService_;
-  AdapterService adapterService_;
-  IntelExtensionsService intelExtensionsService_;
-  std::unique_ptr<PluginService> pluginService_;
-  XessService xessService_;
-  MultithreadedObjectCreationService multithreadedObjectCreationService_;
-  PipelineLibraryService pipelineLibraryService_;
+  WindowService m_WindowService;
+  ReplayDescriptorHandleService m_DescriptorHandleService;
+  MapTrackingService m_MapTrackingService;
+  PlayerGpuAddressService m_GpuAddressService;
+  HeapAllocationService m_HeapAllocationService;
+  AdapterService m_AdapterService;
+  IntelExtensionsService m_IntelExtensionsService;
+  std::unique_ptr<PluginService> m_PluginService;
+  XessService m_XessService;
+  MultithreadedObjectCreationService m_MultithreadedObjectCreationService;
+  PipelineLibraryService m_PipelineLibraryService;
 
-  HMODULE d3d12CoreDll_{};
-  HMODULE dmlDll_{};
-  HMODULE dmlDebugDll_{};
-  HMODULE dStorageDll_{};
-  HMODULE dStorageCoreDll_{};
+  HMODULE m_D3d12CoreDll{};
+  HMODULE m_DmlDll{};
+  HMODULE m_DmlDebugDll{};
+  HMODULE m_DStorageDll{};
+  HMODULE m_DStorageCoreDll{};
 
-  std::unordered_map<unsigned, IUnknown*> objects_;
-  ContextMapService intelExtensionsContextMap_;
-  ContextMapService xessContextMap_;
-  ContextMapService xellContextMap_;
-  ContextMapService xefgContextMap_;
+  std::unordered_map<unsigned, IUnknown*> m_Objects;
+  ContextMapService m_IntelExtensionsContextMap;
+  ContextMapService m_XessContextMap;
+  ContextMapService m_XellContextMap;
+  ContextMapService m_XefgContextMap;
 };
 
 } // namespace DirectX

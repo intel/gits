@@ -23,34 +23,34 @@ namespace DirectX {
 class ResourceDumpService {
 public:
   ResourceDumpService();
-  void createResource(unsigned resourceKey,
+  void CreateResource(unsigned ResourceKey,
                       ID3D12Resource* resource,
                       D3D12_RESOURCE_STATES initialState);
-  void destroyResource(unsigned resourceKey);
-  void commandListCall(unsigned callKey, ID3D12GraphicsCommandList* commandList);
-  void resourceBarrier(ID3D12GraphicsCommandListResourceBarrierCommand& c);
-  void executeCommandLists(unsigned key,
+  void DestroyResource(unsigned ResourceKey);
+  void CommandListCall(unsigned callKey, ID3D12GraphicsCommandList* commandList);
+  void ResourceBarrier(ID3D12GraphicsCommandListResourceBarrierCommand& c);
+  void ExecuteCommandLists(unsigned key,
                            unsigned commandQueueKey,
                            ID3D12CommandQueue* commandQueue,
                            ID3D12CommandList** commandLists,
                            unsigned commandListNum);
-  void commandQueueWait(unsigned key,
+  void CommandQueueWait(unsigned key,
                         unsigned commandQueueKey,
                         unsigned fenceKey,
                         UINT64 fenceValue);
-  void commandQueueSignal(unsigned key,
+  void CommandQueueSignal(unsigned key,
                           unsigned commandQueueKey,
                           unsigned fenceKey,
                           UINT64 fenceValue);
-  void fenceSignal(unsigned key, unsigned fenceKey, UINT64 fenceValue);
+  void FenceSignal(unsigned key, unsigned fenceKey, UINT64 fenceValue);
 
 private:
-  ConfigKeySet resourceKeys_;
-  ConfigKeySet callKeys_;
-  std::wstring dumpPath_;
-  std::map<unsigned, ID3D12Resource*> resources_;
-  ResourceStateTracker resourceStateTracker_;
-  ResourceDump resourceDump_;
+  ConfigKeySet m_ResourceKeys;
+  ConfigKeySet m_CallKeys;
+  std::wstring m_DumpPath;
+  std::map<unsigned, ID3D12Resource*> m_Resources;
+  ResourceStateTracker m_ResourceStateTracker;
+  ResourceDump m_ResourceDump;
 };
 
 } // namespace DirectX

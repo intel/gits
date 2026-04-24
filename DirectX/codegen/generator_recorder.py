@@ -22,11 +22,11 @@ def wrappers_update_created(function):
         if param.is_interface_creation:
             if not param.sal_size:
                 if previous_param.type == 'REFIID' and param.is_pointer_to_pointer and param.type == 'void':
-                    str += f'UpdateOutputInterface<InterfaceOutputArgument<{param.type}>, {param.type}> update_{param.name}(command.{param.name}_, result, command.{previous_param.name}_.value, {param.name});'
+                    str += f'UpdateOutputInterface<InterfaceOutputArgument<{param.type}>, {param.type}> update_{param.name}(command.m_{param.name}, result, command.m_{previous_param.name}.Value, {param.name});'
                 else:
-                    str += f'UpdateOutputInterface<InterfaceOutputArgument<{param.type}>, {param.type}> update_{param.name}(command.{param.name}_, result, IID_{param.type}, {param.name});'
+                    str += f'UpdateOutputInterface<InterfaceOutputArgument<{param.type}>, {param.type}> update_{param.name}(command.m_{param.name}, result, IID_{param.type}, {param.name});'
             else:
-                str += f'UpdateOutputInterface<InterfaceOutputArgument<{param.type}>, {param.type}> update_{param.name}(command.{param.name}_, result, IID_{param.type}, {param.name});'
+                str += f'UpdateOutputInterface<InterfaceOutputArgument<{param.type}>, {param.type}> update_{param.name}(command.m_{param.name}, result, IID_{param.type}, {param.name});'
         previous_param = param
     return str
 

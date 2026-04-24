@@ -27,12 +27,12 @@ void declareObject(const std::string& type, unsigned key);
 
 template <template <typename> typename Arg, typename T>
 void argumentToCpp(Arg<T>& arg, CppParameterInfo& info, CppParameterOutput& out) {
-  toCpp(arg.value, info, out);
+  toCpp(arg.Value, info, out);
 }
 
 template <typename T>
 void argumentToCpp(PointerArgument<T>& arg, CppParameterInfo& info, CppParameterOutput& out) {
-  toCpp(arg.value, info, out);
+  toCpp(arg.Value, info, out);
 }
 
 template <typename T, int N>
@@ -40,12 +40,12 @@ void argumentToCpp(StaticArrayArgument<T, N>& arg,
                    CppParameterInfo& info,
                    CppParameterOutput& out) {
   GITS_ASSERT(N == info.size.value());
-  toCpp(arg.value, info, out);
+  toCpp(arg.Value, info, out);
 }
 
 template <typename T>
 void argumentToCpp(ArrayArgument<T>& arg, CppParameterInfo& info, CppParameterOutput& out) {
-  toCpp(arg.value, info, out);
+  toCpp(arg.Value, info, out);
 }
 
 // Template for interface arguments
@@ -53,8 +53,8 @@ template <typename T>
 void argumentToCpp(InterfaceArgument<T>& arg, CppParameterInfo& info, CppParameterOutput& out) {
   out.initialization = "";
   out.decorator = "";
-  if (arg.value) {
-    out.value = "g_" + objKeyToStr(arg.key);
+  if (arg.Value) {
+    out.value = "g_" + objKeyToStr(arg.Key);
   } else {
     out.value = "nullptr";
   }
@@ -67,15 +67,15 @@ void argumentToCpp(InterfaceOutputArgument<T>& arg,
   out.initialization = "";
   out.decorator = "";
 
-  if (arg.key != 0) {
-    out.value = "g_" + objKeyToStr(arg.key);
+  if (arg.Key != 0) {
+    out.value = "g_" + objKeyToStr(arg.Key);
     out.decorator = "(" + info.type + "**)&";
   } else {
     out.value = "nullptr";
     return;
   }
 
-  declareObject(info.type, arg.key);
+  declareObject(info.type, arg.Key);
 }
 
 template <typename T>
@@ -83,10 +83,10 @@ void argumentToCpp(InterfaceArrayArgument<T>& arg,
                    CppParameterInfo& info,
                    CppParameterOutput& out) {
   std::ostringstream ss;
-  ss << info.type << "* " << info.name << "[" << arg.size << "];" << std::endl;
-  for (unsigned i = 0; i < arg.size; ++i) {
-    if (arg.value[i]) {
-      ss << info.name << "[" << i << "] = " << objKeyToPtrStr(arg.keys[i]) << ";" << std::endl;
+  ss << info.type << "* " << info.name << "[" << arg.Size << "];" << std::endl;
+  for (unsigned i = 0; i < arg.Size; ++i) {
+    if (arg.Value[i]) {
+      ss << info.name << "[" << i << "] = " << objKeyToPtrStr(arg.Keys[i]) << ";" << std::endl;
     } else {
       ss << info.name << "[" << i << "] = nullptr;" << std::endl;
     }
@@ -100,9 +100,9 @@ template <typename T>
 void argumentToCpp(ContextArgument<T>& arg, CppParameterInfo& info, CppParameterOutput& out) {
   out.initialization = "";
   out.decorator = "";
-  // arg.value may be nullptr but arg.key can still be valid (e.g. for Intel Extension calls)
-  if (arg.key != 0) {
-    out.value = "g_" + objKeyToStr(arg.key);
+  // arg.Value may be nullptr but arg.Key can still be valid (e.g. for Intel Extension calls)
+  if (arg.Key != 0) {
+    out.value = "g_" + objKeyToStr(arg.Key);
   } else {
     out.value = "nullptr";
   }
@@ -113,15 +113,15 @@ void argumentToCpp(ContextOutputArgument<T>& arg, CppParameterInfo& info, CppPar
   out.initialization = "";
   out.decorator = "";
 
-  if (arg.key != 0) {
-    out.value = "g_" + objKeyToStr(arg.key);
+  if (arg.Key != 0) {
+    out.value = "g_" + objKeyToStr(arg.Key);
     out.decorator = "&";
   } else {
     out.value = "nullptr";
     return;
   }
 
-  declareObject(info.type, arg.key);
+  declareObject(info.type, arg.Key);
 }
 
 // Overloads for specific argument types

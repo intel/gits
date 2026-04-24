@@ -26,16 +26,16 @@ public:
   MapTrackingService& operator=(const MapTrackingService&) = delete;
 
   void enableWriteWatch(D3D12_HEAP_PROPERTIES& properties, D3D12_HEAP_FLAGS& flags);
-  void mapResource(unsigned resourceKey,
+  void mapResource(unsigned ResourceKey,
                    ID3D12Resource* resource,
                    unsigned subresourceIndex,
                    void** mappedData);
-  void unmapResource(unsigned resourceKey, unsigned subresourceIndex);
+  void unmapResource(unsigned ResourceKey, unsigned subresourceIndex);
   void executeCommandLists();
-  void destroyResource(unsigned resourceKey);
+  void destroyResource(unsigned ResourceKey);
 
 private:
-  bool shadowMemory_{false};
+  bool m_ShadowMemory{false};
   struct MappedInfo {
     MappedInfo() = default;
     ~MappedInfo() {
@@ -46,25 +46,25 @@ private:
     MappedInfo(const MappedInfo&) = delete;
     MappedInfo& operator=(const MappedInfo&) = delete;
 
-    unsigned resourceKey;
+    unsigned ResourceKey;
     char* mappedAddress;
     char* shadowAddress;
     size_t size;
     int mapCount;
     std::vector<void*> watchedPages;
   };
-  std::unordered_map<unsigned, std::map<unsigned, std::unique_ptr<MappedInfo>>> mappedData_;
+  std::unordered_map<unsigned, std::map<unsigned, std::unique_ptr<MappedInfo>>> m_MappedData;
 
-  size_t pageSize_{0};
-  std::mutex mutex_;
+  size_t m_PageSize{0};
+  std::mutex m_Mutex;
 
-  stream::OrderingRecorder& recorder_;
+  stream::OrderingRecorder& m_Recorder;
 
 private:
   bool isUploadHeap(D3D12_HEAP_TYPE heapType, D3D12_CPU_PAGE_PROPERTY cpuPageProperty);
   void captureModifiedData(MappedInfo* info);
   void captureData(
-      unsigned resourceKey, void* mappedAddress, unsigned offset, void* data, unsigned dataSize);
+      unsigned ResourceKey, void* mappedAddress, unsigned offset, void* data, unsigned dataSize);
   size_t getSubresourceSize(ID3D12Resource* resource, unsigned subresource);
 };
 

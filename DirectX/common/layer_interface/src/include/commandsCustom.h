@@ -77,26 +77,26 @@ public:
     GPU_EXECUTION_BEGIN,
     GPU_EXECUTION_END
   };
-  MarkerUInt64Command(uint64_t value) : Command(CommandId::ID_MARKER_UINT64), value_(value) {}
+  MarkerUInt64Command(uint64_t value) : Command(CommandId::ID_MARKER_UINT64), m_Value(value) {}
   MarkerUInt64Command() : Command(CommandId::ID_MARKER_UINT64) {}
 
 public:
-  Argument<uint64_t> value_{};
+  Argument<uint64_t> m_Value{};
 };
 
 class IUnknownQueryInterfaceCommand : public Command {
 public:
   IUnknownQueryInterfaceCommand(unsigned threadId, IUnknown* object, REFIID riid, void** ppvObject)
       : Command{CommandId::ID_IUNKNOWN_QUERYINTERFACE, threadId},
-        riid_{riid},
-        ppvObject_{ppvObject} {}
+        m_riid{riid},
+        m_ppvObject{ppvObject} {}
   IUnknownQueryInterfaceCommand() : Command(CommandId::ID_IUNKNOWN_QUERYINTERFACE) {}
 
 public:
-  InterfaceArgument<IUnknown> object_{};
-  Argument<HRESULT> result_{};
-  Argument<IID> riid_{};
-  InterfaceOutputArgument<void> ppvObject_{};
+  InterfaceArgument<IUnknown> m_Object{};
+  Argument<HRESULT> m_Result{};
+  Argument<IID> m_riid{};
+  InterfaceOutputArgument<void> m_ppvObject{};
 };
 
 class IUnknownAddRefCommand : public Command {
@@ -106,8 +106,8 @@ public:
   IUnknownAddRefCommand() : Command(CommandId::ID_IUNKNOWN_ADDREF) {}
 
 public:
-  InterfaceArgument<IUnknown> object_{};
-  Argument<ULONG> result_{};
+  InterfaceArgument<IUnknown> m_Object{};
+  Argument<ULONG> m_Result{};
 };
 
 class IUnknownReleaseCommand : public Command {
@@ -117,8 +117,8 @@ public:
   IUnknownReleaseCommand() : Command(CommandId::ID_IUNKNOWN_RELEASE) {}
 
 public:
-  InterfaceArgument<IUnknown> object_{};
-  Argument<ULONG> result_{};
+  InterfaceArgument<IUnknown> m_Object{};
+  Argument<ULONG> m_Result{};
 };
 
 class ID3D12GraphicsCommandListOMSetRenderTargetsCommand : public Command {
@@ -131,21 +131,21 @@ public:
       BOOL RTsSingleHandleToDescriptorRange,
       const D3D12_CPU_DESCRIPTOR_HANDLE* pDepthStencilDescriptor)
       : Command{CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_OMSETRENDERTARGETS, threadId},
-        NumRenderTargetDescriptors_{NumRenderTargetDescriptors},
-        pRenderTargetDescriptors_{pRenderTargetDescriptors, RTsSingleHandleToDescriptorRange
-                                                                ? 1
-                                                                : NumRenderTargetDescriptors},
-        RTsSingleHandleToDescriptorRange_{RTsSingleHandleToDescriptorRange},
-        pDepthStencilDescriptor_{pDepthStencilDescriptor, 1} {}
+        m_NumRenderTargetDescriptors{NumRenderTargetDescriptors},
+        m_pRenderTargetDescriptors{pRenderTargetDescriptors, RTsSingleHandleToDescriptorRange
+                                                                 ? 1
+                                                                 : NumRenderTargetDescriptors},
+        m_RTsSingleHandleToDescriptorRange{RTsSingleHandleToDescriptorRange},
+        m_pDepthStencilDescriptor{pDepthStencilDescriptor, 1} {}
   ID3D12GraphicsCommandListOMSetRenderTargetsCommand()
       : Command(CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_OMSETRENDERTARGETS) {}
 
 public:
-  InterfaceArgument<ID3D12GraphicsCommandList> object_{};
-  Argument<UINT> NumRenderTargetDescriptors_{};
-  DescriptorHandleArrayArgument<D3D12_CPU_DESCRIPTOR_HANDLE> pRenderTargetDescriptors_{};
-  Argument<BOOL> RTsSingleHandleToDescriptorRange_{};
-  DescriptorHandleArrayArgument<D3D12_CPU_DESCRIPTOR_HANDLE> pDepthStencilDescriptor_{};
+  InterfaceArgument<ID3D12GraphicsCommandList> m_Object{};
+  Argument<UINT> m_NumRenderTargetDescriptors{};
+  DescriptorHandleArrayArgument<D3D12_CPU_DESCRIPTOR_HANDLE> m_pRenderTargetDescriptors{};
+  Argument<BOOL> m_RTsSingleHandleToDescriptorRange{};
+  DescriptorHandleArrayArgument<D3D12_CPU_DESCRIPTOR_HANDLE> m_pDepthStencilDescriptor{};
 };
 
 // Note: Not auto generated due to pSubresourceTilingsForNonPackedMips_
@@ -163,30 +163,30 @@ public:
       UINT FirstSubresourceTilingToGet,
       D3D12_SUBRESOURCE_TILING* pSubresourceTilingsForNonPackedMips)
       : Command{CommandId::ID_ID3D12DEVICE_GETRESOURCETILING, threadId},
-        object_{object},
-        pTiledResource_{pTiledResource},
-        pNumTilesForEntireResource_{pNumTilesForEntireResource},
-        pPackedMipDesc_{pPackedMipDesc},
-        pStandardTileShapeForNonPackedMips_{pStandardTileShapeForNonPackedMips},
-        pNumSubresourceTilings_{pNumSubresourceTilings},
-        FirstSubresourceTilingToGet_{FirstSubresourceTilingToGet},
-        pSubresourceTilingsForNonPackedMips_{} {
+        m_Object{object},
+        m_pTiledResource{pTiledResource},
+        m_pNumTilesForEntireResource{pNumTilesForEntireResource},
+        m_pPackedMipDesc{pPackedMipDesc},
+        m_pStandardTileShapeForNonPackedMips{pStandardTileShapeForNonPackedMips},
+        m_pNumSubresourceTilings{pNumSubresourceTilings},
+        m_FirstSubresourceTilingToGet{FirstSubresourceTilingToGet},
+        m_pSubresourceTilingsForNonPackedMips{} {
     if (pNumSubresourceTilings) {
-      pSubresourceTilingsForNonPackedMips_.value = pSubresourceTilingsForNonPackedMips;
-      pSubresourceTilingsForNonPackedMips_.size = *pNumSubresourceTilings;
+      m_pSubresourceTilingsForNonPackedMips.Value = pSubresourceTilingsForNonPackedMips;
+      m_pSubresourceTilingsForNonPackedMips.Size = *pNumSubresourceTilings;
     }
   }
   ID3D12DeviceGetResourceTilingCommand() : Command(CommandId::ID_ID3D12DEVICE_GETRESOURCETILING) {}
 
 public:
-  InterfaceArgument<ID3D12Device> object_{};
-  InterfaceArgument<ID3D12Resource> pTiledResource_{};
-  PointerArgument<UINT> pNumTilesForEntireResource_{};
-  PointerArgument<D3D12_PACKED_MIP_INFO> pPackedMipDesc_{};
-  PointerArgument<D3D12_TILE_SHAPE> pStandardTileShapeForNonPackedMips_{};
-  PointerArgument<UINT> pNumSubresourceTilings_{};
-  Argument<UINT> FirstSubresourceTilingToGet_{};
-  ArrayArgument<D3D12_SUBRESOURCE_TILING> pSubresourceTilingsForNonPackedMips_{};
+  InterfaceArgument<ID3D12Device> m_Object{};
+  InterfaceArgument<ID3D12Resource> m_pTiledResource{};
+  PointerArgument<UINT> m_pNumTilesForEntireResource{};
+  PointerArgument<D3D12_PACKED_MIP_INFO> m_pPackedMipDesc{};
+  PointerArgument<D3D12_TILE_SHAPE> m_pStandardTileShapeForNonPackedMips{};
+  PointerArgument<UINT> m_pNumSubresourceTilings{};
+  Argument<UINT> m_FirstSubresourceTilingToGet{};
+  ArrayArgument<D3D12_SUBRESOURCE_TILING> m_pSubresourceTilingsForNonPackedMips{};
 };
 
 class ID3D12StateObjectPropertiesGetShaderIdentifierCommand : public Command {
@@ -195,15 +195,15 @@ public:
                                                         ID3D12StateObjectProperties* object,
                                                         LPCWSTR pExportName)
       : Command{CommandId::ID_ID3D12STATEOBJECTPROPERTIES_GETSHADERIDENTIFIER, threadId},
-        object_{object},
-        pExportName_{pExportName} {}
+        m_Object{object},
+        m_pExportName{pExportName} {}
   ID3D12StateObjectPropertiesGetShaderIdentifierCommand()
       : Command(CommandId::ID_ID3D12STATEOBJECTPROPERTIES_GETSHADERIDENTIFIER) {}
 
 public:
-  InterfaceArgument<ID3D12StateObjectProperties> object_{};
-  ShaderIdentifierArgument result_{};
-  LPCWSTR_Argument pExportName_{};
+  InterfaceArgument<ID3D12StateObjectProperties> m_Object{};
+  ShaderIdentifierArgument m_Result{};
+  LPCWSTR_Argument m_pExportName{};
 };
 
 class ID3D12ResourceWriteToSubresourceCommand : public Command {
@@ -216,11 +216,11 @@ public:
                                           UINT SrcRowPitch,
                                           UINT SrcDepthPitch)
       : Command{CommandId::ID_ID3D12RESOURCE_WRITETOSUBRESOURCE, threadId},
-        object_{object},
-        DstSubresource_{DstSubresource},
-        pDstBox_{pDstBox},
-        SrcRowPitch_{SrcRowPitch},
-        SrcDepthPitch_{SrcDepthPitch} {
+        m_Object{object},
+        m_DstSubresource{DstSubresource},
+        m_pDstBox{pDstBox},
+        m_SrcRowPitch{SrcRowPitch},
+        m_SrcDepthPitch{SrcDepthPitch} {
     UINT depth = 1;
     if (pDstBox) {
       depth = (pDstBox->back - pDstBox->front);
@@ -231,20 +231,20 @@ public:
       }
     }
     size_t pSrcDataSize = SrcDepthPitch * depth;
-    pSrcData_.value = const_cast<void*>(pSrcData);
-    pSrcData_.size = pSrcDataSize;
+    m_pSrcData.Value = const_cast<void*>(pSrcData);
+    m_pSrcData.Size = pSrcDataSize;
   }
   ID3D12ResourceWriteToSubresourceCommand()
       : Command(CommandId::ID_ID3D12RESOURCE_WRITETOSUBRESOURCE) {}
 
 public:
-  InterfaceArgument<ID3D12Resource> object_{};
-  Argument<HRESULT> result_{};
-  Argument<UINT> DstSubresource_{};
-  PointerArgument<D3D12_BOX> pDstBox_{};
-  BufferArgument pSrcData_{};
-  Argument<UINT> SrcRowPitch_{};
-  Argument<UINT> SrcDepthPitch_{};
+  InterfaceArgument<ID3D12Resource> m_Object{};
+  Argument<HRESULT> m_Result{};
+  Argument<UINT> m_DstSubresource{};
+  PointerArgument<D3D12_BOX> m_pDstBox{};
+  BufferArgument m_pSrcData{};
+  Argument<UINT> m_SrcRowPitch{};
+  Argument<UINT> m_SrcDepthPitch{};
 };
 
 class ID3D12ResourceReadFromSubresourceCommand : public Command {
@@ -257,11 +257,11 @@ public:
                                            UINT SrcSubresource,
                                            const D3D12_BOX* pSrcBox)
       : Command{CommandId::ID_ID3D12RESOURCE_READFROMSUBRESOURCE, threadId},
-        object_{object},
-        DstRowPitch_{DstRowPitch},
-        DstDepthPitch_{DstDepthPitch},
-        SrcSubresource_{SrcSubresource},
-        pSrcBox_{pSrcBox} {
+        m_Object{object},
+        m_DstRowPitch{DstRowPitch},
+        m_DstDepthPitch{DstDepthPitch},
+        m_SrcSubresource{SrcSubresource},
+        m_pSrcBox{pSrcBox} {
     UINT depth = 1;
     if (pSrcBox) {
       depth = (pSrcBox->back - pSrcBox->front);
@@ -272,20 +272,20 @@ public:
       }
     }
     size_t pDstDataSize = DstDepthPitch * depth;
-    pDstData_.value = const_cast<void*>(pDstData);
-    pDstData_.size = pDstDataSize;
+    m_pDstData.Value = const_cast<void*>(pDstData);
+    m_pDstData.Size = pDstDataSize;
   }
   ID3D12ResourceReadFromSubresourceCommand()
       : Command(CommandId::ID_ID3D12RESOURCE_READFROMSUBRESOURCE) {}
 
 public:
-  InterfaceArgument<ID3D12Resource> object_{};
-  Argument<HRESULT> result_{};
-  BufferArgument pDstData_{};
-  Argument<UINT> DstRowPitch_{};
-  Argument<UINT> DstDepthPitch_{};
-  Argument<UINT> SrcSubresource_{};
-  PointerArgument<D3D12_BOX> pSrcBox_{};
+  InterfaceArgument<ID3D12Resource> m_Object{};
+  Argument<HRESULT> m_Result{};
+  BufferArgument m_pDstData{};
+  Argument<UINT> m_DstRowPitch{};
+  Argument<UINT> m_DstDepthPitch{};
+  Argument<UINT> m_SrcSubresource{};
+  PointerArgument<D3D12_BOX> m_pSrcBox{};
 };
 
 class ID3D12GraphicsCommandListPreviewConvertLinearAlgebraMatrixCommand : public Command {
@@ -297,16 +297,16 @@ public:
       UINT DescCount)
       : Command{CommandId::ID_ID3D12GRAPHICSCOMMANDLISTPREVIEW_CONVERTLINEARALGEBRAMATRIX,
                 threadId},
-        object_{object},
-        pDesc_{pDesc, DescCount},
-        DescCount_{DescCount} {}
+        m_Object{object},
+        m_pDesc{pDesc, DescCount},
+        m_DescCount{DescCount} {}
   ID3D12GraphicsCommandListPreviewConvertLinearAlgebraMatrixCommand()
       : Command(CommandId::ID_ID3D12GRAPHICSCOMMANDLISTPREVIEW_CONVERTLINEARALGEBRAMATRIX) {}
 
 public:
-  InterfaceArgument<ID3D12GraphicsCommandListPreview> object_{};
-  ArrayArgument<D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO> pDesc_{};
-  Argument<UINT> DescCount_{};
+  InterfaceArgument<ID3D12GraphicsCommandListPreview> m_Object{};
+  ArrayArgument<D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO> m_pDesc{};
+  Argument<UINT> m_DescCount{};
 };
 
 class INTC_D3D12_GetSupportedVersionsCommand : public Command {
@@ -316,21 +316,21 @@ public:
                                          INTCExtensionVersion* pSupportedExtVersions,
                                          uint32_t* pSupportedExtVersionsCount)
       : Command{CommandId::INTC_D3D12_GETSUPPORTEDVERSIONS, threadId},
-        pDevice_{const_cast<ID3D12Device*>(pDevice)},
-        pSupportedExtVersionsCount_{pSupportedExtVersionsCount},
-        pSupportedExtVersions_{} {
+        m_pDevice{const_cast<ID3D12Device*>(pDevice)},
+        m_pSupportedExtVersionsCount{pSupportedExtVersionsCount},
+        m_pSupportedExtVersions{} {
     if (pSupportedExtVersionsCount) {
-      pSupportedExtVersions_.value = pSupportedExtVersions;
-      pSupportedExtVersions_.size = *pSupportedExtVersionsCount;
+      m_pSupportedExtVersions.Value = pSupportedExtVersions;
+      m_pSupportedExtVersions.Size = *pSupportedExtVersionsCount;
     }
   }
   INTC_D3D12_GetSupportedVersionsCommand() : Command(CommandId::INTC_D3D12_GETSUPPORTEDVERSIONS) {}
 
 public:
-  InterfaceArgument<ID3D12Device> pDevice_{};
-  ArrayArgument<INTCExtensionVersion> pSupportedExtVersions_{};
-  PointerArgument<uint32_t> pSupportedExtVersionsCount_{};
-  Argument<HRESULT> result_{};
+  InterfaceArgument<ID3D12Device> m_pDevice{};
+  ArrayArgument<INTCExtensionVersion> m_pSupportedExtVersions{};
+  PointerArgument<uint32_t> m_pSupportedExtVersionsCount{};
+  Argument<HRESULT> m_Result{};
 };
 
 class INTC_D3D12_CreateDeviceExtensionContextCommand : public Command {
@@ -341,19 +341,19 @@ public:
                                                  INTCExtensionInfo* pExtensionInfo,
                                                  INTCExtensionAppInfo* pExtensionAppInfo)
       : Command{CommandId::INTC_D3D12_CREATEDEVICEEXTENSIONCONTEXT, threadId},
-        pDevice_{const_cast<ID3D12Device*>(pDevice)},
-        ppExtensionContext_{ppExtensionContext},
-        pExtensionInfo_{pExtensionInfo},
-        pExtensionAppInfo_{pExtensionAppInfo} {}
+        m_pDevice{const_cast<ID3D12Device*>(pDevice)},
+        m_ppExtensionContext{ppExtensionContext},
+        m_pExtensionInfo{pExtensionInfo},
+        m_pExtensionAppInfo{pExtensionAppInfo} {}
   INTC_D3D12_CreateDeviceExtensionContextCommand()
       : Command(CommandId::INTC_D3D12_CREATEDEVICEEXTENSIONCONTEXT) {}
 
 public:
-  InterfaceArgument<ID3D12Device> pDevice_;
-  INTCExtensionContextOutputArgument ppExtensionContext_;
-  PointerArgument<INTCExtensionInfo> pExtensionInfo_;
-  PointerArgument<INTCExtensionAppInfo> pExtensionAppInfo_;
-  Argument<HRESULT> result_{};
+  InterfaceArgument<ID3D12Device> m_pDevice;
+  INTCExtensionContextOutputArgument m_ppExtensionContext;
+  PointerArgument<INTCExtensionInfo> m_pExtensionInfo;
+  PointerArgument<INTCExtensionAppInfo> m_pExtensionAppInfo;
+  Argument<HRESULT> m_Result{};
 };
 
 class INTC_D3D12_CreateDeviceExtensionContext1Command : public Command {
@@ -364,31 +364,31 @@ public:
                                                   INTCExtensionInfo* pExtensionInfo,
                                                   INTCExtensionAppInfo1* pExtensionAppInfo)
       : Command{CommandId::INTC_D3D12_CREATEDEVICEEXTENSIONCONTEXT1, threadId},
-        pDevice_{const_cast<ID3D12Device*>(pDevice)},
-        ppExtensionContext_{ppExtensionContext},
-        pExtensionInfo_{pExtensionInfo},
-        pExtensionAppInfo_{pExtensionAppInfo} {}
+        m_pDevice{const_cast<ID3D12Device*>(pDevice)},
+        m_ppExtensionContext{ppExtensionContext},
+        m_pExtensionInfo{pExtensionInfo},
+        m_pExtensionAppInfo{pExtensionAppInfo} {}
   INTC_D3D12_CreateDeviceExtensionContext1Command()
       : Command(CommandId::INTC_D3D12_CREATEDEVICEEXTENSIONCONTEXT1) {}
 
 public:
-  InterfaceArgument<ID3D12Device> pDevice_;
-  INTCExtensionContextOutputArgument ppExtensionContext_;
-  PointerArgument<INTCExtensionInfo> pExtensionInfo_;
-  PointerArgument<INTCExtensionAppInfo1> pExtensionAppInfo_;
-  Argument<HRESULT> result_{};
+  InterfaceArgument<ID3D12Device> m_pDevice;
+  INTCExtensionContextOutputArgument m_ppExtensionContext;
+  PointerArgument<INTCExtensionInfo> m_pExtensionInfo;
+  PointerArgument<INTCExtensionAppInfo1> m_pExtensionAppInfo;
+  Argument<HRESULT> m_Result{};
 };
 
 class INTC_D3D12_SetApplicationInfoCommand : public Command {
 public:
   INTC_D3D12_SetApplicationInfoCommand(unsigned threadId, INTCExtensionAppInfo1* pExtensionAppInfo)
       : Command{CommandId::INTC_D3D12_SETAPPLICATIONINFO, threadId},
-        pExtensionAppInfo_{pExtensionAppInfo} {}
+        m_pExtensionAppInfo{pExtensionAppInfo} {}
   INTC_D3D12_SetApplicationInfoCommand() : Command(CommandId::INTC_D3D12_SETAPPLICATIONINFO) {}
 
 public:
-  PointerArgument<INTCExtensionAppInfo1> pExtensionAppInfo_;
-  Argument<HRESULT> result_{};
+  PointerArgument<INTCExtensionAppInfo1> m_pExtensionAppInfo;
+  Argument<HRESULT> m_Result{};
 };
 
 class INTC_DestroyDeviceExtensionContextCommand : public Command {
@@ -396,13 +396,13 @@ public:
   INTC_DestroyDeviceExtensionContextCommand(unsigned threadId,
                                             INTCExtensionContext** ppExtensionContext)
       : Command{CommandId::INTC_DESTROYDEVICEEXTENSIONCONTEXT, threadId},
-        ppExtensionContext_{ppExtensionContext} {}
+        m_ppExtensionContext{ppExtensionContext} {}
   INTC_DestroyDeviceExtensionContextCommand()
       : Command(CommandId::INTC_DESTROYDEVICEEXTENSIONCONTEXT) {}
 
 public:
-  INTCExtensionContextOutputArgument ppExtensionContext_;
-  Argument<HRESULT> result_{};
+  INTCExtensionContextOutputArgument m_ppExtensionContext;
+  Argument<HRESULT> m_Result{};
 };
 
 class INTC_D3D12_CheckFeatureSupportCommand : public Command {
@@ -413,18 +413,18 @@ public:
                                         void* pFeatureSupportData,
                                         UINT FeatureSupportDataSize)
       : Command{CommandId::INTC_D3D12_CHECKFEATURESUPPORT, threadId},
-        pExtensionContext_{pExtensionContext},
-        Feature_{Feature},
-        pFeatureSupportData_{pFeatureSupportData, FeatureSupportDataSize},
-        FeatureSupportDataSize_{FeatureSupportDataSize} {}
+        m_pExtensionContext{pExtensionContext},
+        m_Feature{Feature},
+        m_pFeatureSupportData{pFeatureSupportData, FeatureSupportDataSize},
+        m_FeatureSupportDataSize{FeatureSupportDataSize} {}
   INTC_D3D12_CheckFeatureSupportCommand() : Command(CommandId::INTC_D3D12_CHECKFEATURESUPPORT) {}
 
 public:
-  INTCExtensionContextArgument pExtensionContext_;
-  Argument<INTC_D3D12_FEATURES> Feature_{};
-  BufferArgument pFeatureSupportData_{};
-  Argument<UINT> FeatureSupportDataSize_{};
-  Argument<HRESULT> result_{};
+  INTCExtensionContextArgument m_pExtensionContext;
+  Argument<INTC_D3D12_FEATURES> m_Feature{};
+  BufferArgument m_pFeatureSupportData{};
+  Argument<UINT> m_FeatureSupportDataSize{};
+  Argument<HRESULT> m_Result{};
 };
 
 class INTC_D3D12_CreateCommandQueueCommand : public Command {
@@ -435,18 +435,18 @@ public:
                                        REFIID riid,
                                        void** ppCommandQueue)
       : Command{CommandId::INTC_D3D12_CREATECOMMANDQUEUE, threadId},
-        pExtensionContext_{pExtensionContext},
-        pDesc_{pDesc},
-        riid_{riid},
-        ppCommandQueue_{ppCommandQueue} {}
+        m_pExtensionContext{pExtensionContext},
+        m_pDesc{pDesc},
+        m_riid{riid},
+        m_ppCommandQueue{ppCommandQueue} {}
   INTC_D3D12_CreateCommandQueueCommand() : Command(CommandId::INTC_D3D12_CREATECOMMANDQUEUE) {}
 
 public:
-  INTCExtensionContextArgument pExtensionContext_;
-  PointerArgument<INTC_D3D12_COMMAND_QUEUE_DESC_0001> pDesc_{};
-  Argument<IID> riid_{};
-  InterfaceOutputArgument<void> ppCommandQueue_{};
-  Argument<HRESULT> result_{};
+  INTCExtensionContextArgument m_pExtensionContext;
+  PointerArgument<INTC_D3D12_COMMAND_QUEUE_DESC_0001> m_pDesc{};
+  Argument<IID> m_riid{};
+  InterfaceOutputArgument<void> m_ppCommandQueue{};
+  Argument<HRESULT> m_Result{};
 };
 
 class INTC_D3D12_CreateReservedResourceCommand : public Command {
@@ -459,23 +459,23 @@ public:
                                            REFIID riid,
                                            void** ppvResource)
       : Command{CommandId::INTC_D3D12_CREATERESERVEDRESOURCE, threadId},
-        pExtensionContext_{pExtensionContext},
-        pDesc_{pDesc},
-        InitialState_{InitialState},
-        pOptimizedClearValue_{pOptimizedClearValue},
-        riid_{riid},
-        ppvResource_{ppvResource} {}
+        m_pExtensionContext{pExtensionContext},
+        m_pDesc{pDesc},
+        m_InitialState{InitialState},
+        m_pOptimizedClearValue{pOptimizedClearValue},
+        m_riid{riid},
+        m_ppvResource{ppvResource} {}
   INTC_D3D12_CreateReservedResourceCommand()
       : Command(CommandId::INTC_D3D12_CREATERESERVEDRESOURCE) {}
 
 public:
-  INTCExtensionContextArgument pExtensionContext_;
-  PointerArgument<INTC_D3D12_RESOURCE_DESC> pDesc_{};
-  Argument<D3D12_RESOURCE_STATES> InitialState_{};
-  PointerArgument<D3D12_CLEAR_VALUE> pOptimizedClearValue_{};
-  Argument<IID> riid_{};
-  InterfaceOutputArgument<void> ppvResource_{};
-  Argument<HRESULT> result_{};
+  INTCExtensionContextArgument m_pExtensionContext;
+  PointerArgument<INTC_D3D12_RESOURCE_DESC> m_pDesc{};
+  Argument<D3D12_RESOURCE_STATES> m_InitialState{};
+  PointerArgument<D3D12_CLEAR_VALUE> m_pOptimizedClearValue{};
+  Argument<IID> m_riid{};
+  InterfaceOutputArgument<void> m_ppvResource{};
+  Argument<HRESULT> m_Result{};
 };
 
 class INTC_D3D12_SetFeatureSupportCommand : public Command {
@@ -484,14 +484,14 @@ public:
                                       INTCExtensionContext* pExtensionContext,
                                       INTC_D3D12_FEATURE* pFeature)
       : Command{CommandId::INTC_D3D12_SETFEATURESUPPORT, threadId},
-        pExtensionContext_{pExtensionContext},
-        pFeature_{pFeature} {}
+        m_pExtensionContext{pExtensionContext},
+        m_pFeature{pFeature} {}
   INTC_D3D12_SetFeatureSupportCommand() : Command(CommandId::INTC_D3D12_SETFEATURESUPPORT) {}
 
 public:
-  INTCExtensionContextArgument pExtensionContext_;
-  PointerArgument<INTC_D3D12_FEATURE> pFeature_{};
-  Argument<HRESULT> result_{};
+  INTCExtensionContextArgument m_pExtensionContext;
+  PointerArgument<INTC_D3D12_FEATURE> m_pFeature{};
+  Argument<HRESULT> m_Result{};
 };
 
 class INTC_D3D12_GetResourceAllocationInfoCommand : public Command {
@@ -502,19 +502,19 @@ public:
                                               UINT numResourceDescs,
                                               const INTC_D3D12_RESOURCE_DESC_0001* pResourceDescs)
       : Command{CommandId::INTC_D3D12_GETRESOURCEALLOCATIONINFO, threadId},
-        pExtensionContext_{pExtensionContext},
-        visibleMask_{visibleMask},
-        numResourceDescs_{numResourceDescs},
-        pResourceDescs_{pResourceDescs} {}
+        m_pExtensionContext{pExtensionContext},
+        m_visibleMask{visibleMask},
+        m_numResourceDescs{numResourceDescs},
+        m_pResourceDescs{pResourceDescs} {}
   INTC_D3D12_GetResourceAllocationInfoCommand()
       : Command(CommandId::INTC_D3D12_GETRESOURCEALLOCATIONINFO) {}
 
 public:
-  INTCExtensionContextArgument pExtensionContext_;
-  Argument<UINT> visibleMask_{};
-  Argument<UINT> numResourceDescs_{};
-  PointerArgument<INTC_D3D12_RESOURCE_DESC_0001> pResourceDescs_{};
-  Argument<D3D12_RESOURCE_ALLOCATION_INFO> result_{};
+  INTCExtensionContextArgument m_pExtensionContext;
+  Argument<UINT> m_visibleMask{};
+  Argument<UINT> m_numResourceDescs{};
+  PointerArgument<INTC_D3D12_RESOURCE_DESC_0001> m_pResourceDescs{};
+  Argument<D3D12_RESOURCE_ALLOCATION_INFO> m_Result{};
 };
 
 class INTC_D3D12_CreateComputePipelineStateCommand : public Command {
@@ -525,19 +525,19 @@ public:
                                                REFIID riid,
                                                void** ppPipelineState)
       : Command{CommandId::INTC_D3D12_CREATECOMPUTEPIPELINESTATE, threadId},
-        pExtensionContext_{pExtensionContext},
-        pDesc_{pDesc},
-        riid_{riid},
-        ppPipelineState_{ppPipelineState} {}
+        m_pExtensionContext{pExtensionContext},
+        m_pDesc{pDesc},
+        m_riid{riid},
+        m_ppPipelineState{ppPipelineState} {}
   INTC_D3D12_CreateComputePipelineStateCommand()
       : Command(CommandId::INTC_D3D12_CREATECOMPUTEPIPELINESTATE) {}
 
 public:
-  INTCExtensionContextArgument pExtensionContext_;
-  PointerArgument<INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC> pDesc_{};
-  Argument<IID> riid_{};
-  InterfaceOutputArgument<void> ppPipelineState_{};
-  Argument<HRESULT> result_{};
+  INTCExtensionContextArgument m_pExtensionContext;
+  PointerArgument<INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC> m_pDesc{};
+  Argument<IID> m_riid{};
+  InterfaceOutputArgument<void> m_ppPipelineState{};
+  Argument<HRESULT> m_Result{};
 };
 
 class INTC_D3D12_CreatePlacedResourceCommand : public Command {
@@ -552,26 +552,26 @@ public:
                                          REFIID riid,
                                          void** ppvResource)
       : Command{CommandId::INTC_D3D12_CREATEPLACEDRESOURCE, threadId},
-        pExtensionContext_{pExtensionContext},
-        pHeap_{pHeap},
-        HeapOffset_{HeapOffset},
-        pDesc_{pDesc},
-        InitialState_{InitialState},
-        pOptimizedClearValue_{pOptimizedClearValue},
-        riid_{riid},
-        ppvResource_{ppvResource} {}
+        m_pExtensionContext{pExtensionContext},
+        m_pHeap{pHeap},
+        m_HeapOffset{HeapOffset},
+        m_pDesc{pDesc},
+        m_InitialState{InitialState},
+        m_pOptimizedClearValue{pOptimizedClearValue},
+        m_riid{riid},
+        m_ppvResource{ppvResource} {}
   INTC_D3D12_CreatePlacedResourceCommand() : Command(CommandId::INTC_D3D12_CREATEPLACEDRESOURCE) {}
 
 public:
-  INTCExtensionContextArgument pExtensionContext_;
-  InterfaceArgument<ID3D12Heap> pHeap_{};
-  Argument<UINT64> HeapOffset_{};
-  PointerArgument<INTC_D3D12_RESOURCE_DESC_0001> pDesc_{};
-  Argument<D3D12_RESOURCE_STATES> InitialState_{};
-  PointerArgument<D3D12_CLEAR_VALUE> pOptimizedClearValue_{};
-  Argument<IID> riid_{};
-  InterfaceOutputArgument<void> ppvResource_{};
-  Argument<HRESULT> result_{};
+  INTCExtensionContextArgument m_pExtensionContext;
+  InterfaceArgument<ID3D12Heap> m_pHeap{};
+  Argument<UINT64> m_HeapOffset{};
+  PointerArgument<INTC_D3D12_RESOURCE_DESC_0001> m_pDesc{};
+  Argument<D3D12_RESOURCE_STATES> m_InitialState{};
+  PointerArgument<D3D12_CLEAR_VALUE> m_pOptimizedClearValue{};
+  Argument<IID> m_riid{};
+  InterfaceOutputArgument<void> m_ppvResource{};
+  Argument<HRESULT> m_Result{};
 };
 
 class INTC_D3D12_CreateCommittedResourceCommand : public Command {
@@ -586,27 +586,27 @@ public:
                                             REFIID riidResource,
                                             void** ppvResource)
       : Command{CommandId::INTC_D3D12_CREATECOMMITTEDRESOURCE, threadId},
-        pExtensionContext_{pExtensionContext},
-        pHeapProperties_{pHeapProperties},
-        HeapFlags_{HeapFlags},
-        pDesc_{pDesc},
-        InitialResourceState_{InitialResourceState},
-        pOptimizedClearValue_{pOptimizedClearValue},
-        riidResource_{riidResource},
-        ppvResource_{ppvResource} {}
+        m_pExtensionContext{pExtensionContext},
+        m_pHeapProperties{pHeapProperties},
+        m_HeapFlags{HeapFlags},
+        m_pDesc{pDesc},
+        m_InitialResourceState{InitialResourceState},
+        m_pOptimizedClearValue{pOptimizedClearValue},
+        m_riidResource{riidResource},
+        m_ppvResource{ppvResource} {}
   INTC_D3D12_CreateCommittedResourceCommand()
       : Command(CommandId::INTC_D3D12_CREATECOMMITTEDRESOURCE) {}
 
 public:
-  INTCExtensionContextArgument pExtensionContext_;
-  PointerArgument<D3D12_HEAP_PROPERTIES> pHeapProperties_{};
-  Argument<D3D12_HEAP_FLAGS> HeapFlags_{};
-  PointerArgument<INTC_D3D12_RESOURCE_DESC_0001> pDesc_{};
-  Argument<D3D12_RESOURCE_STATES> InitialResourceState_{};
-  PointerArgument<D3D12_CLEAR_VALUE> pOptimizedClearValue_{};
-  Argument<IID> riidResource_{};
-  InterfaceOutputArgument<void> ppvResource_{};
-  Argument<HRESULT> result_{};
+  INTCExtensionContextArgument m_pExtensionContext;
+  PointerArgument<D3D12_HEAP_PROPERTIES> m_pHeapProperties{};
+  Argument<D3D12_HEAP_FLAGS> m_HeapFlags{};
+  PointerArgument<INTC_D3D12_RESOURCE_DESC_0001> m_pDesc{};
+  Argument<D3D12_RESOURCE_STATES> m_InitialResourceState{};
+  PointerArgument<D3D12_CLEAR_VALUE> m_pOptimizedClearValue{};
+  Argument<IID> m_riidResource{};
+  InterfaceOutputArgument<void> m_ppvResource{};
+  Argument<HRESULT> m_Result{};
 };
 
 class INTC_D3D12_CreateHeapCommand : public Command {
@@ -617,18 +617,18 @@ public:
                                REFIID riid,
                                void** ppvHeap)
       : Command{CommandId::INTC_D3D12_CREATEHEAP, threadId},
-        pExtensionContext_{pExtensionContext},
-        pDesc_{pDesc},
-        riid_{riid},
-        ppvHeap_{ppvHeap} {}
+        m_pExtensionContext{pExtensionContext},
+        m_pDesc{pDesc},
+        m_riid{riid},
+        m_ppvHeap{ppvHeap} {}
   INTC_D3D12_CreateHeapCommand() : Command(CommandId::INTC_D3D12_CREATEHEAP) {}
 
 public:
-  INTCExtensionContextArgument pExtensionContext_;
-  PointerArgument<INTC_D3D12_HEAP_DESC> pDesc_{};
-  Argument<IID> riid_{};
-  InterfaceOutputArgument<void> ppvHeap_{};
-  Argument<HRESULT> result_{};
+  INTCExtensionContextArgument m_pExtensionContext;
+  PointerArgument<INTC_D3D12_HEAP_DESC> m_pDesc{};
+  Argument<IID> m_riid{};
+  InterfaceOutputArgument<void> m_ppvHeap{};
+  Argument<HRESULT> m_Result{};
 };
 
 class CreateWindowMetaCommand : public Command {
@@ -638,9 +638,9 @@ public:
   CreateWindowMetaCommand() : Command(CommandId::ID_META_CREATE_WINDOW) {}
 
 public:
-  Argument<HWND> hWnd_{};
-  Argument<int> width_{};
-  Argument<int> height_{};
+  Argument<HWND> m_hWnd{};
+  Argument<int> m_width{};
+  Argument<int> m_height{};
 };
 
 class MappedDataMetaCommand : public Command {
@@ -649,10 +649,10 @@ public:
   MappedDataMetaCommand() : Command(CommandId::ID_MAPPED_DATA) {}
 
 public:
-  InterfaceArgument<ID3D12Resource> resource_{};
-  Argument<void*> mappedAddress_{};
-  Argument<unsigned> offset_{};
-  BufferArgument data_{};
+  InterfaceArgument<ID3D12Resource> m_resource{};
+  Argument<void*> m_mappedAddress{};
+  Argument<unsigned> m_offset{};
+  BufferArgument m_data{};
 };
 
 class CreateHeapAllocationMetaCommand : public Command {
@@ -662,9 +662,9 @@ public:
   CreateHeapAllocationMetaCommand() : Command(CommandId::ID_CREATE_HEAP_ALLOCATION) {}
 
 public:
-  InterfaceArgument<ID3D12Heap> heap_{};
-  Argument<void*> address_{};
-  BufferArgument data_{};
+  InterfaceArgument<ID3D12Heap> m_heap{};
+  Argument<void*> m_address{};
+  BufferArgument m_data{};
 };
 
 class WaitForFenceSignaledCommand : public Command {
@@ -674,9 +674,9 @@ public:
   WaitForFenceSignaledCommand() : Command(CommandId::ID_WAIT_FOR_FENCE_SIGNALED) {}
 
 public:
-  Argument<HANDLE> event_{};
-  InterfaceArgument<ID3D12Fence> fence_{};
-  Argument<unsigned> value_{};
+  Argument<HANDLE> m_event{};
+  InterfaceArgument<ID3D12Fence> m_fence{};
+  Argument<unsigned> m_Value{};
 };
 
 class DllContainerMetaCommand : public Command {
@@ -686,8 +686,8 @@ public:
   DllContainerMetaCommand() : Command(CommandId::ID_META_DLL_CONTAINER) {}
 
 public:
-  LPCWSTR_Argument dllName_{};
-  BufferArgument dllData_{};
+  LPCWSTR_Argument m_dllName{};
+  BufferArgument m_dllData{};
 };
 
 #pragma region DML
@@ -702,22 +702,22 @@ public:
                                        UINT featureSupportDataSize,
                                        void* featureSupportData)
       : Command{CommandId::ID_IDMLDEVICE_CHECKFEATURESUPPORT, threadId},
-        object_{object},
-        feature_{feature},
-        featureQueryDataSize_{featureQueryDataSize},
-        featureQueryData_{featureQueryData, featureQueryDataSize, feature},
-        featureSupportDataSize_{featureSupportDataSize},
-        featureSupportData_{featureSupportData, featureSupportDataSize} {}
+        m_Object{object},
+        m_feature{feature},
+        m_featureQueryDataSize{featureQueryDataSize},
+        m_featureQueryData{featureQueryData, featureQueryDataSize, feature},
+        m_featureSupportDataSize{featureSupportDataSize},
+        m_featureSupportData{featureSupportData, featureSupportDataSize} {}
   IDMLDeviceCheckFeatureSupportCommand() : Command(CommandId::ID_IDMLDEVICE_CHECKFEATURESUPPORT) {}
 
 public:
-  InterfaceArgument<IDMLDevice> object_{};
-  Argument<HRESULT> result_{};
-  Argument<DML_FEATURE> feature_{};
-  Argument<UINT> featureQueryDataSize_{};
-  DML_CheckFeatureSupport_BufferArgument featureQueryData_{};
-  Argument<UINT> featureSupportDataSize_{};
-  BufferArgument featureSupportData_{};
+  InterfaceArgument<IDMLDevice> m_Object{};
+  Argument<HRESULT> m_Result{};
+  Argument<DML_FEATURE> m_feature{};
+  Argument<UINT> m_featureQueryDataSize{};
+  DML_CheckFeatureSupport_BufferArgument m_featureQueryData{};
+  Argument<UINT> m_featureSupportDataSize{};
+  BufferArgument m_featureSupportData{};
 };
 
 #pragma region NVAPI
@@ -728,7 +728,7 @@ public:
   NvAPI_InitializeCommand() : Command(CommandId::ID_NVAPI_INITIALIZE) {}
 
 public:
-  Argument<NvAPI_Status> result_{};
+  Argument<NvAPI_Status> m_Result{};
 };
 
 class NvAPI_UnloadCommand : public Command {
@@ -737,7 +737,7 @@ public:
   NvAPI_UnloadCommand() : Command(CommandId::ID_NVAPI_UNLOAD) {}
 
 public:
-  Argument<NvAPI_Status> result_{};
+  Argument<NvAPI_Status> m_Result{};
 };
 
 class NvAPI_D3D12_SetCreatePipelineStateOptionsCommand : public Command {
@@ -747,15 +747,15 @@ public:
       ID3D12Device5* pDevice,
       const NVAPI_D3D12_SET_CREATE_PIPELINE_STATE_OPTIONS_PARAMS* pState)
       : Command{CommandId::ID_NVAPI_D3D12_SETCREATEPIPELINESTATEOPTIONS, threadId},
-        pDevice_{pDevice},
-        pState_{pState} {}
+        m_pDevice{pDevice},
+        m_pState{pState} {}
   NvAPI_D3D12_SetCreatePipelineStateOptionsCommand()
       : Command(CommandId::ID_NVAPI_D3D12_SETCREATEPIPELINESTATEOPTIONS) {}
 
 public:
-  InterfaceArgument<ID3D12Device5> pDevice_{};
-  PointerArgument<NVAPI_D3D12_SET_CREATE_PIPELINE_STATE_OPTIONS_PARAMS> pState_{};
-  Argument<NvAPI_Status> result_{};
+  InterfaceArgument<ID3D12Device5> m_pDevice{};
+  PointerArgument<NVAPI_D3D12_SET_CREATE_PIPELINE_STATE_OPTIONS_PARAMS> m_pState{};
+  Argument<NvAPI_Status> m_Result{};
 };
 
 class NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand : public Command {
@@ -765,17 +765,17 @@ public:
                                               NvU32 uavSlot,
                                               NvU32 uavSpace)
       : Command{CommandId::ID_NVAPI_D3D12_SETNVSHADEREXTNSLOTSPACE, threadId},
-        pDev_{pDev},
-        uavSlot_{uavSlot},
-        uavSpace_{uavSpace} {}
+        m_pDev{pDev},
+        m_uavSlot{uavSlot},
+        m_uavSpace{uavSpace} {}
   NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand()
       : Command(CommandId::ID_NVAPI_D3D12_SETNVSHADEREXTNSLOTSPACE) {}
 
 public:
-  InterfaceArgument<IUnknown> pDev_{};
-  Argument<NvU32> uavSlot_{};
-  Argument<NvU32> uavSpace_{};
-  Argument<NvAPI_Status> result_{};
+  InterfaceArgument<IUnknown> m_pDev{};
+  Argument<NvU32> m_uavSlot{};
+  Argument<NvU32> m_uavSpace{};
+  Argument<NvAPI_Status> m_Result{};
 };
 
 class NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand : public Command {
@@ -785,17 +785,17 @@ public:
                                                          NvU32 uavSlot,
                                                          NvU32 uavSpace)
       : Command{CommandId::ID_NVAPI_D3D12_SETNVSHADEREXTNSLOTSPACELOCALTHREAD, threadId},
-        pDev_{pDev},
-        uavSlot_{uavSlot},
-        uavSpace_{uavSpace} {}
+        m_pDev{pDev},
+        m_uavSlot{uavSlot},
+        m_uavSpace{uavSpace} {}
   NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand()
       : Command(CommandId::ID_NVAPI_D3D12_SETNVSHADEREXTNSLOTSPACELOCALTHREAD) {}
 
 public:
-  InterfaceArgument<IUnknown> pDev_{};
-  Argument<NvU32> uavSlot_{};
-  Argument<NvU32> uavSpace_{};
-  Argument<NvAPI_Status> result_{};
+  InterfaceArgument<IUnknown> m_pDev{};
+  Argument<NvU32> m_uavSlot{};
+  Argument<NvU32> m_uavSpace{};
+  Argument<NvAPI_Status> m_Result{};
 };
 
 class NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand : public Command {
@@ -805,15 +805,15 @@ public:
       ID3D12GraphicsCommandList4* pCommandList,
       const NVAPI_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_EX_PARAMS* pParams)
       : Command{CommandId::ID_NVAPI_D3D12_BUILDRAYTRACINGACCELERATIONSTRUCTUREEX, threadId},
-        pCommandList_{pCommandList},
-        pParams{pParams} {}
+        m_pCommandList{pCommandList},
+        m_pParams{pParams} {}
   NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand()
       : Command(CommandId::ID_NVAPI_D3D12_BUILDRAYTRACINGACCELERATIONSTRUCTUREEX) {}
 
 public:
-  InterfaceArgument<ID3D12GraphicsCommandList4> pCommandList_{};
-  PointerArgument<NVAPI_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_EX_PARAMS> pParams{};
-  Argument<NvAPI_Status> result_{};
+  InterfaceArgument<ID3D12GraphicsCommandList4> m_pCommandList{};
+  PointerArgument<NVAPI_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_EX_PARAMS> m_pParams{};
+  Argument<NvAPI_Status> m_Result{};
 };
 
 class NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand : public Command {
@@ -823,15 +823,15 @@ public:
       ID3D12GraphicsCommandList4* pCommandList,
       const NVAPI_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_PARAMS* pParams)
       : Command{CommandId::ID_NVAPI_D3D12_BUILDRAYTRACINGOPACITYMICROMAPARRAY, threadId},
-        pCommandList_{pCommandList},
-        pParams{pParams} {}
+        m_pCommandList{pCommandList},
+        m_pParams{pParams} {}
   NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand()
       : Command(CommandId::ID_NVAPI_D3D12_BUILDRAYTRACINGOPACITYMICROMAPARRAY) {}
 
 public:
-  InterfaceArgument<ID3D12GraphicsCommandList4> pCommandList_{};
-  PointerArgument<NVAPI_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_PARAMS> pParams{};
-  Argument<NvAPI_Status> result_{};
+  InterfaceArgument<ID3D12GraphicsCommandList4> m_pCommandList{};
+  PointerArgument<NVAPI_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_PARAMS> m_pParams{};
+  Argument<NvAPI_Status> m_Result{};
 };
 
 class NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand : public Command {
@@ -841,15 +841,15 @@ public:
       ID3D12GraphicsCommandList4* pCommandList,
       const NVAPI_RAYTRACING_EXECUTE_MULTI_INDIRECT_CLUSTER_OPERATION_PARAMS* pParams)
       : Command{CommandId::ID_NVAPI_D3D12_RAYTRACINGEXECUTEMULTIINDIRECTCLUSTEROPERATION, threadId},
-        pCommandList_{pCommandList},
-        pParams{pParams} {}
+        m_pCommandList{pCommandList},
+        m_pParams{pParams} {}
   NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand()
       : Command(CommandId::ID_NVAPI_D3D12_RAYTRACINGEXECUTEMULTIINDIRECTCLUSTEROPERATION) {}
 
 public:
-  InterfaceArgument<ID3D12GraphicsCommandList4> pCommandList_{};
-  PointerArgument<NVAPI_RAYTRACING_EXECUTE_MULTI_INDIRECT_CLUSTER_OPERATION_PARAMS> pParams{};
-  Argument<NvAPI_Status> result_{};
+  InterfaceArgument<ID3D12GraphicsCommandList4> m_pCommandList{};
+  PointerArgument<NVAPI_RAYTRACING_EXECUTE_MULTI_INDIRECT_CLUSTER_OPERATION_PARAMS> m_pParams{};
+  Argument<NvAPI_Status> m_Result{};
 };
 
 #pragma endregion

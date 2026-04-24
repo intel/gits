@@ -17,18 +17,18 @@ namespace gits {
 namespace DirectX {
 
 ExecuteIndirectShaderPatchService::ExecuteIndirectShaderPatchService() {
-  dxilDll_ = LoadLibrary(".\\D3D12\\dxil.dll");
-  GITS_ASSERT(dxilDll_);
-  dxcDll_ = LoadLibrary(".\\D3D12\\dxcompiler.dll");
-  GITS_ASSERT(dxcDll_);
+  m_DxilDll = LoadLibrary(".\\D3D12\\dxil.dll");
+  GITS_ASSERT(m_DxilDll);
+  m_DxcDll = LoadLibrary(".\\D3D12\\dxcompiler.dll");
+  GITS_ASSERT(m_DxcDll);
 }
 
-ExecuteIndirectShaderPatchService ::~ExecuteIndirectShaderPatchService() {
-  FreeLibrary(dxcDll_);
-  FreeLibrary(dxilDll_);
+ExecuteIndirectShaderPatchService::~ExecuteIndirectShaderPatchService() {
+  FreeLibrary(m_DxcDll);
+  FreeLibrary(m_DxilDll);
 }
 
-void ExecuteIndirectShaderPatchService::patchArgumentBuffer(
+void ExecuteIndirectShaderPatchService::PatchArgumentBuffer(
     ID3D12GraphicsCommandList* commandList,
     D3D12_GPU_VIRTUAL_ADDRESS argumentBuffer,
     D3D12_GPU_VIRTUAL_ADDRESS countBuffer,
@@ -41,16 +41,16 @@ void ExecuteIndirectShaderPatchService::patchArgumentBuffer(
     D3D12_GPU_VIRTUAL_ADDRESS gpuAddressBuffer,
     D3D12_GPU_VIRTUAL_ADDRESS mappingCountBuffer) {
 
-  if (!pipelineState_) {
+  if (!m_PipelineState) {
     Microsoft::WRL::ComPtr<ID3D12Device> device;
     HRESULT hr = commandList->GetDevice(IID_PPV_ARGS(&device));
     GITS_ASSERT(hr == S_OK);
 
-    initialize(device.Get());
+    Initialize(device.Get());
   }
 
-  commandList->SetComputeRootSignature(rootSignature_);
-  commandList->SetPipelineState(pipelineState_);
+  commandList->SetComputeRootSignature(m_RootSignature);
+  commandList->SetPipelineState(m_PipelineState);
 
   commandList->SetComputeRootUnorderedAccessView(0, argumentBuffer);
   commandList->SetComputeRootShaderResourceView(1, patchOffsetsBuffer);
@@ -66,7 +66,7 @@ void ExecuteIndirectShaderPatchService::patchArgumentBuffer(
   commandList->Dispatch((maxArgumentCount + 31) / 32, 1, 1);
 }
 
-void ExecuteIndirectShaderPatchService::initialize(ID3D12Device* device) {
+void ExecuteIndirectShaderPatchService::Initialize(ID3D12Device* device) {
   {
     D3D12_ROOT_SIGNATURE_DESC desc{};
     D3D12_ROOT_PARAMETER parameters[10]{};
@@ -113,7 +113,7 @@ void ExecuteIndirectShaderPatchService::initialize(ID3D12Device* device) {
         D3D12SerializeRootSignature(&desc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, &error);
     GITS_ASSERT(hr == S_OK);
     hr = device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(),
-                                     IID_PPV_ARGS(&rootSignature_));
+                                     IID_PPV_ARGS(&m_RootSignature));
     GITS_ASSERT(hr == S_OK);
   }
 
@@ -228,7 +228,7 @@ void gits_patch(uint3 gId : SV_GroupID, uint3 dtId : SV_DispatchThreadID,
 })";
 
   {
-    auto dxcCreateInstanceFn = (DxcCreateInstanceProc)GetProcAddress(dxcDll_, "DxcCreateInstance");
+    auto dxcCreateInstanceFn = (DxcCreateInstanceProc)GetProcAddress(m_DxcDll, "DxcCreateInstance");
     GITS_ASSERT(dxcCreateInstanceFn);
 
     Microsoft::WRL::ComPtr<IDxcUtils> utils;
@@ -273,10 +273,10 @@ void gits_patch(uint3 gId : SV_GroupID, uint3 dtId : SV_DispatchThreadID,
     }
 
     D3D12_COMPUTE_PIPELINE_STATE_DESC desc{};
-    desc.pRootSignature = rootSignature_;
+    desc.pRootSignature = m_RootSignature;
     desc.CS = D3D12_SHADER_BYTECODE{shader->GetBufferPointer(), shader->GetBufferSize()};
 
-    hr = device->CreateComputePipelineState(&desc, IID_PPV_ARGS(&pipelineState_));
+    hr = device->CreateComputePipelineState(&desc, IID_PPV_ARGS(&m_PipelineState));
     GITS_ASSERT(hr == S_OK);
   }
 }

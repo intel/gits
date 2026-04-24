@@ -15,16 +15,16 @@
 namespace gits {
 namespace DirectX {
 
-void AddressPinningLayerGroup::loadLayers() {
+void AddressPinningLayerGroup::LoadLayers() {
 
   if ((Configurator::IsRecorder() && Configurator::Get().common.recorder.enabled &&
        Configurator::Get().directx.recorder.storeAddressPinning) ||
       (Configurator::IsPlayer() &&
        Configurator::Get().directx.player.addressPinning == AddressPinningMode::STORE)) {
-    addLayer(std::make_unique<AddressPinningStoreLayer>());
+    AddLayer(std::make_unique<AddressPinningStoreLayer>());
   } else if (Configurator::IsPlayer() &&
              Configurator::Get().directx.player.addressPinning == AddressPinningMode::USE) {
-    addLayer(std::make_unique<AddressPinningUseLayer>());
+    AddLayer(std::make_unique<AddressPinningUseLayer>());
   }
 }
 

@@ -14,11 +14,11 @@
 namespace gits {
 namespace DirectX {
 
-void SkipCallsLayerGroup::loadLayers() {
+void SkipCallsLayerGroup::LoadLayers() {
   if (Configurator::Get().directx.features.skipCalls.enabled) {
-    addLayer(std::make_unique<SkipCallsOnConfigLayer>());
+    AddLayer(std::make_unique<SkipCallsOnConfigLayer>());
   }
-  addLayer(std::make_unique<SkipCallsOnResultLayer>());
+  AddLayer(std::make_unique<SkipCallsOnResultLayer>());
 }
 
 } // namespace DirectX

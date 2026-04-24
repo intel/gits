@@ -16,23 +16,23 @@ namespace gits {
 namespace DirectX {
 
 void ResourcePlacementCaptureNoExecute::createPlacedResource(unsigned heapKey,
-                                                             unsigned resourceKey,
+                                                             unsigned ResourceKey,
                                                              UINT64 offset,
                                                              ID3D12Device* device,
                                                              D3D12_RESOURCE_DESC& desc) {
   ResourcePlacementInfo info{};
   info.heapKey = heapKey;
-  info.key = resourceKey;
+  info.key = ResourceKey;
   info.offset = offset;
   info.desc = desc;
 
-  resourcePlacementInfos_[resourceKey] = info;
+  m_ResourcePlacementInfos[ResourceKey] = info;
 }
 
 void ResourcePlacementCaptureNoExecute::getResourceAllocation(const D3D12_RESOURCE_DESC& desc,
                                                               uint64_t sizeInBytes,
                                                               uint64_t alignment) {
-  resourceDescToAllocation_[desc] = {sizeInBytes, alignment};
+  m_ResourceDescToAllocation[desc] = {sizeInBytes, alignment};
 }
 
 void ResourcePlacementCaptureNoExecute::getResourceAllocation(const D3D12_RESOURCE_DESC1& desc,
@@ -41,7 +41,7 @@ void ResourcePlacementCaptureNoExecute::getResourceAllocation(const D3D12_RESOUR
   D3D12_RESOURCE_DESC baseDesc{desc.Dimension,        desc.Alignment, desc.Width,  desc.Height,
                                desc.DepthOrArraySize, desc.MipLevels, desc.Format, desc.SampleDesc,
                                desc.Layout,           desc.Flags};
-  resourceDescToAllocation_[baseDesc] = {sizeInBytes, alignment};
+  m_ResourceDescToAllocation[baseDesc] = {sizeInBytes, alignment};
 }
 
 void ResourcePlacementCaptureNoExecute::storeResourcePlacement() {
@@ -51,9 +51,9 @@ void ResourcePlacementCaptureNoExecute::storeResourcePlacement() {
   filePath /= "resourcePlacementData.dat";
 
   std::ofstream file(filePath, std::ios::binary);
-  for (auto& [resourceKey, info] : resourcePlacementInfos_) {
-    const auto allocationInfoIt = resourceDescToAllocation_.find(info.desc);
-    if (allocationInfoIt != resourceDescToAllocation_.end()) {
+  for (auto& [ResourceKey, info] : m_ResourcePlacementInfos) {
+    const auto allocationInfoIt = m_ResourceDescToAllocation.find(info.desc);
+    if (allocationInfoIt != m_ResourceDescToAllocation.end()) {
       info.size = allocationInfoIt->second.SizeInBytes;
       info.alignment = allocationInfoIt->second.Alignment;
     } else if (info.desc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER) {
@@ -68,7 +68,7 @@ void ResourcePlacementCaptureNoExecute::storeResourcePlacement() {
     if (info.size) {
       file.write(reinterpret_cast<char*>(&info), sizeof(info));
     } else {
-      LOG_ERROR << "Portability - no placement data for resource O: " << resourceKey;
+      LOG_ERROR << "Portability - no placement data for resource O: " << ResourceKey;
     }
   }
 }

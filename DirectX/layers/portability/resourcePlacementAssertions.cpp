@@ -20,19 +20,19 @@ ResourcePlacementAssertions::ResourcePlacementAssertions() {
   loadResourcePlacementData();
 }
 
-void ResourcePlacementAssertions::createPlacedResource(unsigned resourceKey,
+void ResourcePlacementAssertions::createPlacedResource(unsigned ResourceKey,
                                                        const D3D12_RESOURCE_DESC& desc,
                                                        ID3D12Device* device) {
-  if (!placementDataLoaded_) {
+  if (!m_PlacementDataLoaded) {
     return;
   }
 
-  const ResourcePlacementInfo* placementInfo = findPlacementData(resourceKey);
+  const ResourcePlacementInfo* placementInfo = findPlacementData(ResourceKey);
 
   if (!placementInfo) {
     static bool logged = false;
     if (!logged) {
-      LOG_ERROR << "Portability - no resource placement data for resource: O" << resourceKey;
+      LOG_ERROR << "Portability - no resource placement data for resource: O" << ResourceKey;
       logged = true;
     }
     return;
@@ -40,23 +40,23 @@ void ResourcePlacementAssertions::createPlacedResource(unsigned resourceKey,
 
   AllocationInfo info{};
   info.pre = {placementInfo->size, placementInfo->alignment};
-  info.post = queryAllocationFromDevice(device, desc, resourceKey);
-  checkCompatibility(info, resourceKey);
+  info.post = queryAllocationFromDevice(device, desc, ResourceKey);
+  checkCompatibility(info, ResourceKey);
 }
 
-void ResourcePlacementAssertions::createPlacedResource(unsigned resourceKey,
+void ResourcePlacementAssertions::createPlacedResource(unsigned ResourceKey,
                                                        const D3D12_RESOURCE_DESC1& desc,
                                                        ID3D12Device* device) {
-  if (!placementDataLoaded_) {
+  if (!m_PlacementDataLoaded) {
     return;
   }
 
-  const ResourcePlacementInfo* placementInfo = findPlacementData(resourceKey);
+  const ResourcePlacementInfo* placementInfo = findPlacementData(ResourceKey);
 
   if (!placementInfo) {
     static bool logged = false;
     if (!logged) {
-      LOG_ERROR << "Portability - no resource placement data for resource: O" << resourceKey;
+      LOG_ERROR << "Portability - no resource placement data for resource: O" << ResourceKey;
       logged = true;
     }
     return;
@@ -80,36 +80,36 @@ void ResourcePlacementAssertions::createPlacedResource(unsigned resourceKey,
 
   AllocationInfo info{};
   info.pre = {placementInfo->size, placementInfo->alignment};
-  info.post = queryAllocationFromDevice(device, baseDesc, resourceKey);
-  checkCompatibility(info, resourceKey);
+  info.post = queryAllocationFromDevice(device, baseDesc, ResourceKey);
+  checkCompatibility(info, ResourceKey);
 }
 
-const ResourcePlacementInfo* ResourcePlacementAssertions::findPlacementData(unsigned resourceKey) {
-  const auto it = placementDataFromFile_.find(resourceKey);
-  if (it != placementDataFromFile_.end()) {
+const ResourcePlacementInfo* ResourcePlacementAssertions::findPlacementData(unsigned ResourceKey) {
+  const auto it = m_PlacementDataFromFile.find(ResourceKey);
+  if (it != m_PlacementDataFromFile.end()) {
     return &it->second;
   }
   return nullptr;
 }
 
 D3D12_RESOURCE_ALLOCATION_INFO ResourcePlacementAssertions::queryAllocationFromDevice(
-    ID3D12Device* device, const D3D12_RESOURCE_DESC& desc, unsigned resourceKey) {
+    ID3D12Device* device, const D3D12_RESOURCE_DESC& desc, unsigned ResourceKey) {
   D3D12_RESOURCE_ALLOCATION_INFO allocInfo = device->GetResourceAllocationInfo(0, 1, &desc);
   if (allocInfo.SizeInBytes == UINT64_MAX) {
-    LOG_ERROR << "Portability - GetResourceAllocationInfo failed for resource: O" << resourceKey;
+    LOG_ERROR << "Portability - GetResourceAllocationInfo failed for resource: O" << ResourceKey;
   }
   return allocInfo;
 }
 
 void ResourcePlacementAssertions::checkCompatibility(const AllocationInfo& allocationInfo,
-                                                     unsigned resourceKey) {
+                                                     unsigned ResourceKey) {
   if (allocationInfo.pre.Alignment != allocationInfo.post.Alignment) {
-    LOG_ERROR << "Portability - incompatible alignment for resource: O" << resourceKey;
+    LOG_ERROR << "Portability - incompatible alignment for resource: O" << ResourceKey;
   }
   GITS_ASSERT(allocationInfo.pre.Alignment == allocationInfo.post.Alignment);
 
   if (allocationInfo.pre.SizeInBytes < allocationInfo.post.SizeInBytes) {
-    LOG_ERROR << "Portability - incompatible size for resource: O" << resourceKey;
+    LOG_ERROR << "Portability - incompatible size for resource: O" << ResourceKey;
   }
   GITS_ASSERT(allocationInfo.pre.SizeInBytes >= allocationInfo.post.SizeInBytes);
 }
@@ -132,12 +132,12 @@ void ResourcePlacementAssertions::loadResourcePlacementData() {
 
   ResourcePlacementInfo info{};
   while (file.read(reinterpret_cast<char*>(&info), sizeof(ResourcePlacementInfo))) {
-    placementDataFromFile_[info.key] = info;
+    m_PlacementDataFromFile[info.key] = info;
   }
 
-  placementDataLoaded_ = true;
+  m_PlacementDataLoaded = true;
 
-  LOG_INFO << "Portability - loaded " << placementDataFromFile_.size()
+  LOG_INFO << "Portability - loaded " << m_PlacementDataFromFile.size()
            << " resource placement entries from resourcePlacementData.dat";
 }
 

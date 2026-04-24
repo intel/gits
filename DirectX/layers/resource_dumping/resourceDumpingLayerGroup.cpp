@@ -19,29 +19,29 @@
 namespace gits {
 namespace DirectX {
 
-void ResourceDumpingLayerGroup::loadLayers() {
+void ResourceDumpingLayerGroup::LoadLayers() {
   if (Configurator::Get().directx.features.screenshots.enabled ||
       !Configurator::Get().common.player.captureFrames.empty()) {
-    addLayer(std::make_unique<ScreenshotsLayer>());
+    AddLayer(std::make_unique<ScreenshotsLayer>());
   }
   if (Configurator::Get().directx.features.resourcesDump.enabled) {
-    addLayer(std::make_unique<ResourceDumpLayer>());
+    AddLayer(std::make_unique<ResourceDumpLayer>());
   }
   if (Configurator::Get().directx.features.renderTargetsDump.enabled) {
-    addLayer(std::make_unique<RenderTargetsDumpLayer>());
+    AddLayer(std::make_unique<RenderTargetsDumpLayer>());
   }
   if (Configurator::Get().directx.features.dispatchOutputsDump.enabled) {
-    addLayer(std::make_unique<DispatchOutputsDumpLayer>());
+    AddLayer(std::make_unique<DispatchOutputsDumpLayer>());
   }
   if (Configurator::Get().directx.features.raytracingDump.blases) {
     if (Configurator::Get().directx.player.debugLayer) {
-      addLayer(std::make_unique<AccelerationStructuresDumpLayer>());
+      AddLayer(std::make_unique<AccelerationStructuresDumpLayer>());
     } else {
       LOG_ERROR << "Dumping acceleration structures demands directx debug layer turned on.";
     }
   }
   if (Configurator::Get().directx.features.rootSignatureDump.enabled) {
-    addLayer(std::make_unique<RootSignatureDumpLayer>());
+    AddLayer(std::make_unique<RootSignatureDumpLayer>());
   }
 }
 

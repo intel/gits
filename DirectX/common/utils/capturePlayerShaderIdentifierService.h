@@ -22,28 +22,28 @@ class CapturePlayerShaderIdentifierService {
 public:
   using ShaderIdentifier = std::array<uint8_t, D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES>;
   struct ShaderIdentifierMapping {
-    ShaderIdentifier captureIdentifier;
-    ShaderIdentifier playerIdentifier;
+    ShaderIdentifier CaptureIdentifier;
+    ShaderIdentifier PlayerIdentifier;
   };
 
 public:
-  void addCaptureShaderIdentifier(unsigned commandKey,
+  void AddCaptureShaderIdentifier(unsigned commandKey,
                                   ShaderIdentifier captureIdentifier,
                                   LPWSTR exportName);
-  void addPlayerShaderIdentifier(unsigned commandKey,
+  void AddPlayerShaderIdentifier(unsigned commandKey,
                                  ShaderIdentifier playerIdentifier,
                                  LPWSTR exportName);
-  bool getMappings(std::vector<ShaderIdentifierMapping>& mappings);
-  std::wstring getExportNameByCaptureIdentifier(ShaderIdentifier identifier) {
-    std::lock_guard<std::mutex> lock(mutex_);
+  bool GetMappings(std::vector<ShaderIdentifierMapping>& mappings);
+  std::wstring GetExportNameByCaptureIdentifier(ShaderIdentifier identifier) {
+    std::lock_guard<std::mutex> lock(m_Mutex);
     return m_ExportNamesByCaptureIdentifier[identifier];
   }
-  std::wstring getExportNameByPlayerIdentifier(ShaderIdentifier identifier) {
-    std::lock_guard<std::mutex> lock(mutex_);
+  std::wstring GetExportNameByPlayerIdentifier(ShaderIdentifier identifier) {
+    std::lock_guard<std::mutex> lock(m_Mutex);
     return m_ExportNamesByPlayerIdentifier[identifier];
   }
-  void enablePlayerIdentifierLookup() {
-    dumpLookup_ = true;
+  void EnablePlayerIdentifierLookup() {
+    m_DumpLookup = true;
   }
 
 private:
@@ -51,9 +51,9 @@ private:
   std::map<unsigned, ShaderIdentifier> m_ShaderIdentifiersByCommandKey;
   std::map<ShaderIdentifier, std::wstring> m_ExportNamesByCaptureIdentifier;
   std::map<ShaderIdentifier, std::wstring> m_ExportNamesByPlayerIdentifier;
-  bool changed_{};
-  bool dumpLookup_{};
-  std::mutex mutex_;
+  bool m_Changed{};
+  bool m_DumpLookup{};
+  std::mutex m_Mutex;
 };
 
 } // namespace DirectX

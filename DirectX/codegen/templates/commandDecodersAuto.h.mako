@@ -18,11 +18,11 @@ namespace gits {
 namespace DirectX {
 
 %for function in functions:
-void decode(char* src, ${function.name}Command& command);
+void Decode(char* src, ${function.name}Command& command);
 %endfor
 %for interface in interfaces:
 %for function in interface.functions:
-void decode(char* src, ${interface.name}${function.name}Command& command);
+void Decode(char* src, ${interface.name}${function.name}Command& command);
 %endfor
 %endfor
 } // namespace DirectX

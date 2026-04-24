@@ -14,48 +14,48 @@ namespace gits {
 namespace DirectX {
 
 CommandQueueService::CommandQueueService(StateTrackingService& stateService)
-    : stateService_(stateService) {}
+    : m_StateService(stateService) {}
 
 CommandQueueService::~CommandQueueService() {
-  clearCommands();
+  ClearCommands();
 }
 
-void CommandQueueService::addExecuteCommandLists(ID3D12CommandQueueExecuteCommandListsCommand& c) {
-  CommandQueueCommand* command = new CommandQueueCommand(c.getId(), c.key);
-  command->commandSerializer.reset(new ID3D12CommandQueueExecuteCommandListsSerializer(c));
-  commands.push_back(command);
+void CommandQueueService::AddExecuteCommandLists(ID3D12CommandQueueExecuteCommandListsCommand& c) {
+  CommandQueueCommand* Command = new CommandQueueCommand(c.GetId(), c.Key);
+  Command->CommandSerializer.reset(new ID3D12CommandQueueExecuteCommandListsSerializer(c));
+  Commands.push_back(Command);
 }
 
-void CommandQueueService::addUpdateTileMappings(ID3D12CommandQueueUpdateTileMappingsCommand& c) {
-  CommandQueueCommand* command = new CommandQueueCommand(c.getId(), c.key);
-  command->commandSerializer.reset(new ID3D12CommandQueueUpdateTileMappingsSerializer(c));
-  commands.push_back(command);
+void CommandQueueService::AddUpdateTileMappings(ID3D12CommandQueueUpdateTileMappingsCommand& c) {
+  CommandQueueCommand* Command = new CommandQueueCommand(c.GetId(), c.Key);
+  Command->CommandSerializer.reset(new ID3D12CommandQueueUpdateTileMappingsSerializer(c));
+  Commands.push_back(Command);
 }
 
-void CommandQueueService::addCommandQueueWait(ID3D12CommandQueueWaitCommand& c) {
-  CommandQueueCommand* command = new CommandQueueCommand(c.getId(), c.key);
-  command->commandSerializer.reset(new ID3D12CommandQueueWaitSerializer(c));
-  commands.push_back(command);
+void CommandQueueService::AddCommandQueueWait(ID3D12CommandQueueWaitCommand& c) {
+  CommandQueueCommand* Command = new CommandQueueCommand(c.GetId(), c.Key);
+  Command->CommandSerializer.reset(new ID3D12CommandQueueWaitSerializer(c));
+  Commands.push_back(Command);
 }
 
-void CommandQueueService::addCommandQueueSignal(ID3D12CommandQueueSignalCommand& c) {
-  CommandQueueCommand* command = new CommandQueueCommand(c.getId(), c.key);
-  command->commandSerializer.reset(new ID3D12CommandQueueSignalSerializer(c));
-  commands.push_back(command);
+void CommandQueueService::AddCommandQueueSignal(ID3D12CommandQueueSignalCommand& c) {
+  CommandQueueCommand* Command = new CommandQueueCommand(c.GetId(), c.Key);
+  Command->CommandSerializer.reset(new ID3D12CommandQueueSignalSerializer(c));
+  Commands.push_back(Command);
 }
 
-void CommandQueueService::restoreCommandQueues() {
-  for (CommandQueueCommand* command : commands) {
-    stateService_.getRecorder().record(*command->commandSerializer);
+void CommandQueueService::RestoreCommandQueues() {
+  for (CommandQueueCommand* Command : Commands) {
+    m_StateService.GetRecorder().Record(*Command->CommandSerializer);
   }
-  clearCommands();
+  ClearCommands();
 }
 
-void CommandQueueService::clearCommands() {
-  for (CommandQueueCommand* command : commands) {
-    delete command;
+void CommandQueueService::ClearCommands() {
+  for (CommandQueueCommand* Command : Commands) {
+    delete Command;
   }
-  commands.clear();
+  Commands.clear();
 }
 
 } // namespace DirectX

@@ -12,32 +12,33 @@
 
 #include <vector>
 #include <map>
+#include <unordered_map>
 
 namespace gits {
 namespace DirectX {
 
 class ResourceUsageTrackingService {
 public:
-  void addResource(unsigned resourceKey);
-  void commandListResourceUsage(unsigned commandListKey, unsigned resourceKey);
-  void commandListResourceUsage(unsigned commandListKey, std::vector<unsigned>& resourceKeys);
-  void commandListReset(unsigned commandListKey);
-  void executeCommandLists(unsigned commandKey,
+  void AddResource(unsigned resourceKey);
+  void CommandListResourceUsage(unsigned commandListKey, unsigned resourceKey);
+  void CommandListResourceUsage(unsigned commandListKey, std::vector<unsigned>& resourceKeys);
+  void CommandListReset(unsigned commandListKey);
+  void ExecuteCommandLists(unsigned commandKey,
                            unsigned commandQueueKey,
                            std::vector<unsigned>& commandListKeys);
-  void destroyResource(unsigned resourceKey);
+  void DestroyResource(unsigned resourceKey);
 
-  void commandQueueWait(unsigned callKey,
+  void CommandQueueWait(unsigned commandKey,
                         unsigned commandQueueKey,
                         unsigned fenceKey,
                         UINT64 fenceValue);
-  void commandQueueSignal(unsigned callKey,
+  void CommandQueueSignal(unsigned commandKey,
                           unsigned commandQueueKey,
                           unsigned fenceKey,
                           UINT64 fenceValue);
-  void fenceSignal(unsigned callKey, unsigned fenceKey, UINT64 fenceValue);
+  void FenceSignal(unsigned commandKey, unsigned fenceKey, UINT64 fenceValue);
 
-  std::vector<unsigned> getOrderedResources();
+  std::vector<unsigned> GetOrderedResources();
 
 private:
   struct UsageNumber {
@@ -53,16 +54,16 @@ private:
     }
   };
   struct ResourceUsage : public GpuExecutionTracker::Executable {
-    std::vector<unsigned> usedResources;
+    std::vector<unsigned> UsedResources;
   };
 
-  void processReadyExecutables();
-  void updateUsage(const std::vector<unsigned>& usedResources);
+  void ProcessReadyExecutables();
+  void UpdateUsage(const std::vector<unsigned>& usedResources);
 
-  unsigned executeNumber_{};
-  GpuExecutionTracker gpuExecutionTracker_;
-  std::map<unsigned, UsageNumber> usageByResource_;
-  std::unordered_map<unsigned, std::vector<unsigned>> commandListResourceUsage_;
+  unsigned m_ExecuteNumber{};
+  GpuExecutionTracker m_GpuExecutionTracker;
+  std::map<unsigned, UsageNumber> m_UsageByResource;
+  std::unordered_map<unsigned, std::vector<unsigned>> m_CommandListResourceUsage;
 };
 
 } // namespace DirectX

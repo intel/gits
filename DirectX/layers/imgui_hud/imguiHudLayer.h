@@ -34,49 +34,49 @@ public:
   ImGuiHUDLayer();
   ~ImGuiHUDLayer();
 
-  void post(IDXGISwapChainGetBufferCommand& c) override;
-  void pre(IUnknownReleaseCommand& c) override;
-  void pre(ID3D12CommandQueueExecuteCommandListsCommand& c) override;
-  void post(IDXGIFactoryCreateSwapChainCommand& c) override;
-  void post(IDXGIFactory2CreateSwapChainForHwndCommand& c) override;
-  void post(IDXGIFactory2CreateSwapChainForCoreWindowCommand& c) override;
-  void post(IDXGIFactory2CreateSwapChainForCompositionCommand& c) override;
-  void pre(IDXGISwapChainPresentCommand& command) override;
-  void post(IDXGISwapChainPresentCommand& command) override;
-  void pre(IDXGISwapChain1Present1Command& command) override;
-  void post(IDXGISwapChain1Present1Command& command) override;
-  void post(IDXGISwapChainResizeBuffersCommand& command) override;
-  void post(IDXGISwapChain3ResizeBuffers1Command& command) override;
+  void Post(IDXGISwapChainGetBufferCommand& c) override;
+  void Pre(IUnknownReleaseCommand& c) override;
+  void Pre(ID3D12CommandQueueExecuteCommandListsCommand& c) override;
+  void Post(IDXGIFactoryCreateSwapChainCommand& c) override;
+  void Post(IDXGIFactory2CreateSwapChainForHwndCommand& c) override;
+  void Post(IDXGIFactory2CreateSwapChainForCoreWindowCommand& c) override;
+  void Post(IDXGIFactory2CreateSwapChainForCompositionCommand& c) override;
+  void Pre(IDXGISwapChainPresentCommand& command) override;
+  void Post(IDXGISwapChainPresentCommand& command) override;
+  void Pre(IDXGISwapChain1Present1Command& command) override;
+  void Post(IDXGISwapChain1Present1Command& command) override;
+  void Post(IDXGISwapChainResizeBuffersCommand& command) override;
+  void Post(IDXGISwapChain3ResizeBuffers1Command& command) override;
 
 private:
-  bool createFrameContext(unsigned bufferCount);
-  bool initializeResources(IUnknown* device, IDXGISwapChain* swapChain);
-  void initializeImGui(DXGI_FORMAT format);
-  void onPrePresent();
-  void waitForCurrentFrame();
-  void waitForFrame(unsigned bufferIndex);
-  void present();
+  bool CreateFrameContext(unsigned bufferCount);
+  bool InitializeResources(IUnknown* device, IDXGISwapChain* swapChain);
+  void InitializeImGui(DXGI_FORMAT format);
+  void OnPrePresent();
+  void WaitForCurrentFrame();
+  void WaitForFrame(unsigned bufferIndex);
+  void Present();
 
 private:
-  bool initialized_ = false;
+  bool m_Initialized = false;
 
-  std::mutex mutex_;
-  std::unordered_set<unsigned> backBufferKeys_;
+  std::mutex m_Mutex;
+  std::unordered_set<unsigned> m_BackBufferKeys;
 
-  std::vector<FrameContext> frameContext_ = {};
-  Microsoft::WRL::ComPtr<ID3D12Fence> fence_ = nullptr;
-  Microsoft::WRL::ComPtr<ID3D12Device> device_ = nullptr;
-  Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> rtvDescHeap_ = nullptr;
-  Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> srvDescHeap_ = nullptr;
-  Microsoft::WRL::ComPtr<ID3D12CommandQueue> commandQueue_ = nullptr;
-  Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList_ = nullptr;
-  Microsoft::WRL::ComPtr<IDXGISwapChain3> swapChain_ = nullptr;
+  std::vector<FrameContext> m_FrameContext = {};
+  Microsoft::WRL::ComPtr<ID3D12Fence> m_Fence = nullptr;
+  Microsoft::WRL::ComPtr<ID3D12Device> m_Device = nullptr;
+  Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_RtvDescHeap = nullptr;
+  Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_SrvDescHeap = nullptr;
+  Microsoft::WRL::ComPtr<ID3D12CommandQueue> m_CommandQueue = nullptr;
+  Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> m_CommandList = nullptr;
+  Microsoft::WRL::ComPtr<IDXGISwapChain3> m_SwapChain = nullptr;
 
-  UINT64 fenceValue_ = 0;
-  bool firstExecuteInFrame_ = true;
+  UINT64 m_FenceValue = 0;
+  bool m_FirstExecuteInFrame = true;
 
-  void* window_ = nullptr;
-  bool resizeBuffersWarning_ = false;
+  void* m_Window = nullptr;
+  bool m_ResizeBuffersWarning = false;
 };
 
 } // namespace DirectX

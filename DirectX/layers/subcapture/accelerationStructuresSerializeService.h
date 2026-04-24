@@ -25,48 +25,48 @@ class AccelerationStructuresSerializeService {
 public:
   AccelerationStructuresSerializeService(StateTrackingService& stateService,
                                          SubcaptureRecorder& recorder);
-  void buildAccelerationStructure(
-      ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& command);
-  void copyAccelerationStructure(
-      ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& command);
-  void setDevice(ID3D12Device* device, unsigned deviceKey) {
-    device_ = device;
-    deviceKey_ = deviceKey;
+  void BuildAccelerationStructure(
+      ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& Command);
+  void CopyAccelerationStructure(
+      ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& Command);
+  void SetDevice(ID3D12Device* device, unsigned DeviceKey) {
+    m_Device = device;
+    m_DeviceKey = DeviceKey;
   }
-  void restoreAccelerationStructures();
-  void executeCommandLists(ID3D12CommandQueueExecuteCommandListsCommand& command);
-  void destroyResource(unsigned resourceKey);
+  void RestoreAccelerationStructures();
+  void ExecuteCommandLists(ID3D12CommandQueueExecuteCommandListsCommand& Command);
+  void DestroyResource(unsigned ResourceKey);
 
 private:
-  StateTrackingService& stateService_;
-  SubcaptureRecorder& recorder_;
+  StateTrackingService& m_StateService;
+  SubcaptureRecorder& m_Recorder;
 
   struct AccelerationStructure {
-    unsigned callKey;
-    unsigned key;
-    unsigned offset;
-    D3D12_GPU_VIRTUAL_ADDRESS address;
+    unsigned CallKey{};
+    unsigned Key{};
+    unsigned Offset{};
+    D3D12_GPU_VIRTUAL_ADDRESS Address{};
   };
   using AccelerationStructures = std::map<D3D12_GPU_VIRTUAL_ADDRESS, AccelerationStructure>;
-  std::map<unsigned, AccelerationStructures> accelerationStructuresByCommandList_;
-  AccelerationStructures accelerationStructures_;
+  std::map<unsigned, AccelerationStructures> m_AccelerationStructuresByCommandList;
+  AccelerationStructures m_AccelerationStructures;
 
   std::unordered_map<unsigned, std::unordered_set<D3D12_GPU_VIRTUAL_ADDRESS>>
-      accelerationStructuresByResource_;
+      m_AccelerationStructuresByResource;
 
-  bool serializeMode_{};
-  ID3D12Device* device_{};
-  ID3D12CommandQueue* commandQueue_{};
-  ID3D12CommandAllocator* commandAllocator_{};
-  ID3D12GraphicsCommandList4* commandList_{};
-  ID3D12Fence* fence_{};
-  UINT64 currentFenceValue_{};
-  unsigned deviceKey_{};
-  unsigned commandQueueKey_{};
-  unsigned commandAllocatorKey_{};
-  unsigned commandListKey_{};
-  unsigned fenceKey_{};
-  UINT64 recordedFenceValue_{};
+  bool m_SerializeMode{};
+  ID3D12Device* m_Device{};
+  ID3D12CommandQueue* m_CommandQueue{};
+  ID3D12CommandAllocator* m_CommandAllocator{};
+  ID3D12GraphicsCommandList4* m_CommandList{};
+  ID3D12Fence* m_Fence{};
+  UINT64 m_CurrentFenceValue{};
+  unsigned m_DeviceKey{};
+  unsigned m_CommandQueueKey{};
+  unsigned m_CommandAllocatorKey{};
+  unsigned m_CommandListKey{};
+  unsigned m_FenceKey{};
+  UINT64 m_RecordedFenceValue{};
 };
 
 } // namespace DirectX

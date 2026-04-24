@@ -27,15 +27,15 @@ struct ResourcePlacementInfo {
 class ResourcePlacementCapture {
 public:
   void createPlacedResource(unsigned heapKey,
-                            unsigned resourceKey,
+                            unsigned ResourceKey,
                             UINT64 offset,
                             ID3D12Device* device,
                             D3D12_RESOURCE_DESC& desc);
   void storeResourcePlacement();
 
 private:
-  std::mutex mutex_;
-  std::vector<ResourcePlacementInfo> resourcePlacementInfos_;
+  std::mutex m_Mutex;
+  std::vector<ResourcePlacementInfo> m_ResourcePlacementInfos;
 };
 
 } // namespace DirectX

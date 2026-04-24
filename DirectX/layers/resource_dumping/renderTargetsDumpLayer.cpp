@@ -22,10 +22,10 @@ namespace DirectX {
 
 RenderTargetsDumpLayer::RenderTargetsDumpLayer()
     : Layer("RenderTargetsDump"),
-      resourceDump_(Configurator::Get().directx.features.renderTargetsDump.format),
-      frameRange_(Configurator::Get().directx.features.renderTargetsDump.frames),
-      drawRange_(Configurator::Get().directx.features.renderTargetsDump.draws),
-      dryRun_(Configurator::Get().directx.features.renderTargetsDump.dryRun) {
+      m_ResourceDump(Configurator::Get().directx.features.renderTargetsDump.format),
+      m_FrameRange(Configurator::Get().directx.features.renderTargetsDump.frames),
+      m_DrawRange(Configurator::Get().directx.features.renderTargetsDump.draws),
+      m_DryRun(Configurator::Get().directx.features.renderTargetsDump.dryRun) {
 
   auto& dumpPath = Configurator::Get().common.player.outputDir.empty()
                        ? Configurator::Get().common.player.streamDir / "render_targets"
@@ -33,21 +33,21 @@ RenderTargetsDumpLayer::RenderTargetsDumpLayer()
   if (!dumpPath.empty() && !std::filesystem::exists(dumpPath)) {
     std::filesystem::create_directory(dumpPath);
   }
-  dumpPath_ = dumpPath;
+  m_DumpPath = dumpPath;
 }
 
 RenderTargetsDumpLayer::~RenderTargetsDumpLayer() {
   try {
-    if (dryRun_) {
+    if (m_DryRun) {
       YAML::Node output;
       output["DrawsWithTextureByFrame"] = YAML::Node();
-      for (const auto& [frame, dispatchNumbers] : dryRunInfo_.drawsWithTextureByFrame) {
+      for (const auto& [frame, dispatchNumbers] : m_DryRunInfo.drawsWithTextureByFrame) {
         for (unsigned dispatchNumber : dispatchNumbers) {
           output["DrawsWithTextureByFrame"][frame].push_back(dispatchNumber);
         }
         output["DrawsWithTextureByFrame"][frame].SetStyle(YAML::EmitterStyle::Flow);
       }
-      std::ofstream file(std::filesystem::path(dumpPath_) / "RenderTargetsDumpDryRun.yaml");
+      std::ofstream file(std::filesystem::path(m_DumpPath) / "RenderTargetsDumpDryRun.yaml");
       file << output;
     }
   } catch (const std::exception&) {
@@ -55,95 +55,95 @@ RenderTargetsDumpLayer::~RenderTargetsDumpLayer() {
   }
 }
 
-void RenderTargetsDumpLayer::post(StateRestoreBeginCommand& c) {
-  currentFrame_ = 0;
+void RenderTargetsDumpLayer::Post(StateRestoreBeginCommand& c) {
+  m_CurrentFrame = 0;
 }
-void RenderTargetsDumpLayer::post(StateRestoreEndCommand& c) {
-  drawCount_ = 0;
-  executeCount_ = 0;
-  currentFrame_ = 1;
+void RenderTargetsDumpLayer::Post(StateRestoreEndCommand& c) {
+  m_DrawCount = 0;
+  m_ExecuteCount = 0;
+  m_CurrentFrame = 1;
 }
 
-void RenderTargetsDumpLayer::post(ID3D12DeviceCreateRenderTargetViewCommand& c) {
+void RenderTargetsDumpLayer::Post(ID3D12DeviceCreateRenderTargetViewCommand& c) {
   RenderTarget renderTarget{};
-  renderTarget.resource = c.pResource_.value;
-  renderTarget.resourceKey = c.pResource_.key;
-  if (c.pDesc_.value) {
+  renderTarget.resource = c.m_pResource.Value;
+  renderTarget.ResourceKey = c.m_pResource.Key;
+  if (c.m_pDesc.Value) {
     renderTarget.isDesc = true;
-    renderTarget.desc = *c.pDesc_.value;
+    renderTarget.desc = *c.m_pDesc.Value;
   }
 
-  renderTargetsByDescriptorHandle_[std::make_pair(c.DestDescriptor_.interfaceKey,
-                                                  c.DestDescriptor_.index)] = renderTarget;
+  m_RenderTargetsByDescriptorHandle[std::make_pair(c.m_DestDescriptor.InterfaceKey,
+                                                   c.m_DestDescriptor.Index)] = renderTarget;
 }
 
-void RenderTargetsDumpLayer::post(ID3D12DeviceCreateDepthStencilViewCommand& c) {
+void RenderTargetsDumpLayer::Post(ID3D12DeviceCreateDepthStencilViewCommand& c) {
   DepthStencil depthStencil;
-  depthStencil.resource = c.pResource_.value;
-  depthStencil.resourceKey = c.pResource_.key;
-  if (c.pDesc_.value) {
+  depthStencil.resource = c.m_pResource.Value;
+  depthStencil.ResourceKey = c.m_pResource.Key;
+  if (c.m_pDesc.Value) {
     depthStencil.isDesc = true;
-    depthStencil.desc = *c.pDesc_.value;
+    depthStencil.desc = *c.m_pDesc.Value;
   }
 
-  depthStencilsByDescriptorHandle_[std::make_pair(c.DestDescriptor_.interfaceKey,
-                                                  c.DestDescriptor_.index)] = depthStencil;
+  m_DepthStencilsByDescriptorHandle[std::make_pair(c.m_DestDescriptor.InterfaceKey,
+                                                   c.m_DestDescriptor.Index)] = depthStencil;
 }
 
-void RenderTargetsDumpLayer::post(ID3D12DeviceCopyDescriptorsSimpleCommand& c) {
-  unsigned srcHeapKey = c.SrcDescriptorRangeStart_.interfaceKey;
-  unsigned srcHeapIndex = c.SrcDescriptorRangeStart_.index;
-  unsigned destHeapKey = c.DestDescriptorRangeStart_.interfaceKey;
-  unsigned destHeapIndex = c.DestDescriptorRangeStart_.index;
+void RenderTargetsDumpLayer::Post(ID3D12DeviceCopyDescriptorsSimpleCommand& c) {
+  unsigned srcHeapKey = c.m_SrcDescriptorRangeStart.InterfaceKey;
+  unsigned srcHeapIndex = c.m_SrcDescriptorRangeStart.Index;
+  unsigned destHeapKey = c.m_DestDescriptorRangeStart.InterfaceKey;
+  unsigned destHeapIndex = c.m_DestDescriptorRangeStart.Index;
 
-  for (unsigned i = 0; i < c.NumDescriptors_.value; ++i) {
-    copyDescriptors(renderTargetsByDescriptorHandle_, srcHeapKey, srcHeapIndex, destHeapKey,
+  for (unsigned i = 0; i < c.m_NumDescriptors.Value; ++i) {
+    CopyDescriptors(m_RenderTargetsByDescriptorHandle, srcHeapKey, srcHeapIndex, destHeapKey,
                     destHeapIndex);
-    copyDescriptors(depthStencilsByDescriptorHandle_, srcHeapKey, srcHeapIndex, destHeapKey,
+    CopyDescriptors(m_DepthStencilsByDescriptorHandle, srcHeapKey, srcHeapIndex, destHeapKey,
                     destHeapIndex);
     ++srcHeapIndex;
     ++destHeapIndex;
   }
 }
 
-void RenderTargetsDumpLayer::post(ID3D12DeviceCopyDescriptorsCommand& c) {
-  if (!c.NumDestDescriptorRanges_.value || !c.NumSrcDescriptorRanges_.value) {
+void RenderTargetsDumpLayer::Post(ID3D12DeviceCopyDescriptorsCommand& c) {
+  if (!c.m_NumDestDescriptorRanges.Value || !c.m_NumSrcDescriptorRanges.Value) {
     return;
   }
 
   unsigned destRangeIndex = 0;
   unsigned destIndex = 0;
   unsigned destRangeSize =
-      c.pDestDescriptorRangeSizes_.value ? c.pDestDescriptorRangeSizes_.value[destRangeIndex] : 1;
-  unsigned destHeapKey = c.pDestDescriptorRangeStarts_.interfaceKeys[destRangeIndex];
+      c.m_pDestDescriptorRangeSizes.Value ? c.m_pDestDescriptorRangeSizes.Value[destRangeIndex] : 1;
+  unsigned destHeapKey = c.m_pDestDescriptorRangeStarts.InterfaceKeys[destRangeIndex];
 
-  for (unsigned srcRangeIndex = 0; srcRangeIndex < c.NumSrcDescriptorRanges_.value;
+  for (unsigned srcRangeIndex = 0; srcRangeIndex < c.m_NumSrcDescriptorRanges.Value;
        ++srcRangeIndex) {
     unsigned srcRangeSize =
-        c.pSrcDescriptorRangeSizes_.value ? c.pSrcDescriptorRangeSizes_.value[srcRangeIndex] : 1;
-    unsigned srcHeapKey = c.pSrcDescriptorRangeStarts_.interfaceKeys[srcRangeIndex];
-    unsigned srcHeapIndex = c.pSrcDescriptorRangeStarts_.indexes[srcRangeIndex];
+        c.m_pSrcDescriptorRangeSizes.Value ? c.m_pSrcDescriptorRangeSizes.Value[srcRangeIndex] : 1;
+    unsigned srcHeapKey = c.m_pSrcDescriptorRangeStarts.InterfaceKeys[srcRangeIndex];
+    unsigned srcHeapIndex = c.m_pSrcDescriptorRangeStarts.Indexes[srcRangeIndex];
     for (unsigned srcIndex = 0; srcIndex < srcRangeSize; ++srcIndex, ++destIndex) {
       if (destIndex == destRangeSize) {
         destIndex = 0;
         ++destRangeIndex;
-        destRangeSize = c.pDestDescriptorRangeSizes_.value
-                            ? c.pDestDescriptorRangeSizes_.value[destRangeIndex]
+        destRangeSize = c.m_pDestDescriptorRangeSizes.Value
+                            ? c.m_pDestDescriptorRangeSizes.Value[destRangeIndex]
                             : 1;
-        destHeapKey = c.pDestDescriptorRangeStarts_.interfaceKeys[destRangeIndex];
+        destHeapKey = c.m_pDestDescriptorRangeStarts.InterfaceKeys[destRangeIndex];
       }
-      unsigned destHeapIndex = c.pDestDescriptorRangeStarts_.indexes[destRangeIndex] + destIndex;
+      unsigned destHeapIndex = c.m_pDestDescriptorRangeStarts.Indexes[destRangeIndex] + destIndex;
 
-      copyDescriptors(renderTargetsByDescriptorHandle_, srcHeapKey, srcHeapIndex, destHeapKey,
+      CopyDescriptors(m_RenderTargetsByDescriptorHandle, srcHeapKey, srcHeapIndex, destHeapKey,
                       destHeapIndex);
-      copyDescriptors(depthStencilsByDescriptorHandle_, srcHeapKey, srcHeapIndex, destHeapKey,
+      CopyDescriptors(m_DepthStencilsByDescriptorHandle, srcHeapKey, srcHeapIndex, destHeapKey,
                       destHeapIndex);
     }
   }
 }
 
 template <typename Descriptors>
-void RenderTargetsDumpLayer::copyDescriptors(Descriptors& descriptors,
+void RenderTargetsDumpLayer::CopyDescriptors(Descriptors& descriptors,
                                              unsigned srcHeapKey,
                                              unsigned srcHeapIndex,
                                              unsigned destHeapKey,
@@ -159,24 +159,24 @@ void RenderTargetsDumpLayer::copyDescriptors(Descriptors& descriptors,
   }
 }
 
-void RenderTargetsDumpLayer::post(ID3D12GraphicsCommandListOMSetRenderTargetsCommand& c) {
+void RenderTargetsDumpLayer::Post(ID3D12GraphicsCommandListOMSetRenderTargetsCommand& c) {
 
-  auto& renderTargets = renderTargetsByCommandList_[c.object_.key];
+  auto& renderTargets = m_RenderTargetsByCommandList[c.m_Object.Key];
   renderTargets.clear();
 
   {
     unsigned heapKey{};
     unsigned heapIndex{};
-    for (unsigned i = 0; i < c.NumRenderTargetDescriptors_.value; ++i) {
-      if (i == 0 || !c.RTsSingleHandleToDescriptorRange_.value) {
-        heapKey = c.pRenderTargetDescriptors_.interfaceKeys[i];
-        heapIndex = c.pRenderTargetDescriptors_.indexes[i];
+    for (unsigned i = 0; i < c.m_NumRenderTargetDescriptors.Value; ++i) {
+      if (i == 0 || !c.m_RTsSingleHandleToDescriptorRange.Value) {
+        heapKey = c.m_pRenderTargetDescriptors.InterfaceKeys[i];
+        heapIndex = c.m_pRenderTargetDescriptors.Indexes[i];
       } else {
         ++heapIndex;
       }
       if (heapKey) {
-        auto it = renderTargetsByDescriptorHandle_.find(std::make_pair(heapKey, heapIndex));
-        if (it == renderTargetsByDescriptorHandle_.end()) {
+        auto it = m_RenderTargetsByDescriptorHandle.find(std::make_pair(heapKey, heapIndex));
+        if (it == m_RenderTargetsByDescriptorHandle.end()) {
           LOG_ERROR << "RenderTargetsDumpLayer - cannot find rendertarget O" << heapKey << " "
                     << heapIndex;
           continue;
@@ -187,63 +187,63 @@ void RenderTargetsDumpLayer::post(ID3D12GraphicsCommandListOMSetRenderTargetsCom
     }
   }
 
-  if (c.pDepthStencilDescriptor_.value && c.pDepthStencilDescriptor_.interfaceKeys[0]) {
-    auto it = depthStencilsByDescriptorHandle_.find(std::make_pair(
-        c.pDepthStencilDescriptor_.interfaceKeys[0], c.pDepthStencilDescriptor_.indexes[0]));
-    if (it != depthStencilsByDescriptorHandle_.end()) {
-      depthStencilByCommandList_[c.object_.key] = it->second;
+  if (c.m_pDepthStencilDescriptor.Value && c.m_pDepthStencilDescriptor.InterfaceKeys[0]) {
+    auto it = m_DepthStencilsByDescriptorHandle.find(std::make_pair(
+        c.m_pDepthStencilDescriptor.InterfaceKeys[0], c.m_pDepthStencilDescriptor.Indexes[0]));
+    if (it != m_DepthStencilsByDescriptorHandle.end()) {
+      m_DepthStencilByCommandList[c.m_Object.Key] = it->second;
     } else {
       LOG_ERROR << "RenderTargetsDumpLayer - cannot find depthstencil O"
-                << c.pDepthStencilDescriptor_.interfaceKeys[0] << " "
-                << c.pDepthStencilDescriptor_.indexes[0];
+                << c.m_pDepthStencilDescriptor.InterfaceKeys[0] << " "
+                << c.m_pDepthStencilDescriptor.Indexes[0];
     }
   }
 }
 
-void RenderTargetsDumpLayer::post(ID3D12GraphicsCommandListDrawInstancedCommand& c) {
-  onDraw(c.object_.value, c.object_.key);
+void RenderTargetsDumpLayer::Post(ID3D12GraphicsCommandListDrawInstancedCommand& c) {
+  OnDraw(c.m_Object.Value, c.m_Object.Key);
 }
 
-void RenderTargetsDumpLayer::post(ID3D12GraphicsCommandListDrawIndexedInstancedCommand& c) {
-  onDraw(c.object_.value, c.object_.key);
+void RenderTargetsDumpLayer::Post(ID3D12GraphicsCommandListDrawIndexedInstancedCommand& c) {
+  OnDraw(c.m_Object.Value, c.m_Object.Key);
 }
 
-void RenderTargetsDumpLayer::onDraw(ID3D12GraphicsCommandList* commandList,
+void RenderTargetsDumpLayer::OnDraw(ID3D12GraphicsCommandList* commandList,
                                     unsigned commandListKey) {
-  ++drawCount_;
-  unsigned commandListDrawCount = ++drawCountByCommandList_[commandListKey];
-  if (!frameRange_[currentFrame_] || !drawRange_[drawCount_]) {
+  ++m_DrawCount;
+  unsigned commandListDrawCount = ++m_DrawCountByCommandList[commandListKey];
+  if (!m_FrameRange[m_CurrentFrame] || !m_DrawRange[m_DrawCount]) {
     return;
   }
 
-  auto itRenderTargets = renderTargetsByCommandList_.find(commandListKey);
-  if (itRenderTargets != renderTargetsByCommandList_.end()) {
+  auto itRenderTargets = m_RenderTargetsByCommandList.find(commandListKey);
+  if (itRenderTargets != m_RenderTargetsByCommandList.end()) {
     for (RenderTarget& renderTarget : itRenderTargets->second) {
       if (renderTarget.resource) {
-        if (dryRun_) {
-          dryRunInfo_.drawsWithTextureByFrame[currentFrame_].insert(drawCount_);
+        if (m_DryRun) {
+          m_DryRunInfo.drawsWithTextureByFrame[m_CurrentFrame].insert(m_DrawCount);
         } else {
-          dumpRenderTarget(commandList, renderTarget, currentFrame_, commandListDrawCount,
-                           drawCount_);
+          DumpRenderTarget(commandList, renderTarget, m_CurrentFrame, commandListDrawCount,
+                           m_DrawCount);
         }
       }
     }
   }
 
-  auto itDepthStencil = depthStencilByCommandList_.find(commandListKey);
-  if (itDepthStencil != depthStencilByCommandList_.end()) {
+  auto itDepthStencil = m_DepthStencilByCommandList.find(commandListKey);
+  if (itDepthStencil != m_DepthStencilByCommandList.end()) {
     if (itDepthStencil->second.resource) {
-      if (dryRun_) {
-        dryRunInfo_.drawsWithTextureByFrame[currentFrame_].insert(drawCount_);
+      if (m_DryRun) {
+        m_DryRunInfo.drawsWithTextureByFrame[m_CurrentFrame].insert(m_DrawCount);
       } else {
-        dumpDepthStencil(commandList, itDepthStencil->second, currentFrame_, commandListDrawCount,
-                         drawCount_);
+        DumpDepthStencil(commandList, itDepthStencil->second, m_CurrentFrame, commandListDrawCount,
+                         m_DrawCount);
       }
     }
   }
 }
 
-void RenderTargetsDumpLayer::dumpRenderTarget(ID3D12GraphicsCommandList* commandList,
+void RenderTargetsDumpLayer::DumpRenderTarget(ID3D12GraphicsCommandList* commandList,
                                               RenderTarget& renderTarget,
                                               unsigned frame,
                                               unsigned commandListDraw,
@@ -297,7 +297,7 @@ void RenderTargetsDumpLayer::dumpRenderTarget(ID3D12GraphicsCommandList* command
     }
   }
 
-  std::string formatName = resourceDump_.formatToString(format);
+  std::string formatName = m_ResourceDump.formatToString(format);
   std::wstring formatNameW(formatName.begin(), formatName.end());
 
   Microsoft::WRL::ComPtr<ID3D12Device> device;
@@ -308,11 +308,11 @@ void RenderTargetsDumpLayer::dumpRenderTarget(ID3D12GraphicsCommandList* command
   for (unsigned arrayIndex = minArrayIndex; arrayIndex <= maxArrayIndex; ++arrayIndex) {
     for (unsigned planeSlice = 0; planeSlice < planeCount; ++planeSlice) {
 
-      std::wstring dumpName = dumpPath_ + L"/draw_e_" + resourceDump_.dumpNameExecutionMarker +
+      std::wstring dumpName = m_DumpPath + L"/draw_e_" + m_ResourceDump.dumpNameExecutionMarker +
                               L"_f_" + std::to_wstring(frame) + L"_d_" +
-                              std::to_wstring(drawCount_) + L"_rt_" +
+                              std::to_wstring(m_DrawCount) + L"_rt_" +
                               std::to_wstring(renderTarget.slot) + L"_O" +
-                              std::to_wstring(renderTarget.resourceKey) + L"_" + formatNameW;
+                              std::to_wstring(renderTarget.ResourceKey) + L"_" + formatNameW;
       if (planeCount > 1) {
         dumpName += L"_plane_" + std::to_wstring(planeSlice);
       }
@@ -325,14 +325,14 @@ void RenderTargetsDumpLayer::dumpRenderTarget(ID3D12GraphicsCommandList* command
 
       unsigned subresource =
           D3D12CalcSubresource(mipLevel, arrayIndex, planeSlice, desc.MipLevels, arraySize);
-      resourceDump_.dumpResource(commandList, renderTarget.resource, subresource,
-                                 D3D12_RESOURCE_STATE_RENDER_TARGET, dumpName, mipLevel, format,
-                                 commandListDraw);
+      m_ResourceDump.dumpResource(commandList, renderTarget.resource, subresource,
+                                  D3D12_RESOURCE_STATE_RENDER_TARGET, dumpName, mipLevel, format,
+                                  commandListDraw);
     }
   }
 }
 
-void RenderTargetsDumpLayer::dumpDepthStencil(ID3D12GraphicsCommandList* commandList,
+void RenderTargetsDumpLayer::DumpDepthStencil(ID3D12GraphicsCommandList* commandList,
                                               DepthStencil& depthStencil,
                                               unsigned frame,
                                               unsigned commandListDraw,
@@ -376,7 +376,7 @@ void RenderTargetsDumpLayer::dumpDepthStencil(ID3D12GraphicsCommandList* command
     }
   }
 
-  std::string formatName = resourceDump_.formatToString(format);
+  std::string formatName = m_ResourceDump.formatToString(format);
   std::wstring formatNameW(formatName.begin(), formatName.end());
 
   Microsoft::WRL::ComPtr<ID3D12Device> device;
@@ -387,10 +387,10 @@ void RenderTargetsDumpLayer::dumpDepthStencil(ID3D12GraphicsCommandList* command
   for (unsigned arrayIndex = minArrayIndex; arrayIndex <= maxArrayIndex; ++arrayIndex) {
     for (unsigned planeSlice = 0; planeSlice < planeCount; ++planeSlice) {
 
-      std::wstring dumpName = dumpPath_ + L"/draw_e_" + resourceDump_.dumpNameExecutionMarker +
+      std::wstring dumpName = m_DumpPath + L"/draw_e_" + m_ResourceDump.dumpNameExecutionMarker +
                               L"_f_" + std::to_wstring(frame) + L"_d_" +
-                              std::to_wstring(drawCount_) + L"_ds_O" +
-                              std::to_wstring(depthStencil.resourceKey) + L"_" + formatNameW;
+                              std::to_wstring(m_DrawCount) + L"_ds_O" +
+                              std::to_wstring(depthStencil.ResourceKey) + L"_" + formatNameW;
       if (planeCount > 1) {
         dumpName += L"_plane_" + std::to_wstring(planeSlice);
       }
@@ -403,61 +403,62 @@ void RenderTargetsDumpLayer::dumpDepthStencil(ID3D12GraphicsCommandList* command
 
       unsigned subresource =
           D3D12CalcSubresource(mipLevel, arrayIndex, planeSlice, desc.MipLevels, arraySize);
-      resourceDump_.dumpResource(commandList, depthStencil.resource, subresource,
-                                 D3D12_RESOURCE_STATE_DEPTH_WRITE, dumpName, mipLevel, format,
-                                 commandListDraw);
+      m_ResourceDump.dumpResource(commandList, depthStencil.resource, subresource,
+                                  D3D12_RESOURCE_STATE_DEPTH_WRITE, dumpName, mipLevel, format,
+                                  commandListDraw);
     }
   }
 }
 
-void RenderTargetsDumpLayer::post(ID3D12CommandQueueExecuteCommandListsCommand& c) {
-  for (unsigned i = 0; i < c.NumCommandLists_.value; ++i) {
-    unsigned commandListKey = c.ppCommandLists_.keys[i];
-    renderTargetsByCommandList_.erase(commandListKey);
-    depthStencilByCommandList_.erase(commandListKey);
-    drawCountByCommandList_.erase(commandListKey);
+void RenderTargetsDumpLayer::Post(ID3D12CommandQueueExecuteCommandListsCommand& c) {
+  for (unsigned i = 0; i < c.m_NumCommandLists.Value; ++i) {
+    unsigned commandListKey = c.m_ppCommandLists.Keys[i];
+    m_RenderTargetsByCommandList.erase(commandListKey);
+    m_DepthStencilByCommandList.erase(commandListKey);
+    m_DrawCountByCommandList.erase(commandListKey);
   }
-  ++executeCount_;
-  resourceDump_.executeCommandLists(c.key, c.object_.key, c.object_.value, c.ppCommandLists_.value,
-                                    c.NumCommandLists_.value, currentFrame_, executeCount_);
+  ++m_ExecuteCount;
+  m_ResourceDump.executeCommandLists(c.Key, c.m_Object.Key, c.m_Object.Value,
+                                     c.m_ppCommandLists.Value, c.m_NumCommandLists.Value,
+                                     m_CurrentFrame, m_ExecuteCount);
 }
 
-void RenderTargetsDumpLayer::post(ID3D12CommandQueueWaitCommand& c) {
-  resourceDump_.commandQueueWait(c.key, c.object_.key, c.pFence_.key, c.Value_.value);
+void RenderTargetsDumpLayer::Post(ID3D12CommandQueueWaitCommand& c) {
+  m_ResourceDump.commandQueueWait(c.Key, c.m_Object.Key, c.m_pFence.Key, c.m_Value.Value);
 }
 
-void RenderTargetsDumpLayer::post(ID3D12CommandQueueSignalCommand& c) {
-  resourceDump_.commandQueueSignal(c.key, c.object_.key, c.pFence_.key, c.Value_.value);
+void RenderTargetsDumpLayer::Post(ID3D12CommandQueueSignalCommand& c) {
+  m_ResourceDump.commandQueueSignal(c.Key, c.m_Object.Key, c.m_pFence.Key, c.m_Value.Value);
 }
 
-void RenderTargetsDumpLayer::post(ID3D12FenceSignalCommand& c) {
-  resourceDump_.fenceSignal(c.key, c.object_.key, c.Value_.value);
+void RenderTargetsDumpLayer::Post(ID3D12FenceSignalCommand& c) {
+  m_ResourceDump.fenceSignal(c.Key, c.m_Object.Key, c.m_Value.Value);
 }
 
-void RenderTargetsDumpLayer::post(ID3D12DeviceCreateFenceCommand& c) {
-  resourceDump_.fenceSignal(c.key, c.ppFence_.key, c.InitialValue_.value);
+void RenderTargetsDumpLayer::Post(ID3D12DeviceCreateFenceCommand& c) {
+  m_ResourceDump.fenceSignal(c.Key, c.m_ppFence.Key, c.m_InitialValue.Value);
 }
 
-void RenderTargetsDumpLayer::post(ID3D12Device3EnqueueMakeResidentCommand& c) {
-  resourceDump_.fenceSignal(c.key, c.pFenceToSignal_.key, c.FenceValueToSignal_.value);
+void RenderTargetsDumpLayer::Post(ID3D12Device3EnqueueMakeResidentCommand& c) {
+  m_ResourceDump.fenceSignal(c.Key, c.m_pFenceToSignal.Key, c.m_FenceValueToSignal.Value);
 }
 
-void RenderTargetsDumpLayer::post(IDXGISwapChainPresentCommand& c) {
-  if (!(c.Flags_.value & DXGI_PRESENT_TEST)) {
-    drawCount_ = 0;
-    executeCount_ = 0;
-    if (!isStateRestoreKey(c.key)) {
-      ++currentFrame_;
+void RenderTargetsDumpLayer::Post(IDXGISwapChainPresentCommand& c) {
+  if (!(c.m_Flags.Value & DXGI_PRESENT_TEST)) {
+    m_DrawCount = 0;
+    m_ExecuteCount = 0;
+    if (!IsStateRestoreKey(c.Key)) {
+      ++m_CurrentFrame;
     }
   }
 }
 
-void RenderTargetsDumpLayer::post(IDXGISwapChain1Present1Command& c) {
-  if (!(c.PresentFlags_.value & DXGI_PRESENT_TEST)) {
-    drawCount_ = 0;
-    executeCount_ = 0;
-    if (!isStateRestoreKey(c.key)) {
-      ++currentFrame_;
+void RenderTargetsDumpLayer::Post(IDXGISwapChain1Present1Command& c) {
+  if (!(c.m_PresentFlags.Value & DXGI_PRESENT_TEST)) {
+    m_DrawCount = 0;
+    m_ExecuteCount = 0;
+    if (!IsStateRestoreKey(c.Key)) {
+      ++m_CurrentFrame;
     }
   }
 }

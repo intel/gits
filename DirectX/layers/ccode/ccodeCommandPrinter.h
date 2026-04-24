@@ -43,19 +43,19 @@ public:
   void print();
 
 private:
-  Command& command_;
-  std::string name_{};
-  std::vector<std::string> cppArgValues_{};
-  std::vector<std::string> cppArgInitializations_{};
-  std::string cppPreCommand_{};
-  std::string cppPostCommand_{};
-  unsigned objectId_{};
-  bool skip_{false};
+  Command& m_Command;
+  std::string m_Name{};
+  std::vector<std::string> m_CppArgValues{};
+  std::vector<std::string> m_CppArgInitializations{};
+  std::string m_CppPreCommand{};
+  std::string m_CppPostCommand{};
+  unsigned m_ObjectId{};
+  bool m_Skip{false};
 };
 
 template <typename T>
 inline void CommandPrinter::addArgument(T& arg, CppParameterInfo& info) {
-  if (skip_) {
+  if (m_Skip) {
     return;
   }
 
@@ -67,17 +67,17 @@ inline void CommandPrinter::addArgument(T& arg, CppParameterInfo& info) {
   argumentToCpp(arg, info, out);
 
   if (!out.initialization.empty()) {
-    cppArgInitializations_.push_back(out.initialization);
+    m_CppArgInitializations.push_back(out.initialization);
   }
-  cppArgValues_.push_back(out.decorator + out.value);
+  m_CppArgValues.push_back(out.decorator + out.value);
 }
 
 template <typename T>
 inline void CommandPrinter::addArgumentValue(T& value) {
-  if (skip_) {
+  if (m_Skip) {
     return;
   }
-  cppArgValues_.push_back(toStr(value));
+  m_CppArgValues.push_back(toStr(value));
 }
 
 } // namespace ccode

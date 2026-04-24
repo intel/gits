@@ -14,13 +14,13 @@
 namespace gits {
 namespace DirectX {
 
-void PipelineLibraryService::releasePipelineState(unsigned pipelineStateKey, unsigned refCount) {
-  std::lock_guard<std::mutex> lock(mutex_);
+void PipelineLibraryService::ReleasePipelineState(unsigned pipelineStateKey, unsigned refCount) {
+  std::lock_guard<std::mutex> lock(m_Mutex);
   if (refCount == 0) {
-    pipelineStateRefCounts_.erase(pipelineStateKey);
+    m_PipelineStateRefCounts.erase(pipelineStateKey);
   } else {
-    auto it = pipelineStateRefCounts_.find(pipelineStateKey);
-    if (it != pipelineStateRefCounts_.end()) {
+    auto it = m_PipelineStateRefCounts.find(pipelineStateKey);
+    if (it != m_PipelineStateRefCounts.end()) {
       if (it->second) {
         --it->second;
       }
@@ -28,44 +28,44 @@ void PipelineLibraryService::releasePipelineState(unsigned pipelineStateKey, uns
   }
 }
 
-void PipelineLibraryService::addRefPipelineState(unsigned pipelineStateKey) {
-  std::lock_guard<std::mutex> lock(mutex_);
-  auto it = pipelineStateRefCounts_.find(pipelineStateKey);
-  if (it != pipelineStateRefCounts_.end()) {
+void PipelineLibraryService::AddRefPipelineState(unsigned pipelineStateKey) {
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  auto it = m_PipelineStateRefCounts.find(pipelineStateKey);
+  if (it != m_PipelineStateRefCounts.end()) {
     ++it->second;
   }
 }
 
-void PipelineLibraryService::createPipelineLibrary(ID3D12Device1CreatePipelineLibraryCommand& c) {
-  c.pLibraryBlob_.value = nullptr;
-  c.pLibraryBlob_.size = 0;
-  c.BlobLength_.value = 0;
+void PipelineLibraryService::CreatePipelineLibrary(ID3D12Device1CreatePipelineLibraryCommand& c) {
+  c.m_pLibraryBlob.Value = nullptr;
+  c.m_pLibraryBlob.Size = 0;
+  c.m_BlobLength.Value = 0;
 }
 
-void PipelineLibraryService::createPipelineState(unsigned pipelineStateKey) {
-  std::lock_guard<std::mutex> lock(mutex_);
-  pipelineStateRefCounts_[pipelineStateKey] = 1;
+void PipelineLibraryService::CreatePipelineState(unsigned pipelineStateKey) {
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  m_PipelineStateRefCounts[pipelineStateKey] = 1;
 }
 
-HRESULT PipelineLibraryService::loadComputePipeline(
+HRESULT PipelineLibraryService::LoadComputePipeline(
     ID3D12PipelineLibraryLoadComputePipelineCommand& c) {
-  return loadPipelineState(c.object_.value, c.pName_.value, c.pDesc_.value, c.riid_.value,
-                           c.ppPipelineState_.key, c.ppPipelineState_.value);
+  return LoadPipelineState(c.m_Object.Value, c.m_pName.Value, c.m_pDesc.Value, c.m_riid.Value,
+                           c.m_ppPipelineState.Key, c.m_ppPipelineState.Value);
 }
 
-HRESULT PipelineLibraryService::loadGraphicsPipeline(
+HRESULT PipelineLibraryService::LoadGraphicsPipeline(
     ID3D12PipelineLibraryLoadGraphicsPipelineCommand& c) {
-  return loadPipelineState(c.object_.value, c.pName_.value, c.pDesc_.value, c.riid_.value,
-                           c.ppPipelineState_.key, c.ppPipelineState_.value);
+  return LoadPipelineState(c.m_Object.Value, c.m_pName.Value, c.m_pDesc.Value, c.m_riid.Value,
+                           c.m_ppPipelineState.Key, c.m_ppPipelineState.Value);
 }
 
-HRESULT PipelineLibraryService::loadPipeline(ID3D12PipelineLibrary1LoadPipelineCommand& c) {
-  return loadPipelineState(c.object_.value, c.pName_.value, c.pDesc_.value, c.riid_.value,
-                           c.ppPipelineState_.key, c.ppPipelineState_.value);
+HRESULT PipelineLibraryService::LoadPipeline(ID3D12PipelineLibrary1LoadPipelineCommand& c) {
+  return LoadPipelineState(c.m_Object.Value, c.m_pName.Value, c.m_pDesc.Value, c.m_riid.Value,
+                           c.m_ppPipelineState.Key, c.m_ppPipelineState.Value);
 }
 
 template <typename Desc, typename PipelineLibrary>
-HRESULT PipelineLibraryService::loadPipelineState(PipelineLibrary* pipelineLibrary,
+HRESULT PipelineLibraryService::LoadPipelineState(PipelineLibrary* pipelineLibrary,
                                                   LPCWSTR name,
                                                   Desc* desc,
                                                   REFIID iid,
@@ -98,8 +98,8 @@ HRESULT PipelineLibraryService::loadPipelineState(PipelineLibrary* pipelineLibra
   }
   unsigned refCount{};
   {
-    std::lock_guard<std::mutex> lock(mutex_);
-    refCount = pipelineStateRefCounts_[pipelineStateKey] += 1;
+    std::lock_guard<std::mutex> lock(m_Mutex);
+    refCount = m_PipelineStateRefCounts[pipelineStateKey] += 1;
   }
   if (hr != S_OK) {
     pipelineState->AddRef();

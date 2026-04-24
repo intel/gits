@@ -28,19 +28,19 @@ std::string formatDuration(Duration duration) {
   return oss.str();
 }
 
-void PrintStatusLayer::post(StateRestoreBeginCommand& c) {
-  initialTime_ = std::chrono::steady_clock::now();
+void PrintStatusLayer::Post(StateRestoreBeginCommand& c) {
+  m_InitialTime = std::chrono::steady_clock::now();
   LOG_INFO << "PlayerStatus - State restore started";
 }
 
-void PrintStatusLayer::post(StateRestoreEndCommand& c) {
+void PrintStatusLayer::Post(StateRestoreEndCommand& c) {
   LOG_INFO << "PlayerStatus - State restore duration: "
-           << formatDuration(std::chrono::steady_clock::now() - initialTime_);
+           << formatDuration(std::chrono::steady_clock::now() - m_InitialTime);
 }
 
-void PrintStatusLayer::post(MarkerUInt64Command& c) {
+void PrintStatusLayer::Post(MarkerUInt64Command& c) {
   static auto timeBegin = std::chrono::steady_clock::now();
-  switch (c.value_.value) {
+  switch (c.m_Value.Value) {
   case MarkerUInt64Command::Value::STATE_RESTORE_OBJECTS_BEGIN:
   case MarkerUInt64Command::Value::STATE_RESTORE_RTAS_BEGIN:
   case MarkerUInt64Command::Value::STATE_RESTORE_RESOURCES_BEGIN:

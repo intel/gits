@@ -25,54 +25,54 @@ void setD3D12ObjectName(void* obj, unsigned key) {
 } // namespace
 
 template <typename CommandT>
-void MultithreadedObjectCreationLayer::scheduleCreate(CommandT& c) {
-  if (!manager_.executeCommands() || c.result_.value != S_OK || c.skip) {
+void MultithreadedObjectCreationLayer::ScheduleCreate(CommandT& c) {
+  if (!m_Manager.ExecuteCommands() || c.m_Result.Value != S_OK || c.Skip) {
     return;
   }
 
   InterfaceOutputArgument<void>* state{};
   if constexpr (std::is_same_v<CommandT, ID3D12Device5CreateStateObjectCommand>) {
-    state = &c.ppStateObject_;
+    state = &c.m_ppStateObject;
   } else {
-    state = &c.ppPipelineState_;
+    state = &c.m_ppPipelineState;
   }
 
-  decltype(c.pDesc_) desc(c.pDesc_);
+  decltype(c.m_pDesc) desc(c.m_pDesc);
 
-  auto device = c.object_.value;
-  REFIID riid = c.riid_.value;
-  unsigned key = state->key;
+  auto device = c.m_Object.Value;
+  REFIID riid = c.m_riid.Value;
+  unsigned key = state->Key;
 
-  auto& service = manager_.getMultithreadedObjectCreationService();
-  service.addDependency(c.object_.key, key);
+  auto& service = m_Manager.GetMultithreadedObjectCreationService();
+  service.AddDependency(c.m_Object.Key, key);
 
   if constexpr (std::is_same_v<CommandT, ID3D12Device5CreateStateObjectCommand>) {
-    for (unsigned index = 0; index < c.pDesc_.value->NumSubobjects; ++index) {
+    for (unsigned index = 0; index < c.m_pDesc.Value->NumSubobjects; ++index) {
       D3D12_STATE_SUBOBJECT* subobject =
-          const_cast<D3D12_STATE_SUBOBJECT*>(&(c.pDesc_.value->pSubobjects[index]));
+          const_cast<D3D12_STATE_SUBOBJECT*>(&(c.m_pDesc.Value->pSubobjects[index]));
       if (subobject->Type == D3D12_STATE_SUBOBJECT_TYPE_GLOBAL_ROOT_SIGNATURE ||
           subobject->Type == D3D12_STATE_SUBOBJECT_TYPE_LOCAL_ROOT_SIGNATURE ||
           subobject->Type == D3D12_STATE_SUBOBJECT_TYPE_EXISTING_COLLECTION) {
-        service.addDependency(c.pDesc_.interfaceKeysBySubobject[index], key);
+        service.AddDependency(c.m_pDesc.InterfaceKeysBySubobject[index], key);
       }
     }
   } else {
-    service.addDependency(c.pDesc_.rootSignatureKey, key);
+    service.AddDependency(c.m_pDesc.RootSignatureKey, key);
   }
 
-  service.schedule(
+  service.Schedule(
       [desc, device, riid, key]() -> MultithreadedObjectCreationService::ObjectCreationOutput {
         void* object{};
         HRESULT result;
         if constexpr (std::is_same_v<CommandT, ID3D12DeviceCreateGraphicsPipelineStateCommand>) {
-          result = device->CreateGraphicsPipelineState(desc.value, riid, &object);
+          result = device->CreateGraphicsPipelineState(desc.Value, riid, &object);
         } else if constexpr (std::is_same_v<CommandT,
                                             ID3D12DeviceCreateComputePipelineStateCommand>) {
-          result = device->CreateComputePipelineState(desc.value, riid, &object);
+          result = device->CreateComputePipelineState(desc.Value, riid, &object);
         } else if constexpr (std::is_same_v<CommandT, ID3D12Device2CreatePipelineStateCommand>) {
-          result = device->CreatePipelineState(desc.value, riid, &object);
+          result = device->CreatePipelineState(desc.Value, riid, &object);
         } else if constexpr (std::is_same_v<CommandT, ID3D12Device5CreateStateObjectCommand>) {
-          result = device->CreateStateObject(desc.value, riid, &object);
+          result = device->CreateStateObject(desc.Value, riid, &object);
         } else {
           static_assert(false, "Unexpected command type");
         }
@@ -83,73 +83,73 @@ void MultithreadedObjectCreationLayer::scheduleCreate(CommandT& c) {
         return {result, object};
       },
       key);
-  c.skip = true;
-  state->value = nullptr;
+  c.Skip = true;
+  state->Value = nullptr;
 }
 
 template <typename CommandT>
-void MultithreadedObjectCreationLayer::scheduleLoad(CommandT& c) {
-  if (!manager_.executeCommands() || c.result_.value != S_OK || c.skip) {
+void MultithreadedObjectCreationLayer::ScheduleLoad(CommandT& c) {
+  if (!m_Manager.ExecuteCommands() || c.m_Result.Value != S_OK || c.Skip) {
     return;
   }
 
-  decltype(c.pDesc_) desc(c.pDesc_);
+  decltype(c.m_pDesc) desc(c.m_pDesc);
 
-  auto library = c.object_.value;
-  REFIID riid = c.riid_.value;
-  std::wstring name = c.pName_.value;
-  unsigned key = c.ppPipelineState_.key;
+  auto library = c.m_Object.Value;
+  REFIID riid = c.m_riid.Value;
+  std::wstring name = c.m_pName.Value;
+  unsigned key = c.m_ppPipelineState.Key;
 
-  auto& service = manager_.getMultithreadedObjectCreationService();
-  service.addDependency(c.object_.key, key);
-  service.addDependency(c.pDesc_.rootSignatureKey, key);
+  auto& service = m_Manager.GetMultithreadedObjectCreationService();
+  service.AddDependency(c.m_Object.Key, key);
+  service.AddDependency(c.m_pDesc.RootSignatureKey, key);
 
-  PipelineLibraryService& pipelineLibraryService = manager_.getPipelineLibraryService();
+  PipelineLibraryService& pipelineLibraryService = m_Manager.GetPipelineLibraryService();
 
-  service.schedule(
+  service.Schedule(
       [desc, library, riid, name = std::move(name), key,
        &pipelineLibraryService]() -> MultithreadedObjectCreationService::ObjectCreationOutput {
         void* object{};
-        HRESULT result = pipelineLibraryService.loadPipelineState(library, name.c_str(), desc.value,
+        HRESULT result = pipelineLibraryService.LoadPipelineState(library, name.c_str(), desc.Value,
                                                                   riid, key, &object);
         setD3D12ObjectName(object, key);
         return {result, object};
       },
       key);
 
-  c.skip = true;
-  c.ppPipelineState_.value = nullptr;
+  c.Skip = true;
+  c.m_ppPipelineState.Value = nullptr;
 }
 
 MultithreadedObjectCreationLayer::MultithreadedObjectCreationLayer(PlayerManager& manager)
-    : Layer("MultithreadedObjectCreationLayer"), manager_(manager) {}
+    : Layer("MultithreadedObjectCreationLayer"), m_Manager(manager) {}
 
-void MultithreadedObjectCreationLayer::pre(ID3D12DeviceCreateGraphicsPipelineStateCommand& c) {
-  scheduleCreate(c);
+void MultithreadedObjectCreationLayer::Pre(ID3D12DeviceCreateGraphicsPipelineStateCommand& c) {
+  ScheduleCreate(c);
 }
 
-void MultithreadedObjectCreationLayer::pre(ID3D12DeviceCreateComputePipelineStateCommand& c) {
-  scheduleCreate(c);
+void MultithreadedObjectCreationLayer::Pre(ID3D12DeviceCreateComputePipelineStateCommand& c) {
+  ScheduleCreate(c);
 }
 
-void MultithreadedObjectCreationLayer::pre(ID3D12Device2CreatePipelineStateCommand& c) {
-  scheduleCreate(c);
+void MultithreadedObjectCreationLayer::Pre(ID3D12Device2CreatePipelineStateCommand& c) {
+  ScheduleCreate(c);
 }
 
-void MultithreadedObjectCreationLayer::pre(ID3D12PipelineLibraryLoadGraphicsPipelineCommand& c) {
-  scheduleLoad(c);
+void MultithreadedObjectCreationLayer::Pre(ID3D12PipelineLibraryLoadGraphicsPipelineCommand& c) {
+  ScheduleLoad(c);
 }
 
-void MultithreadedObjectCreationLayer::pre(ID3D12PipelineLibraryLoadComputePipelineCommand& c) {
-  scheduleLoad(c);
+void MultithreadedObjectCreationLayer::Pre(ID3D12PipelineLibraryLoadComputePipelineCommand& c) {
+  ScheduleLoad(c);
 }
 
-void MultithreadedObjectCreationLayer::pre(ID3D12PipelineLibrary1LoadPipelineCommand& c) {
-  scheduleLoad(c);
+void MultithreadedObjectCreationLayer::Pre(ID3D12PipelineLibrary1LoadPipelineCommand& c) {
+  ScheduleLoad(c);
 }
 
-void MultithreadedObjectCreationLayer::pre(ID3D12Device5CreateStateObjectCommand& c) {
-  scheduleCreate(c);
+void MultithreadedObjectCreationLayer::Pre(ID3D12Device5CreateStateObjectCommand& c) {
+  ScheduleCreate(c);
 }
 
 } // namespace DirectX

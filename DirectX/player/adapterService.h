@@ -22,13 +22,13 @@ public:
   AdapterService(const AdapterService&) = delete;
   AdapterService& operator=(const AdapterService&) = delete;
 
-  void loadAdapters();
-  bool isAdapterOverride() const;
-  IDXGIAdapter1* getAdapter() const;
+  void LoadAdapters();
+  bool IsAdapterOverride() const;
+  IDXGIAdapter1* GetAdapter() const;
 
-  void setCaptureAdapterLuid(unsigned key, LUID captureLuid);
-  void setCurrentAdapterLuid(unsigned key, LUID currentLuid);
-  LUID getCurrentLuid(LUID captureLuid);
+  void SetCaptureAdapterLuid(unsigned key, LUID captureLuid);
+  void SetCurrentAdapterLuid(unsigned key, LUID currentLuid);
+  LUID GetCurrentLuid(LUID captureLuid);
 
 private:
   struct LessLuid {
@@ -39,9 +39,9 @@ private:
     }
   };
 
-  Microsoft::WRL::ComPtr<IDXGIAdapter1> adapter_;
-  std::map<unsigned, LUID> captureLuids_;
-  std::map<LUID, LUID, LessLuid> luidsByCaptureLuid_;
+  Microsoft::WRL::ComPtr<IDXGIAdapter1> m_Adapter;
+  std::map<unsigned, LUID> m_CaptureLuids;
+  std::map<LUID, LUID, LessLuid> m_LuidsByCaptureLuid;
 };
 
 } // namespace DirectX

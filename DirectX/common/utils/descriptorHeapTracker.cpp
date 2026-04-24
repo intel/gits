@@ -13,84 +13,87 @@
 namespace gits {
 namespace DirectX {
 
-void DescriptorHeapTracker::createDescriptor(DescriptorInfo* descriptorInfo) {
-  descriptorsByHeapIndex_[descriptorInfo->heapKey][descriptorInfo->descriptorIndex].reset(
+void DescriptorHeapTracker::CreateDescriptor(DescriptorInfo* descriptorInfo) {
+  m_DescriptorsByHeapIndex[descriptorInfo->HeapKey][descriptorInfo->DescriptorIndex].reset(
       descriptorInfo);
 }
 
-void DescriptorHeapTracker::destroyObject(unsigned key) {
-  auto itHeap = descriptorsByHeapIndex_.find(key);
-  if (itHeap != descriptorsByHeapIndex_.end()) {
-    descriptorsByHeapIndex_.erase(itHeap);
+void DescriptorHeapTracker::DestroyObject(unsigned key) {
+  auto itHeap = m_DescriptorsByHeapIndex.find(key);
+  if (itHeap != m_DescriptorsByHeapIndex.end()) {
+    m_DescriptorsByHeapIndex.erase(itHeap);
     return;
   }
 }
 
-void DescriptorHeapTracker::copyDescriptors(ID3D12DeviceCopyDescriptorsSimpleCommand& c) {
-  if (!c.NumDescriptors_.value) {
+void DescriptorHeapTracker::CopyDescriptors(ID3D12DeviceCopyDescriptorsSimpleCommand& command) {
+  if (!command.m_NumDescriptors.Value) {
     return;
   }
-  auto srcHeapIt = descriptorsByHeapIndex_.find(c.SrcDescriptorRangeStart_.interfaceKey);
-  if (srcHeapIt == descriptorsByHeapIndex_.end()) {
+  auto srcHeapIt = m_DescriptorsByHeapIndex.find(command.m_SrcDescriptorRangeStart.InterfaceKey);
+  if (srcHeapIt == m_DescriptorsByHeapIndex.end()) {
     return;
   }
-  auto& destHeap = descriptorsByHeapIndex_[c.DestDescriptorRangeStart_.interfaceKey];
-  for (unsigned i = 0; i < c.NumDescriptors_.value; ++i) {
-    auto srcIt = srcHeapIt->second.find(c.SrcDescriptorRangeStart_.index + i);
+  auto& destHeap = m_DescriptorsByHeapIndex[command.m_DestDescriptorRangeStart.InterfaceKey];
+  for (unsigned i = 0; i < command.m_NumDescriptors.Value; ++i) {
+    auto srcIt = srcHeapIt->second.find(command.m_SrcDescriptorRangeStart.Index + i);
     if (srcIt != srcHeapIt->second.end()) {
-      unsigned destHeapIndex = c.DestDescriptorRangeStart_.index + i;
-      destHeap[destHeapIndex].reset(copyDescriptor(
-          srcIt->second.get(), c.DestDescriptorRangeStart_.interfaceKey, destHeapIndex));
+      unsigned destHeapIndex = command.m_DestDescriptorRangeStart.Index + i;
+      destHeap[destHeapIndex].reset(CopyDescriptor(
+          srcIt->second.get(), command.m_DestDescriptorRangeStart.InterfaceKey, destHeapIndex));
     }
   }
 }
 
-void DescriptorHeapTracker::copyDescriptors(ID3D12DeviceCopyDescriptorsCommand& c) {
-  if (!c.NumDestDescriptorRanges_.value || !c.NumSrcDescriptorRanges_.value) {
+void DescriptorHeapTracker::CopyDescriptors(ID3D12DeviceCopyDescriptorsCommand& command) {
+  if (!command.m_NumDestDescriptorRanges.Value || !command.m_NumSrcDescriptorRanges.Value) {
     return;
   }
 
   unsigned destRangeIndex = 0;
   unsigned destIndex = 0;
-  unsigned destRangeSize =
-      c.pDestDescriptorRangeSizes_.value ? c.pDestDescriptorRangeSizes_.value[destRangeIndex] : 1;
+  unsigned destRangeSize = command.m_pDestDescriptorRangeSizes.Value
+                               ? command.m_pDestDescriptorRangeSizes.Value[destRangeIndex]
+                               : 1;
 
-  unsigned destHeapKey = c.pDestDescriptorRangeStarts_.interfaceKeys[destRangeIndex];
+  unsigned destHeapKey = command.m_pDestDescriptorRangeStarts.InterfaceKeys[destRangeIndex];
 
-  for (unsigned srcRangeIndex = 0; srcRangeIndex < c.NumSrcDescriptorRanges_.value;
+  for (unsigned srcRangeIndex = 0; srcRangeIndex < command.m_NumSrcDescriptorRanges.Value;
        ++srcRangeIndex) {
-    unsigned srcRangeSize =
-        c.pSrcDescriptorRangeSizes_.value ? c.pSrcDescriptorRangeSizes_.value[srcRangeIndex] : 1;
-    auto srcHeapIt =
-        descriptorsByHeapIndex_.find(c.pSrcDescriptorRangeStarts_.interfaceKeys[srcRangeIndex]);
-    assert(srcHeapIt != descriptorsByHeapIndex_.end());
+    unsigned srcRangeSize = command.m_pSrcDescriptorRangeSizes.Value
+                                ? command.m_pSrcDescriptorRangeSizes.Value[srcRangeIndex]
+                                : 1;
+    auto srcHeapIt = m_DescriptorsByHeapIndex.find(
+        command.m_pSrcDescriptorRangeStarts.InterfaceKeys[srcRangeIndex]);
+    assert(srcHeapIt != m_DescriptorsByHeapIndex.end());
     for (unsigned srcIndex = 0; srcIndex < srcRangeSize; ++srcIndex, ++destIndex) {
-      auto srcIt =
-          srcHeapIt->second.find(c.pSrcDescriptorRangeStarts_.indexes[srcRangeIndex] + srcIndex);
+      auto srcIt = srcHeapIt->second.find(
+          command.m_pSrcDescriptorRangeStarts.Indexes[srcRangeIndex] + srcIndex);
       if (destIndex == destRangeSize) {
         destIndex = 0;
         ++destRangeIndex;
-        destRangeSize = c.pDestDescriptorRangeSizes_.value
-                            ? c.pDestDescriptorRangeSizes_.value[destRangeIndex]
+        destRangeSize = command.m_pDestDescriptorRangeSizes.Value
+                            ? command.m_pDestDescriptorRangeSizes.Value[destRangeIndex]
                             : 1;
-        destHeapKey = c.pDestDescriptorRangeStarts_.interfaceKeys[destRangeIndex];
+        destHeapKey = command.m_pDestDescriptorRangeStarts.InterfaceKeys[destRangeIndex];
       }
       if (srcIt != srcHeapIt->second.end()) {
-        unsigned destHeapIndex = c.pDestDescriptorRangeStarts_.indexes[destRangeIndex] + destIndex;
-        descriptorsByHeapIndex_[destHeapKey][destHeapIndex].reset(
-            copyDescriptor(srcIt->second.get(), destHeapKey, destHeapIndex));
+        unsigned destHeapIndex =
+            command.m_pDestDescriptorRangeStarts.Indexes[destRangeIndex] + destIndex;
+        m_DescriptorsByHeapIndex[destHeapKey][destHeapIndex].reset(
+            CopyDescriptor(srcIt->second.get(), destHeapKey, destHeapIndex));
       }
     }
   }
 }
 
-DescriptorHeapTracker::DescriptorInfo* DescriptorHeapTracker::copyDescriptor(
-    DescriptorInfo* descriptorInfo, unsigned destHeapKey, unsigned destHeapIndex) {
+DescriptorHeapTracker::DescriptorInfo* DescriptorHeapTracker::CopyDescriptor(
+    DescriptorInfo* descriptorInfo, unsigned destHeapKey, unsigned destDescriptorIndex) {
   DescriptorInfo* dest = new DescriptorInfo();
-  dest->heapKey = destHeapKey;
-  dest->descriptorIndex = destHeapIndex;
-  dest->resourceKey = descriptorInfo->resourceKey;
-  dest->descriptorType = descriptorInfo->descriptorType;
+  dest->HeapKey = destHeapKey;
+  dest->DescriptorIndex = destDescriptorIndex;
+  dest->ResourceKey = descriptorInfo->ResourceKey;
+  dest->Kind = descriptorInfo->Kind;
   return dest;
 }
 

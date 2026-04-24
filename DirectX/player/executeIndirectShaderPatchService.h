@@ -20,7 +20,7 @@ public:
   ExecuteIndirectShaderPatchService(const ExecuteIndirectShaderPatchService&) = delete;
   ExecuteIndirectShaderPatchService& operator=(const ExecuteIndirectShaderPatchService&) = delete;
 
-  void patchArgumentBuffer(ID3D12GraphicsCommandList* commandList,
+  void PatchArgumentBuffer(ID3D12GraphicsCommandList* commandList,
                            D3D12_GPU_VIRTUAL_ADDRESS argumentBuffer,
                            D3D12_GPU_VIRTUAL_ADDRESS countBuffer,
                            D3D12_GPU_VIRTUAL_ADDRESS patchOffsetsBuffer,
@@ -33,14 +33,14 @@ public:
                            D3D12_GPU_VIRTUAL_ADDRESS mappingCountBuffer);
 
 private:
-  void initialize(ID3D12Device* device);
+  void Initialize(ID3D12Device* device);
 
 private:
-  ID3D12RootSignature* rootSignature_{};
-  ID3D12PipelineState* pipelineState_{};
+  ID3D12RootSignature* m_RootSignature{};
+  ID3D12PipelineState* m_PipelineState{};
 
-  HMODULE dxilDll_;
-  HMODULE dxcDll_;
+  HMODULE m_DxilDll;
+  HMODULE m_DxcDll;
 };
 
 } // namespace DirectX

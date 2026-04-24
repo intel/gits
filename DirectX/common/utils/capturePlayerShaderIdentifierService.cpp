@@ -14,19 +14,19 @@
 namespace gits {
 namespace DirectX {
 
-void CapturePlayerShaderIdentifierService::addCaptureShaderIdentifier(
+void CapturePlayerShaderIdentifierService::AddCaptureShaderIdentifier(
     unsigned commandKey, ShaderIdentifier captureIdentifier, LPWSTR exportName) {
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::lock_guard<std::mutex> lock(m_Mutex);
 
   m_ShaderIdentifiersByCommandKey[commandKey] = captureIdentifier;
-  if (dumpLookup_) {
+  if (m_DumpLookup) {
     m_ExportNamesByCaptureIdentifier[captureIdentifier] = exportName;
   }
 }
 
-void CapturePlayerShaderIdentifierService::addPlayerShaderIdentifier(
+void CapturePlayerShaderIdentifierService::AddPlayerShaderIdentifier(
     unsigned commandKey, ShaderIdentifier playerIdentifier, LPWSTR exportName) {
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::lock_guard<std::mutex> lock(m_Mutex);
 
   auto itByCommandKey = m_ShaderIdentifiersByCommandKey.find(commandKey);
   GITS_ASSERT(itByCommandKey != m_ShaderIdentifiersByCommandKey.end());
@@ -39,14 +39,14 @@ void CapturePlayerShaderIdentifierService::addPlayerShaderIdentifier(
   m_ShaderIdentifiers[itByCommandKey->second] =
       ShaderIdentifierMapping{itByCommandKey->second, playerIdentifier};
   m_ShaderIdentifiersByCommandKey.erase(itByCommandKey);
-  changed_ = true;
+  m_Changed = true;
 
-  if (dumpLookup_) {
+  if (m_DumpLookup) {
     m_ExportNamesByPlayerIdentifier[playerIdentifier] = exportName;
   }
 }
 
-bool CapturePlayerShaderIdentifierService::getMappings(
+bool CapturePlayerShaderIdentifierService::GetMappings(
     std::vector<ShaderIdentifierMapping>& mappings) {
   mappings.resize(m_ShaderIdentifiers.size());
   unsigned index = 0;
@@ -59,15 +59,14 @@ bool CapturePlayerShaderIdentifierService::getMappings(
     using ShaderIdentifierGpu =
         std::array<uint64_t, D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES / sizeof(uint64_t)>;
     ShaderIdentifierGpu captureIdentifierA;
-    memcpy(captureIdentifierA.data(), &mappingA.captureIdentifier, sizeof(ShaderIdentifierGpu));
+    memcpy(captureIdentifierA.data(), &mappingA.CaptureIdentifier, sizeof(ShaderIdentifierGpu));
     ShaderIdentifierGpu captureIdentifierB;
-    memcpy(captureIdentifierB.data(), &mappingB.captureIdentifier, sizeof(ShaderIdentifierGpu));
+    memcpy(captureIdentifierB.data(), &mappingB.CaptureIdentifier, sizeof(ShaderIdentifierGpu));
     return captureIdentifierA < captureIdentifierB;
   });
 
-  changed_ = false;
-  bool changed = changed_;
-  changed_ = false;
+  bool changed = m_Changed;
+  m_Changed = false;
   return changed;
 }
 

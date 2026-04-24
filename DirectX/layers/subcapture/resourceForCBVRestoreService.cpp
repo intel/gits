@@ -14,49 +14,49 @@
 namespace gits {
 namespace DirectX {
 
-void ResourceForCBVRestoreService::addResourceCreationCommand(unsigned resourceKey,
+void ResourceForCBVRestoreService::AddResourceCreationCommand(unsigned resourceKey,
                                                               unsigned heapKey,
-                                                              Command* command) {
-  auto& info = resourceCreationInfo_[resourceKey];
-  info.heapKey = heapKey;
-  info.creationCommand.reset(command);
+                                                              Command* creationCommand) {
+  auto& info = m_ResourceCreationInfo[resourceKey];
+  info.HeapKey = heapKey;
+  info.CreationCommand.reset(creationCommand);
 }
 
-bool ResourceForCBVRestoreService::restoreResourceObject(unsigned resourceKey) {
-  if (restoredResourceObjects_.find(resourceKey) != restoredResourceObjects_.end()) {
+bool ResourceForCBVRestoreService::RestoreResourceObject(unsigned resourceKey) {
+  if (m_RestoredResourceObjects.find(resourceKey) != m_RestoredResourceObjects.end()) {
     return true;
   }
 
-  auto infoIt = resourceCreationInfo_.find(resourceKey);
-  if (infoIt == resourceCreationInfo_.end()) {
+  auto infoIt = m_ResourceCreationInfo.find(resourceKey);
+  if (infoIt == m_ResourceCreationInfo.end()) {
     return false;
   }
 
-  ObjectState* heapState = stateService_.getState(infoIt->second.heapKey);
-  if (!heapState || !heapState->restored) {
+  ObjectState* heapState = m_StateService.GetState(infoIt->second.HeapKey);
+  if (!heapState || !heapState->Restored) {
     return false;
   }
 
-  stateService_.getRecorder().record(
-      *createCommandSerializer(infoIt->second.creationCommand.get()));
-  restoredResourceObjects_.insert(infoIt->first);
-  resourceCreationInfo_.erase(infoIt);
+  m_StateService.GetRecorder().Record(
+      *createCommandSerializer(infoIt->second.CreationCommand.get()));
+  m_RestoredResourceObjects.insert(infoIt->first);
+  m_ResourceCreationInfo.erase(infoIt);
 
   return true;
 }
 
-void ResourceForCBVRestoreService::releaseResources() {
-  for (unsigned key : restoredResourceObjects_) {
+void ResourceForCBVRestoreService::ReleaseResources() {
+  for (unsigned key : m_RestoredResourceObjects) {
     IUnknownReleaseCommand c;
-    c.key = stateService_.getUniqueCommandKey();
-    c.object_.key = key;
-    stateService_.getRecorder().record(IUnknownReleaseSerializer(c));
+    c.Key = m_StateService.GetUniqueCommandKey();
+    c.m_Object.Key = key;
+    m_StateService.GetRecorder().Record(IUnknownReleaseSerializer(c));
   }
 }
 
-bool ResourceForCBVRestoreService::resourceRestored(unsigned key) {
-  auto it = restoredResourceObjects_.find(key);
-  return it != restoredResourceObjects_.end();
+bool ResourceForCBVRestoreService::ResourceRestored(unsigned resourceKey) {
+  auto it = m_RestoredResourceObjects.find(resourceKey);
+  return it != m_RestoredResourceObjects.end();
 }
 
 } // namespace DirectX

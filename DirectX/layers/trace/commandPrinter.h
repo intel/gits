@@ -39,30 +39,30 @@ public:
 
   template <typename T>
   void addArgument(T& arg) {
-    if (firstArgumentPrinted_ && !returnPrinted_) {
-      stream_ << ", ";
+    if (m_FirstArgumentPrinted && !m_ReturnPrinted) {
+      m_Stream << ", ";
     }
-    firstArgumentPrinted_ = true;
+    m_FirstArgumentPrinted = true;
 
-    stream_ << arg;
+    m_Stream << arg;
   }
 
   template <typename T>
   void addResult(T& arg) {
-    returnPrinted_ = true;
-    stream_ << ") = ";
+    m_ReturnPrinted = true;
+    m_Stream << ") = ";
     addArgument(arg);
   }
 
   void print(bool flush, bool newLine = true);
 
 private:
-  CommandPrinterState& state_;
-  Command& command_;
-  FastOStream& stream_;
-  std::lock_guard<std::mutex> lock_;
-  bool firstArgumentPrinted_{};
-  bool returnPrinted_{};
+  CommandPrinterState& m_State;
+  Command& m_Command;
+  FastOStream& m_Stream;
+  std::lock_guard<std::mutex> m_Lock;
+  bool m_FirstArgumentPrinted{};
+  bool m_ReturnPrinted{};
 };
 
 } // namespace DirectX

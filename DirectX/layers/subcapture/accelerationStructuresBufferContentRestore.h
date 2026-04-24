@@ -23,47 +23,47 @@ class StateTrackingService;
 class AccelerationStructuresBufferContentRestore : public ResourceDump {
 public:
   struct BufferRestoreInfo {
-    unsigned bufferKey{};
-    unsigned offset{};
-    unsigned bufferHash{};
-    bool isMappable{};
-    std::unique_ptr<std::vector<char>> bufferData;
+    unsigned BufferKey{};
+    unsigned Offset{};
+    unsigned BufferHash{};
+    bool IsMappable{};
+    std::unique_ptr<std::vector<char>> BufferData;
   };
 
 public:
   AccelerationStructuresBufferContentRestore(StateTrackingService& stateService)
-      : stateService_(stateService) {}
-  void storeBuffer(ID3D12GraphicsCommandList* commandList,
+      : m_StateService(stateService) {}
+  void StoreBuffer(ID3D12GraphicsCommandList* commandList,
                    ID3D12Resource* resource,
-                   unsigned resourceKey,
+                   unsigned ResourceKey,
                    unsigned offset,
                    unsigned size,
                    D3D12_RESOURCE_STATES resourceState,
                    unsigned buildCallKey,
                    bool isMappable);
-  std::vector<BufferRestoreInfo>& getRestoreInfos(unsigned buildCallKey) {
-    return restoreBuildInfos_[buildCallKey];
+  std::vector<BufferRestoreInfo>& GetRestoreInfos(unsigned buildCallKey) {
+    return m_RestoreBuildInfos[buildCallKey];
   }
-  void removeBuild(unsigned buildCallKey);
-  void setDeviceKey(unsigned deviceKey) {
-    deviceKey_ = deviceKey;
+  void RemoveBuild(unsigned buildCallKey);
+  void SetDeviceKey(unsigned DeviceKey) {
+    m_DeviceKey = DeviceKey;
   }
 
 protected:
   struct BufferInfo : public DumpInfo {
-    unsigned resourceKey;
-    unsigned buildCallKey;
-    bool isMappable;
+    unsigned ResourceKey;
+    unsigned BuildCallKey;
+    bool IsMappable;
   };
 
   void dumpBuffer(DumpInfo& dumpInfo, void* data) override;
 
 private:
-  StateTrackingService& stateService_;
-  std::unordered_set<unsigned> restoreBuilds_;
-  std::unordered_map<unsigned, std::vector<BufferRestoreInfo>> restoreBuildInfos_;
-  unsigned deviceKey_{};
-  std::mutex mutex_;
+  StateTrackingService& m_StateService;
+  std::unordered_set<unsigned> m_RestoreBuilds;
+  std::unordered_map<unsigned, std::vector<BufferRestoreInfo>> m_RestoreBuildInfos;
+  unsigned m_DeviceKey{};
+  std::mutex m_Mutex;
 };
 
 } // namespace DirectX

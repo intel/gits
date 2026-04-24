@@ -12,38 +12,38 @@
 namespace gits {
 namespace DirectX {
 
-void MapTrackingService::mapResource(unsigned resourceKey,
+void MapTrackingService::MapResource(unsigned ResourceKey,
                                      unsigned subresourceIndex,
                                      void* captureAddress,
                                      void** currentAddress) {
   if (!currentAddress) {
     return;
   }
-  mappedData_[captureAddress] = MappedInfo{*currentAddress, resourceKey};
+  m_MappedData[captureAddress] = MappedInfo{*currentAddress, ResourceKey};
 }
 
-void MapTrackingService::destroyResource(unsigned resourceKey) {
+void MapTrackingService::DestroyResource(unsigned ResourceKey) {
 
-  auto itAddresses = mappedDataByResource_.find(resourceKey);
-  if (itAddresses == mappedDataByResource_.end()) {
+  auto itAddresses = m_MappedDataByResource.find(ResourceKey);
+  if (itAddresses == m_MappedDataByResource.end()) {
     return;
   }
   for (void* address : itAddresses->second) {
-    auto it = mappedData_.find(address);
-    GITS_ASSERT(it != mappedData_.end());
-    if (it->second.resourceKey == resourceKey) {
-      mappedData_.erase(it);
+    auto it = m_MappedData.find(address);
+    GITS_ASSERT(it != m_MappedData.end());
+    if (it->second.ResourceKey == ResourceKey) {
+      m_MappedData.erase(it);
     }
   }
-  mappedDataByResource_.erase(resourceKey);
+  m_MappedDataByResource.erase(ResourceKey);
 }
 
-void* MapTrackingService::getCurrentAddress(void* captureAddress) {
+void* MapTrackingService::GetCurrentAddress(void* captureAddress) {
 
-  auto it = mappedData_.find(captureAddress);
-  GITS_ASSERT(it != mappedData_.end());
+  auto it = m_MappedData.find(captureAddress);
+  GITS_ASSERT(it != m_MappedData.end());
 
-  return it->second.currentAddress;
+  return it->second.CurrentAddress;
 }
 
 } // namespace DirectX

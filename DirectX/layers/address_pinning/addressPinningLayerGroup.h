@@ -18,7 +18,7 @@ public:
   AddressPinningLayerGroup() = default;
   ~AddressPinningLayerGroup() override = default;
 
-  void loadLayers() override;
+  void LoadLayers() override;
 };
 
 } // namespace DirectX

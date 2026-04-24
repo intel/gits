@@ -27,7 +27,7 @@ namespace DirectX {
 
 class RaytracingResourceDump : public ResourceDump {
 public:
-  enum ResourceType {
+  enum class DumpContentKind {
     Instances,
     InstancesArrayOfPointers,
     BindingTable
@@ -36,38 +36,38 @@ public:
   RaytracingResourceDump(CapturePlayerGpuAddressService& addressService,
                          CapturePlayerShaderIdentifierService& shaderIdentifierService,
                          CapturePlayerDescriptorHandleService& descriptorHandleService)
-      : addressService_(addressService),
-        shaderIdentifierService_(shaderIdentifierService),
-        descriptorHandleService_(descriptorHandleService) {}
+      : m_AddressService(addressService),
+        m_ShaderIdentifierService(shaderIdentifierService),
+        m_DescriptorHandleService(descriptorHandleService) {}
   ~RaytracingResourceDump();
-  void dumpResource(ID3D12GraphicsCommandList* commandList,
+  void DumpResource(ID3D12GraphicsCommandList* commandList,
                     ID3D12Resource* resource,
                     unsigned offset,
                     unsigned size,
                     unsigned stride,
                     D3D12_RESOURCE_STATES resourceState,
                     const std::wstring& dumpName,
-                    ResourceType resourceType,
+                    DumpContentKind contentKind,
                     bool fromCapture);
 
 protected:
   struct RaytracingDumpInfo : public DumpInfo {
-    ResourceType resourceType;
-    unsigned stride;
-    bool fromCapture;
+    DumpContentKind ContentKind{};
+    unsigned Stride{};
+    bool FromCapture{};
   };
 
   void dumpBuffer(DumpInfo& dumpInfo, void* data) override;
 
 private:
-  CapturePlayerGpuAddressService& addressService_;
-  CapturePlayerShaderIdentifierService& shaderIdentifierService_;
-  CapturePlayerDescriptorHandleService& descriptorHandleService_;
+  CapturePlayerGpuAddressService& m_AddressService;
+  CapturePlayerShaderIdentifierService& m_ShaderIdentifierService;
+  CapturePlayerDescriptorHandleService& m_DescriptorHandleService;
 
-  void dumpInstancesBuffer(RaytracingDumpInfo& dumpInfo, void* data);
-  void dumpInstancesArrayOfPointersBuffer(RaytracingDumpInfo& dumpInfo, void* data);
-  void dumpBindingTableBuffer(RaytracingDumpInfo& dumpInfo, void* data);
-  void printGpuAddress(std::ostream& stream, D3D12_GPU_VIRTUAL_ADDRESS address, bool fromCapture);
+  void DumpInstancesBuffer(RaytracingDumpInfo& dumpInfo, void* data);
+  void DumpInstancesArrayOfPointersBuffer(RaytracingDumpInfo& dumpInfo, void* data);
+  void DumpBindingTableBuffer(RaytracingDumpInfo& dumpInfo, void* data);
+  void PrintGpuAddress(std::ostream& stream, D3D12_GPU_VIRTUAL_ADDRESS address, bool fromCapture);
 };
 
 } // namespace DirectX

@@ -17,31 +17,31 @@
 namespace gits {
 namespace DirectX {
 
-FenceService::FenceService(stream::OrderingRecorder& recorder) : recorder_(recorder) {}
+FenceService::FenceService(stream::OrderingRecorder& recorder) : m_Recorder(recorder) {}
 
 void FenceService::setEventOnCompletion(ID3D12Fence* fence,
                                         unsigned fenceKey,
                                         UINT64 value,
                                         HANDLE event) {
-  std::lock_guard<std::mutex> fenceLock(mutex_);
+  std::lock_guard<std::mutex> fenceLock(m_Mutex);
 
-  FenceInfo& fenceInfo = fencesByHandle_[event][fenceKey];
-  fenceInfo.fence = fence;
-  fenceInfo.fenceKey = fenceKey;
-  fenceInfo.value = value;
-  fenceInfo.event = event;
-  fenceInfo.signaled = false;
+  FenceInfo& fenceInfo = m_FencesByHandle[event][fenceKey];
+  fenceInfo.Fence = fence;
+  fenceInfo.FenceKey = fenceKey;
+  fenceInfo.Value = value;
+  fenceInfo.Event = event;
+  fenceInfo.Signaled = false;
 
-  fences_.insert(fenceKey);
+  m_Fences.insert(fenceKey);
 }
 
 void FenceService::destroyFence(unsigned fenceKey) {
-  std::lock_guard<std::mutex> fenceLock(mutex_);
-  auto it = fences_.find(fenceKey);
-  if (it == fences_.end()) {
+  std::lock_guard<std::mutex> fenceLock(m_Mutex);
+  auto it = m_Fences.find(fenceKey);
+  if (it == m_Fences.end()) {
     return;
   }
-  for (auto itHandle = fencesByHandle_.begin(); itHandle != fencesByHandle_.end();) {
+  for (auto itHandle = m_FencesByHandle.begin(); itHandle != m_FencesByHandle.end();) {
     for (auto it = itHandle->second.begin(); it != itHandle->second.end();) {
       if (it->first == fenceKey) {
         it = itHandle->second.erase(it);
@@ -50,7 +50,7 @@ void FenceService::destroyFence(unsigned fenceKey) {
       }
     }
     if (itHandle->second.empty()) {
-      itHandle = fencesByHandle_.erase(itHandle);
+      itHandle = m_FencesByHandle.erase(itHandle);
     } else {
       ++itHandle;
     }
@@ -59,11 +59,11 @@ void FenceService::destroyFence(unsigned fenceKey) {
 
 void FenceService::waitSignaled(HANDLE handle) {
 
-  mutex_.lock();
+  m_Mutex.lock();
 
-  auto itHandle = fencesByHandle_.find(handle);
-  if (itHandle == fencesByHandle_.end()) {
-    mutex_.unlock();
+  auto itHandle = m_FencesByHandle.find(handle);
+  if (itHandle == m_FencesByHandle.end()) {
+    m_Mutex.unlock();
     return;
   }
 
@@ -71,46 +71,46 @@ void FenceService::waitSignaled(HANDLE handle) {
   bool single = itHandle->second.size() == 1;
   for (auto& it : itHandle->second) {
     FenceInfo& info = it.second;
-    if (info.signaled) {
+    if (info.Signaled) {
       continue;
     }
-    if (single || info.fence->GetCompletedValue() >= info.value) {
+    if (single || info.Fence->GetCompletedValue() >= info.Value) {
       fenceInfos.push_back(info);
-      info.signaled = true;
+      info.Signaled = true;
     }
   }
 
   for (FenceInfo& info : fenceInfos) {
-    itHandle->second.erase(info.fenceKey);
+    itHandle->second.erase(info.FenceKey);
   }
   if (itHandle->second.empty()) {
-    fencesByHandle_.erase(itHandle);
+    m_FencesByHandle.erase(itHandle);
   }
 
-  mutex_.unlock();
+  m_Mutex.unlock();
 
-  std::lock_guard<std::mutex> fenceLock(globalMutex_);
+  std::lock_guard<std::mutex> fenceLock(m_GlobalMutex);
 
   for (unsigned i = 0; i < fenceInfos.size(); ++i) {
 
     WaitForFenceSignaledCommand command{};
-    command.key = CaptureManager::get().createCommandKey();
-    command.threadId = GetCurrentThreadId();
-    command.event_.value = handle;
-    command.fence_.key = fenceInfos[i].fenceKey;
-    command.value_.value = fenceInfos[i].fence->GetCompletedValue();
+    command.Key = CaptureManager::get().createCommandKey();
+    command.ThreadId = GetCurrentThreadId();
+    command.m_event.Value = handle;
+    command.m_fence.Key = fenceInfos[i].FenceKey;
+    command.m_Value.Value = fenceInfos[i].Fence->GetCompletedValue();
 
-    recorder_.Record(command.key, new WaitForFenceSignaledSerializer(command));
+    m_Recorder.Record(command.Key, new WaitForFenceSignaledSerializer(command));
   }
 }
 
 void FenceService::waitSignaled(HANDLE hObjectToWaitOn, HANDLE hObjectToSignal) {
 
-  mutex_.lock();
+  m_Mutex.lock();
 
-  auto it = fencesByHandle_.find(hObjectToWaitOn);
-  if (it == fencesByHandle_.end()) {
-    mutex_.unlock();
+  auto it = m_FencesByHandle.find(hObjectToWaitOn);
+  if (it == m_FencesByHandle.end()) {
+    m_Mutex.unlock();
     return;
   }
 
@@ -119,69 +119,69 @@ void FenceService::waitSignaled(HANDLE hObjectToWaitOn, HANDLE hObjectToSignal) 
     LOG_ERROR << "SignalObjectAndWait is not handled!";
     printed = true;
   }
-  mutex_.unlock();
+  m_Mutex.unlock();
 }
 
 void FenceService::waitSignaled(DWORD count, const HANDLE* handles) {
 
-  mutex_.lock();
+  m_Mutex.lock();
 
   bool found = false;
   for (unsigned i = 0; i < count; ++i) {
-    auto it = fencesByHandle_.find(handles[i]);
-    if (it != fencesByHandle_.end()) {
+    auto it = m_FencesByHandle.find(handles[i]);
+    if (it != m_FencesByHandle.end()) {
       found = true;
       break;
     }
   }
   if (!found) {
-    mutex_.unlock();
+    m_Mutex.unlock();
     return;
   }
 
   std::vector<FenceInfo> fenceInfos;
 
   for (unsigned i = 0; i < count; ++i) {
-    auto itHandle = fencesByHandle_.find(handles[i]);
-    if (itHandle != fencesByHandle_.end()) {
+    auto itHandle = m_FencesByHandle.find(handles[i]);
+    if (itHandle != m_FencesByHandle.end()) {
       bool single = itHandle->second.size() == 1;
       for (auto& it : itHandle->second) {
         FenceInfo& info = it.second;
-        if (info.signaled) {
+        if (info.Signaled) {
           continue;
         }
-        if (single || info.fence->GetCompletedValue() >= info.value) {
+        if (single || info.Fence->GetCompletedValue() >= info.Value) {
           fenceInfos.push_back(info);
-          info.signaled = true;
+          info.Signaled = true;
         }
       }
     }
   }
 
   for (FenceInfo& info : fenceInfos) {
-    auto itHandle = fencesByHandle_.find(info.event);
-    if (itHandle != fencesByHandle_.end()) {
-      itHandle->second.erase(info.fenceKey);
+    auto itHandle = m_FencesByHandle.find(info.Event);
+    if (itHandle != m_FencesByHandle.end()) {
+      itHandle->second.erase(info.FenceKey);
       if (itHandle->second.empty()) {
-        fencesByHandle_.erase(itHandle);
+        m_FencesByHandle.erase(itHandle);
       }
     }
   }
 
-  mutex_.unlock();
+  m_Mutex.unlock();
 
-  std::lock_guard<std::mutex> fenceLock(globalMutex_);
+  std::lock_guard<std::mutex> fenceLock(m_GlobalMutex);
 
   for (unsigned i = 0; i < fenceInfos.size(); ++i) {
 
     WaitForFenceSignaledCommand command{};
-    command.key = CaptureManager::get().createCommandKey();
-    command.threadId = GetCurrentThreadId();
-    command.event_.value = fenceInfos[i].event;
-    command.fence_.key = fenceInfos[i].fenceKey;
-    command.value_.value = fenceInfos[i].fence->GetCompletedValue();
+    command.Key = CaptureManager::get().createCommandKey();
+    command.ThreadId = GetCurrentThreadId();
+    command.m_event.Value = fenceInfos[i].Event;
+    command.m_fence.Key = fenceInfos[i].FenceKey;
+    command.m_Value.Value = fenceInfos[i].Fence->GetCompletedValue();
 
-    recorder_.Record(command.key, new WaitForFenceSignaledSerializer(command));
+    m_Recorder.Record(command.Key, new WaitForFenceSignaledSerializer(command));
   }
 }
 

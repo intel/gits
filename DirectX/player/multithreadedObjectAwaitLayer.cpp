@@ -13,22 +13,22 @@ namespace gits {
 namespace DirectX {
 
 std::optional<MultithreadedObjectCreationService::ObjectCreationOutput>
-MultithreadedObjectAwaitLayer::collectResult(unsigned objectKey) {
-  auto it = preCollectedOutputs_.find(objectKey);
-  if (it != preCollectedOutputs_.end()) {
+MultithreadedObjectAwaitLayer::CollectResult(unsigned objectKey) {
+  auto it = m_PreCollectedOutputs.find(objectKey);
+  if (it != m_PreCollectedOutputs.end()) {
     auto result = it->second;
-    preCollectedOutputs_.erase(it);
+    m_PreCollectedOutputs.erase(it);
     return result;
   }
-  return manager_.getMultithreadedObjectCreationService().complete(objectKey);
+  return m_Manager.GetMultithreadedObjectCreationService().Complete(objectKey);
 }
 
-bool MultithreadedObjectAwaitLayer::completeObject(unsigned key) {
-  if (!key || manager_.findObject(key)) {
+bool MultithreadedObjectAwaitLayer::CompleteObject(unsigned key) {
+  if (!key || m_Manager.FindObject(key)) {
     return false;
   }
 
-  auto creationOutput = collectResult(key);
+  auto creationOutput = CollectResult(key);
   if (!creationOutput.has_value()) {
     return false;
   }
@@ -37,62 +37,62 @@ bool MultithreadedObjectAwaitLayer::completeObject(unsigned key) {
     return false;
   }
 
-  manager_.addObject(key, static_cast<IUnknown*>(creationOutput.value().object));
+  m_Manager.AddObject(key, static_cast<IUnknown*>(creationOutput.value().object));
   return true;
 }
 
 template <typename T>
-void MultithreadedObjectAwaitLayer::completeArgument(InterfaceArgument<T>& argument) {
-  if (completeObject(argument.key)) {
-    updateInterface(manager_, argument);
+void MultithreadedObjectAwaitLayer::CompleteArgument(InterfaceArgument<T>& argument) {
+  if (CompleteObject(argument.Key)) {
+    UpdateInterface(m_Manager, argument);
   }
 }
 
 template <typename T>
-void MultithreadedObjectAwaitLayer::completeArrayArgument(
+void MultithreadedObjectAwaitLayer::CompleteArrayArgument(
     InterfaceArrayArgument<T>& arrayArgument) {
   bool requiresUpdate = false;
-  for (size_t i = 0; i < arrayArgument.size; ++i) {
-    if (completeObject(arrayArgument.keys[i])) {
+  for (size_t i = 0; i < arrayArgument.Size; ++i) {
+    if (CompleteObject(arrayArgument.Keys[i])) {
       requiresUpdate = true;
     }
   }
 
   if (requiresUpdate) {
-    updateInterface(manager_, arrayArgument);
+    UpdateInterface(m_Manager, arrayArgument);
   }
 }
 
 MultithreadedObjectAwaitLayer::MultithreadedObjectAwaitLayer(PlayerManager& manager)
-    : Layer("MultithreadedObjectAwaitLayer"), manager_(manager) {}
+    : Layer("MultithreadedObjectAwaitLayer"), m_Manager(manager) {}
 
-void MultithreadedObjectAwaitLayer::pre(IUnknownAddRefCommand& c) {
+void MultithreadedObjectAwaitLayer::Pre(IUnknownAddRefCommand& c) {
   // If the object has not been created yet, defer the reference count update
-  if (!manager_.findObject(c.object_.key)) {
-    auto& service = manager_.getMultithreadedObjectCreationService();
-    bool scheduled = service.scheduleUpdateRefCount(c.object_.key, 1);
+  if (!m_Manager.FindObject(c.m_Object.Key)) {
+    auto& service = m_Manager.GetMultithreadedObjectCreationService();
+    bool scheduled = service.ScheduleUpdateRefCount(c.m_Object.Key, 1);
     if (scheduled) {
-      c.skip = true;
+      c.Skip = true;
     } else {
-      completeArgument(c.object_);
+      CompleteArgument(c.m_Object);
     }
   }
 }
 
-void MultithreadedObjectAwaitLayer::pre(IUnknownReleaseCommand& c) {
-  auto& service = manager_.getMultithreadedObjectCreationService();
-  if (c.result_.value == 0) {
-    completeArgument(c.object_);
+void MultithreadedObjectAwaitLayer::Pre(IUnknownReleaseCommand& c) {
+  auto& service = m_Manager.GetMultithreadedObjectCreationService();
+  if (c.m_Result.Value == 0) {
+    CompleteArgument(c.m_Object);
 
     // If the object is being released we need to create all objects that depend on it
-    auto objectsToComplete = service.collectConsumers(c.object_.key);
+    auto objectsToComplete = service.CollectConsumers(c.m_Object.Key);
     for (const auto objectKey : objectsToComplete) {
-      auto creationOutput = service.complete(objectKey);
+      auto creationOutput = service.Complete(objectKey);
       if (!creationOutput.has_value()) {
         continue;
       }
 
-      auto [it, inserted] = preCollectedOutputs_.insert({objectKey, creationOutput.value()});
+      auto [it, inserted] = m_PreCollectedOutputs.insert({objectKey, creationOutput.value()});
       GITS_ASSERT(inserted);
     }
 
@@ -100,138 +100,138 @@ void MultithreadedObjectAwaitLayer::pre(IUnknownReleaseCommand& c) {
   }
 
   // If the object has not been created yet, defer the reference count update
-  if (!manager_.findObject(c.object_.key)) {
-    bool scheduled = service.scheduleUpdateRefCount(c.object_.key, -1);
+  if (!m_Manager.FindObject(c.m_Object.Key)) {
+    bool scheduled = service.ScheduleUpdateRefCount(c.m_Object.Key, -1);
     if (scheduled) {
-      c.skip = true;
+      c.Skip = true;
     } else {
-      completeArgument(c.object_);
+      CompleteArgument(c.m_Object);
     }
   }
 }
 
-void MultithreadedObjectAwaitLayer::pre(IUnknownQueryInterfaceCommand& c) {
-  completeArgument(c.object_);
+void MultithreadedObjectAwaitLayer::Pre(IUnknownQueryInterfaceCommand& c) {
+  CompleteArgument(c.m_Object);
 }
 
-void MultithreadedObjectAwaitLayer::pre(ID3D12ObjectGetPrivateDataCommand& c) {
+void MultithreadedObjectAwaitLayer::Pre(ID3D12ObjectGetPrivateDataCommand& c) {
   // This command is not necessary (skipping it prevents any potential stalling)
-  c.skip = true;
+  c.Skip = true;
 }
 
-void MultithreadedObjectAwaitLayer::pre(ID3D12ObjectSetNameCommand& c) {
+void MultithreadedObjectAwaitLayer::Pre(ID3D12ObjectSetNameCommand& c) {
   // This command is not necessary (skipping it prevents any potential stalling)
-  c.skip = true;
+  c.Skip = true;
 }
 
-void MultithreadedObjectAwaitLayer::pre(ID3D12ObjectSetPrivateDataCommand& c) {
+void MultithreadedObjectAwaitLayer::Pre(ID3D12ObjectSetPrivateDataCommand& c) {
   // This command is not necessary (skipping it prevents any potential stalling)
-  c.skip = true;
+  c.Skip = true;
 }
 
-void MultithreadedObjectAwaitLayer::pre(ID3D12ObjectSetPrivateDataInterfaceCommand& c) {
+void MultithreadedObjectAwaitLayer::Pre(ID3D12ObjectSetPrivateDataInterfaceCommand& c) {
   // This command is not necessary (skipping it prevents any potential stalling)
-  c.skip = true;
+  c.Skip = true;
 }
 
-void MultithreadedObjectAwaitLayer::pre(ID3D12DeviceChildGetDeviceCommand& c) {
-  completeArgument(c.object_);
+void MultithreadedObjectAwaitLayer::Pre(ID3D12DeviceChildGetDeviceCommand& c) {
+  CompleteArgument(c.m_Object);
 }
 
-void MultithreadedObjectAwaitLayer::pre(ID3D12PipelineStateGetCachedBlobCommand& c) {
+void MultithreadedObjectAwaitLayer::Pre(ID3D12PipelineStateGetCachedBlobCommand& c) {
   // This command is not necessary (skipping it prevents any potential stalling)
-  c.skip = true;
+  c.Skip = true;
 }
 
-void MultithreadedObjectAwaitLayer::pre(ID3D12DeviceCreateCommandListCommand& c) {
-  completeArgument(c.pInitialState_);
+void MultithreadedObjectAwaitLayer::Pre(ID3D12DeviceCreateCommandListCommand& c) {
+  CompleteArgument(c.m_pInitialState);
 }
 
-void MultithreadedObjectAwaitLayer::pre(ID3D12GraphicsCommandListResetCommand& c) {
-  completeArgument(c.pInitialState_);
+void MultithreadedObjectAwaitLayer::Pre(ID3D12GraphicsCommandListResetCommand& c) {
+  CompleteArgument(c.m_pInitialState);
 }
 
-void MultithreadedObjectAwaitLayer::pre(ID3D12GraphicsCommandListClearStateCommand& c) {
-  completeArgument(c.pPipelineState_);
+void MultithreadedObjectAwaitLayer::Pre(ID3D12GraphicsCommandListClearStateCommand& c) {
+  CompleteArgument(c.m_pPipelineState);
 }
 
-void MultithreadedObjectAwaitLayer::pre(ID3D12GraphicsCommandListSetPipelineStateCommand& c) {
-  completeArgument(c.pPipelineState_);
+void MultithreadedObjectAwaitLayer::Pre(ID3D12GraphicsCommandListSetPipelineStateCommand& c) {
+  CompleteArgument(c.m_pPipelineState);
 }
 
-void MultithreadedObjectAwaitLayer::pre(ID3D12GraphicsCommandList4SetPipelineState1Command& c) {
-  completeArgument(c.pStateObject_);
+void MultithreadedObjectAwaitLayer::Pre(ID3D12GraphicsCommandList4SetPipelineState1Command& c) {
+  CompleteArgument(c.m_pStateObject);
 }
 
-void MultithreadedObjectAwaitLayer::pre(ID3D12DeviceMakeResidentCommand& c) {
-  completeArrayArgument(c.ppObjects_);
+void MultithreadedObjectAwaitLayer::Pre(ID3D12DeviceMakeResidentCommand& c) {
+  CompleteArrayArgument(c.m_ppObjects);
 }
 
-void MultithreadedObjectAwaitLayer::pre(ID3D12DeviceEvictCommand& c) {
-  completeArrayArgument(c.ppObjects_);
+void MultithreadedObjectAwaitLayer::Pre(ID3D12DeviceEvictCommand& c) {
+  CompleteArrayArgument(c.m_ppObjects);
 }
 
-void MultithreadedObjectAwaitLayer::pre(ID3D12Device1SetResidencyPriorityCommand& c) {
-  completeArrayArgument(c.ppObjects_);
+void MultithreadedObjectAwaitLayer::Pre(ID3D12Device1SetResidencyPriorityCommand& c) {
+  CompleteArrayArgument(c.m_ppObjects);
 }
 
-void MultithreadedObjectAwaitLayer::pre(ID3D12Device3EnqueueMakeResidentCommand& c) {
-  completeArrayArgument(c.ppObjects_);
+void MultithreadedObjectAwaitLayer::Pre(ID3D12Device3EnqueueMakeResidentCommand& c) {
+  CompleteArrayArgument(c.m_ppObjects);
 }
 
-void MultithreadedObjectAwaitLayer::pre(ID3D12Device5CreateStateObjectCommand& c) {
+void MultithreadedObjectAwaitLayer::Pre(ID3D12Device5CreateStateObjectCommand& c) {
   bool requiresUpdate = false;
-  for (unsigned index = 0; index < c.pDesc_.value->NumSubobjects; ++index) {
+  for (unsigned index = 0; index < c.m_pDesc.Value->NumSubobjects; ++index) {
     D3D12_STATE_SUBOBJECT* subobject =
-        const_cast<D3D12_STATE_SUBOBJECT*>(&(c.pDesc_.value->pSubobjects[index]));
+        const_cast<D3D12_STATE_SUBOBJECT*>(&(c.m_pDesc.Value->pSubobjects[index]));
     if (subobject->Type == D3D12_STATE_SUBOBJECT_TYPE_EXISTING_COLLECTION) {
-      unsigned objectKey = c.pDesc_.interfaceKeysBySubobject[index];
-      if (!objectKey || manager_.findObject(objectKey)) {
+      unsigned objectKey = c.m_pDesc.InterfaceKeysBySubobject[index];
+      if (!objectKey || m_Manager.FindObject(objectKey)) {
         continue;
       }
 
-      if (completeObject(objectKey)) {
+      if (CompleteObject(objectKey)) {
         requiresUpdate = true;
       }
     }
   }
   if (requiresUpdate) {
-    updateInterface(manager_, c.pDesc_);
+    UpdateInterface(m_Manager, c.m_pDesc);
   }
 }
 
-void MultithreadedObjectAwaitLayer::pre(ID3D12Device7AddToStateObjectCommand& c) {
-  completeArgument(c.pStateObjectToGrowFrom_);
+void MultithreadedObjectAwaitLayer::Pre(ID3D12Device7AddToStateObjectCommand& c) {
+  CompleteArgument(c.m_pStateObjectToGrowFrom);
   bool requiresUpdate = false;
-  for (unsigned index = 0; index < c.pAddition_.value->NumSubobjects; ++index) {
+  for (unsigned index = 0; index < c.m_pAddition.Value->NumSubobjects; ++index) {
     D3D12_STATE_SUBOBJECT* subobject =
-        const_cast<D3D12_STATE_SUBOBJECT*>(&(c.pAddition_.value->pSubobjects[index]));
+        const_cast<D3D12_STATE_SUBOBJECT*>(&(c.m_pAddition.Value->pSubobjects[index]));
     if (subobject->Type == D3D12_STATE_SUBOBJECT_TYPE_EXISTING_COLLECTION) {
-      unsigned objectKey = c.pAddition_.interfaceKeysBySubobject[index];
-      if (!objectKey || manager_.findObject(objectKey)) {
+      unsigned objectKey = c.m_pAddition.InterfaceKeysBySubobject[index];
+      if (!objectKey || m_Manager.FindObject(objectKey)) {
         continue;
       }
 
-      if (completeObject(objectKey)) {
+      if (CompleteObject(objectKey)) {
         requiresUpdate = true;
       }
     }
   }
   if (requiresUpdate) {
-    updateInterface(manager_, c.pAddition_);
+    UpdateInterface(m_Manager, c.m_pAddition);
   }
 }
 
-void MultithreadedObjectAwaitLayer::pre(ID3D12PipelineLibraryLoadGraphicsPipelineCommand& c) {
-  completeObject(c.ppPipelineState_.key);
+void MultithreadedObjectAwaitLayer::Pre(ID3D12PipelineLibraryLoadGraphicsPipelineCommand& c) {
+  CompleteObject(c.m_ppPipelineState.Key);
 }
 
-void MultithreadedObjectAwaitLayer::pre(ID3D12PipelineLibraryLoadComputePipelineCommand& c) {
-  completeObject(c.ppPipelineState_.key);
+void MultithreadedObjectAwaitLayer::Pre(ID3D12PipelineLibraryLoadComputePipelineCommand& c) {
+  CompleteObject(c.m_ppPipelineState.Key);
 }
 
-void MultithreadedObjectAwaitLayer::pre(ID3D12PipelineLibrary1LoadPipelineCommand& c) {
-  completeObject(c.ppPipelineState_.key);
+void MultithreadedObjectAwaitLayer::Pre(ID3D12PipelineLibrary1LoadPipelineCommand& c) {
+  CompleteObject(c.m_ppPipelineState.Key);
 }
 
 } // namespace DirectX

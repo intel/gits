@@ -11,6 +11,7 @@
 #include "layerAuto.h"
 
 #include <filesystem>
+#include <string>
 
 namespace gits {
 namespace DirectX {
@@ -22,40 +23,40 @@ public:
   DllOverrideUseLayer(PlayerManager& manager);
   ~DllOverrideUseLayer() = default;
 
-  void pre(DllContainerMetaCommand& command) override;
+  void Pre(DllContainerMetaCommand& command) override;
 
-  void pre(D3D12CreateDeviceCommand& command) override;
-  void pre(D3D12GetDebugInterfaceCommand& command) override;
-  void pre(D3D12CreateRootSignatureDeserializerCommand& command) override;
-  void pre(D3D12CreateVersionedRootSignatureDeserializerCommand& command) override;
-  void pre(D3D12EnableExperimentalFeaturesCommand& command) override;
-  void pre(D3D12GetInterfaceCommand& command) override;
-  void pre(D3D12SerializeRootSignatureCommand& command) override;
-  void pre(D3D12SerializeVersionedRootSignatureCommand& command) override;
-  void pre(ID3D12SDKConfiguration1CreateDeviceFactoryCommand& command) override;
+  void Pre(D3D12CreateDeviceCommand& command) override;
+  void Pre(D3D12GetDebugInterfaceCommand& command) override;
+  void Pre(D3D12CreateRootSignatureDeserializerCommand& command) override;
+  void Pre(D3D12CreateVersionedRootSignatureDeserializerCommand& command) override;
+  void Pre(D3D12EnableExperimentalFeaturesCommand& command) override;
+  void Pre(D3D12GetInterfaceCommand& command) override;
+  void Pre(D3D12SerializeRootSignatureCommand& command) override;
+  void Pre(D3D12SerializeVersionedRootSignatureCommand& command) override;
+  void Pre(ID3D12SDKConfiguration1CreateDeviceFactoryCommand& command) override;
 
-  void pre(xessGetVersionCommand& command) override;
-  void pre(xessD3D12CreateContextCommand& command) override;
-  void pre(xellGetVersionCommand& command) override;
-  void pre(xellD3D12CreateContextCommand& command) override;
-  void pre(xefgSwapChainGetVersionCommand& command) override;
-  void pre(xefgSwapChainD3D12CreateContextCommand& command) override;
+  void Pre(xessGetVersionCommand& command) override;
+  void Pre(xessD3D12CreateContextCommand& command) override;
+  void Pre(xellGetVersionCommand& command) override;
+  void Pre(xellD3D12CreateContextCommand& command) override;
+  void Pre(xefgSwapChainGetVersionCommand& command) override;
+  void Pre(xefgSwapChainD3D12CreateContextCommand& command) override;
 
 private:
-  void loadAgilitySDK();
-  void loadXess();
-  void loadXell();
-  void loadXefg();
+  void LoadAgilitySdk();
+  void LoadXess();
+  void LoadXell();
+  void LoadXefg();
 
-  PlayerManager& manager_;
-  bool useAddressPinning_{};
-  std::filesystem::path dllOverridesDirectory_;
-  const std::string dllOverridesRelativePath_ = "D3D12\\overrides\\D3D12";
-  bool agilitySDKLoaded_{};
-  bool xessLoaded_{};
-  bool xellLoaded_{};
-  bool xefgLoaded_{};
-  bool agilitySDKOverrideUsed_{};
+  PlayerManager& m_Manager;
+  bool m_UseAddressPinning{};
+  std::filesystem::path m_DllOverridesDirectory;
+  const std::string m_DllOverridesRelativePath = "D3D12\\overrides\\D3D12";
+  bool m_AgilitySdkLoaded{};
+  bool m_XessLoaded{};
+  bool m_XellLoaded{};
+  bool m_XefgLoaded{};
+  bool m_AgilitySdkOverrideUsed{};
 };
 
 } // namespace DirectX

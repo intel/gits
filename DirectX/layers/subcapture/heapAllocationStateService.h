@@ -18,25 +18,25 @@ namespace DirectX {
 
 class HeapAllocationStateService {
 public:
-  void setHeapState(D3D12HeapFromAddressState* state) {
-    heapStates_[state->key] = state;
+  void SetHeapState(D3D12HeapFromAddressState* state) {
+    m_HeapStates[state->Key] = state;
   }
 
-  D3D12HeapFromAddressState* getHeapState(unsigned heapKey) {
-    auto it = heapStates_.find(heapKey);
-    GITS_ASSERT(it != heapStates_.end());
+  D3D12HeapFromAddressState* GetHeapState(unsigned heapKey) {
+    auto it = m_HeapStates.find(heapKey);
+    GITS_ASSERT(it != m_HeapStates.end());
 
     D3D12HeapFromAddressState* state = it->second;
-    heapStates_.erase(it);
+    m_HeapStates.erase(it);
     return state;
   }
 
-  void destroyHeap(unsigned heapKey) {
-    heapStates_.erase(heapKey);
+  void DestroyHeap(unsigned heapKey) {
+    m_HeapStates.erase(heapKey);
   }
 
 private:
-  std::unordered_map<unsigned, D3D12HeapFromAddressState*> heapStates_;
+  std::unordered_map<unsigned, D3D12HeapFromAddressState*> m_HeapStates;
 };
 
 } // namespace DirectX

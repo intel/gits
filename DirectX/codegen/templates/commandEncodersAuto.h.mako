@@ -16,14 +16,14 @@ namespace gits {
 namespace DirectX {
 
 %for function in functions:
-unsigned getSize(const ${function.name}Command& command);
-void encode(const ${function.name}Command& command, char* dest);
+unsigned GetSize(const ${function.name}Command& command);
+void Encode(const ${function.name}Command& command, char* dest);
 %endfor
 
 %for interface in interfaces:
 %for function in interface.functions:
-unsigned getSize(const ${interface.name}${function.name}Command& command);
-void encode(const ${interface.name}${function.name}Command& command, char* dest);
+unsigned GetSize(const ${interface.name}${function.name}Command& command);
+void Encode(const ${interface.name}${function.name}Command& command, char* dest);
 %endfor
 %endfor
 } // namespace DirectX

@@ -14,20 +14,20 @@
 namespace gits {
 namespace DirectX {
 
-void MapStateService::restoreMapState() {
-  for (auto& itResource : mappedDataBySubresource_) {
-    if (!stateService_.stateRestored(itResource.first)) {
+void MapStateService::RestoreMapState() {
+  for (auto& itResource : m_MappedDataBySubresource) {
+    if (!m_StateService.StateRestored(itResource.first)) {
       continue;
     }
     for (auto& itSubresource : itResource.second) {
       ID3D12ResourceMapCommand c;
-      c.key = stateService_.getUniqueCommandKey();
-      c.object_.key = itResource.first;
-      c.Subresource_.value = itSubresource.first;
-      c.pReadRange_.value = nullptr;
-      c.ppData_.captureValue = itSubresource.second;
-      c.ppData_.value = &itSubresource.second;
-      stateService_.getRecorder().record(ID3D12ResourceMapSerializer(c));
+      c.Key = m_StateService.GetUniqueCommandKey();
+      c.m_Object.Key = itResource.first;
+      c.m_Subresource.Value = itSubresource.first;
+      c.m_pReadRange.Value = nullptr;
+      c.m_ppData.CaptureValue = itSubresource.second;
+      c.m_ppData.Value = &itSubresource.second;
+      m_StateService.GetRecorder().Record(ID3D12ResourceMapSerializer(c));
     }
   }
 }

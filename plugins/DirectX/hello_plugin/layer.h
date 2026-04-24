@@ -23,9 +23,9 @@ public:
   HelloPluginLayer(const HelloPluginConfig& cfg);
   ~HelloPluginLayer() = default;
 
-  void post(IDXGISwapChainPresentCommand& c) override;
-  void post(IDXGISwapChain1Present1Command& c) override;
-  void post(ID3D12CommandQueueExecuteCommandListsCommand& c) override;
+  void Post(IDXGISwapChainPresentCommand& c) override;
+  void Post(IDXGISwapChain1Present1Command& c) override;
+  void Post(ID3D12CommandQueueExecuteCommandListsCommand& c) override;
 
 private:
   void newFrame();

@@ -13,84 +13,84 @@
 namespace gits {
 namespace DirectX {
 
-void ShowExecutionLayer::post(StateRestoreBeginCommand& command) {
-  CommandPrinter p(outBuff_, printerState_, command, "StateRestoreBegin");
-  outBuff_ << "STATE_RESTORE_BEGIN\n";
-  outBuff_.Flush();
-  currentFrame_ = 0;
+void ShowExecutionLayer::Post(StateRestoreBeginCommand& command) {
+  CommandPrinter p(m_OutBuff, m_PrinterState, command, "StateRestoreBegin");
+  m_OutBuff << "STATE_RESTORE_BEGIN\n";
+  m_OutBuff.Flush();
+  m_CurrentFrame = 0;
 }
 
-void ShowExecutionLayer::post(StateRestoreEndCommand& command) {
-  CommandPrinter p(outBuff_, printerState_, command, "StateRestoreEnd");
-  outBuff_ << "STATE_RESTORE_END\n";
-  outBuff_.Flush();
-  currentFrame_ = 1;
+void ShowExecutionLayer::Post(StateRestoreEndCommand& command) {
+  CommandPrinter p(m_OutBuff, m_PrinterState, command, "StateRestoreEnd");
+  m_OutBuff << "STATE_RESTORE_END\n";
+  m_OutBuff.Flush();
+  m_CurrentFrame = 1;
 }
 
-void ShowExecutionLayer::post(ID3D12DeviceCreateCommandQueueCommand& command) {
-  commandQueueTypes_[command.ppCommandQueue_.key] = command.pDesc_.value->Type;
+void ShowExecutionLayer::Post(ID3D12DeviceCreateCommandQueueCommand& command) {
+  m_CommandQueueTypes[command.m_ppCommandQueue.Key] = command.m_pDesc.Value->Type;
 }
 
-void ShowExecutionLayer::post(ID3D12Device9CreateCommandQueue1Command& command) {
-  commandQueueTypes_[command.ppCommandQueue_.key] = command.pDesc_.value->Type;
+void ShowExecutionLayer::Post(ID3D12Device9CreateCommandQueue1Command& command) {
+  m_CommandQueueTypes[command.m_ppCommandQueue.Key] = command.m_pDesc.Value->Type;
 }
 
-void ShowExecutionLayer::post(IDXGISwapChainPresentCommand& command) {
-  if (!(command.Flags_.value & DXGI_PRESENT_TEST)) {
-    CommandPrinter p(outBuff_, printerState_, command, "IDXGISwapChain::Present",
-                     command.object_.key);
-    p.addArgument(command.SyncInterval_);
-    p.addArgument(command.Flags_);
-    p.addResult(command.result_);
+void ShowExecutionLayer::Post(IDXGISwapChainPresentCommand& command) {
+  if (!(command.m_Flags.Value & DXGI_PRESENT_TEST)) {
+    CommandPrinter p(m_OutBuff, m_PrinterState, command, "IDXGISwapChain::Present",
+                     command.m_Object.Key);
+    p.addArgument(command.m_SyncInterval);
+    p.addArgument(command.m_Flags);
+    p.addResult(command.m_Result);
     p.print(true);
 
-    executeCount = 0;
-    if (!isStateRestoreKey(command.key)) {
-      ++currentFrame_;
+    m_ExecuteCount = 0;
+    if (!IsStateRestoreKey(command.Key)) {
+      ++m_CurrentFrame;
     }
   }
 }
 
-void ShowExecutionLayer::post(IDXGISwapChain1Present1Command& command) {
-  if (!(command.PresentFlags_.value & DXGI_PRESENT_TEST)) {
-    CommandPrinter p(outBuff_, printerState_, command, "IDXGISwapChain1::Present1",
-                     command.object_.key);
-    p.addArgument(command.SyncInterval_);
-    p.addArgument(command.PresentFlags_);
-    p.addResult(command.result_);
+void ShowExecutionLayer::Post(IDXGISwapChain1Present1Command& command) {
+  if (!(command.m_PresentFlags.Value & DXGI_PRESENT_TEST)) {
+    CommandPrinter p(m_OutBuff, m_PrinterState, command, "IDXGISwapChain1::Present1",
+                     command.m_Object.Key);
+    p.addArgument(command.m_SyncInterval);
+    p.addArgument(command.m_PresentFlags);
+    p.addResult(command.m_Result);
     p.print(true);
 
-    executeCount = 0;
-    if (!isStateRestoreKey(command.key)) {
-      ++currentFrame_;
+    m_ExecuteCount = 0;
+    if (!IsStateRestoreKey(command.Key)) {
+      ++m_CurrentFrame;
     }
   }
 }
 
-void ShowExecutionLayer::post(ID3D12CommandQueueExecuteCommandListsCommand& command) {
-  outBuff_.Flush();
-  outBuff_ << "  ";
+void ShowExecutionLayer::Post(ID3D12CommandQueueExecuteCommandListsCommand& command) {
+  m_OutBuff.Flush();
+  m_OutBuff << "  ";
 
-  const bool isWaiting = gpuExecutionTracker_.isCommandQueueWaiting(command.object_.key);
+  const bool isWaiting = m_GpuExecutionTracker.IsCommandQueueWaiting(command.m_Object.Key);
   if (isWaiting) {
-    outBuff_ << "[DEFERRED] ";
+    m_OutBuff << "[DEFERRED] ";
   }
-  CommandPrinter p(outBuff_, printerState_, command, "ID3D12CommandQueue::ExecuteCommandLists",
-                   command.object_.key);
-  ++executeCount;
-  p.addArgument(command.NumCommandLists_);
-  p.addArgument(command.ppCommandLists_);
+  CommandPrinter p(m_OutBuff, m_PrinterState, command, "ID3D12CommandQueue::ExecuteCommandLists",
+                   command.m_Object.Key);
+  ++m_ExecuteCount;
+  p.addArgument(command.m_NumCommandLists);
+  p.addArgument(command.m_ppCommandLists);
   p.print(false, false);
-  if (!(isExecutionSerializationKey(command.key) && !printerState_.stateRestorePhase)) {
-    outBuff_ << " Frame #" << printerState_.frameCount << " Frame Execute #" << executeCount
-             << "\n";
+  if (!(IsExecutionSerializationKey(command.Key) && !m_PrinterState.stateRestorePhase)) {
+    m_OutBuff << " Frame #" << m_PrinterState.frameCount << " Frame Execute #" << m_ExecuteCount
+              << "\n";
   } else {
-    outBuff_ << "\n";
+    m_OutBuff << "\n";
   }
 
   std::string type;
-  if (commandQueueTypes_.find(command.object_.key) != commandQueueTypes_.end()) {
-    switch (commandQueueTypes_.at(command.object_.key)) {
+  if (m_CommandQueueTypes.find(command.m_Object.Key) != m_CommandQueueTypes.end()) {
+    switch (m_CommandQueueTypes.at(command.m_Object.Key)) {
     case D3D12_COMMAND_LIST_TYPE_DIRECT:
       type = "Direct";
       break;
@@ -103,517 +103,518 @@ void ShowExecutionLayer::post(ID3D12CommandQueueExecuteCommandListsCommand& comm
     }
   }
 
-  for (unsigned i = 0; i < command.NumCommandLists_.value; ++i) {
-    auto it = commandListCommands_.find(command.ppCommandLists_.keys[i]);
-    if (it != commandListCommands_.end()) {
+  for (unsigned i = 0; i < command.m_NumCommandLists.Value; ++i) {
+    auto it = m_CommandListCommands.find(command.m_ppCommandLists.Keys[i]);
+    if (it != m_CommandListCommands.end()) {
       unsigned drawCount{};
 
-      outBuff_ << "    " << type << " CommandList O" << command.ppCommandLists_.keys[i]
-               << " Frame #" << currentFrame_ << " Frame Execute #" << executeCount
-               << " CommandList #" << i + 1 << "\n";
+      m_OutBuff << "    " << type << " CommandList O" << command.m_ppCommandLists.Keys[i]
+                << " Frame #" << m_CurrentFrame << " Frame Execute #" << m_ExecuteCount
+                << " CommandList #" << i + 1 << "\n";
 
-      for (Command& c : it->second) {
-        if (c.isDraw) {
-          std::string baseStr = c.str;
+      for (Command& cmdEntry : it->second) {
+        if (cmdEntry.m_IsDraw) {
+          std::string baseStr = cmdEntry.m_Str;
           std::string frameDrawSuffix;
           if (auto pos = baseStr.rfind(" Frame Draw #"); pos != std::string::npos) {
             frameDrawSuffix = baseStr.substr(pos);
             baseStr.resize(pos);
           }
-          outBuff_ << "      " << baseStr << " Frame Execute #" << executeCount << " CommandList #"
-                   << i + 1 << " CommandList Draw #" << ++drawCount << " (e_" << currentFrame_
-                   << "_" << executeCount << "_" << i + 1 << "_" << drawCount << ")"
-                   << frameDrawSuffix << "\n";
+          m_OutBuff << "      " << baseStr << " Frame Execute #" << m_ExecuteCount
+                    << " CommandList #" << i + 1 << " CommandList Draw #" << ++drawCount << " (e_"
+                    << m_CurrentFrame << "_" << m_ExecuteCount << "_" << i + 1 << "_" << drawCount
+                    << ")" << frameDrawSuffix << "\n";
         } else {
-          outBuff_ << "      " << c.str;
+          m_OutBuff << "      " << cmdEntry.m_Str;
         }
       }
     }
   }
 
-  const auto str = outBuff_.ExtractString();
-  outBuff_ << str;
-  outBuff_.Flush();
+  const auto str = m_OutBuff.ExtractString();
+  m_OutBuff << str;
+  m_OutBuff.Flush();
   if (isWaiting) {
-    stageCommandQueueEvent(command.key, command.object_.key,
-                           replaceSubstring("  " + str, "[DEFERRED] ", ""));
+    StageCommandQueueEvent(command.Key, command.m_Object.Key,
+                           ReplaceSubstring("  " + str, "[DEFERRED] ", ""));
   }
 }
 
-void ShowExecutionLayer::post(ID3D12GraphicsCommandListResetCommand& command) {
+void ShowExecutionLayer::Post(ID3D12GraphicsCommandListResetCommand& command) {
   // Lock just in case. This code is used from player, so a lock shouldn't be needed.
-  std::lock_guard<std::mutex> lock_(printerState_.mutex);
+  std::lock_guard<std::mutex> lockGuard(m_PrinterState.mutex);
 
-  auto it = commandListCommands_.find(command.object_.key);
-  if (it != commandListCommands_.end()) {
+  auto it = m_CommandListCommands.find(command.m_Object.Key);
+  if (it != m_CommandListCommands.end()) {
     it->second.clear();
   }
 }
 
-void ShowExecutionLayer::post(ID3D12GraphicsCommandListDrawInstancedCommand& command) {
-  outBuff_.Flush();
-  CommandPrinter p(outBuff_, printerState_, command, "ID3D12GraphicsCommandList::DrawInstanced",
-                   command.object_.key);
-  p.addArgument(command.VertexCountPerInstance_);
-  p.addArgument(command.InstanceCount_);
-  p.addArgument(command.StartVertexLocation_);
-  p.addArgument(command.StartInstanceLocation_);
+void ShowExecutionLayer::Post(ID3D12GraphicsCommandListDrawInstancedCommand& command) {
+  m_OutBuff.Flush();
+  CommandPrinter p(m_OutBuff, m_PrinterState, command, "ID3D12GraphicsCommandList::DrawInstanced",
+                   command.m_Object.Key);
+  p.addArgument(command.m_VertexCountPerInstance);
+  p.addArgument(command.m_InstanceCount);
+  p.addArgument(command.m_StartVertexLocation);
+  p.addArgument(command.m_StartInstanceLocation);
   p.print(false, false);
 
-  commandListCommands_[command.object_.key].emplace_back(outBuff_.ExtractString(), true);
+  m_CommandListCommands[command.m_Object.Key].emplace_back(m_OutBuff.ExtractString(), true);
 }
 
-void ShowExecutionLayer::post(ID3D12GraphicsCommandListDrawIndexedInstancedCommand& command) {
-  outBuff_.Flush();
-  CommandPrinter p(outBuff_, printerState_, command,
-                   "ID3D12GraphicsCommandList::DrawIndexedInstanced", command.object_.key);
-  p.addArgument(command.IndexCountPerInstance_);
-  p.addArgument(command.InstanceCount_);
-  p.addArgument(command.StartIndexLocation_);
-  p.addArgument(command.BaseVertexLocation_);
-  p.addArgument(command.StartInstanceLocation_);
+void ShowExecutionLayer::Post(ID3D12GraphicsCommandListDrawIndexedInstancedCommand& command) {
+  m_OutBuff.Flush();
+  CommandPrinter p(m_OutBuff, m_PrinterState, command,
+                   "ID3D12GraphicsCommandList::DrawIndexedInstanced", command.m_Object.Key);
+  p.addArgument(command.m_IndexCountPerInstance);
+  p.addArgument(command.m_InstanceCount);
+  p.addArgument(command.m_StartIndexLocation);
+  p.addArgument(command.m_BaseVertexLocation);
+  p.addArgument(command.m_StartInstanceLocation);
   p.print(false, false);
 
-  commandListCommands_[command.object_.key].emplace_back(outBuff_.ExtractString(), true);
+  m_CommandListCommands[command.m_Object.Key].emplace_back(m_OutBuff.ExtractString(), true);
 }
 
-void ShowExecutionLayer::post(ID3D12GraphicsCommandListClearRenderTargetViewCommand& command) {
-  outBuff_.Flush();
-  CommandPrinter p(outBuff_, printerState_, command,
-                   "ID3D12GraphicsCommandList::ClearRenderTargetView", command.object_.key);
-  p.addArgument(command.RenderTargetView_);
-  p.addArgument(command.ColorRGBA_);
-  p.addArgument(command.NumRects_);
-  p.addArgument(command.pRects_);
+void ShowExecutionLayer::Post(ID3D12GraphicsCommandListClearRenderTargetViewCommand& command) {
+  m_OutBuff.Flush();
+  CommandPrinter p(m_OutBuff, m_PrinterState, command,
+                   "ID3D12GraphicsCommandList::ClearRenderTargetView", command.m_Object.Key);
+  p.addArgument(command.m_RenderTargetView);
+  p.addArgument(command.m_ColorRGBA);
+  p.addArgument(command.m_NumRects);
+  p.addArgument(command.m_pRects);
   p.print(false);
 
-  commandListCommands_[command.object_.key].emplace_back(outBuff_.ExtractString());
+  m_CommandListCommands[command.m_Object.Key].emplace_back(m_OutBuff.ExtractString());
 }
 
-void ShowExecutionLayer::post(ID3D12GraphicsCommandListClearDepthStencilViewCommand& command) {
-  outBuff_.Flush();
-  CommandPrinter p(outBuff_, printerState_, command,
-                   "ID3D12GraphicsCommandList::ClearDepthStencilView", command.object_.key);
-  p.addArgument(command.DepthStencilView_);
-  p.addArgument(command.ClearFlags_);
-  p.addArgument(command.Depth_);
-  p.addArgument(command.Stencil_);
-  p.addArgument(command.NumRects_);
-  p.addArgument(command.pRects_);
+void ShowExecutionLayer::Post(ID3D12GraphicsCommandListClearDepthStencilViewCommand& command) {
+  m_OutBuff.Flush();
+  CommandPrinter p(m_OutBuff, m_PrinterState, command,
+                   "ID3D12GraphicsCommandList::ClearDepthStencilView", command.m_Object.Key);
+  p.addArgument(command.m_DepthStencilView);
+  p.addArgument(command.m_ClearFlags);
+  p.addArgument(command.m_Depth);
+  p.addArgument(command.m_Stencil);
+  p.addArgument(command.m_NumRects);
+  p.addArgument(command.m_pRects);
   p.print(false);
 
-  commandListCommands_[command.object_.key].emplace_back(outBuff_.ExtractString());
+  m_CommandListCommands[command.m_Object.Key].emplace_back(m_OutBuff.ExtractString());
 }
 
-void ShowExecutionLayer::post(ID3D12GraphicsCommandListDispatchCommand& command) {
-  outBuff_.Flush();
-  CommandPrinter p(outBuff_, printerState_, command, "ID3D12GraphicsCommandList::Dispatch",
-                   command.object_.key);
-  p.addArgument(command.ThreadGroupCountX_);
-  p.addArgument(command.ThreadGroupCountY_);
-  p.addArgument(command.ThreadGroupCountZ_);
+void ShowExecutionLayer::Post(ID3D12GraphicsCommandListDispatchCommand& command) {
+  m_OutBuff.Flush();
+  CommandPrinter p(m_OutBuff, m_PrinterState, command, "ID3D12GraphicsCommandList::Dispatch",
+                   command.m_Object.Key);
+  p.addArgument(command.m_ThreadGroupCountX);
+  p.addArgument(command.m_ThreadGroupCountY);
+  p.addArgument(command.m_ThreadGroupCountZ);
   p.print(false);
 
-  commandListCommands_[command.object_.key].emplace_back(outBuff_.ExtractString());
+  m_CommandListCommands[command.m_Object.Key].emplace_back(m_OutBuff.ExtractString());
 }
 
-void ShowExecutionLayer::post(ID3D12GraphicsCommandListExecuteBundleCommand& command) {
-  outBuff_.Flush();
-  CommandPrinter p(outBuff_, printerState_, command, "ID3D12GraphicsCommandList::ExecuteBundle",
-                   command.object_.key);
-  p.addArgument(command.pCommandList_);
+void ShowExecutionLayer::Post(ID3D12GraphicsCommandListExecuteBundleCommand& command) {
+  m_OutBuff.Flush();
+  CommandPrinter p(m_OutBuff, m_PrinterState, command, "ID3D12GraphicsCommandList::ExecuteBundle",
+                   command.m_Object.Key);
+  p.addArgument(command.m_pCommandList);
   p.print(false);
 
-  commandListCommands_[command.object_.key].emplace_back(outBuff_.ExtractString());
+  m_CommandListCommands[command.m_Object.Key].emplace_back(m_OutBuff.ExtractString());
 }
 
-void ShowExecutionLayer::post(ID3D12GraphicsCommandListExecuteIndirectCommand& command) {
-  outBuff_.Flush();
-  CommandPrinter p(outBuff_, printerState_, command, "ID3D12GraphicsCommandList::ExecuteIndirect",
-                   command.object_.key);
-  p.addArgument(command.pCommandSignature_);
-  p.addArgument(command.MaxCommandCount_);
-  p.addArgument(command.pArgumentBuffer_);
-  p.addArgument(command.ArgumentBufferOffset_);
-  p.addArgument(command.pCountBuffer_);
-  p.addArgument(command.CountBufferOffset_);
+void ShowExecutionLayer::Post(ID3D12GraphicsCommandListExecuteIndirectCommand& command) {
+  m_OutBuff.Flush();
+  CommandPrinter p(m_OutBuff, m_PrinterState, command, "ID3D12GraphicsCommandList::ExecuteIndirect",
+                   command.m_Object.Key);
+  p.addArgument(command.m_pCommandSignature);
+  p.addArgument(command.m_MaxCommandCount);
+  p.addArgument(command.m_pArgumentBuffer);
+  p.addArgument(command.m_ArgumentBufferOffset);
+  p.addArgument(command.m_pCountBuffer);
+  p.addArgument(command.m_CountBufferOffset);
   p.print(false);
 
-  commandListCommands_[command.object_.key].emplace_back(outBuff_.ExtractString());
+  m_CommandListCommands[command.m_Object.Key].emplace_back(m_OutBuff.ExtractString());
 }
 
-void ShowExecutionLayer::post(ID3D12GraphicsCommandListCopyBufferRegionCommand& command) {
-  outBuff_.Flush();
-  CommandPrinter p(outBuff_, printerState_, command, "ID3D12GraphicsCommandList::CopyBufferRegion",
-                   command.object_.key);
-  p.addArgument(command.pDstBuffer_);
-  p.addArgument(command.DstOffset_);
-  p.addArgument(command.pSrcBuffer_);
-  p.addArgument(command.SrcOffset_);
-  p.addArgument(command.NumBytes_);
+void ShowExecutionLayer::Post(ID3D12GraphicsCommandListCopyBufferRegionCommand& command) {
+  m_OutBuff.Flush();
+  CommandPrinter p(m_OutBuff, m_PrinterState, command,
+                   "ID3D12GraphicsCommandList::CopyBufferRegion", command.m_Object.Key);
+  p.addArgument(command.m_pDstBuffer);
+  p.addArgument(command.m_DstOffset);
+  p.addArgument(command.m_pSrcBuffer);
+  p.addArgument(command.m_SrcOffset);
+  p.addArgument(command.m_NumBytes);
   p.print(false);
 
-  commandListCommands_[command.object_.key].emplace_back(outBuff_.ExtractString());
+  m_CommandListCommands[command.m_Object.Key].emplace_back(m_OutBuff.ExtractString());
 }
 
-void ShowExecutionLayer::post(ID3D12GraphicsCommandListCopyTextureRegionCommand& command) {
-  outBuff_.Flush();
-  CommandPrinter p(outBuff_, printerState_, command, "ID3D12GraphicsCommandList::CopyTextureRegion",
-                   command.object_.key);
-  p.addArgument(command.pDst_);
-  p.addArgument(command.DstX_);
-  p.addArgument(command.DstY_);
-  p.addArgument(command.DstZ_);
-  p.addArgument(command.pSrc_);
-  p.addArgument(command.pSrcBox_);
+void ShowExecutionLayer::Post(ID3D12GraphicsCommandListCopyTextureRegionCommand& command) {
+  m_OutBuff.Flush();
+  CommandPrinter p(m_OutBuff, m_PrinterState, command,
+                   "ID3D12GraphicsCommandList::CopyTextureRegion", command.m_Object.Key);
+  p.addArgument(command.m_pDst);
+  p.addArgument(command.m_DstX);
+  p.addArgument(command.m_DstY);
+  p.addArgument(command.m_DstZ);
+  p.addArgument(command.m_pSrc);
+  p.addArgument(command.m_pSrcBox);
   p.print(false);
 
-  commandListCommands_[command.object_.key].emplace_back(outBuff_.ExtractString());
+  m_CommandListCommands[command.m_Object.Key].emplace_back(m_OutBuff.ExtractString());
 }
 
-void ShowExecutionLayer::post(ID3D12GraphicsCommandListCopyResourceCommand& command) {
-  outBuff_.Flush();
-  CommandPrinter p(outBuff_, printerState_, command, "ID3D12GraphicsCommandList::CopyResource",
-                   command.object_.key);
-  p.addArgument(command.pDstResource_);
-  p.addArgument(command.pSrcResource_);
+void ShowExecutionLayer::Post(ID3D12GraphicsCommandListCopyResourceCommand& command) {
+  m_OutBuff.Flush();
+  CommandPrinter p(m_OutBuff, m_PrinterState, command, "ID3D12GraphicsCommandList::CopyResource",
+                   command.m_Object.Key);
+  p.addArgument(command.m_pDstResource);
+  p.addArgument(command.m_pSrcResource);
   p.print(false);
 
-  commandListCommands_[command.object_.key].emplace_back(outBuff_.ExtractString());
+  m_CommandListCommands[command.m_Object.Key].emplace_back(m_OutBuff.ExtractString());
 }
 
-void ShowExecutionLayer::post(ID3D12GraphicsCommandListCopyTilesCommand& command) {
-  outBuff_.Flush();
-  CommandPrinter p(outBuff_, printerState_, command, "ID3D12GraphicsCommandList::CopyTiles",
-                   command.object_.key);
-  p.addArgument(command.pTiledResource_);
-  p.addArgument(command.pTileRegionStartCoordinate_);
-  p.addArgument(command.pTileRegionSize_);
-  p.addArgument(command.pBuffer_);
-  p.addArgument(command.BufferStartOffsetInBytes_);
-  p.addArgument(command.Flags_);
+void ShowExecutionLayer::Post(ID3D12GraphicsCommandListCopyTilesCommand& command) {
+  m_OutBuff.Flush();
+  CommandPrinter p(m_OutBuff, m_PrinterState, command, "ID3D12GraphicsCommandList::CopyTiles",
+                   command.m_Object.Key);
+  p.addArgument(command.m_pTiledResource);
+  p.addArgument(command.m_pTileRegionStartCoordinate);
+  p.addArgument(command.m_pTileRegionSize);
+  p.addArgument(command.m_pBuffer);
+  p.addArgument(command.m_BufferStartOffsetInBytes);
+  p.addArgument(command.m_Flags);
   p.print(false);
 
-  commandListCommands_[command.object_.key].emplace_back(outBuff_.ExtractString());
+  m_CommandListCommands[command.m_Object.Key].emplace_back(m_OutBuff.ExtractString());
 }
 
-void ShowExecutionLayer::post(ID3D12GraphicsCommandListResolveSubresourceCommand& command) {
-  outBuff_.Flush();
-  CommandPrinter p(outBuff_, printerState_, command,
-                   "ID3D12GraphicsCommandList::ResolveSubresource", command.object_.key);
-  p.addArgument(command.pDstResource_);
-  p.addArgument(command.DstSubresource_);
-  p.addArgument(command.pSrcResource_);
-  p.addArgument(command.SrcSubresource_);
-  p.addArgument(command.Format_);
+void ShowExecutionLayer::Post(ID3D12GraphicsCommandListResolveSubresourceCommand& command) {
+  m_OutBuff.Flush();
+  CommandPrinter p(m_OutBuff, m_PrinterState, command,
+                   "ID3D12GraphicsCommandList::ResolveSubresource", command.m_Object.Key);
+  p.addArgument(command.m_pDstResource);
+  p.addArgument(command.m_DstSubresource);
+  p.addArgument(command.m_pSrcResource);
+  p.addArgument(command.m_SrcSubresource);
+  p.addArgument(command.m_Format);
   p.print(false);
 
-  commandListCommands_[command.object_.key].emplace_back(outBuff_.ExtractString());
+  m_CommandListCommands[command.m_Object.Key].emplace_back(m_OutBuff.ExtractString());
 }
 
-void ShowExecutionLayer::post(ID3D12GraphicsCommandListResourceBarrierCommand& command) {
-  outBuff_.Flush();
-  CommandPrinter p(outBuff_, printerState_, command, "ID3D12GraphicsCommandList::ResourceBarrier",
-                   command.object_.key);
-  p.addArgument(command.NumBarriers_);
-  p.addArgument(command.pBarriers_);
+void ShowExecutionLayer::Post(ID3D12GraphicsCommandListResourceBarrierCommand& command) {
+  m_OutBuff.Flush();
+  CommandPrinter p(m_OutBuff, m_PrinterState, command, "ID3D12GraphicsCommandList::ResourceBarrier",
+                   command.m_Object.Key);
+  p.addArgument(command.m_NumBarriers);
+  p.addArgument(command.m_pBarriers);
   p.print(false);
 
-  commandListCommands_[command.object_.key].emplace_back(outBuff_.ExtractString());
+  m_CommandListCommands[command.m_Object.Key].emplace_back(m_OutBuff.ExtractString());
 }
 
-void ShowExecutionLayer::post(
+void ShowExecutionLayer::Post(
     ID3D12GraphicsCommandListClearUnorderedAccessViewFloatCommand& command) {
-  outBuff_.Flush();
-  CommandPrinter p(outBuff_, printerState_, command,
-                   "ID3D12GraphicsCommandList::ClearUnorderedAccessViewFloat", command.object_.key);
-  p.addArgument(command.ViewGPUHandleInCurrentHeap_);
-  p.addArgument(command.ViewCPUHandle_);
-  p.addArgument(command.pResource_);
-  p.addArgument(command.Values_);
-  p.addArgument(command.NumRects_);
-  p.addArgument(command.pRects_);
+  m_OutBuff.Flush();
+  CommandPrinter p(m_OutBuff, m_PrinterState, command,
+                   "ID3D12GraphicsCommandList::ClearUnorderedAccessViewFloat",
+                   command.m_Object.Key);
+  p.addArgument(command.m_ViewGPUHandleInCurrentHeap);
+  p.addArgument(command.m_ViewCPUHandle);
+  p.addArgument(command.m_pResource);
+  p.addArgument(command.m_Values);
+  p.addArgument(command.m_NumRects);
+  p.addArgument(command.m_pRects);
   p.print(false);
 
-  commandListCommands_[command.object_.key].emplace_back(outBuff_.ExtractString());
+  m_CommandListCommands[command.m_Object.Key].emplace_back(m_OutBuff.ExtractString());
 }
 
-void ShowExecutionLayer::post(
+void ShowExecutionLayer::Post(
     ID3D12GraphicsCommandListClearUnorderedAccessViewUintCommand& command) {
-  outBuff_.Flush();
-  CommandPrinter p(outBuff_, printerState_, command,
-                   "ID3D12GraphicsCommandList::ClearUnorderedAccessViewUint", command.object_.key);
-  p.addArgument(command.ViewGPUHandleInCurrentHeap_);
-  p.addArgument(command.ViewCPUHandle_);
-  p.addArgument(command.pResource_);
-  p.addArgument(command.Values_);
-  p.addArgument(command.NumRects_);
-  p.addArgument(command.pRects_);
+  m_OutBuff.Flush();
+  CommandPrinter p(m_OutBuff, m_PrinterState, command,
+                   "ID3D12GraphicsCommandList::ClearUnorderedAccessViewUint", command.m_Object.Key);
+  p.addArgument(command.m_ViewGPUHandleInCurrentHeap);
+  p.addArgument(command.m_ViewCPUHandle);
+  p.addArgument(command.m_pResource);
+  p.addArgument(command.m_Values);
+  p.addArgument(command.m_NumRects);
+  p.addArgument(command.m_pRects);
   p.print(false);
 
-  commandListCommands_[command.object_.key].emplace_back(outBuff_.ExtractString());
+  m_CommandListCommands[command.m_Object.Key].emplace_back(m_OutBuff.ExtractString());
 }
 
-void ShowExecutionLayer::post(ID3D12GraphicsCommandList1ResolveSubresourceRegionCommand& command) {
-  outBuff_.Flush();
-  CommandPrinter p(outBuff_, printerState_, command,
-                   "ID3D12GraphicsCommandList1::ResolveSubresourceRegion", command.object_.key);
-  p.addArgument(command.pDstResource_);
-  p.addArgument(command.DstSubresource_);
-  p.addArgument(command.DstX_);
-  p.addArgument(command.DstY_);
-  p.addArgument(command.pSrcResource_);
-  p.addArgument(command.SrcSubresource_);
-  p.addArgument(command.pSrcRect_);
-  p.addArgument(command.Format_);
-  p.addArgument(command.ResolveMode_);
+void ShowExecutionLayer::Post(ID3D12GraphicsCommandList1ResolveSubresourceRegionCommand& command) {
+  m_OutBuff.Flush();
+  CommandPrinter p(m_OutBuff, m_PrinterState, command,
+                   "ID3D12GraphicsCommandList1::ResolveSubresourceRegion", command.m_Object.Key);
+  p.addArgument(command.m_pDstResource);
+  p.addArgument(command.m_DstSubresource);
+  p.addArgument(command.m_DstX);
+  p.addArgument(command.m_DstY);
+  p.addArgument(command.m_pSrcResource);
+  p.addArgument(command.m_SrcSubresource);
+  p.addArgument(command.m_pSrcRect);
+  p.addArgument(command.m_Format);
+  p.addArgument(command.m_ResolveMode);
   p.print(false);
 
-  commandListCommands_[command.object_.key].emplace_back(outBuff_.ExtractString());
+  m_CommandListCommands[command.m_Object.Key].emplace_back(m_OutBuff.ExtractString());
 }
 
-void ShowExecutionLayer::post(
+void ShowExecutionLayer::Post(
     ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& command) {
-  outBuff_.Flush();
-  CommandPrinter p(outBuff_, printerState_, command,
+  m_OutBuff.Flush();
+  CommandPrinter p(m_OutBuff, m_PrinterState, command,
                    "ID3D12GraphicsCommandList4::BuildRaytracingAccelerationStructure",
-                   command.object_.key);
-  p.addArgument(command.pDesc_);
-  p.addArgument(command.NumPostbuildInfoDescs_);
-  p.addArgument(command.pPostbuildInfoDescs_);
+                   command.m_Object.Key);
+  p.addArgument(command.m_pDesc);
+  p.addArgument(command.m_NumPostbuildInfoDescs);
+  p.addArgument(command.m_pPostbuildInfoDescs);
   p.print(false);
 
-  commandListCommands_[command.object_.key].emplace_back(outBuff_.ExtractString());
+  m_CommandListCommands[command.m_Object.Key].emplace_back(m_OutBuff.ExtractString());
 }
 
-void ShowExecutionLayer::post(
+void ShowExecutionLayer::Post(
     ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& command) {
-  outBuff_.Flush();
-  CommandPrinter p(outBuff_, printerState_, command,
+  m_OutBuff.Flush();
+  CommandPrinter p(m_OutBuff, m_PrinterState, command,
                    "ID3D12GraphicsCommandList4::CopyRaytracingAccelerationStructure",
-                   command.object_.key);
-  p.addArgument(command.DestAccelerationStructureData_);
-  p.addArgument(command.SourceAccelerationStructureData_);
-  p.addArgument(command.Mode_);
+                   command.m_Object.Key);
+  p.addArgument(command.m_DestAccelerationStructureData);
+  p.addArgument(command.m_SourceAccelerationStructureData);
+  p.addArgument(command.m_Mode);
   p.print(false);
 
-  commandListCommands_[command.object_.key].emplace_back(outBuff_.ExtractString());
+  m_CommandListCommands[command.m_Object.Key].emplace_back(m_OutBuff.ExtractString());
 }
 
-void ShowExecutionLayer::post(ID3D12GraphicsCommandList4DispatchRaysCommand& command) {
-  outBuff_.Flush();
-  CommandPrinter p(outBuff_, printerState_, command, "ID3D12GraphicsCommandList4::DispatchRays",
-                   command.object_.key);
-  p.addArgument(command.pDesc_);
+void ShowExecutionLayer::Post(ID3D12GraphicsCommandList4DispatchRaysCommand& command) {
+  m_OutBuff.Flush();
+  CommandPrinter p(m_OutBuff, m_PrinterState, command, "ID3D12GraphicsCommandList4::DispatchRays",
+                   command.m_Object.Key);
+  p.addArgument(command.m_pDesc);
   p.print(false);
 
-  commandListCommands_[command.object_.key].emplace_back(outBuff_.ExtractString());
+  m_CommandListCommands[command.m_Object.Key].emplace_back(m_OutBuff.ExtractString());
 }
 
-void ShowExecutionLayer::post(ID3D12GraphicsCommandList4ExecuteMetaCommandCommand& command) {
-  outBuff_.Flush();
-  CommandPrinter p(outBuff_, printerState_, command,
-                   "ID3D12GraphicsCommandList4::ExecuteMetaCommand", command.object_.key);
-  p.addArgument(command.pMetaCommand_);
-  p.addArgument(command.pExecutionParametersData_);
-  p.addArgument(command.ExecutionParametersDataSizeInBytes_);
+void ShowExecutionLayer::Post(ID3D12GraphicsCommandList4ExecuteMetaCommandCommand& command) {
+  m_OutBuff.Flush();
+  CommandPrinter p(m_OutBuff, m_PrinterState, command,
+                   "ID3D12GraphicsCommandList4::ExecuteMetaCommand", command.m_Object.Key);
+  p.addArgument(command.m_pMetaCommand);
+  p.addArgument(command.m_pExecutionParametersData);
+  p.addArgument(command.m_ExecutionParametersDataSizeInBytes);
   p.print(false);
 
-  commandListCommands_[command.object_.key].emplace_back(outBuff_.ExtractString());
+  m_CommandListCommands[command.m_Object.Key].emplace_back(m_OutBuff.ExtractString());
 }
 
-void ShowExecutionLayer::post(ID3D12GraphicsCommandList4InitializeMetaCommandCommand& command) {
-  outBuff_.Flush();
-  CommandPrinter p(outBuff_, printerState_, command,
-                   "ID3D12GraphicsCommandList4::InitializeMetaCommand", command.object_.key);
-  p.addArgument(command.pMetaCommand_);
-  p.addArgument(command.pInitializationParametersData_);
-  p.addArgument(command.InitializationParametersDataSizeInBytes_);
+void ShowExecutionLayer::Post(ID3D12GraphicsCommandList4InitializeMetaCommandCommand& command) {
+  m_OutBuff.Flush();
+  CommandPrinter p(m_OutBuff, m_PrinterState, command,
+                   "ID3D12GraphicsCommandList4::InitializeMetaCommand", command.m_Object.Key);
+  p.addArgument(command.m_pMetaCommand);
+  p.addArgument(command.m_pInitializationParametersData);
+  p.addArgument(command.m_InitializationParametersDataSizeInBytes);
   p.print(false);
 
-  commandListCommands_[command.object_.key].emplace_back(outBuff_.ExtractString());
+  m_CommandListCommands[command.m_Object.Key].emplace_back(m_OutBuff.ExtractString());
 }
 
-void ShowExecutionLayer::post(ID3D12GraphicsCommandList6DispatchMeshCommand& command) {
-  outBuff_.Flush();
-  CommandPrinter p(outBuff_, printerState_, command, "ID3D12GraphicsCommandList6::DispatchMesh",
-                   command.object_.key);
-  p.addArgument(command.ThreadGroupCountX_);
-  p.addArgument(command.ThreadGroupCountY_);
-  p.addArgument(command.ThreadGroupCountZ_);
+void ShowExecutionLayer::Post(ID3D12GraphicsCommandList6DispatchMeshCommand& command) {
+  m_OutBuff.Flush();
+  CommandPrinter p(m_OutBuff, m_PrinterState, command, "ID3D12GraphicsCommandList6::DispatchMesh",
+                   command.m_Object.Key);
+  p.addArgument(command.m_ThreadGroupCountX);
+  p.addArgument(command.m_ThreadGroupCountY);
+  p.addArgument(command.m_ThreadGroupCountZ);
   p.print(false);
 
-  commandListCommands_[command.object_.key].emplace_back(outBuff_.ExtractString());
+  m_CommandListCommands[command.m_Object.Key].emplace_back(m_OutBuff.ExtractString());
 }
 
-void ShowExecutionLayer::post(ID3D12GraphicsCommandListOMSetRenderTargetsCommand& command) {
-  outBuff_.Flush();
-  CommandPrinter p(outBuff_, printerState_, command,
-                   "ID3D12GraphicsCommandList::OMSetRenderTargets", command.object_.key);
-  p.addArgument(command.NumRenderTargetDescriptors_);
-  p.addArgument(command.pRenderTargetDescriptors_);
-  p.addArgument(command.RTsSingleHandleToDescriptorRange_);
-  p.addArgument(command.pDepthStencilDescriptor_);
+void ShowExecutionLayer::Post(ID3D12GraphicsCommandListOMSetRenderTargetsCommand& command) {
+  m_OutBuff.Flush();
+  CommandPrinter p(m_OutBuff, m_PrinterState, command,
+                   "ID3D12GraphicsCommandList::OMSetRenderTargets", command.m_Object.Key);
+  p.addArgument(command.m_NumRenderTargetDescriptors);
+  p.addArgument(command.m_pRenderTargetDescriptors);
+  p.addArgument(command.m_RTsSingleHandleToDescriptorRange);
+  p.addArgument(command.m_pDepthStencilDescriptor);
   p.print(false);
 
-  commandListCommands_[command.object_.key].emplace_back(outBuff_.ExtractString());
+  m_CommandListCommands[command.m_Object.Key].emplace_back(m_OutBuff.ExtractString());
 }
 
-void ShowExecutionLayer::post(
+void ShowExecutionLayer::Post(
     ID3D12GraphicsCommandListSetComputeRootUnorderedAccessViewCommand& command) {
-  outBuff_.Flush();
-  CommandPrinter p(outBuff_, printerState_, command,
+  m_OutBuff.Flush();
+  CommandPrinter p(m_OutBuff, m_PrinterState, command,
                    "ID3D12GraphicsCommandList::SetGraphicsRootUnorderedAccessView",
-                   command.object_.key);
-  p.addArgument(command.RootParameterIndex_);
-  p.addArgument(command.BufferLocation_);
+                   command.m_Object.Key);
+  p.addArgument(command.m_RootParameterIndex);
+  p.addArgument(command.m_BufferLocation);
   p.print(false);
 
-  commandListCommands_[command.object_.key].emplace_back(outBuff_.ExtractString());
+  m_CommandListCommands[command.m_Object.Key].emplace_back(m_OutBuff.ExtractString());
 }
 
-void ShowExecutionLayer::post(ID3D12GraphicsCommandList7BarrierCommand& command) {
-  outBuff_.Flush();
-  CommandPrinter p(outBuff_, printerState_, command, "ID3D12GraphicsCommandList7::Barrier",
-                   command.object_.key);
-  p.addArgument(command.NumBarrierGroups_);
-  p.addArgument(command.pBarrierGroups_);
+void ShowExecutionLayer::Post(ID3D12GraphicsCommandList7BarrierCommand& command) {
+  m_OutBuff.Flush();
+  CommandPrinter p(m_OutBuff, m_PrinterState, command, "ID3D12GraphicsCommandList7::Barrier",
+                   command.m_Object.Key);
+  p.addArgument(command.m_NumBarrierGroups);
+  p.addArgument(command.m_pBarrierGroups);
   p.print(false);
 
-  commandListCommands_[command.object_.key].emplace_back(outBuff_.ExtractString());
+  m_CommandListCommands[command.m_Object.Key].emplace_back(m_OutBuff.ExtractString());
 }
 
-void ShowExecutionLayer::post(ID3D12DeviceCreateFenceCommand& command) {
-  outBuff_ << "  ";
-  CommandPrinter p(outBuff_, printerState_, command, "ID3D12Device::CreateFence",
-                   command.object_.key);
-  p.addArgument(command.InitialValue_);
-  p.addArgument(command.Flags_);
-  p.addArgument(command.riid_);
-  p.addArgument(command.ppFence_);
-  p.addResult(command.result_);
+void ShowExecutionLayer::Post(ID3D12DeviceCreateFenceCommand& command) {
+  m_OutBuff << "  ";
+  CommandPrinter p(m_OutBuff, m_PrinterState, command, "ID3D12Device::CreateFence",
+                   command.m_Object.Key);
+  p.addArgument(command.m_InitialValue);
+  p.addArgument(command.m_Flags);
+  p.addArgument(command.m_riid);
+  p.addArgument(command.m_ppFence);
+  p.addResult(command.m_Result);
   p.print(true);
 
-  fenceSignal(command.key, command.ppFence_.key, command.InitialValue_.value);
+  FenceSignal(command.Key, command.m_ppFence.Key, command.m_InitialValue.Value);
 }
 
-void ShowExecutionLayer::post(ID3D12FenceSignalCommand& command) {
-  outBuff_ << "  ";
-  CommandPrinter p(outBuff_, printerState_, command, "ID3D12Fence::Signal", command.object_.key);
-  p.addArgument(command.Value_);
-  p.addResult(command.result_);
+void ShowExecutionLayer::Post(ID3D12FenceSignalCommand& command) {
+  m_OutBuff << "  ";
+  CommandPrinter p(m_OutBuff, m_PrinterState, command, "ID3D12Fence::Signal", command.m_Object.Key);
+  p.addArgument(command.m_Value);
+  p.addResult(command.m_Result);
   p.print(true);
 
-  fenceSignal(command.key, command.object_.key, command.Value_.value);
+  FenceSignal(command.Key, command.m_Object.Key, command.m_Value.Value);
 }
 
-void ShowExecutionLayer::post(ID3D12CommandQueueSignalCommand& command) {
-  outBuff_.Flush();
-  outBuff_ << "  ";
+void ShowExecutionLayer::Post(ID3D12CommandQueueSignalCommand& command) {
+  m_OutBuff.Flush();
+  m_OutBuff << "  ";
 
-  const bool isWaiting = gpuExecutionTracker_.isCommandQueueWaiting(command.object_.key);
+  const bool isWaiting = m_GpuExecutionTracker.IsCommandQueueWaiting(command.m_Object.Key);
   if (isWaiting) {
-    outBuff_ << "[DEFERRED] ";
+    m_OutBuff << "[DEFERRED] ";
   }
-  CommandPrinter p(outBuff_, printerState_, command, "ID3D12CommandQueue::Signal",
-                   command.object_.key);
-  p.addArgument(command.pFence_);
-  p.addArgument(command.Value_);
-  p.addResult(command.result_);
+  CommandPrinter p(m_OutBuff, m_PrinterState, command, "ID3D12CommandQueue::Signal",
+                   command.m_Object.Key);
+  p.addArgument(command.m_pFence);
+  p.addArgument(command.m_Value);
+  p.addResult(command.m_Result);
   p.print(false);
 
-  const auto str = outBuff_.ExtractString();
-  outBuff_ << str;
-  outBuff_.Flush();
+  const auto str = m_OutBuff.ExtractString();
+  m_OutBuff << str;
+  m_OutBuff.Flush();
 
-  gpuExecutionTracker_.commandQueueSignal(command.key, command.object_.key, command.pFence_.key,
-                                          command.Value_.value);
+  m_GpuExecutionTracker.CommandQueueSignal(command.Key, command.m_Object.Key, command.m_pFence.Key,
+                                           command.m_Value.Value);
 
   if (isWaiting) {
-    stageCommandQueueEvent(command.key, command.object_.key,
-                           replaceSubstring("  " + str, "[DEFERRED] ", ""));
+    StageCommandQueueEvent(command.Key, command.m_Object.Key,
+                           ReplaceSubstring("  " + str, "[DEFERRED] ", ""));
   } else {
-    auto count = gpuExecutionTracker_.getReadyExecutables().size();
+    auto count = m_GpuExecutionTracker.GetReadyExecutables().size();
     if (count > 0) {
-      outBuff_ << "  CommandQueueSignal unlocking " << count << " events:\n";
-      outBuff_.Flush();
+      m_OutBuff << "  CommandQueueSignal unlocking " << count << " events:\n";
+      m_OutBuff.Flush();
     }
-    dumpReadyCommandQueueEvents();
+    DumpReadyCommandQueueEvents();
   }
 }
 
-void ShowExecutionLayer::post(ID3D12Device3EnqueueMakeResidentCommand& command) {
-  outBuff_ << "  ";
-  CommandPrinter p(outBuff_, printerState_, command, "ID3D12Device3::EnqueueMakeResident",
-                   command.object_.key);
-  p.addArgument(command.Flags_);
-  p.addArgument(command.NumObjects_);
-  p.addArgument(command.ppObjects_);
-  p.addArgument(command.pFenceToSignal_);
-  p.addArgument(command.FenceValueToSignal_);
-  p.addResult(command.result_);
+void ShowExecutionLayer::Post(ID3D12Device3EnqueueMakeResidentCommand& command) {
+  m_OutBuff << "  ";
+  CommandPrinter p(m_OutBuff, m_PrinterState, command, "ID3D12Device3::EnqueueMakeResident",
+                   command.m_Object.Key);
+  p.addArgument(command.m_Flags);
+  p.addArgument(command.m_NumObjects);
+  p.addArgument(command.m_ppObjects);
+  p.addArgument(command.m_pFenceToSignal);
+  p.addArgument(command.m_FenceValueToSignal);
+  p.addResult(command.m_Result);
   p.print(true);
 
-  fenceSignal(command.key, command.pFenceToSignal_.key, command.FenceValueToSignal_.value);
+  FenceSignal(command.Key, command.m_pFenceToSignal.Key, command.m_FenceValueToSignal.Value);
 }
 
-void ShowExecutionLayer::post(ID3D12CommandQueueWaitCommand& command) {
-  outBuff_.Flush();
-  outBuff_ << "  ";
+void ShowExecutionLayer::Post(ID3D12CommandQueueWaitCommand& command) {
+  m_OutBuff.Flush();
+  m_OutBuff << "  ";
 
-  gpuExecutionTracker_.commandQueueWait(command.key, command.object_.key, command.pFence_.key,
-                                        command.Value_.value);
-  const bool isWaiting = gpuExecutionTracker_.isCommandQueueWaiting(command.object_.key);
+  m_GpuExecutionTracker.CommandQueueWait(command.Key, command.m_Object.Key, command.m_pFence.Key,
+                                         command.m_Value.Value);
+  const bool isWaiting = m_GpuExecutionTracker.IsCommandQueueWaiting(command.m_Object.Key);
   if (isWaiting) {
-    outBuff_ << "[DEFERRED] ";
+    m_OutBuff << "[DEFERRED] ";
   }
-  CommandPrinter p(outBuff_, printerState_, command, "ID3D12CommandQueue::Wait",
-                   command.object_.key);
-  p.addArgument(command.pFence_);
-  p.addArgument(command.Value_);
-  p.addResult(command.result_);
+  CommandPrinter p(m_OutBuff, m_PrinterState, command, "ID3D12CommandQueue::Wait",
+                   command.m_Object.Key);
+  p.addArgument(command.m_pFence);
+  p.addArgument(command.m_Value);
+  p.addResult(command.m_Result);
   p.print(false);
 
-  const auto str = outBuff_.ExtractString();
-  outBuff_ << str;
-  outBuff_.Flush();
+  const auto str = m_OutBuff.ExtractString();
+  m_OutBuff << str;
+  m_OutBuff.Flush();
   if (isWaiting) {
-    stageCommandQueueEvent(command.key, command.object_.key,
-                           replaceSubstring("  " + str, "[DEFERRED] ", ""));
+    StageCommandQueueEvent(command.Key, command.m_Object.Key,
+                           ReplaceSubstring("  " + str, "[DEFERRED] ", ""));
   }
 }
 
-void ShowExecutionLayer::fenceSignal(unsigned callKey, unsigned fenceKey, UINT64 fenceValue) {
-  gpuExecutionTracker_.fenceSignal(callKey, fenceKey, fenceValue);
-  auto count = gpuExecutionTracker_.getReadyExecutables().size();
+void ShowExecutionLayer::FenceSignal(unsigned callKey, unsigned fenceKey, UINT64 fenceValue) {
+  m_GpuExecutionTracker.FenceSignal(callKey, fenceKey, fenceValue);
+  auto count = m_GpuExecutionTracker.GetReadyExecutables().size();
   if (count > 0) {
-    outBuff_ << "  Signal unlocking: " << count << " events:\n";
-    outBuff_.Flush();
+    m_OutBuff << "  Signal unlocking: " << count << " events:\n";
+    m_OutBuff.Flush();
   }
-  dumpReadyCommandQueueEvents();
+  DumpReadyCommandQueueEvents();
 }
 
-void ShowExecutionLayer::stageCommandQueueEvent(unsigned commandKey,
+void ShowExecutionLayer::StageCommandQueueEvent(unsigned commandKey,
                                                 unsigned commandQueueKey,
                                                 const std::string& str) {
   auto* event = new CommandQueueEvent{};
-  event->str = str;
-  gpuExecutionTracker_.execute(commandKey, commandQueueKey, event);
+  event->m_Str = str;
+  m_GpuExecutionTracker.Execute(commandKey, commandQueueKey, event);
 }
 
-void ShowExecutionLayer::dumpReadyCommandQueueEvents() {
+void ShowExecutionLayer::DumpReadyCommandQueueEvents() {
   std::vector<GpuExecutionTracker::Executable*>& executables =
-      gpuExecutionTracker_.getReadyExecutables();
+      m_GpuExecutionTracker.GetReadyExecutables();
   for (GpuExecutionTracker::Executable* executable : executables) {
     CommandQueueEvent* event = static_cast<CommandQueueEvent*>(executable);
-    outBuff_ << event->str;
-    outBuff_.Flush();
+    m_OutBuff << event->m_Str;
+    m_OutBuff.Flush();
     delete event;
   }
   executables.clear();
 }
 
-std::string ShowExecutionLayer::replaceSubstring(const std::string& str,
+std::string ShowExecutionLayer::ReplaceSubstring(const std::string& str,
                                                  const std::string& from,
                                                  const std::string& to) {
   if (from.empty()) {

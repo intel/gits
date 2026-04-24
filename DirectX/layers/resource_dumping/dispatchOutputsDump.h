@@ -33,12 +33,12 @@ public:
                            unsigned frameCount,
                            unsigned executeCount);
 
-  std::wstring dumpNameExecutionMarker{L"#e#"};
+  std::wstring m_DumpNameExecutionMarker{L"#e#"};
 
 protected:
   struct RenderTargetDumpInfo : public DumpInfo {
-    unsigned commandListDispatchCount;
-    std::wstring executionCount;
+    unsigned CommandListDispatchCount{};
+    std::wstring ExecutionCount{};
   };
 
   void dumpTexture(DumpInfo& dumpInfo, void* data) override;

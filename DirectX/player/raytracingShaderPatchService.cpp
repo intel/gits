@@ -19,32 +19,32 @@ namespace gits {
 namespace DirectX {
 
 RaytracingShaderPatchService::RaytracingShaderPatchService() {
-  dxilDll_ = LoadLibrary(".\\D3D12\\dxil.dll");
-  GITS_ASSERT(dxilDll_);
-  dxcDll_ = LoadLibrary(".\\D3D12\\dxcompiler.dll");
-  GITS_ASSERT(dxcDll_);
+  m_DxilDll = LoadLibrary(".\\D3D12\\dxil.dll");
+  GITS_ASSERT(m_DxilDll);
+  m_DxcDll = LoadLibrary(".\\D3D12\\dxcompiler.dll");
+  GITS_ASSERT(m_DxcDll);
 }
 
 RaytracingShaderPatchService::~RaytracingShaderPatchService() {
-  FreeLibrary(dxcDll_);
-  FreeLibrary(dxilDll_);
+  FreeLibrary(m_DxcDll);
+  FreeLibrary(m_DxilDll);
 }
 
-void RaytracingShaderPatchService::patchInstances(ID3D12GraphicsCommandList* commandList,
+void RaytracingShaderPatchService::PatchInstances(ID3D12GraphicsCommandList* commandList,
                                                   D3D12_GPU_VIRTUAL_ADDRESS instancesBuffer,
                                                   unsigned instancesCount,
                                                   D3D12_GPU_VIRTUAL_ADDRESS gpuAddressBuffer,
                                                   D3D12_GPU_VIRTUAL_ADDRESS mappingCountBuffer) {
-  if (!instancesPipelineState_) {
+  if (!m_InstancesPipelineState) {
     Microsoft::WRL::ComPtr<ID3D12Device> device;
     HRESULT hr = commandList->GetDevice(IID_PPV_ARGS(&device));
     GITS_ASSERT(hr == S_OK);
 
-    initializeInstances(device.Get());
+    InitializeInstances(device.Get());
   }
 
-  commandList->SetComputeRootSignature(instancesRootSignature_);
-  commandList->SetPipelineState(instancesPipelineState_);
+  commandList->SetComputeRootSignature(m_InstancesRootSignature);
+  commandList->SetPipelineState(m_InstancesPipelineState);
 
   commandList->SetComputeRootUnorderedAccessView(0, instancesBuffer);
   commandList->SetComputeRootShaderResourceView(1, gpuAddressBuffer);
@@ -54,7 +54,7 @@ void RaytracingShaderPatchService::patchInstances(ID3D12GraphicsCommandList* com
   commandList->Dispatch((instancesCount + 31) / 32, 1, 1);
 }
 
-void RaytracingShaderPatchService::initializeInstances(ID3D12Device* device) {
+void RaytracingShaderPatchService::InitializeInstances(ID3D12Device* device) {
   {
     D3D12_ROOT_SIGNATURE_DESC desc{};
     D3D12_ROOT_PARAMETER parameters[4]{};
@@ -80,7 +80,7 @@ void RaytracingShaderPatchService::initializeInstances(ID3D12Device* device) {
         D3D12SerializeRootSignature(&desc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, &error);
     GITS_ASSERT(hr == S_OK);
     hr = device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(),
-                                     IID_PPV_ARGS(&instancesRootSignature_));
+                                     IID_PPV_ARGS(&m_InstancesRootSignature));
     GITS_ASSERT(hr == S_OK);
   }
 
@@ -144,11 +144,11 @@ void gits_patch(uint3 gId : SV_GroupID, uint3 dtId : SV_DispatchThreadID,
   }
 })";
 
-  initializePipelineState(cs, device, instancesRootSignature_, &instancesPipelineState_);
-  instancesPipelineState_->SetName(L"GitsPatchInstances_CS");
+  InitializePipelineState(cs, device, m_InstancesRootSignature, &m_InstancesPipelineState);
+  m_InstancesPipelineState->SetName(L"GitsPatchInstances_CS");
 }
 
-void RaytracingShaderPatchService::patchInstancesOffset(
+void RaytracingShaderPatchService::PatchInstancesOffset(
     ID3D12GraphicsCommandList* commandList,
     D3D12_GPU_VIRTUAL_ADDRESS instancesBuffer,
     D3D12_GPU_VIRTUAL_ADDRESS instancesOffsetsBuffer,
@@ -156,16 +156,16 @@ void RaytracingShaderPatchService::patchInstancesOffset(
     D3D12_GPU_VIRTUAL_ADDRESS gpuAddressBuffer,
     D3D12_GPU_VIRTUAL_ADDRESS mappingCountBuffer) {
 
-  if (!instancesOffsetPipelineState_) {
+  if (!m_InstancesOffsetPipelineState) {
     Microsoft::WRL::ComPtr<ID3D12Device> device;
     HRESULT hr = commandList->GetDevice(IID_PPV_ARGS(&device));
     GITS_ASSERT(hr == S_OK);
 
-    initializeInstancesOffset(device.Get());
+    InitializeInstancesOffset(device.Get());
   }
 
-  commandList->SetComputeRootSignature(instancesOffsetRootSignature_);
-  commandList->SetPipelineState(instancesOffsetPipelineState_);
+  commandList->SetComputeRootSignature(m_InstancesOffsetRootSignature);
+  commandList->SetPipelineState(m_InstancesOffsetPipelineState);
 
   commandList->SetComputeRootUnorderedAccessView(0, instancesBuffer);
   commandList->SetComputeRootShaderResourceView(1, instancesOffsetsBuffer);
@@ -176,7 +176,7 @@ void RaytracingShaderPatchService::patchInstancesOffset(
   commandList->Dispatch((instancesCount + 31) / 32, 1, 1);
 }
 
-void RaytracingShaderPatchService::initializeInstancesOffset(ID3D12Device* device) {
+void RaytracingShaderPatchService::InitializeInstancesOffset(ID3D12Device* device) {
   D3D12_ROOT_SIGNATURE_DESC desc{};
   D3D12_ROOT_PARAMETER parameters[5]{};
   desc.NumParameters = 5;
@@ -203,7 +203,7 @@ void RaytracingShaderPatchService::initializeInstancesOffset(ID3D12Device* devic
   HRESULT hr = D3D12SerializeRootSignature(&desc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, &error);
   GITS_ASSERT(hr == S_OK);
   hr = device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(),
-                                   IID_PPV_ARGS(&instancesOffsetRootSignature_));
+                                   IID_PPV_ARGS(&m_InstancesOffsetRootSignature));
   GITS_ASSERT(hr == S_OK);
 
   std::string cs =
@@ -268,12 +268,12 @@ void gits_patch(uint3 gId : SV_GroupID, uint3 dtId : SV_DispatchThreadID,
   }
 })";
 
-  initializePipelineState(cs, device, instancesOffsetRootSignature_,
-                          &instancesOffsetPipelineState_);
-  instancesOffsetPipelineState_->SetName(L"GitsPatchInstancesOffset_CS");
+  InitializePipelineState(cs, device, m_InstancesOffsetRootSignature,
+                          &m_InstancesOffsetPipelineState);
+  m_InstancesOffsetPipelineState->SetName(L"GitsPatchInstancesOffset_CS");
 }
 
-void RaytracingShaderPatchService::patchBindingTable(
+void RaytracingShaderPatchService::PatchBindingTable(
     ID3D12GraphicsCommandList* commandList,
     D3D12_GPU_VIRTUAL_ADDRESS bindingTableBuffer,
     unsigned recordCount,
@@ -284,16 +284,16 @@ void RaytracingShaderPatchService::patchBindingTable(
     D3D12_GPU_VIRTUAL_ADDRESS sampleDescriptorBuffer,
     D3D12_GPU_VIRTUAL_ADDRESS mappingCountBuffer,
     bool patchGpuAdresses) {
-  if (!bindingTablePipelineState_) {
+  if (!m_BindingTablePipelineState) {
     Microsoft::WRL::ComPtr<ID3D12Device> device;
     HRESULT hr = commandList->GetDevice(IID_PPV_ARGS(&device));
     GITS_ASSERT(hr == S_OK);
 
-    initializeBindingTable(device.Get());
+    InitializeBindingTable(device.Get());
   }
 
-  commandList->SetComputeRootSignature(bindingTableRootSignature_);
-  commandList->SetPipelineState(bindingTablePipelineState_);
+  commandList->SetComputeRootSignature(m_BindingTableRootSignature);
+  commandList->SetPipelineState(m_BindingTablePipelineState);
 
   commandList->SetComputeRootUnorderedAccessView(0, bindingTableBuffer);
   commandList->SetComputeRootShaderResourceView(1, gpuAddressBuffer);
@@ -309,7 +309,7 @@ void RaytracingShaderPatchService::patchBindingTable(
   commandList->Dispatch((recordCount + 31) / 32, 1, 1);
 }
 
-void RaytracingShaderPatchService::initializeBindingTable(ID3D12Device* device) {
+void RaytracingShaderPatchService::InitializeBindingTable(ID3D12Device* device) {
   {
     D3D12_ROOT_SIGNATURE_DESC desc{};
     D3D12_ROOT_PARAMETER parameters[8]{};
@@ -348,7 +348,7 @@ void RaytracingShaderPatchService::initializeBindingTable(ID3D12Device* device) 
         D3D12SerializeRootSignature(&desc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, &error);
     GITS_ASSERT(hr == S_OK);
     hr = device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(),
-                                     IID_PPV_ARGS(&bindingTableRootSignature_));
+                                     IID_PPV_ARGS(&m_BindingTableRootSignature));
     GITS_ASSERT(hr == S_OK);
   }
 
@@ -501,15 +501,15 @@ void gits_patch(uint3 gId : SV_GroupID, uint3 dtId : SV_DispatchThreadID,
   }
 })";
 
-  initializePipelineState(cs, device, bindingTableRootSignature_, &bindingTablePipelineState_);
-  bindingTablePipelineState_->SetName(L"GitsPatchBindingTable_CS");
+  InitializePipelineState(cs, device, m_BindingTableRootSignature, &m_BindingTablePipelineState);
+  m_BindingTablePipelineState->SetName(L"GitsPatchBindingTable_CS");
 }
 
-void RaytracingShaderPatchService::initializePipelineState(const std::string& shaderCode,
+void RaytracingShaderPatchService::InitializePipelineState(const std::string& shaderCode,
                                                            ID3D12Device* device,
                                                            ID3D12RootSignature* rootSignature,
                                                            ID3D12PipelineState** pipelineState) {
-  auto dxcCreateInstanceFn = (DxcCreateInstanceProc)GetProcAddress(dxcDll_, "DxcCreateInstance");
+  auto dxcCreateInstanceFn = (DxcCreateInstanceProc)GetProcAddress(m_DxcDll, "DxcCreateInstance");
   GITS_ASSERT(dxcCreateInstanceFn);
 
   Microsoft::WRL::ComPtr<IDxcUtils> utils;

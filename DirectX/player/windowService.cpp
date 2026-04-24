@@ -14,7 +14,7 @@
 namespace gits {
 namespace DirectX {
 
-HWND WindowService::createWindow(HWND captureHwnd, int width, int height) {
+HWND WindowService::CreatePlayerWindow(HWND captureHwnd, int width, int height) {
 
   int wndWidth = Configurator::Get().common.player.forceWindowSize.enabled
                      ? Configurator::Get().common.player.forceWindowSize.width
@@ -29,21 +29,21 @@ HWND WindowService::createWindow(HWND captureHwnd, int width, int height) {
                     ? Configurator::Get().common.player.forceWindowPos.y
                     : 10;
 
-  auto it = windowMap_.find(captureHwnd);
-  if (it != windowMap_.end()) {
+  auto it = m_WindowMap.find(captureHwnd);
+  if (it != m_WindowMap.end()) {
     ResizeWin(it->second, wndWidth, wndHeight);
     return it->second;
   }
 
   HWND newWindow = CreateWin(wndWidth, wndHeight, wndPosX, wndPosY, true);
   WinTitle(newWindow, "DX12-GITS");
-  windowMap_[captureHwnd] = newWindow;
+  m_WindowMap[captureHwnd] = newWindow;
   return newWindow;
 }
 
-HWND WindowService::getCurrentHwnd(HWND captureHwnd) {
-  auto it = windowMap_.find(captureHwnd);
-  if (it == windowMap_.end()) {
+HWND WindowService::GetCurrentHwnd(HWND captureHwnd) {
+  auto it = m_WindowMap.find(captureHwnd);
+  if (it == m_WindowMap.end()) {
     LOG_WARNING << "Cannot find window for hWnd from capture: " << std::hex << captureHwnd
                 << std::dec;
     return 0;

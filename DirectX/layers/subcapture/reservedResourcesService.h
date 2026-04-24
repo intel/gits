@@ -25,71 +25,71 @@ class ResourceStateTrackingService;
 class ReservedResourcesService {
 public:
   struct Tile {
-    unsigned heapKey{};
-    unsigned heapOffset{};
-    unsigned subresourceIndex{};
-    bool packed{};
+    unsigned HeapKey{};
+    unsigned HeapOffset{};
+    unsigned SubresourceIndex{};
+    bool Packed{};
   };
   struct TiledResource {
-    ID3D12Resource* resource{};
-    D3D12_RESOURCE_DESC desc{};
-    unsigned resourceKey{};
-    D3D12_PACKED_MIP_INFO packedMipInfo{};
-    std::vector<D3D12_SUBRESOURCE_TILING> subresources;
-    std::vector<Tile> tiles;
-    std::unordered_map<unsigned, unsigned> packedSubresourcesStartTiles;
-    unsigned updateId{};
-    bool destroyed{};
+    ID3D12Resource* Resource{};
+    D3D12_RESOURCE_DESC Desc{};
+    unsigned ResourceKey{};
+    D3D12_PACKED_MIP_INFO PackedMipInfo{};
+    std::vector<D3D12_SUBRESOURCE_TILING> Subresources;
+    std::vector<Tile> Tiles;
+    std::unordered_map<unsigned, unsigned> PackedSubresourcesStartTiles;
+    unsigned UpdateId{};
+    bool Destroyed{};
   };
 
   struct TileRegion {
-    D3D12_TILED_RESOURCE_COORDINATE coord;
-    D3D12_TILE_REGION_SIZE size;
-    bool packed;
+    D3D12_TILED_RESOURCE_COORDINATE Coord;
+    D3D12_TILE_REGION_SIZE Size;
+    bool Packed;
   };
   using TileRegionsBySubresource = std::unordered_map<unsigned, std::vector<TileRegion>>;
 
 public:
-  ReservedResourcesService(StateTrackingService& stateService) : stateService_(stateService) {}
-  void addUpdateTileMappings(ID3D12CommandQueueUpdateTileMappingsCommand& c);
-  void destroyObject(unsigned objectKey);
-  void updateTileMappings(TiledResource& tiledResource,
+  ReservedResourcesService(StateTrackingService& stateService) : m_StateService(stateService) {}
+  void AddUpdateTileMappings(ID3D12CommandQueueUpdateTileMappingsCommand& c);
+  void DestroyObject(unsigned objectKey);
+  void UpdateTileMappings(TiledResource& tiledResource,
                           unsigned commandQueueKey,
                           TileRegionsBySubresource* tileRegions);
-  TiledResource* getTiledResource(unsigned resourceKey);
-  void restoreContent(const std::vector<unsigned>& resourceKeys);
-  void cleanupRestore();
+  TiledResource* GetTiledResource(unsigned ResourceKey);
+  void RestoreContent(const std::vector<unsigned>& ResourceKeys);
+  void CleanupRestore();
 
 private:
-  std::unordered_map<unsigned, std::unique_ptr<TiledResource>> resources_;
-  std::unordered_map<unsigned, std::unordered_set<unsigned>> resourcesByHeapKey_;
+  std::unordered_map<unsigned, std::unique_ptr<TiledResource>> m_Resources;
+  std::unordered_map<unsigned, std::unordered_set<unsigned>> m_ResourcesByHeapKey;
 
 private:
-  void initRestore();
-  void getSubresourceSizes(
+  void InitRestore();
+  void GetSubresourceSizes(
       ID3D12Device* device,
       D3D12_RESOURCE_DESC& desc,
       std::vector<std::pair<unsigned, D3D12_PLACED_SUBRESOURCE_FOOTPRINT>>& sizes);
-  void initTiledResource(TiledResource& tiledResource);
-  void copySourceBarrier(ID3D12Resource* resource, unsigned resourceKey, bool restoreState);
+  void InitTiledResource(TiledResource& tiledResource);
+  void CopySourceBarrier(ID3D12Resource* resource, unsigned ResourceKey, bool RestoreState);
 
 private:
-  StateTrackingService& stateService_;
+  StateTrackingService& m_StateService;
 
-  ID3D12Device* device_{};
-  ID3D12CommandQueue* commandQueue_{};
-  ID3D12CommandAllocator* commandAllocator_{};
-  ID3D12GraphicsCommandList* commandList_{};
-  ID3D12Fence* fence_{};
-  UINT64 currentFenceValue_{};
-  unsigned commandQueueKey_{};
-  unsigned commandAllocatorKey_{};
-  unsigned commandListKey_{};
-  unsigned fenceKey_{};
-  unsigned uploadResourceKey_{};
-  UINT64 recordedFenceValue_{};
-  size_t uploadResourceSize_{};
-  bool contentRestoreInitialized_{};
+  ID3D12Device* m_Device{};
+  ID3D12CommandQueue* m_CommandQueue{};
+  ID3D12CommandAllocator* m_CommandAllocator{};
+  ID3D12GraphicsCommandList* m_CommandList{};
+  ID3D12Fence* m_Fence{};
+  UINT64 m_CurrentFenceValue{};
+  unsigned m_CommandQueueKey{};
+  unsigned m_CommandAllocatorKey{};
+  unsigned m_CommandListKey{};
+  unsigned m_FenceKey{};
+  unsigned m_UploadResourceKey{};
+  UINT64 m_RecordedFenceValue{};
+  size_t m_UploadResourceSize{};
+  bool m_ContentRestoreInitialized{};
 };
 
 } // namespace DirectX

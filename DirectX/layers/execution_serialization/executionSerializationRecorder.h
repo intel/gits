@@ -21,15 +21,14 @@ public:
   ExecutionSerializationRecorder();
   ~ExecutionSerializationRecorder();
 
-  void record(const stream::CommandSerializer& commandSerializer);
-  void finishRecording();
+  void Record(const stream::CommandSerializer& commandSerializer);
+  void FinishRecording();
 
 private:
-  void copyAuxiliaryFiles();
+  void CopyAuxiliaryFiles();
 
-private:
-  std::unique_ptr<stream::StreamWriter> recorder_;
-  bool finished_{};
+  std::unique_ptr<stream::StreamWriter> m_Recorder;
+  bool m_Finished{};
 };
 
 } // namespace DirectX

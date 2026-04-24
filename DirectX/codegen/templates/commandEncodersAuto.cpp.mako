@@ -14,19 +14,19 @@ namespace gits {
 namespace DirectX {
 
 %for function in functions:
-unsigned getSize(const ${function.name}Command& command) {
+unsigned GetSize(const ${function.name}Command& command) {
   return ${command_encoders_sum_sizes(function, False)}
 }
 
-void encode(const ${function.name}Command& command, char* dest) {
+void Encode(const ${function.name}Command& command, char* dest) {
   unsigned offset = 0;
-  encode(dest, offset, command.key);
-  encode(dest, offset, command.threadId);
+  Encode(dest, offset, command.Key);
+  Encode(dest, offset, command.ThreadId);
   %for param in function.params:
-  encode(dest, offset, command.${param.name}_);
+  Encode(dest, offset, command.m_${param.name});
   %endfor
   %if not function.ret.is_void:
-  encode(dest, offset, command.result_);
+  Encode(dest, offset, command.m_Result);
   %endif
 }
 
@@ -34,20 +34,20 @@ void encode(const ${function.name}Command& command, char* dest) {
 
 %for interface in interfaces:
 %for function in interface.functions:
-unsigned getSize(const ${interface.name}${function.name}Command& command) {
+unsigned GetSize(const ${interface.name}${function.name}Command& command) {
   return ${command_encoders_sum_sizes(function, True)}
 }
 
-void encode(const ${interface.name}${function.name}Command& command, char* dest) {
+void Encode(const ${interface.name}${function.name}Command& command, char* dest) {
   unsigned offset = 0;
-  encode(dest, offset, command.key);
-  encode(dest, offset, command.threadId);
-  encode(dest, offset, command.object_.key);
+  Encode(dest, offset, command.Key);
+  Encode(dest, offset, command.ThreadId);
+  Encode(dest, offset, command.m_Object.Key);
   %for param in function.params:
-  encode(dest, offset, command.${param.name}_);
+  Encode(dest, offset, command.m_${param.name});
   %endfor
   %if not function.ret.is_void:
-  encode(dest, offset, command.result_);
+  Encode(dest, offset, command.m_Result);
   %endif
 }
 

@@ -24,11 +24,11 @@ public:
   LayerGroup(const LayerGroup&) = delete;
   LayerGroup& operator=(const LayerGroup&) = delete;
 
-  virtual void loadLayers() = 0;
+  virtual void LoadLayers() = 0;
 
-  Layer* getLayer(const std::string& name) {
-    auto it = layers_.find(name);
-    if (it == layers_.end()) {
+  Layer* GetLayer(const std::string& name) {
+    auto it = m_Layers.find(name);
+    if (it == m_Layers.end()) {
       return nullptr;
     }
     return it->second.get();
@@ -37,17 +37,17 @@ public:
 protected:
   LayerGroup() = default;
 
-  void addLayer(std::unique_ptr<Layer> layer) {
+  void AddLayer(std::unique_ptr<Layer> layer) {
     if (!layer) {
       return;
     }
     const std::string& key = layer->GetName();
-    assert(layers_.find(key) == layers_.end());
-    layers_[key] = std::move(layer);
+    assert(m_Layers.find(key) == m_Layers.end());
+    m_Layers[key] = std::move(layer);
   }
 
 private:
-  std::unordered_map<std::string, std::unique_ptr<Layer>> layers_;
+  std::unordered_map<std::string, std::unique_ptr<Layer>> m_Layers;
 };
 
 } // namespace DirectX

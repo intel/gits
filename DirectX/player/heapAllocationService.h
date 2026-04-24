@@ -16,14 +16,14 @@ namespace DirectX {
 
 class HeapAllocationService {
 public:
-  void createHeapAllocation(unsigned heapKey, void* captureAddress, void* data, size_t size);
-  void* getHeapAllocation(void* captureAddress);
-  void destroyHeapAllocation(unsigned heapKey);
+  void CreateHeapAllocation(unsigned heapKey, void* captureAddress, void* data, size_t size);
+  void* GetHeapAllocation(void* captureAddress);
+  void DestroyHeapAllocation(unsigned heapKey);
 
 private:
-  std::map<void*, void*> heapAllocationsByCaptureAddress_;
-  std::map<void*, void*> heapAllocationsByReplayAddress_;
-  std::unordered_map<unsigned, void*> heapAllocationsCaptureAddressByHeapKey_;
+  std::map<void*, void*> m_HeapAllocationsByCaptureAddress;
+  std::map<void*, void*> m_HeapAllocationsByReplayAddress;
+  std::unordered_map<unsigned, void*> m_HeapAllocationsCaptureAddressByHeapKey;
 };
 
 } // namespace DirectX

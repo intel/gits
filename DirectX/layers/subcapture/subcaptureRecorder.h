@@ -23,19 +23,18 @@ public:
   SubcaptureRecorder(const SubcaptureRecorder&) = delete;
   SubcaptureRecorder& operator=(const SubcaptureRecorder&) = delete;
 
-  void record(const stream::CommandSerializer& commandSerializer);
-  void finishRecording();
-  bool commandListSubcapture() const {
-    return commandListSubcapture_;
+  void Record(const stream::CommandSerializer& commandSerializer);
+  void FinishRecording();
+  bool CommandListSubcapture() const {
+    return m_CommandListSubcapture;
   }
 
 private:
-  void copyAuxiliaryFiles();
+  void CopyAuxiliaryFiles();
 
-private:
-  std::unique_ptr<stream::StreamWriter> recorder_;
-  bool commandListSubcapture_{};
-  bool finished_{};
+  std::unique_ptr<stream::StreamWriter> m_Recorder;
+  bool m_CommandListSubcapture{};
+  bool m_Finished{};
 };
 
 } // namespace DirectX

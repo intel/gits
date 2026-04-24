@@ -36,108 +36,108 @@ public:
                             AnalyzerCommandListService& commandListService,
                             DescriptorRootSignatureService& rootSignatureService,
                             ResourceStateTracker& resourceStateTracker);
-  void createStateObject(ID3D12Device5CreateStateObjectCommand& c);
-  void addToStateObject(ID3D12Device7AddToStateObjectCommand& c);
-  void setPipelineState(ID3D12GraphicsCommandList4SetPipelineState1Command& c);
+  void CreateStateObject(ID3D12Device5CreateStateObjectCommand& c);
+  void AddToStateObject(ID3D12Device7AddToStateObjectCommand& c);
+  void SetPipelineState(ID3D12GraphicsCommandList4SetPipelineState1Command& c);
 
   struct DescriptorHeapInfo {
-    unsigned key{};
-    D3D12_DESCRIPTOR_HEAP_TYPE type{};
-    unsigned numDescriptors{};
+    unsigned Key{};
+    D3D12_DESCRIPTOR_HEAP_TYPE Type{};
+    unsigned NumDescriptors{};
   };
-  void setDescriptorHeaps(unsigned commandListKey, const std::vector<DescriptorHeapInfo>& infos);
+  void SetDescriptorHeaps(unsigned commandListKey, const std::vector<DescriptorHeapInfo>& infos);
 
-  void buildTlas(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c);
-  void dispatchRays(ID3D12GraphicsCommandList4DispatchRaysCommand& c);
-  void dumpBindingTable(ID3D12GraphicsCommandList* commandList,
+  void BuildTlas(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c);
+  void DispatchRays(ID3D12GraphicsCommandList4DispatchRaysCommand& c);
+  void DumpBindingTable(ID3D12GraphicsCommandList* commandList,
                         unsigned commandListKey,
                         ID3D12Resource* resource,
-                        unsigned resourceKey,
+                        unsigned ResourceKey,
                         unsigned offset,
                         UINT64 size,
                         UINT64 stride,
                         D3D12_GPU_VIRTUAL_ADDRESS address);
-  void addAccelerationStructureSource(unsigned key, unsigned offset) {
-    sources_.insert(std::make_pair(key, offset));
+  void AddAccelerationStructureSource(unsigned key, unsigned offset) {
+    m_Sources.insert(std::make_pair(key, offset));
   }
-  void flush();
-  void executeCommandLists(unsigned key,
+  void Flush();
+  void ExecuteCommandLists(unsigned key,
                            unsigned commandQueueKey,
                            ID3D12CommandQueue* commandQueue,
                            ID3D12CommandList** commandLists,
                            unsigned commandListNum);
-  void commandQueueWait(unsigned key,
+  void CommandQueueWait(unsigned key,
                         unsigned commandQueueKey,
                         unsigned fenceKey,
                         UINT64 fenceValue);
-  void commandQueueSignal(unsigned key,
+  void CommandQueueSignal(unsigned key,
                           unsigned commandQueueKey,
                           unsigned fenceKey,
                           UINT64 fenceValue);
-  void fenceSignal(unsigned key, unsigned fenceKey, UINT64 fenceValue);
-  void getGPUVirtualAddress(ID3D12ResourceGetGPUVirtualAddressCommand& c);
+  void FenceSignal(unsigned key, unsigned fenceKey, UINT64 fenceValue);
+  void GetGPUVirtualAddress(ID3D12ResourceGetGPUVirtualAddressCommand& c);
 
-  CapturePlayerGpuAddressService& getGpuAddressService() {
-    return gpuAddressService_;
+  CapturePlayerGpuAddressService& GetGpuAddressService() {
+    return m_GpuAddressService;
   }
-  CapturePlayerDescriptorHandleService& getDescriptorHandleService() {
-    return descriptorHandleService_;
+  CapturePlayerDescriptorHandleService& GetDescriptorHandleService() {
+    return m_DescriptorHandleService;
   }
-  CapturePlayerShaderIdentifierService& getShaderIdentifierService() {
-    return shaderIdentifierService_;
+  CapturePlayerShaderIdentifierService& GetShaderIdentifierService() {
+    return m_ShaderIdentifierService;
   }
-  DescriptorService& getDescriptorService() {
-    return descriptorService_;
+  DescriptorService& GetDescriptorService() {
+    return m_DescriptorService;
   }
-  DescriptorRootSignatureService& getRootSignatureService() {
-    return rootSignatureService_;
+  DescriptorRootSignatureService& GetRootSignatureService() {
+    return m_RootSignatureService;
   }
 
-  std::set<unsigned> getStateObjectAllSubobjects(unsigned stateObjectKey);
+  std::set<unsigned> GetStateObjectAllSubobjects(unsigned stateObjectKey);
   using KeyOffset = std::pair<unsigned, unsigned>;
-  std::vector<KeyOffset>& getBlases(unsigned tlasBuildKey) {
-    return blasesByTlas_[tlasBuildKey];
+  std::vector<KeyOffset>& GetBlases(unsigned tlasBuildKey) {
+    return m_BlasesByTlas[tlasBuildKey];
   }
-  std::set<KeyOffset>& getSources() {
-    return sources_;
+  std::set<KeyOffset>& GetSources() {
+    return m_Sources;
   }
-  std::unordered_set<unsigned>& getBindingTablesResources() {
-    return bindingTablesDump_.getBindingTablesResources();
+  std::unordered_set<unsigned>& GetBindingTablesResources() {
+    return m_BindingTablesDump.GetBindingTablesResources();
   }
-  std::set<std::pair<unsigned, unsigned>>& getBindingTablesDescriptors() {
-    return bindingTablesDump_.getBindingTablesDescriptors();
+  std::set<std::pair<unsigned, unsigned>>& GetBindingTablesDescriptors() {
+    return m_BindingTablesDump.GetBindingTablesDescriptors();
   }
 
-  unsigned findTlas(const KeyOffset& tlas);
-  void getTlases(std::set<unsigned>& tlases);
+  unsigned FindTlas(const KeyOffset& tlas);
+  void GetTlases(std::set<unsigned>& tlases);
 
 private:
-  void fillStateObjectInfo(D3D12_STATE_OBJECT_DESC_Argument& stateObjectDesc,
+  void FillStateObjectInfo(D3D12_STATE_OBJECT_DESC_Argument& stateObjectDesc,
                            BindingTablesDump::StateObjectInfo* info);
-  void loadInstancesArraysOfPointers();
+  void LoadInstancesArraysOfPointers();
 
 private:
-  CapturePlayerGpuAddressService& gpuAddressService_;
-  CapturePlayerDescriptorHandleService& descriptorHandleService_;
-  CapturePlayerShaderIdentifierService& shaderIdentifierService_;
-  DescriptorService& descriptorService_;
-  AnalyzerCommandListService& commandListService_;
-  DescriptorRootSignatureService& rootSignatureService_;
-  ResourceStateTracker& resourceStateTracker_;
+  CapturePlayerGpuAddressService& m_GpuAddressService;
+  CapturePlayerDescriptorHandleService& m_DescriptorHandleService;
+  CapturePlayerShaderIdentifierService& m_ShaderIdentifierService;
+  DescriptorService& m_DescriptorService;
+  AnalyzerCommandListService& m_CommandListService;
+  DescriptorRootSignatureService& m_RootSignatureService;
+  ResourceStateTracker& m_ResourceStateTracker;
 
-  std::unordered_map<unsigned, std::set<unsigned>> stateObjectsDirectSubobjects_;
+  std::unordered_map<unsigned, std::set<unsigned>> m_StateObjectsDirectSubobjects;
   std::unordered_map<unsigned, std::unique_ptr<BindingTablesDump::StateObjectInfo>>
-      stateObjectInfos_;
-  std::unordered_map<unsigned, unsigned> stateObjectByComandList_;
-  std::unordered_map<unsigned, BindingTablesDump::DescriptorHeaps> descriptorHeapsByComandList_;
+      m_StateObjectInfos;
+  std::unordered_map<unsigned, unsigned> m_StateObjectByComandList;
+  std::unordered_map<unsigned, BindingTablesDump::DescriptorHeaps> m_DescriptorHeapsByComandList;
 
-  RaytracingInstancesDump instancesDump_;
-  BindingTablesDump bindingTablesDump_;
-  std::unordered_map<unsigned, std::vector<KeyOffset>> blasesByTlas_;
-  std::map<KeyOffset, unsigned> tlasBuildKeys_;
-  std::set<KeyOffset> sources_;
-  std::unordered_map<unsigned, ID3D12Resource*> resourceByKey_;
-  std::unordered_map<unsigned, std::vector<D3D12_GPU_VIRTUAL_ADDRESS>> instancesArraysOfPointers_;
+  RaytracingInstancesDump m_InstancesDump;
+  BindingTablesDump m_BindingTablesDump;
+  std::unordered_map<unsigned, std::vector<KeyOffset>> m_BlasesByTlas;
+  std::map<KeyOffset, unsigned> m_TlasBuildKeys;
+  std::set<KeyOffset> m_Sources;
+  std::unordered_map<unsigned, ID3D12Resource*> m_ResourceByKey;
+  std::unordered_map<unsigned, std::vector<D3D12_GPU_VIRTUAL_ADDRESS>> m_InstancesArraysOfPointers;
 };
 
 } // namespace DirectX

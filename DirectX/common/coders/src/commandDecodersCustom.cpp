@@ -12,305 +12,305 @@
 namespace gits {
 namespace DirectX {
 
-void decode(char* src, MarkerUInt64Command& command) {
+void Decode(char* src, MarkerUInt64Command& command) {
   unsigned offset = 0;
-  decode(src, offset, command.value_);
+  Decode(src, offset, command.m_Value);
 }
 
-void decode(char* src, IUnknownQueryInterfaceCommand& command) {
+void Decode(char* src, IUnknownQueryInterfaceCommand& command) {
   unsigned offset = 0;
-  decode(src, offset, command.key);
-  decode(src, offset, command.threadId);
-  decode(src, offset, command.object_.key);
-  decode(src, offset, command.riid_);
-  decode(src, offset, command.ppvObject_);
-  decode(src, offset, command.result_);
+  Decode(src, offset, command.Key);
+  Decode(src, offset, command.ThreadId);
+  Decode(src, offset, command.m_Object.Key);
+  Decode(src, offset, command.m_riid);
+  Decode(src, offset, command.m_ppvObject);
+  Decode(src, offset, command.m_Result);
 }
 
-void decode(char* src, IUnknownAddRefCommand& command) {
+void Decode(char* src, IUnknownAddRefCommand& command) {
   unsigned offset = 0;
-  decode(src, offset, command.key);
-  decode(src, offset, command.threadId);
-  decode(src, offset, command.object_.key);
-  decode(src, offset, command.result_);
+  Decode(src, offset, command.Key);
+  Decode(src, offset, command.ThreadId);
+  Decode(src, offset, command.m_Object.Key);
+  Decode(src, offset, command.m_Result);
 }
 
-void decode(char* src, IUnknownReleaseCommand& command) {
+void Decode(char* src, IUnknownReleaseCommand& command) {
   unsigned offset = 0;
-  decode(src, offset, command.key);
-  decode(src, offset, command.threadId);
-  decode(src, offset, command.object_.key);
-  decode(src, offset, command.result_);
+  Decode(src, offset, command.Key);
+  Decode(src, offset, command.ThreadId);
+  Decode(src, offset, command.m_Object.Key);
+  Decode(src, offset, command.m_Result);
 }
 
-void decode(char* src, CreateWindowMetaCommand& command) {
+void Decode(char* src, CreateWindowMetaCommand& command) {
   unsigned offset = 0;
-  decode(src, offset, command.key);
-  decode(src, offset, command.threadId);
-  decode(src, offset, command.hWnd_);
-  decode(src, offset, command.width_);
-  decode(src, offset, command.height_);
+  Decode(src, offset, command.Key);
+  Decode(src, offset, command.ThreadId);
+  Decode(src, offset, command.m_hWnd);
+  Decode(src, offset, command.m_width);
+  Decode(src, offset, command.m_height);
 }
 
-void decode(char* src, MappedDataMetaCommand& command) {
+void Decode(char* src, MappedDataMetaCommand& command) {
   unsigned offset = 0;
-  decode(src, offset, command.key);
-  decode(src, offset, command.threadId);
-  decode(src, offset, command.resource_);
-  decode(src, offset, command.mappedAddress_);
-  decode(src, offset, command.offset_);
-  decode(src, offset, command.data_);
+  Decode(src, offset, command.Key);
+  Decode(src, offset, command.ThreadId);
+  Decode(src, offset, command.m_resource);
+  Decode(src, offset, command.m_mappedAddress);
+  Decode(src, offset, command.m_offset);
+  Decode(src, offset, command.m_data);
 }
 
-void decode(char* src, CreateHeapAllocationMetaCommand& command) {
+void Decode(char* src, CreateHeapAllocationMetaCommand& command) {
   unsigned offset = 0;
-  decode(src, offset, command.key);
-  decode(src, offset, command.threadId);
-  decode(src, offset, command.heap_);
-  decode(src, offset, command.address_);
-  decode(src, offset, command.data_);
+  Decode(src, offset, command.Key);
+  Decode(src, offset, command.ThreadId);
+  Decode(src, offset, command.m_heap);
+  Decode(src, offset, command.m_address);
+  Decode(src, offset, command.m_data);
 }
 
-void decode(char* src, WaitForFenceSignaledCommand& command) {
+void Decode(char* src, WaitForFenceSignaledCommand& command) {
   unsigned offset = 0;
-  decode(src, offset, command.key);
-  decode(src, offset, command.threadId);
-  decode(src, offset, command.event_);
-  decode(src, offset, command.fence_);
-  decode(src, offset, command.value_);
+  Decode(src, offset, command.Key);
+  Decode(src, offset, command.ThreadId);
+  Decode(src, offset, command.m_event);
+  Decode(src, offset, command.m_fence);
+  Decode(src, offset, command.m_Value);
 }
 
-void decode(char* src, DllContainerMetaCommand& command) {
+void Decode(char* src, DllContainerMetaCommand& command) {
   unsigned offset = 0;
-  decode(src, offset, command.key);
-  decode(src, offset, command.threadId);
-  decode(src, offset, command.dllName_);
-  decode(src, offset, command.dllData_);
+  Decode(src, offset, command.Key);
+  Decode(src, offset, command.ThreadId);
+  Decode(src, offset, command.m_dllName);
+  Decode(src, offset, command.m_dllData);
 }
 
-void decode(char* src, INTC_D3D12_GetSupportedVersionsCommand& command) {
+void Decode(char* src, INTC_D3D12_GetSupportedVersionsCommand& command) {
   unsigned offset = 0;
-  decode(src, offset, command.key);
-  decode(src, offset, command.threadId);
-  decode(src, offset, command.pDevice_);
-  decode(src, offset, command.pSupportedExtVersions_);
-  decode(src, offset, command.pSupportedExtVersionsCount_);
-  decode(src, offset, command.result_);
+  Decode(src, offset, command.Key);
+  Decode(src, offset, command.ThreadId);
+  Decode(src, offset, command.m_pDevice);
+  Decode(src, offset, command.m_pSupportedExtVersions);
+  Decode(src, offset, command.m_pSupportedExtVersionsCount);
+  Decode(src, offset, command.m_Result);
 }
 
-void decode(char* src, INTC_D3D12_CreateDeviceExtensionContextCommand& command) {
+void Decode(char* src, INTC_D3D12_CreateDeviceExtensionContextCommand& command) {
   unsigned offset = 0;
-  decode(src, offset, command.key);
-  decode(src, offset, command.threadId);
-  decode(src, offset, command.pDevice_);
-  decode(src, offset, command.ppExtensionContext_);
-  decode(src, offset, command.pExtensionInfo_);
-  decode(src, offset, command.pExtensionAppInfo_);
-  decode(src, offset, command.result_);
+  Decode(src, offset, command.Key);
+  Decode(src, offset, command.ThreadId);
+  Decode(src, offset, command.m_pDevice);
+  Decode(src, offset, command.m_ppExtensionContext);
+  Decode(src, offset, command.m_pExtensionInfo);
+  Decode(src, offset, command.m_pExtensionAppInfo);
+  Decode(src, offset, command.m_Result);
 }
 
-void decode(char* src, INTC_D3D12_CreateDeviceExtensionContext1Command& command) {
+void Decode(char* src, INTC_D3D12_CreateDeviceExtensionContext1Command& command) {
   unsigned offset = 0;
-  decode(src, offset, command.key);
-  decode(src, offset, command.threadId);
-  decode(src, offset, command.pDevice_);
-  decode(src, offset, command.ppExtensionContext_);
-  decode(src, offset, command.pExtensionInfo_);
-  decode(src, offset, command.pExtensionAppInfo_);
-  decode(src, offset, command.result_);
+  Decode(src, offset, command.Key);
+  Decode(src, offset, command.ThreadId);
+  Decode(src, offset, command.m_pDevice);
+  Decode(src, offset, command.m_ppExtensionContext);
+  Decode(src, offset, command.m_pExtensionInfo);
+  Decode(src, offset, command.m_pExtensionAppInfo);
+  Decode(src, offset, command.m_Result);
 }
 
-void decode(char* src, INTC_D3D12_SetApplicationInfoCommand& command) {
+void Decode(char* src, INTC_D3D12_SetApplicationInfoCommand& command) {
   unsigned offset = 0;
-  decode(src, offset, command.key);
-  decode(src, offset, command.threadId);
-  decode(src, offset, command.pExtensionAppInfo_);
-  decode(src, offset, command.result_);
+  Decode(src, offset, command.Key);
+  Decode(src, offset, command.ThreadId);
+  Decode(src, offset, command.m_pExtensionAppInfo);
+  Decode(src, offset, command.m_Result);
 }
 
-void decode(char* src, INTC_DestroyDeviceExtensionContextCommand& command) {
+void Decode(char* src, INTC_DestroyDeviceExtensionContextCommand& command) {
   unsigned offset = 0;
-  decode(src, offset, command.key);
-  decode(src, offset, command.threadId);
-  decode(src, offset, command.ppExtensionContext_);
-  decode(src, offset, command.result_);
+  Decode(src, offset, command.Key);
+  Decode(src, offset, command.ThreadId);
+  Decode(src, offset, command.m_ppExtensionContext);
+  Decode(src, offset, command.m_Result);
 }
 
-void decode(char* src, INTC_D3D12_CheckFeatureSupportCommand& command) {
+void Decode(char* src, INTC_D3D12_CheckFeatureSupportCommand& command) {
   unsigned offset = 0;
-  decode(src, offset, command.key);
-  decode(src, offset, command.threadId);
-  decode(src, offset, command.pExtensionContext_);
-  decode(src, offset, command.Feature_);
-  decode(src, offset, command.pFeatureSupportData_);
-  decode(src, offset, command.FeatureSupportDataSize_);
-  decode(src, offset, command.result_);
+  Decode(src, offset, command.Key);
+  Decode(src, offset, command.ThreadId);
+  Decode(src, offset, command.m_pExtensionContext);
+  Decode(src, offset, command.m_Feature);
+  Decode(src, offset, command.m_pFeatureSupportData);
+  Decode(src, offset, command.m_FeatureSupportDataSize);
+  Decode(src, offset, command.m_Result);
 }
 
-void decode(char* src, INTC_D3D12_CreateCommandQueueCommand& command) {
+void Decode(char* src, INTC_D3D12_CreateCommandQueueCommand& command) {
   unsigned offset = 0;
-  decode(src, offset, command.key);
-  decode(src, offset, command.threadId);
-  decode(src, offset, command.pExtensionContext_);
-  decode(src, offset, command.pDesc_);
-  decode(src, offset, command.riid_);
-  decode(src, offset, command.ppCommandQueue_);
-  decode(src, offset, command.result_);
+  Decode(src, offset, command.Key);
+  Decode(src, offset, command.ThreadId);
+  Decode(src, offset, command.m_pExtensionContext);
+  Decode(src, offset, command.m_pDesc);
+  Decode(src, offset, command.m_riid);
+  Decode(src, offset, command.m_ppCommandQueue);
+  Decode(src, offset, command.m_Result);
 }
 
-void decode(char* src, INTC_D3D12_CreateReservedResourceCommand& command) {
+void Decode(char* src, INTC_D3D12_CreateReservedResourceCommand& command) {
   unsigned offset = 0;
-  decode(src, offset, command.key);
-  decode(src, offset, command.threadId);
-  decode(src, offset, command.pExtensionContext_);
-  decode(src, offset, command.pDesc_);
-  decode(src, offset, command.InitialState_);
-  decode(src, offset, command.pOptimizedClearValue_);
-  decode(src, offset, command.riid_);
-  decode(src, offset, command.ppvResource_);
-  decode(src, offset, command.result_);
+  Decode(src, offset, command.Key);
+  Decode(src, offset, command.ThreadId);
+  Decode(src, offset, command.m_pExtensionContext);
+  Decode(src, offset, command.m_pDesc);
+  Decode(src, offset, command.m_InitialState);
+  Decode(src, offset, command.m_pOptimizedClearValue);
+  Decode(src, offset, command.m_riid);
+  Decode(src, offset, command.m_ppvResource);
+  Decode(src, offset, command.m_Result);
 }
 
-void decode(char* src, INTC_D3D12_SetFeatureSupportCommand& command) {
+void Decode(char* src, INTC_D3D12_SetFeatureSupportCommand& command) {
   unsigned offset = 0;
-  decode(src, offset, command.key);
-  decode(src, offset, command.threadId);
-  decode(src, offset, command.pExtensionContext_);
-  decode(src, offset, command.pFeature_);
-  decode(src, offset, command.result_);
+  Decode(src, offset, command.Key);
+  Decode(src, offset, command.ThreadId);
+  Decode(src, offset, command.m_pExtensionContext);
+  Decode(src, offset, command.m_pFeature);
+  Decode(src, offset, command.m_Result);
 }
 
-void decode(char* src, INTC_D3D12_GetResourceAllocationInfoCommand& command) {
+void Decode(char* src, INTC_D3D12_GetResourceAllocationInfoCommand& command) {
   unsigned offset = 0;
-  decode(src, offset, command.key);
-  decode(src, offset, command.threadId);
-  decode(src, offset, command.pExtensionContext_);
-  decode(src, offset, command.visibleMask_);
-  decode(src, offset, command.numResourceDescs_);
-  decode(src, offset, command.pResourceDescs_);
-  decode(src, offset, command.result_);
+  Decode(src, offset, command.Key);
+  Decode(src, offset, command.ThreadId);
+  Decode(src, offset, command.m_pExtensionContext);
+  Decode(src, offset, command.m_visibleMask);
+  Decode(src, offset, command.m_numResourceDescs);
+  Decode(src, offset, command.m_pResourceDescs);
+  Decode(src, offset, command.m_Result);
 }
 
-void decode(char* src, INTC_D3D12_CreateComputePipelineStateCommand& command) {
+void Decode(char* src, INTC_D3D12_CreateComputePipelineStateCommand& command) {
   unsigned offset = 0;
-  decode(src, offset, command.key);
-  decode(src, offset, command.threadId);
-  decode(src, offset, command.pExtensionContext_);
-  decode(src, offset, command.pDesc_);
-  decode(src, offset, command.riid_);
-  decode(src, offset, command.ppPipelineState_);
-  decode(src, offset, command.result_);
+  Decode(src, offset, command.Key);
+  Decode(src, offset, command.ThreadId);
+  Decode(src, offset, command.m_pExtensionContext);
+  Decode(src, offset, command.m_pDesc);
+  Decode(src, offset, command.m_riid);
+  Decode(src, offset, command.m_ppPipelineState);
+  Decode(src, offset, command.m_Result);
 }
 
-void decode(char* src, INTC_D3D12_CreatePlacedResourceCommand& command) {
+void Decode(char* src, INTC_D3D12_CreatePlacedResourceCommand& command) {
   unsigned offset = 0;
-  decode(src, offset, command.key);
-  decode(src, offset, command.threadId);
-  decode(src, offset, command.pExtensionContext_);
-  decode(src, offset, command.pHeap_);
-  decode(src, offset, command.HeapOffset_);
-  decode(src, offset, command.pDesc_);
-  decode(src, offset, command.InitialState_);
-  decode(src, offset, command.pOptimizedClearValue_);
-  decode(src, offset, command.riid_);
-  decode(src, offset, command.ppvResource_);
-  decode(src, offset, command.result_);
+  Decode(src, offset, command.Key);
+  Decode(src, offset, command.ThreadId);
+  Decode(src, offset, command.m_pExtensionContext);
+  Decode(src, offset, command.m_pHeap);
+  Decode(src, offset, command.m_HeapOffset);
+  Decode(src, offset, command.m_pDesc);
+  Decode(src, offset, command.m_InitialState);
+  Decode(src, offset, command.m_pOptimizedClearValue);
+  Decode(src, offset, command.m_riid);
+  Decode(src, offset, command.m_ppvResource);
+  Decode(src, offset, command.m_Result);
 }
 
-void decode(char* src, INTC_D3D12_CreateCommittedResourceCommand& command) {
+void Decode(char* src, INTC_D3D12_CreateCommittedResourceCommand& command) {
   unsigned offset = 0;
-  decode(src, offset, command.key);
-  decode(src, offset, command.threadId);
-  decode(src, offset, command.pExtensionContext_);
-  decode(src, offset, command.pHeapProperties_);
-  decode(src, offset, command.HeapFlags_);
-  decode(src, offset, command.pDesc_);
-  decode(src, offset, command.InitialResourceState_);
-  decode(src, offset, command.pOptimizedClearValue_);
-  decode(src, offset, command.riidResource_);
-  decode(src, offset, command.ppvResource_);
-  decode(src, offset, command.result_);
+  Decode(src, offset, command.Key);
+  Decode(src, offset, command.ThreadId);
+  Decode(src, offset, command.m_pExtensionContext);
+  Decode(src, offset, command.m_pHeapProperties);
+  Decode(src, offset, command.m_HeapFlags);
+  Decode(src, offset, command.m_pDesc);
+  Decode(src, offset, command.m_InitialResourceState);
+  Decode(src, offset, command.m_pOptimizedClearValue);
+  Decode(src, offset, command.m_riidResource);
+  Decode(src, offset, command.m_ppvResource);
+  Decode(src, offset, command.m_Result);
 }
 
-void decode(char* src, INTC_D3D12_CreateHeapCommand& command) {
+void Decode(char* src, INTC_D3D12_CreateHeapCommand& command) {
   unsigned offset = 0;
-  decode(src, offset, command.key);
-  decode(src, offset, command.threadId);
-  decode(src, offset, command.pExtensionContext_);
-  decode(src, offset, command.pDesc_);
-  decode(src, offset, command.riid_);
-  decode(src, offset, command.ppvHeap_);
-  decode(src, offset, command.result_);
+  Decode(src, offset, command.Key);
+  Decode(src, offset, command.ThreadId);
+  Decode(src, offset, command.m_pExtensionContext);
+  Decode(src, offset, command.m_pDesc);
+  Decode(src, offset, command.m_riid);
+  Decode(src, offset, command.m_ppvHeap);
+  Decode(src, offset, command.m_Result);
 }
 
-void decode(char* src, NvAPI_InitializeCommand& command) {
+void Decode(char* src, NvAPI_InitializeCommand& command) {
   unsigned offset = 0;
-  decode(src, offset, command.key);
-  decode(src, offset, command.threadId);
-  decode(src, offset, command.result_);
+  Decode(src, offset, command.Key);
+  Decode(src, offset, command.ThreadId);
+  Decode(src, offset, command.m_Result);
 }
 
-void decode(char* src, NvAPI_UnloadCommand& command) {
+void Decode(char* src, NvAPI_UnloadCommand& command) {
   unsigned offset = 0;
-  decode(src, offset, command.key);
-  decode(src, offset, command.threadId);
-  decode(src, offset, command.result_);
+  Decode(src, offset, command.Key);
+  Decode(src, offset, command.ThreadId);
+  Decode(src, offset, command.m_Result);
 }
 
-void decode(char* src, NvAPI_D3D12_SetCreatePipelineStateOptionsCommand& command) {
+void Decode(char* src, NvAPI_D3D12_SetCreatePipelineStateOptionsCommand& command) {
   unsigned offset = 0;
-  decode(src, offset, command.key);
-  decode(src, offset, command.threadId);
-  decode(src, offset, command.pDevice_);
-  decode(src, offset, command.pState_);
-  decode(src, offset, command.result_);
+  Decode(src, offset, command.Key);
+  Decode(src, offset, command.ThreadId);
+  Decode(src, offset, command.m_pDevice);
+  Decode(src, offset, command.m_pState);
+  Decode(src, offset, command.m_Result);
 }
 
-void decode(char* src, NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& command) {
+void Decode(char* src, NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& command) {
   unsigned offset = 0;
-  decode(src, offset, command.key);
-  decode(src, offset, command.threadId);
-  decode(src, offset, command.pDev_);
-  decode(src, offset, command.uavSlot_);
-  decode(src, offset, command.uavSpace_);
-  decode(src, offset, command.result_);
+  Decode(src, offset, command.Key);
+  Decode(src, offset, command.ThreadId);
+  Decode(src, offset, command.m_pDev);
+  Decode(src, offset, command.m_uavSlot);
+  Decode(src, offset, command.m_uavSpace);
+  Decode(src, offset, command.m_Result);
 }
 
-void decode(char* src, NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& command) {
+void Decode(char* src, NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& command) {
   unsigned offset = 0;
-  decode(src, offset, command.key);
-  decode(src, offset, command.threadId);
-  decode(src, offset, command.pDev_);
-  decode(src, offset, command.uavSlot_);
-  decode(src, offset, command.uavSpace_);
-  decode(src, offset, command.result_);
+  Decode(src, offset, command.Key);
+  Decode(src, offset, command.ThreadId);
+  Decode(src, offset, command.m_pDev);
+  Decode(src, offset, command.m_uavSlot);
+  Decode(src, offset, command.m_uavSpace);
+  Decode(src, offset, command.m_Result);
 }
 
-void decode(char* src, NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& command) {
+void Decode(char* src, NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& command) {
   unsigned offset = 0;
-  decode(src, offset, command.key);
-  decode(src, offset, command.threadId);
-  decode(src, offset, command.pCommandList_);
-  decode(src, offset, command.pParams);
-  decode(src, offset, command.result_);
+  Decode(src, offset, command.Key);
+  Decode(src, offset, command.ThreadId);
+  Decode(src, offset, command.m_pCommandList);
+  Decode(src, offset, command.m_pParams);
+  Decode(src, offset, command.m_Result);
 }
 
-void decode(char* src, NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& command) {
+void Decode(char* src, NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& command) {
   unsigned offset = 0;
-  decode(src, offset, command.key);
-  decode(src, offset, command.threadId);
-  decode(src, offset, command.pCommandList_);
-  decode(src, offset, command.pParams);
-  decode(src, offset, command.result_);
+  Decode(src, offset, command.Key);
+  Decode(src, offset, command.ThreadId);
+  Decode(src, offset, command.m_pCommandList);
+  Decode(src, offset, command.m_pParams);
+  Decode(src, offset, command.m_Result);
 }
 
-void decode(char* src, NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand& command) {
+void Decode(char* src, NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand& command) {
   unsigned offset = 0;
-  decode(src, offset, command.key);
-  decode(src, offset, command.threadId);
-  decode(src, offset, command.pCommandList_);
-  decode(src, offset, command.pParams);
-  decode(src, offset, command.result_);
+  Decode(src, offset, command.Key);
+  Decode(src, offset, command.ThreadId);
+  Decode(src, offset, command.m_pCommandList);
+  Decode(src, offset, command.m_pParams);
+  Decode(src, offset, command.m_Result);
 }
 
 } // namespace DirectX

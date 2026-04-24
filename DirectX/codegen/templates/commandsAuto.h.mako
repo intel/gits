@@ -32,7 +32,7 @@ custom = [
 def generate_initializer_list(function):
     initializer_list = []
     for param in function.params:
-        s = param.name + '_{' + param.name
+        s = 'm_' + param.name + '{' + param.name
         if param.sal_size and not param.is_array and not param.is_interface_creation and (not param.is_pointer_to_pointer or param.is_interface):
             s += ', ' + param.sal_size.split(',')[0]
         s += '}'
@@ -68,7 +68,7 @@ public:
 
 public:
   %if is_result:
-  Argument<${generate_return(function)}> result_{};
+  Argument<${generate_return(function)}> m_Result{};
   %endif
   %for param in params_for_function:
   ${param}{};
@@ -98,7 +98,7 @@ public:
           ${params[-1]})
           %endif
       : Command{CommandId::ID_${interface.name.upper()}_${function.name.upper()}, threadId},
-          object_{object}${',' if initializer_list else ''}
+          m_Object{object}${',' if initializer_list else ''}
           %if initializer_list:
           %for param in initializer_list[:-1]:
           ${param},
@@ -109,9 +109,9 @@ public:
   ${interface.name}${function.name}Command() : Command(CommandId::ID_${interface.name.upper()}_${function.name.upper()}) {}
 
 public:
-  InterfaceArgument<${interface.name}> object_{};
+  InterfaceArgument<${interface.name}> m_Object{};
   %if is_result:
-  Argument<${generate_return(function)}> result_{};
+  Argument<${generate_return(function)}> m_Result{};
   %endif
   %for param in params_for_function:
   ${param}{};

@@ -16,20 +16,20 @@
 namespace gits {
 namespace DirectX {
 
-static void createResource(ccode::CommandPrinter& p, unsigned resourceKey) {
+static void createResource(ccode::CommandPrinter& p, unsigned ResourceKey) {
   std::ostringstream ss;
-  ss << "directx::GpuAddressService::Get().CreateResource(" << resourceKey << ", "
-     << ccode::objKeyToPtrStr(resourceKey) << ");" << std::endl;
+  ss << "directx::GpuAddressService::Get().CreateResource(" << ResourceKey << ", "
+     << ccode::objKeyToPtrStr(ResourceKey) << ");" << std::endl;
   p.setPostCommand(ss.str());
 }
 
 static void createPlacedResource(ccode::CommandPrinter& p,
-                                 unsigned resourceKey,
+                                 unsigned ResourceKey,
                                  unsigned heapKey,
                                  uint64_t heapOffset) {
   std::ostringstream ss;
-  ss << "directx::GpuAddressService::Get().CreatePlacedResource(" << resourceKey << ", "
-     << ccode::objKeyToPtrStr(resourceKey) << ", " << heapKey << ", "
+  ss << "directx::GpuAddressService::Get().CreatePlacedResource(" << ResourceKey << ", "
+     << ccode::objKeyToPtrStr(ResourceKey) << ", " << heapKey << ", "
      << ccode::objKeyToPtrStr(heapKey) << ", " << heapOffset << ");" << std::endl;
   p.setPostCommand(ss.str());
 }
@@ -57,24 +57,24 @@ static void present(ccode::CommandPrinter& p, unsigned swapChainKey) {
 
 CCodeLayer::CCodeLayer() : Layer("CCode") {}
 
-void CCodeLayer::pre(StateRestoreBeginCommand& c) {
+void CCodeLayer::Pre(StateRestoreBeginCommand& c) {
   isStateRestore_ = true;
 }
 
-void CCodeLayer::pre(StateRestoreEndCommand& c) {
+void CCodeLayer::Pre(StateRestoreEndCommand& c) {
   isStateRestore_ = false;
   nextCommand();
 }
 
-void CCodeLayer::pre(IDXGISwapChainPresentCommand& c) {
-  if (isStateRestore_ || (c.Flags_.value & DXGI_PRESENT_TEST)) {
+void CCodeLayer::Pre(IDXGISwapChainPresentCommand& c) {
+  if (isStateRestore_ || (c.m_Flags.Value & DXGI_PRESENT_TEST)) {
     return;
   }
   currentFrame_++;
 }
 
-void CCodeLayer::pre(IDXGISwapChain1Present1Command& c) {
-  if (isStateRestore_ || (c.PresentFlags_.value & DXGI_PRESENT_TEST)) {
+void CCodeLayer::Pre(IDXGISwapChain1Present1Command& c) {
+  if (isStateRestore_ || (c.m_PresentFlags.Value & DXGI_PRESENT_TEST)) {
     return;
   }
   currentFrame_++;
@@ -113,74 +113,74 @@ void CCodeLayer::nextCommand() {
   s_cmdCount++;
 }
 
-void CCodeLayer::post(CreateWindowMetaCommand& c) {
-  auto ptrValue = reinterpret_cast<std::uintptr_t>(c.hWnd_.value);
+void CCodeLayer::Post(CreateWindowMetaCommand& c) {
+  auto ptrValue = reinterpret_cast<std::uintptr_t>(c.m_hWnd.Value);
   auto& stream = ccode::CCodeStream::getInstance();
   auto& ss = stream.getCurrentBlock();
-  ss << "// Command #" << keyToStr(c.key) << " CreateWindowMetaCommand" << std::endl;
-  ss << "WindowService::Get().Create(" << ptrValue << ", " << c.width_.value << ", "
-     << c.height_.value << ");" << std::endl;
+  ss << "// Command #" << keyToStr(c.Key) << " CreateWindowMetaCommand" << std::endl;
+  ss << "WindowService::Get().Create(" << ptrValue << ", " << c.m_width.Value << ", "
+     << c.m_height.Value << ");" << std::endl;
 }
 
-void CCodeLayer::post(WaitForFenceSignaledCommand& c) {
+void CCodeLayer::Post(WaitForFenceSignaledCommand& c) {
   using namespace ccode;
   auto& stream = CCodeStream::getInstance();
   auto& ss = stream.getCurrentBlock();
-  ss << "directx::WaitForFence(" << objKeyToPtrStr(c.fence_.key) << ", " << c.value_.value << ");"
+  ss << "directx::WaitForFence(" << objKeyToPtrStr(c.m_fence.Key) << ", " << c.m_Value.Value << ");"
      << std::endl;
 }
 
-void CCodeLayer::post(MappedDataMetaCommand& c) {
+void CCodeLayer::Post(MappedDataMetaCommand& c) {
   using namespace ccode;
   auto& stream = CCodeStream::getInstance();
   auto& ss = stream.getCurrentBlock();
-  ss << "// Command #" << keyToStr(c.key) << " MappedDataMetaCommand" << std::endl;
+  ss << "// Command #" << keyToStr(c.Key) << " MappedDataMetaCommand" << std::endl;
   ss << "{" << std::endl;
 
   CppParameterInfo dataInfo("void", "data");
-  dataInfo.size = c.data_.size;
+  dataInfo.size = c.m_data.Size;
   CppParameterOutput dataOut;
-  toCpp(c.data_.value, dataInfo, dataOut);
+  toCpp(c.m_data.Value, dataInfo, dataOut);
   ss << dataOut.initialization;
 
   ss << "void* mappedAddress = directx::MapTrackingService::Get().GetCurrentAddress("
-     << toHex(c.mappedAddress_.value) << ");" << std::endl;
-  ss << "std::memcpy(static_cast<char*>(mappedAddress) + " << c.offset_.value << ", "
-     << dataOut.value << ", " << c.data_.size << ");" << std::endl;
+     << toHex(c.m_mappedAddress.Value) << ");" << std::endl;
+  ss << "std::memcpy(static_cast<char*>(mappedAddress) + " << c.m_offset.Value << ", "
+     << dataOut.value << ", " << c.m_data.Size << ");" << std::endl;
   ss << "}" << std::endl;
 }
 
-void CCodeLayer::post(CreateHeapAllocationMetaCommand& c) {
+void CCodeLayer::Post(CreateHeapAllocationMetaCommand& c) {
   using namespace ccode;
   auto& stream = CCodeStream::getInstance();
   auto& ss = stream.getCurrentBlock();
-  ss << "// Command #" << keyToStr(c.key) << " CreateHeapAllocationMetaCommand" << std::endl;
-  ss << "directx::HeapAllocationService::Get().CreateHeapAllocation(" << objKeyToStr(c.heap_.key)
-     << ", " << c.data_.size << ");" << std::endl;
+  ss << "// Command #" << keyToStr(c.Key) << " CreateHeapAllocationMetaCommand" << std::endl;
+  ss << "directx::HeapAllocationService::Get().CreateHeapAllocation(" << objKeyToStr(c.m_heap.Key)
+     << ", " << c.m_data.Size << ");" << std::endl;
 }
 
-void CCodeLayer::post(IUnknownQueryInterfaceCommand& c) {
+void CCodeLayer::Post(IUnknownQueryInterfaceCommand& c) {
   using namespace ccode;
 
   // Parameter data
   CppParameterInfo ppvObjectInfo("void", "ppvObject");
 
   // Print command
-  CommandPrinter p(c, "QueryInterface", c.object_.key);
+  CommandPrinter p(c, "QueryInterface", c.m_Object.Key);
   preProcess(p, c);
-  p.addArgumentValue(c.riid_.value);
-  p.addArgument(c.ppvObject_, ppvObjectInfo);
+  p.addArgumentValue(c.m_riid.Value);
+  p.addArgument(c.m_ppvObject, ppvObjectInfo);
   postProcess(p, c);
   p.print();
 
   nextCommand();
 }
 
-void CCodeLayer::post(IUnknownAddRefCommand& c) {
+void CCodeLayer::Post(IUnknownAddRefCommand& c) {
   using namespace ccode;
 
   // Print command
-  CommandPrinter p(c, "AddRef", c.object_.key);
+  CommandPrinter p(c, "AddRef", c.m_Object.Key);
   preProcess(p, c);
   postProcess(p, c);
   p.print();
@@ -188,11 +188,11 @@ void CCodeLayer::post(IUnknownAddRefCommand& c) {
   nextCommand();
 }
 
-void CCodeLayer::post(IUnknownReleaseCommand& c) {
+void CCodeLayer::Post(IUnknownReleaseCommand& c) {
   using namespace ccode;
 
   // Print command
-  CommandPrinter p(c, "Release", c.object_.key);
+  CommandPrinter p(c, "Release", c.m_Object.Key);
   preProcess(p, c);
   postProcess(p, c);
   p.print();
@@ -200,7 +200,7 @@ void CCodeLayer::post(IUnknownReleaseCommand& c) {
   nextCommand();
 }
 
-void CCodeLayer::post(INTC_D3D12_GetSupportedVersionsCommand& c) {
+void CCodeLayer::Post(INTC_D3D12_GetSupportedVersionsCommand& c) {
   using namespace ccode;
 
   // Parameter data
@@ -208,23 +208,23 @@ void CCodeLayer::post(INTC_D3D12_GetSupportedVersionsCommand& c) {
   CppParameterInfo pSupportedExtVersionsInfo("INTCExtensionVersion", "pSupportedExtVersions");
   pSupportedExtVersionsInfo.isPtr = true;
   pSupportedExtVersionsInfo.size = 0;
-  if (c.pSupportedExtVersionsCount_.value) {
-    pSupportedExtVersionsInfo.size = *c.pSupportedExtVersionsCount_.value;
+  if (c.m_pSupportedExtVersionsCount.Value) {
+    pSupportedExtVersionsInfo.size = *c.m_pSupportedExtVersionsCount.Value;
   }
 
   // Print command
   CommandPrinter p(c, "INTC_D3D12_GetSupportedVersions");
   preProcess(p, c);
-  p.addArgument(c.pDevice_, pDeviceInfo);
-  p.addArgument(c.pSupportedExtVersions_, pSupportedExtVersionsInfo);
-  p.addArgumentValue(c.pSupportedExtVersionsCount_.value);
+  p.addArgument(c.m_pDevice, pDeviceInfo);
+  p.addArgument(c.m_pSupportedExtVersions, pSupportedExtVersionsInfo);
+  p.addArgumentValue(c.m_pSupportedExtVersionsCount.Value);
   postProcess(p, c);
   p.print();
 
   nextCommand();
 }
 
-void CCodeLayer::post(INTC_D3D12_CreateDeviceExtensionContextCommand& c) {
+void CCodeLayer::Post(INTC_D3D12_CreateDeviceExtensionContextCommand& c) {
   using namespace ccode;
 
   // Parameter data
@@ -239,17 +239,17 @@ void CCodeLayer::post(INTC_D3D12_CreateDeviceExtensionContextCommand& c) {
   // Print command
   CommandPrinter p(c, "INTC_D3D12_CreateDeviceExtensionContext");
   preProcess(p, c);
-  p.addArgument(c.pDevice_, pDeviceInfo);
-  p.addArgument(c.ppExtensionContext_, ppExtensionContextInfo);
-  p.addArgument(c.pExtensionInfo_, pExtensionInfoInfo);
-  p.addArgument(c.pExtensionAppInfo_, pExtensionAppInfoInfo);
+  p.addArgument(c.m_pDevice, pDeviceInfo);
+  p.addArgument(c.m_ppExtensionContext, ppExtensionContextInfo);
+  p.addArgument(c.m_pExtensionInfo, pExtensionInfoInfo);
+  p.addArgument(c.m_pExtensionAppInfo, pExtensionAppInfoInfo);
   postProcess(p, c);
   p.print();
 
   nextCommand();
 }
 
-void CCodeLayer::post(INTC_D3D12_CreateDeviceExtensionContext1Command& c) {
+void CCodeLayer::Post(INTC_D3D12_CreateDeviceExtensionContext1Command& c) {
   using namespace ccode;
 
   // Parameter data
@@ -264,17 +264,17 @@ void CCodeLayer::post(INTC_D3D12_CreateDeviceExtensionContext1Command& c) {
   // Print command
   CommandPrinter p(c, "INTC_D3D12_CreateDeviceExtensionContext1");
   preProcess(p, c);
-  p.addArgument(c.pDevice_, pDeviceInfo);
-  p.addArgument(c.ppExtensionContext_, ppExtensionContextInfo);
-  p.addArgument(c.pExtensionInfo_, pExtensionInfoInfo);
-  p.addArgument(c.pExtensionAppInfo_, pExtensionAppInfoInfo);
+  p.addArgument(c.m_pDevice, pDeviceInfo);
+  p.addArgument(c.m_ppExtensionContext, ppExtensionContextInfo);
+  p.addArgument(c.m_pExtensionInfo, pExtensionInfoInfo);
+  p.addArgument(c.m_pExtensionAppInfo, pExtensionAppInfoInfo);
   postProcess(p, c);
   p.print();
 
   nextCommand();
 }
 
-void CCodeLayer::post(INTC_DestroyDeviceExtensionContextCommand& c) {
+void CCodeLayer::Post(INTC_DestroyDeviceExtensionContextCommand& c) {
   using namespace ccode;
 
   // Parameter data
@@ -283,14 +283,14 @@ void CCodeLayer::post(INTC_DestroyDeviceExtensionContextCommand& c) {
   // Print command
   CommandPrinter p(c, "INTC_DestroyDeviceExtensionContext");
   preProcess(p, c);
-  p.addArgument(c.ppExtensionContext_, ppExtensionContextInfo);
+  p.addArgument(c.m_ppExtensionContext, ppExtensionContextInfo);
   postProcess(p, c);
   p.print();
 
   nextCommand();
 }
 
-void CCodeLayer::post(INTC_D3D12_SetFeatureSupportCommand& c) {
+void CCodeLayer::Post(INTC_D3D12_SetFeatureSupportCommand& c) {
   using namespace ccode;
 
   // Parameter data
@@ -302,20 +302,20 @@ void CCodeLayer::post(INTC_D3D12_SetFeatureSupportCommand& c) {
   // Print command
   CommandPrinter p(c, "INTC_D3D12_SetFeatureSupport");
   preProcess(p, c);
-  p.addArgument(c.pExtensionContext_, pExtensionContextInfo);
-  p.addArgument(c.pFeature_, pFeatureInfo);
+  p.addArgument(c.m_pExtensionContext, pExtensionContextInfo);
+  p.addArgument(c.m_pFeature, pFeatureInfo);
   postProcess(p, c);
   p.print();
 
   nextCommand();
 }
 
-void CCodeLayer::post(INTC_D3D12_CreatePlacedResourceCommand& c) {
+void CCodeLayer::Post(INTC_D3D12_CreatePlacedResourceCommand& c) {
   using namespace ccode;
 
   // Declare new object
   auto& stream = CCodeStream::getInstance();
-  stream.addInterface(c.ppvResource_.key, c.riid_.value);
+  stream.addInterface(c.m_ppvResource.Key, c.m_riid.Value);
 
   // Parameter data
   CppParameterInfo pExtensionContextInfo("INTCExtensionContext", "pExtensionContext");
@@ -331,26 +331,26 @@ void CCodeLayer::post(INTC_D3D12_CreatePlacedResourceCommand& c) {
   // Print command
   CommandPrinter p(c, "INTC_D3D12_CreatePlacedResource");
   preProcess(p, c);
-  p.addArgument(c.pExtensionContext_, pExtensionContextInfo);
-  p.addArgument(c.pHeap_, pHeapInfo);
-  p.addArgumentValue(c.HeapOffset_.value);
-  p.addArgument(c.pDesc_, pDescInfo);
-  p.addArgumentValue(c.InitialState_.value);
-  p.addArgument(c.pOptimizedClearValue_, pOptimizedClearValueInfo);
-  p.addArgumentValue(c.riid_.value);
-  p.addArgument(c.ppvResource_, ppvResourceInfo);
+  p.addArgument(c.m_pExtensionContext, pExtensionContextInfo);
+  p.addArgument(c.m_pHeap, pHeapInfo);
+  p.addArgumentValue(c.m_HeapOffset.Value);
+  p.addArgument(c.m_pDesc, pDescInfo);
+  p.addArgumentValue(c.m_InitialState.Value);
+  p.addArgument(c.m_pOptimizedClearValue, pOptimizedClearValueInfo);
+  p.addArgumentValue(c.m_riid.Value);
+  p.addArgument(c.m_ppvResource, ppvResourceInfo);
   postProcess(p, c);
   p.print();
 
   nextCommand();
 }
 
-void CCodeLayer::post(INTC_D3D12_CreateCommittedResourceCommand& c) {
+void CCodeLayer::Post(INTC_D3D12_CreateCommittedResourceCommand& c) {
   using namespace ccode;
 
   // Declare new object
   auto& stream = CCodeStream::getInstance();
-  stream.addInterface(c.ppvResource_.key, c.riidResource_.value);
+  stream.addInterface(c.m_ppvResource.Key, c.m_riidResource.Value);
 
   // Parameter data
   CppParameterInfo pExtensionContextInfo("INTCExtensionContext", "pExtensionContext");
@@ -366,26 +366,26 @@ void CCodeLayer::post(INTC_D3D12_CreateCommittedResourceCommand& c) {
   // Print command
   CommandPrinter p(c, "INTC_D3D12_CreateCommittedResource");
   preProcess(p, c);
-  p.addArgument(c.pExtensionContext_, pExtensionContextInfo);
-  p.addArgument(c.pHeapProperties_, pHeapPropertiesInfo);
-  p.addArgumentValue(c.HeapFlags_.value);
-  p.addArgument(c.pDesc_, pDescInfo);
-  p.addArgumentValue(c.InitialResourceState_.value);
-  p.addArgument(c.pOptimizedClearValue_, pOptimizedClearValueInfo);
-  p.addArgumentValue(c.riidResource_.value);
-  p.addArgument(c.ppvResource_, ppvResourceInfo);
+  p.addArgument(c.m_pExtensionContext, pExtensionContextInfo);
+  p.addArgument(c.m_pHeapProperties, pHeapPropertiesInfo);
+  p.addArgumentValue(c.m_HeapFlags.Value);
+  p.addArgument(c.m_pDesc, pDescInfo);
+  p.addArgumentValue(c.m_InitialResourceState.Value);
+  p.addArgument(c.m_pOptimizedClearValue, pOptimizedClearValueInfo);
+  p.addArgumentValue(c.m_riidResource.Value);
+  p.addArgument(c.m_ppvResource, ppvResourceInfo);
   postProcess(p, c);
   p.print();
 
   nextCommand();
 }
 
-void CCodeLayer::post(INTC_D3D12_CreateReservedResourceCommand& c) {
+void CCodeLayer::Post(INTC_D3D12_CreateReservedResourceCommand& c) {
   using namespace ccode;
 
   // Declare new object
   auto& stream = CCodeStream::getInstance();
-  stream.addInterface(c.ppvResource_.key, c.riid_.value);
+  stream.addInterface(c.m_ppvResource.Key, c.m_riid.Value);
 
   // Parameter data
   CppParameterInfo pExtensionContextInfo("INTCExtensionContext", "pExtensionContext");
@@ -399,24 +399,24 @@ void CCodeLayer::post(INTC_D3D12_CreateReservedResourceCommand& c) {
   // Print command
   CommandPrinter p(c, "INTC_D3D12_CreateReservedResource");
   preProcess(p, c);
-  p.addArgument(c.pExtensionContext_, pExtensionContextInfo);
-  p.addArgument(c.pDesc_, pDescInfo);
-  p.addArgumentValue(c.InitialState_.value);
-  p.addArgument(c.pOptimizedClearValue_, pOptimizedClearValueInfo);
-  p.addArgumentValue(c.riid_.value);
-  p.addArgument(c.ppvResource_, ppvResourceInfo);
+  p.addArgument(c.m_pExtensionContext, pExtensionContextInfo);
+  p.addArgument(c.m_pDesc, pDescInfo);
+  p.addArgumentValue(c.m_InitialState.Value);
+  p.addArgument(c.m_pOptimizedClearValue, pOptimizedClearValueInfo);
+  p.addArgumentValue(c.m_riid.Value);
+  p.addArgument(c.m_ppvResource, ppvResourceInfo);
   postProcess(p, c);
   p.print();
 
   nextCommand();
 }
 
-void CCodeLayer::post(INTC_D3D12_CreateHeapCommand& c) {
+void CCodeLayer::Post(INTC_D3D12_CreateHeapCommand& c) {
   using namespace ccode;
 
   // Declare new object
   auto& stream = CCodeStream::getInstance();
-  stream.addInterface(c.ppvHeap_.key, c.riid_.value);
+  stream.addInterface(c.m_ppvHeap.Key, c.m_riid.Value);
 
   // Parameter data
   CppParameterInfo pExtensionContextInfo("INTCExtensionContext", "pExtensionContext");
@@ -428,22 +428,22 @@ void CCodeLayer::post(INTC_D3D12_CreateHeapCommand& c) {
   // Print command
   CommandPrinter p(c, "INTC_D3D12_CreateHeap");
   preProcess(p, c);
-  p.addArgument(c.pExtensionContext_, pExtensionContextInfo);
-  p.addArgument(c.pDesc_, pDescInfo);
-  p.addArgumentValue(c.riid_.value);
-  p.addArgument(c.ppvHeap_, ppvHeapInfo);
+  p.addArgument(c.m_pExtensionContext, pExtensionContextInfo);
+  p.addArgument(c.m_pDesc, pDescInfo);
+  p.addArgumentValue(c.m_riid.Value);
+  p.addArgument(c.m_ppvHeap, ppvHeapInfo);
   postProcess(p, c);
   p.print();
 
   nextCommand();
 }
 
-void CCodeLayer::post(INTC_D3D12_CreateCommandQueueCommand& c) {
+void CCodeLayer::Post(INTC_D3D12_CreateCommandQueueCommand& c) {
   using namespace ccode;
 
   // Declare new object
   auto& stream = CCodeStream::getInstance();
-  stream.addInterface(c.ppCommandQueue_.key, c.riid_.value);
+  stream.addInterface(c.m_ppCommandQueue.Key, c.m_riid.Value);
 
   // Parameter data
   CppParameterInfo pExtensionContextInfo("INTCExtensionContext", "pExtensionContext");
@@ -455,17 +455,17 @@ void CCodeLayer::post(INTC_D3D12_CreateCommandQueueCommand& c) {
   // Print command
   CommandPrinter p(c, "INTC_D3D12_CreateCommandQueue");
   preProcess(p, c);
-  p.addArgument(c.pExtensionContext_, pExtensionContextInfo);
-  p.addArgument(c.pDesc_, pDescInfo);
-  p.addArgumentValue(c.riid_.value);
-  p.addArgument(c.ppCommandQueue_, ppCommandQueueInfo);
+  p.addArgument(c.m_pExtensionContext, pExtensionContextInfo);
+  p.addArgument(c.m_pDesc, pDescInfo);
+  p.addArgumentValue(c.m_riid.Value);
+  p.addArgument(c.m_ppCommandQueue, ppCommandQueueInfo);
   postProcess(p, c);
   p.print();
 
   nextCommand();
 }
 
-void CCodeLayer::post(INTC_D3D12_SetApplicationInfoCommand& c) {
+void CCodeLayer::Post(INTC_D3D12_SetApplicationInfoCommand& c) {
   using namespace ccode;
 
   // Parameter data
@@ -475,14 +475,14 @@ void CCodeLayer::post(INTC_D3D12_SetApplicationInfoCommand& c) {
   // Print command
   CommandPrinter p(c, "INTC_D3D12_SetApplicationInfo");
   preProcess(p, c);
-  p.addArgument(c.pExtensionAppInfo_, pExtensionAppInfoInfo);
+  p.addArgument(c.m_pExtensionAppInfo, pExtensionAppInfoInfo);
   postProcess(p, c);
   p.print();
 
   nextCommand();
 }
 
-void CCodeLayer::post(INTC_D3D12_CheckFeatureSupportCommand& c) {
+void CCodeLayer::Post(INTC_D3D12_CheckFeatureSupportCommand& c) {
   using namespace ccode;
 
   // Parameter data
@@ -490,21 +490,21 @@ void CCodeLayer::post(INTC_D3D12_CheckFeatureSupportCommand& c) {
   pExtensionContextInfo.isPtr = true;
   CppParameterInfo pFeatureSupportDataInfo("void", "pFeatureSupportData");
   pFeatureSupportDataInfo.isPtr = true;
-  pFeatureSupportDataInfo.size = c.FeatureSupportDataSize_.value;
+  pFeatureSupportDataInfo.size = c.m_FeatureSupportDataSize.Value;
 
   // Print command
   CommandPrinter p(c, "INTC_D3D12_CheckFeatureSupport");
   preProcess(p, c);
-  p.addArgument(c.pExtensionContext_, pExtensionContextInfo);
-  p.addArgumentValue(c.Feature_.value);
-  p.addArgument(c.pFeatureSupportData_, pFeatureSupportDataInfo);
-  p.addArgumentValue(c.FeatureSupportDataSize_.value);
+  p.addArgument(c.m_pExtensionContext, pExtensionContextInfo);
+  p.addArgumentValue(c.m_Feature.Value);
+  p.addArgument(c.m_pFeatureSupportData, pFeatureSupportDataInfo);
+  p.addArgumentValue(c.m_FeatureSupportDataSize.Value);
   postProcess(p, c);
   p.print();
 
   nextCommand();
 }
-void CCodeLayer::post(INTC_D3D12_GetResourceAllocationInfoCommand& c) {
+void CCodeLayer::Post(INTC_D3D12_GetResourceAllocationInfoCommand& c) {
   using namespace ccode;
 
   // Parameter data
@@ -512,27 +512,27 @@ void CCodeLayer::post(INTC_D3D12_GetResourceAllocationInfoCommand& c) {
   pExtensionContextInfo.isPtr = true;
   CppParameterInfo pResourceDescsInfo("INTC_D3D12_RESOURCE_DESC_0001", "pResourceDescs");
   pResourceDescsInfo.isPtr = true;
-  pResourceDescsInfo.size = c.numResourceDescs_.value;
+  pResourceDescsInfo.size = c.m_numResourceDescs.Value;
 
   // Print command
   CommandPrinter p(c, "INTC_D3D12_GetResourceAllocationInfo");
   preProcess(p, c);
-  p.addArgument(c.pExtensionContext_, pExtensionContextInfo);
-  p.addArgumentValue(c.visibleMask_.value);
-  p.addArgumentValue(c.numResourceDescs_.value);
-  p.addArgument(c.pResourceDescs_, pResourceDescsInfo);
+  p.addArgument(c.m_pExtensionContext, pExtensionContextInfo);
+  p.addArgumentValue(c.m_visibleMask.Value);
+  p.addArgumentValue(c.m_numResourceDescs.Value);
+  p.addArgument(c.m_pResourceDescs, pResourceDescsInfo);
   postProcess(p, c);
   p.print();
 
   nextCommand();
 }
 
-void CCodeLayer::post(INTC_D3D12_CreateComputePipelineStateCommand& c) {
+void CCodeLayer::Post(INTC_D3D12_CreateComputePipelineStateCommand& c) {
   using namespace ccode;
 
   // Declare new object
   auto& stream = CCodeStream::getInstance();
-  stream.addInterface(c.ppPipelineState_.key, c.riid_.value);
+  stream.addInterface(c.m_ppPipelineState.Key, c.m_riid.Value);
 
   // Parameter data
   CppParameterInfo pExtensionContextInfo("INTCExtensionContext", "pExtensionContext");
@@ -544,10 +544,10 @@ void CCodeLayer::post(INTC_D3D12_CreateComputePipelineStateCommand& c) {
   // Print command
   CommandPrinter p(c, "INTC_D3D12_CreateComputePipelineState");
   preProcess(p, c);
-  p.addArgument(c.pExtensionContext_, pExtensionContextInfo);
-  p.addArgument(c.pDesc_, pDescInfo);
-  p.addArgumentValue(c.riid_.value);
-  p.addArgument(c.ppPipelineState_, ppPipelineStateInfo);
+  p.addArgument(c.m_pExtensionContext, pExtensionContextInfo);
+  p.addArgument(c.m_pDesc, pDescInfo);
+  p.addArgumentValue(c.m_riid.Value);
+  p.addArgument(c.m_ppPipelineState, ppPipelineStateInfo);
   postProcess(p, c);
   p.print();
 
@@ -556,7 +556,7 @@ void CCodeLayer::post(INTC_D3D12_CreateComputePipelineStateCommand& c) {
 
 void CCodeLayer::preProcess(ccode::CommandPrinter& p, ID3D12FenceSetEventOnCompletionCommand& c) {
   // Skip all the non-null SetEventOnCompletion since the events cannot be recorded
-  if (c.hEvent_.value != 0) {
+  if (c.m_hEvent.Value != 0) {
     p.skip();
   }
 }
@@ -572,115 +572,116 @@ void CCodeLayer::preProcess(ccode::CommandPrinter& p, ID3D12ObjectSetPrivateData
 }
 
 void CCodeLayer::postProcess(ccode::CommandPrinter& p, IDXGIFactoryCreateSwapChainCommand& c) {
-  createSwapChain(p, c.ppSwapChain_.key, c.pDevice_.key);
+  createSwapChain(p, c.m_ppSwapChain.Key, c.m_pDevice.Key);
 }
 
 void CCodeLayer::postProcess(ccode::CommandPrinter& p,
                              IDXGIFactory2CreateSwapChainForHwndCommand& c) {
-  createSwapChain(p, c.ppSwapChain_.key, c.pDevice_.key);
+  createSwapChain(p, c.m_ppSwapChain.Key, c.m_pDevice.Key);
 }
 
 void CCodeLayer::postProcess(ccode::CommandPrinter& p,
                              IDXGIFactory2CreateSwapChainForCoreWindowCommand& c) {
-  createSwapChain(p, c.ppSwapChain_.key, c.pDevice_.key);
+  createSwapChain(p, c.m_ppSwapChain.Key, c.m_pDevice.Key);
 }
 
 void CCodeLayer::postProcess(ccode::CommandPrinter& p,
                              IDXGIFactory2CreateSwapChainForCompositionCommand& c) {
-  createSwapChain(p, c.ppSwapChain_.key, c.pDevice_.key);
+  createSwapChain(p, c.m_ppSwapChain.Key, c.m_pDevice.Key);
 }
 
 void CCodeLayer::postProcess(ccode::CommandPrinter& p, IDXGISwapChainPresentCommand& c) {
-  present(p, c.object_.key);
+  present(p, c.m_Object.Key);
 }
 
 void CCodeLayer::postProcess(ccode::CommandPrinter& p, IDXGISwapChain1Present1Command& c) {
-  present(p, c.object_.key);
+  present(p, c.m_Object.Key);
 }
 
 void CCodeLayer::postProcess(ccode::CommandPrinter& p, ID3D12FenceGetCompletedValueCommand& c) {
   using namespace ccode;
   std::ostringstream ss;
-  ss << "directx::WaitForFence(" << objKeyToPtrStr(c.object_.key) << ", " << c.result_.value << ");"
-     << std::endl;
+  ss << "directx::WaitForFence(" << objKeyToPtrStr(c.m_Object.Key) << ", " << c.m_Result.Value
+     << ");" << std::endl;
   p.setPostCommand(ss.str());
 }
 
 void CCodeLayer::postProcess(ccode::CommandPrinter& p, ID3D12DeviceCreateDescriptorHeapCommand& c) {
   using namespace ccode;
   std::ostringstream ss;
-  ss << "directx::DescriptorHeapService::Get().Create(" << objKeyToStr(c.ppvHeap_.key) << ", "
-     << objKeyToPtrStr(c.ppvHeap_.key) << ", &pDescriptorHeapDesc);" << std::endl;
+  ss << "directx::DescriptorHeapService::Get().Create(" << objKeyToStr(c.m_ppvHeap.Key) << ", "
+     << objKeyToPtrStr(c.m_ppvHeap.Key) << ", &pDescriptorHeapDesc);" << std::endl;
   p.setPostCommand(ss.str());
 }
 
 void CCodeLayer::postProcess(ccode::CommandPrinter& p, ID3D12ResourceMapCommand& c) {
   using namespace ccode;
   std::ostringstream ss;
-  ss << "directx::MapTrackingService::Get().MapResource(" << objKeyToStr(c.object_.key) << ", "
-     << c.Subresource_.value << ", " << toHex(c.ppData_.captureValue) << ", &ppData);" << std::endl;
+  ss << "directx::MapTrackingService::Get().MapResource(" << objKeyToStr(c.m_Object.Key) << ", "
+     << c.m_Subresource.Value << ", " << toHex(c.m_ppData.CaptureValue) << ", &ppData);"
+     << std::endl;
   p.setPostCommand(ss.str());
 }
 
 void CCodeLayer::postProcess(ccode::CommandPrinter& p,
                              ID3D12DeviceCreateCommittedResourceCommand& c) {
-  createResource(p, c.ppvResource_.key);
+  createResource(p, c.m_ppvResource.Key);
 }
 
 void CCodeLayer::postProcess(ccode::CommandPrinter& p,
                              ID3D12Device4CreateCommittedResource1Command& c) {
-  createResource(p, c.ppvResource_.key);
+  createResource(p, c.m_ppvResource.Key);
 }
 
 void CCodeLayer::postProcess(ccode::CommandPrinter& p,
                              ID3D12Device8CreateCommittedResource2Command& c) {
-  createResource(p, c.ppvResource_.key);
+  createResource(p, c.m_ppvResource.Key);
 }
 
 void CCodeLayer::postProcess(ccode::CommandPrinter& p,
                              ID3D12Device10CreateCommittedResource3Command& c) {
-  createResource(p, c.ppvResource_.key);
+  createResource(p, c.m_ppvResource.Key);
 }
 
 void CCodeLayer::postProcess(ccode::CommandPrinter& p,
                              ID3D12DeviceCreateReservedResourceCommand& c) {
-  createResource(p, c.ppvResource_.key);
+  createResource(p, c.m_ppvResource.Key);
 }
 
 void CCodeLayer::postProcess(ccode::CommandPrinter& p,
                              ID3D12Device4CreateReservedResource1Command& c) {
-  createResource(p, c.ppvResource_.key);
+  createResource(p, c.m_ppvResource.Key);
 }
 
 void CCodeLayer::postProcess(ccode::CommandPrinter& p,
                              ID3D12Device10CreateReservedResource2Command& c) {
-  createResource(p, c.ppvResource_.key);
+  createResource(p, c.m_ppvResource.Key);
 }
 
 void CCodeLayer::postProcess(ccode::CommandPrinter& p, ID3D12DeviceCreatePlacedResourceCommand& c) {
-  createPlacedResource(p, c.ppvResource_.key, c.pHeap_.key, c.HeapOffset_.value);
+  createPlacedResource(p, c.m_ppvResource.Key, c.m_pHeap.Key, c.m_HeapOffset.Value);
 }
 
 void CCodeLayer::postProcess(ccode::CommandPrinter& p,
                              ID3D12Device8CreatePlacedResource1Command& c) {
-  createPlacedResource(p, c.ppvResource_.key, c.pHeap_.key, c.HeapOffset_.value);
+  createPlacedResource(p, c.m_ppvResource.Key, c.m_pHeap.Key, c.m_HeapOffset.Value);
 }
 
 void CCodeLayer::postProcess(ccode::CommandPrinter& p,
                              ID3D12Device10CreatePlacedResource2Command& c) {
-  createPlacedResource(p, c.ppvResource_.key, c.pHeap_.key, c.HeapOffset_.value);
+  createPlacedResource(p, c.m_ppvResource.Key, c.m_pHeap.Key, c.m_HeapOffset.Value);
 }
 
 void CCodeLayer::postProcess(ccode::CommandPrinter& p, ID3D12DeviceCreateHeapCommand& c) {
-  createHeap(p, c.ppvHeap_.key);
+  createHeap(p, c.m_ppvHeap.Key);
 }
 
 void CCodeLayer::postProcess(ccode::CommandPrinter& p, ID3D12Device4CreateHeap1Command& c) {
-  createHeap(p, c.ppvHeap_.key);
+  createHeap(p, c.m_ppvHeap.Key);
 }
 
 void CCodeLayer::postProcess(ccode::CommandPrinter& p, INTC_D3D12_CreateHeapCommand& c) {
-  createHeap(p, c.ppvHeap_.key);
+  createHeap(p, c.m_ppvHeap.Key);
 }
 
 void CCodeLayer::postProcess(ccode::CommandPrinter& p,
@@ -688,10 +689,10 @@ void CCodeLayer::postProcess(ccode::CommandPrinter& p,
   using namespace ccode;
   std::ostringstream ss;
   ss << "void* pAddress = directx::HeapAllocationService::Get().GetHeapAllocation("
-     << objKeyToStr(c.ppvHeap_.key) << ");" << std::endl;
+     << objKeyToStr(c.m_ppvHeap.Key) << ");" << std::endl;
   p.setPreCommand(ss.str());
   p.getArgumentValue(0) = "pAddress";
-  createHeap(p, c.ppvHeap_.key);
+  createHeap(p, c.m_ppvHeap.Key);
 }
 
 void CCodeLayer::postProcess(ccode::CommandPrinter& p,
@@ -699,17 +700,17 @@ void CCodeLayer::postProcess(ccode::CommandPrinter& p,
   using namespace ccode;
   std::ostringstream ss;
   ss << "void* pAddress = directx::HeapAllocationService::Get().GetHeapAllocation("
-     << objKeyToStr(c.ppvHeap_.key) << ");" << std::endl;
+     << objKeyToStr(c.m_ppvHeap.Key) << ");" << std::endl;
   p.setPreCommand(ss.str());
   p.getArgumentValue(0) = "pAddress";
-  createHeap(p, c.ppvHeap_.key);
+  createHeap(p, c.m_ppvHeap.Key);
 }
 
 void CCodeLayer::postProcess(ccode::CommandPrinter& p,
                              ID3D12PipelineLibraryLoadGraphicsPipelineCommand& c) {
   using namespace ccode;
   std::ostringstream ss;
-  ss << "directx::PreloadGraphicsPipeline(" << objKeyToPtrStr(c.object_.key) << ", "
+  ss << "directx::PreloadGraphicsPipeline(" << objKeyToPtrStr(c.m_Object.Key) << ", "
      << p.getArgumentValue(0) << ", &pDesc);" << std::endl;
   p.setPreCommand(ss.str());
 }
@@ -718,7 +719,7 @@ void CCodeLayer::postProcess(ccode::CommandPrinter& p,
                              ID3D12PipelineLibraryLoadComputePipelineCommand& c) {
   using namespace ccode;
   std::ostringstream ss;
-  ss << "directx::PreloadComputePipeline(" << objKeyToPtrStr(c.object_.key) << ", "
+  ss << "directx::PreloadComputePipeline(" << objKeyToPtrStr(c.m_Object.Key) << ", "
      << p.getArgumentValue(0) << ", &pDesc);" << std::endl;
   p.setPreCommand(ss.str());
 }
@@ -727,7 +728,7 @@ void CCodeLayer::postProcess(ccode::CommandPrinter& p,
                              ID3D12PipelineLibrary1LoadPipelineCommand& c) {
   using namespace ccode;
   std::ostringstream ss;
-  ss << "directx::PreloadPipeline(" << objKeyToPtrStr(c.object_.key) << ", "
+  ss << "directx::PreloadPipeline(" << objKeyToPtrStr(c.m_Object.Key) << ", "
      << p.getArgumentValue(0) << ", &pDesc);" << std::endl;
   p.setPreCommand(ss.str());
 }

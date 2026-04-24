@@ -23,13 +23,12 @@ void DispatchOutputsDump::dumpResource(ID3D12GraphicsCommandList* commandList,
                                        unsigned mipLevel,
                                        DXGI_FORMAT format,
                                        unsigned commandListDispatchCount) {
-
-  RenderTargetDumpInfo* dumpInfo = new RenderTargetDumpInfo();
+  auto* dumpInfo = new RenderTargetDumpInfo{};
   dumpInfo->subresource = subresource;
   dumpInfo->dumpName = dumpName;
   dumpInfo->mipLevel = mipLevel;
   dumpInfo->subresourceFormat = format;
-  dumpInfo->commandListDispatchCount = commandListDispatchCount;
+  dumpInfo->CommandListDispatchCount = commandListDispatchCount;
 
   stageResource(commandList, resource, resourceState, *dumpInfo);
 }
@@ -48,10 +47,10 @@ void DispatchOutputsDump::executeCommandLists(unsigned key,
       found = true;
       if (frameCount && executeCount) {
         for (DumpInfo* dumpInfo : it->second) {
-          RenderTargetDumpInfo* info = static_cast<RenderTargetDumpInfo*>(dumpInfo);
-          info->executionCount = std::to_wstring(frameCount) + L"." +
+          auto* info = static_cast<RenderTargetDumpInfo*>(dumpInfo);
+          info->ExecutionCount = std::to_wstring(frameCount) + L"." +
                                  std::to_wstring(executeCount) + L"." + std::to_wstring(i + 1) +
-                                 L"." + std::to_wstring(info->commandListDispatchCount);
+                                 L"." + std::to_wstring(info->CommandListDispatchCount);
         }
       } else {
         break;
@@ -67,10 +66,10 @@ void DispatchOutputsDump::executeCommandLists(unsigned key,
 }
 
 void DispatchOutputsDump::dumpTexture(DumpInfo& dumpInfo, void* data) {
-  RenderTargetDumpInfo& info = static_cast<RenderTargetDumpInfo&>(dumpInfo);
-  if (!info.executionCount.empty()) {
-    size_t pos = dumpInfo.dumpName.find(dumpNameExecutionMarker);
-    info.dumpName = info.dumpName.replace(pos, dumpNameExecutionMarker.size(), info.executionCount);
+  auto& info = static_cast<RenderTargetDumpInfo&>(dumpInfo);
+  if (!info.ExecutionCount.empty()) {
+    const size_t pos = dumpInfo.dumpName.find(m_DumpNameExecutionMarker);
+    info.dumpName.replace(pos, m_DumpNameExecutionMarker.size(), info.ExecutionCount);
   }
   ResourceDump::dumpTexture(dumpInfo, data);
 }

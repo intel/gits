@@ -17,31 +17,31 @@ namespace gits {
 namespace DirectX {
 
 %for function in functions:
-void decode(char* src, ${function.name}Command& command) {
+void Decode(char* src, ${function.name}Command& command) {
   unsigned offset = 0;
-  decode(src, offset, command.key);
-  decode(src, offset, command.threadId);
+  Decode(src, offset, command.Key);
+  Decode(src, offset, command.ThreadId);
   %for param in function.params:
-  decode(src, offset, command.${param.name}_);
+  Decode(src, offset, command.m_${param.name});
   %endfor
   %if not function.ret.is_void:
-  decode(src, offset, command.result_);
+  Decode(src, offset, command.m_Result);
   %endif
 }
 
 %endfor
 %for interface in interfaces:
 %for function in interface.functions:
-void decode(char* src, ${interface.name}${function.name}Command& command) {
+void Decode(char* src, ${interface.name}${function.name}Command& command) {
   unsigned offset = 0;
-  decode(src, offset, command.key);
-  decode(src, offset, command.threadId);
-  decode(src, offset, command.object_.key);
+  Decode(src, offset, command.Key);
+  Decode(src, offset, command.ThreadId);
+  Decode(src, offset, command.m_Object.Key);
   %for param in function.params:
-  decode(src, offset, command.${param.name}_);
+  Decode(src, offset, command.m_${param.name});
   %endfor
   %if not function.ret.is_void:
-  decode(src, offset, command.result_);
+  Decode(src, offset, command.m_Result);
   %endif
 }
 

@@ -15,15 +15,15 @@ namespace DirectX {
 HelloPluginLayer::HelloPluginLayer(const HelloPluginConfig& cfg)
     : Layer("HelloPlugin"), cfg_(cfg) {}
 
-void HelloPluginLayer::post(IDXGISwapChainPresentCommand& c) {
+void HelloPluginLayer::Post(IDXGISwapChainPresentCommand& c) {
   newFrame();
 }
 
-void HelloPluginLayer::post(IDXGISwapChain1Present1Command& c) {
+void HelloPluginLayer::Post(IDXGISwapChain1Present1Command& c) {
   newFrame();
 }
 
-void HelloPluginLayer::post(ID3D12CommandQueueExecuteCommandListsCommand& c) {
+void HelloPluginLayer::Post(ID3D12CommandQueueExecuteCommandListsCommand& c) {
   static unsigned gpuSubmissionNum = 0;
   if (!cfg_.printGPUSubmissions) {
     return;

@@ -47,15 +47,15 @@ public:
   void writeBlock(const BlockInfo& info);
 
 private:
-  std::filesystem::path generatedDir_ = {};
-  std::vector<std::pair<BlockInfo, std::string>> blocks_{};
-  std::unordered_map<unsigned, std::string> interfaceMap_;
+  std::filesystem::path m_GeneratedDir = {};
+  std::vector<std::pair<BlockInfo, std::string>> m_Blocks{};
+  std::unordered_map<unsigned, std::string> m_InterfaceMap;
 
   // Open streams
-  std::ofstream objectsH_;
-  std::ostringstream currentBlock_;
-  std::ofstream data_;
-  size_t dataOffset_ = 0;
+  std::ofstream m_ObjectsH;
+  std::ostringstream m_CurrentBlock;
+  std::ofstream m_Data;
+  size_t m_DataOffset = 0;
 };
 
 } // namespace ccode

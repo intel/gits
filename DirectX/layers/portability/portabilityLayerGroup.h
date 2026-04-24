@@ -19,8 +19,8 @@ public:
   PortabilityLayerGroup() = default;
   ~PortabilityLayerGroup() override = default;
 
-  void loadLayers() override;
-  void loadLayers(PortabilityLayer::ResourceRegistrationCallback registerResource);
+  void LoadLayers() override;
+  void LoadLayers(PortabilityLayer::ResourceRegistrationCallback registerResource);
 };
 
 } // namespace DirectX

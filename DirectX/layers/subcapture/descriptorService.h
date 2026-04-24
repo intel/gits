@@ -29,52 +29,52 @@ struct DescriptorState {
     D3D12_CONSTANTBUFFERVIEW,
     D3D12_SAMPLER
   };
-  DescriptorState(StateId id_) : id(id_) {}
+  DescriptorState(StateId id_) : Id(id_) {}
   virtual ~DescriptorState() = default;
-  StateId id{};
-  unsigned deviceKey{};
-  D3D12_CPU_DESCRIPTOR_HANDLE destDescriptor{};
-  unsigned destDescriptorKey{};
-  unsigned destDescriptorIndex{};
-  unsigned resourceKey{};
-  unsigned auxiliaryResourceKey{};
+  StateId Id{};
+  unsigned DeviceKey{};
+  D3D12_CPU_DESCRIPTOR_HANDLE DestDescriptor{};
+  unsigned DestDescriptorKey{};
+  unsigned DestDescriptorIndex{};
+  unsigned ResourceKey{};
+  unsigned AuxiliaryResourceKey{};
 };
 
 struct D3D12RenderTargetViewState : public DescriptorState {
   D3D12RenderTargetViewState() : DescriptorState(D3D12_RENDERTARGETVIEW) {}
-  bool isDesc{};
-  D3D12_RENDER_TARGET_VIEW_DESC desc{};
+  bool IsDesc{};
+  D3D12_RENDER_TARGET_VIEW_DESC Desc{};
 };
 
 struct D3D12DepthStencilViewState : public DescriptorState {
   D3D12DepthStencilViewState() : DescriptorState(D3D12_DEPTHSTENCILVIEW) {}
-  bool isDesc{};
-  D3D12_DEPTH_STENCIL_VIEW_DESC desc{};
+  bool IsDesc{};
+  D3D12_DEPTH_STENCIL_VIEW_DESC Desc{};
 };
 
 struct D3D12ShaderResourceViewState : public DescriptorState {
   D3D12ShaderResourceViewState() : DescriptorState(D3D12_SHADERRESOURCEVIEW) {}
-  bool isDesc{};
-  D3D12_SHADER_RESOURCE_VIEW_DESC desc{};
-  unsigned raytracingLocationOffset{};
+  bool IsDesc{};
+  D3D12_SHADER_RESOURCE_VIEW_DESC Desc{};
+  unsigned RaytracingLocationOffset{};
 };
 
 struct D3D12UnorderedAccessViewState : public DescriptorState {
   D3D12UnorderedAccessViewState() : DescriptorState(D3D12_UNORDEREDACCESSVIEW) {}
-  bool isDesc{};
-  D3D12_UNORDERED_ACCESS_VIEW_DESC desc{};
+  bool IsDesc{};
+  D3D12_UNORDERED_ACCESS_VIEW_DESC Desc{};
 };
 
 struct D3D12ConstantBufferViewState : public DescriptorState {
   D3D12ConstantBufferViewState() : DescriptorState(D3D12_CONSTANTBUFFERVIEW) {}
-  bool isDesc{};
-  D3D12_CONSTANT_BUFFER_VIEW_DESC desc{};
-  unsigned bufferLocationOffset{};
+  bool IsDesc{};
+  D3D12_CONSTANT_BUFFER_VIEW_DESC Desc{};
+  unsigned BufferLocationOffset{};
 };
 
 struct D3D12SamplerState : public DescriptorState {
   D3D12SamplerState() : DescriptorState(D3D12_SAMPLER) {}
-  D3D12_SAMPLER_DESC desc{};
+  D3D12_SAMPLER_DESC Desc{};
 };
 
 class StateTrackingService;
@@ -85,32 +85,33 @@ public:
   DescriptorService() {}
   DescriptorService(StateTrackingService* stateService,
                     ResourceForCBVRestoreService* resourceForCBVRestoreService)
-      : stateService_(stateService), resourceForCBVRestoreService_(resourceForCBVRestoreService) {}
-  void storeState(DescriptorState* state);
-  void removeState(unsigned key);
-  void restoreState();
-  void copyDescriptors(ID3D12DeviceCopyDescriptorsSimpleCommand& c);
-  void copyDescriptors(ID3D12DeviceCopyDescriptorsCommand& c);
-  DescriptorState* getDescriptorState(unsigned heapKey, unsigned descriptorIndex);
+      : m_StateService(stateService),
+        m_ResourceForCBVRestoreService(resourceForCBVRestoreService) {}
+  void StoreState(DescriptorState* state);
+  void RemoveState(unsigned key);
+  void RestoreState();
+  void CopyDescriptors(ID3D12DeviceCopyDescriptorsSimpleCommand& c);
+  void CopyDescriptors(ID3D12DeviceCopyDescriptorsCommand& c);
+  DescriptorState* GetDescriptorState(unsigned heapKey, unsigned DescriptorIndex);
 
 private:
-  void restoreState(DescriptorState* state);
-  DescriptorState* copyDescriptor(DescriptorState* state,
+  void RestoreState(DescriptorState* state);
+  DescriptorState* CopyDescriptor(DescriptorState* state,
                                   unsigned destHeapKey,
                                   unsigned destHeapIndex);
-  void restoreD3D12RenderTargetView(D3D12RenderTargetViewState* state);
-  void restoreD3D12DepthStencilView(D3D12DepthStencilViewState* state);
-  void restoreD3D12ShaderResourceView(D3D12ShaderResourceViewState* state);
-  void restoreD3D12UnorderedAccessView(D3D12UnorderedAccessViewState* state);
-  void restoreD3D12ConstantBufferView(D3D12ConstantBufferViewState* state);
-  void restoreD3D12Sampler(D3D12SamplerState* state);
+  void RestoreD3D12RenderTargetView(D3D12RenderTargetViewState* state);
+  void RestoreD3D12DepthStencilView(D3D12DepthStencilViewState* state);
+  void RestoreD3D12ShaderResourceView(D3D12ShaderResourceViewState* state);
+  void RestoreD3D12UnorderedAccessView(D3D12UnorderedAccessViewState* state);
+  void RestoreD3D12ConstantBufferView(D3D12ConstantBufferViewState* state);
+  void RestoreD3D12Sampler(D3D12SamplerState* state);
 
 private:
-  StateTrackingService* stateService_{};
-  ResourceForCBVRestoreService* resourceForCBVRestoreService_{};
-  std::map<unsigned, std::map<unsigned, std::unique_ptr<DescriptorState>>> statesByHeapIndex_;
-  std::set<unsigned> resources_;
-  std::mutex mutex_;
+  StateTrackingService* m_StateService{};
+  ResourceForCBVRestoreService* m_ResourceForCBVRestoreService{};
+  std::map<unsigned, std::map<unsigned, std::unique_ptr<DescriptorState>>> m_StatesByHeapIndex;
+  std::set<unsigned> m_Resources;
+  std::mutex m_Mutex;
 };
 
 } // namespace DirectX

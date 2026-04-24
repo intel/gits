@@ -17,7 +17,7 @@ namespace gits {
 namespace DirectX {
 
 AnalyzerResults::AnalyzerResults() {
-  std::ifstream analysis(getAnalysisFileName());
+  std::ifstream analysis(GetAnalysisFileName());
   if (analysis) {
     std::string str;
     analysis >> str;
@@ -48,65 +48,65 @@ AnalyzerResults::AnalyzerResults() {
       } else {
         unsigned key = std::stoi(str);
         if (commandLists) {
-          commandListKeys_.insert(key);
+          m_CommandListKeys.insert(key);
         } else if (commandQueues) {
-          commandQueueCommands_.insert(key);
+          m_CommandQueueCommands.insert(key);
         } else if (objects) {
-          objectKeys_.insert(key);
+          m_ObjectKeys.insert(key);
         } else if (descriptors) {
           analysis >> str;
           unsigned index = std::stoi(str);
-          descriptors_.insert(std::make_pair(key, index));
+          m_Descriptors.insert(std::make_pair(key, index));
         } else if (tlases) {
-          tlases_.insert(key);
+          m_Tlases.insert(key);
         } else if (blases) {
           analysis >> str;
           unsigned offset = std::stoi(str);
-          blases_.insert(std::make_pair(key, offset));
+          m_Blases.insert(std::make_pair(key, offset));
         } else {
           analysis >> str;
           unsigned offset = std::stoi(str);
-          asSources_.insert(std::make_pair(key, offset));
+          m_AsSources.insert(std::make_pair(key, offset));
         }
       }
     }
   }
-  optimize_ = Configurator::Get().directx.features.subcapture.optimize;
+  m_Optimize = Configurator::Get().directx.features.subcapture.optimize;
 }
 
-bool AnalyzerResults::restoreObject(unsigned objectKey) {
-  if (!optimize_ || objectKeys_.empty()) {
+bool AnalyzerResults::RestoreObject(unsigned objectKey) {
+  if (!m_Optimize || m_ObjectKeys.empty()) {
     return true;
   }
-  return objectKeys_.find(objectKey) != objectKeys_.end();
+  return m_ObjectKeys.find(objectKey) != m_ObjectKeys.end();
 }
 
-bool AnalyzerResults::restoreDescriptor(unsigned heapKey, unsigned index) {
-  if (!optimize_) {
+bool AnalyzerResults::RestoreDescriptor(unsigned heapKey, unsigned index) {
+  if (!m_Optimize) {
     return true;
   }
-  if (descriptors_.empty()) {
+  if (m_Descriptors.empty()) {
     return false;
   }
-  return descriptors_.find(std::make_pair(heapKey, index)) != descriptors_.end();
+  return m_Descriptors.find(std::make_pair(heapKey, index)) != m_Descriptors.end();
 }
 
-bool AnalyzerResults::restoreTlas(unsigned blasBuildKey) {
-  return tlases_.find(blasBuildKey) != tlases_.end();
+bool AnalyzerResults::RestoreTlas(unsigned blasBuildKey) {
+  return m_Tlases.find(blasBuildKey) != m_Tlases.end();
 }
 
-bool AnalyzerResults::restoreBlas(std::pair<unsigned, unsigned> blas) {
-  if (!optimize_) {
+bool AnalyzerResults::RestoreBlas(std::pair<unsigned, unsigned> blas) {
+  if (!m_Optimize) {
     return true;
   }
-  return blases_.find(blas) != blases_.end();
+  return m_Blases.find(blas) != m_Blases.end();
 }
 
-bool AnalyzerResults::isAnalysis() {
-  return std::filesystem::exists(getAnalysisFileName());
+bool AnalyzerResults::IsAnalysis() {
+  return std::filesystem::exists(GetAnalysisFileName());
 }
 
-std::string AnalyzerResults::getAnalysisFileName() {
+std::string AnalyzerResults::GetAnalysisFileName() {
   const Configuration& config = Configurator::Get();
   std::stringstream fileName;
   fileName << config.common.player.streamDir.filename().string() << "_frames-"

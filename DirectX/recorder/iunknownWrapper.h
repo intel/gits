@@ -37,40 +37,40 @@ public:
 
   template <typename T>
   T* getWrappedObject() {
-    return static_cast<T*>(object_);
+    return static_cast<T*>(m_Object);
   }
 
   template <typename T>
   const T* getWrappedObject() const {
-    return static_cast<const T*>(object_);
+    return static_cast<const T*>(m_Object);
   }
 
   static IUnknown* getRootIUnknown(IUnknown* object);
 
   IUnknown* getRootIUnknown() {
-    return getRootIUnknown(object_);
+    return getRootIUnknown(m_Object);
   }
 
   unsigned getKey() {
-    return key_;
+    return m_Key;
   }
 
 protected:
   void insertIID(REFIID riid) {
-    iids_.insert(riid);
+    m_Iids.insert(riid);
   }
 
 private:
   bool isIID(REFIID riid) {
-    return iids_.find(riid) != iids_.end();
+    return m_Iids.find(riid) != m_Iids.end();
   }
 
 private:
-  IID iid_;
-  IUnknown* object_;
-  unsigned key_;
-  std::unordered_set<IID, IIDHash> iids_;
-  std::vector<std::unique_ptr<IUnknownWrapper>> secondaryWrappers_;
+  IID m_Iid;
+  IUnknown* m_Object;
+  unsigned m_Key;
+  std::unordered_set<IID, IIDHash> m_Iids;
+  std::vector<std::unique_ptr<IUnknownWrapper>> m_SecondaryWrappers;
 };
 
 } // namespace DirectX

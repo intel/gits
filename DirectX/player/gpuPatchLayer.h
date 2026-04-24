@@ -35,188 +35,189 @@ public:
   GpuPatchLayer(PlayerManager& manager);
   ~GpuPatchLayer();
 
-  void pre(IUnknownReleaseCommand& c) override;
-  void pre(ID3D12ResourceGetGPUVirtualAddressCommand& c) override;
-  void post(ID3D12ResourceGetGPUVirtualAddressCommand& c) override;
-  void pre(ID3D12StateObjectPropertiesGetShaderIdentifierCommand& c) override;
-  void post(ID3D12StateObjectPropertiesGetShaderIdentifierCommand& c) override;
-  void pre(ID3D12DescriptorHeapGetGPUDescriptorHandleForHeapStartCommand& c) override;
-  void post(ID3D12DescriptorHeapGetGPUDescriptorHandleForHeapStartCommand& c) override;
-  void pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c) override;
-  void pre(ID3D12GraphicsCommandList4DispatchRaysCommand& c) override;
-  void post(ID3D12GraphicsCommandListSetComputeRootSignatureCommand& c) override;
-  void post(ID3D12GraphicsCommandListSetComputeRootDescriptorTableCommand& c) override;
-  void post(ID3D12GraphicsCommandListSetComputeRoot32BitConstantCommand& c) override;
-  void post(ID3D12GraphicsCommandListSetComputeRoot32BitConstantsCommand& c) override;
-  void post(ID3D12GraphicsCommandListSetComputeRootShaderResourceViewCommand& c) override;
-  void post(ID3D12GraphicsCommandListSetComputeRootConstantBufferViewCommand& c) override;
-  void post(ID3D12GraphicsCommandListSetComputeRootUnorderedAccessViewCommand& c) override;
-  void post(ID3D12GraphicsCommandList4SetPipelineState1Command& c) override;
-  void post(ID3D12DeviceCreateCommandListCommand& c) override;
-  void post(ID3D12GraphicsCommandListSetPipelineStateCommand& c) override;
-  void post(ID3D12GraphicsCommandListResetCommand& c) override;
-  void pre(ID3D12CommandQueueExecuteCommandListsCommand& c) override;
-  void post(ID3D12CommandQueueExecuteCommandListsCommand& c) override;
-  void post(ID3D12CommandQueueWaitCommand& c) override;
-  void post(ID3D12CommandQueueSignalCommand& c) override;
-  void post(ID3D12FenceSignalCommand& c) override;
-  void post(ID3D12DeviceCreateFenceCommand& c) override;
-  void post(ID3D12Device3EnqueueMakeResidentCommand& c) override;
-  void post(ID3D12DeviceCreateCommandSignatureCommand& c) override;
-  void pre(ID3D12GraphicsCommandListExecuteIndirectCommand& c) override;
-  void post(ID3D12GraphicsCommandListExecuteIndirectCommand& c) override;
-  void post(ID3D12DeviceCreatePlacedResourceCommand& c) override;
-  void post(ID3D12Device8CreatePlacedResource1Command& c) override;
-  void post(ID3D12Device10CreatePlacedResource2Command& c) override;
-  void post(ID3D12DeviceCreateCommittedResourceCommand& c) override;
-  void post(ID3D12Device4CreateCommittedResource1Command& c) override;
-  void post(ID3D12Device8CreateCommittedResource2Command& c) override;
-  void post(ID3D12Device10CreateCommittedResource3Command& c) override;
-  void post(ID3D12DeviceCreateReservedResourceCommand& c) override;
-  void post(ID3D12Device4CreateReservedResource1Command& c) override;
-  void post(ID3D12Device10CreateReservedResource2Command& c) override;
-  void post(ID3D12GraphicsCommandListResourceBarrierCommand& c) override;
+  void Pre(IUnknownReleaseCommand& command) override;
+  void Pre(ID3D12ResourceGetGPUVirtualAddressCommand& command) override;
+  void Post(ID3D12ResourceGetGPUVirtualAddressCommand& command) override;
+  void Pre(ID3D12StateObjectPropertiesGetShaderIdentifierCommand& command) override;
+  void Post(ID3D12StateObjectPropertiesGetShaderIdentifierCommand& command) override;
+  void Pre(ID3D12DescriptorHeapGetGPUDescriptorHandleForHeapStartCommand& command) override;
+  void Post(ID3D12DescriptorHeapGetGPUDescriptorHandleForHeapStartCommand& command) override;
+  void Pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& command) override;
+  void Pre(ID3D12GraphicsCommandList4DispatchRaysCommand& command) override;
+  void Post(ID3D12GraphicsCommandListSetComputeRootSignatureCommand& command) override;
+  void Post(ID3D12GraphicsCommandListSetComputeRootDescriptorTableCommand& command) override;
+  void Post(ID3D12GraphicsCommandListSetComputeRoot32BitConstantCommand& command) override;
+  void Post(ID3D12GraphicsCommandListSetComputeRoot32BitConstantsCommand& command) override;
+  void Post(ID3D12GraphicsCommandListSetComputeRootShaderResourceViewCommand& command) override;
+  void Post(ID3D12GraphicsCommandListSetComputeRootConstantBufferViewCommand& command) override;
+  void Post(ID3D12GraphicsCommandListSetComputeRootUnorderedAccessViewCommand& command) override;
+  void Post(ID3D12GraphicsCommandList4SetPipelineState1Command& command) override;
+  void Post(ID3D12DeviceCreateCommandListCommand& command) override;
+  void Post(ID3D12GraphicsCommandListSetPipelineStateCommand& command) override;
+  void Post(ID3D12GraphicsCommandListResetCommand& command) override;
+  void Pre(ID3D12CommandQueueExecuteCommandListsCommand& command) override;
+  void Post(ID3D12CommandQueueExecuteCommandListsCommand& command) override;
+  void Post(ID3D12CommandQueueWaitCommand& command) override;
+  void Post(ID3D12CommandQueueSignalCommand& command) override;
+  void Post(ID3D12FenceSignalCommand& command) override;
+  void Post(ID3D12DeviceCreateFenceCommand& command) override;
+  void Post(ID3D12Device3EnqueueMakeResidentCommand& command) override;
+  void Post(ID3D12DeviceCreateCommandSignatureCommand& command) override;
+  void Pre(ID3D12GraphicsCommandListExecuteIndirectCommand& command) override;
+  void Post(ID3D12GraphicsCommandListExecuteIndirectCommand& command) override;
+  void Post(ID3D12DeviceCreatePlacedResourceCommand& command) override;
+  void Post(ID3D12Device8CreatePlacedResource1Command& command) override;
+  void Post(ID3D12Device10CreatePlacedResource2Command& command) override;
+  void Post(ID3D12DeviceCreateCommittedResourceCommand& command) override;
+  void Post(ID3D12Device4CreateCommittedResource1Command& command) override;
+  void Post(ID3D12Device8CreateCommittedResource2Command& command) override;
+  void Post(ID3D12Device10CreateCommittedResource3Command& command) override;
+  void Post(ID3D12DeviceCreateReservedResourceCommand& command) override;
+  void Post(ID3D12Device4CreateReservedResource1Command& command) override;
+  void Post(ID3D12Device10CreateReservedResource2Command& command) override;
+  void Post(ID3D12GraphicsCommandListResourceBarrierCommand& command) override;
 
 private:
-  void initialize(ID3D12GraphicsCommandList* commandList);
-  void initializeInstancesAoP(ID3D12GraphicsCommandList* commandList);
-  void addPatchBuffer(ID3D12GraphicsCommandList* commandList, unsigned patchBufferSize);
-  void createOrReplacePatchBufferObjects(ID3D12Device* device,
+  void Initialize(ID3D12GraphicsCommandList* commandList);
+  void InitializeInstancesAoP(ID3D12GraphicsCommandList* commandList);
+  void AddPatchBuffer(ID3D12GraphicsCommandList* commandList, unsigned patchBufferSize);
+  void CreateOrReplacePatchBufferObjects(ID3D12Device* device,
                                          unsigned patchBufferIndex,
                                          unsigned patchBufferSize);
-  void addMappingBuffer(ID3D12GraphicsCommandList* commandList);
-  void createMappingBufferObjects(ID3D12Device* device, unsigned mappingBufferIndex);
-  unsigned getMappingBufferIndex(unsigned commandListKey, ID3D12GraphicsCommandList* commandList);
-  unsigned getPatchBufferIndex(unsigned commandListKey,
+  void AddMappingBuffer(ID3D12GraphicsCommandList* commandList);
+  void CreateMappingBufferObjects(ID3D12Device* device, unsigned mappingBufferIndex);
+  unsigned GetMappingBufferIndex(unsigned commandListKey, ID3D12GraphicsCommandList* commandList);
+  unsigned GetPatchBufferIndex(unsigned commandListKey,
                                ID3D12GraphicsCommandList* commandList,
                                size_t size);
-  unsigned getInstancesAoPPatchBufferIndex(unsigned commandListKey);
-  unsigned getInstancesAoPStagingBufferIndex(unsigned commandListKey);
-  void getPatchOffsets(const D3D12_COMMAND_SIGNATURE_DESC& commandSignature,
+  unsigned GetInstancesAoPPatchBufferIndex(unsigned commandListKey);
+  unsigned GetInstancesAoPStagingBufferIndex(unsigned commandListKey);
+  void GetPatchOffsets(const D3D12_COMMAND_SIGNATURE_DESC& commandSignature,
                        std::vector<unsigned>& patchOffsets);
-  void loadExecuteIndirectDispatchRays();
-  void loadInstancesArraysOfPointers();
-  void patchDispatchRays(ID3D12GraphicsCommandList* commandList,
+  void LoadExecuteIndirectDispatchRays();
+  void LoadInstancesArraysOfPointers();
+  void PatchDispatchRays(ID3D12GraphicsCommandList* commandList,
                          D3D12_DISPATCH_RAYS_DESC& dispatchRaysDesc,
                          unsigned patchBufferIndex,
                          unsigned mappingBufferIndex,
                          unsigned callKey);
-  size_t getDispatchRaysPatchSize(const D3D12_DISPATCH_RAYS_DESC& desc) const;
-  void waitForFence(ID3D12Fence* fence, unsigned fenceValue);
+  size_t GetDispatchRaysPatchSize(const D3D12_DISPATCH_RAYS_DESC& desc) const;
+  void WaitForFence(ID3D12Fence* fence, unsigned fenceValue);
 
-private:
-  PlayerManager& manager_;
-  bool useAddressPinning_{};
-  HANDLE waitForFenceEvent_{};
+  PlayerManager& m_Manager;
+  bool m_UseAddressPinning{};
+  HANDLE m_WaitForFenceEvent{};
 
-  static const unsigned patchBufferInitialPoolSize_{32};
-  unsigned patchBufferPoolSize_{};
-  std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> patchBuffers_{};
-  const unsigned patchBufferInitialSize_{0x1000000};
-  const float patchBufferSizeMultiplier_{1.1f};
+  static constexpr unsigned PATCH_BUFFER_INITIAL_POOL_SIZE = 32;
+  unsigned m_PatchBufferPoolSize{};
+  std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> m_PatchBuffers;
+  static constexpr unsigned PATCH_BUFFER_INITIAL_SIZE = 0x1000000;
+  static constexpr float PATCH_BUFFER_SIZE_MULTIPLIER = 1.1f;
 
-  static const unsigned instancesAoPPatchBufferPoolSize_{8};
-  std::array<ID3D12Resource*, instancesAoPPatchBufferPoolSize_> instancesAoPPatchBuffers_{};
-  const unsigned instancesAoPPatchBufferSize_{0x10000000};
+  static constexpr unsigned INSTANCES_AOP_PATCH_BUFFER_POOL_SIZE = 8;
+  std::array<ID3D12Resource*, INSTANCES_AOP_PATCH_BUFFER_POOL_SIZE> m_InstancesAopPatchBuffers{};
+  static constexpr unsigned INSTANCES_AOP_PATCH_BUFFER_SIZE = 0x10000000;
 
-  static const unsigned instancesAoPStagingBufferPoolSize_{8};
-  std::array<ID3D12Resource*, instancesAoPStagingBufferPoolSize_> instancesAoPStagingBuffers_{};
-  const unsigned instancesAoPStagingBufferSize_{0x80000};
+  static constexpr unsigned INSTANCES_AOP_STAGING_BUFFER_POOL_SIZE = 8;
+  std::array<ID3D12Resource*, INSTANCES_AOP_STAGING_BUFFER_POOL_SIZE>
+      m_InstancesAopStagingBuffers{};
+  static constexpr unsigned INSTANCES_AOP_STAGING_BUFFER_SIZE = 0x80000;
 
-  std::array<ID3D12Resource*, instancesAoPStagingBufferPoolSize_>
-      instancesAoPPatchOffsetsBuffers_{};
-  std::array<ID3D12Resource*, instancesAoPStagingBufferPoolSize_>
-      instancesAoPPatchOffsetsStagingBuffers_{};
-  const unsigned instancesAoPPatchOffsetsBufferSize_{0x40000};
+  std::array<ID3D12Resource*, INSTANCES_AOP_STAGING_BUFFER_POOL_SIZE>
+      m_InstancesAopPatchOffsetsBuffers{};
+  std::array<ID3D12Resource*, INSTANCES_AOP_STAGING_BUFFER_POOL_SIZE>
+      m_InstancesAopPatchOffsetsStagingBuffers{};
+  static constexpr unsigned INSTANCES_AOP_PATCH_OFFSETS_BUFFER_SIZE = 0x40000;
 
-  std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> patchOffsetsBuffers_{};
-  std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> patchOffsetsStagingBuffers_{};
-  const unsigned patchOffsetsBufferSize_{0x20000};
+  std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> m_PatchOffsetsBuffers;
+  std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> m_PatchOffsetsStagingBuffers;
+  static constexpr unsigned PATCH_OFFSETS_BUFFER_SIZE = 0x20000;
 
-  std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> executeIndirectRaytracingPatchBuffers_{};
+  std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> m_ExecuteIndirectRaytracingPatchBuffers;
   std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>>
-      executeIndirectRaytracingPatchStagingBuffers_{};
-  const unsigned executeIndirectRaytracingPatchBufferSize_{0x100};
+      m_ExecuteIndirectRaytracingPatchStagingBuffers;
+  static constexpr unsigned EXECUTE_INDIRECT_RAYTRACING_PATCH_BUFFER_SIZE = 0x100;
 
-  std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> executeIndirectCountBuffers_{};
-  std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> executeIndirectCountStagingBuffers_{};
-  const unsigned executeIndirectCountBufferSize_{0x10};
+  std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> m_ExecuteIndirectCountBuffers;
+  std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> m_ExecuteIndirectCountStagingBuffers;
+  static constexpr unsigned EXECUTE_INDIRECT_COUNT_BUFFER_SIZE = 0x10;
 
-  static const unsigned mappingBufferInitialPoolSize_{24};
-  unsigned mappingBufferPoolSize_{};
+  static constexpr unsigned MAPPING_BUFFER_INITIAL_POOL_SIZE = 24;
+  unsigned m_MappingBufferPoolSize{};
 
-  std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> gpuAddressBuffers_{};
-  std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> gpuAddressStagingBuffers_{};
-  unsigned gpuAddressBufferSize_{sizeof(CapturePlayerGpuAddressService::GpuAddressMapping) *
-                                 0x10000};
+  std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> m_GpuAddressBuffers;
+  std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> m_GpuAddressStagingBuffers;
+  unsigned m_GpuAddressBufferSize{sizeof(CapturePlayerGpuAddressService::GpuAddressMapping) *
+                                  0x10000};
 
-  std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> shaderIdentifierBuffers_{};
-  std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> shaderIdentifierStagingBuffers_{};
-  unsigned shaderIdentifierBufferSize_{
+  std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> m_ShaderIdentifierBuffers;
+  std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> m_ShaderIdentifierStagingBuffers;
+  unsigned m_ShaderIdentifierBufferSize{
       sizeof(CapturePlayerShaderIdentifierService::ShaderIdentifierMapping) * 0x1000};
 
-  std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> viewDescriptorBuffers_{};
-  std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> viewDescriptorStagingBuffers_{};
-  unsigned viewDescriptorBufferSize_{
+  std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> m_ViewDescriptorBuffers;
+  std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> m_ViewDescriptorStagingBuffers;
+  unsigned m_ViewDescriptorBufferSize{
       sizeof(CapturePlayerDescriptorHandleService::DescriptorMapping) * 0x10000};
 
-  std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> sampleDescriptorBuffers_{};
-  std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> sampleDescriptorStagingBuffers_{};
-  unsigned sampleDescriptorBufferSize_{
+  std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> m_SampleDescriptorBuffers;
+  std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> m_SampleDescriptorStagingBuffers;
+  unsigned m_SampleDescriptorBufferSize{
       sizeof(CapturePlayerDescriptorHandleService::DescriptorMapping) * 0x1000};
 
   struct MappingCount {
-    unsigned gpuAddressCount;
-    unsigned shaderIdentiferCount;
-    unsigned viewDescriptorCount;
-    unsigned sampleDescriptorCount;
+    unsigned GpuAddressCount;
+    unsigned ShaderIdentifierCount;
+    unsigned ViewDescriptorCount;
+    unsigned SampleDescriptorCount;
   };
-  std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> mappingCountBuffers_{};
-  std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> mappingCountStagingBuffers_{};
-  unsigned mappingCountBufferSize_{sizeof(MappingCount)};
+  std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> m_MappingCountBuffers;
+  std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> m_MappingCountStagingBuffers;
+  unsigned m_MappingCountBufferSize{sizeof(MappingCount)};
 
   struct FenceInfo {
-    Microsoft::WRL::ComPtr<ID3D12Fence> fence{};
-    UINT64 fenceValue{};
-    bool waitingForExecute{};
+    Microsoft::WRL::ComPtr<ID3D12Fence> D3d12Fence{};
+    UINT64 FenceValue{};
+    bool WaitingForExecute{};
   };
   struct PatchBufferInfo {
-    FenceInfo fenceInfo;
-    size_t size{};
+    FenceInfo Fence{};
+    size_t Size{};
   };
-  std::vector<FenceInfo> mappingFences_{};
-  std::unordered_map<unsigned, unsigned> currentMappingsByCommandList_;
+  std::vector<FenceInfo> m_MappingFences;
+  std::unordered_map<unsigned, unsigned> m_CurrentMappingsByCommandList;
 
-  std::vector<PatchBufferInfo> patchBufferInfos_{};
-  std::unordered_map<unsigned, std::vector<unsigned>> currentPatchBuffersByCommandList_;
+  std::vector<PatchBufferInfo> m_PatchBufferInfos;
+  std::unordered_map<unsigned, std::vector<unsigned>> m_CurrentPatchBuffersByCommandList;
 
-  std::array<FenceInfo, instancesAoPPatchBufferPoolSize_> instancesAoPPatchBufferFences_{};
-  std::unordered_map<unsigned, std::vector<unsigned>> currentInstancesAoPPatchBuffersByCommandList_;
-
-  std::array<FenceInfo, instancesAoPStagingBufferPoolSize_> instancesAoPStagingBufferFences_{};
+  std::array<FenceInfo, INSTANCES_AOP_PATCH_BUFFER_POOL_SIZE> m_InstancesAopPatchBufferFences{};
   std::unordered_map<unsigned, std::vector<unsigned>>
-      currentInstancesAoPStagingBuffersByCommandList_;
+      m_CurrentInstancesAopPatchBuffersByCommandList;
 
-  bool initialized_{};
-  bool initializedInstancesAoP_{};
+  std::array<FenceInfo, INSTANCES_AOP_STAGING_BUFFER_POOL_SIZE> m_InstancesAopStagingBufferFences{};
+  std::unordered_map<unsigned, std::vector<unsigned>>
+      m_CurrentInstancesAopStagingBuffersByCommandList;
 
-  CapturePlayerGpuAddressService addressService_;
-  CapturePlayerShaderIdentifierService shaderIdentifierService_;
-  CapturePlayerDescriptorHandleService descriptorHandleService_;
-  RaytracingShaderPatchService raytracingShaderPatchService_;
-  ExecuteIndirectShaderPatchService executeIndirectShaderPatchService_;
-  GpuPatchCommandListService commandListService_;
-  GpuPatchDumpService dumpService_;
-  ResourceStateTracker resourceStateTracker_;
+  bool m_Initialized{};
+  bool m_InitializedInstancesAop{};
+
+  CapturePlayerGpuAddressService m_AddressService;
+  CapturePlayerShaderIdentifierService m_ShaderIdentifierService;
+  CapturePlayerDescriptorHandleService m_DescriptorHandleService;
+  RaytracingShaderPatchService m_RaytracingShaderPatchService;
+  ExecuteIndirectShaderPatchService m_ExecuteIndirectShaderPatchService;
+  GpuPatchCommandListService m_CommandListService;
+  GpuPatchDumpService m_DumpService;
+  ResourceStateTracker m_ResourceStateTracker;
 
   std::unordered_map<unsigned, std::unique_ptr<PointerArgument<D3D12_COMMAND_SIGNATURE_DESC>>>
-      commandSignatures_;
-  std::unordered_map<unsigned, D3D12_DISPATCH_RAYS_DESC> executeIndirectDispatchRays_;
-  std::unordered_map<unsigned, std::vector<D3D12_GPU_VIRTUAL_ADDRESS>> instancesArraysOfPointers_;
+      m_CommandSignatures;
+  std::unordered_map<unsigned, D3D12_DISPATCH_RAYS_DESC> m_ExecuteIndirectDispatchRays;
+  std::unordered_map<unsigned, std::vector<D3D12_GPU_VIRTUAL_ADDRESS>> m_InstancesArraysOfPointers;
 
-  std::unordered_map<unsigned, ID3D12Resource*> resourceByKey_;
+  std::unordered_map<unsigned, ID3D12Resource*> m_ResourceByKey;
 
-  UINT64 executeIndirectLastArgumentBufferOffset_{};
+  UINT64 m_ExecuteIndirectLastArgumentBufferOffset{};
 };
 
 } // namespace DirectX

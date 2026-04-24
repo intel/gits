@@ -24,29 +24,29 @@ public:
   XessService(const XessService&) = delete;
   XessService& operator=(const XessService&) = delete;
 
-  bool loadXess(std::filesystem::path path);
-  bool loadXell(std::filesystem::path path);
-  bool loadXefg(std::filesystem::path path);
+  bool LoadXess(std::filesystem::path path);
+  bool LoadXell(std::filesystem::path path);
+  bool LoadXefg(std::filesystem::path path);
 
-  XessDispatchTable& getXessDispatchTable() {
-    return xessDispatchTable_;
+  XessDispatchTable& GetXessDispatchTable() {
+    return m_XessDispatchTable;
   }
 
-  XellDispatchTable& getXellDispatchTable() {
-    return xellDispatchTable_;
+  XellDispatchTable& GetXellDispatchTable() {
+    return m_XellDispatchTable;
   }
 
-  XefgDispatchTable& getXefgDispatchTable() {
-    return xefgDispatchTable_;
+  XefgDispatchTable& GetXefgDispatchTable() {
+    return m_XefgDispatchTable;
   }
 
 private:
-  HMODULE xessDll_{};
-  XessDispatchTable xessDispatchTable_{};
-  HMODULE xellDll_{};
-  XellDispatchTable xellDispatchTable_{};
-  HMODULE xefgDll_{};
-  XefgDispatchTable xefgDispatchTable_{};
+  HMODULE m_XessDll{};
+  XessDispatchTable m_XessDispatchTable{};
+  HMODULE m_XellDll{};
+  XellDispatchTable m_XellDispatchTable{};
+  HMODULE m_XefgDll{};
+  XefgDispatchTable m_XefgDispatchTable{};
 };
 
 } // namespace DirectX

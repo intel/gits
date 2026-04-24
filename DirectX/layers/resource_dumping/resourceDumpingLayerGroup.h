@@ -18,7 +18,7 @@ public:
   ResourceDumpingLayerGroup() = default;
   ~ResourceDumpingLayerGroup() override = default;
 
-  void loadLayers() override;
+  void LoadLayers() override;
 };
 
 } // namespace DirectX

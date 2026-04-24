@@ -55,9 +55,9 @@ def get_sal_size_value(parameter, is_command_argument):
     # Some size sals have expressions that would add too much complexity
     custom_values = {
         # ID3D12GraphicsCommandListSetComputeRoot32BitConstants
-        'Num32BitValuesToSet*sizeof(UINT)': 'c.Num32BitValuesToSet_.value * sizeof(UINT);',
+        'Num32BitValuesToSet*sizeof(UINT)': 'c.m_Num32BitValuesToSet.Value * sizeof(UINT);',
         # ID3D12GraphicsCommandList1SetSamplePositions
-        'NumSamplesPerPixel*NumPixels': 'c.NumSamplesPerPixel_.value * c.NumPixels_.value;',
+        'NumSamplesPerPixel*NumPixels': 'c.m_NumSamplesPerPixel.Value * c.m_NumPixels.Value;',
         # ID3D12GraphicsCommandList5RSSetShadingRate
         'D3D12_RS_SET_SHADING_RATE_COMBINER_COUNT': 'D3D12_RS_SET_SHADING_RATE_COMBINER_COUNT;'
     }
@@ -80,7 +80,7 @@ def get_sal_size_value(parameter, is_command_argument):
             if ',' in sal_size:
                 sal_size = sal_size.split(',')[0]
             if is_command_argument:
-                str = f'{sal_size_decorator}c.{sal_size}_.value;'
+                str = f'{sal_size_decorator}c.m_{sal_size}.Value;'
             else:
                 str = f'{sal_size_decorator}value.{sal_size};'
     return str
@@ -133,9 +133,9 @@ def get_interface_declaration(function):
         if param.is_interface_creation:
             if not param.sal_size:
                 if previous_param.type == 'REFIID' and param.is_pointer_to_pointer and param.type == 'void':
-                    str += f'stream.addInterface(c.{param.name}_.key, c.{previous_param.name}_.value);'
+                    str += f'stream.addInterface(c.m_{param.name}.Key, c.m_{previous_param.name}.Value);'
                 else:
-                    str += f'stream.addInterface(c.{param.name}_.key, IID_{param.type});'
+                    str += f'stream.addInterface(c.m_{param.name}.Key, IID_{param.type});'
             else:
                 str += f'// TODO ARRAY OF COM OBJECTS'
         previous_param = param

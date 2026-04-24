@@ -13,85 +13,85 @@
 namespace gits {
 namespace DirectX {
 
-void updateInterface(PlayerManager& manager, D3D12_TEXTURE_COPY_LOCATION_Argument& arg) {
-  if (!manager.executeCommands()) {
+void UpdateInterface(PlayerManager& manager, D3D12_TEXTURE_COPY_LOCATION_Argument& arg) {
+  if (!manager.ExecuteCommands()) {
     return;
   }
-  if (arg.resourceKey) {
-    arg.value->pResource = static_cast<ID3D12Resource*>(manager.findObject(arg.resourceKey));
+  if (arg.ResourceKey) {
+    arg.Value->pResource = static_cast<ID3D12Resource*>(manager.FindObject(arg.ResourceKey));
   }
 }
 
-void updateInterface(PlayerManager& manager, D3D12_RESOURCE_BARRIERs_Argument& arg) {
-  if (!manager.executeCommands()) {
+void UpdateInterface(PlayerManager& manager, D3D12_RESOURCE_BARRIERs_Argument& arg) {
+  if (!manager.ExecuteCommands()) {
     return;
   }
 
-  for (unsigned i = 0; i < arg.size; ++i) {
-    D3D12_RESOURCE_BARRIER& barrier = arg.value[i];
+  for (unsigned i = 0; i < arg.Size; ++i) {
+    D3D12_RESOURCE_BARRIER& barrier = arg.Value[i];
     switch (barrier.Type) {
     case D3D12_RESOURCE_BARRIER_TYPE_ALIASING:
-      if (arg.resourceKeys[i]) {
+      if (arg.ResourceKeys[i]) {
         barrier.Aliasing.pResourceBefore =
-            static_cast<ID3D12Resource*>(manager.findObject(arg.resourceKeys[i]));
+            static_cast<ID3D12Resource*>(manager.FindObject(arg.ResourceKeys[i]));
       }
-      if (arg.resourceAfterKeys[i]) {
+      if (arg.ResourceAfterKeys[i]) {
         barrier.Aliasing.pResourceAfter =
-            static_cast<ID3D12Resource*>(manager.findObject(arg.resourceAfterKeys[i]));
+            static_cast<ID3D12Resource*>(manager.FindObject(arg.ResourceAfterKeys[i]));
       }
       break;
 
     case D3D12_RESOURCE_BARRIER_TYPE_TRANSITION:
-      if (arg.resourceKeys[i]) {
+      if (arg.ResourceKeys[i]) {
         barrier.Transition.pResource =
-            static_cast<ID3D12Resource*>(manager.findObject(arg.resourceKeys[i]));
+            static_cast<ID3D12Resource*>(manager.FindObject(arg.ResourceKeys[i]));
       }
       break;
 
     case D3D12_RESOURCE_BARRIER_TYPE_UAV:
-      if (arg.resourceKeys[i]) {
+      if (arg.ResourceKeys[i]) {
         barrier.UAV.pResource =
-            static_cast<ID3D12Resource*>(manager.findObject(arg.resourceKeys[i]));
+            static_cast<ID3D12Resource*>(manager.FindObject(arg.ResourceKeys[i]));
       }
       break;
     }
   }
 }
 
-void updateInterface(PlayerManager& manager, D3D12_GRAPHICS_PIPELINE_STATE_DESC_Argument& arg) {
-  if (!manager.executeCommands()) {
+void UpdateInterface(PlayerManager& manager, D3D12_GRAPHICS_PIPELINE_STATE_DESC_Argument& arg) {
+  if (!manager.ExecuteCommands()) {
     return;
   }
 
-  if (arg.rootSignatureKey) {
-    arg.value->pRootSignature =
-        static_cast<ID3D12RootSignature*>(manager.findObject(arg.rootSignatureKey));
+  if (arg.RootSignatureKey) {
+    arg.Value->pRootSignature =
+        static_cast<ID3D12RootSignature*>(manager.FindObject(arg.RootSignatureKey));
   }
 }
 
-void updateInterface(PlayerManager& manager, D3D12_COMPUTE_PIPELINE_STATE_DESC_Argument& arg) {
-  if (!manager.executeCommands()) {
+void UpdateInterface(PlayerManager& manager, D3D12_COMPUTE_PIPELINE_STATE_DESC_Argument& arg) {
+  if (!manager.ExecuteCommands()) {
     return;
   }
 
-  if (arg.rootSignatureKey) {
-    arg.value->pRootSignature =
-        static_cast<ID3D12RootSignature*>(manager.findObject(arg.rootSignatureKey));
+  if (arg.RootSignatureKey) {
+    arg.Value->pRootSignature =
+        static_cast<ID3D12RootSignature*>(manager.FindObject(arg.RootSignatureKey));
   }
 }
 
-void updateInterface(PlayerManager& manager, D3D12_PIPELINE_STATE_STREAM_DESC_Argument& arg) {
-  if (!manager.executeCommands()) {
+void UpdateInterface(PlayerManager& manager, D3D12_PIPELINE_STATE_STREAM_DESC_Argument& arg) {
+  if (!manager.ExecuteCommands()) {
     return;
   }
 
   ID3D12RootSignature* rootSignature = nullptr;
-  if (arg.rootSignatureKey) {
-    rootSignature = static_cast<ID3D12RootSignature*>(manager.findObject(arg.rootSignatureKey));
+  if (arg.RootSignatureKey) {
+    rootSignature = static_cast<ID3D12RootSignature*>(manager.FindObject(arg.RootSignatureKey));
 
     size_t offset = 0;
-    while (offset < arg.value->SizeInBytes) {
-      void* subobjectData = static_cast<char*>(arg.value->pPipelineStateSubobjectStream) + offset;
+    while (offset < arg.Value->SizeInBytes) {
+      void* subobjectData = static_cast<char*>(arg.Value->pPipelineStateSubobjectStream) + offset;
       D3D12_PIPELINE_STATE_SUBOBJECT_TYPE subobjectType =
           *reinterpret_cast<D3D12_PIPELINE_STATE_SUBOBJECT_TYPE*>(subobjectData);
 
@@ -193,93 +193,93 @@ void updateInterface(PlayerManager& manager, D3D12_PIPELINE_STATE_STREAM_DESC_Ar
   }
 }
 
-void updateInterface(PlayerManager& manager, D3D12_STATE_OBJECT_DESC_Argument& arg) {
-  if (!manager.executeCommands()) {
+void UpdateInterface(PlayerManager& manager, D3D12_STATE_OBJECT_DESC_Argument& arg) {
+  if (!manager.ExecuteCommands()) {
     return;
   }
 
-  for (unsigned index = 0; index < arg.value->NumSubobjects; ++index) {
+  for (unsigned index = 0; index < arg.Value->NumSubobjects; ++index) {
     D3D12_STATE_SUBOBJECT* subobject =
-        const_cast<D3D12_STATE_SUBOBJECT*>(&(arg.value->pSubobjects[index]));
+        const_cast<D3D12_STATE_SUBOBJECT*>(&(arg.Value->pSubobjects[index]));
     switch (subobject->Type) {
     case D3D12_STATE_SUBOBJECT_TYPE_GLOBAL_ROOT_SIGNATURE: {
       D3D12_GLOBAL_ROOT_SIGNATURE* globalSignature =
           static_cast<D3D12_GLOBAL_ROOT_SIGNATURE*>(const_cast<void*>(subobject->pDesc));
       globalSignature->pGlobalRootSignature = static_cast<ID3D12RootSignature*>(
-          manager.findObject(arg.interfaceKeysBySubobject[index]));
+          manager.FindObject(arg.InterfaceKeysBySubobject[index]));
     } break;
     case D3D12_STATE_SUBOBJECT_TYPE_LOCAL_ROOT_SIGNATURE: {
       D3D12_LOCAL_ROOT_SIGNATURE* localSignature =
           static_cast<D3D12_LOCAL_ROOT_SIGNATURE*>(const_cast<void*>(subobject->pDesc));
       localSignature->pLocalRootSignature = static_cast<ID3D12RootSignature*>(
-          manager.findObject(arg.interfaceKeysBySubobject[index]));
+          manager.FindObject(arg.InterfaceKeysBySubobject[index]));
     } break;
     case D3D12_STATE_SUBOBJECT_TYPE_EXISTING_COLLECTION: {
       D3D12_EXISTING_COLLECTION_DESC* desc =
           static_cast<D3D12_EXISTING_COLLECTION_DESC*>(const_cast<void*>(subobject->pDesc));
       desc->pExistingCollection =
-          static_cast<ID3D12StateObject*>(manager.findObject(arg.interfaceKeysBySubobject[index]));
+          static_cast<ID3D12StateObject*>(manager.FindObject(arg.InterfaceKeysBySubobject[index]));
     } break;
     }
   }
 }
 
-void updateInterface(PlayerManager& manager, D3D12_RENDER_PASS_RENDER_TARGET_DESCs_Argument& arg) {
-  if (!arg.value || !manager.executeCommands()) {
+void UpdateInterface(PlayerManager& manager, D3D12_RENDER_PASS_RENDER_TARGET_DESCs_Argument& arg) {
+  if (!arg.Value || !manager.ExecuteCommands()) {
     return;
   }
 
-  for (unsigned i = 0, j = 0; i < arg.size; ++i) {
-    if (arg.value[i].EndingAccess.Type == D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_RESOLVE) {
-      arg.value[i].EndingAccess.Resolve.pSrcResource =
-          static_cast<ID3D12Resource*>(manager.findObject(arg.resolveSrcResourceKeys[j]));
-      arg.value[i].EndingAccess.Resolve.pDstResource =
-          static_cast<ID3D12Resource*>(manager.findObject(arg.resolveDstResourceKeys[j]));
+  for (unsigned i = 0, j = 0; i < arg.Size; ++i) {
+    if (arg.Value[i].EndingAccess.Type == D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_RESOLVE) {
+      arg.Value[i].EndingAccess.Resolve.pSrcResource =
+          static_cast<ID3D12Resource*>(manager.FindObject(arg.ResolveSrcResourceKeys[j]));
+      arg.Value[i].EndingAccess.Resolve.pDstResource =
+          static_cast<ID3D12Resource*>(manager.FindObject(arg.ResolveDstResourceKeys[j]));
       ++j;
     }
   }
 }
 
-void updateInterface(PlayerManager& manager, D3D12_RENDER_PASS_DEPTH_STENCIL_DESC_Argument& arg) {
-  if (!arg.value || !manager.executeCommands()) {
+void UpdateInterface(PlayerManager& manager, D3D12_RENDER_PASS_DEPTH_STENCIL_DESC_Argument& arg) {
+  if (!arg.Value || !manager.ExecuteCommands()) {
     return;
   }
 
-  if (arg.value->DepthEndingAccess.Type == D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_RESOLVE) {
-    arg.value->DepthEndingAccess.Resolve.pSrcResource =
-        static_cast<ID3D12Resource*>(manager.findObject(arg.resolveSrcDepthKey));
-    arg.value->DepthEndingAccess.Resolve.pDstResource =
-        static_cast<ID3D12Resource*>(manager.findObject(arg.resolveDstDepthKey));
+  if (arg.Value->DepthEndingAccess.Type == D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_RESOLVE) {
+    arg.Value->DepthEndingAccess.Resolve.pSrcResource =
+        static_cast<ID3D12Resource*>(manager.FindObject(arg.ResolveSrcDepthKey));
+    arg.Value->DepthEndingAccess.Resolve.pDstResource =
+        static_cast<ID3D12Resource*>(manager.FindObject(arg.ResolveDstDepthKey));
   }
-  if (arg.value->StencilEndingAccess.Type == D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_RESOLVE) {
-    arg.value->StencilEndingAccess.Resolve.pSrcResource =
-        static_cast<ID3D12Resource*>(manager.findObject(arg.resolveSrcStencilKey));
-    arg.value->StencilEndingAccess.Resolve.pDstResource =
-        static_cast<ID3D12Resource*>(manager.findObject(arg.resolveDstStencilKey));
+  if (arg.Value->StencilEndingAccess.Type == D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_RESOLVE) {
+    arg.Value->StencilEndingAccess.Resolve.pSrcResource =
+        static_cast<ID3D12Resource*>(manager.FindObject(arg.ResolveSrcStencilKey));
+    arg.Value->StencilEndingAccess.Resolve.pDstResource =
+        static_cast<ID3D12Resource*>(manager.FindObject(arg.ResolveDstStencilKey));
   }
 }
 
-void updateInterface(PlayerManager& manager,
+void UpdateInterface(PlayerManager& manager,
                      PointerArgument<INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC>& arg) {
-  if (!manager.executeCommands()) {
+  if (!manager.ExecuteCommands()) {
     return;
   }
 
-  if (arg.rootSignatureKey) {
-    arg.value->pD3D12Desc->pRootSignature =
-        static_cast<ID3D12RootSignature*>(manager.findObject(arg.rootSignatureKey));
+  if (arg.RootSignatureKey) {
+    arg.Value->pD3D12Desc->pRootSignature =
+        static_cast<ID3D12RootSignature*>(manager.FindObject(arg.RootSignatureKey));
   }
 }
 
-void updateInterface(PlayerManager& manager, D3D12_BARRIER_GROUPs_Argument& arg) {
-  if (!manager.executeCommands()) {
+void UpdateInterface(PlayerManager& manager, D3D12_BARRIER_GROUPs_Argument& arg) {
+  if (!manager.ExecuteCommands()) {
     return;
   }
 
   unsigned resourceKeyIndex = 0;
 
-  for (unsigned i = 0; i < arg.size; ++i) {
-    D3D12_BARRIER_GROUP& barrierGroup = arg.value[i];
+  for (unsigned i = 0; i < arg.Size; ++i) {
+    D3D12_BARRIER_GROUP& barrierGroup = arg.Value[i];
     if (barrierGroup.Type == D3D12_BARRIER_TYPE_GLOBAL) {
       continue;
     } else if (barrierGroup.Type == D3D12_BARRIER_TYPE_TEXTURE) {
@@ -287,276 +287,276 @@ void updateInterface(PlayerManager& manager, D3D12_BARRIER_GROUPs_Argument& arg)
           const_cast<D3D12_TEXTURE_BARRIER*>(barrierGroup.pTextureBarriers);
       for (unsigned j = 0; j < barrierGroup.NumBarriers; ++j) {
         barriers[j].pResource =
-            static_cast<ID3D12Resource*>(manager.findObject(arg.resourceKeys[resourceKeyIndex++]));
+            static_cast<ID3D12Resource*>(manager.FindObject(arg.ResourceKeys[resourceKeyIndex++]));
       }
     } else if (barrierGroup.Type == D3D12_BARRIER_TYPE_BUFFER) {
       D3D12_BUFFER_BARRIER* barriers =
           const_cast<D3D12_BUFFER_BARRIER*>(barrierGroup.pBufferBarriers);
       for (unsigned j = 0; j < barrierGroup.NumBarriers; ++j) {
         barriers[j].pResource =
-            static_cast<ID3D12Resource*>(manager.findObject(arg.resourceKeys[resourceKeyIndex++]));
+            static_cast<ID3D12Resource*>(manager.FindObject(arg.ResourceKeys[resourceKeyIndex++]));
       }
     }
   }
 }
 
-void updateInterface(PlayerManager& manager, DML_BINDING_TABLE_DESC_Argument& arg) {
-  if (!manager.executeCommands()) {
+void UpdateInterface(PlayerManager& manager, DML_BINDING_TABLE_DESC_Argument& arg) {
+  if (!manager.ExecuteCommands()) {
     return;
   }
 
-  if (arg.data.dispatchableKey) {
-    arg.value->Dispatchable =
-        static_cast<IDMLDispatchable*>(manager.findObject(arg.data.dispatchableKey));
+  if (arg.TableFields.DispatchableKey) {
+    arg.Value->Dispatchable =
+        static_cast<IDMLDispatchable*>(manager.FindObject(arg.TableFields.DispatchableKey));
   }
 }
 
 static void updateDmlBinding(PlayerManager& manager,
-                             unsigned resourceKey,
+                             unsigned ResourceKey,
                              const void* bindingDesc) {
-  if (!manager.executeCommands()) {
+  if (!manager.ExecuteCommands()) {
     return;
   }
 
   auto* binding = static_cast<DML_BUFFER_BINDING*>(const_cast<void*>(bindingDesc));
   GITS_ASSERT(binding);
   if (binding->Buffer) {
-    IUnknown* object = manager.findObject(resourceKey);
+    IUnknown* object = manager.FindObject(ResourceKey);
     GITS_ASSERT(object);
     binding->Buffer = static_cast<ID3D12Resource*>(object);
   }
 }
 
-void updateInterface(PlayerManager& manager, DML_BINDING_DESC_Argument& arg) {
-  GITS_ASSERT(arg.resourceKeys.size() == arg.resourceKeysSize);
-  if (!manager.executeCommands()) {
+void UpdateInterface(PlayerManager& manager, DML_BINDING_DESC_Argument& arg) {
+  GITS_ASSERT(arg.ResourceKeys.size() == arg.ResourceKeysSize);
+  if (!manager.ExecuteCommands()) {
     return;
   }
 
-  if (arg.value->Type == DML_BINDING_TYPE_BUFFER) {
-    updateDmlBinding(manager, arg.resourceKeys[0], arg.value->Desc);
-  } else if (arg.value->Type == DML_BINDING_TYPE_BUFFER_ARRAY) {
-    auto* bindingArray = static_cast<DML_BUFFER_ARRAY_BINDING*>(const_cast<void*>(arg.value->Desc));
+  if (arg.Value->Type == DML_BINDING_TYPE_BUFFER) {
+    updateDmlBinding(manager, arg.ResourceKeys[0], arg.Value->Desc);
+  } else if (arg.Value->Type == DML_BINDING_TYPE_BUFFER_ARRAY) {
+    auto* bindingArray = static_cast<DML_BUFFER_ARRAY_BINDING*>(const_cast<void*>(arg.Value->Desc));
     GITS_ASSERT(bindingArray);
     for (unsigned i = 0; i < bindingArray->BindingCount; ++i) {
-      updateDmlBinding(manager, arg.resourceKeys[i], &bindingArray->Bindings[i]);
+      updateDmlBinding(manager, arg.ResourceKeys[i], &bindingArray->Bindings[i]);
     }
   }
 }
 
-void updateInterface(PlayerManager& manager, DML_BINDING_DESCs_Argument& arg) {
-  GITS_ASSERT(arg.resourceKeys.size() == arg.resourceKeysSize);
-  if (!manager.executeCommands()) {
+void UpdateInterface(PlayerManager& manager, DML_BINDING_DESCs_Argument& arg) {
+  GITS_ASSERT(arg.ResourceKeys.size() == arg.ResourceKeysSize);
+  if (!manager.ExecuteCommands()) {
     return;
   }
 
   unsigned bindingIdx = 0;
-  for (unsigned i = 0; i < arg.size; ++i) {
-    auto& binding = arg.value[i];
+  for (unsigned i = 0; i < arg.Size; ++i) {
+    auto& binding = arg.Value[i];
     if (binding.Type == DML_BINDING_TYPE_BUFFER) {
-      updateDmlBinding(manager, arg.resourceKeys[bindingIdx], binding.Desc);
+      updateDmlBinding(manager, arg.ResourceKeys[bindingIdx], binding.Desc);
       ++bindingIdx;
     } else if (binding.Type == DML_BINDING_TYPE_BUFFER_ARRAY) {
       auto* bindingArray = static_cast<DML_BUFFER_ARRAY_BINDING*>(const_cast<void*>(binding.Desc));
       GITS_ASSERT(bindingArray);
       for (unsigned j = 0; j < bindingArray->BindingCount; ++j) {
-        updateDmlBinding(manager, arg.resourceKeys[bindingIdx], &bindingArray->Bindings[j]);
+        updateDmlBinding(manager, arg.ResourceKeys[bindingIdx], &bindingArray->Bindings[j]);
         ++bindingIdx;
       }
     }
   }
 }
 
-void updateInterface(PlayerManager& manager, DML_GRAPH_DESC_Argument& arg) {
-  GITS_ASSERT(arg.operatorKeysSize == arg.value->NodeCount);
-  GITS_ASSERT(arg.operatorKeys.size() == arg.operatorKeysSize);
-  if (!manager.executeCommands()) {
+void UpdateInterface(PlayerManager& manager, DML_GRAPH_DESC_Argument& arg) {
+  GITS_ASSERT(arg.OperatorKeysSize == arg.Value->NodeCount);
+  GITS_ASSERT(arg.OperatorKeys.size() == arg.OperatorKeysSize);
+  if (!manager.ExecuteCommands()) {
     return;
   }
 
-  for (unsigned i = 0; i < arg.value->NodeCount; ++i) {
-    auto& node = arg.value->Nodes[i];
+  for (unsigned i = 0; i < arg.Value->NodeCount; ++i) {
+    auto& node = arg.Value->Nodes[i];
     if (node.Type == DML_GRAPH_NODE_TYPE_OPERATOR) {
       auto* opNode = static_cast<DML_OPERATOR_GRAPH_NODE_DESC*>(const_cast<void*>(node.Desc));
       if (opNode->Operator) {
-        opNode->Operator = static_cast<IDMLOperator*>(manager.findObject(arg.operatorKeys[i]));
+        opNode->Operator = static_cast<IDMLOperator*>(manager.FindObject(arg.OperatorKeys[i]));
       }
     }
   }
 }
 
-void updateInterface(PlayerManager& manager, xess_d3d12_init_params_t_Argument& arg) {
-  if (!manager.executeCommands()) {
+void UpdateInterface(PlayerManager& manager, xess_d3d12_init_params_t_Argument& arg) {
+  if (!manager.ExecuteCommands()) {
     return;
   }
 
-  if (arg.tempBufferHeapKey) {
-    arg.value->pTempBufferHeap =
-        static_cast<ID3D12Heap*>(manager.findObject(arg.tempBufferHeapKey));
+  if (arg.TempBufferHeapKey) {
+    arg.Value->pTempBufferHeap =
+        static_cast<ID3D12Heap*>(manager.FindObject(arg.TempBufferHeapKey));
   }
-  if (arg.tempTextureHeapKey) {
-    arg.value->pTempTextureHeap =
-        static_cast<ID3D12Heap*>(manager.findObject(arg.tempTextureHeapKey));
+  if (arg.TempTextureHeapKey) {
+    arg.Value->pTempTextureHeap =
+        static_cast<ID3D12Heap*>(manager.FindObject(arg.TempTextureHeapKey));
   }
-  if (arg.pipelineLibraryKey) {
-    arg.value->pPipelineLibrary =
-        static_cast<ID3D12PipelineLibrary*>(manager.findObject(arg.pipelineLibraryKey));
+  if (arg.PipelineLibraryKey) {
+    arg.Value->pPipelineLibrary =
+        static_cast<ID3D12PipelineLibrary*>(manager.FindObject(arg.PipelineLibraryKey));
   }
 }
 
-void updateInterface(PlayerManager& manager, xess_d3d12_execute_params_t_Argument& arg) {
-  if (!manager.executeCommands()) {
+void UpdateInterface(PlayerManager& manager, xess_d3d12_execute_params_t_Argument& arg) {
+  if (!manager.ExecuteCommands()) {
     return;
   }
 
-  if (arg.colorTextureKey) {
-    arg.value->pColorTexture =
-        static_cast<ID3D12Resource*>(manager.findObject(arg.colorTextureKey));
+  if (arg.ColorTextureKey) {
+    arg.Value->pColorTexture =
+        static_cast<ID3D12Resource*>(manager.FindObject(arg.ColorTextureKey));
   }
-  if (arg.velocityTextureKey) {
-    arg.value->pVelocityTexture =
-        static_cast<ID3D12Resource*>(manager.findObject(arg.velocityTextureKey));
+  if (arg.VelocityTextureKey) {
+    arg.Value->pVelocityTexture =
+        static_cast<ID3D12Resource*>(manager.FindObject(arg.VelocityTextureKey));
   }
-  if (arg.depthTextureKey) {
-    arg.value->pDepthTexture =
-        static_cast<ID3D12Resource*>(manager.findObject(arg.depthTextureKey));
+  if (arg.DepthTextureKey) {
+    arg.Value->pDepthTexture =
+        static_cast<ID3D12Resource*>(manager.FindObject(arg.DepthTextureKey));
   }
-  if (arg.exposureScaleTextureKey) {
-    arg.value->pExposureScaleTexture =
-        static_cast<ID3D12Resource*>(manager.findObject(arg.exposureScaleTextureKey));
+  if (arg.ExposureScaleTextureKey) {
+    arg.Value->pExposureScaleTexture =
+        static_cast<ID3D12Resource*>(manager.FindObject(arg.ExposureScaleTextureKey));
   }
-  if (arg.responsivePixelMaskTextureKey) {
-    arg.value->pResponsivePixelMaskTexture =
-        static_cast<ID3D12Resource*>(manager.findObject(arg.responsivePixelMaskTextureKey));
+  if (arg.ResponsivePixelMaskTextureKey) {
+    arg.Value->pResponsivePixelMaskTexture =
+        static_cast<ID3D12Resource*>(manager.FindObject(arg.ResponsivePixelMaskTextureKey));
   }
-  if (arg.outputTextureKey) {
-    arg.value->pOutputTexture =
-        static_cast<ID3D12Resource*>(manager.findObject(arg.outputTextureKey));
+  if (arg.OutputTextureKey) {
+    arg.Value->pOutputTexture =
+        static_cast<ID3D12Resource*>(manager.FindObject(arg.OutputTextureKey));
   }
-  if (arg.descriptorHeapKey) {
-    arg.value->pDescriptorHeap =
-        static_cast<ID3D12DescriptorHeap*>(manager.findObject(arg.descriptorHeapKey));
+  if (arg.DescriptorHeapKey) {
+    arg.Value->pDescriptorHeap =
+        static_cast<ID3D12DescriptorHeap*>(manager.FindObject(arg.DescriptorHeapKey));
   }
 }
 
-void updateInterface(PlayerManager& manager, DSTORAGE_QUEUE_DESC_Argument& arg) {
-  if (!manager.executeCommands()) {
+void UpdateInterface(PlayerManager& manager, DSTORAGE_QUEUE_DESC_Argument& arg) {
+  if (!manager.ExecuteCommands()) {
     return;
   }
 
-  if (arg.value->Device) {
-    arg.value->Device = static_cast<ID3D12Device*>(manager.findObject(arg.deviceKey));
+  if (arg.Value->Device) {
+    arg.Value->Device = static_cast<ID3D12Device*>(manager.FindObject(arg.DeviceKey));
   }
 }
 
-void updateInterface(PlayerManager& manager, DSTORAGE_REQUEST_Argument& arg) {
-  if (!manager.executeCommands()) {
+void UpdateInterface(PlayerManager& manager, DSTORAGE_REQUEST_Argument& arg) {
+  if (!manager.ExecuteCommands()) {
     return;
   }
 
-  switch (arg.value->Options.SourceType) {
+  switch (arg.Value->Options.SourceType) {
   case DSTORAGE_REQUEST_SOURCE_FILE:
-    if (arg.value->Source.File.Source) {
-      arg.value->Source.File.Source = static_cast<IDStorageFile*>(manager.findObject(arg.fileKey));
+    if (arg.Value->Source.File.Source) {
+      arg.Value->Source.File.Source = static_cast<IDStorageFile*>(manager.FindObject(arg.FileKey));
     }
     break;
   }
-  switch (arg.value->Options.DestinationType) {
+  switch (arg.Value->Options.DestinationType) {
   case DSTORAGE_REQUEST_DESTINATION_BUFFER:
-    if (arg.value->Destination.Buffer.Resource) {
-      arg.value->Destination.Buffer.Resource =
-          static_cast<ID3D12Resource*>(manager.findObject(arg.resourceKey));
+    if (arg.Value->Destination.Buffer.Resource) {
+      arg.Value->Destination.Buffer.Resource =
+          static_cast<ID3D12Resource*>(manager.FindObject(arg.ResourceKey));
     }
     break;
   case DSTORAGE_REQUEST_DESTINATION_TEXTURE_REGION:
-    if (arg.value->Destination.Texture.Resource) {
-      arg.value->Destination.Texture.Resource =
-          static_cast<ID3D12Resource*>(manager.findObject(arg.resourceKey));
+    if (arg.Value->Destination.Texture.Resource) {
+      arg.Value->Destination.Texture.Resource =
+          static_cast<ID3D12Resource*>(manager.FindObject(arg.ResourceKey));
     }
     break;
   case DSTORAGE_REQUEST_DESTINATION_MULTIPLE_SUBRESOURCES:
-    if (arg.value->Destination.MultipleSubresources.Resource) {
-      arg.value->Destination.MultipleSubresources.Resource =
-          static_cast<ID3D12Resource*>(manager.findObject(arg.resourceKey));
+    if (arg.Value->Destination.MultipleSubresources.Resource) {
+      arg.Value->Destination.MultipleSubresources.Resource =
+          static_cast<ID3D12Resource*>(manager.FindObject(arg.ResourceKey));
     }
     break;
   case DSTORAGE_REQUEST_DESTINATION_TILES:
-    if (arg.value->Destination.Tiles.Resource) {
-      arg.value->Destination.Tiles.Resource =
-          static_cast<ID3D12Resource*>(manager.findObject(arg.resourceKey));
+    if (arg.Value->Destination.Tiles.Resource) {
+      arg.Value->Destination.Tiles.Resource =
+          static_cast<ID3D12Resource*>(manager.FindObject(arg.ResourceKey));
     }
     break;
   }
 }
 
-void updateInterface(PlayerManager& manager, xefg_swapchain_d3d12_init_params_t_Argument& arg) {
-  if (!manager.executeCommands()) {
+void UpdateInterface(PlayerManager& manager, xefg_swapchain_d3d12_init_params_t_Argument& arg) {
+  if (!manager.ExecuteCommands()) {
     return;
   }
-  if (arg.applicationSwapChainKey) {
-    arg.value->pApplicationSwapChain =
-        static_cast<IDXGISwapChain*>(manager.findObject(arg.applicationSwapChainKey));
+  if (arg.ApplicationSwapChainKey) {
+    arg.Value->pApplicationSwapChain =
+        static_cast<IDXGISwapChain*>(manager.FindObject(arg.ApplicationSwapChainKey));
   }
-  if (arg.tempBufferHeapKey) {
-    arg.value->pTempBufferHeap =
-        static_cast<ID3D12Heap*>(manager.findObject(arg.tempBufferHeapKey));
+  if (arg.TempBufferHeapKey) {
+    arg.Value->pTempBufferHeap =
+        static_cast<ID3D12Heap*>(manager.FindObject(arg.TempBufferHeapKey));
   }
-  if (arg.tempTextureHeapKey) {
-    arg.value->pTempTextureHeap =
-        static_cast<ID3D12Heap*>(manager.findObject(arg.tempTextureHeapKey));
+  if (arg.TempTextureHeapKey) {
+    arg.Value->pTempTextureHeap =
+        static_cast<ID3D12Heap*>(manager.FindObject(arg.TempTextureHeapKey));
   }
-  if (arg.pipelineLibraryKey) {
-    arg.value->pPipelineLibrary =
-        static_cast<ID3D12PipelineLibrary*>(manager.findObject(arg.pipelineLibraryKey));
+  if (arg.PipelineLibraryKey) {
+    arg.Value->pPipelineLibrary =
+        static_cast<ID3D12PipelineLibrary*>(manager.FindObject(arg.PipelineLibraryKey));
   }
 }
 
-void updateInterface(PlayerManager& manager, xefg_swapchain_d3d12_resource_data_t_Argument& arg) {
-  if (!manager.executeCommands()) {
+void UpdateInterface(PlayerManager& manager, xefg_swapchain_d3d12_resource_data_t_Argument& arg) {
+  if (!manager.ExecuteCommands()) {
     return;
   }
-  if (arg.resourceKey) {
-    arg.value->pResource = static_cast<ID3D12Resource*>(manager.findObject(arg.resourceKey));
+  if (arg.ResourceKey) {
+    arg.Value->pResource = static_cast<ID3D12Resource*>(manager.FindObject(arg.ResourceKey));
   }
 }
 
-void updateContext(PlayerManager& manager, XESSContextArgument& arg) {
-  if (!manager.executeCommands()) {
+void UpdateContext(PlayerManager& manager, XESSContextArgument& arg) {
+  if (!manager.ExecuteCommands()) {
     return;
   }
-  arg.value =
-      reinterpret_cast<xess_context_handle_t>(manager.getXessContextMap().getContext(arg.key));
+  arg.Value =
+      reinterpret_cast<xess_context_handle_t>(manager.GetXessContextMap().GetContext(arg.Key));
 }
 
-void updateOutputContext(PlayerManager& manager, XESSContextOutputArgument& arg) {
-  manager.getXessContextMap().setContext(arg.key, reinterpret_cast<std::uintptr_t>(*arg.value));
-  arg.data = *arg.value;
+void UpdateOutputContext(PlayerManager& manager, XESSContextOutputArgument& arg) {
+  manager.GetXessContextMap().SetContext(arg.Key, reinterpret_cast<std::uintptr_t>(*arg.Value));
+  arg.Data = *arg.Value;
 }
 
-void updateContext(PlayerManager& manager, XELLContextArgument& arg) {
-  if (!manager.executeCommands()) {
+void UpdateContext(PlayerManager& manager, XELLContextArgument& arg) {
+  if (!manager.ExecuteCommands()) {
     return;
   }
-  arg.value =
-      reinterpret_cast<xell_context_handle_t>(manager.getXellContextMap().getContext(arg.key));
+  arg.Value =
+      reinterpret_cast<xell_context_handle_t>(manager.GetXellContextMap().GetContext(arg.Key));
 }
 
-void updateOutputContext(PlayerManager& manager, XELLContextOutputArgument& arg) {
-  manager.getXellContextMap().setContext(arg.key, reinterpret_cast<std::uintptr_t>(*arg.value));
-  arg.data = *arg.value;
+void UpdateOutputContext(PlayerManager& manager, XELLContextOutputArgument& arg) {
+  manager.GetXellContextMap().SetContext(arg.Key, reinterpret_cast<std::uintptr_t>(*arg.Value));
+  arg.Data = *arg.Value;
 }
 
-void updateContext(PlayerManager& manager, XEFGContextArgument& arg) {
-  if (!manager.executeCommands()) {
+void UpdateContext(PlayerManager& manager, XEFGContextArgument& arg) {
+  if (!manager.ExecuteCommands()) {
     return;
   }
-  arg.value =
-      reinterpret_cast<xefg_swapchain_handle_t>(manager.getXefgContextMap().getContext(arg.key));
+  arg.Value =
+      reinterpret_cast<xefg_swapchain_handle_t>(manager.GetXefgContextMap().GetContext(arg.Key));
 }
 
-void updateOutputContext(PlayerManager& manager, XEFGContextOutputArgument& arg) {
-  manager.getXefgContextMap().setContext(arg.key, reinterpret_cast<std::uintptr_t>(*arg.value));
-  arg.data = *arg.value;
+void UpdateOutputContext(PlayerManager& manager, XEFGContextOutputArgument& arg) {
+  manager.GetXefgContextMap().SetContext(arg.Key, reinterpret_cast<std::uintptr_t>(*arg.Value));
+  arg.Data = *arg.Value;
 }
 
 } // namespace DirectX

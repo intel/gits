@@ -14,45 +14,45 @@
 namespace gits {
 namespace DirectX {
 
-void GpuAddressService::createResource(unsigned resourceKey, ID3D12Resource* resource) {
+void GpuAddressService::createResource(unsigned ResourceKey, ID3D12Resource* resource) {
 
   D3D12_RESOURCE_DESC desc = resource->GetDesc();
   if (desc.Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
     return;
   }
 
-  tbb::spin_rw_mutex::scoped_lock lock(rwMutex_);
+  tbb::spin_rw_mutex::scoped_lock lock(m_RwMutex);
 
   ResourceInfo* resourceInfo = new ResourceInfo{};
-  resourceInfo->key = resourceKey;
+  resourceInfo->key = ResourceKey;
   resourceInfo->start = resource->GetGPUVirtualAddress();
   resourceInfo->end = resourceInfo->start + desc.Width;
   if (!resourceInfo->start) {
-    LOG_ERROR << "GpuAddressService: can't GetGPUVirtualAddress for O" << resourceKey;
+    LOG_ERROR << "GpuAddressService: can't GetGPUVirtualAddress for O" << ResourceKey;
   }
 
   {
     std::vector<ResourceInfo*> intersecting;
-    for (auto& it : resourcesByStartAddress_) {
+    for (auto& it : m_ResourcesByStartAddress) {
       if (it.second->end > resourceInfo->start && it.second->start < resourceInfo->end) {
         intersecting.push_back(it.second);
       }
     }
     // resource can be already removed but destroyInterface method not called yet because of multithreading
     for (ResourceInfo* info : intersecting) {
-      auto itResource = resourcesByKey_.find(info->key);
-      if (itResource != resourcesByKey_.end()) {
-        resourcesByStartAddress_.erase(itResource->second->start);
-        resourcesByKey_.erase(itResource);
+      auto itResource = m_ResourcesByKey.find(info->key);
+      if (itResource != m_ResourcesByKey.end()) {
+        m_ResourcesByStartAddress.erase(itResource->second->start);
+        m_ResourcesByKey.erase(itResource);
       }
     }
   }
 
-  resourcesByStartAddress_[resourceInfo->start] = resourceInfo;
-  resourcesByKey_[resourceKey].reset(resourceInfo);
+  m_ResourcesByStartAddress[resourceInfo->start] = resourceInfo;
+  m_ResourcesByKey[ResourceKey].reset(resourceInfo);
 }
 
-void GpuAddressService::createPlacedResource(unsigned resourceKey,
+void GpuAddressService::createPlacedResource(unsigned ResourceKey,
                                              ID3D12Resource* resource,
                                              unsigned heapKey,
                                              ID3D12Heap* heap,
@@ -68,15 +68,15 @@ void GpuAddressService::createPlacedResource(unsigned resourceKey,
     return;
   }
 
-  tbb::spin_rw_mutex::scoped_lock lock(rwMutex_);
+  tbb::spin_rw_mutex::scoped_lock lock(m_RwMutex);
 
-  auto itHeapByKey = heapsByKey_.find(heapKey);
-  GITS_ASSERT(itHeapByKey != heapsByKey_.end());
+  auto itHeapByKey = m_HeapsByKey.find(heapKey);
+  GITS_ASSERT(itHeapByKey != m_HeapsByKey.end());
 
   HeapInfoLayered* heapInfo = itHeapByKey->second.get();
 
   PlacedResourceInfo* resourceInfo = new PlacedResourceInfo{};
-  resourceInfo->key = resourceKey;
+  resourceInfo->key = ResourceKey;
   resourceInfo->start = resource->GetGPUVirtualAddress();
   resourceInfo->end = resourceInfo->start + desc.Width;
   resourceInfo->heapInfo = heapInfo;
@@ -111,8 +111,8 @@ void GpuAddressService::createPlacedResource(unsigned resourceKey,
     info->intersecting.insert(resourceInfo);
   }
 
-  placedResourcesByKey_[resourceInfo->key].reset(resourceInfo);
-  placedResourcesByHeap_[resourceInfo->heapInfo->key].insert(resourceInfo->key);
+  m_PlacedResourcesByKey[resourceInfo->key].reset(resourceInfo);
+  m_PlacedResourcesByHeap[resourceInfo->heapInfo->key].insert(resourceInfo->key);
 }
 
 void GpuAddressService::createHeap(unsigned heapKey, ID3D12Heap* heap) {
@@ -132,12 +132,12 @@ void GpuAddressService::createHeap(unsigned heapKey, ID3D12Heap* heap) {
     return;
   }
 
-  tbb::spin_rw_mutex::scoped_lock lock(rwMutex_);
+  tbb::spin_rw_mutex::scoped_lock lock(m_RwMutex);
 
   // check for resources intersections
   {
     std::vector<ResourceInfo*> intersecting;
-    for (auto& it : resourcesByStartAddress_) {
+    for (auto& it : m_ResourcesByStartAddress) {
       if (it.second->end > heapInfo->start && it.second->start < heapInfo->end) {
         intersecting.push_back(it.second);
       }
@@ -148,7 +148,7 @@ void GpuAddressService::createHeap(unsigned heapKey, ID3D12Heap* heap) {
   // check for heaps intersections
   {
     std::vector<HeapInfoLayered*> intersecting;
-    for (auto& it : heapsByStartAddress_) {
+    for (auto& it : m_HeapsByStartAddress) {
       if (it.second->end > heapInfo->start && it.second->start < heapInfo->end) {
         intersecting.push_back(it.second);
       }
@@ -156,8 +156,8 @@ void GpuAddressService::createHeap(unsigned heapKey, ID3D12Heap* heap) {
     GITS_ASSERT(intersecting.empty());
   }
 
-  heapsByStartAddress_[heapInfo->start] = heapInfo;
-  heapsByKey_[heapKey].reset(heapInfo);
+  m_HeapsByStartAddress[heapInfo->start] = heapInfo;
+  m_HeapsByKey[heapKey].reset(heapInfo);
 }
 
 D3D12_GPU_VIRTUAL_ADDRESS GpuAddressService::getHeapGPUVirtualAddress(ID3D12Heap* heap) {
@@ -208,12 +208,12 @@ GpuAddressService::GpuAddressInfo GpuAddressService::getGpuAddressInfo(
     return GpuAddressInfo{};
   }
 
-  tbb::spin_rw_mutex::scoped_lock lock(rwMutex_, false);
+  tbb::spin_rw_mutex::scoped_lock lock(m_RwMutex, false);
 
   const ResourceInfo* resourceInfo = nullptr;
 
-  auto itResource = resourcesByStartAddress_.upper_bound(gpuAddress);
-  if (itResource != resourcesByStartAddress_.begin() && !resourcesByStartAddress_.empty()) {
+  auto itResource = m_ResourcesByStartAddress.upper_bound(gpuAddress);
+  if (itResource != m_ResourcesByStartAddress.begin() && !m_ResourcesByStartAddress.empty()) {
     --itResource;
     ResourceInfo* info = itResource->second;
     if (gpuAddress >= info->start && gpuAddress < info->end) {
@@ -224,8 +224,8 @@ GpuAddressService::GpuAddressInfo GpuAddressService::getGpuAddressInfo(
   if (!resourceInfo) {
     HeapInfoLayered* heapInfo = nullptr;
 
-    auto itHeap = heapsByStartAddress_.upper_bound(gpuAddress);
-    if (itHeap != heapsByStartAddress_.begin() && !heapsByStartAddress_.empty()) {
+    auto itHeap = m_HeapsByStartAddress.upper_bound(gpuAddress);
+    if (itHeap != m_HeapsByStartAddress.begin() && !m_HeapsByStartAddress.empty()) {
       --itHeap;
       HeapInfoLayered* info = itHeap->second;
       if (gpuAddress >= info->start && gpuAddress < info->end) {
@@ -239,8 +239,8 @@ GpuAddressService::GpuAddressInfo GpuAddressService::getGpuAddressInfo(
 
   HeapInfoLayered* heapInfo = nullptr;
   if (!resourceInfo) {
-    auto itHeap = heapsByStartAddress_.upper_bound(gpuAddress);
-    if (itHeap != heapsByStartAddress_.begin() && !heapsByStartAddress_.empty()) {
+    auto itHeap = m_HeapsByStartAddress.upper_bound(gpuAddress);
+    if (itHeap != m_HeapsByStartAddress.begin() && !m_HeapsByStartAddress.empty()) {
       --itHeap;
       HeapInfoLayered* info = itHeap->second;
       if (gpuAddress >= info->start && gpuAddress < info->end) {
@@ -255,11 +255,11 @@ GpuAddressService::GpuAddressInfo GpuAddressService::getGpuAddressInfo(
 
   GpuAddressInfo info{};
   if (resourceInfo) {
-    info.resourceKey = resourceInfo->key;
-    info.offset = gpuAddress - resourceInfo->start;
+    info.ResourceKey = resourceInfo->key;
+    info.Offset = gpuAddress - resourceInfo->start;
   } else if (heapInfo) {
-    info.resourceKey = heapInfo->key;
-    info.offset = gpuAddress - heapInfo->start;
+    info.ResourceKey = heapInfo->key;
+    info.Offset = gpuAddress - heapInfo->start;
   }
 
   return info;
@@ -299,47 +299,47 @@ const GpuAddressService::ResourceInfo* GpuAddressService::getResourceFromHeap(
   return resourceInfo;
 }
 
-void GpuAddressService::destroyInterface(unsigned interfaceKey) {
+void GpuAddressService::destroyInterface(unsigned InterfaceKey) {
 
-  tbb::spin_rw_mutex::scoped_lock lock(rwMutex_);
+  tbb::spin_rw_mutex::scoped_lock lock(m_RwMutex);
 
-  auto itResource = resourcesByKey_.find(interfaceKey);
-  if (itResource != resourcesByKey_.end()) {
-    resourcesByStartAddress_.erase(itResource->second->start);
-    resourcesByKey_.erase(itResource);
+  auto itResource = m_ResourcesByKey.find(InterfaceKey);
+  if (itResource != m_ResourcesByKey.end()) {
+    m_ResourcesByStartAddress.erase(itResource->second->start);
+    m_ResourcesByKey.erase(itResource);
     return;
   }
 
-  auto itPlacedResource = placedResourcesByKey_.find(interfaceKey);
-  if (itPlacedResource != placedResourcesByKey_.end()) {
+  auto itPlacedResource = m_PlacedResourcesByKey.find(InterfaceKey);
+  if (itPlacedResource != m_PlacedResourcesByKey.end()) {
     PlacedResourceInfo* info = itPlacedResource->second.get();
 
     for (PlacedResourceInfo* intersecting : info->intersecting) {
       intersecting->intersecting.erase(info);
     }
 
-    auto itHeap = heapsByKey_.find(info->heapKey);
-    if (itHeap != heapsByKey_.end()) {
+    auto itHeap = m_HeapsByKey.find(info->heapKey);
+    if (itHeap != m_HeapsByKey.end()) {
       HeapInfoLayered* heapInfo = itHeap->second.get();
       heapInfo->resources[info->layer].erase(info->start);
     }
 
-    placedResourcesByKey_.erase(itPlacedResource);
+    m_PlacedResourcesByKey.erase(itPlacedResource);
     return;
   }
 
-  auto itHeap = heapsByKey_.find(interfaceKey);
-  if (itHeap != heapsByKey_.end()) {
-    heapsByStartAddress_.erase(itHeap->second->start);
-    heapsByKey_.erase(itHeap);
+  auto itHeap = m_HeapsByKey.find(InterfaceKey);
+  if (itHeap != m_HeapsByKey.end()) {
+    m_HeapsByStartAddress.erase(itHeap->second->start);
+    m_HeapsByKey.erase(itHeap);
 
-    auto itPlacedResourceHeap = placedResourcesByHeap_.find(interfaceKey);
-    if (itPlacedResourceHeap != placedResourcesByHeap_.end()) {
+    auto itPlacedResourceHeap = m_PlacedResourcesByHeap.find(InterfaceKey);
+    if (itPlacedResourceHeap != m_PlacedResourcesByHeap.end()) {
       for (unsigned placedResourceKey : itPlacedResourceHeap->second) {
-        placedResourcesByKey_.erase(placedResourceKey);
+        m_PlacedResourcesByKey.erase(placedResourceKey);
       }
 
-      placedResourcesByHeap_.erase(interfaceKey);
+      m_PlacedResourcesByHeap.erase(InterfaceKey);
     }
   }
 }

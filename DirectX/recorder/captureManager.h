@@ -49,67 +49,67 @@ public:
                                    D3D12DispatchTable& wrapperTable);
 
   DXGIDispatchTable& getDXGIDispatchTable() {
-    return dxgiDispatchTableSystem_;
+    return m_DxgiDispatchTableSystem;
   }
   D3D12DispatchTable& getD3D12DispatchTable() {
-    return d3d12DispatchTableSystem_;
+    return m_D3D12DispatchTableSystem;
   }
   DMLDispatchTable& getDMLDispatchTable() {
-    return dmlDispatchTable_;
+    return m_DmlDispatchTable;
   }
   DStorageDispatchTable& getDStorageDispatchTable() {
-    return dstorageDispatchTable_;
+    return m_DstorageDispatchTable;
   }
   Kernel32DispatchTable& getKernel32DispatchTable() {
-    return kernel32DispatchTableSystem_;
+    return m_Kernel32DispatchTableSystem;
   }
   XessDispatchTable& getXessDispatchTable() {
-    return xessDispatchTable_;
+    return m_XessDispatchTable;
   }
   NvAPIDispatchTable& getNvAPIDispatchTable() {
-    return nvapiDispatchTable_;
+    return m_NvapiDispatchTable;
   }
   D3D11On12DispatchTable& getd3d11on12DispatchTable() {
-    return d3d11on12DispatchTable_;
+    return m_D3D11On12DispatchTable;
   }
   XellDispatchTable& getXellDispatchTable() {
-    return xellDispatchTable_;
+    return m_XellDispatchTable;
   }
   XefgDispatchTable& getXefgDispatchTable() {
-    return xefgDispatchTable_;
+    return m_XefgDispatchTable;
   }
 
-  std::vector<Layer*>& getPreLayers() {
-    return layerManager_.getPreLayers();
+  std::vector<Layer*>& GetPreLayers() {
+    return m_LayerManager.GetPreLayers();
   }
-  std::vector<Layer*>& getPostLayers() {
-    return layerManager_.getPostLayers();
+  std::vector<Layer*>& GetPostLayers() {
+    return m_LayerManager.GetPostLayers();
   }
 
   unsigned incrementGlobalStackDepth() {
-    return ++globalStackDepth_;
+    return ++m_GlobalStackDepth;
   }
   unsigned decrementGlobalStackDepth() {
-    return --globalStackDepth_;
+    return --m_GlobalStackDepth;
   }
   unsigned incrementLocalStackDepth() {
-    return ++localStackDepth_;
+    return ++m_LocalStackDepth;
   }
   unsigned decrementLocalStackDepth() {
-    return --localStackDepth_;
+    return --m_LocalStackDepth;
   }
 
   unsigned createWrapperKey() {
-    return wrapperUniqueKey_.fetch_add(1, std::memory_order_relaxed) + 1;
+    return m_WrapperUniqueKey.fetch_add(1, std::memory_order_relaxed) + 1;
   }
   unsigned createCommandKey() {
-    return commandUniqueKey_.fetch_add(1, std::memory_order_relaxed) + 1;
+    return m_CommandUniqueKey.fetch_add(1, std::memory_order_relaxed) + 1;
   }
   std::pair<unsigned, unsigned> createCommandKeyRange(unsigned rangeSize);
 
   void updateCommandKey(Command& command) {
-    recorder_->Skip(command.key);
-    command.key = createCommandKey();
+    m_Recorder->Skip(command.Key);
+    command.Key = createCommandKey();
   }
 
   void addWrapper(IUnknownWrapper* wrapper);
@@ -117,34 +117,34 @@ public:
   IUnknownWrapper* findWrapper(IUnknown* object);
 
   CaptureDescriptorHandleService& getDescriptorHandleService() {
-    return descriptorHandleService_;
+    return m_DescriptorHandleService;
   }
   MapTrackingService& getMapTrackingService() {
-    return *mapTrackingService_;
+    return *m_MapTrackingService;
   }
   RootSignatureService& getRootSignatureService() {
-    return rootSignatureService_;
+    return m_RootSignatureService;
   }
   GpuAddressService& getGpuAddressService() {
-    return gpuAddressService_;
+    return m_GpuAddressService;
   }
   FenceService& getFenceService() {
-    return *fenceService_;
+    return *m_FenceService;
   }
   ContextMapService& getIntelExtensionsContextMap() {
-    return intelExtensionsContextMap_;
+    return m_IntelExtensionsContextMap;
   }
   ContextMapService& getXessContextMap() {
-    return xessContextMap_;
+    return m_XessContextMap;
   }
   ContextMapService& getXellContextMap() {
-    return xellContextMap_;
+    return m_XellContextMap;
   }
   ContextMapService& getXefgContextMap() {
-    return xefgContextMap_;
+    return m_XefgContextMap;
   }
   std::unordered_map<std::string, unsigned int>& getNvAPIFunctionIds() {
-    return nvapiFunctionIds_;
+    return m_NvapiFunctionIds;
   }
 
   void interceptXessFunctions();
@@ -166,58 +166,58 @@ private:
   void interceptD3D11On12Functions();
 
 private:
-  static CaptureManager* instance_;
-  CaptureLayerManager layerManager_;
+  static CaptureManager* m_Instance;
+  CaptureLayerManager m_LayerManager;
 
-  DXGIDispatchTable dxgiDispatchTableSystem_{};
-  DXGIDispatchTable dxgiDispatchTableWrapper_{};
-  D3D12DispatchTable d3d12DispatchTableSystem_{};
-  D3D12DispatchTable d3d12DispatchTableWrapper_{};
-  DMLDispatchTable dmlDispatchTable_{};
-  DStorageDispatchTable dstorageDispatchTable_{};
-  Kernel32DispatchTable kernel32DispatchTableSystem_{};
-  XessDispatchTable xessDispatchTable_{};
-  XellDispatchTable xellDispatchTable_{};
-  XefgDispatchTable xefgDispatchTable_{};
-  NvAPIDispatchTable nvapiDispatchTable_{};
-  D3D11On12DispatchTable d3d11on12DispatchTable_{};
+  DXGIDispatchTable m_DxgiDispatchTableSystem{};
+  DXGIDispatchTable m_DxgiDispatchTableWrapper{};
+  D3D12DispatchTable m_D3D12DispatchTableSystem{};
+  D3D12DispatchTable m_D3D12DispatchTableWrapper{};
+  DMLDispatchTable m_DmlDispatchTable{};
+  DStorageDispatchTable m_DstorageDispatchTable{};
+  Kernel32DispatchTable m_Kernel32DispatchTableSystem{};
+  XessDispatchTable m_XessDispatchTable{};
+  XellDispatchTable m_XellDispatchTable{};
+  XefgDispatchTable m_XefgDispatchTable{};
+  NvAPIDispatchTable m_NvapiDispatchTable{};
+  D3D11On12DispatchTable m_D3D11On12DispatchTable{};
 
-  std::atomic<unsigned> globalStackDepth_{0};
-  static thread_local unsigned localStackDepth_;
+  std::atomic<unsigned> m_GlobalStackDepth{0};
+  static thread_local unsigned m_LocalStackDepth;
 
-  std::atomic<unsigned> wrapperUniqueKey_{0};
-  std::atomic<unsigned> commandUniqueKey_{0};
+  std::atomic<unsigned> m_WrapperUniqueKey{0};
+  std::atomic<unsigned> m_CommandUniqueKey{0};
 
-  std::unordered_map<IUnknown*, IUnknownWrapper*> wrappers_;
-  std::mutex wrappersMutex_;
+  std::unordered_map<IUnknown*, IUnknownWrapper*> m_Wrappers;
+  std::mutex m_WrappersMutex;
 
-  std::unique_ptr<stream::OrderingRecorder> recorder_;
+  std::unique_ptr<stream::OrderingRecorder> m_Recorder;
 
-  CaptureDescriptorHandleService descriptorHandleService_;
-  std::unique_ptr<MapTrackingService> mapTrackingService_;
-  RootSignatureService rootSignatureService_;
-  GpuAddressService gpuAddressService_;
-  std::unique_ptr<FenceService> fenceService_;
-  PluginService pluginService_;
+  CaptureDescriptorHandleService m_DescriptorHandleService;
+  std::unique_ptr<MapTrackingService> m_MapTrackingService;
+  RootSignatureService m_RootSignatureService;
+  GpuAddressService m_GpuAddressService;
+  std::unique_ptr<FenceService> m_FenceService;
+  PluginService m_PluginService;
 
-  ContextMapService intelExtensionsContextMap_;
-  ContextMapService xessContextMap_;
-  ContextMapService xellContextMap_;
-  ContextMapService xefgContextMap_;
+  ContextMapService m_IntelExtensionsContextMap;
+  ContextMapService m_XessContextMap;
+  ContextMapService m_XellContextMap;
+  ContextMapService m_XefgContextMap;
 
-  HMODULE kernelDll_{};
-  HMODULE dmlDll_{};
-  HMODULE dStorageDll_{};
-  HMODULE xessDll_{};
-  HMODULE xellDll_{};
-  HMODULE xefgDll_{};
-  bool loadingXessDll_{};
-  bool loadingXellDll_{};
-  bool loadingXefgDll_{};
-  bool intelExtensionLoaded_{};
-  HMODULE nvapiDll_{};
-  HMODULE d3d11Dll_{};
-  std::unordered_map<std::string, unsigned int> nvapiFunctionIds_;
+  HMODULE m_KernelDll{};
+  HMODULE m_DmlDll{};
+  HMODULE m_DstorageDll{};
+  HMODULE m_XessDll{};
+  HMODULE m_XellDll{};
+  HMODULE m_XefgDll{};
+  bool m_LoadingXessDll{};
+  bool m_LoadingXellDll{};
+  bool m_LoadingXefgDll{};
+  bool m_IntelExtensionLoaded{};
+  HMODULE m_NvapiDll{};
+  HMODULE m_D3D11Dll{};
+  std::unordered_map<std::string, unsigned int> m_NvapiFunctionIds;
 };
 
 } // namespace DirectX

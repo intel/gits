@@ -21,24 +21,24 @@ namespace DirectX {
 class ScreenshotsLayer : public Layer {
 public:
   ScreenshotsLayer();
-  void post(IDXGIFactoryCreateSwapChainCommand& c) override;
-  void post(IDXGIFactory2CreateSwapChainForHwndCommand& c) override;
-  void post(xefgSwapChainD3D12InitFromSwapChainCommand& c) override;
-  void post(xefgSwapChainD3D12InitFromSwapChainDescCommand& c) override;
-  void post(xefgSwapChainD3D12GetSwapChainPtrCommand& c) override;
-  void pre(IDXGISwapChainPresentCommand& c) override;
-  void pre(IDXGISwapChain1Present1Command& c) override;
+  void Post(IDXGIFactoryCreateSwapChainCommand& c) override;
+  void Post(IDXGIFactory2CreateSwapChainForHwndCommand& c) override;
+  void Post(xefgSwapChainD3D12InitFromSwapChainCommand& c) override;
+  void Post(xefgSwapChainD3D12InitFromSwapChainDescCommand& c) override;
+  void Post(xefgSwapChainD3D12GetSwapChainPtrCommand& c) override;
+  void Pre(IDXGISwapChainPresentCommand& c) override;
+  void Pre(IDXGISwapChain1Present1Command& c) override;
 
 private:
-  void swapChainCreate(unsigned swapChainKey, IUnknown* commandQueue);
-  void swapChainPresent(unsigned swapChainKey, IDXGISwapChain* swapChain);
+  void SwapChainCreate(unsigned swapChainKey, IUnknown* commandQueue);
+  void SwapChainPresent(unsigned swapChainKey, IDXGISwapChain* swapChain);
 
 private:
-  std::map<unsigned, std::unique_ptr<ScreenshotDump>> screenshotDump_;
-  BitRange screenshotRange_;
-  std::wstring dumpPath_;
-  unsigned currentFrame_{};
-  std::unordered_map<unsigned, ID3D12CommandQueue*> xefgToDeviceMap_;
+  std::map<unsigned, std::unique_ptr<ScreenshotDump>> m_ScreenshotDump;
+  BitRange m_ScreenshotRange;
+  std::wstring m_DumpPath;
+  unsigned m_CurrentFrame{};
+  std::unordered_map<unsigned, ID3D12CommandQueue*> m_XefgToDeviceMap;
 };
 
 } // namespace DirectX

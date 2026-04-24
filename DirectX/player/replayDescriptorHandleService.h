@@ -22,22 +22,22 @@ public:
     GpuHandle
   };
 
-  void createDescriptorHeap(unsigned descriptorHeapKey,
+  void CreateDescriptorHeap(unsigned DescriptorHeapKey,
                             ID3D12DescriptorHeap* descriptorHeap,
                             const D3D12_DESCRIPTOR_HEAP_DESC* desc);
-  size_t getDescriptorHandle(unsigned descriptorHeapKey, HandleType handleType, unsigned index);
-  void destroyDescriptorHeap(unsigned descriptorHeapKey);
+  size_t GetDescriptorHandle(unsigned DescriptorHeapKey, HandleType handleType, unsigned index);
+  void DestroyDescriptorHeap(unsigned DescriptorHeapKey);
 
 private:
   struct DescriptorHeapInfo {
-    size_t cpuStart{};
-    size_t gpuStart{};
-    unsigned increment{};
+    size_t CpuStart{};
+    size_t GpuStart{};
+    unsigned Increment{};
   };
-  std::unordered_map<unsigned, DescriptorHeapInfo> descriptorHeaps_;
+  std::unordered_map<unsigned, DescriptorHeapInfo> m_DescriptorHeaps;
 
-  std::array<unsigned, D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES> descriptorHeapIncrements_{};
-  bool initialized_{false};
+  std::array<unsigned, D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES> m_DescriptorHeapIncrements{};
+  bool m_Initialized{false};
 };
 
 } // namespace DirectX

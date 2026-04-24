@@ -23,9 +23,9 @@ namespace DirectX {
 class ${function.name}Serializer : public stream::CommandSerializer {
 public:
   ${function.name}Serializer(const ${function.name}Command& command) {
-    m_DataSize = getSize(command);
+    m_DataSize = GetSize(command);
     m_Data.reset(new char[m_DataSize]);
-    encode(command, m_Data.get());
+    Encode(command, m_Data.get());
   }
   unsigned Id() const override {
     return static_cast<unsigned>(CommandId::ID_${function.name.upper()});
@@ -38,9 +38,9 @@ public:
 class ${interface.name}${function.name}Serializer : public stream::CommandSerializer {
 public:
   ${interface.name}${function.name}Serializer(const ${interface.name}${function.name}Command& command) {
-    m_DataSize = getSize(command);
+    m_DataSize = GetSize(command);
     m_Data.reset(new char[m_DataSize]);
-    encode(command, m_Data.get());
+    Encode(command, m_Data.get());
   }
   unsigned Id() const override {
     return static_cast<unsigned>(CommandId::ID_${interface.name.upper()}_${function.name.upper()});

@@ -15,7 +15,7 @@
 namespace gits {
 namespace DirectX {
 
-void BindingTablesDump::dumpBindingTable(ID3D12GraphicsCommandList* commandList,
+void BindingTablesDump::DumpBindingTable(ID3D12GraphicsCommandList* commandList,
                                          ID3D12Resource* resource,
                                          unsigned offset,
                                          unsigned size,
@@ -23,42 +23,42 @@ void BindingTablesDump::dumpBindingTable(ID3D12GraphicsCommandList* commandList,
                                          D3D12_RESOURCE_STATES state,
                                          StateObjectInfo* stateObjectInfo,
                                          DescriptorHeaps descriptorHeaps,
-                                         unsigned rootSignatureKey) {
+                                         unsigned RootSignatureKey) {
   BindingTablesInfo* info = new BindingTablesInfo();
   info->offset = offset;
   info->size = size;
   info->stride = stride;
   info->stateObjectInfo = stateObjectInfo;
   info->descriptorHeaps = descriptorHeaps;
-  info->rootSignatureKey = rootSignatureKey;
+  info->RootSignatureKey = RootSignatureKey;
 
   stageResource(commandList, resource, state, *info);
 }
 
 void BindingTablesDump::dumpBuffer(DumpInfo& dumpInfo, void* data) {
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::lock_guard<std::mutex> lock(m_Mutex);
 
   BindingTablesInfo& info = static_cast<BindingTablesInfo&>(dumpInfo);
   unsigned recordCount = info.size / info.stride;
   for (unsigned recordIndex = 0; recordIndex < recordCount; ++recordIndex) {
     uint8_t* p = static_cast<uint8_t*>(data) + recordIndex * info.stride;
 
-    unsigned rootSignatureKey = info.stateObjectInfo->globalRootSignature;
-    if (!rootSignatureKey) {
-      rootSignatureKey = info.rootSignatureKey;
+    unsigned RootSignatureKey = info.stateObjectInfo->GlobalRootSignature;
+    if (!RootSignatureKey) {
+      RootSignatureKey = info.RootSignatureKey;
     }
     CapturePlayerShaderIdentifierService::ShaderIdentifier shaderIdentifier;
     memcpy(shaderIdentifier.data(), p, shaderIdentifier.size());
     std::wstring exportName =
-        raytracingService_.getShaderIdentifierService().getExportNameByCaptureIdentifier(
+        m_RaytracingService.GetShaderIdentifierService().GetExportNameByCaptureIdentifier(
             shaderIdentifier);
-    auto it = info.stateObjectInfo->exportToRootSignature.find(exportName);
-    if (it != info.stateObjectInfo->exportToRootSignature.end()) {
-      rootSignatureKey = it->second;
+    auto it = info.stateObjectInfo->ExportToRootSignature.find(exportName);
+    if (it != info.stateObjectInfo->ExportToRootSignature.end()) {
+      RootSignatureKey = it->second;
     }
 
     D3D12_ROOT_SIGNATURE_DESC* desc =
-        raytracingService_.getRootSignatureService().getRootSignatureDesc(rootSignatureKey);
+        m_RaytracingService.GetRootSignatureService().GetRootSignatureDesc(RootSignatureKey);
     GITS_ASSERT(desc);
 
     unsigned byteOffset = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
@@ -73,7 +73,7 @@ void BindingTablesDump::dumpBuffer(DumpInfo& dumpInfo, void* data) {
       } else if (param.ParameterType == D3D12_ROOT_PARAMETER_TYPE_CBV ||
                  param.ParameterType == D3D12_ROOT_PARAMETER_TYPE_SRV ||
                  param.ParameterType == D3D12_ROOT_PARAMETER_TYPE_UAV) {
-        byteOffset = align(byteOffset, sizeof(UINT64));
+        byteOffset = Align(byteOffset, sizeof(UINT64));
         if (byteOffset >= info.stride) {
           break;
         }
@@ -81,22 +81,22 @@ void BindingTablesDump::dumpBuffer(DumpInfo& dumpInfo, void* data) {
         UINT64* address = reinterpret_cast<UINT64*>(p + byteOffset);
         if (*address) {
           CapturePlayerGpuAddressService::ResourceInfo* resourceInfo =
-              raytracingService_.getGpuAddressService().getResourceInfoByCaptureAddress(*address);
+              m_RaytracingService.GetGpuAddressService().GetResourceInfoByCaptureAddress(*address);
           if (resourceInfo) {
-            bindingTablesResources_.insert(resourceInfo->key);
+            m_BindingTablesResources.insert(resourceInfo->Key);
           }
         }
 
         byteOffset += sizeof(UINT64);
       } else if (param.ParameterType == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE) {
-        byteOffset = align(byteOffset, sizeof(UINT64));
+        byteOffset = Align(byteOffset, sizeof(UINT64));
         if (byteOffset >= info.stride) {
           break;
         }
 
         UINT64* descriptor = reinterpret_cast<UINT64*>(p + byteOffset);
         if (*descriptor) {
-          unsigned descriptorHeapKey{};
+          unsigned DescriptorHeapKey{};
           unsigned descriptorHeapSize{};
           CapturePlayerDescriptorHandleService::DescriptorHeapInfo* heapInfo{};
 
@@ -104,35 +104,36 @@ void BindingTablesDump::dumpBuffer(DumpInfo& dumpInfo, void* data) {
           GITS_ASSERT(param.DescriptorTable.NumDescriptorRanges);
           if (param.DescriptorTable.pDescriptorRanges[0].RangeType ==
               D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER) {
-            heapInfo = raytracingService_.getDescriptorHandleService()
-                           .getSamplerDescriptorHeapInfoByCaptureHandle(*descriptor);
-            stride = raytracingService_.getDescriptorHandleService().samplerHeapIncrement();
-            descriptorHeapKey = info.descriptorHeaps.samplerHeapKey;
-            descriptorHeapSize = info.descriptorHeaps.samplerHeapSize;
+            heapInfo = m_RaytracingService.GetDescriptorHandleService()
+                           .GetSamplerDescriptorHeapInfoByCaptureHandle(*descriptor);
+            stride = m_RaytracingService.GetDescriptorHandleService().SamplerHeapIncrement();
+            DescriptorHeapKey = info.descriptorHeaps.SamplerHeapKey;
+            descriptorHeapSize = info.descriptorHeaps.SamplerHeapSize;
           } else {
-            heapInfo = raytracingService_.getDescriptorHandleService()
-                           .getViewDescriptorHeapInfoByCaptureHandle(*descriptor);
-            stride = raytracingService_.getDescriptorHandleService().viewHeapIncrement();
-            descriptorHeapKey = info.descriptorHeaps.viewDescriptorHeapKey;
-            descriptorHeapSize = info.descriptorHeaps.viewDescriptorHeapSize;
+            heapInfo = m_RaytracingService.GetDescriptorHandleService()
+                           .GetViewDescriptorHeapInfoByCaptureHandle(*descriptor);
+            stride = m_RaytracingService.GetDescriptorHandleService().ViewHeapIncrement();
+            DescriptorHeapKey = info.descriptorHeaps.ViewDescriptorHeapKey;
+            descriptorHeapSize = info.descriptorHeaps.ViewDescriptorHeapSize;
           }
 
           if (heapInfo) {
-            unsigned descriptorIndex = (*descriptor - heapInfo->captureStart) / stride;
+            unsigned DescriptorIndex = (*descriptor - heapInfo->CaptureStart) / stride;
 
-            std::vector<unsigned> indexes =
-                raytracingService_.getRootSignatureService().getDescriptorTableIndexes(
-                    rootSignatureKey, descriptorHeapKey, rootParameterIndex, descriptorIndex,
+            std::vector<unsigned> Indexes =
+                m_RaytracingService.GetRootSignatureService().GetDescriptorTableIndexes(
+                    RootSignatureKey, DescriptorHeapKey, rootParameterIndex, DescriptorIndex,
                     descriptorHeapSize, true);
-            for (unsigned index : indexes) {
-              DescriptorState* state = raytracingService_.getDescriptorService().getDescriptorState(
-                  descriptorHeapKey, index);
+            for (unsigned index : Indexes) {
+              DescriptorState* state =
+                  m_RaytracingService.GetDescriptorService().GetDescriptorState(DescriptorHeapKey,
+                                                                                index);
               if (state) {
-                bindingTablesResources_.insert(state->resourceKey);
-                bindingTablesDescriptors_.insert({descriptorHeapKey, index});
+                m_BindingTablesResources.insert(state->ResourceKey);
+                m_BindingTablesDescriptors.insert({DescriptorHeapKey, index});
               }
             }
-            bindingTablesResources_.insert(descriptorHeapKey);
+            m_BindingTablesResources.insert(DescriptorHeapKey);
           }
         }
         byteOffset += sizeof(UINT64);
@@ -141,7 +142,7 @@ void BindingTablesDump::dumpBuffer(DumpInfo& dumpInfo, void* data) {
   }
 }
 
-unsigned BindingTablesDump::align(unsigned value, unsigned alignment) {
+unsigned BindingTablesDump::Align(unsigned value, unsigned alignment) {
   return ((value - 1) / alignment + 1) * alignment;
 }
 

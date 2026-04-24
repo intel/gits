@@ -13,7 +13,7 @@ namespace gits {
 namespace DirectX {
 
 %for function in functions:
-void StatisticsLayer::post(${function.name}Command& command) {
+void StatisticsLayer::Post(${function.name}Command& command) {
   m_StatisticsService.Command("${function.name}");
 }
 
@@ -27,7 +27,7 @@ custom = [
 %for interface in interfaces:
 %for function in interface.functions:
 %if not interface.name + function.name in custom:
-void StatisticsLayer::post(${interface.name}${function.name}Command& command) {
+void StatisticsLayer::Post(${interface.name}${function.name}Command& command) {
   m_StatisticsService.Command("${interface.name}::${function.name}");
 }
 

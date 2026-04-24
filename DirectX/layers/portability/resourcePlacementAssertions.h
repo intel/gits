@@ -20,10 +20,10 @@ class ResourcePlacementAssertions {
 public:
   ResourcePlacementAssertions();
 
-  void createPlacedResource(unsigned resourceKey,
+  void createPlacedResource(unsigned ResourceKey,
                             const D3D12_RESOURCE_DESC& desc,
                             ID3D12Device* device);
-  void createPlacedResource(unsigned resourceKey,
+  void createPlacedResource(unsigned ResourceKey,
                             const D3D12_RESOURCE_DESC1& desc,
                             ID3D12Device* device);
 
@@ -33,16 +33,16 @@ private:
     D3D12_RESOURCE_ALLOCATION_INFO post{};
   };
 
-  const ResourcePlacementInfo* findPlacementData(unsigned resourceKey);
+  const ResourcePlacementInfo* findPlacementData(unsigned ResourceKey);
   D3D12_RESOURCE_ALLOCATION_INFO queryAllocationFromDevice(ID3D12Device* device,
                                                            const D3D12_RESOURCE_DESC& desc,
-                                                           unsigned resourceKey);
-  void checkCompatibility(const AllocationInfo& allocationInfo, unsigned resourceKey);
+                                                           unsigned ResourceKey);
+  void checkCompatibility(const AllocationInfo& allocationInfo, unsigned ResourceKey);
 
   void loadResourcePlacementData();
 
-  std::unordered_map<unsigned, ResourcePlacementInfo> placementDataFromFile_;
-  bool placementDataLoaded_{};
+  std::unordered_map<unsigned, ResourcePlacementInfo> m_PlacementDataFromFile;
+  bool m_PlacementDataLoaded{};
 };
 
 } // namespace DirectX

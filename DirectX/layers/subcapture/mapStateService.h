@@ -19,19 +19,19 @@ class StateTrackingService;
 
 class MapStateService {
 public:
-  MapStateService(StateTrackingService& stateService) : stateService_(stateService) {}
-  void mapResource(unsigned resourceKey, unsigned subresourceIndex, void* captureAddress) {
-    mappedDataBySubresource_[resourceKey][subresourceIndex] = captureAddress;
+  MapStateService(StateTrackingService& stateService) : m_StateService(stateService) {}
+  void MapResource(unsigned ResourceKey, unsigned subresourceIndex, void* captureAddress) {
+    m_MappedDataBySubresource[ResourceKey][subresourceIndex] = captureAddress;
   }
-  void destroyResource(unsigned resourceKey) {
-    mappedDataBySubresource_.erase(resourceKey);
+  void DestroyResource(unsigned ResourceKey) {
+    m_MappedDataBySubresource.erase(ResourceKey);
   }
-  void restoreMapState();
+  void RestoreMapState();
 
 private:
-  StateTrackingService& stateService_;
-  std::unordered_map<unsigned, std::unordered_map<unsigned, void*>> mappedDataBySubresource_;
-  std::unordered_set<unsigned> restoredResources_;
+  StateTrackingService& m_StateService;
+  std::unordered_map<unsigned, std::unordered_map<unsigned, void*>> m_MappedDataBySubresource;
+  std::unordered_set<unsigned> m_RestoredResources;
 };
 
 } // namespace DirectX

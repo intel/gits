@@ -19,35 +19,35 @@ class AnalyzerResults {
 public:
   AnalyzerResults();
 
-  bool restoreCommandLists() {
-    return !commandListKeys_.empty();
+  bool RestoreCommandLists() {
+    return !m_CommandListKeys.empty();
   }
-  bool restoreCommandList(unsigned commandListKey) {
-    return commandListKeys_.find(commandListKey) != commandListKeys_.end();
+  bool RestoreCommandList(unsigned commandListKey) {
+    return m_CommandListKeys.find(commandListKey) != m_CommandListKeys.end();
   }
-  bool restoreCommandQueueCommand(unsigned commandKey) {
-    return commandQueueCommands_.find(commandKey) != commandQueueCommands_.end();
+  bool RestoreCommandQueueCommand(unsigned commandKey) {
+    return m_CommandQueueCommands.find(commandKey) != m_CommandQueueCommands.end();
   }
-  bool restoreObject(unsigned objectKey);
-  bool restoreDescriptor(unsigned heapKey, unsigned index);
-  bool restoreTlas(unsigned blasBuildKey);
-  bool restoreBlas(std::pair<unsigned, unsigned> blas);
-  std::set<std::pair<unsigned, unsigned>>& getAsSources() {
-    return asSources_;
+  bool RestoreObject(unsigned objectKey);
+  bool RestoreDescriptor(unsigned heapKey, unsigned index);
+  bool RestoreTlas(unsigned blasBuildKey);
+  bool RestoreBlas(std::pair<unsigned, unsigned> blas);
+  std::set<std::pair<unsigned, unsigned>>& GetAsSources() {
+    return m_AsSources;
   }
 
-  static bool isAnalysis();
-  static std::string getAnalysisFileName();
+  static bool IsAnalysis();
+  static std::string GetAnalysisFileName();
 
 private:
-  bool optimize_{};
-  std::unordered_set<unsigned> commandListKeys_;
-  std::unordered_set<unsigned> commandQueueCommands_;
-  std::unordered_set<unsigned> objectKeys_;
-  std::set<std::pair<unsigned, unsigned>> descriptors_;
-  std::unordered_set<unsigned> tlases_;
-  std::set<std::pair<unsigned, unsigned>> blases_;
-  std::set<std::pair<unsigned, unsigned>> asSources_;
+  bool m_Optimize{};
+  std::unordered_set<unsigned> m_CommandListKeys;
+  std::unordered_set<unsigned> m_CommandQueueCommands;
+  std::unordered_set<unsigned> m_ObjectKeys;
+  std::set<std::pair<unsigned, unsigned>> m_Descriptors;
+  std::unordered_set<unsigned> m_Tlases;
+  std::set<std::pair<unsigned, unsigned>> m_Blases;
+  std::set<std::pair<unsigned, unsigned>> m_AsSources;
 };
 
 } // namespace DirectX

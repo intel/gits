@@ -17,21 +17,21 @@ namespace DirectX {
 
 class Command {
 public:
-  Command(CommandId id, unsigned threadId_) : id_(id), threadId(threadId_) {}
-  Command(CommandId id) : id_{id} {}
+  Command(CommandId id, unsigned threadId) : m_Id(id), ThreadId(threadId) {}
+  Command(CommandId id) : m_Id{id} {}
   virtual ~Command() {}
 
-  CommandId getId() const {
-    return id_;
+  CommandId GetId() const {
+    return m_Id;
   }
 
 public:
-  unsigned key{};
-  unsigned threadId{};
-  bool skip{false};
+  unsigned Key{};
+  unsigned ThreadId{};
+  bool Skip{false};
 
 private:
-  CommandId id_{};
+  CommandId m_Id{};
 };
 
 } // namespace DirectX

@@ -14,7 +14,7 @@
 namespace gits {
 namespace DirectX {
 
-void ExecutionSerializationLayerGroup::loadLayers() {
+void ExecutionSerializationLayerGroup::LoadLayers() {
 
   if (!Configurator::Get().directx.features.subcapture.enabled ||
       !Configurator::Get().directx.features.subcapture.executionSerialization) {
@@ -34,8 +34,8 @@ void ExecutionSerializationLayerGroup::loadLayers() {
     exit(EXIT_FAILURE);
   }
 
-  recorder_ = std::make_unique<ExecutionSerializationRecorder>();
-  addLayer(std::make_unique<ExecutionSerializationLayer>(*recorder_));
+  m_Recorder = std::make_unique<ExecutionSerializationRecorder>();
+  AddLayer(std::make_unique<ExecutionSerializationLayer>(*m_Recorder));
 }
 
 } // namespace DirectX

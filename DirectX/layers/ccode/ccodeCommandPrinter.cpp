@@ -16,75 +16,75 @@ namespace DirectX {
 namespace ccode {
 
 CommandPrinter::CommandPrinter(Command& command, const char* name, unsigned objectId)
-    : command_(command), name_(name), objectId_(objectId) {}
+    : m_Command(command), m_Name(name), m_ObjectId(objectId) {}
 
 CommandPrinter::~CommandPrinter() {}
 
 std::string& CommandPrinter::getArgumentValue(unsigned index) {
-  GITS_ASSERT(index < cppArgValues_.size(), "Argument index out of range.");
-  return cppArgValues_[index];
+  GITS_ASSERT(index < m_CppArgValues.size(), "Argument index out of range.");
+  return m_CppArgValues[index];
 }
 
 void CommandPrinter::setPreCommand(const std::string& preCommand) {
-  cppPreCommand_ = preCommand;
+  m_CppPreCommand = preCommand;
 }
 
 void CommandPrinter::setPostCommand(const std::string& postCommand) {
-  cppPostCommand_ = postCommand;
+  m_CppPostCommand = postCommand;
 }
 
 void CommandPrinter::skip() {
-  skip_ = true;
+  m_Skip = true;
 }
 
 void CommandPrinter::print() {
   auto& stream = ccode::CCodeStream::getInstance();
   auto& ss = stream.getCurrentBlock();
-  if (skip_) {
-    ss << "// [SKIPPED] Command " << keyToStr(command_.key) << " " << name_ << std::endl;
+  if (m_Skip) {
+    ss << "// [SKIPPED] Command " << keyToStr(m_Command.Key) << " " << m_Name << std::endl;
     return;
   }
 
   bool needsScope =
-      !cppArgInitializations_.empty() || !cppPreCommand_.empty() || !cppPostCommand_.empty();
+      !m_CppArgInitializations.empty() || !m_CppPreCommand.empty() || !m_CppPostCommand.empty();
 
   // Command #N name
-  ss << "// Command " << keyToStr(command_.key) << " " << name_ << std::endl;
+  ss << "// Command " << keyToStr(m_Command.Key) << " " << m_Name << std::endl;
   if (needsScope) {
     ss << "{" << std::endl;
   }
 
   // Print argument declarations
-  for (const auto& initialization : cppArgInitializations_) {
+  for (const auto& initialization : m_CppArgInitializations) {
     ss << initialization;
   }
 
   // Print command (with pre / post)
-  ss << cppPreCommand_;
+  ss << m_CppPreCommand;
   bool hasObjectAsArgument = false;
   if (Configurator::Get().directx.player.cCode.wrapApiCalls) {
     // Wrapped: CC_Function(g_OX, a0, a1, ...);
-    ss << "CC_" << name_ << "(";
-    if (objectId_ != 0) {
+    ss << "CC_" << m_Name << "(";
+    if (m_ObjectId != 0) {
       hasObjectAsArgument = true;
-      ss << objKeyToPtrStr(objectId_);
+      ss << objKeyToPtrStr(m_ObjectId);
     }
   } else {
     // Default: g_OX->Function(a0, a1, ...);
-    if (objectId_ != 0) {
-      ss << "g_" << objKeyToStr(objectId_) << "->";
+    if (m_ObjectId != 0) {
+      ss << "g_" << objKeyToStr(m_ObjectId) << "->";
     }
-    ss << name_ << "(";
+    ss << m_Name << "(";
   }
   // Print arguments
-  for (size_t i = 0; i < cppArgValues_.size(); ++i) {
+  for (size_t i = 0; i < m_CppArgValues.size(); ++i) {
     if (hasObjectAsArgument || (i > 0)) {
       ss << ", ";
     }
-    ss << cppArgValues_[i];
+    ss << m_CppArgValues[i];
   }
   ss << ");" << std::endl;
-  ss << cppPostCommand_;
+  ss << m_CppPostCommand;
 
   // Closing scope
   if (needsScope) {

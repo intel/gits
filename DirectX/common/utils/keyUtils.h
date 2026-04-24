@@ -14,45 +14,45 @@
 namespace gits {
 namespace DirectX {
 
-inline constexpr unsigned stateRestoreKeyMask{1u << 31};
-inline constexpr unsigned executionSerializationKeyMask{1u << 30};
+inline constexpr unsigned STATE_RESTORE_KEY_MASK = 1u << 31;
+inline constexpr unsigned EXECUTION_SERIALIZATION_KEY_MASK = 1u << 30;
 
-inline bool isStateRestoreKey(unsigned key) {
-  return key & stateRestoreKeyMask;
+inline bool IsStateRestoreKey(unsigned key) {
+  return key & STATE_RESTORE_KEY_MASK;
 }
 
-inline unsigned extractStateRestoreKey(unsigned key) {
-  return key & ~stateRestoreKeyMask;
+inline unsigned ExtractStateRestoreKey(unsigned key) {
+  return key & ~STATE_RESTORE_KEY_MASK;
 }
 
-inline bool isExecutionSerializationKey(unsigned key) {
-  return key & executionSerializationKeyMask;
+inline bool IsExecutionSerializationKey(unsigned key) {
+  return key & EXECUTION_SERIALIZATION_KEY_MASK;
 }
 
-inline unsigned extractExecutionSerializationKey(unsigned key) {
-  return key & ~executionSerializationKeyMask;
+inline unsigned ExtractExecutionSerializationKey(unsigned key) {
+  return key & ~EXECUTION_SERIALIZATION_KEY_MASK;
 }
 
-std::string parseConfigKeys(const std::string& keys);
+std::string ParseConfigKeys(const std::string& keys);
 
 class ConfigKeySet {
 public:
   ConfigKeySet(const std::string& keys);
-  bool empty() {
-    return commandKeys_.empty();
+  bool Empty() const {
+    return m_CommandKeys.empty();
   }
-  bool contains(unsigned key) {
-    return commandKeys_.find(key) != commandKeys_.end();
+  bool Contains(unsigned key) const {
+    return m_CommandKeys.find(key) != m_CommandKeys.end();
   }
-  auto begin() {
-    return commandKeys_.begin();
+  auto begin() const {
+    return m_CommandKeys.begin();
   }
-  auto end() {
-    return commandKeys_.end();
+  auto end() const {
+    return m_CommandKeys.end();
   }
 
 private:
-  std::unordered_set<unsigned> commandKeys_;
+  std::unordered_set<unsigned> m_CommandKeys;
 };
 
 } // namespace DirectX

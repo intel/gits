@@ -116,7 +116,7 @@ def generate_params_for_function(function):
             if param.is_array:
                 str += ', ' + param.size
             str += '>'
-        str += ' ' + param.name + '_'
+        str += ' m_' + param.name
         list.append(str)
     return list
 

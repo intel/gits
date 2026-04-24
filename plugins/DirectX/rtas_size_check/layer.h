@@ -21,9 +21,9 @@ public:
   ~RtasSizeCheckLayer() = default;
 
   // Capture time addresses and output
-  void pre(ID3D12Device5GetRaytracingAccelerationStructurePrebuildInfoCommand& command) override;
+  void Pre(ID3D12Device5GetRaytracingAccelerationStructurePrebuildInfoCommand& command) override;
   // Playback time addresses and output
-  void post(ID3D12Device5GetRaytracingAccelerationStructurePrebuildInfoCommand& command) override;
+  void Post(ID3D12Device5GetRaytracingAccelerationStructurePrebuildInfoCommand& command) override;
 
 private:
   MessageBus* msgBus_;

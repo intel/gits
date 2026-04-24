@@ -17,13 +17,13 @@ namespace DirectX {
 UpdateInterface<D3D12_TEXTURE_COPY_LOCATION_Argument, D3D12_TEXTURE_COPY_LOCATION>::UpdateInterface(
     D3D12_TEXTURE_COPY_LOCATION_Argument& arg, const D3D12_TEXTURE_COPY_LOCATION* value) {
 
-  arg.value = &unwrapStructure_;
-  *arg.value = *value;
+  arg.Value = &m_UnwrapStructure;
+  *arg.Value = *value;
 
   if (value->pResource) {
     IUnknownWrapper* wrapper = reinterpret_cast<IUnknownWrapper*>(value->pResource);
-    arg.resourceKey = wrapper->getKey();
-    arg.value->pResource = wrapper->getWrappedObject<ID3D12Resource>();
+    arg.ResourceKey = wrapper->getKey();
+    arg.Value->pResource = wrapper->getWrappedObject<ID3D12Resource>();
   }
 }
 
@@ -31,13 +31,13 @@ UpdateInterface<D3D12_GRAPHICS_PIPELINE_STATE_DESC_Argument, D3D12_GRAPHICS_PIPE
     UpdateInterface(D3D12_GRAPHICS_PIPELINE_STATE_DESC_Argument& arg,
                     const D3D12_GRAPHICS_PIPELINE_STATE_DESC* value) {
 
-  arg.value = &unwrapStructure_;
-  *arg.value = *value;
+  arg.Value = &m_UnwrapStructure;
+  *arg.Value = *value;
 
   if (value->pRootSignature) {
     IUnknownWrapper* wrapper = reinterpret_cast<IUnknownWrapper*>(value->pRootSignature);
-    arg.rootSignatureKey = wrapper->getKey();
-    arg.value->pRootSignature = wrapper->getWrappedObject<ID3D12RootSignature>();
+    arg.RootSignatureKey = wrapper->getKey();
+    arg.Value->pRootSignature = wrapper->getWrappedObject<ID3D12RootSignature>();
   }
 }
 
@@ -45,43 +45,43 @@ UpdateInterface<D3D12_COMPUTE_PIPELINE_STATE_DESC_Argument, D3D12_COMPUTE_PIPELI
     UpdateInterface(D3D12_COMPUTE_PIPELINE_STATE_DESC_Argument& arg,
                     const D3D12_COMPUTE_PIPELINE_STATE_DESC* value) {
 
-  arg.value = &unwrapStructure_;
-  *arg.value = *value;
+  arg.Value = &m_UnwrapStructure;
+  *arg.Value = *value;
 
   if (value->pRootSignature) {
     IUnknownWrapper* wrapper = reinterpret_cast<IUnknownWrapper*>(value->pRootSignature);
-    arg.rootSignatureKey = wrapper->getKey();
-    arg.value->pRootSignature = wrapper->getWrappedObject<ID3D12RootSignature>();
+    arg.RootSignatureKey = wrapper->getKey();
+    arg.Value->pRootSignature = wrapper->getWrappedObject<ID3D12RootSignature>();
   }
 }
 
 UpdateInterface<D3D12_RESOURCE_BARRIERs_Argument, D3D12_RESOURCE_BARRIER>::UpdateInterface(
     D3D12_RESOURCE_BARRIERs_Argument& arg, const D3D12_RESOURCE_BARRIER* value) {
 
-  unwrapped_ = unwrappedStatic_;
-  if (arg.size > NUM) {
-    unwrappedDynamic_.resize(arg.size);
-    unwrapped_ = unwrappedDynamic_.data();
+  m_Unwrapped = m_UnwrappedStatic;
+  if (arg.Size > NUM) {
+    m_UnwrappedDynamic.resize(arg.Size);
+    m_Unwrapped = m_UnwrappedDynamic.data();
   }
-  arg.value = unwrapped_;
+  arg.Value = m_Unwrapped;
 
-  for (unsigned i = 0; i < arg.size; ++i) {
+  for (unsigned i = 0; i < arg.Size; ++i) {
 
-    arg.value[i] = value[i];
-    D3D12_RESOURCE_BARRIER& barrier = arg.value[i];
+    arg.Value[i] = value[i];
+    D3D12_RESOURCE_BARRIER& barrier = arg.Value[i];
 
     switch (barrier.Type) {
     case D3D12_RESOURCE_BARRIER_TYPE_ALIASING:
       if (barrier.Aliasing.pResourceBefore) {
         IUnknownWrapper* wrapper =
             reinterpret_cast<IUnknownWrapper*>(barrier.Aliasing.pResourceBefore);
-        arg.resourceKeys[i] = wrapper->getKey();
+        arg.ResourceKeys[i] = wrapper->getKey();
         barrier.Aliasing.pResourceBefore = wrapper->getWrappedObject<ID3D12Resource>();
       }
       if (barrier.Aliasing.pResourceAfter) {
         IUnknownWrapper* wrapper =
             reinterpret_cast<IUnknownWrapper*>(barrier.Aliasing.pResourceAfter);
-        arg.resourceAfterKeys[i] = wrapper->getKey();
+        arg.ResourceAfterKeys[i] = wrapper->getKey();
         barrier.Aliasing.pResourceAfter = wrapper->getWrappedObject<ID3D12Resource>();
       }
       break;
@@ -89,7 +89,7 @@ UpdateInterface<D3D12_RESOURCE_BARRIERs_Argument, D3D12_RESOURCE_BARRIER>::Updat
     case D3D12_RESOURCE_BARRIER_TYPE_TRANSITION:
       if (barrier.Transition.pResource) {
         IUnknownWrapper* wrapper = reinterpret_cast<IUnknownWrapper*>(barrier.Transition.pResource);
-        arg.resourceKeys[i] = wrapper->getKey();
+        arg.ResourceKeys[i] = wrapper->getKey();
         barrier.Transition.pResource = wrapper->getWrappedObject<ID3D12Resource>();
       }
       break;
@@ -97,7 +97,7 @@ UpdateInterface<D3D12_RESOURCE_BARRIERs_Argument, D3D12_RESOURCE_BARRIER>::Updat
     case D3D12_RESOURCE_BARRIER_TYPE_UAV:
       if (barrier.UAV.pResource) {
         IUnknownWrapper* wrapper = reinterpret_cast<IUnknownWrapper*>(barrier.UAV.pResource);
-        arg.resourceKeys[i] = wrapper->getKey();
+        arg.ResourceKeys[i] = wrapper->getKey();
         barrier.UAV.pResource = wrapper->getWrappedObject<ID3D12Resource>();
       }
       break;
@@ -109,17 +109,17 @@ UpdateInterface<D3D12_PIPELINE_STATE_STREAM_DESC_Argument, D3D12_PIPELINE_STATE_
     UpdateInterface(D3D12_PIPELINE_STATE_STREAM_DESC_Argument& arg,
                     const D3D12_PIPELINE_STATE_STREAM_DESC* stateStreamtDesc) {
 
-  streamDescUnwrapped_ = *stateStreamtDesc;
-  subobjectsUnwrapped_.resize(stateStreamtDesc->SizeInBytes);
-  streamDescUnwrapped_.pPipelineStateSubobjectStream = subobjectsUnwrapped_.data();
-  memcpy(subobjectsUnwrapped_.data(), stateStreamtDesc->pPipelineStateSubobjectStream,
+  m_StreamDescUnwrapped = *stateStreamtDesc;
+  m_SubobjectsUnwrapped.resize(stateStreamtDesc->SizeInBytes);
+  m_StreamDescUnwrapped.pPipelineStateSubobjectStream = m_SubobjectsUnwrapped.data();
+  memcpy(m_SubobjectsUnwrapped.data(), stateStreamtDesc->pPipelineStateSubobjectStream,
          stateStreamtDesc->SizeInBytes);
 
-  arg.value = &streamDescUnwrapped_;
+  arg.Value = &m_StreamDescUnwrapped;
 
   size_t offset = 0;
   while (offset < stateStreamtDesc->SizeInBytes) {
-    uint8_t* subobjectData = subobjectsUnwrapped_.data() + offset;
+    uint8_t* subobjectData = m_SubobjectsUnwrapped.data() + offset;
     D3D12_PIPELINE_STATE_SUBOBJECT_TYPE subobjectType =
         *reinterpret_cast<D3D12_PIPELINE_STATE_SUBOBJECT_TYPE*>(subobjectData);
 
@@ -129,7 +129,7 @@ UpdateInterface<D3D12_PIPELINE_STATE_STREAM_DESC_Argument, D3D12_PIPELINE_STATE_
 
       ID3D12RootSignature* rootSignature = *rootSignatureSubobject;
       IUnknownWrapper* wrapper = reinterpret_cast<IUnknownWrapper*>(rootSignature);
-      arg.rootSignatureKey = wrapper->getKey();
+      arg.RootSignatureKey = wrapper->getKey();
       *rootSignatureSubobject = wrapper->getWrappedObject<ID3D12RootSignature>();
 
       offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_ROOT_SIGNATURE);
@@ -228,13 +228,13 @@ UpdateInterface<D3D12_PIPELINE_STATE_STREAM_DESC_Argument, D3D12_PIPELINE_STATE_
 UpdateInterface<D3D12_STATE_OBJECT_DESC_Argument, D3D12_STATE_OBJECT_DESC>::UpdateInterface(
     D3D12_STATE_OBJECT_DESC_Argument& arg, const D3D12_STATE_OBJECT_DESC* stateObjectDesc) {
 
-  arg.value = &stateObjectDescUnwrapped_;
-  *arg.value = *stateObjectDesc;
+  arg.Value = &m_StateObjectDescUnwrapped;
+  *arg.Value = *stateObjectDesc;
 
-  subobjectsUnwrapped_.reserve(stateObjectDesc->NumSubobjects);
-  localSignatures_.reserve(stateObjectDesc->NumSubobjects);
+  m_SubobjectsUnwrapped.reserve(stateObjectDesc->NumSubobjects);
+  m_LocalSignatures.reserve(stateObjectDesc->NumSubobjects);
   existingCollectionDescs.reserve(stateObjectDesc->NumSubobjects);
-  subobjectToExportsAssociations_.reserve(stateObjectDesc->NumSubobjects);
+  m_SubobjectToExportsAssociations.reserve(stateObjectDesc->NumSubobjects);
 
   for (unsigned index = 0; index < stateObjectDesc->NumSubobjects; ++index) {
 
@@ -242,31 +242,31 @@ UpdateInterface<D3D12_STATE_OBJECT_DESC_Argument, D3D12_STATE_OBJECT_DESC>::Upda
     switch (subobject->Type) {
 
     case D3D12_STATE_SUBOBJECT_TYPE_GLOBAL_ROOT_SIGNATURE: {
-      globalSignatureUnwrapped_ =
+      m_GlobalSignatureUnwrapped =
           *static_cast<D3D12_GLOBAL_ROOT_SIGNATURE*>(const_cast<void*>(subobject->pDesc));
       IUnknownWrapper* wrapper =
-          reinterpret_cast<IUnknownWrapper*>(globalSignatureUnwrapped_.pGlobalRootSignature);
-      arg.interfaceKeysBySubobject[index] = wrapper->getKey();
-      globalSignatureUnwrapped_.pGlobalRootSignature =
+          reinterpret_cast<IUnknownWrapper*>(m_GlobalSignatureUnwrapped.pGlobalRootSignature);
+      arg.InterfaceKeysBySubobject[index] = wrapper->getKey();
+      m_GlobalSignatureUnwrapped.pGlobalRootSignature =
           wrapper->getWrappedObject<ID3D12RootSignature>();
 
-      subobjectsUnwrapped_.push_back(
-          D3D12_STATE_SUBOBJECT{subobject->Type, &globalSignatureUnwrapped_});
-      wrappedSubobjectIndexes_[subobject] = index;
+      m_SubobjectsUnwrapped.push_back(
+          D3D12_STATE_SUBOBJECT{subobject->Type, &m_GlobalSignatureUnwrapped});
+      m_WrappedSubobjectIndexes[subobject] = index;
     } break;
 
     case D3D12_STATE_SUBOBJECT_TYPE_LOCAL_ROOT_SIGNATURE: {
-      localSignatures_.push_back(
+      m_LocalSignatures.push_back(
           *static_cast<D3D12_LOCAL_ROOT_SIGNATURE*>(const_cast<void*>(subobject->pDesc)));
 
-      D3D12_LOCAL_ROOT_SIGNATURE* localRootSignature = &localSignatures_.back();
+      D3D12_LOCAL_ROOT_SIGNATURE* localRootSignature = &m_LocalSignatures.back();
       IUnknownWrapper* wrapper =
           reinterpret_cast<IUnknownWrapper*>(localRootSignature->pLocalRootSignature);
-      arg.interfaceKeysBySubobject[index] = wrapper->getKey();
+      arg.InterfaceKeysBySubobject[index] = wrapper->getKey();
       localRootSignature->pLocalRootSignature = wrapper->getWrappedObject<ID3D12RootSignature>();
 
-      subobjectsUnwrapped_.push_back(D3D12_STATE_SUBOBJECT{subobject->Type, localRootSignature});
-      wrappedSubobjectIndexes_[subobject] = index;
+      m_SubobjectsUnwrapped.push_back(D3D12_STATE_SUBOBJECT{subobject->Type, localRootSignature});
+      m_WrappedSubobjectIndexes[subobject] = index;
     } break;
 
     case D3D12_STATE_SUBOBJECT_TYPE_EXISTING_COLLECTION: {
@@ -275,40 +275,40 @@ UpdateInterface<D3D12_STATE_OBJECT_DESC_Argument, D3D12_STATE_OBJECT_DESC>::Upda
 
       D3D12_EXISTING_COLLECTION_DESC* desc = &existingCollectionDescs.back();
       IUnknownWrapper* wrapper = reinterpret_cast<IUnknownWrapper*>(desc->pExistingCollection);
-      arg.interfaceKeysBySubobject[index] = wrapper->getKey();
+      arg.InterfaceKeysBySubobject[index] = wrapper->getKey();
       desc->pExistingCollection = wrapper->getWrappedObject<ID3D12StateObject>();
 
-      subobjectsUnwrapped_.push_back(D3D12_STATE_SUBOBJECT{subobject->Type, desc});
-      wrappedSubobjectIndexes_[subobject] = index;
+      m_SubobjectsUnwrapped.push_back(D3D12_STATE_SUBOBJECT{subobject->Type, desc});
+      m_WrappedSubobjectIndexes[subobject] = index;
     } break;
 
     default:
-      subobjectsUnwrapped_.push_back(D3D12_STATE_SUBOBJECT{subobject->Type, subobject->pDesc});
-      wrappedSubobjectIndexes_[subobject] = index;
+      m_SubobjectsUnwrapped.push_back(D3D12_STATE_SUBOBJECT{subobject->Type, subobject->pDesc});
+      m_WrappedSubobjectIndexes[subobject] = index;
       break;
     }
   }
 
-  for (D3D12_STATE_SUBOBJECT& subobject : subobjectsUnwrapped_) {
+  for (D3D12_STATE_SUBOBJECT& subobject : m_SubobjectsUnwrapped) {
 
     if (subobject.Type == D3D12_STATE_SUBOBJECT_TYPE_SUBOBJECT_TO_EXPORTS_ASSOCIATION) {
-      subobjectToExportsAssociations_.push_back(
+      m_SubobjectToExportsAssociations.push_back(
           *static_cast<D3D12_SUBOBJECT_TO_EXPORTS_ASSOCIATION*>(
               const_cast<void*>(subobject.pDesc)));
 
-      auto it = wrappedSubobjectIndexes_.find(
-          subobjectToExportsAssociations_.back().pSubobjectToAssociate);
-      GITS_ASSERT(it != wrappedSubobjectIndexes_.end());
+      auto it = m_WrappedSubobjectIndexes.find(
+          m_SubobjectToExportsAssociations.back().pSubobjectToAssociate);
+      GITS_ASSERT(it != m_WrappedSubobjectIndexes.end());
       unsigned associateIndex = it->second;
-      subobjectToExportsAssociations_.back().pSubobjectToAssociate =
-          &subobjectsUnwrapped_[associateIndex];
+      m_SubobjectToExportsAssociations.back().pSubobjectToAssociate =
+          &m_SubobjectsUnwrapped[associateIndex];
 
-      subobject.pDesc = &subobjectToExportsAssociations_.back();
+      subobject.pDesc = &m_SubobjectToExportsAssociations.back();
     }
   }
 
-  stateObjectDescUnwrapped_ = *const_cast<D3D12_STATE_OBJECT_DESC*>(stateObjectDesc);
-  stateObjectDescUnwrapped_.pSubobjects = subobjectsUnwrapped_.data();
+  m_StateObjectDescUnwrapped = *const_cast<D3D12_STATE_OBJECT_DESC*>(stateObjectDesc);
+  m_StateObjectDescUnwrapped.pSubobjects = m_SubobjectsUnwrapped.data();
 }
 
 UpdateInterface<D3D12_RENDER_PASS_RENDER_TARGET_DESCs_Argument,
@@ -318,27 +318,27 @@ UpdateInterface<D3D12_RENDER_PASS_RENDER_TARGET_DESCs_Argument,
   if (!value) {
     return;
   }
-  unwrapStructures_.reserve(arg.size);
-  for (unsigned i = 0; i < arg.size; ++i) {
-    unwrapStructures_[i] = arg.value[i];
-    if (unwrapStructures_[i].EndingAccess.Type == D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_RESOLVE) {
-      if (unwrapStructures_[i].EndingAccess.Resolve.pSrcResource) {
+  m_UnwrapStructures.reserve(arg.Size);
+  for (unsigned i = 0; i < arg.Size; ++i) {
+    m_UnwrapStructures[i] = arg.Value[i];
+    if (m_UnwrapStructures[i].EndingAccess.Type == D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_RESOLVE) {
+      if (m_UnwrapStructures[i].EndingAccess.Resolve.pSrcResource) {
         IUnknownWrapper* wrapperSrcResource = reinterpret_cast<IUnknownWrapper*>(
-            unwrapStructures_[i].EndingAccess.Resolve.pSrcResource);
-        arg.resolveSrcResourceKeys.push_back(wrapperSrcResource->getKey());
-        unwrapStructures_[i].EndingAccess.Resolve.pSrcResource =
+            m_UnwrapStructures[i].EndingAccess.Resolve.pSrcResource);
+        arg.ResolveSrcResourceKeys.push_back(wrapperSrcResource->getKey());
+        m_UnwrapStructures[i].EndingAccess.Resolve.pSrcResource =
             wrapperSrcResource->getWrappedObject<ID3D12Resource>();
       }
-      if (unwrapStructures_[i].EndingAccess.Resolve.pDstResource) {
+      if (m_UnwrapStructures[i].EndingAccess.Resolve.pDstResource) {
         IUnknownWrapper* wrapperDstResource = reinterpret_cast<IUnknownWrapper*>(
-            unwrapStructures_[i].EndingAccess.Resolve.pDstResource);
-        arg.resolveDstResourceKeys.push_back(wrapperDstResource->getKey());
-        unwrapStructures_[i].EndingAccess.Resolve.pDstResource =
+            m_UnwrapStructures[i].EndingAccess.Resolve.pDstResource);
+        arg.ResolveDstResourceKeys.push_back(wrapperDstResource->getKey());
+        m_UnwrapStructures[i].EndingAccess.Resolve.pDstResource =
             wrapperDstResource->getWrappedObject<ID3D12Resource>();
       }
     }
   }
-  arg.value = unwrapStructures_.data();
+  arg.Value = m_UnwrapStructures.data();
 }
 
 UpdateInterface<D3D12_RENDER_PASS_DEPTH_STENCIL_DESC_Argument,
@@ -348,39 +348,39 @@ UpdateInterface<D3D12_RENDER_PASS_DEPTH_STENCIL_DESC_Argument,
   if (!value) {
     return;
   }
-  arg.value = &unwrapStructure_;
-  *arg.value = *value;
+  arg.Value = &m_UnwrapStructure;
+  *arg.Value = *value;
 
-  if (arg.value->DepthEndingAccess.Type == D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_RESOLVE) {
-    if (arg.value->DepthEndingAccess.Resolve.pSrcResource) {
+  if (arg.Value->DepthEndingAccess.Type == D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_RESOLVE) {
+    if (arg.Value->DepthEndingAccess.Resolve.pSrcResource) {
       IUnknownWrapper* wrapperSrcResource =
-          reinterpret_cast<IUnknownWrapper*>(arg.value->DepthEndingAccess.Resolve.pSrcResource);
-      arg.resolveSrcDepthKey = wrapperSrcResource->getKey();
-      arg.value->DepthEndingAccess.Resolve.pSrcResource =
+          reinterpret_cast<IUnknownWrapper*>(arg.Value->DepthEndingAccess.Resolve.pSrcResource);
+      arg.ResolveSrcDepthKey = wrapperSrcResource->getKey();
+      arg.Value->DepthEndingAccess.Resolve.pSrcResource =
           wrapperSrcResource->getWrappedObject<ID3D12Resource>();
     }
-    if (arg.value->DepthEndingAccess.Resolve.pDstResource) {
+    if (arg.Value->DepthEndingAccess.Resolve.pDstResource) {
       IUnknownWrapper* wrapperDstResource =
-          reinterpret_cast<IUnknownWrapper*>(arg.value->DepthEndingAccess.Resolve.pDstResource);
-      arg.resolveDstDepthKey = wrapperDstResource->getKey();
-      arg.value->DepthEndingAccess.Resolve.pDstResource =
+          reinterpret_cast<IUnknownWrapper*>(arg.Value->DepthEndingAccess.Resolve.pDstResource);
+      arg.ResolveDstDepthKey = wrapperDstResource->getKey();
+      arg.Value->DepthEndingAccess.Resolve.pDstResource =
           wrapperDstResource->getWrappedObject<ID3D12Resource>();
     }
   }
 
-  if (arg.value->StencilEndingAccess.Type == D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_RESOLVE) {
-    if (arg.value->StencilEndingAccess.Resolve.pSrcResource) {
+  if (arg.Value->StencilEndingAccess.Type == D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_RESOLVE) {
+    if (arg.Value->StencilEndingAccess.Resolve.pSrcResource) {
       IUnknownWrapper* wrapperSrcResource =
-          reinterpret_cast<IUnknownWrapper*>(arg.value->StencilEndingAccess.Resolve.pSrcResource);
-      arg.resolveSrcStencilKey = wrapperSrcResource->getKey();
-      arg.value->StencilEndingAccess.Resolve.pSrcResource =
+          reinterpret_cast<IUnknownWrapper*>(arg.Value->StencilEndingAccess.Resolve.pSrcResource);
+      arg.ResolveSrcStencilKey = wrapperSrcResource->getKey();
+      arg.Value->StencilEndingAccess.Resolve.pSrcResource =
           wrapperSrcResource->getWrappedObject<ID3D12Resource>();
     }
-    if (arg.value->StencilEndingAccess.Resolve.pDstResource) {
+    if (arg.Value->StencilEndingAccess.Resolve.pDstResource) {
       IUnknownWrapper* wrapperDstResource =
-          reinterpret_cast<IUnknownWrapper*>(arg.value->StencilEndingAccess.Resolve.pDstResource);
-      arg.resolveDstStencilKey = wrapperDstResource->getKey();
-      arg.value->StencilEndingAccess.Resolve.pDstResource =
+          reinterpret_cast<IUnknownWrapper*>(arg.Value->StencilEndingAccess.Resolve.pDstResource);
+      arg.ResolveDstStencilKey = wrapperDstResource->getKey();
+      arg.Value->StencilEndingAccess.Resolve.pDstResource =
           wrapperDstResource->getWrappedObject<ID3D12Resource>();
     }
   }
@@ -389,47 +389,47 @@ UpdateInterface<D3D12_RENDER_PASS_DEPTH_STENCIL_DESC_Argument,
 UpdateInterface<D3D12_BARRIER_GROUPs_Argument, D3D12_BARRIER_GROUP>::UpdateInterface(
     D3D12_BARRIER_GROUPs_Argument& arg, const D3D12_BARRIER_GROUP* value) {
 
-  unwrapped_.resize(arg.size);
-  arg.value = unwrapped_.data();
+  m_Unwrapped.resize(arg.Size);
+  arg.Value = m_Unwrapped.data();
 
   unsigned resourceKeyIndex = 0;
 
-  for (unsigned i = 0; i < arg.size; ++i) {
+  for (unsigned i = 0; i < arg.Size; ++i) {
     const D3D12_BARRIER_GROUP& barrierGroup = value[i];
-    D3D12_BARRIER_GROUP& barrierGroupUnwrapped = unwrapped_[i];
+    D3D12_BARRIER_GROUP& barrierGroupUnwrapped = m_Unwrapped[i];
     barrierGroupUnwrapped = barrierGroup;
 
     if (barrierGroup.Type == D3D12_BARRIER_TYPE_GLOBAL) {
-      unwrappedGlobalBarrierGroups_.emplace_back(
+      m_UnwrappedGlobalBarrierGroups.emplace_back(
           std::make_unique<std::vector<D3D12_GLOBAL_BARRIER>>());
       for (unsigned j = 0; j < barrierGroup.NumBarriers; ++j) {
-        unwrappedGlobalBarrierGroups_.back()->push_back(barrierGroup.pGlobalBarriers[j]);
+        m_UnwrappedGlobalBarrierGroups.back()->push_back(barrierGroup.pGlobalBarriers[j]);
       }
-      barrierGroupUnwrapped.pGlobalBarriers = unwrappedGlobalBarrierGroups_.back()->data();
+      barrierGroupUnwrapped.pGlobalBarriers = m_UnwrappedGlobalBarrierGroups.back()->data();
     } else if (barrierGroup.Type == D3D12_BARRIER_TYPE_TEXTURE) {
-      unwrappedTextureBarrierGroups_.emplace_back(
+      m_UnwrappedTextureBarrierGroups.emplace_back(
           std::make_unique<std::vector<D3D12_TEXTURE_BARRIER>>());
       for (unsigned j = 0; j < barrierGroup.NumBarriers; ++j) {
         IUnknownWrapper* wrapper =
             reinterpret_cast<IUnknownWrapper*>(barrierGroup.pTextureBarriers[j].pResource);
-        arg.resourceKeys[resourceKeyIndex++] = wrapper->getKey();
-        unwrappedTextureBarrierGroups_.back()->push_back(barrierGroup.pTextureBarriers[j]);
-        unwrappedTextureBarrierGroups_.back()->back().pResource =
+        arg.ResourceKeys[resourceKeyIndex++] = wrapper->getKey();
+        m_UnwrappedTextureBarrierGroups.back()->push_back(barrierGroup.pTextureBarriers[j]);
+        m_UnwrappedTextureBarrierGroups.back()->back().pResource =
             wrapper->getWrappedObject<ID3D12Resource>();
       }
-      barrierGroupUnwrapped.pTextureBarriers = unwrappedTextureBarrierGroups_.back()->data();
+      barrierGroupUnwrapped.pTextureBarriers = m_UnwrappedTextureBarrierGroups.back()->data();
     } else if (barrierGroup.Type == D3D12_BARRIER_TYPE_BUFFER) {
-      unwrappedBufferBarrierGroups_.emplace_back(
+      m_UnwrappedBufferBarrierGroups.emplace_back(
           std::make_unique<std::vector<D3D12_BUFFER_BARRIER>>());
       for (unsigned j = 0; j < barrierGroup.NumBarriers; ++j) {
         IUnknownWrapper* wrapper =
             reinterpret_cast<IUnknownWrapper*>(barrierGroup.pBufferBarriers[j].pResource);
-        arg.resourceKeys[resourceKeyIndex++] = wrapper->getKey();
-        unwrappedBufferBarrierGroups_.back()->push_back(barrierGroup.pBufferBarriers[j]);
-        unwrappedBufferBarrierGroups_.back()->back().pResource =
+        arg.ResourceKeys[resourceKeyIndex++] = wrapper->getKey();
+        m_UnwrappedBufferBarrierGroups.back()->push_back(barrierGroup.pBufferBarriers[j]);
+        m_UnwrappedBufferBarrierGroups.back()->back().pResource =
             wrapper->getWrappedObject<ID3D12Resource>();
       }
-      barrierGroupUnwrapped.pBufferBarriers = unwrappedBufferBarrierGroups_.back()->data();
+      barrierGroupUnwrapped.pBufferBarriers = m_UnwrappedBufferBarrierGroups.back()->data();
     }
   }
 }
@@ -439,14 +439,14 @@ UpdateInterface<PointerArgument<INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC>,
     UpdateInterface(PointerArgument<INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC>& arg,
                     const INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC* value) {
 
-  arg.value = &unwrapStructure_;
-  *arg.value = *value;
+  arg.Value = &m_UnwrapStructure;
+  *arg.Value = *value;
 
   if (value->pD3D12Desc->pRootSignature) {
     IUnknownWrapper* wrapper =
         reinterpret_cast<IUnknownWrapper*>(value->pD3D12Desc->pRootSignature);
-    arg.rootSignatureKey = wrapper->getKey();
-    arg.value->pD3D12Desc->pRootSignature = wrapper->getWrappedObject<ID3D12RootSignature>();
+    arg.RootSignatureKey = wrapper->getKey();
+    arg.Value->pD3D12Desc->pRootSignature = wrapper->getWrappedObject<ID3D12RootSignature>();
   }
 }
 
@@ -483,86 +483,86 @@ static unsigned updateDmlBinding(const void* srcBinding, DML_BUFFER_BINDING* dst
 UpdateInterface<DML_BINDING_TABLE_DESC_Argument, DML_BINDING_TABLE_DESC>::UpdateInterface(
     DML_BINDING_TABLE_DESC_Argument& arg, const DML_BINDING_TABLE_DESC* value) {
 
-  arg.value = &unwrapStructure_;
-  *arg.value = *value;
+  arg.Value = &m_UnwrapStructure;
+  *arg.Value = *value;
 
   if (value->Dispatchable) {
     IUnknownWrapper* wrapper = reinterpret_cast<IUnknownWrapper*>(value->Dispatchable);
-    arg.data.dispatchableKey = wrapper->getKey();
-    arg.value->Dispatchable = wrapper->getWrappedObject<IDMLDispatchable>();
+    arg.TableFields.DispatchableKey = wrapper->getKey();
+    arg.Value->Dispatchable = wrapper->getWrappedObject<IDMLDispatchable>();
   }
 }
 
 UpdateInterface<DML_BINDING_DESC_Argument, DML_BINDING_DESC>::UpdateInterface(
     DML_BINDING_DESC_Argument& arg, const DML_BINDING_DESC* value) {
-  if (!arg.value) {
+  if (!arg.Value) {
     return;
   }
 
-  arg.value = &unwrapStructure_;
-  *arg.value = *value;
+  arg.Value = &m_UnwrapStructure;
+  *arg.Value = *value;
 
-  arg.resourceKeysSize = getDmlBindingCount(arg.value, 1);
-  arg.resourceKeys.resize(arg.resourceKeysSize);
-  bindings_.resize(arg.resourceKeysSize);
+  arg.ResourceKeysSize = getDmlBindingCount(arg.Value, 1);
+  arg.ResourceKeys.resize(arg.ResourceKeysSize);
+  m_Bindings.resize(arg.ResourceKeysSize);
 
-  if (arg.resourceKeysSize == 0) {
+  if (arg.ResourceKeysSize == 0) {
     return;
   }
 
-  if (arg.value->Type == DML_BINDING_TYPE_BUFFER) {
-    arg.resourceKeys[0] = updateDmlBinding(arg.value->Desc, &bindings_[0]);
-    arg.value->Desc = bindings_.data();
-  } else if (arg.value->Type == DML_BINDING_TYPE_BUFFER_ARRAY) {
-    auto* bindingArray = static_cast<DML_BUFFER_ARRAY_BINDING*>(const_cast<void*>(arg.value->Desc));
+  if (arg.Value->Type == DML_BINDING_TYPE_BUFFER) {
+    arg.ResourceKeys[0] = updateDmlBinding(arg.Value->Desc, &m_Bindings[0]);
+    arg.Value->Desc = m_Bindings.data();
+  } else if (arg.Value->Type == DML_BINDING_TYPE_BUFFER_ARRAY) {
+    auto* bindingArray = static_cast<DML_BUFFER_ARRAY_BINDING*>(const_cast<void*>(arg.Value->Desc));
     GITS_ASSERT(bindingArray);
     for (unsigned i = 0; i < bindingArray->BindingCount; ++i) {
-      arg.resourceKeys[i] = updateDmlBinding(&bindingArray->Bindings[i], &bindings_[i]);
+      arg.ResourceKeys[i] = updateDmlBinding(&bindingArray->Bindings[i], &m_Bindings[i]);
     }
-    bindingArray_ = *bindingArray;
-    bindingArray_.Bindings = bindings_.data();
-    arg.value->Desc = &bindingArray_;
+    m_BindingArray = *bindingArray;
+    m_BindingArray.Bindings = m_Bindings.data();
+    arg.Value->Desc = &m_BindingArray;
   }
 }
 
 UpdateInterface<DML_BINDING_DESCs_Argument, DML_BINDING_DESC>::UpdateInterface(
     DML_BINDING_DESCs_Argument& arg, const DML_BINDING_DESC* value) {
-  if (!arg.value) {
+  if (!arg.Value) {
     return;
   }
-  GITS_ASSERT(arg.size > 0);
+  GITS_ASSERT(arg.Size > 0);
 
-  bindingArrays_.resize(arg.size);
-  unwrapStructures_.resize(arg.size);
-  unwrapStructure_ = unwrapStructures_.data();
-  arg.value = unwrapStructure_;
+  m_BindingArrays.resize(arg.Size);
+  m_UnwrapStructures.resize(arg.Size);
+  m_UnwrapStructure = m_UnwrapStructures.data();
+  arg.Value = m_UnwrapStructure;
 
-  auto bindingCount = getDmlBindingCount(value, arg.size);
-  bindings_.resize(bindingCount);
-  arg.resourceKeysSize = bindingCount;
-  arg.resourceKeys.resize(bindingCount);
+  auto bindingCount = getDmlBindingCount(value, arg.Size);
+  m_Bindings.resize(bindingCount);
+  arg.ResourceKeysSize = bindingCount;
+  arg.ResourceKeys.resize(bindingCount);
 
-  memcpy(arg.value, value, arg.size * sizeof(DML_BINDING_DESC));
+  memcpy(arg.Value, value, arg.Size * sizeof(DML_BINDING_DESC));
 
   unsigned bindingIdx = 0;
-  for (unsigned i = 0; i < arg.size; ++i) {
+  for (unsigned i = 0; i < arg.Size; ++i) {
     if (bindingIdx >= bindingCount) {
       return;
     }
-    auto* bindingSrc = &arg.value[i];
-    auto* bindingDst = &bindings_[bindingIdx];
+    auto* bindingSrc = &arg.Value[i];
+    auto* bindingDst = &m_Bindings[bindingIdx];
     if (bindingSrc->Type == DML_BINDING_TYPE_BUFFER) {
-      arg.resourceKeys[bindingIdx] = updateDmlBinding(bindingSrc->Desc, bindingDst);
+      arg.ResourceKeys[bindingIdx] = updateDmlBinding(bindingSrc->Desc, bindingDst);
       bindingSrc->Desc = bindingDst;
       ++bindingIdx;
     } else if (bindingSrc->Type == DML_BINDING_TYPE_BUFFER_ARRAY) {
       auto* bindingArray =
           static_cast<DML_BUFFER_ARRAY_BINDING*>(const_cast<void*>(bindingSrc->Desc));
       GITS_ASSERT(bindingArray);
-      bindingArrays_[i] = *bindingArray;
-      bindingArray = &bindingArrays_[i];
+      m_BindingArrays[i] = *bindingArray;
+      bindingArray = &m_BindingArrays[i];
       for (unsigned j = 0; j < bindingArray->BindingCount; ++j) {
-        arg.resourceKeys[bindingIdx] = updateDmlBinding(&bindingArray->Bindings[j], &bindingDst[j]);
+        arg.ResourceKeys[bindingIdx] = updateDmlBinding(&bindingArray->Bindings[j], &bindingDst[j]);
         ++bindingIdx;
       }
       bindingArray->Bindings = bindingDst;
@@ -573,31 +573,31 @@ UpdateInterface<DML_BINDING_DESCs_Argument, DML_BINDING_DESC>::UpdateInterface(
 
 UpdateInterface<DML_GRAPH_DESC_Argument, DML_GRAPH_DESC>::UpdateInterface(
     DML_GRAPH_DESC_Argument& arg, const DML_GRAPH_DESC* value) {
-  if (!arg.value) {
+  if (!arg.Value) {
     return;
   }
 
-  arg.value = &unwrapStructure_;
-  *arg.value = *value;
+  arg.Value = &m_UnwrapStructure;
+  *arg.Value = *value;
 
-  nodes_.resize(value->NodeCount);
-  opNodes_.resize(value->NodeCount);
-  arg.operatorKeys.resize(value->NodeCount);
-  arg.operatorKeysSize = value->NodeCount;
-  arg.value->Nodes = nodes_.data();
+  m_Nodes.resize(value->NodeCount);
+  m_OpNodes.resize(value->NodeCount);
+  arg.OperatorKeys.resize(value->NodeCount);
+  arg.OperatorKeysSize = value->NodeCount;
+  arg.Value->Nodes = m_Nodes.data();
 
-  memcpy(nodes_.data(), value->Nodes, value->NodeCount * sizeof(DML_GRAPH_NODE_DESC));
+  memcpy(m_Nodes.data(), value->Nodes, value->NodeCount * sizeof(DML_GRAPH_NODE_DESC));
 
   for (unsigned i = 0; i < value->NodeCount; ++i) {
-    auto* node = &nodes_[i];
+    auto* node = &m_Nodes[i];
     if (node->Type == DML_GRAPH_NODE_TYPE_OPERATOR) {
       auto* opNode = static_cast<DML_OPERATOR_GRAPH_NODE_DESC*>(const_cast<void*>(node->Desc));
-      opNodes_[i] = *opNode;
-      opNode = &opNodes_[i];
+      m_OpNodes[i] = *opNode;
+      opNode = &m_OpNodes[i];
       if (opNode->Operator) {
         IUnknownWrapper* wrapper = reinterpret_cast<IUnknownWrapper*>(opNode->Operator);
         opNode->Operator = wrapper->getWrappedObject<IDMLOperator>();
-        arg.operatorKeys[i] = wrapper->getKey();
+        arg.OperatorKeys[i] = wrapper->getKey();
       }
       node->Desc = opNode;
     }
@@ -607,91 +607,91 @@ UpdateInterface<DML_GRAPH_DESC_Argument, DML_GRAPH_DESC>::UpdateInterface(
 UpdateInterface<xess_d3d12_init_params_t_Argument, xess_d3d12_init_params_t>::UpdateInterface(
     xess_d3d12_init_params_t_Argument& arg, const xess_d3d12_init_params_t* value) {
 
-  arg.value = &unwrapStructure_;
-  *arg.value = *value;
+  arg.Value = &m_UnwrapStructure;
+  *arg.Value = *value;
 
   if (value->pTempBufferHeap) {
     IUnknownWrapper* wrapper = reinterpret_cast<IUnknownWrapper*>(value->pTempBufferHeap);
-    arg.tempBufferHeapKey = wrapper->getKey();
-    arg.value->pTempBufferHeap = wrapper->getWrappedObject<ID3D12Heap>();
+    arg.TempBufferHeapKey = wrapper->getKey();
+    arg.Value->pTempBufferHeap = wrapper->getWrappedObject<ID3D12Heap>();
   }
   if (value->pTempTextureHeap) {
     IUnknownWrapper* wrapper = reinterpret_cast<IUnknownWrapper*>(value->pTempTextureHeap);
-    arg.tempTextureHeapKey = wrapper->getKey();
-    arg.value->pTempTextureHeap = wrapper->getWrappedObject<ID3D12Heap>();
+    arg.TempTextureHeapKey = wrapper->getKey();
+    arg.Value->pTempTextureHeap = wrapper->getWrappedObject<ID3D12Heap>();
   }
   if (value->pPipelineLibrary) {
     IUnknownWrapper* wrapper = reinterpret_cast<IUnknownWrapper*>(value->pPipelineLibrary);
-    arg.pipelineLibraryKey = wrapper->getKey();
-    arg.value->pPipelineLibrary = wrapper->getWrappedObject<ID3D12PipelineLibrary>();
+    arg.PipelineLibraryKey = wrapper->getKey();
+    arg.Value->pPipelineLibrary = wrapper->getWrappedObject<ID3D12PipelineLibrary>();
   }
 }
 
 UpdateInterface<xess_d3d12_execute_params_t_Argument, xess_d3d12_execute_params_t>::UpdateInterface(
     xess_d3d12_execute_params_t_Argument& arg, const xess_d3d12_execute_params_t* value) {
 
-  arg.value = &unwrapStructure_;
-  *arg.value = *value;
+  arg.Value = &m_UnwrapStructure;
+  *arg.Value = *value;
 
   if (value->pColorTexture) {
     IUnknownWrapper* wrapper = reinterpret_cast<IUnknownWrapper*>(value->pColorTexture);
-    arg.colorTextureKey = wrapper->getKey();
-    arg.value->pColorTexture = wrapper->getWrappedObject<ID3D12Resource>();
+    arg.ColorTextureKey = wrapper->getKey();
+    arg.Value->pColorTexture = wrapper->getWrappedObject<ID3D12Resource>();
   }
   if (value->pVelocityTexture) {
     IUnknownWrapper* wrapper = reinterpret_cast<IUnknownWrapper*>(value->pVelocityTexture);
-    arg.velocityTextureKey = wrapper->getKey();
-    arg.value->pVelocityTexture = wrapper->getWrappedObject<ID3D12Resource>();
+    arg.VelocityTextureKey = wrapper->getKey();
+    arg.Value->pVelocityTexture = wrapper->getWrappedObject<ID3D12Resource>();
   }
   if (value->pDepthTexture) {
     IUnknownWrapper* wrapper = reinterpret_cast<IUnknownWrapper*>(value->pDepthTexture);
-    arg.depthTextureKey = wrapper->getKey();
-    arg.value->pDepthTexture = wrapper->getWrappedObject<ID3D12Resource>();
+    arg.DepthTextureKey = wrapper->getKey();
+    arg.Value->pDepthTexture = wrapper->getWrappedObject<ID3D12Resource>();
   }
   if (value->pExposureScaleTexture) {
     IUnknownWrapper* wrapper = reinterpret_cast<IUnknownWrapper*>(value->pExposureScaleTexture);
-    arg.exposureScaleTextureKey = wrapper->getKey();
-    arg.value->pExposureScaleTexture = wrapper->getWrappedObject<ID3D12Resource>();
+    arg.ExposureScaleTextureKey = wrapper->getKey();
+    arg.Value->pExposureScaleTexture = wrapper->getWrappedObject<ID3D12Resource>();
   }
   if (value->pResponsivePixelMaskTexture) {
     IUnknownWrapper* wrapper =
         reinterpret_cast<IUnknownWrapper*>(value->pResponsivePixelMaskTexture);
-    arg.responsivePixelMaskTextureKey = wrapper->getKey();
-    arg.value->pResponsivePixelMaskTexture = wrapper->getWrappedObject<ID3D12Resource>();
+    arg.ResponsivePixelMaskTextureKey = wrapper->getKey();
+    arg.Value->pResponsivePixelMaskTexture = wrapper->getWrappedObject<ID3D12Resource>();
   }
   if (value->pOutputTexture) {
     IUnknownWrapper* wrapper = reinterpret_cast<IUnknownWrapper*>(value->pOutputTexture);
-    arg.outputTextureKey = wrapper->getKey();
-    arg.value->pOutputTexture = wrapper->getWrappedObject<ID3D12Resource>();
+    arg.OutputTextureKey = wrapper->getKey();
+    arg.Value->pOutputTexture = wrapper->getWrappedObject<ID3D12Resource>();
   }
   if (value->pDescriptorHeap) {
     IUnknownWrapper* wrapper = reinterpret_cast<IUnknownWrapper*>(value->pDescriptorHeap);
-    arg.descriptorHeapKey = wrapper->getKey();
-    arg.value->pDescriptorHeap = wrapper->getWrappedObject<ID3D12DescriptorHeap>();
+    arg.DescriptorHeapKey = wrapper->getKey();
+    arg.Value->pDescriptorHeap = wrapper->getWrappedObject<ID3D12DescriptorHeap>();
   }
 }
 
 UpdateInterface<DSTORAGE_QUEUE_DESC_Argument, DSTORAGE_QUEUE_DESC>::UpdateInterface(
     DSTORAGE_QUEUE_DESC_Argument& arg, const DSTORAGE_QUEUE_DESC* value) {
-  arg.value = &unwrapStructure_;
-  *arg.value = *value;
+  arg.Value = &m_UnwrapStructure;
+  *arg.Value = *value;
   if (value->Device) {
     IUnknownWrapper* wrapper = reinterpret_cast<IUnknownWrapper*>(value->Device);
-    arg.deviceKey = wrapper->getKey();
-    arg.value->Device = wrapper->getWrappedObject<ID3D12Device>();
+    arg.DeviceKey = wrapper->getKey();
+    arg.Value->Device = wrapper->getWrappedObject<ID3D12Device>();
   }
 }
 
 UpdateInterface<DSTORAGE_REQUEST_Argument, DSTORAGE_REQUEST>::UpdateInterface(
     DSTORAGE_REQUEST_Argument& arg, const DSTORAGE_REQUEST* value) {
-  arg.value = &unwrapStructure_;
-  *arg.value = *value;
+  arg.Value = &m_UnwrapStructure;
+  *arg.Value = *value;
   switch (value->Options.SourceType) {
   case DSTORAGE_REQUEST_SOURCE_FILE:
     if (value->Source.File.Source) {
       IUnknownWrapper* wrapper = reinterpret_cast<IUnknownWrapper*>(value->Source.File.Source);
-      arg.fileKey = wrapper->getKey();
-      arg.value->Source.File.Source = wrapper->getWrappedObject<IDStorageFile>();
+      arg.FileKey = wrapper->getKey();
+      arg.Value->Source.File.Source = wrapper->getWrappedObject<IDStorageFile>();
     }
     break;
   }
@@ -700,24 +700,24 @@ UpdateInterface<DSTORAGE_REQUEST_Argument, DSTORAGE_REQUEST>::UpdateInterface(
     if (value->Destination.Buffer.Resource) {
       IUnknownWrapper* wrapper =
           reinterpret_cast<IUnknownWrapper*>(value->Destination.Buffer.Resource);
-      arg.resourceKey = wrapper->getKey();
-      arg.value->Destination.Buffer.Resource = wrapper->getWrappedObject<ID3D12Resource>();
+      arg.ResourceKey = wrapper->getKey();
+      arg.Value->Destination.Buffer.Resource = wrapper->getWrappedObject<ID3D12Resource>();
     }
     break;
   case DSTORAGE_REQUEST_DESTINATION_TEXTURE_REGION:
     if (value->Destination.Texture.Resource) {
       IUnknownWrapper* wrapper =
           reinterpret_cast<IUnknownWrapper*>(value->Destination.Texture.Resource);
-      arg.resourceKey = wrapper->getKey();
-      arg.value->Destination.Texture.Resource = wrapper->getWrappedObject<ID3D12Resource>();
+      arg.ResourceKey = wrapper->getKey();
+      arg.Value->Destination.Texture.Resource = wrapper->getWrappedObject<ID3D12Resource>();
     }
     break;
   case DSTORAGE_REQUEST_DESTINATION_MULTIPLE_SUBRESOURCES:
     if (value->Destination.MultipleSubresources.Resource) {
       IUnknownWrapper* wrapper =
           reinterpret_cast<IUnknownWrapper*>(value->Destination.MultipleSubresources.Resource);
-      arg.resourceKey = wrapper->getKey();
-      arg.value->Destination.MultipleSubresources.Resource =
+      arg.ResourceKey = wrapper->getKey();
+      arg.Value->Destination.MultipleSubresources.Resource =
           wrapper->getWrappedObject<ID3D12Resource>();
     }
     break;
@@ -725,8 +725,8 @@ UpdateInterface<DSTORAGE_REQUEST_Argument, DSTORAGE_REQUEST>::UpdateInterface(
     if (value->Destination.Tiles.Resource) {
       IUnknownWrapper* wrapper =
           reinterpret_cast<IUnknownWrapper*>(value->Destination.Tiles.Resource);
-      arg.resourceKey = wrapper->getKey();
-      arg.value->Destination.Tiles.Resource = wrapper->getWrappedObject<ID3D12Resource>();
+      arg.ResourceKey = wrapper->getKey();
+      arg.Value->Destination.Tiles.Resource = wrapper->getWrappedObject<ID3D12Resource>();
     }
     break;
   }
@@ -735,31 +735,31 @@ UpdateInterface<DSTORAGE_REQUEST_Argument, DSTORAGE_REQUEST>::UpdateInterface(
 UpdateInterface<xefg_swapchain_d3d12_init_params_t_Argument, xefg_swapchain_d3d12_init_params_t>::
     UpdateInterface(xefg_swapchain_d3d12_init_params_t_Argument& arg,
                     const xefg_swapchain_d3d12_init_params_t* value) {
-  arg.value = &unwrapStructure_;
-  *arg.value = *value;
+  arg.Value = &m_UnwrapStructure;
+  *arg.Value = *value;
   if (value->pApplicationSwapChain) {
     IUnknownWrapper* wrapper = nullptr;
     if (value->pApplicationSwapChain->QueryInterface(IID_IUnknownWrapper,
                                                      reinterpret_cast<void**>(&wrapper)) != S_OK) {
       return;
     }
-    arg.applicationSwapChainKey = wrapper->getKey();
-    arg.value->pApplicationSwapChain = wrapper->getWrappedObject<IDXGISwapChain>();
+    arg.ApplicationSwapChainKey = wrapper->getKey();
+    arg.Value->pApplicationSwapChain = wrapper->getWrappedObject<IDXGISwapChain>();
   }
   if (value->pTempBufferHeap) {
     IUnknownWrapper* wrapper = reinterpret_cast<IUnknownWrapper*>(value->pTempBufferHeap);
-    arg.tempBufferHeapKey = wrapper->getKey();
-    arg.value->pTempBufferHeap = wrapper->getWrappedObject<ID3D12Heap>();
+    arg.TempBufferHeapKey = wrapper->getKey();
+    arg.Value->pTempBufferHeap = wrapper->getWrappedObject<ID3D12Heap>();
   }
   if (value->pTempTextureHeap) {
     IUnknownWrapper* wrapper = reinterpret_cast<IUnknownWrapper*>(value->pTempTextureHeap);
-    arg.tempTextureHeapKey = wrapper->getKey();
-    arg.value->pTempTextureHeap = wrapper->getWrappedObject<ID3D12Heap>();
+    arg.TempTextureHeapKey = wrapper->getKey();
+    arg.Value->pTempTextureHeap = wrapper->getWrappedObject<ID3D12Heap>();
   }
   if (value->pPipelineLibrary) {
     IUnknownWrapper* wrapper = reinterpret_cast<IUnknownWrapper*>(value->pPipelineLibrary);
-    arg.pipelineLibraryKey = wrapper->getKey();
-    arg.value->pPipelineLibrary = wrapper->getWrappedObject<ID3D12PipelineLibrary>();
+    arg.PipelineLibraryKey = wrapper->getKey();
+    arg.Value->pPipelineLibrary = wrapper->getWrappedObject<ID3D12PipelineLibrary>();
   }
 }
 
@@ -767,12 +767,12 @@ UpdateInterface<xefg_swapchain_d3d12_resource_data_t_Argument,
                 xefg_swapchain_d3d12_resource_data_t>::
     UpdateInterface(xefg_swapchain_d3d12_resource_data_t_Argument& arg,
                     const xefg_swapchain_d3d12_resource_data_t* value) {
-  arg.value = &unwrapStructure_;
-  *arg.value = *value;
+  arg.Value = &m_UnwrapStructure;
+  *arg.Value = *value;
   if (value->pResource) {
     IUnknownWrapper* wrapper = reinterpret_cast<IUnknownWrapper*>(value->pResource);
-    arg.resourceKey = wrapper->getKey();
-    arg.value->pResource = wrapper->getWrappedObject<ID3D12Resource>();
+    arg.ResourceKey = wrapper->getKey();
+    arg.Value->pResource = wrapper->getWrappedObject<ID3D12Resource>();
   }
 }
 

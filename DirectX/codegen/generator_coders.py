@@ -11,13 +11,13 @@
 from generator_helpers import *
 
 def command_encoders_sum_sizes(function, isObject):
-    str = 'getSize(command.key) + getSize(command.threadId)'
+    str = 'GetSize(command.Key) + GetSize(command.ThreadId)'
     if isObject:
-        str += ' + getSize(command.object_.key)'
+        str += ' + GetSize(command.m_Object.Key)'
     for param in function.params:
-        str += ' + getSize(command.' + param.name + '_)'
+        str += ' + GetSize(command.m_' + param.name + ')'
     if not function.ret.is_void:
-        str += ' + getSize(command.result_)'
+        str += ' + GetSize(command.m_Result)'
     str += ';'
     return str
 

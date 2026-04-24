@@ -27,16 +27,16 @@ public:
   RtasCacheLayer(const RtasCacheConfig& cfg);
   ~RtasCacheLayer();
 
-  void pre(StateRestoreBeginCommand& c) override;
-  void pre(StateRestoreEndCommand& c) override;
-  void pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c) override;
-  void post(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c) override;
-  void post(ID3D12CommandQueueExecuteCommandListsCommand& c) override;
-  void post(ID3D12CommandQueueWaitCommand& c) override;
-  void post(ID3D12CommandQueueSignalCommand& c) override;
-  void post(ID3D12FenceSignalCommand& c) override;
-  void post(ID3D12DeviceCreateFenceCommand& c) override;
-  void post(ID3D12Device3EnqueueMakeResidentCommand& c) override;
+  void Pre(StateRestoreBeginCommand& c) override;
+  void Pre(StateRestoreEndCommand& c) override;
+  void Pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c) override;
+  void Post(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c) override;
+  void Post(ID3D12CommandQueueExecuteCommandListsCommand& c) override;
+  void Post(ID3D12CommandQueueWaitCommand& c) override;
+  void Post(ID3D12CommandQueueSignalCommand& c) override;
+  void Post(ID3D12FenceSignalCommand& c) override;
+  void Post(ID3D12DeviceCreateFenceCommand& c) override;
+  void Post(ID3D12Device3EnqueueMakeResidentCommand& c) override;
 
 private:
   bool record() const {

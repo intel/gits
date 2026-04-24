@@ -27,44 +27,44 @@ public:
   AnalyzerExecuteIndirectService(AnalyzerExecuteIndirectService&) = delete;
   AnalyzerExecuteIndirectService& operator=(AnalyzerExecuteIndirectService&) = delete;
 
-  void createCommandSignature(ID3D12DeviceCreateCommandSignatureCommand& c);
-  void executeIndirect(ID3D12GraphicsCommandListExecuteIndirectCommand& c);
+  void CreateCommandSignature(ID3D12DeviceCreateCommandSignatureCommand& c);
+  void ExecuteIndirect(ID3D12GraphicsCommandListExecuteIndirectCommand& c);
 
-  void flush();
-  void executeCommandLists(unsigned key,
+  void Flush();
+  void ExecuteCommandLists(unsigned key,
                            unsigned commandQueueKey,
                            ID3D12CommandQueue* commandQueue,
                            ID3D12CommandList** commandLists,
                            unsigned commandListNum);
-  void commandQueueWait(unsigned key,
+  void CommandQueueWait(unsigned key,
                         unsigned commandQueueKey,
                         unsigned fenceKey,
                         UINT64 fenceValue);
-  void commandQueueSignal(unsigned key,
+  void CommandQueueSignal(unsigned key,
                           unsigned commandQueueKey,
                           unsigned fenceKey,
                           UINT64 fenceValue);
-  void fenceSignal(unsigned key, unsigned fenceKey, UINT64 fenceValue);
+  void FenceSignal(unsigned key, unsigned fenceKey, UINT64 fenceValue);
 
-  std::unordered_set<unsigned>& getArgumentBuffersResources() {
-    return executeIndirectDump_.getArgumentBuffersResources();
+  std::unordered_set<unsigned>& GetArgumentBuffersResources() {
+    return m_ExecuteIndirectDump.GetArgumentBuffersResources();
   }
 
-  CapturePlayerGpuAddressService& getGpuAddressService() {
-    return gpuAddressService_;
+  CapturePlayerGpuAddressService& GetGpuAddressService() {
+    return m_GpuAddressService;
   }
 
 private:
-  void loadExecuteIndirectDispatchRays();
+  void LoadExecuteIndirectDispatchRays();
 
 private:
-  CapturePlayerGpuAddressService& gpuAddressService_;
-  AnalyzerRaytracingService& raytracingService_;
-  AnalyzerCommandListService& commandListService_;
-  AnalyzerExecuteIndirectDump executeIndirectDump_;
+  CapturePlayerGpuAddressService& m_GpuAddressService;
+  AnalyzerRaytracingService& m_RaytracingService;
+  AnalyzerCommandListService& m_CommandListService;
+  AnalyzerExecuteIndirectDump m_ExecuteIndirectDump;
 
-  std::unordered_map<unsigned, D3D12_DISPATCH_RAYS_DESC> executeIndirectDispatchRays_;
-  std::unordered_map<unsigned, D3D12_COMMAND_SIGNATURE_DESC> commandSignatures_;
+  std::unordered_map<unsigned, D3D12_DISPATCH_RAYS_DESC> m_ExecuteIndirectDispatchRays;
+  std::unordered_map<unsigned, D3D12_COMMAND_SIGNATURE_DESC> m_CommandSignatures;
 };
 
 } // namespace DirectX

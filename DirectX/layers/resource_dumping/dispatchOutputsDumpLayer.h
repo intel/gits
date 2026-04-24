@@ -25,109 +25,109 @@ class DispatchOutputsDumpLayer : public Layer {
 public:
   DispatchOutputsDumpLayer();
   ~DispatchOutputsDumpLayer();
-  void post(ID3D12DeviceCreateCommittedResourceCommand& c) override;
-  void post(ID3D12Device4CreateCommittedResource1Command& c) override;
-  void post(ID3D12Device8CreateCommittedResource2Command& c) override;
-  void post(ID3D12Device10CreateCommittedResource3Command& c) override;
-  void post(INTC_D3D12_CreateCommittedResourceCommand& c) override;
-  void post(ID3D12DeviceCreatePlacedResourceCommand& c) override;
-  void post(ID3D12Device8CreatePlacedResource1Command& c) override;
-  void post(ID3D12Device10CreatePlacedResource2Command& c) override;
-  void post(INTC_D3D12_CreatePlacedResourceCommand& c) override;
-  void post(ID3D12DeviceCreateReservedResourceCommand& c) override;
-  void post(ID3D12Device4CreateReservedResource1Command& c) override;
-  void post(ID3D12Device10CreateReservedResource2Command& c) override;
-  void post(INTC_D3D12_CreateReservedResourceCommand& c) override;
+  void Post(ID3D12DeviceCreateCommittedResourceCommand& c) override;
+  void Post(ID3D12Device4CreateCommittedResource1Command& c) override;
+  void Post(ID3D12Device8CreateCommittedResource2Command& c) override;
+  void Post(ID3D12Device10CreateCommittedResource3Command& c) override;
+  void Post(INTC_D3D12_CreateCommittedResourceCommand& c) override;
+  void Post(ID3D12DeviceCreatePlacedResourceCommand& c) override;
+  void Post(ID3D12Device8CreatePlacedResource1Command& c) override;
+  void Post(ID3D12Device10CreatePlacedResource2Command& c) override;
+  void Post(INTC_D3D12_CreatePlacedResourceCommand& c) override;
+  void Post(ID3D12DeviceCreateReservedResourceCommand& c) override;
+  void Post(ID3D12Device4CreateReservedResource1Command& c) override;
+  void Post(ID3D12Device10CreateReservedResource2Command& c) override;
+  void Post(INTC_D3D12_CreateReservedResourceCommand& c) override;
 
-  void post(IUnknownReleaseCommand& c) override;
-  void post(ID3D12DeviceCreateDescriptorHeapCommand& c) override;
-  void post(ID3D12DeviceCreateRenderTargetViewCommand& c) override;
-  void post(ID3D12DeviceCreateDepthStencilViewCommand& c) override;
-  void post(ID3D12DeviceCreateShaderResourceViewCommand& c) override;
-  void post(ID3D12DeviceCreateUnorderedAccessViewCommand& c) override;
-  void post(ID3D12DeviceCreateConstantBufferViewCommand& c) override;
-  void post(ID3D12DeviceCreateSamplerCommand& c) override;
-  void post(ID3D12DeviceCopyDescriptorsSimpleCommand& c) override;
-  void post(ID3D12DeviceCopyDescriptorsCommand& c) override;
-  void post(ID3D12DeviceCreateRootSignatureCommand& c) override;
+  void Post(IUnknownReleaseCommand& c) override;
+  void Post(ID3D12DeviceCreateDescriptorHeapCommand& c) override;
+  void Post(ID3D12DeviceCreateRenderTargetViewCommand& c) override;
+  void Post(ID3D12DeviceCreateDepthStencilViewCommand& c) override;
+  void Post(ID3D12DeviceCreateShaderResourceViewCommand& c) override;
+  void Post(ID3D12DeviceCreateUnorderedAccessViewCommand& c) override;
+  void Post(ID3D12DeviceCreateConstantBufferViewCommand& c) override;
+  void Post(ID3D12DeviceCreateSamplerCommand& c) override;
+  void Post(ID3D12DeviceCopyDescriptorsSimpleCommand& c) override;
+  void Post(ID3D12DeviceCopyDescriptorsCommand& c) override;
+  void Post(ID3D12DeviceCreateRootSignatureCommand& c) override;
 
-  void post(StateRestoreBeginCommand& c) override;
-  void post(StateRestoreEndCommand& c) override;
-  void post(IDXGISwapChainPresentCommand& c) override;
-  void post(IDXGISwapChain1Present1Command& c) override;
+  void Post(StateRestoreBeginCommand& c) override;
+  void Post(StateRestoreEndCommand& c) override;
+  void Post(IDXGISwapChainPresentCommand& c) override;
+  void Post(IDXGISwapChain1Present1Command& c) override;
 
-  void post(ID3D12CommandQueueExecuteCommandListsCommand& c) override;
-  void post(ID3D12CommandQueueWaitCommand& c) override;
-  void post(ID3D12CommandQueueSignalCommand& c) override;
-  void post(ID3D12FenceSignalCommand& c) override;
-  void post(ID3D12DeviceCreateFenceCommand& c) override;
-  void post(ID3D12Device3EnqueueMakeResidentCommand& c) override;
+  void Post(ID3D12CommandQueueExecuteCommandListsCommand& c) override;
+  void Post(ID3D12CommandQueueWaitCommand& c) override;
+  void Post(ID3D12CommandQueueSignalCommand& c) override;
+  void Post(ID3D12FenceSignalCommand& c) override;
+  void Post(ID3D12DeviceCreateFenceCommand& c) override;
+  void Post(ID3D12Device3EnqueueMakeResidentCommand& c) override;
 
-  void post(ID3D12GraphicsCommandListResetCommand& c) override;
-  void post(ID3D12GraphicsCommandListSetComputeRootSignatureCommand& c) override;
-  void post(ID3D12GraphicsCommandListSetComputeRootUnorderedAccessViewCommand& c) override;
-  void post(ID3D12GraphicsCommandListSetComputeRootDescriptorTableCommand& c) override;
-  void post(ID3D12GraphicsCommandListDispatchCommand& c) override;
+  void Post(ID3D12GraphicsCommandListResetCommand& c) override;
+  void Post(ID3D12GraphicsCommandListSetComputeRootSignatureCommand& c) override;
+  void Post(ID3D12GraphicsCommandListSetComputeRootUnorderedAccessViewCommand& c) override;
+  void Post(ID3D12GraphicsCommandListSetComputeRootDescriptorTableCommand& c) override;
+  void Post(ID3D12GraphicsCommandListDispatchCommand& c) override;
 
 private:
-  std::wstring dumpPath_;
-  DispatchOutputsDump resourceDump_;
-  BitRange frameRange_;
-  BitRange dispatchRange_;
-  std::filesystem::path analysisFilePath_;
-  bool inAnalysis_{};
-  bool dryRun_{};
-  unsigned dispatchCount_{};
-  unsigned executeCount_{};
-  unsigned currentFrame_{1};
+  std::wstring m_DumpPath;
+  DispatchOutputsDump m_ResourceDump;
+  BitRange m_FrameRange;
+  BitRange m_DispatchRange;
+  std::filesystem::path m_AnalysisFilePath;
+  bool m_InAnalysis{};
+  bool m_DryRun{};
+  unsigned m_DispatchCount{};
+  unsigned m_ExecuteCount{};
+  unsigned m_CurrentFrame{1};
 
-  DescriptorRootSignatureService rootSignatureService_;
-  DescriptorHeapTracker descriptorService_;
+  DescriptorRootSignatureService m_RootSignatureService;
+  DescriptorHeapTracker m_DescriptorService;
 
-  std::unordered_map<unsigned, unsigned> dispatchCountByCommandList_;
-  std::unordered_map<unsigned, ID3D12Resource*> resourceByKey_;
+  std::unordered_map<unsigned, unsigned> m_DispatchCountByCommandList;
+  std::unordered_map<unsigned, ID3D12Resource*> m_ResourceByKey;
 
   struct CommandListInfo {
     unsigned computeRootSignature{};
   };
-  std::unordered_map<unsigned, CommandListInfo> commandListInfos_;
+  std::unordered_map<unsigned, CommandListInfo> m_CommandListInfos;
 
   struct DescriptorHeapInfo {
     D3D12_DESCRIPTOR_HEAP_TYPE type{};
     unsigned numDescriptors{};
   };
-  std::unordered_map<unsigned, DescriptorHeapInfo> descriptorHeapInfos_;
+  std::unordered_map<unsigned, DescriptorHeapInfo> m_DescriptorHeapInfos;
 
   struct DispatchOutput {
-    unsigned resourceKey{};
+    unsigned ResourceKey{};
     ID3D12Resource* resource{};
     unsigned slot{};
   };
 
   struct IndicesInfo {
     std::vector<unsigned> indices;
-    unsigned descriptorHeapKey{};
+    unsigned DescriptorHeapKey{};
   };
   std::unordered_map<unsigned, std::unordered_map<unsigned, unsigned>>
-      resourceKeyFromSetViewBySlotByCommandList;
+      m_ResourceKeyFromSetViewBySlotByCommandList;
   std::unordered_map<unsigned, std::unordered_map<unsigned, IndicesInfo>>
-      indicesBySlotByCommandList_;
+      m_IndicesBySlotByCommandList;
   std::unordered_map<unsigned,
                      std::unordered_map<unsigned, std::unordered_map<unsigned, IndicesInfo>>>
-      indicesBySlotByDispatchByCommandList_;
+      m_IndicesBySlotByDispatchByCommandList;
   std::map<unsigned, std::unordered_map<unsigned, std::set<unsigned>>>
-      resourceKeysBySlotByDispatch_;
+      m_ResourceKeysBySlotByDispatch;
 
   struct DryRunInfo {
     std::map<unsigned, std::set<unsigned>> dispatchesWithTextureByFrame;
-  } dryRunInfo_;
+  } m_DryRunInfo;
 
 private:
-  void createDescriptor(unsigned heapKey,
-                        unsigned descriptorIndex,
-                        unsigned resourceKey,
-                        DescriptorHeapTracker::DescriptorInfo::DescriptorType descriptorType);
-  void dumpComputeOutput(ID3D12GraphicsCommandList* commandList,
+  void CreateDescriptor(unsigned heapKey,
+                        unsigned DescriptorIndex,
+                        unsigned ResourceKey,
+                        DescriptorHeapTracker::DescriptorInfo::DescriptorKind descriptorKind);
+  void DumpComputeOutput(ID3D12GraphicsCommandList* commandList,
                          const DispatchOutput& dispatchOutput,
                          unsigned frame,
                          unsigned commandListDispatch);

@@ -15,26 +15,26 @@ class SubcaptureRange {
 public:
   SubcaptureRange();
 
-  void frameEnd(bool stateRestore);
-  bool isFrameRangeStart(bool stateRestore);
-  void executionStart();
-  void executionEnd();
-  bool isExecutionRangeStart();
-  bool inRange();
-  bool commandListSubcapture();
+  void FrameEnd(bool stateRestore);
+  bool IsFrameRangeStart(bool stateRestore);
+  void ExecutionStart();
+  void ExecutionEnd();
+  bool IsExecutionRangeStart();
+  bool InRange();
+  bool CommandListSubcapture();
 
 private:
-  unsigned executionCount_{};
-  unsigned executionRangeStart_{};
-  unsigned executionRangeEnd_{};
-  bool insideExecution_{};
-  bool zeroOrFirstFrame_{true};
+  unsigned m_ExecutionCount{};
+  unsigned m_ExecutionRangeStart{};
+  unsigned m_ExecutionRangeEnd{};
+  bool m_InsideExecution{};
+  bool m_ZeroOrFirstFrame{true};
 
-  bool inFrameRange_{};
-  bool trimmingMode_{};
-  unsigned startFrame_{};
-  unsigned endFrame_{};
-  unsigned currentFrame_{1};
+  bool m_InFrameRange{};
+  bool m_TrimmingMode{};
+  unsigned m_StartFrame{};
+  unsigned m_EndFrame{};
+  unsigned m_CurrentFrame{1};
 };
 
 } // namespace DirectX

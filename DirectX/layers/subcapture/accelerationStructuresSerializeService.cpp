@@ -6,7 +6,7 @@
 //
 // ===================== end_copyright_notice ==============================
 
-#include "AccelerationStructuresSerializeService.h"
+#include "accelerationStructuresSerializeService.h"
 #include "stateTrackingService.h"
 #include "arguments.h"
 #include "commandSerializersAuto.h"
@@ -20,135 +20,137 @@ namespace DirectX {
 
 AccelerationStructuresSerializeService::AccelerationStructuresSerializeService(
     StateTrackingService& stateService, SubcaptureRecorder& recorder)
-    : stateService_(stateService), recorder_(recorder) {
-  serializeMode_ = Configurator::Get().directx.features.subcapture.serializeAccelerationStructures;
+    : m_StateService(stateService), m_Recorder(recorder) {
+  m_SerializeMode = Configurator::Get().directx.features.subcapture.serializeAccelerationStructures;
 }
 
-void AccelerationStructuresSerializeService::buildAccelerationStructure(
+void AccelerationStructuresSerializeService::BuildAccelerationStructure(
     ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c) {
-  if (!serializeMode_ ||
-      c.pDesc_.value->Inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
+  if (!m_SerializeMode ||
+      c.m_pDesc.Value->Inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
     return;
   }
   AccelerationStructure as{};
-  as.callKey = c.key;
-  as.key = c.pDesc_.destAccelerationStructureKey;
-  as.offset = c.pDesc_.destAccelerationStructureOffset;
-  as.address = c.pDesc_.value->DestAccelerationStructureData;
-  accelerationStructuresByCommandList_[c.object_.key]
-                                      [c.pDesc_.value->DestAccelerationStructureData] = as;
-  accelerationStructuresByResource_[c.pDesc_.destAccelerationStructureKey].insert(
-      c.pDesc_.value->DestAccelerationStructureData);
+  as.CallKey = c.Key;
+  as.Key = c.m_pDesc.DestAccelerationStructureKey;
+  as.Offset = c.m_pDesc.DestAccelerationStructureOffset;
+  as.Address = c.m_pDesc.Value->DestAccelerationStructureData;
+  m_AccelerationStructuresByCommandList[c.m_Object.Key]
+                                       [c.m_pDesc.Value->DestAccelerationStructureData] = as;
+  m_AccelerationStructuresByResource[c.m_pDesc.DestAccelerationStructureKey].insert(
+      c.m_pDesc.Value->DestAccelerationStructureData);
 }
 
-void AccelerationStructuresSerializeService::copyAccelerationStructure(
+void AccelerationStructuresSerializeService::CopyAccelerationStructure(
     ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& c) {
-  if (!serializeMode_) {
+  if (!m_SerializeMode) {
     return;
   }
   AccelerationStructure as{};
-  as.callKey = c.key;
-  as.key = c.DestAccelerationStructureData_.interfaceKey;
-  as.offset = c.DestAccelerationStructureData_.offset;
-  as.address = c.DestAccelerationStructureData_.value;
-  accelerationStructuresByCommandList_[c.object_.key][c.DestAccelerationStructureData_.value] = as;
-  accelerationStructuresByResource_[c.DestAccelerationStructureData_.interfaceKey].insert(
-      c.DestAccelerationStructureData_.value);
+  as.CallKey = c.Key;
+  as.Key = c.m_DestAccelerationStructureData.InterfaceKey;
+  as.Offset = c.m_DestAccelerationStructureData.Offset;
+  as.Address = c.m_DestAccelerationStructureData.Value;
+  m_AccelerationStructuresByCommandList[c.m_Object.Key][c.m_DestAccelerationStructureData.Value] =
+      as;
+  m_AccelerationStructuresByResource[c.m_DestAccelerationStructureData.InterfaceKey].insert(
+      c.m_DestAccelerationStructureData.Value);
 }
 
-void AccelerationStructuresSerializeService::executeCommandLists(
+void AccelerationStructuresSerializeService::ExecuteCommandLists(
     ID3D12CommandQueueExecuteCommandListsCommand& c) {
-  for (unsigned commandListKey : c.ppCommandLists_.keys) {
-    auto itByKey = accelerationStructuresByCommandList_.find(commandListKey);
-    if (itByKey != accelerationStructuresByCommandList_.end()) {
+  for (unsigned commandListKey : c.m_ppCommandLists.Keys) {
+    auto itByKey = m_AccelerationStructuresByCommandList.find(commandListKey);
+    if (itByKey != m_AccelerationStructuresByCommandList.end()) {
       for (auto& it : itByKey->second) {
-        accelerationStructures_[it.first] = it.second;
+        m_AccelerationStructures[it.first] = it.second;
       }
-      accelerationStructuresByCommandList_.erase(itByKey);
+      m_AccelerationStructuresByCommandList.erase(itByKey);
     }
   }
 }
 
-void AccelerationStructuresSerializeService::destroyResource(unsigned resourceKey) {
-  if (!serializeMode_) {
+void AccelerationStructuresSerializeService::DestroyResource(unsigned ResourceKey) {
+  if (!m_SerializeMode) {
     return;
   }
-  auto itResource = accelerationStructuresByResource_.find(resourceKey);
-  if (itResource == accelerationStructuresByResource_.end()) {
+  auto itResource = m_AccelerationStructuresByResource.find(ResourceKey);
+  if (itResource == m_AccelerationStructuresByResource.end()) {
     return;
   }
   for (D3D12_GPU_VIRTUAL_ADDRESS address : itResource->second) {
-    accelerationStructures_.erase(address);
+    m_AccelerationStructures.erase(address);
   }
-  accelerationStructuresByResource_.erase(itResource);
+  m_AccelerationStructuresByResource.erase(itResource);
 }
 
-void AccelerationStructuresSerializeService::restoreAccelerationStructures() {
-  if (!serializeMode_) {
+void AccelerationStructuresSerializeService::RestoreAccelerationStructures() {
+  if (!m_SerializeMode) {
     return;
   }
   {
     D3D12_COMMAND_QUEUE_DESC commandQueueDirectDesc{};
     commandQueueDirectDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
-    HRESULT hr = device_->CreateCommandQueue(&commandQueueDirectDesc, IID_PPV_ARGS(&commandQueue_));
+    HRESULT hr =
+        m_Device->CreateCommandQueue(&commandQueueDirectDesc, IID_PPV_ARGS(&m_CommandQueue));
     GITS_ASSERT(hr == S_OK);
-    hr = device_->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT,
-                                         IID_PPV_ARGS(&commandAllocator_));
+    hr = m_Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT,
+                                          IID_PPV_ARGS(&m_CommandAllocator));
     GITS_ASSERT(hr == S_OK);
-    hr = device_->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, commandAllocator_, nullptr,
-                                    IID_PPV_ARGS(&commandList_));
+    hr = m_Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_CommandAllocator, nullptr,
+                                     IID_PPV_ARGS(&m_CommandList));
     GITS_ASSERT(hr == S_OK);
-    hr = device_->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence_));
+    hr = m_Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_Fence));
     GITS_ASSERT(hr == S_OK);
 
-    commandQueueKey_ = stateService_.getUniqueObjectKey();
+    m_CommandQueueKey = m_StateService.GetUniqueObjectKey();
     D3D12_COMMAND_QUEUE_DESC commandQueueDesc{};
     commandQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_COPY;
-    ID3D12DeviceCreateCommandQueueCommand createCommandQueue;
-    createCommandQueue.key = stateService_.getUniqueCommandKey();
-    createCommandQueue.object_.key = deviceKey_;
-    createCommandQueue.pDesc_.value = &commandQueueDesc;
-    createCommandQueue.riid_.value = IID_ID3D12CommandQueue;
-    createCommandQueue.ppCommandQueue_.key = commandQueueKey_;
-    stateService_.getRecorder().record(
-        ID3D12DeviceCreateCommandQueueSerializer(createCommandQueue));
+    ID3D12DeviceCreateCommandQueueCommand CreateCommandQueue;
+    CreateCommandQueue.Key = m_StateService.GetUniqueCommandKey();
+    CreateCommandQueue.m_Object.Key = m_DeviceKey;
+    CreateCommandQueue.m_pDesc.Value = &commandQueueDesc;
+    CreateCommandQueue.m_riid.Value = IID_ID3D12CommandQueue;
+    CreateCommandQueue.m_ppCommandQueue.Key = m_CommandQueueKey;
+    m_StateService.GetRecorder().Record(
+        ID3D12DeviceCreateCommandQueueSerializer(CreateCommandQueue));
 
-    commandAllocatorKey_ = stateService_.getUniqueObjectKey();
+    m_CommandAllocatorKey = m_StateService.GetUniqueObjectKey();
     ID3D12DeviceCreateCommandAllocatorCommand createCommandAllocator;
-    createCommandAllocator.key = stateService_.getUniqueCommandKey();
-    createCommandAllocator.object_.key = deviceKey_;
-    createCommandAllocator.type_.value = D3D12_COMMAND_LIST_TYPE_COPY;
-    createCommandAllocator.riid_.value = IID_ID3D12CommandAllocator;
-    createCommandAllocator.ppCommandAllocator_.key = commandAllocatorKey_;
-    stateService_.getRecorder().record(
+    createCommandAllocator.Key = m_StateService.GetUniqueCommandKey();
+    createCommandAllocator.m_Object.Key = m_DeviceKey;
+    createCommandAllocator.m_type.Value = D3D12_COMMAND_LIST_TYPE_COPY;
+    createCommandAllocator.m_riid.Value = IID_ID3D12CommandAllocator;
+    createCommandAllocator.m_ppCommandAllocator.Key = m_CommandAllocatorKey;
+    m_StateService.GetRecorder().Record(
         ID3D12DeviceCreateCommandAllocatorSerializer(createCommandAllocator));
 
-    commandListKey_ = stateService_.getUniqueObjectKey();
+    m_CommandListKey = m_StateService.GetUniqueObjectKey();
     ID3D12DeviceCreateCommandListCommand createCommandList;
-    createCommandList.key = stateService_.getUniqueCommandKey();
-    createCommandList.object_.key = deviceKey_;
-    createCommandList.nodeMask_.value = 0;
-    createCommandList.pCommandAllocator_.key = createCommandAllocator.ppCommandAllocator_.key;
-    createCommandList.type_.value = D3D12_COMMAND_LIST_TYPE_COPY;
-    createCommandList.pInitialState_.value = nullptr;
-    createCommandList.riid_.value = IID_ID3D12GraphicsCommandList4;
-    createCommandList.ppCommandList_.key = commandListKey_;
-    stateService_.getRecorder().record(ID3D12DeviceCreateCommandListSerializer(createCommandList));
+    createCommandList.Key = m_StateService.GetUniqueCommandKey();
+    createCommandList.m_Object.Key = m_DeviceKey;
+    createCommandList.m_nodeMask.Value = 0;
+    createCommandList.m_pCommandAllocator.Key = createCommandAllocator.m_ppCommandAllocator.Key;
+    createCommandList.m_type.Value = D3D12_COMMAND_LIST_TYPE_COPY;
+    createCommandList.m_pInitialState.Value = nullptr;
+    createCommandList.m_riid.Value = IID_ID3D12GraphicsCommandList4;
+    createCommandList.m_ppCommandList.Key = m_CommandListKey;
+    m_StateService.GetRecorder().Record(ID3D12DeviceCreateCommandListSerializer(createCommandList));
 
-    fenceKey_ = stateService_.getUniqueObjectKey();
+    m_FenceKey = m_StateService.GetUniqueObjectKey();
     ID3D12DeviceCreateFenceCommand createFence;
-    createFence.key = stateService_.getUniqueCommandKey();
-    createFence.object_.key = deviceKey_;
-    createFence.InitialValue_.value = 0;
-    createFence.Flags_.value = D3D12_FENCE_FLAG_NONE;
-    createFence.riid_.value = IID_ID3D12Fence;
-    createFence.ppFence_.key = fenceKey_;
-    stateService_.getRecorder().record(ID3D12DeviceCreateFenceSerializer(createFence));
+    createFence.Key = m_StateService.GetUniqueCommandKey();
+    createFence.m_Object.Key = m_DeviceKey;
+    createFence.m_InitialValue.Value = 0;
+    createFence.m_Flags.Value = D3D12_FENCE_FLAG_NONE;
+    createFence.m_riid.Value = IID_ID3D12Fence;
+    createFence.m_ppFence.Key = m_FenceKey;
+    m_StateService.GetRecorder().Record(ID3D12DeviceCreateFenceSerializer(createFence));
   }
 
   unsigned infoBufferSize =
       sizeof(D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_SERIALIZATION_DESC) *
-      accelerationStructures_.size();
+      m_AccelerationStructures.size();
   D3D12_HEAP_PROPERTIES heapProperties{};
   heapProperties.Type = D3D12_HEAP_TYPE_DEFAULT;
   heapProperties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
@@ -170,36 +172,36 @@ void AccelerationStructuresSerializeService::restoreAccelerationStructures() {
   resourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
   Microsoft::WRL::ComPtr<ID3D12Resource> infoResource;
-  HRESULT hr = device_->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE,
-                                                &resourceDesc, D3D12_RESOURCE_STATE_COMMON, nullptr,
-                                                IID_PPV_ARGS(&infoResource));
+  HRESULT hr = m_Device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE,
+                                                 &resourceDesc, D3D12_RESOURCE_STATE_COMMON,
+                                                 nullptr, IID_PPV_ARGS(&infoResource));
   GITS_ASSERT(hr == S_OK);
 
   Microsoft::WRL::ComPtr<ID3D12Resource> infoStagingResource;
   heapProperties.Type = D3D12_HEAP_TYPE_READBACK;
   resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
-  hr = device_->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc,
-                                        D3D12_RESOURCE_STATE_COMMON, nullptr,
-                                        IID_PPV_ARGS(&infoStagingResource));
+  hr = m_Device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc,
+                                         D3D12_RESOURCE_STATE_COMMON, nullptr,
+                                         IID_PPV_ARGS(&infoStagingResource));
   GITS_ASSERT(hr == S_OK);
 
   std::map<unsigned, AccelerationStructure> accelerationStructuresByCallKey;
-  for (auto& it : accelerationStructures_) {
-    accelerationStructuresByCallKey[it.second.callKey] = it.second;
+  for (auto& it : m_AccelerationStructures) {
+    accelerationStructuresByCallKey[it.second.CallKey] = it.second;
   }
 
-  std::vector<D3D12_GPU_VIRTUAL_ADDRESS> destAdresses(accelerationStructures_.size());
+  std::vector<D3D12_GPU_VIRTUAL_ADDRESS> destAdresses(m_AccelerationStructures.size());
   unsigned index = 0;
   for (auto& it : accelerationStructuresByCallKey) {
-    destAdresses[index] = it.second.address;
+    destAdresses[index] = it.second.Address;
     ++index;
   }
 
   D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC desc{};
   desc.InfoType = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_SERIALIZATION;
   desc.DestBuffer = infoResource->GetGPUVirtualAddress();
-  commandList_->EmitRaytracingAccelerationStructurePostbuildInfo(&desc, destAdresses.size(),
-                                                                 destAdresses.data());
+  m_CommandList->EmitRaytracingAccelerationStructurePostbuildInfo(&desc, destAdresses.size(),
+                                                                  destAdresses.data());
   D3D12_RESOURCE_BARRIER barrier{};
   barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
   barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
@@ -207,20 +209,20 @@ void AccelerationStructuresSerializeService::restoreAccelerationStructures() {
   barrier.Transition.Subresource = 0;
   barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
   barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_SOURCE;
-  commandList_->ResourceBarrier(1, &barrier);
+  m_CommandList->ResourceBarrier(1, &barrier);
 
-  commandList_->CopyResource(infoStagingResource.Get(), infoResource.Get());
-  commandList_->Close();
-  ID3D12CommandList* commandLists[] = {commandList_};
-  commandQueue_->ExecuteCommandLists(1, commandLists);
-  hr = commandQueue_->Signal(fence_, ++currentFenceValue_);
+  m_CommandList->CopyResource(infoStagingResource.Get(), infoResource.Get());
+  m_CommandList->Close();
+  ID3D12CommandList* commandLists[] = {m_CommandList};
+  m_CommandQueue->ExecuteCommandLists(1, commandLists);
+  hr = m_CommandQueue->Signal(m_Fence, ++m_CurrentFenceValue);
   GITS_ASSERT(hr == S_OK);
-  hr = fence_->SetEventOnCompletion(currentFenceValue_, NULL);
+  hr = m_Fence->SetEventOnCompletion(m_CurrentFenceValue, NULL);
   GITS_ASSERT(hr == S_OK);
 
-  hr = commandAllocator_->Reset();
+  hr = m_CommandAllocator->Reset();
   GITS_ASSERT(hr == S_OK);
-  hr = commandList_->Reset(commandAllocator_, nullptr);
+  hr = m_CommandList->Reset(m_CommandAllocator, nullptr);
   GITS_ASSERT(hr == S_OK);
 
   D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_SERIALIZATION_DESC* infoData{};
@@ -234,8 +236,8 @@ void AccelerationStructuresSerializeService::restoreAccelerationStructures() {
       continue;
     }
 
-    unsigned destKey = it.second.key;
-    unsigned destOffset = it.second.offset;
+    unsigned DestKey = it.second.Key;
+    unsigned DestOffset = it.second.Offset;
 
     // serialize acceleration structure
 
@@ -243,21 +245,21 @@ void AccelerationStructuresSerializeService::restoreAccelerationStructures() {
     heapProperties.Type = D3D12_HEAP_TYPE_DEFAULT;
     resourceDesc.Width = infoData[index].SerializedSizeInBytes;
     resourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-    hr = device_->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc,
-                                          D3D12_RESOURCE_STATE_COMMON, nullptr,
-                                          IID_PPV_ARGS(&serializedResource));
+    hr = m_Device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc,
+                                           D3D12_RESOURCE_STATE_COMMON, nullptr,
+                                           IID_PPV_ARGS(&serializedResource));
     GITS_ASSERT(hr == S_OK);
 
     Microsoft::WRL::ComPtr<ID3D12Resource> serializedStagingResource;
     heapProperties.Type = D3D12_HEAP_TYPE_READBACK;
     resourceDesc.Width = infoData[index].SerializedSizeInBytes;
     resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
-    hr = device_->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc,
-                                          D3D12_RESOURCE_STATE_COMMON, nullptr,
-                                          IID_PPV_ARGS(&serializedStagingResource));
+    hr = m_Device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc,
+                                           D3D12_RESOURCE_STATE_COMMON, nullptr,
+                                           IID_PPV_ARGS(&serializedStagingResource));
     GITS_ASSERT(hr == S_OK);
 
-    commandList_->CopyRaytracingAccelerationStructure(
+    m_CommandList->CopyRaytracingAccelerationStructure(
         serializedResource->GetGPUVirtualAddress(), destAdresses[index],
         D3D12_RAYTRACING_ACCELERATION_STRUCTURE_COPY_MODE_SERIALIZE);
 
@@ -268,37 +270,37 @@ void AccelerationStructuresSerializeService::restoreAccelerationStructures() {
     barrier.Transition.Subresource = 0;
     barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
     barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_SOURCE;
-    commandList_->ResourceBarrier(1, &barrier);
+    m_CommandList->ResourceBarrier(1, &barrier);
 
-    commandList_->CopyResource(serializedStagingResource.Get(), serializedResource.Get());
-    commandList_->Close();
-    ID3D12CommandList* commandLists[] = {commandList_};
-    commandQueue_->ExecuteCommandLists(1, commandLists);
-    hr = commandQueue_->Signal(fence_, ++currentFenceValue_);
+    m_CommandList->CopyResource(serializedStagingResource.Get(), serializedResource.Get());
+    m_CommandList->Close();
+    ID3D12CommandList* commandLists[] = {m_CommandList};
+    m_CommandQueue->ExecuteCommandLists(1, commandLists);
+    hr = m_CommandQueue->Signal(m_Fence, ++m_CurrentFenceValue);
     GITS_ASSERT(hr == S_OK);
-    hr = fence_->SetEventOnCompletion(currentFenceValue_, NULL);
+    hr = m_Fence->SetEventOnCompletion(m_CurrentFenceValue, NULL);
     GITS_ASSERT(hr == S_OK);
 
-    hr = commandAllocator_->Reset();
+    hr = m_CommandAllocator->Reset();
     GITS_ASSERT(hr == S_OK);
-    hr = commandList_->Reset(commandAllocator_, nullptr);
+    hr = m_CommandList->Reset(m_CommandAllocator, nullptr);
     GITS_ASSERT(hr == S_OK);
 
     // create upload resource with serialize acceleration structure in subcaptured stream
 
-    unsigned uploadResourceKey = stateService_.getUniqueObjectKey();
+    unsigned uploadResourceKey = m_StateService.GetUniqueObjectKey();
     heapProperties.Type = D3D12_HEAP_TYPE_UPLOAD;
     ID3D12DeviceCreateCommittedResourceCommand createUploadResource;
-    createUploadResource.key = stateService_.getUniqueCommandKey();
-    createUploadResource.object_.key = deviceKey_;
-    createUploadResource.pHeapProperties_.value = &heapProperties;
-    createUploadResource.HeapFlags_.value = D3D12_HEAP_FLAG_NONE;
-    createUploadResource.pDesc_.value = &resourceDesc;
-    createUploadResource.InitialResourceState_.value = D3D12_RESOURCE_STATE_GENERIC_READ;
-    createUploadResource.pOptimizedClearValue_.value = nullptr;
-    createUploadResource.riidResource_.value = IID_ID3D12Resource;
-    createUploadResource.ppvResource_.key = uploadResourceKey;
-    stateService_.getRecorder().record(
+    createUploadResource.Key = m_StateService.GetUniqueCommandKey();
+    createUploadResource.m_Object.Key = m_DeviceKey;
+    createUploadResource.m_pHeapProperties.Value = &heapProperties;
+    createUploadResource.m_HeapFlags.Value = D3D12_HEAP_FLAG_NONE;
+    createUploadResource.m_pDesc.Value = &resourceDesc;
+    createUploadResource.m_InitialResourceState.Value = D3D12_RESOURCE_STATE_GENERIC_READ;
+    createUploadResource.m_pOptimizedClearValue.Value = nullptr;
+    createUploadResource.m_riidResource.Value = IID_ID3D12Resource;
+    createUploadResource.m_ppvResource.Key = uploadResourceKey;
+    m_StateService.GetRecorder().Record(
         ID3D12DeviceCreateCommittedResourceSerializer(createUploadResource));
 
     void* mappedData{};
@@ -306,91 +308,91 @@ void AccelerationStructuresSerializeService::restoreAccelerationStructures() {
     GITS_ASSERT(hr == S_OK);
 
     ID3D12ResourceMapCommand mapCommand;
-    mapCommand.key = stateService_.getUniqueCommandKey();
-    mapCommand.object_.key = uploadResourceKey;
-    mapCommand.Subresource_.value = 0;
-    mapCommand.pReadRange_.value = nullptr;
-    mapCommand.ppData_.captureValue = stateService_.getUniqueFakePointer();
-    mapCommand.ppData_.value = &mapCommand.ppData_.captureValue;
-    stateService_.getRecorder().record(ID3D12ResourceMapSerializer(mapCommand));
+    mapCommand.Key = m_StateService.GetUniqueCommandKey();
+    mapCommand.m_Object.Key = uploadResourceKey;
+    mapCommand.m_Subresource.Value = 0;
+    mapCommand.m_pReadRange.Value = nullptr;
+    mapCommand.m_ppData.CaptureValue = m_StateService.GetUniqueFakePointer();
+    mapCommand.m_ppData.Value = &mapCommand.m_ppData.CaptureValue;
+    m_StateService.GetRecorder().Record(ID3D12ResourceMapSerializer(mapCommand));
 
     MappedDataMetaCommand metaCommand;
-    metaCommand.key = stateService_.getUniqueCommandKey();
-    metaCommand.resource_.key = uploadResourceKey;
-    metaCommand.mappedAddress_.value = mapCommand.ppData_.captureValue;
-    metaCommand.offset_.value = 0;
-    metaCommand.data_.value = mappedData;
-    metaCommand.data_.size = resourceDesc.Width;
-    stateService_.getRecorder().record(MappedDataMetaSerializer(metaCommand));
+    metaCommand.Key = m_StateService.GetUniqueCommandKey();
+    metaCommand.m_resource.Key = uploadResourceKey;
+    metaCommand.m_mappedAddress.Value = mapCommand.m_ppData.CaptureValue;
+    metaCommand.m_offset.Value = 0;
+    metaCommand.m_data.Value = mappedData;
+    metaCommand.m_data.Size = resourceDesc.Width;
+    m_StateService.GetRecorder().Record(MappedDataMetaSerializer(metaCommand));
 
     ID3D12ResourceUnmapCommand unmapCommand;
-    unmapCommand.key = stateService_.getUniqueCommandKey();
-    unmapCommand.object_.key = uploadResourceKey;
-    unmapCommand.Subresource_.value = 0;
-    unmapCommand.pWrittenRange_.value = nullptr;
-    stateService_.getRecorder().record(ID3D12ResourceUnmapSerializer(unmapCommand));
+    unmapCommand.Key = m_StateService.GetUniqueCommandKey();
+    unmapCommand.m_Object.Key = uploadResourceKey;
+    unmapCommand.m_Subresource.Value = 0;
+    unmapCommand.m_pWrittenRange.Value = nullptr;
+    m_StateService.GetRecorder().Record(ID3D12ResourceUnmapSerializer(unmapCommand));
 
     serializedStagingResource->Unmap(0, nullptr);
 
     // deserialize acceleration structure in subcaptured stream
 
     ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand copyASCommand;
-    copyASCommand.key = stateService_.getUniqueCommandKey();
-    copyASCommand.object_.key = commandListKey_;
-    copyASCommand.DestAccelerationStructureData_.interfaceKey = destKey;
-    copyASCommand.DestAccelerationStructureData_.offset = destOffset;
-    copyASCommand.SourceAccelerationStructureData_.interfaceKey = uploadResourceKey;
-    copyASCommand.SourceAccelerationStructureData_.offset = 0;
-    copyASCommand.Mode_.value = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_COPY_MODE_DESERIALIZE;
-    stateService_.getRecorder().record(
+    copyASCommand.Key = m_StateService.GetUniqueCommandKey();
+    copyASCommand.m_Object.Key = m_CommandListKey;
+    copyASCommand.m_DestAccelerationStructureData.InterfaceKey = DestKey;
+    copyASCommand.m_DestAccelerationStructureData.Offset = DestOffset;
+    copyASCommand.m_SourceAccelerationStructureData.InterfaceKey = uploadResourceKey;
+    copyASCommand.m_SourceAccelerationStructureData.Offset = 0;
+    copyASCommand.m_Mode.Value = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_COPY_MODE_DESERIALIZE;
+    m_StateService.GetRecorder().Record(
         ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureSerializer(copyASCommand));
 
     ID3D12GraphicsCommandListCloseCommand commandListClose;
-    commandListClose.key = stateService_.getUniqueCommandKey();
-    commandListClose.object_.key = commandListKey_;
-    stateService_.getRecorder().record(ID3D12GraphicsCommandListCloseSerializer(commandListClose));
+    commandListClose.Key = m_StateService.GetUniqueCommandKey();
+    commandListClose.m_Object.Key = m_CommandListKey;
+    m_StateService.GetRecorder().Record(ID3D12GraphicsCommandListCloseSerializer(commandListClose));
 
-    ID3D12CommandQueueExecuteCommandListsCommand executeCommandLists;
-    executeCommandLists.key = stateService_.getUniqueCommandKey();
-    executeCommandLists.object_.key = commandQueueKey_;
-    executeCommandLists.NumCommandLists_.value = 1;
-    executeCommandLists.ppCommandLists_.value = reinterpret_cast<ID3D12CommandList**>(1);
-    executeCommandLists.ppCommandLists_.size = 1;
-    executeCommandLists.ppCommandLists_.keys.resize(1);
-    executeCommandLists.ppCommandLists_.keys[0] = commandListKey_;
-    stateService_.getRecorder().record(
-        ID3D12CommandQueueExecuteCommandListsSerializer(executeCommandLists));
+    ID3D12CommandQueueExecuteCommandListsCommand ExecuteCommandLists;
+    ExecuteCommandLists.Key = m_StateService.GetUniqueCommandKey();
+    ExecuteCommandLists.m_Object.Key = m_CommandQueueKey;
+    ExecuteCommandLists.m_NumCommandLists.Value = 1;
+    ExecuteCommandLists.m_ppCommandLists.Value = reinterpret_cast<ID3D12CommandList**>(1);
+    ExecuteCommandLists.m_ppCommandLists.Size = 1;
+    ExecuteCommandLists.m_ppCommandLists.Keys.resize(1);
+    ExecuteCommandLists.m_ppCommandLists.Keys[0] = m_CommandListKey;
+    m_StateService.GetRecorder().Record(
+        ID3D12CommandQueueExecuteCommandListsSerializer(ExecuteCommandLists));
 
-    ID3D12CommandQueueSignalCommand commandQueueSignal;
-    commandQueueSignal.key = stateService_.getUniqueCommandKey();
-    commandQueueSignal.object_.key = commandQueueKey_;
-    commandQueueSignal.pFence_.key = fenceKey_;
-    commandQueueSignal.Value_.value = ++recordedFenceValue_;
-    stateService_.getRecorder().record(ID3D12CommandQueueSignalSerializer(commandQueueSignal));
+    ID3D12CommandQueueSignalCommand CommandQueueSignal;
+    CommandQueueSignal.Key = m_StateService.GetUniqueCommandKey();
+    CommandQueueSignal.m_Object.Key = m_CommandQueueKey;
+    CommandQueueSignal.m_pFence.Key = m_FenceKey;
+    CommandQueueSignal.m_Value.Value = ++m_RecordedFenceValue;
+    m_StateService.GetRecorder().Record(ID3D12CommandQueueSignalSerializer(CommandQueueSignal));
 
     ID3D12FenceGetCompletedValueCommand getCompletedValue;
-    getCompletedValue.key = stateService_.getUniqueCommandKey();
-    getCompletedValue.object_.key = fenceKey_;
-    getCompletedValue.result_.value = recordedFenceValue_;
-    stateService_.getRecorder().record(ID3D12FenceGetCompletedValueSerializer(getCompletedValue));
+    getCompletedValue.Key = m_StateService.GetUniqueCommandKey();
+    getCompletedValue.m_Object.Key = m_FenceKey;
+    getCompletedValue.m_Result.Value = m_RecordedFenceValue;
+    m_StateService.GetRecorder().Record(ID3D12FenceGetCompletedValueSerializer(getCompletedValue));
 
     ID3D12CommandAllocatorResetCommand commandAllocatorReset;
-    commandAllocatorReset.key = stateService_.getUniqueCommandKey();
-    commandAllocatorReset.object_.key = commandAllocatorKey_;
-    stateService_.getRecorder().record(
+    commandAllocatorReset.Key = m_StateService.GetUniqueCommandKey();
+    commandAllocatorReset.m_Object.Key = m_CommandAllocatorKey;
+    m_StateService.GetRecorder().Record(
         ID3D12CommandAllocatorResetSerializer(commandAllocatorReset));
 
-    ID3D12GraphicsCommandListResetCommand commandListReset;
-    commandListReset.key = stateService_.getUniqueCommandKey();
-    commandListReset.object_.key = commandListKey_;
-    commandListReset.pAllocator_.key = commandAllocatorKey_;
-    commandListReset.pInitialState_.key = 0;
-    stateService_.getRecorder().record(ID3D12GraphicsCommandListResetSerializer(commandListReset));
+    ID3D12GraphicsCommandListResetCommand CommandListReset;
+    CommandListReset.Key = m_StateService.GetUniqueCommandKey();
+    CommandListReset.m_Object.Key = m_CommandListKey;
+    CommandListReset.m_pAllocator.Key = m_CommandAllocatorKey;
+    CommandListReset.m_pInitialState.Key = 0;
+    m_StateService.GetRecorder().Record(ID3D12GraphicsCommandListResetSerializer(CommandListReset));
 
     IUnknownReleaseCommand releaseCommand;
-    releaseCommand.key = stateService_.getUniqueCommandKey();
-    releaseCommand.object_.key = uploadResourceKey;
-    stateService_.getRecorder().record(IUnknownReleaseSerializer(releaseCommand));
+    releaseCommand.Key = m_StateService.GetUniqueCommandKey();
+    releaseCommand.m_Object.Key = uploadResourceKey;
+    m_StateService.GetRecorder().Record(IUnknownReleaseSerializer(releaseCommand));
 
     ++index;
   }

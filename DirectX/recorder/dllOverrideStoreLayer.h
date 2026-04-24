@@ -26,21 +26,21 @@ public:
   DllOverrideStoreLayer(CaptureManager& manager, stream::OrderingRecorder& recorder);
   ~DllOverrideStoreLayer() = default;
 
-  void post(D3D12CreateDeviceCommand& command) override;
-  void post(D3D12GetDebugInterfaceCommand& command) override;
-  void post(D3D12CreateRootSignatureDeserializerCommand& command) override;
-  void post(D3D12CreateVersionedRootSignatureDeserializerCommand& command) override;
-  void post(D3D12EnableExperimentalFeaturesCommand& command) override;
-  void post(D3D12GetInterfaceCommand& command) override;
-  void post(D3D12SerializeRootSignatureCommand& command) override;
-  void post(D3D12SerializeVersionedRootSignatureCommand& command) override;
+  void Post(D3D12CreateDeviceCommand& command) override;
+  void Post(D3D12GetDebugInterfaceCommand& command) override;
+  void Post(D3D12CreateRootSignatureDeserializerCommand& command) override;
+  void Post(D3D12CreateVersionedRootSignatureDeserializerCommand& command) override;
+  void Post(D3D12EnableExperimentalFeaturesCommand& command) override;
+  void Post(D3D12GetInterfaceCommand& command) override;
+  void Post(D3D12SerializeRootSignatureCommand& command) override;
+  void Post(D3D12SerializeVersionedRootSignatureCommand& command) override;
 
-  void pre(xessGetVersionCommand& command) override;
-  void pre(xessD3D12CreateContextCommand& command) override;
-  void pre(xellGetVersionCommand& command) override;
-  void pre(xellD3D12CreateContextCommand& command) override;
-  void pre(xefgSwapChainGetVersionCommand& command) override;
-  void pre(xefgSwapChainD3D12CreateContextCommand& command) override;
+  void Pre(xessGetVersionCommand& command) override;
+  void Pre(xessD3D12CreateContextCommand& command) override;
+  void Pre(xellGetVersionCommand& command) override;
+  void Pre(xellD3D12CreateContextCommand& command) override;
+  void Pre(xefgSwapChainGetVersionCommand& command) override;
+  void Pre(xefgSwapChainD3D12CreateContextCommand& command) override;
 
 private:
   void captureAgilitySDKDll(Command& command);
@@ -49,16 +49,16 @@ private:
   void captureXefgDll(Command& command);
   bool captureDll(const std::wstring& dllName, unsigned threadId);
 
-  bool agilitySDKDllchecked_{};
-  std::mutex agilitySDKDllMutex_{};
-  bool xessDllchecked_{};
-  std::mutex xessDllMutex_{};
-  bool xellDllchecked_{};
-  std::mutex xellDllMutex_{};
-  bool xefgDllchecked_{};
-  std::mutex xefgDllMutex_{};
-  CaptureManager& manager_;
-  stream::OrderingRecorder& recorder_;
+  bool m_AgilitySdkDllChecked{};
+  std::mutex m_AgilitySdkDllMutex{};
+  bool m_XessDllChecked{};
+  std::mutex m_XessDllMutex{};
+  bool m_XellDllChecked{};
+  std::mutex m_XellDllMutex{};
+  bool m_XefgDllChecked{};
+  std::mutex m_XefgDllMutex{};
+  CaptureManager& m_Manager;
+  stream::OrderingRecorder& m_Recorder;
 };
 
 } // namespace DirectX

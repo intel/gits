@@ -12,377 +12,377 @@
 namespace gits {
 namespace DirectX {
 
-void CommandPreservationLayer::pre(
+void CommandPreservationLayer::Pre(
     ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c) {
-  captureGpuAddresses_.push_back(c.pDesc_.value->DestAccelerationStructureData);
-  if (c.pDesc_.value->SourceAccelerationStructureData) {
-    captureGpuAddresses_.push_back(c.pDesc_.value->SourceAccelerationStructureData);
+  m_CaptureGpuAddresses.push_back(c.m_pDesc.Value->DestAccelerationStructureData);
+  if (c.m_pDesc.Value->SourceAccelerationStructureData) {
+    m_CaptureGpuAddresses.push_back(c.m_pDesc.Value->SourceAccelerationStructureData);
   }
-  captureGpuAddresses_.push_back(c.pDesc_.value->ScratchAccelerationStructureData);
+  m_CaptureGpuAddresses.push_back(c.m_pDesc.Value->ScratchAccelerationStructureData);
 
-  if (c.pDesc_.value->Inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
-    captureGpuAddresses_.push_back(c.pDesc_.value->Inputs.InstanceDescs);
-  } else if (c.pDesc_.value->Inputs.Type ==
+  if (c.m_pDesc.Value->Inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
+    m_CaptureGpuAddresses.push_back(c.m_pDesc.Value->Inputs.InstanceDescs);
+  } else if (c.m_pDesc.Value->Inputs.Type ==
              D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL) {
-    for (unsigned i = 0; i < c.pDesc_.value->Inputs.NumDescs; ++i) {
+    for (unsigned i = 0; i < c.m_pDesc.Value->Inputs.NumDescs; ++i) {
       D3D12_RAYTRACING_GEOMETRY_DESC& desc = const_cast<D3D12_RAYTRACING_GEOMETRY_DESC&>(
-          c.pDesc_.value->Inputs.DescsLayout == D3D12_ELEMENTS_LAYOUT_ARRAY
-              ? c.pDesc_.value->Inputs.pGeometryDescs[i]
-              : *c.pDesc_.value->Inputs.ppGeometryDescs[i]);
+          c.m_pDesc.Value->Inputs.DescsLayout == D3D12_ELEMENTS_LAYOUT_ARRAY
+              ? c.m_pDesc.Value->Inputs.pGeometryDescs[i]
+              : *c.m_pDesc.Value->Inputs.ppGeometryDescs[i]);
       if (desc.Type == D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES) {
-        captureGpuAddresses_.push_back(desc.Triangles.Transform3x4);
-        captureGpuAddresses_.push_back(desc.Triangles.IndexBuffer);
-        captureGpuAddresses_.push_back(desc.Triangles.VertexBuffer.StartAddress);
+        m_CaptureGpuAddresses.push_back(desc.Triangles.Transform3x4);
+        m_CaptureGpuAddresses.push_back(desc.Triangles.IndexBuffer);
+        m_CaptureGpuAddresses.push_back(desc.Triangles.VertexBuffer.StartAddress);
       } else if (desc.Type == D3D12_RAYTRACING_GEOMETRY_TYPE_PROCEDURAL_PRIMITIVE_AABBS) {
-        captureGpuAddresses_.push_back(desc.AABBs.AABBs.StartAddress);
+        m_CaptureGpuAddresses.push_back(desc.AABBs.AABBs.StartAddress);
       } else if (desc.Type == D3D12_RAYTRACING_GEOMETRY_TYPE_OMM_TRIANGLES) {
         if (desc.OmmTriangles.pTriangles) {
-          captureGpuAddresses_.push_back(desc.OmmTriangles.pTriangles->Transform3x4);
-          captureGpuAddresses_.push_back(desc.OmmTriangles.pTriangles->IndexBuffer);
-          captureGpuAddresses_.push_back(desc.OmmTriangles.pTriangles->VertexBuffer.StartAddress);
+          m_CaptureGpuAddresses.push_back(desc.OmmTriangles.pTriangles->Transform3x4);
+          m_CaptureGpuAddresses.push_back(desc.OmmTriangles.pTriangles->IndexBuffer);
+          m_CaptureGpuAddresses.push_back(desc.OmmTriangles.pTriangles->VertexBuffer.StartAddress);
         }
         if (desc.OmmTriangles.pOmmLinkage) {
-          captureGpuAddresses_.push_back(
+          m_CaptureGpuAddresses.push_back(
               desc.OmmTriangles.pOmmLinkage->OpacityMicromapIndexBuffer.StartAddress);
-          captureGpuAddresses_.push_back(desc.OmmTriangles.pOmmLinkage->OpacityMicromapArray);
+          m_CaptureGpuAddresses.push_back(desc.OmmTriangles.pOmmLinkage->OpacityMicromapArray);
         }
       }
     }
-  } else if (c.pDesc_.value->Inputs.Type ==
+  } else if (c.m_pDesc.Value->Inputs.Type ==
              D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_OPACITY_MICROMAP_ARRAY) {
-    if (c.pDesc_.value->Inputs.pOpacityMicromapArrayDesc) {
+    if (c.m_pDesc.Value->Inputs.pOpacityMicromapArrayDesc) {
       auto& ommDesc = *const_cast<D3D12_RAYTRACING_OPACITY_MICROMAP_ARRAY_DESC*>(
-          c.pDesc_.value->Inputs.pOpacityMicromapArrayDesc);
-      captureGpuAddresses_.push_back(ommDesc.InputBuffer);
-      captureGpuAddresses_.push_back(ommDesc.PerOmmDescs.StartAddress);
+          c.m_pDesc.Value->Inputs.pOpacityMicromapArrayDesc);
+      m_CaptureGpuAddresses.push_back(ommDesc.InputBuffer);
+      m_CaptureGpuAddresses.push_back(ommDesc.PerOmmDescs.StartAddress);
     }
   }
 
-  for (unsigned i = 0; i < c.NumPostbuildInfoDescs_.value; ++i) {
-    captureGpuAddresses_.push_back(c.pPostbuildInfoDescs_.value[i].DestBuffer);
+  for (unsigned i = 0; i < c.m_NumPostbuildInfoDescs.Value; ++i) {
+    m_CaptureGpuAddresses.push_back(c.m_pPostbuildInfoDescs.Value[i].DestBuffer);
   }
 }
 
-void CommandPreservationLayer::post(
+void CommandPreservationLayer::Post(
     ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c) {
   unsigned index = 0;
-  c.pDesc_.value->DestAccelerationStructureData = captureGpuAddresses_[index++];
-  if (c.pDesc_.value->SourceAccelerationStructureData) {
-    c.pDesc_.value->SourceAccelerationStructureData = captureGpuAddresses_[index++];
+  c.m_pDesc.Value->DestAccelerationStructureData = m_CaptureGpuAddresses[index++];
+  if (c.m_pDesc.Value->SourceAccelerationStructureData) {
+    c.m_pDesc.Value->SourceAccelerationStructureData = m_CaptureGpuAddresses[index++];
   }
-  c.pDesc_.value->ScratchAccelerationStructureData = captureGpuAddresses_[index++];
+  c.m_pDesc.Value->ScratchAccelerationStructureData = m_CaptureGpuAddresses[index++];
 
-  if (c.pDesc_.value->Inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
-    c.pDesc_.value->Inputs.InstanceDescs = captureGpuAddresses_[index++];
-  } else if (c.pDesc_.value->Inputs.Type ==
+  if (c.m_pDesc.Value->Inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
+    c.m_pDesc.Value->Inputs.InstanceDescs = m_CaptureGpuAddresses[index++];
+  } else if (c.m_pDesc.Value->Inputs.Type ==
              D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL) {
-    for (unsigned i = 0; i < c.pDesc_.value->Inputs.NumDescs; ++i) {
+    for (unsigned i = 0; i < c.m_pDesc.Value->Inputs.NumDescs; ++i) {
       D3D12_RAYTRACING_GEOMETRY_DESC& desc = const_cast<D3D12_RAYTRACING_GEOMETRY_DESC&>(
-          c.pDesc_.value->Inputs.DescsLayout == D3D12_ELEMENTS_LAYOUT_ARRAY
-              ? c.pDesc_.value->Inputs.pGeometryDescs[i]
-              : *c.pDesc_.value->Inputs.ppGeometryDescs[i]);
+          c.m_pDesc.Value->Inputs.DescsLayout == D3D12_ELEMENTS_LAYOUT_ARRAY
+              ? c.m_pDesc.Value->Inputs.pGeometryDescs[i]
+              : *c.m_pDesc.Value->Inputs.ppGeometryDescs[i]);
       if (desc.Type == D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES) {
-        desc.Triangles.Transform3x4 = captureGpuAddresses_[index++];
-        desc.Triangles.IndexBuffer = captureGpuAddresses_[index++];
-        desc.Triangles.VertexBuffer.StartAddress = captureGpuAddresses_[index++];
+        desc.Triangles.Transform3x4 = m_CaptureGpuAddresses[index++];
+        desc.Triangles.IndexBuffer = m_CaptureGpuAddresses[index++];
+        desc.Triangles.VertexBuffer.StartAddress = m_CaptureGpuAddresses[index++];
       } else if (desc.Type == D3D12_RAYTRACING_GEOMETRY_TYPE_PROCEDURAL_PRIMITIVE_AABBS) {
-        desc.AABBs.AABBs.StartAddress = captureGpuAddresses_[index++];
+        desc.AABBs.AABBs.StartAddress = m_CaptureGpuAddresses[index++];
       } else if (desc.Type == D3D12_RAYTRACING_GEOMETRY_TYPE_OMM_TRIANGLES) {
         if (desc.OmmTriangles.pTriangles) {
           auto& triangles =
               *const_cast<D3D12_RAYTRACING_GEOMETRY_TRIANGLES_DESC*>(desc.OmmTriangles.pTriangles);
-          triangles.Transform3x4 = captureGpuAddresses_[index++];
-          triangles.IndexBuffer = captureGpuAddresses_[index++];
-          triangles.VertexBuffer.StartAddress = captureGpuAddresses_[index++];
+          triangles.Transform3x4 = m_CaptureGpuAddresses[index++];
+          triangles.IndexBuffer = m_CaptureGpuAddresses[index++];
+          triangles.VertexBuffer.StartAddress = m_CaptureGpuAddresses[index++];
         }
         if (desc.OmmTriangles.pOmmLinkage) {
           auto& ommLinkage = *const_cast<D3D12_RAYTRACING_GEOMETRY_OMM_LINKAGE_DESC*>(
               desc.OmmTriangles.pOmmLinkage);
-          ommLinkage.OpacityMicromapIndexBuffer.StartAddress = captureGpuAddresses_[index++];
-          ommLinkage.OpacityMicromapArray = captureGpuAddresses_[index++];
+          ommLinkage.OpacityMicromapIndexBuffer.StartAddress = m_CaptureGpuAddresses[index++];
+          ommLinkage.OpacityMicromapArray = m_CaptureGpuAddresses[index++];
         }
       }
     }
-  } else if (c.pDesc_.value->Inputs.Type ==
+  } else if (c.m_pDesc.Value->Inputs.Type ==
              D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_OPACITY_MICROMAP_ARRAY) {
-    if (c.pDesc_.value->Inputs.pOpacityMicromapArrayDesc) {
+    if (c.m_pDesc.Value->Inputs.pOpacityMicromapArrayDesc) {
       auto& ommDesc = *const_cast<D3D12_RAYTRACING_OPACITY_MICROMAP_ARRAY_DESC*>(
-          c.pDesc_.value->Inputs.pOpacityMicromapArrayDesc);
-      ommDesc.InputBuffer = captureGpuAddresses_[index++];
-      ommDesc.PerOmmDescs.StartAddress = captureGpuAddresses_[index++];
+          c.m_pDesc.Value->Inputs.pOpacityMicromapArrayDesc);
+      ommDesc.InputBuffer = m_CaptureGpuAddresses[index++];
+      ommDesc.PerOmmDescs.StartAddress = m_CaptureGpuAddresses[index++];
     }
   }
 
-  for (unsigned i = 0; i < c.NumPostbuildInfoDescs_.value; ++i) {
-    c.pPostbuildInfoDescs_.value[i].DestBuffer = captureGpuAddresses_[index++];
+  for (unsigned i = 0; i < c.m_NumPostbuildInfoDescs.Value; ++i) {
+    c.m_pPostbuildInfoDescs.Value[i].DestBuffer = m_CaptureGpuAddresses[index++];
   }
-  captureGpuAddresses_.clear();
+  m_CaptureGpuAddresses.clear();
 }
 
-void CommandPreservationLayer::pre(ID3D12GraphicsCommandList4DispatchRaysCommand& c) {
-  captureGpuAddresses_.push_back(c.pDesc_.value->RayGenerationShaderRecord.StartAddress);
-  captureGpuAddresses_.push_back(c.pDesc_.value->MissShaderTable.StartAddress);
-  captureGpuAddresses_.push_back(c.pDesc_.value->HitGroupTable.StartAddress);
-  captureGpuAddresses_.push_back(c.pDesc_.value->CallableShaderTable.StartAddress);
+void CommandPreservationLayer::Pre(ID3D12GraphicsCommandList4DispatchRaysCommand& c) {
+  m_CaptureGpuAddresses.push_back(c.m_pDesc.Value->RayGenerationShaderRecord.StartAddress);
+  m_CaptureGpuAddresses.push_back(c.m_pDesc.Value->MissShaderTable.StartAddress);
+  m_CaptureGpuAddresses.push_back(c.m_pDesc.Value->HitGroupTable.StartAddress);
+  m_CaptureGpuAddresses.push_back(c.m_pDesc.Value->CallableShaderTable.StartAddress);
 }
 
-void CommandPreservationLayer::post(ID3D12GraphicsCommandList4DispatchRaysCommand& c) {
-  c.pDesc_.value->RayGenerationShaderRecord.StartAddress = captureGpuAddresses_[0];
-  c.pDesc_.value->MissShaderTable.StartAddress = captureGpuAddresses_[1];
-  c.pDesc_.value->HitGroupTable.StartAddress = captureGpuAddresses_[2];
-  c.pDesc_.value->CallableShaderTable.StartAddress = captureGpuAddresses_[3];
-  captureGpuAddresses_.clear();
+void CommandPreservationLayer::Post(ID3D12GraphicsCommandList4DispatchRaysCommand& c) {
+  c.m_pDesc.Value->RayGenerationShaderRecord.StartAddress = m_CaptureGpuAddresses[0];
+  c.m_pDesc.Value->MissShaderTable.StartAddress = m_CaptureGpuAddresses[1];
+  c.m_pDesc.Value->HitGroupTable.StartAddress = m_CaptureGpuAddresses[2];
+  c.m_pDesc.Value->CallableShaderTable.StartAddress = m_CaptureGpuAddresses[3];
+  m_CaptureGpuAddresses.clear();
 }
 
-void CommandPreservationLayer::pre(ID3D12ResourceGetGPUVirtualAddressCommand& c) {
-  captureGpuAddresses_.push_back(c.result_.value);
+void CommandPreservationLayer::Pre(ID3D12ResourceGetGPUVirtualAddressCommand& c) {
+  m_CaptureGpuAddresses.push_back(c.m_Result.Value);
 }
 
-void CommandPreservationLayer::post(ID3D12ResourceGetGPUVirtualAddressCommand& c) {
-  c.result_.value = captureGpuAddresses_[0];
-  captureGpuAddresses_.clear();
+void CommandPreservationLayer::Post(ID3D12ResourceGetGPUVirtualAddressCommand& c) {
+  c.m_Result.Value = m_CaptureGpuAddresses[0];
+  m_CaptureGpuAddresses.clear();
 }
 
-void CommandPreservationLayer::pre(ID3D12StateObjectPropertiesGetShaderIdentifierCommand& c) {
+void CommandPreservationLayer::Pre(ID3D12StateObjectPropertiesGetShaderIdentifierCommand& c) {
   for (unsigned i = 0; i < D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES; ++i) {
-    captureShaderIdentifier_[i] = static_cast<uint8_t*>(c.result_.value)[i];
+    m_CaptureShaderIdentifier[i] = static_cast<uint8_t*>(c.m_Result.Value)[i];
   }
 }
 
-void CommandPreservationLayer::post(ID3D12StateObjectPropertiesGetShaderIdentifierCommand& c) {
+void CommandPreservationLayer::Post(ID3D12StateObjectPropertiesGetShaderIdentifierCommand& c) {
   for (unsigned i = 0; i < D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES; ++i) {
-    static_cast<uint8_t*>(c.result_.value)[i] = captureShaderIdentifier_[i];
+    static_cast<uint8_t*>(c.m_Result.Value)[i] = m_CaptureShaderIdentifier[i];
   }
 }
 
-void CommandPreservationLayer::pre(
+void CommandPreservationLayer::Pre(
     ID3D12DescriptorHeapGetGPUDescriptorHandleForHeapStartCommand& c) {
-  captureGpuDescriptorHandle_ = c.result_.value;
+  m_CaptureGpuDescriptorHandle = c.m_Result.Value;
 }
 
-void CommandPreservationLayer::post(
+void CommandPreservationLayer::Post(
     ID3D12DescriptorHeapGetGPUDescriptorHandleForHeapStartCommand& c) {
-  c.result_.value = captureGpuDescriptorHandle_;
+  c.m_Result.Value = m_CaptureGpuDescriptorHandle;
 }
 
-void CommandPreservationLayer::pre(INTC_D3D12_CreateComputePipelineStateCommand& c) {
-  c.pDesc_.cs = c.pDesc_.value->CS.pShaderBytecode;
-  c.pDesc_.compileOptions = c.pDesc_.value->CompileOptions;
-  c.pDesc_.internalOptions = c.pDesc_.value->InternalOptions;
+void CommandPreservationLayer::Pre(INTC_D3D12_CreateComputePipelineStateCommand& c) {
+  c.m_pDesc.Cs = c.m_pDesc.Value->CS.pShaderBytecode;
+  c.m_pDesc.CompileOptions = c.m_pDesc.Value->CompileOptions;
+  c.m_pDesc.InternalOptions = c.m_pDesc.Value->InternalOptions;
 }
 
-void CommandPreservationLayer::pre(ID3D12DeviceCreateConstantBufferViewCommand& c) {
-  if (c.pDesc_.value && c.pDesc_.value->BufferLocation) {
-    captureGpuAddresses_.push_back(c.pDesc_.value->BufferLocation);
+void CommandPreservationLayer::Pre(ID3D12DeviceCreateConstantBufferViewCommand& c) {
+  if (c.m_pDesc.Value && c.m_pDesc.Value->BufferLocation) {
+    m_CaptureGpuAddresses.push_back(c.m_pDesc.Value->BufferLocation);
   }
 }
 
-void CommandPreservationLayer::post(ID3D12DeviceCreateConstantBufferViewCommand& c) {
-  if (c.pDesc_.value && c.pDesc_.value->BufferLocation) {
-    c.pDesc_.value->BufferLocation = captureGpuAddresses_[0];
-    captureGpuAddresses_.clear();
+void CommandPreservationLayer::Post(ID3D12DeviceCreateConstantBufferViewCommand& c) {
+  if (c.m_pDesc.Value && c.m_pDesc.Value->BufferLocation) {
+    c.m_pDesc.Value->BufferLocation = m_CaptureGpuAddresses[0];
+    m_CaptureGpuAddresses.clear();
   }
 }
 
-void CommandPreservationLayer::pre(ID3D12GraphicsCommandListIASetIndexBufferCommand& c) {
-  if (c.pView_.value && c.pView_.value->BufferLocation) {
-    captureGpuAddresses_.push_back(c.pView_.value->BufferLocation);
+void CommandPreservationLayer::Pre(ID3D12GraphicsCommandListIASetIndexBufferCommand& c) {
+  if (c.m_pView.Value && c.m_pView.Value->BufferLocation) {
+    m_CaptureGpuAddresses.push_back(c.m_pView.Value->BufferLocation);
   }
 }
 
-void CommandPreservationLayer::post(ID3D12GraphicsCommandListIASetIndexBufferCommand& c) {
-  if (c.pView_.value && c.pView_.value->BufferLocation) {
-    c.pView_.value->BufferLocation = captureGpuAddresses_[0];
-    captureGpuAddresses_.clear();
+void CommandPreservationLayer::Post(ID3D12GraphicsCommandListIASetIndexBufferCommand& c) {
+  if (c.m_pView.Value && c.m_pView.Value->BufferLocation) {
+    c.m_pView.Value->BufferLocation = m_CaptureGpuAddresses[0];
+    m_CaptureGpuAddresses.clear();
   }
 }
 
-void CommandPreservationLayer::pre(ID3D12GraphicsCommandListIASetVertexBuffersCommand& c) {
-  if (c.pViews_.value) {
-    for (unsigned i = 0; i < c.NumViews_.value; ++i) {
-      if (c.pViews_.value[i].BufferLocation) {
-        captureGpuAddresses_.push_back(c.pViews_.value[i].BufferLocation);
+void CommandPreservationLayer::Pre(ID3D12GraphicsCommandListIASetVertexBuffersCommand& c) {
+  if (c.m_pViews.Value) {
+    for (unsigned i = 0; i < c.m_NumViews.Value; ++i) {
+      if (c.m_pViews.Value[i].BufferLocation) {
+        m_CaptureGpuAddresses.push_back(c.m_pViews.Value[i].BufferLocation);
       }
     }
   }
 }
 
-void CommandPreservationLayer::post(ID3D12GraphicsCommandListIASetVertexBuffersCommand& c) {
-  if (c.pViews_.value) {
+void CommandPreservationLayer::Post(ID3D12GraphicsCommandListIASetVertexBuffersCommand& c) {
+  if (c.m_pViews.Value) {
     unsigned index = 0;
-    for (unsigned i = 0; i < c.NumViews_.value; ++i) {
-      if (c.pViews_.value[i].BufferLocation) {
-        c.pViews_.value[i].BufferLocation = captureGpuAddresses_[index++];
+    for (unsigned i = 0; i < c.m_NumViews.Value; ++i) {
+      if (c.m_pViews.Value[i].BufferLocation) {
+        c.m_pViews.Value[i].BufferLocation = m_CaptureGpuAddresses[index++];
       }
     }
-    captureGpuAddresses_.clear();
+    m_CaptureGpuAddresses.clear();
   }
 }
 
-void CommandPreservationLayer::pre(ID3D12GraphicsCommandListSOSetTargetsCommand& c) {
-  if (c.pViews_.value) {
-    for (unsigned i = 0; i < c.NumViews_.value; ++i) {
-      if (c.pViews_.value[i].SizeInBytes) {
-        if (c.pViews_.value[i].BufferLocation) {
-          captureGpuAddresses_.push_back(c.pViews_.value[i].BufferLocation);
+void CommandPreservationLayer::Pre(ID3D12GraphicsCommandListSOSetTargetsCommand& c) {
+  if (c.m_pViews.Value) {
+    for (unsigned i = 0; i < c.m_NumViews.Value; ++i) {
+      if (c.m_pViews.Value[i].SizeInBytes) {
+        if (c.m_pViews.Value[i].BufferLocation) {
+          m_CaptureGpuAddresses.push_back(c.m_pViews.Value[i].BufferLocation);
         }
-        if (c.pViews_.value[i].BufferFilledSizeLocation) {
-          captureGpuAddresses_.push_back(c.pViews_.value[i].BufferFilledSizeLocation);
+        if (c.m_pViews.Value[i].BufferFilledSizeLocation) {
+          m_CaptureGpuAddresses.push_back(c.m_pViews.Value[i].BufferFilledSizeLocation);
         }
       }
     }
   }
 }
 
-void CommandPreservationLayer::post(ID3D12GraphicsCommandListSOSetTargetsCommand& c) {
-  if (c.pViews_.value) {
+void CommandPreservationLayer::Post(ID3D12GraphicsCommandListSOSetTargetsCommand& c) {
+  if (c.m_pViews.Value) {
     unsigned index = 0;
-    for (unsigned i = 0; i < c.NumViews_.value; ++i) {
-      if (c.pViews_.value[i].SizeInBytes) {
-        if (c.pViews_.value[i].BufferLocation) {
-          c.pViews_.value[i].BufferLocation = captureGpuAddresses_[index++];
+    for (unsigned i = 0; i < c.m_NumViews.Value; ++i) {
+      if (c.m_pViews.Value[i].SizeInBytes) {
+        if (c.m_pViews.Value[i].BufferLocation) {
+          c.m_pViews.Value[i].BufferLocation = m_CaptureGpuAddresses[index++];
         }
-        if (c.pViews_.value[i].BufferFilledSizeLocation) {
-          c.pViews_.value[i].BufferFilledSizeLocation = captureGpuAddresses_[index++];
+        if (c.m_pViews.Value[i].BufferFilledSizeLocation) {
+          c.m_pViews.Value[i].BufferFilledSizeLocation = m_CaptureGpuAddresses[index++];
         }
       }
     }
   }
-  captureGpuAddresses_.clear();
+  m_CaptureGpuAddresses.clear();
 }
 
-void CommandPreservationLayer::pre(ID3D12GraphicsCommandList2WriteBufferImmediateCommand& c) {
-  if (c.pParams_.value) {
-    for (unsigned i = 0; i < c.Count_.value; ++i) {
-      if (c.pParams_.value[i].Dest) {
-        captureGpuAddresses_.push_back(c.pParams_.value[i].Dest);
+void CommandPreservationLayer::Pre(ID3D12GraphicsCommandList2WriteBufferImmediateCommand& c) {
+  if (c.m_pParams.Value) {
+    for (unsigned i = 0; i < c.m_Count.Value; ++i) {
+      if (c.m_pParams.Value[i].Dest) {
+        m_CaptureGpuAddresses.push_back(c.m_pParams.Value[i].Dest);
       }
     }
   }
 }
 
-void CommandPreservationLayer::post(ID3D12GraphicsCommandList2WriteBufferImmediateCommand& c) {
-  if (c.pParams_.value) {
+void CommandPreservationLayer::Post(ID3D12GraphicsCommandList2WriteBufferImmediateCommand& c) {
+  if (c.m_pParams.Value) {
     unsigned index = 0;
-    for (unsigned i = 0; i < c.Count_.value; ++i) {
-      if (c.pParams_.value[i].Dest) {
-        c.pParams_.value[i].Dest = captureGpuAddresses_[index++];
+    for (unsigned i = 0; i < c.m_Count.Value; ++i) {
+      if (c.m_pParams.Value[i].Dest) {
+        c.m_pParams.Value[i].Dest = m_CaptureGpuAddresses[index++];
       }
     }
-    captureGpuAddresses_.clear();
+    m_CaptureGpuAddresses.clear();
   }
 }
 
-void CommandPreservationLayer::pre(ID3D12DeviceCreateShaderResourceViewCommand& c) {
-  if (c.pDesc_.value &&
-      c.pDesc_.value->ViewDimension == D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE) {
-    captureGpuAddresses_.push_back(c.pDesc_.value->RaytracingAccelerationStructure.Location);
+void CommandPreservationLayer::Pre(ID3D12DeviceCreateShaderResourceViewCommand& c) {
+  if (c.m_pDesc.Value &&
+      c.m_pDesc.Value->ViewDimension == D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE) {
+    m_CaptureGpuAddresses.push_back(c.m_pDesc.Value->RaytracingAccelerationStructure.Location);
   }
 }
 
-void CommandPreservationLayer::post(ID3D12DeviceCreateShaderResourceViewCommand& c) {
-  if (c.pDesc_.value &&
-      c.pDesc_.value->ViewDimension == D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE) {
-    c.pDesc_.value->RaytracingAccelerationStructure.Location = captureGpuAddresses_[0];
-    captureGpuAddresses_.clear();
+void CommandPreservationLayer::Post(ID3D12DeviceCreateShaderResourceViewCommand& c) {
+  if (c.m_pDesc.Value &&
+      c.m_pDesc.Value->ViewDimension == D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE) {
+    c.m_pDesc.Value->RaytracingAccelerationStructure.Location = m_CaptureGpuAddresses[0];
+    m_CaptureGpuAddresses.clear();
   }
 }
 
-void CommandPreservationLayer::pre(
+void CommandPreservationLayer::Pre(
     ID3D12GraphicsCommandListSetComputeRootConstantBufferViewCommand& c) {
-  captureGpuAddresses_.push_back(c.BufferLocation_.value);
+  m_CaptureGpuAddresses.push_back(c.m_BufferLocation.Value);
 }
 
-void CommandPreservationLayer::post(
+void CommandPreservationLayer::Post(
     ID3D12GraphicsCommandListSetComputeRootConstantBufferViewCommand& c) {
-  c.BufferLocation_.value = captureGpuAddresses_[0];
-  captureGpuAddresses_.clear();
+  c.m_BufferLocation.Value = m_CaptureGpuAddresses[0];
+  m_CaptureGpuAddresses.clear();
 }
 
-void CommandPreservationLayer::pre(
+void CommandPreservationLayer::Pre(
     ID3D12GraphicsCommandListSetGraphicsRootConstantBufferViewCommand& c) {
-  captureGpuAddresses_.push_back(c.BufferLocation_.value);
+  m_CaptureGpuAddresses.push_back(c.m_BufferLocation.Value);
 }
 
-void CommandPreservationLayer::post(
+void CommandPreservationLayer::Post(
     ID3D12GraphicsCommandListSetGraphicsRootConstantBufferViewCommand& c) {
-  c.BufferLocation_.value = captureGpuAddresses_[0];
-  captureGpuAddresses_.clear();
+  c.m_BufferLocation.Value = m_CaptureGpuAddresses[0];
+  m_CaptureGpuAddresses.clear();
 }
 
-void CommandPreservationLayer::pre(
+void CommandPreservationLayer::Pre(
     ID3D12GraphicsCommandListSetComputeRootShaderResourceViewCommand& c) {
-  captureGpuAddresses_.push_back(c.BufferLocation_.value);
+  m_CaptureGpuAddresses.push_back(c.m_BufferLocation.Value);
 }
 
-void CommandPreservationLayer::post(
+void CommandPreservationLayer::Post(
     ID3D12GraphicsCommandListSetComputeRootShaderResourceViewCommand& c) {
-  c.BufferLocation_.value = captureGpuAddresses_[0];
-  captureGpuAddresses_.clear();
+  c.m_BufferLocation.Value = m_CaptureGpuAddresses[0];
+  m_CaptureGpuAddresses.clear();
 }
 
-void CommandPreservationLayer::pre(
+void CommandPreservationLayer::Pre(
     ID3D12GraphicsCommandListSetGraphicsRootShaderResourceViewCommand& c) {
-  captureGpuAddresses_.push_back(c.BufferLocation_.value);
+  m_CaptureGpuAddresses.push_back(c.m_BufferLocation.Value);
 }
 
-void CommandPreservationLayer::post(
+void CommandPreservationLayer::Post(
     ID3D12GraphicsCommandListSetGraphicsRootShaderResourceViewCommand& c) {
-  c.BufferLocation_.value = captureGpuAddresses_[0];
-  captureGpuAddresses_.clear();
+  c.m_BufferLocation.Value = m_CaptureGpuAddresses[0];
+  m_CaptureGpuAddresses.clear();
 }
 
-void CommandPreservationLayer::pre(
+void CommandPreservationLayer::Pre(
     ID3D12GraphicsCommandListSetComputeRootUnorderedAccessViewCommand& c) {
-  captureGpuAddresses_.push_back(c.BufferLocation_.value);
+  m_CaptureGpuAddresses.push_back(c.m_BufferLocation.Value);
 }
 
-void CommandPreservationLayer::post(
+void CommandPreservationLayer::Post(
     ID3D12GraphicsCommandListSetComputeRootUnorderedAccessViewCommand& c) {
-  c.BufferLocation_.value = captureGpuAddresses_[0];
-  captureGpuAddresses_.clear();
+  c.m_BufferLocation.Value = m_CaptureGpuAddresses[0];
+  m_CaptureGpuAddresses.clear();
 }
 
-void CommandPreservationLayer::pre(
+void CommandPreservationLayer::Pre(
     ID3D12GraphicsCommandListSetGraphicsRootUnorderedAccessViewCommand& c) {
-  captureGpuAddresses_.push_back(c.BufferLocation_.value);
+  m_CaptureGpuAddresses.push_back(c.m_BufferLocation.Value);
 }
 
-void CommandPreservationLayer::post(
+void CommandPreservationLayer::Post(
     ID3D12GraphicsCommandListSetGraphicsRootUnorderedAccessViewCommand& c) {
-  c.BufferLocation_.value = captureGpuAddresses_[0];
-  captureGpuAddresses_.clear();
+  c.m_BufferLocation.Value = m_CaptureGpuAddresses[0];
+  m_CaptureGpuAddresses.clear();
 }
 
-void CommandPreservationLayer::pre(
+void CommandPreservationLayer::Pre(
     ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& c) {
-  captureGpuAddresses_.push_back(c.DestAccelerationStructureData_.value);
-  captureGpuAddresses_.push_back(c.SourceAccelerationStructureData_.value);
+  m_CaptureGpuAddresses.push_back(c.m_DestAccelerationStructureData.Value);
+  m_CaptureGpuAddresses.push_back(c.m_SourceAccelerationStructureData.Value);
 }
 
-void CommandPreservationLayer::post(
+void CommandPreservationLayer::Post(
     ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& c) {
-  c.DestAccelerationStructureData_.value = captureGpuAddresses_[0];
-  c.SourceAccelerationStructureData_.value = captureGpuAddresses_[1];
-  captureGpuAddresses_.clear();
+  c.m_DestAccelerationStructureData.Value = m_CaptureGpuAddresses[0];
+  c.m_SourceAccelerationStructureData.Value = m_CaptureGpuAddresses[1];
+  m_CaptureGpuAddresses.clear();
 }
 
-void CommandPreservationLayer::pre(
+void CommandPreservationLayer::Pre(
     ID3D12GraphicsCommandList4EmitRaytracingAccelerationStructurePostbuildInfoCommand& c) {
-  captureGpuAddresses_.push_back(c.pDesc_.value->DestBuffer);
-  for (unsigned i = 0; i < c.NumSourceAccelerationStructures_.value; ++i) {
-    captureGpuAddresses_.push_back(c.pSourceAccelerationStructureData_.value[i]);
+  m_CaptureGpuAddresses.push_back(c.m_pDesc.Value->DestBuffer);
+  for (unsigned i = 0; i < c.m_NumSourceAccelerationStructures.Value; ++i) {
+    m_CaptureGpuAddresses.push_back(c.m_pSourceAccelerationStructureData.Value[i]);
   }
 }
 
-void CommandPreservationLayer::post(
+void CommandPreservationLayer::Post(
     ID3D12GraphicsCommandList4EmitRaytracingAccelerationStructurePostbuildInfoCommand& c) {
   unsigned index = 0;
-  c.pDesc_.value->DestBuffer = captureGpuAddresses_[index++];
-  for (unsigned i = 0; i < c.NumSourceAccelerationStructures_.value; ++i) {
-    c.pSourceAccelerationStructureData_.value[i] = captureGpuAddresses_[index++];
+  c.m_pDesc.Value->DestBuffer = m_CaptureGpuAddresses[index++];
+  for (unsigned i = 0; i < c.m_NumSourceAccelerationStructures.Value; ++i) {
+    c.m_pSourceAccelerationStructureData.Value[i] = m_CaptureGpuAddresses[index++];
   }
-  captureGpuAddresses_.clear();
+  m_CaptureGpuAddresses.clear();
 }
 
 } // namespace DirectX

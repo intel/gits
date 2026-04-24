@@ -24,60 +24,59 @@ public:
   ExecutionSerializationLayer(ExecutionSerializationRecorder& recorder);
   ~ExecutionSerializationLayer();
   
-  void post(StateRestoreBeginCommand& c) override;
-  void post(StateRestoreEndCommand& c) override;
-  void post(FrameEndCommand& c) override;
-  void post(MarkerUInt64Command& c) override;
-  void pre(CreateWindowMetaCommand& c) override;
-  void pre(MappedDataMetaCommand& c) override;
-  void pre(CreateHeapAllocationMetaCommand& c) override;
-  void pre(WaitForFenceSignaledCommand& c) override;
-  void pre(DllContainerMetaCommand& c) override;
-  void pre(IUnknownQueryInterfaceCommand& c) override;
-  void pre(IUnknownAddRefCommand& c) override;
-  void pre(IUnknownReleaseCommand& c) override;
-  void post(ID3D12GraphicsCommandListOMSetRenderTargetsCommand& c) override;
-  void post(ID3D12GraphicsCommandListClearDepthStencilViewCommand& c) override;
-  void post(ID3D12GraphicsCommandListClearRenderTargetViewCommand& c) override;
-  void post(ID3D12GraphicsCommandListClearUnorderedAccessViewUintCommand& c) override;
-  void post(ID3D12GraphicsCommandListClearUnorderedAccessViewFloatCommand& c) override;
+  void Post(StateRestoreBeginCommand& c) override;
+  void Post(StateRestoreEndCommand& c) override;
+  void Post(FrameEndCommand& c) override;
+  void Post(MarkerUInt64Command& c) override;
+  void Pre(CreateWindowMetaCommand& c) override;
+  void Pre(MappedDataMetaCommand& c) override;
+  void Pre(CreateHeapAllocationMetaCommand& c) override;
+  void Pre(WaitForFenceSignaledCommand& c) override;
+  void Pre(DllContainerMetaCommand& c) override;
+  void Pre(IUnknownQueryInterfaceCommand& c) override;
+  void Pre(IUnknownAddRefCommand& c) override;
+  void Pre(IUnknownReleaseCommand& c) override;
+  void Post(ID3D12GraphicsCommandListOMSetRenderTargetsCommand& c) override;
+  void Post(ID3D12GraphicsCommandListClearDepthStencilViewCommand& c) override;
+  void Post(ID3D12GraphicsCommandListClearRenderTargetViewCommand& c) override;
+  void Post(ID3D12GraphicsCommandListClearUnorderedAccessViewUintCommand& c) override;
+  void Post(ID3D12GraphicsCommandListClearUnorderedAccessViewFloatCommand& c) override;
   %for function in functions:
-  void pre(${function.name}Command& c) override;
+  void Pre(${function.name}Command& c) override;
   %endfor
   %for interface in interfaces:
   %for function in interface.functions:
-  void pre(${interface.name}${function.name}Command& c) override;
+  void Pre(${interface.name}${function.name}Command& c) override;
   %endfor
   %endfor
-  void pre(INTC_D3D12_CreateDeviceExtensionContextCommand& c) override;
-  void pre(INTC_D3D12_CreateDeviceExtensionContext1Command& c) override;
-  void pre(INTC_D3D12_SetApplicationInfoCommand& c) override;
-  void pre(INTC_DestroyDeviceExtensionContextCommand& c) override;
-  void pre(INTC_D3D12_SetFeatureSupportCommand& c) override;
-  void pre(INTC_D3D12_CreateComputePipelineStateCommand& c) override;
-  void pre(INTC_D3D12_CreatePlacedResourceCommand& c) override;
-  void pre(INTC_D3D12_CreateCommittedResourceCommand& c) override;
-  void pre(INTC_D3D12_CreateReservedResourceCommand& c) override;
-  void pre(INTC_D3D12_CreateCommandQueueCommand& c) override;
-  void pre(INTC_D3D12_CreateHeapCommand& c) override;
-  void pre(NvAPI_InitializeCommand& c) override;
-  void pre(NvAPI_UnloadCommand& c) override;
-  void pre(NvAPI_D3D12_SetCreatePipelineStateOptionsCommand& c) override;
-  void pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& c) override;
-  void pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& c) override;
-  void pre(NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& c) override;
-  void pre(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& c) override;
-  void pre(NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand& c) override;
+  void Pre(INTC_D3D12_CreateDeviceExtensionContextCommand& c) override;
+  void Pre(INTC_D3D12_CreateDeviceExtensionContext1Command& c) override;
+  void Pre(INTC_D3D12_SetApplicationInfoCommand& c) override;
+  void Pre(INTC_DestroyDeviceExtensionContextCommand& c) override;
+  void Pre(INTC_D3D12_SetFeatureSupportCommand& c) override;
+  void Pre(INTC_D3D12_CreateComputePipelineStateCommand& c) override;
+  void Pre(INTC_D3D12_CreatePlacedResourceCommand& c) override;
+  void Pre(INTC_D3D12_CreateCommittedResourceCommand& c) override;
+  void Pre(INTC_D3D12_CreateReservedResourceCommand& c) override;
+  void Pre(INTC_D3D12_CreateCommandQueueCommand& c) override;
+  void Pre(INTC_D3D12_CreateHeapCommand& c) override;
+  void Pre(NvAPI_InitializeCommand& c) override;
+  void Pre(NvAPI_UnloadCommand& c) override;
+  void Pre(NvAPI_D3D12_SetCreatePipelineStateOptionsCommand& c) override;
+  void Pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& c) override;
+  void Pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& c) override;
+  void Pre(NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& c) override;
+  void Pre(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& c) override;
+  void Pre(NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand& c) override;
 
 private:
-  bool inRange() const;
+  bool InRange() const;
 
-private:
-  ExecutionSerializationRecorder& recorder_;
-  CommandListExecutionService executionService_;
-  CpuDescriptorsService cpuDescriptorsService_;
-  unsigned currentFrame_{1};
-  unsigned endFrame_{};
+  ExecutionSerializationRecorder& m_Recorder;
+  CommandListExecutionService m_ExecutionService;
+  CpuDescriptorsService m_CpuDescriptorsService;
+  unsigned m_CurrentFrame{1};
+  unsigned m_EndFrame{};
 };
 
 } // namespace DirectX

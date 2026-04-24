@@ -20,465 +20,467 @@ namespace gits {
 namespace DirectX {
 
 CommandListService::CommandListService(StateTrackingService& stateService)
-    : stateService_(stateService) {
+    : m_StateService(stateService) {
 
-  restoreCommandLists_ = stateService_.getAnalyzerResults().restoreCommandLists();
+  m_RestoreCommandLists = m_StateService.GetAnalyzerResults().RestoreCommandLists();
 }
 
-void CommandListService::addCommandList(CommandListState* state) {
-  commandListsByKey_[state->key] = state;
+void CommandListService::AddCommandList(CommandListState* state) {
+  m_CommandListsByKey[state->Key] = state;
 }
-void CommandListService::removeCommandList(unsigned key) {
-  commandListsByKey_.erase(key);
+void CommandListService::RemoveCommandList(unsigned key) {
+  m_CommandListsByKey.erase(key);
 }
 
-void CommandListService::restoreCommandLists() {
-  if (!restoreCommandLists_) {
+void CommandListService::RestoreCommandLists() {
+  if (!m_RestoreCommandLists) {
     return;
   }
 
   std::map<unsigned, CommandListCommand*> commandsByKey;
   std::map<unsigned, unsigned> commandListAllocatorsForReset;
 
-  for (auto& it : commandListsByKey_) {
-    if (!stateService_.getAnalyzerResults().restoreCommandList(it.first)) {
+  for (auto& it : m_CommandListsByKey) {
+    if (!m_StateService.GetAnalyzerResults().RestoreCommandList(it.first)) {
       continue;
     }
     CommandListState* state = it.second;
-    if (state->allocatorKey && !state->commands.empty()) {
-      if (state->commands.front()->id != CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_RESET) {
-        commandListAllocatorsForReset[state->key] = state->allocatorKey;
+    if (state->m_AllocatorKey && !state->m_Commands.empty()) {
+      if (state->m_Commands.front()->m_Id != CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_RESET) {
+        commandListAllocatorsForReset[state->Key] = state->m_AllocatorKey;
       }
     }
-    for (CommandListCommand* command : state->commands) {
-      commandsByKey[command->commandKey] = command;
+    for (CommandListCommand* Command : state->m_Commands) {
+      commandsByKey[Command->m_CommandKey] = Command;
     }
   }
 
   for (auto& it : commandsByKey) {
-    CommandListCommand* command = it.second;
+    CommandListCommand* Command = it.second;
 
-    auto itReset = commandListAllocatorsForReset.find(command->commandListKey);
+    auto itReset = commandListAllocatorsForReset.find(Command->m_CommandListKey);
     if (itReset != commandListAllocatorsForReset.end()) {
       ID3D12GraphicsCommandListResetCommand reset;
-      reset.key = stateService_.getUniqueCommandKey();
-      reset.object_.key = itReset->first;
-      reset.pAllocator_.key = itReset->second;
-      stateService_.getRecorder().record(*createCommandSerializer(&reset));
+      reset.Key = m_StateService.GetUniqueCommandKey();
+      reset.m_Object.Key = itReset->first;
+      reset.m_pAllocator.Key = itReset->second;
+      m_StateService.GetRecorder().Record(*createCommandSerializer(&reset));
       commandListAllocatorsForReset.erase(itReset);
     }
 
-    if (command->id == CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_OMSETRENDERTARGETS) {
-      restoreCommandState(static_cast<CommandListOMSetRenderTargets*>(command));
-    } else if (command->id == CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_CLEARRENDERTARGETVIEW) {
-      restoreCommandState(static_cast<CommandListClearRenderTargetView*>(command));
-    } else if (command->id == CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_CLEARDEPTHSTENCILVIEW) {
-      restoreCommandState(static_cast<CommandListClearDepthStencilView*>(command));
-    } else if (command->id ==
+    if (Command->m_Id == CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_OMSETRENDERTARGETS) {
+      RestoreCommandState(static_cast<CommandListOMSetRenderTargets*>(Command));
+    } else if (Command->m_Id == CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_CLEARRENDERTARGETVIEW) {
+      RestoreCommandState(static_cast<CommandListClearRenderTargetView*>(Command));
+    } else if (Command->m_Id == CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_CLEARDEPTHSTENCILVIEW) {
+      RestoreCommandState(static_cast<CommandListClearDepthStencilView*>(Command));
+    } else if (Command->m_Id ==
                CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_CLEARUNORDEREDACCESSVIEWUINT) {
-      restoreCommandState(static_cast<CommandListClearUnorderedAccessViewUint*>(command));
-    } else if (command->id ==
+      RestoreCommandState(static_cast<CommandListClearUnorderedAccessViewUint*>(Command));
+    } else if (Command->m_Id ==
                CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_CLEARUNORDEREDACCESSVIEWFLOAT) {
-      restoreCommandState(static_cast<CommandListClearUnorderedAccessViewFloat*>(command));
+      RestoreCommandState(static_cast<CommandListClearUnorderedAccessViewFloat*>(Command));
     } else {
-      stateService_.getRecorder().record(*command->commandSerializer);
+      m_StateService.GetRecorder().Record(*Command->m_CommandSerializer);
     }
   }
 }
 
-void CommandListService::restoreCommandState(CommandListOMSetRenderTargets* command) {
+void CommandListService::RestoreCommandState(CommandListOMSetRenderTargets* Command) {
   bool changed = false;
-  for (unsigned i = 0; i < command->renderTargetViews.size(); ++i) {
-    D3D12RenderTargetViewState* view = command->renderTargetViews[i].get();
+  for (unsigned i = 0; i < Command->m_RenderTargetViews.size(); ++i) {
+    D3D12RenderTargetViewState* view = Command->m_RenderTargetViews[i].get();
     if (view) {
-      DescriptorState* descriptor = stateService_.getDescriptorService().getDescriptorState(
-          view->destDescriptorKey, view->destDescriptorIndex);
-      if (!equalRtv(view, descriptor)) {
-        createAuxiliaryRtv(view);
+      DescriptorState* descriptor = m_StateService.GetDescriptorService().GetDescriptorState(
+          view->DestDescriptorKey, view->DestDescriptorIndex);
+      if (!EqualRtv(view, descriptor)) {
+        CreateAuxiliaryRtv(view);
         changed = true;
       }
     }
   }
-  D3D12DepthStencilViewState* view = command->depthStencilView.get();
+  D3D12DepthStencilViewState* view = Command->m_DepthStencilView.get();
   if (view) {
-    DescriptorState* descriptor = stateService_.getDescriptorService().getDescriptorState(
-        view->destDescriptorKey, view->destDescriptorIndex);
-    if (!equalDsv(view, descriptor)) {
-      createAuxiliaryDsv(view);
+    DescriptorState* descriptor = m_StateService.GetDescriptorService().GetDescriptorState(
+        view->DestDescriptorKey, view->DestDescriptorIndex);
+    if (!EqualDsv(view, descriptor)) {
+      CreateAuxiliaryDsv(view);
       changed = true;
     }
   }
 
   if (changed) {
     ID3D12GraphicsCommandListOMSetRenderTargetsCommand c;
-    c.key = stateService_.getUniqueCommandKey();
-    c.object_.key = command->commandListKey;
-    c.NumRenderTargetDescriptors_.value = command->renderTargetViews.size();
-    c.RTsSingleHandleToDescriptorRange_.value = command->rtsSingleHandleToDescriptorRange;
-    c.pRenderTargetDescriptors_.interfaceKeys.resize(command->renderTargetViews.size());
-    c.pRenderTargetDescriptors_.indexes.resize(command->renderTargetViews.size());
-    c.pRenderTargetDescriptors_.size = command->renderTargetViews.size();
-    c.pRenderTargetDescriptors_.value =
-        static_cast<D3D12_CPU_DESCRIPTOR_HANDLE*>(stateService_.getUniqueFakePointer());
-    for (unsigned i = 0; i < command->renderTargetViews.size(); ++i) {
-      D3D12RenderTargetViewState* view = command->renderTargetViews[i].get();
+    c.Key = m_StateService.GetUniqueCommandKey();
+    c.m_Object.Key = Command->m_CommandListKey;
+    c.m_NumRenderTargetDescriptors.Value = Command->m_RenderTargetViews.size();
+    c.m_RTsSingleHandleToDescriptorRange.Value = Command->m_RtsSingleHandleToDescriptorRange;
+    c.m_pRenderTargetDescriptors.InterfaceKeys.resize(Command->m_RenderTargetViews.size());
+    c.m_pRenderTargetDescriptors.Indexes.resize(Command->m_RenderTargetViews.size());
+    c.m_pRenderTargetDescriptors.Size = Command->m_RenderTargetViews.size();
+    c.m_pRenderTargetDescriptors.Value =
+        static_cast<D3D12_CPU_DESCRIPTOR_HANDLE*>(m_StateService.GetUniqueFakePointer());
+    for (unsigned i = 0; i < Command->m_RenderTargetViews.size(); ++i) {
+      D3D12RenderTargetViewState* view = Command->m_RenderTargetViews[i].get();
       if (view) {
-        c.pRenderTargetDescriptors_.interfaceKeys[i] = view->destDescriptorKey;
-        c.pRenderTargetDescriptors_.indexes[i] = view->destDescriptorIndex;
+        c.m_pRenderTargetDescriptors.InterfaceKeys[i] = view->DestDescriptorKey;
+        c.m_pRenderTargetDescriptors.Indexes[i] = view->DestDescriptorIndex;
       }
     }
-    D3D12DepthStencilViewState* view = command->depthStencilView.get();
+    D3D12DepthStencilViewState* view = Command->m_DepthStencilView.get();
     if (view) {
-      c.pDepthStencilDescriptor_.interfaceKeys.resize(1);
-      c.pDepthStencilDescriptor_.indexes.resize(1);
-      c.pDepthStencilDescriptor_.interfaceKeys[0] = view->destDescriptorKey;
-      c.pDepthStencilDescriptor_.indexes[0] = view->destDescriptorIndex;
-      c.pDepthStencilDescriptor_.size = 1;
-      c.pDepthStencilDescriptor_.value =
-          static_cast<D3D12_CPU_DESCRIPTOR_HANDLE*>(stateService_.getUniqueFakePointer());
+      c.m_pDepthStencilDescriptor.InterfaceKeys.resize(1);
+      c.m_pDepthStencilDescriptor.Indexes.resize(1);
+      c.m_pDepthStencilDescriptor.InterfaceKeys[0] = view->DestDescriptorKey;
+      c.m_pDepthStencilDescriptor.Indexes[0] = view->DestDescriptorIndex;
+      c.m_pDepthStencilDescriptor.Size = 1;
+      c.m_pDepthStencilDescriptor.Value =
+          static_cast<D3D12_CPU_DESCRIPTOR_HANDLE*>(m_StateService.GetUniqueFakePointer());
     }
-    stateService_.getRecorder().record(ID3D12GraphicsCommandListOMSetRenderTargetsSerializer(c));
+    m_StateService.GetRecorder().Record(ID3D12GraphicsCommandListOMSetRenderTargetsSerializer(c));
   } else {
-    stateService_.getRecorder().record(*command->commandSerializer);
+    m_StateService.GetRecorder().Record(*Command->m_CommandSerializer);
   }
 }
 
-void CommandListService::restoreCommandState(CommandListClearRenderTargetView* command) {
+void CommandListService::RestoreCommandState(CommandListClearRenderTargetView* Command) {
   bool changed = false;
-  D3D12RenderTargetViewState* view = command->renderTargetView.get();
+  D3D12RenderTargetViewState* view = Command->m_RenderTargetView.get();
   if (view) {
-    DescriptorState* descriptor = stateService_.getDescriptorService().getDescriptorState(
-        view->destDescriptorKey, view->destDescriptorIndex);
-    if (!equalRtv(view, descriptor)) {
-      createAuxiliaryRtv(view);
+    DescriptorState* descriptor = m_StateService.GetDescriptorService().GetDescriptorState(
+        view->DestDescriptorKey, view->DestDescriptorIndex);
+    if (!EqualRtv(view, descriptor)) {
+      CreateAuxiliaryRtv(view);
       changed = true;
     }
   }
   if (changed) {
     ID3D12GraphicsCommandListClearRenderTargetViewCommand c;
-    c.key = stateService_.getUniqueCommandKey();
-    c.object_.key = command->commandListKey;
-    c.RenderTargetView_.value = view->destDescriptor;
-    c.RenderTargetView_.interfaceKey = view->destDescriptorKey;
-    c.RenderTargetView_.index = view->destDescriptorIndex;
+    c.Key = m_StateService.GetUniqueCommandKey();
+    c.m_Object.Key = Command->m_CommandListKey;
+    c.m_RenderTargetView.Value = view->DestDescriptor;
+    c.m_RenderTargetView.InterfaceKey = view->DestDescriptorKey;
+    c.m_RenderTargetView.Index = view->DestDescriptorIndex;
     for (unsigned i = 0; i < 4; ++i) {
-      c.ColorRGBA_.value[i] = command->colorRGBA[i];
+      c.m_ColorRGBA.Value[i] = Command->m_ColorRGBA[i];
     }
-    if (!command->rects.empty()) {
-      c.NumRects_.value = command->rects.size();
-      c.pRects_.size = command->rects.size();
-      c.pRects_.value = command->rects.data();
+    if (!Command->m_Rects.empty()) {
+      c.m_NumRects.Value = Command->m_Rects.size();
+      c.m_pRects.Size = Command->m_Rects.size();
+      c.m_pRects.Value = Command->m_Rects.data();
     }
-    stateService_.getRecorder().record(ID3D12GraphicsCommandListClearRenderTargetViewSerializer(c));
+    m_StateService.GetRecorder().Record(
+        ID3D12GraphicsCommandListClearRenderTargetViewSerializer(c));
   } else {
-    stateService_.getRecorder().record(*command->commandSerializer);
+    m_StateService.GetRecorder().Record(*Command->m_CommandSerializer);
   }
 }
 
-void CommandListService::restoreCommandState(CommandListClearDepthStencilView* command) {
+void CommandListService::RestoreCommandState(CommandListClearDepthStencilView* Command) {
   bool changed = false;
-  D3D12DepthStencilViewState* view = command->depthStencilView.get();
+  D3D12DepthStencilViewState* view = Command->m_DepthStencilView.get();
   if (view) {
-    DescriptorState* descriptor = stateService_.getDescriptorService().getDescriptorState(
-        view->destDescriptorKey, view->destDescriptorIndex);
-    if (!equalDsv(view, descriptor)) {
-      createAuxiliaryDsv(view);
+    DescriptorState* descriptor = m_StateService.GetDescriptorService().GetDescriptorState(
+        view->DestDescriptorKey, view->DestDescriptorIndex);
+    if (!EqualDsv(view, descriptor)) {
+      CreateAuxiliaryDsv(view);
       changed = true;
     }
   }
   if (changed) {
     ID3D12GraphicsCommandListClearDepthStencilViewCommand c;
-    c.key = stateService_.getUniqueCommandKey();
-    c.object_.key = command->commandListKey;
-    c.DepthStencilView_.value = view->destDescriptor;
-    c.DepthStencilView_.interfaceKey = view->destDescriptorKey;
-    c.DepthStencilView_.index = view->destDescriptorIndex;
-    c.Depth_.value = command->depth;
-    c.Stencil_.value = command->stencil;
-    if (!command->rects.empty()) {
-      c.NumRects_.value = command->rects.size();
-      c.pRects_.size = command->rects.size();
-      c.pRects_.value = command->rects.data();
+    c.Key = m_StateService.GetUniqueCommandKey();
+    c.m_Object.Key = Command->m_CommandListKey;
+    c.m_DepthStencilView.Value = view->DestDescriptor;
+    c.m_DepthStencilView.InterfaceKey = view->DestDescriptorKey;
+    c.m_DepthStencilView.Index = view->DestDescriptorIndex;
+    c.m_Depth.Value = Command->m_Depth;
+    c.m_Stencil.Value = Command->m_Stencil;
+    if (!Command->m_Rects.empty()) {
+      c.m_NumRects.Value = Command->m_Rects.size();
+      c.m_pRects.Size = Command->m_Rects.size();
+      c.m_pRects.Value = Command->m_Rects.data();
     }
-    stateService_.getRecorder().record(ID3D12GraphicsCommandListClearDepthStencilViewSerializer(c));
+    m_StateService.GetRecorder().Record(
+        ID3D12GraphicsCommandListClearDepthStencilViewSerializer(c));
   } else {
-    stateService_.getRecorder().record(*command->commandSerializer);
+    m_StateService.GetRecorder().Record(*Command->m_CommandSerializer);
   }
 }
 
 template <typename CommandListClearUnorderedAccessView>
-void CommandListService::restoreCommandState(CommandListClearUnorderedAccessView* command) {
+void CommandListService::RestoreCommandState(CommandListClearUnorderedAccessView* Command) {
   bool changedGpu = false;
   D3D12UnorderedAccessViewState* viewGPUHandleInCurrentHeap =
-      command->viewGPUHandleInCurrentHeap.get();
+      Command->m_ViewGPUHandleInCurrentHeap.get();
   if (viewGPUHandleInCurrentHeap) {
-    DescriptorState* descriptor = stateService_.getDescriptorService().getDescriptorState(
-        viewGPUHandleInCurrentHeap->destDescriptorKey,
-        viewGPUHandleInCurrentHeap->destDescriptorIndex);
-    if (!equalUav(viewGPUHandleInCurrentHeap, descriptor)) {
-      createAuxiliaryUavGpu(viewGPUHandleInCurrentHeap);
+    DescriptorState* descriptor = m_StateService.GetDescriptorService().GetDescriptorState(
+        viewGPUHandleInCurrentHeap->DestDescriptorKey,
+        viewGPUHandleInCurrentHeap->DestDescriptorIndex);
+    if (!EqualUav(viewGPUHandleInCurrentHeap, descriptor)) {
+      CreateAuxiliaryUavGpu(viewGPUHandleInCurrentHeap);
       changedGpu = true;
     }
   }
   bool changedCpu = false;
-  D3D12UnorderedAccessViewState* viewCPUHandle = command->viewCPUHandle.get();
+  D3D12UnorderedAccessViewState* viewCPUHandle = Command->m_ViewCPUHandle.get();
   if (viewCPUHandle) {
-    DescriptorState* descriptor = stateService_.getDescriptorService().getDescriptorState(
-        viewCPUHandle->destDescriptorKey, viewCPUHandle->destDescriptorIndex);
-    if (!equalUav(viewCPUHandle, descriptor)) {
-      createAuxiliaryUavCpu(viewCPUHandle);
+    DescriptorState* descriptor = m_StateService.GetDescriptorService().GetDescriptorState(
+        viewCPUHandle->DestDescriptorKey, viewCPUHandle->DestDescriptorIndex);
+    if (!EqualUav(viewCPUHandle, descriptor)) {
+      CreateAuxiliaryUavCpu(viewCPUHandle);
       changedCpu = true;
     }
   }
   if (changedGpu || changedCpu) {
     if (changedGpu) {
       ID3D12GraphicsCommandListSetDescriptorHeapsCommand c;
-      c.key = stateService_.getUniqueCommandKey();
-      c.object_.key = command->commandListKey;
-      c.NumDescriptorHeaps_.value = 1;
-      c.ppDescriptorHeaps_.keys.resize(1);
-      c.ppDescriptorHeaps_.size = 1;
-      c.ppDescriptorHeaps_.keys[0] = auxiliaryUavGpuDescriptorHeapKey_;
+      c.Key = m_StateService.GetUniqueCommandKey();
+      c.m_Object.Key = Command->m_CommandListKey;
+      c.m_NumDescriptorHeaps.Value = 1;
+      c.m_ppDescriptorHeaps.Keys.resize(1);
+      c.m_ppDescriptorHeaps.Size = 1;
+      c.m_ppDescriptorHeaps.Keys[0] = m_AuxiliaryUavGpuDescriptorHeapKey;
       ID3D12DescriptorHeap* fakePointer =
-          static_cast<ID3D12DescriptorHeap*>(stateService_.getUniqueFakePointer());
-      c.ppDescriptorHeaps_.value = &fakePointer;
-      stateService_.getRecorder().record(ID3D12GraphicsCommandListSetDescriptorHeapsSerializer(c));
+          static_cast<ID3D12DescriptorHeap*>(m_StateService.GetUniqueFakePointer());
+      c.m_ppDescriptorHeaps.Value = &fakePointer;
+      m_StateService.GetRecorder().Record(ID3D12GraphicsCommandListSetDescriptorHeapsSerializer(c));
     }
     {
       ID3D12GraphicsCommandListClearUnorderedAccessViewUintCommand c;
-      c.key = stateService_.getUniqueCommandKey();
-      c.object_.key = command->commandListKey;
+      c.Key = m_StateService.GetUniqueCommandKey();
+      c.m_Object.Key = Command->m_CommandListKey;
       if (viewGPUHandleInCurrentHeap) {
-        c.ViewGPUHandleInCurrentHeap_.interfaceKey = viewGPUHandleInCurrentHeap->destDescriptorKey;
-        c.ViewGPUHandleInCurrentHeap_.index = viewGPUHandleInCurrentHeap->destDescriptorIndex;
+        c.m_ViewGPUHandleInCurrentHeap.InterfaceKey = viewGPUHandleInCurrentHeap->DestDescriptorKey;
+        c.m_ViewGPUHandleInCurrentHeap.Index = viewGPUHandleInCurrentHeap->DestDescriptorIndex;
       }
       if (viewCPUHandle) {
-        c.ViewCPUHandle_.value = viewCPUHandle->destDescriptor;
-        c.ViewCPUHandle_.interfaceKey = viewCPUHandle->destDescriptorKey;
-        c.ViewCPUHandle_.index = viewCPUHandle->destDescriptorIndex;
+        c.m_ViewCPUHandle.Value = viewCPUHandle->DestDescriptor;
+        c.m_ViewCPUHandle.InterfaceKey = viewCPUHandle->DestDescriptorKey;
+        c.m_ViewCPUHandle.Index = viewCPUHandle->DestDescriptorIndex;
       }
-      c.pResource_.key = command->resourceKey;
+      c.m_pResource.Key = Command->m_ResourceKey;
       for (unsigned i = 0; i < 4; ++i) {
-        c.Values_.value[i] = command->values[i];
+        c.m_Values.Value[i] = Command->m_Values[i];
       }
-      if (!command->rects.empty()) {
-        c.NumRects_.value = command->rects.size();
-        c.pRects_.size = command->rects.size();
-        c.pRects_.value = command->rects.data();
+      if (!Command->m_Rects.empty()) {
+        c.m_NumRects.Value = Command->m_Rects.size();
+        c.m_pRects.Size = Command->m_Rects.size();
+        c.m_pRects.Value = Command->m_Rects.data();
       }
-      stateService_.getRecorder().record(
+      m_StateService.GetRecorder().Record(
           ID3D12GraphicsCommandListClearUnorderedAccessViewUintSerializer(c));
     }
     if (changedGpu) {
-      CommandListState* commandListState = commandListsByKey_[command->commandListKey];
+      CommandListState* commandListState = m_CommandListsByKey[Command->m_CommandListKey];
       ID3D12GraphicsCommandListSetDescriptorHeapsCommand c;
-      c.key = stateService_.getUniqueCommandKey();
-      c.object_.key = command->commandListKey;
-      c.NumDescriptorHeaps_.value = commandListState->descriptorHeapKeys.size();
-      c.ppDescriptorHeaps_.size = c.NumDescriptorHeaps_.value;
-      c.ppDescriptorHeaps_.keys = commandListState->descriptorHeapKeys;
+      c.Key = m_StateService.GetUniqueCommandKey();
+      c.m_Object.Key = Command->m_CommandListKey;
+      c.m_NumDescriptorHeaps.Value = commandListState->m_DescriptorHeapKeys.size();
+      c.m_ppDescriptorHeaps.Size = c.m_NumDescriptorHeaps.Value;
+      c.m_ppDescriptorHeaps.Keys = commandListState->m_DescriptorHeapKeys;
       ID3D12DescriptorHeap* fakePointer =
-          static_cast<ID3D12DescriptorHeap*>(stateService_.getUniqueFakePointer());
-      c.ppDescriptorHeaps_.value = &fakePointer;
-      stateService_.getRecorder().record(ID3D12GraphicsCommandListSetDescriptorHeapsSerializer(c));
+          static_cast<ID3D12DescriptorHeap*>(m_StateService.GetUniqueFakePointer());
+      c.m_ppDescriptorHeaps.Value = &fakePointer;
+      m_StateService.GetRecorder().Record(ID3D12GraphicsCommandListSetDescriptorHeapsSerializer(c));
     }
   } else {
-    stateService_.getRecorder().record(*command->commandSerializer);
+    m_StateService.GetRecorder().Record(*Command->m_CommandSerializer);
   }
 }
 
-void CommandListService::initAuxiliaryRtvHeap(unsigned deviceKey) {
-  if (auxiliaryRtvDescriptorHeapKey_) {
+void CommandListService::InitAuxiliaryRtvHeap(unsigned DeviceKey) {
+  if (m_AuxiliaryRtvDescriptorHeapKey) {
     return;
   }
   ID3D12DeviceCreateDescriptorHeapCommand c;
-  c.key = stateService_.getUniqueCommandKey();
-  c.object_.key = deviceKey;
+  c.Key = m_StateService.GetUniqueCommandKey();
+  c.m_Object.Key = DeviceKey;
   D3D12_DESCRIPTOR_HEAP_DESC desc{};
   desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-  desc.NumDescriptors = auxiliaryHeapSize_;
+  desc.NumDescriptors = m_AuxiliaryHeapSize;
   desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
   desc.NodeMask = 1;
-  c.pDescriptorHeapDesc_.value = &desc;
-  c.riid_.value = IID_ID3D12DescriptorHeap;
-  auxiliaryRtvDescriptorHeapKey_ = stateService_.getUniqueObjectKey();
-  c.ppvHeap_.key = auxiliaryRtvDescriptorHeapKey_;
-  stateService_.getRecorder().record(ID3D12DeviceCreateDescriptorHeapSerializer(c));
+  c.m_pDescriptorHeapDesc.Value = &desc;
+  c.m_riid.Value = IID_ID3D12DescriptorHeap;
+  m_AuxiliaryRtvDescriptorHeapKey = m_StateService.GetUniqueObjectKey();
+  c.m_ppvHeap.Key = m_AuxiliaryRtvDescriptorHeapKey;
+  m_StateService.GetRecorder().Record(ID3D12DeviceCreateDescriptorHeapSerializer(c));
 }
 
-void CommandListService::initAuxiliaryDsvHeap(unsigned deviceKey) {
-  if (auxiliaryDsvDescriptorHeapKey_) {
+void CommandListService::InitAuxiliaryDsvHeap(unsigned DeviceKey) {
+  if (m_AuxiliaryDsvDescriptorHeapKey) {
     return;
   }
   ID3D12DeviceCreateDescriptorHeapCommand c;
-  c.key = stateService_.getUniqueCommandKey();
-  c.object_.key = deviceKey;
+  c.Key = m_StateService.GetUniqueCommandKey();
+  c.m_Object.Key = DeviceKey;
   D3D12_DESCRIPTOR_HEAP_DESC desc{};
   desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
-  desc.NumDescriptors = auxiliaryHeapSize_;
+  desc.NumDescriptors = m_AuxiliaryHeapSize;
   desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
   desc.NodeMask = 1;
-  c.pDescriptorHeapDesc_.value = &desc;
-  c.riid_.value = IID_ID3D12DescriptorHeap;
-  auxiliaryDsvDescriptorHeapKey_ = stateService_.getUniqueObjectKey();
-  c.ppvHeap_.key = auxiliaryDsvDescriptorHeapKey_;
-  stateService_.getRecorder().record(ID3D12DeviceCreateDescriptorHeapSerializer(c));
+  c.m_pDescriptorHeapDesc.Value = &desc;
+  c.m_riid.Value = IID_ID3D12DescriptorHeap;
+  m_AuxiliaryDsvDescriptorHeapKey = m_StateService.GetUniqueObjectKey();
+  c.m_ppvHeap.Key = m_AuxiliaryDsvDescriptorHeapKey;
+  m_StateService.GetRecorder().Record(ID3D12DeviceCreateDescriptorHeapSerializer(c));
 }
 
-void CommandListService::initAuxiliaryUavGpuHeap(unsigned deviceKey) {
-  if (auxiliaryUavGpuDescriptorHeapKey_) {
+void CommandListService::InitAuxiliaryUavGpuHeap(unsigned DeviceKey) {
+  if (m_AuxiliaryUavGpuDescriptorHeapKey) {
     return;
   }
   ID3D12DeviceCreateDescriptorHeapCommand c;
-  c.key = stateService_.getUniqueCommandKey();
-  c.object_.key = deviceKey;
+  c.Key = m_StateService.GetUniqueCommandKey();
+  c.m_Object.Key = DeviceKey;
   D3D12_DESCRIPTOR_HEAP_DESC desc{};
   desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-  desc.NumDescriptors = auxiliaryHeapSize_;
+  desc.NumDescriptors = m_AuxiliaryHeapSize;
   desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
   desc.NodeMask = 1;
-  c.pDescriptorHeapDesc_.value = &desc;
-  c.riid_.value = IID_ID3D12DescriptorHeap;
-  auxiliaryUavGpuDescriptorHeapKey_ = stateService_.getUniqueObjectKey();
-  c.ppvHeap_.key = auxiliaryUavGpuDescriptorHeapKey_;
-  stateService_.getRecorder().record(ID3D12DeviceCreateDescriptorHeapSerializer(c));
+  c.m_pDescriptorHeapDesc.Value = &desc;
+  c.m_riid.Value = IID_ID3D12DescriptorHeap;
+  m_AuxiliaryUavGpuDescriptorHeapKey = m_StateService.GetUniqueObjectKey();
+  c.m_ppvHeap.Key = m_AuxiliaryUavGpuDescriptorHeapKey;
+  m_StateService.GetRecorder().Record(ID3D12DeviceCreateDescriptorHeapSerializer(c));
 }
 
-void CommandListService::initAuxiliaryUavCpuHeap(unsigned deviceKey) {
-  if (auxiliaryUavCpuDescriptorHeapKey_) {
+void CommandListService::InitAuxiliaryUavCpuHeap(unsigned DeviceKey) {
+  if (m_AuxiliaryUavCpuDescriptorHeapKey) {
     return;
   }
   ID3D12DeviceCreateDescriptorHeapCommand c;
-  c.key = stateService_.getUniqueCommandKey();
-  c.object_.key = deviceKey;
+  c.Key = m_StateService.GetUniqueCommandKey();
+  c.m_Object.Key = DeviceKey;
   D3D12_DESCRIPTOR_HEAP_DESC desc{};
   desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-  desc.NumDescriptors = auxiliaryHeapSize_;
+  desc.NumDescriptors = m_AuxiliaryHeapSize;
   desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
   desc.NodeMask = 1;
-  c.pDescriptorHeapDesc_.value = &desc;
-  c.riid_.value = IID_ID3D12DescriptorHeap;
-  auxiliaryUavCpuDescriptorHeapKey_ = stateService_.getUniqueObjectKey();
-  c.ppvHeap_.key = auxiliaryUavCpuDescriptorHeapKey_;
-  stateService_.getRecorder().record(ID3D12DeviceCreateDescriptorHeapSerializer(c));
+  c.m_pDescriptorHeapDesc.Value = &desc;
+  c.m_riid.Value = IID_ID3D12DescriptorHeap;
+  m_AuxiliaryUavCpuDescriptorHeapKey = m_StateService.GetUniqueObjectKey();
+  c.m_ppvHeap.Key = m_AuxiliaryUavCpuDescriptorHeapKey;
+  m_StateService.GetRecorder().Record(ID3D12DeviceCreateDescriptorHeapSerializer(c));
 }
 
-void CommandListService::createAuxiliaryRtv(D3D12RenderTargetViewState* view) {
-  initAuxiliaryRtvHeap(view->deviceKey);
+void CommandListService::CreateAuxiliaryRtv(D3D12RenderTargetViewState* view) {
+  InitAuxiliaryRtvHeap(view->DeviceKey);
 
-  if (auxiliaryRtvDescriptorHeapIndex_ >= auxiliaryHeapSize_) {
+  if (m_AuxiliaryRtvDescriptorHeapIndex >= m_AuxiliaryHeapSize) {
     LOG_ERROR << "Auxiliary RTV descriptor heap too small.";
     exit(EXIT_FAILURE);
   }
   ID3D12DeviceCreateRenderTargetViewCommand c;
-  c.key = stateService_.getUniqueCommandKey();
-  c.object_.key = view->deviceKey;
-  c.pResource_.key = view->resourceKey;
-  c.pDesc_.value = &view->desc;
-  c.DestDescriptor_.interfaceKey = auxiliaryRtvDescriptorHeapKey_;
-  c.DestDescriptor_.index = auxiliaryRtvDescriptorHeapIndex_;
-  stateService_.getRecorder().record(ID3D12DeviceCreateRenderTargetViewSerializer(c));
-  view->destDescriptorKey = auxiliaryRtvDescriptorHeapKey_;
-  view->destDescriptorIndex = auxiliaryRtvDescriptorHeapIndex_;
-  ++auxiliaryRtvDescriptorHeapIndex_;
+  c.Key = m_StateService.GetUniqueCommandKey();
+  c.m_Object.Key = view->DeviceKey;
+  c.m_pResource.Key = view->ResourceKey;
+  c.m_pDesc.Value = &view->Desc;
+  c.m_DestDescriptor.InterfaceKey = m_AuxiliaryRtvDescriptorHeapKey;
+  c.m_DestDescriptor.Index = m_AuxiliaryRtvDescriptorHeapIndex;
+  m_StateService.GetRecorder().Record(ID3D12DeviceCreateRenderTargetViewSerializer(c));
+  view->DestDescriptorKey = m_AuxiliaryRtvDescriptorHeapKey;
+  view->DestDescriptorIndex = m_AuxiliaryRtvDescriptorHeapIndex;
+  ++m_AuxiliaryRtvDescriptorHeapIndex;
 }
 
-void CommandListService::createAuxiliaryDsv(D3D12DepthStencilViewState* view) {
-  initAuxiliaryDsvHeap(view->deviceKey);
+void CommandListService::CreateAuxiliaryDsv(D3D12DepthStencilViewState* view) {
+  InitAuxiliaryDsvHeap(view->DeviceKey);
 
-  if (auxiliaryDsvDescriptorHeapIndex_ >= auxiliaryHeapSize_) {
+  if (m_AuxiliaryDsvDescriptorHeapIndex >= m_AuxiliaryHeapSize) {
     LOG_ERROR << "Auxiliary DSV descriptor heap too small.";
     exit(EXIT_FAILURE);
   }
   ID3D12DeviceCreateDepthStencilViewCommand c;
-  c.key = stateService_.getUniqueCommandKey();
-  c.object_.key = view->deviceKey;
-  c.pResource_.key = view->resourceKey;
-  c.pDesc_.value = &view->desc;
-  c.DestDescriptor_.interfaceKey = auxiliaryDsvDescriptorHeapKey_;
-  c.DestDescriptor_.index = auxiliaryDsvDescriptorHeapIndex_;
-  stateService_.getRecorder().record(ID3D12DeviceCreateDepthStencilViewSerializer(c));
-  view->destDescriptorKey = auxiliaryDsvDescriptorHeapKey_;
-  view->destDescriptorIndex = auxiliaryDsvDescriptorHeapIndex_;
-  ++auxiliaryDsvDescriptorHeapIndex_;
+  c.Key = m_StateService.GetUniqueCommandKey();
+  c.m_Object.Key = view->DeviceKey;
+  c.m_pResource.Key = view->ResourceKey;
+  c.m_pDesc.Value = &view->Desc;
+  c.m_DestDescriptor.InterfaceKey = m_AuxiliaryDsvDescriptorHeapKey;
+  c.m_DestDescriptor.Index = m_AuxiliaryDsvDescriptorHeapIndex;
+  m_StateService.GetRecorder().Record(ID3D12DeviceCreateDepthStencilViewSerializer(c));
+  view->DestDescriptorKey = m_AuxiliaryDsvDescriptorHeapKey;
+  view->DestDescriptorIndex = m_AuxiliaryDsvDescriptorHeapIndex;
+  ++m_AuxiliaryDsvDescriptorHeapIndex;
 }
 
-void CommandListService::createAuxiliaryUavGpu(D3D12UnorderedAccessViewState* view) {
-  initAuxiliaryUavGpuHeap(view->deviceKey);
+void CommandListService::CreateAuxiliaryUavGpu(D3D12UnorderedAccessViewState* view) {
+  InitAuxiliaryUavGpuHeap(view->DeviceKey);
 
-  if (auxiliaryUavGpuDescriptorHeapIndex_ >= auxiliaryHeapSize_) {
+  if (m_AuxiliaryUavGpuDescriptorHeapIndex >= m_AuxiliaryHeapSize) {
     LOG_ERROR << "Auxiliary UAV GPU descriptor heap too small.";
     exit(EXIT_FAILURE);
   }
   ID3D12DeviceCreateUnorderedAccessViewCommand c;
-  c.key = stateService_.getUniqueCommandKey();
-  c.object_.key = view->deviceKey;
-  c.pResource_.key = view->resourceKey;
-  c.pDesc_.value = &view->desc;
-  c.DestDescriptor_.interfaceKey = auxiliaryUavGpuDescriptorHeapKey_;
-  c.DestDescriptor_.index = auxiliaryUavGpuDescriptorHeapIndex_;
-  stateService_.getRecorder().record(ID3D12DeviceCreateUnorderedAccessViewSerializer(c));
-  view->destDescriptorKey = auxiliaryUavGpuDescriptorHeapKey_;
-  view->destDescriptorIndex = auxiliaryUavGpuDescriptorHeapIndex_;
-  ++auxiliaryUavGpuDescriptorHeapIndex_;
+  c.Key = m_StateService.GetUniqueCommandKey();
+  c.m_Object.Key = view->DeviceKey;
+  c.m_pResource.Key = view->ResourceKey;
+  c.m_pDesc.Value = &view->Desc;
+  c.m_DestDescriptor.InterfaceKey = m_AuxiliaryUavGpuDescriptorHeapKey;
+  c.m_DestDescriptor.Index = m_AuxiliaryUavGpuDescriptorHeapIndex;
+  m_StateService.GetRecorder().Record(ID3D12DeviceCreateUnorderedAccessViewSerializer(c));
+  view->DestDescriptorKey = m_AuxiliaryUavGpuDescriptorHeapKey;
+  view->DestDescriptorIndex = m_AuxiliaryUavGpuDescriptorHeapIndex;
+  ++m_AuxiliaryUavGpuDescriptorHeapIndex;
 }
 
-void CommandListService::createAuxiliaryUavCpu(D3D12UnorderedAccessViewState* view) {
-  initAuxiliaryUavCpuHeap(view->deviceKey);
+void CommandListService::CreateAuxiliaryUavCpu(D3D12UnorderedAccessViewState* view) {
+  InitAuxiliaryUavCpuHeap(view->DeviceKey);
 
-  if (auxiliaryUavCpuDescriptorHeapIndex_ >= auxiliaryHeapSize_) {
+  if (m_AuxiliaryUavCpuDescriptorHeapIndex >= m_AuxiliaryHeapSize) {
     LOG_ERROR << "Auxiliary UAV CPU descriptor heap too small.";
     exit(EXIT_FAILURE);
   }
   ID3D12DeviceCreateUnorderedAccessViewCommand c;
-  c.key = stateService_.getUniqueCommandKey();
-  c.object_.key = view->deviceKey;
-  c.pResource_.key = view->resourceKey;
-  c.pDesc_.value = &view->desc;
-  c.DestDescriptor_.interfaceKey = auxiliaryUavCpuDescriptorHeapKey_;
-  c.DestDescriptor_.index = auxiliaryUavCpuDescriptorHeapIndex_;
-  stateService_.getRecorder().record(ID3D12DeviceCreateUnorderedAccessViewSerializer(c));
-  view->destDescriptorKey = auxiliaryUavCpuDescriptorHeapKey_;
-  view->destDescriptorIndex = auxiliaryUavCpuDescriptorHeapIndex_;
-  ++auxiliaryUavCpuDescriptorHeapIndex_;
+  c.Key = m_StateService.GetUniqueCommandKey();
+  c.m_Object.Key = view->DeviceKey;
+  c.m_pResource.Key = view->ResourceKey;
+  c.m_pDesc.Value = &view->Desc;
+  c.m_DestDescriptor.InterfaceKey = m_AuxiliaryUavCpuDescriptorHeapKey;
+  c.m_DestDescriptor.Index = m_AuxiliaryUavCpuDescriptorHeapIndex;
+  m_StateService.GetRecorder().Record(ID3D12DeviceCreateUnorderedAccessViewSerializer(c));
+  view->DestDescriptorKey = m_AuxiliaryUavCpuDescriptorHeapKey;
+  view->DestDescriptorIndex = m_AuxiliaryUavCpuDescriptorHeapIndex;
+  ++m_AuxiliaryUavCpuDescriptorHeapIndex;
 }
 
-bool CommandListService::equalRtv(D3D12RenderTargetViewState* view, DescriptorState* descriptor) {
-  if (descriptor->id != DescriptorState::D3D12_RENDERTARGETVIEW ||
-      descriptor->resourceKey != view->resourceKey) {
+bool CommandListService::EqualRtv(D3D12RenderTargetViewState* view, DescriptorState* descriptor) {
+  if (descriptor->Id != DescriptorState::D3D12_RENDERTARGETVIEW ||
+      descriptor->ResourceKey != view->ResourceKey) {
     return false;
   }
   D3D12RenderTargetViewState* descriptorView = static_cast<D3D12RenderTargetViewState*>(descriptor);
-  if (view->isDesc != descriptorView->isDesc ||
-      memcmp(&view->desc, &descriptorView->desc, sizeof(D3D12_RENDER_TARGET_VIEW_DESC))) {
+  if (view->IsDesc != descriptorView->IsDesc ||
+      memcmp(&view->Desc, &descriptorView->Desc, sizeof(D3D12_RENDER_TARGET_VIEW_DESC))) {
     return false;
   }
   return true;
 }
 
-bool CommandListService::equalDsv(D3D12DepthStencilViewState* view, DescriptorState* descriptor) {
-  if (descriptor->id != DescriptorState::D3D12_DEPTHSTENCILVIEW ||
-      descriptor->resourceKey != view->resourceKey) {
+bool CommandListService::EqualDsv(D3D12DepthStencilViewState* view, DescriptorState* descriptor) {
+  if (descriptor->Id != DescriptorState::D3D12_DEPTHSTENCILVIEW ||
+      descriptor->ResourceKey != view->ResourceKey) {
     return false;
   }
   D3D12DepthStencilViewState* descriptorView = static_cast<D3D12DepthStencilViewState*>(descriptor);
-  if (view->isDesc != descriptorView->isDesc ||
-      memcmp(&view->desc, &descriptorView->desc, sizeof(D3D12_DEPTH_STENCIL_VIEW_DESC))) {
+  if (view->IsDesc != descriptorView->IsDesc ||
+      memcmp(&view->Desc, &descriptorView->Desc, sizeof(D3D12_DEPTH_STENCIL_VIEW_DESC))) {
     return false;
   }
   return true;
 }
 
-bool CommandListService::equalUav(D3D12UnorderedAccessViewState* view,
+bool CommandListService::EqualUav(D3D12UnorderedAccessViewState* view,
                                   DescriptorState* descriptor) {
-  if (descriptor->id != DescriptorState::D3D12_UNORDEREDACCESSVIEW ||
-      descriptor->resourceKey != view->resourceKey) {
+  if (descriptor->Id != DescriptorState::D3D12_UNORDEREDACCESSVIEW ||
+      descriptor->ResourceKey != view->ResourceKey) {
     return false;
   }
   D3D12UnorderedAccessViewState* descriptorView =
       static_cast<D3D12UnorderedAccessViewState*>(descriptor);
-  if (view->isDesc != descriptorView->isDesc ||
-      memcmp(&view->desc, &descriptorView->desc, sizeof(D3D12_UNORDERED_ACCESS_VIEW_DESC))) {
+  if (view->IsDesc != descriptorView->IsDesc ||
+      memcmp(&view->Desc, &descriptorView->Desc, sizeof(D3D12_UNORDERED_ACCESS_VIEW_DESC))) {
     return false;
   }
   return true;

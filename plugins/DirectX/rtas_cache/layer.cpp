@@ -52,17 +52,17 @@ RtasCacheLayer::~RtasCacheLayer() {
   }
 }
 
-void RtasCacheLayer::pre(StateRestoreBeginCommand& c) {
+void RtasCacheLayer::Pre(StateRestoreBeginCommand& c) {
   stateRestore_ = true;
 }
 
-void RtasCacheLayer::pre(StateRestoreEndCommand& c) {
+void RtasCacheLayer::Pre(StateRestoreEndCommand& c) {
   stateRestore_ = false;
 }
 
-void RtasCacheLayer::pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c) {
+void RtasCacheLayer::Pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c) {
   static bool firstBuildCall = true;
-  if (c.pDesc_.value->Inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
+  if (c.m_pDesc.Value->Inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
     return;
   }
 
@@ -71,7 +71,7 @@ void RtasCacheLayer::pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationSt
       firstBuildCall = false;
 
       Microsoft::WRL::ComPtr<ID3D12Device5> device;
-      HRESULT hr = c.object_.value->GetDevice(IID_PPV_ARGS(&device));
+      HRESULT hr = c.m_Object.Value->GetDevice(IID_PPV_ARGS(&device));
       assert(hr == S_OK);
 
       isValid_ = deserializer_.preloadCache(device.Get());
@@ -82,63 +82,63 @@ void RtasCacheLayer::pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationSt
       }
     }
 
-    if (deserializer_.deserialize(c.key, c.object_.value, *c.pDesc_.value)) {
-      c.skip = true;
+    if (deserializer_.deserialize(c.Key, c.m_Object.Value, *c.m_pDesc.Value)) {
+      c.Skip = true;
       ++cachedBlasCount_;
     }
   }
 }
 
-void RtasCacheLayer::post(
+void RtasCacheLayer::Post(
     ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c) {
-  if (c.pDesc_.value->Inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
+  if (c.m_pDesc.Value->Inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
     return;
   }
 
   if (record()) {
-    serializer_.serialize(c.key, c.object_.value, *c.pDesc_.value);
+    serializer_.serialize(c.Key, c.m_Object.Value, *c.m_pDesc.Value);
   }
 
   ++blasCount_;
 }
 
-void RtasCacheLayer::post(ID3D12CommandQueueExecuteCommandListsCommand& c) {
+void RtasCacheLayer::Post(ID3D12CommandQueueExecuteCommandListsCommand& c) {
   if (record()) {
-    serializer_.executeCommandLists(c.key, c.object_.key, c.object_.value, c.ppCommandLists_.value,
-                                    c.NumCommandLists_.value);
+    serializer_.executeCommandLists(c.Key, c.m_Object.Key, c.m_Object.Value,
+                                    c.m_ppCommandLists.Value, c.m_NumCommandLists.Value);
   } else if (replay()) {
-    deserializer_.executeCommandLists(c.key, c.object_.key, c.object_.value,
-                                      c.ppCommandLists_.value, c.NumCommandLists_.value);
+    deserializer_.executeCommandLists(c.Key, c.m_Object.Key, c.m_Object.Value,
+                                      c.m_ppCommandLists.Value, c.m_NumCommandLists.Value);
   }
 }
 
-void RtasCacheLayer::post(ID3D12CommandQueueWaitCommand& c) {
+void RtasCacheLayer::Post(ID3D12CommandQueueWaitCommand& c) {
   if (record()) {
-    serializer_.commandQueueWait(c.key, c.object_.key, c.pFence_.key, c.Value_.value);
+    serializer_.commandQueueWait(c.Key, c.m_Object.Key, c.m_pFence.Key, c.m_Value.Value);
   }
 }
 
-void RtasCacheLayer::post(ID3D12CommandQueueSignalCommand& c) {
+void RtasCacheLayer::Post(ID3D12CommandQueueSignalCommand& c) {
   if (record()) {
-    serializer_.commandQueueSignal(c.key, c.object_.key, c.pFence_.key, c.Value_.value);
+    serializer_.commandQueueSignal(c.Key, c.m_Object.Key, c.m_pFence.Key, c.m_Value.Value);
   }
 }
 
-void RtasCacheLayer::post(ID3D12FenceSignalCommand& c) {
+void RtasCacheLayer::Post(ID3D12FenceSignalCommand& c) {
   if (record()) {
-    serializer_.fenceSignal(c.key, c.object_.key, c.Value_.value);
+    serializer_.fenceSignal(c.Key, c.m_Object.Key, c.m_Value.Value);
   }
 }
 
-void RtasCacheLayer::post(ID3D12DeviceCreateFenceCommand& c) {
+void RtasCacheLayer::Post(ID3D12DeviceCreateFenceCommand& c) {
   if (record()) {
-    serializer_.fenceSignal(c.key, c.ppFence_.key, c.InitialValue_.value);
+    serializer_.fenceSignal(c.Key, c.m_ppFence.Key, c.m_InitialValue.Value);
   }
 }
 
-void RtasCacheLayer::post(ID3D12Device3EnqueueMakeResidentCommand& c) {
+void RtasCacheLayer::Post(ID3D12Device3EnqueueMakeResidentCommand& c) {
   if (record()) {
-    serializer_.fenceSignal(c.key, c.pFenceToSignal_.key, c.FenceValueToSignal_.value);
+    serializer_.fenceSignal(c.Key, c.m_pFenceToSignal.Key, c.m_FenceValueToSignal.Value);
   }
 }
 

@@ -20,25 +20,25 @@ public:
   ContextMapService() = default;
   ~ContextMapService() = default;
 
-  void setContext(unsigned key, std::uintptr_t context) {
-    contextMap_[key] = context;
+  void SetContext(unsigned key, std::uintptr_t context) {
+    m_ContextMap[key] = context;
   }
 
-  std::uintptr_t getContext(unsigned key) {
+  std::uintptr_t GetContext(unsigned key) {
     if (!key) {
       return {};
     }
-    auto it = contextMap_.find(key);
-    GITS_ASSERT(it != contextMap_.end());
+    auto it = m_ContextMap.find(key);
+    GITS_ASSERT(it != m_ContextMap.end());
     return it->second;
   }
 
-  void removeContext(unsigned key) {
-    contextMap_.erase(key);
+  void RemoveContext(unsigned key) {
+    m_ContextMap.erase(key);
   }
 
 private:
-  std::unordered_map<unsigned, std::uintptr_t> contextMap_{};
+  std::unordered_map<unsigned, std::uintptr_t> m_ContextMap{};
 };
 
 } // namespace DirectX

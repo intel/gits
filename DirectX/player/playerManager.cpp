@@ -20,101 +20,101 @@
 namespace gits {
 namespace DirectX {
 
-PlayerManager* PlayerManager::instance_ = nullptr;
+PlayerManager* PlayerManager::m_Instance = nullptr;
 
-PlayerManager& PlayerManager::get() {
-  if (!instance_) {
-    instance_ = new PlayerManager();
+PlayerManager& PlayerManager::Get() {
+  if (!m_Instance) {
+    m_Instance = new PlayerManager();
     gits::MessageBus::get().subscribe(
         {PUBLISHER_PLAYER, TOPIC_PROGRAM_EXIT},
-        [](Topic t, const MessagePtr& m) { PlayerManager::destroy(); });
+        [](Topic t, const MessagePtr& m) { PlayerManager::Destroy(); });
   }
-  return *instance_;
+  return *m_Instance;
 }
 
 PlayerManager::~PlayerManager() {
   try {
     LOG_INFO << "PlayerManager: Playback completed. Cleaning up...";
-    multithreadedObjectCreationService_.shutdown();
-    pluginService_.reset();
+    m_MultithreadedObjectCreationService.Shutdown();
+    m_PluginService.reset();
   } catch (...) {
     topmost_exception_handler("PlayerManager::~PlayerManager");
   }
 
-  if (d3d12CoreDll_) {
-    FreeLibrary(d3d12CoreDll_);
+  if (m_D3d12CoreDll) {
+    FreeLibrary(m_D3d12CoreDll);
   }
-  if (dmlDll_) {
-    FreeLibrary(dmlDll_);
+  if (m_DmlDll) {
+    FreeLibrary(m_DmlDll);
   }
-  if (dmlDebugDll_) {
-    FreeLibrary(dmlDebugDll_);
+  if (m_DmlDebugDll) {
+    FreeLibrary(m_DmlDebugDll);
   }
-  if (dStorageDll_) {
-    FreeLibrary(dStorageDll_);
+  if (m_DStorageDll) {
+    FreeLibrary(m_DStorageDll);
   }
-  if (dStorageCoreDll_) {
-    FreeLibrary(dStorageCoreDll_);
+  if (m_DStorageCoreDll) {
+    FreeLibrary(m_DStorageCoreDll);
   }
 }
 
 PlayerManager::PlayerManager() {
   auto& cfg = Configurator::Get();
-  executeCommands_ = cfg.directx.player.execute;
-  multithreadedShaderCompilation_ = cfg.directx.player.multithreadedShaderCompilation &&
-                                    !cfg.directx.features.subcapture.enabled &&
-                                    !cfg.directx.player.cCode.enabled;
+  m_ExecuteCommands = cfg.directx.player.execute;
+  m_MultithreadedShaderCompilation = cfg.directx.player.multithreadedShaderCompilation &&
+                                     !cfg.directx.features.subcapture.enabled &&
+                                     !cfg.directx.player.cCode.enabled;
 
   // Load DirectX runtimes
-  loadDirectML();
-  loadDirectStorage();
+  LoadDirectML();
+  LoadDirectStorage();
 
-  getAdapterService().loadAdapters();
-  getIntelExtensionsService().loadIntelExtensions(getAdapterService().getAdapter());
-  getIntelExtensionsService().setApplicationInfo();
+  GetAdapterService().LoadAdapters();
+  GetIntelExtensionsService().LoadIntelExtensions(GetAdapterService().GetAdapter());
+  GetIntelExtensionsService().SetApplicationInfo();
 
-  pluginService_ = std::make_unique<PluginService>();
-  pluginService_->loadPlugins();
+  m_PluginService = std::make_unique<PluginService>();
+  m_PluginService->loadPlugins();
 
-  layerManager_.loadLayers(*this, *pluginService_.get());
+  m_LayerManager.LoadLayers(*this, *m_PluginService.get());
 }
 
-void PlayerManager::flushMultithreadedShaderCompilation() {
-  const auto& results = multithreadedObjectCreationService_.completeAll();
+void PlayerManager::FlushMultithreadedShaderCompilation() {
+  const auto& results = m_MultithreadedObjectCreationService.CompleteAll();
 
   for (const auto& [key, output] : results) {
     if (output.result != S_OK) {
       continue;
     }
 
-    addObject(key, static_cast<IUnknown*>(output.object));
+    AddObject(key, static_cast<IUnknown*>(output.object));
   }
 }
 
-void PlayerManager::addObject(unsigned objectKey, IUnknown* object) {
-  objects_[objectKey] = object;
+void PlayerManager::AddObject(unsigned objectKey, IUnknown* object) {
+  m_Objects[objectKey] = object;
 }
 
-void PlayerManager::removeObject(unsigned objectKey) {
-  objects_.erase(objectKey);
+void PlayerManager::RemoveObject(unsigned objectKey) {
+  m_Objects.erase(objectKey);
 }
 
-IUnknown* PlayerManager::findObject(unsigned objectKey) {
-  auto it = objects_.find(objectKey);
-  if (it == objects_.end()) {
+IUnknown* PlayerManager::FindObject(unsigned objectKey) {
+  auto it = m_Objects.find(objectKey);
+  if (it == m_Objects.end()) {
     return nullptr;
   }
   return it->second;
 }
 
-bool PlayerManager::loadAgilitySdk(const std::filesystem::path& path) {
+bool PlayerManager::LoadAgilitySdk(const std::filesystem::path& path) {
   std::string dllPath = (path / "D3D12Core.dll").string();
-  d3d12CoreDll_ = LoadLibrary(dllPath.c_str());
-  if (!d3d12CoreDll_) {
+  m_D3d12CoreDll = LoadLibrary(dllPath.c_str());
+  if (!m_D3d12CoreDll) {
     LOG_ERROR << "Agility SDK - Failed to load (" << dllPath << ")";
     return false;
   }
-  UINT sdkVersion = *reinterpret_cast<UINT*>(GetProcAddress(d3d12CoreDll_, "D3D12SDKVersion"));
+  UINT sdkVersion = *reinterpret_cast<UINT*>(GetProcAddress(m_D3d12CoreDll, "D3D12SDKVersion"));
 
   Microsoft::WRL::ComPtr<ID3D12SDKConfiguration> sdkConfiguration;
   HRESULT hr = D3D12GetInterface(CLSID_D3D12SDKConfiguration, IID_PPV_ARGS(&sdkConfiguration));
@@ -135,17 +135,17 @@ bool PlayerManager::loadAgilitySdk(const std::filesystem::path& path) {
   return true;
 }
 
-void PlayerManager::loadDirectML() {
-  dmlDll_ = LoadLibrary(".\\D3D12\\DirectML.dll");
-  if (!dmlDll_) {
+void PlayerManager::LoadDirectML() {
+  m_DmlDll = LoadLibrary(".\\D3D12\\DirectML.dll");
+  if (!m_DmlDll) {
     LOG_ERROR << "Failed to load DirectML runtime (D3D12\\DirectML.dll)";
     return;
   }
   LOG_INFO << "Loaded DirectML runtime (D3D12\\DirectML.dll)";
 
   if (Configurator::Get().directx.player.debugLayer) {
-    dmlDebugDll_ = LoadLibrary(".\\D3D12\\DirectML.Debug.dll");
-    if (!dmlDebugDll_) {
+    m_DmlDebugDll = LoadLibrary(".\\D3D12\\DirectML.Debug.dll");
+    if (!m_DmlDebugDll) {
       LOG_ERROR << "Failed to load DirectML debug runtime (D3D12\\DirectML.Debug.dll)";
       return;
     }
@@ -153,14 +153,14 @@ void PlayerManager::loadDirectML() {
   }
 }
 
-void PlayerManager::loadDirectStorage() {
-  dStorageDll_ = LoadLibrary(".\\D3D12\\dstorage.dll");
-  if (!dStorageDll_) {
+void PlayerManager::LoadDirectStorage() {
+  m_DStorageDll = LoadLibrary(".\\D3D12\\dstorage.dll");
+  if (!m_DStorageDll) {
     LOG_ERROR << "DirectStorage - Failed to load (D3D12\\dstorage.dll)";
     return;
   }
-  dStorageCoreDll_ = LoadLibrary(".\\D3D12\\dstoragecore.dll");
-  if (!dStorageCoreDll_) {
+  m_DStorageCoreDll = LoadLibrary(".\\D3D12\\dstoragecore.dll");
+  if (!m_DStorageCoreDll) {
     LOG_ERROR << "DirectStorage - Failed to load (D3D12\\dstoragecore.dll)";
     return;
   }
