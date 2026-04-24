@@ -77,6 +77,7 @@ void XessStateService::RestoreContextState(ContextState* state) {
     c.Key = m_StateService.GetUniqueCommandKey();
     c.m_hContext.Key = state->Key;
     c.m_scale.Value = state->ExposureScale.value();
+    m_Recorder.Record(xessSetExposureMultiplierSerializer(c));
   }
 
   if (state->VelocityScale) {
@@ -93,6 +94,7 @@ void XessStateService::RestoreContextState(ContextState* state) {
     c.Key = m_StateService.GetUniqueCommandKey();
     c.m_hContext.Key = state->Key;
     c.m_force.Value = state->ForceLegacyScaleFactors.value();
+    m_Recorder.Record(xessForceLegacyScaleFactorsSerializer(c));
   }
 }
 
