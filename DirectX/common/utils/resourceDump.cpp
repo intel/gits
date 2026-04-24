@@ -8,6 +8,7 @@
 
 #include "resourceDump.h"
 #include "resourceSizeUtils.h"
+#include "resourceStateEnhanced.h"
 #include "log.h"
 #include "imageWriter.h"
 
@@ -19,7 +20,7 @@ namespace gits {
 namespace DirectX {
 
 ResourceDump::ResourceDump(ImageFormat format, const std::string& textureRescaleRange) {
-  format_ = format;
+  m_Format = format;
   if (!textureRescaleRange.empty()) {
     try {
       float min = std::stof(textureRescaleRange);
@@ -31,7 +32,7 @@ ResourceDump::ResourceDump(ImageFormat format, const std::string& textureRescale
       if (min < 0 || min > 1 || min > max || max < 0 || max > 1) {
         throw;
       }
-      textureRescaleRange_ = std::make_pair(min, max);
+      m_TextureRescaleRange = std::make_pair(min, max);
     } catch (...) {
       LOG_ERROR << "Improper TextureRescaleRange.";
     }
@@ -39,42 +40,42 @@ ResourceDump::ResourceDump(ImageFormat format, const std::string& textureRescale
 }
 
 ResourceDump::~ResourceDump() {
-  waitUntilDumped();
+  WaitUntilDumped();
 }
 
-void ResourceDump::waitUntilDumped() {
+void ResourceDump::WaitUntilDumped() {
   std::vector<GpuExecutionTracker::Executable*>& executables =
       m_GpuExecutionTracker.GetReadyExecutables();
   for (GpuExecutionTracker::Executable* executable : executables) {
     ThreadInfo* threadInfo = static_cast<ThreadInfo*>(executable);
-    if (threadInfo->dumpThread->joinable()) {
-      threadInfo->dumpThread->join();
+    if (threadInfo->DumpThread->joinable()) {
+      threadInfo->DumpThread->join();
     }
     delete threadInfo;
   }
   executables.clear();
 }
 
-void ResourceDump::dumpResource(ID3D12GraphicsCommandList* commandList,
+void ResourceDump::DumpResource(ID3D12GraphicsCommandList* commandList,
                                 ID3D12Resource* resource,
                                 unsigned subresource,
-                                D3D12_RESOURCE_STATES resourceState,
+                                BarrierState resourceState,
                                 const std::wstring& dumpName,
                                 unsigned mipLevel,
                                 DXGI_FORMAT format) {
 
   DumpInfo* dumpInfo = new DumpInfo();
-  dumpInfo->subresource = subresource;
-  dumpInfo->dumpName = dumpName;
-  dumpInfo->mipLevel = mipLevel;
-  dumpInfo->subresourceFormat = format;
+  dumpInfo->Subresource = subresource;
+  dumpInfo->DumpName = dumpName;
+  dumpInfo->MipLevel = mipLevel;
+  dumpInfo->SubresourceFormat = format;
 
-  stageResource(commandList, resource, resourceState, *dumpInfo);
+  StageResource(commandList, resource, resourceState, *dumpInfo);
 }
 
-void ResourceDump::stageResource(ID3D12GraphicsCommandList* commandList,
+void ResourceDump::StageResource(ID3D12GraphicsCommandList* commandList,
                                  ID3D12Resource* resource,
-                                 D3D12_RESOURCE_STATES resourceState,
+                                 BarrierState resourceState,
                                  DumpInfo& dumpInfo,
                                  bool dependent) {
 
@@ -82,23 +83,23 @@ void ResourceDump::stageResource(ID3D12GraphicsCommandList* commandList,
   HRESULT hr = resource->GetDevice(IID_PPV_ARGS(&device));
   GITS_ASSERT(hr == S_OK);
 
-  dumpInfo.desc = resource->GetDesc();
+  dumpInfo.Desc = resource->GetDesc();
   D3D12_PLACED_SUBRESOURCE_FOOTPRINT footprint{};
-  if (dumpInfo.desc.Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
-    D3D12_RESOURCE_DESC desc = dumpInfo.desc;
+  if (dumpInfo.Desc.Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
+    D3D12_RESOURCE_DESC desc = dumpInfo.Desc;
     desc.SampleDesc.Count = 1;
     desc.SampleDesc.Quality = 0;
     desc.Flags = D3D12_RESOURCE_FLAG_NONE;
     desc.Alignment = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
 
     UINT64 size{};
-    GetCopyableFootprintsSafe(device.Get(), &desc, dumpInfo.subresource, 1, 0, &footprint, nullptr,
+    GetCopyableFootprintsSafe(device.Get(), &desc, dumpInfo.Subresource, 1, 0, &footprint, nullptr,
                               nullptr, &size);
-    dumpInfo.size = size;
-    dumpInfo.rowPitch = footprint.Footprint.RowPitch;
-    dumpInfo.subresourceFormat = getDumpableFormat(footprint.Footprint.Format);
-  } else if (!dumpInfo.size) {
-    dumpInfo.size = dumpInfo.desc.Width - dumpInfo.offset;
+    dumpInfo.Size = size;
+    dumpInfo.RowPitch = footprint.Footprint.RowPitch;
+    dumpInfo.SubresourceFormat = GetDumpableFormat(footprint.Footprint.Format);
+  } else if (!dumpInfo.Size) {
+    dumpInfo.Size = dumpInfo.Desc.Width - dumpInfo.Offset;
   }
   {
     D3D12_HEAP_PROPERTIES heapProperties{};
@@ -110,7 +111,7 @@ void ResourceDump::stageResource(ID3D12GraphicsCommandList* commandList,
 
     D3D12_RESOURCE_DESC desc{};
     desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-    desc.Width = dumpInfo.size;
+    desc.Width = dumpInfo.Size;
     desc.Height = 1;
     desc.DepthOrArraySize = 1;
     desc.MipLevels = 1;
@@ -120,7 +121,7 @@ void ResourceDump::stageResource(ID3D12GraphicsCommandList* commandList,
 
     HRESULT hr = device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &desc,
                                                  D3D12_RESOURCE_STATE_COPY_DEST, nullptr,
-                                                 IID_PPV_ARGS(&dumpInfo.stagingBuffer));
+                                                 IID_PPV_ARGS(&dumpInfo.StagingBuffer));
     if (hr != S_OK) {
       if (hr == E_OUTOFMEMORY) {
         LOG_ERROR << "Resource dumping - create staging buffer failed - E_OUTOFMEMORY - try with "
@@ -132,7 +133,7 @@ void ResourceDump::stageResource(ID3D12GraphicsCommandList* commandList,
       exit(EXIT_FAILURE);
     }
   }
-  if (dumpInfo.desc.SampleDesc.Count > 1) {
+  if (dumpInfo.Desc.SampleDesc.Count > 1) {
     {
       D3D12_HEAP_PROPERTIES heapProperties{};
       heapProperties.Type = D3D12_HEAP_TYPE_DEFAULT;
@@ -141,7 +142,7 @@ void ResourceDump::stageResource(ID3D12GraphicsCommandList* commandList,
       heapProperties.CreationNodeMask = 1;
       heapProperties.VisibleNodeMask = 1;
 
-      D3D12_RESOURCE_DESC desc = dumpInfo.desc;
+      D3D12_RESOURCE_DESC desc = dumpInfo.Desc;
       desc.SampleDesc.Count = 1;
       desc.SampleDesc.Quality = 0;
       desc.Flags = D3D12_RESOURCE_FLAG_NONE;
@@ -149,7 +150,7 @@ void ResourceDump::stageResource(ID3D12GraphicsCommandList* commandList,
 
       HRESULT hr = device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &desc,
                                                    D3D12_RESOURCE_STATE_RESOLVE_DEST, nullptr,
-                                                   IID_PPV_ARGS(&dumpInfo.resolvedResource));
+                                                   IID_PPV_ARGS(&dumpInfo.ResolvedResource));
       if (hr != S_OK) {
         if (hr == E_OUTOFMEMORY) {
           LOG_ERROR
@@ -163,74 +164,53 @@ void ResourceDump::stageResource(ID3D12GraphicsCommandList* commandList,
       }
     }
 
-    D3D12_RESOURCE_BARRIER barrier{};
-    if (resourceState != D3D12_RESOURCE_STATE_RESOLVE_SOURCE) {
-      barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-      barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-      barrier.Transition.pResource = resource;
-      barrier.Transition.Subresource = dumpInfo.subresource;
-      barrier.Transition.StateBefore = resourceState;
-      barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RESOLVE_SOURCE;
+    ResourceStateEnhanced resourceStateEnhanced(commandList, resource, resourceState,
+                                                dumpInfo.Subresource);
+    resourceStateEnhanced.SetState(D3D12_RESOURCE_STATE_RESOLVE_SOURCE);
 
-      commandList->ResourceBarrier(1, &barrier);
-    }
+    commandList->ResolveSubresource(dumpInfo.ResolvedResource.Get(), dumpInfo.Subresource, resource,
+                                    dumpInfo.Subresource, dumpInfo.SubresourceFormat);
 
-    commandList->ResolveSubresource(dumpInfo.resolvedResource.Get(), dumpInfo.subresource, resource,
-                                    dumpInfo.subresource, dumpInfo.subresourceFormat);
-
-    if (resourceState != D3D12_RESOURCE_STATE_COPY_SOURCE) {
-      barrier.Transition.StateAfter = barrier.Transition.StateBefore;
-      barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RESOLVE_SOURCE;
-
-      commandList->ResourceBarrier(1, &barrier);
-    }
+    resourceStateEnhanced.RevertState();
   }
 
-  D3D12_RESOURCE_BARRIER barrier{};
-  if (resourceState != D3D12_RESOURCE_STATE_COPY_SOURCE &&
-      resourceState != D3D12_RESOURCE_STATE_GENERIC_READ) {
-    barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-    barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-    barrier.Transition.pResource =
-        dumpInfo.resolvedResource.Get() ? dumpInfo.resolvedResource.Get() : resource;
-    barrier.Transition.Subresource = dumpInfo.subresource;
-    barrier.Transition.StateBefore =
-        dumpInfo.resolvedResource.Get() ? D3D12_RESOURCE_STATE_RESOLVE_DEST : resourceState;
-    barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_SOURCE;
-
-    commandList->ResourceBarrier(1, &barrier);
+  ID3D12Resource* copySourceResource = resource;
+  ResourceStateEnhanced resourceStateEnhanced(commandList, resource, resourceState,
+                                              dumpInfo.Subresource);
+  if (dumpInfo.ResolvedResource.Get()) {
+    copySourceResource = dumpInfo.ResolvedResource.Get();
+    resourceStateEnhanced = ResourceStateEnhanced(commandList, copySourceResource,
+                                                  BarrierState(D3D12_RESOURCE_STATE_RESOLVE_DEST),
+                                                  dumpInfo.Subresource);
   }
+  resourceStateEnhanced.SetState(D3D12_RESOURCE_STATE_COPY_SOURCE);
 
-  if (dumpInfo.desc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER) {
-    commandList->CopyBufferRegion(dumpInfo.stagingBuffer.Get(), dumpInfo.subresource, resource,
-                                  dumpInfo.offset, dumpInfo.size);
+  if (dumpInfo.Desc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER) {
+    commandList->CopyBufferRegion(dumpInfo.StagingBuffer.Get(), dumpInfo.Subresource, resource,
+                                  dumpInfo.Offset, dumpInfo.Size);
   } else {
     D3D12_TEXTURE_COPY_LOCATION dest{};
     dest.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
-    dest.pResource = dumpInfo.stagingBuffer.Get();
+    dest.pResource = dumpInfo.StagingBuffer.Get();
     dest.PlacedFootprint.Footprint = footprint.Footprint;
     dest.PlacedFootprint.Offset = 0;
     D3D12_TEXTURE_COPY_LOCATION src{};
     src.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-    src.pResource = dumpInfo.resolvedResource.Get() ? dumpInfo.resolvedResource.Get() : resource;
-    src.SubresourceIndex = dumpInfo.subresource;
+    src.pResource = copySourceResource;
+    src.SubresourceIndex = dumpInfo.Subresource;
     commandList->CopyTextureRegion(&dest, 0, 0, 0, &src, nullptr);
   }
 
-  if (!dumpInfo.resolvedResource.Get() && resourceState != D3D12_RESOURCE_STATE_COPY_SOURCE &&
-      resourceState != D3D12_RESOURCE_STATE_GENERIC_READ) {
-    barrier.Transition.StateAfter = barrier.Transition.StateBefore;
-    barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_SOURCE;
-
-    commandList->ResourceBarrier(1, &barrier);
+  if (!dumpInfo.ResolvedResource.Get()) {
+    resourceStateEnhanced.RevertState();
   }
 
   if (!dependent) {
-    stagedResources_[commandList].push_back(&dumpInfo);
+    m_StagedResources[commandList].push_back(&dumpInfo);
   }
 }
 
-void ResourceDump::executeCommandLists(unsigned key,
+void ResourceDump::ExecuteCommandLists(unsigned key,
                                        unsigned commandQueueKey,
                                        ID3D12CommandQueue* commandQueue,
                                        ID3D12CommandList** commandLists,
@@ -238,8 +218,8 @@ void ResourceDump::executeCommandLists(unsigned key,
 
   bool found = false;
   for (unsigned i = 0; i < commandListNum; ++i) {
-    auto it = stagedResources_.find(commandLists[i]);
-    if (it != stagedResources_.end()) {
+    auto it = m_StagedResources.find(commandLists[i]);
+    if (it != m_StagedResources.end()) {
       found = true;
       break;
     }
@@ -248,57 +228,57 @@ void ResourceDump::executeCommandLists(unsigned key,
     return;
   }
 
-  waitUntilDumped();
-  initFence(commandQueue);
+  WaitUntilDumped();
+  InitFence(commandQueue);
 
-  ++fenceValue_;
-  HRESULT hr = fence_->SetEventOnCompletion(fenceValue_, fenceEvent_);
+  ++m_FenceValue;
+  HRESULT hr = m_Fence->SetEventOnCompletion(m_FenceValue, m_FenceEvent);
   GITS_ASSERT(hr == S_OK);
-  hr = commandQueue->Signal(fence_, fenceValue_);
+  hr = commandQueue->Signal(m_Fence, m_FenceValue);
   GITS_ASSERT(hr == S_OK);
 
   ThreadInfo* threadInfo = new ThreadInfo();
-  threadInfo->fenceValue = fenceValue_;
+  threadInfo->FenceValue = m_FenceValue;
   for (unsigned i = 0; i < commandListNum; ++i) {
-    auto it = stagedResources_.find(commandLists[i]);
-    if (it != stagedResources_.end()) {
+    auto it = m_StagedResources.find(commandLists[i]);
+    if (it != m_StagedResources.end()) {
       for (DumpInfo* dumpInfo : it->second) {
-        threadInfo->dumpInfos.emplace_back(dumpInfo);
+        threadInfo->DumpInfos.emplace_back(dumpInfo);
       }
-      stagedResources_.erase(it);
+      m_StagedResources.erase(it);
     }
   }
 
-  threadInfo->dumpThread =
-      std::make_unique<std::thread>(&ResourceDump::dumpStagedResources, this, threadInfo);
+  threadInfo->DumpThread =
+      std::make_unique<std::thread>(&ResourceDump::DumpStagedResources, this, threadInfo);
 
   m_GpuExecutionTracker.Execute(key, commandQueueKey, threadInfo);
 }
 
-void ResourceDump::commandQueueWait(unsigned key,
+void ResourceDump::CommandQueueWait(unsigned key,
                                     unsigned commandQueueKey,
                                     unsigned fenceKey,
                                     UINT64 fenceValue) {
   m_GpuExecutionTracker.CommandQueueWait(key, commandQueueKey, fenceKey, fenceValue);
 }
 
-void ResourceDump::commandQueueSignal(unsigned key,
+void ResourceDump::CommandQueueSignal(unsigned key,
                                       unsigned commandQueueKey,
                                       unsigned fenceKey,
                                       UINT64 fenceValue) {
   m_GpuExecutionTracker.CommandQueueSignal(key, commandQueueKey, fenceKey, fenceValue);
 }
 
-void ResourceDump::fenceSignal(unsigned key, unsigned fenceKey, UINT64 fenceValue) {
+void ResourceDump::FenceSignal(unsigned key, unsigned fenceKey, UINT64 fenceValue) {
   m_GpuExecutionTracker.FenceSignal(key, fenceKey, fenceValue);
 }
 
-void ResourceDump::dumpStagedResources(ThreadInfo* threadInfo) {
+void ResourceDump::DumpStagedResources(ThreadInfo* threadInfo) {
 
   struct Cleanup : public gits::noncopyable {
     Cleanup(ThreadInfo* threadInfo_) : threadInfo(threadInfo_) {}
     ~Cleanup() {
-      for (auto& it : threadInfo->dumpInfos) {
+      for (auto& it : threadInfo->DumpInfos) {
         it.reset();
       }
     }
@@ -308,17 +288,17 @@ void ResourceDump::dumpStagedResources(ThreadInfo* threadInfo) {
   } cleanup(threadInfo);
 
   do {
-    WaitForSingleObject(fenceEvent_, 10000);
-  } while (fence_->GetCompletedValue() < threadInfo->fenceValue);
+    WaitForSingleObject(m_FenceEvent, 10000);
+  } while (m_Fence->GetCompletedValue() < threadInfo->FenceValue);
 
-  for (auto& dumpInfo : threadInfo->dumpInfos) {
-    dumpStagedResource(*dumpInfo);
+  for (auto& dumpInfo : threadInfo->DumpInfos) {
+    DumpStagedResource(*dumpInfo);
   }
 }
 
-void ResourceDump::dumpStagedResource(DumpInfo& dumpInfo) {
+void ResourceDump::DumpStagedResource(DumpInfo& dumpInfo) {
   void* data{};
-  HRESULT hr = dumpInfo.stagingBuffer->Map(0, nullptr, &data);
+  HRESULT hr = dumpInfo.StagingBuffer->Map(0, nullptr, &data);
   if (hr != S_OK) {
     auto printHr = [](HRESULT hr) {
       if (hr == E_OUTOFMEMORY) {
@@ -331,36 +311,36 @@ void ResourceDump::dumpStagedResource(DumpInfo& dumpInfo) {
         return s.str();
       }
     };
-    std::string dumpName(dumpInfo.dumpName.begin(), dumpInfo.dumpName.end());
+    std::string dumpName(dumpInfo.DumpName.begin(), dumpInfo.DumpName.end());
     LOG_ERROR << "ResourceDump - Map failed " << printHr(hr) << " " << dumpName;
     return;
   }
 
-  if (dumpInfo.desc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER) {
-    dumpBuffer(dumpInfo, data);
+  if (dumpInfo.Desc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER) {
+    DumpBuffer(dumpInfo, data);
   } else {
-    dumpTexture(dumpInfo, data);
+    DumpTexture(dumpInfo, data);
   }
 
-  dumpInfo.stagingBuffer->Unmap(0, nullptr);
+  dumpInfo.StagingBuffer->Unmap(0, nullptr);
 }
 
-void ResourceDump::initFence(ID3D12DeviceChild* deviceChild) {
-  if (!fence_) {
+void ResourceDump::InitFence(ID3D12DeviceChild* deviceChild) {
+  if (!m_Fence) {
     Microsoft::WRL::ComPtr<ID3D12Device> device;
     HRESULT hr = deviceChild->GetDevice(IID_PPV_ARGS(&device));
     GITS_ASSERT(hr == S_OK);
-    hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence_));
+    hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_Fence));
     GITS_ASSERT(hr == S_OK);
-    fenceEvent_ = CreateEvent(nullptr, FALSE, FALSE, nullptr);
-    GITS_ASSERT(fenceEvent_);
+    m_FenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+    GITS_ASSERT(m_FenceEvent);
   }
 }
 
-void ResourceDump::dumpBuffer(DumpInfo& dumpInfo, void* data) {
-  std::ofstream stream((dumpInfo.dumpName + L".txt").c_str());
+void ResourceDump::DumpBuffer(DumpInfo& dumpInfo, void* data) {
+  std::ofstream stream((dumpInfo.DumpName + L".txt").c_str());
   uint8_t* byteData = static_cast<uint8_t*>(data);
-  for (unsigned i = 0; i < dumpInfo.desc.Width; ++i) {
+  for (unsigned i = 0; i < dumpInfo.Desc.Width; ++i) {
     if (i % 8 == 0 && i > 0) {
       stream << "\n";
     }
@@ -368,30 +348,31 @@ void ResourceDump::dumpBuffer(DumpInfo& dumpInfo, void* data) {
   }
 }
 
-void ResourceDump::dumpTexture(DumpInfo& dumpInfo, void* data) {
-  DXGI_FORMAT format = dumpInfo.subresourceFormat;
+void ResourceDump::DumpTexture(DumpInfo& dumpInfo, void* data) {
+  DXGI_FORMAT format = dumpInfo.SubresourceFormat;
   if (format == DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS) {
     format = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
   } else if (format == DXGI_FORMAT_R24_UNORM_X8_TYPELESS) {
     format = DXGI_FORMAT_D24_UNORM_S8_UINT;
   }
 
-  unsigned depth = dumpInfo.desc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE3D
-                       ? dumpInfo.desc.DepthOrArraySize
+  unsigned depth = dumpInfo.Desc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE3D
+                       ? dumpInfo.Desc.DepthOrArraySize
                        : 1;
 
-  if (format_ == ImageFormat::DDS) {
+  if (m_Format == ImageFormat::DDS) {
+
     // For DDS, we can write the image directly without conversion
-    size_t slicePitch = dumpInfo.size / depth;
+    size_t slicePitch = dumpInfo.Size / depth;
     for (unsigned slice = 0; slice < depth; ++slice) {
-      std::wstring dumpNameW = dumpInfo.dumpName;
+      std::wstring dumpNameW = dumpInfo.DumpName;
       if (depth > 1) {
         dumpNameW += L"_slice_" + std::to_wstring(slice);
       }
       uint8_t* pixels = reinterpret_cast<uint8_t*>(data) + slice * slicePitch;
-      size_t width = std::max(dumpInfo.desc.Width >> dumpInfo.mipLevel, 1ull);
-      size_t height = std::max(dumpInfo.desc.Height >> dumpInfo.mipLevel, 1u);
-      writeImage(dumpNameW, ImageFormat::DDS, pixels, format, width, height, dumpInfo.rowPitch);
+      size_t width = std::max(dumpInfo.Desc.Width >> dumpInfo.MipLevel, 1ull);
+      size_t height = std::max(dumpInfo.Desc.Height >> dumpInfo.MipLevel, 1u);
+      writeImage(dumpNameW, ImageFormat::DDS, pixels, format, width, height, dumpInfo.RowPitch);
     }
     return;
   }
@@ -401,18 +382,18 @@ void ResourceDump::dumpTexture(DumpInfo& dumpInfo, void* data) {
 
   for (unsigned slice = 0; slice < depth; ++slice) {
 
-    std::wstring dumpNameW = dumpInfo.dumpName;
+    std::wstring dumpNameW = dumpInfo.DumpName;
     if (depth > 1) {
       dumpNameW += L"_slice_" + std::to_wstring(slice);
     }
     std::string dumpNameA(dumpNameW.begin(), dumpNameW.end());
 
     ::DirectX::Image image{};
-    image.width = dumpInfo.desc.Width / pow(2, dumpInfo.mipLevel);
-    image.height = dumpInfo.desc.Height / pow(2, dumpInfo.mipLevel);
+    image.width = dumpInfo.Desc.Width / pow(2, dumpInfo.MipLevel);
+    image.height = dumpInfo.Desc.Height / pow(2, dumpInfo.MipLevel);
     image.format = format;
-    image.rowPitch = dumpInfo.rowPitch;
-    image.slicePitch = dumpInfo.size / depth;
+    image.rowPitch = dumpInfo.RowPitch;
+    image.slicePitch = dumpInfo.Size / depth;
     image.pixels = reinterpret_cast<uint8_t*>(data) + slice * image.slicePitch;
 
     static thread_local bool initialized = false;
@@ -422,7 +403,7 @@ void ResourceDump::dumpTexture(DumpInfo& dumpInfo, void* data) {
       HRESULT hr = ::DirectX::Decompress(image, destFormat, scratchImage);
       if (hr != S_OK) {
         LOG_ERROR << "Dumping " + dumpNameA + " format "
-                  << formatToString(dumpInfo.subresourceFormat) << " failed in Decompress 0x"
+                  << FormatToString(dumpInfo.SubresourceFormat) << " failed in Decompress 0x"
                   << std::hex << hr << std::dec;
         return;
       }
@@ -430,8 +411,8 @@ void ResourceDump::dumpTexture(DumpInfo& dumpInfo, void* data) {
     } else if (image.format != DXGI_FORMAT_R8G8B8A8_UNORM &&
                image.format != DXGI_FORMAT_R8G8B8A8_UNORM_SRGB) {
       HRESULT hr{};
-      if (textureRescaleRange_.has_value()) {
-        hr = rescaleTexture(image, scratchImage);
+      if (m_TextureRescaleRange.has_value()) {
+        hr = RescaleTexture(image, scratchImage);
       } else {
         auto convert = [&]() {
           auto filter = ::DirectX::TEX_FILTER_DEFAULT;
@@ -451,7 +432,7 @@ void ResourceDump::dumpTexture(DumpInfo& dumpInfo, void* data) {
       }
       if (hr != S_OK) {
         LOG_ERROR << "Dumping " + dumpNameA + " format "
-                  << formatToString(dumpInfo.subresourceFormat) << " failed 0x" << std::hex << hr
+                  << FormatToString(dumpInfo.SubresourceFormat) << " failed 0x" << std::hex << hr
                   << std::dec;
         return;
       }
@@ -461,17 +442,17 @@ void ResourceDump::dumpTexture(DumpInfo& dumpInfo, void* data) {
       imageConverted = &image;
     }
     if (!imageConverted) {
-      LOG_ERROR << "Dumping " + dumpNameA + " format " << formatToString(dumpInfo.subresourceFormat)
+      LOG_ERROR << "Dumping " + dumpNameA + " format " << FormatToString(dumpInfo.SubresourceFormat)
                 << " failed: imageConverted is nullptr";
       return;
     }
 
-    writeImage(dumpNameW, format_, imageConverted->pixels, imageConverted->format,
+    writeImage(dumpNameW, m_Format, imageConverted->pixels, imageConverted->format,
                imageConverted->width, imageConverted->height, imageConverted->rowPitch);
   }
 }
 
-HRESULT ResourceDump::rescaleTexture(const ::DirectX::Image& srcImage,
+HRESULT ResourceDump::RescaleTexture(const ::DirectX::Image& srcImage,
                                      ::DirectX::ScratchImage& destScratchImage) {
   HRESULT hr = destScratchImage.Initialize2D(DXGI_FORMAT_R8G8B8A8_UNORM, srcImage.width,
                                              srcImage.height, 1, 1);
@@ -514,8 +495,8 @@ HRESULT ResourceDump::rescaleTexture(const ::DirectX::Image& srcImage,
     }
   }
 
-  minValue += textureRescaleRange_->first * (maxValue - minValue);
-  maxValue -= (1 - textureRescaleRange_->second) * (maxValue - minValue);
+  minValue += m_TextureRescaleRange->first * (maxValue - minValue);
+  maxValue -= (1 - m_TextureRescaleRange->second) * (maxValue - minValue);
 
   const ::DirectX::Image* destImage = destScratchImage.GetImage(0, 0, 0);
 
@@ -542,7 +523,7 @@ HRESULT ResourceDump::rescaleTexture(const ::DirectX::Image& srcImage,
   return S_OK;
 }
 
-DXGI_FORMAT ResourceDump::getDumpableFormat(DXGI_FORMAT format) {
+DXGI_FORMAT ResourceDump::GetDumpableFormat(DXGI_FORMAT format) {
   switch (format) {
   case DXGI_FORMAT_R32G32B32A32_TYPELESS:
     return DXGI_FORMAT_R32G32B32A32_FLOAT;
@@ -597,7 +578,7 @@ DXGI_FORMAT ResourceDump::getDumpableFormat(DXGI_FORMAT format) {
   }
 }
 
-std::string ResourceDump::formatToString(DXGI_FORMAT value) {
+std::string ResourceDump::FormatToString(DXGI_FORMAT value) {
   switch (value) {
   case DXGI_FORMAT_UNKNOWN:
     return "UNKNOWN";

@@ -45,7 +45,7 @@ public:
                     unsigned offset,
                     unsigned size,
                     unsigned stride,
-                    D3D12_RESOURCE_STATES resourceState,
+                    BarrierState resourceState,
                     const std::wstring& dumpName,
                     DumpContentKind contentKind,
                     bool fromCapture);
@@ -57,7 +57,7 @@ protected:
     bool FromCapture{};
   };
 
-  void dumpBuffer(DumpInfo& dumpInfo, void* data) override;
+  void DumpBuffer(DumpInfo& dumpInfo, void* data) override;
 
 private:
   CapturePlayerGpuAddressService& m_AddressService;

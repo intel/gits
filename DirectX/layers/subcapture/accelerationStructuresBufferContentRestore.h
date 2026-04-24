@@ -38,7 +38,7 @@ public:
                    unsigned ResourceKey,
                    unsigned offset,
                    unsigned size,
-                   D3D12_RESOURCE_STATES resourceState,
+                   BarrierState resourceState,
                    unsigned buildCallKey,
                    bool isMappable);
   std::vector<BufferRestoreInfo>& GetRestoreInfos(unsigned buildCallKey) {
@@ -56,7 +56,7 @@ protected:
     bool IsMappable;
   };
 
-  void dumpBuffer(DumpInfo& dumpInfo, void* data) override;
+  void DumpBuffer(DumpInfo& dumpInfo, void* data) override;
 
 private:
   StateTrackingService& m_StateService;

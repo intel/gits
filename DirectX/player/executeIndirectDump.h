@@ -24,10 +24,10 @@ public:
                           unsigned maxCommandCount,
                           ID3D12Resource* argumentBuffer,
                           unsigned argumentBufferOffset,
-                          D3D12_RESOURCE_STATES argumentBufferState,
+                          BarrierState argumentBufferState,
                           ID3D12Resource* countBuffer,
                           unsigned countBufferOffset,
-                          D3D12_RESOURCE_STATES countBufferState,
+                          BarrierState countBufferState,
                           const std::wstring& dumpName,
                           bool fromCapture);
 
@@ -38,7 +38,7 @@ private:
     bool FromCapture{};
   };
 
-  void dumpStagedResource(DumpInfo& dumpInfo) override;
+  void DumpStagedResource(DumpInfo& dumpInfo) override;
   void DumpArgumentBuffer(ExecuteIndirectDumpInfo& dumpInfo, unsigned argumentCount, void* data);
   void PrintGpuAddress(std::ostream& stream, D3D12_GPU_VIRTUAL_ADDRESS address, bool fromCapture);
 

@@ -56,8 +56,9 @@ GpuPatchDumpService::GpuPatchDumpService(
 
 void GpuPatchDumpService::DumpInstances(ID3D12GraphicsCommandList* commandList,
                                         ID3D12Resource* resource,
-                                        unsigned ResourceKey,
+                                        unsigned resourceKey,
                                         unsigned size,
+                                        BarrierState resourceState,
                                         unsigned callKey,
                                         bool prePatch) {
 
@@ -69,20 +70,19 @@ void GpuPatchDumpService::DumpInstances(ID3D12GraphicsCommandList* commandList,
   }
 
   std::wstringstream dumpName;
-  dumpName << m_DumpPath << L"/call_" << callKey << L"_instances_O" << ResourceKey << L"_"
+  dumpName << m_DumpPath << L"/call_" << callKey << L"_instances_O" << resourceKey << L"_"
            << (prePatch ? L"pre_patch" : L"post_patch") << L".txt";
 
-  m_ResourceDump.DumpResource(commandList, resource, 0, size, 0,
-                              D3D12_RESOURCE_STATE_UNORDERED_ACCESS, dumpName.str(),
+  m_ResourceDump.DumpResource(commandList, resource, 0, size, 0, resourceState, dumpName.str(),
                               RaytracingResourceDump::DumpContentKind::Instances, prePatch);
 }
 
 void GpuPatchDumpService::DumpInstancesArrayOfPointers(ID3D12GraphicsCommandList* commandList,
                                                        ID3D12Resource* resource,
-                                                       unsigned ResourceKey,
+                                                       unsigned resourceKey,
                                                        unsigned offset,
                                                        unsigned size,
-                                                       D3D12_RESOURCE_STATES resourceState,
+                                                       BarrierState resourceState,
                                                        unsigned callKey,
                                                        bool prePatch) {
   if (!(m_DumpInstancesPre && prePatch || m_DumpInstancesPost && !prePatch)) {
@@ -93,7 +93,7 @@ void GpuPatchDumpService::DumpInstancesArrayOfPointers(ID3D12GraphicsCommandList
   }
 
   std::wstringstream dumpName;
-  dumpName << m_DumpPath << L"/call_" << callKey << L"_instances_array_of_pointers_O" << ResourceKey
+  dumpName << m_DumpPath << L"/call_" << callKey << L"_instances_array_of_pointers_O" << resourceKey
            << L"_" << (prePatch ? L"pre_patch" : L"post_patch") << L".txt";
 
   m_ResourceDump.DumpResource(commandList, resource, offset, size, 0, resourceState, dumpName.str(),
@@ -106,6 +106,7 @@ void GpuPatchDumpService::DumpBindingTable(ID3D12GraphicsCommandList* commandLis
                                            unsigned offset,
                                            unsigned size,
                                            unsigned stride,
+                                           BarrierState resourceState,
                                            unsigned callKey,
                                            BindingTableType bindingTableType,
                                            bool prePatch) {
@@ -120,24 +121,24 @@ void GpuPatchDumpService::DumpBindingTable(ID3D12GraphicsCommandList* commandLis
   std::wstringstream dumpName;
   dumpName << m_DumpPath << L"/call_" << callKey << L"_binding_table_";
   switch (bindingTableType) {
-  case RayGeneration:
+  case BindingTableType::RayGeneration:
     dumpName << L"ray_generation";
     break;
-  case Miss:
+  case BindingTableType::Miss:
     dumpName << L"miss";
     break;
-  case HitGroup:
+  case BindingTableType::HitGroup:
     dumpName << L"hit_group";
     break;
-  case Callable:
+  case BindingTableType::Callable:
     dumpName << L"callable";
     break;
   }
   dumpName << (prePatch ? L"_pre_patch" : L"_post_patch") << L".txt";
 
-  m_ResourceDump.DumpResource(commandList, resource, offset, size, stride,
-                              D3D12_RESOURCE_STATE_UNORDERED_ACCESS, dumpName.str(),
-                              RaytracingResourceDump::DumpContentKind::BindingTable, prePatch);
+  m_ResourceDump.DumpResource(commandList, resource, offset, size, stride, resourceState,
+                              dumpName.str(), RaytracingResourceDump::DumpContentKind::BindingTable,
+                              prePatch);
 }
 
 void GpuPatchDumpService::DumpExecuteIndirectArgumentBuffer(
@@ -146,10 +147,10 @@ void GpuPatchDumpService::DumpExecuteIndirectArgumentBuffer(
     unsigned maxCommandCount,
     ID3D12Resource* argumentBuffer,
     unsigned argumentBufferOffset,
-    D3D12_RESOURCE_STATES argumentBufferState,
+    BarrierState argumentBufferState,
     ID3D12Resource* countBuffer,
     unsigned countBufferOffset,
-    D3D12_RESOURCE_STATES countBufferState,
+    BarrierState countBufferState,
     unsigned callKey,
     bool prePatch) {
 
@@ -177,11 +178,11 @@ void GpuPatchDumpService::ExecuteCommandLists(unsigned key,
                                               unsigned commandListNum) {
   if (m_DumpInstancesPre || m_DumpInstancesPost || m_DumpBindingTablesPre ||
       m_DumpBindingTablesPost) {
-    m_ResourceDump.executeCommandLists(key, commandQueueKey, commandQueue, commandLists,
+    m_ResourceDump.ExecuteCommandLists(key, commandQueueKey, commandQueue, commandLists,
                                        commandListNum);
   }
   if (m_DumpArgumentBufferPre || m_DumpArgumentBufferPost) {
-    m_ExecuteIndirectDump.executeCommandLists(key, commandQueueKey, commandQueue, commandLists,
+    m_ExecuteIndirectDump.ExecuteCommandLists(key, commandQueueKey, commandQueue, commandLists,
                                               commandListNum);
   }
 }
@@ -192,10 +193,10 @@ void GpuPatchDumpService::CommandQueueWait(unsigned key,
                                            UINT64 fenceValue) {
   if (m_DumpInstancesPre || m_DumpInstancesPost || m_DumpBindingTablesPre ||
       m_DumpBindingTablesPost) {
-    m_ResourceDump.commandQueueWait(key, commandQueueKey, fenceKey, fenceValue);
+    m_ResourceDump.CommandQueueWait(key, commandQueueKey, fenceKey, fenceValue);
   }
   if (m_DumpArgumentBufferPre || m_DumpArgumentBufferPost) {
-    m_ExecuteIndirectDump.commandQueueWait(key, commandQueueKey, fenceKey, fenceValue);
+    m_ExecuteIndirectDump.CommandQueueWait(key, commandQueueKey, fenceKey, fenceValue);
   }
 }
 
@@ -205,20 +206,20 @@ void GpuPatchDumpService::CommandQueueSignal(unsigned key,
                                              UINT64 fenceValue) {
   if (m_DumpInstancesPre || m_DumpInstancesPost || m_DumpBindingTablesPre ||
       m_DumpBindingTablesPost) {
-    m_ResourceDump.commandQueueSignal(key, commandQueueKey, fenceKey, fenceValue);
+    m_ResourceDump.CommandQueueSignal(key, commandQueueKey, fenceKey, fenceValue);
   }
   if (m_DumpArgumentBufferPre || m_DumpArgumentBufferPost) {
-    m_ExecuteIndirectDump.commandQueueSignal(key, commandQueueKey, fenceKey, fenceValue);
+    m_ExecuteIndirectDump.CommandQueueSignal(key, commandQueueKey, fenceKey, fenceValue);
   }
 }
 
 void GpuPatchDumpService::FenceSignal(unsigned key, unsigned fenceKey, UINT64 fenceValue) {
   if (m_DumpInstancesPre || m_DumpInstancesPost || m_DumpBindingTablesPre ||
       m_DumpBindingTablesPost) {
-    m_ResourceDump.fenceSignal(key, fenceKey, fenceValue);
+    m_ResourceDump.FenceSignal(key, fenceKey, fenceValue);
   }
   if (m_DumpArgumentBufferPre || m_DumpArgumentBufferPost) {
-    m_ExecuteIndirectDump.fenceSignal(key, fenceKey, fenceValue);
+    m_ExecuteIndirectDump.FenceSignal(key, fenceKey, fenceValue);
   }
 }
 

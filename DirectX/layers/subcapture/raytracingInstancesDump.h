@@ -25,18 +25,18 @@ public:
                  ID3D12Resource* resource,
                  unsigned offset,
                  unsigned size,
-                 D3D12_RESOURCE_STATES state,
+                 BarrierState state,
                  unsigned buildCall);
   void BuildTlasArrayOfPointers(ID3D12GraphicsCommandList* commandList,
                                 ID3D12Resource* resource,
                                 unsigned offset,
                                 unsigned size,
-                                D3D12_RESOURCE_STATES state,
+                                BarrierState state,
                                 unsigned buildCall,
                                 std::vector<unsigned>& arrayOfPointersOffsets);
 
 private:
-  void dumpBuffer(DumpInfo& dumpInfo, void* data) override;
+  void DumpBuffer(DumpInfo& dumpInfo, void* data) override;
 
 private:
   AnalyzerRaytracingService& m_RaytracingService;

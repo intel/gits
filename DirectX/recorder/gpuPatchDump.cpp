@@ -21,68 +21,68 @@ GpuPatchDump::GpuPatchDump() {}
 
 GpuPatchDump::~GpuPatchDump() {
   try {
-    flush();
+    Flush();
   } catch (...) {
     topmost_exception_handler("GpuPatchDump::~GpuPatchDump");
   }
 }
 
-void GpuPatchDump::dumpArgumentBuffer(ID3D12GraphicsCommandList* commandList,
+void GpuPatchDump::DumpArgumentBuffer(ID3D12GraphicsCommandList* commandList,
                                       D3D12_COMMAND_SIGNATURE_DESC& commandSignature,
                                       unsigned maxCommandCount,
                                       ID3D12Resource* argumentBuffer,
                                       unsigned argumentBufferOffset,
-                                      D3D12_RESOURCE_STATES argumentBufferState,
+                                      BarrierState argumentBufferState,
                                       ID3D12Resource* countBuffer,
                                       unsigned countBufferOffset,
-                                      D3D12_RESOURCE_STATES countBufferState,
+                                      BarrierState countBufferState,
                                       unsigned callKey) {
   ExecuteIndirectDumpInfo* dumpInfo = new ExecuteIndirectDumpInfo();
   dumpInfo->CommandSignature = &commandSignature;
-  dumpInfo->offset = argumentBufferOffset;
-  dumpInfo->size = commandSignature.ByteStride * maxCommandCount;
+  dumpInfo->Offset = argumentBufferOffset;
+  dumpInfo->Size = commandSignature.ByteStride * maxCommandCount;
   dumpInfo->CallKey = callKey;
   if (countBuffer) {
-    dumpInfo->CountDumpInfo.offset = countBufferOffset;
-    dumpInfo->CountDumpInfo.size = sizeof(unsigned);
+    dumpInfo->CountDumpInfo.Offset = countBufferOffset;
+    dumpInfo->CountDumpInfo.Size = sizeof(unsigned);
   }
 
-  stageResource(commandList, argumentBuffer, argumentBufferState, *dumpInfo);
+  StageResource(commandList, argumentBuffer, argumentBufferState, *dumpInfo);
   if (countBuffer) {
-    stageResource(commandList, countBuffer, countBufferState, dumpInfo->CountDumpInfo, true);
+    StageResource(commandList, countBuffer, countBufferState, dumpInfo->CountDumpInfo, true);
   }
 }
 
-void GpuPatchDump::dumpInstancesArrayOfPointers(ID3D12GraphicsCommandList* commandList,
+void GpuPatchDump::DumpInstancesArrayOfPointers(ID3D12GraphicsCommandList* commandList,
                                                 ID3D12Resource* instancesBuffer,
                                                 unsigned offset,
                                                 unsigned pointersCount,
-                                                D3D12_RESOURCE_STATES bufferState,
+                                                BarrierState bufferState,
                                                 unsigned callKey) {
   InstancesArrayOfPointersDumpInfo* dumpInfo = new InstancesArrayOfPointersDumpInfo();
-  dumpInfo->offset = offset;
-  dumpInfo->size = sizeof(D3D12_GPU_VIRTUAL_ADDRESS) * pointersCount;
+  dumpInfo->Offset = offset;
+  dumpInfo->Size = sizeof(D3D12_GPU_VIRTUAL_ADDRESS) * pointersCount;
   dumpInfo->CallKey = callKey;
 
-  stageResource(commandList, instancesBuffer, bufferState, *dumpInfo);
+  StageResource(commandList, instancesBuffer, bufferState, *dumpInfo);
 }
 
-void GpuPatchDump::dumpStagedResource(DumpInfo& dumpInfo) {
+void GpuPatchDump::DumpStagedResource(DumpInfo& dumpInfo) {
   ExecuteIndirectDumpInfo* executeIndirectInfo = dynamic_cast<ExecuteIndirectDumpInfo*>(&dumpInfo);
   if (executeIndirectInfo) {
-    unsigned count = executeIndirectInfo->size / executeIndirectInfo->CommandSignature->ByteStride;
-    if (executeIndirectInfo->CountDumpInfo.stagingBuffer) {
+    unsigned count = executeIndirectInfo->Size / executeIndirectInfo->CommandSignature->ByteStride;
+    if (executeIndirectInfo->CountDumpInfo.StagingBuffer) {
       void* data{};
-      HRESULT hr = executeIndirectInfo->CountDumpInfo.stagingBuffer->Map(0, nullptr, &data);
+      HRESULT hr = executeIndirectInfo->CountDumpInfo.StagingBuffer->Map(0, nullptr, &data);
       GITS_ASSERT(hr == S_OK);
       count = std::min(count, *static_cast<unsigned*>(data));
-      executeIndirectInfo->CountDumpInfo.stagingBuffer->Unmap(0, nullptr);
+      executeIndirectInfo->CountDumpInfo.StagingBuffer->Unmap(0, nullptr);
     }
     void* data{};
-    HRESULT hr = executeIndirectInfo->stagingBuffer->Map(0, nullptr, &data);
+    HRESULT hr = executeIndirectInfo->StagingBuffer->Map(0, nullptr, &data);
     GITS_ASSERT(hr == S_OK);
-    dumpArgumentBuffer(*executeIndirectInfo, count, data);
-    executeIndirectInfo->stagingBuffer->Unmap(0, nullptr);
+    DumpArgumentBuffer(*executeIndirectInfo, count, data);
+    executeIndirectInfo->StagingBuffer->Unmap(0, nullptr);
     return;
   }
 
@@ -90,16 +90,16 @@ void GpuPatchDump::dumpStagedResource(DumpInfo& dumpInfo) {
       dynamic_cast<InstancesArrayOfPointersDumpInfo*>(&dumpInfo);
   if (instancesInfo) {
     void* data{};
-    HRESULT hr = instancesInfo->stagingBuffer->Map(0, nullptr, &data);
+    HRESULT hr = instancesInfo->StagingBuffer->Map(0, nullptr, &data);
     GITS_ASSERT(hr == S_OK);
-    dumpInstancesBuffer(*instancesInfo, data);
-    instancesInfo->stagingBuffer->Unmap(0, nullptr);
+    DumpInstancesBuffer(*instancesInfo, data);
+    instancesInfo->StagingBuffer->Unmap(0, nullptr);
     return;
   }
 }
 
-void GpuPatchDump::flush() {
-  waitUntilDumped();
+void GpuPatchDump::Flush() {
+  WaitUntilDumped();
   {
     std::lock_guard<std::mutex> lock(m_ExecuteIndirectMutex);
     m_ExecuteIndirectStream.flush();
@@ -110,7 +110,7 @@ void GpuPatchDump::flush() {
   }
 }
 
-void GpuPatchDump::dumpArgumentBuffer(ExecuteIndirectDumpInfo& dumpInfo,
+void GpuPatchDump::DumpArgumentBuffer(ExecuteIndirectDumpInfo& dumpInfo,
                                       unsigned argumentCount,
                                       void* data) {
   unsigned offset = 0;
@@ -192,14 +192,14 @@ void GpuPatchDump::dumpArgumentBuffer(ExecuteIndirectDumpInfo& dumpInfo,
   }
 }
 
-void GpuPatchDump::dumpInstancesBuffer(InstancesArrayOfPointersDumpInfo& dumpInfo, void* data) {
+void GpuPatchDump::DumpInstancesBuffer(InstancesArrayOfPointersDumpInfo& dumpInfo, void* data) {
   std::lock_guard<std::mutex> lock(m_InstancesMutex);
   if (!m_InstancesStream.is_open()) {
     std::filesystem::path dumpPath = Configurator::Get().common.recorder.dumpPath;
     m_InstancesStream.open(dumpPath / "raytracingArraysOfPointers.dat", std::ios::binary);
   }
   m_InstancesStream.write(reinterpret_cast<char*>(&dumpInfo.CallKey), sizeof(unsigned));
-  unsigned count = dumpInfo.size / sizeof(D3D12_GPU_VIRTUAL_ADDRESS);
+  unsigned count = dumpInfo.Size / sizeof(D3D12_GPU_VIRTUAL_ADDRESS);
   m_InstancesStream.write(reinterpret_cast<char*>(&count), sizeof(unsigned));
   D3D12_GPU_VIRTUAL_ADDRESS* address = static_cast<D3D12_GPU_VIRTUAL_ADDRESS*>(data);
   for (unsigned i = 0; i < count; ++i) {

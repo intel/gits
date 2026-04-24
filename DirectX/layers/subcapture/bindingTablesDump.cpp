@@ -20,26 +20,26 @@ void BindingTablesDump::DumpBindingTable(ID3D12GraphicsCommandList* commandList,
                                          unsigned offset,
                                          unsigned size,
                                          unsigned stride,
-                                         D3D12_RESOURCE_STATES state,
+                                         BarrierState state,
                                          StateObjectInfo* stateObjectInfo,
                                          DescriptorHeaps descriptorHeaps,
                                          unsigned RootSignatureKey) {
   BindingTablesInfo* info = new BindingTablesInfo();
-  info->offset = offset;
-  info->size = size;
+  info->Offset = offset;
+  info->Size = size;
   info->stride = stride;
   info->stateObjectInfo = stateObjectInfo;
   info->descriptorHeaps = descriptorHeaps;
   info->RootSignatureKey = RootSignatureKey;
 
-  stageResource(commandList, resource, state, *info);
+  StageResource(commandList, resource, state, *info);
 }
 
-void BindingTablesDump::dumpBuffer(DumpInfo& dumpInfo, void* data) {
+void BindingTablesDump::DumpBuffer(DumpInfo& dumpInfo, void* data) {
   std::lock_guard<std::mutex> lock(m_Mutex);
 
   BindingTablesInfo& info = static_cast<BindingTablesInfo&>(dumpInfo);
-  unsigned recordCount = info.size / info.stride;
+  unsigned recordCount = info.Size / info.stride;
   for (unsigned recordIndex = 0; recordIndex < recordCount; ++recordIndex) {
     uint8_t* p = static_cast<uint8_t*>(data) + recordIndex * info.stride;
 

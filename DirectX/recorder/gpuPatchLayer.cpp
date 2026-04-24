@@ -40,11 +40,14 @@ void GpuPatchLayer::Post(ID3D12GraphicsCommandListExecuteIndirectCommand& c) {
   }
 
   if (raytracing) {
-    m_GpuPatchDump.dumpArgumentBuffer(c.m_Object.Value, it->second, c.m_MaxCommandCount.Value,
+    BarrierState argumentBufferState{};
+    argumentBufferState.State = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+    BarrierState countBufferState{};
+    countBufferState.State = D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT;
+    m_GpuPatchDump.DumpArgumentBuffer(c.m_Object.Value, it->second, c.m_MaxCommandCount.Value,
                                       c.m_pArgumentBuffer.Value, c.m_ArgumentBufferOffset.Value,
-                                      D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT,
-                                      c.m_pCountBuffer.Value, c.m_CountBufferOffset.Value,
-                                      D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT, c.Key);
+                                      argumentBufferState, c.m_pCountBuffer.Value,
+                                      c.m_CountBufferOffset.Value, countBufferState, c.Key);
   }
 }
 
@@ -65,54 +68,55 @@ void GpuPatchLayer::Post(ID3D12GraphicsCommandList4BuildRaytracingAccelerationSt
       resourceState = D3D12_RESOURCE_STATE_GENERIC_READ;
     }
 
-    m_GpuPatchDump.dumpInstancesArrayOfPointers(c.m_Object.Value, instancesBuffer, info.Offset,
-                                                c.m_pDesc.Value->Inputs.NumDescs, resourceState,
-                                                c.Key);
+    BarrierState state{};
+    state.State = resourceState;
+    m_GpuPatchDump.DumpInstancesArrayOfPointers(c.m_Object.Value, instancesBuffer, info.Offset,
+                                                c.m_pDesc.Value->Inputs.NumDescs, state, c.Key);
   }
 }
 
 void GpuPatchLayer::Post(ID3D12CommandQueueExecuteCommandListsCommand& c) {
   std::lock_guard<std::mutex> lock(m_Mutex);
-  m_GpuPatchDump.executeCommandLists(c.Key, c.m_Object.Key, c.m_Object.Value,
+  m_GpuPatchDump.ExecuteCommandLists(c.Key, c.m_Object.Key, c.m_Object.Value,
                                      c.m_ppCommandLists.Value, c.m_NumCommandLists.Value);
 }
 
 void GpuPatchLayer::Post(ID3D12CommandQueueWaitCommand& c) {
   std::lock_guard<std::mutex> lock(m_Mutex);
-  m_GpuPatchDump.commandQueueWait(c.Key, c.m_Object.Key, c.m_pFence.Key, c.m_Value.Value);
+  m_GpuPatchDump.CommandQueueWait(c.Key, c.m_Object.Key, c.m_pFence.Key, c.m_Value.Value);
 }
 
 void GpuPatchLayer::Post(ID3D12CommandQueueSignalCommand& c) {
   std::lock_guard<std::mutex> lock(m_Mutex);
-  m_GpuPatchDump.commandQueueSignal(c.Key, c.m_Object.Key, c.m_pFence.Key, c.m_Value.Value);
+  m_GpuPatchDump.CommandQueueSignal(c.Key, c.m_Object.Key, c.m_pFence.Key, c.m_Value.Value);
 }
 
 void GpuPatchLayer::Post(ID3D12FenceSignalCommand& c) {
   std::lock_guard<std::mutex> lock(m_Mutex);
-  m_GpuPatchDump.fenceSignal(c.Key, c.m_Object.Key, c.m_Value.Value);
+  m_GpuPatchDump.FenceSignal(c.Key, c.m_Object.Key, c.m_Value.Value);
 }
 
 void GpuPatchLayer::Post(ID3D12DeviceCreateFenceCommand& c) {
   std::lock_guard<std::mutex> lock(m_Mutex);
-  m_GpuPatchDump.fenceSignal(c.Key, c.m_ppFence.Key, c.m_InitialValue.Value);
+  m_GpuPatchDump.FenceSignal(c.Key, c.m_ppFence.Key, c.m_InitialValue.Value);
 }
 
 void GpuPatchLayer::Post(ID3D12Device3EnqueueMakeResidentCommand& c) {
   std::lock_guard<std::mutex> lock(m_Mutex);
-  m_GpuPatchDump.fenceSignal(c.Key, c.m_pFenceToSignal.Key, c.m_FenceValueToSignal.Value);
+  m_GpuPatchDump.FenceSignal(c.Key, c.m_pFenceToSignal.Key, c.m_FenceValueToSignal.Value);
 }
 
 void GpuPatchLayer::Post(IDXGISwapChainPresentCommand& c) {
   if (!(c.m_Flags.Value & DXGI_PRESENT_TEST)) {
     std::lock_guard<std::mutex> lock(m_Mutex);
-    m_GpuPatchDump.flush();
+    m_GpuPatchDump.Flush();
   }
 }
 
 void GpuPatchLayer::Post(IDXGISwapChain1Present1Command& c) {
   if (!(c.m_PresentFlags.Value & DXGI_PRESENT_TEST)) {
     std::lock_guard<std::mutex> lock(m_Mutex);
-    m_GpuPatchDump.flush();
+    m_GpuPatchDump.Flush();
   }
 }
 

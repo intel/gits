@@ -17,15 +17,15 @@ class DispatchOutputsDump : public ResourceDump {
 public:
   DispatchOutputsDump(ImageFormat format) : ResourceDump(format) {}
   ~DispatchOutputsDump();
-  void dumpResource(ID3D12GraphicsCommandList* commandList,
+  void DumpResource(ID3D12GraphicsCommandList* commandList,
                     ID3D12Resource* resource,
                     unsigned subresource,
-                    D3D12_RESOURCE_STATES resourceState,
+                    BarrierState resourceState,
                     const std::wstring& dumpName,
                     unsigned mipLevel,
                     DXGI_FORMAT format,
                     unsigned commandListDispatchCount);
-  void executeCommandLists(unsigned key,
+  void ExecuteCommandLists(unsigned key,
                            unsigned commandQueueKey,
                            ID3D12CommandQueue* commandQueue,
                            ID3D12CommandList** commandLists,
@@ -41,7 +41,7 @@ protected:
     std::wstring ExecutionCount{};
   };
 
-  void dumpTexture(DumpInfo& dumpInfo, void* data) override;
+  void DumpTexture(DumpInfo& dumpInfo, void* data) override;
 };
 
 } // namespace DirectX

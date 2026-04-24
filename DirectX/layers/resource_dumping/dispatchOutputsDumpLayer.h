@@ -88,24 +88,24 @@ private:
   std::unordered_map<unsigned, ID3D12Resource*> m_ResourceByKey;
 
   struct CommandListInfo {
-    unsigned computeRootSignature{};
+    unsigned ComputeRootSignature{};
   };
   std::unordered_map<unsigned, CommandListInfo> m_CommandListInfos;
 
   struct DescriptorHeapInfo {
-    D3D12_DESCRIPTOR_HEAP_TYPE type{};
-    unsigned numDescriptors{};
+    D3D12_DESCRIPTOR_HEAP_TYPE Type{};
+    unsigned NumDescriptors{};
   };
   std::unordered_map<unsigned, DescriptorHeapInfo> m_DescriptorHeapInfos;
 
   struct DispatchOutput {
     unsigned ResourceKey{};
-    ID3D12Resource* resource{};
-    unsigned slot{};
+    ID3D12Resource* Resource{};
+    unsigned Slot{};
   };
 
   struct IndicesInfo {
-    std::vector<unsigned> indices;
+    std::vector<unsigned> Indices;
     unsigned DescriptorHeapKey{};
   };
   std::unordered_map<unsigned, std::unordered_map<unsigned, unsigned>>
@@ -119,7 +119,7 @@ private:
       m_ResourceKeysBySlotByDispatch;
 
   struct DryRunInfo {
-    std::map<unsigned, std::set<unsigned>> dispatchesWithTextureByFrame;
+    std::map<unsigned, std::set<unsigned>> DispatchesWithTextureByFrame;
   } m_DryRunInfo;
 
 private:

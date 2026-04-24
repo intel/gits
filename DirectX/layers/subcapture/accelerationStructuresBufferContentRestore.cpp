@@ -23,25 +23,25 @@ void AccelerationStructuresBufferContentRestore::StoreBuffer(ID3D12GraphicsComma
                                                              unsigned ResourceKey,
                                                              unsigned offset,
                                                              unsigned size,
-                                                             D3D12_RESOURCE_STATES resourceState,
+                                                             BarrierState resourceState,
                                                              unsigned buildCallKey,
                                                              bool isMappable) {
   BufferInfo* info = new BufferInfo();
-  info->offset = offset;
-  info->size = size;
+  info->Offset = offset;
+  info->Size = size;
   info->BuildCallKey = buildCallKey;
   info->ResourceKey = ResourceKey;
   info->IsMappable = isMappable;
-  info->dumpName = L"BLAS build " + std::to_wstring(buildCallKey) + L" resource O" +
+  info->DumpName = L"BLAS build " + std::to_wstring(buildCallKey) + L" resource O" +
                    std::to_wstring(ResourceKey);
 
-  stageResource(commandList, resource, resourceState, *info);
+  StageResource(commandList, resource, resourceState, *info);
 
   std::lock_guard<std::mutex> lock(m_Mutex);
   m_RestoreBuilds.insert(buildCallKey);
 }
 
-void AccelerationStructuresBufferContentRestore::dumpBuffer(DumpInfo& dumpInfo, void* data) {
+void AccelerationStructuresBufferContentRestore::DumpBuffer(DumpInfo& dumpInfo, void* data) {
 
   BufferInfo& info = static_cast<BufferInfo&>(dumpInfo);
   {
@@ -53,11 +53,11 @@ void AccelerationStructuresBufferContentRestore::dumpBuffer(DumpInfo& dumpInfo, 
 
   BufferRestoreInfo restoreInfo{};
   restoreInfo.BufferKey = info.ResourceKey;
-  restoreInfo.Offset = info.offset;
+  restoreInfo.Offset = info.Offset;
   restoreInfo.IsMappable = info.IsMappable;
-  restoreInfo.BufferHash = XXH32(data, info.size, 0);
+  restoreInfo.BufferHash = XXH32(data, info.Size, 0);
   restoreInfo.BufferData = std::make_unique<std::vector<char>>(
-      static_cast<char*>(data), static_cast<char*>(data) + info.size);
+      static_cast<char*>(data), static_cast<char*>(data) + info.Size);
 
   std::lock_guard<std::mutex> lock(m_Mutex);
   m_RestoreBuildInfos[info.BuildCallKey].push_back(std::move(restoreInfo));

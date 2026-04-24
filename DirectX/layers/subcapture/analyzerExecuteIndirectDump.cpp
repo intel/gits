@@ -21,42 +21,43 @@ void AnalyzerExecuteIndirectDump::DumpArgumentBuffer(
     unsigned maxCommandCount,
     ID3D12Resource* argumentBuffer,
     unsigned argumentBufferOffset,
+    BarrierState argumentBufferState,
     ID3D12Resource* countBuffer,
-    unsigned countBufferOffset) {
+    unsigned countBufferOffset,
+    BarrierState countBufferState) {
 
   ExecuteIndirectDumpInfo* dumpInfo = new ExecuteIndirectDumpInfo();
   dumpInfo->commandSignature = commandSignature;
-  dumpInfo->offset = argumentBufferOffset;
-  dumpInfo->size = commandSignature->ByteStride * maxCommandCount;
+  dumpInfo->Offset = argumentBufferOffset;
+  dumpInfo->Size = commandSignature->ByteStride * maxCommandCount;
   if (countBuffer) {
-    dumpInfo->countDumpInfo.offset = countBufferOffset;
-    dumpInfo->countDumpInfo.size = sizeof(unsigned);
+    dumpInfo->countDumpInfo.Offset = countBufferOffset;
+    dumpInfo->countDumpInfo.Size = sizeof(unsigned);
   }
 
-  stageResource(commandList, argumentBuffer, D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT, *dumpInfo);
+  StageResource(commandList, argumentBuffer, argumentBufferState, *dumpInfo);
   if (countBuffer) {
-    stageResource(commandList, countBuffer, D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT,
-                  dumpInfo->countDumpInfo, true);
+    StageResource(commandList, countBuffer, countBufferState, dumpInfo->countDumpInfo, true);
   }
 }
 
-void AnalyzerExecuteIndirectDump::dumpStagedResource(DumpInfo& dumpInfo) {
+void AnalyzerExecuteIndirectDump::DumpStagedResource(DumpInfo& dumpInfo) {
   ExecuteIndirectDumpInfo& info = static_cast<ExecuteIndirectDumpInfo&>(dumpInfo);
-  unsigned count = info.size / info.commandSignature->ByteStride;
-  if (info.countDumpInfo.stagingBuffer) {
+  unsigned count = info.Size / info.commandSignature->ByteStride;
+  if (info.countDumpInfo.StagingBuffer) {
     void* data{};
-    HRESULT hr = info.countDumpInfo.stagingBuffer->Map(0, nullptr, &data);
+    HRESULT hr = info.countDumpInfo.StagingBuffer->Map(0, nullptr, &data);
     GITS_ASSERT(hr == S_OK);
     count = std::min(count, *static_cast<unsigned*>(data));
-    info.countDumpInfo.stagingBuffer->Unmap(0, nullptr);
+    info.countDumpInfo.StagingBuffer->Unmap(0, nullptr);
   }
   void* data{};
-  HRESULT hr = info.stagingBuffer->Map(0, nullptr, &data);
+  HRESULT hr = info.StagingBuffer->Map(0, nullptr, &data);
   GITS_ASSERT(hr == S_OK);
 
   DumpArgumentBuffer(info, count, data);
 
-  info.stagingBuffer->Unmap(0, nullptr);
+  info.StagingBuffer->Unmap(0, nullptr);
 }
 
 void AnalyzerExecuteIndirectDump::DumpArgumentBuffer(ExecuteIndirectDumpInfo& dumpInfo,

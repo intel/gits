@@ -72,16 +72,16 @@ bool StateTrackingLayer::IsResourceHeapMappable(unsigned heapKey,
                                                 const D3D12_TEXTURE_LAYOUT& textureLayout) {
   ObjectState* state = m_StateService.GetState(heapKey);
   if (state->CreationCommand->GetId() == CommandId::ID_ID3D12DEVICE_CREATEHEAP) {
-    auto* Command = static_cast<ID3D12DeviceCreateHeapCommand*>(state->CreationCommand.get());
-    return IsResourceHeapMappable(Command->m_pDesc.Value->Properties, textureLayout);
+    auto* command = static_cast<ID3D12DeviceCreateHeapCommand*>(state->CreationCommand.get());
+    return IsResourceHeapMappable(command->m_pDesc.Value->Properties, textureLayout);
   } else if (state->CreationCommand->GetId() == CommandId::ID_ID3D12DEVICE4_CREATEHEAP1) {
-    auto* Command = static_cast<ID3D12Device4CreateHeap1Command*>(state->CreationCommand.get());
-    return IsResourceHeapMappable(Command->m_pDesc.Value->Properties, textureLayout);
+    auto* command = static_cast<ID3D12DeviceCreateHeapCommand*>(state->CreationCommand.get());
+    return IsResourceHeapMappable(command->m_pDesc.Value->Properties, textureLayout);
   } else if (state->CreationCommand->GetId() == CommandId::ID_CREATE_HEAP_ALLOCATION) {
     return true;
   } else if (state->CreationCommand->GetId() == CommandId::INTC_D3D12_CREATEHEAP) {
-    auto* Command = static_cast<INTC_D3D12_CreateHeapCommand*>(state->CreationCommand.get());
-    return IsResourceHeapMappable(Command->m_pDesc.Value->pD3D12Desc->Properties, textureLayout);
+    auto* command = static_cast<INTC_D3D12_CreateHeapCommand*>(state->CreationCommand.get());
+    return IsResourceHeapMappable(command->m_pDesc.Value->pD3D12Desc->Properties, textureLayout);
   } else {
     GITS_ASSERT(0 && "Unexpected state type");
   }
@@ -90,7 +90,7 @@ bool StateTrackingLayer::IsResourceHeapMappable(unsigned heapKey,
 
 bool StateTrackingLayer::IsResourceBarrierRestricted(D3D12_RESOURCE_FLAGS flags) {
   // ResourceBarrier on placed resource can corrupt underlying heap data if resource does not currently own that data
-  // https://learn.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12device-createplacedresource
+  // https://learn.microsoft.Com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12device-createplacedresource
   constexpr D3D12_RESOURCE_FLAGS resourceTypesRestrictedFromBarrier =
       D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL | D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
   return (flags & resourceTypesRestrictedFromBarrier) != 0;
@@ -149,14 +149,14 @@ void StateTrackingLayer::Pre(IUnknownReleaseCommand& c) {
 
     auto it = m_ResourceHeaps.find(c.m_Object.Key);
     if (it != m_ResourceHeaps.end()) {
-      for (unsigned ResourceKey : it->second) {
-        m_StateService.ReleaseObject(ResourceKey, 0);
-        m_MapStateService.DestroyResource(ResourceKey);
-        m_ResourceStateTrackingService.DestroyResource(ResourceKey);
-        m_DescriptorService.RemoveState(ResourceKey);
-        m_AccelerationStructuresSerializeService.DestroyResource(ResourceKey);
-        m_ResidencyService.DestroyObject(ResourceKey);
-        m_ResourceUsageTrackingService.DestroyResource(ResourceKey);
+      for (unsigned resourceKey : it->second) {
+        m_StateService.ReleaseObject(resourceKey, 0);
+        m_MapStateService.DestroyResource(resourceKey);
+        m_ResourceStateTrackingService.DestroyResource(resourceKey);
+        m_DescriptorService.RemoveState(resourceKey);
+        m_AccelerationStructuresSerializeService.DestroyResource(resourceKey);
+        m_ResidencyService.DestroyObject(resourceKey);
+        m_ResourceUsageTrackingService.DestroyResource(resourceKey);
       }
       m_ResourceHeaps.erase(it);
     }
@@ -184,9 +184,9 @@ void StateTrackingLayer::ReleaseSwapChainBuffers(unsigned key, unsigned referenc
 
   // SwapChain buffers share the same reference count
   // Remove all buffers from the same SwapChain if one of them has 0 references
-  IDXGISwapChainGetBufferCommand* Command =
+  IDXGISwapChainGetBufferCommand* command =
       static_cast<IDXGISwapChainGetBufferCommand*>(state->CreationCommand.get());
-  unsigned swapChainKey = Command->m_Object.Key;
+  unsigned swapChainKey = command->m_Object.Key;
   for (unsigned bufferKey : m_SwapchainBuffers[swapChainKey]) {
     if (bufferKey == key) {
       continue;
@@ -534,36 +534,36 @@ void StateTrackingLayer::Post(IDXGISwapChainResizeBuffersCommand& c) {
   }
   ObjectState* objectState = m_StateService.GetState(c.m_Object.Key);
   if (objectState->CreationCommand->GetId() == CommandId::ID_IDXGIFACTORY_CREATESWAPCHAIN) {
-    IDXGIFactoryCreateSwapChainCommand* Command =
+    IDXGIFactoryCreateSwapChainCommand* command =
         static_cast<IDXGIFactoryCreateSwapChainCommand*>(objectState->CreationCommand.get());
-    Command->m_pDesc.Value->BufferDesc.Width = c.m_Width.Value;
-    Command->m_pDesc.Value->BufferDesc.Height = c.m_Height.Value;
-    Command->m_pDesc.Value->Flags = c.m_SwapChainFlags.Value;
+    command->m_pDesc.Value->BufferDesc.Width = c.m_Width.Value;
+    command->m_pDesc.Value->BufferDesc.Height = c.m_Height.Value;
+    command->m_pDesc.Value->Flags = c.m_SwapChainFlags.Value;
     if (c.m_BufferCount.Value) {
-      Command->m_pDesc.Value->BufferCount = c.m_BufferCount.Value;
+      command->m_pDesc.Value->BufferCount = c.m_BufferCount.Value;
     }
     if (c.m_NewFormat.Value != DXGI_FORMAT_UNKNOWN) {
-      Command->m_pDesc.Value->BufferDesc.Format = c.m_NewFormat.Value;
+      command->m_pDesc.Value->BufferDesc.Format = c.m_NewFormat.Value;
     }
   } else if (objectState->CreationCommand->GetId() ==
              CommandId::ID_IDXGIFACTORY2_CREATESWAPCHAINFORHWND) {
-    IDXGIFactory2CreateSwapChainForHwndCommand* Command =
+    IDXGIFactory2CreateSwapChainForHwndCommand* command =
         static_cast<IDXGIFactory2CreateSwapChainForHwndCommand*>(
             objectState->CreationCommand.get());
-    Command->m_pDesc.Value->Width = c.m_Width.Value;
-    Command->m_pDesc.Value->Height = c.m_Height.Value;
-    Command->m_pDesc.Value->Flags = c.m_SwapChainFlags.Value;
+    command->m_pDesc.Value->Width = c.m_Width.Value;
+    command->m_pDesc.Value->Height = c.m_Height.Value;
+    command->m_pDesc.Value->Flags = c.m_SwapChainFlags.Value;
     if (c.m_BufferCount.Value) {
-      Command->m_pDesc.Value->BufferCount = c.m_BufferCount.Value;
+      command->m_pDesc.Value->BufferCount = c.m_BufferCount.Value;
     }
     if (c.m_NewFormat.Value != DXGI_FORMAT_UNKNOWN) {
-      Command->m_pDesc.Value->Format = c.m_NewFormat.Value;
+      command->m_pDesc.Value->Format = c.m_NewFormat.Value;
     }
   } else if (objectState->CreationCommand->GetId() ==
              CommandId::ID_XEFGSWAPCHAIND3D12GETSWAPCHAINPTR) {
-    xefgSwapChainD3D12GetSwapChainPtrCommand* Command =
+    xefgSwapChainD3D12GetSwapChainPtrCommand* command =
         static_cast<xefgSwapChainD3D12GetSwapChainPtrCommand*>(objectState->CreationCommand.get());
-    auto contextKey = Command->m_hSwapChain.Key;
+    auto contextKey = command->m_hSwapChain.Key;
     auto xefgContextState = m_XefgStateService.GetContextState(contextKey);
     if (xefgContextState->InitFromSwapChainDescParams.has_value()) {
       auto& swapChainDesc = xefgContextState->InitFromSwapChainDescParams.value().SwapChainDesc;
@@ -597,36 +597,36 @@ void StateTrackingLayer::Post(IDXGISwapChain3ResizeBuffers1Command& c) {
   }
   ObjectState* objectState = m_StateService.GetState(c.m_Object.Key);
   if (objectState->CreationCommand->GetId() == CommandId::ID_IDXGIFACTORY_CREATESWAPCHAIN) {
-    IDXGIFactoryCreateSwapChainCommand* Command =
+    IDXGIFactoryCreateSwapChainCommand* command =
         static_cast<IDXGIFactoryCreateSwapChainCommand*>(objectState->CreationCommand.get());
-    Command->m_pDesc.Value->BufferDesc.Width = c.m_Width.Value;
-    Command->m_pDesc.Value->BufferDesc.Height = c.m_Height.Value;
-    Command->m_pDesc.Value->Flags = c.m_SwapChainFlags.Value;
+    command->m_pDesc.Value->BufferDesc.Width = c.m_Width.Value;
+    command->m_pDesc.Value->BufferDesc.Height = c.m_Height.Value;
+    command->m_pDesc.Value->Flags = c.m_SwapChainFlags.Value;
     if (c.m_BufferCount.Value) {
-      Command->m_pDesc.Value->BufferCount = c.m_BufferCount.Value;
+      command->m_pDesc.Value->BufferCount = c.m_BufferCount.Value;
     }
     if (c.m_Format.Value != DXGI_FORMAT_UNKNOWN) {
-      Command->m_pDesc.Value->BufferDesc.Format = c.m_Format.Value;
+      command->m_pDesc.Value->BufferDesc.Format = c.m_Format.Value;
     }
   } else if (objectState->CreationCommand->GetId() ==
              CommandId::ID_IDXGIFACTORY2_CREATESWAPCHAINFORHWND) {
-    IDXGIFactory2CreateSwapChainForHwndCommand* Command =
+    IDXGIFactory2CreateSwapChainForHwndCommand* command =
         static_cast<IDXGIFactory2CreateSwapChainForHwndCommand*>(
             objectState->CreationCommand.get());
-    Command->m_pDesc.Value->Width = c.m_Width.Value;
-    Command->m_pDesc.Value->Height = c.m_Height.Value;
-    Command->m_pDesc.Value->Flags = c.m_SwapChainFlags.Value;
+    command->m_pDesc.Value->Width = c.m_Width.Value;
+    command->m_pDesc.Value->Height = c.m_Height.Value;
+    command->m_pDesc.Value->Flags = c.m_SwapChainFlags.Value;
     if (c.m_BufferCount.Value) {
-      Command->m_pDesc.Value->BufferCount = c.m_BufferCount.Value;
+      command->m_pDesc.Value->BufferCount = c.m_BufferCount.Value;
     }
     if (c.m_Format.Value != DXGI_FORMAT_UNKNOWN) {
-      Command->m_pDesc.Value->Format = c.m_Format.Value;
+      command->m_pDesc.Value->Format = c.m_Format.Value;
     }
   } else if (objectState->CreationCommand->GetId() ==
              CommandId::ID_XEFGSWAPCHAIND3D12GETSWAPCHAINPTR) {
-    xefgSwapChainD3D12GetSwapChainPtrCommand* Command =
+    xefgSwapChainD3D12GetSwapChainPtrCommand* command =
         static_cast<xefgSwapChainD3D12GetSwapChainPtrCommand*>(objectState->CreationCommand.get());
-    auto contextKey = Command->m_hSwapChain.Key;
+    auto contextKey = command->m_hSwapChain.Key;
     auto xefgContextState = m_XefgStateService.GetContextState(contextKey);
     if (xefgContextState->InitFromSwapChainDescParams.has_value()) {
       auto& swapChainDesc = xefgContextState->InitFromSwapChainDescParams.value().SwapChainDesc;
@@ -1081,7 +1081,8 @@ void StateTrackingLayer::Post(ID3D12DeviceCreateCommittedResourceCommand& c) {
     m_ResourceStateTrackingService.AddResource(state->DeviceKey,
                                                static_cast<ID3D12Resource*>(*c.m_ppvResource.Value),
                                                state->Key, state->InitialState, !state->IsMappable);
-    m_ResourceStateTracker.AddResource(c.m_ppvResource.Key, c.m_InitialResourceState.Value);
+    m_ResourceStateTracker.AddResource(*reinterpret_cast<ID3D12Resource**>(c.m_ppvResource.Value),
+                                       c.m_ppvResource.Key, c.m_InitialResourceState.Value);
   }
   if (c.m_HeapFlags.Value & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
     m_ResidencyService.CreateNotResident(state->Key, state->DeviceKey);
@@ -1115,7 +1116,8 @@ void StateTrackingLayer::Post(ID3D12Device4CreateCommittedResource1Command& c) {
     m_ResourceStateTrackingService.AddResource(state->DeviceKey,
                                                static_cast<ID3D12Resource*>(*c.m_ppvResource.Value),
                                                state->Key, state->InitialState, !state->IsMappable);
-    m_ResourceStateTracker.AddResource(c.m_ppvResource.Key, c.m_InitialResourceState.Value);
+    m_ResourceStateTracker.AddResource(*reinterpret_cast<ID3D12Resource**>(c.m_ppvResource.Value),
+                                       c.m_ppvResource.Key, c.m_InitialResourceState.Value);
   }
   if (c.m_HeapFlags.Value & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
     m_ResidencyService.CreateNotResident(state->Key, state->DeviceKey);
@@ -1150,7 +1152,8 @@ void StateTrackingLayer::Post(ID3D12Device8CreateCommittedResource2Command& c) {
     m_ResourceStateTrackingService.AddResource(state->DeviceKey,
                                                static_cast<ID3D12Resource*>(*c.m_ppvResource.Value),
                                                state->Key, state->InitialState, !state->IsMappable);
-    m_ResourceStateTracker.AddResource(c.m_ppvResource.Key, c.m_InitialResourceState.Value);
+    m_ResourceStateTracker.AddResource(*reinterpret_cast<ID3D12Resource**>(c.m_ppvResource.Value),
+                                       c.m_ppvResource.Key, c.m_InitialResourceState.Value);
   }
   if (c.m_HeapFlags.Value & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
     m_ResidencyService.CreateNotResident(state->Key, state->DeviceKey);
@@ -1184,7 +1187,8 @@ void StateTrackingLayer::Post(ID3D12Device10CreateCommittedResource3Command& c) 
   m_ResourceStateTrackingService.AddResource(state->DeviceKey,
                                              static_cast<ID3D12Resource*>(*c.m_ppvResource.Value),
                                              state->Key, state->InitialLayout, !state->IsMappable);
-  m_ResourceStateTracker.AddResource(c.m_ppvResource.Key, c.m_InitialLayout.Value);
+  m_ResourceStateTracker.AddResource(*reinterpret_cast<ID3D12Resource**>(c.m_ppvResource.Value),
+                                     c.m_ppvResource.Key, c.m_InitialLayout.Value);
   if (c.m_HeapFlags.Value & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
     m_ResidencyService.CreateNotResident(state->Key, state->DeviceKey);
   }
@@ -1225,7 +1229,8 @@ void StateTrackingLayer::Post(ID3D12DeviceCreatePlacedResourceCommand& c) {
     m_ResourceStateTrackingService.AddResource(
         state->DeviceKey, static_cast<ID3D12Resource*>(*c.m_ppvResource.Value), state->Key,
         state->InitialState, !(state->IsMappable || state->BarrierRestricted));
-    m_ResourceStateTracker.AddResource(c.m_ppvResource.Key, c.m_InitialState.Value);
+    m_ResourceStateTracker.AddResource(*reinterpret_cast<ID3D12Resource**>(c.m_ppvResource.Value),
+                                       c.m_ppvResource.Key, c.m_InitialState.Value);
   }
   m_GpuAddressService.CreatePlacedResource(c.m_pHeap.Key, c.m_ppvResource.Key,
                                            c.m_pDesc.Value->Flags);
@@ -1266,7 +1271,8 @@ void StateTrackingLayer::Post(ID3D12Device8CreatePlacedResource1Command& c) {
     m_ResourceStateTrackingService.AddResource(
         state->DeviceKey, static_cast<ID3D12Resource*>(*c.m_ppvResource.Value), state->Key,
         state->InitialState, !(state->IsMappable || state->BarrierRestricted));
-    m_ResourceStateTracker.AddResource(c.m_ppvResource.Key, c.m_InitialState.Value);
+    m_ResourceStateTracker.AddResource(*reinterpret_cast<ID3D12Resource**>(c.m_ppvResource.Value),
+                                       c.m_ppvResource.Key, c.m_InitialState.Value);
   }
   m_GpuAddressService.CreatePlacedResource(c.m_pHeap.Key, c.m_ppvResource.Key,
                                            c.m_pDesc.Value->Flags);
@@ -1306,7 +1312,8 @@ void StateTrackingLayer::Post(ID3D12Device10CreatePlacedResource2Command& c) {
   m_ResourceStateTrackingService.AddResource(
       state->DeviceKey, static_cast<ID3D12Resource*>(*c.m_ppvResource.Value), state->Key,
       state->InitialLayout, !(state->IsMappable || state->BarrierRestricted));
-  m_ResourceStateTracker.AddResource(c.m_ppvResource.Key, c.m_InitialLayout.Value);
+  m_ResourceStateTracker.AddResource(*reinterpret_cast<ID3D12Resource**>(c.m_ppvResource.Value),
+                                     c.m_ppvResource.Key, c.m_InitialLayout.Value);
   m_GpuAddressService.CreatePlacedResource(c.m_pHeap.Key, c.m_ppvResource.Key,
                                            c.m_pDesc.Value->Flags);
 }
@@ -1338,7 +1345,8 @@ void StateTrackingLayer::Post(ID3D12DeviceCreateReservedResourceCommand& c) {
     m_ResourceStateTrackingService.AddResource(state->DeviceKey,
                                                static_cast<ID3D12Resource*>(*c.m_ppvResource.Value),
                                                state->Key, state->InitialState, !state->IsMappable);
-    m_ResourceStateTracker.AddResource(c.m_ppvResource.Key, c.m_InitialState.Value);
+    m_ResourceStateTracker.AddResource(*reinterpret_cast<ID3D12Resource**>(c.m_ppvResource.Value),
+                                       c.m_ppvResource.Key, c.m_InitialState.Value);
   }
 }
 
@@ -1369,7 +1377,8 @@ void StateTrackingLayer::Post(ID3D12Device4CreateReservedResource1Command& c) {
     m_ResourceStateTrackingService.AddResource(state->DeviceKey,
                                                static_cast<ID3D12Resource*>(*c.m_ppvResource.Value),
                                                state->Key, state->InitialState, !state->IsMappable);
-    m_ResourceStateTracker.AddResource(c.m_ppvResource.Key, c.m_InitialState.Value);
+    m_ResourceStateTracker.AddResource(*reinterpret_cast<ID3D12Resource**>(c.m_ppvResource.Value),
+                                       c.m_ppvResource.Key, c.m_InitialState.Value);
   }
 }
 
@@ -1399,7 +1408,8 @@ void StateTrackingLayer::Post(ID3D12Device10CreateReservedResource2Command& c) {
   m_ResourceStateTrackingService.AddResource(state->DeviceKey,
                                              static_cast<ID3D12Resource*>(*c.m_ppvResource.Value),
                                              state->Key, state->InitialLayout, !state->IsMappable);
-  m_ResourceStateTracker.AddResource(c.m_ppvResource.Key, c.m_InitialLayout.Value);
+  m_ResourceStateTracker.AddResource(*reinterpret_cast<ID3D12Resource**>(c.m_ppvResource.Value),
+                                     c.m_ppvResource.Key, c.m_InitialLayout.Value);
 }
 
 void StateTrackingLayer::Post(ID3D12DeviceCreateShaderResourceViewCommand& c) {
@@ -1694,7 +1704,8 @@ void StateTrackingLayer::Post(INTC_D3D12_CreateCommittedResourceCommand& c) {
     m_ResourceStateTrackingService.AddResource(state->DeviceKey,
                                                static_cast<ID3D12Resource*>(*c.m_ppvResource.Value),
                                                state->Key, state->InitialState, !state->IsMappable);
-    m_ResourceStateTracker.AddResource(c.m_ppvResource.Key, c.m_InitialResourceState.Value);
+    m_ResourceStateTracker.AddResource(*reinterpret_cast<ID3D12Resource**>(c.m_ppvResource.Value),
+                                       c.m_ppvResource.Key, c.m_InitialResourceState.Value);
   }
   if (c.m_HeapFlags.Value & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
     m_ResidencyService.CreateNotResident(state->Key, state->DeviceKey);
@@ -1734,7 +1745,8 @@ void StateTrackingLayer::Post(INTC_D3D12_CreatePlacedResourceCommand& c) {
     m_ResourceStateTrackingService.AddResource(
         state->DeviceKey, static_cast<ID3D12Resource*>(*c.m_ppvResource.Value), state->Key,
         state->InitialState, !(state->IsMappable || state->BarrierRestricted));
-    m_ResourceStateTracker.AddResource(c.m_ppvResource.Key, c.m_InitialState.Value);
+    m_ResourceStateTracker.AddResource(*reinterpret_cast<ID3D12Resource**>(c.m_ppvResource.Value),
+                                       c.m_ppvResource.Key, c.m_InitialState.Value);
   }
 }
 
@@ -1763,7 +1775,8 @@ void StateTrackingLayer::Post(INTC_D3D12_CreateReservedResourceCommand& c) {
     m_ResourceStateTrackingService.AddResource(state->DeviceKey,
                                                static_cast<ID3D12Resource*>(*c.m_ppvResource.Value),
                                                state->Key, state->InitialState, !state->IsMappable);
-    m_ResourceStateTracker.AddResource(c.m_ppvResource.Key, c.m_InitialState.Value);
+    m_ResourceStateTracker.AddResource(*reinterpret_cast<ID3D12Resource**>(c.m_ppvResource.Value),
+                                       c.m_ppvResource.Key, c.m_InitialState.Value);
   }
 }
 
@@ -1835,7 +1848,7 @@ void StateTrackingLayer::Post(ID3D12Device1SetResidencyPriorityCommand& c) {
         state->CreationCommand->GetId() != CommandId::ID_ID3D12DEVICE_CREATEHEAP &&
         state->CreationCommand->GetId() != CommandId::ID_ID3D12DEVICE4_CREATEHEAP1 &&
         state->CreationCommand->GetId() != CommandId::INTC_D3D12_CREATEHEAP) {
-      LOG_WARNING << "SetResidencyPriority not handled for Command "
+      LOG_WARNING << "SetResidencyPriority not handled for command "
                   << static_cast<unsigned>(state->CreationCommand->GetId());
     }
     state->ResidencyPriority = c.m_pPriorities.Value[i];
@@ -1913,11 +1926,11 @@ void StateTrackingLayer::Post(
   }
   m_AccelerationStructuresSerializeService.BuildAccelerationStructure(c);
 
-  CommandListCommand* Command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
-  Command->m_CommandSerializer.reset(
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->m_CommandSerializer.reset(
       new ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Pre(
@@ -1935,21 +1948,21 @@ void StateTrackingLayer::Post(
   }
   m_AccelerationStructuresSerializeService.CopyAccelerationStructure(c);
 
-  CommandListCommand* Command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
-  Command->m_CommandSerializer.reset(
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->m_CommandSerializer.reset(
       new ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Post(ID3D12GraphicsCommandList4DispatchRaysCommand& c) {
   if (m_StateRestored) {
     return;
   }
-  CommandListCommand* Command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
-  Command->m_CommandSerializer.reset(new ID3D12GraphicsCommandList4DispatchRaysSerializer(c));
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->m_CommandSerializer.reset(new ID3D12GraphicsCommandList4DispatchRaysSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Post(ID3D12GraphicsCommandListResetCommand& c) {
@@ -1964,18 +1977,17 @@ void StateTrackingLayer::Post(ID3D12GraphicsCommandListResetCommand& c) {
 
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
   state->ClearCommands();
-  state->m_AllocatorKey = c.m_pAllocator.Key;
 
   if (state->CreationCommand->GetId() == CommandId::ID_ID3D12DEVICE_CREATECOMMANDLIST) {
-    ID3D12DeviceCreateCommandListCommand* Command =
+    ID3D12DeviceCreateCommandListCommand* command =
         static_cast<ID3D12DeviceCreateCommandListCommand*>(state->CreationCommand.get());
-    Command->m_pCommandAllocator.Key = c.m_pAllocator.Key;
-    Command->m_pInitialState.Key = c.m_pInitialState.Key;
+    command->m_pCommandAllocator.Key = c.m_pAllocator.Key;
+    command->m_pInitialState.Key = c.m_pInitialState.Key;
   }
 
-  CommandListCommand* Command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
-  Command->m_CommandSerializer.reset(new ID3D12GraphicsCommandListResetSerializer(c));
-  state->m_Commands.push_back(Command);
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->m_CommandSerializer.reset(new ID3D12GraphicsCommandListResetSerializer(c));
+  state->m_Commands.push_back(command);
 
   m_ResourceUsageTrackingService.CommandListReset(state->Key);
 }
@@ -1984,52 +1996,52 @@ void StateTrackingLayer::Post(ID3D12GraphicsCommandListCloseCommand& c) {
   if (m_StateRestored) {
     return;
   }
-  CommandListCommand* Command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
-  Command->m_CommandSerializer.reset(new ID3D12GraphicsCommandListCloseSerializer(c));
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->m_CommandSerializer.reset(new ID3D12GraphicsCommandListCloseSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
   state->m_Closed = true;
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Post(ID3D12GraphicsCommandListClearStateCommand& c) {
   if (m_StateRestored) {
     return;
   }
-  CommandListCommand* Command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
-  Command->m_CommandSerializer.reset(new ID3D12GraphicsCommandListClearStateSerializer(c));
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->m_CommandSerializer.reset(new ID3D12GraphicsCommandListClearStateSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Post(ID3D12GraphicsCommandListDrawInstancedCommand& c) {
   if (m_StateRestored) {
     return;
   }
-  CommandListCommand* Command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
-  Command->m_CommandSerializer.reset(new ID3D12GraphicsCommandListDrawInstancedSerializer(c));
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->m_CommandSerializer.reset(new ID3D12GraphicsCommandListDrawInstancedSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Post(ID3D12GraphicsCommandListDrawIndexedInstancedCommand& c) {
   if (m_StateRestored) {
     return;
   }
-  CommandListCommand* Command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
-  Command->m_CommandSerializer.reset(
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->m_CommandSerializer.reset(
       new ID3D12GraphicsCommandListDrawIndexedInstancedSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Post(ID3D12GraphicsCommandListDispatchCommand& c) {
   if (m_StateRestored) {
     return;
   }
-  CommandListCommand* Command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
-  Command->m_CommandSerializer.reset(new ID3D12GraphicsCommandListDispatchSerializer(c));
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->m_CommandSerializer.reset(new ID3D12GraphicsCommandListDispatchSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Post(ID3D12GraphicsCommandListCopyBufferRegionCommand& c) {
@@ -2037,10 +2049,10 @@ void StateTrackingLayer::Post(ID3D12GraphicsCommandListCopyBufferRegionCommand& 
     return;
   }
   m_ResourceUsageTrackingService.CommandListResourceUsage(c.m_Object.Key, c.m_pDstBuffer.Key);
-  CommandListCommand* Command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
-  Command->m_CommandSerializer.reset(new ID3D12GraphicsCommandListCopyBufferRegionSerializer(c));
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->m_CommandSerializer.reset(new ID3D12GraphicsCommandListCopyBufferRegionSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Post(ID3D12GraphicsCommandListCopyTextureRegionCommand& c) {
@@ -2048,10 +2060,10 @@ void StateTrackingLayer::Post(ID3D12GraphicsCommandListCopyTextureRegionCommand&
     return;
   }
   m_ResourceUsageTrackingService.CommandListResourceUsage(c.m_Object.Key, c.m_pDst.ResourceKey);
-  CommandListCommand* Command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
-  Command->m_CommandSerializer.reset(new ID3D12GraphicsCommandListCopyTextureRegionSerializer(c));
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->m_CommandSerializer.reset(new ID3D12GraphicsCommandListCopyTextureRegionSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Post(ID3D12GraphicsCommandListCopyResourceCommand& c) {
@@ -2059,10 +2071,10 @@ void StateTrackingLayer::Post(ID3D12GraphicsCommandListCopyResourceCommand& c) {
     return;
   }
   m_ResourceUsageTrackingService.CommandListResourceUsage(c.m_Object.Key, c.m_pDstResource.Key);
-  CommandListCommand* Command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
-  Command->m_CommandSerializer.reset(new ID3D12GraphicsCommandListCopyResourceSerializer(c));
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->m_CommandSerializer.reset(new ID3D12GraphicsCommandListCopyResourceSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Post(ID3D12GraphicsCommandListCopyTilesCommand& c) {
@@ -2070,81 +2082,81 @@ void StateTrackingLayer::Post(ID3D12GraphicsCommandListCopyTilesCommand& c) {
     return;
   }
   m_ResourceUsageTrackingService.CommandListResourceUsage(c.m_Object.Key, c.m_pTiledResource.Key);
-  CommandListCommand* Command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
-  Command->m_CommandSerializer.reset(new ID3D12GraphicsCommandListCopyTilesSerializer(c));
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->m_CommandSerializer.reset(new ID3D12GraphicsCommandListCopyTilesSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Post(ID3D12GraphicsCommandListResolveSubresourceCommand& c) {
   if (m_StateRestored) {
     return;
   }
-  CommandListCommand* Command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
-  Command->m_CommandSerializer.reset(new ID3D12GraphicsCommandListResolveSubresourceSerializer(c));
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->m_CommandSerializer.reset(new ID3D12GraphicsCommandListResolveSubresourceSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Post(ID3D12GraphicsCommandListIASetPrimitiveTopologyCommand& c) {
   if (m_StateRestored) {
     return;
   }
-  CommandListCommand* Command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
-  Command->m_CommandSerializer.reset(
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->m_CommandSerializer.reset(
       new ID3D12GraphicsCommandListIASetPrimitiveTopologySerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Post(ID3D12GraphicsCommandListRSSetViewportsCommand& c) {
   if (m_StateRestored) {
     return;
   }
-  CommandListCommand* Command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
-  Command->m_CommandSerializer.reset(new ID3D12GraphicsCommandListRSSetViewportsSerializer(c));
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->m_CommandSerializer.reset(new ID3D12GraphicsCommandListRSSetViewportsSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Post(ID3D12GraphicsCommandListRSSetScissorRectsCommand& c) {
   if (m_StateRestored) {
     return;
   }
-  CommandListCommand* Command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
-  Command->m_CommandSerializer.reset(new ID3D12GraphicsCommandListRSSetScissorRectsSerializer(c));
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->m_CommandSerializer.reset(new ID3D12GraphicsCommandListRSSetScissorRectsSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Post(ID3D12GraphicsCommandListOMSetBlendFactorCommand& c) {
   if (m_StateRestored) {
     return;
   }
-  CommandListCommand* Command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
-  Command->m_CommandSerializer.reset(new ID3D12GraphicsCommandListOMSetBlendFactorSerializer(c));
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->m_CommandSerializer.reset(new ID3D12GraphicsCommandListOMSetBlendFactorSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Post(ID3D12GraphicsCommandListOMSetStencilRefCommand& c) {
   if (m_StateRestored) {
     return;
   }
-  CommandListCommand* Command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
-  Command->m_CommandSerializer.reset(new ID3D12GraphicsCommandListOMSetStencilRefSerializer(c));
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->m_CommandSerializer.reset(new ID3D12GraphicsCommandListOMSetStencilRefSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Post(ID3D12GraphicsCommandListSetPipelineStateCommand& c) {
   if (m_StateRestored) {
     return;
   }
-  CommandListCommand* Command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
-  Command->m_CommandSerializer.reset(new ID3D12GraphicsCommandListSetPipelineStateSerializer(c));
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->m_CommandSerializer.reset(new ID3D12GraphicsCommandListSetPipelineStateSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Post(ID3D12GraphicsCommandListResourceBarrierCommand& c) {
@@ -2161,129 +2173,129 @@ void StateTrackingLayer::Post(ID3D12GraphicsCommandListResourceBarrierCommand& c
   m_ResourceStateTracker.ResourceBarrier(c.m_Object.Value, c.m_pBarriers.Value,
                                          c.m_NumBarriers.Value, c.m_pBarriers.ResourceKeys.data());
 
-  CommandListCommand* Command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
-  Command->m_CommandSerializer.reset(new ID3D12GraphicsCommandListResourceBarrierSerializer(c));
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->m_CommandSerializer.reset(new ID3D12GraphicsCommandListResourceBarrierSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 void StateTrackingLayer::Post(ID3D12GraphicsCommandListExecuteBundleCommand& c) {
   if (m_StateRestored) {
     return;
   }
-  CommandListCommand* Command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
-  Command->m_CommandSerializer.reset(new ID3D12GraphicsCommandListExecuteBundleSerializer(c));
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->m_CommandSerializer.reset(new ID3D12GraphicsCommandListExecuteBundleSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Post(ID3D12GraphicsCommandListSetDescriptorHeapsCommand& c) {
   if (m_StateRestored) {
     return;
   }
-  CommandListCommand* Command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
-  Command->m_CommandSerializer.reset(new ID3D12GraphicsCommandListSetDescriptorHeapsSerializer(c));
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->m_CommandSerializer.reset(new ID3D12GraphicsCommandListSetDescriptorHeapsSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
   state->m_DescriptorHeapKeys = c.m_ppDescriptorHeaps.Keys;
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Post(ID3D12GraphicsCommandListSetComputeRootSignatureCommand& c) {
   if (m_StateRestored) {
     return;
   }
-  CommandListCommand* Command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
-  Command->m_CommandSerializer.reset(
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->m_CommandSerializer.reset(
       new ID3D12GraphicsCommandListSetComputeRootSignatureSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Post(ID3D12GraphicsCommandListSetGraphicsRootSignatureCommand& c) {
   if (m_StateRestored) {
     return;
   }
-  CommandListCommand* Command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
-  Command->m_CommandSerializer.reset(
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->m_CommandSerializer.reset(
       new ID3D12GraphicsCommandListSetGraphicsRootSignatureSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Post(ID3D12GraphicsCommandListSetComputeRootDescriptorTableCommand& c) {
   if (m_StateRestored) {
     return;
   }
-  CommandListCommand* Command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
-  Command->m_CommandSerializer.reset(
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->m_CommandSerializer.reset(
       new ID3D12GraphicsCommandListSetComputeRootDescriptorTableSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Post(ID3D12GraphicsCommandListSetGraphicsRootDescriptorTableCommand& c) {
   if (m_StateRestored) {
     return;
   }
-  CommandListCommand* Command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
-  Command->m_CommandSerializer.reset(
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->m_CommandSerializer.reset(
       new ID3D12GraphicsCommandListSetGraphicsRootDescriptorTableSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Post(ID3D12GraphicsCommandListSetComputeRoot32BitConstantCommand& c) {
   if (m_StateRestored) {
     return;
   }
-  CommandListCommand* Command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
-  Command->m_CommandSerializer.reset(
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->m_CommandSerializer.reset(
       new ID3D12GraphicsCommandListSetComputeRoot32BitConstantSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Post(ID3D12GraphicsCommandListSetGraphicsRoot32BitConstantCommand& c) {
   if (m_StateRestored) {
     return;
   }
-  CommandListCommand* Command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
-  Command->m_CommandSerializer.reset(
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->m_CommandSerializer.reset(
       new ID3D12GraphicsCommandListSetGraphicsRoot32BitConstantSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Post(ID3D12GraphicsCommandListSetComputeRoot32BitConstantsCommand& c) {
   if (m_StateRestored) {
     return;
   }
-  CommandListCommand* Command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
-  Command->m_CommandSerializer.reset(
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->m_CommandSerializer.reset(
       new ID3D12GraphicsCommandListSetComputeRoot32BitConstantsSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Post(ID3D12GraphicsCommandListSetGraphicsRoot32BitConstantsCommand& c) {
   if (m_StateRestored) {
     return;
   }
-  CommandListCommand* Command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
-  Command->m_CommandSerializer.reset(
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->m_CommandSerializer.reset(
       new ID3D12GraphicsCommandListSetGraphicsRoot32BitConstantsSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Post(ID3D12GraphicsCommandListSetComputeRootConstantBufferViewCommand& c) {
   if (m_StateRestored) {
     return;
   }
-  CommandListCommand* Command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
-  Command->m_CommandSerializer.reset(
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->m_CommandSerializer.reset(
       new ID3D12GraphicsCommandListSetComputeRootConstantBufferViewSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Post(
@@ -2291,22 +2303,22 @@ void StateTrackingLayer::Post(
   if (m_StateRestored) {
     return;
   }
-  CommandListCommand* Command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
-  Command->m_CommandSerializer.reset(
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->m_CommandSerializer.reset(
       new ID3D12GraphicsCommandListSetGraphicsRootConstantBufferViewSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Post(ID3D12GraphicsCommandListSetComputeRootShaderResourceViewCommand& c) {
   if (m_StateRestored) {
     return;
   }
-  CommandListCommand* Command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
-  Command->m_CommandSerializer.reset(
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->m_CommandSerializer.reset(
       new ID3D12GraphicsCommandListSetComputeRootShaderResourceViewSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Post(
@@ -2314,11 +2326,11 @@ void StateTrackingLayer::Post(
   if (m_StateRestored) {
     return;
   }
-  CommandListCommand* Command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
-  Command->m_CommandSerializer.reset(
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->m_CommandSerializer.reset(
       new ID3D12GraphicsCommandListSetGraphicsRootShaderResourceViewSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Post(
@@ -2326,11 +2338,11 @@ void StateTrackingLayer::Post(
   if (m_StateRestored) {
     return;
   }
-  CommandListCommand* Command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
-  Command->m_CommandSerializer.reset(
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->m_CommandSerializer.reset(
       new ID3D12GraphicsCommandListSetComputeRootUnorderedAccessViewSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Post(
@@ -2338,49 +2350,49 @@ void StateTrackingLayer::Post(
   if (m_StateRestored) {
     return;
   }
-  CommandListCommand* Command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
-  Command->m_CommandSerializer.reset(
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->m_CommandSerializer.reset(
       new ID3D12GraphicsCommandListSetGraphicsRootUnorderedAccessViewSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Post(ID3D12GraphicsCommandListIASetIndexBufferCommand& c) {
   if (m_StateRestored) {
     return;
   }
-  CommandListCommand* Command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
-  Command->m_CommandSerializer.reset(new ID3D12GraphicsCommandListIASetIndexBufferSerializer(c));
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->m_CommandSerializer.reset(new ID3D12GraphicsCommandListIASetIndexBufferSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Post(ID3D12GraphicsCommandListIASetVertexBuffersCommand& c) {
   if (m_StateRestored) {
     return;
   }
-  CommandListCommand* Command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
-  Command->m_CommandSerializer.reset(new ID3D12GraphicsCommandListIASetVertexBuffersSerializer(c));
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->m_CommandSerializer.reset(new ID3D12GraphicsCommandListIASetVertexBuffersSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Post(ID3D12GraphicsCommandListSOSetTargetsCommand& c) {
   if (m_StateRestored) {
     return;
   }
-  CommandListCommand* Command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
-  Command->m_CommandSerializer.reset(new ID3D12GraphicsCommandListSOSetTargetsSerializer(c));
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->m_CommandSerializer.reset(new ID3D12GraphicsCommandListSOSetTargetsSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Post(ID3D12GraphicsCommandListOMSetRenderTargetsCommand& c) {
   if (m_StateRestored) {
     return;
   }
-  CommandListOMSetRenderTargets* Command = new CommandListOMSetRenderTargets(c.Key, c.m_Object.Key);
-  Command->m_RenderTargetViews.resize(c.m_NumRenderTargetDescriptors.Value);
+  CommandListOMSetRenderTargets* command = new CommandListOMSetRenderTargets(c.Key, c.m_Object.Key);
+  command->m_RenderTargetViews.resize(c.m_NumRenderTargetDescriptors.Value);
   {
     unsigned heapKey{};
     unsigned heapIndex{};
@@ -2395,7 +2407,7 @@ void StateTrackingLayer::Post(ID3D12GraphicsCommandListOMSetRenderTargetsCommand
         DescriptorState* descriptorState =
             m_DescriptorService.GetDescriptorState(heapKey, heapIndex);
         GITS_ASSERT(descriptorState->Id == DescriptorState::D3D12_RENDERTARGETVIEW);
-        Command->m_RenderTargetViews[i].reset(new D3D12RenderTargetViewState(
+        command->m_RenderTargetViews[i].reset(new D3D12RenderTargetViewState(
             *static_cast<D3D12RenderTargetViewState*>(descriptorState)));
       }
     }
@@ -2404,336 +2416,336 @@ void StateTrackingLayer::Post(ID3D12GraphicsCommandListOMSetRenderTargetsCommand
     DescriptorState* descriptorState = m_DescriptorService.GetDescriptorState(
         c.m_pDepthStencilDescriptor.InterfaceKeys[0], c.m_pDepthStencilDescriptor.Indexes[0]);
     GITS_ASSERT(descriptorState->Id == DescriptorState::D3D12_DEPTHSTENCILVIEW);
-    Command->m_DepthStencilView.reset(
+    command->m_DepthStencilView.reset(
         new D3D12DepthStencilViewState(*static_cast<D3D12DepthStencilViewState*>(descriptorState)));
   }
-  Command->m_CommandListKey = c.m_Object.Key;
-  Command->m_RtsSingleHandleToDescriptorRange = c.m_RTsSingleHandleToDescriptorRange.Value;
+  command->m_CommandListKey = c.m_Object.Key;
+  command->m_RtsSingleHandleToDescriptorRange = c.m_RTsSingleHandleToDescriptorRange.Value;
 
-  Command->m_CommandSerializer.reset(new ID3D12GraphicsCommandListOMSetRenderTargetsSerializer(c));
+  command->m_CommandSerializer.reset(new ID3D12GraphicsCommandListOMSetRenderTargetsSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Post(ID3D12GraphicsCommandListClearDepthStencilViewCommand& c) {
   if (m_StateRestored) {
     return;
   }
-  CommandListClearDepthStencilView* Command =
+  CommandListClearDepthStencilView* command =
       new CommandListClearDepthStencilView(c.Key, c.m_Object.Key);
   if (c.m_DepthStencilView.InterfaceKey) {
     DescriptorState* descriptorState = m_DescriptorService.GetDescriptorState(
         c.m_DepthStencilView.InterfaceKey, c.m_DepthStencilView.Index);
     GITS_ASSERT(descriptorState->Id == DescriptorState::D3D12_DEPTHSTENCILVIEW);
-    Command->m_DepthStencilView.reset(
+    command->m_DepthStencilView.reset(
         new D3D12DepthStencilViewState(*static_cast<D3D12DepthStencilViewState*>(descriptorState)));
   }
-  Command->m_CommandListKey = c.m_Object.Key;
-  Command->m_Depth = c.m_Depth.Value;
-  Command->m_Stencil = c.m_Stencil.Value;
+  command->m_CommandListKey = c.m_Object.Key;
+  command->m_Depth = c.m_Depth.Value;
+  command->m_Stencil = c.m_Stencil.Value;
   if (c.m_NumRects.Value) {
-    Command->m_Rects.resize(c.m_NumRects.Value);
+    command->m_Rects.resize(c.m_NumRects.Value);
     for (unsigned i = 0; i < c.m_NumRects.Value; ++i) {
-      Command->m_Rects[i] = c.m_pRects.Value[i];
+      command->m_Rects[i] = c.m_pRects.Value[i];
     }
   }
 
-  Command->m_CommandSerializer.reset(
+  command->m_CommandSerializer.reset(
       new ID3D12GraphicsCommandListClearDepthStencilViewSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Post(ID3D12GraphicsCommandListClearRenderTargetViewCommand& c) {
   if (m_StateRestored) {
     return;
   }
-  CommandListClearRenderTargetView* Command =
+  CommandListClearRenderTargetView* command =
       new CommandListClearRenderTargetView(c.Key, c.m_Object.Key);
   if (c.m_RenderTargetView.InterfaceKey) {
     DescriptorState* descriptorState = m_DescriptorService.GetDescriptorState(
         c.m_RenderTargetView.InterfaceKey, c.m_RenderTargetView.Index);
     GITS_ASSERT(descriptorState->Id == DescriptorState::D3D12_RENDERTARGETVIEW);
-    Command->m_RenderTargetView.reset(
+    command->m_RenderTargetView.reset(
         new D3D12RenderTargetViewState(*static_cast<D3D12RenderTargetViewState*>(descriptorState)));
   }
-  Command->m_CommandListKey = c.m_Object.Key;
+  command->m_CommandListKey = c.m_Object.Key;
   for (unsigned i = 0; i < 4; ++i) {
-    Command->m_ColorRGBA[i] = c.m_ColorRGBA.Value[i];
+    command->m_ColorRGBA[i] = c.m_ColorRGBA.Value[i];
   }
   if (c.m_NumRects.Value) {
-    Command->m_Rects.resize(c.m_NumRects.Value);
+    command->m_Rects.resize(c.m_NumRects.Value);
     for (unsigned i = 0; i < c.m_NumRects.Value; ++i) {
-      Command->m_Rects[i] = c.m_pRects.Value[i];
+      command->m_Rects[i] = c.m_pRects.Value[i];
     }
   }
 
-  Command->m_CommandSerializer.reset(
+  command->m_CommandSerializer.reset(
       new ID3D12GraphicsCommandListClearRenderTargetViewSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Post(ID3D12GraphicsCommandListClearUnorderedAccessViewUintCommand& c) {
   if (m_StateRestored) {
     return;
   }
-  CommandListClearUnorderedAccessViewUint* Command =
+  CommandListClearUnorderedAccessViewUint* command =
       new CommandListClearUnorderedAccessViewUint(c.Key, c.m_Object.Key);
   if (c.m_ViewGPUHandleInCurrentHeap.InterfaceKey) {
     DescriptorState* descriptorState = m_DescriptorService.GetDescriptorState(
         c.m_ViewGPUHandleInCurrentHeap.InterfaceKey, c.m_ViewGPUHandleInCurrentHeap.Index);
     GITS_ASSERT(descriptorState->Id == DescriptorState::D3D12_UNORDEREDACCESSVIEW);
-    Command->m_ViewGPUHandleInCurrentHeap.reset(new D3D12UnorderedAccessViewState(
+    command->m_ViewGPUHandleInCurrentHeap.reset(new D3D12UnorderedAccessViewState(
         *static_cast<D3D12UnorderedAccessViewState*>(descriptorState)));
   }
   if (c.m_ViewCPUHandle.InterfaceKey) {
     DescriptorState* descriptorState = m_DescriptorService.GetDescriptorState(
         c.m_ViewCPUHandle.InterfaceKey, c.m_ViewCPUHandle.Index);
     GITS_ASSERT(descriptorState->Id == DescriptorState::D3D12_UNORDEREDACCESSVIEW);
-    Command->m_ViewCPUHandle.reset(new D3D12UnorderedAccessViewState(
+    command->m_ViewCPUHandle.reset(new D3D12UnorderedAccessViewState(
         *static_cast<D3D12UnorderedAccessViewState*>(descriptorState)));
   }
-  Command->m_CommandListKey = c.m_Object.Key;
-  Command->m_ResourceKey = c.m_pResource.Key;
+  command->m_CommandListKey = c.m_Object.Key;
+  command->m_ResourceKey = c.m_pResource.Key;
   for (unsigned i = 0; i < 4; ++i) {
-    Command->m_Values[i] = c.m_Values.Value[i];
+    command->m_Values[i] = c.m_Values.Value[i];
   }
   if (c.m_NumRects.Value) {
-    Command->m_Rects.resize(c.m_NumRects.Value);
+    command->m_Rects.resize(c.m_NumRects.Value);
     for (unsigned i = 0; i < c.m_NumRects.Value; ++i) {
-      Command->m_Rects[i] = c.m_pRects.Value[i];
+      command->m_Rects[i] = c.m_pRects.Value[i];
     }
   }
 
-  Command->m_CommandSerializer.reset(
+  command->m_CommandSerializer.reset(
       new ID3D12GraphicsCommandListClearUnorderedAccessViewUintSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Post(ID3D12GraphicsCommandListClearUnorderedAccessViewFloatCommand& c) {
   if (m_StateRestored) {
     return;
   }
-  CommandListClearUnorderedAccessViewFloat* Command =
+  CommandListClearUnorderedAccessViewFloat* command =
       new CommandListClearUnorderedAccessViewFloat(c.Key, c.m_Object.Key);
   if (c.m_ViewGPUHandleInCurrentHeap.InterfaceKey) {
     DescriptorState* descriptorState = m_DescriptorService.GetDescriptorState(
         c.m_ViewGPUHandleInCurrentHeap.InterfaceKey, c.m_ViewGPUHandleInCurrentHeap.Index);
     GITS_ASSERT(descriptorState->Id == DescriptorState::D3D12_UNORDEREDACCESSVIEW);
-    Command->m_ViewGPUHandleInCurrentHeap.reset(new D3D12UnorderedAccessViewState(
+    command->m_ViewGPUHandleInCurrentHeap.reset(new D3D12UnorderedAccessViewState(
         *static_cast<D3D12UnorderedAccessViewState*>(descriptorState)));
   }
   if (c.m_ViewCPUHandle.InterfaceKey) {
     DescriptorState* descriptorState = m_DescriptorService.GetDescriptorState(
         c.m_ViewCPUHandle.InterfaceKey, c.m_ViewCPUHandle.Index);
     GITS_ASSERT(descriptorState->Id == DescriptorState::D3D12_UNORDEREDACCESSVIEW);
-    Command->m_ViewCPUHandle.reset(new D3D12UnorderedAccessViewState(
+    command->m_ViewCPUHandle.reset(new D3D12UnorderedAccessViewState(
         *static_cast<D3D12UnorderedAccessViewState*>(descriptorState)));
   }
-  Command->m_CommandListKey = c.m_Object.Key;
-  Command->m_ResourceKey = c.m_pResource.Key;
+  command->m_CommandListKey = c.m_Object.Key;
+  command->m_ResourceKey = c.m_pResource.Key;
   for (unsigned i = 0; i < 4; ++i) {
-    Command->m_Values[i] = c.m_Values.Value[i];
+    command->m_Values[i] = c.m_Values.Value[i];
   }
   if (c.m_NumRects.Value) {
-    Command->m_Rects.resize(c.m_NumRects.Value);
+    command->m_Rects.resize(c.m_NumRects.Value);
     for (unsigned i = 0; i < c.m_NumRects.Value; ++i) {
-      Command->m_Rects[i] = c.m_pRects.Value[i];
+      command->m_Rects[i] = c.m_pRects.Value[i];
     }
   }
 
-  Command->m_CommandSerializer.reset(
+  command->m_CommandSerializer.reset(
       new ID3D12GraphicsCommandListClearUnorderedAccessViewFloatSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Post(ID3D12GraphicsCommandListDiscardResourceCommand& c) {
   if (m_StateRestored) {
     return;
   }
-  CommandListCommand* Command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
-  Command->m_CommandSerializer.reset(new ID3D12GraphicsCommandListDiscardResourceSerializer(c));
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->m_CommandSerializer.reset(new ID3D12GraphicsCommandListDiscardResourceSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Post(ID3D12GraphicsCommandListBeginQueryCommand& c) {
   if (m_StateRestored) {
     return;
   }
-  CommandListCommand* Command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
-  Command->m_CommandSerializer.reset(new ID3D12GraphicsCommandListBeginQuerySerializer(c));
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->m_CommandSerializer.reset(new ID3D12GraphicsCommandListBeginQuerySerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Post(ID3D12GraphicsCommandListEndQueryCommand& c) {
   if (m_StateRestored) {
     return;
   }
-  CommandListCommand* Command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
-  Command->m_CommandSerializer.reset(new ID3D12GraphicsCommandListEndQuerySerializer(c));
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->m_CommandSerializer.reset(new ID3D12GraphicsCommandListEndQuerySerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Post(ID3D12GraphicsCommandListResolveQueryDataCommand& c) {
   if (m_StateRestored) {
     return;
   }
-  CommandListCommand* Command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
-  Command->m_CommandSerializer.reset(new ID3D12GraphicsCommandListResolveQueryDataSerializer(c));
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->m_CommandSerializer.reset(new ID3D12GraphicsCommandListResolveQueryDataSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Post(ID3D12GraphicsCommandListSetPredicationCommand& c) {
   if (m_StateRestored) {
     return;
   }
-  CommandListCommand* Command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
-  Command->m_CommandSerializer.reset(new ID3D12GraphicsCommandListSetPredicationSerializer(c));
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->m_CommandSerializer.reset(new ID3D12GraphicsCommandListSetPredicationSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Post(ID3D12GraphicsCommandListSetMarkerCommand& c) {
   if (m_StateRestored) {
     return;
   }
-  CommandListCommand* Command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
-  Command->m_CommandSerializer.reset(new ID3D12GraphicsCommandListSetMarkerSerializer(c));
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->m_CommandSerializer.reset(new ID3D12GraphicsCommandListSetMarkerSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Post(ID3D12GraphicsCommandListBeginEventCommand& c) {
   if (m_StateRestored) {
     return;
   }
-  CommandListCommand* Command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
-  Command->m_CommandSerializer.reset(new ID3D12GraphicsCommandListBeginEventSerializer(c));
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->m_CommandSerializer.reset(new ID3D12GraphicsCommandListBeginEventSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Post(ID3D12GraphicsCommandListEndEventCommand& c) {
   if (m_StateRestored) {
     return;
   }
-  CommandListCommand* Command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
-  Command->m_CommandSerializer.reset(new ID3D12GraphicsCommandListEndEventSerializer(c));
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->m_CommandSerializer.reset(new ID3D12GraphicsCommandListEndEventSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Post(ID3D12GraphicsCommandListExecuteIndirectCommand& c) {
   if (m_StateRestored) {
     return;
   }
-  CommandListCommand* Command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
-  Command->m_CommandSerializer.reset(new ID3D12GraphicsCommandListExecuteIndirectSerializer(c));
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->m_CommandSerializer.reset(new ID3D12GraphicsCommandListExecuteIndirectSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Post(ID3D12GraphicsCommandList1AtomicCopyBufferUINTCommand& c) {
   if (m_StateRestored) {
     return;
   }
-  CommandListCommand* Command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
-  Command->m_CommandSerializer.reset(
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->m_CommandSerializer.reset(
       new ID3D12GraphicsCommandList1AtomicCopyBufferUINTSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Post(ID3D12GraphicsCommandList1AtomicCopyBufferUINT64Command& c) {
   if (m_StateRestored) {
     return;
   }
-  CommandListCommand* Command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
-  Command->m_CommandSerializer.reset(
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->m_CommandSerializer.reset(
       new ID3D12GraphicsCommandList1AtomicCopyBufferUINT64Serializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Post(ID3D12GraphicsCommandList1OMSetDepthBoundsCommand& c) {
   if (m_StateRestored) {
     return;
   }
-  CommandListCommand* Command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
-  Command->m_CommandSerializer.reset(new ID3D12GraphicsCommandList1OMSetDepthBoundsSerializer(c));
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->m_CommandSerializer.reset(new ID3D12GraphicsCommandList1OMSetDepthBoundsSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Post(ID3D12GraphicsCommandList1SetSamplePositionsCommand& c) {
   if (m_StateRestored) {
     return;
   }
-  CommandListCommand* Command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
-  Command->m_CommandSerializer.reset(new ID3D12GraphicsCommandList1SetSamplePositionsSerializer(c));
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->m_CommandSerializer.reset(new ID3D12GraphicsCommandList1SetSamplePositionsSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Post(ID3D12GraphicsCommandList1ResolveSubresourceRegionCommand& c) {
   if (m_StateRestored) {
     return;
   }
-  CommandListCommand* Command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
-  Command->m_CommandSerializer.reset(
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->m_CommandSerializer.reset(
       new ID3D12GraphicsCommandList1ResolveSubresourceRegionSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Post(ID3D12GraphicsCommandList1SetViewInstanceMaskCommand& c) {
   if (m_StateRestored) {
     return;
   }
-  CommandListCommand* Command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
-  Command->m_CommandSerializer.reset(
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->m_CommandSerializer.reset(
       new ID3D12GraphicsCommandList1SetViewInstanceMaskSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Post(ID3D12GraphicsCommandList2WriteBufferImmediateCommand& c) {
   if (m_StateRestored) {
     return;
   }
-  CommandListCommand* Command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
-  Command->m_CommandSerializer.reset(
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->m_CommandSerializer.reset(
       new ID3D12GraphicsCommandList2WriteBufferImmediateSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Post(ID3D12GraphicsCommandList3SetProtectedResourceSessionCommand& c) {
   if (m_StateRestored) {
     return;
   }
-  CommandListCommand* Command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
-  Command->m_CommandSerializer.reset(
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->m_CommandSerializer.reset(
       new ID3D12GraphicsCommandList3SetProtectedResourceSessionSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Post(ID3D12GraphicsCommandList4BeginRenderPassCommand& c) {
   if (m_StateRestored) {
     return;
   }
-  CommandListCommand* Command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
-  Command->m_CommandSerializer.reset(new ID3D12GraphicsCommandList4BeginRenderPassSerializer(c));
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->m_CommandSerializer.reset(new ID3D12GraphicsCommandList4BeginRenderPassSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Post(
@@ -2741,21 +2753,21 @@ void StateTrackingLayer::Post(
   if (m_StateRestored) {
     return;
   }
-  CommandListCommand* Command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
-  Command->m_CommandSerializer.reset(
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->m_CommandSerializer.reset(
       new ID3D12GraphicsCommandList4EmitRaytracingAccelerationStructurePostbuildInfoSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Post(ID3D12GraphicsCommandList4EndRenderPassCommand& c) {
   if (m_StateRestored) {
     return;
   }
-  CommandListCommand* Command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
-  Command->m_CommandSerializer.reset(new ID3D12GraphicsCommandList4EndRenderPassSerializer(c));
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->m_CommandSerializer.reset(new ID3D12GraphicsCommandList4EndRenderPassSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Post(ID3D12GraphicsCommandList4ExecuteMetaCommandCommand& c) {
@@ -2767,62 +2779,62 @@ void StateTrackingLayer::Post(ID3D12GraphicsCommandList4ExecuteMetaCommandComman
     LOG_ERROR << "ID3D12GraphicsCommandList4ExecuteMetaCommand is not supported in subcapture.";
     logged = true;
   }
-  CommandListCommand* Command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
-  Command->m_CommandSerializer.reset(new ID3D12GraphicsCommandList4ExecuteMetaCommandSerializer(c));
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->m_CommandSerializer.reset(new ID3D12GraphicsCommandList4ExecuteMetaCommandSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Post(ID3D12GraphicsCommandList4InitializeMetaCommandCommand& c) {
   if (m_StateRestored) {
     return;
   }
-  CommandListCommand* Command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
-  Command->m_CommandSerializer.reset(
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->m_CommandSerializer.reset(
       new ID3D12GraphicsCommandList4InitializeMetaCommandSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Post(ID3D12GraphicsCommandList4SetPipelineState1Command& c) {
   if (m_StateRestored) {
     return;
   }
-  CommandListCommand* Command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
-  Command->m_CommandSerializer.reset(new ID3D12GraphicsCommandList4SetPipelineState1Serializer(c));
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->m_CommandSerializer.reset(new ID3D12GraphicsCommandList4SetPipelineState1Serializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Post(ID3D12GraphicsCommandList5RSSetShadingRateCommand& c) {
   if (m_StateRestored) {
     return;
   }
-  CommandListCommand* Command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
-  Command->m_CommandSerializer.reset(new ID3D12GraphicsCommandList5RSSetShadingRateSerializer(c));
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->m_CommandSerializer.reset(new ID3D12GraphicsCommandList5RSSetShadingRateSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Post(ID3D12GraphicsCommandList5RSSetShadingRateImageCommand& c) {
   if (m_StateRestored) {
     return;
   }
-  CommandListCommand* Command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
-  Command->m_CommandSerializer.reset(
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->m_CommandSerializer.reset(
       new ID3D12GraphicsCommandList5RSSetShadingRateImageSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Post(ID3D12GraphicsCommandList6DispatchMeshCommand& c) {
   if (m_StateRestored) {
     return;
   }
-  CommandListCommand* Command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
-  Command->m_CommandSerializer.reset(new ID3D12GraphicsCommandList6DispatchMeshSerializer(c));
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->m_CommandSerializer.reset(new ID3D12GraphicsCommandList6DispatchMeshSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Post(ID3D12GraphicsCommandList7BarrierCommand& c) {
@@ -2839,10 +2851,10 @@ void StateTrackingLayer::Post(ID3D12GraphicsCommandList7BarrierCommand& c) {
                                          c.m_NumBarrierGroups.Value,
                                          c.m_pBarrierGroups.ResourceKeys.data());
 
-  CommandListCommand* Command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
-  Command->m_CommandSerializer.reset(new ID3D12GraphicsCommandList7BarrierSerializer(c));
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->m_CommandSerializer.reset(new ID3D12GraphicsCommandList7BarrierSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Post(ID3D12SDKConfiguration1CreateDeviceFactoryCommand& c) {
@@ -3091,12 +3103,12 @@ void StateTrackingLayer::Post(NvAPI_D3D12_BuildRaytracingAccelerationStructureEx
     return;
   }
 
-  CommandListCommand* Command = new CommandListCommand(c.GetId(), c.Key, c.m_pCommandList.Key);
-  Command->m_CommandSerializer.reset(
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_pCommandList.Key);
+  command->m_CommandSerializer.reset(
       new NvAPI_D3D12_BuildRaytracingAccelerationStructureExSerializer(c));
   CommandListState* state =
       static_cast<CommandListState*>(m_StateService.GetState(c.m_pCommandList.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Pre(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& c) {
@@ -3111,12 +3123,12 @@ void StateTrackingLayer::Post(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCom
     return;
   }
 
-  CommandListCommand* Command = new CommandListCommand(c.GetId(), c.Key, c.m_pCommandList.Key);
-  Command->m_CommandSerializer.reset(
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_pCommandList.Key);
+  command->m_CommandSerializer.reset(
       new NvAPI_D3D12_BuildRaytracingOpacityMicromapArraySerializer(c));
   CommandListState* state =
       static_cast<CommandListState*>(m_StateService.GetState(c.m_pCommandList.Key));
-  state->m_Commands.push_back(Command);
+  state->m_Commands.push_back(command);
 }
 
 void StateTrackingLayer::Post(DllContainerMetaCommand& c) {

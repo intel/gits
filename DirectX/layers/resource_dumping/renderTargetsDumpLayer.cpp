@@ -297,7 +297,7 @@ void RenderTargetsDumpLayer::DumpRenderTarget(ID3D12GraphicsCommandList* command
     }
   }
 
-  std::string formatName = m_ResourceDump.formatToString(format);
+  std::string formatName = m_ResourceDump.FormatToString(format);
   std::wstring formatNameW(formatName.begin(), formatName.end());
 
   Microsoft::WRL::ComPtr<ID3D12Device> device;
@@ -325,9 +325,10 @@ void RenderTargetsDumpLayer::DumpRenderTarget(ID3D12GraphicsCommandList* command
 
       unsigned subresource =
           D3D12CalcSubresource(mipLevel, arrayIndex, planeSlice, desc.MipLevels, arraySize);
-      m_ResourceDump.dumpResource(commandList, renderTarget.resource, subresource,
-                                  D3D12_RESOURCE_STATE_RENDER_TARGET, dumpName, mipLevel, format,
-                                  commandListDraw);
+      BarrierState resourceState{};
+      resourceState.State = D3D12_RESOURCE_STATE_RENDER_TARGET;
+      m_ResourceDump.dumpResource(commandList, renderTarget.resource, subresource, resourceState,
+                                  dumpName, mipLevel, format, commandListDraw);
     }
   }
 }
@@ -376,7 +377,7 @@ void RenderTargetsDumpLayer::DumpDepthStencil(ID3D12GraphicsCommandList* command
     }
   }
 
-  std::string formatName = m_ResourceDump.formatToString(format);
+  std::string formatName = m_ResourceDump.FormatToString(format);
   std::wstring formatNameW(formatName.begin(), formatName.end());
 
   Microsoft::WRL::ComPtr<ID3D12Device> device;
@@ -403,9 +404,10 @@ void RenderTargetsDumpLayer::DumpDepthStencil(ID3D12GraphicsCommandList* command
 
       unsigned subresource =
           D3D12CalcSubresource(mipLevel, arrayIndex, planeSlice, desc.MipLevels, arraySize);
-      m_ResourceDump.dumpResource(commandList, depthStencil.resource, subresource,
-                                  D3D12_RESOURCE_STATE_DEPTH_WRITE, dumpName, mipLevel, format,
-                                  commandListDraw);
+      BarrierState resourceState{};
+      resourceState.State = D3D12_RESOURCE_STATE_DEPTH_WRITE;
+      m_ResourceDump.dumpResource(commandList, depthStencil.resource, subresource, resourceState,
+                                  dumpName, mipLevel, format, commandListDraw);
     }
   }
 }
@@ -424,23 +426,23 @@ void RenderTargetsDumpLayer::Post(ID3D12CommandQueueExecuteCommandListsCommand& 
 }
 
 void RenderTargetsDumpLayer::Post(ID3D12CommandQueueWaitCommand& c) {
-  m_ResourceDump.commandQueueWait(c.Key, c.m_Object.Key, c.m_pFence.Key, c.m_Value.Value);
+  m_ResourceDump.CommandQueueWait(c.Key, c.m_Object.Key, c.m_pFence.Key, c.m_Value.Value);
 }
 
 void RenderTargetsDumpLayer::Post(ID3D12CommandQueueSignalCommand& c) {
-  m_ResourceDump.commandQueueSignal(c.Key, c.m_Object.Key, c.m_pFence.Key, c.m_Value.Value);
+  m_ResourceDump.CommandQueueSignal(c.Key, c.m_Object.Key, c.m_pFence.Key, c.m_Value.Value);
 }
 
 void RenderTargetsDumpLayer::Post(ID3D12FenceSignalCommand& c) {
-  m_ResourceDump.fenceSignal(c.Key, c.m_Object.Key, c.m_Value.Value);
+  m_ResourceDump.FenceSignal(c.Key, c.m_Object.Key, c.m_Value.Value);
 }
 
 void RenderTargetsDumpLayer::Post(ID3D12DeviceCreateFenceCommand& c) {
-  m_ResourceDump.fenceSignal(c.Key, c.m_ppFence.Key, c.m_InitialValue.Value);
+  m_ResourceDump.FenceSignal(c.Key, c.m_ppFence.Key, c.m_InitialValue.Value);
 }
 
 void RenderTargetsDumpLayer::Post(ID3D12Device3EnqueueMakeResidentCommand& c) {
-  m_ResourceDump.fenceSignal(c.Key, c.m_pFenceToSignal.Key, c.m_FenceValueToSignal.Value);
+  m_ResourceDump.FenceSignal(c.Key, c.m_pFenceToSignal.Key, c.m_FenceValueToSignal.Value);
 }
 
 void RenderTargetsDumpLayer::Post(IDXGISwapChainPresentCommand& c) {

@@ -8,6 +8,7 @@
 
 #include "accelerationStructuresBuildService.h"
 #include "stateTrackingService.h"
+#include "resourceStateEnhanced.h"
 #include "arguments.h"
 #include "commandSerializersAuto.h"
 #include "commandSerializersCustom.h"
@@ -22,15 +23,15 @@ namespace gits {
 namespace DirectX {
 
 AccelerationStructuresBuildService::AccelerationStructuresBuildService(
-    StateTrackingService& stateService,
-    SubcaptureRecorder& recorder,
+    StateTrackingService& m_StateService,
+    SubcaptureRecorder& m_Recorder,
     ReservedResourcesService& reservedResourcesService,
     ResourceStateTracker& resourceStateTracker,
     CapturePlayerGpuAddressService& gpuAddressService)
-    : m_StateService(stateService),
-      m_Recorder(recorder),
+    : m_StateService(m_StateService),
+      m_Recorder(m_Recorder),
       m_ReservedResourcesService(reservedResourcesService),
-      m_BufferContentRestore(stateService),
+      m_BufferContentRestore(m_StateService),
       m_ResourceStateTracker(resourceStateTracker),
       m_GpuAddressService(gpuAddressService) {
   m_SerializeMode = Configurator::Get().directx.features.subcapture.serializeAccelerationStructures;
@@ -298,10 +299,10 @@ void AccelerationStructuresBuildService::CopyAccelerationStructure(
 
 void AccelerationStructuresBuildService::NvapiBuildAccelerationStructureEx(
     NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& c) {
-  const NVAPI_D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC_EX* pDesc =
+  const NVAPI_D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC_EX* m_pDesc =
       c.m_pParams.Value->pDesc;
   if (!m_RestoreTlas &&
-      pDesc->inputs.type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
+      m_pDesc->inputs.type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
     return;
   }
 
@@ -309,7 +310,7 @@ void AccelerationStructuresBuildService::NvapiBuildAccelerationStructureEx(
     return;
   }
 
-  NVAPI_D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS_EX inputs = pDesc->inputs;
+  NVAPI_D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS_EX inputs = m_pDesc->inputs;
 
   Microsoft::WRL::ComPtr<ID3D12Device5> device;
   HRESULT hr = c.m_pCommandList.Value->GetDevice(IID_PPV_ARGS(&device));
@@ -336,11 +337,11 @@ void AccelerationStructuresBuildService::NvapiBuildAccelerationStructureEx(
   state->DestOffset = c.m_pParams.DestAccelerationStructureOffset;
   state->SourceKey = c.m_pParams.SourceAccelerationStructureKey;
   state->SourceOffset = c.m_pParams.SourceAccelerationStructureOffset;
-  state->Update = pDesc->inputs.flags &
+  state->Update = m_pDesc->inputs.flags &
                   NVAPI_D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PERFORM_UPDATE_EX;
 
   if (m_SerializeMode &&
-      pDesc->inputs.type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
+      m_pDesc->inputs.type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
     m_Tlases.insert(std::make_pair(state->DestKey, state->DestOffset));
   }
 
@@ -367,13 +368,13 @@ void AccelerationStructuresBuildService::NvapiBuildAccelerationStructureEx(
   } else {
     for (unsigned i = 0; i < inputs.numDescs; ++i) {
       const NVAPI_D3D12_RAYTRACING_GEOMETRY_DESC_EX& desc =
-          pDesc->inputs.descsLayout == D3D12_ELEMENTS_LAYOUT_ARRAY
-              ? *(const NVAPI_D3D12_RAYTRACING_GEOMETRY_DESC_EX*)((char*)(pDesc->inputs
+          m_pDesc->inputs.descsLayout == D3D12_ELEMENTS_LAYOUT_ARRAY
+              ? *(const NVAPI_D3D12_RAYTRACING_GEOMETRY_DESC_EX*)((char*)(m_pDesc->inputs
                                                                               .pGeometryDescs) +
-                                                                  pDesc->inputs
+                                                                  m_pDesc->inputs
                                                                           .geometryDescStrideInBytes *
                                                                       i)
-              : *pDesc->inputs.ppGeometryDescs[i];
+              : *m_pDesc->inputs.ppGeometryDescs[i];
       if (desc.type == D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES) {
         if (desc.triangles.Transform3x4) {
           unsigned size = sizeof(float) * 3 * 4;
@@ -645,9 +646,10 @@ void AccelerationStructuresBuildService::NvapiBuildOpacityMicromapArray(
     return;
   }
 
-  const NVAPI_D3D12_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_DESC* pDesc = c.m_pParams.Value->pDesc;
+  const NVAPI_D3D12_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_DESC* m_pDesc =
+      c.m_pParams.Value->pDesc;
 
-  NVAPI_D3D12_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_INPUTS inputs = pDesc->inputs;
+  NVAPI_D3D12_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_INPUTS inputs = m_pDesc->inputs;
 
   Microsoft::WRL::ComPtr<ID3D12Device5> device;
   HRESULT hr = c.m_pCommandList.Value->GetDevice(IID_PPV_ARGS(&device));
@@ -684,8 +686,8 @@ void AccelerationStructuresBuildService::NvapiBuildOpacityMicromapArray(
   {
     unsigned ommCount{};
     size_t inputSize{};
-    for (unsigned i = 0; i < pDesc->inputs.numOMMUsageCounts; ++i) {
-      const auto& usage = pDesc->inputs.pOMMUsageCounts[i];
+    for (unsigned i = 0; i < m_pDesc->inputs.numOMMUsageCounts; ++i) {
+      const auto& usage = m_pDesc->inputs.pOMMUsageCounts[i];
       ommCount += usage.count;
 
       unsigned numMicroTriangles = 1u << (2 * usage.subdivisionLevel);
@@ -708,11 +710,11 @@ void AccelerationStructuresBuildService::NvapiBuildOpacityMicromapArray(
     };
     inputSize = alignUp(inputSize, 256);
 
-    if (pDesc->inputs.inputBuffer) {
+    if (m_pDesc->inputs.inputBuffer) {
       addBufferAccess(c.m_pParams.InputBufferKey, c.m_pParams.InputBufferOffset, inputSize);
     }
-    if (pDesc->inputs.perOMMDescs.StartAddress) {
-      unsigned stride = pDesc->inputs.perOMMDescs.StrideInBytes;
+    if (m_pDesc->inputs.perOMMDescs.StartAddress) {
+      unsigned stride = m_pDesc->inputs.perOMMDescs.StrideInBytes;
       if (!stride) {
         stride = sizeof(NVAPI_D3D12_RAYTRACING_OPACITY_MICROMAP_USAGE_COUNT);
       }
@@ -740,7 +742,7 @@ void AccelerationStructuresBuildService::RestoreAccelerationStructures() {
   RemoveSourcesWithoutDestinations();
   Optimize();
 
-  m_BufferContentRestore.waitUntilDumped();
+  m_BufferContentRestore.WaitUntilDumped();
 
   InitUploadBuffer();
 
@@ -748,14 +750,14 @@ void AccelerationStructuresBuildService::RestoreAccelerationStructures() {
     m_CommandQueueCopyKey = m_StateService.GetUniqueObjectKey();
     D3D12_COMMAND_QUEUE_DESC commandQueueDesc{};
     commandQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_COPY;
-    ID3D12DeviceCreateCommandQueueCommand CreateCommandQueue;
-    CreateCommandQueue.Key = m_StateService.GetUniqueCommandKey();
-    CreateCommandQueue.m_Object.Key = m_DeviceKey;
-    CreateCommandQueue.m_pDesc.Value = &commandQueueDesc;
-    CreateCommandQueue.m_riid.Value = IID_ID3D12CommandQueue;
-    CreateCommandQueue.m_ppCommandQueue.Key = m_CommandQueueCopyKey;
+    ID3D12DeviceCreateCommandQueueCommand createCommandQueue;
+    createCommandQueue.Key = m_StateService.GetUniqueCommandKey();
+    createCommandQueue.m_Object.Key = m_DeviceKey;
+    createCommandQueue.m_pDesc.Value = &commandQueueDesc;
+    createCommandQueue.m_riid.Value = IID_ID3D12CommandQueue;
+    createCommandQueue.m_ppCommandQueue.Key = m_CommandQueueCopyKey;
     m_StateService.GetRecorder().Record(
-        ID3D12DeviceCreateCommandQueueSerializer(CreateCommandQueue));
+        ID3D12DeviceCreateCommandQueueSerializer(createCommandQueue));
 
     m_CommandAllocatorCopyKey = m_StateService.GetUniqueObjectKey();
     ID3D12DeviceCreateCommandAllocatorCommand createCommandAllocator;
@@ -783,14 +785,14 @@ void AccelerationStructuresBuildService::RestoreAccelerationStructures() {
     m_CommandQueueDirectKey = m_StateService.GetUniqueObjectKey();
     D3D12_COMMAND_QUEUE_DESC commandQueueDesc{};
     commandQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
-    ID3D12DeviceCreateCommandQueueCommand CreateCommandQueue;
-    CreateCommandQueue.Key = m_StateService.GetUniqueCommandKey();
-    CreateCommandQueue.m_Object.Key = m_DeviceKey;
-    CreateCommandQueue.m_pDesc.Value = &commandQueueDesc;
-    CreateCommandQueue.m_riid.Value = IID_ID3D12CommandQueue;
-    CreateCommandQueue.m_ppCommandQueue.Key = m_CommandQueueDirectKey;
+    ID3D12DeviceCreateCommandQueueCommand createCommandQueue;
+    createCommandQueue.Key = m_StateService.GetUniqueCommandKey();
+    createCommandQueue.m_Object.Key = m_DeviceKey;
+    createCommandQueue.m_pDesc.Value = &commandQueueDesc;
+    createCommandQueue.m_riid.Value = IID_ID3D12CommandQueue;
+    createCommandQueue.m_ppCommandQueue.Key = m_CommandQueueDirectKey;
     m_StateService.GetRecorder().Record(
-        ID3D12DeviceCreateCommandQueueSerializer(CreateCommandQueue));
+        ID3D12DeviceCreateCommandQueueSerializer(createCommandQueue));
 
     m_CommandAllocatorDirectKey = m_StateService.GetUniqueObjectKey();
     ID3D12DeviceCreateCommandAllocatorCommand createCommandAllocator;
@@ -913,23 +915,23 @@ void AccelerationStructuresBuildService::RestoreAccelerationStructures() {
         m_StateService.GetRecorder().Record(
             ID3D12GraphicsCommandListCloseSerializer(commandListClose));
 
-        ID3D12CommandQueueExecuteCommandListsCommand ExecuteCommandLists;
-        ExecuteCommandLists.Key = m_StateService.GetUniqueCommandKey();
-        ExecuteCommandLists.m_Object.Key = m_CommandQueueCopyKey;
-        ExecuteCommandLists.m_NumCommandLists.Value = 1;
-        ExecuteCommandLists.m_ppCommandLists.Value = reinterpret_cast<ID3D12CommandList**>(1);
-        ExecuteCommandLists.m_ppCommandLists.Size = 1;
-        ExecuteCommandLists.m_ppCommandLists.Keys.resize(1);
-        ExecuteCommandLists.m_ppCommandLists.Keys[0] = m_CommandListCopyKey;
+        ID3D12CommandQueueExecuteCommandListsCommand executeCommandLists;
+        executeCommandLists.Key = m_StateService.GetUniqueCommandKey();
+        executeCommandLists.m_Object.Key = m_CommandQueueCopyKey;
+        executeCommandLists.m_NumCommandLists.Value = 1;
+        executeCommandLists.m_ppCommandLists.Value = reinterpret_cast<ID3D12CommandList**>(1);
+        executeCommandLists.m_ppCommandLists.Size = 1;
+        executeCommandLists.m_ppCommandLists.Keys.resize(1);
+        executeCommandLists.m_ppCommandLists.Keys[0] = m_CommandListCopyKey;
         m_StateService.GetRecorder().Record(
-            ID3D12CommandQueueExecuteCommandListsSerializer(ExecuteCommandLists));
+            ID3D12CommandQueueExecuteCommandListsSerializer(executeCommandLists));
 
-        ID3D12CommandQueueSignalCommand CommandQueueSignal;
-        CommandQueueSignal.Key = m_StateService.GetUniqueCommandKey();
-        CommandQueueSignal.m_Object.Key = m_CommandQueueCopyKey;
-        CommandQueueSignal.m_pFence.Key = m_FenceKey;
-        CommandQueueSignal.m_Value.Value = ++m_RecordedFenceValue;
-        m_StateService.GetRecorder().Record(ID3D12CommandQueueSignalSerializer(CommandQueueSignal));
+        ID3D12CommandQueueSignalCommand commandQueueSignal;
+        commandQueueSignal.Key = m_StateService.GetUniqueCommandKey();
+        commandQueueSignal.m_Object.Key = m_CommandQueueCopyKey;
+        commandQueueSignal.m_pFence.Key = m_FenceKey;
+        commandQueueSignal.m_Value.Value = ++m_RecordedFenceValue;
+        m_StateService.GetRecorder().Record(ID3D12CommandQueueSignalSerializer(commandQueueSignal));
 
         ID3D12FenceGetCompletedValueCommand getCompletedValue;
         getCompletedValue.Key = m_StateService.GetUniqueCommandKey();
@@ -944,13 +946,13 @@ void AccelerationStructuresBuildService::RestoreAccelerationStructures() {
         m_StateService.GetRecorder().Record(
             ID3D12CommandAllocatorResetSerializer(commandAllocatorReset));
 
-        ID3D12GraphicsCommandListResetCommand CommandListReset;
-        CommandListReset.Key = m_StateService.GetUniqueCommandKey();
-        CommandListReset.m_Object.Key = m_CommandListCopyKey;
-        CommandListReset.m_pAllocator.Key = m_CommandAllocatorCopyKey;
-        CommandListReset.m_pInitialState.Key = 0;
+        ID3D12GraphicsCommandListResetCommand commandListReset;
+        commandListReset.Key = m_StateService.GetUniqueCommandKey();
+        commandListReset.m_Object.Key = m_CommandListCopyKey;
+        commandListReset.m_pAllocator.Key = m_CommandAllocatorCopyKey;
+        commandListReset.m_pInitialState.Key = 0;
         m_StateService.GetRecorder().Record(
-            ID3D12GraphicsCommandListResetSerializer(CommandListReset));
+            ID3D12GraphicsCommandListResetSerializer(commandListReset));
       }
 
       for (auto& it : state->Buffers) {
@@ -1008,23 +1010,23 @@ void AccelerationStructuresBuildService::RestoreAccelerationStructures() {
         m_StateService.GetRecorder().Record(
             ID3D12GraphicsCommandListCloseSerializer(commandListClose));
 
-        ID3D12CommandQueueExecuteCommandListsCommand ExecuteCommandLists;
-        ExecuteCommandLists.Key = m_StateService.GetUniqueCommandKey();
-        ExecuteCommandLists.m_Object.Key = m_CommandQueueDirectKey;
-        ExecuteCommandLists.m_NumCommandLists.Value = 1;
-        ExecuteCommandLists.m_ppCommandLists.Value = reinterpret_cast<ID3D12CommandList**>(1);
-        ExecuteCommandLists.m_ppCommandLists.Size = 1;
-        ExecuteCommandLists.m_ppCommandLists.Keys.resize(1);
-        ExecuteCommandLists.m_ppCommandLists.Keys[0] = m_CommandListDirectKey;
+        ID3D12CommandQueueExecuteCommandListsCommand executeCommandLists;
+        executeCommandLists.Key = m_StateService.GetUniqueCommandKey();
+        executeCommandLists.m_Object.Key = m_CommandQueueDirectKey;
+        executeCommandLists.m_NumCommandLists.Value = 1;
+        executeCommandLists.m_ppCommandLists.Value = reinterpret_cast<ID3D12CommandList**>(1);
+        executeCommandLists.m_ppCommandLists.Size = 1;
+        executeCommandLists.m_ppCommandLists.Keys.resize(1);
+        executeCommandLists.m_ppCommandLists.Keys[0] = m_CommandListDirectKey;
         m_StateService.GetRecorder().Record(
-            ID3D12CommandQueueExecuteCommandListsSerializer(ExecuteCommandLists));
+            ID3D12CommandQueueExecuteCommandListsSerializer(executeCommandLists));
 
-        ID3D12CommandQueueSignalCommand CommandQueueSignal;
-        CommandQueueSignal.Key = m_StateService.GetUniqueCommandKey();
-        CommandQueueSignal.m_Object.Key = m_CommandQueueDirectKey;
-        CommandQueueSignal.m_pFence.Key = m_FenceKey;
-        CommandQueueSignal.m_Value.Value = ++m_RecordedFenceValue;
-        m_StateService.GetRecorder().Record(ID3D12CommandQueueSignalSerializer(CommandQueueSignal));
+        ID3D12CommandQueueSignalCommand commandQueueSignal;
+        commandQueueSignal.Key = m_StateService.GetUniqueCommandKey();
+        commandQueueSignal.m_Object.Key = m_CommandQueueDirectKey;
+        commandQueueSignal.m_pFence.Key = m_FenceKey;
+        commandQueueSignal.m_Value.Value = ++m_RecordedFenceValue;
+        m_StateService.GetRecorder().Record(ID3D12CommandQueueSignalSerializer(commandQueueSignal));
 
         ID3D12FenceGetCompletedValueCommand getCompletedValue;
         getCompletedValue.Key = m_StateService.GetUniqueCommandKey();
@@ -1039,13 +1041,13 @@ void AccelerationStructuresBuildService::RestoreAccelerationStructures() {
         m_StateService.GetRecorder().Record(
             ID3D12CommandAllocatorResetSerializer(commandAllocatorReset));
 
-        ID3D12GraphicsCommandListResetCommand CommandListReset;
-        CommandListReset.Key = m_StateService.GetUniqueCommandKey();
-        CommandListReset.m_Object.Key = m_CommandListDirectKey;
-        CommandListReset.m_pAllocator.Key = m_CommandAllocatorDirectKey;
-        CommandListReset.m_pInitialState.Key = 0;
+        ID3D12GraphicsCommandListResetCommand commandListReset;
+        commandListReset.Key = m_StateService.GetUniqueCommandKey();
+        commandListReset.m_Object.Key = m_CommandListDirectKey;
+        commandListReset.m_pAllocator.Key = m_CommandAllocatorDirectKey;
+        commandListReset.m_pInitialState.Key = 0;
         m_StateService.GetRecorder().Record(
-            ID3D12GraphicsCommandListResetSerializer(CommandListReset));
+            ID3D12GraphicsCommandListResetSerializer(commandListReset));
       }
       RecordEvict(residencyKeys);
     } else if (itState.second->Kind == RaytracingAccelerationStructureState::StateKind::Copy) {
@@ -1077,23 +1079,23 @@ void AccelerationStructuresBuildService::RestoreAccelerationStructures() {
         m_StateService.GetRecorder().Record(
             ID3D12GraphicsCommandListCloseSerializer(commandListClose));
 
-        ID3D12CommandQueueExecuteCommandListsCommand ExecuteCommandLists;
-        ExecuteCommandLists.Key = m_StateService.GetUniqueCommandKey();
-        ExecuteCommandLists.m_Object.Key = m_CommandQueueDirectKey;
-        ExecuteCommandLists.m_NumCommandLists.Value = 1;
-        ExecuteCommandLists.m_ppCommandLists.Value = reinterpret_cast<ID3D12CommandList**>(1);
-        ExecuteCommandLists.m_ppCommandLists.Size = 1;
-        ExecuteCommandLists.m_ppCommandLists.Keys.resize(1);
-        ExecuteCommandLists.m_ppCommandLists.Keys[0] = m_CommandListDirectKey;
+        ID3D12CommandQueueExecuteCommandListsCommand executeCommandLists;
+        executeCommandLists.Key = m_StateService.GetUniqueCommandKey();
+        executeCommandLists.m_Object.Key = m_CommandQueueDirectKey;
+        executeCommandLists.m_NumCommandLists.Value = 1;
+        executeCommandLists.m_ppCommandLists.Value = reinterpret_cast<ID3D12CommandList**>(1);
+        executeCommandLists.m_ppCommandLists.Size = 1;
+        executeCommandLists.m_ppCommandLists.Keys.resize(1);
+        executeCommandLists.m_ppCommandLists.Keys[0] = m_CommandListDirectKey;
         m_StateService.GetRecorder().Record(
-            ID3D12CommandQueueExecuteCommandListsSerializer(ExecuteCommandLists));
+            ID3D12CommandQueueExecuteCommandListsSerializer(executeCommandLists));
 
-        ID3D12CommandQueueSignalCommand CommandQueueSignal;
-        CommandQueueSignal.Key = m_StateService.GetUniqueCommandKey();
-        CommandQueueSignal.m_Object.Key = m_CommandQueueDirectKey;
-        CommandQueueSignal.m_pFence.Key = m_FenceKey;
-        CommandQueueSignal.m_Value.Value = ++m_RecordedFenceValue;
-        m_StateService.GetRecorder().Record(ID3D12CommandQueueSignalSerializer(CommandQueueSignal));
+        ID3D12CommandQueueSignalCommand commandQueueSignal;
+        commandQueueSignal.Key = m_StateService.GetUniqueCommandKey();
+        commandQueueSignal.m_Object.Key = m_CommandQueueDirectKey;
+        commandQueueSignal.m_pFence.Key = m_FenceKey;
+        commandQueueSignal.m_Value.Value = ++m_RecordedFenceValue;
+        m_StateService.GetRecorder().Record(ID3D12CommandQueueSignalSerializer(commandQueueSignal));
 
         ID3D12FenceGetCompletedValueCommand getCompletedValue;
         getCompletedValue.Key = m_StateService.GetUniqueCommandKey();
@@ -1108,13 +1110,13 @@ void AccelerationStructuresBuildService::RestoreAccelerationStructures() {
         m_StateService.GetRecorder().Record(
             ID3D12CommandAllocatorResetSerializer(commandAllocatorReset));
 
-        ID3D12GraphicsCommandListResetCommand CommandListReset;
-        CommandListReset.Key = m_StateService.GetUniqueCommandKey();
-        CommandListReset.m_Object.Key = m_CommandListDirectKey;
-        CommandListReset.m_pAllocator.Key = m_CommandAllocatorDirectKey;
-        CommandListReset.m_pInitialState.Key = 0;
+        ID3D12GraphicsCommandListResetCommand commandListReset;
+        commandListReset.Key = m_StateService.GetUniqueCommandKey();
+        commandListReset.m_Object.Key = m_CommandListDirectKey;
+        commandListReset.m_pAllocator.Key = m_CommandAllocatorDirectKey;
+        commandListReset.m_pInitialState.Key = 0;
         m_StateService.GetRecorder().Record(
-            ID3D12GraphicsCommandListResetSerializer(CommandListReset));
+            ID3D12GraphicsCommandListResetSerializer(commandListReset));
       }
       RecordEvict(residencyKeys);
     } else if (itState.second->Kind ==
@@ -1163,23 +1165,23 @@ void AccelerationStructuresBuildService::RestoreAccelerationStructures() {
         m_StateService.GetRecorder().Record(
             ID3D12GraphicsCommandListCloseSerializer(commandListClose));
 
-        ID3D12CommandQueueExecuteCommandListsCommand ExecuteCommandLists;
-        ExecuteCommandLists.Key = m_StateService.GetUniqueCommandKey();
-        ExecuteCommandLists.m_Object.Key = m_CommandQueueCopyKey;
-        ExecuteCommandLists.m_NumCommandLists.Value = 1;
-        ExecuteCommandLists.m_ppCommandLists.Value = reinterpret_cast<ID3D12CommandList**>(1);
-        ExecuteCommandLists.m_ppCommandLists.Size = 1;
-        ExecuteCommandLists.m_ppCommandLists.Keys.resize(1);
-        ExecuteCommandLists.m_ppCommandLists.Keys[0] = m_CommandListCopyKey;
+        ID3D12CommandQueueExecuteCommandListsCommand executeCommandLists;
+        executeCommandLists.Key = m_StateService.GetUniqueCommandKey();
+        executeCommandLists.m_Object.Key = m_CommandQueueCopyKey;
+        executeCommandLists.m_NumCommandLists.Value = 1;
+        executeCommandLists.m_ppCommandLists.Value = reinterpret_cast<ID3D12CommandList**>(1);
+        executeCommandLists.m_ppCommandLists.Size = 1;
+        executeCommandLists.m_ppCommandLists.Keys.resize(1);
+        executeCommandLists.m_ppCommandLists.Keys[0] = m_CommandListCopyKey;
         m_StateService.GetRecorder().Record(
-            ID3D12CommandQueueExecuteCommandListsSerializer(ExecuteCommandLists));
+            ID3D12CommandQueueExecuteCommandListsSerializer(executeCommandLists));
 
-        ID3D12CommandQueueSignalCommand CommandQueueSignal;
-        CommandQueueSignal.Key = m_StateService.GetUniqueCommandKey();
-        CommandQueueSignal.m_Object.Key = m_CommandQueueCopyKey;
-        CommandQueueSignal.m_pFence.Key = m_FenceKey;
-        CommandQueueSignal.m_Value.Value = ++m_RecordedFenceValue;
-        m_StateService.GetRecorder().Record(ID3D12CommandQueueSignalSerializer(CommandQueueSignal));
+        ID3D12CommandQueueSignalCommand commandQueueSignal;
+        commandQueueSignal.Key = m_StateService.GetUniqueCommandKey();
+        commandQueueSignal.m_Object.Key = m_CommandQueueCopyKey;
+        commandQueueSignal.m_pFence.Key = m_FenceKey;
+        commandQueueSignal.m_Value.Value = ++m_RecordedFenceValue;
+        m_StateService.GetRecorder().Record(ID3D12CommandQueueSignalSerializer(commandQueueSignal));
 
         ID3D12FenceGetCompletedValueCommand getCompletedValue;
         getCompletedValue.Key = m_StateService.GetUniqueCommandKey();
@@ -1194,13 +1196,13 @@ void AccelerationStructuresBuildService::RestoreAccelerationStructures() {
         m_StateService.GetRecorder().Record(
             ID3D12CommandAllocatorResetSerializer(commandAllocatorReset));
 
-        ID3D12GraphicsCommandListResetCommand CommandListReset;
-        CommandListReset.Key = m_StateService.GetUniqueCommandKey();
-        CommandListReset.m_Object.Key = m_CommandListCopyKey;
-        CommandListReset.m_pAllocator.Key = m_CommandAllocatorCopyKey;
-        CommandListReset.m_pInitialState.Key = 0;
+        ID3D12GraphicsCommandListResetCommand commandListReset;
+        commandListReset.Key = m_StateService.GetUniqueCommandKey();
+        commandListReset.m_Object.Key = m_CommandListCopyKey;
+        commandListReset.m_pAllocator.Key = m_CommandAllocatorCopyKey;
+        commandListReset.m_pInitialState.Key = 0;
         m_StateService.GetRecorder().Record(
-            ID3D12GraphicsCommandListResetSerializer(CommandListReset));
+            ID3D12GraphicsCommandListResetSerializer(commandListReset));
       }
 
       for (auto& it : state->Buffers) {
@@ -1258,23 +1260,23 @@ void AccelerationStructuresBuildService::RestoreAccelerationStructures() {
         m_StateService.GetRecorder().Record(
             ID3D12GraphicsCommandListCloseSerializer(commandListClose));
 
-        ID3D12CommandQueueExecuteCommandListsCommand ExecuteCommandLists;
-        ExecuteCommandLists.Key = m_StateService.GetUniqueCommandKey();
-        ExecuteCommandLists.m_Object.Key = m_CommandQueueDirectKey;
-        ExecuteCommandLists.m_NumCommandLists.Value = 1;
-        ExecuteCommandLists.m_ppCommandLists.Value = reinterpret_cast<ID3D12CommandList**>(1);
-        ExecuteCommandLists.m_ppCommandLists.Size = 1;
-        ExecuteCommandLists.m_ppCommandLists.Keys.resize(1);
-        ExecuteCommandLists.m_ppCommandLists.Keys[0] = m_CommandListDirectKey;
+        ID3D12CommandQueueExecuteCommandListsCommand executeCommandLists;
+        executeCommandLists.Key = m_StateService.GetUniqueCommandKey();
+        executeCommandLists.m_Object.Key = m_CommandQueueDirectKey;
+        executeCommandLists.m_NumCommandLists.Value = 1;
+        executeCommandLists.m_ppCommandLists.Value = reinterpret_cast<ID3D12CommandList**>(1);
+        executeCommandLists.m_ppCommandLists.Size = 1;
+        executeCommandLists.m_ppCommandLists.Keys.resize(1);
+        executeCommandLists.m_ppCommandLists.Keys[0] = m_CommandListDirectKey;
         m_StateService.GetRecorder().Record(
-            ID3D12CommandQueueExecuteCommandListsSerializer(ExecuteCommandLists));
+            ID3D12CommandQueueExecuteCommandListsSerializer(executeCommandLists));
 
-        ID3D12CommandQueueSignalCommand CommandQueueSignal;
-        CommandQueueSignal.Key = m_StateService.GetUniqueCommandKey();
-        CommandQueueSignal.m_Object.Key = m_CommandQueueDirectKey;
-        CommandQueueSignal.m_pFence.Key = m_FenceKey;
-        CommandQueueSignal.m_Value.Value = ++m_RecordedFenceValue;
-        m_StateService.GetRecorder().Record(ID3D12CommandQueueSignalSerializer(CommandQueueSignal));
+        ID3D12CommandQueueSignalCommand commandQueueSignal;
+        commandQueueSignal.Key = m_StateService.GetUniqueCommandKey();
+        commandQueueSignal.m_Object.Key = m_CommandQueueDirectKey;
+        commandQueueSignal.m_pFence.Key = m_FenceKey;
+        commandQueueSignal.m_Value.Value = ++m_RecordedFenceValue;
+        m_StateService.GetRecorder().Record(ID3D12CommandQueueSignalSerializer(commandQueueSignal));
 
         ID3D12FenceGetCompletedValueCommand getCompletedValue;
         getCompletedValue.Key = m_StateService.GetUniqueCommandKey();
@@ -1289,13 +1291,13 @@ void AccelerationStructuresBuildService::RestoreAccelerationStructures() {
         m_StateService.GetRecorder().Record(
             ID3D12CommandAllocatorResetSerializer(commandAllocatorReset));
 
-        ID3D12GraphicsCommandListResetCommand CommandListReset;
-        CommandListReset.Key = m_StateService.GetUniqueCommandKey();
-        CommandListReset.m_Object.Key = m_CommandListDirectKey;
-        CommandListReset.m_pAllocator.Key = m_CommandAllocatorDirectKey;
-        CommandListReset.m_pInitialState.Key = 0;
+        ID3D12GraphicsCommandListResetCommand commandListReset;
+        commandListReset.Key = m_StateService.GetUniqueCommandKey();
+        commandListReset.m_Object.Key = m_CommandListDirectKey;
+        commandListReset.m_pAllocator.Key = m_CommandAllocatorDirectKey;
+        commandListReset.m_pInitialState.Key = 0;
         m_StateService.GetRecorder().Record(
-            ID3D12GraphicsCommandListResetSerializer(CommandListReset));
+            ID3D12GraphicsCommandListResetSerializer(commandListReset));
       }
       RecordEvict(residencyKeys);
     } else if (itState.second->Kind == RaytracingAccelerationStructureState::StateKind::NvAPIOMM) {
@@ -1347,23 +1349,23 @@ void AccelerationStructuresBuildService::RestoreAccelerationStructures() {
         m_StateService.GetRecorder().Record(
             ID3D12GraphicsCommandListCloseSerializer(commandListClose));
 
-        ID3D12CommandQueueExecuteCommandListsCommand ExecuteCommandLists;
-        ExecuteCommandLists.Key = m_StateService.GetUniqueCommandKey();
-        ExecuteCommandLists.m_Object.Key = m_CommandQueueCopyKey;
-        ExecuteCommandLists.m_NumCommandLists.Value = 1;
-        ExecuteCommandLists.m_ppCommandLists.Value = reinterpret_cast<ID3D12CommandList**>(1);
-        ExecuteCommandLists.m_ppCommandLists.Size = 1;
-        ExecuteCommandLists.m_ppCommandLists.Keys.resize(1);
-        ExecuteCommandLists.m_ppCommandLists.Keys[0] = m_CommandListCopyKey;
+        ID3D12CommandQueueExecuteCommandListsCommand executeCommandLists;
+        executeCommandLists.Key = m_StateService.GetUniqueCommandKey();
+        executeCommandLists.m_Object.Key = m_CommandQueueCopyKey;
+        executeCommandLists.m_NumCommandLists.Value = 1;
+        executeCommandLists.m_ppCommandLists.Value = reinterpret_cast<ID3D12CommandList**>(1);
+        executeCommandLists.m_ppCommandLists.Size = 1;
+        executeCommandLists.m_ppCommandLists.Keys.resize(1);
+        executeCommandLists.m_ppCommandLists.Keys[0] = m_CommandListCopyKey;
         m_StateService.GetRecorder().Record(
-            ID3D12CommandQueueExecuteCommandListsSerializer(ExecuteCommandLists));
+            ID3D12CommandQueueExecuteCommandListsSerializer(executeCommandLists));
 
-        ID3D12CommandQueueSignalCommand CommandQueueSignal;
-        CommandQueueSignal.Key = m_StateService.GetUniqueCommandKey();
-        CommandQueueSignal.m_Object.Key = m_CommandQueueCopyKey;
-        CommandQueueSignal.m_pFence.Key = m_FenceKey;
-        CommandQueueSignal.m_Value.Value = ++m_RecordedFenceValue;
-        m_StateService.GetRecorder().Record(ID3D12CommandQueueSignalSerializer(CommandQueueSignal));
+        ID3D12CommandQueueSignalCommand commandQueueSignal;
+        commandQueueSignal.Key = m_StateService.GetUniqueCommandKey();
+        commandQueueSignal.m_Object.Key = m_CommandQueueCopyKey;
+        commandQueueSignal.m_pFence.Key = m_FenceKey;
+        commandQueueSignal.m_Value.Value = ++m_RecordedFenceValue;
+        m_StateService.GetRecorder().Record(ID3D12CommandQueueSignalSerializer(commandQueueSignal));
 
         ID3D12FenceGetCompletedValueCommand getCompletedValue;
         getCompletedValue.Key = m_StateService.GetUniqueCommandKey();
@@ -1378,13 +1380,13 @@ void AccelerationStructuresBuildService::RestoreAccelerationStructures() {
         m_StateService.GetRecorder().Record(
             ID3D12CommandAllocatorResetSerializer(commandAllocatorReset));
 
-        ID3D12GraphicsCommandListResetCommand CommandListReset;
-        CommandListReset.Key = m_StateService.GetUniqueCommandKey();
-        CommandListReset.m_Object.Key = m_CommandListCopyKey;
-        CommandListReset.m_pAllocator.Key = m_CommandAllocatorCopyKey;
-        CommandListReset.m_pInitialState.Key = 0;
+        ID3D12GraphicsCommandListResetCommand commandListReset;
+        commandListReset.Key = m_StateService.GetUniqueCommandKey();
+        commandListReset.m_Object.Key = m_CommandListCopyKey;
+        commandListReset.m_pAllocator.Key = m_CommandAllocatorCopyKey;
+        commandListReset.m_pInitialState.Key = 0;
         m_StateService.GetRecorder().Record(
-            ID3D12GraphicsCommandListResetSerializer(CommandListReset));
+            ID3D12GraphicsCommandListResetSerializer(commandListReset));
       }
 
       for (auto& it : state->Buffers) {
@@ -1441,23 +1443,23 @@ void AccelerationStructuresBuildService::RestoreAccelerationStructures() {
         m_StateService.GetRecorder().Record(
             ID3D12GraphicsCommandListCloseSerializer(commandListClose));
 
-        ID3D12CommandQueueExecuteCommandListsCommand ExecuteCommandLists;
-        ExecuteCommandLists.Key = m_StateService.GetUniqueCommandKey();
-        ExecuteCommandLists.m_Object.Key = m_CommandQueueDirectKey;
-        ExecuteCommandLists.m_NumCommandLists.Value = 1;
-        ExecuteCommandLists.m_ppCommandLists.Value = reinterpret_cast<ID3D12CommandList**>(1);
-        ExecuteCommandLists.m_ppCommandLists.Size = 1;
-        ExecuteCommandLists.m_ppCommandLists.Keys.resize(1);
-        ExecuteCommandLists.m_ppCommandLists.Keys[0] = m_CommandListDirectKey;
+        ID3D12CommandQueueExecuteCommandListsCommand executeCommandLists;
+        executeCommandLists.Key = m_StateService.GetUniqueCommandKey();
+        executeCommandLists.m_Object.Key = m_CommandQueueDirectKey;
+        executeCommandLists.m_NumCommandLists.Value = 1;
+        executeCommandLists.m_ppCommandLists.Value = reinterpret_cast<ID3D12CommandList**>(1);
+        executeCommandLists.m_ppCommandLists.Size = 1;
+        executeCommandLists.m_ppCommandLists.Keys.resize(1);
+        executeCommandLists.m_ppCommandLists.Keys[0] = m_CommandListDirectKey;
         m_StateService.GetRecorder().Record(
-            ID3D12CommandQueueExecuteCommandListsSerializer(ExecuteCommandLists));
+            ID3D12CommandQueueExecuteCommandListsSerializer(executeCommandLists));
 
-        ID3D12CommandQueueSignalCommand CommandQueueSignal;
-        CommandQueueSignal.Key = m_StateService.GetUniqueCommandKey();
-        CommandQueueSignal.m_Object.Key = m_CommandQueueDirectKey;
-        CommandQueueSignal.m_pFence.Key = m_FenceKey;
-        CommandQueueSignal.m_Value.Value = ++m_RecordedFenceValue;
-        m_StateService.GetRecorder().Record(ID3D12CommandQueueSignalSerializer(CommandQueueSignal));
+        ID3D12CommandQueueSignalCommand commandQueueSignal;
+        commandQueueSignal.Key = m_StateService.GetUniqueCommandKey();
+        commandQueueSignal.m_Object.Key = m_CommandQueueDirectKey;
+        commandQueueSignal.m_pFence.Key = m_FenceKey;
+        commandQueueSignal.m_Value.Value = ++m_RecordedFenceValue;
+        m_StateService.GetRecorder().Record(ID3D12CommandQueueSignalSerializer(commandQueueSignal));
 
         ID3D12FenceGetCompletedValueCommand getCompletedValue;
         getCompletedValue.Key = m_StateService.GetUniqueCommandKey();
@@ -1472,13 +1474,13 @@ void AccelerationStructuresBuildService::RestoreAccelerationStructures() {
         m_StateService.GetRecorder().Record(
             ID3D12CommandAllocatorResetSerializer(commandAllocatorReset));
 
-        ID3D12GraphicsCommandListResetCommand CommandListReset;
-        CommandListReset.Key = m_StateService.GetUniqueCommandKey();
-        CommandListReset.m_Object.Key = m_CommandListDirectKey;
-        CommandListReset.m_pAllocator.Key = m_CommandAllocatorDirectKey;
-        CommandListReset.m_pInitialState.Key = 0;
+        ID3D12GraphicsCommandListResetCommand commandListReset;
+        commandListReset.Key = m_StateService.GetUniqueCommandKey();
+        commandListReset.m_Object.Key = m_CommandListDirectKey;
+        commandListReset.m_pAllocator.Key = m_CommandAllocatorDirectKey;
+        commandListReset.m_pInitialState.Key = 0;
         m_StateService.GetRecorder().Record(
-            ID3D12GraphicsCommandListResetSerializer(CommandListReset));
+            ID3D12GraphicsCommandListResetSerializer(commandListReset));
       }
       RecordEvict(residencyKeys);
     } else {
@@ -1555,22 +1557,22 @@ void AccelerationStructuresBuildService::ExecuteCommandLists(
       m_StatesByCommandList.erase(itStates);
     }
   }
-  m_BufferContentRestore.executeCommandLists(c.Key, c.m_Object.Key, c.m_Object.Value,
+  m_BufferContentRestore.ExecuteCommandLists(c.Key, c.m_Object.Key, c.m_Object.Value,
                                              c.m_ppCommandLists.Value, c.m_NumCommandLists.Value);
 }
 
 void AccelerationStructuresBuildService::CommandQueueWait(ID3D12CommandQueueWaitCommand& c) {
-  m_BufferContentRestore.commandQueueWait(c.Key, c.m_Object.Key, c.m_pFence.Key, c.m_Value.Value);
+  m_BufferContentRestore.CommandQueueWait(c.Key, c.m_Object.Key, c.m_pFence.Key, c.m_Value.Value);
 }
 
 void AccelerationStructuresBuildService::CommandQueueSignal(ID3D12CommandQueueSignalCommand& c) {
-  m_BufferContentRestore.commandQueueSignal(c.Key, c.m_Object.Key, c.m_pFence.Key, c.m_Value.Value);
+  m_BufferContentRestore.CommandQueueSignal(c.Key, c.m_Object.Key, c.m_pFence.Key, c.m_Value.Value);
 }
 
 void AccelerationStructuresBuildService::FenceSignal(unsigned key,
                                                      unsigned fenceKey,
                                                      UINT64 fenceValue) {
-  m_BufferContentRestore.fenceSignal(key, fenceKey, fenceValue);
+  m_BufferContentRestore.FenceSignal(key, fenceKey, fenceValue);
 }
 
 void AccelerationStructuresBuildService::StoreState(RaytracingAccelerationStructureState* state) {
@@ -1870,42 +1872,18 @@ void AccelerationStructuresBuildService::StoreBuffer(
   m_StateService.KeepState(inputKey);
   ResourceState* bufferState = static_cast<ResourceState*>(m_StateService.GetState(inputKey));
   bufferState->CurrentState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
-  D3D12_RESOURCE_STATES trackedState =
-      m_ResourceStateTracker.GetResourceState(commandList, inputKey, 0);
-  if (trackedState == D3D12_RESOURCE_STATE_GENERIC_READ ||
-      trackedState == D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE) {
-    bufferState->CurrentState = trackedState;
-  } else if (trackedState != D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE) {
-    if (bufferState->DenyShaderResource) {
-      bufferState->CurrentState = D3D12_RESOURCE_STATE_COMMON;
-    } else {
-      CapturePlayerGpuAddressService::ResourceInfo* resourceInfo =
-          m_GpuAddressService.GetResourceInfoByCaptureAddress(bufferState->GpuVirtualAddress +
-                                                              inputOffset);
-      if (resourceInfo && resourceInfo->Overlapping()) {
-        bufferState->CurrentState = trackedState;
-        static bool logged = false;
-        if (!logged) {
-          LOG_WARNING << "State restore - state of overlapped resource different than expected";
-          logged = true;
-        }
-      }
-      if (commandList->GetType() == D3D12_COMMAND_LIST_TYPE_COMPUTE) {
-        bufferState->CurrentState &= ~D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
-        if (bufferState->CurrentState != trackedState) {
-          static bool logged = false;
-          if (!logged) {
-            LOG_WARNING
-                << "State restore - state of overlapped resource adjusted for compute Command list";
-            logged = true;
-          }
-        }
-      }
-    }
+  if (bufferState->DenyShaderResource) {
+    bufferState->CurrentState = D3D12_RESOURCE_STATE_COMMON;
   }
+
+  BarrierState currentState = GetAdjustedCurrentState(
+      m_ResourceStateTracker, m_GpuAddressService, commandList,
+      bufferState->GpuVirtualAddress + inputOffset,
+      static_cast<ID3D12Resource*>(bufferState->Object), inputKey, bufferState->CurrentState);
+
   m_BufferContentRestore.StoreBuffer(commandList, static_cast<ID3D12Resource*>(bufferState->Object),
-                                     inputKey, inputOffset, size, bufferState->CurrentState,
-                                     commandKey, bufferState->IsMappable);
+                                     inputKey, inputOffset, size, currentState, commandKey,
+                                     bufferState->IsMappable);
   state->Buffers[inputKey] = bufferState;
   ReservedResourcesService::TiledResource* tiledResource =
       m_ReservedResourcesService.GetTiledResource(inputKey);
@@ -1940,13 +1918,13 @@ std::vector<AccelerationStructuresBuildService::Interval> AccelerationStructures
   return merged;
 }
 
-void AccelerationStructuresBuildService::InsertIfNotResident(unsigned ResourceKey,
+void AccelerationStructuresBuildService::InsertIfNotResident(unsigned resourceKey,
                                                              std::set<unsigned>& residencyKeys) {
-  if (!ResourceKey) {
+  if (!resourceKey) {
     return;
   }
 
-  auto residencyKey = GetResidencyKeyForNotResidentResource(ResourceKey);
+  auto residencyKey = GetResidencyKeyForNotResidentResource(resourceKey);
   if (residencyKey.has_value() && residencyKey.value() != 0) {
     residencyKeys.insert(residencyKey.value());
   }
@@ -1961,37 +1939,37 @@ std::optional<unsigned> AccelerationStructuresBuildService::GetResidencyKeyForNo
 
   switch (state->CreationCommand->GetId()) {
   case CommandId::ID_ID3D12DEVICE_CREATECOMMITTEDRESOURCE: {
-    auto* Command =
+    auto* command =
         static_cast<ID3D12DeviceCreateCommittedResourceCommand*>(state->CreationCommand.get());
-    if (Command->m_HeapFlags.Value & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
+    if (command->m_HeapFlags.Value & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
       return key;
     }
   } break;
   case CommandId::ID_ID3D12DEVICE4_CREATECOMMITTEDRESOURCE1: {
-    auto* Command =
+    auto* command =
         static_cast<ID3D12Device4CreateCommittedResource1Command*>(state->CreationCommand.get());
-    if (Command->m_HeapFlags.Value & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
+    if (command->m_HeapFlags.Value & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
       return key;
     }
   } break;
   case CommandId::ID_ID3D12DEVICE8_CREATECOMMITTEDRESOURCE2: {
-    auto* Command =
+    auto* command =
         static_cast<ID3D12Device8CreateCommittedResource2Command*>(state->CreationCommand.get());
-    if (Command->m_HeapFlags.Value & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
+    if (command->m_HeapFlags.Value & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
       return key;
     }
   } break;
   case CommandId::ID_ID3D12DEVICE10_CREATECOMMITTEDRESOURCE3: {
-    auto* Command =
+    auto* command =
         static_cast<ID3D12Device10CreateCommittedResource3Command*>(state->CreationCommand.get());
-    if (Command->m_HeapFlags.Value & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
+    if (command->m_HeapFlags.Value & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
       return key;
     }
   } break;
   case CommandId::INTC_D3D12_CREATECOMMITTEDRESOURCE: {
-    auto* Command =
+    auto* command =
         static_cast<INTC_D3D12_CreateCommittedResourceCommand*>(state->CreationCommand.get());
-    if (Command->m_HeapFlags.Value & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
+    if (command->m_HeapFlags.Value & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
       return key;
     }
   } break;
@@ -2006,21 +1984,21 @@ std::optional<unsigned> AccelerationStructuresBuildService::GetResidencyKeyForNo
     }
     switch (heapState->CreationCommand->GetId()) {
     case CommandId::ID_ID3D12DEVICE_CREATEHEAP: {
-      auto* Command = static_cast<ID3D12DeviceCreateHeapCommand*>(heapState->CreationCommand.get());
-      if (Command->m_pDesc.Value->Flags & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
+      auto* command = static_cast<ID3D12DeviceCreateHeapCommand*>(heapState->CreationCommand.get());
+      if (command->m_pDesc.Value->Flags & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
         return heapKey;
       }
     } break;
     case CommandId::ID_ID3D12DEVICE4_CREATEHEAP1: {
-      auto* Command =
+      auto* command =
           static_cast<ID3D12Device4CreateHeap1Command*>(heapState->CreationCommand.get());
-      if (Command->m_pDesc.Value->Flags & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
+      if (command->m_pDesc.Value->Flags & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
         return heapKey;
       }
     } break;
     case CommandId::INTC_D3D12_CREATEHEAP: {
-      auto* Command = static_cast<INTC_D3D12_CreateHeapCommand*>(heapState->CreationCommand.get());
-      if (Command->m_pDesc.Value->pD3D12Desc->Flags & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
+      auto* command = static_cast<INTC_D3D12_CreateHeapCommand*>(heapState->CreationCommand.get());
+      if (command->m_pDesc.Value->pD3D12Desc->Flags & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
         return heapKey;
       }
     } break;
@@ -2037,17 +2015,17 @@ void AccelerationStructuresBuildService::RecordMakeResident(const std::set<unsig
     return;
   }
 
-  ID3D12DeviceMakeResidentCommand MakeResident;
-  MakeResident.Key = m_StateService.GetUniqueCommandKey();
-  MakeResident.m_Object.Key = m_DeviceKey;
-  MakeResident.m_NumObjects.Value = keys.size();
+  ID3D12DeviceMakeResidentCommand makeResident;
+  makeResident.Key = m_StateService.GetUniqueCommandKey();
+  makeResident.m_Object.Key = m_DeviceKey;
+  makeResident.m_NumObjects.Value = keys.size();
   ID3D12Pageable* fakePtr = reinterpret_cast<ID3D12Pageable*>(1);
-  MakeResident.m_ppObjects.Value = &fakePtr;
-  MakeResident.m_ppObjects.Size = keys.size();
+  makeResident.m_ppObjects.Value = &fakePtr;
+  makeResident.m_ppObjects.Size = keys.size();
   for (unsigned key : keys) {
-    MakeResident.m_ppObjects.Keys.push_back(key);
+    makeResident.m_ppObjects.Keys.push_back(key);
   }
-  m_StateService.GetRecorder().Record(ID3D12DeviceMakeResidentSerializer(MakeResident));
+  m_StateService.GetRecorder().Record(ID3D12DeviceMakeResidentSerializer(makeResident));
 }
 
 void AccelerationStructuresBuildService::RecordEvict(const std::set<unsigned>& keys) {
@@ -2055,17 +2033,17 @@ void AccelerationStructuresBuildService::RecordEvict(const std::set<unsigned>& k
     return;
   }
 
-  ID3D12DeviceEvictCommand Evict;
-  Evict.Key = m_StateService.GetUniqueCommandKey();
-  Evict.m_Object.Key = m_DeviceKey;
-  Evict.m_NumObjects.Value = keys.size();
+  ID3D12DeviceEvictCommand evict;
+  evict.Key = m_StateService.GetUniqueCommandKey();
+  evict.m_Object.Key = m_DeviceKey;
+  evict.m_NumObjects.Value = keys.size();
   ID3D12Pageable* fakePtr = reinterpret_cast<ID3D12Pageable*>(1);
-  Evict.m_ppObjects.Value = &fakePtr;
-  Evict.m_ppObjects.Size = keys.size();
+  evict.m_ppObjects.Value = &fakePtr;
+  evict.m_ppObjects.Size = keys.size();
   for (unsigned key : keys) {
-    Evict.m_ppObjects.Keys.push_back(key);
+    evict.m_ppObjects.Keys.push_back(key);
   }
-  m_StateService.GetRecorder().Record(ID3D12DeviceEvictSerializer(Evict));
+  m_StateService.GetRecorder().Record(ID3D12DeviceEvictSerializer(evict));
 }
 
 } // namespace DirectX

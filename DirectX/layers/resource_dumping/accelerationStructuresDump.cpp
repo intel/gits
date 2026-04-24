@@ -16,7 +16,7 @@ namespace gits {
 namespace DirectX {
 
 AccelerationStructuresDump::~AccelerationStructuresDump() {
-  waitUntilDumped();
+  WaitUntilDumped();
 }
 
 void AccelerationStructuresDump::dumpAccelerationStructure(
@@ -31,7 +31,7 @@ void AccelerationStructuresDump::dumpAccelerationStructure(
   const unsigned decodedSize = 0x1000000;
 
   AccelerationStructuresDumpInfo* dumpInfo = new AccelerationStructuresDumpInfo();
-  dumpInfo->dumpName = dumpName;
+  dumpInfo->DumpName = dumpName;
 
   {
     D3D12_HEAP_PROPERTIES heapProperties{};
@@ -53,7 +53,7 @@ void AccelerationStructuresDump::dumpAccelerationStructure(
 
     hr = device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc,
                                          D3D12_RESOURCE_STATE_COMMON, nullptr,
-                                         IID_PPV_ARGS(&dumpInfo->decodedBuffer));
+                                         IID_PPV_ARGS(&dumpInfo->DecodedBuffer));
     if (hr != S_OK) {
       if (hr == E_OUTOFMEMORY) {
         LOG_ERROR << "BLAS dumping - create buffer failed - E_OUTOFMEMORY - try with less buffers.";
@@ -69,7 +69,7 @@ void AccelerationStructuresDump::dumpAccelerationStructure(
 
     hr = device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc,
                                          D3D12_RESOURCE_STATE_COPY_DEST, nullptr,
-                                         IID_PPV_ARGS(&dumpInfo->stagingBuffer));
+                                         IID_PPV_ARGS(&dumpInfo->StagingBuffer));
     if (hr != S_OK) {
       if (hr == E_OUTOFMEMORY) {
         LOG_ERROR << "BLAS dumping - create buffer failed - E_OUTOFMEMORY - try with less buffers.";
@@ -82,29 +82,29 @@ void AccelerationStructuresDump::dumpAccelerationStructure(
   }
 
   commandList->CopyRaytracingAccelerationStructure(
-      dumpInfo->decodedBuffer->GetGPUVirtualAddress(), accelerationStructure,
+      dumpInfo->DecodedBuffer->GetGPUVirtualAddress(), accelerationStructure,
       D3D12_RAYTRACING_ACCELERATION_STRUCTURE_COPY_MODE_VISUALIZATION_DECODE_FOR_TOOLS);
 
   D3D12_RESOURCE_BARRIER barrier{};
   barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
   barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
   barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_SOURCE;
-  barrier.Transition.pResource = dumpInfo->decodedBuffer.Get();
+  barrier.Transition.pResource = dumpInfo->DecodedBuffer.Get();
   commandList->ResourceBarrier(1, &barrier);
 
-  commandList->CopyResource(dumpInfo->stagingBuffer.Get(), dumpInfo->decodedBuffer.Get());
+  commandList->CopyResource(dumpInfo->StagingBuffer.Get(), dumpInfo->DecodedBuffer.Get());
 
-  stagedResources_[commandList].push_back(dumpInfo);
+  m_StagedResources[commandList].push_back(dumpInfo);
 }
 
-void AccelerationStructuresDump::dumpStagedResource(DumpInfo& dumpInfo) {
+void AccelerationStructuresDump::DumpStagedResource(DumpInfo& dumpInfo) {
   AccelerationStructuresDumpInfo& info = static_cast<AccelerationStructuresDumpInfo&>(dumpInfo);
 
   void* data{};
-  HRESULT hr = info.stagingBuffer->Map(0, nullptr, &data);
+  HRESULT hr = info.StagingBuffer->Map(0, nullptr, &data);
   GITS_ASSERT(hr == S_OK);
 
-  std::ofstream stream(info.dumpName);
+  std::ofstream stream(info.DumpName);
 
   unsigned offset = 0;
 
@@ -113,7 +113,7 @@ void AccelerationStructuresDump::dumpStagedResource(DumpInfo& dumpInfo) {
   offset += sizeof(unsigned);
   if (type != D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL) {
     LOG_ERROR << "Can't dump bottom level acceleration structure "
-              << std::string(dumpInfo.dumpName.begin(), dumpInfo.dumpName.end());
+              << std::string(dumpInfo.DumpName.begin(), dumpInfo.DumpName.end());
     return;
   }
 
@@ -124,7 +124,7 @@ void AccelerationStructuresDump::dumpStagedResource(DumpInfo& dumpInfo) {
   stream << "D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL NumDesc " << numDescs
          << "\n\n";
 
-  D3D12_GPU_VIRTUAL_ADDRESS baseAddress = info.decodedBuffer->GetGPUVirtualAddress();
+  D3D12_GPU_VIRTUAL_ADDRESS baseAddress = info.DecodedBuffer->GetGPUVirtualAddress();
 
   for (unsigned i = 0; i < numDescs; ++i) {
     D3D12_RAYTRACING_GEOMETRY_DESC desc{};
@@ -133,19 +133,19 @@ void AccelerationStructuresDump::dumpStagedResource(DumpInfo& dumpInfo) {
 
     if (desc.Type == D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES) {
       stream << "D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES";
-      printGeometryFlags(stream, desc.Flags);
+      PrintGeometryFlags(stream, desc.Flags);
       stream << "\n";
-      printTrianglesDesc(stream, baseAddress, static_cast<uint8_t*>(data), desc.Triangles);
+      PrintTrianglesDesc(stream, baseAddress, static_cast<uint8_t*>(data), desc.Triangles);
     } else if (desc.Type == D3D12_RAYTRACING_GEOMETRY_TYPE_PROCEDURAL_PRIMITIVE_AABBS) {
       stream << "D3D12_RAYTRACING_GEOMETRY_TYPE_PROCEDURAL_PRIMITIVE_AABBS";
-      printGeometryFlags(stream, desc.Flags);
+      PrintGeometryFlags(stream, desc.Flags);
       stream << "\n";
     }
   }
-  info.stagingBuffer->Unmap(0, nullptr);
+  info.StagingBuffer->Unmap(0, nullptr);
 }
 
-void AccelerationStructuresDump::printGeometryFlags(std::ostream& stream,
+void AccelerationStructuresDump::PrintGeometryFlags(std::ostream& stream,
                                                     D3D12_RAYTRACING_GEOMETRY_FLAGS flags) {
   if (flags & D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE) {
     stream << " D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE";
@@ -155,7 +155,7 @@ void AccelerationStructuresDump::printGeometryFlags(std::ostream& stream,
   }
 }
 
-void AccelerationStructuresDump::printTrianglesDesc(
+void AccelerationStructuresDump::PrintTrianglesDesc(
     std::ostream& stream,
     D3D12_GPU_VIRTUAL_ADDRESS baseAddress,
     uint8_t* data,
@@ -163,8 +163,8 @@ void AccelerationStructuresDump::printTrianglesDesc(
 
   stream << "Transform3x4 0x" << std::hex << std::setw(16) << std::setfill('0') << desc.Transform3x4
          << std::dec << "\n";
-  stream << "IndexFormat " << formatToString(desc.IndexFormat) << "\n";
-  stream << "VertexFormat " << formatToString(desc.VertexFormat) << "\n";
+  stream << "IndexFormat " << FormatToString(desc.IndexFormat) << "\n";
+  stream << "VertexFormat " << FormatToString(desc.VertexFormat) << "\n";
   stream << "IndexCount " << desc.IndexCount << "\n";
   stream << "VertexCount " << desc.VertexCount << "\n";
   stream << "IndexBuffer 0x" << std::hex << std::setw(16) << std::setfill('0') << desc.IndexBuffer
@@ -173,11 +173,11 @@ void AccelerationStructuresDump::printTrianglesDesc(
 
   unsigned offset = static_cast<unsigned>(desc.VertexBuffer.StartAddress - baseAddress);
   if (desc.VertexCount) {
-    printVertices(stream, data + offset, desc.VertexCount);
+    PrintVertices(stream, data + offset, desc.VertexCount);
   }
 }
 
-void AccelerationStructuresDump::printVertices(std::ostream& stream,
+void AccelerationStructuresDump::PrintVertices(std::ostream& stream,
                                                uint8_t* data,
                                                unsigned vertexCount) {
   stream << "VERTICES\n";

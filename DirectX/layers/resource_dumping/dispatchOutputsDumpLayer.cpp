@@ -59,12 +59,12 @@ DispatchOutputsDumpLayer::DispatchOutputsDumpLayer()
       std::istringstream iss(line);
       unsigned dispatchKey{};
       unsigned slot{};
-      unsigned ResourceKey{};
+      unsigned resourceKey{};
       iss >> dispatchKey;
       iss >> slot;
-      auto& ResourceKeys = m_ResourceKeysBySlotByDispatch[dispatchKey][slot];
-      while (iss >> ResourceKey) {
-        ResourceKeys.insert(ResourceKey);
+      auto& resourceKeys = m_ResourceKeysBySlotByDispatch[dispatchKey][slot];
+      while (iss >> resourceKey) {
+        resourceKeys.insert(resourceKey);
       }
     }
   }
@@ -75,10 +75,10 @@ DispatchOutputsDumpLayer::~DispatchOutputsDumpLayer() {
     if (m_InAnalysis) {
       std::ofstream analysisFile(m_AnalysisFilePath);
       for (const auto& [dispatchKey, resourceKeysBySlot] : m_ResourceKeysBySlotByDispatch) {
-        for (const auto& [slot, ResourceKeys] : resourceKeysBySlot) {
+        for (const auto& [slot, resourceKeys] : resourceKeysBySlot) {
           analysisFile << dispatchKey << " " << slot;
-          for (unsigned ResourceKey : ResourceKeys) {
-            analysisFile << " " << ResourceKey;
+          for (unsigned resourceKey : resourceKeys) {
+            analysisFile << " " << resourceKey;
           }
           analysisFile << "\n";
         }
@@ -88,7 +88,7 @@ DispatchOutputsDumpLayer::~DispatchOutputsDumpLayer() {
     if (m_DryRun) {
       YAML::Node output;
       output["DispatchesWithTextureByFrame"] = YAML::Node();
-      for (const auto& [frame, dispatchNumbers] : m_DryRunInfo.dispatchesWithTextureByFrame) {
+      for (const auto& [frame, dispatchNumbers] : m_DryRunInfo.DispatchesWithTextureByFrame) {
         for (unsigned dispatchNumber : dispatchNumbers) {
           output["DispatchesWithTextureByFrame"][frame].push_back(dispatchNumber);
         }
@@ -163,8 +163,8 @@ void DispatchOutputsDumpLayer::Post(IUnknownReleaseCommand& c) {
 }
 
 void DispatchOutputsDumpLayer::Post(ID3D12DeviceCreateDescriptorHeapCommand& c) {
-  m_DescriptorHeapInfos[c.m_ppvHeap.Key].type = c.m_pDescriptorHeapDesc.Value->Type;
-  m_DescriptorHeapInfos[c.m_ppvHeap.Key].numDescriptors =
+  m_DescriptorHeapInfos[c.m_ppvHeap.Key].Type = c.m_pDescriptorHeapDesc.Value->Type;
+  m_DescriptorHeapInfos[c.m_ppvHeap.Key].NumDescriptors =
       c.m_pDescriptorHeapDesc.Value->NumDescriptors;
 }
 
@@ -251,9 +251,9 @@ void DispatchOutputsDumpLayer::Post(ID3D12CommandQueueExecuteCommandListsCommand
       if (indicesBySlotByDispatchIt != m_IndicesBySlotByDispatchByCommandList.end()) {
         for (const auto& [dispatchKey, indicesBySlot] : indicesBySlotByDispatchIt->second) {
           for (const auto& [slot, indicesInfo] : indicesBySlot) {
-            for (unsigned index : indicesInfo.indices) {
+            for (unsigned Index : indicesInfo.Indices) {
               const auto* descriptorInfo =
-                  m_DescriptorService.GetDescriptorInfo(indicesInfo.DescriptorHeapKey, index);
+                  m_DescriptorService.GetDescriptorInfo(indicesInfo.DescriptorHeapKey, Index);
               if (descriptorInfo &&
                   descriptorInfo->Kind ==
                       DescriptorHeapTracker::DescriptorInfo::DescriptorKind::UAV &&
@@ -271,29 +271,29 @@ void DispatchOutputsDumpLayer::Post(ID3D12CommandQueueExecuteCommandListsCommand
     }
   }
   ++m_ExecuteCount;
-  m_ResourceDump.executeCommandLists(c.Key, c.m_Object.Key, c.m_Object.Value,
+  m_ResourceDump.ExecuteCommandLists(c.Key, c.m_Object.Key, c.m_Object.Value,
                                      c.m_ppCommandLists.Value, c.m_NumCommandLists.Value,
                                      m_CurrentFrame, m_ExecuteCount);
 }
 
 void DispatchOutputsDumpLayer::Post(ID3D12CommandQueueWaitCommand& c) {
-  m_ResourceDump.commandQueueWait(c.Key, c.m_Object.Key, c.m_pFence.Key, c.m_Value.Value);
+  m_ResourceDump.CommandQueueWait(c.Key, c.m_Object.Key, c.m_pFence.Key, c.m_Value.Value);
 }
 
 void DispatchOutputsDumpLayer::Post(ID3D12CommandQueueSignalCommand& c) {
-  m_ResourceDump.commandQueueSignal(c.Key, c.m_Object.Key, c.m_pFence.Key, c.m_Value.Value);
+  m_ResourceDump.CommandQueueSignal(c.Key, c.m_Object.Key, c.m_pFence.Key, c.m_Value.Value);
 }
 
 void DispatchOutputsDumpLayer::Post(ID3D12FenceSignalCommand& c) {
-  m_ResourceDump.fenceSignal(c.Key, c.m_Object.Key, c.m_Value.Value);
+  m_ResourceDump.FenceSignal(c.Key, c.m_Object.Key, c.m_Value.Value);
 }
 
 void DispatchOutputsDumpLayer::Post(ID3D12DeviceCreateFenceCommand& c) {
-  m_ResourceDump.fenceSignal(c.Key, c.m_ppFence.Key, c.m_InitialValue.Value);
+  m_ResourceDump.FenceSignal(c.Key, c.m_ppFence.Key, c.m_InitialValue.Value);
 }
 
 void DispatchOutputsDumpLayer::Post(ID3D12Device3EnqueueMakeResidentCommand& c) {
-  m_ResourceDump.fenceSignal(c.Key, c.m_pFenceToSignal.Key, c.m_FenceValueToSignal.Value);
+  m_ResourceDump.FenceSignal(c.Key, c.m_pFenceToSignal.Key, c.m_FenceValueToSignal.Value);
 }
 
 void DispatchOutputsDumpLayer::Post(ID3D12GraphicsCommandListResetCommand& c) {
@@ -307,7 +307,7 @@ void DispatchOutputsDumpLayer::Post(ID3D12GraphicsCommandListResetCommand& c) {
 }
 
 void DispatchOutputsDumpLayer::Post(ID3D12GraphicsCommandListSetComputeRootSignatureCommand& c) {
-  m_CommandListInfos[c.m_Object.Key].computeRootSignature = c.m_pRootSignature.Key;
+  m_CommandListInfos[c.m_Object.Key].ComputeRootSignature = c.m_pRootSignature.Key;
 }
 
 void DispatchOutputsDumpLayer::Post(
@@ -331,18 +331,18 @@ void DispatchOutputsDumpLayer::Post(
   if (!m_InAnalysis || !c.m_BaseDescriptor.Value.ptr) {
     return;
   }
-  unsigned RootSignatureKey = m_CommandListInfos[c.m_Object.Key].computeRootSignature;
-  GITS_ASSERT(RootSignatureKey);
-  unsigned numDescriptors = m_DescriptorHeapInfos[c.m_BaseDescriptor.InterfaceKey].numDescriptors;
+  unsigned rootSignatureKey = m_CommandListInfos[c.m_Object.Key].ComputeRootSignature;
+  GITS_ASSERT(rootSignatureKey);
+  unsigned numDescriptors = m_DescriptorHeapInfos[c.m_BaseDescriptor.InterfaceKey].NumDescriptors;
   GITS_ASSERT(numDescriptors);
 
   std::vector<unsigned> indices = m_RootSignatureService.GetDescriptorTableIndexes(
-      RootSignatureKey, c.m_BaseDescriptor.InterfaceKey, c.m_RootParameterIndex.Value,
+      rootSignatureKey, c.m_BaseDescriptor.InterfaceKey, c.m_RootParameterIndex.Value,
       c.m_BaseDescriptor.Index, numDescriptors, false);
 
   m_IndicesBySlotByCommandList[c.m_Object.Key][c.m_RootParameterIndex.Value].DescriptorHeapKey =
       c.m_BaseDescriptor.InterfaceKey;
-  m_IndicesBySlotByCommandList[c.m_Object.Key][c.m_RootParameterIndex.Value].indices = indices;
+  m_IndicesBySlotByCommandList[c.m_Object.Key][c.m_RootParameterIndex.Value].Indices = indices;
 }
 
 void DispatchOutputsDumpLayer::Post(ID3D12GraphicsCommandListDispatchCommand& c) {
@@ -363,21 +363,21 @@ void DispatchOutputsDumpLayer::Post(ID3D12GraphicsCommandListDispatchCommand& c)
         m_IndicesBySlotByCommandList[commandListKey];
     auto resourceKeyBySlotIt = m_ResourceKeyFromSetViewBySlotByCommandList.find(commandListKey);
     if (resourceKeyBySlotIt != m_ResourceKeyFromSetViewBySlotByCommandList.end()) {
-      for (const auto& [slot, ResourceKey] : resourceKeyBySlotIt->second) {
-        m_ResourceKeysBySlotByDispatch[c.Key][slot].insert(ResourceKey);
+      for (const auto& [slot, resourceKey] : resourceKeyBySlotIt->second) {
+        m_ResourceKeysBySlotByDispatch[c.Key][slot].insert(resourceKey);
       }
     }
   } else {
     auto resourceKeysBySlotIt = m_ResourceKeysBySlotByDispatch.find(c.Key);
     if (resourceKeysBySlotIt != m_ResourceKeysBySlotByDispatch.end()) {
-      for (const auto& [slot, ResourceKeys] : resourceKeysBySlotIt->second) {
-        for (unsigned ResourceKey : ResourceKeys) {
+      for (const auto& [slot, resourceKeys] : resourceKeysBySlotIt->second) {
+        for (unsigned resourceKey : resourceKeys) {
           if (m_DryRun) {
-            m_DryRunInfo.dispatchesWithTextureByFrame[m_CurrentFrame].insert(m_DispatchCount);
+            m_DryRunInfo.DispatchesWithTextureByFrame[m_CurrentFrame].insert(m_DispatchCount);
           } else {
-            ID3D12Resource* resource = m_ResourceByKey[ResourceKey];
+            ID3D12Resource* resource = m_ResourceByKey[resourceKey];
             GITS_ASSERT(resource);
-            DispatchOutput dispatchOutput{ResourceKey, resource, slot};
+            DispatchOutput dispatchOutput{resourceKey, resource, slot};
             DumpComputeOutput(commandList, dispatchOutput, m_CurrentFrame,
                               commandListDispatchCount);
           }
@@ -389,14 +389,14 @@ void DispatchOutputsDumpLayer::Post(ID3D12GraphicsCommandListDispatchCommand& c)
 
 void DispatchOutputsDumpLayer::CreateDescriptor(
     unsigned heapKey,
-    unsigned DescriptorIndex,
-    unsigned ResourceKey,
-    DescriptorHeapTracker::DescriptorInfo::DescriptorKind descriptorKind) {
+    unsigned descriptorIndex,
+    unsigned resourceKey,
+    DescriptorHeapTracker::DescriptorInfo::DescriptorKind descriptorType) {
   auto* descriptorInfo = new DescriptorHeapTracker::DescriptorInfo;
   descriptorInfo->HeapKey = heapKey;
-  descriptorInfo->DescriptorIndex = DescriptorIndex;
-  descriptorInfo->ResourceKey = ResourceKey;
-  descriptorInfo->Kind = descriptorKind;
+  descriptorInfo->DescriptorIndex = descriptorIndex;
+  descriptorInfo->ResourceKey = resourceKey;
+  descriptorInfo->Kind = descriptorType;
   m_DescriptorService.CreateDescriptor(descriptorInfo);
 }
 
@@ -404,7 +404,7 @@ void DispatchOutputsDumpLayer::DumpComputeOutput(ID3D12GraphicsCommandList* comm
                                                  const DispatchOutput& dispatchOutput,
                                                  unsigned frame,
                                                  unsigned commandListDispatch) {
-  D3D12_RESOURCE_DESC desc = dispatchOutput.resource->GetDesc();
+  D3D12_RESOURCE_DESC desc = dispatchOutput.Resource->GetDesc();
   DXGI_FORMAT format = desc.Format;
 
   unsigned arraySize =
@@ -417,11 +417,11 @@ void DispatchOutputsDumpLayer::DumpComputeOutput(ID3D12GraphicsCommandList* comm
   unsigned maxSlice =
       desc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE3D ? desc.DepthOrArraySize - 1 : 0;
 
-  std::string formatName = m_ResourceDump.formatToString(format);
+  std::string formatName = m_ResourceDump.FormatToString(format);
   std::wstring formatNameW(formatName.begin(), formatName.end());
 
   Microsoft::WRL::ComPtr<ID3D12Device> device;
-  HRESULT hr = dispatchOutput.resource->GetDevice(IID_PPV_ARGS(&device));
+  HRESULT hr = dispatchOutput.Resource->GetDevice(IID_PPV_ARGS(&device));
   GITS_ASSERT(hr == S_OK);
   unsigned planeCount = D3D12GetFormatPlaneCount(device.Get(), format);
 
@@ -431,7 +431,7 @@ void DispatchOutputsDumpLayer::DumpComputeOutput(ID3D12GraphicsCommandList* comm
       std::wstring dumpName = m_DumpPath + L"/dispatch_e_" +
                               m_ResourceDump.m_DumpNameExecutionMarker + L"_f_" +
                               std::to_wstring(frame) + L"_d_" + std::to_wstring(m_DispatchCount) +
-                              L"_s_" + std::to_wstring(dispatchOutput.slot) + L"_O" +
+                              L"_s_" + std::to_wstring(dispatchOutput.Slot) + L"_O" +
                               std::to_wstring(dispatchOutput.ResourceKey) + L"_" + formatNameW;
       if (planeCount > 1) {
         dumpName += L"_plane_" + std::to_wstring(planeSlice);
@@ -445,9 +445,10 @@ void DispatchOutputsDumpLayer::DumpComputeOutput(ID3D12GraphicsCommandList* comm
 
       unsigned subresource =
           D3D12CalcSubresource(mipLevel, arrayIndex, planeSlice, desc.MipLevels, arraySize);
-      m_ResourceDump.dumpResource(commandList, dispatchOutput.resource, subresource,
-                                  D3D12_RESOURCE_STATE_UNORDERED_ACCESS, dumpName, mipLevel, format,
-                                  commandListDispatch);
+      BarrierState resourceState{};
+      resourceState.State = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+      m_ResourceDump.DumpResource(commandList, dispatchOutput.Resource, subresource, resourceState,
+                                  dumpName, mipLevel, format, commandListDispatch);
     }
   }
 }

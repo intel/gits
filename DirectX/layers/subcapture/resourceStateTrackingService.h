@@ -31,57 +31,56 @@ public:
   struct ResourceStates {
     std::vector<SubresourceState> SubresourceStates;
     bool AllEqual{true};
-    bool InitialEnhanced{};
+    bool CreatedEnhanced{};
   };
 
 public:
   ResourceStateTrackingService(StateTrackingService& stateService) : m_StateService(stateService) {}
-  void AddResource(unsigned DeviceKey,
+  void AddResource(unsigned deviceKey,
                    ID3D12Resource* resource,
-                   unsigned ResourceKey,
+                   unsigned resourceKey,
                    D3D12_RESOURCE_STATES initialState,
                    bool recreateState);
-  void AddResource(unsigned DeviceKey,
+  void AddResource(unsigned deviceKey,
                    ID3D12Resource* resource,
-                   unsigned ResourceKey,
+                   unsigned resourceKey,
                    D3D12_BARRIER_LAYOUT initialState,
                    bool recreateState);
   void ResourceBarrier(unsigned commandListKey,
                        D3D12_RESOURCE_BARRIER* barriers,
-                       std::vector<unsigned>& ResourceKeys,
-                       std::vector<unsigned>& ResourceAfterKeys);
+                       std::vector<unsigned>& resourceKeys,
+                       std::vector<unsigned>& resourceAfterKeys);
   void ResourceBarrier(unsigned commandListKey,
                        D3D12_BARRIER_GROUP* barriers,
                        unsigned barriersNum,
-                       std::vector<unsigned>& ResourceKeys);
+                       std::vector<unsigned>& resourceKeys);
   void ExecuteCommandLists(std::vector<unsigned>& commandListKeys);
-  void DestroyResource(unsigned ResourceKey);
-  ResourceStates& GetResourceStates(unsigned ResourceKey);
-  D3D12_RESOURCE_STATES GetResourceState(unsigned ResourceKey);
-  D3D12_BARRIER_LAYOUT GetResourceLayout(unsigned ResourceKey);
+  void DestroyResource(unsigned resourceKey);
+  ResourceStates& GetResourceStates(unsigned resourceKey);
+  D3D12_RESOURCE_STATES GetResourceState(unsigned resourceKey);
+  D3D12_BARRIER_LAYOUT GetResourceLayout(unsigned resourceKey);
   void RestoreResourceStates(const std::vector<unsigned>& orderedResources);
   void RestoreBackBufferState(unsigned commandQueueKey,
-                              unsigned ResourceKey,
+                              unsigned resourceKey,
                               D3D12_RESOURCE_STATES beforeState);
 
 private:
-  unsigned GetSubresourcesCount(ID3D12Resource* resource);
   void ResourceBarrier(std::vector<D3D12_RESOURCE_BARRIER>& barriers,
-                       std::vector<unsigned>& ResourceKeys,
-                       std::vector<unsigned>& ResourceAfterKeys);
+                       std::vector<unsigned>& resourceKeys,
+                       std::vector<unsigned>& resourceAfterKeys);
   void ResourceBarrier(std::vector<D3D12_TEXTURE_BARRIER>& barriers,
-                       std::vector<unsigned>& ResourceKeys);
+                       std::vector<unsigned>& resourceKeys);
   D3D12_RESOURCE_STATES GetResourceState(D3D12_BARRIER_LAYOUT layout);
   D3D12_BARRIER_LAYOUT GetResourceLayout(D3D12_RESOURCE_STATES layout);
-  void InsertIfNotResident(unsigned ResourceKey, std::set<unsigned>& residencyKeys);
+  void InsertIfNotResident(unsigned resourceKey, std::set<unsigned>& residencyKeys);
   std::optional<unsigned> GetResidencyKeyForNotResidentResource(unsigned key);
   void RecordMakeResident(const std::set<unsigned>& keys);
   void RecordEvict(const std::set<unsigned>& keys);
 
 private:
   struct ResourceBarriers {
-    std::vector<D3D12_RESOURCE_BARRIER> barriers;
-    std::vector<D3D12_TEXTURE_BARRIER> layouts;
+    std::vector<D3D12_RESOURCE_BARRIER> Barriers;
+    std::vector<D3D12_TEXTURE_BARRIER> Layouts;
     std::vector<unsigned> ResourceKeys;
     std::vector<unsigned> ResourceAfterKeys;
   };
@@ -95,8 +94,6 @@ private:
   using AliasingBarrierKeys = std::pair<unsigned, unsigned>;
   std::map<AliasingBarrierKeys, unsigned> m_AliasingBarriersCounted;
   std::vector<std::pair<AliasingBarrierKeys, unsigned>> m_AliasingBarriersOrdered;
-
-  std::unordered_map<DXGI_FORMAT, unsigned> m_PlanesByFormat;
 };
 
 } // namespace DirectX

@@ -41,7 +41,7 @@ public:
                         unsigned offset,
                         unsigned size,
                         unsigned stride,
-                        D3D12_RESOURCE_STATES state,
+                        BarrierState state,
                         StateObjectInfo* stateObjectInfo,
                         DescriptorHeaps descriptorHeaps,
                         unsigned RootSignatureKey);
@@ -54,7 +54,7 @@ public:
   }
 
 private:
-  void dumpBuffer(DumpInfo& dumpInfo, void* data) override;
+  void DumpBuffer(DumpInfo& dumpInfo, void* data) override;
   unsigned Align(unsigned value, unsigned alignment);
 
 private:

@@ -20,23 +20,23 @@ class GpuPatchDump : public ResourceDump {
 public:
   GpuPatchDump();
   ~GpuPatchDump();
-  void dumpArgumentBuffer(ID3D12GraphicsCommandList* commandList,
+  void DumpArgumentBuffer(ID3D12GraphicsCommandList* commandList,
                           D3D12_COMMAND_SIGNATURE_DESC& commandSignature,
                           unsigned maxCommandCount,
                           ID3D12Resource* argumentBuffer,
                           unsigned argumentBufferOffset,
-                          D3D12_RESOURCE_STATES argumentBufferState,
+                          BarrierState argumentBufferState,
                           ID3D12Resource* countBuffer,
                           unsigned countBufferOffset,
-                          D3D12_RESOURCE_STATES countBufferState,
+                          BarrierState countBufferState,
                           unsigned callKey);
-  void dumpInstancesArrayOfPointers(ID3D12GraphicsCommandList* commandList,
+  void DumpInstancesArrayOfPointers(ID3D12GraphicsCommandList* commandList,
                                     ID3D12Resource* instancesBuffer,
                                     unsigned offset,
                                     unsigned pointersCount,
-                                    D3D12_RESOURCE_STATES bufferState,
+                                    BarrierState bufferState,
                                     unsigned callKey);
-  void flush();
+  void Flush();
 
 protected:
   struct ExecuteIndirectDumpInfo : public DumpInfo {
@@ -48,9 +48,9 @@ protected:
     unsigned CallKey;
   };
 
-  void dumpStagedResource(DumpInfo& dumpInfo) override;
-  void dumpArgumentBuffer(ExecuteIndirectDumpInfo& dumpInfo, unsigned argumentCount, void* data);
-  void dumpInstancesBuffer(InstancesArrayOfPointersDumpInfo& dumpInfo, void* data);
+  void DumpStagedResource(DumpInfo& dumpInfo) override;
+  void DumpArgumentBuffer(ExecuteIndirectDumpInfo& dumpInfo, unsigned argumentCount, void* data);
+  void DumpInstancesBuffer(InstancesArrayOfPointersDumpInfo& dumpInfo, void* data);
 
 private:
   std::mutex m_ExecuteIndirectMutex;

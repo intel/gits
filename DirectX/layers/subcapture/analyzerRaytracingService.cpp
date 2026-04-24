@@ -8,6 +8,7 @@
 
 #include "analyzerRaytracingService.h"
 #include "analyzerCommandListService.h"
+#include "resourceStateEnhanced.h"
 #include "log.h"
 
 #include <fstream>
@@ -165,39 +166,12 @@ void AnalyzerRaytracingService::BuildTlas(
     unsigned offset = c.m_pDesc.InputOffsets[0];
     unsigned size = c.m_pDesc.Value->Inputs.NumDescs * sizeof(D3D12_RAYTRACING_INSTANCE_DESC);
 
-    D3D12_RESOURCE_STATES resourceState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
-    D3D12_RESOURCE_STATES trackedState =
-        m_ResourceStateTracker.GetResourceState(c.m_Object.Value, c.m_pDesc.InputKeys[0], 0);
-    if (trackedState == D3D12_RESOURCE_STATE_GENERIC_READ ||
-        trackedState == D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE) {
-      resourceState = trackedState;
-    } else if (trackedState != D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE) {
-      CapturePlayerGpuAddressService::ResourceInfo* resourceInfo =
-          m_GpuAddressService.GetResourceInfoByCaptureAddress(
-              c.m_pDesc.Value->Inputs.InstanceDescs);
-      if (resourceInfo && resourceInfo->Overlapping()) {
-        resourceState = trackedState;
-        static bool logged = false;
-        if (!logged) {
-          LOG_WARNING << "Analysis - state of overlapped resource different than expected";
-          logged = true;
-        }
+    BarrierState currentState = GetAdjustedCurrentState(
+        m_ResourceStateTracker, m_GpuAddressService, c.m_Object.Value,
+        c.m_pDesc.Value->Inputs.InstanceDescs, instances, c.m_pDesc.InputKeys[0],
+        D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 
-        if (c.m_Object.Value->GetType() == D3D12_COMMAND_LIST_TYPE_COMPUTE) {
-          resourceState &= ~D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
-          if (resourceState != trackedState) {
-            static bool logged = false;
-            if (!logged) {
-              LOG_WARNING
-                  << "Analysis - state of overlapped resource adjusted for compute Command list";
-              logged = true;
-            }
-          }
-        }
-      }
-    }
-
-    m_InstancesDump.BuildTlas(c.m_Object.Value, instances, offset, size, resourceState, c.Key);
+    m_InstancesDump.BuildTlas(c.m_Object.Value, instances, offset, size, currentState, c.Key);
 
   } else if (c.m_pDesc.Value->Inputs.DescsLayout == D3D12_ELEMENTS_LAYOUT_ARRAY_OF_POINTERS) {
     auto itInstances = m_InstancesArraysOfPointers.find(c.Key);
@@ -206,9 +180,9 @@ void AnalyzerRaytracingService::BuildTlas(
 
     struct InstanceInfo {
       ID3D12Resource* resource{};
-      unsigned ResourceKey{};
+      unsigned resourceKey{};
       D3D12_GPU_VIRTUAL_ADDRESS captureStart;
-      std::set<unsigned> Offsets;
+      std::set<unsigned> offsets;
     };
     std::unordered_map<unsigned, InstanceInfo> instancesByResourceKey;
 
@@ -221,65 +195,38 @@ void AnalyzerRaytracingService::BuildTlas(
       if (it == instancesByResourceKey.end()) {
         instanceInfos[i] = &instancesByResourceKey[resourceInfo->Key];
         instanceInfos[i]->resource = resourceInfo->Resource;
-        instanceInfos[i]->ResourceKey = resourceInfo->Key;
+        instanceInfos[i]->resourceKey = resourceInfo->Key;
         instanceInfos[i]->captureStart = resourceInfo->CaptureStart;
       } else {
         instanceInfos[i] = &it->second;
       }
       unsigned offset = arrayOfPointers[i] - resourceInfo->CaptureStart;
-      instanceInfos[i]->Offsets.insert(offset);
+      instanceInfos[i]->offsets.insert(offset);
     }
 
     for (auto& it : instancesByResourceKey) {
       InstanceInfo& instanceInfo = it.second;
 
-      m_CommandListService.AddObjectForRestore(instanceInfo.ResourceKey);
+      m_CommandListService.AddObjectForRestore(instanceInfo.resourceKey);
 
-      std::vector<unsigned> Offsets(instanceInfo.Offsets.size());
-      std::copy(instanceInfo.Offsets.begin(), instanceInfo.Offsets.end(), Offsets.begin());
+      std::vector<unsigned> offsets(instanceInfo.offsets.size());
+      std::copy(instanceInfo.offsets.begin(), instanceInfo.offsets.end(), offsets.begin());
 
-      unsigned size = Offsets.back() + sizeof(D3D12_RAYTRACING_INSTANCE_DESC) - Offsets[0];
+      unsigned size = offsets.back() + sizeof(D3D12_RAYTRACING_INSTANCE_DESC) - offsets[0];
 
-      unsigned startOffset = Offsets[0];
-      for (unsigned i = 0; i < Offsets.size(); ++i) {
-        Offsets[i] -= startOffset;
-        Offsets[i] /= sizeof(D3D12_RAYTRACING_INSTANCE_DESC);
+      unsigned startOffset = offsets[0];
+      for (unsigned i = 0; i < offsets.size(); ++i) {
+        offsets[i] -= startOffset;
+        offsets[i] /= sizeof(D3D12_RAYTRACING_INSTANCE_DESC);
       }
 
-      D3D12_RESOURCE_STATES resourceState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
-      D3D12_RESOURCE_STATES trackedState =
-          m_ResourceStateTracker.GetResourceState(c.m_Object.Value, c.m_pDesc.InputKeys[0], 0);
-      if (trackedState == D3D12_RESOURCE_STATE_GENERIC_READ ||
-          trackedState == D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE) {
-        resourceState = trackedState;
-      } else if (trackedState != D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE) {
-        CapturePlayerGpuAddressService::ResourceInfo* resourceInfo =
-            m_GpuAddressService.GetResourceInfoByCaptureAddress(
-                c.m_pDesc.Value->Inputs.InstanceDescs);
-        if (resourceInfo && resourceInfo->Overlapping()) {
-          resourceState = trackedState;
-          static bool logged = false;
-          if (!logged) {
-            LOG_WARNING << "Analysis - state of overlapped resource different than expected";
-            logged = true;
-          }
-
-          if (c.m_Object.Value->GetType() == D3D12_COMMAND_LIST_TYPE_COMPUTE) {
-            resourceState &= ~D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
-            if (resourceState != trackedState) {
-              static bool logged = false;
-              if (!logged) {
-                LOG_WARNING
-                    << "Analysis - state of overlapped resource adjusted for compute Command list";
-                logged = true;
-              }
-            }
-          }
-        }
-      }
+      BarrierState currentState = GetAdjustedCurrentState(
+          m_ResourceStateTracker, m_GpuAddressService, c.m_Object.Value,
+          c.m_pDesc.Value->Inputs.InstanceDescs, instanceInfo.resource, c.m_pDesc.InputKeys[0],
+          D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 
       m_InstancesDump.BuildTlasArrayOfPointers(c.m_Object.Value, instanceInfo.resource, startOffset,
-                                               size, resourceState, c.Key, Offsets);
+                                               size, currentState, c.Key, offsets);
     }
   }
 
@@ -289,12 +236,12 @@ void AnalyzerRaytracingService::BuildTlas(
 
 void AnalyzerRaytracingService::DispatchRays(ID3D12GraphicsCommandList4DispatchRaysCommand& c) {
 
-  auto dump = [&](unsigned ResourceKey, unsigned offset, UINT64 size, UINT64 stride,
+  auto dump = [&](unsigned resourceKey, unsigned offset, UINT64 size, UINT64 stride,
                   D3D12_GPU_VIRTUAL_ADDRESS address) {
-    if (ResourceKey) {
-      ID3D12Resource* resource = m_ResourceByKey[ResourceKey];
+    if (resourceKey) {
+      ID3D12Resource* resource = m_ResourceByKey[resourceKey];
       GITS_ASSERT(resource);
-      DumpBindingTable(c.m_Object.Value, c.m_Object.Key, resource, ResourceKey, offset, size,
+      DumpBindingTable(c.m_Object.Value, c.m_Object.Key, resource, resourceKey, offset, size,
                        stride, address);
     }
   };
@@ -318,45 +265,11 @@ void AnalyzerRaytracingService::DispatchRays(ID3D12GraphicsCommandList4DispatchR
 void AnalyzerRaytracingService::DumpBindingTable(ID3D12GraphicsCommandList* commandList,
                                                  unsigned commandListKey,
                                                  ID3D12Resource* resource,
-                                                 unsigned ResourceKey,
+                                                 unsigned resourceKey,
                                                  unsigned offset,
                                                  UINT64 size,
                                                  UINT64 stride,
                                                  D3D12_GPU_VIRTUAL_ADDRESS address) {
-  D3D12_RESOURCE_STATES state =
-      m_ResourceStateTracker.GetResourceState(commandList, ResourceKey, 0);
-
-  D3D12_RESOURCE_STATES resourceState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
-  D3D12_RESOURCE_STATES trackedState =
-      m_ResourceStateTracker.GetResourceState(commandList, ResourceKey, 0);
-  if (trackedState == D3D12_RESOURCE_STATE_GENERIC_READ ||
-      trackedState == D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE) {
-    resourceState = trackedState;
-  } else if (trackedState != D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE) {
-    CapturePlayerGpuAddressService::ResourceInfo* resourceInfo =
-        m_GpuAddressService.GetResourceInfoByCaptureAddress(address);
-    if (resourceInfo && resourceInfo->Overlapping()) {
-      resourceState = trackedState;
-      static bool logged = false;
-      if (!logged) {
-        LOG_WARNING << "Analysis - state of overlapped resource different than expected";
-        logged = true;
-      }
-
-      if (commandList->GetType() == D3D12_COMMAND_LIST_TYPE_COMPUTE) {
-        resourceState &= ~D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
-        if (resourceState != trackedState) {
-          static bool logged = false;
-          if (!logged) {
-            LOG_WARNING
-                << "Analysis - state of overlapped resource adjusted for compute Command list";
-            logged = true;
-          }
-        }
-      }
-    }
-  }
-
   if (stride == 0) {
     stride = size;
   }
@@ -369,16 +282,20 @@ void AnalyzerRaytracingService::DumpBindingTable(ID3D12GraphicsCommandList* comm
   auto itDescriptorHeaps = m_DescriptorHeapsByComandList.find(commandListKey);
   GITS_ASSERT(itDescriptorHeaps != m_DescriptorHeapsByComandList.end());
 
-  unsigned RootSignatureKey = m_CommandListService.GetComputeRootSignatureKey(commandListKey);
+  unsigned rootSignatureKey = m_CommandListService.GetComputeRootSignatureKey(commandListKey);
 
-  m_BindingTablesDump.DumpBindingTable(commandList, resource, offset, size, stride, resourceState,
+  BarrierState currentState = GetAdjustedCurrentState(
+      m_ResourceStateTracker, m_GpuAddressService, commandList, address, resource, resourceKey,
+      D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+
+  m_BindingTablesDump.DumpBindingTable(commandList, resource, offset, size, stride, currentState,
                                        stateObjectInfo, itDescriptorHeaps->second,
-                                       RootSignatureKey);
+                                       rootSignatureKey);
 }
 
 void AnalyzerRaytracingService::Flush() {
-  m_InstancesDump.waitUntilDumped();
-  m_BindingTablesDump.waitUntilDumped();
+  m_InstancesDump.WaitUntilDumped();
+  m_BindingTablesDump.WaitUntilDumped();
 }
 
 void AnalyzerRaytracingService::ExecuteCommandLists(unsigned key,
@@ -386,9 +303,9 @@ void AnalyzerRaytracingService::ExecuteCommandLists(unsigned key,
                                                     ID3D12CommandQueue* commandQueue,
                                                     ID3D12CommandList** commandLists,
                                                     unsigned commandListNum) {
-  m_InstancesDump.executeCommandLists(key, commandQueueKey, commandQueue, commandLists,
+  m_InstancesDump.ExecuteCommandLists(key, commandQueueKey, commandQueue, commandLists,
                                       commandListNum);
-  m_BindingTablesDump.executeCommandLists(key, commandQueueKey, commandQueue, commandLists,
+  m_BindingTablesDump.ExecuteCommandLists(key, commandQueueKey, commandQueue, commandLists,
                                           commandListNum);
 }
 
@@ -396,21 +313,21 @@ void AnalyzerRaytracingService::CommandQueueWait(unsigned key,
                                                  unsigned commandQueueKey,
                                                  unsigned fenceKey,
                                                  UINT64 fenceValue) {
-  m_InstancesDump.commandQueueWait(key, commandQueueKey, fenceKey, fenceValue);
-  m_BindingTablesDump.commandQueueWait(key, commandQueueKey, fenceKey, fenceValue);
+  m_InstancesDump.CommandQueueWait(key, commandQueueKey, fenceKey, fenceValue);
+  m_BindingTablesDump.CommandQueueWait(key, commandQueueKey, fenceKey, fenceValue);
 }
 
 void AnalyzerRaytracingService::CommandQueueSignal(unsigned key,
                                                    unsigned commandQueueKey,
                                                    unsigned fenceKey,
                                                    UINT64 fenceValue) {
-  m_InstancesDump.commandQueueSignal(key, commandQueueKey, fenceKey, fenceValue);
-  m_BindingTablesDump.commandQueueSignal(key, commandQueueKey, fenceKey, fenceValue);
+  m_InstancesDump.CommandQueueSignal(key, commandQueueKey, fenceKey, fenceValue);
+  m_BindingTablesDump.CommandQueueSignal(key, commandQueueKey, fenceKey, fenceValue);
 }
 
 void AnalyzerRaytracingService::FenceSignal(unsigned key, unsigned fenceKey, UINT64 fenceValue) {
-  m_InstancesDump.fenceSignal(key, fenceKey, fenceValue);
-  m_BindingTablesDump.fenceSignal(key, fenceKey, fenceValue);
+  m_InstancesDump.FenceSignal(key, fenceKey, fenceValue);
+  m_BindingTablesDump.FenceSignal(key, fenceKey, fenceValue);
 }
 
 void AnalyzerRaytracingService::GetGPUVirtualAddress(ID3D12ResourceGetGPUVirtualAddressCommand& c) {

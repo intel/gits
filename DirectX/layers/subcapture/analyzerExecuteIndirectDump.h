@@ -26,8 +26,10 @@ public:
                           unsigned maxCommandCount,
                           ID3D12Resource* argumentBuffer,
                           unsigned argumentBufferOffset,
+                          BarrierState argumentBufferState,
                           ID3D12Resource* countBuffer,
-                          unsigned countBufferOffset);
+                          unsigned countBufferOffset,
+                          BarrierState countBufferState);
 
   std::unordered_set<unsigned>& GetArgumentBuffersResources() {
     return m_ArgumentBuffersResources;
@@ -39,7 +41,7 @@ private:
     DumpInfo countDumpInfo;
   };
 
-  void dumpStagedResource(DumpInfo& dumpInfo) override;
+  void DumpStagedResource(DumpInfo& dumpInfo) override;
   void DumpArgumentBuffer(ExecuteIndirectDumpInfo& dumpInfo, unsigned argumentCount, void* data);
 
 private:

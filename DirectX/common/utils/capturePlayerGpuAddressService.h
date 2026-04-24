@@ -82,7 +82,9 @@ public:
     m_GpuAddressService.GetMappings(mappings);
   }
   void EnablePlayerAddressLookup() {
-    m_GpuPlayerAddress.reset(new GpuAddressService());
+    if (!m_GpuPlayerAddress) {
+      m_GpuPlayerAddress.reset(new GpuAddressService());
+    }
   }
 
 private:

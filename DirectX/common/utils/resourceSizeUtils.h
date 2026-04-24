@@ -23,5 +23,7 @@ void GetCopyableFootprintsSafe(ID3D12Device* device,
                                UINT64* pRowSizeInBytes,
                                UINT64* pTotalBytes);
 
+unsigned GetSubresourcesCount(ID3D12Resource* resource);
+
 } // namespace DirectX
 } // namespace gits

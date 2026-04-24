@@ -17,7 +17,7 @@ namespace gits {
 namespace DirectX {
 
 ExecuteIndirectDump::~ExecuteIndirectDump() {
-  waitUntilDumped();
+  WaitUntilDumped();
 }
 
 void ExecuteIndirectDump::DumpArgumentBuffer(ID3D12GraphicsCommandList* commandList,
@@ -25,52 +25,52 @@ void ExecuteIndirectDump::DumpArgumentBuffer(ID3D12GraphicsCommandList* commandL
                                              unsigned maxCommandCount,
                                              ID3D12Resource* argumentBuffer,
                                              unsigned argumentBufferOffset,
-                                             D3D12_RESOURCE_STATES argumentBufferState,
+                                             BarrierState argumentBufferState,
                                              ID3D12Resource* countBuffer,
                                              unsigned countBufferOffset,
-                                             D3D12_RESOURCE_STATES countBufferState,
+                                             BarrierState countBufferState,
                                              const std::wstring& dumpName,
                                              bool fromCapture) {
   ExecuteIndirectDumpInfo* dumpInfo = new ExecuteIndirectDumpInfo();
   dumpInfo->CommandSignature = commandSignature;
-  dumpInfo->offset = argumentBufferOffset;
-  dumpInfo->size = commandSignature->ByteStride * maxCommandCount;
-  dumpInfo->dumpName = dumpName;
+  dumpInfo->Offset = argumentBufferOffset;
+  dumpInfo->Size = commandSignature->ByteStride * maxCommandCount;
+  dumpInfo->DumpName = dumpName;
   dumpInfo->FromCapture = fromCapture;
   if (countBuffer) {
-    dumpInfo->CountDumpInfo.offset = countBufferOffset;
-    dumpInfo->CountDumpInfo.size = sizeof(unsigned);
+    dumpInfo->CountDumpInfo.Offset = countBufferOffset;
+    dumpInfo->CountDumpInfo.Size = sizeof(unsigned);
   }
 
-  stageResource(commandList, argumentBuffer, argumentBufferState, *dumpInfo);
+  StageResource(commandList, argumentBuffer, argumentBufferState, *dumpInfo);
   if (countBuffer) {
-    stageResource(commandList, countBuffer, countBufferState, dumpInfo->CountDumpInfo, true);
+    StageResource(commandList, countBuffer, countBufferState, dumpInfo->CountDumpInfo, true);
   }
 }
 
-void ExecuteIndirectDump::dumpStagedResource(DumpInfo& dumpInfo) {
+void ExecuteIndirectDump::DumpStagedResource(DumpInfo& dumpInfo) {
   ExecuteIndirectDumpInfo& info = static_cast<ExecuteIndirectDumpInfo&>(dumpInfo);
-  unsigned count = info.size / info.CommandSignature->ByteStride;
-  if (info.CountDumpInfo.stagingBuffer) {
+  unsigned count = info.Size / info.CommandSignature->ByteStride;
+  if (info.CountDumpInfo.StagingBuffer) {
     void* data{};
-    HRESULT hr = info.CountDumpInfo.stagingBuffer->Map(0, nullptr, &data);
+    HRESULT hr = info.CountDumpInfo.StagingBuffer->Map(0, nullptr, &data);
     GITS_ASSERT(hr == S_OK);
     count = std::min(count, *static_cast<unsigned*>(data));
-    info.CountDumpInfo.stagingBuffer->Unmap(0, nullptr);
+    info.CountDumpInfo.StagingBuffer->Unmap(0, nullptr);
   }
   void* data{};
-  HRESULT hr = info.stagingBuffer->Map(0, nullptr, &data);
+  HRESULT hr = info.StagingBuffer->Map(0, nullptr, &data);
   GITS_ASSERT(hr == S_OK);
 
   DumpArgumentBuffer(info, count, data);
 
-  info.stagingBuffer->Unmap(0, nullptr);
+  info.StagingBuffer->Unmap(0, nullptr);
 }
 
 void ExecuteIndirectDump::DumpArgumentBuffer(ExecuteIndirectDumpInfo& dumpInfo,
                                              unsigned argumentCount,
                                              void* data) {
-  std::ofstream stream(dumpInfo.dumpName);
+  std::ofstream stream(dumpInfo.DumpName);
   unsigned offset = 0;
   for (unsigned i = 0; i < argumentCount; ++i) {
     stream << "ARGUMENT " << i + 1 << "\n";

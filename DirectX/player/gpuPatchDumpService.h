@@ -37,6 +37,7 @@ public:
                      ID3D12Resource* resource,
                      unsigned ResourceKey,
                      unsigned size,
+                     BarrierState resourceState,
                      unsigned callKey,
                      bool prePatch);
   void DumpInstancesArrayOfPointers(ID3D12GraphicsCommandList* commandList,
@@ -44,7 +45,7 @@ public:
                                     unsigned ResourceKey,
                                     unsigned offset,
                                     unsigned size,
-                                    D3D12_RESOURCE_STATES resourceState,
+                                    BarrierState resourceState,
                                     unsigned callKey,
                                     bool prePatch);
   void DumpBindingTable(ID3D12GraphicsCommandList* commandList,
@@ -52,6 +53,7 @@ public:
                         unsigned offset,
                         unsigned size,
                         unsigned stride,
+                        BarrierState resourceState,
                         unsigned callKey,
                         BindingTableType bindingTableType,
                         bool prePatch);
@@ -60,10 +62,10 @@ public:
                                          unsigned maxCommandCount,
                                          ID3D12Resource* argumentBuffer,
                                          unsigned argumentBufferOffset,
-                                         D3D12_RESOURCE_STATES argumentBufferState,
+                                         BarrierState argumentBufferState,
                                          ID3D12Resource* countBuffer,
                                          unsigned countBufferOffset,
-                                         D3D12_RESOURCE_STATES countBufferState,
+                                         BarrierState countBufferState,
                                          unsigned callKey,
                                          bool prePatch);
   void ExecuteCommandLists(unsigned key,

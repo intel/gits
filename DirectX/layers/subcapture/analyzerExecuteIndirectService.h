@@ -20,7 +20,8 @@ class AnalyzerCommandListService;
 
 class AnalyzerExecuteIndirectService {
 public:
-  AnalyzerExecuteIndirectService(CapturePlayerGpuAddressService& gpuAddressService,
+  AnalyzerExecuteIndirectService(ResourceStateTracker& resourceStateTracker,
+                                 CapturePlayerGpuAddressService& gpuAddressService,
                                  AnalyzerRaytracingService& raytracingService,
                                  AnalyzerCommandListService& commandListService);
   ~AnalyzerExecuteIndirectService();
@@ -58,6 +59,7 @@ private:
   void LoadExecuteIndirectDispatchRays();
 
 private:
+  ResourceStateTracker& m_ResourceStateTracker;
   CapturePlayerGpuAddressService& m_GpuAddressService;
   AnalyzerRaytracingService& m_RaytracingService;
   AnalyzerCommandListService& m_CommandListService;

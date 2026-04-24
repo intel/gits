@@ -12,6 +12,7 @@
 #include "commandSerializersAuto.h"
 #include "commandsCustom.h"
 #include "commandSerializersCustom.h"
+#include "resourceSizeUtils.h"
 #include "log.h"
 
 #include <wrl/client.h>
@@ -21,30 +22,30 @@ namespace DirectX {
 
 void ResourceStateTrackingService::ResourceBarrier(unsigned commandListKey,
                                                    D3D12_RESOURCE_BARRIER* barriers,
-                                                   std::vector<unsigned>& ResourceKeys,
-                                                   std::vector<unsigned>& ResourceAfterKeys) {
+                                                   std::vector<unsigned>& resourceKeys,
+                                                   std::vector<unsigned>& resourceAfterKeys) {
   ResourceBarriers resourceBarriers;
-  resourceBarriers.barriers.resize(ResourceKeys.size());
-  for (unsigned i = 0; i < ResourceKeys.size(); ++i) {
-    resourceBarriers.barriers[i] = barriers[i];
+  resourceBarriers.Barriers.resize(resourceKeys.size());
+  for (unsigned i = 0; i < resourceKeys.size(); ++i) {
+    resourceBarriers.Barriers[i] = barriers[i];
   }
-  resourceBarriers.ResourceKeys = ResourceKeys;
-  resourceBarriers.ResourceAfterKeys = ResourceAfterKeys;
+  resourceBarriers.ResourceKeys = resourceKeys;
+  resourceBarriers.ResourceAfterKeys = resourceAfterKeys;
   m_BarriersByCommandList[commandListKey].push_back(std::move(resourceBarriers));
 }
 
 void ResourceStateTrackingService::ResourceBarrier(unsigned commandListKey,
                                                    D3D12_BARRIER_GROUP* barriers,
                                                    unsigned barriersNum,
-                                                   std::vector<unsigned>& ResourceKeys) {
+                                                   std::vector<unsigned>& resourceKeys) {
   ResourceBarriers resourceBarriers;
   unsigned resourceKeyIndex = 0;
   for (unsigned i = 0; i < barriersNum; ++i) {
     D3D12_BARRIER_GROUP& barrierGroup = barriers[i];
     if (barrierGroup.Type == D3D12_BARRIER_TYPE_TEXTURE) {
       for (unsigned j = 0; j < barrierGroup.NumBarriers; ++j) {
-        resourceBarriers.layouts.push_back(barrierGroup.pTextureBarriers[j]);
-        resourceBarriers.ResourceKeys.push_back(ResourceKeys[resourceKeyIndex]);
+        resourceBarriers.Layouts.push_back(barrierGroup.pTextureBarriers[j]);
+        resourceBarriers.ResourceKeys.push_back(resourceKeys[resourceKeyIndex]);
         ++resourceKeyIndex;
       }
     } else if (barrierGroup.Type == D3D12_BARRIER_TYPE_BUFFER) {
@@ -61,10 +62,10 @@ void ResourceStateTrackingService::ExecuteCommandLists(std::vector<unsigned>& co
     auto it = m_BarriersByCommandList.find(key);
     if (it != m_BarriersByCommandList.end()) {
       for (ResourceBarriers& barriers : it->second) {
-        if (!barriers.barriers.empty()) {
-          ResourceBarrier(barriers.barriers, barriers.ResourceKeys, barriers.ResourceAfterKeys);
+        if (!barriers.Barriers.empty()) {
+          ResourceBarrier(barriers.Barriers, barriers.ResourceKeys, barriers.ResourceAfterKeys);
         } else {
-          ResourceBarrier(barriers.layouts, barriers.ResourceKeys);
+          ResourceBarrier(barriers.Layouts, barriers.ResourceKeys);
         }
       }
       m_BarriersByCommandList.erase(it);
@@ -72,40 +73,13 @@ void ResourceStateTrackingService::ExecuteCommandLists(std::vector<unsigned>& co
   }
 }
 
-unsigned ResourceStateTrackingService::GetSubresourcesCount(ID3D12Resource* resource) {
-  D3D12_RESOURCE_DESC desc = resource->GetDesc();
-  unsigned planes = 1;
-  if (desc.Format != DXGI_FORMAT_UNKNOWN) {
-    auto it = m_PlanesByFormat.find(desc.Format);
-    if (it == m_PlanesByFormat.end()) {
-      Microsoft::WRL::ComPtr<ID3D12Device> device;
-      HRESULT hr = resource->GetDevice(IID_PPV_ARGS(&device));
-      GITS_ASSERT(hr == S_OK);
-      D3D12_FEATURE_DATA_FORMAT_INFO formatInfo = {desc.Format, 0};
-      if (SUCCEEDED(device->CheckFeatureSupport(D3D12_FEATURE_FORMAT_INFO, &formatInfo,
-                                                sizeof(formatInfo)))) {
-        planes = formatInfo.PlaneCount;
-        m_PlanesByFormat[desc.Format] = planes;
-      }
-    } else {
-      planes = it->second;
-    }
-  }
-  unsigned subresources = desc.MipLevels * planes;
-  if (desc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE2D ||
-      desc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE1D) {
-    subresources *= desc.DepthOrArraySize;
-  }
-  return subresources;
-}
-
 void ResourceStateTrackingService::ResourceBarrier(std::vector<D3D12_RESOURCE_BARRIER>& barriers,
-                                                   std::vector<unsigned>& ResourceKeys,
-                                                   std::vector<unsigned>& ResourceAfterKeys) {
+                                                   std::vector<unsigned>& resourceKeys,
+                                                   std::vector<unsigned>& resourceAfterKeys) {
   for (unsigned i = 0; i < barriers.size(); ++i) {
     if (barriers[i].Type == D3D12_RESOURCE_BARRIER_TYPE_TRANSITION) {
       D3D12_RESOURCE_STATES stateAfter = barriers[i].Transition.StateAfter;
-      ResourceStates& states = GetResourceStates(ResourceKeys[i]);
+      ResourceStates& states = GetResourceStates(resourceKeys[i]);
       unsigned subresource = barriers[i].Transition.Subresource;
       if (subresource == D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES) {
         states.AllEqual = true;
@@ -119,7 +93,7 @@ void ResourceStateTrackingService::ResourceBarrier(std::vector<D3D12_RESOURCE_BA
         states.SubresourceStates[subresource].Enhanced = false;
       }
     } else if (barriers[i].Type == D3D12_RESOURCE_BARRIER_TYPE_ALIASING) {
-      auto keys = std::make_pair(ResourceKeys[i], ResourceAfterKeys[i]);
+      auto keys = std::make_pair(resourceKeys[i], resourceAfterKeys[i]);
       unsigned& count = m_AliasingBarriersCounted[keys];
       ++count;
       m_AliasingBarriersOrdered.push_back(std::make_pair(keys, count));
@@ -128,12 +102,12 @@ void ResourceStateTrackingService::ResourceBarrier(std::vector<D3D12_RESOURCE_BA
 }
 
 void ResourceStateTrackingService::ResourceBarrier(std::vector<D3D12_TEXTURE_BARRIER>& barriers,
-                                                   std::vector<unsigned>& ResourceKeys) {
+                                                   std::vector<unsigned>& resourceKeys) {
   for (unsigned i = 0; i < barriers.size(); ++i) {
-    ResourceStates& states = GetResourceStates(ResourceKeys[i]);
+    ResourceStates& states = GetResourceStates(resourceKeys[i]);
     D3D12_BARRIER_SUBRESOURCE_RANGE& range = barriers[i].Subresources;
     if (range.NumMipLevels == 0) {
-      if (range.IndexOrFirstMipLevel == 0xFFFFFFFF) {
+      if (range.IndexOrFirstMipLevel == 0XFFFFFFFF) {
         states.AllEqual = true;
         for (unsigned j = 0; j < states.SubresourceStates.size(); ++j) {
           states.SubresourceStates[j].Layout = barriers[i].LayoutAfter;
@@ -162,50 +136,50 @@ void ResourceStateTrackingService::ResourceBarrier(std::vector<D3D12_TEXTURE_BAR
   }
 }
 
-void ResourceStateTrackingService::AddResource(unsigned DeviceKey,
+void ResourceStateTrackingService::AddResource(unsigned deviceKey,
                                                ID3D12Resource* resource,
-                                               unsigned ResourceKey,
+                                               unsigned resourceKey,
                                                D3D12_RESOURCE_STATES initialState,
                                                bool recreateState) {
-  if (DeviceKey) {
-    m_DeviceKey = DeviceKey;
+  if (deviceKey) {
+    m_DeviceKey = deviceKey;
   }
-  ResourceStates& states = m_ResourceStates[ResourceKey];
+  ResourceStates& states = m_ResourceStates[resourceKey];
   states.SubresourceStates.resize(GetSubresourcesCount(resource));
   for (unsigned i = 0; i < states.SubresourceStates.size(); ++i) {
     states.SubresourceStates[i].State = initialState;
     states.SubresourceStates[i].Enhanced = false;
   }
   if (recreateState) {
-    m_RecreateStateResources.insert(ResourceKey);
+    m_RecreateStateResources.insert(resourceKey);
   }
 }
 
-void ResourceStateTrackingService::AddResource(unsigned DeviceKey,
+void ResourceStateTrackingService::AddResource(unsigned deviceKey,
                                                ID3D12Resource* resource,
-                                               unsigned ResourceKey,
+                                               unsigned resourceKey,
                                                D3D12_BARRIER_LAYOUT initialState,
                                                bool recreateState) {
-  if (DeviceKey) {
-    m_DeviceKey = DeviceKey;
+  if (deviceKey) {
+    m_DeviceKey = deviceKey;
   }
-  ResourceStates& states = m_ResourceStates[ResourceKey];
-  states.InitialEnhanced = true;
+  ResourceStates& states = m_ResourceStates[resourceKey];
+  states.CreatedEnhanced = true;
   states.SubresourceStates.resize(GetSubresourcesCount(resource));
   for (unsigned i = 0; i < states.SubresourceStates.size(); ++i) {
     states.SubresourceStates[i].Layout = initialState;
     states.SubresourceStates[i].Enhanced = true;
   }
   if (recreateState) {
-    m_RecreateStateResources.insert(ResourceKey);
+    m_RecreateStateResources.insert(resourceKey);
   }
 }
 
-D3D12_RESOURCE_STATES ResourceStateTrackingService::GetResourceState(D3D12_BARRIER_LAYOUT layout) {
+D3D12_RESOURCE_STATES ResourceStateTrackingService::GetResourceState(D3D12_BARRIER_LAYOUT Layout) {
 
   D3D12_RESOURCE_STATES state{};
 
-  switch (layout) {
+  switch (Layout) {
   case D3D12_BARRIER_LAYOUT_COMMON:
     break;
   case D3D12_BARRIER_LAYOUT_GENERIC_READ:
@@ -245,7 +219,7 @@ D3D12_RESOURCE_STATES ResourceStateTrackingService::GetResourceState(D3D12_BARRI
   default:
     static bool logged = false;
     if (!logged) {
-      LOG_ERROR << "Barrier layout not handled " << layout << "!";
+      LOG_ERROR << "Barrier Layout not handled " << Layout << "!";
       logged = true;
     }
   }
@@ -254,71 +228,71 @@ D3D12_RESOURCE_STATES ResourceStateTrackingService::GetResourceState(D3D12_BARRI
 }
 
 D3D12_BARRIER_LAYOUT ResourceStateTrackingService::GetResourceLayout(D3D12_RESOURCE_STATES state) {
-  D3D12_BARRIER_LAYOUT layout{};
+  D3D12_BARRIER_LAYOUT Layout{};
 
   switch (state) {
   case D3D12_RESOURCE_STATE_COMMON:
     break;
   case D3D12_RESOURCE_STATE_GENERIC_READ:
-    layout = D3D12_BARRIER_LAYOUT_GENERIC_READ;
+    Layout = D3D12_BARRIER_LAYOUT_GENERIC_READ;
     break;
   case D3D12_RESOURCE_STATE_RENDER_TARGET:
-    layout = D3D12_BARRIER_LAYOUT_RENDER_TARGET;
+    Layout = D3D12_BARRIER_LAYOUT_RENDER_TARGET;
     break;
   case D3D12_RESOURCE_STATE_UNORDERED_ACCESS:
-    layout = D3D12_BARRIER_LAYOUT_UNORDERED_ACCESS;
+    Layout = D3D12_BARRIER_LAYOUT_UNORDERED_ACCESS;
     break;
   case D3D12_RESOURCE_STATE_DEPTH_WRITE:
-    layout = D3D12_BARRIER_LAYOUT_DEPTH_STENCIL_WRITE;
+    Layout = D3D12_BARRIER_LAYOUT_DEPTH_STENCIL_WRITE;
     break;
   case D3D12_RESOURCE_STATE_DEPTH_READ:
-    layout = D3D12_BARRIER_LAYOUT_DEPTH_STENCIL_READ;
+    Layout = D3D12_BARRIER_LAYOUT_DEPTH_STENCIL_READ;
     break;
   case D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE:
-    layout = D3D12_BARRIER_LAYOUT_SHADER_RESOURCE;
+    Layout = D3D12_BARRIER_LAYOUT_SHADER_RESOURCE;
     break;
   case D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE:
-    layout = D3D12_BARRIER_LAYOUT_SHADER_RESOURCE;
+    Layout = D3D12_BARRIER_LAYOUT_SHADER_RESOURCE;
     break;
   case D3D12_RESOURCE_STATE_COPY_SOURCE:
-    layout = D3D12_BARRIER_LAYOUT_COPY_SOURCE;
+    Layout = D3D12_BARRIER_LAYOUT_COPY_SOURCE;
     break;
   case D3D12_RESOURCE_STATE_COPY_DEST:
-    layout = D3D12_BARRIER_LAYOUT_COPY_DEST;
+    Layout = D3D12_BARRIER_LAYOUT_COPY_DEST;
     break;
   case D3D12_RESOURCE_STATE_RESOLVE_SOURCE:
-    layout = D3D12_BARRIER_LAYOUT_RESOLVE_SOURCE;
+    Layout = D3D12_BARRIER_LAYOUT_RESOLVE_SOURCE;
     break;
   case D3D12_RESOURCE_STATE_RESOLVE_DEST:
-    layout = D3D12_BARRIER_LAYOUT_RESOLVE_DEST;
+    Layout = D3D12_BARRIER_LAYOUT_RESOLVE_DEST;
     break;
   case D3D12_RESOURCE_STATE_SHADING_RATE_SOURCE:
-    layout = D3D12_BARRIER_LAYOUT_SHADING_RATE_SOURCE;
+    Layout = D3D12_BARRIER_LAYOUT_SHADING_RATE_SOURCE;
     break;
   default:
     LOG_ERROR << "Barrier state not handled " << state << "!";
   }
 
-  return layout;
+  return Layout;
 }
 
-void ResourceStateTrackingService::DestroyResource(unsigned ResourceKey) {
-  m_RecreateStateResources.erase(ResourceKey);
+void ResourceStateTrackingService::DestroyResource(unsigned resourceKey) {
+  m_RecreateStateResources.erase(resourceKey);
 }
 
 ResourceStateTrackingService::ResourceStates& ResourceStateTrackingService::GetResourceStates(
-    unsigned ResourceKey) {
-  auto it = m_ResourceStates.find(ResourceKey);
+    unsigned resourceKey) {
+  auto it = m_ResourceStates.find(resourceKey);
   GITS_ASSERT(it != m_ResourceStates.end());
   return it->second;
 }
 
-D3D12_RESOURCE_STATES ResourceStateTrackingService::GetResourceState(unsigned ResourceKey) {
-  ResourceStates& states = GetResourceStates(ResourceKey);
+D3D12_RESOURCE_STATES ResourceStateTrackingService::GetResourceState(unsigned resourceKey) {
+  ResourceStates& states = GetResourceStates(resourceKey);
   if (states.SubresourceStates[0].Enhanced) {
     static bool logged = false;
     if (!logged) {
-      LOG_WARNING << "ResourceStateTrackingService - converting enhanced barrier layout to legacy "
+      LOG_WARNING << "ResourceStateTrackingService - converting enhanced barrier Layout to legacy "
                      "barrier state.";
     }
     return GetResourceState(states.SubresourceStates[0].Layout);
@@ -326,13 +300,13 @@ D3D12_RESOURCE_STATES ResourceStateTrackingService::GetResourceState(unsigned Re
   return states.SubresourceStates[0].State;
 }
 
-D3D12_BARRIER_LAYOUT ResourceStateTrackingService::GetResourceLayout(unsigned ResourceKey) {
-  ResourceStates& states = GetResourceStates(ResourceKey);
+D3D12_BARRIER_LAYOUT ResourceStateTrackingService::GetResourceLayout(unsigned resourceKey) {
+  ResourceStates& states = GetResourceStates(resourceKey);
   if (!states.SubresourceStates[0].Enhanced) {
     static bool logged = false;
     if (!logged) {
       LOG_WARNING << "ResourceStateTrackingService - converting legacy barrier state to enhanced "
-                     "barrier layout.";
+                     "barrier Layout.";
     }
     return GetResourceLayout(states.SubresourceStates[0].State);
   }
@@ -348,13 +322,13 @@ void ResourceStateTrackingService::RestoreResourceStates(
   unsigned commandQueueKey = m_StateService.GetUniqueObjectKey();
   D3D12_COMMAND_QUEUE_DESC commandQueueDesc{};
   commandQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
-  ID3D12DeviceCreateCommandQueueCommand CreateCommandQueue;
-  CreateCommandQueue.Key = m_StateService.GetUniqueCommandKey();
-  CreateCommandQueue.m_Object.Key = m_DeviceKey;
-  CreateCommandQueue.m_pDesc.Value = &commandQueueDesc;
-  CreateCommandQueue.m_riid.Value = IID_ID3D12CommandQueue;
-  CreateCommandQueue.m_ppCommandQueue.Key = commandQueueKey;
-  m_StateService.GetRecorder().Record(ID3D12DeviceCreateCommandQueueSerializer(CreateCommandQueue));
+  ID3D12DeviceCreateCommandQueueCommand createCommandQueue;
+  createCommandQueue.Key = m_StateService.GetUniqueCommandKey();
+  createCommandQueue.m_Object.Key = m_DeviceKey;
+  createCommandQueue.m_pDesc.Value = &commandQueueDesc;
+  createCommandQueue.m_riid.Value = IID_ID3D12CommandQueue;
+  createCommandQueue.m_ppCommandQueue.Key = commandQueueKey;
+  m_StateService.GetRecorder().Record(ID3D12DeviceCreateCommandQueueSerializer(createCommandQueue));
 
   unsigned commandAllocatorKey = m_StateService.GetUniqueObjectKey();
   ID3D12DeviceCreateCommandAllocatorCommand createCommandAllocator;
@@ -390,17 +364,17 @@ void ResourceStateTrackingService::RestoreResourceStates(
 
   std::set<unsigned> residencyKeys;
 
-  for (unsigned ResourceKey : orderedResources) {
-    if (m_RecreateStateResources.find(ResourceKey) == m_RecreateStateResources.end()) {
+  for (unsigned resourceKey : orderedResources) {
+    if (m_RecreateStateResources.find(resourceKey) == m_RecreateStateResources.end()) {
       continue;
     }
-    if (!m_StateService.StateRestored(ResourceKey)) {
+    if (!m_StateService.StateRestored(resourceKey)) {
       continue;
     }
 
     auto writeResourceBarrier = [&](unsigned subresource, D3D12_RESOURCE_STATES beforeState,
                                     D3D12_RESOURCE_STATES afterState) {
-      InsertIfNotResident(ResourceKey, residencyKeys);
+      InsertIfNotResident(resourceKey, residencyKeys);
 
       ID3D12GraphicsCommandListResourceBarrierCommand barrierCommand;
       barrierCommand.Key = m_StateService.GetUniqueCommandKey();
@@ -416,14 +390,14 @@ void ResourceStateTrackingService::RestoreResourceStates(
       barrier.Transition.Subresource = subresource;
       barrier.Transition.StateBefore = beforeState;
       barrier.Transition.StateAfter = afterState;
-      barrierCommand.m_pBarriers.ResourceKeys[0] = ResourceKey;
+      barrierCommand.m_pBarriers.ResourceKeys[0] = resourceKey;
       m_StateService.GetRecorder().Record(
           ID3D12GraphicsCommandListResourceBarrierSerializer(barrierCommand));
     };
 
     auto writeResourceEnhancedBarrier = [&](unsigned subresource, D3D12_BARRIER_LAYOUT beforeLayout,
                                             D3D12_BARRIER_LAYOUT afterLayout) {
-      InsertIfNotResident(ResourceKey, residencyKeys);
+      InsertIfNotResident(resourceKey, residencyKeys);
 
       ID3D12GraphicsCommandList7BarrierCommand barrierCommand;
       barrierCommand.Key = m_StateService.GetUniqueCommandKey();
@@ -447,15 +421,15 @@ void ResourceStateTrackingService::RestoreResourceStates(
       barrierGroup.NumBarriers = 1;
       barrierGroup.pTextureBarriers = &barrier;
 
-      barrierCommand.m_pBarrierGroups.ResourceKeys[0] = ResourceKey;
+      barrierCommand.m_pBarrierGroups.ResourceKeys[0] = resourceKey;
       m_StateService.GetRecorder().Record(
           ID3D12GraphicsCommandList7BarrierSerializer(barrierCommand));
     };
 
-    ResourceStates& resourceStates = GetResourceStates(ResourceKey);
+    ResourceStates& resourceStates = GetResourceStates(resourceKey);
 
     if (resourceStates.AllEqual) {
-      if (!resourceStates.InitialEnhanced) {
+      if (!resourceStates.CreatedEnhanced) {
         if (!resourceStates.SubresourceStates[0].Enhanced) {
           if (resourceStates.SubresourceStates[0].State != D3D12_RESOURCE_STATE_COPY_DEST) {
             writeResourceBarrier(D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
@@ -488,7 +462,7 @@ void ResourceStateTrackingService::RestoreResourceStates(
       }
     } else {
       for (unsigned i = 0; i < resourceStates.SubresourceStates.size(); ++i) {
-        if (!resourceStates.InitialEnhanced) {
+        if (!resourceStates.CreatedEnhanced) {
           if (!resourceStates.SubresourceStates[i].Enhanced) {
             if (resourceStates.SubresourceStates[i].State != D3D12_RESOURCE_STATE_COPY_DEST) {
               writeResourceBarrier(i, D3D12_RESOURCE_STATE_COPY_DEST,
@@ -563,29 +537,29 @@ void ResourceStateTrackingService::RestoreResourceStates(
 
   RecordMakeResident(residencyKeys);
 
-  ID3D12CommandQueueExecuteCommandListsCommand ExecuteCommandLists;
-  ExecuteCommandLists.Key = m_StateService.GetUniqueCommandKey();
-  ExecuteCommandLists.m_Object.Key = commandQueueKey;
-  ExecuteCommandLists.m_NumCommandLists.Value = 1;
-  ExecuteCommandLists.m_ppCommandLists.Value = reinterpret_cast<ID3D12CommandList**>(1);
-  ExecuteCommandLists.m_ppCommandLists.Size = 1;
-  ExecuteCommandLists.m_ppCommandLists.Keys.resize(1);
-  ExecuteCommandLists.m_ppCommandLists.Keys[0] = commandListKey;
+  ID3D12CommandQueueExecuteCommandListsCommand executeCommandLists;
+  executeCommandLists.Key = m_StateService.GetUniqueCommandKey();
+  executeCommandLists.m_Object.Key = commandQueueKey;
+  executeCommandLists.m_NumCommandLists.Value = 1;
+  executeCommandLists.m_ppCommandLists.Value = reinterpret_cast<ID3D12CommandList**>(1);
+  executeCommandLists.m_ppCommandLists.Size = 1;
+  executeCommandLists.m_ppCommandLists.Keys.resize(1);
+  executeCommandLists.m_ppCommandLists.Keys[0] = commandListKey;
   m_StateService.GetRecorder().Record(
-      ID3D12CommandQueueExecuteCommandListsSerializer(ExecuteCommandLists));
+      ID3D12CommandQueueExecuteCommandListsSerializer(executeCommandLists));
 
-  ID3D12CommandQueueSignalCommand CommandQueueSignal;
-  CommandQueueSignal.Key = m_StateService.GetUniqueCommandKey();
-  CommandQueueSignal.m_Object.Key = commandQueueKey;
-  CommandQueueSignal.m_pFence.Key = fenceKey;
-  CommandQueueSignal.m_Value.Value = 1;
-  m_StateService.GetRecorder().Record(ID3D12CommandQueueSignalSerializer(CommandQueueSignal));
+  ID3D12CommandQueueSignalCommand commandQueueSignal;
+  commandQueueSignal.Key = m_StateService.GetUniqueCommandKey();
+  commandQueueSignal.m_Object.Key = commandQueueKey;
+  commandQueueSignal.m_pFence.Key = fenceKey;
+  commandQueueSignal.m_Value.Value = 1;
+  m_StateService.GetRecorder().Record(ID3D12CommandQueueSignalSerializer(commandQueueSignal));
 
-  ID3D12FenceGetCompletedValueCommand getCompletedValue;
-  getCompletedValue.Key = m_StateService.GetUniqueCommandKey();
-  getCompletedValue.m_Object.Key = fenceKey;
-  getCompletedValue.m_Result.Value = 1;
-  m_StateService.GetRecorder().Record(ID3D12FenceGetCompletedValueSerializer(getCompletedValue));
+  ID3D12FenceGetCompletedValueCommand GetCompletedValue;
+  GetCompletedValue.Key = m_StateService.GetUniqueCommandKey();
+  GetCompletedValue.m_Object.Key = fenceKey;
+  GetCompletedValue.m_Result.Value = 1;
+  m_StateService.GetRecorder().Record(ID3D12FenceGetCompletedValueSerializer(GetCompletedValue));
 
   IUnknownReleaseCommand releaseFence;
   releaseFence.Key = m_StateService.GetUniqueCommandKey();
@@ -611,9 +585,9 @@ void ResourceStateTrackingService::RestoreResourceStates(
 }
 
 void ResourceStateTrackingService::RestoreBackBufferState(unsigned commandQueueKey,
-                                                          unsigned ResourceKey,
+                                                          unsigned resourceKey,
                                                           D3D12_RESOURCE_STATES beforeState) {
-  ResourceStates& resourceStates = GetResourceStates(ResourceKey);
+  ResourceStates& resourceStates = GetResourceStates(resourceKey);
   D3D12_RESOURCE_STATES afterState = D3D12_RESOURCE_STATE_COMMON;
   if (!resourceStates.SubresourceStates[0].Enhanced) {
     afterState = resourceStates.SubresourceStates[0].State;
@@ -667,7 +641,7 @@ void ResourceStateTrackingService::RestoreBackBufferState(unsigned commandQueueK
   barrier.Transition.Subresource = 0;
   barrier.Transition.StateBefore = beforeState;
   barrier.Transition.StateAfter = afterState;
-  barrierCommand.m_pBarriers.ResourceKeys[0] = ResourceKey;
+  barrierCommand.m_pBarriers.ResourceKeys[0] = resourceKey;
   m_StateService.GetRecorder().Record(
       ID3D12GraphicsCommandListResourceBarrierSerializer(barrierCommand));
 
@@ -676,29 +650,29 @@ void ResourceStateTrackingService::RestoreBackBufferState(unsigned commandQueueK
   commandListClose.m_Object.Key = commandListKey;
   m_StateService.GetRecorder().Record(ID3D12GraphicsCommandListCloseSerializer(commandListClose));
 
-  ID3D12CommandQueueExecuteCommandListsCommand ExecuteCommandLists;
-  ExecuteCommandLists.Key = m_StateService.GetUniqueCommandKey();
-  ExecuteCommandLists.m_Object.Key = commandQueueKey;
-  ExecuteCommandLists.m_NumCommandLists.Value = 1;
-  ExecuteCommandLists.m_ppCommandLists.Value = reinterpret_cast<ID3D12CommandList**>(1);
-  ExecuteCommandLists.m_ppCommandLists.Size = 1;
-  ExecuteCommandLists.m_ppCommandLists.Keys.resize(1);
-  ExecuteCommandLists.m_ppCommandLists.Keys[0] = commandListKey;
+  ID3D12CommandQueueExecuteCommandListsCommand executeCommandLists;
+  executeCommandLists.Key = m_StateService.GetUniqueCommandKey();
+  executeCommandLists.m_Object.Key = commandQueueKey;
+  executeCommandLists.m_NumCommandLists.Value = 1;
+  executeCommandLists.m_ppCommandLists.Value = reinterpret_cast<ID3D12CommandList**>(1);
+  executeCommandLists.m_ppCommandLists.Size = 1;
+  executeCommandLists.m_ppCommandLists.Keys.resize(1);
+  executeCommandLists.m_ppCommandLists.Keys[0] = commandListKey;
   m_StateService.GetRecorder().Record(
-      ID3D12CommandQueueExecuteCommandListsSerializer(ExecuteCommandLists));
+      ID3D12CommandQueueExecuteCommandListsSerializer(executeCommandLists));
 
-  ID3D12CommandQueueSignalCommand CommandQueueSignal;
-  CommandQueueSignal.Key = m_StateService.GetUniqueCommandKey();
-  CommandQueueSignal.m_Object.Key = commandQueueKey;
-  CommandQueueSignal.m_pFence.Key = fenceKey;
-  CommandQueueSignal.m_Value.Value = 1;
-  m_StateService.GetRecorder().Record(ID3D12CommandQueueSignalSerializer(CommandQueueSignal));
+  ID3D12CommandQueueSignalCommand commandQueueSignal;
+  commandQueueSignal.Key = m_StateService.GetUniqueCommandKey();
+  commandQueueSignal.m_Object.Key = commandQueueKey;
+  commandQueueSignal.m_pFence.Key = fenceKey;
+  commandQueueSignal.m_Value.Value = 1;
+  m_StateService.GetRecorder().Record(ID3D12CommandQueueSignalSerializer(commandQueueSignal));
 
-  ID3D12FenceGetCompletedValueCommand getCompletedValue;
-  getCompletedValue.Key = m_StateService.GetUniqueCommandKey();
-  getCompletedValue.m_Object.Key = fenceKey;
-  getCompletedValue.m_Result.Value = 1;
-  m_StateService.GetRecorder().Record(ID3D12FenceGetCompletedValueSerializer(getCompletedValue));
+  ID3D12FenceGetCompletedValueCommand GetCompletedValue;
+  GetCompletedValue.Key = m_StateService.GetUniqueCommandKey();
+  GetCompletedValue.m_Object.Key = fenceKey;
+  GetCompletedValue.m_Result.Value = 1;
+  m_StateService.GetRecorder().Record(ID3D12FenceGetCompletedValueSerializer(GetCompletedValue));
 
   IUnknownReleaseCommand releaseFence;
   releaseFence.Key = m_StateService.GetUniqueCommandKey();
@@ -716,13 +690,13 @@ void ResourceStateTrackingService::RestoreBackBufferState(unsigned commandQueueK
   m_StateService.GetRecorder().Record(IUnknownReleaseSerializer(releaseCommandAllocator));
 }
 
-void ResourceStateTrackingService::InsertIfNotResident(unsigned ResourceKey,
+void ResourceStateTrackingService::InsertIfNotResident(unsigned resourceKey,
                                                        std::set<unsigned>& residencyKeys) {
-  if (!ResourceKey) {
+  if (!resourceKey) {
     return;
   }
 
-  auto residencyKey = GetResidencyKeyForNotResidentResource(ResourceKey);
+  auto residencyKey = GetResidencyKeyForNotResidentResource(resourceKey);
   if (residencyKey.has_value() && residencyKey.value() != 0) {
     residencyKeys.insert(residencyKey.value());
   }
@@ -737,37 +711,37 @@ std::optional<unsigned> ResourceStateTrackingService::GetResidencyKeyForNotResid
 
   switch (state->CreationCommand->GetId()) {
   case CommandId::ID_ID3D12DEVICE_CREATECOMMITTEDRESOURCE: {
-    auto* Command =
+    auto* command =
         static_cast<ID3D12DeviceCreateCommittedResourceCommand*>(state->CreationCommand.get());
-    if (Command->m_HeapFlags.Value & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
+    if (command->m_HeapFlags.Value & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
       return key;
     }
   } break;
   case CommandId::ID_ID3D12DEVICE4_CREATECOMMITTEDRESOURCE1: {
-    auto* Command =
+    auto* command =
         static_cast<ID3D12Device4CreateCommittedResource1Command*>(state->CreationCommand.get());
-    if (Command->m_HeapFlags.Value & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
+    if (command->m_HeapFlags.Value & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
       return key;
     }
   } break;
   case CommandId::ID_ID3D12DEVICE8_CREATECOMMITTEDRESOURCE2: {
-    auto* Command =
+    auto* command =
         static_cast<ID3D12Device8CreateCommittedResource2Command*>(state->CreationCommand.get());
-    if (Command->m_HeapFlags.Value & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
+    if (command->m_HeapFlags.Value & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
       return key;
     }
   } break;
   case CommandId::ID_ID3D12DEVICE10_CREATECOMMITTEDRESOURCE3: {
-    auto* Command =
+    auto* command =
         static_cast<ID3D12Device10CreateCommittedResource3Command*>(state->CreationCommand.get());
-    if (Command->m_HeapFlags.Value & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
+    if (command->m_HeapFlags.Value & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
       return key;
     }
   } break;
   case CommandId::INTC_D3D12_CREATECOMMITTEDRESOURCE: {
-    auto* Command =
+    auto* command =
         static_cast<INTC_D3D12_CreateCommittedResourceCommand*>(state->CreationCommand.get());
-    if (Command->m_HeapFlags.Value & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
+    if (command->m_HeapFlags.Value & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
       return key;
     }
   } break;
@@ -782,21 +756,21 @@ std::optional<unsigned> ResourceStateTrackingService::GetResidencyKeyForNotResid
     }
     switch (heapState->CreationCommand->GetId()) {
     case CommandId::ID_ID3D12DEVICE_CREATEHEAP: {
-      auto* Command = static_cast<ID3D12DeviceCreateHeapCommand*>(heapState->CreationCommand.get());
-      if (Command->m_pDesc.Value->Flags & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
+      auto* command = static_cast<ID3D12DeviceCreateHeapCommand*>(heapState->CreationCommand.get());
+      if (command->m_pDesc.Value->Flags & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
         return heapKey;
       }
     } break;
     case CommandId::ID_ID3D12DEVICE4_CREATEHEAP1: {
-      auto* Command =
+      auto* command =
           static_cast<ID3D12Device4CreateHeap1Command*>(heapState->CreationCommand.get());
-      if (Command->m_pDesc.Value->Flags & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
+      if (command->m_pDesc.Value->Flags & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
         return heapKey;
       }
     } break;
     case CommandId::INTC_D3D12_CREATEHEAP: {
-      auto* Command = static_cast<INTC_D3D12_CreateHeapCommand*>(heapState->CreationCommand.get());
-      if (Command->m_pDesc.Value->pD3D12Desc->Flags & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
+      auto* command = static_cast<INTC_D3D12_CreateHeapCommand*>(heapState->CreationCommand.get());
+      if (command->m_pDesc.Value->pD3D12Desc->Flags & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
         return heapKey;
       }
     } break;
@@ -813,17 +787,17 @@ void ResourceStateTrackingService::RecordMakeResident(const std::set<unsigned>& 
     return;
   }
 
-  ID3D12DeviceMakeResidentCommand MakeResident;
-  MakeResident.Key = m_StateService.GetUniqueCommandKey();
-  MakeResident.m_Object.Key = m_DeviceKey;
-  MakeResident.m_NumObjects.Value = keys.size();
+  ID3D12DeviceMakeResidentCommand makeResident;
+  makeResident.Key = m_StateService.GetUniqueCommandKey();
+  makeResident.m_Object.Key = m_DeviceKey;
+  makeResident.m_NumObjects.Value = keys.size();
   ID3D12Pageable* fakePtr = reinterpret_cast<ID3D12Pageable*>(1);
-  MakeResident.m_ppObjects.Value = &fakePtr;
-  MakeResident.m_ppObjects.Size = keys.size();
+  makeResident.m_ppObjects.Value = &fakePtr;
+  makeResident.m_ppObjects.Size = keys.size();
   for (unsigned key : keys) {
-    MakeResident.m_ppObjects.Keys.push_back(key);
+    makeResident.m_ppObjects.Keys.push_back(key);
   }
-  m_StateService.GetRecorder().Record(ID3D12DeviceMakeResidentSerializer(MakeResident));
+  m_StateService.GetRecorder().Record(ID3D12DeviceMakeResidentSerializer(makeResident));
 }
 
 void ResourceStateTrackingService::RecordEvict(const std::set<unsigned>& keys) {
@@ -831,17 +805,17 @@ void ResourceStateTrackingService::RecordEvict(const std::set<unsigned>& keys) {
     return;
   }
 
-  ID3D12DeviceEvictCommand Evict;
-  Evict.Key = m_StateService.GetUniqueCommandKey();
-  Evict.m_Object.Key = m_DeviceKey;
-  Evict.m_NumObjects.Value = keys.size();
+  ID3D12DeviceEvictCommand evict;
+  evict.Key = m_StateService.GetUniqueCommandKey();
+  evict.m_Object.Key = m_DeviceKey;
+  evict.m_NumObjects.Value = keys.size();
   ID3D12Pageable* fakePtr = reinterpret_cast<ID3D12Pageable*>(1);
-  Evict.m_ppObjects.Value = &fakePtr;
-  Evict.m_ppObjects.Size = keys.size();
+  evict.m_ppObjects.Value = &fakePtr;
+  evict.m_ppObjects.Size = keys.size();
   for (unsigned key : keys) {
-    Evict.m_ppObjects.Keys.push_back(key);
+    evict.m_ppObjects.Keys.push_back(key);
   }
-  m_StateService.GetRecorder().Record(ID3D12DeviceEvictSerializer(Evict));
+  m_StateService.GetRecorder().Record(ID3D12DeviceEvictSerializer(evict));
 }
 
 } // namespace DirectX

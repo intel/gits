@@ -16,7 +16,7 @@ namespace gits {
 namespace DirectX {
 
 RaytracingResourceDump::~RaytracingResourceDump() {
-  waitUntilDumped();
+  WaitUntilDumped();
 }
 
 void RaytracingResourceDump::DumpResource(ID3D12GraphicsCommandList* commandList,
@@ -24,23 +24,23 @@ void RaytracingResourceDump::DumpResource(ID3D12GraphicsCommandList* commandList
                                           unsigned offset,
                                           unsigned size,
                                           unsigned stride,
-                                          D3D12_RESOURCE_STATES resourceState,
+                                          BarrierState resourceState,
                                           const std::wstring& dumpName,
                                           DumpContentKind contentKind,
                                           bool fromCapture) {
 
   RaytracingDumpInfo* dumpInfo = new RaytracingDumpInfo();
   dumpInfo->ContentKind = contentKind;
-  dumpInfo->offset = offset;
-  dumpInfo->size = size;
+  dumpInfo->Offset = offset;
+  dumpInfo->Size = size;
   dumpInfo->Stride = stride;
-  dumpInfo->dumpName = dumpName;
+  dumpInfo->DumpName = dumpName;
   dumpInfo->FromCapture = fromCapture;
 
-  stageResource(commandList, resource, resourceState, *dumpInfo);
+  StageResource(commandList, resource, resourceState, *dumpInfo);
 }
 
-void RaytracingResourceDump::dumpBuffer(DumpInfo& dumpInfo, void* data) {
+void RaytracingResourceDump::DumpBuffer(DumpInfo& dumpInfo, void* data) {
   RaytracingDumpInfo& info = static_cast<RaytracingDumpInfo&>(dumpInfo);
   if (info.ContentKind == DumpContentKind::Instances) {
     DumpInstancesBuffer(info, data);
@@ -52,9 +52,9 @@ void RaytracingResourceDump::dumpBuffer(DumpInfo& dumpInfo, void* data) {
 }
 
 void RaytracingResourceDump::DumpInstancesBuffer(RaytracingDumpInfo& dumpInfo, void* data) {
-  std::ofstream stream(dumpInfo.dumpName);
+  std::ofstream stream(dumpInfo.DumpName);
   D3D12_RAYTRACING_INSTANCE_DESC* instances = static_cast<D3D12_RAYTRACING_INSTANCE_DESC*>(data);
-  unsigned count = dumpInfo.size / sizeof(D3D12_RAYTRACING_INSTANCE_DESC);
+  unsigned count = dumpInfo.Size / sizeof(D3D12_RAYTRACING_INSTANCE_DESC);
 
   for (unsigned i = 0; i < count; ++i) {
     stream << "INSTANCE " << i + 1 << "\n";
@@ -105,9 +105,9 @@ void RaytracingResourceDump::DumpInstancesBuffer(RaytracingDumpInfo& dumpInfo, v
 
 void RaytracingResourceDump::DumpInstancesArrayOfPointersBuffer(RaytracingDumpInfo& dumpInfo,
                                                                 void* data) {
-  std::ofstream stream(dumpInfo.dumpName);
+  std::ofstream stream(dumpInfo.DumpName);
   D3D12_GPU_VIRTUAL_ADDRESS* addresses = static_cast<D3D12_GPU_VIRTUAL_ADDRESS*>(data);
-  unsigned count = dumpInfo.size / sizeof(D3D12_GPU_VIRTUAL_ADDRESS);
+  unsigned count = dumpInfo.Size / sizeof(D3D12_GPU_VIRTUAL_ADDRESS);
   for (unsigned i = 0; i < count; ++i) {
     PrintGpuAddress(stream, addresses[i], dumpInfo.FromCapture);
     stream << "\n";
@@ -115,8 +115,8 @@ void RaytracingResourceDump::DumpInstancesArrayOfPointersBuffer(RaytracingDumpIn
 }
 
 void RaytracingResourceDump::DumpBindingTableBuffer(RaytracingDumpInfo& dumpInfo, void* data) {
-  std::ofstream stream(dumpInfo.dumpName);
-  unsigned recordCount = dumpInfo.size / dumpInfo.Stride;
+  std::ofstream stream(dumpInfo.DumpName);
+  unsigned recordCount = dumpInfo.Size / dumpInfo.Stride;
   for (unsigned recordIndex = 0; recordIndex < recordCount; ++recordIndex) {
     stream << "BINDING TABLE " << recordIndex + 1 << " size " << dumpInfo.Stride << "\n";
 

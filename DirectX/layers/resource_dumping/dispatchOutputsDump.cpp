@@ -12,28 +12,28 @@ namespace gits {
 namespace DirectX {
 
 DispatchOutputsDump::~DispatchOutputsDump() {
-  waitUntilDumped();
+  WaitUntilDumped();
 }
 
-void DispatchOutputsDump::dumpResource(ID3D12GraphicsCommandList* commandList,
+void DispatchOutputsDump::DumpResource(ID3D12GraphicsCommandList* commandList,
                                        ID3D12Resource* resource,
                                        unsigned subresource,
-                                       D3D12_RESOURCE_STATES resourceState,
+                                       BarrierState resourceState,
                                        const std::wstring& dumpName,
                                        unsigned mipLevel,
                                        DXGI_FORMAT format,
                                        unsigned commandListDispatchCount) {
   auto* dumpInfo = new RenderTargetDumpInfo{};
-  dumpInfo->subresource = subresource;
-  dumpInfo->dumpName = dumpName;
-  dumpInfo->mipLevel = mipLevel;
-  dumpInfo->subresourceFormat = format;
+  dumpInfo->Subresource = subresource;
+  dumpInfo->DumpName = dumpName;
+  dumpInfo->MipLevel = mipLevel;
+  dumpInfo->SubresourceFormat = format;
   dumpInfo->CommandListDispatchCount = commandListDispatchCount;
 
-  stageResource(commandList, resource, resourceState, *dumpInfo);
+  StageResource(commandList, resource, resourceState, *dumpInfo);
 }
 
-void DispatchOutputsDump::executeCommandLists(unsigned key,
+void DispatchOutputsDump::ExecuteCommandLists(unsigned key,
                                               unsigned commandQueueKey,
                                               ID3D12CommandQueue* commandQueue,
                                               ID3D12CommandList** commandLists,
@@ -42,8 +42,8 @@ void DispatchOutputsDump::executeCommandLists(unsigned key,
                                               unsigned executeCount) {
   bool found = false;
   for (unsigned i = 0; i < commandListNum; ++i) {
-    auto it = stagedResources_.find(commandLists[i]);
-    if (it != stagedResources_.end()) {
+    auto it = m_StagedResources.find(commandLists[i]);
+    if (it != m_StagedResources.end()) {
       found = true;
       if (frameCount && executeCount) {
         for (DumpInfo* dumpInfo : it->second) {
@@ -61,17 +61,17 @@ void DispatchOutputsDump::executeCommandLists(unsigned key,
     return;
   }
 
-  ResourceDump::executeCommandLists(key, commandQueueKey, commandQueue, commandLists,
+  ResourceDump::ExecuteCommandLists(key, commandQueueKey, commandQueue, commandLists,
                                     commandListNum);
 }
 
-void DispatchOutputsDump::dumpTexture(DumpInfo& dumpInfo, void* data) {
+void DispatchOutputsDump::DumpTexture(DumpInfo& dumpInfo, void* data) {
   auto& info = static_cast<RenderTargetDumpInfo&>(dumpInfo);
   if (!info.ExecutionCount.empty()) {
-    const size_t pos = dumpInfo.dumpName.find(m_DumpNameExecutionMarker);
-    info.dumpName.replace(pos, m_DumpNameExecutionMarker.size(), info.ExecutionCount);
+    const size_t pos = dumpInfo.DumpName.find(m_DumpNameExecutionMarker);
+    info.DumpName.replace(pos, m_DumpNameExecutionMarker.size(), info.ExecutionCount);
   }
-  ResourceDump::dumpTexture(dumpInfo, data);
+  ResourceDump::DumpTexture(dumpInfo, data);
 }
 
 } // namespace DirectX

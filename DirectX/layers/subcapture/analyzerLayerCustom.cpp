@@ -34,7 +34,8 @@ AnalyzerLayer::AnalyzerLayer(SubcaptureRange& subcaptureRange)
                           m_CommandListService,
                           m_RootSignatureService,
                           m_ResourceStateTracker),
-      m_ExecuteIndirectService(m_GpuAddressService, m_RaytracingService, m_CommandListService) {
+      m_ExecuteIndirectService(
+          m_ResourceStateTracker, m_GpuAddressService, m_RaytracingService, m_CommandListService) {
   m_Optimize = Configurator::Get().directx.features.subcapture.optimize;
   m_OptimizeRaytracing = Configurator::Get().directx.features.subcapture.optimizeRaytracing;
   if (m_Optimize) {
@@ -1092,13 +1093,14 @@ void AnalyzerLayer::Post(INTC_D3D12_CreateCommandQueueCommand& c) {
 }
 
 void AnalyzerLayer::Post(INTC_D3D12_CreateReservedResourceCommand& c) {
-  if (m_AnalyzerService.AfterRange()) {
+  if (m_AnalyzerService.AfterRange() || c.m_Result.Value != S_OK) {
     return;
   }
   m_AnalyzerService.NotifyObject(c.m_pExtensionContext.Key);
   m_AnalyzerService.NotifyObject(c.m_ppvResource.Key);
   m_AnalyzerService.AddParent(c.m_ppvResource.Key, c.m_pExtensionContext.Key);
-  m_ResourceStateTracker.AddResource(c.m_ppvResource.Key, c.m_InitialState.Value);
+  m_ResourceStateTracker.AddResource(*reinterpret_cast<ID3D12Resource**>(c.m_ppvResource.Value),
+                                     c.m_ppvResource.Key, c.m_InitialState.Value);
 }
 
 void AnalyzerLayer::Post(INTC_D3D12_SetFeatureSupportCommand& c) {
@@ -1127,7 +1129,7 @@ void AnalyzerLayer::Post(INTC_D3D12_CreateComputePipelineStateCommand& c) {
 }
 
 void AnalyzerLayer::Post(INTC_D3D12_CreatePlacedResourceCommand& c) {
-  if (m_AnalyzerService.AfterRange()) {
+  if (m_AnalyzerService.AfterRange() || c.m_Result.Value != S_OK) {
     return;
   }
   m_AnalyzerService.NotifyObject(c.m_pExtensionContext.Key);
@@ -1135,17 +1137,19 @@ void AnalyzerLayer::Post(INTC_D3D12_CreatePlacedResourceCommand& c) {
   m_AnalyzerService.NotifyObject(c.m_ppvResource.Key);
   m_AnalyzerService.AddParent(c.m_ppvResource.Key, c.m_pExtensionContext.Key);
   m_AnalyzerService.AddParent(c.m_ppvResource.Key, c.m_pHeap.Key);
-  m_ResourceStateTracker.AddResource(c.m_ppvResource.Key, c.m_InitialState.Value);
+  m_ResourceStateTracker.AddResource(*reinterpret_cast<ID3D12Resource**>(c.m_ppvResource.Value),
+                                     c.m_ppvResource.Key, c.m_InitialState.Value);
 }
 
 void AnalyzerLayer::Post(INTC_D3D12_CreateCommittedResourceCommand& c) {
-  if (m_AnalyzerService.AfterRange()) {
+  if (m_AnalyzerService.AfterRange() || c.m_Result.Value != S_OK) {
     return;
   }
   m_AnalyzerService.NotifyObject(c.m_pExtensionContext.Key);
   m_AnalyzerService.NotifyObject(c.m_ppvResource.Key);
   m_AnalyzerService.AddParent(c.m_ppvResource.Key, c.m_pExtensionContext.Key);
-  m_ResourceStateTracker.AddResource(c.m_ppvResource.Key, c.m_InitialResourceState.Value);
+  m_ResourceStateTracker.AddResource(*reinterpret_cast<ID3D12Resource**>(c.m_ppvResource.Value),
+                                     c.m_ppvResource.Key, c.m_InitialResourceState.Value);
 }
 
 void AnalyzerLayer::Post(INTC_D3D12_CreateHeapCommand& c) {
@@ -1308,13 +1312,14 @@ void AnalyzerLayer::Post(ID3D12DeviceCreateRootSignatureCommand& c) {
 }
 
 void AnalyzerLayer::Post(ID3D12DeviceCreateCommittedResourceCommand& c) {
-  if (m_AnalyzerService.AfterRange()) {
+  if (m_AnalyzerService.AfterRange() || c.m_Result.Value != S_OK) {
     return;
   }
   m_AnalyzerService.NotifyObject(c.m_Object.Key);
   m_AnalyzerService.NotifyObject(c.m_ppvResource.Key);
   m_AnalyzerService.AddParent(c.m_ppvResource.Key, c.m_Object.Key);
-  m_ResourceStateTracker.AddResource(c.m_ppvResource.Key, c.m_InitialResourceState.Value);
+  m_ResourceStateTracker.AddResource(*reinterpret_cast<ID3D12Resource**>(c.m_ppvResource.Value),
+                                     c.m_ppvResource.Key, c.m_InitialResourceState.Value);
 }
 
 void AnalyzerLayer::Post(ID3D12DeviceCreateHeapCommand& c) {
@@ -1327,7 +1332,7 @@ void AnalyzerLayer::Post(ID3D12DeviceCreateHeapCommand& c) {
 }
 
 void AnalyzerLayer::Post(ID3D12DeviceCreatePlacedResourceCommand& c) {
-  if (m_AnalyzerService.AfterRange()) {
+  if (m_AnalyzerService.AfterRange() || c.m_Result.Value != S_OK) {
     return;
   }
   m_AnalyzerService.NotifyObject(c.m_Object.Key);
@@ -1336,7 +1341,8 @@ void AnalyzerLayer::Post(ID3D12DeviceCreatePlacedResourceCommand& c) {
   m_AnalyzerService.AddParent(c.m_ppvResource.Key, c.m_pHeap.Key);
   if (m_Optimize || m_OptimizeRaytracing) {
     if (c.m_Result.Value == S_OK) {
-      m_ResourceStateTracker.AddResource(c.m_ppvResource.Key, c.m_InitialState.Value);
+      m_ResourceStateTracker.AddResource(*reinterpret_cast<ID3D12Resource**>(c.m_ppvResource.Value),
+                                         c.m_ppvResource.Key, c.m_InitialState.Value);
       m_GpuAddressService.CreatePlacedResource(c.m_pHeap.Key, c.m_ppvResource.Key,
                                                c.m_pDesc.Value->Flags);
     }
@@ -1344,13 +1350,14 @@ void AnalyzerLayer::Post(ID3D12DeviceCreatePlacedResourceCommand& c) {
 }
 
 void AnalyzerLayer::Post(ID3D12DeviceCreateReservedResourceCommand& c) {
-  if (m_AnalyzerService.AfterRange()) {
+  if (m_AnalyzerService.AfterRange() || c.m_Result.Value != S_OK) {
     return;
   }
   m_AnalyzerService.NotifyObject(c.m_Object.Key);
   m_AnalyzerService.NotifyObject(c.m_ppvResource.Key);
   m_AnalyzerService.AddParent(c.m_ppvResource.Key, c.m_Object.Key);
-  m_ResourceStateTracker.AddResource(c.m_ppvResource.Key, c.m_InitialState.Value);
+  m_ResourceStateTracker.AddResource(*reinterpret_cast<ID3D12Resource**>(c.m_ppvResource.Value),
+                                     c.m_ppvResource.Key, c.m_InitialState.Value);
 }
 
 void AnalyzerLayer::Post(ID3D12DeviceCreateSharedHandleCommand& c) {
@@ -1450,13 +1457,14 @@ void AnalyzerLayer::Post(ID3D12Device4CreateProtectedResourceSessionCommand& c) 
 }
 
 void AnalyzerLayer::Post(ID3D12Device4CreateCommittedResource1Command& c) {
-  if (m_AnalyzerService.AfterRange()) {
+  if (m_AnalyzerService.AfterRange() || c.m_Result.Value != S_OK) {
     return;
   }
   m_AnalyzerService.NotifyObject(c.m_Object.Key);
   m_AnalyzerService.NotifyObject(c.m_ppvResource.Key);
   m_AnalyzerService.AddParent(c.m_ppvResource.Key, c.m_Object.Key);
-  m_ResourceStateTracker.AddResource(c.m_ppvResource.Key, c.m_InitialResourceState.Value);
+  m_ResourceStateTracker.AddResource(*reinterpret_cast<ID3D12Resource**>(c.m_ppvResource.Value),
+                                     c.m_ppvResource.Key, c.m_InitialResourceState.Value);
 }
 
 void AnalyzerLayer::Post(ID3D12Device4CreateHeap1Command& c) {
@@ -1471,7 +1479,7 @@ void AnalyzerLayer::Post(ID3D12Device4CreateHeap1Command& c) {
 }
 
 void AnalyzerLayer::Post(ID3D12Device4CreateReservedResource1Command& c) {
-  if (m_AnalyzerService.AfterRange()) {
+  if (m_AnalyzerService.AfterRange() || c.m_Result.Value != S_OK) {
     return;
   }
   m_AnalyzerService.NotifyObject(c.m_Object.Key);
@@ -1479,7 +1487,8 @@ void AnalyzerLayer::Post(ID3D12Device4CreateReservedResource1Command& c) {
   m_AnalyzerService.NotifyObject(c.m_ppvResource.Key);
   m_AnalyzerService.AddParent(c.m_ppvResource.Key, c.m_Object.Key);
   m_AnalyzerService.AddParent(c.m_ppvResource.Key, c.m_pProtectedSession.Key);
-  m_ResourceStateTracker.AddResource(c.m_ppvResource.Key, c.m_InitialState.Value);
+  m_ResourceStateTracker.AddResource(*reinterpret_cast<ID3D12Resource**>(c.m_ppvResource.Value),
+                                     c.m_ppvResource.Key, c.m_InitialState.Value);
 }
 
 void AnalyzerLayer::Post(ID3D12Device5CreateLifetimeTrackerCommand& c) {
@@ -1542,17 +1551,18 @@ void AnalyzerLayer::Post(ID3D12Device7CreateProtectedResourceSession1Command& c)
 }
 
 void AnalyzerLayer::Post(ID3D12Device8CreateCommittedResource2Command& c) {
-  if (m_AnalyzerService.AfterRange()) {
+  if (m_AnalyzerService.AfterRange() || c.m_Result.Value != S_OK) {
     return;
   }
   m_AnalyzerService.NotifyObject(c.m_Object.Key);
   m_AnalyzerService.NotifyObject(c.m_ppvResource.Key);
   m_AnalyzerService.AddParent(c.m_ppvResource.Key, c.m_Object.Key);
-  m_ResourceStateTracker.AddResource(c.m_ppvResource.Key, c.m_InitialResourceState.Value);
+  m_ResourceStateTracker.AddResource(*reinterpret_cast<ID3D12Resource**>(c.m_ppvResource.Value),
+                                     c.m_ppvResource.Key, c.m_InitialResourceState.Value);
 }
 
 void AnalyzerLayer::Post(ID3D12Device8CreatePlacedResource1Command& c) {
-  if (m_AnalyzerService.AfterRange()) {
+  if (m_AnalyzerService.AfterRange() || c.m_Result.Value != S_OK) {
     return;
   }
   m_AnalyzerService.NotifyObject(c.m_Object.Key);
@@ -1561,7 +1571,8 @@ void AnalyzerLayer::Post(ID3D12Device8CreatePlacedResource1Command& c) {
   m_AnalyzerService.AddParent(c.m_ppvResource.Key, c.m_pHeap.Key);
   if (m_Optimize || m_OptimizeRaytracing) {
     if (c.m_Result.Value == S_OK) {
-      m_ResourceStateTracker.AddResource(c.m_ppvResource.Key, c.m_InitialState.Value);
+      m_ResourceStateTracker.AddResource(*reinterpret_cast<ID3D12Resource**>(c.m_ppvResource.Value),
+                                         c.m_ppvResource.Key, c.m_InitialState.Value);
       m_GpuAddressService.CreatePlacedResource(c.m_pHeap.Key, c.m_ppvResource.Key,
                                                c.m_pDesc.Value->Flags);
     }
@@ -1587,17 +1598,18 @@ void AnalyzerLayer::Post(ID3D12Device9CreateCommandQueue1Command& c) {
 }
 
 void AnalyzerLayer::Post(ID3D12Device10CreateCommittedResource3Command& c) {
-  if (m_AnalyzerService.AfterRange()) {
+  if (m_AnalyzerService.AfterRange() || c.m_Result.Value != S_OK) {
     return;
   }
   m_AnalyzerService.NotifyObject(c.m_Object.Key);
   m_AnalyzerService.NotifyObject(c.m_ppvResource.Key);
   m_AnalyzerService.AddParent(c.m_ppvResource.Key, c.m_Object.Key);
-  m_ResourceStateTracker.AddResource(c.m_ppvResource.Key, c.m_InitialLayout.Value);
+  m_ResourceStateTracker.AddResource(*reinterpret_cast<ID3D12Resource**>(c.m_ppvResource.Value),
+                                     c.m_ppvResource.Key, c.m_InitialLayout.Value);
 }
 
 void AnalyzerLayer::Post(ID3D12Device10CreatePlacedResource2Command& c) {
-  if (m_AnalyzerService.AfterRange()) {
+  if (m_AnalyzerService.AfterRange() || c.m_Result.Value != S_OK) {
     return;
   }
   m_AnalyzerService.NotifyObject(c.m_Object.Key);
@@ -1606,7 +1618,8 @@ void AnalyzerLayer::Post(ID3D12Device10CreatePlacedResource2Command& c) {
   m_AnalyzerService.AddParent(c.m_pHeap.Key, c.m_pHeap.Key);
   if (m_Optimize || m_OptimizeRaytracing) {
     if (c.m_Result.Value == S_OK) {
-      m_ResourceStateTracker.AddResource(c.m_ppvResource.Key, c.m_InitialLayout.Value);
+      m_ResourceStateTracker.AddResource(*reinterpret_cast<ID3D12Resource**>(c.m_ppvResource.Value),
+                                         c.m_ppvResource.Key, c.m_InitialLayout.Value);
       m_GpuAddressService.CreatePlacedResource(c.m_pHeap.Key, c.m_ppvResource.Key,
                                                c.m_pDesc.Value->Flags);
     }
@@ -1614,7 +1627,7 @@ void AnalyzerLayer::Post(ID3D12Device10CreatePlacedResource2Command& c) {
 }
 
 void AnalyzerLayer::Post(ID3D12Device10CreateReservedResource2Command& c) {
-  if (m_AnalyzerService.AfterRange()) {
+  if (m_AnalyzerService.AfterRange() || c.m_Result.Value != S_OK) {
     return;
   }
   m_AnalyzerService.NotifyObject(c.m_Object.Key);
@@ -1622,7 +1635,8 @@ void AnalyzerLayer::Post(ID3D12Device10CreateReservedResource2Command& c) {
   m_AnalyzerService.NotifyObject(c.m_ppvResource.Key);
   m_AnalyzerService.AddParent(c.m_ppvResource.Key, c.m_Object.Key);
   m_AnalyzerService.AddParent(c.m_ppvResource.Key, c.m_pProtectedSession.Key);
-  m_ResourceStateTracker.AddResource(c.m_ppvResource.Key, c.m_InitialLayout.Value);
+  m_ResourceStateTracker.AddResource(*reinterpret_cast<ID3D12Resource**>(c.m_ppvResource.Value),
+                                     c.m_ppvResource.Key, c.m_InitialLayout.Value);
 }
 
 void AnalyzerLayer::Post(ID3D12Device14CreateRootSignatureFromSubobjectInLibraryCommand& c) {

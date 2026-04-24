@@ -16,10 +16,12 @@ namespace gits {
 namespace DirectX {
 
 AnalyzerExecuteIndirectService::AnalyzerExecuteIndirectService(
+    ResourceStateTracker& resourceStateTracker,
     CapturePlayerGpuAddressService& gpuAddressService,
     AnalyzerRaytracingService& raytracingService,
     AnalyzerCommandListService& commandListService)
-    : m_GpuAddressService(gpuAddressService),
+    : m_ResourceStateTracker(resourceStateTracker),
+      m_GpuAddressService(gpuAddressService),
       m_RaytracingService(raytracingService),
       m_CommandListService(commandListService),
       m_ExecuteIndirectDump(*this) {
@@ -66,7 +68,7 @@ void AnalyzerExecuteIndirectService::ExecuteIndirect(
   }
 
   if (raytracing) {
-    auto DumpBindingTable = [&](UINT64 address, UINT64 size, UINT64 stride) {
+    auto dumpBindingTable = [&](UINT64 address, UINT64 size, UINT64 stride) {
       if (!address) {
         return;
       }
@@ -82,25 +84,37 @@ void AnalyzerExecuteIndirectService::ExecuteIndirect(
     auto it = m_ExecuteIndirectDispatchRays.find(c.Key);
     if (it != m_ExecuteIndirectDispatchRays.end()) {
       D3D12_DISPATCH_RAYS_DESC& desc = it->second;
-      DumpBindingTable(desc.RayGenerationShaderRecord.StartAddress,
+      dumpBindingTable(desc.RayGenerationShaderRecord.StartAddress,
                        desc.RayGenerationShaderRecord.SizeInBytes,
                        desc.RayGenerationShaderRecord.SizeInBytes);
-      DumpBindingTable(desc.MissShaderTable.StartAddress, desc.MissShaderTable.SizeInBytes,
+      dumpBindingTable(desc.MissShaderTable.StartAddress, desc.MissShaderTable.SizeInBytes,
                        desc.MissShaderTable.StrideInBytes);
-      DumpBindingTable(desc.HitGroupTable.StartAddress, desc.HitGroupTable.SizeInBytes,
+      dumpBindingTable(desc.HitGroupTable.StartAddress, desc.HitGroupTable.SizeInBytes,
                        desc.HitGroupTable.StrideInBytes);
-      DumpBindingTable(desc.CallableShaderTable.StartAddress, desc.CallableShaderTable.SizeInBytes,
+      dumpBindingTable(desc.CallableShaderTable.StartAddress, desc.CallableShaderTable.SizeInBytes,
                        desc.CallableShaderTable.StrideInBytes);
     }
   } else if (view) {
+    BarrierState argumentBufferState =
+        GetAdjustedCurrentState(m_ResourceStateTracker, m_GpuAddressService, c.m_Object.Value,
+                                c.m_pArgumentBuffer.Value, c.m_ArgumentBufferOffset.Value,
+                                c.m_pArgumentBuffer.Key, D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT);
+    BarrierState countBufferState{};
+    if (c.m_pCountBuffer.Value) {
+      BarrierState countBufferState =
+          GetAdjustedCurrentState(m_ResourceStateTracker, m_GpuAddressService, c.m_Object.Value,
+                                  c.m_pCountBuffer.Value, c.m_CountBufferOffset.Value,
+                                  c.m_pCountBuffer.Key, D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT);
+    }
     m_ExecuteIndirectDump.DumpArgumentBuffer(
         c.m_Object.Value, &commandSignature, c.m_MaxCommandCount.Value, c.m_pArgumentBuffer.Value,
-        c.m_ArgumentBufferOffset.Value, c.m_pCountBuffer.Value, c.m_CountBufferOffset.Value);
+        c.m_ArgumentBufferOffset.Value, argumentBufferState, c.m_pCountBuffer.Value,
+        c.m_CountBufferOffset.Value, countBufferState);
   }
 }
 
 void AnalyzerExecuteIndirectService::Flush() {
-  m_ExecuteIndirectDump.waitUntilDumped();
+  m_ExecuteIndirectDump.WaitUntilDumped();
 }
 
 void AnalyzerExecuteIndirectService::ExecuteCommandLists(unsigned key,
@@ -108,7 +122,7 @@ void AnalyzerExecuteIndirectService::ExecuteCommandLists(unsigned key,
                                                          ID3D12CommandQueue* commandQueue,
                                                          ID3D12CommandList** commandLists,
                                                          unsigned commandListNum) {
-  m_ExecuteIndirectDump.executeCommandLists(key, commandQueueKey, commandQueue, commandLists,
+  m_ExecuteIndirectDump.ExecuteCommandLists(key, commandQueueKey, commandQueue, commandLists,
                                             commandListNum);
 }
 
@@ -116,20 +130,20 @@ void AnalyzerExecuteIndirectService::CommandQueueWait(unsigned key,
                                                       unsigned commandQueueKey,
                                                       unsigned fenceKey,
                                                       UINT64 fenceValue) {
-  m_ExecuteIndirectDump.commandQueueWait(key, commandQueueKey, fenceKey, fenceValue);
+  m_ExecuteIndirectDump.CommandQueueWait(key, commandQueueKey, fenceKey, fenceValue);
 }
 
 void AnalyzerExecuteIndirectService::CommandQueueSignal(unsigned key,
                                                         unsigned commandQueueKey,
                                                         unsigned fenceKey,
                                                         UINT64 fenceValue) {
-  m_ExecuteIndirectDump.commandQueueSignal(key, commandQueueKey, fenceKey, fenceValue);
+  m_ExecuteIndirectDump.CommandQueueSignal(key, commandQueueKey, fenceKey, fenceValue);
 }
 
 void AnalyzerExecuteIndirectService::FenceSignal(unsigned key,
                                                  unsigned fenceKey,
                                                  UINT64 fenceValue) {
-  m_ExecuteIndirectDump.fenceSignal(key, fenceKey, fenceValue);
+  m_ExecuteIndirectDump.FenceSignal(key, fenceKey, fenceValue);
 }
 
 void AnalyzerExecuteIndirectService::LoadExecuteIndirectDispatchRays() {

@@ -26,6 +26,8 @@ set(UTILS_FILES
   ${SRC_DIR}/capturePlayerShaderIdentifierService.cpp
   ${SRC_DIR}/resourceStateTracker.h
   ${SRC_DIR}/resourceStateTracker.cpp
+  ${SRC_DIR}/resourceStateEnhanced.h
+  ${SRC_DIR}/resourceStateEnhanced.cpp
   ${SRC_DIR}/descriptorRootSignatureService.h
   ${SRC_DIR}/descriptorRootSignatureService.cpp
   ${SRC_DIR}/descriptorHeapTracker.h

@@ -24,18 +24,18 @@ public:
 
 protected:
   struct AccelerationStructuresDumpInfo : public DumpInfo {
-    Microsoft::WRL::ComPtr<ID3D12Resource> decodedBuffer{};
+    Microsoft::WRL::ComPtr<ID3D12Resource> DecodedBuffer{};
   };
 
-  void dumpStagedResource(DumpInfo& dumpInfo) override;
+  void DumpStagedResource(DumpInfo& dumpInfo) override;
 
 private:
-  void printGeometryFlags(std::ostream& stream, D3D12_RAYTRACING_GEOMETRY_FLAGS flags);
-  void printTrianglesDesc(std::ostream& stream,
+  void PrintGeometryFlags(std::ostream& stream, D3D12_RAYTRACING_GEOMETRY_FLAGS flags);
+  void PrintTrianglesDesc(std::ostream& stream,
                           D3D12_GPU_VIRTUAL_ADDRESS baseAddress,
                           uint8_t* data,
                           D3D12_RAYTRACING_GEOMETRY_TRIANGLES_DESC& desc);
-  void printVertices(std::ostream& stream, uint8_t* data, unsigned vertexCount);
+  void PrintVertices(std::ostream& stream, uint8_t* data, unsigned vertexCount);
 };
 
 } // namespace DirectX

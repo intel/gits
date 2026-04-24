@@ -106,7 +106,7 @@ void AccelerationStructuresDumpLayer::Post(
 }
 
 void AccelerationStructuresDumpLayer::Post(ID3D12CommandQueueExecuteCommandListsCommand& c) {
-  m_AccelerationStructuresDump.executeCommandLists(
+  m_AccelerationStructuresDump.ExecuteCommandLists(
       c.Key, c.m_Object.Key, c.m_Object.Value, c.m_ppCommandLists.Value, c.m_NumCommandLists.Value);
 }
 
@@ -115,25 +115,25 @@ void AccelerationStructuresDumpLayer::Post(ID3D12GraphicsCommandListResetCommand
 }
 
 void AccelerationStructuresDumpLayer::Post(ID3D12CommandQueueWaitCommand& c) {
-  m_AccelerationStructuresDump.commandQueueWait(c.Key, c.m_Object.Key, c.m_pFence.Key,
+  m_AccelerationStructuresDump.CommandQueueWait(c.Key, c.m_Object.Key, c.m_pFence.Key,
                                                 c.m_Value.Value);
 }
 
 void AccelerationStructuresDumpLayer::Post(ID3D12CommandQueueSignalCommand& c) {
-  m_AccelerationStructuresDump.commandQueueSignal(c.Key, c.m_Object.Key, c.m_pFence.Key,
+  m_AccelerationStructuresDump.CommandQueueSignal(c.Key, c.m_Object.Key, c.m_pFence.Key,
                                                   c.m_Value.Value);
 }
 
 void AccelerationStructuresDumpLayer::Post(ID3D12FenceSignalCommand& c) {
-  m_AccelerationStructuresDump.fenceSignal(c.Key, c.m_Object.Key, c.m_Value.Value);
+  m_AccelerationStructuresDump.FenceSignal(c.Key, c.m_Object.Key, c.m_Value.Value);
 }
 
 void AccelerationStructuresDumpLayer::Post(ID3D12DeviceCreateFenceCommand& c) {
-  m_AccelerationStructuresDump.fenceSignal(c.Key, c.m_ppFence.Key, c.m_InitialValue.Value);
+  m_AccelerationStructuresDump.FenceSignal(c.Key, c.m_ppFence.Key, c.m_InitialValue.Value);
 }
 
 void AccelerationStructuresDumpLayer::Post(ID3D12Device3EnqueueMakeResidentCommand& c) {
-  m_AccelerationStructuresDump.fenceSignal(c.Key, c.m_pFenceToSignal.Key,
+  m_AccelerationStructuresDump.FenceSignal(c.Key, c.m_pFenceToSignal.Key,
                                            c.m_FenceValueToSignal.Value);
 }
 
