@@ -318,7 +318,7 @@ UpdateInterface<D3D12_RENDER_PASS_RENDER_TARGET_DESCs_Argument,
   if (!value) {
     return;
   }
-  m_UnwrapStructures.reserve(arg.Size);
+  m_UnwrapStructures.resize(arg.Size);
   for (unsigned i = 0; i < arg.Size; ++i) {
     m_UnwrapStructures[i] = arg.Value[i];
     if (m_UnwrapStructures[i].EndingAccess.Type == D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_RESOLVE) {
