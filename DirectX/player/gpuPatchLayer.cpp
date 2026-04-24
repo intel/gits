@@ -467,7 +467,6 @@ void GpuPatchLayer::Pre(ID3D12GraphicsCommandList4DispatchRaysCommand& c) {
     Initialize(commandList);
   }
 
-  gits::MessageBus& msgBus = gits::MessageBus::get();
   gits::MessageBus::get().publish({PUBLISHER_PLAYER, TOPIC_GITS_WORKLOAD_BEGIN},
                                   std::make_shared<GitsWorkloadMessage>(
                                       commandList, "GITS_DispatchRays-Patch", c.m_Object.Key));

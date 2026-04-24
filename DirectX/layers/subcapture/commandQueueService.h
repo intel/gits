@@ -39,7 +39,7 @@ private:
     unsigned CommandKey{};
     std::unique_ptr<stream::CommandSerializer> CommandSerializer;
   };
-  std::vector<CommandQueueCommand*> Commands;
+  std::vector<CommandQueueCommand*> m_Commands;
 };
 
 } // namespace DirectX

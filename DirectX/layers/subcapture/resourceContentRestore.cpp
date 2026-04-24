@@ -58,7 +58,7 @@ void ResourceContentRestore::AddPlacedResourceState(ResourceState* resourceState
   }
 }
 
-void ResourceContentRestore::RestoreContent(const std::vector<unsigned>& ResourceKeys,
+void ResourceContentRestore::RestoreContent(const std::vector<unsigned>& resourceKeys,
                                             bool backBuffer) {
   enum ResourceBatchType {
     MappableResource,
@@ -72,20 +72,20 @@ void ResourceContentRestore::RestoreContent(const std::vector<unsigned>& Resourc
   {
     ResourceBatchType prevType{};
 
-    for (unsigned ResourceKey : ResourceKeys) {
+    for (unsigned resourceKey : resourceKeys) {
       ResourceBatchType type{};
       ResourceInfo resourceInfo{};
-      if (m_MappableResourceStates.find(ResourceKey) != m_MappableResourceStates.end()) {
+      if (m_MappableResourceStates.find(resourceKey) != m_MappableResourceStates.end()) {
         type = MappableResource;
-        resourceInfo = m_MappableResourceStates[ResourceKey];
-      } else if (m_UnmappableResourceBuffers.find(ResourceKey) !=
+        resourceInfo = m_MappableResourceStates[resourceKey];
+      } else if (m_UnmappableResourceBuffers.find(resourceKey) !=
                  m_UnmappableResourceBuffers.end()) {
         type = UnmappableResourceBuffer;
-        resourceInfo = m_UnmappableResourceBuffers[ResourceKey];
-      } else if (m_UnmappableResourceTextures.find(ResourceKey) !=
+        resourceInfo = m_UnmappableResourceBuffers[resourceKey];
+      } else if (m_UnmappableResourceTextures.find(resourceKey) !=
                  m_UnmappableResourceTextures.end()) {
         type = UnmappableResourceTexture;
-        resourceInfo = m_UnmappableResourceTextures[ResourceKey];
+        resourceInfo = m_UnmappableResourceTextures[resourceKey];
       } else {
         continue;
       }
@@ -342,7 +342,7 @@ unsigned ResourceContentRestore::RestoreUnmappableResources(
 
   // create upload resource with resources contents in subcaptured stream
 
-  unsigned DeviceKey = m_StateService.GetDeviceKey();
+  unsigned deviceKey = m_StateService.GetDeviceKey();
 
   void* mappedData{};
   hr = readbackResource->Map(0, nullptr, &mappedData);
@@ -377,17 +377,17 @@ unsigned ResourceContentRestore::RestoreUnmappableResources(
   // make resources resident
 
   if (!residencyKeys.empty()) {
-    ID3D12DeviceMakeResidentCommand MakeResident;
-    MakeResident.Key = m_StateService.GetUniqueCommandKey();
-    MakeResident.m_Object.Key = DeviceKey;
-    MakeResident.m_NumObjects.Value = static_cast<UINT>(residencyKeys.size());
+    ID3D12DeviceMakeResidentCommand makeResident;
+    makeResident.Key = m_StateService.GetUniqueCommandKey();
+    makeResident.m_Object.Key = deviceKey;
+    makeResident.m_NumObjects.Value = static_cast<UINT>(residencyKeys.size());
     ID3D12Pageable* fakePtr = reinterpret_cast<ID3D12Pageable*>(1);
-    MakeResident.m_ppObjects.Value = &fakePtr;
-    MakeResident.m_ppObjects.Size = residencyKeys.size();
+    makeResident.m_ppObjects.Value = &fakePtr;
+    makeResident.m_ppObjects.Size = residencyKeys.size();
     for (unsigned key : residencyKeys) {
-      MakeResident.m_ppObjects.Keys.push_back(key);
+      makeResident.m_ppObjects.Keys.push_back(key);
     }
-    m_StateService.GetRecorder().Record(ID3D12DeviceMakeResidentSerializer(MakeResident));
+    m_StateService.GetRecorder().Record(ID3D12DeviceMakeResidentSerializer(makeResident));
   }
 
   // restore resources contents from upload resource in subcaptured stream
@@ -397,10 +397,10 @@ unsigned ResourceContentRestore::RestoreUnmappableResources(
   for (unsigned resourceIndex = 0; resourceIndex < resourcesCount; ++resourceIndex) {
     ResourceInfo& state = unmappableResourceStates[resourceIndex + resourceStartIndex];
     D3D12_RESOURCE_DESC desc = state.Resource->GetDesc();
-    unsigned ResourceKey = state.Key;
+    unsigned resourceKey = state.Key;
     if (IsBarrierRestricted(state.Key)) {
-      ResourceKey = CreateSubcaptureAuxiliaryPlacedResource(state.Key);
-      auxiliaryPlacedResourceKeys.push_back(ResourceKey);
+      resourceKey = CreateSubcaptureAuxiliaryPlacedResource(state.Key);
+      auxiliaryPlacedResourceKeys.push_back(resourceKey);
     }
 
     for (unsigned subresourceIndex = 0; subresourceIndex < resourceSizes[resourceIndex].size();
@@ -411,7 +411,7 @@ unsigned ResourceContentRestore::RestoreUnmappableResources(
         ID3D12GraphicsCommandListCopyBufferRegionCommand copyBufferRegion;
         copyBufferRegion.Key = m_StateService.GetUniqueCommandKey();
         copyBufferRegion.m_Object.Key = m_CommandListKey;
-        copyBufferRegion.m_pDstBuffer.Key = ResourceKey;
+        copyBufferRegion.m_pDstBuffer.Key = resourceKey;
         copyBufferRegion.m_DstOffset.Value = 0;
         copyBufferRegion.m_pSrcBuffer.Key = m_UploadResourceKey;
         copyBufferRegion.m_SrcOffset.Value = offsetUpload;
@@ -434,7 +434,7 @@ unsigned ResourceContentRestore::RestoreUnmappableResources(
         copyTextureRegion.Key = m_StateService.GetUniqueCommandKey();
         copyTextureRegion.m_Object.Key = m_CommandListKey;
         copyTextureRegion.m_pDst.Value = &dest;
-        copyTextureRegion.m_pDst.ResourceKey = ResourceKey;
+        copyTextureRegion.m_pDst.ResourceKey = resourceKey;
         copyTextureRegion.m_pSrc.Value = &src;
         copyTextureRegion.m_pSrc.ResourceKey = m_UploadResourceKey;
         m_StateService.GetRecorder().Record(
@@ -450,23 +450,23 @@ unsigned ResourceContentRestore::RestoreUnmappableResources(
   commandListClose.m_Object.Key = m_CommandListKey;
   m_StateService.GetRecorder().Record(ID3D12GraphicsCommandListCloseSerializer(commandListClose));
 
-  ID3D12CommandQueueExecuteCommandListsCommand ExecuteCommandLists;
-  ExecuteCommandLists.Key = m_StateService.GetUniqueCommandKey();
-  ExecuteCommandLists.m_Object.Key = m_CommandQueueKey;
-  ExecuteCommandLists.m_NumCommandLists.Value = 1;
-  ExecuteCommandLists.m_ppCommandLists.Value = reinterpret_cast<ID3D12CommandList**>(1);
-  ExecuteCommandLists.m_ppCommandLists.Size = 1;
-  ExecuteCommandLists.m_ppCommandLists.Keys.resize(1);
-  ExecuteCommandLists.m_ppCommandLists.Keys[0] = m_CommandListKey;
+  ID3D12CommandQueueExecuteCommandListsCommand executeCommandLists;
+  executeCommandLists.Key = m_StateService.GetUniqueCommandKey();
+  executeCommandLists.m_Object.Key = m_CommandQueueKey;
+  executeCommandLists.m_NumCommandLists.Value = 1;
+  executeCommandLists.m_ppCommandLists.Value = reinterpret_cast<ID3D12CommandList**>(1);
+  executeCommandLists.m_ppCommandLists.Size = 1;
+  executeCommandLists.m_ppCommandLists.Keys.resize(1);
+  executeCommandLists.m_ppCommandLists.Keys[0] = m_CommandListKey;
   m_StateService.GetRecorder().Record(
-      ID3D12CommandQueueExecuteCommandListsSerializer(ExecuteCommandLists));
+      ID3D12CommandQueueExecuteCommandListsSerializer(executeCommandLists));
 
-  ID3D12CommandQueueSignalCommand CommandQueueSignal;
-  CommandQueueSignal.Key = m_StateService.GetUniqueCommandKey();
-  CommandQueueSignal.m_Object.Key = m_CommandQueueKey;
-  CommandQueueSignal.m_pFence.Key = m_FenceKey;
-  CommandQueueSignal.m_Value.Value = ++m_RecordedFenceValue;
-  m_StateService.GetRecorder().Record(ID3D12CommandQueueSignalSerializer(CommandQueueSignal));
+  ID3D12CommandQueueSignalCommand commandQueueSignal;
+  commandQueueSignal.Key = m_StateService.GetUniqueCommandKey();
+  commandQueueSignal.m_Object.Key = m_CommandQueueKey;
+  commandQueueSignal.m_pFence.Key = m_FenceKey;
+  commandQueueSignal.m_Value.Value = ++m_RecordedFenceValue;
+  m_StateService.GetRecorder().Record(ID3D12CommandQueueSignalSerializer(commandQueueSignal));
 
   ID3D12FenceGetCompletedValueCommand getCompletedValue;
   getCompletedValue.Key = m_StateService.GetUniqueCommandKey();
@@ -479,12 +479,12 @@ unsigned ResourceContentRestore::RestoreUnmappableResources(
   commandAllocatorReset.m_Object.Key = m_CommandAllocatorKey;
   m_StateService.GetRecorder().Record(ID3D12CommandAllocatorResetSerializer(commandAllocatorReset));
 
-  ID3D12GraphicsCommandListResetCommand CommandListReset;
-  CommandListReset.Key = m_StateService.GetUniqueCommandKey();
-  CommandListReset.m_Object.Key = m_CommandListKey;
-  CommandListReset.m_pAllocator.Key = m_CommandAllocatorKey;
-  CommandListReset.m_pInitialState.Key = 0;
-  m_StateService.GetRecorder().Record(ID3D12GraphicsCommandListResetSerializer(CommandListReset));
+  ID3D12GraphicsCommandListResetCommand commandListReset;
+  commandListReset.Key = m_StateService.GetUniqueCommandKey();
+  commandListReset.m_Object.Key = m_CommandListKey;
+  commandListReset.m_pAllocator.Key = m_CommandAllocatorKey;
+  commandListReset.m_pInitialState.Key = 0;
+  m_StateService.GetRecorder().Record(ID3D12GraphicsCommandListResetSerializer(commandListReset));
 
   for (const auto key : auxiliaryPlacedResourceKeys) {
     IUnknownReleaseCommand releaseCommand;
@@ -578,11 +578,11 @@ void ResourceContentRestore::InitRestoreUnmappableResources(bool backBuffer) {
   heapPropertiesUpload.CreationNodeMask = 1;
   heapPropertiesUpload.VisibleNodeMask = 1;
 
-  unsigned DeviceKey = m_StateService.GetDeviceKey();
+  unsigned deviceKey = m_StateService.GetDeviceKey();
 
   ID3D12DeviceCreateCommittedResourceCommand createUploadResource;
   createUploadResource.Key = m_StateService.GetUniqueCommandKey();
-  createUploadResource.m_Object.Key = DeviceKey;
+  createUploadResource.m_Object.Key = deviceKey;
   createUploadResource.m_pHeapProperties.Value = &heapPropertiesUpload;
   createUploadResource.m_HeapFlags.Value = D3D12_HEAP_FLAG_NONE;
   createUploadResource.m_pDesc.Value = &resourceDesc;
@@ -615,7 +615,7 @@ void ResourceContentRestore::InitRestoreUnmappableResources(bool backBuffer) {
     commandQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_COPY;
     ID3D12DeviceCreateCommandQueueCommand CreateCommandQueue;
     CreateCommandQueue.Key = m_StateService.GetUniqueCommandKey();
-    CreateCommandQueue.m_Object.Key = DeviceKey;
+    CreateCommandQueue.m_Object.Key = deviceKey;
     CreateCommandQueue.m_pDesc.Value = &commandQueueDesc;
     CreateCommandQueue.m_riid.Value = IID_ID3D12CommandQueue;
     CreateCommandQueue.m_ppCommandQueue.Key = m_CommandQueueKey;
@@ -626,7 +626,7 @@ void ResourceContentRestore::InitRestoreUnmappableResources(bool backBuffer) {
   m_CommandAllocatorKey = m_StateService.GetUniqueObjectKey();
   ID3D12DeviceCreateCommandAllocatorCommand createCommandAllocator;
   createCommandAllocator.Key = m_StateService.GetUniqueCommandKey();
-  createCommandAllocator.m_Object.Key = DeviceKey;
+  createCommandAllocator.m_Object.Key = deviceKey;
   createCommandAllocator.m_type.Value = D3D12_COMMAND_LIST_TYPE_COPY;
   createCommandAllocator.m_riid.Value = IID_ID3D12CommandAllocator;
   createCommandAllocator.m_ppCommandAllocator.Key = m_CommandAllocatorKey;
@@ -636,7 +636,7 @@ void ResourceContentRestore::InitRestoreUnmappableResources(bool backBuffer) {
   m_CommandListKey = m_StateService.GetUniqueObjectKey();
   ID3D12DeviceCreateCommandListCommand createCommandList;
   createCommandList.Key = m_StateService.GetUniqueCommandKey();
-  createCommandList.m_Object.Key = DeviceKey;
+  createCommandList.m_Object.Key = deviceKey;
   createCommandList.m_nodeMask.Value = 0;
   createCommandList.m_pCommandAllocator.Key = createCommandAllocator.m_ppCommandAllocator.Key;
   createCommandList.m_type.Value = D3D12_COMMAND_LIST_TYPE_COPY;
@@ -648,7 +648,7 @@ void ResourceContentRestore::InitRestoreUnmappableResources(bool backBuffer) {
   m_FenceKey = m_StateService.GetUniqueObjectKey();
   ID3D12DeviceCreateFenceCommand createFence;
   createFence.Key = m_StateService.GetUniqueCommandKey();
-  createFence.m_Object.Key = DeviceKey;
+  createFence.m_Object.Key = deviceKey;
   createFence.m_InitialValue.Value = 0;
   createFence.m_Flags.Value = D3D12_FENCE_FLAG_NONE;
   createFence.m_riid.Value = IID_ID3D12Fence;
@@ -738,49 +738,49 @@ ID3D12Resource* ResourceContentRestore::CreateAuxiliaryPlacedResource(unsigned p
   ID3D12Resource* auxiliaryResource{};
   if (resourceObjectState->CreationCommand->GetId() ==
       CommandId::ID_ID3D12DEVICE_CREATEPLACEDRESOURCE) {
-    auto* Command = static_cast<ID3D12DeviceCreatePlacedResourceCommand*>(
+    auto* command = static_cast<ID3D12DeviceCreatePlacedResourceCommand*>(
         resourceObjectState->CreationCommand.get());
     HRESULT hr = m_Device->CreatePlacedResource(
-        Command->m_pHeap.Value, Command->m_HeapOffset.Value, Command->m_pDesc.Value,
-        D3D12_RESOURCE_STATE_COPY_SOURCE, Command->m_pOptimizedClearValue.Value,
+        command->m_pHeap.Value, command->m_HeapOffset.Value, command->m_pDesc.Value,
+        D3D12_RESOURCE_STATE_COPY_SOURCE, command->m_pOptimizedClearValue.Value,
         IID_PPV_ARGS(&auxiliaryResource));
     GITS_ASSERT(hr == S_OK);
   } else if (resourceObjectState->CreationCommand->GetId() ==
              CommandId::ID_ID3D12DEVICE8_CREATEPLACEDRESOURCE1) {
-    auto* Command = static_cast<ID3D12Device8CreatePlacedResource1Command*>(
+    auto* command = static_cast<ID3D12Device8CreatePlacedResource1Command*>(
         resourceObjectState->CreationCommand.get());
     Microsoft::WRL::ComPtr<ID3D12Device8> device;
     HRESULT hr = m_Device->QueryInterface(IID_PPV_ARGS(&device));
     GITS_ASSERT(hr == S_OK);
-    hr = device->CreatePlacedResource1(Command->m_pHeap.Value, Command->m_HeapOffset.Value,
-                                       Command->m_pDesc.Value, D3D12_RESOURCE_STATE_COPY_SOURCE,
-                                       Command->m_pOptimizedClearValue.Value,
+    hr = device->CreatePlacedResource1(command->m_pHeap.Value, command->m_HeapOffset.Value,
+                                       command->m_pDesc.Value, D3D12_RESOURCE_STATE_COPY_SOURCE,
+                                       command->m_pOptimizedClearValue.Value,
                                        IID_PPV_ARGS(&auxiliaryResource));
     GITS_ASSERT(hr == S_OK);
   } else if (resourceObjectState->CreationCommand->GetId() ==
              CommandId::ID_ID3D12DEVICE10_CREATEPLACEDRESOURCE2) {
-    auto* Command = static_cast<ID3D12Device10CreatePlacedResource2Command*>(
+    auto* command = static_cast<ID3D12Device10CreatePlacedResource2Command*>(
         resourceObjectState->CreationCommand.get());
     Microsoft::WRL::ComPtr<ID3D12Device10> device;
     HRESULT hr = m_Device->QueryInterface(IID_PPV_ARGS(&device));
     GITS_ASSERT(hr == S_OK);
     hr = device->CreatePlacedResource2(
-        Command->m_pHeap.Value, Command->m_HeapOffset.Value, Command->m_pDesc.Value,
-        D3D12_BARRIER_LAYOUT_COPY_SOURCE, Command->m_pOptimizedClearValue.Value,
-        Command->m_NumCastableFormats.Value, Command->m_pCastableFormats.Value,
+        command->m_pHeap.Value, command->m_HeapOffset.Value, command->m_pDesc.Value,
+        D3D12_BARRIER_LAYOUT_COPY_SOURCE, command->m_pOptimizedClearValue.Value,
+        command->m_NumCastableFormats.Value, command->m_pCastableFormats.Value,
         IID_PPV_ARGS(&auxiliaryResource));
     GITS_ASSERT(hr == S_OK);
   } else if (resourceObjectState->CreationCommand->GetId() ==
              CommandId::INTC_D3D12_CREATEPLACEDRESOURCE) {
-    auto* Command = static_cast<INTC_D3D12_CreatePlacedResourceCommand*>(
+    auto* command = static_cast<INTC_D3D12_CreatePlacedResourceCommand*>(
         resourceObjectState->CreationCommand.get());
     Microsoft::WRL::ComPtr<ID3D12Device8> device;
     HRESULT hr = m_Device->QueryInterface(IID_PPV_ARGS(&device));
     GITS_ASSERT(hr == S_OK);
     hr = INTC_D3D12_CreatePlacedResource(
-        Command->m_pExtensionContext.Value, Command->m_pHeap.Value, Command->m_HeapOffset.Value,
-        Command->m_pDesc.Value, D3D12_RESOURCE_STATE_COPY_SOURCE,
-        Command->m_pOptimizedClearValue.Value, IID_PPV_ARGS(&auxiliaryResource));
+        command->m_pExtensionContext.Value, command->m_pHeap.Value, command->m_HeapOffset.Value,
+        command->m_pDesc.Value, D3D12_RESOURCE_STATE_COPY_SOURCE,
+        command->m_pOptimizedClearValue.Value, IID_PPV_ARGS(&auxiliaryResource));
     GITS_ASSERT(hr == S_OK);
   } else {
     GITS_ASSERT(false && "Unhandled ObjectState");
@@ -795,71 +795,71 @@ unsigned ResourceContentRestore::CreateSubcaptureAuxiliaryPlacedResource(
   unsigned auxiliaryResourceKey{};
   if (resourceObjectState->CreationCommand->GetId() ==
       CommandId::ID_ID3D12DEVICE_CREATEPLACEDRESOURCE) {
-    auto* Command = static_cast<ID3D12DeviceCreatePlacedResourceCommand*>(
+    auto* command = static_cast<ID3D12DeviceCreatePlacedResourceCommand*>(
         resourceObjectState->CreationCommand.get());
 
     ID3D12DeviceCreatePlacedResourceCommand c;
     c.Key = m_StateService.GetUniqueCommandKey();
-    c.m_Object.Key = Command->m_Object.Key;
-    c.m_pHeap.Key = Command->m_pHeap.Key;
-    c.m_HeapOffset.Value = Command->m_HeapOffset.Value;
-    c.m_pDesc.Value = Command->m_pDesc.Value;
+    c.m_Object.Key = command->m_Object.Key;
+    c.m_pHeap.Key = command->m_pHeap.Key;
+    c.m_HeapOffset.Value = command->m_HeapOffset.Value;
+    c.m_pDesc.Value = command->m_pDesc.Value;
     c.m_InitialState.Value = D3D12_RESOURCE_STATE_COPY_DEST;
-    c.m_pOptimizedClearValue.Value = Command->m_pOptimizedClearValue.Value;
-    c.m_riid.Value = Command->m_riid.Value;
+    c.m_pOptimizedClearValue.Value = command->m_pOptimizedClearValue.Value;
+    c.m_riid.Value = command->m_riid.Value;
     c.m_ppvResource.Key = m_StateService.GetUniqueObjectKey();
     m_StateService.GetRecorder().Record(ID3D12DeviceCreatePlacedResourceSerializer(c));
     auxiliaryResourceKey = c.m_ppvResource.Key;
   } else if (resourceObjectState->CreationCommand->GetId() ==
              CommandId::ID_ID3D12DEVICE8_CREATEPLACEDRESOURCE1) {
-    auto* Command = static_cast<ID3D12Device8CreatePlacedResource1Command*>(
+    auto* command = static_cast<ID3D12Device8CreatePlacedResource1Command*>(
         resourceObjectState->CreationCommand.get());
 
     ID3D12Device8CreatePlacedResource1Command c;
     c.Key = m_StateService.GetUniqueCommandKey();
-    c.m_Object.Key = Command->m_Object.Key;
-    c.m_pHeap.Key = Command->m_pHeap.Key;
-    c.m_HeapOffset.Value = Command->m_HeapOffset.Value;
-    c.m_pDesc.Value = Command->m_pDesc.Value;
+    c.m_Object.Key = command->m_Object.Key;
+    c.m_pHeap.Key = command->m_pHeap.Key;
+    c.m_HeapOffset.Value = command->m_HeapOffset.Value;
+    c.m_pDesc.Value = command->m_pDesc.Value;
     c.m_InitialState.Value = D3D12_RESOURCE_STATE_COPY_DEST;
-    c.m_pOptimizedClearValue.Value = Command->m_pOptimizedClearValue.Value;
-    c.m_riid.Value = Command->m_riid.Value;
+    c.m_pOptimizedClearValue.Value = command->m_pOptimizedClearValue.Value;
+    c.m_riid.Value = command->m_riid.Value;
     c.m_ppvResource.Key = m_StateService.GetUniqueObjectKey();
     m_StateService.GetRecorder().Record(ID3D12Device8CreatePlacedResource1Serializer(c));
     auxiliaryResourceKey = c.m_ppvResource.Key;
   } else if (resourceObjectState->CreationCommand->GetId() ==
              CommandId::ID_ID3D12DEVICE10_CREATEPLACEDRESOURCE2) {
-    auto* Command = static_cast<ID3D12Device10CreatePlacedResource2Command*>(
+    auto* command = static_cast<ID3D12Device10CreatePlacedResource2Command*>(
         resourceObjectState->CreationCommand.get());
 
     ID3D12Device10CreatePlacedResource2Command c;
     c.Key = m_StateService.GetUniqueCommandKey();
-    c.m_Object.Key = Command->m_Object.Key;
-    c.m_pHeap.Key = Command->m_pHeap.Key;
-    c.m_HeapOffset.Value = Command->m_HeapOffset.Value;
-    c.m_pDesc.Value = Command->m_pDesc.Value;
+    c.m_Object.Key = command->m_Object.Key;
+    c.m_pHeap.Key = command->m_pHeap.Key;
+    c.m_HeapOffset.Value = command->m_HeapOffset.Value;
+    c.m_pDesc.Value = command->m_pDesc.Value;
     c.m_InitialLayout.Value = D3D12_BARRIER_LAYOUT_COPY_DEST;
-    c.m_pOptimizedClearValue.Value = Command->m_pOptimizedClearValue.Value;
-    c.m_NumCastableFormats.Value = Command->m_NumCastableFormats.Value;
-    c.m_pCastableFormats.Value = Command->m_pCastableFormats.Value;
-    c.m_riid.Value = Command->m_riid.Value;
+    c.m_pOptimizedClearValue.Value = command->m_pOptimizedClearValue.Value;
+    c.m_NumCastableFormats.Value = command->m_NumCastableFormats.Value;
+    c.m_pCastableFormats.Value = command->m_pCastableFormats.Value;
+    c.m_riid.Value = command->m_riid.Value;
     c.m_ppvResource.Key = m_StateService.GetUniqueObjectKey();
     m_StateService.GetRecorder().Record(ID3D12Device10CreatePlacedResource2Serializer(c));
     auxiliaryResourceKey = c.m_ppvResource.Key;
   } else if (resourceObjectState->CreationCommand->GetId() ==
              CommandId::INTC_D3D12_CREATEPLACEDRESOURCE) {
-    auto* Command = static_cast<INTC_D3D12_CreatePlacedResourceCommand*>(
+    auto* command = static_cast<INTC_D3D12_CreatePlacedResourceCommand*>(
         resourceObjectState->CreationCommand.get());
 
     INTC_D3D12_CreatePlacedResourceCommand c;
     c.Key = m_StateService.GetUniqueCommandKey();
-    c.m_pExtensionContext.Key = Command->m_pExtensionContext.Key;
-    c.m_pHeap.Key = Command->m_pHeap.Key;
-    c.m_HeapOffset.Value = Command->m_HeapOffset.Value;
-    c.m_pDesc.Value = Command->m_pDesc.Value;
+    c.m_pExtensionContext.Key = command->m_pExtensionContext.Key;
+    c.m_pHeap.Key = command->m_pHeap.Key;
+    c.m_HeapOffset.Value = command->m_HeapOffset.Value;
+    c.m_pDesc.Value = command->m_pDesc.Value;
     c.m_InitialState.Value = D3D12_RESOURCE_STATE_COPY_DEST;
-    c.m_pOptimizedClearValue.Value = Command->m_pOptimizedClearValue.Value;
-    c.m_riid.Value = Command->m_riid.Value;
+    c.m_pOptimizedClearValue.Value = command->m_pOptimizedClearValue.Value;
+    c.m_riid.Value = command->m_riid.Value;
     c.m_ppvResource.Key = m_StateService.GetUniqueObjectKey();
     m_StateService.GetRecorder().Record(INTC_D3D12_CreatePlacedResourceSerializer(c));
     auxiliaryResourceKey = c.m_ppvResource.Key;
@@ -882,22 +882,22 @@ void ResourceContentRestore::EvictPrevResidencyObjects() {
   HRESULT hr = m_Device->Evict(residencyObjects.size(), residencyObjects.data());
   GITS_ASSERT(hr == S_OK);
 
-  unsigned DeviceKey = m_StateService.GetDeviceKey();
+  unsigned deviceKey = m_StateService.GetDeviceKey();
 
-  ID3D12DeviceEvictCommand Evict;
-  Evict.Key = m_StateService.GetUniqueCommandKey();
-  Evict.m_Object.Key = DeviceKey;
-  Evict.m_NumObjects.Value = static_cast<UINT>(residencyKeys.size());
+  ID3D12DeviceEvictCommand evict;
+  evict.Key = m_StateService.GetUniqueCommandKey();
+  evict.m_Object.Key = deviceKey;
+  evict.m_NumObjects.Value = static_cast<UINT>(residencyKeys.size());
   ID3D12Pageable* fakePtr = reinterpret_cast<ID3D12Pageable*>(1);
-  Evict.m_ppObjects.Value = &fakePtr;
-  Evict.m_ppObjects.Size = residencyKeys.size();
+  evict.m_ppObjects.Value = &fakePtr;
+  evict.m_ppObjects.Size = residencyKeys.size();
   for (unsigned key : residencyKeys) {
-    Evict.m_ppObjects.Keys.push_back(key);
+    evict.m_ppObjects.Keys.push_back(key);
   }
-  m_StateService.GetRecorder().Record(ID3D12DeviceEvictSerializer(Evict));
+  m_StateService.GetRecorder().Record(ID3D12DeviceEvictSerializer(evict));
 }
 
-void ResourceContentRestore::CopySourceBarrier(ResourceInfo& state, bool RestoreState) {
+void ResourceContentRestore::CopySourceBarrier(ResourceInfo& state, bool restoreState) {
   ResourceStateTrackingService::ResourceStates& resourceStates =
       m_StateService.GetResourceStateTrackingService().GetResourceStates(state.Key);
   std::vector<D3D12_RESOURCE_BARRIER> barriers;
@@ -911,9 +911,9 @@ void ResourceContentRestore::CopySourceBarrier(ResourceInfo& state, bool Restore
         barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
         barrier.Transition.pResource = state.Resource;
         barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-        barrier.Transition.StateBefore = RestoreState ? D3D12_RESOURCE_STATE_COPY_SOURCE
+        barrier.Transition.StateBefore = restoreState ? D3D12_RESOURCE_STATE_COPY_SOURCE
                                                       : resourceStates.SubresourceStates[0].State;
-        barrier.Transition.StateAfter = RestoreState ? resourceStates.SubresourceStates[0].State
+        barrier.Transition.StateAfter = restoreState ? resourceStates.SubresourceStates[0].State
                                                      : D3D12_RESOURCE_STATE_COPY_SOURCE;
         barriers.push_back(barrier);
       }
@@ -921,15 +921,15 @@ void ResourceContentRestore::CopySourceBarrier(ResourceInfo& state, bool Restore
       if (resourceStates.SubresourceStates[0].Layout != D3D12_BARRIER_LAYOUT_COPY_SOURCE &&
           resourceStates.SubresourceStates[0].Layout != D3D12_BARRIER_LAYOUT_UNDEFINED) {
         D3D12_TEXTURE_BARRIER* barrier = new D3D12_TEXTURE_BARRIER{};
-        barrier->SyncBefore = RestoreState ? D3D12_BARRIER_SYNC_ALL : D3D12_BARRIER_SYNC_ALL;
-        barrier->SyncAfter = RestoreState ? D3D12_BARRIER_SYNC_ALL : D3D12_BARRIER_SYNC_ALL;
+        barrier->SyncBefore = restoreState ? D3D12_BARRIER_SYNC_ALL : D3D12_BARRIER_SYNC_ALL;
+        barrier->SyncAfter = restoreState ? D3D12_BARRIER_SYNC_ALL : D3D12_BARRIER_SYNC_ALL;
         barrier->AccessBefore =
-            RestoreState ? D3D12_BARRIER_ACCESS_COPY_SOURCE : D3D12_BARRIER_ACCESS_COMMON;
+            restoreState ? D3D12_BARRIER_ACCESS_COPY_SOURCE : D3D12_BARRIER_ACCESS_COMMON;
         barrier->AccessAfter =
-            RestoreState ? D3D12_BARRIER_ACCESS_COMMON : D3D12_BARRIER_ACCESS_COPY_SOURCE;
-        barrier->LayoutBefore = RestoreState ? D3D12_BARRIER_LAYOUT_COPY_SOURCE
+            restoreState ? D3D12_BARRIER_ACCESS_COMMON : D3D12_BARRIER_ACCESS_COPY_SOURCE;
+        barrier->LayoutBefore = restoreState ? D3D12_BARRIER_LAYOUT_COPY_SOURCE
                                              : resourceStates.SubresourceStates[0].Layout;
-        barrier->LayoutAfter = RestoreState ? resourceStates.SubresourceStates[0].Layout
+        barrier->LayoutAfter = restoreState ? resourceStates.SubresourceStates[0].Layout
                                             : D3D12_BARRIER_LAYOUT_COPY_SOURCE;
         barrier->pResource = state.Resource;
         barrier->Subresources.IndexOrFirstMipLevel = 0;
@@ -949,9 +949,9 @@ void ResourceContentRestore::CopySourceBarrier(ResourceInfo& state, bool Restore
           barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
           barrier.Transition.pResource = state.Resource;
           barrier.Transition.Subresource = i;
-          barrier.Transition.StateBefore = RestoreState ? D3D12_RESOURCE_STATE_COPY_SOURCE
+          barrier.Transition.StateBefore = restoreState ? D3D12_RESOURCE_STATE_COPY_SOURCE
                                                         : resourceStates.SubresourceStates[i].State;
-          barrier.Transition.StateAfter = RestoreState ? resourceStates.SubresourceStates[i].State
+          barrier.Transition.StateAfter = restoreState ? resourceStates.SubresourceStates[i].State
                                                        : D3D12_RESOURCE_STATE_COPY_SOURCE;
           barriers.push_back(barrier);
         }
@@ -959,15 +959,15 @@ void ResourceContentRestore::CopySourceBarrier(ResourceInfo& state, bool Restore
         if (resourceStates.SubresourceStates[i].Layout != D3D12_BARRIER_LAYOUT_COPY_SOURCE &&
             resourceStates.SubresourceStates[i].Layout != D3D12_BARRIER_LAYOUT_UNDEFINED) {
           D3D12_TEXTURE_BARRIER* barrier = new D3D12_TEXTURE_BARRIER{};
-          barrier->SyncBefore = RestoreState ? D3D12_BARRIER_SYNC_ALL : D3D12_BARRIER_SYNC_ALL;
-          barrier->SyncAfter = RestoreState ? D3D12_BARRIER_SYNC_ALL : D3D12_BARRIER_SYNC_ALL;
+          barrier->SyncBefore = restoreState ? D3D12_BARRIER_SYNC_ALL : D3D12_BARRIER_SYNC_ALL;
+          barrier->SyncAfter = restoreState ? D3D12_BARRIER_SYNC_ALL : D3D12_BARRIER_SYNC_ALL;
           barrier->AccessBefore =
-              RestoreState ? D3D12_BARRIER_ACCESS_COPY_SOURCE : D3D12_BARRIER_ACCESS_COMMON;
+              restoreState ? D3D12_BARRIER_ACCESS_COPY_SOURCE : D3D12_BARRIER_ACCESS_COMMON;
           barrier->AccessAfter =
-              RestoreState ? D3D12_BARRIER_ACCESS_COMMON : D3D12_BARRIER_ACCESS_COPY_SOURCE;
-          barrier->LayoutBefore = RestoreState ? D3D12_BARRIER_LAYOUT_COPY_SOURCE
+              restoreState ? D3D12_BARRIER_ACCESS_COMMON : D3D12_BARRIER_ACCESS_COPY_SOURCE;
+          barrier->LayoutBefore = restoreState ? D3D12_BARRIER_LAYOUT_COPY_SOURCE
                                                : resourceStates.SubresourceStates[i].Layout;
-          barrier->LayoutAfter = RestoreState ? resourceStates.SubresourceStates[i].Layout
+          barrier->LayoutAfter = restoreState ? resourceStates.SubresourceStates[i].Layout
                                               : D3D12_BARRIER_LAYOUT_COPY_SOURCE;
           barrier->pResource = state.Resource;
           barrier->Subresources.IndexOrFirstMipLevel = i;

@@ -136,7 +136,7 @@ unsigned CpuDescriptorsService::DescriptorHeap<SIZE>::preserveDescriptor(unsigne
   m_DescriptorUsage.set(preservedIndex);
 
   ID3D12DeviceCopyDescriptorsSimpleCommand copy;
-  copy.Key = m_Service.m_CommandListExecutionService.getUniqueCommandKey();
+  copy.Key = m_Service.m_CommandListExecutionService.GetUniqueCommandKey();
   copy.m_Object.Key = m_Service.m_DeviceKey;
   copy.m_NumDescriptors.Value = 1;
   copy.m_DestDescriptorRangeStart.InterfaceKey = m_DescriptorHeapKey;
@@ -151,7 +151,7 @@ unsigned CpuDescriptorsService::DescriptorHeap<SIZE>::preserveDescriptor(unsigne
 
 template <unsigned SIZE>
 void CpuDescriptorsService::DescriptorHeap<SIZE>::createDescriptorHeap() {
-  m_DescriptorHeapKey = m_Service.m_CommandListExecutionService.getUniqueObjectKey();
+  m_DescriptorHeapKey = m_Service.m_CommandListExecutionService.GetUniqueObjectKey();
 
   D3D12_DESCRIPTOR_HEAP_DESC desc{};
   desc.Type = m_Type;
@@ -160,7 +160,7 @@ void CpuDescriptorsService::DescriptorHeap<SIZE>::createDescriptorHeap() {
   desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 
   ID3D12DeviceCreateDescriptorHeapCommand create;
-  create.Key = m_Service.m_CommandListExecutionService.getUniqueCommandKey();
+  create.Key = m_Service.m_CommandListExecutionService.GetUniqueCommandKey();
   create.m_Object.Key = m_Service.m_DeviceKey;
   create.m_pDescriptorHeapDesc.Value = &desc;
   create.m_riid.Value = IID_ID3D12DescriptorHeap;

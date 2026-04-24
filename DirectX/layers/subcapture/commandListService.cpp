@@ -45,20 +45,20 @@ void CommandListService::RestoreCommandLists() {
       continue;
     }
     CommandListState* state = it.second;
-    if (state->m_AllocatorKey && !state->m_Commands.empty()) {
-      if (state->m_Commands.front()->m_Id != CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_RESET) {
-        commandListAllocatorsForReset[state->Key] = state->m_AllocatorKey;
+    if (state->AllocatorKey && !state->Commands.empty()) {
+      if (state->Commands.front()->Id != CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_RESET) {
+        commandListAllocatorsForReset[state->Key] = state->AllocatorKey;
       }
     }
-    for (CommandListCommand* Command : state->m_Commands) {
-      commandsByKey[Command->m_CommandKey] = Command;
+    for (CommandListCommand* command : state->Commands) {
+      commandsByKey[command->CommandKey] = command;
     }
   }
 
   for (auto& it : commandsByKey) {
-    CommandListCommand* Command = it.second;
+    CommandListCommand* command = it.second;
 
-    auto itReset = commandListAllocatorsForReset.find(Command->m_CommandListKey);
+    auto itReset = commandListAllocatorsForReset.find(command->CommandListKey);
     if (itReset != commandListAllocatorsForReset.end()) {
       ID3D12GraphicsCommandListResetCommand reset;
       reset.Key = m_StateService.GetUniqueCommandKey();
@@ -68,28 +68,28 @@ void CommandListService::RestoreCommandLists() {
       commandListAllocatorsForReset.erase(itReset);
     }
 
-    if (Command->m_Id == CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_OMSETRENDERTARGETS) {
-      RestoreCommandState(static_cast<CommandListOMSetRenderTargets*>(Command));
-    } else if (Command->m_Id == CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_CLEARRENDERTARGETVIEW) {
-      RestoreCommandState(static_cast<CommandListClearRenderTargetView*>(Command));
-    } else if (Command->m_Id == CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_CLEARDEPTHSTENCILVIEW) {
-      RestoreCommandState(static_cast<CommandListClearDepthStencilView*>(Command));
-    } else if (Command->m_Id ==
+    if (command->Id == CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_OMSETRENDERTARGETS) {
+      RestoreCommandState(static_cast<CommandListOMSetRenderTargets*>(command));
+    } else if (command->Id == CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_CLEARRENDERTARGETVIEW) {
+      RestoreCommandState(static_cast<CommandListClearRenderTargetView*>(command));
+    } else if (command->Id == CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_CLEARDEPTHSTENCILVIEW) {
+      RestoreCommandState(static_cast<CommandListClearDepthStencilView*>(command));
+    } else if (command->Id ==
                CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_CLEARUNORDEREDACCESSVIEWUINT) {
-      RestoreCommandState(static_cast<CommandListClearUnorderedAccessViewUint*>(Command));
-    } else if (Command->m_Id ==
+      RestoreCommandState(static_cast<CommandListClearUnorderedAccessViewUint*>(command));
+    } else if (command->Id ==
                CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_CLEARUNORDEREDACCESSVIEWFLOAT) {
-      RestoreCommandState(static_cast<CommandListClearUnorderedAccessViewFloat*>(Command));
+      RestoreCommandState(static_cast<CommandListClearUnorderedAccessViewFloat*>(command));
     } else {
-      m_StateService.GetRecorder().Record(*Command->m_CommandSerializer);
+      m_StateService.GetRecorder().Record(*command->CommandSerializer);
     }
   }
 }
 
-void CommandListService::RestoreCommandState(CommandListOMSetRenderTargets* Command) {
+void CommandListService::RestoreCommandState(CommandListOMSetRenderTargets* command) {
   bool changed = false;
-  for (unsigned i = 0; i < Command->m_RenderTargetViews.size(); ++i) {
-    D3D12RenderTargetViewState* view = Command->m_RenderTargetViews[i].get();
+  for (unsigned i = 0; i < command->RenderTargetViews.size(); ++i) {
+    D3D12RenderTargetViewState* view = command->RenderTargetViews[i].get();
     if (view) {
       DescriptorState* descriptor = m_StateService.GetDescriptorService().GetDescriptorState(
           view->DestDescriptorKey, view->DestDescriptorIndex);
@@ -99,7 +99,7 @@ void CommandListService::RestoreCommandState(CommandListOMSetRenderTargets* Comm
       }
     }
   }
-  D3D12DepthStencilViewState* view = Command->m_DepthStencilView.get();
+  D3D12DepthStencilViewState* view = command->DepthStencilView.get();
   if (view) {
     DescriptorState* descriptor = m_StateService.GetDescriptorService().GetDescriptorState(
         view->DestDescriptorKey, view->DestDescriptorIndex);
@@ -112,22 +112,22 @@ void CommandListService::RestoreCommandState(CommandListOMSetRenderTargets* Comm
   if (changed) {
     ID3D12GraphicsCommandListOMSetRenderTargetsCommand c;
     c.Key = m_StateService.GetUniqueCommandKey();
-    c.m_Object.Key = Command->m_CommandListKey;
-    c.m_NumRenderTargetDescriptors.Value = Command->m_RenderTargetViews.size();
-    c.m_RTsSingleHandleToDescriptorRange.Value = Command->m_RtsSingleHandleToDescriptorRange;
-    c.m_pRenderTargetDescriptors.InterfaceKeys.resize(Command->m_RenderTargetViews.size());
-    c.m_pRenderTargetDescriptors.Indexes.resize(Command->m_RenderTargetViews.size());
-    c.m_pRenderTargetDescriptors.Size = Command->m_RenderTargetViews.size();
+    c.m_Object.Key = command->CommandListKey;
+    c.m_NumRenderTargetDescriptors.Value = command->RenderTargetViews.size();
+    c.m_RTsSingleHandleToDescriptorRange.Value = command->RtsSingleHandleToDescriptorRange;
+    c.m_pRenderTargetDescriptors.InterfaceKeys.resize(command->RenderTargetViews.size());
+    c.m_pRenderTargetDescriptors.Indexes.resize(command->RenderTargetViews.size());
+    c.m_pRenderTargetDescriptors.Size = command->RenderTargetViews.size();
     c.m_pRenderTargetDescriptors.Value =
         static_cast<D3D12_CPU_DESCRIPTOR_HANDLE*>(m_StateService.GetUniqueFakePointer());
-    for (unsigned i = 0; i < Command->m_RenderTargetViews.size(); ++i) {
-      D3D12RenderTargetViewState* view = Command->m_RenderTargetViews[i].get();
+    for (unsigned i = 0; i < command->RenderTargetViews.size(); ++i) {
+      D3D12RenderTargetViewState* view = command->RenderTargetViews[i].get();
       if (view) {
         c.m_pRenderTargetDescriptors.InterfaceKeys[i] = view->DestDescriptorKey;
         c.m_pRenderTargetDescriptors.Indexes[i] = view->DestDescriptorIndex;
       }
     }
-    D3D12DepthStencilViewState* view = Command->m_DepthStencilView.get();
+    D3D12DepthStencilViewState* view = command->DepthStencilView.get();
     if (view) {
       c.m_pDepthStencilDescriptor.InterfaceKeys.resize(1);
       c.m_pDepthStencilDescriptor.Indexes.resize(1);
@@ -139,13 +139,13 @@ void CommandListService::RestoreCommandState(CommandListOMSetRenderTargets* Comm
     }
     m_StateService.GetRecorder().Record(ID3D12GraphicsCommandListOMSetRenderTargetsSerializer(c));
   } else {
-    m_StateService.GetRecorder().Record(*Command->m_CommandSerializer);
+    m_StateService.GetRecorder().Record(*command->CommandSerializer);
   }
 }
 
-void CommandListService::RestoreCommandState(CommandListClearRenderTargetView* Command) {
+void CommandListService::RestoreCommandState(CommandListClearRenderTargetView* command) {
   bool changed = false;
-  D3D12RenderTargetViewState* view = Command->m_RenderTargetView.get();
+  D3D12RenderTargetViewState* view = command->RenderTargetView.get();
   if (view) {
     DescriptorState* descriptor = m_StateService.GetDescriptorService().GetDescriptorState(
         view->DestDescriptorKey, view->DestDescriptorIndex);
@@ -157,28 +157,28 @@ void CommandListService::RestoreCommandState(CommandListClearRenderTargetView* C
   if (changed) {
     ID3D12GraphicsCommandListClearRenderTargetViewCommand c;
     c.Key = m_StateService.GetUniqueCommandKey();
-    c.m_Object.Key = Command->m_CommandListKey;
+    c.m_Object.Key = command->CommandListKey;
     c.m_RenderTargetView.Value = view->DestDescriptor;
     c.m_RenderTargetView.InterfaceKey = view->DestDescriptorKey;
     c.m_RenderTargetView.Index = view->DestDescriptorIndex;
     for (unsigned i = 0; i < 4; ++i) {
-      c.m_ColorRGBA.Value[i] = Command->m_ColorRGBA[i];
+      c.m_ColorRGBA.Value[i] = command->ColorRGBA[i];
     }
-    if (!Command->m_Rects.empty()) {
-      c.m_NumRects.Value = Command->m_Rects.size();
-      c.m_pRects.Size = Command->m_Rects.size();
-      c.m_pRects.Value = Command->m_Rects.data();
+    if (!command->Rects.empty()) {
+      c.m_NumRects.Value = command->Rects.size();
+      c.m_pRects.Size = command->Rects.size();
+      c.m_pRects.Value = command->Rects.data();
     }
     m_StateService.GetRecorder().Record(
         ID3D12GraphicsCommandListClearRenderTargetViewSerializer(c));
   } else {
-    m_StateService.GetRecorder().Record(*Command->m_CommandSerializer);
+    m_StateService.GetRecorder().Record(*command->CommandSerializer);
   }
 }
 
-void CommandListService::RestoreCommandState(CommandListClearDepthStencilView* Command) {
+void CommandListService::RestoreCommandState(CommandListClearDepthStencilView* command) {
   bool changed = false;
-  D3D12DepthStencilViewState* view = Command->m_DepthStencilView.get();
+  D3D12DepthStencilViewState* view = command->m_DepthStencilView.get();
   if (view) {
     DescriptorState* descriptor = m_StateService.GetDescriptorService().GetDescriptorState(
         view->DestDescriptorKey, view->DestDescriptorIndex);
@@ -190,29 +190,29 @@ void CommandListService::RestoreCommandState(CommandListClearDepthStencilView* C
   if (changed) {
     ID3D12GraphicsCommandListClearDepthStencilViewCommand c;
     c.Key = m_StateService.GetUniqueCommandKey();
-    c.m_Object.Key = Command->m_CommandListKey;
+    c.m_Object.Key = command->CommandListKey;
     c.m_DepthStencilView.Value = view->DestDescriptor;
     c.m_DepthStencilView.InterfaceKey = view->DestDescriptorKey;
     c.m_DepthStencilView.Index = view->DestDescriptorIndex;
-    c.m_Depth.Value = Command->m_Depth;
-    c.m_Stencil.Value = Command->m_Stencil;
-    if (!Command->m_Rects.empty()) {
-      c.m_NumRects.Value = Command->m_Rects.size();
-      c.m_pRects.Size = Command->m_Rects.size();
-      c.m_pRects.Value = Command->m_Rects.data();
+    c.m_Depth.Value = command->Depth;
+    c.m_Stencil.Value = command->Stencil;
+    if (!command->Rects.empty()) {
+      c.m_NumRects.Value = command->Rects.size();
+      c.m_pRects.Size = command->Rects.size();
+      c.m_pRects.Value = command->Rects.data();
     }
     m_StateService.GetRecorder().Record(
         ID3D12GraphicsCommandListClearDepthStencilViewSerializer(c));
   } else {
-    m_StateService.GetRecorder().Record(*Command->m_CommandSerializer);
+    m_StateService.GetRecorder().Record(*command->CommandSerializer);
   }
 }
 
 template <typename CommandListClearUnorderedAccessView>
-void CommandListService::RestoreCommandState(CommandListClearUnorderedAccessView* Command) {
+void CommandListService::RestoreCommandState(CommandListClearUnorderedAccessView* command) {
   bool changedGpu = false;
   D3D12UnorderedAccessViewState* viewGPUHandleInCurrentHeap =
-      Command->m_ViewGPUHandleInCurrentHeap.get();
+      command->ViewGPUHandleInCurrentHeap.get();
   if (viewGPUHandleInCurrentHeap) {
     DescriptorState* descriptor = m_StateService.GetDescriptorService().GetDescriptorState(
         viewGPUHandleInCurrentHeap->DestDescriptorKey,
@@ -223,7 +223,7 @@ void CommandListService::RestoreCommandState(CommandListClearUnorderedAccessView
     }
   }
   bool changedCpu = false;
-  D3D12UnorderedAccessViewState* viewCPUHandle = Command->m_ViewCPUHandle.get();
+  D3D12UnorderedAccessViewState* viewCPUHandle = command->ViewCPUHandle.get();
   if (viewCPUHandle) {
     DescriptorState* descriptor = m_StateService.GetDescriptorService().GetDescriptorState(
         viewCPUHandle->DestDescriptorKey, viewCPUHandle->DestDescriptorIndex);
@@ -236,7 +236,7 @@ void CommandListService::RestoreCommandState(CommandListClearUnorderedAccessView
     if (changedGpu) {
       ID3D12GraphicsCommandListSetDescriptorHeapsCommand c;
       c.Key = m_StateService.GetUniqueCommandKey();
-      c.m_Object.Key = Command->m_CommandListKey;
+      c.m_Object.Key = command->CommandListKey;
       c.m_NumDescriptorHeaps.Value = 1;
       c.m_ppDescriptorHeaps.Keys.resize(1);
       c.m_ppDescriptorHeaps.Size = 1;
@@ -249,7 +249,7 @@ void CommandListService::RestoreCommandState(CommandListClearUnorderedAccessView
     {
       ID3D12GraphicsCommandListClearUnorderedAccessViewUintCommand c;
       c.Key = m_StateService.GetUniqueCommandKey();
-      c.m_Object.Key = Command->m_CommandListKey;
+      c.m_Object.Key = command->CommandListKey;
       if (viewGPUHandleInCurrentHeap) {
         c.m_ViewGPUHandleInCurrentHeap.InterfaceKey = viewGPUHandleInCurrentHeap->DestDescriptorKey;
         c.m_ViewGPUHandleInCurrentHeap.Index = viewGPUHandleInCurrentHeap->DestDescriptorIndex;
@@ -259,33 +259,33 @@ void CommandListService::RestoreCommandState(CommandListClearUnorderedAccessView
         c.m_ViewCPUHandle.InterfaceKey = viewCPUHandle->DestDescriptorKey;
         c.m_ViewCPUHandle.Index = viewCPUHandle->DestDescriptorIndex;
       }
-      c.m_pResource.Key = Command->m_ResourceKey;
+      c.m_pResource.Key = command->ResourceKey;
       for (unsigned i = 0; i < 4; ++i) {
-        c.m_Values.Value[i] = Command->m_Values[i];
+        c.m_Values.Value[i] = command->Values[i];
       }
-      if (!Command->m_Rects.empty()) {
-        c.m_NumRects.Value = Command->m_Rects.size();
-        c.m_pRects.Size = Command->m_Rects.size();
-        c.m_pRects.Value = Command->m_Rects.data();
+      if (!command->Rects.empty()) {
+        c.m_NumRects.Value = command->Rects.size();
+        c.m_pRects.Size = command->Rects.size();
+        c.m_pRects.Value = command->Rects.data();
       }
       m_StateService.GetRecorder().Record(
           ID3D12GraphicsCommandListClearUnorderedAccessViewUintSerializer(c));
     }
     if (changedGpu) {
-      CommandListState* commandListState = m_CommandListsByKey[Command->m_CommandListKey];
+      CommandListState* commandListState = m_CommandListsByKey[command->CommandListKey];
       ID3D12GraphicsCommandListSetDescriptorHeapsCommand c;
       c.Key = m_StateService.GetUniqueCommandKey();
-      c.m_Object.Key = Command->m_CommandListKey;
-      c.m_NumDescriptorHeaps.Value = commandListState->m_DescriptorHeapKeys.size();
+      c.m_Object.Key = command->CommandListKey;
+      c.m_NumDescriptorHeaps.Value = commandListState->DescriptorHeapKeys.size();
       c.m_ppDescriptorHeaps.Size = c.m_NumDescriptorHeaps.Value;
-      c.m_ppDescriptorHeaps.Keys = commandListState->m_DescriptorHeapKeys;
+      c.m_ppDescriptorHeaps.Keys = commandListState->DescriptorHeapKeys;
       ID3D12DescriptorHeap* fakePointer =
           static_cast<ID3D12DescriptorHeap*>(m_StateService.GetUniqueFakePointer());
       c.m_ppDescriptorHeaps.Value = &fakePointer;
       m_StateService.GetRecorder().Record(ID3D12GraphicsCommandListSetDescriptorHeapsSerializer(c));
     }
   } else {
-    m_StateService.GetRecorder().Record(*Command->m_CommandSerializer);
+    m_StateService.GetRecorder().Record(*command->CommandSerializer);
   }
 }
 

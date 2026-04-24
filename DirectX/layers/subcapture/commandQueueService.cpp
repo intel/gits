@@ -21,41 +21,41 @@ CommandQueueService::~CommandQueueService() {
 }
 
 void CommandQueueService::AddExecuteCommandLists(ID3D12CommandQueueExecuteCommandListsCommand& c) {
-  CommandQueueCommand* Command = new CommandQueueCommand(c.GetId(), c.Key);
-  Command->CommandSerializer.reset(new ID3D12CommandQueueExecuteCommandListsSerializer(c));
-  Commands.push_back(Command);
+  CommandQueueCommand* command = new CommandQueueCommand(c.GetId(), c.Key);
+  command->CommandSerializer.reset(new ID3D12CommandQueueExecuteCommandListsSerializer(c));
+  m_Commands.push_back(command);
 }
 
 void CommandQueueService::AddUpdateTileMappings(ID3D12CommandQueueUpdateTileMappingsCommand& c) {
-  CommandQueueCommand* Command = new CommandQueueCommand(c.GetId(), c.Key);
-  Command->CommandSerializer.reset(new ID3D12CommandQueueUpdateTileMappingsSerializer(c));
-  Commands.push_back(Command);
+  CommandQueueCommand* command = new CommandQueueCommand(c.GetId(), c.Key);
+  command->CommandSerializer.reset(new ID3D12CommandQueueUpdateTileMappingsSerializer(c));
+  m_Commands.push_back(command);
 }
 
 void CommandQueueService::AddCommandQueueWait(ID3D12CommandQueueWaitCommand& c) {
-  CommandQueueCommand* Command = new CommandQueueCommand(c.GetId(), c.Key);
-  Command->CommandSerializer.reset(new ID3D12CommandQueueWaitSerializer(c));
-  Commands.push_back(Command);
+  CommandQueueCommand* command = new CommandQueueCommand(c.GetId(), c.Key);
+  command->CommandSerializer.reset(new ID3D12CommandQueueWaitSerializer(c));
+  m_Commands.push_back(command);
 }
 
 void CommandQueueService::AddCommandQueueSignal(ID3D12CommandQueueSignalCommand& c) {
-  CommandQueueCommand* Command = new CommandQueueCommand(c.GetId(), c.Key);
-  Command->CommandSerializer.reset(new ID3D12CommandQueueSignalSerializer(c));
-  Commands.push_back(Command);
+  CommandQueueCommand* command = new CommandQueueCommand(c.GetId(), c.Key);
+  command->CommandSerializer.reset(new ID3D12CommandQueueSignalSerializer(c));
+  m_Commands.push_back(command);
 }
 
 void CommandQueueService::RestoreCommandQueues() {
-  for (CommandQueueCommand* Command : Commands) {
-    m_StateService.GetRecorder().Record(*Command->CommandSerializer);
+  for (CommandQueueCommand* command : m_Commands) {
+    m_StateService.GetRecorder().Record(*command->CommandSerializer);
   }
   ClearCommands();
 }
 
 void CommandQueueService::ClearCommands() {
-  for (CommandQueueCommand* Command : Commands) {
-    delete Command;
+  for (CommandQueueCommand* command : m_Commands) {
+    delete command;
   }
-  Commands.clear();
+  m_Commands.clear();
 }
 
 } // namespace DirectX

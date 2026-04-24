@@ -22,30 +22,30 @@ namespace DirectX {
 
 struct CommandListCommand {
   CommandListCommand(CommandId id_, unsigned key, unsigned clKey)
-      : m_Id(id_), m_CommandKey(key), m_CommandListKey(clKey) {}
+      : Id(id_), CommandKey(key), CommandListKey(clKey) {}
   virtual ~CommandListCommand() = default;
-  CommandId m_Id{};
-  unsigned m_CommandKey{};
-  unsigned m_CommandListKey{};
-  std::unique_ptr<stream::CommandSerializer> m_CommandSerializer;
+  CommandId Id{};
+  unsigned CommandKey{};
+  unsigned CommandListKey{};
+  std::unique_ptr<stream::CommandSerializer> CommandSerializer;
 };
 
 struct CommandListOMSetRenderTargets : public CommandListCommand {
   CommandListOMSetRenderTargets(unsigned key, unsigned commandListKey)
       : CommandListCommand(
             CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_OMSETRENDERTARGETS, key, commandListKey) {}
-  std::vector<std::unique_ptr<D3D12RenderTargetViewState>> m_RenderTargetViews;
-  std::unique_ptr<D3D12DepthStencilViewState> m_DepthStencilView;
-  bool m_RtsSingleHandleToDescriptorRange{};
+  std::vector<std::unique_ptr<D3D12RenderTargetViewState>> RenderTargetViews;
+  std::unique_ptr<D3D12DepthStencilViewState> DepthStencilView;
+  bool RtsSingleHandleToDescriptorRange{};
 };
 
 struct CommandListClearRenderTargetView : public CommandListCommand {
   CommandListClearRenderTargetView(unsigned key, unsigned commandListKey)
       : CommandListCommand(
             CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_CLEARRENDERTARGETVIEW, key, commandListKey) {}
-  std::unique_ptr<D3D12RenderTargetViewState> m_RenderTargetView;
-  FLOAT m_ColorRGBA[4]{};
-  std::vector<D3D12_RECT> m_Rects{};
+  std::unique_ptr<D3D12RenderTargetViewState> RenderTargetView;
+  FLOAT ColorRGBA[4]{};
+  std::vector<D3D12_RECT> Rects{};
 };
 
 struct CommandListClearDepthStencilView : public CommandListCommand {
@@ -53,9 +53,9 @@ struct CommandListClearDepthStencilView : public CommandListCommand {
       : CommandListCommand(
             CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_CLEARDEPTHSTENCILVIEW, key, commandListKey) {}
   std::unique_ptr<D3D12DepthStencilViewState> m_DepthStencilView;
-  FLOAT m_Depth{};
-  UINT8 m_Stencil{};
-  std::vector<D3D12_RECT> m_Rects{};
+  FLOAT Depth{};
+  UINT8 Stencil{};
+  std::vector<D3D12_RECT> Rects{};
 };
 
 struct CommandListClearUnorderedAccessViewUint : public CommandListCommand {
@@ -63,11 +63,11 @@ struct CommandListClearUnorderedAccessViewUint : public CommandListCommand {
       : CommandListCommand(CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_CLEARUNORDEREDACCESSVIEWUINT,
                            key,
                            commandListKey) {}
-  std::unique_ptr<D3D12UnorderedAccessViewState> m_ViewGPUHandleInCurrentHeap;
-  std::unique_ptr<D3D12UnorderedAccessViewState> m_ViewCPUHandle;
-  unsigned m_ResourceKey{};
-  UINT m_Values[4]{};
-  std::vector<D3D12_RECT> m_Rects{};
+  std::unique_ptr<D3D12UnorderedAccessViewState> ViewGPUHandleInCurrentHeap;
+  std::unique_ptr<D3D12UnorderedAccessViewState> ViewCPUHandle;
+  unsigned ResourceKey{};
+  UINT Values[4]{};
+  std::vector<D3D12_RECT> Rects{};
 };
 
 struct CommandListClearUnorderedAccessViewFloat : public CommandListCommand {
@@ -75,11 +75,11 @@ struct CommandListClearUnorderedAccessViewFloat : public CommandListCommand {
       : CommandListCommand(CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_CLEARUNORDEREDACCESSVIEWFLOAT,
                            key,
                            commandListKey) {}
-  std::unique_ptr<D3D12UnorderedAccessViewState> m_ViewGPUHandleInCurrentHeap;
-  std::unique_ptr<D3D12UnorderedAccessViewState> m_ViewCPUHandle;
-  unsigned m_ResourceKey{};
-  FLOAT m_Values[4]{};
-  std::vector<D3D12_RECT> m_Rects{};
+  std::unique_ptr<D3D12UnorderedAccessViewState> ViewGPUHandleInCurrentHeap;
+  std::unique_ptr<D3D12UnorderedAccessViewState> ViewCPUHandle;
+  unsigned ResourceKey{};
+  FLOAT Values[4]{};
+  std::vector<D3D12_RECT> Rects{};
 };
 
 struct CommandListState : public ObjectState {
@@ -91,18 +91,18 @@ struct CommandListState : public ObjectState {
   CommandListState& operator=(const CommandListState&) = delete;
 
   void ClearCommands() {
-    for (CommandListCommand* Command : m_Commands) {
+    for (CommandListCommand* Command : Commands) {
       delete Command;
     }
-    m_Commands.clear();
+    Commands.clear();
   }
-  unsigned m_AllocatorKey{};
-  UINT m_NodeMask{};
-  D3D12_COMMAND_LIST_TYPE m_Type{};
-  IID m_Iid{};
-  std::vector<CommandListCommand*> m_Commands;
-  std::vector<unsigned> m_DescriptorHeapKeys{};
-  bool m_Closed{};
+  unsigned AllocatorKey{};
+  UINT NodeMask{};
+  D3D12_COMMAND_LIST_TYPE Type{};
+  IID Iid{};
+  std::vector<CommandListCommand*> Commands;
+  std::vector<unsigned> DescriptorHeapKeys{};
+  bool Closed{};
 };
 
 class StateTrackingService;

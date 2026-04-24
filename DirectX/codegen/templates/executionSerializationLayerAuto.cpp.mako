@@ -47,7 +47,7 @@ custom = [
 %if not interface.name + function.name in custom and interface.name.startswith('ID3D12GraphicsCommandList'):
 void ExecutionSerializationLayer::Pre(${interface.name}${function.name}Command& c) {
   if (InRange()) {
-    m_ExecutionService.commandListCommand(c.m_Object.Key, c);
+    m_ExecutionService.CommandListCommand(c.m_Object.Key, c);
   }
 }
 

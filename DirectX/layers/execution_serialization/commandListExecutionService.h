@@ -29,42 +29,42 @@ public:
   CommandListExecutionService(ExecutionSerializationRecorder& recorder,
                               CpuDescriptorsService& cpuDescriptorsService)
       : m_Recorder(recorder), m_CpuDescriptorsService(cpuDescriptorsService) {}
-  void commandListCommand(unsigned commandListKey, const Command& command);
-  void executeCommandLists(unsigned callKey,
+  void CommandListCommand(unsigned commandListKey, const Command& command);
+  void ExecuteCommandLists(unsigned callKey,
                            unsigned commandQueueKey,
                            std::vector<unsigned>& commandListKeys);
-  void createCommandList(unsigned commandListKey, unsigned allocatorKey);
-  void commandListReset(unsigned commandKey, unsigned commandListKey, unsigned allocatorKey);
-  void commandQueueWait(unsigned callKey,
+  void CreateCommandList(unsigned commandListKey, unsigned allocatorKey);
+  void CommandListReset(unsigned commandKey, unsigned commandListKey, unsigned allocatorKey);
+  void CommandQueueWait(unsigned callKey,
                         unsigned commandQueueKey,
                         unsigned fenceKey,
                         UINT64 fenceValue);
-  void commandQueueSignal(unsigned callKey,
+  void CommandQueueSignal(unsigned callKey,
                           unsigned commandQueueKey,
                           unsigned fenceKey,
                           UINT64 fenceValue);
-  void fenceSignal(unsigned callKey, unsigned fenceKey, UINT64 fenceValue);
-  void createCommandQueue(unsigned DeviceKey, unsigned commandQueueKey);
-  unsigned getUniqueCommandKey() {
+  void FenceSignal(unsigned callKey, unsigned fenceKey, UINT64 fenceValue);
+  void CreateCommandQueue(unsigned DeviceKey, unsigned commandQueueKey);
+  unsigned GetUniqueCommandKey() {
     return ++m_RestoreCommandKey;
   };
-  unsigned getUniqueObjectKey() {
+  unsigned GetUniqueObjectKey() {
     return ++m_RestoreObjectKey;
   };
 
 private:
   struct CommandList {
-    unsigned m_CommandListKey{};
-    bool m_Reset{};
-    std::vector<std::unique_ptr<stream::CommandSerializer>> m_Commands;
+    unsigned CommandListKey{};
+    bool Reset{};
+    std::vector<std::unique_ptr<stream::CommandSerializer>> Commands;
   };
 
-  struct ExecuteCommandLists : public GpuExecutionTracker::Executable {
-    std::vector<CommandList> m_CommandLists;
+  struct Execute : public GpuExecutionTracker::Executable {
+    std::vector<CommandList> CommandLists;
   };
 
-  void executeReadyExecutables();
-  void executeExecutable(ExecuteCommandLists& executeCommandLists);
+  void ExecuteReadyExecutables();
+  void ExecuteExecutable(Execute& executeCommandLists);
 
   ExecutionSerializationRecorder& m_Recorder;
   CpuDescriptorsService& m_CpuDescriptorsService;

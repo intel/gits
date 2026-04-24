@@ -91,7 +91,7 @@ void ExecutionSerializationLayer::Pre(IDXGISwapChain1Present1Command& c) {
 
 void ExecutionSerializationLayer::Pre(ID3D12CommandQueueExecuteCommandListsCommand& c) {
   if (InRange()) {
-    m_ExecutionService.executeCommandLists(c.Key, c.m_Object.Key, c.m_ppCommandLists.Keys);
+    m_ExecutionService.ExecuteCommandLists(c.Key, c.m_Object.Key, c.m_ppCommandLists.Keys);
   }
 }
 
@@ -99,7 +99,7 @@ void ExecutionSerializationLayer::Pre(ID3D12DeviceCreateCommandListCommand& c) {
   if (InRange()) {
     m_CpuDescriptorsService.createCommandList(c.m_Object.Key);
     m_Recorder.Record(ID3D12DeviceCreateCommandListSerializer(c));
-    m_ExecutionService.createCommandList(c.m_ppCommandList.Key, c.m_pCommandAllocator.Key);
+    m_ExecutionService.CreateCommandList(c.m_ppCommandList.Key, c.m_pCommandAllocator.Key);
   }
 }
 
@@ -112,8 +112,8 @@ void ExecutionSerializationLayer::Pre(ID3D12Device4CreateCommandList1Command& c)
 
 void ExecutionSerializationLayer::Pre(ID3D12GraphicsCommandListResetCommand& c) {
   if (InRange()) {
-    m_ExecutionService.commandListReset(c.Key, c.m_Object.Key, c.m_pAllocator.Key);
-    m_ExecutionService.commandListCommand(c.m_Object.Key, c);
+    m_ExecutionService.CommandListReset(c.Key, c.m_Object.Key, c.m_pAllocator.Key);
+    m_ExecutionService.CommandListCommand(c.m_Object.Key, c);
   }
 }
 
@@ -121,7 +121,7 @@ void ExecutionSerializationLayer::Pre(ID3D12GraphicsCommandListCloseCommand& c) 
 
 void ExecutionSerializationLayer::Pre(ID3D12CommandQueueWaitCommand& c) {
   if (InRange()) {
-    m_ExecutionService.commandQueueWait(c.Key, c.m_Object.Key, c.m_pFence.Key, c.m_Value.Value);
+    m_ExecutionService.CommandQueueWait(c.Key, c.m_Object.Key, c.m_pFence.Key, c.m_Value.Value);
   }
 }
 
@@ -130,7 +130,7 @@ void ExecutionSerializationLayer::Pre(ID3D12GraphicsCommandListOMSetRenderTarget
 void ExecutionSerializationLayer::Post(ID3D12GraphicsCommandListOMSetRenderTargetsCommand& c) {
   if (InRange()) {
     m_CpuDescriptorsService.preserveDescriptor(c);
-    m_ExecutionService.commandListCommand(c.m_Object.Key, c);
+    m_ExecutionService.CommandListCommand(c.m_Object.Key, c);
   }
 }
 
@@ -139,7 +139,7 @@ void ExecutionSerializationLayer::Pre(ID3D12GraphicsCommandListClearDepthStencil
 void ExecutionSerializationLayer::Post(ID3D12GraphicsCommandListClearDepthStencilViewCommand& c) {
   if (InRange()) {
     m_CpuDescriptorsService.preserveDescriptor(c);
-    m_ExecutionService.commandListCommand(c.m_Object.Key, c);
+    m_ExecutionService.CommandListCommand(c.m_Object.Key, c);
   }
 }
 
@@ -148,7 +148,7 @@ void ExecutionSerializationLayer::Pre(ID3D12GraphicsCommandListClearRenderTarget
 void ExecutionSerializationLayer::Post(ID3D12GraphicsCommandListClearRenderTargetViewCommand& c) {
   if (InRange()) {
     m_CpuDescriptorsService.preserveDescriptor(c);
-    m_ExecutionService.commandListCommand(c.m_Object.Key, c);
+    m_ExecutionService.CommandListCommand(c.m_Object.Key, c);
   }
 }
 
@@ -159,7 +159,7 @@ void ExecutionSerializationLayer::Post(
     ID3D12GraphicsCommandListClearUnorderedAccessViewUintCommand& c) {
   if (InRange()) {
     m_CpuDescriptorsService.preserveDescriptor(c);
-    m_ExecutionService.commandListCommand(c.m_Object.Key, c);
+    m_ExecutionService.CommandListCommand(c.m_Object.Key, c);
   }
 }
 
@@ -170,42 +170,42 @@ void ExecutionSerializationLayer::Post(
     ID3D12GraphicsCommandListClearUnorderedAccessViewFloatCommand& c) {
   if (InRange()) {
     m_CpuDescriptorsService.preserveDescriptor(c);
-    m_ExecutionService.commandListCommand(c.m_Object.Key, c);
+    m_ExecutionService.CommandListCommand(c.m_Object.Key, c);
   }
 }
 
 void ExecutionSerializationLayer::Pre(xessD3D12ExecuteCommand& c) {
   if (InRange()) {
-    m_ExecutionService.commandListCommand(c.m_pCommandList.Key, c);
+    m_ExecutionService.CommandListCommand(c.m_pCommandList.Key, c);
   }
 }
 
 void ExecutionSerializationLayer::Pre(ID3D12CommandQueueSignalCommand& c) {
   if (InRange()) {
-    m_ExecutionService.commandQueueSignal(c.Key, c.m_Object.Key, c.m_pFence.Key, c.m_Value.Value);
+    m_ExecutionService.CommandQueueSignal(c.Key, c.m_Object.Key, c.m_pFence.Key, c.m_Value.Value);
   }
 }
 
 void ExecutionSerializationLayer::Pre(ID3D12FenceSignalCommand& c) {
   if (InRange()) {
-    m_ExecutionService.fenceSignal(c.Key, c.m_Object.Key, c.m_Value.Value);
+    m_ExecutionService.FenceSignal(c.Key, c.m_Object.Key, c.m_Value.Value);
   }
 }
 
 void ExecutionSerializationLayer::Pre(ID3D12DeviceCreateFenceCommand& c) {
   if (InRange()) {
     m_Recorder.Record(ID3D12DeviceCreateFenceSerializer(c));
-    m_ExecutionService.fenceSignal(c.Key, c.m_ppFence.Key, c.m_InitialValue.Value);
+    m_ExecutionService.FenceSignal(c.Key, c.m_ppFence.Key, c.m_InitialValue.Value);
   }
 }
 
 void ExecutionSerializationLayer::Pre(ID3D12Device3EnqueueMakeResidentCommand& c) {
   if (InRange()) {
     m_Recorder.Record(ID3D12Device3EnqueueMakeResidentSerializer(c));
-    m_ExecutionService.fenceSignal(c.Key, c.m_pFenceToSignal.Key, c.m_FenceValueToSignal.Value);
+    m_ExecutionService.FenceSignal(c.Key, c.m_pFenceToSignal.Key, c.m_FenceValueToSignal.Value);
 
     ID3D12FenceGetCompletedValueCommand getCompletedValue;
-    getCompletedValue.Key = m_ExecutionService.getUniqueCommandKey();
+    getCompletedValue.Key = m_ExecutionService.GetUniqueCommandKey();
     getCompletedValue.m_Object.Key = c.m_pFenceToSignal.Key;
     getCompletedValue.m_Result.Value = c.m_FenceValueToSignal.Value;
     m_Recorder.Record(ID3D12FenceGetCompletedValueSerializer(getCompletedValue));
@@ -215,14 +215,14 @@ void ExecutionSerializationLayer::Pre(ID3D12Device3EnqueueMakeResidentCommand& c
 void ExecutionSerializationLayer::Pre(ID3D12DeviceCreateCommandQueueCommand& c) {
   if (InRange()) {
     m_Recorder.Record(ID3D12DeviceCreateCommandQueueSerializer(c));
-    m_ExecutionService.createCommandQueue(c.m_Object.Key, c.m_ppCommandQueue.Key);
+    m_ExecutionService.CreateCommandQueue(c.m_Object.Key, c.m_ppCommandQueue.Key);
   }
 }
 
 void ExecutionSerializationLayer::Pre(ID3D12Device9CreateCommandQueue1Command& c) {
   if (InRange()) {
     m_Recorder.Record(ID3D12Device9CreateCommandQueue1Serializer(c));
-    m_ExecutionService.createCommandQueue(c.m_Object.Key, c.m_ppCommandQueue.Key);
+    m_ExecutionService.CreateCommandQueue(c.m_Object.Key, c.m_ppCommandQueue.Key);
   }
 }
 
@@ -375,20 +375,20 @@ void ExecutionSerializationLayer::Pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalT
 void ExecutionSerializationLayer::Pre(
     NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& c) {
   if (InRange()) {
-    m_ExecutionService.commandListCommand(c.m_pCommandList.Key, c);
+    m_ExecutionService.CommandListCommand(c.m_pCommandList.Key, c);
   }
 }
 
 void ExecutionSerializationLayer::Pre(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& c) {
   if (InRange()) {
-    m_ExecutionService.commandListCommand(c.m_pCommandList.Key, c);
+    m_ExecutionService.CommandListCommand(c.m_pCommandList.Key, c);
   }
 }
 
 void ExecutionSerializationLayer::Pre(
     NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand& c) {
   if (InRange()) {
-    m_ExecutionService.commandListCommand(c.m_pCommandList.Key, c);
+    m_ExecutionService.CommandListCommand(c.m_pCommandList.Key, c);
   }
 }
 
