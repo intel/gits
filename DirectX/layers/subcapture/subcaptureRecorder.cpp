@@ -53,15 +53,20 @@ SubcaptureRecorder::~SubcaptureRecorder() {
 }
 
 void SubcaptureRecorder::Record(const stream::CommandSerializer& commandSerializer) {
-  m_Recorder->Record(commandSerializer);
+  if (m_Recorder) {
+    m_Recorder->Record(commandSerializer);
+  }
 }
 
 void SubcaptureRecorder::FinishRecording() {
-  if (!m_Finished) {
+  if (m_Finished) {
+    return;
+  }
+  if (m_Recorder) {
     m_Recorder->Close();
     LOG_INFO << "Subcapture recording finished";
-    m_Finished = true;
   }
+  m_Finished = true;
 }
 
 void SubcaptureRecorder::CopyAuxiliaryFiles() {
