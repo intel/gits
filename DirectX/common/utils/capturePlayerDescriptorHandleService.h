@@ -40,6 +40,7 @@ public:
   bool GetViewMappings(std::vector<DescriptorMapping>& mappings);
   bool GetSamplerMappings(std::vector<DescriptorMapping>& mappings);
   DescriptorHeapInfo* GetViewDescriptorHeapInfoByCaptureHandle(UINT64 handle) {
+    std::lock_guard<std::mutex> lock(m_Mutex);
     return GetViewDescriptorHeapInfo(m_ViewHeapsByCaptureHandle, handle, true);
   }
   DescriptorHeapInfo* GetSamplerDescriptorHeapInfoByCaptureHandle(UINT64 handle) {

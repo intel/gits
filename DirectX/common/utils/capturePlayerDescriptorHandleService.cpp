@@ -102,6 +102,7 @@ void CapturePlayerDescriptorHandleService::DestroyHeap(unsigned heapKey) {
 
 bool CapturePlayerDescriptorHandleService::GetViewMappings(
     std::vector<DescriptorMapping>& mappings) {
+  std::lock_guard<std::mutex> lock(m_Mutex);
   mappings.resize(m_ViewHeapsByCaptureHandle.size());
   unsigned i = 0;
   for (auto& it : m_ViewHeapsByCaptureHandle) {
@@ -117,6 +118,7 @@ bool CapturePlayerDescriptorHandleService::GetViewMappings(
 
 bool CapturePlayerDescriptorHandleService::GetSamplerMappings(
     std::vector<DescriptorMapping>& mappings) {
+  std::lock_guard<std::mutex> lock(m_Mutex);
   mappings.resize(m_SamplerHeapsByCaptureHandle.size());
   unsigned i = 0;
   for (auto& it : m_SamplerHeapsByCaptureHandle) {
