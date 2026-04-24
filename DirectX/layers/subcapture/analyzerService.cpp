@@ -107,6 +107,7 @@ void AnalyzerService::Present(unsigned callKey, unsigned swapChainKey) {
         delete event;
       }
     }
+    queueEvents.clear();
     m_SubcaptureRange.FrameEnd(IsStateRestoreKey(callKey));
     return;
   }
