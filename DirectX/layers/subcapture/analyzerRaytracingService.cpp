@@ -144,7 +144,7 @@ void AnalyzerRaytracingService::SetDescriptorHeaps(unsigned commandListKey,
       if (info.Type == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV) {
         descriptorHeaps.ViewDescriptorHeapKey = info.Key;
         descriptorHeaps.ViewDescriptorHeapSize = info.NumDescriptors;
-      } else if (info.Type == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV) {
+      } else if (info.Type == D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER) {
         descriptorHeaps.SamplerHeapKey = info.Key;
         descriptorHeaps.SamplerHeapSize = info.NumDescriptors;
       }
