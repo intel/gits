@@ -191,6 +191,12 @@ void argumentToCpp(D3D12_RENDER_PASS_RENDER_TARGET_DESCs_Argument& arg,
 void argumentToCpp(D3D12_RENDER_PASS_DEPTH_STENCIL_DESC_Argument& arg,
                    CppParameterInfo& info,
                    CppParameterOutput& out);
+void argumentToCpp(D3D12_EXTENSION_ARGUMENTS_Argument& arg,
+                   CppParameterInfo& info,
+                   CppParameterOutput& out);
+void argumentToCpp(D3D12_EXTENDED_OPERATION_DATA_Argument& arg,
+                   CppParameterInfo& info,
+                   CppParameterOutput& out);
 void argumentToCpp(PointerArgument<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC>& arg,
                    CppParameterInfo& info,
                    CppParameterOutput& out);
@@ -239,6 +245,15 @@ void argumentToCpp(
     PointerArgument<NVAPI_RAYTRACING_EXECUTE_MULTI_INDIRECT_CLUSTER_OPERATION_PARAMS>& arg,
     CppParameterInfo& info,
     CppParameterOutput& out);
+void argumentToCpp(Argument<D3D12StateObjectFunc>& arg,
+                   CppParameterInfo& info,
+                   CppParameterOutput& out);
+void argumentToCpp(Argument<D3D12ApplicationDescFunc>& arg,
+                   CppParameterInfo& info,
+                   CppParameterOutput& out);
+void argumentToCpp(Argument<D3D12PipelineStateFunc>& arg,
+                   CppParameterInfo& info,
+                   CppParameterOutput& out);
 void argumentToCpp(PointerArgument<INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC>& arg,
                    CppParameterInfo& info,
                    CppParameterOutput& out);

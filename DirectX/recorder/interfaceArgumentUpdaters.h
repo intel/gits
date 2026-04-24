@@ -211,6 +211,25 @@ private:
 };
 
 template <>
+class UpdateInterface<D3D12_EXTENSION_ARGUMENTS_Argument, D3D12_EXTENSION_ARGUMENTS> {
+public:
+  UpdateInterface(D3D12_EXTENSION_ARGUMENTS_Argument& arg, const D3D12_EXTENSION_ARGUMENTS* value);
+
+private:
+  D3D12_EXTENSION_ARGUMENTS m_UnwrapStructure{};
+};
+
+template <>
+class UpdateInterface<D3D12_EXTENDED_OPERATION_DATA_Argument, D3D12_EXTENDED_OPERATION_DATA> {
+public:
+  UpdateInterface(D3D12_EXTENDED_OPERATION_DATA_Argument& arg,
+                  const D3D12_EXTENDED_OPERATION_DATA* value);
+
+private:
+  D3D12_EXTENDED_OPERATION_DATA m_UnwrapStructure{};
+};
+
+template <>
 class UpdateInterface<PointerArgument<INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC>,
                       INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC> {
 public:

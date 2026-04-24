@@ -1904,6 +1904,33 @@ void Encode(char* dest,
   offset += arg.Size * sizeof(unsigned);
 }
 
+unsigned GetSize(const PointerArgument<D3D12_UNORDERED_ACCESS_VIEW_DESC>& arg) {
+  if (!arg.Value) {
+    return sizeof(void*);
+  }
+
+  // WA for D3D12_UNORDERED_ACCESS_VIEW_DESC size change in Agility SDK 1.719.1-preview
+  constexpr unsigned sizeAdjustment =
+      (sizeof(D3D12_BUFFER_UAV_BYTE_OFFSET) - sizeof(D3D12_BUFFER_UAV));
+  return sizeof(void*) + sizeof(D3D12_UNORDERED_ACCESS_VIEW_DESC) - sizeAdjustment;
+}
+
+void Encode(char* dest,
+            unsigned& offset,
+            const PointerArgument<D3D12_UNORDERED_ACCESS_VIEW_DESC>& arg) {
+  if (EncodeNullPtr(dest, offset, arg)) {
+    return;
+  }
+
+  // WA for D3D12_UNORDERED_ACCESS_VIEW_DESC size change in Agility SDK 1.719.1-preview
+  GITS_ASSERT(arg.Value->ViewDimension != D3D12_UAV_DIMENSION_BUFFER_BYTE_OFFSET);
+  constexpr unsigned sizeAdjustment =
+      (sizeof(D3D12_BUFFER_UAV_BYTE_OFFSET) - sizeof(D3D12_BUFFER_UAV));
+  constexpr unsigned size = sizeof(D3D12_UNORDERED_ACCESS_VIEW_DESC) - sizeAdjustment;
+  memcpy(dest + offset, arg.Value, size);
+  offset += size;
+}
+
 unsigned GetSize(const DML_BINDING_DESC_Argument& arg) {
   if (!arg.Value) {
     return sizeof(void*);

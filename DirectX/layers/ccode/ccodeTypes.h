@@ -48,6 +48,9 @@ void toCpp(const wchar_t* s, CppParameterInfo& info, CppParameterOutput& out);
 void toCpp(const HMONITOR& value, CppParameterInfo& info, CppParameterOutput& out);
 void toCpp(const HWND& value, CppParameterInfo& info, CppParameterOutput& out);
 void toCpp(const D3D12_RECT& value, CppParameterInfo& info, CppParameterOutput& out);
+void toCpp(const D3D12_PFN_TRIM_NOTIFICATION_CALLBACK& value,
+           CppParameterInfo& info,
+           CppParameterOutput& out);
 
 template <size_t N>
 void toCpp(const wchar_t (&s)[N], CppParameterInfo& info, CppParameterOutput& out) {

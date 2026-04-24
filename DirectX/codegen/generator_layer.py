@@ -27,6 +27,8 @@ def generate_params_for_function(function):
         'D3D12_RENDER_PASS_RENDER_TARGET_DESC',
         'D3D12_RENDER_PASS_DEPTH_STENCIL_DESC',
         'D3D12_BARRIER_GROUP',
+        'D3D12_EXTENSION_ARGUMENTS',
+        'D3D12_EXTENDED_OPERATION_DATA',
         'DML_BINDING_TABLE_DESC',
         'DML_GRAPH_DESC',
         'DML_BINDING_DESC',

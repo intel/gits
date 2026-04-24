@@ -59,7 +59,10 @@ def get_sal_size_value(parameter, is_command_argument):
         # ID3D12GraphicsCommandList1SetSamplePositions
         'NumSamplesPerPixel*NumPixels': 'c.m_NumSamplesPerPixel.Value * c.m_NumPixels.Value;',
         # ID3D12GraphicsCommandList5RSSetShadingRate
-        'D3D12_RS_SET_SHADING_RATE_COMBINER_COUNT': 'D3D12_RS_SET_SHADING_RATE_COMBINER_COUNT;'
+        'D3D12_RS_SET_SHADING_RATE_COMBINER_COUNT': 'D3D12_RS_SET_SHADING_RATE_COMBINER_COUNT;',
+        # ID3D12StateObjectDatabaseFindStateObjectDesc
+        # ID3D12StateObjectDatabaseFindObjectVersion
+        'keySize': 'c.m_KeySize.Value;'
     }
     if parameter.sal_size in custom_values:
         return custom_values[parameter.sal_size]

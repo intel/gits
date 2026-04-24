@@ -34,7 +34,10 @@ def generate_initializer_list(function):
     for param in function.params:
         s = 'm_' + param.name + '{' + param.name
         if param.sal_size and not param.is_array and not param.is_interface_creation and (not param.is_pointer_to_pointer or param.is_interface):
-            s += ', ' + param.sal_size.split(',')[0]
+            size_initializer = next((p.name for p in function.params if p.name.lower() == param.sal_size.split(',')[0].lower()), None)
+            if size_initializer == None:
+              size_initializer = param.sal_size.split(',')[0]
+            s += ', ' + size_initializer
         s += '}'
         initializer_list.append(s)
     return initializer_list

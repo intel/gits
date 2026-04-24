@@ -458,6 +458,31 @@ struct D3D12_STATE_OBJECT_DESC_Argument {
   bool Copy{};
 };
 
+struct D3D12_EXTENSION_ARGUMENTS_Argument {
+  D3D12_EXTENSION_ARGUMENTS_Argument(const D3D12_EXTENSION_ARGUMENTS* value_)
+      : Value(const_cast<D3D12_EXTENSION_ARGUMENTS*>(value_)) {}
+  D3D12_EXTENSION_ARGUMENTS_Argument() {}
+  D3D12_EXTENSION_ARGUMENTS_Argument(const D3D12_EXTENSION_ARGUMENTS_Argument& arg);
+  D3D12_EXTENSION_ARGUMENTS_Argument& operator=(const D3D12_EXTENSION_ARGUMENTS_Argument&) = delete;
+  ~D3D12_EXTENSION_ARGUMENTS_Argument();
+  D3D12_EXTENSION_ARGUMENTS* Value{};
+  std::vector<unsigned> ObjectKeys{};
+  bool Copy{};
+};
+
+struct D3D12_EXTENDED_OPERATION_DATA_Argument {
+  D3D12_EXTENDED_OPERATION_DATA_Argument(const D3D12_EXTENDED_OPERATION_DATA* value_)
+      : Value(const_cast<D3D12_EXTENDED_OPERATION_DATA*>(value_)) {}
+  D3D12_EXTENDED_OPERATION_DATA_Argument() {}
+  D3D12_EXTENDED_OPERATION_DATA_Argument(const D3D12_EXTENDED_OPERATION_DATA_Argument& arg);
+  D3D12_EXTENDED_OPERATION_DATA_Argument& operator=(const D3D12_EXTENDED_OPERATION_DATA_Argument&) =
+      delete;
+  ~D3D12_EXTENDED_OPERATION_DATA_Argument();
+  D3D12_EXTENDED_OPERATION_DATA* Value{};
+  std::vector<unsigned> ObjectKeys{};
+  bool Copy{};
+};
+
 template <>
 struct PointerArgument<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS> {
   PointerArgument(const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS* value_)

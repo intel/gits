@@ -300,6 +300,22 @@ void UpdateInterface(PlayerManager& manager, D3D12_BARRIER_GROUPs_Argument& arg)
   }
 }
 
+void UpdateInterface(PlayerManager& manager, D3D12_EXTENSION_ARGUMENTS_Argument& arg) {
+  if (!manager.ExecuteCommands()) {
+    return;
+  }
+
+  GITS_ASSERT(false, "UpdateInterface not implemented for D3D12_EXTENSION_ARGUMENTS_Argument");
+}
+
+void UpdateInterface(PlayerManager& manager, D3D12_EXTENDED_OPERATION_DATA_Argument& arg) {
+  if (!manager.ExecuteCommands()) {
+    return;
+  }
+
+  GITS_ASSERT(false, "UpdateInterface not implemented for D3D12_EXTENDED_OPERATION_DATA_Argument");
+}
+
 void UpdateInterface(PlayerManager& manager, DML_BINDING_TABLE_DESC_Argument& arg) {
   if (!manager.ExecuteCommands()) {
     return;

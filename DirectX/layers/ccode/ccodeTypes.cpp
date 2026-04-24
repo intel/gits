@@ -116,6 +116,18 @@ void toCpp(const D3D12_RECT& value, CppParameterInfo& info, CppParameterOutput& 
   out.decorator = "";
 }
 
+void toCpp(const D3D12_PFN_TRIM_NOTIFICATION_CALLBACK& value,
+           CppParameterInfo& info,
+           CppParameterOutput& out) {
+  GITS_ASSERT(false, "Not implemented");
+  std::string name = info.getIndexedName();
+  std::ostringstream ss;
+  ss << info.type << " " << name << " = {};" << std::endl;
+  out.initialization = ss.str();
+  out.value = std::move(name);
+  out.decorator = "";
+}
+
 } // namespace ccode
 } // namespace DirectX
 } // namespace gits

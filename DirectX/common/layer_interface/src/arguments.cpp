@@ -9,6 +9,7 @@
 #include "arguments.h"
 #include "intelExtensions.h"
 #include <d3dx12/d3dx12_pipeline_state_stream.h>
+#include "log.h"
 
 namespace gits {
 namespace DirectX {
@@ -1152,6 +1153,36 @@ D3D12_STATE_OBJECT_DESC_Argument::~D3D12_STATE_OBJECT_DESC_Argument() {
     }
     delete[] Value->pSubobjects;
     delete Value;
+  }
+}
+
+D3D12_EXTENSION_ARGUMENTS_Argument::D3D12_EXTENSION_ARGUMENTS_Argument(
+    const D3D12_EXTENSION_ARGUMENTS_Argument& arg) {
+  if (!arg.Value) {
+    return;
+  }
+
+  GITS_ASSERT(false, "Copy constructor not implemented for D3D12_EXTENSION_ARGUMENTS_Argument");
+}
+
+D3D12_EXTENSION_ARGUMENTS_Argument::~D3D12_EXTENSION_ARGUMENTS_Argument() {
+  if (Copy) {
+    GITS_ASSERT(false, "Destructor not implemented for D3D12_EXTENSION_ARGUMENTS_Argument");
+  }
+}
+
+D3D12_EXTENDED_OPERATION_DATA_Argument::D3D12_EXTENDED_OPERATION_DATA_Argument(
+    const D3D12_EXTENDED_OPERATION_DATA_Argument& arg) {
+  if (!arg.Value) {
+    return;
+  }
+
+  GITS_ASSERT(false, "Copy constructor not implemented for D3D12_EXTENDED_OPERATION_DATA_Argument");
+}
+
+D3D12_EXTENDED_OPERATION_DATA_Argument::~D3D12_EXTENDED_OPERATION_DATA_Argument() {
+  if (Copy) {
+    GITS_ASSERT(false, "Destructor not implemented for D3D12_EXTENDED_OPERATION_DATA_Argument");
   }
 }
 

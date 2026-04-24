@@ -1334,6 +1334,25 @@ void Decode(char* src,
   offset += arg.Size * sizeof(unsigned);
 }
 
+void Decode(char* src, unsigned& offset, PointerArgument<D3D12_UNORDERED_ACCESS_VIEW_DESC>& arg) {
+  if (DecodeNullPtr(src, offset, arg)) {
+    return;
+  }
+
+  // WA for D3D12_UNORDERED_ACCESS_VIEW_DESC size change in Agility SDK 1.719.1-preview
+  constexpr unsigned sizeAdjustment =
+      (sizeof(D3D12_BUFFER_UAV_BYTE_OFFSET) - sizeof(D3D12_BUFFER_UAV));
+  constexpr unsigned size = sizeof(D3D12_UNORDERED_ACCESS_VIEW_DESC) - sizeAdjustment;
+
+  // Using copy mechanics to ensure the argument is fully backed by memory
+  arg.Value = new D3D12_UNORDERED_ACCESS_VIEW_DESC();
+  memcpy(arg.Value, src + offset, size);
+  arg.Copy = true;
+
+  GITS_ASSERT(arg.Value->ViewDimension != D3D12_UAV_DIMENSION_BUFFER_BYTE_OFFSET);
+  offset += size;
+}
+
 // This Decode function does not have a GetSize/Encode counterpart
 // Set pDeviceDriverDesc and pDeviceDriverVersion to 0 (the capture time strings are NOT encoded in the stream)
 // Note: Encoding and decoding these values would cause compatibility issues with already existing streams

@@ -71,6 +71,7 @@ FastOStream& operator<<(FastOStream& stream, const LARGE_INTEGER& value);
 FastOStream& operator<<(FastOStream& stream, const D3D12_RECT& value);
 FastOStream& operator<<(FastOStream& stream, const D3D12_RECT* value);
 FastOStream& operator<<(FastOStream& stream, const POINT& value);
+FastOStream& operator<<(FastOStream& stream, const D3D12_VERSION_NUMBER& value);
 FastOStream& operator<<(FastOStream& stream, const DML_SCALAR_UNION& value);
 
 FastOStream& operator<<(FastOStream& stream, const INTCExtensionInfo& value);

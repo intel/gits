@@ -634,6 +634,16 @@ void argumentToCpp(D3D12_RENDER_PASS_DEPTH_STENCIL_DESC_Argument& arg,
   GITS_ASSERT(false,
               "argumentToCpp not implemented for D3D12_RENDER_PASS_DEPTH_STENCIL_DESC_Argument");
 }
+void argumentToCpp(D3D12_EXTENSION_ARGUMENTS_Argument& arg,
+                   CppParameterInfo& info,
+                   CppParameterOutput& out) {
+  GITS_ASSERT(false, "argumentToCpp not implemented for D3D12_EXTENSION_ARGUMENTS_Argument");
+}
+void argumentToCpp(D3D12_EXTENDED_OPERATION_DATA_Argument& arg,
+                   CppParameterInfo& info,
+                   CppParameterOutput& out) {
+  GITS_ASSERT(false, "argumentToCpp not implemented for D3D12_EXTENDED_OPERATION_DATA_Argument");
+}
 void argumentToCpp(PointerArgument<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC>& arg,
                    CppParameterInfo& info,
                    CppParameterOutput& out) {
@@ -727,6 +737,27 @@ void argumentToCpp(
   GITS_ASSERT(false,
               "argumentToCpp not implemented for "
               "PointerArgument<NVAPI_RAYTRACING_EXECUTE_MULTI_INDIRECT_CLUSTER_OPERATION_PARAMS>");
+}
+
+void argumentToCpp(Argument<D3D12StateObjectFunc>& arg,
+                   CppParameterInfo& info,
+                   CppParameterOutput& out) {
+  GITS_ASSERT(false, "argumentToCpp not implemented for "
+                     "Argument<D3D12StateObjectFunc>");
+}
+
+void argumentToCpp(Argument<D3D12ApplicationDescFunc>& arg,
+                   CppParameterInfo& info,
+                   CppParameterOutput& out) {
+  GITS_ASSERT(false, "argumentToCpp not implemented for "
+                     "Argument<D3D12ApplicationDescFunc>");
+}
+
+void argumentToCpp(Argument<D3D12PipelineStateFunc>& arg,
+                   CppParameterInfo& info,
+                   CppParameterOutput& out) {
+  GITS_ASSERT(false, "argumentToCpp not implemented for "
+                     "Argument<D3D12PipelineStateFunc>");
 }
 
 void argumentToCpp(PointerArgument<INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC>& arg,

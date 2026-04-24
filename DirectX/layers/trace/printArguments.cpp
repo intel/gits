@@ -925,6 +925,24 @@ FastOStream& operator<<(FastOStream& stream, D3D12_RENDER_PASS_DEPTH_STENCIL_DES
   return stream;
 }
 
+FastOStream& operator<<(FastOStream& stream, D3D12_EXTENSION_ARGUMENTS_Argument& arg) {
+  if (!arg.Value) {
+    return stream << "nullptr";
+  }
+
+  GITS_ASSERT(false, "operator<< not implemented for D3D12_EXTENSION_ARGUMENTS_Argument");
+  return stream;
+}
+
+FastOStream& operator<<(FastOStream& stream, D3D12_EXTENDED_OPERATION_DATA_Argument& arg) {
+  if (!arg.Value) {
+    return stream << "nullptr";
+  }
+
+  GITS_ASSERT(false, "operator<< not implemented for D3D12_EXTENDED_OPERATION_DATA_Argument");
+  return stream;
+}
+
 FastOStream& operator<<(FastOStream& stream,
                         PointerArgument<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC>& arg) {
   if (!arg.Value) {
@@ -1123,6 +1141,9 @@ FastOStream& operator<<(FastOStream& stream,
     break;
   case D3D12_UAV_DIMENSION_TEXTURE3D:
     stream << arg.Value->Texture3D;
+    break;
+  case D3D12_UAV_DIMENSION_BUFFER_BYTE_OFFSET:
+    stream << arg.Value->BufferByteOffset;
     break;
   }
   stream << "}}";

@@ -3,7 +3,7 @@ dependencies:
     - name: AgilitySDK
       argument: agility-sdk
       package_url: https://www.nuget.org/api/v2/package/Microsoft.Direct3D.D3D12/
-      version: 1.717.1-preview
+      version: 1.719.1-preview
       os: WINDOWS
       folder_to_extract: build/native/
     - name: dxc

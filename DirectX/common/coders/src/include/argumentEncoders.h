@@ -298,6 +298,11 @@ void Encode(char* dest,
             unsigned& offset,
             const ArrayArgument<D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO>& arg);
 
+unsigned GetSize(const PointerArgument<D3D12_UNORDERED_ACCESS_VIEW_DESC>& arg);
+void Encode(char* dest,
+            unsigned& offset,
+            const PointerArgument<D3D12_UNORDERED_ACCESS_VIEW_DESC>& arg);
+
 unsigned GetSize(const DML_BINDING_DESC_Argument& arg);
 void Encode(char* dest, unsigned& offset, const DML_BINDING_DESC_Argument& arg);
 

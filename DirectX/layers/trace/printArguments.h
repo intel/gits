@@ -130,6 +130,8 @@ FastOStream& operator<<(FastOStream& stream, D3D12_SHADER_RESOURCE_VIEW_DESC_Arg
 FastOStream& operator<<(FastOStream& stream, ArrayArgument<D3D12_RESIDENCY_PRIORITY>& arg);
 FastOStream& operator<<(FastOStream& stream, D3D12_RENDER_PASS_RENDER_TARGET_DESCs_Argument& arg);
 FastOStream& operator<<(FastOStream& stream, D3D12_RENDER_PASS_DEPTH_STENCIL_DESC_Argument& arg);
+FastOStream& operator<<(FastOStream& stream, D3D12_EXTENSION_ARGUMENTS_Argument& arg);
+FastOStream& operator<<(FastOStream& stream, D3D12_EXTENDED_OPERATION_DATA_Argument& arg);
 FastOStream& operator<<(FastOStream& stream,
                         PointerArgument<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC>& arg);
 FastOStream& operator<<(

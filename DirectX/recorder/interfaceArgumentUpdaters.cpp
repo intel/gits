@@ -434,6 +434,23 @@ UpdateInterface<D3D12_BARRIER_GROUPs_Argument, D3D12_BARRIER_GROUP>::UpdateInter
   }
 }
 
+UpdateInterface<D3D12_EXTENSION_ARGUMENTS_Argument, D3D12_EXTENSION_ARGUMENTS>::UpdateInterface(
+    D3D12_EXTENSION_ARGUMENTS_Argument& arg, const D3D12_EXTENSION_ARGUMENTS* value) {
+  if (!value) {
+    return;
+  }
+  GITS_ASSERT(false, "UpdateInterface not implemented for D3D12_EXTENSION_ARGUMENTS_Argument");
+}
+
+UpdateInterface<D3D12_EXTENDED_OPERATION_DATA_Argument, D3D12_EXTENDED_OPERATION_DATA>::
+    UpdateInterface(D3D12_EXTENDED_OPERATION_DATA_Argument& arg,
+                    const D3D12_EXTENDED_OPERATION_DATA* value) {
+  if (!value) {
+    return;
+  }
+  GITS_ASSERT(false, "UpdateInterface not implemented for D3D12_EXTENDED_OPERATION_DATA_Argument");
+}
+
 UpdateInterface<PointerArgument<INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC>,
                 INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC>::
     UpdateInterface(PointerArgument<INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC>& arg,

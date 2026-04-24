@@ -106,6 +106,12 @@ FastOStream& operator<<(FastOStream& stream, const POINT& value) {
   return stream;
 }
 
+FastOStream& operator<<(FastOStream& stream, const D3D12_VERSION_NUMBER& value) {
+  stream << "D3D12_VERSION_NUMBER{";
+  printStaticArray(stream, value.VersionParts) << "}";
+  return stream;
+}
+
 FastOStream& operator<<(FastOStream& stream, const D3D12_RENDER_TARGET_VIEW_DESC& value) {
   return stream << &value;
 }
