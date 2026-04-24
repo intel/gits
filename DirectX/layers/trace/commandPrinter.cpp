@@ -33,7 +33,7 @@ CommandPrinter::CommandPrinter(FastOStream& stream,
                                Command& command,
                                const char* name,
                                unsigned objectId)
-    : m_Stream(stream), m_State(state), m_Command(command), m_Lock(state.mutex) {
+    : m_State(state), m_Command(command), m_Stream(stream), m_Lock(state.mutex) {
 
   if (m_Command.GetId() == CommandId::ID_INIT_START) {
     m_State.stateRestorePhase = true;

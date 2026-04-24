@@ -17,7 +17,7 @@ namespace DirectX {
 
 class Command {
 public:
-  Command(CommandId id, unsigned threadId) : m_Id(id), ThreadId(threadId) {}
+  Command(CommandId id, unsigned threadId) : ThreadId(threadId), m_Id(id) {}
   Command(CommandId id) : m_Id{id} {}
   virtual ~Command() {}
 
