@@ -71,7 +71,7 @@ private:
     virtual ~RaytracingAccelerationStructureState() {}
     unsigned CommandKey{};
     unsigned CommandListKey{};
-    StateKind StateKind{};
+    StateKind Kind{};
     unsigned DestKey{};
     unsigned DestOffset{};
     unsigned SourceKey{};
