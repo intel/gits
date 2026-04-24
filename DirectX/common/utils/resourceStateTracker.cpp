@@ -29,7 +29,6 @@ void ResourceStateTracker::AddResource(ID3D12Resource* resource,
                                        unsigned resourceKey,
                                        D3D12_BARRIER_LAYOUT initialState) {
   ResourceStates& states = m_ResourceStates[resourceKey];
-  states.CreatedEnhanced = true;
   states.SubresourceStates.resize(GetSubresourcesCount(resource));
   for (unsigned i = 0; i < states.SubresourceStates.size(); ++i) {
     states.SubresourceStates[i].Layout = initialState;
@@ -192,7 +191,6 @@ void ResourceStateTracker::ExecuteCommandLists(ID3D12GraphicsCommandList** comma
         ResourceStates& resourceStatesOnCommandList = itResource.second;
         ResourceStates& resourceStates = m_ResourceStates[itResource.first];
         resourceStates.AllEqual = resourceStatesOnCommandList.AllEqual;
-        resourceStates.CreatedEnhanced = resourceStatesOnCommandList.CreatedEnhanced;
         for (unsigned i = 0; i < resourceStates.SubresourceStates.size(); ++i) {
           resourceStates.SubresourceStates[i] = resourceStatesOnCommandList.SubresourceStates[i];
         }

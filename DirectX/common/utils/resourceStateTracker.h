@@ -57,7 +57,6 @@ private:
   struct ResourceStates {
     std::vector<BarrierState> SubresourceStates;
     bool AllEqual{true};
-    bool CreatedEnhanced{};
   };
   using ResourceStatesByKey = std::unordered_map<unsigned, ResourceStates>;
   ResourceStatesByKey m_ResourceStates;

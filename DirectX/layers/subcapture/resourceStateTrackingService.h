@@ -31,7 +31,7 @@ public:
   struct ResourceStates {
     std::vector<SubresourceState> SubresourceStates;
     bool AllEqual{true};
-    bool CreatedEnhanced{};
+    bool IsBuffer{};
   };
 
 public:

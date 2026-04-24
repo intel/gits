@@ -21,8 +21,8 @@ ResourceStateEnhanced::ResourceStateEnhanced(ID3D12GraphicsCommandList* commandL
       m_Subresource(subresource),
       m_CurrentState(currentState) {}
 
-void ResourceStateEnhanced::SetState(D3D12_RESOURCE_STATES State) {
-  m_State = State;
+void ResourceStateEnhanced::SetState(D3D12_RESOURCE_STATES state) {
+  m_State = state;
 
   if (m_CurrentState.Enhanced) {
     HRESULT hr = m_CommandList->QueryInterface(IID_PPV_ARGS(&m_CommandList7));
@@ -105,9 +105,9 @@ void ResourceStateEnhanced::RevertState() {
   }
 }
 
-D3D12_BARRIER_SYNC ResourceStateEnhanced::GetSync(D3D12_RESOURCE_STATES State) {
+D3D12_BARRIER_SYNC ResourceStateEnhanced::GetSync(D3D12_RESOURCE_STATES state) {
   D3D12_BARRIER_SYNC sync = D3D12_BARRIER_SYNC_NONE;
-  switch (State) {
+  switch (state) {
   case D3D12_RESOURCE_STATE_COMMON:
     sync = D3D12_BARRIER_SYNC_ALL;
     break;
@@ -163,9 +163,9 @@ D3D12_BARRIER_SYNC ResourceStateEnhanced::GetSync(D3D12_RESOURCE_STATES State) {
   return sync;
 }
 
-D3D12_BARRIER_ACCESS ResourceStateEnhanced::GetAccess(D3D12_RESOURCE_STATES State) {
+D3D12_BARRIER_ACCESS ResourceStateEnhanced::GetAccess(D3D12_RESOURCE_STATES state) {
   D3D12_BARRIER_ACCESS access = D3D12_BARRIER_ACCESS_NO_ACCESS;
-  switch (State) {
+  switch (state) {
   case D3D12_RESOURCE_STATE_COMMON:
     access = D3D12_BARRIER_ACCESS_COMMON;
     break;
@@ -222,9 +222,9 @@ D3D12_BARRIER_ACCESS ResourceStateEnhanced::GetAccess(D3D12_RESOURCE_STATES Stat
   return access;
 }
 
-D3D12_BARRIER_LAYOUT ResourceStateEnhanced::GetLayout(D3D12_RESOURCE_STATES State) {
+D3D12_BARRIER_LAYOUT ResourceStateEnhanced::GetLayout(D3D12_RESOURCE_STATES state) {
   D3D12_BARRIER_LAYOUT layout = D3D12_BARRIER_LAYOUT_UNDEFINED;
-  switch (State) {
+  switch (state) {
   case D3D12_RESOURCE_STATE_COMMON:
     layout = D3D12_BARRIER_LAYOUT_COMMON;
     break;
