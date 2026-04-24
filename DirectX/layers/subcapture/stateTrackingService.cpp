@@ -657,6 +657,7 @@ void StateTrackingService::RestoreD3D12CommittedResource(ObjectState* state) {
   case CommandId::ID_ID3D12DEVICE_CREATECOMMITTEDRESOURCE: {
     auto* command =
         static_cast<ID3D12DeviceCreateCommittedResourceCommand*>(state->CreationCommand.get());
+    initialState = GetResourceInitialState(*resourceState, resourceState->Dimension);
     command->m_InitialResourceState.Value = initialState;
   } break;
   case CommandId::ID_ID3D12DEVICE4_CREATECOMMITTEDRESOURCE1: {
