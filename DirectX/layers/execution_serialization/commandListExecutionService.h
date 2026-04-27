@@ -44,7 +44,7 @@ public:
                           unsigned fenceKey,
                           UINT64 fenceValue);
   void FenceSignal(unsigned callKey, unsigned fenceKey, UINT64 fenceValue);
-  void CreateCommandQueue(unsigned DeviceKey, unsigned commandQueueKey);
+  void CreateCommandQueue(unsigned deviceKey, unsigned commandQueueKey);
   unsigned GetUniqueCommandKey() {
     return ++m_RestoreCommandKey;
   };

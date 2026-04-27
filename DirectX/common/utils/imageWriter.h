@@ -16,7 +16,7 @@
 namespace gits {
 namespace DirectX {
 
-bool writeImage(const std::filesystem::path& outputFileName,
+bool WriteImage(const std::filesystem::path& outputFileName,
                 ImageFormat outputFormat,
                 uint8_t* pixelData,
                 DXGI_FORMAT pixelFormat,

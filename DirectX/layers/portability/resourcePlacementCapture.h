@@ -27,7 +27,7 @@ struct ResourcePlacementInfo {
 class ResourcePlacementCapture {
 public:
   void createPlacedResource(unsigned heapKey,
-                            unsigned ResourceKey,
+                            unsigned resourceKey,
                             UINT64 offset,
                             ID3D12Device* device,
                             D3D12_RESOURCE_DESC& desc);

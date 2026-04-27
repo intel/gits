@@ -372,7 +372,7 @@ void ResourceDump::DumpTexture(DumpInfo& dumpInfo, void* data) {
       uint8_t* pixels = reinterpret_cast<uint8_t*>(data) + slice * slicePitch;
       size_t width = std::max(dumpInfo.Desc.Width >> dumpInfo.MipLevel, 1ull);
       size_t height = std::max(dumpInfo.Desc.Height >> dumpInfo.MipLevel, 1u);
-      writeImage(dumpNameW, ImageFormat::DDS, pixels, format, width, height, dumpInfo.RowPitch);
+      WriteImage(dumpNameW, ImageFormat::DDS, pixels, format, width, height, dumpInfo.RowPitch);
     }
     return;
   }
@@ -447,7 +447,7 @@ void ResourceDump::DumpTexture(DumpInfo& dumpInfo, void* data) {
       return;
     }
 
-    writeImage(dumpNameW, m_Format, imageConverted->pixels, imageConverted->format,
+    WriteImage(dumpNameW, m_Format, imageConverted->pixels, imageConverted->format,
                imageConverted->width, imageConverted->height, imageConverted->rowPitch);
   }
 }

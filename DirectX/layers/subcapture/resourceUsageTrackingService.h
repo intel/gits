@@ -42,14 +42,14 @@ public:
 
 private:
   struct UsageNumber {
-    unsigned executeKey{};
-    unsigned commandNumber{};
+    unsigned ExecuteKey{};
+    unsigned CommandNumber{};
 
     bool operator<(const UsageNumber& rhs) const {
-      if (executeKey == rhs.executeKey) {
-        return commandNumber < rhs.commandNumber;
+      if (ExecuteKey == rhs.ExecuteKey) {
+        return CommandNumber < rhs.CommandNumber;
       } else {
-        return executeKey < rhs.executeKey;
+        return ExecuteKey < rhs.ExecuteKey;
       }
     }
   };

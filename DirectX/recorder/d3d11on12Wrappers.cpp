@@ -29,12 +29,12 @@ HRESULT D3D11On12CreateDeviceWrapper(IUnknown* pDevice,
     IUnknown* pDeviceUnwrap{};
     if (pDevice) {
       IUnknownWrapper* pDeviceWrapper = reinterpret_cast<IUnknownWrapper*>(pDevice);
-      pDeviceUnwrap = pDeviceWrapper->getWrappedObject<IUnknown>();
+      pDeviceUnwrap = pDeviceWrapper->GetWrappedObject<IUnknown>();
     }
     IUnknown* pCommandQueuesUnwrapped{};
     if (ppCommandQueues && *ppCommandQueues) {
       IUnknownWrapper* commandQueuesWrapper = reinterpret_cast<IUnknownWrapper*>(*ppCommandQueues);
-      pCommandQueuesUnwrapped = commandQueuesWrapper->getWrappedObject<IUnknown>();
+      pCommandQueuesUnwrapped = commandQueuesWrapper->GetWrappedObject<IUnknown>();
     }
     result = manager.getd3d11on12DispatchTable().D3D11On12CreateDevice(
         pDeviceUnwrap, Flags, pFeatureLevels, FeatureLevels, &pCommandQueuesUnwrapped, NumQueues,

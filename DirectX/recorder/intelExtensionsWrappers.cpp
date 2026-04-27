@@ -80,7 +80,7 @@ HRESULT INTC_D3D12_CreateDeviceExtensionContextWrapper(
     }
     if (result == S_OK) {
       command.m_ppExtensionContext.Key = manager.createWrapperKey();
-      manager.getIntelExtensionsContextMap().setContext(
+      manager.getIntelExtensionsContextMap().SetContext(
           reinterpret_cast<std::uintptr_t>(*command.m_ppExtensionContext.Value),
           command.m_ppExtensionContext.Key);
     }
@@ -134,7 +134,7 @@ HRESULT INTC_D3D12_CreateDeviceExtensionContext1Wrapper(
     }
     if (result == S_OK) {
       command.m_ppExtensionContext.Key = manager.createWrapperKey();
-      manager.getIntelExtensionsContextMap().setContext(
+      manager.getIntelExtensionsContextMap().SetContext(
           reinterpret_cast<std::uintptr_t>(*command.m_ppExtensionContext.Value),
           command.m_ppExtensionContext.Key);
     }
@@ -171,8 +171,8 @@ HRESULT INTC_DestroyDeviceExtensionContextWrapper(
     INTC_DestroyDeviceExtensionContextCommand command(GetCurrentThreadId(), ppExtensionContext);
 
     auto context = reinterpret_cast<std::uintptr_t>(*command.m_ppExtensionContext.Value);
-    command.m_ppExtensionContext.Key = manager.getIntelExtensionsContextMap().getKey(context);
-    manager.getIntelExtensionsContextMap().removeContext(context);
+    command.m_ppExtensionContext.Key = manager.getIntelExtensionsContextMap().GetKey(context);
+    manager.getIntelExtensionsContextMap().RemoveContext(context);
 
     for (Layer* layer : manager.GetPreLayers()) {
       layer->Pre(command);
@@ -208,7 +208,7 @@ HRESULT INTC_D3D12_CreateCommandQueueWrapper(
     INTC_D3D12_CreateCommandQueueCommand command(GetCurrentThreadId(), pExtensionContext, pDesc,
                                                  riid, ppCommandQueue);
 
-    command.m_pExtensionContext.Key = manager.getIntelExtensionsContextMap().getKey(
+    command.m_pExtensionContext.Key = manager.getIntelExtensionsContextMap().GetKey(
         reinterpret_cast<std::uintptr_t>(command.m_pExtensionContext.Value));
 
     for (Layer* layer : manager.GetPreLayers()) {
@@ -249,7 +249,7 @@ HRESULT INTC_D3D12_CreateComputePipelineStateWrapper(
     INTC_D3D12_CreateComputePipelineStateCommand command(GetCurrentThreadId(), pExtensionContext,
                                                          pDesc, riid, ppPipelineState);
 
-    command.m_pExtensionContext.Key = manager.getIntelExtensionsContextMap().getKey(
+    command.m_pExtensionContext.Key = manager.getIntelExtensionsContextMap().GetKey(
         reinterpret_cast<std::uintptr_t>(command.m_pExtensionContext.Value));
     UpdateInterface<PointerArgument<INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC>,
                     INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC>
@@ -296,7 +296,7 @@ HRESULT INTC_D3D12_CreateReservedResourceWrapper(
                                                      InitialState, pOptimizedClearValue, riid,
                                                      ppvResource);
 
-    command.m_pExtensionContext.Key = manager.getIntelExtensionsContextMap().getKey(
+    command.m_pExtensionContext.Key = manager.getIntelExtensionsContextMap().GetKey(
         reinterpret_cast<std::uintptr_t>(command.m_pExtensionContext.Value));
 
     for (Layer* layer : manager.GetPreLayers()) {
@@ -344,7 +344,7 @@ HRESULT INTC_D3D12_CreateCommittedResourceWrapper(
         GetCurrentThreadId(), pExtensionContext, pHeapProperties, HeapFlags, pDesc,
         InitialResourceState, pOptimizedClearValue, riidResource, ppvResource);
 
-    command.m_pExtensionContext.Key = manager.getIntelExtensionsContextMap().getKey(
+    command.m_pExtensionContext.Key = manager.getIntelExtensionsContextMap().GetKey(
         reinterpret_cast<std::uintptr_t>(command.m_pExtensionContext.Value));
 
     for (Layer* layer : manager.GetPreLayers()) {
@@ -407,7 +407,7 @@ HRESULT INTC_D3D12_CreateHeapWrapper(PFNINTCDX12EXT_CREATEHEAP pfnCreateHeap,
     INTC_D3D12_CreateHeapCommand command(GetCurrentThreadId(), pExtensionContext, pDesc, riid,
                                          ppvHeap);
 
-    command.m_pExtensionContext.Key = manager.getIntelExtensionsContextMap().getKey(
+    command.m_pExtensionContext.Key = manager.getIntelExtensionsContextMap().GetKey(
         reinterpret_cast<std::uintptr_t>(command.m_pExtensionContext.Value));
 
     for (Layer* layer : manager.GetPreLayers()) {
@@ -453,7 +453,7 @@ HRESULT INTC_D3D12_CreatePlacedResourceWrapper(
                                                    HeapOffset, pDesc, InitialState,
                                                    pOptimizedClearValue, riid, ppvResource);
 
-    command.m_pExtensionContext.Key = manager.getIntelExtensionsContextMap().getKey(
+    command.m_pExtensionContext.Key = manager.getIntelExtensionsContextMap().GetKey(
         reinterpret_cast<std::uintptr_t>(command.m_pExtensionContext.Value));
     updateInterface(command.m_pHeap, pHeap);
 
@@ -664,7 +664,7 @@ HRESULT INTC_D3D12_SetFeatureSupportWrapper(PFNINTCDX12EXT_SETFEATURESUPPORT pfn
 
     INTC_D3D12_SetFeatureSupportCommand command(GetCurrentThreadId(), pExtensionContext, pFeature);
 
-    command.m_pExtensionContext.Key = manager.getIntelExtensionsContextMap().getKey(
+    command.m_pExtensionContext.Key = manager.getIntelExtensionsContextMap().GetKey(
         reinterpret_cast<std::uintptr_t>(command.m_pExtensionContext.Value));
 
     for (Layer* layer : manager.GetPreLayers()) {
@@ -700,7 +700,7 @@ D3D12_RESOURCE_ALLOCATION_INFO INTC_D3D12_GetResourceAllocationInfoWrapper(
 
     INTC_D3D12_GetResourceAllocationInfoCommand command(
         GetCurrentThreadId(), pExtensionContext, visibleMask, numResourceDescs, pResourceDescs);
-    command.m_pExtensionContext.Key = manager.getIntelExtensionsContextMap().getKey(
+    command.m_pExtensionContext.Key = manager.getIntelExtensionsContextMap().GetKey(
         reinterpret_cast<std::uintptr_t>(command.m_pExtensionContext.Value));
 
     for (Layer* layer : manager.GetPreLayers()) {
@@ -739,7 +739,7 @@ HRESULT INTC_D3D12_CheckFeatureSupportWrapper(
 
     INTC_D3D12_CheckFeatureSupportCommand command(GetCurrentThreadId(), pExtensionContext, Feature,
                                                   pFeatureSupportData, FeatureSupportDataSize);
-    command.m_pExtensionContext.Key = manager.getIntelExtensionsContextMap().getKey(
+    command.m_pExtensionContext.Key = manager.getIntelExtensionsContextMap().GetKey(
         reinterpret_cast<std::uintptr_t>(command.m_pExtensionContext.Value));
 
     for (Layer* layer : manager.GetPreLayers()) {

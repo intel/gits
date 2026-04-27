@@ -125,7 +125,7 @@ private:
 private:
   void CreateDescriptor(unsigned heapKey,
                         unsigned DescriptorIndex,
-                        unsigned ResourceKey,
+                        unsigned resourceKey,
                         DescriptorHeapTracker::DescriptorInfo::DescriptorKind descriptorKind);
   void DumpComputeOutput(ID3D12GraphicsCommandList* commandList,
                          const DispatchOutput& dispatchOutput,

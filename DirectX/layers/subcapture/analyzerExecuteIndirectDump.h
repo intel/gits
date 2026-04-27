@@ -37,8 +37,8 @@ public:
 
 private:
   struct ExecuteIndirectDumpInfo : public DumpInfo {
-    const D3D12_COMMAND_SIGNATURE_DESC* commandSignature{};
-    DumpInfo countDumpInfo;
+    const D3D12_COMMAND_SIGNATURE_DESC* CommandSignature{};
+    DumpInfo CountDumpInfo;
   };
 
   void DumpStagedResource(DumpInfo& dumpInfo) override;

@@ -21,7 +21,7 @@ namespace gits {
 namespace DirectX {
 
 IUnknownWrapper::IUnknownWrapper(REFIID riid, IUnknown* object) : m_Iid(riid), m_Object(object) {
-  insertIID(IID_IUnknown);
+  InsertIID(IID_IUnknown);
   m_Key = CaptureManager::get().createWrapperKey();
 }
 
@@ -52,13 +52,13 @@ HRESULT STDMETHODCALLTYPE IUnknownWrapper::QueryInterface(REFIID riid, void** pp
     ULONG ret = m_Object->Release();
 
     if (SUCCEEDED(result)) {
-      if (isIID(riid)) {
+      if (IsIID(riid)) {
         *ppvObject = this;
         command.m_ppvObject.Key = m_Key;
       } else {
         bool found = false;
         for (auto& wrapper : m_SecondaryWrappers) {
-          if (wrapper->isIID(riid)) {
+          if (wrapper->IsIID(riid)) {
             *ppvObject = wrapper.get();
             command.m_ppvObject.Key = wrapper->m_Key;
             found = true;
@@ -154,7 +154,7 @@ ULONG STDMETHODCALLTYPE IUnknownWrapper::Release() {
   return result;
 }
 
-IUnknown* IUnknownWrapper::getRootIUnknown(IUnknown* object) {
+IUnknown* IUnknownWrapper::GetRootIUnknown(IUnknown* object) {
   IUnknown* unknown = nullptr;
   HRESULT hr = object->QueryInterface(IID_PPV_ARGS(&unknown));
   unknown->Release();

@@ -26,16 +26,16 @@ public:
   AccelerationStructuresSerializeService(StateTrackingService& stateService,
                                          SubcaptureRecorder& recorder);
   void BuildAccelerationStructure(
-      ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& Command);
+      ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c);
   void CopyAccelerationStructure(
-      ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& Command);
-  void SetDevice(ID3D12Device* device, unsigned DeviceKey) {
+      ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& c);
+  void SetDevice(ID3D12Device* device, unsigned deviceKey) {
     m_Device = device;
-    m_DeviceKey = DeviceKey;
+    m_DeviceKey = deviceKey;
   }
   void RestoreAccelerationStructures();
-  void ExecuteCommandLists(ID3D12CommandQueueExecuteCommandListsCommand& Command);
-  void DestroyResource(unsigned ResourceKey);
+  void ExecuteCommandLists(ID3D12CommandQueueExecuteCommandListsCommand& c);
+  void DestroyResource(unsigned resourceKey);
 
 private:
   StateTrackingService& m_StateService;

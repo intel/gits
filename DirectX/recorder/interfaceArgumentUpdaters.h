@@ -19,8 +19,8 @@ namespace DirectX {
 template <typename T>
 void updateInterface(InterfaceArgument<T>& arg, IUnknownWrapper* wrapper) {
 
-  arg.Key = wrapper->getKey();
-  arg.Value = wrapper->getWrappedObject<T>();
+  arg.Key = wrapper->GetKey();
+  arg.Value = wrapper->GetWrappedObject<T>();
 }
 
 template <typename T>
@@ -34,8 +34,8 @@ void updateInterface(InterfaceArgument<T>& arg, T* object) {
   if (object->QueryInterface(IID_IUnknownWrapper, reinterpret_cast<void**>(&wrapper)) != S_OK) {
     return;
   }
-  arg.Key = wrapper->getKey();
-  arg.Value = wrapper->getWrappedObject<T>();
+  arg.Key = wrapper->GetKey();
+  arg.Value = wrapper->GetWrappedObject<T>();
 }
 
 template <typename T, typename Arg>
@@ -66,8 +66,8 @@ public:
       HRESULT hr =
           objects[i]->QueryInterface(IID_IUnknownWrapper, reinterpret_cast<void**>(&wrapper));
       GITS_ASSERT(hr == S_OK);
-      arg.Keys[i] = wrapper->getKey();
-      m_UnwrappedObjects[i] = wrapper->getWrappedObject<T>();
+      arg.Keys[i] = wrapper->GetKey();
+      m_UnwrappedObjects[i] = wrapper->GetWrappedObject<T>();
     }
   }
 
@@ -89,7 +89,7 @@ public:
       wrapObject(riid, reinterpret_cast<void**>(&wrappedObject));
       m_Wrapper = reinterpret_cast<IUnknownWrapper*>(wrappedObject);
 
-      arg.Key = m_Wrapper->getKey();
+      arg.Key = m_Wrapper->GetKey();
     }
   }
   ~UpdateOutputInterface() {

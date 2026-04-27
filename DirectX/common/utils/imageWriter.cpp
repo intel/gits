@@ -21,7 +21,7 @@
 namespace gits {
 namespace DirectX {
 
-static void convertRgba8ToRgb8(
+static void ConvertRgba8ToRgb8(
     const uint8_t* src, size_t width, size_t height, size_t rowPitch, uint8_t* dst) {
   uint8_t* dstPtr = dst;
   for (size_t y = 0; y < height; ++y) {
@@ -35,7 +35,7 @@ static void convertRgba8ToRgb8(
   }
 }
 
-static void convertBgra8ToRgb8(
+static void ConvertBgra8ToRgb8(
     const uint8_t* src, size_t width, size_t height, size_t rowPitch, uint8_t* dst) {
   uint8_t* dstPtr = dst;
   for (size_t y = 0; y < height; ++y) {
@@ -52,7 +52,7 @@ static void convertBgra8ToRgb8(
   }
 }
 
-static void covertRgb10a2ToRgb8(
+static void ConvertRgb10a2ToRgb8(
     const uint8_t* src, size_t width, size_t height, size_t rowPitch, uint8_t* dst) {
   uint8_t* dstPtr = dst;
   for (size_t y = 0; y < height; ++y) {
@@ -72,7 +72,7 @@ static void covertRgb10a2ToRgb8(
   }
 }
 
-static bool writeImageToDds(const std::filesystem::path& outputFileName,
+static bool WriteImageToDds(const std::filesystem::path& outputFileName,
                             uint8_t* pixelData,
                             DXGI_FORMAT pixelFormat,
                             size_t width,
@@ -104,7 +104,7 @@ static bool writeImageToDds(const std::filesystem::path& outputFileName,
   return true;
 }
 
-bool writeImage(const std::filesystem::path& outputFileName,
+bool WriteImage(const std::filesystem::path& outputFileName,
                 ImageFormat outputFormat,
                 uint8_t* pixelData,
                 DXGI_FORMAT pixelFormat,
@@ -113,7 +113,7 @@ bool writeImage(const std::filesystem::path& outputFileName,
                 size_t rowPitch) {
   // DDS does not require format conversion and can be directly written using DirectXTex
   if (outputFormat == ImageFormat::DDS) {
-    return writeImageToDds(outputFileName, pixelData, pixelFormat, width, height, rowPitch);
+    return WriteImageToDds(outputFileName, pixelData, pixelFormat, width, height, rowPitch);
   }
 
   bool useStbImage =
@@ -133,15 +133,15 @@ bool writeImage(const std::filesystem::path& outputFileName,
     switch (pixelFormat) {
     case DXGI_FORMAT_R8G8B8A8_UNORM:
     case DXGI_FORMAT_R8G8B8A8_UNORM_SRGB:
-      convertRgba8ToRgb8(pixelData, width, height, rowPitch, rgbData.data());
+      ConvertRgba8ToRgb8(pixelData, width, height, rowPitch, rgbData.data());
       break;
     case DXGI_FORMAT_B8G8R8X8_UNORM:
     case DXGI_FORMAT_B8G8R8A8_UNORM:
     case DXGI_FORMAT_B8G8R8A8_UNORM_SRGB:
-      convertBgra8ToRgb8(pixelData, width, height, rowPitch, rgbData.data());
+      ConvertBgra8ToRgb8(pixelData, width, height, rowPitch, rgbData.data());
       break;
     case DXGI_FORMAT_R10G10B10A2_UNORM:
-      covertRgb10a2ToRgb8(pixelData, width, height, rowPitch, rgbData.data());
+      ConvertRgb10a2ToRgb8(pixelData, width, height, rowPitch, rgbData.data());
       break;
     }
 

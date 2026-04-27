@@ -21,9 +21,9 @@ namespace DirectX {
 
 struct BarrierState {
   BarrierState() {}
-  BarrierState(D3D12_RESOURCE_STATES state_) : State(state_) {}
-  BarrierState(D3D12_BARRIER_LAYOUT layout_, D3D12_BARRIER_SYNC sync_, D3D12_BARRIER_ACCESS access_)
-      : Layout(layout_), Sync(sync_), Access(access_) {}
+  BarrierState(D3D12_RESOURCE_STATES state) : State(state) {}
+  BarrierState(D3D12_BARRIER_LAYOUT layout, D3D12_BARRIER_SYNC sync, D3D12_BARRIER_ACCESS access)
+      : Layout(layout), Sync(sync), Access(access) {}
   D3D12_RESOURCE_STATES State{};
   D3D12_BARRIER_LAYOUT Layout{};
   D3D12_BARRIER_SYNC Sync{};

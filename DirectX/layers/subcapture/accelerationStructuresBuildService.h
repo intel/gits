@@ -42,9 +42,9 @@ public:
       NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& Command);
   void NvapiBuildOpacityMicromapArray(
       NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& Command);
-  void SetDeviceKey(unsigned DeviceKey) {
-    m_DeviceKey = DeviceKey;
-    m_BufferContentRestore.SetDeviceKey(DeviceKey);
+  void SetDeviceKey(unsigned deviceKey) {
+    m_DeviceKey = deviceKey;
+    m_BufferContentRestore.SetDeviceKey(deviceKey);
   }
   void RestoreAccelerationStructures();
   void ExecuteCommandLists(ID3D12CommandQueueExecuteCommandListsCommand& Command);
@@ -163,7 +163,7 @@ private:
                    ID3D12GraphicsCommandList* commandList,
                    BufferBackedRaytracingAccelerationStructureState* state);
   std::vector<Interval> MergeIntervals(const std::vector<Interval>& intervals);
-  void InsertIfNotResident(unsigned ResourceKey, std::set<unsigned>& residencyKeys);
+  void InsertIfNotResident(unsigned resourceKey, std::set<unsigned>& residencyKeys);
   std::optional<unsigned> GetResidencyKeyForNotResidentResource(unsigned key);
   void RecordMakeResident(const std::set<unsigned>& keys);
   void RecordEvict(const std::set<unsigned>& keys);

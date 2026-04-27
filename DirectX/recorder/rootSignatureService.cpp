@@ -14,17 +14,17 @@
 namespace gits {
 namespace DirectX {
 
-void RootSignatureService::serializeRootSignature(D3D12_ROOT_SIGNATURE_DESC* desc,
+void RootSignatureService::SerializeRootSignature(D3D12_ROOT_SIGNATURE_DESC* desc,
                                                   unsigned blobKey) {
 
   std::lock_guard<std::mutex> lock(m_Mutex);
 
   RootSignatureInfo* info = new RootSignatureInfo{};
-  parseRootSignatureDesc(*desc, info);
+  ParseRootSignatureDesc(*desc, info);
   m_RootSignatureByBlobKey[blobKey] = info;
 }
 
-void RootSignatureService::serializeVersionedRootSignature(
+void RootSignatureService::SerializeVersionedRootSignature(
     D3D12_VERSIONED_ROOT_SIGNATURE_DESC* desc, unsigned blobKey) {
 
   std::lock_guard<std::mutex> lock(m_Mutex);
@@ -33,13 +33,13 @@ void RootSignatureService::serializeVersionedRootSignature(
 
   switch (desc->Version) {
   case D3D_ROOT_SIGNATURE_VERSION_1_0:
-    parseRootSignatureDesc(desc->Desc_1_0, info);
+    ParseRootSignatureDesc(desc->Desc_1_0, info);
     break;
   case D3D_ROOT_SIGNATURE_VERSION_1_1:
-    parseRootSignatureDesc(desc->Desc_1_1, info);
+    ParseRootSignatureDesc(desc->Desc_1_1, info);
     break;
   case D3D_ROOT_SIGNATURE_VERSION_1_2:
-    parseRootSignatureDesc(desc->Desc_1_2, info);
+    ParseRootSignatureDesc(desc->Desc_1_2, info);
     break;
   }
 
@@ -47,7 +47,7 @@ void RootSignatureService::serializeVersionedRootSignature(
 }
 
 template <typename ROOT_SIGNATURE_DESC>
-void RootSignatureService::parseRootSignatureDesc(ROOT_SIGNATURE_DESC& desc,
+void RootSignatureService::ParseRootSignatureDesc(ROOT_SIGNATURE_DESC& desc,
                                                   RootSignatureInfo* rootSignatureInfo) {
 
   for (unsigned paramIndex = 0; paramIndex < desc.NumParameters; ++paramIndex) {
@@ -57,10 +57,10 @@ void RootSignatureService::parseRootSignatureDesc(ROOT_SIGNATURE_DESC& desc,
            ++rangeIndex) {
         if (desc.pParameters[paramIndex].DescriptorTable.pDescriptorRanges[rangeIndex].RangeType ==
             D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER) {
-          rootSignatureInfo->setDescriptorTableHeapType(paramIndex,
+          rootSignatureInfo->SetDescriptorTableHeapType(paramIndex,
                                                         D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
         } else {
-          rootSignatureInfo->setDescriptorTableHeapType(paramIndex,
+          rootSignatureInfo->SetDescriptorTableHeapType(paramIndex,
                                                         D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
         }
       }
@@ -68,7 +68,7 @@ void RootSignatureService::parseRootSignatureDesc(ROOT_SIGNATURE_DESC& desc,
   }
 }
 
-void RootSignatureService::setBlobBufferPointer(unsigned blobKey, void* blobPointer) {
+void RootSignatureService::SetBlobBufferPointer(unsigned blobKey, void* blobPointer) {
 
   std::lock_guard<std::mutex> lock(m_Mutex);
 
@@ -79,7 +79,7 @@ void RootSignatureService::setBlobBufferPointer(unsigned blobKey, void* blobPoin
   }
 }
 
-void RootSignatureService::createRootSignature(void* blobPointer,
+void RootSignatureService::CreateRootSignature(void* blobPointer,
                                                unsigned blobLength,
                                                unsigned RootSignatureKey) {
 
@@ -102,13 +102,13 @@ void RootSignatureService::createRootSignature(void* blobPointer,
     GITS_ASSERT(res == S_OK);
 
     const D3D12_ROOT_SIGNATURE_DESC* desc = rootSignatureDeserializer->GetRootSignatureDesc();
-    parseRootSignatureDesc(*desc, info);
+    ParseRootSignatureDesc(*desc, info);
   }
 
   m_RootSignatureByRootSignatureKey[RootSignatureKey] = info;
 }
 
-void RootSignatureService::setGraphicsRootSignature(unsigned commandListKey,
+void RootSignatureService::SetGraphicsRootSignature(unsigned commandListKey,
                                                     unsigned RootSignatureKey) {
   std::lock_guard<std::mutex> lock(m_Mutex);
   auto it = m_RootSignatureByRootSignatureKey.find(RootSignatureKey);
@@ -116,7 +116,7 @@ void RootSignatureService::setGraphicsRootSignature(unsigned commandListKey,
   m_GraphicsRootSignatureByCommandListKey[commandListKey] = it->second;
 }
 
-void RootSignatureService::setComputeRootSignature(unsigned commandListKey,
+void RootSignatureService::SetComputeRootSignature(unsigned commandListKey,
                                                    unsigned RootSignatureKey) {
   std::lock_guard<std::mutex> lock(m_Mutex);
   auto it = m_RootSignatureByRootSignatureKey.find(RootSignatureKey);
@@ -124,30 +124,30 @@ void RootSignatureService::setComputeRootSignature(unsigned commandListKey,
   m_ComputeRootSignatureByCommandListKey[commandListKey] = it->second;
 }
 
-void RootSignatureService::resetRootSignatures(unsigned commandListKey) {
+void RootSignatureService::ResetRootSignatures(unsigned commandListKey) {
   std::lock_guard<std::mutex> lock(m_Mutex);
   m_GraphicsRootSignatureByCommandListKey.erase(commandListKey);
   m_ComputeRootSignatureByCommandListKey.erase(commandListKey);
 }
 
-D3D12_DESCRIPTOR_HEAP_TYPE RootSignatureService::getGraphicsRootSignatureDescriptorHeapType(
+D3D12_DESCRIPTOR_HEAP_TYPE RootSignatureService::GetGraphicsRootSignatureDescriptorHeapType(
     unsigned commandListKey, unsigned parameterIndex) {
   std::lock_guard<std::mutex> lock(m_Mutex);
   D3D12_DESCRIPTOR_HEAP_TYPE type{};
   auto it = m_GraphicsRootSignatureByCommandListKey.find(commandListKey);
   if (it != m_GraphicsRootSignatureByCommandListKey.end()) {
-    type = it->second->getDescriptorTableHeapType(parameterIndex);
+    type = it->second->GetDescriptorTableHeapType(parameterIndex);
   }
   return type;
 }
 
-D3D12_DESCRIPTOR_HEAP_TYPE RootSignatureService::getComputeRootSignatureDescriptorHeapType(
+D3D12_DESCRIPTOR_HEAP_TYPE RootSignatureService::GetComputeRootSignatureDescriptorHeapType(
     unsigned commandListKey, unsigned parameterIndex) {
   std::lock_guard<std::mutex> lock(m_Mutex);
   D3D12_DESCRIPTOR_HEAP_TYPE type{};
   auto it = m_ComputeRootSignatureByCommandListKey.find(commandListKey);
   if (it != m_ComputeRootSignatureByCommandListKey.end()) {
-    type = it->second->getDescriptorTableHeapType(parameterIndex);
+    type = it->second->GetDescriptorTableHeapType(parameterIndex);
   }
   return type;
 }

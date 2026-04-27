@@ -62,7 +62,7 @@ public:
                           unsigned fenceKey,
                           UINT64 fenceValue);
   void FenceSignal(unsigned callKey, unsigned fenceKey, UINT64 fenceValue);
-  void MappedDataMeta(unsigned ResourceKey);
+  void MappedDataMeta(unsigned resourceKey);
   void CreateXessContext(xessD3D12CreateContextCommand& c);
   void CreateXellContext(xellD3D12CreateContextCommand& c);
   void CreateXefgContext(xefgSwapChainD3D12CreateContextCommand& c);

@@ -21,16 +21,16 @@ void BindingTablesDump::DumpBindingTable(ID3D12GraphicsCommandList* commandList,
                                          unsigned size,
                                          unsigned stride,
                                          BarrierState state,
-                                         StateObjectInfo* stateObjectInfo,
+                                         StateObjectInfo* StateObjectInfo,
                                          DescriptorHeaps descriptorHeaps,
-                                         unsigned RootSignatureKey) {
+                                         unsigned rootSignatureKey) {
   BindingTablesInfo* info = new BindingTablesInfo();
   info->Offset = offset;
   info->Size = size;
-  info->stride = stride;
-  info->stateObjectInfo = stateObjectInfo;
-  info->descriptorHeaps = descriptorHeaps;
-  info->RootSignatureKey = RootSignatureKey;
+  info->Stride = stride;
+  info->StateObjectInfo = StateObjectInfo;
+  info->DescriptorHeaps = descriptorHeaps;
+  info->RootSignatureKey = rootSignatureKey;
 
   StageResource(commandList, resource, state, *info);
 }
@@ -39,32 +39,32 @@ void BindingTablesDump::DumpBuffer(DumpInfo& dumpInfo, void* data) {
   std::lock_guard<std::mutex> lock(m_Mutex);
 
   BindingTablesInfo& info = static_cast<BindingTablesInfo&>(dumpInfo);
-  unsigned recordCount = info.Size / info.stride;
+  unsigned recordCount = info.Size / info.Stride;
   for (unsigned recordIndex = 0; recordIndex < recordCount; ++recordIndex) {
-    uint8_t* p = static_cast<uint8_t*>(data) + recordIndex * info.stride;
+    uint8_t* p = static_cast<uint8_t*>(data) + recordIndex * info.Stride;
 
-    unsigned RootSignatureKey = info.stateObjectInfo->GlobalRootSignature;
-    if (!RootSignatureKey) {
-      RootSignatureKey = info.RootSignatureKey;
+    unsigned rootSignatureKey = info.StateObjectInfo->GlobalRootSignature;
+    if (!rootSignatureKey) {
+      rootSignatureKey = info.RootSignatureKey;
     }
     CapturePlayerShaderIdentifierService::ShaderIdentifier shaderIdentifier;
     memcpy(shaderIdentifier.data(), p, shaderIdentifier.size());
     std::wstring exportName =
         m_RaytracingService.GetShaderIdentifierService().GetExportNameByCaptureIdentifier(
             shaderIdentifier);
-    auto it = info.stateObjectInfo->ExportToRootSignature.find(exportName);
-    if (it != info.stateObjectInfo->ExportToRootSignature.end()) {
-      RootSignatureKey = it->second;
+    auto it = info.StateObjectInfo->ExportToRootSignature.find(exportName);
+    if (it != info.StateObjectInfo->ExportToRootSignature.end()) {
+      rootSignatureKey = it->second;
     }
 
     D3D12_ROOT_SIGNATURE_DESC* desc =
-        m_RaytracingService.GetRootSignatureService().GetRootSignatureDesc(RootSignatureKey);
+        m_RaytracingService.GetRootSignatureService().GetRootSignatureDesc(rootSignatureKey);
     GITS_ASSERT(desc);
 
     unsigned byteOffset = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
     for (unsigned rootParameterIndex = 0; rootParameterIndex < desc->NumParameters;
          ++rootParameterIndex) {
-      if (byteOffset >= info.stride) {
+      if (byteOffset >= info.Stride) {
         break;
       }
       const D3D12_ROOT_PARAMETER& param = desc->pParameters[rootParameterIndex];
@@ -74,7 +74,7 @@ void BindingTablesDump::DumpBuffer(DumpInfo& dumpInfo, void* data) {
                  param.ParameterType == D3D12_ROOT_PARAMETER_TYPE_SRV ||
                  param.ParameterType == D3D12_ROOT_PARAMETER_TYPE_UAV) {
         byteOffset = Align(byteOffset, sizeof(UINT64));
-        if (byteOffset >= info.stride) {
+        if (byteOffset >= info.Stride) {
           break;
         }
 
@@ -90,13 +90,13 @@ void BindingTablesDump::DumpBuffer(DumpInfo& dumpInfo, void* data) {
         byteOffset += sizeof(UINT64);
       } else if (param.ParameterType == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE) {
         byteOffset = Align(byteOffset, sizeof(UINT64));
-        if (byteOffset >= info.stride) {
+        if (byteOffset >= info.Stride) {
           break;
         }
 
         UINT64* descriptor = reinterpret_cast<UINT64*>(p + byteOffset);
         if (*descriptor) {
-          unsigned DescriptorHeapKey{};
+          unsigned descriptorHeapKey{};
           unsigned descriptorHeapSize{};
           CapturePlayerDescriptorHandleService::DescriptorHeapInfo* heapInfo{};
 
@@ -107,14 +107,14 @@ void BindingTablesDump::DumpBuffer(DumpInfo& dumpInfo, void* data) {
             heapInfo = m_RaytracingService.GetDescriptorHandleService()
                            .GetSamplerDescriptorHeapInfoByCaptureHandle(*descriptor);
             stride = m_RaytracingService.GetDescriptorHandleService().SamplerHeapIncrement();
-            DescriptorHeapKey = info.descriptorHeaps.SamplerHeapKey;
-            descriptorHeapSize = info.descriptorHeaps.SamplerHeapSize;
+            descriptorHeapKey = info.DescriptorHeaps.SamplerHeapKey;
+            descriptorHeapSize = info.DescriptorHeaps.SamplerHeapSize;
           } else {
             heapInfo = m_RaytracingService.GetDescriptorHandleService()
                            .GetViewDescriptorHeapInfoByCaptureHandle(*descriptor);
             stride = m_RaytracingService.GetDescriptorHandleService().ViewHeapIncrement();
-            DescriptorHeapKey = info.descriptorHeaps.ViewDescriptorHeapKey;
-            descriptorHeapSize = info.descriptorHeaps.ViewDescriptorHeapSize;
+            descriptorHeapKey = info.DescriptorHeaps.ViewDescriptorHeapKey;
+            descriptorHeapSize = info.DescriptorHeaps.ViewDescriptorHeapSize;
           }
 
           if (heapInfo) {
@@ -122,18 +122,18 @@ void BindingTablesDump::DumpBuffer(DumpInfo& dumpInfo, void* data) {
 
             std::vector<unsigned> Indexes =
                 m_RaytracingService.GetRootSignatureService().GetDescriptorTableIndexes(
-                    RootSignatureKey, DescriptorHeapKey, rootParameterIndex, DescriptorIndex,
+                    rootSignatureKey, descriptorHeapKey, rootParameterIndex, DescriptorIndex,
                     descriptorHeapSize, true);
             for (unsigned index : Indexes) {
               DescriptorState* state =
-                  m_RaytracingService.GetDescriptorService().GetDescriptorState(DescriptorHeapKey,
+                  m_RaytracingService.GetDescriptorService().GetDescriptorState(descriptorHeapKey,
                                                                                 index);
               if (state) {
                 m_BindingTablesResources.insert(state->ResourceKey);
-                m_BindingTablesDescriptors.insert({DescriptorHeapKey, index});
+                m_BindingTablesDescriptors.insert({descriptorHeapKey, index});
               }
             }
-            m_BindingTablesResources.insert(DescriptorHeapKey);
+            m_BindingTablesResources.insert(descriptorHeapKey);
           }
         }
         byteOffset += sizeof(UINT64);

@@ -18,10 +18,10 @@ class StateTrackingService;
 class ResidencyService {
 public:
   ResidencyService(StateTrackingService& stateService) : m_StateService(stateService) {}
-  void CreateNotResident(const unsigned key, const unsigned DeviceKey);
-  void MakeResident(const std::vector<unsigned>& keys, const unsigned DeviceKey);
-  void Evict(const std::vector<unsigned>& keys, const unsigned DeviceKey);
-  void DestroyObject(const unsigned key);
+  void CreateNotResident(unsigned key, unsigned deviceKey);
+  void MakeResident(const std::vector<unsigned>& keys, unsigned deviceKey);
+  void Evict(const std::vector<unsigned>& keys, unsigned deviceKey);
+  void DestroyObject(unsigned key);
   void RestoreResidency();
 
 private:

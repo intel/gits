@@ -22,8 +22,8 @@ UpdateInterface<D3D12_TEXTURE_COPY_LOCATION_Argument, D3D12_TEXTURE_COPY_LOCATIO
 
   if (value->pResource) {
     IUnknownWrapper* wrapper = reinterpret_cast<IUnknownWrapper*>(value->pResource);
-    arg.ResourceKey = wrapper->getKey();
-    arg.Value->pResource = wrapper->getWrappedObject<ID3D12Resource>();
+    arg.ResourceKey = wrapper->GetKey();
+    arg.Value->pResource = wrapper->GetWrappedObject<ID3D12Resource>();
   }
 }
 
@@ -36,8 +36,8 @@ UpdateInterface<D3D12_GRAPHICS_PIPELINE_STATE_DESC_Argument, D3D12_GRAPHICS_PIPE
 
   if (value->pRootSignature) {
     IUnknownWrapper* wrapper = reinterpret_cast<IUnknownWrapper*>(value->pRootSignature);
-    arg.RootSignatureKey = wrapper->getKey();
-    arg.Value->pRootSignature = wrapper->getWrappedObject<ID3D12RootSignature>();
+    arg.RootSignatureKey = wrapper->GetKey();
+    arg.Value->pRootSignature = wrapper->GetWrappedObject<ID3D12RootSignature>();
   }
 }
 
@@ -50,8 +50,8 @@ UpdateInterface<D3D12_COMPUTE_PIPELINE_STATE_DESC_Argument, D3D12_COMPUTE_PIPELI
 
   if (value->pRootSignature) {
     IUnknownWrapper* wrapper = reinterpret_cast<IUnknownWrapper*>(value->pRootSignature);
-    arg.RootSignatureKey = wrapper->getKey();
-    arg.Value->pRootSignature = wrapper->getWrappedObject<ID3D12RootSignature>();
+    arg.RootSignatureKey = wrapper->GetKey();
+    arg.Value->pRootSignature = wrapper->GetWrappedObject<ID3D12RootSignature>();
   }
 }
 
@@ -75,30 +75,30 @@ UpdateInterface<D3D12_RESOURCE_BARRIERs_Argument, D3D12_RESOURCE_BARRIER>::Updat
       if (barrier.Aliasing.pResourceBefore) {
         IUnknownWrapper* wrapper =
             reinterpret_cast<IUnknownWrapper*>(barrier.Aliasing.pResourceBefore);
-        arg.ResourceKeys[i] = wrapper->getKey();
-        barrier.Aliasing.pResourceBefore = wrapper->getWrappedObject<ID3D12Resource>();
+        arg.ResourceKeys[i] = wrapper->GetKey();
+        barrier.Aliasing.pResourceBefore = wrapper->GetWrappedObject<ID3D12Resource>();
       }
       if (barrier.Aliasing.pResourceAfter) {
         IUnknownWrapper* wrapper =
             reinterpret_cast<IUnknownWrapper*>(barrier.Aliasing.pResourceAfter);
-        arg.ResourceAfterKeys[i] = wrapper->getKey();
-        barrier.Aliasing.pResourceAfter = wrapper->getWrappedObject<ID3D12Resource>();
+        arg.ResourceAfterKeys[i] = wrapper->GetKey();
+        barrier.Aliasing.pResourceAfter = wrapper->GetWrappedObject<ID3D12Resource>();
       }
       break;
 
     case D3D12_RESOURCE_BARRIER_TYPE_TRANSITION:
       if (barrier.Transition.pResource) {
         IUnknownWrapper* wrapper = reinterpret_cast<IUnknownWrapper*>(barrier.Transition.pResource);
-        arg.ResourceKeys[i] = wrapper->getKey();
-        barrier.Transition.pResource = wrapper->getWrappedObject<ID3D12Resource>();
+        arg.ResourceKeys[i] = wrapper->GetKey();
+        barrier.Transition.pResource = wrapper->GetWrappedObject<ID3D12Resource>();
       }
       break;
 
     case D3D12_RESOURCE_BARRIER_TYPE_UAV:
       if (barrier.UAV.pResource) {
         IUnknownWrapper* wrapper = reinterpret_cast<IUnknownWrapper*>(barrier.UAV.pResource);
-        arg.ResourceKeys[i] = wrapper->getKey();
-        barrier.UAV.pResource = wrapper->getWrappedObject<ID3D12Resource>();
+        arg.ResourceKeys[i] = wrapper->GetKey();
+        barrier.UAV.pResource = wrapper->GetWrappedObject<ID3D12Resource>();
       }
       break;
     }
@@ -129,8 +129,8 @@ UpdateInterface<D3D12_PIPELINE_STATE_STREAM_DESC_Argument, D3D12_PIPELINE_STATE_
 
       ID3D12RootSignature* rootSignature = *rootSignatureSubobject;
       IUnknownWrapper* wrapper = reinterpret_cast<IUnknownWrapper*>(rootSignature);
-      arg.RootSignatureKey = wrapper->getKey();
-      *rootSignatureSubobject = wrapper->getWrappedObject<ID3D12RootSignature>();
+      arg.RootSignatureKey = wrapper->GetKey();
+      *rootSignatureSubobject = wrapper->GetWrappedObject<ID3D12RootSignature>();
 
       offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_ROOT_SIGNATURE);
       break;
@@ -246,9 +246,9 @@ UpdateInterface<D3D12_STATE_OBJECT_DESC_Argument, D3D12_STATE_OBJECT_DESC>::Upda
           *static_cast<D3D12_GLOBAL_ROOT_SIGNATURE*>(const_cast<void*>(subobject->pDesc));
       IUnknownWrapper* wrapper =
           reinterpret_cast<IUnknownWrapper*>(m_GlobalSignatureUnwrapped.pGlobalRootSignature);
-      arg.InterfaceKeysBySubobject[index] = wrapper->getKey();
+      arg.InterfaceKeysBySubobject[index] = wrapper->GetKey();
       m_GlobalSignatureUnwrapped.pGlobalRootSignature =
-          wrapper->getWrappedObject<ID3D12RootSignature>();
+          wrapper->GetWrappedObject<ID3D12RootSignature>();
 
       m_SubobjectsUnwrapped.push_back(
           D3D12_STATE_SUBOBJECT{subobject->Type, &m_GlobalSignatureUnwrapped});
@@ -262,8 +262,8 @@ UpdateInterface<D3D12_STATE_OBJECT_DESC_Argument, D3D12_STATE_OBJECT_DESC>::Upda
       D3D12_LOCAL_ROOT_SIGNATURE* localRootSignature = &m_LocalSignatures.back();
       IUnknownWrapper* wrapper =
           reinterpret_cast<IUnknownWrapper*>(localRootSignature->pLocalRootSignature);
-      arg.InterfaceKeysBySubobject[index] = wrapper->getKey();
-      localRootSignature->pLocalRootSignature = wrapper->getWrappedObject<ID3D12RootSignature>();
+      arg.InterfaceKeysBySubobject[index] = wrapper->GetKey();
+      localRootSignature->pLocalRootSignature = wrapper->GetWrappedObject<ID3D12RootSignature>();
 
       m_SubobjectsUnwrapped.push_back(D3D12_STATE_SUBOBJECT{subobject->Type, localRootSignature});
       m_WrappedSubobjectIndexes[subobject] = index;
@@ -275,8 +275,8 @@ UpdateInterface<D3D12_STATE_OBJECT_DESC_Argument, D3D12_STATE_OBJECT_DESC>::Upda
 
       D3D12_EXISTING_COLLECTION_DESC* desc = &existingCollectionDescs.back();
       IUnknownWrapper* wrapper = reinterpret_cast<IUnknownWrapper*>(desc->pExistingCollection);
-      arg.InterfaceKeysBySubobject[index] = wrapper->getKey();
-      desc->pExistingCollection = wrapper->getWrappedObject<ID3D12StateObject>();
+      arg.InterfaceKeysBySubobject[index] = wrapper->GetKey();
+      desc->pExistingCollection = wrapper->GetWrappedObject<ID3D12StateObject>();
 
       m_SubobjectsUnwrapped.push_back(D3D12_STATE_SUBOBJECT{subobject->Type, desc});
       m_WrappedSubobjectIndexes[subobject] = index;
@@ -325,16 +325,16 @@ UpdateInterface<D3D12_RENDER_PASS_RENDER_TARGET_DESCs_Argument,
       if (m_UnwrapStructures[i].EndingAccess.Resolve.pSrcResource) {
         IUnknownWrapper* wrapperSrcResource = reinterpret_cast<IUnknownWrapper*>(
             m_UnwrapStructures[i].EndingAccess.Resolve.pSrcResource);
-        arg.ResolveSrcResourceKeys.push_back(wrapperSrcResource->getKey());
+        arg.ResolveSrcResourceKeys.push_back(wrapperSrcResource->GetKey());
         m_UnwrapStructures[i].EndingAccess.Resolve.pSrcResource =
-            wrapperSrcResource->getWrappedObject<ID3D12Resource>();
+            wrapperSrcResource->GetWrappedObject<ID3D12Resource>();
       }
       if (m_UnwrapStructures[i].EndingAccess.Resolve.pDstResource) {
         IUnknownWrapper* wrapperDstResource = reinterpret_cast<IUnknownWrapper*>(
             m_UnwrapStructures[i].EndingAccess.Resolve.pDstResource);
-        arg.ResolveDstResourceKeys.push_back(wrapperDstResource->getKey());
+        arg.ResolveDstResourceKeys.push_back(wrapperDstResource->GetKey());
         m_UnwrapStructures[i].EndingAccess.Resolve.pDstResource =
-            wrapperDstResource->getWrappedObject<ID3D12Resource>();
+            wrapperDstResource->GetWrappedObject<ID3D12Resource>();
       }
     }
   }
@@ -355,16 +355,16 @@ UpdateInterface<D3D12_RENDER_PASS_DEPTH_STENCIL_DESC_Argument,
     if (arg.Value->DepthEndingAccess.Resolve.pSrcResource) {
       IUnknownWrapper* wrapperSrcResource =
           reinterpret_cast<IUnknownWrapper*>(arg.Value->DepthEndingAccess.Resolve.pSrcResource);
-      arg.ResolveSrcDepthKey = wrapperSrcResource->getKey();
+      arg.ResolveSrcDepthKey = wrapperSrcResource->GetKey();
       arg.Value->DepthEndingAccess.Resolve.pSrcResource =
-          wrapperSrcResource->getWrappedObject<ID3D12Resource>();
+          wrapperSrcResource->GetWrappedObject<ID3D12Resource>();
     }
     if (arg.Value->DepthEndingAccess.Resolve.pDstResource) {
       IUnknownWrapper* wrapperDstResource =
           reinterpret_cast<IUnknownWrapper*>(arg.Value->DepthEndingAccess.Resolve.pDstResource);
-      arg.ResolveDstDepthKey = wrapperDstResource->getKey();
+      arg.ResolveDstDepthKey = wrapperDstResource->GetKey();
       arg.Value->DepthEndingAccess.Resolve.pDstResource =
-          wrapperDstResource->getWrappedObject<ID3D12Resource>();
+          wrapperDstResource->GetWrappedObject<ID3D12Resource>();
     }
   }
 
@@ -372,16 +372,16 @@ UpdateInterface<D3D12_RENDER_PASS_DEPTH_STENCIL_DESC_Argument,
     if (arg.Value->StencilEndingAccess.Resolve.pSrcResource) {
       IUnknownWrapper* wrapperSrcResource =
           reinterpret_cast<IUnknownWrapper*>(arg.Value->StencilEndingAccess.Resolve.pSrcResource);
-      arg.ResolveSrcStencilKey = wrapperSrcResource->getKey();
+      arg.ResolveSrcStencilKey = wrapperSrcResource->GetKey();
       arg.Value->StencilEndingAccess.Resolve.pSrcResource =
-          wrapperSrcResource->getWrappedObject<ID3D12Resource>();
+          wrapperSrcResource->GetWrappedObject<ID3D12Resource>();
     }
     if (arg.Value->StencilEndingAccess.Resolve.pDstResource) {
       IUnknownWrapper* wrapperDstResource =
           reinterpret_cast<IUnknownWrapper*>(arg.Value->StencilEndingAccess.Resolve.pDstResource);
-      arg.ResolveDstStencilKey = wrapperDstResource->getKey();
+      arg.ResolveDstStencilKey = wrapperDstResource->GetKey();
       arg.Value->StencilEndingAccess.Resolve.pDstResource =
-          wrapperDstResource->getWrappedObject<ID3D12Resource>();
+          wrapperDstResource->GetWrappedObject<ID3D12Resource>();
     }
   }
 }
@@ -412,10 +412,10 @@ UpdateInterface<D3D12_BARRIER_GROUPs_Argument, D3D12_BARRIER_GROUP>::UpdateInter
       for (unsigned j = 0; j < barrierGroup.NumBarriers; ++j) {
         IUnknownWrapper* wrapper =
             reinterpret_cast<IUnknownWrapper*>(barrierGroup.pTextureBarriers[j].pResource);
-        arg.ResourceKeys[resourceKeyIndex++] = wrapper->getKey();
+        arg.ResourceKeys[resourceKeyIndex++] = wrapper->GetKey();
         m_UnwrappedTextureBarrierGroups.back()->push_back(barrierGroup.pTextureBarriers[j]);
         m_UnwrappedTextureBarrierGroups.back()->back().pResource =
-            wrapper->getWrappedObject<ID3D12Resource>();
+            wrapper->GetWrappedObject<ID3D12Resource>();
       }
       barrierGroupUnwrapped.pTextureBarriers = m_UnwrappedTextureBarrierGroups.back()->data();
     } else if (barrierGroup.Type == D3D12_BARRIER_TYPE_BUFFER) {
@@ -424,10 +424,10 @@ UpdateInterface<D3D12_BARRIER_GROUPs_Argument, D3D12_BARRIER_GROUP>::UpdateInter
       for (unsigned j = 0; j < barrierGroup.NumBarriers; ++j) {
         IUnknownWrapper* wrapper =
             reinterpret_cast<IUnknownWrapper*>(barrierGroup.pBufferBarriers[j].pResource);
-        arg.ResourceKeys[resourceKeyIndex++] = wrapper->getKey();
+        arg.ResourceKeys[resourceKeyIndex++] = wrapper->GetKey();
         m_UnwrappedBufferBarrierGroups.back()->push_back(barrierGroup.pBufferBarriers[j]);
         m_UnwrappedBufferBarrierGroups.back()->back().pResource =
-            wrapper->getWrappedObject<ID3D12Resource>();
+            wrapper->GetWrappedObject<ID3D12Resource>();
       }
       barrierGroupUnwrapped.pBufferBarriers = m_UnwrappedBufferBarrierGroups.back()->data();
     }
@@ -462,8 +462,8 @@ UpdateInterface<PointerArgument<INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC>,
   if (value->pD3D12Desc->pRootSignature) {
     IUnknownWrapper* wrapper =
         reinterpret_cast<IUnknownWrapper*>(value->pD3D12Desc->pRootSignature);
-    arg.RootSignatureKey = wrapper->getKey();
-    arg.Value->pD3D12Desc->pRootSignature = wrapper->getWrappedObject<ID3D12RootSignature>();
+    arg.RootSignatureKey = wrapper->GetKey();
+    arg.Value->pD3D12Desc->pRootSignature = wrapper->GetWrappedObject<ID3D12RootSignature>();
   }
 }
 
@@ -493,8 +493,8 @@ static unsigned updateDmlBinding(const void* srcBinding, DML_BUFFER_BINDING* dst
   binding = dstBinding;
 
   IUnknownWrapper* wrapper = reinterpret_cast<IUnknownWrapper*>(binding->Buffer);
-  binding->Buffer = wrapper->getWrappedObject<ID3D12Resource>();
-  return wrapper->getKey();
+  binding->Buffer = wrapper->GetWrappedObject<ID3D12Resource>();
+  return wrapper->GetKey();
 }
 
 UpdateInterface<DML_BINDING_TABLE_DESC_Argument, DML_BINDING_TABLE_DESC>::UpdateInterface(
@@ -505,8 +505,8 @@ UpdateInterface<DML_BINDING_TABLE_DESC_Argument, DML_BINDING_TABLE_DESC>::Update
 
   if (value->Dispatchable) {
     IUnknownWrapper* wrapper = reinterpret_cast<IUnknownWrapper*>(value->Dispatchable);
-    arg.TableFields.DispatchableKey = wrapper->getKey();
-    arg.Value->Dispatchable = wrapper->getWrappedObject<IDMLDispatchable>();
+    arg.TableFields.DispatchableKey = wrapper->GetKey();
+    arg.Value->Dispatchable = wrapper->GetWrappedObject<IDMLDispatchable>();
   }
 }
 
@@ -613,8 +613,8 @@ UpdateInterface<DML_GRAPH_DESC_Argument, DML_GRAPH_DESC>::UpdateInterface(
       opNode = &m_OpNodes[i];
       if (opNode->Operator) {
         IUnknownWrapper* wrapper = reinterpret_cast<IUnknownWrapper*>(opNode->Operator);
-        opNode->Operator = wrapper->getWrappedObject<IDMLOperator>();
-        arg.OperatorKeys[i] = wrapper->getKey();
+        opNode->Operator = wrapper->GetWrappedObject<IDMLOperator>();
+        arg.OperatorKeys[i] = wrapper->GetKey();
       }
       node->Desc = opNode;
     }
@@ -629,18 +629,18 @@ UpdateInterface<xess_d3d12_init_params_t_Argument, xess_d3d12_init_params_t>::Up
 
   if (value->pTempBufferHeap) {
     IUnknownWrapper* wrapper = reinterpret_cast<IUnknownWrapper*>(value->pTempBufferHeap);
-    arg.TempBufferHeapKey = wrapper->getKey();
-    arg.Value->pTempBufferHeap = wrapper->getWrappedObject<ID3D12Heap>();
+    arg.TempBufferHeapKey = wrapper->GetKey();
+    arg.Value->pTempBufferHeap = wrapper->GetWrappedObject<ID3D12Heap>();
   }
   if (value->pTempTextureHeap) {
     IUnknownWrapper* wrapper = reinterpret_cast<IUnknownWrapper*>(value->pTempTextureHeap);
-    arg.TempTextureHeapKey = wrapper->getKey();
-    arg.Value->pTempTextureHeap = wrapper->getWrappedObject<ID3D12Heap>();
+    arg.TempTextureHeapKey = wrapper->GetKey();
+    arg.Value->pTempTextureHeap = wrapper->GetWrappedObject<ID3D12Heap>();
   }
   if (value->pPipelineLibrary) {
     IUnknownWrapper* wrapper = reinterpret_cast<IUnknownWrapper*>(value->pPipelineLibrary);
-    arg.PipelineLibraryKey = wrapper->getKey();
-    arg.Value->pPipelineLibrary = wrapper->getWrappedObject<ID3D12PipelineLibrary>();
+    arg.PipelineLibraryKey = wrapper->GetKey();
+    arg.Value->pPipelineLibrary = wrapper->GetWrappedObject<ID3D12PipelineLibrary>();
   }
 }
 
@@ -652,39 +652,39 @@ UpdateInterface<xess_d3d12_execute_params_t_Argument, xess_d3d12_execute_params_
 
   if (value->pColorTexture) {
     IUnknownWrapper* wrapper = reinterpret_cast<IUnknownWrapper*>(value->pColorTexture);
-    arg.ColorTextureKey = wrapper->getKey();
-    arg.Value->pColorTexture = wrapper->getWrappedObject<ID3D12Resource>();
+    arg.ColorTextureKey = wrapper->GetKey();
+    arg.Value->pColorTexture = wrapper->GetWrappedObject<ID3D12Resource>();
   }
   if (value->pVelocityTexture) {
     IUnknownWrapper* wrapper = reinterpret_cast<IUnknownWrapper*>(value->pVelocityTexture);
-    arg.VelocityTextureKey = wrapper->getKey();
-    arg.Value->pVelocityTexture = wrapper->getWrappedObject<ID3D12Resource>();
+    arg.VelocityTextureKey = wrapper->GetKey();
+    arg.Value->pVelocityTexture = wrapper->GetWrappedObject<ID3D12Resource>();
   }
   if (value->pDepthTexture) {
     IUnknownWrapper* wrapper = reinterpret_cast<IUnknownWrapper*>(value->pDepthTexture);
-    arg.DepthTextureKey = wrapper->getKey();
-    arg.Value->pDepthTexture = wrapper->getWrappedObject<ID3D12Resource>();
+    arg.DepthTextureKey = wrapper->GetKey();
+    arg.Value->pDepthTexture = wrapper->GetWrappedObject<ID3D12Resource>();
   }
   if (value->pExposureScaleTexture) {
     IUnknownWrapper* wrapper = reinterpret_cast<IUnknownWrapper*>(value->pExposureScaleTexture);
-    arg.ExposureScaleTextureKey = wrapper->getKey();
-    arg.Value->pExposureScaleTexture = wrapper->getWrappedObject<ID3D12Resource>();
+    arg.ExposureScaleTextureKey = wrapper->GetKey();
+    arg.Value->pExposureScaleTexture = wrapper->GetWrappedObject<ID3D12Resource>();
   }
   if (value->pResponsivePixelMaskTexture) {
     IUnknownWrapper* wrapper =
         reinterpret_cast<IUnknownWrapper*>(value->pResponsivePixelMaskTexture);
-    arg.ResponsivePixelMaskTextureKey = wrapper->getKey();
-    arg.Value->pResponsivePixelMaskTexture = wrapper->getWrappedObject<ID3D12Resource>();
+    arg.ResponsivePixelMaskTextureKey = wrapper->GetKey();
+    arg.Value->pResponsivePixelMaskTexture = wrapper->GetWrappedObject<ID3D12Resource>();
   }
   if (value->pOutputTexture) {
     IUnknownWrapper* wrapper = reinterpret_cast<IUnknownWrapper*>(value->pOutputTexture);
-    arg.OutputTextureKey = wrapper->getKey();
-    arg.Value->pOutputTexture = wrapper->getWrappedObject<ID3D12Resource>();
+    arg.OutputTextureKey = wrapper->GetKey();
+    arg.Value->pOutputTexture = wrapper->GetWrappedObject<ID3D12Resource>();
   }
   if (value->pDescriptorHeap) {
     IUnknownWrapper* wrapper = reinterpret_cast<IUnknownWrapper*>(value->pDescriptorHeap);
-    arg.DescriptorHeapKey = wrapper->getKey();
-    arg.Value->pDescriptorHeap = wrapper->getWrappedObject<ID3D12DescriptorHeap>();
+    arg.DescriptorHeapKey = wrapper->GetKey();
+    arg.Value->pDescriptorHeap = wrapper->GetWrappedObject<ID3D12DescriptorHeap>();
   }
 }
 
@@ -694,8 +694,8 @@ UpdateInterface<DSTORAGE_QUEUE_DESC_Argument, DSTORAGE_QUEUE_DESC>::UpdateInterf
   *arg.Value = *value;
   if (value->Device) {
     IUnknownWrapper* wrapper = reinterpret_cast<IUnknownWrapper*>(value->Device);
-    arg.DeviceKey = wrapper->getKey();
-    arg.Value->Device = wrapper->getWrappedObject<ID3D12Device>();
+    arg.DeviceKey = wrapper->GetKey();
+    arg.Value->Device = wrapper->GetWrappedObject<ID3D12Device>();
   }
 }
 
@@ -707,8 +707,8 @@ UpdateInterface<DSTORAGE_REQUEST_Argument, DSTORAGE_REQUEST>::UpdateInterface(
   case DSTORAGE_REQUEST_SOURCE_FILE:
     if (value->Source.File.Source) {
       IUnknownWrapper* wrapper = reinterpret_cast<IUnknownWrapper*>(value->Source.File.Source);
-      arg.FileKey = wrapper->getKey();
-      arg.Value->Source.File.Source = wrapper->getWrappedObject<IDStorageFile>();
+      arg.FileKey = wrapper->GetKey();
+      arg.Value->Source.File.Source = wrapper->GetWrappedObject<IDStorageFile>();
     }
     break;
   }
@@ -717,33 +717,33 @@ UpdateInterface<DSTORAGE_REQUEST_Argument, DSTORAGE_REQUEST>::UpdateInterface(
     if (value->Destination.Buffer.Resource) {
       IUnknownWrapper* wrapper =
           reinterpret_cast<IUnknownWrapper*>(value->Destination.Buffer.Resource);
-      arg.ResourceKey = wrapper->getKey();
-      arg.Value->Destination.Buffer.Resource = wrapper->getWrappedObject<ID3D12Resource>();
+      arg.ResourceKey = wrapper->GetKey();
+      arg.Value->Destination.Buffer.Resource = wrapper->GetWrappedObject<ID3D12Resource>();
     }
     break;
   case DSTORAGE_REQUEST_DESTINATION_TEXTURE_REGION:
     if (value->Destination.Texture.Resource) {
       IUnknownWrapper* wrapper =
           reinterpret_cast<IUnknownWrapper*>(value->Destination.Texture.Resource);
-      arg.ResourceKey = wrapper->getKey();
-      arg.Value->Destination.Texture.Resource = wrapper->getWrappedObject<ID3D12Resource>();
+      arg.ResourceKey = wrapper->GetKey();
+      arg.Value->Destination.Texture.Resource = wrapper->GetWrappedObject<ID3D12Resource>();
     }
     break;
   case DSTORAGE_REQUEST_DESTINATION_MULTIPLE_SUBRESOURCES:
     if (value->Destination.MultipleSubresources.Resource) {
       IUnknownWrapper* wrapper =
           reinterpret_cast<IUnknownWrapper*>(value->Destination.MultipleSubresources.Resource);
-      arg.ResourceKey = wrapper->getKey();
+      arg.ResourceKey = wrapper->GetKey();
       arg.Value->Destination.MultipleSubresources.Resource =
-          wrapper->getWrappedObject<ID3D12Resource>();
+          wrapper->GetWrappedObject<ID3D12Resource>();
     }
     break;
   case DSTORAGE_REQUEST_DESTINATION_TILES:
     if (value->Destination.Tiles.Resource) {
       IUnknownWrapper* wrapper =
           reinterpret_cast<IUnknownWrapper*>(value->Destination.Tiles.Resource);
-      arg.ResourceKey = wrapper->getKey();
-      arg.Value->Destination.Tiles.Resource = wrapper->getWrappedObject<ID3D12Resource>();
+      arg.ResourceKey = wrapper->GetKey();
+      arg.Value->Destination.Tiles.Resource = wrapper->GetWrappedObject<ID3D12Resource>();
     }
     break;
   }
@@ -760,23 +760,23 @@ UpdateInterface<xefg_swapchain_d3d12_init_params_t_Argument, xefg_swapchain_d3d1
                                                      reinterpret_cast<void**>(&wrapper)) != S_OK) {
       return;
     }
-    arg.ApplicationSwapChainKey = wrapper->getKey();
-    arg.Value->pApplicationSwapChain = wrapper->getWrappedObject<IDXGISwapChain>();
+    arg.ApplicationSwapChainKey = wrapper->GetKey();
+    arg.Value->pApplicationSwapChain = wrapper->GetWrappedObject<IDXGISwapChain>();
   }
   if (value->pTempBufferHeap) {
     IUnknownWrapper* wrapper = reinterpret_cast<IUnknownWrapper*>(value->pTempBufferHeap);
-    arg.TempBufferHeapKey = wrapper->getKey();
-    arg.Value->pTempBufferHeap = wrapper->getWrappedObject<ID3D12Heap>();
+    arg.TempBufferHeapKey = wrapper->GetKey();
+    arg.Value->pTempBufferHeap = wrapper->GetWrappedObject<ID3D12Heap>();
   }
   if (value->pTempTextureHeap) {
     IUnknownWrapper* wrapper = reinterpret_cast<IUnknownWrapper*>(value->pTempTextureHeap);
-    arg.TempTextureHeapKey = wrapper->getKey();
-    arg.Value->pTempTextureHeap = wrapper->getWrappedObject<ID3D12Heap>();
+    arg.TempTextureHeapKey = wrapper->GetKey();
+    arg.Value->pTempTextureHeap = wrapper->GetWrappedObject<ID3D12Heap>();
   }
   if (value->pPipelineLibrary) {
     IUnknownWrapper* wrapper = reinterpret_cast<IUnknownWrapper*>(value->pPipelineLibrary);
-    arg.PipelineLibraryKey = wrapper->getKey();
-    arg.Value->pPipelineLibrary = wrapper->getWrappedObject<ID3D12PipelineLibrary>();
+    arg.PipelineLibraryKey = wrapper->GetKey();
+    arg.Value->pPipelineLibrary = wrapper->GetWrappedObject<ID3D12PipelineLibrary>();
   }
 }
 
@@ -788,8 +788,8 @@ UpdateInterface<xefg_swapchain_d3d12_resource_data_t_Argument,
   *arg.Value = *value;
   if (value->pResource) {
     IUnknownWrapper* wrapper = reinterpret_cast<IUnknownWrapper*>(value->pResource);
-    arg.ResourceKey = wrapper->getKey();
-    arg.Value->pResource = wrapper->getWrappedObject<ID3D12Resource>();
+    arg.ResourceKey = wrapper->GetKey();
+    arg.Value->pResource = wrapper->GetWrappedObject<ID3D12Resource>();
   }
 }
 

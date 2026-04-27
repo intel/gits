@@ -29,12 +29,12 @@ namespace DirectX {
 void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService& pluginService) {
   auto& cfg = Configurator::Get().directx;
 
-  auto registerResourceCallback = [&playerManager](unsigned ResourceKey, ID3D12Resource* resource) {
+  auto registerResourceCallback = [&playerManager](unsigned resourceKey, ID3D12Resource* resource) {
     if (!resource) {
       return;
     }
-    playerManager.AddObject(ResourceKey, resource);
-    playerManager.GetGpuAddressService().CreateResource(ResourceKey, resource);
+    playerManager.AddObject(resourceKey, resource);
+    playerManager.GetGpuAddressService().CreateResource(resourceKey, resource);
   };
 
   // Load layers from LayerGroups

@@ -20,10 +20,10 @@ class ResourcePlacementAssertions {
 public:
   ResourcePlacementAssertions();
 
-  void createPlacedResource(unsigned ResourceKey,
+  void createPlacedResource(unsigned resourceKey,
                             const D3D12_RESOURCE_DESC& desc,
                             ID3D12Device* device);
-  void createPlacedResource(unsigned ResourceKey,
+  void createPlacedResource(unsigned resourceKey,
                             const D3D12_RESOURCE_DESC1& desc,
                             ID3D12Device* device);
 
@@ -33,11 +33,11 @@ private:
     D3D12_RESOURCE_ALLOCATION_INFO post{};
   };
 
-  const ResourcePlacementInfo* findPlacementData(unsigned ResourceKey);
+  const ResourcePlacementInfo* findPlacementData(unsigned resourceKey);
   D3D12_RESOURCE_ALLOCATION_INFO queryAllocationFromDevice(ID3D12Device* device,
                                                            const D3D12_RESOURCE_DESC& desc,
-                                                           unsigned ResourceKey);
-  void checkCompatibility(const AllocationInfo& allocationInfo, unsigned ResourceKey);
+                                                           unsigned resourceKey);
+  void checkCompatibility(const AllocationInfo& allocationInfo, unsigned resourceKey);
 
   void loadResourcePlacementData();
 

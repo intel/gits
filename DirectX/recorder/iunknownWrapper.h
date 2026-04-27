@@ -36,32 +36,32 @@ public:
   virtual ULONG STDMETHODCALLTYPE Release();
 
   template <typename T>
-  T* getWrappedObject() {
+  T* GetWrappedObject() {
     return static_cast<T*>(m_Object);
   }
 
   template <typename T>
-  const T* getWrappedObject() const {
+  const T* GetWrappedObject() const {
     return static_cast<const T*>(m_Object);
   }
 
-  static IUnknown* getRootIUnknown(IUnknown* object);
+  static IUnknown* GetRootIUnknown(IUnknown* object);
 
-  IUnknown* getRootIUnknown() {
-    return getRootIUnknown(m_Object);
+  IUnknown* GetRootIUnknown() {
+    return GetRootIUnknown(m_Object);
   }
 
-  unsigned getKey() {
+  unsigned GetKey() {
     return m_Key;
   }
 
 protected:
-  void insertIID(REFIID riid) {
+  void InsertIID(REFIID riid) {
     m_Iids.insert(riid);
   }
 
 private:
-  bool isIID(REFIID riid) {
+  bool IsIID(REFIID riid) {
     return m_Iids.find(riid) != m_Iids.end();
   }
 

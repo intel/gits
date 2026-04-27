@@ -60,7 +60,7 @@ void GpuPatchLayer::Post(ID3D12GraphicsCommandList4BuildRaytracingAccelerationSt
   std::lock_guard<std::mutex> lock(m_Mutex);
   if (c.m_pDesc.Value->Inputs.DescsLayout == D3D12_ELEMENTS_LAYOUT_ARRAY_OF_POINTERS) {
     GpuAddressService::GpuAddressInfo info =
-        m_GpuAddressService.getGpuAddressInfo(c.m_pDesc.Value->Inputs.InstanceDescs);
+        m_GpuAddressService.GetGpuAddressInfo(c.m_pDesc.Value->Inputs.InstanceDescs);
     D3D12_RESOURCE_STATES resourceState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
     ID3D12Resource* instancesBuffer = m_ResourcesByKey[info.ResourceKey];
     GITS_ASSERT(instancesBuffer);
