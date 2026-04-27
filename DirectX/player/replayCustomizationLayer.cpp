@@ -803,7 +803,8 @@ void ReplayCustomizationLayer::Pre(ID3D12PipelineLibraryLoadGraphicsPipelineComm
     return;
   }
   c.m_pDesc.Value->CachedPSO.pCachedBlob = nullptr;
-  if (c.m_Result.Value != S_OK || m_Manager.MultithreadedShaderCompilation()) {
+  if (c.m_Result.Value != S_OK ||
+      Configurator::Get().directx.player.multithreadedShaderCompilation) {
     return;
   }
   c.Skip = true;
@@ -823,7 +824,8 @@ void ReplayCustomizationLayer::Pre(ID3D12PipelineLibraryLoadComputePipelineComma
     return;
   }
   c.m_pDesc.Value->CachedPSO.pCachedBlob = nullptr;
-  if (c.m_Result.Value != S_OK || m_Manager.MultithreadedShaderCompilation()) {
+  if (c.m_Result.Value != S_OK ||
+      Configurator::Get().directx.player.multithreadedShaderCompilation) {
     return;
   }
   c.Skip = true;
@@ -843,7 +845,8 @@ void ReplayCustomizationLayer::Pre(ID3D12PipelineLibrary1LoadPipelineCommand& c)
     return;
   }
   RemoveCachedPso(*c.m_pDesc.Value);
-  if (c.m_Result.Value != S_OK || m_Manager.MultithreadedShaderCompilation()) {
+  if (c.m_Result.Value != S_OK ||
+      Configurator::Get().directx.player.multithreadedShaderCompilation) {
     return;
   }
   c.Skip = true;
@@ -1482,14 +1485,23 @@ void ReplayCustomizationLayer::Pre(INTC_D3D12_GetSupportedVersionsCommand& c) {
 }
 
 void ReplayCustomizationLayer::Pre(NvAPI_D3D12_SetCreatePipelineStateOptionsCommand& c) {
-  if (c.Skip || c.m_Result.Value != NVAPI_OK || !m_Manager.MultithreadedShaderCompilation()) {
+  if (c.Skip || c.m_Result.Value != NVAPI_OK ||
+      !Configurator::Get().directx.player.multithreadedShaderCompilation) {
     return;
   }
-  m_Manager.FlushMultithreadedShaderCompilation();
+  // Flush multithreaded shader compilation
+  const auto& results = m_Manager.GetMultithreadedObjectCreationService().CompleteAll();
+  for (const auto& [key, output] : results) {
+    if (output.result != S_OK) {
+      continue;
+    }
+    m_Manager.AddObject(key, static_cast<IUnknown*>(output.object));
+  }
 }
 
 void ReplayCustomizationLayer::Pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& c) {
-  if (c.Skip || c.m_Result.Value != NVAPI_OK || !m_Manager.MultithreadedShaderCompilation()) {
+  if (c.Skip || c.m_Result.Value != NVAPI_OK ||
+      !Configurator::Get().directx.player.multithreadedShaderCompilation) {
     return;
   }
 
@@ -1499,7 +1511,8 @@ void ReplayCustomizationLayer::Pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& 
 }
 
 void ReplayCustomizationLayer::Pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& c) {
-  if (c.Skip || c.m_Result.Value != NVAPI_OK || !m_Manager.MultithreadedShaderCompilation()) {
+  if (c.Skip || c.m_Result.Value != NVAPI_OK ||
+      !Configurator::Get().directx.player.multithreadedShaderCompilation) {
     return;
   }
 

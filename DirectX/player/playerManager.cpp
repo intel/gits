@@ -59,11 +59,7 @@ PlayerManager::~PlayerManager() {
 }
 
 PlayerManager::PlayerManager() {
-  auto& cfg = Configurator::Get();
-  m_ExecuteCommands = cfg.directx.player.execute;
-  m_MultithreadedShaderCompilation = cfg.directx.player.multithreadedShaderCompilation &&
-                                     !cfg.directx.features.subcapture.enabled &&
-                                     !cfg.directx.player.cCode.enabled;
+  m_ExecuteCommands = Configurator::Get().directx.player.execute;
 
   // Load DirectX runtimes
   LoadDirectML();
@@ -77,18 +73,6 @@ PlayerManager::PlayerManager() {
   m_PluginService->loadPlugins();
 
   m_LayerManager.LoadLayers(*this, *m_PluginService.get());
-}
-
-void PlayerManager::FlushMultithreadedShaderCompilation() {
-  const auto& results = m_MultithreadedObjectCreationService.CompleteAll();
-
-  for (const auto& [key, output] : results) {
-    if (output.result != S_OK) {
-      continue;
-    }
-
-    AddObject(key, static_cast<IUnknown*>(output.object));
-  }
 }
 
 void PlayerManager::AddObject(unsigned objectKey, IUnknown* object) {
