@@ -29,7 +29,7 @@ HRESULT INTC_D3D12_GetSupportedVersionsWrapper(
     INTC_D3D12_GetSupportedVersionsCommand command(
         GetCurrentThreadId(), pDevice, pSupportedExtVersions, pSupportedExtVersionsCount);
 
-    updateInterface(command.m_pDevice, const_cast<ID3D12Device*>(pDevice));
+    UpdateInterface(command.m_pDevice, const_cast<ID3D12Device*>(pDevice));
     for (Layer* layer : manager.GetPreLayers()) {
       layer->Pre(command);
     }
@@ -66,7 +66,7 @@ HRESULT INTC_D3D12_CreateDeviceExtensionContextWrapper(
     INTC_D3D12_CreateDeviceExtensionContextCommand command(
         GetCurrentThreadId(), pDevice, ppExtensionContext, pExtensionInfo, pExtensionAppInfo);
 
-    updateInterface(command.m_pDevice, const_cast<ID3D12Device*>(pDevice));
+    UpdateInterface(command.m_pDevice, const_cast<ID3D12Device*>(pDevice));
 
     for (Layer* layer : manager.GetPreLayers()) {
       layer->Pre(command);
@@ -120,7 +120,7 @@ HRESULT INTC_D3D12_CreateDeviceExtensionContext1Wrapper(
     INTC_D3D12_CreateDeviceExtensionContext1Command command(
         GetCurrentThreadId(), pDevice, ppExtensionContext, pExtensionInfo, pExtensionAppInfo);
 
-    updateInterface(command.m_pDevice, const_cast<ID3D12Device*>(pDevice));
+    UpdateInterface(command.m_pDevice, const_cast<ID3D12Device*>(pDevice));
 
     for (Layer* layer : manager.GetPreLayers()) {
       layer->Pre(command);
@@ -251,8 +251,8 @@ HRESULT INTC_D3D12_CreateComputePipelineStateWrapper(
 
     command.m_pExtensionContext.Key = manager.getIntelExtensionsContextMap().GetKey(
         reinterpret_cast<std::uintptr_t>(command.m_pExtensionContext.Value));
-    UpdateInterface<PointerArgument<INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC>,
-                    INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC>
+    UpdateInterfaceT<PointerArgument<INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC>,
+                     INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC>
         update_pDesc(command.m_pDesc, pDesc);
 
     for (Layer* layer : manager.GetPreLayers()) {
@@ -455,7 +455,7 @@ HRESULT INTC_D3D12_CreatePlacedResourceWrapper(
 
     command.m_pExtensionContext.Key = manager.getIntelExtensionsContextMap().GetKey(
         reinterpret_cast<std::uintptr_t>(command.m_pExtensionContext.Value));
-    updateInterface(command.m_pHeap, pHeap);
+    UpdateInterface(command.m_pHeap, pHeap);
 
     for (Layer* layer : manager.GetPreLayers()) {
       layer->Pre(command);

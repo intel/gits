@@ -61,14 +61,14 @@ ${generate_return(function)} ${function.name}Wrapper(${'' if params else ') {'}
     command.m_${param.name}.Key = manager.getXellContextMap().GetKey(reinterpret_cast<std::uintptr_t>(${param.name}));
     %elif param.is_interface and not param.is_interface_creation and not param.is_const:
     %if not param.sal_size:
-    updateInterface(command.m_${param.name}, ${param.name});
+    UpdateInterface(command.m_${param.name}, ${param.name});
     %else:
-    UpdateInterface<InterfaceArrayArgument<${param.type}>, ${param.type}> update_${param.name}(command.m_${param.name}, ${param.name});
+    UpdateInterfaceT<InterfaceArrayArgument<${param.type}>, ${param.type}> update_${param.name}(command.m_${param.name}, ${param.name});
     %endif
     %elif param.structure_with_interfaces and param.sal_size:
-    UpdateInterface<${param.type}s_Argument, ${param.type}> update_${param.name}(command.m_${param.name}, ${param.name});
+    UpdateInterfaceT<${param.type}s_Argument, ${param.type}> update_${param.name}(command.m_${param.name}, ${param.name});
     %elif param.structure_with_interfaces:
-    UpdateInterface<${param.type}_Argument, ${param.type}> update_${param.name}(command.m_${param.name}, ${param.name});
+    UpdateInterfaceT<${param.type}_Argument, ${param.type}> update_${param.name}(command.m_${param.name}, ${param.name});
     %endif
     %if is_xess_sdk_init_param(param):
     command.m_${param.name}.Key = manager.createWrapperKey(); // Used for subcapture restore order
@@ -159,18 +159,18 @@ ${generate_return(function)} ${interface.name}Wrapper::${function.name}(${'' if 
         ${args_simple[-1]});
         %endif
 
-    updateInterface(command.m_Object, this);
+    UpdateInterface(command.m_Object, this);
     %for param in function.params:
     %if param.is_interface and not param.is_interface_creation and not param.is_const:
     %if not param.sal_size:
-    updateInterface(command.m_${param.name}, ${param.name});
+    UpdateInterface(command.m_${param.name}, ${param.name});
     %else:
-    UpdateInterface<InterfaceArrayArgument<${param.type}>, ${param.type}> update_${param.name}(command.m_${param.name}, ${param.name});
+    UpdateInterfaceT<InterfaceArrayArgument<${param.type}>, ${param.type}> update_${param.name}(command.m_${param.name}, ${param.name});
     %endif
     %elif param.structure_with_interfaces and param.sal_size:
-    UpdateInterface<${param.type}s_Argument, ${param.type}> update_${param.name}(command.m_${param.name}, ${param.name});
+    UpdateInterfaceT<${param.type}s_Argument, ${param.type}> update_${param.name}(command.m_${param.name}, ${param.name});
     %elif param.structure_with_interfaces:
-    UpdateInterface<${param.type}_Argument, ${param.type}> update_${param.name}(command.m_${param.name}, ${param.name});
+    UpdateInterfaceT<${param.type}_Argument, ${param.type}> update_${param.name}(command.m_${param.name}, ${param.name});
     %endif
     %endfor
 

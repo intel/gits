@@ -14,8 +14,9 @@
 namespace gits {
 namespace DirectX {
 
-UpdateInterface<D3D12_TEXTURE_COPY_LOCATION_Argument, D3D12_TEXTURE_COPY_LOCATION>::UpdateInterface(
-    D3D12_TEXTURE_COPY_LOCATION_Argument& arg, const D3D12_TEXTURE_COPY_LOCATION* value) {
+UpdateInterfaceT<D3D12_TEXTURE_COPY_LOCATION_Argument, D3D12_TEXTURE_COPY_LOCATION>::
+    UpdateInterfaceT(D3D12_TEXTURE_COPY_LOCATION_Argument& arg,
+                     const D3D12_TEXTURE_COPY_LOCATION* value) {
 
   arg.Value = &m_UnwrapStructure;
   *arg.Value = *value;
@@ -27,9 +28,9 @@ UpdateInterface<D3D12_TEXTURE_COPY_LOCATION_Argument, D3D12_TEXTURE_COPY_LOCATIO
   }
 }
 
-UpdateInterface<D3D12_GRAPHICS_PIPELINE_STATE_DESC_Argument, D3D12_GRAPHICS_PIPELINE_STATE_DESC>::
-    UpdateInterface(D3D12_GRAPHICS_PIPELINE_STATE_DESC_Argument& arg,
-                    const D3D12_GRAPHICS_PIPELINE_STATE_DESC* value) {
+UpdateInterfaceT<D3D12_GRAPHICS_PIPELINE_STATE_DESC_Argument, D3D12_GRAPHICS_PIPELINE_STATE_DESC>::
+    UpdateInterfaceT(D3D12_GRAPHICS_PIPELINE_STATE_DESC_Argument& arg,
+                     const D3D12_GRAPHICS_PIPELINE_STATE_DESC* value) {
 
   arg.Value = &m_UnwrapStructure;
   *arg.Value = *value;
@@ -41,9 +42,9 @@ UpdateInterface<D3D12_GRAPHICS_PIPELINE_STATE_DESC_Argument, D3D12_GRAPHICS_PIPE
   }
 }
 
-UpdateInterface<D3D12_COMPUTE_PIPELINE_STATE_DESC_Argument, D3D12_COMPUTE_PIPELINE_STATE_DESC>::
-    UpdateInterface(D3D12_COMPUTE_PIPELINE_STATE_DESC_Argument& arg,
-                    const D3D12_COMPUTE_PIPELINE_STATE_DESC* value) {
+UpdateInterfaceT<D3D12_COMPUTE_PIPELINE_STATE_DESC_Argument, D3D12_COMPUTE_PIPELINE_STATE_DESC>::
+    UpdateInterfaceT(D3D12_COMPUTE_PIPELINE_STATE_DESC_Argument& arg,
+                     const D3D12_COMPUTE_PIPELINE_STATE_DESC* value) {
 
   arg.Value = &m_UnwrapStructure;
   *arg.Value = *value;
@@ -55,7 +56,7 @@ UpdateInterface<D3D12_COMPUTE_PIPELINE_STATE_DESC_Argument, D3D12_COMPUTE_PIPELI
   }
 }
 
-UpdateInterface<D3D12_RESOURCE_BARRIERs_Argument, D3D12_RESOURCE_BARRIER>::UpdateInterface(
+UpdateInterfaceT<D3D12_RESOURCE_BARRIERs_Argument, D3D12_RESOURCE_BARRIER>::UpdateInterfaceT(
     D3D12_RESOURCE_BARRIERs_Argument& arg, const D3D12_RESOURCE_BARRIER* value) {
 
   m_Unwrapped = m_UnwrappedStatic;
@@ -105,9 +106,9 @@ UpdateInterface<D3D12_RESOURCE_BARRIERs_Argument, D3D12_RESOURCE_BARRIER>::Updat
   }
 }
 
-UpdateInterface<D3D12_PIPELINE_STATE_STREAM_DESC_Argument, D3D12_PIPELINE_STATE_STREAM_DESC>::
-    UpdateInterface(D3D12_PIPELINE_STATE_STREAM_DESC_Argument& arg,
-                    const D3D12_PIPELINE_STATE_STREAM_DESC* stateStreamtDesc) {
+UpdateInterfaceT<D3D12_PIPELINE_STATE_STREAM_DESC_Argument, D3D12_PIPELINE_STATE_STREAM_DESC>::
+    UpdateInterfaceT(D3D12_PIPELINE_STATE_STREAM_DESC_Argument& arg,
+                     const D3D12_PIPELINE_STATE_STREAM_DESC* stateStreamtDesc) {
 
   m_StreamDescUnwrapped = *stateStreamtDesc;
   m_SubobjectsUnwrapped.resize(stateStreamtDesc->SizeInBytes);
@@ -225,7 +226,7 @@ UpdateInterface<D3D12_PIPELINE_STATE_STREAM_DESC_Argument, D3D12_PIPELINE_STATE_
   }
 }
 
-UpdateInterface<D3D12_STATE_OBJECT_DESC_Argument, D3D12_STATE_OBJECT_DESC>::UpdateInterface(
+UpdateInterfaceT<D3D12_STATE_OBJECT_DESC_Argument, D3D12_STATE_OBJECT_DESC>::UpdateInterfaceT(
     D3D12_STATE_OBJECT_DESC_Argument& arg, const D3D12_STATE_OBJECT_DESC* stateObjectDesc) {
 
   arg.Value = &m_StateObjectDescUnwrapped;
@@ -311,10 +312,10 @@ UpdateInterface<D3D12_STATE_OBJECT_DESC_Argument, D3D12_STATE_OBJECT_DESC>::Upda
   m_StateObjectDescUnwrapped.pSubobjects = m_SubobjectsUnwrapped.data();
 }
 
-UpdateInterface<D3D12_RENDER_PASS_RENDER_TARGET_DESCs_Argument,
-                D3D12_RENDER_PASS_RENDER_TARGET_DESC>::
-    UpdateInterface(D3D12_RENDER_PASS_RENDER_TARGET_DESCs_Argument& arg,
-                    const D3D12_RENDER_PASS_RENDER_TARGET_DESC* value) {
+UpdateInterfaceT<D3D12_RENDER_PASS_RENDER_TARGET_DESCs_Argument,
+                 D3D12_RENDER_PASS_RENDER_TARGET_DESC>::
+    UpdateInterfaceT(D3D12_RENDER_PASS_RENDER_TARGET_DESCs_Argument& arg,
+                     const D3D12_RENDER_PASS_RENDER_TARGET_DESC* value) {
   if (!value) {
     return;
   }
@@ -341,10 +342,10 @@ UpdateInterface<D3D12_RENDER_PASS_RENDER_TARGET_DESCs_Argument,
   arg.Value = m_UnwrapStructures.data();
 }
 
-UpdateInterface<D3D12_RENDER_PASS_DEPTH_STENCIL_DESC_Argument,
-                D3D12_RENDER_PASS_DEPTH_STENCIL_DESC>::
-    UpdateInterface(D3D12_RENDER_PASS_DEPTH_STENCIL_DESC_Argument& arg,
-                    const D3D12_RENDER_PASS_DEPTH_STENCIL_DESC* value) {
+UpdateInterfaceT<D3D12_RENDER_PASS_DEPTH_STENCIL_DESC_Argument,
+                 D3D12_RENDER_PASS_DEPTH_STENCIL_DESC>::
+    UpdateInterfaceT(D3D12_RENDER_PASS_DEPTH_STENCIL_DESC_Argument& arg,
+                     const D3D12_RENDER_PASS_DEPTH_STENCIL_DESC* value) {
   if (!value) {
     return;
   }
@@ -386,7 +387,7 @@ UpdateInterface<D3D12_RENDER_PASS_DEPTH_STENCIL_DESC_Argument,
   }
 }
 
-UpdateInterface<D3D12_BARRIER_GROUPs_Argument, D3D12_BARRIER_GROUP>::UpdateInterface(
+UpdateInterfaceT<D3D12_BARRIER_GROUPs_Argument, D3D12_BARRIER_GROUP>::UpdateInterfaceT(
     D3D12_BARRIER_GROUPs_Argument& arg, const D3D12_BARRIER_GROUP* value) {
 
   m_Unwrapped.resize(arg.Size);
@@ -434,27 +435,27 @@ UpdateInterface<D3D12_BARRIER_GROUPs_Argument, D3D12_BARRIER_GROUP>::UpdateInter
   }
 }
 
-UpdateInterface<D3D12_EXTENSION_ARGUMENTS_Argument, D3D12_EXTENSION_ARGUMENTS>::UpdateInterface(
+UpdateInterfaceT<D3D12_EXTENSION_ARGUMENTS_Argument, D3D12_EXTENSION_ARGUMENTS>::UpdateInterfaceT(
     D3D12_EXTENSION_ARGUMENTS_Argument& arg, const D3D12_EXTENSION_ARGUMENTS* value) {
   if (!value) {
     return;
   }
-  GITS_ASSERT(false, "UpdateInterface not implemented for D3D12_EXTENSION_ARGUMENTS_Argument");
+  GITS_ASSERT(false, "UpdateInterfaceT not implemented for D3D12_EXTENSION_ARGUMENTS_Argument");
 }
 
-UpdateInterface<D3D12_EXTENDED_OPERATION_DATA_Argument, D3D12_EXTENDED_OPERATION_DATA>::
-    UpdateInterface(D3D12_EXTENDED_OPERATION_DATA_Argument& arg,
-                    const D3D12_EXTENDED_OPERATION_DATA* value) {
+UpdateInterfaceT<D3D12_EXTENDED_OPERATION_DATA_Argument, D3D12_EXTENDED_OPERATION_DATA>::
+    UpdateInterfaceT(D3D12_EXTENDED_OPERATION_DATA_Argument& arg,
+                     const D3D12_EXTENDED_OPERATION_DATA* value) {
   if (!value) {
     return;
   }
-  GITS_ASSERT(false, "UpdateInterface not implemented for D3D12_EXTENDED_OPERATION_DATA_Argument");
+  GITS_ASSERT(false, "UpdateInterfaceT not implemented for D3D12_EXTENDED_OPERATION_DATA_Argument");
 }
 
-UpdateInterface<PointerArgument<INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC>,
-                INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC>::
-    UpdateInterface(PointerArgument<INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC>& arg,
-                    const INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC* value) {
+UpdateInterfaceT<PointerArgument<INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC>,
+                 INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC>::
+    UpdateInterfaceT(PointerArgument<INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC>& arg,
+                     const INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC* value) {
 
   arg.Value = &m_UnwrapStructure;
   *arg.Value = *value;
@@ -497,7 +498,7 @@ static unsigned updateDmlBinding(const void* srcBinding, DML_BUFFER_BINDING* dst
   return wrapper->GetKey();
 }
 
-UpdateInterface<DML_BINDING_TABLE_DESC_Argument, DML_BINDING_TABLE_DESC>::UpdateInterface(
+UpdateInterfaceT<DML_BINDING_TABLE_DESC_Argument, DML_BINDING_TABLE_DESC>::UpdateInterfaceT(
     DML_BINDING_TABLE_DESC_Argument& arg, const DML_BINDING_TABLE_DESC* value) {
 
   arg.Value = &m_UnwrapStructure;
@@ -510,7 +511,7 @@ UpdateInterface<DML_BINDING_TABLE_DESC_Argument, DML_BINDING_TABLE_DESC>::Update
   }
 }
 
-UpdateInterface<DML_BINDING_DESC_Argument, DML_BINDING_DESC>::UpdateInterface(
+UpdateInterfaceT<DML_BINDING_DESC_Argument, DML_BINDING_DESC>::UpdateInterfaceT(
     DML_BINDING_DESC_Argument& arg, const DML_BINDING_DESC* value) {
   if (!arg.Value) {
     return;
@@ -542,7 +543,7 @@ UpdateInterface<DML_BINDING_DESC_Argument, DML_BINDING_DESC>::UpdateInterface(
   }
 }
 
-UpdateInterface<DML_BINDING_DESCs_Argument, DML_BINDING_DESC>::UpdateInterface(
+UpdateInterfaceT<DML_BINDING_DESCs_Argument, DML_BINDING_DESC>::UpdateInterfaceT(
     DML_BINDING_DESCs_Argument& arg, const DML_BINDING_DESC* value) {
   if (!arg.Value) {
     return;
@@ -588,7 +589,7 @@ UpdateInterface<DML_BINDING_DESCs_Argument, DML_BINDING_DESC>::UpdateInterface(
   }
 }
 
-UpdateInterface<DML_GRAPH_DESC_Argument, DML_GRAPH_DESC>::UpdateInterface(
+UpdateInterfaceT<DML_GRAPH_DESC_Argument, DML_GRAPH_DESC>::UpdateInterfaceT(
     DML_GRAPH_DESC_Argument& arg, const DML_GRAPH_DESC* value) {
   if (!arg.Value) {
     return;
@@ -621,7 +622,7 @@ UpdateInterface<DML_GRAPH_DESC_Argument, DML_GRAPH_DESC>::UpdateInterface(
   }
 }
 
-UpdateInterface<xess_d3d12_init_params_t_Argument, xess_d3d12_init_params_t>::UpdateInterface(
+UpdateInterfaceT<xess_d3d12_init_params_t_Argument, xess_d3d12_init_params_t>::UpdateInterfaceT(
     xess_d3d12_init_params_t_Argument& arg, const xess_d3d12_init_params_t* value) {
 
   arg.Value = &m_UnwrapStructure;
@@ -644,8 +645,9 @@ UpdateInterface<xess_d3d12_init_params_t_Argument, xess_d3d12_init_params_t>::Up
   }
 }
 
-UpdateInterface<xess_d3d12_execute_params_t_Argument, xess_d3d12_execute_params_t>::UpdateInterface(
-    xess_d3d12_execute_params_t_Argument& arg, const xess_d3d12_execute_params_t* value) {
+UpdateInterfaceT<xess_d3d12_execute_params_t_Argument, xess_d3d12_execute_params_t>::
+    UpdateInterfaceT(xess_d3d12_execute_params_t_Argument& arg,
+                     const xess_d3d12_execute_params_t* value) {
 
   arg.Value = &m_UnwrapStructure;
   *arg.Value = *value;
@@ -688,7 +690,7 @@ UpdateInterface<xess_d3d12_execute_params_t_Argument, xess_d3d12_execute_params_
   }
 }
 
-UpdateInterface<DSTORAGE_QUEUE_DESC_Argument, DSTORAGE_QUEUE_DESC>::UpdateInterface(
+UpdateInterfaceT<DSTORAGE_QUEUE_DESC_Argument, DSTORAGE_QUEUE_DESC>::UpdateInterfaceT(
     DSTORAGE_QUEUE_DESC_Argument& arg, const DSTORAGE_QUEUE_DESC* value) {
   arg.Value = &m_UnwrapStructure;
   *arg.Value = *value;
@@ -699,7 +701,7 @@ UpdateInterface<DSTORAGE_QUEUE_DESC_Argument, DSTORAGE_QUEUE_DESC>::UpdateInterf
   }
 }
 
-UpdateInterface<DSTORAGE_REQUEST_Argument, DSTORAGE_REQUEST>::UpdateInterface(
+UpdateInterfaceT<DSTORAGE_REQUEST_Argument, DSTORAGE_REQUEST>::UpdateInterfaceT(
     DSTORAGE_REQUEST_Argument& arg, const DSTORAGE_REQUEST* value) {
   arg.Value = &m_UnwrapStructure;
   *arg.Value = *value;
@@ -749,9 +751,9 @@ UpdateInterface<DSTORAGE_REQUEST_Argument, DSTORAGE_REQUEST>::UpdateInterface(
   }
 }
 
-UpdateInterface<xefg_swapchain_d3d12_init_params_t_Argument, xefg_swapchain_d3d12_init_params_t>::
-    UpdateInterface(xefg_swapchain_d3d12_init_params_t_Argument& arg,
-                    const xefg_swapchain_d3d12_init_params_t* value) {
+UpdateInterfaceT<xefg_swapchain_d3d12_init_params_t_Argument, xefg_swapchain_d3d12_init_params_t>::
+    UpdateInterfaceT(xefg_swapchain_d3d12_init_params_t_Argument& arg,
+                     const xefg_swapchain_d3d12_init_params_t* value) {
   arg.Value = &m_UnwrapStructure;
   *arg.Value = *value;
   if (value->pApplicationSwapChain) {
@@ -780,10 +782,10 @@ UpdateInterface<xefg_swapchain_d3d12_init_params_t_Argument, xefg_swapchain_d3d1
   }
 }
 
-UpdateInterface<xefg_swapchain_d3d12_resource_data_t_Argument,
-                xefg_swapchain_d3d12_resource_data_t>::
-    UpdateInterface(xefg_swapchain_d3d12_resource_data_t_Argument& arg,
-                    const xefg_swapchain_d3d12_resource_data_t* value) {
+UpdateInterfaceT<xefg_swapchain_d3d12_resource_data_t_Argument,
+                 xefg_swapchain_d3d12_resource_data_t>::
+    UpdateInterfaceT(xefg_swapchain_d3d12_resource_data_t_Argument& arg,
+                     const xefg_swapchain_d3d12_resource_data_t* value) {
   arg.Value = &m_UnwrapStructure;
   *arg.Value = *value;
   if (value->pResource) {

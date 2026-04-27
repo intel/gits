@@ -95,7 +95,7 @@ NvAPI_Status NvAPI_D3D12_SetCreatePipelineStateOptionsWrapper(
 
     NvAPI_D3D12_SetCreatePipelineStateOptionsCommand command(GetCurrentThreadId(), pDevice, pState);
 
-    updateInterface(command.m_pDevice, pDevice);
+    UpdateInterface(command.m_pDevice, pDevice);
     for (Layer* layer : manager.GetPreLayers()) {
       layer->Pre(command);
     }
@@ -127,7 +127,7 @@ NvAPI_Status NvAPI_D3D12_SetNvShaderExtnSlotSpaceWrapper(IUnknown* pDev,
     NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand command(GetCurrentThreadId(), pDev, uavSlot,
                                                         uavSpace);
 
-    updateInterface(command.m_pDev, pDev);
+    UpdateInterface(command.m_pDev, pDev);
     for (Layer* layer : manager.GetPreLayers()) {
       layer->Pre(command);
     }
@@ -159,7 +159,7 @@ NvAPI_Status NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadWrapper(IUnknown* pD
     NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand command(GetCurrentThreadId(), pDev,
                                                                    uavSlot, uavSpace);
 
-    updateInterface(command.m_pDev, pDev);
+    UpdateInterface(command.m_pDev, pDev);
     for (Layer* layer : manager.GetPreLayers()) {
       layer->Pre(command);
     }
@@ -193,7 +193,7 @@ NvAPI_Status NvAPI_D3D12_BuildRaytracingAccelerationStructureExWrapper(
     NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand command(GetCurrentThreadId(),
                                                                       pCommandList, pParams);
 
-    updateInterface(command.m_pCommandList, pCommandList);
+    UpdateInterface(command.m_pCommandList, pCommandList);
     for (Layer* layer : manager.GetPreLayers()) {
       layer->Pre(command);
     }
@@ -227,7 +227,7 @@ NvAPI_Status NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayWrapper(
     NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand command(GetCurrentThreadId(),
                                                                    pCommandList, pParams);
 
-    updateInterface(command.m_pCommandList, pCommandList);
+    UpdateInterface(command.m_pCommandList, pCommandList);
     for (Layer* layer : manager.GetPreLayers()) {
       layer->Pre(command);
     }
@@ -288,7 +288,7 @@ NvAPI_Status NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationWrapper(
     NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand command(
         GetCurrentThreadId(), pCommandList, pParams);
 
-    updateInterface(command.m_pCommandList, pCommandList);
+    UpdateInterface(command.m_pCommandList, pCommandList);
     for (Layer* layer : manager.GetPreLayers()) {
       layer->Pre(command);
     }

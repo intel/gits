@@ -39,7 +39,7 @@ HRESULT STDMETHODCALLTYPE IUnknownWrapper::QueryInterface(REFIID riid, void** pp
 
     IUnknownQueryInterfaceCommand command(GetCurrentThreadId(), reinterpret_cast<IUnknown*>(this),
                                           riid, ppvObject);
-    updateInterface(command.m_Object, this);
+    UpdateInterface(command.m_Object, this);
 
     for (Layer* layer : manager.GetPreLayers()) {
       layer->Pre(command);
@@ -95,7 +95,7 @@ ULONG STDMETHODCALLTYPE IUnknownWrapper::AddRef() {
   if (auto atTopOfStack = AtTopOfStackLocal()) {
 
     IUnknownAddRefCommand command(GetCurrentThreadId(), reinterpret_cast<IUnknown*>(this));
-    updateInterface(command.m_Object, this);
+    UpdateInterface(command.m_Object, this);
 
     for (Layer* layer : manager.GetPreLayers()) {
       layer->Pre(command);
@@ -123,7 +123,7 @@ ULONG STDMETHODCALLTYPE IUnknownWrapper::Release() {
   if (auto atTopOfStack = AtTopOfStackLocal()) {
 
     IUnknownReleaseCommand command(GetCurrentThreadId(), reinterpret_cast<IUnknown*>(this));
-    updateInterface(command.m_Object, this);
+    UpdateInterface(command.m_Object, this);
 
     for (Layer* layer : manager.GetPreLayers()) {
       layer->Pre(command);
