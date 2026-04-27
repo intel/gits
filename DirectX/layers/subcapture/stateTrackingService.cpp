@@ -431,7 +431,7 @@ D3D12_BARRIER_LAYOUT StateTrackingService::GetResourceInitialLayout(
   } else if (flags & D3D12_RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS) {
     return D3D12_BARRIER_LAYOUT_COMMON;
   }
-  if (state.IsMappable) {
+  if (state.IsMappable || state.BarrierRestricted) {
     return m_ResourceStateTrackingService.GetResourceLayout(state.Key);
   }
   return D3D12_BARRIER_LAYOUT_COPY_DEST;
