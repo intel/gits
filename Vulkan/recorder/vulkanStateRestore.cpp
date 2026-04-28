@@ -2519,6 +2519,9 @@ std::vector<uint64_t> GetTimestampsOfAliasedResources(
       }
       break;
     }
+    default: {
+      throw std::runtime_error("Invalid resource type provided for memory aliasing check!");
+    }
     }
   }
 
@@ -2622,8 +2625,6 @@ bool isResourceOmittedFromContentsRestoration(uint64_t resource,
     if (!bufferState) {
       return true;
     }
-
-    VkDevice device = bufferState->deviceStateStore->deviceHandle;
 
     if ((!bufferState->bufferCreateInfoData.Value()) ||
         (bufferState->bufferCreateInfoData.Value()->size == 0)) {
@@ -2749,6 +2750,9 @@ bool isResourceOmittedFromContentsRestoration(uint64_t resource,
       return true;
     }
     break;
+  }
+  default: {
+    throw std::runtime_error("Invalid resource type provided for resource omission check!");
   }
   }
 

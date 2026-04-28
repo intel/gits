@@ -169,11 +169,6 @@ void gits::Vulkan::CVkGenericArgument::InitArgument(uint32_t type) {
     _argument = std::make_unique<C##structure##__VA_ARGS__>();                                     \
     break;
 
-#define PNEXT_EXTENDED_WRAPPER(STRUCTURE_TYPE, structure, ...)                                     \
-  case STRUCTURE_TYPE:                                                                             \
-    _argument = std::make_unique<C##structure##__VA_ARGS__>();                                     \
-    break;
-
 #include "vulkanPNextWrappers.inl"
 
   default:
@@ -191,12 +186,6 @@ void gits::Vulkan::CVkGenericArgument::CreateArgument(const void* pVkGenericArgu
 #define PNEXT_WRAPPER(STRUCTURE_TYPE, structure, ...)                                              \
   case STRUCTURE_TYPE:                                                                             \
     _argument = std::make_unique<C##structure##__VA_ARGS__>((structure*)pVkGenericArgument);       \
-    break;
-
-#define PNEXT_EXTENDED_WRAPPER(STRUCTURE_TYPE, structure, ...)                                     \
-  case STRUCTURE_TYPE:                                                                             \
-    _argument =                                                                                    \
-        std::make_unique<C##structure##__VA_ARGS__>((structure*)pVkGenericArgument, pCustomData);  \
     break;
 
 #include "vulkanPNextWrappers.inl"
@@ -835,10 +824,7 @@ gits::PtrConverter<VkAccelerationStructureGeometryInstancesDataKHR> gits::Vulkan
 
 std::set<uint64_t> gits::Vulkan::CVkAccelerationStructureGeometryInstancesDataKHR::
     GetMappedPointers() {
-  std::set<uint64_t> returnMap;
-  if (!*_isNullPtr) {
-  }
-  return returnMap;
+  return _bufferDeviceAddress->GetMappedPointers();
 }
 
 void gits::Vulkan::CVkAccelerationStructureGeometryInstancesDataKHR::Write(

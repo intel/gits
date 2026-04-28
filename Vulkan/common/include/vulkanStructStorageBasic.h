@@ -554,7 +554,7 @@ class CVkGenericArgumentData : gits::noncopyable {
   std::unique_ptr<CBaseDataStruct> _argument;
 
 public:
-  CVkGenericArgumentData(const void* pVkGenericArgumentData, const void* pCustomData = nullptr);
+  CVkGenericArgumentData(const void* pVkGenericArgumentData);
 
   const void* Value();
   struct PtrConverter {
@@ -790,8 +790,7 @@ class CpNextWrapperData {
   std::shared_ptr<CVkGenericArgumentData> _ptr;
 
 public:
-  CpNextWrapperData(const void* pNext, const void* pCustomData = nullptr)
-      : _ptr(std::make_shared<CVkGenericArgumentData>(pNext, pCustomData)) {}
+  CpNextWrapperData(const void* pNext) : _ptr(std::make_shared<CVkGenericArgumentData>(pNext)) {}
   const void* Value() {
     if (_ptr) {
       return _ptr->Value();
@@ -933,11 +932,11 @@ struct COnQueueSubmitEndDataStorage : public COnQueueSubmitEndInterface {
 
 protected:
   COnQueueSubmitEndDataStorage()
-      : _device(VK_NULL_HANDLE),
+      : _onQueueSubmitEnd(nullptr),
+        _device(VK_NULL_HANDLE),
         _dataSize(0),
         _offset(0),
-        _dataMemory(VK_NULL_HANDLE),
-        _onQueueSubmitEnd(nullptr) {}
+        _dataMemory(VK_NULL_HANDLE) {}
 
   virtual void OnQueueSubmitEnd() override;
   OnQueueSubmitEndFunctionType _onQueueSubmitEnd;

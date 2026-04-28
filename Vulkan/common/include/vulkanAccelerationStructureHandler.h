@@ -7,15 +7,15 @@
 // ===================== end_copyright_notice ==============================
 
 /**
-* @file   vulkanStateTracking.h
+* @file   vulkanAccelerationStructureHandler.h
 *
-* @brief Functions for tracking current state of Vulkan resources
+* @brief Functions responsible for gathering acceleration structure build inputs
 *
 */
 
-#include "vulkanTools.h"
-
 #pragma once
+
+#include "vulkanTools.h"
 
 namespace gits {
 
@@ -219,8 +219,7 @@ void PrepareStateRestoreDataForIndexedVertices(CVkDeviceOrHostAddressConstKHRDat
   };
 
   // Offset doesn't matter at this point as it is going to be calculated by a compute shader.
-  structStorage.GatherDataOnQueueSubmitEnd(cmdBufState, fun, device,
-                                           memoryBufferPair.first->deviceMemoryHandle, 0, size);
+  structStorage.GatherDataOnQueueSubmitEnd(cmdBufState, fun, device, dstMemory, 0, size);
 }
 
 void PrepareStateRestoreData(CVkDeviceOrHostAddressConstKHRData& structStorage,
@@ -238,7 +237,7 @@ void PrepareStateRestoreData(CVkDeviceOrHostAddressConstKHRData& structStorage,
   }
   auto srcBuffer = findBufferFromDeviceAddress(deviceAddress + deviceAddressOffset);
   if (!srcBuffer) {
-    throw std::runtime_error("Could not find a source buffer for AS input data!");
+    return;
   }
   auto baseAddress = SD()._bufferstates[srcBuffer]->deviceAddress;
   auto bufferOffset = deviceAddress + deviceAddressOffset - baseAddress;
@@ -273,7 +272,6 @@ inline void handleAccelerationStructureBuild(
     const VkAccelerationStructureBuildGeometryInfoKHR* pInfos,
     const VkAccelerationStructureBuildRangeInfoKHR* const* ppBuildRangeInfos) {
   auto& cmdBufState = *SD()._commandbufferstates[cmdBuf];
-  auto device = cmdBufState.commandPoolStateStore->deviceStateStore->deviceHandle;
 
   for (uint32_t bgi = 0; bgi < infoCount; ++bgi) {
     // Struct storage data is going to be injected into original structures via pNext
@@ -310,6 +308,10 @@ inline void handleAccelerationStructureBuild(
       auto& buildRangeInfo = pBuildRangeInfos[g];
 
       primitivesCount[g] = buildRangeInfo.primitiveCount;
+      if (buildRangeInfo.primitiveCount == 0) {
+        continue;
+      }
+
       auto* pStateTrackedGeometry =
           pBuildGeometryInfo->pGeometries
               ? stateTrackInfo->buildGeometryInfoData._pGeometries->Vector()[g].get()
@@ -345,9 +347,9 @@ inline void handleAccelerationStructureBuild(
           // Vertex data
           PrepareStateRestoreDataForIndexedVertices(
               *stateTrackedTriangles->_vertexData, triangles.indexType,
-              triangles.indexData.deviceAddress, triangles.vertexStride,
-              buildRangeInfo.primitiveCount * 3, buildRangeInfo.firstVertex, triangles.maxVertex,
-              cmdBufState);
+              triangles.indexData.deviceAddress + buildRangeInfo.primitiveOffset,
+              triangles.vertexStride, buildRangeInfo.primitiveCount * 3, buildRangeInfo.firstVertex,
+              triangles.maxVertex, cmdBufState);
         }
 
         // Transform data
@@ -381,8 +383,9 @@ inline void handleAccelerationStructureBuild(
     }
 
     drvVk.vkGetAccelerationStructureBuildSizesKHR(
-        device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, pBuildGeometryInfo,
-        primitivesCount.data(), &accelerationStructureState->buildSizeInfo);
+        cmdBufState.commandPoolStateStore->deviceStateStore->deviceHandle,
+        VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, pBuildGeometryInfo, primitivesCount.data(),
+        &accelerationStructureState->buildSizeInfo);
     cmdBufState.touchedResources.emplace_back(
         (uint64_t)pBuildGeometryInfo->dstAccelerationStructure,
         ResourceType::ACCELERATION_STRUCTURE);

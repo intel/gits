@@ -20,8 +20,7 @@ gits::Vulkan::CBinaryResourceData::PointerProxy gits::Vulkan::CBinaryResourceDat
 
 // ------------------------------------------------------------------------------------------------
 
-gits::Vulkan::CVkGenericArgumentData::CVkGenericArgumentData(const void* pVkGenericArgumentData,
-                                                             const void* pCustomData)
+gits::Vulkan::CVkGenericArgumentData::CVkGenericArgumentData(const void* pVkGenericArgumentData)
     : _argument(nullptr) {
   pVkGenericArgumentData = ignoreLoaderSpecificStructureTypes(pVkGenericArgumentData);
 
@@ -31,11 +30,6 @@ gits::Vulkan::CVkGenericArgumentData::CVkGenericArgumentData(const void* pVkGene
 #define PNEXT_WRAPPER(STRUCTURE_TYPE, structure, ...)                                              \
   case STRUCTURE_TYPE:                                                                             \
     _argument = std::make_unique<C##structure##Data>((structure*)pVkGenericArgumentData);          \
-    break;
-#define PNEXT_EXTENDED_WRAPPER(STRUCTURE_TYPE, structure, ...)                                     \
-  case STRUCTURE_TYPE:                                                                             \
-    _argument =                                                                                    \
-        std::make_unique<C##structure##Data>((structure*)pVkGenericArgumentData, pCustomData);     \
     break;
 
 #include "vulkanPNextWrappers.inl"
@@ -278,8 +272,8 @@ gits::Vulkan::CVkAccelerationStructureGeometryInstancesDataKHRData::
     CVkAccelerationStructureGeometryInstancesDataKHRData(
         const VkAccelerationStructureGeometryInstancesDataKHR*
             accelerationstructuregeometryinstancesdatakhr)
-    : _AccelerationStructureGeometryInstancesDataKHR(nullptr),
-      _baseIn(),
+    : _baseIn(),
+      _AccelerationStructureGeometryInstancesDataKHR(nullptr),
       _isNullPtr(accelerationstructuregeometryinstancesdatakhr == nullptr) {
   if (!*_isNullPtr) {
     _sType = std::make_unique<CVkStructureTypeData>(
