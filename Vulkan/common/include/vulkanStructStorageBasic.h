@@ -906,8 +906,12 @@ public:
 };
 
 // ------------------------------------------------------------------------------------------------
+struct CCommandBufferState;
 
 struct COnQueueSubmitEndDataStorage : public COnQueueSubmitEndInterface {
+  using OnQueueSubmitEndFunctionType = std::function<void(
+      VkDevice, VkDeviceMemory, VkDeviceSize&, VkDeviceSize&, std::vector<uint8_t>&)>;
+
   VkDeviceSize GetDataSize() const {
     return _dataSize;
   }
@@ -920,6 +924,13 @@ struct COnQueueSubmitEndDataStorage : public COnQueueSubmitEndInterface {
     return _offset;
   }
 
+  void GatherDataOnQueueSubmitEnd(CCommandBufferState& commandBufferState,
+                                  OnQueueSubmitEndFunctionType function,
+                                  VkDevice device,
+                                  VkDeviceMemory memory,
+                                  VkDeviceSize offset,
+                                  VkDeviceSize size);
+
 protected:
   COnQueueSubmitEndDataStorage()
       : _device(VK_NULL_HANDLE),
@@ -929,11 +940,10 @@ protected:
         _onQueueSubmitEnd(nullptr) {}
 
   virtual void OnQueueSubmitEnd() override;
-
-  std::function<void(VkDevice, VkDeviceSize, VkDeviceMemory, uint8_t*)> _onQueueSubmitEnd;
+  OnQueueSubmitEndFunctionType _onQueueSubmitEnd;
   VkDevice _device;
   VkDeviceSize _dataSize;
-  int64_t _offset;
+  VkDeviceSize _offset;
   std::vector<uint8_t> _data;
   VkDeviceMemory _dataMemory; // Destroyed automatically
 };

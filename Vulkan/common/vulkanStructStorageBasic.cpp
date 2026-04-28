@@ -141,44 +141,26 @@ std::set<uint64_t> gits::Vulkan::CBufferDeviceAddressObjectData::GetMappedPointe
 
 // ------------------------------------------------------------------------------------------------
 
-void gits::Vulkan::COnQueueSubmitEndDataStorage::OnQueueSubmitEnd() {
-  if (_onQueueSubmitEnd) {
-    _onQueueSubmitEnd(_device, _dataSize, _dataMemory, _data.data());
-  }
-  //if (_device && _dataSize && _dataMemory) {
-  //  _data.resize(_dataSize);
-  //  mapMemoryAndCopyData(_data.data(), _device, _dataMemory, 0, _dataSize);
-  //}
+void gits::Vulkan::COnQueueSubmitEndDataStorage::GatherDataOnQueueSubmitEnd(
+    CCommandBufferState& commandBufferState,
+    OnQueueSubmitEndFunctionType function,
+    VkDevice device,
+    VkDeviceMemory memory,
+    VkDeviceSize offset,
+    VkDeviceSize size) {
+  _onQueueSubmitEnd = function;
+  _device = device;
+  _offset = offset;
+  _dataSize = size;
+  _dataMemory = memory;
+  commandBufferState.queueSubmitEndMessageReceivers.push_back(this);
 }
 
-// ------------------------------------------------------------------------------------------------
-
-//void gits::Vulkan::CVkDeviceOrHostAddressConstKHRData::PrepareStateRestore(
-//    CCommandBufferState* commandBufferState, uint32_t offset, uint32_t size) {
-//  // For substream recording, input data needs to be acquired and stored for further use in
-//  // a state restoration phase. In case of a non-indexed geometry, data acquisition is very
-//  // simple as it requires just a copy operation.
-//  auto commandBuffer = commandBufferState->commandBufferHandle;
-//  auto device = commandBufferState->commandPoolStateStore->deviceStateStore->deviceHandle;
-//  auto memoryBufferPair =
-//      createTemporaryBuffer(device, size, VK_BUFFER_USAGE_TRANSFER_DST_BIT, commandBufferState,
-//                            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-//  auto srcBuffer = _bufferDeviceAddress._buffer;
-//  auto srcOffset = _bufferDeviceAddress._offset + offset;
-//
-//  injectCopyCommand(commandBuffer, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-//                    VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, size, srcBuffer, srcOffset,
-//                    VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_MEMORY_READ_BIT,
-//                    VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_MEMORY_READ_BIT,
-//                    memoryBufferPair.second->bufferHandle, 0, 0, VK_ACCESS_HOST_READ_BIT);
-//
-//  _device = device;
-//  _dataSize = size;
-//  _offset = offset;
-//  _dataMemory = memoryBufferPair.first->deviceMemoryHandle;
-//
-//  commandBufferState->queueSubmitEndMessageReceivers.push_back(this);
-//}
+void gits::Vulkan::COnQueueSubmitEndDataStorage::OnQueueSubmitEnd() {
+  if (_onQueueSubmitEnd) {
+    _onQueueSubmitEnd(_device, _dataMemory, _offset, _dataSize, _data);
+  }
+}
 
 // ------------------------------------------------------------------------------------------------
 
@@ -193,217 +175,6 @@ VkDeviceOrHostAddressConstKHR* gits::Vulkan::CVkDeviceOrHostAddressConstKHRData:
 std::set<uint64_t> gits::Vulkan::CVkDeviceOrHostAddressConstKHRData::GetMappedPointers() {
   return _bufferDeviceAddress.GetMappedPointers();
 }
-
-// ------------------------------------------------------------------------------------------------
-
-/*void gits::Vulkan::CDeviceOrHostAddressAccelerationStructureVertexDataGITSData::
-    InitializeIndexedVertexDataOnDevice(VkDeviceOrHostAddressConstKHR vertexData,
-                                        uint32_t offset,
-                                        uint64_t stride,
-                                        uint32_t count,
-                                        uint32_t firstVertex,
-                                        uint32_t maxVertex,
-                                        VkDeviceOrHostAddressConstKHR indexData,
-                                        VkIndexType indexType) {
-  // (maxVertex - 1) is a workaround for an incorrect behavior of some applications
-  _bufferDeviceAddress = CBufferDeviceAddressObjectData(vertexData.deviceAddress,
-                                                        std::max(0u, maxVertex - 1) * stride);
-
-  if (_bufferDeviceAddress._offset < 0) {
-    CALL_ONCE[] {
-      LOG_INFO << "Application uses negative offsets for buffer device addresses!";
-    };
-  }
-
-  if (isSubcaptureBeforeRestorationPhase()) {
-    CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
-
-    // The whole vertex data needs to be copied for state restoration purposes. This is done with
-    // a compute shader because the source data is provided via a device address and is
-    // additionally offset by indices (which are unknown to us). The compute shader performs more
-    // or less the same operations as the PrepareIndexedVertexDataOnHost() function.
-
-    // Since we don't know yet how much data would be copied (because we don't know the actual
-    // values of indices and a spread between max and min index), we need to prepare storage for
-    // maximal potential amount of data. But later on we will know the exact amount (as it is
-    // going to be stored by the compute shader).
-
-    // Data copying is performed with an indirect dispatch divided into multiple workgroups, each
-    // consisting of multiple local invocations. This done to speed up copying process as a single
-    // compute shader may take too much time to copy all the data and GPU may treat it as a hang.
-    // So all in all, the first compute shader gathers the information about the data size and
-    // offset and also prepares the number of workgroup count (indirect parameters). The second
-    // (indirect) compute shader performs the actual copy operation.
-
-    //              DataSize           Offset         Indirect count x/y/z      Vertices
-    SetDataSize(sizeof(uint32_t) + sizeof(uint32_t) + 3 * sizeof(uint32_t) + count * stride);
-
-    auto commandBuffer = _controlData.commandBuffer;
-    auto commandBufferState = SD()._commandbufferstates[commandBuffer];
-    auto device = commandBufferState->commandPoolStateStore->deviceStateStore->deviceHandle;
-    auto memoryBufferPair = createTemporaryBuffer(
-        device, _dataSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT,
-        commandBufferState.get(), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-    auto dstBuffer = memoryBufferPair.second->bufferHandle;
-    auto dstMemory = memoryBufferPair.first->deviceMemoryHandle;
-    auto descriptorSet = getTemporaryDescriptorSet(device, *commandBufferState);
-    auto pipelineLayout = SD().internalResources.internalPipelines[device].getLayout();
-
-    {
-      VkDescriptorBufferInfo bufferInfo = {
-          dstBuffer,    // VkBuffer        buffer;
-          0,            // VkDeviceSize    offset;
-          VK_WHOLE_SIZE // VkDeviceSize    range;
-      };
-
-      VkWriteDescriptorSet writeSet = {
-          VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, // VkStructureType                sType
-          nullptr,                                // const void                   * pNext
-          descriptorSet,                          // VkDescriptorSet                dstSet
-          0,                                      // uint32_t                       dstBinding
-          0,                                      // uint32_t                       dstArrayElement
-          1,                                      // uint32_t                       descriptorCount
-          VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,      // VkDescriptorType               descriptorType
-          nullptr,                                // const VkDescriptorImageInfo  * pImageInfo
-          &bufferInfo,                            // const VkDescriptorBufferInfo * pBufferInfo
-          nullptr                                 // const VkBufferView           * pTexelBufferView
-      };
-      drvVk.vkUpdateDescriptorSets(device, 1, &writeSet, 0, nullptr);
-    }
-
-    // Prepare memory barriers, dispatch the compute shaders
-    {
-      VkMemoryBarrier barrier = {
-          VK_STRUCTURE_TYPE_MEMORY_BARRIER,                       // VkStructureType   sType
-          nullptr,                                                // const void      * pNext
-          VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_MEMORY_READ_BIT, // VkAccessFlags     srcAccessMask
-          VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT  // VkAccessFlags     dstAccessMask
-      };
-      drvVk.vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-                                 VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 1, &barrier, 0, nullptr,
-                                 0, nullptr);
-    }
-
-    {
-      VkPipeline prepareIndirectCopyPipeline = VK_NULL_HANDLE;
-
-      switch (indexType) {
-      case VK_INDEX_TYPE_UINT16:
-        prepareIndirectCopyPipeline = SD().internalResources.internalPipelines[device]
-                                          .getPrepareIndirectCopyFor16BitIndexedVerticesPipeline();
-        break;
-      case VK_INDEX_TYPE_UINT32:
-        prepareIndirectCopyPipeline = SD().internalResources.internalPipelines[device]
-                                          .getPrepareIndirectCopyFor32BitIndexedVerticesPipeline();
-        break;
-      default:
-        throw std::runtime_error("Invalid index type specified for triangles data!");
-      };
-
-      // Look at getPrepareIndirectCopyFor32BitIndexedVerticesShaderModuleSource()
-      struct ControlData {
-        VkDeviceAddress AddressOfIndices;
-        uint32_t Stride;
-        uint32_t Count;
-        uint32_t FirstVertex;
-      } controlData = {indexData.deviceAddress +
-                           offset, // For indexed vertices offset is applied to indices
-                       (uint32_t)stride, count, firstVertex};
-
-      drvVk.vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE,
-                              prepareIndirectCopyPipeline);
-      drvVk.vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipelineLayout,
-                                    0, 1, &descriptorSet, 0, nullptr);
-      drvVk.vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0,
-                               sizeof(controlData), &controlData);
-      drvVk.vkCmdDispatch(commandBuffer, 1, 1, 1);
-    }
-
-    {
-      VkBufferMemoryBarrier barrier = {
-          VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER, // VkStructureType sType
-          nullptr,                                 // const void    * pNext
-          VK_ACCESS_SHADER_WRITE_BIT,              // VkAccessFlags   srcAccessMask
-          VK_ACCESS_INDIRECT_COMMAND_READ_BIT | VK_ACCESS_SHADER_READ_BIT |
-              VK_ACCESS_SHADER_WRITE_BIT, // VkAccessFlags   dstAccessMask
-          VK_QUEUE_FAMILY_IGNORED,        // uint32_t        srcQueueFamilyIndex
-          VK_QUEUE_FAMILY_IGNORED,        // uint32_t        dstQueueFamilyIndex
-          dstBuffer,                      // VkBuffer        buffer
-          0,                              // VkDeviceSize    offset
-          5 * sizeof(uint32_t)            // VkDeviceSize    size
-      };
-      drvVk.vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                                 VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT |
-                                     VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                                 0, 0, nullptr, 1, &barrier, 0, nullptr);
-    }
-
-    {
-      // Look at getPerformIndirectCopyShaderModuleSource()
-      struct ControlData {
-        VkDeviceAddress VertexData;
-      } controlData = {vertexData.deviceAddress};
-      drvVk.vkCmdBindPipeline(
-          commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE,
-          SD().internalResources.internalPipelines[device].getPerformIndirectCopyPipeline());
-      drvVk.vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0,
-                               sizeof(controlData), &controlData);
-      drvVk.vkCmdDispatchIndirect(commandBuffer, dstBuffer, 2 * sizeof(uint32_t));
-    }
-
-    {
-      VkMemoryBarrier barrier = {
-          VK_STRUCTURE_TYPE_MEMORY_BARRIER,                       // VkStructureType   sType
-          nullptr,                                                // const void      * pNext
-          VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT, // VkAccessFlags     srcAccessMask
-          VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_MEMORY_READ_BIT |
-              VK_ACCESS_HOST_READ_BIT // VkAccessFlags     dstAccessMask
-      };
-      drvVk.vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-                                 VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 1, &barrier, 0, nullptr,
-                                 0, nullptr);
-    }
-
-    if (commandBufferState->currentPipeline != VK_NULL_HANDLE) {
-      drvVk.vkCmdBindPipeline(commandBuffer, commandBufferState->currentPipelineBindPoint,
-                              commandBufferState->currentPipeline);
-    }
-
-    GatherDataOnQueueSubmitEnd(commandBufferState.get(), dstMemory);
-  }
-}
-
-void gits::Vulkan::CDeviceOrHostAddressAccelerationStructureVertexDataGITSData::OnQueueSubmitEnd() {
-  COnQueueSubmitEndDataStorage::OnQueueSubmitEnd();
-
-  if ((_indexType != VK_INDEX_TYPE_NONE_KHR) && _device && _dataSize && _dataMemory) {
-    // When vertex data is indexed, acquisition can only be performed via a compute shader. This
-    // is caused by the fact that indices can point to arbitrarily large/small offsets within
-    // a buffer with vertices. So a compute shader needs to check the minimal and maximal index
-    // value and copy data from the found range.
-    // Additionally, for the GITS to properly handle the data, the compute shader needs to store
-    // actual amount of data that was copied and the calculated offset (minimal index * stride).
-    // This is the data that the compute shader stores:
-    // - uint dataSize;
-    // - uint offset;
-    // - uint8_t vertices[];
-    auto* basePtr = (uint32_t*)_data.data();
-
-    _dataSize = basePtr[0]; // Data size = stride * ((maxIndex + 1) - minIndex)
-    _offset = basePtr[1];   // Offset    = minIndex * stride
-
-    // Remove additional control information (a header) from the acquired data and leave only the
-    // actual vertex data. (This is done for cohesion with other cases/non-index data). This
-    // additional data is used to control the copy operation and consists of:
-    // - data size,
-    // - offset,
-    // - indirect count x/y/z
-    // followed immediately by a vertex data
-    std::vector<uint8_t> data(_dataSize);
-    memcpy(data.data(), _data.data() + 5 * sizeof(uint32_t), _dataSize);
-    _data.swap(data);
-  }
-}*/
 
 // ------------------------------------------------------------------------------------------------
 // No const, mainly scratch data
@@ -526,61 +297,6 @@ gits::Vulkan::CVkAccelerationStructureGeometryInstancesDataKHRData::
     _data = nullptr;
   }
 }
-
-//gits::Vulkan::CVkAccelerationStructureGeometryInstancesDataKHRData::
-//    CVkAccelerationStructureGeometryInstancesDataKHRData(
-//        const VkAccelerationStructureGeometryInstancesDataKHR*
-//            accelerationstructuregeometryinstancesdatakhr)
-//    : _sType(VK_STRUCTURE_TYPE_MAX_ENUM),
-//      _pNext(std::make_unique<CpNextWrapperData>(nullptr)),
-//      _arrayOfPointers(false),
-//      _bufferDeviceAddress(),
-//      _AccelerationStructureGeometryInstancesDataKHR(),
-//      _isNullPtr(accelerationstructuregeometryinstancesdatakhr == nullptr) {
-//  if (*_isNullPtr) {
-//    return;
-//  }
-//
-//  _sType = accelerationstructuregeometryinstancesdatakhr->sType;
-//  _pNext =
-//      std::make_unique<CpNextWrapperData>(accelerationstructuregeometryinstancesdatakhr->pNext);
-//  _arrayOfPointers = accelerationstructuregeometryinstancesdatakhr->arrayOfPointers;
-//
-//  _bufferDeviceAddress = CBufferDeviceAddressObjectData(
-//      accelerationstructuregeometryinstancesdatakhr->data.deviceAddress,
-//      buildRangeInfo.primitiveOffset);
-//
-//  auto baseAddress = accelerationstructuregeometryinstancesdatakhr->data.deviceAddress +
-//                     buildRangeInfo.primitiveOffset;
-//  auto& commandBufferState = SD()._commandbufferstates[controlData.commandBuffer];
-//
-//  if (isSubcaptureBeforeRestorationPhase() && _bufferDeviceAddress._buffer) {
-//    // Acquire instance data
-//    auto commandBuffer = controlData.commandBuffer;
-//    auto commandBufferState = SD()._commandbufferstates[commandBuffer];
-//    auto device = commandBufferState->commandPoolStateStore->deviceStateStore->deviceHandle;
-//    auto memoryBufferPair =
-//        createTemporaryBuffer(device, _dataSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-//                              commandBufferState.get(), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-//    auto srcBuffer = _bufferDeviceAddress._buffer;
-//    auto srcOffset = _bufferDeviceAddress._offset + buildRangeInfo.primitiveOffset;
-//
-//    if (_arrayOfPointers) {
-//      // Submit a compute shader which copies structures
-//      throw std::runtime_error("Array of pointers not implemented yet!");
-//    } else if (_bufferDeviceAddress._buffer) {
-//      // Copy data with a just a usual copy command
-//      injectCopyCommand(commandBuffer, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-//                        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, _dataSize, srcBuffer, srcOffset,
-//                        VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_MEMORY_READ_BIT,
-//                        VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_MEMORY_READ_BIT,
-//                        memoryBufferPair.second->bufferHandle, 0, 0, VK_ACCESS_HOST_READ_BIT);
-//    }
-//
-//    GatherDataOnQueueSubmitEnd(commandBufferState.get(),
-//                               memoryBufferPair.first->deviceMemoryHandle);
-//  }
-//}
 
 VkAccelerationStructureGeometryInstancesDataKHR* gits::Vulkan::
     CVkAccelerationStructureGeometryInstancesDataKHRData::Value() {

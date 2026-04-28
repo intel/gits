@@ -3862,8 +3862,8 @@ void gits::Vulkan::RestoreAccelerationStructureContents(CScheduler& scheduler, C
     std::vector<VkDeviceMemory> temporaryMemoryObjects;
 
     auto prepareSourceData = [&](CVkDeviceOrHostAddressConstKHRData& structStorageData) {
-      if ((!structStorageData.GetDataSize()) ||
-          (!structStorageData._bufferDeviceAddress._originalDeviceAddress)) {
+      if (!structStorageData.GetDataSize() ||
+          !structStorageData._bufferDeviceAddress._originalDeviceAddress) {
         return;
       }
 
@@ -3904,11 +3904,12 @@ void gits::Vulkan::RestoreAccelerationStructureContents(CScheduler& scheduler, C
       drvVk.vkDestroyBuffer(device, memoryBufferPair.second->bufferHandle, nullptr);
       drvVk.vkFreeMemory(device, memoryBufferPair.first->deviceMemoryHandle, nullptr);
 
+      // For the state restore phase with custom (GITS-created) buffers, we don't rely on
+      // capture/replay features. Device addresses are generated on the fly by taking
+      // a buffer's current device address and applying a stored offset. So the original
+      // device address doesn't matter in this case.
       structStorageData._bufferDeviceAddress._offset = -structStorageData.GetOffset();
-      structStorageData._bufferDeviceAddress._originalDeviceAddress =
-          deviceAddress - structStorageData.GetOffset();
       structStorageData._bufferDeviceAddress._buffer = buffer;
-      structStorageData.Value();
     };
 
     scheduleBuild = [&](VkAccelerationStructureKHR dst, VkBuffer accelerationStructureBuffer,
@@ -3918,57 +3919,62 @@ void gits::Vulkan::RestoreAccelerationStructureContents(CScheduler& scheduler, C
         return;
       }
 
-      auto& buildGeometryInfo = buildInfo->buildGeometryInfoData;
-      buildGeometryInfo._scratchData->_bufferDeviceAddress._originalDeviceAddress = 0;
+      auto* pBuildInfo = buildInfo->buildGeometryInfoData.Value();
+      pBuildInfo->scratchData.deviceAddress = 0;
 
-      if (buildGeometryInfo._srcAccelerationStructure->Value()) {
-        if (buildGeometryInfo._srcAccelerationStructure->Value() !=
-            buildGeometryInfo._dstAccelerationStructure->Value()) {
-          buildGeometryInfo._srcAccelerationStructure =
-              std::make_unique<CVkAccelerationStructureKHRData>(
-                  scheduleTemporaryAccelerationStructureCreation(
-                      *buildInfo->srcAccelerationStructureStateStore, commandBuffer));
+      if (pBuildInfo->srcAccelerationStructure) {
+        if (pBuildInfo->srcAccelerationStructure != pBuildInfo->dstAccelerationStructure) {
+          pBuildInfo->srcAccelerationStructure = scheduleTemporaryAccelerationStructureCreation(
+              *buildInfo->srcAccelerationStructureStateStore, commandBuffer);
         } else {
-          buildGeometryInfo._srcAccelerationStructure =
-              std::make_unique<CVkAccelerationStructureKHRData>(dst);
+          pBuildInfo->srcAccelerationStructure = dst;
         }
       }
-      buildGeometryInfo._dstAccelerationStructure =
-          std::make_unique<CVkAccelerationStructureKHRData>(dst);
+      pBuildInfo->dstAccelerationStructure = dst;
 
-      for (uint32_t i = 0; i < buildGeometryInfo._geometryCount->Value(); ++i) {
-        auto& geometry = buildGeometryInfo._pGeometries->size()
-                             ? *buildGeometryInfo._pGeometries->Vector()[i].get()
-                             : *buildGeometryInfo._ppGeometries->Vector()[i][0].get();
+      for (uint32_t i = 0; i < pBuildInfo->geometryCount; ++i) {
+        auto geometry =
+            pBuildInfo->pGeometries ? pBuildInfo->pGeometries[i] : *pBuildInfo->ppGeometries[i];
 
-        switch (geometry._geometryType->Value()) {
+        switch (geometry.geometryType) {
         case VK_GEOMETRY_TYPE_TRIANGLES_KHR: {
-          auto& trianglesData = *geometry._geometry->_triangles.get();
+          auto* pStructStorage =
+              (CVkAccelerationStructureGeometryTrianglesDataKHRData*)getStructStoragePointer(
+                  geometry.geometry.triangles.pNext,
+                  VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR);
 
-          if (trianglesData._vertexData) {
-            prepareSourceData(*trianglesData._vertexData);
-          }
-          if (trianglesData._indexData) {
-            prepareSourceData(*trianglesData._indexData);
-          }
-          if (trianglesData._transformData) {
-            prepareSourceData(*trianglesData._transformData);
+          if (pStructStorage) {
+            if (pStructStorage->_vertexData) {
+              prepareSourceData(*pStructStorage->_vertexData);
+            }
+            if (pStructStorage->_indexData) {
+              prepareSourceData(*pStructStorage->_indexData);
+            }
+            if (pStructStorage->_transformData) {
+              prepareSourceData(*pStructStorage->_transformData);
+            }
           }
           break;
         }
         case VK_GEOMETRY_TYPE_AABBS_KHR: {
-          auto& aabbsData = *geometry._geometry->_aabbs.get();
+          auto* pStructStorage =
+              (CVkAccelerationStructureGeometryAabbsDataKHRData*)getStructStoragePointer(
+                  geometry.geometry.aabbs.pNext,
+                  VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_AABBS_DATA_KHR);
 
-          if (aabbsData._data) {
-            prepareSourceData(*aabbsData._data);
+          if (pStructStorage && pStructStorage->_data) {
+            prepareSourceData(*pStructStorage->_data);
           }
           break;
         }
         case VK_GEOMETRY_TYPE_INSTANCES_KHR: {
-          auto& instancesData = *geometry._geometry->_instances.get();
+          auto* pStructStorage =
+              (CVkAccelerationStructureGeometryInstancesDataKHRData*)getStructStoragePointer(
+                  geometry.geometry.instances.pNext,
+                  VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR);
 
-          if (instancesData._data) {
-            prepareSourceData(*instancesData._data);
+          if (pStructStorage && pStructStorage->_data) {
+            prepareSourceData(*pStructStorage->_data);
           }
           break;
         }
@@ -3979,7 +3985,6 @@ void gits::Vulkan::RestoreAccelerationStructureContents(CScheduler& scheduler, C
       }
 
       {
-        auto* pBuildInfo = buildGeometryInfo.Value();
         auto* pRangeInfo = buildInfo->buildRangeInfoDataArray.Value();
         scheduler.Register(
             new CvkCmdBuildAccelerationStructuresKHR(commandBuffer, 1, pBuildInfo, &pRangeInfo));

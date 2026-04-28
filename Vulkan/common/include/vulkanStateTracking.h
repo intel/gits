@@ -21,6 +21,109 @@ namespace gits {
 
 namespace Vulkan {
 
+namespace {
+
+inline bool isRecorder() {
+  static bool isRecorder = Configurator::IsRecorder();
+  return isRecorder;
+}
+
+inline bool isSubcaptureBeforeRestorationPhase() {
+  static bool isSubcapture = CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture();
+  if (!isSubcapture) {
+    return false;
+  }
+  return !SD().stateRestoreFinished;
+}
+
+inline bool updateOnlyUsedMemory() {
+  static bool updateOnlyUsedMemory =
+      TMemoryUpdateStates::ONLY_USED == Configurator::Get().vulkan.recorder.memoryUpdateState;
+  return updateOnlyUsedMemory;
+}
+
+inline bool captureRenderPasses() {
+  static bool captureRenderPasses =
+      !Configurator::Get().vulkan.player.captureVulkanSubmits.empty() ||
+      !Configurator::Get().vulkan.player.captureVulkanRenderPasses.empty() ||
+      !Configurator::Get().vulkan.player.captureVulkanDraws.empty() ||
+      !Configurator::Get().vulkan.recorder.dumpSubmits.empty();
+  return captureRenderPasses;
+}
+
+inline bool captureRenderPassesResources() {
+  static bool captureRenderPassesResources =
+      !Configurator::Get().vulkan.player.captureVulkanSubmitsResources.empty() ||
+      !Configurator::Get().vulkan.player.captureVulkanRenderPassesResources.empty() ||
+      !Configurator::Get().vulkan.player.captureVulkanResources.empty();
+  return captureRenderPassesResources;
+}
+
+inline bool crossPlatformStateRestoration() {
+  static bool crossPlatformStateRestoration =
+      Configurator::Get().vulkan.recorder.crossPlatformStateRestoration.images;
+  return crossPlatformStateRestoration;
+}
+#ifdef GITS_PLATFORM_WINDOWS
+inline bool usePresentSrcLayoutTransitionAsAFrameBoundary() {
+  static bool usePresentSrcLayoutTransitionAsAFrameBoundary =
+      Configurator::Get().vulkan.recorder.usePresentSrcLayoutTransitionAsAFrameBoundary;
+  return usePresentSrcLayoutTransitionAsAFrameBoundary;
+}
+#endif
+
+inline bool useCaptureReplayFeaturesForBuffersAndAccelerationStructures() {
+  static bool useCaptureReplayFeaturesForBuffersAndAccelerationStructures =
+      Configurator::Get()
+          .vulkan.recorder.useCaptureReplayFeaturesForBuffersAndAccelerationStructures;
+  return useCaptureReplayFeaturesForBuffersAndAccelerationStructures;
+}
+
+inline bool isUseExternalMemoryExtensionUsed() {
+#ifdef GITS_PLATFORM_WINDOWS
+  return Configurator::Get().vulkan.recorder.useExternalMemoryExtension;
+#else
+  return false;
+#endif
+}
+
+inline bool isGitsRecorderAttached() {
+  if (drvVk.GetGlobalDispatchTable().vkIAmRecorderGITS) {
+    return true;
+  }
+  return false;
+}
+
+template <class STATE_CONTAINER, class KEY, class DST_CONTAINER>
+inline void insertStateIfFound(STATE_CONTAINER& state, KEY key, DST_CONTAINER& dst) {
+  const auto it = state.find(key);
+  if (it != state.end()) {
+    dst.insert(it->second);
+  }
+}
+
+template <>
+inline void insertStateIfFound(gits::Vulkan::CStateDynamic::TAccelerationStructureKHRStates& state,
+                               VkAccelerationStructureKHR key,
+                               std::unordered_set<std::shared_ptr<CBufferState>>& dst) {
+  const auto it = state.find(key);
+  if (it != state.end()) {
+    dst.insert(it->second->bufferStateStore);
+  }
+}
+
+template <>
+inline void insertStateIfFound(gits::Vulkan::CStateDynamic::TMicromapEXTStates& state,
+                               VkMicromapEXT key,
+                               std::unordered_set<std::shared_ptr<CBufferState>>& dst) {
+  const auto it = state.find(key);
+  if (it != state.end()) {
+    dst.insert(it->second->bufferStateStore);
+  }
+}
+
+} // namespace
+
 inline void vkIAmGITS_SD() {
   SD().internalResources.attachedToGITS = true;
 }
