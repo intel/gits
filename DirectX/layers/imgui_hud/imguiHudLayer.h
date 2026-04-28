@@ -48,7 +48,14 @@ public:
   void Post(IDXGISwapChainResizeBuffersCommand& command) override;
   void Post(IDXGISwapChain3ResizeBuffers1Command& command) override;
 
+  // XeFG SwapChain support
+  void Pre(xefgSwapChainDestroyCommand& command) override;
+  void Post(xefgSwapChainD3D12InitFromSwapChainCommand& command) override;
+  void Post(xefgSwapChainD3D12InitFromSwapChainDescCommand& command) override;
+  void Post(xefgSwapChainD3D12GetSwapChainPtrCommand& command) override;
+
 private:
+  void Shutdown();
   bool CreateFrameContext(unsigned bufferCount);
   bool InitializeResources(IUnknown* device, IDXGISwapChain* swapChain);
   void InitializeImGui(DXGI_FORMAT format);
@@ -77,6 +84,9 @@ private:
 
   void* m_Window = nullptr;
   bool m_ResizeBuffersWarning = false;
+
+  ID3D12CommandQueue* m_XefgCmdQueue = nullptr;
+  unsigned m_XefgContextKey = 0;
 };
 
 } // namespace DirectX
