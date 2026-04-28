@@ -15,114 +15,11 @@
 
 #pragma once
 
-#include "vulkanTools.h"
+#include "vulkanAccelerationStructureHandler.h"
 
 namespace gits {
 
 namespace Vulkan {
-
-namespace {
-
-inline bool isRecorder() {
-  static bool isRecorder = Configurator::IsRecorder();
-  return isRecorder;
-}
-
-inline bool isSubcaptureBeforeRestorationPhase() {
-  static bool isSubcapture = CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture();
-  if (!isSubcapture) {
-    return false;
-  }
-  return !SD().stateRestoreFinished;
-}
-
-inline bool updateOnlyUsedMemory() {
-  static bool updateOnlyUsedMemory =
-      TMemoryUpdateStates::ONLY_USED == Configurator::Get().vulkan.recorder.memoryUpdateState;
-  return updateOnlyUsedMemory;
-}
-
-inline bool captureRenderPasses() {
-  static bool captureRenderPasses =
-      !Configurator::Get().vulkan.player.captureVulkanSubmits.empty() ||
-      !Configurator::Get().vulkan.player.captureVulkanRenderPasses.empty() ||
-      !Configurator::Get().vulkan.player.captureVulkanDraws.empty() ||
-      !Configurator::Get().vulkan.recorder.dumpSubmits.empty();
-  return captureRenderPasses;
-}
-
-inline bool captureRenderPassesResources() {
-  static bool captureRenderPassesResources =
-      !Configurator::Get().vulkan.player.captureVulkanSubmitsResources.empty() ||
-      !Configurator::Get().vulkan.player.captureVulkanRenderPassesResources.empty() ||
-      !Configurator::Get().vulkan.player.captureVulkanResources.empty();
-  return captureRenderPassesResources;
-}
-
-inline bool crossPlatformStateRestoration() {
-  static bool crossPlatformStateRestoration =
-      Configurator::Get().vulkan.recorder.crossPlatformStateRestoration.images;
-  return crossPlatformStateRestoration;
-}
-#ifdef GITS_PLATFORM_WINDOWS
-inline bool usePresentSrcLayoutTransitionAsAFrameBoundary() {
-  static bool usePresentSrcLayoutTransitionAsAFrameBoundary =
-      Configurator::Get().vulkan.recorder.usePresentSrcLayoutTransitionAsAFrameBoundary;
-  return usePresentSrcLayoutTransitionAsAFrameBoundary;
-}
-#endif
-
-inline bool useCaptureReplayFeaturesForBuffersAndAccelerationStructures() {
-  static bool useCaptureReplayFeaturesForBuffersAndAccelerationStructures =
-      Configurator::Get()
-          .vulkan.recorder.useCaptureReplayFeaturesForBuffersAndAccelerationStructures;
-  return useCaptureReplayFeaturesForBuffersAndAccelerationStructures;
-}
-
-inline bool isUseExternalMemoryExtensionUsed() {
-#ifdef GITS_PLATFORM_WINDOWS
-  return Configurator::Get().vulkan.recorder.useExternalMemoryExtension;
-#else
-  return false;
-#endif
-}
-
-inline bool isGitsRecorderAttached() {
-  if (drvVk.GetGlobalDispatchTable().vkIAmRecorderGITS) {
-    return true;
-  }
-  return false;
-}
-
-template <class STATE_CONTAINER, class KEY, class DST_CONTAINER>
-inline void insertStateIfFound(STATE_CONTAINER& state, KEY key, DST_CONTAINER& dst) {
-  const auto it = state.find(key);
-  if (it != state.end()) {
-    dst.insert(it->second);
-  }
-}
-
-template <>
-inline void insertStateIfFound(gits::Vulkan::CStateDynamic::TAccelerationStructureKHRStates& state,
-                               VkAccelerationStructureKHR key,
-                               std::unordered_set<std::shared_ptr<CBufferState>>& dst) {
-  const auto it = state.find(key);
-  if (it != state.end()) {
-    dst.insert(it->second->bufferStateStore);
-  }
-}
-
-template <>
-inline void insertStateIfFound(gits::Vulkan::CStateDynamic::TMicromapEXTStates& state,
-                               VkMicromapEXT key,
-                               std::unordered_set<std::shared_ptr<CBufferState>>& dst) {
-  const auto it = state.find(key);
-  if (it != state.end()) {
-    dst.insert(it->second->bufferStateStore);
-  }
-}
-
-} // namespace
 
 inline void vkIAmGITS_SD() {
   SD().internalResources.attachedToGITS = true;
@@ -2753,52 +2650,16 @@ inline void vkCmdBuildAccelerationStructuresKHR_SD(
     return;
   }
 
-  CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
-  auto& cmdBufState = SD()._commandbufferstates[cmdBuf];
-  auto device = cmdBufState->commandPoolStateStore->deviceStateStore->deviceHandle;
-
-  for (uint32_t acc = 0; acc < infoCount; ++acc) {
-    // Struct storage data is going to be injected into original structures via pNext
-    // that's why a pointer to original, app-provided structures is needed here.
-    auto* pBuildInfo = &pInfos[acc];
-    auto* pRangeInfos = ppBuildRangeInfos[acc];
-    auto& accelerationStructureState =
-        SD()._accelerationstructurekhrstates[pBuildInfo->dstAccelerationStructure];
-
-    if (isSubcaptureBeforeRestorationPhase()) {
-      std::vector<uint32_t> primitivesCount(pBuildInfo->geometryCount);
-
-      for (uint32_t g = 0; g < pBuildInfo->geometryCount; ++g) {
-        primitivesCount[g] = pRangeInfos[g].primitiveCount;
-      }
-
-      drvVk.vkGetAccelerationStructureBuildSizesKHR(
-          device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, pBuildInfo,
-          primitivesCount.data(), &accelerationStructureState->buildSizeInfo);
-      cmdBufState->touchedResources.emplace_back((uint64_t)pBuildInfo->dstAccelerationStructure,
-                                                 ResourceType::ACCELERATION_STRUCTURE);
-    }
-
-    if (pBuildInfo->mode == VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR) {
-      // Full acceleration structure build
-      accelerationStructureState->buildInfo.reset(new CAccelerationStructureKHRState::CBuildInfo(
-          pBuildInfo, pRangeInfos, prepareAccelerationStructureControlData(cmdBuf)));
-      accelerationStructureState->updateInfo.reset();
-      accelerationStructureState->copyInfo.reset();
-    } else if (pBuildInfo->mode == VK_BUILD_ACCELERATION_STRUCTURE_MODE_UPDATE_KHR) {
-      // Acceleration structure update (full build info left untouched)
-      const auto& srcAccelerationStructureState =
-          SD()._accelerationstructurekhrstates[pBuildInfo->srcAccelerationStructure];
-      accelerationStructureState->updateInfo.reset(new CAccelerationStructureKHRState::CBuildInfo(
-          pBuildInfo, pRangeInfos, prepareAccelerationStructureControlData(cmdBuf),
-          srcAccelerationStructureState));
-    }
-  }
-
   if (!(updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase())) {
     return;
   }
 
+  CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
+
+  // Track AS build data
+  handleAccelerationStructureBuild(cmdBuf, infoCount, pInfos, ppBuildRangeInfos);
+
+  // Usual state tracking
   auto& bindingBuffers = SD().bindingBuffers[cmdBuf];
   auto addBindingBuffer = [&bindingBuffers](VkDeviceAddress deviceAddress, uint64_t offset) {
     if (deviceAddress != 0) {
@@ -2883,8 +2744,8 @@ inline void vkCmdCopyAccelerationStructureKHR_SD(VkCommandBuffer cmdBuf,
 
     dstAccelerationStructureState->buildInfo.reset();
     dstAccelerationStructureState->updateInfo.reset();
-    dstAccelerationStructureState->copyInfo.reset(new CAccelerationStructureKHRState::CCopyInfo(
-        pInfo, srcAccelerationStructureState, getCommandExecutionSide(cmdBuf)));
+    dstAccelerationStructureState->copyInfo.reset(
+        new CAccelerationStructureKHRState::CCopyInfo(pInfo, srcAccelerationStructureState));
     dstAccelerationStructureState->buildSizeInfo = srcAccelerationStructureState->buildSizeInfo;
 
     auto& cmdBufState = SD()._commandbufferstates[cmdBuf];
@@ -2952,8 +2813,7 @@ inline void vkCmdBuildMicromapsEXT_SD(VkCommandBuffer cmdBuf,
 
     if (pBuildInfo->mode == VK_BUILD_MICROMAP_MODE_BUILD_EXT) {
       // Full micromap build
-      mmState->buildInfo.reset(new CMicromapEXTState::CBuildInfo(
-          pBuildInfo, prepareAccelerationStructureControlData(cmdBuf)));
+      mmState->buildInfo.reset(new CMicromapEXTState::CBuildInfo(pBuildInfo));
       mmState->copyInfo.reset();
     }
   }

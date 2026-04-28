@@ -117,19 +117,8 @@ VkClearValue* gits::Vulkan::CVkClearValueData::Value() {
 // ------------------------------------------------------------------------------------------------
 
 gits::Vulkan::CBufferDeviceAddressObjectData::CBufferDeviceAddressObjectData(
-    VkDeviceAddress originalDeviceAddress, int64_t additionalOffset)
-    : _buffer(VK_NULL_HANDLE), _offset(0) {
-  _originalDeviceAddress = originalDeviceAddress;
-
-  if ((originalDeviceAddress != 0) &&
-      (!useCaptureReplayFeaturesForBuffersAndAccelerationStructures() ||
-       isSubcaptureBeforeRestorationPhase())) {
-    _buffer = findBufferFromDeviceAddress(originalDeviceAddress + additionalOffset);
-    if (_buffer) {
-      _offset = originalDeviceAddress - SD()._bufferstates[_buffer]->deviceAddress;
-    }
-  }
-}
+    VkDeviceAddress deviceAddress)
+    : _originalDeviceAddress(deviceAddress), _buffer(VK_NULL_HANDLE), _offset(0) {}
 
 gits::Vulkan::CBufferDeviceAddressObjectData& gits::Vulkan::CBufferDeviceAddressObjectData::
 operator=(CBufferDeviceAddressObjectData&& other) noexcept {
@@ -152,109 +141,51 @@ std::set<uint64_t> gits::Vulkan::CBufferDeviceAddressObjectData::GetMappedPointe
 
 // ------------------------------------------------------------------------------------------------
 
-void gits::Vulkan::COnQueueSubmitEndDataStorage::SetDataSize(VkDeviceSize dataSize) {
-  _dataSize = dataSize;
-  if (_dataSize) {
-    _data.resize(_dataSize);
-  }
-}
-
-void gits::Vulkan::COnQueueSubmitEndDataStorage::GatherDataOnQueueSubmitEnd(
-    CCommandBufferState* commandBufferState, VkDeviceMemory memory) {
-  // When all: _device, _dataSize and _dataMemory members are set,
-  // this class instance will add itself to queueSubmitEndMessageReceivers
-  // and OnQueueSubmitEnd() will perform memory mapping and data copy.
-
-  if (commandBufferState) {
-    _device = commandBufferState->commandPoolStateStore->deviceStateStore->deviceHandle;
-    commandBufferState->queueSubmitEndMessageReceivers.push_back(this);
-  }
-  _dataMemory = memory;
-}
-
 void gits::Vulkan::COnQueueSubmitEndDataStorage::OnQueueSubmitEnd() {
-  if (_device && _dataSize && _dataMemory) {
-    mapMemoryAndCopyData(_data.data(), _device, _dataMemory, 0, _dataSize);
+  if (_onQueueSubmitEnd) {
+    _onQueueSubmitEnd(_device, _dataSize, _dataMemory, _data.data());
   }
+  //if (_device && _dataSize && _dataMemory) {
+  //  _data.resize(_dataSize);
+  //  mapMemoryAndCopyData(_data.data(), _device, _dataMemory, 0, _dataSize);
+  //}
 }
 
 // ------------------------------------------------------------------------------------------------
 
-gits::Vulkan::CVkDeviceOrHostAddressConstKHRData::CVkDeviceOrHostAddressConstKHRData(
-    const VkDeviceOrHostAddressConstKHR deviceorhostaddress,
-    uint32_t offset,
-    uint64_t stride,
-    uint32_t count,
-    const VkAccelerationStructureBuildControlDataGITS& controlData)
-    : COnQueueSubmitEndDataStorage(),
-      _controlData(controlData),
-      _bufferDeviceAddress(),
-      _DeviceOrHostAddressConst(nullptr) {
-  if ((deviceorhostaddress.deviceAddress == 0) || (count == 0) || (stride == 0)) {
-    return;
-  }
-
-  Initialize(deviceorhostaddress, offset, stride, count);
-}
-
-void gits::Vulkan::CVkDeviceOrHostAddressConstKHRData::Initialize(
-    const VkDeviceOrHostAddressConstKHR deviceorhostaddress,
-    uint32_t offset,
-    uint64_t stride,
-    uint32_t count) {
-  SetDataSize(count * stride);
-  _offset = offset;
-
-  switch (_controlData.executionSide) {
-  case VK_COMMAND_EXECUTION_SIDE_DEVICE_GITS:
-    // Store original device address
-    _bufferDeviceAddress =
-        CBufferDeviceAddressObjectData(deviceorhostaddress.deviceAddress, offset);
-
-    // For substream recording, input data needs to be acquired and stored for further use in
-    // a state restoration phase. In case of non-indexed geometry, data acquisition is very
-    // simple as it requires just a copy operation.
-    if (isSubcaptureBeforeRestorationPhase() && _bufferDeviceAddress._buffer) {
-      auto commandBuffer = _controlData.commandBuffer;
-      auto commandBufferState = SD()._commandbufferstates[commandBuffer];
-      auto device = commandBufferState->commandPoolStateStore->deviceStateStore->deviceHandle;
-      auto memoryBufferPair =
-          createTemporaryBuffer(device, _dataSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-                                commandBufferState.get(), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-      auto srcBuffer = _bufferDeviceAddress._buffer;
-      auto srcOffset = _bufferDeviceAddress._offset + offset;
-
-      injectCopyCommand(commandBuffer, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-                        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, _dataSize, srcBuffer, srcOffset,
-                        VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_MEMORY_READ_BIT,
-                        VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_MEMORY_READ_BIT,
-                        memoryBufferPair.second->bufferHandle, 0, 0, VK_ACCESS_HOST_READ_BIT);
-
-      GatherDataOnQueueSubmitEnd(commandBufferState.get(),
-                                 memoryBufferPair.first->deviceMemoryHandle);
-    }
-    break;
-  case VK_COMMAND_EXECUTION_SIDE_HOST_GITS:
-    memcpy(_data.data(), ((uint8_t*)deviceorhostaddress.hostAddress) + offset, _dataSize);
-    break;
-  }
-}
+//void gits::Vulkan::CVkDeviceOrHostAddressConstKHRData::PrepareStateRestore(
+//    CCommandBufferState* commandBufferState, uint32_t offset, uint32_t size) {
+//  // For substream recording, input data needs to be acquired and stored for further use in
+//  // a state restoration phase. In case of a non-indexed geometry, data acquisition is very
+//  // simple as it requires just a copy operation.
+//  auto commandBuffer = commandBufferState->commandBufferHandle;
+//  auto device = commandBufferState->commandPoolStateStore->deviceStateStore->deviceHandle;
+//  auto memoryBufferPair =
+//      createTemporaryBuffer(device, size, VK_BUFFER_USAGE_TRANSFER_DST_BIT, commandBufferState,
+//                            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+//  auto srcBuffer = _bufferDeviceAddress._buffer;
+//  auto srcOffset = _bufferDeviceAddress._offset + offset;
+//
+//  injectCopyCommand(commandBuffer, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+//                    VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, size, srcBuffer, srcOffset,
+//                    VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_MEMORY_READ_BIT,
+//                    VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_MEMORY_READ_BIT,
+//                    memoryBufferPair.second->bufferHandle, 0, 0, VK_ACCESS_HOST_READ_BIT);
+//
+//  _device = device;
+//  _dataSize = size;
+//  _offset = offset;
+//  _dataMemory = memoryBufferPair.first->deviceMemoryHandle;
+//
+//  commandBufferState->queueSubmitEndMessageReceivers.push_back(this);
+//}
 
 // ------------------------------------------------------------------------------------------------
 
 VkDeviceOrHostAddressConstKHR* gits::Vulkan::CVkDeviceOrHostAddressConstKHRData::Value() {
   if (!_DeviceOrHostAddressConst) {
     _DeviceOrHostAddressConst = std::make_unique<VkDeviceOrHostAddressConstKHR>();
-    _DeviceOrHostAddressConst->deviceAddress = 0;
-
-    switch (_controlData.executionSide) {
-    case VK_COMMAND_EXECUTION_SIDE_DEVICE_GITS:
-      _DeviceOrHostAddressConst->deviceAddress = _bufferDeviceAddress._originalDeviceAddress;
-      break;
-    case VK_COMMAND_EXECUTION_SIDE_HOST_GITS:
-      _DeviceOrHostAddressConst->hostAddress = _data.data() + _offset;
-      break;
-    }
+    _DeviceOrHostAddressConst->deviceAddress = _bufferDeviceAddress._originalDeviceAddress;
   }
   return _DeviceOrHostAddressConst.get();
 }
@@ -265,42 +196,7 @@ std::set<uint64_t> gits::Vulkan::CVkDeviceOrHostAddressConstKHRData::GetMappedPo
 
 // ------------------------------------------------------------------------------------------------
 
-gits::Vulkan::CDeviceOrHostAddressAccelerationStructureVertexDataGITSData::
-    CDeviceOrHostAddressAccelerationStructureVertexDataGITSData(
-        VkDeviceOrHostAddressConstKHR vertexData,
-        uint32_t offset,
-        uint64_t stride,
-        uint32_t count,
-        uint32_t firstVertex,
-        uint32_t maxVertex,
-        VkDeviceOrHostAddressConstKHR indexData,
-        VkIndexType indexType,
-        const VkAccelerationStructureBuildControlDataGITS& controlData)
-    : CVkDeviceOrHostAddressConstKHRData(), _indexType(indexType) {
-  _controlData = controlData;
-  _offset = 0;
-
-  if ((vertexData.deviceAddress == 0) || (count == 0) || (stride == 0)) {
-    return;
-  }
-
-  if (indexType == VK_INDEX_TYPE_NONE_KHR) {
-    // Non-indexed geometry, buffer with vertex data can be retrieved directly from a device address
-    Initialize(vertexData, offset + firstVertex * stride, stride, count);
-  } else {
-    // Indexed geometry, indices alter/offset device address before fetching vertices,
-    // so indices need to be read first in order to find a source buffer with vertex data
-    if (_controlData.executionSide == VK_COMMAND_EXECUTION_SIDE_DEVICE_GITS) {
-      InitializeIndexedVertexDataOnDevice(vertexData, offset, stride, count, firstVertex, maxVertex,
-                                          indexData, indexType);
-    } else {
-      InitializeIndexedVertexDataOnHost(vertexData, offset, stride, count, firstVertex, indexData,
-                                        indexType);
-    }
-  }
-}
-
-void gits::Vulkan::CDeviceOrHostAddressAccelerationStructureVertexDataGITSData::
+/*void gits::Vulkan::CDeviceOrHostAddressAccelerationStructureVertexDataGITSData::
     InitializeIndexedVertexDataOnDevice(VkDeviceOrHostAddressConstKHR vertexData,
                                         uint32_t offset,
                                         uint64_t stride,
@@ -340,8 +236,7 @@ void gits::Vulkan::CDeviceOrHostAddressAccelerationStructureVertexDataGITSData::
     // (indirect) compute shader performs the actual copy operation.
 
     //              DataSize           Offset         Indirect count x/y/z      Vertices
-    SetDataSize(sizeof(uint32_t) + sizeof(uint32_t) + 3 * sizeof(uint32_t) +
-                std::max(count, maxVertex) * stride);
+    SetDataSize(sizeof(uint32_t) + sizeof(uint32_t) + 3 * sizeof(uint32_t) + count * stride);
 
     auto commandBuffer = _controlData.commandBuffer;
     auto commandBufferState = SD()._commandbufferstates[commandBuffer];
@@ -508,92 +403,25 @@ void gits::Vulkan::CDeviceOrHostAddressAccelerationStructureVertexDataGITSData::
     memcpy(data.data(), _data.data() + 5 * sizeof(uint32_t), _dataSize);
     _data.swap(data);
   }
-}
-
-void gits::Vulkan::CDeviceOrHostAddressAccelerationStructureVertexDataGITSData::
-    InitializeIndexedVertexDataOnHost(
-        VkDeviceOrHostAddressConstKHR vertexData,
-        uint32_t offset, // For indexed vertices offset is applied to indices
-        uint64_t stride,
-        uint32_t count,
-        uint32_t firstVertex,
-        VkDeviceOrHostAddressConstKHR indexData,
-        VkIndexType indexType) {
-
-  switch (indexType) {
-  case VK_INDEX_TYPE_UINT16: {
-    uint16_t* baseIndex = (uint16_t*)(((uint8_t*)indexData.hostAddress) + offset);
-    uint16_t maxIndex = baseIndex[0] + firstVertex;
-    uint16_t minIndex = baseIndex[0] + firstVertex;
-
-    for (uint32_t i = 0; i < count; ++i) {
-      uint16_t index = baseIndex[i] + firstVertex;
-      maxIndex = index > maxIndex ? index : maxIndex;
-      minIndex = index < minIndex ? index : minIndex;
-    }
-
-    SetDataSize(stride * ((maxIndex + 1) - minIndex));
-    _offset = stride * minIndex;
-    break;
-  }
-  case VK_INDEX_TYPE_UINT32: {
-    uint32_t* baseIndex = (uint32_t*)(((uint8_t*)indexData.hostAddress) + offset);
-    uint32_t maxIndex = baseIndex[0] + firstVertex;
-    uint32_t minIndex = baseIndex[0] + firstVertex;
-
-    for (uint32_t i = 0; i < count; ++i) {
-      uint16_t index = baseIndex[i] + firstVertex;
-      maxIndex = index > maxIndex ? index : maxIndex;
-      minIndex = index < minIndex ? index : minIndex;
-    }
-
-    SetDataSize(stride * ((maxIndex + 1) - minIndex));
-    _offset = stride * minIndex;
-    break;
-  }
-  default:
-    throw std::runtime_error(EXCEPTION_MESSAGE);
-  }
-
-  uint8_t* finalVertexPtr = ((uint8_t*)vertexData.hostAddress) + _offset;
-  memcpy(_data.data(), finalVertexPtr, _dataSize);
-}
+}*/
 
 // ------------------------------------------------------------------------------------------------
 // No const, mainly scratch data
 
 gits::Vulkan::CVkDeviceOrHostAddressKHRData::CVkDeviceOrHostAddressKHRData(
-    const VkDeviceOrHostAddressKHR deviceorhostaddress,
-    const VkAccelerationStructureBuildControlDataGITS& controlData)
-    : _controlData(controlData), _bufferDeviceAddress(), _DeviceOrHostAddress(nullptr) {
+    const VkDeviceOrHostAddressKHR deviceorhostaddress)
+    : _bufferDeviceAddress(), _DeviceOrHostAddress(nullptr) {
   if (deviceorhostaddress.deviceAddress == 0) {
     return;
   }
-
-  switch (_controlData.executionSide) {
-  case VK_COMMAND_EXECUTION_SIDE_DEVICE_GITS:
-    // Store original device address
-    _bufferDeviceAddress = CBufferDeviceAddressObjectData(deviceorhostaddress.deviceAddress);
-    break;
-  case VK_COMMAND_EXECUTION_SIDE_HOST_GITS:
-    throw std::runtime_error("Host operations not supported yet!");
-    break;
-  }
+  // Store original device address
+  _bufferDeviceAddress = CBufferDeviceAddressObjectData(deviceorhostaddress.deviceAddress);
 }
 
 VkDeviceOrHostAddressKHR* gits::Vulkan::CVkDeviceOrHostAddressKHRData::Value() {
   if (!_DeviceOrHostAddress) {
     _DeviceOrHostAddress = std::make_unique<VkDeviceOrHostAddressKHR>();
-    _DeviceOrHostAddress->deviceAddress = 0;
-
-    switch (_controlData.executionSide) {
-    case VK_COMMAND_EXECUTION_SIDE_DEVICE_GITS:
-      _DeviceOrHostAddress->deviceAddress = _bufferDeviceAddress._originalDeviceAddress;
-      break;
-    case VK_COMMAND_EXECUTION_SIDE_HOST_GITS:
-      throw std::runtime_error("Host operations not supported yet!");
-      break;
-    }
+    _DeviceOrHostAddress->deviceAddress = _bufferDeviceAddress._originalDeviceAddress;
   }
   return _DeviceOrHostAddress.get();
 }
@@ -607,9 +435,7 @@ std::set<uint64_t> gits::Vulkan::CVkDeviceOrHostAddressKHRData::GetMappedPointer
 gits::Vulkan::CVkAccelerationStructureGeometryDataKHRData::
     CVkAccelerationStructureGeometryDataKHRData(
         VkGeometryTypeKHR geometryType,
-        const VkAccelerationStructureGeometryDataKHR* accelerationstructuregeometrydatakhr,
-        const VkAccelerationStructureBuildRangeInfoKHR& buildRangeInfo,
-        const VkAccelerationStructureBuildControlDataGITS& controlData)
+        const VkAccelerationStructureGeometryDataKHR* accelerationstructuregeometrydatakhr)
     : _AccelerationStructureGeometryDataKHR(nullptr),
       _isNullPtr(accelerationstructuregeometrydatakhr == nullptr) {
   if (*_isNullPtr) {
@@ -620,15 +446,15 @@ gits::Vulkan::CVkAccelerationStructureGeometryDataKHRData::
   switch (geometryType) {
   case VK_GEOMETRY_TYPE_TRIANGLES_KHR:
     _triangles = std::make_unique<CVkAccelerationStructureGeometryTrianglesDataKHRData>(
-        &accelerationstructuregeometrydatakhr->triangles, buildRangeInfo, controlData);
+        &accelerationstructuregeometrydatakhr->triangles);
     break;
   case VK_GEOMETRY_TYPE_AABBS_KHR:
     _aabbs = std::make_unique<CVkAccelerationStructureGeometryAabbsDataKHRData>(
-        &accelerationstructuregeometrydatakhr->aabbs, buildRangeInfo, controlData);
+        &accelerationstructuregeometrydatakhr->aabbs);
     break;
   case VK_GEOMETRY_TYPE_INSTANCES_KHR:
     _instances = std::make_unique<CVkAccelerationStructureGeometryInstancesDataKHRData>(
-        &accelerationstructuregeometrydatakhr->instances, buildRangeInfo, controlData);
+        &accelerationstructuregeometrydatakhr->instances);
     break;
   default:
     throw std::runtime_error("Unknown geometry type provided!");
@@ -680,90 +506,81 @@ std::set<uint64_t> gits::Vulkan::CVkAccelerationStructureGeometryDataKHRData::Ge
 gits::Vulkan::CVkAccelerationStructureGeometryInstancesDataKHRData::
     CVkAccelerationStructureGeometryInstancesDataKHRData(
         const VkAccelerationStructureGeometryInstancesDataKHR*
-            accelerationstructuregeometryinstancesdatakhr,
-        const VkAccelerationStructureBuildRangeInfoKHR& buildRangeInfo,
-        const VkAccelerationStructureBuildControlDataGITS& controlData)
-    : _sType(VK_STRUCTURE_TYPE_MAX_ENUM),
-      _pNext(std::make_unique<CpNextWrapperData>(nullptr)),
-      _arrayOfPointers(false),
-      _bufferDeviceAddress(),
-      _AccelerationStructureGeometryInstancesDataKHR(),
-      _controlData(controlData),
-      _pointers(),
+            accelerationstructuregeometryinstancesdatakhr)
+    : _AccelerationStructureGeometryInstancesDataKHR(nullptr),
       _baseIn(),
       _isNullPtr(accelerationstructuregeometryinstancesdatakhr == nullptr) {
-  if (*_isNullPtr || (buildRangeInfo.primitiveCount == 0)) {
-    return;
-  }
-
-  SetDataSize(buildRangeInfo.primitiveCount * sizeof(VkAccelerationStructureInstanceKHR));
-  _offset = buildRangeInfo.primitiveOffset;
-
-  _sType = accelerationstructuregeometryinstancesdatakhr->sType;
-  _pNext =
-      std::make_unique<CpNextWrapperData>(accelerationstructuregeometryinstancesdatakhr->pNext);
-  _arrayOfPointers = accelerationstructuregeometryinstancesdatakhr->arrayOfPointers;
-
-  switch (_controlData.executionSide) {
-  case VK_COMMAND_EXECUTION_SIDE_DEVICE_GITS: {
-    _bufferDeviceAddress = CBufferDeviceAddressObjectData(
-        accelerationstructuregeometryinstancesdatakhr->data.deviceAddress,
-        buildRangeInfo.primitiveOffset);
-
-    auto baseAddress = accelerationstructuregeometryinstancesdatakhr->data.deviceAddress +
-                       buildRangeInfo.primitiveOffset;
-    auto& commandBufferState = SD()._commandbufferstates[controlData.commandBuffer];
-
-    if (isSubcaptureBeforeRestorationPhase() && _bufferDeviceAddress._buffer) {
-      // Acquire instance data
-      auto commandBuffer = controlData.commandBuffer;
-      auto commandBufferState = SD()._commandbufferstates[commandBuffer];
-      auto device = commandBufferState->commandPoolStateStore->deviceStateStore->deviceHandle;
-      auto memoryBufferPair =
-          createTemporaryBuffer(device, _dataSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-                                commandBufferState.get(), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-      auto srcBuffer = _bufferDeviceAddress._buffer;
-      auto srcOffset = _bufferDeviceAddress._offset + buildRangeInfo.primitiveOffset;
-
-      if (_arrayOfPointers) {
-        // Submit a compute shader which copies structures
-        throw std::runtime_error("Array of pointers not implemented yet!");
-      } else if (_bufferDeviceAddress._buffer) {
-        // Copy data with a just a usual copy command
-        injectCopyCommand(commandBuffer, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-                          VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, _dataSize, srcBuffer, srcOffset,
-                          VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_MEMORY_READ_BIT,
-                          VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_MEMORY_READ_BIT,
-                          memoryBufferPair.second->bufferHandle, 0, 0, VK_ACCESS_HOST_READ_BIT);
-      }
-
-      GatherDataOnQueueSubmitEnd(commandBufferState.get(),
-                                 memoryBufferPair.first->deviceMemoryHandle);
-    }
-    break;
-  }
-  case VK_COMMAND_EXECUTION_SIDE_HOST_GITS: {
-    // Leave it for now, it's easy to implement but not used by existing apps
-
-    throw std::runtime_error(
-        "Building top-level acceleration structures on host is not supported yet.");
-    break;
-  }
-  }
-
-  // Pass data to "vulkan arguments" class (see CVkAccelerationStructureGeometryInstancesDataKHR() constructor)
-  if (!isSubcaptureBeforeRestorationPhase()) {
-    _baseIn = {
-        VK_STRUCTURE_TYPE_STRUCT_STORAGE_POINTER_GITS,        // VkStructureType sType;
-        accelerationstructuregeometryinstancesdatakhr->pNext, // const void* pNext;
-        accelerationstructuregeometryinstancesdatakhr->sType, // VkStructureType sStructStorageType
-        this                                                  // const void* pStructStorage;
-    };
-    const_cast<VkAccelerationStructureGeometryInstancesDataKHR*>(
-        accelerationstructuregeometryinstancesdatakhr)
-        ->pNext = &_baseIn;
+  if (!*_isNullPtr) {
+    _sType = std::make_unique<CVkStructureTypeData>(
+        accelerationstructuregeometryinstancesdatakhr->sType);
+    _pNext =
+        std::make_unique<CpNextWrapperData>(accelerationstructuregeometryinstancesdatakhr->pNext);
+    _arrayOfPointers = std::make_unique<Cuint32_tData>(
+        accelerationstructuregeometryinstancesdatakhr->arrayOfPointers);
+    _data = std::make_unique<CVkDeviceOrHostAddressConstKHRData>(
+        &accelerationstructuregeometryinstancesdatakhr->data);
+  } else {
+    _sType = nullptr;
+    _pNext = nullptr;
+    _arrayOfPointers = nullptr;
+    _data = nullptr;
   }
 }
+
+//gits::Vulkan::CVkAccelerationStructureGeometryInstancesDataKHRData::
+//    CVkAccelerationStructureGeometryInstancesDataKHRData(
+//        const VkAccelerationStructureGeometryInstancesDataKHR*
+//            accelerationstructuregeometryinstancesdatakhr)
+//    : _sType(VK_STRUCTURE_TYPE_MAX_ENUM),
+//      _pNext(std::make_unique<CpNextWrapperData>(nullptr)),
+//      _arrayOfPointers(false),
+//      _bufferDeviceAddress(),
+//      _AccelerationStructureGeometryInstancesDataKHR(),
+//      _isNullPtr(accelerationstructuregeometryinstancesdatakhr == nullptr) {
+//  if (*_isNullPtr) {
+//    return;
+//  }
+//
+//  _sType = accelerationstructuregeometryinstancesdatakhr->sType;
+//  _pNext =
+//      std::make_unique<CpNextWrapperData>(accelerationstructuregeometryinstancesdatakhr->pNext);
+//  _arrayOfPointers = accelerationstructuregeometryinstancesdatakhr->arrayOfPointers;
+//
+//  _bufferDeviceAddress = CBufferDeviceAddressObjectData(
+//      accelerationstructuregeometryinstancesdatakhr->data.deviceAddress,
+//      buildRangeInfo.primitiveOffset);
+//
+//  auto baseAddress = accelerationstructuregeometryinstancesdatakhr->data.deviceAddress +
+//                     buildRangeInfo.primitiveOffset;
+//  auto& commandBufferState = SD()._commandbufferstates[controlData.commandBuffer];
+//
+//  if (isSubcaptureBeforeRestorationPhase() && _bufferDeviceAddress._buffer) {
+//    // Acquire instance data
+//    auto commandBuffer = controlData.commandBuffer;
+//    auto commandBufferState = SD()._commandbufferstates[commandBuffer];
+//    auto device = commandBufferState->commandPoolStateStore->deviceStateStore->deviceHandle;
+//    auto memoryBufferPair =
+//        createTemporaryBuffer(device, _dataSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+//                              commandBufferState.get(), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+//    auto srcBuffer = _bufferDeviceAddress._buffer;
+//    auto srcOffset = _bufferDeviceAddress._offset + buildRangeInfo.primitiveOffset;
+//
+//    if (_arrayOfPointers) {
+//      // Submit a compute shader which copies structures
+//      throw std::runtime_error("Array of pointers not implemented yet!");
+//    } else if (_bufferDeviceAddress._buffer) {
+//      // Copy data with a just a usual copy command
+//      injectCopyCommand(commandBuffer, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+//                        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, _dataSize, srcBuffer, srcOffset,
+//                        VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_MEMORY_READ_BIT,
+//                        VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_MEMORY_READ_BIT,
+//                        memoryBufferPair.second->bufferHandle, 0, 0, VK_ACCESS_HOST_READ_BIT);
+//    }
+//
+//    GatherDataOnQueueSubmitEnd(commandBufferState.get(),
+//                               memoryBufferPair.first->deviceMemoryHandle);
+//  }
+//}
 
 VkAccelerationStructureGeometryInstancesDataKHR* gits::Vulkan::
     CVkAccelerationStructureGeometryInstancesDataKHRData::Value() {
@@ -771,49 +588,25 @@ VkAccelerationStructureGeometryInstancesDataKHR* gits::Vulkan::
     return nullptr;
   }
   if (_AccelerationStructureGeometryInstancesDataKHR == nullptr) {
-    VkDeviceOrHostAddressConstKHR address = {0};
-
-    switch (_controlData.executionSide) {
-    case VK_COMMAND_EXECUTION_SIDE_DEVICE_GITS:
-      address.deviceAddress = _bufferDeviceAddress._originalDeviceAddress;
-      break;
-    case VK_COMMAND_EXECUTION_SIDE_HOST_GITS:
-      if (_arrayOfPointers) {
-        _pointers.resize(_dataSize / sizeof(VkAccelerationStructureInstanceKHR));
-        for (uint32_t i = 0; i < _dataSize; i += sizeof(VkAccelerationStructureInstanceKHR)) {
-          _pointers[i] = &_data[i];
-        }
-        address.hostAddress = _pointers.data();
-      } else {
-        address.hostAddress = _data.data();
-      }
-      break;
-    }
-
     // Pass this structure through pNext
     _baseIn = {
         VK_STRUCTURE_TYPE_STRUCT_STORAGE_POINTER_GITS, // VkStructureType sType;
         **_pNext,                                      // const void* pNext;
-        _sType,                                        // VkStructureType sStructStorageType
+        **_sType,                                      // VkStructureType sStructStorageType;
         this                                           // const void* pStructStorage;
     };
 
     _AccelerationStructureGeometryInstancesDataKHR =
         std::make_unique<VkAccelerationStructureGeometryInstancesDataKHR>();
-    _AccelerationStructureGeometryInstancesDataKHR->sType = _sType;
+    _AccelerationStructureGeometryInstancesDataKHR->sType = **_sType;
     _AccelerationStructureGeometryInstancesDataKHR->pNext = &_baseIn;
-    _AccelerationStructureGeometryInstancesDataKHR->arrayOfPointers = _arrayOfPointers;
-    _AccelerationStructureGeometryInstancesDataKHR->data = address;
+    _AccelerationStructureGeometryInstancesDataKHR->arrayOfPointers = **_arrayOfPointers;
+    _AccelerationStructureGeometryInstancesDataKHR->data = **_data;
   }
   return _AccelerationStructureGeometryInstancesDataKHR.get();
 }
 
 std::set<uint64_t> gits::Vulkan::CVkAccelerationStructureGeometryInstancesDataKHRData::
     GetMappedPointers() {
-  switch (_controlData.executionSide) {
-  case VK_COMMAND_EXECUTION_SIDE_DEVICE_GITS:
-    return _bufferDeviceAddress.GetMappedPointers();
-  default:
-    return {};
-  }
+  return _data->GetMappedPointers();
 }

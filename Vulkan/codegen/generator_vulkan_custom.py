@@ -90,11 +90,6 @@ ExtendedEnum(name='VkFormat', enumerators = [
 VarDef(name='VK_FORMAT_CUSTOM_A8_UNORM_GITS', value='2000000025'),
 ])
 
-CustomEnum(name='VkCommandExecutionSideGITS', enumerators = [
-VarDef(name='VK_COMMAND_EXECUTION_SIDE_DEVICE_GITS', value='0'),
-VarDef(name='VK_COMMAND_EXECUTION_SIDE_HOST_GITS', value='1')
-])
-
 ExtendedEnum(name='VkStructureType', enumerators = [
 VarDef(name='VK_STRUCTURE_TYPE_ORIGINAL_SHADER_GROUP_HANDLES_GITS', value='808620001'),
 VarDef(name='VK_STRUCTURE_TYPE_STRUCT_STORAGE_POINTER_GITS', value='808600002'),
@@ -132,19 +127,9 @@ var2=VarDef(name='buffer', type='VkBuffer'),
 var3=VarDef(name='offset', type='int64_t')
 )
 
-CustomStruct(name='VkBufferDeviceAddressPatchGITS_', enabled=False,
+CustomStruct(name='VkBufferDeviceAddressPatchGITS_', enabled=False, # Not needed anymore
 var1=VarDef(name='location', type='VkBufferDeviceAddressGITS'),
 var2=VarDef(name='patchedValue', type='VkBufferDeviceAddressGITS')
-)
-
-CustomStruct(name='VkAccelerationStructureBuildControlDataGITS_', enabled=False,
-var1=VarDef(name='commandBuffer', type='VkCommandBuffer'),
-var2=VarDef(name='executionSide', type='VkCommandExecutionSideGITS')
-)
-
-CustomStruct(name='VkOpacityMicromapCustomDataGITS_', enabled=False,
-var1=VarDef(name='primitiveCount', type='uint32_t'),
-var2=VarDef(name='controlData', type='const VkAccelerationStructureBuildControlDataGITS&')
 )
 
 CustomStruct(name='VkStructStoragePointerGITS_', enabled=False,
