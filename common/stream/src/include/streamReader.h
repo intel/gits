@@ -77,8 +77,7 @@ private:
   struct WaitForRunDoneInfo {
     bool Waiting{};
     std::condition_variable Condition;
-    unsigned BlockId{};
-    uint64_t BlockSize{};
+    unsigned BlockIndex{};
   };
   std::array<WaitForRunDoneInfo, NUMBER_OF_DECOMPRESSION_THREADS> m_WaitsForRunDone;
 
@@ -98,9 +97,8 @@ private:
   UncompressedBlock* FindBlockForRun(std::unique_lock<std::mutex>& lock, unsigned blockId);
   void WaitForRunDone(std::unique_lock<std::mutex>& lock,
                       unsigned threadIndex,
-                      unsigned blockId,
-                      uint64_t blockSize);
-  void NotifyRunDone(unsigned blockId, uint64_t blockAllocSize);
+                      unsigned blockIndex);
+  void NotifyRunDone(unsigned blockIndex);
   void NotifyRunDoneAll();
   uint64_t Align(uint64_t value);
 };

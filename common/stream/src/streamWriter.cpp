@@ -170,10 +170,11 @@ void StreamWriter::Compress(unsigned threadIndex) {
 
     {
       std::unique_lock<std::mutex> lock(m_Mutex);
+      unsigned blockIndex{};
 
       while (!uncompressedBlock) {
         if (!m_CompressionQueue.empty()) {
-          unsigned blockIndex = m_CompressionQueue.front();
+          blockIndex = m_CompressionQueue.front();
           m_CompressionQueue.pop();
           uncompressedBlock = &m_UncompressedBlocks[blockIndex];
         } else if (m_StopThreads && m_WrittenBlockId == m_RecordedBlockId) {
@@ -188,32 +189,14 @@ void StreamWriter::Compress(unsigned threadIndex) {
 
       compressedSize = m_Compressors[threadIndex]->CompressBound(uncompressedBlock->DataSize);
 
-      unsigned blockIndex = 0;
-      uint64_t maxAlloc = 0;
-      while (!compressedBlock) {
-        CompressedBlock& block = m_CompressedBlocks[blockIndex];
-        if (!block.Full && !block.Compressing) {
-          if (compressedSize <= block.DataAlloc) {
-            compressedBlock = &block;
-            break;
-          } else if (block.DataAlloc > maxAlloc) {
-            maxAlloc = block.DataAlloc;
-            compressedBlock = &block;
-          }
-        }
-        ++blockIndex;
-        if (blockIndex == NUMBER_OF_BLOCKS) {
-          if (compressedBlock) {
-            break;
-          }
-          blockIndex = 0;
-          if (m_StopThreads && m_WrittenBlockId == m_RecordedBlockId) {
-            uncompressedBlock->Compressing = false;
-            m_CompressionDoneCondition.notify_all();
-            return;
-          } else {
-            WaitForWriteDone(lock, threadIndex, uncompressedBlock->Id, compressedSize);
-          }
+      compressedBlock = &m_CompressedBlocks[blockIndex];
+      if (compressedBlock->Full || compressedBlock->Compressing) {
+        if (m_StopThreads && m_WrittenBlockId == m_RecordedBlockId) {
+          uncompressedBlock->Compressing = false;
+          m_CompressionDoneCondition.notify_all();
+          return;
+        } else {
+          WaitForWriteDone(lock, threadIndex, compressedBlock->Index);
         }
       }
       GITS_ASSERT(compressedBlock);
@@ -279,7 +262,7 @@ void StreamWriter::WriteCompressedBlocks() {
 
         block.Full = false;
         ++m_WrittenBlockId;
-        NotifyWriteDone(m_WrittenBlockId, block.DataAlloc);
+        NotifyWriteDone(block.Index);
       }
       ++readyBlocks;
     }
@@ -301,43 +284,18 @@ void StreamWriter::WriteCompressedBlocks() {
 
 void StreamWriter::WaitForWriteDone(std::unique_lock<std::mutex>& lock,
                                     unsigned threadIndex,
-                                    unsigned blockId,
-                                    uint64_t blockSize) {
+                                    unsigned blockIndex) {
   m_WaitsForWriteDone[threadIndex].Waiting = true;
-  m_WaitsForWriteDone[threadIndex].BlockId = blockId;
-  m_WaitsForWriteDone[threadIndex].BlockSize = blockSize;
+  m_WaitsForWriteDone[threadIndex].BlockIndex = blockIndex;
   m_WaitsForWriteDone[threadIndex].Condition.wait(lock);
 }
 
-void StreamWriter::NotifyWriteDone(unsigned blockId, uint64_t blockAllocSize) {
-  unsigned minIdThread{};
-  unsigned minId = std::numeric_limits<unsigned>::max();
-  unsigned maxSizeThread{};
-  uint64_t maxBlockSize = 0;
-  unsigned waitingCount = 0;
+void StreamWriter::NotifyWriteDone(unsigned blockIndex) {
   for (unsigned i = 0; i < NUMBER_OF_COMPRESSION_THREADS; ++i) {
-    if (m_WaitsForWriteDone[i].Waiting) {
-      if (m_WaitsForWriteDone[i].BlockId < minId) {
-        minId = m_WaitsForWriteDone[i].BlockId;
-        minIdThread = i;
-      }
-      if (m_WaitsForWriteDone[i].BlockSize > maxBlockSize) {
-        maxBlockSize = m_WaitsForWriteDone[i].BlockSize;
-        maxSizeThread = i;
-      }
-      ++waitingCount;
-    }
-  }
-  if (waitingCount) {
-    if (minId == blockId + 1) {
-      m_WaitsForWriteDone[minIdThread].Waiting = false;
-      m_WaitsForWriteDone[minIdThread].Condition.notify_one();
-    } else if (maxBlockSize > INITIAL_BLOCK_ALLOC && blockAllocSize > INITIAL_BLOCK_ALLOC) {
-      m_WaitsForWriteDone[maxSizeThread].Waiting = false;
-      m_WaitsForWriteDone[maxSizeThread].Condition.notify_one();
-    } else {
-      m_WaitsForWriteDone[minIdThread].Waiting = false;
-      m_WaitsForWriteDone[minIdThread].Condition.notify_one();
+    if (m_WaitsForWriteDone[i].Waiting && m_WaitsForWriteDone[i].BlockIndex == blockIndex) {
+      m_WaitsForWriteDone[i].Waiting = false;
+      m_WaitsForWriteDone[i].Condition.notify_one();
+      break;
     }
   }
 }

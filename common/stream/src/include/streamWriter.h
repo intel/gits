@@ -72,8 +72,7 @@ private:
   struct WaitForWriteDoneInfo {
     bool Waiting{};
     std::condition_variable Condition;
-    unsigned BlockId{};
-    uint64_t BlockSize{};
+    unsigned BlockIndex{};
   };
   std::array<WaitForWriteDoneInfo, NUMBER_OF_COMPRESSION_THREADS> m_WaitsForWriteDone;
 
@@ -88,9 +87,8 @@ private:
   Block* FindBlockForRecord(std::unique_lock<std::mutex>& lock, uint64_t size);
   void WaitForWriteDone(std::unique_lock<std::mutex>& lock,
                         unsigned threadIndex,
-                        unsigned blockId,
-                        uint64_t blockSize);
-  void NotifyWriteDone(unsigned blockId, uint64_t blockAllocSize);
+                        unsigned blockIndex);
+  void NotifyWriteDone(unsigned blockIndex);
   uint64_t Align(uint64_t value);
 };
 
