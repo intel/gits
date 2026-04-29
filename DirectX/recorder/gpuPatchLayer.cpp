@@ -40,14 +40,11 @@ void GpuPatchLayer::Post(ID3D12GraphicsCommandListExecuteIndirectCommand& c) {
   }
 
   if (raytracing) {
-    BarrierState argumentBufferState{};
-    argumentBufferState.State = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
-    BarrierState countBufferState{};
-    countBufferState.State = D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT;
     m_GpuPatchDump.DumpArgumentBuffer(c.m_Object.Value, it->second, c.m_MaxCommandCount.Value,
                                       c.m_pArgumentBuffer.Value, c.m_ArgumentBufferOffset.Value,
-                                      argumentBufferState, c.m_pCountBuffer.Value,
-                                      c.m_CountBufferOffset.Value, countBufferState, c.Key);
+                                      D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT,
+                                      c.m_pCountBuffer.Value, c.m_CountBufferOffset.Value,
+                                      D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT, c.Key);
   }
 }
 
