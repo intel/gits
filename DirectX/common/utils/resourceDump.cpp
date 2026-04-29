@@ -98,7 +98,7 @@ void ResourceDump::StageResource(ID3D12GraphicsCommandList* commandList,
     dumpInfo.Size = size;
     dumpInfo.RowPitch = footprint.Footprint.RowPitch;
     dumpInfo.SubresourceFormat = GetDumpableFormat(footprint.Footprint.Format);
-  } else if (!dumpInfo.Size) {
+  } else if (!dumpInfo.Size || dumpInfo.Offset + dumpInfo.Size > dumpInfo.Desc.Width) {
     dumpInfo.Size = dumpInfo.Desc.Width - dumpInfo.Offset;
   }
   {
