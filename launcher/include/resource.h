@@ -10,9 +10,13 @@
 
 #define APP_ICON      101
 #define APP_FILE_ICON 102
-#define APP_VERSION   "0.1.8.1"
+#define APP_VERSION   "0.1.9"
 
 inline const char* RELEASE_NOTES = R"(
+Release Notes v0.1.9
+====================
+- Added ability to send GITS log via email
+
 Release Notes v0.1.8.1
 ====================
 - Added Resource Dump retry mode
@@ -25,7 +29,7 @@ Release Notes v0.1.8
 - Added release notes window
 - Added system for default paths for screenshots & trace based on playback stream
 - New default path for subcapture output based on original stream path
-- Aded option so enable custom executable name for gitsPlayer
+- Added option to enable custom executable name for gitsPlayer
 
 - New system to determine base gits installation path
 - Added buttons to use configuration files from base gits installation

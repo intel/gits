@@ -9,6 +9,7 @@
 #include "textEditorWidget.h"
 
 #include <fstream>
+#include <cstdlib>
 
 #include "log.h"
 
@@ -24,6 +25,7 @@ static const auto& TOOL_BAR() {
           {TextEditorWidget::TOOL_BAR_ITEMS::UNDO, {"Undo", "Undo the last change"}},
           {TextEditorWidget::TOOL_BAR_ITEMS::REDO, {"Redo", "Redo last undone change"}},
           {TextEditorWidget::TOOL_BAR_ITEMS::CHECK, {"Check", "Check the document for errors"}},
+          {TextEditorWidget::TOOL_BAR_ITEMS::SEND_BY_EMAIL, {"Send by email", "Send by email"}},
       };
   return items;
 }
@@ -213,6 +215,10 @@ void TextEditorWidget::Render(ImVec2 size) {
   m_Editor.Render(m_Name.c_str());
 }
 
+void TextEditorWidget::SetSendByEmailCallback(std::function<void(const std::string&)> callback) {
+  m_OnSendByEmail = std::move(callback);
+}
+
 void TextEditorWidget::RenderToolbar(ImVec2 size) {
   auto width = m_BtnsToolBar->GetSize().x;
   if ((ImGui::GetCursorPosX() + width + ImGui::GetStyle().WindowPadding.x) > size.x) {
@@ -278,6 +284,12 @@ void TextEditorWidget::RenderToolbar(ImVec2 size) {
                  << (result ? "No issues found." : "Issues detected.");
       }
       break;
+    case TOOL_BAR_ITEMS::SEND_BY_EMAIL: {
+      if (m_OnSendByEmail) {
+        m_OnSendByEmail(m_Editor.GetText());
+      }
+      break;
+    }
     default:
       break;
     }
