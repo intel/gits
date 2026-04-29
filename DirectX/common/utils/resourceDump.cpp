@@ -99,6 +99,14 @@ void ResourceDump::StageResource(ID3D12GraphicsCommandList* commandList,
     dumpInfo.RowPitch = footprint.Footprint.RowPitch;
     dumpInfo.SubresourceFormat = GetDumpableFormat(footprint.Footprint.Format);
   } else if (!dumpInfo.Size || dumpInfo.Offset + dumpInfo.Size > dumpInfo.Desc.Width) {
+    if (dumpInfo.Size) {
+      static bool logged = false;
+      if (!logged) {
+        LOG_WARNING << "ResourceDump - size of buffer region adjusted not to exceed buffer "
+                       "boundaries.";
+        logged = true;
+      }
+    }
     dumpInfo.Size = dumpInfo.Desc.Width - dumpInfo.Offset;
   }
   {
