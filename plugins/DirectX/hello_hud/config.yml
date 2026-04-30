@@ -1,0 +1,14 @@
+## ===================== begin_copyright_notice ============================
+##
+## Copyright (C) 2023-2026 Intel Corporation
+##
+## SPDX-License-Identifier: MIT
+##
+## ===================== end_copyright_notice ==============================
+
+Info:
+  Name: 'HelloHUD'
+  Description: 'Example starting point for a DirectX HUD GITS plugin. Shows some text in the HUD.'
+
+Config:
+  Text: 'Hello HUD'
