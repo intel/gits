@@ -925,6 +925,9 @@ void AnalyzerCommandListService::Command(
     for (unsigned key : c.m_pDesc.InputKeys) {
       AddObjectForRestore(key);
     }
+    for (unsigned key : c.m_pPostbuildInfoDescs.DestBufferKeys) {
+      AddObjectForRestore(key);
+    }
   }
 }
 
