@@ -39,7 +39,8 @@ StateTrackingLayer::StateTrackingLayer(SubcaptureRecorder& recorder,
                      m_ResourceUsageTrackingService,
                      m_ResourceForCBVRestoreService,
                      m_XellStateService,
-                     m_XefgStateService),
+                     m_XefgStateService,
+                     m_MetaCommandsService),
       m_Recorder(recorder),
       m_SubcaptureRange(subcaptureRange),
       m_MapStateService(m_StateService),
@@ -58,7 +59,8 @@ StateTrackingLayer::StateTrackingLayer(SubcaptureRecorder& recorder,
                                            m_ReservedResourcesService,
                                            m_ResourceStateTracker,
                                            m_GpuAddressService),
-      m_ResidencyService(m_StateService) {}
+      m_ResidencyService(m_StateService),
+      m_MetaCommandsService(m_StateService) {}
 
 void StateTrackingLayer::SetAsChildInParent(unsigned parentKey, unsigned childKey) {
   ObjectState* parentState = m_StateService.GetState(parentKey);
@@ -2768,11 +2770,6 @@ void StateTrackingLayer::Post(ID3D12GraphicsCommandList4ExecuteMetaCommandComman
   if (m_StateRestored) {
     return;
   }
-  static bool logged = false;
-  if (!logged) {
-    LOG_ERROR << "ID3D12GraphicsCommandList4ExecuteMetaCommand is not supported in subcapture.";
-    logged = true;
-  }
   CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
   command->CommandSerializer.reset(new ID3D12GraphicsCommandList4ExecuteMetaCommandSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
@@ -2788,6 +2785,8 @@ void StateTrackingLayer::Post(ID3D12GraphicsCommandList4InitializeMetaCommandCom
       new ID3D12GraphicsCommandList4InitializeMetaCommandSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
   state->Commands.push_back(command);
+
+  m_MetaCommandsService.InitializeMetaCommand(c);
 }
 
 void StateTrackingLayer::Post(ID3D12GraphicsCommandList4SetPipelineState1Command& c) {
@@ -2855,7 +2854,6 @@ void StateTrackingLayer::Post(ID3D12SDKConfiguration1CreateDeviceFactoryCommand&
   if (m_StateRestored) {
     return;
   }
-
   if (c.m_Result.Value != S_OK) {
     return;
   }
@@ -2872,7 +2870,6 @@ void StateTrackingLayer::Post(ID3D12DeviceFactoryCreateDeviceCommand& c) {
   if (m_StateRestored) {
     return;
   }
-
   if (c.m_Result.Value != S_OK) {
     return;
   }
@@ -2883,6 +2880,23 @@ void StateTrackingLayer::Post(ID3D12DeviceFactoryCreateDeviceCommand& c) {
   state->CreationCommand.reset(new ID3D12DeviceFactoryCreateDeviceCommand(c));
   m_StateService.StoreState(state);
   m_StateService.KeepState(state->ParentKey);
+}
+
+void StateTrackingLayer::Post(ID3D12Device5CreateMetaCommandCommand& c) {
+  if (m_StateRestored) {
+    return;
+  }
+  if (c.m_Result.Value != S_OK) {
+    return;
+  }
+  ObjectState* state = new ObjectState();
+  state->ParentKey = c.m_Object.Key;
+  state->Key = c.m_ppMetaCommand.Key;
+  state->Object = static_cast<IUnknown*>(*c.m_ppMetaCommand.Value);
+  state->CreationCommand.reset(new ID3D12Device5CreateMetaCommandCommand(c));
+  m_StateService.StoreState(state);
+
+  m_MetaCommandsService.SetDeviceKey(c.m_Object.Key);
 }
 
 void StateTrackingLayer::Post(xessD3D12CreateContextCommand& c) {

@@ -41,6 +41,7 @@ void StateTrackingService::RestoreState() {
   }
   RestoreStateObjectProperties();
   recordStatus(MarkerUInt64Command::Value::STATE_RESTORE_OBJECTS_END);
+  m_MetaCommandsService.RestoreState();
   m_NvapiGlobalStateService.RestoreInitializeCount();
   m_XessStateService.RestoreState();
   m_XellStateService.RestoreState();

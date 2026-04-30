@@ -29,6 +29,7 @@
 #include "resourceForCBVRestoreService.h"
 #include "resourceStateTracker.h"
 #include "capturePlayerGpuAddressService.h"
+#include "metaCommandsService.h"
 
 #include <map>
 #include <array>
@@ -208,6 +209,7 @@ public:
   void Post(ID3D12GraphicsCommandList7BarrierCommand& Command) override;
   void Post(ID3D12SDKConfiguration1CreateDeviceFactoryCommand& Command) override;
   void Post(ID3D12DeviceFactoryCreateDeviceCommand& Command) override;
+  void Post(ID3D12Device5CreateMetaCommandCommand& c) override;
   void Post(xessD3D12CreateContextCommand& c) override;
   void Post(xessD3D12InitCommand& c) override;
   void Pre(xessDestroyContextCommand& c) override;
@@ -285,6 +287,7 @@ private:
   GpuExecutionFlusher m_GpuExecutionFlusher;
   ResourceStateTracker m_ResourceStateTracker;
   CapturePlayerGpuAddressService m_GpuAddressService;
+  MetaCommandsService m_MetaCommandsService;
   std::unordered_map<unsigned, std::unordered_set<unsigned>> m_ResourceHeaps;
   std::unordered_map<unsigned, std::vector<unsigned>> m_SwapchainBuffers;
 

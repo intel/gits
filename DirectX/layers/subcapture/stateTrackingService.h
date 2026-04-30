@@ -25,6 +25,7 @@
 #include "resourceUsageTrackingService.h"
 #include "analyzerResults.h"
 #include "resourceForCBVRestoreService.h"
+#include "metaCommandsService.h"
 #include "keyUtils.h"
 
 #include <vector>
@@ -54,7 +55,8 @@ public:
       ResourceUsageTrackingService& resourceUsageTrackingService,
       ResourceForCBVRestoreService& resourceForCBVRestoreService,
       XellStateService& xellStateService,
-      XefgStateService& xefgStateService)
+      XefgStateService& xefgStateService,
+      MetaCommandsService& metaCommandsService)
       : m_Recorder(recorder),
         m_ResourceContentRestore(*this),
         m_SwapChainService(*this),
@@ -74,7 +76,8 @@ public:
         m_ResourceForCBVRestoreService(resourceForCBVRestoreService),
         m_NvapiGlobalStateService(*this),
         m_XellStateService(xellStateService),
-        m_XefgStateService(xefgStateService) {}
+        m_XefgStateService(xefgStateService),
+        m_MetaCommandsService(metaCommandsService) {}
   ~StateTrackingService();
   StateTrackingService(StateTrackingService&) = delete;
   StateTrackingService& operator=(StateTrackingService&) = delete;
@@ -216,6 +219,7 @@ private:
   ResidencyService& m_ResidencyService;
   ResourceUsageTrackingService& m_ResourceUsageTrackingService;
   ResourceForCBVRestoreService& m_ResourceForCBVRestoreService;
+  MetaCommandsService& m_MetaCommandsService;
   unsigned m_DeviceKey{};
   INTC_D3D12_FEATURE m_IntcFeature{};
   std::unique_ptr<INTC_D3D12_SetApplicationInfoCommand> m_SetApplicationInfoCommand;
