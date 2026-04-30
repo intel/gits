@@ -2,17 +2,17 @@
 icon: material/microsoft
 title: Plugins
 ---
-GITS supports plugins for both capture and replay. GITS plugins are dynamic libraries loaded at runtime by the `gitsPlayer.exe` or `gitsRecorder.dll`. Plugins are included under `Plugins\DirectX\`.
+GITS supports plugins for both capture and replay. GITS plugins are dynamic libraries loaded at runtime by `gitsPlayer.exe` or `gitsRecorder.dll`. Built plugins are installed under `Plugins/DirectX/`.
 
-Each plugin consists of the following:
+Each plugin folder contains:
 
-- `gitsPlugin.dll`: Main library containing all the plugin logic.
+- `plugin.dll`: Main library containing the plugin logic.
 - `config.yml`: Configuration file (may also contain documentation).
-- `dependencies\`: Directory containing all the DLLs the plugin depends on.
+- `dependencies/`: Optional directory with extra DLLs the plugin depends on.
 
 # Usage
 
-GITS plugins must be enabled in the configuration file, either under `DirectX.Recorder` or `DirectX.Player`.
+Enable plugins under `DirectX.Recorder` or `DirectX.Player` using the `Plugins` list. Each entry must match the name returned by the DLL (`IPlugin::getName()`) which should match the `Info.Name` value in that plugin’s `config.yml`.
 
 ```yaml
 DirectX:
@@ -26,52 +26,41 @@ DirectX:
     Plugins: [] # List of plugins to enable
 ```
 
-To enable a given plugin just add it to the `Plugins[]` list. For example to enable `HelloPlugin` on playback:
+Example: enable `HelloPlugin` or `HelloHUD` during playback.
 
 ```yaml
 DirectX:
   Player:
-    Plugins: ['HelloPlugin']
+    Plugins: ['HelloPlugin', 'HelloHUD']
 ```
 
-## Plugin Names
+## Plugin names
 
-The plugin name can be found in each plugin's `config.yml` and in the list of plugins [below](#plugin-list).
+Use the **Name** column from the [summary table](#directx-plugins). Full defaults and comments are in each plugin’s `config.yml` beside `plugin.dll`.
 
-## Interceptor Only
+## Interceptor only
 
-GITS plugins are very flexible and may not require full capture (or playback) to be enabled. It is possible to disable stream capture and use a GITS plugin without any limitations or errors.
-
-For example, we can enable `HelloPlugin` when running an application without capturing anything by using the following:
+Plugins can run without recording a stream. Disable the recorder and load a plugin as usual:
 
 ```yml
 Common:
   Recorder:
-    Enabled: false  
+    Enabled: false
 ```
 
-# Plugin List
+# DirectX plugins
 
-The following DirectX plugins are included with GITS.
+| Name | Folder | Summary |
+|------|--------|---------|
+| `HelloPlugin` | `hello_plugin` | Example plugin; logs presents and GPU submissions. |
+| `HelloHUD` | `hello_hud` | Example DirectX HUD plugin; shows configurable text in the GITS HUD (`Text` in `config.yml`). |
+| `Benchmark` | `benchmark` | Writes CPU present-to-present frame times to a CSV file. |
+| `RtasCache` | `rtas_cache` | Caches BLAS data via `CopyRaytracingAccelerationStructure` to reduce rebuild cost. |
+| `RtasSizeCheck` | `rtas_size_check` | Compares RTAS prebuild sizes between capture and replay on `GetRaytracingAccelerationStructurePrebuildInfo`. |
+| `AdapterSpoof` | `adapter_spoof` | Overrides fields from `IDXGIAdapter::GetDesc` for vendor or device testing. |
+| `PlatformPortability` | `platform_portability` | Skips or adjusts calls that may be missing on the replay platform. |
+| `Statistics` | `statistics` | Aggregates DirectX API call statistics to a YAML report. |
 
-## HelloPlugin
-
-Example starting point for a DirectX GITS plugin. Annotates presents and GPU executions in the log.
-
-## Benchmark
-
-Creates a .csv file with the present-to-present frame times (CPU) for the stream.
-
-## RtasCache
-
-Caches BLASes through serialization/deserialization by CopyRaytracingAccelerationStructure. This plugin is useful to avoid costly BuildRaytracingAccelerationStructure calls.
-
-## AdapterSpoof
-
-Spoof the DXGIAdapter description returned by `IDXGIAdapter::GetDesc`. This plugin can be used to test how an application behaves for a different GPU vendor (or a specific GPU).
-
-## PlatformPortability
-
-Skips/modifies certain API calls that might not exist on the target platform.
+**Benchmark** measures CPU time between presents. **Statistics** counts API usage. They are complementary, not interchangeable.
 
 
