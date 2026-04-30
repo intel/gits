@@ -267,6 +267,11 @@ int MainBody(int argc, char* argv[]) {
   bool legacyMode = false;
 
   try {
+#if defined GITS_PLATFORM_WINDOWS && (WITH_DIRECTX || WITH_VULKAN)
+    auto pImGuiHUD = std::make_unique<ImGuiHUD>();
+    CGits::Instance().SetImGuiHUD(std::move(pImGuiHUD));
+#endif
+
 #if defined GITS_PLATFORM_WINDOWS
     if (cfg.common.player.escalatePriority) {
       if (SetPriorityClass(GetCurrentProcess(), REALTIME_PRIORITY_CLASS)) {
@@ -387,10 +392,6 @@ int MainBody(int argc, char* argv[]) {
       player.NotSupportedFunctionsPrint();
     }
 
-#if defined GITS_PLATFORM_WINDOWS && (WITH_DIRECTX || WITH_VULKAN)
-    auto pImGuiHUD = std::make_unique<ImGuiHUD>();
-    CGits::Instance().SetImGuiHUD(std::move(pImGuiHUD));
-#endif
 #ifdef GITS_PLATFORM_WINDOWS
     auto pid = _getpid();
     auto processName = gits::GetWindowsProcessName(pid);

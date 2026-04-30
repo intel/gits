@@ -2519,9 +2519,6 @@ std::vector<uint64_t> GetTimestampsOfAliasedResources(
       }
       break;
     }
-    default: {
-      throw std::runtime_error("Invalid resource type provided for memory aliasing check!");
-    }
     }
   }
 
@@ -2625,6 +2622,8 @@ bool isResourceOmittedFromContentsRestoration(uint64_t resource,
     if (!bufferState) {
       return true;
     }
+
+    VkDevice device = bufferState->deviceStateStore->deviceHandle;
 
     if ((!bufferState->bufferCreateInfoData.Value()) ||
         (bufferState->bufferCreateInfoData.Value()->size == 0)) {
@@ -2750,9 +2749,6 @@ bool isResourceOmittedFromContentsRestoration(uint64_t resource,
       return true;
     }
     break;
-  }
-  default: {
-    throw std::runtime_error("Invalid resource type provided for resource omission check!");
   }
   }
 
@@ -3865,16 +3861,17 @@ void gits::Vulkan::RestoreAccelerationStructureContents(CScheduler& scheduler, C
     std::vector<VkBuffer> temporaryBuffers;
     std::vector<VkDeviceMemory> temporaryMemoryObjects;
 
-    auto prepareSourceData = [&](CVkDeviceOrHostAddressConstKHRData& structStorageData) {
-      if (!structStorageData.GetDataSize() ||
-          !structStorageData._bufferDeviceAddress._originalDeviceAddress) {
-        return;
+    auto prepareSourceData = [&](COnQueueSubmitEndDataStorage* structStorageData,
+                                 CBufferDeviceAddressObjectData& bufferDeviceAddressData) {
+      if ((!structStorageData->GetDataSize()) || (!bufferDeviceAddressData._buffer) ||
+          (!bufferDeviceAddressData._originalDeviceAddress)) {
+        return bufferDeviceAddressData._originalDeviceAddress;
       }
 
       auto usage = VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR |
                    VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
       auto memoryBufferPair =
-          createTemporaryBuffer(device, structStorageData.GetDataSize(), usage, nullptr,
+          createTemporaryBuffer(device, structStorageData->GetDataSize(), usage, nullptr,
                                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, false);
       auto memory = (VkDeviceMemory)memoryBufferPair.first->GetUniqueStateID();
       auto buffer = (VkBuffer)memoryBufferPair.second->GetUniqueStateID();
@@ -3898,9 +3895,9 @@ void gits::Vulkan::RestoreAccelerationStructureContents(CScheduler& scheduler, C
       void* ptr;
       scheduler.Register(new CvkMapMemory(
           VK_SUCCESS, device, (VkDeviceMemory)memoryBufferPair.first->GetUniqueStateID(), 0,
-          structStorageData.GetDataSize(), 0, &ptr));
-      scheduler.Register(new CGitsVkMemoryRestore(device, memory, structStorageData.GetDataSize(),
-                                                  structStorageData.GetData()));
+          structStorageData->GetDataSize(), 0, &ptr));
+      scheduler.Register(new CGitsVkMemoryRestore(device, memory, structStorageData->GetDataSize(),
+                                                  structStorageData->GetData()));
 
       temporaryBuffers.push_back(buffer);
       temporaryMemoryObjects.push_back(memory);
@@ -3908,12 +3905,11 @@ void gits::Vulkan::RestoreAccelerationStructureContents(CScheduler& scheduler, C
       drvVk.vkDestroyBuffer(device, memoryBufferPair.second->bufferHandle, nullptr);
       drvVk.vkFreeMemory(device, memoryBufferPair.first->deviceMemoryHandle, nullptr);
 
-      // For the state restore phase with custom (GITS-created) buffers, we don't rely on
-      // capture/replay features. Device addresses are generated on the fly by taking
-      // a buffer's current device address and applying a stored offset. So the original
-      // device address doesn't matter in this case.
-      structStorageData._bufferDeviceAddress._offset = -structStorageData.GetOffset();
-      structStorageData._bufferDeviceAddress._buffer = buffer;
+      bufferDeviceAddressData._offset = -structStorageData->GetOffset();
+      bufferDeviceAddressData._originalDeviceAddress = deviceAddress;
+      bufferDeviceAddressData._buffer = buffer;
+
+      return deviceAddress - structStorageData->GetOffset();
     };
 
     scheduleBuild = [&](VkAccelerationStructureKHR dst, VkBuffer accelerationStructureBuffer,
@@ -3923,93 +3919,113 @@ void gits::Vulkan::RestoreAccelerationStructureContents(CScheduler& scheduler, C
         return;
       }
 
-      auto* pBuildInfo = buildInfo->buildGeometryInfoData.Value();
-      pBuildInfo->scratchData.deviceAddress = 0;
+      auto pBuildRangeInfo = buildInfo->buildRangeInfoDataArray.Value();
+      auto pBuildGeometryInfo = buildInfo->buildGeometryInfoData.Value();
+      pBuildGeometryInfo->scratchData.deviceAddress = 0;
 
-      if (pBuildInfo->srcAccelerationStructure) {
-        if (pBuildInfo->srcAccelerationStructure != pBuildInfo->dstAccelerationStructure) {
-          pBuildInfo->srcAccelerationStructure = scheduleTemporaryAccelerationStructureCreation(
-              *buildInfo->srcAccelerationStructureStateStore, commandBuffer);
+      if (pBuildGeometryInfo->srcAccelerationStructure) {
+        if (pBuildGeometryInfo->srcAccelerationStructure !=
+            pBuildGeometryInfo->dstAccelerationStructure) {
+          pBuildGeometryInfo->srcAccelerationStructure =
+              scheduleTemporaryAccelerationStructureCreation(
+                  *buildInfo->srcAccelerationStructureStateStore, commandBuffer);
         } else {
-          pBuildInfo->srcAccelerationStructure = dst;
+          pBuildGeometryInfo->srcAccelerationStructure = dst;
         }
       }
-      pBuildInfo->dstAccelerationStructure = dst;
+      pBuildGeometryInfo->dstAccelerationStructure = dst;
 
-      for (uint32_t i = 0; i < pBuildInfo->geometryCount; ++i) {
-        auto geometry =
-            pBuildInfo->pGeometries ? pBuildInfo->pGeometries[i] : *pBuildInfo->ppGeometries[i];
+      if (buildInfo->controlData.executionSide == VK_COMMAND_EXECUTION_SIDE_DEVICE_GITS) {
 
-        switch (geometry.geometryType) {
-        case VK_GEOMETRY_TYPE_TRIANGLES_KHR: {
-          auto* pStructStorage =
-              (CVkAccelerationStructureGeometryTrianglesDataKHRData*)getStructStoragePointer(
-                  geometry.geometry.triangles.pNext,
-                  VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR);
+        for (uint32_t i = 0; i < pBuildGeometryInfo->geometryCount; ++i) {
+          VkAccelerationStructureGeometryKHR* pGeometry =
+              pBuildGeometryInfo->pGeometries
+                  ? (VkAccelerationStructureGeometryKHR*)&pBuildGeometryInfo->pGeometries[i]
+                  : (VkAccelerationStructureGeometryKHR*)pBuildGeometryInfo->ppGeometries[i];
 
-          if (pStructStorage) {
-            if (pStructStorage->_vertexData) {
-              prepareSourceData(*pStructStorage->_vertexData);
+          switch (pGeometry->geometryType) {
+          case VK_GEOMETRY_TYPE_TRIANGLES_KHR: {
+            auto* structStoragePointer = (VkStructStoragePointerGITS*)getPNextStructure(
+                pGeometry->geometry.triangles.pNext, VK_STRUCTURE_TYPE_STRUCT_STORAGE_POINTER_GITS);
+            if (structStoragePointer && structStoragePointer->pStructStorage) {
+              auto* trianglesData = (CVkAccelerationStructureGeometryTrianglesDataKHRData*)
+                                        structStoragePointer->pStructStorage;
+              if (trianglesData->_vertexData) {
+                pGeometry->geometry.triangles.vertexData.deviceAddress =
+                    prepareSourceData(trianglesData->_vertexData.get(),
+                                      trianglesData->_vertexData->_bufferDeviceAddress);
+              }
+              if (trianglesData->_indexData) {
+                pGeometry->geometry.triangles.indexData.deviceAddress =
+                    prepareSourceData(trianglesData->_indexData.get(),
+                                      trianglesData->_indexData->_bufferDeviceAddress);
+              }
+              if (trianglesData->_transformData) {
+                pGeometry->geometry.triangles.transformData.deviceAddress =
+                    prepareSourceData(trianglesData->_transformData.get(),
+                                      trianglesData->_transformData->_bufferDeviceAddress);
+              }
             }
-            if (pStructStorage->_indexData) {
-              prepareSourceData(*pStructStorage->_indexData);
+            break;
+          }
+          case VK_GEOMETRY_TYPE_AABBS_KHR: {
+            auto* structStoragePointer = (VkStructStoragePointerGITS*)getPNextStructure(
+                pGeometry->geometry.aabbs.pNext, VK_STRUCTURE_TYPE_STRUCT_STORAGE_POINTER_GITS);
+            if (structStoragePointer && structStoragePointer->pStructStorage) {
+              auto* aabbsData = (CVkAccelerationStructureGeometryAabbsDataKHRData*)
+                                    structStoragePointer->pStructStorage;
+              if (aabbsData->_data) {
+                pGeometry->geometry.aabbs.data.deviceAddress = prepareSourceData(
+                    aabbsData->_data.get(), aabbsData->_data->_bufferDeviceAddress);
+              }
             }
-            if (pStructStorage->_transformData) {
-              prepareSourceData(*pStructStorage->_transformData);
+            break;
+          }
+          case VK_GEOMETRY_TYPE_INSTANCES_KHR: {
+            auto* structStoragePointer = (VkStructStoragePointerGITS*)getPNextStructure(
+                pGeometry->geometry.instances.pNext, VK_STRUCTURE_TYPE_STRUCT_STORAGE_POINTER_GITS);
+            if (structStoragePointer && structStoragePointer->pStructStorage) {
+              auto* geometryInstancesData = (CVkAccelerationStructureGeometryInstancesDataKHRData*)
+                                                structStoragePointer->pStructStorage;
+              pGeometry->geometry.instances.data.deviceAddress = prepareSourceData(
+                  geometryInstancesData, geometryInstancesData->_bufferDeviceAddress);
+
+              TODO("FINISH IMPLEMENTATION FOR AS BUILDING WITHOUT CAPTURE/REPLAY FEATURES!!!")
+              //geometryInstancesData->individualPatcher
+              //CGitsVkCmdPatchDeviceAddresses()
             }
+            break;
           }
-          break;
+          default:
+            throw std::runtime_error("Provided incorrect geometry type!");
+            break;
+          }
         }
-        case VK_GEOMETRY_TYPE_AABBS_KHR: {
-          auto* pStructStorage =
-              (CVkAccelerationStructureGeometryAabbsDataKHRData*)getStructStoragePointer(
-                  geometry.geometry.aabbs.pNext,
-                  VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_AABBS_DATA_KHR);
 
-          if (pStructStorage && pStructStorage->_data) {
-            prepareSourceData(*pStructStorage->_data);
-          }
-          break;
-        }
-        case VK_GEOMETRY_TYPE_INSTANCES_KHR: {
-          auto* pStructStorage =
-              (CVkAccelerationStructureGeometryInstancesDataKHRData*)getStructStoragePointer(
-                  geometry.geometry.instances.pNext,
-                  VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR);
+        scheduler.Register(new CvkCmdBuildAccelerationStructuresKHR(
+            commandBuffer, 1, pBuildGeometryInfo, &pBuildRangeInfo));
 
-          if (pStructStorage && pStructStorage->_data) {
-            prepareSourceData(*pStructStorage->_data);
-          }
-          break;
-        }
-        default:
-          throw std::runtime_error("Provided incorrect geometry type!");
-          break;
-        }
+        VkBufferMemoryBarrier bufferMemoryBarrier = {
+            VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER, // VkStructureType    sType;
+            nullptr,                                 // const void       * pNext;
+            VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR |
+                VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR, // VkAccessFlags      srcAccessMask;
+            VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR |
+                VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR, // VkAccessFlags      dstAccessMask;
+            VK_QUEUE_FAMILY_IGNORED,     // uint32_t           srcQueueFamilyIndex;
+            VK_QUEUE_FAMILY_IGNORED,     // uint32_t           dstQueueFamilyIndex;
+            accelerationStructureBuffer, // VkBuffer           buffer;
+            0,                           // VkDeviceSize       offset;
+            VK_WHOLE_SIZE                // VkDeviceSize       size;
+        };
+        scheduler.Register(new CvkCmdPipelineBarrier(
+            commandBuffer, VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR,
+            VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr, 1, &bufferMemoryBarrier, 0,
+            nullptr));
+      } else /* VK_COMMAND_EXECUTION_SIDE_HOST_GITS */ {
+        throw std::runtime_error(
+            "Restoring ray tracing-related resources built on host is not yet supported.");
       }
-
-      {
-        auto* pRangeInfo = buildInfo->buildRangeInfoDataArray.Value();
-        scheduler.Register(
-            new CvkCmdBuildAccelerationStructuresKHR(commandBuffer, 1, pBuildInfo, &pRangeInfo));
-      }
-
-      VkBufferMemoryBarrier bufferMemoryBarrier = {
-          VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER, // VkStructureType    sType;
-          nullptr,                                 // const void       * pNext;
-          VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR |
-              VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR, // VkAccessFlags      srcAccessMask;
-          VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR |
-              VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR, // VkAccessFlags      dstAccessMask;
-          VK_QUEUE_FAMILY_IGNORED,     // uint32_t           srcQueueFamilyIndex;
-          VK_QUEUE_FAMILY_IGNORED,     // uint32_t           dstQueueFamilyIndex;
-          accelerationStructureBuffer, // VkBuffer           buffer;
-          0,                           // VkDeviceSize       offset;
-          VK_WHOLE_SIZE                // VkDeviceSize       size;
-      };
-      scheduler.Register(new CvkCmdPipelineBarrier(
-          commandBuffer, VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR,
-          VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr, 1, &bufferMemoryBarrier, 0, nullptr));
     };
 
     scheduleCopy = [&](VkAccelerationStructureKHR dst, VkBuffer accelerationStructureBuffer,
@@ -4026,23 +4042,29 @@ void gits::Vulkan::RestoreAccelerationStructureContents(CScheduler& scheduler, C
       info.src = scheduleTemporaryAccelerationStructureCreation(*srcAccelerationStructureStateStore,
                                                                 commandBuffer);
 
-      scheduler.Register(new CvkCmdCopyAccelerationStructureKHR(commandBuffer, &info));
-      VkBufferMemoryBarrier bufferMemoryBarrier = {
-          VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER, // VkStructureType    sType;
-          nullptr,                                 // const void       * pNext;
-          VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR |
-              VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR, // VkAccessFlags      srcAccessMask;
-          VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR |
-              VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR, // VkAccessFlags      dstAccessMask;
-          VK_QUEUE_FAMILY_IGNORED,     // uint32_t           srcQueueFamilyIndex;
-          VK_QUEUE_FAMILY_IGNORED,     // uint32_t           dstQueueFamilyIndex;
-          accelerationStructureBuffer, // VkBuffer           buffer;
-          0,                           // VkDeviceSize       offset;
-          VK_WHOLE_SIZE                // VkDeviceSize       size;
-      };
-      scheduler.Register(new CvkCmdPipelineBarrier(
-          commandBuffer, VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR,
-          VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr, 1, &bufferMemoryBarrier, 0, nullptr));
+      if (copyInfo->executionSide == VK_COMMAND_EXECUTION_SIDE_DEVICE_GITS) {
+        scheduler.Register(new CvkCmdCopyAccelerationStructureKHR(commandBuffer, &info));
+        VkBufferMemoryBarrier bufferMemoryBarrier = {
+            VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER, // VkStructureType    sType;
+            nullptr,                                 // const void       * pNext;
+            VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR |
+                VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR, // VkAccessFlags      srcAccessMask;
+            VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR |
+                VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR, // VkAccessFlags      dstAccessMask;
+            VK_QUEUE_FAMILY_IGNORED,     // uint32_t           srcQueueFamilyIndex;
+            VK_QUEUE_FAMILY_IGNORED,     // uint32_t           dstQueueFamilyIndex;
+            accelerationStructureBuffer, // VkBuffer           buffer;
+            0,                           // VkDeviceSize       offset;
+            VK_WHOLE_SIZE                // VkDeviceSize       size;
+        };
+        scheduler.Register(new CvkCmdPipelineBarrier(
+            commandBuffer, VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR,
+            VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr, 1, &bufferMemoryBarrier, 0,
+            nullptr));
+      } else /* VK_COMMAND_EXECUTION_SIDE_HOST_GITS */ {
+        scheduler.Register(
+            new CvkCopyAccelerationStructureKHR(VK_SUCCESS, device, VK_NULL_HANDLE, &info));
+      }
     };
 
     scheduleTemporaryAccelerationStructureCreation =

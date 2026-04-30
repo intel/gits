@@ -17,11 +17,11 @@ namespace DirectX {
 
 class MapTrackingService {
 public:
-  void MapResource(unsigned resourceKey,
+  void MapResource(unsigned ResourceKey,
                    unsigned subresourceIndex,
                    void* captureAddress,
                    void** currentAddress);
-  void DestroyResource(unsigned resourceKey);
+  void DestroyResource(unsigned ResourceKey);
   void* GetCurrentAddress(void* captureAddress);
 
 private:

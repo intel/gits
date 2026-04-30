@@ -501,15 +501,5 @@ struct Labels {
     }
     return maximum;
   }
-
-  // Email
-  static constexpr const char* EMAIL_LOG_RECIPIENT = "";
-  static constexpr const char* EMAIL_LOG_SUBJECT = "GITS Log Report";
-  static constexpr const char* EMAIL_LOG_BODY_HEADER =
-      "Description of the problem:\n"
-      "[Please describe the issue you encountered here]\n"
-      "\n"
-      "---\n"
-      "GITS log: \n\n";
 };
 } // namespace gits::gui

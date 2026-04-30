@@ -1181,7 +1181,7 @@ FastOStream& operator<<(FastOStream& stream, D3D12_BARRIER_GROUPs_Argument& arg)
         const D3D12_TEXTURE_BARRIER& barrier = arg.Value[i].pTextureBarriers[j];
         stream << "{" << barrier.SyncBefore << ", " << barrier.SyncAfter << ", "
                << barrier.AccessBefore << ", " << barrier.AccessAfter << ", "
-               << barrier.LayoutBefore << ", " << barrier.LayoutAfter << ", ";
+               << barrier.LayoutBefore << ", ";
         printObjectKey(stream, arg.ResourceKeys[resourceKeyIndex++]);
         stream << ", " << barrier.Subresources << ", " << barrier.Flags << "}";
       }

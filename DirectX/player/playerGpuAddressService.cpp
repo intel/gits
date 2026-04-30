@@ -14,7 +14,7 @@
 namespace gits {
 namespace DirectX {
 
-void PlayerGpuAddressService::CreateResource(unsigned resourceKey, ID3D12Resource* resource) {
+void PlayerGpuAddressService::CreateResource(unsigned ResourceKey, ID3D12Resource* resource) {
 
   D3D12_RESOURCE_DESC desc = resource->GetDesc();
   if (desc.Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
@@ -24,10 +24,10 @@ void PlayerGpuAddressService::CreateResource(unsigned resourceKey, ID3D12Resourc
   D3D12_GPU_VIRTUAL_ADDRESS startAddress = resource->GetGPUVirtualAddress();
   GITS_ASSERT(startAddress);
 
-  m_StartAddressesByKey[resourceKey] = startAddress;
+  m_StartAddressesByKey[ResourceKey] = startAddress;
 }
 
-void PlayerGpuAddressService::CreatePlacedResource(unsigned resourceKey,
+void PlayerGpuAddressService::CreatePlacedResource(unsigned ResourceKey,
                                                    ID3D12Resource* resource,
                                                    unsigned heapKey,
                                                    ID3D12Heap* heap,
@@ -48,8 +48,8 @@ void PlayerGpuAddressService::CreatePlacedResource(unsigned resourceKey,
   D3D12_GPU_VIRTUAL_ADDRESS heapStartAddress = itHeap->second;
 
   D3D12_GPU_VIRTUAL_ADDRESS resourceStartAddress = heapStartAddress + heapOffset;
-  m_StartAddressesByKey[resourceKey] = resourceStartAddress;
-  m_PlacedResources.insert(resourceKey);
+  m_StartAddressesByKey[ResourceKey] = resourceStartAddress;
+  m_PlacedResources.insert(ResourceKey);
 }
 
 void PlayerGpuAddressService::CreateHeap(unsigned heapKey, ID3D12Heap* heap) {
@@ -104,16 +104,16 @@ D3D12_GPU_VIRTUAL_ADDRESS PlayerGpuAddressService::GetHeapGpuVirtualAddress(ID3D
   return gpuAddress;
 }
 
-D3D12_GPU_VIRTUAL_ADDRESS PlayerGpuAddressService::GetGpuAddress(unsigned resourceKey,
+D3D12_GPU_VIRTUAL_ADDRESS PlayerGpuAddressService::GetGpuAddress(unsigned ResourceKey,
                                                                  unsigned offset) {
-  if (!resourceKey) {
+  if (!ResourceKey) {
     return 0;
   }
-  auto itResource = m_StartAddressesByKey.find(resourceKey);
+  auto itResource = m_StartAddressesByKey.find(ResourceKey);
   if (itResource != m_StartAddressesByKey.end()) {
     return itResource->second + offset;
   } else {
-    auto itPlacedResouce = m_ReleasedPlacedResources.find(resourceKey);
+    auto itPlacedResouce = m_ReleasedPlacedResources.find(ResourceKey);
     GITS_ASSERT(itPlacedResouce != m_ReleasedPlacedResources.end());
     static bool logged = false;
     if (!logged) {
@@ -125,14 +125,14 @@ D3D12_GPU_VIRTUAL_ADDRESS PlayerGpuAddressService::GetGpuAddress(unsigned resour
   }
 }
 
-void PlayerGpuAddressService::DestroyInterface(unsigned interfaceKey) {
+void PlayerGpuAddressService::DestroyInterface(unsigned InterfaceKey) {
 
-  if (m_PlacedResources.contains(interfaceKey)) {
-    m_ReleasedPlacedResources[interfaceKey] = m_StartAddressesByKey[interfaceKey];
-    m_PlacedResources.erase(interfaceKey);
+  if (m_PlacedResources.contains(InterfaceKey)) {
+    m_ReleasedPlacedResources[InterfaceKey] = m_StartAddressesByKey[InterfaceKey];
+    m_PlacedResources.erase(InterfaceKey);
   }
 
-  m_StartAddressesByKey.erase(interfaceKey);
+  m_StartAddressesByKey.erase(InterfaceKey);
 }
 
 } // namespace DirectX

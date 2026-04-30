@@ -16,17 +16,17 @@ namespace gits {
 namespace DirectX {
 
 void ResourcePlacementCaptureNoExecute::createPlacedResource(unsigned heapKey,
-                                                             unsigned resourceKey,
+                                                             unsigned ResourceKey,
                                                              UINT64 offset,
                                                              ID3D12Device* device,
                                                              D3D12_RESOURCE_DESC& desc) {
   ResourcePlacementInfo info{};
   info.heapKey = heapKey;
-  info.key = resourceKey;
+  info.key = ResourceKey;
   info.offset = offset;
   info.desc = desc;
 
-  m_ResourcePlacementInfos[resourceKey] = info;
+  m_ResourcePlacementInfos[ResourceKey] = info;
 }
 
 void ResourcePlacementCaptureNoExecute::getResourceAllocation(const D3D12_RESOURCE_DESC& desc,
@@ -51,7 +51,7 @@ void ResourcePlacementCaptureNoExecute::storeResourcePlacement() {
   filePath /= "resourcePlacementData.dat";
 
   std::ofstream file(filePath, std::ios::binary);
-  for (auto& [resourceKey, info] : m_ResourcePlacementInfos) {
+  for (auto& [ResourceKey, info] : m_ResourcePlacementInfos) {
     const auto allocationInfoIt = m_ResourceDescToAllocation.find(info.desc);
     if (allocationInfoIt != m_ResourceDescToAllocation.end()) {
       info.size = allocationInfoIt->second.SizeInBytes;
@@ -68,7 +68,7 @@ void ResourcePlacementCaptureNoExecute::storeResourcePlacement() {
     if (info.size) {
       file.write(reinterpret_cast<char*>(&info), sizeof(info));
     } else {
-      LOG_ERROR << "Portability - no placement data for resource O: " << resourceKey;
+      LOG_ERROR << "Portability - no placement data for resource O: " << ResourceKey;
     }
   }
 }

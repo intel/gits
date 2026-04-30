@@ -13,20 +13,39 @@
 #include <deque>
 #include <functional>
 #include <mutex>
+#include <shared_mutex>
 #include <string>
 #include <utility>
+#include <vector>
+#include <map>
+#include <variant>
 
 #include "imgui.h"
 #include "enumsAuto.h"
 
 namespace gits {
-using RenderImGuiFunc = std::function<void()>;
+
+struct ImGuiWidget_Text {
+  std::string text;
+};
+
+struct ImGuiWidget_Separator {};
+
+using ImGuiWidget = std::variant<ImGuiWidget_Text, ImGuiWidget_Separator>;
+
+class IHUDPlugin {
+public:
+  virtual ~IHUDPlugin() = default;
+  virtual const std::vector<ImGuiWidget>* HUDCallback() = 0;
+};
 
 class ImGuiHUD {
 public:
   ImGuiHUD();
+  ~ImGuiHUD();
 
-  void AddCallback(RenderImGuiFunc callback);
+  int AddHUDPlugin(IHUDPlugin* plugin, bool flag);
+  void RemoveHUDPlugin(int pluginID);
   void SetApplicationInfo(const std::string& name, int pid);
   void SetBackBufferInfo(uint64_t width, uint64_t height, size_t count = 1);
   void Render();
@@ -40,8 +59,9 @@ private:
   void ExecuteCallbacks();
   double CalculateFPS(std::chrono::high_resolution_clock::time_point now);
 
-  std::vector<RenderImGuiFunc> _callbacks;
-  std::mutex _callbackMutex;
+  int _nextPluginID = 0;
+  std::map<int, IHUDPlugin*> _plugins;
+  mutable std::shared_mutex _pluginMutex;
   bool _hasExternalCallbacks = false;
   int _tableRows = 0;
   std::vector<std::array<std::string, 2>> _dataTable;

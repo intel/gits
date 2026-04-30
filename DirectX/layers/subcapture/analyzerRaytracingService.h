@@ -52,7 +52,7 @@ public:
   void DumpBindingTable(ID3D12GraphicsCommandList* commandList,
                         unsigned commandListKey,
                         ID3D12Resource* resource,
-                        unsigned resourceKey,
+                        unsigned ResourceKey,
                         unsigned offset,
                         UINT64 size,
                         UINT64 stride,

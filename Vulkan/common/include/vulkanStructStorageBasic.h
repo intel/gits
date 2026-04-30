@@ -554,7 +554,7 @@ class CVkGenericArgumentData : gits::noncopyable {
   std::unique_ptr<CBaseDataStruct> _argument;
 
 public:
-  CVkGenericArgumentData(const void* pVkGenericArgumentData);
+  CVkGenericArgumentData(const void* pVkGenericArgumentData, const void* pCustomData = nullptr);
 
   const void* Value();
   struct PtrConverter {
@@ -790,7 +790,8 @@ class CpNextWrapperData {
   std::shared_ptr<CVkGenericArgumentData> _ptr;
 
 public:
-  CpNextWrapperData(const void* pNext) : _ptr(std::make_shared<CVkGenericArgumentData>(pNext)) {}
+  CpNextWrapperData(const void* pNext, const void* pCustomData = nullptr)
+      : _ptr(std::make_shared<CVkGenericArgumentData>(pNext, pCustomData)) {}
   const void* Value() {
     if (_ptr) {
       return _ptr->Value();
@@ -872,7 +873,8 @@ public:
 
   CBufferDeviceAddressObjectData()
       : _originalDeviceAddress(0), _buffer(VK_NULL_HANDLE), _offset(0) {}
-  CBufferDeviceAddressObjectData(VkDeviceAddress deviceAddress);
+  CBufferDeviceAddressObjectData(VkDeviceAddress originalDeviceAddress,
+                                 int64_t additionalOffset = 0);
   CBufferDeviceAddressObjectData& operator=(CBufferDeviceAddressObjectData&& other) noexcept;
   ~CBufferDeviceAddressObjectData() = default;
 
@@ -905,12 +907,10 @@ public:
 };
 
 // ------------------------------------------------------------------------------------------------
+
 struct CCommandBufferState;
 
 struct COnQueueSubmitEndDataStorage : public COnQueueSubmitEndInterface {
-  using OnQueueSubmitEndFunctionType = std::function<void(
-      VkDevice, VkDeviceMemory, VkDeviceSize&, VkDeviceSize&, std::vector<uint8_t>&)>;
-
   VkDeviceSize GetDataSize() const {
     return _dataSize;
   }
@@ -923,45 +923,45 @@ struct COnQueueSubmitEndDataStorage : public COnQueueSubmitEndInterface {
     return _offset;
   }
 
-  void GatherDataOnQueueSubmitEnd(CCommandBufferState& commandBufferState,
-                                  OnQueueSubmitEndFunctionType function,
-                                  VkDevice device,
-                                  VkDeviceMemory memory,
-                                  VkDeviceSize offset,
-                                  VkDeviceSize size);
-
 protected:
   COnQueueSubmitEndDataStorage()
-      : _onQueueSubmitEnd(nullptr),
-        _device(VK_NULL_HANDLE),
-        _dataSize(0),
-        _offset(0),
-        _dataMemory(VK_NULL_HANDLE) {}
+      : _device(VK_NULL_HANDLE), _dataSize(0), _offset(0), _dataMemory(VK_NULL_HANDLE) {}
+
+  void SetDataSize(VkDeviceSize dataSize);
+  void GatherDataOnQueueSubmitEnd(CCommandBufferState* commandBufferState, VkDeviceMemory memory);
 
   virtual void OnQueueSubmitEnd() override;
-  OnQueueSubmitEndFunctionType _onQueueSubmitEnd;
+
   VkDevice _device;
   VkDeviceSize _dataSize;
-  VkDeviceSize _offset;
   std::vector<uint8_t> _data;
+  int64_t _offset;
   VkDeviceMemory _dataMemory; // Destroyed automatically
 };
 
 // ------------------------------------------------------------------------------------------------
 
-struct CCommandBufferState;
-
 struct CVkDeviceOrHostAddressConstKHRData : public CBaseDataStruct,
                                             public COnQueueSubmitEndDataStorage {
+  VkAccelerationStructureBuildControlDataGITS _controlData;
   CBufferDeviceAddressObjectData _bufferDeviceAddress;
 
   std::unique_ptr<VkDeviceOrHostAddressConstKHR> _DeviceOrHostAddressConst;
 
   CVkDeviceOrHostAddressConstKHRData()
-      : _bufferDeviceAddress(), _DeviceOrHostAddressConst(nullptr) {}
-  CVkDeviceOrHostAddressConstKHRData(const VkDeviceOrHostAddressConstKHR* deviceOrHostAddress)
-      : _bufferDeviceAddress(deviceOrHostAddress->deviceAddress),
-        _DeviceOrHostAddressConst(nullptr) {}
+      : _controlData(), _bufferDeviceAddress(), _DeviceOrHostAddressConst(nullptr) {}
+
+  CVkDeviceOrHostAddressConstKHRData(
+      const VkDeviceOrHostAddressConstKHR deviceorhostaddress,
+      uint32_t offset,
+      uint64_t stride,
+      uint32_t count,
+      const VkAccelerationStructureBuildControlDataGITS& controlData);
+
+  void Initialize(const VkDeviceOrHostAddressConstKHR deviceorhostaddress,
+                  uint32_t offset,
+                  uint64_t stride,
+                  uint32_t count);
 
   VkDeviceOrHostAddressConstKHR* Value();
 
@@ -978,14 +978,66 @@ struct CVkDeviceOrHostAddressConstKHRData : public CBaseDataStruct,
 
 // ------------------------------------------------------------------------------------------------
 
+struct CDeviceOrHostAddressAccelerationStructureVertexDataGITSData
+    : public CVkDeviceOrHostAddressConstKHRData {
+  VkIndexType _indexType;
+
+  CDeviceOrHostAddressAccelerationStructureVertexDataGITSData()
+      : CVkDeviceOrHostAddressConstKHRData(), _indexType(VK_INDEX_TYPE_NONE_KHR) {}
+
+  CDeviceOrHostAddressAccelerationStructureVertexDataGITSData(
+      VkDeviceOrHostAddressConstKHR vertexData,
+      uint32_t offset,
+      uint64_t stride,
+      uint32_t count,
+      uint32_t firstVertex,
+      uint32_t maxVertex,
+      VkDeviceOrHostAddressConstKHR indexData,
+      VkIndexType indexType,
+      const VkAccelerationStructureBuildControlDataGITS& controlData);
+
+  void InitializeIndexedVertexDataOnDevice(VkDeviceOrHostAddressConstKHR vertexData,
+                                           uint32_t offset,
+                                           uint64_t stride,
+                                           uint32_t count,
+                                           uint32_t firstVertex,
+                                           uint32_t maxVertex,
+                                           VkDeviceOrHostAddressConstKHR indexData,
+                                           VkIndexType indexType);
+
+  void InitializeIndexedVertexDataOnHost(VkDeviceOrHostAddressConstKHR vertexData,
+                                         uint32_t offset,
+                                         uint64_t stride,
+                                         uint32_t count,
+                                         uint32_t firstVertex,
+                                         VkDeviceOrHostAddressConstKHR indexData,
+                                         VkIndexType indexType);
+
+  PtrConverter<VkDeviceOrHostAddressConstKHR> operator*() {
+    return PtrConverter<VkDeviceOrHostAddressConstKHR>(Value());
+  }
+
+  void* GetPtrType() override {
+    return (void*)Value();
+  }
+
+private:
+  virtual void OnQueueSubmitEnd() override;
+};
+
+// ------------------------------------------------------------------------------------------------
+
 struct CVkDeviceOrHostAddressKHRData : public CBaseDataStruct {
+  VkAccelerationStructureBuildControlDataGITS _controlData;
   CBufferDeviceAddressObjectData _bufferDeviceAddress;
 
   std::unique_ptr<VkDeviceOrHostAddressKHR> _DeviceOrHostAddress;
 
-  CVkDeviceOrHostAddressKHRData() : _bufferDeviceAddress(), _DeviceOrHostAddress(nullptr) {}
+  CVkDeviceOrHostAddressKHRData()
+      : _controlData(), _bufferDeviceAddress(), _DeviceOrHostAddress(nullptr) {}
 
-  CVkDeviceOrHostAddressKHRData(const VkDeviceOrHostAddressKHR deviceorhostaddress);
+  CVkDeviceOrHostAddressKHRData(const VkDeviceOrHostAddressKHR deviceorhostaddress,
+                                const VkAccelerationStructureBuildControlDataGITS& controlData);
 
   VkDeviceOrHostAddressKHR* Value();
 
@@ -1003,37 +1055,40 @@ struct CVkDeviceOrHostAddressKHRData : public CBaseDataStruct {
 // ------------------------------------------------------------------------------------------------
 
 struct CVkAccelerationStructureGeometryInstancesDataKHRData : public CBaseDataStruct,
-                                                              gits::noncopyable {
-  std::unique_ptr<CVkStructureTypeData> _sType;
+                                                              public COnQueueSubmitEndDataStorage {
+  VkStructureType _sType;
   std::unique_ptr<CpNextWrapperData> _pNext;
-  std::unique_ptr<Cuint32_tData> _arrayOfPointers;
-  std::unique_ptr<CVkDeviceOrHostAddressConstKHRData> _data;
-  VkStructStoragePointerGITS _baseIn;
+  bool _arrayOfPointers;
+  CBufferDeviceAddressObjectData _bufferDeviceAddress;
 
   std::unique_ptr<VkAccelerationStructureGeometryInstancesDataKHR>
       _AccelerationStructureGeometryInstancesDataKHR;
 
+  VkAccelerationStructureBuildControlDataGITS _controlData;
+  std::vector<void*> _pointers;
+  VkStructStoragePointerGITS _baseIn;
   CboolData _isNullPtr;
+
+  CDeviceAddressPatcher individualPatcher;
 
   CVkAccelerationStructureGeometryInstancesDataKHRData(
       const VkAccelerationStructureGeometryInstancesDataKHR*
-          accelerationstructuregeometryinstancesdatakhr);
+          accelerationstructuregeometryinstancesdatakhr,
+      const VkAccelerationStructureBuildRangeInfoKHR& buildRangeInfo,
+      const VkAccelerationStructureBuildControlDataGITS& controlData);
+
   VkAccelerationStructureGeometryInstancesDataKHR* Value();
-  PtrConverter<VkAccelerationStructureGeometryInstancesDataKHR> operator*() {
-    return PtrConverter<VkAccelerationStructureGeometryInstancesDataKHR>(Value());
+
+  VkAccelerationStructureGeometryInstancesDataKHR* operator*() {
+    return Value();
   }
-  void* GetPtrType() override {
+
+  void* GetPtrType() {
     return (void*)Value();
   }
+
   std::set<uint64_t> GetMappedPointers();
 };
-
-//typedef CDataArray<VkAccelerationStructureGeometryInstancesDataKHR,
-//                   CVkAccelerationStructureGeometryInstancesDataKHRData>
-//    CVkAccelerationStructureGeometryInstancesDataKHRDataArray;
-//typedef CDataArrayOfArrays<VkAccelerationStructureGeometryInstancesDataKHR,
-//                           CVkAccelerationStructureGeometryInstancesDataKHRData>
-//    CVkAccelerationStructureGeometryInstancesDataKHRDataArrayOfArrays;
 
 // ------------------------------------------------------------------------------------------------
 
@@ -1052,7 +1107,9 @@ struct CVkAccelerationStructureGeometryDataKHRData : public CBaseDataStruct {
 
   CVkAccelerationStructureGeometryDataKHRData(
       VkGeometryTypeKHR geometryType,
-      const VkAccelerationStructureGeometryDataKHR* accelerationstructuregeometrydatakhr);
+      const VkAccelerationStructureGeometryDataKHR* accelerationstructuregeometrydatakhr,
+      const VkAccelerationStructureBuildRangeInfoKHR& buildRangeInfo,
+      const VkAccelerationStructureBuildControlDataGITS& controlData);
 
   VkAccelerationStructureGeometryDataKHR* Value();
 

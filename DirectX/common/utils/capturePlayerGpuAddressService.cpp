@@ -15,7 +15,7 @@ namespace gits {
 namespace DirectX {
 
 void CapturePlayerGpuAddressService::GpuAddressService::CreatePlacedResource(
-    unsigned heapKey, unsigned resourceKey, D3D12_RESOURCE_FLAGS flags) {
+    unsigned heapKey, unsigned ResourceKey, D3D12_RESOURCE_FLAGS flags) {
   HeapInfo* heapInfo{};
   auto it = m_HeapsByKey.find(heapKey);
   if (it != m_HeapsByKey.end()) {
@@ -24,32 +24,32 @@ void CapturePlayerGpuAddressService::GpuAddressService::CreatePlacedResource(
     heapInfo = new HeapInfo{};
     m_HeapsByKey[heapKey].reset(heapInfo);
   }
-  heapInfo->Resources.insert(resourceKey);
-  m_HeapsByResourceKey[resourceKey] = heapInfo;
+  heapInfo->Resources.insert(ResourceKey);
+  m_HeapsByResourceKey[ResourceKey] = heapInfo;
 
   if (flags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE) {
-    m_DeniedShaderResources.insert(resourceKey);
+    m_DeniedShaderResources.insert(ResourceKey);
   }
 }
 
 void CapturePlayerGpuAddressService::GpuAddressService::AddGpuCaptureAddress(
     ID3D12Resource* resource,
-    unsigned resourceKey,
+    unsigned ResourceKey,
     unsigned size,
     D3D12_GPU_VIRTUAL_ADDRESS captureAddress) {
   if (!captureAddress) {
     return;
   }
-  auto itHeap = m_HeapsByResourceKey.find(resourceKey);
+  auto itHeap = m_HeapsByResourceKey.find(ResourceKey);
   if (itHeap != m_HeapsByResourceKey.end()) {
-    auto it = m_PlacedResourcesByKey.find(resourceKey);
+    auto it = m_PlacedResourcesByKey.find(ResourceKey);
     if (it != m_PlacedResourcesByKey.end()) {
       return;
     }
 
     PlacedResourceInfo* info = new PlacedResourceInfo{};
     info->CaptureStart = captureAddress;
-    info->Key = resourceKey;
+    info->Key = ResourceKey;
     info->Size = size;
     info->Resource = resource;
 
@@ -81,29 +81,29 @@ void CapturePlayerGpuAddressService::GpuAddressService::AddGpuCaptureAddress(
       inf->Intersecting.insert(info);
     }
 
-    m_PlacedResourcesByKey[resourceKey].reset(info);
+    m_PlacedResourcesByKey[ResourceKey].reset(info);
 
   } else {
-    auto it = m_ResourcesByKey.find(resourceKey);
+    auto it = m_ResourcesByKey.find(ResourceKey);
     if (it != m_ResourcesByKey.end()) {
       return;
     }
 
     ResourceInfo* info = new ResourceInfo{};
     info->CaptureStart = captureAddress;
-    info->Key = resourceKey;
+    info->Key = ResourceKey;
     info->Size = size;
     info->Resource = resource;
     m_ResourcesByAddress[captureAddress] = info;
-    m_ResourcesByKey[resourceKey].reset(info);
+    m_ResourcesByKey[ResourceKey].reset(info);
   }
 }
 
 void CapturePlayerGpuAddressService::GpuAddressService::AddGpuPlayerAddress(
-    unsigned resourceKey, D3D12_GPU_VIRTUAL_ADDRESS playerAddress) {
-  auto itHeap = m_HeapsByResourceKey.find(resourceKey);
+    unsigned ResourceKey, D3D12_GPU_VIRTUAL_ADDRESS playerAddress) {
+  auto itHeap = m_HeapsByResourceKey.find(ResourceKey);
   if (itHeap != m_HeapsByResourceKey.end()) {
-    PlacedResourceInfo* info = m_PlacedResourcesByKey[resourceKey].get();
+    PlacedResourceInfo* info = m_PlacedResourcesByKey[ResourceKey].get();
     info->PlayerStart = playerAddress;
 
     HeapInfo* heapInfo = itHeap->second;
@@ -115,21 +115,21 @@ void CapturePlayerGpuAddressService::GpuAddressService::AddGpuPlayerAddress(
       heapInfo->CaptureEnd = info->CaptureStart + info->Size;
     }
   } else {
-    auto it = m_ResourcesByKey.find(resourceKey);
+    auto it = m_ResourcesByKey.find(ResourceKey);
     if (it != m_ResourcesByKey.end()) {
-      ResourceInfo* info = m_ResourcesByKey[resourceKey].get();
+      ResourceInfo* info = m_ResourcesByKey[ResourceKey].get();
       it->second->PlayerStart = playerAddress;
     }
   }
 }
 
-void CapturePlayerGpuAddressService::GpuAddressService::DestroyInterface(unsigned interfaceKey) {
+void CapturePlayerGpuAddressService::GpuAddressService::DestroyInterface(unsigned InterfaceKey) {
   {
-    auto it = m_ResourcesByKey.find(interfaceKey);
+    auto it = m_ResourcesByKey.find(InterfaceKey);
     if (it != m_ResourcesByKey.end()) {
       auto itAddr = m_ResourcesByAddress.find(it->second->CaptureStart);
       GITS_ASSERT(itAddr != m_ResourcesByAddress.end());
-      if (itAddr->second->Key == interfaceKey) {
+      if (itAddr->second->Key == InterfaceKey) {
         m_ResourcesByAddress.erase(itAddr);
       }
       m_ResourcesByKey.erase(it);
@@ -137,7 +137,7 @@ void CapturePlayerGpuAddressService::GpuAddressService::DestroyInterface(unsigne
     }
   }
   {
-    auto it = m_PlacedResourcesByKey.find(interfaceKey);
+    auto it = m_PlacedResourcesByKey.find(InterfaceKey);
     if (it != m_PlacedResourcesByKey.end()) {
       PlacedResourceInfo* info = it->second.get();
       for (PlacedResourceInfo* intersecting : info->Intersecting) {
@@ -145,28 +145,28 @@ void CapturePlayerGpuAddressService::GpuAddressService::DestroyInterface(unsigne
       }
       m_PlacedResourcesByAddress[info->Layer].erase(info->CaptureStart);
       m_PlacedResourcesByKey.erase(it);
-      auto heapIt = m_HeapsByResourceKey.find(interfaceKey);
+      auto heapIt = m_HeapsByResourceKey.find(InterfaceKey);
       GITS_ASSERT(heapIt != m_HeapsByResourceKey.end());
-      heapIt->second->Resources.erase(interfaceKey);
+      heapIt->second->Resources.erase(InterfaceKey);
       m_HeapsByResourceKey.erase(heapIt);
       return;
     }
   }
   {
-    auto it = m_HeapsByKey.find(interfaceKey);
+    auto it = m_HeapsByKey.find(InterfaceKey);
     if (it != m_HeapsByKey.end()) {
       HeapInfo* heapInfo = it->second.get();
       std::vector<unsigned> resources;
-      for (unsigned resourceKey : heapInfo->Resources) {
-        resources.push_back(resourceKey);
+      for (unsigned ResourceKey : heapInfo->Resources) {
+        resources.push_back(ResourceKey);
       }
-      for (unsigned resourceKey : resources) {
-        DestroyInterface(resourceKey);
+      for (unsigned ResourceKey : resources) {
+        DestroyInterface(ResourceKey);
       }
       m_HeapsByKey.erase(it);
     }
   }
-  m_DeniedShaderResources.erase(interfaceKey);
+  m_DeniedShaderResources.erase(InterfaceKey);
 }
 
 CapturePlayerGpuAddressService::ResourceInfo* CapturePlayerGpuAddressService::GpuAddressService::

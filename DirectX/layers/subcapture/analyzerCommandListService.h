@@ -69,8 +69,8 @@ public:
 
 private:
   void CommandListRestore(unsigned commandListKey);
-  void SetBindlessDescriptors(unsigned rootSignatureKey,
-                              unsigned descriptorHeapKey,
+  void SetBindlessDescriptors(unsigned RootSignatureKey,
+                              unsigned DescriptorHeapKey,
                               D3D12_DESCRIPTOR_HEAP_TYPE heapType,
                               unsigned heapNumDescriptors);
   bool InRange();

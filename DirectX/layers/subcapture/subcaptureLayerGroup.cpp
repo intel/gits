@@ -59,8 +59,6 @@ void SubcaptureLayerGroup::LoadLayers() {
     AddLayer(std::make_unique<StateTrackingLayer>(*m_Recorder, *m_SubcaptureRange));
     AddLayer(std::make_unique<RecordingLayer>(*m_Recorder, *m_SubcaptureRange));
     AddLayer(std::make_unique<CommandPreservationLayer>());
-    const_cast<gits::Configuration&>(Configurator::Get())
-        .directx.player.multithreadedShaderCompilation = false;
   } else {
     AddLayer(std::make_unique<AnalyzerLayer>(*m_SubcaptureRange));
     LOG_INFO << "SUBCAPTURE ANALYSIS. RUN AGAIN FOR SUBCAPTURE RECORDING.";

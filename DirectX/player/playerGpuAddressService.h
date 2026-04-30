@@ -17,15 +17,15 @@ namespace DirectX {
 
 class PlayerGpuAddressService {
 public:
-  void CreateResource(unsigned resourceKey, ID3D12Resource* resource);
-  void CreatePlacedResource(unsigned resourceKey,
+  void CreateResource(unsigned ResourceKey, ID3D12Resource* resource);
+  void CreatePlacedResource(unsigned ResourceKey,
                             ID3D12Resource* resource,
                             unsigned heapKey,
                             ID3D12Heap* heap,
                             UINT64 heapOffset);
   void CreateHeap(unsigned heapKey, ID3D12Heap* heap);
-  D3D12_GPU_VIRTUAL_ADDRESS GetGpuAddress(unsigned resourceKey, unsigned offset);
-  void DestroyInterface(unsigned interfaceKey);
+  D3D12_GPU_VIRTUAL_ADDRESS GetGpuAddress(unsigned ResourceKey, unsigned offset);
+  void DestroyInterface(unsigned InterfaceKey);
 
 private:
   std::unordered_map<unsigned, D3D12_GPU_VIRTUAL_ADDRESS> m_StartAddressesByKey;

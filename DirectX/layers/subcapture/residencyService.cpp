@@ -14,25 +14,25 @@
 namespace gits {
 namespace DirectX {
 
-void ResidencyService::CreateNotResident(unsigned key, unsigned deviceKey) {
+void ResidencyService::CreateNotResident(const unsigned key, const unsigned DeviceKey) {
   GITS_ASSERT(m_Residency.find(key) == m_Residency.end());
-  m_Residency[key] = {0, deviceKey, true};
+  m_Residency[key] = {0, DeviceKey, true};
 }
 
-void ResidencyService::MakeResident(const std::vector<unsigned>& keys, unsigned deviceKey) {
+void ResidencyService::MakeResident(const std::vector<unsigned>& keys, const unsigned DeviceKey) {
   for (const auto key : keys) {
     if (m_Residency.find(key) == m_Residency.end()) {
-      m_Residency[key] = {2, deviceKey};
+      m_Residency[key] = {2, DeviceKey};
     } else {
       ++m_Residency[key].ResidencyCount;
     }
   }
 }
 
-void ResidencyService::Evict(const std::vector<unsigned>& keys, unsigned deviceKey) {
+void ResidencyService::Evict(const std::vector<unsigned>& keys, const unsigned DeviceKey) {
   for (const auto key : keys) {
     if (m_Residency.find(key) == m_Residency.end()) {
-      m_Residency[key] = {0, deviceKey};
+      m_Residency[key] = {0, DeviceKey};
     } else {
       if (m_Residency[key].ResidencyCount > 0) {
         --m_Residency[key].ResidencyCount;
@@ -41,7 +41,7 @@ void ResidencyService::Evict(const std::vector<unsigned>& keys, unsigned deviceK
   }
 }
 
-void ResidencyService::DestroyObject(unsigned key) {
+void ResidencyService::DestroyObject(const unsigned key) {
   m_Residency.erase(key);
 }
 

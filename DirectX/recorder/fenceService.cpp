@@ -19,7 +19,7 @@ namespace DirectX {
 
 FenceService::FenceService(stream::OrderingRecorder& recorder) : m_Recorder(recorder) {}
 
-void FenceService::SetEventOnCompletion(ID3D12Fence* fence,
+void FenceService::setEventOnCompletion(ID3D12Fence* fence,
                                         unsigned fenceKey,
                                         UINT64 value,
                                         HANDLE event) {
@@ -35,7 +35,7 @@ void FenceService::SetEventOnCompletion(ID3D12Fence* fence,
   m_Fences.insert(fenceKey);
 }
 
-void FenceService::DestroyFence(unsigned fenceKey) {
+void FenceService::destroyFence(unsigned fenceKey) {
   std::lock_guard<std::mutex> fenceLock(m_Mutex);
   auto it = m_Fences.find(fenceKey);
   if (it == m_Fences.end()) {
@@ -57,7 +57,7 @@ void FenceService::DestroyFence(unsigned fenceKey) {
   }
 }
 
-void FenceService::WaitSignaled(HANDLE handle) {
+void FenceService::waitSignaled(HANDLE handle) {
 
   m_Mutex.lock();
 
@@ -104,7 +104,7 @@ void FenceService::WaitSignaled(HANDLE handle) {
   }
 }
 
-void FenceService::WaitSignaled(HANDLE hObjectToWaitOn, HANDLE hObjectToSignal) {
+void FenceService::waitSignaled(HANDLE hObjectToWaitOn, HANDLE hObjectToSignal) {
 
   m_Mutex.lock();
 
@@ -122,7 +122,7 @@ void FenceService::WaitSignaled(HANDLE hObjectToWaitOn, HANDLE hObjectToSignal) 
   m_Mutex.unlock();
 }
 
-void FenceService::WaitSignaled(DWORD count, const HANDLE* handles) {
+void FenceService::waitSignaled(DWORD count, const HANDLE* handles) {
 
   m_Mutex.lock();
 

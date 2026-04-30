@@ -34,7 +34,7 @@ params = generate_params(function)
 class ${interface.name}Wrapper : public ${interface.base_name}Wrapper {
 public:
   ${interface.name}Wrapper(REFIID riid, IUnknown* object) : ${interface.base_name}Wrapper(riid, object) {
-    InsertIID(__uuidof(${interface.name}));
+    insertIID(__uuidof(${interface.name}));
   }
 %for function in interface.functions:
 <%

@@ -16,20 +16,20 @@
 namespace gits {
 namespace DirectX {
 
-static void createResource(ccode::CommandPrinter& p, unsigned resourceKey) {
+static void createResource(ccode::CommandPrinter& p, unsigned ResourceKey) {
   std::ostringstream ss;
-  ss << "directx::GpuAddressService::Get().CreateResource(" << resourceKey << ", "
-     << ccode::objKeyToPtrStr(resourceKey) << ");" << std::endl;
+  ss << "directx::GpuAddressService::Get().CreateResource(" << ResourceKey << ", "
+     << ccode::objKeyToPtrStr(ResourceKey) << ");" << std::endl;
   p.setPostCommand(ss.str());
 }
 
 static void createPlacedResource(ccode::CommandPrinter& p,
-                                 unsigned resourceKey,
+                                 unsigned ResourceKey,
                                  unsigned heapKey,
                                  uint64_t heapOffset) {
   std::ostringstream ss;
-  ss << "directx::GpuAddressService::Get().CreatePlacedResource(" << resourceKey << ", "
-     << ccode::objKeyToPtrStr(resourceKey) << ", " << heapKey << ", "
+  ss << "directx::GpuAddressService::Get().CreatePlacedResource(" << ResourceKey << ", "
+     << ccode::objKeyToPtrStr(ResourceKey) << ", " << heapKey << ", "
      << ccode::objKeyToPtrStr(heapKey) << ", " << heapOffset << ");" << std::endl;
   p.setPostCommand(ss.str());
 }

@@ -17,14 +17,14 @@ namespace gits {
 namespace DirectX {
 
 template <typename T>
-void UpdateInterface(InterfaceArgument<T>& arg, IUnknownWrapper* wrapper) {
+void updateInterface(InterfaceArgument<T>& arg, IUnknownWrapper* wrapper) {
 
-  arg.Key = wrapper->GetKey();
-  arg.Value = wrapper->GetWrappedObject<T>();
+  arg.Key = wrapper->getKey();
+  arg.Value = wrapper->getWrappedObject<T>();
 }
 
 template <typename T>
-void UpdateInterface(InterfaceArgument<T>& arg, T* object) {
+void updateInterface(InterfaceArgument<T>& arg, T* object) {
 
   if (!object) {
     return;
@@ -34,20 +34,20 @@ void UpdateInterface(InterfaceArgument<T>& arg, T* object) {
   if (object->QueryInterface(IID_IUnknownWrapper, reinterpret_cast<void**>(&wrapper)) != S_OK) {
     return;
   }
-  arg.Key = wrapper->GetKey();
-  arg.Value = wrapper->GetWrappedObject<T>();
+  arg.Key = wrapper->getKey();
+  arg.Value = wrapper->getWrappedObject<T>();
 }
 
 template <typename T, typename Arg>
-class UpdateInterfaceT {};
+class UpdateInterface {};
 
 template <typename T, typename Arg>
 class UpdateOutputInterface {};
 
 template <typename T>
-class UpdateInterfaceT<InterfaceArrayArgument<T>, T> {
+class UpdateInterface<InterfaceArrayArgument<T>, T> {
 public:
-  UpdateInterfaceT(InterfaceArrayArgument<T>& arg, T** objects) {
+  UpdateInterface(InterfaceArrayArgument<T>& arg, T** objects) {
 
     if (!objects) {
       return;
@@ -66,8 +66,8 @@ public:
       HRESULT hr =
           objects[i]->QueryInterface(IID_IUnknownWrapper, reinterpret_cast<void**>(&wrapper));
       GITS_ASSERT(hr == S_OK);
-      arg.Keys[i] = wrapper->GetKey();
-      m_UnwrappedObjects[i] = wrapper->GetWrappedObject<T>();
+      arg.Keys[i] = wrapper->getKey();
+      m_UnwrappedObjects[i] = wrapper->getWrappedObject<T>();
     }
   }
 
@@ -89,7 +89,7 @@ public:
       wrapObject(riid, reinterpret_cast<void**>(&wrappedObject));
       m_Wrapper = reinterpret_cast<IUnknownWrapper*>(wrappedObject);
 
-      arg.Key = m_Wrapper->GetKey();
+      arg.Key = m_Wrapper->getKey();
     }
   }
   ~UpdateOutputInterface() {
@@ -106,19 +106,19 @@ private:
 };
 
 template <>
-class UpdateInterfaceT<D3D12_TEXTURE_COPY_LOCATION_Argument, D3D12_TEXTURE_COPY_LOCATION> {
+class UpdateInterface<D3D12_TEXTURE_COPY_LOCATION_Argument, D3D12_TEXTURE_COPY_LOCATION> {
 public:
-  UpdateInterfaceT(D3D12_TEXTURE_COPY_LOCATION_Argument& arg,
-                   const D3D12_TEXTURE_COPY_LOCATION* value);
+  UpdateInterface(D3D12_TEXTURE_COPY_LOCATION_Argument& arg,
+                  const D3D12_TEXTURE_COPY_LOCATION* value);
 
 private:
   D3D12_TEXTURE_COPY_LOCATION m_UnwrapStructure;
 };
 
 template <>
-class UpdateInterfaceT<D3D12_RESOURCE_BARRIERs_Argument, D3D12_RESOURCE_BARRIER> {
+class UpdateInterface<D3D12_RESOURCE_BARRIERs_Argument, D3D12_RESOURCE_BARRIER> {
 public:
-  UpdateInterfaceT(D3D12_RESOURCE_BARRIERs_Argument& arg, const D3D12_RESOURCE_BARRIER* value);
+  UpdateInterface(D3D12_RESOURCE_BARRIERs_Argument& arg, const D3D12_RESOURCE_BARRIER* value);
 
 private:
   static constexpr unsigned NUM = 128;
@@ -128,33 +128,32 @@ private:
 };
 
 template <>
-class UpdateInterfaceT<D3D12_GRAPHICS_PIPELINE_STATE_DESC_Argument,
-                       D3D12_GRAPHICS_PIPELINE_STATE_DESC> {
+class UpdateInterface<D3D12_GRAPHICS_PIPELINE_STATE_DESC_Argument,
+                      D3D12_GRAPHICS_PIPELINE_STATE_DESC> {
 public:
-  UpdateInterfaceT(D3D12_GRAPHICS_PIPELINE_STATE_DESC_Argument& arg,
-                   const D3D12_GRAPHICS_PIPELINE_STATE_DESC* value);
+  UpdateInterface(D3D12_GRAPHICS_PIPELINE_STATE_DESC_Argument& arg,
+                  const D3D12_GRAPHICS_PIPELINE_STATE_DESC* value);
 
 private:
   D3D12_GRAPHICS_PIPELINE_STATE_DESC m_UnwrapStructure{};
 };
 
 template <>
-class UpdateInterfaceT<D3D12_COMPUTE_PIPELINE_STATE_DESC_Argument,
-                       D3D12_COMPUTE_PIPELINE_STATE_DESC> {
+class UpdateInterface<D3D12_COMPUTE_PIPELINE_STATE_DESC_Argument,
+                      D3D12_COMPUTE_PIPELINE_STATE_DESC> {
 public:
-  UpdateInterfaceT(D3D12_COMPUTE_PIPELINE_STATE_DESC_Argument& arg,
-                   const D3D12_COMPUTE_PIPELINE_STATE_DESC* value);
+  UpdateInterface(D3D12_COMPUTE_PIPELINE_STATE_DESC_Argument& arg,
+                  const D3D12_COMPUTE_PIPELINE_STATE_DESC* value);
 
 private:
   D3D12_COMPUTE_PIPELINE_STATE_DESC m_UnwrapStructure{};
 };
 
 template <>
-class UpdateInterfaceT<D3D12_PIPELINE_STATE_STREAM_DESC_Argument,
-                       D3D12_PIPELINE_STATE_STREAM_DESC> {
+class UpdateInterface<D3D12_PIPELINE_STATE_STREAM_DESC_Argument, D3D12_PIPELINE_STATE_STREAM_DESC> {
 public:
-  UpdateInterfaceT(D3D12_PIPELINE_STATE_STREAM_DESC_Argument& arg,
-                   const D3D12_PIPELINE_STATE_STREAM_DESC* stateObjectDesc);
+  UpdateInterface(D3D12_PIPELINE_STATE_STREAM_DESC_Argument& arg,
+                  const D3D12_PIPELINE_STATE_STREAM_DESC* stateObjectDesc);
 
 private:
   D3D12_PIPELINE_STATE_STREAM_DESC m_StreamDescUnwrapped{};
@@ -162,10 +161,10 @@ private:
 };
 
 template <>
-class UpdateInterfaceT<D3D12_STATE_OBJECT_DESC_Argument, D3D12_STATE_OBJECT_DESC> {
+class UpdateInterface<D3D12_STATE_OBJECT_DESC_Argument, D3D12_STATE_OBJECT_DESC> {
 public:
-  UpdateInterfaceT(D3D12_STATE_OBJECT_DESC_Argument& arg,
-                   const D3D12_STATE_OBJECT_DESC* stateObjectDesc);
+  UpdateInterface(D3D12_STATE_OBJECT_DESC_Argument& arg,
+                  const D3D12_STATE_OBJECT_DESC* stateObjectDesc);
 
 private:
   D3D12_STATE_OBJECT_DESC m_StateObjectDescUnwrapped{};
@@ -178,31 +177,31 @@ private:
 };
 
 template <>
-class UpdateInterfaceT<D3D12_RENDER_PASS_RENDER_TARGET_DESCs_Argument,
-                       D3D12_RENDER_PASS_RENDER_TARGET_DESC> {
+class UpdateInterface<D3D12_RENDER_PASS_RENDER_TARGET_DESCs_Argument,
+                      D3D12_RENDER_PASS_RENDER_TARGET_DESC> {
 public:
-  UpdateInterfaceT(D3D12_RENDER_PASS_RENDER_TARGET_DESCs_Argument& arg,
-                   const D3D12_RENDER_PASS_RENDER_TARGET_DESC* value);
+  UpdateInterface(D3D12_RENDER_PASS_RENDER_TARGET_DESCs_Argument& arg,
+                  const D3D12_RENDER_PASS_RENDER_TARGET_DESC* value);
 
 private:
   std::vector<D3D12_RENDER_PASS_RENDER_TARGET_DESC> m_UnwrapStructures;
 };
 
 template <>
-class UpdateInterfaceT<D3D12_RENDER_PASS_DEPTH_STENCIL_DESC_Argument,
-                       D3D12_RENDER_PASS_DEPTH_STENCIL_DESC> {
+class UpdateInterface<D3D12_RENDER_PASS_DEPTH_STENCIL_DESC_Argument,
+                      D3D12_RENDER_PASS_DEPTH_STENCIL_DESC> {
 public:
-  UpdateInterfaceT(D3D12_RENDER_PASS_DEPTH_STENCIL_DESC_Argument& arg,
-                   const D3D12_RENDER_PASS_DEPTH_STENCIL_DESC* value);
+  UpdateInterface(D3D12_RENDER_PASS_DEPTH_STENCIL_DESC_Argument& arg,
+                  const D3D12_RENDER_PASS_DEPTH_STENCIL_DESC* value);
 
 private:
   D3D12_RENDER_PASS_DEPTH_STENCIL_DESC m_UnwrapStructure{};
 };
 
 template <>
-class UpdateInterfaceT<D3D12_BARRIER_GROUPs_Argument, D3D12_BARRIER_GROUP> {
+class UpdateInterface<D3D12_BARRIER_GROUPs_Argument, D3D12_BARRIER_GROUP> {
 public:
-  UpdateInterfaceT(D3D12_BARRIER_GROUPs_Argument& arg, const D3D12_BARRIER_GROUP* value);
+  UpdateInterface(D3D12_BARRIER_GROUPs_Argument& arg, const D3D12_BARRIER_GROUP* value);
 
 private:
   std::vector<std::unique_ptr<std::vector<D3D12_GLOBAL_BARRIER>>> m_UnwrappedGlobalBarrierGroups;
@@ -212,48 +211,48 @@ private:
 };
 
 template <>
-class UpdateInterfaceT<D3D12_EXTENSION_ARGUMENTS_Argument, D3D12_EXTENSION_ARGUMENTS> {
+class UpdateInterface<D3D12_EXTENSION_ARGUMENTS_Argument, D3D12_EXTENSION_ARGUMENTS> {
 public:
-  UpdateInterfaceT(D3D12_EXTENSION_ARGUMENTS_Argument& arg, const D3D12_EXTENSION_ARGUMENTS* value);
+  UpdateInterface(D3D12_EXTENSION_ARGUMENTS_Argument& arg, const D3D12_EXTENSION_ARGUMENTS* value);
 
 private:
   D3D12_EXTENSION_ARGUMENTS m_UnwrapStructure{};
 };
 
 template <>
-class UpdateInterfaceT<D3D12_EXTENDED_OPERATION_DATA_Argument, D3D12_EXTENDED_OPERATION_DATA> {
+class UpdateInterface<D3D12_EXTENDED_OPERATION_DATA_Argument, D3D12_EXTENDED_OPERATION_DATA> {
 public:
-  UpdateInterfaceT(D3D12_EXTENDED_OPERATION_DATA_Argument& arg,
-                   const D3D12_EXTENDED_OPERATION_DATA* value);
+  UpdateInterface(D3D12_EXTENDED_OPERATION_DATA_Argument& arg,
+                  const D3D12_EXTENDED_OPERATION_DATA* value);
 
 private:
   D3D12_EXTENDED_OPERATION_DATA m_UnwrapStructure{};
 };
 
 template <>
-class UpdateInterfaceT<PointerArgument<INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC>,
-                       INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC> {
+class UpdateInterface<PointerArgument<INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC>,
+                      INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC> {
 public:
-  UpdateInterfaceT(PointerArgument<INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC>& arg,
-                   const INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC* value);
+  UpdateInterface(PointerArgument<INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC>& arg,
+                  const INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC* value);
 
 private:
   INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC m_UnwrapStructure{};
 };
 
 template <>
-class UpdateInterfaceT<DML_BINDING_TABLE_DESC_Argument, DML_BINDING_TABLE_DESC> {
+class UpdateInterface<DML_BINDING_TABLE_DESC_Argument, DML_BINDING_TABLE_DESC> {
 public:
-  UpdateInterfaceT(DML_BINDING_TABLE_DESC_Argument& arg, const DML_BINDING_TABLE_DESC* value);
+  UpdateInterface(DML_BINDING_TABLE_DESC_Argument& arg, const DML_BINDING_TABLE_DESC* value);
 
 private:
   DML_BINDING_TABLE_DESC m_UnwrapStructure{};
 };
 
 template <>
-class UpdateInterfaceT<DML_BINDING_DESC_Argument, DML_BINDING_DESC> {
+class UpdateInterface<DML_BINDING_DESC_Argument, DML_BINDING_DESC> {
 public:
-  UpdateInterfaceT(DML_BINDING_DESC_Argument& arg, const DML_BINDING_DESC* value);
+  UpdateInterface(DML_BINDING_DESC_Argument& arg, const DML_BINDING_DESC* value);
 
 private:
   DML_BINDING_DESC m_UnwrapStructure{};
@@ -262,9 +261,9 @@ private:
 };
 
 template <>
-class UpdateInterfaceT<DML_BINDING_DESCs_Argument, DML_BINDING_DESC> {
+class UpdateInterface<DML_BINDING_DESCs_Argument, DML_BINDING_DESC> {
 public:
-  UpdateInterfaceT(DML_BINDING_DESCs_Argument& arg, const DML_BINDING_DESC* value);
+  UpdateInterface(DML_BINDING_DESCs_Argument& arg, const DML_BINDING_DESC* value);
 
 private:
   DML_BINDING_DESC* m_UnwrapStructure{nullptr};
@@ -274,9 +273,9 @@ private:
 };
 
 template <>
-class UpdateInterfaceT<DML_GRAPH_DESC_Argument, DML_GRAPH_DESC> {
+class UpdateInterface<DML_GRAPH_DESC_Argument, DML_GRAPH_DESC> {
 public:
-  UpdateInterfaceT(DML_GRAPH_DESC_Argument& arg, const DML_GRAPH_DESC* value);
+  UpdateInterface(DML_GRAPH_DESC_Argument& arg, const DML_GRAPH_DESC* value);
 
 private:
   DML_GRAPH_DESC m_UnwrapStructure{};
@@ -285,59 +284,59 @@ private:
 };
 
 template <>
-class UpdateInterfaceT<xess_d3d12_init_params_t_Argument, xess_d3d12_init_params_t> {
+class UpdateInterface<xess_d3d12_init_params_t_Argument, xess_d3d12_init_params_t> {
 public:
-  UpdateInterfaceT(xess_d3d12_init_params_t_Argument& arg, const xess_d3d12_init_params_t* value);
+  UpdateInterface(xess_d3d12_init_params_t_Argument& arg, const xess_d3d12_init_params_t* value);
 
 private:
   xess_d3d12_init_params_t m_UnwrapStructure{};
 };
 
 template <>
-class UpdateInterfaceT<xess_d3d12_execute_params_t_Argument, xess_d3d12_execute_params_t> {
+class UpdateInterface<xess_d3d12_execute_params_t_Argument, xess_d3d12_execute_params_t> {
 public:
-  UpdateInterfaceT(xess_d3d12_execute_params_t_Argument& arg,
-                   const xess_d3d12_execute_params_t* value);
+  UpdateInterface(xess_d3d12_execute_params_t_Argument& arg,
+                  const xess_d3d12_execute_params_t* value);
 
 private:
   xess_d3d12_execute_params_t m_UnwrapStructure{};
 };
 
 template <>
-class UpdateInterfaceT<DSTORAGE_QUEUE_DESC_Argument, DSTORAGE_QUEUE_DESC> {
+class UpdateInterface<DSTORAGE_QUEUE_DESC_Argument, DSTORAGE_QUEUE_DESC> {
 public:
-  UpdateInterfaceT(DSTORAGE_QUEUE_DESC_Argument& arg, const DSTORAGE_QUEUE_DESC* value);
+  UpdateInterface(DSTORAGE_QUEUE_DESC_Argument& arg, const DSTORAGE_QUEUE_DESC* value);
 
 private:
   DSTORAGE_QUEUE_DESC m_UnwrapStructure{};
 };
 
 template <>
-class UpdateInterfaceT<DSTORAGE_REQUEST_Argument, DSTORAGE_REQUEST> {
+class UpdateInterface<DSTORAGE_REQUEST_Argument, DSTORAGE_REQUEST> {
 public:
-  UpdateInterfaceT(DSTORAGE_REQUEST_Argument& arg, const DSTORAGE_REQUEST* value);
+  UpdateInterface(DSTORAGE_REQUEST_Argument& arg, const DSTORAGE_REQUEST* value);
 
 private:
   DSTORAGE_REQUEST m_UnwrapStructure{};
 };
 
 template <>
-class UpdateInterfaceT<xefg_swapchain_d3d12_init_params_t_Argument,
-                       xefg_swapchain_d3d12_init_params_t> {
+class UpdateInterface<xefg_swapchain_d3d12_init_params_t_Argument,
+                      xefg_swapchain_d3d12_init_params_t> {
 public:
-  UpdateInterfaceT(xefg_swapchain_d3d12_init_params_t_Argument& arg,
-                   const xefg_swapchain_d3d12_init_params_t* value);
+  UpdateInterface(xefg_swapchain_d3d12_init_params_t_Argument& arg,
+                  const xefg_swapchain_d3d12_init_params_t* value);
 
 private:
   xefg_swapchain_d3d12_init_params_t m_UnwrapStructure{};
 };
 
 template <>
-class UpdateInterfaceT<xefg_swapchain_d3d12_resource_data_t_Argument,
-                       xefg_swapchain_d3d12_resource_data_t> {
+class UpdateInterface<xefg_swapchain_d3d12_resource_data_t_Argument,
+                      xefg_swapchain_d3d12_resource_data_t> {
 public:
-  UpdateInterfaceT(xefg_swapchain_d3d12_resource_data_t_Argument& arg,
-                   const xefg_swapchain_d3d12_resource_data_t* value);
+  UpdateInterface(xefg_swapchain_d3d12_resource_data_t_Argument& arg,
+                  const xefg_swapchain_d3d12_resource_data_t* value);
 
 private:
   xefg_swapchain_d3d12_resource_data_t m_UnwrapStructure{};

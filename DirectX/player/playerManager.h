@@ -54,6 +54,10 @@ public:
     return m_ExecuteCommands;
   }
 
+  bool MultithreadedShaderCompilation() {
+    return m_MultithreadedShaderCompilation;
+  }
+
   WindowService& GetWindowService() {
     return m_WindowService;
   }
@@ -81,6 +85,7 @@ public:
   MultithreadedObjectCreationService& GetMultithreadedObjectCreationService() {
     return m_MultithreadedObjectCreationService;
   }
+  void FlushMultithreadedShaderCompilation();
   PipelineLibraryService& GetPipelineLibraryService() {
     return m_PipelineLibraryService;
   }
@@ -117,6 +122,7 @@ private:
   PlayerLayerManager m_LayerManager;
 
   bool m_ExecuteCommands{true};
+  bool m_MultithreadedShaderCompilation{true};
 
   WindowService m_WindowService;
   ReplayDescriptorHandleService m_DescriptorHandleService;

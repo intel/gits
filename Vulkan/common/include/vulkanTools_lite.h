@@ -33,6 +33,7 @@ bool isBufferDescriptor(VkDescriptorType descriptorType);
 bool isTexelBufferDescriptor(VkDescriptorType descriptorType);
 std::vector<uint32_t> getRayTracingArraySizes(
     uint32_t count, VkAccelerationStructureBuildGeometryInfoKHR const* pInfos);
+VkCommandExecutionSideGITS getCommandExecutionSide(VkCommandBuffer commandBuffer);
 inline bool isBitSet(VkFlags64 flags, VkFlags64 bit) {
   return (flags & bit) == bit;
 }

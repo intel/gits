@@ -26,9 +26,9 @@ MapTrackingService::MapTrackingService(stream::OrderingRecorder& recorder) : m_R
   m_ShadowMemory = Configurator::Get().directx.recorder.shadowMemory;
 }
 
-void MapTrackingService::EnableWriteWatch(D3D12_HEAP_PROPERTIES& properties,
+void MapTrackingService::enableWriteWatch(D3D12_HEAP_PROPERTIES& properties,
                                           D3D12_HEAP_FLAGS& flags) {
-  if (!IsUploadHeap(properties.Type, properties.CPUPageProperty)) {
+  if (!isUploadHeap(properties.Type, properties.CPUPageProperty)) {
     return;
   }
   if (!m_ShadowMemory) {
@@ -39,7 +39,7 @@ void MapTrackingService::EnableWriteWatch(D3D12_HEAP_PROPERTIES& properties,
   }
 }
 
-void MapTrackingService::MapResource(unsigned resourceKey,
+void MapTrackingService::mapResource(unsigned ResourceKey,
                                      ID3D12Resource* resource,
                                      unsigned subresourceIndex,
                                      void** mappedData) {
@@ -50,7 +50,7 @@ void MapTrackingService::MapResource(unsigned resourceKey,
   m_Mutex.lock();
 
   MappedInfo* info{};
-  auto itResource = m_MappedData.find(resourceKey);
+  auto itResource = m_MappedData.find(ResourceKey);
   if (itResource != m_MappedData.end()) {
     auto it = itResource->second.find(subresourceIndex);
     if (it != itResource->second.end()) {
@@ -66,76 +66,76 @@ void MapTrackingService::MapResource(unsigned resourceKey,
     D3D12_HEAP_FLAGS flags{};
     HRESULT hr = resource->GetHeapProperties(&properties, &flags);
     GITS_ASSERT(hr == S_OK);
-    if (!IsUploadHeap(properties.Type, properties.CPUPageProperty)) {
+    if (!isUploadHeap(properties.Type, properties.CPUPageProperty)) {
       return;
     }
 
     info = new MappedInfo{};
-    info->ResourceKey = resourceKey;
-    info->Size = GetSubresourceSize(resource, subresourceIndex);
-    info->WatchedPages.resize((info->Size + (m_PageSize - 1)) / m_PageSize);
+    info->ResourceKey = ResourceKey;
+    info->size = getSubresourceSize(resource, subresourceIndex);
+    info->watchedPages.resize((info->size + (m_PageSize - 1)) / m_PageSize);
 
     if (m_ShadowMemory) {
-      info->ShadowAddress = static_cast<char*>(VirtualAlloc(
-          nullptr, info->Size, MEM_COMMIT | MEM_RESERVE | MEM_WRITE_WATCH, PAGE_READWRITE));
-      memcpy(info->ShadowAddress, *mappedData, info->Size);
-      ResetWriteWatch(info->ShadowAddress, info->Size);
+      info->shadowAddress = static_cast<char*>(VirtualAlloc(
+          nullptr, info->size, MEM_COMMIT | MEM_RESERVE | MEM_WRITE_WATCH, PAGE_READWRITE));
+      memcpy(info->shadowAddress, *mappedData, info->size);
+      ResetWriteWatch(info->shadowAddress, info->size);
     }
 
     m_Mutex.lock();
-    m_MappedData[resourceKey][subresourceIndex].reset(info);
+    m_MappedData[ResourceKey][subresourceIndex].reset(info);
   }
 
-  info->MappedAddress = static_cast<char*>(*mappedData);
-  ++info->MapCount;
+  info->mappedAddress = static_cast<char*>(*mappedData);
+  ++info->mapCount;
 
   if (m_ShadowMemory) {
-    *mappedData = info->ShadowAddress;
+    *mappedData = info->shadowAddress;
   }
 
   m_Mutex.unlock();
 }
 
-void MapTrackingService::UnmapResource(unsigned resourceKey, unsigned subresourceIndex) {
+void MapTrackingService::unmapResource(unsigned ResourceKey, unsigned subresourceIndex) {
 
   std::lock_guard<std::mutex> lock(m_Mutex);
 
-  auto itResource = m_MappedData.find(resourceKey);
+  auto itResource = m_MappedData.find(ResourceKey);
   if (itResource != m_MappedData.end()) {
     auto it = itResource->second.find(subresourceIndex);
     if (it != itResource->second.end()) {
 
       MappedInfo* info = it->second.get();
-      if (--info->MapCount == 0) {
-        CaptureModifiedData(info);
+      if (--info->mapCount == 0) {
+        captureModifiedData(info);
       }
     }
   }
 }
 
-void MapTrackingService::ExecuteCommandLists() {
+void MapTrackingService::executeCommandLists() {
 
   std::lock_guard<std::mutex> lock(m_Mutex);
 
   for (auto& itResource : m_MappedData) {
     for (auto& it : itResource.second) {
-      CaptureModifiedData(it.second.get());
+      captureModifiedData(it.second.get());
     }
   }
 }
 
-void MapTrackingService::DestroyResource(unsigned resourceKey) {
+void MapTrackingService::destroyResource(unsigned ResourceKey) {
 
   std::lock_guard<std::mutex> lock(m_Mutex);
 
-  auto it = m_MappedData.find(resourceKey);
+  auto it = m_MappedData.find(ResourceKey);
   if (it == m_MappedData.end()) {
     return;
   }
-  m_MappedData.erase(resourceKey);
+  m_MappedData.erase(ResourceKey);
 }
 
-bool MapTrackingService::IsUploadHeap(D3D12_HEAP_TYPE heapType,
+bool MapTrackingService::isUploadHeap(D3D12_HEAP_TYPE heapType,
                                       D3D12_CPU_PAGE_PROPERTY cpuPageProperty) {
   return heapType == D3D12_HEAP_TYPE_UPLOAD || heapType == D3D12_HEAP_TYPE_GPU_UPLOAD ||
          heapType == D3D12_HEAP_TYPE_CUSTOM &&
@@ -143,13 +143,13 @@ bool MapTrackingService::IsUploadHeap(D3D12_HEAP_TYPE heapType,
              cpuPageProperty != D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
 }
 
-void MapTrackingService::CaptureModifiedData(MappedInfo* info) {
+void MapTrackingService::captureModifiedData(MappedInfo* info) {
 
-  UINT64 pageCount = info->WatchedPages.size();
+  UINT64 pageCount = info->watchedPages.size();
   unsigned long pageSize;
-  char* watchedAddress = m_ShadowMemory ? info->ShadowAddress : info->MappedAddress;
-  UINT ret = GetWriteWatch(WRITE_WATCH_FLAG_RESET, watchedAddress, info->Size,
-                           info->WatchedPages.data(), &pageCount, &pageSize);
+  char* watchedAddress = m_ShadowMemory ? info->shadowAddress : info->mappedAddress;
+  UINT ret = GetWriteWatch(WRITE_WATCH_FLAG_RESET, watchedAddress, info->size,
+                           info->watchedPages.data(), &pageCount, &pageSize);
   if (ret != 0) {
     static bool logged = false;
     if (!logged) {
@@ -160,13 +160,13 @@ void MapTrackingService::CaptureModifiedData(MappedInfo* info) {
 
   for (UINT64 i = 0; i < pageCount;) {
 
-    char* data = static_cast<char*>(info->WatchedPages[i]);
+    char* data = static_cast<char*>(info->watchedPages[i]);
     unsigned offset = static_cast<unsigned>(data - watchedAddress);
     unsigned dataSize = pageSize;
 
     for (++i; i < pageCount; ++i) {
-      if (static_cast<char*>(info->WatchedPages[i]) ==
-          static_cast<char*>(info->WatchedPages[i - 1]) + pageSize) {
+      if (static_cast<char*>(info->watchedPages[i]) ==
+          static_cast<char*>(info->watchedPages[i - 1]) + pageSize) {
         dataSize += pageSize;
       } else {
         break;
@@ -174,7 +174,7 @@ void MapTrackingService::CaptureModifiedData(MappedInfo* info) {
     }
 
     if (i == pageCount) {
-      const char* mappedMemoryEnd = watchedAddress + info->Size;
+      const char* mappedMemoryEnd = watchedAddress + info->size;
       const char* dataEnd = data + dataSize;
 
       if (dataEnd > mappedMemoryEnd) {
@@ -183,18 +183,18 @@ void MapTrackingService::CaptureModifiedData(MappedInfo* info) {
     }
 
     if (m_ShadowMemory) {
-      memcpy(info->MappedAddress + offset, watchedAddress + offset, dataSize);
+      memcpy(info->mappedAddress + offset, watchedAddress + offset, dataSize);
     }
-    CaptureData(info->ResourceKey, watchedAddress, offset, data, dataSize);
+    captureData(info->ResourceKey, watchedAddress, offset, data, dataSize);
   }
 }
 
-void MapTrackingService::CaptureData(
-    unsigned resourceKey, void* mappedAddress, unsigned offset, void* data, unsigned dataSize) {
+void MapTrackingService::captureData(
+    unsigned ResourceKey, void* mappedAddress, unsigned offset, void* data, unsigned dataSize) {
 
   MappedDataMetaCommand command(GetCurrentThreadId());
   command.Key = CaptureManager::get().createCommandKey();
-  command.m_resource.Key = resourceKey;
+  command.m_resource.Key = ResourceKey;
   command.m_mappedAddress.Value = mappedAddress;
   command.m_offset.Value = offset;
   command.m_data.Value = data;
@@ -203,7 +203,7 @@ void MapTrackingService::CaptureData(
   m_Recorder.Record(command.Key, new MappedDataMetaSerializer(command));
 }
 
-size_t MapTrackingService::GetSubresourceSize(ID3D12Resource* resource, unsigned subresource) {
+size_t MapTrackingService::getSubresourceSize(ID3D12Resource* resource, unsigned subresource) {
 
   D3D12_RESOURCE_DESC desc = resource->GetDesc();
 

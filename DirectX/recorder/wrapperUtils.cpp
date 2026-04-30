@@ -72,7 +72,7 @@ unsigned getWrapperKey(const IUnknown* object) {
     IUnknownWrapper* wrapper = nullptr;
     if (SUCCEEDED(const_cast<IUnknown*>(object)->QueryInterface(
             IID_IUnknownWrapper, reinterpret_cast<void**>(&wrapper)))) {
-      return wrapper->GetKey();
+      return wrapper->getKey();
     }
   }
   return 0;

@@ -16,12 +16,12 @@ namespace DirectX {
 
 class ContextMapService {
 public:
-  void SetContext(std::uintptr_t context, unsigned key) {
+  void setContext(std::uintptr_t context, unsigned key) {
     std::lock_guard<std::mutex> lock(m_Mutex);
     m_ContextMap[context] = key;
   }
 
-  unsigned GetKey(std::uintptr_t context) {
+  unsigned getKey(std::uintptr_t context) {
     if (!context) {
       return 0;
     }
@@ -31,7 +31,7 @@ public:
     return it->second;
   }
 
-  void RemoveContext(std::uintptr_t context) {
+  void removeContext(std::uintptr_t context) {
     std::lock_guard<std::mutex> lock(m_Mutex);
     m_ContextMap.erase(context);
   }

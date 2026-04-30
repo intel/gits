@@ -289,13 +289,13 @@ void CommandListService::RestoreCommandState(CommandListClearUnorderedAccessView
   }
 }
 
-void CommandListService::InitAuxiliaryRtvHeap(unsigned deviceKey) {
+void CommandListService::InitAuxiliaryRtvHeap(unsigned DeviceKey) {
   if (m_AuxiliaryRtvDescriptorHeapKey) {
     return;
   }
   ID3D12DeviceCreateDescriptorHeapCommand c;
   c.Key = m_StateService.GetUniqueCommandKey();
-  c.m_Object.Key = deviceKey;
+  c.m_Object.Key = DeviceKey;
   D3D12_DESCRIPTOR_HEAP_DESC desc{};
   desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
   desc.NumDescriptors = m_AuxiliaryHeapSize;
@@ -308,13 +308,13 @@ void CommandListService::InitAuxiliaryRtvHeap(unsigned deviceKey) {
   m_StateService.GetRecorder().Record(ID3D12DeviceCreateDescriptorHeapSerializer(c));
 }
 
-void CommandListService::InitAuxiliaryDsvHeap(unsigned deviceKey) {
+void CommandListService::InitAuxiliaryDsvHeap(unsigned DeviceKey) {
   if (m_AuxiliaryDsvDescriptorHeapKey) {
     return;
   }
   ID3D12DeviceCreateDescriptorHeapCommand c;
   c.Key = m_StateService.GetUniqueCommandKey();
-  c.m_Object.Key = deviceKey;
+  c.m_Object.Key = DeviceKey;
   D3D12_DESCRIPTOR_HEAP_DESC desc{};
   desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
   desc.NumDescriptors = m_AuxiliaryHeapSize;
@@ -327,13 +327,13 @@ void CommandListService::InitAuxiliaryDsvHeap(unsigned deviceKey) {
   m_StateService.GetRecorder().Record(ID3D12DeviceCreateDescriptorHeapSerializer(c));
 }
 
-void CommandListService::InitAuxiliaryUavGpuHeap(unsigned deviceKey) {
+void CommandListService::InitAuxiliaryUavGpuHeap(unsigned DeviceKey) {
   if (m_AuxiliaryUavGpuDescriptorHeapKey) {
     return;
   }
   ID3D12DeviceCreateDescriptorHeapCommand c;
   c.Key = m_StateService.GetUniqueCommandKey();
-  c.m_Object.Key = deviceKey;
+  c.m_Object.Key = DeviceKey;
   D3D12_DESCRIPTOR_HEAP_DESC desc{};
   desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
   desc.NumDescriptors = m_AuxiliaryHeapSize;
@@ -346,13 +346,13 @@ void CommandListService::InitAuxiliaryUavGpuHeap(unsigned deviceKey) {
   m_StateService.GetRecorder().Record(ID3D12DeviceCreateDescriptorHeapSerializer(c));
 }
 
-void CommandListService::InitAuxiliaryUavCpuHeap(unsigned deviceKey) {
+void CommandListService::InitAuxiliaryUavCpuHeap(unsigned DeviceKey) {
   if (m_AuxiliaryUavCpuDescriptorHeapKey) {
     return;
   }
   ID3D12DeviceCreateDescriptorHeapCommand c;
   c.Key = m_StateService.GetUniqueCommandKey();
-  c.m_Object.Key = deviceKey;
+  c.m_Object.Key = DeviceKey;
   D3D12_DESCRIPTOR_HEAP_DESC desc{};
   desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
   desc.NumDescriptors = m_AuxiliaryHeapSize;

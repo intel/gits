@@ -433,7 +433,7 @@ retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='deferredOperation', type='VkDeferredOperationKHR'),
 arg3=ArgDef(name='infoCount', type='uint32_t'),
-arg4=ArgDef(name='pInfos', type='const VkAccelerationStructureBuildGeometryInfoKHR*', wrapType='CVkAccelerationStructureBuildGeometryInfoKHRArray', wrapParams='infoCount, pInfos', count='infoCount'),
+arg4=ArgDef(name='pInfos', type='const VkAccelerationStructureBuildGeometryInfoKHR*', wrapType='CVkAccelerationStructureBuildGeometryInfoKHRArray', wrapParams='infoCount, pInfos, ppBuildRangeInfos, VK_NULL_HANDLE', count='infoCount'),
 arg5=ArgDef(name='ppBuildRangeInfos', type='const VkAccelerationStructureBuildRangeInfoKHR* const*', wrapType='CVkAccelerationStructureBuildRangeInfoKHRArrayOfArrays', wrapParams='getRayTracingArraySizes(infoCount, pInfos), ppBuildRangeInfos', count='infoCount')
 )
 
@@ -740,7 +740,7 @@ Function(name='vkCmdBuildAccelerationStructuresKHR', enabled=True, type=FuncType
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='infoCount', type='uint32_t'),
-arg3=ArgDef(name='pInfos', type='const VkAccelerationStructureBuildGeometryInfoKHR*', wrapType='CVkAccelerationStructureBuildGeometryInfoKHRArray', wrapParams='infoCount, pInfos', count='infoCount'),
+arg3=ArgDef(name='pInfos', type='const VkAccelerationStructureBuildGeometryInfoKHR*', wrapType='CVkAccelerationStructureBuildGeometryInfoKHRArray', wrapParams='infoCount, pInfos, ppBuildRangeInfos, prepareAccelerationStructureControlData(commandBuffer)', count='infoCount'),
 arg4=ArgDef(name='ppBuildRangeInfos', type='const VkAccelerationStructureBuildRangeInfoKHR* const*', wrapType='CVkAccelerationStructureBuildRangeInfoKHRArrayOfArrays', wrapParams='getRayTracingArraySizes(infoCount, pInfos), ppBuildRangeInfos', count='infoCount')
 )
 
@@ -754,7 +754,7 @@ Function(name='vkCmdBuildMicromapsEXT', enabled=True, type=FuncType.PARAM, state
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='infoCount', type='uint32_t'),
-arg3=ArgDef(name='pInfos', type='const VkMicromapBuildInfoEXT*', wrapType='CVkMicromapBuildInfoEXTArray', wrapParams='infoCount, pInfos', count='infoCount')
+arg3=ArgDef(name='pInfos', type='const VkMicromapBuildInfoEXT*', wrapType='CVkMicromapBuildInfoEXTArray', wrapParams='infoCount, pInfos, prepareAccelerationStructureControlData(commandBuffer)', count='infoCount')
 )
 
 Function(name='vkCmdBuildPartitionedAccelerationStructuresNV', enabled=False, type=FuncType.NONE,
@@ -10594,7 +10594,7 @@ var5=VarDef(name='maxY', type='float'),
 var6=VarDef(name='maxZ', type='float')
 )
 
-Struct(name='VkAccelerationStructureBuildGeometryInfoKHR_', enabled=True, declareArray=True,
+Struct(name='VkAccelerationStructureBuildGeometryInfoKHR_', enabled=True, declareArray=True, passStructStorage=True, constructorWrap=True, constructorArgs='const VkAccelerationStructureBuildGeometryInfoKHR* accelerationstructurebuildgeometryinfokhr, const VkAccelerationStructureBuildRangeInfoKHR* pBuildRangeInfos, VkAccelerationStructureBuildControlDataGITS controlData',
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='type', type='VkAccelerationStructureTypeKHR'),
@@ -10603,9 +10603,9 @@ var5=VarDef(name='mode', type='VkBuildAccelerationStructureModeKHR'),
 var6=VarDef(name='srcAccelerationStructure', type='VkAccelerationStructureKHR'),
 var7=VarDef(name='dstAccelerationStructure', type='VkAccelerationStructureKHR'),
 var8=VarDef(name='geometryCount', type='uint32_t'),
-var9=VarDef(name='pGeometries', type='const VkAccelerationStructureGeometryKHR*', wrapType='CVkAccelerationStructureGeometryKHRArray', wrapParams='accelerationstructurebuildgeometryinfokhr->geometryCount, accelerationstructurebuildgeometryinfokhr->pGeometries', count='geometryCount'),
-var10=VarDef(name='ppGeometries', type='const VkAccelerationStructureGeometryKHR* const*', wrapType='CVkAccelerationStructureGeometryKHRArrayOfArrays', wrapParams='accelerationstructurebuildgeometryinfokhr->geometryCount, accelerationstructurebuildgeometryinfokhr->ppGeometries', count='geometryCount'),
-var11=VarDef(name='scratchData', type='VkDeviceOrHostAddressKHR', wrapParams='accelerationstructurebuildgeometryinfokhr->scratchData')
+var9=VarDef(name='pGeometries', type='const VkAccelerationStructureGeometryKHR*', wrapType='CVkAccelerationStructureGeometryKHRArray', wrapParams='accelerationstructurebuildgeometryinfokhr->geometryCount, accelerationstructurebuildgeometryinfokhr->pGeometries, pBuildRangeInfos, controlData', count='geometryCount'),
+var10=VarDef(name='ppGeometries', type='const VkAccelerationStructureGeometryKHR* const*', wrapType='CVkAccelerationStructureGeometryKHRArrayOfArrays', wrapParams='accelerationstructurebuildgeometryinfokhr->geometryCount, accelerationstructurebuildgeometryinfokhr->ppGeometries, pBuildRangeInfos, controlData', count='geometryCount'),
+var11=VarDef(name='scratchData', type='VkDeviceOrHostAddressKHR', wrapParams='accelerationstructurebuildgeometryinfokhr->scratchData, controlData')
 )
 
 Struct(name='VkAccelerationStructureBuildRangeInfoKHR_', enabled=True, declareArray=True, declareArrayOfArrays=True,
@@ -10666,25 +10666,25 @@ var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='accelerationStructure', type='VkAccelerationStructureKHR')
 )
 
-Struct(name='VkAccelerationStructureGeometryAabbsDataKHR_', enabled=True, constructorWrap=True, passStructStorage=True,
+Struct(name='VkAccelerationStructureGeometryAabbsDataKHR_', enabled=True, constructorWrap=True, passStructStorage=True, constructorArgs='const VkAccelerationStructureGeometryAabbsDataKHR* accelerationstructuregeometryaabbsdatakhr, const VkAccelerationStructureBuildRangeInfoKHR& buildRangeInfo, const VkAccelerationStructureBuildControlDataGITS& controlData',
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
-var3=VarDef(name='data', type='VkDeviceOrHostAddressConstKHR'),
+var3=VarDef(name='data', type='VkDeviceOrHostAddressConstKHR', wrapParams='accelerationstructuregeometryaabbsdatakhr->data, buildRangeInfo.primitiveOffset, accelerationstructuregeometryaabbsdatakhr->stride, buildRangeInfo.primitiveCount, controlData'),
 var4=VarDef(name='stride', type='VkDeviceSize')
 )
 
-Struct(name='VkAccelerationStructureGeometryInstancesDataKHR_', enabled=True, custom=True, # Custom is used for maintaining compatibility with existing streams (Write/Read function)
+Struct(name='VkAccelerationStructureGeometryInstancesDataKHR_', enabled=True, custom=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='arrayOfPointers', type='VkBool32'),
 var4=VarDef(name='data', type='VkDeviceOrHostAddressConstKHR')
 )
 
-Struct(name='VkAccelerationStructureGeometryKHR_', enabled=True, declareArray=True, declareArrayOfArrays=True,
+Struct(name='VkAccelerationStructureGeometryKHR_', enabled=True, declareArray=True, declareArrayOfArrays=True, constructorArgs='const VkAccelerationStructureGeometryKHR* accelerationstructuregeometrykhr, const VkAccelerationStructureBuildRangeInfoKHR& buildRangeInfo, VkAccelerationStructureBuildControlDataGITS controlData',
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='geometryType', type='VkGeometryTypeKHR'),
-var4=VarDef(name='geometry', type='VkAccelerationStructureGeometryDataKHR', wrapParams='accelerationstructuregeometrykhr->geometryType, &accelerationstructuregeometrykhr->geometry'),
+var4=VarDef(name='geometry', type='VkAccelerationStructureGeometryDataKHR', wrapParams='accelerationstructuregeometrykhr->geometryType, &accelerationstructuregeometrykhr->geometry, buildRangeInfo, controlData'),
 var5=VarDef(name='flags', type='VkGeometryFlagsKHR')
 )
 
@@ -10730,16 +10730,16 @@ var2=VarDef(name='aabbs', type='VkAccelerationStructureGeometryAabbsDataKHR'),
 var3=VarDef(name='instances', type='VkAccelerationStructureGeometryInstancesDataKHR'),
 )
 
-Struct(name='VkAccelerationStructureGeometryTrianglesDataKHR_', enabled=True, constructorWrap=True, passStructStorage=True,
+Struct(name='VkAccelerationStructureGeometryTrianglesDataKHR_', enabled=True, constructorWrap=True, passStructStorage=True, constructorArgs='const VkAccelerationStructureGeometryTrianglesDataKHR* accelerationstructuregeometrytrianglesdatakhr, const VkAccelerationStructureBuildRangeInfoKHR& buildRangeInfo, const VkAccelerationStructureBuildControlDataGITS& controlData',
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='vertexFormat', type='VkFormat'),
-var4=VarDef(name='vertexData', type='VkDeviceOrHostAddressConstKHR'),
+var4=VarDef(name='vertexData', type='VkDeviceOrHostAddressConstKHR', wrapType='CDeviceOrHostAddressAccelerationStructureVertexDataGITS', wrapParams='accelerationstructuregeometrytrianglesdatakhr->vertexData, buildRangeInfo.primitiveOffset, accelerationstructuregeometrytrianglesdatakhr->vertexStride, buildRangeInfo.primitiveCount * 3, buildRangeInfo.firstVertex, accelerationstructuregeometrytrianglesdatakhr->maxVertex, accelerationstructuregeometrytrianglesdatakhr->indexData, accelerationstructuregeometrytrianglesdatakhr->indexType, controlData'),
 var5=VarDef(name='vertexStride', type='VkDeviceSize'),
 var6=VarDef(name='maxVertex', type='uint32_t'),
 var7=VarDef(name='indexType', type='VkIndexType'),
-var8=VarDef(name='indexData', type='VkDeviceOrHostAddressConstKHR'),
-var9=VarDef(name='transformData', type='VkDeviceOrHostAddressConstKHR')
+var8=VarDef(name='indexData', type='VkDeviceOrHostAddressConstKHR', wrapParams='accelerationstructuregeometrytrianglesdatakhr->indexData, buildRangeInfo.primitiveOffset, getIndexElementSize(accelerationstructuregeometrytrianglesdatakhr->indexType), buildRangeInfo.primitiveCount * 3, controlData'),
+var9=VarDef(name='transformData', type='VkDeviceOrHostAddressConstKHR', wrapParams='accelerationstructuregeometrytrianglesdatakhr->transformData, buildRangeInfo.transformOffset, sizeof(VkTransformMatrixKHR), 1, controlData')
 )
 
 Struct(name='VkAccelerationStructureInfoNV_', enabled=False,
@@ -10828,7 +10828,7 @@ var17=VarDef(name='ppUsageCounts', type='const VkMicromapUsageEXT* const*'),
 var18=VarDef(name='micromap', type='VkMicromapEXT')
 )
 
-Struct(name='VkAccelerationStructureTrianglesOpacityMicromapEXT_', enabled=True, passStructStorage=True, constructorWrap=True,
+Struct(name='VkAccelerationStructureTrianglesOpacityMicromapEXT_', enabled=True, passStructStorage=True, constructorWrap=True, constructorArgs='const VkAccelerationStructureTrianglesOpacityMicromapEXT* accelerationstructuretrianglesopacitymicromapext, const void* pCustomData',
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='indexType', type='VkIndexType'),
@@ -10836,8 +10836,8 @@ var4=VarDef(name='indexBuffer', type='VkDeviceOrHostAddressConstKHR'),
 var5=VarDef(name='indexStride', type='VkDeviceSize'),
 var6=VarDef(name='baseTriangle', type='uint32_t'),
 var7=VarDef(name='usageCountsCount', type='uint32_t'),
-var8=VarDef(name='pUsageCounts', type='const VkMicromapUsageEXT*', wrapType='CVkMicromapUsageEXTArray', wrapParams='accelerationstructuretrianglesopacitymicromapext->usageCountsCount, accelerationstructuretrianglesopacitymicromapext->pUsageCounts', count='usageCountsCount'),
-var9=VarDef(name='ppUsageCounts', type='const VkMicromapUsageEXT* const*', wrapType='CVkMicromapUsageEXTArrayOfArrays', wrapParams='accelerationstructuretrianglesopacitymicromapext->usageCountsCount, accelerationstructuretrianglesopacitymicromapext->ppUsageCounts', count='usageCountsCount'),
+var8=VarDef(name='pUsageCounts', type='const VkMicromapUsageEXT*', wrapType='CVkMicromapUsageEXTArray'),
+var9=VarDef(name='ppUsageCounts', type='const VkMicromapUsageEXT* const*', wrapType='CVkMicromapUsageEXTArrayOfArrays'),
 var10=VarDef(name='micromap', type='VkMicromapEXT')
 )
 
@@ -14613,7 +14613,7 @@ var3=VarDef(name='memoryTypeBits', type='uint32_t')
 #var4=VarDef(name='pLayer', type='const CAMetalLayer*')
 #)
 
-Struct(name='VkMicromapBuildInfoEXT_', enabled=True, declareArray=True, passStructStorage=True, #constructorWrap=True,
+Struct(name='VkMicromapBuildInfoEXT_', enabled=True, declareArray=True, passStructStorage=True, constructorWrap=True, constructorArgs='const VkMicromapBuildInfoEXT* micromapbuildinfoext, VkAccelerationStructureBuildControlDataGITS controlData',
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='type', type='VkMicromapTypeEXT'),
@@ -14621,10 +14621,10 @@ var4=VarDef(name='flags', type='VkBuildMicromapFlagsEXT'),
 var5=VarDef(name='mode', type='VkBuildMicromapModeEXT'),
 var6=VarDef(name='dstMicromap', type='VkMicromapEXT'),
 var7=VarDef(name='usageCountsCount', type='uint32_t'),
-var8=VarDef(name='pUsageCounts', type='const VkMicromapUsageEXT*', wrapType='CVkMicromapUsageEXTArray', wrapParams='micromapbuildinfoext->usageCountsCount, micromapbuildinfoext->pUsageCounts', count='usageCountsCount'),
-var9=VarDef(name='ppUsageCounts', type='const VkMicromapUsageEXT* const*', wrapType='CVkMicromapUsageEXTArrayOfArrays', wrapParams='micromapbuildinfoext->usageCountsCount, micromapbuildinfoext->ppUsageCounts', count='usageCountsCount'),
+var8=VarDef(name='pUsageCounts', type='const VkMicromapUsageEXT*', wrapType='CVkMicromapUsageEXTArray', wrapParams='micromapbuildinfoext->usageCountsCount, micromapbuildinfoext->pUsageCounts'),
+var9=VarDef(name='ppUsageCounts', type='const VkMicromapUsageEXT* const*', wrapType='CVkMicromapUsageEXTArrayOfArrays', wrapParams='micromapbuildinfoext->usageCountsCount, micromapbuildinfoext->ppUsageCounts'),
 var10=VarDef(name='data', type='VkDeviceOrHostAddressConstKHR'),
-var11=VarDef(name='scratchData', type='VkDeviceOrHostAddressKHR', wrapParams='micromapbuildinfoext->scratchData'),
+var11=VarDef(name='scratchData', type='VkDeviceOrHostAddressKHR', wrapParams='micromapbuildinfoext->scratchData, controlData'),
 var12=VarDef(name='triangleArray', type='VkDeviceOrHostAddressConstKHR'),
 var13=VarDef(name='triangleArrayStride', type='VkDeviceSize')
 )

@@ -21,11 +21,11 @@ namespace DirectX {
 class FenceService {
 public:
   FenceService(stream::OrderingRecorder& recorder);
-  void SetEventOnCompletion(ID3D12Fence* fence, unsigned fenceKey, UINT64 value, HANDLE event);
-  void WaitSignaled(HANDLE handle);
-  void WaitSignaled(HANDLE hObjectToWaitOn, HANDLE hObjectToSignal);
-  void WaitSignaled(DWORD count, const HANDLE* handles);
-  void DestroyFence(unsigned fenceKey);
+  void setEventOnCompletion(ID3D12Fence* fence, unsigned fenceKey, UINT64 value, HANDLE event);
+  void waitSignaled(HANDLE handle);
+  void waitSignaled(HANDLE hObjectToWaitOn, HANDLE hObjectToSignal);
+  void waitSignaled(DWORD count, const HANDLE* handles);
+  void destroyFence(unsigned fenceKey);
 
   std::mutex& getGlobalMutex() {
     return m_GlobalMutex;

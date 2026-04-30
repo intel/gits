@@ -21,8 +21,8 @@ namespace gits {
 namespace DirectX {
 
 struct CommandListCommand {
-  CommandListCommand(CommandId id_, unsigned key, unsigned commandListKey)
-      : Id(id_), CommandKey(key), CommandListKey(commandListKey) {}
+  CommandListCommand(CommandId id_, unsigned key, unsigned clKey)
+      : Id(id_), CommandKey(key), CommandListKey(clKey) {}
   virtual ~CommandListCommand() = default;
   CommandId Id{};
   unsigned CommandKey{};
@@ -120,10 +120,10 @@ private:
   void RestoreCommandState(CommandListClearDepthStencilView* Command);
   template <typename CommandListClearUnorderedAccessView>
   void RestoreCommandState(CommandListClearUnorderedAccessView* Command);
-  void InitAuxiliaryRtvHeap(unsigned deviceKey);
-  void InitAuxiliaryDsvHeap(unsigned deviceKey);
-  void InitAuxiliaryUavGpuHeap(unsigned deviceKey);
-  void InitAuxiliaryUavCpuHeap(unsigned deviceKey);
+  void InitAuxiliaryRtvHeap(unsigned DeviceKey);
+  void InitAuxiliaryDsvHeap(unsigned DeviceKey);
+  void InitAuxiliaryUavGpuHeap(unsigned DeviceKey);
+  void InitAuxiliaryUavCpuHeap(unsigned DeviceKey);
   void CreateAuxiliaryRtv(D3D12RenderTargetViewState* view);
   void CreateAuxiliaryDsv(D3D12DepthStencilViewState* view);
   void CreateAuxiliaryUavGpu(D3D12UnorderedAccessViewState* view);

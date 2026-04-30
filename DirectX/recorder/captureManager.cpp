@@ -194,15 +194,15 @@ std::pair<unsigned, unsigned> CaptureManager::createCommandKeyRange(unsigned ran
 
 void CaptureManager::addWrapper(IUnknownWrapper* wrapper) {
   std::lock_guard<std::mutex> lock(m_WrappersMutex);
-  m_Wrappers[wrapper->GetRootIUnknown()] = wrapper;
+  m_Wrappers[wrapper->getRootIUnknown()] = wrapper;
 }
 void CaptureManager::removeWrapper(IUnknownWrapper* wrapper) {
   std::lock_guard<std::mutex> lock(m_WrappersMutex);
-  m_Wrappers.erase(wrapper->GetRootIUnknown());
+  m_Wrappers.erase(wrapper->getRootIUnknown());
 }
 IUnknownWrapper* CaptureManager::findWrapper(IUnknown* object) {
   std::lock_guard<std::mutex> lock(m_WrappersMutex);
-  auto it = m_Wrappers.find(IUnknownWrapper::GetRootIUnknown(object));
+  auto it = m_Wrappers.find(IUnknownWrapper::getRootIUnknown(object));
   return it != m_Wrappers.end() ? it->second : nullptr;
 }
 

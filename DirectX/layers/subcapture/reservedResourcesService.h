@@ -56,8 +56,8 @@ public:
   void UpdateTileMappings(TiledResource& tiledResource,
                           unsigned commandQueueKey,
                           TileRegionsBySubresource* tileRegions);
-  TiledResource* GetTiledResource(unsigned resourceKey);
-  void RestoreContent(const std::vector<unsigned>& resourceKeys);
+  TiledResource* GetTiledResource(unsigned ResourceKey);
+  void RestoreContent(const std::vector<unsigned>& ResourceKeys);
   void CleanupRestore();
 
 private:
@@ -71,7 +71,7 @@ private:
       D3D12_RESOURCE_DESC& desc,
       std::vector<std::pair<unsigned, D3D12_PLACED_SUBRESOURCE_FOOTPRINT>>& sizes);
   void InitTiledResource(TiledResource& tiledResource);
-  void CopySourceBarrier(ID3D12Resource* resource, unsigned resourceKey, bool restoreState);
+  void CopySourceBarrier(ID3D12Resource* resource, unsigned ResourceKey, bool RestoreState);
 
 private:
   StateTrackingService& m_StateService;

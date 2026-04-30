@@ -23,10 +23,10 @@ namespace DirectX {
 class ResourceDumpService {
 public:
   ResourceDumpService();
-  void CreateResource(unsigned resourceKey,
+  void CreateResource(unsigned ResourceKey,
                       ID3D12Resource* resource,
                       D3D12_RESOURCE_STATES initialState);
-  void DestroyResource(unsigned resourceKey);
+  void DestroyResource(unsigned ResourceKey);
   void CommandListCall(unsigned callKey, ID3D12GraphicsCommandList* commandList);
   void ResourceBarrier(ID3D12GraphicsCommandListResourceBarrierCommand& c);
   void ExecuteCommandLists(unsigned key,

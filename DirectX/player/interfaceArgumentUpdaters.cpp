@@ -328,7 +328,7 @@ void UpdateInterface(PlayerManager& manager, DML_BINDING_TABLE_DESC_Argument& ar
 }
 
 static void updateDmlBinding(PlayerManager& manager,
-                             unsigned resourceKey,
+                             unsigned ResourceKey,
                              const void* bindingDesc) {
   if (!manager.ExecuteCommands()) {
     return;
@@ -337,7 +337,7 @@ static void updateDmlBinding(PlayerManager& manager,
   auto* binding = static_cast<DML_BUFFER_BINDING*>(const_cast<void*>(bindingDesc));
   GITS_ASSERT(binding);
   if (binding->Buffer) {
-    IUnknown* object = manager.FindObject(resourceKey);
+    IUnknown* object = manager.FindObject(ResourceKey);
     GITS_ASSERT(object);
     binding->Buffer = static_cast<ID3D12Resource*>(object);
   }

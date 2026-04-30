@@ -24,35 +24,11 @@ ImGuiHUDLayer::ImGuiHUDLayer() : Layer("ImGuiHUDLayer") {
 }
 
 ImGuiHUDLayer::~ImGuiHUDLayer() {
-  Shutdown();
-}
-
-void ImGuiHUDLayer::Shutdown() {
-  if (m_Initialized) {
-    if (m_Fence) {
-      m_Fence->SetEventOnCompletion(m_FenceValue, NULL);
-    }
-    ImGui_ImplDX12_Shutdown();
+  if (!m_Initialized) {
+    return;
   }
-
-  m_FrameContext.clear();
-  m_BackBufferKeys.clear();
-  m_XefgCmdQueue = nullptr;
-  m_XefgContextKey = 0;
-
-  m_Fence.Reset();
-  m_Device.Reset();
-  m_RtvDescHeap.Reset();
-  m_SrvDescHeap.Reset();
-  m_CommandQueue.Reset();
-  m_CommandList.Reset();
-  m_SwapChain.Reset();
-
-  m_Initialized = false;
-  m_FenceValue = 0;
-  m_FirstExecuteInFrame = true;
-  m_Window = nullptr;
-  m_ResizeBuffersWarning = false;
+  m_Fence->SetEventOnCompletion(m_FenceValue, NULL);
+  ImGui_ImplDX12_Shutdown();
 }
 
 void ImGuiHUDLayer::Post(IDXGISwapChainGetBufferCommand& c) {
@@ -134,51 +110,6 @@ void ImGuiHUDLayer::Post(IDXGIFactory2CreateSwapChainForCompositionCommand& c) {
   }
 
   m_Initialized = InitializeResources(c.m_pDevice.Value, *c.m_ppSwapChain.Value);
-  if (!m_Initialized) {
-    LOG_ERROR << "ImGui HUD: Failed to initialize resources";
-    return;
-  }
-}
-
-void ImGuiHUDLayer::Pre(xefgSwapChainDestroyCommand& c) {
-  std::lock_guard<std::mutex> lock(m_Mutex);
-  if (m_XefgContextKey == 0 || c.m_hSwapChain.Key != m_XefgContextKey) {
-    return;
-  }
-  Shutdown();
-}
-
-void ImGuiHUDLayer::Post(xefgSwapChainD3D12InitFromSwapChainCommand& c) {
-  if (c.m_Result.Value != XEFG_SWAPCHAIN_RESULT_SUCCESS) {
-    return;
-  }
-
-  m_XefgContextKey = c.m_hSwapChain.Key;
-  m_XefgCmdQueue = c.m_pCmdQueue.Value;
-}
-
-void ImGuiHUDLayer::Post(xefgSwapChainD3D12InitFromSwapChainDescCommand& c) {
-  if (c.m_Result.Value != XEFG_SWAPCHAIN_RESULT_SUCCESS) {
-    return;
-  }
-
-  m_XefgContextKey = c.m_hSwapChain.Key;
-  m_XefgCmdQueue = c.m_pCmdQueue.Value;
-}
-
-void ImGuiHUDLayer::Post(xefgSwapChainD3D12GetSwapChainPtrCommand& c) {
-  if (c.m_Result.Value != XEFG_SWAPCHAIN_RESULT_SUCCESS) {
-    return;
-  }
-
-  GITS_ASSERT(m_XefgCmdQueue != nullptr);
-  GITS_ASSERT(m_XefgContextKey != 0);
-  GITS_ASSERT(c.m_hSwapChain.Key == m_XefgContextKey);
-
-  auto* swapChain = static_cast<IDXGISwapChain*>(*c.m_ppSwapChain.Value);
-  GITS_ASSERT(swapChain);
-
-  m_Initialized = InitializeResources(m_XefgCmdQueue, swapChain);
   if (!m_Initialized) {
     LOG_ERROR << "ImGui HUD: Failed to initialize resources";
     return;

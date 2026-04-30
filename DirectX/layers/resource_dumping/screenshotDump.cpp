@@ -150,7 +150,7 @@ void ScreenshotDump::dumpStagedResource(std::wstring dumpName) {
   GITS_ASSERT(hr == S_OK);
 
   uint8_t* pixels = reinterpret_cast<uint8_t*>(data) + m_BackBufferFootprint.Offset;
-  WriteImage(dumpName, m_Format, pixels, m_BackBufferDesc.Format, m_BackBufferDesc.Width,
+  writeImage(dumpName, m_Format, pixels, m_BackBufferDesc.Format, m_BackBufferDesc.Width,
              m_BackBufferDesc.Height, m_BackBufferFootprint.Footprint.RowPitch);
 
   m_StagingBuffer->Unmap(0, nullptr);

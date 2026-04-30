@@ -24,20 +24,20 @@ class DirectStorageService {
 public:
   DirectStorageService();
 
-  void OpenFile(IDStorageFactoryOpenFileCommand& c);
-  void EnqueueRequest(IDStorageQueueEnqueueRequestCommand& c);
+  void openFile(IDStorageFactoryOpenFileCommand& c);
+  void enqueueRequest(IDStorageQueueEnqueueRequestCommand& c);
 
 private:
   struct FileRange {
     uint64_t NewOffset{};
-    uint64_t OldOffset{};
-    uint64_t Size{};
+    uint64_t oldOffset{};
+    uint64_t size{};
     FileRange(uint64_t NewOffset, uint64_t oldOffset, uint64_t size)
-        : NewOffset(NewOffset), OldOffset(oldOffset), Size(size) {}
+        : NewOffset(NewOffset), oldOffset(oldOffset), size(size) {}
   };
   struct CompareFileRange {
     bool operator()(const FileRange& lhs, const FileRange& rhs) const {
-      return lhs.OldOffset < rhs.OldOffset;
+      return lhs.oldOffset < rhs.oldOffset;
     }
   };
   using Buffer = std::vector<char>;

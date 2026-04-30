@@ -45,7 +45,6 @@ SET(Vulkan_common_SOURCES
   include/vulkanPreToken.h
   include/vulkanStateDynamic.h
   include/vulkanStateTracking.h
-  include/vulkanAccelerationStructureHandler.h
   include/vulkanStructStorageAuto.h
   include/vulkanStructStorageBasic.h
   include/vulkanTools.h

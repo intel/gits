@@ -43,11 +43,11 @@ public:
   void Pre(xefgSwapChainD3D12CreateContextCommand& command) override;
 
 private:
-  void CaptureAgilitySDKDll(Command& command);
-  void CaptureXessDll(Command& command);
-  void CaptureXellDll(Command& command);
-  void CaptureXefgDll(Command& command);
-  bool CaptureDll(const std::wstring& dllName, unsigned threadId);
+  void captureAgilitySDKDll(Command& command);
+  void captureXessDll(Command& command);
+  void captureXellDll(Command& command);
+  void captureXefgDll(Command& command);
+  bool captureDll(const std::wstring& dllName, unsigned threadId);
 
   bool m_AgilitySdkDllChecked{};
   std::mutex m_AgilitySdkDllMutex{};

@@ -20,26 +20,26 @@ namespace DirectX {
 
 class RootSignatureService {
 public:
-  void SerializeRootSignature(D3D12_ROOT_SIGNATURE_DESC* desc, unsigned blobKey);
-  void SerializeVersionedRootSignature(D3D12_VERSIONED_ROOT_SIGNATURE_DESC* desc, unsigned blobKey);
-  void SetBlobBufferPointer(unsigned blobKey, void* blobPointer);
-  void CreateRootSignature(void* blobPointer, unsigned blobLength, unsigned rootSignatureKey);
+  void serializeRootSignature(D3D12_ROOT_SIGNATURE_DESC* desc, unsigned blobKey);
+  void serializeVersionedRootSignature(D3D12_VERSIONED_ROOT_SIGNATURE_DESC* desc, unsigned blobKey);
+  void setBlobBufferPointer(unsigned blobKey, void* blobPointer);
+  void createRootSignature(void* blobPointer, unsigned blobLength, unsigned RootSignatureKey);
 
-  void SetGraphicsRootSignature(unsigned commandListKey, unsigned rootSignatureKey);
-  void SetComputeRootSignature(unsigned commandListKey, unsigned rootSignatureKey);
-  void ResetRootSignatures(unsigned commandListKey);
-  D3D12_DESCRIPTOR_HEAP_TYPE GetGraphicsRootSignatureDescriptorHeapType(unsigned commandListKey,
+  void setGraphicsRootSignature(unsigned commandListKey, unsigned RootSignatureKey);
+  void setComputeRootSignature(unsigned commandListKey, unsigned RootSignatureKey);
+  void resetRootSignatures(unsigned commandListKey);
+  D3D12_DESCRIPTOR_HEAP_TYPE getGraphicsRootSignatureDescriptorHeapType(unsigned commandListKey,
                                                                         unsigned parameterIndex);
-  D3D12_DESCRIPTOR_HEAP_TYPE GetComputeRootSignatureDescriptorHeapType(unsigned commandListKey,
+  D3D12_DESCRIPTOR_HEAP_TYPE getComputeRootSignatureDescriptorHeapType(unsigned commandListKey,
                                                                        unsigned parameterIndex);
 
 private:
   class RootSignatureInfo {
   public:
-    void SetDescriptorTableHeapType(unsigned parameterIndex, D3D12_DESCRIPTOR_HEAP_TYPE type) {
+    void setDescriptorTableHeapType(unsigned parameterIndex, D3D12_DESCRIPTOR_HEAP_TYPE type) {
       m_DescriptorTableHeapTypeByParameterIndex[parameterIndex] = type;
     }
-    D3D12_DESCRIPTOR_HEAP_TYPE GetDescriptorTableHeapType(unsigned parameterIndex) {
+    D3D12_DESCRIPTOR_HEAP_TYPE getDescriptorTableHeapType(unsigned parameterIndex) {
       auto it = m_DescriptorTableHeapTypeByParameterIndex.find(parameterIndex);
       GITS_ASSERT(it != m_DescriptorTableHeapTypeByParameterIndex.end());
       return it->second;
@@ -52,7 +52,7 @@ private:
 
 private:
   template <typename ROOT_SIGNATURE_DESC>
-  void ParseRootSignatureDesc(ROOT_SIGNATURE_DESC& desc, RootSignatureInfo* rootSignatureInfo);
+  void parseRootSignatureDesc(ROOT_SIGNATURE_DESC& desc, RootSignatureInfo* rootSignatureInfo);
 
 private:
   std::unordered_map<unsigned, RootSignatureInfo*> m_RootSignatureByBlobKey;

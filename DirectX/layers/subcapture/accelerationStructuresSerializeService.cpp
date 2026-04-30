@@ -70,11 +70,11 @@ void AccelerationStructuresSerializeService::ExecuteCommandLists(
   }
 }
 
-void AccelerationStructuresSerializeService::DestroyResource(unsigned resourceKey) {
+void AccelerationStructuresSerializeService::DestroyResource(unsigned ResourceKey) {
   if (!m_SerializeMode) {
     return;
   }
-  auto itResource = m_AccelerationStructuresByResource.find(resourceKey);
+  auto itResource = m_AccelerationStructuresByResource.find(ResourceKey);
   if (itResource == m_AccelerationStructuresByResource.end()) {
     return;
   }

@@ -21,7 +21,7 @@ namespace gits {
 namespace DirectX {
 
 IUnknownWrapper::IUnknownWrapper(REFIID riid, IUnknown* object) : m_Iid(riid), m_Object(object) {
-  InsertIID(IID_IUnknown);
+  insertIID(IID_IUnknown);
   m_Key = CaptureManager::get().createWrapperKey();
 }
 
@@ -39,7 +39,7 @@ HRESULT STDMETHODCALLTYPE IUnknownWrapper::QueryInterface(REFIID riid, void** pp
 
     IUnknownQueryInterfaceCommand command(GetCurrentThreadId(), reinterpret_cast<IUnknown*>(this),
                                           riid, ppvObject);
-    UpdateInterface(command.m_Object, this);
+    updateInterface(command.m_Object, this);
 
     for (Layer* layer : manager.GetPreLayers()) {
       layer->Pre(command);
@@ -52,13 +52,13 @@ HRESULT STDMETHODCALLTYPE IUnknownWrapper::QueryInterface(REFIID riid, void** pp
     ULONG ret = m_Object->Release();
 
     if (SUCCEEDED(result)) {
-      if (IsIID(riid)) {
+      if (isIID(riid)) {
         *ppvObject = this;
         command.m_ppvObject.Key = m_Key;
       } else {
         bool found = false;
         for (auto& wrapper : m_SecondaryWrappers) {
-          if (wrapper->IsIID(riid)) {
+          if (wrapper->isIID(riid)) {
             *ppvObject = wrapper.get();
             command.m_ppvObject.Key = wrapper->m_Key;
             found = true;
@@ -95,7 +95,7 @@ ULONG STDMETHODCALLTYPE IUnknownWrapper::AddRef() {
   if (auto atTopOfStack = AtTopOfStackLocal()) {
 
     IUnknownAddRefCommand command(GetCurrentThreadId(), reinterpret_cast<IUnknown*>(this));
-    UpdateInterface(command.m_Object, this);
+    updateInterface(command.m_Object, this);
 
     for (Layer* layer : manager.GetPreLayers()) {
       layer->Pre(command);
@@ -123,7 +123,7 @@ ULONG STDMETHODCALLTYPE IUnknownWrapper::Release() {
   if (auto atTopOfStack = AtTopOfStackLocal()) {
 
     IUnknownReleaseCommand command(GetCurrentThreadId(), reinterpret_cast<IUnknown*>(this));
-    UpdateInterface(command.m_Object, this);
+    updateInterface(command.m_Object, this);
 
     for (Layer* layer : manager.GetPreLayers()) {
       layer->Pre(command);
@@ -154,7 +154,7 @@ ULONG STDMETHODCALLTYPE IUnknownWrapper::Release() {
   return result;
 }
 
-IUnknown* IUnknownWrapper::GetRootIUnknown(IUnknown* object) {
+IUnknown* IUnknownWrapper::getRootIUnknown(IUnknown* object) {
   IUnknown* unknown = nullptr;
   HRESULT hr = object->QueryInterface(IID_PPV_ARGS(&unknown));
   unknown->Release();

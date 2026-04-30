@@ -166,10 +166,8 @@ void GUIController::SetupGui() {
   context.ConfigEditor->SetSaveCallback(configOnSaveCallback);
 
   context.GITSLogEditor = std::make_unique<TextEditorWidget>("GITSLogEditor");
-  auto logConfig =
-      TextEditorWidget::Config{.ShowToolbar = true,
-                               .ToolBarItems = {TextEditorWidget::TOOL_BAR_ITEMS::SAVE,
-                                                TextEditorWidget::TOOL_BAR_ITEMS::SEND_BY_EMAIL}};
+  auto logConfig = TextEditorWidget::Config{
+      .ShowToolbar = true, .ToolBarItems = {TextEditorWidget::TOOL_BAR_ITEMS::SAVE}};
   context.GITSLogEditor->SetConfig(logConfig);
   context.GITSLogEditor->GetEditor().SetReadOnly(true);
   context.GITSLogEditor->GetEditor().SetShowWhitespaces(false);
@@ -197,10 +195,6 @@ void GUIController::SetupGui() {
     ShowFileDialog(FileDialogKey{.Path = Path::GITS_LOG, .Mode = context.AppMode}, logPath);
   };
   context.GITSLogEditor->SetSaveCallback(gitsLogOnSaveCallback);
-  context.GITSLogEditor->SetSendByEmailCallback([](const std::string& logText) {
-    SendLogByEmail(Labels::EMAIL_LOG_RECIPIENT, Labels::EMAIL_LOG_SUBJECT,
-                   CreateEmailBodyWithLog(logText));
-  });
 
   context.LogEditor = std::make_unique<TextEditorWidget>("LogEditor");
   context.LogEditor->SetConfig(TextEditorWidget::Config{.ShowToolbar = false});

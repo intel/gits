@@ -100,9 +100,9 @@ bool StateTrackingService::StateRestored(unsigned key) {
 }
 
 void StateTrackingService::AddBackBuffer(unsigned buffer,
-                                         unsigned resourceKey,
+                                         unsigned ResourceKey,
                                          ID3D12Resource* resource) {
-  m_SwapChainService.AddBackBuffer(buffer, resourceKey, resource);
+  m_SwapChainService.AddBackBuffer(buffer, ResourceKey, resource);
 }
 
 void StateTrackingService::SetXefgSwapChainFlag() {
@@ -431,13 +431,13 @@ D3D12_BARRIER_LAYOUT StateTrackingService::GetResourceInitialLayout(
   } else if (flags & D3D12_RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS) {
     return D3D12_BARRIER_LAYOUT_COMMON;
   }
-  if (state.IsMappable || state.BarrierRestricted) {
+  if (state.IsMappable) {
     return m_ResourceStateTrackingService.GetResourceLayout(state.Key);
   }
   return D3D12_BARRIER_LAYOUT_COPY_DEST;
 }
 
-void StateTrackingService::RestoreResidencyPriority(unsigned deviceKey,
+void StateTrackingService::RestoreResidencyPriority(unsigned DeviceKey,
                                                     unsigned objectKey,
                                                     D3D12_RESIDENCY_PRIORITY residencyPriority) {
   if (!residencyPriority) {
@@ -445,7 +445,7 @@ void StateTrackingService::RestoreResidencyPriority(unsigned deviceKey,
   }
   ID3D12Device1SetResidencyPriorityCommand c;
   c.Key = GetUniqueCommandKey();
-  c.m_Object.Key = deviceKey;
+  c.m_Object.Key = DeviceKey;
   c.m_NumObjects.Value = 1;
   ID3D12Pageable* fakePtr = reinterpret_cast<ID3D12Pageable*>(1);
   c.m_ppObjects.Value = &fakePtr;
@@ -944,9 +944,9 @@ void StateTrackingService::SwapChainService::RecordSwapChainPresent() {
 }
 
 void StateTrackingService::SwapChainService::AddBackBuffer(unsigned buffer,
-                                                           unsigned resourceKey,
+                                                           unsigned ResourceKey,
                                                            ID3D12Resource* resource) {
-  m_BackBuffers[buffer] = {resourceKey, resource};
+  m_BackBuffers[buffer] = {ResourceKey, resource};
 }
 
 void StateTrackingService::NvAPIGlobalStateService::IncrementInitialize() {

@@ -20,11 +20,11 @@ class StateTrackingService;
 class MapStateService {
 public:
   MapStateService(StateTrackingService& stateService) : m_StateService(stateService) {}
-  void MapResource(unsigned resourceKey, unsigned subresourceIndex, void* captureAddress) {
-    m_MappedDataBySubresource[resourceKey][subresourceIndex] = captureAddress;
+  void MapResource(unsigned ResourceKey, unsigned subresourceIndex, void* captureAddress) {
+    m_MappedDataBySubresource[ResourceKey][subresourceIndex] = captureAddress;
   }
-  void DestroyResource(unsigned resourceKey) {
-    m_MappedDataBySubresource.erase(resourceKey);
+  void DestroyResource(unsigned ResourceKey) {
+    m_MappedDataBySubresource.erase(ResourceKey);
   }
   void RestoreMapState();
 

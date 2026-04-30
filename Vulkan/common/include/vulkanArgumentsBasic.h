@@ -983,15 +983,17 @@ class CBufferDeviceAddressObject : public CArgument, gits::noncopyable {
   std::unique_ptr<Cuint64_t> _originalDeviceAddress;
   std::unique_ptr<CVkBuffer> _buffer;
   std::unique_ptr<Cint64_t> _offset;
+  VkDeviceAddress _deviceAddress;
 
 public:
   CBufferDeviceAddressObject()
       : _originalDeviceAddress(std::make_unique<Cuint64_t>()),
         _buffer(std::make_unique<CVkBuffer>()),
-        _offset(std::make_unique<Cint64_t>()) {}
+        _offset(std::make_unique<Cint64_t>()),
+        _deviceAddress(0) {}
 
   CBufferDeviceAddressObject(VkDeviceAddress deviceAddress);
-  CBufferDeviceAddressObject(const CBufferDeviceAddressObjectData& deviceAddressObject);
+  CBufferDeviceAddressObject(const CBufferDeviceAddressObjectData& bufferDeviceAddressObject);
 
   VkDeviceAddress Value();
 
@@ -1034,27 +1036,32 @@ public:
   virtual uint64_t Size() const override;
 };
 
+typedef CVulkanEnum<VkCommandExecutionSideGITS> CVkCommandExecutionSideGITS;
 struct CVkDeviceOrHostAddressConstKHRData;
 
 class CVkDeviceOrHostAddressConstKHR : public CArgument {
+  std::unique_ptr<CVkCommandExecutionSideGITS> _commandExecutionSideGITS;
   std::unique_ptr<CBufferDeviceAddressObject> _bufferDeviceAddress;
+
+  std::unique_ptr<Csize_t> _dataSize;
+  std::unique_ptr<CBinaryResource> _resource;
+  std::vector<uint8_t> _data;
 
   std::unique_ptr<VkDeviceOrHostAddressConstKHR> _DeviceOrHostAddress;
   std::unique_ptr<VkDeviceOrHostAddressConstKHR> _DeviceOrHostAddressOriginal;
 
 public:
   CVkDeviceOrHostAddressConstKHR()
-      : _bufferDeviceAddress(std::make_unique<CBufferDeviceAddressObject>()),
+      : _commandExecutionSideGITS(std::make_unique<CVkCommandExecutionSideGITS>()),
+        _bufferDeviceAddress(std::make_unique<CBufferDeviceAddressObject>()),
+        _dataSize(std::make_unique<Csize_t>()),
+        _resource(std::make_unique<CBinaryResource>()),
+        _data(),
         _DeviceOrHostAddress(nullptr),
         _DeviceOrHostAddressOriginal(nullptr) {}
 
-  CVkDeviceOrHostAddressConstKHR(const VkDeviceOrHostAddressConstKHR deviceorhostaddress)
-      : _bufferDeviceAddress(
-            std::make_unique<CBufferDeviceAddressObject>(deviceorhostaddress.deviceAddress)),
-        _DeviceOrHostAddress(nullptr),
-        _DeviceOrHostAddressOriginal(nullptr) {}
-
-  CVkDeviceOrHostAddressConstKHR(const CVkDeviceOrHostAddressConstKHRData& deviceorhostaddress);
+  CVkDeviceOrHostAddressConstKHR(const VkDeviceOrHostAddressConstKHR deviceorhostaddress,
+                                 const CVkDeviceOrHostAddressConstKHRData& deviceOrHostAddressData);
 
   virtual ~CVkDeviceOrHostAddressConstKHR() {}
 
@@ -1083,7 +1090,29 @@ public:
   virtual uint64_t Size() const override;
 };
 
+class CDeviceOrHostAddressAccelerationStructureVertexDataGITS
+    : public CVkDeviceOrHostAddressConstKHR {
+
+public:
+  CDeviceOrHostAddressAccelerationStructureVertexDataGITS() : CVkDeviceOrHostAddressConstKHR() {}
+
+  CDeviceOrHostAddressAccelerationStructureVertexDataGITS(
+      VkDeviceOrHostAddressConstKHR vertexData,
+      const CVkDeviceOrHostAddressConstKHRData& deviceOrHostAddressData)
+      : CVkDeviceOrHostAddressConstKHR(vertexData, deviceOrHostAddressData) {
+    // Implementation of this class is exactly the same as CVkDeviceOrHostAddressConstKHR.
+    // The difference is in the struct storage counterpart.
+  }
+
+  virtual const char* Name() const override {
+    return "CDeviceOrHostAddressAccelerationStructureVertexDataGITS";
+  }
+};
+
+struct CVkDeviceOrHostAddressKHRData;
+
 class CVkDeviceOrHostAddressKHR : public CArgument {
+  std::unique_ptr<CVkCommandExecutionSideGITS> _commandExecutionSideGITS;
   std::unique_ptr<CBufferDeviceAddressObject> _bufferDeviceAddress;
 
   std::unique_ptr<VkDeviceOrHostAddressKHR> _DeviceOrHostAddress;
@@ -1091,11 +1120,13 @@ class CVkDeviceOrHostAddressKHR : public CArgument {
 
 public:
   CVkDeviceOrHostAddressKHR()
-      : _bufferDeviceAddress(std::make_unique<CBufferDeviceAddressObject>()),
+      : _commandExecutionSideGITS(std::make_unique<CVkCommandExecutionSideGITS>()),
+        _bufferDeviceAddress(std::make_unique<CBufferDeviceAddressObject>()),
         _DeviceOrHostAddress(nullptr),
         _DeviceOrHostAddressOriginal(nullptr) {}
 
-  CVkDeviceOrHostAddressKHR(const VkDeviceOrHostAddressKHR deviceorhostaddress);
+  CVkDeviceOrHostAddressKHR(const VkDeviceOrHostAddressKHR deviceorhostaddress,
+                            const CVkDeviceOrHostAddressKHRData& deviceOrHostAddressData);
 
   virtual ~CVkDeviceOrHostAddressKHR() {}
 
@@ -1124,11 +1155,16 @@ public:
   virtual uint64_t Size() const override;
 };
 
-class CVkAccelerationStructureGeometryInstancesDataKHR : public CArgument, gits::noncopyable {
+class CVkAccelerationStructureGeometryInstancesDataKHR : public CArgument {
   std::unique_ptr<CVkStructureType> _sType;
   std::unique_ptr<CpNextWrapper> _pNext;
+  std::unique_ptr<CVkCommandExecutionSideGITS> _commandExecutionSideGITS;
   std::unique_ptr<Cuint32_t> _arrayOfPointers;
   std::unique_ptr<CBufferDeviceAddressObject> _bufferDeviceAddress;
+
+  std::unique_ptr<Cuint32_t> _count;
+  std::unique_ptr<CBinaryResource> _resource;
+  std::vector<VkAccelerationStructureInstanceKHR> _inputData;
 
   std::unique_ptr<VkAccelerationStructureGeometryInstancesDataKHR>
       _AccelerationStructureGeometryInstancesDataKHR;
@@ -1137,21 +1173,40 @@ class CVkAccelerationStructureGeometryInstancesDataKHR : public CArgument, gits:
   Cbool _isNullPtr;
 
 public:
-  CVkAccelerationStructureGeometryInstancesDataKHR();
+  CVkAccelerationStructureGeometryInstancesDataKHR()
+      : _sType(std::make_unique<CVkStructureType>()),
+        _pNext(std::make_unique<CpNextWrapper>()),
+        _commandExecutionSideGITS(std::make_unique<CVkCommandExecutionSideGITS>()),
+        _arrayOfPointers(std::make_unique<Cuint32_t>()),
+        _bufferDeviceAddress(std::make_unique<CBufferDeviceAddressObject>()),
+        _count(std::make_unique<Cuint32_t>()),
+        _inputData(),
+        _AccelerationStructureGeometryInstancesDataKHR(nullptr),
+        _AccelerationStructureGeometryInstancesDataKHROriginal(nullptr),
+        _isNullPtr(false) {}
+
   CVkAccelerationStructureGeometryInstancesDataKHR(
       const VkAccelerationStructureGeometryInstancesDataKHR*
-          accelerationstructuregeometryinstancesdatakhr);
+          accelerationstructuregeometryinstancesdatakhr,
+      const VkAccelerationStructureBuildRangeInfoKHR& buildRangeInfo,
+      const VkAccelerationStructureBuildControlDataGITS& controlData);
+
   virtual const char* Name() const override {
     return "VkAccelerationStructureGeometryInstancesDataKHR";
   }
+
   VkAccelerationStructureGeometryInstancesDataKHR* Value();
+
   PtrConverter<VkAccelerationStructureGeometryInstancesDataKHR> operator*() {
     return PtrConverter<VkAccelerationStructureGeometryInstancesDataKHR>(Value());
   }
+
   PtrConverter<VkAccelerationStructureGeometryInstancesDataKHR> Original();
+
   void* GetPtrType() override {
     return (void*)Value();
   }
+
   virtual std::set<uint64_t> GetMappedPointers();
   virtual void Write(CBinOStream& stream) const override;
   virtual void Read(CBinIStream& stream) override;
@@ -1161,6 +1216,7 @@ public:
 typedef CVulkanEnum<VkGeometryTypeKHR> CVkGeometryTypeKHR;
 class CVkAccelerationStructureGeometryTrianglesDataKHR;
 class CVkAccelerationStructureGeometryAabbsDataKHR;
+class CVkAccelerationStructureGeometryInstancesDataKHR;
 
 class CVkAccelerationStructureGeometryDataKHR : public CArgument {
   std::unique_ptr<CVkGeometryTypeKHR> _geometryType;
@@ -1185,7 +1241,9 @@ public:
 
   CVkAccelerationStructureGeometryDataKHR(
       VkGeometryTypeKHR geometryType,
-      const VkAccelerationStructureGeometryDataKHR* accelerationstructuregeometrydatakhr);
+      const VkAccelerationStructureGeometryDataKHR* accelerationstructuregeometrydatakhr,
+      const VkAccelerationStructureBuildRangeInfoKHR& buildRangeInfo,
+      VkAccelerationStructureBuildControlDataGITS controlData);
 
   virtual const char* Name() const override {
     return "VkAccelerationStructureGeometryDataKHR";

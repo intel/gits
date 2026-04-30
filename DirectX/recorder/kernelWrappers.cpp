@@ -18,7 +18,7 @@ DWORD WaitForSingleObject(HANDLE hHandle, DWORD dwMilliseconds) {
   DWORD ret = manager.getKernel32DispatchTable().WaitForSingleObject(hHandle, dwMilliseconds);
 
   if (ret == WAIT_OBJECT_0) {
-    manager.getFenceService().WaitSignaled(hHandle);
+    manager.getFenceService().waitSignaled(hHandle);
   }
 
   return ret;
@@ -31,7 +31,7 @@ DWORD WaitForSingleObjectEx(HANDLE hHandle, DWORD dwMilliseconds, BOOL bAlertabl
       manager.getKernel32DispatchTable().WaitForSingleObjectEx(hHandle, dwMilliseconds, bAlertable);
 
   if (ret == WAIT_OBJECT_0) {
-    manager.getFenceService().WaitSignaled(hHandle);
+    manager.getFenceService().waitSignaled(hHandle);
   }
 
   return ret;
@@ -47,9 +47,9 @@ DWORD WaitForMultipleObjects(DWORD nCount,
                                                                         dwMilliseconds);
   if (ret < WAIT_OBJECT_0 + nCount) {
     if (bWaitAll) {
-      manager.getFenceService().WaitSignaled(nCount, lpHandles);
+      manager.getFenceService().waitSignaled(nCount, lpHandles);
     } else {
-      manager.getFenceService().WaitSignaled(lpHandles[ret - WAIT_OBJECT_0]);
+      manager.getFenceService().waitSignaled(lpHandles[ret - WAIT_OBJECT_0]);
     }
   }
   return ret;
@@ -64,9 +64,9 @@ DWORD WaitForMultipleObjectsEx(
 
   if (ret < WAIT_OBJECT_0 + nCount) {
     if (bWaitAll) {
-      manager.getFenceService().WaitSignaled(nCount, lpHandles);
+      manager.getFenceService().waitSignaled(nCount, lpHandles);
     } else {
-      manager.getFenceService().WaitSignaled(lpHandles[ret - WAIT_OBJECT_0]);
+      manager.getFenceService().waitSignaled(lpHandles[ret - WAIT_OBJECT_0]);
     }
   }
   return ret;
@@ -82,7 +82,7 @@ DWORD SignalObjectAndWait(HANDLE hObjectToSignal,
       manager.getKernel32DispatchTable().WaitForSingleObject(hObjectToWaitOn, dwMilliseconds);
 
   if (ret == WAIT_OBJECT_0) {
-    manager.getFenceService().WaitSignaled(hObjectToWaitOn, hObjectToSignal);
+    manager.getFenceService().waitSignaled(hObjectToWaitOn, hObjectToSignal);
   }
 
   return ret;

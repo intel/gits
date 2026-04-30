@@ -27,29 +27,29 @@ void AnalyzerExecuteIndirectDump::DumpArgumentBuffer(
     BarrierState countBufferState) {
 
   ExecuteIndirectDumpInfo* dumpInfo = new ExecuteIndirectDumpInfo();
-  dumpInfo->CommandSignature = commandSignature;
+  dumpInfo->commandSignature = commandSignature;
   dumpInfo->Offset = argumentBufferOffset;
   dumpInfo->Size = commandSignature->ByteStride * maxCommandCount;
   if (countBuffer) {
-    dumpInfo->CountDumpInfo.Offset = countBufferOffset;
-    dumpInfo->CountDumpInfo.Size = sizeof(unsigned);
+    dumpInfo->countDumpInfo.Offset = countBufferOffset;
+    dumpInfo->countDumpInfo.Size = sizeof(unsigned);
   }
 
   StageResource(commandList, argumentBuffer, argumentBufferState, *dumpInfo);
   if (countBuffer) {
-    StageResource(commandList, countBuffer, countBufferState, dumpInfo->CountDumpInfo, true);
+    StageResource(commandList, countBuffer, countBufferState, dumpInfo->countDumpInfo, true);
   }
 }
 
 void AnalyzerExecuteIndirectDump::DumpStagedResource(DumpInfo& dumpInfo) {
   ExecuteIndirectDumpInfo& info = static_cast<ExecuteIndirectDumpInfo&>(dumpInfo);
-  unsigned count = info.Size / info.CommandSignature->ByteStride;
-  if (info.CountDumpInfo.StagingBuffer) {
+  unsigned count = info.Size / info.commandSignature->ByteStride;
+  if (info.countDumpInfo.StagingBuffer) {
     void* data{};
-    HRESULT hr = info.CountDumpInfo.StagingBuffer->Map(0, nullptr, &data);
+    HRESULT hr = info.countDumpInfo.StagingBuffer->Map(0, nullptr, &data);
     GITS_ASSERT(hr == S_OK);
     count = std::min(count, *static_cast<unsigned*>(data));
-    info.CountDumpInfo.StagingBuffer->Unmap(0, nullptr);
+    info.countDumpInfo.StagingBuffer->Unmap(0, nullptr);
   }
   void* data{};
   HRESULT hr = info.StagingBuffer->Map(0, nullptr, &data);
@@ -67,10 +67,10 @@ void AnalyzerExecuteIndirectDump::DumpArgumentBuffer(ExecuteIndirectDumpInfo& du
 
   unsigned offset = 0;
   for (unsigned i = 0; i < argumentCount; ++i) {
-    offset = i * dumpInfo.CommandSignature->ByteStride;
+    offset = i * dumpInfo.commandSignature->ByteStride;
 
-    for (unsigned j = 0; j < dumpInfo.CommandSignature->NumArgumentDescs; ++j) {
-      const D3D12_INDIRECT_ARGUMENT_DESC& desc = dumpInfo.CommandSignature->pArgumentDescs[j];
+    for (unsigned j = 0; j < dumpInfo.commandSignature->NumArgumentDescs; ++j) {
+      const D3D12_INDIRECT_ARGUMENT_DESC& desc = dumpInfo.commandSignature->pArgumentDescs[j];
       switch (desc.Type) {
       case D3D12_INDIRECT_ARGUMENT_TYPE_DRAW: {
         offset += sizeof(D3D12_DRAW_ARGUMENTS);

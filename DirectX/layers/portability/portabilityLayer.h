@@ -26,7 +26,7 @@ class PortabilityLayer : public Layer {
 
 public:
   using ResourceRegistrationCallback =
-      std::function<void(unsigned resourceKey, ID3D12Resource* resource)>;
+      std::function<void(unsigned ResourceKey, ID3D12Resource* resource)>;
 
   PortabilityLayer();
   PortabilityLayer(ResourceRegistrationCallback registerResource);

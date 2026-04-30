@@ -3555,6 +3555,14 @@ VkDeviceAddress getAccelerationStructureDeviceAddress(
   return drvVk.vkGetAccelerationStructureDeviceAddressUnifiedGITS(device, &addressInfo);
 }
 
+VkAccelerationStructureBuildControlDataGITS prepareAccelerationStructureControlData(
+    VkCommandBuffer commandBuffer) {
+  return {
+      commandBuffer,                         // VkCommandBuffer commandBuffer;
+      getCommandExecutionSide(commandBuffer) // VkCommandExecutionSideGITS executionSide;
+  };
+}
+
 namespace {
 
 VkShaderModule createShaderModule(VkDevice device, uint32_t codeSize, uint32_t const* codePtr) {

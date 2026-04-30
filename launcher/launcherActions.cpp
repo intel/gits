@@ -8,10 +8,8 @@
 
 #include "launcherActions.h"
 
-#include <cstdlib>
 #ifdef _WIN32
 #include <windows.h>
-#include <shellapi.h>
 #else
 #include <unistd.h>
 #include <limits.h>
@@ -481,46 +479,4 @@ bool OpenFolder(const std::filesystem::path& path) {
 bool OpenFolder(const std::string& path) {
   return OpenFolder(std::filesystem::path(path));
 }
-
-std::string CreateEmailBodyWithLog(const std::string& logText) {
-  return std::string(Labels::EMAIL_LOG_BODY_HEADER) + logText;
-}
-
-void SendLogByEmail(const std::string& recipient,
-                    const std::string& subject,
-                    const std::string& body) {
-  auto urlEncode = [](const std::string& str) -> std::string {
-    std::string encoded;
-    encoded.reserve(str.size() * 3);
-    for (unsigned char c : str) {
-      if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-' ||
-          c == '_' || c == '.' || c == '~') {
-        encoded += static_cast<char>(c);
-      } else if (c == ' ') {
-        encoded += "%20";
-      } else if (c == '\n') {
-        encoded += "%0A";
-      } else if (c == '\r') {
-      } else {
-        char buf[4];
-        snprintf(buf, sizeof(buf), "%%%02X", c);
-        encoded += buf;
-      }
-    }
-    return encoded;
-  };
-
-  std::string mailto =
-      "mailto:" + recipient + "?subject=" + urlEncode(subject) + "&body=" + urlEncode(body);
-#ifdef _WIN32
-  ShellExecuteA(nullptr, "open", mailto.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
-#else
-  std::string command = "xdg-open \"" + mailto + "\"";
-  if (std::system(command.c_str()) != 0) {
-    LOG_WARNING << "Failed to open email client via xdg-open";
-  }
-#endif
-  LOG_INFO << "Opening email client to send log to " << Labels::EMAIL_LOG_RECIPIENT;
-}
-
 } // namespace gits::gui

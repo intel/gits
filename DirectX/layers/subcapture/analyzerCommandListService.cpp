@@ -347,24 +347,24 @@ void AnalyzerCommandListService::Present() {
   m_FirstFrame = false;
 }
 
-void AnalyzerCommandListService::SetBindlessDescriptors(unsigned rootSignatureKey,
-                                                        unsigned descriptorHeapKey,
+void AnalyzerCommandListService::SetBindlessDescriptors(unsigned RootSignatureKey,
+                                                        unsigned DescriptorHeapKey,
                                                         D3D12_DESCRIPTOR_HEAP_TYPE heapType,
                                                         unsigned heapNumDescriptors) {
-  if (!rootSignatureKey || !descriptorHeapKey) {
+  if (!RootSignatureKey || !DescriptorHeapKey) {
     return;
   }
   std::vector<unsigned> Indexes = m_RootSignatureService.GetBindlessDescriptorIndexes(
-      rootSignatureKey, descriptorHeapKey, heapType, heapNumDescriptors);
+      RootSignatureKey, DescriptorHeapKey, heapType, heapNumDescriptors);
   for (unsigned index : Indexes) {
-    DescriptorState* state = m_DescriptorService.GetDescriptorState(descriptorHeapKey, index);
+    DescriptorState* state = m_DescriptorService.GetDescriptorState(DescriptorHeapKey, index);
     if (state) {
       AddObjectForRestore(state->ResourceKey);
       AddObjectForRestore(state->AuxiliaryResourceKey);
     }
-    m_Descriptors.insert({descriptorHeapKey, index});
+    m_Descriptors.insert({DescriptorHeapKey, index});
   }
-  AddObjectForRestore(descriptorHeapKey);
+  AddObjectForRestore(DescriptorHeapKey);
 }
 
 bool AnalyzerCommandListService::InRange() {
@@ -516,12 +516,12 @@ void AnalyzerCommandListService::CommandAnalysis(
   if (!c.m_BaseDescriptor.Value.ptr) {
     return;
   }
-  unsigned rootSignatureKey = m_CommandListInfos[c.m_Object.Key].computeRootSignature;
-  GITS_ASSERT(rootSignatureKey);
+  unsigned RootSignatureKey = m_CommandListInfos[c.m_Object.Key].computeRootSignature;
+  GITS_ASSERT(RootSignatureKey);
   unsigned numDescriptors = m_DescriptorHeapInfos[c.m_BaseDescriptor.InterfaceKey].numDescriptors;
   GITS_ASSERT(numDescriptors);
   std::vector<unsigned> Indexes = m_RootSignatureService.GetDescriptorTableIndexes(
-      rootSignatureKey, c.m_BaseDescriptor.InterfaceKey, c.m_RootParameterIndex.Value,
+      RootSignatureKey, c.m_BaseDescriptor.InterfaceKey, c.m_RootParameterIndex.Value,
       c.m_BaseDescriptor.Index, numDescriptors);
   for (unsigned index : Indexes) {
     DescriptorState* state =
@@ -540,12 +540,12 @@ void AnalyzerCommandListService::CommandAnalysis(
   if (!c.m_BaseDescriptor.Value.ptr) {
     return;
   }
-  unsigned rootSignatureKey = m_CommandListInfos[c.m_Object.Key].graphicsRootSignature;
-  GITS_ASSERT(rootSignatureKey);
+  unsigned RootSignatureKey = m_CommandListInfos[c.m_Object.Key].graphicsRootSignature;
+  GITS_ASSERT(RootSignatureKey);
   unsigned numDescriptors = m_DescriptorHeapInfos[c.m_BaseDescriptor.InterfaceKey].numDescriptors;
   GITS_ASSERT(numDescriptors);
   std::vector<unsigned> Indexes = m_RootSignatureService.GetDescriptorTableIndexes(
-      rootSignatureKey, c.m_BaseDescriptor.InterfaceKey, c.m_RootParameterIndex.Value,
+      RootSignatureKey, c.m_BaseDescriptor.InterfaceKey, c.m_RootParameterIndex.Value,
       c.m_BaseDescriptor.Index, numDescriptors);
   for (unsigned index : Indexes) {
     DescriptorState* state =

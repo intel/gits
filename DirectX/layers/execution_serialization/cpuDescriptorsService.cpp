@@ -15,27 +15,27 @@
 namespace gits {
 namespace DirectX {
 
-void CpuDescriptorsService::CreateCommandList(unsigned deviceKey) {
-  if (m_DeviceKey && m_DeviceKey != deviceKey) {
+void CpuDescriptorsService::createCommandList(unsigned DeviceKey) {
+  if (m_DeviceKey && m_DeviceKey != DeviceKey) {
     LOG_ERROR << "Execution serialization - multiple devices not handled";
   }
-  m_DeviceKey = deviceKey;
+  m_DeviceKey = DeviceKey;
 }
 
-void CpuDescriptorsService::ExecuteCommandLists(std::vector<unsigned>& commandListKeys) {
+void CpuDescriptorsService::executeCommandLists(std::vector<unsigned>& commandListKeys) {
   for (unsigned key : commandListKeys) {
     auto it = m_DescriptorsByCommandList.find(key);
     if (it != m_DescriptorsByCommandList.end()) {
       for (DescriptorHandle& descriptor : it->second) {
         switch (descriptor.Type) {
         case D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV:
-          m_UavDescriptorHeap.ClearDescriptor(descriptor.Index);
+          m_UavDescriptorHeap.clearDescriptor(descriptor.Index);
           break;
         case D3D12_DESCRIPTOR_HEAP_TYPE_RTV:
-          m_RtvDescriptorHeap.ClearDescriptor(descriptor.Index);
+          m_RtvDescriptorHeap.clearDescriptor(descriptor.Index);
           break;
         case D3D12_DESCRIPTOR_HEAP_TYPE_DSV:
-          m_DsvDescriptorHeap.ClearDescriptor(descriptor.Index);
+          m_DsvDescriptorHeap.clearDescriptor(descriptor.Index);
           break;
         }
       }
@@ -44,7 +44,7 @@ void CpuDescriptorsService::ExecuteCommandLists(std::vector<unsigned>& commandLi
   }
 }
 
-void CpuDescriptorsService::PreserveDescriptor(
+void CpuDescriptorsService::preserveDescriptor(
     ID3D12GraphicsCommandListOMSetRenderTargetsCommand& c) {
 
   unsigned heapKey{};
@@ -56,7 +56,7 @@ void CpuDescriptorsService::PreserveDescriptor(
     } else {
       ++heapIndex;
     }
-    unsigned preservedIndex = m_RtvDescriptorHeap.PreserveDescriptor(heapKey, heapIndex);
+    unsigned preservedIndex = m_RtvDescriptorHeap.preserveDescriptor(heapKey, heapIndex);
     m_DescriptorsByCommandList[c.m_Object.Key].push_back(
         DescriptorHandle{D3D12_DESCRIPTOR_HEAP_TYPE_RTV, preservedIndex});
     if (i == 0 || !c.m_RTsSingleHandleToDescriptorRange.Value) {
@@ -66,7 +66,7 @@ void CpuDescriptorsService::PreserveDescriptor(
   }
 
   if (c.m_pDepthStencilDescriptor.Value) {
-    unsigned preservedIndex = m_DsvDescriptorHeap.PreserveDescriptor(
+    unsigned preservedIndex = m_DsvDescriptorHeap.preserveDescriptor(
         c.m_pDepthStencilDescriptor.InterfaceKeys[0], c.m_pDepthStencilDescriptor.Indexes[0]);
     c.m_pDepthStencilDescriptor.InterfaceKeys[0] = m_DsvDescriptorHeap.m_DescriptorHeapKey;
     c.m_pDepthStencilDescriptor.Indexes[0] = preservedIndex;
@@ -75,9 +75,9 @@ void CpuDescriptorsService::PreserveDescriptor(
   }
 }
 
-void CpuDescriptorsService::PreserveDescriptor(
+void CpuDescriptorsService::preserveDescriptor(
     ID3D12GraphicsCommandListClearDepthStencilViewCommand& c) {
-  unsigned preservedIndex = m_DsvDescriptorHeap.PreserveDescriptor(
+  unsigned preservedIndex = m_DsvDescriptorHeap.preserveDescriptor(
       c.m_DepthStencilView.InterfaceKey, c.m_DepthStencilView.Index);
   c.m_DepthStencilView.InterfaceKey = m_DsvDescriptorHeap.m_DescriptorHeapKey;
   c.m_DepthStencilView.Index = preservedIndex;
@@ -85,9 +85,9 @@ void CpuDescriptorsService::PreserveDescriptor(
       DescriptorHandle{D3D12_DESCRIPTOR_HEAP_TYPE_DSV, preservedIndex});
 }
 
-void CpuDescriptorsService::PreserveDescriptor(
+void CpuDescriptorsService::preserveDescriptor(
     ID3D12GraphicsCommandListClearRenderTargetViewCommand& c) {
-  unsigned preservedIndex = m_RtvDescriptorHeap.PreserveDescriptor(
+  unsigned preservedIndex = m_RtvDescriptorHeap.preserveDescriptor(
       c.m_RenderTargetView.InterfaceKey, c.m_RenderTargetView.Index);
   c.m_RenderTargetView.InterfaceKey = m_RtvDescriptorHeap.m_DescriptorHeapKey;
   c.m_RenderTargetView.Index = preservedIndex;
@@ -95,9 +95,9 @@ void CpuDescriptorsService::PreserveDescriptor(
       DescriptorHandle{D3D12_DESCRIPTOR_HEAP_TYPE_RTV, preservedIndex});
 }
 
-void CpuDescriptorsService::PreserveDescriptor(
+void CpuDescriptorsService::preserveDescriptor(
     ID3D12GraphicsCommandListClearUnorderedAccessViewUintCommand& c) {
-  unsigned preservedIndex = m_UavDescriptorHeap.PreserveDescriptor(c.m_ViewCPUHandle.InterfaceKey,
+  unsigned preservedIndex = m_UavDescriptorHeap.preserveDescriptor(c.m_ViewCPUHandle.InterfaceKey,
                                                                    c.m_ViewCPUHandle.Index);
   c.m_ViewCPUHandle.InterfaceKey = m_UavDescriptorHeap.m_DescriptorHeapKey;
   c.m_ViewCPUHandle.Index = preservedIndex;
@@ -105,9 +105,9 @@ void CpuDescriptorsService::PreserveDescriptor(
       DescriptorHandle{D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, preservedIndex});
 }
 
-void CpuDescriptorsService::PreserveDescriptor(
+void CpuDescriptorsService::preserveDescriptor(
     ID3D12GraphicsCommandListClearUnorderedAccessViewFloatCommand& c) {
-  unsigned preservedIndex = m_UavDescriptorHeap.PreserveDescriptor(c.m_ViewCPUHandle.InterfaceKey,
+  unsigned preservedIndex = m_UavDescriptorHeap.preserveDescriptor(c.m_ViewCPUHandle.InterfaceKey,
                                                                    c.m_ViewCPUHandle.Index);
   c.m_ViewCPUHandle.InterfaceKey = m_UavDescriptorHeap.m_DescriptorHeapKey;
   c.m_ViewCPUHandle.Index = preservedIndex;
@@ -116,7 +116,7 @@ void CpuDescriptorsService::PreserveDescriptor(
 }
 
 template <unsigned SIZE>
-unsigned CpuDescriptorsService::DescriptorHeap<SIZE>::PreserveDescriptor(unsigned heapKey,
+unsigned CpuDescriptorsService::DescriptorHeap<SIZE>::preserveDescriptor(unsigned heapKey,
                                                                          unsigned heapIndex) {
   if (!m_DescriptorHeapKey) {
     createDescriptorHeap();
@@ -169,7 +169,7 @@ void CpuDescriptorsService::DescriptorHeap<SIZE>::createDescriptorHeap() {
 }
 
 template <unsigned SIZE>
-void CpuDescriptorsService::DescriptorHeap<SIZE>::ClearDescriptor(unsigned index) {
+void CpuDescriptorsService::DescriptorHeap<SIZE>::clearDescriptor(unsigned index) {
   m_DescriptorUsage.reset(index);
 }
 

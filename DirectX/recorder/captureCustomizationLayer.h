@@ -121,21 +121,21 @@ private:
 
     HeapInfo() = default;
     HeapInfo(D3D12_HEAP_PROPERTIES* p, D3D12_HEAP_FLAGS f) {
-      PropertiesPtr = p;
-      Properties = *p;
-      Flags = f;
+      this->PropertiesPtr = p;
+      this->Properties = *p;
+      this->Flags = f;
     }
     HeapInfo(D3D12_HEAP_PROPERTIES& p, D3D12_HEAP_FLAGS f) {
-      PropertiesPtr = &p;
-      Properties = p;
-      Flags = f;
+      this->PropertiesPtr = &p;
+      this->Properties = p;
+      this->Flags = f;
     }
   };
 
-  void FillGpuAddressArgument(D3D12_GPU_VIRTUAL_ADDRESS_Argument& arg);
-  void FillGpuDescriptorHandleArgument(DescriptorHandleArgument<D3D12_GPU_DESCRIPTOR_HANDLE>& arg,
+  void fillGpuAddressArgument(D3D12_GPU_VIRTUAL_ADDRESS_Argument& arg);
+  void fillGpuDescriptorHandleArgument(DescriptorHandleArgument<D3D12_GPU_DESCRIPTOR_HANDLE>& arg,
                                        D3D12_DESCRIPTOR_HEAP_TYPE heapType);
-  void FillCpuDescriptorHandleArgument(DescriptorHandleArgument<D3D12_CPU_DESCRIPTOR_HANDLE>& arg,
+  void fillCpuDescriptorHandleArgument(DescriptorHandleArgument<D3D12_CPU_DESCRIPTOR_HANDLE>& arg,
                                        D3D12_DESCRIPTOR_HEAP_TYPE heapType);
 
   static thread_local HeapInfo m_HeapInfo;

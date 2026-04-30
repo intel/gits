@@ -35,8 +35,7 @@ public:
     REVERT,
     UNDO,
     REDO,
-    CHECK,
-    SEND_BY_EMAIL
+    CHECK
   };
 
   struct Config {
@@ -62,7 +61,6 @@ public:
   void SetSaveCallback(std::function<void(std::filesystem::path)> callback);
   void SetRevertCallback(std::function<void(std::filesystem::path)> callback);
   void SetCheckCallback(std::function<bool(const std::string&)> callback);
-  void SetSendByEmailCallback(std::function<void(const std::string&)> callback);
 
   void SetConfig(const Config& cfg);
   Config& GetConfig();
@@ -91,7 +89,6 @@ private:
   std::function<void(std::filesystem::path)> m_OnSave;
   std::function<void(std::filesystem::path)> m_OnRevert;
   std::function<bool(const std::string&)> m_OnCheck;
-  std::function<void(const std::string&)> m_OnSendByEmail;
 
 private:
   std::string m_Name;

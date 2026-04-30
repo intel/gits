@@ -1362,6 +1362,14 @@ std::vector<uint32_t> getRayTracingArraySizes(
   return sizes;
 }
 
+VkCommandExecutionSideGITS getCommandExecutionSide(VkCommandBuffer commandBuffer) {
+  if (commandBuffer != VK_NULL_HANDLE) {
+    return VK_COMMAND_EXECUTION_SIDE_DEVICE_GITS;
+  } else {
+    return VK_COMMAND_EXECUTION_SIDE_HOST_GITS;
+  }
+}
+
 const void* getPNextStructure(const void* pNext, VkStructureType structureType) {
   const VkBaseInStructure* pNextPtr = (const VkBaseInStructure*)pNext;
   while (pNextPtr != nullptr) {

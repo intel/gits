@@ -16,13 +16,13 @@ namespace gits {
 namespace DirectX {
 
 void ResourcePlacementCapture::createPlacedResource(unsigned heapKey,
-                                                    unsigned resourceKey,
+                                                    unsigned ResourceKey,
                                                     UINT64 offset,
                                                     ID3D12Device* device,
                                                     D3D12_RESOURCE_DESC& desc) {
   ResourcePlacementInfo info{};
   info.heapKey = heapKey;
-  info.key = resourceKey;
+  info.key = ResourceKey;
   info.offset = offset;
   info.desc = desc;
 

@@ -1556,23 +1556,29 @@ struct CAccelerationStructureKHRState : public UniqueResourceHandle {
     std::shared_ptr<CAccelerationStructureKHRState> srcAccelerationStructureStateStore;
     CVkAccelerationStructureBuildGeometryInfoKHRData buildGeometryInfoData;
     CVkAccelerationStructureBuildRangeInfoKHRDataArray buildRangeInfoDataArray;
+    VkAccelerationStructureBuildControlDataGITS controlData;
 
     CBuildInfo(const VkAccelerationStructureBuildGeometryInfoKHR* _pBuildGeometryInfo,
                const VkAccelerationStructureBuildRangeInfoKHR* _pBuildRangeInfos,
+               VkAccelerationStructureBuildControlDataGITS _controlData,
                std::shared_ptr<CAccelerationStructureKHRState> _srcAccelerationStructureState = {})
         : srcAccelerationStructureStateStore(std::move(_srcAccelerationStructureState)),
-          buildGeometryInfoData(_pBuildGeometryInfo),
-          buildRangeInfoDataArray(_pBuildGeometryInfo->geometryCount, _pBuildRangeInfos) {}
+          buildGeometryInfoData(_pBuildGeometryInfo, _pBuildRangeInfos, _controlData),
+          buildRangeInfoDataArray(_pBuildGeometryInfo->geometryCount, _pBuildRangeInfos),
+          controlData(_controlData) {}
   };
 
   struct CCopyInfo {
     std::shared_ptr<CAccelerationStructureKHRState> srcAccelerationStructureStateStore;
     CVkCopyAccelerationStructureInfoKHRData copyAccelerationStructureInfoData;
+    VkCommandExecutionSideGITS executionSide;
 
     CCopyInfo(const VkCopyAccelerationStructureInfoKHR* _pCopyInfo,
-              const std::shared_ptr<CAccelerationStructureKHRState>& _srcAccelerationStructureState)
+              const std::shared_ptr<CAccelerationStructureKHRState>& _srcAccelerationStructureState,
+              VkCommandExecutionSideGITS _executionSide)
         : srcAccelerationStructureStateStore(_srcAccelerationStructureState),
-          copyAccelerationStructureInfoData(_pCopyInfo) {}
+          copyAccelerationStructureInfoData(_pCopyInfo),
+          executionSide(_executionSide) {}
   };
 
   VkAccelerationStructureKHR accelerationStructureHandle;
@@ -1622,9 +1628,11 @@ struct CAccelerationStructureKHRState : public UniqueResourceHandle {
 struct CMicromapEXTState : public UniqueResourceHandle {
   struct CBuildInfo {
     CVkMicromapBuildInfoEXTData micromapBuildInfoData;
+    VkAccelerationStructureBuildControlDataGITS controlData;
 
-    CBuildInfo(const VkMicromapBuildInfoEXT* _pMicromapBuildInfo)
-        : micromapBuildInfoData(_pMicromapBuildInfo) {}
+    CBuildInfo(const VkMicromapBuildInfoEXT* _pMicromapBuildInfo,
+               VkAccelerationStructureBuildControlDataGITS _controlData)
+        : micromapBuildInfoData(_pMicromapBuildInfo, _controlData), controlData(_controlData) {}
   };
 
   struct CCopyInfo {

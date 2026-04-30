@@ -231,10 +231,10 @@ void ReservedResourcesService::InitTiledResource(TiledResource& tiledResource) {
 }
 
 void ReservedResourcesService::CopySourceBarrier(ID3D12Resource* resource,
-                                                 unsigned resourceKey,
-                                                 bool restoreState) {
+                                                 unsigned ResourceKey,
+                                                 bool RestoreState) {
   ResourceStateTrackingService::ResourceStates& resourceStates =
-      m_StateService.GetResourceStateTrackingService().GetResourceStates(resourceKey);
+      m_StateService.GetResourceStateTrackingService().GetResourceStates(ResourceKey);
   std::vector<D3D12_RESOURCE_BARRIER> barriers;
   std::vector<std::unique_ptr<D3D12_TEXTURE_BARRIER>> enhancedBarriers;
   std::vector<D3D12_BARRIER_GROUP> enhancedBarrierGroups;
@@ -246,9 +246,9 @@ void ReservedResourcesService::CopySourceBarrier(ID3D12Resource* resource,
         barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
         barrier.Transition.pResource = resource;
         barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-        barrier.Transition.StateBefore = restoreState ? D3D12_RESOURCE_STATE_COPY_SOURCE
+        barrier.Transition.StateBefore = RestoreState ? D3D12_RESOURCE_STATE_COPY_SOURCE
                                                       : resourceStates.SubresourceStates[0].State;
-        barrier.Transition.StateAfter = restoreState ? resourceStates.SubresourceStates[0].State
+        barrier.Transition.StateAfter = RestoreState ? resourceStates.SubresourceStates[0].State
                                                      : D3D12_RESOURCE_STATE_COPY_SOURCE;
         barriers.push_back(barrier);
       }
@@ -256,15 +256,15 @@ void ReservedResourcesService::CopySourceBarrier(ID3D12Resource* resource,
       if (resourceStates.SubresourceStates[0].Layout != D3D12_BARRIER_LAYOUT_COPY_SOURCE &&
           resourceStates.SubresourceStates[0].Layout != D3D12_BARRIER_LAYOUT_UNDEFINED) {
         D3D12_TEXTURE_BARRIER* barrier = new D3D12_TEXTURE_BARRIER{};
-        barrier->SyncBefore = restoreState ? D3D12_BARRIER_SYNC_ALL : D3D12_BARRIER_SYNC_ALL;
-        barrier->SyncAfter = restoreState ? D3D12_BARRIER_SYNC_ALL : D3D12_BARRIER_SYNC_ALL;
+        barrier->SyncBefore = RestoreState ? D3D12_BARRIER_SYNC_ALL : D3D12_BARRIER_SYNC_ALL;
+        barrier->SyncAfter = RestoreState ? D3D12_BARRIER_SYNC_ALL : D3D12_BARRIER_SYNC_ALL;
         barrier->AccessBefore =
-            restoreState ? D3D12_BARRIER_ACCESS_COPY_SOURCE : D3D12_BARRIER_ACCESS_COMMON;
+            RestoreState ? D3D12_BARRIER_ACCESS_COPY_SOURCE : D3D12_BARRIER_ACCESS_COMMON;
         barrier->AccessAfter =
-            restoreState ? D3D12_BARRIER_ACCESS_COMMON : D3D12_BARRIER_ACCESS_COPY_SOURCE;
-        barrier->LayoutBefore = restoreState ? D3D12_BARRIER_LAYOUT_COPY_SOURCE
+            RestoreState ? D3D12_BARRIER_ACCESS_COMMON : D3D12_BARRIER_ACCESS_COPY_SOURCE;
+        barrier->LayoutBefore = RestoreState ? D3D12_BARRIER_LAYOUT_COPY_SOURCE
                                              : resourceStates.SubresourceStates[0].Layout;
-        barrier->LayoutAfter = restoreState ? resourceStates.SubresourceStates[0].Layout
+        barrier->LayoutAfter = RestoreState ? resourceStates.SubresourceStates[0].Layout
                                             : D3D12_BARRIER_LAYOUT_COPY_SOURCE;
         barrier->pResource = resource;
         barrier->Subresources.IndexOrFirstMipLevel = 0;
@@ -284,9 +284,9 @@ void ReservedResourcesService::CopySourceBarrier(ID3D12Resource* resource,
           barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
           barrier.Transition.pResource = resource;
           barrier.Transition.Subresource = i;
-          barrier.Transition.StateBefore = restoreState ? D3D12_RESOURCE_STATE_COPY_SOURCE
+          barrier.Transition.StateBefore = RestoreState ? D3D12_RESOURCE_STATE_COPY_SOURCE
                                                         : resourceStates.SubresourceStates[i].State;
-          barrier.Transition.StateAfter = restoreState ? resourceStates.SubresourceStates[i].State
+          barrier.Transition.StateAfter = RestoreState ? resourceStates.SubresourceStates[i].State
                                                        : D3D12_RESOURCE_STATE_COPY_SOURCE;
           barriers.push_back(barrier);
         }
@@ -294,15 +294,15 @@ void ReservedResourcesService::CopySourceBarrier(ID3D12Resource* resource,
         if (resourceStates.SubresourceStates[i].Layout != D3D12_BARRIER_LAYOUT_COPY_SOURCE &&
             resourceStates.SubresourceStates[i].Layout != D3D12_BARRIER_LAYOUT_UNDEFINED) {
           D3D12_TEXTURE_BARRIER* barrier = new D3D12_TEXTURE_BARRIER{};
-          barrier->SyncBefore = restoreState ? D3D12_BARRIER_SYNC_ALL : D3D12_BARRIER_SYNC_ALL;
-          barrier->SyncAfter = restoreState ? D3D12_BARRIER_SYNC_ALL : D3D12_BARRIER_SYNC_ALL;
+          barrier->SyncBefore = RestoreState ? D3D12_BARRIER_SYNC_ALL : D3D12_BARRIER_SYNC_ALL;
+          barrier->SyncAfter = RestoreState ? D3D12_BARRIER_SYNC_ALL : D3D12_BARRIER_SYNC_ALL;
           barrier->AccessBefore =
-              restoreState ? D3D12_BARRIER_ACCESS_COPY_SOURCE : D3D12_BARRIER_ACCESS_COMMON;
+              RestoreState ? D3D12_BARRIER_ACCESS_COPY_SOURCE : D3D12_BARRIER_ACCESS_COMMON;
           barrier->AccessAfter =
-              restoreState ? D3D12_BARRIER_ACCESS_COMMON : D3D12_BARRIER_ACCESS_COPY_SOURCE;
-          barrier->LayoutBefore = restoreState ? D3D12_BARRIER_LAYOUT_COPY_SOURCE
+              RestoreState ? D3D12_BARRIER_ACCESS_COMMON : D3D12_BARRIER_ACCESS_COPY_SOURCE;
+          barrier->LayoutBefore = RestoreState ? D3D12_BARRIER_LAYOUT_COPY_SOURCE
                                                : resourceStates.SubresourceStates[i].Layout;
-          barrier->LayoutAfter = restoreState ? resourceStates.SubresourceStates[i].Layout
+          barrier->LayoutAfter = RestoreState ? resourceStates.SubresourceStates[i].Layout
                                               : D3D12_BARRIER_LAYOUT_COPY_SOURCE;
           barrier->pResource = resource;
           barrier->Subresources.IndexOrFirstMipLevel = i;
@@ -355,8 +355,8 @@ void ReservedResourcesService::DestroyObject(unsigned objectKey) {
 }
 
 ReservedResourcesService::TiledResource* ReservedResourcesService::GetTiledResource(
-    unsigned resourceKey) {
-  auto it = m_Resources.find(resourceKey);
+    unsigned ResourceKey) {
+  auto it = m_Resources.find(ResourceKey);
   if (it == m_Resources.end()) {
     return nullptr;
   }
@@ -461,14 +461,14 @@ void ReservedResourcesService::UpdateTileMappings(TiledResource& tiledResource,
   }
 }
 
-void ReservedResourcesService::RestoreContent(const std::vector<unsigned>& resourceKeys) {
+void ReservedResourcesService::RestoreContent(const std::vector<unsigned>& ResourceKeys) {
   if (m_Resources.empty()) {
     return;
   }
 
   InitRestore();
 
-  for (unsigned ResourceKey : resourceKeys) {
+  for (unsigned ResourceKey : ResourceKeys) {
     if (m_Resources.find(ResourceKey) == m_Resources.end()) {
       continue;
     }
@@ -617,7 +617,7 @@ void ReservedResourcesService::RestoreContent(const std::vector<unsigned>& resou
 
     // create upload resource with resources contents in subcaptured stream
 
-    unsigned deviceKey = m_StateService.GetDeviceKey();
+    unsigned DeviceKey = m_StateService.GetDeviceKey();
 
     void* mappedData{};
     hr = readbackResource->Map(0, nullptr, &mappedData);
@@ -729,7 +729,7 @@ void ReservedResourcesService::RestoreContent(const std::vector<unsigned>& resou
     if (!heapKeys.empty()) {
       ID3D12DeviceMakeResidentCommand MakeResident;
       MakeResident.Key = m_StateService.GetUniqueCommandKey();
-      MakeResident.m_Object.Key = deviceKey;
+      MakeResident.m_Object.Key = DeviceKey;
       MakeResident.m_NumObjects.Value = heapKeys.size();
       ID3D12Pageable* fakePtr = reinterpret_cast<ID3D12Pageable*>(1);
       MakeResident.m_ppObjects.Value = &fakePtr;
@@ -782,7 +782,7 @@ void ReservedResourcesService::RestoreContent(const std::vector<unsigned>& resou
     if (!heapKeys.empty()) {
       ID3D12DeviceEvictCommand Evict;
       Evict.Key = m_StateService.GetUniqueCommandKey();
-      Evict.m_Object.Key = deviceKey;
+      Evict.m_Object.Key = DeviceKey;
       Evict.m_NumObjects.Value = heapKeys.size();
       ID3D12Pageable* fakePtr = reinterpret_cast<ID3D12Pageable*>(1);
       Evict.m_ppObjects.Value = &fakePtr;
@@ -837,7 +837,7 @@ void ReservedResourcesService::InitRestore() {
 
   m_UploadResourceSize = maxUploadSize;
 
-  unsigned deviceKey = m_StateService.GetDeviceKey();
+  unsigned DeviceKey = m_StateService.GetDeviceKey();
 
   if (m_UploadResourceSize) {
     m_UploadResourceKey = m_StateService.GetUniqueObjectKey();
@@ -864,7 +864,7 @@ void ReservedResourcesService::InitRestore() {
 
     ID3D12DeviceCreateCommittedResourceCommand createUploadResource;
     createUploadResource.Key = m_StateService.GetUniqueCommandKey();
-    createUploadResource.m_Object.Key = deviceKey;
+    createUploadResource.m_Object.Key = DeviceKey;
     createUploadResource.m_pHeapProperties.Value = &heapPropertiesUpload;
     createUploadResource.m_HeapFlags.Value = D3D12_HEAP_FLAG_NONE;
     createUploadResource.m_pDesc.Value = &resourceDesc;
@@ -894,7 +894,7 @@ void ReservedResourcesService::InitRestore() {
   commandQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_COPY;
   ID3D12DeviceCreateCommandQueueCommand CreateCommandQueue;
   CreateCommandQueue.Key = m_StateService.GetUniqueCommandKey();
-  CreateCommandQueue.m_Object.Key = deviceKey;
+  CreateCommandQueue.m_Object.Key = DeviceKey;
   CreateCommandQueue.m_pDesc.Value = &commandQueueDesc;
   CreateCommandQueue.m_riid.Value = IID_ID3D12CommandQueue;
   CreateCommandQueue.m_ppCommandQueue.Key = m_CommandQueueKey;
@@ -903,7 +903,7 @@ void ReservedResourcesService::InitRestore() {
   m_CommandAllocatorKey = m_StateService.GetUniqueObjectKey();
   ID3D12DeviceCreateCommandAllocatorCommand createCommandAllocator;
   createCommandAllocator.Key = m_StateService.GetUniqueCommandKey();
-  createCommandAllocator.m_Object.Key = deviceKey;
+  createCommandAllocator.m_Object.Key = DeviceKey;
   createCommandAllocator.m_type.Value = D3D12_COMMAND_LIST_TYPE_COPY;
   createCommandAllocator.m_riid.Value = IID_ID3D12CommandAllocator;
   createCommandAllocator.m_ppCommandAllocator.Key = m_CommandAllocatorKey;
@@ -913,7 +913,7 @@ void ReservedResourcesService::InitRestore() {
   m_CommandListKey = m_StateService.GetUniqueObjectKey();
   ID3D12DeviceCreateCommandListCommand createCommandList;
   createCommandList.Key = m_StateService.GetUniqueCommandKey();
-  createCommandList.m_Object.Key = deviceKey;
+  createCommandList.m_Object.Key = DeviceKey;
   createCommandList.m_nodeMask.Value = 0;
   createCommandList.m_pCommandAllocator.Key = createCommandAllocator.m_ppCommandAllocator.Key;
   createCommandList.m_type.Value = D3D12_COMMAND_LIST_TYPE_COPY;
@@ -925,7 +925,7 @@ void ReservedResourcesService::InitRestore() {
   m_FenceKey = m_StateService.GetUniqueObjectKey();
   ID3D12DeviceCreateFenceCommand createFence;
   createFence.Key = m_StateService.GetUniqueCommandKey();
-  createFence.m_Object.Key = deviceKey;
+  createFence.m_Object.Key = DeviceKey;
   createFence.m_InitialValue.Value = 0;
   createFence.m_Flags.Value = D3D12_FENCE_FLAG_NONE;
   createFence.m_riid.Value = IID_ID3D12Fence;

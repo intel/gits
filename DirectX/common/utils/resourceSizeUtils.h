@@ -15,8 +15,8 @@ namespace DirectX {
 
 void GetCopyableFootprintsSafe(ID3D12Device* device,
                                const D3D12_RESOURCE_DESC* pResourceDesc,
-                               UINT firstSubresource,
-                               UINT numSubresources,
+                               UINT FirstSubresource,
+                               UINT NumSubresources,
                                UINT64 BaseOffset,
                                D3D12_PLACED_SUBRESOURCE_FOOTPRINT* pLayouts,
                                UINT* pNumRows,

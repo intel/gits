@@ -703,20 +703,20 @@ void ResourceContentRestore::CleanupRestoreUnmappableResources() {
 
 void ResourceContentRestore::RestoreBackBuffer(ID3D12CommandQueue* commandQueue,
                                                unsigned commandQueueKey,
-                                               unsigned resourceKey,
+                                               unsigned ResourceKey,
                                                ID3D12Resource* resource) {
   m_CommandQueue = commandQueue;
   m_CommandQueueKey = commandQueueKey;
 
   D3D12_RESOURCE_DESC desc = resource->GetDesc();
   if (desc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER) {
-    m_UnmappableResourceBuffers[resourceKey] = ResourceInfo{resource, resourceKey};
+    m_UnmappableResourceBuffers[ResourceKey] = ResourceInfo{resource, ResourceKey};
   } else {
-    m_UnmappableResourceTextures[resourceKey] = ResourceInfo{resource, resourceKey};
+    m_UnmappableResourceTextures[ResourceKey] = ResourceInfo{resource, ResourceKey};
   }
 
   std::vector<unsigned> ResourceKeys;
-  ResourceKeys.push_back(resourceKey);
+  ResourceKeys.push_back(ResourceKey);
   RestoreContent(ResourceKeys, true);
 }
 
@@ -727,8 +727,8 @@ UINT64 ResourceContentRestore::GetAlignedSize(UINT64 size) {
                    D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT;
 }
 
-bool ResourceContentRestore::IsBarrierRestricted(unsigned resourceKey) {
-  ObjectState* resourceObjectState = m_StateService.GetState(resourceKey);
+bool ResourceContentRestore::IsBarrierRestricted(unsigned ResourceKey) {
+  ObjectState* resourceObjectState = m_StateService.GetState(ResourceKey);
   GITS_ASSERT(resourceObjectState);
   return static_cast<ResourceState*>(resourceObjectState)->BarrierRestricted;
 }

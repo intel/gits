@@ -35,7 +35,7 @@ public:
       : m_StateService(stateService) {}
   void StoreBuffer(ID3D12GraphicsCommandList* commandList,
                    ID3D12Resource* resource,
-                   unsigned resourceKey,
+                   unsigned ResourceKey,
                    unsigned offset,
                    unsigned size,
                    BarrierState resourceState,
@@ -45,8 +45,8 @@ public:
     return m_RestoreBuildInfos[buildCallKey];
   }
   void RemoveBuild(unsigned buildCallKey);
-  void SetDeviceKey(unsigned deviceKey) {
-    m_DeviceKey = deviceKey;
+  void SetDeviceKey(unsigned DeviceKey) {
+    m_DeviceKey = DeviceKey;
   }
 
 protected:
