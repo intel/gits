@@ -20,7 +20,7 @@ namespace DirectX {
 
 void AccelerationStructuresBufferContentRestore::StoreBuffer(ID3D12GraphicsCommandList* commandList,
                                                              ID3D12Resource* resource,
-                                                             unsigned ResourceKey,
+                                                             unsigned resourceKey,
                                                              unsigned offset,
                                                              unsigned size,
                                                              BarrierState resourceState,
@@ -30,10 +30,10 @@ void AccelerationStructuresBufferContentRestore::StoreBuffer(ID3D12GraphicsComma
   info->Offset = offset;
   info->Size = size;
   info->BuildCallKey = buildCallKey;
-  info->ResourceKey = ResourceKey;
+  info->ResourceKey = resourceKey;
   info->IsMappable = isMappable;
   info->DumpName = L"BLAS build " + std::to_wstring(buildCallKey) + L" resource O" +
-                   std::to_wstring(ResourceKey);
+                   std::to_wstring(resourceKey);
 
   StageResource(commandList, resource, resourceState, *info);
 

@@ -56,19 +56,19 @@ ${generate_return(function)} ${function.name}Wrapper(${'' if params else ') {'}
         %endif
     %for param in function.params:
     %if param.is_context:
-    command.m_${param.name}.Key = manager.${get_context_map(function)}.getKey(reinterpret_cast<std::uintptr_t>(${param.name}));
+    command.m_${param.name}.Key = manager.${get_context_map(function)}.GetKey(reinterpret_cast<std::uintptr_t>(${param.name}));
     %elif param.name == 'hXeLLContext' and function.name == 'xefgSwapChainSetLatencyReduction':
-    command.m_${param.name}.Key = manager.getXellContextMap().getKey(reinterpret_cast<std::uintptr_t>(${param.name}));
+    command.m_${param.name}.Key = manager.getXellContextMap().GetKey(reinterpret_cast<std::uintptr_t>(${param.name}));
     %elif param.is_interface and not param.is_interface_creation and not param.is_const:
     %if not param.sal_size:
-    updateInterface(command.m_${param.name}, ${param.name});
+    UpdateInterface(command.m_${param.name}, ${param.name});
     %else:
-    UpdateInterface<InterfaceArrayArgument<${param.type}>, ${param.type}> update_${param.name}(command.m_${param.name}, ${param.name});
+    UpdateInterfaceT<InterfaceArrayArgument<${param.type}>, ${param.type}> update_${param.name}(command.m_${param.name}, ${param.name});
     %endif
     %elif param.structure_with_interfaces and param.sal_size:
-    UpdateInterface<${param.type}s_Argument, ${param.type}> update_${param.name}(command.m_${param.name}, ${param.name});
+    UpdateInterfaceT<${param.type}s_Argument, ${param.type}> update_${param.name}(command.m_${param.name}, ${param.name});
     %elif param.structure_with_interfaces:
-    UpdateInterface<${param.type}_Argument, ${param.type}> update_${param.name}(command.m_${param.name}, ${param.name});
+    UpdateInterfaceT<${param.type}_Argument, ${param.type}> update_${param.name}(command.m_${param.name}, ${param.name});
     %endif
     %if is_xess_sdk_init_param(param):
     command.m_${param.name}.Key = manager.createWrapperKey(); // Used for subcapture restore order
@@ -95,7 +95,7 @@ ${generate_return(function)} ${function.name}Wrapper(${'' if params else ') {'}
     if (result == ${get_success_return_value(function)}) {
       command.m_${param.name}.Key = manager.createWrapperKey();
       auto context = reinterpret_cast<std::uintptr_t>(*command.m_${param.name}.Value);
-      manager.${get_context_map(function)}.setContext(context, command.m_${param.name}.Key);
+      manager.${get_context_map(function)}.SetContext(context, command.m_${param.name}.Key);
     }
     %endif
     %endfor
@@ -159,18 +159,18 @@ ${generate_return(function)} ${interface.name}Wrapper::${function.name}(${'' if 
         ${args_simple[-1]});
         %endif
 
-    updateInterface(command.m_Object, this);
+    UpdateInterface(command.m_Object, this);
     %for param in function.params:
     %if param.is_interface and not param.is_interface_creation and not param.is_const:
     %if not param.sal_size:
-    updateInterface(command.m_${param.name}, ${param.name});
+    UpdateInterface(command.m_${param.name}, ${param.name});
     %else:
-    UpdateInterface<InterfaceArrayArgument<${param.type}>, ${param.type}> update_${param.name}(command.m_${param.name}, ${param.name});
+    UpdateInterfaceT<InterfaceArrayArgument<${param.type}>, ${param.type}> update_${param.name}(command.m_${param.name}, ${param.name});
     %endif
     %elif param.structure_with_interfaces and param.sal_size:
-    UpdateInterface<${param.type}s_Argument, ${param.type}> update_${param.name}(command.m_${param.name}, ${param.name});
+    UpdateInterfaceT<${param.type}s_Argument, ${param.type}> update_${param.name}(command.m_${param.name}, ${param.name});
     %elif param.structure_with_interfaces:
-    UpdateInterface<${param.type}_Argument, ${param.type}> update_${param.name}(command.m_${param.name}, ${param.name});
+    UpdateInterfaceT<${param.type}_Argument, ${param.type}> update_${param.name}(command.m_${param.name}, ${param.name});
     %endif
     %endfor
 
@@ -200,7 +200,7 @@ ${generate_return(function)} ${interface.name}Wrapper::${function.name}(${'' if 
       layer->Post(command);
     }
   } else {
-      ${'result = ' if not function.ret.is_void else ''}getWrappedObject<${interface.name}>()->${function.name}(${'' if args else ');'}
+      ${'result = ' if not function.ret.is_void else ''}GetWrappedObject<${interface.name}>()->${function.name}(${'' if args else ');'}
         %if args:
         %for param in function.params[:-1]:
         ${param.name},

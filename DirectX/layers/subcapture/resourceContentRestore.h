@@ -26,11 +26,11 @@ public:
   ResourceContentRestore(StateTrackingService& stateService) : m_StateService(stateService) {}
   void AddCommittedResourceState(ResourceState* resourceState);
   void AddPlacedResourceState(ResourceState* resourceState);
-  void RestoreContent(const std::vector<unsigned>& ResourceKeys, bool backBuffer = false);
+  void RestoreContent(const std::vector<unsigned>& resourceKeys, bool backBuffer = false);
   void CleanupRestoreUnmappableResources();
   void RestoreBackBuffer(ID3D12CommandQueue* commandQueue,
                          unsigned commandQueueKey,
-                         unsigned ResourceKey,
+                         unsigned resourceKey,
                          ID3D12Resource* resource);
 
 private:
@@ -51,7 +51,7 @@ private:
       std::vector<std::pair<unsigned, D3D12_PLACED_SUBRESOURCE_FOOTPRINT>>& sizes);
   void InitRestoreUnmappableResources(bool backBuffer);
   UINT64 GetAlignedSize(UINT64 size);
-  bool IsBarrierRestricted(unsigned ResourceKey);
+  bool IsBarrierRestricted(unsigned resourceKey);
   ID3D12Resource* CreateAuxiliaryPlacedResource(unsigned primaryResourceKey);
   unsigned CreateSubcaptureAuxiliaryPlacedResource(unsigned primaryResourceKey);
   void EvictPrevResidencyObjects();

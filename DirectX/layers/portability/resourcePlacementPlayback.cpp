@@ -30,8 +30,8 @@ void ResourcePlacementPlayback::createHeap(ID3D12Device* device, unsigned heapKe
   }
 }
 
-void ResourcePlacementPlayback::createPlacedResource(unsigned ResourceKey, UINT64& offset) {
-  auto it = m_ChangedResourceOffsets.find(ResourceKey);
+void ResourcePlacementPlayback::createPlacedResource(unsigned resourceKey, UINT64& offset) {
+  auto it = m_ChangedResourceOffsets.find(resourceKey);
   if (it != m_ChangedResourceOffsets.end()) {
     offset = it->second;
   }

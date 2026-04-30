@@ -29,12 +29,12 @@ namespace DirectX {
 void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService& pluginService) {
   auto& cfg = Configurator::Get().directx;
 
-  auto registerResourceCallback = [&playerManager](unsigned ResourceKey, ID3D12Resource* resource) {
+  auto registerResourceCallback = [&playerManager](unsigned resourceKey, ID3D12Resource* resource) {
     if (!resource) {
       return;
     }
-    playerManager.AddObject(ResourceKey, resource);
-    playerManager.GetGpuAddressService().CreateResource(ResourceKey, resource);
+    playerManager.AddObject(resourceKey, resource);
+    playerManager.GetGpuAddressService().CreateResource(resourceKey, resource);
   };
 
   // Load layers from LayerGroups
@@ -97,18 +97,20 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
     if (cfg.player.debugLayer) {
       debugInfoLayer = std::make_unique<DebugInfoLayer>();
     }
-    if (playerManager.MultithreadedShaderCompilation()) {
-      multithreadedObjectCreationLayer =
-          std::make_unique<MultithreadedObjectCreationLayer>(playerManager);
-      multithreadedObjectAwaitLayer =
-          std::make_unique<MultithreadedObjectAwaitLayer>(playerManager);
-    }
     if (Configurator::IsHudEnabledForApi(ApiBool::DX)) {
       imGuiHUDLayer = std::make_unique<ImGuiHUDLayer>();
     }
     dllOverrideUseLayer = std::make_unique<DllOverrideUseLayer>(playerManager);
     if (cfg.player.cCode.enabled) {
       ccodeLayer = std::make_unique<CCodeLayer>();
+      const_cast<gits::Configuration&>(Configurator::Get())
+          .directx.player.multithreadedShaderCompilation = false;
+    }
+    if (cfg.player.multithreadedShaderCompilation) {
+      multithreadedObjectCreationLayer =
+          std::make_unique<MultithreadedObjectCreationLayer>(playerManager);
+      multithreadedObjectAwaitLayer =
+          std::make_unique<MultithreadedObjectAwaitLayer>(playerManager);
     }
   }
 

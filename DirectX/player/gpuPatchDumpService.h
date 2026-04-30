@@ -35,14 +35,14 @@ public:
                       CapturePlayerDescriptorHandleService& descriptorHandleService);
   void DumpInstances(ID3D12GraphicsCommandList* commandList,
                      ID3D12Resource* resource,
-                     unsigned ResourceKey,
+                     unsigned resourceKey,
                      unsigned size,
                      BarrierState resourceState,
                      unsigned callKey,
                      bool prePatch);
   void DumpInstancesArrayOfPointers(ID3D12GraphicsCommandList* commandList,
                                     ID3D12Resource* resource,
-                                    unsigned ResourceKey,
+                                    unsigned resourceKey,
                                     unsigned offset,
                                     unsigned size,
                                     BarrierState resourceState,

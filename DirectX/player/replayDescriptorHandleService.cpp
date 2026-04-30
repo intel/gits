@@ -40,22 +40,22 @@ void ReplayDescriptorHandleService::CreateDescriptorHeap(unsigned DescriptorHeap
   m_DescriptorHeaps[DescriptorHeapKey] = heapInfo;
 }
 
-size_t ReplayDescriptorHandleService::GetDescriptorHandle(unsigned DescriptorHeapKey,
+size_t ReplayDescriptorHandleService::GetDescriptorHandle(unsigned descriptorHeapKey,
                                                           HandleType handleType,
                                                           unsigned index) {
-  if (!DescriptorHeapKey) {
+  if (!descriptorHeapKey) {
     return 0;
   }
 
-  auto it = m_DescriptorHeaps.find(DescriptorHeapKey);
+  auto it = m_DescriptorHeaps.find(descriptorHeapKey);
   GITS_ASSERT(it != m_DescriptorHeaps.end());
   DescriptorHeapInfo& info = it->second;
   size_t start = handleType == HandleType::CpuHandle ? info.CpuStart : info.GpuStart;
   return start + index * info.Increment;
 }
 
-void ReplayDescriptorHandleService::DestroyDescriptorHeap(unsigned DescriptorHeapKey) {
-  m_DescriptorHeaps.erase(DescriptorHeapKey);
+void ReplayDescriptorHandleService::DestroyDescriptorHeap(unsigned descriptorHeapKey) {
+  m_DescriptorHeaps.erase(descriptorHeapKey);
 }
 
 } // namespace DirectX

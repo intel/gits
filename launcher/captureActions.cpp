@@ -245,7 +245,7 @@ bool CleanupRecorderFiles(Api api, gui::CapturePanel::CaptureCleanupOptions clea
     return false;
   }
 
-  std::filesystem::path targetDirectory = context.GetPathSafe(Path::CAPTURE_TARGET);
+  std::filesystem::path targetDirectory = context.GetPathSafe(Path::CAPTURE_TARGET).parent_path();
   if (targetDirectory.empty()) {
     LOG_ERROR << "Couldn't perform cleanup. No target directory was selected.";
     return false;

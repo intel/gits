@@ -51,7 +51,7 @@ void ResourceStateEnhanced::SetState(D3D12_RESOURCE_STATES state) {
       textureBarrier.SyncAfter = GetSync(m_State);
       textureBarrier.AccessBefore = m_CurrentState.Access;
       textureBarrier.AccessAfter = GetAccess(m_State);
-      textureBarrier.LayoutBefore = GetLayout(m_State);
+      textureBarrier.LayoutBefore = m_CurrentState.Layout;
       textureBarrier.LayoutAfter = GetLayout(m_State);
       textureBarrier.Subresources.IndexOrFirstMipLevel = m_Subresource;
       textureBarrier.pResource = m_Resource;
@@ -61,23 +61,33 @@ void ResourceStateEnhanced::SetState(D3D12_RESOURCE_STATES state) {
     }
     barrierGroup.NumBarriers = 1;
     m_CommandList7->Barrier(1, &barrierGroup);
+    m_BarrierSet = true;
 
   } else {
-    if (m_CurrentState.State != D3D12_RESOURCE_STATE_GENERIC_READ) {
-      if (m_CommandList->GetType() == D3D12_COMMAND_LIST_TYPE_COMPUTE) {
-        m_CurrentState.State &= ~D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
-      }
-      D3D12_RESOURCE_BARRIER barrier{};
-      barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-      barrier.Transition.pResource = m_Resource;
-      barrier.Transition.StateBefore = m_CurrentState.State;
-      barrier.Transition.StateAfter = m_State;
-      m_CommandList->ResourceBarrier(1, &barrier);
+    if (m_CurrentState.State == m_State) {
+      return;
     }
+    if (m_CurrentState.State == D3D12_RESOURCE_STATE_GENERIC_READ &&
+        state & D3D12_RESOURCE_STATE_GENERIC_READ) {
+      return;
+    }
+    if (m_CommandList->GetType() == D3D12_COMMAND_LIST_TYPE_COMPUTE) {
+      m_CurrentState.State &= ~D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+    }
+    D3D12_RESOURCE_BARRIER barrier{};
+    barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+    barrier.Transition.pResource = m_Resource;
+    barrier.Transition.StateBefore = m_CurrentState.State;
+    barrier.Transition.StateAfter = m_State;
+    m_CommandList->ResourceBarrier(1, &barrier);
+    m_BarrierSet = true;
   }
 }
 
 void ResourceStateEnhanced::RevertState() {
+  if (!m_BarrierSet) {
+    return;
+  }
   if (m_CurrentState.Enhanced) {
     D3D12_BUFFER_BARRIER barrier{};
     barrier.SyncBefore = GetSync(m_State);
@@ -94,14 +104,12 @@ void ResourceStateEnhanced::RevertState() {
     barrierGroup.pBufferBarriers = &barrier;
     m_CommandList7->Barrier(1, &barrierGroup);
   } else {
-    if (m_CurrentState.State != D3D12_RESOURCE_STATE_GENERIC_READ) {
-      D3D12_RESOURCE_BARRIER barrier{};
-      barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-      barrier.Transition.pResource = m_Resource;
-      barrier.Transition.StateBefore = m_State;
-      barrier.Transition.StateAfter = m_CurrentState.State;
-      m_CommandList->ResourceBarrier(1, &barrier);
-    }
+    D3D12_RESOURCE_BARRIER barrier{};
+    barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+    barrier.Transition.pResource = m_Resource;
+    barrier.Transition.StateBefore = m_State;
+    barrier.Transition.StateAfter = m_CurrentState.State;
+    m_CommandList->ResourceBarrier(1, &barrier);
   }
 }
 

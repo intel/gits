@@ -81,8 +81,8 @@ void CommandListExecutionService::FenceSignal(unsigned callKey,
   ExecuteReadyExecutables();
 }
 
-void CommandListExecutionService::CreateCommandQueue(unsigned DeviceKey, unsigned commandQueueKey) {
-  m_DeviceByCommandQueue[commandQueueKey] = DeviceKey;
+void CommandListExecutionService::CreateCommandQueue(unsigned deviceKey, unsigned commandQueueKey) {
+  m_DeviceByCommandQueue[commandQueueKey] = deviceKey;
 }
 
 void CommandListExecutionService::ExecuteReadyExecutables() {
@@ -102,11 +102,11 @@ void CommandListExecutionService::ExecuteExecutable(Execute& executable) {
   if (it == m_FenceByCommandQueue.end()) {
     fenceKey = GetUniqueObjectKey();
     m_FenceByCommandQueue[executable.CommandQueueKey].first = fenceKey;
-    unsigned DeviceKey = m_DeviceByCommandQueue[executable.CommandQueueKey];
-    GITS_ASSERT(DeviceKey);
+    unsigned deviceKey = m_DeviceByCommandQueue[executable.CommandQueueKey];
+    GITS_ASSERT(deviceKey);
     ID3D12DeviceCreateFenceCommand createFence;
     createFence.Key = GetUniqueCommandKey();
-    createFence.m_Object.Key = DeviceKey;
+    createFence.m_Object.Key = deviceKey;
     createFence.m_InitialValue.Value = 0;
     createFence.m_Flags.Value = D3D12_FENCE_FLAG_NONE;
     createFence.m_riid.Value = IID_ID3D12Fence;
@@ -170,7 +170,7 @@ void CommandListExecutionService::ExecuteExecutable(Execute& executable) {
   for (CommandList& commandList : executable.CommandLists) {
     commandListKeys.push_back(commandList.CommandListKey);
   }
-  m_CpuDescriptorsService.executeCommandLists(commandListKeys);
+  m_CpuDescriptorsService.ExecuteCommandLists(commandListKeys);
 }
 
 } // namespace DirectX

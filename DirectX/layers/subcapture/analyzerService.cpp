@@ -202,9 +202,9 @@ void AnalyzerService::FenceSignal(unsigned callKey, unsigned fenceKey, UINT64 fe
   }
 }
 
-void AnalyzerService::MappedDataMeta(unsigned ResourceKey) {
+void AnalyzerService::MappedDataMeta(unsigned resourceKey) {
   if (m_InRange) {
-    m_ObjectsForRestore.insert(ResourceKey);
+    m_ObjectsForRestore.insert(resourceKey);
   }
 }
 
@@ -322,14 +322,14 @@ void AnalyzerService::DumpAnalysisFile() {
       ases.insert(blas);
     }
   }
-  for (auto& [ResourceKey, offset] : ases) {
-    out << ResourceKey << " " << offset << "\n";
+  for (auto& [resourceKey, offset] : ases) {
+    out << resourceKey << " " << offset << "\n";
   }
 
   out << "AS_SOURCES\n";
   std::set<std::pair<unsigned, unsigned>>& sources = m_RaytracingService.GetSources();
-  for (auto& [ResourceKey, offset] : sources) {
-    out << ResourceKey << " " << offset << "\n";
+  for (auto& [resourceKey, offset] : sources) {
+    out << resourceKey << " " << offset << "\n";
   }
 }
 

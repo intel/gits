@@ -164,8 +164,6 @@ VkDeviceAddress getBufferDeviceAddress(VkDevice device, VkBuffer buffer);
 VkBuffer findBufferFromDeviceAddress(VkDeviceAddress deviceAddress);
 VkDeviceAddress getAccelerationStructureDeviceAddress(
     VkDevice device, VkAccelerationStructureKHR accelerationStructure);
-VkAccelerationStructureBuildControlDataGITS prepareAccelerationStructureControlData(
-    VkCommandBuffer commandBuffer);
 std::shared_ptr<CDescriptorSetLayoutState> createInternalDescriptorSetLayout(VkDevice device);
 VkPipelineLayout createInternalPipelineLayout(VkDevice device,
                                               uint32_t descriptorSetLayoutCount,

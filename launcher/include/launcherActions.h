@@ -45,5 +45,9 @@ void ResetBasePaths();
 void OpenURL(const std::string& url);
 bool OpenFolder(const std::filesystem::path& path);
 bool OpenFolder(const std::string& path);
+std::string CreateEmailBodyWithLog(const std::string& logText);
+void SendLogByEmail(const std::string& recipient,
+                    const std::string& subject,
+                    const std::string& body);
 
 } // namespace gits::gui

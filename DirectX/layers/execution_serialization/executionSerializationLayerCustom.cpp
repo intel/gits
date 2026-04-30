@@ -97,7 +97,7 @@ void ExecutionSerializationLayer::Pre(ID3D12CommandQueueExecuteCommandListsComma
 
 void ExecutionSerializationLayer::Pre(ID3D12DeviceCreateCommandListCommand& c) {
   if (InRange()) {
-    m_CpuDescriptorsService.createCommandList(c.m_Object.Key);
+    m_CpuDescriptorsService.CreateCommandList(c.m_Object.Key);
     m_Recorder.Record(ID3D12DeviceCreateCommandListSerializer(c));
     m_ExecutionService.CreateCommandList(c.m_ppCommandList.Key, c.m_pCommandAllocator.Key);
   }
@@ -105,7 +105,7 @@ void ExecutionSerializationLayer::Pre(ID3D12DeviceCreateCommandListCommand& c) {
 
 void ExecutionSerializationLayer::Pre(ID3D12Device4CreateCommandList1Command& c) {
   if (InRange()) {
-    m_CpuDescriptorsService.createCommandList(c.m_Object.Key);
+    m_CpuDescriptorsService.CreateCommandList(c.m_Object.Key);
     m_Recorder.Record(ID3D12Device4CreateCommandList1Serializer(c));
   }
 }
@@ -129,7 +129,7 @@ void ExecutionSerializationLayer::Pre(ID3D12GraphicsCommandListOMSetRenderTarget
 
 void ExecutionSerializationLayer::Post(ID3D12GraphicsCommandListOMSetRenderTargetsCommand& c) {
   if (InRange()) {
-    m_CpuDescriptorsService.preserveDescriptor(c);
+    m_CpuDescriptorsService.PreserveDescriptor(c);
     m_ExecutionService.CommandListCommand(c.m_Object.Key, c);
   }
 }
@@ -138,7 +138,7 @@ void ExecutionSerializationLayer::Pre(ID3D12GraphicsCommandListClearDepthStencil
 
 void ExecutionSerializationLayer::Post(ID3D12GraphicsCommandListClearDepthStencilViewCommand& c) {
   if (InRange()) {
-    m_CpuDescriptorsService.preserveDescriptor(c);
+    m_CpuDescriptorsService.PreserveDescriptor(c);
     m_ExecutionService.CommandListCommand(c.m_Object.Key, c);
   }
 }
@@ -147,7 +147,7 @@ void ExecutionSerializationLayer::Pre(ID3D12GraphicsCommandListClearRenderTarget
 
 void ExecutionSerializationLayer::Post(ID3D12GraphicsCommandListClearRenderTargetViewCommand& c) {
   if (InRange()) {
-    m_CpuDescriptorsService.preserveDescriptor(c);
+    m_CpuDescriptorsService.PreserveDescriptor(c);
     m_ExecutionService.CommandListCommand(c.m_Object.Key, c);
   }
 }
@@ -158,7 +158,7 @@ void ExecutionSerializationLayer::Pre(
 void ExecutionSerializationLayer::Post(
     ID3D12GraphicsCommandListClearUnorderedAccessViewUintCommand& c) {
   if (InRange()) {
-    m_CpuDescriptorsService.preserveDescriptor(c);
+    m_CpuDescriptorsService.PreserveDescriptor(c);
     m_ExecutionService.CommandListCommand(c.m_Object.Key, c);
   }
 }
@@ -169,7 +169,7 @@ void ExecutionSerializationLayer::Pre(
 void ExecutionSerializationLayer::Post(
     ID3D12GraphicsCommandListClearUnorderedAccessViewFloatCommand& c) {
   if (InRange()) {
-    m_CpuDescriptorsService.preserveDescriptor(c);
+    m_CpuDescriptorsService.PreserveDescriptor(c);
     m_ExecutionService.CommandListCommand(c.m_Object.Key, c);
   }
 }

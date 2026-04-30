@@ -44,7 +44,7 @@ public:
                         BarrierState state,
                         StateObjectInfo* stateObjectInfo,
                         DescriptorHeaps descriptorHeaps,
-                        unsigned RootSignatureKey);
+                        unsigned rootSignatureKey);
 
   std::unordered_set<unsigned>& GetBindingTablesResources() {
     return m_BindingTablesResources;
@@ -64,9 +64,9 @@ private:
   std::set<std::pair<unsigned, unsigned>> m_BindingTablesDescriptors;
 
   struct BindingTablesInfo : DumpInfo {
-    unsigned stride{};
-    StateObjectInfo* stateObjectInfo{};
-    DescriptorHeaps descriptorHeaps{};
+    unsigned Stride{};
+    StateObjectInfo* StateObjectInfo{};
+    DescriptorHeaps DescriptorHeaps{};
     unsigned RootSignatureKey{};
   };
 };

@@ -109,10 +109,11 @@ void StreamReader::Decompress(unsigned threadIndex) {
 
     {
       std::unique_lock<std::mutex> lock(m_Mutex);
+      unsigned blockIndex{};
 
       while (!compressedBlock) {
         if (!m_DecompressionQueue.empty()) {
-          unsigned blockIndex = m_DecompressionQueue.front();
+          blockIndex = m_DecompressionQueue.front();
           m_DecompressionQueue.pop();
           compressedBlock = &m_CompressedBlocks[blockIndex];
         } else if (m_ReadFinished) {
@@ -124,31 +125,12 @@ void StreamReader::Decompress(unsigned threadIndex) {
       GITS_ASSERT(compressedBlock);
       compressedBlock->Decompressing = true;
 
-      unsigned blockIndex = 0;
-      uint64_t maxAlloc = 0;
-      while (!uncompressedBlock) {
-        UncompressedBlock& block = m_UncompressedBlocks[blockIndex];
-        if (!block.Full && !block.Decompressing) {
-          if (compressedBlock->UncompressedDataSize <= block.DataAlloc) {
-            uncompressedBlock = &block;
-            break;
-          } else if (block.DataAlloc > maxAlloc) {
-            maxAlloc = block.DataAlloc;
-            uncompressedBlock = &block;
-          }
-        }
-        ++blockIndex;
-        if (blockIndex == NUMBER_OF_BLOCKS) {
-          if (uncompressedBlock) {
-            break;
-          }
-          blockIndex = 0;
-          if (!m_RunFinished) {
-            WaitForRunDone(lock, threadIndex, compressedBlock->Id,
-                           compressedBlock->UncompressedDataSize);
-          } else {
-            return;
-          }
+      uncompressedBlock = &m_UncompressedBlocks[blockIndex];
+      if (uncompressedBlock->Full || uncompressedBlock->Decompressing) {
+        if (!m_RunFinished) {
+          WaitForRunDone(lock, threadIndex, uncompressedBlock->Index);
+        } else {
+          return;
         }
       }
       GITS_ASSERT(uncompressedBlock);
@@ -239,7 +221,7 @@ void StreamReader::Run() {
       block->Id = 0;
       block->DataSize = 0;
       block->Full = false;
-      NotifyRunDone(blockId, block->DataAlloc);
+      NotifyRunDone(block->Index);
     }
   }
 
@@ -279,43 +261,18 @@ StreamReader::UncompressedBlock* StreamReader::FindBlockForRun(std::unique_lock<
 
 void StreamReader::WaitForRunDone(std::unique_lock<std::mutex>& lock,
                                   unsigned threadIndex,
-                                  unsigned blockId,
-                                  uint64_t blockSize) {
+                                  unsigned blockIndex) {
   m_WaitsForRunDone[threadIndex].Waiting = true;
-  m_WaitsForRunDone[threadIndex].BlockId = blockId;
-  m_WaitsForRunDone[threadIndex].BlockSize = blockSize;
+  m_WaitsForRunDone[threadIndex].BlockIndex = blockIndex;
   m_WaitsForRunDone[threadIndex].Condition.wait(lock);
 }
 
-void StreamReader::NotifyRunDone(unsigned blockId, uint64_t blockAllocSize) {
-  unsigned minIdThread{};
-  unsigned minId = std::numeric_limits<unsigned>::max();
-  unsigned maxSizeThread{};
-  uint64_t maxBlockSize = 0;
-  unsigned waitingCount = 0;
+void StreamReader::NotifyRunDone(unsigned blockIndex) {
   for (unsigned i = 0; i < NUMBER_OF_DECOMPRESSION_THREADS; ++i) {
-    if (m_WaitsForRunDone[i].Waiting) {
-      if (m_WaitsForRunDone[i].BlockId < minId) {
-        minId = m_WaitsForRunDone[i].BlockId;
-        minIdThread = i;
-      }
-      if (m_WaitsForRunDone[i].BlockSize > maxBlockSize) {
-        maxBlockSize = m_WaitsForRunDone[i].BlockSize;
-        maxSizeThread = i;
-      }
-      ++waitingCount;
-    }
-  }
-  if (waitingCount) {
-    if (minId == blockId + 1) {
-      m_WaitsForRunDone[minIdThread].Waiting = false;
-      m_WaitsForRunDone[minIdThread].Condition.notify_one();
-    } else if (maxBlockSize > INITIAL_BLOCK_ALLOC && blockAllocSize > INITIAL_BLOCK_ALLOC) {
-      m_WaitsForRunDone[maxSizeThread].Waiting = false;
-      m_WaitsForRunDone[maxSizeThread].Condition.notify_one();
-    } else {
-      m_WaitsForRunDone[minIdThread].Waiting = false;
-      m_WaitsForRunDone[minIdThread].Condition.notify_one();
+    if (m_WaitsForRunDone[i].Waiting && m_WaitsForRunDone[i].BlockIndex == blockIndex) {
+      m_WaitsForRunDone[i].Waiting = false;
+      m_WaitsForRunDone[i].Condition.notify_one();
+      break;
     }
   }
 }

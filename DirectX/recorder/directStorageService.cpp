@@ -27,14 +27,14 @@ DirectStorageService::DirectStorageService() {
   }
 }
 
-void DirectStorageService::openFile(IDStorageFactoryOpenFileCommand& c) {
+void DirectStorageService::OpenFile(IDStorageFactoryOpenFileCommand& c) {
   if (m_CaptureDirectStorage) {
     std::lock_guard<std::mutex> lock(m_MapMutex);
     m_Files[c.m_ppv.Key] = c.m_path.Value;
   }
 }
 
-void DirectStorageService::enqueueRequest(IDStorageQueueEnqueueRequestCommand& c) {
+void DirectStorageService::EnqueueRequest(IDStorageQueueEnqueueRequestCommand& c) {
   if (!m_CaptureDirectStorage) {
     return;
   }
@@ -56,14 +56,14 @@ void DirectStorageService::enqueueRequest(IDStorageQueueEnqueueRequestCommand& c
       FileRange(m_OutFile.tellp(), request.Source.File.Offset, request.Source.File.Size);
   auto result = fileReads.insert(range);
   // Assumes that all the chunks accessed are the same size (or smaller) than when originally accessed
-  GITS_ASSERT(result.first->size >= request.Source.File.Size);
+  GITS_ASSERT(result.first->Size >= request.Source.File.Size);
   if (result.second) {
     // Write file data into DirectStorageResources.bin
     std::ifstream inputFile(filePath, std::ios::binary);
-    inputFile.seekg(range.oldOffset);
-    Buffer buffer(range.size);
-    inputFile.read(buffer.data(), range.size);
-    m_OutFile.write(buffer.data(), range.size);
+    inputFile.seekg(range.OldOffset);
+    Buffer buffer(range.Size);
+    inputFile.read(buffer.data(), range.Size);
+    m_OutFile.write(buffer.data(), range.Size);
   }
   // Save the DirectStorageResources.bin offset
   c.m_request.NewOffset = result.first->NewOffset;

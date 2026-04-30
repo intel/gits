@@ -98,7 +98,15 @@ void ResourceDump::StageResource(ID3D12GraphicsCommandList* commandList,
     dumpInfo.Size = size;
     dumpInfo.RowPitch = footprint.Footprint.RowPitch;
     dumpInfo.SubresourceFormat = GetDumpableFormat(footprint.Footprint.Format);
-  } else if (!dumpInfo.Size) {
+  } else if (!dumpInfo.Size || dumpInfo.Offset + dumpInfo.Size > dumpInfo.Desc.Width) {
+    if (dumpInfo.Size) {
+      static bool logged = false;
+      if (!logged) {
+        LOG_WARNING << "ResourceDump - size of buffer region adjusted not to exceed buffer "
+                       "boundaries.";
+        logged = true;
+      }
+    }
     dumpInfo.Size = dumpInfo.Desc.Width - dumpInfo.Offset;
   }
   {
@@ -372,7 +380,7 @@ void ResourceDump::DumpTexture(DumpInfo& dumpInfo, void* data) {
       uint8_t* pixels = reinterpret_cast<uint8_t*>(data) + slice * slicePitch;
       size_t width = std::max(dumpInfo.Desc.Width >> dumpInfo.MipLevel, 1ull);
       size_t height = std::max(dumpInfo.Desc.Height >> dumpInfo.MipLevel, 1u);
-      writeImage(dumpNameW, ImageFormat::DDS, pixels, format, width, height, dumpInfo.RowPitch);
+      WriteImage(dumpNameW, ImageFormat::DDS, pixels, format, width, height, dumpInfo.RowPitch);
     }
     return;
   }
@@ -447,7 +455,7 @@ void ResourceDump::DumpTexture(DumpInfo& dumpInfo, void* data) {
       return;
     }
 
-    writeImage(dumpNameW, m_Format, imageConverted->pixels, imageConverted->format,
+    WriteImage(dumpNameW, m_Format, imageConverted->pixels, imageConverted->format,
                imageConverted->width, imageConverted->height, imageConverted->rowPitch);
   }
 }

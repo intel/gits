@@ -40,14 +40,11 @@ void GpuPatchLayer::Post(ID3D12GraphicsCommandListExecuteIndirectCommand& c) {
   }
 
   if (raytracing) {
-    BarrierState argumentBufferState{};
-    argumentBufferState.State = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
-    BarrierState countBufferState{};
-    countBufferState.State = D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT;
     m_GpuPatchDump.DumpArgumentBuffer(c.m_Object.Value, it->second, c.m_MaxCommandCount.Value,
                                       c.m_pArgumentBuffer.Value, c.m_ArgumentBufferOffset.Value,
-                                      argumentBufferState, c.m_pCountBuffer.Value,
-                                      c.m_CountBufferOffset.Value, countBufferState, c.Key);
+                                      D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT,
+                                      c.m_pCountBuffer.Value, c.m_CountBufferOffset.Value,
+                                      D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT, c.Key);
   }
 }
 
@@ -60,7 +57,7 @@ void GpuPatchLayer::Post(ID3D12GraphicsCommandList4BuildRaytracingAccelerationSt
   std::lock_guard<std::mutex> lock(m_Mutex);
   if (c.m_pDesc.Value->Inputs.DescsLayout == D3D12_ELEMENTS_LAYOUT_ARRAY_OF_POINTERS) {
     GpuAddressService::GpuAddressInfo info =
-        m_GpuAddressService.getGpuAddressInfo(c.m_pDesc.Value->Inputs.InstanceDescs);
+        m_GpuAddressService.GetGpuAddressInfo(c.m_pDesc.Value->Inputs.InstanceDescs);
     D3D12_RESOURCE_STATES resourceState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
     ID3D12Resource* instancesBuffer = m_ResourcesByKey[info.ResourceKey];
     GITS_ASSERT(instancesBuffer);

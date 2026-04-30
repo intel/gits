@@ -20,7 +20,7 @@ namespace DirectX {
 class ResourcePlacementPlayback {
 public:
   void createHeap(ID3D12Device* device, unsigned heapKey, UINT64& size);
-  void createPlacedResource(unsigned ResourceKey, UINT64& offset);
+  void createPlacedResource(unsigned resourceKey, UINT64& offset);
   void updateTileMappings(ID3D12CommandQueueUpdateTileMappingsCommand& c);
   void calculateResourcePlacement(ID3D12Device* device);
 

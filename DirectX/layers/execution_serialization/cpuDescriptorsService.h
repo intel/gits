@@ -29,13 +29,13 @@ public:
         m_RtvDescriptorHeap(*this, D3D12_DESCRIPTOR_HEAP_TYPE_RTV),
         m_DsvDescriptorHeap(*this, D3D12_DESCRIPTOR_HEAP_TYPE_DSV) {}
 
-  void createCommandList(unsigned DeviceKey);
-  void executeCommandLists(std::vector<unsigned>& commandListKeys);
-  void preserveDescriptor(ID3D12GraphicsCommandListOMSetRenderTargetsCommand& c);
-  void preserveDescriptor(ID3D12GraphicsCommandListClearDepthStencilViewCommand& c);
-  void preserveDescriptor(ID3D12GraphicsCommandListClearRenderTargetViewCommand& c);
-  void preserveDescriptor(ID3D12GraphicsCommandListClearUnorderedAccessViewUintCommand& c);
-  void preserveDescriptor(ID3D12GraphicsCommandListClearUnorderedAccessViewFloatCommand& c);
+  void CreateCommandList(unsigned deviceKey);
+  void ExecuteCommandLists(std::vector<unsigned>& commandListKeys);
+  void PreserveDescriptor(ID3D12GraphicsCommandListOMSetRenderTargetsCommand& c);
+  void PreserveDescriptor(ID3D12GraphicsCommandListClearDepthStencilViewCommand& c);
+  void PreserveDescriptor(ID3D12GraphicsCommandListClearRenderTargetViewCommand& c);
+  void PreserveDescriptor(ID3D12GraphicsCommandListClearUnorderedAccessViewUintCommand& c);
+  void PreserveDescriptor(ID3D12GraphicsCommandListClearUnorderedAccessViewFloatCommand& c);
 
 private:
   ExecutionSerializationRecorder& m_Recorder;
@@ -47,8 +47,8 @@ private:
   public:
     DescriptorHeap(CpuDescriptorsService& service, D3D12_DESCRIPTOR_HEAP_TYPE type)
         : m_Service(service), m_Type(type) {}
-    unsigned preserveDescriptor(unsigned heapKey, unsigned heapIndex);
-    void clearDescriptor(unsigned index);
+    unsigned PreserveDescriptor(unsigned heapKey, unsigned heapIndex);
+    void ClearDescriptor(unsigned index);
 
   public:
     unsigned m_DescriptorHeapKey{};

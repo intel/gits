@@ -30,13 +30,13 @@ public:
     GpuHandle
   };
 
-  void createDescriptorHeap(unsigned DescriptorHeapKey,
+  void CreateDescriptorHeap(unsigned descriptorHeapKey,
                             ID3D12DescriptorHeap* descriptorHeap,
                             const D3D12_DESCRIPTOR_HEAP_DESC* desc);
-  HandleInfo getDescriptorHandleInfo(D3D12_DESCRIPTOR_HEAP_TYPE heapType,
+  HandleInfo GetDescriptorHandleInfo(D3D12_DESCRIPTOR_HEAP_TYPE heapType,
                                      HandleType handleType,
                                      size_t handle) const;
-  void destroyDescriptorHeap(unsigned DescriptorHeapKey);
+  void DestroyDescriptorHeap(unsigned descriptorHeapKey);
 
 private:
   struct DescriptorHeapInfo {

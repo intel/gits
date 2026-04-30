@@ -92,7 +92,7 @@ public:
   ObjectState* GetState(unsigned key);
   void RestoreState(unsigned key);
   bool StateRestored(unsigned key);
-  void AddBackBuffer(unsigned buffer, unsigned ResourceKey, ID3D12Resource* resource);
+  void AddBackBuffer(unsigned buffer, unsigned resourceKey, ID3D12Resource* resource);
   void SetXefgSwapChainFlag();
 
   unsigned GetUniqueCommandKey() {
@@ -173,7 +173,7 @@ private:
   void RestoreD3D12EnableExperimentalFeatures();
   void RestoreDllContainers();
   void RestoreStateObjectProperties();
-  void RestoreResidencyPriority(unsigned DeviceKey,
+  void RestoreResidencyPriority(unsigned deviceKey,
                                 unsigned objectKey,
                                 D3D12_RESIDENCY_PRIORITY residencyPriority);
   void RestoreDXGISwapChain(ObjectState* state);
@@ -236,7 +236,7 @@ private:
                       unsigned backBuffersCount);
     void RestoreBackBufferSequence(bool CommandListSubcapture);
     void RecordSwapChainPresent();
-    void AddBackBuffer(unsigned buffer, unsigned ResourceKey, ID3D12Resource* resource);
+    void AddBackBuffer(unsigned buffer, unsigned resourceKey, ID3D12Resource* resource);
     unsigned GetBackBuffersCount() {
       return m_BackBuffersCount;
     }

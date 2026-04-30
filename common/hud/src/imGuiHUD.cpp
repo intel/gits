@@ -27,39 +27,19 @@ struct Settings {
                                            ImGuiWindowFlags_AlwaysAutoResize;
 };
 
-static void RenderWidget(const ImGuiWidget_Text& w, IHUDPlugin*) {
-  ImGui::Text("%s", w.text.data());
-}
-
-static void RenderWidget(const ImGuiWidget_Separator&, IHUDPlugin*) {
-  ImGui::Separator();
-}
 } // namespace
 
 ImGuiHUD::ImGuiHUD() {
   std::ostringstream oss;
   oss << CGits::Instance().Version();
   _strVersion = oss.str();
-  _plugins = std::map<int, IHUDPlugin*>();
 }
 
-ImGuiHUD::~ImGuiHUD() {
-  std::unique_lock<std::shared_mutex> lock(_pluginMutex);
-  _plugins.clear();
-}
+void ImGuiHUD::AddCallback(RenderImGuiFunc callback) {
+  std::lock_guard<std::mutex> lock(_callbackMutex);
+  _callbacks.push_back(callback);
 
-int ImGuiHUD::AddHUDPlugin(IHUDPlugin* plugin, bool flag) {
-  int pluginID = _nextPluginID++;
-  std::unique_lock<std::shared_mutex> lock(_pluginMutex);
-  _plugins.emplace(pluginID, plugin);
-  _hasExternalCallbacks = !_plugins.empty();
-  return pluginID;
-}
-
-void ImGuiHUD::RemoveHUDPlugin(int pluginID) {
-  std::unique_lock<std::shared_mutex> lock(_pluginMutex);
-  _plugins.erase(pluginID);
-  _hasExternalCallbacks = !_plugins.empty();
+  _hasExternalCallbacks = !_callbacks.empty();
 }
 
 void ImGuiHUD::SetApplicationInfo(const std::string& name, int pid) {
@@ -68,12 +48,9 @@ void ImGuiHUD::SetApplicationInfo(const std::string& name, int pid) {
 }
 
 void ImGuiHUD::ExecuteCallbacks() {
-  std::shared_lock<std::shared_mutex> lock(_pluginMutex);
-  for (auto& [id, plugin] : _plugins) {
-    const std::vector<ImGuiWidget>* widgets = plugin->HUDCallback();
-    for (const auto& widget : *widgets) {
-      std::visit([&plugin](auto& w) { RenderWidget(w, plugin); }, widget);
-    }
+  std::lock_guard<std::mutex> lock(_callbackMutex);
+  for (const auto& callback : _callbacks) {
+    callback();
   }
 }
 

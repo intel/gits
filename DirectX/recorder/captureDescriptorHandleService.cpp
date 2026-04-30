@@ -14,7 +14,7 @@
 namespace gits {
 namespace DirectX {
 
-void CaptureDescriptorHandleService::createDescriptorHeap(unsigned DescriptorHeapKey,
+void CaptureDescriptorHandleService::CreateDescriptorHeap(unsigned descriptorHeapKey,
                                                           ID3D12DescriptorHeap* descriptorHeap,
                                                           const D3D12_DESCRIPTOR_HEAP_DESC* desc) {
   tbb::spin_rw_mutex::scoped_lock lock(m_RwMutex);
@@ -32,7 +32,7 @@ void CaptureDescriptorHandleService::createDescriptorHeap(unsigned DescriptorHea
   }
 
   DescriptorHeapInfo cpuInfo;
-  cpuInfo.InterfaceKey = DescriptorHeapKey;
+  cpuInfo.InterfaceKey = descriptorHeapKey;
   cpuInfo.Start = descriptorHeap->GetCPUDescriptorHandleForHeapStart().ptr;
   cpuInfo.End = cpuInfo.Start + desc->NumDescriptors * m_DescriptorHeapIncrements[desc->Type];
   m_DescriptorHeapsByCpuStartAddress[desc->Type]
@@ -41,16 +41,16 @@ void CaptureDescriptorHandleService::createDescriptorHeap(unsigned DescriptorHea
 
   if (desc->Flags & D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE) {
     DescriptorHeapInfo gpuInfo;
-    gpuInfo.InterfaceKey = DescriptorHeapKey;
+    gpuInfo.InterfaceKey = descriptorHeapKey;
     gpuInfo.Start = descriptorHeap->GetGPUDescriptorHandleForHeapStart().ptr;
     gpuInfo.End = gpuInfo.Start + desc->NumDescriptors * m_DescriptorHeapIncrements[desc->Type];
     m_DescriptorHeapsByGpuStartAddress[desc->Type][gpuInfo.Start] = gpuInfo;
   }
 
-  m_DescriptorHeapKeys.insert(DescriptorHeapKey);
+  m_DescriptorHeapKeys.insert(descriptorHeapKey);
 }
 
-CaptureDescriptorHandleService::HandleInfo CaptureDescriptorHandleService::getDescriptorHandleInfo(
+CaptureDescriptorHandleService::HandleInfo CaptureDescriptorHandleService::GetDescriptorHandleInfo(
     D3D12_DESCRIPTOR_HEAP_TYPE heapType, HandleType handleType, size_t handle) const {
 
   tbb::spin_rw_mutex::scoped_lock lock(m_RwMutex, false);
@@ -75,18 +75,18 @@ CaptureDescriptorHandleService::HandleInfo CaptureDescriptorHandleService::getDe
   return handleInfo;
 }
 
-void CaptureDescriptorHandleService::destroyDescriptorHeap(unsigned DescriptorHeapKey) {
+void CaptureDescriptorHandleService::DestroyDescriptorHeap(unsigned descriptorHeapKey) {
 
   tbb::spin_rw_mutex::scoped_lock lock(m_RwMutex);
 
-  auto it = m_DescriptorHeapKeys.find(DescriptorHeapKey);
+  auto it = m_DescriptorHeapKeys.find(descriptorHeapKey);
   if (it != m_DescriptorHeapKeys.end()) {
 
     bool found = false;
     for (auto& moduloMap : m_DescriptorHeapsByCpuStartAddress) {
       for (auto& startMap : moduloMap) {
         for (auto& it : startMap.second) {
-          if (it.second.InterfaceKey == DescriptorHeapKey) {
+          if (it.second.InterfaceKey == descriptorHeapKey) {
             startMap.second.erase(it.second.Start);
             found = true;
             break;
@@ -104,7 +104,7 @@ void CaptureDescriptorHandleService::destroyDescriptorHeap(unsigned DescriptorHe
     found = false;
     for (auto& startMap : m_DescriptorHeapsByGpuStartAddress) {
       for (auto& it : startMap) {
-        if (it.second.InterfaceKey == DescriptorHeapKey) {
+        if (it.second.InterfaceKey == descriptorHeapKey) {
           startMap.erase(it.second.Start);
           found = true;
           break;
@@ -115,7 +115,7 @@ void CaptureDescriptorHandleService::destroyDescriptorHeap(unsigned DescriptorHe
       }
     }
 
-    m_DescriptorHeapKeys.erase(DescriptorHeapKey);
+    m_DescriptorHeapKeys.erase(descriptorHeapKey);
   }
 }
 

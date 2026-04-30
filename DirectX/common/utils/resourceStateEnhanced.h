@@ -35,6 +35,7 @@ private:
   unsigned m_Subresource;
   BarrierState m_CurrentState;
   D3D12_RESOURCE_STATES m_State{};
+  bool m_BarrierSet{};
 };
 
 } // namespace DirectX
