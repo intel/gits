@@ -24,6 +24,7 @@ public:
   void RestoreState();
   void InitializeMetaCommand(ID3D12GraphicsCommandList4InitializeMetaCommandCommand& command);
   void SetDeviceKey(unsigned deviceKey);
+  void DestroyMetaCommand(unsigned key);
 
 private:
   void RestoreStateInitialize();

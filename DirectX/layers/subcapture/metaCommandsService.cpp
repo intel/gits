@@ -29,6 +29,10 @@ void MetaCommandsService::SetDeviceKey(unsigned deviceKey) {
   m_DeviceKey = deviceKey;
 }
 
+void MetaCommandsService::DestroyMetaCommand(unsigned key) {
+  m_MetaCommandData.erase(key);
+}
+
 void MetaCommandsService::RestoreState() {
   RestoreStateInitialize();
 
