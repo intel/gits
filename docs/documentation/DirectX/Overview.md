@@ -35,21 +35,7 @@ Learn more about the configuration file options [here](../../configuration/Direc
 
 # Sub-capture
 
-Frame sub-capture is supported through `gitsPlayer.exe`. The current implementation relies on playing back the trace multiple times:
-
-1. Analyze the workload (this will generate an analysis file in the directory you are calling `gitsPlayer` from).
-2. Record the sub-capture.
-
-For both steps, the `Player/gits_config.yml` file needs to be edited:
-
-1. Set `DirectX12.Features.Subcapture.Enabled` to `true`.
-2. Set `DirectX12.Features.Subcapture.Frames` to the desired range (e.g., `'1800-1803'`).
-
-Run `gitsPlayer.exe` twice (you can use `--exitFrame` to exit right after the subcapture range is completed).
-
-> **Notes**:
-> - To find the correct range to subcapture, you can either look at the screenshots or use `--showWindowBorder` on playback (which will show the frame number on the window title).
-> - The subcapture stream will be stored in the path specified by `Common.Player.SubcapturePath`.
+Sub-capture is used to trim a stream. It is possible to generate a sub-capture of a single frame or even a single Command List. See [sub-capture section](Subcapture.md) for details.
 
 # Application Specific Options
 

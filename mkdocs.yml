@@ -92,6 +92,7 @@ nav:
     - API:
       - DirectX: 
         - 'documentation/DirectX/Overview.md'
+        - 'documentation/DirectX/Subcapture.md'
         - 'documentation/DirectX/Plugins.md'
         - 'documentation/DirectX/DirectStorage.md'
         - 'documentation/DirectX/Portability.md'
