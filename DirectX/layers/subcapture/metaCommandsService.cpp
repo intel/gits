@@ -34,6 +34,9 @@ void MetaCommandsService::DestroyMetaCommand(unsigned key) {
 }
 
 void MetaCommandsService::RestoreState() {
+  if (m_MetaCommandData.empty()) {
+    return;
+  }
   RestoreStateInitialize();
 
   for (auto& [metaCommandKey, initializationData] : m_MetaCommandData) {
