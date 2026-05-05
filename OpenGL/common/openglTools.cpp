@@ -1288,11 +1288,9 @@ std::vector<uint8_t> DepthToRgb(std::vector<GLfloat>& depthData, bool alpha) {
 std::vector<uint8_t> StencilToRgb(std::vector<uint32_t>& depthStencilData, bool alpha) {
   //Stencil values extraction (GL_UNSIGNED_INT_24_8 format)
   std::vector<uint8_t> stencilData(depthStencilData.size(), 0);
-  std::transform(depthStencilData.begin(), depthStencilData.end(), stencilData.begin(),
-                 [=](uint32_t depthStencil) -> uint8_t {
-                   const uint8_t* ptr = (const uint8_t*)(&depthStencil);
-                   return ptr[0];
-                 });
+  std::transform(
+      depthStencilData.begin(), depthStencilData.end(), stencilData.begin(),
+      [=](uint32_t depthStencil) -> uint8_t { return static_cast<uint8_t>(depthStencil & 0xFF); });
 
   //"Normalization"
   std::vector<uint8_t> normStencilData(stencilData.size(), 0);
