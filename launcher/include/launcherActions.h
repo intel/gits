@@ -29,7 +29,7 @@ void UpdateCLICall();
 void SetImGuiStyle(size_t selectedItem);
 void LoadConfigFile();
 void FileDialogs();
-void ShowFileDialog(FileDialogKey key, std::filesystem::path path = "");
+void ShowFileDialog(FileDialogKey key, const std::filesystem::path& path = "");
 void PlaybackStream();
 void SubcaptureStream();
 

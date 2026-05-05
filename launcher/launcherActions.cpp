@@ -247,7 +247,7 @@ void FileDialogs() {
 bool SetupFileDialogPath(Path path,
                          Mode mode,
                          IGFD::FileDialogConfig* dlgConfig,
-                         std::filesystem::path customPath) {
+                         const std::filesystem::path& customPath) {
   auto contextPath = Context::GetInstance().GetPathSafe(path, mode);
   if (!customPath.empty()) {
     contextPath = customPath;
@@ -260,7 +260,7 @@ bool SetupFileDialogPath(Path path,
   return true;
 }
 
-void ShowFileDialog(FileDialogKey key, std::filesystem::path path) {
+void ShowFileDialog(FileDialogKey key, const std::filesystem::path& path) {
   auto& context = Context::GetInstance();
 
   context.CurrentFileDialogKey = key;
