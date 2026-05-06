@@ -77,6 +77,7 @@ void ResourceStateEnhanced::SetState(D3D12_RESOURCE_STATES state) {
     D3D12_RESOURCE_BARRIER barrier{};
     barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
     barrier.Transition.pResource = m_Resource;
+    barrier.Transition.Subresource = m_Subresource;
     barrier.Transition.StateBefore = m_CurrentState.State;
     barrier.Transition.StateAfter = m_State;
     m_CommandList->ResourceBarrier(1, &barrier);
@@ -89,24 +90,41 @@ void ResourceStateEnhanced::RevertState() {
     return;
   }
   if (m_CurrentState.Enhanced) {
-    D3D12_BUFFER_BARRIER barrier{};
-    barrier.SyncBefore = GetSync(m_State);
-    barrier.SyncAfter = m_CurrentState.Sync;
-    barrier.AccessBefore = GetAccess(m_State);
-    barrier.AccessAfter = m_CurrentState.Access;
-    barrier.pResource = m_Resource;
-    barrier.Offset = 0;
-    barrier.Size = UINT64_MAX;
-
     D3D12_BARRIER_GROUP barrierGroup{};
-    barrierGroup.Type = D3D12_BARRIER_TYPE_BUFFER;
+    D3D12_BUFFER_BARRIER bufferBarrier{};
+    D3D12_TEXTURE_BARRIER textureBarrier{};
+    D3D12_RESOURCE_DESC desc = m_Resource->GetDesc();
+    if (desc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER) {
+      bufferBarrier.SyncBefore = GetSync(m_State);
+      bufferBarrier.SyncAfter = m_CurrentState.Sync;
+      bufferBarrier.AccessBefore = GetAccess(m_State);
+      bufferBarrier.AccessAfter = m_CurrentState.Access;
+      bufferBarrier.pResource = m_Resource;
+      bufferBarrier.Offset = 0;
+      bufferBarrier.Size = UINT64_MAX;
+
+      barrierGroup.Type = D3D12_BARRIER_TYPE_BUFFER;
+      barrierGroup.pBufferBarriers = &bufferBarrier;
+    } else {
+      textureBarrier.SyncBefore = GetSync(m_State);
+      textureBarrier.SyncAfter = m_CurrentState.Sync;
+      textureBarrier.AccessBefore = GetAccess(m_State);
+      textureBarrier.AccessAfter = m_CurrentState.Access;
+      textureBarrier.LayoutBefore = GetLayout(m_State);
+      textureBarrier.LayoutAfter = m_CurrentState.Layout;
+      textureBarrier.Subresources.IndexOrFirstMipLevel = m_Subresource;
+      textureBarrier.pResource = m_Resource;
+
+      barrierGroup.Type = D3D12_BARRIER_TYPE_TEXTURE;
+      barrierGroup.pTextureBarriers = &textureBarrier;
+    }
     barrierGroup.NumBarriers = 1;
-    barrierGroup.pBufferBarriers = &barrier;
     m_CommandList7->Barrier(1, &barrierGroup);
   } else {
     D3D12_RESOURCE_BARRIER barrier{};
     barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
     barrier.Transition.pResource = m_Resource;
+    barrier.Transition.Subresource = m_Subresource;
     barrier.Transition.StateBefore = m_State;
     barrier.Transition.StateAfter = m_CurrentState.State;
     m_CommandList->ResourceBarrier(1, &barrier);
