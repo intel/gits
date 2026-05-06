@@ -238,7 +238,7 @@ void AnalyzerRaytracingService::DispatchRays(ID3D12GraphicsCommandList4DispatchR
 
   auto dump = [&](unsigned resourceKey, unsigned offset, UINT64 size, UINT64 stride,
                   D3D12_GPU_VIRTUAL_ADDRESS address) {
-    if (resourceKey) {
+    if (resourceKey && size) {
       ID3D12Resource* resource = m_ResourceByKey[resourceKey];
       GITS_ASSERT(resource);
       DumpBindingTable(c.m_Object.Value, c.m_Object.Key, resource, resourceKey, offset, size,
