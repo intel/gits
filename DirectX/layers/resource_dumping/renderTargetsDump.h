@@ -17,7 +17,7 @@ class RenderTargetsDump : public ResourceDump {
 public:
   RenderTargetsDump(ImageFormat format) : ResourceDump(format) {}
   ~RenderTargetsDump();
-  void dumpResource(ID3D12GraphicsCommandList* commandList,
+  void DumpResource(ID3D12GraphicsCommandList* commandList,
                     ID3D12Resource* resource,
                     unsigned subresource,
                     BarrierState resourceState,
@@ -25,7 +25,7 @@ public:
                     unsigned mipLevel,
                     DXGI_FORMAT format,
                     unsigned commandListDrawCount);
-  void executeCommandLists(unsigned key,
+  void ExecuteCommandLists(unsigned key,
                            unsigned commandQueueKey,
                            ID3D12CommandQueue* commandQueue,
                            ID3D12CommandList** commandLists,
@@ -33,12 +33,12 @@ public:
                            unsigned frameCount,
                            unsigned executeCount);
 
-  std::wstring dumpNameExecutionMarker{L"#e#"};
+  std::wstring m_DumpNameExecutionMarker{L"#e#"};
 
 protected:
   struct RenderTargetDumpInfo : public DumpInfo {
-    unsigned commandListDrawCount;
-    std::wstring executionCount;
+    unsigned CommandListDrawCount;
+    std::wstring ExecutionCount;
   };
 
   void DumpTexture(DumpInfo& dumpInfo, void* data) override;

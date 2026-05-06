@@ -63,13 +63,13 @@ FastOStream& operator<<(FastOStream& stream, ArrayArgument<T>& arg) {
 
 template <typename T>
 FastOStream& operator<<(FastOStream& stream, InterfaceArgument<T>& arg) {
-  printObjectKey(stream, arg.Key);
+  PrintObjectKey(stream, arg.Key);
   return stream;
 }
 
 template <typename T>
 FastOStream& operator<<(FastOStream& stream, InterfaceOutputArgument<T>& arg) {
-  printObjectKey(stream, arg.Key);
+  PrintObjectKey(stream, arg.Key);
   return stream;
 }
 
@@ -84,7 +84,7 @@ FastOStream& operator<<(FastOStream& stream, InterfaceArrayArgument<T>& arg) {
     if (i > 0) {
       stream << ", ";
     }
-    printObjectKey(stream, arg.Keys[i]);
+    PrintObjectKey(stream, arg.Keys[i]);
   }
   stream << "]";
   return stream;
@@ -92,13 +92,13 @@ FastOStream& operator<<(FastOStream& stream, InterfaceArrayArgument<T>& arg) {
 
 template <typename T>
 FastOStream& operator<<(FastOStream& stream, ContextArgument<T>& arg) {
-  printObjectKey(stream, arg.Key);
+  PrintObjectKey(stream, arg.Key);
   return stream;
 }
 
 template <typename T>
 FastOStream& operator<<(FastOStream& stream, ContextOutputArgument<T>& arg) {
-  printObjectKey(stream, arg.Key);
+  PrintObjectKey(stream, arg.Key);
   return stream;
 }
 

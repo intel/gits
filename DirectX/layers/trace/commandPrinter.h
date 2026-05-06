@@ -20,13 +20,13 @@ namespace gits {
 namespace DirectX {
 
 struct CommandPrinterState {
-  CommandPrinterState(std::mutex& m) : mutex(m) {}
-  std::mutex& mutex;
-  unsigned frameCount{1};
-  unsigned drawCount{};
-  unsigned dispatchCount{};
-  unsigned commandListExecutionCount{};
-  bool stateRestorePhase{};
+  CommandPrinterState(std::mutex& m) : Mutex(m) {}
+  std::mutex& Mutex;
+  unsigned FrameCount{1};
+  unsigned DrawCount{};
+  unsigned DispatchCount{};
+  unsigned CommandListExecutionCount{};
+  bool StateRestorePhase{};
 };
 
 class CommandPrinter {
@@ -38,7 +38,7 @@ public:
                  unsigned objectId = 0);
 
   template <typename T>
-  void addArgument(T& arg) {
+  void AddArgument(T& arg) {
     if (m_FirstArgumentPrinted && !m_ReturnPrinted) {
       m_Stream << ", ";
     }
@@ -48,13 +48,13 @@ public:
   }
 
   template <typename T>
-  void addResult(T& arg) {
+  void AddResult(T& arg) {
     m_ReturnPrinted = true;
     m_Stream << ") = ";
-    addArgument(arg);
+    AddArgument(arg);
   }
 
-  void print(bool flush, bool newLine = true);
+  void Print(bool flush, bool newLine = true);
 
 private:
   CommandPrinterState& m_State;

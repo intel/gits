@@ -63,7 +63,7 @@ FastOStream& operator<<(FastOStream& stream,
       stream << ", ";
     }
     stream << "{";
-    printObjectKey(stream, arg.InterfaceKeys[i]);
+    PrintObjectKey(stream, arg.InterfaceKeys[i]);
     stream << ", " << arg.Indexes[i] << "}";
   }
   stream << "]";
@@ -73,7 +73,7 @@ FastOStream& operator<<(FastOStream& stream,
 FastOStream& operator<<(FastOStream& stream,
                         DescriptorHandleArgument<D3D12_CPU_DESCRIPTOR_HANDLE>& arg) {
   stream << "D3D12_CPU_DESCRIPTOR_HANDLE{";
-  printObjectKey(stream, arg.InterfaceKey);
+  PrintObjectKey(stream, arg.InterfaceKey);
   stream << ", " << arg.Index << "}";
   return stream;
 }
@@ -81,24 +81,24 @@ FastOStream& operator<<(FastOStream& stream,
 FastOStream& operator<<(FastOStream& stream,
                         DescriptorHandleArgument<D3D12_GPU_DESCRIPTOR_HANDLE>& arg) {
   stream << "D3D12_GPU_DESCRIPTOR_HANDLE{";
-  printObjectKey(stream, arg.InterfaceKey);
+  PrintObjectKey(stream, arg.InterfaceKey);
   stream << ", " << arg.Index << "}";
   return stream;
 }
 
 FastOStream& operator<<(FastOStream& stream, LPCWSTR_Argument& arg) {
-  printString(stream, arg.Value);
+  PrintString(stream, arg.Value);
   return stream;
 }
 
 FastOStream& operator<<(FastOStream& stream, LPCSTR_Argument& arg) {
-  printString(stream, arg.Value);
+  PrintString(stream, arg.Value);
   return stream;
 }
 
 FastOStream& operator<<(FastOStream& stream, D3D12_GPU_VIRTUAL_ADDRESS_Argument& arg) {
   stream << "D3D12_GPU_VIRTUAL_ADDRESS{";
-  printObjectKey(stream, arg.InterfaceKey);
+  PrintObjectKey(stream, arg.InterfaceKey);
   stream << ", " << arg.Offset << "}";
   return stream;
 }
@@ -113,7 +113,7 @@ FastOStream& operator<<(FastOStream& stream, D3D12_GPU_VIRTUAL_ADDRESSs_Argument
       stream << ", ";
     }
     stream << "{";
-    printObjectKey(stream, arg.InterfaceKeys[i]);
+    PrintObjectKey(stream, arg.InterfaceKeys[i]);
     stream << ", " << arg.Offsets[i] << "}";
   }
   return stream << "]";
@@ -121,7 +121,7 @@ FastOStream& operator<<(FastOStream& stream, D3D12_GPU_VIRTUAL_ADDRESSs_Argument
 
 FastOStream& operator<<(FastOStream& stream, D3D12_GRAPHICS_PIPELINE_STATE_DESC_Argument& arg) {
   stream << "D3D12_GRAPHICS_PIPELINE_STATE_DESC{";
-  printObjectKey(stream, arg.RootSignatureKey);
+  PrintObjectKey(stream, arg.RootSignatureKey);
   stream << ", ";
   stream << arg.Value->VS << ", ";
   stream << arg.Value->PS << ", ";
@@ -137,7 +137,7 @@ FastOStream& operator<<(FastOStream& stream, D3D12_GRAPHICS_PIPELINE_STATE_DESC_
   stream << arg.Value->IBStripCutValue << ", ";
   stream << arg.Value->PrimitiveTopologyType << ", ";
   stream << arg.Value->NumRenderTargets << ", ";
-  printStaticArray(stream, arg.Value->RTVFormats) << ", ";
+  PrintStaticArray(stream, arg.Value->RTVFormats) << ", ";
   stream << arg.Value->DSVFormat << ", ";
   stream << arg.Value->SampleDesc << ", ";
   stream << arg.Value->NodeMask << ", ";
@@ -149,7 +149,7 @@ FastOStream& operator<<(FastOStream& stream, D3D12_GRAPHICS_PIPELINE_STATE_DESC_
 
 FastOStream& operator<<(FastOStream& stream, D3D12_COMPUTE_PIPELINE_STATE_DESC_Argument& arg) {
   stream << "D3D12_COMPUTE_PIPELINE_STATE_DESC{";
-  printObjectKey(stream, arg.RootSignatureKey);
+  PrintObjectKey(stream, arg.RootSignatureKey);
   stream << ", ";
   stream << arg.Value->CS << ", ";
   stream << arg.Value->NodeMask << ", ";
@@ -165,7 +165,7 @@ FastOStream& operator<<(FastOStream& stream, D3D12_TEXTURE_COPY_LOCATION_Argumen
   }
   stream << "D3D12_TEXTURE_COPY_LOCATION{";
 
-  printObjectKey(stream, arg.ResourceKey);
+  PrintObjectKey(stream, arg.ResourceKey);
   stream << ", " << arg.Value->Type << ", ";
   if (arg.Value->Type == D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX) {
     stream << arg.Value->SubresourceIndex;
@@ -186,7 +186,7 @@ FastOStream& operator<<(FastOStream& stream, D3D12_RESOURCE_BARRIERs_Argument& a
     switch (arg.Value[i].Type) {
     case D3D12_RESOURCE_BARRIER_TYPE_TRANSITION:
       stream << "D3D12_RESOURCE_TRANSITION_BARRIER{";
-      printObjectKey(stream, arg.ResourceKeys[i]);
+      PrintObjectKey(stream, arg.ResourceKeys[i]);
       stream << ", ";
       if (arg.Value[i].Transition.Subresource == D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES) {
         stream << "D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES";
@@ -198,13 +198,13 @@ FastOStream& operator<<(FastOStream& stream, D3D12_RESOURCE_BARRIERs_Argument& a
       break;
     case D3D12_RESOURCE_BARRIER_TYPE_ALIASING:
       stream << "D3D12_RESOURCE_ALIASING_BARRIER{";
-      printObjectKey(stream, arg.ResourceKeys[i]);
+      PrintObjectKey(stream, arg.ResourceKeys[i]);
       stream << ", ";
-      printObjectKey(stream, arg.ResourceAfterKeys[i]);
+      PrintObjectKey(stream, arg.ResourceAfterKeys[i]);
       break;
     case D3D12_RESOURCE_BARRIER_TYPE_UAV:
       stream << "D3D12_RESOURCE_UAV_BARRIER{";
-      printObjectKey(stream, arg.ResourceKeys[i]);
+      PrintObjectKey(stream, arg.ResourceKeys[i]);
       break;
     }
     stream << "}}";
@@ -217,7 +217,7 @@ FastOStream& operator<<(FastOStream& stream, D3D12_INDEX_BUFFER_VIEW_Argument& a
     return stream << "nullptr";
   }
   stream << "D3D12_INDEX_BUFFER_VIEW{{";
-  printObjectKey(stream, arg.BufferLocationKey);
+  PrintObjectKey(stream, arg.BufferLocationKey);
   stream << ", " << arg.BufferLocationOffset << "}, ";
   stream << arg.Value->SizeInBytes << ", " << arg.Value->Format;
   return stream << "}";
@@ -228,7 +228,7 @@ FastOStream& operator<<(FastOStream& stream, D3D12_CONSTANT_BUFFER_VIEW_DESC_Arg
     return stream << "nullptr";
   }
   stream << "D3D12_CONSTANT_BUFFER_VIEW_DESC{{";
-  printObjectKey(stream, arg.BufferLocationKey);
+  PrintObjectKey(stream, arg.BufferLocationKey);
   stream << ", " << arg.BufferLocationOffset << "}, ";
   stream << arg.Value->SizeInBytes;
   return stream << "}";
@@ -241,7 +241,7 @@ FastOStream& operator<<(FastOStream& stream, D3D12_VERTEX_BUFFER_VIEWs_Argument&
   stream << "D3D12_VERTEX_BUFFER_VIEW[";
   for (unsigned i = 0; i < arg.Size; ++i) {
     stream << "{{";
-    printObjectKey(stream, arg.BufferLocationKeys[i]);
+    PrintObjectKey(stream, arg.BufferLocationKeys[i]);
     stream << ", " << arg.BufferLocationOffsets[i] << "}, ";
     stream << arg.Value[i].SizeInBytes << ", " << arg.Value[i].StrideInBytes << "}";
   }
@@ -262,7 +262,7 @@ FastOStream& operator<<(FastOStream& stream, D3D12_WRITEBUFFERIMMEDIATE_PARAMETE
       stream << ", ";
     }
     stream << "{{";
-    printObjectKey(stream, arg.DestKeys[i]);
+    PrintObjectKey(stream, arg.DestKeys[i]);
     stream << ", " << arg.DestOffsets[i] << "}, " << arg.Value[i].Value << "}";
   }
   return stream << "]";
@@ -279,7 +279,7 @@ FastOStream& operator<<(FastOStream& stream, D3D12_PIPELINE_STATE_STREAM_DESC_Ar
     }
     switch (subobjectType) {
     case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_ROOT_SIGNATURE:
-      printObjectKey(stream, arg.RootSignatureKey);
+      PrintObjectKey(stream, arg.RootSignatureKey);
       offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM::pRootSignature);
       break;
     case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_VS: {
@@ -503,12 +503,12 @@ FastOStream& operator<<(FastOStream& stream, D3D12_STATE_OBJECT_DESC_Argument& a
     }
     case D3D12_STATE_SUBOBJECT_TYPE_GLOBAL_ROOT_SIGNATURE: {
       auto desc = static_cast<const D3D12_GLOBAL_ROOT_SIGNATURE*>(subobject.pDesc);
-      printObjectKey(stream, arg.InterfaceKeysBySubobject[i]);
+      PrintObjectKey(stream, arg.InterfaceKeysBySubobject[i]);
       break;
     }
     case D3D12_STATE_SUBOBJECT_TYPE_LOCAL_ROOT_SIGNATURE: {
       auto desc = static_cast<const D3D12_LOCAL_ROOT_SIGNATURE*>(subobject.pDesc);
-      printObjectKey(stream, arg.InterfaceKeysBySubobject[i]);
+      PrintObjectKey(stream, arg.InterfaceKeysBySubobject[i]);
       break;
     }
     case D3D12_STATE_SUBOBJECT_TYPE_NODE_MASK: {
@@ -530,7 +530,7 @@ FastOStream& operator<<(FastOStream& stream, D3D12_STATE_OBJECT_DESC_Argument& a
     }
     case D3D12_STATE_SUBOBJECT_TYPE_EXISTING_COLLECTION: {
       auto desc = static_cast<const D3D12_EXISTING_COLLECTION_DESC*>(subobject.pDesc);
-      printObjectKey(stream, arg.InterfaceKeysBySubobject[i]);
+      PrintObjectKey(stream, arg.InterfaceKeysBySubobject[i]);
       stream << ", " << desc->NumExports << ", [";
       for (unsigned j = 0; j < desc->NumExports; ++j) {
         if (j > 0) {
@@ -554,20 +554,20 @@ FastOStream& operator<<(FastOStream& stream, D3D12_STATE_OBJECT_DESC_Argument& a
         if (j > 0) {
           stream << ", ";
         }
-        printString(stream, desc->pExports[j]);
+        PrintString(stream, desc->pExports[j]);
       }
       stream << "]";
       break;
     }
     case D3D12_STATE_SUBOBJECT_TYPE_DXIL_SUBOBJECT_TO_EXPORTS_ASSOCIATION: {
       auto desc = static_cast<const D3D12_DXIL_SUBOBJECT_TO_EXPORTS_ASSOCIATION*>(subobject.pDesc);
-      printString(stream, desc->SubobjectToAssociate);
+      PrintString(stream, desc->SubobjectToAssociate);
       stream << ", " << desc->NumExports << ", [";
       for (unsigned j = 0; j < desc->NumExports; ++j) {
         if (j > 0) {
           stream << ", ";
         }
-        printString(stream, desc->pExports[j]);
+        PrintString(stream, desc->pExports[j]);
       }
       stream << "]";
       break;
@@ -584,13 +584,13 @@ FastOStream& operator<<(FastOStream& stream, D3D12_STATE_OBJECT_DESC_Argument& a
     }
     case D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP: {
       auto desc = static_cast<const D3D12_HIT_GROUP_DESC*>(subobject.pDesc);
-      printString(stream, desc->HitGroupExport);
+      PrintString(stream, desc->HitGroupExport);
       stream << ", " << desc->Type << ", ";
-      printString(stream, desc->AnyHitShaderImport);
+      PrintString(stream, desc->AnyHitShaderImport);
       stream << ", ";
-      printString(stream, desc->ClosestHitShaderImport);
+      PrintString(stream, desc->ClosestHitShaderImport);
       stream << ", ";
-      printString(stream, desc->IntersectionShaderImport);
+      PrintString(stream, desc->IntersectionShaderImport);
       break;
     }
     case D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_PIPELINE_CONFIG1: {
@@ -600,14 +600,14 @@ FastOStream& operator<<(FastOStream& stream, D3D12_STATE_OBJECT_DESC_Argument& a
     }
     case D3D12_STATE_SUBOBJECT_TYPE_WORK_GRAPH: {
       auto desc = static_cast<const D3D12_WORK_GRAPH_DESC*>(subobject.pDesc);
-      printString(stream, desc->ProgramName);
+      PrintString(stream, desc->ProgramName);
       stream << ", " << desc->Flags << ", " << desc->NumEntrypoints << ", [";
       for (unsigned j = 0; j < desc->NumEntrypoints; ++j) {
         if (j > 0) {
           stream << ", ";
         }
         stream << "{";
-        printString(stream, desc->pEntrypoints[j].Name);
+        PrintString(stream, desc->pEntrypoints[j].Name);
         stream << ", " << desc->pEntrypoints[j].ArrayIndex;
         stream << "}";
       }
@@ -736,7 +736,7 @@ FastOStream& operator<<(FastOStream& stream, D3D12_SHADER_RESOURCE_VIEW_DESC_Arg
     break;
   case D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE:
     stream << "{";
-    printObjectKey(stream, arg.RaytracingLocationKey);
+    PrintObjectKey(stream, arg.RaytracingLocationKey);
     stream << ", " << arg.RaytracingLocationOffset << "}";
     break;
   }
@@ -791,7 +791,7 @@ FastOStream& operator<<(FastOStream& stream, D3D12_RENDER_PASS_RENDER_TARGET_DES
     }
     stream << "{{";
     stream << arg.Value[i].cpuDescriptor.ptr << ", ";
-    printObjectKey(stream, arg.DescriptorKeys[i]);
+    PrintObjectKey(stream, arg.DescriptorKeys[i]);
     stream << ", " << arg.DescriptorIndexes[i];
     stream << "}, {";
     stream << arg.Value[i].BeginningAccess.Type;
@@ -809,9 +809,9 @@ FastOStream& operator<<(FastOStream& stream, D3D12_RENDER_PASS_RENDER_TARGET_DES
     stream << arg.Value[i].EndingAccess.Type;
     if (arg.Value[i].EndingAccess.Type == D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_RESOLVE) {
       stream << ", {";
-      printObjectKey(stream, arg.ResolveSrcResourceKeys[j]);
+      PrintObjectKey(stream, arg.ResolveSrcResourceKeys[j]);
       stream << ", ";
-      printObjectKey(stream, arg.ResolveDstResourceKeys[j]);
+      PrintObjectKey(stream, arg.ResolveDstResourceKeys[j]);
       stream << ", " << arg.Value[i].EndingAccess.Resolve.SubresourceCount << ", [";
       for (unsigned k = 0; k < arg.Value[i].EndingAccess.Resolve.SubresourceCount; ++k) {
         if (k > 0) {
@@ -844,7 +844,7 @@ FastOStream& operator<<(FastOStream& stream, D3D12_RENDER_PASS_DEPTH_STENCIL_DES
 
   stream << "D3D12_RENDER_PASS_DEPTH_STENCIL_DESC{{";
   stream << arg.Value->cpuDescriptor.ptr << ", ";
-  printObjectKey(stream, arg.DescriptorKey);
+  PrintObjectKey(stream, arg.DescriptorKey);
   stream << ", " << arg.DescriptorIndex;
   stream << "}, {";
   stream << arg.Value->DepthBeginningAccess.Type;
@@ -874,9 +874,9 @@ FastOStream& operator<<(FastOStream& stream, D3D12_RENDER_PASS_DEPTH_STENCIL_DES
   stream << arg.Value->DepthEndingAccess.Type;
   if (arg.Value->DepthEndingAccess.Type == D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_RESOLVE) {
     stream << ", {";
-    printObjectKey(stream, arg.ResolveSrcDepthKey);
+    PrintObjectKey(stream, arg.ResolveSrcDepthKey);
     stream << ", ";
-    printObjectKey(stream, arg.ResolveDstDepthKey);
+    PrintObjectKey(stream, arg.ResolveDstDepthKey);
     stream << ", " << arg.Value->DepthEndingAccess.Resolve.SubresourceCount << ", [";
     for (unsigned k = 0; k < arg.Value->DepthEndingAccess.Resolve.SubresourceCount; ++k) {
       if (k > 0) {
@@ -899,9 +899,9 @@ FastOStream& operator<<(FastOStream& stream, D3D12_RENDER_PASS_DEPTH_STENCIL_DES
   stream << arg.Value->DepthEndingAccess.Type;
   if (arg.Value->StencilEndingAccess.Type == D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_RESOLVE) {
     stream << ", {";
-    printObjectKey(stream, arg.ResolveSrcStencilKey);
+    PrintObjectKey(stream, arg.ResolveSrcStencilKey);
     stream << ", ";
-    printObjectKey(stream, arg.ResolveDstStencilKey);
+    PrintObjectKey(stream, arg.ResolveDstStencilKey);
     stream << ", " << arg.Value->StencilEndingAccess.Resolve.SubresourceCount << ", [";
     for (unsigned k = 0; k < arg.Value->StencilEndingAccess.Resolve.SubresourceCount; ++k) {
       if (k > 0) {
@@ -949,7 +949,7 @@ FastOStream& operator<<(FastOStream& stream,
     return stream << "nullptr";
   }
   stream << "D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC{{";
-  printObjectKey(stream, arg.DestAccelerationStructureKey);
+  PrintObjectKey(stream, arg.DestAccelerationStructureKey);
   stream << ", " << arg.DestAccelerationStructureOffset << "} (0x";
   PrintHex(stream, arg.Value->DestAccelerationStructureData) << "), {";
 
@@ -958,7 +958,7 @@ FastOStream& operator<<(FastOStream& stream,
   if (!arg.InputKeys.empty() &&
       arg.Value->Inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
     stream << "{";
-    printObjectKey(stream, arg.InputKeys[0]);
+    PrintObjectKey(stream, arg.InputKeys[0]);
     stream << ", " << arg.InputOffsets[0] << "}";
   } else if (arg.Value->Inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL) {
     unsigned inputIndex = 0;
@@ -976,22 +976,22 @@ FastOStream& operator<<(FastOStream& stream,
 
       if (!arg.InputKeys.empty() && desc.Type == D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES) {
         stream << "{";
-        printObjectKey(stream, arg.InputKeys[inputIndex]);
+        PrintObjectKey(stream, arg.InputKeys[inputIndex]);
         stream << ", " << arg.InputOffsets[inputIndex] << "}, ";
         ++inputIndex;
         stream << desc.Triangles.IndexFormat << ", " << desc.Triangles.VertexFormat << ", "
                << desc.Triangles.IndexCount << ", " << desc.Triangles.VertexCount << ", {";
-        printObjectKey(stream, arg.InputKeys[inputIndex]);
+        PrintObjectKey(stream, arg.InputKeys[inputIndex]);
         stream << ", " << arg.InputOffsets[inputIndex] << "}, {{";
         ++inputIndex;
-        printObjectKey(stream, arg.InputKeys[inputIndex]);
+        PrintObjectKey(stream, arg.InputKeys[inputIndex]);
         stream << ", " << arg.InputOffsets[inputIndex] << "}, ";
         ++inputIndex;
         stream << desc.Triangles.VertexBuffer.StrideInBytes << "}";
       } else if (!arg.InputKeys.empty() &&
                  desc.Type == D3D12_RAYTRACING_GEOMETRY_TYPE_PROCEDURAL_PRIMITIVE_AABBS) {
         stream << desc.AABBs.AABBCount << ", {{";
-        printObjectKey(stream, arg.InputKeys[inputIndex]);
+        PrintObjectKey(stream, arg.InputKeys[inputIndex]);
         stream << ", " << arg.InputOffsets[inputIndex] << "}, ";
         ++inputIndex;
         stream << desc.AABBs.AABBs.StrideInBytes << "}";
@@ -1001,15 +1001,15 @@ FastOStream& operator<<(FastOStream& stream,
         if (desc.OmmTriangles.pTriangles) {
           auto& triangles = *desc.OmmTriangles.pTriangles;
           stream << "{";
-          printObjectKey(stream, arg.InputKeys[inputIndex]);
+          PrintObjectKey(stream, arg.InputKeys[inputIndex]);
           stream << ", " << arg.InputOffsets[inputIndex] << "}, ";
           ++inputIndex;
           stream << triangles.IndexFormat << ", " << triangles.VertexFormat << ", "
                  << triangles.IndexCount << ", " << triangles.VertexCount << ", {";
-          printObjectKey(stream, arg.InputKeys[inputIndex]);
+          PrintObjectKey(stream, arg.InputKeys[inputIndex]);
           stream << ", " << arg.InputOffsets[inputIndex] << "}, {{";
           ++inputIndex;
-          printObjectKey(stream, arg.InputKeys[inputIndex]);
+          PrintObjectKey(stream, arg.InputKeys[inputIndex]);
           stream << ", " << arg.InputOffsets[inputIndex] << "}, ";
           ++inputIndex;
           stream << triangles.VertexBuffer.StrideInBytes << "}";
@@ -1020,13 +1020,13 @@ FastOStream& operator<<(FastOStream& stream,
         if (desc.OmmTriangles.pOmmLinkage) {
           auto& ommLinkage = *desc.OmmTriangles.pOmmLinkage;
           stream << "{{";
-          printObjectKey(stream, arg.InputKeys[inputIndex]);
+          PrintObjectKey(stream, arg.InputKeys[inputIndex]);
           stream << ", " << arg.InputOffsets[inputIndex] << "}, ";
           ++inputIndex;
           stream << ommLinkage.OpacityMicromapIndexBuffer.StrideInBytes << "}, ";
           stream << ommLinkage.OpacityMicromapIndexFormat << ", ";
           stream << ommLinkage.OpacityMicromapBaseLocation << ", {";
-          printObjectKey(stream, arg.InputKeys[inputIndex]);
+          PrintObjectKey(stream, arg.InputKeys[inputIndex]);
           stream << ", " << arg.InputOffsets[inputIndex] << "}";
 
         } else {
@@ -1051,10 +1051,10 @@ FastOStream& operator<<(FastOStream& stream,
       stream << "{" << entry.Count << ", " << entry.SubdivisionLevel << ", " << entry.Format << "}";
     }
     stream << "], {";
-    printObjectKey(stream, arg.InputKeys[inputIndex]);
+    PrintObjectKey(stream, arg.InputKeys[inputIndex]);
     stream << ", " << arg.InputOffsets[inputIndex] << "}, {{";
     ++inputIndex;
-    printObjectKey(stream, arg.InputKeys[inputIndex]);
+    PrintObjectKey(stream, arg.InputKeys[inputIndex]);
     stream << ", " << arg.InputOffsets[inputIndex] << "}, ";
     ++inputIndex;
     stream << arg.Value->Inputs.pOpacityMicromapArrayDesc->PerOmmDescs.StrideInBytes << "}";
@@ -1062,9 +1062,9 @@ FastOStream& operator<<(FastOStream& stream,
   }
 
   stream << "}, {";
-  printObjectKey(stream, arg.SourceAccelerationStructureKey);
+  PrintObjectKey(stream, arg.SourceAccelerationStructureKey);
   stream << ", " << arg.SourceAccelerationStructureOffset << "}, {";
-  printObjectKey(stream, arg.ScratchAccelerationStructureKey);
+  PrintObjectKey(stream, arg.ScratchAccelerationStructureKey);
   stream << ", " << arg.ScratchAccelerationStructureOffset << "}";
   stream << "}";
   return stream;
@@ -1083,7 +1083,7 @@ FastOStream& operator<<(
       stream << ", ";
     }
     stream << "D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC{{";
-    printObjectKey(stream, arg.DestBufferKeys[i]);
+    PrintObjectKey(stream, arg.DestBufferKeys[i]);
     stream << ", " << arg.DestBufferOffsets[i] << "}, ";
     stream << arg.Value->InfoType;
     stream << "}";
@@ -1100,7 +1100,7 @@ FastOStream& operator<<(
   }
 
   stream << "D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC{{";
-  printObjectKey(stream, arg.destBufferKey);
+  PrintObjectKey(stream, arg.destBufferKey);
   stream << ", " << arg.destBufferOffset << "}, ";
   stream << arg.Value->InfoType;
   stream << "}";
@@ -1182,7 +1182,7 @@ FastOStream& operator<<(FastOStream& stream, D3D12_BARRIER_GROUPs_Argument& arg)
         stream << "{" << barrier.SyncBefore << ", " << barrier.SyncAfter << ", "
                << barrier.AccessBefore << ", " << barrier.AccessAfter << ", "
                << barrier.LayoutBefore << ", " << barrier.LayoutAfter << ", ";
-        printObjectKey(stream, arg.ResourceKeys[resourceKeyIndex++]);
+        PrintObjectKey(stream, arg.ResourceKeys[resourceKeyIndex++]);
         stream << ", " << barrier.Subresources << ", " << barrier.Flags << "}";
       }
       stream << "]";
@@ -1195,7 +1195,7 @@ FastOStream& operator<<(FastOStream& stream, D3D12_BARRIER_GROUPs_Argument& arg)
         const D3D12_BUFFER_BARRIER& barrier = arg.Value[i].pBufferBarriers[j];
         stream << "{" << barrier.SyncBefore << ", " << barrier.SyncAfter << ", "
                << barrier.AccessBefore << ", " << barrier.AccessAfter << ", ";
-        printObjectKey(stream, arg.ResourceKeys[resourceKeyIndex++]);
+        PrintObjectKey(stream, arg.ResourceKeys[resourceKeyIndex++]);
         stream << ", " << barrier.Offset << ", " << barrier.Size << "}";
       }
       stream << "]";
@@ -1212,24 +1212,24 @@ FastOStream& operator<<(FastOStream& stream, PointerArgument<D3D12_DISPATCH_RAYS
   stream << "D3D12_DISPATCH_RAYS_DESC{";
 
   stream << "{{";
-  printObjectKey(stream, arg.RayGenerationShaderRecordKey);
+  PrintObjectKey(stream, arg.RayGenerationShaderRecordKey);
   stream << ", " << arg.RayGenerationShaderRecordOffset << "}, ";
   stream << arg.Value->RayGenerationShaderRecord.SizeInBytes << "}, ";
 
   stream << "{{";
-  printObjectKey(stream, arg.MissShaderTableKey);
+  PrintObjectKey(stream, arg.MissShaderTableKey);
   stream << ", " << arg.MissShaderTableOffset << "}, ";
   stream << arg.Value->MissShaderTable.SizeInBytes << ", "
          << arg.Value->MissShaderTable.StrideInBytes << "}, ";
 
   stream << "{{";
-  printObjectKey(stream, arg.HitGroupTableKey);
+  PrintObjectKey(stream, arg.HitGroupTableKey);
   stream << ", " << arg.HitGroupTableOffset << "}, ";
   stream << arg.Value->HitGroupTable.SizeInBytes << ", " << arg.Value->HitGroupTable.StrideInBytes
          << "}, ";
 
   stream << "{{";
-  printObjectKey(stream, arg.CallableShaderTableKey);
+  PrintObjectKey(stream, arg.CallableShaderTableKey);
   stream << ", " << arg.CallableShaderTableOffset << "}, ";
   stream << arg.Value->CallableShaderTable.SizeInBytes << ", "
          << arg.Value->CallableShaderTable.StrideInBytes << "}, ";
@@ -1264,7 +1264,7 @@ FastOStream& operator<<(FastOStream& stream, DML_BINDING_TABLE_DESC_Argument& ar
     return stream << "nullptr";
   }
   stream << "DML_BINDING_TABLE_DESC{";
-  printObjectKey(stream, arg.TableFields.DispatchableKey);
+  PrintObjectKey(stream, arg.TableFields.DispatchableKey);
   stream << ", ";
   stream << arg.Value->CPUDescriptorHandle << ", ";
   stream << arg.Value->GPUDescriptorHandle << ", ";
@@ -1288,7 +1288,7 @@ FastOStream& operator<<(FastOStream& stream, DML_BINDING_DESC_Argument& arg) {
     if (i > 0) {
       stream << ", ";
     }
-    printObjectKey(stream, arg.ResourceKeys[i]);
+    PrintObjectKey(stream, arg.ResourceKeys[i]);
   }
   stream << "}}";
   return stream;
@@ -1312,7 +1312,7 @@ FastOStream& operator<<(FastOStream& stream, DML_BINDING_DESCs_Argument& arg) {
       stream << "DML_BINDING_TYPE_NONE";
       break;
     case DML_BINDING_TYPE_BUFFER:
-      printObjectKey(stream, arg.ResourceKeys[currentKey++]);
+      PrintObjectKey(stream, arg.ResourceKeys[currentKey++]);
       break;
     case DML_BINDING_TYPE_BUFFER_ARRAY: {
       const auto* bufferArray =
@@ -1321,7 +1321,7 @@ FastOStream& operator<<(FastOStream& stream, DML_BINDING_DESCs_Argument& arg) {
         if (j > 0) {
           stream << ", ";
         }
-        printObjectKey(stream, arg.ResourceKeys[currentKey++]);
+        PrintObjectKey(stream, arg.ResourceKeys[currentKey++]);
       }
       break;
     }
@@ -1347,11 +1347,11 @@ FastOStream& operator<<(FastOStream& stream, xess_d3d12_init_params_t_Argument& 
   stream << arg.Value->initFlags << ", ";
   stream << arg.Value->creationNodeMask << ", ";
   stream << arg.Value->visibleNodeMask << ", ";
-  printObjectKey(stream, arg.TempBufferHeapKey);
+  PrintObjectKey(stream, arg.TempBufferHeapKey);
   stream << ", " << arg.Value->bufferHeapOffset << ", ";
-  printObjectKey(stream, arg.TempTextureHeapKey);
+  PrintObjectKey(stream, arg.TempTextureHeapKey);
   stream << ", " << arg.Value->textureHeapOffset << ", ";
-  printObjectKey(stream, arg.PipelineLibraryKey);
+  PrintObjectKey(stream, arg.PipelineLibraryKey);
   stream << "}";
   return stream;
 }
@@ -1361,17 +1361,17 @@ FastOStream& operator<<(FastOStream& stream, xess_d3d12_execute_params_t_Argumen
     return stream << "nullptr";
   }
   stream << "xess_d3d12_execute_params_t{";
-  printObjectKey(stream, arg.ColorTextureKey);
+  PrintObjectKey(stream, arg.ColorTextureKey);
   stream << ", ";
-  printObjectKey(stream, arg.VelocityTextureKey);
+  PrintObjectKey(stream, arg.VelocityTextureKey);
   stream << ", ";
-  printObjectKey(stream, arg.DepthTextureKey);
+  PrintObjectKey(stream, arg.DepthTextureKey);
   stream << ", ";
-  printObjectKey(stream, arg.ExposureScaleTextureKey);
+  PrintObjectKey(stream, arg.ExposureScaleTextureKey);
   stream << ", ";
-  printObjectKey(stream, arg.ResponsivePixelMaskTextureKey);
+  PrintObjectKey(stream, arg.ResponsivePixelMaskTextureKey);
   stream << ", ";
-  printObjectKey(stream, arg.OutputTextureKey);
+  PrintObjectKey(stream, arg.OutputTextureKey);
   stream << ", ";
   stream << arg.Value->jitterOffsetX << ", ";
   stream << arg.Value->jitterOffsetY << ", ";
@@ -1385,7 +1385,7 @@ FastOStream& operator<<(FastOStream& stream, xess_d3d12_execute_params_t_Argumen
   stream << arg.Value->inputResponsiveMaskBase << ", ";
   stream << arg.Value->reserved0 << ", ";
   stream << arg.Value->outputColorBase << ", ";
-  printObjectKey(stream, arg.DescriptorHeapKey);
+  PrintObjectKey(stream, arg.DescriptorHeapKey);
   stream << ", ";
   stream << arg.Value->descriptorHeapOffset;
   stream << "}";
@@ -1409,7 +1409,7 @@ FastOStream& operator<<(FastOStream& stream, DSTORAGE_QUEUE_DESC_Argument& arg) 
   } else {
     stream << "nullptr, ";
   }
-  printObjectKey(stream, arg.DeviceKey);
+  PrintObjectKey(stream, arg.DeviceKey);
   stream << "}";
   return stream;
 }
@@ -1423,7 +1423,7 @@ FastOStream& operator<<(FastOStream& stream, DSTORAGE_REQUEST_Argument& arg) {
     break;
   case DSTORAGE_REQUEST_SOURCE_FILE:
     stream << "DSTORAGE_SOURCE_FILE{";
-    printObjectKey(stream, arg.FileKey) << ", ";
+    PrintObjectKey(stream, arg.FileKey) << ", ";
     stream << arg.Value->Source.File.Offset << ", ";
     stream << arg.Value->Source.File.Size;
     stream << "}, ";
@@ -1437,27 +1437,27 @@ FastOStream& operator<<(FastOStream& stream, DSTORAGE_REQUEST_Argument& arg) {
     break;
   case DSTORAGE_REQUEST_DESTINATION_BUFFER:
     stream << "DSTORAGE_DESTINATION_BUFFER{";
-    printObjectKey(stream, arg.ResourceKey) << ", ";
+    PrintObjectKey(stream, arg.ResourceKey) << ", ";
     stream << arg.Value->Destination.Buffer.Offset << ", ";
     stream << arg.Value->Destination.Buffer.Size;
     stream << "}, ";
     break;
   case DSTORAGE_REQUEST_DESTINATION_TEXTURE_REGION:
     stream << "DSTORAGE_DESTINATION_TEXTURE_REGION{";
-    printObjectKey(stream, arg.ResourceKey) << ", ";
+    PrintObjectKey(stream, arg.ResourceKey) << ", ";
     stream << arg.Value->Destination.Texture.SubresourceIndex << ", ";
     stream << arg.Value->Destination.Texture.Region;
     stream << "}, ";
     break;
   case DSTORAGE_REQUEST_DESTINATION_MULTIPLE_SUBRESOURCES:
     stream << "DSTORAGE_DESTINATION_MULTIPLE_SUBRESOURCES{";
-    printObjectKey(stream, arg.ResourceKey) << ", ";
+    PrintObjectKey(stream, arg.ResourceKey) << ", ";
     stream << arg.Value->Destination.MultipleSubresources.FirstSubresource;
     stream << "}, ";
     break;
   case DSTORAGE_REQUEST_DESTINATION_TILES:
     stream << "DSTORAGE_DESTINATION_TEXTURE_TILES{";
-    printObjectKey(stream, arg.ResourceKey) << ", ";
+    PrintObjectKey(stream, arg.ResourceKey) << ", ";
     stream << arg.Value->Destination.Tiles.TiledRegionStartCoordinate << ", ";
     stream << arg.Value->Destination.Tiles.TileRegionSize;
     stream << "}, ";
@@ -1484,7 +1484,7 @@ FastOStream& operator<<(
   }
   stream << "NVAPI_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_EX_PARAMS{";
   stream << arg.Value->version << ", {";
-  printObjectKey(stream, arg.DestAccelerationStructureKey);
+  PrintObjectKey(stream, arg.DestAccelerationStructureKey);
   stream << ", " << arg.DestAccelerationStructureOffset << "} (0x";
   PrintHex(stream, arg.Value->pDesc->destAccelerationStructureData) << "), {";
 
@@ -1494,7 +1494,7 @@ FastOStream& operator<<(
   if (!arg.InputKeys.empty() &&
       arg.Value->pDesc->inputs.type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
     stream << "{";
-    printObjectKey(stream, arg.InputKeys[0]);
+    PrintObjectKey(stream, arg.InputKeys[0]);
     stream << ", " << arg.InputOffsets[0] << "}";
   } else if (arg.Value->pDesc->inputs.type ==
              D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL) {
@@ -1516,48 +1516,48 @@ FastOStream& operator<<(
 
       if (!arg.InputKeys.empty() && desc->type == D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES) {
         stream << "{";
-        printObjectKey(stream, arg.InputKeys[inputIndex]);
+        PrintObjectKey(stream, arg.InputKeys[inputIndex]);
         stream << ", " << arg.InputOffsets[inputIndex] << "}, ";
         ++inputIndex;
         stream << desc->triangles.IndexFormat << ", " << desc->triangles.VertexFormat << ", "
                << desc->triangles.IndexCount << ", " << desc->triangles.VertexCount << ", {";
-        printObjectKey(stream, arg.InputKeys[inputIndex]);
+        PrintObjectKey(stream, arg.InputKeys[inputIndex]);
         stream << ", " << arg.InputOffsets[inputIndex] << "}, {{";
         ++inputIndex;
-        printObjectKey(stream, arg.InputKeys[inputIndex]);
+        PrintObjectKey(stream, arg.InputKeys[inputIndex]);
         stream << ", " << arg.InputOffsets[inputIndex] << "}, ";
         ++inputIndex;
         stream << desc->triangles.VertexBuffer.StrideInBytes << "}";
       } else if (desc->type == D3D12_RAYTRACING_GEOMETRY_TYPE_PROCEDURAL_PRIMITIVE_AABBS) {
         stream << desc->aabbs.AABBCount << ", {{";
-        printObjectKey(stream, arg.InputKeys[inputIndex]);
+        PrintObjectKey(stream, arg.InputKeys[inputIndex]);
         stream << ", " << arg.InputOffsets[inputIndex] << "}, ";
         ++inputIndex;
         stream << desc->aabbs.AABBs.StrideInBytes << "}";
       } else if (desc->type == NVAPI_D3D12_RAYTRACING_GEOMETRY_TYPE_OMM_TRIANGLES_EX) {
         stream << "{";
-        printObjectKey(stream, arg.InputKeys[inputIndex]);
+        PrintObjectKey(stream, arg.InputKeys[inputIndex]);
         stream << ", " << arg.InputOffsets[inputIndex] << "}, ";
         ++inputIndex;
         stream << desc->ommTriangles.triangles.IndexFormat << ", "
                << desc->ommTriangles.triangles.VertexFormat << ", "
                << desc->ommTriangles.triangles.IndexCount << ", "
                << desc->ommTriangles.triangles.VertexCount << ", {";
-        printObjectKey(stream, arg.InputKeys[inputIndex]);
+        PrintObjectKey(stream, arg.InputKeys[inputIndex]);
         stream << ", " << arg.InputOffsets[inputIndex] << "}, {{";
         ++inputIndex;
-        printObjectKey(stream, arg.InputKeys[inputIndex]);
+        PrintObjectKey(stream, arg.InputKeys[inputIndex]);
         stream << ", " << arg.InputOffsets[inputIndex] << "}, ";
         ++inputIndex;
         stream << desc->ommTriangles.triangles.VertexBuffer.StrideInBytes << "}, {{";
-        printObjectKey(stream, arg.InputKeys[inputIndex]);
+        PrintObjectKey(stream, arg.InputKeys[inputIndex]);
         stream << ", " << arg.InputOffsets[inputIndex] << "}, ";
         ++inputIndex;
         stream << desc->ommTriangles.ommAttachment.opacityMicromapIndexBuffer.StrideInBytes
                << "}, ";
         stream << desc->ommTriangles.ommAttachment.opacityMicromapIndexFormat << ", "
                << desc->ommTriangles.ommAttachment.opacityMicromapBaseLocation << ", {";
-        printObjectKey(stream, arg.InputKeys[inputIndex]);
+        PrintObjectKey(stream, arg.InputKeys[inputIndex]);
         stream << ", " << arg.InputOffsets[inputIndex] << "}, ";
         ++inputIndex;
         stream << desc->ommTriangles.ommAttachment.numOMMUsageCounts << ", ";
@@ -1579,44 +1579,44 @@ FastOStream& operator<<(
         stream << "}";
       } else if (desc->type == NVAPI_D3D12_RAYTRACING_GEOMETRY_TYPE_DMM_TRIANGLES_EX) {
         stream << "{";
-        printObjectKey(stream, arg.InputKeys[inputIndex]);
+        PrintObjectKey(stream, arg.InputKeys[inputIndex]);
         stream << ", " << arg.InputOffsets[inputIndex] << "}, ";
         ++inputIndex;
         stream << desc->dmmTriangles.triangles.IndexFormat << ", "
                << desc->dmmTriangles.triangles.VertexFormat << ", "
                << desc->dmmTriangles.triangles.IndexCount << ", "
                << desc->dmmTriangles.triangles.VertexCount << ", {";
-        printObjectKey(stream, arg.InputKeys[inputIndex]);
+        PrintObjectKey(stream, arg.InputKeys[inputIndex]);
         stream << ", " << arg.InputOffsets[inputIndex] << "}, {{";
         ++inputIndex;
-        printObjectKey(stream, arg.InputKeys[inputIndex]);
+        PrintObjectKey(stream, arg.InputKeys[inputIndex]);
         stream << ", " << arg.InputOffsets[inputIndex] << "}, ";
         ++inputIndex;
         stream << desc->dmmTriangles.triangles.VertexBuffer.StrideInBytes << "}, {{";
-        printObjectKey(stream, arg.InputKeys[inputIndex]);
+        PrintObjectKey(stream, arg.InputKeys[inputIndex]);
         stream << ", " << arg.InputOffsets[inputIndex] << "}, ";
         ++inputIndex;
         stream << desc->dmmTriangles.dmmAttachment.triangleMicromapIndexBuffer.StrideInBytes
                << "}, ";
         stream << desc->dmmTriangles.dmmAttachment.triangleMicromapIndexFormat << ", "
                << desc->dmmTriangles.dmmAttachment.triangleMicromapBaseLocation << ", {{";
-        printObjectKey(stream, arg.InputKeys[inputIndex]);
+        PrintObjectKey(stream, arg.InputKeys[inputIndex]);
         stream << ", " << arg.InputOffsets[inputIndex] << "}, ";
         ++inputIndex;
         stream << desc->dmmTriangles.dmmAttachment.trianglePrimitiveFlagsBuffer.StrideInBytes
                << "}, {{";
-        printObjectKey(stream, arg.InputKeys[inputIndex]);
+        PrintObjectKey(stream, arg.InputKeys[inputIndex]);
         stream << ", " << arg.InputOffsets[inputIndex] << "}, ";
         ++inputIndex;
         stream << desc->dmmTriangles.dmmAttachment.vertexBiasAndScaleBuffer.StrideInBytes << "}, ";
         stream << desc->dmmTriangles.dmmAttachment.vertexBiasAndScaleFormat << ", {{";
-        printObjectKey(stream, arg.InputKeys[inputIndex]);
+        PrintObjectKey(stream, arg.InputKeys[inputIndex]);
         stream << ", " << arg.InputOffsets[inputIndex] << "}, ";
         ++inputIndex;
         stream << desc->dmmTriangles.dmmAttachment.vertexDisplacementVectorBuffer.StrideInBytes
                << "}, ";
         stream << desc->dmmTriangles.dmmAttachment.vertexDisplacementVectorFormat << ", {";
-        printObjectKey(stream, arg.InputKeys[inputIndex]);
+        PrintObjectKey(stream, arg.InputKeys[inputIndex]);
         stream << ", " << arg.InputOffsets[inputIndex] << "}, ";
         ++inputIndex;
         stream << ", " << desc->dmmTriangles.dmmAttachment.numDMMUsageCounts << ", ";
@@ -1638,17 +1638,17 @@ FastOStream& operator<<(
         stream << "}";
       } else if (desc->type == NVAPI_D3D12_RAYTRACING_GEOMETRY_TYPE_SPHERES_EX) {
         stream << "{" << desc->spheres.vertexCount << ", " << desc->spheres.indexCount << ", {{";
-        printObjectKey(stream, arg.InputKeys[inputIndex]);
+        PrintObjectKey(stream, arg.InputKeys[inputIndex]);
         stream << ", " << arg.InputOffsets[inputIndex] << "}, ";
         ++inputIndex;
         stream << desc->spheres.vertexPositionBuffer.StrideInBytes << "}, ";
         stream << desc->spheres.vertexPositionFormat << ", {{";
-        printObjectKey(stream, arg.InputKeys[inputIndex]);
+        PrintObjectKey(stream, arg.InputKeys[inputIndex]);
         stream << ", " << arg.InputOffsets[inputIndex] << "}, ";
         ++inputIndex;
         stream << desc->spheres.vertexRadiusBuffer.StrideInBytes << "}, ";
         stream << desc->spheres.vertexRadiusFormat << ", {{";
-        printObjectKey(stream, arg.InputKeys[inputIndex]);
+        PrintObjectKey(stream, arg.InputKeys[inputIndex]);
         stream << ", " << arg.InputOffsets[inputIndex] << "}, ";
         ++inputIndex;
         stream << desc->spheres.indexBuffer.StrideInBytes << "}, ";
@@ -1656,17 +1656,17 @@ FastOStream& operator<<(
       } else if (desc->type == NVAPI_D3D12_RAYTRACING_GEOMETRY_TYPE_LSS_EX) {
         stream << "{" << desc->lss.vertexCount << ", " << desc->lss.indexCount << ", "
                << desc->lss.primitiveCount << ", {{";
-        printObjectKey(stream, arg.InputKeys[inputIndex]);
+        PrintObjectKey(stream, arg.InputKeys[inputIndex]);
         stream << ", " << arg.InputOffsets[inputIndex] << "}, ";
         ++inputIndex;
         stream << desc->lss.vertexPositionBuffer.StrideInBytes << "}, ";
         stream << desc->lss.vertexPositionFormat << ", {{";
-        printObjectKey(stream, arg.InputKeys[inputIndex]);
+        PrintObjectKey(stream, arg.InputKeys[inputIndex]);
         stream << ", " << arg.InputOffsets[inputIndex] << "}, ";
         ++inputIndex;
         stream << desc->lss.vertexRadiusBuffer.StrideInBytes << "}, ";
         stream << desc->lss.vertexRadiusFormat << ", {{";
-        printObjectKey(stream, arg.InputKeys[inputIndex]);
+        PrintObjectKey(stream, arg.InputKeys[inputIndex]);
         stream << ", " << arg.InputOffsets[inputIndex] << "}, ";
         ++inputIndex;
         stream << desc->lss.indexBuffer.StrideInBytes << "}, ";
@@ -1679,9 +1679,9 @@ FastOStream& operator<<(
   }
 
   stream << "}, {";
-  printObjectKey(stream, arg.SourceAccelerationStructureKey);
+  PrintObjectKey(stream, arg.SourceAccelerationStructureKey);
   stream << ", " << arg.SourceAccelerationStructureOffset << "}, {";
-  printObjectKey(stream, arg.ScratchAccelerationStructureKey);
+  PrintObjectKey(stream, arg.ScratchAccelerationStructureKey);
   stream << ", " << arg.ScratchAccelerationStructureOffset << "}, ";
 
   stream << arg.Value->numPostbuildInfoDescs << ", ";
@@ -1694,7 +1694,7 @@ FastOStream& operator<<(
         stream << ", ";
       }
       stream << "D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC{{";
-      printObjectKey(stream, arg.DestPostBuildBufferKeys[i]);
+      PrintObjectKey(stream, arg.DestPostBuildBufferKeys[i]);
       stream << ", " << arg.DestPostBuildBufferOffsets[i] << "}, ";
       stream << arg.Value->pPostbuildInfoDescs[i].InfoType;
       stream << "}";
@@ -1717,7 +1717,7 @@ FastOStream& operator<<(
 
   stream << arg.Value->version << ", {";
 
-  printObjectKey(stream, arg.DestOpacityMicromapArrayDataKey);
+  PrintObjectKey(stream, arg.DestOpacityMicromapArrayDataKey);
   stream << ", " << arg.DestOpacityMicromapArrayDataOffset << "} (0x";
   PrintHex(stream, arg.Value->pDesc->destOpacityMicromapArrayData) << "), {";
 
@@ -1739,14 +1739,14 @@ FastOStream& operator<<(
     stream << "]";
   }
   stream << ", {";
-  printObjectKey(stream, arg.InputBufferKey);
+  PrintObjectKey(stream, arg.InputBufferKey);
   stream << ", " << arg.InputBufferOffset << "}, {{";
-  printObjectKey(stream, arg.PerOMMDescsKey);
+  PrintObjectKey(stream, arg.PerOMMDescsKey);
   stream << ", " << arg.PerOMMDescsOffset << "}, "
          << arg.Value->pDesc->inputs.perOMMDescs.StrideInBytes << "}";
 
   stream << "}, {";
-  printObjectKey(stream, arg.ScratchOpacityMicromapArrayDataKey);
+  PrintObjectKey(stream, arg.ScratchOpacityMicromapArrayDataKey);
   stream << ", " << arg.ScratchOpacityMicromapArrayDataOffset << "}, ";
 
   stream << arg.Value->numPostbuildInfoDescs << ", ";
@@ -1759,7 +1759,7 @@ FastOStream& operator<<(
         stream << ", ";
       }
       stream << "D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC{{";
-      printObjectKey(stream, arg.DestPostBuildBufferKeys[i]);
+      PrintObjectKey(stream, arg.DestPostBuildBufferKeys[i]);
       stream << ", " << arg.DestPostBuildBufferOffsets[i] << "}, ";
       stream << arg.Value->pPostbuildInfoDescs[i].infoType;
       stream << "}";
@@ -1808,25 +1808,25 @@ FastOStream& operator<<(
                 arg.Value->pDesc->addressResolutionFlags)
          << ", {";
 
-  printObjectKey(stream, arg.BatchResultDataKey);
+  PrintObjectKey(stream, arg.BatchResultDataKey);
   stream << ", " << arg.BatchResultDataOffset << "}, {";
 
-  printObjectKey(stream, arg.BatchScratchDataKey);
+  PrintObjectKey(stream, arg.BatchScratchDataKey);
   stream << ", " << arg.BatchScratchDataOffset << "}, {{";
 
-  printObjectKey(stream, arg.DestinationAddressArrayKey);
+  PrintObjectKey(stream, arg.DestinationAddressArrayKey);
   stream << ", " << arg.DestinationAddressArrayOffset << "}, "
          << arg.Value->pDesc->destinationAddressArray.StrideInBytes << "}, {{";
 
-  printObjectKey(stream, arg.ResultSizeArrayKey);
+  PrintObjectKey(stream, arg.ResultSizeArrayKey);
   stream << ", " << arg.ResultSizeArrayOffset << "}, "
          << arg.Value->pDesc->resultSizeArray.StrideInBytes << "}, {{";
 
-  printObjectKey(stream, arg.IndirectArgArrayKey);
+  PrintObjectKey(stream, arg.IndirectArgArrayKey);
   stream << ", " << arg.IndirectArgArrayOffset << "}, "
          << arg.Value->pDesc->indirectArgArray.StrideInBytes << "}, {";
 
-  printObjectKey(stream, arg.IndirectArgCountKey);
+  PrintObjectKey(stream, arg.IndirectArgCountKey);
   stream << ", " << arg.IndirectArgCountOffset << "}";
 
   return stream;
@@ -1860,16 +1860,16 @@ FastOStream& operator<<(FastOStream& stream, xefg_swapchain_d3d12_init_params_t_
     return stream << "nullptr";
   }
   stream << "xefg_swapchain_d3d12_init_params_t{";
-  printObjectKey(stream, arg.ApplicationSwapChainKey);
+  PrintObjectKey(stream, arg.ApplicationSwapChainKey);
   stream << ", " << arg.Value->initFlags << ", ";
   stream << arg.Value->maxInterpolatedFrames << ", ";
   stream << arg.Value->creationNodeMask << ", ";
   stream << arg.Value->visibleNodeMask << ", ";
-  printObjectKey(stream, arg.TempBufferHeapKey);
+  PrintObjectKey(stream, arg.TempBufferHeapKey);
   stream << ", " << arg.Value->bufferHeapOffset << ", ";
-  printObjectKey(stream, arg.TempTextureHeapKey);
+  PrintObjectKey(stream, arg.TempTextureHeapKey);
   stream << ", " << arg.Value->textureHeapOffset << ", ";
-  printObjectKey(stream, arg.PipelineLibraryKey);
+  PrintObjectKey(stream, arg.PipelineLibraryKey);
   stream << ", " << toStr(arg.Value->uiMode);
   stream << "}";
   return stream;
@@ -1884,7 +1884,7 @@ FastOStream& operator<<(FastOStream& stream, xefg_swapchain_d3d12_resource_data_
   stream << toStr(arg.Value->validity) << ", ";
   stream << arg.Value->resourceBase << ", ";
   stream << arg.Value->resourceSize << ", ";
-  printObjectKey(stream, arg.ResourceKey);
+  PrintObjectKey(stream, arg.ResourceKey);
   stream << ", " << toStr(arg.Value->incomingState);
   stream << "}";
   return stream;

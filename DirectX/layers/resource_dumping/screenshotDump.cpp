@@ -48,7 +48,7 @@ ScreenshotDump::~ScreenshotDump() {
   }
 }
 
-void ScreenshotDump::dump(ID3D12Resource* backBuffer, const std::wstring& dumpName) {
+void ScreenshotDump::Dump(ID3D12Resource* backBuffer, const std::wstring& dumpName) {
   if (m_DumpThread && m_DumpThread->joinable()) {
     m_DumpThread->join();
   }
@@ -63,7 +63,7 @@ void ScreenshotDump::dump(ID3D12Resource* backBuffer, const std::wstring& dumpNa
   if (desc.Width != m_BackBufferDesc.Width || desc.Height != m_BackBufferDesc.Height ||
       desc.Format != m_BackBufferDesc.Format) {
     m_BackBufferDesc = desc;
-    createStagingBuffer();
+    CreateStagingBuffer();
   }
 
   D3D12_RESOURCE_BARRIER barrier{};
@@ -103,10 +103,10 @@ void ScreenshotDump::dump(ID3D12Resource* backBuffer, const std::wstring& dumpNa
   hr = m_CommandQueue->Signal(m_Fence.Get(), m_FenceValue);
   GITS_ASSERT(hr == S_OK);
 
-  m_DumpThread = std::make_unique<std::thread>(&ScreenshotDump::dumpStagedResource, this, dumpName);
+  m_DumpThread = std::make_unique<std::thread>(&ScreenshotDump::DumpStagedResource, this, dumpName);
 }
 
-void ScreenshotDump::createStagingBuffer() {
+void ScreenshotDump::CreateStagingBuffer() {
   if (m_StagingBuffer) {
     m_StagingBuffer->Release();
   }
@@ -141,7 +141,7 @@ void ScreenshotDump::createStagingBuffer() {
   GITS_ASSERT(hr == S_OK);
 }
 
-void ScreenshotDump::dumpStagedResource(std::wstring dumpName) {
+void ScreenshotDump::DumpStagedResource(std::wstring dumpName) {
   WaitForSingleObject(m_FenceEvent, INFINITE);
   GITS_ASSERT(m_StagingBuffer.Get());
 

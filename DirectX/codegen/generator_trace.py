@@ -65,13 +65,13 @@ def print_struct_values(struct):
             else:
                 representation = f'value.{field.name}'
         if is_array and (struct.name in PRINT_ARRAY_VALUES):
-            str += f'  printArray(stream, value.{field.sal_size}, value.{field.name}){separator};\n'
+            str += f'  PrintArray(stream, value.{field.sal_size}, value.{field.name}){separator};\n'
         elif field.is_parameter and not is_array and field.type in ["wchar_t", "LPCWSTR", "WCHAR"]:
-            str += f'  printString(stream, value.{field.name}){separator};\n'
+            str += f'  PrintString(stream, value.{field.name}){separator};\n'
         elif field.is_parameter and field.is_array:
-            str += f'  printStaticArray(stream, value.{field.name}){separator};\n'
+            str += f'  PrintStaticArray(stream, value.{field.name}){separator};\n'
         elif field.is_parameter and field.is_array_of_arrays:
-            str += f'  printStatic2DArray(stream, value.{field.name}){separator};\n'
+            str += f'  PrintStatic2DArray(stream, value.{field.name}){separator};\n'
         else:
             str += f'  stream << {representation}{separator};\n'
     str += '  stream << "}";\n'

@@ -119,7 +119,7 @@ template <unsigned SIZE>
 unsigned CpuDescriptorsService::DescriptorHeap<SIZE>::PreserveDescriptor(unsigned heapKey,
                                                                          unsigned heapIndex) {
   if (!m_DescriptorHeapKey) {
-    createDescriptorHeap();
+    CreateDescriptorHeap();
   }
 
   unsigned preservedIndex = 0;
@@ -150,7 +150,7 @@ unsigned CpuDescriptorsService::DescriptorHeap<SIZE>::PreserveDescriptor(unsigne
 }
 
 template <unsigned SIZE>
-void CpuDescriptorsService::DescriptorHeap<SIZE>::createDescriptorHeap() {
+void CpuDescriptorsService::DescriptorHeap<SIZE>::CreateDescriptorHeap() {
   m_DescriptorHeapKey = m_Service.m_CommandListExecutionService.GetUniqueObjectKey();
 
   D3D12_DESCRIPTOR_HEAP_DESC desc{};

@@ -308,7 +308,7 @@ void RenderTargetsDumpLayer::DumpRenderTarget(ID3D12GraphicsCommandList* command
   for (unsigned arrayIndex = minArrayIndex; arrayIndex <= maxArrayIndex; ++arrayIndex) {
     for (unsigned planeSlice = 0; planeSlice < planeCount; ++planeSlice) {
 
-      std::wstring dumpName = m_DumpPath + L"/draw_e_" + m_ResourceDump.dumpNameExecutionMarker +
+      std::wstring dumpName = m_DumpPath + L"/draw_e_" + m_ResourceDump.m_DumpNameExecutionMarker +
                               L"_f_" + std::to_wstring(frame) + L"_d_" +
                               std::to_wstring(m_DrawCount) + L"_rt_" +
                               std::to_wstring(renderTarget.slot) + L"_O" +
@@ -327,7 +327,7 @@ void RenderTargetsDumpLayer::DumpRenderTarget(ID3D12GraphicsCommandList* command
           D3D12CalcSubresource(mipLevel, arrayIndex, planeSlice, desc.MipLevels, arraySize);
       BarrierState resourceState{};
       resourceState.State = D3D12_RESOURCE_STATE_RENDER_TARGET;
-      m_ResourceDump.dumpResource(commandList, renderTarget.resource, subresource, resourceState,
+      m_ResourceDump.DumpResource(commandList, renderTarget.resource, subresource, resourceState,
                                   dumpName, mipLevel, format, commandListDraw);
     }
   }
@@ -388,7 +388,7 @@ void RenderTargetsDumpLayer::DumpDepthStencil(ID3D12GraphicsCommandList* command
   for (unsigned arrayIndex = minArrayIndex; arrayIndex <= maxArrayIndex; ++arrayIndex) {
     for (unsigned planeSlice = 0; planeSlice < planeCount; ++planeSlice) {
 
-      std::wstring dumpName = m_DumpPath + L"/draw_e_" + m_ResourceDump.dumpNameExecutionMarker +
+      std::wstring dumpName = m_DumpPath + L"/draw_e_" + m_ResourceDump.m_DumpNameExecutionMarker +
                               L"_f_" + std::to_wstring(frame) + L"_d_" +
                               std::to_wstring(m_DrawCount) + L"_ds_O" +
                               std::to_wstring(depthStencil.ResourceKey) + L"_" + formatNameW;
@@ -406,7 +406,7 @@ void RenderTargetsDumpLayer::DumpDepthStencil(ID3D12GraphicsCommandList* command
           D3D12CalcSubresource(mipLevel, arrayIndex, planeSlice, desc.MipLevels, arraySize);
       BarrierState resourceState{};
       resourceState.State = D3D12_RESOURCE_STATE_DEPTH_WRITE;
-      m_ResourceDump.dumpResource(commandList, depthStencil.resource, subresource, resourceState,
+      m_ResourceDump.DumpResource(commandList, depthStencil.resource, subresource, resourceState,
                                   dumpName, mipLevel, format, commandListDraw);
     }
   }
@@ -420,7 +420,7 @@ void RenderTargetsDumpLayer::Post(ID3D12CommandQueueExecuteCommandListsCommand& 
     m_DrawCountByCommandList.erase(commandListKey);
   }
   ++m_ExecuteCount;
-  m_ResourceDump.executeCommandLists(c.Key, c.m_Object.Key, c.m_Object.Value,
+  m_ResourceDump.ExecuteCommandLists(c.Key, c.m_Object.Key, c.m_Object.Value,
                                      c.m_ppCommandLists.Value, c.m_NumCommandLists.Value,
                                      m_CurrentFrame, m_ExecuteCount);
 }

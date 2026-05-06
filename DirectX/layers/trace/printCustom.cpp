@@ -15,7 +15,7 @@
 namespace gits {
 namespace DirectX {
 
-FastOStream& printObjectKey(FastOStream& stream, unsigned key) {
+FastOStream& PrintObjectKey(FastOStream& stream, unsigned key) {
   if (!key) {
     stream << "nullptr";
   } else {
@@ -25,7 +25,7 @@ FastOStream& printObjectKey(FastOStream& stream, unsigned key) {
   return stream;
 }
 
-FastOStream& printString(FastOStream& stream, const wchar_t* s) {
+FastOStream& PrintString(FastOStream& stream, const wchar_t* s) {
   if (s) {
     std::wstring strW(s);
     std::string str(strW.begin(), strW.end());
@@ -36,7 +36,7 @@ FastOStream& printString(FastOStream& stream, const wchar_t* s) {
   return stream;
 }
 
-FastOStream& printString(FastOStream& stream, const char* s) {
+FastOStream& PrintString(FastOStream& stream, const char* s) {
   if (s) {
     stream << "\"" << s << "\"";
   } else {
@@ -108,7 +108,7 @@ FastOStream& operator<<(FastOStream& stream, const POINT& value) {
 
 FastOStream& operator<<(FastOStream& stream, const D3D12_VERSION_NUMBER& value) {
   stream << "D3D12_VERSION_NUMBER{";
-  printStaticArray(stream, value.VersionParts) << "}";
+  PrintStaticArray(stream, value.VersionParts) << "}";
   return stream;
 }
 
@@ -419,9 +419,9 @@ FastOStream& operator<<(FastOStream& stream, const D3D12_SHADER_BYTECODE& value)
 
 FastOStream& operator<<(FastOStream& stream, const D3D12_EXPORT_DESC& value) {
   stream << "{";
-  printString(stream, value.Name);
+  PrintString(stream, value.Name);
   stream << ", ";
-  printString(stream, value.ExportToRename);
+  PrintString(stream, value.ExportToRename);
   stream << ", " << value.Flags << "}";
   return stream;
 }
@@ -716,8 +716,8 @@ FastOStream& operator<<(FastOStream& stream, const INTCExtensionInfo& value) {
   stream << "INTCExtensionInfo{";
   stream << value.RequestedExtensionVersion << ", ";
   stream << value.IntelDeviceInfo << ", ";
-  printString(stream, value.pDeviceDriverDesc) << ", ";
-  printString(stream, value.pDeviceDriverVersion) << ", ";
+  PrintString(stream, value.pDeviceDriverDesc) << ", ";
+  PrintString(stream, value.pDeviceDriverVersion) << ", ";
   stream << value.DeviceDriverBuildNumber;
   stream << "}";
   return stream;
@@ -758,7 +758,7 @@ FastOStream& operator<<(FastOStream& stream, const INTCDeviceInfo& value) {
   stream << value.EUCount << ", ";
   stream << value.PackageTDP << ", ";
   stream << value.MaxFillRate << ", ";
-  printString(stream, value.GTGenerationName);
+  PrintString(stream, value.GTGenerationName);
   stream << "}";
   return stream;
 }
@@ -774,9 +774,9 @@ FastOStream& operator<<(FastOStream& stream, const INTCDeviceInfo* value) {
 
 FastOStream& operator<<(FastOStream& stream, const INTCExtensionAppInfo& value) {
   stream << "INTCExtensionAppInfo{";
-  printString(stream, value.pApplicationName) << ", ";
+  PrintString(stream, value.pApplicationName) << ", ";
   stream << value.ApplicationVersion << ", ";
-  printString(stream, value.pEngineName) << ", ";
+  PrintString(stream, value.pEngineName) << ", ";
   stream << value.EngineVersion;
   stream << "}";
   return stream;
@@ -811,9 +811,9 @@ FastOStream& operator<<(FastOStream& stream, const INTCAppInfoVersion* value) {
 
 FastOStream& operator<<(FastOStream& stream, const INTCExtensionAppInfo1& value) {
   stream << "INTCExtensionAppInfo1{";
-  printString(stream, value.pApplicationName) << ", ";
+  PrintString(stream, value.pApplicationName) << ", ";
   stream << value.ApplicationVersion << ", ";
-  printString(stream, value.pEngineName) << ", ";
+  PrintString(stream, value.pEngineName) << ", ";
   stream << value.EngineVersion;
   stream << "}";
   return stream;

@@ -54,7 +54,7 @@ private:
     unsigned m_DescriptorHeapKey{};
 
   private:
-    void createDescriptorHeap();
+    void CreateDescriptorHeap();
 
   private:
     CpuDescriptorsService& m_Service;

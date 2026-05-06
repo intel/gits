@@ -26,11 +26,11 @@ public:
   ScreenshotDump(const ScreenshotDump&) = delete;
   ScreenshotDump& operator=(const ScreenshotDump&) = delete;
 
-  void dump(ID3D12Resource* backBuffer, const std::wstring& dumpName);
+  void Dump(ID3D12Resource* backBuffer, const std::wstring& dumpName);
 
 private:
-  void createStagingBuffer();
-  void dumpStagedResource(std::wstring dumpName);
+  void CreateStagingBuffer();
+  void DumpStagedResource(std::wstring dumpName);
 
   Microsoft::WRL::ComPtr<ID3D12Device> m_Device;
   Microsoft::WRL::ComPtr<ID3D12CommandQueue> m_CommandQueue;

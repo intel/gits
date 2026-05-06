@@ -20,7 +20,7 @@ namespace DirectX {
 class SkipCallsOnConfigLayer : public Layer {
 public:
   SkipCallsOnConfigLayer() : Layer("SkipCallsOnConfig"),
-      keyRange_(ParseConfigKeys(Configurator::Get().directx.features.skipCalls.commandKeys)) {}
+      m_KeyRange(ParseConfigKeys(Configurator::Get().directx.features.skipCalls.commandKeys)) {}
 
   virtual void Pre(CreateWindowMetaCommand& command) override;
   virtual void Pre(MappedDataMetaCommand& command) override;
@@ -63,7 +63,7 @@ public:
   %endfor
 
 private:
-  BitRange keyRange_;
+  BitRange m_KeyRange;
 };
 
 } // namespace DirectX

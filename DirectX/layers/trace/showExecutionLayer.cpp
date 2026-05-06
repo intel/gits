@@ -39,10 +39,10 @@ void ShowExecutionLayer::Post(IDXGISwapChainPresentCommand& command) {
   if (!(command.m_Flags.Value & DXGI_PRESENT_TEST)) {
     CommandPrinter p(m_OutBuff, m_PrinterState, command, "IDXGISwapChain::Present",
                      command.m_Object.Key);
-    p.addArgument(command.m_SyncInterval);
-    p.addArgument(command.m_Flags);
-    p.addResult(command.m_Result);
-    p.print(true);
+    p.AddArgument(command.m_SyncInterval);
+    p.AddArgument(command.m_Flags);
+    p.AddResult(command.m_Result);
+    p.Print(true);
 
     m_ExecuteCount = 0;
     if (!IsStateRestoreKey(command.Key)) {
@@ -55,10 +55,10 @@ void ShowExecutionLayer::Post(IDXGISwapChain1Present1Command& command) {
   if (!(command.m_PresentFlags.Value & DXGI_PRESENT_TEST)) {
     CommandPrinter p(m_OutBuff, m_PrinterState, command, "IDXGISwapChain1::Present1",
                      command.m_Object.Key);
-    p.addArgument(command.m_SyncInterval);
-    p.addArgument(command.m_PresentFlags);
-    p.addResult(command.m_Result);
-    p.print(true);
+    p.AddArgument(command.m_SyncInterval);
+    p.AddArgument(command.m_PresentFlags);
+    p.AddResult(command.m_Result);
+    p.Print(true);
 
     m_ExecuteCount = 0;
     if (!IsStateRestoreKey(command.Key)) {
@@ -78,11 +78,11 @@ void ShowExecutionLayer::Post(ID3D12CommandQueueExecuteCommandListsCommand& comm
   CommandPrinter p(m_OutBuff, m_PrinterState, command, "ID3D12CommandQueue::ExecuteCommandLists",
                    command.m_Object.Key);
   ++m_ExecuteCount;
-  p.addArgument(command.m_NumCommandLists);
-  p.addArgument(command.m_ppCommandLists);
-  p.print(false, false);
-  if (!(IsExecutionSerializationKey(command.Key) && !m_PrinterState.stateRestorePhase)) {
-    m_OutBuff << " Frame #" << m_PrinterState.frameCount << " Frame Execute #" << m_ExecuteCount
+  p.AddArgument(command.m_NumCommandLists);
+  p.AddArgument(command.m_ppCommandLists);
+  p.Print(false, false);
+  if (!(IsExecutionSerializationKey(command.Key) && !m_PrinterState.StateRestorePhase)) {
+    m_OutBuff << " Frame #" << m_PrinterState.FrameCount << " Frame Execute #" << m_ExecuteCount
               << "\n";
   } else {
     m_OutBuff << "\n";
@@ -142,7 +142,7 @@ void ShowExecutionLayer::Post(ID3D12CommandQueueExecuteCommandListsCommand& comm
 
 void ShowExecutionLayer::Post(ID3D12GraphicsCommandListResetCommand& command) {
   // Lock just in case. This code is used from player, so a lock shouldn't be needed.
-  std::lock_guard<std::mutex> lockGuard(m_PrinterState.mutex);
+  std::lock_guard<std::mutex> lockGuard(m_PrinterState.Mutex);
 
   auto it = m_CommandListCommands.find(command.m_Object.Key);
   if (it != m_CommandListCommands.end()) {
@@ -154,11 +154,11 @@ void ShowExecutionLayer::Post(ID3D12GraphicsCommandListDrawInstancedCommand& com
   m_OutBuff.Flush();
   CommandPrinter p(m_OutBuff, m_PrinterState, command, "ID3D12GraphicsCommandList::DrawInstanced",
                    command.m_Object.Key);
-  p.addArgument(command.m_VertexCountPerInstance);
-  p.addArgument(command.m_InstanceCount);
-  p.addArgument(command.m_StartVertexLocation);
-  p.addArgument(command.m_StartInstanceLocation);
-  p.print(false, false);
+  p.AddArgument(command.m_VertexCountPerInstance);
+  p.AddArgument(command.m_InstanceCount);
+  p.AddArgument(command.m_StartVertexLocation);
+  p.AddArgument(command.m_StartInstanceLocation);
+  p.Print(false, false);
 
   m_CommandListCommands[command.m_Object.Key].emplace_back(m_OutBuff.ExtractString(), true);
 }
@@ -167,12 +167,12 @@ void ShowExecutionLayer::Post(ID3D12GraphicsCommandListDrawIndexedInstancedComma
   m_OutBuff.Flush();
   CommandPrinter p(m_OutBuff, m_PrinterState, command,
                    "ID3D12GraphicsCommandList::DrawIndexedInstanced", command.m_Object.Key);
-  p.addArgument(command.m_IndexCountPerInstance);
-  p.addArgument(command.m_InstanceCount);
-  p.addArgument(command.m_StartIndexLocation);
-  p.addArgument(command.m_BaseVertexLocation);
-  p.addArgument(command.m_StartInstanceLocation);
-  p.print(false, false);
+  p.AddArgument(command.m_IndexCountPerInstance);
+  p.AddArgument(command.m_InstanceCount);
+  p.AddArgument(command.m_StartIndexLocation);
+  p.AddArgument(command.m_BaseVertexLocation);
+  p.AddArgument(command.m_StartInstanceLocation);
+  p.Print(false, false);
 
   m_CommandListCommands[command.m_Object.Key].emplace_back(m_OutBuff.ExtractString(), true);
 }
@@ -181,11 +181,11 @@ void ShowExecutionLayer::Post(ID3D12GraphicsCommandListClearRenderTargetViewComm
   m_OutBuff.Flush();
   CommandPrinter p(m_OutBuff, m_PrinterState, command,
                    "ID3D12GraphicsCommandList::ClearRenderTargetView", command.m_Object.Key);
-  p.addArgument(command.m_RenderTargetView);
-  p.addArgument(command.m_ColorRGBA);
-  p.addArgument(command.m_NumRects);
-  p.addArgument(command.m_pRects);
-  p.print(false);
+  p.AddArgument(command.m_RenderTargetView);
+  p.AddArgument(command.m_ColorRGBA);
+  p.AddArgument(command.m_NumRects);
+  p.AddArgument(command.m_pRects);
+  p.Print(false);
 
   m_CommandListCommands[command.m_Object.Key].emplace_back(m_OutBuff.ExtractString());
 }
@@ -194,13 +194,13 @@ void ShowExecutionLayer::Post(ID3D12GraphicsCommandListClearDepthStencilViewComm
   m_OutBuff.Flush();
   CommandPrinter p(m_OutBuff, m_PrinterState, command,
                    "ID3D12GraphicsCommandList::ClearDepthStencilView", command.m_Object.Key);
-  p.addArgument(command.m_DepthStencilView);
-  p.addArgument(command.m_ClearFlags);
-  p.addArgument(command.m_Depth);
-  p.addArgument(command.m_Stencil);
-  p.addArgument(command.m_NumRects);
-  p.addArgument(command.m_pRects);
-  p.print(false);
+  p.AddArgument(command.m_DepthStencilView);
+  p.AddArgument(command.m_ClearFlags);
+  p.AddArgument(command.m_Depth);
+  p.AddArgument(command.m_Stencil);
+  p.AddArgument(command.m_NumRects);
+  p.AddArgument(command.m_pRects);
+  p.Print(false);
 
   m_CommandListCommands[command.m_Object.Key].emplace_back(m_OutBuff.ExtractString());
 }
@@ -209,10 +209,10 @@ void ShowExecutionLayer::Post(ID3D12GraphicsCommandListDispatchCommand& command)
   m_OutBuff.Flush();
   CommandPrinter p(m_OutBuff, m_PrinterState, command, "ID3D12GraphicsCommandList::Dispatch",
                    command.m_Object.Key);
-  p.addArgument(command.m_ThreadGroupCountX);
-  p.addArgument(command.m_ThreadGroupCountY);
-  p.addArgument(command.m_ThreadGroupCountZ);
-  p.print(false);
+  p.AddArgument(command.m_ThreadGroupCountX);
+  p.AddArgument(command.m_ThreadGroupCountY);
+  p.AddArgument(command.m_ThreadGroupCountZ);
+  p.Print(false);
 
   m_CommandListCommands[command.m_Object.Key].emplace_back(m_OutBuff.ExtractString());
 }
@@ -221,8 +221,8 @@ void ShowExecutionLayer::Post(ID3D12GraphicsCommandListExecuteBundleCommand& com
   m_OutBuff.Flush();
   CommandPrinter p(m_OutBuff, m_PrinterState, command, "ID3D12GraphicsCommandList::ExecuteBundle",
                    command.m_Object.Key);
-  p.addArgument(command.m_pCommandList);
-  p.print(false);
+  p.AddArgument(command.m_pCommandList);
+  p.Print(false);
 
   m_CommandListCommands[command.m_Object.Key].emplace_back(m_OutBuff.ExtractString());
 }
@@ -231,13 +231,13 @@ void ShowExecutionLayer::Post(ID3D12GraphicsCommandListExecuteIndirectCommand& c
   m_OutBuff.Flush();
   CommandPrinter p(m_OutBuff, m_PrinterState, command, "ID3D12GraphicsCommandList::ExecuteIndirect",
                    command.m_Object.Key);
-  p.addArgument(command.m_pCommandSignature);
-  p.addArgument(command.m_MaxCommandCount);
-  p.addArgument(command.m_pArgumentBuffer);
-  p.addArgument(command.m_ArgumentBufferOffset);
-  p.addArgument(command.m_pCountBuffer);
-  p.addArgument(command.m_CountBufferOffset);
-  p.print(false);
+  p.AddArgument(command.m_pCommandSignature);
+  p.AddArgument(command.m_MaxCommandCount);
+  p.AddArgument(command.m_pArgumentBuffer);
+  p.AddArgument(command.m_ArgumentBufferOffset);
+  p.AddArgument(command.m_pCountBuffer);
+  p.AddArgument(command.m_CountBufferOffset);
+  p.Print(false);
 
   m_CommandListCommands[command.m_Object.Key].emplace_back(m_OutBuff.ExtractString());
 }
@@ -246,12 +246,12 @@ void ShowExecutionLayer::Post(ID3D12GraphicsCommandListCopyBufferRegionCommand& 
   m_OutBuff.Flush();
   CommandPrinter p(m_OutBuff, m_PrinterState, command,
                    "ID3D12GraphicsCommandList::CopyBufferRegion", command.m_Object.Key);
-  p.addArgument(command.m_pDstBuffer);
-  p.addArgument(command.m_DstOffset);
-  p.addArgument(command.m_pSrcBuffer);
-  p.addArgument(command.m_SrcOffset);
-  p.addArgument(command.m_NumBytes);
-  p.print(false);
+  p.AddArgument(command.m_pDstBuffer);
+  p.AddArgument(command.m_DstOffset);
+  p.AddArgument(command.m_pSrcBuffer);
+  p.AddArgument(command.m_SrcOffset);
+  p.AddArgument(command.m_NumBytes);
+  p.Print(false);
 
   m_CommandListCommands[command.m_Object.Key].emplace_back(m_OutBuff.ExtractString());
 }
@@ -260,13 +260,13 @@ void ShowExecutionLayer::Post(ID3D12GraphicsCommandListCopyTextureRegionCommand&
   m_OutBuff.Flush();
   CommandPrinter p(m_OutBuff, m_PrinterState, command,
                    "ID3D12GraphicsCommandList::CopyTextureRegion", command.m_Object.Key);
-  p.addArgument(command.m_pDst);
-  p.addArgument(command.m_DstX);
-  p.addArgument(command.m_DstY);
-  p.addArgument(command.m_DstZ);
-  p.addArgument(command.m_pSrc);
-  p.addArgument(command.m_pSrcBox);
-  p.print(false);
+  p.AddArgument(command.m_pDst);
+  p.AddArgument(command.m_DstX);
+  p.AddArgument(command.m_DstY);
+  p.AddArgument(command.m_DstZ);
+  p.AddArgument(command.m_pSrc);
+  p.AddArgument(command.m_pSrcBox);
+  p.Print(false);
 
   m_CommandListCommands[command.m_Object.Key].emplace_back(m_OutBuff.ExtractString());
 }
@@ -275,9 +275,9 @@ void ShowExecutionLayer::Post(ID3D12GraphicsCommandListCopyResourceCommand& comm
   m_OutBuff.Flush();
   CommandPrinter p(m_OutBuff, m_PrinterState, command, "ID3D12GraphicsCommandList::CopyResource",
                    command.m_Object.Key);
-  p.addArgument(command.m_pDstResource);
-  p.addArgument(command.m_pSrcResource);
-  p.print(false);
+  p.AddArgument(command.m_pDstResource);
+  p.AddArgument(command.m_pSrcResource);
+  p.Print(false);
 
   m_CommandListCommands[command.m_Object.Key].emplace_back(m_OutBuff.ExtractString());
 }
@@ -286,13 +286,13 @@ void ShowExecutionLayer::Post(ID3D12GraphicsCommandListCopyTilesCommand& command
   m_OutBuff.Flush();
   CommandPrinter p(m_OutBuff, m_PrinterState, command, "ID3D12GraphicsCommandList::CopyTiles",
                    command.m_Object.Key);
-  p.addArgument(command.m_pTiledResource);
-  p.addArgument(command.m_pTileRegionStartCoordinate);
-  p.addArgument(command.m_pTileRegionSize);
-  p.addArgument(command.m_pBuffer);
-  p.addArgument(command.m_BufferStartOffsetInBytes);
-  p.addArgument(command.m_Flags);
-  p.print(false);
+  p.AddArgument(command.m_pTiledResource);
+  p.AddArgument(command.m_pTileRegionStartCoordinate);
+  p.AddArgument(command.m_pTileRegionSize);
+  p.AddArgument(command.m_pBuffer);
+  p.AddArgument(command.m_BufferStartOffsetInBytes);
+  p.AddArgument(command.m_Flags);
+  p.Print(false);
 
   m_CommandListCommands[command.m_Object.Key].emplace_back(m_OutBuff.ExtractString());
 }
@@ -301,12 +301,12 @@ void ShowExecutionLayer::Post(ID3D12GraphicsCommandListResolveSubresourceCommand
   m_OutBuff.Flush();
   CommandPrinter p(m_OutBuff, m_PrinterState, command,
                    "ID3D12GraphicsCommandList::ResolveSubresource", command.m_Object.Key);
-  p.addArgument(command.m_pDstResource);
-  p.addArgument(command.m_DstSubresource);
-  p.addArgument(command.m_pSrcResource);
-  p.addArgument(command.m_SrcSubresource);
-  p.addArgument(command.m_Format);
-  p.print(false);
+  p.AddArgument(command.m_pDstResource);
+  p.AddArgument(command.m_DstSubresource);
+  p.AddArgument(command.m_pSrcResource);
+  p.AddArgument(command.m_SrcSubresource);
+  p.AddArgument(command.m_Format);
+  p.Print(false);
 
   m_CommandListCommands[command.m_Object.Key].emplace_back(m_OutBuff.ExtractString());
 }
@@ -315,9 +315,9 @@ void ShowExecutionLayer::Post(ID3D12GraphicsCommandListResourceBarrierCommand& c
   m_OutBuff.Flush();
   CommandPrinter p(m_OutBuff, m_PrinterState, command, "ID3D12GraphicsCommandList::ResourceBarrier",
                    command.m_Object.Key);
-  p.addArgument(command.m_NumBarriers);
-  p.addArgument(command.m_pBarriers);
-  p.print(false);
+  p.AddArgument(command.m_NumBarriers);
+  p.AddArgument(command.m_pBarriers);
+  p.Print(false);
 
   m_CommandListCommands[command.m_Object.Key].emplace_back(m_OutBuff.ExtractString());
 }
@@ -328,13 +328,13 @@ void ShowExecutionLayer::Post(
   CommandPrinter p(m_OutBuff, m_PrinterState, command,
                    "ID3D12GraphicsCommandList::ClearUnorderedAccessViewFloat",
                    command.m_Object.Key);
-  p.addArgument(command.m_ViewGPUHandleInCurrentHeap);
-  p.addArgument(command.m_ViewCPUHandle);
-  p.addArgument(command.m_pResource);
-  p.addArgument(command.m_Values);
-  p.addArgument(command.m_NumRects);
-  p.addArgument(command.m_pRects);
-  p.print(false);
+  p.AddArgument(command.m_ViewGPUHandleInCurrentHeap);
+  p.AddArgument(command.m_ViewCPUHandle);
+  p.AddArgument(command.m_pResource);
+  p.AddArgument(command.m_Values);
+  p.AddArgument(command.m_NumRects);
+  p.AddArgument(command.m_pRects);
+  p.Print(false);
 
   m_CommandListCommands[command.m_Object.Key].emplace_back(m_OutBuff.ExtractString());
 }
@@ -344,13 +344,13 @@ void ShowExecutionLayer::Post(
   m_OutBuff.Flush();
   CommandPrinter p(m_OutBuff, m_PrinterState, command,
                    "ID3D12GraphicsCommandList::ClearUnorderedAccessViewUint", command.m_Object.Key);
-  p.addArgument(command.m_ViewGPUHandleInCurrentHeap);
-  p.addArgument(command.m_ViewCPUHandle);
-  p.addArgument(command.m_pResource);
-  p.addArgument(command.m_Values);
-  p.addArgument(command.m_NumRects);
-  p.addArgument(command.m_pRects);
-  p.print(false);
+  p.AddArgument(command.m_ViewGPUHandleInCurrentHeap);
+  p.AddArgument(command.m_ViewCPUHandle);
+  p.AddArgument(command.m_pResource);
+  p.AddArgument(command.m_Values);
+  p.AddArgument(command.m_NumRects);
+  p.AddArgument(command.m_pRects);
+  p.Print(false);
 
   m_CommandListCommands[command.m_Object.Key].emplace_back(m_OutBuff.ExtractString());
 }
@@ -359,16 +359,16 @@ void ShowExecutionLayer::Post(ID3D12GraphicsCommandList1ResolveSubresourceRegion
   m_OutBuff.Flush();
   CommandPrinter p(m_OutBuff, m_PrinterState, command,
                    "ID3D12GraphicsCommandList1::ResolveSubresourceRegion", command.m_Object.Key);
-  p.addArgument(command.m_pDstResource);
-  p.addArgument(command.m_DstSubresource);
-  p.addArgument(command.m_DstX);
-  p.addArgument(command.m_DstY);
-  p.addArgument(command.m_pSrcResource);
-  p.addArgument(command.m_SrcSubresource);
-  p.addArgument(command.m_pSrcRect);
-  p.addArgument(command.m_Format);
-  p.addArgument(command.m_ResolveMode);
-  p.print(false);
+  p.AddArgument(command.m_pDstResource);
+  p.AddArgument(command.m_DstSubresource);
+  p.AddArgument(command.m_DstX);
+  p.AddArgument(command.m_DstY);
+  p.AddArgument(command.m_pSrcResource);
+  p.AddArgument(command.m_SrcSubresource);
+  p.AddArgument(command.m_pSrcRect);
+  p.AddArgument(command.m_Format);
+  p.AddArgument(command.m_ResolveMode);
+  p.Print(false);
 
   m_CommandListCommands[command.m_Object.Key].emplace_back(m_OutBuff.ExtractString());
 }
@@ -379,10 +379,10 @@ void ShowExecutionLayer::Post(
   CommandPrinter p(m_OutBuff, m_PrinterState, command,
                    "ID3D12GraphicsCommandList4::BuildRaytracingAccelerationStructure",
                    command.m_Object.Key);
-  p.addArgument(command.m_pDesc);
-  p.addArgument(command.m_NumPostbuildInfoDescs);
-  p.addArgument(command.m_pPostbuildInfoDescs);
-  p.print(false);
+  p.AddArgument(command.m_pDesc);
+  p.AddArgument(command.m_NumPostbuildInfoDescs);
+  p.AddArgument(command.m_pPostbuildInfoDescs);
+  p.Print(false);
 
   m_CommandListCommands[command.m_Object.Key].emplace_back(m_OutBuff.ExtractString());
 }
@@ -393,10 +393,10 @@ void ShowExecutionLayer::Post(
   CommandPrinter p(m_OutBuff, m_PrinterState, command,
                    "ID3D12GraphicsCommandList4::CopyRaytracingAccelerationStructure",
                    command.m_Object.Key);
-  p.addArgument(command.m_DestAccelerationStructureData);
-  p.addArgument(command.m_SourceAccelerationStructureData);
-  p.addArgument(command.m_Mode);
-  p.print(false);
+  p.AddArgument(command.m_DestAccelerationStructureData);
+  p.AddArgument(command.m_SourceAccelerationStructureData);
+  p.AddArgument(command.m_Mode);
+  p.Print(false);
 
   m_CommandListCommands[command.m_Object.Key].emplace_back(m_OutBuff.ExtractString());
 }
@@ -405,8 +405,8 @@ void ShowExecutionLayer::Post(ID3D12GraphicsCommandList4DispatchRaysCommand& com
   m_OutBuff.Flush();
   CommandPrinter p(m_OutBuff, m_PrinterState, command, "ID3D12GraphicsCommandList4::DispatchRays",
                    command.m_Object.Key);
-  p.addArgument(command.m_pDesc);
-  p.print(false);
+  p.AddArgument(command.m_pDesc);
+  p.Print(false);
 
   m_CommandListCommands[command.m_Object.Key].emplace_back(m_OutBuff.ExtractString());
 }
@@ -415,10 +415,10 @@ void ShowExecutionLayer::Post(ID3D12GraphicsCommandList4ExecuteMetaCommandComman
   m_OutBuff.Flush();
   CommandPrinter p(m_OutBuff, m_PrinterState, command,
                    "ID3D12GraphicsCommandList4::ExecuteMetaCommand", command.m_Object.Key);
-  p.addArgument(command.m_pMetaCommand);
-  p.addArgument(command.m_pExecutionParametersData);
-  p.addArgument(command.m_ExecutionParametersDataSizeInBytes);
-  p.print(false);
+  p.AddArgument(command.m_pMetaCommand);
+  p.AddArgument(command.m_pExecutionParametersData);
+  p.AddArgument(command.m_ExecutionParametersDataSizeInBytes);
+  p.Print(false);
 
   m_CommandListCommands[command.m_Object.Key].emplace_back(m_OutBuff.ExtractString());
 }
@@ -427,10 +427,10 @@ void ShowExecutionLayer::Post(ID3D12GraphicsCommandList4InitializeMetaCommandCom
   m_OutBuff.Flush();
   CommandPrinter p(m_OutBuff, m_PrinterState, command,
                    "ID3D12GraphicsCommandList4::InitializeMetaCommand", command.m_Object.Key);
-  p.addArgument(command.m_pMetaCommand);
-  p.addArgument(command.m_pInitializationParametersData);
-  p.addArgument(command.m_InitializationParametersDataSizeInBytes);
-  p.print(false);
+  p.AddArgument(command.m_pMetaCommand);
+  p.AddArgument(command.m_pInitializationParametersData);
+  p.AddArgument(command.m_InitializationParametersDataSizeInBytes);
+  p.Print(false);
 
   m_CommandListCommands[command.m_Object.Key].emplace_back(m_OutBuff.ExtractString());
 }
@@ -439,10 +439,10 @@ void ShowExecutionLayer::Post(ID3D12GraphicsCommandList6DispatchMeshCommand& com
   m_OutBuff.Flush();
   CommandPrinter p(m_OutBuff, m_PrinterState, command, "ID3D12GraphicsCommandList6::DispatchMesh",
                    command.m_Object.Key);
-  p.addArgument(command.m_ThreadGroupCountX);
-  p.addArgument(command.m_ThreadGroupCountY);
-  p.addArgument(command.m_ThreadGroupCountZ);
-  p.print(false);
+  p.AddArgument(command.m_ThreadGroupCountX);
+  p.AddArgument(command.m_ThreadGroupCountY);
+  p.AddArgument(command.m_ThreadGroupCountZ);
+  p.Print(false);
 
   m_CommandListCommands[command.m_Object.Key].emplace_back(m_OutBuff.ExtractString());
 }
@@ -451,11 +451,11 @@ void ShowExecutionLayer::Post(ID3D12GraphicsCommandListOMSetRenderTargetsCommand
   m_OutBuff.Flush();
   CommandPrinter p(m_OutBuff, m_PrinterState, command,
                    "ID3D12GraphicsCommandList::OMSetRenderTargets", command.m_Object.Key);
-  p.addArgument(command.m_NumRenderTargetDescriptors);
-  p.addArgument(command.m_pRenderTargetDescriptors);
-  p.addArgument(command.m_RTsSingleHandleToDescriptorRange);
-  p.addArgument(command.m_pDepthStencilDescriptor);
-  p.print(false);
+  p.AddArgument(command.m_NumRenderTargetDescriptors);
+  p.AddArgument(command.m_pRenderTargetDescriptors);
+  p.AddArgument(command.m_RTsSingleHandleToDescriptorRange);
+  p.AddArgument(command.m_pDepthStencilDescriptor);
+  p.Print(false);
 
   m_CommandListCommands[command.m_Object.Key].emplace_back(m_OutBuff.ExtractString());
 }
@@ -466,9 +466,9 @@ void ShowExecutionLayer::Post(
   CommandPrinter p(m_OutBuff, m_PrinterState, command,
                    "ID3D12GraphicsCommandList::SetGraphicsRootUnorderedAccessView",
                    command.m_Object.Key);
-  p.addArgument(command.m_RootParameterIndex);
-  p.addArgument(command.m_BufferLocation);
-  p.print(false);
+  p.AddArgument(command.m_RootParameterIndex);
+  p.AddArgument(command.m_BufferLocation);
+  p.Print(false);
 
   m_CommandListCommands[command.m_Object.Key].emplace_back(m_OutBuff.ExtractString());
 }
@@ -477,9 +477,9 @@ void ShowExecutionLayer::Post(ID3D12GraphicsCommandList7BarrierCommand& command)
   m_OutBuff.Flush();
   CommandPrinter p(m_OutBuff, m_PrinterState, command, "ID3D12GraphicsCommandList7::Barrier",
                    command.m_Object.Key);
-  p.addArgument(command.m_NumBarrierGroups);
-  p.addArgument(command.m_pBarrierGroups);
-  p.print(false);
+  p.AddArgument(command.m_NumBarrierGroups);
+  p.AddArgument(command.m_pBarrierGroups);
+  p.Print(false);
 
   m_CommandListCommands[command.m_Object.Key].emplace_back(m_OutBuff.ExtractString());
 }
@@ -488,12 +488,12 @@ void ShowExecutionLayer::Post(ID3D12DeviceCreateFenceCommand& command) {
   m_OutBuff << "  ";
   CommandPrinter p(m_OutBuff, m_PrinterState, command, "ID3D12Device::CreateFence",
                    command.m_Object.Key);
-  p.addArgument(command.m_InitialValue);
-  p.addArgument(command.m_Flags);
-  p.addArgument(command.m_riid);
-  p.addArgument(command.m_ppFence);
-  p.addResult(command.m_Result);
-  p.print(true);
+  p.AddArgument(command.m_InitialValue);
+  p.AddArgument(command.m_Flags);
+  p.AddArgument(command.m_riid);
+  p.AddArgument(command.m_ppFence);
+  p.AddResult(command.m_Result);
+  p.Print(true);
 
   FenceSignal(command.Key, command.m_ppFence.Key, command.m_InitialValue.Value);
 }
@@ -501,9 +501,9 @@ void ShowExecutionLayer::Post(ID3D12DeviceCreateFenceCommand& command) {
 void ShowExecutionLayer::Post(ID3D12FenceSignalCommand& command) {
   m_OutBuff << "  ";
   CommandPrinter p(m_OutBuff, m_PrinterState, command, "ID3D12Fence::Signal", command.m_Object.Key);
-  p.addArgument(command.m_Value);
-  p.addResult(command.m_Result);
-  p.print(true);
+  p.AddArgument(command.m_Value);
+  p.AddResult(command.m_Result);
+  p.Print(true);
 
   FenceSignal(command.Key, command.m_Object.Key, command.m_Value.Value);
 }
@@ -518,10 +518,10 @@ void ShowExecutionLayer::Post(ID3D12CommandQueueSignalCommand& command) {
   }
   CommandPrinter p(m_OutBuff, m_PrinterState, command, "ID3D12CommandQueue::Signal",
                    command.m_Object.Key);
-  p.addArgument(command.m_pFence);
-  p.addArgument(command.m_Value);
-  p.addResult(command.m_Result);
-  p.print(false);
+  p.AddArgument(command.m_pFence);
+  p.AddArgument(command.m_Value);
+  p.AddResult(command.m_Result);
+  p.Print(false);
 
   const auto str = m_OutBuff.ExtractString();
   m_OutBuff << str;
@@ -547,13 +547,13 @@ void ShowExecutionLayer::Post(ID3D12Device3EnqueueMakeResidentCommand& command) 
   m_OutBuff << "  ";
   CommandPrinter p(m_OutBuff, m_PrinterState, command, "ID3D12Device3::EnqueueMakeResident",
                    command.m_Object.Key);
-  p.addArgument(command.m_Flags);
-  p.addArgument(command.m_NumObjects);
-  p.addArgument(command.m_ppObjects);
-  p.addArgument(command.m_pFenceToSignal);
-  p.addArgument(command.m_FenceValueToSignal);
-  p.addResult(command.m_Result);
-  p.print(true);
+  p.AddArgument(command.m_Flags);
+  p.AddArgument(command.m_NumObjects);
+  p.AddArgument(command.m_ppObjects);
+  p.AddArgument(command.m_pFenceToSignal);
+  p.AddArgument(command.m_FenceValueToSignal);
+  p.AddResult(command.m_Result);
+  p.Print(true);
 
   FenceSignal(command.Key, command.m_pFenceToSignal.Key, command.m_FenceValueToSignal.Value);
 }
@@ -570,10 +570,10 @@ void ShowExecutionLayer::Post(ID3D12CommandQueueWaitCommand& command) {
   }
   CommandPrinter p(m_OutBuff, m_PrinterState, command, "ID3D12CommandQueue::Wait",
                    command.m_Object.Key);
-  p.addArgument(command.m_pFence);
-  p.addArgument(command.m_Value);
-  p.addResult(command.m_Result);
-  p.print(false);
+  p.AddArgument(command.m_pFence);
+  p.AddArgument(command.m_Value);
+  p.AddResult(command.m_Result);
+  p.Print(false);
 
   const auto str = m_OutBuff.ExtractString();
   m_OutBuff << str;

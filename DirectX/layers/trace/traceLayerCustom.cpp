@@ -90,62 +90,62 @@ void TraceLayer::Post(MarkerUInt64Command& command) {
 void TraceLayer::Pre(CreateWindowMetaCommand& command) {
   if (m_PrintPre) {
     CommandPrinter p(m_StreamPre, m_StatePre, command, "CreateWindowMetaCommand");
-    p.addArgument(command.m_hWnd);
-    p.addArgument(command.m_width);
-    p.addArgument(command.m_height);
-    p.print(m_Flush);
+    p.AddArgument(command.m_hWnd);
+    p.AddArgument(command.m_width);
+    p.AddArgument(command.m_height);
+    p.Print(m_Flush);
   }
 }
 
 void TraceLayer::Post(CreateWindowMetaCommand& command) {
   if (m_PrintPost) {
     CommandPrinter p(m_StreamPost, m_StatePost, command, "CreateWindowMetaCommand");
-    p.addArgument(command.m_hWnd);
-    p.addArgument(command.m_width);
-    p.addArgument(command.m_height);
-    p.print(m_Flush);
+    p.AddArgument(command.m_hWnd);
+    p.AddArgument(command.m_width);
+    p.AddArgument(command.m_height);
+    p.Print(m_Flush);
   }
 }
 
 void TraceLayer::Pre(MappedDataMetaCommand& command) {
   if (m_PrintPre) {
     CommandPrinter p(m_StreamPre, m_StatePre, command, "MappedDataMetaCommand");
-    p.addArgument(command.m_resource);
-    p.addArgument(command.m_mappedAddress);
-    p.addArgument(command.m_offset);
-    p.addArgument(command.m_data);
-    p.print(m_Flush);
+    p.AddArgument(command.m_resource);
+    p.AddArgument(command.m_mappedAddress);
+    p.AddArgument(command.m_offset);
+    p.AddArgument(command.m_data);
+    p.Print(m_Flush);
   }
 }
 
 void TraceLayer::Post(MappedDataMetaCommand& command) {
   if (m_PrintPost) {
     CommandPrinter p(m_StreamPost, m_StatePost, command, "MappedDataMetaCommand");
-    p.addArgument(command.m_resource);
-    p.addArgument(command.m_mappedAddress);
-    p.addArgument(command.m_offset);
-    p.addArgument(command.m_data);
-    p.print(m_Flush);
+    p.AddArgument(command.m_resource);
+    p.AddArgument(command.m_mappedAddress);
+    p.AddArgument(command.m_offset);
+    p.AddArgument(command.m_data);
+    p.Print(m_Flush);
   }
 }
 
 void TraceLayer::Pre(CreateHeapAllocationMetaCommand& command) {
   if (m_PrintPre) {
     CommandPrinter p(m_StreamPre, m_StatePre, command, "CreateHeapAllocationMetaCommand");
-    p.addArgument(command.m_heap);
-    p.addArgument(command.m_address);
-    p.addArgument(command.m_data);
-    p.print(m_Flush);
+    p.AddArgument(command.m_heap);
+    p.AddArgument(command.m_address);
+    p.AddArgument(command.m_data);
+    p.Print(m_Flush);
   }
 }
 
 void TraceLayer::Post(CreateHeapAllocationMetaCommand& command) {
   if (m_PrintPost) {
     CommandPrinter p(m_StreamPost, m_StatePost, command, "CreateHeapAllocationMetaCommand");
-    p.addArgument(command.m_heap);
-    p.addArgument(command.m_address);
-    p.addArgument(command.m_data);
-    p.print(m_Flush);
+    p.AddArgument(command.m_heap);
+    p.AddArgument(command.m_address);
+    p.AddArgument(command.m_data);
+    p.Print(m_Flush);
   }
 }
 
@@ -154,38 +154,38 @@ void TraceLayer::Post(CreateHeapAllocationMetaCommand& command) {
 void TraceLayer::Pre(WaitForFenceSignaledCommand& command) {
   if (m_PrintPre) {
     CommandPrinter p(m_StreamPre, m_StatePre, command, "WaitForFenceSignaledCommand");
-    p.addArgument(command.m_event);
-    p.addArgument(command.m_fence);
-    p.addArgument(command.m_Value);
-    p.print(m_Flush);
+    p.AddArgument(command.m_event);
+    p.AddArgument(command.m_fence);
+    p.AddArgument(command.m_Value);
+    p.Print(m_Flush);
   }
 }
 
 void TraceLayer::Post(WaitForFenceSignaledCommand& command) {
   if (m_PrintPost) {
     CommandPrinter p(m_StreamPost, m_StatePost, command, "WaitForFenceSignaledCommand");
-    p.addArgument(command.m_event);
-    p.addArgument(command.m_fence);
-    p.addArgument(command.m_Value);
-    p.print(m_Flush);
+    p.AddArgument(command.m_event);
+    p.AddArgument(command.m_fence);
+    p.AddArgument(command.m_Value);
+    p.Print(m_Flush);
   }
 }
 
 void TraceLayer::Pre(DllContainerMetaCommand& command) {
   if (m_PrintPre) {
     CommandPrinter p(m_StreamPre, m_StatePre, command, "DllContainerMetaCommand");
-    p.addArgument(command.m_dllName);
-    p.addArgument(command.m_dllData);
-    p.print(m_Flush);
+    p.AddArgument(command.m_dllName);
+    p.AddArgument(command.m_dllData);
+    p.Print(m_Flush);
   }
 }
 
 void TraceLayer::Post(DllContainerMetaCommand& command) {
   if (m_PrintPost) {
     CommandPrinter p(m_StreamPost, m_StatePost, command, "DllContainerMetaCommand");
-    p.addArgument(command.m_dllName);
-    p.addArgument(command.m_dllData);
-    p.print(m_Flush);
+    p.AddArgument(command.m_dllName);
+    p.AddArgument(command.m_dllData);
+    p.Print(m_Flush);
   }
 }
 
@@ -193,10 +193,10 @@ void TraceLayer::Pre(IUnknownQueryInterfaceCommand& command) {
   if (m_PrintPre) {
     CommandPrinter p(m_StreamPre, m_StatePre, command, "IUnknown::QueryInterface",
                      command.m_Object.Key);
-    p.addArgument(command.m_riid);
-    p.addArgument(command.m_ppvObject);
-    p.addResult(command.m_Result);
-    p.print(m_Flush);
+    p.AddArgument(command.m_riid);
+    p.AddArgument(command.m_ppvObject);
+    p.AddResult(command.m_Result);
+    p.Print(m_Flush);
   }
 }
 
@@ -204,42 +204,42 @@ void TraceLayer::Post(IUnknownQueryInterfaceCommand& command) {
   if (m_PrintPost) {
     CommandPrinter p(m_StreamPost, m_StatePost, command, "IUnknown::QueryInterface",
                      command.m_Object.Key);
-    p.addArgument(command.m_riid);
-    p.addArgument(command.m_ppvObject);
-    p.addResult(command.m_Result);
-    p.print(m_Flush);
+    p.AddArgument(command.m_riid);
+    p.AddArgument(command.m_ppvObject);
+    p.AddResult(command.m_Result);
+    p.Print(m_Flush);
   }
 }
 
 void TraceLayer::Pre(IUnknownAddRefCommand& command) {
   if (m_PrintPre) {
     CommandPrinter p(m_StreamPre, m_StatePre, command, "IUnknown::AddRef", command.m_Object.Key);
-    p.addResult(command.m_Result);
-    p.print(m_Flush);
+    p.AddResult(command.m_Result);
+    p.Print(m_Flush);
   }
 }
 
 void TraceLayer::Post(IUnknownAddRefCommand& command) {
   if (m_PrintPost) {
     CommandPrinter p(m_StreamPost, m_StatePost, command, "IUnknown::AddRef", command.m_Object.Key);
-    p.addResult(command.m_Result);
-    p.print(m_Flush);
+    p.AddResult(command.m_Result);
+    p.Print(m_Flush);
   }
 }
 
 void TraceLayer::Pre(IUnknownReleaseCommand& command) {
   if (m_PrintPre) {
     CommandPrinter p(m_StreamPre, m_StatePre, command, "IUnknown::Release", command.m_Object.Key);
-    p.addResult(command.m_Result);
-    p.print(m_Flush);
+    p.AddResult(command.m_Result);
+    p.Print(m_Flush);
   }
 }
 
 void TraceLayer::Post(IUnknownReleaseCommand& command) {
   if (m_PrintPost) {
     CommandPrinter p(m_StreamPost, m_StatePost, command, "IUnknown::Release", command.m_Object.Key);
-    p.addResult(command.m_Result);
-    p.print(m_Flush);
+    p.AddResult(command.m_Result);
+    p.Print(m_Flush);
   }
 }
 
@@ -247,8 +247,8 @@ void TraceLayer::Pre(ID3D12ResourceGetGPUVirtualAddressCommand& command) {
   if (m_PrintPre) {
     CommandPrinter p(m_StreamPre, m_StatePre, command, "ID3D12Resource::GetGPUVirtualAddress",
                      command.m_Object.Key);
-    p.addResult(reinterpret_cast<Argument<void*>&>(command.m_Result));
-    p.print(m_Flush);
+    p.AddResult(reinterpret_cast<Argument<void*>&>(command.m_Result));
+    p.Print(m_Flush);
   }
 }
 
@@ -256,8 +256,8 @@ void TraceLayer::Post(ID3D12ResourceGetGPUVirtualAddressCommand& command) {
   if (m_PrintPost) {
     CommandPrinter p(m_StreamPost, m_StatePost, command, "ID3D12Resource::GetGPUVirtualAddress",
                      command.m_Object.Key);
-    p.addResult(reinterpret_cast<Argument<void*>&>(command.m_Result));
-    p.print(m_Flush);
+    p.AddResult(reinterpret_cast<Argument<void*>&>(command.m_Result));
+    p.Print(m_Flush);
   }
 }
 
@@ -266,8 +266,8 @@ void TraceLayer::Pre(ID3D12DescriptorHeapGetCPUDescriptorHandleForHeapStartComma
     CommandPrinter p(m_StreamPre, m_StatePre, command,
                      "ID3D12DescriptorHeap::GetCPUDescriptorHandleForHeapStart",
                      command.m_Object.Key);
-    p.addResult(reinterpret_cast<Argument<void*>&>(command.m_Result));
-    p.print(m_Flush);
+    p.AddResult(reinterpret_cast<Argument<void*>&>(command.m_Result));
+    p.Print(m_Flush);
   }
 }
 
@@ -276,8 +276,8 @@ void TraceLayer::Post(ID3D12DescriptorHeapGetCPUDescriptorHandleForHeapStartComm
     CommandPrinter p(m_StreamPost, m_StatePost, command,
                      "ID3D12DescriptorHeap::GetCPUDescriptorHandleForHeapStart",
                      command.m_Object.Key);
-    p.addResult(reinterpret_cast<Argument<void*>&>(command.m_Result));
-    p.print(m_Flush);
+    p.AddResult(reinterpret_cast<Argument<void*>&>(command.m_Result));
+    p.Print(m_Flush);
   }
 }
 
@@ -286,8 +286,8 @@ void TraceLayer::Pre(ID3D12DescriptorHeapGetGPUDescriptorHandleForHeapStartComma
     CommandPrinter p(m_StreamPre, m_StatePre, command,
                      "ID3D12DescriptorHeap::GetGPUDescriptorHandleForHeapStart",
                      command.m_Object.Key);
-    p.addResult(reinterpret_cast<Argument<void*>&>(command.m_Result));
-    p.print(m_Flush);
+    p.AddResult(reinterpret_cast<Argument<void*>&>(command.m_Result));
+    p.Print(m_Flush);
   }
 }
 
@@ -296,8 +296,8 @@ void TraceLayer::Post(ID3D12DescriptorHeapGetGPUDescriptorHandleForHeapStartComm
     CommandPrinter p(m_StreamPost, m_StatePost, command,
                      "ID3D12DescriptorHeap::GetGPUDescriptorHandleForHeapStart",
                      command.m_Object.Key);
-    p.addResult(reinterpret_cast<Argument<void*>&>(command.m_Result));
-    p.print(m_Flush);
+    p.AddResult(reinterpret_cast<Argument<void*>&>(command.m_Result));
+    p.Print(m_Flush);
   }
 }
 
@@ -305,10 +305,10 @@ void TraceLayer::Pre(ID3D12GraphicsCommandListBeginEventCommand& command) {
   if (m_PrintPre) {
     CommandPrinter p(m_StreamPre, m_StatePre, command, "ID3D12GraphicsCommandList::BeginEvent",
                      command.m_Object.Key);
-    p.addArgument(command.m_Metadata);
+    p.AddArgument(command.m_Metadata);
     LPCWSTR_Argument arg(static_cast<wchar_t*>(command.m_pData.Value));
-    p.addArgument(arg);
-    p.print(m_Flush);
+    p.AddArgument(arg);
+    p.Print(m_Flush);
   }
 }
 
@@ -316,10 +316,10 @@ void TraceLayer::Post(ID3D12GraphicsCommandListBeginEventCommand& command) {
   if (m_PrintPost) {
     CommandPrinter p(m_StreamPost, m_StatePost, command, "ID3D12GraphicsCommandList::BeginEvent",
                      command.m_Object.Key);
-    p.addArgument(command.m_Metadata);
+    p.AddArgument(command.m_Metadata);
     LPCWSTR_Argument arg(static_cast<wchar_t*>(command.m_pData.Value));
-    p.addArgument(arg);
-    p.print(m_Flush);
+    p.AddArgument(arg);
+    p.Print(m_Flush);
   }
 }
 
@@ -328,58 +328,58 @@ void TraceLayer::Post(ID3D12GraphicsCommandListBeginEventCommand& command) {
 void TraceLayer::Pre(INTC_D3D12_GetSupportedVersionsCommand& command) {
   if (m_PrintPre) {
     CommandPrinter p(m_StreamPre, m_StatePre, command, "INTC_D3D12_GetSupportedVersions");
-    p.addArgument(command.m_pDevice);
-    p.addArgument(command.m_pSupportedExtVersions);
-    p.addArgument(command.m_pSupportedExtVersionsCount);
-    p.addResult(command.m_Result);
-    p.print(m_Flush);
+    p.AddArgument(command.m_pDevice);
+    p.AddArgument(command.m_pSupportedExtVersions);
+    p.AddArgument(command.m_pSupportedExtVersionsCount);
+    p.AddResult(command.m_Result);
+    p.Print(m_Flush);
   }
 }
 
 void TraceLayer::Post(INTC_D3D12_GetSupportedVersionsCommand& command) {
   if (m_PrintPost) {
     CommandPrinter p(m_StreamPost, m_StatePost, command, "INTC_D3D12_GetSupportedVersions");
-    p.addArgument(command.m_pDevice);
-    p.addArgument(command.m_pSupportedExtVersions);
-    p.addArgument(command.m_pSupportedExtVersionsCount);
-    p.addResult(command.m_Result);
-    p.print(m_Flush);
+    p.AddArgument(command.m_pDevice);
+    p.AddArgument(command.m_pSupportedExtVersions);
+    p.AddArgument(command.m_pSupportedExtVersionsCount);
+    p.AddResult(command.m_Result);
+    p.Print(m_Flush);
   }
 }
 
 void TraceLayer::Pre(INTC_D3D12_CreateDeviceExtensionContextCommand& command) {
   if (m_PrintPre) {
     CommandPrinter p(m_StreamPre, m_StatePre, command, "INTC_D3D12_CreateDeviceExtensionContext");
-    p.addArgument(command.m_pDevice);
-    p.addArgument(command.m_ppExtensionContext);
-    p.addArgument(command.m_pExtensionInfo);
-    p.addArgument(command.m_pExtensionAppInfo);
-    p.addResult(command.m_Result);
-    p.print(m_Flush);
+    p.AddArgument(command.m_pDevice);
+    p.AddArgument(command.m_ppExtensionContext);
+    p.AddArgument(command.m_pExtensionInfo);
+    p.AddArgument(command.m_pExtensionAppInfo);
+    p.AddResult(command.m_Result);
+    p.Print(m_Flush);
   }
 }
 
 void TraceLayer::Post(INTC_D3D12_CreateDeviceExtensionContextCommand& command) {
   if (m_PrintPost) {
     CommandPrinter p(m_StreamPost, m_StatePost, command, "INTC_D3D12_CreateDeviceExtensionContext");
-    p.addArgument(command.m_pDevice);
-    p.addArgument(command.m_ppExtensionContext);
-    p.addArgument(command.m_pExtensionInfo);
-    p.addArgument(command.m_pExtensionAppInfo);
-    p.addResult(command.m_Result);
-    p.print(m_Flush);
+    p.AddArgument(command.m_pDevice);
+    p.AddArgument(command.m_ppExtensionContext);
+    p.AddArgument(command.m_pExtensionInfo);
+    p.AddArgument(command.m_pExtensionAppInfo);
+    p.AddResult(command.m_Result);
+    p.Print(m_Flush);
   }
 }
 
 void TraceLayer::Pre(INTC_D3D12_CreateDeviceExtensionContext1Command& command) {
   if (m_PrintPre) {
     CommandPrinter p(m_StreamPre, m_StatePre, command, "INTC_D3D12_CreateDeviceExtensionContext1");
-    p.addArgument(command.m_pDevice);
-    p.addArgument(command.m_ppExtensionContext);
-    p.addArgument(command.m_pExtensionInfo);
-    p.addArgument(command.m_pExtensionAppInfo);
-    p.addResult(command.m_Result);
-    p.print(m_Flush);
+    p.AddArgument(command.m_pDevice);
+    p.AddArgument(command.m_ppExtensionContext);
+    p.AddArgument(command.m_pExtensionInfo);
+    p.AddArgument(command.m_pExtensionAppInfo);
+    p.AddResult(command.m_Result);
+    p.Print(m_Flush);
   }
 }
 
@@ -387,321 +387,321 @@ void TraceLayer::Post(INTC_D3D12_CreateDeviceExtensionContext1Command& command) 
   if (m_PrintPost) {
     CommandPrinter p(m_StreamPost, m_StatePost, command,
                      "INTC_D3D12_CreateDeviceExtensionContext1");
-    p.addArgument(command.m_pDevice);
-    p.addArgument(command.m_ppExtensionContext);
-    p.addArgument(command.m_pExtensionInfo);
-    p.addArgument(command.m_pExtensionAppInfo);
-    p.addResult(command.m_Result);
-    p.print(m_Flush);
+    p.AddArgument(command.m_pDevice);
+    p.AddArgument(command.m_ppExtensionContext);
+    p.AddArgument(command.m_pExtensionInfo);
+    p.AddArgument(command.m_pExtensionAppInfo);
+    p.AddResult(command.m_Result);
+    p.Print(m_Flush);
   }
 }
 
 void TraceLayer::Pre(INTC_D3D12_SetApplicationInfoCommand& command) {
   if (m_PrintPre) {
     CommandPrinter p(m_StreamPre, m_StatePre, command, "INTC_D3D12_SetApplicationInfo");
-    p.addArgument(command.m_pExtensionAppInfo);
-    p.addResult(command.m_Result);
-    p.print(m_Flush);
+    p.AddArgument(command.m_pExtensionAppInfo);
+    p.AddResult(command.m_Result);
+    p.Print(m_Flush);
   }
 }
 
 void TraceLayer::Post(INTC_D3D12_SetApplicationInfoCommand& command) {
   if (m_PrintPost) {
     CommandPrinter p(m_StreamPost, m_StatePost, command, "INTC_D3D12_SetApplicationInfo");
-    p.addArgument(command.m_pExtensionAppInfo);
-    p.addResult(command.m_Result);
-    p.print(m_Flush);
+    p.AddArgument(command.m_pExtensionAppInfo);
+    p.AddResult(command.m_Result);
+    p.Print(m_Flush);
   }
 }
 
 void TraceLayer::Pre(INTC_DestroyDeviceExtensionContextCommand& command) {
   if (m_PrintPre) {
     CommandPrinter p(m_StreamPre, m_StatePre, command, "INTC_DestroyDeviceExtensionContext");
-    p.addArgument(command.m_ppExtensionContext);
-    p.addResult(command.m_Result);
-    p.print(m_Flush);
+    p.AddArgument(command.m_ppExtensionContext);
+    p.AddResult(command.m_Result);
+    p.Print(m_Flush);
   }
 }
 
 void TraceLayer::Post(INTC_DestroyDeviceExtensionContextCommand& command) {
   if (m_PrintPost) {
     CommandPrinter p(m_StreamPost, m_StatePost, command, "INTC_DestroyDeviceExtensionContext");
-    p.addArgument(command.m_ppExtensionContext);
-    p.addResult(command.m_Result);
-    p.print(m_Flush);
+    p.AddArgument(command.m_ppExtensionContext);
+    p.AddResult(command.m_Result);
+    p.Print(m_Flush);
   }
 }
 
 void TraceLayer::Pre(INTC_D3D12_CheckFeatureSupportCommand& command) {
   if (m_PrintPre) {
     CommandPrinter p(m_StreamPre, m_StatePre, command, "INTC_D3D12_CheckFeatureSupport");
-    p.addArgument(command.m_pExtensionContext);
-    p.addArgument(command.m_Feature);
-    p.addArgument(command.m_pFeatureSupportData);
-    p.addArgument(command.m_FeatureSupportDataSize);
-    p.addResult(command.m_Result);
-    p.print(m_Flush);
+    p.AddArgument(command.m_pExtensionContext);
+    p.AddArgument(command.m_Feature);
+    p.AddArgument(command.m_pFeatureSupportData);
+    p.AddArgument(command.m_FeatureSupportDataSize);
+    p.AddResult(command.m_Result);
+    p.Print(m_Flush);
   }
 }
 
 void TraceLayer::Post(INTC_D3D12_CheckFeatureSupportCommand& command) {
   if (m_PrintPost) {
     CommandPrinter p(m_StreamPost, m_StatePost, command, "INTC_D3D12_CheckFeatureSupport");
-    p.addArgument(command.m_pExtensionContext);
-    p.addArgument(command.m_Feature);
-    p.addArgument(command.m_pFeatureSupportData);
-    p.addArgument(command.m_FeatureSupportDataSize);
-    p.addResult(command.m_Result);
-    p.print(m_Flush);
+    p.AddArgument(command.m_pExtensionContext);
+    p.AddArgument(command.m_Feature);
+    p.AddArgument(command.m_pFeatureSupportData);
+    p.AddArgument(command.m_FeatureSupportDataSize);
+    p.AddResult(command.m_Result);
+    p.Print(m_Flush);
   }
 }
 
 void TraceLayer::Pre(INTC_D3D12_SetFeatureSupportCommand& command) {
   if (m_PrintPre) {
     CommandPrinter p(m_StreamPre, m_StatePre, command, "INTC_D3D12_SetFeatureSupport");
-    p.addArgument(command.m_pExtensionContext);
-    p.addArgument(command.m_pFeature);
-    p.addResult(command.m_Result);
-    p.print(m_Flush);
+    p.AddArgument(command.m_pExtensionContext);
+    p.AddArgument(command.m_pFeature);
+    p.AddResult(command.m_Result);
+    p.Print(m_Flush);
   }
 }
 
 void TraceLayer::Post(INTC_D3D12_SetFeatureSupportCommand& command) {
   if (m_PrintPost) {
     CommandPrinter p(m_StreamPost, m_StatePost, command, "INTC_D3D12_SetFeatureSupport");
-    p.addArgument(command.m_pExtensionContext);
-    p.addArgument(command.m_pFeature);
-    p.addResult(command.m_Result);
-    p.print(m_Flush);
+    p.AddArgument(command.m_pExtensionContext);
+    p.AddArgument(command.m_pFeature);
+    p.AddResult(command.m_Result);
+    p.Print(m_Flush);
   }
 }
 
 void TraceLayer::Pre(INTC_D3D12_GetResourceAllocationInfoCommand& command) {
   if (m_PrintPre) {
     CommandPrinter p(m_StreamPre, m_StatePre, command, "INTC_D3D12_GetResourceAllocationInfo");
-    p.addArgument(command.m_pExtensionContext);
-    p.addArgument(command.m_visibleMask);
-    p.addArgument(command.m_numResourceDescs);
-    p.addArgument(command.m_pResourceDescs);
-    p.addResult(command.m_Result);
-    p.print(m_Flush);
+    p.AddArgument(command.m_pExtensionContext);
+    p.AddArgument(command.m_visibleMask);
+    p.AddArgument(command.m_numResourceDescs);
+    p.AddArgument(command.m_pResourceDescs);
+    p.AddResult(command.m_Result);
+    p.Print(m_Flush);
   }
 }
 
 void TraceLayer::Post(INTC_D3D12_GetResourceAllocationInfoCommand& command) {
   if (m_PrintPost) {
     CommandPrinter p(m_StreamPost, m_StatePost, command, "INTC_D3D12_GetResourceAllocationInfo");
-    p.addArgument(command.m_pExtensionContext);
-    p.addArgument(command.m_visibleMask);
-    p.addArgument(command.m_numResourceDescs);
-    p.addArgument(command.m_pResourceDescs);
-    p.addResult(command.m_Result);
-    p.print(m_Flush);
+    p.AddArgument(command.m_pExtensionContext);
+    p.AddArgument(command.m_visibleMask);
+    p.AddArgument(command.m_numResourceDescs);
+    p.AddArgument(command.m_pResourceDescs);
+    p.AddResult(command.m_Result);
+    p.Print(m_Flush);
   }
 }
 
 void TraceLayer::Pre(INTC_D3D12_CreatePlacedResourceCommand& command) {
   if (m_PrintPre) {
     CommandPrinter p(m_StreamPre, m_StatePre, command, "INTC_D3D12_CreatePlacedResource");
-    p.addArgument(command.m_pExtensionContext);
-    p.addArgument(command.m_pHeap);
-    p.addArgument(command.m_HeapOffset);
-    p.addArgument(command.m_pDesc);
-    p.addArgument(command.m_InitialState);
-    p.addArgument(command.m_pOptimizedClearValue);
-    p.addArgument(command.m_riid);
-    p.addArgument(command.m_ppvResource);
-    p.addResult(command.m_Result);
-    p.print(m_Flush);
+    p.AddArgument(command.m_pExtensionContext);
+    p.AddArgument(command.m_pHeap);
+    p.AddArgument(command.m_HeapOffset);
+    p.AddArgument(command.m_pDesc);
+    p.AddArgument(command.m_InitialState);
+    p.AddArgument(command.m_pOptimizedClearValue);
+    p.AddArgument(command.m_riid);
+    p.AddArgument(command.m_ppvResource);
+    p.AddResult(command.m_Result);
+    p.Print(m_Flush);
   }
 }
 
 void TraceLayer::Post(INTC_D3D12_CreatePlacedResourceCommand& command) {
   if (m_PrintPost) {
     CommandPrinter p(m_StreamPost, m_StatePost, command, "INTC_D3D12_CreatePlacedResource");
-    p.addArgument(command.m_pExtensionContext);
-    p.addArgument(command.m_pHeap);
-    p.addArgument(command.m_HeapOffset);
-    p.addArgument(command.m_pDesc);
-    p.addArgument(command.m_InitialState);
-    p.addArgument(command.m_pOptimizedClearValue);
-    p.addArgument(command.m_riid);
-    p.addArgument(command.m_ppvResource);
-    p.addResult(command.m_Result);
-    p.print(m_Flush);
+    p.AddArgument(command.m_pExtensionContext);
+    p.AddArgument(command.m_pHeap);
+    p.AddArgument(command.m_HeapOffset);
+    p.AddArgument(command.m_pDesc);
+    p.AddArgument(command.m_InitialState);
+    p.AddArgument(command.m_pOptimizedClearValue);
+    p.AddArgument(command.m_riid);
+    p.AddArgument(command.m_ppvResource);
+    p.AddResult(command.m_Result);
+    p.Print(m_Flush);
   }
 }
 
 void TraceLayer::Pre(INTC_D3D12_CreateCommittedResourceCommand& command) {
   if (m_PrintPre) {
     CommandPrinter p(m_StreamPre, m_StatePre, command, "INTC_D3D12_CreateCommittedResource");
-    p.addArgument(command.m_pExtensionContext);
-    p.addArgument(command.m_pHeapProperties);
-    p.addArgument(command.m_HeapFlags);
-    p.addArgument(command.m_pDesc);
-    p.addArgument(command.m_InitialResourceState);
-    p.addArgument(command.m_pOptimizedClearValue);
-    p.addArgument(command.m_riidResource);
-    p.addArgument(command.m_ppvResource);
-    p.addResult(command.m_Result);
-    p.print(m_Flush);
+    p.AddArgument(command.m_pExtensionContext);
+    p.AddArgument(command.m_pHeapProperties);
+    p.AddArgument(command.m_HeapFlags);
+    p.AddArgument(command.m_pDesc);
+    p.AddArgument(command.m_InitialResourceState);
+    p.AddArgument(command.m_pOptimizedClearValue);
+    p.AddArgument(command.m_riidResource);
+    p.AddArgument(command.m_ppvResource);
+    p.AddResult(command.m_Result);
+    p.Print(m_Flush);
   }
 }
 
 void TraceLayer::Post(INTC_D3D12_CreateCommittedResourceCommand& command) {
   if (m_PrintPost) {
     CommandPrinter p(m_StreamPost, m_StatePost, command, "INTC_D3D12_CreateCommittedResource");
-    p.addArgument(command.m_pExtensionContext);
-    p.addArgument(command.m_pHeapProperties);
-    p.addArgument(command.m_HeapFlags);
-    p.addArgument(command.m_pDesc);
-    p.addArgument(command.m_InitialResourceState);
-    p.addArgument(command.m_pOptimizedClearValue);
-    p.addArgument(command.m_riidResource);
-    p.addArgument(command.m_ppvResource);
-    p.addResult(command.m_Result);
-    p.print(m_Flush);
+    p.AddArgument(command.m_pExtensionContext);
+    p.AddArgument(command.m_pHeapProperties);
+    p.AddArgument(command.m_HeapFlags);
+    p.AddArgument(command.m_pDesc);
+    p.AddArgument(command.m_InitialResourceState);
+    p.AddArgument(command.m_pOptimizedClearValue);
+    p.AddArgument(command.m_riidResource);
+    p.AddArgument(command.m_ppvResource);
+    p.AddResult(command.m_Result);
+    p.Print(m_Flush);
   }
 }
 
 void TraceLayer::Pre(INTC_D3D12_CreateComputePipelineStateCommand& command) {
   if (m_PrintPre) {
     CommandPrinter p(m_StreamPre, m_StatePre, command, "INTC_D3D12_CreateComputePipelineState");
-    p.addArgument(command.m_pExtensionContext);
-    p.addArgument(command.m_pDesc);
-    p.addArgument(command.m_riid);
-    p.addArgument(command.m_ppPipelineState);
-    p.addResult(command.m_Result);
-    p.print(m_Flush);
+    p.AddArgument(command.m_pExtensionContext);
+    p.AddArgument(command.m_pDesc);
+    p.AddArgument(command.m_riid);
+    p.AddArgument(command.m_ppPipelineState);
+    p.AddResult(command.m_Result);
+    p.Print(m_Flush);
   }
 }
 
 void TraceLayer::Post(INTC_D3D12_CreateComputePipelineStateCommand& command) {
   if (m_PrintPost) {
     CommandPrinter p(m_StreamPost, m_StatePost, command, "INTC_D3D12_CreateComputePipelineState");
-    p.addArgument(command.m_pExtensionContext);
-    p.addArgument(command.m_pDesc);
-    p.addArgument(command.m_riid);
-    p.addArgument(command.m_ppPipelineState);
-    p.addResult(command.m_Result);
-    p.print(m_Flush);
+    p.AddArgument(command.m_pExtensionContext);
+    p.AddArgument(command.m_pDesc);
+    p.AddArgument(command.m_riid);
+    p.AddArgument(command.m_ppPipelineState);
+    p.AddResult(command.m_Result);
+    p.Print(m_Flush);
   }
 }
 
 void TraceLayer::Pre(INTC_D3D12_CreateCommandQueueCommand& command) {
   if (m_PrintPre) {
     CommandPrinter p(m_StreamPre, m_StatePre, command, "INTC_D3D12_CreateCommandQueue");
-    p.addArgument(command.m_pExtensionContext);
-    p.addArgument(command.m_pDesc);
-    p.addArgument(command.m_riid);
-    p.addArgument(command.m_ppCommandQueue);
-    p.addResult(command.m_Result);
-    p.print(m_Flush);
+    p.AddArgument(command.m_pExtensionContext);
+    p.AddArgument(command.m_pDesc);
+    p.AddArgument(command.m_riid);
+    p.AddArgument(command.m_ppCommandQueue);
+    p.AddResult(command.m_Result);
+    p.Print(m_Flush);
   }
 }
 
 void TraceLayer::Post(INTC_D3D12_CreateCommandQueueCommand& command) {
   if (m_PrintPost) {
     CommandPrinter p(m_StreamPost, m_StatePost, command, "INTC_D3D12_CreateCommandQueue");
-    p.addArgument(command.m_pExtensionContext);
-    p.addArgument(command.m_pDesc);
-    p.addArgument(command.m_riid);
-    p.addArgument(command.m_ppCommandQueue);
-    p.addResult(command.m_Result);
-    p.print(m_Flush);
+    p.AddArgument(command.m_pExtensionContext);
+    p.AddArgument(command.m_pDesc);
+    p.AddArgument(command.m_riid);
+    p.AddArgument(command.m_ppCommandQueue);
+    p.AddResult(command.m_Result);
+    p.Print(m_Flush);
   }
 }
 void TraceLayer::Pre(INTC_D3D12_CreateReservedResourceCommand& command) {
   if (m_PrintPre) {
     CommandPrinter p(m_StreamPre, m_StatePre, command, "INTC_D3D12_CreateReservedResource");
-    p.addArgument(command.m_pExtensionContext);
-    p.addArgument(command.m_pDesc);
-    p.addArgument(command.m_InitialState);
-    p.addArgument(command.m_pOptimizedClearValue);
-    p.addArgument(command.m_riid);
-    p.addArgument(command.m_ppvResource);
-    p.addResult(command.m_Result);
-    p.print(m_Flush);
+    p.AddArgument(command.m_pExtensionContext);
+    p.AddArgument(command.m_pDesc);
+    p.AddArgument(command.m_InitialState);
+    p.AddArgument(command.m_pOptimizedClearValue);
+    p.AddArgument(command.m_riid);
+    p.AddArgument(command.m_ppvResource);
+    p.AddResult(command.m_Result);
+    p.Print(m_Flush);
   }
 }
 
 void TraceLayer::Post(INTC_D3D12_CreateReservedResourceCommand& command) {
   if (m_PrintPost) {
     CommandPrinter p(m_StreamPost, m_StatePost, command, "INTC_D3D12_CreateReservedResource");
-    p.addArgument(command.m_pExtensionContext);
-    p.addArgument(command.m_pDesc);
-    p.addArgument(command.m_InitialState);
-    p.addArgument(command.m_pOptimizedClearValue);
-    p.addArgument(command.m_riid);
-    p.addArgument(command.m_ppvResource);
-    p.addResult(command.m_Result);
-    p.print(m_Flush);
+    p.AddArgument(command.m_pExtensionContext);
+    p.AddArgument(command.m_pDesc);
+    p.AddArgument(command.m_InitialState);
+    p.AddArgument(command.m_pOptimizedClearValue);
+    p.AddArgument(command.m_riid);
+    p.AddArgument(command.m_ppvResource);
+    p.AddResult(command.m_Result);
+    p.Print(m_Flush);
   }
 }
 
 void TraceLayer::Pre(INTC_D3D12_CreateHeapCommand& command) {
   if (m_PrintPre) {
     CommandPrinter p(m_StreamPre, m_StatePre, command, "INTC_D3D12_CreateHeap");
-    p.addArgument(command.m_pExtensionContext);
-    p.addArgument(command.m_pDesc);
-    p.addArgument(command.m_riid);
-    p.addArgument(command.m_ppvHeap);
-    p.addResult(command.m_Result);
-    p.print(m_Flush);
+    p.AddArgument(command.m_pExtensionContext);
+    p.AddArgument(command.m_pDesc);
+    p.AddArgument(command.m_riid);
+    p.AddArgument(command.m_ppvHeap);
+    p.AddResult(command.m_Result);
+    p.Print(m_Flush);
   }
 }
 
 void TraceLayer::Post(INTC_D3D12_CreateHeapCommand& command) {
   if (m_PrintPost) {
     CommandPrinter p(m_StreamPost, m_StatePost, command, "INTC_D3D12_CreateHeap");
-    p.addArgument(command.m_pExtensionContext);
-    p.addArgument(command.m_pDesc);
-    p.addArgument(command.m_riid);
-    p.addArgument(command.m_ppvHeap);
-    p.addResult(command.m_Result);
-    p.print(m_Flush);
+    p.AddArgument(command.m_pExtensionContext);
+    p.AddArgument(command.m_pDesc);
+    p.AddArgument(command.m_riid);
+    p.AddArgument(command.m_ppvHeap);
+    p.AddResult(command.m_Result);
+    p.Print(m_Flush);
   }
 }
 
 void TraceLayer::Pre(NvAPI_InitializeCommand& command) {
   if (m_PrintPre) {
     CommandPrinter p(m_StreamPre, m_StatePre, command, "NvAPI_Initialize");
-    p.addResult(command.m_Result);
-    p.print(m_Flush);
+    p.AddResult(command.m_Result);
+    p.Print(m_Flush);
   }
 }
 
 void TraceLayer::Post(NvAPI_InitializeCommand& command) {
   if (m_PrintPost) {
     CommandPrinter p(m_StreamPost, m_StatePost, command, "NvAPI_Initialize");
-    p.addResult(command.m_Result);
-    p.print(m_Flush);
+    p.AddResult(command.m_Result);
+    p.Print(m_Flush);
   }
 }
 
 void TraceLayer::Pre(NvAPI_UnloadCommand& command) {
   if (m_PrintPre) {
     CommandPrinter p(m_StreamPre, m_StatePre, command, "NvAPI_Unload");
-    p.addResult(command.m_Result);
-    p.print(m_Flush);
+    p.AddResult(command.m_Result);
+    p.Print(m_Flush);
   }
 }
 
 void TraceLayer::Post(NvAPI_UnloadCommand& command) {
   if (m_PrintPost) {
     CommandPrinter p(m_StreamPost, m_StatePost, command, "NvAPI_Unload");
-    p.addResult(command.m_Result);
-    p.print(m_Flush);
+    p.AddResult(command.m_Result);
+    p.Print(m_Flush);
   }
 }
 
 void TraceLayer::Pre(NvAPI_D3D12_SetCreatePipelineStateOptionsCommand& command) {
   if (m_PrintPre) {
     CommandPrinter p(m_StreamPre, m_StatePre, command, "NvAPI_D3D12_SetCreatePipelineStateOptions");
-    p.addArgument(command.m_pDevice);
-    p.addArgument(command.m_pState);
-    p.addResult(command.m_Result);
-    p.print(m_Flush);
+    p.AddArgument(command.m_pDevice);
+    p.AddArgument(command.m_pState);
+    p.AddResult(command.m_Result);
+    p.Print(m_Flush);
   }
 }
 
@@ -709,32 +709,32 @@ void TraceLayer::Post(NvAPI_D3D12_SetCreatePipelineStateOptionsCommand& command)
   if (m_PrintPost) {
     CommandPrinter p(m_StreamPost, m_StatePost, command,
                      "NvAPI_D3D12_SetCreatePipelineStateOptions");
-    p.addArgument(command.m_pDevice);
-    p.addArgument(command.m_pState);
-    p.addResult(command.m_Result);
-    p.print(m_Flush);
+    p.AddArgument(command.m_pDevice);
+    p.AddArgument(command.m_pState);
+    p.AddResult(command.m_Result);
+    p.Print(m_Flush);
   }
 }
 
 void TraceLayer::Pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& command) {
   if (m_PrintPre) {
     CommandPrinter p(m_StreamPre, m_StatePre, command, "NvAPI_D3D12_SetNvShaderExtnSlotSpace");
-    p.addArgument(command.m_pDev);
-    p.addArgument(command.m_uavSlot);
-    p.addArgument(command.m_uavSpace);
-    p.addResult(command.m_Result);
-    p.print(m_Flush);
+    p.AddArgument(command.m_pDev);
+    p.AddArgument(command.m_uavSlot);
+    p.AddArgument(command.m_uavSpace);
+    p.AddResult(command.m_Result);
+    p.Print(m_Flush);
   }
 }
 
 void TraceLayer::Post(NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& command) {
   if (m_PrintPost) {
     CommandPrinter p(m_StreamPost, m_StatePost, command, "NvAPI_D3D12_SetNvShaderExtnSlotSpace");
-    p.addArgument(command.m_pDev);
-    p.addArgument(command.m_uavSlot);
-    p.addArgument(command.m_uavSpace);
-    p.addResult(command.m_Result);
-    p.print(m_Flush);
+    p.AddArgument(command.m_pDev);
+    p.AddArgument(command.m_uavSlot);
+    p.AddArgument(command.m_uavSpace);
+    p.AddResult(command.m_Result);
+    p.Print(m_Flush);
   }
 }
 
@@ -742,11 +742,11 @@ void TraceLayer::Pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& com
   if (m_PrintPre) {
     CommandPrinter p(m_StreamPre, m_StatePre, command,
                      "NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThread");
-    p.addArgument(command.m_pDev);
-    p.addArgument(command.m_uavSlot);
-    p.addArgument(command.m_uavSpace);
-    p.addResult(command.m_Result);
-    p.print(m_Flush);
+    p.AddArgument(command.m_pDev);
+    p.AddArgument(command.m_uavSlot);
+    p.AddArgument(command.m_uavSpace);
+    p.AddResult(command.m_Result);
+    p.Print(m_Flush);
   }
 }
 
@@ -754,11 +754,11 @@ void TraceLayer::Post(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& co
   if (m_PrintPost) {
     CommandPrinter p(m_StreamPost, m_StatePost, command,
                      "NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThread");
-    p.addArgument(command.m_pDev);
-    p.addArgument(command.m_uavSlot);
-    p.addArgument(command.m_uavSpace);
-    p.addResult(command.m_Result);
-    p.print(m_Flush);
+    p.AddArgument(command.m_pDev);
+    p.AddArgument(command.m_uavSlot);
+    p.AddArgument(command.m_uavSpace);
+    p.AddResult(command.m_Result);
+    p.Print(m_Flush);
   }
 }
 
@@ -766,10 +766,10 @@ void TraceLayer::Pre(NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& 
   if (m_PrintPre) {
     CommandPrinter p(m_StreamPre, m_StatePre, command,
                      "NvAPI_D3D12_BuildRaytracingAccelerationStructureEx");
-    p.addArgument(command.m_pCommandList);
-    p.addArgument(command.m_pParams);
-    p.addResult(command.m_Result);
-    p.print(m_Flush);
+    p.AddArgument(command.m_pCommandList);
+    p.AddArgument(command.m_pParams);
+    p.AddResult(command.m_Result);
+    p.Print(m_Flush);
   }
 }
 
@@ -777,10 +777,10 @@ void TraceLayer::Post(NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand&
   if (m_PrintPost) {
     CommandPrinter p(m_StreamPost, m_StatePost, command,
                      "NvAPI_D3D12_BuildRaytracingAccelerationStructureEx");
-    p.addArgument(command.m_pCommandList);
-    p.addArgument(command.m_pParams);
-    p.addResult(command.m_Result);
-    p.print(m_Flush);
+    p.AddArgument(command.m_pCommandList);
+    p.AddArgument(command.m_pParams);
+    p.AddResult(command.m_Result);
+    p.Print(m_Flush);
   }
 }
 
@@ -788,10 +788,10 @@ void TraceLayer::Pre(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& com
   if (m_PrintPre) {
     CommandPrinter p(m_StreamPre, m_StatePre, command,
                      "NvAPI_D3D12_BuildRaytracingOpacityMicromapArray");
-    p.addArgument(command.m_pCommandList);
-    p.addArgument(command.m_pParams);
-    p.addResult(command.m_Result);
-    p.print(m_Flush);
+    p.AddArgument(command.m_pCommandList);
+    p.AddArgument(command.m_pParams);
+    p.AddResult(command.m_Result);
+    p.Print(m_Flush);
   }
 }
 
@@ -799,10 +799,10 @@ void TraceLayer::Post(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& co
   if (m_PrintPost) {
     CommandPrinter p(m_StreamPost, m_StatePost, command,
                      "NvAPI_D3D12_BuildRaytracingOpacityMicromapArray");
-    p.addArgument(command.m_pCommandList);
-    p.addArgument(command.m_pParams);
-    p.addResult(command.m_Result);
-    p.print(m_Flush);
+    p.AddArgument(command.m_pCommandList);
+    p.AddArgument(command.m_pParams);
+    p.AddResult(command.m_Result);
+    p.Print(m_Flush);
   }
 }
 
@@ -810,10 +810,10 @@ void TraceLayer::Pre(NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationC
   if (m_PrintPre) {
     CommandPrinter p(m_StreamPre, m_StatePre, command,
                      "NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperation");
-    p.addArgument(command.m_pCommandList);
-    p.addArgument(command.m_pParams);
-    p.addResult(command.m_Result);
-    p.print(m_Flush);
+    p.AddArgument(command.m_pCommandList);
+    p.AddArgument(command.m_pParams);
+    p.AddResult(command.m_Result);
+    p.Print(m_Flush);
   }
 }
 
@@ -821,10 +821,10 @@ void TraceLayer::Post(NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperation
   if (m_PrintPost) {
     CommandPrinter p(m_StreamPost, m_StatePost, command,
                      "NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperation");
-    p.addArgument(command.m_pCommandList);
-    p.addArgument(command.m_pParams);
-    p.addResult(command.m_Result);
-    p.print(m_Flush);
+    p.AddArgument(command.m_pCommandList);
+    p.AddArgument(command.m_pParams);
+    p.AddResult(command.m_Result);
+    p.Print(m_Flush);
   }
 }
 

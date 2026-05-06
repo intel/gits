@@ -114,7 +114,7 @@ void ScreenshotsLayer::SwapChainPresent(unsigned swapChainKey, IDXGISwapChain* s
 
   std::wstringstream outputName;
   outputName << m_DumpPath << L"/frame" << std::setw(8) << std::setfill(L'0') << m_CurrentFrame;
-  it->second->dump(backBuffer.Get(), outputName.str());
+  it->second->Dump(backBuffer.Get(), outputName.str());
 }
 
 } // namespace DirectX

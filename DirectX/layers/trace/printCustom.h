@@ -24,12 +24,12 @@
 namespace gits {
 namespace DirectX {
 
-FastOStream& printObjectKey(FastOStream& stream, unsigned key);
-FastOStream& printString(FastOStream& stream, const wchar_t* s);
-FastOStream& printString(FastOStream& stream, const char* s);
+FastOStream& PrintObjectKey(FastOStream& stream, unsigned key);
+FastOStream& PrintString(FastOStream& stream, const wchar_t* s);
+FastOStream& PrintString(FastOStream& stream, const char* s);
 
 template <typename T>
-FastOStream& printArray(FastOStream& stream, unsigned dimension, T* data) {
+FastOStream& PrintArray(FastOStream& stream, unsigned dimension, T* data) {
   if (!data) {
     return stream << "nullptr";
   }
@@ -46,15 +46,15 @@ FastOStream& printArray(FastOStream& stream, unsigned dimension, T* data) {
 }
 
 template <typename T, size_t N>
-FastOStream& printStaticArray(FastOStream& stream, const T (&array)[N]) {
-  return printArray(stream, N, array);
+FastOStream& PrintStaticArray(FastOStream& stream, const T (&array)[N]) {
+  return PrintArray(stream, N, array);
 }
 
 template <typename T, size_t ROWS, size_t COLS>
-FastOStream& printStatic2DArray(FastOStream& stream, const T (&array)[ROWS][COLS]) {
+FastOStream& PrintStatic2DArray(FastOStream& stream, const T (&array)[ROWS][COLS]) {
   stream << "{";
   for (unsigned row = 0; row < ROWS; ++row) {
-    printStaticArray(stream, array[row]);
+    PrintStaticArray(stream, array[row]);
     if (row < ROWS - 1) {
       stream << ", ";
     }

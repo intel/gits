@@ -25,7 +25,7 @@ custom = [
 <%
 params = []
 for param in function.params:
-    s = 'p.addArgument(command.m_' + param.name + ');'
+    s = 'p.AddArgument(command.m_' + param.name + ');'
     params.append(s)
 is_result = False if function.ret.is_void else True
 %>
@@ -36,9 +36,9 @@ void TraceLayer::Pre(${function.name}Command& command) {
     ${param}
     %endfor
     %if is_result:
-    p.addResult(command.m_Result);
+    p.AddResult(command.m_Result);
     %endif
-    p.print(m_Flush);
+    p.Print(m_Flush);
   }
 }
 
@@ -49,9 +49,9 @@ void TraceLayer::Post(${function.name}Command& command) {
     ${param}
     %endfor
     %if is_result:
-    p.addResult(command.m_Result);
+    p.AddResult(command.m_Result);
     %endif
-    p.print(m_Flush);
+    p.Print(m_Flush);
   }
 }
 
@@ -64,7 +64,7 @@ void TraceLayer::Post(${function.name}Command& command) {
 <%
 params = []
 for param in function.params:
-    s = 'p.addArgument(command.m_' + param.name + ');'
+    s = 'p.AddArgument(command.m_' + param.name + ');'
     params.append(s)
 is_result = False if function.ret.is_void else True
 %>
@@ -75,9 +75,9 @@ void TraceLayer::Pre(${interface.name}${function.name}Command& command) {
     ${param}
     %endfor
     %if is_result:
-    p.addResult(command.m_Result);
+    p.AddResult(command.m_Result);
     %endif
-    p.print(m_Flush);
+    p.Print(m_Flush);
   }
 }
 
@@ -88,9 +88,9 @@ void TraceLayer::Post(${interface.name}${function.name}Command& command) {
     ${param}
     %endfor
     %if is_result:
-    p.addResult(command.m_Result);
+    p.AddResult(command.m_Result);
     %endif
-    p.print(m_Flush);
+    p.Print(m_Flush);
   }
 }
 

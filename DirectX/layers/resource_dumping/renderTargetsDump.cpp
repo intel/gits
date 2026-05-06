@@ -15,7 +15,7 @@ RenderTargetsDump::~RenderTargetsDump() {
   WaitUntilDumped();
 }
 
-void RenderTargetsDump::dumpResource(ID3D12GraphicsCommandList* commandList,
+void RenderTargetsDump::DumpResource(ID3D12GraphicsCommandList* commandList,
                                      ID3D12Resource* resource,
                                      unsigned subresource,
                                      BarrierState resourceState,
@@ -29,12 +29,12 @@ void RenderTargetsDump::dumpResource(ID3D12GraphicsCommandList* commandList,
   dumpInfo->DumpName = dumpName;
   dumpInfo->MipLevel = mipLevel;
   dumpInfo->SubresourceFormat = format;
-  dumpInfo->commandListDrawCount = commandListDrawCount;
+  dumpInfo->CommandListDrawCount = commandListDrawCount;
 
   StageResource(commandList, resource, resourceState, *dumpInfo);
 }
 
-void RenderTargetsDump::executeCommandLists(unsigned key,
+void RenderTargetsDump::ExecuteCommandLists(unsigned key,
                                             unsigned commandQueueKey,
                                             ID3D12CommandQueue* commandQueue,
                                             ID3D12CommandList** commandLists,
@@ -49,9 +49,9 @@ void RenderTargetsDump::executeCommandLists(unsigned key,
       if (frameCount && executeCount) {
         for (DumpInfo* dumpInfo : it->second) {
           RenderTargetDumpInfo* info = static_cast<RenderTargetDumpInfo*>(dumpInfo);
-          info->executionCount = std::to_wstring(frameCount) + L"." +
+          info->ExecutionCount = std::to_wstring(frameCount) + L"." +
                                  std::to_wstring(executeCount) + L"." + std::to_wstring(i + 1) +
-                                 L"." + std::to_wstring(info->commandListDrawCount);
+                                 L"." + std::to_wstring(info->CommandListDrawCount);
         }
       } else {
         break;
@@ -68,9 +68,10 @@ void RenderTargetsDump::executeCommandLists(unsigned key,
 
 void RenderTargetsDump::DumpTexture(DumpInfo& dumpInfo, void* data) {
   RenderTargetDumpInfo& info = static_cast<RenderTargetDumpInfo&>(dumpInfo);
-  if (!info.executionCount.empty()) {
-    size_t pos = dumpInfo.DumpName.find(dumpNameExecutionMarker);
-    info.DumpName = info.DumpName.replace(pos, dumpNameExecutionMarker.size(), info.executionCount);
+  if (!info.ExecutionCount.empty()) {
+    size_t pos = dumpInfo.DumpName.find(m_DumpNameExecutionMarker);
+    info.DumpName =
+        info.DumpName.replace(pos, m_DumpNameExecutionMarker.size(), info.ExecutionCount);
   }
   ResourceDump::DumpTexture(dumpInfo, data);
 }
