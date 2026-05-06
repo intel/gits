@@ -479,7 +479,42 @@ void RenderTargetsDumpLayer::Post(ID3D12DeviceCreateCommittedResourceCommand& c)
                                      c.m_ppvResource.Key, c.m_InitialResourceState.Value);
 }
 
+void RenderTargetsDumpLayer::Post(ID3D12Device4CreateCommittedResource1Command& c) {
+  m_ResourceStateTracker.AddResource(static_cast<ID3D12Resource*>(*c.m_ppvResource.Value),
+                                     c.m_ppvResource.Key, c.m_InitialResourceState.Value);
+}
+
+void RenderTargetsDumpLayer::Post(ID3D12Device8CreateCommittedResource2Command& c) {
+  m_ResourceStateTracker.AddResource(static_cast<ID3D12Resource*>(*c.m_ppvResource.Value),
+                                     c.m_ppvResource.Key, c.m_InitialResourceState.Value);
+}
+
+void RenderTargetsDumpLayer::Post(ID3D12Device10CreateCommittedResource3Command& c) {
+  m_ResourceStateTracker.AddResource(static_cast<ID3D12Resource*>(*c.m_ppvResource.Value),
+                                     c.m_ppvResource.Key, c.m_InitialLayout.Value);
+}
+
+void RenderTargetsDumpLayer::Post(INTC_D3D12_CreateCommittedResourceCommand& c) {
+  m_ResourceStateTracker.AddResource(static_cast<ID3D12Resource*>(*c.m_ppvResource.Value),
+                                     c.m_ppvResource.Key, c.m_InitialResourceState.Value);
+}
+
 void RenderTargetsDumpLayer::Post(ID3D12DeviceCreatePlacedResourceCommand& c) {
+  m_ResourceStateTracker.AddResource(static_cast<ID3D12Resource*>(*c.m_ppvResource.Value),
+                                     c.m_ppvResource.Key, c.m_InitialState.Value);
+}
+
+void RenderTargetsDumpLayer::Post(ID3D12Device8CreatePlacedResource1Command& c) {
+  m_ResourceStateTracker.AddResource(static_cast<ID3D12Resource*>(*c.m_ppvResource.Value),
+                                     c.m_ppvResource.Key, c.m_InitialState.Value);
+}
+
+void RenderTargetsDumpLayer::Post(ID3D12Device10CreatePlacedResource2Command& c) {
+  m_ResourceStateTracker.AddResource(static_cast<ID3D12Resource*>(*c.m_ppvResource.Value),
+                                     c.m_ppvResource.Key, c.m_InitialLayout.Value);
+}
+
+void RenderTargetsDumpLayer::Post(INTC_D3D12_CreatePlacedResourceCommand& c) {
   m_ResourceStateTracker.AddResource(static_cast<ID3D12Resource*>(*c.m_ppvResource.Value),
                                      c.m_ppvResource.Key, c.m_InitialState.Value);
 }
@@ -489,39 +524,19 @@ void RenderTargetsDumpLayer::Post(ID3D12DeviceCreateReservedResourceCommand& c) 
                                      c.m_ppvResource.Key, c.m_InitialState.Value);
 }
 
-void RenderTargetsDumpLayer::Post(ID3D12Device4CreateCommittedResource1Command& c) {
-  m_ResourceStateTracker.AddResource(static_cast<ID3D12Resource*>(*c.m_ppvResource.Value),
-                                     c.m_ppvResource.Key, c.m_InitialResourceState.Value);
-}
-
 void RenderTargetsDumpLayer::Post(ID3D12Device4CreateReservedResource1Command& c) {
   m_ResourceStateTracker.AddResource(static_cast<ID3D12Resource*>(*c.m_ppvResource.Value),
                                      c.m_ppvResource.Key, c.m_InitialState.Value);
 }
 
-void RenderTargetsDumpLayer::Post(ID3D12Device8CreateCommittedResource2Command& c) {
-  m_ResourceStateTracker.AddResource(static_cast<ID3D12Resource*>(*c.m_ppvResource.Value),
-                                     c.m_ppvResource.Key, c.m_InitialResourceState.Value);
-}
-
-void RenderTargetsDumpLayer::Post(ID3D12Device8CreatePlacedResource1Command& c) {
-  m_ResourceStateTracker.AddResource(static_cast<ID3D12Resource*>(*c.m_ppvResource.Value),
-                                     c.m_ppvResource.Key, c.m_InitialState.Value);
-}
-
-void RenderTargetsDumpLayer::Post(ID3D12Device10CreateCommittedResource3Command& c) {
-  m_ResourceStateTracker.AddResource(static_cast<ID3D12Resource*>(*c.m_ppvResource.Value),
-                                     c.m_ppvResource.Key, c.m_InitialLayout.Value);
-}
-
-void RenderTargetsDumpLayer::Post(ID3D12Device10CreatePlacedResource2Command& c) {
-  m_ResourceStateTracker.AddResource(static_cast<ID3D12Resource*>(*c.m_ppvResource.Value),
-                                     c.m_ppvResource.Key, c.m_InitialLayout.Value);
-}
-
 void RenderTargetsDumpLayer::Post(ID3D12Device10CreateReservedResource2Command& c) {
   m_ResourceStateTracker.AddResource(static_cast<ID3D12Resource*>(*c.m_ppvResource.Value),
                                      c.m_ppvResource.Key, c.m_InitialLayout.Value);
+}
+
+void RenderTargetsDumpLayer::Post(INTC_D3D12_CreateReservedResourceCommand& c) {
+  m_ResourceStateTracker.AddResource(static_cast<ID3D12Resource*>(*c.m_ppvResource.Value),
+                                     c.m_ppvResource.Key, c.m_InitialState.Value);
 }
 
 void RenderTargetsDumpLayer::Post(ID3D12GraphicsCommandListResourceBarrierCommand& c) {

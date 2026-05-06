@@ -105,54 +105,80 @@ DispatchOutputsDumpLayer::~DispatchOutputsDumpLayer() {
 
 void DispatchOutputsDumpLayer::Post(ID3D12DeviceCreateCommittedResourceCommand& c) {
   m_ResourceByKey[c.m_ppvResource.Key] = static_cast<ID3D12Resource*>(*c.m_ppvResource.Value);
+  m_ResourceStateTracker.AddResource(static_cast<ID3D12Resource*>(*c.m_ppvResource.Value),
+                                     c.m_ppvResource.Key, c.m_InitialResourceState.Value);
 }
 
 void DispatchOutputsDumpLayer::Post(ID3D12Device4CreateCommittedResource1Command& c) {
   m_ResourceByKey[c.m_ppvResource.Key] = static_cast<ID3D12Resource*>(*c.m_ppvResource.Value);
+  m_ResourceStateTracker.AddResource(static_cast<ID3D12Resource*>(*c.m_ppvResource.Value),
+                                     c.m_ppvResource.Key, c.m_InitialResourceState.Value);
 }
 
 void DispatchOutputsDumpLayer::Post(ID3D12Device8CreateCommittedResource2Command& c) {
   m_ResourceByKey[c.m_ppvResource.Key] = static_cast<ID3D12Resource*>(*c.m_ppvResource.Value);
+  m_ResourceStateTracker.AddResource(static_cast<ID3D12Resource*>(*c.m_ppvResource.Value),
+                                     c.m_ppvResource.Key, c.m_InitialResourceState.Value);
 }
 
 void DispatchOutputsDumpLayer::Post(ID3D12Device10CreateCommittedResource3Command& c) {
   m_ResourceByKey[c.m_ppvResource.Key] = static_cast<ID3D12Resource*>(*c.m_ppvResource.Value);
+  m_ResourceStateTracker.AddResource(static_cast<ID3D12Resource*>(*c.m_ppvResource.Value),
+                                     c.m_ppvResource.Key, c.m_InitialLayout.Value);
 }
 
 void DispatchOutputsDumpLayer::Post(INTC_D3D12_CreateCommittedResourceCommand& c) {
   m_ResourceByKey[c.m_ppvResource.Key] = static_cast<ID3D12Resource*>(*c.m_ppvResource.Value);
+  m_ResourceStateTracker.AddResource(static_cast<ID3D12Resource*>(*c.m_ppvResource.Value),
+                                     c.m_ppvResource.Key, c.m_InitialResourceState.Value);
 }
 
 void DispatchOutputsDumpLayer::Post(ID3D12DeviceCreatePlacedResourceCommand& c) {
   m_ResourceByKey[c.m_ppvResource.Key] = static_cast<ID3D12Resource*>(*c.m_ppvResource.Value);
+  m_ResourceStateTracker.AddResource(static_cast<ID3D12Resource*>(*c.m_ppvResource.Value),
+                                     c.m_ppvResource.Key, c.m_InitialState.Value);
 }
 
 void DispatchOutputsDumpLayer::Post(ID3D12Device8CreatePlacedResource1Command& c) {
   m_ResourceByKey[c.m_ppvResource.Key] = static_cast<ID3D12Resource*>(*c.m_ppvResource.Value);
+  m_ResourceStateTracker.AddResource(static_cast<ID3D12Resource*>(*c.m_ppvResource.Value),
+                                     c.m_ppvResource.Key, c.m_InitialState.Value);
 }
 
 void DispatchOutputsDumpLayer::Post(ID3D12Device10CreatePlacedResource2Command& c) {
   m_ResourceByKey[c.m_ppvResource.Key] = static_cast<ID3D12Resource*>(*c.m_ppvResource.Value);
+  m_ResourceStateTracker.AddResource(static_cast<ID3D12Resource*>(*c.m_ppvResource.Value),
+                                     c.m_ppvResource.Key, c.m_InitialLayout.Value);
 }
 
 void DispatchOutputsDumpLayer::Post(INTC_D3D12_CreatePlacedResourceCommand& c) {
   m_ResourceByKey[c.m_ppvResource.Key] = static_cast<ID3D12Resource*>(*c.m_ppvResource.Value);
+  m_ResourceStateTracker.AddResource(static_cast<ID3D12Resource*>(*c.m_ppvResource.Value),
+                                     c.m_ppvResource.Key, c.m_InitialState.Value);
 }
 
 void DispatchOutputsDumpLayer::Post(ID3D12DeviceCreateReservedResourceCommand& c) {
   m_ResourceByKey[c.m_ppvResource.Key] = static_cast<ID3D12Resource*>(*c.m_ppvResource.Value);
+  m_ResourceStateTracker.AddResource(static_cast<ID3D12Resource*>(*c.m_ppvResource.Value),
+                                     c.m_ppvResource.Key, c.m_InitialState.Value);
 }
 
 void DispatchOutputsDumpLayer::Post(ID3D12Device4CreateReservedResource1Command& c) {
   m_ResourceByKey[c.m_ppvResource.Key] = static_cast<ID3D12Resource*>(*c.m_ppvResource.Value);
+  m_ResourceStateTracker.AddResource(static_cast<ID3D12Resource*>(*c.m_ppvResource.Value),
+                                     c.m_ppvResource.Key, c.m_InitialState.Value);
 }
 
 void DispatchOutputsDumpLayer::Post(ID3D12Device10CreateReservedResource2Command& c) {
   m_ResourceByKey[c.m_ppvResource.Key] = static_cast<ID3D12Resource*>(*c.m_ppvResource.Value);
+  m_ResourceStateTracker.AddResource(static_cast<ID3D12Resource*>(*c.m_ppvResource.Value),
+                                     c.m_ppvResource.Key, c.m_InitialLayout.Value);
 }
 
 void DispatchOutputsDumpLayer::Post(INTC_D3D12_CreateReservedResourceCommand& c) {
   m_ResourceByKey[c.m_ppvResource.Key] = static_cast<ID3D12Resource*>(*c.m_ppvResource.Value);
+  m_ResourceStateTracker.AddResource(static_cast<ID3D12Resource*>(*c.m_ppvResource.Value),
+                                     c.m_ppvResource.Key, c.m_InitialState.Value);
 }
 
 void DispatchOutputsDumpLayer::Post(IUnknownReleaseCommand& c) {
@@ -271,6 +297,9 @@ void DispatchOutputsDumpLayer::Post(ID3D12CommandQueueExecuteCommandListsCommand
     }
   }
   ++m_ExecuteCount;
+  m_ResourceStateTracker.ExecuteCommandLists(
+      reinterpret_cast<ID3D12GraphicsCommandList**>(c.m_ppCommandLists.Value),
+      c.m_NumCommandLists.Value);
   m_ResourceDump.ExecuteCommandLists(c.Key, c.m_Object.Key, c.m_Object.Value,
                                      c.m_ppCommandLists.Value, c.m_NumCommandLists.Value,
                                      m_CurrentFrame, m_ExecuteCount);
@@ -387,6 +416,17 @@ void DispatchOutputsDumpLayer::Post(ID3D12GraphicsCommandListDispatchCommand& c)
   }
 }
 
+void DispatchOutputsDumpLayer::Post(ID3D12GraphicsCommandListResourceBarrierCommand& c) {
+  m_ResourceStateTracker.ResourceBarrier(c.m_Object.Value, c.m_pBarriers.Value,
+                                         c.m_NumBarriers.Value, c.m_pBarriers.ResourceKeys.data());
+}
+
+void DispatchOutputsDumpLayer::Post(ID3D12GraphicsCommandList7BarrierCommand& c) {
+  m_ResourceStateTracker.ResourceBarrier(c.m_Object.Value, c.m_pBarrierGroups.Value,
+                                         c.m_NumBarrierGroups.Value,
+                                         c.m_pBarrierGroups.ResourceKeys.data());
+}
+
 void DispatchOutputsDumpLayer::CreateDescriptor(
     unsigned heapKey,
     unsigned descriptorIndex,
@@ -445,8 +485,8 @@ void DispatchOutputsDumpLayer::DumpComputeOutput(ID3D12GraphicsCommandList* comm
 
       unsigned subresource =
           D3D12CalcSubresource(mipLevel, arrayIndex, planeSlice, desc.MipLevels, arraySize);
-      BarrierState resourceState{};
-      resourceState.State = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+      BarrierState resourceState = m_ResourceStateTracker.GetSubresourceState(
+          commandList, dispatchOutput.ResourceKey, subresource);
       m_ResourceDump.DumpResource(commandList, dispatchOutput.Resource, subresource, resourceState,
                                   dumpName, mipLevel, format, commandListDispatch);
     }

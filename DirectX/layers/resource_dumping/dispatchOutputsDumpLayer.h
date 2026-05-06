@@ -69,7 +69,11 @@ public:
   void Post(ID3D12GraphicsCommandListSetComputeRootDescriptorTableCommand& c) override;
   void Post(ID3D12GraphicsCommandListDispatchCommand& c) override;
 
+  void Post(ID3D12GraphicsCommandListResourceBarrierCommand& c) override;
+  void Post(ID3D12GraphicsCommandList7BarrierCommand& c) override;
+
 private:
+  ResourceStateTracker m_ResourceStateTracker;
   std::wstring m_DumpPath;
   DispatchOutputsDump m_ResourceDump;
   BitRange m_FrameRange;
