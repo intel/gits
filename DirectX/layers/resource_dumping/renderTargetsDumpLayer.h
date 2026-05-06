@@ -42,6 +42,18 @@ public:
   void Post(ID3D12Device3EnqueueMakeResidentCommand& c) override;
   void Post(IDXGISwapChainPresentCommand& c) override;
   void Post(IDXGISwapChain1Present1Command& c) override;
+  void Post(ID3D12DeviceCreateCommittedResourceCommand& c) override;
+  void Post(ID3D12DeviceCreatePlacedResourceCommand& c) override;
+  void Post(ID3D12DeviceCreateReservedResourceCommand& c) override;
+  void Post(ID3D12Device4CreateCommittedResource1Command& c) override;
+  void Post(ID3D12Device4CreateReservedResource1Command& c) override;
+  void Post(ID3D12Device8CreateCommittedResource2Command& c) override;
+  void Post(ID3D12Device8CreatePlacedResource1Command& c) override;
+  void Post(ID3D12Device10CreateCommittedResource3Command& c) override;
+  void Post(ID3D12Device10CreatePlacedResource2Command& c) override;
+  void Post(ID3D12Device10CreateReservedResource2Command& c) override;
+  void Post(ID3D12GraphicsCommandListResourceBarrierCommand& c) override;
+  void Post(ID3D12GraphicsCommandList7BarrierCommand& c) override;
 
 private:
   std::wstring m_DumpPath;
