@@ -416,6 +416,9 @@ void StateTrackingService::RestoreResources() {
 
 D3D12_RESOURCE_STATES StateTrackingService::GetResourceInitialState(
     ResourceState& state, D3D12_RESOURCE_DIMENSION dimension) {
+  if (state.InitialState == D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE) {
+    return state.InitialState;
+  }
   if (dimension == D3D12_RESOURCE_DIMENSION_BUFFER) {
     return D3D12_RESOURCE_STATE_COMMON;
   }
