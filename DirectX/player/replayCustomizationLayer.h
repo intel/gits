@@ -158,6 +158,7 @@ public:
   void Pre(ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& command) override;
   void Pre(ID3D12GraphicsCommandList4EmitRaytracingAccelerationStructurePostbuildInfoCommand&
                command) override;
+  void Pre(ID3D12GraphicsCommandList4DispatchRaysCommand& command) override;
   void Pre(D3D12CreateRootSignatureDeserializerCommand& command) override;
   void Pre(ID3D12DeviceOpenSharedHandleCommand& command) override;
   void Pre(ID3DBlobGetBufferPointerCommand& command) override;

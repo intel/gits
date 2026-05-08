@@ -1392,6 +1392,31 @@ void ReplayCustomizationLayer::Pre(
   }
 }
 
+void ReplayCustomizationLayer::Pre(ID3D12GraphicsCommandList4DispatchRaysCommand& c) {
+  if (c.Skip || m_UseAddressPinning) {
+    return;
+  }
+
+  auto& desc = *c.m_pDesc.Value;
+  auto patchStartAddressIfEmptyTable = [this](D3D12_GPU_VIRTUAL_ADDRESS& start, UINT64 sizeInBytes,
+                                              unsigned key, unsigned offset) {
+    if (!sizeInBytes && start) {
+      start = m_Manager.GetGpuAddressService().GetGpuAddress(key, offset);
+    }
+  };
+
+  patchStartAddressIfEmptyTable(
+      desc.RayGenerationShaderRecord.StartAddress, desc.RayGenerationShaderRecord.SizeInBytes,
+      c.m_pDesc.RayGenerationShaderRecordKey, c.m_pDesc.RayGenerationShaderRecordOffset);
+  patchStartAddressIfEmptyTable(desc.MissShaderTable.StartAddress, desc.MissShaderTable.SizeInBytes,
+                                c.m_pDesc.MissShaderTableKey, c.m_pDesc.MissShaderTableOffset);
+  patchStartAddressIfEmptyTable(desc.HitGroupTable.StartAddress, desc.HitGroupTable.SizeInBytes,
+                                c.m_pDesc.HitGroupTableKey, c.m_pDesc.HitGroupTableOffset);
+  patchStartAddressIfEmptyTable(
+      desc.CallableShaderTable.StartAddress, desc.CallableShaderTable.SizeInBytes,
+      c.m_pDesc.CallableShaderTableKey, c.m_pDesc.CallableShaderTableOffset);
+}
+
 void ReplayCustomizationLayer::Pre(D3D12CreateRootSignatureDeserializerCommand& c) {
   c.Skip = true;
 }
