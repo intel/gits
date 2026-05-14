@@ -10,6 +10,8 @@
 #include "log.h"
 
 #include <wrl/client.h>
+#include <unordered_set>
+#include <algorithm>
 
 namespace gits {
 namespace DirectX {
@@ -72,7 +74,7 @@ std::vector<unsigned> DescriptorRootSignatureService::GetDescriptorTableIndexes(
     bool checkRetrieved) {
   std::lock_guard<std::mutex> lock(m_Mutex);
 
-  std::vector<unsigned> indexes;
+  std::unordered_set<unsigned> indexes;
 
   auto it = m_RootSignatureDescs.find(rootSignatureKey);
   GITS_ASSERT(it != m_RootSignatureDescs.end());
@@ -97,12 +99,17 @@ std::vector<unsigned> DescriptorRootSignatureService::GetDescriptorTableIndexes(
       }
     }
     for (unsigned j = 0; j < numDescriptors; ++j) {
-      indexes.push_back(index);
+      indexes.insert(index);
       ++index;
     }
   }
 
-  return indexes;
+  std::vector<unsigned> vIndexes;
+  vIndexes.resize(indexes.size());
+  std::copy(indexes.cbegin(), indexes.cend(), vIndexes.begin());
+  std::sort(vIndexes.begin(), vIndexes.end());
+
+  return vIndexes;
 }
 
 std::vector<unsigned> DescriptorRootSignatureService::GetBindlessDescriptorIndexes(
