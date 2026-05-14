@@ -28,7 +28,8 @@ public:
                                                   unsigned parameterIndex,
                                                   unsigned baseIndex,
                                                   unsigned heapNumDescriptors,
-                                                  bool checkRetrieved = true);
+                                                  bool checkRetrieved = true,
+                                                  bool* unbounded = nullptr);
   std::vector<unsigned> GetBindlessDescriptorIndexes(unsigned rootSignatureKey,
                                                      unsigned descriptorHeapKey,
                                                      D3D12_DESCRIPTOR_HEAP_TYPE heapType,

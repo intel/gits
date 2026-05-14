@@ -71,7 +71,8 @@ std::vector<unsigned> DescriptorRootSignatureService::GetDescriptorTableIndexes(
     unsigned parameterIndex,
     unsigned baseIndex,
     unsigned heapNumDescriptors,
-    bool checkRetrieved) {
+    bool checkRetrieved,
+    bool* unbounded) {
   std::lock_guard<std::mutex> lock(m_Mutex);
 
   std::unordered_set<unsigned> indexes;
@@ -89,6 +90,9 @@ std::vector<unsigned> DescriptorRootSignatureService::GetDescriptorTableIndexes(
     }
     unsigned numDescriptors = range.NumDescriptors;
     if (range.NumDescriptors == UINT_MAX) {
+      if (unbounded) {
+        *unbounded = true;
+      }
       if (checkRetrieved && UnboundedRetrieved(descriptorHeapKey, index)) {
         continue;
       }

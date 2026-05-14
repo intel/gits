@@ -78,9 +78,11 @@ private:
   DispatchOutputsDump m_ResourceDump;
   BitRange m_FrameRange;
   BitRange m_DispatchRange;
+  BitRange m_SlotResourcesRange;
   std::filesystem::path m_AnalysisFilePath;
   bool m_InAnalysis{};
   bool m_DryRun{};
+  bool m_SkipUnboundedHeaps{};
   unsigned m_DispatchCount{};
   unsigned m_ExecuteCount{};
   unsigned m_CurrentFrame{1};
@@ -111,6 +113,7 @@ private:
   struct IndicesInfo {
     std::vector<unsigned> Indices;
     unsigned DescriptorHeapKey{};
+    bool Unbounded{};
   };
   std::unordered_map<unsigned, std::unordered_map<unsigned, unsigned>>
       m_ResourceKeyFromSetViewBySlotByCommandList;
@@ -119,7 +122,11 @@ private:
   std::unordered_map<unsigned,
                      std::unordered_map<unsigned, std::unordered_map<unsigned, IndicesInfo>>>
       m_IndicesBySlotByDispatchByCommandList;
-  std::map<unsigned, std::unordered_map<unsigned, std::set<unsigned>>>
+  struct ResourcesBoundInfo {
+    std::set<unsigned> Keys;
+    bool Unbounded{};
+  };
+  std::map<unsigned, std::unordered_map<unsigned, ResourcesBoundInfo>>
       m_ResourceKeysBySlotByDispatch;
 
   struct DryRunInfo {
@@ -131,10 +138,11 @@ private:
                         unsigned DescriptorIndex,
                         unsigned resourceKey,
                         DescriptorHeapTracker::DescriptorInfo::DescriptorKind descriptorKind);
-  void DumpComputeOutput(ID3D12GraphicsCommandList* commandList,
+  bool DumpComputeOutput(ID3D12GraphicsCommandList* commandList,
                          const DispatchOutput& dispatchOutput,
                          unsigned frame,
                          unsigned commandListDispatch);
+  bool IsUav(BarrierState resourceState) const;
 };
 
 } // namespace DirectX

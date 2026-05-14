@@ -1208,8 +1208,15 @@ Configuration:
                 Type: std::string
                 Default: ""
                 Description:
-                  Dispatch range (supports multiple ranges and strides). For example
-                  '1-100:5'
+                  Dispatch range (supports multiple ranges and strides). For example '1-100:5'
+              - Name: skipUnboundedHeaps
+                Type: bool
+                Default: false
+                Description: Skips dumping resources from unbounded descriptor heaps.
+              - Name: dispatchSlotRange
+                Type: std::string
+                Default: "all"
+                Description: Range of resource keys for a slot and dispatch. Makes possible dumping resources for unbounded descriptor heaps in multiple passes.
               - Name: format
                 Type: ImageFormat
                 Default: PNG

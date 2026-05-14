@@ -25,7 +25,11 @@ DispatchOutputsDumpLayer::DispatchOutputsDumpLayer()
       m_ResourceDump(Configurator::Get().directx.features.dispatchOutputsDump.format),
       m_FrameRange(Configurator::Get().directx.features.dispatchOutputsDump.frames),
       m_DispatchRange(Configurator::Get().directx.features.dispatchOutputsDump.dispatches),
-      m_DryRun(Configurator::Get().directx.features.dispatchOutputsDump.dryRun) {
+      m_SlotResourcesRange(
+          Configurator::Get().directx.features.dispatchOutputsDump.dispatchSlotRange),
+      m_DryRun(Configurator::Get().directx.features.dispatchOutputsDump.dryRun),
+      m_SkipUnboundedHeaps(
+          Configurator::Get().directx.features.dispatchOutputsDump.skipUnboundedHeaps) {
   const auto& config = Configurator::Get();
   auto& dumpPath = config.common.player.outputDir.empty()
                        ? config.common.player.streamDir / "dispatch_outputs"
@@ -62,9 +66,16 @@ DispatchOutputsDumpLayer::DispatchOutputsDumpLayer()
       unsigned resourceKey{};
       iss >> dispatchKey;
       iss >> slot;
-      auto& resourceKeys = m_ResourceKeysBySlotByDispatch[dispatchKey][slot];
+      ResourcesBoundInfo& info = m_ResourceKeysBySlotByDispatch[dispatchKey][slot];
+      unsigned size{};
+      iss >> size;
+      char unbounded{};
+      iss >> unbounded;
+      if (unbounded == 'u') {
+        info.Unbounded = true;
+      }
       while (iss >> resourceKey) {
-        resourceKeys.insert(resourceKey);
+        info.Keys.insert(resourceKey);
       }
     }
   }
@@ -75,9 +86,10 @@ DispatchOutputsDumpLayer::~DispatchOutputsDumpLayer() {
     if (m_InAnalysis) {
       std::ofstream analysisFile(m_AnalysisFilePath);
       for (const auto& [dispatchKey, resourceKeysBySlot] : m_ResourceKeysBySlotByDispatch) {
-        for (const auto& [slot, resourceKeys] : resourceKeysBySlot) {
-          analysisFile << dispatchKey << " " << slot;
-          for (unsigned resourceKey : resourceKeys) {
+        for (const auto& [slot, resourcesBoundInfo] : resourceKeysBySlot) {
+          analysisFile << dispatchKey << " " << slot << " " << resourcesBoundInfo.Keys.size() << " "
+                       << (resourcesBoundInfo.Unbounded ? 'u' : 'b');
+          for (unsigned resourceKey : resourcesBoundInfo.Keys) {
             analysisFile << " " << resourceKey;
           }
           analysisFile << "\n";
@@ -286,8 +298,9 @@ void DispatchOutputsDumpLayer::Post(ID3D12CommandQueueExecuteCommandListsCommand
                   descriptorInfo->ResourceKey) {
                 ID3D12Resource* resource = m_ResourceByKey[descriptorInfo->ResourceKey];
                 if (resource && resource->GetDesc().Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
-                  m_ResourceKeysBySlotByDispatch[dispatchKey][slot].insert(
-                      descriptorInfo->ResourceKey);
+                  ResourcesBoundInfo& info = m_ResourceKeysBySlotByDispatch[dispatchKey][slot];
+                  info.Unbounded = indicesInfo.Unbounded;
+                  info.Keys.insert(descriptorInfo->ResourceKey);
                 }
               }
             }
@@ -365,13 +378,16 @@ void DispatchOutputsDumpLayer::Post(
   unsigned numDescriptors = m_DescriptorHeapInfos[c.m_BaseDescriptor.InterfaceKey].NumDescriptors;
   GITS_ASSERT(numDescriptors);
 
+  bool unbounded{};
   std::vector<unsigned> indices = m_RootSignatureService.GetDescriptorTableIndexes(
       rootSignatureKey, c.m_BaseDescriptor.InterfaceKey, c.m_RootParameterIndex.Value,
-      c.m_BaseDescriptor.Index, numDescriptors, false);
+      c.m_BaseDescriptor.Index, numDescriptors, false, &unbounded);
 
   m_IndicesBySlotByCommandList[c.m_Object.Key][c.m_RootParameterIndex.Value].DescriptorHeapKey =
       c.m_BaseDescriptor.InterfaceKey;
-  m_IndicesBySlotByCommandList[c.m_Object.Key][c.m_RootParameterIndex.Value].Indices = indices;
+  IndicesInfo& info = m_IndicesBySlotByCommandList[c.m_Object.Key][c.m_RootParameterIndex.Value];
+  info.Unbounded = unbounded;
+  info.Indices = indices;
 }
 
 void DispatchOutputsDumpLayer::Post(ID3D12GraphicsCommandListDispatchCommand& c) {
@@ -393,23 +409,40 @@ void DispatchOutputsDumpLayer::Post(ID3D12GraphicsCommandListDispatchCommand& c)
     auto resourceKeyBySlotIt = m_ResourceKeyFromSetViewBySlotByCommandList.find(commandListKey);
     if (resourceKeyBySlotIt != m_ResourceKeyFromSetViewBySlotByCommandList.end()) {
       for (const auto& [slot, resourceKey] : resourceKeyBySlotIt->second) {
-        m_ResourceKeysBySlotByDispatch[c.Key][slot].insert(resourceKey);
+        m_ResourceKeysBySlotByDispatch[c.Key][slot].Keys.insert(resourceKey);
       }
     }
   } else {
     auto resourceKeysBySlotIt = m_ResourceKeysBySlotByDispatch.find(c.Key);
     if (resourceKeysBySlotIt != m_ResourceKeysBySlotByDispatch.end()) {
-      for (const auto& [slot, resourceKeys] : resourceKeysBySlotIt->second) {
-        for (unsigned resourceKey : resourceKeys) {
+      for (const auto& [slot, resourcesBoundInfo] : resourceKeysBySlotIt->second) {
+        if (!m_DryRun && resourcesBoundInfo.Unbounded && m_SkipUnboundedHeaps) {
+          LOG_WARNING << "Skipped dumping " << resourcesBoundInfo.Keys.size()
+                      << " resources from unbounded descriptor heap in frame " << m_CurrentFrame
+                      << " dispatch " << m_DispatchCount << " slot " << slot;
+          continue;
+        }
+        unsigned resourceIndex{};
+        unsigned resourceCount{};
+        for (unsigned resourceKey : resourcesBoundInfo.Keys) {
+          ++resourceIndex;
           if (m_DryRun) {
             m_DryRunInfo.DispatchesWithTextureByFrame[m_CurrentFrame].insert(m_DispatchCount);
-          } else {
+          } else if (m_SlotResourcesRange[resourceIndex]) {
             ID3D12Resource* resource = m_ResourceByKey[resourceKey];
             GITS_ASSERT(resource);
             DispatchOutput dispatchOutput{resourceKey, resource, slot};
-            DumpComputeOutput(commandList, dispatchOutput, m_CurrentFrame,
-                              commandListDispatchCount);
+            if (DumpComputeOutput(commandList, dispatchOutput, m_CurrentFrame,
+                                  commandListDispatchCount)) {
+              ++resourceCount;
+            }
           }
+        }
+        if (!m_DryRun) {
+          LOG_INFO << "Dumping " << resourceCount << " resources from "
+                   << (resourcesBoundInfo.Unbounded ? "unbounded" : "bounded")
+                   << " descriptor heap in frame " << m_CurrentFrame << " dispatch "
+                   << m_DispatchCount << " slot " << slot;
         }
       }
     }
@@ -440,7 +473,7 @@ void DispatchOutputsDumpLayer::CreateDescriptor(
   m_DescriptorService.CreateDescriptor(descriptorInfo);
 }
 
-void DispatchOutputsDumpLayer::DumpComputeOutput(ID3D12GraphicsCommandList* commandList,
+bool DispatchOutputsDumpLayer::DumpComputeOutput(ID3D12GraphicsCommandList* commandList,
                                                  const DispatchOutput& dispatchOutput,
                                                  unsigned frame,
                                                  unsigned commandListDispatch) {
@@ -465,6 +498,8 @@ void DispatchOutputsDumpLayer::DumpComputeOutput(ID3D12GraphicsCommandList* comm
   GITS_ASSERT(hr == S_OK);
   unsigned planeCount = D3D12GetFormatPlaneCount(device.Get(), format);
 
+  bool dumped = false;
+
   for (unsigned arrayIndex = minArrayIndex; arrayIndex <= maxArrayIndex; ++arrayIndex) {
     for (unsigned planeSlice = 0; planeSlice < planeCount; ++planeSlice) {
 
@@ -487,9 +522,24 @@ void DispatchOutputsDumpLayer::DumpComputeOutput(ID3D12GraphicsCommandList* comm
           D3D12CalcSubresource(mipLevel, arrayIndex, planeSlice, desc.MipLevels, arraySize);
       BarrierState resourceState = m_ResourceStateTracker.GetSubresourceState(
           commandList, dispatchOutput.ResourceKey, subresource);
-      m_ResourceDump.DumpResource(commandList, dispatchOutput.Resource, subresource, resourceState,
-                                  dumpName, mipLevel, format, commandListDispatch);
+      if (IsUav(resourceState)) {
+        m_ResourceDump.DumpResource(commandList, dispatchOutput.Resource, subresource,
+                                    resourceState, dumpName, mipLevel, format, commandListDispatch);
+        dumped = true;
+      }
     }
+  }
+  return dumped;
+}
+
+bool DispatchOutputsDumpLayer::IsUav(BarrierState resourceState) const {
+  if (!resourceState.Enhanced) {
+    return resourceState.State == D3D12_RESOURCE_STATE_UNORDERED_ACCESS ||
+           resourceState.State == D3D12_RESOURCE_STATE_COMMON;
+  } else {
+    return resourceState.Layout == D3D12_BARRIER_LAYOUT_COMMON ||
+           resourceState.Layout == D3D12_BARRIER_LAYOUT_COMPUTE_QUEUE_UNORDERED_ACCESS ||
+           resourceState.Layout == D3D12_BARRIER_LAYOUT_DIRECT_QUEUE_UNORDERED_ACCESS;
   }
 }
 
