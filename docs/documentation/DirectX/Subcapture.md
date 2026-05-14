@@ -111,3 +111,29 @@ gitsPlayer.exe ... --DirectX.Features.Subcapture.CommandListExecutions 50 --exit
 ```
 
 Each pair emits a separate `*.gits2` under `Common.Player.SubcapturePath`.
+
+## Command list split (Draw call sub-capture)
+
+**Command list split** rewrites a serialized stream so that chosen commands (typically draws or dispatches) each become their own command list execution in the output. You can then run the usual [Command list sub-capture](#command-list-sub-capture) workflow on that **split** stream and sub-capture at draw  granularity.
+
+### Behavior
+
+- **Input:** A `*.gits2` that already uses serialized executions (one command list per `ExecuteCommandLists`), from [Serialized sub-capture](#serialized-sub-capture).
+- **Configuration:** `DirectX.Features.Subcapture.CommandListSplit` in `gits_config.yml`, or `--DirectX.Features.Subcapture.CommandListSplit` on the command line, with `DirectX.Features.Subcapture.Enabled` set to `true`.
+- **Mutual exclusion:** In a split pass, do **not** enable `ExecutionSerialization` or `CommandListExecutions`. The player runs in a dedicated **split** mode and **does not execute** the GPU workload.
+- **Split points:** Values are **stream command keys**. Use a trace of the **serialized** stream to pick keys of commands you want to isolate (for example `ID3D12GraphicsCommandList::DrawIndexedInstanced`). Syntax: a single key (`42`), an inclusive range (`10-20`), comma-separated tokens (`10-20,50,60-70`), or `all` to split at every GPU work command. Intervals must not overlap, and a split interval must not span more than one serialized execution.
+- **Output:** A new `*.gits2` under `Common.Player.SubcapturePath`, using a directory whose name ends with `split`.
+
+### Workflow: draw-level sub-capture via split, then [Command list sub-capture](#command-list-sub-capture)
+
+1. Produce a serialized stream as in [Serialized sub-capture](#serialized-sub-capture).
+2. Trace that serialized file (`--DirectX.Features.Trace.Enabled`) and note the **command keys** on the draw or dispatch lines you want as separate executions.
+3. Play the **serialized** file once with sub-capture enabled and `CommandListSplit` set to those keys (or ranges).
+4. Trace the **split** output and count **`Execute #`** for your target frame, as in [Command list sub-capture](#command-list-sub-capture).
+5. **Clear** `CommandListSplit`. On the **split** `*.gits2`, run the normal two-pass-per-index `CommandListExecutions` sub-capture from [Command list sub-capture](#command-list-sub-capture), using the new execution indices from step 4.
+
+Example split pass (adjust keys and paths):
+
+```text
+gitsPlayer.exe --DirectX.Features.Subcapture.Enabled --DirectX.Features.Subcapture.CommandListSplit 100-105,200 C:\path\to\serialized_trace.gits2
+```
