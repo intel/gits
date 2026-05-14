@@ -12,6 +12,7 @@
 #include "traceLayerGroup.h"
 #include "subcaptureLayerGroup.h"
 #include "executionSerializationLayerGroup.h"
+#include "commandListSplitLayerGroup.h"
 #include "resourceDumpingLayerGroup.h"
 #include "skipCallsLayerGroup.h"
 #include "portabilityLayerGroup.h"
@@ -46,6 +47,7 @@ private:
   TraceLayerGroup m_TraceLayerGroup;
   SubcaptureLayerGroup m_SubcaptureLayerGroup;
   ExecutionSerializationLayerGroup m_ExecutionSerializationLayerGroup;
+  CommandListSplitLayerGroup m_CommandListSplitLayerGroup;
   ResourceDumpingLayerGroup m_ResourceDumpingLayerGroup;
   SkipCallsLayerGroup m_SkipCallsLayerGroup;
   PortabilityLayerGroup m_PortabilityLayerGroup;

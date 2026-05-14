@@ -21,7 +21,8 @@ namespace DirectX {
 void SubcaptureLayerGroup::LoadLayers() {
 
   if (!Configurator::Get().directx.features.subcapture.enabled ||
-      Configurator::Get().directx.features.subcapture.executionSerialization) {
+      Configurator::Get().directx.features.subcapture.executionSerialization ||
+      !Configurator::Get().directx.features.subcapture.commandListSplit.empty()) {
     return;
   }
 

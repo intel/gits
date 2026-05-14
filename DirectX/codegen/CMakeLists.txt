@@ -26,6 +26,7 @@ set(SCRIPTS_SRC
   generator_player.py
   generator_subcapture.py
   generator_execution_serialization.py
+  generator_command_list_split.py
   generator_resource_dumping.py
   generator_skip_calls.py
   plugin_generator.py

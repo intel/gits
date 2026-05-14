@@ -1110,6 +1110,10 @@ Configuration:
                 Type: bool
                 Default: false
                 Description: Creates stream with serialized CPU and GPU execution
+              - Name: commandListSplit
+                Type: std::string
+                Default: ""
+                Description: Split serialized stream at command list command keys. For example, '42' (where '42' is a command key of a draw call) will extract the draw call into a separate execution containing only that draw call and the necessary command list state restoration commands. Multiple keys and key ranges are supported. Ranges containing only state commands are invalid. Use 'all' to split at every GPU work command. Leave empty to disable.
               - Name: optimize
                 Type: bool
                 Default: true

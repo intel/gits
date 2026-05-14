@@ -20,6 +20,7 @@ source_group("common" FILES ${COMMON_SRC})
 set(ENCODERS_SRC
   ${SRC_DIR}/include/argumentEncoders.h
   ${SRC_DIR}/include/commandSerializersFactory.h
+  ${SRC_DIR}/include/commandCopyFactory.h
   ${SRC_DIR}/include/commandSerializersCustom.h
   ${SRC_DIR}/include/commandEncodersCustom.h
   ${SRC_DIR}/include/commandSerializersAuto.h
@@ -28,6 +29,7 @@ set(ENCODERS_SRC
   ${SRC_DIR}/commandEncodersAuto.cpp
   ${SRC_DIR}/commandEncodersCustom.cpp
   ${SRC_DIR}/commandSerializersFactoryAuto.cpp
+  ${SRC_DIR}/commandCopyFactoryAuto.cpp
 )
 source_group("encoders" FILES ${ENCODERS_SRC})
 

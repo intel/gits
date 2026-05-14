@@ -27,6 +27,7 @@ from generator_to_string import generate_to_string_files
 from generator_player import generate_player_files
 from generator_subcapture import generate_subcapture_files
 from generator_execution_serialization import generate_execution_serialization_files
+from generator_command_list_split import generate_command_list_split_files
 from generator_resource_dumping import generate_resource_dumping_files
 from generator_skip_calls import generate_skip_calls_files
 from generator_ccode import generate_ccode_files
@@ -127,6 +128,7 @@ def main():
     generate_to_string_files(context, os.path.join(outpath, 'common/utils/to_string'))
     generate_subcapture_files(context, os.path.join(outpath, 'layers/subcapture'))
     generate_execution_serialization_files(context, os.path.join(outpath, 'layers/execution_serialization'))
+    generate_command_list_split_files(context, os.path.join(outpath, 'layers/command_list_split'))
     generate_resource_dumping_files(context, os.path.join(outpath, 'layers/resource_dumping'))
     generate_skip_calls_files(context, os.path.join(outpath, 'layers/skip_calls'))
     generate_ccode_files(context, os.path.join(outpath, 'layers/ccode'))

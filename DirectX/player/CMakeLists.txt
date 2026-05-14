@@ -113,6 +113,7 @@ target_include_directories(DirectX_player PRIVATE
   ${DIRECTX_DIR}/layers/trace
   ${DIRECTX_DIR}/layers/subcapture
   ${DIRECTX_DIR}/layers/execution_serialization
+  ${DIRECTX_DIR}/layers/command_list_split
   ${DIRECTX_DIR}/layers/api_debug
   ${DIRECTX_DIR}/layers/resource_dumping
   ${DIRECTX_DIR}/layers/skip_calls
@@ -134,6 +135,7 @@ target_link_libraries(DirectX_player PRIVATE
   DirectX_resource_dumping
   DirectX_subcapture
   DirectX_execution_serialization
+  DirectX_command_list_split
   DirectX_coders
   DirectX_imgui_hud
   DirectX_utils

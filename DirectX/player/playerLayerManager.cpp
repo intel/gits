@@ -41,6 +41,7 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
   m_TraceLayerGroup.LoadLayers();
   m_SubcaptureLayerGroup.LoadLayers();
   m_ExecutionSerializationLayerGroup.LoadLayers();
+  m_CommandListSplitLayerGroup.LoadLayers();
   m_ResourceDumpingLayerGroup.LoadLayers();
   m_SkipCallsLayerGroup.LoadLayers();
   m_PortabilityLayerGroup.LoadLayers(registerResourceCallback);
@@ -58,6 +59,7 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
   Layer* analyzerLayer = m_SubcaptureLayerGroup.GetLayer("Analyzer");
   Layer* executionSerializationLayer =
       m_ExecutionSerializationLayerGroup.GetLayer("ExecutionSerialization");
+  Layer* commandListSplitLayer = m_CommandListSplitLayerGroup.GetLayer("CommandListSplit");
   Layer* screenshotsLayer = m_ResourceDumpingLayerGroup.GetLayer("Screenshots");
   Layer* resourceDumpLayer = m_ResourceDumpingLayerGroup.GetLayer("ResourceDump");
   Layer* renderTargetsDumpLayer = m_ResourceDumpingLayerGroup.GetLayer("RenderTargetsDump");
@@ -131,6 +133,7 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
   enablePreLayer(dllOverrideUseLayer.get());
   enablePreLayer(stateTrackingLayer);
   enablePreLayer(executionSerializationLayer);
+  enablePreLayer(commandListSplitLayer);
   enablePreLayer(analyzerLayer);
   enablePreLayer(gpuPatchLayer.get());
   enablePreLayer(addressPinningLayer);
@@ -174,6 +177,7 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
   enablePostLayer(rootSignatureDumpLayer);
   enablePostLayer(recordingLayer);
   enablePostLayer(executionSerializationLayer);
+  enablePostLayer(commandListSplitLayer);
   enablePostLayer(printStatusLayer.get());
   enablePostLayer(imGuiHUDLayer.get());
   enablePostLayer(ccodeLayer.get());

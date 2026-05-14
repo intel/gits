@@ -59,8 +59,6 @@ PlayerManager::~PlayerManager() {
 }
 
 PlayerManager::PlayerManager() {
-  m_ExecuteCommands = Configurator::Get().directx.player.execute;
-
   // Load DirectX runtimes
   LoadDirectML();
   LoadDirectStorage();
@@ -73,6 +71,8 @@ PlayerManager::PlayerManager() {
   m_PluginService->loadPlugins();
 
   m_LayerManager.LoadLayers(*this, *m_PluginService.get());
+
+  m_ExecuteCommands = Configurator::Get().directx.player.execute;
 }
 
 void PlayerManager::AddObject(unsigned objectKey, IUnknown* object) {
