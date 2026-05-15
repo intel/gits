@@ -108,12 +108,12 @@ std::vector<unsigned> DescriptorRootSignatureService::GetDescriptorTableIndexes(
     }
   }
 
-  std::vector<unsigned> vIndexes;
-  vIndexes.resize(indexes.size());
-  std::copy(indexes.cbegin(), indexes.cend(), vIndexes.begin());
-  std::sort(vIndexes.begin(), vIndexes.end());
+  std::vector<unsigned> sortedIndexes;
+  sortedIndexes.resize(indexes.size());
+  std::copy(indexes.cbegin(), indexes.cend(), sortedIndexes.begin());
+  std::sort(sortedIndexes.begin(), sortedIndexes.end());
 
-  return vIndexes;
+  return sortedIndexes;
 }
 
 std::vector<unsigned> DescriptorRootSignatureService::GetBindlessDescriptorIndexes(

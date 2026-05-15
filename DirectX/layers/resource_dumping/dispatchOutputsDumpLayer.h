@@ -9,14 +9,11 @@
 #pragma once
 
 #include "layerAuto.h"
-#include "dispatchOutputsDump.h"
 #include "bit_range.h"
-#include "resourceStateTracker.h"
-#include "descriptorRootSignatureService.h"
-#include "descriptorHeapTracker.h"
+#include "dispatchOutputsAnalyzer.h"
+#include "dispatchOutputsDumpService.h"
 
 #include <unordered_map>
-#include <d3d12.h>
 
 namespace gits {
 namespace DirectX {
@@ -64,6 +61,7 @@ public:
   void Post(ID3D12Device3EnqueueMakeResidentCommand& c) override;
 
   void Post(ID3D12GraphicsCommandListResetCommand& c) override;
+  void Post(ID3D12GraphicsCommandListClearStateCommand& c) override;
   void Post(ID3D12GraphicsCommandListSetComputeRootSignatureCommand& c) override;
   void Post(ID3D12GraphicsCommandListSetComputeRootUnorderedAccessViewCommand& c) override;
   void Post(ID3D12GraphicsCommandListSetComputeRootDescriptorTableCommand& c) override;
@@ -73,76 +71,17 @@ public:
   void Post(ID3D12GraphicsCommandList7BarrierCommand& c) override;
 
 private:
-  ResourceStateTracker m_ResourceStateTracker;
-  std::wstring m_DumpPath;
-  DispatchOutputsDump m_ResourceDump;
+  DispatchOutputsAnalyzer m_DispatchOutputsAnalyzer;
+  DispatchOutputsDumpService m_DispatchOutputsDumpService;
+
   BitRange m_FrameRange;
   BitRange m_DispatchRange;
-  BitRange m_SlotResourcesRange;
-  std::filesystem::path m_AnalysisFilePath;
   bool m_InAnalysis{};
   bool m_DryRun{};
-  bool m_SkipUnboundedHeaps{};
   unsigned m_DispatchCount{};
   unsigned m_ExecuteCount{};
   unsigned m_CurrentFrame{1};
-
-  DescriptorRootSignatureService m_RootSignatureService;
-  DescriptorHeapTracker m_DescriptorService;
-
   std::unordered_map<unsigned, unsigned> m_DispatchCountByCommandList;
-  std::unordered_map<unsigned, ID3D12Resource*> m_ResourceByKey;
-
-  struct CommandListInfo {
-    unsigned ComputeRootSignature{};
-  };
-  std::unordered_map<unsigned, CommandListInfo> m_CommandListInfos;
-
-  struct DescriptorHeapInfo {
-    D3D12_DESCRIPTOR_HEAP_TYPE Type{};
-    unsigned NumDescriptors{};
-  };
-  std::unordered_map<unsigned, DescriptorHeapInfo> m_DescriptorHeapInfos;
-
-  struct DispatchOutput {
-    unsigned ResourceKey{};
-    ID3D12Resource* Resource{};
-    unsigned Slot{};
-  };
-
-  struct IndicesInfo {
-    std::vector<unsigned> Indices;
-    unsigned DescriptorHeapKey{};
-    bool Unbounded{};
-  };
-  std::unordered_map<unsigned, std::unordered_map<unsigned, unsigned>>
-      m_ResourceKeyFromSetViewBySlotByCommandList;
-  std::unordered_map<unsigned, std::unordered_map<unsigned, IndicesInfo>>
-      m_IndicesBySlotByCommandList;
-  std::unordered_map<unsigned,
-                     std::unordered_map<unsigned, std::unordered_map<unsigned, IndicesInfo>>>
-      m_IndicesBySlotByDispatchByCommandList;
-  struct ResourcesBoundInfo {
-    std::set<unsigned> Keys;
-    bool Unbounded{};
-  };
-  std::map<unsigned, std::unordered_map<unsigned, ResourcesBoundInfo>>
-      m_ResourceKeysBySlotByDispatch;
-
-  struct DryRunInfo {
-    std::map<unsigned, std::set<unsigned>> DispatchesWithTextureByFrame;
-  } m_DryRunInfo;
-
-private:
-  void CreateDescriptor(unsigned heapKey,
-                        unsigned DescriptorIndex,
-                        unsigned resourceKey,
-                        DescriptorHeapTracker::DescriptorInfo::DescriptorKind descriptorKind);
-  bool DumpComputeOutput(ID3D12GraphicsCommandList* commandList,
-                         const DispatchOutput& dispatchOutput,
-                         unsigned frame,
-                         unsigned commandListDispatch);
-  bool IsUav(BarrierState resourceState) const;
 };
 
 } // namespace DirectX

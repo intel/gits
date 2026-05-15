@@ -45,6 +45,10 @@ set(DISPATCH_OUTPUT_DUMP_SRC
   ${SRC_DIR}/dispatchOutputsDumpLayer.cpp
   ${SRC_DIR}/dispatchOutputsDump.h
   ${SRC_DIR}/dispatchOutputsDump.cpp
+  ${SRC_DIR}/dispatchOutputsDumpService.h
+  ${SRC_DIR}/dispatchOutputsDumpService.cpp
+  ${SRC_DIR}/dispatchOutputsAnalyzer.h
+  ${SRC_DIR}/dispatchOutputsAnalyzer.cpp
 )
 source_group("dispatch_outputs_dump" FILES ${DISPATCH_OUTPUT_DUMP_SRC})
 
