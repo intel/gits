@@ -2281,6 +2281,9 @@ Configuration:
             Type: bool
             Default: true
             OSVisibility: [WINDOWS]
+          - Name: indexedVerticesSizeCalculationMethod
+            Type: VulkanIndexedVerticesSizeCalculationMethod
+            Default: CountOrMaxvertex
   - Name: OpenCL
     Type: Group
     Options:

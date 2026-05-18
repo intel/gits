@@ -228,3 +228,7 @@ Enums:
      - Value: OGL
      - Value: L0
      - Value: OCL
+  - Name: VulkanIndexedVerticesSizeCalculationMethod
+    Values:
+      - Value: COUNT_ONLY
+      - Value: COUNT_OR_MAXVERTEX

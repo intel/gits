@@ -15158,7 +15158,7 @@ var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='clusterShadingRate', type='VkBool32')
 )
 
-Struct(name='VkPhysicalDeviceCoherentMemoryFeaturesAMD_', enabled=False,
+Struct(name='VkPhysicalDeviceCoherentMemoryFeaturesAMD_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='deviceCoherentMemory', type='VkBool32')
@@ -15854,7 +15854,7 @@ var4=VarDef(name='pDescription', type='const VkTensorDescriptionARM*'),
 var5=VarDef(name='handleType', type='VkExternalMemoryHandleTypeFlagBits')
 )
 
-Struct(name='VkPhysicalDeviceFaultFeaturesEXT_', enabled=False,
+Struct(name='VkPhysicalDeviceFaultFeaturesEXT_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='deviceFault', type='VkBool32'),
@@ -18301,7 +18301,7 @@ var26=VarDef(name='optimalTilingLayoutUUID', type='uint8_t[VK_UUID_SIZE ]'),
 var27=VarDef(name='identicalMemoryTypeRequirements', type='VkBool32')
 )
 
-Struct(name='VkPhysicalDeviceVulkanMemoryModelFeatures_', enabled=False,
+Struct(name='VkPhysicalDeviceVulkanMemoryModelFeatures_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='vulkanMemoryModel', type='VkBool32'),
@@ -20516,13 +20516,13 @@ var4=VarDef(name='initialDataSize', type='size_t'),
 var5=VarDef(name='pInitialData', type='const void*')
 )
 
-Struct(name='VkValidationFeaturesEXT_', enabled=False,
+Struct(name='VkValidationFeaturesEXT_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='enabledValidationFeatureCount', type='uint32_t'),
-var4=VarDef(name='pEnabledValidationFeatures', type='const VkValidationFeatureEnableEXT*'),
+var4=VarDef(name='pEnabledValidationFeatures', type='const VkValidationFeatureEnableEXT*', wrapType='CVkValidationFeatureEnableEXT::CSArray', wrapParams='validationfeaturesext->enabledValidationFeatureCount, validationfeaturesext->pEnabledValidationFeatures', count='enabledValidationFeatureCount'),
 var5=VarDef(name='disabledValidationFeatureCount', type='uint32_t'),
-var6=VarDef(name='pDisabledValidationFeatures', type='const VkValidationFeatureDisableEXT*')
+var6=VarDef(name='pDisabledValidationFeatures', type='const VkValidationFeatureDisableEXT*', wrapType='CVkValidationFeatureDisableEXT::CSArray', wrapParams='validationfeaturesext->disabledValidationFeatureCount, validationfeaturesext->pDisabledValidationFeatures', count='disabledValidationFeatureCount'),
 )
 
 Struct(name='VkValidationFlagsEXT_', enabled=False,

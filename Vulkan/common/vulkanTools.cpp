@@ -3320,7 +3320,6 @@ TemporaryBufferPairType createTemporaryBuffer(VkDevice device,
 
   // Find appropriate memory type index
   for (uint32_t type = 0; type < memoryProperties.memoryTypeCount; ++type) {
-    void* pNext = nullptr;
     if (isBitSet(bufferMemoryRequirements.memoryTypeBits, 1 << type) &&
         isBitSet(memoryProperties.memoryTypes[type].propertyFlags, requiredMemoryPropertyFlags)) {
       memoryAllocateInfo.memoryTypeIndex = type;
@@ -3337,7 +3336,7 @@ TemporaryBufferPairType createTemporaryBuffer(VkDevice device,
 
   // Bind memory to the buffer
   if (VK_SUCCESS != drvVk.vkBindBufferMemory(device, buffer, memory, 0)) {
-    throw std::runtime_error("Could not bind memory object to a buffer.");
+    throw std::runtime_error("Could not bind a memory object to a temporary buffer.");
   }
 
   auto temporaryMemoryState =

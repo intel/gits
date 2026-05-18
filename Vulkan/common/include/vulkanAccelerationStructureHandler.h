@@ -56,9 +56,14 @@ void PrepareStateRestoreDataForIndexedVertices(CVkDeviceOrHostAddressConstKHRDat
   // - DataSize               uint32_t
   // - Offset                 uint32_t
   // - Indirect count x/y/z   uint32_t * 3
-  // - Actual vertices        stride * max(count, maxVertex)
-  auto size = sizeof(uint32_t) + sizeof(uint32_t) + 3 * sizeof(uint32_t) +
-              stride * std::max(count, maxVertex);
+  // - Actual vertices        (stride * count) or (stride * std::max(count, maxVertex))
+  auto size = sizeof(uint32_t) + sizeof(uint32_t) + 3 * sizeof(uint32_t);
+  if (Configurator::Get().vulkan.recorder.indexedVerticesSizeCalculationMethod ==
+      VulkanIndexedVerticesSizeCalculationMethod::COUNT_ONLY) {
+    size += stride * count;
+  } else {
+    size += stride * std::max(count, maxVertex);
+  }
   auto commandBuffer = cmdBufState.commandBufferHandle;
   auto device = cmdBufState.commandPoolStateStore->deviceStateStore->deviceHandle;
   auto memoryBufferPair = createTemporaryBuffer(
@@ -208,6 +213,10 @@ void PrepareStateRestoreDataForIndexedVertices(CVkDeviceOrHostAddressConstKHRDat
     // - uint IndirectDispatchZ;
     // - uint8_t vertices[];
     auto* basePtr = (uint32_t*)temporary.data();
+    if (basePtr[0] > size) {
+      throw std::runtime_error("Rought estimate of storage size for acceleration structure build "
+                               "input data turned out to be too small!");
+    }
 
     size = basePtr[0];   // Data size = stride * ((maxIndex + 1) - minIndex)
     offset = basePtr[1]; // Offset    = minIndex * stride

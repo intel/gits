@@ -2759,9 +2759,6 @@ inline void vkCmdBuildAccelerationStructuresKHR_SD(
 
   CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
 
-  // Track AS build data
-  handleAccelerationStructureBuild(cmdBuf, infoCount, pInfos, ppBuildRangeInfos);
-
   // Usual state tracking
   auto& bindingBuffers = SD().bindingBuffers[cmdBuf];
   auto addBindingBuffer = [&bindingBuffers](VkDeviceAddress deviceAddress, uint64_t offset) {
@@ -2829,6 +2826,11 @@ inline void vkCmdBuildAccelerationStructuresKHR_SD(
         break;
       }
     }
+  }
+
+  if (isSubcaptureBeforeRestorationPhase()) {
+    // Track AS build data
+    handleAccelerationStructureBuild(cmdBuf, infoCount, pInfos, ppBuildRangeInfos);
   }
 }
 
