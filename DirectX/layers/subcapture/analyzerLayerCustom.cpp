@@ -687,6 +687,7 @@ void AnalyzerLayer::Post(IUnknownReleaseCommand& c) {
   if (m_Optimize || m_OptimizeRaytracing) {
     if (c.m_Result.Value == 0) {
       m_GpuAddressService.DestroyInterface(c.m_Object.Key);
+      m_DescriptorService.RemoveState(c.m_Object.Key);
     }
   }
 }

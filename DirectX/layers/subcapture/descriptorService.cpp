@@ -189,6 +189,19 @@ DescriptorState* DescriptorService::GetDescriptorState(unsigned heapKey, unsigne
   if (stateIt == heapIt->second.end()) {
     return nullptr;
   }
+  DescriptorState* state = stateIt->second.get();
+  if (state && state->ResourceKey) {
+    auto it = m_Resources.find(state->ResourceKey);
+    if (it == m_Resources.end()) {
+      if (state->Id != DescriptorState::D3D12_CONSTANTBUFFERVIEW) {
+        return nullptr;
+      } else {
+        if (!m_ResourceForCBVRestoreService->RestoreResourceObject(state->ResourceKey)) {
+          return nullptr;
+        }
+      }
+    }
+  }
   return stateIt->second.get();
 }
 
