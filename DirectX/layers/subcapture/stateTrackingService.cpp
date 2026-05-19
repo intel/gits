@@ -35,8 +35,10 @@ void StateTrackingService::RestoreState() {
   RestoreDllContainers();
   recordStatus(MarkerUInt64Command::Value::STATE_RESTORE_OBJECTS_BEGIN);
   for (auto& it : m_StatesByKey) {
-    if (m_AnalyzerResults.RestoreObject(it.first)) {
-      RestoreState(it.second);
+    if (!it.second->Destroyed || it.second->KeepDestroyed) {
+      if (m_AnalyzerResults.RestoreObject(it.first)) {
+        RestoreState(it.second);
+      }
     }
   }
   RestoreStateObjectProperties();
@@ -262,11 +264,6 @@ void StateTrackingService::ReleaseObject(unsigned key, ULONG result) {
         ReleaseObject(itChildState->first, 0);
       }
     }
-  }
-
-  if (!itState->second->KeepDestroyed && !m_AnalyzerResults.RestoreObject(key)) {
-    delete itState->second;
-    m_StatesByKey.erase(itState);
   }
 }
 
