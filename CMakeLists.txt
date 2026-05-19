@@ -386,3 +386,32 @@ install(FILES ${CONFIG_DEFAULT_OUTPUT} DESTINATION Player)
 if(WITH_DIRECTX)
   include(ccode_install)
 endif()
+
+function(get_all_targets_recursive targets_var dir)
+  get_property(targets DIRECTORY ${dir} PROPERTY BUILDSYSTEM_TARGETS)
+  get_property(subdirs DIRECTORY ${dir} PROPERTY SUBDIRECTORIES)
+
+  foreach(subdir IN LISTS subdirs)
+      get_all_targets_recursive(subdir_targets ${subdir})
+      list(APPEND targets ${subdir_targets})
+  endforeach()
+
+  set(${targets_var} ${targets} PARENT_SCOPE)
+endfunction()
+
+if(WIN32)
+  # Get all targets and install their PDB files
+  get_all_targets_recursive(all_targets ${CMAKE_CURRENT_SOURCE_DIR})
+  
+  foreach(target IN LISTS all_targets)
+    get_target_property(target_type ${target} TYPE)
+    if(target_type MATCHES "EXECUTABLE|SHARED_LIBRARY")
+        install(FILES $<TARGET_PDB_FILE:${target}>
+            DESTINATION debug_symbols/${target}
+            COMPONENT debug_symbols
+            EXCLUDE_FROM_ALL
+            OPTIONAL
+        )
+    endif()
+  endforeach()
+endif()
