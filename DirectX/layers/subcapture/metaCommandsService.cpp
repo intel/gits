@@ -40,6 +40,9 @@ void MetaCommandsService::RestoreState() {
   RestoreStateInitialize();
 
   for (auto& [metaCommandKey, initializationData] : m_MetaCommandData) {
+    if (!m_StateService.GetAnalyzerResults().RestoreObject(metaCommandKey)) {
+      continue;
+    }
     ID3D12GraphicsCommandList4InitializeMetaCommandCommand c;
     c.Key = m_StateService.GetUniqueCommandKey();
     c.m_Object.Key = m_CommandListKey;
