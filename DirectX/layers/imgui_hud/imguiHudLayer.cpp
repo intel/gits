@@ -116,30 +116,6 @@ void ImGuiHUDLayer::Post(IDXGIFactory2CreateSwapChainForHwndCommand& c) {
   }
 }
 
-void ImGuiHUDLayer::Post(IDXGIFactory2CreateSwapChainForCoreWindowCommand& c) {
-  if (c.m_Result.Value != S_OK) {
-    return;
-  }
-
-  m_Initialized = InitializeResources(c.m_pDevice.Value, *c.m_ppSwapChain.Value);
-  if (!m_Initialized) {
-    LOG_ERROR << "ImGui HUD: Failed to initialize resources";
-    return;
-  }
-}
-
-void ImGuiHUDLayer::Post(IDXGIFactory2CreateSwapChainForCompositionCommand& c) {
-  if (c.m_Result.Value != S_OK) {
-    return;
-  }
-
-  m_Initialized = InitializeResources(c.m_pDevice.Value, *c.m_ppSwapChain.Value);
-  if (!m_Initialized) {
-    LOG_ERROR << "ImGui HUD: Failed to initialize resources";
-    return;
-  }
-}
-
 void ImGuiHUDLayer::Pre(xefgSwapChainDestroyCommand& c) {
   std::lock_guard<std::mutex> lock(m_Mutex);
   if (m_XefgContextKey == 0 || c.m_hSwapChain.Key != m_XefgContextKey) {

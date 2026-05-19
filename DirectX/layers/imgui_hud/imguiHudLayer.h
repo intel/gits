@@ -39,8 +39,6 @@ public:
   void Pre(ID3D12CommandQueueExecuteCommandListsCommand& c) override;
   void Post(IDXGIFactoryCreateSwapChainCommand& c) override;
   void Post(IDXGIFactory2CreateSwapChainForHwndCommand& c) override;
-  void Post(IDXGIFactory2CreateSwapChainForCoreWindowCommand& c) override;
-  void Post(IDXGIFactory2CreateSwapChainForCompositionCommand& c) override;
   void Pre(IDXGISwapChainPresentCommand& command) override;
   void Post(IDXGISwapChainPresentCommand& command) override;
   void Pre(IDXGISwapChain1Present1Command& command) override;
