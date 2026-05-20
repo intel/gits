@@ -10,13 +10,14 @@
 
 #include "layerAuto.h"
 
+#include <deque>
+#include <list>
+#include <memory>
 #include <wrl.h>
 #include <unordered_map>
 
 namespace gits {
 namespace DirectX {
-
-class PlayerManager;
 
 class DirectStorageLayer : public Layer {
 public:
@@ -24,10 +25,8 @@ public:
   ~DirectStorageLayer();
 
   void Pre(IDStorageFactoryOpenFileCommand& c) override;
-  void Post(IDStorageFactoryCreateQueueCommand& c) override;
   void Pre(IDStorageQueueEnqueueRequestCommand& c) override;
   void Pre(IDStorageQueueSubmitCommand& c) override;
-  void Post(IDStorageQueueSubmitCommand& c) override;
 
   // Skip
   void Pre(IDStorageQueue1EnqueueSetEventCommand& c) override;
@@ -36,9 +35,17 @@ public:
 private:
   using Buffer = std::vector<std::byte>;
 
+  struct Batch {
+    Microsoft::WRL::Wrappers::Event CompletionEvent;
+    std::list<Buffer> Buffers;
+  };
+
+  void ClearCompletedBatches(unsigned queueKey);
+  void CompleteAllBatches();
+
   std::wstring m_ResourcesFilePath;
   std::unordered_map<unsigned, std::list<Buffer>> m_Buffers;
-  std::unordered_map<unsigned, Microsoft::WRL::Wrappers::Event> m_Events;
+  std::unordered_map<unsigned, std::deque<std::unique_ptr<Batch>>> m_InflightBatches;
 };
 
 } // namespace DirectX
