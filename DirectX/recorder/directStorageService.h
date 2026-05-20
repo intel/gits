@@ -13,7 +13,6 @@
 
 #include <mutex>
 #include <filesystem>
-#include <set>
 #include <fstream>
 #include <unordered_map>
 
@@ -28,27 +27,18 @@ public:
   void EnqueueRequest(IDStorageQueueEnqueueRequestCommand& c);
 
 private:
-  struct FileRange {
+  struct DataBlock {
     uint64_t NewOffset{};
-    uint64_t OldOffset{};
     uint64_t Size{};
-    FileRange(uint64_t NewOffset, uint64_t oldOffset, uint64_t size)
-        : NewOffset(NewOffset), OldOffset(oldOffset), Size(size) {}
   };
-  struct CompareFileRange {
-    bool operator()(const FileRange& lhs, const FileRange& rhs) const {
-      return lhs.OldOffset < rhs.OldOffset;
-    }
-  };
-  using Buffer = std::vector<char>;
-  using Ranges = std::set<FileRange, CompareFileRange>;
 
   bool m_CaptureDirectStorage{};
   std::filesystem::path m_OutFilePath{};
   std::ofstream m_OutFile{};
   std::mutex m_MapMutex{};
-  std::unordered_map<unsigned, std::filesystem::path> m_Files{};
-  std::unordered_map<std::filesystem::path, Ranges> m_FileReads{};
+  std::unordered_map<unsigned, std::filesystem::path> m_StorageFiles{};
+  std::unordered_map<std::filesystem::path, std::unordered_map<uint64_t, DataBlock>>
+      m_FileBlockByPathByOffset;
 };
 
 } // namespace DirectX
