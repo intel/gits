@@ -8,6 +8,7 @@
 
 #include "executionSerializationRecorder.h"
 #include "configurator.h"
+#include "exception.h"
 
 #include <filesystem>
 
@@ -34,7 +35,11 @@ ExecutionSerializationRecorder::ExecutionSerializationRecorder() {
 }
 
 ExecutionSerializationRecorder::~ExecutionSerializationRecorder() {
-  FinishRecording();
+  try {
+    FinishRecording();
+  } catch (...) {
+    topmost_exception_handler("ExecutionSerializationRecorder::~ExecutionSerializationRecorder");
+  }
 }
 
 void ExecutionSerializationRecorder::Record(const stream::CommandSerializer& commandSerializer) {

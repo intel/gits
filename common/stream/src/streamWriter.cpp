@@ -10,6 +10,7 @@
 #include "streamHeader.h"
 #include "log.h"
 #include "configurator.h"
+#include "exception.h"
 
 namespace gits {
 namespace stream {
@@ -46,7 +47,11 @@ StreamWriter::StreamWriter(const std::filesystem::path& streamDir,
 }
 
 StreamWriter::~StreamWriter() {
-  Close();
+  try {
+    Close();
+  } catch (...) {
+    topmost_exception_handler("StreamWriter::~StreamWriter");
+  }
 }
 
 void StreamWriter::Close() {

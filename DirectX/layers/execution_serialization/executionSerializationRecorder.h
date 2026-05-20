@@ -20,6 +20,8 @@ class ExecutionSerializationRecorder {
 public:
   ExecutionSerializationRecorder();
   ~ExecutionSerializationRecorder();
+  ExecutionSerializationRecorder(const ExecutionSerializationRecorder&) = delete;
+  ExecutionSerializationRecorder& operator=(const ExecutionSerializationRecorder&) = delete;
 
   void Record(const stream::CommandSerializer& commandSerializer);
   void FinishRecording();

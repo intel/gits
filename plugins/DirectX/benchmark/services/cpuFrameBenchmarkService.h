@@ -22,6 +22,8 @@ class CpuFrameBenchmarkService {
 public:
   CpuFrameBenchmarkService(const BenchmarkConfig& cfg, gits::MessageBus& msgBus);
   ~CpuFrameBenchmarkService();
+  CpuFrameBenchmarkService(const CpuFrameBenchmarkService&) = delete;
+  CpuFrameBenchmarkService& operator=(const CpuFrameBenchmarkService&) = delete;
 
   void onStart();
   void onPostPresent();

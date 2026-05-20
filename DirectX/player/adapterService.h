@@ -17,11 +17,6 @@ namespace DirectX {
 
 class AdapterService {
 public:
-  AdapterService() = default;
-  ~AdapterService() = default;
-  AdapterService(const AdapterService&) = delete;
-  AdapterService& operator=(const AdapterService&) = delete;
-
   void LoadAdapters();
   bool IsAdapterOverride() const;
   IDXGIAdapter1* GetAdapter() const;

@@ -31,10 +31,6 @@ std::ofstream& operator<<(std::ofstream& ofs, const D3D12_ROOT_SIGNATURE_DESC2& 
 
 class RootSignatureDump {
 public:
-  RootSignatureDump() = default;
-  RootSignatureDump(const RootSignatureDump&) = delete;
-  RootSignatureDump& operator=(const RootSignatureDump&) = delete;
-
   void DeserializeRootSignature(const void* pBlobWithRootSignature,
                                 size_t blobLengthInBytes,
                                 const std::wstring& dumpName);

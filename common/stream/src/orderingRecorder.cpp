@@ -24,7 +24,11 @@ OrderingRecorder::OrderingRecorder() {
 }
 
 OrderingRecorder::~OrderingRecorder() {
-  Close();
+  try {
+    Close();
+  } catch (...) {
+    topmost_exception_handler("OrderingRecorder::~OrderingRecorder");
+  }
 }
 
 void OrderingRecorder::Record(size_t key, stream::CommandSerializer* serializer) {

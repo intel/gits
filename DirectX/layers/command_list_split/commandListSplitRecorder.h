@@ -20,6 +20,8 @@ class CommandListSplitRecorder {
 public:
   CommandListSplitRecorder();
   ~CommandListSplitRecorder();
+  CommandListSplitRecorder(const CommandListSplitRecorder&) = delete;
+  CommandListSplitRecorder& operator=(const CommandListSplitRecorder&) = delete;
 
   void Record(const stream::CommandSerializer& commandSerializer);
   void FinishRecording();

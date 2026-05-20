@@ -9,6 +9,7 @@
 #include "commandListSplitRecorder.h"
 #include "configurator.h"
 #include "log.h"
+#include "exception.h"
 
 #include <filesystem>
 
@@ -41,7 +42,11 @@ CommandListSplitRecorder::CommandListSplitRecorder() {
 }
 
 CommandListSplitRecorder::~CommandListSplitRecorder() {
-  FinishRecording();
+  try {
+    FinishRecording();
+  } catch (...) {
+    topmost_exception_handler("CommandListSplitRecorder::~CommandListSplitRecorder");
+  }
 }
 
 void CommandListSplitRecorder::Record(const stream::CommandSerializer& commandSerializer) {
