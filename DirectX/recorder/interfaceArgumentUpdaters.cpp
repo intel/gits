@@ -695,9 +695,14 @@ UpdateInterfaceT<DSTORAGE_QUEUE_DESC_Argument, DSTORAGE_QUEUE_DESC>::UpdateInter
   arg.Value = &m_UnwrapStructure;
   *arg.Value = *value;
   if (value->Device) {
-    IUnknownWrapper* wrapper = reinterpret_cast<IUnknownWrapper*>(value->Device);
-    arg.DeviceKey = wrapper->GetKey();
-    arg.Value->Device = wrapper->GetWrappedObject<ID3D12Device>();
+    IUnknownWrapper* wrapper{};
+    if (value->Device->QueryInterface(IID_IUnknownWrapper, reinterpret_cast<void**>(&wrapper)) ==
+        S_OK) {
+      arg.DeviceKey = wrapper->GetKey();
+      arg.Value->Device = wrapper->GetWrappedObject<ID3D12Device>();
+    } else {
+      LOG_ERROR << "Unknown device in IDStorageFactory::CreateQueue.";
+    }
   }
 }
 
