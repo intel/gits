@@ -102,6 +102,7 @@ vulkan_other_primitives: list[str] = [
     "void*",
     "void**",
     "nullptr",
+    "HANDLE"
 ]
 
 vulkan_enums32: list[str] = [enum.name for enum in get_enums32()]

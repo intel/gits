@@ -1293,7 +1293,6 @@ const void* ignoreLoaderSpecificStructureTypes(const void* pNext) {
       switch (*(VkStructureType*)pNext) {
       case VK_STRUCTURE_TYPE_LOADER_INSTANCE_CREATE_INFO:
       case VK_STRUCTURE_TYPE_LOADER_DEVICE_CREATE_INFO:
-      case VK_STRUCTURE_TYPE_WIN32_INSTANCE_CREATE_INFO_INTEL:
       case VK_STRUCTURE_TYPE_QUERY_LOW_LATENCY_SUPPORT_NV:
       case VK_STRUCTURE_TYPE_STRUCT_STORAGE_POINTER_GITS:
         pNext = ((const VkBaseInStructure*)pNext)->pNext;
