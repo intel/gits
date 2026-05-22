@@ -6,7 +6,7 @@
 //
 // ===================== end_copyright_notice ==============================
 
-#include "gpuPatchDump.h"
+#include "captureGpuPatchDump.h"
 #include "log.h"
 #include "exception.h"
 
@@ -17,26 +17,26 @@
 namespace gits {
 namespace DirectX {
 
-GpuPatchDump::GpuPatchDump() {}
+CaptureGpuPatchDump::CaptureGpuPatchDump() {}
 
-GpuPatchDump::~GpuPatchDump() {
+CaptureGpuPatchDump::~CaptureGpuPatchDump() {
   try {
     Flush();
   } catch (...) {
-    topmost_exception_handler("GpuPatchDump::~GpuPatchDump");
+    topmost_exception_handler("CaptureGpuPatchDump::~CaptureGpuPatchDump");
   }
 }
 
-void GpuPatchDump::DumpArgumentBuffer(ID3D12GraphicsCommandList* commandList,
-                                      D3D12_COMMAND_SIGNATURE_DESC& commandSignature,
-                                      unsigned maxCommandCount,
-                                      ID3D12Resource* argumentBuffer,
-                                      unsigned argumentBufferOffset,
-                                      BarrierState argumentBufferState,
-                                      ID3D12Resource* countBuffer,
-                                      unsigned countBufferOffset,
-                                      BarrierState countBufferState,
-                                      unsigned callKey) {
+void CaptureGpuPatchDump::DumpArgumentBuffer(ID3D12GraphicsCommandList* commandList,
+                                             D3D12_COMMAND_SIGNATURE_DESC& commandSignature,
+                                             unsigned maxCommandCount,
+                                             ID3D12Resource* argumentBuffer,
+                                             unsigned argumentBufferOffset,
+                                             BarrierState argumentBufferState,
+                                             ID3D12Resource* countBuffer,
+                                             unsigned countBufferOffset,
+                                             BarrierState countBufferState,
+                                             unsigned callKey) {
   ExecuteIndirectDumpInfo* dumpInfo = new ExecuteIndirectDumpInfo();
   dumpInfo->CommandSignature = &commandSignature;
   dumpInfo->Offset = argumentBufferOffset;
@@ -53,12 +53,12 @@ void GpuPatchDump::DumpArgumentBuffer(ID3D12GraphicsCommandList* commandList,
   }
 }
 
-void GpuPatchDump::DumpInstancesArrayOfPointers(ID3D12GraphicsCommandList* commandList,
-                                                ID3D12Resource* instancesBuffer,
-                                                unsigned offset,
-                                                unsigned pointersCount,
-                                                BarrierState bufferState,
-                                                unsigned callKey) {
+void CaptureGpuPatchDump::DumpInstancesArrayOfPointers(ID3D12GraphicsCommandList* commandList,
+                                                       ID3D12Resource* instancesBuffer,
+                                                       unsigned offset,
+                                                       unsigned pointersCount,
+                                                       BarrierState bufferState,
+                                                       unsigned callKey) {
   InstancesArrayOfPointersDumpInfo* dumpInfo = new InstancesArrayOfPointersDumpInfo();
   dumpInfo->Offset = offset;
   dumpInfo->Size = sizeof(D3D12_GPU_VIRTUAL_ADDRESS) * pointersCount;
@@ -67,7 +67,7 @@ void GpuPatchDump::DumpInstancesArrayOfPointers(ID3D12GraphicsCommandList* comma
   StageResource(commandList, instancesBuffer, bufferState, *dumpInfo);
 }
 
-void GpuPatchDump::DumpStagedResource(DumpInfo& dumpInfo) {
+void CaptureGpuPatchDump::DumpStagedResource(DumpInfo& dumpInfo) {
   ExecuteIndirectDumpInfo* executeIndirectInfo = dynamic_cast<ExecuteIndirectDumpInfo*>(&dumpInfo);
   if (executeIndirectInfo) {
     unsigned count = executeIndirectInfo->Size / executeIndirectInfo->CommandSignature->ByteStride;
@@ -98,7 +98,7 @@ void GpuPatchDump::DumpStagedResource(DumpInfo& dumpInfo) {
   }
 }
 
-void GpuPatchDump::Flush() {
+void CaptureGpuPatchDump::Flush() {
   WaitUntilDumped();
   {
     std::lock_guard<std::mutex> lock(m_ExecuteIndirectMutex);
@@ -110,9 +110,9 @@ void GpuPatchDump::Flush() {
   }
 }
 
-void GpuPatchDump::DumpArgumentBuffer(ExecuteIndirectDumpInfo& dumpInfo,
-                                      unsigned argumentCount,
-                                      void* data) {
+void CaptureGpuPatchDump::DumpArgumentBuffer(ExecuteIndirectDumpInfo& dumpInfo,
+                                             unsigned argumentCount,
+                                             void* data) {
   unsigned offset = 0;
   for (unsigned i = 0; i < argumentCount; ++i) {
     offset = i * dumpInfo.CommandSignature->ByteStride;
@@ -192,7 +192,8 @@ void GpuPatchDump::DumpArgumentBuffer(ExecuteIndirectDumpInfo& dumpInfo,
   }
 }
 
-void GpuPatchDump::DumpInstancesBuffer(InstancesArrayOfPointersDumpInfo& dumpInfo, void* data) {
+void CaptureGpuPatchDump::DumpInstancesBuffer(InstancesArrayOfPointersDumpInfo& dumpInfo,
+                                              void* data) {
   std::lock_guard<std::mutex> lock(m_InstancesMutex);
   if (!m_InstancesStream.is_open()) {
     std::filesystem::path dumpPath = Configurator::Get().common.recorder.dumpPath;

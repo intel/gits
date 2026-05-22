@@ -83,10 +83,10 @@ set(SERVICES_SRC
 source_group("services" FILES ${SERVICES_SRC})
 
 set(GPU_PATCH_SRC
-  ${SRC_DIR}/gpuPatchLayer.h
-  ${SRC_DIR}/gpuPatchLayer.cpp
-  ${SRC_DIR}/gpuPatchDump.h
-  ${SRC_DIR}/gpuPatchDump.cpp
+  ${SRC_DIR}/captureGpuPatchLayer.h
+  ${SRC_DIR}/captureGpuPatchLayer.cpp
+  ${SRC_DIR}/captureGpuPatchDump.h
+  ${SRC_DIR}/captureGpuPatchDump.cpp
 )
 source_group("gpu_patch" FILES ${GPU_PATCH_SRC})
 

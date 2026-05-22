@@ -16,10 +16,10 @@
 namespace gits {
 namespace DirectX {
 
-class GpuPatchDump : public ResourceDump {
+class CaptureGpuPatchDump : public ResourceDump {
 public:
-  GpuPatchDump();
-  ~GpuPatchDump();
+  CaptureGpuPatchDump();
+  ~CaptureGpuPatchDump();
   void DumpArgumentBuffer(ID3D12GraphicsCommandList* commandList,
                           D3D12_COMMAND_SIGNATURE_DESC& commandSignature,
                           unsigned maxCommandCount,

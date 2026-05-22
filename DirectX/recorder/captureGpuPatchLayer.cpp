@@ -6,17 +6,17 @@
 //
 // ===================== end_copyright_notice ==============================
 
-#include "gpuPatchLayer.h"
+#include "captureGpuPatchLayer.h"
 #include "log.h"
 #include "exception.h"
 
 namespace gits {
 namespace DirectX {
 
-GpuPatchLayer::GpuPatchLayer(GpuAddressService& gpuAddressService)
+CaptureGpuPatchLayer::CaptureGpuPatchLayer(GpuAddressService& gpuAddressService)
     : Layer("GpuPatch"), m_GpuAddressService(gpuAddressService) {}
 
-void GpuPatchLayer::Post(ID3D12DeviceCreateCommandSignatureCommand& c) {
+void CaptureGpuPatchLayer::Post(ID3D12DeviceCreateCommandSignatureCommand& c) {
   std::lock_guard<std::mutex> lock(m_Mutex);
   m_CommandSignatures[c.m_ppvCommandSignature.Key] = *c.m_pDesc.Value;
   D3D12_COMMAND_SIGNATURE_DESC& desc = m_CommandSignatures[c.m_ppvCommandSignature.Key];
@@ -26,7 +26,7 @@ void GpuPatchLayer::Post(ID3D12DeviceCreateCommandSignatureCommand& c) {
             const_cast<D3D12_INDIRECT_ARGUMENT_DESC*>(desc.pArgumentDescs));
 }
 
-void GpuPatchLayer::Post(ID3D12GraphicsCommandListExecuteIndirectCommand& c) {
+void CaptureGpuPatchLayer::Post(ID3D12GraphicsCommandListExecuteIndirectCommand& c) {
   std::lock_guard<std::mutex> lock(m_Mutex);
   auto it = m_CommandSignatures.find(c.m_pCommandSignature.Key);
   GITS_ASSERT(it != m_CommandSignatures.end());
@@ -48,7 +48,8 @@ void GpuPatchLayer::Post(ID3D12GraphicsCommandListExecuteIndirectCommand& c) {
   }
 }
 
-void GpuPatchLayer::Post(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c) {
+void CaptureGpuPatchLayer::Post(
+    ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c) {
   if (c.m_pDesc.Value->Inputs.Type != D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL ||
       c.m_pDesc.Value->Inputs.NumDescs == 0) {
     return;
@@ -72,52 +73,52 @@ void GpuPatchLayer::Post(ID3D12GraphicsCommandList4BuildRaytracingAccelerationSt
   }
 }
 
-void GpuPatchLayer::Post(ID3D12CommandQueueExecuteCommandListsCommand& c) {
+void CaptureGpuPatchLayer::Post(ID3D12CommandQueueExecuteCommandListsCommand& c) {
   std::lock_guard<std::mutex> lock(m_Mutex);
   m_GpuPatchDump.ExecuteCommandLists(c.Key, c.m_Object.Key, c.m_Object.Value,
                                      c.m_ppCommandLists.Value, c.m_NumCommandLists.Value);
 }
 
-void GpuPatchLayer::Post(ID3D12CommandQueueWaitCommand& c) {
+void CaptureGpuPatchLayer::Post(ID3D12CommandQueueWaitCommand& c) {
   std::lock_guard<std::mutex> lock(m_Mutex);
   m_GpuPatchDump.CommandQueueWait(c.Key, c.m_Object.Key, c.m_pFence.Key, c.m_Value.Value);
 }
 
-void GpuPatchLayer::Post(ID3D12CommandQueueSignalCommand& c) {
+void CaptureGpuPatchLayer::Post(ID3D12CommandQueueSignalCommand& c) {
   std::lock_guard<std::mutex> lock(m_Mutex);
   m_GpuPatchDump.CommandQueueSignal(c.Key, c.m_Object.Key, c.m_pFence.Key, c.m_Value.Value);
 }
 
-void GpuPatchLayer::Post(ID3D12FenceSignalCommand& c) {
+void CaptureGpuPatchLayer::Post(ID3D12FenceSignalCommand& c) {
   std::lock_guard<std::mutex> lock(m_Mutex);
   m_GpuPatchDump.FenceSignal(c.Key, c.m_Object.Key, c.m_Value.Value);
 }
 
-void GpuPatchLayer::Post(ID3D12DeviceCreateFenceCommand& c) {
+void CaptureGpuPatchLayer::Post(ID3D12DeviceCreateFenceCommand& c) {
   std::lock_guard<std::mutex> lock(m_Mutex);
   m_GpuPatchDump.FenceSignal(c.Key, c.m_ppFence.Key, c.m_InitialValue.Value);
 }
 
-void GpuPatchLayer::Post(ID3D12Device3EnqueueMakeResidentCommand& c) {
+void CaptureGpuPatchLayer::Post(ID3D12Device3EnqueueMakeResidentCommand& c) {
   std::lock_guard<std::mutex> lock(m_Mutex);
   m_GpuPatchDump.FenceSignal(c.Key, c.m_pFenceToSignal.Key, c.m_FenceValueToSignal.Value);
 }
 
-void GpuPatchLayer::Post(IDXGISwapChainPresentCommand& c) {
+void CaptureGpuPatchLayer::Post(IDXGISwapChainPresentCommand& c) {
   if (!(c.m_Flags.Value & DXGI_PRESENT_TEST)) {
     std::lock_guard<std::mutex> lock(m_Mutex);
     m_GpuPatchDump.Flush();
   }
 }
 
-void GpuPatchLayer::Post(IDXGISwapChain1Present1Command& c) {
+void CaptureGpuPatchLayer::Post(IDXGISwapChain1Present1Command& c) {
   if (!(c.m_PresentFlags.Value & DXGI_PRESENT_TEST)) {
     std::lock_guard<std::mutex> lock(m_Mutex);
     m_GpuPatchDump.Flush();
   }
 }
 
-void GpuPatchLayer::Post(IUnknownReleaseCommand& c) {
+void CaptureGpuPatchLayer::Post(IUnknownReleaseCommand& c) {
   if (c.m_Result.Value == 0) {
     std::lock_guard<std::mutex> lock(m_Mutex);
     m_ResourcesByKey.erase(c.m_Object.Key);
@@ -125,7 +126,7 @@ void GpuPatchLayer::Post(IUnknownReleaseCommand& c) {
   }
 }
 
-void GpuPatchLayer::Post(ID3D12DeviceCreatePlacedResourceCommand& c) {
+void CaptureGpuPatchLayer::Post(ID3D12DeviceCreatePlacedResourceCommand& c) {
   if (c.m_Result.Value != S_OK || c.m_pDesc.Value->Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
     return;
   }
@@ -137,7 +138,7 @@ void GpuPatchLayer::Post(ID3D12DeviceCreatePlacedResourceCommand& c) {
       *reinterpret_cast<ID3D12Resource**>(c.m_ppvResource.Value);
 }
 
-void GpuPatchLayer::Post(ID3D12Device8CreatePlacedResource1Command& c) {
+void CaptureGpuPatchLayer::Post(ID3D12Device8CreatePlacedResource1Command& c) {
   if (c.m_Result.Value != S_OK || c.m_pDesc.Value->Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
     return;
   }
@@ -149,7 +150,7 @@ void GpuPatchLayer::Post(ID3D12Device8CreatePlacedResource1Command& c) {
       *reinterpret_cast<ID3D12Resource**>(c.m_ppvResource.Value);
 }
 
-void GpuPatchLayer::Post(ID3D12Device10CreatePlacedResource2Command& c) {
+void CaptureGpuPatchLayer::Post(ID3D12Device10CreatePlacedResource2Command& c) {
   if (c.m_Result.Value != S_OK || c.m_pDesc.Value->Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
     return;
   }
@@ -161,7 +162,7 @@ void GpuPatchLayer::Post(ID3D12Device10CreatePlacedResource2Command& c) {
       *reinterpret_cast<ID3D12Resource**>(c.m_ppvResource.Value);
 }
 
-void GpuPatchLayer::Post(ID3D12DeviceCreateCommittedResourceCommand& c) {
+void CaptureGpuPatchLayer::Post(ID3D12DeviceCreateCommittedResourceCommand& c) {
   if (c.m_Result.Value != S_OK || c.m_pDesc.Value->Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
     return;
   }
@@ -173,7 +174,7 @@ void GpuPatchLayer::Post(ID3D12DeviceCreateCommittedResourceCommand& c) {
       *reinterpret_cast<ID3D12Resource**>(c.m_ppvResource.Value);
 }
 
-void GpuPatchLayer::Post(ID3D12Device4CreateCommittedResource1Command& c) {
+void CaptureGpuPatchLayer::Post(ID3D12Device4CreateCommittedResource1Command& c) {
   if (c.m_Result.Value != S_OK || c.m_pDesc.Value->Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
     return;
   }
@@ -185,7 +186,7 @@ void GpuPatchLayer::Post(ID3D12Device4CreateCommittedResource1Command& c) {
       *reinterpret_cast<ID3D12Resource**>(c.m_ppvResource.Value);
 }
 
-void GpuPatchLayer::Post(ID3D12Device8CreateCommittedResource2Command& c) {
+void CaptureGpuPatchLayer::Post(ID3D12Device8CreateCommittedResource2Command& c) {
   if (c.m_Result.Value != S_OK || c.m_pDesc.Value->Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
     return;
   }
@@ -197,7 +198,7 @@ void GpuPatchLayer::Post(ID3D12Device8CreateCommittedResource2Command& c) {
       *reinterpret_cast<ID3D12Resource**>(c.m_ppvResource.Value);
 }
 
-void GpuPatchLayer::Post(ID3D12Device10CreateCommittedResource3Command& c) {
+void CaptureGpuPatchLayer::Post(ID3D12Device10CreateCommittedResource3Command& c) {
   if (c.m_Result.Value != S_OK || c.m_pDesc.Value->Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
     return;
   }

@@ -13,7 +13,7 @@
 #include "encoderLayerAuto.h"
 #include "captureCustomizationLayer.h"
 #include "captureSynchronizationLayer.h"
-#include "gpuPatchLayer.h"
+#include "captureGpuPatchLayer.h"
 #include "debugInfoLayerAuto.h"
 #include "globalSynchronizationLayerAuto.h"
 #include "logDxErrorLayerAuto.h"
@@ -67,7 +67,7 @@ void CaptureLayerManager::LoadLayers(CaptureManager& captureManager,
         std::make_unique<CaptureCustomizationLayer>(captureManager, gitsRecorder);
     captureSynchronizationLayer = std::make_unique<CaptureSynchronizationLayer>(captureManager);
     encoderLayer = std::make_unique<EncoderLayer>(gitsRecorder);
-    gpuPatchLayer = std::make_unique<GpuPatchLayer>(gpuAddressService);
+    gpuPatchLayer = std::make_unique<CaptureGpuPatchLayer>(gpuAddressService);
     portabilityLayer = m_PortabilityLayerGroup.GetLayer("Portability");
     addressPinningLayer = m_AddressPinningLayerGroup.GetLayer("AddressPinningStore");
     if (!addressPinningLayer) {

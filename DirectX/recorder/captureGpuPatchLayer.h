@@ -9,7 +9,7 @@
 #pragma once
 
 #include "layerAuto.h"
-#include "gpuPatchDump.h"
+#include "captureGpuPatchDump.h"
 #include "gpuAddressService.h"
 
 #include <unordered_map>
@@ -19,9 +19,9 @@
 namespace gits {
 namespace DirectX {
 
-class GpuPatchLayer : public Layer {
+class CaptureGpuPatchLayer : public Layer {
 public:
-  GpuPatchLayer(GpuAddressService& gpuAddressService);
+  CaptureGpuPatchLayer(GpuAddressService& gpuAddressService);
   void Post(ID3D12DeviceCreateCommandSignatureCommand& c) override;
   void Post(ID3D12GraphicsCommandListExecuteIndirectCommand& c) override;
   void Post(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c) override;
@@ -44,7 +44,7 @@ public:
 
 private:
   std::unordered_map<unsigned, D3D12_COMMAND_SIGNATURE_DESC> m_CommandSignatures;
-  GpuPatchDump m_GpuPatchDump;
+  CaptureGpuPatchDump m_GpuPatchDump;
   GpuAddressService& m_GpuAddressService;
   std::unordered_set<unsigned> m_GenericReadResources;
   std::unordered_map<unsigned, ID3D12Resource*> m_ResourcesByKey;
