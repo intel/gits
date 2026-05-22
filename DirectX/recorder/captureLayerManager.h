@@ -27,11 +27,6 @@ class CaptureManager;
 
 class CaptureLayerManager {
 public:
-  CaptureLayerManager() = default;
-  ~CaptureLayerManager() = default;
-  CaptureLayerManager(const CaptureLayerManager&) = delete;
-  CaptureLayerManager& operator=(const CaptureLayerManager&) = delete;
-
   void LoadLayers(CaptureManager& captureManager,
                   stream::OrderingRecorder& gitsRecorder,
                   GpuAddressService& gpuAddressService,

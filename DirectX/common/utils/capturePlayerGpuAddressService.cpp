@@ -241,7 +241,13 @@ void CapturePlayerGpuAddressService::GpuAddressService::GetMappings(
     mappings[index].Size = it.second->CaptureEnd - it.second->CaptureStart;
     ++index;
   }
+}
 
+void CapturePlayerGpuAddressService::GetMappings(std::vector<GpuAddressMapping>& mappings) {
+  {
+    std::lock_guard<std::mutex> lock(m_Mutex);
+    m_GpuAddressService.GetMappings(mappings);
+  }
   std::sort(mappings.begin(), mappings.end(),
             [](CapturePlayerGpuAddressService::GpuAddressMapping& m1,
                CapturePlayerGpuAddressService::GpuAddressMapping& m2) {

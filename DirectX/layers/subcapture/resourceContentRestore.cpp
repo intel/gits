@@ -921,8 +921,8 @@ void ResourceContentRestore::CopySourceBarrier(ResourceInfo& state, bool restore
       if (resourceStates.SubresourceStates[0].Layout != D3D12_BARRIER_LAYOUT_COPY_SOURCE &&
           resourceStates.SubresourceStates[0].Layout != D3D12_BARRIER_LAYOUT_UNDEFINED) {
         D3D12_TEXTURE_BARRIER* barrier = new D3D12_TEXTURE_BARRIER{};
-        barrier->SyncBefore = restoreState ? D3D12_BARRIER_SYNC_ALL : D3D12_BARRIER_SYNC_ALL;
-        barrier->SyncAfter = restoreState ? D3D12_BARRIER_SYNC_ALL : D3D12_BARRIER_SYNC_ALL;
+        barrier->SyncBefore = D3D12_BARRIER_SYNC_ALL;
+        barrier->SyncAfter = D3D12_BARRIER_SYNC_ALL;
         barrier->AccessBefore =
             restoreState ? D3D12_BARRIER_ACCESS_COPY_SOURCE : D3D12_BARRIER_ACCESS_COMMON;
         barrier->AccessAfter =

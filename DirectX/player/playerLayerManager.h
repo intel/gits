@@ -29,11 +29,6 @@ class PlayerManager;
 
 class PlayerLayerManager {
 public:
-  PlayerLayerManager() = default;
-  ~PlayerLayerManager() = default;
-  PlayerLayerManager(const PlayerLayerManager&) = delete;
-  PlayerLayerManager& operator=(const PlayerLayerManager&) = delete;
-
   void LoadLayers(PlayerManager& playerManager, PluginService& pluginService);
 
   std::vector<Layer*>& GetPreLayers() {

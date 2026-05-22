@@ -23,9 +23,6 @@ namespace DirectX {
 class StatisticsLayer : public Layer {
 public:
   StatisticsLayer(const StatisticsConfig& cfg, gits::MessageBus& msgBus);
-  ~StatisticsLayer() = default;
-  StatisticsLayer(const StatisticsLayer&) = delete;
-  StatisticsLayer& operator=(const StatisticsLayer&) = delete;
 
   void Post(StateRestoreBeginCommand& c) override;
   void Post(StateRestoreEndCommand& c) override;

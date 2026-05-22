@@ -22,8 +22,6 @@ namespace DirectX {
 class MapTrackingService {
 public:
   MapTrackingService(stream::OrderingRecorder& recorder);
-  MapTrackingService(const MapTrackingService&) = delete;
-  MapTrackingService& operator=(const MapTrackingService&) = delete;
 
   void EnableWriteWatch(D3D12_HEAP_PROPERTIES& properties, D3D12_HEAP_FLAGS& flags);
   void MapResource(unsigned resourceKey,

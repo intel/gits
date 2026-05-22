@@ -78,9 +78,7 @@ public:
     }
     return nullptr;
   }
-  void GetMappings(std::vector<GpuAddressMapping>& mappings) {
-    m_GpuAddressService.GetMappings(mappings);
-  }
+  void GetMappings(std::vector<GpuAddressMapping>& mappings);
   void EnablePlayerAddressLookup() {
     if (!m_GpuPlayerAddress) {
       m_GpuPlayerAddress.reset(new GpuAddressService());

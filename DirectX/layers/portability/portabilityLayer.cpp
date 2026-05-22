@@ -170,7 +170,7 @@ void PortabilityLayer::Pre(ID3D12DeviceCreatePlacedResourceCommand& c) {
       return;
     }
   }
-  if (m_PortabilityAssertions && !IsStateRestoreKey(c.m_ppvResource.Key)) {
+  if (m_PortabilityAssertions && !IsStateRestoreKey(c.m_ppvResource.Key) && c.m_ppvResource.Value) {
     m_ResourcePlacementAssertions.createPlacedResource(c.m_ppvResource.Key, *c.m_pDesc.Value,
                                                        c.m_Object.Value);
   }
@@ -233,7 +233,7 @@ void PortabilityLayer::Pre(ID3D12Device8CreatePlacedResource1Command& c) {
       return;
     }
   }
-  if (m_PortabilityAssertions && !IsStateRestoreKey(c.m_ppvResource.Key)) {
+  if (m_PortabilityAssertions && !IsStateRestoreKey(c.m_ppvResource.Key) && c.m_ppvResource.Value) {
     m_ResourcePlacementAssertions.createPlacedResource(c.m_ppvResource.Key, *c.m_pDesc.Value,
                                                        c.m_Object.Value);
   }
@@ -296,7 +296,7 @@ void PortabilityLayer::Pre(ID3D12Device10CreatePlacedResource2Command& c) {
       return;
     }
   }
-  if (m_PortabilityAssertions && !IsStateRestoreKey(c.m_ppvResource.Key)) {
+  if (m_PortabilityAssertions && !IsStateRestoreKey(c.m_ppvResource.Key) && c.m_ppvResource.Value) {
     m_ResourcePlacementAssertions.createPlacedResource(c.m_ppvResource.Key, *c.m_pDesc.Value,
                                                        c.m_Object.Value);
   }

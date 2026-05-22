@@ -21,7 +21,7 @@ ConfigKeySet::ConfigKeySet(const std::string& keys) {
       }
       std::string key(begin, p);
       if (key[0] == 'S' || key[0] == 'E') {
-        unsigned k = std::stoi(key.substr(1));
+        unsigned k = std::stoul(key.substr(1));
         if (key[0] == 'S') {
           k |= STATE_RESTORE_KEY_MASK;
         } else if (key[0] == 'E') {
@@ -44,7 +44,7 @@ std::string ParseConfigKeys(const std::string& keys) {
       while (i < keys.size() && std::isdigit(keys[i])) {
         ++i;
       }
-      unsigned k = std::stoi(std::string(begin, &keys[i--]));
+      unsigned k = std::stoul(std::string(begin, &keys[i--]));
       if (c == 'S') {
         k |= STATE_RESTORE_KEY_MASK;
       } else if (c == 'E') {
