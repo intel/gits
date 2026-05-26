@@ -22,11 +22,23 @@ gits::Vulkan::CVkAccelerationStructureGeometryAabbsDataKHRData::
     _data = std::make_unique<CVkDeviceOrHostAddressConstKHRData>(
         &accelerationstructuregeometryaabbsdatakhr->data);
     _stride = std::make_unique<Cuint64_tData>(accelerationstructuregeometryaabbsdatakhr->stride);
+    _baseIn = {
+        VK_STRUCTURE_TYPE_STRUCT_STORAGE_POINTER_GITS,    // VkStructureType sType;
+        accelerationstructuregeometryaabbsdatakhr->pNext, // const void* pNext;
+        accelerationstructuregeometryaabbsdatakhr->sType, // VkStructureType sStructStorageType;
+        this                                              // const void* pStructStorage;
+    };
   } else {
     _sType = nullptr;
     _pNext = nullptr;
     _data = nullptr;
     _stride = nullptr;
+    _baseIn = {
+        VK_STRUCTURE_TYPE_STRUCT_STORAGE_POINTER_GITS,                    // VkStructureType sType;
+        nullptr,                                                          // const void* pNext;
+        VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_AABBS_DATA_KHR, // VkStructureType sStructStorageType;
+        nullptr // const void* pStructStorage;
+    };
   }
 }
 
@@ -56,6 +68,12 @@ gits::Vulkan::CVkAccelerationStructureGeometryTrianglesDataKHRData::
         &accelerationstructuregeometrytrianglesdatakhr->indexData);
     _transformData = std::make_unique<CVkDeviceOrHostAddressConstKHRData>(
         &accelerationstructuregeometrytrianglesdatakhr->transformData);
+    _baseIn = {
+        VK_STRUCTURE_TYPE_STRUCT_STORAGE_POINTER_GITS,        // VkStructureType sType;
+        accelerationstructuregeometrytrianglesdatakhr->pNext, // const void* pNext;
+        accelerationstructuregeometrytrianglesdatakhr->sType, // VkStructureType sStructStorageType;
+        this                                                  // const void* pStructStorage;
+    };
   } else {
     _sType = nullptr;
     _pNext = nullptr;
@@ -66,5 +84,11 @@ gits::Vulkan::CVkAccelerationStructureGeometryTrianglesDataKHRData::
     _indexType = nullptr;
     _indexData = nullptr;
     _transformData = nullptr;
+    _baseIn = {
+        VK_STRUCTURE_TYPE_STRUCT_STORAGE_POINTER_GITS, // VkStructureType sType;
+        nullptr,                                       // const void* pNext;
+        VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR, // VkStructureType sStructStorageType;
+        nullptr // const void* pStructStorage;
+    };
   }
 }

@@ -60,9 +60,9 @@ void PrepareStateRestoreDataForIndexedVertices(CVkDeviceOrHostAddressConstKHRDat
   auto size = sizeof(uint32_t) + sizeof(uint32_t) + 3 * sizeof(uint32_t);
   if (Configurator::Get().vulkan.recorder.indexedVerticesSizeCalculationMethod ==
       VulkanIndexedVerticesSizeCalculationMethod::COUNT_ONLY) {
-    size += stride * count;
+    size += (unsigned long long)stride * count;
   } else {
-    size += stride * std::max(count, maxVertex);
+    size += (unsigned long long)stride * std::max(count, maxVertex);
   }
   auto commandBuffer = cmdBufState.commandBufferHandle;
   auto device = cmdBufState.commandPoolStateStore->deviceStateStore->deviceHandle;
@@ -309,6 +309,8 @@ inline void handleAccelerationStructureBuild(
           pBuildGeometryInfo, pBuildRangeInfos, srcAccelerationStructureState);
 
       accelerationStructureState->updateInfo = stateTrackInfo;
+    } else {
+      throw std::runtime_error("Unknown acceleration structure build mode!");
     }
 
     std::vector<uint32_t> primitivesCount(pBuildGeometryInfo->geometryCount);
