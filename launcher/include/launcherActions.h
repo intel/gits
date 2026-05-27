@@ -25,6 +25,9 @@ struct CCodeExport {
 
 bool ValidateYaml(const std::string& text);
 bool ValidateGITSConfig(const std::string& config);
+#ifdef _WIN32
+std::string QuoteWindowsPath(const std::string& path);
+#endif
 void UpdateCLICall();
 void SetImGuiStyle(size_t selectedItem);
 void LoadConfigFile();

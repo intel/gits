@@ -81,8 +81,13 @@ const std::string SubcapturePanel::GetCLIArguments() const {
     if (optSubcaptureOutPuthPath.has_value()) {
       const auto& subcapturePath = optSubcaptureOutPuthPath.value();
       if (!subcapturePath.empty()) {
-        // We append the special GITS directory name format to the subcapture directory path
+// We append the special GITS directory name format to the subcapture directory path
+#ifdef _WIN32
+        args += "--Common.Player.SubcapturePath=" +
+                QuoteWindowsPath((subcapturePath / "%f%_%r%").string()) + " ";
+#else
         args += "--Common.Player.SubcapturePath=\"" + (subcapturePath / "%f%_%r%").string() + "\" ";
+#endif
       }
     }
     if (!SubcaptureConfig.Optimize) {

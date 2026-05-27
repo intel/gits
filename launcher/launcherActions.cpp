@@ -55,6 +55,21 @@ bool ValidateGITSConfig(const std::string& config) {
   return true;
 }
 
+#ifdef _WIN32
+std::string QuoteWindowsPath(const std::string& path) {
+  if (path.empty()) {
+    return "\"\"";
+  }
+  std::string result = path;
+  // If path ends with a backslash, we add a trailing dot
+  // This way the ending quote doesn't get escaped, and when GITS Player relaunches itself, the path remains correct
+  if (!result.empty() && result.back() == '\\') {
+    result += '.';
+  }
+  return "\"" + result + "\"";
+}
+#endif
+
 void UpdateCLICall() {
   auto& context = Context::GetInstance();
   context.UpdateFixedLauncherArguments();
@@ -68,12 +83,23 @@ void UpdateCLICall() {
 
     context.CLIArguments.clear();
 
-    context.CLIArguments.push_back("--config=" + context.GetPathSafe(Path::CONFIG).string());
+#ifdef _WIN32
+    context.CLIArguments.push_back("--config=" +
+                                   QuoteWindowsPath(context.GetPathSafe(Path::CONFIG).string()));
+#else
+    context.CLIArguments.push_back("--config=\"" + context.GetPathSafe(Path::CONFIG).string() +
+                                   "\" ");
+#endif
+
     context.CLIArguments.push_back(context.FixedLauncherArguments);
     context.CLIArguments.push_back(context.CustomArguments);
 
     const auto& streamPath = context.GetPathSafe(Path::INPUT_STREAM);
-    context.CLIArguments.push_back(streamPath.string());
+#ifdef _WIN32
+    context.CLIArguments.push_back(QuoteWindowsPath(streamPath.string()));
+#else
+    context.CLIArguments.push_back("\"" + streamPath.string() + "\" ");
+#endif
 
     context.CLIArguments.erase(std::remove_if(context.CLIArguments.begin(),
                                               context.CLIArguments.end(),

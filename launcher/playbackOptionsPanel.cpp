@@ -188,14 +188,24 @@ const std::string PlaybackOptionsPanel::GetCLIArguments() const {
     if (screenshotPath.has_value()) {
       args += "--DirectX.Features.Screenshots.Enabled ";
       args += "--DirectX.Features.Screenshots.Frames=\"" + ScreenshotsConfig.Range + "\" ";
+#ifdef _WIN32
+      args +=
+          "--Common.Player.OutputDir=" + QuoteWindowsPath(screenshotPath.value().string() + " ");
+#else
       args += "--Common.Player.OutputDir=\"" + screenshotPath.value().string() + "\" ";
+#endif
     }
   }
   if (TraceConfig.Enabled) {
     auto tracePath = Context::GetInstance().GetPath(Path::TRACE, Mode::PLAYBACK);
     if (tracePath.has_value()) {
       args += "--DirectX.Features.Trace.Enabled ";
+#ifdef _WIN32
+      args +=
+          "--Common.Player.OutputTracePath=" + QuoteWindowsPath(tracePath.value().string() + " ");
+#else
       args += "--Common.Player.OutputTracePath=\"" + tracePath.value().string() + "\" ";
+#endif
     }
   }
   return args;
