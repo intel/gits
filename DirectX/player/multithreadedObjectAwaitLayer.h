@@ -47,7 +47,7 @@ public:
 private:
   std::optional<MultithreadedObjectCreationService::ObjectCreationOutput> CollectResult(
       unsigned objectKey);
-  bool CompleteObject(unsigned key);
+  bool CompleteObject(unsigned key, bool forceCompletePendingObject = false);
   template <typename T>
   void CompleteArgument(InterfaceArgument<T>& commandObject);
   template <typename T>

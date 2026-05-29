@@ -23,8 +23,8 @@ MultithreadedObjectAwaitLayer::CollectResult(unsigned objectKey) {
   return m_Manager.GetMultithreadedObjectCreationService().Complete(objectKey);
 }
 
-bool MultithreadedObjectAwaitLayer::CompleteObject(unsigned key) {
-  if (!key || m_Manager.FindObject(key)) {
+bool MultithreadedObjectAwaitLayer::CompleteObject(unsigned key, bool forceCompletePendingObject) {
+  if (!key || forceCompletePendingObject ? false : m_Manager.FindObject(key)) {
     return false;
   }
 
@@ -180,6 +180,8 @@ void MultithreadedObjectAwaitLayer::Pre(ID3D12Device3EnqueueMakeResidentCommand&
 }
 
 void MultithreadedObjectAwaitLayer::Pre(ID3D12Device5CreateStateObjectCommand& c) {
+  CompleteObject(c.m_ppStateObject.Key, true);
+
   bool requiresUpdate = false;
   for (unsigned index = 0; index < c.m_pDesc.Value->NumSubobjects; ++index) {
     D3D12_STATE_SUBOBJECT* subobject =
@@ -223,15 +225,15 @@ void MultithreadedObjectAwaitLayer::Pre(ID3D12Device7AddToStateObjectCommand& c)
 }
 
 void MultithreadedObjectAwaitLayer::Pre(ID3D12PipelineLibraryLoadGraphicsPipelineCommand& c) {
-  CompleteObject(c.m_ppPipelineState.Key);
+  CompleteObject(c.m_ppPipelineState.Key, true);
 }
 
 void MultithreadedObjectAwaitLayer::Pre(ID3D12PipelineLibraryLoadComputePipelineCommand& c) {
-  CompleteObject(c.m_ppPipelineState.Key);
+  CompleteObject(c.m_ppPipelineState.Key, true);
 }
 
 void MultithreadedObjectAwaitLayer::Pre(ID3D12PipelineLibrary1LoadPipelineCommand& c) {
-  CompleteObject(c.m_ppPipelineState.Key);
+  CompleteObject(c.m_ppPipelineState.Key, true);
 }
 
 } // namespace DirectX
