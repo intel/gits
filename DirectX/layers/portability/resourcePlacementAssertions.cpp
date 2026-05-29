@@ -8,6 +8,7 @@
 
 #include "resourcePlacementAssertions.h"
 #include "configurationLib.h"
+#include "to_string/toStr.h"
 #include "log.h"
 
 #include <filesystem>
@@ -32,7 +33,7 @@ void ResourcePlacementAssertions::createPlacedResource(unsigned resourceKey,
   if (!placementInfo) {
     static bool logged = false;
     if (!logged) {
-      LOG_ERROR << "Portability - no resource placement data for resource: O" << resourceKey;
+      LOG_ERROR << "Portability - No resource placement data for resource: O" << resourceKey;
       logged = true;
     }
     return;
@@ -41,7 +42,7 @@ void ResourcePlacementAssertions::createPlacedResource(unsigned resourceKey,
   AllocationInfo info{};
   info.pre = {placementInfo->size, placementInfo->alignment};
   info.post = queryAllocationFromDevice(device, desc, resourceKey);
-  checkCompatibility(info, resourceKey);
+  checkCompatibility(info, desc, resourceKey);
 }
 
 void ResourcePlacementAssertions::createPlacedResource(unsigned resourceKey,
@@ -56,7 +57,7 @@ void ResourcePlacementAssertions::createPlacedResource(unsigned resourceKey,
   if (!placementInfo) {
     static bool logged = false;
     if (!logged) {
-      LOG_ERROR << "Portability - no resource placement data for resource: O" << resourceKey;
+      LOG_ERROR << "Portability - No resource placement data for resource: O" << resourceKey;
       logged = true;
     }
     return;
@@ -68,7 +69,7 @@ void ResourcePlacementAssertions::createPlacedResource(unsigned resourceKey,
         desc.SamplerFeedbackMipRegion.Depth) {
       static bool logged = false;
       if (!logged) {
-        LOG_WARNING << "Portability - incompatibility in SamplerFeedbackMipRegion not checked";
+        LOG_WARNING << "Portability - Incompatibility in SamplerFeedbackMipRegion not checked";
         logged = true;
       }
     }
@@ -81,7 +82,7 @@ void ResourcePlacementAssertions::createPlacedResource(unsigned resourceKey,
   AllocationInfo info{};
   info.pre = {placementInfo->size, placementInfo->alignment};
   info.post = queryAllocationFromDevice(device, baseDesc, resourceKey);
-  checkCompatibility(info, resourceKey);
+  checkCompatibility(info, baseDesc, resourceKey);
 }
 
 const ResourcePlacementInfo* ResourcePlacementAssertions::findPlacementData(unsigned resourceKey) {
@@ -102,14 +103,33 @@ D3D12_RESOURCE_ALLOCATION_INFO ResourcePlacementAssertions::queryAllocationFromD
 }
 
 void ResourcePlacementAssertions::checkCompatibility(const AllocationInfo& allocationInfo,
+                                                     const D3D12_RESOURCE_DESC& desc,
                                                      unsigned resourceKey) {
+  const auto logResourceDesc = [](const D3D12_RESOURCE_DESC& resourceDesc) {
+    LOG_ERROR << "Portability - Resource desc:"
+              << " Dimension=" << toStr(resourceDesc.Dimension)
+              << " Alignment=" << toStr(resourceDesc.Alignment) << " Width=" << resourceDesc.Width
+              << " Height=" << resourceDesc.Height
+              << " DepthOrArraySize=" << resourceDesc.DepthOrArraySize
+              << " MipLevels=" << resourceDesc.MipLevels << " Format=" << toStr(resourceDesc.Format)
+              << " SampleDesc.Count=" << resourceDesc.SampleDesc.Count
+              << " SampleDesc.Quality=" << resourceDesc.SampleDesc.Quality
+              << " Layout=" << toStr(resourceDesc.Layout) << " Flags=" << toStr(resourceDesc.Flags);
+  };
+
   if (allocationInfo.pre.Alignment != allocationInfo.post.Alignment) {
-    LOG_ERROR << "Portability - incompatible alignment for resource: O" << resourceKey;
+    LOG_ERROR << "Portability - Incompatible alignment for resource: O" << resourceKey;
+    LOG_ERROR << "Portability - Capture alignment: " << allocationInfo.pre.Alignment
+              << " Current alignment: " << allocationInfo.post.Alignment;
+    logResourceDesc(desc);
   }
   GITS_ASSERT(allocationInfo.pre.Alignment == allocationInfo.post.Alignment);
 
   if (allocationInfo.pre.SizeInBytes < allocationInfo.post.SizeInBytes) {
-    LOG_ERROR << "Portability - incompatible size for resource: O" << resourceKey;
+    LOG_ERROR << "Portability - Incompatible size for resource: O" << resourceKey;
+    LOG_ERROR << "Portability - Capture size: " << allocationInfo.pre.SizeInBytes
+              << " Current size: " << allocationInfo.post.SizeInBytes;
+    logResourceDesc(desc);
   }
   GITS_ASSERT(allocationInfo.pre.SizeInBytes >= allocationInfo.post.SizeInBytes);
 }
@@ -126,7 +146,7 @@ void ResourcePlacementAssertions::loadResourcePlacementData() {
 
   std::ifstream file(filePath, std::ios::binary);
   if (!file.is_open()) {
-    LOG_ERROR << "Portability - failed to open resourcePlacementData.dat";
+    LOG_ERROR << "Portability - Failed to open resourcePlacementData.dat";
     return;
   }
 
@@ -137,7 +157,7 @@ void ResourcePlacementAssertions::loadResourcePlacementData() {
 
   m_PlacementDataLoaded = true;
 
-  LOG_INFO << "Portability - loaded " << m_PlacementDataFromFile.size()
+  LOG_INFO << "Portability - Loaded " << m_PlacementDataFromFile.size()
            << " resource placement entries from resourcePlacementData.dat";
 }
 

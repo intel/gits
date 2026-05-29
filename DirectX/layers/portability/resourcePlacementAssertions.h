@@ -37,7 +37,9 @@ private:
   D3D12_RESOURCE_ALLOCATION_INFO queryAllocationFromDevice(ID3D12Device* device,
                                                            const D3D12_RESOURCE_DESC& desc,
                                                            unsigned resourceKey);
-  void checkCompatibility(const AllocationInfo& allocationInfo, unsigned resourceKey);
+  void checkCompatibility(const AllocationInfo& allocationInfo,
+                          const D3D12_RESOURCE_DESC& desc,
+                          unsigned resourceKey);
 
   void loadResourcePlacementData();
 
