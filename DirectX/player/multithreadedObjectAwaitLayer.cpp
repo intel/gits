@@ -66,6 +66,17 @@ void MultithreadedObjectAwaitLayer::CompleteArrayArgument(
 MultithreadedObjectAwaitLayer::MultithreadedObjectAwaitLayer(PlayerManager& manager)
     : Layer("MultithreadedObjectAwaitLayer"), m_Manager(manager) {}
 
+void MultithreadedObjectAwaitLayer::Pre(StateRestoreEndCommand& c) {
+  // Complete all the objects to minimize stalls during playback
+  const auto& results = m_Manager.GetMultithreadedObjectCreationService().CompleteAll();
+  for (const auto& [key, output] : results) {
+    if (output.result != S_OK) {
+      continue;
+    }
+    m_Manager.AddObject(key, static_cast<IUnknown*>(output.object));
+  }
+}
+
 void MultithreadedObjectAwaitLayer::Pre(IUnknownAddRefCommand& c) {
   // If the object has not been created yet, defer the reference count update
   if (!m_Manager.FindObject(c.m_Object.Key)) {

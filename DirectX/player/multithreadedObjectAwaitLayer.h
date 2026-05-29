@@ -20,6 +20,9 @@ class MultithreadedObjectAwaitLayer : public Layer {
 public:
   MultithreadedObjectAwaitLayer(PlayerManager& manager);
 
+  // Wait for the completion of all objects
+  void Pre(StateRestoreEndCommand& command) override;
+
   void Pre(IUnknownAddRefCommand& command) override;
   void Pre(IUnknownReleaseCommand& command) override;
   void Pre(IUnknownQueryInterfaceCommand& command) override;
