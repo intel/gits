@@ -39,6 +39,22 @@ void PlatformPortabilityLayer::Pre(ID3D12SDKConfigurationSetSDKVersionCommand& c
   c.Skip = true;
 }
 
+void PlatformPortabilityLayer::Pre(D3D12GetDebugInterfaceCommand& c) {
+  c.Skip = true;
+}
+
+void PlatformPortabilityLayer::Pre(ID3D12DebugEnableDebugLayerCommand& c) {
+  c.Skip = true;
+}
+
+void PlatformPortabilityLayer::Pre(DXGIGetDebugInterface1Command& c) {
+  c.Skip = true;
+}
+
+void PlatformPortabilityLayer::Pre(IDXGIInfoQueueSetBreakOnSeverityCommand& c) {
+  c.Skip = true;
+}
+
 void PlatformPortabilityLayer::Pre(INTC_D3D12_CreateDeviceExtensionContextCommand& c) {
   c.Skip = true;
 }

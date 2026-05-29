@@ -30,6 +30,11 @@ public:
       ID3D12DeviceRemovedExtendedDataSettings2UseMarkersOnlyAutoBreadcrumbsCommand& c) override;
   void Pre(ID3D12SDKConfigurationSetSDKVersionCommand& c) override;
 
+  void Pre(D3D12GetDebugInterfaceCommand& c) override;
+  void Pre(ID3D12DebugEnableDebugLayerCommand& c) override;
+  void Pre(DXGIGetDebugInterface1Command& c) override;
+  void Pre(IDXGIInfoQueueSetBreakOnSeverityCommand& c) override;
+
   void Pre(INTC_D3D12_CreateDeviceExtensionContextCommand& command) override;
   void Pre(INTC_D3D12_CreateDeviceExtensionContext1Command& command) override;
   void Pre(INTC_D3D12_SetApplicationInfoCommand& command) override;
