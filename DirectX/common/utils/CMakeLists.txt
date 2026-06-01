@@ -73,6 +73,7 @@ PRIVATE
 
 target_link_libraries(DirectX_utils PRIVATE
   DirectX_layer_interface
+  stb_implementation
 )
 
 set_target_properties(DirectX_utils PROPERTIES LINKER_LANGUAGE CXX)
