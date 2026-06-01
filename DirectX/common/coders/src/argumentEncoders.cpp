@@ -2148,6 +2148,56 @@ void Encode(char* dest, unsigned& offset, const PointerArgument<INTCExtensionApp
   }
 }
 
+unsigned GetSize(const PointerArgument<D3D12_APPLICATION_DESC>& arg) {
+  if (!arg.Value) {
+    return sizeof(void*);
+  }
+  unsigned size = sizeof(void*) + sizeof(D3D12_APPLICATION_DESC);
+
+  if (arg.ExeFilename) {
+    size += sizeof(unsigned) + wcslen(arg.ExeFilename) * 2 + 2;
+  }
+  if (arg.Name) {
+    size += sizeof(unsigned) + wcslen(arg.Name) * 2 + 2;
+  }
+  if (arg.EngineName) {
+    size += sizeof(unsigned) + wcslen(arg.EngineName) * 2 + 2;
+  }
+
+  return size;
+}
+
+void Encode(char* dest, unsigned& offset, const PointerArgument<D3D12_APPLICATION_DESC>& arg) {
+  if (EncodeNullPtr(dest, offset, arg)) {
+    return;
+  }
+
+  memcpy(dest + offset, arg.Value, sizeof(D3D12_APPLICATION_DESC));
+  offset += sizeof(D3D12_APPLICATION_DESC);
+
+  if (arg.Value->pExeFilename) {
+    unsigned len = wcslen(arg.ExeFilename) * 2 + 2;
+    memcpy(dest + offset, &len, sizeof(len));
+    offset += sizeof(unsigned);
+    memcpy(dest + offset, arg.ExeFilename, len);
+    offset += len;
+  }
+  if (arg.Value->pName) {
+    unsigned len = wcslen(arg.Name) * 2 + 2;
+    memcpy(dest + offset, &len, sizeof(len));
+    offset += sizeof(unsigned);
+    memcpy(dest + offset, arg.Name, len);
+    offset += len;
+  }
+  if (arg.Value->pEngineName) {
+    unsigned len = wcslen(arg.EngineName) * 2 + 2;
+    memcpy(dest + offset, &len, sizeof(len));
+    offset += sizeof(unsigned);
+    memcpy(dest + offset, arg.EngineName, len);
+    offset += len;
+  }
+}
+
 unsigned GetSize(const PointerArgument<INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC>& arg) {
   if (!arg.Value) {
     return sizeof(void*);

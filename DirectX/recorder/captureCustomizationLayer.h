@@ -96,6 +96,8 @@ public:
   void Pre(INTC_D3D12_CreateDeviceExtensionContextCommand& command) override;
   void Pre(INTC_D3D12_CreateDeviceExtensionContext1Command& command) override;
   void Pre(INTC_D3D12_SetApplicationInfoCommand& command) override;
+  void Pre(ID3D12StateObjectDatabaseSetApplicationDescCommand& command) override;
+  void Pre(ID3D12ApplicationIdentitySetApplicationIdentityCommand& command) override;
   void Pre(INTC_D3D12_CreateComputePipelineStateCommand& command) override;
   void Pre(INTC_D3D12_CreateHeapCommand& command) override;
   void Post(INTC_D3D12_CreateHeapCommand& command) override;

@@ -761,6 +761,21 @@ struct PointerArgument<INTCExtensionAppInfo1> {
 };
 
 template <>
+struct PointerArgument<D3D12_APPLICATION_DESC> {
+  PointerArgument(const D3D12_APPLICATION_DESC* value_)
+      : Value(const_cast<D3D12_APPLICATION_DESC*>(value_)) {}
+  PointerArgument() {}
+  PointerArgument(const PointerArgument<D3D12_APPLICATION_DESC>& arg);
+  PointerArgument& operator=(const PointerArgument<D3D12_APPLICATION_DESC>&) = delete;
+  ~PointerArgument();
+  D3D12_APPLICATION_DESC* Value{};
+  const wchar_t* ExeFilename{};
+  const wchar_t* Name{};
+  const wchar_t* EngineName{};
+  bool Copy{};
+};
+
+template <>
 struct PointerArgument<INTC_D3D12_HEAP_DESC> {
   PointerArgument(const INTC_D3D12_HEAP_DESC* value_)
       : Value(const_cast<INTC_D3D12_HEAP_DESC*>(value_)) {}

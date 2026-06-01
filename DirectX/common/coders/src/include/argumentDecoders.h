@@ -182,6 +182,7 @@ void Decode(char* src,
 void Decode(char* src, unsigned& offset, PointerArgument<INTCExtensionInfo>& arg);
 void Decode(char* src, unsigned& offset, PointerArgument<INTCExtensionAppInfo>& arg);
 void Decode(char* src, unsigned& offset, PointerArgument<INTCExtensionAppInfo1>& arg);
+void Decode(char* src, unsigned& offset, PointerArgument<D3D12_APPLICATION_DESC>& arg);
 void Decode(char* src,
             unsigned& offset,
             PointerArgument<INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC>& arg);

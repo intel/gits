@@ -1417,6 +1417,37 @@ void Decode(char* src, unsigned& offset, PointerArgument<INTCExtensionAppInfo1>&
   }
 }
 
+void Decode(char* src, unsigned& offset, PointerArgument<D3D12_APPLICATION_DESC>& arg) {
+  if (DecodeNullPtr(src, offset, arg)) {
+    return;
+  }
+
+  arg.Value = reinterpret_cast<D3D12_APPLICATION_DESC*>(src + offset);
+  offset += sizeof(D3D12_APPLICATION_DESC);
+
+  if (arg.Value->pExeFilename) {
+    unsigned* len = reinterpret_cast<unsigned*>(src + offset);
+    offset += sizeof(unsigned);
+    arg.Value->pExeFilename = reinterpret_cast<const wchar_t*>(src + offset);
+    arg.ExeFilename = arg.Value->pExeFilename;
+    offset += *len;
+  }
+  if (arg.Value->pName) {
+    unsigned* len = reinterpret_cast<unsigned*>(src + offset);
+    offset += sizeof(unsigned);
+    arg.Value->pName = reinterpret_cast<const wchar_t*>(src + offset);
+    arg.Name = arg.Value->pName;
+    offset += *len;
+  }
+  if (arg.Value->pEngineName) {
+    unsigned* len = reinterpret_cast<unsigned*>(src + offset);
+    offset += sizeof(unsigned);
+    arg.Value->pEngineName = reinterpret_cast<const wchar_t*>(src + offset);
+    arg.EngineName = arg.Value->pEngineName;
+    offset += *len;
+  }
+}
+
 void Decode(char* src,
             unsigned& offset,
             PointerArgument<INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC>& arg) {

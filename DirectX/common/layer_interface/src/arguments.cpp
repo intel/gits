@@ -1775,6 +1775,46 @@ PointerArgument<INTCExtensionAppInfo1>::~PointerArgument() {
   }
 }
 
+PointerArgument<D3D12_APPLICATION_DESC>::PointerArgument(
+    const PointerArgument<D3D12_APPLICATION_DESC>& arg) {
+  if (!arg.Value) {
+    return;
+  }
+  Value = new D3D12_APPLICATION_DESC();
+  *Value = *arg.Value;
+  if (arg.Value->pExeFilename) {
+    const auto* str = arg.ExeFilename ? arg.ExeFilename : arg.Value->pExeFilename;
+    unsigned len = wcslen(str);
+    ExeFilename = new wchar_t[len + 1];
+    memcpy(const_cast<wchar_t*>(ExeFilename), str, len * 2 + 2);
+    Value->pExeFilename = const_cast<wchar_t*>(ExeFilename);
+  }
+  if (arg.Value->pName) {
+    const auto* str = arg.Name ? arg.Name : arg.Value->pName;
+    unsigned len = wcslen(str);
+    Name = new wchar_t[len + 1];
+    memcpy(const_cast<wchar_t*>(Name), str, len * 2 + 2);
+    Value->pName = const_cast<wchar_t*>(Name);
+  }
+  if (arg.Value->pEngineName) {
+    const auto* str = arg.EngineName ? arg.EngineName : arg.Value->pEngineName;
+    unsigned len = wcslen(str);
+    EngineName = new wchar_t[len + 1];
+    memcpy(const_cast<wchar_t*>(EngineName), str, len * 2 + 2);
+    Value->pEngineName = const_cast<wchar_t*>(EngineName);
+  }
+  Copy = true;
+}
+
+PointerArgument<D3D12_APPLICATION_DESC>::~PointerArgument() {
+  if (Copy) {
+    delete[] ExeFilename;
+    delete[] Name;
+    delete[] EngineName;
+    delete Value;
+  }
+}
+
 PointerArgument<INTC_D3D12_HEAP_DESC>::PointerArgument(
     const PointerArgument<INTC_D3D12_HEAP_DESC>& arg) {
   if (!arg.Value) {

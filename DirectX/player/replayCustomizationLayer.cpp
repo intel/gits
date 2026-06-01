@@ -40,6 +40,28 @@ static std::string appInfoToStr(INTCExtensionAppInfo1* appInfo) {
   return oss.str();
 }
 
+static std::string applicationDescToStr(D3D12_APPLICATION_DESC* desc) {
+  if (!desc) {
+    return "ExeFilename: nullptr, Name: nullptr, Engine: nullptr";
+  }
+
+  std::wstring exeFilenameW = desc->pExeFilename ? desc->pExeFilename : L"";
+  auto exeFilename = std::string(exeFilenameW.begin(), exeFilenameW.end());
+  std::wstring nameW = desc->pName ? desc->pName : L"";
+  auto name = std::string(nameW.begin(), nameW.end());
+  std::wstring engineNameW = desc->pEngineName ? desc->pEngineName : L"";
+  auto engineName = std::string(engineNameW.begin(), engineNameW.end());
+
+  std::ostringstream oss;
+  oss << "ExeFilename: \"" << exeFilename << "\", Name: \"" << name << "\" ("
+      << desc->Version.VersionParts[3] << "." << desc->Version.VersionParts[2] << "."
+      << desc->Version.VersionParts[1] << "." << desc->Version.VersionParts[0] << ")"
+      << ", Engine: \"" << engineName << "\" (" << desc->EngineVersion.VersionParts[3] << "."
+      << desc->EngineVersion.VersionParts[2] << "." << desc->EngineVersion.VersionParts[1] << "."
+      << desc->EngineVersion.VersionParts[0] << ")";
+  return oss.str();
+}
+
 ReplayCustomizationLayer::ReplayCustomizationLayer(PlayerManager& manager)
     : Layer("ReplayCustomization"),
       m_Manager(manager),
@@ -1816,6 +1838,11 @@ void ReplayCustomizationLayer::Pre(xellSetLoggingCallbackCommand& command) {
                 "nullptr";
     logged = true;
   }
+}
+
+void ReplayCustomizationLayer::Pre(ID3D12ApplicationIdentitySetApplicationIdentityCommand& c) {
+  LOG_INFO << "ID3D12ApplicationIdentity::SetApplicationIdentity - "
+           << applicationDescToStr(c.m_pDesc.Value);
 }
 
 void ReplayCustomizationLayer::FillGpuAddressArgument(D3D12_GPU_VIRTUAL_ADDRESS_Argument& arg) {

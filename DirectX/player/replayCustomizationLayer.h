@@ -180,6 +180,7 @@ public:
   void Pre(xefgSwapChainSetLoggingCallbackCommand& command) override;
   void Pre(xessSetLoggingCallbackCommand& command) override;
   void Pre(xellSetLoggingCallbackCommand& command) override;
+  void Pre(ID3D12ApplicationIdentitySetApplicationIdentityCommand& command) override;
 
 private:
   struct NvAPIShaderExtnSlot {

@@ -327,6 +327,9 @@ void Encode(char* dest, unsigned& offset, const PointerArgument<INTCExtensionApp
 unsigned GetSize(const PointerArgument<INTCExtensionAppInfo1>& arg);
 void Encode(char* dest, unsigned& offset, const PointerArgument<INTCExtensionAppInfo1>& arg);
 
+unsigned GetSize(const PointerArgument<D3D12_APPLICATION_DESC>& arg);
+void Encode(char* dest, unsigned& offset, const PointerArgument<D3D12_APPLICATION_DESC>& arg);
+
 unsigned GetSize(const PointerArgument<INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC>& arg);
 void Encode(char* dest,
             unsigned& offset,
