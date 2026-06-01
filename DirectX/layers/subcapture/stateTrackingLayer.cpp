@@ -2900,6 +2900,16 @@ void StateTrackingLayer::Post(ID3D12Device5CreateMetaCommandCommand& c) {
   m_MetaCommandsService.SetDeviceKey(c.m_Object.Key);
 }
 
+void StateTrackingLayer::Post(ID3D12ApplicationIdentitySetApplicationIdentityCommand& c) {
+  if (m_StateRestored) {
+    return;
+  }
+  if (c.m_Result.Value != S_OK) {
+    return;
+  }
+  m_StateService.GetApplicationIdentityService().SetApplicationIdentity(c);
+}
+
 void StateTrackingLayer::Post(xessD3D12CreateContextCommand& c) {
   if (m_StateRestored) {
     return;

@@ -27,6 +27,7 @@
 #include "resourceForCBVRestoreService.h"
 #include "metaCommandsService.h"
 #include "keyUtils.h"
+#include "commandSerializersAuto.h"
 
 #include <vector>
 #include <unordered_map>
@@ -77,7 +78,8 @@ public:
         m_NvapiGlobalStateService(*this),
         m_XellStateService(xellStateService),
         m_XefgStateService(xefgStateService),
-        m_MetaCommandsService(metaCommandsService) {}
+        m_MetaCommandsService(metaCommandsService),
+        m_ApplicationIdentityService(*this) {}
   ~StateTrackingService();
   StateTrackingService(StateTrackingService&) = delete;
   StateTrackingService& operator=(StateTrackingService&) = delete;
@@ -163,6 +165,23 @@ public:
     return m_NvapiGlobalStateService;
   }
 
+  class ApplicationIdentityService {
+  public:
+    ApplicationIdentityService(StateTrackingService& stateService) : m_StateService(stateService) {}
+    void SetApplicationIdentity(ID3D12ApplicationIdentitySetApplicationIdentityCommand& c);
+    void RestoreApplicationIdentity();
+
+  private:
+    StateTrackingService& m_StateService;
+    std::unordered_map<unsigned,
+                       std::unique_ptr<ID3D12ApplicationIdentitySetApplicationIdentitySerializer>>
+        m_ApplicationIdentities;
+  };
+
+  ApplicationIdentityService& GetApplicationIdentityService() {
+    return m_ApplicationIdentityService;
+  }
+
 private:
   void RestoreState(ObjectState* state);
   void RestoreReferenceCount();
@@ -227,6 +246,7 @@ private:
   std::vector<std::unique_ptr<DllContainerMetaCommand>> m_DllContainerCommands;
   std::queue<std::unique_ptr<Command>> m_StateObjectPropertiesCommands;
   NvAPIGlobalStateService m_NvapiGlobalStateService;
+  ApplicationIdentityService m_ApplicationIdentityService;
   bool m_IsXefgSwapChain{};
 
 private:

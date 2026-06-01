@@ -210,6 +210,7 @@ public:
   void Post(ID3D12SDKConfiguration1CreateDeviceFactoryCommand& Command) override;
   void Post(ID3D12DeviceFactoryCreateDeviceCommand& Command) override;
   void Post(ID3D12Device5CreateMetaCommandCommand& c) override;
+  void Post(ID3D12ApplicationIdentitySetApplicationIdentityCommand& c) override;
   void Post(xessD3D12CreateContextCommand& c) override;
   void Post(xessD3D12InitCommand& c) override;
   void Pre(xessDestroyContextCommand& c) override;

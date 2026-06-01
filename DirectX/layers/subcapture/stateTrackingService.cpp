@@ -8,7 +8,6 @@
 
 #include "stateTrackingService.h"
 #include "commandsAuto.h"
-#include "commandSerializersAuto.h"
 #include "commandSerializersCustom.h"
 #include "commandSerializersFactory.h"
 #include "log.h"
@@ -33,6 +32,7 @@ void StateTrackingService::RestoreState() {
 
   m_Recorder.Record(StateRestoreBeginSerializer(StateRestoreBeginCommand()));
   RestoreDllContainers();
+  m_ApplicationIdentityService.RestoreApplicationIdentity();
   recordStatus(MarkerUInt64Command::Value::STATE_RESTORE_OBJECTS_BEGIN);
   for (auto& it : m_StatesByKey) {
     if (!it.second->Destroyed || it.second->KeepDestroyed) {
@@ -1022,6 +1022,25 @@ void StateTrackingService::NvAPIGlobalStateService::FinalizeRestore() {
     const auto& command = m_SetCreatePipelineStateOptionsCommands.top();
     m_StateService.m_Recorder.Record(*createCommandSerializer(command.SerializedCommand.get()));
     m_SetCreatePipelineStateOptionsCommands.pop();
+  }
+}
+
+void StateTrackingService::ApplicationIdentityService::SetApplicationIdentity(
+    ID3D12ApplicationIdentitySetApplicationIdentityCommand& c) {
+  m_ApplicationIdentities[c.m_Object.Key].reset(
+      new ID3D12ApplicationIdentitySetApplicationIdentitySerializer(c));
+}
+
+void StateTrackingService::ApplicationIdentityService::RestoreApplicationIdentity() {
+  for (auto& [applicationIdentityKey, setApplicationIdentity] : m_ApplicationIdentities) {
+    D3D12GetInterfaceCommand command;
+    command.Key = m_StateService.GetUniqueCommandKey();
+    command.m_rclsid.Value = CLSID_D3D12ApplicationIdentity;
+    command.m_riid.Value = IID_ID3D12ApplicationIdentity;
+    command.m_ppvDebug.Key = applicationIdentityKey;
+    m_StateService.m_Recorder.Record(D3D12GetInterfaceSerializer(command));
+
+    m_StateService.m_Recorder.Record(*setApplicationIdentity.get());
   }
 }
 
