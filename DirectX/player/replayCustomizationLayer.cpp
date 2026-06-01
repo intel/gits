@@ -1866,6 +1866,13 @@ void ReplayCustomizationLayer::Pre(ID3D12ApplicationIdentitySetApplicationIdenti
   LOG_INFO << "ID3D12ApplicationIdentity::SetApplicationIdentity - " << appDesc;
 }
 
+void ReplayCustomizationLayer::Pre(ID3DDestructionNotifierRegisterDestructionCallbackCommand& c) {
+  c.Skip = true;
+}
+void ReplayCustomizationLayer::Pre(ID3DDestructionNotifierUnregisterDestructionCallbackCommand& c) {
+  c.Skip = true;
+}
+
 void ReplayCustomizationLayer::FillGpuAddressArgument(D3D12_GPU_VIRTUAL_ADDRESS_Argument& arg) {
   if (m_UseAddressPinning) {
     return;

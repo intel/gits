@@ -181,6 +181,8 @@ public:
   void Pre(xessSetLoggingCallbackCommand& command) override;
   void Pre(xellSetLoggingCallbackCommand& command) override;
   void Pre(ID3D12ApplicationIdentitySetApplicationIdentityCommand& command) override;
+  void Pre(ID3DDestructionNotifierRegisterDestructionCallbackCommand& command) override;
+  void Pre(ID3DDestructionNotifierUnregisterDestructionCallbackCommand& command) override;
 
 private:
   struct NvAPIShaderExtnSlot {
