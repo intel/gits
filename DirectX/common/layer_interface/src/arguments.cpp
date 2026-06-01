@@ -1783,34 +1783,28 @@ PointerArgument<D3D12_APPLICATION_DESC>::PointerArgument(
   Value = new D3D12_APPLICATION_DESC();
   *Value = *arg.Value;
   if (arg.Value->pExeFilename) {
-    const auto* str = arg.ExeFilename ? arg.ExeFilename : arg.Value->pExeFilename;
-    unsigned len = wcslen(str);
-    ExeFilename = new wchar_t[len + 1];
-    memcpy(const_cast<wchar_t*>(ExeFilename), str, len * 2 + 2);
-    Value->pExeFilename = const_cast<wchar_t*>(ExeFilename);
+    unsigned len = wcslen(arg.Value->pExeFilename);
+    Value->pExeFilename = new wchar_t[len + 1];
+    memcpy(const_cast<wchar_t*>(Value->pExeFilename), arg.Value->pExeFilename, len * 2 + 2);
   }
   if (arg.Value->pName) {
-    const auto* str = arg.Name ? arg.Name : arg.Value->pName;
-    unsigned len = wcslen(str);
-    Name = new wchar_t[len + 1];
-    memcpy(const_cast<wchar_t*>(Name), str, len * 2 + 2);
-    Value->pName = const_cast<wchar_t*>(Name);
+    unsigned len = wcslen(arg.Value->pName);
+    Value->pName = new wchar_t[len + 1];
+    memcpy(const_cast<wchar_t*>(Value->pName), arg.Value->pName, len * 2 + 2);
   }
   if (arg.Value->pEngineName) {
-    const auto* str = arg.EngineName ? arg.EngineName : arg.Value->pEngineName;
-    unsigned len = wcslen(str);
-    EngineName = new wchar_t[len + 1];
-    memcpy(const_cast<wchar_t*>(EngineName), str, len * 2 + 2);
-    Value->pEngineName = const_cast<wchar_t*>(EngineName);
+    unsigned len = wcslen(arg.Value->pEngineName);
+    Value->pEngineName = new wchar_t[len + 1];
+    memcpy(const_cast<wchar_t*>(Value->pEngineName), arg.Value->pEngineName, len * 2 + 2);
   }
   Copy = true;
 }
 
 PointerArgument<D3D12_APPLICATION_DESC>::~PointerArgument() {
   if (Copy) {
-    delete[] ExeFilename;
-    delete[] Name;
-    delete[] EngineName;
+    delete[] Value->pExeFilename;
+    delete[] Value->pName;
+    delete[] Value->pEngineName;
     delete Value;
   }
 }

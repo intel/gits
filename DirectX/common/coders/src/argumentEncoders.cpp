@@ -2154,14 +2154,14 @@ unsigned GetSize(const PointerArgument<D3D12_APPLICATION_DESC>& arg) {
   }
   unsigned size = sizeof(void*) + sizeof(D3D12_APPLICATION_DESC);
 
-  if (arg.ExeFilename) {
-    size += sizeof(unsigned) + wcslen(arg.ExeFilename) * 2 + 2;
+  if (arg.Value->pExeFilename) {
+    size += sizeof(unsigned) + wcslen(arg.Value->pExeFilename) * 2 + 2;
   }
-  if (arg.Name) {
-    size += sizeof(unsigned) + wcslen(arg.Name) * 2 + 2;
+  if (arg.Value->pName) {
+    size += sizeof(unsigned) + wcslen(arg.Value->pName) * 2 + 2;
   }
-  if (arg.EngineName) {
-    size += sizeof(unsigned) + wcslen(arg.EngineName) * 2 + 2;
+  if (arg.Value->pEngineName) {
+    size += sizeof(unsigned) + wcslen(arg.Value->pEngineName) * 2 + 2;
   }
 
   return size;
@@ -2176,24 +2176,24 @@ void Encode(char* dest, unsigned& offset, const PointerArgument<D3D12_APPLICATIO
   offset += sizeof(D3D12_APPLICATION_DESC);
 
   if (arg.Value->pExeFilename) {
-    unsigned len = wcslen(arg.ExeFilename) * 2 + 2;
+    unsigned len = wcslen(arg.Value->pExeFilename) * 2 + 2;
     memcpy(dest + offset, &len, sizeof(len));
     offset += sizeof(unsigned);
-    memcpy(dest + offset, arg.ExeFilename, len);
+    memcpy(dest + offset, arg.Value->pExeFilename, len);
     offset += len;
   }
   if (arg.Value->pName) {
-    unsigned len = wcslen(arg.Name) * 2 + 2;
+    unsigned len = wcslen(arg.Value->pName) * 2 + 2;
     memcpy(dest + offset, &len, sizeof(len));
     offset += sizeof(unsigned);
-    memcpy(dest + offset, arg.Name, len);
+    memcpy(dest + offset, arg.Value->pName, len);
     offset += len;
   }
   if (arg.Value->pEngineName) {
-    unsigned len = wcslen(arg.EngineName) * 2 + 2;
+    unsigned len = wcslen(arg.Value->pEngineName) * 2 + 2;
     memcpy(dest + offset, &len, sizeof(len));
     offset += sizeof(unsigned);
-    memcpy(dest + offset, arg.EngineName, len);
+    memcpy(dest + offset, arg.Value->pEngineName, len);
     offset += len;
   }
 }

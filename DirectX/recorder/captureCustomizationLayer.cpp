@@ -898,22 +898,6 @@ void CaptureCustomizationLayer::Pre(INTC_D3D12_SetApplicationInfoCommand& c) {
   }
 }
 
-void CaptureCustomizationLayer::Pre(ID3D12StateObjectDatabaseSetApplicationDescCommand& c) {
-  if (c.m_pApplicationDesc.Value) {
-    c.m_pApplicationDesc.ExeFilename = c.m_pApplicationDesc.Value->pExeFilename;
-    c.m_pApplicationDesc.Name = c.m_pApplicationDesc.Value->pName;
-    c.m_pApplicationDesc.EngineName = c.m_pApplicationDesc.Value->pEngineName;
-  }
-}
-
-void CaptureCustomizationLayer::Pre(ID3D12ApplicationIdentitySetApplicationIdentityCommand& c) {
-  if (c.m_pDesc.Value) {
-    c.m_pDesc.ExeFilename = c.m_pDesc.Value->pExeFilename;
-    c.m_pDesc.Name = c.m_pDesc.Value->pName;
-    c.m_pDesc.EngineName = c.m_pDesc.Value->pEngineName;
-  }
-}
-
 void CaptureCustomizationLayer::Pre(INTC_D3D12_CreateComputePipelineStateCommand& c) {
   c.m_pDesc.Cs = c.m_pDesc.Value->CS.pShaderBytecode;
   c.m_pDesc.CompileOptions = c.m_pDesc.Value->CompileOptions;

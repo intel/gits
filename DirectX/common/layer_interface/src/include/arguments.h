@@ -769,9 +769,6 @@ struct PointerArgument<D3D12_APPLICATION_DESC> {
   PointerArgument& operator=(const PointerArgument<D3D12_APPLICATION_DESC>&) = delete;
   ~PointerArgument();
   D3D12_APPLICATION_DESC* Value{};
-  const wchar_t* ExeFilename{};
-  const wchar_t* Name{};
-  const wchar_t* EngineName{};
   bool Copy{};
 };
 

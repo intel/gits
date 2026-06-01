@@ -1429,21 +1429,18 @@ void Decode(char* src, unsigned& offset, PointerArgument<D3D12_APPLICATION_DESC>
     unsigned* len = reinterpret_cast<unsigned*>(src + offset);
     offset += sizeof(unsigned);
     arg.Value->pExeFilename = reinterpret_cast<const wchar_t*>(src + offset);
-    arg.ExeFilename = arg.Value->pExeFilename;
     offset += *len;
   }
   if (arg.Value->pName) {
     unsigned* len = reinterpret_cast<unsigned*>(src + offset);
     offset += sizeof(unsigned);
     arg.Value->pName = reinterpret_cast<const wchar_t*>(src + offset);
-    arg.Name = arg.Value->pName;
     offset += *len;
   }
   if (arg.Value->pEngineName) {
     unsigned* len = reinterpret_cast<unsigned*>(src + offset);
     offset += sizeof(unsigned);
     arg.Value->pEngineName = reinterpret_cast<const wchar_t*>(src + offset);
-    arg.EngineName = arg.Value->pEngineName;
     offset += *len;
   }
 }
