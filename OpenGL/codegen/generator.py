@@ -15,6 +15,9 @@ from typing import Any
 
 
 
+####### Function clases #######
+
+
 class FuncType(IntFlag):
     """Flag for API call classification."""
 
@@ -141,6 +144,10 @@ functions_dict_processed: bool = False  # To avoid reprocessing/damaging data on
 # Tokens to ignore (not just disable).
 blocklist: list[str] = ['glCreateSyncFromCLeventARB']
 
+
+####### Helper functions #######
+
+
 def apply_blocklist(functions_dict: dict[str, list[dict[str, Any]]]) -> None:
     """Remove blocked API calls entirely."""
     for func in blocklist:
@@ -235,6 +242,9 @@ def get_tokens(*, include_disabled: bool) -> dict[str, list[Token]]:
     tokens.default_factory = None
 
     return tokens
+
+
+####### Actual data #######
 
 
 function(name='glAccum', enabled=True, function_type=FuncType.PARAM,
