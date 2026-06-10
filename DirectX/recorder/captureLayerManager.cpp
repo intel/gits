@@ -120,6 +120,7 @@ void CaptureLayerManager::LoadLayers(CaptureManager& captureManager,
   enablePostLayer(imGuiHUDLayer.get());
 
   // Enable plugin layers
+  pluginService.loadPlugins();
   for (const auto& plugin : pluginService.getPlugins()) {
     Layer* layer = static_cast<Layer*>(plugin.impl->getImpl());
     enablePreLayer(layer);

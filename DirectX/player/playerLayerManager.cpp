@@ -183,6 +183,7 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
   enablePostLayer(ccodeLayer.get());
 
   // Enable plugin layers
+  pluginService.loadPlugins();
   for (const auto& plugin : pluginService.getPlugins()) {
     Layer* layer = static_cast<Layer*>(plugin.impl->getImpl());
     enablePreLayer(layer);

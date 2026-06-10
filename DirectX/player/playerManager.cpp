@@ -68,7 +68,6 @@ PlayerManager::PlayerManager() {
   GetIntelExtensionsService().SetApplicationInfo();
 
   m_PluginService = std::make_unique<PluginService>();
-  m_PluginService->loadPlugins();
 
   m_LayerManager.LoadLayers(*this, *m_PluginService.get());
 
