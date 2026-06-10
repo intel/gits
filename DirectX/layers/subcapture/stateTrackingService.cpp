@@ -249,10 +249,12 @@ void StateTrackingService::ReleaseObject(unsigned key, ULONG result) {
   if (linkedLifetimeKey) {
     auto itLinkedLifetimeState = m_StatesByKey.find(linkedLifetimeKey);
     if (itLinkedLifetimeState != m_StatesByKey.end()) {
-      itLinkedLifetimeState->second->Object->AddRef();
-      ULONG refCount = itLinkedLifetimeState->second->Object->Release();
-      if (refCount == 1 && !itLinkedLifetimeState->second->Destroyed) {
-        ReleaseObject(itLinkedLifetimeState->first, 0);
+      if (!itLinkedLifetimeState->second->Destroyed) {
+        itLinkedLifetimeState->second->Object->AddRef();
+        ULONG refCount = itLinkedLifetimeState->second->Object->Release();
+        if (refCount == 1 && !itLinkedLifetimeState->second->Destroyed) {
+          ReleaseObject(itLinkedLifetimeState->first, 0);
+        }
       }
     }
   }
