@@ -37,6 +37,7 @@ AccelerationStructuresBuildService::AccelerationStructuresBuildService(
   m_SerializeMode = Configurator::Get().directx.features.subcapture.serializeAccelerationStructures;
   m_RestoreTlas = Configurator::Get().directx.features.subcapture.restoreTLASes;
   m_Optimize = Configurator::Get().directx.features.subcapture.optimize;
+  m_OptimizeRaytracing = Configurator::Get().directx.features.subcapture.optimizeRaytracing;
 }
 
 void AccelerationStructuresBuildService::BuildAccelerationStructure(
@@ -1840,6 +1841,9 @@ void AccelerationStructuresBuildService::Optimize() {
 }
 
 void AccelerationStructuresBuildService::RemoveSourcesWithoutDestinations() {
+  if (!m_Optimize && !m_OptimizeRaytracing) {
+    return;
+  }
   for (unsigned source : m_SourcesWithoutDestinations) {
     auto itDests = m_StateDestsBySource.find(source);
     GITS_ASSERT(itDests != m_StateDestsBySource.end());

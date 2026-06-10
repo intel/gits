@@ -145,6 +145,7 @@ private:
   bool m_SerializeMode{};
   bool m_RestoreTlas{};
   bool m_Optimize{};
+  bool m_OptimizeRaytracing{};
 
   void StoreState(RaytracingAccelerationStructureState* state);
   unsigned GetState(unsigned key, unsigned offset);
