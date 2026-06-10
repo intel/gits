@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "graphicsPipelineState.h"
+#include "pipelineStateStreamDescDump.h"
 #include "to_string/toStr.h"
 #include "to_string/enumToStrAuto.h"
 
@@ -15,6 +16,7 @@ namespace DirectX {
 
 void GraphicsPipelineState::Reset() {
   m_StateDesc = nullptr;
+  m_StateStreamDesc = nullptr;
   m_RootSignatureKey = 0;
   m_BindingState.Reset();
   m_IndexBufferKey = 0;
@@ -144,7 +146,11 @@ void GraphicsPipelineState::DumpState(const std::wstring& dumpDir,
 
 void GraphicsPipelineState::DumpState(std::ofstream& stream) {
   stream << "\n";
-  DumpStateDesc(stream);
+  if (m_StateDesc) {
+    DumpStateDesc(stream);
+  } else if (m_StateStreamDesc) {
+    DumpPipelineStateStreamDesc(*m_StateStreamDesc, stream);
+  }
   stream << "\n";
   if (m_IndexBufferKey) {
     stream << "Index buffer O" << m_IndexBufferKey << " offset " << m_IndexBufferOffset << "\n";
@@ -190,8 +196,21 @@ void GraphicsPipelineState::DumpStateDesc(std::ofstream& stream) {
   stream << "\tGS BytecodeLength " << desc.GS.BytecodeLength << "\n";
 
   stream << "\tStreamOutput\n";
-  stream << "\t\tNumEntries " << desc.StreamOutput.NumEntries << "\n";
-  stream << "\t\tNumStrides " << desc.StreamOutput.NumStrides << "\n";
+  for (unsigned i = 0; i < desc.StreamOutput.NumEntries; ++i) {
+    const D3D12_SO_DECLARATION_ENTRY& entry = desc.StreamOutput.pSODeclaration[i];
+    stream << "\t\tEntry[" << i << "]\n";
+    stream << "\t\t\tStream " << entry.Stream << "\n";
+    stream << "\t\t\tSemanticName " << entry.SemanticName << "\n";
+    stream << "\t\t\tSemanticIndex " << entry.SemanticIndex << "\n";
+    stream << "\t\t\tStartComponent " << static_cast<unsigned>(entry.StartComponent) << "\n";
+    stream << "\t\t\tComponentCount " << static_cast<unsigned>(entry.ComponentCount) << "\n";
+    stream << "\t\t\tOutputSlot " << static_cast<unsigned>(entry.OutputSlot) << "\n";
+  }
+  stream << "\t\BufferStrides " << desc.StreamOutput.NumStrides;
+  for (unsigned i = 0; i < desc.StreamOutput.NumStrides; ++i) {
+    stream << " " << desc.StreamOutput.pBufferStrides[i];
+  }
+  stream << "\n";
   stream << "\t\tRasterizedStream " << desc.StreamOutput.RasterizedStream << "\n";
 
   stream << "\tBlendState\n";

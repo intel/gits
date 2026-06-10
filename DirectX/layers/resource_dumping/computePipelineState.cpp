@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "computePipelineState.h"
+#include "pipelineStateStreamDescDump.h"
 #include "to_string/toStr.h"
 
 #include <fstream>
@@ -16,6 +17,7 @@ namespace DirectX {
 
 void ComputePipelineState::Reset() {
   m_StateDesc = nullptr;
+  m_StateStreamDesc = nullptr;
   m_RootSignatureKey = 0;
   m_BindingState.Reset();
 }
@@ -74,7 +76,11 @@ void ComputePipelineState::DumpState(const std::wstring& dumpDir,
 
 void ComputePipelineState::DumpState(std::ofstream& stream) {
   stream << "\n";
-  DumpStateDesc(stream);
+  if (m_StateDesc) {
+    DumpStateDesc(stream);
+  } else if (m_StateStreamDesc) {
+    DumpPipelineStateStreamDesc(*m_StateStreamDesc, stream);
+  }
   stream << "\n";
   stream << "Root signature O" << m_RootSignatureKey << "\n";
   stream << "\n";

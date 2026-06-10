@@ -30,6 +30,7 @@ public:
   void Post(IUnknownReleaseCommand& c) override;
   void Post(ID3D12DeviceCreateGraphicsPipelineStateCommand& c) override;
   void Post(ID3D12DeviceCreateComputePipelineStateCommand& c) override;
+  void Post(ID3D12Device2CreatePipelineStateCommand& c) override;
   void Post(ID3D12DeviceCreateRootSignatureCommand& c) override;
   void Post(ID3D12DeviceCreateDescriptorHeapCommand& c) override;
   void Post(ID3D12DeviceCreateRenderTargetViewCommand& c) override;
@@ -96,6 +97,8 @@ private:
       m_GraphicsPipelineStateDescs;
   std::unordered_map<unsigned, std::unique_ptr<D3D12_COMPUTE_PIPELINE_STATE_DESC_Argument>>
       m_ComputePipelineStateDescs;
+  std::unordered_map<unsigned, std::unique_ptr<D3D12_PIPELINE_STATE_STREAM_DESC_Argument>>
+      m_PipelineStateDescs;
   std::unordered_map<unsigned, D3D12_DESCRIPTOR_HEAP_DESC> m_DescriptorHeaps;
   std::unordered_map<unsigned, D3D12_ROOT_SIGNATURE_DESC2*> m_RootSignatures;
 };

@@ -77,6 +77,8 @@ set(PIPELINE_STATE_DUMP_SRC
   ${SRC_DIR}/computePipelineState.cpp
   ${SRC_DIR}/pipelineBindingState.h
   ${SRC_DIR}/pipelineBindingState.cpp
+  ${SRC_DIR}/pipelineStateStreamDescDump.h
+  ${SRC_DIR}/pipelineStateStreamDescDump.cpp
 )
 source_group("pipeline_state_dump" FILES ${PIPELINE_STATE_DUMP_SRC})
 

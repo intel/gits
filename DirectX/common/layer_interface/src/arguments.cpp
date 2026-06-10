@@ -556,15 +556,15 @@ D3D12_PIPELINE_STATE_STREAM_DESC_Argument::D3D12_PIPELINE_STATE_STREAM_DESC_Argu
   Value->pPipelineStateSubobjectStream = new uint8_t[Value->SizeInBytes];
   memcpy(Value->pPipelineStateSubobjectStream, arg.Value->pPipelineStateSubobjectStream,
          Value->SizeInBytes);
-  size_t Offset{};
-  while (Offset < arg.Value->SizeInBytes) {
-    void* destData = static_cast<char*>(Value->pPipelineStateSubobjectStream) + Offset;
-    void* srcData = static_cast<char*>(arg.Value->pPipelineStateSubobjectStream) + Offset;
+  size_t offset{};
+  while (offset < arg.Value->SizeInBytes) {
+    void* destData = static_cast<char*>(Value->pPipelineStateSubobjectStream) + offset;
+    void* srcData = static_cast<char*>(arg.Value->pPipelineStateSubobjectStream) + offset;
     D3D12_PIPELINE_STATE_SUBOBJECT_TYPE subobjectType =
         *reinterpret_cast<D3D12_PIPELINE_STATE_SUBOBJECT_TYPE*>(srcData);
     switch (subobjectType) {
     case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_ROOT_SIGNATURE:
-      Offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_ROOT_SIGNATURE);
+      offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_ROOT_SIGNATURE);
       break;
     case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_VS: {
       D3D12_SHADER_BYTECODE& dest = *static_cast<CD3DX12_PIPELINE_STATE_STREAM_VS*>(destData);
@@ -573,7 +573,7 @@ D3D12_PIPELINE_STATE_STREAM_DESC_Argument::D3D12_PIPELINE_STATE_STREAM_DESC_Argu
         dest.pShaderBytecode = new uint8_t[src.BytecodeLength];
         memcpy(const_cast<void*>(dest.pShaderBytecode), src.pShaderBytecode, src.BytecodeLength);
       }
-      Offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_VS);
+      offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_VS);
     } break;
     case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_PS: {
       D3D12_SHADER_BYTECODE& dest = *static_cast<CD3DX12_PIPELINE_STATE_STREAM_PS*>(destData);
@@ -582,7 +582,7 @@ D3D12_PIPELINE_STATE_STREAM_DESC_Argument::D3D12_PIPELINE_STATE_STREAM_DESC_Argu
         dest.pShaderBytecode = new uint8_t[src.BytecodeLength];
         memcpy(const_cast<void*>(dest.pShaderBytecode), src.pShaderBytecode, src.BytecodeLength);
       }
-      Offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_PS);
+      offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_PS);
     } break;
     case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_DS: {
       D3D12_SHADER_BYTECODE& dest = *static_cast<CD3DX12_PIPELINE_STATE_STREAM_DS*>(destData);
@@ -591,7 +591,7 @@ D3D12_PIPELINE_STATE_STREAM_DESC_Argument::D3D12_PIPELINE_STATE_STREAM_DESC_Argu
         dest.pShaderBytecode = new uint8_t[src.BytecodeLength];
         memcpy(const_cast<void*>(dest.pShaderBytecode), src.pShaderBytecode, src.BytecodeLength);
       }
-      Offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_DS);
+      offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_DS);
     } break;
     case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_HS: {
       D3D12_SHADER_BYTECODE& dest = *static_cast<CD3DX12_PIPELINE_STATE_STREAM_HS*>(destData);
@@ -600,7 +600,7 @@ D3D12_PIPELINE_STATE_STREAM_DESC_Argument::D3D12_PIPELINE_STATE_STREAM_DESC_Argu
         dest.pShaderBytecode = new uint8_t[src.BytecodeLength];
         memcpy(const_cast<void*>(dest.pShaderBytecode), src.pShaderBytecode, src.BytecodeLength);
       }
-      Offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_HS);
+      offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_HS);
     } break;
     case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_GS: {
       D3D12_SHADER_BYTECODE& dest = *static_cast<CD3DX12_PIPELINE_STATE_STREAM_GS*>(destData);
@@ -609,7 +609,7 @@ D3D12_PIPELINE_STATE_STREAM_DESC_Argument::D3D12_PIPELINE_STATE_STREAM_DESC_Argu
         dest.pShaderBytecode = new uint8_t[src.BytecodeLength];
         memcpy(const_cast<void*>(dest.pShaderBytecode), src.pShaderBytecode, src.BytecodeLength);
       }
-      Offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_GS);
+      offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_GS);
     } break;
     case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_CS: {
       D3D12_SHADER_BYTECODE& dest = *static_cast<CD3DX12_PIPELINE_STATE_STREAM_CS*>(destData);
@@ -618,7 +618,7 @@ D3D12_PIPELINE_STATE_STREAM_DESC_Argument::D3D12_PIPELINE_STATE_STREAM_DESC_Argu
         dest.pShaderBytecode = new uint8_t[src.BytecodeLength];
         memcpy(const_cast<void*>(dest.pShaderBytecode), src.pShaderBytecode, src.BytecodeLength);
       }
-      Offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_CS);
+      offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_CS);
     } break;
     case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_AS: {
       D3D12_SHADER_BYTECODE& dest = *static_cast<CD3DX12_PIPELINE_STATE_STREAM_AS*>(destData);
@@ -627,7 +627,7 @@ D3D12_PIPELINE_STATE_STREAM_DESC_Argument::D3D12_PIPELINE_STATE_STREAM_DESC_Argu
         dest.pShaderBytecode = new uint8_t[src.BytecodeLength];
         memcpy(const_cast<void*>(dest.pShaderBytecode), src.pShaderBytecode, src.BytecodeLength);
       }
-      Offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_AS);
+      offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_AS);
     } break;
     case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_MS: {
       D3D12_SHADER_BYTECODE& dest = *static_cast<CD3DX12_PIPELINE_STATE_STREAM_MS*>(destData);
@@ -636,7 +636,7 @@ D3D12_PIPELINE_STATE_STREAM_DESC_Argument::D3D12_PIPELINE_STATE_STREAM_DESC_Argu
         dest.pShaderBytecode = new uint8_t[src.BytecodeLength];
         memcpy(const_cast<void*>(dest.pShaderBytecode), src.pShaderBytecode, src.BytecodeLength);
       }
-      Offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_MS);
+      offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_MS);
     } break;
     case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_STREAM_OUTPUT: {
       D3D12_STREAM_OUTPUT_DESC& dest =
@@ -660,34 +660,34 @@ D3D12_PIPELINE_STATE_STREAM_DESC_Argument::D3D12_PIPELINE_STATE_STREAM_DESC_Argu
         memcpy(const_cast<UINT*>(dest.pBufferStrides), src.pBufferStrides,
                src.NumStrides * sizeof(UINT));
       }
-      Offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_STREAM_OUTPUT);
+      offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_STREAM_OUTPUT);
     } break;
     case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_BLEND:
-      Offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_BLEND_DESC);
+      offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_BLEND_DESC);
       break;
     case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_SAMPLE_MASK:
-      Offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_SAMPLE_MASK);
+      offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_SAMPLE_MASK);
       break;
     case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_NODE_MASK:
-      Offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_NODE_MASK);
+      offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_NODE_MASK);
       break;
     case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_RASTERIZER:
-      Offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_RASTERIZER);
+      offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_RASTERIZER);
       break;
     case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_RASTERIZER1:
-      Offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_RASTERIZER1);
+      offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_RASTERIZER1);
       break;
     case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_RASTERIZER2:
-      Offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_RASTERIZER2);
+      offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_RASTERIZER2);
       break;
     case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_DEPTH_STENCIL:
-      Offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL);
+      offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL);
       break;
     case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_DEPTH_STENCIL1:
-      Offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL1);
+      offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL1);
       break;
     case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_DEPTH_STENCIL2:
-      Offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL2);
+      offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL2);
       break;
     case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_INPUT_LAYOUT: {
       D3D12_INPUT_LAYOUT_DESC& dest =
@@ -706,22 +706,22 @@ D3D12_PIPELINE_STATE_STREAM_DESC_Argument::D3D12_PIPELINE_STATE_STREAM_DESC_Argu
                  src.pInputElementDescs[i].SemanticName, len + 1);
         }
       }
-      Offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_INPUT_LAYOUT);
+      offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_INPUT_LAYOUT);
     } break;
     case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_IB_STRIP_CUT_VALUE:
-      Offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_IB_STRIP_CUT_VALUE);
+      offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_IB_STRIP_CUT_VALUE);
       break;
     case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_PRIMITIVE_TOPOLOGY:
-      Offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_PRIMITIVE_TOPOLOGY);
+      offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_PRIMITIVE_TOPOLOGY);
       break;
     case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_RENDER_TARGET_FORMATS:
-      Offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_RENDER_TARGET_FORMATS);
+      offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_RENDER_TARGET_FORMATS);
       break;
     case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_DEPTH_STENCIL_FORMAT:
-      Offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL_FORMAT);
+      offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL_FORMAT);
       break;
     case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_SAMPLE_DESC:
-      Offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_SAMPLE_DESC);
+      offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_SAMPLE_DESC);
       break;
     case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_CACHED_PSO: {
       D3D12_CACHED_PIPELINE_STATE& dest =
@@ -732,10 +732,10 @@ D3D12_PIPELINE_STATE_STREAM_DESC_Argument::D3D12_PIPELINE_STATE_STREAM_DESC_Argu
         dest.pCachedBlob = new uint8_t[src.CachedBlobSizeInBytes];
         memcpy(const_cast<void*>(dest.pCachedBlob), src.pCachedBlob, src.CachedBlobSizeInBytes);
       }
-      Offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_CACHED_PSO);
+      offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_CACHED_PSO);
     } break;
     case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_FLAGS:
-      Offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_FLAGS);
+      offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_FLAGS);
       break;
     case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_VIEW_INSTANCING: {
       D3D12_VIEW_INSTANCING_DESC& dest =
@@ -748,7 +748,7 @@ D3D12_PIPELINE_STATE_STREAM_DESC_Argument::D3D12_PIPELINE_STATE_STREAM_DESC_Argu
                src.pViewInstanceLocations,
                src.ViewInstanceCount * sizeof(D3D12_VIEW_INSTANCE_LOCATION));
       }
-      Offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_VIEW_INSTANCING);
+      offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_VIEW_INSTANCING);
     } break;
     }
   }
@@ -758,58 +758,58 @@ D3D12_PIPELINE_STATE_STREAM_DESC_Argument::D3D12_PIPELINE_STATE_STREAM_DESC_Argu
 
 D3D12_PIPELINE_STATE_STREAM_DESC_Argument::~D3D12_PIPELINE_STATE_STREAM_DESC_Argument() {
   if (Copy) {
-    size_t Offset{};
-    while (Offset < Value->SizeInBytes) {
-      void* Data = static_cast<char*>(Value->pPipelineStateSubobjectStream) + Offset;
+    size_t offset{};
+    while (offset < Value->SizeInBytes) {
+      void* data = static_cast<char*>(Value->pPipelineStateSubobjectStream) + offset;
       D3D12_PIPELINE_STATE_SUBOBJECT_TYPE subobjectType =
-          *reinterpret_cast<D3D12_PIPELINE_STATE_SUBOBJECT_TYPE*>(Data);
+          *reinterpret_cast<D3D12_PIPELINE_STATE_SUBOBJECT_TYPE*>(data);
       switch (subobjectType) {
       case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_ROOT_SIGNATURE:
-        Offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_ROOT_SIGNATURE);
+        offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_ROOT_SIGNATURE);
         break;
       case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_VS: {
-        D3D12_SHADER_BYTECODE& desc = *static_cast<CD3DX12_PIPELINE_STATE_STREAM_VS*>(Data);
+        D3D12_SHADER_BYTECODE& desc = *static_cast<CD3DX12_PIPELINE_STATE_STREAM_VS*>(data);
         delete[] static_cast<const uint8_t*>(desc.pShaderBytecode);
-        Offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_VS);
+        offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_VS);
       } break;
       case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_PS: {
-        D3D12_SHADER_BYTECODE& desc = *static_cast<CD3DX12_PIPELINE_STATE_STREAM_PS*>(Data);
+        D3D12_SHADER_BYTECODE& desc = *static_cast<CD3DX12_PIPELINE_STATE_STREAM_PS*>(data);
         delete[] static_cast<const uint8_t*>(desc.pShaderBytecode);
-        Offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_PS);
+        offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_PS);
       } break;
       case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_DS: {
-        D3D12_SHADER_BYTECODE& desc = *static_cast<CD3DX12_PIPELINE_STATE_STREAM_DS*>(Data);
+        D3D12_SHADER_BYTECODE& desc = *static_cast<CD3DX12_PIPELINE_STATE_STREAM_DS*>(data);
         delete[] static_cast<const uint8_t*>(desc.pShaderBytecode);
-        Offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_DS);
+        offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_DS);
       } break;
       case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_HS: {
-        D3D12_SHADER_BYTECODE& desc = *static_cast<CD3DX12_PIPELINE_STATE_STREAM_HS*>(Data);
+        D3D12_SHADER_BYTECODE& desc = *static_cast<CD3DX12_PIPELINE_STATE_STREAM_HS*>(data);
         delete[] static_cast<const uint8_t*>(desc.pShaderBytecode);
-        Offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_HS);
+        offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_HS);
       } break;
       case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_GS: {
-        D3D12_SHADER_BYTECODE& desc = *static_cast<CD3DX12_PIPELINE_STATE_STREAM_GS*>(Data);
+        D3D12_SHADER_BYTECODE& desc = *static_cast<CD3DX12_PIPELINE_STATE_STREAM_GS*>(data);
         delete[] static_cast<const uint8_t*>(desc.pShaderBytecode);
-        Offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_GS);
+        offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_GS);
       } break;
       case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_CS: {
-        D3D12_SHADER_BYTECODE& desc = *static_cast<CD3DX12_PIPELINE_STATE_STREAM_CS*>(Data);
+        D3D12_SHADER_BYTECODE& desc = *static_cast<CD3DX12_PIPELINE_STATE_STREAM_CS*>(data);
         delete[] static_cast<const uint8_t*>(desc.pShaderBytecode);
-        Offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_CS);
+        offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_CS);
       } break;
       case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_AS: {
-        D3D12_SHADER_BYTECODE& desc = *static_cast<CD3DX12_PIPELINE_STATE_STREAM_AS*>(Data);
+        D3D12_SHADER_BYTECODE& desc = *static_cast<CD3DX12_PIPELINE_STATE_STREAM_AS*>(data);
         delete[] static_cast<const uint8_t*>(desc.pShaderBytecode);
-        Offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_AS);
+        offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_AS);
       } break;
       case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_MS: {
-        D3D12_SHADER_BYTECODE& desc = *static_cast<CD3DX12_PIPELINE_STATE_STREAM_MS*>(Data);
+        D3D12_SHADER_BYTECODE& desc = *static_cast<CD3DX12_PIPELINE_STATE_STREAM_MS*>(data);
         delete[] static_cast<const uint8_t*>(desc.pShaderBytecode);
-        Offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_MS);
+        offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_MS);
       } break;
       case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_STREAM_OUTPUT: {
         D3D12_STREAM_OUTPUT_DESC& desc =
-            *static_cast<CD3DX12_PIPELINE_STATE_STREAM_STREAM_OUTPUT*>(Data);
+            *static_cast<CD3DX12_PIPELINE_STATE_STREAM_STREAM_OUTPUT*>(data);
         if (desc.pSODeclaration) {
           for (unsigned i = 0; i < desc.NumEntries; ++i) {
             delete[] desc.pSODeclaration[i].SemanticName;
@@ -817,75 +817,75 @@ D3D12_PIPELINE_STATE_STREAM_DESC_Argument::~D3D12_PIPELINE_STATE_STREAM_DESC_Arg
           delete[] desc.pSODeclaration;
         }
         delete[] desc.pBufferStrides;
-        Offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_STREAM_OUTPUT);
+        offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_STREAM_OUTPUT);
       } break;
       case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_BLEND:
-        Offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_BLEND_DESC);
+        offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_BLEND_DESC);
         break;
       case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_SAMPLE_MASK:
-        Offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_SAMPLE_MASK);
+        offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_SAMPLE_MASK);
         break;
       case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_NODE_MASK:
-        Offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_NODE_MASK);
+        offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_NODE_MASK);
         break;
       case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_RASTERIZER:
-        Offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_RASTERIZER);
+        offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_RASTERIZER);
         break;
       case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_RASTERIZER1:
-        Offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_RASTERIZER1);
+        offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_RASTERIZER1);
         break;
       case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_RASTERIZER2:
-        Offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_RASTERIZER2);
+        offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_RASTERIZER2);
         break;
       case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_DEPTH_STENCIL:
-        Offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL);
+        offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL);
         break;
       case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_DEPTH_STENCIL1:
-        Offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL1);
+        offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL1);
         break;
       case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_DEPTH_STENCIL2:
-        Offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL2);
+        offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL2);
         break;
       case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_INPUT_LAYOUT: {
         D3D12_INPUT_LAYOUT_DESC& desc =
-            *static_cast<CD3DX12_PIPELINE_STATE_STREAM_INPUT_LAYOUT*>(Data);
+            *static_cast<CD3DX12_PIPELINE_STATE_STREAM_INPUT_LAYOUT*>(data);
         if (desc.pInputElementDescs) {
           for (unsigned i = 0; i < desc.NumElements; ++i) {
             delete[] desc.pInputElementDescs[i].SemanticName;
           }
           delete[] desc.pInputElementDescs;
         }
-        Offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_INPUT_LAYOUT);
+        offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_INPUT_LAYOUT);
       } break;
       case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_IB_STRIP_CUT_VALUE:
-        Offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_IB_STRIP_CUT_VALUE);
+        offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_IB_STRIP_CUT_VALUE);
         break;
       case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_PRIMITIVE_TOPOLOGY:
-        Offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_PRIMITIVE_TOPOLOGY);
+        offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_PRIMITIVE_TOPOLOGY);
         break;
       case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_RENDER_TARGET_FORMATS:
-        Offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_RENDER_TARGET_FORMATS);
+        offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_RENDER_TARGET_FORMATS);
         break;
       case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_DEPTH_STENCIL_FORMAT:
-        Offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL_FORMAT);
+        offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL_FORMAT);
         break;
       case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_SAMPLE_DESC:
-        Offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_SAMPLE_DESC);
+        offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_SAMPLE_DESC);
         break;
       case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_CACHED_PSO: {
         D3D12_CACHED_PIPELINE_STATE& desc =
-            *static_cast<CD3DX12_PIPELINE_STATE_STREAM_CACHED_PSO*>(Data);
+            *static_cast<CD3DX12_PIPELINE_STATE_STREAM_CACHED_PSO*>(data);
         delete[] static_cast<const uint8_t*>(desc.pCachedBlob);
-        Offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_CACHED_PSO);
+        offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_CACHED_PSO);
       } break;
       case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_FLAGS:
-        Offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_FLAGS);
+        offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_FLAGS);
         break;
       case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_VIEW_INSTANCING: {
         D3D12_VIEW_INSTANCING_DESC& desc =
-            *static_cast<CD3DX12_PIPELINE_STATE_STREAM_VIEW_INSTANCING*>(Data);
+            *static_cast<CD3DX12_PIPELINE_STATE_STREAM_VIEW_INSTANCING*>(data);
         delete[] desc.pViewInstanceLocations;
-        Offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_VIEW_INSTANCING);
+        offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_VIEW_INSTANCING);
       } break;
       }
     }

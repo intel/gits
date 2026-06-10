@@ -26,6 +26,11 @@ public:
   void Reset();
   void SetStateDesc(const D3D12_COMPUTE_PIPELINE_STATE_DESC_Argument* stateDesc) {
     m_StateDesc = stateDesc;
+    m_StateStreamDesc = nullptr;
+  }
+  void SetStateDesc(const D3D12_PIPELINE_STATE_STREAM_DESC_Argument* stateDesc) {
+    m_StateStreamDesc = stateDesc;
+    m_StateDesc = nullptr;
   }
   void DumpState(const std::wstring& dumpDir, ID3D12GraphicsCommandListDispatchCommand& c);
   void SetRootSignature(unsigned rootSignatureKey, D3D12_ROOT_SIGNATURE_DESC2* desc);
@@ -49,6 +54,7 @@ private:
   PipelineBindingState m_BindingState;
   DescriptorHeapTracker& m_DescriptorService;
   const D3D12_COMPUTE_PIPELINE_STATE_DESC_Argument* m_StateDesc{};
+  const D3D12_PIPELINE_STATE_STREAM_DESC_Argument* m_StateStreamDesc{};
   unsigned m_RootSignatureKey{};
 };
 

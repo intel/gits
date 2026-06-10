@@ -59,6 +59,12 @@ void PipelineStateDumpLayer::Post(ID3D12DeviceCreateComputePipelineStateCommand&
       std::make_unique<D3D12_COMPUTE_PIPELINE_STATE_DESC_Argument>(c.m_pDesc));
 }
 
+void PipelineStateDumpLayer::Post(ID3D12Device2CreatePipelineStateCommand& c) {
+  m_PipelineStateDescs.emplace(
+      c.m_ppPipelineState.Key,
+      std::make_unique<D3D12_PIPELINE_STATE_STREAM_DESC_Argument>(c.m_pDesc));
+}
+
 void PipelineStateDumpLayer::Post(ID3D12DeviceCreateRootSignatureCommand& c) {
   Microsoft::WRL::ComPtr<ID3D12VersionedRootSignatureDeserializer> deserializer;
   HRESULT hr = D3D12CreateVersionedRootSignatureDeserializer(
@@ -192,6 +198,12 @@ void PipelineStateDumpLayer::Post(ID3D12GraphicsCommandListResetCommand& c) {
       auto it = m_ComputePipelineStateDescs.find(c.m_pInitialState.Key);
       if (it != m_ComputePipelineStateDescs.end()) {
         computeState->SetStateDesc(it->second.get());
+      } else {
+        auto it = m_PipelineStateDescs.find(c.m_pInitialState.Key);
+        if (it != m_PipelineStateDescs.end()) {
+          computeState->SetStateDesc(it->second.get());
+          graphicsState->SetStateDesc(it->second.get());
+        }
       }
     }
   }
@@ -200,16 +212,22 @@ void PipelineStateDumpLayer::Post(ID3D12GraphicsCommandListResetCommand& c) {
 void PipelineStateDumpLayer::Post(ID3D12GraphicsCommandListClearStateCommand& c) {}
 
 void PipelineStateDumpLayer::Post(ID3D12GraphicsCommandListSetPipelineStateCommand& c) {
+  GraphicsPipelineState* graphicsState = GetGraphicsState(c.m_Object.Key);
+  ComputePipelineState* computeState = GetComputeState(c.m_Object.Key);
   if (c.m_pPipelineState.Key) {
     auto it = m_GraphicsPipelineStateDescs.find(c.m_pPipelineState.Key);
     if (it != m_GraphicsPipelineStateDescs.end()) {
-      GraphicsPipelineState* graphicsState = GetGraphicsState(c.m_Object.Key);
       graphicsState->SetStateDesc(it->second.get());
     } else {
       auto it = m_ComputePipelineStateDescs.find(c.m_pPipelineState.Key);
       if (it != m_ComputePipelineStateDescs.end()) {
-        ComputePipelineState* computeState = GetComputeState(c.m_Object.Key);
         computeState->SetStateDesc(it->second.get());
+      } else {
+        auto it = m_PipelineStateDescs.find(c.m_pPipelineState.Key);
+        if (it != m_PipelineStateDescs.end()) {
+          computeState->SetStateDesc(it->second.get());
+          graphicsState->SetStateDesc(it->second.get());
+        }
       }
     }
   }
