@@ -151,8 +151,7 @@ blocklist: list[str] = ['glCreateSyncFromCLeventARB']
 def apply_blocklist(functions_dict: dict[str, list[dict[str, Any]]]) -> None:
     """Remove blocked API calls entirely."""
     for func in blocklist:
-        if func in functions_dict:
-            del functions_dict[func]
+        functions_dict.pop(func, None)
 
 
 def calculate_wrap_names(functions_dict: dict[str, list[dict[str, Any]]]) -> None:
