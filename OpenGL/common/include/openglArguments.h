@@ -20,7 +20,7 @@
 #include "key_value.h"
 #include "platform.h"
 #include "openglTypes.h"
-#include "openglEnums.h"
+#include "glEnumsAuto.h"
 #include "openglDrivers.h"
 #include "stateDynamic.h"
 #include "mapping.h"
@@ -527,13 +527,6 @@ public:
     * type value.
     */
 class CGLenum : public CGLtype<GLenum, CGLenum, GLushort> {
-  struct TEnumName {
-    GLenum value;
-    const char* name;
-  };
-
-  static TEnumName _enumNames[];
-
 public:
   CGLenum();
   CGLenum(GLenum);
@@ -542,8 +535,6 @@ public:
   virtual const char* Name() const {
     return NAME;
   }
-
-  static std::string EnumString(GLenum value);
 };
 
 /**

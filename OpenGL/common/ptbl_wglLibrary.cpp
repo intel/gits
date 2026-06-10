@@ -20,7 +20,7 @@
 #include "ptbl_wglLibrary.h"
 #include "ptblLibrary.h"
 #include "openglTypes.h"
-#include "openglEnums.h"
+#include "glEnumsAuto.h"
 
 //******************************* Helper Functions *********************************
 void gits::OpenGL::PtblToWGLPFDAttribs(PIXELFORMATDESCRIPTOR* pfd,

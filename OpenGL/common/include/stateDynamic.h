@@ -19,7 +19,7 @@
 #include "gits.h"
 #include "stateObjects.h"
 #include "openglCommon.h"
-#include "openglEnums.h"
+#include "glEnumsAuto.h"
 #include "openglDrivers.h"
 #include "message_pump.h"
 

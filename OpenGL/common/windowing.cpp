@@ -16,7 +16,7 @@
 #include "gits.h"
 #include "pragmas.h"
 #include "message_pump.h"
-#include "openglEnums.h"
+#include "glEnumsAuto.h"
 #include "ptblLibrary.h"
 
 #include <iostream>

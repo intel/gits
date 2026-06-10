@@ -36,7 +36,7 @@
 #if defined GITS_PLATFORM_X11
 #include <X11/Xlib.h>
 #endif
-#include "openglEnums.h"
+#include "glEnumsAuto.h"
 
 /* ***************************** ID_GLX_CHOOSE_VISUAL *************************** */
 

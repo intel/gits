@@ -17,6 +17,7 @@
 
 #include "gits.h"
 #include "openglTypes.h"
+
 #include <string>
 #include <unordered_map>
 
@@ -41,7 +42,6 @@ GLenum InternalFormatToFboMatch(GLenum format);
 GLenum FboToBlitMask(GLenum attachment);
 const char* DrawBufferToSuffixStr(GLenum buffer);
 bool IsTextureCompressed(GLenum internalFormat);
-const char* GetGLEnumString(GLenum glenum);
 unsigned DataTypeSize(GLenum type);
 } // namespace OpenGL
 } // namespace gits

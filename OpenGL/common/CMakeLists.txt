@@ -11,9 +11,11 @@ set(OPENGL_COMMON_HEADER_DIR ${OPENGL_COMMON_SOURCE_DIR}/include)
 
 set_source_files_properties(
   ${OPENGL_COMMON_HEADER_DIR}/glDrivers.h
+  ${OPENGL_COMMON_HEADER_DIR}/glEnumsAuto.h
   ${OPENGL_COMMON_HEADER_DIR}/glFunctions.h
   ${OPENGL_COMMON_HEADER_DIR}/glIDs.h
   ${OPENGL_COMMON_HEADER_DIR}/glIDswitch.h
+  ${OPENGL_COMMON_SOURCE_DIR}/glEnumsAuto.cpp
   ${OPENGL_COMMON_SOURCE_DIR}/glFunctions.cpp
   PROPERTIES GENERATED 1
 )
@@ -34,7 +36,7 @@ add_library(OpenGL_common
   ${OPENGL_COMMON_HEADER_DIR}/openglArguments.h
   ${OPENGL_COMMON_HEADER_DIR}/openglCommon.h
   ${OPENGL_COMMON_HEADER_DIR}/openglDrivers.h
-  ${OPENGL_COMMON_HEADER_DIR}/openglEnums.h
+  ${OPENGL_COMMON_HEADER_DIR}/glEnumsAuto.h
   ${OPENGL_COMMON_HEADER_DIR}/openglFunction.h
   ${OPENGL_COMMON_HEADER_DIR}/openglLibrary.h
   ${OPENGL_COMMON_HEADER_DIR}/openglTools.h
@@ -77,7 +79,7 @@ add_library(OpenGL_common
   ${OPENGL_COMMON_SOURCE_DIR}/wglFunctions.cpp
   ${OPENGL_COMMON_SOURCE_DIR}/windowContextState.cpp
   ${OPENGL_COMMON_SOURCE_DIR}/windowing.cpp
-  ${OPENGL_COMMON_SOURCE_DIR}/glEnumStrings.cpp
+  ${OPENGL_COMMON_SOURCE_DIR}/glEnumsAuto.cpp
   ${OPENGL_COMMON_SOURCE_DIR}/clientArrays.cpp
   ${OPENGL_COMMON_SOURCE_DIR}/gitsFunctions.cpp
   ${OPENGL_COMMON_SOURCE_DIR}/stateTracking.cpp
@@ -94,9 +96,11 @@ target_include_directories(OpenGL_common_interface INTERFACE ${OPENGL_COMMON_HEA
 
 source_group("Generated Files" FILES
   ${OPENGL_COMMON_HEADER_DIR}/glDrivers.h
+  ${OPENGL_COMMON_HEADER_DIR}/glEnumsAuto.h
   ${OPENGL_COMMON_HEADER_DIR}/glFunctions.h
   ${OPENGL_COMMON_HEADER_DIR}/glIDs.h
   ${OPENGL_COMMON_HEADER_DIR}/glIDswitch.h
+  ${OPENGL_COMMON_SOURCE_DIR}/glEnumsAuto.cpp
   ${OPENGL_COMMON_SOURCE_DIR}/glFunctions.cpp)
 
 target_link_libraries(OpenGL_common PRIVATE common configuration)

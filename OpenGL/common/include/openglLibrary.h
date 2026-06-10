@@ -23,7 +23,7 @@
 #include "version.h"
 #include "windowing.h"
 #include "platform.h"
-#include "openglEnums.h"
+#include "glEnumsAuto.h"
 #include "tools.h"
 #include <unordered_map>
 #include <list>

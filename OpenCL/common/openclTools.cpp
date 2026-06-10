@@ -19,7 +19,7 @@
 #include "exception.h"
 #include "recorder.h"
 
-#include "openglEnums.h"
+#include "glEnumsAuto.h"
 
 #include <array>
 #include <utility>

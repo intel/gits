@@ -17,6 +17,7 @@
 #include "openclStateDynamic.h"
 #include "openclTools.h"
 
+#include "glEnumsAuto.h"
 #include "wglArguments.h"
 #include "mapping.h"
 
@@ -145,7 +146,7 @@ std::string gits::OpenCL::Ccl_image_format::ToString() const {
 }
 
 std::string gits::OpenCL::Ccl_GLenum::ToString() const {
-  return OpenGL::CGLenum::EnumString(Value());
+  return GetGLenumString(GLenumApi::Unknown, Value(), GLenumGroup::Unknown);
 }
 
 /******************** CALLBACKS ********************/

@@ -71,8 +71,10 @@ third_party/*
 recorder/gits_config.txt
 
 # OpenGL
+OpenGL/common/glEnumsAuto.cpp
 OpenGL/common/glFunctions.cpp
 OpenGL/common/include/glDrivers.h
+OpenGL/common/include/glEnumsAuto.h
 OpenGL/common/include/glFunctions.h
 OpenGL/common/include/glIDs.h
 OpenGL/common/include/glIDswitch.h

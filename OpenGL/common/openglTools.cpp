@@ -20,7 +20,7 @@
 #include "gits.h"
 #include "log.h"
 #include "openglCommon.h"
-#include "openglEnums.h"
+#include "glEnumsAuto.h"
 #include "openglLibrary.h"
 #include "pragmas.h"
 #include "ptblLibrary.h"
@@ -1885,7 +1885,7 @@ std::string ToStr<GLenum>(const GLenum& value) {
   //This operator converts all unsigned int values higher then threshold (1000) into enum string. As we can't differentiate between GLuint
   //and GLenum types there is an issue that GLuint values higher then threshold are converted to GLenum string and lower GLenum are not converted at all.
   if (value > 1000) {
-    return GetGLEnumString(value);
+    return GetGLenumString(GLenumApi::Unknown, value, GLenumGroup::Unknown);
   }
   return std::to_string(value);
 }

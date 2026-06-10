@@ -31,6 +31,7 @@
 #include "eglFunctions.h"
 #include "glxFunctions.h"
 #include "wglFunctions.h"
+#include "glEnumsAuto.h"
 
 #include "platform.h"
 #ifdef GITS_PLATFORM_WINDOWS
@@ -4229,8 +4230,9 @@ void gits::OpenGL::CVariableGLSLInfo::Schedule(CScheduler& scheduler,
                 new CglUniformMatrix4x3fv(newLocation, dataSize / 12, false, dataPtr));
             break;
           default:
-            LOG_ERROR << "Unknown float uniform type: " << GetGLEnumString(uniformInfo.type) << " ("
-                      << gits::hex(uniformInfo.type) << ")";
+            LOG_ERROR << "Unknown float uniform type: "
+                      << GetGLenumString(GLenumApi::GL, uniformInfo.type, GLenumGroup::UniformType)
+                      << " (" << gits::hex(uniformInfo.type) << ")";
             throw ENotImplemented(EXCEPTION_MESSAGE);
           }
         }
@@ -4576,8 +4578,9 @@ void gits::OpenGL::CVariableGLSLInfo::ObtainUniform(GLuint programId,
       drv.gl.glGetUniformuiv(programId, location + i, uiuniform.data[i].data());
     }
   } else {
-    LOG_ERROR << "Type " << GetGLEnumString(dimensionality.first) << " ("
-              << gits::hex(dimensionality.first) << ") is not one of: ";
+    LOG_ERROR << "Type "
+              << GetGLenumString(GLenumApi::GL, dimensionality.first, GLenumGroup::UniformType)
+              << " (" << gits::hex(dimensionality.first) << ") is not one of: ";
     LOG_ERROR << " - GL_INT (" << gits::hex(GL_INT) << ")";
     LOG_ERROR << " - GL_FLOAT (" << gits::hex(GL_FLOAT) << ")";
     LOG_ERROR << " - GL_UNSIGNED_INT (" << gits::hex(GL_UNSIGNED_INT) << ")";
@@ -4727,8 +4730,9 @@ std::pair<GLenum, GLuint> gits::OpenGL::CVariableGLSLInfo::UniformDimensions(GLe
   if (it != typeMap.end()) {
     return it->second;
   } else {
-    LOG_ERROR << "Unknown uniform type: " << GetGLEnumString(type) << " (" << gits::hex(type)
-              << ")";
+    LOG_ERROR << "Unknown uniform type: "
+              << GetGLenumString(GLenumApi::GL, type, GLenumGroup::UniformType) << " ("
+              << gits::hex(type) << ")";
     throw ENotImplemented(EXCEPTION_MESSAGE);
   }
 }

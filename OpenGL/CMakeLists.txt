@@ -19,6 +19,8 @@ add_custom_command(
     "${OpenGL_SCRIPTS_DIR}/templates/gitsPluginPrePostAuto.cpp.mako"
     "${OpenGL_SCRIPTS_DIR}/templates/gitsPluginPrePostAuto.h.mako"
     "${OpenGL_SCRIPTS_DIR}/templates/glDrivers.h.mako"
+    "${OpenGL_SCRIPTS_DIR}/templates/glEnumsAuto.h.mako"
+    "${OpenGL_SCRIPTS_DIR}/templates/glEnumsAuto.cpp.mako"
     "${OpenGL_SCRIPTS_DIR}/templates/glFunctions.cpp.mako"
     "${OpenGL_SCRIPTS_DIR}/templates/glFunctions.h.mako"
     "${OpenGL_SCRIPTS_DIR}/templates/glIDswitch.h.mako"
@@ -33,9 +35,11 @@ set_target_properties(OpenGL_codegen PROPERTIES FOLDER OpenGL)
 # staying here doesn't do any harm
 set_source_files_properties(
   ${CMAKE_CURRENT_SOURCE_DIR}/common/include/glDrivers.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/common/include/glEnumsAuto.h
   ${CMAKE_CURRENT_SOURCE_DIR}/common/include/glFunctions.h
   ${CMAKE_CURRENT_SOURCE_DIR}/common/include/glIDs.h
   ${CMAKE_CURRENT_SOURCE_DIR}/common/include/glIDswitch.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/common/glEnumsAuto.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/common/glFunctions.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/recorder/openglRecorderWrapperAuto.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/recorder/include/openglRecorderWrapperAuto.h

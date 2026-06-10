@@ -21,7 +21,7 @@
 
 #include "openglCommon.h"
 #include "openglTools.h"
-#include "openglEnums.h"
+#include "glEnumsAuto.h"
 #include "intervalSet.h"
 
 #include <unordered_map>

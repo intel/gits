@@ -9,7 +9,7 @@
 #include "openglDrivers.h"
 #include "log.h"
 #include "platform.h"
-#include "openglEnums.h"
+#include "glEnumsAuto.h"
 #include "exception.h"
 #include "gits.h"
 #include "lua_bindings.h"

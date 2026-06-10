@@ -15,7 +15,7 @@
 #include "openglRecorderWrapper.h"
 #include "gitsPlugin.h"
 #include "openglDrivers.h"
-#include "openglEnums.h"
+#include "glEnumsAuto.h"
 #include "gitsPluginPrePostAuto.h"
 #include "pragmas.h"
 

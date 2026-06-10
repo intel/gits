@@ -13,7 +13,7 @@
 
 #include "ptbl_eglLibrary.h"
 #include "openglDrivers.h"
-#include "openglEnums.h"
+#include "glEnumsAuto.h"
 #include "windowing.h"
 #include "eglFunctions.h"
 

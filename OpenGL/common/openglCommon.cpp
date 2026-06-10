@@ -10,7 +10,7 @@
 #include "log.h"
 #include "tools.h"
 #include "openglDrivers.h"
-#include "openglEnums.h"
+#include "glEnumsAuto.h"
 #include "stateDynamic.h"
 #include <cmath>
 

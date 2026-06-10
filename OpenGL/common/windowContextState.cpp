@@ -18,7 +18,7 @@
 #include "openglDrivers.h"
 #include "ptbl_glxLibrary.h"
 #include "ptblLibrary.h"
-#include "openglEnums.h"
+#include "glEnumsAuto.h"
 
 using namespace gits;
 using namespace OpenGL;

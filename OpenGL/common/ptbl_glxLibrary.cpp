@@ -15,7 +15,7 @@
 #include "ptblLibrary.h"
 #include "openglDrivers.h"
 #include "openglTypes.h"
-#include "openglEnums.h"
+#include "glEnumsAuto.h"
 #if defined GITS_PLATFORM_X11
 #define XVisualInfo XVisualInfo_
 #include <GL/glx.h>

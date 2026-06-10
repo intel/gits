@@ -20,7 +20,7 @@
 
 #include "pfattribs.h"
 #include "log.h"
-#include "openglEnums.h"
+#include "glEnumsAuto.h"
 #include <unordered_map>
 
 void gits::GetAttribsFromPFD(const PIXELFORMATDESCRIPTOR* pfd,

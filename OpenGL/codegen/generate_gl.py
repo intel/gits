@@ -8,18 +8,20 @@
 #
 # ===================== end_copyright_notice ==============================
 
-from generator import get_tokens, FuncType, Token, Argument, ReturnValue
-
-from datetime import datetime
 import copy
 import os.path
 import re
 import shutil
+import sys
 import textwrap
+from collections import defaultdict
+from datetime import datetime
+from typing import NamedTuple
 
-import mako.template
 import mako.exceptions
+import mako.template
 
+from generator import Api, Argument, EnumType, EnumValue, FuncType, ReturnValue, Token, get_enums, get_tokens
 
 AUTO_GENERATED_HEADER = f"""
 //
@@ -246,6 +248,8 @@ wgl_function_names = '''
 	wglCopyImageSubDataNV
 '''.strip('\r\n')
 
+
+# Token helpers
 
 def version_suffix(version: int) -> str:
     """Return a version suffix (like '_V1'), empty for version 0."""
@@ -537,6 +541,325 @@ def driver_call(token: Token) -> str:
 
     return f'{retval_assignment}{function_prefix}{token.name}{driver_args};'
 
+
+# Enum helpers
+
+# Helps pick best name to use when several enums match (api, value, group).
+SUFFIX_RANK: dict[str, int] = {
+    '':      0,
+    'KHR':   1,
+    'ARB':   2,
+    'OES':   3,
+    'EXT':   4,
+    'ANGLE': 5,  'WEBGL': 5,
+    'NV':    6,  'INTEL': 6,  'AMD':   6,
+    'ATI':   7,  'NVX':   7,
+    'APPLE': 8,  'IMG':   8,  'QCOM':  8,  'ANDROID': 8,
+    'ARM':   8,  'OVR':   8,
+    'MESA':  9,  'MESAX': 9,
+    'SGI':  10,  'SGIS': 10,  'SGIX': 10,  'IBM':    10,
+    'SUN':  10,  'SUNX': 10,  '3DFX': 10,  'HP':     10,
+    'WIN':  10,  'PGI':  10,  'I3D':  10,  'TAO':    10,
+    'NOK':  10,  'INGR': 10,  'OML':  10,  'REND':   10,
+    'DMP':  10,  'VIV':  10,  'FJ':   10,
+}
+
+_known_suffixes = '|'.join(s for s in SUFFIX_RANK if s)
+VENDOR_SUFFIX_REGEX = re.compile(rf'_({_known_suffixes})$')
+
+
+def strip_suffix(name: str) -> str:
+    """Remove the vendor suffix from an enum name string, if any."""
+    return VENDOR_SUFFIX_REGEX.sub('', name)
+
+
+def extract_suffix(name: str) -> str:
+    """Return the vendor suffix of an enum name string, or '' if none."""
+    match = VENDOR_SUFFIX_REGEX.search(name)
+    return match.group(1) if match else ''
+
+
+def get_suffix_rank(enum: EnumValue) -> int:
+    """Return the suffix rank of a single enum."""
+    return SUFFIX_RANK[extract_suffix(enum.name)]
+
+
+def get_best_ranked_enum(group: list[EnumValue]) -> EnumValue:
+    """Return the enum with lowest (best) suffix rank from a list of enums."""
+    return min(group, key=get_suffix_rank)
+
+
+def get_group_rank(group: list[EnumValue]) -> int:
+    """Return the lowest (best) suffix rank among a list of enums."""
+    return get_suffix_rank(get_best_ranked_enum(group))
+
+
+SENTINEL_GROUP = ''  # Used for enums with no group annotation.
+
+class EnumKey(NamedTuple):
+    """Data to be mapped to a GLenum name string."""
+    api:   Api  # which API this enum belongs to
+    value: int  # converted from str to ignore formatting
+    group: str  # group name, or SENTINEL_GROUP
+
+EnumNameMap = dict[EnumKey, str]
+
+# Manual overrides for (api, value, group) keys where automatic resolution
+# would produce a tie between two no-suffix names with different generic names.
+# All other genuine duplicates are resolved automatically by suffix ranking.
+CANONICAL_NAME_OVERRIDES: EnumNameMap = {
+    # GL_LOGIC_OP was split into GL_INDEX_LOGIC_OP for color-index buffers and
+    # GL_COLOR_LOGIC_OP for RGBA buffers. Now a deprecated alias of the former.
+    EnumKey(Api.GL, 0x0BF1, 'GetPName'):             'GL_INDEX_LOGIC_OP',
+    # GL_TEXTURE_COMPONENTS was renamed when internal formats were formally defined.
+    EnumKey(Api.GL, 0x1003, 'TextureParameterName'): 'GL_TEXTURE_INTERNAL_FORMAT',
+    EnumKey(Api.GL, 0x1003, 'GetTextureParameter'):  'GL_TEXTURE_INTERNAL_FORMAT',
+    # GL_BLEND_EQUATION was split into GL_BLEND_EQUATION_RGB and
+    # GL_BLEND_EQUATION_ALPHA and is an alias of the former.
+    EnumKey(Api.GL, 0x8009, 'GetPName'):             'GL_BLEND_EQUATION_RGB',
+    # Canonical form in gl.xml, used in ARB_texture_env_combine, likely older.
+    EnumKey(Api.GL, 0x8589, 'TextureEnvParameter'):  'GL_SOURCE1_ALPHA',
+    # It seems GL_CLIP_PLANEn_IMG and GL_CLIP_DISTANCEn_APPLE should be marked
+    # in gl.xml as aliases of the core GL_CLIP_PLANEn / GL_CLIP_DISTANCEn
+    # enums but for some reason aren't. Prefer DISTANCE over PLANE since it's
+    # the newer terminology despite PLANE being canonical in gl.xml.
+    EnumKey(Api.GL, 0x0D32, SENTINEL_GROUP): 'GL_MAX_CLIP_DISTANCES',
+    EnumKey(Api.GL, 0x3000, SENTINEL_GROUP): 'GL_CLIP_DISTANCE0',
+    EnumKey(Api.GL, 0x3001, SENTINEL_GROUP): 'GL_CLIP_DISTANCE1',
+    EnumKey(Api.GL, 0x3002, SENTINEL_GROUP): 'GL_CLIP_DISTANCE2',
+    EnumKey(Api.GL, 0x3003, SENTINEL_GROUP): 'GL_CLIP_DISTANCE3',
+    EnumKey(Api.GL, 0x3004, SENTINEL_GROUP): 'GL_CLIP_DISTANCE4',
+    EnumKey(Api.GL, 0x3005, SENTINEL_GROUP): 'GL_CLIP_DISTANCE5',
+    EnumKey(Api.GL, 0x3006, SENTINEL_GROUP): 'GL_CLIP_DISTANCE6',
+    EnumKey(Api.GL, 0x3007, SENTINEL_GROUP): 'GL_CLIP_DISTANCE7',
+    # GL_TEXTURE_3D_BINDING_OES and GL_TEXTURE_BINDING_3D_OES are unmarked
+    # aliases. Pick the established GL_TEXTURE_BINDING_<target> pattern.
+    EnumKey(Api.GL, 0x806A, SENTINEL_GROUP): 'GL_TEXTURE_BINDING_3D',
+    # Accidental collisions with no true winner, acknowledged in gl.xml.
+    # We choose non-debug enums over GL_DEBUG_*_MESA.
+    EnumKey(Api.GL, 0x8759, SENTINEL_GROUP): 'GL_TEXTURE_1D_STACK_MESAX',
+    EnumKey(Api.GL, 0x875A, SENTINEL_GROUP): 'GL_TEXTURE_2D_STACK_MESAX',
+    EnumKey(Api.GL, 0x875B, SENTINEL_GROUP): 'GL_PROXY_TEXTURE_1D_STACK_MESAX',
+
+    # WGL bit value 1 is used by few genuinely unrelated bitmasks.
+    # WGL_SWAP_MAIN_PLANE and WGL_FONT_POLYGONS tie on rank. The former is a
+    # core framebuffer concept, while the latter a flag for a niche function.
+    EnumKey(Api.WGL, 0x0001, SENTINEL_GROUP): 'WGL_SWAP_MAIN_PLANE',
+
+    # EGL bit value 1 is used by few unrelated bitmasks and the Boolean group.
+    # EGL_TRUE, EGL_PBUFFER_BIT, EGL_OPENGL_ES_BIT tie on rank.
+    # EGL_TRUE is the most often encountered of those three.
+    EnumKey(Api.EGL, 0x0001, SENTINEL_GROUP): 'EGL_TRUE',
+    # EGL_PIXMAP_BIT, EGL_OPENVG_BIT, EGL_CONTEXT_OPENGL_COMPATIBILITY_PROFILE_BIT
+    # tie on rank. The former is the oldest (EGL 1.0) surface type bit, while OpenVG 
+    # is deprecated and compat profile is used only during context creation.
+    EnumKey(Api.EGL, 0x0002, SENTINEL_GROUP): 'EGL_PIXMAP_BIT',
+    # EGL_WINDOW_BIT and EGL_OPENGL_ES2_BIT tie on rank. The former is the
+    # primary EGL surface type since EGL 1.0. We are unlikely to see ES2 apps.
+    EnumKey(Api.EGL, 0x0004, SENTINEL_GROUP): 'EGL_WINDOW_BIT',
+    # EGL_VG_ALPHA_FORMAT_PRE_BIT and EGL_OPENGL_ES3_BIT tie on rank.
+    # OpenVG is deprecated, so choose the latter.
+    EnumKey(Api.EGL, 0x0040, SENTINEL_GROUP): 'EGL_OPENGL_ES3_BIT',
+
+    # These GLX values are shared across GLXAttribute (glXChooseVisual visual
+    # attribs), GLXStringName, GLXErrorCode, and several bitmask groups.
+    # GLXAttribute is the largest contiguous no-suffix sequence and covers the
+    # most commonly encountered values in practice.
+    EnumKey(Api.GLX, 0x0001, SENTINEL_GROUP): 'GLX_USE_GL',
+    EnumKey(Api.GLX, 0x0002, SENTINEL_GROUP): 'GLX_BUFFER_SIZE',
+    EnumKey(Api.GLX, 0x0003, SENTINEL_GROUP): 'GLX_LEVEL',
+    EnumKey(Api.GLX, 0x0004, SENTINEL_GROUP): 'GLX_RGBA',
+    EnumKey(Api.GLX, 0x0005, SENTINEL_GROUP): 'GLX_DOUBLEBUFFER',
+    EnumKey(Api.GLX, 0x0006, SENTINEL_GROUP): 'GLX_STEREO',
+    EnumKey(Api.GLX, 0x0007, SENTINEL_GROUP): 'GLX_AUX_BUFFERS',
+    EnumKey(Api.GLX, 0x0008, SENTINEL_GROUP): 'GLX_RED_SIZE',
+    EnumKey(Api.GLX, 0x0010, SENTINEL_GROUP): 'GLX_ACCUM_BLUE_SIZE',
+    # The other 0x0011 (17) candidate __GLX_NUMBER_EVENTS is not a real enum.
+    EnumKey(Api.GLX, 0x0011, SENTINEL_GROUP): 'GLX_ACCUM_ALPHA_SIZE',
+    EnumKey(Api.GLX, 0x0020, SENTINEL_GROUP): 'GLX_CONFIG_CAVEAT',
+}
+
+
+def is_real_glenum(enum: EnumValue) -> bool:
+    """Return True if the enum is a proper GLenum, False otherwise."""
+    # Some enums aren't real GLenums, but abuses of the enum mechanism. They
+    # are mostly grouped in the 'SpecialNumbers' group, which is only annotated
+    # directly on <enum> tags in gl.xml. Other registries only ever annotate
+    # group="SpecialNumbers" on <enums> tags, but reg.py provided by Khronos
+    # doesn't provide any data from <enums> XML elements. This is why we use
+    # this heuristic.
+
+    # Known non-GLenum values.
+    if 'SpecialNumbers' in enum.groups:
+        return False  # Works for GL. For WGL/EGL/GLX, we need below heuristics.
+    elif enum.value.startswith('EGL_CAST'):
+        return False  # They are explicitly cast to a type different from GLenum.
+    elif enum.type != EnumType.INT:
+        return False  # u/ull type annotations only appear on SpecialNumbers enums.
+    elif enum.value == '"GLX"':
+        return False  # GLX registry XML admits this is abuse of the enum mechanism.
+
+    return True
+
+
+def enums_by_key(enums_by_api: dict[Api, list[EnumValue]]) -> dict[EnumKey, list[EnumValue]]:
+    """Return mapping from EnumKey (api, value, group) to enums matching it.
+
+    Enums that aren't proper GLenums are skipped. Enums with no group use
+    SENTINEL_GROUP as their group.
+    """
+    enums_by_key: dict[EnumKey, list[EnumValue]] = defaultdict(list)
+    for api, enums in enums_by_api.items():
+        for enum in enums:
+            if not is_real_glenum(enum):
+                continue
+
+            try:
+                norm = int(enum.value, 0) # 0 means auto-detect base.
+            except (ValueError, TypeError):
+                sys.exit(f"Error: unexpected non-integer enum value {enum.name} = {enum.value}")
+
+            if not enum.groups:
+                enums_by_key[EnumKey(api, norm, SENTINEL_GROUP)].append(enum)
+            else:
+                for group in enum.groups:
+                    enums_by_key[EnumKey(api, norm, group)].append(enum)
+    return enums_by_key
+
+
+def build_enum_name_map(enums_by_api: dict[Api, list[EnumValue]]) -> EnumNameMap:
+    """Return a mapping from (api, normalized_value, group) to a canonical name."""
+    result: EnumNameMap = {}
+
+    for key, enums_matching_key in enums_by_key(enums_by_api).items():
+        if key.group == 'SpecialNumbers':
+            # It's only used for grouping in the XML, no function actually uses it.
+            continue
+
+        if key in CANONICAL_NAME_OVERRIDES:
+            result[key] = CANONICAL_NAME_OVERRIDES[key]
+            continue
+
+        # Possible alias/target group combinations:
+        # 1. Alias group == target group: choose target, drop alias.
+        # 2. Target has a group, alias doesn't: use target for group resolution.
+        # 3. Alias has a group, target doesn't: keep alias for group resolution.
+        # 4. Alias group != target group: keep alias for group resolution.
+        # Cases 1 & 2 are common and expected. Cases 2, 3, 4 resolve target and
+        # alias separately (different keys). In case 2, alias will most likely
+        # be dropped in sentinel group resolution. Cases 3 & 4 are unusual:
+        # alias isn't a simple synonym but has a different context in which
+        # it's preferred. Examples: case 3: GL_PROGRAM_POINT_SIZE, case 4:
+        # GL_SHADING_RATE_*_PIXELS_QCOM vs their EXT aliases.
+        non_aliases: list[EnumValue] = [e for e in enums_matching_key if e.alias is None]
+        candidates: list[EnumValue] = non_aliases if non_aliases else enums_matching_key
+
+        if len(candidates) == 1:
+            result[key] = candidates[0].name
+            continue
+
+        # Group candidates whose names differ only by vendor suffix.
+        generic_name_groups: dict[str, list[EnumValue]] = defaultdict(list)
+        for e in candidates:
+            generic_name_groups[strip_suffix(e.name)].append(e)
+
+        # Resolve name conflicts using vendor suffixes.
+        if len(generic_name_groups) == 1:
+            # One generic name with multiple suffixes; pick the best-ranked member.
+            result[key] = get_best_ranked_enum(candidates).name
+        else:
+            # Multiple generic names; rank each group by their best member.
+            ranked_groups = sorted(generic_name_groups.values(), key=get_group_rank)
+            if get_group_rank(ranked_groups[0]) == get_group_rank(ranked_groups[1]):
+                names = [e.name for g in ranked_groups for e in g]
+                print(f'WARNING: unresolvable tie for {key}: {names}. '
+                      f'Add an entry to CANONICAL_NAME_OVERRIDES.')
+            else:
+                winner_group = ranked_groups[0]
+                result[key] = get_best_ranked_enum(winner_group).name
+
+    return result
+
+
+def get_bitmask_groups(enums_by_api: dict[Api, list[EnumValue]]) -> frozenset[str]:
+    """Return the names of all groups that contain bitflag pseudo-enums."""
+    # We don't simply get the group names from <enums type="bitmask"> tags because the
+    # group names annotated on <enums> can differ from those on individual <enum> tags.
+    # E.g., <enums group="PathRenderingTokenNV"> contains <enum group="PathCoordType">
+    # tags. Instead, we exploit naming conventions: pseudo-enum bitflag constants use
+    # the _BIT suffix. We exclude the _BITS suffix from our heuristic as it appears
+    # not only in all-bits-set mask constants like GL_ALL_ATTRIB_BITS, but also in
+    # scalar enums like GL_SUBPIXEL_BITS. Every bitmask group containing a _BITS mask
+    # also contains _BIT flags, so excluding _BITS doesn't yield false negatives.
+    bitmask_groups: set[str] = set()
+    for enum_list in enums_by_api.values():
+        for enum in enum_list:
+            if '_BIT' in enum.name and '_BITS' not in enum.name:
+                bitmask_groups.update(enum.groups)
+    return frozenset(bitmask_groups)
+
+
+class EnumEntry(NamedTuple):
+    """One entry for the C++ array of enums generated by the template."""
+    # No API field here as each API has its own array.
+    group: str  # group name, or SENTINEL_GROUP for ungrouped enums
+    value: int
+    name:  str  # best name for this (api, value, group) combination
+
+
+def build_enum_entries_by_api(
+    enum_name_map: EnumNameMap,
+) -> dict[Api, list[EnumEntry]]:
+    """Return enum data for C++ (api, value, group) -> name mapping, grouped by API.
+
+    Includes both scalar enums and bitmask group members. This way some bitmask
+    values (zero, single-bit-set, and all-bits-set) can be looked up by exact
+    match, so no decomposition is needed.
+    """
+    result: dict[Api, list[EnumEntry]] = {api: [] for api in Api}
+
+    for key, name in enum_name_map.items():
+        group_str = key.group if key.group else 'NoGroup'
+        result[key.api].append(EnumEntry(group=group_str, value=key.value, name=name))
+
+    for api in Api:
+        result[api].sort()
+
+    return result
+
+
+def build_bitflag_entries_by_api(
+    enum_name_map: EnumNameMap,
+    bitmask_groups: frozenset[str],
+) -> dict[Api, list[EnumEntry]]:
+    """Return single-bit bitflag entries grouped by API.
+
+    This data will be used to decompose bitmasks into their flags.
+
+    Only true bitflags (single bit set) from bitmask groups are included. We
+    skip zero and all-bits-set masks because they can be looked up in the
+    regular (scalar) enum map first.
+
+    Ungrouped enums are excluded; without group data we don't know which name
+    to use for a given bit.
+    """
+    result: dict[Api, list[EnumEntry]] = {api: [] for api in Api}
+
+    for key, name in enum_name_map.items():
+        if key.group not in bitmask_groups:
+            continue
+        if key.value.bit_count() != 1:
+            continue
+        result[key.api].append(EnumEntry(group=key.group, value=key.value, name=name))
+
+    for api in Api:
+        result[api].sort()
+
+    return result
+
+
+# Helpers for dealing with files and templates
+
 def mako_write(inpath: str, outpath: str, **kwargs) -> int:
     """Render a Mako template into a file."""
     # Objects used by all (or almost all) Mako templates.
@@ -611,6 +934,16 @@ def main() -> None:
     # Example: {'glFoo': [glFoo, glFoo_v1], 'glBar': [glBar]}
     all_tokens: dict[str, list[Token]] = get_tokens(include_disabled=True)
     enabled_tokens: dict[str, list[Token]] = get_tokens(include_disabled=False)
+
+    enums_by_api: dict[Api, list[EnumValue]] = get_enums()
+    enums: list[EnumValue] = []
+    for api_enums in enums_by_api.values():
+        enums.extend(api_enums)
+    enum_name_map: EnumNameMap = build_enum_name_map(enums_by_api)
+
+    bitmask_groups: frozenset[str] = get_bitmask_groups(enums_by_api)
+    enum_entries_by_api: dict[Api, list[EnumEntry]] = build_enum_entries_by_api(enum_name_map)
+    bitflag_entries_by_api: dict[Api, list[EnumEntry]] = build_bitflag_entries_by_api(enum_name_map, bitmask_groups)
 
     update_gl_ids('glIDs.h', 'common/include', gl_functions=enabled_tokens)
 
@@ -696,6 +1029,22 @@ def main() -> None:
                is_draw_function=is_draw_function,
                args_to_str=args_to_str,
                gl_functions=all_tokens)
+
+    mako_write(
+        'templates/glEnumsAuto.h.mako',
+        'common/include/glEnumsAuto.h',
+        enums=enums,
+        enum_name_map=enum_name_map,
+        bitmask_groups=bitmask_groups,
+    )
+    mako_write(
+        'templates/glEnumsAuto.cpp.mako',
+        'common/glEnumsAuto.cpp',
+        Api=Api,
+        enum_entries_by_api=enum_entries_by_api,
+        bitflag_entries_by_api=bitflag_entries_by_api,
+        bitmask_groups=bitmask_groups,
+    )
 
 if __name__ == '__main__':
     main()

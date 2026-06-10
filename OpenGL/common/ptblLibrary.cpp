@@ -16,7 +16,7 @@
 #include "ptbl_glxLibrary.h"
 #include "ptbl_eglLibrary.h"
 #include "tools_lite.h"
-#include "openglEnums.h"
+#include "glEnumsAuto.h"
 
 //*********************** Native API ****************************
 gits::OpenGL::PtblNativeAPI::Type gits::OpenGL::PtblNativeAPI::_api = UNKNOWN;
