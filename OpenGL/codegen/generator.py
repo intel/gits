@@ -10,7 +10,17 @@
 
 from collections import defaultdict
 from dataclasses import dataclass, field
-from enum import Flag, IntFlag, StrEnum
+from enum import Flag, IntFlag
+
+try:
+    from enum import StrEnum
+except ImportError:
+    # StrEnum was introduced in Python 3.11, but we must support 3.10.
+    from enum import Enum
+    class StrEnum(str, Enum):
+        def __str__(self) -> str:
+            return self.value
+
 from typing import Any
 
 
