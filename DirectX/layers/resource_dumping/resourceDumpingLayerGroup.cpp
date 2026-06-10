@@ -13,6 +13,7 @@
 #include "dispatchOutputsDumpLayer.h"
 #include "accelerationStructuresDumpLayer.h"
 #include "rootSignatureDumpLayer.h"
+#include "pipelineStateDumpLayer.h"
 #include "log.h"
 #include "configurationLib.h"
 
@@ -42,6 +43,9 @@ void ResourceDumpingLayerGroup::LoadLayers() {
   }
   if (Configurator::Get().directx.features.rootSignatureDump.enabled) {
     AddLayer(std::make_unique<RootSignatureDumpLayer>());
+  }
+  if (Configurator::Get().directx.features.pipelineStateDump.enabled) {
+    AddLayer(std::make_unique<PipelineStateDumpLayer>());
   }
 }
 

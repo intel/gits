@@ -30,10 +30,7 @@ public:
   void CreateDescriptorHeap(ID3D12DeviceCreateDescriptorHeapCommand& c);
   void CreateResource(ID3D12Resource* resource, unsigned resourceKey);
   void CreateRootSignature(ID3D12DeviceCreateRootSignatureCommand& c);
-  void CreateDescriptor(unsigned heapKey,
-                        unsigned DescriptorIndex,
-                        unsigned resourceKey,
-                        DescriptorHeapTracker::DescriptorInfo::DescriptorKind descriptorType);
+  void CreateDescriptor(DescriptorHeapTracker::Descriptor* descriptor);
   void CopyDescriptors(ID3D12DeviceCopyDescriptorsSimpleCommand& c);
   void CopyDescriptors(ID3D12DeviceCopyDescriptorsCommand& c);
   void SetComputeRootSignature(ID3D12GraphicsCommandListSetComputeRootSignatureCommand& c);

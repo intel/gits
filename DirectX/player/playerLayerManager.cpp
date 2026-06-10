@@ -64,6 +64,7 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
   Layer* resourceDumpLayer = m_ResourceDumpingLayerGroup.GetLayer("ResourceDump");
   Layer* renderTargetsDumpLayer = m_ResourceDumpingLayerGroup.GetLayer("RenderTargetsDump");
   Layer* dispatchOutputsDumpLayer = m_ResourceDumpingLayerGroup.GetLayer("DispatchOutputsDump");
+  Layer* pipelineStateDumpLayer = m_ResourceDumpingLayerGroup.GetLayer("PipelineStateDump");
   Layer* accelerationStructuresDumpLayer =
       m_ResourceDumpingLayerGroup.GetLayer("AccelerationStructuresDump");
   Layer* rootSignatureDumpLayer = m_ResourceDumpingLayerGroup.GetLayer("RootSignatureDump");
@@ -173,6 +174,7 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
   enablePostLayer(resourceDumpLayer);
   enablePostLayer(renderTargetsDumpLayer);
   enablePostLayer(dispatchOutputsDumpLayer);
+  enablePostLayer(pipelineStateDumpLayer);
   enablePostLayer(accelerationStructuresDumpLayer);
   enablePostLayer(rootSignatureDumpLayer);
   enablePostLayer(recordingLayer);

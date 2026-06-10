@@ -68,6 +68,18 @@ set(ROOT_SIGNATURE_DUMP_SRC
 )
 source_group("root_signature_dump" FILES ${ROOT_SIGNATURE_DUMP_SRC})
 
+set(PIPELINE_STATE_DUMP_SRC
+  ${SRC_DIR}/pipelineStateDumpLayer.h
+  ${SRC_DIR}/pipelineStateDumpLayer.cpp
+  ${SRC_DIR}/graphicsPipelineState.h
+  ${SRC_DIR}/graphicsPipelineState.cpp
+  ${SRC_DIR}/computePipelineState.h
+  ${SRC_DIR}/computePipelineState.cpp
+  ${SRC_DIR}/pipelineBindingState.h
+  ${SRC_DIR}/pipelineBindingState.cpp
+)
+source_group("pipeline_state_dump" FILES ${PIPELINE_STATE_DUMP_SRC})
+
 set(ALL_SRC
   ${ROOT_SRC}
   ${SCREENSHOTS_SRC}
@@ -76,6 +88,7 @@ set(ALL_SRC
   ${DISPATCH_OUTPUT_DUMP_SRC}
   ${ACCELERATION_STRUCTURES_DUMP_SRC}
   ${ROOT_SIGNATURE_DUMP_SRC}
+  ${PIPELINE_STATE_DUMP_SRC}
 )
 
 set_auto_generated_property(FILE_LIST  ${ALL_SRC})

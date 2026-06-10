@@ -1229,6 +1229,17 @@ Configuration:
                 Type: bool
                 Default: false
                 Description: Whether dry run is enabled or not
+          - Name: PipelineStateDump
+            Type: Group
+            Options:
+              - Name: enabled
+                Type: bool
+                Default: false
+                Description: Whether pipeline state dumping is enabled or not
+              - Name: commandKeys
+                Type: std::string
+                Default: ""
+                Description: Comma separated list of command keys of draws and dispatches
           - Name: RaytracingDump
             Type: Group
             Options:

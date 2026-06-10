@@ -10,7 +10,7 @@
 
 #include "commandsAuto.h"
 
-#include <map>
+#include <unordered_map>
 #include <memory>
 
 namespace gits {
@@ -18,11 +18,12 @@ namespace DirectX {
 
 class DescriptorHeapTracker {
 public:
-  struct DescriptorInfo {
+  struct Descriptor {
     unsigned HeapKey{};
     unsigned DescriptorIndex{};
     unsigned ResourceKey{};
-    enum class DescriptorKind {
+    unsigned UavCounterResourceKey{};
+    enum class DescriptorType {
       Unknown,
       RTV,
       DSV,
@@ -31,24 +32,34 @@ public:
       CBV,
       Sampler
     };
-    DescriptorKind Kind{};
+    DescriptorType Type{};
+    union {
+      D3D12_RENDER_TARGET_VIEW_DESC RenderTargetViewDesc;
+      D3D12_DEPTH_STENCIL_VIEW_DESC DepthStencilViewDesc;
+      D3D12_SHADER_RESOURCE_VIEW_DESC ShaderResourceViewDesc;
+      D3D12_UNORDERED_ACCESS_VIEW_DESC UnorderedAccessViewDesc;
+      D3D12_CONSTANT_BUFFER_VIEW_DESC ConstantBufferViewDesc;
+      D3D12_SAMPLER_DESC SamplerDesc;
+    };
+    bool IsDesc{};
   };
 
-  void CreateDescriptor(DescriptorInfo* descriptorInfo);
+  void CreateDescriptor(Descriptor* descriptor);
   void DestroyObject(unsigned key);
-  void CopyDescriptors(ID3D12DeviceCopyDescriptorsSimpleCommand& command);
-  void CopyDescriptors(ID3D12DeviceCopyDescriptorsCommand& command);
-  DescriptorInfo* GetDescriptorInfo(unsigned heapKey, unsigned descriptorIndex) {
-    return m_DescriptorsByHeapIndex[heapKey][descriptorIndex].get();
+  void CopyDescriptors(ID3D12DeviceCopyDescriptorsSimpleCommand& c);
+  void CopyDescriptors(ID3D12DeviceCopyDescriptorsCommand& c);
+  Descriptor* GetDescriptor(unsigned heapKey, unsigned descriptorIndex) {
+    return m_DescriptorByHeapByIndex[heapKey][descriptorIndex].get();
   }
 
 private:
-  DescriptorInfo* CopyDescriptor(DescriptorInfo* state,
-                                 unsigned destHeapKey,
-                                 unsigned destDescriptorIndex);
+  Descriptor* CopyDescriptor(Descriptor* descriptor,
+                             unsigned destHeapKey,
+                             unsigned destDescriptorIndex);
 
 private:
-  std::map<unsigned, std::map<unsigned, std::unique_ptr<DescriptorInfo>>> m_DescriptorsByHeapIndex;
+  std::unordered_map<unsigned, std::unordered_map<unsigned, std::unique_ptr<Descriptor>>>
+      m_DescriptorByHeapByIndex;
 };
 
 } // namespace DirectX

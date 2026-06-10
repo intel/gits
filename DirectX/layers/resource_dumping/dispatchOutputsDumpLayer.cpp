@@ -207,49 +207,90 @@ void DispatchOutputsDumpLayer::Post(ID3D12DeviceCreateDescriptorHeapCommand& c) 
 
 void DispatchOutputsDumpLayer::Post(ID3D12DeviceCreateRenderTargetViewCommand& c) {
   if (m_InAnalysis) {
-    m_DispatchOutputsAnalyzer.CreateDescriptor(
-        c.m_DestDescriptor.InterfaceKey, c.m_DestDescriptor.Index, c.m_pResource.Key,
-        DescriptorHeapTracker::DescriptorInfo::DescriptorKind::RTV);
+    auto* descriptor = new DescriptorHeapTracker::Descriptor{};
+    descriptor->HeapKey = c.m_DestDescriptor.InterfaceKey;
+    descriptor->DescriptorIndex = c.m_DestDescriptor.Index;
+    descriptor->ResourceKey = c.m_pResource.Key;
+    descriptor->Type = DescriptorHeapTracker::Descriptor::DescriptorType::RTV;
+    if (c.m_pDesc.Value) {
+      descriptor->RenderTargetViewDesc = *c.m_pDesc.Value;
+      descriptor->IsDesc = true;
+    }
+    m_DispatchOutputsAnalyzer.CreateDescriptor(descriptor);
   }
 }
 
 void DispatchOutputsDumpLayer::Post(ID3D12DeviceCreateDepthStencilViewCommand& c) {
   if (m_InAnalysis) {
-    m_DispatchOutputsAnalyzer.CreateDescriptor(
-        c.m_DestDescriptor.InterfaceKey, c.m_DestDescriptor.Index, c.m_pResource.Key,
-        DescriptorHeapTracker::DescriptorInfo::DescriptorKind::DSV);
+    auto* descriptor = new DescriptorHeapTracker::Descriptor{};
+    descriptor->HeapKey = c.m_DestDescriptor.InterfaceKey;
+    descriptor->DescriptorIndex = c.m_DestDescriptor.Index;
+    descriptor->ResourceKey = c.m_pResource.Key;
+    descriptor->Type = DescriptorHeapTracker::Descriptor::DescriptorType::DSV;
+    if (c.m_pDesc.Value) {
+      descriptor->DepthStencilViewDesc = *c.m_pDesc.Value;
+      descriptor->IsDesc = true;
+    }
+    m_DispatchOutputsAnalyzer.CreateDescriptor(descriptor);
   }
 }
 
 void DispatchOutputsDumpLayer::Post(ID3D12DeviceCreateShaderResourceViewCommand& c) {
   if (m_InAnalysis) {
-    m_DispatchOutputsAnalyzer.CreateDescriptor(
-        c.m_DestDescriptor.InterfaceKey, c.m_DestDescriptor.Index, c.m_pResource.Key,
-        DescriptorHeapTracker::DescriptorInfo::DescriptorKind::SRV);
+    auto* descriptor = new DescriptorHeapTracker::Descriptor{};
+    descriptor->HeapKey = c.m_DestDescriptor.InterfaceKey;
+    descriptor->DescriptorIndex = c.m_DestDescriptor.Index;
+    descriptor->ResourceKey = c.m_pResource.Key;
+    descriptor->Type = DescriptorHeapTracker::Descriptor::DescriptorType::SRV;
+    if (c.m_pDesc.Value) {
+      descriptor->ShaderResourceViewDesc = *c.m_pDesc.Value;
+      descriptor->IsDesc = true;
+    }
+    m_DispatchOutputsAnalyzer.CreateDescriptor(descriptor);
   }
 }
 
 void DispatchOutputsDumpLayer::Post(ID3D12DeviceCreateUnorderedAccessViewCommand& c) {
   if (m_InAnalysis) {
-    m_DispatchOutputsAnalyzer.CreateDescriptor(
-        c.m_DestDescriptor.InterfaceKey, c.m_DestDescriptor.Index, c.m_pResource.Key,
-        DescriptorHeapTracker::DescriptorInfo::DescriptorKind::UAV);
+    auto* descriptor = new DescriptorHeapTracker::Descriptor{};
+    descriptor->HeapKey = c.m_DestDescriptor.InterfaceKey;
+    descriptor->DescriptorIndex = c.m_DestDescriptor.Index;
+    descriptor->ResourceKey = c.m_pResource.Key;
+    descriptor->UavCounterResourceKey = c.m_pCounterResource.Key;
+    descriptor->Type = DescriptorHeapTracker::Descriptor::DescriptorType::UAV;
+    if (c.m_pDesc.Value) {
+      descriptor->UnorderedAccessViewDesc = *c.m_pDesc.Value;
+      descriptor->IsDesc = true;
+    }
+    m_DispatchOutputsAnalyzer.CreateDescriptor(descriptor);
   }
 }
 
 void DispatchOutputsDumpLayer::Post(ID3D12DeviceCreateConstantBufferViewCommand& c) {
   if (m_InAnalysis) {
-    m_DispatchOutputsAnalyzer.CreateDescriptor(
-        c.m_DestDescriptor.InterfaceKey, c.m_DestDescriptor.Index, c.m_pDesc.BufferLocationKey,
-        DescriptorHeapTracker::DescriptorInfo::DescriptorKind::CBV);
+    auto* descriptor = new DescriptorHeapTracker::Descriptor{};
+    descriptor->HeapKey = c.m_DestDescriptor.InterfaceKey;
+    descriptor->DescriptorIndex = c.m_DestDescriptor.Index;
+    descriptor->ResourceKey = c.m_pDesc.BufferLocationKey;
+    descriptor->Type = DescriptorHeapTracker::Descriptor::DescriptorType::CBV;
+    if (c.m_pDesc.Value) {
+      descriptor->ConstantBufferViewDesc = *c.m_pDesc.Value;
+      descriptor->IsDesc = true;
+    }
+    m_DispatchOutputsAnalyzer.CreateDescriptor(descriptor);
   }
 }
 
 void DispatchOutputsDumpLayer::Post(ID3D12DeviceCreateSamplerCommand& c) {
   if (m_InAnalysis) {
-    m_DispatchOutputsAnalyzer.CreateDescriptor(
-        c.m_DestDescriptor.InterfaceKey, c.m_DestDescriptor.Index, 0,
-        DescriptorHeapTracker::DescriptorInfo::DescriptorKind::Sampler);
+    auto* descriptor = new DescriptorHeapTracker::Descriptor{};
+    descriptor->HeapKey = c.m_DestDescriptor.InterfaceKey;
+    descriptor->DescriptorIndex = c.m_DestDescriptor.Index;
+    descriptor->Type = DescriptorHeapTracker::Descriptor::DescriptorType::Sampler;
+    GITS_ASSERT(c.m_pDesc.Value);
+    descriptor->SamplerDesc = *c.m_pDesc.Value;
+    descriptor->IsDesc = true;
+    m_DispatchOutputsAnalyzer.CreateDescriptor(descriptor);
   }
 }
 

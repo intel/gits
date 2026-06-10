@@ -97,16 +97,7 @@ void DispatchOutputsAnalyzer::CreateRootSignature(ID3D12DeviceCreateRootSignatur
   m_RootSignatureService.CreateRootSignature(c);
 }
 
-void DispatchOutputsAnalyzer::CreateDescriptor(
-    unsigned heapKey,
-    unsigned descriptorIndex,
-    unsigned resourceKey,
-    DescriptorHeapTracker::DescriptorInfo::DescriptorKind descriptorType) {
-  auto* descriptor = new DescriptorHeapTracker::DescriptorInfo;
-  descriptor->HeapKey = heapKey;
-  descriptor->DescriptorIndex = descriptorIndex;
-  descriptor->ResourceKey = resourceKey;
-  descriptor->Kind = descriptorType;
+void DispatchOutputsAnalyzer::CreateDescriptor(DescriptorHeapTracker::Descriptor* descriptor) {
   m_DescriptorService.CreateDescriptor(descriptor);
 }
 
@@ -182,10 +173,9 @@ void DispatchOutputsAnalyzer::ExecuteCommandLists(ID3D12CommandQueueExecuteComma
         for (const auto& [slot, descriptorTable] : descriptorTableBySlot) {
           for (unsigned index : descriptorTable.Indexes) {
             const auto* descriptorInfo =
-                m_DescriptorService.GetDescriptorInfo(descriptorTable.DescriptorHeap, index);
+                m_DescriptorService.GetDescriptor(descriptorTable.DescriptorHeap, index);
             if (descriptorInfo &&
-                descriptorInfo->Kind ==
-                    DescriptorHeapTracker::DescriptorInfo::DescriptorKind::UAV &&
+                descriptorInfo->Type == DescriptorHeapTracker::Descriptor::DescriptorType::UAV &&
                 descriptorInfo->ResourceKey) {
               ID3D12Resource* resource = m_ResourceByKey[descriptorInfo->ResourceKey];
               if (resource && resource->GetDesc().Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
