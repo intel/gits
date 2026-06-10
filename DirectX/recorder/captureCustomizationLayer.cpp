@@ -13,6 +13,8 @@
 #include "commandSerializersAuto.h"
 #include "iunknownWrapper.h"
 #include "wrapperUtils.h"
+#include "configurator.h"
+#include "messageBus.h"
 #include "log.h"
 
 #include <windows.h>
@@ -25,6 +27,34 @@ thread_local CaptureCustomizationLayer::HeapInfo CaptureCustomizationLayer::m_He
 CaptureCustomizationLayer::CaptureCustomizationLayer(CaptureManager& manager,
                                                      stream::OrderingRecorder& recorder)
     : Layer("CaptureCustomization"), m_Manager(manager), m_Recorder(recorder) {}
+
+void CaptureCustomizationLayer::Post(IDXGISwapChainPresentCommand& c) {
+  if (!(c.m_Flags.Value & DXGI_PRESENT_TEST)) {
+    NewFrame();
+  }
+}
+
+void CaptureCustomizationLayer::Post(IDXGISwapChain1Present1Command& c) {
+  if (!(c.m_PresentFlags.Value & DXGI_PRESENT_TEST)) {
+    NewFrame();
+  }
+}
+
+void CaptureCustomizationLayer::NewFrame() {
+  static bool exitKeysPressed = false;
+  if (exitKeysPressed) {
+    return;
+  }
+  const auto& exitKeys = Configurator::Get().common.recorder.exitKeys;
+  for (uint32_t key : exitKeys) {
+    if ((GetAsyncKeyState(static_cast<int>(key)) & 0x8000) != 0) {
+      exitKeysPressed = true;
+      gits::MessageBus::get().publish({PUBLISHER_RECORDER, TOPIC_PROGRAM_EXIT},
+                                      std::make_shared<ProgramMessage>());
+      return;
+    }
+  }
+}
 
 void CaptureCustomizationLayer::Post(IUnknownReleaseCommand& c) {
   if (c.m_Result.Value == 0) {

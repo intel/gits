@@ -108,8 +108,11 @@ public:
   void Pre(IDStorageQueueEnqueueRequestCommand& c) override;
   void Pre(xefgSwapChainD3D12InitFromSwapChainCommand& c) override;
   void Pre(xefgSwapChainD3D12InitFromSwapChainDescCommand& c) override;
+  void Post(IDXGISwapChainPresentCommand& command) override;
+  void Post(IDXGISwapChain1Present1Command& command) override;
 
 private:
+  void NewFrame();
   // Heaps (and resources) may require their D3D12_HEAP_PROPERTIES and D3D12_HEAP_FLAGS to be updated (for writewatch)
   struct HeapInfo {
     // Pointer to the original data
