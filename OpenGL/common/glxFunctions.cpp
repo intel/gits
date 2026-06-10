@@ -12,31 +12,32 @@
  */
 
 #include "glxFunctions.h"
-#include "platform.h"
-#include "openglLibrary.h"
-#include "openglDrivers.h"
-#include "gits.h"
+
 #include "exception.h"
+#include "gits.h"
+#include "glEnumsAuto.h"
 #include "library.h"
 #include "log.h"
-#include <iostream>
-#include <sstream>
-#include <iomanip>
-#include <set>
-#include <map>
+#include "openglDrivers.h"
+#include "openglLibrary.h"
+#include "opengl_apis_iface.h"
 #include "pfattribs.h"
-#include "stateDynamic.h"
-#include "windowContextState.h"
+#include "platform.h"
 #include "ptblLibrary.h"
 #include "ptbl_glxLibrary.h"
-#include "opengl_apis_iface.h"
+#include "stateDynamic.h"
+#include "windowContextState.h"
 
 #include <cerrno>
+#include <iomanip>
+#include <iostream>
+#include <map>
+#include <set>
+#include <sstream>
 
 #if defined GITS_PLATFORM_X11
 #include <X11/Xlib.h>
 #endif
-#include "glEnumsAuto.h"
 
 /* ***************************** ID_GLX_CHOOSE_VISUAL *************************** */
 
