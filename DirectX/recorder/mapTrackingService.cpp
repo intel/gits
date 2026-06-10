@@ -148,6 +148,9 @@ void MapTrackingService::CaptureModifiedData(MappedInfo* info) {
   UINT64 pageCount = info->WatchedPages.size();
   unsigned long pageSize;
   char* watchedAddress = m_ShadowMemory ? info->ShadowAddress : info->MappedAddress;
+  GITS_ASSERT(reinterpret_cast<uintptr_t>(watchedAddress) % m_PageSize == 0,
+              "MapTrackingService - watchedAddress must be page-aligned. WriteWatch for tightly "
+              "aligned placed resources is not handled. Try ShadowMemory option.");
   UINT ret = GetWriteWatch(WRITE_WATCH_FLAG_RESET, watchedAddress, info->Size,
                            info->WatchedPages.data(), &pageCount, &pageSize);
   if (ret != 0) {
