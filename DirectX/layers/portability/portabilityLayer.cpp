@@ -63,6 +63,12 @@ PortabilityLayer::PortabilityLayer() : Layer("Portability") {
     if (m_AccelerationStructureScratchPadding < 1.0) {
       m_AccelerationStructureScratchPadding = 1.0;
     }
+    m_AccelerationStructureScratchMinSizeInBytes =
+        Configurator::Get()
+            .directx.recorder.portability.raytracing.accelerationStructureScratchMinSizeInBytes;
+    if (m_AccelerationStructureScratchMinSizeInBytes < 0) {
+      m_AccelerationStructureScratchMinSizeInBytes = 0;
+    }
   }
 
   if (Configurator::IsRecorder() && m_StoreResourcePlacementData) {
@@ -329,8 +335,12 @@ void PortabilityLayer::Post(ID3D12Device10CreatePlacedResource2Command& c) {
 
 void PortabilityLayer::Post(ID3D12Device5GetRaytracingAccelerationStructurePrebuildInfoCommand& c) {
   c.m_pInfo.Value->ResultDataMaxSizeInBytes *= m_AccelerationStructurePadding;
-  c.m_pInfo.Value->ScratchDataSizeInBytes *= m_AccelerationStructureScratchPadding;
-  c.m_pInfo.Value->UpdateScratchDataSizeInBytes *= m_AccelerationStructureScratchPadding;
+  c.m_pInfo.Value->ScratchDataSizeInBytes =
+      std::max(m_AccelerationStructureScratchMinSizeInBytes,
+               c.m_pInfo.Value->ScratchDataSizeInBytes * m_AccelerationStructureScratchPadding);
+  c.m_pInfo.Value->UpdateScratchDataSizeInBytes = std::max(
+      m_AccelerationStructureScratchMinSizeInBytes,
+      c.m_pInfo.Value->UpdateScratchDataSizeInBytes * m_AccelerationStructureScratchPadding);
 }
 
 void PortabilityLayer::Post(

@@ -1032,6 +1032,9 @@ Configuration:
                     Type: float
                     Default: 1.0
                     LegacyPaths: ["DirectX.Capture.Portability.Raytracing.AccelerationStructureScratchPadding"]
+                  - Name: accelerationStructureScratchMinSizeInBytes
+                    Type: uint32_t
+                    Default: 0
           - Name: storeAddressPinning
             Type: bool
             Default: true

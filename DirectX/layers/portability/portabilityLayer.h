@@ -148,6 +148,7 @@ private:
   bool m_ForcePlacedToCommittedResources{};
   float m_AccelerationStructurePadding{1.0};
   float m_AccelerationStructureScratchPadding{1.0};
+  uint32_t m_AccelerationStructureScratchMinSizeInBytes{0};
   std::unordered_set<unsigned> m_ForcedCommittedResources{};
 };
 
