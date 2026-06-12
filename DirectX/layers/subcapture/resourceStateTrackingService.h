@@ -76,7 +76,7 @@ private:
   std::optional<unsigned> GetResidencyKeyForNotResidentResource(unsigned key);
   void RecordMakeResident(const std::set<unsigned>& keys);
   void RecordEvict(const std::set<unsigned>& keys);
-  unsigned GetDeviceKey() const;
+  unsigned GetDeviceKeyForRestore() const;
 
 private:
   struct ResourceBarriers {
