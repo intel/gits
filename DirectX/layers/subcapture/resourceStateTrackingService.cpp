@@ -275,6 +275,13 @@ void ResourceStateTrackingService::DestroyResource(unsigned resourceKey) {
   m_RecreateStateResources.erase(resourceKey);
 }
 
+unsigned ResourceStateTrackingService::GetDeviceKeyForRestore() const {
+  if (m_DeviceKey != 0) {
+    return m_DeviceKey;
+  }
+  return m_StateService.GetDeviceKey();
+}
+
 ResourceStateTrackingService::ResourceStates& ResourceStateTrackingService::GetResourceStates(
     unsigned resourceKey) {
   auto it = m_ResourceStates.find(resourceKey);
@@ -314,12 +321,15 @@ void ResourceStateTrackingService::RestoreResourceStates(
     return;
   }
 
+  const unsigned deviceKey = GetDeviceKeyForRestore();
+  GITS_ASSERT(deviceKey != 0, "Device key must be available for resource state restore");
+
   unsigned commandQueueKey = m_StateService.GetUniqueObjectKey();
   D3D12_COMMAND_QUEUE_DESC commandQueueDesc{};
   commandQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
   ID3D12DeviceCreateCommandQueueCommand createCommandQueue;
   createCommandQueue.Key = m_StateService.GetUniqueCommandKey();
-  createCommandQueue.m_Object.Key = m_DeviceKey;
+  createCommandQueue.m_Object.Key = deviceKey;
   createCommandQueue.m_pDesc.Value = &commandQueueDesc;
   createCommandQueue.m_riid.Value = IID_ID3D12CommandQueue;
   createCommandQueue.m_ppCommandQueue.Key = commandQueueKey;
@@ -328,7 +338,7 @@ void ResourceStateTrackingService::RestoreResourceStates(
   unsigned commandAllocatorKey = m_StateService.GetUniqueObjectKey();
   ID3D12DeviceCreateCommandAllocatorCommand createCommandAllocator;
   createCommandAllocator.Key = m_StateService.GetUniqueCommandKey();
-  createCommandAllocator.m_Object.Key = m_DeviceKey;
+  createCommandAllocator.m_Object.Key = deviceKey;
   createCommandAllocator.m_type.Value = D3D12_COMMAND_LIST_TYPE_DIRECT;
   createCommandAllocator.m_riid.Value = IID_ID3D12CommandAllocator;
   createCommandAllocator.m_ppCommandAllocator.Key = commandAllocatorKey;
@@ -338,7 +348,7 @@ void ResourceStateTrackingService::RestoreResourceStates(
   unsigned commandListKey = m_StateService.GetUniqueObjectKey();
   ID3D12DeviceCreateCommandListCommand createCommandList;
   createCommandList.Key = m_StateService.GetUniqueCommandKey();
-  createCommandList.m_Object.Key = m_DeviceKey;
+  createCommandList.m_Object.Key = deviceKey;
   createCommandList.m_nodeMask.Value = 0;
   createCommandList.m_pCommandAllocator.Key = createCommandAllocator.m_ppCommandAllocator.Key;
   createCommandList.m_type.Value = D3D12_COMMAND_LIST_TYPE_DIRECT;
@@ -350,7 +360,7 @@ void ResourceStateTrackingService::RestoreResourceStates(
   unsigned fenceKey = m_StateService.GetUniqueObjectKey();
   ID3D12DeviceCreateFenceCommand createFence;
   createFence.Key = m_StateService.GetUniqueCommandKey();
-  createFence.m_Object.Key = m_DeviceKey;
+  createFence.m_Object.Key = deviceKey;
   createFence.m_InitialValue.Value = 0;
   createFence.m_Flags.Value = D3D12_FENCE_FLAG_NONE;
   createFence.m_riid.Value = IID_ID3D12Fence;
@@ -551,6 +561,9 @@ void ResourceStateTrackingService::RestoreResourceStates(
 void ResourceStateTrackingService::RestoreBackBufferState(unsigned commandQueueKey,
                                                           unsigned resourceKey,
                                                           D3D12_RESOURCE_STATES beforeState) {
+  const unsigned deviceKey = GetDeviceKeyForRestore();
+  GITS_ASSERT(deviceKey != 0, "Device key must be available for back buffer state restore");
+
   ResourceStates& resourceStates = GetResourceStates(resourceKey);
   D3D12_RESOURCE_STATES afterState = D3D12_RESOURCE_STATE_COMMON;
   if (!resourceStates.SubresourceStates[0].Enhanced) {
@@ -562,7 +575,7 @@ void ResourceStateTrackingService::RestoreBackBufferState(unsigned commandQueueK
   unsigned commandAllocatorKey = m_StateService.GetUniqueObjectKey();
   ID3D12DeviceCreateCommandAllocatorCommand createCommandAllocator;
   createCommandAllocator.Key = m_StateService.GetUniqueCommandKey();
-  createCommandAllocator.m_Object.Key = m_DeviceKey;
+  createCommandAllocator.m_Object.Key = deviceKey;
   createCommandAllocator.m_type.Value = D3D12_COMMAND_LIST_TYPE_DIRECT;
   createCommandAllocator.m_riid.Value = IID_ID3D12CommandAllocator;
   createCommandAllocator.m_ppCommandAllocator.Key = commandAllocatorKey;
@@ -572,7 +585,7 @@ void ResourceStateTrackingService::RestoreBackBufferState(unsigned commandQueueK
   unsigned commandListKey = m_StateService.GetUniqueObjectKey();
   ID3D12DeviceCreateCommandListCommand createCommandList;
   createCommandList.Key = m_StateService.GetUniqueCommandKey();
-  createCommandList.m_Object.Key = m_DeviceKey;
+  createCommandList.m_Object.Key = deviceKey;
   createCommandList.m_nodeMask.Value = 0;
   createCommandList.m_pCommandAllocator.Key = createCommandAllocator.m_ppCommandAllocator.Key;
   createCommandList.m_type.Value = D3D12_COMMAND_LIST_TYPE_DIRECT;
@@ -584,7 +597,7 @@ void ResourceStateTrackingService::RestoreBackBufferState(unsigned commandQueueK
   unsigned fenceKey = m_StateService.GetUniqueObjectKey();
   ID3D12DeviceCreateFenceCommand createFence;
   createFence.Key = m_StateService.GetUniqueCommandKey();
-  createFence.m_Object.Key = m_DeviceKey;
+  createFence.m_Object.Key = deviceKey;
   createFence.m_InitialValue.Value = 0;
   createFence.m_Flags.Value = D3D12_FENCE_FLAG_NONE;
   createFence.m_riid.Value = IID_ID3D12Fence;
@@ -753,7 +766,7 @@ void ResourceStateTrackingService::RecordMakeResident(const std::set<unsigned>& 
 
   ID3D12DeviceMakeResidentCommand makeResident;
   makeResident.Key = m_StateService.GetUniqueCommandKey();
-  makeResident.m_Object.Key = m_DeviceKey;
+  makeResident.m_Object.Key = GetDeviceKeyForRestore();
   makeResident.m_NumObjects.Value = keys.size();
   ID3D12Pageable* fakePtr = reinterpret_cast<ID3D12Pageable*>(1);
   makeResident.m_ppObjects.Value = &fakePtr;
@@ -771,7 +784,7 @@ void ResourceStateTrackingService::RecordEvict(const std::set<unsigned>& keys) {
 
   ID3D12DeviceEvictCommand evict;
   evict.Key = m_StateService.GetUniqueCommandKey();
-  evict.m_Object.Key = m_DeviceKey;
+  evict.m_Object.Key = GetDeviceKeyForRestore();
   evict.m_NumObjects.Value = keys.size();
   ID3D12Pageable* fakePtr = reinterpret_cast<ID3D12Pageable*>(1);
   evict.m_ppObjects.Value = &fakePtr;
