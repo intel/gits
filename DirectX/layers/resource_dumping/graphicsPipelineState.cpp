@@ -18,6 +18,7 @@ void GraphicsPipelineState::Reset() {
   m_StateDesc = nullptr;
   m_StateStreamDesc = nullptr;
   m_RootSignatureKey = 0;
+  m_RootSignatureDesc = nullptr;
   m_BindingState.Reset();
   m_IndexBufferKey = 0;
   m_IndexBufferOffset = 0;
@@ -32,6 +33,7 @@ void GraphicsPipelineState::Reset() {
 void GraphicsPipelineState::SetRootSignature(unsigned rootSignatureKey,
                                              D3D12_ROOT_SIGNATURE_DESC2* desc) {
   m_RootSignatureKey = rootSignatureKey;
+  m_RootSignatureDesc = desc;
   m_BindingState.SetRootSignature(desc);
 }
 
@@ -165,43 +167,20 @@ void GraphicsPipelineState::DumpState(const std::wstring& dumpDir,
 
 void GraphicsPipelineState::DumpState(std::ofstream& stream) {
   stream << "\n";
-  if (m_StateDesc) {
-    DumpStateDesc(stream);
-  } else if (m_StateStreamDesc) {
-    DumpPipelineStateStreamDesc(*m_StateStreamDesc, stream);
-  }
-  stream << "\n";
   if (m_IndexBufferKey) {
-    stream << "Index buffer O" << m_IndexBufferKey << " offset " << m_IndexBufferOffset << "\n";
+    stream << "IndexBuffer O" << m_IndexBufferKey << " offset " << m_IndexBufferOffset << "\n";
   }
   for (unsigned i = 0; i < m_VertexBuffers.size(); ++i) {
     if (m_VertexBuffers[i].Key) {
-      stream << "Vertex buffer slot " << i << " O" << m_VertexBuffers[i].Key << " offset "
+      stream << "VertexBuffer[" << i << "] O" << m_VertexBuffers[i].Key << " offset "
              << m_VertexBuffers[i].Offset << " size " << m_VertexBuffers[i].Size << " stride "
              << m_VertexBuffers[i].Stride << "\n";
     }
   }
+
   stream << "\n";
-  stream << "Primitive topology " << toStr(m_PrimitiveTopology) << "\n";
-  stream << "\n";
-  stream << "Root signature O" << m_RootSignatureKey << "\n";
-  stream << "\n";
-  m_BindingState.DumpState(stream);
-  stream << "\n";
-  for (unsigned i = 0; i < m_RenderTargets.size(); ++i) {
-    if (m_RenderTargets[i].has_value()) {
-      stream << "RenderTarget[" << i << "] resource O" << m_RenderTargets[i]->ResourceKey
-             << " descriptor O" << m_RenderTargets[i]->HeapKey << " "
-             << m_RenderTargets[i]->DescriptorIndex << "\n";
-      if (m_RenderTargets[i]->IsDesc) {
-        stream << "\t";
-        DumpRenderTargetView(stream, m_RenderTargets[i]->RenderTargetViewDesc);
-        stream << "\n";
-      }
-    }
-  }
   if (m_DepthStencil.has_value()) {
-    stream << "DepthStencil resource O" << m_DepthStencil->ResourceKey << " descriptor O"
+    stream << "DepthStencil O" << m_DepthStencil->ResourceKey << " descriptor O"
            << m_DepthStencil->HeapKey << " " << m_DepthStencil->DescriptorIndex << "\n";
     if (m_DepthStencil->IsDesc) {
       stream << "\t";
@@ -209,11 +188,32 @@ void GraphicsPipelineState::DumpState(std::ofstream& stream) {
       stream << "\n";
     }
   }
+  for (unsigned i = 0; i < m_RenderTargets.size(); ++i) {
+    if (m_RenderTargets[i].has_value()) {
+      stream << "RenderTarget[" << i << "] O" << m_RenderTargets[i]->ResourceKey << " descriptor O"
+             << m_RenderTargets[i]->HeapKey << " " << m_RenderTargets[i]->DescriptorIndex << "\n";
+      if (m_RenderTargets[i]->IsDesc) {
+        stream << "\t";
+        DumpRenderTargetView(stream, m_RenderTargets[i]->RenderTargetViewDesc);
+        stream << "\n";
+      }
+    }
+  }
+
+  stream << "\n";
+  m_BindingState.DumpState(stream);
+
+  stream << "\n";
+  stream << "RootSignature O" << m_RootSignatureKey;
+  if (m_RootSignatureDesc) {
+    stream << " " << toStr(m_RootSignatureDesc->Flags);
+  }
+  stream << "\n";
+  stream << "PrimitiveTopology " << toStr(m_PrimitiveTopology) << "\n";
   if (m_StencilRef.has_value()) {
     stream << "StencilRef " << m_StencilRef.value() << "\n";
   }
   if (m_BlendFactor.has_value()) {
-    stream << "\n";
     stream << "BlendFactor";
     for (float value : m_BlendFactor.value()) {
       stream << " " << value;
@@ -221,7 +221,6 @@ void GraphicsPipelineState::DumpState(std::ofstream& stream) {
     stream << "\n";
   }
   if (!m_ScissorRects.empty()) {
-    stream << "\n";
     stream << "ScissorRects";
     for (D3D12_RECT rect : m_ScissorRects) {
       stream << " {" << rect.left << ", " << rect.top << ", " << rect.right << ", " << rect.bottom
@@ -230,13 +229,19 @@ void GraphicsPipelineState::DumpState(std::ofstream& stream) {
     stream << "\n";
   }
   if (!m_Viewports.empty()) {
-    stream << "\n";
     stream << "Viewports";
     for (D3D12_VIEWPORT v : m_Viewports) {
       stream << " {" << v.TopLeftX << ", " << v.TopLeftY << ", " << v.Width << ", " << v.Height
              << ", " << v.MinDepth << ", " << v.MaxDepth << "}";
     }
     stream << "\n";
+  }
+
+  stream << "\n";
+  if (m_StateDesc) {
+    DumpStateDesc(stream);
+  } else if (m_StateStreamDesc) {
+    DumpPipelineStateStreamDesc(*m_StateStreamDesc, stream);
   }
 }
 

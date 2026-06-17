@@ -74,15 +74,16 @@ void PipelineBindingState::DumpState(std::ofstream& stream) {
   stream << "Bindings\n";
   for (unsigned parameterIndex = 0; parameterIndex < m_RootSignatureDesc->NumParameters;
        ++parameterIndex) {
-    const D3D12_ROOT_PARAMETER1& rootParameter = m_RootSignatureDesc->pParameters[parameterIndex];
-    stream << "\tBinding[" << parameterIndex << "] " << toStr(rootParameter.ParameterType);
     auto it = m_Bindings.find(parameterIndex);
     if (it != m_Bindings.end()) {
+      const D3D12_ROOT_PARAMETER1& rootParameter = m_RootSignatureDesc->pParameters[parameterIndex];
+      stream << "\tBinding[" << parameterIndex << "] " << toStr(rootParameter.ParameterType);
+
       Binding& binding = it->second;
       if (rootParameter.ParameterType == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE) {
         GITS_ASSERT(binding.Type == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE);
-        stream << " descriptorHeapKey O" << binding.DescriptorTable.DescriptorHeapKey
-               << " baseIndex " << binding.DescriptorTable.DescriptorHeapIndex << "\n";
+        stream << " descriptorHeap O" << binding.DescriptorTable.DescriptorHeapKey << " baseIndex "
+               << binding.DescriptorTable.DescriptorHeapIndex << "\n";
         unsigned index = binding.DescriptorTable.DescriptorHeapIndex;
         for (unsigned rangeIndex = 0;
              rangeIndex < rootParameter.DescriptorTable.NumDescriptorRanges; ++rangeIndex) {
@@ -101,16 +102,16 @@ void PipelineBindingState::DumpState(std::ofstream& stream) {
               DescriptorHeapTracker::Descriptor* descriptor = m_DescriptorService.GetDescriptor(
                   binding.DescriptorTable.DescriptorHeapKey, index);
               if (range.RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER) {
-                stream << "\t\t\tSampler index " << index << "\n";
+                stream << "\t\t\tSampler " << index << "\n";
                 if (descriptor && descriptor->IsDesc) {
                   stream << "\t\t\t\t";
                   DumpSampler(stream, descriptor->SamplerDesc);
                   stream << "\n";
                 }
               } else {
-                stream << "\t\t\tDescriptor index " << index;
                 if (descriptor && descriptor->ResourceKey) {
-                  stream << " resource O" << descriptor->ResourceKey << "\n";
+                  stream << "\t\t\tDescriptor " << index << " resource O" << descriptor->ResourceKey
+                         << "\n";
                   if (descriptor->IsDesc) {
                     if (descriptor->Type ==
                         DescriptorHeapTracker::Descriptor::DescriptorType::SRV) {
@@ -120,7 +121,7 @@ void PipelineBindingState::DumpState(std::ofstream& stream) {
                     } else if (descriptor->Type ==
                                DescriptorHeapTracker::Descriptor::DescriptorType::UAV) {
                       if (descriptor->UavCounterResourceKey) {
-                        stream << "\t\t\t\tuav counter resource O"
+                        stream << "\t\t\t\tUavCounter resource O"
                                << descriptor->UavCounterResourceKey << "\n";
                       }
                       stream << "\t\t\t\t";
@@ -133,8 +134,6 @@ void PipelineBindingState::DumpState(std::ofstream& stream) {
                       stream << "\n";
                     }
                   }
-                } else {
-                  stream << " null\n";
                 }
               }
               ++index;
@@ -155,8 +154,6 @@ void PipelineBindingState::DumpState(std::ofstream& stream) {
       } else {
         stream << "\n";
       }
-    } else {
-      stream << "\n";
     }
   }
 }

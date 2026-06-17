@@ -19,12 +19,14 @@ void ComputePipelineState::Reset() {
   m_StateDesc = nullptr;
   m_StateStreamDesc = nullptr;
   m_RootSignatureKey = 0;
+  m_RootSignatureDesc = nullptr;
   m_BindingState.Reset();
 }
 
 void ComputePipelineState::SetRootSignature(unsigned rootSignatureKey,
                                             D3D12_ROOT_SIGNATURE_DESC2* desc) {
   m_RootSignatureKey = rootSignatureKey;
+  m_RootSignatureDesc = desc;
   m_BindingState.SetRootSignature(desc);
 }
 
@@ -76,15 +78,21 @@ void ComputePipelineState::DumpState(const std::wstring& dumpDir,
 
 void ComputePipelineState::DumpState(std::ofstream& stream) {
   stream << "\n";
+  m_BindingState.DumpState(stream);
+
+  stream << "\n";
+  stream << "RootSignature O" << m_RootSignatureKey;
+  if (m_RootSignatureDesc) {
+    stream << " " << toStr(m_RootSignatureDesc->Flags);
+  }
+  stream << "\n";
+
+  stream << "\n";
   if (m_StateDesc) {
     DumpStateDesc(stream);
   } else if (m_StateStreamDesc) {
     DumpPipelineStateStreamDesc(*m_StateStreamDesc, stream);
   }
-  stream << "\n";
-  stream << "Root signature O" << m_RootSignatureKey << "\n";
-  stream << "\n";
-  m_BindingState.DumpState(stream);
 }
 
 void ComputePipelineState::DumpStateDesc(std::ofstream& stream) {

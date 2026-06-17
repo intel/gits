@@ -56,6 +56,7 @@ private:
   const D3D12_COMPUTE_PIPELINE_STATE_DESC_Argument* m_StateDesc{};
   const D3D12_PIPELINE_STATE_STREAM_DESC_Argument* m_StateStreamDesc{};
   unsigned m_RootSignatureKey{};
+  D3D12_ROOT_SIGNATURE_DESC2* m_RootSignatureDesc{};
 };
 
 } // namespace DirectX
