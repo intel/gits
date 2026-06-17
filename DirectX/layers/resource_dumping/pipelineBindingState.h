@@ -41,6 +41,11 @@ public:
   void DumpState(std::ofstream& stream);
 
 private:
+  void DumpShaderResourceView(std::ofstream& stream, const D3D12_SHADER_RESOURCE_VIEW_DESC& desc);
+  void DumpUnorderedAccessView(std::ofstream& stream, const D3D12_UNORDERED_ACCESS_VIEW_DESC& desc);
+  void DumpSampler(std::ofstream& stream, const D3D12_SAMPLER_DESC& desc);
+
+private:
   DescriptorHeapTracker& m_DescriptorService;
   D3D12_ROOT_SIGNATURE_DESC2* m_RootSignatureDesc{};
 

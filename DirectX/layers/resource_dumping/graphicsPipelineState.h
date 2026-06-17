@@ -63,6 +63,8 @@ public:
 private:
   void DumpState(std::ofstream& stream);
   void DumpStateDesc(std::ofstream& stream);
+  void DumpRenderTargetView(std::ofstream& stream, const D3D12_RENDER_TARGET_VIEW_DESC& desc);
+  void DumpDepthStencilView(std::ofstream& stream, const D3D12_DEPTH_STENCIL_VIEW_DESC& desc);
 
 private:
   PipelineBindingState m_BindingState;
@@ -82,6 +84,11 @@ private:
   std::array<VertexBuffer, 16> m_VertexBuffers{};
   std::array<std::optional<DescriptorHeapTracker::Descriptor>, 8> m_RenderTargets{};
   std::optional<DescriptorHeapTracker::Descriptor> m_DepthStencil{};
+  D3D12_PRIMITIVE_TOPOLOGY m_PrimitiveTopology{};
+  std::optional<std::array<FLOAT, 4>> m_BlendFactor{};
+  std::optional<UINT> m_StencilRef{};
+  std::vector<D3D12_RECT> m_ScissorRects{};
+  std::vector<D3D12_VIEWPORT> m_Viewports{};
 };
 
 } // namespace DirectX

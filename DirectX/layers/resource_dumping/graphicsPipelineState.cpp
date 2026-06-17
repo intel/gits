@@ -22,6 +22,11 @@ void GraphicsPipelineState::Reset() {
   m_IndexBufferKey = 0;
   m_IndexBufferOffset = 0;
   m_VertexBuffers.fill(VertexBuffer{});
+  m_DepthStencil.reset();
+  m_PrimitiveTopology = D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
+  m_BlendFactor.reset();
+  m_StencilRef.reset();
+  m_ScissorRects.clear();
 }
 
 void GraphicsPipelineState::SetRootSignature(unsigned rootSignatureKey,
@@ -47,9 +52,13 @@ void GraphicsPipelineState::IASetVertexBuffers(
 }
 
 void GraphicsPipelineState::IASetPrimitiveTopology(
-    ID3D12GraphicsCommandListIASetPrimitiveTopologyCommand& c) {}
+    ID3D12GraphicsCommandListIASetPrimitiveTopologyCommand& c) {
+  m_PrimitiveTopology = c.m_PrimitiveTopology.Value;
+}
 
-void GraphicsPipelineState::OMSetBlendFactor(ID3D12GraphicsCommandListOMSetBlendFactorCommand& c) {}
+void GraphicsPipelineState::OMSetBlendFactor(ID3D12GraphicsCommandListOMSetBlendFactorCommand& c) {
+  m_BlendFactor = std::to_array(c.m_BlendFactor.Value);
+}
 
 void GraphicsPipelineState::OMSetRenderTargets(
     ID3D12GraphicsCommandListOMSetRenderTargetsCommand& c) {
@@ -77,12 +86,22 @@ void GraphicsPipelineState::OMSetRenderTargets(
   }
 }
 
-void GraphicsPipelineState::OMSetStencilRef(ID3D12GraphicsCommandListOMSetStencilRefCommand& c) {}
+void GraphicsPipelineState::OMSetStencilRef(ID3D12GraphicsCommandListOMSetStencilRefCommand& c) {
+  m_StencilRef = c.m_StencilRef.Value;
+}
 
 void GraphicsPipelineState::RSSetScissorRects(
-    ID3D12GraphicsCommandListRSSetScissorRectsCommand& c) {}
+    ID3D12GraphicsCommandListRSSetScissorRectsCommand& c) {
+  for (unsigned i = 0; i < c.m_NumRects.Value; ++i) {
+    m_ScissorRects.push_back(c.m_pRects.Value[i]);
+  }
+}
 
-void GraphicsPipelineState::RSSetViewports(ID3D12GraphicsCommandListRSSetViewportsCommand& c) {}
+void GraphicsPipelineState::RSSetViewports(ID3D12GraphicsCommandListRSSetViewportsCommand& c) {
+  for (unsigned i = 0; i < c.m_NumViewports.Value; ++i) {
+    m_Viewports.push_back(c.m_pViewports.Value[i]);
+  }
+}
 
 void GraphicsPipelineState::SOSetTargets(ID3D12GraphicsCommandListSOSetTargetsCommand& c) {}
 
@@ -163,6 +182,8 @@ void GraphicsPipelineState::DumpState(std::ofstream& stream) {
     }
   }
   stream << "\n";
+  stream << "Primitive topology " << toStr(m_PrimitiveTopology) << "\n";
+  stream << "\n";
   stream << "Root signature O" << m_RootSignatureKey << "\n";
   stream << "\n";
   m_BindingState.DumpState(stream);
@@ -172,11 +193,50 @@ void GraphicsPipelineState::DumpState(std::ofstream& stream) {
       stream << "RenderTarget[" << i << "] resource O" << m_RenderTargets[i]->ResourceKey
              << " descriptor O" << m_RenderTargets[i]->HeapKey << " "
              << m_RenderTargets[i]->DescriptorIndex << "\n";
+      if (m_RenderTargets[i]->IsDesc) {
+        stream << "\t";
+        DumpRenderTargetView(stream, m_RenderTargets[i]->RenderTargetViewDesc);
+        stream << "\n";
+      }
     }
   }
   if (m_DepthStencil.has_value()) {
     stream << "DepthStencil resource O" << m_DepthStencil->ResourceKey << " descriptor O"
            << m_DepthStencil->HeapKey << " " << m_DepthStencil->DescriptorIndex << "\n";
+    if (m_DepthStencil->IsDesc) {
+      stream << "\t";
+      DumpDepthStencilView(stream, m_DepthStencil->DepthStencilViewDesc);
+      stream << "\n";
+    }
+  }
+  if (m_StencilRef.has_value()) {
+    stream << "StencilRef " << m_StencilRef.value() << "\n";
+  }
+  if (m_BlendFactor.has_value()) {
+    stream << "\n";
+    stream << "BlendFactor";
+    for (float value : m_BlendFactor.value()) {
+      stream << " " << value;
+    }
+    stream << "\n";
+  }
+  if (!m_ScissorRects.empty()) {
+    stream << "\n";
+    stream << "ScissorRects";
+    for (D3D12_RECT rect : m_ScissorRects) {
+      stream << " {" << rect.left << ", " << rect.top << ", " << rect.right << ", " << rect.bottom
+             << "}";
+    }
+    stream << "\n";
+  }
+  if (!m_Viewports.empty()) {
+    stream << "\n";
+    stream << "Viewports";
+    for (D3D12_VIEWPORT v : m_Viewports) {
+      stream << " {" << v.TopLeftX << ", " << v.TopLeftY << ", " << v.Width << ", " << v.Height
+             << ", " << v.MinDepth << ", " << v.MaxDepth << "}";
+    }
+    stream << "\n";
   }
 }
 
@@ -206,7 +266,7 @@ void GraphicsPipelineState::DumpStateDesc(std::ofstream& stream) {
     stream << "\t\t\tComponentCount " << static_cast<unsigned>(entry.ComponentCount) << "\n";
     stream << "\t\t\tOutputSlot " << static_cast<unsigned>(entry.OutputSlot) << "\n";
   }
-  stream << "\t\BufferStrides " << desc.StreamOutput.NumStrides;
+  stream << "\tBufferStrides " << desc.StreamOutput.NumStrides;
   for (unsigned i = 0; i < desc.StreamOutput.NumStrides; ++i) {
     stream << " " << desc.StreamOutput.pBufferStrides[i];
   }
@@ -310,6 +370,67 @@ void GraphicsPipelineState::DumpStateDesc(std::ofstream& stream) {
   stream << "\tCachedPSO.CachedBlobSizeInBytes " << desc.CachedPSO.CachedBlobSizeInBytes << "\n";
 
   stream << "\tFlags " << toStr(desc.Flags) << "\n";
+}
+
+void GraphicsPipelineState::DumpRenderTargetView(std::ofstream& stream,
+                                                 const D3D12_RENDER_TARGET_VIEW_DESC& desc) {
+  stream << toStr(desc.Format) << " " << toStr(desc.ViewDimension) << " {";
+  switch (desc.ViewDimension) {
+  case D3D12_RTV_DIMENSION_BUFFER:
+    stream << desc.Buffer.FirstElement << ", " << desc.Buffer.NumElements;
+    break;
+  case D3D12_RTV_DIMENSION_TEXTURE1D:
+    stream << desc.Texture1D.MipSlice;
+    break;
+  case D3D12_RTV_DIMENSION_TEXTURE1DARRAY:
+    stream << desc.Texture1DArray.MipSlice << ", " << desc.Texture1DArray.FirstArraySlice << ", "
+           << desc.Texture1DArray.ArraySize;
+    break;
+  case D3D12_RTV_DIMENSION_TEXTURE2D:
+    stream << desc.Texture2D.MipSlice << ", " << desc.Texture2D.PlaneSlice;
+    break;
+  case D3D12_RTV_DIMENSION_TEXTURE2DARRAY:
+    stream << desc.Texture2DArray.MipSlice << ", " << desc.Texture2DArray.FirstArraySlice << ", "
+           << desc.Texture2DArray.ArraySize << ", " << desc.Texture2DArray.PlaneSlice;
+    break;
+  case D3D12_RTV_DIMENSION_TEXTURE2DMS:
+    break;
+  case D3D12_RTV_DIMENSION_TEXTURE2DMSARRAY:
+    stream << desc.Texture2DMSArray.FirstArraySlice << ", " << desc.Texture2DMSArray.ArraySize;
+    break;
+  case D3D12_RTV_DIMENSION_TEXTURE3D:
+    stream << desc.Texture3D.MipSlice << ", " << desc.Texture3D.FirstWSlice << ", "
+           << desc.Texture3D.WSize;
+    break;
+  }
+  stream << "}";
+}
+
+void GraphicsPipelineState::DumpDepthStencilView(std::ofstream& stream,
+                                                 const D3D12_DEPTH_STENCIL_VIEW_DESC& desc) {
+  stream << toStr(desc.Format) << " " << toStr(desc.ViewDimension) << " {";
+  switch (desc.ViewDimension) {
+  case D3D12_DSV_DIMENSION_TEXTURE1D:
+    stream << desc.Texture1D.MipSlice;
+    break;
+  case D3D12_DSV_DIMENSION_TEXTURE1DARRAY:
+    stream << desc.Texture1DArray.MipSlice << ", " << desc.Texture1DArray.FirstArraySlice << ", "
+           << desc.Texture1DArray.ArraySize;
+    break;
+  case D3D12_DSV_DIMENSION_TEXTURE2D:
+    stream << desc.Texture2D.MipSlice;
+    break;
+  case D3D12_DSV_DIMENSION_TEXTURE2DARRAY:
+    stream << desc.Texture2DArray.MipSlice << ", " << desc.Texture2DArray.FirstArraySlice << ", "
+           << desc.Texture2DArray.ArraySize;
+    break;
+  case D3D12_DSV_DIMENSION_TEXTURE2DMS:
+    break;
+  case D3D12_DSV_DIMENSION_TEXTURE2DMSARRAY:
+    stream << desc.Texture2DMSArray.FirstArraySlice << ", " << desc.Texture2DMSArray.ArraySize;
+    break;
+  }
+  stream << "}";
 }
 
 } // namespace DirectX
