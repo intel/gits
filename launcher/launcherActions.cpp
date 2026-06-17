@@ -464,6 +464,38 @@ void ResetBasePaths() {
   LoadConfigFile();
 }
 
+void SetAllConfigsFromBasePath() {
+  auto& context = Context::GetInstance();
+
+  const auto captureConfigPath = GetRecorderConfigPathForApi(context.SelectedApiForCapture);
+  if (std::filesystem::exists(captureConfigPath)) {
+    context.SetPath(captureConfigPath, Path::CONFIG, Mode::CAPTURE);
+  }
+  const auto playbackConfigPath = GetPlayerConfigPath();
+  if (std::filesystem::exists(playbackConfigPath)) {
+    context.SetPath(playbackConfigPath, Path::CONFIG, Mode::PLAYBACK);
+    context.SetPath(playbackConfigPath, Path::CONFIG, Mode::SUBCAPTURE);
+  }
+}
+
+void NewLauncherSession() {
+  auto& context = Context::GetInstance();
+
+  const auto emptyPath = "";
+
+  SetAllConfigsFromBasePath();
+
+  context.SetPath(emptyPath, Path::CAPTURE_TARGET, Mode::CAPTURE);
+  context.SetPath(emptyPath, Path::OUTPUT_STREAM, Mode::CAPTURE);
+
+  context.SetPath(emptyPath, Path::INPUT_STREAM, Mode::PLAYBACK);
+  context.SetPath(emptyPath, Path::SCREENSHOTS, Mode::PLAYBACK);
+  context.SetPath(emptyPath, Path::TRACE, Mode::PLAYBACK);
+
+  context.SetPath(emptyPath, Path::INPUT_STREAM, Mode::SUBCAPTURE);
+  context.SetPath(emptyPath, Path::OUTPUT_STREAM, Mode::SUBCAPTURE);
+}
+
 void OpenURL(const std::string& url) {
 #ifdef _WIN32
   system(("start " + url).c_str());

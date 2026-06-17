@@ -111,6 +111,12 @@ void MainWindow::Render() {
 
   GITSButton();
 
+  ImGui::SameLine();
+  if (ImGui::Button(Labels::NEW_SESSION_BUTTON)) {
+    NewLauncherSession();
+  }
+  ImGuiHelper::AddTooltip(Labels::NEW_SESSION_BUTTON_TOOLTIP);
+
   ModeSelectionButtons();
 
   MainActionButtons();
@@ -416,15 +422,7 @@ void MainWindow::GITSBaseRow() {
   ImGuiHelper::AddTooltip(Labels::UPDATE_CONFIG_PATH_HINT);
   ImGui::SameLine();
   if (ImGui::Button(Labels::USE_ALL_CONFIGS_FROM_BASE_PATH)) {
-    const auto captureConfigPath = GetRecorderConfigPathForApi(context.SelectedApiForCapture);
-    if (std::filesystem::exists(captureConfigPath)) {
-      context.SetPath(captureConfigPath, Path::CONFIG, Mode::CAPTURE);
-    }
-    const auto playbackConfigPath = GetPlayerConfigPath();
-    if (std::filesystem::exists(playbackConfigPath)) {
-      context.SetPath(playbackConfigPath, Path::CONFIG, Mode::PLAYBACK);
-      context.SetPath(playbackConfigPath, Path::CONFIG, Mode::SUBCAPTURE);
-    }
+    SetAllConfigsFromBasePath();
   }
   ImGuiHelper::AddTooltip(Labels::USE_ALL_CONFIGS_FROM_BASE_PATH_HINT);
 };

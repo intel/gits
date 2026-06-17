@@ -31,6 +31,9 @@ struct Labels {
                                         "Not all features work for other APIs.";
   static constexpr const char* NOTICE_2 = "The following options are exclusive to DirectX. For "
                                           "other APIs please modify the config file.";
+  static constexpr const char* NEW_SESSION_BUTTON = "New Session";
+  static constexpr const char* NEW_SESSION_BUTTON_TOOLTIP =
+      "Clear all paths except the GITS base path";
   static constexpr const char* CHOOSE_CONFIG = "Browse";
   static constexpr const char* CHOOSE_CONFIG_HINT =
       "Open File Dialog to choose a configuration yaml";

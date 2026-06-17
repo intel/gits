@@ -44,6 +44,8 @@ std::filesystem::path GetPlayerConfigPath();
 bool IsValidGITSBasePath(const std::filesystem::path& path);
 void DetectBasePaths();
 void ResetBasePaths();
+void SetAllConfigsFromBasePath();
+void NewLauncherSession();
 
 void OpenURL(const std::string& url);
 bool OpenFolder(const std::filesystem::path& path);
