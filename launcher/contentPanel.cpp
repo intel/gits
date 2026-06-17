@@ -256,8 +256,14 @@ void ContentPanel::CaptureActionCallback(const Event& e) {
     std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
     file.close();
     context.GITSLogEditor->AppendText(content);
-
     context.BtnsSideBar->SelectEntry(Context::SideBarItem::LOG);
+
+    const auto& streamDirectory = capture_actions::GetStreamDirectoryFromLog(content);
+    if (streamDirectory.has_value()) {
+      const auto streamPath = streamDirectory.value() / filesystem_names::GITS_STREAM;
+      context.SetPath(streamPath, Path::INPUT_STREAM, Mode::PLAYBACK);
+      context.SetPath(streamPath, Path::INPUT_STREAM, Mode::SUBCAPTURE);
+    }
 
     capture_actions::CleanupRecorderFiles(context.SelectedApiForCapture,
                                           context.TheMainWindow->GetCleanupOptions());

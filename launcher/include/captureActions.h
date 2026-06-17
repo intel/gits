@@ -11,6 +11,7 @@
 #include <filesystem>
 #include <vector>
 #include <string>
+#include <optional>
 
 #include "context.h"
 #include "capturePanel.h"
@@ -21,6 +22,7 @@ bool CopyRecorderFiles(std::filesystem::path gitsBasePath,
                        std::filesystem::path targetDirectory,
                        Api api);
 std::filesystem::path FindLatestRecorderLog(std::filesystem::path directory);
+std::optional<std::filesystem::path> GetStreamDirectoryFromLog(const std::string& log);
 void CaptureStream();
 std::vector<std::string> GetRecorderFilesForApi(Api api);
 bool CleanupRecorderFiles(Api api, CapturePanel::CaptureCleanupOptions cleanupSelections);

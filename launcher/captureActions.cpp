@@ -8,6 +8,8 @@
 
 #include "captureActions.h"
 
+#include <optional>
+
 #include "context.h"
 #include "fileActions.h"
 #include <yaml-cpp/yaml.h>
@@ -120,6 +122,35 @@ std::filesystem::path FindLatestRecorderLog(std::filesystem::path directory) {
     LOG_ERROR << "Error while trying to find the latest recorder log. Error: " << e.what();
     return std::filesystem::path();
   }
+}
+
+std::optional<std::filesystem::path> GetStreamDirectoryFromLog(const std::string& log) {
+  const std::string searchPattern = "Stream will be written to: ";
+
+  size_t pos = log.find(searchPattern);
+  if (pos != std::string::npos) {
+    // Move to the start of the path
+    pos += searchPattern.length();
+
+    // Find the end of the line
+    size_t endPos = log.find('\n', pos);
+    if (endPos == std::string::npos) {
+      endPos = log.length();
+    }
+
+    // Extract the path
+    std::string pathStr = log.substr(pos, endPos - pos);
+
+    // Remove any trailing whitespace/carriage return
+    while (!pathStr.empty() &&
+           (pathStr.back() == '\r' || pathStr.back() == '\n' || pathStr.back() == ' ')) {
+      pathStr.pop_back();
+    }
+
+    return std::filesystem::path(pathStr);
+  }
+
+  return std::nullopt;
 }
 
 void CaptureStream() {

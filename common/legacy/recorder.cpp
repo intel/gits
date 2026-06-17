@@ -190,6 +190,9 @@ gits::CRecorder::CRecorder()
 #else
     auto& outputpath = config.common.recorder.dumpPath;
 #endif
+
+    LOG_INFO << "Stream will be written to: " << outputpath;
+
     std::filesystem::create_directories(outputpath);
 #if defined(GITS_PLATFORM_X11)
     struct sigaction action;

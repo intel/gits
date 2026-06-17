@@ -17,6 +17,7 @@ namespace stream {
 
 StreamWriter::StreamWriter(const std::filesystem::path& streamDir,
                            CompressionType compressionType) {
+  LOG_INFO << "Stream will be written to: " << streamDir;
   m_StreamDir = streamDir.string();
   std::filesystem::create_directories(streamDir);
   m_Stream.exceptions(std::ofstream::failbit | std::ofstream::badbit);
