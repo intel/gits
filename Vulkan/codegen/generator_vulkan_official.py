@@ -1851,7 +1851,7 @@ arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='depthBoundsTestEnable', type='VkBool32')
 )
 
-Function(name='vkCmdSetDepthClampEnableEXT', enabled=False, type=FuncType.PARAM,
+Function(name='vkCmdSetDepthClampEnableEXT', enabled=True, type=FuncType.COMMAND_BUFFER_SET, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='depthClampEnable', type='VkBool32')
@@ -2011,11 +2011,11 @@ arg2=ArgDef(name='shadingRate', type='VkFragmentShadingRateNV'),
 arg3=ArgDef(name='combinerOps', type='const VkFragmentShadingRateCombinerOpKHR[2]')
 )
 
-Function(name='vkCmdSetFragmentShadingRateKHR', enabled=False, type=FuncType.PARAM,
+Function(name='vkCmdSetFragmentShadingRateKHR', enabled=True, type=FuncType.COMMAND_BUFFER_SET, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pFragmentSize', type='const VkExtent2D*'),
-arg3=ArgDef(name='combinerOps', type='const VkFragmentShadingRateCombinerOpKHR[2]')
+arg3=ArgDef(name='combinerOps', type='const VkFragmentShadingRateCombinerOpKHR[2]', wrapType='CVkFragmentShadingRateCombinerOpKHR::CSArray', wrapParams='2, combinerOps', count='2')
 )
 
 Function(name='vkCmdSetFrontFace', enabled=True, type=FuncType.COMMAND_BUFFER_SET, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
@@ -2105,7 +2105,7 @@ arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pMarkerInfo', type='const VkPerformanceStreamMarkerInfoINTEL*')
 )
 
-Function(name='vkCmdSetPolygonModeEXT', enabled=False, type=FuncType.PARAM,
+Function(name='vkCmdSetPolygonModeEXT', enabled=True, type=FuncType.COMMAND_BUFFER_SET, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='polygonMode', type='VkPolygonMode')

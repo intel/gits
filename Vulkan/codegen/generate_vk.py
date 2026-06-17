@@ -527,24 +527,28 @@ def make_argument_log_code(argument: Argument, count_is_a_pointer: bool) -> str:
 
     if argument.count is not None:
         additional_conditions: str = ''
+        additional_conditions_finish: str = ''
         dereference: str = ''
         if '[' not in argument.type:  # Skip nullptr check for arrays on the stack.
-            additional_conditions = f'({argument.name} != nullptr)'
+            additional_conditions = f'if (({argument.name} != nullptr)'
+
             if count_is_a_pointer:
                 additional_conditions += f' && ({argument.count} != nullptr)'
                 dereference = '*'
+            additional_conditions += ') {'
+            additional_conditions_finish = """
+                } else {
+                  LOG_TRACE_RAW << "{ 0 }";
+                }"""
 
         result += inspect.cleandoc(f'''
             ;
-                if ({additional_conditions}) {{
+                {additional_conditions}
                   LOG_TRACE_RAW << "{{";
                   for (uint32_t i = 0; i < (uint32_t){dereference}{argument.count}; ++i) {{
                     LOG_TRACE_RAW << " [" << i << "]:" << ToStr({type_cast}{argument.name}[i]);
                   }}
-                  LOG_TRACE_RAW << " }}";
-                }} else {{
-                  LOG_TRACE_RAW << "{{ 0 }}";
-                }}
+                  LOG_TRACE_RAW << " }}";{additional_conditions_finish}
             ''')
         result += '\n'
         result += '    LOG_TRACE_RAW << '
