@@ -232,6 +232,7 @@ void PlaybackOptionsPanel::ContextCallback(const Event& e) {
       auto recorderDiags = Context::GetInstance().MetaData.RecorderDiags;
       ExecutableNameConfig.CustomName =
           recorderDiags["/diag/original_app/name"_json_pointer].get<std::string>();
+      UpdateCLICall();
     } catch (...) {
       // nothing
     }
