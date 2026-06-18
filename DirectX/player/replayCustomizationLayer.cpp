@@ -163,6 +163,13 @@ void ReplayCustomizationLayer::Pre(ID3D12DeviceCreateRenderTargetViewCommand& c)
   FillCpuDescriptorHandleArgument(c.m_DestDescriptor);
 }
 
+void ReplayCustomizationLayer::Pre(ID3D12Device15TryCreateRenderTargetViewCommand& c) {
+  if (c.Skip) {
+    return;
+  }
+  FillCpuDescriptorHandleArgument(c.m_DestDescriptor);
+}
+
 void ReplayCustomizationLayer::Pre(ID3D12DeviceCreateShaderResourceViewCommand& c) {
   if (c.Skip) {
     return;
@@ -188,7 +195,39 @@ void ReplayCustomizationLayer::Pre(ID3D12DeviceCreateUnorderedAccessViewCommand&
   FillCpuDescriptorHandleArgument(c.m_DestDescriptor);
 }
 
+void ReplayCustomizationLayer::Pre(ID3D12Device15TryCreateShaderResourceViewCommand& c) {
+  if (c.Skip) {
+    return;
+  }
+  FillCpuDescriptorHandleArgument(c.m_DestDescriptor);
+
+  if (m_UseAddressPinning) {
+    return;
+  }
+
+  if (c.m_pDesc.Value &&
+      c.m_pDesc.Value->ViewDimension == D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE) {
+    c.m_pDesc.Value->RaytracingAccelerationStructure.Location =
+        m_Manager.GetGpuAddressService().GetGpuAddress(c.m_pDesc.RaytracingLocationKey,
+                                                       c.m_pDesc.RaytracingLocationOffset);
+  }
+}
+
+void ReplayCustomizationLayer::Pre(ID3D12Device15TryCreateUnorderedAccessViewCommand& c) {
+  if (c.Skip) {
+    return;
+  }
+  FillCpuDescriptorHandleArgument(c.m_DestDescriptor);
+}
+
 void ReplayCustomizationLayer::Pre(ID3D12DeviceCreateDepthStencilViewCommand& c) {
+  if (c.Skip) {
+    return;
+  }
+  FillCpuDescriptorHandleArgument(c.m_DestDescriptor);
+}
+
+void ReplayCustomizationLayer::Pre(ID3D12Device15TryCreateDepthStencilViewCommand& c) {
   if (c.Skip) {
     return;
   }
@@ -203,6 +242,14 @@ void ReplayCustomizationLayer::Pre(
   FillCpuDescriptorHandleArgument(c.m_DestDescriptor);
 }
 
+void ReplayCustomizationLayer::Pre(
+    ID3D12Device15TryCreateSamplerFeedbackUnorderedAccessViewCommand& c) {
+  if (c.Skip) {
+    return;
+  }
+  FillCpuDescriptorHandleArgument(c.m_DestDescriptor);
+}
+
 void ReplayCustomizationLayer::Pre(ID3D12DeviceCreateSamplerCommand& c) {
   if (c.Skip) {
     return;
@@ -211,6 +258,13 @@ void ReplayCustomizationLayer::Pre(ID3D12DeviceCreateSamplerCommand& c) {
 }
 
 void ReplayCustomizationLayer::Pre(ID3D12Device11CreateSampler2Command& c) {
+  if (c.Skip) {
+    return;
+  }
+  FillCpuDescriptorHandleArgument(c.m_DestDescriptor);
+}
+
+void ReplayCustomizationLayer::Pre(ID3D12Device15TryCreateSampler2Command& c) {
   if (c.Skip) {
     return;
   }
@@ -585,6 +639,22 @@ void ReplayCustomizationLayer::Pre(ID3D12GraphicsCommandList4SetPipelineState1Co
 }
 
 void ReplayCustomizationLayer::Pre(ID3D12DeviceCreateConstantBufferViewCommand& c) {
+  if (c.Skip) {
+    return;
+  }
+  FillCpuDescriptorHandleArgument(c.m_DestDescriptor);
+
+  if (m_UseAddressPinning) {
+    return;
+  }
+
+  if (c.m_pDesc.Value && c.m_pDesc.Value->BufferLocation) {
+    c.m_pDesc.Value->BufferLocation = m_Manager.GetGpuAddressService().GetGpuAddress(
+        c.m_pDesc.BufferLocationKey, c.m_pDesc.BufferLocationOffset);
+  }
+}
+
+void ReplayCustomizationLayer::Pre(ID3D12Device15TryCreateConstantBufferViewCommand& c) {
   if (c.Skip) {
     return;
   }

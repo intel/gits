@@ -339,6 +339,10 @@ void CaptureCustomizationLayer::Pre(ID3D12DeviceCreateRenderTargetViewCommand& c
   FillCpuDescriptorHandleArgument(c.m_DestDescriptor, D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 }
 
+void CaptureCustomizationLayer::Pre(ID3D12Device15TryCreateRenderTargetViewCommand& c) {
+  FillCpuDescriptorHandleArgument(c.m_DestDescriptor, D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+}
+
 void CaptureCustomizationLayer::Pre(ID3D12DeviceCreateShaderResourceViewCommand& c) {
   FillCpuDescriptorHandleArgument(c.m_DestDescriptor, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
   if (c.m_pDesc.Value &&
@@ -354,7 +358,26 @@ void CaptureCustomizationLayer::Pre(ID3D12DeviceCreateUnorderedAccessViewCommand
   FillCpuDescriptorHandleArgument(c.m_DestDescriptor, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 }
 
+void CaptureCustomizationLayer::Pre(ID3D12Device15TryCreateShaderResourceViewCommand& c) {
+  FillCpuDescriptorHandleArgument(c.m_DestDescriptor, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+  if (c.m_pDesc.Value &&
+      c.m_pDesc.Value->ViewDimension == D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE) {
+    GpuAddressService::GpuAddressInfo info = m_Manager.getGpuAddressService().GetGpuAddressInfo(
+        c.m_pDesc.Value->RaytracingAccelerationStructure.Location, true);
+    c.m_pDesc.RaytracingLocationKey = info.ResourceKey;
+    c.m_pDesc.RaytracingLocationOffset = info.Offset;
+  }
+}
+
+void CaptureCustomizationLayer::Pre(ID3D12Device15TryCreateUnorderedAccessViewCommand& c) {
+  FillCpuDescriptorHandleArgument(c.m_DestDescriptor, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+}
+
 void CaptureCustomizationLayer::Pre(ID3D12DeviceCreateDepthStencilViewCommand& c) {
+  FillCpuDescriptorHandleArgument(c.m_DestDescriptor, D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+}
+
+void CaptureCustomizationLayer::Pre(ID3D12Device15TryCreateDepthStencilViewCommand& c) {
   FillCpuDescriptorHandleArgument(c.m_DestDescriptor, D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
 }
 
@@ -363,11 +386,20 @@ void CaptureCustomizationLayer::Pre(
   FillCpuDescriptorHandleArgument(c.m_DestDescriptor, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 }
 
+void CaptureCustomizationLayer::Pre(
+    ID3D12Device15TryCreateSamplerFeedbackUnorderedAccessViewCommand& c) {
+  FillCpuDescriptorHandleArgument(c.m_DestDescriptor, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+}
+
 void CaptureCustomizationLayer::Pre(ID3D12DeviceCreateSamplerCommand& c) {
   FillCpuDescriptorHandleArgument(c.m_DestDescriptor, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
 }
 
 void CaptureCustomizationLayer::Pre(ID3D12Device11CreateSampler2Command& c) {
+  FillCpuDescriptorHandleArgument(c.m_DestDescriptor, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
+}
+
+void CaptureCustomizationLayer::Pre(ID3D12Device15TryCreateSampler2Command& c) {
   FillCpuDescriptorHandleArgument(c.m_DestDescriptor, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
 }
 
@@ -535,6 +567,16 @@ void CaptureCustomizationLayer::Pre(
 }
 
 void CaptureCustomizationLayer::Pre(ID3D12DeviceCreateConstantBufferViewCommand& c) {
+  FillCpuDescriptorHandleArgument(c.m_DestDescriptor, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+  if (c.m_pDesc.Value && c.m_pDesc.Value->BufferLocation) {
+    GpuAddressService::GpuAddressInfo info =
+        m_Manager.getGpuAddressService().GetGpuAddressInfo(c.m_pDesc.Value->BufferLocation);
+    c.m_pDesc.BufferLocationKey = info.ResourceKey;
+    c.m_pDesc.BufferLocationOffset = info.Offset;
+  }
+}
+
+void CaptureCustomizationLayer::Pre(ID3D12Device15TryCreateConstantBufferViewCommand& c) {
   FillCpuDescriptorHandleArgument(c.m_DestDescriptor, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
   if (c.m_pDesc.Value && c.m_pDesc.Value->BufferLocation) {
     GpuAddressService::GpuAddressInfo info =

@@ -29,6 +29,8 @@ public:
   void Post(StateRestoreEndCommand& c) override;
   void Post(ID3D12DeviceCreateRenderTargetViewCommand& c) override;
   void Post(ID3D12DeviceCreateDepthStencilViewCommand& c) override;
+  void Post(ID3D12Device15TryCreateRenderTargetViewCommand& c) override;
+  void Post(ID3D12Device15TryCreateDepthStencilViewCommand& c) override;
   void Post(ID3D12DeviceCopyDescriptorsSimpleCommand& c) override;
   void Post(ID3D12DeviceCopyDescriptorsCommand& c) override;
   void Post(ID3D12GraphicsCommandListOMSetRenderTargetsCommand& c) override;

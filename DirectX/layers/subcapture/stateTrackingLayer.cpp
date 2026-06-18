@@ -814,6 +814,44 @@ void StateTrackingLayer::Post(ID3D12DeviceCreateDepthStencilViewCommand& c) {
   m_DescriptorService.StoreState(state);
 }
 
+void StateTrackingLayer::Post(ID3D12Device15TryCreateRenderTargetViewCommand& c) {
+  if (m_StateRestored) {
+    return;
+  }
+  if (c.m_Result.Value != S_OK) {
+    return;
+  }
+  D3D12RenderTargetViewState* state = new D3D12RenderTargetViewState();
+  state->DeviceKey = c.m_Object.Key;
+  state->ResourceKey = c.m_pResource.Key;
+  if (state->IsDesc = c.m_pDesc.Value ? true : false) {
+    state->Desc = *c.m_pDesc.Value;
+  }
+  state->DestDescriptor = c.m_DestDescriptor.Value;
+  state->DestDescriptorKey = c.m_DestDescriptor.InterfaceKey;
+  state->DestDescriptorIndex = c.m_DestDescriptor.Index;
+  m_DescriptorService.StoreState(state);
+}
+
+void StateTrackingLayer::Post(ID3D12Device15TryCreateDepthStencilViewCommand& c) {
+  if (m_StateRestored) {
+    return;
+  }
+  if (c.m_Result.Value != S_OK) {
+    return;
+  }
+  D3D12DepthStencilViewState* state = new D3D12DepthStencilViewState();
+  state->DeviceKey = c.m_Object.Key;
+  state->ResourceKey = c.m_pResource.Key;
+  if (state->IsDesc = c.m_pDesc.Value ? true : false) {
+    state->Desc = *c.m_pDesc.Value;
+  }
+  state->DestDescriptor = c.m_DestDescriptor.Value;
+  state->DestDescriptorKey = c.m_DestDescriptor.InterfaceKey;
+  state->DestDescriptorIndex = c.m_DestDescriptor.Index;
+  m_DescriptorService.StoreState(state);
+}
+
 void StateTrackingLayer::Post(ID3D12DeviceCreateCommandAllocatorCommand& c) {
   if (m_StateRestored) {
     return;
@@ -1574,6 +1612,70 @@ void StateTrackingLayer::Post(ID3D12DeviceCreateUnorderedAccessViewCommand& c) {
 
 void StateTrackingLayer::Post(ID3D12DeviceCreateConstantBufferViewCommand& c) {
   if (m_StateRestored) {
+    return;
+  }
+  D3D12ConstantBufferViewState* state = new D3D12ConstantBufferViewState();
+  state->DeviceKey = c.m_Object.Key;
+  if (state->IsDesc = c.m_pDesc.Value ? true : false) {
+    state->Desc = *c.m_pDesc.Value;
+  }
+  state->ResourceKey = c.m_pDesc.BufferLocationKey;
+  state->BufferLocationOffset = c.m_pDesc.BufferLocationOffset;
+  state->DestDescriptor = c.m_DestDescriptor.Value;
+  state->DestDescriptorKey = c.m_DestDescriptor.InterfaceKey;
+  state->DestDescriptorIndex = c.m_DestDescriptor.Index;
+  m_DescriptorService.StoreState(state);
+}
+
+void StateTrackingLayer::Post(ID3D12Device15TryCreateShaderResourceViewCommand& c) {
+  if (m_StateRestored) {
+    return;
+  }
+  if (c.m_Result.Value != S_OK) {
+    return;
+  }
+  D3D12ShaderResourceViewState* state = new D3D12ShaderResourceViewState();
+  state->DeviceKey = c.m_Object.Key;
+  state->ResourceKey = c.m_pResource.Key;
+  if (c.m_pDesc.Value) {
+    state->IsDesc = true;
+    state->Desc = *c.m_pDesc.Value;
+    if (c.m_pDesc.Value->ViewDimension == D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE) {
+      state->ResourceKey = c.m_pDesc.RaytracingLocationKey;
+      state->RaytracingLocationOffset = c.m_pDesc.RaytracingLocationOffset;
+    }
+  }
+  state->DestDescriptor = c.m_DestDescriptor.Value;
+  state->DestDescriptorKey = c.m_DestDescriptor.InterfaceKey;
+  state->DestDescriptorIndex = c.m_DestDescriptor.Index;
+  m_DescriptorService.StoreState(state);
+}
+
+void StateTrackingLayer::Post(ID3D12Device15TryCreateUnorderedAccessViewCommand& c) {
+  if (m_StateRestored) {
+    return;
+  }
+  if (c.m_Result.Value != S_OK) {
+    return;
+  }
+  D3D12UnorderedAccessViewState* state = new D3D12UnorderedAccessViewState();
+  state->DeviceKey = c.m_Object.Key;
+  state->ResourceKey = c.m_pResource.Key;
+  state->AuxiliaryResourceKey = c.m_pCounterResource.Key;
+  if (state->IsDesc = c.m_pDesc.Value ? true : false) {
+    state->Desc = *c.m_pDesc.Value;
+  }
+  state->DestDescriptor = c.m_DestDescriptor.Value;
+  state->DestDescriptorKey = c.m_DestDescriptor.InterfaceKey;
+  state->DestDescriptorIndex = c.m_DestDescriptor.Index;
+  m_DescriptorService.StoreState(state);
+}
+
+void StateTrackingLayer::Post(ID3D12Device15TryCreateConstantBufferViewCommand& c) {
+  if (m_StateRestored) {
+    return;
+  }
+  if (c.m_Result.Value != S_OK) {
     return;
   }
   D3D12ConstantBufferViewState* state = new D3D12ConstantBufferViewState();

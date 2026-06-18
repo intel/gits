@@ -32,6 +32,8 @@ public:
   void Pre(INTC_D3D12_CreateComputePipelineStateCommand& c) override;
   void Pre(ID3D12DeviceCreateConstantBufferViewCommand& c) override;
   void Post(ID3D12DeviceCreateConstantBufferViewCommand& c) override;
+  void Pre(ID3D12Device15TryCreateConstantBufferViewCommand& c) override;
+  void Post(ID3D12Device15TryCreateConstantBufferViewCommand& c) override;
   void Pre(ID3D12GraphicsCommandListIASetIndexBufferCommand& c) override;
   void Post(ID3D12GraphicsCommandListIASetIndexBufferCommand& c) override;
   void Pre(ID3D12GraphicsCommandListIASetVertexBuffersCommand& c) override;
@@ -42,6 +44,8 @@ public:
   void Post(ID3D12GraphicsCommandList2WriteBufferImmediateCommand& c) override;
   void Pre(ID3D12DeviceCreateShaderResourceViewCommand& c) override;
   void Post(ID3D12DeviceCreateShaderResourceViewCommand& c) override;
+  void Pre(ID3D12Device15TryCreateShaderResourceViewCommand& c) override;
+  void Post(ID3D12Device15TryCreateShaderResourceViewCommand& c) override;
   void Pre(ID3D12GraphicsCommandListSetComputeRootConstantBufferViewCommand& c) override;
   void Post(ID3D12GraphicsCommandListSetComputeRootConstantBufferViewCommand& c) override;
   void Pre(ID3D12GraphicsCommandListSetGraphicsRootConstantBufferViewCommand& c) override;

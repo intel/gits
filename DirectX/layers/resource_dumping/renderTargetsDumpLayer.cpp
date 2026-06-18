@@ -90,6 +90,38 @@ void RenderTargetsDumpLayer::Post(ID3D12DeviceCreateDepthStencilViewCommand& c) 
                                                    c.m_DestDescriptor.Index)] = depthStencil;
 }
 
+void RenderTargetsDumpLayer::Post(ID3D12Device15TryCreateRenderTargetViewCommand& c) {
+  if (c.m_Result.Value != S_OK) {
+    return;
+  }
+  RenderTarget renderTarget{};
+  renderTarget.resource = c.m_pResource.Value;
+  renderTarget.ResourceKey = c.m_pResource.Key;
+  if (c.m_pDesc.Value) {
+    renderTarget.isDesc = true;
+    renderTarget.desc = *c.m_pDesc.Value;
+  }
+
+  m_RenderTargetsByDescriptorHandle[std::make_pair(c.m_DestDescriptor.InterfaceKey,
+                                                   c.m_DestDescriptor.Index)] = renderTarget;
+}
+
+void RenderTargetsDumpLayer::Post(ID3D12Device15TryCreateDepthStencilViewCommand& c) {
+  if (c.m_Result.Value != S_OK) {
+    return;
+  }
+  DepthStencil depthStencil;
+  depthStencil.resource = c.m_pResource.Value;
+  depthStencil.ResourceKey = c.m_pResource.Key;
+  if (c.m_pDesc.Value) {
+    depthStencil.isDesc = true;
+    depthStencil.desc = *c.m_pDesc.Value;
+  }
+
+  m_DepthStencilsByDescriptorHandle[std::make_pair(c.m_DestDescriptor.InterfaceKey,
+                                                   c.m_DestDescriptor.Index)] = depthStencil;
+}
+
 void RenderTargetsDumpLayer::Post(ID3D12DeviceCopyDescriptorsSimpleCommand& c) {
   unsigned srcHeapKey = c.m_SrcDescriptorRangeStart.InterfaceKey;
   unsigned srcHeapIndex = c.m_SrcDescriptorRangeStart.Index;

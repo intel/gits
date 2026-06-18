@@ -75,6 +75,8 @@ public:
   void Post(IDXGISwapChainGetBufferCommand& c) override;
   void Post(ID3D12DeviceCreateRenderTargetViewCommand& c) override;
   void Post(ID3D12DeviceCreateDepthStencilViewCommand& c) override;
+  void Post(ID3D12Device15TryCreateRenderTargetViewCommand& c) override;
+  void Post(ID3D12Device15TryCreateDepthStencilViewCommand& c) override;
   void Post(ID3D12DeviceCreateCommandAllocatorCommand& c) override;
   void Post(ID3D12DeviceCreateRootSignatureCommand& c) override;
   void Post(ID3D12Device1CreatePipelineLibraryCommand& c) override;
@@ -100,6 +102,7 @@ public:
   void Post(ID3D12Device4CreateReservedResource1Command& c) override;
   void Post(ID3D12Device10CreateReservedResource2Command& c) override;
   void Post(ID3D12DeviceCreateShaderResourceViewCommand& c) override;
+  void Post(ID3D12Device15TryCreateShaderResourceViewCommand& c) override;
   void Post(ID3D12DeviceCreateFenceCommand& c) override;
   void Post(ID3D12CommandQueueSignalCommand& c) override;
   void Post(ID3D12CommandQueueWaitCommand& c) override;
@@ -109,7 +112,9 @@ public:
   void Post(ID3D12DeviceEvictCommand& c) override;
   void Post(ID3D12DeviceCreateSamplerCommand& c) override;
   void Post(ID3D12DeviceCreateUnorderedAccessViewCommand& c) override;
+  void Post(ID3D12Device15TryCreateUnorderedAccessViewCommand& c) override;
   void Post(ID3D12DeviceCreateConstantBufferViewCommand& c) override;
+  void Post(ID3D12Device15TryCreateConstantBufferViewCommand& c) override;
   void Post(ID3D12ResourceMapCommand& c) override;
   void Post(ID3D12CommandQueueUpdateTileMappingsCommand& c) override;
   void Post(ID3D12CommandQueueCopyTileMappingsCommand& c) override;

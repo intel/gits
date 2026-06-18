@@ -40,9 +40,14 @@ public:
   void Post(ID3D12DeviceCreateDescriptorHeapCommand& c) override;
   void Post(ID3D12DeviceCreateRenderTargetViewCommand& c) override;
   void Post(ID3D12DeviceCreateDepthStencilViewCommand& c) override;
+  void Post(ID3D12Device15TryCreateRenderTargetViewCommand& c) override;
+  void Post(ID3D12Device15TryCreateDepthStencilViewCommand& c) override;
   void Post(ID3D12DeviceCreateShaderResourceViewCommand& c) override;
   void Post(ID3D12DeviceCreateUnorderedAccessViewCommand& c) override;
   void Post(ID3D12DeviceCreateConstantBufferViewCommand& c) override;
+  void Post(ID3D12Device15TryCreateShaderResourceViewCommand& c) override;
+  void Post(ID3D12Device15TryCreateUnorderedAccessViewCommand& c) override;
+  void Post(ID3D12Device15TryCreateConstantBufferViewCommand& c) override;
   void Post(ID3D12DeviceCreateSamplerCommand& c) override;
   void Post(ID3D12DeviceCopyDescriptorsSimpleCommand& c) override;
   void Post(ID3D12DeviceCopyDescriptorsCommand& c) override;

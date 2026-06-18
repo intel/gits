@@ -48,12 +48,18 @@ public:
   void Pre(ID3D12CommandQueueExecuteCommandListsCommand& command) override;
   void Post(ID3D12DeviceCreateDescriptorHeapCommand& command) override;
   void Pre(ID3D12DeviceCreateRenderTargetViewCommand& command) override;
+  void Pre(ID3D12Device15TryCreateRenderTargetViewCommand& command) override;
   void Pre(ID3D12DeviceCreateShaderResourceViewCommand& command) override;
   void Pre(ID3D12DeviceCreateUnorderedAccessViewCommand& command) override;
+  void Pre(ID3D12Device15TryCreateShaderResourceViewCommand& command) override;
+  void Pre(ID3D12Device15TryCreateUnorderedAccessViewCommand& command) override;
   void Pre(ID3D12DeviceCreateDepthStencilViewCommand& command) override;
+  void Pre(ID3D12Device15TryCreateDepthStencilViewCommand& command) override;
   void Pre(ID3D12Device8CreateSamplerFeedbackUnorderedAccessViewCommand& command) override;
+  void Pre(ID3D12Device15TryCreateSamplerFeedbackUnorderedAccessViewCommand& command) override;
   void Pre(ID3D12DeviceCreateSamplerCommand& command) override;
   void Pre(ID3D12Device11CreateSampler2Command& command) override;
+  void Pre(ID3D12Device15TryCreateSampler2Command& command) override;
   void Pre(ID3D12GraphicsCommandListSetGraphicsRootDescriptorTableCommand& command) override;
   void Pre(ID3D12GraphicsCommandListSetComputeRootDescriptorTableCommand& command) override;
   void Pre(ID3D12GraphicsCommandListOMSetRenderTargetsCommand& command) override;
@@ -77,6 +83,7 @@ public:
   void Pre(ID3D12GraphicsCommandListSetComputeRootUnorderedAccessViewCommand& command) override;
   void Pre(ID3D12GraphicsCommandListSetGraphicsRootUnorderedAccessViewCommand& command) override;
   void Pre(ID3D12DeviceCreateConstantBufferViewCommand& command) override;
+  void Pre(ID3D12Device15TryCreateConstantBufferViewCommand& command) override;
   void Pre(ID3D12GraphicsCommandListIASetIndexBufferCommand& command) override;
   void Pre(ID3D12GraphicsCommandListIASetVertexBuffersCommand& command) override;
   void Pre(ID3D12GraphicsCommandListSOSetTargetsCommand& command) override;

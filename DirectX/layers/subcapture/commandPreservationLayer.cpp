@@ -184,6 +184,19 @@ void CommandPreservationLayer::Post(ID3D12DeviceCreateConstantBufferViewCommand&
   }
 }
 
+void CommandPreservationLayer::Pre(ID3D12Device15TryCreateConstantBufferViewCommand& c) {
+  if (c.m_pDesc.Value && c.m_pDesc.Value->BufferLocation) {
+    m_CaptureGpuAddresses.push_back(c.m_pDesc.Value->BufferLocation);
+  }
+}
+
+void CommandPreservationLayer::Post(ID3D12Device15TryCreateConstantBufferViewCommand& c) {
+  if (c.m_pDesc.Value && c.m_pDesc.Value->BufferLocation) {
+    c.m_pDesc.Value->BufferLocation = m_CaptureGpuAddresses[0];
+    m_CaptureGpuAddresses.clear();
+  }
+}
+
 void CommandPreservationLayer::Pre(ID3D12GraphicsCommandListIASetIndexBufferCommand& c) {
   if (c.m_pView.Value && c.m_pView.Value->BufferLocation) {
     m_CaptureGpuAddresses.push_back(c.m_pView.Value->BufferLocation);
@@ -281,6 +294,21 @@ void CommandPreservationLayer::Pre(ID3D12DeviceCreateShaderResourceViewCommand& 
 }
 
 void CommandPreservationLayer::Post(ID3D12DeviceCreateShaderResourceViewCommand& c) {
+  if (c.m_pDesc.Value &&
+      c.m_pDesc.Value->ViewDimension == D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE) {
+    c.m_pDesc.Value->RaytracingAccelerationStructure.Location = m_CaptureGpuAddresses[0];
+    m_CaptureGpuAddresses.clear();
+  }
+}
+
+void CommandPreservationLayer::Pre(ID3D12Device15TryCreateShaderResourceViewCommand& c) {
+  if (c.m_pDesc.Value &&
+      c.m_pDesc.Value->ViewDimension == D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE) {
+    m_CaptureGpuAddresses.push_back(c.m_pDesc.Value->RaytracingAccelerationStructure.Location);
+  }
+}
+
+void CommandPreservationLayer::Post(ID3D12Device15TryCreateShaderResourceViewCommand& c) {
   if (c.m_pDesc.Value &&
       c.m_pDesc.Value->ViewDimension == D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE) {
     c.m_pDesc.Value->RaytracingAccelerationStructure.Location = m_CaptureGpuAddresses[0];
