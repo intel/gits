@@ -109,7 +109,7 @@ private:
     std::unique_ptr<PointerArgument<NVAPI_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_PARAMS>> Desc{};
   };
 
-  struct Interval {
+  struct BufferRegion {
     unsigned Start{};
     unsigned End{};
   };
@@ -163,11 +163,7 @@ private:
                    unsigned commandKey,
                    ID3D12GraphicsCommandList* commandList,
                    BufferBackedRaytracingAccelerationStructureState* state);
-  std::vector<Interval> MergeIntervals(const std::vector<Interval>& intervals);
-  void InsertIfNotResident(unsigned resourceKey, std::set<unsigned>& residencyKeys);
-  std::optional<unsigned> GetResidencyKeyForNotResidentResource(unsigned key);
-  void RecordMakeResident(const std::set<unsigned>& keys);
-  void RecordEvict(const std::set<unsigned>& keys);
+  std::vector<BufferRegion> MergeBufferRegions(const std::vector<BufferRegion>& bufferRegions);
 };
 
 } // namespace DirectX

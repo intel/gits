@@ -72,10 +72,6 @@ private:
                        std::vector<unsigned>& resourceKeys);
   D3D12_RESOURCE_STATES GetResourceState(D3D12_BARRIER_LAYOUT layout);
   D3D12_BARRIER_LAYOUT GetResourceLayout(D3D12_RESOURCE_STATES layout);
-  void InsertIfNotResident(unsigned resourceKey, std::set<unsigned>& residencyKeys);
-  std::optional<unsigned> GetResidencyKeyForNotResidentResource(unsigned key);
-  void RecordMakeResident(const std::set<unsigned>& keys);
-  void RecordEvict(const std::set<unsigned>& keys);
   unsigned GetDeviceKeyForRestore() const;
 
 private:

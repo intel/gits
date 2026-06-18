@@ -13,6 +13,7 @@
 #include "commandsCustom.h"
 #include "commandSerializersCustom.h"
 #include "resourceSizeUtils.h"
+#include "resourceResidencyService.h"
 #include "log.h"
 
 #include <wrl/client.h>
@@ -367,7 +368,7 @@ void ResourceStateTrackingService::RestoreResourceStates(
   createFence.m_ppFence.Key = fenceKey;
   m_StateService.GetRecorder().Record(ID3D12DeviceCreateFenceSerializer(createFence));
 
-  std::set<unsigned> residencyKeys;
+  ResourceResidencyService residencyService(m_StateService, m_DeviceKey);
 
   for (unsigned resourceKey : orderedResources) {
     if (m_RecreateStateResources.find(resourceKey) == m_RecreateStateResources.end()) {
@@ -379,7 +380,7 @@ void ResourceStateTrackingService::RestoreResourceStates(
 
     auto writeResourceBarrier = [&](unsigned subresource, D3D12_RESOURCE_STATES beforeState,
                                     D3D12_RESOURCE_STATES afterState) {
-      InsertIfNotResident(resourceKey, residencyKeys);
+      residencyService.AddResource(resourceKey);
 
       ID3D12GraphicsCommandListResourceBarrierCommand barrierCommand;
       barrierCommand.Key = m_StateService.GetUniqueCommandKey();
@@ -402,7 +403,7 @@ void ResourceStateTrackingService::RestoreResourceStates(
 
     auto writeResourceEnhancedBarrier = [&](unsigned subresource, D3D12_BARRIER_LAYOUT beforeLayout,
                                             D3D12_BARRIER_LAYOUT afterLayout) {
-      InsertIfNotResident(resourceKey, residencyKeys);
+      residencyService.AddResource(resourceKey);
 
       ID3D12GraphicsCommandList7BarrierCommand barrierCommand;
       barrierCommand.Key = m_StateService.GetUniqueCommandKey();
@@ -484,8 +485,8 @@ void ResourceStateTrackingService::RestoreResourceStates(
       continue;
     }
 
-    InsertIfNotResident(keys.first, residencyKeys);
-    InsertIfNotResident(keys.second, residencyKeys);
+    residencyService.AddResource(keys.first);
+    residencyService.AddResource(keys.second);
 
     ID3D12GraphicsCommandListResourceBarrierCommand barrierCommand;
     barrierCommand.Key = m_StateService.GetUniqueCommandKey();
@@ -509,7 +510,7 @@ void ResourceStateTrackingService::RestoreResourceStates(
   commandListClose.m_Object.Key = commandListKey;
   m_StateService.GetRecorder().Record(ID3D12GraphicsCommandListCloseSerializer(commandListClose));
 
-  RecordMakeResident(residencyKeys);
+  residencyService.RecordMakeResident();
 
   ID3D12CommandQueueExecuteCommandListsCommand executeCommandLists;
   executeCommandLists.Key = m_StateService.GetUniqueCommandKey();
@@ -555,7 +556,7 @@ void ResourceStateTrackingService::RestoreResourceStates(
   releaseCommandQueue.m_Object.Key = commandQueueKey;
   m_StateService.GetRecorder().Record(IUnknownReleaseSerializer(releaseCommandQueue));
 
-  RecordEvict(residencyKeys);
+  residencyService.RecordEvict();
 }
 
 void ResourceStateTrackingService::RestoreBackBufferState(unsigned commandQueueKey,
@@ -665,134 +666,6 @@ void ResourceStateTrackingService::RestoreBackBufferState(unsigned commandQueueK
   releaseCommandAllocator.Key = m_StateService.GetUniqueCommandKey();
   releaseCommandAllocator.m_Object.Key = commandAllocatorKey;
   m_StateService.GetRecorder().Record(IUnknownReleaseSerializer(releaseCommandAllocator));
-}
-
-void ResourceStateTrackingService::InsertIfNotResident(unsigned resourceKey,
-                                                       std::set<unsigned>& residencyKeys) {
-  if (!resourceKey) {
-    return;
-  }
-
-  auto residencyKey = GetResidencyKeyForNotResidentResource(resourceKey);
-  if (residencyKey.has_value() && residencyKey.value() != 0) {
-    residencyKeys.insert(residencyKey.value());
-  }
-}
-
-std::optional<unsigned> ResourceStateTrackingService::GetResidencyKeyForNotResidentResource(
-    unsigned key) {
-  ObjectState* state = m_StateService.GetState(key);
-  if (!state) {
-    return std::nullopt;
-  }
-
-  switch (state->CreationCommand->GetId()) {
-  case CommandId::ID_ID3D12DEVICE_CREATECOMMITTEDRESOURCE: {
-    auto* command =
-        static_cast<ID3D12DeviceCreateCommittedResourceCommand*>(state->CreationCommand.get());
-    if (command->m_HeapFlags.Value & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
-      return key;
-    }
-  } break;
-  case CommandId::ID_ID3D12DEVICE4_CREATECOMMITTEDRESOURCE1: {
-    auto* command =
-        static_cast<ID3D12Device4CreateCommittedResource1Command*>(state->CreationCommand.get());
-    if (command->m_HeapFlags.Value & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
-      return key;
-    }
-  } break;
-  case CommandId::ID_ID3D12DEVICE8_CREATECOMMITTEDRESOURCE2: {
-    auto* command =
-        static_cast<ID3D12Device8CreateCommittedResource2Command*>(state->CreationCommand.get());
-    if (command->m_HeapFlags.Value & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
-      return key;
-    }
-  } break;
-  case CommandId::ID_ID3D12DEVICE10_CREATECOMMITTEDRESOURCE3: {
-    auto* command =
-        static_cast<ID3D12Device10CreateCommittedResource3Command*>(state->CreationCommand.get());
-    if (command->m_HeapFlags.Value & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
-      return key;
-    }
-  } break;
-  case CommandId::INTC_D3D12_CREATECOMMITTEDRESOURCE: {
-    auto* command =
-        static_cast<INTC_D3D12_CreateCommittedResourceCommand*>(state->CreationCommand.get());
-    if (command->m_HeapFlags.Value & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
-      return key;
-    }
-  } break;
-  case CommandId::ID_ID3D12DEVICE_CREATEPLACEDRESOURCE:
-  case CommandId::ID_ID3D12DEVICE8_CREATEPLACEDRESOURCE1:
-  case CommandId::ID_ID3D12DEVICE10_CREATEPLACEDRESOURCE2:
-  case CommandId::INTC_D3D12_CREATEPLACEDRESOURCE: {
-    unsigned heapKey = static_cast<ResourceState*>(state)->HeapKey;
-    ObjectState* heapState = m_StateService.GetState(heapKey);
-    if (!heapState) {
-      return std::nullopt;
-    }
-    switch (heapState->CreationCommand->GetId()) {
-    case CommandId::ID_ID3D12DEVICE_CREATEHEAP: {
-      auto* command = static_cast<ID3D12DeviceCreateHeapCommand*>(heapState->CreationCommand.get());
-      if (command->m_pDesc.Value->Flags & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
-        return heapKey;
-      }
-    } break;
-    case CommandId::ID_ID3D12DEVICE4_CREATEHEAP1: {
-      auto* command =
-          static_cast<ID3D12Device4CreateHeap1Command*>(heapState->CreationCommand.get());
-      if (command->m_pDesc.Value->Flags & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
-        return heapKey;
-      }
-    } break;
-    case CommandId::INTC_D3D12_CREATEHEAP: {
-      auto* command = static_cast<INTC_D3D12_CreateHeapCommand*>(heapState->CreationCommand.get());
-      if (command->m_pDesc.Value->pD3D12Desc->Flags & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
-        return heapKey;
-      }
-    } break;
-    default:
-      return std::nullopt;
-    }
-  } break;
-  }
-  return std::nullopt;
-}
-
-void ResourceStateTrackingService::RecordMakeResident(const std::set<unsigned>& keys) {
-  if (keys.empty()) {
-    return;
-  }
-
-  ID3D12DeviceMakeResidentCommand makeResident;
-  makeResident.Key = m_StateService.GetUniqueCommandKey();
-  makeResident.m_Object.Key = GetDeviceKeyForRestore();
-  makeResident.m_NumObjects.Value = keys.size();
-  ID3D12Pageable* fakePtr = reinterpret_cast<ID3D12Pageable*>(1);
-  makeResident.m_ppObjects.Value = &fakePtr;
-  makeResident.m_ppObjects.Size = keys.size();
-  for (unsigned key : keys) {
-    makeResident.m_ppObjects.Keys.push_back(key);
-  }
-  m_StateService.GetRecorder().Record(ID3D12DeviceMakeResidentSerializer(makeResident));
-}
-
-void ResourceStateTrackingService::RecordEvict(const std::set<unsigned>& keys) {
-  if (keys.empty()) {
-    return;
-  }
-
-  ID3D12DeviceEvictCommand evict;
-  evict.Key = m_StateService.GetUniqueCommandKey();
-  evict.m_Object.Key = GetDeviceKeyForRestore();
-  evict.m_NumObjects.Value = keys.size();
-  ID3D12Pageable* fakePtr = reinterpret_cast<ID3D12Pageable*>(1);
-  evict.m_ppObjects.Value = &fakePtr;
-  evict.m_ppObjects.Size = keys.size();
-  for (unsigned key : keys) {
-    evict.m_ppObjects.Keys.push_back(key);
-  }
-  m_StateService.GetRecorder().Record(ID3D12DeviceEvictSerializer(evict));
 }
 
 } // namespace DirectX

@@ -13,6 +13,7 @@
 #include "commandSerializersAuto.h"
 #include "commandSerializersCustom.h"
 #include "reservedResourcesService.h"
+#include "resourceResidencyService.h"
 #include "log.h"
 #include "configurationLib.h"
 #include "nvapi.h"
@@ -42,37 +43,42 @@ AccelerationStructuresBuildService::AccelerationStructuresBuildService(
 
 void AccelerationStructuresBuildService::BuildAccelerationStructure(
     ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c) {
-  if (m_SerializeMode &&
-      c.m_pDesc.Value->Inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL) {
-    return;
-  }
-  if (c.m_pDesc.Value->Inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
-    if (m_Optimize) {
-      if (!m_StateService.GetAnalyzerResults().RestoreTlas(c.Key)) {
-        return;
-      }
-    } else {
-      if (!m_Recorder.CommandListSubcapture() && !m_RestoreTlas) {
-        return;
+  {
+    if (m_SerializeMode &&
+        c.m_pDesc.Value->Inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL) {
+      return;
+    }
+    if (c.m_pDesc.Value->Inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
+      if (m_Optimize) {
+        if (!m_StateService.GetAnalyzerResults().RestoreTlas(c.Key)) {
+          return;
+        }
+      } else {
+        if (!m_Recorder.CommandListSubcapture() && !m_RestoreTlas) {
+          return;
+        }
       }
     }
-  }
-  if (m_Restored) {
-    return;
+    if (m_Restored) {
+      return;
+    }
   }
 
   D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS& inputs = c.m_pDesc.Value->Inputs;
 
-  D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO info{};
-  Microsoft::WRL::ComPtr<ID3D12Device5> device;
-  HRESULT hr = c.m_Object.Value->GetDevice(IID_PPV_ARGS(&device));
-  GITS_ASSERT(hr == S_OK);
-  device->GetRaytracingAccelerationStructurePrebuildInfo(&inputs, &info);
-  if (info.ScratchDataSizeInBytes > m_MaxBuildScratchSpace) {
-    m_MaxBuildScratchSpace = info.ScratchDataSizeInBytes;
-  }
-  if (info.UpdateScratchDataSizeInBytes > m_MaxBuildScratchSpace) {
-    m_MaxBuildScratchSpace = info.UpdateScratchDataSizeInBytes;
+  // get scratch space size
+  {
+    D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO info{};
+    Microsoft::WRL::ComPtr<ID3D12Device5> device;
+    HRESULT hr = c.m_Object.Value->GetDevice(IID_PPV_ARGS(&device));
+    GITS_ASSERT(hr == S_OK);
+    device->GetRaytracingAccelerationStructurePrebuildInfo(&inputs, &info);
+    if (info.ScratchDataSizeInBytes > m_MaxBuildScratchSpace) {
+      m_MaxBuildScratchSpace = info.ScratchDataSizeInBytes;
+    }
+    if (info.UpdateScratchDataSizeInBytes > m_MaxBuildScratchSpace) {
+      m_MaxBuildScratchSpace = info.UpdateScratchDataSizeInBytes;
+    }
   }
 
   BuildRaytracingAccelerationStructureState* state =
@@ -97,175 +103,180 @@ void AccelerationStructuresBuildService::BuildAccelerationStructure(
 
   m_StateService.KeepState(c.m_pDesc.DestAccelerationStructureKey);
 
-  std::unordered_map<unsigned, std::vector<Interval>> intervalsByInputKey;
-  auto addBufferAccess = [&](unsigned inputIndex, unsigned size) {
-    unsigned inputKey = c.m_pDesc.InputKeys[inputIndex];
-    unsigned inputOffset = c.m_pDesc.InputOffsets[inputIndex];
+  std::unordered_map<unsigned, std::vector<BufferRegion>> bufferRegionsByInputKey;
 
-    auto& intervals = intervalsByInputKey[inputKey];
-    intervals.push_back({inputOffset, inputOffset + size});
-  };
+  // get input buffer regions
+  {
+    auto addBufferRegion = [&](unsigned inputIndex, unsigned size) {
+      unsigned inputKey = c.m_pDesc.InputKeys[inputIndex];
+      unsigned inputOffset = c.m_pDesc.InputOffsets[inputIndex];
+      auto& bufferRegions = bufferRegionsByInputKey[inputKey];
+      bufferRegions.push_back({inputOffset, inputOffset + size});
+    };
 
-  unsigned inputIndex = 0;
-  if (inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL &&
-      inputs.InstanceDescs) {
-    unsigned size = inputs.NumDescs * sizeof(D3D12_RAYTRACING_INSTANCE_DESC);
-    if (inputs.DescsLayout == D3D12_ELEMENTS_LAYOUT_ARRAY_OF_POINTERS) {
-      size = inputs.NumDescs * sizeof(D3D12_GPU_VIRTUAL_ADDRESS);
-    }
-    addBufferAccess(inputIndex, size);
-  } else if (inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL) {
-    for (unsigned i = 0; i < inputs.NumDescs; ++i) {
-      D3D12_RAYTRACING_GEOMETRY_DESC& desc = const_cast<D3D12_RAYTRACING_GEOMETRY_DESC&>(
-          c.m_pDesc.Value->Inputs.DescsLayout == D3D12_ELEMENTS_LAYOUT_ARRAY
-              ? c.m_pDesc.Value->Inputs.pGeometryDescs[i]
-              : *c.m_pDesc.Value->Inputs.ppGeometryDescs[i]);
-      if (desc.Type == D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES) {
-        if (desc.Triangles.Transform3x4) {
-          unsigned size = sizeof(float) * 3 * 4;
-          addBufferAccess(inputIndex, size);
-        }
-        ++inputIndex;
-        if (desc.Triangles.IndexBuffer && desc.Triangles.IndexCount) {
-          unsigned size = desc.Triangles.IndexCount *
-                          (desc.Triangles.IndexFormat == DXGI_FORMAT_R16_UINT ? 2 : 4);
-          addBufferAccess(inputIndex, size);
-        }
-        ++inputIndex;
-        if (desc.Triangles.VertexBuffer.StartAddress && desc.Triangles.VertexCount) {
-          unsigned stride = desc.Triangles.VertexBuffer.StrideInBytes;
-          if (!stride) {
-            if (desc.Triangles.VertexFormat == DXGI_FORMAT_R16G16B16A16_SNORM) {
-              stride = 8;
-            }
-          }
-          unsigned size = desc.Triangles.VertexCount * stride;
-          addBufferAccess(inputIndex, size);
-        }
-        ++inputIndex;
-      } else if (desc.Type == D3D12_RAYTRACING_GEOMETRY_TYPE_PROCEDURAL_PRIMITIVE_AABBS) {
-        if (desc.AABBs.AABBs.StartAddress && desc.AABBs.AABBCount) {
-          unsigned size = desc.AABBs.AABBCount * desc.AABBs.AABBs.StrideInBytes;
-          addBufferAccess(inputIndex, size);
-        }
-        ++inputIndex;
-      } else if (desc.Type == D3D12_RAYTRACING_GEOMETRY_TYPE_OMM_TRIANGLES) {
-        if (desc.OmmTriangles.pTriangles) {
-          auto& triangles = *desc.OmmTriangles.pTriangles;
-          if (triangles.Transform3x4) {
+    unsigned inputIndex = 0;
+    if (inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL &&
+        inputs.InstanceDescs) {
+      unsigned size = inputs.NumDescs * sizeof(D3D12_RAYTRACING_INSTANCE_DESC);
+      if (inputs.DescsLayout == D3D12_ELEMENTS_LAYOUT_ARRAY_OF_POINTERS) {
+        size = inputs.NumDescs * sizeof(D3D12_GPU_VIRTUAL_ADDRESS);
+      }
+      addBufferRegion(inputIndex, size);
+    } else if (inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL) {
+      for (unsigned i = 0; i < inputs.NumDescs; ++i) {
+        D3D12_RAYTRACING_GEOMETRY_DESC& desc = const_cast<D3D12_RAYTRACING_GEOMETRY_DESC&>(
+            c.m_pDesc.Value->Inputs.DescsLayout == D3D12_ELEMENTS_LAYOUT_ARRAY
+                ? c.m_pDesc.Value->Inputs.pGeometryDescs[i]
+                : *c.m_pDesc.Value->Inputs.ppGeometryDescs[i]);
+        if (desc.Type == D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES) {
+          if (desc.Triangles.Transform3x4) {
             unsigned size = sizeof(float) * 3 * 4;
-            addBufferAccess(inputIndex, size);
+            addBufferRegion(inputIndex, size);
           }
           ++inputIndex;
-          if (triangles.IndexBuffer && triangles.IndexCount) {
-            unsigned size =
-                triangles.IndexCount * (triangles.IndexFormat == DXGI_FORMAT_R16_UINT ? 2 : 4);
-            addBufferAccess(inputIndex, size);
+          if (desc.Triangles.IndexBuffer && desc.Triangles.IndexCount) {
+            unsigned size = desc.Triangles.IndexCount *
+                            (desc.Triangles.IndexFormat == DXGI_FORMAT_R16_UINT ? 2 : 4);
+            addBufferRegion(inputIndex, size);
           }
           ++inputIndex;
-          if (triangles.VertexBuffer.StartAddress && triangles.VertexCount) {
-            unsigned stride = triangles.VertexBuffer.StrideInBytes;
+          if (desc.Triangles.VertexBuffer.StartAddress && desc.Triangles.VertexCount) {
+            unsigned stride = desc.Triangles.VertexBuffer.StrideInBytes;
             if (!stride) {
-              if (triangles.VertexFormat == DXGI_FORMAT_R16G16B16A16_SNORM) {
+              if (desc.Triangles.VertexFormat == DXGI_FORMAT_R16G16B16A16_SNORM) {
                 stride = 8;
               }
             }
-            unsigned size = triangles.VertexCount * stride;
-            addBufferAccess(inputIndex, size);
+            unsigned size = desc.Triangles.VertexCount * stride;
+            addBufferRegion(inputIndex, size);
           }
           ++inputIndex;
-        }
-        if (desc.OmmTriangles.pOmmLinkage) {
-          auto& ommLinkage = *desc.OmmTriangles.pOmmLinkage;
-          if (ommLinkage.OpacityMicromapIndexBuffer.StartAddress) {
-            unsigned stride = ommLinkage.OpacityMicromapIndexBuffer.StrideInBytes;
-            unsigned formatSize = 0;
-            if (!stride) {
-              if (ommLinkage.OpacityMicromapIndexFormat == DXGI_FORMAT_R32_UINT) {
-                stride = 4;
-                formatSize = 4;
-              } else if (ommLinkage.OpacityMicromapIndexFormat == DXGI_FORMAT_R16_UINT) {
-                stride = 2;
-                formatSize = 2;
-              } else if (ommLinkage.OpacityMicromapIndexFormat == DXGI_FORMAT_R8_UINT) {
-                stride = 1;
-                formatSize = 1;
-              }
-            } else {
-              if (ommLinkage.OpacityMicromapIndexFormat == DXGI_FORMAT_R32_UINT) {
-                formatSize = 4;
-              } else if (ommLinkage.OpacityMicromapIndexFormat == DXGI_FORMAT_R16_UINT) {
-                formatSize = 2;
-              } else if (ommLinkage.OpacityMicromapIndexFormat == DXGI_FORMAT_R8_UINT) {
-                formatSize = 1;
-              }
-            }
-            GITS_ASSERT(stride);
-            GITS_ASSERT(formatSize);
-            GITS_ASSERT(ommLinkage.OpacityMicromapIndexBuffer.StartAddress % formatSize == 0);
-            GITS_ASSERT(stride % formatSize == 0);
-            unsigned ommCount{};
-            if (desc.OmmTriangles.pTriangles && desc.OmmTriangles.pTriangles->IndexCount > 0) {
-              ommCount = desc.OmmTriangles.pTriangles->IndexCount / 3;
-            }
-            unsigned size = ommCount * stride;
-            if (size) {
-              addBufferAccess(inputIndex, size);
-            }
+        } else if (desc.Type == D3D12_RAYTRACING_GEOMETRY_TYPE_PROCEDURAL_PRIMITIVE_AABBS) {
+          if (desc.AABBs.AABBs.StartAddress && desc.AABBs.AABBCount) {
+            unsigned size = desc.AABBs.AABBCount * desc.AABBs.AABBs.StrideInBytes;
+            addBufferRegion(inputIndex, size);
           }
           ++inputIndex;
-          ++inputIndex;
+        } else if (desc.Type == D3D12_RAYTRACING_GEOMETRY_TYPE_OMM_TRIANGLES) {
+          if (desc.OmmTriangles.pTriangles) {
+            auto& triangles = *desc.OmmTriangles.pTriangles;
+            if (triangles.Transform3x4) {
+              unsigned size = sizeof(float) * 3 * 4;
+              addBufferRegion(inputIndex, size);
+            }
+            ++inputIndex;
+            if (triangles.IndexBuffer && triangles.IndexCount) {
+              unsigned size =
+                  triangles.IndexCount * (triangles.IndexFormat == DXGI_FORMAT_R16_UINT ? 2 : 4);
+              addBufferRegion(inputIndex, size);
+            }
+            ++inputIndex;
+            if (triangles.VertexBuffer.StartAddress && triangles.VertexCount) {
+              unsigned stride = triangles.VertexBuffer.StrideInBytes;
+              if (!stride) {
+                if (triangles.VertexFormat == DXGI_FORMAT_R16G16B16A16_SNORM) {
+                  stride = 8;
+                }
+              }
+              unsigned size = triangles.VertexCount * stride;
+              addBufferRegion(inputIndex, size);
+            }
+            ++inputIndex;
+          }
+          if (desc.OmmTriangles.pOmmLinkage) {
+            auto& ommLinkage = *desc.OmmTriangles.pOmmLinkage;
+            if (ommLinkage.OpacityMicromapIndexBuffer.StartAddress) {
+              unsigned stride = ommLinkage.OpacityMicromapIndexBuffer.StrideInBytes;
+              unsigned formatSize = 0;
+              if (!stride) {
+                if (ommLinkage.OpacityMicromapIndexFormat == DXGI_FORMAT_R32_UINT) {
+                  stride = 4;
+                  formatSize = 4;
+                } else if (ommLinkage.OpacityMicromapIndexFormat == DXGI_FORMAT_R16_UINT) {
+                  stride = 2;
+                  formatSize = 2;
+                } else if (ommLinkage.OpacityMicromapIndexFormat == DXGI_FORMAT_R8_UINT) {
+                  stride = 1;
+                  formatSize = 1;
+                }
+              } else {
+                if (ommLinkage.OpacityMicromapIndexFormat == DXGI_FORMAT_R32_UINT) {
+                  formatSize = 4;
+                } else if (ommLinkage.OpacityMicromapIndexFormat == DXGI_FORMAT_R16_UINT) {
+                  formatSize = 2;
+                } else if (ommLinkage.OpacityMicromapIndexFormat == DXGI_FORMAT_R8_UINT) {
+                  formatSize = 1;
+                }
+              }
+              GITS_ASSERT(stride);
+              GITS_ASSERT(formatSize);
+              GITS_ASSERT(ommLinkage.OpacityMicromapIndexBuffer.StartAddress % formatSize == 0);
+              GITS_ASSERT(stride % formatSize == 0);
+              unsigned ommCount{};
+              if (desc.OmmTriangles.pTriangles && desc.OmmTriangles.pTriangles->IndexCount > 0) {
+                ommCount = desc.OmmTriangles.pTriangles->IndexCount / 3;
+              }
+              unsigned size = ommCount * stride;
+              if (size) {
+                addBufferRegion(inputIndex, size);
+              }
+            }
+            ++inputIndex;
+            ++inputIndex;
+          }
         }
       }
-    }
-  } else if (inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_OPACITY_MICROMAP_ARRAY) {
-    if (inputs.pOpacityMicromapArrayDesc) {
-      auto& ommDesc = *const_cast<D3D12_RAYTRACING_OPACITY_MICROMAP_ARRAY_DESC*>(
-          inputs.pOpacityMicromapArrayDesc);
-      UINT totalOmmCount{};
-      size_t totalInputSize{};
-      for (unsigned i = 0; i < ommDesc.NumOmmHistogramEntries; ++i) {
-        const auto& histogramEntry = ommDesc.pOmmHistogram[i];
-        totalOmmCount += histogramEntry.Count;
-        size_t numMicroTriangles = 1ull << (2 * histogramEntry.SubdivisionLevel);
-        size_t bitsPerTriangle{};
-        if (histogramEntry.Format == D3D12_RAYTRACING_OPACITY_MICROMAP_FORMAT_OC1_4_STATE) {
-          bitsPerTriangle = 2;
-        } else if (histogramEntry.Format == D3D12_RAYTRACING_OPACITY_MICROMAP_FORMAT_OC1_2_STATE) {
-          bitsPerTriangle = 1;
+    } else if (inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_OPACITY_MICROMAP_ARRAY) {
+      if (inputs.pOpacityMicromapArrayDesc) {
+        auto& ommDesc = *const_cast<D3D12_RAYTRACING_OPACITY_MICROMAP_ARRAY_DESC*>(
+            inputs.pOpacityMicromapArrayDesc);
+        UINT totalOmmCount{};
+        size_t totalInputSize{};
+        for (unsigned i = 0; i < ommDesc.NumOmmHistogramEntries; ++i) {
+          const auto& histogramEntry = ommDesc.pOmmHistogram[i];
+          totalOmmCount += histogramEntry.Count;
+          size_t numMicroTriangles = 1ull << (2 * histogramEntry.SubdivisionLevel);
+          size_t bitsPerTriangle{};
+          if (histogramEntry.Format == D3D12_RAYTRACING_OPACITY_MICROMAP_FORMAT_OC1_4_STATE) {
+            bitsPerTriangle = 2;
+          } else if (histogramEntry.Format ==
+                     D3D12_RAYTRACING_OPACITY_MICROMAP_FORMAT_OC1_2_STATE) {
+            bitsPerTriangle = 1;
+          }
+          GITS_ASSERT(bitsPerTriangle);
+          size_t bitsPerOMM = numMicroTriangles * bitsPerTriangle;
+          size_t bytesPerOMM = (bitsPerOMM + 7) / 8;
+          totalInputSize += histogramEntry.Count * bytesPerOMM;
         }
-        GITS_ASSERT(bitsPerTriangle);
-        size_t bitsPerOMM = numMicroTriangles * bitsPerTriangle;
-        size_t bytesPerOMM = (bitsPerOMM + 7) / 8;
-        totalInputSize += histogramEntry.Count * bytesPerOMM;
-      }
-      GITS_ASSERT(totalOmmCount);
-      GITS_ASSERT(totalInputSize);
+        GITS_ASSERT(totalOmmCount);
+        GITS_ASSERT(totalInputSize);
 
-      if (ommDesc.InputBuffer) {
-        GITS_ASSERT(ommDesc.InputBuffer % 128 == 0);
-        addBufferAccess(inputIndex, totalInputSize);
-      }
-      ++inputIndex;
-      if (ommDesc.PerOmmDescs.StartAddress) {
-        unsigned stride = ommDesc.PerOmmDescs.StrideInBytes;
-        if (!stride) {
-          stride = sizeof(D3D12_RAYTRACING_OPACITY_MICROMAP_DESC);
+        if (ommDesc.InputBuffer) {
+          GITS_ASSERT(ommDesc.InputBuffer % 128 == 0);
+          addBufferRegion(inputIndex, totalInputSize);
         }
-        GITS_ASSERT(ommDesc.PerOmmDescs.StartAddress % 4 == 0);
-        GITS_ASSERT(stride % 4 == 0);
-        unsigned size = totalOmmCount * stride;
-        addBufferAccess(inputIndex, size);
+        ++inputIndex;
+        if (ommDesc.PerOmmDescs.StartAddress) {
+          unsigned stride = ommDesc.PerOmmDescs.StrideInBytes;
+          if (!stride) {
+            stride = sizeof(D3D12_RAYTRACING_OPACITY_MICROMAP_DESC);
+          }
+          GITS_ASSERT(ommDesc.PerOmmDescs.StartAddress % 4 == 0);
+          GITS_ASSERT(stride % 4 == 0);
+          unsigned size = totalOmmCount * stride;
+          addBufferRegion(inputIndex, size);
+        }
+        ++inputIndex;
       }
-      ++inputIndex;
     }
   }
 
-  for (const auto& [inputKey, intervals] : intervalsByInputKey) {
-    std::vector<Interval> merged = MergeIntervals(intervals);
-    for (Interval interval : merged) {
-      StoreBuffer(inputKey, interval.Start, interval.End - interval.Start, c.Key, c.m_Object.Value,
-                  state);
+  // store input buffer regions
+  for (const auto& [inputKey, bufferRegions] : bufferRegionsByInputKey) {
+    std::vector<BufferRegion> merged = MergeBufferRegions(bufferRegions);
+    for (BufferRegion bufferRegion : merged) {
+      StoreBuffer(inputKey, bufferRegion.Start, bufferRegion.End - bufferRegion.Start, c.Key,
+                  c.m_Object.Value, state);
     }
   }
 
@@ -300,10 +311,10 @@ void AccelerationStructuresBuildService::CopyAccelerationStructure(
 
 void AccelerationStructuresBuildService::NvapiBuildAccelerationStructureEx(
     NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& c) {
-  const NVAPI_D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC_EX* m_pDesc =
+  const NVAPI_D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC_EX* buildDesc =
       c.m_pParams.Value->pDesc;
   if (!m_RestoreTlas &&
-      m_pDesc->inputs.type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
+      buildDesc->inputs.type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
     return;
   }
 
@@ -311,22 +322,25 @@ void AccelerationStructuresBuildService::NvapiBuildAccelerationStructureEx(
     return;
   }
 
-  NVAPI_D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS_EX inputs = m_pDesc->inputs;
+  NVAPI_D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS_EX inputs = buildDesc->inputs;
 
-  Microsoft::WRL::ComPtr<ID3D12Device5> device;
-  HRESULT hr = c.m_pCommandList.Value->GetDevice(IID_PPV_ARGS(&device));
-  GITS_ASSERT(hr == S_OK);
-  NVAPI_GET_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO_EX_PARAMS params{};
-  D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO info{};
-  params.version = NVAPI_GET_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO_EX_PARAMS_VER;
-  params.pDesc = &inputs;
-  params.pInfo = &info;
-  NvAPI_D3D12_GetRaytracingAccelerationStructurePrebuildInfoEx(device.Get(), &params);
-  if (info.ScratchDataSizeInBytes > m_MaxBuildScratchSpace) {
-    m_MaxBuildScratchSpace = info.ScratchDataSizeInBytes;
-  }
-  if (info.UpdateScratchDataSizeInBytes > m_MaxBuildScratchSpace) {
-    m_MaxBuildScratchSpace = info.UpdateScratchDataSizeInBytes;
+  // get scratch space size
+  {
+    Microsoft::WRL::ComPtr<ID3D12Device5> device;
+    HRESULT hr = c.m_pCommandList.Value->GetDevice(IID_PPV_ARGS(&device));
+    GITS_ASSERT(hr == S_OK);
+    NVAPI_GET_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO_EX_PARAMS params{};
+    D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO info{};
+    params.version = NVAPI_GET_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO_EX_PARAMS_VER;
+    params.pDesc = &inputs;
+    params.pInfo = &info;
+    NvAPI_D3D12_GetRaytracingAccelerationStructurePrebuildInfoEx(device.Get(), &params);
+    if (info.ScratchDataSizeInBytes > m_MaxBuildScratchSpace) {
+      m_MaxBuildScratchSpace = info.ScratchDataSizeInBytes;
+    }
+    if (info.UpdateScratchDataSizeInBytes > m_MaxBuildScratchSpace) {
+      m_MaxBuildScratchSpace = info.UpdateScratchDataSizeInBytes;
+    }
   }
 
   NvAPIBuildRaytracingAccelerationStructureExState* state =
@@ -338,11 +352,11 @@ void AccelerationStructuresBuildService::NvapiBuildAccelerationStructureEx(
   state->DestOffset = c.m_pParams.DestAccelerationStructureOffset;
   state->SourceKey = c.m_pParams.SourceAccelerationStructureKey;
   state->SourceOffset = c.m_pParams.SourceAccelerationStructureOffset;
-  state->Update = m_pDesc->inputs.flags &
+  state->Update = buildDesc->inputs.flags &
                   NVAPI_D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PERFORM_UPDATE_EX;
 
   if (m_SerializeMode &&
-      m_pDesc->inputs.type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
+      buildDesc->inputs.type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
     m_Tlases.insert(std::make_pair(state->DestKey, state->DestOffset));
   }
 
@@ -351,289 +365,297 @@ void AccelerationStructuresBuildService::NvapiBuildAccelerationStructureEx(
 
   m_StateService.KeepState(c.m_pParams.DestAccelerationStructureKey);
 
-  std::unordered_map<unsigned, std::vector<Interval>> intervalsByInputKey;
-  auto addBufferAccess = [&](unsigned inputIndex, unsigned size) {
-    unsigned inputKey = c.m_pParams.InputKeys[inputIndex];
-    unsigned inputOffset = c.m_pParams.InputOffsets[inputIndex];
+  std::unordered_map<unsigned, std::vector<BufferRegion>> bufferRegionsByInputKey;
 
-    auto& intervals = intervalsByInputKey[inputKey];
-    intervals.push_back({inputOffset, inputOffset + size});
-  };
+  // get input buffer regions
+  {
+    auto addBufferRegion = [&](unsigned inputIndex, unsigned size) {
+      unsigned inputKey = c.m_pParams.InputKeys[inputIndex];
+      unsigned inputOffset = c.m_pParams.InputOffsets[inputIndex];
 
-  unsigned inputIndex = 0;
-  if (inputs.type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL && inputs.numDescs) {
-    if (inputs.numDescs) {
-      unsigned size = inputs.numDescs * sizeof(D3D12_RAYTRACING_INSTANCE_DESC);
-      addBufferAccess(inputIndex, size);
-    }
-  } else {
-    for (unsigned i = 0; i < inputs.numDescs; ++i) {
-      const NVAPI_D3D12_RAYTRACING_GEOMETRY_DESC_EX& desc =
-          m_pDesc->inputs.descsLayout == D3D12_ELEMENTS_LAYOUT_ARRAY
-              ? *(const NVAPI_D3D12_RAYTRACING_GEOMETRY_DESC_EX*)((char*)(m_pDesc->inputs
-                                                                              .pGeometryDescs) +
-                                                                  m_pDesc->inputs
-                                                                          .geometryDescStrideInBytes *
-                                                                      i)
-              : *m_pDesc->inputs.ppGeometryDescs[i];
-      if (desc.type == D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES) {
-        if (desc.triangles.Transform3x4) {
-          unsigned size = sizeof(float) * 3 * 4;
-          addBufferAccess(inputIndex, size);
-        }
-        ++inputIndex;
-        if (desc.triangles.IndexBuffer && desc.triangles.IndexCount) {
-          unsigned size = desc.triangles.IndexCount *
-                          (desc.triangles.IndexFormat == DXGI_FORMAT_R16_UINT ? 2 : 4);
-          addBufferAccess(inputIndex, size);
-        }
-        ++inputIndex;
-        if (desc.triangles.VertexBuffer.StartAddress && desc.triangles.VertexCount) {
-          unsigned stride = desc.triangles.VertexBuffer.StrideInBytes;
-          if (!stride) {
-            if (desc.triangles.VertexFormat == DXGI_FORMAT_R16G16B16A16_SNORM) {
-              stride = 8;
+      auto& bufferRegions = bufferRegionsByInputKey[inputKey];
+      bufferRegions.push_back({inputOffset, inputOffset + size});
+    };
+
+    unsigned inputIndex = 0;
+    if (inputs.type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL && inputs.numDescs) {
+      if (inputs.numDescs) {
+        unsigned size = inputs.numDescs * sizeof(D3D12_RAYTRACING_INSTANCE_DESC);
+        addBufferRegion(inputIndex, size);
+      }
+    } else {
+      for (unsigned i = 0; i < inputs.numDescs; ++i) {
+        const NVAPI_D3D12_RAYTRACING_GEOMETRY_DESC_EX& desc =
+            buildDesc->inputs.descsLayout == D3D12_ELEMENTS_LAYOUT_ARRAY
+                ? *(const NVAPI_D3D12_RAYTRACING_GEOMETRY_DESC_EX*)((char*)(buildDesc->inputs
+                                                                                .pGeometryDescs) +
+                                                                    buildDesc->inputs
+                                                                            .geometryDescStrideInBytes *
+                                                                        i)
+                : *buildDesc->inputs.ppGeometryDescs[i];
+        if (desc.type == D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES) {
+          if (desc.triangles.Transform3x4) {
+            unsigned size = sizeof(float) * 3 * 4;
+            addBufferRegion(inputIndex, size);
+          }
+          ++inputIndex;
+          if (desc.triangles.IndexBuffer && desc.triangles.IndexCount) {
+            unsigned size = desc.triangles.IndexCount *
+                            (desc.triangles.IndexFormat == DXGI_FORMAT_R16_UINT ? 2 : 4);
+            addBufferRegion(inputIndex, size);
+          }
+          ++inputIndex;
+          if (desc.triangles.VertexBuffer.StartAddress && desc.triangles.VertexCount) {
+            unsigned stride = desc.triangles.VertexBuffer.StrideInBytes;
+            if (!stride) {
+              if (desc.triangles.VertexFormat == DXGI_FORMAT_R16G16B16A16_SNORM) {
+                stride = 8;
+              }
+            }
+            unsigned size = desc.triangles.VertexCount * stride;
+            addBufferRegion(inputIndex, size);
+          }
+          ++inputIndex;
+        } else if (desc.type == D3D12_RAYTRACING_GEOMETRY_TYPE_PROCEDURAL_PRIMITIVE_AABBS) {
+          if (desc.aabbs.AABBs.StartAddress && desc.aabbs.AABBCount) {
+            unsigned size = desc.aabbs.AABBCount * desc.aabbs.AABBs.StrideInBytes;
+            addBufferRegion(inputIndex, size);
+          }
+          ++inputIndex;
+        } else if (desc.type == NVAPI_D3D12_RAYTRACING_GEOMETRY_TYPE_OMM_TRIANGLES_EX) {
+          if (desc.ommTriangles.triangles.Transform3x4) {
+            unsigned size = sizeof(float) * 3 * 4;
+            addBufferRegion(inputIndex, size);
+          }
+          ++inputIndex;
+          if (desc.ommTriangles.triangles.IndexBuffer && desc.ommTriangles.triangles.IndexCount) {
+            unsigned size =
+                desc.ommTriangles.triangles.IndexCount *
+                (desc.ommTriangles.triangles.IndexFormat == DXGI_FORMAT_R16_UINT ? 2 : 4);
+            addBufferRegion(inputIndex, size);
+          }
+          ++inputIndex;
+          if (desc.ommTriangles.triangles.VertexBuffer.StartAddress &&
+              desc.ommTriangles.triangles.VertexCount) {
+            unsigned stride = desc.ommTriangles.triangles.VertexBuffer.StrideInBytes;
+            if (!stride) {
+              if (desc.ommTriangles.triangles.VertexFormat == DXGI_FORMAT_R16G16B16A16_SNORM) {
+                stride = 8;
+              }
+            }
+            unsigned size = desc.ommTriangles.triangles.VertexCount * stride;
+            addBufferRegion(inputIndex, size);
+          }
+          ++inputIndex;
+          if (desc.ommTriangles.ommAttachment.opacityMicromapIndexBuffer.StartAddress) {
+            unsigned stride =
+                desc.ommTriangles.ommAttachment.opacityMicromapIndexBuffer.StrideInBytes;
+            if (!stride) {
+              if (desc.ommTriangles.ommAttachment.opacityMicromapIndexFormat ==
+                  DXGI_FORMAT_R32_UINT) {
+                stride = 4;
+              } else if (desc.ommTriangles.ommAttachment.opacityMicromapIndexFormat ==
+                         DXGI_FORMAT_R16_UINT) {
+                stride = 2;
+              }
+            }
+            GITS_ASSERT(stride);
+            unsigned ommCount = desc.ommTriangles.triangles.IndexCount / 3;
+            unsigned size = ommCount * stride;
+            if (size) {
+              addBufferRegion(inputIndex, size);
             }
           }
-          unsigned size = desc.triangles.VertexCount * stride;
-          addBufferAccess(inputIndex, size);
-        }
-        ++inputIndex;
-      } else if (desc.type == D3D12_RAYTRACING_GEOMETRY_TYPE_PROCEDURAL_PRIMITIVE_AABBS) {
-        if (desc.aabbs.AABBs.StartAddress && desc.aabbs.AABBCount) {
-          unsigned size = desc.aabbs.AABBCount * desc.aabbs.AABBs.StrideInBytes;
-          addBufferAccess(inputIndex, size);
-        }
-        ++inputIndex;
-      } else if (desc.type == NVAPI_D3D12_RAYTRACING_GEOMETRY_TYPE_OMM_TRIANGLES_EX) {
-        if (desc.ommTriangles.triangles.Transform3x4) {
-          unsigned size = sizeof(float) * 3 * 4;
-          addBufferAccess(inputIndex, size);
-        }
-        ++inputIndex;
-        if (desc.ommTriangles.triangles.IndexBuffer && desc.ommTriangles.triangles.IndexCount) {
-          unsigned size = desc.ommTriangles.triangles.IndexCount *
-                          (desc.ommTriangles.triangles.IndexFormat == DXGI_FORMAT_R16_UINT ? 2 : 4);
-          addBufferAccess(inputIndex, size);
-        }
-        ++inputIndex;
-        if (desc.ommTriangles.triangles.VertexBuffer.StartAddress &&
-            desc.ommTriangles.triangles.VertexCount) {
-          unsigned stride = desc.ommTriangles.triangles.VertexBuffer.StrideInBytes;
-          if (!stride) {
-            if (desc.ommTriangles.triangles.VertexFormat == DXGI_FORMAT_R16G16B16A16_SNORM) {
-              stride = 8;
+          ++inputIndex;
+          ++inputIndex;
+        } else if (desc.type == NVAPI_D3D12_RAYTRACING_GEOMETRY_TYPE_DMM_TRIANGLES_EX) {
+          if (desc.dmmTriangles.triangles.Transform3x4) {
+            unsigned size = sizeof(float) * 3 * 4;
+            addBufferRegion(inputIndex, size);
+          }
+          ++inputIndex;
+          if (desc.dmmTriangles.triangles.IndexBuffer && desc.dmmTriangles.triangles.IndexCount) {
+            unsigned size =
+                desc.dmmTriangles.triangles.IndexCount *
+                (desc.dmmTriangles.triangles.IndexFormat == DXGI_FORMAT_R16_UINT ? 2 : 4);
+            addBufferRegion(inputIndex, size);
+          }
+          ++inputIndex;
+          if (desc.dmmTriangles.triangles.VertexBuffer.StartAddress &&
+              desc.dmmTriangles.triangles.VertexCount) {
+            unsigned stride = desc.dmmTriangles.triangles.VertexBuffer.StrideInBytes;
+            if (!stride) {
+              if (desc.dmmTriangles.triangles.VertexFormat == DXGI_FORMAT_R16G16B16A16_SNORM) {
+                stride = 8;
+              }
+            }
+            unsigned size = desc.dmmTriangles.triangles.VertexCount * stride;
+            addBufferRegion(inputIndex, size);
+          }
+          ++inputIndex;
+          if (desc.dmmTriangles.dmmAttachment.triangleMicromapIndexBuffer.StartAddress) {
+            unsigned stride =
+                desc.dmmTriangles.dmmAttachment.triangleMicromapIndexBuffer.StrideInBytes;
+            if (!stride) {
+              if (desc.dmmTriangles.dmmAttachment.triangleMicromapIndexFormat ==
+                  DXGI_FORMAT_R32_UINT) {
+                stride = 4;
+              } else if (desc.dmmTriangles.dmmAttachment.triangleMicromapIndexFormat ==
+                         DXGI_FORMAT_R16_UINT) {
+                stride = 2;
+              }
+            }
+            GITS_ASSERT(stride);
+            unsigned dmmCount{};
+            for (unsigned j = 0; j < desc.dmmTriangles.dmmAttachment.numDMMUsageCounts; ++j) {
+              dmmCount += desc.dmmTriangles.dmmAttachment.pDMMUsageCounts[j].count;
+            }
+            if (!dmmCount) {
+              dmmCount = desc.dmmTriangles.triangles.IndexCount / 3;
+            }
+            unsigned size = dmmCount * stride;
+            if (size) {
+              addBufferRegion(inputIndex, size);
             }
           }
-          unsigned size = desc.ommTriangles.triangles.VertexCount * stride;
-          addBufferAccess(inputIndex, size);
-        }
-        ++inputIndex;
-        if (desc.ommTriangles.ommAttachment.opacityMicromapIndexBuffer.StartAddress) {
-          unsigned stride =
-              desc.ommTriangles.ommAttachment.opacityMicromapIndexBuffer.StrideInBytes;
-          if (!stride) {
-            if (desc.ommTriangles.ommAttachment.opacityMicromapIndexFormat ==
-                DXGI_FORMAT_R32_UINT) {
+          ++inputIndex;
+          if (desc.dmmTriangles.dmmAttachment.trianglePrimitiveFlagsBuffer.StartAddress) {
+            unsigned size = desc.dmmTriangles.triangles.VertexCount;
+            addBufferRegion(inputIndex, size);
+          }
+          ++inputIndex;
+          if (desc.dmmTriangles.dmmAttachment.vertexBiasAndScaleBuffer.StartAddress) {
+            unsigned stride =
+                desc.dmmTriangles.dmmAttachment.vertexBiasAndScaleBuffer.StrideInBytes;
+            if (!stride) {
+              if (desc.dmmTriangles.dmmAttachment.vertexBiasAndScaleFormat ==
+                  DXGI_FORMAT_R32G32_FLOAT) {
+                stride = 8;
+              } else if (desc.dmmTriangles.dmmAttachment.vertexBiasAndScaleFormat ==
+                         DXGI_FORMAT_R16G16_FLOAT) {
+                stride = 4;
+              }
+            }
+            GITS_ASSERT(stride);
+            unsigned size = desc.dmmTriangles.triangles.VertexCount * stride;
+            addBufferRegion(inputIndex, size);
+          }
+          ++inputIndex;
+          if (desc.dmmTriangles.dmmAttachment.vertexDisplacementVectorBuffer.StartAddress) {
+            unsigned stride =
+                desc.dmmTriangles.dmmAttachment.vertexDisplacementVectorBuffer.StrideInBytes;
+            if (!stride) {
+              // The Alpha channel is ignored
+              if (desc.dmmTriangles.dmmAttachment.vertexDisplacementVectorFormat ==
+                      DXGI_FORMAT_R32G32B32A32_FLOAT ||
+                  desc.dmmTriangles.dmmAttachment.vertexDisplacementVectorFormat ==
+                      DXGI_FORMAT_R32G32B32_FLOAT) {
+                stride = 12;
+              } else if (desc.dmmTriangles.dmmAttachment.vertexDisplacementVectorFormat ==
+                         DXGI_FORMAT_R16G16B16A16_FLOAT) {
+                stride = 6;
+              }
+            }
+            GITS_ASSERT(stride);
+            unsigned size = desc.dmmTriangles.triangles.VertexCount * stride;
+            addBufferRegion(inputIndex, size);
+          }
+          ++inputIndex;
+          ++inputIndex;
+        } else if (desc.type == NVAPI_D3D12_RAYTRACING_GEOMETRY_TYPE_SPHERES_EX) {
+          if (desc.spheres.vertexPositionBuffer.StartAddress) {
+            unsigned stride = desc.spheres.vertexPositionBuffer.StrideInBytes;
+            // Supports the same formats as the triangle vertex buffers
+            if (!stride) {
+              if (desc.spheres.vertexPositionFormat == DXGI_FORMAT_R16G16B16A16_SNORM) {
+                stride = 8;
+              }
+            }
+            GITS_ASSERT(stride);
+            unsigned size = desc.spheres.vertexCount * stride;
+            addBufferRegion(inputIndex, size);
+          }
+          ++inputIndex;
+          if (desc.spheres.vertexRadiusBuffer.StartAddress) {
+            unsigned stride{};
+            if (desc.spheres.vertexRadiusFormat == DXGI_FORMAT_R32_FLOAT) {
               stride = 4;
-            } else if (desc.ommTriangles.ommAttachment.opacityMicromapIndexFormat ==
-                       DXGI_FORMAT_R16_UINT) {
+            } else if (desc.spheres.vertexRadiusFormat == DXGI_FORMAT_R16_FLOAT) {
               stride = 2;
             }
+            GITS_ASSERT(stride);
+            unsigned size = desc.spheres.vertexCount * stride;
+            addBufferRegion(inputIndex, size);
           }
-          GITS_ASSERT(stride);
-          unsigned ommCount = desc.ommTriangles.triangles.IndexCount / 3;
-          unsigned size = ommCount * stride;
-          if (size) {
-            addBufferAccess(inputIndex, size);
-          }
-        }
-        ++inputIndex;
-        ++inputIndex;
-      } else if (desc.type == NVAPI_D3D12_RAYTRACING_GEOMETRY_TYPE_DMM_TRIANGLES_EX) {
-        if (desc.dmmTriangles.triangles.Transform3x4) {
-          unsigned size = sizeof(float) * 3 * 4;
-          addBufferAccess(inputIndex, size);
-        }
-        ++inputIndex;
-        if (desc.dmmTriangles.triangles.IndexBuffer && desc.dmmTriangles.triangles.IndexCount) {
-          unsigned size = desc.dmmTriangles.triangles.IndexCount *
-                          (desc.dmmTriangles.triangles.IndexFormat == DXGI_FORMAT_R16_UINT ? 2 : 4);
-          addBufferAccess(inputIndex, size);
-        }
-        ++inputIndex;
-        if (desc.dmmTriangles.triangles.VertexBuffer.StartAddress &&
-            desc.dmmTriangles.triangles.VertexCount) {
-          unsigned stride = desc.dmmTriangles.triangles.VertexBuffer.StrideInBytes;
-          if (!stride) {
-            if (desc.dmmTriangles.triangles.VertexFormat == DXGI_FORMAT_R16G16B16A16_SNORM) {
-              stride = 8;
+          ++inputIndex;
+          if (desc.spheres.indexBuffer.StartAddress) {
+            unsigned stride = desc.spheres.indexBuffer.StrideInBytes;
+            if (!stride) {
+              if (desc.spheres.indexFormat == DXGI_FORMAT_R32_UINT) {
+                stride = 4;
+              } else if (desc.spheres.indexFormat == DXGI_FORMAT_R16_UINT) {
+                stride = 2;
+              } else if (desc.spheres.indexFormat == DXGI_FORMAT_R8_UINT) {
+                stride = 1;
+              }
             }
+            GITS_ASSERT(stride);
+            unsigned size = desc.spheres.indexCount * stride;
+            addBufferRegion(inputIndex, size);
           }
-          unsigned size = desc.dmmTriangles.triangles.VertexCount * stride;
-          addBufferAccess(inputIndex, size);
-        }
-        ++inputIndex;
-        if (desc.dmmTriangles.dmmAttachment.triangleMicromapIndexBuffer.StartAddress) {
-          unsigned stride =
-              desc.dmmTriangles.dmmAttachment.triangleMicromapIndexBuffer.StrideInBytes;
-          if (!stride) {
-            if (desc.dmmTriangles.dmmAttachment.triangleMicromapIndexFormat ==
-                DXGI_FORMAT_R32_UINT) {
+          ++inputIndex;
+        } else if (desc.type == NVAPI_D3D12_RAYTRACING_GEOMETRY_TYPE_LSS_EX) {
+          if (desc.lss.vertexPositionBuffer.StartAddress) {
+            unsigned stride = desc.lss.vertexPositionBuffer.StrideInBytes;
+            // Supports the same formats as the triangle vertex buffers
+            if (!stride) {
+              if (desc.lss.vertexPositionFormat == DXGI_FORMAT_R16G16B16A16_SNORM) {
+                stride = 8;
+              }
+            }
+            GITS_ASSERT(stride);
+            unsigned size = desc.lss.primitiveCount * stride;
+            addBufferRegion(inputIndex, size);
+          }
+          ++inputIndex;
+          if (desc.lss.vertexRadiusBuffer.StartAddress) {
+            unsigned stride{};
+            if (desc.lss.vertexRadiusFormat == DXGI_FORMAT_R32_FLOAT) {
               stride = 4;
-            } else if (desc.dmmTriangles.dmmAttachment.triangleMicromapIndexFormat ==
-                       DXGI_FORMAT_R16_UINT) {
+            } else if (desc.lss.vertexRadiusFormat == DXGI_FORMAT_R16_FLOAT) {
               stride = 2;
             }
+            GITS_ASSERT(stride);
+            unsigned size = desc.lss.primitiveCount * stride;
+            addBufferRegion(inputIndex, size);
           }
-          GITS_ASSERT(stride);
-          unsigned dmmCount{};
-          for (unsigned j = 0; j < desc.dmmTriangles.dmmAttachment.numDMMUsageCounts; ++j) {
-            dmmCount += desc.dmmTriangles.dmmAttachment.pDMMUsageCounts[j].count;
-          }
-          if (!dmmCount) {
-            dmmCount = desc.dmmTriangles.triangles.IndexCount / 3;
-          }
-          unsigned size = dmmCount * stride;
-          if (size) {
-            addBufferAccess(inputIndex, size);
-          }
-        }
-        ++inputIndex;
-        if (desc.dmmTriangles.dmmAttachment.trianglePrimitiveFlagsBuffer.StartAddress) {
-          unsigned size = desc.dmmTriangles.triangles.VertexCount;
-          addBufferAccess(inputIndex, size);
-        }
-        ++inputIndex;
-        if (desc.dmmTriangles.dmmAttachment.vertexBiasAndScaleBuffer.StartAddress) {
-          unsigned stride = desc.dmmTriangles.dmmAttachment.vertexBiasAndScaleBuffer.StrideInBytes;
-          if (!stride) {
-            if (desc.dmmTriangles.dmmAttachment.vertexBiasAndScaleFormat ==
-                DXGI_FORMAT_R32G32_FLOAT) {
-              stride = 8;
-            } else if (desc.dmmTriangles.dmmAttachment.vertexBiasAndScaleFormat ==
-                       DXGI_FORMAT_R16G16_FLOAT) {
-              stride = 4;
+          ++inputIndex;
+          if (desc.lss.indexBuffer.StartAddress) {
+            unsigned stride = desc.lss.indexBuffer.StrideInBytes;
+            if (!stride) {
+              if (desc.lss.indexFormat == DXGI_FORMAT_R32_UINT) {
+                stride = 4;
+              } else if (desc.lss.indexFormat == DXGI_FORMAT_R16_UINT) {
+                stride = 2;
+              } else if (desc.lss.indexFormat == DXGI_FORMAT_R8_UINT) {
+                stride = 1;
+              }
             }
+            GITS_ASSERT(stride);
+            unsigned size = desc.lss.indexCount * stride;
+            addBufferRegion(inputIndex, size);
           }
-          GITS_ASSERT(stride);
-          unsigned size = desc.dmmTriangles.triangles.VertexCount * stride;
-          addBufferAccess(inputIndex, size);
+          ++inputIndex;
         }
-        ++inputIndex;
-        if (desc.dmmTriangles.dmmAttachment.vertexDisplacementVectorBuffer.StartAddress) {
-          unsigned stride =
-              desc.dmmTriangles.dmmAttachment.vertexDisplacementVectorBuffer.StrideInBytes;
-          if (!stride) {
-            // The Alpha channel is ignored
-            if (desc.dmmTriangles.dmmAttachment.vertexDisplacementVectorFormat ==
-                    DXGI_FORMAT_R32G32B32A32_FLOAT ||
-                desc.dmmTriangles.dmmAttachment.vertexDisplacementVectorFormat ==
-                    DXGI_FORMAT_R32G32B32_FLOAT) {
-              stride = 12;
-            } else if (desc.dmmTriangles.dmmAttachment.vertexDisplacementVectorFormat ==
-                       DXGI_FORMAT_R16G16B16A16_FLOAT) {
-              stride = 6;
-            }
-          }
-          GITS_ASSERT(stride);
-          unsigned size = desc.dmmTriangles.triangles.VertexCount * stride;
-          addBufferAccess(inputIndex, size);
-        }
-        ++inputIndex;
-        ++inputIndex;
-      } else if (desc.type == NVAPI_D3D12_RAYTRACING_GEOMETRY_TYPE_SPHERES_EX) {
-        if (desc.spheres.vertexPositionBuffer.StartAddress) {
-          unsigned stride = desc.spheres.vertexPositionBuffer.StrideInBytes;
-          // Supports the same formats as the triangle vertex buffers
-          if (!stride) {
-            if (desc.spheres.vertexPositionFormat == DXGI_FORMAT_R16G16B16A16_SNORM) {
-              stride = 8;
-            }
-          }
-          GITS_ASSERT(stride);
-          unsigned size = desc.spheres.vertexCount * stride;
-          addBufferAccess(inputIndex, size);
-        }
-        ++inputIndex;
-        if (desc.spheres.vertexRadiusBuffer.StartAddress) {
-          unsigned stride{};
-          if (desc.spheres.vertexRadiusFormat == DXGI_FORMAT_R32_FLOAT) {
-            stride = 4;
-          } else if (desc.spheres.vertexRadiusFormat == DXGI_FORMAT_R16_FLOAT) {
-            stride = 2;
-          }
-          GITS_ASSERT(stride);
-          unsigned size = desc.spheres.vertexCount * stride;
-          addBufferAccess(inputIndex, size);
-        }
-        ++inputIndex;
-        if (desc.spheres.indexBuffer.StartAddress) {
-          unsigned stride = desc.spheres.indexBuffer.StrideInBytes;
-          if (!stride) {
-            if (desc.spheres.indexFormat == DXGI_FORMAT_R32_UINT) {
-              stride = 4;
-            } else if (desc.spheres.indexFormat == DXGI_FORMAT_R16_UINT) {
-              stride = 2;
-            } else if (desc.spheres.indexFormat == DXGI_FORMAT_R8_UINT) {
-              stride = 1;
-            }
-          }
-          GITS_ASSERT(stride);
-          unsigned size = desc.spheres.indexCount * stride;
-          addBufferAccess(inputIndex, size);
-        }
-        ++inputIndex;
-      } else if (desc.type == NVAPI_D3D12_RAYTRACING_GEOMETRY_TYPE_LSS_EX) {
-        if (desc.lss.vertexPositionBuffer.StartAddress) {
-          unsigned stride = desc.lss.vertexPositionBuffer.StrideInBytes;
-          // Supports the same formats as the triangle vertex buffers
-          if (!stride) {
-            if (desc.lss.vertexPositionFormat == DXGI_FORMAT_R16G16B16A16_SNORM) {
-              stride = 8;
-            }
-          }
-          GITS_ASSERT(stride);
-          unsigned size = desc.lss.primitiveCount * stride;
-          addBufferAccess(inputIndex, size);
-        }
-        ++inputIndex;
-        if (desc.lss.vertexRadiusBuffer.StartAddress) {
-          unsigned stride{};
-          if (desc.lss.vertexRadiusFormat == DXGI_FORMAT_R32_FLOAT) {
-            stride = 4;
-          } else if (desc.lss.vertexRadiusFormat == DXGI_FORMAT_R16_FLOAT) {
-            stride = 2;
-          }
-          GITS_ASSERT(stride);
-          unsigned size = desc.lss.primitiveCount * stride;
-          addBufferAccess(inputIndex, size);
-        }
-        ++inputIndex;
-        if (desc.lss.indexBuffer.StartAddress) {
-          unsigned stride = desc.lss.indexBuffer.StrideInBytes;
-          if (!stride) {
-            if (desc.lss.indexFormat == DXGI_FORMAT_R32_UINT) {
-              stride = 4;
-            } else if (desc.lss.indexFormat == DXGI_FORMAT_R16_UINT) {
-              stride = 2;
-            } else if (desc.lss.indexFormat == DXGI_FORMAT_R8_UINT) {
-              stride = 1;
-            }
-          }
-          GITS_ASSERT(stride);
-          unsigned size = desc.lss.indexCount * stride;
-          addBufferAccess(inputIndex, size);
-        }
-        ++inputIndex;
       }
     }
   }
 
-  for (const auto& [inputKey, intervals] : intervalsByInputKey) {
-    std::vector<Interval> merged = MergeIntervals(intervals);
-    for (Interval interval : merged) {
-      StoreBuffer(inputKey, interval.Start, interval.End - interval.Start, c.Key,
+  // store input buffer regions
+  for (const auto& [inputKey, bufferRegions] : bufferRegionsByInputKey) {
+    std::vector<BufferRegion> merged = MergeBufferRegions(bufferRegions);
+    for (BufferRegion bufferRegion : merged) {
+      StoreBuffer(inputKey, bufferRegion.Start, bufferRegion.End - bufferRegion.Start, c.Key,
                   c.m_pCommandList.Value, state);
     }
   }
@@ -647,22 +669,25 @@ void AccelerationStructuresBuildService::NvapiBuildOpacityMicromapArray(
     return;
   }
 
-  const NVAPI_D3D12_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_DESC* m_pDesc =
+  const NVAPI_D3D12_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_DESC* buildDesc =
       c.m_pParams.Value->pDesc;
 
-  NVAPI_D3D12_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_INPUTS inputs = m_pDesc->inputs;
+  NVAPI_D3D12_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_INPUTS inputs = buildDesc->inputs;
 
-  Microsoft::WRL::ComPtr<ID3D12Device5> device;
-  HRESULT hr = c.m_pCommandList.Value->GetDevice(IID_PPV_ARGS(&device));
-  GITS_ASSERT(hr == S_OK);
-  NVAPI_GET_RAYTRACING_OPACITY_MICROMAP_ARRAY_PREBUILD_INFO_PARAMS params{};
-  NVAPI_D3D12_RAYTRACING_OPACITY_MICROMAP_ARRAY_PREBUILD_INFO info{};
-  params.version = NVAPI_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_PARAMS_VER;
-  params.pDesc = &inputs;
-  params.pInfo = &info;
-  NvAPI_D3D12_GetRaytracingOpacityMicromapArrayPrebuildInfo(device.Get(), &params);
-  if (info.scratchDataSizeInBytes > m_MaxBuildScratchSpace) {
-    m_MaxBuildScratchSpace = info.scratchDataSizeInBytes;
+  // get scratch space size
+  {
+    Microsoft::WRL::ComPtr<ID3D12Device5> device;
+    HRESULT hr = c.m_pCommandList.Value->GetDevice(IID_PPV_ARGS(&device));
+    GITS_ASSERT(hr == S_OK);
+    NVAPI_GET_RAYTRACING_OPACITY_MICROMAP_ARRAY_PREBUILD_INFO_PARAMS params{};
+    NVAPI_D3D12_RAYTRACING_OPACITY_MICROMAP_ARRAY_PREBUILD_INFO info{};
+    params.version = NVAPI_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_PARAMS_VER;
+    params.pDesc = &inputs;
+    params.pInfo = &info;
+    NvAPI_D3D12_GetRaytracingOpacityMicromapArrayPrebuildInfo(device.Get(), &params);
+    if (info.scratchDataSizeInBytes > m_MaxBuildScratchSpace) {
+      m_MaxBuildScratchSpace = info.scratchDataSizeInBytes;
+    }
   }
 
   NvAPIBuildRaytracingOpacityMicromapArrayState* state =
@@ -678,55 +703,61 @@ void AccelerationStructuresBuildService::NvapiBuildOpacityMicromapArray(
 
   m_StateService.KeepState(c.m_pParams.DestOpacityMicromapArrayDataKey);
 
-  std::unordered_map<unsigned, std::vector<Interval>> intervalsByInputKey;
-  auto addBufferAccess = [&](unsigned inputKey, unsigned inputOffset, unsigned size) {
-    auto& intervals = intervalsByInputKey[inputKey];
-    intervals.push_back({inputOffset, inputOffset + size});
-  };
+  std::unordered_map<unsigned, std::vector<BufferRegion>> bufferRegionsByInputKey;
 
+  // get input buffer regions
   {
-    unsigned ommCount{};
-    size_t inputSize{};
-    for (unsigned i = 0; i < m_pDesc->inputs.numOMMUsageCounts; ++i) {
-      const auto& usage = m_pDesc->inputs.pOMMUsageCounts[i];
-      ommCount += usage.count;
-
-      unsigned numMicroTriangles = 1u << (2 * usage.subdivisionLevel);
-      unsigned bitsPerTriangle{};
-      if (usage.format == NVAPI_D3D12_RAYTRACING_OPACITY_MICROMAP_FORMAT_OC1_4_STATE) {
-        bitsPerTriangle = 2;
-      } else if (usage.format == NVAPI_D3D12_RAYTRACING_OPACITY_MICROMAP_FORMAT_OC1_2_STATE) {
-        bitsPerTriangle = 1;
-      }
-      GITS_ASSERT(bitsPerTriangle);
-
-      unsigned bitsPerOMM = numMicroTriangles * bitsPerTriangle;
-      unsigned bytesPerOMM = (bitsPerOMM + 7) / 8; // round up to full byte
-
-      inputSize += usage.count * bytesPerOMM;
-    }
-
-    auto alignUp = [](size_t value, size_t alignment) {
-      return (value + alignment - 1) & ~(alignment - 1);
+    auto addBufferRegion = [&](unsigned inputKey, unsigned inputOffset, unsigned size) {
+      auto& bufferRegions = bufferRegionsByInputKey[inputKey];
+      bufferRegions.push_back({inputOffset, inputOffset + size});
     };
-    inputSize = alignUp(inputSize, 256);
 
-    if (m_pDesc->inputs.inputBuffer) {
-      addBufferAccess(c.m_pParams.InputBufferKey, c.m_pParams.InputBufferOffset, inputSize);
-    }
-    if (m_pDesc->inputs.perOMMDescs.StartAddress) {
-      unsigned stride = m_pDesc->inputs.perOMMDescs.StrideInBytes;
-      if (!stride) {
-        stride = sizeof(NVAPI_D3D12_RAYTRACING_OPACITY_MICROMAP_USAGE_COUNT);
+    {
+      unsigned ommCount{};
+      size_t inputSize{};
+      for (unsigned i = 0; i < buildDesc->inputs.numOMMUsageCounts; ++i) {
+        const auto& usage = buildDesc->inputs.pOMMUsageCounts[i];
+        ommCount += usage.count;
+
+        unsigned numMicroTriangles = 1u << (2 * usage.subdivisionLevel);
+        unsigned bitsPerTriangle{};
+        if (usage.format == NVAPI_D3D12_RAYTRACING_OPACITY_MICROMAP_FORMAT_OC1_4_STATE) {
+          bitsPerTriangle = 2;
+        } else if (usage.format == NVAPI_D3D12_RAYTRACING_OPACITY_MICROMAP_FORMAT_OC1_2_STATE) {
+          bitsPerTriangle = 1;
+        }
+        GITS_ASSERT(bitsPerTriangle);
+
+        unsigned bitsPerOMM = numMicroTriangles * bitsPerTriangle;
+        unsigned bytesPerOMM = (bitsPerOMM + 7) / 8; // round up to full byte
+
+        inputSize += usage.count * bytesPerOMM;
       }
-      addBufferAccess(c.m_pParams.PerOMMDescsKey, c.m_pParams.PerOMMDescsOffset, stride * ommCount);
+
+      auto alignUp = [](size_t value, size_t alignment) {
+        return (value + alignment - 1) & ~(alignment - 1);
+      };
+      inputSize = alignUp(inputSize, 256);
+
+      if (buildDesc->inputs.inputBuffer) {
+        addBufferRegion(c.m_pParams.InputBufferKey, c.m_pParams.InputBufferOffset, inputSize);
+      }
+      if (buildDesc->inputs.perOMMDescs.StartAddress) {
+        unsigned stride = buildDesc->inputs.perOMMDescs.StrideInBytes;
+        if (!stride) {
+          stride = sizeof(NVAPI_D3D12_RAYTRACING_OPACITY_MICROMAP_USAGE_COUNT);
+        }
+        addBufferRegion(c.m_pParams.PerOMMDescsKey, c.m_pParams.PerOMMDescsOffset,
+                        stride * ommCount);
+      }
     }
   }
 
-  for (const auto& [inputKey, intervals] : intervalsByInputKey) {
-    std::vector<Interval> merged = MergeIntervals(intervals);
-    for (Interval interval : merged) {
-      StoreBuffer(inputKey, interval.Start, interval.End - interval.Start, c.Key,
+  // store input buffer regions
+  for (const auto& [inputKey, bufferRegions] : bufferRegionsByInputKey) {
+    std::vector<BufferRegion> merged = MergeBufferRegions(bufferRegions);
+    for (BufferRegion bufferRegion : merged) {
+      StoreBuffer(inputKey, bufferRegion.Start, bufferRegion.End - bufferRegion.Start, c.Key,
                   c.m_pCommandList.Value, state);
     }
   }
@@ -747,127 +778,136 @@ void AccelerationStructuresBuildService::RestoreAccelerationStructures() {
 
   InitUploadBuffer();
 
+  // recording creation of command list and other RTAS restoration objects
   {
-    m_CommandQueueCopyKey = m_StateService.GetUniqueObjectKey();
-    D3D12_COMMAND_QUEUE_DESC commandQueueDesc{};
-    commandQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_COPY;
-    ID3D12DeviceCreateCommandQueueCommand createCommandQueue;
-    createCommandQueue.Key = m_StateService.GetUniqueCommandKey();
-    createCommandQueue.m_Object.Key = m_DeviceKey;
-    createCommandQueue.m_pDesc.Value = &commandQueueDesc;
-    createCommandQueue.m_riid.Value = IID_ID3D12CommandQueue;
-    createCommandQueue.m_ppCommandQueue.Key = m_CommandQueueCopyKey;
-    m_StateService.GetRecorder().Record(
-        ID3D12DeviceCreateCommandQueueSerializer(createCommandQueue));
+    {
+      m_CommandQueueCopyKey = m_StateService.GetUniqueObjectKey();
+      D3D12_COMMAND_QUEUE_DESC commandQueueDesc{};
+      commandQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_COPY;
+      ID3D12DeviceCreateCommandQueueCommand createCommandQueue;
+      createCommandQueue.Key = m_StateService.GetUniqueCommandKey();
+      createCommandQueue.m_Object.Key = m_DeviceKey;
+      createCommandQueue.m_pDesc.Value = &commandQueueDesc;
+      createCommandQueue.m_riid.Value = IID_ID3D12CommandQueue;
+      createCommandQueue.m_ppCommandQueue.Key = m_CommandQueueCopyKey;
+      m_StateService.GetRecorder().Record(
+          ID3D12DeviceCreateCommandQueueSerializer(createCommandQueue));
 
-    m_CommandAllocatorCopyKey = m_StateService.GetUniqueObjectKey();
-    ID3D12DeviceCreateCommandAllocatorCommand createCommandAllocator;
-    createCommandAllocator.Key = m_StateService.GetUniqueCommandKey();
-    createCommandAllocator.m_Object.Key = m_DeviceKey;
-    createCommandAllocator.m_type.Value = D3D12_COMMAND_LIST_TYPE_COPY;
-    createCommandAllocator.m_riid.Value = IID_ID3D12CommandAllocator;
-    createCommandAllocator.m_ppCommandAllocator.Key = m_CommandAllocatorCopyKey;
-    m_StateService.GetRecorder().Record(
-        ID3D12DeviceCreateCommandAllocatorSerializer(createCommandAllocator));
+      m_CommandAllocatorCopyKey = m_StateService.GetUniqueObjectKey();
+      ID3D12DeviceCreateCommandAllocatorCommand createCommandAllocator;
+      createCommandAllocator.Key = m_StateService.GetUniqueCommandKey();
+      createCommandAllocator.m_Object.Key = m_DeviceKey;
+      createCommandAllocator.m_type.Value = D3D12_COMMAND_LIST_TYPE_COPY;
+      createCommandAllocator.m_riid.Value = IID_ID3D12CommandAllocator;
+      createCommandAllocator.m_ppCommandAllocator.Key = m_CommandAllocatorCopyKey;
+      m_StateService.GetRecorder().Record(
+          ID3D12DeviceCreateCommandAllocatorSerializer(createCommandAllocator));
 
-    m_CommandListCopyKey = m_StateService.GetUniqueObjectKey();
-    ID3D12DeviceCreateCommandListCommand createCommandList;
-    createCommandList.Key = m_StateService.GetUniqueCommandKey();
-    createCommandList.m_Object.Key = m_DeviceKey;
-    createCommandList.m_nodeMask.Value = 0;
-    createCommandList.m_pCommandAllocator.Key = createCommandAllocator.m_ppCommandAllocator.Key;
-    createCommandList.m_type.Value = D3D12_COMMAND_LIST_TYPE_COPY;
-    createCommandList.m_pInitialState.Value = nullptr;
-    createCommandList.m_riid.Value = IID_ID3D12CommandList;
-    createCommandList.m_ppCommandList.Key = m_CommandListCopyKey;
-    m_StateService.GetRecorder().Record(ID3D12DeviceCreateCommandListSerializer(createCommandList));
-  }
-  {
-    m_CommandQueueDirectKey = m_StateService.GetUniqueObjectKey();
-    D3D12_COMMAND_QUEUE_DESC commandQueueDesc{};
-    commandQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
-    ID3D12DeviceCreateCommandQueueCommand createCommandQueue;
-    createCommandQueue.Key = m_StateService.GetUniqueCommandKey();
-    createCommandQueue.m_Object.Key = m_DeviceKey;
-    createCommandQueue.m_pDesc.Value = &commandQueueDesc;
-    createCommandQueue.m_riid.Value = IID_ID3D12CommandQueue;
-    createCommandQueue.m_ppCommandQueue.Key = m_CommandQueueDirectKey;
-    m_StateService.GetRecorder().Record(
-        ID3D12DeviceCreateCommandQueueSerializer(createCommandQueue));
+      m_CommandListCopyKey = m_StateService.GetUniqueObjectKey();
+      ID3D12DeviceCreateCommandListCommand createCommandList;
+      createCommandList.Key = m_StateService.GetUniqueCommandKey();
+      createCommandList.m_Object.Key = m_DeviceKey;
+      createCommandList.m_nodeMask.Value = 0;
+      createCommandList.m_pCommandAllocator.Key = createCommandAllocator.m_ppCommandAllocator.Key;
+      createCommandList.m_type.Value = D3D12_COMMAND_LIST_TYPE_COPY;
+      createCommandList.m_pInitialState.Value = nullptr;
+      createCommandList.m_riid.Value = IID_ID3D12CommandList;
+      createCommandList.m_ppCommandList.Key = m_CommandListCopyKey;
+      m_StateService.GetRecorder().Record(
+          ID3D12DeviceCreateCommandListSerializer(createCommandList));
+    }
+    {
+      m_CommandQueueDirectKey = m_StateService.GetUniqueObjectKey();
+      D3D12_COMMAND_QUEUE_DESC commandQueueDesc{};
+      commandQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
+      ID3D12DeviceCreateCommandQueueCommand createCommandQueue;
+      createCommandQueue.Key = m_StateService.GetUniqueCommandKey();
+      createCommandQueue.m_Object.Key = m_DeviceKey;
+      createCommandQueue.m_pDesc.Value = &commandQueueDesc;
+      createCommandQueue.m_riid.Value = IID_ID3D12CommandQueue;
+      createCommandQueue.m_ppCommandQueue.Key = m_CommandQueueDirectKey;
+      m_StateService.GetRecorder().Record(
+          ID3D12DeviceCreateCommandQueueSerializer(createCommandQueue));
 
-    m_CommandAllocatorDirectKey = m_StateService.GetUniqueObjectKey();
-    ID3D12DeviceCreateCommandAllocatorCommand createCommandAllocator;
-    createCommandAllocator.Key = m_StateService.GetUniqueCommandKey();
-    createCommandAllocator.m_Object.Key = m_DeviceKey;
-    createCommandAllocator.m_type.Value = D3D12_COMMAND_LIST_TYPE_DIRECT;
-    createCommandAllocator.m_riid.Value = IID_ID3D12CommandAllocator;
-    createCommandAllocator.m_ppCommandAllocator.Key = m_CommandAllocatorDirectKey;
-    m_StateService.GetRecorder().Record(
-        ID3D12DeviceCreateCommandAllocatorSerializer(createCommandAllocator));
+      m_CommandAllocatorDirectKey = m_StateService.GetUniqueObjectKey();
+      ID3D12DeviceCreateCommandAllocatorCommand createCommandAllocator;
+      createCommandAllocator.Key = m_StateService.GetUniqueCommandKey();
+      createCommandAllocator.m_Object.Key = m_DeviceKey;
+      createCommandAllocator.m_type.Value = D3D12_COMMAND_LIST_TYPE_DIRECT;
+      createCommandAllocator.m_riid.Value = IID_ID3D12CommandAllocator;
+      createCommandAllocator.m_ppCommandAllocator.Key = m_CommandAllocatorDirectKey;
+      m_StateService.GetRecorder().Record(
+          ID3D12DeviceCreateCommandAllocatorSerializer(createCommandAllocator));
 
-    m_CommandListDirectKey = m_StateService.GetUniqueObjectKey();
-    ID3D12DeviceCreateCommandListCommand createCommandList;
-    createCommandList.Key = m_StateService.GetUniqueCommandKey();
-    createCommandList.m_Object.Key = m_DeviceKey;
-    createCommandList.m_nodeMask.Value = 0;
-    createCommandList.m_pCommandAllocator.Key = createCommandAllocator.m_ppCommandAllocator.Key;
-    createCommandList.m_type.Value = D3D12_COMMAND_LIST_TYPE_DIRECT;
-    createCommandList.m_pInitialState.Value = nullptr;
-    createCommandList.m_riid.Value = IID_ID3D12CommandList;
-    createCommandList.m_ppCommandList.Key = m_CommandListDirectKey;
-    m_StateService.GetRecorder().Record(ID3D12DeviceCreateCommandListSerializer(createCommandList));
-  }
-  {
-    m_FenceKey = m_StateService.GetUniqueObjectKey();
-    ID3D12DeviceCreateFenceCommand createFence;
-    createFence.Key = m_StateService.GetUniqueCommandKey();
-    createFence.m_Object.Key = m_DeviceKey;
-    createFence.m_InitialValue.Value = 0;
-    createFence.m_Flags.Value = D3D12_FENCE_FLAG_NONE;
-    createFence.m_riid.Value = IID_ID3D12Fence;
-    createFence.m_ppFence.Key = m_FenceKey;
-    m_StateService.GetRecorder().Record(ID3D12DeviceCreateFenceSerializer(createFence));
+      m_CommandListDirectKey = m_StateService.GetUniqueObjectKey();
+      ID3D12DeviceCreateCommandListCommand createCommandList;
+      createCommandList.Key = m_StateService.GetUniqueCommandKey();
+      createCommandList.m_Object.Key = m_DeviceKey;
+      createCommandList.m_nodeMask.Value = 0;
+      createCommandList.m_pCommandAllocator.Key = createCommandAllocator.m_ppCommandAllocator.Key;
+      createCommandList.m_type.Value = D3D12_COMMAND_LIST_TYPE_DIRECT;
+      createCommandList.m_pInitialState.Value = nullptr;
+      createCommandList.m_riid.Value = IID_ID3D12CommandList;
+      createCommandList.m_ppCommandList.Key = m_CommandListDirectKey;
+      m_StateService.GetRecorder().Record(
+          ID3D12DeviceCreateCommandListSerializer(createCommandList));
+    }
+    {
+      m_FenceKey = m_StateService.GetUniqueObjectKey();
+      ID3D12DeviceCreateFenceCommand createFence;
+      createFence.Key = m_StateService.GetUniqueCommandKey();
+      createFence.m_Object.Key = m_DeviceKey;
+      createFence.m_InitialValue.Value = 0;
+      createFence.m_Flags.Value = D3D12_FENCE_FLAG_NONE;
+      createFence.m_riid.Value = IID_ID3D12Fence;
+      createFence.m_ppFence.Key = m_FenceKey;
+      m_StateService.GetRecorder().Record(ID3D12DeviceCreateFenceSerializer(createFence));
+    }
   }
 
   unsigned scratchResourceKey = m_StateService.GetUniqueObjectKey();
 
-  D3D12_HEAP_PROPERTIES heapProperties{};
-  heapProperties.Type = D3D12_HEAP_TYPE_DEFAULT;
-  heapProperties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
-  heapProperties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
-  heapProperties.CreationNodeMask = 1;
-  heapProperties.VisibleNodeMask = 1;
+  // recording creation of scratch space buffer
+  {
+    D3D12_HEAP_PROPERTIES heapProperties{};
+    heapProperties.Type = D3D12_HEAP_TYPE_DEFAULT;
+    heapProperties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+    heapProperties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+    heapProperties.CreationNodeMask = 1;
+    heapProperties.VisibleNodeMask = 1;
 
-  D3D12_RESOURCE_DESC resourceDesc{};
-  resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-  resourceDesc.Alignment = 0;
-  resourceDesc.Width = m_MaxBuildScratchSpace;
-  resourceDesc.Height = 1;
-  resourceDesc.DepthOrArraySize = 1;
-  resourceDesc.MipLevels = 1;
-  resourceDesc.Format = DXGI_FORMAT_UNKNOWN;
-  resourceDesc.SampleDesc.Count = 1;
-  resourceDesc.SampleDesc.Quality = 0;
-  resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-  resourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+    D3D12_RESOURCE_DESC resourceDesc{};
+    resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+    resourceDesc.Alignment = 0;
+    resourceDesc.Width = m_MaxBuildScratchSpace;
+    resourceDesc.Height = 1;
+    resourceDesc.DepthOrArraySize = 1;
+    resourceDesc.MipLevels = 1;
+    resourceDesc.Format = DXGI_FORMAT_UNKNOWN;
+    resourceDesc.SampleDesc.Count = 1;
+    resourceDesc.SampleDesc.Quality = 0;
+    resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+    resourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
-  ID3D12DeviceCreateCommittedResourceCommand createScratch;
-  createScratch.Key = m_StateService.GetUniqueCommandKey();
-  createScratch.m_Object.Key = m_DeviceKey;
-  createScratch.m_pHeapProperties.Value = &heapProperties;
-  createScratch.m_HeapFlags.Value = D3D12_HEAP_FLAG_NONE;
-  createScratch.m_pDesc.Value = &resourceDesc;
-  createScratch.m_InitialResourceState.Value = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
-  createScratch.m_pOptimizedClearValue.Value = nullptr;
-  createScratch.m_riidResource.Value = IID_ID3D12Resource;
-  createScratch.m_ppvResource.Key = scratchResourceKey;
-  m_Recorder.Record(ID3D12DeviceCreateCommittedResourceSerializer(createScratch));
+    ID3D12DeviceCreateCommittedResourceCommand createScratch;
+    createScratch.Key = m_StateService.GetUniqueCommandKey();
+    createScratch.m_Object.Key = m_DeviceKey;
+    createScratch.m_pHeapProperties.Value = &heapProperties;
+    createScratch.m_HeapFlags.Value = D3D12_HEAP_FLAG_NONE;
+    createScratch.m_pDesc.Value = &resourceDesc;
+    createScratch.m_InitialResourceState.Value = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+    createScratch.m_pOptimizedClearValue.Value = nullptr;
+    createScratch.m_riidResource.Value = IID_ID3D12Resource;
+    createScratch.m_ppvResource.Key = scratchResourceKey;
+    m_Recorder.Record(ID3D12DeviceCreateCommittedResourceSerializer(createScratch));
 
-  ID3D12ResourceGetGPUVirtualAddressCommand getAddress{};
-  getAddress.Key = m_StateService.GetUniqueCommandKey();
-  getAddress.m_Object.Key = scratchResourceKey;
-  m_Recorder.Record(ID3D12ResourceGetGPUVirtualAddressSerializer(getAddress));
+    ID3D12ResourceGetGPUVirtualAddressCommand getAddress{};
+    getAddress.Key = m_StateService.GetUniqueCommandKey();
+    getAddress.m_Object.Key = scratchResourceKey;
+    m_Recorder.Record(ID3D12ResourceGetGPUVirtualAddressSerializer(getAddress));
+  }
 
+  // restoring RTAS
   std::map<std::pair<unsigned, unsigned>, uint64_t> bufferHashesByKeyOffset;
   std::unordered_map<unsigned, std::unordered_set<unsigned>> tiledResourceUpdatesRestored;
   for (auto& itState : m_StatesById) {
@@ -878,13 +918,13 @@ void AccelerationStructuresBuildService::RestoreAccelerationStructures() {
       std::vector<AccelerationStructuresBufferContentRestore::BufferRestoreInfo>& restoreInfos =
           m_BufferContentRestore.GetRestoreInfos(state->CommandKey);
 
-      std::set<unsigned> residencyKeys;
+      ResourceResidencyService residencyService(m_StateService, m_DeviceKey);
       for (const auto& info : restoreInfos) {
-        InsertIfNotResident(info.BufferKey, residencyKeys);
+        residencyService.AddResource(info.BufferKey);
       }
-      InsertIfNotResident(state->Desc->DestAccelerationStructureKey, residencyKeys);
-      InsertIfNotResident(state->Desc->SourceAccelerationStructureKey, residencyKeys);
-      RecordMakeResident(residencyKeys);
+      residencyService.AddResource(state->Desc->DestAccelerationStructureKey);
+      residencyService.AddResource(state->Desc->SourceAccelerationStructureKey);
+      residencyService.RecordMakeResident();
 
       std::unordered_set<unsigned> restoredBuffers;
       size_t uploadBufferOffset{};
@@ -1050,15 +1090,15 @@ void AccelerationStructuresBuildService::RestoreAccelerationStructures() {
         m_StateService.GetRecorder().Record(
             ID3D12GraphicsCommandListResetSerializer(commandListReset));
       }
-      RecordEvict(residencyKeys);
+      residencyService.RecordEvict();
     } else if (itState.second->Kind == RaytracingAccelerationStructureState::StateKind::Copy) {
       CopyRaytracingAccelerationStructureState* state =
           static_cast<CopyRaytracingAccelerationStructureState*>(itState.second);
 
-      std::set<unsigned> residencyKeys;
-      InsertIfNotResident(state->DestKey, residencyKeys);
-      InsertIfNotResident(state->SourceKey, residencyKeys);
-      RecordMakeResident(residencyKeys);
+      ResourceResidencyService residencyService(m_StateService, m_DeviceKey);
+      residencyService.AddResource(state->DestKey);
+      residencyService.AddResource(state->SourceKey);
+      residencyService.RecordMakeResident();
 
       ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand copy;
       copy.Key = state->CommandKey;
@@ -1119,7 +1159,7 @@ void AccelerationStructuresBuildService::RestoreAccelerationStructures() {
         m_StateService.GetRecorder().Record(
             ID3D12GraphicsCommandListResetSerializer(commandListReset));
       }
-      RecordEvict(residencyKeys);
+      residencyService.RecordEvict();
     } else if (itState.second->Kind ==
                RaytracingAccelerationStructureState::StateKind::NvAPIBuild) {
       NvAPIBuildRaytracingAccelerationStructureExState* state =
@@ -1128,13 +1168,13 @@ void AccelerationStructuresBuildService::RestoreAccelerationStructures() {
       std::vector<AccelerationStructuresBufferContentRestore::BufferRestoreInfo>& restoreInfos =
           m_BufferContentRestore.GetRestoreInfos(state->CommandKey);
 
-      std::set<unsigned> residencyKeys;
+      ResourceResidencyService residencyService(m_StateService, m_DeviceKey);
       for (const auto& info : restoreInfos) {
-        InsertIfNotResident(info.BufferKey, residencyKeys);
+        residencyService.AddResource(info.BufferKey);
       }
-      InsertIfNotResident(state->Desc->DestAccelerationStructureKey, residencyKeys);
-      InsertIfNotResident(state->Desc->SourceAccelerationStructureKey, residencyKeys);
-      RecordMakeResident(residencyKeys);
+      residencyService.AddResource(state->Desc->DestAccelerationStructureKey);
+      residencyService.AddResource(state->Desc->SourceAccelerationStructureKey);
+      residencyService.RecordMakeResident();
 
       std::unordered_set<unsigned> restoredBuffers;
       size_t uploadBufferOffset{};
@@ -1300,7 +1340,7 @@ void AccelerationStructuresBuildService::RestoreAccelerationStructures() {
         m_StateService.GetRecorder().Record(
             ID3D12GraphicsCommandListResetSerializer(commandListReset));
       }
-      RecordEvict(residencyKeys);
+      residencyService.RecordEvict();
     } else if (itState.second->Kind == RaytracingAccelerationStructureState::StateKind::NvAPIOMM) {
       NvAPIBuildRaytracingOpacityMicromapArrayState* state =
           static_cast<NvAPIBuildRaytracingOpacityMicromapArrayState*>(itState.second);
@@ -1308,17 +1348,17 @@ void AccelerationStructuresBuildService::RestoreAccelerationStructures() {
       std::vector<AccelerationStructuresBufferContentRestore::BufferRestoreInfo>& restoreInfos =
           m_BufferContentRestore.GetRestoreInfos(state->CommandKey);
 
-      std::set<unsigned> residencyKeys;
+      ResourceResidencyService residencyService(m_StateService, m_DeviceKey);
       for (const auto& info : restoreInfos) {
-        InsertIfNotResident(info.BufferKey, residencyKeys);
+        residencyService.AddResource(info.BufferKey);
       }
-      InsertIfNotResident(state->Desc->DestOpacityMicromapArrayDataKey, residencyKeys);
-      InsertIfNotResident(state->Desc->InputBufferKey, residencyKeys);
-      InsertIfNotResident(state->Desc->PerOMMDescsKey, residencyKeys);
+      residencyService.AddResource(state->Desc->DestOpacityMicromapArrayDataKey);
+      residencyService.AddResource(state->Desc->InputBufferKey);
+      residencyService.AddResource(state->Desc->PerOMMDescsKey);
       for (unsigned key : state->Desc->DestPostBuildBufferKeys) {
-        InsertIfNotResident(key, residencyKeys);
+        residencyService.AddResource(key);
       }
-      RecordMakeResident(residencyKeys);
+      residencyService.RecordMakeResident();
 
       std::unordered_set<unsigned> restoredBuffers;
       size_t uploadBufferOffset{};
@@ -1483,62 +1523,65 @@ void AccelerationStructuresBuildService::RestoreAccelerationStructures() {
         m_StateService.GetRecorder().Record(
             ID3D12GraphicsCommandListResetSerializer(commandListReset));
       }
-      RecordEvict(residencyKeys);
+      residencyService.RecordEvict();
     } else {
       GITS_ASSERT(0 && "unknown state");
     }
     delete itState.second;
   }
 
+  // cleanup
   {
-    IUnknownReleaseCommand releaseScratchResource{};
-    releaseScratchResource.Key = m_StateService.GetUniqueCommandKey();
-    releaseScratchResource.m_Object.Key = scratchResourceKey;
-    m_StateService.GetRecorder().Record(IUnknownReleaseSerializer(releaseScratchResource));
-  }
-  {
-    IUnknownReleaseCommand releaseFence{};
-    releaseFence.Key = m_StateService.GetUniqueCommandKey();
-    releaseFence.m_Object.Key = m_FenceKey;
-    m_StateService.GetRecorder().Record(IUnknownReleaseSerializer(releaseFence));
-  }
-  {
-    IUnknownReleaseCommand releaseCommandList{};
-    releaseCommandList.Key = m_StateService.GetUniqueCommandKey();
-    releaseCommandList.m_Object.Key = m_CommandListDirectKey;
-    m_StateService.GetRecorder().Record(IUnknownReleaseSerializer(releaseCommandList));
+    {
+      IUnknownReleaseCommand releaseScratchResource{};
+      releaseScratchResource.Key = m_StateService.GetUniqueCommandKey();
+      releaseScratchResource.m_Object.Key = scratchResourceKey;
+      m_StateService.GetRecorder().Record(IUnknownReleaseSerializer(releaseScratchResource));
+    }
+    {
+      IUnknownReleaseCommand releaseFence{};
+      releaseFence.Key = m_StateService.GetUniqueCommandKey();
+      releaseFence.m_Object.Key = m_FenceKey;
+      m_StateService.GetRecorder().Record(IUnknownReleaseSerializer(releaseFence));
+    }
+    {
+      IUnknownReleaseCommand releaseCommandList{};
+      releaseCommandList.Key = m_StateService.GetUniqueCommandKey();
+      releaseCommandList.m_Object.Key = m_CommandListDirectKey;
+      m_StateService.GetRecorder().Record(IUnknownReleaseSerializer(releaseCommandList));
 
-    IUnknownReleaseCommand releaseCommandAllocator{};
-    releaseCommandAllocator.Key = m_StateService.GetUniqueCommandKey();
-    releaseCommandAllocator.m_Object.Key = m_CommandAllocatorDirectKey;
-    m_StateService.GetRecorder().Record(IUnknownReleaseSerializer(releaseCommandAllocator));
+      IUnknownReleaseCommand releaseCommandAllocator{};
+      releaseCommandAllocator.Key = m_StateService.GetUniqueCommandKey();
+      releaseCommandAllocator.m_Object.Key = m_CommandAllocatorDirectKey;
+      m_StateService.GetRecorder().Record(IUnknownReleaseSerializer(releaseCommandAllocator));
 
-    IUnknownReleaseCommand releaseCommandQueue{};
-    releaseCommandQueue.Key = m_StateService.GetUniqueCommandKey();
-    releaseCommandQueue.m_Object.Key = m_CommandQueueDirectKey;
-    m_StateService.GetRecorder().Record(IUnknownReleaseSerializer(releaseCommandQueue));
-  }
-  {
-    IUnknownReleaseCommand releaseCommandList{};
-    releaseCommandList.Key = m_StateService.GetUniqueCommandKey();
-    releaseCommandList.m_Object.Key = m_CommandListCopyKey;
-    m_StateService.GetRecorder().Record(IUnknownReleaseSerializer(releaseCommandList));
+      IUnknownReleaseCommand releaseCommandQueue{};
+      releaseCommandQueue.Key = m_StateService.GetUniqueCommandKey();
+      releaseCommandQueue.m_Object.Key = m_CommandQueueDirectKey;
+      m_StateService.GetRecorder().Record(IUnknownReleaseSerializer(releaseCommandQueue));
+    }
+    {
+      IUnknownReleaseCommand releaseCommandList{};
+      releaseCommandList.Key = m_StateService.GetUniqueCommandKey();
+      releaseCommandList.m_Object.Key = m_CommandListCopyKey;
+      m_StateService.GetRecorder().Record(IUnknownReleaseSerializer(releaseCommandList));
 
-    IUnknownReleaseCommand releaseCommandAllocator{};
-    releaseCommandAllocator.Key = m_StateService.GetUniqueCommandKey();
-    releaseCommandAllocator.m_Object.Key = m_CommandAllocatorCopyKey;
-    m_StateService.GetRecorder().Record(IUnknownReleaseSerializer(releaseCommandAllocator));
+      IUnknownReleaseCommand releaseCommandAllocator{};
+      releaseCommandAllocator.Key = m_StateService.GetUniqueCommandKey();
+      releaseCommandAllocator.m_Object.Key = m_CommandAllocatorCopyKey;
+      m_StateService.GetRecorder().Record(IUnknownReleaseSerializer(releaseCommandAllocator));
 
-    IUnknownReleaseCommand releaseCommandQueue{};
-    releaseCommandQueue.Key = m_StateService.GetUniqueCommandKey();
-    releaseCommandQueue.m_Object.Key = m_CommandQueueCopyKey;
-    m_StateService.GetRecorder().Record(IUnknownReleaseSerializer(releaseCommandQueue));
-  }
-  if (m_UploadBufferKey) {
-    IUnknownReleaseCommand releaseUploadBuffer{};
-    releaseUploadBuffer.Key = m_StateService.GetUniqueCommandKey();
-    releaseUploadBuffer.m_Object.Key = m_UploadBufferKey;
-    m_StateService.GetRecorder().Record(IUnknownReleaseSerializer(releaseUploadBuffer));
+      IUnknownReleaseCommand releaseCommandQueue{};
+      releaseCommandQueue.Key = m_StateService.GetUniqueCommandKey();
+      releaseCommandQueue.m_Object.Key = m_CommandQueueCopyKey;
+      m_StateService.GetRecorder().Record(IUnknownReleaseSerializer(releaseCommandQueue));
+    }
+    if (m_UploadBufferKey) {
+      IUnknownReleaseCommand releaseUploadBuffer{};
+      releaseUploadBuffer.Key = m_StateService.GetUniqueCommandKey();
+      releaseUploadBuffer.m_Object.Key = m_UploadBufferKey;
+      m_StateService.GetRecorder().Record(IUnknownReleaseSerializer(releaseUploadBuffer));
+    }
   }
 
   m_Restored = true;
@@ -1904,150 +1947,22 @@ void AccelerationStructuresBuildService::StoreBuffer(
   }
 }
 
-std::vector<AccelerationStructuresBuildService::Interval> AccelerationStructuresBuildService::
-    MergeIntervals(const std::vector<Interval>& intervals) {
-  std::vector<Interval> intervalsCopy = intervals;
-  std::sort(intervalsCopy.begin(), intervalsCopy.end(),
+std::vector<AccelerationStructuresBuildService::BufferRegion> AccelerationStructuresBuildService::
+    MergeBufferRegions(const std::vector<BufferRegion>& bufferRegions) {
+  std::vector<BufferRegion> bufferRegionsCopy = bufferRegions;
+  std::sort(bufferRegionsCopy.begin(), bufferRegionsCopy.end(),
             [](const auto& a, const auto& b) { return a.Start < b.Start; });
 
-  std::vector<Interval> merged;
-  for (auto interval : intervalsCopy) {
-    if (merged.empty() || merged.back().End < interval.Start) {
-      merged.push_back(interval);
+  std::vector<BufferRegion> merged;
+  for (auto bufferRegion : bufferRegionsCopy) {
+    if (merged.empty() || merged.back().End < bufferRegion.Start) {
+      merged.push_back(bufferRegion);
     } else {
-      merged.back().End = std::max(merged.back().End, interval.End);
+      merged.back().End = std::max(merged.back().End, bufferRegion.End);
     }
   }
 
   return merged;
-}
-
-void AccelerationStructuresBuildService::InsertIfNotResident(unsigned resourceKey,
-                                                             std::set<unsigned>& residencyKeys) {
-  if (!resourceKey) {
-    return;
-  }
-
-  auto residencyKey = GetResidencyKeyForNotResidentResource(resourceKey);
-  if (residencyKey.has_value() && residencyKey.value() != 0) {
-    residencyKeys.insert(residencyKey.value());
-  }
-}
-
-std::optional<unsigned> AccelerationStructuresBuildService::GetResidencyKeyForNotResidentResource(
-    unsigned key) {
-  ObjectState* state = m_StateService.GetState(key);
-  if (!state) {
-    return std::nullopt;
-  }
-
-  switch (state->CreationCommand->GetId()) {
-  case CommandId::ID_ID3D12DEVICE_CREATECOMMITTEDRESOURCE: {
-    auto* command =
-        static_cast<ID3D12DeviceCreateCommittedResourceCommand*>(state->CreationCommand.get());
-    if (command->m_HeapFlags.Value & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
-      return key;
-    }
-  } break;
-  case CommandId::ID_ID3D12DEVICE4_CREATECOMMITTEDRESOURCE1: {
-    auto* command =
-        static_cast<ID3D12Device4CreateCommittedResource1Command*>(state->CreationCommand.get());
-    if (command->m_HeapFlags.Value & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
-      return key;
-    }
-  } break;
-  case CommandId::ID_ID3D12DEVICE8_CREATECOMMITTEDRESOURCE2: {
-    auto* command =
-        static_cast<ID3D12Device8CreateCommittedResource2Command*>(state->CreationCommand.get());
-    if (command->m_HeapFlags.Value & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
-      return key;
-    }
-  } break;
-  case CommandId::ID_ID3D12DEVICE10_CREATECOMMITTEDRESOURCE3: {
-    auto* command =
-        static_cast<ID3D12Device10CreateCommittedResource3Command*>(state->CreationCommand.get());
-    if (command->m_HeapFlags.Value & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
-      return key;
-    }
-  } break;
-  case CommandId::INTC_D3D12_CREATECOMMITTEDRESOURCE: {
-    auto* command =
-        static_cast<INTC_D3D12_CreateCommittedResourceCommand*>(state->CreationCommand.get());
-    if (command->m_HeapFlags.Value & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
-      return key;
-    }
-  } break;
-  case CommandId::ID_ID3D12DEVICE_CREATEPLACEDRESOURCE:
-  case CommandId::ID_ID3D12DEVICE8_CREATEPLACEDRESOURCE1:
-  case CommandId::ID_ID3D12DEVICE10_CREATEPLACEDRESOURCE2:
-  case CommandId::INTC_D3D12_CREATEPLACEDRESOURCE: {
-    unsigned heapKey = static_cast<ResourceState*>(state)->HeapKey;
-    ObjectState* heapState = m_StateService.GetState(heapKey);
-    if (!heapState) {
-      return std::nullopt;
-    }
-    switch (heapState->CreationCommand->GetId()) {
-    case CommandId::ID_ID3D12DEVICE_CREATEHEAP: {
-      auto* command = static_cast<ID3D12DeviceCreateHeapCommand*>(heapState->CreationCommand.get());
-      if (command->m_pDesc.Value->Flags & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
-        return heapKey;
-      }
-    } break;
-    case CommandId::ID_ID3D12DEVICE4_CREATEHEAP1: {
-      auto* command =
-          static_cast<ID3D12Device4CreateHeap1Command*>(heapState->CreationCommand.get());
-      if (command->m_pDesc.Value->Flags & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
-        return heapKey;
-      }
-    } break;
-    case CommandId::INTC_D3D12_CREATEHEAP: {
-      auto* command = static_cast<INTC_D3D12_CreateHeapCommand*>(heapState->CreationCommand.get());
-      if (command->m_pDesc.Value->pD3D12Desc->Flags & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
-        return heapKey;
-      }
-    } break;
-    default:
-      return std::nullopt;
-    }
-  } break;
-  }
-  return std::nullopt;
-}
-
-void AccelerationStructuresBuildService::RecordMakeResident(const std::set<unsigned>& keys) {
-  if (keys.empty()) {
-    return;
-  }
-
-  ID3D12DeviceMakeResidentCommand makeResident;
-  makeResident.Key = m_StateService.GetUniqueCommandKey();
-  makeResident.m_Object.Key = m_DeviceKey;
-  makeResident.m_NumObjects.Value = keys.size();
-  ID3D12Pageable* fakePtr = reinterpret_cast<ID3D12Pageable*>(1);
-  makeResident.m_ppObjects.Value = &fakePtr;
-  makeResident.m_ppObjects.Size = keys.size();
-  for (unsigned key : keys) {
-    makeResident.m_ppObjects.Keys.push_back(key);
-  }
-  m_StateService.GetRecorder().Record(ID3D12DeviceMakeResidentSerializer(makeResident));
-}
-
-void AccelerationStructuresBuildService::RecordEvict(const std::set<unsigned>& keys) {
-  if (keys.empty()) {
-    return;
-  }
-
-  ID3D12DeviceEvictCommand evict;
-  evict.Key = m_StateService.GetUniqueCommandKey();
-  evict.m_Object.Key = m_DeviceKey;
-  evict.m_NumObjects.Value = keys.size();
-  ID3D12Pageable* fakePtr = reinterpret_cast<ID3D12Pageable*>(1);
-  evict.m_ppObjects.Value = &fakePtr;
-  evict.m_ppObjects.Size = keys.size();
-  for (unsigned key : keys) {
-    evict.m_ppObjects.Keys.push_back(key);
-  }
-  m_StateService.GetRecorder().Record(ID3D12DeviceEvictSerializer(evict));
 }
 
 } // namespace DirectX

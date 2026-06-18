@@ -68,6 +68,8 @@ set(STATE_TRACKING_SRC
   ${SRC_DIR}/resourceForCBVRestoreService.cpp
   ${SRC_DIR}/metaCommandsService.h
   ${SRC_DIR}/metaCommandsService.cpp
+  ${SRC_DIR}/resourceResidencyService.h
+  ${SRC_DIR}/resourceResidencyService.cpp
 )
 source_group("state_tracking" FILES ${STATE_TRACKING_SRC})
 
