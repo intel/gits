@@ -41,7 +41,7 @@ namespace Vulkan {
     struct ${cnamedata} : public CBaseDataStruct, gits::noncopyable {
       ${fields.strip()}
     % if struct.pass_struct_storage:
-      VkStructStoragePointerGITS _baseIn;
+      VkStructStoragePointerGITS _baseIn{};
     % endif
 
       std::unique_ptr<${struct.name}> _${vkless_name};
