@@ -27,7 +27,7 @@ HelloHUDLayer::HelloHUDLayer(const HelloHUDConfig& cfg, CGits* gits)
 
 HelloHUDLayer::~HelloHUDLayer() {
   auto* hud = gits_->GetImGuiHUD();
-  if (hud) {
+  if (hud && token_ != -1) {
     hud->RemoveHUDPlugin(token_);
   }
 }

@@ -33,7 +33,7 @@ private:
   std::vector<ImGuiWidget> widgets_;
   HelloHUDConfig cfg_;
   CGits* gits_;
-  int token_;
+  int token_ = -1;
 };
 
 } // namespace DirectX
