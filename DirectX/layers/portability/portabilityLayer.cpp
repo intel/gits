@@ -66,9 +66,6 @@ PortabilityLayer::PortabilityLayer() : Layer("Portability") {
     m_AccelerationStructureScratchMinSizeInBytes =
         Configurator::Get()
             .directx.recorder.portability.raytracing.accelerationStructureScratchMinSizeInBytes;
-    if (m_AccelerationStructureScratchMinSizeInBytes < 0) {
-      m_AccelerationStructureScratchMinSizeInBytes = 0;
-    }
   }
 
   if (Configurator::IsRecorder() && m_StoreResourcePlacementData) {
