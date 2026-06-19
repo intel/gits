@@ -293,7 +293,8 @@ void StreamWriter::WaitForWriteDone(std::unique_lock<std::mutex>& lock,
                                     unsigned blockIndex) {
   m_WaitsForWriteDone[threadIndex].Waiting = true;
   m_WaitsForWriteDone[threadIndex].BlockIndex = blockIndex;
-  m_WaitsForWriteDone[threadIndex].Condition.wait(lock);
+  m_WaitsForWriteDone[threadIndex].Condition.wait(
+      lock, [&] { return !m_WaitsForWriteDone[threadIndex].Waiting; });
 }
 
 void StreamWriter::NotifyWriteDone(unsigned blockIndex) {
