@@ -467,14 +467,14 @@ void ResetBasePaths() {
 void SetAllConfigsFromBasePath() {
   auto& context = Context::GetInstance();
 
-  const auto captureConfigPath = GetRecorderConfigPathForApi(context.SelectedApiForCapture);
+  auto captureConfigPath = GetRecorderConfigPathForApi(context.SelectedApiForCapture);
   if (std::filesystem::exists(captureConfigPath)) {
-    context.SetPath(captureConfigPath, Path::CONFIG, Mode::CAPTURE);
+    context.SetPath(std::move(captureConfigPath), Path::CONFIG, Mode::CAPTURE);
   }
-  const auto playbackConfigPath = GetPlayerConfigPath();
+  auto playbackConfigPath = GetPlayerConfigPath();
   if (std::filesystem::exists(playbackConfigPath)) {
     context.SetPath(playbackConfigPath, Path::CONFIG, Mode::PLAYBACK);
-    context.SetPath(playbackConfigPath, Path::CONFIG, Mode::SUBCAPTURE);
+    context.SetPath(std::move(playbackConfigPath), Path::CONFIG, Mode::SUBCAPTURE);
   }
 }
 
