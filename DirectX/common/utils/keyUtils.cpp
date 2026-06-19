@@ -8,6 +8,9 @@
 
 #include "keyUtils.h"
 
+#include <limits>
+#include <stdexcept>
+
 namespace gits {
 namespace DirectX {
 
@@ -21,7 +24,11 @@ ConfigKeySet::ConfigKeySet(const std::string& keys) {
       }
       std::string key(begin, p);
       if (key[0] == 'S' || key[0] == 'E') {
-        unsigned k = std::stoul(key.substr(1));
+        unsigned long parsed = std::stoul(key.substr(1));
+        if (parsed > (std::numeric_limits<unsigned>::max() >> 2)) {
+          throw std::out_of_range("Config key value out of range: " + key);
+        }
+        unsigned k = static_cast<unsigned>(parsed);
         if (key[0] == 'S') {
           k |= STATE_RESTORE_KEY_MASK;
         } else if (key[0] == 'E') {
@@ -44,7 +51,11 @@ std::string ParseConfigKeys(const std::string& keys) {
       while (i < keys.size() && std::isdigit(keys[i])) {
         ++i;
       }
-      unsigned k = std::stoul(std::string(begin, &keys[i--]));
+      unsigned long parsed = std::stoul(std::string(begin, &keys[i--]));
+      if (parsed > (std::numeric_limits<unsigned>::max() >> 2)) {
+        throw std::out_of_range("Config key value out of range");
+      }
+      unsigned k = static_cast<unsigned>(parsed);
       if (c == 'S') {
         k |= STATE_RESTORE_KEY_MASK;
       } else if (c == 'E') {
