@@ -260,9 +260,9 @@ void ContentPanel::CaptureActionCallback(const Event& e) {
 
     const auto& streamDirectory = capture_actions::GetStreamDirectoryFromLog(content);
     if (streamDirectory.has_value()) {
-      const auto streamPath = streamDirectory.value() / filesystem_names::GITS_STREAM;
+      auto streamPath = streamDirectory.value() / filesystem_names::GITS_STREAM;
       context.SetPath(streamPath, Path::INPUT_STREAM, Mode::PLAYBACK);
-      context.SetPath(streamPath, Path::INPUT_STREAM, Mode::SUBCAPTURE);
+      context.SetPath(std::move(streamPath), Path::INPUT_STREAM, Mode::SUBCAPTURE);
     }
 
     capture_actions::CleanupRecorderFiles(context.SelectedApiForCapture,
