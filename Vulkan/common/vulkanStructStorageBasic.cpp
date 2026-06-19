@@ -142,7 +142,7 @@ void gits::Vulkan::COnQueueSubmitEndDataStorage::GatherDataOnQueueSubmitEnd(
     VkDeviceMemory memory,
     VkDeviceSize offset,
     VkDeviceSize size) {
-  _onQueueSubmitEnd = function;
+  _onQueueSubmitEnd = std::move(function);
   _device = device;
   _offset = offset;
   _dataSize = size;
