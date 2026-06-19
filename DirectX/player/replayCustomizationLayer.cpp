@@ -1888,30 +1888,29 @@ void ReplayCustomizationLayer::Pre(xellSetLoggingCallbackCommand& command) {
   }
 }
 
-static std::string applicationDescToStr(D3D12_APPLICATION_DESC* desc) {
-  if (!desc) {
-    return "ExeFilename: nullptr, Name: nullptr, Engine: nullptr";
-  }
-
-  std::wstring exeFilenameW = desc->pExeFilename ? desc->pExeFilename : L"";
-  auto exeFilename = std::string(exeFilenameW.begin(), exeFilenameW.end());
-  std::wstring nameW = desc->pName ? desc->pName : L"";
-  auto name = std::string(nameW.begin(), nameW.end());
-  std::wstring engineNameW = desc->pEngineName ? desc->pEngineName : L"";
-  auto engineName = std::string(engineNameW.begin(), engineNameW.end());
-
-  std::ostringstream oss;
-  oss << "ExeFilename: \"" << exeFilename << "\", Name: \"" << name << "\" ("
-      << desc->Version.VersionParts[3] << "." << desc->Version.VersionParts[2] << "."
-      << desc->Version.VersionParts[1] << "." << desc->Version.VersionParts[0] << ")"
-      << ", Engine: \"" << engineName << "\" (" << desc->EngineVersion.VersionParts[3] << "."
-      << desc->EngineVersion.VersionParts[2] << "." << desc->EngineVersion.VersionParts[1] << "."
-      << desc->EngineVersion.VersionParts[0] << ")";
-  return oss.str();
-}
-
 void ReplayCustomizationLayer::Pre(ID3D12ApplicationIdentitySetApplicationIdentityCommand& c) {
-  std::string appDesc = applicationDescToStr(c.m_pDesc.Value);
+  D3D12_APPLICATION_DESC* desc = c.m_pDesc.Value;
+
+  std::string appDesc;
+  if (!desc) {
+    appDesc = "ExeFilename: nullptr, Name: nullptr, Engine: nullptr";
+  } else {
+    std::wstring exeFilenameW = desc->pExeFilename ? desc->pExeFilename : L"";
+    auto exeFilename = std::string(exeFilenameW.begin(), exeFilenameW.end());
+    std::wstring nameW = desc->pName ? desc->pName : L"";
+    auto name = std::string(nameW.begin(), nameW.end());
+    std::wstring engineNameW = desc->pEngineName ? desc->pEngineName : L"";
+    auto engineName = std::string(engineNameW.begin(), engineNameW.end());
+
+    std::ostringstream oss;
+    oss << "ExeFilename: \"" << exeFilename << "\", Name: \"" << name << "\" ("
+        << desc->Version.VersionParts[3] << "." << desc->Version.VersionParts[2] << "."
+        << desc->Version.VersionParts[1] << "." << desc->Version.VersionParts[0] << ")"
+        << ", Engine: \"" << engineName << "\" (" << desc->EngineVersion.VersionParts[3] << "."
+        << desc->EngineVersion.VersionParts[2] << "." << desc->EngineVersion.VersionParts[1] << "."
+        << desc->EngineVersion.VersionParts[0] << ")";
+    appDesc = oss.str();
+  }
 
   LOG_INFO << "ID3D12ApplicationIdentity::SetApplicationIdentity - " << appDesc;
 }
