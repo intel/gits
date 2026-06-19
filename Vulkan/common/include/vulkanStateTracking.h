@@ -145,7 +145,7 @@ inline void vkCreateInstance_SD(VkResult return_value,
 
   if ((return_value == VK_SUCCESS) && (*pInstance != VK_NULL_HANDLE)) {
     auto instanceState = std::make_shared<CInstanceState>(pInstance, pCreateInfo);
-    if (pCreateInfo && pCreateInfo->pApplicationInfo) {
+    if (pCreateInfo->pApplicationInfo) {
       instanceState->vulkanVersionMajor =
           VK_VERSION_MAJOR(pCreateInfo->pApplicationInfo->apiVersion);
       instanceState->vulkanVersionMinor =
