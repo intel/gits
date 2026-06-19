@@ -45,13 +45,10 @@ ConfigKeySet::ConfigKeySet(const std::string& keys) {
 std::string ParseConfigKeys(const std::string& keys) {
   std::string result;
   for (size_t i = 0; i < keys.size(); ++i) {
-    char c = keys[i];
+    const char c = keys[i];
     if (c == 'S' || c == 'E') {
-      const char* begin = &keys[++i];
-      while (i < keys.size() && std::isdigit(keys[i])) {
-        ++i;
-      }
-      unsigned long parsed = std::stoul(std::string(begin, &keys[i--]));
+      size_t consumed = 0;
+      const unsigned long parsed = std::stoul(keys.substr(i + 1), &consumed);
       if (parsed > (std::numeric_limits<unsigned>::max() >> 2)) {
         throw std::out_of_range("Config key value out of range");
       }
@@ -62,6 +59,7 @@ std::string ParseConfigKeys(const std::string& keys) {
         k |= EXECUTION_SERIALIZATION_KEY_MASK;
       }
       result += std::to_string(k);
+      i += consumed;
     } else {
       result += c;
     }
