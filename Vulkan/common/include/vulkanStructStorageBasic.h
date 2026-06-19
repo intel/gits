@@ -259,14 +259,10 @@ public:
 // ------------------------------------------------------------------------------------------------
 
 class CNullWrapperData {
-  const void* _ptr;
+  const void* _ptr = nullptr;
 
 public:
-  CNullWrapperData(const void* srcpNext) {
-    if (srcpNext == NULL) {
-      _ptr = NULL;
-    }
-  }
+  CNullWrapperData(const void* srcpNext) {}
   const void** Value() {
     return &_ptr;
   }
