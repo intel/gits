@@ -45,6 +45,13 @@ public:
   ImGuiHUD();
   ~ImGuiHUD();
 
+  // Owns resources and holds atomics/synchronization primitives, so it is
+  // neither copyable nor movable.
+  ImGuiHUD(const ImGuiHUD&) = delete;
+  ImGuiHUD& operator=(const ImGuiHUD&) = delete;
+  ImGuiHUD(ImGuiHUD&&) = delete;
+  ImGuiHUD& operator=(ImGuiHUD&&) = delete;
+
   int AddHUDPlugin(IHUDPlugin* plugin, bool flag);
   void RemoveHUDPlugin(int pluginID);
   void SetApplicationInfo(const std::string& name, int pid);
