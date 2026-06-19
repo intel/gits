@@ -9,6 +9,7 @@
 #pragma once
 
 #include <array>
+#include <atomic>
 #include <chrono>
 #include <deque>
 #include <functional>
@@ -59,10 +60,10 @@ private:
   void ExecuteCallbacks();
   double CalculateFPS(std::chrono::high_resolution_clock::time_point now);
 
-  int _nextPluginID = 0;
+  std::atomic<int> _nextPluginID = 0;
   std::map<int, IHUDPlugin*> _plugins;
   mutable std::shared_mutex _pluginMutex;
-  bool _hasExternalCallbacks = false;
+  std::atomic<bool> _hasExternalCallbacks = false;
   int _tableRows = 0;
   std::vector<std::array<std::string, 2>> _dataTable;
   std::string _strVersion = "<unknown>";
