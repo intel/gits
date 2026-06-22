@@ -1,9 +1,9 @@
 diff --git a/gzguts.h b/gzguts.h
-index eba7208..cfe55bd 100644
+index 266305d..c1654a0 100644
 --- a/gzguts.h
 +++ b/gzguts.h
-@@ -17,6 +17,11 @@
- #  define ZLIB_INTERNAL
+@@ -29,6 +29,11 @@
+ #  endif
  #endif
  
 +// Required to compile with GCC 15.2.0 (Ubuntu 25.10)

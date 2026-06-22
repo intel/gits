@@ -30,7 +30,7 @@ dependencies:
       commit_id: 61a0530f28277f2e850bfc39600ce61d02b518de
     - name: zlib
       url: https://github.com/madler/zlib.git
-      branch: v1.3.1
+      branch: v1.3.2
     - name: libpng
       url: https://github.com/glennrp/libpng.git
       branch: v1.6.58
