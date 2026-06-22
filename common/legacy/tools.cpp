@@ -31,8 +31,6 @@
 #endif
 
 #include <png.h>
-#include <pngpriv.h>
-#include <pnginfo.h>
 
 #if !defined GITS_ARCH_ARM && !defined GITS_ARCH_A64
 
@@ -261,8 +259,9 @@ bool SavePng(const std::string& filename,
     }
   }
 
+  // png_set_rows marks the image data as valid internally when the row pointers
+  // are non-null, so png_write_png has the rows it needs to emit the IDAT chunk.
   png_set_rows(png_ptr, info_ptr, (png_bytepp)rows);
-  info_ptr->valid |= PNG_INFO_IDAT;
 
   // actually write the image
   int pngTransforms;

@@ -33,7 +33,7 @@ dependencies:
       branch: v1.3.1
     - name: libpng
       url: https://github.com/glennrp/libpng.git
-      branch: v1.6.43
+      branch: v1.6.58
     - name: xxhash
       url: https://github.com/Cyan4973/xxHash.git
       branch: v0.8.1
