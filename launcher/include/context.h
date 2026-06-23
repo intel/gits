@@ -8,33 +8,25 @@
 
 #pragma once
 
-#include "imgui.h"
 #include <filesystem>
-#include <functional>
-#include <fstream>
-#include <utility>
 #include <optional>
-#include <iostream>
+#include <memory>
 #include <atomic>
-#include <yaml-cpp/yaml.h>
+#include <yaml-cpp/node/node.h>
+#include <vector>
+#include <configurationAuto.h>
+#include <string>
 
 #ifdef _WIN32
 #include <windows.h>
 #endif
 
 #include "common.h"
-#include "basePanel.h"
-#include "imGuiHelper.h"
-#include "buttonGroup.h"
 #include "tabGroup.h"
 #include "textEditorWidget.h"
 #include "metaDataActions.h"
 
-#include "fileActions.h"
 #include "launcherConfig.h"
-#include "playbackOptionsPanel.h"
-#include "resourceDumpPanel.h"
-#include "log.h"
 #include "launcherPaths.h"
 
 #include <plog/Appenders/IAppender.h>
@@ -58,54 +50,55 @@ public:
   LauncherPaths Paths;
 
   enum class SideBarItem {
-    OPTIONS = 0,
-    CONFIG,
+    LABEL_GITS = 0,
+    OPTIONS,
+    YAML_CONFIG,
+    LABEL_STREAM,
     RESOURCE_DUMP,
-    PLUGINS,
-    CLI,
-    STATS,
-    LOG,
-    APP_LOG,
     INFO,
     API_TRACE,
-    COUNT
-  };
-
-  enum class ConfigSectionItem {
-    COMMON = 0,
-    DIRECTX,
-    OPENGL,
-    VULKAN,
-    OPENCL,
-    LEVELZERO,
-    OVERRIDES,
-    COUNT
-  };
-
-  enum class MetaDataItem {
-    CONFIG = 0,
     STATS,
-    DIAGS
+    LABEL_LOG,
+    LOG,
+    APP_LOG,
+    COUNT
   };
 
-  std::unique_ptr<gits::ImGuiHelper::TextEditorWidget> ConfigEditor;
+  struct ModeConfiguration {
+    bool ConfigurationDirty = false;
+    std::string BaseGitsConfigurationStr; // This preserves the comments
+    std::string ModifiedGitsConfigurationStr;
+    std::string ConfigDeltaStr;
+    Configuration BaseGitsConfiguration;
+    Configuration ModifiedGitsConfiguration;
+    YAML::Node BaseOverrides;
+    YAML::Node ModifiedOverrides;
+    STREAM_META_DATA MetaData; // Only relevant for Playback and Subcapture modes
+
+    ModeConfiguration(bool& baseConfigValidityFlag, bool& modifiedConfigValidityFlag)
+        : ConfigurationDirty(false),
+          BaseGitsConfigurationStr(""),
+          ModifiedGitsConfigurationStr(""),
+          ConfigDeltaStr(""),
+          BaseGitsConfiguration(baseConfigValidityFlag),
+          ModifiedGitsConfiguration(modifiedConfigValidityFlag),
+          BaseOverrides(),
+          ModifiedOverrides(),
+          MetaData() {}
+  };
+
+  ModeConfiguration CaptureGitsConfig;
+  ModeConfiguration PlaybackGitsConfig;
+  ModeConfiguration SubcaptureGitsConfig;
+
   std::unique_ptr<gits::ImGuiHelper::TextEditorWidget> LogEditor;
   std::unique_ptr<gits::ImGuiHelper::TextEditorWidget> GITSLogEditor;
-  std::unique_ptr<gits::ImGuiHelper::TextEditorWidget> TraceInfoEditor;
-  std::unique_ptr<gits::ImGuiHelper::TextEditorWidget> DiagsEditor;
-  std::unique_ptr<gits::ImGuiHelper::TextEditorWidget> TraceConfigEditor;
-  std::unique_ptr<gits::ImGuiHelper::TextEditorWidget> TraceStatsEditor;
-
-  std::unique_ptr<gits::gui::PlaybackOptionsPanel> PlaybackOptionsPanel;
-  std::unique_ptr<gits::gui::ResourceDumpPanel> ResourceDumpPanel;
 
   std::shared_ptr<MainWindow> TheMainWindow;
 
   std::unique_ptr<TextEditorAppender> LogAppender;
 
   ImGuiHelper::TabGroup<SideBarItem>* BtnsSideBar;
-  ImGuiHelper::TabGroup<ConfigSectionItem>* BtnsAPI;
-  ImGuiHelper::TabGroup<MetaDataItem>* BtnsMetaData;
 
   Mode AppMode = Mode::CAPTURE;
   Api SelectedApiForCapture = Api::DIRECTX;
@@ -118,9 +111,6 @@ public:
   std::vector<std::string> CLIArguments;
   std::string CaptureCustomArguments = "";
   std::vector<std::string> CaptureCLIArguments;
-  STREAM_META_DATA MetaData;
-
-  std::map<ConfigSectionItem, int> ConfigSectionLines = {};
 
   std::optional<FileDialogKey> CurrentFileDialogKey = std::nullopt;
   LauncherConfig LauncherConfiguration;
@@ -149,6 +139,13 @@ public:
   void UpdatePalette();
   void SendAllPathsSetEvents();
   void SetCaptureAPI(Api api);
+  Context::ModeConfiguration& ConfigurationForMode(std::optional<Mode> mode = std::nullopt);
+  void UpdateInMemoryConfig(std::optional<Mode> mode = std::nullopt);
+
+private:
+  Context();
+
+  void UpdateConfigDelta(std::optional<Mode> mode = std::nullopt);
 };
 
 class TextEditorAppender : public plog::IAppender {

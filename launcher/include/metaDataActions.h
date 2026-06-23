@@ -13,11 +13,14 @@
 #include "apis_iface.h"
 
 #include <filesystem>
+#include <string>
+#include <yaml-cpp/yaml.h>
 
 namespace gits::gui {
 struct STREAM_META_DATA {
   CVersion Version = 0; // Version of GITS that the stream was captured with
   nlohmann::ordered_json RecorderDiags = nlohmann::ordered_json();
+  YAML::Node RecorderDiagsYAML;
   std::string LegacyRecorderDiags = std::string(); // Legacy diagnostics found in old streams
   std::string RecorderConfig = std::string();      // Config that the stream was captured with
   ApisIface::TApi Api3D = ApisIface::TApi::ApiNotSet;

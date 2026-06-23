@@ -321,6 +321,9 @@ class ConfigurationOption(ConfigurationEntry):
     def get_yaml_path(self) -> Tuple[str, str]:
         return self.yaml_path
 
+    def get_config_path(self) -> str:
+       return '.'.join(self.yaml_path[0])
+
     def get_legacy_paths(self) -> list[Tuple[str, str]]:
         return self.legacy_paths
 

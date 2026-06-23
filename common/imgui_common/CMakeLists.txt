@@ -40,6 +40,7 @@ set(IMGUILIB_CPP_FILES
   ${IMGUILIB_SOURCE_DIR}/imGuiHelper.cpp
   ${IMGUILIB_SOURCE_DIR}/imGuiStyle.cpp
   ${IMGUILIB_SOURCE_DIR}/textEditorWidget.cpp
+  ${IMGUILIB_SOURCE_DIR}/yamlTreeViewer.cpp
 )
 
 set(IMGUILIB_HEADER_FILES
@@ -49,6 +50,7 @@ set(IMGUILIB_HEADER_FILES
   ${IMGUILIB_HEADER_DIR}/baseButtonGroup.h
   ${IMGUILIB_HEADER_DIR}/buttonGroup.h
   ${IMGUILIB_HEADER_DIR}/tabGroup.h
+  ${IMGUILIB_HEADER_DIR}/yamlTreeViewer.h
   ${IMGUILIB_FONT_C_HEADER}
 )
 

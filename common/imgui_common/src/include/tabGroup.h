@@ -41,19 +41,28 @@ bool TabGroup<T>::Render(bool newLine) {
     auto const& item = it->second;
     auto styleButton = i == this->selectedIndex;
 
-    if (!this->btnEnabled[it->first] || !item.enabled) {
+    if (!item.visible) {
       continue;
     }
 
-    if (styleButton) {
-      this->PushButtonStyle(item);
-    }
-    if (ImGui::Button(this->GetLabel(item).c_str(), btnSize)) {
-      new_selected_tab = i;
-    }
-    this->AddTooltip(item);
-    if (styleButton) {
-      this->PopButtonStyle();
+    if (item.type == ItemType::Button) {
+      if (!this->btnEnabled[it->first] || !item.enabled) {
+        continue;
+      }
+
+      if (styleButton) {
+        this->PushButtonStyle(item);
+      }
+      if (ImGui::Button(this->GetLabel(item).c_str(), btnSize)) {
+        new_selected_tab = i;
+      }
+      this->AddTooltip(item);
+      if (styleButton) {
+        this->PopButtonStyle();
+      }
+    } else if (item.type == ItemType::Label) {
+      ImGui::Text("%s", this->GetLabel(item).c_str());
+      this->AddTooltip(item);
     }
     if (this->isHorizontal) {
       ImGui::SameLine();

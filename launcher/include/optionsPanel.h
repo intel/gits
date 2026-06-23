@@ -12,30 +12,26 @@
 #include "eventBus.h"
 #include "textEditorWidget.h"
 #include "metaDataPanel.h"
-#include "optionsPanel.h"
-#include "yamlPanel.h"
-#include "resourceDumpPanel.h"
+#include "pluginsPanel.h"
+#include "captureOptionsPanel.h"
+#include "playbackOptionsPanel.h"
+#include "subcaptureOptionsPanel.h"
 
 namespace gits::gui {
 
-class ContentPanel : public BasePanel {
+class OptionsPanel : public BasePanel {
 public:
-  ContentPanel();
+  OptionsPanel();
   using BasePanel::BasePanel; // boiler-plate constructors be gone!
 
-  float WidthColumn1(bool resetSize = false);
   void Render() override;
 
 private:
-  void GITSButton();
+  CaptureOptionsPanel m_CaptureOptionsPanel;
+  PlaybackOptionsPanel m_PlaybackOptionsPanel;
+  SubcaptureOptionsPanel m_SubcaptureOptionsPanel;
 
-  // Event callbacks
-  void CaptureActionCallback(const Event& e);
-
-  OptionsPanel m_OptionsPanel;
-  YAMLPanel m_YAMLPanel;
-  MetaDataPanel m_MetaDataPanel;
-  ResourceDumpPanel m_ResourceDumpPanel;
+  PluginsPanel m_PluginsPanel;
 };
 
 } // namespace gits::gui

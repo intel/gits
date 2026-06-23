@@ -12,7 +12,6 @@
 #include <string>
 #include <filesystem>
 #include <thread>
-#include <numeric>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -45,7 +44,7 @@ public:
 };
 
 // File operations
-bool FileActions::CopyFile(const fs::path& source, const fs::path& destination) {
+bool FileActions::CopyFileSafe(const fs::path& source, const fs::path& destination) {
   try {
     fs::copy_file(source, destination, fs::copy_options::overwrite_existing);
     LOG_INFO << "Copied: " << source << " -> " << destination;
@@ -60,7 +59,7 @@ bool FileActions::CopyFiles(const std::vector<fs::path>& sources, const fs::path
   bool allSucceeded = true;
 
   // Ensure destination directory exists
-  if (!CreateDirectory(destinationDir)) {
+  if (!CreateDirectorySafe(destinationDir)) {
     LOG_ERROR << "Failed to create destination directory: " << destinationDir;
     return false;
   }
@@ -73,7 +72,7 @@ bool FileActions::CopyFiles(const std::vector<fs::path>& sources, const fs::path
     }
 
     fs::path destination = destinationDir / source.filename();
-    if (!CopyFile(source, destination)) {
+    if (!CopyFileSafe(source, destination)) {
       allSucceeded = false;
     }
   }
@@ -110,7 +109,7 @@ bool FileActions::CopyDirectoryContents(const std::filesystem::path& source,
   }
 }
 
-bool FileActions::DeleteFile(const fs::path& filePath) {
+bool FileActions::DeleteFileSafe(const fs::path& filePath) {
   try {
     if (!exists(filePath)) {
       LOG_WARNING << "File does not exist: " << filePath;
@@ -130,7 +129,7 @@ bool FileActions::DeleteFiles(const std::vector<fs::path>& filePaths) {
   bool allSucceeded = true;
 
   for (const auto& filePath : filePaths) {
-    if (!DeleteFile(filePath)) {
+    if (!DeleteFileSafe(filePath)) {
       allSucceeded = false;
     }
   }
@@ -138,7 +137,7 @@ bool FileActions::DeleteFiles(const std::vector<fs::path>& filePaths) {
   return allSucceeded;
 }
 
-bool FileActions::DeleteDirectory(const fs::path& directoryPath) {
+bool FileActions::DeleteDirectorySafe(const fs::path& directoryPath) {
   try {
     if (!exists(directoryPath)) {
       LOG_WARNING << "Directory does not exist: " << directoryPath;
@@ -154,7 +153,7 @@ bool FileActions::DeleteDirectory(const fs::path& directoryPath) {
   }
 }
 
-bool FileActions::CreateDirectory(const fs::path& path) {
+bool FileActions::CreateDirectorySafe(const fs::path& path) {
   try {
     fs::create_directories(path);
     return true;

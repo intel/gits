@@ -14,10 +14,12 @@ set(GENERATED_FILES
   ${GENERATED_FILES_DIR}/configurationYAMLAuto.cpp
   ${GENERATED_FILES_DIR}/enumsAuto.cpp
   ${GENERATED_FILES_DIR}/enumsYAMLAuto.cpp
+  ${GENERATED_FILES_DIR}/configMetadataAuto.cpp
   ${GENERATED_FILES_DIR}/include/argumentsAuto.h
   ${GENERATED_FILES_DIR}/include/configurationAuto.h
   ${GENERATED_FILES_DIR}/include/enumsAuto.h
   ${GENERATED_FILES_DIR}/include/enumsYAMLAuto.h
+  ${GENERATED_FILES_DIR}/include/configMetadataAuto.h
 )
 
 add_custom_target(config_codegen DEPENDS ${GENERATED_FILES})
@@ -58,6 +60,8 @@ set(MAKO_TEMPLATES
   ${TEMPLATES_DIR}/enumsAuto.h.mako
   ${TEMPLATES_DIR}/enumsYAMLAuto.cpp.mako
   ${TEMPLATES_DIR}/enumsYAMLAuto.h.mako
+  ${TEMPLATES_DIR}/configMetadataAuto.cpp.mako
+  ${TEMPLATES_DIR}/configMetadataAuto.h.mako
 )
 source_group(mako FILES ${MAKO_TEMPLATES})
 

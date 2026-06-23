@@ -18,7 +18,6 @@
 #include "contentPanel.h"
 #include "playbackPanel.h"
 #include "capturePanel.h"
-#include "subcapturePanel.h"
 #include "eventBus.h"
 #include "launcherActions.h"
 
@@ -44,7 +43,6 @@ private:
   std::unique_ptr<ContentPanel> contentPanel;
   std::unique_ptr<PlaybackPanel> playbackPanel;
   std::unique_ptr<CapturePanel> capturePanel;
-  std::unique_ptr<SubcapturePanel> subcapturePanel;
   std::unique_ptr<gits::ImGuiHelper::TabGroup<Mode>> tabsToolBar;
 
   bool m_CaptureInProgress = false;

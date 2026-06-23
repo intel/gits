@@ -11,6 +11,38 @@
 #include "gits.h"
 #include "common.h"
 
+#include <plog/Log.h>
+
+namespace {
+YAML::Node orderedJsonToYaml(const nlohmann::ordered_json& j) {
+  YAML::Node node;
+  if (j.is_object()) {
+    for (const auto& [key, value] : j.items()) {
+      node[key] = orderedJsonToYaml(value);
+    }
+  } else if (j.is_array()) {
+    for (const auto& element : j) {
+      node.push_back(orderedJsonToYaml(element));
+    }
+  } else if (j.is_string()) {
+    node = j.get<std::string>();
+  } else if (j.is_boolean()) {
+    node = j.get<bool>();
+  } else if (j.is_number_integer()) {
+    node = j.get<int64_t>();
+  } else if (j.is_number_unsigned()) {
+    node = j.get<uint64_t>();
+  } else if (j.is_number_float()) {
+    node = j.get<double>();
+  } else {
+    // null or discarded
+    node = YAML::Node(YAML::NodeType::Null);
+  }
+  return node;
+}
+
+} // namespace
+
 namespace gits::gui {
 STREAM_META_DATA GetStreamMetaData(std::filesystem::path streamPath) {
   // This function consists (mostly) of an already existing gits code with some calls removed
@@ -72,6 +104,11 @@ STREAM_META_DATA GetStreamMetaData(std::filesystem::path streamPath) {
             if (j.contains("diag") && j["diag"].contains("gits") &&
                 j["diag"]["gits"].contains("config")) {
               metaData.RecorderConfig = j["diag"]["gits"]["config"].dump();
+              if (metaData.RecorderConfig.size() >= 2 && metaData.RecorderConfig.front() == '"' &&
+                  metaData.RecorderConfig.back() == '"') {
+                metaData.RecorderConfig =
+                    metaData.RecorderConfig.substr(1, metaData.RecorderConfig.size() - 2);
+              }
               for (size_t pos = 0;
                    (pos = metaData.RecorderConfig.find("\\n", pos)) != std::string::npos;
                    pos += 1) {
@@ -82,6 +119,10 @@ STREAM_META_DATA GetStreamMetaData(std::filesystem::path streamPath) {
               j["diag"]["gits"].erase("config");
             }
             metaData.RecorderDiags = std::move(j);
+            if (metaData.RecorderDiags.is_object() && metaData.RecorderDiags.contains("diag")) {
+              metaData.RecorderDiags = metaData.RecorderDiags["diag"];
+            }
+            metaData.RecorderDiagsYAML = orderedJsonToYaml(metaData.RecorderDiags);
           }
           result = true;
         }

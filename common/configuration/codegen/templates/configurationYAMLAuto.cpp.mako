@@ -27,6 +27,7 @@
 %>
 
 #include "configurationYAMLAuto.h"
+#include "enumsYAMLAuto.h"
 #include "configurator.h"
 #include "log.h"
 
@@ -73,6 +74,43 @@ Node convert<${group.namespace_str}>::encode(const ${group.namespace_str}& rhs) 
 %   endif
 % endfor
   return node;
+}
+
+% if group.namespace_str == "Configuration":
+void convert<${group.namespace_str}>::emit(YAML::Emitter& out, const ${group.namespace_str}& rhs, bool annotate, std::optional<YAML::Node> overrides) {
+% else:
+void convert<${group.namespace_str}>::emit(YAML::Emitter& out, const ${group.namespace_str}& rhs, bool annotate) {
+% endif
+  out << YAML::BeginMap;
+% for option in group.options:
+%   if not option.is_derived and not (hasattr(option, 'is_deprecated') and option.is_deprecated):
+  out << YAML::Key << "${option.config_name}";
+%     if not option.is_group and option.is_vector_type and option.short_description:
+  if (annotate) {
+    out << YAML::Comment(R"(${option.short_description})");
+  }
+%     endif
+  out << YAML::Value;
+%     if option.is_group:
+  convert<${"::".join(option.namespace)}>::emit(out, rhs.${option.instance_name});
+%     else:
+  out << YAML::convert<${option.type}>::encode(rhs.${option.instance_name});
+%       if not option.is_vector_type and option.short_description :
+  if (annotate) {
+    out << YAML::Comment(R"(${option.short_description})");
+  }
+%       endif
+%     endif
+%   endif
+% endfor
+
+% if group.namespace_str == "Configuration":
+  if (overrides.has_value()) {
+    out << YAML::Key << "Overrides" << YAML::Value << overrides.value();
+  }
+% endif
+
+  out << YAML::EndMap;
 }
 
 bool convert<${group.namespace_str}>::decode(const Node& node, ${group.namespace_str}& rhs) {

@@ -21,6 +21,8 @@
 #include "mainWindow.h"
 #include "contextHelper.h"
 
+#include "configurationYAMLAuto.h"
+
 namespace {
 using namespace gits::gui;
 
@@ -47,6 +49,9 @@ PlaybackPanel::PlaybackPanel() : BasePanel() {
 
   EventBus::GetInstance().subscribe<FileDropEvent>(
       std::bind(&PlaybackPanel::FileDropCallback, this, std::placeholders::_1));
+
+  EventBus::GetInstance().subscribe<ContextEvent>(
+      std::bind(&PlaybackPanel::ContextCallback, this, std::placeholders::_1));
 }
 
 void PlaybackPanel::Render() {
@@ -95,7 +100,7 @@ void PlaybackPanel::RowArguments() {
   auto remainingWidth = availableWidth - ImGui::GetCursorPosX() - WidthLastButton();
   if (ImGuiHelper::InputString("###CustomArgumentsInput", context.CustomArguments, 0,
                                remainingWidth)) {
-    UpdateCLICall();
+    // nothing
   }
   ImGuiHelper::AddTooltip(Labels::CUSTOM_ARGS_INPUT_HINT);
 
@@ -103,7 +108,6 @@ void PlaybackPanel::RowArguments() {
   ImGui::PushID(++context.ImguiIDs);
   if (ImGui::Button(Labels::CLEAR_ARGUMENTS, ImVec2(WidthLastButton(), 0))) {
     context.CustomArguments.clear();
-    UpdateCLICall();
   }
   ImGui::PopID();
   ImGuiHelper::AddTooltip(Labels::CLEAR_ARGUMENTS_HINT);
@@ -146,10 +150,8 @@ void PlaybackPanel::PathCallback(const Event& e) {
   }
 
   if (pathEvent.EventType == PathEvent::Type::CONFIG) {
-    LoadConfigFile();
+    LoadConfigFile(Mode::PLAYBACK);
   }
-
-  UpdateCLICall();
 }
 
 void PlaybackPanel::FileDropCallback(const Event& e) {
@@ -157,6 +159,17 @@ void PlaybackPanel::FileDropCallback(const Event& e) {
   auto appMode = Context::GetInstance().AppMode;
   if (appMode == Mode::PLAYBACK || appMode == Mode::SUBCAPTURE) {
     DroppedFilePath = fileDropEvent.FilePath;
+  }
+}
+
+void PlaybackPanel::ContextCallback(const Event& e) {
+  const ContextEvent& contextEvent = static_cast<const ContextEvent&>(e);
+
+  auto& context = Context::GetInstance();
+  auto& configurationForMode = context.ConfigurationForMode(Mode::PLAYBACK);
+
+  if (contextEvent.EventType == ContextEvent::Type::InMemoryConfigurationChanged) {
+    configurationForMode.ConfigurationDirty = true;
   }
 }
 

@@ -13,6 +13,9 @@ list(APPEND LAUNCHER_SOURCE
   ${LAUNCHER_SOURCE_DIR}/contextHelper.cpp
   ${LAUNCHER_SOURCE_DIR}/launcherPaths.cpp
   ${LAUNCHER_SOURCE_DIR}/vulkanLoader.cpp
+  ${LAUNCHER_SOURCE_DIR}/configOptions.cpp
+  ${LAUNCHER_SOURCE_DIR}/configOptionsGuiHelpers.cpp
+  ${LAUNCHER_SOURCE_DIR}/yamlUtils.cpp
 
   ${LAUNCHER_HEADER_DIR}/common.h
   ${LAUNCHER_HEADER_DIR}/fileActions.h
@@ -31,6 +34,9 @@ list(APPEND LAUNCHER_SOURCE
   ${LAUNCHER_HEADER_DIR}/launcherPaths.h
   ${LAUNCHER_HEADER_DIR}/vulkanLoader.h
   ${LAUNCHER_HEADER_DIR}/vulkanFunctions.inl
+  ${LAUNCHER_HEADER_DIR}/configOptions.h
+  ${LAUNCHER_HEADER_DIR}/configOptionsGuiHelpers.h
+  ${LAUNCHER_HEADER_DIR}/yamlUtils.h
   )
 
 list(APPEND LAUNCHER_PANEL_SOURCE
@@ -38,22 +44,28 @@ list(APPEND LAUNCHER_PANEL_SOURCE
   ${LAUNCHER_SOURCE_DIR}/mainWindow.cpp
   ${LAUNCHER_SOURCE_DIR}/playbackPanel.cpp
   ${LAUNCHER_SOURCE_DIR}/capturePanel.cpp
+  ${LAUNCHER_SOURCE_DIR}/captureOptionsPanel.cpp
   ${LAUNCHER_SOURCE_DIR}/playbackOptionsPanel.cpp
+  ${LAUNCHER_SOURCE_DIR}/subcaptureOptionsPanel.cpp
   ${LAUNCHER_SOURCE_DIR}/resourceDumpPanel.cpp
-  ${LAUNCHER_SOURCE_DIR}/subcapturePanel.cpp
   ${LAUNCHER_SOURCE_DIR}/metaDataPanel.cpp
   ${LAUNCHER_SOURCE_DIR}/pluginsPanel.cpp
+  ${LAUNCHER_SOURCE_DIR}/optionsPanel.cpp
+  ${LAUNCHER_SOURCE_DIR}/yamlPanel.cpp
 
   ${LAUNCHER_HEADER_DIR}/contentPanel.h
   ${LAUNCHER_HEADER_DIR}/basePanel.h
+  ${LAUNCHER_HEADER_DIR}/captureOptionsPanel.h
   ${LAUNCHER_HEADER_DIR}/playbackOptionsPanel.h
+  ${LAUNCHER_HEADER_DIR}/subcaptureOptionsPanel.h
   ${LAUNCHER_HEADER_DIR}/resourceDumpPanel.h
   ${LAUNCHER_HEADER_DIR}/mainWindow.h
   ${LAUNCHER_HEADER_DIR}/playbackPanel.h
   ${LAUNCHER_HEADER_DIR}/capturePanel.h
-  ${LAUNCHER_HEADER_DIR}/subcapturePanel.h
   ${LAUNCHER_HEADER_DIR}/metaDataPanel.h
   ${LAUNCHER_HEADER_DIR}/pluginsPanel.h
+  ${LAUNCHER_HEADER_DIR}/optionsPanel.h
+  ${LAUNCHER_HEADER_DIR}/yamlPanel.h
   )
 source_group("Panels" FILES ${LAUNCHER_PANEL_SOURCE})
 

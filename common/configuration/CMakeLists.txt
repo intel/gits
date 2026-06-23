@@ -43,12 +43,14 @@ set(AUTO_FILES
   ${CPP_SRC}/configurationYAMLAuto.cpp
   ${CPP_SRC}/enumsAuto.cpp
   ${CPP_SRC}/enumsYAMLAuto.cpp
+  ${CPP_SRC}/configMetadataAuto.cpp
 
   ${HEADER_SRC}/argumentsAuto.h
   ${HEADER_SRC}/configurationAuto.h
   ${HEADER_SRC}/configurationYAMLAuto.h
   ${HEADER_SRC}/enumsAuto.h
   ${HEADER_SRC}/enumsYAMLAuto.h
+  ${HEADER_SRC}/configMetadataAuto.h
 )
 
 set_source_files_properties(${AUTO_FILES} PROPERTIES GENERATED 1)

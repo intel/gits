@@ -75,9 +75,12 @@ std::string stringFrom<BitRange>(const BitRange& value) {
 
 template <>
 std::string stringFrom(const VulkanObjectRange& value) {
+  if (value.empty()) {
+    return std::string();
+  }
   std::ostringstream oss;
   oss << stringFrom<std::vector<uint32_t>>(value.objVector) << "/"
-      << stringFrom<BitRange>(value.range) << "/" << stringFrom<VulkanObjectMode>(value.objMode);
+      << stringFrom<BitRange>(value.range);
   return oss.str();
 }
 

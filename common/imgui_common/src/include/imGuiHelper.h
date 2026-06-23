@@ -109,5 +109,7 @@ bool RangeControls(const char* label,
                    const char* addRangeLabel,
                    const char* addSingleLabel);
 
+void HelpButton(const std::string& id, const std::string& tooltip, const std::string& description);
+
 }; // namespace ImGuiHelper
 }; // namespace gits

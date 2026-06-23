@@ -12,24 +12,28 @@
 #include <vector>
 #include <string>
 
-#include "context.h"
-#include "log.h"
 #include <numeric>
+#include <functional>
+#include <plog/Log.h>
+#include <fstream>
+#include <iterator>
+#include <yaml-cpp/yaml.h>
+#include <exception>
 
 class FileActions {
 public:
-  static bool CopyFile(const std::filesystem::path& source,
-                       const std::filesystem::path& destination);
+  static bool CopyFileSafe(const std::filesystem::path& source,
+                           const std::filesystem::path& destination);
   static bool CopyFiles(const std::vector<std::filesystem::path>& sources,
                         const std::filesystem::path& destinationDir);
   static bool CopyDirectory(const std::filesystem::path& source,
                             const std::filesystem::path& destination);
   static bool CopyDirectoryContents(const std::filesystem::path& source,
                                     const std::filesystem::path& destination);
-  static bool DeleteFile(const std::filesystem::path& filePath);
+  static bool DeleteFileSafe(const std::filesystem::path& filePath);
   static bool DeleteFiles(const std::vector<std::filesystem::path>& filePaths);
-  static bool DeleteDirectory(const std::filesystem::path& directoryPath);
-  static bool CreateDirectory(const std::filesystem::path& path);
+  static bool DeleteDirectorySafe(const std::filesystem::path& directoryPath);
+  static bool CreateDirectorySafe(const std::filesystem::path& path);
   static bool Exists(const std::filesystem::path& path);
 
   static bool LaunchExecutable(const std::filesystem::path& executablePath,

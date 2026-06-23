@@ -8,6 +8,10 @@
 
 #pragma once
 
+#include <optional>
+#include <string>
+#include <vector>
+
 #include "basePanel.h"
 #include "eventBus.h"
 #include "textEditorWidget.h"
@@ -41,10 +45,9 @@ private:
   void RenderSelectedPluginConfig();
 
   // Event callbacks
-  void BasePathCallback(const Event& e);
-  void ConfigPathCallback(const Event& e);
-  void ModeChangedCallback(const Event& e);
-  void ConfigEditedCallback(const Event& e);
+  void PathCallback(const Event& e);
+  void AppCallback(const Event& e);
+  void ContextCallback(const Event& e);
 };
 
 } // namespace gits::gui

@@ -20,13 +20,13 @@
 namespace gits::gui {
 
 struct Labels {
+  using ItemType = gits::ImGuiHelper::ItemType;
   using SideBarItem = Context::SideBarItem;
-  using ConfigSectionItem = Context::ConfigSectionItem;
-  using MetaDataItem = Context::MetaDataItem;
 
   // main window
   static constexpr const char* VERSION = "Version";
   static constexpr const char* TITLE = "GITS Launcher";
+  static constexpr const char* HELP_BUTTON = "?";
   static constexpr const char* NOTICE = "GITS Launcher is currently designed to support DirectX. "
                                         "Not all features work for other APIs.";
   static constexpr const char* NOTICE_2 = "The following options are exclusive to DirectX. For "
@@ -34,6 +34,9 @@ struct Labels {
   static constexpr const char* NEW_SESSION_BUTTON = "New Session";
   static constexpr const char* NEW_SESSION_BUTTON_TOOLTIP =
       "Clear all paths except the GITS base path";
+  static constexpr const char* BASE_CONFIG_NOTICE =
+      "This is a read-only view of the loaded config file";
+  static constexpr const char* DELTA_CONFIG_NOTICE = "Show only the difference to";
   static constexpr const char* CHOOSE_CONFIG = "Browse";
   static constexpr const char* CHOOSE_CONFIG_HINT =
       "Open File Dialog to choose a configuration yaml";
@@ -92,6 +95,11 @@ struct Labels {
   static constexpr const char* OPEN_CAPTURE_OUTPUT_PATH = "Open";
   static constexpr const char* OPEN_CAPTURE_OUTPUT_PATH_HINT = "Open specified path in explorer";
 
+  // Capture-Options
+  static constexpr const char* RECORDING_ENABLED = "Enable recording";
+  static constexpr const char* SHADOW_MEMORY = "Enable shadow memory";
+  static constexpr const char* BASE_ON_TARGET_PATH = "Base on target path";
+
   // Playback-Options
   static constexpr const char* EXECUTABLE_NAME_ENABLED =
       "Use custom application name for GITS Player";
@@ -103,7 +111,7 @@ struct Labels {
       "stream.";
 
   static constexpr const char* HUD_ENABLED = "Show HUD";
-  static constexpr const char* BASE_ON_STREAMPATH = "Base on streampath";
+  static constexpr const char* BASE_ON_STREAMPATH = "Base on stream path";
   static constexpr const char* SCREENSHOTS = "Screenshots";
   static constexpr const char* SCREENSHOTS_PATH = "Path";
   static constexpr const char* SCREENSHOTS_RANGES = "Range";
@@ -159,12 +167,13 @@ struct Labels {
   static constexpr const char* RELEASE_NOTES_WINDOW_TITLE = "Release Notes";
   static constexpr const char* RELEASE_NOTES_BUTTON = "Show Release Notes";
   static constexpr const char* RELEASE_NOTES_CLOSE_BUTTON = "Close";
+  static constexpr const char* GITS_BASE_PATHS_MENU = "GITS base path";
   static constexpr const char* DETECT_BASE_PATHS = "Detect GITS base path";
   static constexpr const char* DETECT_BASE_PATHS_HINT =
       "Try to automatically detect the GITS base path based on the executable location";
   static constexpr const char* UPDATE_CONFIG_PATH = "Use config from GITS base path ";
   static constexpr const char* UPDATE_CONFIG_PATH_HINT =
-      "Set the current mode's config path based ont the GITS base path";
+      "Set the current mode's config path based on the GITS base path";
   static constexpr const char* USE_ALL_CONFIGS_FROM_BASE_PATH =
       "Use ALL configs from GITS base path";
   static constexpr const char* USE_ALL_CONFIGS_FROM_BASE_PATH_HINT =
@@ -189,6 +198,7 @@ struct Labels {
     // Common strings
     static constexpr const char* FORMAT_PNG = "PNG";
     static constexpr const char* FORMAT_JPEG = "JPEG";
+    static constexpr const char* FORMAT_DDS = "DDS";
     static constexpr const char* FORMAT_LABEL = "Format";
     static constexpr const char* FORMAT_TOOLTIP = "Format (PNG/JPEG)";
     static constexpr const char* FRAMES_LABEL = "Frames";
@@ -368,6 +378,8 @@ struct Labels {
       return "Choose directory where to output the stream to";
     case Path::GITS_LOG:
       return "Choose directory where to write the GITS log to";
+    case Path::CONFIG_EXPORT:
+      return "Choose directory where to export the config to";
     default:
       return "";
     };
@@ -388,21 +400,25 @@ struct Labels {
 
   static const auto& SIDE_BAR() {
     static const std::map<SideBarItem, ImGuiHelper::ButtonGroupItem> items = {
+        {SideBarItem::LABEL_GITS,
+         {.label = "GITS", .tooltip = "Settings for GITS", .type = ItemType::Label}},
         {SideBarItem::OPTIONS,
          {.label = "Configuration", .tooltip = "Show common configuration options"}},
-        {SideBarItem::CONFIG, {"Config YML", "Show current GITS config file"}},
-        {SideBarItem::PLUGINS,
-         {.label = "DirectX Plugins", .tooltip = "Enable / disable DirectX Plugins"}},
-        {SideBarItem::CLI, {"CLI", "Show the full command line call"}},
-        {SideBarItem::LOG, {"GITS Log", "Show the GITS output"}},
-        {SideBarItem::STATS, {"Metadata", "Show the stream metadata"}},
-        {SideBarItem::APP_LOG, {"Launcher Log", "Show the launcher log"}},
+        {SideBarItem::YAML_CONFIG,
+         {.label = "YAML Config", .tooltip = "Textual yaml config files"}},
+        {SideBarItem::LABEL_STREAM,
+         {.label = "Stream", .tooltip = "Work with the stream", .type = ItemType::Label}},
         {SideBarItem::INFO,
          {.label = "Info", .tooltip = "Show stream information", .enabled = false}},
+        {SideBarItem::STATS, {"Metadata", "Show the stream metadata"}},
         {SideBarItem::API_TRACE,
          {.label = "API-Trace", .tooltip = "Show an API-Trace of the stream", .enabled = false}},
         {SideBarItem::RESOURCE_DUMP,
-         {.label = "Resource Dump", .tooltip = "Show the resource dump config"}}};
+         {.label = "Resource Dump", .tooltip = "Show the resource dump config"}},
+        {SideBarItem::LABEL_LOG, {.label = "Log", .tooltip = "Show logs", .type = ItemType::Label}},
+        {SideBarItem::LOG, {"GITS Log", "Show the GITS output"}},
+        {SideBarItem::APP_LOG, {"Launcher Log", "Show the launcher log"}},
+    };
     return items;
   }
   static const auto& SIDE_BAR_VEC() {
@@ -457,45 +473,6 @@ struct Labels {
     }());
     return values;
   }
-
-  static const auto& CONFIG_SECTIONS() {
-    static const std::map<ConfigSectionItem, ImGuiHelper::ButtonGroupItem> labels = {
-        {ConfigSectionItem::COMMON,
-         {"Common", "Common options", ImGuiHelper::ButtonStatus::Default, "Cmn"}},
-        {ConfigSectionItem::DIRECTX,
-         {API_NAME_DX, "DirectX API options", ImGuiHelper::ButtonStatus::Default,
-          API_NAME_SHORT_DX}},
-        {ConfigSectionItem::OPENGL,
-         {API_NAME_GL, "OpenGL API options", ImGuiHelper::ButtonStatus::Default,
-          API_NAME_SHORT_GL}},
-        {ConfigSectionItem::VULKAN,
-         {API_NAME_VK, "Vulkan API options", ImGuiHelper::ButtonStatus::Default,
-          API_NAME_SHORT_VK}},
-        {ConfigSectionItem::OPENCL,
-         {API_NAME_CL, "OpenCL API options", ImGuiHelper::ButtonStatus::Default,
-          API_NAME_SHORT_CL}},
-        {ConfigSectionItem::LEVELZERO,
-         {API_NAME_L0, "LevelZero API options", ImGuiHelper::ButtonStatus::Default,
-          API_NAME_SHORT_L0}},
-        {ConfigSectionItem::OVERRIDES,
-         {"Overrides", "Per application overrides", ImGuiHelper::ButtonStatus::Default, "Ovr"}},
-    };
-    return labels;
-  }
-
-  static const auto& META_DATA() {
-    static const std::map<MetaDataItem, ImGuiHelper::ButtonGroupItem> labels = {
-        {MetaDataItem::CONFIG,
-         {"Config", "Config the stream was recorded with", ImGuiHelper::ButtonStatus::Default,
-          "Config"}},
-        {MetaDataItem::STATS,
-         {"Stats", "Stream statistics", ImGuiHelper::ButtonStatus::Default, "Stats"}},
-        {MetaDataItem::DIAGS,
-         {"Diagnostics", "Stream Recorder diagnostics", ImGuiHelper::ButtonStatus::Default,
-          "Diags"}},
-    };
-    return labels;
-  };
 
   float static MaxLength(const std::vector<std::string>& labels) {
     float maximum = std::numeric_limits<float>::min();

@@ -55,8 +55,6 @@ GUIController::GUIController(GLFWwindow* glfwWindow)
     : m_GLFWWindow(glfwWindow), m_CleanUpAfterRecording(true) {
 #endif
   mainWindow = nullptr;
-
-  // nothing to do here
 }
 void GUIController::DrawGui() {
   const auto& io = ImGui::GetIO();
@@ -134,10 +132,17 @@ void GUIController::RenderUI() {
 
 void GUIController::SetupGui() {
   auto& context = Context::GetInstance();
-  context.LauncherConfiguration = LauncherConfig::FromFile();
-  DetectBasePaths();
 
-  context.Paths = context.LauncherConfiguration.Paths;
+  // Read config, store paths from config, ensure paths are correct or detect them
+  context.LauncherConfiguration = LauncherConfig::FromFile();
+  if (!DetectBasePaths()) {
+    context.Paths = context.LauncherConfiguration.Paths;
+  } else {
+    context.Paths.Capture = context.LauncherConfiguration.Paths.Capture;
+    context.Paths.Playback = context.LauncherConfiguration.Paths.Playback;
+    context.Paths.Subcapture = context.LauncherConfiguration.Paths.Subcapture;
+  }
+
   LOG_INFO << "Attempting to restore window size and position from last session: "
            << ImGuiHelper::ToStr(context.LauncherConfiguration.WindowPos) << "@"
            << ImGuiHelper::ToStr(context.LauncherConfiguration.WindowSize);
@@ -151,30 +156,70 @@ void GUIController::SetupGui() {
 
   // Setup editor
   // - scrollbar for max width of file, not visible part
-  context.ConfigEditor = std::make_unique<TextEditorWidget>("ConfigEditor");
-  context.ConfigEditor->GetEditor().SetShowWhitespaces(false);
-  context.ConfigEditor->GetEditor().SetTabSize(4);
-  context.ConfigEditor->SetCheckCallback(&ValidateGITSConfig);
-  // Since we want to publish an event for config being edited, but
-  // we don't want to publish it for all text editors, we use a custom save callback
-  const auto configOnSaveCallback = [](std::filesystem::path configPath) {
-    auto& context = Context::GetInstance();
-    context.ConfigEditor->SaveToFile(std::move(configPath));
+  auto modifiedEditorConfig = TextEditorWidget::Config{
+      .ShowToolbar = true,
+      .ToolBarItems = {
+          TextEditorWidget::TOOL_BAR_ITEMS::SAVE, TextEditorWidget::TOOL_BAR_ITEMS::REVERT,
+          TextEditorWidget::TOOL_BAR_ITEMS::UNDO, TextEditorWidget::TOOL_BAR_ITEMS::REDO,
+          TextEditorWidget::TOOL_BAR_ITEMS::CHECK, TextEditorWidget::TOOL_BAR_ITEMS::EXPORT}};
 
-    EventBus::GetInstance().publish<ContextEvent>(ContextEvent::Type::ConfigEdited);
+  // The save button for the modified config will save the changes to the in-memory struct
+  // by serializing the text inside into the struct
+  const auto modifiedConfigOnSaveCallback = [](std::filesystem::path configPath) {
+    auto& context = Context::GetInstance();
+    auto& currentModeConfiguration = context.ConfigurationForMode();
+
+    std::string text = currentModeConfiguration.ModifiedGitsConfigurationStr;
+
+    YAML::Node yaml = YAML::Load(text);
+    if (gits::Configurator::LoadInto(yaml, &currentModeConfiguration.ModifiedGitsConfiguration)) {
+      if (yaml["Overrides"]) {
+        currentModeConfiguration.ModifiedOverrides = yaml["Overrides"];
+      }
+    } else {
+      LOG_ERROR << "Couldn't serialize GITS configuration from the YAML editor";
+    }
+
+    context.UpdateInMemoryConfig();
   };
-  context.ConfigEditor->SetSaveCallback(configOnSaveCallback);
+
+  const auto modifiedConfigOnExportCallback = [](std::filesystem::path filePath) {
+    auto& context = Context::GetInstance();
+    auto exportPath = std::filesystem::path();
+    switch (context.AppMode) {
+    case Mode::CAPTURE:
+      exportPath = context.GetPathSafe(Path::CAPTURE_TARGET, Mode::CAPTURE);
+      break;
+    case Mode::PLAYBACK:
+      exportPath = context.GetGITSPlayerPath();
+      break;
+    case Mode::SUBCAPTURE:
+      exportPath = context.GetGITSPlayerPath();
+      break;
+    default:
+      break;
+    }
+    if (!exportPath.empty()) {
+      exportPath = exportPath.parent_path();
+      auto timestamp = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+      std::stringstream ss;
+      ss << "gits_config_" << std::put_time(std::localtime(&timestamp), "%Y-%m-%d_%H-%M-%S")
+         << ".yml";
+      exportPath /= ss.str();
+    }
+    ShowFileDialog(FileDialogKey{.Path = Path::CONFIG_EXPORT, .Mode = context.AppMode}, exportPath);
+  };
 
   context.GITSLogEditor = std::make_unique<TextEditorWidget>("GITSLogEditor");
   auto logConfig =
       TextEditorWidget::Config{.ShowToolbar = true,
-                               .ToolBarItems = {TextEditorWidget::TOOL_BAR_ITEMS::SAVE,
+                               .ToolBarItems = {TextEditorWidget::TOOL_BAR_ITEMS::EXPORT,
                                                 TextEditorWidget::TOOL_BAR_ITEMS::SEND_BY_EMAIL}};
   context.GITSLogEditor->SetConfig(logConfig);
   context.GITSLogEditor->GetEditor().SetReadOnly(true);
   context.GITSLogEditor->GetEditor().SetShowWhitespaces(false);
   context.GITSLogEditor->GetEditor().SetTabSize(4);
-  const auto gitsLogOnSaveCallback = [](std::filesystem::path logPath) {
+  const auto gitsLogOnExportCallback = [](std::filesystem::path logPath) {
     auto& context = Context::GetInstance();
     switch (context.AppMode) {
     case Mode::CAPTURE:
@@ -196,7 +241,7 @@ void GUIController::SetupGui() {
     }
     ShowFileDialog(FileDialogKey{.Path = Path::GITS_LOG, .Mode = context.AppMode}, logPath);
   };
-  context.GITSLogEditor->SetSaveCallback(gitsLogOnSaveCallback);
+  context.GITSLogEditor->SetExportCallback(gitsLogOnExportCallback);
   context.GITSLogEditor->SetSendByEmailCallback([](const std::string& logText) {
     SendLogByEmail(Labels::EMAIL_LOG_RECIPIENT, Labels::EMAIL_LOG_SUBJECT,
                    CreateEmailBodyWithLog(logText));
@@ -208,42 +253,12 @@ void GUIController::SetupGui() {
   context.LogEditor->GetEditor().SetShowWhitespaces(false);
   context.LogEditor->GetEditor().SetTabSize(4);
 
-  context.DiagsEditor = std::make_unique<TextEditorWidget>("DiagsEditor");
-  context.DiagsEditor->GetEditor().SetReadOnly(true);
-  context.DiagsEditor->GetEditor().SetShowWhitespaces(false);
-  context.DiagsEditor->GetEditor().SetTabSize(4);
-  context.DiagsEditor->SetConfig(
-      TextEditorWidget::Config{.ShowToolbar = false, .ScrollToBottom = true});
-  context.DiagsEditor->GetEditor().SetColorizerEnable(false);
-
-  context.TraceConfigEditor = std::make_unique<TextEditorWidget>("TraceConfigEditor");
-  context.TraceConfigEditor->SetConfig(TextEditorWidget::Config{.ShowToolbar = false});
-  context.TraceConfigEditor->GetEditor().SetReadOnly(true);
-  context.TraceConfigEditor->GetEditor().SetShowWhitespaces(false);
-  context.TraceConfigEditor->GetEditor().SetTabSize(4);
-  context.TraceConfigEditor->SetConfig(
-      TextEditorWidget::Config{.ShowToolbar = false, .ScrollToBottom = true});
-  context.TraceConfigEditor->GetEditor().SetColorizerEnable(false);
-
-  context.TraceStatsEditor = std::make_unique<TextEditorWidget>("TraceStatsEditor");
-  context.TraceStatsEditor->SetConfig(TextEditorWidget::Config{.ShowToolbar = false});
-  context.TraceStatsEditor->GetEditor().SetReadOnly(true);
-  context.TraceStatsEditor->GetEditor().SetShowWhitespaces(false);
-  context.TraceStatsEditor->GetEditor().SetTabSize(4);
-  context.TraceStatsEditor->SetConfig(
-      TextEditorWidget::Config{.ShowToolbar = false, .ScrollToBottom = true});
-  context.TraceStatsEditor->GetEditor().SetColorizerEnable(false);
-
-  context.PlaybackOptionsPanel = std::make_unique<PlaybackOptionsPanel>();
-  context.ResourceDumpPanel = std::make_unique<ResourceDumpPanel>();
-
   context.LogAppender = std::make_unique<TextEditorAppender>(context.LogEditor.get());
 
   plog::get()->addAppender(context.LogAppender.get());
 
-  context.BtnsSideBar = new ImGuiHelper::TabGroup(Labels::SIDE_BAR(), false, true);
-  context.BtnsAPI = new ImGuiHelper::TabGroup(Labels::CONFIG_SECTIONS(), true, false);
-  context.BtnsMetaData = new ImGuiHelper::TabGroup(Labels::META_DATA(), true, false);
+  context.BtnsSideBar =
+      new ImGuiHelper::TabGroup<Context::SideBarItem>(Labels::SIDE_BAR(), false, true);
 
   SetImGuiStyle(context.LauncherConfiguration.Theme.CurrentThemeIdx);
 
@@ -252,12 +267,11 @@ void GUIController::SetupGui() {
 
   // Initialize panels and UI in the desired startup state
   context.ChangeMode(Mode::CAPTURE);
-  context.BtnsSideBar->SelectEntry(Context::SideBarItem::CONFIG);
+  context.SetCaptureAPI(Api::DIRECTX);
 
   context.SendAllPathsSetEvents();
 
-  UpdateCLICall();
-  LoadConfigFile();
+  LoadConfigFile(context.AppMode);
 }
 
 void GUIController::TeardownGui() {
@@ -269,13 +283,10 @@ void GUIController::TeardownGui() {
               << context.LauncherConfiguration.GetGITSLauncherConfigPath();
   }
 
-  context.ConfigEditor.reset();
   context.LogEditor.reset();
 
   delete context.BtnsSideBar;
   context.BtnsSideBar = nullptr;
-  delete context.BtnsAPI;
-  context.BtnsAPI = nullptr;
   mainWindow.reset();
 }
 

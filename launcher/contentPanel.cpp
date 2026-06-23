@@ -8,9 +8,6 @@
 
 #include "contentPanel.h"
 
-#include "imGuiHelper.h"
-
-#include "resource.h"
 #include "context.h"
 #include "launcherActions.h"
 #include "labels.h"
@@ -22,25 +19,11 @@ namespace gits::gui {
 
 typedef Context::SideBarItem SideBarItem;
 
-ContentPanel::ContentPanel() : m_PluginsPanel(), CLIEditor("CLIEditor"), m_MetaDataPanel() {
-  CLIEditor.SetConfig(TextEditorWidget::Config{.ShowToolbar = false});
-  CLIEditor.GetEditor().SetReadOnly(true);
-  CLIEditor.GetEditor().SetShowWhitespaces(false);
-  CLIEditor.GetEditor().SetTabSize(4);
-  CLIEditor.UpdatePalette();
-
-  EventBus::GetInstance().subscribe<AppEvent>(
-      std::bind(&ContentPanel::ThemeChangedCallback, this, std::placeholders::_1),
-      {AppEvent::Type::ThemeChanged});
-  EventBus::GetInstance().subscribe<ContextEvent>(
-      std::bind(&ContentPanel::CliUpdatedCallback, this, std::placeholders::_1),
-      {ContextEvent::Type::CLIUpdated});
+ContentPanel::ContentPanel()
+    : m_OptionsPanel(), m_YAMLPanel(), m_MetaDataPanel(), m_ResourceDumpPanel() {
   EventBus::GetInstance().subscribe<ActionEvent>(
       std::bind(&ContentPanel::CaptureActionCallback, this, std::placeholders::_1),
       {ActionEvent::Type::Capture});
-  EventBus::GetInstance().subscribe<ContextEvent>(
-      std::bind(&ContentPanel::PluginsUpdatedCallback, this, std::placeholders::_1),
-      {ContextEvent::Type::PluginsUpdated});
 }
 
 float ContentPanel::WidthColumn1(bool resetSize) {
@@ -103,17 +86,14 @@ void ContentPanel::Render() {
     ImGui::TableSetColumnIndex(1);
     auto area = ImGui::GetContentRegionAvail();
     switch (context.BtnsSideBar->Selected()) {
-    case SideBarItem::CONFIG:
-      ChildWindowConfig();
+    case SideBarItem::YAML_CONFIG:
+      ImGui::BeginChild("yamlPanel", ImVec2(area.x, area.y), true);
+      m_YAMLPanel.Render();
+      ImGui::EndChild();
       break;
     case SideBarItem::LOG:
       ImGui::BeginChild("gitsLogArea", ImVec2(area.x, area.y), true);
       context.GITSLogEditor->Render();
-      ImGui::EndChild();
-      break;
-    case SideBarItem::CLI:
-      ImGui::BeginChild("CLIArea", ImVec2(area.x, area.y), true);
-      CLIEditor.Render();
       ImGui::EndChild();
       break;
     case SideBarItem::APP_LOG:
@@ -127,18 +107,13 @@ void ContentPanel::Render() {
       ImGui::EndChild();
       break;
     case SideBarItem::OPTIONS:
-      ImGui::BeginChild("StatsArea", ImVec2(area.x, area.y), true);
-      context.PlaybackOptionsPanel->Render();
-      ImGui::EndChild();
-      break;
-    case SideBarItem::PLUGINS:
-      ImGui::BeginChild("Plugins", ImVec2(area.x, area.y), true);
-      m_PluginsPanel.Render();
+      ImGui::BeginChild("OptionsPanel", ImVec2(area.x, area.y), true);
+      m_OptionsPanel.Render();
       ImGui::EndChild();
       break;
     case SideBarItem::RESOURCE_DUMP:
       ImGui::BeginChild("Resource dump", ImVec2(area.x, area.y), true);
-      context.ResourceDumpPanel->Render();
+      m_ResourceDumpPanel.Render();
       ImGui::EndChild();
       break;
     default:
@@ -148,84 +123,6 @@ void ContentPanel::Render() {
       break;
     }
     ImGui::EndTable();
-  }
-}
-
-void ContentPanel::ChildWindowConfig() {
-  auto& context = Context::GetInstance();
-  ImVec2 available = ImGui::GetContentRegionAvail();
-  if (ImGui::BeginChild("ContentArea", ImVec2(available.x, available.y), true)) {
-
-    if (context.BtnsAPI->Render()) {
-      auto lineIdx = context.ConfigSectionLines[context.BtnsAPI->Selected()];
-      if (lineIdx > -1) {
-        auto pos = TextEditor::Coordinates(lineIdx, 0);
-        context.ConfigEditor->GetEditor().SetCursorPosition(pos);
-      } else {
-        LOG_INFO << "Config section line index is invalid or not found. Selected index: "
-                 << context.BtnsAPI->SelectedIndex()
-                 << ", item:" << context.BtnsAPI->SelectedItem().label;
-      }
-    }
-    context.ConfigEditor->Render(available);
-  }
-  ImGui::EndChild();
-}
-
-void ContentPanel::ThemeChangedCallback(const Event& event) {
-  CLIEditor.UpdatePalette();
-}
-
-void ContentPanel::CliUpdatedCallback(const Event& event) {
-  auto& context = Context::GetInstance();
-  const auto gitsExecutable = context.GetGITSPlayerPath();
-
-  switch (context.AppMode) {
-  case Mode::PLAYBACK:
-  // [[fallthrough]]
-  case Mode::SUBCAPTURE: {
-    std::string cliEditorText =
-        "# This buffer is write protected, it shows the current command line\n\n";
-
-    auto executableSpecified = false;
-    if (gitsExecutable.empty()) {
-      cliEditorText += "Error: no GITS-Player specified!\n\n";
-    } else if (!std::filesystem::exists(gitsExecutable)) {
-      cliEditorText += "Error: GITS-Player does not exist\n> " + gitsExecutable.string() + "\n\n";
-    } else {
-      cliEditorText += gitsExecutable.string() + "\n";
-      executableSpecified = true;
-    }
-    if (!executableSpecified) {
-      cliEditorText += "Arguments for GITS-Player:\n";
-    }
-    for (const auto& argument : context.CLIArguments) {
-      cliEditorText += "  " + argument + "\n";
-    }
-
-    CLIEditor.SetText(cliEditorText);
-
-    break;
-  }
-  case Mode::CAPTURE: {
-    const auto targetExecutable = context.GetPathSafe(Path::CAPTURE_TARGET);
-    std::string cliEditorText =
-        "# This buffer is write protected, it shows the current command line\n\n";
-
-    cliEditorText += targetExecutable.string() + "\n";
-    if (!std::filesystem::exists(targetExecutable)) {
-      cliEditorText += "!!  [Warning: Target executable path does not exist]\n";
-    }
-
-    for (const auto& argument : context.CLIArguments) {
-      cliEditorText += "  " + argument + "\n";
-    }
-    CLIEditor.SetText(cliEditorText);
-
-    break;
-  }
-  default:
-    break;
   }
 }
 
@@ -272,10 +169,6 @@ void ContentPanel::CaptureActionCallback(const Event& e) {
   default:
     break;
   }
-}
-
-void ContentPanel::PluginsUpdatedCallback(const Event& e) {
-  LoadConfigFile();
 }
 
 } // namespace gits::gui

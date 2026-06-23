@@ -27,32 +27,29 @@
 #include "configurator.h"
 #include "metaDataActions.h"
 #include "eventBus.h"
+#include "configOptions.h"
+
+#include "configurationYAMLAuto.h"
+#include <iterator>
+#include <yaml-cpp/emitter.h>
+#include <configurationAuto.h>
 
 namespace gits::gui {
 
 typedef Context::SideBarItem SideBarItem;
 
-bool ValidateYaml(const std::string& text) {
+std::optional<std::string> ValidateYaml(const std::string& text) {
   try {
     YAML::Node node = YAML::Load(text);
     (void)node; // Workaround for unused variable warning
-    return true;
   } catch (const YAML::Exception& e) {
-    LOG_ERROR << "Error validating YAML: " << e.what();
-    return false;
+    return "Error validating YAML: " + std::string(e.what());
   }
-
-  return true;
+  return std::nullopt;
 }
 
-bool ValidateGITSConfig(const std::string& config) {
-  const auto result = gits::Configurator::Instance().Load(config);
-  if (!result) {
-    LOG_ERROR << "Error validating configuration from";
-    return false;
-  }
-
-  return true;
+std::optional<std::string> ValidateGITSConfig(const std::string& config) {
+  return gits::Configurator::Instance().Validate(config);
 }
 
 #ifdef _WIN32
@@ -79,19 +76,8 @@ void UpdateCLICall() {
   // [[fallthrough]]
   case Mode::SUBCAPTURE: {
 
-    const auto gitsExecutable = context.GetGITSPlayerPath();
-
     context.CLIArguments.clear();
 
-#ifdef _WIN32
-    context.CLIArguments.push_back("--config=" +
-                                   QuoteWindowsPath(context.GetPathSafe(Path::CONFIG).string()));
-#else
-    context.CLIArguments.push_back("--config=\"" + context.GetPathSafe(Path::CONFIG).string() +
-                                   "\" ");
-#endif
-
-    context.CLIArguments.push_back(context.FixedLauncherArguments);
     context.CLIArguments.push_back(context.CustomArguments);
 
     const auto& streamPath = context.GetPathSafe(Path::INPUT_STREAM);
@@ -133,12 +119,26 @@ void PlaybackStream() {
   auto& context = Context::GetInstance();
   const auto gitsPlayerPath = context.GetGITSPlayerPath();
 
+  const auto tmpConfigInfo =
+      PrepareTemporaryConfigFile(Mode::PLAYBACK, gitsPlayerPath.parent_path());
+  if (tmpConfigInfo.TemporaryConfigPath.empty()) {
+    LOG_ERROR << "Couldn't playback the stream, couldn't create a temporary config file";
+  }
+  auto argsWithTmpConfig = context.CLIArguments;
+
+#ifdef _WIN32
+  argsWithTmpConfig.push_back("--config=" +
+                              QuoteWindowsPath(tmpConfigInfo.TemporaryConfigPath.string()));
+#else
+  argsWithTmpConfig.push_back("--config=" + tmpConfigInfo.TemporaryConfigPath.string());
+#endif
+
   context.GITSLogEditor->SetText("");
 
   FileActions::LaunchExecutableThreadCallbackOnExit(
-      gitsPlayerPath, context.CLIArguments, gitsPlayerPath.parent_path(),
+      gitsPlayerPath, argsWithTmpConfig, gitsPlayerPath.parent_path(),
       [&context](const std::string& log) { context.GITSLog(log); },
-      [&context]() {
+      [&context, tmpConfigInfo]() {
         // Check log for errors and publish result
         const auto& logText = context.GITSLogEditor->GetText();
         bool oom = logText.find("E_OUTOFMEMORY") != std::string::npos;
@@ -146,6 +146,7 @@ void PlaybackStream() {
                                         oom ? ActionEvent::Status::Failure
                                             : ActionEvent::Status::Success,
                                         oom ? "E_OUTOFMEMORY" : "");
+        std::filesystem::remove(tmpConfigInfo.TemporaryConfigPath);
       });
   context.BtnsSideBar->SelectEntry(SideBarItem::LOG);
 }
@@ -154,17 +155,31 @@ void SubcaptureStream() {
   auto& context = Context::GetInstance();
   const auto gitsPlayerPath = context.GetGITSPlayerPath();
 
+  const auto tmpConfigInfo =
+      PrepareTemporaryConfigFile(Mode::SUBCAPTURE, gitsPlayerPath.parent_path());
+  if (tmpConfigInfo.TemporaryConfigPath.empty()) {
+    LOG_ERROR << "Couldn't playback the stream, couldn't create a temporary config file";
+  }
+  auto argsWithTmpConfig = context.CLIArguments;
+#ifdef _WIN32
+  argsWithTmpConfig.push_back("--config=" +
+                              QuoteWindowsPath(tmpConfigInfo.TemporaryConfigPath.string()));
+#else
+  argsWithTmpConfig.push_back("--config=" + tmpConfigInfo.TemporaryConfigPath.string());
+#endif
+
   context.GITSLogEditor->SetText("");
   // TODO: Create a generic solution for this
-  std::thread([gitsPlayerPath, &context]() {
+  std::thread([gitsPlayerPath, &context, tmpConfigInfo, argsWithTmpConfig]() {
     context.SubcaptureInProgress = true;
     // since we need to run player twice, consecutively & blocking, we do it in a separate thread
-    FileActions::LaunchExecutable(gitsPlayerPath, context.CLIArguments, true,
+    FileActions::LaunchExecutable(gitsPlayerPath, argsWithTmpConfig, true,
                                   gitsPlayerPath.parent_path(),
                                   [&context](const std::string& log) { context.GITSLog(log); });
-    FileActions::LaunchExecutable(gitsPlayerPath, context.CLIArguments, true,
+    FileActions::LaunchExecutable(gitsPlayerPath, argsWithTmpConfig, true,
                                   gitsPlayerPath.parent_path(),
                                   [&context](const std::string& log) { context.GITSLog(log); });
+    std::filesystem::remove(tmpConfigInfo.TemporaryConfigPath);
     context.SubcaptureInProgress = false;
   }).detach();
 
@@ -202,24 +217,6 @@ void GenerateCCode(CCodeExport parameters) {
             oom ? "E_OUTOFMEMORY" : "");
       });
   context.BtnsSideBar->SelectEntry(SideBarItem::LOG);
-}
-
-void UpdateConfigSectionPositions(const std::vector<std::string>& config) {
-  auto& context = Context::GetInstance();
-  size_t idx = 0;
-  for (const auto& item : Labels::CONFIG_SECTIONS()) {
-    int pos = -1;
-    const std::string sectionHeader = item.second.label + ":";
-    for (size_t lineNum = 0; lineNum < config.size(); ++lineNum) {
-      const std::string& line = config[lineNum];
-      if (line.compare(0, sectionHeader.size(), sectionHeader) == 0) {
-        pos = static_cast<int>(lineNum);
-        break;
-      }
-    }
-    context.ConfigSectionLines[item.first] = pos;
-    idx++;
-  }
 }
 
 std::optional<std::string> ProcessFileDialog(std::string imGuiDialogKey) {
@@ -264,6 +261,8 @@ void FileDialogs() {
     DetectBasePaths();
     context.SendAllPathsSetEvents();
   } else if (key.Path == Path::GITS_LOG) {
+    EventBus::GetInstance().publish(PathEvent(key.Path, key.Mode, path));
+  } else if (key.Path == Path::CONFIG_EXPORT) {
     EventBus::GetInstance().publish(PathEvent(key.Path, key.Mode, path));
   } else {
     context.SetPath(path, key.Path, key.Mode);
@@ -310,6 +309,9 @@ void ShowFileDialog(FileDialogKey key, const std::filesystem::path& path) {
   case Path::GITS_LOG:
     ext = ".txt";
     break;
+  case Path::CONFIG_EXPORT:
+    ext = ".yml";
+    break;
   default:
     break;
   }
@@ -325,12 +327,66 @@ void ShowFileDialog(FileDialogKey key, const std::filesystem::path& path) {
   }
 }
 
-void LoadConfigFile() {
+TemporaryConfigInfo PrepareTemporaryConfigFile(Mode mode, const std::filesystem::path& directory) {
   auto& context = Context::GetInstance();
 
-  auto filePath = context.GetPathSafe(Path::CONFIG);
+  if (directory.empty()) {
+    return TemporaryConfigInfo();
+  }
+
+  const auto& configurationForMode = context.ConfigurationForMode(mode);
+
+  if (mode == Mode::CAPTURE) {
+    auto& dumpPath = config_options::DumpPath(mode);
+    if (!dumpPath.string().ends_with("%n%_%p%")) {
+      dumpPath = dumpPath / "%n%_%p%";
+    }
+  }
+  if (mode == Mode::SUBCAPTURE) {
+    auto& subcapturePath = config_options::SubcapturePath(mode);
+    if (!subcapturePath.string().ends_with("%f%_%r%")) {
+      subcapturePath = subcapturePath / "%f%_%r%";
+    }
+  }
+
+  const auto tmpConfigPath =
+      directory /
+      (mode == Mode::CAPTURE
+           ? filesystem_names::RECORDER_CONFIG_FILENAME
+           : filesystem_names::
+                 PLAYER_TEMPORARY_CONFIG_FILENAME); // For Playback and Subcapture, we can use the --config argument to pass that temporary file so we can have an arbitrary name for it
+  auto originalNeedsRestoring = false;
+  const std::filesystem::path originalBackupPath = directory / "gits_config_backup.yml";
+  if (mode == Mode::CAPTURE && std::filesystem::exists(tmpConfigPath)) {
+    originalNeedsRestoring = true;
+    std::filesystem::copy_file(tmpConfigPath, originalBackupPath);
+  }
+
+  std::ofstream file(tmpConfigPath);
+  if (file.is_open()) {
+    file << GetYamlStringFromConfig(configurationForMode);
+    file.close();
+  } else {
+    return TemporaryConfigInfo();
+  }
+
+  return {tmpConfigPath, originalNeedsRestoring, originalNeedsRestoring ? originalBackupPath : ""};
+}
+
+void LoadConfigFile(Mode mode) {
+  auto& context = Context::GetInstance();
+  auto& configurationForMode = context.ConfigurationForMode(mode);
+
+  auto filePath = context.GetPathSafe(Path::CONFIG, mode);
   if (filePath.empty()) {
-    context.ConfigEditor->SetText("// No file specified.");
+    configurationForMode.BaseGitsConfigurationStr = "// No file specified.";
+    return;
+  }
+
+  if (!std::filesystem::exists(filePath)) {
+
+    configurationForMode.BaseGitsConfigurationStr =
+        "File:\n> " + filePath.string() + "\ndoesn't exist";
     return;
   }
 
@@ -338,21 +394,60 @@ void LoadConfigFile() {
   if (fhandle.is_open()) {
     const std::string str((std::istreambuf_iterator<char>(fhandle)),
                           std::istreambuf_iterator<char>());
-    context.ConfigEditor->SetText(str);
-    UpdateConfigSectionPositions(context.ConfigEditor->GetEditor().GetTextLines());
-    TextEditor::Breakpoints breakpoints;
-    for (const auto& section : context.ConfigSectionLines) {
-      int line = section.second;
-      context.BtnsAPI->SetEnabled(section.first, line >= 0);
-      if (line >= 0) {
-        breakpoints.insert(line + 1);
-      }
+    YAML::Node yaml;
+    try {
+      yaml = YAML::Load(str);
+    } catch (const YAML::Exception& e) {
+      configurationForMode.BaseGitsConfigurationStr =
+          "Couldn't load configuration YAML from file:\n>" + filePath.string() + "\nError:\n" +
+          e.what();
+      return;
     }
-    context.ConfigEditor->SetFilePath(filePath);
-    context.ConfigEditor->SetBreakpoints(breakpoints);
+    if (gits::Configurator::LoadInto(yaml, &configurationForMode.BaseGitsConfiguration)) {
+      std::optional<YAML::Node> baseOverrides = std::nullopt;
+      if (yaml["Overrides"]) {
+        baseOverrides = yaml["Overrides"];
+        configurationForMode.BaseOverrides = yaml["Overrides"];
+        configurationForMode.ModifiedOverrides = yaml["Overrides"];
+      }
+      configurationForMode.BaseGitsConfigurationStr =
+          GetYamlStringFromConfig(configurationForMode.BaseGitsConfiguration, baseOverrides);
+      configurationForMode.ModifiedGitsConfiguration = configurationForMode.BaseGitsConfiguration;
+      context.UpdateInMemoryConfig(mode);
+    } else {
+      configurationForMode.BaseGitsConfigurationStr =
+          "Couldn't deserialize configuration from file:\n>" + filePath.string();
+    }
   } else {
-    context.ConfigEditor->SetText("// Could not open file:\n> " + filePath.string());
+    configurationForMode.BaseGitsConfigurationStr =
+        "// Could not open file:\n> " + filePath.string();
   }
+
+  config_options::SetLauncherDefaults(mode);
+  EventBus::GetInstance().publish(ContextEvent::Type::ConfigFileLoaded, mode);
+}
+
+void LoadConfigFromMemory(Mode mode) {
+  auto& context = Context::GetInstance();
+  auto& configurationForMode = context.ConfigurationForMode(mode);
+
+  configurationForMode.ModifiedGitsConfigurationStr = configurationForMode.BaseGitsConfigurationStr;
+}
+
+std::string GetYamlStringFromConfig(const gits::Configuration& config,
+                                    std::optional<YAML::Node> overrides) {
+  YAML::Emitter emitter;
+  bool result = gits::Configurator::Emit(emitter, config, true, overrides);
+
+  if (!result) {
+    LOG_ERROR << "Couldn't get YAML for the current configuration";
+    return "";
+  }
+  return std::string(emitter.c_str());
+}
+
+std::string GetYamlStringFromConfig(const Context::ModeConfiguration& config) {
+  return GetYamlStringFromConfig(config.ModifiedGitsConfiguration, config.ModifiedOverrides);
 }
 
 void SetImGuiStyle(size_t idx) {
@@ -407,7 +502,7 @@ bool IsValidGITSBasePath(const std::filesystem::path& path) {
   return std::filesystem::exists(playerExecutablePath) && std::filesystem::exists(recorderDLLPath);
 }
 
-void DetectBasePaths() {
+bool DetectBasePaths() {
   // the parent folder of the folder in which the executable being run is:
   // Get the parent folder of the folder in which the executable is being run
 #ifdef _WIN32
@@ -431,12 +526,17 @@ void DetectBasePaths() {
   }
   if (!detected) {
     const auto buildDir = exeDir.parent_path().parent_path();
-    const auto distDir = buildDir / "dist";
-    detected = IsValidGITSBasePath(distDir);
-    if (detected) {
-      context.Paths.BasePath = distDir;
-      LOG_DEBUG << "Detected base path from build/dist relative location: "
-                << context.Paths.BasePath;
+    auto possibleDistFoldernames = {"dist",      "install",      "dist_debug",
+                                    "distDebug", "dist_release", "distRelease"};
+    for (const auto& distFoldername : possibleDistFoldernames) {
+      const auto distDir = buildDir / distFoldername;
+      detected = IsValidGITSBasePath(distDir);
+      if (detected) {
+        context.Paths.BasePath = distDir;
+        LOG_DEBUG << "Detected base path from build/dist relative location: "
+                  << context.Paths.BasePath;
+        break;
+      }
     }
   }
   if (!detected) {
@@ -452,6 +552,8 @@ void DetectBasePaths() {
       context.Paths.Subcapture.ConfigPath = playerConfigPath;
     }
   }
+
+  return detected;
 }
 
 void ResetBasePaths() {
@@ -461,7 +563,7 @@ void ResetBasePaths() {
   context.SendAllPathsSetEvents();
 
   UpdateCLICall();
-  LoadConfigFile();
+  LoadConfigFile(context.AppMode);
 }
 
 void SetAllConfigsFromBasePath() {
@@ -494,6 +596,18 @@ void NewLauncherSession() {
 
   context.SetPath(emptyPath, Path::INPUT_STREAM, Mode::SUBCAPTURE);
   context.SetPath(emptyPath, Path::OUTPUT_STREAM, Mode::SUBCAPTURE);
+}
+
+void SetTracePathFromInputStream() {
+  auto& context = Context::GetInstance();
+  auto streamPath = context.GetPathSafe(Path::INPUT_STREAM, Mode::PLAYBACK);
+  context.SetPath(streamPath.parent_path(), Path::TRACE, Mode::PLAYBACK);
+}
+
+void SetTracePathFromTargetExecutable() {
+  auto& context = Context::GetInstance();
+  auto targetPath = context.GetPathSafe(Path::CAPTURE_TARGET, Mode::CAPTURE);
+  context.SetPath(targetPath.parent_path(), Path::TRACE, Mode::CAPTURE);
 }
 
 void OpenURL(const std::string& url) {
@@ -544,9 +658,7 @@ std::string CreateEmailBodyWithLog(const std::string& logText) {
   return std::string(Labels::EMAIL_LOG_BODY_HEADER) + logText;
 }
 
-void SendLogByEmail(const std::string& recipient,
-                    const std::string& subject,
-                    const std::string& body) {
+void SendEmail(const std::string& recipient, const std::string& subject, const std::string& body) {
   auto urlEncode = [](const std::string& str) -> std::string {
     std::string encoded;
     encoded.reserve(str.size() * 3);
@@ -578,7 +690,42 @@ void SendLogByEmail(const std::string& recipient,
     LOG_WARNING << "Failed to open email client via xdg-open";
   }
 #endif
+}
+
+void SendLogByEmail(const std::string& recipient,
+                    const std::string& subject,
+                    const std::string& body) {
+  SendEmail(recipient, subject, body);
   LOG_INFO << "Opening email client to send log to " << Labels::EMAIL_LOG_RECIPIENT;
 }
 
+void RestoreOriginalConfigIfNeeded(const TemporaryConfigInfo& tmpConfigInfo) {
+  if (!tmpConfigInfo.OriginalNeedsRestoring) {
+    return;
+  }
+  if (tmpConfigInfo.OriginalBackupPath.empty()) {
+    LOG_ERROR << "Couldn't restore original config file. Path to the backup file is empty";
+    return;
+  }
+  if (tmpConfigInfo.TemporaryConfigPath.empty()) {
+    LOG_ERROR << "Couldn't restore original config file. Path to the temporary file is empty";
+    return;
+  }
+  if (!std::filesystem::exists(tmpConfigInfo.OriginalBackupPath)) {
+    LOG_ERROR << "Couldn't restore original config file. Backup file does not exist: "
+              << tmpConfigInfo.OriginalBackupPath;
+    return;
+  }
+  try {
+    std::filesystem::copy_file(tmpConfigInfo.OriginalBackupPath, tmpConfigInfo.TemporaryConfigPath,
+                               std::filesystem::copy_options::overwrite_existing);
+    std::filesystem::remove(tmpConfigInfo.OriginalBackupPath);
+  } catch (const std::filesystem::filesystem_error& e) {
+    LOG_ERROR << "Couldn't restore original config file. Error: " << e.what();
+  } catch (const std::exception& e) {
+    LOG_ERROR << "Couldn't restore original config file. Error " << e.what();
+  } catch (...) {
+    LOG_ERROR << "Couldn't restore original config file. Unknown error occurred.";
+  }
+}
 } // namespace gits::gui

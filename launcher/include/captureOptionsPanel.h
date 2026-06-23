@@ -8,31 +8,19 @@
 
 #pragma once
 
-#include <optional>
-#include <filesystem>
-
 #include "basePanel.h"
 #include "eventBus.h"
 
 namespace gits::gui {
 
-class PlaybackPanel : public BasePanel {
+class CaptureOptionsPanel : public BasePanel {
 public:
-  PlaybackPanel();
+  CaptureOptionsPanel();
 
   void Render() override;
 
 private:
-  void RowStreamPath();
-  void RowConfigPath();
-  void RowArguments();
-
-  std::optional<std::filesystem::path> DroppedFilePath;
-
-  // Event callbacks
   void PathCallback(const Event& e);
-  void FileDropCallback(const Event& e);
-  void ContextCallback(const Event& e);
 };
 
 } // namespace gits::gui

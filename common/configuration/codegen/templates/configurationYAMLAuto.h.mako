@@ -24,6 +24,11 @@ template <>
 struct convert<gits::${group.namespace_str}> {
   static Node encode(const gits::${group.namespace_str}& rhs);
   static bool decode(const Node& node, gits::${group.namespace_str}& rhs);
+% if group.namespace_str == "Configuration":
+  static void emit(YAML::Emitter& out, const gits::${group.namespace_str}& rhs, bool annotate = true, std::optional<YAML::Node> overrides = std::nullopt);
+% else:
+  static void emit(YAML::Emitter& out, const gits::${group.namespace_str}& rhs, bool annotate = true);
+% endif
 };
 
 %endfor

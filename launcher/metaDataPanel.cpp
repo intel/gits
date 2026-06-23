@@ -13,15 +13,33 @@
 #include "eventBus.h"
 
 #include <filesystem>
+#include "imgui.h"
+#include <mutex>
+#include <string>
 
 namespace gits::gui {
-MetaDataPanel::MetaDataPanel() {
+MetaDataPanel::MetaDataPanel()
+    : m_MetaDataEditor("MetaDataEditor"),
+      m_MetaDataStatsEditor("MetaDataStatsEditor"),
+      m_YamlTreeViewer() {
+  m_YamlTreeViewer.SetTextEditor(&m_MetaDataEditor.GetEditor());
+  m_MetaDataEditor.GetEditor().SetShowWhitespaces(false);
+  m_MetaDataEditor.GetEditor().SetTabSize(4);
+  m_MetaDataEditor.GetEditor().SetLanguageDefinition(TextEditorWidget::GetYamlLanguageDefinition());
+  m_MetaDataEditor.SetConfig(TextEditorWidget::CONFIG_NO_TOOLBAR);
+
+  m_MetaDataStatsEditor.GetEditor().SetShowWhitespaces(false);
+  m_MetaDataStatsEditor.GetEditor().SetTabSize(4);
+  m_MetaDataStatsEditor.GetEditor().SetLanguageDefinition(
+      TextEditorWidget::GetYamlLanguageDefinition());
+  m_MetaDataStatsEditor.SetConfig(TextEditorWidget::CONFIG_NO_TOOLBAR);
+
   EventBus::GetInstance().subscribe<PathEvent>(
       std::bind(&MetaDataPanel::StreamPathCallback, this, std::placeholders::_1),
       {PathEvent::Type::INPUT_STREAM});
-  EventBus::GetInstance().subscribe<ContextEvent>(
-      std::bind(&MetaDataPanel::MetaDataCallback, this, std::placeholders::_1),
-      {ContextEvent::Type::MetadataLoaded});
+  EventBus::GetInstance().subscribe<AppEvent>(
+      std::bind(&MetaDataPanel::ThemeChangedCallback, this, std::placeholders::_1),
+      {AppEvent::Type::ThemeChanged});
 }
 
 void MetaDataPanel::Render() {
@@ -45,96 +63,137 @@ void MetaDataPanel::Render() {
     return;
   }
 
+  auto currentSubPanel = m_ActiveSubPanel;
   ImVec2 available = ImGui::GetContentRegionAvail();
   if (ImGui::BeginChild("MetaDataPanel", ImVec2(available.x, available.y), true)) {
-    context.BtnsMetaData->Render();
-    switch (context.BtnsMetaData->Selected()) {
-    case Context::MetaDataItem::DIAGS:
+    if (ImGui::BeginTabBar("MetaDataTabs")) {
+      if (ImGui::BeginTabItem("Configuration")) {
+        currentSubPanel = SubPanel::Config;
+        ImGui::EndTabItem();
+      }
+      if (ImGui::BeginTabItem("Diagnostics")) {
+        currentSubPanel = SubPanel::Diags;
+        ImGui::EndTabItem();
+      }
+      // Stats are currently broken
+      //if (ImGui::BeginTabItem("Stats")) {
+      //  currentSubPanel = SubPanel::Stats;
+      //  ImGui::EndTabItem();
+      //}
+      ImGui::EndTabBar();
+    }
+
+    if (currentSubPanel != m_ActiveSubPanel) {
+      m_ActiveSubPanel = currentSubPanel;
+      UpdateContent();
+    }
+
+    const auto col1Ratio = std::min(256.0f / available.x, 0.25f);
+    if (m_ActiveSubPanel == SubPanel::Stats) {
+      std::lock_guard guard{m_StatsMutex};
       ImGui::NewLine();
-      context.DiagsEditor->Render(available);
-      break;
-    case Context::MetaDataItem::CONFIG:
-      ImGui::NewLine();
-      context.TraceConfigEditor->Render(available);
-      break;
-    case Context::MetaDataItem::STATS: {
-      std::lock_guard guard{StatsMutex};
-      ImGui::NewLine();
-      if (StatsGatheringInProgress) {
+      if (m_StatsGatheringInProgress) {
         ImGui::TextColored(ImVec4(0.8f, 0.15f, 0.15f, 1.0f),
                            Labels::STATS_GATHERING_IN_PROGRESS_MESSAGE);
-      } else if (!StatsGatheringInProgress && !Stats.empty()) {
-        context.TraceStatsEditor->Render(available);
+      } else if (!m_StatsGatheringInProgress && !m_StatsStr.empty()) {
+        m_MetaDataStatsEditor.Render(available);
       } else {
         ImGui::Text(Labels::STATS_GATHERING_PROMPT_MESSAGE);
         if (ImGui::Button(Labels::STATS_GATHERING_BUTTON_LABEL)) {
-          context.TraceStatsEditor->SetText("");
+          m_MetaDataStatsEditor.SetText("");
           std::string statistics;
           const auto& gitsPlayerPath = context.GetGITSPlayerPath();
 
-          StatsGatheringInProgress = true;
+          m_StatsGatheringInProgress = true;
           FileActions::LaunchExecutableThreadCallbackOnExit(
               gitsPlayerPath, {"--stats", streamPathValue.string()}, gitsPlayerPath.parent_path(),
               [this](const std::string& stats) { this->AppendStats(stats); },
               [this, &context]() {
                 this->FillStatsEditor();
-                this->StatsGatheringInProgress = false;
+                this->m_StatsGatheringInProgress = false;
               });
         }
       }
-      break;
-    }
-    default:
-      ImGui::Text(Labels::UNKNOWN_METADATA_TAB_MESSAGE);
-      break;
+    } else {
+      const auto& MetaData = context.ConfigurationForMode(Mode::PLAYBACK).MetaData;
+      if (ImGui::BeginTable("MetaDataTable", 2,
+                            ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_Resizable)) {
+        ImGui::TableSetupColumn("TreeViewColumn", ImGuiTableColumnFlags_WidthStretch, col1Ratio);
+        ImGui::TableSetupColumn("EditorColumn", ImGuiTableColumnFlags_WidthStretch,
+                                1.0f - col1Ratio);
+        ImGui::TableNextRow();
+        ImGui::TableSetColumnIndex(0);
+        m_YamlTreeViewer.Render();
+        ImGui::TableSetColumnIndex(1);
+        m_MetaDataEditor.Render(available);
+        ImGui::EndTable();
+      }
     }
   }
   ImGui::EndChild();
 }
 
-void MetaDataPanel::LoadMetaData(std::filesystem::path streamPath) {
-  auto& context = Context::GetInstance();
-  const auto& MetaData = context.MetaData;
-  context.DiagsEditor->SetText(MetaData.RecorderDiags.empty() ? Labels::EMPTY_RECORDER_DIAGS_MESSAGE
-                                                              : MetaData.RecorderDiags.dump(2));
-  context.TraceConfigEditor->SetText(MetaData.RecorderConfig.empty()
-                                         ? Labels::EMPTY_RECORDER_CONFIG_MESSAGE
-                                         : MetaData.RecorderConfig);
-}
-
 void MetaDataPanel::ClearStats() {
-  std::lock_guard guard{StatsMutex};
-  Stats.clear();
+  std::lock_guard guard{m_StatsMutex};
+  m_StatsStr.clear();
 }
 
 void MetaDataPanel::AppendStats(std::string str) {
-  std::lock_guard guard{StatsMutex};
-  Stats.append(str);
+  std::lock_guard guard{m_StatsMutex};
+  m_StatsStr.append(str);
 }
 
 void MetaDataPanel::FillStatsEditor() {
-  std::lock_guard guard{StatsMutex};
+  std::lock_guard guard{m_StatsMutex};
   auto& context = Context::GetInstance();
   // Remove everything before the "Statistics" line (which appears exactly once)
-  size_t pos = Stats.find("Statistics");
+  size_t pos = m_StatsStr.find("Statistics");
   if (pos != std::string::npos) {
-    Stats = Stats.substr(pos);
+    m_StatsStr = m_StatsStr.substr(pos);
   }
 
-  context.TraceStatsEditor->SetText(Stats);
+  m_MetaDataStatsEditor.SetText(m_StatsStr);
 }
 
-void MetaDataPanel::MetaDataCallback(const Event& e) {
+void MetaDataPanel::UpdateContent() {
   auto& context = Context::GetInstance();
-  const auto& MetaData = context.MetaData;
-  context.DiagsEditor->SetText(MetaData.RecorderDiags.empty() ? Labels::EMPTY_RECORDER_DIAGS_MESSAGE
-                                                              : MetaData.RecorderDiags.dump(2));
-  context.TraceConfigEditor->SetText(MetaData.RecorderConfig.empty()
-                                         ? Labels::EMPTY_RECORDER_CONFIG_MESSAGE
-                                         : MetaData.RecorderConfig);
+  const auto& MetaData = context.ConfigurationForMode(Mode::PLAYBACK).MetaData;
+  std::string yamlText = "";
+  std::string yamlNodeText = "";
+  if (m_ActiveSubPanel == SubPanel::Diags) {
+    if (MetaData.RecorderDiags.empty()) {
+      yamlText = Labels::EMPTY_RECORDER_DIAGS_MESSAGE;
+    } else {
+      yamlText = MetaData.RecorderDiags.dump(2);
+      try {
+        yamlText = YAML::Dump(MetaData.RecorderDiagsYAML);
+        yamlNodeText = yamlText;
+      } catch (const YAML::Exception& e) {
+        LOG_ERROR << "MetaData:Diagnostics: YAML conversion error: " << e.what();
+      }
+    }
+  } else if (m_ActiveSubPanel == SubPanel::Config) {
+    if (MetaData.RecorderConfig.empty()) {
+      yamlText = Labels::EMPTY_RECORDER_CONFIG_MESSAGE;
+    } else {
+      yamlText = MetaData.RecorderConfig;
+      yamlNodeText = MetaData.RecorderConfig;
+    }
+  }
+  m_YamlTreeViewer.SetYAMLText(yamlNodeText);
+  m_MetaDataEditor.SetText(yamlText);
+
+  // nothing
 }
 
 void MetaDataPanel::StreamPathCallback(const Event& e) {
   ClearStats();
+  m_ActiveSubPanel = SubPanel::Unset;
 }
+
+void MetaDataPanel::ThemeChangedCallback(const Event& e) {
+  m_MetaDataStatsEditor.UpdatePalette();
+  m_MetaDataEditor.UpdatePalette();
+}
+
 } // namespace gits::gui

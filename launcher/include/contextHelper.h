@@ -9,11 +9,9 @@
 #pragma once
 
 #include "imgui.h"
-#include <filesystem>
 #include <string>
-
-#include "context.h"
-#include "labels.h"
+#include <optional>
+#include "common.h"
 
 namespace gits::gui::context_helper {
 

@@ -9,27 +9,25 @@
 #pragma once
 
 #include "basePanel.h"
-#include "eventBus.h"
-
 #include <string>
+#include <optional>
+#include <filesystem>
 
 namespace gits::gui {
 
-class SubcapturePanel : public BasePanel {
+struct Event;
+
+class SubcaptureOptionsPanel : public BasePanel {
 public:
-  SubcapturePanel();
+  SubcaptureOptionsPanel();
 
   void Render() override;
-
-  const std::string GetCLIArguments() const;
 
 private:
   void RowSubcapturePath();
 
+  // Struct to store options
   struct SubcaptureConfig {
-    bool Enabled = true;
-    bool Optimize = true;
-    bool ExecutionSerialization = false;
     int StartFrame = 1;
     int EndFrame = 1;
 
@@ -39,7 +37,8 @@ private:
   } SubcaptureConfig;
   std::optional<std::filesystem::path> DroppedFilePath;
 
-  // Event callbacks
+  // Callbacks
+  void ContextCallback(const Event& e);
   void PathCallback(const Event& e);
   void FileDropCallback(const Event& e);
 };

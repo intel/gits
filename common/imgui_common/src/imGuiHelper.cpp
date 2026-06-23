@@ -12,6 +12,7 @@
 #include <yaml-cpp/yaml.h>
 #include <fstream>
 #include <iostream>
+#include <cfloat>
 
 #include "IntelOneMono-RegularAuto.h"
 #include "log.h"
@@ -215,6 +216,7 @@ bool LabelInputString(const std::string& label,
                       const float widthLabel,
                       const float widthInput,
                       ImGuiInputTextFlags flags) {
+  const auto indent = ImGui::GetCursorPosX();
   if (widthLabel > 0) {
     ImGui::SetNextItemWidth(static_cast<float>(widthLabel));
   }
@@ -224,7 +226,7 @@ bool LabelInputString(const std::string& label,
 
   // let the input field take the remaining width
   if (widthLabel > 0) {
-    ImGui::SetCursorPosX(widthLabel);
+    ImGui::SetCursorPosX(indent + widthLabel);
   }
   return InputString(labelID, str, flags, widthInput);
 }
@@ -242,7 +244,7 @@ bool LabelInputStringTooltip(const std::string& label,
   }
 
   ImGui::Text(label.c_str());
-  if (ImGui::IsItemHovered()) {
+  if (ImGui::IsItemHovered() && tooltip) {
     ImGui::SetTooltip(tooltip);
   }
   ImGui::SameLine();
@@ -282,17 +284,17 @@ bool RangeControls(const char* label,
 
   std::string startLabel = GetLabelWithRangeID("Start", rangeId);
   ImGui::SetNextItemWidth(rangeFieldInputWidth);
-  localChanged |= ImGui::InputInt(startLabel.c_str(), &tmpStart, 1, 50);
+  ImGui::InputInt(startLabel.c_str(), &tmpStart, 1, 50);
   ImGui::SameLine();
 
   std::string endLabel = GetLabelWithRangeID("End", rangeId);
   ImGui::SetNextItemWidth(rangeFieldInputWidth);
-  localChanged |= ImGui::InputInt(endLabel.c_str(), &tmpEnd, 1, 50);
+  ImGui::InputInt(endLabel.c_str(), &tmpEnd, 1, 50);
   ImGui::SameLine();
 
   std::string stepLabel = GetLabelWithRangeID("Step", rangeId);
   ImGui::SetNextItemWidth(rangeFieldInputWidth);
-  localChanged |= ImGui::InputInt(stepLabel.c_str(), &tmpStep, 1, 10);
+  ImGui::InputInt(stepLabel.c_str(), &tmpStep, 1, 10);
   tmpStep = std::max(tmpStep, 1);
 
   ImGui::SetCursorPosX(inputPosition);
@@ -327,6 +329,40 @@ bool RangeControls(const char* label,
   }
 
   return localChanged;
+}
+
+void HelpButton(const std::string& id, const std::string& tooltip, const std::string& description) {
+  std::string buttonId = "?##HelpBtn" + id;
+  std::string popupId = id + "##HelpPopup";
+
+  float buttonSize = ImGui::GetFrameHeight();
+  ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, buttonSize * 0.5f);
+  ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,
+                      ImVec2(10.0f, 0.0f)); // Manual tweak for centering
+
+  ImGui::SameLine();
+  if (ImGui::Button(buttonId.c_str(), ImVec2(buttonSize, buttonSize))) {
+    ImGui::OpenPopup(popupId.c_str());
+  }
+  ImGui::PopStyleVar(2);
+
+  if (ImGui::IsItemHovered()) {
+    ImGui::SetTooltip("%s", tooltip.c_str());
+  }
+
+  ImVec2 viewportCenter = ImGui::GetMainViewport()->GetCenter();
+  ImGui::SetNextWindowPos(viewportCenter, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+  ImVec2 viewportSize = ImGui::GetMainViewport()->Size;
+  float minWidth = viewportSize.x * 0.4f;
+  ImGui::SetNextWindowSizeConstraints(ImVec2(minWidth, 0), ImVec2(FLT_MAX, FLT_MAX));
+
+  if (ImGui::BeginPopupModal(popupId.c_str(), nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+    ImGui::TextWrapped("%s", description.c_str());
+    if (ImGui::Button("Close")) {
+      ImGui::CloseCurrentPopup();
+    }
+    ImGui::EndPopup();
+  }
 }
 
 } // namespace ImGuiHelper

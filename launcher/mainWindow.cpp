@@ -11,7 +11,6 @@
 #include "imGuiHelper.h"
 #include "tabGroup.h"
 #include "labels.h"
-#include "captureActions.h"
 #include "launcherActions.h"
 #include "resource.h"
 #include "contextHelper.h"
@@ -58,7 +57,6 @@ MainWindow::MainWindow() {
   contentPanel = std::make_unique<ContentPanel>();
   playbackPanel = std::make_unique<PlaybackPanel>();
   capturePanel = std::make_unique<CapturePanel>();
-  subcapturePanel = std::make_unique<SubcapturePanel>();
   tabsToolBar = std::make_unique<ImGuiHelper::TabGroup<Mode>>(Labels::MODE_BUTTONS());
 
   EventBus::GetInstance().subscribe<ActionEvent>(
@@ -72,17 +70,10 @@ MainWindow::~MainWindow() {
   contentPanel.reset();
   playbackPanel.reset();
   capturePanel.reset();
-  subcapturePanel.reset();
 }
 
 const std::string MainWindow::GetCLIArguments() const {
-  auto& context = Context::GetInstance();
-
   std::string args;
-  if (context.AppMode == Mode::SUBCAPTURE) {
-    args += subcapturePanel->GetCLIArguments();
-  }
-
   return args;
 }
 
@@ -92,8 +83,8 @@ const CapturePanel::CaptureCleanupOptions MainWindow::GetCleanupOptions() const 
 
 void MainWindow::SetPlaybackFile(const std::filesystem::path& filePath) {
   auto& context = Context::GetInstance();
-  context.Paths.Playback.InputStreamPath = filePath;
-  context.Paths.Subcapture.InputStreamPath = filePath;
+  context.SetPath(filePath, Path::INPUT_STREAM, Mode::PLAYBACK);
+  context.SetPath(filePath, Path::INPUT_STREAM, Mode::SUBCAPTURE);
   context.ChangeMode(Mode::PLAYBACK);
   tabsToolBar->SelectEntry(Mode::PLAYBACK);
 }
@@ -148,10 +139,6 @@ void MainWindow::Render() {
     if (playbackPanel) {
       playbackPanel->Render();
     }
-    if (subcapturePanel) {
-      ImGui::Separator();
-      subcapturePanel->Render();
-    }
     break;
   default:
     break;
@@ -197,6 +184,32 @@ void MainWindow::GITSButton() {
     context_helper::PathMenuItem(Labels::GITS_SUBCAPTURE_BUTTON, Path::OUTPUT_STREAM,
                                  Mode::SUBCAPTURE);
 
+    ImGui::Separator();
+    if (ImGui::BeginMenu(Labels::GITS_BASE_PATHS_MENU)) {
+      if (ImGui::MenuItem(Labels::DETECT_BASE_PATHS)) {
+        ResetBasePaths();
+      }
+      ImGui::SetItemTooltip(Labels::DETECT_BASE_PATHS_HINT);
+
+      if (ImGui::MenuItem(Labels::UPDATE_CONFIG_PATH)) {
+        std::filesystem::path configPath = "";
+        if (context.AppMode == Mode::CAPTURE) {
+          configPath = GetRecorderConfigPathForApi(context.SelectedApiForCapture);
+        } else if (context.AppMode == Mode::PLAYBACK || context.AppMode == Mode::SUBCAPTURE) {
+          configPath = GetPlayerConfigPath();
+        }
+        if (std::filesystem::exists(configPath)) {
+          context.SetPath(std::move(configPath), Path::CONFIG, context.AppMode);
+        }
+      }
+      ImGui::SetItemTooltip(Labels::UPDATE_CONFIG_PATH_HINT);
+
+      if (ImGui::MenuItem(Labels::USE_ALL_CONFIGS_FROM_BASE_PATH)) {
+        SetAllConfigsFromBasePath();
+      }
+      ImGui::SetItemTooltip(Labels::USE_ALL_CONFIGS_FROM_BASE_PATH_HINT);
+      ImGui::EndMenu();
+    }
     ImGui::Separator();
     auto versionLabel = std::string(Labels::VERSION) + ": " + APP_VERSION;
     ImGui::MenuItem(versionLabel.c_str());
@@ -249,12 +262,15 @@ void MainWindow::MainActionButtons() {
 
   const auto label = Labels::MainAction(context.AppMode);
   if (ImGui::Button(label.c_str())) {
+    UpdateCLICall();
     switch (context.AppMode) {
     case Mode::PLAYBACK:
       PlaybackStream();
       break;
     case Mode::CAPTURE:
-      gui::capture_actions::CaptureStream();
+      if (capturePanel) {
+        capturePanel->CaptureStream();
+      };
       break;
     case Mode::SUBCAPTURE:
       SubcaptureStream();
@@ -399,32 +415,6 @@ void MainWindow::GITSBaseRow() {
     ShowFileDialog(FileDialogKey{Path::GITS_BASE, Mode::PLAYBACK});
   }
   ImGuiHelper::AddTooltip(Labels::CHOOSE_GITS_BASE_PATH_HINT);
-
-  // Buttons to reset paths and things.
-  ImGui::SetCursorPosX(context.TheMainWindow->WidthLeftColumn);
-  if (ImGui::Button(Labels::DETECT_BASE_PATHS)) {
-    ResetBasePaths();
-  }
-  ImGuiHelper::AddTooltip(Labels::DETECT_BASE_PATHS_HINT);
-
-  ImGui::SameLine();
-  if (ImGui::Button(Labels::UPDATE_CONFIG_PATH)) {
-    std::filesystem::path configPath = "";
-    if (context.AppMode == Mode::CAPTURE) {
-      configPath = GetRecorderConfigPathForApi(context.SelectedApiForCapture);
-    } else if (context.AppMode == Mode::PLAYBACK || context.AppMode == Mode::SUBCAPTURE) {
-      configPath = GetPlayerConfigPath();
-    }
-    if (std::filesystem::exists(configPath)) {
-      context.SetPath(std::move(configPath), Path::CONFIG, context.AppMode);
-    }
-  }
-  ImGuiHelper::AddTooltip(Labels::UPDATE_CONFIG_PATH_HINT);
-  ImGui::SameLine();
-  if (ImGui::Button(Labels::USE_ALL_CONFIGS_FROM_BASE_PATH)) {
-    SetAllConfigsFromBasePath();
-  }
-  ImGuiHelper::AddTooltip(Labels::USE_ALL_CONFIGS_FROM_BASE_PATH_HINT);
 };
 
 void MainWindow::CaptureActionCallback(const Event& e) {
@@ -450,18 +440,30 @@ void MainWindow::PathCallback(const Event& e) {
   auto& context = Context::GetInstance();
   context.LauncherConfiguration.ToFile();
 
-  if (!pathEvent.Mode.has_value() || pathEvent.Mode.value() != Mode::PLAYBACK) {
+  if (!pathEvent.Mode.has_value() || pathEvent.Mode == Mode::CAPTURE) {
     return;
   }
 
+  const auto& eventMode = pathEvent.Mode.value();
+
   if (pathEvent.EventType == PathEvent::Type::INPUT_STREAM) {
-    const auto& streamPath = context.GetPathSafe(Path::INPUT_STREAM, Mode::PLAYBACK);
+    const auto& streamPath = context.GetPathSafe(Path::INPUT_STREAM, eventMode);
     if (!streamPath.empty()) {
-      context.MetaData = GetStreamMetaData(streamPath);
-      EventBus::GetInstance().publish<ContextEvent>(ContextEvent::Type::MetadataLoaded);
+      context.ConfigurationForMode(eventMode).MetaData = GetStreamMetaData(streamPath);
+      EventBus::GetInstance().publish(ContextEvent::Type::MetadataLoaded, eventMode);
     }
   } else if (pathEvent.EventType == PathEvent::Type::GITS_LOG) {
     context.GITSLogEditor->SaveToFile(pathEvent.CustomPath.value());
+  } else if (pathEvent.EventType == PathEvent::Type::CONFIG_EXPORT) {
+    auto& configStr = context.ConfigurationForMode(eventMode).ModifiedGitsConfigurationStr;
+    auto& filePath = pathEvent.CustomPath.value();
+    std::ofstream outFile(filePath);
+    if (!outFile.is_open()) {
+      LOG_ERROR << "Failed to open file for saving: " << filePath;
+    } else {
+      outFile << configStr;
+      outFile.close();
+    }
   }
 }
 } // namespace gits::gui

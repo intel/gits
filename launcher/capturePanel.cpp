@@ -22,6 +22,8 @@
 
 #include "mainWindow.h"
 
+#include "configurationYAMLAuto.h"
+
 namespace {
 using namespace gits::gui;
 
@@ -68,11 +70,18 @@ typedef Context::SideBarItem SideBarItem;
 CapturePanel::CapturePanel() : BasePanel() {
   EventBus::GetInstance().subscribe<PathEvent>(
       std::bind(&CapturePanel::PathCallback, this, std::placeholders::_1));
-  apiToolBar = std::make_unique<ImGuiHelper::TabGroup<Api>>(Labels::API_BUTTONS());
-  apiToolBar->SelectEntry(Api::DIRECTX);
 
   EventBus::GetInstance().subscribe<FileDropEvent>(
       std::bind(&CapturePanel::FileDropCallback, this, std::placeholders::_1));
+
+  EventBus::GetInstance().subscribe<ContextEvent>(
+      std::bind(&CapturePanel::ContextCallback, this, std::placeholders::_1));
+
+  EventBus::GetInstance().subscribe<ActionEvent>(
+      std::bind(&CapturePanel::ActionCallback, this, std::placeholders::_1));
+
+  apiToolBar = std::make_unique<ImGuiHelper::TabGroup<Api>>(Labels::API_BUTTONS());
+  apiToolBar->SelectEntry(Api::DIRECTX);
 }
 
 void CapturePanel::Render() {
@@ -172,7 +181,7 @@ void CapturePanel::RowArguments() {
   auto remainingWidth = availableWidth - ImGui::GetCursorPosX() - WidthLastButton();
   if (ImGuiHelper::InputString("###CustomArgumentsInput", context.CaptureCustomArguments, 0,
                                remainingWidth)) {
-    UpdateCLICall();
+    // nothing
   }
   ImGuiHelper::AddTooltip(Labels::CUSTOM_ARGS_INPUT_HINT);
 
@@ -180,7 +189,6 @@ void CapturePanel::RowArguments() {
   ImGui::PushID(++context.ImguiIDs);
   if (ImGui::Button(Labels::CLEAR_ARGUMENTS, ImVec2(WidthLastButton(), 0))) {
     context.CustomArguments.clear();
-    UpdateCLICall();
   }
   ImGui::PopID();
   ImGuiHelper::AddTooltip(Labels::CLEAR_ARGUMENTS_HINT);
@@ -252,6 +260,89 @@ void CapturePanel::RowOutputPath() {
 #endif
 }
 
+void CapturePanel::CaptureStream() {
+  auto& context = Context::GetInstance();
+
+  context.GITSLogEditor->SetText("");
+
+  const std::map<Api, std::string> stringForApi = {{Api::UNKNOWN, "N/A"}, {Api::DIRECTX, "DX"},
+                                                   {Api::OPENGL, "GL"},   {Api::VULKAN, "VK"},
+                                                   {Api::OPENCL, "CL"},   {Api::LEVELZERO, "L0"}};
+
+  std::filesystem::path executablePath = context.GetPathSafe(Path::CAPTURE_TARGET);
+  if (executablePath.empty()) {
+    LOG_ERROR << "No target application was selected for capture";
+    context.BtnsSideBar->SelectEntry(Context::SideBarItem::APP_LOG);
+
+    return;
+  }
+
+  const auto gitsBasePath = context.GetPathSafe(Path::GITS_BASE);
+  if (gitsBasePath.empty()) {
+    LOG_ERROR << "No GITS base path for capture was selected";
+    context.BtnsSideBar->SelectEntry(Context::SideBarItem::APP_LOG);
+
+    return;
+  }
+
+  std::filesystem::path captureConfigPath = context.GetPathSafe(Path::CONFIG, Mode::CAPTURE);
+  if (captureConfigPath.empty()) {
+    LOG_ERROR << "No config for capture was selected";
+    context.BtnsSideBar->SelectEntry(Context::SideBarItem::APP_LOG);
+
+    return;
+  }
+
+  if (!FileActions::Exists(gitsBasePath)) {
+    LOG_ERROR << "Selected GITS base path for capture: " << gitsBasePath.string()
+              << " doesn't exist";
+    context.BtnsSideBar->SelectEntry(Context::SideBarItem::APP_LOG);
+
+    return;
+  }
+
+  if (context.SelectedApiForCapture == Api::UNKNOWN) {
+    LOG_ERROR << "No API was selected for capture";
+    context.BtnsSideBar->SelectEntry(Context::SideBarItem::APP_LOG);
+
+    return;
+  }
+
+  LOG_INFO << "Copying recorder files for capture for API: "
+           << stringForApi.at(context.SelectedApiForCapture);
+  if (!capture_actions::CopyRecorderFiles(gitsBasePath, executablePath.parent_path(),
+                                          context.SelectedApiForCapture)) {
+    context.BtnsSideBar->SelectEntry(Context::SideBarItem::APP_LOG);
+
+    return;
+  }
+
+  TmpConfigInfo = PrepareTemporaryConfigFile(Mode::CAPTURE, executablePath.parent_path());
+
+  if (TmpConfigInfo.TemporaryConfigPath.empty()) {
+    LOG_ERROR << "Couldn't capture the stream. Couldn't create a temporary config file";
+
+    return;
+  }
+
+  ActionEvent event;
+  event.EventType = ActionEvent::Type::Capture;
+  event.ActionState = ActionEvent::State::Started;
+  EventBus::GetInstance().publish(event);
+  FileActions::LaunchExecutableThreadCallbackOnExit(
+      executablePath, context.CLIArguments, executablePath.parent_path(),
+      [](std::string msg) {
+        // We pass an empty lambda to the onOutput argument, since we only care about the recorder log which we load after
+        // TODO: Maybe this could change and play nicely with logToConsole
+      },
+      [executablePath, &context]() {
+        ActionEvent event;
+        event.EventType = ActionEvent::Type::Capture;
+        event.ActionState = ActionEvent::State::Ended;
+        EventBus::GetInstance().publish(event);
+      });
+}
+
 void CapturePanel::PathCallback(const Event& e) {
   const PathEvent& pathEvent = static_cast<const PathEvent&>(e);
 
@@ -261,14 +352,7 @@ void CapturePanel::PathCallback(const Event& e) {
 
   switch (pathEvent.EventType) {
   case PathEvent::Type::CONFIG:
-    LoadConfigFile();
-    break;
-  case PathEvent::Type::CAPTURE_TARGET:
-    UpdateCLICall();
-    break;
-  case PathEvent::Type::OUTPUT_STREAM:
-    capture_actions::UpdateConfigDumpPath();
-    LoadConfigFile();
+    LoadConfigFile(Mode::CAPTURE);
     break;
   default:
     break;
@@ -279,6 +363,27 @@ void CapturePanel::FileDropCallback(const Event& e) {
   const FileDropEvent& fileDropEvent = static_cast<const FileDropEvent&>(e);
   if (Context::GetInstance().AppMode == Mode::CAPTURE) {
     DroppedFilePath = fileDropEvent.FilePath;
+  }
+}
+
+void CapturePanel::ContextCallback(const Event& e) {
+  const ContextEvent& contextEvent = static_cast<const ContextEvent&>(e);
+
+  auto& context = Context::GetInstance();
+  auto& configurationForMode = context.ConfigurationForMode(Mode::CAPTURE);
+
+  if (contextEvent.EventType == ContextEvent::Type::InMemoryConfigurationChanged) {
+    configurationForMode.ConfigurationDirty = true;
+  }
+}
+
+void CapturePanel::ActionCallback(const Event& e) {
+  const ActionEvent& actionEvent = static_cast<const ActionEvent&>(e);
+
+  if (actionEvent.EventType == ActionEvent::Type::Capture &&
+      actionEvent.ActionState == ActionEvent::State::Ended) {
+    RestoreOriginalConfigIfNeeded(TmpConfigInfo);
+    TmpConfigInfo = TemporaryConfigInfo();
   }
 }
 } // namespace gits::gui

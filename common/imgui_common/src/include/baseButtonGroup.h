@@ -28,6 +28,11 @@ enum class ButtonStatus {
   Warning,
 };
 
+enum class ItemType {
+  Button,
+  Label,
+};
+
 struct ButtonGroupItem {
   std::string label;
   std::string tooltip = "";
@@ -35,6 +40,7 @@ struct ButtonGroupItem {
   std::string short_label = "";
   bool enabled = true;
   bool visible = true;
+  ItemType type = ItemType::Button;
 };
 
 template <typename T>
@@ -185,7 +191,11 @@ ImVec2 BaseButtonGroup<T>::GetSize() const {
     const auto& label =
         useRegularLabel ? item.label : (item.short_label.empty() ? item.label : item.short_label);
     ImVec2 btnSize = ImGui::CalcTextSize(label.c_str());
-    btnSize.x = ImGuiHelper::WidthOf(ImGuiHelper::Widgets::Button, label);
+    if (item.type == ItemType::Button) {
+      btnSize.x = ImGuiHelper::WidthOf(ImGuiHelper::Widgets::Button, label);
+    } else if (item.type == ItemType::Label) {
+      btnSize.x = ImGuiHelper::WidthOf(ImGuiHelper::Widgets::Text, label);
+    }
 
     if (isHorizontal) {
       size.x += btnSize.x + ImGui::GetStyle().ItemSpacing.x;

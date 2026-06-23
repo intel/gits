@@ -10,11 +10,11 @@
 
 #include <chrono>
 #include <ctime>
-#include <stdio.h>
 
 #include "log.h"
 #include <plog/Record.h>
 #include <plog/Util.h>
+#include <cstdio>
 
 namespace plog {
 class LauncherFormatter {

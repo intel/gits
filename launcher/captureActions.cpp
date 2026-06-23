@@ -211,7 +211,7 @@ void CaptureStream() {
   }
 
   LOG_INFO << "Copying config file for capture";
-  if (!FileActions::CopyFile(
+  if (!FileActions::CopyFileSafe(
           captureConfigPath,
           executablePath.parent_path() /
               filesystem_names::

@@ -7,9 +7,17 @@
 // ===================== end_copyright_notice ==============================
 
 #include "pluginsPanel.h"
-#include "configurationLib.h"
-#include "fileActions.h"
+#include "context.h"
 #include "launcherActions.h"
+#include "configOptions.h"
+#include <fstream>
+#include <iterator>
+#include <optional>
+#include <plog/Log.h>
+#include <exception>
+#include "eventBus.h"
+#include <functional>
+#include <imgui.h>
 
 namespace {
 // Helpers and messages / labels
@@ -40,21 +48,14 @@ static constexpr const char* INVALID_GITS_CONFIG_PATH_MESSAGE =
 namespace gits::gui {
 
 PluginsPanel::PluginsPanel() : BasePanel(), m_PluginConfigEditor("PluginConfigEditor") {
-  m_PluginConfigEditor.SetCheckCallback(
-      ValidateYaml); // Since plugin configs don't have a set structure, we use a generic YAML validation
+  m_PluginConfigEditor.SetFilterOutFirstYMLComment(true);
 
   EventBus::GetInstance().subscribe<PathEvent>(
-      std::bind(&PluginsPanel::BasePathCallback, this, std::placeholders::_1),
-      {PathEvent::Type::GITS_BASE});
-  EventBus::GetInstance().subscribe<PathEvent>(
-      std::bind(&PluginsPanel::ConfigPathCallback, this, std::placeholders::_1),
-      {PathEvent::Type::CONFIG});
+      std::bind(&PluginsPanel::PathCallback, this, std::placeholders::_1));
   EventBus::GetInstance().subscribe<AppEvent>(
-      std::bind(&PluginsPanel::ModeChangedCallback, this, std::placeholders::_1),
-      {AppEvent::Type::ModeChanged});
+      std::bind(&PluginsPanel::AppCallback, this, std::placeholders::_1));
   EventBus::GetInstance().subscribe<ContextEvent>(
-      std::bind(&PluginsPanel::ConfigEditedCallback, this, std::placeholders::_1),
-      {ContextEvent::Type::ConfigEdited});
+      std::bind(&PluginsPanel::ContextCallback, this, std::placeholders::_1));
 }
 
 void PluginsPanel::Render() {
@@ -126,16 +127,7 @@ bool PluginsPanel::LoadPluginConfig(const std::filesystem::path& pluginDirectory
     return false;
   }
 
-  auto fhandle = std::ifstream(pluginConfigPath);
-  if (fhandle.is_open()) {
-    const std::string str((std::istreambuf_iterator<char>(fhandle)),
-                          std::istreambuf_iterator<char>());
-    m_PluginConfigEditor.SetText(str);
-    m_PluginConfigEditor.SetFilePath(pluginConfigPath);
-  } else {
-    m_PluginConfigEditor.SetText("// Could not open file:\n> " + pluginConfigPath.string());
-    return false;
-  }
+  m_PluginConfigEditor.LoadFromFile(pluginConfigPath);
 
   return true;
 }
@@ -200,8 +192,8 @@ std::optional<PluginsPanel::PluginListEntry> PluginsPanel::GetPluginListEntry(
   }
 
   const auto& pluginsList = Context::GetInstance().AppMode == Mode::CAPTURE
-                                ? Configurator::Get().directx.recorder.plugins
-                                : Configurator::Get().directx.player.plugins;
+                                ? config_options::RecorderPlugins()
+                                : config_options::PlayerPlugins();
 
   entry.value().Enabled = std::ranges::find(pluginsList, entry.value().Name) != pluginsList.end();
 
@@ -210,16 +202,6 @@ std::optional<PluginsPanel::PluginListEntry> PluginsPanel::GetPluginListEntry(
 
 void PluginsPanel::LoadPluginsList() {
   m_PluginsList.clear();
-
-  // We need to load the GITS config to know which plugins are already enabled
-  const auto& gitsConfigPath = Context::GetInstance().GetPathSafe(Path::CONFIG);
-  if (gitsConfigPath.empty() || !std::filesystem::exists(gitsConfigPath)) {
-    return;
-  }
-
-  if (!Configurator::Instance().Load(gitsConfigPath)) {
-    return;
-  }
 
   const auto& pluginsPath = GetPluginsDirectory();
 
@@ -240,7 +222,9 @@ void PluginsPanel::LoadPluginsList() {
 }
 
 void PluginsPanel::UpdateGitsConfig(const std::string& pluginName, const bool enable) {
-  const auto& gitsConfigPath = Context::GetInstance().GetPathSafe(Path::CONFIG);
+  auto& context = Context::GetInstance();
+  const auto& gitsConfigPath = context.GetPathSafe(Path::CONFIG);
+
   if (gitsConfigPath.empty() || !std::filesystem::exists(gitsConfigPath)) {
     return;
   }
@@ -250,23 +234,16 @@ void PluginsPanel::UpdateGitsConfig(const std::string& pluginName, const bool en
   } else {
     LOG_INFO << "Disabling " << pluginName << "DirectX plugin";
   }
-  std::vector<std::string> pluginsList = Context::GetInstance().AppMode == Mode::CAPTURE
-                                             ? Configurator::Get().directx.recorder.plugins
-                                             : Configurator::Get().directx.player.plugins;
+  auto& pluginsList = context.AppMode == Mode::CAPTURE ? config_options::RecorderPlugins()
+                                                       : config_options::PlayerPlugins();
+
   if (enable) {
     pluginsList.push_back(pluginName);
   } else {
     std::erase(pluginsList, pluginName);
   }
 
-  FileActions::UpdateConfigYamlPath(
-      gitsConfigPath,
-      {"DirectX", Context::GetInstance().AppMode == Mode::CAPTURE ? "Recorder" : "Player",
-       "Plugins"},
-      std::move(pluginsList));
-
-  EventBus::GetInstance().publish<ContextEvent>(ContextEvent::Type::PluginsUpdated);
-  EventBus::GetInstance().publish<ContextEvent>(ContextEvent::Type::ConfigEdited);
+  context.UpdateInMemoryConfig();
 }
 
 void PluginsPanel::RenderPluginsList() {
@@ -311,20 +288,26 @@ void PluginsPanel::RenderSelectedPluginConfig() {
   }
 }
 
-void PluginsPanel::BasePathCallback(const Event& e) {
-  InvalidatePluginsList();
+void PluginsPanel::PathCallback(const Event& e) {
+  const PathEvent& pathEvent = static_cast<const PathEvent&>(e);
+  if (pathEvent.EventType == PathEvent::Type::GITS_BASE ||
+      pathEvent.EventType == PathEvent::Type::CONFIG) {
+    InvalidatePluginsList();
+  }
 }
 
-void PluginsPanel::ConfigPathCallback(const Event& e) {
-  InvalidatePluginsList();
+void PluginsPanel::AppCallback(const Event& e) {
+  const AppEvent& appEvent = static_cast<const AppEvent&>(e);
+  if (appEvent.EventType == AppEvent::Type::ModeChanged) {
+    InvalidatePluginsList();
+  }
 }
 
-void PluginsPanel::ModeChangedCallback(const Event& e) {
-  InvalidatePluginsList();
-}
-
-void PluginsPanel::ConfigEditedCallback(const Event& e) {
-  InvalidatePluginsList();
+void PluginsPanel::ContextCallback(const Event& e) {
+  const ContextEvent& contextEvent = static_cast<const ContextEvent&>(e);
+  if (contextEvent.EventType == ContextEvent::Type::InMemoryConfigurationChanged) {
+    InvalidatePluginsList();
+  }
 }
 
 } // namespace gits::gui

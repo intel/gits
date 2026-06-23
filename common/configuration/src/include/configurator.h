@@ -12,7 +12,9 @@
 #include <map>
 #include <string>
 #include <vector>
+
 #include <yaml-cpp/yaml.h>
+#include <yaml-cpp/emitter.h>
 
 #include "configurationAuto.h"
 #include "platform.h"
@@ -102,7 +104,14 @@ public: // Singleton
 
   bool Load(const std::string& config);
 
+  // Validation is only intended for the launcher as it modifies the in-memory configuration held here
+  std::optional<std::string> Validate(const std::string& config);
+
   static bool Save(const std::filesystem::path& filepath, const Configuration& config);
+  static bool Emit(YAML::Emitter& out,
+                   const Configuration& config,
+                   bool annotate = true,
+                   std::optional<YAML::Node> overrides = std::nullopt);
 
   bool ApplyOverrides(const std::filesystem::path& filepath, const std::string& processName);
   void DeriveData();

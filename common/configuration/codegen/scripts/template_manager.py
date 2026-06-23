@@ -50,6 +50,8 @@ class TemplateManager:
                 'include', 'configurationYAMLAuto.h'), ()),
             ('configurationYAMLAuto.cpp.mako',
                 os.path.join('configurationYAMLAuto.cpp'), ()),
+            ('configMetadataAuto.h.mako', os.path.join('include', 'configMetadataAuto.h'), ()),
+            ('configMetadataAuto.cpp.mako', os.path.join('configMetadataAuto.cpp'), ()),
         ]
         self.templates[Step.ENUMS] = [
             ('enumsAuto.h.mako', os.path.join('include', 'enumsAuto.h'), ()),

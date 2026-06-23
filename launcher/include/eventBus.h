@@ -14,7 +14,6 @@
 #include <string>
 #include <memory>
 #include <typeindex>
-#include <any>
 #include <filesystem>
 #include <queue>
 #include <mutex>
@@ -23,6 +22,8 @@
 
 // GITS Common includes
 #include "tools_lite.h"
+#include <optional>
+#include <type_traits>
 
 namespace gits::gui {
 
@@ -42,16 +43,22 @@ struct AppEvent : Event {
 
 struct ContextEvent : Event {
   enum class Type {
-    ConfigEdited,
     ConfigValidated,
     CaptureAPIChanged,
     CLIUpdated,
     AppArgumentsChanged,
-    PluginsUpdated,
-    MetadataLoaded
+    MetadataLoaded,
+    InMemoryConfigurationChanged,
+    ConfigFileLoaded
   };
 
   Type EventType;
+  std::optional<Mode> Mode = std::nullopt;
+
+  ContextEvent() {}
+
+  ContextEvent(Type type, std::optional<gits::gui::Mode> mode = std::nullopt)
+      : EventType(type), Mode(mode) {}
 };
 
 struct PathEvent : Event {
@@ -207,6 +214,10 @@ public:
     T event;
     event.EventType = type;
     publish<T>(event);
+  }
+
+  void publish(ContextEvent::Type type, std::optional<Mode> mode = std::nullopt) {
+    publish<ContextEvent>(ContextEvent(type, mode));
   }
 
   void publish(PathEvent::Type type, std::optional<Mode> mode = std::nullopt) {

@@ -6,7 +6,7 @@
 //
 // ===================== end_copyright_notice ==============================
 
-#pragma once
+#include "context.h"
 
 #include "imgui.h"
 #include <filesystem>
@@ -36,24 +36,24 @@
 #include "launcherFormatter.h"
 #include "mainWindow.h"
 #include "eventBus.h"
+#include "configOptions.h"
 
 #include <plog/Appenders/IAppender.h>
 #include <plog/Record.h>
 #include <plog/Util.h>
 #include <plog/Formatters/TxtFormatter.h>
 
+#include "configurationYamlAuto.h"
+
+#include "configurationYamlAuto.h"
+#include "configurationAuto.h"
+#include "configMetadataAuto.h"
+#include "yamlUtils.h"
+
 namespace gits::gui {
 
 void Context::UpdateFixedLauncherArguments() {
   FixedLauncherArguments = "";
-  if (AppMode == Mode::PLAYBACK) {
-    if (PlaybackOptionsPanel) {
-      FixedLauncherArguments += PlaybackOptionsPanel->GetCLIArguments();
-    }
-    if (ResourceDumpPanel) {
-      FixedLauncherArguments += ResourceDumpPanel->GetCLIArguments();
-    }
-  }
   FixedLauncherArguments += TheMainWindow->GetCLIArguments();
 }
 
@@ -93,12 +93,7 @@ std::optional<std::filesystem::path> Context::GetPath(Path pathType,
   // unique paths - independent of mode
   case Path::SCREENSHOTS:
     if (noMode || mode == Mode::PLAYBACK) {
-      return Paths.Playback.ScreenshotsPath;
-    }
-    return std::nullopt;
-  case Path::TRACE:
-    if (noMode || mode == Mode::PLAYBACK) {
-      return Paths.Playback.TracePath;
+      return config_options::OutputDir(Mode::PLAYBACK);
     }
     return std::nullopt;
   case Path::CAPTURE_TARGET:
@@ -119,6 +114,8 @@ std::optional<std::filesystem::path> Context::GetPath(Path pathType,
       return Paths.Playback.ConfigPath;
     case Path::INPUT_STREAM:
       return Paths.Playback.InputStreamPath;
+    case Path::TRACE:
+      return config_options::OutputTracePath(Mode::PLAYBACK);
     default:
       return std::nullopt;
     }
@@ -128,7 +125,9 @@ std::optional<std::filesystem::path> Context::GetPath(Path pathType,
     case Path::CONFIG:
       return Paths.Capture.ConfigPath;
     case Path::OUTPUT_STREAM:
-      return Paths.Capture.OutputStreamPath;
+      return config_options::DumpPath(Mode::CAPTURE);
+    case Path::TRACE:
+      return config_options::OutputTracePath(Mode::CAPTURE);
     default:
       return std::nullopt;
     }
@@ -140,7 +139,7 @@ std::optional<std::filesystem::path> Context::GetPath(Path pathType,
     case Path::INPUT_STREAM:
       return Paths.Subcapture.InputStreamPath;
     case Path::OUTPUT_STREAM:
-      return Paths.Subcapture.OutputStreamPath;
+      return config_options::SubcapturePath(Mode::SUBCAPTURE);
     default:
       return std::nullopt;
     }
@@ -157,6 +156,7 @@ std::filesystem::path Context::GetPathSafe(Path pathType, std::optional<Mode> ap
 bool Context::SetPath(std::filesystem::path path, Path pathType, std::optional<Mode> appMode) {
   Mode mode = appMode.has_value() ? appMode.value() : AppMode;
   auto result = false;
+  auto configModified = false;
   if (pathType == Path::GITS_BASE) {
     Paths.BasePath = path;
     result = true;
@@ -173,12 +173,14 @@ bool Context::SetPath(std::filesystem::path path, Path pathType, std::optional<M
         result = true;
         break;
       case Path::SCREENSHOTS:
-        Paths.Playback.ScreenshotsPath = path;
+        config_options::OutputDir(Mode::PLAYBACK) = path;
+        configModified = true;
         result = true;
         break;
       case Path::TRACE:
-        Paths.Playback.TracePath = path;
+        config_options::OutputTracePath(Mode::PLAYBACK) = path;
         result = true;
+        configModified = true;
         break;
       default:
         result = false;
@@ -196,8 +198,14 @@ bool Context::SetPath(std::filesystem::path path, Path pathType, std::optional<M
         result = true;
         break;
       case Path::OUTPUT_STREAM:
-        Paths.Capture.OutputStreamPath = path;
+        config_options::DumpPath(Mode::CAPTURE) = path;
+        configModified = true;
         result = true;
+        break;
+      case Path::TRACE:
+        config_options::OutputTracePath(Mode::CAPTURE) = path;
+        result = true;
+        configModified = true;
         break;
       default:
         result = false;
@@ -215,7 +223,8 @@ bool Context::SetPath(std::filesystem::path path, Path pathType, std::optional<M
         result = true;
         break;
       case Path::OUTPUT_STREAM:
-        Paths.Subcapture.OutputStreamPath = path;
+        config_options::SubcapturePath(Mode::SUBCAPTURE) = path;
+        configModified = true;
         result = true;
         break;
       default:
@@ -231,6 +240,9 @@ bool Context::SetPath(std::filesystem::path path, Path pathType, std::optional<M
 
   if (result) {
     EventBus::GetInstance().publish<PathEvent>(PathEvent(pathType, mode));
+  }
+  if (configModified) {
+    UpdateInMemoryConfig(mode);
   }
 
   return result;
@@ -251,51 +263,30 @@ bool Context::IsCapture() {
 void Context::ChangeMode(Mode mode) {
   AppMode = mode;
   //based on app mode
-  BtnsSideBar->SetEnabled(Context::SideBarItem::OPTIONS, IsPlayback());
-  BtnsSideBar->SetEnabled(Context::SideBarItem::STATS, IsPlayback());
-  BtnsSideBar->SetEnabled(Context::SideBarItem::RESOURCE_DUMP, IsPlayback());
+  BtnsSideBar->SetVisible(Context::SideBarItem::LABEL_STREAM, IsPlayback());
+  BtnsSideBar->SetVisible(Context::SideBarItem::STATS, IsPlayback());
+  BtnsSideBar->SetVisible(Context::SideBarItem::RESOURCE_DUMP, IsPlayback());
 
-  switch (mode) {
-  case Mode::PLAYBACK:
-    BtnsSideBar->SelectEntry(Context::SideBarItem::OPTIONS);
-    break;
-  case Mode::CAPTURE:
-    BtnsSideBar->SelectEntry(Context::SideBarItem::CONFIG);
-    break;
-  case Mode::SUBCAPTURE:
-    BtnsSideBar->SelectEntry(Context::SideBarItem::CONFIG);
-    break;
-  };
+  BtnsSideBar->SelectEntry(Context::SideBarItem::OPTIONS);
 
   UpdateFixedLauncherArguments();
-  gits::gui::UpdateCLICall();
-  gits::gui::LoadConfigFile();
+  gits::gui::LoadConfigFromMemory(mode);
   GITSLogEditor->SetText("");
+
+  auto& currentModeConfiguration = ConfigurationForMode();
+
+  currentModeConfiguration.ModifiedGitsConfigurationStr =
+      GetYamlStringFromConfig(currentModeConfiguration);
 
   EventBus::GetInstance().publish<AppEvent>(AppEvent::Type::ModeChanged);
 }
 
 void Context::UpdatePalette() {
-  if (ConfigEditor) {
-    ConfigEditor->UpdatePalette();
-  }
   if (LogEditor) {
     LogEditor->UpdatePalette();
   }
   if (GITSLogEditor) {
     GITSLogEditor->UpdatePalette();
-  }
-  if (TraceInfoEditor) {
-    TraceInfoEditor->UpdatePalette();
-  }
-  if (DiagsEditor) {
-    DiagsEditor->UpdatePalette();
-  }
-  if (TraceConfigEditor) {
-    TraceConfigEditor->UpdatePalette();
-  }
-  if (TraceStatsEditor) {
-    TraceStatsEditor->UpdatePalette();
   }
 }
 
@@ -353,6 +344,72 @@ void Context::SetCaptureAPI(Api api) {
     }
   }
 }
+
+Context::ModeConfiguration& Context::ConfigurationForMode(std::optional<Mode> mode) {
+  if (!mode.has_value()) {
+    mode = AppMode;
+  }
+
+  switch (mode.value()) {
+  case Mode::CAPTURE:
+    return CaptureGitsConfig;
+  case Mode::PLAYBACK:
+    return PlaybackGitsConfig;
+  case Mode::SUBCAPTURE:
+    return SubcaptureGitsConfig;
+  default:
+    // Shouldn't happen
+    assert(0 && "Unhandled launcher mode");
+    return CaptureGitsConfig;
+  }
+}
+
+void Context::UpdateConfigDelta(std::optional<Mode> mode) {
+  const auto appMode = mode.has_value() ? mode.value() : AppMode;
+  auto& configurationForMode = ConfigurationForMode(appMode);
+
+  const auto& lookupFunc = [](const std::string& path) -> std::string {
+    const auto result = gits::ConfigMetadata::Get(path);
+    if (!result) {
+      return "";
+    }
+    return result->ShortDescription;
+  };
+
+  try {
+    const auto node1 =
+        YAML::convert<Configuration>::encode(configurationForMode.ModifiedGitsConfiguration);
+    const auto node2 =
+        YAML::convert<Configuration>::encode(configurationForMode.BaseGitsConfiguration);
+
+    configurationForMode.ConfigDeltaStr =
+        yaml_utils::YamlDeltaGenerator::GenerateDelta(node1, node2, lookupFunc);
+  } catch (const YAML::Exception& e) {
+    LOG_ERROR << "Error generating config delta: " << e.what();
+    configurationForMode.ConfigDeltaStr = "";
+  }
+}
+
+void Context::UpdateInMemoryConfig(std::optional<Mode> mode) {
+  const auto appMode = mode.has_value() ? mode.value() : AppMode;
+
+  UpdateConfigDelta(appMode);
+  EventBus::GetInstance().publish<ContextEvent>(
+      {ContextEvent::Type::InMemoryConfigurationChanged, appMode});
+}
+
+namespace {
+// These are here just to satisfy the GITS Configuration constructor interface
+// TODO: Could something be changed in regards to initialization of the GITS Configuration struct?
+static bool g_BaseConfigValidityFlag = false;
+static bool g_ModifiedConfigValidityFlag = false;
+} // namespace
+
+Context::Context()
+    : CaptureGitsConfig(g_BaseConfigValidityFlag, g_ModifiedConfigValidityFlag),
+      PlaybackGitsConfig(g_BaseConfigValidityFlag, g_ModifiedConfigValidityFlag),
+      SubcaptureGitsConfig(g_BaseConfigValidityFlag, g_ModifiedConfigValidityFlag),
+      BtnsSideBar(nullptr) {}
 
 void TextEditorAppender::write(const plog::Record& record) {
   if (!m_Editor) {

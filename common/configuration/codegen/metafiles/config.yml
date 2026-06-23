@@ -175,6 +175,10 @@ Configuration:
               recording. Then, player exits.
           - Name: ExecutableNameOverride
             Type: Group
+            Description: Renames GITS Player before playing back the stream
+            LongDescription: |
+              Renames GITS Player before playing back the stream.
+              If CustomName is empty, the original name of the captured application found in the stream will be used (if available).
             Options:
               - Name: Enabled
                 Type: bool
@@ -598,6 +602,10 @@ Configuration:
           - Name: enabled
             Type: bool
             Default: true
+            Description: Whether recording is enabled or not
+            LongDescription: |
+              Whether recording is enabled or not.
+              Recorder can be disabled so GITS acts as an interceptor that allows for tracing, logging etc.
           - Name: logToConsole
             Type: bool
             Default: false

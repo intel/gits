@@ -43,15 +43,20 @@ bool ButtonGroup<T>::Render(bool newLine) {
       continue;
     }
 
-    this->PushButtonStyle(item);
-    ImGui::BeginDisabled(!this->btnEnabled[it->first] && !item.enabled);
-    if (ImGui::Button(this->GetLabel(item).c_str(), btnSize)) {
-      clicked = true;
-      this->selectedIndex = i;
+    if (item.type == ItemType::Button) {
+      this->PushButtonStyle(item);
+      ImGui::BeginDisabled(!this->btnEnabled[it->first]);
+      if (ImGui::Button(this->GetLabel(item).c_str(), btnSize)) {
+        clicked = true;
+        this->selectedIndex = i;
+      }
+      this->AddTooltip(item);
+      ImGui::EndDisabled();
+      this->PopButtonStyle();
+    } else if (item.type == ItemType::Label) {
+      ImGui::Text("%s", this->GetLabel(item).c_str());
+      this->AddTooltip(item);
     }
-    this->AddTooltip(item);
-    ImGui::EndDisabled();
-    this->PopButtonStyle();
     if (this->isHorizontal) {
       ImGui::SameLine();
     }

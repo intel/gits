@@ -187,6 +187,29 @@ bool Configurator::Load(const std::string& config) {
   return LoadInto(config, &configuration);
 }
 
+std::optional<std::string> Configurator::Validate(const std::string& config) {
+  GITS_ASSERT(!m_configurationLocked, "Configurator::Validate() called after Lock()");
+  bool result = false;
+  try {
+    const YAML::Node node = YAML::Load(config);
+    if (YAML::convert<Configuration>::decode(node, configuration)) {
+      CheckLegacyPaths(node, configuration);
+      result = true;
+    }
+  } catch (const YAML::ParserException& e) {
+    return "YAML Parser Exception: " + std::string(e.what());
+  } catch (const YAML::BadConversion& e) {
+    return "YAML Bad Conversion Exception: " + std::string(e.what());
+  } catch (const YAML::Exception& e) {
+    return "YAML Exception: " + std::string(e.what());
+  } catch (...) {
+  }
+  if (!result) {
+    return "Failed to decode YAML to Configuration";
+  }
+  return std::nullopt; // No errors, configuration is valid
+}
+
 bool Configurator::Save(const std::filesystem::path& filepath, const Configuration& config) {
   try {
     YAML::Node node = YAML::convert<Configuration>::encode(config);
@@ -200,6 +223,19 @@ bool Configurator::Save(const std::filesystem::path& filepath, const Configurati
     return true;
   } catch (const std::exception& e) {
     LOG_ERROR << "Exception during save: " << e.what() << std::endl;
+    return false;
+  }
+}
+
+bool Configurator::Emit(YAML::Emitter& out,
+                        const Configuration& config,
+                        bool annotate,
+                        std::optional<YAML::Node> overrides) {
+  try {
+    YAML::convert<Configuration>::emit(out, config, annotate, overrides);
+    return true;
+  } catch (const std::exception& e) {
+    LOG_ERROR << "Exception when emitting configuration: " << e.what();
     return false;
   }
 }

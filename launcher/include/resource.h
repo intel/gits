@@ -10,9 +10,31 @@
 
 #define APP_ICON      101
 #define APP_FILE_ICON 102
-#define APP_VERSION   "0.1.9"
+#define APP_VERSION   "1.0.0"
 
 inline const char* RELEASE_NOTES = R"(
+Release Notes v1.0.0
+====================
+- New YAML-Editor panel:
+  - Tree for navigation,
+  - New YAML syntax highlighting
+  - Live validation of YAML syntax with error markers
+  - Filter for initial comment/copyright blocks in plugin editor
+- New metadata panel:
+  - Diags are converted to YAML format for consistency
+  - Tree for navigating in config and diags section
+  - New YAML syntax highlighting
+- UX improvements:
+  - Added Info/Help buttons for most GUI options
+  - Added ability to send Launcher log via email
+  - A 'New Session' button to reset paths/configs
+  - The captured stream is now automatically set as input for playback & subcapture
+  - Tabs for YAML text editor
+  - Tabs for configuration & plugin editor
+- Moved 'Detect GITS base' paths to GITS Button popup menu
+- Left action button bar segmented & cleaned up
+  - Removed CLI tab as it's no longer needed
+
 Release Notes v0.1.9
 ====================
 - Added ability to send GITS log via email
