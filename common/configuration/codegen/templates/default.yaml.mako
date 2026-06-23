@@ -66,10 +66,4 @@ ${render_group(option, 0)}\
 # Override gits_config.yml with settings based on the executable name
 # GITS will override the base configuration with the YAML under each entry
 
-# Example entry (disable recording for MyApplication.exe):
-#   MyApplication:
-#     Common:
-#       Recorder:
-#         Enabled: false
-
 Overrides:

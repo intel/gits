@@ -20,6 +20,7 @@ Release Notes v1.0.0
   - New YAML syntax highlighting
   - Live validation of YAML syntax with error markers
   - Filter for initial comment/copyright blocks in plugin editor
+  - Add support for the new overrides format
 - New metadata panel:
   - Diags are converted to YAML format for consistency
   - Tree for navigating in config and diags section

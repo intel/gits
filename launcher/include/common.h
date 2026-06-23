@@ -26,6 +26,10 @@ static constexpr const char* GITS_RECORDER_LINUX = "libgitsRecorder.so";
 static constexpr const char* GITS_STREAM = "stream.gits2";
 } // namespace filesystem_names
 
+namespace yaml_constants {
+static constexpr const char* OVERRIDES_KEY = "Overrides";
+}
+
 enum class Api {
   UNKNOWN = 0,
   DIRECTX,

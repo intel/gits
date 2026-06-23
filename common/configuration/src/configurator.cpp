@@ -254,12 +254,30 @@ bool Configurator::ApplyOverrides(const std::filesystem::path& filepath,
     if (!node["Overrides"]) {
       return false;
     }
-    if (node["Overrides"][processName]) {
-      if (YAML::convert<Configuration>::decode(node["Overrides"][processName], configuration)) {
-        return true;
-      } else {
-        LOG_ERROR << "Failed to decode YAML to Configuration" << std::endl;
-        return false;
+
+    if (node["Overrides"].IsSequence()) {
+      // New Overrides format
+      for (const auto& ovr : node["Overrides"]) {
+        if (ovr["Executable"] && ovr["Executable"].as<std::string>() == processName) {
+          if (ovr["Config"]) {
+            if (YAML::convert<Configuration>::decode(ovr["Config"], configuration)) {
+              return true;
+            } else {
+              LOG_ERROR << "Failed to decode YAML to Configuration" << std::endl;
+              return false;
+            }
+          }
+        }
+      }
+    } else {
+      // Old Overrides format
+      if (node["Overrides"][processName]) {
+        if (YAML::convert<Configuration>::decode(node["Overrides"][processName], configuration)) {
+          return true;
+        } else {
+          LOG_ERROR << "Failed to decode YAML to Configuration" << std::endl;
+          return false;
+        }
       }
     }
   } catch (const YAML::Exception& e) {

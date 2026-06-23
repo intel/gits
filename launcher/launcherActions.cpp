@@ -406,9 +406,9 @@ void LoadConfigFile(Mode mode) {
     if (gits::Configurator::LoadInto(yaml, &configurationForMode.BaseGitsConfiguration)) {
       std::optional<YAML::Node> baseOverrides = std::nullopt;
       if (yaml["Overrides"]) {
-        baseOverrides = yaml["Overrides"];
-        configurationForMode.BaseOverrides = yaml["Overrides"];
-        configurationForMode.ModifiedOverrides = yaml["Overrides"];
+        baseOverrides = YAML::Clone(yaml["Overrides"]);
+        configurationForMode.BaseOverrides = baseOverrides.value();
+        configurationForMode.ModifiedOverrides = YAML::Clone(yaml["Overrides"]);
       }
       configurationForMode.BaseGitsConfigurationStr =
           GetYamlStringFromConfig(configurationForMode.BaseGitsConfiguration, baseOverrides);

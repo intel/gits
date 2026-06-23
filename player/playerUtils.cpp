@@ -74,7 +74,9 @@ bool ConfigurePlayer(const std::filesystem::path& playerPath, ArgumentParser& ar
 #elif defined GITS_PLATFORM_LINUX
   const auto& processName = GetLinuxProcessName(getpid());
 #endif
-  Configurator::Instance().ApplyOverrides(configPath, processName);
+  if (Configurator::Instance().ApplyOverrides(configPath, processName)) {
+    LOG_INFO << "Found and loaded overrides for process: " << processName;
+  }
 
   auto& cfg = Configurator::GetMutable();
   cfg.common.mode = GITSMode::MODE_PLAYER;

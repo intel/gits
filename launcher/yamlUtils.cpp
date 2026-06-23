@@ -66,38 +66,36 @@ void YamlDeltaGenerator::GenerateDeltaRecursive(const YAML::Node& current,
                                                 const YAML::Node& base,
                                                 YAML::Node& delta,
                                                 std::vector<std::string>& keyPath) {
-  if (!current.IsMap()) {
-    return;
-  }
+  if (current.IsMap()) {
+    for (const auto& pair : current) {
+      std::string key = pair.first.as<std::string>();
+      const YAML::Node& currentValue = pair.second;
 
-  for (const auto& pair : current) {
-    std::string key = pair.first.as<std::string>();
-    const YAML::Node& currentValue = pair.second;
+      keyPath.push_back(key);
 
-    keyPath.push_back(key);
-
-    if (!base[key]) {
-      // Key doesn't exist in base - this is a new addition
-      delta[key] = currentValue;
-    } else {
-      const YAML::Node& baseValue = base[key];
-
-      if (currentValue.IsMap() && baseValue.IsMap()) {
-        // Both are maps - recurse deeper
-        YAML::Node subDelta;
-        GenerateDeltaRecursive(currentValue, baseValue, subDelta, keyPath);
-
-        // Only add to delta if there are differences
-        if (subDelta.size() > 0) {
-          delta[key] = subDelta;
-        }
-      } else if (!NodesEqual(currentValue, baseValue)) {
-        // Values are different - add to delta
+      if (!base[key]) {
+        // Key doesn't exist in base - this is a new addition
         delta[key] = currentValue;
-      }
-    }
+      } else {
+        const YAML::Node& baseValue = base[key];
 
-    keyPath.pop_back();
+        if (currentValue.IsMap() && baseValue.IsMap()) {
+          // Both are maps - recurse deeper
+          YAML::Node subDelta;
+          GenerateDeltaRecursive(currentValue, baseValue, subDelta, keyPath);
+
+          // Only add to delta if there are differences
+          if (subDelta.size() > 0) {
+            delta[key] = subDelta;
+          }
+        } else if (!NodesEqual(currentValue, baseValue)) {
+          // Values are different (including sequences) - add to delta
+          delta[key] = currentValue;
+        }
+      }
+
+      keyPath.pop_back();
+    }
   }
 }
 
@@ -117,40 +115,135 @@ void YamlDeltaGenerator::GenerateFormattedYaml(
     std::string path = BuildPath(keyPath);
 
     if (value.IsMap()) {
-      // Add the key
-      output += indentStr + key + ":\n";
-
-      // Add comment if available
-      if (commentLookup) {
-        std::string comment = commentLookup(path);
-        if (!comment.empty()) {
-          output += indentStr + "  # " + comment + "\n";
+      // Handle empty maps
+      if (value.size() == 0) {
+        output += indentStr + key + ": {}";
+        if (commentLookup) {
+          std::string comment = commentLookup(path);
+          if (!comment.empty()) {
+            output += " # " + comment;
+          }
         }
-      }
+        output += "\n";
+      } else {
+        // Add the key
+        output += indentStr + key + ":\n";
 
-      // Recurse for nested maps
-      GenerateFormattedYaml(value, keyPath, output, commentLookup, indent + 2);
+        // Add comment if available
+        if (commentLookup) {
+          std::string comment = commentLookup(path);
+          if (!comment.empty()) {
+            output += indentStr + "  # " + comment + "\n";
+          }
+        }
+
+        // Recurse for nested maps
+        GenerateFormattedYaml(value, keyPath, output, commentLookup, indent + 2);
+      }
     } else if (value.IsSequence()) {
-      // Handle sequences (arrays/lists)
-      output += indentStr + key + ":";
-
-      // Add comment if available
-      if (commentLookup) {
-        std::string comment = commentLookup(path);
-        if (!comment.empty()) {
-          output += " # " + comment;
+      // Handle empty sequences
+      if (value.size() == 0) {
+        output += indentStr + key + ": []";
+        if (commentLookup) {
+          std::string comment = commentLookup(path);
+          if (!comment.empty()) {
+            output += " # " + comment;
+          }
         }
-      }
-      output += "\n";
+        output += "\n";
+      } else {
+        // Handle sequences (arrays/lists)
+        output += indentStr + key + ":";
 
-      // Add each sequence item
-      for (const auto& item : value) {
-        output += indentStr + "  - ";
-        std::string itemStr = YAML::Dump(item);
-        if (!itemStr.empty() && itemStr.back() == '\n') {
-          itemStr.pop_back(); // Remove trailing newline from YAML::Dump
+        // Add comment if available
+        if (commentLookup) {
+          std::string comment = commentLookup(path);
+          if (!comment.empty()) {
+            output += " # " + comment;
+          }
         }
-        output += itemStr + "\n";
+        output += "\n";
+
+        // Add each sequence item
+        for (const auto& item : value) {
+          if (item.IsMap()) {
+            // For maps in sequences, we need special handling
+            bool firstKey = true;
+            for (const auto& itemPair : item) {
+              std::string itemKey = itemPair.first.as<std::string>();
+              const YAML::Node& itemValue = itemPair.second;
+
+              if (firstKey) {
+                // First key gets the "- " prefix
+                output += indentStr + "  - " + itemKey + ":";
+                firstKey = false;
+              } else {
+                // Subsequent keys are indented to align with the first key
+                output += indentStr + "    " + itemKey + ":";
+              }
+
+              keyPath.push_back(itemKey);
+              std::string itemPath = BuildPath(keyPath);
+
+              // Handle empty nodes first
+              if (!itemValue.IsDefined() || (itemValue.IsSequence() && itemValue.size() == 0)) {
+                output += " []";
+                if (commentLookup) {
+                  std::string comment = commentLookup(itemPath);
+                  if (!comment.empty()) {
+                    output += " # " + comment;
+                  }
+                }
+                output += "\n";
+              } else if (itemValue.IsMap() && itemValue.size() == 0) {
+                output += " {}";
+                if (commentLookup) {
+                  std::string comment = commentLookup(itemPath);
+                  if (!comment.empty()) {
+                    output += " # " + comment;
+                  }
+                }
+                output += "\n";
+              } else if (itemValue.IsMap()) {
+                output += "\n";
+                // Recurse with proper indentation (4 more spaces from the "- ")
+                GenerateFormattedYaml(itemValue, keyPath, output, commentLookup, indent + 6);
+              } else if (itemValue.IsSequence()) {
+                output += "\n";
+                // Handle nested sequences - create a temporary node to recurse
+                YAML::Node tempNode;
+                tempNode[itemKey] = itemValue;
+                GenerateFormattedYaml(tempNode, keyPath, output, commentLookup, indent + 6);
+              } else {
+                // Scalar value
+                output += " ";
+                std::string valueStr = YAML::Dump(itemValue);
+                if (!valueStr.empty() && valueStr.back() == '\n') {
+                  valueStr.pop_back();
+                }
+                output += valueStr;
+
+                if (commentLookup) {
+                  std::string comment = commentLookup(itemPath);
+                  if (!comment.empty()) {
+                    output += " # " + comment;
+                  }
+                }
+                output += "\n";
+              }
+
+              keyPath.pop_back();
+            }
+          } else {
+            // Simple scalar in sequence
+            output += indentStr + "  - ";
+            std::string itemStr = YAML::Dump(item);
+            if (!itemStr.empty() && itemStr.back() == '\n') {
+              itemStr.pop_back();
+            }
+            output += itemStr + "\n";
+          }
+        }
       }
     } else {
       // Leaf node - add key: value with comment
@@ -160,6 +253,7 @@ void YamlDeltaGenerator::GenerateFormattedYaml(
       if (!valueStr.empty() && valueStr.back() == '\n') {
         valueStr.pop_back(); // Remove trailing newline from YAML::Dump
       }
+
       output += valueStr;
 
       if (commentLookup) {

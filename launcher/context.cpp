@@ -377,10 +377,15 @@ void Context::UpdateConfigDelta(std::optional<Mode> mode) {
   };
 
   try {
-    const auto node1 =
+    auto node1 =
         YAML::convert<Configuration>::encode(configurationForMode.ModifiedGitsConfiguration);
-    const auto node2 =
-        YAML::convert<Configuration>::encode(configurationForMode.BaseGitsConfiguration);
+    if (configurationForMode.ModifiedOverrides) {
+      node1[yaml_constants::OVERRIDES_KEY] = configurationForMode.ModifiedOverrides;
+    }
+    auto node2 = YAML::convert<Configuration>::encode(configurationForMode.BaseGitsConfiguration);
+    if (configurationForMode.BaseOverrides) {
+      node2[yaml_constants::OVERRIDES_KEY] = configurationForMode.BaseOverrides;
+    }
 
     configurationForMode.ConfigDeltaStr =
         yaml_utils::YamlDeltaGenerator::GenerateDelta(node1, node2, lookupFunc);

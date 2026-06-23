@@ -103,7 +103,7 @@ STREAM_META_DATA GetStreamMetaData(std::filesystem::path streamPath) {
             // After getting the recorder config from the diags, we store it and erase it from diags
             if (j.contains("diag") && j["diag"].contains("gits") &&
                 j["diag"]["gits"].contains("config")) {
-              metaData.RecorderConfig = j["diag"]["gits"]["config"].dump();
+              metaData.RecorderConfig = j["diag"]["gits"]["config"];
               if (metaData.RecorderConfig.size() >= 2 && metaData.RecorderConfig.front() == '"' &&
                   metaData.RecorderConfig.back() == '"') {
                 metaData.RecorderConfig =

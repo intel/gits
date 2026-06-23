@@ -67,7 +67,9 @@ bool ConfigureRecorder(const std::filesystem::path& configPath, bool legacyMode)
   const auto& processName = GetLinuxProcessName(pid);
 #endif
   const auto& processNameHUD = processName.empty() ? "<unknown>" : processName;
-  Configurator::Instance().ApplyOverrides(configPath, processName);
+  if (Configurator::Instance().ApplyOverrides(configPath, processName)) {
+    LOG_INFO << "Found and loaded overrides for process: " << processName;
+  }
 
   Configurator::GetMutable().common.mode = GITSMode::MODE_RECORDER;
 
