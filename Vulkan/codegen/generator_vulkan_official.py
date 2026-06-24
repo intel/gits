@@ -10828,7 +10828,7 @@ var17=VarDef(name='ppUsageCounts', type='const VkMicromapUsageEXT* const*'),
 var18=VarDef(name='micromap', type='VkMicromapEXT')
 )
 
-Struct(name='VkAccelerationStructureTrianglesOpacityMicromapEXT_', enabled=True, passStructStorage=True, constructorWrap=True,
+Struct(name='VkAccelerationStructureTrianglesOpacityMicromapEXT_', enabled=True, passStructStorage=True, #constructorWrap=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='indexType', type='VkIndexType'),
