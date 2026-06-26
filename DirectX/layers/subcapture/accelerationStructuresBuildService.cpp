@@ -34,7 +34,8 @@ AccelerationStructuresBuildService::AccelerationStructuresBuildService(
       m_ReservedResourcesService(reservedResourcesService),
       m_BufferContentRestore(m_StateService),
       m_ResourceStateTracker(resourceStateTracker),
-      m_GpuAddressService(gpuAddressService) {
+      m_GpuAddressService(gpuAddressService),
+      m_OptimizationService(m_StateService, m_BufferContentRestore) {
   m_SerializeMode = Configurator::Get().directx.features.subcapture.serializeAccelerationStructures;
   m_RestoreTlas = Configurator::Get().directx.features.subcapture.restoreTLASes;
   m_Optimize = Configurator::Get().directx.features.subcapture.optimize;
@@ -95,7 +96,7 @@ void AccelerationStructuresBuildService::BuildAccelerationStructure(
 
   if (m_SerializeMode &&
       c.m_pDesc.Value->Inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
-    m_Tlases.insert(std::make_pair(state->DestKey, state->DestOffset));
+    m_TlasesKeyOffsets.insert(std::make_pair(state->DestKey, state->DestOffset));
   }
 
   state->Desc.reset(
@@ -277,16 +278,15 @@ void AccelerationStructuresBuildService::BuildAccelerationStructure(
   }
 
   inputBufferService.StoreBuffers(c.Key, c.m_Object.Value, state);
-
-  m_StatesByCommandList[c.m_Object.Key].emplace_back(state);
+  m_OptimizationService.AddState(c.m_Object.Key, state);
 }
 
 void AccelerationStructuresBuildService::CopyAccelerationStructure(
     ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& c) {
   if (m_SerializeMode) {
-    auto it = m_Tlases.find(std::make_pair(c.m_DestAccelerationStructureData.InterfaceKey,
-                                           c.m_DestAccelerationStructureData.Offset));
-    if (it == m_Tlases.end()) {
+    auto it = m_TlasesKeyOffsets.find(std::make_pair(c.m_DestAccelerationStructureData.InterfaceKey,
+                                                     c.m_DestAccelerationStructureData.Offset));
+    if (it == m_TlasesKeyOffsets.end()) {
       return;
     }
   }
@@ -303,8 +303,7 @@ void AccelerationStructuresBuildService::CopyAccelerationStructure(
   state->Mode = c.m_Mode.Value;
 
   m_StateService.KeepState(c.m_DestAccelerationStructureData.InterfaceKey);
-
-  m_StatesByCommandList[c.m_Object.Key].emplace_back(state);
+  m_OptimizationService.AddState(c.m_Object.Key, state);
 }
 
 void AccelerationStructuresBuildService::NvapiBuildAccelerationStructureEx(
@@ -355,7 +354,7 @@ void AccelerationStructuresBuildService::NvapiBuildAccelerationStructureEx(
 
   if (m_SerializeMode &&
       buildDesc->inputs.type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
-    m_Tlases.insert(std::make_pair(state->DestKey, state->DestOffset));
+    m_TlasesKeyOffsets.insert(std::make_pair(state->DestKey, state->DestOffset));
   }
 
   state->Desc.reset(
@@ -665,8 +664,7 @@ void AccelerationStructuresBuildService::NvapiBuildAccelerationStructureEx(
   }
 
   inputBufferService.StoreBuffers(c.Key, c.m_pCommandList.Value, state);
-
-  m_StatesByCommandList[c.m_pCommandList.Key].emplace_back(state);
+  m_OptimizationService.AddState(c.m_pCommandList.Key, state);
 }
 
 void AccelerationStructuresBuildService::NvapiBuildOpacityMicromapArray(
@@ -755,18 +753,15 @@ void AccelerationStructuresBuildService::NvapiBuildOpacityMicromapArray(
   }
 
   inputBufferService.StoreBuffers(c.Key, c.m_pCommandList.Value, state);
-
-  m_StatesByCommandList[c.m_pCommandList.Key].emplace_back(state);
+  m_OptimizationService.AddState(c.m_pCommandList.Key, state);
 }
 
 void AccelerationStructuresBuildService::RestoreAccelerationStructures() {
-  if (m_StatesById.empty()) {
+  if (m_OptimizationService.GetStates().empty()) {
     return;
   }
 
-  CompleteSourcesFromAnalysis();
-  RemoveSourcesWithoutDestinations();
-  Optimize();
+  m_OptimizationService.Optimize();
 
   m_BufferContentRestore.WaitUntilDumped();
 
@@ -895,7 +890,7 @@ void AccelerationStructuresBuildService::RestoreAccelerationStructures() {
   }
 
   // restoring RTAS
-  for (auto& itState : m_StatesById) {
+  for (auto& itState : m_OptimizationService.GetStates()) {
     if (itState.second->Kind == RaytracingAccelerationStructureState::StateKind::Build) {
       BuildRaytracingAccelerationStructureState* state =
           static_cast<BuildRaytracingAccelerationStructureState*>(itState.second);
@@ -981,15 +976,7 @@ void AccelerationStructuresBuildService::ExecuteCommandLists(
   if (m_Restored) {
     return;
   }
-  for (unsigned commandListKey : c.m_ppCommandLists.Keys) {
-    auto itStates = m_StatesByCommandList.find(commandListKey);
-    if (itStates != m_StatesByCommandList.end()) {
-      for (RaytracingAccelerationStructureState* state : itStates->second) {
-        StoreState(state);
-      }
-      m_StatesByCommandList.erase(itStates);
-    }
-  }
+  m_OptimizationService.StoreStatesOnExecute(c.m_ppCommandLists.Keys);
   m_BufferContentRestore.ExecuteCommandLists(c.Key, c.m_Object.Key, c.m_Object.Value,
                                              c.m_ppCommandLists.Value, c.m_NumCommandLists.Value);
 }
@@ -1010,7 +997,7 @@ void AccelerationStructuresBuildService::FenceSignal(unsigned key,
 
 void AccelerationStructuresBuildService::InitUploadBuffer() {
   size_t maxPerBuildUploadSize = 0;
-  for (auto& itState : m_StatesById) {
+  for (auto& itState : m_OptimizationService.GetStates()) {
     std::vector<AccelerationStructuresBufferContentRestore::BufferRestoreInfo>& restoreInfos =
         m_BufferContentRestore.GetRestoreInfos(itState.second->CommandKey);
     size_t uploadSize = 0;
@@ -1400,117 +1387,6 @@ void AccelerationStructuresBuildService::RecordExecuteCommandLists(const Command
   m_StateService.GetRecorder().Record(ID3D12GraphicsCommandListResetSerializer(commandListReset));
 }
 
-void AccelerationStructuresBuildService::StoreState(RaytracingAccelerationStructureState* state) {
-
-  unsigned stateId = ++m_StateUniqueId;
-  m_StatesById[stateId] = state;
-  if (state->SourceKey) {
-    unsigned sourceId = GetState(state->SourceKey, state->SourceOffset);
-    GITS_ASSERT(sourceId);
-
-    // remove intermediate update
-    if (state->Kind == RaytracingAccelerationStructureState::StateKind::Build) {
-      BuildRaytracingAccelerationStructureState* buildState =
-          static_cast<BuildRaytracingAccelerationStructureState*>(state);
-      if (buildState->Update) {
-        auto itPrimarySource = m_StateSourceByDest.find(sourceId);
-        if (itPrimarySource != m_StateSourceByDest.end()) {
-          sourceId = itPrimarySource->second;
-          auto itPrimarySourceState = m_StatesById.find(sourceId);
-          GITS_ASSERT(itPrimarySourceState != m_StatesById.end());
-          buildState->SourceKey = itPrimarySourceState->second->DestKey;
-          buildState->SourceOffset = itPrimarySourceState->second->DestOffset;
-          buildState->Desc->SourceAccelerationStructureKey = buildState->SourceKey;
-          buildState->Desc->SourceAccelerationStructureOffset = buildState->SourceOffset;
-        }
-      }
-    } else if (state->Kind == RaytracingAccelerationStructureState::StateKind::NvAPIBuild) {
-      NvAPIBuildRaytracingAccelerationStructureExState* buildState =
-          static_cast<NvAPIBuildRaytracingAccelerationStructureExState*>(state);
-      if (buildState->Update) {
-        auto itPrimarySource = m_StateSourceByDest.find(sourceId);
-        if (itPrimarySource != m_StateSourceByDest.end()) {
-          sourceId = itPrimarySource->second;
-          auto itPrimarySourceState = m_StatesById.find(sourceId);
-          GITS_ASSERT(itPrimarySourceState != m_StatesById.end());
-          buildState->SourceKey = itPrimarySourceState->second->DestKey;
-          buildState->SourceOffset = itPrimarySourceState->second->DestOffset;
-          buildState->Desc->SourceAccelerationStructureKey = buildState->SourceKey;
-          buildState->Desc->SourceAccelerationStructureOffset = buildState->SourceOffset;
-        }
-      }
-    }
-
-    m_StateSourceByDest[stateId] = sourceId;
-    m_StateDestsBySource[sourceId].insert(stateId);
-  }
-
-  // remove previous state if not a source for any AS
-  unsigned prevStateId = GetState(state->DestKey, state->DestOffset);
-  if (prevStateId) {
-    auto itDests = m_StateDestsBySource.find(prevStateId);
-    if (itDests == m_StateDestsBySource.end()) {
-      RemoveState(prevStateId);
-    }
-  }
-
-  m_StateByKeyOffset[{state->DestKey, state->DestOffset}].insert(stateId);
-}
-
-unsigned AccelerationStructuresBuildService::GetState(unsigned key, unsigned offset) {
-  auto itStates = m_StateByKeyOffset.find({key, offset});
-  if (itStates == m_StateByKeyOffset.end() || itStates->second.empty()) {
-    return 0;
-  }
-  return *itStates->second.rbegin();
-}
-
-void AccelerationStructuresBuildService::RemoveState(unsigned stateId, bool removeSource) {
-  auto itState = m_StatesById.find(stateId);
-  GITS_ASSERT(itState != m_StatesById.end());
-  if (itState->second->Kind == RaytracingAccelerationStructureState::StateKind::NvAPIOMM) {
-    return;
-  } else if (itState->second->Kind == RaytracingAccelerationStructureState::StateKind::Build &&
-             static_cast<BuildRaytracingAccelerationStructureState*>(itState->second)
-                     ->Desc->Value->Inputs.Type ==
-                 D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_OPACITY_MICROMAP_ARRAY) {
-    return;
-  }
-
-  if (itState->second->FoundInAnalysis) {
-    return;
-  }
-
-  // remove state sources chain
-  auto itSource = m_StateSourceByDest.find(stateId);
-  if (itSource != m_StateSourceByDest.end()) {
-    auto itDests = m_StateDestsBySource.find(itSource->second);
-    GITS_ASSERT(itDests != m_StateDestsBySource.end());
-    itDests->second.erase(stateId);
-    if (itDests->second.empty()) {
-      if (removeSource) {
-        RemoveState(itSource->second, removeSource);
-        m_StateDestsBySource.erase(itDests);
-      } else {
-        m_SourcesWithoutDestinations.insert(itSource->second);
-      }
-    }
-    m_StateSourceByDest.erase(itSource);
-  }
-
-  // remove state
-  if (itState->second->Kind != RaytracingAccelerationStructureState::StateKind::Copy) {
-    m_BufferContentRestore.RemoveBuild(itState->second->CommandKey);
-  }
-  auto it = m_StateByKeyOffset.find({itState->second->DestKey, itState->second->DestOffset});
-  GITS_ASSERT(it != m_StateByKeyOffset.end());
-  it->second.erase(stateId);
-  if (it->second.empty()) {
-    m_StateByKeyOffset.erase(it);
-  }
-  m_StatesById.erase(itState);
-}
-
 size_t AccelerationStructuresBuildService::RestoreBuffer(
     const AccelerationStructuresBufferContentRestore::BufferRestoreInfo& restoreInfo,
     size_t uploadBufferOffset) {
@@ -1583,55 +1459,6 @@ size_t AccelerationStructuresBuildService::RestoreBuffer(
   }
 }
 
-void AccelerationStructuresBuildService::Optimize() {
-  if (!Configurator::Get().directx.features.subcapture.optimize &&
-      !Configurator::Get().directx.features.subcapture.optimizeRaytracing) {
-    return;
-  }
-  std::vector<unsigned> removedStates;
-  for (auto& [stateId, state] : m_StatesById) {
-    if (!m_StateService.GetAnalyzerResults().RestoreBlas(
-            std::make_pair(state->DestKey, state->DestOffset)) &&
-        !m_StateService.GetAnalyzerResults().RestoreTlas(state->CommandKey)) {
-      auto itDests = m_StateDestsBySource.find(stateId);
-      if (itDests == m_StateDestsBySource.end() || itDests->second.empty()) {
-        removedStates.push_back(stateId);
-      }
-    } else {
-      state->FoundInAnalysis = true;
-    }
-  }
-  for (unsigned stateId : removedStates) {
-    RemoveState(stateId, true);
-  }
-}
-
-void AccelerationStructuresBuildService::RemoveSourcesWithoutDestinations() {
-  if (!m_Optimize && !m_OptimizeRaytracing) {
-    return;
-  }
-  for (unsigned source : m_SourcesWithoutDestinations) {
-    auto itDests = m_StateDestsBySource.find(source);
-    GITS_ASSERT(itDests != m_StateDestsBySource.end());
-    if (itDests->second.empty()) {
-      RemoveState(source, true);
-      m_StateDestsBySource.erase(itDests);
-    }
-  }
-}
-
-void AccelerationStructuresBuildService::CompleteSourcesFromAnalysis() {
-  std::set<std::pair<unsigned, unsigned>>& sources =
-      m_StateService.GetAnalyzerResults().GetAsSources();
-  for (auto& keyOffset : sources) {
-    auto itStates = m_StateByKeyOffset.find(keyOffset);
-    if (itStates != m_StateByKeyOffset.end() && !itStates->second.empty()) {
-      unsigned lastState = *itStates->second.rbegin();
-      m_StateDestsBySource[lastState].insert(UINT_MAX);
-    }
-  }
-}
-
 void AccelerationStructuresBuildService::InputBufferService::AddBufferRegion(unsigned key,
                                                                              unsigned offset,
                                                                              unsigned size) {
@@ -1697,6 +1524,181 @@ void AccelerationStructuresBuildService::InputBufferService::StoreBuffer(
       if (tile.HeapKey) {
         m_StateService.KeepState(tile.HeapKey);
       }
+    }
+  }
+}
+
+void AccelerationStructuresBuildService::OptimizationService::AddState(
+    unsigned commandListKey, RaytracingAccelerationStructureState* state) {
+  m_StatesByCommandList[commandListKey].emplace_back(state);
+}
+
+void AccelerationStructuresBuildService::OptimizationService::StoreStatesOnExecute(
+    std::vector<unsigned>& commandListKeys) {
+  for (unsigned commandListKey : commandListKeys) {
+    auto itStates = m_StatesByCommandList.find(commandListKey);
+    if (itStates != m_StatesByCommandList.end()) {
+      for (RaytracingAccelerationStructureState* state : itStates->second) {
+        StoreState(state);
+      }
+      m_StatesByCommandList.erase(itStates);
+    }
+  }
+}
+
+void AccelerationStructuresBuildService::OptimizationService::Optimize() {
+  if (!Configurator::Get().directx.features.subcapture.optimize &&
+      !Configurator::Get().directx.features.subcapture.optimizeRaytracing) {
+    return;
+  }
+
+  CompleteSourcesFromAnalysis();
+  RemoveSourcesWithoutDestinations();
+
+  std::vector<unsigned> removedStates;
+  for (auto& [stateId, state] : m_StatesById) {
+    if (!m_StateService.GetAnalyzerResults().RestoreBlas(
+            std::make_pair(state->DestKey, state->DestOffset)) &&
+        !m_StateService.GetAnalyzerResults().RestoreTlas(state->CommandKey)) {
+      auto itDests = m_StateDestsBySource.find(stateId);
+      if (itDests == m_StateDestsBySource.end() || itDests->second.empty()) {
+        removedStates.push_back(stateId);
+      }
+    } else {
+      state->FoundInAnalysis = true;
+    }
+  }
+  for (unsigned stateId : removedStates) {
+    RemoveState(stateId, true);
+  }
+}
+
+void AccelerationStructuresBuildService::OptimizationService::StoreState(
+    RaytracingAccelerationStructureState* state) {
+
+  unsigned stateId = ++m_StateUniqueId;
+  m_StatesById[stateId] = state;
+  if (state->SourceKey) {
+    auto itStates = m_StateByKeyOffset.find({state->SourceKey, state->SourceOffset});
+    GITS_ASSERT(itStates != m_StateByKeyOffset.end() && !itStates->second.empty());
+    unsigned sourceId = *itStates->second.rbegin();
+
+    // remove intermediate update
+    if (state->Kind == RaytracingAccelerationStructureState::StateKind::Build) {
+      BuildRaytracingAccelerationStructureState* buildState =
+          static_cast<BuildRaytracingAccelerationStructureState*>(state);
+      if (buildState->Update) {
+        auto itPrimarySource = m_StateSourceByDest.find(sourceId);
+        if (itPrimarySource != m_StateSourceByDest.end()) {
+          sourceId = itPrimarySource->second;
+          auto itPrimarySourceState = m_StatesById.find(sourceId);
+          GITS_ASSERT(itPrimarySourceState != m_StatesById.end());
+          buildState->SourceKey = itPrimarySourceState->second->DestKey;
+          buildState->SourceOffset = itPrimarySourceState->second->DestOffset;
+          buildState->Desc->SourceAccelerationStructureKey = buildState->SourceKey;
+          buildState->Desc->SourceAccelerationStructureOffset = buildState->SourceOffset;
+        }
+      }
+    } else if (state->Kind == RaytracingAccelerationStructureState::StateKind::NvAPIBuild) {
+      NvAPIBuildRaytracingAccelerationStructureExState* buildState =
+          static_cast<NvAPIBuildRaytracingAccelerationStructureExState*>(state);
+      if (buildState->Update) {
+        auto itPrimarySource = m_StateSourceByDest.find(sourceId);
+        if (itPrimarySource != m_StateSourceByDest.end()) {
+          sourceId = itPrimarySource->second;
+          auto itPrimarySourceState = m_StatesById.find(sourceId);
+          GITS_ASSERT(itPrimarySourceState != m_StatesById.end());
+          buildState->SourceKey = itPrimarySourceState->second->DestKey;
+          buildState->SourceOffset = itPrimarySourceState->second->DestOffset;
+          buildState->Desc->SourceAccelerationStructureKey = buildState->SourceKey;
+          buildState->Desc->SourceAccelerationStructureOffset = buildState->SourceOffset;
+        }
+      }
+    }
+
+    m_StateSourceByDest[stateId] = sourceId;
+    m_StateDestsBySource[sourceId].insert(stateId);
+  }
+
+  // remove previous state if not a source for any AS
+  auto itStates = m_StateByKeyOffset.find({state->DestKey, state->DestOffset});
+  if (itStates != m_StateByKeyOffset.end() && !itStates->second.empty()) {
+    unsigned prevStateId = *itStates->second.rbegin();
+    auto itDests = m_StateDestsBySource.find(prevStateId);
+    if (itDests == m_StateDestsBySource.end()) {
+      RemoveState(prevStateId);
+    }
+  }
+
+  m_StateByKeyOffset[{state->DestKey, state->DestOffset}].insert(stateId);
+}
+
+void AccelerationStructuresBuildService::OptimizationService::RemoveState(unsigned stateId,
+                                                                          bool removeSource) {
+  auto itState = m_StatesById.find(stateId);
+  GITS_ASSERT(itState != m_StatesById.end());
+  if (itState->second->Kind == RaytracingAccelerationStructureState::StateKind::NvAPIOMM) {
+    return;
+  } else if (itState->second->Kind == RaytracingAccelerationStructureState::StateKind::Build &&
+             static_cast<BuildRaytracingAccelerationStructureState*>(itState->second)
+                     ->Desc->Value->Inputs.Type ==
+                 D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_OPACITY_MICROMAP_ARRAY) {
+    return;
+  }
+
+  if (itState->second->FoundInAnalysis) {
+    return;
+  }
+
+  // remove state sources chain
+  auto itSource = m_StateSourceByDest.find(stateId);
+  if (itSource != m_StateSourceByDest.end()) {
+    auto itDests = m_StateDestsBySource.find(itSource->second);
+    GITS_ASSERT(itDests != m_StateDestsBySource.end());
+    itDests->second.erase(stateId);
+    if (itDests->second.empty()) {
+      if (removeSource) {
+        RemoveState(itSource->second, removeSource);
+        m_StateDestsBySource.erase(itDests);
+      } else {
+        m_SourcesWithoutDestinations.insert(itSource->second);
+      }
+    }
+    m_StateSourceByDest.erase(itSource);
+  }
+
+  // remove state
+  if (itState->second->Kind != RaytracingAccelerationStructureState::StateKind::Copy) {
+    m_BufferContentRestore.RemoveBuild(itState->second->CommandKey);
+  }
+  auto it = m_StateByKeyOffset.find({itState->second->DestKey, itState->second->DestOffset});
+  GITS_ASSERT(it != m_StateByKeyOffset.end());
+  it->second.erase(stateId);
+  if (it->second.empty()) {
+    m_StateByKeyOffset.erase(it);
+  }
+  m_StatesById.erase(itState);
+}
+
+void AccelerationStructuresBuildService::OptimizationService::RemoveSourcesWithoutDestinations() {
+  for (unsigned source : m_SourcesWithoutDestinations) {
+    auto itDests = m_StateDestsBySource.find(source);
+    GITS_ASSERT(itDests != m_StateDestsBySource.end());
+    if (itDests->second.empty()) {
+      RemoveState(source, true);
+      m_StateDestsBySource.erase(itDests);
+    }
+  }
+}
+
+void AccelerationStructuresBuildService::OptimizationService::CompleteSourcesFromAnalysis() {
+  std::set<std::pair<unsigned, unsigned>>& sources =
+      m_StateService.GetAnalyzerResults().GetAsSources();
+  for (auto& keyOffset : sources) {
+    auto itStates = m_StateByKeyOffset.find(keyOffset);
+    if (itStates != m_StateByKeyOffset.end() && !itStates->second.empty()) {
+      unsigned lastState = *itStates->second.rbegin();
+      m_StateDestsBySource[lastState].insert(UINT_MAX);
     }
   }
 }
