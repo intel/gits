@@ -1,0 +1,16 @@
+## ===================== begin_copyright_notice ============================
+##
+## Copyright (C) 2023-2026 Intel Corporation
+##
+## SPDX-License-Identifier: MIT
+##
+## ===================== end_copyright_notice ==============================
+
+Info:
+  Name: 'CpuPatch'
+  Description: 'Patch shader binding tables and instances buffers on CPU'
+
+# Mode is selected automatically based on gits config
+# Store - in replay dump patch data to stream directory
+#       - in subcapture recording (not analysis) dump patch data to subcapture directory
+# Use - patch buffers on CPU using stored patch data
