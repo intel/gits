@@ -23,10 +23,12 @@ CCodeStream::CCodeStream() {
   auto& cfg = Configurator::Get();
   GITS_ASSERT(cfg.directx.player.cCode.enabled);
 
+  m_StreamDir = cfg.common.player.streamDir;
+
   // Prepare output directory
   auto outputDir = cfg.common.player.outputDir;
   if (outputDir.empty()) {
-    outputDir = cfg.common.player.streamDir;
+    outputDir = m_StreamDir;
   }
   std::filesystem::create_directories(outputDir);
 
@@ -127,6 +129,43 @@ CCodeStream::~CCodeStream() {
   }
   commandsCpp << "}" << std::endl;
   commandsCpp.close();
+
+  const auto cpuPatchSrc = m_StreamDir / "cpu_patch";
+  const auto cpuPatchDst = m_GeneratedDir / "cpu_patch";
+  if (std::filesystem::exists(cpuPatchSrc)) {
+    try {
+      std::filesystem::copy(cpuPatchSrc, cpuPatchDst,
+                            std::filesystem::copy_options::recursive |
+                                std::filesystem::copy_options::overwrite_existing);
+      LOG_INFO << "CCode - Copied cpu_patch from stream to " << cpuPatchDst;
+    } catch (const std::filesystem::filesystem_error& e) {
+      LOG_ERROR << "CCode - Failed to copy cpu_patch directory: " << e.what();
+    }
+  }
+
+  const auto directStorageSrc = m_StreamDir / "DirectStorageResources.bin";
+  const auto directStorageDst = m_GeneratedDir / "DirectStorageResources.bin";
+  if (std::filesystem::exists(directStorageSrc)) {
+    try {
+      std::filesystem::copy_file(directStorageSrc, directStorageDst,
+                                 std::filesystem::copy_options::overwrite_existing);
+      LOG_INFO << "CCode - Copied DirectStorageResources.bin to " << directStorageDst;
+    } catch (const std::filesystem::filesystem_error& e) {
+      LOG_ERROR << "CCode - Failed to copy DirectStorageResources.bin: " << e.what();
+    }
+  }
+
+  const auto executeIndirectSrc = m_StreamDir / "executeIndirectRaytracing.txt";
+  const auto executeIndirectDst = m_GeneratedDir / "executeIndirectRaytracing.txt";
+  if (std::filesystem::exists(executeIndirectSrc)) {
+    try {
+      std::filesystem::copy_file(executeIndirectSrc, executeIndirectDst,
+                                 std::filesystem::copy_options::overwrite_existing);
+      LOG_INFO << "CCode - Copied executeIndirectRaytracing.txt to " << executeIndirectDst;
+    } catch (const std::filesystem::filesystem_error& e) {
+      LOG_ERROR << "CCode - Failed to copy executeIndirectRaytracing.txt: " << e.what();
+    }
+  }
 }
 
 std::ostream& CCodeStream::getCurrentBlock() {

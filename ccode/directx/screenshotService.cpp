@@ -43,6 +43,7 @@ void ScreenshotService::Initialize(const std::filesystem::path& outputDir) {
   m_OutputDir = outputDir;
   m_Enabled = true;
   LOG_INFO << "CCode - ScreenshotService enabled";
+  std::filesystem::create_directories(m_OutputDir);
   LOG_INFO << "CCode - Screenshots will be saved in " << outputDir;
 }
 
@@ -55,7 +56,7 @@ void ScreenshotService::RegisterSwapChain(unsigned key,
   e.Queue = queue;
   e.FenceValue = 0;
   e.ReadbackBuffer.Reset();
-  e.FrameIndex = 0;
+  e.FrameIndex = 1;
 
   // Create D3D12 resources for copying back buffer and synchronization
   e.Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&e.Fence));

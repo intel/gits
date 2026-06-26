@@ -15,6 +15,7 @@
 namespace gits {
 namespace DirectX {
 
+std::string toStr(NVAPI_D3D12_PIPELINE_CREATION_STATE_FLAGS value);
 std::string toStr(NVAPI_D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS_EX value);
 std::string toStr(NVAPI_D3D12_RAYTRACING_GEOMETRY_TYPE_EX value);
 std::string toStr(NVAPI_D3D12_RAYTRACING_OPACITY_MICROMAP_FORMAT value);

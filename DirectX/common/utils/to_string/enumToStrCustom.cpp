@@ -16,16 +16,62 @@ namespace DirectX {
 static std::string enumToStr(const std::unordered_map<int, std::string>& enumMap, int value) {
   std::string result;
   bool first = true;
+  int remainingValue = value;
   for (const auto& [k, name] : enumMap) {
-    if (value & k) {
+    if (k != 0 && (remainingValue & k) == k) {
       if (!first) {
         result += "|";
       }
       result += name;
       first = false;
+      remainingValue &= ~k; // Clear the bits
     }
   }
-  return result.empty() ? "unknown" : std::move(result);
+  if (result.empty() || remainingValue != 0) {
+    return std::to_string(value);
+  }
+  return std::move(result);
+}
+
+std::string toStr(NVAPI_D3D12_PIPELINE_CREATION_STATE_FLAGS value) {
+  std::string result = "unknown";
+  switch (value) {
+  case NVAPI_D3D12_PIPELINE_CREATION_STATE_FLAGS_NONE:
+    result = "NVAPI_D3D12_PIPELINE_CREATION_STATE_FLAGS_NONE";
+    break;
+  case NVAPI_D3D12_PIPELINE_CREATION_STATE_FLAGS_ENABLE_OMM_SUPPORT:
+    result = "NVAPI_D3D12_PIPELINE_CREATION_STATE_FLAGS_ENABLE_OMM_SUPPORT";
+    break;
+  case NVAPI_D3D12_PIPELINE_CREATION_STATE_FLAGS_ENABLE_DMM_SUPPORT:
+    result = "NVAPI_D3D12_PIPELINE_CREATION_STATE_FLAGS_ENABLE_DMM_SUPPORT";
+    break;
+  case NVAPI_D3D12_PIPELINE_CREATION_STATE_FLAGS_ENABLE_CLUSTER_SUPPORT:
+    result = "NVAPI_D3D12_PIPELINE_CREATION_STATE_FLAGS_ENABLE_CLUSTER_SUPPORT";
+    break;
+  case NVAPI_D3D12_PIPELINE_CREATION_STATE_FLAGS_ENABLE_SPHERE_SUPPORT:
+    result = "NVAPI_D3D12_PIPELINE_CREATION_STATE_FLAGS_ENABLE_SPHERE_SUPPORT";
+    break;
+  case NVAPI_D3D12_PIPELINE_CREATION_STATE_FLAGS_ENABLE_LSS_SUPPORT:
+    result = "NVAPI_D3D12_PIPELINE_CREATION_STATE_FLAGS_ENABLE_LSS_SUPPORT";
+    break;
+  default:
+    static std::unordered_map<int, std::string> enumMap{
+        {NVAPI_D3D12_PIPELINE_CREATION_STATE_FLAGS_NONE,
+         "NVAPI_D3D12_PIPELINE_CREATION_STATE_FLAGS_NONE"},
+        {NVAPI_D3D12_PIPELINE_CREATION_STATE_FLAGS_ENABLE_OMM_SUPPORT,
+         "NVAPI_D3D12_PIPELINE_CREATION_STATE_FLAGS_ENABLE_OMM_SUPPORT"},
+        {NVAPI_D3D12_PIPELINE_CREATION_STATE_FLAGS_ENABLE_DMM_SUPPORT,
+         "NVAPI_D3D12_PIPELINE_CREATION_STATE_FLAGS_ENABLE_DMM_SUPPORT"},
+        {NVAPI_D3D12_PIPELINE_CREATION_STATE_FLAGS_ENABLE_CLUSTER_SUPPORT,
+         "NVAPI_D3D12_PIPELINE_CREATION_STATE_FLAGS_ENABLE_CLUSTER_SUPPORT"},
+        {NVAPI_D3D12_PIPELINE_CREATION_STATE_FLAGS_ENABLE_SPHERE_SUPPORT,
+         "NVAPI_D3D12_PIPELINE_CREATION_STATE_FLAGS_ENABLE_SPHERE_SUPPORT"},
+        {NVAPI_D3D12_PIPELINE_CREATION_STATE_FLAGS_ENABLE_LSS_SUPPORT,
+         "NVAPI_D3D12_PIPELINE_CREATION_STATE_FLAGS_ENABLE_LSS_SUPPORT"}};
+    result = enumToStr(enumMap, value);
+    break;
+  }
+  return result;
 }
 
 std::string toStr(NVAPI_D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS_EX value) {

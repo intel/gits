@@ -63,8 +63,15 @@ def decode_sal(param):
 def find_typedef_name(header, type):
     for typedef in header.data.namespace.typedefs:
         if isinstance(typedef.type, cxxheaderparser.types.Type):
-            if typedef.type.typename.segments[0].name == type:
-                return typedef.name
+            if not isinstance(typedef.type.typename, cxxheaderparser.types.PQName):
+                continue
+            seg = typedef.type.typename.segments[0]
+            if isinstance(seg, cxxheaderparser.types.AnonymousName):
+                continue
+            if isinstance(seg, (cxxheaderparser.types.NameSpecifier,
+                              cxxheaderparser.types.FundamentalSpecifier)):
+                if seg.name == type:
+                    return typedef.name
     return ''
 
 def find_enum_name(header, cxx_enum):
@@ -355,7 +362,7 @@ def parse_enums(header):
         if not cxx_name in custom:
             enum = Enum()
             enum.api = header.api
-            enum.name = cxx_name
+            enum.name = find_typedef_name(header, cxx_name) or cxx_name
             for cxx_value in cxx_enum.values:
                 enum_value = cxx_value.value.tokens[0].value if cxx_value.value else None
                 # Attempt to evaluate and convert enum_value to an integer to handle both numeric and hexadecimal values

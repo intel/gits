@@ -65,6 +65,25 @@ HMODULE LoadAgilitySdk(const std::filesystem::path& path) {
   return hModule;
 }
 
+std::vector<HMODULE> LoadReplayExtensionDlls(const std::filesystem::path& path) {
+  std::vector<HMODULE> loadedModules;
+  static const wchar_t* dllNames[] = {
+      L"dstorage.dll", L"dstoragecore.dll", L"libxess.dll", L"libxell.dll", L"libxess_fg.dll",
+  };
+  for (const wchar_t* name : dllNames) {
+    const auto dllPath = path / name;
+    HMODULE hModule = LoadLibraryW(dllPath.c_str());
+    if (!hModule) {
+      LOG_ERROR << "CCode - Failed to load " << dllPath.wstring() << " (error " << GetLastError()
+                << ")";
+      continue;
+    }
+    LOG_INFO << "CCode - Loaded " << dllPath.wstring();
+    loadedModules.push_back(hModule);
+  }
+  return loadedModules;
+}
+
 void PatchPipelineState(D3D12_PIPELINE_STATE_STREAM_DESC& desc,
                         ID3D12RootSignature* pRootSignature,
                         void* subobjectsData,

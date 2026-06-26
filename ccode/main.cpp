@@ -32,7 +32,7 @@ int main(int argc, char* argv[]) {
   plog::init(plog::verbose, &debugAppender).addAppender(&colorConsoleAppender);
 
   // Change working directory to executable directory
-  std::filesystem::path exeDir = std::filesystem::path(argv[0]).parent_path();
+  std::filesystem::path exeDir = std::filesystem::absolute(argv[0]).parent_path();
   std::filesystem::current_path(exeDir);
 
   Arguments args;

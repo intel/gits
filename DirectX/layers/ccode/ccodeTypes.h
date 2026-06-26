@@ -35,11 +35,18 @@ std::string toHex(const T& value) {
   return oss.str();
 }
 
+inline std::string enumFlagsToCpp(const std::string& expr, const char* enumTypeName) {
+  return "static_cast<" + std::string(enumTypeName) + ">(" + expr + ")";
+}
+
 template <typename T>
 bool isZeroInitialized(const T& obj) {
   T zeroObj{};
   return memcmp(&obj, &zeroObj, sizeof(T)) == 0;
 }
+
+std::string charPtrToCpp(const char* s);
+std::string charPtrToCpp(const wchar_t* s);
 
 void toCpp(const LARGE_INTEGER& value, CppParameterInfo& info, CppParameterOutput& out);
 void toCpp(const void* value, CppParameterInfo& info, CppParameterOutput& out);
@@ -48,6 +55,7 @@ void toCpp(const wchar_t* s, CppParameterInfo& info, CppParameterOutput& out);
 void toCpp(const HMONITOR& value, CppParameterInfo& info, CppParameterOutput& out);
 void toCpp(const HWND& value, CppParameterInfo& info, CppParameterOutput& out);
 void toCpp(const D3D12_RECT& value, CppParameterInfo& info, CppParameterOutput& out);
+void toCpp(const D3D12_VERSION_NUMBER& value, CppParameterInfo& info, CppParameterOutput& out);
 void toCpp(const D3D12_PFN_TRIM_NOTIFICATION_CALLBACK& value,
            CppParameterInfo& info,
            CppParameterOutput& out);
@@ -70,8 +78,16 @@ void toCpp(const T* value, CppParameterInfo& info, CppParameterOutput& out) {
   std::string name = info.getIndexedName();
   if (info.size.value_or(0)) {
     std::ostringstream ss;
+    constexpr size_t largeArrayHeapThresholdBytes = 1024;
+    const size_t arrayByteSize = info.size.value() * sizeof(T);
+    const bool useHeap = arrayByteSize > largeArrayHeapThresholdBytes;
     // Declare array storage
-    ss << info.type << " " << name << "[" << info.size.value() << "] = {};" << std::endl;
+    if (useHeap) {
+      ss << "std::vector<" << info.type << "> " << name << "(" << info.size.value() << ");"
+         << std::endl;
+    } else {
+      ss << info.type << " " << name << "[" << info.size.value() << "] = {};" << std::endl;
+    }
     for (unsigned i = 0; i < info.size; ++i) {
       ss << "// " << info.name << " " << i << std::endl;
       CppParameterInfo elementInfo(info.type, info.name, info);
@@ -82,7 +98,7 @@ void toCpp(const T* value, CppParameterInfo& info, CppParameterOutput& out) {
       ss << elementOut.initialization;
     }
     out.initialization = ss.str();
-    out.value = name;
+    out.value = useHeap ? name + ".data()" : name;
     out.decorator = "";
     return;
   }

@@ -18,6 +18,7 @@
 #include <ostream>
 #include <sstream>
 #include <string>
+#include <type_traits>
 
 namespace gits {
 namespace DirectX {
@@ -27,6 +28,8 @@ void declareObject(const std::string& type, unsigned key);
 
 template <template <typename> typename Arg, typename T>
 void argumentToCpp(Arg<T>& arg, CppParameterInfo& info, CppParameterOutput& out) {
+  static_assert(!(std::is_arithmetic_v<T> || std::is_enum_v<T>),
+                "Trivial argument types must use CommandPrinter::addArgumentValue");
   toCpp(arg.Value, info, out);
 }
 
@@ -82,6 +85,13 @@ template <typename T>
 void argumentToCpp(InterfaceArrayArgument<T>& arg,
                    CppParameterInfo& info,
                    CppParameterOutput& out) {
+  if (arg.Size == 0) {
+    out.initialization = "";
+    out.value = "nullptr";
+    out.decorator = "";
+    return;
+  }
+
   std::ostringstream ss;
   ss << info.type << "* " << info.name << "[" << arg.Size << "];" << std::endl;
   for (unsigned i = 0; i < arg.Size; ++i) {
@@ -126,6 +136,18 @@ void argumentToCpp(ContextOutputArgument<T>& arg, CppParameterInfo& info, CppPar
 
 // Overloads for specific argument types
 void argumentToCpp(Argument<IID>& arg, CppParameterInfo& info, CppParameterOutput& out);
+void argumentToCpp(Argument<xess_app_log_callback_t>& arg,
+                   CppParameterInfo& info,
+                   CppParameterOutput& out);
+void argumentToCpp(Argument<xell_app_log_callback_t>& arg,
+                   CppParameterInfo& info,
+                   CppParameterOutput& out);
+void argumentToCpp(Argument<xell_latency_marker_type_t>& arg,
+                   CppParameterInfo& info,
+                   CppParameterOutput& out);
+void argumentToCpp(Argument<xefg_swapchain_app_log_callback_t>& arg,
+                   CppParameterInfo& info,
+                   CppParameterOutput& out);
 void argumentToCpp(BufferArgument& arg, CppParameterInfo& info, CppParameterOutput& out);
 void argumentToCpp(OutputBufferArgument& arg, CppParameterInfo& info, CppParameterOutput& out);
 void argumentToCpp(ShaderIdentifierArgument& arg, CppParameterInfo& info, CppParameterOutput& out);
@@ -179,6 +201,9 @@ void argumentToCpp(D3D12_PIPELINE_STATE_STREAM_DESC_Argument& arg,
 void argumentToCpp(D3D12_STATE_OBJECT_DESC_Argument& arg,
                    CppParameterInfo& info,
                    CppParameterOutput& out);
+void argumentToCpp(PointerArgument<D3D12_DISPATCH_RAYS_DESC>& arg,
+                   CppParameterInfo& info,
+                   CppParameterOutput& out);
 void argumentToCpp(D3D12_SHADER_RESOURCE_VIEW_DESC_Argument& arg,
                    CppParameterInfo& info,
                    CppParameterOutput& out);
@@ -197,14 +222,16 @@ void argumentToCpp(D3D12_EXTENSION_ARGUMENTS_Argument& arg,
 void argumentToCpp(D3D12_EXTENDED_OPERATION_DATA_Argument& arg,
                    CppParameterInfo& info,
                    CppParameterOutput& out);
+void argumentToCpp(PointerArgument<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS>& arg,
+                   CppParameterInfo& info,
+                   CppParameterOutput& out);
 void argumentToCpp(PointerArgument<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC>& arg,
                    CppParameterInfo& info,
                    CppParameterOutput& out);
 void argumentToCpp(ArrayArgument<D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC>& arg,
                    CppParameterInfo& info,
                    CppParameterOutput& out);
-void printArgument(
-    CCodeStream& ccodeStream,
+void argumentToCpp(
     PointerArgument<D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC>& arg,
     CppParameterInfo& info,
     CppParameterOutput& out);
@@ -231,10 +258,22 @@ void argumentToCpp(xess_d3d12_execute_params_t_Argument& arg,
 void argumentToCpp(DML_CheckFeatureSupport_BufferArgument& arg,
                    CppParameterInfo& info,
                    CppParameterOutput& out);
+void argumentToCpp(xell_frame_report_t_Argument& arg,
+                   CppParameterInfo& info,
+                   CppParameterOutput& out);
+void argumentToCpp(xefg_swapchain_d3d12_init_params_t_Argument& arg,
+                   CppParameterInfo& info,
+                   CppParameterOutput& out);
+void argumentToCpp(xefg_swapchain_d3d12_resource_data_t_Argument& arg,
+                   CppParameterInfo& info,
+                   CppParameterOutput& out);
 void argumentToCpp(DSTORAGE_QUEUE_DESC_Argument& arg,
                    CppParameterInfo& info,
                    CppParameterOutput& out);
 void argumentToCpp(DSTORAGE_REQUEST_Argument& arg, CppParameterInfo& info, CppParameterOutput& out);
+void argumentToCpp(PointerArgument<NVAPI_D3D12_SET_CREATE_PIPELINE_STATE_OPTIONS_PARAMS>& arg,
+                   CppParameterInfo& info,
+                   CppParameterOutput& out);
 void argumentToCpp(PointerArgument<NVAPI_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_EX_PARAMS>& arg,
                    CppParameterInfo& info,
                    CppParameterOutput& out);

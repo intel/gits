@@ -29,7 +29,7 @@ This file gives AI agents context so they can work effectively in this repo.
 
 - **Language**: C++20.
 - **Build**: CMake 3.13+; executable name comes from `generated/config.cmake` (e.g. `b1-Win64-Shipping`).
-- **Graphics**: D3D12 (Agility SDK in `third_party/AgilitySDK/`), Intel extensions (`third_party/IntelExtensions/`, `igdext64.lib`).
+- **Graphics**: D3D12 (Agility SDK in `third_party/AgilitySDK/`), Intel extensions (`third_party/IntelExtensions/`, `igdext64.lib`), DirectStorage (`third_party/DirectStorage/`), Intel XeSS family (`third_party/xess/`), NvAPI (`third_party/nvapi/`).
 - **Logging**: plog. **CLI**: args.hxx (included; minimal use in current `main`).
 
 ## Important concepts

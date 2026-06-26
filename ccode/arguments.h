@@ -13,6 +13,7 @@
 
 struct Arguments {
   bool EnableScreenshots = false;
+  bool EnableDebugLayer = false;
   std::filesystem::path OutputDir;
 };
 

@@ -53,7 +53,7 @@ namespace gits {
 namespace DirectX {
 
 %for function in functions:
-%if function.api == Api.D3D12 or function.api == Api.DXGI:
+%if function.api in [Api.D3D12, Api.DXGI, Api.DXGI_DEBUG, Api.XESS, Api.DSTORAGE, Api.XELL, Api.XEFG]:
 void CCodeLayer::Post(${function.name}Command& c) {
 ${print_body(function, False)}
 }
@@ -61,7 +61,7 @@ ${print_body(function, False)}
 %endif
 %endfor
 %for interface in interfaces:
-%if interface.api == Api.D3D12 or interface.api == Api.DXGI:
+%if interface.api in [Api.D3D12, Api.DXGI, Api.DXGI_DEBUG, Api.XESS, Api.DSTORAGE, Api.XELL, Api.XEFG]:
 %for function in interface.functions:
 void CCodeLayer::Post(${interface.name}${function.name}Command& c){
 ${print_body(function, True)}

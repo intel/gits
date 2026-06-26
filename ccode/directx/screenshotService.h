@@ -41,7 +41,7 @@ private:
     UINT64 FenceValue = 0;
     ComPtr<ID3D12Resource> ReadbackBuffer;
     size_t ReadbackBufferSize = 0;
-    size_t FrameIndex = 0;
+    size_t FrameIndex = 1;
   };
 
   void SaveBackBuffer(unsigned key, Entry& entry);

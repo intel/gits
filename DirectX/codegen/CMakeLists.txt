@@ -29,6 +29,7 @@ set(SCRIPTS_SRC
   generator_command_list_split.py
   generator_resource_dumping.py
   generator_skip_calls.py
+  generator_ccode.py
   plugin_generator.py
   generator_xess.py
   generator_xess_helpers.py

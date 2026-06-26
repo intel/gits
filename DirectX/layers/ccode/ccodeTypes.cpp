@@ -18,6 +18,19 @@ namespace gits {
 namespace DirectX {
 namespace ccode {
 
+namespace {
+
+std::string makeRawStringLiteral(const std::string& content, const char* prefix) {
+  if (content.find(")\"") == std::string::npos) {
+    return std::string(prefix) + "\"(" + content + ")\"";
+  }
+  constexpr const char* rawStringDelimiter = "DELIM";
+  return std::string(prefix) + "\"" + rawStringDelimiter + "(" + content + ")" +
+         rawStringDelimiter + "\"";
+}
+
+} // namespace
+
 std::string objKeyToStr(unsigned key) {
   GITS_ASSERT(key);
   return "O" + keyToStr(key);
@@ -28,6 +41,20 @@ std::string objKeyToPtrStr(unsigned key) {
     return "nullptr";
   }
   return "g_" + objKeyToStr(key);
+}
+
+std::string charPtrToCpp(const char* s) {
+  if (!s) {
+    return "nullptr";
+  }
+  return makeRawStringLiteral(s, "R");
+}
+
+std::string charPtrToCpp(const wchar_t* s) {
+  if (!s) {
+    return "nullptr";
+  }
+  return makeRawStringLiteral(toStr(s), "LR");
 }
 
 void toCpp(const LARGE_INTEGER& value, CppParameterInfo& info, CppParameterOutput& out) {
@@ -72,13 +99,13 @@ void toCpp(const void* value, CppParameterInfo& info, CppParameterOutput& out) {
 
 void toCpp(const char* s, CppParameterInfo& info, CppParameterOutput& out) {
   out.initialization = "";
-  out.value = "\"" + std::string(s) + '"';
+  out.value = charPtrToCpp(s);
   out.decorator = "";
 }
 
 void toCpp(const wchar_t* s, CppParameterInfo& info, CppParameterOutput& out) {
   out.initialization = "";
-  out.value = "L\"" + toStr(s) + '"';
+  out.value = charPtrToCpp(s);
   out.decorator = "";
 }
 
@@ -110,6 +137,22 @@ void toCpp(const D3D12_RECT& value, CppParameterInfo& info, CppParameterOutput& 
   ss << name << ".top = " << toStr(value.top) << ";" << std::endl;
   ss << name << ".right = " << toStr(value.right) << ";" << std::endl;
   ss << name << ".bottom = " << toStr(value.bottom) << ";" << std::endl;
+
+  out.initialization = ss.str();
+  out.value = std::move(name);
+  out.decorator = "";
+}
+
+void toCpp(const D3D12_VERSION_NUMBER& value, CppParameterInfo& info, CppParameterOutput& out) {
+  std::string name = info.getIndexedName();
+  std::ostringstream ss;
+  if (!info.isArrayElement) {
+    ss << info.type << " " << name << ";" << std::endl;
+  }
+  for (unsigned i = 0; i < 4; ++i) {
+    ss << name << ".VersionParts[" << i << "] = " << toStr(value.VersionParts[i]) << ";"
+       << std::endl;
+  }
 
   out.initialization = ss.str();
   out.value = std::move(name);

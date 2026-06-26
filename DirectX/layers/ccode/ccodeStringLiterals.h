@@ -40,7 +40,12 @@ void RunFrames();
 const std::string g_CommandsCpp = R"(
 #include "commands.h"
 #include "directx/utils.h"
+#include "directx/debugLayerService.h"
+#include "directx/directStorageService.h"
 #include "directx/screenshotService.h"
+#include "directx/capturePlayerGpuAddressService.h"
+#include "directx/capturePlayerShaderIdentifierService.h"
+#include "directx/capturePlayerDescriptorHandleService.h"
 
 #include <plog/Log.h>
 #include <vector>
@@ -48,13 +53,21 @@ const std::string g_CommandsCpp = R"(
 // DirectX 12 runtime libraries
 struct D3D12Context {
   HMODULE d3d12AgilitySdk{nullptr};
+  std::vector<HMODULE> extensionDlls;
 };
 D3D12Context g_D3D12Context;
 
 void SetupEnvironment(Arguments& args) {
   LOG_INFO << "CCode - Preparing DirectX 12 environment...";
-  g_D3D12Context.d3d12AgilitySdk = directx::LoadAgilitySdk("D3D12/");
+  g_D3D12Context.d3d12AgilitySdk = directx::LoadAgilitySdk("D3D12");
+  g_D3D12Context.extensionDlls = directx::LoadReplayExtensionDlls("D3D12");
   directx::LoadIntelExtensions();
+  directx::CapturePlayerGpuAddressService::Get().EnablePlayerAddressLookup();
+  directx::CapturePlayerShaderIdentifierService::Get().EnablePlayerIdentifierLookup();
+  directx::CapturePlayerDescriptorHandleService::Get().EnablePlayerHandleLookup();
+  if (args.EnableDebugLayer) {
+    directx::DebugLayerService::Get().Enable();
+  }
   if (args.EnableScreenshots) {
     directx::ScreenshotService::Get().Initialize(args.OutputDir);
   }
@@ -62,6 +75,13 @@ void SetupEnvironment(Arguments& args) {
 
 void TeardownEnvironment() {
   LOG_INFO << "CCode - Tearing down DirectX 12 environment...";
+  directx::DirectStorageService::Get().CompleteAllBatches();
+  for (HMODULE module : g_D3D12Context.extensionDlls) {
+    if (module) {
+      FreeLibrary(module);
+    }
+  }
+  g_D3D12Context.extensionDlls.clear();
   if (g_D3D12Context.d3d12AgilitySdk) {
     FreeLibrary(g_D3D12Context.d3d12AgilitySdk);
     g_D3D12Context.d3d12AgilitySdk = nullptr;
@@ -79,9 +99,13 @@ const std::string g_CommandsXCpp = R"(
 #include "directx/mapTrackingService.h"
 #include "directx/descriptorHeapService.h"
 #include "directx/gpuAddressService.h"
+#include "directx/capturePlayerRecord.h"
+#include "directx/patchService.h"
+#include "directx/debugLayerService.h"
 #include "directx/heapAllocationService.h"
 #include "directx/screenshotService.h"
 #include "directx/wrappers/ccodeApiWrappers.h"
+#include "nvapi.h"
 
 #include <plog/Log.h>
 #include <vector>

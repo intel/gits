@@ -26,11 +26,14 @@ static void createResource(ccode::CommandPrinter& p, unsigned resourceKey) {
 static void createPlacedResource(ccode::CommandPrinter& p,
                                  unsigned resourceKey,
                                  unsigned heapKey,
-                                 uint64_t heapOffset) {
+                                 uint64_t heapOffset,
+                                 const char* flagsExpr = "pDesc.Flags") {
   std::ostringstream ss;
   ss << "directx::GpuAddressService::Get().CreatePlacedResource(" << resourceKey << ", "
      << ccode::objKeyToPtrStr(resourceKey) << ", " << heapKey << ", "
      << ccode::objKeyToPtrStr(heapKey) << ", " << heapOffset << ");" << std::endl;
+  ss << "directx::RecordCreatePlacedResource(" << heapKey << ", " << resourceKey << ", "
+     << flagsExpr << ");" << std::endl;
   p.setPostCommand(ss.str());
 }
 
@@ -55,29 +58,44 @@ static void present(ccode::CommandPrinter& p, unsigned swapChainKey) {
   p.setPreCommand(ss.str());
 }
 
-CCodeLayer::CCodeLayer() : Layer("CCode") {}
+CCodeLayer::CCodeLayer() : Layer("CCode") {
+  Configurator::GetMutable().directx.player.plugins.push_back("CpuPatch");
+}
+
+void CCodeLayer::Pre(ID3D12ResourceGetGPUVirtualAddressCommand& c) {
+  m_ExportGpuVirtualAddressCapture = c.m_Result.Value;
+}
+
+void CCodeLayer::Pre(ID3D12DescriptorHeapGetGPUDescriptorHandleForHeapStartCommand& c) {
+  m_ExportGpuDescriptorHandleCapture = c.m_Result.Value;
+}
+
+void CCodeLayer::Pre(ID3D12StateObjectPropertiesGetShaderIdentifierCommand& c) {
+  memcpy(m_ExportShaderIdentifierCapture.data(), c.m_Result.Value,
+         m_ExportShaderIdentifierCapture.size());
+}
 
 void CCodeLayer::Pre(StateRestoreBeginCommand& c) {
-  isStateRestore_ = true;
+  m_IsStateRestore = true;
 }
 
 void CCodeLayer::Pre(StateRestoreEndCommand& c) {
-  isStateRestore_ = false;
+  m_IsStateRestore = false;
   nextCommand();
 }
 
 void CCodeLayer::Pre(IDXGISwapChainPresentCommand& c) {
-  if (isStateRestore_ || (c.m_Flags.Value & DXGI_PRESENT_TEST)) {
+  if (m_IsStateRestore || (c.m_Flags.Value & DXGI_PRESENT_TEST)) {
     return;
   }
-  currentFrame_++;
+  m_CurrentFrame++;
 }
 
 void CCodeLayer::Pre(IDXGISwapChain1Present1Command& c) {
-  if (isStateRestore_ || (c.m_PresentFlags.Value & DXGI_PRESENT_TEST)) {
+  if (m_IsStateRestore || (c.m_PresentFlags.Value & DXGI_PRESENT_TEST)) {
     return;
   }
-  currentFrame_++;
+  m_CurrentFrame++;
 }
 
 void CCodeLayer::nextCommand() {
@@ -85,7 +103,7 @@ void CCodeLayer::nextCommand() {
 
   static unsigned s_cmdCount = 1;
   static unsigned s_currentFrame = 0;
-  static bool s_stateRestore = isStateRestore_;
+  static bool s_stateRestore = m_IsStateRestore;
 
   static unsigned s_commandsPerBlock = 0;
   if (s_commandsPerBlock == 0) {
@@ -94,8 +112,8 @@ void CCodeLayer::nextCommand() {
                 "CCode - commandsPerBlock must be greater than 0 to enable block splitting");
   }
 
-  bool shouldStartNewBlock = (isStateRestore_ != s_stateRestore) ||
-                             (currentFrame_ != s_currentFrame) ||
+  bool shouldStartNewBlock = (m_IsStateRestore != s_stateRestore) ||
+                             (m_CurrentFrame != s_currentFrame) ||
                              (s_cmdCount == s_commandsPerBlock);
   if (shouldStartNewBlock) {
     CCodeStream::BlockInfo blockInfo = {};
@@ -108,8 +126,8 @@ void CCodeLayer::nextCommand() {
 
     s_cmdCount = 0;
   }
-  s_stateRestore = isStateRestore_;
-  s_currentFrame = currentFrame_;
+  s_stateRestore = m_IsStateRestore;
+  s_currentFrame = m_CurrentFrame;
   s_cmdCount++;
 }
 
@@ -161,6 +179,11 @@ void CCodeLayer::Post(CreateHeapAllocationMetaCommand& c) {
 
 void CCodeLayer::Post(IUnknownQueryInterfaceCommand& c) {
   using namespace ccode;
+
+  if (c.m_ppvObject.Key) {
+    // ID3D12StateObjectProperties
+    CCodeStream::getInstance().addInterface(c.m_ppvObject.Key, c.m_riid.Value);
+  }
 
   // Parameter data
   CppParameterInfo ppvObjectInfo("void", "ppvObject");
@@ -554,6 +577,108 @@ void CCodeLayer::Post(INTC_D3D12_CreateComputePipelineStateCommand& c) {
   nextCommand();
 }
 
+void CCodeLayer::Post(NvAPI_InitializeCommand& c) {
+  using namespace ccode;
+  CommandPrinter p(c, "NvAPI_Initialize");
+  preProcess(p, c);
+  postProcess(p, c);
+  p.print();
+  nextCommand();
+}
+
+void CCodeLayer::Post(NvAPI_UnloadCommand& c) {
+  using namespace ccode;
+  CommandPrinter p(c, "NvAPI_Unload");
+  preProcess(p, c);
+  postProcess(p, c);
+  p.print();
+  nextCommand();
+}
+
+void CCodeLayer::Post(NvAPI_D3D12_SetCreatePipelineStateOptionsCommand& c) {
+  using namespace ccode;
+  CppParameterInfo pDeviceInfo("ID3D12Device5", "pDevice");
+  CppParameterInfo pStateInfo("NVAPI_D3D12_SET_CREATE_PIPELINE_STATE_OPTIONS_PARAMS", "pState");
+  pStateInfo.isPtr = true;
+  CommandPrinter p(c, "NvAPI_D3D12_SetCreatePipelineStateOptions");
+  preProcess(p, c);
+  p.addArgument(c.m_pDevice, pDeviceInfo);
+  p.addArgument(c.m_pState, pStateInfo);
+  postProcess(p, c);
+  p.print();
+  nextCommand();
+}
+
+void CCodeLayer::Post(NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& c) {
+  using namespace ccode;
+  CppParameterInfo pDevInfo("IUnknown", "pDev");
+  CommandPrinter p(c, "NvAPI_D3D12_SetNvShaderExtnSlotSpace");
+  preProcess(p, c);
+  p.addArgument(c.m_pDev, pDevInfo);
+  p.addArgumentValue(c.m_uavSlot.Value);
+  p.addArgumentValue(c.m_uavSpace.Value);
+  postProcess(p, c);
+  p.print();
+  nextCommand();
+}
+
+void CCodeLayer::Post(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& c) {
+  using namespace ccode;
+  CppParameterInfo pDevInfo("IUnknown", "pDev");
+  CommandPrinter p(c, "NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThread");
+  preProcess(p, c);
+  p.addArgument(c.m_pDev, pDevInfo);
+  p.addArgumentValue(c.m_uavSlot.Value);
+  p.addArgumentValue(c.m_uavSpace.Value);
+  postProcess(p, c);
+  p.print();
+  nextCommand();
+}
+
+void CCodeLayer::Post(NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& c) {
+  using namespace ccode;
+  CppParameterInfo pCommandListInfo("ID3D12GraphicsCommandList4", "pCommandList");
+  CppParameterInfo pParamsInfo("NVAPI_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_EX_PARAMS",
+                               "pParams");
+  pParamsInfo.isPtr = true;
+  CommandPrinter p(c, "NvAPI_D3D12_BuildRaytracingAccelerationStructureEx");
+  preProcess(p, c);
+  p.addArgument(c.m_pCommandList, pCommandListInfo);
+  p.addArgument(c.m_pParams, pParamsInfo);
+  postProcess(p, c);
+  p.print();
+  nextCommand();
+}
+
+void CCodeLayer::Post(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& c) {
+  using namespace ccode;
+  CppParameterInfo pCommandListInfo("ID3D12GraphicsCommandList4", "pCommandList");
+  CppParameterInfo pParamsInfo("NVAPI_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_PARAMS", "pParams");
+  pParamsInfo.isPtr = true;
+  CommandPrinter p(c, "NvAPI_D3D12_BuildRaytracingOpacityMicromapArray");
+  preProcess(p, c);
+  p.addArgument(c.m_pCommandList, pCommandListInfo);
+  p.addArgument(c.m_pParams, pParamsInfo);
+  postProcess(p, c);
+  p.print();
+  nextCommand();
+}
+
+void CCodeLayer::Post(NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand& c) {
+  using namespace ccode;
+  CppParameterInfo pCommandListInfo("ID3D12GraphicsCommandList4", "pCommandList");
+  CppParameterInfo pParamsInfo("NVAPI_RAYTRACING_EXECUTE_MULTI_INDIRECT_CLUSTER_OPERATION_PARAMS",
+                               "pParams");
+  pParamsInfo.isPtr = true;
+  CommandPrinter p(c, "NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperation");
+  preProcess(p, c);
+  p.addArgument(c.m_pCommandList, pCommandListInfo);
+  p.addArgument(c.m_pParams, pParamsInfo);
+  postProcess(p, c);
+  p.print();
+  nextCommand();
+}
+
 void CCodeLayer::preProcess(ccode::CommandPrinter& p, ID3D12FenceSetEventOnCompletionCommand& c) {
   // Skip all the non-null SetEventOnCompletion since the events cannot be recorded
   if (c.m_hEvent.Value != 0) {
@@ -568,6 +693,32 @@ void CCodeLayer::preProcess(ccode::CommandPrinter& p, ID3D12ObjectGetPrivateData
 
 void CCodeLayer::preProcess(ccode::CommandPrinter& p, ID3D12ObjectSetPrivateDataCommand& c) {
   // Data is not used and may trigger Debug Layer errors
+  p.skip();
+}
+
+void CCodeLayer::preProcess(ccode::CommandPrinter& p, xessSetLoggingCallbackCommand& c) {
+  p.skip();
+}
+
+void CCodeLayer::preProcess(ccode::CommandPrinter& p, xellSetLoggingCallbackCommand& c) {
+  p.skip();
+}
+
+void CCodeLayer::preProcess(ccode::CommandPrinter& p, xefgSwapChainSetLoggingCallbackCommand& c) {
+  p.skip();
+}
+
+void CCodeLayer::preProcess(ccode::CommandPrinter& p, IDStorageFactoryOpenFileCommand& c) {
+  static const wchar_t s_ResourcesFilePath[] = L"DirectStorageResources.bin";
+  c.m_path.Value = const_cast<LPWSTR>(s_ResourcesFilePath);
+}
+
+void CCodeLayer::preProcess(ccode::CommandPrinter& p, IDStorageQueue1EnqueueSetEventCommand& c) {
+  p.skip();
+}
+
+void CCodeLayer::preProcess(ccode::CommandPrinter& p,
+                            IDStorageCustomDecompressionQueueSetRequestResultsCommand& c) {
   p.skip();
 }
 
@@ -590,11 +741,43 @@ void CCodeLayer::postProcess(ccode::CommandPrinter& p,
   createSwapChain(p, c.m_ppSwapChain.Key, c.m_pDevice.Key);
 }
 
+void CCodeLayer::postProcess(ccode::CommandPrinter& p,
+                             xefgSwapChainD3D12InitFromSwapChainCommand& c) {
+  if (c.m_Result.Value != XEFG_SWAPCHAIN_RESULT_SUCCESS) {
+    return;
+  }
+  m_XefgCmdQueueKeyByHandleKey[c.m_hSwapChain.Key] = c.m_pCmdQueue.Key;
+}
+
+void CCodeLayer::postProcess(ccode::CommandPrinter& p,
+                             xefgSwapChainD3D12InitFromSwapChainDescCommand& c) {
+  if (c.m_Result.Value != XEFG_SWAPCHAIN_RESULT_SUCCESS) {
+    return;
+  }
+  m_XefgCmdQueueKeyByHandleKey[c.m_hSwapChain.Key] = c.m_pCmdQueue.Key;
+}
+
+void CCodeLayer::postProcess(ccode::CommandPrinter& p,
+                             xefgSwapChainD3D12GetSwapChainPtrCommand& c) {
+  if (c.m_Result.Value != XEFG_SWAPCHAIN_RESULT_SUCCESS) {
+    return;
+  }
+  auto cmdQueueIt = m_XefgCmdQueueKeyByHandleKey.find(c.m_hSwapChain.Key);
+  GITS_ASSERT(cmdQueueIt != m_XefgCmdQueueKeyByHandleKey.end());
+  createSwapChain(p, c.m_ppSwapChain.Key, cmdQueueIt->second);
+}
+
 void CCodeLayer::postProcess(ccode::CommandPrinter& p, IDXGISwapChainPresentCommand& c) {
+  if (c.m_Flags.Value & DXGI_PRESENT_TEST || IsStateRestoreKey(c.Key)) {
+    return;
+  }
   present(p, c.m_Object.Key);
 }
 
 void CCodeLayer::postProcess(ccode::CommandPrinter& p, IDXGISwapChain1Present1Command& c) {
+  if (c.m_PresentFlags.Value & DXGI_PRESENT_TEST || IsStateRestoreKey(c.Key)) {
+    return;
+  }
   present(p, c.m_Object.Key);
 }
 
@@ -604,6 +787,36 @@ void CCodeLayer::postProcess(ccode::CommandPrinter& p, ID3D12FenceGetCompletedVa
   ss << "directx::WaitForFence(" << objKeyToPtrStr(c.m_Object.Key) << ", " << c.m_Result.Value
      << ");" << std::endl;
   p.setPostCommand(ss.str());
+}
+
+void CCodeLayer::postProcess(ccode::CommandPrinter& p, IDStorageFactoryOpenFileCommand& c) {
+  p.getArgumentValue(0) = "directx::DirectStorageService::Get().ResourcesFilePath()";
+}
+
+void CCodeLayer::postProcess(ccode::CommandPrinter& p, IDStorageQueueEnqueueRequestCommand& c) {
+  using namespace ccode;
+
+  // Custom compression is not supported
+  // Memory source is not supported
+  if ((c.m_request.Value->Options.CompressionFormat & DSTORAGE_CUSTOM_COMPRESSION_0) ||
+      (c.m_request.Value->Options.SourceType == DSTORAGE_REQUEST_SOURCE_MEMORY)) {
+    p.skip();
+    return;
+  }
+
+  std::ostringstream ss;
+  // Argument order: DSTORAGE_REQUEST is the first (and only) non-trivial parameter.
+  ss << "directx::DirectStorageService::Get().PrepareEnqueueRequest(" << c.m_Object.Key << ", "
+     << p.getArgumentValue(0) << ", " << c.m_request.NewOffset << ");" << std::endl;
+  p.setPreCommand(ss.str());
+}
+
+void CCodeLayer::postProcess(ccode::CommandPrinter& p, IDStorageQueueSubmitCommand& c) {
+  using namespace ccode;
+  std::ostringstream ss;
+  ss << "directx::DirectStorageService::Get().OnSubmit(" << c.m_Object.Key << ", "
+     << "static_cast<IDStorageQueue1*>(" << objKeyToPtrStr(c.m_Object.Key) << "));" << std::endl;
+  p.setPreCommand(ss.str());
 }
 
 void CCodeLayer::postProcess(ccode::CommandPrinter& p, ID3D12DeviceCreateDescriptorHeapCommand& c) {
@@ -672,6 +885,48 @@ void CCodeLayer::postProcess(ccode::CommandPrinter& p,
   createPlacedResource(p, c.m_ppvResource.Key, c.m_pHeap.Key, c.m_HeapOffset.Value);
 }
 
+void CCodeLayer::postProcess(ccode::CommandPrinter& p, INTC_D3D12_CreatePlacedResourceCommand& c) {
+  createPlacedResource(p, c.m_ppvResource.Key, c.m_pHeap.Key, c.m_HeapOffset.Value,
+                       "pD3D12Desc.Flags");
+}
+
+void CCodeLayer::postProcess(ccode::CommandPrinter& p, IUnknownReleaseCommand& c) {
+  if (!c.m_Object.Key || !c.m_Object.Value) {
+    p.skip();
+    return;
+  }
+  std::ostringstream ss;
+  const auto objectPtr = ccode::objKeyToPtrStr(c.m_Object.Key);
+  ss << objectPtr << "->AddRef();" << std::endl;
+  ss << "ULONG refCount = " << objectPtr << "->Release() - 1;" << std::endl;
+  ss << "directx::RecordRelease(" << c.m_Object.Key << ", refCount);" << std::endl;
+  p.setPreCommand(ss.str());
+}
+
+void CCodeLayer::postProcess(ccode::CommandPrinter& p,
+                             ID3D12ResourceGetGPUVirtualAddressCommand& c) {
+  if (!c.m_Object.Key) {
+    return;
+  }
+  std::ostringstream ss;
+  const auto objectPtr = ccode::objKeyToPtrStr(c.m_Object.Key);
+  ss << "directx::RecordGetGPUVirtualAddress(" << objectPtr << ", " << c.m_Object.Key << ", "
+     << ccode::toHex(m_ExportGpuVirtualAddressCapture) << ");" << std::endl;
+  p.setPreCommand(ss.str());
+}
+
+void CCodeLayer::postProcess(ccode::CommandPrinter& p,
+                             ID3D12DescriptorHeapGetGPUDescriptorHandleForHeapStartCommand& c) {
+  if (!c.m_Object.Key) {
+    return;
+  }
+  std::ostringstream ss;
+  const auto objectPtr = ccode::objKeyToPtrStr(c.m_Object.Key);
+  ss << "directx::RecordGetGPUDescriptorHandleForHeapStart(" << objectPtr << ", " << c.m_Object.Key
+     << ", {" << ccode::toHex(m_ExportGpuDescriptorHandleCapture.ptr) << "});" << std::endl;
+  p.setPreCommand(ss.str());
+}
+
 void CCodeLayer::postProcess(ccode::CommandPrinter& p, ID3D12DeviceCreateHeapCommand& c) {
   createHeap(p, c.m_ppvHeap.Key);
 }
@@ -731,6 +986,184 @@ void CCodeLayer::postProcess(ccode::CommandPrinter& p,
   ss << "directx::PreloadPipeline(" << objKeyToPtrStr(c.m_Object.Key) << ", "
      << p.getArgumentValue(0) << ", &pDesc);" << std::endl;
   p.setPreCommand(ss.str());
+}
+
+void CCodeLayer::postProcess(ccode::CommandPrinter& p,
+                             ID3D12StateObjectPropertiesGetShaderIdentifierCommand& c) {
+  if (!c.m_Object.Key) {
+    return;
+  }
+  std::ostringstream ss;
+  const auto objectPtr = ccode::objKeyToPtrStr(c.m_Object.Key);
+  const auto* bytes = static_cast<const uint8_t*>(m_ExportShaderIdentifierCapture.data());
+  ss << "directx::RecordGetShaderIdentifier(" << objectPtr << ", " << p.getArgumentValue(0) << ", "
+     << c.Key << ", ";
+  ss << "std::array<uint8_t, D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES>{";
+  for (size_t i = 0; i < D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES; ++i) {
+    if (i > 0) {
+      ss << ", ";
+    }
+    ss << static_cast<unsigned>(bytes[i]);
+  }
+  ss << "}.data());" << std::endl;
+  p.setPreCommand(ss.str());
+}
+
+void CCodeLayer::postProcess(
+    ccode::CommandPrinter& p,
+    ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c) {
+  if (!c.m_Object.Key) {
+    return;
+  }
+  std::ostringstream ss;
+  ss << "directx::PatchService::Get().PreBuildRaytracingAccelerationStructure(" << c.m_Object.Key
+     << ", " << c.Key << ", " << ccode::objKeyToPtrStr(c.m_Object.Key) << ", &pDesc);" << std::endl;
+  p.setPreCommand(ss.str());
+}
+
+void CCodeLayer::postProcess(ccode::CommandPrinter& p,
+                             ID3D12GraphicsCommandList4DispatchRaysCommand& c) {
+  if (!c.m_Object.Key) {
+    return;
+  }
+  std::ostringstream ss;
+  ss << "directx::PatchService::Get().PreDispatchRays(" << c.m_Object.Key << ", " << c.Key << ", "
+     << ccode::objKeyToPtrStr(c.m_Object.Key) << ", &pDesc);" << std::endl;
+  p.setPreCommand(ss.str());
+}
+
+void CCodeLayer::postProcess(ccode::CommandPrinter& p,
+                             ID3D12GraphicsCommandListExecuteIndirectCommand& c) {
+  if (!c.m_Object.Key || !c.m_pCommandSignature.Key) {
+    return;
+  }
+  const unsigned argumentBufferIndex =
+      Configurator::Get().directx.player.cCode.wrapApiCalls ? 3u : 2u;
+  const std::string originalArgumentBuffer = p.getArgumentValue(argumentBufferIndex);
+  const std::string originalArgumentBufferOffset = p.getArgumentValue(argumentBufferIndex + 1);
+
+  std::ostringstream pre;
+  pre << "ID3D12Resource* patchExecuteIndirectArgumentBuffer = " << originalArgumentBuffer << ";"
+      << std::endl;
+  pre << "UINT64 patchExecuteIndirectArgumentBufferOffset = " << originalArgumentBufferOffset << ";"
+      << std::endl;
+  pre << "UINT64 captureExecuteIndirectArgumentBufferOffset = "
+      << "patchExecuteIndirectArgumentBufferOffset;" << std::endl;
+  pre << "directx::PatchService::Get().PreExecuteIndirect(" << c.m_Object.Key << ", " << c.Key
+      << ", " << ccode::objKeyToPtrStr(c.m_Object.Key) << ", " << c.m_pCommandSignature.Key
+      << ", &patchExecuteIndirectArgumentBuffer, &patchExecuteIndirectArgumentBufferOffset, "
+      << c.m_MaxCommandCount.Value << ");" << std::endl;
+  p.setPreCommand(pre.str());
+
+  p.getArgumentValue(argumentBufferIndex) = "patchExecuteIndirectArgumentBuffer";
+  p.getArgumentValue(argumentBufferIndex + 1) = "patchExecuteIndirectArgumentBufferOffset";
+
+  std::ostringstream post;
+  post << "directx::PatchService::Get().PostExecuteIndirect("
+          "&patchExecuteIndirectArgumentBufferOffset, "
+          "captureExecuteIndirectArgumentBufferOffset);"
+       << std::endl;
+  p.setPostCommand(post.str());
+}
+
+void CCodeLayer::postProcess(ccode::CommandPrinter& p,
+                             ID3D12CommandQueueExecuteCommandListsCommand& c) {
+  if (!c.m_Object.Key || c.m_ppCommandLists.Keys.empty()) {
+    return;
+  }
+  std::ostringstream pre;
+  pre << "static const unsigned executeCommandListsKeys[] = {";
+  for (size_t i = 0; i < c.m_ppCommandLists.Keys.size(); ++i) {
+    if (i > 0) {
+      pre << ", ";
+    }
+    pre << c.m_ppCommandLists.Keys[i];
+  }
+  pre << "};" << std::endl;
+  pre << "directx::PatchService::Get().PreExecuteCommandLists(executeCommandListsKeys, "
+      << c.m_ppCommandLists.Keys.size() << ");" << std::endl;
+  p.setPreCommand(pre.str());
+
+  std::ostringstream post;
+  post << "directx::PatchService::Get().PostExecuteCommandLists("
+       << ccode::objKeyToPtrStr(c.m_Object.Key) << ", executeCommandListsKeys, "
+       << c.m_ppCommandLists.Keys.size() << ");" << std::endl;
+  p.setPostCommand(post.str());
+}
+
+void CCodeLayer::postProcess(ccode::CommandPrinter& p,
+                             ID3D12DeviceCreateCommandSignatureCommand& c) {
+  if (!c.m_ppvCommandSignature.Key) {
+    return;
+  }
+  std::ostringstream ss;
+  ss << "directx::PatchService::Get().RegisterCommandSignature(" << c.m_ppvCommandSignature.Key
+     << ", pDesc);" << std::endl;
+  p.setPostCommand(ss.str());
+}
+
+void CCodeLayer::postProcess(ccode::CommandPrinter& p, CreateDXGIFactoryCommand& c) {
+  if (!c.m_ppFactory.Key) {
+    return;
+  }
+  std::ostringstream ss;
+  ss << "directx::DebugLayerService::Get().OnDxgiFactoryCreated(" << p.getArgumentValue(0) << ", "
+     << p.getArgumentValue(1) << ");" << std::endl;
+  p.setPostCommand(ss.str());
+}
+
+void CCodeLayer::postProcess(ccode::CommandPrinter& p, CreateDXGIFactory1Command& c) {
+  if (!c.m_ppFactory.Key) {
+    return;
+  }
+  std::ostringstream ss;
+  ss << "directx::DebugLayerService::Get().OnDxgiFactoryCreated(" << p.getArgumentValue(0) << ", "
+     << p.getArgumentValue(1) << ");" << std::endl;
+  p.setPostCommand(ss.str());
+}
+
+void CCodeLayer::postProcess(ccode::CommandPrinter& p, CreateDXGIFactory2Command& c) {
+  if (!c.m_ppFactory.Key) {
+    return;
+  }
+  std::ostringstream ss;
+  ss << "directx::DebugLayerService::Get().OnDxgiFactoryCreated(" << p.getArgumentValue(1) << ", "
+     << p.getArgumentValue(2) << ", " << c.m_Flags.Value << ");" << std::endl;
+  p.setPostCommand(ss.str());
+}
+
+void CCodeLayer::postProcess(ccode::CommandPrinter& p, D3D12CreateDeviceCommand& c) {
+  if (!c.m_ppDevice.Key) {
+    return;
+  }
+  std::ostringstream ss;
+  ss << "directx::DebugLayerService::Get().OnDeviceCreated("
+     << ccode::objKeyToPtrStr(c.m_ppDevice.Key) << ");" << std::endl;
+  p.setPostCommand(ss.str());
+}
+
+void CCodeLayer::postProcess(ccode::CommandPrinter& p,
+                             NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& c) {
+  std::ostringstream ss;
+  ss << "directx::DebugLayerService::Get().FlushRaytracingValidation("
+     << ccode::objKeyToPtrStr(c.m_pCommandList.Key) << ");" << std::endl;
+  p.setPostCommand(ss.str());
+}
+
+void CCodeLayer::postProcess(ccode::CommandPrinter& p,
+                             NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& c) {
+  std::ostringstream ss;
+  ss << "directx::DebugLayerService::Get().FlushRaytracingValidation("
+     << ccode::objKeyToPtrStr(c.m_pCommandList.Key) << ");" << std::endl;
+  p.setPostCommand(ss.str());
+}
+
+void CCodeLayer::postProcess(ccode::CommandPrinter& p,
+                             NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand& c) {
+  std::ostringstream ss;
+  ss << "directx::DebugLayerService::Get().FlushRaytracingValidation("
+     << ccode::objKeyToPtrStr(c.m_pCommandList.Key) << ");" << std::endl;
+  p.setPostCommand(ss.str());
 }
 
 } // namespace DirectX

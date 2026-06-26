@@ -34,15 +34,9 @@ An executable (with the same name as the application the stream was captured fro
 
 ## Limitations
 
-The initial implementation is limited to `DirectX12` and `DXGI`.
 
 The following APIs are not yet supported:
 
-- DirectX12 Ray Tracing (DXR)
 - DirectML
-- DirectStorage
-- Intel Extensions
-- Intel XeSS
-- Nvidia NVAPI
 
 Support will be added incrementally as needed.

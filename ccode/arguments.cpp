@@ -16,6 +16,7 @@ bool ParseArguments(int argc, char* argv[], Arguments& args) {
   args::ArgumentParser parser("CCode replay");
   args::HelpFlag help(parser, "help", "Display this help", {'h', "help"});
   args::Flag screenshots(parser, "screenshots", "Enable screenshot capture", {'s', "screenshots"});
+  args::Flag debugLayer(parser, "debug", "Enable debug layer", {'d', "debug"});
   args::ValueFlag<std::string> outputDir(parser, "output-dir", "Directory for screenshot output",
                                          {'o', "output-dir"}, "out");
 
@@ -23,6 +24,7 @@ bool ParseArguments(int argc, char* argv[], Arguments& args) {
   try {
     parser.ParseArgs(argvVec);
     args.EnableScreenshots = screenshots;
+    args.EnableDebugLayer = debugLayer;
     args.OutputDir = std::filesystem::absolute(args::get(outputDir));
     return true;
   } catch (const args::Help&) {

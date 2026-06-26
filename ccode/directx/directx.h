@@ -13,6 +13,7 @@
 #include <wrl/client.h>
 
 #include <d3d12.h>
+#include <d3d12sdklayers.h>
 #include <dxgi.h>
 #include <dxgidebug.h>
 #include <dxgi1_2.h>
@@ -24,6 +25,19 @@
 // IntelExtensions
 #define INTC_IGDEXT_D3D12
 #include <igdext.h>
+
+#include <dstorage.h>
+#include "directStorageGuids.h"
+
+#include <xess/xess.h>
+#include <xess/xess_d3d12.h>
+#include <xell/xell.h>
+#include <xell/xell_d3d12.h>
+#include <xess_fg/xefg_swapchain.h>
+#include <xess_fg/xefg_swapchain_d3d12.h>
+#include <xess_fg/xefg_swapchain_debug.h>
+
+#include "directStorageService.h"
 
 template <typename T>
 using ComPtr = Microsoft::WRL::ComPtr<T>;

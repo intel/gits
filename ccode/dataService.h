@@ -17,6 +17,7 @@ public:
 
   bool Open(const std::filesystem::path& dataFile);
   bool Read(void* outBuffer, size_t size);
+  const std::filesystem::path& GetPath() const;
 
 private:
   DataService() = default;
@@ -27,4 +28,5 @@ private:
   DataService& operator=(const DataService&) = delete;
 
   std::ifstream m_FileStream;
+  std::filesystem::path m_DataFilePath;
 };

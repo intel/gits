@@ -12,14 +12,14 @@ ${header}
 #include "directx/directx.h"
 
 %for function in functions:
-%if function.api == Api.D3D12 or function.api == Api.DXGI:
+%if function.api in [Api.D3D12, Api.DXGI, Api.DXGI_DEBUG, Api.XESS, Api.DSTORAGE, Api.XELL, Api.XEFG]:
 ${function_signature(function)};
 
 %endif
 %endfor
 
 %for interface in interfaces:
-%if interface.api == Api.D3D12 or interface.api == Api.DXGI:
+%if interface.api in [Api.D3D12, Api.DXGI, Api.DXGI_DEBUG, Api.XESS, Api.DSTORAGE, Api.XELL, Api.XEFG]:
 %for function in interface.functions:
 ${function_signature(function, interface.name)};
 

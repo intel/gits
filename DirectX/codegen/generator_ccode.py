@@ -14,13 +14,18 @@ from typing import Union
 # Used to find whether a type is trivial
 TRIVIAL_TYPES = {"UINT", "SIZE_T", "INT", "FLOAT", "BOOL", "LARGE_INTEGER", "INT8", "INT32", "INT64", 
                 "UINT8", "UINT16", "UINT32", "UINT64", "DOUBLE", "BYTE", "REFIID", "REFGUID", "REFCLSID", "DWORD", "LONG",
+                "uint8_t", "uint16_t", "uint32_t", "uint64_t", "int8_t", "int16_t", "int32_t", "int64_t",
                 "DXGI_USAGE", # UINT
                 "D3D12_PRIMITIVE_TOPOLOGY", # D3D_PRIMITIVE_TOPOLOGY
-                "D3D12_PRIMITIVE" # D3D_PRIMITIVE
+                "D3D12_PRIMITIVE", # D3D_PRIMITIVE
+                "DXGI_INFO_QUEUE_MESSAGE_ID", # INT
 }
+ENUM_NAMES = set()
+
 def initialize_trivial_types(enums):
-    global TRIVIAL_TYPES
-    TRIVIAL_TYPES.update(enum.name for enum in enums)
+    global TRIVIAL_TYPES, ENUM_NAMES
+    ENUM_NAMES = {enum.name for enum in enums}
+    TRIVIAL_TYPES.update(ENUM_NAMES)
 
 
 def print_parameter_info(origin: Union[Function, Struct], parameter):
@@ -106,7 +111,10 @@ def is_trivial_parameter(parameter):
         return False
     if parameter.is_array:
         return False
-    if parameter.type in TRIVIAL_TYPES:
+    param_type = parameter.type
+    if param_type in TRIVIAL_TYPES:
+        return True
+    if param_type.upper() in TRIVIAL_TYPES:
         return True
     return False
 
@@ -126,6 +134,10 @@ def is_custom_struct(struct):
     if struct.name in custom_structs:
         return True
     return False
+
+def is_enum_parameter(parameter):
+    param_type = parameter.type
+    return param_type in ENUM_NAMES or param_type.upper() in ENUM_NAMES
 
 def get_interface_declaration(function):
     str = ''
@@ -151,6 +163,7 @@ def generate_ccode_files(context, out_path):
         'print_parameter_info': print_parameter_info,
         'is_trivial_parameter': is_trivial_parameter,
         'to_lower_camel_case': to_lower_camel_case,
+        'is_enum_parameter': is_enum_parameter,
         'get_interface_declaration': get_interface_declaration
     }
     files_to_generate = [

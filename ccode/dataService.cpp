@@ -21,10 +21,15 @@ bool DataService::Open(const std::filesystem::path& dataFile) {
   if (m_FileStream.is_open()) {
     m_FileStream.close();
   }
+  m_DataFilePath = dataFile;
 
   // Open the new file
   m_FileStream.open(dataFile, std::ios::in | std::ios::binary);
   return m_FileStream.is_open();
+}
+
+const std::filesystem::path& DataService::GetPath() const {
+  return m_DataFilePath;
 }
 
 bool DataService::Read(void* outBuffer, size_t size) {

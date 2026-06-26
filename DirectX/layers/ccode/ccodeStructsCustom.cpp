@@ -8,6 +8,7 @@
 
 #include "ccodeStructsAuto.h"
 #include "ccodeTypes.h"
+#include "ccodeArguments.h"
 #include "ccodeStream.h"
 #include "log.h"
 
@@ -27,8 +28,8 @@ static void initialize(const INTCDeviceInfo& value,
   ss << name << ".EUCount = " << value.EUCount << ";" << std::endl;
   ss << name << ".PackageTDP = " << value.PackageTDP << ";" << std::endl;
   ss << name << ".MaxFillRate = " << value.MaxFillRate << ";" << std::endl;
-  ss << "wcscpy_s(" << name << ".GTGenerationName"
-     << ", L\"" << toStr(value.GTGenerationName) << "\");" << std::endl;
+  ss << "wcscpy_s(" << name << ".GTGenerationName, " << charPtrToCpp(value.GTGenerationName) << ");"
+     << std::endl;
 }
 
 void initialize(const INTC_D3D12_RESOURCE_DESC& value,
@@ -115,8 +116,9 @@ void toCpp(const INTCExtensionInfo& value, CppParameterInfo& info, CppParameterO
 
   ss << name << ".RequestedExtensionVersion = " << versionOut.value << ";" << std::endl;
   ss << name << ".IntelDeviceInfo = " << deviceOut.value << ";" << std::endl;
-  ss << name << ".pDeviceDriverDesc = L\"" << toStr(value.pDeviceDriverDesc) << "\";" << std::endl;
-  ss << name << ".pDeviceDriverVersion = L\"" << toStr(value.pDeviceDriverVersion) << "\";"
+  ss << name << ".pDeviceDriverDesc = " << charPtrToCpp(value.pDeviceDriverDesc) << ";"
+     << std::endl;
+  ss << name << ".pDeviceDriverVersion = " << charPtrToCpp(value.pDeviceDriverVersion) << ";"
      << std::endl;
   ss << name << ".DeviceDriverBuildNumber = " << value.DeviceDriverBuildNumber << ";" << std::endl;
 
@@ -145,8 +147,9 @@ void toCpp(const INTCExtensionInfo1& value, CppParameterInfo& info, CppParameter
 
   ss << name << ".RequestedExtensionVersion = " << versionOut.value << ";" << std::endl;
   ss << name << ".IntelDeviceInfo = " << deviceOut.value << ";" << std::endl;
-  ss << name << ".pDeviceDriverDesc = L\"" << toStr(value.pDeviceDriverDesc) << "\";" << std::endl;
-  ss << name << ".pDeviceDriverVersion = L\"" << toStr(value.pDeviceDriverVersion) << "\";"
+  ss << name << ".pDeviceDriverDesc = " << charPtrToCpp(value.pDeviceDriverDesc) << ";"
+     << std::endl;
+  ss << name << ".pDeviceDriverVersion = " << charPtrToCpp(value.pDeviceDriverVersion) << ";"
      << std::endl;
   ss << name << ".DeviceDriverBuildNumber = " << value.DeviceDriverBuildNumber << ";" << std::endl;
 
@@ -163,9 +166,9 @@ void toCpp(const INTCExtensionAppInfo& value, CppParameterInfo& info, CppParamet
     ss << info.type << " " << name << " = {};" << std::endl;
   }
 
-  ss << name << ".pApplicationName = L\"" << toStr(value.pApplicationName) << "\";" << std::endl;
+  ss << name << ".pApplicationName = " << charPtrToCpp(value.pApplicationName) << ";" << std::endl;
   ss << name << ".ApplicationVersion = " << value.ApplicationVersion << ";" << std::endl;
-  ss << name << ".pEngineName = L\"" << toStr(value.pEngineName) << "\";" << std::endl;
+  ss << name << ".pEngineName = " << charPtrToCpp(value.pEngineName) << ";" << std::endl;
   ss << name << ".EngineVersion = " << value.EngineVersion << ";" << std::endl;
 
   out.initialization = ss.str();
@@ -191,9 +194,9 @@ void toCpp(const INTCExtensionAppInfo1& value, CppParameterInfo& info, CppParame
     ss << info.type << " " << name << " = {};" << std::endl;
   }
 
-  ss << name << ".pApplicationName = L\"" << toStr(value.pApplicationName) << "\";" << std::endl;
+  ss << name << ".pApplicationName = " << charPtrToCpp(value.pApplicationName) << ";" << std::endl;
   ss << name << ".ApplicationVersion = " << appVersionOut.value << ";" << std::endl;
-  ss << name << ".pEngineName = L\"" << toStr(value.pEngineName) << "\";" << std::endl;
+  ss << name << ".pEngineName = " << charPtrToCpp(value.pEngineName) << ";" << std::endl;
   ss << name << ".EngineVersion = " << engineVersionOut.value << ";" << std::endl;
 
   out.initialization = ss.str();
@@ -794,7 +797,7 @@ void toCpp(const D3D12_NODE& value, CppParameterInfo& info, CppParameterOutput& 
   out.decorator = "";
 }
 
-void toCpp(const D3D12_RENDER_PASS_BEGINNING_ACCESS& value,
+void toCpp(const D3D12_RENDER_PASS_ENDING_ACCESS& value,
            CppParameterInfo& info,
            CppParameterOutput& out) {
   GITS_ASSERT(false, "Not implemented");
@@ -806,13 +809,46 @@ void toCpp(const D3D12_RENDER_PASS_BEGINNING_ACCESS& value,
   out.decorator = "";
 }
 
-void toCpp(const D3D12_RENDER_PASS_ENDING_ACCESS& value,
+void toCpp(const D3D12_RENDER_PASS_BEGINNING_ACCESS& value,
            CppParameterInfo& info,
            CppParameterOutput& out) {
-  GITS_ASSERT(false, "Not implemented");
   std::string name = info.getIndexedName();
   std::ostringstream ss;
-  ss << info.type << " " << name << " = {};" << std::endl;
+  std::ostringstream ssUnion;
+
+  CppParameterInfo paramInfo("", "", info);
+  CppParameterOutput paramOut;
+  switch (value.Type) {
+  case D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR:
+    paramInfo.type = "D3D12_RENDER_PASS_BEGINNING_ACCESS_CLEAR_PARAMETERS";
+    paramInfo.name = "Clear";
+    toCpp(value.Clear, paramInfo, paramOut);
+    ss << paramOut.initialization;
+    ssUnion << name << ".Clear = " << paramOut.value << ";" << std::endl;
+    break;
+  case D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_PRESERVE_LOCAL_RENDER:
+  case D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_PRESERVE_LOCAL_SRV:
+  case D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_PRESERVE_LOCAL_UAV:
+    paramInfo.type = "D3D12_RENDER_PASS_BEGINNING_ACCESS_PRESERVE_LOCAL_PARAMETERS";
+    paramInfo.name = "PreserveLocal";
+    toCpp(value.PreserveLocal, paramInfo, paramOut);
+    ss << paramOut.initialization;
+    ssUnion << name << ".PreserveLocal = " << paramOut.value << ";" << std::endl;
+    break;
+  case D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_DISCARD:
+  case D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_PRESERVE:
+    break;
+  default:
+    GITS_ASSERT(false, "Unknown D3D12_RENDER_PASS_BEGINNING_ACCESS Type");
+    break;
+  }
+
+  if (!info.isArrayElement) {
+    ss << info.type << " " << name << " = {};" << std::endl;
+  }
+  ss << name << ".Type = " << toStr(value.Type) << ";" << std::endl;
+  ss << ssUnion.str();
+
   out.initialization = ss.str();
   out.value = std::move(name);
   out.decorator = "";

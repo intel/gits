@@ -30,7 +30,10 @@ static std::string enumToStr(const std::vector<std::pair<int, std::string>>& enu
       remainingValue &= ~k; // Clear the bits
     }
   }
-  return result.empty() ? "0" : std::move(result);
+  if (result.empty() || remainingValue != 0) {
+    return std::to_string(value);
+  }
+  return std::move(result);
 }
 
 %for enum in enums:

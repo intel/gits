@@ -53,10 +53,14 @@ void toCpp(const ${structure.name}& value, CppParameterInfo& info, CppParameterO
   ss << "wcscpy_s(" << name << ".${param.name}" << ", " << ${param_name}Out.value << ");" << std::endl;
   %elif param.is_array:
   for (unsigned i = 0; i < ${param_name}Info.size; ++i) {
-    ss << name << ".${param.name}[" << i << "] = " << ${param_name}Out.decorator << "${param_name}[" << i << "];" << std::endl;
+    ss << name << ".${param.name}[" << i << "] = " << ${param_name}Out.decorator << ${param_name}Out.value << "[" << i << "];" << std::endl;
   }
   %elif is_trivial_parameter(param):
-  ss << name << ".${param.name} = " << toStr(value.${param.name}) << ";" << std::endl;
+    %if is_enum_parameter(param):
+    ss << name << ".${param.name} = " << enumFlagsToCpp(toStr(value.${param.name}), "${param.type}") << ";" << std::endl;
+    %else:
+    ss << name << ".${param.name} = " << toStr(value.${param.name}) << ";" << std::endl;
+    %endif
   %else:
   ss << name << ".${param.name} = " << ${param_name}Out.decorator << ${param_name}Out.value << ";" << std::endl;
   %endif
