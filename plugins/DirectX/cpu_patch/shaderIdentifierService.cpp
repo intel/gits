@@ -75,7 +75,6 @@ bool ShaderIdentifierService::GetMappings(std::vector<ShaderIdentifierMapping>& 
     return captureIdentifierA < captureIdentifierB;
   });
 
-  m_Changed = false;
   bool changed = m_Changed;
   m_Changed = false;
   return changed;
