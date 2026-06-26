@@ -26,70 +26,70 @@ class ResourceDump {
 public:
   ResourceDump() {}
   virtual ~ResourceDump();
-  void dumpResource(ID3D12GraphicsCommandList* commandList,
+  void DumpResource(ID3D12GraphicsCommandList* commandList,
                     ID3D12Resource* resource,
                     unsigned subresource,
                     D3D12_RESOURCE_STATES resourceState,
                     const std::wstring& dumpName,
                     unsigned mipLevel = 0,
                     DXGI_FORMAT format = DXGI_FORMAT_UNKNOWN);
-  void executeCommandLists(unsigned key,
+  void ExecuteCommandLists(unsigned key,
                            unsigned commandQueueKey,
                            ID3D12CommandQueue* commandQueue,
                            ID3D12CommandList** commandLists,
                            unsigned commandListNum);
-  void commandQueueWait(unsigned key,
+  void CommandQueueWait(unsigned key,
                         unsigned commandQueueKey,
                         unsigned fenceKey,
                         UINT64 fenceValue);
-  void commandQueueSignal(unsigned key,
+  void CommandQueueSignal(unsigned key,
                           unsigned commandQueueKey,
                           unsigned fenceKey,
                           UINT64 fenceValue);
-  void fenceSignal(unsigned key, unsigned fenceKey, UINT64 fenceValue);
-  void waitUntilDumped();
+  void FenceSignal(unsigned key, unsigned fenceKey, UINT64 fenceValue);
+  void WaitUntilDumped();
 
 protected:
   struct DumpInfo {
     virtual ~DumpInfo() {}
-    unsigned subresource{};
-    unsigned size{};
-    unsigned offset{};
-    unsigned mipLevel{};
-    std::wstring dumpName{};
-    Microsoft::WRL::ComPtr<ID3D12Resource> stagingBuffer{};
-    Microsoft::WRL::ComPtr<ID3D12Resource> resolvedResource{};
-    D3D12_RESOURCE_DESC desc{};
-    DXGI_FORMAT subresourceFormat{};
-    unsigned rowPitch{};
+    unsigned Subresource{};
+    unsigned Size{};
+    unsigned Offset{};
+    unsigned MipLevel{};
+    std::wstring DumpName{};
+    Microsoft::WRL::ComPtr<ID3D12Resource> StagingBuffer{};
+    Microsoft::WRL::ComPtr<ID3D12Resource> ResolvedResource{};
+    D3D12_RESOURCE_DESC Desc{};
+    DXGI_FORMAT SubresourceFormat{};
+    unsigned RowPitch{};
   };
 
-  std::unordered_map<ID3D12CommandList*, std::vector<DumpInfo*>> stagedResources_;
+  std::unordered_map<ID3D12CommandList*, std::vector<DumpInfo*>> m_StagedResources;
 
 private:
   GpuExecutionTracker m_GpuExecutionTracker;
 
   struct ThreadInfo : public GpuExecutionTracker::Executable {
-    UINT64 fenceValue{};
-    std::unique_ptr<std::thread> dumpThread{};
-    std::vector<std::unique_ptr<DumpInfo>> dumpInfos;
+    UINT64 FenceValue{};
+    std::unique_ptr<std::thread> DumpThread{};
+    std::vector<std::unique_ptr<DumpInfo>> DumpInfos;
   };
 
-  ID3D12Fence* fence_{};
-  HANDLE fenceEvent_{};
-  UINT64 fenceValue_{};
+  ID3D12Fence* m_Fence{};
+  HANDLE m_FenceEvent{};
+  UINT64 m_FenceValue{};
 
 protected:
-  virtual void dumpStagedResource(DumpInfo& dumpInfo) {}
-  void stageResource(ID3D12GraphicsCommandList* commandList,
+  virtual void DumpStagedResource(DumpInfo& dumpInfo) {}
+  void StageResource(ID3D12GraphicsCommandList* commandList,
                      ID3D12Resource* resource,
                      D3D12_RESOURCE_STATES resourceState,
                      DumpInfo& dumpInfo,
                      bool dependent = false);
 
 private:
-  void dumpStagedResources(ThreadInfo* threadInfo);
-  void initFence(ID3D12DeviceChild* deviceChild);
+  void DumpStagedResources(ThreadInfo* threadInfo);
+  void InitFence(ID3D12DeviceChild* deviceChild);
 };
 
 } // namespace DirectX

@@ -16,120 +16,120 @@ namespace DirectX {
 PlatformPortabilityLayer::~PlatformPortabilityLayer() {}
 
 void PlatformPortabilityLayer::Pre(
-    ID3D12DeviceRemovedExtendedDataSettingsSetAutoBreadcrumbsEnablementCommand& c) {
-  c.Skip = true;
+    ID3D12DeviceRemovedExtendedDataSettingsSetAutoBreadcrumbsEnablementCommand& command) {
+  command.Skip = true;
 }
 void PlatformPortabilityLayer::Pre(
-    ID3D12DeviceRemovedExtendedDataSettingsSetPageFaultEnablementCommand& c) {
-  c.Skip = true;
+    ID3D12DeviceRemovedExtendedDataSettingsSetPageFaultEnablementCommand& command) {
+  command.Skip = true;
 }
 void PlatformPortabilityLayer::Pre(
-    ID3D12DeviceRemovedExtendedDataSettingsSetWatsonDumpEnablementCommand& c) {
-  c.Skip = true;
+    ID3D12DeviceRemovedExtendedDataSettingsSetWatsonDumpEnablementCommand& command) {
+  command.Skip = true;
 }
 void PlatformPortabilityLayer::Pre(
-    ID3D12DeviceRemovedExtendedDataSettings1SetBreadcrumbContextEnablementCommand& c) {
-  c.Skip = true;
+    ID3D12DeviceRemovedExtendedDataSettings1SetBreadcrumbContextEnablementCommand& command) {
+  command.Skip = true;
 }
 void PlatformPortabilityLayer::Pre(
-    ID3D12DeviceRemovedExtendedDataSettings2UseMarkersOnlyAutoBreadcrumbsCommand& c) {
-  c.Skip = true;
+    ID3D12DeviceRemovedExtendedDataSettings2UseMarkersOnlyAutoBreadcrumbsCommand& command) {
+  command.Skip = true;
 }
-void PlatformPortabilityLayer::Pre(ID3D12SDKConfigurationSetSDKVersionCommand& c) {
-  c.Skip = true;
-}
-
-void PlatformPortabilityLayer::Pre(D3D12GetDebugInterfaceCommand& c) {
-  c.Skip = true;
+void PlatformPortabilityLayer::Pre(ID3D12SDKConfigurationSetSDKVersionCommand& command) {
+  command.Skip = true;
 }
 
-void PlatformPortabilityLayer::Pre(ID3D12DebugEnableDebugLayerCommand& c) {
-  c.Skip = true;
+void PlatformPortabilityLayer::Pre(D3D12GetDebugInterfaceCommand& command) {
+  command.Skip = true;
 }
 
-void PlatformPortabilityLayer::Pre(DXGIGetDebugInterface1Command& c) {
-  c.Skip = true;
+void PlatformPortabilityLayer::Pre(ID3D12DebugEnableDebugLayerCommand& command) {
+  command.Skip = true;
 }
 
-void PlatformPortabilityLayer::Pre(IDXGIInfoQueueSetBreakOnSeverityCommand& c) {
-  c.Skip = true;
+void PlatformPortabilityLayer::Pre(DXGIGetDebugInterface1Command& command) {
+  command.Skip = true;
 }
 
-void PlatformPortabilityLayer::Pre(INTC_D3D12_CreateDeviceExtensionContextCommand& c) {
-  c.Skip = true;
+void PlatformPortabilityLayer::Pre(IDXGIInfoQueueSetBreakOnSeverityCommand& command) {
+  command.Skip = true;
 }
 
-void PlatformPortabilityLayer::Pre(INTC_D3D12_CreateDeviceExtensionContext1Command& c) {
-  c.Skip = true;
+void PlatformPortabilityLayer::Pre(INTC_D3D12_CreateDeviceExtensionContextCommand& command) {
+  command.Skip = true;
 }
 
-void PlatformPortabilityLayer::Pre(INTC_D3D12_SetApplicationInfoCommand& c) {
-  c.Skip = true;
+void PlatformPortabilityLayer::Pre(INTC_D3D12_CreateDeviceExtensionContext1Command& command) {
+  command.Skip = true;
 }
 
-void PlatformPortabilityLayer::Pre(INTC_D3D12_SetFeatureSupportCommand& c) {
-  c.Skip = true;
+void PlatformPortabilityLayer::Pre(INTC_D3D12_SetApplicationInfoCommand& command) {
+  command.Skip = true;
 }
 
-void PlatformPortabilityLayer::Pre(INTC_D3D12_CreatePlacedResourceCommand& c) {
-  c.Skip = true;
+void PlatformPortabilityLayer::Pre(INTC_D3D12_SetFeatureSupportCommand& command) {
+  command.Skip = true;
+}
 
-  if (!c.m_pHeap.Value) {
+void PlatformPortabilityLayer::Pre(INTC_D3D12_CreatePlacedResourceCommand& command) {
+  command.Skip = true;
+
+  if (!command.m_pHeap.Value) {
     LOG_ERROR << "PlatformPortability - pHeap is null";
-    c.m_Result.Value = E_INVALIDARG;
+    command.m_Result.Value = E_INVALIDARG;
     return;
   }
 
   // Get device from heap
   Microsoft::WRL::ComPtr<ID3D12Device> pDevice;
-  HRESULT hr = c.m_pHeap.Value->GetDevice(IID_PPV_ARGS(&pDevice));
+  HRESULT hr = command.m_pHeap.Value->GetDevice(IID_PPV_ARGS(&pDevice));
   if (FAILED(hr) || !pDevice) {
     LOG_ERROR << "PlatformPortability - GetDevice failed with HRESULT: 0x" << std::hex << hr
               << std::dec;
-    c.m_Result.Value = FAILED(hr) ? hr : E_FAIL;
+    command.m_Result.Value = FAILED(hr) ? hr : E_FAIL;
     return;
   }
 
   // Extract D3D12_RESOURCE_DESC from Intel extended structure
   // The first member of INTC_D3D12_RESOURCE_DESC_0001 is a pointer to D3D12_RESOURCE_DESC
-  if (!c.m_pDesc.Value) {
+  if (!command.m_pDesc.Value) {
     LOG_ERROR << "PlatformPortability - Resource descriptor is null";
-    c.m_Result.Value = E_INVALIDARG;
+    command.m_Result.Value = E_INVALIDARG;
     return;
   }
 
-  auto** ppDesc = reinterpret_cast<D3D12_RESOURCE_DESC**>(c.m_pDesc.Value);
+  auto** ppDesc = reinterpret_cast<D3D12_RESOURCE_DESC**>(command.m_pDesc.Value);
   auto* pDesc = *ppDesc;
 
   if (!pDesc) {
     LOG_ERROR << "PlatformPortability - D3D12_RESOURCE_DESC pointer is null";
-    c.m_Result.Value = E_INVALIDARG;
+    command.m_Result.Value = E_INVALIDARG;
     return;
   }
 
   // Validate descriptor
   if (pDesc->Dimension > D3D12_RESOURCE_DIMENSION_TEXTURE3D) {
     LOG_ERROR << "PlatformPortability - Invalid resource dimension: " << pDesc->Dimension;
-    c.m_Result.Value = E_INVALIDARG;
+    command.m_Result.Value = E_INVALIDARG;
     return;
   }
 
   // Forward to standard D3D12 CreatePlacedResource
-  hr = pDevice->CreatePlacedResource(c.m_pHeap.Value, c.m_HeapOffset.Value, pDesc,
-                                     static_cast<D3D12_RESOURCE_STATES>(c.m_InitialState.Value),
-                                     c.m_pOptimizedClearValue.Value, c.m_riid.Value,
-                                     c.m_ppvResource.Value);
+  hr = pDevice->CreatePlacedResource(
+      command.m_pHeap.Value, command.m_HeapOffset.Value, pDesc,
+      static_cast<D3D12_RESOURCE_STATES>(command.m_InitialState.Value),
+      command.m_pOptimizedClearValue.Value, command.m_riid.Value, command.m_ppvResource.Value);
 
   if (FAILED(hr)) {
     LOG_ERROR << "PlatformPortability - CreatePlacedResource failed with HRESULT: 0x" << std::hex
               << hr << std::dec;
-    LOG_ERROR << "  Heap: " << c.m_pHeap.Value << ", Offset: " << c.m_HeapOffset.Value;
+    LOG_ERROR << "  Heap: " << command.m_pHeap.Value << ", Offset: " << command.m_HeapOffset.Value;
     LOG_ERROR << "  Dimension: " << pDesc->Dimension << ", Format: " << pDesc->Format;
     LOG_ERROR << "  Width: " << pDesc->Width << ", Height: " << pDesc->Height;
     LOG_ERROR << "  Flags: 0x" << std::hex << pDesc->Flags << std::dec;
   }
 
-  c.m_Result.Value = hr;
+  command.m_Result.Value = hr;
 }
 
 } // namespace DirectX

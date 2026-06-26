@@ -14,21 +14,21 @@
 namespace gits {
 namespace DirectX {
 
-void ShaderIdentifierService::addCaptureShaderIdentifier(unsigned commandKey,
+void ShaderIdentifierService::AddCaptureShaderIdentifier(unsigned commandKey,
                                                          ShaderIdentifier captureIdentifier,
                                                          LPWSTR exportName) {
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::lock_guard<std::mutex> lock(m_Mutex);
 
   m_ShaderIdentifiersByCommandKey[commandKey] = captureIdentifier;
-  if (dumpLookup_) {
+  if (m_DumpLookup) {
     m_ExportNamesByCaptureIdentifier[captureIdentifier] = exportName;
   }
 }
 
-void ShaderIdentifierService::addPlayerShaderIdentifier(unsigned commandKey,
+void ShaderIdentifierService::AddPlayerShaderIdentifier(unsigned commandKey,
                                                         ShaderIdentifier playerIdentifier,
                                                         LPWSTR exportName) {
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::lock_guard<std::mutex> lock(m_Mutex);
 
   auto itByCommandKey = m_ShaderIdentifiersByCommandKey.find(commandKey);
   GITS_ASSERT(itByCommandKey != m_ShaderIdentifiersByCommandKey.end());
@@ -41,23 +41,23 @@ void ShaderIdentifierService::addPlayerShaderIdentifier(unsigned commandKey,
   m_ShaderIdentifiers[itByCommandKey->second] =
       ShaderIdentifierMapping{itByCommandKey->second, playerIdentifier};
   m_ShaderIdentifiersByCommandKey.erase(itByCommandKey);
-  changed_ = true;
+  m_Changed = true;
 
-  if (dumpLookup_) {
+  if (m_DumpLookup) {
     m_ExportNamesByPlayerIdentifier[playerIdentifier] = exportName;
   }
 }
 
 ShaderIdentifierService::ShaderIdentifier* ShaderIdentifierService::
-    getPlayerIdentifierByCaptureIdentifier(const ShaderIdentifier& captureIdentifier) {
+    GetPlayerIdentifierByCaptureIdentifier(const ShaderIdentifier& captureIdentifier) {
   auto it = m_ShaderIdentifiers.find(captureIdentifier);
   if (it == m_ShaderIdentifiers.end()) {
     return nullptr;
   }
-  return &it->second.playerIdentifier;
+  return &it->second.PlayerIdentifier;
 }
 
-bool ShaderIdentifierService::getMappings(std::vector<ShaderIdentifierMapping>& mappings) {
+bool ShaderIdentifierService::GetMappings(std::vector<ShaderIdentifierMapping>& mappings) {
   mappings.resize(m_ShaderIdentifiers.size());
   unsigned index = 0;
   for (auto& it : m_ShaderIdentifiers) {
@@ -69,15 +69,15 @@ bool ShaderIdentifierService::getMappings(std::vector<ShaderIdentifierMapping>& 
     using ShaderIdentifierGpu =
         std::array<uint64_t, D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES / sizeof(uint64_t)>;
     ShaderIdentifierGpu captureIdentifierA;
-    memcpy(captureIdentifierA.data(), &mappingA.captureIdentifier, sizeof(ShaderIdentifierGpu));
+    memcpy(captureIdentifierA.data(), &mappingA.CaptureIdentifier, sizeof(ShaderIdentifierGpu));
     ShaderIdentifierGpu captureIdentifierB;
-    memcpy(captureIdentifierB.data(), &mappingB.captureIdentifier, sizeof(ShaderIdentifierGpu));
+    memcpy(captureIdentifierB.data(), &mappingB.CaptureIdentifier, sizeof(ShaderIdentifierGpu));
     return captureIdentifierA < captureIdentifierB;
   });
 
-  changed_ = false;
-  bool changed = changed_;
-  changed_ = false;
+  m_Changed = false;
+  bool changed = m_Changed;
+  m_Changed = false;
   return changed;
 }
 

@@ -21,37 +21,38 @@ ExecuteIndirectDump::ExecuteIndirectDump(
     CapturePlayerGpuAddressService& addressService,
     std::unordered_map<unsigned, ID3D12Resource*>& resourceByKey)
     : ResourceDump(),
-      gitsConfig_(gitsConfig),
-      resourceStateTracker_(resourceStateTracker),
-      addressService_(addressService),
-      resourceByKey_(resourceByKey) {
+      m_GitsConfig(gitsConfig),
+      m_ResourceStateTracker(resourceStateTracker),
+      m_AddressService(addressService),
+      m_ResourceByKey(resourceByKey) {
   if (gitsConfig.directx.features.subcapture.enabled) {
-    dumpDir_ = gitsConfig.common.player.subcapturePath;
-    frames_ = BitRange(gitsConfig.directx.features.subcapture.frames);
+    m_DumpDir = gitsConfig.common.player.subcapturePath;
+    m_Frames = BitRange(gitsConfig.directx.features.subcapture.frames);
     if (gitsConfig.directx.features.subcapture.commandListExecutions.empty()) {
-      executions_ = BitRange("all");
+      m_Executions = BitRange("all");
     } else {
-      executions_ = BitRange(gitsConfig.directx.features.subcapture.commandListExecutions);
+      m_Executions = BitRange(gitsConfig.directx.features.subcapture.commandListExecutions);
     }
   } else {
-    dumpDir_ = gitsConfig.common.player.streamDir;
-    frames_ = BitRange("all");
-    executions_ = BitRange("all");
+    m_DumpDir = gitsConfig.common.player.streamDir;
+    m_Frames = BitRange("all");
+    m_Executions = BitRange("all");
   }
-  dumpDir_ /= "cpu_patch";
-  dumpDir_ /= "execute_indirect_dump";
-  LOG_INFO << "CpuPatch - ExecuteIndirectDump location: " << dumpDir_.string();
+  m_DumpDir /= "cpu_patch";
+  m_DumpDir /= "execute_indirect_dump";
+  LOG_INFO << "CpuPatch - ExecuteIndirectDump location: " << m_DumpDir.string();
 }
 
 ExecuteIndirectDump::~ExecuteIndirectDump() {
-  waitUntilDumped();
-  LOG_INFO << "CpuPatch - ExecuteIndirectDump - files dumped: " << std::to_string(numFiles_)
-           << ", total size: " << FormatMemorySize(filesTotalSize_);
+  WaitUntilDumped();
+  LOG_INFO << "CpuPatch - ExecuteIndirectDump - files dumped: " << std::to_string(m_NumFiles)
+           << ", total size: " << FormatMemorySize(m_FilesTotalSize);
 }
 
-void ExecuteIndirectDump::executeIndirect(ID3D12GraphicsCommandListExecuteIndirectCommand& c) {
-  auto itCommandSignature = commandSignatures_.find(c.m_pCommandSignature.Key);
-  GITS_ASSERT(itCommandSignature != commandSignatures_.end());
+void ExecuteIndirectDump::ExecuteIndirect(
+    ID3D12GraphicsCommandListExecuteIndirectCommand& command) {
+  auto itCommandSignature = m_CommandSignatures.find(command.m_pCommandSignature.Key);
+  GITS_ASSERT(itCommandSignature != m_CommandSignatures.end());
   const D3D12_COMMAND_SIGNATURE_DESC& commandSignature = *itCommandSignature->second->Value;
 
   bool view = false;
@@ -73,7 +74,7 @@ void ExecuteIndirectDump::executeIndirect(ID3D12GraphicsCommandListExecuteIndire
     return;
   }
 
-  initialize();
+  Initialize();
 
   auto dumpBindingTable = [&](D3D12_GPU_VIRTUAL_ADDRESS address, UINT64 size, UINT64 stride,
                               unsigned index, std::string type) {
@@ -81,27 +82,27 @@ void ExecuteIndirectDump::executeIndirect(ID3D12GraphicsCommandListExecuteIndire
       return;
     }
     CapturePlayerGpuAddressService::ResourceInfo* info =
-        addressService_.GetResourceInfoByCaptureAddress(address);
+        m_AddressService.GetResourceInfoByCaptureAddress(address);
     GITS_ASSERT(info);
     unsigned offset = address - info->CaptureStart;
 
     D3D12_RESOURCE_STATES state =
-        GetAdjustedCurrentState(resourceStateTracker_, addressService_, c.m_Object.Value,
+        GetAdjustedCurrentState(m_ResourceStateTracker, m_AddressService, command.m_Object.Value,
                                 info->Resource, offset, info->Key,
                                 D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE)
             .State;
 
     ExecuteIndirectDumpInfo* dumpInfo = new ExecuteIndirectDumpInfo();
-    dumpInfo->offset = offset;
-    dumpInfo->size = size;
-    dumpInfo->dumpName = (dumpDir_ / "binding_tables" /
-                          (std::to_string(c.Key) + "-" + std::to_string(index) + "-" + type))
+    dumpInfo->Offset = offset;
+    dumpInfo->Size = size;
+    dumpInfo->DumpName = (m_DumpDir / "binding_tables" /
+                          (std::to_string(command.Key) + "-" + std::to_string(index) + "-" + type))
                              .wstring();
-    stageResource(c.m_Object.Value, info->Resource, state, *dumpInfo);
+    StageResource(command.m_Object.Value, info->Resource, state, *dumpInfo);
   };
 
-  auto it = executeIndirectDispatchRays_.find(c.Key);
-  if (it != executeIndirectDispatchRays_.end()) {
+  auto it = m_ExecuteIndirectDispatchRays.find(command.Key);
+  if (it != m_ExecuteIndirectDispatchRays.end()) {
     for (unsigned i = 0; i < it->second.size(); ++i) {
       D3D12_DISPATCH_RAYS_DESC& desc = it->second.at(i);
       dumpBindingTable(desc.RayGenerationShaderRecord.StartAddress,
@@ -118,28 +119,30 @@ void ExecuteIndirectDump::executeIndirect(ID3D12GraphicsCommandListExecuteIndire
 
   {
     ExecuteIndirectDumpInfo* info = new ExecuteIndirectDumpInfo();
-    info->offset = c.m_ArgumentBufferOffset.Value;
-    info->size = commandSignature.ByteStride * c.m_MaxCommandCount.Value;
-    info->dumpName = (dumpDir_ / (std::to_string(c.Key) + "-ArgumentBuffer")).wstring();
+    info->Offset = command.m_ArgumentBufferOffset.Value;
+    info->Size = commandSignature.ByteStride * command.m_MaxCommandCount.Value;
+    info->DumpName = (m_DumpDir / (std::to_string(command.Key) + "-ArgumentBuffer")).wstring();
 
-    ID3D12Resource* argumentBuffer = resourceByKey_[c.m_pArgumentBuffer.Key];
+    ID3D12Resource* argumentBuffer = m_ResourceByKey[command.m_pArgumentBuffer.Key];
     GITS_ASSERT(argumentBuffer);
-    stageResource(c.m_Object.Value, argumentBuffer, D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT, *info);
+    StageResource(command.m_Object.Value, argumentBuffer, D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT,
+                  *info);
   }
 
-  if (c.m_pCountBuffer.Value) {
+  if (command.m_pCountBuffer.Value) {
     ExecuteIndirectDumpInfo* info = new ExecuteIndirectDumpInfo();
-    info->offset = c.m_CountBufferOffset.Value;
-    info->size = sizeof(unsigned);
-    info->dumpName = (dumpDir_ / (std::to_string(c.Key) + "-CountBuffer")).wstring();
+    info->Offset = command.m_CountBufferOffset.Value;
+    info->Size = sizeof(unsigned);
+    info->DumpName = (m_DumpDir / (std::to_string(command.Key) + "-CountBuffer")).wstring();
 
-    ID3D12Resource* countBuffer = resourceByKey_[c.m_pCountBuffer.Key];
+    ID3D12Resource* countBuffer = m_ResourceByKey[command.m_pCountBuffer.Key];
     GITS_ASSERT(countBuffer);
-    stageResource(c.m_Object.Value, countBuffer, D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT, *info);
+    StageResource(command.m_Object.Value, countBuffer, D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT,
+                  *info);
   }
 }
 
-void ExecuteIndirectDump::executeCommandLists(unsigned key,
+void ExecuteIndirectDump::ExecuteCommandLists(unsigned key,
                                               unsigned commandQueueKey,
                                               ID3D12CommandQueue* commandQueue,
                                               ID3D12CommandList** commandLists,
@@ -147,62 +150,63 @@ void ExecuteIndirectDump::executeCommandLists(unsigned key,
                                               unsigned frameCount,
                                               unsigned executeCount) {
   for (unsigned i = 0; i < commandListNum; ++i) {
-    auto it = stagedResources_.find(commandLists[i]);
-    if (it != stagedResources_.end()) {
+    auto it = m_StagedResources.find(commandLists[i]);
+    if (it != m_StagedResources.end()) {
       for (DumpInfo* dumpInfo : it->second) {
         auto* info = static_cast<ExecuteIndirectDumpInfo*>(dumpInfo);
-        info->frameCount = frameCount;
-        info->executeCount = executeCount;
+        info->FrameCount = frameCount;
+        info->ExecuteCount = executeCount;
       }
     }
   }
 
-  ResourceDump::executeCommandLists(key, commandQueueKey, commandQueue, commandLists,
+  ResourceDump::ExecuteCommandLists(key, commandQueueKey, commandQueue, commandLists,
                                     commandListNum);
 }
 
-void ExecuteIndirectDump::createCommandSignature(ID3D12DeviceCreateCommandSignatureCommand& c) {
-  commandSignatures_[c.m_ppvCommandSignature.Key].reset(
-      new PointerArgument<D3D12_COMMAND_SIGNATURE_DESC>(c.m_pDesc));
+void ExecuteIndirectDump::CreateCommandSignature(
+    ID3D12DeviceCreateCommandSignatureCommand& command) {
+  m_CommandSignatures[command.m_ppvCommandSignature.Key].reset(
+      new PointerArgument<D3D12_COMMAND_SIGNATURE_DESC>(command.m_pDesc));
 }
 
-void ExecuteIndirectDump::dumpStagedResource(DumpInfo& dumpInfo) {
+void ExecuteIndirectDump::DumpStagedResource(DumpInfo& dumpInfo) {
   {
     const auto& info = static_cast<ExecuteIndirectDumpInfo&>(dumpInfo);
-    if (!frames_[info.frameCount] || !executions_[info.executeCount]) {
+    if (!m_Frames[info.FrameCount] || !m_Executions[info.ExecuteCount]) {
       return;
     }
   }
 
   void* data{};
-  HRESULT hr = dumpInfo.stagingBuffer->Map(0, nullptr, &data);
+  HRESULT hr = dumpInfo.StagingBuffer->Map(0, nullptr, &data);
 
-  std::ofstream stream(dumpInfo.dumpName, std::ios_base::binary);
-  stream.write(static_cast<char*>(data), dumpInfo.size);
+  std::ofstream stream(dumpInfo.DumpName, std::ios_base::binary);
+  stream.write(static_cast<char*>(data), dumpInfo.Size);
 
-  dumpInfo.stagingBuffer->Unmap(0, nullptr);
+  dumpInfo.StagingBuffer->Unmap(0, nullptr);
 
-  ++numFiles_;
-  filesTotalSize_ += dumpInfo.size;
+  ++m_NumFiles;
+  m_FilesTotalSize += dumpInfo.Size;
 }
 
-void ExecuteIndirectDump::initialize() {
-  if (initialized_) {
+void ExecuteIndirectDump::Initialize() {
+  if (m_Initialized) {
     return;
   }
 
-  if (!dumpDir_.empty() && !std::filesystem::exists(dumpDir_)) {
-    std::filesystem::create_directories(dumpDir_);
-    std::filesystem::create_directory(dumpDir_ / "binding_tables");
+  if (!m_DumpDir.empty() && !std::filesystem::exists(m_DumpDir)) {
+    std::filesystem::create_directories(m_DumpDir);
+    std::filesystem::create_directory(m_DumpDir / "binding_tables");
   }
 
-  loadExecuteIndirectDispatchRays();
+  LoadExecuteIndirectDispatchRays();
 
-  initialized_ = true;
+  m_Initialized = true;
 }
 
-void ExecuteIndirectDump::loadExecuteIndirectDispatchRays() {
-  std::filesystem::path dumpPath = gitsConfig_.common.player.streamDir;
+void ExecuteIndirectDump::LoadExecuteIndirectDispatchRays() {
+  std::filesystem::path dumpPath = m_GitsConfig.common.player.streamDir;
   std::ifstream stream(dumpPath / "executeIndirectRaytracing.txt");
   while (true) {
     unsigned callKey{};
@@ -221,7 +225,7 @@ void ExecuteIndirectDump::loadExecuteIndirectDispatchRays() {
         desc.CallableShaderTable.StrideInBytes;
     stream >> desc.Width >> desc.Height >> desc.Depth;
 
-    executeIndirectDispatchRays_[callKey].push_back(desc);
+    m_ExecuteIndirectDispatchRays[callKey].push_back(desc);
   }
 }
 

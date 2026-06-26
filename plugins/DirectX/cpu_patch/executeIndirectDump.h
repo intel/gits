@@ -33,8 +33,8 @@ public:
   ExecuteIndirectDump(const ExecuteIndirectDump&) = delete;
   ExecuteIndirectDump& operator=(const ExecuteIndirectDump&) = delete;
 
-  void executeIndirect(ID3D12GraphicsCommandListExecuteIndirectCommand& command);
-  void executeCommandLists(unsigned key,
+  void ExecuteIndirect(ID3D12GraphicsCommandListExecuteIndirectCommand& command);
+  void ExecuteCommandLists(unsigned key,
                            unsigned commandQueueKey,
                            ID3D12CommandQueue* commandQueue,
                            ID3D12CommandList** commandLists,
@@ -42,34 +42,34 @@ public:
                            unsigned frameCount,
                            unsigned executeCount);
 
-  void createCommandSignature(ID3D12DeviceCreateCommandSignatureCommand& command);
+  void CreateCommandSignature(ID3D12DeviceCreateCommandSignatureCommand& command);
 
 protected:
-  void dumpStagedResource(DumpInfo& dumpInfo);
+  void DumpStagedResource(DumpInfo& dumpInfo);
 
 private:
   struct ExecuteIndirectDumpInfo : DumpInfo {
-    unsigned frameCount{};
-    unsigned executeCount{};
+    unsigned FrameCount{};
+    unsigned ExecuteCount{};
   };
 
-  void initialize();
-  void loadExecuteIndirectDispatchRays();
+  void Initialize();
+  void LoadExecuteIndirectDispatchRays();
 
-  const Configuration& gitsConfig_;
-  ResourceStateTracker& resourceStateTracker_;
-  CapturePlayerGpuAddressService& addressService_;
-  std::unordered_map<unsigned, ID3D12Resource*>& resourceByKey_;
-  BitRange frames_;
-  BitRange executions_;
-  bool initialized_{false};
-  std::filesystem::path dumpDir_;
-  size_t numFiles_{};
-  size_t filesTotalSize_{};
+  const Configuration& m_GitsConfig;
+  ResourceStateTracker& m_ResourceStateTracker;
+  CapturePlayerGpuAddressService& m_AddressService;
+  std::unordered_map<unsigned, ID3D12Resource*>& m_ResourceByKey;
+  BitRange m_Frames;
+  BitRange m_Executions;
+  bool m_Initialized{false};
+  std::filesystem::path m_DumpDir;
+  size_t m_NumFiles{};
+  size_t m_FilesTotalSize{};
 
-  std::unordered_map<unsigned, std::vector<D3D12_DISPATCH_RAYS_DESC>> executeIndirectDispatchRays_;
+  std::unordered_map<unsigned, std::vector<D3D12_DISPATCH_RAYS_DESC>> m_ExecuteIndirectDispatchRays;
   std::unordered_map<unsigned, std::unique_ptr<PointerArgument<D3D12_COMMAND_SIGNATURE_DESC>>>
-      commandSignatures_;
+      m_CommandSignatures;
 };
 
 } // namespace DirectX

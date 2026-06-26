@@ -14,8 +14,8 @@ namespace gits {
 namespace DirectX {
 
 struct BenchmarkConfig {
-  std::string output{"benchmarkCPUPerFrame.csv"};
-  bool isCapture{};
+  std::string Output{"benchmarkCPUPerFrame.csv"};
+  bool IsCapture{};
 };
 
 } // namespace DirectX

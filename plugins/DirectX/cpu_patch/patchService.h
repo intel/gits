@@ -29,28 +29,28 @@ public:
   PatchService(const PatchService&) = delete;
   PatchService& operator=(const PatchService&) = delete;
 
-  void preBuildRTAS(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& command);
-  void preDispatchRays(ID3D12GraphicsCommandList4DispatchRaysCommand& command);
-  void preExecuteIndirect(ID3D12GraphicsCommandListExecuteIndirectCommand& command);
-  void postExecuteIndirect(ID3D12GraphicsCommandListExecuteIndirectCommand& command);
-  void preExecute(ID3D12CommandQueueExecuteCommandListsCommand& command);
-  void postExecute(ID3D12CommandQueueExecuteCommandListsCommand& command);
+  void PreBuildRTAS(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& command);
+  void PreDispatchRays(ID3D12GraphicsCommandList4DispatchRaysCommand& command);
+  void PreExecuteIndirect(ID3D12GraphicsCommandListExecuteIndirectCommand& command);
+  void PostExecuteIndirect(ID3D12GraphicsCommandListExecuteIndirectCommand& command);
+  void PreExecute(ID3D12CommandQueueExecuteCommandListsCommand& command);
+  void PostExecute(ID3D12CommandQueueExecuteCommandListsCommand& command);
 
-  void releaseObject(IUnknownReleaseCommand& command);
-  void preGetShaderId(ID3D12StateObjectPropertiesGetShaderIdentifierCommand& command);
-  void postGetShaderId(ID3D12StateObjectPropertiesGetShaderIdentifierCommand& command);
-  void preGetDescriptorHandle(
+  void ReleaseObject(IUnknownReleaseCommand& command);
+  void PreGetShaderId(ID3D12StateObjectPropertiesGetShaderIdentifierCommand& command);
+  void PostGetShaderId(ID3D12StateObjectPropertiesGetShaderIdentifierCommand& command);
+  void PreGetDescriptorHandle(
       ID3D12DescriptorHeapGetGPUDescriptorHandleForHeapStartCommand& command);
-  void postGetDescriptorHandle(
+  void PostGetDescriptorHandle(
       ID3D12DescriptorHeapGetGPUDescriptorHandleForHeapStartCommand& command);
-  void createCommandSignature(unsigned commandSignatureKey,
+  void CreateCommandSignature(unsigned commandSignatureKey,
                               const PointerArgument<D3D12_COMMAND_SIGNATURE_DESC>& desc);
 
 private:
   struct FenceInfo {
-    ID3D12Fence* fence{};
-    UINT64 fenceValue{};
-    bool waitingForExecute{};
+    ID3D12Fence* Fence{};
+    UINT64 FenceValue{};
+    bool WaitingForExecute{};
   };
 
   struct PatchInfo {
@@ -59,52 +59,52 @@ private:
       DispatchRays,
       ExecuteIndirect,
     };
-    Type type{};
-    unsigned patchBufferIndex{};
-    std::unique_ptr<Command> command;
+    Type Type{};
+    unsigned PatchBufferIndex{};
+    std::unique_ptr<Command> Command;
   };
 
-  void initialize(ID3D12GraphicsCommandList* commandList);
-  size_t align(size_t value, size_t alignment);
-  void addPatchBuffer(ID3D12GraphicsCommandList* commandList);
-  unsigned getPatchBufferIndex(unsigned commandListKey, ID3D12GraphicsCommandList* commandList);
-  void patchBuild(
+  void Initialize(ID3D12GraphicsCommandList* commandList);
+  size_t Align(size_t value, size_t alignment);
+  void AddPatchBuffer(ID3D12GraphicsCommandList* commandList);
+  unsigned GetPatchBufferIndex(unsigned commandListKey, ID3D12GraphicsCommandList* commandList);
+  void PatchBuild(
       const PatchInfo& patchInfo,
       const std::vector<CapturePlayerGpuAddressService::GpuAddressMapping>& gpuAddressMappings);
-  void patchDispatchRays(
+  void PatchDispatchRays(
       const PatchInfo& patchInfo,
       const std::vector<CapturePlayerGpuAddressService::GpuAddressMapping>& gpuAddressMappings);
-  void patchExecuteIndirect(
+  void PatchExecuteIndirect(
       const PatchInfo& patchInfo,
       const std::vector<CapturePlayerGpuAddressService::GpuAddressMapping>& gpuAddressMappings);
-  std::vector<char> readFile(std::filesystem::path path);
-  UINT64 getPlayerAddress(
+  std::vector<char> ReadFile(std::filesystem::path path);
+  UINT64 GetPlayerAddress(
       UINT64 captureAddress,
       const std::vector<CapturePlayerGpuAddressService::GpuAddressMapping>& gpuAddressMappings);
-  void loadExecuteIndirectDispatchRays();
+  void LoadExecuteIndirectDispatchRays();
 
-  const Configuration& gitsConfig_;
-  std::filesystem::path path_;
-  bool initialized_{};
+  const Configuration& m_GitsConfig;
+  std::filesystem::path m_Path;
+  bool m_Initialized{};
 
-  std::vector<FenceInfo> patchBufferFences_{};
-  std::unordered_map<unsigned, std::vector<unsigned>> currentPatchBuffersByCommandList_;
+  std::vector<FenceInfo> m_PatchBufferFences{};
+  std::unordered_map<unsigned, std::vector<unsigned>> m_CurrentPatchBuffersByCommandList;
 
-  static const unsigned patchBufferInitialPoolSize_{16};
-  unsigned patchBufferPoolSize_{};
-  std::vector<ID3D12Resource*> patchBuffers_{};
-  unsigned patchBufferSize_{};
+  static const unsigned PatchBufferInitialPoolSize{16};
+  unsigned m_PatchBufferPoolSize{};
+  std::vector<ID3D12Resource*> m_PatchBuffers{};
+  unsigned m_PatchBufferSize{};
 
-  std::unordered_map<unsigned, std::vector<std::unique_ptr<PatchInfo>>> patchInfoByCommandList_;
+  std::unordered_map<unsigned, std::vector<std::unique_ptr<PatchInfo>>> m_PatchInfoByCommandList;
 
   std::unordered_map<unsigned, std::unique_ptr<PointerArgument<D3D12_COMMAND_SIGNATURE_DESC>>>
-      commandSignatures_;
-  std::unordered_map<unsigned, std::vector<D3D12_DISPATCH_RAYS_DESC>> executeIndirectDispatchRays_;
-  UINT64 executeIndirectLastArgumentBufferOffset_{};
+      m_CommandSignatures;
+  std::unordered_map<unsigned, std::vector<D3D12_DISPATCH_RAYS_DESC>> m_ExecuteIndirectDispatchRays;
+  UINT64 m_ExecuteIndirectLastArgumentBufferOffset{};
 
-  CapturePlayerGpuAddressService& addressService_;
-  ShaderIdentifierService shaderIdentifierService_;
-  DescriptorHandleService descriptorHandleService_;
+  CapturePlayerGpuAddressService& m_AddressService;
+  ShaderIdentifierService m_ShaderIdentifierService;
+  DescriptorHandleService m_DescriptorHandleService;
 };
 
 } // namespace DirectX

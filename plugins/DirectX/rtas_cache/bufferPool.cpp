@@ -6,62 +6,62 @@
 //
 // ===================== end_copyright_notice ==============================
 
-#include "BufferPool.h"
+#include "bufferPool.h"
 
 #include <cassert>
 
 namespace gits {
 namespace DirectX {
 
-void BufferPool::initialize(ID3D12Device* device, size_t bufferSize, unsigned initialCount) {
+void BufferPool::Initialize(ID3D12Device* device, size_t bufferSize, unsigned initialCount) {
   assert(device);
   assert(bufferSize > 0);
 
-  device_ = device;
-  bufferSize_ = bufferSize;
+  m_Device = device;
+  m_BufferSize = bufferSize;
 
   // Clear existing data
-  buffers_.clear();
-  keyToIndex_.clear();
-  freeIndices_ = std::stack<unsigned>();
+  m_Buffers.clear();
+  m_KeyToIndex.clear();
+  m_FreeIndices = std::stack<unsigned>();
 
   // Pre-allocate buffers and mark all as free
   for (unsigned i = 0; i < initialCount; ++i) {
-    buffers_.push_back(createBuffer(device_, bufferSize_));
-    freeIndices_.push(i);
+    m_Buffers.push_back(CreateBuffer(m_Device, m_BufferSize));
+    m_FreeIndices.push(i);
   }
 }
 
-ID3D12Resource* BufferPool::acquireBuffer(unsigned key) {
+ID3D12Resource* BufferPool::AcquireBuffer(unsigned key) {
   unsigned index = 0;
-  if (!freeIndices_.empty()) {
+  if (!m_FreeIndices.empty()) {
     // Use an existing free buffer
-    index = freeIndices_.top();
-    freeIndices_.pop();
+    index = m_FreeIndices.top();
+    m_FreeIndices.pop();
   } else {
     // Create a new buffer
-    index = static_cast<unsigned>(buffers_.size());
-    buffers_.push_back(createBuffer(device_, bufferSize_));
+    index = static_cast<unsigned>(m_Buffers.size());
+    m_Buffers.push_back(CreateBuffer(m_Device, m_BufferSize));
   }
 
-  keyToIndex_[key] = index;
-  return buffers_[index].Get();
+  m_KeyToIndex[key] = index;
+  return m_Buffers[index].Get();
 }
 
-void BufferPool::releaseBuffer(unsigned key) {
-  auto it = keyToIndex_.find(key);
-  if (it != keyToIndex_.end()) {
+void BufferPool::ReleaseBuffer(unsigned key) {
+  auto it = m_KeyToIndex.find(key);
+  if (it != m_KeyToIndex.end()) {
     unsigned index = it->second;
-    keyToIndex_.erase(it);
-    freeIndices_.push(index);
+    m_KeyToIndex.erase(it);
+    m_FreeIndices.push(index);
   }
 }
 
-size_t BufferPool::size() const {
-  return buffers_.size();
+size_t BufferPool::Size() const {
+  return m_Buffers.size();
 }
 
-ID3D12Resource* createBuffer(ID3D12Device* device, size_t bufferSize) {
+ID3D12Resource* CreateBuffer(ID3D12Device* device, size_t bufferSize) {
   D3D12_HEAP_PROPERTIES heapProperties{};
   heapProperties.Type = D3D12_HEAP_TYPE_UPLOAD;
   heapProperties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;

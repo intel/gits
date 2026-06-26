@@ -28,8 +28,8 @@ public:
   void Post(IDXGISwapChain1Present1Command& command) override;
 
 private:
-  BenchmarkConfig cfg_;
-  CpuFrameBenchmarkService cpuFrameBenchmarkService_;
+  BenchmarkConfig m_Cfg;
+  CpuFrameBenchmarkService m_CpuFrameBenchmarkService;
 };
 
 } // namespace DirectX

@@ -14,9 +14,9 @@ namespace gits {
 namespace DirectX {
 
 struct AdapterSpoofConfig {
-  std::string description = "";
-  unsigned vendorId = 0;
-  unsigned deviceId = 0;
+  std::string Description;
+  unsigned VendorId = 0;
+  unsigned DeviceId = 0;
 };
 
 class AdapterSpoofLayer : public Layer {
@@ -24,13 +24,13 @@ public:
   AdapterSpoofLayer(const AdapterSpoofConfig& cfg);
   ~AdapterSpoofLayer() = default;
 
-  void Post(IDXGIAdapterGetDescCommand& c) override;
-  void Post(IDXGIAdapter1GetDesc1Command& c) override;
-  void Post(IDXGIAdapter2GetDesc2Command& c) override;
-  void Post(IDXGIAdapter4GetDesc3Command& c) override;
+  void Post(IDXGIAdapterGetDescCommand& command) override;
+  void Post(IDXGIAdapter1GetDesc1Command& command) override;
+  void Post(IDXGIAdapter2GetDesc2Command& command) override;
+  void Post(IDXGIAdapter4GetDesc3Command& command) override;
 
 private:
-  AdapterSpoofConfig cfg_;
+  AdapterSpoofConfig m_Cfg;
 };
 
 } // namespace DirectX

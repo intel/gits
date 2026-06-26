@@ -49,26 +49,26 @@ static std::string IdentifierToStr(
   return oss.str();
 }
 
-RtasDeserializer::RtasDeserializer(const std::string& cacheFile) : cacheFilePath_(cacheFile) {}
+RtasDeserializer::RtasDeserializer(const std::string& cacheFile) : m_CacheFilePath(cacheFile) {}
 
 RtasDeserializer::~RtasDeserializer() {
   try {
     LOG_INFO << "RtasCache - Cleaning up RTAS deserializer...";
-    LOG_INFO << "RtasCache - Buffer pool contains " << bufferPool_.size() << " buffers";
-    cleanup();
+    LOG_INFO << "RtasCache - Buffer pool contains " << m_BufferPool.Size() << " buffers";
+    Cleanup();
   } catch (...) {
     topmost_exception_handler("RtasDeserializer::~RtasDeserializer");
   }
 }
 
-bool RtasDeserializer::preloadCache(ID3D12Device5* device) {
-  std::ifstream cacheFile(cacheFilePath_, std::ios_base::binary);
+bool RtasDeserializer::PreloadCache(ID3D12Device5* device) {
+  std::ifstream cacheFile(m_CacheFilePath, std::ios_base::binary);
   if (!cacheFile) {
-    LOG_ERROR << "RtasCache - Failed to open " << cacheFilePath_;
+    LOG_ERROR << "RtasCache - Failed to open " << m_CacheFilePath;
   }
 
   // Check if the cache file is compatible with the current device
-  if (!isCompatible(cacheFile, device)) {
+  if (!IsCompatible(cacheFile, device)) {
     LOG_ERROR << "RtasCache - Cache is not compatible with the current device";
     return false;
   }
@@ -83,19 +83,19 @@ bool RtasDeserializer::preloadCache(ID3D12Device5* device) {
     cacheFile.read(reinterpret_cast<char*>(data.data()), size);
     if (size > 0 && !cacheFile) {
       LOG_ERROR << "RtasCache - Error reading BLAS " << key;
-      cacheData_.clear();
+      m_CacheData.clear();
       return false;
     }
-    cacheData_[key] = std::move(data);
+    m_CacheData[key] = std::move(data);
   }
 
-  LOG_INFO << "RtasCache - Cache file read successfully, total BLASes: " << cacheData_.size();
-  LOG_INFO << "RtasCache - Buffer pool size: " << FormatMemorySize(maxBufferSize_);
+  LOG_INFO << "RtasCache - Cache file read successfully, total BLASes: " << m_CacheData.size();
+  LOG_INFO << "RtasCache - Buffer pool size: " << FormatMemorySize(m_MaxBufferSize);
 
   return true;
 }
 
-bool RtasDeserializer::isCompatible(std::ifstream& cacheFile, ID3D12Device5* device) {
+bool RtasDeserializer::IsCompatible(std::ifstream& cacheFile, ID3D12Device5* device) {
   if (!device || !cacheFile) {
     return false;
   }
@@ -124,14 +124,14 @@ bool RtasDeserializer::isCompatible(std::ifstream& cacheFile, ID3D12Device5* dev
   return true;
 }
 
-bool RtasDeserializer::deserialize(unsigned buildKey,
+bool RtasDeserializer::Deserialize(unsigned buildKey,
                                    ID3D12GraphicsCommandList4* commandList,
                                    D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC& desc) {
 
-  cleanup();
+  Cleanup();
 
-  auto it = cacheData_.find(buildKey);
-  if (it == cacheData_.end()) {
+  auto it = m_CacheData.find(buildKey);
+  if (it == m_CacheData.end()) {
     LOG_WARNING << "RtasCache - BLAS " << buildKey << " not found in cache";
     return false;
   }
@@ -150,18 +150,18 @@ bool RtasDeserializer::deserialize(unsigned buildKey,
   assert(hr == S_OK);
 
   // Create buffer pool if not initialized
-  if (bufferPool_.size() == 0) {
-    bufferPool_.initialize(device.Get(), maxBufferSize_, 1);
+  if (m_BufferPool.Size() == 0) {
+    m_BufferPool.Initialize(device.Get(), m_MaxBufferSize, 1);
   }
 
   ID3D12Resource* buffer = nullptr;
-  if (size <= maxBufferSize_) {
-    buffer = bufferPool_.acquireBuffer(buildKey);
+  if (size <= m_MaxBufferSize) {
+    buffer = m_BufferPool.AcquireBuffer(buildKey);
   } else {
     LOG_WARNING << "RtasCache - BLAS " << key << " with size " << FormatMemorySize(size)
                 << " does not fit in the buffer pool";
-    buffer = createBuffer(device.Get(), size);
-    tmpBuffers_[buildKey] = buffer;
+    buffer = CreateBuffer(device.Get(), size);
+    m_TmpBuffers[buildKey] = buffer;
   }
   assert(buffer);
 
@@ -174,22 +174,22 @@ bool RtasDeserializer::deserialize(unsigned buildKey,
       desc.DestAccelerationStructureData, buffer->GetGPUVirtualAddress(),
       D3D12_RAYTRACING_ACCELERATION_STRUCTURE_COPY_MODE_DESERIALIZE);
 
-  buildKeysByCommandList_[commandList].emplace_back(buildKey);
+  m_BuildKeysByCommandList[commandList].emplace_back(buildKey);
 
   data.clear();
 
   return true;
 }
 
-void RtasDeserializer::executeCommandLists(unsigned key,
+void RtasDeserializer::ExecuteCommandLists(unsigned key,
                                            unsigned commandQueueKey,
                                            ID3D12CommandQueue* commandQueue,
                                            ID3D12CommandList** commandLists,
                                            unsigned commandListNum) {
   bool found = false;
   for (unsigned i = 0; i < commandListNum; ++i) {
-    auto itCommandList = buildKeysByCommandList_.find(commandLists[i]);
-    if (itCommandList != buildKeysByCommandList_.end()) {
+    auto itCommandList = m_BuildKeysByCommandList.find(commandLists[i]);
+    if (itCommandList != m_BuildKeysByCommandList.end()) {
       found = true;
       break;
     }
@@ -198,51 +198,51 @@ void RtasDeserializer::executeCommandLists(unsigned key,
     return;
   }
 
-  cleanup();
+  Cleanup();
 
-  auto itCommandQueue = commandQueues_.find(commandQueue);
-  if (itCommandQueue == commandQueues_.end()) {
+  auto itCommandQueue = m_CommandQueues.find(commandQueue);
+  if (itCommandQueue == m_CommandQueues.end()) {
     Microsoft::WRL::ComPtr<ID3D12Device> device;
     HRESULT hr = commandQueue->GetDevice(IID_PPV_ARGS(&device));
     assert(hr == S_OK);
     CommandQueueInfo info{};
-    hr = device->CreateFence(info.fenceValue, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&info.fence));
+    hr = device->CreateFence(info.FenceValue, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&info.Fence));
     assert(hr == S_OK);
-    auto ret = commandQueues_.insert(std::make_pair(commandQueue, info));
+    auto ret = m_CommandQueues.insert(std::make_pair(commandQueue, info));
     itCommandQueue = ret.first;
   }
 
-  itCommandQueue->first->Signal(itCommandQueue->second.fence.Get(),
-                                ++itCommandQueue->second.fenceValue);
+  itCommandQueue->first->Signal(itCommandQueue->second.Fence.Get(),
+                                ++itCommandQueue->second.FenceValue);
 
   ExecuteInfo executeInfo{};
-  executeInfo.fenceValue = itCommandQueue->second.fenceValue;
+  executeInfo.FenceValue = itCommandQueue->second.FenceValue;
 
   for (unsigned i = 0; i < commandListNum; ++i) {
-    auto itCommandList = buildKeysByCommandList_.find(commandLists[i]);
-    if (itCommandList != buildKeysByCommandList_.end()) {
+    auto itCommandList = m_BuildKeysByCommandList.find(commandLists[i]);
+    if (itCommandList != m_BuildKeysByCommandList.end()) {
       for (auto buildKey : itCommandList->second) {
-        executeInfo.buildKeys.push_back(buildKey);
+        executeInfo.BuildKeys.push_back(buildKey);
       }
     }
   }
 
-  itCommandQueue->second.executes.push(executeInfo);
+  itCommandQueue->second.Executes.push(executeInfo);
 }
 
-void RtasDeserializer::cleanup() {
-  for (auto& it : commandQueues_) {
-    UINT64 completedValue = it.second.fence->GetCompletedValue();
-    while (!it.second.executes.empty()) {
-      ExecuteInfo& executeInfo = it.second.executes.front();
-      if (executeInfo.fenceValue > completedValue) {
+void RtasDeserializer::Cleanup() {
+  for (auto& it : m_CommandQueues) {
+    UINT64 completedValue = it.second.Fence->GetCompletedValue();
+    while (!it.second.Executes.empty()) {
+      ExecuteInfo& executeInfo = it.second.Executes.front();
+      if (executeInfo.FenceValue > completedValue) {
         break;
       }
-      for (auto buildKey : executeInfo.buildKeys) {
-        bufferPool_.releaseBuffer(buildKey);
-        tmpBuffers_.erase(buildKey);
+      for (auto buildKey : executeInfo.BuildKeys) {
+        m_BufferPool.ReleaseBuffer(buildKey);
+        m_TmpBuffers.erase(buildKey);
       }
-      it.second.executes.pop();
+      it.second.Executes.pop();
     }
   }
 }

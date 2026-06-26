@@ -26,8 +26,8 @@ public:
   void Post(ID3D12Device5GetRaytracingAccelerationStructurePrebuildInfoCommand& command) override;
 
 private:
-  MessageBus* msgBus_;
-  D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO lastCaptureTimePrebuildInfo_;
+  MessageBus* m_MsgBus;
+  D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO m_LastCaptureTimePrebuildInfo;
 };
 
 } // namespace DirectX

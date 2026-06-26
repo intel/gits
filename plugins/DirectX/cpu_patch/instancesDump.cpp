@@ -17,45 +17,45 @@ namespace DirectX {
 
 InstancesDump::InstancesDump(const Configuration& gitsConfig) : ResourceDump() {
   if (gitsConfig.directx.features.subcapture.enabled) {
-    dumpDir_ = gitsConfig.common.player.subcapturePath;
-    frames_ = BitRange(gitsConfig.directx.features.subcapture.frames);
+    m_DumpDir = gitsConfig.common.player.subcapturePath;
+    m_Frames = BitRange(gitsConfig.directx.features.subcapture.frames);
     if (gitsConfig.directx.features.subcapture.commandListExecutions.empty()) {
-      executions_ = BitRange("all");
+      m_Executions = BitRange("all");
     } else {
-      executions_ = BitRange(gitsConfig.directx.features.subcapture.commandListExecutions);
+      m_Executions = BitRange(gitsConfig.directx.features.subcapture.commandListExecutions);
     }
   } else {
-    dumpDir_ = gitsConfig.common.player.streamDir;
-    frames_ = BitRange("all");
-    executions_ = BitRange("all");
+    m_DumpDir = gitsConfig.common.player.streamDir;
+    m_Frames = BitRange("all");
+    m_Executions = BitRange("all");
   }
-  dumpDir_ /= "cpu_patch";
-  dumpDir_ /= "instances_dump";
-  LOG_INFO << "CpuPatch - InstancesDump location: " << dumpDir_.string();
+  m_DumpDir /= "cpu_patch";
+  m_DumpDir /= "instances_dump";
+  LOG_INFO << "CpuPatch - InstancesDump location: " << m_DumpDir.string();
 }
 
 InstancesDump::~InstancesDump() {
-  waitUntilDumped();
-  LOG_INFO << "CpuPatch - InstancesDump - files dumped: " << std::to_string(numFiles_)
-           << ", total size: " << FormatMemorySize(filesTotalSize_);
+  WaitUntilDumped();
+  LOG_INFO << "CpuPatch - InstancesDump - files dumped: " << std::to_string(m_NumFiles)
+           << ", total size: " << FormatMemorySize(m_FilesTotalSize);
 }
 
-void InstancesDump::buildTlas(ID3D12GraphicsCommandList* commandList,
+void InstancesDump::BuildTlas(ID3D12GraphicsCommandList* commandList,
                               ID3D12Resource* resource,
                               unsigned offset,
                               unsigned size,
                               D3D12_RESOURCE_STATES state,
                               unsigned commandKey) {
-  initialize();
+  Initialize();
 
   InstancesDumpInfo* info = new InstancesDumpInfo();
-  info->offset = offset;
-  info->size = size;
-  info->dumpName = (dumpDir_ / std::to_string(commandKey)).wstring();
-  stageResource(commandList, resource, state, *info);
+  info->Offset = offset;
+  info->Size = size;
+  info->DumpName = (m_DumpDir / std::to_string(commandKey)).wstring();
+  StageResource(commandList, resource, state, *info);
 }
 
-void InstancesDump::executeCommandLists(unsigned key,
+void InstancesDump::ExecuteCommandLists(unsigned key,
                                         unsigned commandQueueKey,
                                         ID3D12CommandQueue* commandQueue,
                                         ID3D12CommandList** commandLists,
@@ -63,49 +63,49 @@ void InstancesDump::executeCommandLists(unsigned key,
                                         unsigned frameCount,
                                         unsigned executeCount) {
   for (unsigned i = 0; i < commandListNum; ++i) {
-    auto it = stagedResources_.find(commandLists[i]);
-    if (it != stagedResources_.end()) {
+    auto it = m_StagedResources.find(commandLists[i]);
+    if (it != m_StagedResources.end()) {
       for (DumpInfo* dumpInfo : it->second) {
         auto* info = static_cast<InstancesDumpInfo*>(dumpInfo);
-        info->frameCount = frameCount;
-        info->executeCount = executeCount;
+        info->FrameCount = frameCount;
+        info->ExecuteCount = executeCount;
       }
     }
   }
 
-  ResourceDump::executeCommandLists(key, commandQueueKey, commandQueue, commandLists,
+  ResourceDump::ExecuteCommandLists(key, commandQueueKey, commandQueue, commandLists,
                                     commandListNum);
 }
 
-void InstancesDump::dumpStagedResource(DumpInfo& dumpInfo) {
+void InstancesDump::DumpStagedResource(DumpInfo& dumpInfo) {
   {
     const auto& info = static_cast<InstancesDumpInfo&>(dumpInfo);
-    if (!frames_[info.frameCount] || !executions_[info.executeCount]) {
+    if (!m_Frames[info.FrameCount] || !m_Executions[info.ExecuteCount]) {
       return;
     }
   }
 
   void* data{};
-  HRESULT hr = dumpInfo.stagingBuffer->Map(0, nullptr, &data);
+  HRESULT hr = dumpInfo.StagingBuffer->Map(0, nullptr, &data);
 
-  std::ofstream stream(dumpInfo.dumpName, std::ios_base::binary);
-  stream.write(static_cast<char*>(data), dumpInfo.size);
+  std::ofstream stream(dumpInfo.DumpName, std::ios_base::binary);
+  stream.write(static_cast<char*>(data), dumpInfo.Size);
 
-  dumpInfo.stagingBuffer->Unmap(0, nullptr);
+  dumpInfo.StagingBuffer->Unmap(0, nullptr);
 
-  ++numFiles_;
-  filesTotalSize_ += dumpInfo.size;
+  ++m_NumFiles;
+  m_FilesTotalSize += dumpInfo.Size;
 }
 
-void InstancesDump::initialize() {
-  if (initialized_) {
+void InstancesDump::Initialize() {
+  if (m_Initialized) {
     return;
   }
 
-  if (!dumpDir_.empty() && !std::filesystem::exists(dumpDir_)) {
-    std::filesystem::create_directories(dumpDir_);
+  if (!m_DumpDir.empty() && !std::filesystem::exists(m_DumpDir)) {
+    std::filesystem::create_directories(m_DumpDir);
   }
-  initialized_ = true;
+  m_Initialized = true;
 }
 
 } // namespace DirectX

@@ -19,23 +19,23 @@ namespace gits {
 namespace DirectX {
 
 ResourceDump::~ResourceDump() {
-  waitUntilDumped();
+  WaitUntilDumped();
 }
 
-void ResourceDump::waitUntilDumped() {
+void ResourceDump::WaitUntilDumped() {
   std::vector<GpuExecutionTracker::Executable*>& executables =
       m_GpuExecutionTracker.GetReadyExecutables();
   for (GpuExecutionTracker::Executable* executable : executables) {
     ThreadInfo* threadInfo = static_cast<ThreadInfo*>(executable);
-    if (threadInfo->dumpThread->joinable()) {
-      threadInfo->dumpThread->join();
+    if (threadInfo->DumpThread->joinable()) {
+      threadInfo->DumpThread->join();
     }
     delete threadInfo;
   }
   executables.clear();
 }
 
-void ResourceDump::dumpResource(ID3D12GraphicsCommandList* commandList,
+void ResourceDump::DumpResource(ID3D12GraphicsCommandList* commandList,
                                 ID3D12Resource* resource,
                                 unsigned subresource,
                                 D3D12_RESOURCE_STATES resourceState,
@@ -44,15 +44,15 @@ void ResourceDump::dumpResource(ID3D12GraphicsCommandList* commandList,
                                 DXGI_FORMAT format) {
 
   DumpInfo* dumpInfo = new DumpInfo();
-  dumpInfo->subresource = subresource;
-  dumpInfo->dumpName = dumpName;
-  dumpInfo->mipLevel = mipLevel;
-  dumpInfo->subresourceFormat = format;
+  dumpInfo->Subresource = subresource;
+  dumpInfo->DumpName = dumpName;
+  dumpInfo->MipLevel = mipLevel;
+  dumpInfo->SubresourceFormat = format;
 
-  stageResource(commandList, resource, resourceState, *dumpInfo);
+  StageResource(commandList, resource, resourceState, *dumpInfo);
 }
 
-void ResourceDump::stageResource(ID3D12GraphicsCommandList* commandList,
+void ResourceDump::StageResource(ID3D12GraphicsCommandList* commandList,
                                  ID3D12Resource* resource,
                                  D3D12_RESOURCE_STATES resourceState,
                                  DumpInfo& dumpInfo,
@@ -62,23 +62,23 @@ void ResourceDump::stageResource(ID3D12GraphicsCommandList* commandList,
   HRESULT hr = resource->GetDevice(IID_PPV_ARGS(&device));
   assert(hr == S_OK);
 
-  dumpInfo.desc = resource->GetDesc();
+  dumpInfo.Desc = resource->GetDesc();
   D3D12_PLACED_SUBRESOURCE_FOOTPRINT footprint{};
-  if (dumpInfo.desc.Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
-    D3D12_RESOURCE_DESC desc = dumpInfo.desc;
+  if (dumpInfo.Desc.Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
+    D3D12_RESOURCE_DESC desc = dumpInfo.Desc;
     desc.SampleDesc.Count = 1;
     desc.SampleDesc.Quality = 0;
     desc.Flags = D3D12_RESOURCE_FLAG_NONE;
     desc.Alignment = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
 
     UINT64 size{};
-    GetCopyableFootprintsSafe(device.Get(), &desc, dumpInfo.subresource, 1, 0, &footprint, nullptr,
+    GetCopyableFootprintsSafe(device.Get(), &desc, dumpInfo.Subresource, 1, 0, &footprint, nullptr,
                               nullptr, &size);
-    dumpInfo.size = size;
-    dumpInfo.rowPitch = footprint.Footprint.RowPitch;
-    dumpInfo.subresourceFormat = footprint.Footprint.Format;
-  } else if (!dumpInfo.size) {
-    dumpInfo.size = dumpInfo.desc.Width - dumpInfo.offset;
+    dumpInfo.Size = size;
+    dumpInfo.RowPitch = footprint.Footprint.RowPitch;
+    dumpInfo.SubresourceFormat = footprint.Footprint.Format;
+  } else if (!dumpInfo.Size) {
+    dumpInfo.Size = dumpInfo.Desc.Width - dumpInfo.Offset;
   }
   {
     D3D12_HEAP_PROPERTIES heapProperties{};
@@ -90,7 +90,7 @@ void ResourceDump::stageResource(ID3D12GraphicsCommandList* commandList,
 
     D3D12_RESOURCE_DESC desc{};
     desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-    desc.Width = dumpInfo.size;
+    desc.Width = dumpInfo.Size;
     desc.Height = 1;
     desc.DepthOrArraySize = 1;
     desc.MipLevels = 1;
@@ -100,10 +100,10 @@ void ResourceDump::stageResource(ID3D12GraphicsCommandList* commandList,
 
     HRESULT hr = device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &desc,
                                                  D3D12_RESOURCE_STATE_COPY_DEST, nullptr,
-                                                 IID_PPV_ARGS(&dumpInfo.stagingBuffer));
+                                                 IID_PPV_ARGS(&dumpInfo.StagingBuffer));
     assert(hr == S_OK);
   }
-  if (dumpInfo.desc.SampleDesc.Count > 1) {
+  if (dumpInfo.Desc.SampleDesc.Count > 1) {
     {
       D3D12_HEAP_PROPERTIES heapProperties{};
       heapProperties.Type = D3D12_HEAP_TYPE_DEFAULT;
@@ -112,7 +112,7 @@ void ResourceDump::stageResource(ID3D12GraphicsCommandList* commandList,
       heapProperties.CreationNodeMask = 1;
       heapProperties.VisibleNodeMask = 1;
 
-      D3D12_RESOURCE_DESC desc = dumpInfo.desc;
+      D3D12_RESOURCE_DESC desc = dumpInfo.Desc;
       desc.SampleDesc.Count = 1;
       desc.SampleDesc.Quality = 0;
       desc.Flags = D3D12_RESOURCE_FLAG_NONE;
@@ -120,7 +120,7 @@ void ResourceDump::stageResource(ID3D12GraphicsCommandList* commandList,
 
       HRESULT hr = device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &desc,
                                                    D3D12_RESOURCE_STATE_RESOLVE_DEST, nullptr,
-                                                   IID_PPV_ARGS(&dumpInfo.resolvedResource));
+                                                   IID_PPV_ARGS(&dumpInfo.ResolvedResource));
       assert(hr == S_OK);
     }
 
@@ -129,15 +129,15 @@ void ResourceDump::stageResource(ID3D12GraphicsCommandList* commandList,
       barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
       barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
       barrier.Transition.pResource = resource;
-      barrier.Transition.Subresource = dumpInfo.subresource;
+      barrier.Transition.Subresource = dumpInfo.Subresource;
       barrier.Transition.StateBefore = resourceState;
       barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RESOLVE_SOURCE;
 
       commandList->ResourceBarrier(1, &barrier);
     }
 
-    commandList->ResolveSubresource(dumpInfo.resolvedResource.Get(), dumpInfo.subresource, resource,
-                                    dumpInfo.subresource, dumpInfo.subresourceFormat);
+    commandList->ResolveSubresource(dumpInfo.ResolvedResource.Get(), dumpInfo.Subresource, resource,
+                                    dumpInfo.Subresource, dumpInfo.SubresourceFormat);
 
     if (resourceState != D3D12_RESOURCE_STATE_COPY_SOURCE) {
       barrier.Transition.StateAfter = barrier.Transition.StateBefore;
@@ -153,32 +153,32 @@ void ResourceDump::stageResource(ID3D12GraphicsCommandList* commandList,
     barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
     barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
     barrier.Transition.pResource =
-        dumpInfo.resolvedResource.Get() ? dumpInfo.resolvedResource.Get() : resource;
-    barrier.Transition.Subresource = dumpInfo.subresource;
+        dumpInfo.ResolvedResource.Get() ? dumpInfo.ResolvedResource.Get() : resource;
+    barrier.Transition.Subresource = dumpInfo.Subresource;
     barrier.Transition.StateBefore =
-        dumpInfo.resolvedResource.Get() ? D3D12_RESOURCE_STATE_RESOLVE_DEST : resourceState;
+        dumpInfo.ResolvedResource.Get() ? D3D12_RESOURCE_STATE_RESOLVE_DEST : resourceState;
     barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_SOURCE;
 
     commandList->ResourceBarrier(1, &barrier);
   }
 
-  if (dumpInfo.desc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER) {
-    commandList->CopyBufferRegion(dumpInfo.stagingBuffer.Get(), dumpInfo.subresource, resource,
-                                  dumpInfo.offset, dumpInfo.size);
+  if (dumpInfo.Desc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER) {
+    commandList->CopyBufferRegion(dumpInfo.StagingBuffer.Get(), dumpInfo.Subresource, resource,
+                                  dumpInfo.Offset, dumpInfo.Size);
   } else {
     D3D12_TEXTURE_COPY_LOCATION dest{};
     dest.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
-    dest.pResource = dumpInfo.stagingBuffer.Get();
+    dest.pResource = dumpInfo.StagingBuffer.Get();
     dest.PlacedFootprint.Footprint = footprint.Footprint;
     dest.PlacedFootprint.Offset = 0;
     D3D12_TEXTURE_COPY_LOCATION src{};
     src.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-    src.pResource = dumpInfo.resolvedResource.Get() ? dumpInfo.resolvedResource.Get() : resource;
-    src.SubresourceIndex = dumpInfo.subresource;
+    src.pResource = dumpInfo.ResolvedResource.Get() ? dumpInfo.ResolvedResource.Get() : resource;
+    src.SubresourceIndex = dumpInfo.Subresource;
     commandList->CopyTextureRegion(&dest, 0, 0, 0, &src, nullptr);
   }
 
-  if (!dumpInfo.resolvedResource.Get() && resourceState != D3D12_RESOURCE_STATE_COPY_SOURCE &&
+  if (!dumpInfo.ResolvedResource.Get() && resourceState != D3D12_RESOURCE_STATE_COPY_SOURCE &&
       resourceState != D3D12_RESOURCE_STATE_GENERIC_READ) {
     barrier.Transition.StateAfter = barrier.Transition.StateBefore;
     barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_SOURCE;
@@ -187,11 +187,11 @@ void ResourceDump::stageResource(ID3D12GraphicsCommandList* commandList,
   }
 
   if (!dependent) {
-    stagedResources_[commandList].push_back(&dumpInfo);
+    m_StagedResources[commandList].push_back(&dumpInfo);
   }
 }
 
-void ResourceDump::executeCommandLists(unsigned key,
+void ResourceDump::ExecuteCommandLists(unsigned key,
                                        unsigned commandQueueKey,
                                        ID3D12CommandQueue* commandQueue,
                                        ID3D12CommandList** commandLists,
@@ -199,8 +199,8 @@ void ResourceDump::executeCommandLists(unsigned key,
 
   bool found = false;
   for (unsigned i = 0; i < commandListNum; ++i) {
-    auto it = stagedResources_.find(commandLists[i]);
-    if (it != stagedResources_.end()) {
+    auto it = m_StagedResources.find(commandLists[i]);
+    if (it != m_StagedResources.end()) {
       found = true;
       break;
     }
@@ -209,79 +209,79 @@ void ResourceDump::executeCommandLists(unsigned key,
     return;
   }
 
-  waitUntilDumped();
-  initFence(commandQueue);
+  WaitUntilDumped();
+  InitFence(commandQueue);
 
-  ++fenceValue_;
-  HRESULT hr = fence_->SetEventOnCompletion(fenceValue_, fenceEvent_);
-  hr = commandQueue->Signal(fence_, fenceValue_);
+  ++m_FenceValue;
+  HRESULT hr = m_Fence->SetEventOnCompletion(m_FenceValue, m_FenceEvent);
+  hr = commandQueue->Signal(m_Fence, m_FenceValue);
   assert(hr == S_OK);
 
   ThreadInfo* threadInfo = new ThreadInfo();
-  threadInfo->fenceValue = fenceValue_;
+  threadInfo->FenceValue = m_FenceValue;
   for (unsigned i = 0; i < commandListNum; ++i) {
-    auto it = stagedResources_.find(commandLists[i]);
-    if (it != stagedResources_.end()) {
+    auto it = m_StagedResources.find(commandLists[i]);
+    if (it != m_StagedResources.end()) {
       for (DumpInfo* dumpInfo : it->second) {
-        threadInfo->dumpInfos.emplace_back(dumpInfo);
+        threadInfo->DumpInfos.emplace_back(dumpInfo);
       }
-      stagedResources_.erase(it);
+      m_StagedResources.erase(it);
     }
   }
 
-  threadInfo->dumpThread =
-      std::make_unique<std::thread>(&ResourceDump::dumpStagedResources, this, threadInfo);
+  threadInfo->DumpThread =
+      std::make_unique<std::thread>(&ResourceDump::DumpStagedResources, this, threadInfo);
 
   m_GpuExecutionTracker.Execute(key, commandQueueKey, threadInfo);
 }
 
-void ResourceDump::commandQueueWait(unsigned key,
+void ResourceDump::CommandQueueWait(unsigned key,
                                     unsigned commandQueueKey,
                                     unsigned fenceKey,
                                     UINT64 fenceValue) {
   m_GpuExecutionTracker.CommandQueueWait(key, commandQueueKey, fenceKey, fenceValue);
 }
 
-void ResourceDump::commandQueueSignal(unsigned key,
+void ResourceDump::CommandQueueSignal(unsigned key,
                                       unsigned commandQueueKey,
                                       unsigned fenceKey,
                                       UINT64 fenceValue) {
   m_GpuExecutionTracker.CommandQueueSignal(key, commandQueueKey, fenceKey, fenceValue);
 }
 
-void ResourceDump::fenceSignal(unsigned key, unsigned fenceKey, UINT64 fenceValue) {
+void ResourceDump::FenceSignal(unsigned key, unsigned fenceKey, UINT64 fenceValue) {
   m_GpuExecutionTracker.FenceSignal(key, fenceKey, fenceValue);
 }
 
-void ResourceDump::dumpStagedResources(ThreadInfo* threadInfo) {
+void ResourceDump::DumpStagedResources(ThreadInfo* threadInfo) {
 
   struct Cleanup {
-    Cleanup(ThreadInfo* threadInfo_) : threadInfo(threadInfo_) {}
+    Cleanup(ThreadInfo* threadInfo_) : Info(threadInfo_) {}
     ~Cleanup() {
-      for (auto& it : threadInfo->dumpInfos) {
+      for (auto& it : Info->DumpInfos) {
         it.reset();
       }
     }
-    ThreadInfo* threadInfo;
+    ThreadInfo* Info;
   } cleanup(threadInfo);
 
   do {
-    WaitForSingleObject(fenceEvent_, 10000);
-  } while (fence_->GetCompletedValue() < threadInfo->fenceValue);
+    WaitForSingleObject(m_FenceEvent, 10000);
+  } while (m_Fence->GetCompletedValue() < threadInfo->FenceValue);
 
-  for (auto& dumpInfo : threadInfo->dumpInfos) {
-    dumpStagedResource(*dumpInfo);
+  for (auto& dumpInfo : threadInfo->DumpInfos) {
+    DumpStagedResource(*dumpInfo);
   }
 }
 
-void ResourceDump::initFence(ID3D12DeviceChild* deviceChild) {
-  if (!fence_) {
+void ResourceDump::InitFence(ID3D12DeviceChild* deviceChild) {
+  if (!m_Fence) {
     Microsoft::WRL::ComPtr<ID3D12Device> device;
     HRESULT hr = deviceChild->GetDevice(IID_PPV_ARGS(&device));
     assert(hr == S_OK);
-    hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence_));
+    hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_Fence));
     assert(hr == S_OK);
-    fenceEvent_ = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+    m_FenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
   }
 }
 

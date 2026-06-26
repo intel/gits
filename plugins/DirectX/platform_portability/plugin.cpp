@@ -10,6 +10,7 @@
 #include "layer.h"
 #include "log.h"
 #include "configurationAuto.h"
+
 #include "yaml-cpp/yaml.h"
 #include <filesystem>
 
@@ -19,7 +20,7 @@ namespace DirectX {
 class PlatformPortabilityPlugin : public IPlugin {
 public:
   PlatformPortabilityPlugin(IPluginContext context, const char* pluginPath)
-      : IPlugin(context, pluginPath), context_(context), pluginPath_(pluginPath) {}
+      : IPlugin(context, pluginPath), m_Context(context), m_PluginPath(pluginPath) {}
 
   ~PlatformPortabilityPlugin() = default;
 
@@ -28,33 +29,32 @@ public:
   }
 
   void* getImpl() override {
-    if (!pluginLayer_) {
-      pluginLayer_ = std::make_unique<PlatformPortabilityLayer>();
+    if (!m_PluginLayer) {
+      m_PluginLayer = std::make_unique<PlatformPortabilityLayer>();
     }
-    return pluginLayer_.get();
+    return m_PluginLayer.get();
   }
 
 private:
-  IPluginContext context_;
-  std::filesystem::path pluginPath_;
-  std::unique_ptr<PlatformPortabilityLayer> pluginLayer_;
+  IPluginContext m_Context;
+  std::filesystem::path m_PluginPath;
+  std::unique_ptr<PlatformPortabilityLayer> m_PluginLayer;
 };
 
 } // namespace DirectX
 } // namespace gits
 
-static std::unique_ptr<gits::DirectX::PlatformPortabilityPlugin> g_plugin = nullptr;
+static std::unique_ptr<gits::DirectX::PlatformPortabilityPlugin> g_Plugin = nullptr;
 
 GITS_PLUGIN_API IPlugin* createPlugin(IPluginContext context, const char* pluginPath) {
-  // Initialize Plog for the plugin DLL
   gits::log::Initialize(context.config->common.shared.thresholdLogLevel, context.logAppender);
 
-  if (!g_plugin) {
-    g_plugin = std::make_unique<gits::DirectX::PlatformPortabilityPlugin>(context, pluginPath);
+  if (!g_Plugin) {
+    g_Plugin = std::make_unique<gits::DirectX::PlatformPortabilityPlugin>(context, pluginPath);
   }
-  return g_plugin.get();
+  return g_Plugin.get();
 }
 
 GITS_PLUGIN_API void destroyPlugin() {
-  g_plugin.reset();
+  g_Plugin.reset();
 }

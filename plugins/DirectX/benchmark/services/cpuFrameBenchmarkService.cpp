@@ -16,44 +16,43 @@ namespace DirectX {
 
 CpuFrameBenchmarkService::CpuFrameBenchmarkService(const BenchmarkConfig& cfg,
                                                    gits::MessageBus& msgBus)
-    : cfg_(cfg), msgBus_(msgBus) {
-  if (cfg.isCapture) {
-    subscriptionId_ = msgBus_.subscribe({PUBLISHER_RECORDER, TOPIC_STREAM_SAVED},
-                                        [this](Topic t, const MessagePtr& m) { writeResults(); });
+    : m_Cfg(cfg), m_MsgBus(msgBus) {
+  if (cfg.IsCapture) {
+    m_SubscriptionId = m_MsgBus.subscribe({PUBLISHER_RECORDER, TOPIC_STREAM_SAVED},
+                                          [this](Topic t, const MessagePtr& m) { WriteResults(); });
   } else {
-    subscriptionId_ = msgBus_.subscribe({PUBLISHER_PLAYER, TOPIC_PROGRAM_EXIT},
-                                        [this](Topic t, const MessagePtr& m) { writeResults(); });
+    m_SubscriptionId = m_MsgBus.subscribe({PUBLISHER_PLAYER, TOPIC_PROGRAM_EXIT},
+                                          [this](Topic t, const MessagePtr& m) { WriteResults(); });
   }
 }
 
-void CpuFrameBenchmarkService::onStart() {
-  if (!start_) {
+void CpuFrameBenchmarkService::OnStart() {
+  if (!m_Start) {
     return;
   }
-  start_ = false;
-  prevTimePoint_ = std::chrono::steady_clock::now();
+  m_Start = false;
+  m_PrevTimePoint = std::chrono::steady_clock::now();
 }
 
 CpuFrameBenchmarkService::~CpuFrameBenchmarkService() {
-  msgBus_.unsubscribe(subscriptionId_);
+  m_MsgBus.unsubscribe(m_SubscriptionId);
 }
 
-void CpuFrameBenchmarkService::onPostPresent() {
-  ++frameNumber_;
+void CpuFrameBenchmarkService::OnPostPresent() {
+  ++m_FrameNumber;
   double durationSec = std::chrono::duration_cast<std::chrono::nanoseconds>(
-                           std::chrono::steady_clock::now() - prevTimePoint_)
+                           std::chrono::steady_clock::now() - m_PrevTimePoint)
                            .count() *
                        0.000'000'001;
-  prevTimePoint_ = std::chrono::steady_clock::now();
-  frameTimes_.emplace_back(frameNumber_, durationSec);
+  m_PrevTimePoint = std::chrono::steady_clock::now();
+  m_FrameTimes.emplace_back(m_FrameNumber, durationSec);
 }
 
-void CpuFrameBenchmarkService::writeResults() {
-
-  std::ofstream stream(cfg_.output);
-  GITS_ASSERT(stream.good(), "CpuFrameBenchmarkService - failed to create file: " + cfg_.output);
+void CpuFrameBenchmarkService::WriteResults() {
+  std::ofstream stream(m_Cfg.Output);
+  GITS_ASSERT(stream.good(), "CpuFrameBenchmarkService - failed to create file: " + m_Cfg.Output);
   stream << "Frame#,Time[sec]\n";
-  for (auto& [frameNumber, duration] : frameTimes_) {
+  for (auto& [frameNumber, duration] : m_FrameTimes) {
     stream << frameNumber << "," << duration << "\n";
   }
 }

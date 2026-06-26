@@ -14,30 +14,30 @@ namespace gits {
 namespace DirectX {
 
 HelloHUDLayer::HelloHUDLayer(const HelloHUDConfig& cfg, CGits* gits)
-    : Layer("HelloHUD"), cfg_(cfg), gits_(gits) {
-  auto* hud = gits_->GetImGuiHUD();
+    : Layer("HelloHUD"), m_Cfg(cfg), m_Gits(gits) {
+  auto* hud = m_Gits->GetImGuiHUD();
 
   if (!hud) {
     LOG_ERROR << "ImGuiHUD not set, cannot create HelloHUDLayer";
     return;
   }
 
-  token_ = hud->AddHUDPlugin(this, true);
+  m_Token = hud->AddHUDPlugin(this, true);
 }
 
 HelloHUDLayer::~HelloHUDLayer() {
-  auto* hud = gits_->GetImGuiHUD();
-  if (hud && token_ != -1) {
-    hud->RemoveHUDPlugin(token_);
+  auto* hud = m_Gits->GetImGuiHUD();
+  if (hud && m_Token != -1) {
+    hud->RemoveHUDPlugin(m_Token);
   }
 }
 
 const std::vector<ImGuiWidget>* HelloHUDLayer::HUDCallback() {
-  widgets_.clear();
+  m_Widgets.clear();
 
-  widgets_.push_back(ImGuiWidget_Text{cfg_.Text});
+  m_Widgets.push_back(ImGuiWidget_Text{m_Cfg.Text});
 
-  return &widgets_;
+  return &m_Widgets;
 }
 
 } // namespace DirectX

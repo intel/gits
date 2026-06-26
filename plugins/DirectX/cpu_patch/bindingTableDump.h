@@ -25,14 +25,14 @@ public:
   BindingTableDump(const BindingTableDump&) = delete;
   BindingTableDump& operator=(const BindingTableDump&) = delete;
 
-  void dispatchRays(ID3D12GraphicsCommandList* commandList,
+  void DispatchRays(ID3D12GraphicsCommandList* commandList,
                     ID3D12Resource* resource,
                     unsigned offset,
                     unsigned size,
                     D3D12_RESOURCE_STATES state,
                     unsigned commandKey,
                     std::string type);
-  void executeCommandLists(unsigned key,
+  void ExecuteCommandLists(unsigned key,
                            unsigned commandQueueKey,
                            ID3D12CommandQueue* commandQueue,
                            ID3D12CommandList** commandLists,
@@ -41,22 +41,22 @@ public:
                            unsigned executeCount);
 
 protected:
-  void dumpStagedResource(DumpInfo& dumpInfo);
+  void DumpStagedResource(DumpInfo& dumpInfo);
 
 private:
   struct BindingTableDumpInfo : DumpInfo {
-    unsigned frameCount{};
-    unsigned executeCount{};
+    unsigned FrameCount{};
+    unsigned ExecuteCount{};
   };
 
-  void initialize();
+  void Initialize();
 
-  BitRange frames_;
-  BitRange executions_;
-  bool initialized_{false};
-  std::filesystem::path dumpDir_;
-  size_t numFiles_{};
-  size_t filesTotalSize_{};
+  BitRange m_Frames;
+  BitRange m_Executions;
+  bool m_Initialized{false};
+  std::filesystem::path m_DumpDir;
+  size_t m_NumFiles{};
+  size_t m_FilesTotalSize{};
 };
 
 } // namespace DirectX

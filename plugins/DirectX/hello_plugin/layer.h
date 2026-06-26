@@ -14,8 +14,8 @@ namespace gits {
 namespace DirectX {
 
 struct HelloPluginConfig {
-  bool printFrames = false;
-  bool printGPUSubmissions = false;
+  bool PrintFrames = false;
+  bool PrintGpuSubmissions = false;
 };
 
 class HelloPluginLayer : public Layer {
@@ -23,14 +23,14 @@ public:
   HelloPluginLayer(const HelloPluginConfig& cfg);
   ~HelloPluginLayer() = default;
 
-  void Post(IDXGISwapChainPresentCommand& c) override;
-  void Post(IDXGISwapChain1Present1Command& c) override;
-  void Post(ID3D12CommandQueueExecuteCommandListsCommand& c) override;
+  void Post(IDXGISwapChainPresentCommand& command) override;
+  void Post(IDXGISwapChain1Present1Command& command) override;
+  void Post(ID3D12CommandQueueExecuteCommandListsCommand& command) override;
 
 private:
-  void newFrame();
+  void NewFrame();
 
-  HelloPluginConfig cfg_;
+  HelloPluginConfig m_Cfg;
 };
 
 } // namespace DirectX

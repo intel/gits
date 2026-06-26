@@ -16,19 +16,22 @@ namespace gits {
 namespace DirectX {
 
 RtasSerializer::RtasSerializer(const std::string& cacheFile, bool dumpCacheInfo)
-    : ResourceDump(), cacheFile_(cacheFile), dumpCacheInfo_(dumpCacheInfo), initialized_(false) {}
+    : ResourceDump(),
+      m_CacheFile(cacheFile),
+      m_DumpCacheInfo(dumpCacheInfo),
+      m_Initialized(false) {}
 
 RtasSerializer::~RtasSerializer() {
-  writeCache();
+  WriteCache();
 }
 
-void RtasSerializer::serialize(unsigned buildKey,
+void RtasSerializer::Serialize(unsigned buildKey,
                                ID3D12GraphicsCommandList4* commandList,
                                D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC& desc) {
-  initialize();
+  Initialize();
 
-  buildKeys_.push_back(buildKey);
-  cacheInfoByBuildKey[buildKey].destVA = desc.DestAccelerationStructureData;
+  m_BuildKeys.push_back(buildKey);
+  m_CacheInfoByBuildKey[buildKey].DestVA = desc.DestAccelerationStructureData;
 
   Microsoft::WRL::ComPtr<ID3D12Device5> device;
   HRESULT hr = commandList->GetDevice(IID_PPV_ARGS(&device));
@@ -40,9 +43,9 @@ void RtasSerializer::serialize(unsigned buildKey,
   UINT64 size = prebuildInfo.ResultDataMaxSizeInBytes * 2;
 
   RtasDumpInfo* dumpInfo = new RtasDumpInfo();
-  dumpInfo->dumpName = tmpCacheDir_ + L"/" + std::to_wstring(buildKey);
-  dumpInfo->size = size;
-  dumpInfo->postbuildInfo.size =
+  dumpInfo->DumpName = m_TmpCacheDir + L"/" + std::to_wstring(buildKey);
+  dumpInfo->Size = size;
+  dumpInfo->PostbuildInfo.Size =
       sizeof(D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_SERIALIZATION_DESC);
 
   {
@@ -65,7 +68,7 @@ void RtasSerializer::serialize(unsigned buildKey,
 
     hr = device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc,
                                          D3D12_RESOURCE_STATE_COMMON, nullptr,
-                                         IID_PPV_ARGS(&dumpInfo->serializedBuffer));
+                                         IID_PPV_ARGS(&dumpInfo->SerializedBuffer));
     assert(hr == S_OK);
 
     heapProperties.Type = D3D12_HEAP_TYPE_READBACK;
@@ -73,12 +76,12 @@ void RtasSerializer::serialize(unsigned buildKey,
 
     hr = device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc,
                                          D3D12_RESOURCE_STATE_COMMON, nullptr,
-                                         IID_PPV_ARGS(&dumpInfo->stagingBuffer));
+                                         IID_PPV_ARGS(&dumpInfo->StagingBuffer));
     assert(hr == S_OK);
   }
 
   commandList->CopyRaytracingAccelerationStructure(
-      dumpInfo->serializedBuffer->GetGPUVirtualAddress(), desc.DestAccelerationStructureData,
+      dumpInfo->SerializedBuffer->GetGPUVirtualAddress(), desc.DestAccelerationStructureData,
       D3D12_RAYTRACING_ACCELERATION_STRUCTURE_COPY_MODE_SERIALIZE);
 
   {
@@ -86,11 +89,11 @@ void RtasSerializer::serialize(unsigned buildKey,
     barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
     barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
     barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_SOURCE;
-    barrier.Transition.pResource = dumpInfo->serializedBuffer.Get();
+    barrier.Transition.pResource = dumpInfo->SerializedBuffer.Get();
     commandList->ResourceBarrier(1, &barrier);
   }
 
-  commandList->CopyResource(dumpInfo->stagingBuffer.Get(), dumpInfo->serializedBuffer.Get());
+  commandList->CopyResource(dumpInfo->StagingBuffer.Get(), dumpInfo->SerializedBuffer.Get());
 
   {
     D3D12_HEAP_PROPERTIES heapProperties{};
@@ -113,7 +116,7 @@ void RtasSerializer::serialize(unsigned buildKey,
 
     hr = device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc,
                                          D3D12_RESOURCE_STATE_COMMON, nullptr,
-                                         IID_PPV_ARGS(&dumpInfo->postbuildInfoBuffer));
+                                         IID_PPV_ARGS(&dumpInfo->PostbuildInfoBuffer));
     assert(hr == S_OK);
 
     heapProperties.Type = D3D12_HEAP_TYPE_READBACK;
@@ -121,11 +124,11 @@ void RtasSerializer::serialize(unsigned buildKey,
 
     hr = device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc,
                                          D3D12_RESOURCE_STATE_COPY_DEST, nullptr,
-                                         IID_PPV_ARGS(&dumpInfo->postbuildInfo.stagingBuffer));
+                                         IID_PPV_ARGS(&dumpInfo->PostbuildInfo.StagingBuffer));
     assert(hr == S_OK);
 
     D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC postbuildInfoDesc{};
-    postbuildInfoDesc.DestBuffer = dumpInfo->postbuildInfoBuffer->GetGPUVirtualAddress();
+    postbuildInfoDesc.DestBuffer = dumpInfo->PostbuildInfoBuffer->GetGPUVirtualAddress();
     postbuildInfoDesc.InfoType =
         D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_SERIALIZATION;
     commandList->EmitRaytracingAccelerationStructurePostbuildInfo(
@@ -133,37 +136,37 @@ void RtasSerializer::serialize(unsigned buildKey,
 
     D3D12_RESOURCE_BARRIER barrierDesc{};
     barrierDesc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-    barrierDesc.Transition.pResource = dumpInfo->postbuildInfoBuffer.Get();
+    barrierDesc.Transition.pResource = dumpInfo->PostbuildInfoBuffer.Get();
     barrierDesc.Transition.Subresource = 0;
     barrierDesc.Transition.StateBefore = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
     barrierDesc.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_SOURCE;
     commandList->ResourceBarrier(1, &barrierDesc);
 
-    commandList->CopyResource(dumpInfo->postbuildInfo.stagingBuffer.Get(),
-                              dumpInfo->postbuildInfoBuffer.Get());
+    commandList->CopyResource(dumpInfo->PostbuildInfo.StagingBuffer.Get(),
+                              dumpInfo->PostbuildInfoBuffer.Get());
 
     barrierDesc.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_SOURCE;
     barrierDesc.Transition.StateAfter = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
     commandList->ResourceBarrier(1, &barrierDesc);
   }
 
-  stagedResources_[commandList].push_back(dumpInfo);
+  m_StagedResources[commandList].push_back(dumpInfo);
 }
 
-void RtasSerializer::writeCache() {
+void RtasSerializer::WriteCache() {
   static bool written = false;
-  if (!initialized_ || written) {
+  if (!m_Initialized || written) {
     return;
   }
 
   try {
-    waitUntilDumped();
+    WaitUntilDumped();
 
-    LOG_INFO << "RtasCache - Writing " << cacheFile_;
+    LOG_INFO << "RtasCache - Writing " << m_CacheFile;
 
     std::unordered_map<unsigned, unsigned> blases;
     for (std::filesystem::directory_entry file :
-         std::filesystem::directory_iterator(tmpCacheDir_)) {
+         std::filesystem::directory_iterator(m_TmpCacheDir)) {
       std::string name = file.path().filename().string();
       unsigned size = file.file_size();
       unsigned buildKey = std::stoi(name);
@@ -171,11 +174,11 @@ void RtasSerializer::writeCache() {
     }
 
     // Serialize the RTASes based on build key serialization order
-    std::ofstream cache(cacheFile_, std::ios_base::binary);
-    for (unsigned buildKey : buildKeys_) {
+    std::ofstream cache(m_CacheFile, std::ios_base::binary);
+    for (unsigned buildKey : m_BuildKeys) {
       std::wstring name = std::to_wstring(buildKey);
       unsigned size = blases[buildKey];
-      std::ifstream file(tmpCacheDir_ + L"/" + name, std::ios_base::binary);
+      std::ifstream file(m_TmpCacheDir + L"/" + name, std::ios_base::binary);
       std::vector<char> data(size);
       file.read(data.data(), size);
       if (file.fail()) {
@@ -195,24 +198,24 @@ void RtasSerializer::writeCache() {
 
     LOG_INFO << "RtasCache - Writing done";
 
-    std::filesystem::remove_all(tmpCacheDir_);
+    std::filesystem::remove_all(m_TmpCacheDir);
 
-    if (dumpCacheInfo_) {
-      dumpCacheInfo();
+    if (m_DumpCacheInfo) {
+      DumpCacheInfo();
     }
 
     written = true;
   } catch (...) {
-    std::cerr << "Unhandled exception caught in RtasSerializer::writeCache()";
+    std::cerr << "Unhandled exception caught in RtasSerializer::WriteCache()";
   }
 }
 
-void RtasSerializer::dumpStagedResource(DumpInfo& dumpInfo) {
+void RtasSerializer::DumpStagedResource(DumpInfo& dumpInfo) {
   RtasDumpInfo& info = static_cast<RtasDumpInfo&>(dumpInfo);
   UINT64 size = 0;
   {
     void* data{};
-    HRESULT hr = info.postbuildInfo.stagingBuffer->Map(0, nullptr, &data);
+    HRESULT hr = info.PostbuildInfo.StagingBuffer->Map(0, nullptr, &data);
     assert(hr == S_OK);
 
     D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_SERIALIZATION_DESC*
@@ -221,42 +224,42 @@ void RtasSerializer::dumpStagedResource(DumpInfo& dumpInfo) {
                 data);
     size = infoSerializationDesc->SerializedSizeInBytes;
 
-    info.postbuildInfo.stagingBuffer->Unmap(0, nullptr);
+    info.PostbuildInfo.StagingBuffer->Unmap(0, nullptr);
   }
 
-  assert(size <= info.size);
+  assert(size <= info.Size);
 
   {
     void* data{};
-    HRESULT hr = info.stagingBuffer->Map(0, nullptr, &data);
+    HRESULT hr = info.StagingBuffer->Map(0, nullptr, &data);
 
-    std::ofstream stream(info.dumpName, std::ios_base::binary);
+    std::ofstream stream(info.DumpName, std::ios_base::binary);
     stream.write(static_cast<char*>(data), size);
 
-    info.stagingBuffer->Unmap(0, nullptr);
+    info.StagingBuffer->Unmap(0, nullptr);
   }
 }
 
-void RtasSerializer::initialize() {
-  if (initialized_) {
+void RtasSerializer::Initialize() {
+  if (m_Initialized) {
     return;
   }
 
   // Create the temporary RTAS cache directory
-  tmpCacheDir_ = L"rtas_cache";
-  if (!tmpCacheDir_.empty() && !std::filesystem::exists(tmpCacheDir_)) {
-    std::filesystem::create_directory(tmpCacheDir_);
+  m_TmpCacheDir = L"rtas_cache";
+  if (!m_TmpCacheDir.empty() && !std::filesystem::exists(m_TmpCacheDir)) {
+    std::filesystem::create_directory(m_TmpCacheDir);
   }
-  initialized_ = true;
+  m_Initialized = true;
 }
 
-void RtasSerializer::dumpCacheInfo() {
+void RtasSerializer::DumpCacheInfo() {
   std::filesystem::path cacheInfoFile =
-      cacheFile_.parent_path() / (cacheFile_.stem().string() + "_info.csv");
+      m_CacheFile.parent_path() / (m_CacheFile.stem().string() + "_info.csv");
   std::ofstream cacheInfo(cacheInfoFile);
   cacheInfo << "BuildKey,DestVA\n";
-  for (const auto& [buildKey, info] : cacheInfoByBuildKey) {
-    cacheInfo << buildKey << "," << info.destVA << '\n';
+  for (const auto& [buildKey, info] : m_CacheInfoByBuildKey) {
+    cacheInfo << buildKey << "," << info.DestVA << '\n';
   }
 }
 

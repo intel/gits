@@ -14,45 +14,45 @@
 namespace gits {
 namespace DirectX {
 
-TaskScheduler::TaskScheduler(const std::string name) : name_{name} {}
+TaskScheduler::TaskScheduler(const std::string name) : m_Name(name) {}
 
 TaskScheduler::~TaskScheduler() {
   {
-    std::unique_lock<std::mutex> lock(mutex_);
-    done_ = true;
+    std::unique_lock<std::mutex> lock(m_Mutex);
+    m_Done = true;
   }
-  cv_.notify_all();
-  if (thread_.joinable()) {
-    thread_.join();
+  m_Cv.notify_all();
+  if (m_Thread.joinable()) {
+    m_Thread.join();
   }
 }
 
-void TaskScheduler::schedule(Task task) {
-  initialize();
+void TaskScheduler::Schedule(Task task) {
+  Initialize();
 
   {
-    std::lock_guard<std::mutex> guard(mutex_);
-    tasks_.push(task);
+    std::lock_guard<std::mutex> guard(m_Mutex);
+    m_Tasks.push(task);
   }
-  cv_.notify_one();
+  m_Cv.notify_one();
 }
 
-void TaskScheduler::initialize() {
-  if (initialized_) {
+void TaskScheduler::Initialize() {
+  if (m_Initialized) {
     return;
   }
 
-  initialized_ = true;
-  thread_ = std::thread{&TaskScheduler::threadProc, this};
-  std::wstring wName(name_.begin(), name_.end());
-  SetThreadDescription(thread_.native_handle(), (L"task-scheduler-thread-" + wName).c_str());
+  m_Initialized = true;
+  m_Thread = std::thread{&TaskScheduler::ThreadProc, this};
+  std::wstring wName(m_Name.begin(), m_Name.end());
+  SetThreadDescription(m_Thread.native_handle(), (L"task-scheduler-thread-" + wName).c_str());
 }
 
-void TaskScheduler::threadProc() {
+void TaskScheduler::ThreadProc() {
   const auto& emptyQueue = [this]() {
-    while (!tasks_.empty()) {
-      Task task = std::move(tasks_.front());
-      tasks_.pop();
+    while (!m_Tasks.empty()) {
+      Task task = std::move(m_Tasks.front());
+      m_Tasks.pop();
       task();
     }
   };
@@ -60,15 +60,15 @@ void TaskScheduler::threadProc() {
   while (true) {
     Task task;
     {
-      std::unique_lock<std::mutex> lock(mutex_);
-      cv_.wait(lock, [this] { return !tasks_.empty() || done_; });
-      if (done_) {
+      std::unique_lock<std::mutex> lock(m_Mutex);
+      m_Cv.wait(lock, [this] { return !m_Tasks.empty() || m_Done; });
+      if (m_Done) {
         emptyQueue();
         return;
       }
 
-      task = std::move(tasks_.front());
-      tasks_.pop();
+      task = std::move(m_Tasks.front());
+      m_Tasks.pop();
     }
 
     task();

@@ -27,44 +27,43 @@ public:
   RtasDeserializer(const RtasDeserializer&) = delete;
   RtasDeserializer& operator=(const RtasDeserializer&) = delete;
 
-  bool preloadCache(ID3D12Device5* device);
+  bool PreloadCache(ID3D12Device5* device);
 
-  bool deserialize(unsigned buildKey,
+  bool Deserialize(unsigned buildKey,
                    ID3D12GraphicsCommandList4* commandList,
                    D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC& desc);
-  void executeCommandLists(unsigned key,
+  void ExecuteCommandLists(unsigned key,
                            unsigned commandQueueKey,
                            ID3D12CommandQueue* commandQueue,
                            ID3D12CommandList** commandLists,
                            unsigned commandListNum);
 
 private:
-  bool isCompatible(std::ifstream& cacheFile, ID3D12Device5* device);
-  void cleanup();
+  bool IsCompatible(std::ifstream& cacheFile, ID3D12Device5* device);
+  void Cleanup();
 
-private:
   struct ExecuteInfo {
-    UINT64 fenceValue{};
-    std::vector<unsigned> buildKeys;
+    UINT64 FenceValue{};
+    std::vector<unsigned> BuildKeys;
   };
   struct CommandQueueInfo {
-    Microsoft::WRL::ComPtr<ID3D12Fence> fence;
-    UINT64 fenceValue{};
-    std::queue<ExecuteInfo> executes;
+    Microsoft::WRL::ComPtr<ID3D12Fence> Fence;
+    UINT64 FenceValue{};
+    std::queue<ExecuteInfo> Executes;
   };
 
-  std::string cacheFilePath_;
-  std::unordered_map<unsigned, std::vector<uint8_t>> cacheData_;
+  std::string m_CacheFilePath;
+  std::unordered_map<unsigned, std::vector<uint8_t>> m_CacheData;
 
   // Track command execution to release buffers after GPU is done with them
-  std::unordered_map<ID3D12CommandQueue*, CommandQueueInfo> commandQueues_;
-  std::unordered_map<ID3D12CommandList*, std::vector<unsigned>> buildKeysByCommandList_;
+  std::unordered_map<ID3D12CommandQueue*, CommandQueueInfo> m_CommandQueues;
+  std::unordered_map<ID3D12CommandList*, std::vector<unsigned>> m_BuildKeysByCommandList;
 
   // Buffer pool for deserialization (max 2 MB buffers) to avoid repeated allocations
-  unsigned maxBufferSize_{2 * 1024 * 1024};
-  BufferPool bufferPool_;
-  // Temporary buffers (for buffers larger than maxBufferSize_)
-  std::unordered_map<unsigned, Microsoft::WRL::ComPtr<ID3D12Resource>> tmpBuffers_;
+  unsigned m_MaxBufferSize{2 * 1024 * 1024};
+  BufferPool m_BufferPool;
+  // Temporary buffers (for buffers larger than m_MaxBufferSize)
+  std::unordered_map<unsigned, Microsoft::WRL::ComPtr<ID3D12Resource>> m_TmpBuffers;
 };
 
 } // namespace DirectX

@@ -6,8 +6,6 @@
 //
 // ===================== end_copyright_notice ==============================
 
-#pragma once
-
 #include "layer.h"
 #include "pluginUtils.h"
 #include "keyUtils.h"
@@ -16,36 +14,36 @@ namespace gits {
 namespace DirectX {
 
 BenchmarkLayer::BenchmarkLayer(const BenchmarkConfig& cfg, gits::MessageBus& msgBus)
-    : Layer("Benchmark"), cfg_(cfg), cpuFrameBenchmarkService_(cfg, msgBus) {}
+    : Layer("Benchmark"), m_Cfg(cfg), m_CpuFrameBenchmarkService(cfg, msgBus) {}
 
 void BenchmarkLayer::Pre(CreateDXGIFactoryCommand& command) {
-  cpuFrameBenchmarkService_.onStart();
+  m_CpuFrameBenchmarkService.OnStart();
 }
 
 void BenchmarkLayer::Pre(CreateDXGIFactory1Command& command) {
-  cpuFrameBenchmarkService_.onStart();
+  m_CpuFrameBenchmarkService.OnStart();
 }
 
 void BenchmarkLayer::Pre(CreateDXGIFactory2Command& command) {
-  cpuFrameBenchmarkService_.onStart();
+  m_CpuFrameBenchmarkService.OnStart();
 }
 
-void BenchmarkLayer::Post(IDXGISwapChainPresentCommand& c) {
-  if (c.Skip || c.m_Result.Value != S_OK || c.m_Flags.Value & DXGI_PRESENT_TEST ||
-      IsStateRestoreKey(c.Key)) {
+void BenchmarkLayer::Post(IDXGISwapChainPresentCommand& command) {
+  if (command.Skip || command.m_Result.Value != S_OK || command.m_Flags.Value & DXGI_PRESENT_TEST ||
+      IsStateRestoreKey(command.Key)) {
     return;
   }
 
-  cpuFrameBenchmarkService_.onPostPresent();
+  m_CpuFrameBenchmarkService.OnPostPresent();
 }
 
-void BenchmarkLayer::Post(IDXGISwapChain1Present1Command& c) {
-  if (c.Skip || c.m_Result.Value != S_OK || c.m_PresentFlags.Value & DXGI_PRESENT_TEST ||
-      IsStateRestoreKey(c.Key)) {
+void BenchmarkLayer::Post(IDXGISwapChain1Present1Command& command) {
+  if (command.Skip || command.m_Result.Value != S_OK ||
+      command.m_PresentFlags.Value & DXGI_PRESENT_TEST || IsStateRestoreKey(command.Key)) {
     return;
   }
 
-  cpuFrameBenchmarkService_.onPostPresent();
+  m_CpuFrameBenchmarkService.OnPostPresent();
 }
 
 } // namespace DirectX

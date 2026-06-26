@@ -18,25 +18,25 @@ namespace gits {
 namespace DirectX {
 
 // Used internally by BufferPool but can also be used externally (for larger buffers)
-ID3D12Resource* createBuffer(ID3D12Device* device, size_t bufferSize);
+ID3D12Resource* CreateBuffer(ID3D12Device* device, size_t bufferSize);
 
 class BufferPool {
 public:
   BufferPool() = default;
   ~BufferPool() = default;
 
-  void initialize(ID3D12Device* device, size_t bufferSize, unsigned initialCount = 0);
-  ID3D12Resource* acquireBuffer(unsigned key);
-  void releaseBuffer(unsigned key);
-  size_t size() const;
+  void Initialize(ID3D12Device* device, size_t bufferSize, unsigned initialCount = 0);
+  ID3D12Resource* AcquireBuffer(unsigned key);
+  void ReleaseBuffer(unsigned key);
+  size_t Size() const;
 
 private:
-  ID3D12Device* device_{nullptr};
-  size_t bufferSize_{0};
+  ID3D12Device* m_Device{nullptr};
+  size_t m_BufferSize{0};
 
-  std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> buffers_;
-  std::unordered_map<unsigned, unsigned> keyToIndex_;
-  std::stack<unsigned> freeIndices_;
+  std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> m_Buffers;
+  std::unordered_map<unsigned, unsigned> m_KeyToIndex;
+  std::stack<unsigned> m_FreeIndices;
 };
 
 } // namespace DirectX

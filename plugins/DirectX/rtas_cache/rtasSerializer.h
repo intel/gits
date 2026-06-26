@@ -26,33 +26,33 @@ public:
   RtasSerializer(const RtasSerializer&) = delete;
   RtasSerializer& operator=(const RtasSerializer&) = delete;
 
-  void serialize(unsigned buildKey,
+  void Serialize(unsigned buildKey,
                  ID3D12GraphicsCommandList4* commandList,
                  D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC& desc);
-  void writeCache();
+  void WriteCache();
 
 protected:
   struct RtasDumpInfo : public DumpInfo {
-    Microsoft::WRL::ComPtr<ID3D12Resource> serializedBuffer{};
-    Microsoft::WRL::ComPtr<ID3D12Resource> postbuildInfoBuffer{};
-    DumpInfo postbuildInfo;
+    Microsoft::WRL::ComPtr<ID3D12Resource> SerializedBuffer{};
+    Microsoft::WRL::ComPtr<ID3D12Resource> PostbuildInfoBuffer{};
+    DumpInfo PostbuildInfo;
   };
-  void dumpStagedResource(DumpInfo& dumpInfo) override;
+  void DumpStagedResource(DumpInfo& dumpInfo) override;
 
 private:
   struct CacheInfo {
-    D3D12_GPU_VIRTUAL_ADDRESS destVA;
+    D3D12_GPU_VIRTUAL_ADDRESS DestVA;
   };
 
-  void initialize();
-  void dumpCacheInfo();
+  void Initialize();
+  void DumpCacheInfo();
 
-  bool initialized_{false};
-  std::wstring tmpCacheDir_;
-  std::filesystem::path cacheFile_;
-  bool dumpCacheInfo_{false};
-  std::vector<unsigned> buildKeys_;
-  std::map<unsigned, CacheInfo> cacheInfoByBuildKey;
+  bool m_Initialized{false};
+  std::wstring m_TmpCacheDir;
+  std::filesystem::path m_CacheFile;
+  bool m_DumpCacheInfo{false};
+  std::vector<unsigned> m_BuildKeys;
+  std::map<unsigned, CacheInfo> m_CacheInfoByBuildKey;
 };
 
 } // namespace DirectX

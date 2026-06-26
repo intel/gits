@@ -13,27 +13,27 @@ namespace gits {
 namespace DirectX {
 
 HelloPluginLayer::HelloPluginLayer(const HelloPluginConfig& cfg)
-    : Layer("HelloPlugin"), cfg_(cfg) {}
+    : Layer("HelloPlugin"), m_Cfg(cfg) {}
 
-void HelloPluginLayer::Post(IDXGISwapChainPresentCommand& c) {
-  newFrame();
+void HelloPluginLayer::Post(IDXGISwapChainPresentCommand& command) {
+  NewFrame();
 }
 
-void HelloPluginLayer::Post(IDXGISwapChain1Present1Command& c) {
-  newFrame();
+void HelloPluginLayer::Post(IDXGISwapChain1Present1Command& command) {
+  NewFrame();
 }
 
-void HelloPluginLayer::Post(ID3D12CommandQueueExecuteCommandListsCommand& c) {
+void HelloPluginLayer::Post(ID3D12CommandQueueExecuteCommandListsCommand& command) {
   static unsigned gpuSubmissionNum = 0;
-  if (!cfg_.printGPUSubmissions) {
+  if (!m_Cfg.PrintGpuSubmissions) {
     return;
   }
   LOG_INFO << "HelloPlugin - GPU Submission: " << ++gpuSubmissionNum;
 }
 
-void HelloPluginLayer::newFrame() {
+void HelloPluginLayer::NewFrame() {
   static unsigned frameNum = 0;
-  if (!cfg_.printFrames) {
+  if (!m_Cfg.PrintFrames) {
     return;
   }
   LOG_INFO << "HelloPlugin - Frame: " << ++frameNum;

@@ -8,14 +8,15 @@
 
 #pragma once
 
-#include <functional>
-#include <string>
-#include <queue>
-#include <mutex>
-#include <thread>
-#include <condition_variable>
-#include <atomic>
 #include "tools_lite.h"
+
+#include <atomic>
+#include <condition_variable>
+#include <functional>
+#include <mutex>
+#include <queue>
+#include <string>
+#include <thread>
 
 namespace gits {
 namespace DirectX {
@@ -25,19 +26,19 @@ public:
   using Task = std::function<void()>;
   TaskScheduler(const std::string name = "");
   ~TaskScheduler();
-  void schedule(Task task);
+  void Schedule(Task task);
 
 private:
-  void initialize();
-  void threadProc();
+  void Initialize();
+  void ThreadProc();
 
-  bool initialized_{false};
-  std::string name_;
-  std::queue<Task> tasks_;
-  std::mutex mutex_;
-  std::thread thread_;
-  std::condition_variable cv_;
-  bool done_{false};
+  bool m_Initialized{false};
+  std::string m_Name;
+  std::queue<Task> m_Tasks;
+  std::mutex m_Mutex;
+  std::thread m_Thread;
+  std::condition_variable m_Cv;
+  bool m_Done{false};
 };
 
 } // namespace DirectX
