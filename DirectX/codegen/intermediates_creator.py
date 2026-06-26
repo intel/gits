@@ -67,6 +67,21 @@ def find_typedef_name(header, type):
                 return typedef.name
     return ''
 
+def find_enum_name(header, cxx_enum):
+    seg = cxx_enum.typename.segments[0]
+    if isinstance(seg, cxxheaderparser.types.AnonymousName):
+        for typedef in header.data.namespace.typedefs:
+            if not isinstance(typedef.type, cxxheaderparser.types.Type):
+                continue
+            if not isinstance(typedef.type.typename, cxxheaderparser.types.PQName):
+                continue
+            typedef_seg = typedef.type.typename.segments[0]
+            if (isinstance(typedef_seg, cxxheaderparser.types.AnonymousName) and
+                    typedef_seg.id == seg.id):
+                return typedef.name
+        return None
+    return seg.name
+
 def parse_parameter(cxx_type):
     param = Parameter()
     if isinstance(cxx_type, cxxheaderparser.types.Type):
@@ -333,7 +348,9 @@ def parse_enums(header):
     ]
 
     for cxx_enum in header.data.namespace.enums:
-        cxx_name = cxx_enum.typename.segments[0].name
+        cxx_name = find_enum_name(header, cxx_enum)
+        if cxx_name is None:
+            continue
         seen_values = set()
         if not cxx_name in custom:
             enum = Enum()

@@ -254,6 +254,9 @@ public:
   void Post(xefgSwapChainD3D12GetSwapChainPtrCommand& c) override;
   void Post(xefgSwapChainD3D12SetDescriptorHeapCommand& c) override;
   void Post(xefgSwapChainEnableDebugFeatureCommand& c) override;
+  void Post(xefgSwapChainSetNumInterpolatedFramesCommand& c) override;
+  void Post(xefgSwapChainSetUiCompositionStateCommand& c) override;
+  void Post(xefgSwapChainD3D12UpdateExternalHeapOnResizeCommand& c) override;
 
 private:
   void SetAsChildInParent(unsigned parentKey, unsigned childKey);

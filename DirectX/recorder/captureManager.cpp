@@ -615,12 +615,21 @@ void CaptureManager::interceptXefgFunctions() {
   m_XefgDispatchTable.xefgSwapChainGetPipelineBuildStatus =
       reinterpret_cast<decltype(xefgSwapChainGetPipelineBuildStatus)*>(
           GetProcAddress(m_XefgDll, "xefgSwapChainGetPipelineBuildStatus"));
+  m_XefgDispatchTable.xefgSwapChainSetNumInterpolatedFrames =
+      reinterpret_cast<decltype(xefgSwapChainSetNumInterpolatedFrames)*>(
+          GetProcAddress(m_XefgDll, "xefgSwapChainSetNumInterpolatedFrames"));
+  m_XefgDispatchTable.xefgSwapChainSetUiCompositionState =
+      reinterpret_cast<decltype(xefgSwapChainSetUiCompositionState)*>(
+          GetProcAddress(m_XefgDll, "xefgSwapChainSetUiCompositionState"));
   m_XefgDispatchTable.xefgSwapChainD3D12CreateContext =
       reinterpret_cast<decltype(xefgSwapChainD3D12CreateContext)*>(
           GetProcAddress(m_XefgDll, "xefgSwapChainD3D12CreateContext"));
   m_XefgDispatchTable.xefgSwapChainD3D12BuildPipelines =
       reinterpret_cast<decltype(xefgSwapChainD3D12BuildPipelines)*>(
           GetProcAddress(m_XefgDll, "xefgSwapChainD3D12BuildPipelines"));
+  m_XefgDispatchTable.xefgSwapChainD3D12GetProperties =
+      reinterpret_cast<decltype(xefgSwapChainD3D12GetProperties)*>(
+          GetProcAddress(m_XefgDll, "xefgSwapChainD3D12GetProperties"));
   m_XefgDispatchTable.xefgSwapChainD3D12InitFromSwapChain =
       reinterpret_cast<decltype(xefgSwapChainD3D12InitFromSwapChain)*>(
           GetProcAddress(m_XefgDll, "xefgSwapChainD3D12InitFromSwapChain"));
@@ -636,6 +645,12 @@ void CaptureManager::interceptXefgFunctions() {
   m_XefgDispatchTable.xefgSwapChainD3D12SetDescriptorHeap =
       reinterpret_cast<decltype(xefgSwapChainD3D12SetDescriptorHeap)*>(
           GetProcAddress(m_XefgDll, "xefgSwapChainD3D12SetDescriptorHeap"));
+  m_XefgDispatchTable.xefgSwapChainD3D12UpdateExternalHeapOnResize =
+      reinterpret_cast<decltype(xefgSwapChainD3D12UpdateExternalHeapOnResize)*>(
+          GetProcAddress(m_XefgDll, "xefgSwapChainD3D12UpdateExternalHeapOnResize"));
+  m_XefgDispatchTable.xefgSwapChainD3D12GetInitializationParameters =
+      reinterpret_cast<decltype(xefgSwapChainD3D12GetInitializationParameters)*>(
+          GetProcAddress(m_XefgDll, "xefgSwapChainD3D12GetInitializationParameters"));
   m_XefgDispatchTable.xefgSwapChainEnableDebugFeature =
       reinterpret_cast<decltype(xefgSwapChainEnableDebugFeature)*>(
           GetProcAddress(m_XefgDll, "xefgSwapChainEnableDebugFeature"));
@@ -704,6 +719,16 @@ void CaptureManager::interceptXefgFunctions() {
                        xefgSwapChainGetPipelineBuildStatusWrapper);
     GITS_ASSERT(ret == NO_ERROR);
   }
+  if (m_XefgDispatchTable.xefgSwapChainSetNumInterpolatedFrames) {
+    ret = DetourAttach(&m_XefgDispatchTable.xefgSwapChainSetNumInterpolatedFrames,
+                       xefgSwapChainSetNumInterpolatedFramesWrapper);
+    GITS_ASSERT(ret == NO_ERROR);
+  }
+  if (m_XefgDispatchTable.xefgSwapChainSetUiCompositionState) {
+    ret = DetourAttach(&m_XefgDispatchTable.xefgSwapChainSetUiCompositionState,
+                       xefgSwapChainSetUiCompositionStateWrapper);
+    GITS_ASSERT(ret == NO_ERROR);
+  }
   if (m_XefgDispatchTable.xefgSwapChainD3D12CreateContext) {
     ret = DetourAttach(&m_XefgDispatchTable.xefgSwapChainD3D12CreateContext,
                        xefgSwapChainD3D12CreateContextWrapper);
@@ -712,6 +737,11 @@ void CaptureManager::interceptXefgFunctions() {
   if (m_XefgDispatchTable.xefgSwapChainD3D12BuildPipelines) {
     ret = DetourAttach(&m_XefgDispatchTable.xefgSwapChainD3D12BuildPipelines,
                        xefgSwapChainD3D12BuildPipelinesWrapper);
+    GITS_ASSERT(ret == NO_ERROR);
+  }
+  if (m_XefgDispatchTable.xefgSwapChainD3D12GetProperties) {
+    ret = DetourAttach(&m_XefgDispatchTable.xefgSwapChainD3D12GetProperties,
+                       xefgSwapChainD3D12GetPropertiesWrapper);
     GITS_ASSERT(ret == NO_ERROR);
   }
   if (m_XefgDispatchTable.xefgSwapChainD3D12InitFromSwapChain) {
@@ -737,6 +767,16 @@ void CaptureManager::interceptXefgFunctions() {
   if (m_XefgDispatchTable.xefgSwapChainD3D12SetDescriptorHeap) {
     ret = DetourAttach(&m_XefgDispatchTable.xefgSwapChainD3D12SetDescriptorHeap,
                        xefgSwapChainD3D12SetDescriptorHeapWrapper);
+    GITS_ASSERT(ret == NO_ERROR);
+  }
+  if (m_XefgDispatchTable.xefgSwapChainD3D12UpdateExternalHeapOnResize) {
+    ret = DetourAttach(&m_XefgDispatchTable.xefgSwapChainD3D12UpdateExternalHeapOnResize,
+                       xefgSwapChainD3D12UpdateExternalHeapOnResizeWrapper);
+    GITS_ASSERT(ret == NO_ERROR);
+  }
+  if (m_XefgDispatchTable.xefgSwapChainD3D12GetInitializationParameters) {
+    ret = DetourAttach(&m_XefgDispatchTable.xefgSwapChainD3D12GetInitializationParameters,
+                       xefgSwapChainD3D12GetInitializationParametersWrapper);
     GITS_ASSERT(ret == NO_ERROR);
   }
   if (m_XefgDispatchTable.xefgSwapChainEnableDebugFeature) {

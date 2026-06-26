@@ -139,6 +139,13 @@ public:
     void* Argument;
   };
 
+  struct ExternalHeapOnResizeState {
+    unsigned TempBufferHeapKey{};
+    uint64_t TempBufferHeapOffset{};
+    unsigned TempTextureHeapKey{};
+    uint64_t TempTextureHeapOffset{};
+  };
+
   struct ContextState {
     unsigned Key{};
     unsigned DeviceKey{};
@@ -151,6 +158,9 @@ public:
     std::optional<SwapChainPtrState> SwapChain;
     std::optional<DescriptorHeapState> DescriptorHeap;
     std::optional<DebugFeatureState> DebugFeature;
+    std::optional<uint32_t> NumInterpolatedFrames;
+    std::optional<xefg_swapchain_ui_composition_state_t> UiCompositionState;
+    std::optional<ExternalHeapOnResizeState> ExternalHeapOnResize;
   };
 
 public:

@@ -2430,5 +2430,52 @@ void AnalyzerLayer::Post(xefgSwapChainEnableDebugFeatureCommand& c) {
   m_AnalyzerService.NotifyObject(c.m_hSwapChain.Key);
 }
 
+void AnalyzerLayer::Post(xefgSwapChainSetNumInterpolatedFramesCommand& c) {
+  if (m_AnalyzerService.AfterRange()) {
+    return;
+  }
+  m_AnalyzerService.NotifyObject(c.m_hSwapChain.Key);
+}
+
+void AnalyzerLayer::Post(xefgSwapChainSetUiCompositionStateCommand& c) {
+  if (m_AnalyzerService.AfterRange()) {
+    return;
+  }
+  m_AnalyzerService.NotifyObject(c.m_hSwapChain.Key);
+}
+
+void AnalyzerLayer::Post(xefgSwapChainD3D12GetPropertiesCommand& c) {
+  if (m_AnalyzerService.AfterRange()) {
+    return;
+  }
+  m_AnalyzerService.NotifyObject(c.m_context.Key);
+  m_AnalyzerService.NotifyObject(c.m_initParams.Key);
+  m_AnalyzerService.NotifyObject(c.m_initParams.ApplicationSwapChainKey);
+  m_AnalyzerService.NotifyObject(c.m_initParams.TempBufferHeapKey);
+  m_AnalyzerService.NotifyObject(c.m_initParams.TempTextureHeapKey);
+  m_AnalyzerService.NotifyObject(c.m_initParams.PipelineLibraryKey);
+}
+
+void AnalyzerLayer::Post(xefgSwapChainD3D12UpdateExternalHeapOnResizeCommand& c) {
+  if (m_AnalyzerService.AfterRange()) {
+    return;
+  }
+  m_AnalyzerService.NotifyObject(c.m_hSwapChain.Key);
+  m_AnalyzerService.NotifyObject(c.m_tempBufferHeap.Key);
+  m_AnalyzerService.NotifyObject(c.m_tempTextureHeap.Key);
+}
+
+void AnalyzerLayer::Post(xefgSwapChainD3D12GetInitializationParametersCommand& c) {
+  if (m_AnalyzerService.AfterRange()) {
+    return;
+  }
+  m_AnalyzerService.NotifyObject(c.m_hSwapChain.Key);
+  m_AnalyzerService.NotifyObject(c.m_pParams.Key);
+  m_AnalyzerService.NotifyObject(c.m_pParams.ApplicationSwapChainKey);
+  m_AnalyzerService.NotifyObject(c.m_pParams.TempBufferHeapKey);
+  m_AnalyzerService.NotifyObject(c.m_pParams.TempTextureHeapKey);
+  m_AnalyzerService.NotifyObject(c.m_pParams.PipelineLibraryKey);
+}
+
 } // namespace DirectX
 } // namespace gits

@@ -3484,5 +3484,49 @@ void StateTrackingLayer::Post(xefgSwapChainEnableDebugFeatureCommand& c) {
   state->DebugFeature.emplace(debugFeatureState);
 }
 
+void StateTrackingLayer::Post(xefgSwapChainSetNumInterpolatedFramesCommand& c) {
+  if (m_StateRestored) {
+    return;
+  }
+  XefgStateService::ContextState* state = m_XefgStateService.GetContextState(c.m_hSwapChain.Key);
+  state->NumInterpolatedFrames = c.m_numInterpolatedFrames.Value;
+}
+
+void StateTrackingLayer::Post(xefgSwapChainSetUiCompositionStateCommand& c) {
+  if (m_StateRestored) {
+    return;
+  }
+  XefgStateService::ContextState* state = m_XefgStateService.GetContextState(c.m_hSwapChain.Key);
+  state->UiCompositionState = c.m_state.Value;
+}
+
+void StateTrackingLayer::Post(xefgSwapChainD3D12UpdateExternalHeapOnResizeCommand& c) {
+  if (m_StateRestored) {
+    return;
+  }
+  XefgStateService::ContextState* state = m_XefgStateService.GetContextState(c.m_hSwapChain.Key);
+  XefgStateService::ExternalHeapOnResizeState heapState{};
+  heapState.TempBufferHeapKey = c.m_tempBufferHeap.Key;
+  heapState.TempBufferHeapOffset = c.m_tempBufferHeapOffset.Value;
+  heapState.TempTextureHeapKey = c.m_tempTextureHeap.Key;
+  heapState.TempTextureHeapOffset = c.m_tempTextureHeapOffset.Value;
+  state->ExternalHeapOnResize.emplace(heapState);
+
+  auto updateInitParams = [&](xefg_swapchain_d3d12_init_params_t_Argument& initParams) {
+    initParams.TempBufferHeapKey = c.m_tempBufferHeap.Key;
+    initParams.TempTextureHeapKey = c.m_tempTextureHeap.Key;
+    if (initParams.Value) {
+      initParams.Value->bufferHeapOffset = c.m_tempBufferHeapOffset.Value;
+      initParams.Value->textureHeapOffset = c.m_tempTextureHeapOffset.Value;
+    }
+  };
+  if (state->InitFromSwapChainParams) {
+    updateInitParams(state->InitFromSwapChainParams.value().InitParams);
+  }
+  if (state->InitFromSwapChainDescParams) {
+    updateInitParams(state->InitFromSwapChainDescParams.value().InitParams);
+  }
+}
+
 } // namespace DirectX
 } // namespace gits

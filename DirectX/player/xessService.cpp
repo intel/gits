@@ -199,12 +199,21 @@ bool XessService::LoadXefg(std::filesystem::path path) {
   m_XefgDispatchTable.xefgSwapChainGetPipelineBuildStatus =
       reinterpret_cast<decltype(xefgSwapChainGetPipelineBuildStatus)*>(
           GetProcAddress(m_XefgDll, "xefgSwapChainGetPipelineBuildStatus"));
+  m_XefgDispatchTable.xefgSwapChainSetNumInterpolatedFrames =
+      reinterpret_cast<decltype(xefgSwapChainSetNumInterpolatedFrames)*>(
+          GetProcAddress(m_XefgDll, "xefgSwapChainSetNumInterpolatedFrames"));
+  m_XefgDispatchTable.xefgSwapChainSetUiCompositionState =
+      reinterpret_cast<decltype(xefgSwapChainSetUiCompositionState)*>(
+          GetProcAddress(m_XefgDll, "xefgSwapChainSetUiCompositionState"));
   m_XefgDispatchTable.xefgSwapChainD3D12CreateContext =
       reinterpret_cast<decltype(xefgSwapChainD3D12CreateContext)*>(
           GetProcAddress(m_XefgDll, "xefgSwapChainD3D12CreateContext"));
   m_XefgDispatchTable.xefgSwapChainD3D12BuildPipelines =
       reinterpret_cast<decltype(xefgSwapChainD3D12BuildPipelines)*>(
           GetProcAddress(m_XefgDll, "xefgSwapChainD3D12BuildPipelines"));
+  m_XefgDispatchTable.xefgSwapChainD3D12GetProperties =
+      reinterpret_cast<decltype(xefgSwapChainD3D12GetProperties)*>(
+          GetProcAddress(m_XefgDll, "xefgSwapChainD3D12GetProperties"));
   m_XefgDispatchTable.xefgSwapChainD3D12InitFromSwapChain =
       reinterpret_cast<decltype(xefgSwapChainD3D12InitFromSwapChain)*>(
           GetProcAddress(m_XefgDll, "xefgSwapChainD3D12InitFromSwapChain"));
@@ -220,6 +229,12 @@ bool XessService::LoadXefg(std::filesystem::path path) {
   m_XefgDispatchTable.xefgSwapChainD3D12SetDescriptorHeap =
       reinterpret_cast<decltype(xefgSwapChainD3D12SetDescriptorHeap)*>(
           GetProcAddress(m_XefgDll, "xefgSwapChainD3D12SetDescriptorHeap"));
+  m_XefgDispatchTable.xefgSwapChainD3D12UpdateExternalHeapOnResize =
+      reinterpret_cast<decltype(xefgSwapChainD3D12UpdateExternalHeapOnResize)*>(
+          GetProcAddress(m_XefgDll, "xefgSwapChainD3D12UpdateExternalHeapOnResize"));
+  m_XefgDispatchTable.xefgSwapChainD3D12GetInitializationParameters =
+      reinterpret_cast<decltype(xefgSwapChainD3D12GetInitializationParameters)*>(
+          GetProcAddress(m_XefgDll, "xefgSwapChainD3D12GetInitializationParameters"));
   m_XefgDispatchTable.xefgSwapChainEnableDebugFeature =
       reinterpret_cast<decltype(xefgSwapChainEnableDebugFeature)*>(
           GetProcAddress(m_XefgDll, "xefgSwapChainEnableDebugFeature"));

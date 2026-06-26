@@ -288,6 +288,34 @@ void XefgStateService::RestoreContextState(ContextState* state) {
     m_Recorder.Record(xefgSwapChainD3D12SetDescriptorHeapSerializer(c));
   }
 
+  if (state->ExternalHeapOnResize) {
+    auto& heaps = state->ExternalHeapOnResize.value();
+    xefgSwapChainD3D12UpdateExternalHeapOnResizeCommand c;
+    c.Key = m_StateService.GetUniqueCommandKey();
+    c.m_hSwapChain.Key = state->Key;
+    c.m_tempBufferHeap.Key = heaps.TempBufferHeapKey;
+    c.m_tempBufferHeapOffset.Value = heaps.TempBufferHeapOffset;
+    c.m_tempTextureHeap.Key = heaps.TempTextureHeapKey;
+    c.m_tempTextureHeapOffset.Value = heaps.TempTextureHeapOffset;
+    m_Recorder.Record(xefgSwapChainD3D12UpdateExternalHeapOnResizeSerializer(c));
+  }
+
+  if (state->NumInterpolatedFrames) {
+    xefgSwapChainSetNumInterpolatedFramesCommand c;
+    c.Key = m_StateService.GetUniqueCommandKey();
+    c.m_hSwapChain.Key = state->Key;
+    c.m_numInterpolatedFrames.Value = state->NumInterpolatedFrames.value();
+    m_Recorder.Record(xefgSwapChainSetNumInterpolatedFramesSerializer(c));
+  }
+
+  if (state->UiCompositionState) {
+    xefgSwapChainSetUiCompositionStateCommand c;
+    c.Key = m_StateService.GetUniqueCommandKey();
+    c.m_hSwapChain.Key = state->Key;
+    c.m_state.Value = state->UiCompositionState.value();
+    m_Recorder.Record(xefgSwapChainSetUiCompositionStateSerializer(c));
+  }
+
   if (state->Enabled) {
     xefgSwapChainSetEnabledCommand c;
     c.Key = m_StateService.GetUniqueCommandKey();

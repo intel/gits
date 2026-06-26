@@ -198,7 +198,12 @@ custom = [
     'xefgSwapChainSetLatencyReduction',
     'xefgSwapChainSetSceneChangeThreshold',
     'xefgSwapChainGetPipelineBuildStatus',
-    'xefgSwapChainEnableDebugFeature'
+    'xefgSwapChainEnableDebugFeature',
+    'xefgSwapChainSetNumInterpolatedFrames',
+    'xefgSwapChainSetUiCompositionState',
+    'xefgSwapChainD3D12GetProperties',
+    'xefgSwapChainD3D12UpdateExternalHeapOnResize',
+    'xefgSwapChainD3D12GetInitializationParameters'
 ]
 %>\
 %for function in functions:
