@@ -1281,7 +1281,7 @@ void ReplayCustomizationLayer::Pre(ID3D12DeviceCreateCommandListCommand& c) {
 }
 
 void ReplayCustomizationLayer::Pre(IDMLDeviceCreateBindingTableCommand& c) {
-  if (c.Skip) {
+  if (c.Skip || !c.m_desc.Value) {
     return;
   }
   c.m_desc.Value->CPUDescriptorHandle.ptr =

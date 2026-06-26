@@ -500,6 +500,9 @@ static unsigned updateDmlBinding(const void* srcBinding, DML_BUFFER_BINDING* dst
 
 UpdateInterfaceT<DML_BINDING_TABLE_DESC_Argument, DML_BINDING_TABLE_DESC>::UpdateInterfaceT(
     DML_BINDING_TABLE_DESC_Argument& arg, const DML_BINDING_TABLE_DESC* value) {
+  if (!arg.Value) {
+    return;
+  }
 
   arg.Value = &m_UnwrapStructure;
   *arg.Value = *value;

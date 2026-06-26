@@ -977,6 +977,9 @@ void CaptureCustomizationLayer::Pre(INTC_D3D12_CreateComputePipelineStateCommand
 }
 
 void CaptureCustomizationLayer::Pre(IDMLDeviceCreateBindingTableCommand& c) {
+  if (!c.m_desc.Value) {
+    return;
+  }
   DescriptorHandleArgument<D3D12_CPU_DESCRIPTOR_HANDLE> cpuDescHandle = {
       c.m_desc.Value->CPUDescriptorHandle};
   FillCpuDescriptorHandleArgument(cpuDescHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
