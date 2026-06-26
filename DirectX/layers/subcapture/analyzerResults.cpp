@@ -99,7 +99,11 @@ bool AnalyzerResults::RestoreBlas(std::pair<unsigned, unsigned> blas) {
   if (!m_Optimize) {
     return true;
   }
-  return m_Blases.find(blas) != m_Blases.end();
+  bool found = m_Blases.find(blas) != m_Blases.end();
+  if (!found) {
+    found = m_AsSources.find(blas) != m_AsSources.end();
+  }
+  return found;
 }
 
 bool AnalyzerResults::IsAnalysis() {

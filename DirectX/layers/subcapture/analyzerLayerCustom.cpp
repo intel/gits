@@ -37,7 +37,6 @@ AnalyzerLayer::AnalyzerLayer(SubcaptureRange& subcaptureRange)
       m_ExecuteIndirectService(
           m_ResourceStateTracker, m_GpuAddressService, m_RaytracingService, m_CommandListService) {
   m_Optimize = Configurator::Get().directx.features.subcapture.optimize;
-  m_OptimizeRaytracing = Configurator::Get().directx.features.subcapture.optimizeRaytracing;
   if (m_Optimize) {
     m_ShaderIdentifierService.EnablePlayerIdentifierLookup();
   }
@@ -74,7 +73,7 @@ void AnalyzerLayer::Post(ID3D12CommandQueueExecuteCommandListsCommand& c) {
   m_AnalyzerService.NotifyObject(c.m_Object.Key);
   m_AnalyzerService.NotifyObjects(c.m_ppCommandLists.Keys);
   m_AnalyzerService.ExecuteCommandLists(c.Key, c.m_Object.Key, c.m_ppCommandLists.Keys);
-  if (m_Optimize || m_OptimizeRaytracing) {
+  if (m_Optimize) {
     m_ResourceStateTracker.ExecuteCommandLists(
         reinterpret_cast<ID3D12GraphicsCommandList**>(c.m_ppCommandLists.Value),
         c.m_NumCommandLists.Value);
@@ -99,7 +98,7 @@ void AnalyzerLayer::Post(ID3D12GraphicsCommandListResetCommand& c) {
   m_AnalyzerService.ExecutionStart();
   m_SubcaptureRange.ExecutionStart();
   m_AnalyzerService.CommandListReset(c.m_Object.Key, c.m_pAllocator.Key, c.m_pInitialState.Key);
-  if (m_Optimize || m_OptimizeRaytracing) {
+  if (m_Optimize) {
     m_CommandListService.CommandListReset(c);
   }
   if (m_Optimize) {
@@ -126,7 +125,7 @@ void AnalyzerLayer::Post(ID3D12CommandQueueWaitCommand& c) {
     return;
   }
   m_AnalyzerService.CommandQueueWait(c.Key, c.m_Object.Key, c.m_pFence.Key, c.m_Value.Value);
-  if (m_Optimize || m_OptimizeRaytracing) {
+  if (m_Optimize) {
     m_RaytracingService.CommandQueueWait(c.Key, c.m_Object.Key, c.m_pFence.Key, c.m_Value.Value);
     m_ExecuteIndirectService.CommandQueueWait(c.Key, c.m_Object.Key, c.m_pFence.Key,
                                               c.m_Value.Value);
@@ -143,7 +142,7 @@ void AnalyzerLayer::Post(ID3D12CommandQueueSignalCommand& c) {
     return;
   }
   m_AnalyzerService.CommandQueueSignal(c.Key, c.m_Object.Key, c.m_pFence.Key, c.m_Value.Value);
-  if (m_Optimize || m_OptimizeRaytracing) {
+  if (m_Optimize) {
     m_RaytracingService.CommandQueueSignal(c.Key, c.m_Object.Key, c.m_pFence.Key, c.m_Value.Value);
     m_ExecuteIndirectService.CommandQueueSignal(c.Key, c.m_Object.Key, c.m_pFence.Key,
                                                 c.m_Value.Value);
@@ -159,7 +158,7 @@ void AnalyzerLayer::Post(ID3D12FenceSignalCommand& c) {
     return;
   }
   m_AnalyzerService.FenceSignal(c.Key, c.m_Object.Key, c.m_Value.Value);
-  if (m_Optimize || m_OptimizeRaytracing) {
+  if (m_Optimize) {
     m_RaytracingService.FenceSignal(c.Key, c.m_Object.Key, c.m_Value.Value);
     m_ExecuteIndirectService.FenceSignal(c.Key, c.m_Object.Key, c.m_Value.Value);
   }
@@ -176,7 +175,7 @@ void AnalyzerLayer::Post(ID3D12Device3EnqueueMakeResidentCommand& c) {
     return;
   }
   m_AnalyzerService.FenceSignal(c.Key, c.m_pFenceToSignal.Key, c.m_FenceValueToSignal.Value);
-  if (m_Optimize || m_OptimizeRaytracing) {
+  if (m_Optimize) {
     m_RaytracingService.FenceSignal(c.Key, c.m_pFenceToSignal.Key, c.m_FenceValueToSignal.Value);
     m_ExecuteIndirectService.FenceSignal(c.Key, c.m_pFenceToSignal.Key,
                                          c.m_FenceValueToSignal.Value);
@@ -678,7 +677,7 @@ void AnalyzerLayer::Pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStr
   if (m_AnalyzerService.AfterRange()) {
     return;
   }
-  if (m_Optimize || m_OptimizeRaytracing) {
+  if (m_Optimize) {
     m_CommandListService.Command(c);
   }
 }
@@ -687,7 +686,7 @@ void AnalyzerLayer::Pre(ID3D12GraphicsCommandList4CopyRaytracingAccelerationStru
   if (m_AnalyzerService.AfterRange()) {
     return;
   }
-  if (m_Optimize || m_OptimizeRaytracing) {
+  if (m_Optimize) {
     m_CommandListService.Command(c);
   }
 }
@@ -697,7 +696,7 @@ void AnalyzerLayer::Pre(
   if (m_AnalyzerService.AfterRange()) {
     return;
   }
-  if (m_Optimize || m_OptimizeRaytracing) {
+  if (m_Optimize) {
     m_CommandListService.Command(c);
   }
 }
@@ -706,7 +705,7 @@ void AnalyzerLayer::Pre(NvAPI_D3D12_BuildRaytracingAccelerationStructureExComman
   if (m_AnalyzerService.AfterRange()) {
     return;
   }
-  if (m_Optimize || m_OptimizeRaytracing) {
+  if (m_Optimize) {
     m_CommandListService.Command(c);
   }
 }
@@ -715,7 +714,7 @@ void AnalyzerLayer::Pre(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& 
   if (m_AnalyzerService.AfterRange()) {
     return;
   }
-  if (m_Optimize || m_OptimizeRaytracing) {
+  if (m_Optimize) {
     m_CommandListService.Command(c);
   }
 }
@@ -769,7 +768,7 @@ void AnalyzerLayer::Pre(ID3D12ResourceGetGPUVirtualAddressCommand& c) {
   if (m_AnalyzerService.AfterRange()) {
     return;
   }
-  if (m_Optimize || m_OptimizeRaytracing) {
+  if (m_Optimize) {
     m_RaytracingService.GetGPUVirtualAddress(c);
     D3D12_RESOURCE_DESC desc = c.m_Object.Value->GetDesc();
     m_GpuAddressService.AddGpuCaptureAddress(c.m_Object.Value, c.m_Object.Key, desc.Width,
@@ -781,7 +780,7 @@ void AnalyzerLayer::Post(ID3D12ResourceGetGPUVirtualAddressCommand& c) {
   if (m_AnalyzerService.AfterRange()) {
     return;
   }
-  if (m_Optimize || m_OptimizeRaytracing) {
+  if (m_Optimize) {
     m_AnalyzerService.NotifyObject(c.m_Object.Key);
     D3D12_RESOURCE_DESC desc = c.m_Object.Value->GetDesc();
     m_GpuAddressService.AddGpuPlayerAddress(c.m_Object.Value, c.m_Object.Key, desc.Width,
@@ -813,7 +812,7 @@ void AnalyzerLayer::Post(IUnknownReleaseCommand& c) {
     return;
   }
   m_AnalyzerService.NotifyObject(c.m_Object.Key);
-  if (m_Optimize || m_OptimizeRaytracing) {
+  if (m_Optimize) {
     if (c.m_Result.Value == 0) {
       m_GpuAddressService.DestroyInterface(c.m_Object.Key);
     }
@@ -1468,7 +1467,7 @@ void AnalyzerLayer::Post(ID3D12DeviceCreatePlacedResourceCommand& c) {
   m_AnalyzerService.NotifyObject(c.m_pHeap.Key);
   m_AnalyzerService.NotifyObject(c.m_ppvResource.Key);
   m_AnalyzerService.AddParent(c.m_ppvResource.Key, c.m_pHeap.Key);
-  if (m_Optimize || m_OptimizeRaytracing) {
+  if (m_Optimize) {
     if (c.m_Result.Value == S_OK) {
       m_ResourceStateTracker.AddResource(*reinterpret_cast<ID3D12Resource**>(c.m_ppvResource.Value),
                                          c.m_ppvResource.Key, c.m_InitialState.Value);
@@ -1518,7 +1517,7 @@ void AnalyzerLayer::Post(ID3D12DeviceCreateFenceCommand& c) {
     return;
   }
   m_AnalyzerService.FenceSignal(c.Key, c.m_ppFence.Key, c.m_InitialValue.Value);
-  if (m_Optimize || m_OptimizeRaytracing) {
+  if (m_Optimize) {
     m_RaytracingService.FenceSignal(c.Key, c.m_ppFence.Key, c.m_InitialValue.Value);
   }
 }
@@ -1698,7 +1697,7 @@ void AnalyzerLayer::Post(ID3D12Device8CreatePlacedResource1Command& c) {
   m_AnalyzerService.NotifyObject(c.m_pHeap.Key);
   m_AnalyzerService.NotifyObject(c.m_ppvResource.Key);
   m_AnalyzerService.AddParent(c.m_ppvResource.Key, c.m_pHeap.Key);
-  if (m_Optimize || m_OptimizeRaytracing) {
+  if (m_Optimize) {
     if (c.m_Result.Value == S_OK) {
       m_ResourceStateTracker.AddResource(*reinterpret_cast<ID3D12Resource**>(c.m_ppvResource.Value),
                                          c.m_ppvResource.Key, c.m_InitialState.Value);
@@ -1745,7 +1744,7 @@ void AnalyzerLayer::Post(ID3D12Device10CreatePlacedResource2Command& c) {
   m_AnalyzerService.NotifyObject(c.m_pHeap.Key);
   m_AnalyzerService.NotifyObject(c.m_ppvResource.Key);
   m_AnalyzerService.AddParent(c.m_pHeap.Key, c.m_pHeap.Key);
-  if (m_Optimize || m_OptimizeRaytracing) {
+  if (m_Optimize) {
     if (c.m_Result.Value == S_OK) {
       m_ResourceStateTracker.AddResource(*reinterpret_cast<ID3D12Resource**>(c.m_ppvResource.Value),
                                          c.m_ppvResource.Key, c.m_InitialLayout.Value);

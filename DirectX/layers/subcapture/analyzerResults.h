@@ -32,9 +32,6 @@ public:
   bool RestoreDescriptor(unsigned heapKey, unsigned index);
   bool RestoreTlas(unsigned blasBuildKey);
   bool RestoreBlas(std::pair<unsigned, unsigned> blas);
-  std::set<std::pair<unsigned, unsigned>>& GetAsSources() {
-    return m_AsSources;
-  }
 
   static bool IsAnalysis();
   static std::string GetAnalysisFileName();

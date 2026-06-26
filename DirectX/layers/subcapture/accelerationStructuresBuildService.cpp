@@ -39,7 +39,6 @@ AccelerationStructuresBuildService::AccelerationStructuresBuildService(
   m_SerializeMode = Configurator::Get().directx.features.subcapture.serializeAccelerationStructures;
   m_RestoreTlas = Configurator::Get().directx.features.subcapture.restoreTLASes;
   m_Optimize = Configurator::Get().directx.features.subcapture.optimize;
-  m_OptimizeRaytracing = Configurator::Get().directx.features.subcapture.optimizeRaytracing;
 }
 
 void AccelerationStructuresBuildService::BuildAccelerationStructure(
@@ -82,24 +81,26 @@ void AccelerationStructuresBuildService::BuildAccelerationStructure(
     }
   }
 
-  BuildRaytracingAccelerationStructureState* state =
-      new BuildRaytracingAccelerationStructureState();
-  state->CommandKey = c.Key;
-  state->CommandListKey = m_CommandListDirectKeys.CommandListKey;
-  state->Kind = RaytracingAccelerationStructureState::StateKind::Build;
-  state->DestKey = c.m_pDesc.DestAccelerationStructureKey;
-  state->DestOffset = c.m_pDesc.DestAccelerationStructureOffset;
-  state->SourceKey = c.m_pDesc.SourceAccelerationStructureKey;
-  state->SourceOffset = c.m_pDesc.SourceAccelerationStructureOffset;
-  state->Update = c.m_pDesc.Value->Inputs.Flags &
-                  D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PERFORM_UPDATE;
+  BuildRaytracingAccelerationStructureCommand* command =
+      new BuildRaytracingAccelerationStructureCommand();
+  command->CommandKey = c.Key;
+  command->CommandListKey = m_CommandListDirectKeys.CommandListKey;
+  command->Type = RaytracingAccelerationStructureCommand::CommandType::Build;
+  command->DestKey = c.m_pDesc.DestAccelerationStructureKey;
+  command->DestOffset = c.m_pDesc.DestAccelerationStructureOffset;
+  command->SourceKey = c.m_pDesc.SourceAccelerationStructureKey;
+  command->SourceOffset = c.m_pDesc.SourceAccelerationStructureOffset;
+  command->Update = c.m_pDesc.Value->Inputs.Flags &
+                    D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PERFORM_UPDATE;
+  command->TlasBuild =
+      c.m_pDesc.Value->Inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
 
   if (m_SerializeMode &&
       c.m_pDesc.Value->Inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
-    m_TlasesKeyOffsets.insert(std::make_pair(state->DestKey, state->DestOffset));
+    m_TlasesKeyOffsets.insert(std::make_pair(command->DestKey, command->DestOffset));
   }
 
-  state->Desc.reset(
+  command->Desc.reset(
       new PointerArgument<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC>(c.m_pDesc));
 
   m_StateService.KeepState(c.m_pDesc.DestAccelerationStructureKey);
@@ -277,8 +278,8 @@ void AccelerationStructuresBuildService::BuildAccelerationStructure(
     }
   }
 
-  inputBufferService.StoreBuffers(c.Key, c.m_Object.Value, state);
-  m_OptimizationService.AddState(c.m_Object.Key, state);
+  inputBufferService.StoreBuffers(c.Key, c.m_Object.Value, command);
+  m_OptimizationService.AddCommand(c.m_Object.Key, command);
 }
 
 void AccelerationStructuresBuildService::CopyAccelerationStructure(
@@ -290,20 +291,21 @@ void AccelerationStructuresBuildService::CopyAccelerationStructure(
       return;
     }
   }
-  CopyRaytracingAccelerationStructureState* state = new CopyRaytracingAccelerationStructureState();
-  state->CommandKey = c.Key;
-  state->CommandListKey = m_CommandListDirectKeys.CommandListKey;
-  state->Kind = RaytracingAccelerationStructureState::StateKind::Copy;
-  state->DestAccelerationStructureData = c.m_DestAccelerationStructureData.Value;
-  state->DestKey = c.m_DestAccelerationStructureData.InterfaceKey;
-  state->DestOffset = c.m_DestAccelerationStructureData.Offset;
-  state->SourceAccelerationStructureData = c.m_SourceAccelerationStructureData.Value;
-  state->SourceKey = c.m_SourceAccelerationStructureData.InterfaceKey;
-  state->SourceOffset = c.m_SourceAccelerationStructureData.Offset;
-  state->Mode = c.m_Mode.Value;
+  CopyRaytracingAccelerationStructureCommand* command =
+      new CopyRaytracingAccelerationStructureCommand();
+  command->CommandKey = c.Key;
+  command->CommandListKey = m_CommandListDirectKeys.CommandListKey;
+  command->Type = RaytracingAccelerationStructureCommand::CommandType::Copy;
+  command->DestAccelerationStructureData = c.m_DestAccelerationStructureData.Value;
+  command->DestKey = c.m_DestAccelerationStructureData.InterfaceKey;
+  command->DestOffset = c.m_DestAccelerationStructureData.Offset;
+  command->SourceAccelerationStructureData = c.m_SourceAccelerationStructureData.Value;
+  command->SourceKey = c.m_SourceAccelerationStructureData.InterfaceKey;
+  command->SourceOffset = c.m_SourceAccelerationStructureData.Offset;
+  command->Mode = c.m_Mode.Value;
 
   m_StateService.KeepState(c.m_DestAccelerationStructureData.InterfaceKey);
-  m_OptimizationService.AddState(c.m_Object.Key, state);
+  m_OptimizationService.AddCommand(c.m_Object.Key, command);
 }
 
 void AccelerationStructuresBuildService::NvapiBuildAccelerationStructureEx(
@@ -340,24 +342,26 @@ void AccelerationStructuresBuildService::NvapiBuildAccelerationStructureEx(
     }
   }
 
-  NvAPIBuildRaytracingAccelerationStructureExState* state =
-      new NvAPIBuildRaytracingAccelerationStructureExState();
-  state->CommandKey = c.Key;
-  state->CommandListKey = m_CommandListDirectKeys.CommandListKey;
-  state->Kind = RaytracingAccelerationStructureState::StateKind::NvAPIBuild;
-  state->DestKey = c.m_pParams.DestAccelerationStructureKey;
-  state->DestOffset = c.m_pParams.DestAccelerationStructureOffset;
-  state->SourceKey = c.m_pParams.SourceAccelerationStructureKey;
-  state->SourceOffset = c.m_pParams.SourceAccelerationStructureOffset;
-  state->Update = buildDesc->inputs.flags &
-                  NVAPI_D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PERFORM_UPDATE_EX;
+  NvAPIBuildRaytracingAccelerationStructureExCommand* command =
+      new NvAPIBuildRaytracingAccelerationStructureExCommand();
+  command->CommandKey = c.Key;
+  command->CommandListKey = m_CommandListDirectKeys.CommandListKey;
+  command->Type = RaytracingAccelerationStructureCommand::CommandType::NvAPIBuild;
+  command->DestKey = c.m_pParams.DestAccelerationStructureKey;
+  command->DestOffset = c.m_pParams.DestAccelerationStructureOffset;
+  command->SourceKey = c.m_pParams.SourceAccelerationStructureKey;
+  command->SourceOffset = c.m_pParams.SourceAccelerationStructureOffset;
+  command->Update = buildDesc->inputs.flags &
+                    NVAPI_D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PERFORM_UPDATE_EX;
+  command->TlasBuild = c.m_pParams.Value->pDesc->inputs.type ==
+                       D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
 
   if (m_SerializeMode &&
       buildDesc->inputs.type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
-    m_TlasesKeyOffsets.insert(std::make_pair(state->DestKey, state->DestOffset));
+    m_TlasesKeyOffsets.insert(std::make_pair(command->DestKey, command->DestOffset));
   }
 
-  state->Desc.reset(
+  command->Desc.reset(
       new PointerArgument<NVAPI_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_EX_PARAMS>(c.m_pParams));
 
   m_StateService.KeepState(c.m_pParams.DestAccelerationStructureKey);
@@ -663,8 +667,8 @@ void AccelerationStructuresBuildService::NvapiBuildAccelerationStructureEx(
     }
   }
 
-  inputBufferService.StoreBuffers(c.Key, c.m_pCommandList.Value, state);
-  m_OptimizationService.AddState(c.m_pCommandList.Key, state);
+  inputBufferService.StoreBuffers(c.Key, c.m_pCommandList.Value, command);
+  m_OptimizationService.AddCommand(c.m_pCommandList.Key, command);
 }
 
 void AccelerationStructuresBuildService::NvapiBuildOpacityMicromapArray(
@@ -694,15 +698,15 @@ void AccelerationStructuresBuildService::NvapiBuildOpacityMicromapArray(
     }
   }
 
-  NvAPIBuildRaytracingOpacityMicromapArrayState* state =
-      new NvAPIBuildRaytracingOpacityMicromapArrayState();
-  state->CommandKey = c.Key;
-  state->CommandListKey = m_CommandListDirectKeys.CommandListKey;
-  state->Kind = RaytracingAccelerationStructureState::StateKind::NvAPIOMM;
-  state->DestKey = c.m_pParams.DestOpacityMicromapArrayDataKey;
-  state->DestOffset = c.m_pParams.DestOpacityMicromapArrayDataOffset;
+  NvAPIBuildRaytracingOpacityMicromapArrayCommand* command =
+      new NvAPIBuildRaytracingOpacityMicromapArrayCommand();
+  command->CommandKey = c.Key;
+  command->CommandListKey = m_CommandListDirectKeys.CommandListKey;
+  command->Type = RaytracingAccelerationStructureCommand::CommandType::NvAPIOMM;
+  command->DestKey = c.m_pParams.DestOpacityMicromapArrayDataKey;
+  command->DestOffset = c.m_pParams.DestOpacityMicromapArrayDataOffset;
 
-  state->Desc.reset(
+  command->Desc.reset(
       new PointerArgument<NVAPI_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_PARAMS>(c.m_pParams));
 
   m_StateService.KeepState(c.m_pParams.DestOpacityMicromapArrayDataKey);
@@ -752,16 +756,16 @@ void AccelerationStructuresBuildService::NvapiBuildOpacityMicromapArray(
     }
   }
 
-  inputBufferService.StoreBuffers(c.Key, c.m_pCommandList.Value, state);
-  m_OptimizationService.AddState(c.m_pCommandList.Key, state);
+  inputBufferService.StoreBuffers(c.Key, c.m_pCommandList.Value, command);
+  m_OptimizationService.AddCommand(c.m_pCommandList.Key, command);
 }
 
 void AccelerationStructuresBuildService::RestoreAccelerationStructures() {
-  if (m_OptimizationService.GetStates().empty()) {
+  m_OptimizationService.ProcessCommands();
+  if (m_OptimizationService.GetCommands().empty()) {
+    m_OptimizationService.Cleanup();
     return;
   }
-
-  m_OptimizationService.Optimize();
 
   m_BufferContentRestore.WaitUntilDumped();
 
@@ -890,32 +894,33 @@ void AccelerationStructuresBuildService::RestoreAccelerationStructures() {
   }
 
   // restoring RTAS
-  for (auto& itState : m_OptimizationService.GetStates()) {
-    if (itState.second->Kind == RaytracingAccelerationStructureState::StateKind::Build) {
-      BuildRaytracingAccelerationStructureState* state =
-          static_cast<BuildRaytracingAccelerationStructureState*>(itState.second);
-      RestoreState(state);
-    } else if (itState.second->Kind == RaytracingAccelerationStructureState::StateKind::Copy) {
-      CopyRaytracingAccelerationStructureState* state =
-          static_cast<CopyRaytracingAccelerationStructureState*>(itState.second);
-      RestoreState(state);
-    } else if (itState.second->Kind ==
-               RaytracingAccelerationStructureState::StateKind::NvAPIBuild) {
-      NvAPIBuildRaytracingAccelerationStructureExState* state =
-          static_cast<NvAPIBuildRaytracingAccelerationStructureExState*>(itState.second);
-      RestoreState(state);
-    } else if (itState.second->Kind == RaytracingAccelerationStructureState::StateKind::NvAPIOMM) {
-      NvAPIBuildRaytracingOpacityMicromapArrayState* state =
-          static_cast<NvAPIBuildRaytracingOpacityMicromapArrayState*>(itState.second);
-      RestoreState(state);
+  for (OptimizationService::CommandNode* node : m_OptimizationService.GetCommands()) {
+    if (node->Command->Type == RaytracingAccelerationStructureCommand::CommandType::Build) {
+      BuildRaytracingAccelerationStructureCommand* build =
+          static_cast<BuildRaytracingAccelerationStructureCommand*>(node->Command.get());
+      RestoreCommand(build);
+    } else if (node->Command->Type == RaytracingAccelerationStructureCommand::CommandType::Copy) {
+      CopyRaytracingAccelerationStructureCommand* copy =
+          static_cast<CopyRaytracingAccelerationStructureCommand*>(node->Command.get());
+      RestoreCommand(copy);
+    } else if (node->Command->Type ==
+               RaytracingAccelerationStructureCommand::CommandType::NvAPIBuild) {
+      NvAPIBuildRaytracingAccelerationStructureExCommand* build =
+          static_cast<NvAPIBuildRaytracingAccelerationStructureExCommand*>(node->Command.get());
+      RestoreCommand(build);
+    } else if (node->Command->Type ==
+               RaytracingAccelerationStructureCommand::CommandType::NvAPIOMM) {
+      NvAPIBuildRaytracingOpacityMicromapArrayCommand* build =
+          static_cast<NvAPIBuildRaytracingOpacityMicromapArrayCommand*>(node->Command.get());
+      RestoreCommand(build);
     } else {
-      GITS_ASSERT(0 && "unknown state");
+      GITS_ASSERT(0 && "unknown command");
     }
-    delete itState.second;
   }
 
   // cleanup
   {
+    m_OptimizationService.Cleanup();
     {
       IUnknownReleaseCommand releaseScratchResource{};
       releaseScratchResource.Key = m_StateService.GetUniqueCommandKey();
@@ -976,7 +981,7 @@ void AccelerationStructuresBuildService::ExecuteCommandLists(
   if (m_Restored) {
     return;
   }
-  m_OptimizationService.StoreStatesOnExecute(c.m_ppCommandLists.Keys);
+  m_OptimizationService.OnExecute(c.m_ppCommandLists.Keys);
   m_BufferContentRestore.ExecuteCommandLists(c.Key, c.m_Object.Key, c.m_Object.Value,
                                              c.m_ppCommandLists.Value, c.m_NumCommandLists.Value);
 }
@@ -997,25 +1002,22 @@ void AccelerationStructuresBuildService::FenceSignal(unsigned key,
 
 void AccelerationStructuresBuildService::InitUploadBuffer() {
   size_t maxPerBuildUploadSize = 0;
-  for (auto& itState : m_OptimizationService.GetStates()) {
+  for (OptimizationService::CommandNode* node : m_OptimizationService.GetCommands()) {
     std::vector<AccelerationStructuresBufferContentRestore::BufferRestoreInfo>& restoreInfos =
-        m_BufferContentRestore.GetRestoreInfos(itState.second->CommandKey);
+        m_BufferContentRestore.GetRestoreInfos(node->Command->CommandKey);
     size_t uploadSize = 0;
-    for (const AccelerationStructuresBufferContentRestore::BufferRestoreInfo& info : restoreInfos) {
+    for (AccelerationStructuresBufferContentRestore::BufferRestoreInfo& info : restoreInfos) {
       if (!info.IsMappable) {
         uploadSize += info.BufferData->size();
       }
     }
-
     if (uploadSize > maxPerBuildUploadSize) {
       maxPerBuildUploadSize = uploadSize;
     }
   }
-
   if (maxPerBuildUploadSize == 0) {
     return;
   }
-
   m_UploadBufferSize = maxPerBuildUploadSize;
 
   D3D12_HEAP_PROPERTIES heapPropertiesUpload{};
@@ -1053,17 +1055,17 @@ void AccelerationStructuresBuildService::InitUploadBuffer() {
   m_Recorder.Record(ID3D12DeviceCreateCommittedResourceSerializer(createUploadResource));
 }
 
-void AccelerationStructuresBuildService::RestoreState(
-    BuildRaytracingAccelerationStructureState* state) {
+void AccelerationStructuresBuildService::RestoreCommand(
+    BuildRaytracingAccelerationStructureCommand* command) {
   std::vector<AccelerationStructuresBufferContentRestore::BufferRestoreInfo>& restoreInfos =
-      m_BufferContentRestore.GetRestoreInfos(state->CommandKey);
+      m_BufferContentRestore.GetRestoreInfos(command->CommandKey);
 
   ResourceResidencyService residencyService(m_StateService, m_DeviceKey);
   for (const auto& info : restoreInfos) {
     residencyService.AddResource(info.BufferKey);
   }
-  residencyService.AddResource(state->Desc->DestAccelerationStructureKey);
-  residencyService.AddResource(state->Desc->SourceAccelerationStructureKey);
+  residencyService.AddResource(command->Desc->DestAccelerationStructureKey);
+  residencyService.AddResource(command->Desc->SourceAccelerationStructureKey);
   residencyService.RecordMakeResident();
 
   std::unordered_set<unsigned> restoredBuffers;
@@ -1076,7 +1078,7 @@ void AccelerationStructuresBuildService::RestoreState(
     m_BufferHashesByKeyOffset[std::pair(info.BufferKey, info.Offset)] = info.BufferHash;
     restoredBuffers.insert(info.BufferKey);
 
-    for (auto& itTiledResource : state->TiledResources) {
+    for (auto& itTiledResource : command->TiledResources) {
       auto it = m_TiledResourceUpdatesRestored.find(info.BufferKey);
       if (it == m_TiledResourceUpdatesRestored.end() ||
           it->second.find(itTiledResource.second.UpdateId) == it->second.end()) {
@@ -1091,7 +1093,7 @@ void AccelerationStructuresBuildService::RestoreState(
 
   RecordExecuteCommandLists(m_CommandListCopyKeys);
 
-  for (auto& it : state->Buffers) {
+  for (auto& it : command->Buffers) {
     if (!it.second->IsMappable && restoredBuffers.find(it.first) != restoredBuffers.end()) {
       ID3D12GraphicsCommandListResourceBarrierCommand barrierCommand;
       barrierCommand.Key = m_StateService.GetUniqueCommandKey();
@@ -1113,24 +1115,24 @@ void AccelerationStructuresBuildService::RestoreState(
     }
   }
 
-  state->Desc->ScratchAccelerationStructureKey = m_ScratchResourceKey;
-  state->Desc->ScratchAccelerationStructureOffset = 0;
+  command->Desc->ScratchAccelerationStructureKey = m_ScratchResourceKey;
+  command->Desc->ScratchAccelerationStructureOffset = 0;
 
   {
     ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand build;
-    build.Key = state->CommandKey;
+    build.Key = command->CommandKey;
     build.m_Object.Key = m_CommandListDirectKeys.CommandListKey;
-    build.m_pDesc.Value = state->Desc->Value;
-    build.m_pDesc.DestAccelerationStructureKey = state->Desc->DestAccelerationStructureKey;
-    build.m_pDesc.DestAccelerationStructureOffset = state->Desc->DestAccelerationStructureOffset;
-    build.m_pDesc.SourceAccelerationStructureKey = state->Desc->SourceAccelerationStructureKey;
+    build.m_pDesc.Value = command->Desc->Value;
+    build.m_pDesc.DestAccelerationStructureKey = command->Desc->DestAccelerationStructureKey;
+    build.m_pDesc.DestAccelerationStructureOffset = command->Desc->DestAccelerationStructureOffset;
+    build.m_pDesc.SourceAccelerationStructureKey = command->Desc->SourceAccelerationStructureKey;
     build.m_pDesc.SourceAccelerationStructureOffset =
-        state->Desc->SourceAccelerationStructureOffset;
-    build.m_pDesc.ScratchAccelerationStructureKey = state->Desc->ScratchAccelerationStructureKey;
+        command->Desc->SourceAccelerationStructureOffset;
+    build.m_pDesc.ScratchAccelerationStructureKey = command->Desc->ScratchAccelerationStructureKey;
     build.m_pDesc.ScratchAccelerationStructureOffset =
-        state->Desc->ScratchAccelerationStructureOffset;
-    build.m_pDesc.InputKeys = state->Desc->InputKeys;
-    build.m_pDesc.InputOffsets = state->Desc->InputOffsets;
+        command->Desc->ScratchAccelerationStructureOffset;
+    build.m_pDesc.InputKeys = command->Desc->InputKeys;
+    build.m_pDesc.InputOffsets = command->Desc->InputOffsets;
     build.m_NumPostbuildInfoDescs.Value = 0;
     build.m_pPostbuildInfoDescs.Value = nullptr;
     m_Recorder.Record(
@@ -1141,23 +1143,23 @@ void AccelerationStructuresBuildService::RestoreState(
   residencyService.RecordEvict();
 }
 
-void AccelerationStructuresBuildService::RestoreState(
-    CopyRaytracingAccelerationStructureState* state) {
+void AccelerationStructuresBuildService::RestoreCommand(
+    CopyRaytracingAccelerationStructureCommand* command) {
   ResourceResidencyService residencyService(m_StateService, m_DeviceKey);
-  residencyService.AddResource(state->DestKey);
-  residencyService.AddResource(state->SourceKey);
+  residencyService.AddResource(command->DestKey);
+  residencyService.AddResource(command->SourceKey);
   residencyService.RecordMakeResident();
 
   ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand copy;
-  copy.Key = state->CommandKey;
+  copy.Key = command->CommandKey;
   copy.m_Object.Key = m_CommandListDirectKeys.CommandListKey;
-  copy.m_DestAccelerationStructureData.Value = state->DestAccelerationStructureData;
-  copy.m_DestAccelerationStructureData.InterfaceKey = state->DestKey;
-  copy.m_DestAccelerationStructureData.Offset = state->DestOffset;
-  copy.m_SourceAccelerationStructureData.Value = state->SourceAccelerationStructureData;
-  copy.m_SourceAccelerationStructureData.InterfaceKey = state->SourceKey;
-  copy.m_SourceAccelerationStructureData.Offset = state->SourceOffset;
-  copy.m_Mode.Value = state->Mode;
+  copy.m_DestAccelerationStructureData.Value = command->DestAccelerationStructureData;
+  copy.m_DestAccelerationStructureData.InterfaceKey = command->DestKey;
+  copy.m_DestAccelerationStructureData.Offset = command->DestOffset;
+  copy.m_SourceAccelerationStructureData.Value = command->SourceAccelerationStructureData;
+  copy.m_SourceAccelerationStructureData.InterfaceKey = command->SourceKey;
+  copy.m_SourceAccelerationStructureData.Offset = command->SourceOffset;
+  copy.m_Mode.Value = command->Mode;
   m_StateService.GetRecorder().Record(
       ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureSerializer(copy));
 
@@ -1165,17 +1167,17 @@ void AccelerationStructuresBuildService::RestoreState(
   residencyService.RecordEvict();
 }
 
-void AccelerationStructuresBuildService::RestoreState(
-    NvAPIBuildRaytracingAccelerationStructureExState* state) {
+void AccelerationStructuresBuildService::RestoreCommand(
+    NvAPIBuildRaytracingAccelerationStructureExCommand* command) {
   std::vector<AccelerationStructuresBufferContentRestore::BufferRestoreInfo>& restoreInfos =
-      m_BufferContentRestore.GetRestoreInfos(state->CommandKey);
+      m_BufferContentRestore.GetRestoreInfos(command->CommandKey);
 
   ResourceResidencyService residencyService(m_StateService, m_DeviceKey);
   for (const auto& info : restoreInfos) {
     residencyService.AddResource(info.BufferKey);
   }
-  residencyService.AddResource(state->Desc->DestAccelerationStructureKey);
-  residencyService.AddResource(state->Desc->SourceAccelerationStructureKey);
+  residencyService.AddResource(command->Desc->DestAccelerationStructureKey);
+  residencyService.AddResource(command->Desc->SourceAccelerationStructureKey);
   residencyService.RecordMakeResident();
 
   std::unordered_set<unsigned> restoredBuffers;
@@ -1188,7 +1190,7 @@ void AccelerationStructuresBuildService::RestoreState(
     m_BufferHashesByKeyOffset[std::pair(info.BufferKey, info.Offset)] = info.BufferHash;
     restoredBuffers.insert(info.BufferKey);
 
-    for (auto& itTiledResource : state->TiledResources) {
+    for (auto& itTiledResource : command->TiledResources) {
       auto it = m_TiledResourceUpdatesRestored.find(info.BufferKey);
       if (it == m_TiledResourceUpdatesRestored.end() ||
           it->second.find(itTiledResource.second.UpdateId) == it->second.end()) {
@@ -1203,7 +1205,7 @@ void AccelerationStructuresBuildService::RestoreState(
 
   RecordExecuteCommandLists(m_CommandListCopyKeys);
 
-  for (auto& it : state->Buffers) {
+  for (auto& it : command->Buffers) {
     if (!it.second->IsMappable && restoredBuffers.find(it.first) != restoredBuffers.end()) {
       ID3D12GraphicsCommandListResourceBarrierCommand barrierCommand;
       barrierCommand.Key = m_StateService.GetUniqueCommandKey();
@@ -1225,24 +1227,26 @@ void AccelerationStructuresBuildService::RestoreState(
     }
   }
 
-  state->Desc->ScratchAccelerationStructureKey = m_ScratchResourceKey;
-  state->Desc->ScratchAccelerationStructureOffset = 0;
+  command->Desc->ScratchAccelerationStructureKey = m_ScratchResourceKey;
+  command->Desc->ScratchAccelerationStructureOffset = 0;
 
   {
     NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand build;
-    build.Key = state->CommandKey;
+    build.Key = command->CommandKey;
     build.m_pCommandList.Key = m_CommandListDirectKeys.CommandListKey;
-    build.m_pParams.Value = state->Desc->Value;
-    build.m_pParams.DestAccelerationStructureKey = state->Desc->DestAccelerationStructureKey;
-    build.m_pParams.DestAccelerationStructureOffset = state->Desc->DestAccelerationStructureOffset;
-    build.m_pParams.SourceAccelerationStructureKey = state->Desc->SourceAccelerationStructureKey;
+    build.m_pParams.Value = command->Desc->Value;
+    build.m_pParams.DestAccelerationStructureKey = command->Desc->DestAccelerationStructureKey;
+    build.m_pParams.DestAccelerationStructureOffset =
+        command->Desc->DestAccelerationStructureOffset;
+    build.m_pParams.SourceAccelerationStructureKey = command->Desc->SourceAccelerationStructureKey;
     build.m_pParams.SourceAccelerationStructureOffset =
-        state->Desc->SourceAccelerationStructureOffset;
-    build.m_pParams.ScratchAccelerationStructureKey = state->Desc->ScratchAccelerationStructureKey;
+        command->Desc->SourceAccelerationStructureOffset;
+    build.m_pParams.ScratchAccelerationStructureKey =
+        command->Desc->ScratchAccelerationStructureKey;
     build.m_pParams.ScratchAccelerationStructureOffset =
-        state->Desc->ScratchAccelerationStructureOffset;
-    build.m_pParams.InputKeys = state->Desc->InputKeys;
-    build.m_pParams.InputOffsets = state->Desc->InputOffsets;
+        command->Desc->ScratchAccelerationStructureOffset;
+    build.m_pParams.InputKeys = command->Desc->InputKeys;
+    build.m_pParams.InputOffsets = command->Desc->InputOffsets;
     build.m_pParams.Value->numPostbuildInfoDescs = 0;
     build.m_pParams.Value->pPostbuildInfoDescs = nullptr;
     m_Recorder.Record(NvAPI_D3D12_BuildRaytracingAccelerationStructureExSerializer(build));
@@ -1252,19 +1256,19 @@ void AccelerationStructuresBuildService::RestoreState(
   residencyService.RecordEvict();
 }
 
-void AccelerationStructuresBuildService::RestoreState(
-    NvAPIBuildRaytracingOpacityMicromapArrayState* state) {
+void AccelerationStructuresBuildService::RestoreCommand(
+    NvAPIBuildRaytracingOpacityMicromapArrayCommand* command) {
   std::vector<AccelerationStructuresBufferContentRestore::BufferRestoreInfo>& restoreInfos =
-      m_BufferContentRestore.GetRestoreInfos(state->CommandKey);
+      m_BufferContentRestore.GetRestoreInfos(command->CommandKey);
 
   ResourceResidencyService residencyService(m_StateService, m_DeviceKey);
   for (const auto& info : restoreInfos) {
     residencyService.AddResource(info.BufferKey);
   }
-  residencyService.AddResource(state->Desc->DestOpacityMicromapArrayDataKey);
-  residencyService.AddResource(state->Desc->InputBufferKey);
-  residencyService.AddResource(state->Desc->PerOMMDescsKey);
-  for (unsigned key : state->Desc->DestPostBuildBufferKeys) {
+  residencyService.AddResource(command->Desc->DestOpacityMicromapArrayDataKey);
+  residencyService.AddResource(command->Desc->InputBufferKey);
+  residencyService.AddResource(command->Desc->PerOMMDescsKey);
+  for (unsigned key : command->Desc->DestPostBuildBufferKeys) {
     residencyService.AddResource(key);
   }
   residencyService.RecordMakeResident();
@@ -1279,7 +1283,7 @@ void AccelerationStructuresBuildService::RestoreState(
     m_BufferHashesByKeyOffset[std::pair(info.BufferKey, info.Offset)] = info.BufferHash;
     restoredBuffers.insert(info.BufferKey);
 
-    for (auto& itTiledResource : state->TiledResources) {
+    for (auto& itTiledResource : command->TiledResources) {
       auto it = m_TiledResourceUpdatesRestored.find(info.BufferKey);
       if (it == m_TiledResourceUpdatesRestored.end() ||
           it->second.find(itTiledResource.second.UpdateId) == it->second.end()) {
@@ -1294,7 +1298,7 @@ void AccelerationStructuresBuildService::RestoreState(
 
   RecordExecuteCommandLists(m_CommandListCopyKeys);
 
-  for (auto& it : state->Buffers) {
+  for (auto& it : command->Buffers) {
     if (!it.second->IsMappable && restoredBuffers.find(it.first) != restoredBuffers.end()) {
       ID3D12GraphicsCommandListResourceBarrierCommand barrierCommand;
       barrierCommand.Key = m_StateService.GetUniqueCommandKey();
@@ -1316,25 +1320,26 @@ void AccelerationStructuresBuildService::RestoreState(
     }
   }
 
-  state->Desc->ScratchOpacityMicromapArrayDataKey = m_ScratchResourceKey;
-  state->Desc->ScratchOpacityMicromapArrayDataOffset = 0;
+  command->Desc->ScratchOpacityMicromapArrayDataKey = m_ScratchResourceKey;
+  command->Desc->ScratchOpacityMicromapArrayDataOffset = 0;
 
   {
     NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand build;
-    build.Key = state->CommandKey;
+    build.Key = command->CommandKey;
     build.m_pCommandList.Key = m_CommandListDirectKeys.CommandListKey;
-    build.m_pParams.Value = state->Desc->Value;
-    build.m_pParams.DestOpacityMicromapArrayDataKey = state->Desc->DestOpacityMicromapArrayDataKey;
+    build.m_pParams.Value = command->Desc->Value;
+    build.m_pParams.DestOpacityMicromapArrayDataKey =
+        command->Desc->DestOpacityMicromapArrayDataKey;
     build.m_pParams.DestOpacityMicromapArrayDataOffset =
-        state->Desc->DestOpacityMicromapArrayDataOffset;
-    build.m_pParams.InputBufferKey = state->Desc->InputBufferKey;
-    build.m_pParams.InputBufferOffset = state->Desc->InputBufferOffset;
-    build.m_pParams.PerOMMDescsKey = state->Desc->PerOMMDescsKey;
-    build.m_pParams.PerOMMDescsOffset = state->Desc->PerOMMDescsOffset;
+        command->Desc->DestOpacityMicromapArrayDataOffset;
+    build.m_pParams.InputBufferKey = command->Desc->InputBufferKey;
+    build.m_pParams.InputBufferOffset = command->Desc->InputBufferOffset;
+    build.m_pParams.PerOMMDescsKey = command->Desc->PerOMMDescsKey;
+    build.m_pParams.PerOMMDescsOffset = command->Desc->PerOMMDescsOffset;
     build.m_pParams.ScratchOpacityMicromapArrayDataKey =
-        state->Desc->ScratchOpacityMicromapArrayDataKey;
+        command->Desc->ScratchOpacityMicromapArrayDataKey;
     build.m_pParams.ScratchOpacityMicromapArrayDataOffset =
-        state->Desc->ScratchOpacityMicromapArrayDataOffset;
+        command->Desc->ScratchOpacityMicromapArrayDataOffset;
     build.m_pParams.Value->numPostbuildInfoDescs = 0;
     build.m_pParams.Value->pPostbuildInfoDescs = nullptr;
     m_Recorder.Record(NvAPI_D3D12_BuildRaytracingOpacityMicromapArraySerializer(build));
@@ -1468,7 +1473,7 @@ void AccelerationStructuresBuildService::InputBufferService::AddBufferRegion(uns
 void AccelerationStructuresBuildService::InputBufferService::StoreBuffers(
     unsigned commandKey,
     ID3D12GraphicsCommandList* commandList,
-    RaytracingAccelerationStructureState* state) {
+    RaytracingAccelerationStructureCommand* command) {
   for (auto& [inputKey, bufferRegions] : m_BufferRegionsByInputKey) {
 
     std::sort(bufferRegions.begin(), bufferRegions.end(),
@@ -1485,7 +1490,7 @@ void AccelerationStructuresBuildService::InputBufferService::StoreBuffers(
 
     for (BufferRegion bufferRegion : bufferRegionsMerged) {
       StoreBuffer(inputKey, bufferRegion.Start, bufferRegion.End - bufferRegion.Start, commandKey,
-                  commandList, state);
+                  commandList, command);
     }
   }
 }
@@ -1496,7 +1501,7 @@ void AccelerationStructuresBuildService::InputBufferService::StoreBuffer(
     unsigned size,
     unsigned commandKey,
     ID3D12GraphicsCommandList* commandList,
-    RaytracingAccelerationStructureState* state) {
+    RaytracingAccelerationStructureCommand* command) {
   m_StateService.KeepState(inputKey);
   ResourceState* bufferState = static_cast<ResourceState*>(m_StateService.GetState(inputKey));
   bufferState->CurrentState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
@@ -1512,13 +1517,13 @@ void AccelerationStructuresBuildService::InputBufferService::StoreBuffer(
   m_BufferContentRestore.StoreBuffer(commandList, static_cast<ID3D12Resource*>(bufferState->Object),
                                      inputKey, inputOffset, size, currentState, commandKey,
                                      bufferState->IsMappable);
-  state->Buffers[inputKey] = bufferState;
+  command->Buffers[inputKey] = bufferState;
   ReservedResourcesService::TiledResource* tiledResource =
       m_ReservedResourcesService.GetTiledResource(inputKey);
   if (tiledResource) {
-    auto it = state->TiledResources.find(inputKey);
-    if (it == state->TiledResources.end()) {
-      state->TiledResources[inputKey] = *tiledResource;
+    auto it = command->TiledResources.find(inputKey);
+    if (it == command->TiledResources.end()) {
+      command->TiledResources[inputKey] = *tiledResource;
     }
     for (ReservedResourcesService::Tile& tile : tiledResource->Tiles) {
       if (tile.HeapKey) {
@@ -1528,179 +1533,117 @@ void AccelerationStructuresBuildService::InputBufferService::StoreBuffer(
   }
 }
 
-void AccelerationStructuresBuildService::OptimizationService::AddState(
-    unsigned commandListKey, RaytracingAccelerationStructureState* state) {
-  m_StatesByCommandList[commandListKey].emplace_back(state);
-}
-
-void AccelerationStructuresBuildService::OptimizationService::StoreStatesOnExecute(
+void AccelerationStructuresBuildService::OptimizationService::OnExecute(
     std::vector<unsigned>& commandListKeys) {
   for (unsigned commandListKey : commandListKeys) {
-    auto itStates = m_StatesByCommandList.find(commandListKey);
-    if (itStates != m_StatesByCommandList.end()) {
-      for (RaytracingAccelerationStructureState* state : itStates->second) {
-        StoreState(state);
+    auto itStates = m_CommandsByCommandList.find(commandListKey);
+    if (itStates != m_CommandsByCommandList.end()) {
+      for (auto& command : itStates->second) {
+        StoreCommand(command);
       }
-      m_StatesByCommandList.erase(itStates);
+      m_CommandsByCommandList.erase(itStates);
     }
   }
 }
 
-void AccelerationStructuresBuildService::OptimizationService::Optimize() {
-  if (!Configurator::Get().directx.features.subcapture.optimize &&
-      !Configurator::Get().directx.features.subcapture.optimizeRaytracing) {
-    return;
+void AccelerationStructuresBuildService::OptimizationService::StoreCommand(
+    std::unique_ptr<RaytracingAccelerationStructureCommand>& command) {
+  CommandNode* node = new CommandNode{};
+  node->Command.swap(command);
+  node->Id = ++m_CommandUniqueId;
+  m_CommandById[node->Id].reset(node);
+
+  CommandNode* sourceNode{};
+  if (node->Command->SourceKey) {
+    auto it = m_CommandByKeyOffset.find({node->Command->SourceKey, node->Command->SourceOffset});
+    GITS_ASSERT(it != m_CommandByKeyOffset.end() && it->second);
+    sourceNode = it->second;
   }
 
-  CompleteSourcesFromAnalysis();
-  RemoveSourcesWithoutDestinations();
-
-  std::vector<unsigned> removedStates;
-  for (auto& [stateId, state] : m_StatesById) {
-    if (!m_StateService.GetAnalyzerResults().RestoreBlas(
-            std::make_pair(state->DestKey, state->DestOffset)) &&
-        !m_StateService.GetAnalyzerResults().RestoreTlas(state->CommandKey)) {
-      auto itDests = m_StateDestsBySource.find(stateId);
-      if (itDests == m_StateDestsBySource.end() || itDests->second.empty()) {
-        removedStates.push_back(stateId);
+  // skip intermediate update build command
+  if (node->Command->Update) {
+    GITS_ASSERT(sourceNode);
+    if (sourceNode->Source) {
+      sourceNode = sourceNode->Source;
+      node->Command->SourceKey = sourceNode->Command->DestKey;
+      node->Command->SourceOffset = sourceNode->Command->DestOffset;
+      switch (node->Command->Type) {
+      case RaytracingAccelerationStructureCommand::CommandType::Build: {
+        auto* build =
+            static_cast<BuildRaytracingAccelerationStructureCommand*>(node->Command.get());
+        build->Desc->SourceAccelerationStructureKey = sourceNode->Command->DestKey;
+        build->Desc->SourceAccelerationStructureOffset = sourceNode->Command->DestOffset;
+      } break;
+      case RaytracingAccelerationStructureCommand::CommandType::NvAPIBuild: {
+        auto* build =
+            static_cast<NvAPIBuildRaytracingAccelerationStructureExCommand*>(node->Command.get());
+        build->Desc->SourceAccelerationStructureKey = sourceNode->Command->DestKey;
+        build->Desc->SourceAccelerationStructureOffset = sourceNode->Command->DestOffset;
+      } break;
       }
-    } else {
-      state->FoundInAnalysis = true;
     }
   }
-  for (unsigned stateId : removedStates) {
-    RemoveState(stateId, true);
+
+  // handle previous command in the same location
+  CommandNode* previousNode{};
+  auto it = m_CommandByKeyOffset.find({node->Command->DestKey, node->Command->DestOffset});
+  if (it != m_CommandByKeyOffset.end()) {
+    previousNode = it->second;
+  }
+  m_CommandByKeyOffset[{node->Command->DestKey, node->Command->DestOffset}] = node;
+  if (previousNode && previousNode != sourceNode && previousNode->Destinations.empty()) {
+    m_BufferContentRestore.RemoveBuild(previousNode->Command->CommandKey);
+    if (previousNode->Source) {
+      previousNode->Source->Destinations.erase(previousNode);
+    }
+    m_CommandById.erase(previousNode->Id);
+  }
+
+  if (sourceNode) {
+    sourceNode->Destinations.insert(node);
+    node->Source = sourceNode;
   }
 }
 
-void AccelerationStructuresBuildService::OptimizationService::StoreState(
-    RaytracingAccelerationStructureState* state) {
+void AccelerationStructuresBuildService::OptimizationService::ProcessCommands() {
+  if (Configurator::Get().directx.features.subcapture.optimize) {
+    for (auto& [keyOffset, node] : m_CommandByKeyOffset) {
+      if (m_StateService.GetAnalyzerResults().RestoreBlas(keyOffset) || node->Command->TlasBuild) {
+        node->Restore = true;
+      }
+    }
 
-  unsigned stateId = ++m_StateUniqueId;
-  m_StatesById[stateId] = state;
-  if (state->SourceKey) {
-    auto itStates = m_StateByKeyOffset.find({state->SourceKey, state->SourceOffset});
-    GITS_ASSERT(itStates != m_StateByKeyOffset.end() && !itStates->second.empty());
-    unsigned sourceId = *itStates->second.rbegin();
-
-    // remove intermediate update
-    if (state->Kind == RaytracingAccelerationStructureState::StateKind::Build) {
-      BuildRaytracingAccelerationStructureState* buildState =
-          static_cast<BuildRaytracingAccelerationStructureState*>(state);
-      if (buildState->Update) {
-        auto itPrimarySource = m_StateSourceByDest.find(sourceId);
-        if (itPrimarySource != m_StateSourceByDest.end()) {
-          sourceId = itPrimarySource->second;
-          auto itPrimarySourceState = m_StatesById.find(sourceId);
-          GITS_ASSERT(itPrimarySourceState != m_StatesById.end());
-          buildState->SourceKey = itPrimarySourceState->second->DestKey;
-          buildState->SourceOffset = itPrimarySourceState->second->DestOffset;
-          buildState->Desc->SourceAccelerationStructureKey = buildState->SourceKey;
-          buildState->Desc->SourceAccelerationStructureOffset = buildState->SourceOffset;
+    // mark source nodes for restoration
+    for (auto& it : m_CommandById) {
+      CommandNode* node = it.second.get();
+      if (node->Restore) {
+        while (node->Source) {
+          node->Source->Restore = true;
+          node = node->Source;
         }
-      }
-    } else if (state->Kind == RaytracingAccelerationStructureState::StateKind::NvAPIBuild) {
-      NvAPIBuildRaytracingAccelerationStructureExState* buildState =
-          static_cast<NvAPIBuildRaytracingAccelerationStructureExState*>(state);
-      if (buildState->Update) {
-        auto itPrimarySource = m_StateSourceByDest.find(sourceId);
-        if (itPrimarySource != m_StateSourceByDest.end()) {
-          sourceId = itPrimarySource->second;
-          auto itPrimarySourceState = m_StatesById.find(sourceId);
-          GITS_ASSERT(itPrimarySourceState != m_StatesById.end());
-          buildState->SourceKey = itPrimarySourceState->second->DestKey;
-          buildState->SourceOffset = itPrimarySourceState->second->DestOffset;
-          buildState->Desc->SourceAccelerationStructureKey = buildState->SourceKey;
-          buildState->Desc->SourceAccelerationStructureOffset = buildState->SourceOffset;
-        }
-      }
-    }
-
-    m_StateSourceByDest[stateId] = sourceId;
-    m_StateDestsBySource[sourceId].insert(stateId);
-  }
-
-  // remove previous state if not a source for any AS
-  auto itStates = m_StateByKeyOffset.find({state->DestKey, state->DestOffset});
-  if (itStates != m_StateByKeyOffset.end() && !itStates->second.empty()) {
-    unsigned prevStateId = *itStates->second.rbegin();
-    auto itDests = m_StateDestsBySource.find(prevStateId);
-    if (itDests == m_StateDestsBySource.end()) {
-      RemoveState(prevStateId);
-    }
-  }
-
-  m_StateByKeyOffset[{state->DestKey, state->DestOffset}].insert(stateId);
-}
-
-void AccelerationStructuresBuildService::OptimizationService::RemoveState(unsigned stateId,
-                                                                          bool removeSource) {
-  auto itState = m_StatesById.find(stateId);
-  GITS_ASSERT(itState != m_StatesById.end());
-  if (itState->second->Kind == RaytracingAccelerationStructureState::StateKind::NvAPIOMM) {
-    return;
-  } else if (itState->second->Kind == RaytracingAccelerationStructureState::StateKind::Build &&
-             static_cast<BuildRaytracingAccelerationStructureState*>(itState->second)
-                     ->Desc->Value->Inputs.Type ==
-                 D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_OPACITY_MICROMAP_ARRAY) {
-    return;
-  }
-
-  if (itState->second->FoundInAnalysis) {
-    return;
-  }
-
-  // remove state sources chain
-  auto itSource = m_StateSourceByDest.find(stateId);
-  if (itSource != m_StateSourceByDest.end()) {
-    auto itDests = m_StateDestsBySource.find(itSource->second);
-    GITS_ASSERT(itDests != m_StateDestsBySource.end());
-    itDests->second.erase(stateId);
-    if (itDests->second.empty()) {
-      if (removeSource) {
-        RemoveState(itSource->second, removeSource);
-        m_StateDestsBySource.erase(itDests);
       } else {
-        m_SourcesWithoutDestinations.insert(itSource->second);
+        if (node->Command->Type == RaytracingAccelerationStructureCommand::CommandType::NvAPIOMM) {
+          node->Restore = true;
+        }
       }
     }
-    m_StateSourceByDest.erase(itSource);
   }
 
-  // remove state
-  if (itState->second->Kind != RaytracingAccelerationStructureState::StateKind::Copy) {
-    m_BufferContentRestore.RemoveBuild(itState->second->CommandKey);
-  }
-  auto it = m_StateByKeyOffset.find({itState->second->DestKey, itState->second->DestOffset});
-  GITS_ASSERT(it != m_StateByKeyOffset.end());
-  it->second.erase(stateId);
-  if (it->second.empty()) {
-    m_StateByKeyOffset.erase(it);
-  }
-  m_StatesById.erase(itState);
-}
-
-void AccelerationStructuresBuildService::OptimizationService::RemoveSourcesWithoutDestinations() {
-  for (unsigned source : m_SourcesWithoutDestinations) {
-    auto itDests = m_StateDestsBySource.find(source);
-    GITS_ASSERT(itDests != m_StateDestsBySource.end());
-    if (itDests->second.empty()) {
-      RemoveState(source, true);
-      m_StateDestsBySource.erase(itDests);
+  // prepare sorted commands
+  for (auto& it : m_CommandById) {
+    if (it.second->Restore || !Configurator::Get().directx.features.subcapture.optimize) {
+      m_RestoreCommands.push_back(it.second.get());
     }
   }
+  std::sort(m_RestoreCommands.begin(), m_RestoreCommands.end(),
+            [](const CommandNode* a, const CommandNode* b) { return a->Id < b->Id; });
 }
 
-void AccelerationStructuresBuildService::OptimizationService::CompleteSourcesFromAnalysis() {
-  std::set<std::pair<unsigned, unsigned>>& sources =
-      m_StateService.GetAnalyzerResults().GetAsSources();
-  for (auto& keyOffset : sources) {
-    auto itStates = m_StateByKeyOffset.find(keyOffset);
-    if (itStates != m_StateByKeyOffset.end() && !itStates->second.empty()) {
-      unsigned lastState = *itStates->second.rbegin();
-      m_StateDestsBySource[lastState].insert(UINT_MAX);
-    }
-  }
+void AccelerationStructuresBuildService::OptimizationService::Cleanup() {
+  m_CommandsByCommandList.clear();
+  m_CommandByKeyOffset.clear();
+  m_CommandById.clear();
+  m_RestoreCommands.clear();
 }
 
 } // namespace DirectX

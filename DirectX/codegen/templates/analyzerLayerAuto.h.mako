@@ -76,7 +76,6 @@ public:
 
 private:
   bool m_Optimize{};
-  bool m_OptimizeRaytracing{};
   SubcaptureRange& m_SubcaptureRange;
   AnalyzerCommandListService m_CommandListService;
   DescriptorService m_DescriptorService;

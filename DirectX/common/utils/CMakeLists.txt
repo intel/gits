@@ -36,6 +36,7 @@ set(UTILS_FILES
   ${SRC_DIR}/resourceSizeUtils.cpp
   ${SRC_DIR}/imageWriter.h
   ${SRC_DIR}/imageWriter.cpp
+  ${SRC_DIR}/hashUtils.h
 )
 source_group("" FILES ${UTILS_FILES})
 

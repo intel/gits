@@ -16,6 +16,7 @@
 #include "objectState.h"
 #include "resourceStateTracker.h"
 #include "capturePlayerGpuAddressService.h"
+#include "hashUtils.h"
 
 #include <unordered_map>
 #include <unordered_set>
@@ -59,10 +60,10 @@ private:
   ResourceStateTracker& m_ResourceStateTracker;
   CapturePlayerGpuAddressService& m_GpuAddressService;
 
-  struct RaytracingAccelerationStructureState {
-    virtual ~RaytracingAccelerationStructureState() {}
+  struct RaytracingAccelerationStructureCommand {
+    virtual ~RaytracingAccelerationStructureCommand() {}
 
-    enum class StateKind {
+    enum class CommandType {
       Build,
       Copy,
       NvAPIBuild,
@@ -72,34 +73,35 @@ private:
     std::unordered_map<unsigned, ReservedResourcesService::TiledResource> TiledResources;
     unsigned CommandKey{};
     unsigned CommandListKey{};
-    StateKind Kind{};
+    CommandType Type{};
     unsigned DestKey{};
     unsigned DestOffset{};
     unsigned SourceKey{};
     unsigned SourceOffset{};
-    bool FoundInAnalysis{};
-  };
-
-  struct BuildRaytracingAccelerationStructureState : public RaytracingAccelerationStructureState {
-    std::unique_ptr<PointerArgument<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC>> Desc{};
     bool Update{};
+    bool TlasBuild{};
   };
 
-  struct CopyRaytracingAccelerationStructureState : public RaytracingAccelerationStructureState {
+  struct BuildRaytracingAccelerationStructureCommand
+      : public RaytracingAccelerationStructureCommand {
+    std::unique_ptr<PointerArgument<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC>> Desc{};
+  };
+
+  struct CopyRaytracingAccelerationStructureCommand
+      : public RaytracingAccelerationStructureCommand {
     D3D12_GPU_VIRTUAL_ADDRESS DestAccelerationStructureData{};
     D3D12_GPU_VIRTUAL_ADDRESS SourceAccelerationStructureData{};
     D3D12_RAYTRACING_ACCELERATION_STRUCTURE_COPY_MODE Mode{};
   };
 
-  struct NvAPIBuildRaytracingAccelerationStructureExState
-      : public RaytracingAccelerationStructureState {
+  struct NvAPIBuildRaytracingAccelerationStructureExCommand
+      : public RaytracingAccelerationStructureCommand {
     std::unique_ptr<PointerArgument<NVAPI_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_EX_PARAMS>>
         Desc{};
-    bool Update{};
   };
 
-  struct NvAPIBuildRaytracingOpacityMicromapArrayState
-      : public RaytracingAccelerationStructureState {
+  struct NvAPIBuildRaytracingOpacityMicromapArrayCommand
+      : public RaytracingAccelerationStructureCommand {
     std::unique_ptr<PointerArgument<NVAPI_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_PARAMS>> Desc{};
   };
 
@@ -129,14 +131,13 @@ private:
   bool m_SerializeMode{};
   bool m_RestoreTlas{};
   bool m_Optimize{};
-  bool m_OptimizeRaytracing{};
 
 private:
   void InitUploadBuffer();
-  void RestoreState(BuildRaytracingAccelerationStructureState* state);
-  void RestoreState(CopyRaytracingAccelerationStructureState* state);
-  void RestoreState(NvAPIBuildRaytracingAccelerationStructureExState* state);
-  void RestoreState(NvAPIBuildRaytracingOpacityMicromapArrayState* state);
+  void RestoreCommand(BuildRaytracingAccelerationStructureCommand* command);
+  void RestoreCommand(CopyRaytracingAccelerationStructureCommand* command);
+  void RestoreCommand(NvAPIBuildRaytracingAccelerationStructureExCommand* command);
+  void RestoreCommand(NvAPIBuildRaytracingOpacityMicromapArrayCommand* command);
   void RecordExecuteCommandLists(const CommandListKeys& keys);
   size_t RestoreBuffer(
       const AccelerationStructuresBufferContentRestore::BufferRestoreInfo& restoreInfo,
@@ -158,7 +159,7 @@ private:
     void AddBufferRegion(unsigned key, unsigned offset, unsigned size);
     void StoreBuffers(unsigned commandKey,
                       ID3D12GraphicsCommandList* commandList,
-                      RaytracingAccelerationStructureState* state);
+                      RaytracingAccelerationStructureCommand* state);
 
   private:
     void StoreBuffer(unsigned inputKey,
@@ -166,7 +167,7 @@ private:
                      unsigned size,
                      unsigned commandKey,
                      ID3D12GraphicsCommandList* commandList,
-                     RaytracingAccelerationStructureState* state);
+                     RaytracingAccelerationStructureCommand* state);
 
   private:
     StateTrackingService& m_StateService;
@@ -186,31 +187,41 @@ private:
     OptimizationService(StateTrackingService& stateService,
                         AccelerationStructuresBufferContentRestore& bufferContentRestore)
         : m_StateService(stateService), m_BufferContentRestore(bufferContentRestore) {}
-    void AddState(unsigned commandListKey, RaytracingAccelerationStructureState* state);
-    void StoreStatesOnExecute(std::vector<unsigned>& commandListKeys);
-    void Optimize();
-    std::map<unsigned, RaytracingAccelerationStructureState*>& GetStates() {
-      return m_StatesById;
+    void AddCommand(unsigned commandListKey, RaytracingAccelerationStructureCommand* command) {
+      m_CommandsByCommandList[commandListKey].emplace_back(command);
+    }
+    void OnExecute(std::vector<unsigned>& commandListKeys);
+    void ProcessCommands();
+    void Cleanup();
+
+  public:
+    struct CommandNode {
+      unsigned Id{};
+      std::unique_ptr<RaytracingAccelerationStructureCommand> Command{};
+      CommandNode* Source{};
+      std::unordered_set<CommandNode*> Destinations;
+      bool Restore{};
+    };
+    std::vector<CommandNode*>& GetCommands() {
+      return m_RestoreCommands;
     }
 
   private:
-    void StoreState(RaytracingAccelerationStructureState* state);
-    void RemoveState(unsigned stateId, bool removeSource = false);
-    void RemoveSourcesWithoutDestinations();
-    void CompleteSourcesFromAnalysis();
+    void StoreCommand(std::unique_ptr<RaytracingAccelerationStructureCommand>& command);
 
   private:
     StateTrackingService& m_StateService;
     AccelerationStructuresBufferContentRestore& m_BufferContentRestore;
-    unsigned m_StateUniqueId{};
-    std::unordered_map<unsigned, std::vector<RaytracingAccelerationStructureState*>>
-        m_StatesByCommandList;
-    std::map<unsigned, RaytracingAccelerationStructureState*> m_StatesById;
-    std::map<std::pair<unsigned, unsigned>, std::set<unsigned>> m_StateByKeyOffset;
-    std::unordered_map<unsigned, unsigned> m_StateSourceByDest;
-    std::unordered_map<unsigned, std::unordered_set<unsigned>> m_StateDestsBySource;
-    std::unordered_set<unsigned> m_SourcesWithoutDestinations;
+    unsigned m_CommandUniqueId{};
+    std::unordered_map<unsigned,
+                       std::vector<std::unique_ptr<RaytracingAccelerationStructureCommand>>>
+        m_CommandsByCommandList;
+    std::unordered_map<std::pair<unsigned, unsigned>, CommandNode*, UnsignedPairHash>
+        m_CommandByKeyOffset;
+    std::unordered_map<unsigned, std::unique_ptr<CommandNode>> m_CommandById;
+    std::vector<CommandNode*> m_RestoreCommands;
   };
+
   OptimizationService m_OptimizationService;
 };
 

@@ -1129,10 +1129,6 @@ Configuration:
                 Type: bool
                 Default: true
                 Description: Uses optimization information from subcapture analysis to restore only necessary objects
-              - Name: optimizeRaytracing
-                Type: bool
-                Default: true
-                Description: Uses optimization information from subcapture analysis to restore only necessary raytracing acceleration structures
               - Name: compressionType
                 Type: CompressionType
                 Default: ZSTD
