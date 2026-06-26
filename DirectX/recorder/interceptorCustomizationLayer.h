@@ -24,11 +24,15 @@ public:
 
   void Post(IDXGISwapChainGetBufferCommand& command) override;
   void Pre(IUnknownReleaseCommand& command) override;
+  void Post(IDXGISwapChainResizeBuffersCommand& command) override;
+  void Post(IDXGISwapChain3ResizeBuffers1Command& command) override;
 
   void Pre(D3D12CreateDeviceCommand& command) override;
   void Post(D3D12CreateDeviceCommand& command) override;
 
 private:
+  void RemoveSwapChainBufferWrappersOnResize(unsigned swapChainKey);
+
   std::unordered_map<unsigned, unsigned> m_SwapChainByBufferKey;
   std::unordered_map<unsigned, std::unordered_set<IUnknown*>> m_BuffersBySwapChainKey;
   std::mutex m_Mutex;

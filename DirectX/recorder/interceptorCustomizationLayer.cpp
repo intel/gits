@@ -59,6 +59,41 @@ void InterceptorCustomizationLayer::Pre(IUnknownReleaseCommand& c) {
   m_BuffersBySwapChainKey.erase(itBuffers);
 }
 
+void InterceptorCustomizationLayer::RemoveSwapChainBufferWrappersOnResize(unsigned swapChainKey) {
+  // XeFG keeps an extra reference on swap chain buffers and drops it internally on resize
+
+  auto itBuffers = m_BuffersBySwapChainKey.find(swapChainKey);
+  if (itBuffers == m_BuffersBySwapChainKey.end()) {
+    return;
+  }
+
+  for (IUnknown* bufferObject : itBuffers->second) {
+    auto* bufferWrapper = CaptureManager::get().findWrapper(bufferObject);
+    GITS_ASSERT(bufferWrapper != nullptr, "Can't remove a nonexistent buffer wrapper.");
+    m_SwapChainByBufferKey.erase(bufferWrapper->GetKey());
+    CaptureManager::get().removeWrapper(bufferWrapper);
+  }
+  m_BuffersBySwapChainKey.erase(itBuffers);
+}
+
+void InterceptorCustomizationLayer::Post(IDXGISwapChainResizeBuffersCommand& c) {
+  if (c.m_Result.Value != S_OK) {
+    return;
+  }
+
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  RemoveSwapChainBufferWrappersOnResize(c.m_Object.Key);
+}
+
+void InterceptorCustomizationLayer::Post(IDXGISwapChain3ResizeBuffers1Command& c) {
+  if (c.m_Result.Value != S_OK) {
+    return;
+  }
+
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  RemoveSwapChainBufferWrappersOnResize(c.m_Object.Key);
+}
+
 void InterceptorCustomizationLayer::Pre(D3D12CreateDeviceCommand& command) {
   Microsoft::WRL::ComPtr<IDXGIAdapter> adapter;
   if (command.m_pAdapter.Value) {
