@@ -68,7 +68,7 @@ void IntelExtensionsService::SetApplicationInfo() {
 
   std::string appName = stream::StreamHeader::Get().GetApplicationName();
   std::string appVersion = "0.0.0";
-  std::string engineName;
+  std::string engineName = "GITS";
   std::string engineVersion = "0.0.0";
 
   const auto& appInfoConfigOverride = Configurator::Get().directx.player.applicationInfoOverride;
