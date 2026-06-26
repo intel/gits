@@ -759,6 +759,10 @@ UpdateInterfaceT<DSTORAGE_REQUEST_Argument, DSTORAGE_REQUEST>::UpdateInterfaceT(
 UpdateInterfaceT<xefg_swapchain_d3d12_init_params_t_Argument, xefg_swapchain_d3d12_init_params_t>::
     UpdateInterfaceT(xefg_swapchain_d3d12_init_params_t_Argument& arg,
                      const xefg_swapchain_d3d12_init_params_t* value) {
+  if (!value) {
+    return;
+  }
+
   arg.Value = &m_UnwrapStructure;
   *arg.Value = *value;
   if (value->pApplicationSwapChain) {
