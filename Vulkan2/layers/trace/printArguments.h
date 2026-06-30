@@ -106,10 +106,10 @@ FastOStream& operator<<(FastOStream& stream, Arg<T>& arg) {
   return stream;
 }
 
-template <typename T, int N>
+template <typename T, uint32_t N>
 FastOStream& operator<<(FastOStream& stream, StaticArrayArgument<T, N>& arg) {
   stream << "[";
-  for (int i = 0; i < N; ++i) {
+  for (uint32_t i = 0; i < N; ++i) {
     if (i > 0) {
       stream << ", ";
     }

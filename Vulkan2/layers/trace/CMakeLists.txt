@@ -45,8 +45,6 @@ target_sources(Vulkan_trace PRIVATE
 
 target_include_directories(Vulkan_trace PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}
-  ${FASTIO_DIR}/include
-  ${FASTOUTPUT_DIR}
 )
 
 target_link_libraries(Vulkan_trace PRIVATE

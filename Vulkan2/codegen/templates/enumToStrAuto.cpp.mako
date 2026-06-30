@@ -11,6 +11,7 @@ ${header}
 #include "vulkanHeader2.h"
 #include <unordered_map>
 #include <algorithm>
+#include <vector>
 
 namespace gits {
 namespace vulkan {
@@ -34,7 +35,10 @@ static std::string enumToStr(const std::vector<std::pair<int, std::string>>& enu
 
 %for enum in enums:
 %if enum.name not in excluded_enums:
-
+<% define = get_define(enum.platform) %>\
+% if define:
+#ifdef ${define}
+% endif
 std::string toStr(${enum.name} value) {
   std::string result = "unknown";
   switch (value) {
@@ -61,6 +65,9 @@ std::string toStr(${enum.name} value) {
   }
   return result;
 }
+% if define:
+#endif
+% endif
 
 %endif
 %endfor

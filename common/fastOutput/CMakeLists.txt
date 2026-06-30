@@ -18,9 +18,13 @@ set(FASTOUTPUT_SRC
 
 add_library(fastOutput STATIC ${FASTOUTPUT_SRC})
 
-target_include_directories(fastOutput PUBLIC
+target_include_directories(fastOutput SYSTEM PUBLIC
   ${FASTIO_DIR}/include
+)
+
+target_include_directories(fastOutput PUBLIC
   ${COMMON_HEADER_DIR}
+  ${FASTOUTPUT_DIR}
 )
 
 target_link_libraries(fastOutput PRIVATE
