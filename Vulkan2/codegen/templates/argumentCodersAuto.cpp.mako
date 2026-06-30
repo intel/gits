@@ -17,6 +17,11 @@ namespace vulkan {
 <%
 pnext_input_structs  = [s for s in structures if s.pnext_input  and s.stype_value]
 pnext_output_structs = [s for s in structures if s.pnext_output and s.stype_value]
+# Structs whose GetSize/Encode/Decode are hand-written in argumentCodersCustom.cpp.
+# Add struct names here to exclude them from auto-generation.
+custom_structs = {
+    'VkWriteDescriptorSet',
+}
 %>\
 // ============================================================================
 // pNext chain - encoding format per node: [VkStructureType][struct_bytes...]
@@ -207,7 +212,7 @@ void DecodePNextChainOutput(char* src, uint32_t& offset, void** pNext) {
 define = get_define(structure.platform)
 needs_coder = struct_needs_coder(structure, structures)
 %>\
-% if needs_coder:
+% if needs_coder and structure.name not in custom_structs:
 % if define:
 #ifdef ${define}
 % endif

@@ -1,0 +1,225 @@
+// ===================== begin_copyright_notice ============================
+//
+// Copyright (C) 2023-2026 Intel Corporation
+//
+// SPDX-License-Identifier: MIT
+//
+// ===================== end_copyright_notice ==============================
+
+#include "argumentCodersCustom.h"
+#include "argumentCodersAuto.h"
+#include "argumentCoders.h"
+#include "handleMapService.h"
+
+namespace gits {
+namespace vulkan {
+
+// Returns true if descriptorType uses pImageInfo.
+static bool UsesImageInfo(VkDescriptorType type) {
+  switch (type) {
+  case VK_DESCRIPTOR_TYPE_SAMPLER:
+  case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
+  case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
+  case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
+  case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
+    return true;
+  default:
+    return false;
+  }
+}
+
+// Returns true if descriptorType uses pBufferInfo.
+static bool UsesBufferInfo(VkDescriptorType type) {
+  switch (type) {
+  case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+  case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
+  case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
+  case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
+    return true;
+  default:
+    return false;
+  }
+}
+
+// Returns true if descriptorType uses pTexelBufferView.
+static bool UsesTexelBufferView(VkDescriptorType type) {
+  switch (type) {
+  case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
+  case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
+    return true;
+  default:
+    return false;
+  }
+}
+
+uint32_t GetSize(const VkWriteDescriptorSet* src, uint32_t count) {
+  if (!src) {
+    return 0;
+  }
+  auto blobSize = static_cast<uint32_t>(sizeof(VkWriteDescriptorSet) * count);
+  for (uint32_t i = 0; i < count; ++i) {
+    const auto* desc = &src[i];
+    blobSize += GetPNextChainSizeInput(desc->pNext);
+    if (desc->dstSet != VK_NULL_HANDLE) {
+      blobSize += sizeof(GITSKey);
+    }
+    if (desc->descriptorCount > 0) {
+      if (UsesImageInfo(desc->descriptorType) && desc->pImageInfo) {
+        blobSize += GetSize(desc->pImageInfo, desc->descriptorCount);
+      } else if (UsesBufferInfo(desc->descriptorType) && desc->pBufferInfo) {
+        blobSize += GetSize(desc->pBufferInfo, desc->descriptorCount);
+      } else if (UsesTexelBufferView(desc->descriptorType) && desc->pTexelBufferView) {
+        blobSize += sizeof(GITSKey) * desc->descriptorCount;
+      }
+    }
+  }
+  return blobSize;
+}
+
+void Encode(const VkWriteDescriptorSet* src, uint32_t count, char* dst, uint32_t& offset) {
+  if (!src || !dst) {
+    return;
+  }
+  auto* srcDesc = src;
+  auto* dstDesc = reinterpret_cast<VkWriteDescriptorSet*>(&dst[offset]);
+  WriteData(reinterpret_cast<const char*>(src), sizeof(VkWriteDescriptorSet) * count, dst, offset);
+
+  for (uint32_t i = 0; i < count; ++i) {
+    auto* currentSrcDesc = const_cast<VkWriteDescriptorSet*>(&srcDesc[i]);
+    auto* currentDstDesc = &dstDesc[i];
+
+    if (currentSrcDesc->pNext) {
+      currentDstDesc->pNext =
+          reinterpret_cast<decltype(currentDstDesc->pNext)>(static_cast<uintptr_t>(offset));
+      EncodePNextChainInput(dst, offset, currentSrcDesc->pNext);
+    } else {
+      currentDstDesc->pNext = nullptr;
+    }
+
+    if (currentSrcDesc->dstSet != VK_NULL_HANDLE) {
+      GITSKey key =
+          HandleMapService::Get().GetKey(reinterpret_cast<uint64_t>(currentSrcDesc->dstSet));
+      std::memcpy(dst + offset, &key, sizeof(GITSKey));
+      offset += sizeof(GITSKey);
+    }
+
+    if (currentSrcDesc->descriptorCount > 0) {
+      if (UsesImageInfo(currentSrcDesc->descriptorType) && currentSrcDesc->pImageInfo) {
+        currentDstDesc->pImageInfo =
+            reinterpret_cast<VkDescriptorImageInfo*>(static_cast<uintptr_t>(offset));
+        Encode(currentSrcDesc->pImageInfo, currentSrcDesc->descriptorCount, dst, offset);
+      } else if (UsesBufferInfo(currentSrcDesc->descriptorType) && currentSrcDesc->pBufferInfo) {
+        currentDstDesc->pBufferInfo =
+            reinterpret_cast<VkDescriptorBufferInfo*>(static_cast<uintptr_t>(offset));
+        Encode(currentSrcDesc->pBufferInfo, currentSrcDesc->descriptorCount, dst, offset);
+      } else if (UsesTexelBufferView(currentSrcDesc->descriptorType) &&
+                 currentSrcDesc->pTexelBufferView) {
+        currentDstDesc->pTexelBufferView =
+            reinterpret_cast<VkBufferView*>(static_cast<uintptr_t>(offset));
+        for (uint32_t j = 0; j < currentSrcDesc->descriptorCount; ++j) {
+          GITSKey key = currentSrcDesc->pTexelBufferView[j] != VK_NULL_HANDLE
+                            ? HandleMapService::Get().GetKey(
+                                  reinterpret_cast<uint64_t>(currentSrcDesc->pTexelBufferView[j]))
+                            : GITSKey{0};
+          std::memcpy(dst + offset, &key, sizeof(GITSKey));
+          offset += sizeof(GITSKey);
+        }
+      }
+    }
+  }
+}
+
+void Decode(const VkWriteDescriptorSet* dst, uint32_t count, char* src, uint32_t& offset) {
+  offset += sizeof(VkWriteDescriptorSet) * count;
+
+  for (uint32_t i = 0; i < count; ++i) {
+    auto* currentDstDesc = const_cast<VkWriteDescriptorSet*>(&dst[i]);
+
+    if (currentDstDesc->pNext) {
+      DecodePNextChainInput(src, offset, const_cast<void**>(&currentDstDesc->pNext));
+    }
+
+    if (currentDstDesc->dstSet != VK_NULL_HANDLE) {
+      GITSKey key;
+      std::memcpy(&key, src + offset, sizeof(GITSKey));
+      offset += sizeof(GITSKey);
+      currentDstDesc->dstSet = reinterpret_cast<VkDescriptorSet>(key);
+    }
+
+    if (currentDstDesc->descriptorCount > 0) {
+      if (UsesImageInfo(currentDstDesc->descriptorType) && currentDstDesc->pImageInfo) {
+        currentDstDesc->pImageInfo = AddPtrs(currentDstDesc->pImageInfo, src);
+        Decode(currentDstDesc->pImageInfo, currentDstDesc->descriptorCount, src, offset);
+      } else if (UsesBufferInfo(currentDstDesc->descriptorType) && currentDstDesc->pBufferInfo) {
+        currentDstDesc->pBufferInfo = AddPtrs(currentDstDesc->pBufferInfo, src);
+        Decode(currentDstDesc->pBufferInfo, currentDstDesc->descriptorCount, src, offset);
+      } else if (UsesTexelBufferView(currentDstDesc->descriptorType) &&
+                 currentDstDesc->pTexelBufferView) {
+        currentDstDesc->pTexelBufferView = AddPtrs(currentDstDesc->pTexelBufferView, src);
+        offset += sizeof(GITSKey) * currentDstDesc->descriptorCount;
+      }
+    }
+  }
+}
+
+// PointerArgument overloads for VkWriteDescriptorSet
+uint32_t GetSize(const PointerArgument<VkWriteDescriptorSet>& arg) {
+  if (!arg.Value) {
+    return sizeof(void*);
+  }
+  return sizeof(void*) + GetSize(arg.Value, 1);
+}
+
+void Encode(char* dst, uint32_t& offset, const PointerArgument<VkWriteDescriptorSet>& arg) {
+  std::memcpy(dst + offset, &arg.Value, sizeof(void*));
+  offset += sizeof(void*);
+  if (!arg.Value) {
+    return;
+  }
+  Encode(arg.Value, 1, dst, offset);
+}
+
+void Decode(char* src, uint32_t& offset, PointerArgument<VkWriteDescriptorSet>& arg) {
+  std::memcpy(&arg.Value, src + offset, sizeof(void*));
+  offset += sizeof(void*);
+  if (!arg.Value) {
+    return;
+  }
+  arg.Value = reinterpret_cast<VkWriteDescriptorSet*>(src + offset);
+  Decode(arg.Value, 1, src, offset);
+}
+
+// ArrayArgument overloads for VkWriteDescriptorSet
+uint32_t GetSize(const ArrayArgument<VkWriteDescriptorSet>& arg) {
+  if (!arg.Value) {
+    return sizeof(void*);
+  }
+  return sizeof(void*) + sizeof(arg.Size) + GetSize(arg.Value, arg.Size);
+}
+
+void Encode(char* dst, uint32_t& offset, const ArrayArgument<VkWriteDescriptorSet>& arg) {
+  std::memcpy(dst + offset, &arg.Value, sizeof(void*));
+  offset += sizeof(void*);
+  if (!arg.Value) {
+    return;
+  }
+  std::memcpy(dst + offset, &arg.Size, sizeof(arg.Size));
+  offset += sizeof(arg.Size);
+  Encode(arg.Value, arg.Size, dst, offset);
+}
+
+void Decode(char* src, uint32_t& offset, ArrayArgument<VkWriteDescriptorSet>& arg) {
+  std::memcpy(&arg.Value, src + offset, sizeof(void*));
+  offset += sizeof(void*);
+  if (!arg.Value) {
+    arg.Size = 0;
+    return;
+  }
+  std::memcpy(&arg.Size, src + offset, sizeof(arg.Size));
+  offset += sizeof(arg.Size);
+  arg.Value = reinterpret_cast<VkWriteDescriptorSet*>(src + offset);
+  Decode(arg.Value, arg.Size, src, offset);
+}
+
+} // namespace vulkan
+} // namespace gits
