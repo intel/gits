@@ -26,6 +26,7 @@ public:
 
   void SetKey(uint64_t handle, GITSKey key);
   GITSKey GetKey(uint64_t handle);
+  bool HasKey(uint64_t handle);
   void SetHandle(GITSKey key, uint64_t handle);
   uint64_t GetHandle(GITSKey key);
 

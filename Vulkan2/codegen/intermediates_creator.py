@@ -474,6 +474,11 @@ def postprocess(commands, structures, unions, handles, enums, bitmasks, flags, e
 
     OPAQUE_POINTER_TYPES = {'xcb_connection_t', 'Display', 'wl_display', 'wl_surface'}
 
+    # Structs that contain fixed-size arrays of output handles (handles filled in by the driver,
+    # not looked up from existing registrations). UpdateOutputHandle must be called before
+    # UpdateHandle for parameters of these types.
+    STRUCTS_WITH_OUTPUT_HANDLES = {'VkPhysicalDeviceGroupProperties'}
+
     # Commands whose void* pData parameter carries descriptor update template data
     # and must be serialized as DescriptorTemplateDataArgument.
     DESCRIPTOR_TEMPLATE_COMMANDS = {
@@ -529,6 +534,8 @@ def postprocess(commands, structures, unions, handles, enums, bitmasks, flags, e
                     param.is_handle_output = True
             if param.base_type in structure_with_handles:
                 param.is_struct_with_handles = True
+            if param.base_type in STRUCTS_WITH_OUTPUT_HANDLES:
+                param.is_struct_with_output_handles = True
             if param.base_type in structure_names:
                 param.is_struct = True
             if param.base_type in union_names:

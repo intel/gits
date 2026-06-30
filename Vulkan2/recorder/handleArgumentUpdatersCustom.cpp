@@ -106,5 +106,28 @@ void UpdateHandle(CaptureManager& manager, ArrayArgument<VkPushDescriptorSetInfo
   }
 }
 
+void UpdateOutputHandle(CaptureManager& manager,
+                        ArrayArgument<VkPhysicalDeviceGroupProperties>& arg) {
+  if (!arg.Value || arg.Size == 0) {
+    return;
+  }
+  for (uint32_t i = 0; i < arg.Size; ++i) {
+    const auto& group = arg.Value[i];
+    for (uint32_t j = 0; j < group.physicalDeviceCount; ++j) {
+      VkPhysicalDevice device = group.physicalDevices[j];
+      if (device == VK_NULL_HANDLE) {
+        arg.HandleKeys.push_back(0);
+        continue;
+      }
+      auto handle = reinterpret_cast<uint64_t>(device);
+      if (!HandleMapService::Get().HasKey(handle)) {
+        GITSKey key = manager.CreateHandleKey();
+        HandleMapService::Get().SetKey(handle, key);
+      }
+      arg.HandleKeys.push_back(HandleMapService::Get().GetKey(handle));
+    }
+  }
+}
+
 } // namespace vulkan
 } // namespace gits

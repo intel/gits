@@ -28,6 +28,12 @@ void ResolveHandleKeys(const std::vector<GITSKey>& keys,
                        std::vector<uint64_t>& handleData,
                        VkPushDescriptorSetInfo& s);
 
+void CollectHandleKeys(std::vector<GITSKey>& keys, const VkWriteDescriptorSet& s);
+void CollectHandleKeys(std::vector<GITSKey>& keys, const VkPushDescriptorSetInfo& s);
+
+void UpdateOutputHandle(PlayerManager& manager,
+                        ArrayArgument<VkPhysicalDeviceGroupProperties>& arg);
+
 void UpdateHandle(PlayerManager& manager, PointerArgument<VkWriteDescriptorSet>& arg);
 void UpdateHandle(PlayerManager& manager, ArrayArgument<VkWriteDescriptorSet>& arg);
 void UpdateHandle(PlayerManager& manager, PointerArgument<VkPushDescriptorSetInfo>& arg);

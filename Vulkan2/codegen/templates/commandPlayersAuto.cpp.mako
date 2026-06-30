@@ -36,12 +36,13 @@ void ${command.name}Player::Run() {
   % for param in command.params:
   % if param.is_handle:
   UpdateHandle(manager, command.m_${param.name});
-  % elif param.is_struct_with_handles:
+  % elif param.is_struct_with_handles and not param.is_struct_with_output_handles:
   UpdateHandle(manager, command.m_${param.name});
   % elif param.is_struct:
 <%
   struct_def = structures_by_name.get(param.base_type)
-  has_pnext = struct_def is not None and any(m.name == 'pNext' for m in struct_def.members)
+  pnext_member = next((m for m in struct_def.members if m.name == 'pNext'), None) if struct_def else None
+  has_pnext = pnext_member is not None and pnext_member.is_const
 %>
   % if has_pnext and pnext_handle_structs:
   UpdateHandle(manager, command.m_${param.name});
@@ -63,7 +64,21 @@ void ${command.name}Player::Run() {
 
     % for param in command.params:
     % if param.is_handle_output:
+    % if command.return_type != 'void':
+    if (command.m_Return.Value == VK_SUCCESS) {
+      UpdateOutputHandle(manager, command.m_${param.name});
+    }
+    % else:
     UpdateOutputHandle(manager, command.m_${param.name});
+    % endif
+    % elif param.is_struct_with_output_handles and param.is_pointer and not param.is_const:
+    % if command.return_type != 'void':
+    if (command.m_Return.Value == VK_SUCCESS) {
+      UpdateOutputHandle(manager, command.m_${param.name});
+    }
+    % else:
+    UpdateOutputHandle(manager, command.m_${param.name});
+    % endif
     % endif
     % endfor
   }

@@ -26,6 +26,7 @@ class Parameter:
     is_handle_output: bool = False
     is_struct: bool = False
     is_struct_with_handles: bool = False
+    is_struct_with_output_handles: bool = False
     is_union: bool = False
     is_opaque_pointer: bool = False
     is_descriptor_template_data: bool = False

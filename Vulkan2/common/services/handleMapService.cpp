@@ -23,6 +23,11 @@ GITSKey HandleMapService::GetKey(uint64_t handle) {
   return it->second;
 }
 
+bool HandleMapService::HasKey(uint64_t handle) {
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  return m_HandleToKey.find(handle) != m_HandleToKey.end();
+}
+
 void HandleMapService::SetHandle(GITSKey key, uint64_t handle) {
   std::lock_guard<std::mutex> lock(m_Mutex);
   m_KeyToHandle[key] = handle;

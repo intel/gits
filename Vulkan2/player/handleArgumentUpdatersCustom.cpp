@@ -130,5 +130,23 @@ void UpdateHandle(PlayerManager& manager, ArrayArgument<VkPushDescriptorSetInfo>
   }
 }
 
+void UpdateOutputHandle(PlayerManager& manager,
+                        ArrayArgument<VkPhysicalDeviceGroupProperties>& arg) {
+  if (!arg.Value || arg.Size == 0 || arg.HandleKeys.empty()) {
+    return;
+  }
+  uint32_t keyIdx = 0;
+  for (uint32_t i = 0; i < arg.Size; ++i) {
+    const auto& group = arg.Value[i];
+    for (uint32_t j = 0; j < group.physicalDeviceCount && keyIdx < arg.HandleKeys.size(); ++j) {
+      if (group.physicalDevices[j] != VK_NULL_HANDLE) {
+        auto handle = reinterpret_cast<uint64_t>(group.physicalDevices[j]);
+        HandleMapService::Get().SetHandle(arg.HandleKeys[keyIdx], handle);
+      }
+      ++keyIdx;
+    }
+  }
+}
+
 } // namespace vulkan
 } // namespace gits
