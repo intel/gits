@@ -17,6 +17,8 @@
 #include <queue>
 #include <string>
 #include <thread>
+#include <unordered_map>
+#include <vector>
 
 namespace gits {
 namespace vulkan {
@@ -37,16 +39,26 @@ public:
   SwapchainImagesDumper(const SwapchainImagesDumper&) = delete;
   SwapchainImagesDumper& operator=(const SwapchainImagesDumper&) = delete;
 
-  void AllocateBuffers();
+  // Pre-creates a command pool and per-staged-frame command buffers for every
+  // queue family the swapchain may be presented from.
+  void AllocateBuffers(const std::vector<uint32_t>& queueFamilyIndices);
   void StartWorkerThread();
 
-  void SubmitCommandBuffer(VkQueue queue,
+  // Records and submits the copy on the present queue, waiting on the given
+  // semaphores (typically the present's original wait semaphores) before the
+  // transfer read. Returns true if the copy was actually submitted - i.e. the
+  // wait semaphores were consumed - and false if the dump was skipped.
+  bool SubmitCommandBuffer(VkQueue queue,
+                           uint32_t queueFamilyIndex,
                            VkImage swapchainImage,
-                           const std::string& dumpedImageName);
+                           const std::string& dumpedImageName,
+                           uint32_t waitSemaphoreCount,
+                           const VkSemaphore* pWaitSemaphores);
 
 private:
   struct StagedFrame {
-    VkCommandBuffer CommandBuffer{};
+    // One command buffer per queue family
+    std::unordered_map<uint32_t, VkCommandBuffer> CommandBuffers;
     VkFence Fence{};
     VkBuffer StagingBuffer{};
     VkDeviceMemory StagingMemory{};
@@ -55,7 +67,6 @@ private:
   };
 
   StagedFrame* ReserveStagedFrame();
-  StagedFrame* GetReservedStagedFrame();
 
   uint32_t GetMemoryTypeIndexWithFlags(uint32_t memoryTypeBits,
                                        VkMemoryPropertyFlags requiredFlags) const;
@@ -67,14 +78,17 @@ private:
   VkDeviceLevelDispatchTable& m_DispatchTable;
   VkDevice m_Device{};
   VkPhysicalDeviceMemoryProperties m_MemProperties{};
-  VkCommandPool m_CommandPool{};
+  // One command pool per queue family the swapchain is presented from.
+  std::unordered_map<uint32_t, VkCommandPool> m_CommandPools;
   VkFormat m_Format{};
   uint32_t m_Width{};
   uint32_t m_Height{};
   bool m_StagingMemoryIsCached{false};
   std::array<StagedFrame, MAX_STAGED_FRAMES> m_StagedFrames;
 
-  std::thread m_Worker;
+  std::vector<std::thread> m_Workers;
+  // Frames whose copy has been submitted and are awaiting dump to disk
+  std::queue<StagedFrame*> m_SubmittedFrames;
   std::mutex m_Mutex;
   std::condition_variable m_FrameCopySubmittedCV;
   std::condition_variable m_StagedFrameFreeCV;

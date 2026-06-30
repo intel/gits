@@ -13,9 +13,11 @@
 #include "dispatchTablesHolder.h"
 #include "bit_range.h"
 
+#include <atomic>
 #include <filesystem>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <vector>
 #include <unordered_map>
@@ -33,6 +35,8 @@ public:
   ScreenshotsLayer(DispatchTablesHolder& dispatchTablesHolder);
 
   void Post(vkCreateDeviceCommand& command) override;
+  void Post(vkGetDeviceQueueCommand& command) override;
+  void Post(vkGetDeviceQueue2Command& command) override;
   void Post(vkCreateSwapchainKHRCommand& command) override;
   // Flush and release the swapchain's dumper before the swapchain (and shortly
   // after, the device) is destroyed, while both are still valid.  This both
@@ -52,11 +56,14 @@ private:
   };
 
   DispatchTablesHolder& m_DispatchTablesHolder;
+  // Protect the shared maps
+  std::mutex m_Mutex;
   std::unordered_map<VkDevice, VkPhysicalDevice> m_DeviceToPhysicalDevice;
   std::map<VkSwapchainKHR, SwapchainInfo> m_SwapchainInfos;
+  std::unordered_map<VkQueue, uint32_t> m_QueueToFamily;
   BitRange m_ScreenshotRange;
   std::filesystem::path m_DumpPath;
-  unsigned m_CurrentFrame{};
+  std::atomic<unsigned> m_CurrentFrame{};
 };
 
 } // namespace vulkan

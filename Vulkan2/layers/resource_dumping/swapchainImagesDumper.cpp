@@ -12,6 +12,7 @@
 #include "log.h"
 
 #include <stb_image_write.h>
+#include <algorithm>
 #include <cstring>
 #include <cerrno>
 
@@ -38,38 +39,63 @@ SwapchainImagesDumper::SwapchainImagesDumper(VkDevice device,
   }
 }
 
-void SwapchainImagesDumper::AllocateBuffers() {
-  VkCommandPoolCreateInfo poolInfo{};
-  poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-  poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-  poolInfo.queueFamilyIndex = 0;
-
-  VkResult result =
-      m_DispatchTable.vkCreateCommandPool(m_Device, &poolInfo, nullptr, &m_CommandPool);
-  GITS_ASSERT(result == VK_SUCCESS);
-
+void SwapchainImagesDumper::AllocateBuffers(const std::vector<uint32_t>& queueFamilyIndices) {
+  // Fences and staging buffers are queue family independent
+  // and can be created up front.
   for (auto& stagedFrame : m_StagedFrames) {
-    VkCommandBufferAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocInfo.commandPool = m_CommandPool;
-    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandBufferCount = 1;
-
-    result =
-        m_DispatchTable.vkAllocateCommandBuffers(m_Device, &allocInfo, &stagedFrame.CommandBuffer);
-    GITS_ASSERT(result == VK_SUCCESS);
-
     VkFenceCreateInfo fenceInfo{};
     fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 
-    result = m_DispatchTable.vkCreateFence(m_Device, &fenceInfo, nullptr, &stagedFrame.Fence);
+    VkResult result =
+        m_DispatchTable.vkCreateFence(m_Device, &fenceInfo, nullptr, &stagedFrame.Fence);
     GITS_ASSERT(result == VK_SUCCESS);
 
     CreateStagingBuffer(stagedFrame);
   }
+
+  // Command pools and buffers are queue family dependent
+  for (uint32_t queueFamilyIndex : queueFamilyIndices) {
+    if (m_CommandPools.count(queueFamilyIndex)) {
+      continue;
+    }
+
+    VkCommandPoolCreateInfo poolInfo{};
+    poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    poolInfo.queueFamilyIndex = queueFamilyIndex;
+
+    VkCommandPool commandPool = VK_NULL_HANDLE;
+    VkResult result =
+        m_DispatchTable.vkCreateCommandPool(m_Device, &poolInfo, nullptr, &commandPool);
+    GITS_ASSERT(result == VK_SUCCESS);
+
+    for (auto& stagedFrame : m_StagedFrames) {
+      VkCommandBufferAllocateInfo allocInfo{};
+      allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+      allocInfo.commandPool = commandPool;
+      allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+      allocInfo.commandBufferCount = 1;
+
+      VkCommandBuffer commandBuffer = VK_NULL_HANDLE;
+      result = m_DispatchTable.vkAllocateCommandBuffers(m_Device, &allocInfo, &commandBuffer);
+      GITS_ASSERT(result == VK_SUCCESS);
+      stagedFrame.CommandBuffers[queueFamilyIndex] = commandBuffer;
+    }
+
+    m_CommandPools[queueFamilyIndex] = commandPool;
+  }
 }
+
 void SwapchainImagesDumper::StartWorkerThread() {
-  m_Worker = std::thread(&SwapchainImagesDumper::WorkerThread, this);
+  // Create a pool of workers to encode staged frames in parallel
+  unsigned int hwThreads = std::thread::hardware_concurrency();
+  unsigned int workerCount = (hwThreads > 1) ? (hwThreads - 1) : 1;
+  workerCount = std::min<unsigned int>(workerCount, MAX_STAGED_FRAMES);
+
+  m_Workers.reserve(workerCount);
+  for (unsigned int i = 0; i < workerCount; ++i) {
+    m_Workers.emplace_back(&SwapchainImagesDumper::WorkerThread, this);
+  }
 }
 
 SwapchainImagesDumper::~SwapchainImagesDumper() {
@@ -77,10 +103,12 @@ SwapchainImagesDumper::~SwapchainImagesDumper() {
     std::lock_guard<std::mutex> lock(m_Mutex);
     m_Shutdown = true;
   }
-  m_FrameCopySubmittedCV.notify_one();
+  m_FrameCopySubmittedCV.notify_all();
 
-  if (m_Worker.joinable()) {
-    m_Worker.join();
+  for (auto& worker : m_Workers) {
+    if (worker.joinable()) {
+      worker.join();
+    }
   }
 
   for (auto& stagedFrame : m_StagedFrames) {
@@ -94,8 +122,10 @@ SwapchainImagesDumper::~SwapchainImagesDumper() {
       m_DispatchTable.vkDestroyFence(m_Device, stagedFrame.Fence, nullptr);
     }
   }
-  if (m_CommandPool) {
-    m_DispatchTable.vkDestroyCommandPool(m_Device, m_CommandPool, nullptr);
+  for (auto& [queueFamilyIndex, commandPool] : m_CommandPools) {
+    if (commandPool) {
+      m_DispatchTable.vkDestroyCommandPool(m_Device, commandPool, nullptr);
+    }
   }
 }
 
@@ -178,18 +208,12 @@ SwapchainImagesDumper::StagedFrame* SwapchainImagesDumper::ReserveStagedFrame() 
   return nullptr;
 }
 
-SwapchainImagesDumper::StagedFrame* SwapchainImagesDumper::GetReservedStagedFrame() {
-  for (auto& stagedFrame : m_StagedFrames) {
-    if (stagedFrame.IsReservedForDump.load()) {
-      return &stagedFrame;
-    }
-  }
-  return nullptr;
-}
-
-void SwapchainImagesDumper::SubmitCommandBuffer(VkQueue queue,
+bool SwapchainImagesDumper::SubmitCommandBuffer(VkQueue queue,
+                                                uint32_t queueFamilyIndex,
                                                 VkImage swapchainImage,
-                                                const std::string& dumpName) {
+                                                const std::string& dumpName,
+                                                uint32_t waitSemaphoreCount,
+                                                const VkSemaphore* pWaitSemaphores) {
   StagedFrame* stagedFrame = nullptr;
   {
     std::unique_lock<std::mutex> lock(m_Mutex);
@@ -199,17 +223,32 @@ void SwapchainImagesDumper::SubmitCommandBuffer(VkQueue queue,
     });
   }
   if (m_Shutdown) {
-    return;
+    return false;
   }
 
+  // The command buffer must come from a pool created for the present queue's
+  // family.
+  auto commandBufferIt = stagedFrame->CommandBuffers.find(queueFamilyIndex);
+  if (commandBufferIt == stagedFrame->CommandBuffers.end()) {
+    LOG_ERROR << "SwapchainImagesDumper: no command resources for present queue family "
+              << queueFamilyIndex << "; skipping screenshot.";
+    stagedFrame->IsReservedForDump.store(false);
+    {
+      std::unique_lock<std::mutex> lock(m_Mutex);
+      m_StagedFrameFreeCV.notify_one();
+    }
+    return false;
+  }
+  VkCommandBuffer commandBuffer = commandBufferIt->second;
+
   stagedFrame->DumpName = dumpName;
-  m_DispatchTable.vkResetCommandBuffer(stagedFrame->CommandBuffer, 0);
+  m_DispatchTable.vkResetCommandBuffer(commandBuffer, 0);
 
   VkCommandBufferBeginInfo beginInfo{};
   beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
   beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
-  VkResult result = m_DispatchTable.vkBeginCommandBuffer(stagedFrame->CommandBuffer, &beginInfo);
+  VkResult result = m_DispatchTable.vkBeginCommandBuffer(commandBuffer, &beginInfo);
   GITS_ASSERT(result == VK_SUCCESS);
 
   VkImageMemoryBarrier barrier{};
@@ -224,12 +263,12 @@ void SwapchainImagesDumper::SubmitCommandBuffer(VkQueue queue,
   barrier.subresourceRange.levelCount = 1;
   barrier.subresourceRange.baseArrayLayer = 0;
   barrier.subresourceRange.layerCount = 1;
-  barrier.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+  barrier.srcAccessMask = 0;
   barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
 
-  m_DispatchTable.vkCmdPipelineBarrier(
-      stagedFrame->CommandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-      VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+  m_DispatchTable.vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+                                       VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1,
+                                       &barrier);
 
   VkBufferImageCopy region{};
   region.bufferOffset = 0;
@@ -242,20 +281,20 @@ void SwapchainImagesDumper::SubmitCommandBuffer(VkQueue queue,
   region.imageOffset = {0, 0, 0};
   region.imageExtent = {m_Width, m_Height, 1};
 
-  m_DispatchTable.vkCmdCopyImageToBuffer(stagedFrame->CommandBuffer, swapchainImage,
+  m_DispatchTable.vkCmdCopyImageToBuffer(commandBuffer, swapchainImage,
                                          VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
                                          stagedFrame->StagingBuffer, 1, &region);
 
   barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
   barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-  barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-  barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+  barrier.srcAccessMask = 0;
+  barrier.dstAccessMask = 0;
 
-  m_DispatchTable.vkCmdPipelineBarrier(stagedFrame->CommandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
+  m_DispatchTable.vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
                                        VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, nullptr, 0,
                                        nullptr, 1, &barrier);
 
-  result = m_DispatchTable.vkEndCommandBuffer(stagedFrame->CommandBuffer);
+  result = m_DispatchTable.vkEndCommandBuffer(commandBuffer);
   GITS_ASSERT(result == VK_SUCCESS);
 
   m_DispatchTable.vkResetFences(m_Device, 1, &stagedFrame->Fence);
@@ -263,15 +302,23 @@ void SwapchainImagesDumper::SubmitCommandBuffer(VkQueue queue,
   VkSubmitInfo submitInfo{};
   submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
   submitInfo.commandBufferCount = 1;
-  submitInfo.pCommandBuffers = &stagedFrame->CommandBuffer;
+  submitInfo.pCommandBuffers = &commandBuffer;
+  submitInfo.waitSemaphoreCount = waitSemaphoreCount;
+  submitInfo.pWaitSemaphores = pWaitSemaphores;
+  std::vector<VkPipelineStageFlags> waitStages(waitSemaphoreCount, VK_PIPELINE_STAGE_TRANSFER_BIT);
+  submitInfo.pWaitDstStageMask = waitStages.data();
 
   result = m_DispatchTable.vkQueueSubmit(queue, 1, &submitInfo, stagedFrame->Fence);
   GITS_ASSERT(result == VK_SUCCESS);
 
+  // Only hand the frame to the worker pool once its copy has actually been
+  // submitted, so a worker never waits on a stale (already signaled) fence.
   {
     std::unique_lock<std::mutex> lock(m_Mutex);
+    m_SubmittedFrames.push(stagedFrame);
     m_FrameCopySubmittedCV.notify_one();
   }
+  return true;
 }
 
 void SwapchainImagesDumper::DumpStagedFrame(StagedFrame& stagedFrame, const std::string& dumpName) {
@@ -336,14 +383,17 @@ void SwapchainImagesDumper::WorkerThread() {
     StagedFrame* submittedFrame = nullptr;
     {
       std::unique_lock<std::mutex> lock(m_Mutex);
-      m_FrameCopySubmittedCV.wait(lock, [this, &submittedFrame] {
-        submittedFrame = GetReservedStagedFrame();
-        return submittedFrame || m_Shutdown;
-      });
+      m_FrameCopySubmittedCV.wait(lock,
+                                  [this] { return !m_SubmittedFrames.empty() || m_Shutdown; });
 
-      if (m_Shutdown && !submittedFrame) {
+      // Drain any remaining submitted frames even during shutdown so the last
+      // screenshots are flushed before the worker exits.
+      if (m_SubmittedFrames.empty()) {
         return;
       }
+
+      submittedFrame = m_SubmittedFrames.front();
+      m_SubmittedFrames.pop();
     }
     if (m_Shutdown) {
       LOG_WARNING << "WorkerThread: shutdown is in progress, DumpStagedFrame is executing";

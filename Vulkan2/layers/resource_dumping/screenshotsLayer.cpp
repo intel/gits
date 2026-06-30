@@ -12,10 +12,12 @@
 #include "log.h"
 #include "configurator.h"
 
+#include <algorithm>
 #include <filesystem>
 #include <iomanip>
 #include <sstream>
 #include <memory>
+#include <vector>
 
 namespace gits {
 namespace vulkan {
@@ -40,7 +42,24 @@ void ScreenshotsLayer::Post(vkCreateDeviceCommand& command) {
   if (command.m_Return.Value != VK_SUCCESS || !command.m_pDevice.Value) {
     return;
   }
+  std::lock_guard<std::mutex> lock(m_Mutex);
   m_DeviceToPhysicalDevice[*command.m_pDevice.Value] = command.m_physicalDevice.Value;
+}
+
+void ScreenshotsLayer::Post(vkGetDeviceQueueCommand& command) {
+  if (command.m_pQueue.Value == nullptr) {
+    return;
+  }
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  m_QueueToFamily[*command.m_pQueue.Value] = command.m_queueFamilyIndex.Value;
+}
+
+void ScreenshotsLayer::Post(vkGetDeviceQueue2Command& command) {
+  if (command.m_pQueue.Value == nullptr || command.m_pQueueInfo.Value == nullptr) {
+    return;
+  }
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  m_QueueToFamily[*command.m_pQueue.Value] = command.m_pQueueInfo.Value->queueFamilyIndex;
 }
 
 void ScreenshotsLayer::Post(vkCreateSwapchainKHRCommand& command) {
@@ -73,12 +92,26 @@ void ScreenshotsLayer::Post(vkCreateSwapchainKHRCommand& command) {
     return;
   }
 
-  auto physDevIt = m_DeviceToPhysicalDevice.find(device);
-  if (physDevIt == m_DeviceToPhysicalDevice.end()) {
-    LOG_ERROR << "ScreenshotLayer: could not find the physicalDevice by device";
-    return;
+  // Get the device and queue indices under a lock
+  VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
+  std::vector<uint32_t> queueFamilyIndices;
+  {
+    std::lock_guard<std::mutex> lock(m_Mutex);
+    auto physDevIt = m_DeviceToPhysicalDevice.find(device);
+    if (physDevIt == m_DeviceToPhysicalDevice.end()) {
+      LOG_ERROR << "ScreenshotLayer: could not find the physicalDevice by device";
+      return;
+    }
+    physicalDevice = physDevIt->second;
+
+    // A swapchain may be presented from more than one queue family
+    for (const auto& [queue, queueFamilyIndex] : m_QueueToFamily) {
+      if (std::find(queueFamilyIndices.begin(), queueFamilyIndices.end(), queueFamilyIndex) ==
+          queueFamilyIndices.end()) {
+        queueFamilyIndices.push_back(queueFamilyIndex);
+      }
+    }
   }
-  VkPhysicalDevice physicalDevice = physDevIt->second;
 
   auto* instanceDispatchTable = m_DispatchTablesHolder.GetInstanceDispatchTable(physicalDevice);
   if (instanceDispatchTable == nullptr) {
@@ -96,26 +129,32 @@ void ScreenshotsLayer::Post(vkCreateSwapchainKHRCommand& command) {
 
   info.Dumper = std::make_unique<SwapchainImagesDumper>(device, *pCreateInfo, memProperties,
                                                         *deviceDispatchTable);
-  info.Dumper->AllocateBuffers();
+  info.Dumper->AllocateBuffers(queueFamilyIndices);
   info.Dumper->StartWorkerThread();
 
-  m_SwapchainInfos[swapchain] = std::move(info);
+  {
+    std::lock_guard<std::mutex> lock(m_Mutex);
+    m_SwapchainInfos[swapchain] = std::move(info);
+  }
 }
 
 void ScreenshotsLayer::Pre(vkDestroySwapchainKHRCommand& command) {
-  // Runs before the driver destroys the swapchain, so the device and swapchain
-  // images are still valid here.  Erasing the entry destroys the
-  // SwapchainImagesDumper, whose destructor joins its worker thread (writing any
-  // pending screenshot, e.g. the last frame's) and frees its Vulkan resources.
-  auto it = m_SwapchainInfos.find(command.m_swapchain.Value);
-  if (it != m_SwapchainInfos.end()) {
+  // Extract the dumper under the lock, then let it destruct
+  std::unique_ptr<SwapchainImagesDumper> dumper;
+  {
+    std::lock_guard<std::mutex> lock(m_Mutex);
+    auto it = m_SwapchainInfos.find(command.m_swapchain.Value);
+    if (it == m_SwapchainInfos.end()) {
+      return;
+    }
+    dumper = std::move(it->second.Dumper);
     m_SwapchainInfos.erase(it);
   }
 }
 
 void ScreenshotsLayer::Pre(vkQueuePresentKHRCommand& command) {
-  ++m_CurrentFrame;
-  if (!m_ScreenshotRange[m_CurrentFrame]) {
+  const unsigned frame = m_CurrentFrame.fetch_add(1) + 1;
+  if (!m_ScreenshotRange[frame]) {
     return;
   }
 
@@ -126,31 +165,56 @@ void ScreenshotsLayer::Pre(vkQueuePresentKHRCommand& command) {
     return;
   }
 
+  // Guard the shared maps
+  std::lock_guard<std::mutex> lock(m_Mutex);
+
+  auto familyIt = m_QueueToFamily.find(queue);
+  if (familyIt == m_QueueToFamily.end()) {
+    LOG_ERROR << "ScreenshotLayer: unknown queue family for present queue; cannot dump screenshot "
+                 "for frame: "
+              << frame;
+    return;
+  }
+  const uint32_t queueFamilyIndex = familyIt->second;
+
+  // Consume the wait semaphores in copy operation
+  uint32_t pendingWaitCount = presentInfo->waitSemaphoreCount;
+  const VkSemaphore* pendingWaitSemaphores = presentInfo->pWaitSemaphores;
+  bool waitSemaphoresConsumed = false;
+
   bool hasValidSwapchain = false;
   for (uint32_t i = 0; i < presentInfo->swapchainCount; ++i) {
-    VkSwapchainKHR swapchain = presentInfo->pSwapchains[i];
-    uint32_t imageIndex = presentInfo->pImageIndices[i];
-
-    auto it = m_SwapchainInfos.find(swapchain);
+    auto it = m_SwapchainInfos.find(presentInfo->pSwapchains[i]);
     if (it == m_SwapchainInfos.end()) {
       continue;
     }
     hasValidSwapchain = true;
     SwapchainInfo& swapInfo = it->second;
-    VkImage image = swapInfo.Images[imageIndex];
+    VkImage image = swapInfo.Images[presentInfo->pImageIndices[i]];
 
     std::ostringstream outputName;
-    outputName << m_DumpPath.string() << "/frame" << std::setw(8) << std::setfill('0')
-               << m_CurrentFrame;
+    outputName << m_DumpPath.string() << "/frame" << std::setw(8) << std::setfill('0') << frame;
     if (presentInfo->swapchainCount > 1) {
       outputName << "_swap" << i;
     }
 
-    swapInfo.Dumper->SubmitCommandBuffer(queue, image, outputName.str());
+    const bool submitted = swapInfo.Dumper->SubmitCommandBuffer(
+        queue, queueFamilyIndex, image, outputName.str(), pendingWaitCount, pendingWaitSemaphores);
+    if (submitted && pendingWaitCount > 0) {
+      waitSemaphoresConsumed = true;
+      pendingWaitCount = 0;
+      pendingWaitSemaphores = nullptr;
+    }
+  }
+
+  // Avoid waiting on them semaphores twice
+  if (waitSemaphoresConsumed) {
+    command.m_pPresentInfo.Value->waitSemaphoreCount = 0;
+    command.m_pPresentInfo.Value->pWaitSemaphores = nullptr;
   }
 
   if (!hasValidSwapchain) {
-    LOG_ERROR << "ScreenshotLayer: no valid swapchain found for frame: " << m_CurrentFrame;
+    LOG_ERROR << "ScreenshotLayer: no valid swapchain found for frame: " << frame;
   }
 }
 
