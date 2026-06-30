@@ -38,13 +38,9 @@ public:
   void Post(vkGetDeviceQueueCommand& command) override;
   void Post(vkGetDeviceQueue2Command& command) override;
   void Post(vkCreateSwapchainKHRCommand& command) override;
-  // Flush and release the swapchain's dumper before the swapchain (and shortly
-  // after, the device) is destroyed, while both are still valid.  This both
-  // captures the final present's screenshot for a normally-terminating stream
-  // and guarantees the dumper never runs its Vulkan cleanup against a destroyed
-  // device.
   void Pre(vkDestroySwapchainKHRCommand& command) override;
   void Pre(vkQueuePresentKHRCommand& command) override;
+  void Post(vkQueuePresentKHRCommand& command) override;
 
 private:
   struct SwapchainInfo {

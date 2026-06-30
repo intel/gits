@@ -74,7 +74,6 @@ void CaptureLayerManager::LoadLayers(CaptureManager& captureManager,
 
   enablePostLayer(logVkErrorLayer);
   enablePostLayer(captureCustomizationLayer);
-  enablePostLayer(encoderLayer);
   //enablePostLayer(testLayer);
   if (traceCfg.enabled && traceCfg.print.postCalls) {
     enablePostLayer(traceLayer);
@@ -82,6 +81,8 @@ void CaptureLayerManager::LoadLayers(CaptureManager& captureManager,
   if (screenshotsCfg.enabled) {
     m_PostLayers.push_back(screenshotLayer);
   }
+  // The encoder must run last
+  enablePostLayer(encoderLayer);
 
   auto retainLayer = [this](std::unique_ptr<Layer>&& layer) {
     if (layer) {
@@ -90,10 +91,10 @@ void CaptureLayerManager::LoadLayers(CaptureManager& captureManager,
   };
 
   retainLayer(std::move(captureCustomizationLayer));
-  retainLayer(std::move(encoderLayer));
   retainLayer(std::move(logVkErrorLayer));
   //retainLayer(std::move(testLayer));
   retainLayer(std::move(traceLayer));
+  retainLayer(std::move(encoderLayer));
 
   for (const auto& plugin : pluginService.GetPlugins()) {
     Layer* layer = static_cast<Layer*>(plugin.Impl->getImpl());

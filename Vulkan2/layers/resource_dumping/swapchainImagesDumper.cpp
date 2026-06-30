@@ -357,6 +357,11 @@ void SwapchainImagesDumper::DumpStagedFrame(StagedFrame& stagedFrame, const std:
     }
   }
 
+  // Force opaque alpha
+  for (uint32_t i = 0; i < m_Width * m_Height; ++i) {
+    pixels[i * BYTES_PER_PIXEL + 3] = 0xFF;
+  }
+
   int saved = 0;
   std::string filename;
   if (Configurator::Get().common.shared.screenshots.format == ImageFormat::PNG) {

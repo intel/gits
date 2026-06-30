@@ -22,6 +22,17 @@
 namespace gits {
 namespace vulkan {
 
+struct PresentInfoCopy {
+  bool Restore = false;
+  uint32_t WaitSemaphoreCount = 0;
+  const VkSemaphore* WaitSemaphores = nullptr;
+};
+
+namespace {
+// vkQueuePresentKHR wait-semaphore save/restore across this layer's Pre/Post.
+thread_local PresentInfoCopy tl_presentInfoCopy;
+} // namespace
+
 ScreenshotsLayer::ScreenshotsLayer(DispatchTablesHolder& dispatchTablesHolder)
     : Layer(LAYER_NAME),
       m_DispatchTablesHolder(dispatchTablesHolder),
@@ -153,6 +164,7 @@ void ScreenshotsLayer::Pre(vkDestroySwapchainKHRCommand& command) {
 }
 
 void ScreenshotsLayer::Pre(vkQueuePresentKHRCommand& command) {
+  tl_presentInfoCopy.Restore = false;
   const unsigned frame = m_CurrentFrame.fetch_add(1) + 1;
   if (!m_ScreenshotRange[frame]) {
     return;
@@ -207,8 +219,12 @@ void ScreenshotsLayer::Pre(vkQueuePresentKHRCommand& command) {
     }
   }
 
-  // Avoid waiting on them semaphores twice
+  // Avoid waiting on them semaphores twice. Save the originals so Post can
+  // restore them for downstream (subcapture/recording) layers.
   if (waitSemaphoresConsumed) {
+    tl_presentInfoCopy.WaitSemaphoreCount = command.m_pPresentInfo.Value->waitSemaphoreCount;
+    tl_presentInfoCopy.WaitSemaphores = command.m_pPresentInfo.Value->pWaitSemaphores;
+    tl_presentInfoCopy.Restore = true;
     command.m_pPresentInfo.Value->waitSemaphoreCount = 0;
     command.m_pPresentInfo.Value->pWaitSemaphores = nullptr;
   }
@@ -216,6 +232,14 @@ void ScreenshotsLayer::Pre(vkQueuePresentKHRCommand& command) {
   if (!hasValidSwapchain) {
     LOG_ERROR << "ScreenshotLayer: no valid swapchain found for frame: " << frame;
   }
+}
+
+void ScreenshotsLayer::Post(vkQueuePresentKHRCommand& command) {
+  if (tl_presentInfoCopy.Restore && command.m_pPresentInfo.Value) {
+    command.m_pPresentInfo.Value->waitSemaphoreCount = tl_presentInfoCopy.WaitSemaphoreCount;
+    command.m_pPresentInfo.Value->pWaitSemaphores = tl_presentInfoCopy.WaitSemaphores;
+  }
+  tl_presentInfoCopy.Restore = false;
 }
 
 } // namespace vulkan
