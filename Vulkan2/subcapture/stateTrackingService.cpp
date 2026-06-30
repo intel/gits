@@ -1372,6 +1372,29 @@ void StateTrackingService::RestoreSwapchain(ObjectState* state) {
     if (cmd.m_pCreateInfo.Value) {
       cmd.m_pCreateInfo.Value->imageUsage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     }
+    // Handle the oldSwapchain reference.  HandleKeys layout for
+    // VkSwapchainCreateInfoKHR is [surface, oldSwapchain].  The original create
+    // call passed the swapchain it was retiring; mirror the legacy
+    // RestoreSwapchainKHR behaviour (vulkanStateRestore.cpp ~617):
+    //   * if that swapchain still exists, keep the reference -- but make sure it
+    //     is restored (and thus registered in the player handle map) *before*
+    //     this one, otherwise vkCreateSwapchainKHRRunner crashes resolving it;
+    //   * if it was destroyed before the cut, it was never restored, so null the
+    //     reference (oldSwapchain is only an optimization hint).
+    if (cmd.m_pCreateInfo.HandleKeys.size() > 1) {
+      const uint64_t oldSwapchainKey = cmd.m_pCreateInfo.HandleKeys[1];
+      if (oldSwapchainKey != 0) {
+        if (HasState(oldSwapchainKey)) {
+          RestoreOne(GetState(oldSwapchainKey));
+        }
+        if (!m_RestoredThisPass.count(oldSwapchainKey)) {
+          cmd.m_pCreateInfo.HandleKeys[1] = 0;
+          if (cmd.m_pCreateInfo.Value) {
+            cmd.m_pCreateInfo.Value->oldSwapchain = VK_NULL_HANDLE;
+          }
+        }
+      }
+    }
     m_Recorder.Record(vkCreateSwapchainKHRSerializer(cmd));
   } else {
     LOG_WARNING << "Vulkan2 subcapture: failed to emit vkCreateSwapchainKHR for swapchain key="
