@@ -846,11 +846,21 @@ void SubcaptureLayer::Post(vkCreateGraphicsPipelinesCommand& command) {
   std::vector<uint64_t> batchKeys;
   batchKeys.reserve(command.m_createInfoCount.Value);
   for (uint32_t i = 0; i < command.m_createInfoCount.Value; ++i) {
-    batchKeys.push_back(command.m_pPipelines.Keys[i]);
+    const uint64_t pipelineKey = command.m_pPipelines.Keys[i];
+    if (pipelineKey) {
+      batchKeys.push_back(pipelineKey);
+    }
   }
   for (uint32_t i = 0; i < command.m_createInfoCount.Value; ++i) {
+    const uint64_t pipelineKey = command.m_pPipelines.Keys[i];
+    // A zero key marks a VK_NULL_HANDLE pipeline slot (e.g. an element skipped by
+    // VK_PIPELINE_CREATE_FAIL_ON_PIPELINE_COMPILE_REQUIRED_BIT).  Do not track it:
+    // a Key 0 state would sort to the front of m_States and be restored first.
+    if (!pipelineKey) {
+      continue;
+    }
     auto state = std::make_unique<PipelineState>();
-    state->Key = command.m_pPipelines.Keys[i];
+    state->Key = pipelineKey;
     state->ParentKey = command.m_device.Key;
     state->DependencyKeys = batchDeps;
     state->BatchPipelineKeys = batchKeys;

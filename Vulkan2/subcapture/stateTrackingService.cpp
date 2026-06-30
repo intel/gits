@@ -67,6 +67,13 @@ StateTrackingService::StateTrackingService(SubcaptureRecorder& recorder) : m_Rec
 
 void StateTrackingService::StoreState(std::unique_ptr<ObjectState> state) {
   uint64_t key = state->Key;
+  // Key 0 denotes VK_NULL_HANDLE; no real object ever has key 0.  Inserting such
+  // an entry would place it at m_States.begin() (the map is ordered by key), so
+  // it would be the FIRST object handed to RestoreOne and emit a bogus creation
+  // command with a null handle before any genuine object is restored.
+  if (!key) {
+    return;
+  }
   m_States[key] = std::move(state);
 }
 
