@@ -24,7 +24,13 @@ public:
   void Pre(vkCreateWin32SurfaceKHRCommand& command) override;
 #endif
 
+  void Post(vkCreateDeviceCommand& command) override;
+  void Post(vkGetPhysicalDeviceMemoryPropertiesCommand& command) override;
+  void Post(vkGetPhysicalDeviceMemoryProperties2Command& command) override;
+  void Post(vkGetPhysicalDeviceMemoryProperties2KHRCommand& command) override;
+  void Pre(vkAllocateMemoryCommand& command) override;
   void Post(vkAllocateMemoryCommand& command) override;
+  void Post(vkFreeMemoryCommand& command) override;
   void Post(vkMapMemoryCommand& command) override;
   void Pre(vkUnmapMemoryCommand& command) override;
   void Pre(vkQueueSubmitCommand& command) override;
@@ -40,6 +46,22 @@ public:
   void Pre(vkCmdPushDescriptorSetWithTemplateKHRCommand& command) override;
 
 private:
+  struct AllocateInfo {
+    // Pointer to the original data
+    VkMemoryAllocateInfo* AllocateInfoPtr{nullptr};
+    // Local copy of the data
+    VkMemoryAllocateInfo AllocateInfoModified{};
+
+    void* ExternalMemory{nullptr};
+
+    AllocateInfo() = default;
+    AllocateInfo(VkMemoryAllocateInfo* p) {
+      this->AllocateInfoPtr = p;
+      this->AllocateInfoModified = *p;
+    }
+  };
+
+  static thread_local AllocateInfo s_AllocateInfo;
   CaptureManager& m_Manager;
   GitsRecorder& m_Recorder;
 };

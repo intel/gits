@@ -18,7 +18,7 @@ namespace vulkan {
 void CaptureLayerManager::LoadLayers(CaptureManager& captureManager, GitsRecorder& gitsRecorder) {
   auto& cfg = Configurator::Get();
 
-  std::unique_ptr<Layer> testLayer = std::make_unique<TestLayerAuto>();
+  //std::unique_ptr<Layer> testLayer = std::make_unique<TestLayerAuto>();
   std::unique_ptr<Layer> encoderLayer;
   std::unique_ptr<Layer> captureCustomizationLayer;
 
@@ -34,7 +34,7 @@ void CaptureLayerManager::LoadLayers(CaptureManager& captureManager, GitsRecorde
     }
   };
 
-  enablePreLayer(testLayer);
+  //enablePreLayer(testLayer);
   enablePreLayer(captureCustomizationLayer);
 
   auto enablePostLayer = [this](std::unique_ptr<Layer>& layer) {
@@ -45,7 +45,7 @@ void CaptureLayerManager::LoadLayers(CaptureManager& captureManager, GitsRecorde
 
   enablePostLayer(captureCustomizationLayer);
   enablePostLayer(encoderLayer);
-  enablePostLayer(testLayer);
+  //enablePostLayer(testLayer);
 
   auto retainLayer = [this](std::unique_ptr<Layer>&& layer) {
     if (layer) {
@@ -55,7 +55,7 @@ void CaptureLayerManager::LoadLayers(CaptureManager& captureManager, GitsRecorde
 
   retainLayer(std::move(captureCustomizationLayer));
   retainLayer(std::move(encoderLayer));
-  retainLayer(std::move(testLayer));
+  //retainLayer(std::move(testLayer));
 }
 
 } // namespace vulkan

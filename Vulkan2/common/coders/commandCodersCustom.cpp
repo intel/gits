@@ -45,14 +45,8 @@ void Decode(char* src, CreateWindowMetaCommand& command) {
 }
 
 uint32_t GetSize(const MappedDataMetaCommand& command) {
-  uint32_t size = GetSize(command.m_Key) + GetSize(command.m_ThreadId) + GetSize(command.m_Device) +
-                  GetSize(command.m_Memory) + GetSize(command.m_TotalSize) +
-                  GetSize(command.m_RegionCount);
-
-  for (const auto& region : command.m_Regions) {
-    size += sizeof(region.Offset) + sizeof(region.Size) + static_cast<uint32_t>(region.Size);
-  }
-  return size;
+  return GetSize(command.m_Key) + GetSize(command.m_ThreadId) + GetSize(command.m_Device) +
+         GetSize(command.m_Memory) + GetSize(command.m_Regions);
 }
 
 void Encode(const MappedDataMetaCommand& command, char* dest) {
@@ -61,14 +55,7 @@ void Encode(const MappedDataMetaCommand& command, char* dest) {
   Encode(dest, offset, command.m_ThreadId);
   Encode(dest, offset, command.m_Device);
   Encode(dest, offset, command.m_Memory);
-  Encode(dest, offset, command.m_TotalSize);
-  Encode(dest, offset, command.m_RegionCount);
-  for (const auto& r : command.m_Regions) {
-    Encode(dest, offset, r.Offset);
-    Encode(dest, offset, r.Size);
-    std::memcpy(dest + offset, r.Data, r.Size);
-    offset += static_cast<uint32_t>(r.Size);
-  }
+  Encode(dest, offset, command.m_Regions);
 }
 
 void Decode(char* src, MappedDataMetaCommand& command) {
@@ -77,16 +64,7 @@ void Decode(char* src, MappedDataMetaCommand& command) {
   Decode(src, offset, command.m_ThreadId);
   Decode(src, offset, command.m_Device);
   Decode(src, offset, command.m_Memory);
-  Decode(src, offset, command.m_TotalSize);
-  Decode(src, offset, command.m_RegionCount);
-  uint32_t count = command.m_RegionCount.Value;
-  command.m_Regions.resize(count);
-  for (uint32_t i = 0; i < count; ++i) {
-    Decode(src, offset, command.m_Regions[i].Offset);
-    Decode(src, offset, command.m_Regions[i].Size);
-    command.m_Regions[i].Data = src + offset;
-    offset += static_cast<uint32_t>(command.m_Regions[i].Size);
-  }
+  Decode(src, offset, command.m_Regions);
 }
 
 } // namespace vulkan

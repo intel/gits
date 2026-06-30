@@ -294,6 +294,27 @@ void Encode(char* dest, uint32_t& offset, const OpaquePointerArgument<T>& arg) {
   EncodeNullPtr(dest, offset, arg.Value);
 }
 
+inline uint32_t GetSize(const MemoryRegions& arg) {
+  uint32_t size = sizeof(arg.Size);
+  for (const auto& region : arg.Regions) {
+    size += sizeof(region.Offset) + sizeof(region.Size) + region.Size;
+  }
+  return size;
+}
+
+inline void Encode(char* dest, uint32_t& offset, const MemoryRegions& arg) {
+  std::memcpy(dest + offset, &arg.Size, sizeof(arg.Size));
+  offset += sizeof(arg.Size);
+  for (const auto& region : arg.Regions) {
+    std::memcpy(dest + offset, &region.Offset, sizeof(region.Offset));
+    offset += sizeof(region.Offset);
+    std::memcpy(dest + offset, &region.Size, sizeof(region.Size));
+    offset += sizeof(region.Size);
+    std::memcpy(dest + offset, region.Data, region.Size);
+    offset += region.Size;
+  }
+}
+
 // ============================================================================
 // Generic decode implementations
 // ============================================================================
@@ -435,6 +456,21 @@ void Decode(char* src, uint32_t& offset, ArrayOfArrays<T>& arg) {
 template <typename T>
 void Decode(char* src, uint32_t& offset, OpaquePointerArgument<T>& arg) {
   DecodeNullPtr(src, offset, arg);
+}
+
+inline void Decode(char* src, uint32_t& offset, MemoryRegions& arg) {
+  std::memcpy(&arg.Size, src + offset, sizeof(arg.Size));
+  offset += sizeof(arg.Size);
+  arg.Regions.resize(arg.Size);
+  for (uint32_t i = 0; i < arg.Size; ++i) {
+    auto& region = arg.Regions[i];
+    std::memcpy(&region.Offset, src + offset, sizeof(region.Offset));
+    offset += sizeof(region.Offset);
+    std::memcpy(&region.Size, src + offset, sizeof(region.Size));
+    offset += sizeof(region.Size);
+    region.Data = src + offset;
+    offset += region.Size;
+  }
 }
 
 } // namespace vulkan

@@ -31,12 +31,6 @@ public:
   Argument<uint64_t> m_Hinstance{};
 };
 
-struct MemoryRegion {
-  uint64_t Offset;
-  uint64_t Size;
-  const char* Data;
-};
-
 class MappedDataMetaCommand : public Command {
 public:
   MappedDataMetaCommand(uint32_t threadId) : Command{CommandId::ID_META_MAPPED_DATA, threadId} {}
@@ -45,9 +39,7 @@ public:
 public:
   HandleArgument<VkDevice> m_Device{};
   HandleArgument<VkDeviceMemory> m_Memory{};
-  Argument<uint64_t> m_TotalSize{};
-  Argument<uint32_t> m_RegionCount{};
-  std::vector<MemoryRegion> m_Regions{};
+  MemoryRegions m_Regions{};
 };
 
 } // namespace vulkan

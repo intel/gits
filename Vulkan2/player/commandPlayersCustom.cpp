@@ -44,7 +44,7 @@ void MappedDataMetaPlayer::Run() {
   if (manager.ExecuteCommands() && !m_Command.m_Skip) {
     auto mappedEntry =
         manager.GetMapTrackingService().GetData(m_Command.m_Device.Key, m_Command.m_Memory.Key);
-    for (const auto& region : m_Command.m_Regions) {
+    for (const auto& region : m_Command.m_Regions.Regions) {
       char* dstPtr = static_cast<char*>(mappedEntry->Ptr) + region.Offset;
       std::memcpy(dstPtr, region.Data, region.Size);
     }

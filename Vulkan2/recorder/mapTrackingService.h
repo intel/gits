@@ -21,31 +21,45 @@ namespace vulkan {
 class MapTrackingService {
 public:
   MapTrackingService(GitsRecorder& gitsRecorder);
-
+  void StorePhysicalDevice(GITSKey physicalDeviceKey, GITSKey deviceKey);
+  void StorePhysicalDeviceMemoryProperties(
+      GITSKey physicalDeviceKey, const VkPhysicalDeviceMemoryProperties& memoryProperties);
+  bool IsMemoryMappable(GITSKey deviceKey, uint32_t memoryTypeIndex);
+  void* EnableExternalMemory(GITSKey deviceKey, VkMemoryAllocateInfo* allocationInfo);
   void StoreAllocationInfo(GITSKey deviceKey,
                            GITSKey deviceMemoryKey,
-                           VkDeviceSize allocationSize,
-                           uint32_t memoryTypeIndex);
-  void StoreData(GITSKey deviceKey, GITSKey deviceMemoryKey, void* data, VkDeviceSize size);
-  void RemoveData(GITSKey deviceKey, GITSKey deviceMemoryKey);
+                           VkDeviceMemory memory,
+                           const VkMemoryAllocateInfo& allocateInfo,
+                           void* externalPtr);
+  void FreeExternalMemory(GITSKey deviceMemoryKey);
+  void StoreData(GITSKey deviceMemoryKey, VkDeviceSize offset, VkDeviceSize size, void* data);
+  void RemoveData(GITSKey deviceMemoryKey);
   void SnapshotAllMapped();
 
 private:
-  void ScheduleMemoryUpdate(GITSKey deviceKey, GITSKey deviceMemoryKey);
+  void ScheduleMemoryUpdate(GITSKey deviceMemoryKey);
+  void RecordMappedDataMetaCommand(GITSKey deviceKey,
+                                   GITSKey memoryKey,
+                                   const std::vector<MemoryRegions::Region>& regions);
+
+  std::unique_ptr<VkImportMemoryHostPointerInfoEXT> m_HostPointerInfo;
 
   struct AllocationInfo {
+    GITSKey DeviceKey;
+    VkDeviceMemory Memory;
     VkDeviceSize AllocationSize;
     uint32_t MemoryTypeIndex;
+    void* ExternalMemory{nullptr};
+    bool IsMapped;
+    VkDeviceSize MapOffset;
+    VkDeviceSize MapSize;
+    void* MappedData{nullptr};
   };
 
-  struct MappedEntry {
-    void* Ptr{};
-    VkDeviceSize Size{};
-    std::vector<char> Data{};
-  };
-
-  std::unordered_map<GITSKey, std::unordered_map<GITSKey, AllocationInfo>> m_Allocations;
-  std::unordered_map<GITSKey, std::unordered_map<GITSKey, MappedEntry>> m_Entries;
+  uint32_t m_PageSize;
+  std::unordered_map<GITSKey, GITSKey> m_DeviceToPhysicalDevice;
+  std::unordered_map<GITSKey, VkPhysicalDeviceMemoryProperties> m_PhysicalDeviceMemoryProperties;
+  std::unordered_map<GITSKey, AllocationInfo> m_Allocations;
   GitsRecorder& m_GitsRecorder;
 };
 

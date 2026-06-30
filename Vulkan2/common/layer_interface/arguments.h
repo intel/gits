@@ -191,5 +191,16 @@ struct OpaquePointerArgument {
   OpaquePointerArgument(T* v) : Value(v) {}
 };
 
+struct MemoryRegions {
+  struct Region {
+    uint64_t Offset;
+    uint64_t Size;
+    char* Data;
+  };
+
+  uint32_t Size{};
+  std::vector<Region> Regions{};
+};
+
 } // namespace vulkan
 } // namespace gits
