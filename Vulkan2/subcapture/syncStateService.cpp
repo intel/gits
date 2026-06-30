@@ -100,7 +100,7 @@ void SyncStateService::OnResetFences(const std::vector<uint64_t>& fenceKeys) {
   for (uint64_t key : fenceKeys) {
     auto* state = m_StateTracking.GetState(key);
     if (state) {
-      static_cast<FenceState*>(state)->isSignaled = false;
+      static_cast<FenceState*>(state)->IsSignaled = false;
     }
   }
 }
@@ -111,7 +111,7 @@ void SyncStateService::SignalFence(uint64_t fenceKey) {
   }
   auto* state = m_StateTracking.GetState(fenceKey);
   if (state) {
-    static_cast<FenceState*>(state)->isSignaled = true;
+    static_cast<FenceState*>(state)->IsSignaled = true;
   }
 }
 
@@ -120,8 +120,8 @@ void SyncStateService::UnsignalBinarySemaphore(uint64_t semKey) {
   // resolves to a different object type (e.g. a fence key) is a clean no-op
   // rather than a wrong-type reinterpretation.
   auto* state = m_StateTracking.GetState<SemaphoreState>(semKey);
-  if (state && state->isBinary) {
-    state->isSignaled = false;
+  if (state && state->IsBinary) {
+    state->IsSignaled = false;
   }
 }
 
@@ -129,8 +129,8 @@ void SyncStateService::SignalBinarySemaphore(uint64_t semKey) {
   // Typed lookup: see UnsignalBinarySemaphore.  Guards against an acquire/submit
   // HandleKeys slot that turns out not to be a semaphore (e.g. a fence key).
   auto* state = m_StateTracking.GetState<SemaphoreState>(semKey);
-  if (state && state->isBinary) {
-    state->isSignaled = true;
+  if (state && state->IsBinary) {
+    state->IsSignaled = true;
   }
 }
 
@@ -139,32 +139,32 @@ void SyncStateService::ApplyCommandBufferEventStates(uint64_t cbKey) {
   if (!cb) {
     return;
   }
-  for (const auto& [eventKey, signaled] : cb->eventStatesAfterSubmit) {
+  for (const auto& [eventKey, signaled] : cb->EventStatesAfterSubmit) {
     auto* ev = m_StateTracking.GetState<EventState>(eventKey);
     if (ev) {
-      ev->isSignaled = signaled;
+      ev->IsSignaled = signaled;
     }
   }
 }
 
 void SyncStateService::InvalidateCBIfOneTimeSubmit(uint64_t key) {
   auto* objState = m_StateTracking.GetState(key);
-  if (!objState || objState->creationCommandId != CommandId::ID_VKALLOCATECOMMANDBUFFERS) {
+  if (!objState || objState->CreationCommandId != CommandId::ID_VKALLOCATECOMMANDBUFFERS) {
     return;
   }
   auto* cbState = static_cast<CommandBufferState*>(objState);
-  if (cbState->beginFlags & VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT) {
-    cbState->isRecording = false;
-    cbState->isExecutable = false;
-    cbState->beginFlags = 0;
-    cbState->dependencyKeys.clear();
-    cbState->beginCommandBuffer.clear();
-    cbState->endCommandBuffer.clear();
-    cbState->recordedCommands.clear();
-    cbState->recordedCommandIds.clear();
-    cbState->eventStatesAfterSubmit.clear();
-    cbState->resetQueriesAfterSubmit.clear();
-    cbState->usedQueriesAfterSubmit.clear();
+  if (cbState->BeginFlags & VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT) {
+    cbState->IsRecording = false;
+    cbState->IsExecutable = false;
+    cbState->BeginFlags = 0;
+    cbState->DependencyKeys.clear();
+    cbState->BeginCommandBuffer.clear();
+    cbState->EndCommandBuffer.clear();
+    cbState->RecordedCommands.clear();
+    cbState->RecordedCommandIds.clear();
+    cbState->EventStatesAfterSubmit.clear();
+    cbState->ResetQueriesAfterSubmit.clear();
+    cbState->UsedQueriesAfterSubmit.clear();
   }
 }
 

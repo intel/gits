@@ -67,7 +67,7 @@ private:
   void UnsignalBinarySemaphore(uint64_t semKey);
   void SignalBinarySemaphore(uint64_t semKey);
   // Applies a submitted command buffer's recorded vkCmdSetEvent / vkCmdResetEvent
-  // net effects to the corresponding EventState::isSignaled.  No-op for non-CB keys.
+  // net effects to the corresponding EventState::IsSignaled.  No-op for non-CB keys.
   void ApplyCommandBufferEventStates(uint64_t cbKey);
   // Invalidates the CB's tracked state if it was submitted with ONE_TIME_SUBMIT_BIT.
   // Safe to call with any key - is a no-op for non-CB keys or reusable CBs.

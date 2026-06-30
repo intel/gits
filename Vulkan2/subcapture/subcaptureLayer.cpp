@@ -1,4 +1,4 @@
-﻿// ===================== begin_copyright_notice ============================
+// ===================== begin_copyright_notice ============================
 //
 // Copyright (C) 2023-2026 Intel Corporation
 //
@@ -36,13 +36,13 @@ void SubcaptureLayer::TriggerRestoreState() {
 
 void SubcaptureLayer::Post(vkQueuePresentKHRCommand& command) {
   // vkQueuePresentKHR consumes (unsignals) all binary semaphores listed in
-  // pWaitSemaphores.  Clear isSignaled so we don't incorrectly signal them
+  // pWaitSemaphores.  Clear IsSignaled so we don't incorrectly signal them
   // during state restore.
   if (command.m_pPresentInfo.Value && !command.m_pPresentInfo.HandleKeys.empty()) {
     m_SyncState.OnQueuePresent(*command.m_pPresentInfo.Value, command.m_pPresentInfo.HandleKeys);
   }
 
-  // Remove presented images from their swapchain's acquiredImages set.
+  // Remove presented images from their swapchain's AcquiredImages set.
   // HandleKeys layout: [waitSemaphoreKeys...][swapchainKeys...]
   if (command.m_pPresentInfo.Value) {
     const VkPresentInfoKHR& pi = *command.m_pPresentInfo.Value;
@@ -55,7 +55,7 @@ void SubcaptureLayer::Post(vkQueuePresentKHRCommand& command) {
       const uint64_t swapchainKey = command.m_pPresentInfo.HandleKeys[keyIdx];
       auto* sc = m_StateTracking.GetState<SwapchainState>(swapchainKey);
       if (sc) {
-        sc->acquiredImages.erase(pi.pImageIndices[i]);
+        sc->AcquiredImages.erase(pi.pImageIndices[i]);
       }
     }
   }
@@ -83,7 +83,7 @@ void SubcaptureLayer::Post(vkQueuePresentKHRCommand& command) {
     FrameEndCommand fec;
     m_Recorder.Record(FrameEndSerializer(fec));
   } else if (m_Recording) {
-    // We just left the range — close the stream.
+    // We just left the range - close the stream.
     m_Recording = false;
     m_Recorder.FinishRecording();
     LOG_INFO << "Vulkan2 subcapture: recording range complete, stream closed";
@@ -97,7 +97,7 @@ void SubcaptureLayer::Post(vkCreateInstanceCommand& command) {
     return;
   }
   auto state = std::make_unique<InstanceState>();
-  state->key = command.m_pInstance.Key;
+  state->Key = command.m_pInstance.Key;
   StoreState(std::move(state), command);
 }
 
@@ -107,12 +107,12 @@ void SubcaptureLayer::Post(vkDestroyInstanceCommand& command) {
   // vkCreateInstance + vkEnumeratePhysicalDevices on the same hardware (which
   // returns the same VkPhysicalDevice handle, and therefore the same recorder
   // key via TryGetKey) re-tracks them under the new instance instead of
-  // leaving stale state pointing at the destroyed instance.
+  // leaving stale state pointing at the Destroyed instance.
   const uint64_t instanceKey = command.m_instance.Key;
   std::vector<uint64_t> orphanedPDs;
   for (const auto& [key, statePtr] : m_StateTracking.GetStates()) {
-    if (statePtr->creationCommandId == CommandId::ID_VKENUMERATEPHYSICALDEVICES &&
-        statePtr->parentKey == instanceKey) {
+    if (statePtr->CreationCommandId == CommandId::ID_VKENUMERATEPHYSICALDEVICES &&
+        statePtr->ParentKey == instanceKey) {
       orphanedPDs.push_back(key);
     }
   }
@@ -141,11 +141,11 @@ void SubcaptureLayer::Post(vkEnumeratePhysicalDevicesCommand& command) {
   for (uint32_t i = 0; i < command.m_pPhysicalDevices.Size; ++i) {
     uint64_t key = command.m_pPhysicalDevices.Keys[i];
     auto state = std::make_unique<PhysicalDeviceState>();
-    state->key = key;
-    state->parentKey = command.m_instance.Key;
-    state->creationCommandId = command.GetId();
+    state->Key = key;
+    state->ParentKey = command.m_instance.Key;
+    state->CreationCommandId = command.GetId();
     if (m_StateTracking.HasState(key)) {
-      // Re-enumeration on a (possibly new) instance: refresh parentKey so the
+      // Re-enumeration on a (possibly new) instance: refresh ParentKey so the
       // synthesis attaches the device to whichever instance is current.
       m_StateTracking.RemoveState(key);
     }
@@ -181,8 +181,8 @@ void SubcaptureLayer::Post(vkEnumeratePhysicalDeviceGroupsCommand& command) {
       const uint64_t key = command.m_pPhysicalDeviceGroupProperties.HandleKeys[keyIdx++];
       if (key && !m_StateTracking.HasState(key)) {
         auto state = std::make_unique<PhysicalDeviceState>();
-        state->key = key;
-        state->parentKey = command.m_instance.Key;
+        state->Key = key;
+        state->ParentKey = command.m_instance.Key;
         StoreState(std::move(state), command);
       }
     }
@@ -209,8 +209,8 @@ void SubcaptureLayer::Post(vkEnumeratePhysicalDeviceGroupsKHRCommand& command) {
       const uint64_t key = command.m_pPhysicalDeviceGroupProperties.HandleKeys[keyIdx++];
       if (key && !m_StateTracking.HasState(key)) {
         auto state = std::make_unique<PhysicalDeviceState>();
-        state->key = key;
-        state->parentKey = command.m_instance.Key;
+        state->Key = key;
+        state->ParentKey = command.m_instance.Key;
         StoreState(std::move(state), command);
       }
     }
@@ -222,8 +222,8 @@ void SubcaptureLayer::Post(vkCreateDeviceCommand& command) {
     return;
   }
   auto state = std::make_unique<DeviceState>();
-  state->key = command.m_pDevice.Key;
-  state->parentKey = command.m_physicalDevice.Key;
+  state->Key = command.m_pDevice.Key;
+  state->ParentKey = command.m_physicalDevice.Key;
   StoreState(std::move(state), command);
 }
 
@@ -238,11 +238,11 @@ void SubcaptureLayer::Post(vkAllocateMemoryCommand& command) {
     return;
   }
   auto state = std::make_unique<DeviceMemoryState>();
-  state->key = command.m_pMemory.Key;
-  state->parentKey = command.m_device.Key;
+  state->Key = command.m_pMemory.Key;
+  state->ParentKey = command.m_device.Key;
   if (command.m_pAllocateInfo.Value) {
-    state->allocationSize = command.m_pAllocateInfo.Value->allocationSize;
-    state->memoryTypeIndex = command.m_pAllocateInfo.Value->memoryTypeIndex;
+    state->AllocationSize = command.m_pAllocateInfo.Value->allocationSize;
+    state->MemoryTypeIndex = command.m_pAllocateInfo.Value->memoryTypeIndex;
   }
   // VkMemoryAllocateInfo itself has no handle members, but its pNext chain
   // can carry VkMemoryDedicatedAllocateInfo (image / buffer) and other
@@ -256,7 +256,7 @@ void SubcaptureLayer::Post(vkAllocateMemoryCommand& command) {
   // dependency so RestoreOne restores them first.
   for (uint64_t dep : command.m_pAllocateInfo.HandleKeys) {
     if (dep) {
-      state->dependencyKeys.push_back(dep);
+      state->DependencyKeys.push_back(dep);
     }
   }
   StoreState(std::move(state), command);
@@ -295,10 +295,10 @@ void SubcaptureLayer::Post(vkBeginCommandBufferCommand& command) {
   m_CommandBufferLifecycle.OnBegin(command);
   // For secondary command buffers pBeginInfo->pInheritanceInfo carries
   // renderPass and framebuffer handles encoded into the stored
-  // beginCommandBuffer bytes.  When RestoreCommandBuffers later emits those
+  // BeginCommandBuffer bytes.  When RestoreCommandBuffers later emits those
   // bytes the second player calls GetHandle on every key in HandleKeys -- if
   // either object was not restored the player will assert.  Track them as
-  // dependencies (isRecording is true after OnBegin) so RestoreOne skips
+  // dependencies (IsRecording is true after OnBegin) so RestoreOne skips
   // this CB when a dependency cannot be restored.
   m_CommandBufferLifecycle.TrackHandleDependencies(command.m_commandBuffer.Key,
                                                    command.m_pBeginInfo.HandleKeys);
@@ -320,8 +320,8 @@ void SubcaptureLayer::Post(vkCreateFenceCommand& command) {
     return;
   }
   auto state = std::make_unique<FenceState>();
-  state->key = command.m_pFence.Key;
-  state->parentKey = command.m_device.Key;
+  state->Key = command.m_pFence.Key;
+  state->ParentKey = command.m_device.Key;
   StoreState(std::move(state), command);
 }
 
@@ -368,9 +368,9 @@ void SubcaptureLayer::Post(vkGetDeviceQueueCommand& command) {
     return;
   }
   auto state = std::make_unique<QueueState>();
-  state->key = command.m_pQueue.Key;
-  state->parentKey = command.m_device.Key;
-  state->queueFamilyIndex = command.m_queueFamilyIndex.Value;
+  state->Key = command.m_pQueue.Key;
+  state->ParentKey = command.m_device.Key;
+  state->QueueFamilyIndex = command.m_queueFamilyIndex.Value;
   StoreState(std::move(state), command);
 }
 
@@ -379,10 +379,10 @@ void SubcaptureLayer::Post(vkGetDeviceQueue2Command& command) {
     return;
   }
   auto state = std::make_unique<QueueState>();
-  state->key = command.m_pQueue.Key;
-  state->parentKey = command.m_device.Key;
+  state->Key = command.m_pQueue.Key;
+  state->ParentKey = command.m_device.Key;
   if (command.m_pQueueInfo.Value) {
-    state->queueFamilyIndex = command.m_pQueueInfo.Value->queueFamilyIndex;
+    state->QueueFamilyIndex = command.m_pQueueInfo.Value->queueFamilyIndex;
   }
   StoreState(std::move(state), command);
 }
@@ -392,8 +392,8 @@ void SubcaptureLayer::Post(vkCreateSemaphoreCommand& command) {
     return;
   }
   auto state = std::make_unique<SemaphoreState>();
-  state->key = command.m_pSemaphore.Key;
-  state->parentKey = command.m_device.Key;
+  state->Key = command.m_pSemaphore.Key;
+  state->ParentKey = command.m_device.Key;
   // Detect timeline semaphores via pNext chain.
   if (command.m_pCreateInfo.Value) {
     const auto* pNext = static_cast<const VkBaseInStructure*>(command.m_pCreateInfo.Value->pNext);
@@ -401,7 +401,7 @@ void SubcaptureLayer::Post(vkCreateSemaphoreCommand& command) {
       if (pNext->sType == VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO) {
         const auto* typeInfo = reinterpret_cast<const VkSemaphoreTypeCreateInfo*>(pNext);
         if (typeInfo->semaphoreType == VK_SEMAPHORE_TYPE_TIMELINE) {
-          state->isBinary = false;
+          state->IsBinary = false;
         }
         break;
       }
@@ -420,8 +420,8 @@ void SubcaptureLayer::Post(vkCreateEventCommand& command) {
     return;
   }
   auto state = std::make_unique<EventState>();
-  state->key = command.m_pEvent.Key;
-  state->parentKey = command.m_device.Key;
+  state->Key = command.m_pEvent.Key;
+  state->ParentKey = command.m_device.Key;
   StoreState(std::move(state), command);
 }
 
@@ -435,7 +435,7 @@ void SubcaptureLayer::Post(vkSetEventCommand& command) {
     return;
   }
   if (auto* ev = m_StateTracking.GetState<EventState>(command.m_event.Key)) {
-    ev->isSignaled = true;
+    ev->IsSignaled = true;
   }
 }
 
@@ -444,7 +444,7 @@ void SubcaptureLayer::Post(vkResetEventCommand& command) {
     return;
   }
   if (auto* ev = m_StateTracking.GetState<EventState>(command.m_event.Key)) {
-    ev->isSignaled = false;
+    ev->IsSignaled = false;
   }
 }
 
@@ -455,11 +455,11 @@ void SubcaptureLayer::Post(vkCreateBufferCommand& command) {
     return;
   }
   auto state = std::make_unique<BufferState>();
-  state->key = command.m_pBuffer.Key;
-  state->parentKey = command.m_device.Key;
+  state->Key = command.m_pBuffer.Key;
+  state->ParentKey = command.m_device.Key;
   if (command.m_pCreateInfo.Value) {
-    state->bufferSize = command.m_pCreateInfo.Value->size;
-    state->usageFlags = command.m_pCreateInfo.Value->usage;
+    state->BufferSize = command.m_pCreateInfo.Value->size;
+    state->UsageFlags = command.m_pCreateInfo.Value->usage;
   }
   StoreState(std::move(state), command);
 }
@@ -474,8 +474,8 @@ void SubcaptureLayer::Post(vkBindBufferMemoryCommand& command) {
   }
   auto* state = m_StateTracking.GetState<BufferState>(command.m_buffer.Key);
   if (state) {
-    state->boundMemoryKey = command.m_memory.Key;
-    state->memoryOffset = command.m_memoryOffset.Value;
+    state->BoundMemoryKey = command.m_memory.Key;
+    state->MemoryOffset = command.m_memoryOffset.Value;
   }
 }
 
@@ -490,8 +490,8 @@ void SubcaptureLayer::Post(vkBindBufferMemory2Command& command) {
     const uint64_t memKey = (keys.size() > i * 2 + 1) ? keys[i * 2 + 1] : 0;
     auto* state = m_StateTracking.GetState<BufferState>(bufKey);
     if (state && memKey) {
-      state->boundMemoryKey = memKey;
-      state->memoryOffset = command.m_pBindInfos.Value[i].memoryOffset;
+      state->BoundMemoryKey = memKey;
+      state->MemoryOffset = command.m_pBindInfos.Value[i].memoryOffset;
     }
   }
 }
@@ -506,8 +506,8 @@ void SubcaptureLayer::Post(vkBindBufferMemory2KHRCommand& command) {
     const uint64_t memKey = (keys.size() > i * 2 + 1) ? keys[i * 2 + 1] : 0;
     auto* state = m_StateTracking.GetState<BufferState>(bufKey);
     if (state && memKey) {
-      state->boundMemoryKey = memKey;
-      state->memoryOffset = command.m_pBindInfos.Value[i].memoryOffset;
+      state->BoundMemoryKey = memKey;
+      state->MemoryOffset = command.m_pBindInfos.Value[i].memoryOffset;
     }
   }
 }
@@ -517,16 +517,16 @@ void SubcaptureLayer::Post(vkCreateImageCommand& command) {
     return;
   }
   auto state = std::make_unique<ImageState>();
-  state->key = command.m_pImage.Key;
-  state->parentKey = command.m_device.Key;
+  state->Key = command.m_pImage.Key;
+  state->ParentKey = command.m_device.Key;
   const VkImageCreateInfo& ci = *command.m_pCreateInfo.Value;
-  state->format = ci.format;
-  state->currentLayout = ci.initialLayout;
-  state->extent = ci.extent;
-  state->mipLevels = ci.mipLevels;
-  state->arrayLayers = ci.arrayLayers;
-  state->samples = ci.samples;
-  state->usageFlags = ci.usage;
+  state->Format = ci.format;
+  state->CurrentLayout = ci.initialLayout;
+  state->Extent = ci.extent;
+  state->MipLevels = ci.mipLevels;
+  state->ArrayLayers = ci.arrayLayers;
+  state->Samples = ci.samples;
+  state->UsageFlags = ci.usage;
   StoreState(std::move(state), command);
 }
 
@@ -540,8 +540,8 @@ void SubcaptureLayer::Post(vkBindImageMemoryCommand& command) {
   }
   auto* state = m_StateTracking.GetState<ImageState>(command.m_image.Key);
   if (state) {
-    state->boundMemoryKey = command.m_memory.Key;
-    state->memoryOffset = command.m_memoryOffset.Value;
+    state->BoundMemoryKey = command.m_memory.Key;
+    state->MemoryOffset = command.m_memoryOffset.Value;
   }
 }
 
@@ -556,8 +556,8 @@ void SubcaptureLayer::Post(vkBindImageMemory2Command& command) {
     const uint64_t memKey = (keys.size() > i * 2 + 1) ? keys[i * 2 + 1] : 0;
     auto* state = m_StateTracking.GetState<ImageState>(imgKey);
     if (state && memKey) {
-      state->boundMemoryKey = memKey;
-      state->memoryOffset = command.m_pBindInfos.Value[i].memoryOffset;
+      state->BoundMemoryKey = memKey;
+      state->MemoryOffset = command.m_pBindInfos.Value[i].memoryOffset;
     }
   }
 }
@@ -572,8 +572,8 @@ void SubcaptureLayer::Post(vkBindImageMemory2KHRCommand& command) {
     const uint64_t memKey = (keys.size() > i * 2 + 1) ? keys[i * 2 + 1] : 0;
     auto* state = m_StateTracking.GetState<ImageState>(imgKey);
     if (state && memKey) {
-      state->boundMemoryKey = memKey;
-      state->memoryOffset = command.m_pBindInfos.Value[i].memoryOffset;
+      state->BoundMemoryKey = memKey;
+      state->MemoryOffset = command.m_pBindInfos.Value[i].memoryOffset;
     }
   }
 }
@@ -583,11 +583,11 @@ void SubcaptureLayer::Post(vkCreateBufferViewCommand& command) {
     return;
   }
   auto state = std::make_unique<BufferViewState>();
-  state->key = command.m_pView.Key;
-  state->parentKey = command.m_device.Key;
+  state->Key = command.m_pView.Key;
+  state->ParentKey = command.m_device.Key;
   // VkBufferViewCreateInfo::buffer is the first handle in HandleKeys.
   if (!command.m_pCreateInfo.HandleKeys.empty()) {
-    state->dependencyKeys.push_back(command.m_pCreateInfo.HandleKeys[0]);
+    state->DependencyKeys.push_back(command.m_pCreateInfo.HandleKeys[0]);
   }
   StoreState(std::move(state), command);
 }
@@ -601,15 +601,15 @@ void SubcaptureLayer::Post(vkCreateImageViewCommand& command) {
     return;
   }
   auto state = std::make_unique<ImageViewState>();
-  state->key = command.m_pView.Key;
-  state->parentKey = command.m_device.Key;
+  state->Key = command.m_pView.Key;
+  state->ParentKey = command.m_device.Key;
   // VkImageViewCreateInfo::image is the first handle in HandleKeys.
-  // Store in imageKey for other consumers, and in dependencyKeys so RestoreOne
+  // Store in imageKey for other consumers, and in DependencyKeys so RestoreOne
   // ensures the image exists before the view is created.
-  state->imageKey =
+  state->ImageKey =
       command.m_pCreateInfo.HandleKeys.empty() ? 0 : command.m_pCreateInfo.HandleKeys[0];
-  if (state->imageKey) {
-    state->dependencyKeys.push_back(state->imageKey);
+  if (state->ImageKey) {
+    state->DependencyKeys.push_back(state->ImageKey);
   }
   StoreState(std::move(state), command);
 }
@@ -625,13 +625,13 @@ void SubcaptureLayer::Post(vkCreateRenderPassCommand& command) {
     return;
   }
   auto state = std::make_unique<RenderPassState>();
-  state->key = command.m_pRenderPass.Key;
-  state->parentKey = command.m_device.Key;
+  state->Key = command.m_pRenderPass.Key;
+  state->ParentKey = command.m_device.Key;
   if (command.m_pCreateInfo.Value && command.m_pCreateInfo.Value->pAttachments) {
     const auto& ci = *command.m_pCreateInfo.Value;
-    state->attachmentFinalLayouts.reserve(ci.attachmentCount);
+    state->AttachmentFinalLayouts.reserve(ci.attachmentCount);
     for (uint32_t i = 0; i < ci.attachmentCount; ++i) {
-      state->attachmentFinalLayouts.push_back(ci.pAttachments[i].finalLayout);
+      state->AttachmentFinalLayouts.push_back(ci.pAttachments[i].finalLayout);
     }
   }
   StoreState(std::move(state), command);
@@ -642,13 +642,13 @@ void SubcaptureLayer::Post(vkCreateRenderPass2Command& command) {
     return;
   }
   auto state = std::make_unique<RenderPassState>();
-  state->key = command.m_pRenderPass.Key;
-  state->parentKey = command.m_device.Key;
+  state->Key = command.m_pRenderPass.Key;
+  state->ParentKey = command.m_device.Key;
   if (command.m_pCreateInfo.Value && command.m_pCreateInfo.Value->pAttachments) {
     const auto& ci = *command.m_pCreateInfo.Value;
-    state->attachmentFinalLayouts.reserve(ci.attachmentCount);
+    state->AttachmentFinalLayouts.reserve(ci.attachmentCount);
     for (uint32_t i = 0; i < ci.attachmentCount; ++i) {
-      state->attachmentFinalLayouts.push_back(ci.pAttachments[i].finalLayout);
+      state->AttachmentFinalLayouts.push_back(ci.pAttachments[i].finalLayout);
     }
   }
   StoreState(std::move(state), command);
@@ -659,13 +659,13 @@ void SubcaptureLayer::Post(vkCreateRenderPass2KHRCommand& command) {
     return;
   }
   auto state = std::make_unique<RenderPassState>();
-  state->key = command.m_pRenderPass.Key;
-  state->parentKey = command.m_device.Key;
+  state->Key = command.m_pRenderPass.Key;
+  state->ParentKey = command.m_device.Key;
   if (command.m_pCreateInfo.Value && command.m_pCreateInfo.Value->pAttachments) {
     const auto& ci = *command.m_pCreateInfo.Value;
-    state->attachmentFinalLayouts.reserve(ci.attachmentCount);
+    state->AttachmentFinalLayouts.reserve(ci.attachmentCount);
     for (uint32_t i = 0; i < ci.attachmentCount; ++i) {
-      state->attachmentFinalLayouts.push_back(ci.pAttachments[i].finalLayout);
+      state->AttachmentFinalLayouts.push_back(ci.pAttachments[i].finalLayout);
     }
   }
   StoreState(std::move(state), command);
@@ -673,15 +673,15 @@ void SubcaptureLayer::Post(vkCreateRenderPass2KHRCommand& command) {
 
 void SubcaptureLayer::Post(vkDestroyRenderPassCommand& command) {
   // Same rationale as vkDestroyShaderModule / vkDestroyPipelineLayout: VkRenderPass may be
-  // destroyed after VkGraphicsPipelineCreateInfo referenced it (Vulkan permits this once pipelines
+  // Destroyed after VkGraphicsPipelineCreateInfo referenced it (Vulkan permits this once pipelines
   // are built). RemoveState erased the key while pipelines still listed it as a dependency, so
   // RestoreOne aborted vkCreateGraphicsPipelines with "dependency ... no longer tracked". Keep the
-  // encoded vkCreateRenderPass* blob and mark destroyed; RestoreOne re-emits create before pipelines.
+  // encoded vkCreateRenderPass* blob and mark Destroyed; RestoreOne re-emits create before pipelines.
   // Unlike shader modules we do not schedule vkDestroyRenderPass after restore: vkCmdBeginRenderPass
   // blobs still reference this handle key for the rest of replay.
   auto* state = m_StateTracking.GetState(command.m_renderPass.Key);
   if (state) {
-    state->destroyed = true;
+    state->Destroyed = true;
   }
 }
 
@@ -690,20 +690,20 @@ void SubcaptureLayer::Post(vkCreateFramebufferCommand& command) {
     return;
   }
   auto state = std::make_unique<FramebufferState>();
-  state->key = command.m_pFramebuffer.Key;
-  state->parentKey = command.m_device.Key;
+  state->Key = command.m_pFramebuffer.Key;
+  state->ParentKey = command.m_device.Key;
   // VkFramebufferCreateInfo HandleKeys: render pass followed by attachment image views.
   for (uint64_t dep : command.m_pCreateInfo.HandleKeys) {
     if (dep) {
-      state->dependencyKeys.push_back(dep);
+      state->DependencyKeys.push_back(dep);
     }
   }
   // Store attachment image view keys separately (HandleKeys[0] = renderPass,
   // HandleKeys[1..] = pAttachments[i] image view keys in order).
-  // Used by ImageLayoutService to resolve attachment index → image key.
+  // Used by ImageLayoutService to resolve attachment index ? image key.
   const auto& keys = command.m_pCreateInfo.HandleKeys;
   if (keys.size() > 1) {
-    state->attachmentImageViewKeys.assign(keys.begin() + 1, keys.end());
+    state->AttachmentImageViewKeys.assign(keys.begin() + 1, keys.end());
   }
   StoreState(std::move(state), command);
 }
@@ -719,8 +719,8 @@ void SubcaptureLayer::Post(vkCreatePipelineCacheCommand& command) {
     return;
   }
   auto state = std::make_unique<PipelineCacheState>();
-  state->key = command.m_pPipelineCache.Key;
-  state->parentKey = command.m_device.Key;
+  state->Key = command.m_pPipelineCache.Key;
+  state->ParentKey = command.m_device.Key;
   StoreState(std::move(state), command);
 }
 
@@ -733,24 +733,24 @@ void SubcaptureLayer::Post(vkCreatePipelineLayoutCommand& command) {
     return;
   }
   auto state = std::make_unique<PipelineLayoutState>();
-  state->key = command.m_pPipelineLayout.Key;
-  state->parentKey = command.m_device.Key;
+  state->Key = command.m_pPipelineLayout.Key;
+  state->ParentKey = command.m_device.Key;
   // Descriptor set layout handles referenced by pSetLayouts.
   for (uint64_t dep : command.m_pCreateInfo.HandleKeys) {
     if (dep) {
-      state->dependencyKeys.push_back(dep);
+      state->DependencyKeys.push_back(dep);
     }
   }
   StoreState(std::move(state), command);
 }
 
 void SubcaptureLayer::Post(vkDestroyPipelineLayoutCommand& command) {
-  // Mark as destroyed but keep the state so it can be transiently re-created
+  // Mark as Destroyed but keep the state so it can be transiently re-created
   // as a pipeline dependency during state restore (same rationale as shader
   // modules above).
   auto* state = m_StateTracking.GetState(command.m_pipelineLayout.Key);
   if (state) {
-    state->destroyed = true;
+    state->Destroyed = true;
   }
 }
 
@@ -759,20 +759,20 @@ void SubcaptureLayer::Post(vkCreateShaderModuleCommand& command) {
     return;
   }
   auto state = std::make_unique<ShaderModuleState>();
-  state->key = command.m_pShaderModule.Key;
-  state->parentKey = command.m_device.Key;
+  state->Key = command.m_pShaderModule.Key;
+  state->ParentKey = command.m_device.Key;
   StoreState(std::move(state), command);
 }
 
 void SubcaptureLayer::Post(vkDestroyShaderModuleCommand& command) {
-  // Mark as destroyed but keep the state so it can be transiently re-created
+  // Mark as Destroyed but keep the state so it can be transiently re-created
   // as a pipeline dependency during state restore.  Vulkan allows destroying a
   // VkShaderModule after pipeline creation; the pipeline holds the compiled
   // shader internally.  We need the creation data to re-emit the module just
   // before any pipeline that references it, and destroy it afterwards.
   auto* state = m_StateTracking.GetState(command.m_shaderModule.Key);
   if (state) {
-    state->destroyed = true;
+    state->Destroyed = true;
   }
 }
 
@@ -785,7 +785,7 @@ void SubcaptureLayer::Post(vkCreateGraphicsPipelinesCommand& command) {
   // base pipeline) from the encoded HandleKeys for all create infos in the batch.
   // NOTE: pipelineCache is deliberately NOT treated as a dependency.  It is a pure
   // optimization hint that engines frequently destroy right after building their
-  // pipelines; as a hard dependency a destroyed (and thus removed) cache would make
+  // pipelines; as a hard dependency a Destroyed (and thus removed) cache would make
   // every pipeline built from it unrestorable and crash later at vkCmdBindPipeline.
   // A live cache is still restored on its own in RestoreState's first pass, and
   // EmitCreationCommand nulls the cache handle when it is no longer live -- mirroring
@@ -796,7 +796,7 @@ void SubcaptureLayer::Post(vkCreateGraphicsPipelinesCommand& command) {
       batchDeps.push_back(dep);
     }
   }
-  // Collect all output pipeline keys for this batch.  batchPipelineKeys is
+  // Collect all output pipeline keys for this batch.  BatchPipelineKeys is
   // stored on every sibling PipelineState so that RestoreOne can mark all
   // siblings as restored after the first one emits the shared batch command,
   // preventing N redundant full-batch emissions for a batch of N pipelines.
@@ -807,10 +807,10 @@ void SubcaptureLayer::Post(vkCreateGraphicsPipelinesCommand& command) {
   }
   for (uint32_t i = 0; i < command.m_createInfoCount.Value; ++i) {
     auto state = std::make_unique<PipelineState>();
-    state->key = command.m_pPipelines.Keys[i];
-    state->parentKey = command.m_device.Key;
-    state->dependencyKeys = batchDeps;
-    state->batchPipelineKeys = batchKeys;
+    state->Key = command.m_pPipelines.Keys[i];
+    state->ParentKey = command.m_device.Key;
+    state->DependencyKeys = batchDeps;
+    state->BatchPipelineKeys = batchKeys;
     StoreState(std::move(state), command);
   }
 }
@@ -822,7 +822,7 @@ void SubcaptureLayer::Post(vkCreateComputePipelinesCommand& command) {
   // Collect handle dependencies (shader module, pipeline layout, base pipeline)
   // so RestoreOne restores them before the pipeline. pipelineCache is intentionally
   // NOT a dependency (see vkCreateGraphicsPipelines): it is an optional hint that may
-  // be destroyed before the cut; EmitCreationCommand nulls it when no longer live.
+  // be Destroyed before the cut; EmitCreationCommand nulls it when no longer live.
   std::vector<uint64_t> batchDeps;
   for (uint64_t dep : command.m_pCreateInfos.HandleKeys) {
     if (dep) {
@@ -836,10 +836,10 @@ void SubcaptureLayer::Post(vkCreateComputePipelinesCommand& command) {
   }
   for (uint32_t i = 0; i < command.m_createInfoCount.Value; ++i) {
     auto state = std::make_unique<PipelineState>();
-    state->key = command.m_pPipelines.Keys[i];
-    state->parentKey = command.m_device.Key;
-    state->dependencyKeys = batchDeps;
-    state->batchPipelineKeys = batchKeys;
+    state->Key = command.m_pPipelines.Keys[i];
+    state->ParentKey = command.m_device.Key;
+    state->DependencyKeys = batchDeps;
+    state->BatchPipelineKeys = batchKeys;
     StoreState(std::move(state), command);
   }
 }
@@ -849,7 +849,7 @@ void SubcaptureLayer::Post(vkCreateRayTracingPipelinesKHRCommand& command) {
     return;
   }
   // pipelineCache is intentionally NOT a dependency (see vkCreateGraphicsPipelines):
-  // an optional hint that may be destroyed before the cut; EmitCreationCommand nulls
+  // an optional hint that may be Destroyed before the cut; EmitCreationCommand nulls
   // it when no longer live.
   std::vector<uint64_t> batchDeps;
   for (uint64_t dep : command.m_pCreateInfos.HandleKeys) {
@@ -864,10 +864,10 @@ void SubcaptureLayer::Post(vkCreateRayTracingPipelinesKHRCommand& command) {
   }
   for (uint32_t i = 0; i < command.m_createInfoCount.Value; ++i) {
     auto state = std::make_unique<PipelineState>();
-    state->key = command.m_pPipelines.Keys[i];
-    state->parentKey = command.m_device.Key;
-    state->dependencyKeys = batchDeps;
-    state->batchPipelineKeys = batchKeys;
+    state->Key = command.m_pPipelines.Keys[i];
+    state->ParentKey = command.m_device.Key;
+    state->DependencyKeys = batchDeps;
+    state->BatchPipelineKeys = batchKeys;
     StoreState(std::move(state), command);
   }
 }
@@ -877,7 +877,7 @@ void SubcaptureLayer::Post(vkCreateRayTracingPipelinesNVCommand& command) {
     return;
   }
   // pipelineCache is intentionally NOT a dependency (see vkCreateGraphicsPipelines):
-  // an optional hint that may be destroyed before the cut; EmitCreationCommand nulls
+  // an optional hint that may be Destroyed before the cut; EmitCreationCommand nulls
   // it when no longer live.
   std::vector<uint64_t> batchDeps;
   for (uint64_t dep : command.m_pCreateInfos.HandleKeys) {
@@ -892,10 +892,10 @@ void SubcaptureLayer::Post(vkCreateRayTracingPipelinesNVCommand& command) {
   }
   for (uint32_t i = 0; i < command.m_createInfoCount.Value; ++i) {
     auto state = std::make_unique<PipelineState>();
-    state->key = command.m_pPipelines.Keys[i];
-    state->parentKey = command.m_device.Key;
-    state->dependencyKeys = batchDeps;
-    state->batchPipelineKeys = batchKeys;
+    state->Key = command.m_pPipelines.Keys[i];
+    state->ParentKey = command.m_device.Key;
+    state->DependencyKeys = batchDeps;
+    state->BatchPipelineKeys = batchKeys;
     StoreState(std::move(state), command);
   }
 }
@@ -904,13 +904,13 @@ void SubcaptureLayer::Post(vkDestroyPipelineCommand& command) {
   // Same pattern as vkDestroyShaderModule: VkPipeline may still appear in
   // encoded vkCmdBindPipeline blobs after the app destroys it.  Removing state
   // made HasState(pipelineKey) false so RestoreCommandBuffers could not recreate
-  // the pipeline before replaying those blobs.  Keep creationCommandBuffer and
-  // mark destroyed so RestoreOne can transiently recreate the VkPipeline; we
+  // the pipeline before replaying those blobs.  Keep CreationCommandBuffer and
+  // mark Destroyed so RestoreOne can transiently recreate the VkPipeline; we
   // do not emit vkDestroyPipeline after restore (pipelines can stay referenced
   // by executable CBs submitted later, unlike shader modules post-create).
   auto* state = m_StateTracking.GetState(command.m_pipeline.Key);
   if (state) {
-    state->destroyed = true;
+    state->Destroyed = true;
   }
 }
 
@@ -921,25 +921,25 @@ void SubcaptureLayer::Post(vkCreateDescriptorSetLayoutCommand& command) {
     return;
   }
   auto state = std::make_unique<DescriptorSetLayoutState>();
-  state->key = command.m_pSetLayout.Key;
-  state->parentKey = command.m_device.Key;
+  state->Key = command.m_pSetLayout.Key;
+  state->ParentKey = command.m_device.Key;
   // Immutable sampler handles referenced in pBindings.
   for (uint64_t dep : command.m_pCreateInfo.HandleKeys) {
     if (dep) {
-      state->dependencyKeys.push_back(dep);
+      state->DependencyKeys.push_back(dep);
     }
   }
   StoreState(std::move(state), command);
 }
 
 void SubcaptureLayer::Post(vkDestroyDescriptorSetLayoutCommand& command) {
-  // Mark as destroyed but keep the state.  Descriptor set layouts may be
-  // destroyed after vkCreatePipelineLayout (Vulkan allows this).  During state
+  // Mark as Destroyed but keep the state.  Descriptor set layouts may be
+  // Destroyed after vkCreatePipelineLayout (Vulkan allows this).  During state
   // restore we must re-create the layout before re-creating any pipeline layout
   // that references it, so the state must remain available here.
   auto* state = m_StateTracking.GetState(command.m_descriptorSetLayout.Key);
   if (state) {
-    state->destroyed = true;
+    state->Destroyed = true;
   }
 }
 
@@ -948,17 +948,17 @@ void SubcaptureLayer::Post(vkCreateDescriptorPoolCommand& command) {
     return;
   }
   auto state = std::make_unique<DescriptorPoolState>();
-  state->key = command.m_pDescriptorPool.Key;
-  state->parentKey = command.m_device.Key;
+  state->Key = command.m_pDescriptorPool.Key;
+  state->ParentKey = command.m_device.Key;
   StoreState(std::move(state), command);
 }
 
 void SubcaptureLayer::RemoveDescriptorSetsByPool(uint64_t poolKey) {
   std::vector<uint64_t> setKeys;
   for (const auto& [key, statePtr] : m_StateTracking.GetStates()) {
-    if (statePtr->creationCommandId == CommandId::ID_VKALLOCATEDESCRIPTORSETS) {
+    if (statePtr->CreationCommandId == CommandId::ID_VKALLOCATEDESCRIPTORSETS) {
       auto* ds = static_cast<DescriptorSetState*>(statePtr.get());
-      if (ds->poolKey == poolKey) {
+      if (ds->PoolKey == poolKey) {
         setKeys.push_back(key);
       }
     }
@@ -968,9 +968,9 @@ void SubcaptureLayer::RemoveDescriptorSetsByPool(uint64_t poolKey) {
     m_StateTracking.GetDescriptorSetUpdateService().RemoveDescriptorSet(setKey);
   }
   // vkResetDescriptorPool frees every set at once; the pool itself stays alive,
-  // so zero the live count but keep peakLiveSets (the all-time high-water mark).
+  // so zero the live count but keep PeakLiveSets (the all-time high-water mark).
   if (auto* poolState = m_StateTracking.GetState<DescriptorPoolState>(poolKey)) {
-    poolState->liveSets = 0;
+    poolState->LiveSets = 0;
   }
 }
 
@@ -999,9 +999,9 @@ void SubcaptureLayer::Post(vkAllocateDescriptorSetsCommand& command) {
   // Track per-pool live/peak set counts so state restore can size the re-created
   // pool from observed demand rather than a blind multiplier.
   if (auto* poolState = m_StateTracking.GetState<DescriptorPoolState>(poolKey)) {
-    poolState->liveSets += command.m_pDescriptorSets.Size;
-    if (poolState->liveSets > poolState->peakLiveSets) {
-      poolState->peakLiveSets = poolState->liveSets;
+    poolState->LiveSets += command.m_pDescriptorSets.Size;
+    if (poolState->LiveSets > poolState->PeakLiveSets) {
+      poolState->PeakLiveSets = poolState->LiveSets;
     }
   }
 
@@ -1019,9 +1019,9 @@ void SubcaptureLayer::Post(vkAllocateDescriptorSetsCommand& command) {
 
   for (uint32_t i = 0; i < command.m_pDescriptorSets.Size; ++i) {
     auto state = std::make_unique<DescriptorSetState>();
-    state->key = command.m_pDescriptorSets.Keys[i];
-    state->parentKey = command.m_device.Key;
-    state->poolKey = poolKey;
+    state->Key = command.m_pDescriptorSets.Keys[i];
+    state->ParentKey = command.m_device.Key;
+    state->PoolKey = poolKey;
 
     // HandleKeys layout in the original command: [0]=pool, [1+i]=pSetLayouts[i].
     // Add the layout as a dependency so RestoreOne restores it before emitting
@@ -1031,11 +1031,11 @@ void SubcaptureLayer::Post(vkAllocateDescriptorSetsCommand& command) {
     if (layoutIdx < command.m_pAllocateInfo.HandleKeys.size()) {
       layoutKey = command.m_pAllocateInfo.HandleKeys[layoutIdx];
       if (layoutKey) {
-        state->dependencyKeys.push_back(layoutKey);
+        state->DependencyKeys.push_back(layoutKey);
       }
     }
-    state->layoutKey = layoutKey;
-    state->hasAllocPNext = allocHasPNext;
+    state->LayoutKey = layoutKey;
+    state->HasAllocPNext = allocHasPNext;
 
     // Synthetic single-set allocation command for this set only.  pSetLayouts
     // points into the original array slot; Encode reads pSetLayouts[0..count)
@@ -1068,8 +1068,8 @@ void SubcaptureLayer::Post(vkFreeDescriptorSetsCommand& command) {
   }
   if (auto* poolState =
           m_StateTracking.GetState<DescriptorPoolState>(command.m_descriptorPool.Key)) {
-    poolState->liveSets = (command.m_descriptorSetCount.Value <= poolState->liveSets)
-                              ? poolState->liveSets - command.m_descriptorSetCount.Value
+    poolState->LiveSets = (command.m_descriptorSetCount.Value <= poolState->LiveSets)
+                              ? poolState->LiveSets - command.m_descriptorSetCount.Value
                               : 0;
   }
   for (uint32_t i = 0; i < command.m_descriptorSetCount.Value; ++i) {
@@ -1091,8 +1091,8 @@ void SubcaptureLayer::Post(vkCreateDescriptorUpdateTemplateCommand& command) {
     return;
   }
   auto state = std::make_unique<DescriptorUpdateTemplateState>();
-  state->key = command.m_pDescriptorUpdateTemplate.Key;
-  state->parentKey = command.m_device.Key;
+  state->Key = command.m_pDescriptorUpdateTemplate.Key;
+  state->ParentKey = command.m_device.Key;
   m_StateTracking.GetDescriptorSetUpdateService().StoreTemplateEntries(
       command.m_pDescriptorUpdateTemplate.Key, command.m_pCreateInfo.Value);
   StoreState(std::move(state), command);
@@ -1103,8 +1103,8 @@ void SubcaptureLayer::Post(vkCreateDescriptorUpdateTemplateKHRCommand& command) 
     return;
   }
   auto state = std::make_unique<DescriptorUpdateTemplateState>();
-  state->key = command.m_pDescriptorUpdateTemplate.Key;
-  state->parentKey = command.m_device.Key;
+  state->Key = command.m_pDescriptorUpdateTemplate.Key;
+  state->ParentKey = command.m_device.Key;
   m_StateTracking.GetDescriptorSetUpdateService().StoreTemplateEntries(
       command.m_pDescriptorUpdateTemplate.Key, command.m_pCreateInfo.Value);
   StoreState(std::move(state), command);
@@ -1141,8 +1141,8 @@ void SubcaptureLayer::Post(vkCreateSamplerCommand& command) {
     return;
   }
   auto state = std::make_unique<SamplerState>();
-  state->key = command.m_pSampler.Key;
-  state->parentKey = command.m_device.Key;
+  state->Key = command.m_pSampler.Key;
+  state->ParentKey = command.m_device.Key;
   StoreState(std::move(state), command);
 }
 
@@ -1157,10 +1157,10 @@ void SubcaptureLayer::Post(vkCreateCommandPoolCommand& command) {
     return;
   }
   auto state = std::make_unique<CommandPoolState>();
-  state->key = command.m_pCommandPool.Key;
-  state->parentKey = command.m_device.Key;
+  state->Key = command.m_pCommandPool.Key;
+  state->ParentKey = command.m_device.Key;
   if (command.m_pCreateInfo.Value) {
-    state->queueFamilyIndex = command.m_pCreateInfo.Value->queueFamilyIndex;
+    state->QueueFamilyIndex = command.m_pCreateInfo.Value->queueFamilyIndex;
   }
   StoreState(std::move(state), command);
 }
@@ -1282,7 +1282,7 @@ void SubcaptureLayer::Post(vkCmdBindIndexBuffer2KHRCommand& command) {
 
 // ---- vkCmd* transfer / sync / query dependency tracking -----------------
 // Every handle referenced inside a recorded command must appear in the CB's
-// dependencyKeys so that RestoreOne guarantees the object is restored before
+// DependencyKeys so that RestoreOne guarantees the object is restored before
 // RestoreCommandBuffers emits the raw command bytes.
 
 void SubcaptureLayer::Post(vkCmdCopyBufferCommand& command) {
@@ -1406,15 +1406,15 @@ void SubcaptureLayer::Post(vkCmdCopyImageToBuffer2KHRCommand& command) {
 }
 
 // Records the net signaled state an event ends up in after the given (still
-// recording) command buffer executes.  Applied to EventState::isSignaled when
+// recording) command buffer executes.  Applied to EventState::IsSignaled when
 // the command buffer is submitted (see SyncStateService::OnQueueSubmit).
 void SubcaptureLayer::RecordCmdEventState(uint64_t cbKey, uint64_t eventKey, bool signaled) {
   if (!cbKey || !eventKey) {
     return;
   }
   auto* cb = m_StateTracking.GetState<CommandBufferState>(cbKey);
-  if (cb && cb->isRecording) {
-    cb->eventStatesAfterSubmit[eventKey] = signaled;
+  if (cb && cb->IsRecording) {
+    cb->EventStatesAfterSubmit[eventKey] = signaled;
   }
 }
 
@@ -1566,14 +1566,14 @@ void SubcaptureLayer::Post(CreateWindowMetaCommand& command) {
   // creation command.  The player emits this token before each
   // vkCreate*SurfaceKHR; we store it here and attach it to the SurfaceState
   // so RestoreState can re-emit the window command before the surface.
-  m_PendingWindow.x = command.m_X.Value;
-  m_PendingWindow.y = command.m_Y.Value;
-  m_PendingWindow.width = command.m_Width.Value;
-  m_PendingWindow.height = command.m_Height.Value;
-  m_PendingWindow.visible = command.m_Visible.Value;
-  m_PendingWindow.hwndKey = command.m_Hwnd.Value;
-  m_PendingWindow.hinstanceKey = command.m_Hinstance.Value;
-  m_PendingWindow.valid = true;
+  m_PendingWindow.X = command.m_X.Value;
+  m_PendingWindow.Y = command.m_Y.Value;
+  m_PendingWindow.Width = command.m_Width.Value;
+  m_PendingWindow.Height = command.m_Height.Value;
+  m_PendingWindow.Visible = command.m_Visible.Value;
+  m_PendingWindow.HwndKey = command.m_Hwnd.Value;
+  m_PendingWindow.HinstanceKey = command.m_Hinstance.Value;
+  m_PendingWindow.Valid = true;
 }
 
 #ifdef VK_USE_PLATFORM_WIN32_KHR
@@ -1582,17 +1582,17 @@ void SubcaptureLayer::Post(vkCreateWin32SurfaceKHRCommand& command) {
     return;
   }
   auto state = std::make_unique<SurfaceState>();
-  state->key = command.m_pSurface.Key;
-  state->parentKey = command.m_instance.Key;
-  if (m_PendingWindow.valid) {
-    state->windowX = m_PendingWindow.x;
-    state->windowY = m_PendingWindow.y;
-    state->windowWidth = m_PendingWindow.width;
-    state->windowHeight = m_PendingWindow.height;
-    state->windowVisible = m_PendingWindow.visible;
-    state->hwndKey = m_PendingWindow.hwndKey;
-    state->hinstanceKey = m_PendingWindow.hinstanceKey;
-    m_PendingWindow.valid = false;
+  state->Key = command.m_pSurface.Key;
+  state->ParentKey = command.m_instance.Key;
+  if (m_PendingWindow.Valid) {
+    state->WindowX = m_PendingWindow.X;
+    state->WindowY = m_PendingWindow.Y;
+    state->WindowWidth = m_PendingWindow.Width;
+    state->WindowHeight = m_PendingWindow.Height;
+    state->WindowVisible = m_PendingWindow.Visible;
+    state->HwndKey = m_PendingWindow.HwndKey;
+    state->HinstanceKey = m_PendingWindow.HinstanceKey;
+    m_PendingWindow.Valid = false;
   }
   StoreState(std::move(state), command);
 }
@@ -1604,17 +1604,17 @@ void SubcaptureLayer::Post(vkCreateXcbSurfaceKHRCommand& command) {
     return;
   }
   auto state = std::make_unique<SurfaceState>();
-  state->key = command.m_pSurface.Key;
-  state->parentKey = command.m_instance.Key;
-  if (m_PendingWindow.valid) {
-    state->windowX = m_PendingWindow.x;
-    state->windowY = m_PendingWindow.y;
-    state->windowWidth = m_PendingWindow.width;
-    state->windowHeight = m_PendingWindow.height;
-    state->windowVisible = m_PendingWindow.visible;
-    state->hwndKey = m_PendingWindow.hwndKey;
-    state->hinstanceKey = m_PendingWindow.hinstanceKey;
-    m_PendingWindow.valid = false;
+  state->Key = command.m_pSurface.Key;
+  state->ParentKey = command.m_instance.Key;
+  if (m_PendingWindow.Valid) {
+    state->WindowX = m_PendingWindow.X;
+    state->WindowY = m_PendingWindow.Y;
+    state->WindowWidth = m_PendingWindow.Width;
+    state->WindowHeight = m_PendingWindow.Height;
+    state->WindowVisible = m_PendingWindow.Visible;
+    state->HwndKey = m_PendingWindow.HwndKey;
+    state->HinstanceKey = m_PendingWindow.HinstanceKey;
+    m_PendingWindow.Valid = false;
   }
   StoreState(std::move(state), command);
 }
@@ -1624,17 +1624,17 @@ void SubcaptureLayer::Post(vkCreateXlibSurfaceKHRCommand& command) {
     return;
   }
   auto state = std::make_unique<SurfaceState>();
-  state->key = command.m_pSurface.Key;
-  state->parentKey = command.m_instance.Key;
-  if (m_PendingWindow.valid) {
-    state->windowX = m_PendingWindow.x;
-    state->windowY = m_PendingWindow.y;
-    state->windowWidth = m_PendingWindow.width;
-    state->windowHeight = m_PendingWindow.height;
-    state->windowVisible = m_PendingWindow.visible;
-    state->hwndKey = m_PendingWindow.hwndKey;
-    state->hinstanceKey = m_PendingWindow.hinstanceKey;
-    m_PendingWindow.valid = false;
+  state->Key = command.m_pSurface.Key;
+  state->ParentKey = command.m_instance.Key;
+  if (m_PendingWindow.Valid) {
+    state->WindowX = m_PendingWindow.X;
+    state->WindowY = m_PendingWindow.Y;
+    state->WindowWidth = m_PendingWindow.Width;
+    state->WindowHeight = m_PendingWindow.Height;
+    state->WindowVisible = m_PendingWindow.Visible;
+    state->HwndKey = m_PendingWindow.HwndKey;
+    state->HinstanceKey = m_PendingWindow.HinstanceKey;
+    m_PendingWindow.Valid = false;
   }
   StoreState(std::move(state), command);
 }
@@ -1649,11 +1649,11 @@ void SubcaptureLayer::Post(vkCreateSwapchainKHRCommand& command) {
     return;
   }
   auto state = std::make_unique<SwapchainState>();
-  state->key = command.m_pSwapchain.Key;
-  state->parentKey = command.m_device.Key;
+  state->Key = command.m_pSwapchain.Key;
+  state->ParentKey = command.m_device.Key;
   // Surface must be restored before the swapchain; add it as a dependency.
   if (!command.m_pCreateInfo.HandleKeys.empty() && command.m_pCreateInfo.HandleKeys[0] != 0) {
-    state->dependencyKeys.push_back(command.m_pCreateInfo.HandleKeys[0]);
+    state->DependencyKeys.push_back(command.m_pCreateInfo.HandleKeys[0]);
   }
   StoreState(std::move(state), command);
 }
@@ -1661,7 +1661,7 @@ void SubcaptureLayer::Post(vkCreateSwapchainKHRCommand& command) {
 void SubcaptureLayer::Post(vkDestroySwapchainKHRCommand& command) {
   auto* swapchainState = m_StateTracking.GetState<SwapchainState>(command.m_swapchain.Key);
   if (swapchainState) {
-    for (auto imageKey : swapchainState->imageKeys) {
+    for (auto imageKey : swapchainState->ImageKeys) {
       m_StateTracking.RemoveState(imageKey);
     }
   }
@@ -1679,12 +1679,12 @@ void SubcaptureLayer::Post(vkGetSwapchainImagesKHRCommand& command) {
   for (uint32_t i = 0; i < command.m_pSwapchainImages.Size; ++i) {
     uint64_t imgKey = command.m_pSwapchainImages.Keys[i];
 
-    // Swapchain images are not explicitly created — track them here.
+    // Swapchain images are not explicitly created - track them here.
     if (!m_StateTracking.HasState(imgKey)) {
-      swapchainState->imageKeys.push_back(imgKey);
+      swapchainState->ImageKeys.push_back(imgKey);
       auto state = std::make_unique<ImageState>();
-      state->key = imgKey;
-      state->parentKey = command.m_swapchain.Key;
+      state->Key = imgKey;
+      state->ParentKey = command.m_swapchain.Key;
       StoreState(std::move(state), command);
     }
   }
@@ -1697,7 +1697,7 @@ void SubcaptureLayer::Post(vkAcquireNextImageKHRCommand& command) {
   }
   auto* sc = m_StateTracking.GetState<SwapchainState>(command.m_swapchain.Key);
   if (sc) {
-    sc->acquiredImages.insert(*command.m_pImageIndex.Value);
+    sc->AcquiredImages.insert(*command.m_pImageIndex.Value);
   }
   // The acquire signals the binary semaphore; track it so state restore
   // re-signals it for any first recorded submit that waits on it.
@@ -1717,7 +1717,7 @@ void SubcaptureLayer::Post(vkAcquireNextImage2KHRCommand& command) {
   const uint64_t swapchainKey = command.m_pAcquireInfo.HandleKeys[0];
   auto* sc = m_StateTracking.GetState<SwapchainState>(swapchainKey);
   if (sc) {
-    sc->acquiredImages.insert(*command.m_pImageIndex.Value);
+    sc->AcquiredImages.insert(*command.m_pImageIndex.Value);
   }
   // The acquire signals the binary semaphore; track it (see vkAcquireNextImageKHR).
   if (command.m_pAcquireInfo.HandleKeys.size() > 1) {
@@ -1732,8 +1732,8 @@ void SubcaptureLayer::Post(vkCreateQueryPoolCommand& command) {
     return;
   }
   auto state = std::make_unique<QueryPoolState>();
-  state->key = command.m_pQueryPool.Key;
-  state->parentKey = command.m_device.Key;
+  state->Key = command.m_pQueryPool.Key;
+  state->ParentKey = command.m_device.Key;
   const uint64_t poolKey = command.m_pQueryPool.Key;
   uint32_t queryType = 0;
   uint32_t queryCount = 0;
@@ -1756,8 +1756,8 @@ void SubcaptureLayer::Post(vkCreateAccelerationStructureKHRCommand& command) {
     return;
   }
   auto state = std::make_unique<AccelerationStructureState>();
-  state->key = command.m_pAccelerationStructure.Key;
-  state->parentKey = command.m_device.Key;
+  state->Key = command.m_pAccelerationStructure.Key;
+  state->ParentKey = command.m_device.Key;
   StoreState(std::move(state), command);
 }
 
@@ -1770,8 +1770,8 @@ void SubcaptureLayer::Post(vkCreateAccelerationStructureNVCommand& command) {
     return;
   }
   auto state = std::make_unique<AccelerationStructureState>();
-  state->key = command.m_pAccelerationStructure.Key;
-  state->parentKey = command.m_device.Key;
+  state->Key = command.m_pAccelerationStructure.Key;
+  state->ParentKey = command.m_device.Key;
   StoreState(std::move(state), command);
 }
 
@@ -1786,8 +1786,8 @@ void SubcaptureLayer::Post(vkCreateDeferredOperationKHRCommand& command) {
     return;
   }
   auto state = std::make_unique<DeferredOperationState>();
-  state->key = command.m_pDeferredOperation.Key;
-  state->parentKey = command.m_device.Key;
+  state->Key = command.m_pDeferredOperation.Key;
+  state->ParentKey = command.m_device.Key;
   StoreState(std::move(state), command);
 }
 

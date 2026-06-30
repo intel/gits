@@ -311,12 +311,12 @@ bool GpuReadbackHelper::ReadBuffer(uint64_t deviceKey,
 namespace {
 
 struct FormatBlockInfo {
-  uint32_t blockWidth{1};
-  uint32_t blockHeight{1};
-  uint32_t bytesPerBlock{4};
-  bool isDepthStencil{false};
-  uint32_t depthBytes{0};   // 0 = no depth
-  uint32_t stencilBytes{0}; // 0 = no stencil
+  uint32_t BlockWidth{1};
+  uint32_t BlockHeight{1};
+  uint32_t BytesPerBlock{4};
+  bool IsDepthStencil{false};
+  uint32_t DepthBytes{0};   // 0 = no depth
+  uint32_t StencilBytes{0}; // 0 = no stencil
 };
 
 static FormatBlockInfo GetFormatBlockInfo(VkFormat fmt) {
@@ -459,15 +459,15 @@ static VkDeviceSize ComputeImageStagingLayout(VkFormat format,
       uint32_t h = std::max(1u, extent.height >> mip);
       uint32_t d = std::max(1u, extent.depth >> mip);
 
-      if (!fi.isDepthStencil) {
-        addRegion(VK_IMAGE_ASPECT_COLOR_BIT, layer, mip, w, h, d, fi.blockWidth, fi.blockHeight,
-                  fi.bytesPerBlock);
+      if (!fi.IsDepthStencil) {
+        addRegion(VK_IMAGE_ASPECT_COLOR_BIT, layer, mip, w, h, d, fi.BlockWidth, fi.BlockHeight,
+                  fi.BytesPerBlock);
       } else {
-        if (fi.depthBytes > 0) {
-          addRegion(VK_IMAGE_ASPECT_DEPTH_BIT, layer, mip, w, h, d, 1, 1, fi.depthBytes);
+        if (fi.DepthBytes > 0) {
+          addRegion(VK_IMAGE_ASPECT_DEPTH_BIT, layer, mip, w, h, d, 1, 1, fi.DepthBytes);
         }
-        if (fi.stencilBytes > 0) {
-          addRegion(VK_IMAGE_ASPECT_STENCIL_BIT, layer, mip, w, h, d, 1, 1, fi.stencilBytes);
+        if (fi.StencilBytes > 0) {
+          addRegion(VK_IMAGE_ASPECT_STENCIL_BIT, layer, mip, w, h, d, 1, 1, fi.StencilBytes);
         }
       }
     }
@@ -531,12 +531,12 @@ bool GpuReadbackHelper::ReadImage(uint64_t deviceKey,
   // Determine the aspect mask for layout transitions.
   const auto fi = GetFormatBlockInfo(format);
   VkImageAspectFlags transitionAspect = VK_IMAGE_ASPECT_COLOR_BIT;
-  if (fi.isDepthStencil) {
+  if (fi.IsDepthStencil) {
     transitionAspect = 0;
-    if (fi.depthBytes > 0) {
+    if (fi.DepthBytes > 0) {
       transitionAspect |= VK_IMAGE_ASPECT_DEPTH_BIT;
     }
-    if (fi.stencilBytes > 0) {
+    if (fi.StencilBytes > 0) {
       transitionAspect |= VK_IMAGE_ASPECT_STENCIL_BIT;
     }
   }

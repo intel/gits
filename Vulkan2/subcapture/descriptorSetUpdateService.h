@@ -27,38 +27,38 @@ class StateTrackingService;
 // validity can be checked against the live StateTrackingService at restore
 // time (analogous to the old Vulkan RestoreDescriptorSetsUpdates helpers).
 struct DescriptorElementData {
-  VkDescriptorType descriptorType{VK_DESCRIPTOR_TYPE_MAX_ENUM};
+  VkDescriptorType DescriptorType{VK_DESCRIPTOR_TYPE_MAX_ENUM};
 
   // Image descriptors (SAMPLER, COMBINED_IMAGE_SAMPLER, SAMPLED_IMAGE,
   //                    STORAGE_IMAGE, INPUT_ATTACHMENT)
-  uint64_t samplerKey{};   // non-zero for SAMPLER / COMBINED_IMAGE_SAMPLER
-  uint64_t imageViewKey{}; // non-zero for all image types except SAMPLER
-  VkImageLayout imageLayout{VK_IMAGE_LAYOUT_UNDEFINED};
+  uint64_t SamplerKey{};   // non-zero for SAMPLER / COMBINED_IMAGE_SAMPLER
+  uint64_t ImageViewKey{}; // non-zero for all image types except SAMPLER
+  VkImageLayout ImageLayout{VK_IMAGE_LAYOUT_UNDEFINED};
 
   // Buffer descriptors (UNIFORM_BUFFER, STORAGE_BUFFER, and dynamic variants)
-  uint64_t bufferKey{};
-  VkDeviceSize bufferOffset{};
-  VkDeviceSize bufferRange{VK_WHOLE_SIZE};
+  uint64_t BufferKey{};
+  VkDeviceSize BufferOffset{};
+  VkDeviceSize BufferRange{VK_WHOLE_SIZE};
 
   // Texel-buffer descriptors (UNIFORM_TEXEL_BUFFER, STORAGE_TEXEL_BUFFER)
-  uint64_t bufferViewKey{};
+  uint64_t BufferViewKey{};
 
   // Acceleration-structure descriptors (VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR)
-  uint64_t accelerationStructureKey{};
+  uint64_t AccelerationStructureKey{};
 };
 
 // Tracks all written array elements for one VkDescriptorSetLayoutBinding slot.
 struct DescriptorBindingData {
-  VkDescriptorType type{VK_DESCRIPTOR_TYPE_MAX_ENUM};
+  VkDescriptorType Type{VK_DESCRIPTOR_TYPE_MAX_ENUM};
 
   // For VK_DESCRIPTOR_TYPE_INLINE_UNIFORM_BLOCK: raw byte storage indexed by
   // byte offset from the beginning of the block.
-  std::vector<uint8_t> inlineUniformData;
+  std::vector<uint8_t> InlineUniformData;
 
   // For all other descriptor types: one entry per array element, indexed by
-  // array element index.  Entries with descriptorType == MAX_ENUM were never
+  // array element index.  Entries with DescriptorType == MAX_ENUM were never
   // explicitly written and are skipped during restore.
-  std::vector<DescriptorElementData> elements;
+  std::vector<DescriptorElementData> Elements;
 };
 
 // Tracks descriptor-set write and copy state accumulated between creation and

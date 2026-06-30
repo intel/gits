@@ -25,20 +25,20 @@ void MappedMemoryService::OnMapMemory(uint64_t memoryKey,
                                       VkMemoryMapFlags flags) {
   auto* state = m_StateTracking.GetState<DeviceMemoryState>(memoryKey);
   if (state) {
-    state->isMapped = true;
-    state->mappingOffset = offset;
-    state->mappingSize = size;
-    state->mappingFlags = flags;
+    state->IsMapped = true;
+    state->MappingOffset = offset;
+    state->MappingSize = size;
+    state->MappingFlags = flags;
   }
 }
 
 void MappedMemoryService::OnUnmapMemory(uint64_t memoryKey) {
   auto* state = m_StateTracking.GetState<DeviceMemoryState>(memoryKey);
   if (state) {
-    state->isMapped = false;
-    state->mappingOffset = 0;
-    state->mappingSize = 0;
-    state->mappingFlags = 0;
+    state->IsMapped = false;
+    state->MappingOffset = 0;
+    state->MappingSize = 0;
+    state->MappingFlags = 0;
   }
 }
 
@@ -48,29 +48,29 @@ void MappedMemoryService::OnMappedData(MappedDataMetaCommand& command) {
     return;
   }
   // Patch the shadow buffer in-place, matching DX12's shadowMemory_ approach.
-  // region.Offset is relative to the mapped range start (mappingOffset within
-  // the allocation), so the allocation-relative offset is mappingOffset + region.Offset.
+  // region.Offset is relative to the mapped range start (MappingOffset within
+  // the allocation), so the allocation-relative offset is MappingOffset + region.Offset.
   // Writing directly to the same position each time means only the latest data
   // for any byte range survives - no stale copies accumulate across frames.
-  if (state->allocationSize == 0) {
+  if (state->AllocationSize == 0) {
     return;
   }
-  if (state->shadowBuffer.empty()) {
-    state->shadowBuffer.assign(state->allocationSize, 0u);
-    state->shadowDirtyBegin = state->allocationSize;
-    state->shadowDirtyEnd = 0;
+  if (state->ShadowBuffer.empty()) {
+    state->ShadowBuffer.assign(state->AllocationSize, 0u);
+    state->ShadowDirtyBegin = state->AllocationSize;
+    state->ShadowDirtyEnd = 0;
   }
   for (const auto& region : command.m_Regions.Regions) {
-    const VkDeviceSize allocOffset = state->mappingOffset + region.Offset;
-    if (allocOffset + region.Size > state->allocationSize) {
+    const VkDeviceSize allocOffset = state->MappingOffset + region.Offset;
+    if (allocOffset + region.Size > state->AllocationSize) {
       LOG_WARNING << "Vulkan2 subcapture: MappedDataMeta region [" << allocOffset << ", "
                   << allocOffset + region.Size << ") exceeds allocationSize "
-                  << state->allocationSize << " - skipping";
+                  << state->AllocationSize << " - skipping";
       continue;
     }
-    std::memcpy(state->shadowBuffer.data() + allocOffset, region.Data, region.Size);
-    state->shadowDirtyBegin = std::min(state->shadowDirtyBegin, allocOffset);
-    state->shadowDirtyEnd = std::max(state->shadowDirtyEnd, allocOffset + region.Size);
+    std::memcpy(state->ShadowBuffer.data() + allocOffset, region.Data, region.Size);
+    state->ShadowDirtyBegin = std::min(state->ShadowDirtyBegin, allocOffset);
+    state->ShadowDirtyEnd = std::max(state->ShadowDirtyEnd, allocOffset + region.Size);
   }
 }
 

@@ -26,9 +26,9 @@ void QueryPoolStateService::RecordQueueFamily(uint64_t cbKey, uint64_t poolKey) 
   if (!cb) {
     return;
   }
-  auto* cmdPool = m_StateTracking.GetState<CommandPoolState>(cb->poolKey);
-  if (cmdPool && cmdPool->queueFamilyIndex != UINT32_MAX) {
-    qp->restoreQueueFamily = cmdPool->queueFamilyIndex;
+  auto* cmdPool = m_StateTracking.GetState<CommandPoolState>(cb->PoolKey);
+  if (cmdPool && cmdPool->QueueFamilyIndex != UINT32_MAX) {
+    qp->RestoreQueueFamily = cmdPool->QueueFamilyIndex;
   }
 }
 
@@ -39,10 +39,10 @@ void QueryPoolStateService::OnCreateQueryPool(uint64_t poolKey,
   if (!qp) {
     return;
   }
-  qp->queryType = queryType;
-  qp->queryCount = queryCount;
-  qp->resetQueries.assign(queryCount, false);
-  qp->usedQueries.assign(queryCount, false);
+  qp->QueryType = queryType;
+  qp->QueryCount = queryCount;
+  qp->ResetQueries.assign(queryCount, false);
+  qp->UsedQueries.assign(queryCount, false);
 }
 
 void QueryPoolStateService::OnCmdResetQueryPool(uint64_t cbKey,
@@ -53,7 +53,7 @@ void QueryPoolStateService::OnCmdResetQueryPool(uint64_t cbKey,
   if (!cb || !poolKey) {
     return;
   }
-  auto& reset = cb->resetQueriesAfterSubmit[poolKey];
+  auto& reset = cb->ResetQueriesAfterSubmit[poolKey];
   for (uint32_t i = firstQuery; i < firstQuery + queryCount; ++i) {
     reset.insert(i);
   }
@@ -65,7 +65,7 @@ void QueryPoolStateService::OnCmdUseQuery(uint64_t cbKey, uint64_t poolKey, uint
   if (!cb || !poolKey) {
     return;
   }
-  cb->usedQueriesAfterSubmit[poolKey].insert(query);
+  cb->UsedQueriesAfterSubmit[poolKey].insert(query);
   RecordQueueFamily(cbKey, poolKey);
 }
 
@@ -75,11 +75,11 @@ void QueryPoolStateService::MergeSecondary(uint64_t primaryKey, uint64_t seconda
   if (!prim || !sec) {
     return;
   }
-  for (const auto& [poolKey, indices] : sec->resetQueriesAfterSubmit) {
-    prim->resetQueriesAfterSubmit[poolKey].insert(indices.begin(), indices.end());
+  for (const auto& [poolKey, indices] : sec->ResetQueriesAfterSubmit) {
+    prim->ResetQueriesAfterSubmit[poolKey].insert(indices.begin(), indices.end());
   }
-  for (const auto& [poolKey, indices] : sec->usedQueriesAfterSubmit) {
-    prim->usedQueriesAfterSubmit[poolKey].insert(indices.begin(), indices.end());
+  for (const auto& [poolKey, indices] : sec->UsedQueriesAfterSubmit) {
+    prim->UsedQueriesAfterSubmit[poolKey].insert(indices.begin(), indices.end());
   }
 }
 
@@ -91,26 +91,26 @@ void QueryPoolStateService::ApplyCommandBuffer(uint64_t cbKey) {
   // Resets first, then uses: a query that is both reset and written by the same
   // submit ends up reset == true and used == true (it is available).  Matches
   // the legacy ordering in vkQueueSubmit_SD.
-  for (const auto& [poolKey, indices] : cb->resetQueriesAfterSubmit) {
+  for (const auto& [poolKey, indices] : cb->ResetQueriesAfterSubmit) {
     auto* qp = m_StateTracking.GetState<QueryPoolState>(poolKey);
     if (!qp) {
       continue;
     }
     for (uint32_t i : indices) {
-      if (i < qp->resetQueries.size()) {
-        qp->resetQueries[i] = true;
-        qp->usedQueries[i] = false;
+      if (i < qp->ResetQueries.size()) {
+        qp->ResetQueries[i] = true;
+        qp->UsedQueries[i] = false;
       }
     }
   }
-  for (const auto& [poolKey, indices] : cb->usedQueriesAfterSubmit) {
+  for (const auto& [poolKey, indices] : cb->UsedQueriesAfterSubmit) {
     auto* qp = m_StateTracking.GetState<QueryPoolState>(poolKey);
     if (!qp) {
       continue;
     }
     for (uint32_t i : indices) {
-      if (i < qp->usedQueries.size()) {
-        qp->usedQueries[i] = true;
+      if (i < qp->UsedQueries.size()) {
+        qp->UsedQueries[i] = true;
       }
     }
   }

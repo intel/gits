@@ -61,7 +61,7 @@ void DescriptorSetUpdateService::TrackWrite(uint64_t setKey,
   // keyIdx on entry already points past the dstSet key.
 
   auto& bindingData = m_Updates[setKey][write.dstBinding];
-  bindingData.type = write.descriptorType;
+  bindingData.Type = write.descriptorType;
 
   if (write.descriptorType == VK_DESCRIPTOR_TYPE_INLINE_UNIFORM_BLOCK) {
     // For inline uniform blocks, descriptorCount is the byte count and
@@ -70,10 +70,10 @@ void DescriptorSetUpdateService::TrackWrite(uint64_t setKey,
         write.pNext, VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_INLINE_UNIFORM_BLOCK));
     if (iub && iub->pData && iub->dataSize > 0) {
       const uint32_t endByte = write.dstArrayElement + iub->dataSize;
-      if (bindingData.inlineUniformData.size() < endByte) {
-        bindingData.inlineUniformData.resize(endByte, 0);
+      if (bindingData.InlineUniformData.size() < endByte) {
+        bindingData.InlineUniformData.resize(endByte, 0);
       }
-      std::memcpy(bindingData.inlineUniformData.data() + write.dstArrayElement, iub->pData,
+      std::memcpy(bindingData.InlineUniformData.data() + write.dstArrayElement, iub->pData,
                   iub->dataSize);
     }
     return;
@@ -81,46 +81,46 @@ void DescriptorSetUpdateService::TrackWrite(uint64_t setKey,
 
   // Grow the elements vector if needed.
   const uint32_t lastElem = write.dstArrayElement + write.descriptorCount;
-  if (bindingData.elements.size() < lastElem) {
-    bindingData.elements.resize(lastElem);
+  if (bindingData.Elements.size() < lastElem) {
+    bindingData.Elements.resize(lastElem);
   }
 
   for (uint32_t i = 0; i < write.descriptorCount; ++i) {
     const uint32_t elem = write.dstArrayElement + i;
-    auto& ed = bindingData.elements[elem];
-    ed.descriptorType = write.descriptorType;
+    auto& ed = bindingData.Elements[elem];
+    ed.DescriptorType = write.descriptorType;
 
     if (IsImageDescriptorType(write.descriptorType)) {
       // Key layout: [samplerKey?] [imageViewKey?] per element.
       if ((write.descriptorType == VK_DESCRIPTOR_TYPE_SAMPLER ||
            write.descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) &&
           keyIdx < handleKeys.size()) {
-        ed.samplerKey = handleKeys[keyIdx++];
+        ed.SamplerKey = handleKeys[keyIdx++];
       }
       if (write.descriptorType != VK_DESCRIPTOR_TYPE_SAMPLER && keyIdx < handleKeys.size()) {
-        ed.imageViewKey = handleKeys[keyIdx++];
+        ed.ImageViewKey = handleKeys[keyIdx++];
       }
       if (write.pImageInfo) {
-        ed.imageLayout = write.pImageInfo[i].imageLayout;
+        ed.ImageLayout = write.pImageInfo[i].imageLayout;
       }
     } else if (IsBufferDescriptorType(write.descriptorType)) {
       if (keyIdx < handleKeys.size()) {
-        ed.bufferKey = handleKeys[keyIdx++];
+        ed.BufferKey = handleKeys[keyIdx++];
       }
       if (write.pBufferInfo) {
-        ed.bufferOffset = write.pBufferInfo[i].offset;
-        ed.bufferRange = write.pBufferInfo[i].range;
+        ed.BufferOffset = write.pBufferInfo[i].offset;
+        ed.BufferRange = write.pBufferInfo[i].range;
       }
     } else if (IsTexelBufferDescriptorType(write.descriptorType)) {
       if (keyIdx < handleKeys.size()) {
-        ed.bufferViewKey = handleKeys[keyIdx++];
+        ed.BufferViewKey = handleKeys[keyIdx++];
       }
     } else if (write.descriptorType == VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR) {
       // AS keys are in the pNext-chain HandleKeys block (after the regular keys).
       // They are appended after all per-write image/buffer keys by
       // CollectHandleKeysInPNextChain, so we consume them here.
       if (keyIdx < handleKeys.size()) {
-        ed.accelerationStructureKey = handleKeys[keyIdx++];
+        ed.AccelerationStructureKey = handleKeys[keyIdx++];
       }
     }
   }
@@ -152,35 +152,35 @@ void DescriptorSetUpdateService::TrackCopy(const VkCopyDescriptorSet& copy,
 
   const auto& srcBind = srcBindIt->second;
   auto& dstBind = m_Updates[dstSetKey][copy.dstBinding];
-  dstBind.type = srcBind.type;
+  dstBind.Type = srcBind.Type;
 
-  if (srcBind.type == VK_DESCRIPTOR_TYPE_INLINE_UNIFORM_BLOCK) {
+  if (srcBind.Type == VK_DESCRIPTOR_TYPE_INLINE_UNIFORM_BLOCK) {
     // For inline uniform: copy byte range [srcArrayElement, srcArrayElement+descriptorCount).
     const uint32_t srcBegin = copy.srcArrayElement;
     const uint32_t srcEnd = srcBegin + copy.descriptorCount;
     const uint32_t dstBegin = copy.dstArrayElement;
     const uint32_t dstEnd = dstBegin + copy.descriptorCount;
 
-    if (srcEnd <= srcBind.inlineUniformData.size()) {
-      if (dstBind.inlineUniformData.size() < dstEnd) {
-        dstBind.inlineUniformData.resize(dstEnd, 0);
+    if (srcEnd <= srcBind.InlineUniformData.size()) {
+      if (dstBind.InlineUniformData.size() < dstEnd) {
+        dstBind.InlineUniformData.resize(dstEnd, 0);
       }
-      std::memcpy(dstBind.inlineUniformData.data() + dstBegin,
-                  srcBind.inlineUniformData.data() + srcBegin, copy.descriptorCount);
+      std::memcpy(dstBind.InlineUniformData.data() + dstBegin,
+                  srcBind.InlineUniformData.data() + srcBegin, copy.descriptorCount);
     }
     return;
   }
 
   const uint32_t srcEnd = copy.srcArrayElement + copy.descriptorCount;
   const uint32_t dstEnd = copy.dstArrayElement + copy.descriptorCount;
-  if (srcEnd > srcBind.elements.size()) {
+  if (srcEnd > srcBind.Elements.size()) {
     return;
   }
-  if (dstBind.elements.size() < dstEnd) {
-    dstBind.elements.resize(dstEnd);
+  if (dstBind.Elements.size() < dstEnd) {
+    dstBind.Elements.resize(dstEnd);
   }
   for (uint32_t i = 0; i < copy.descriptorCount; ++i) {
-    dstBind.elements[copy.dstArrayElement + i] = srcBind.elements[copy.srcArrayElement + i];
+    dstBind.Elements[copy.dstArrayElement + i] = srcBind.Elements[copy.srcArrayElement + i];
   }
 }
 
@@ -247,17 +247,17 @@ void DescriptorSetUpdateService::TrackTemplateUpdate(uint64_t setKey,
     }
 
     auto& bindingData = m_Updates[setKey][entry.dstBinding];
-    bindingData.type = entry.descriptorType;
+    bindingData.Type = entry.descriptorType;
 
     const uint32_t lastElem = entry.dstArrayElement + entry.descriptorCount;
-    if (bindingData.elements.size() < lastElem) {
-      bindingData.elements.resize(lastElem);
+    if (bindingData.Elements.size() < lastElem) {
+      bindingData.Elements.resize(lastElem);
     }
 
     for (uint32_t i = 0; i < entry.descriptorCount; ++i) {
       const uint32_t elem = entry.dstArrayElement + i;
-      auto& ed = bindingData.elements[elem];
-      ed.descriptorType = entry.descriptorType;
+      auto& ed = bindingData.Elements[elem];
+      ed.DescriptorType = entry.descriptorType;
 
       const size_t base = entry.offset + static_cast<size_t>(i) * entry.stride;
 
@@ -266,35 +266,35 @@ void DescriptorSetUpdateService::TrackTemplateUpdate(uint64_t setKey,
             entry.descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) {
           const size_t off = base + offsetof(VkDescriptorImageInfo, sampler);
           if (off + sizeof(uint64_t) <= pDataBytes.size()) {
-            std::memcpy(&ed.samplerKey, pDataBytes.data() + off, sizeof(uint64_t));
+            std::memcpy(&ed.SamplerKey, pDataBytes.data() + off, sizeof(uint64_t));
           }
         }
         if (entry.descriptorType != VK_DESCRIPTOR_TYPE_SAMPLER) {
           const size_t off = base + offsetof(VkDescriptorImageInfo, imageView);
           if (off + sizeof(uint64_t) <= pDataBytes.size()) {
-            std::memcpy(&ed.imageViewKey, pDataBytes.data() + off, sizeof(uint64_t));
+            std::memcpy(&ed.ImageViewKey, pDataBytes.data() + off, sizeof(uint64_t));
           }
         }
         const size_t layoutOff = base + offsetof(VkDescriptorImageInfo, imageLayout);
         if (layoutOff + sizeof(VkImageLayout) <= pDataBytes.size()) {
-          std::memcpy(&ed.imageLayout, pDataBytes.data() + layoutOff, sizeof(VkImageLayout));
+          std::memcpy(&ed.ImageLayout, pDataBytes.data() + layoutOff, sizeof(VkImageLayout));
         }
       } else if (IsBufferDescriptorType(entry.descriptorType)) {
         const size_t bufOff = base + offsetof(VkDescriptorBufferInfo, buffer);
         if (bufOff + sizeof(uint64_t) <= pDataBytes.size()) {
-          std::memcpy(&ed.bufferKey, pDataBytes.data() + bufOff, sizeof(uint64_t));
+          std::memcpy(&ed.BufferKey, pDataBytes.data() + bufOff, sizeof(uint64_t));
         }
         const size_t offOff = base + offsetof(VkDescriptorBufferInfo, offset);
         if (offOff + sizeof(VkDeviceSize) <= pDataBytes.size()) {
-          std::memcpy(&ed.bufferOffset, pDataBytes.data() + offOff, sizeof(VkDeviceSize));
+          std::memcpy(&ed.BufferOffset, pDataBytes.data() + offOff, sizeof(VkDeviceSize));
         }
         const size_t rangeOff = base + offsetof(VkDescriptorBufferInfo, range);
         if (rangeOff + sizeof(VkDeviceSize) <= pDataBytes.size()) {
-          std::memcpy(&ed.bufferRange, pDataBytes.data() + rangeOff, sizeof(VkDeviceSize));
+          std::memcpy(&ed.BufferRange, pDataBytes.data() + rangeOff, sizeof(VkDeviceSize));
         }
       } else if (IsTexelBufferDescriptorType(entry.descriptorType)) {
         if (base + sizeof(uint64_t) <= pDataBytes.size()) {
-          std::memcpy(&ed.bufferViewKey, pDataBytes.data() + base, sizeof(uint64_t));
+          std::memcpy(&ed.BufferViewKey, pDataBytes.data() + base, sizeof(uint64_t));
         }
       }
       // VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR: not currently supported
@@ -347,20 +347,20 @@ void DescriptorSetUpdateService::RestoreUpdates(uint64_t setKey,
   std::vector<uint64_t> writeHandleKeys;
 
   for (auto& [binding, bindData] : updIt->second) {
-    if (bindData.type == VK_DESCRIPTOR_TYPE_MAX_ENUM) {
+    if (bindData.Type == VK_DESCRIPTOR_TYPE_MAX_ENUM) {
       continue;
     }
 
-    if (bindData.type == VK_DESCRIPTOR_TYPE_INLINE_UNIFORM_BLOCK) {
-      if (bindData.inlineUniformData.empty()) {
+    if (bindData.Type == VK_DESCRIPTOR_TYPE_INLINE_UNIFORM_BLOCK) {
+      if (bindData.InlineUniformData.empty()) {
         continue;
       }
       // Inline uniform block: emit one write for the whole block.
       iubStorage.push_back(VkWriteDescriptorSetInlineUniformBlock{
           VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_INLINE_UNIFORM_BLOCK, // sType
           nullptr,                                                     // pNext
-          static_cast<uint32_t>(bindData.inlineUniformData.size()),    // dataSize
-          bindData.inlineUniformData.data()                            // pData
+          static_cast<uint32_t>(bindData.InlineUniformData.size()),    // dataSize
+          bindData.InlineUniformData.data()                            // pData
       });
       VkWriteDescriptorSet w{};
       w.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -368,7 +368,7 @@ void DescriptorSetUpdateService::RestoreUpdates(uint64_t setKey,
       w.dstSet = VK_NULL_HANDLE; // resolved from HandleKeys
       w.dstBinding = binding;
       w.dstArrayElement = 0;
-      w.descriptorCount = static_cast<uint32_t>(bindData.inlineUniformData.size());
+      w.descriptorCount = static_cast<uint32_t>(bindData.InlineUniformData.size());
       w.descriptorType = VK_DESCRIPTOR_TYPE_INLINE_UNIFORM_BLOCK;
 
       writeHandleKeys.push_back(setKey); // dstSet key
@@ -391,52 +391,52 @@ void DescriptorSetUpdateService::RestoreUpdates(uint64_t setKey,
       w.dstBinding = binding;
       w.dstArrayElement = runStart;
       w.descriptorCount = count;
-      w.descriptorType = bindData.type;
+      w.descriptorType = bindData.Type;
 
       writeHandleKeys.push_back(setKey); // dstSet key
 
-      if (IsImageDescriptorType(bindData.type)) {
+      if (IsImageDescriptorType(bindData.Type)) {
         imageInfoStorage.push_back(std::vector<VkDescriptorImageInfo>(count));
         auto& infos = imageInfoStorage.back();
         for (uint32_t i = 0; i < count; ++i) {
-          const auto& ed = bindData.elements[runStart + i];
+          const auto& ed = bindData.Elements[runStart + i];
           infos[i].sampler = VK_NULL_HANDLE;
           infos[i].imageView = VK_NULL_HANDLE;
-          infos[i].imageLayout = ed.imageLayout;
-          if (bindData.type == VK_DESCRIPTOR_TYPE_SAMPLER ||
-              bindData.type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) {
-            writeHandleKeys.push_back(ed.samplerKey);
+          infos[i].imageLayout = ed.ImageLayout;
+          if (bindData.Type == VK_DESCRIPTOR_TYPE_SAMPLER ||
+              bindData.Type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) {
+            writeHandleKeys.push_back(ed.SamplerKey);
           }
-          if (bindData.type != VK_DESCRIPTOR_TYPE_SAMPLER) {
-            writeHandleKeys.push_back(ed.imageViewKey);
+          if (bindData.Type != VK_DESCRIPTOR_TYPE_SAMPLER) {
+            writeHandleKeys.push_back(ed.ImageViewKey);
           }
         }
         w.pImageInfo = infos.data();
-      } else if (IsBufferDescriptorType(bindData.type)) {
+      } else if (IsBufferDescriptorType(bindData.Type)) {
         bufferInfoStorage.push_back(std::vector<VkDescriptorBufferInfo>(count));
         auto& infos = bufferInfoStorage.back();
         for (uint32_t i = 0; i < count; ++i) {
-          const auto& ed = bindData.elements[runStart + i];
+          const auto& ed = bindData.Elements[runStart + i];
           infos[i].buffer = VK_NULL_HANDLE;
-          infos[i].offset = ed.bufferOffset;
-          infos[i].range = ed.bufferRange;
-          writeHandleKeys.push_back(ed.bufferKey);
+          infos[i].offset = ed.BufferOffset;
+          infos[i].range = ed.BufferRange;
+          writeHandleKeys.push_back(ed.BufferKey);
         }
         w.pBufferInfo = infos.data();
-      } else if (IsTexelBufferDescriptorType(bindData.type)) {
+      } else if (IsTexelBufferDescriptorType(bindData.Type)) {
         texelViewStorage.push_back(std::vector<VkBufferView>(count, VK_NULL_HANDLE));
         for (uint32_t i = 0; i < count; ++i) {
-          writeHandleKeys.push_back(bindData.elements[runStart + i].bufferViewKey);
+          writeHandleKeys.push_back(bindData.Elements[runStart + i].BufferViewKey);
         }
         w.pTexelBufferView = texelViewStorage.back().data();
-      } else if (bindData.type == VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR) {
+      } else if (bindData.Type == VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR) {
         asStorage.push_back(std::vector<VkAccelerationStructureKHR>(count, VK_NULL_HANDLE));
         asWriteStorage.push_back(VkWriteDescriptorSetAccelerationStructureKHR{
             VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR, nullptr, count,
             asStorage.back().data()});
         w.pNext = &asWriteStorage.back();
         for (uint32_t i = 0; i < count; ++i) {
-          writeHandleKeys.push_back(bindData.elements[runStart + i].accelerationStructureKey);
+          writeHandleKeys.push_back(bindData.Elements[runStart + i].AccelerationStructureKey);
         }
       }
 
@@ -444,9 +444,9 @@ void DescriptorSetUpdateService::RestoreUpdates(uint64_t setKey,
       runStart = UINT32_MAX;
     };
 
-    for (uint32_t e = 0; e < static_cast<uint32_t>(bindData.elements.size()); ++e) {
-      const auto& ed = bindData.elements[e];
-      if (ed.descriptorType == VK_DESCRIPTOR_TYPE_MAX_ENUM) {
+    for (uint32_t e = 0; e < static_cast<uint32_t>(bindData.Elements.size()); ++e) {
+      const auto& ed = bindData.Elements[e];
+      if (ed.DescriptorType == VK_DESCRIPTOR_TYPE_MAX_ENUM) {
         flushRun(e);
         continue;
       }
@@ -456,55 +456,55 @@ void DescriptorSetUpdateService::RestoreUpdates(uint64_t setKey,
       // have not yet been processed by the iteration loop.  Call
       // EnsureRestored to pull each live referenced resource into the
       // current restore pass before checking IsRestored.  Resources whose
-      // state was already removed (destroyed by the app before subcapture
+      // state was already removed (Destroyed by the app before subcapture
       // start) are NOT resurrected: EnsureRestored is a no-op when no
       // state exists for the key, and IsRestored remains false, so the
       // write is omitted.  This matches the legacy Vulkan
       // RestoreDescriptorSetsUpdates behaviour ("Omitting restore of
       // vkUpdateDescriptorSets ... doesn't exist").
       bool valid = true;
-      if (IsImageDescriptorType(ed.descriptorType)) {
-        if (ed.descriptorType == VK_DESCRIPTOR_TYPE_SAMPLER ||
-            ed.descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) {
-          sts.EnsureRestored(ed.samplerKey);
-          if (ed.samplerKey != 0 && !sts.IsRestored(ed.samplerKey)) {
+      if (IsImageDescriptorType(ed.DescriptorType)) {
+        if (ed.DescriptorType == VK_DESCRIPTOR_TYPE_SAMPLER ||
+            ed.DescriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) {
+          sts.EnsureRestored(ed.SamplerKey);
+          if (ed.SamplerKey != 0 && !sts.IsRestored(ed.SamplerKey)) {
             LOG_TRACE << "Vulkan2 subcapture: omitting descriptor write for set key=" << setKey
                       << " binding=" << binding << " element=" << e
-                      << " because VkSampler key=" << ed.samplerKey << " was not restored.";
+                      << " because VkSampler key=" << ed.SamplerKey << " was not restored.";
             valid = false;
           }
         }
-        if (valid && ed.descriptorType != VK_DESCRIPTOR_TYPE_SAMPLER) {
-          sts.EnsureRestored(ed.imageViewKey);
-          if (ed.imageViewKey != 0 && !sts.IsRestored(ed.imageViewKey)) {
+        if (valid && ed.DescriptorType != VK_DESCRIPTOR_TYPE_SAMPLER) {
+          sts.EnsureRestored(ed.ImageViewKey);
+          if (ed.ImageViewKey != 0 && !sts.IsRestored(ed.ImageViewKey)) {
             LOG_TRACE << "Vulkan2 subcapture: omitting descriptor write for set key=" << setKey
                       << " binding=" << binding << " element=" << e
-                      << " because VkImageView key=" << ed.imageViewKey << " was not restored.";
+                      << " because VkImageView key=" << ed.ImageViewKey << " was not restored.";
             valid = false;
           }
         }
-      } else if (IsBufferDescriptorType(ed.descriptorType)) {
-        sts.EnsureRestored(ed.bufferKey);
-        if (ed.bufferKey != 0 && !sts.IsRestored(ed.bufferKey)) {
+      } else if (IsBufferDescriptorType(ed.DescriptorType)) {
+        sts.EnsureRestored(ed.BufferKey);
+        if (ed.BufferKey != 0 && !sts.IsRestored(ed.BufferKey)) {
           LOG_TRACE << "Vulkan2 subcapture: omitting descriptor write for set key=" << setKey
                     << " binding=" << binding << " element=" << e
-                    << " because VkBuffer key=" << ed.bufferKey << " was not restored.";
+                    << " because VkBuffer key=" << ed.BufferKey << " was not restored.";
           valid = false;
         }
-      } else if (IsTexelBufferDescriptorType(ed.descriptorType)) {
-        sts.EnsureRestored(ed.bufferViewKey);
-        if (ed.bufferViewKey != 0 && !sts.IsRestored(ed.bufferViewKey)) {
+      } else if (IsTexelBufferDescriptorType(ed.DescriptorType)) {
+        sts.EnsureRestored(ed.BufferViewKey);
+        if (ed.BufferViewKey != 0 && !sts.IsRestored(ed.BufferViewKey)) {
           LOG_TRACE << "Vulkan2 subcapture: omitting descriptor write for set key=" << setKey
                     << " binding=" << binding << " element=" << e
-                    << " because VkBufferView key=" << ed.bufferViewKey << " was not restored.";
+                    << " because VkBufferView key=" << ed.BufferViewKey << " was not restored.";
           valid = false;
         }
-      } else if (ed.descriptorType == VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR) {
-        sts.EnsureRestored(ed.accelerationStructureKey);
-        if (ed.accelerationStructureKey != 0 && !sts.IsRestored(ed.accelerationStructureKey)) {
+      } else if (ed.DescriptorType == VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR) {
+        sts.EnsureRestored(ed.AccelerationStructureKey);
+        if (ed.AccelerationStructureKey != 0 && !sts.IsRestored(ed.AccelerationStructureKey)) {
           LOG_TRACE << "Vulkan2 subcapture: omitting descriptor write for set key=" << setKey
                     << " binding=" << binding << " element=" << e
-                    << " because VkAccelerationStructureKHR key=" << ed.accelerationStructureKey
+                    << " because VkAccelerationStructureKHR key=" << ed.AccelerationStructureKey
                     << " was not restored.";
           valid = false;
         }
@@ -518,11 +518,11 @@ void DescriptorSetUpdateService::RestoreUpdates(uint64_t setKey,
         runStart = e;
       }
     }
-    flushRun(static_cast<uint32_t>(bindData.elements.size()));
+    flushRun(static_cast<uint32_t>(bindData.Elements.size()));
   }
 
   if (!writes.empty()) {
-    // Resolve device key via DescriptorSetState::parentKey (device key is set
+    // Resolve device key via DescriptorSetState::ParentKey (device key is set
     // directly - see SubcaptureLayer::Post(vkAllocateDescriptorSetsCommand)).
     // If the descriptor set state is gone (freed before subcapture), skip:
     // its key won't be in HandleMapService and playback would assert.
@@ -532,7 +532,7 @@ void DescriptorSetUpdateService::RestoreUpdates(uint64_t setKey,
                 << " because the descriptor set state no longer exists.";
       return;
     }
-    uint64_t deviceKey = dsState->parentKey;
+    uint64_t deviceKey = dsState->ParentKey;
 
     vkUpdateDescriptorSetsCommand cmd;
     cmd.m_device.Key = deviceKey;

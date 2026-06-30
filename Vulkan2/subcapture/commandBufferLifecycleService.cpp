@@ -21,17 +21,17 @@ CommandBufferLifecycleService::CommandBufferLifecycleService(StateTrackingServic
 
 // static
 void CommandBufferLifecycleService::ClearState(CommandBufferState& state) {
-  state.isRecording = false;
-  state.isExecutable = false;
-  state.beginFlags = 0;
-  state.dependencyKeys.clear();
-  state.beginCommandBuffer.clear();
-  state.endCommandBuffer.clear();
-  state.recordedCommands.clear();
-  state.recordedCommandIds.clear();
-  state.eventStatesAfterSubmit.clear();
-  state.resetQueriesAfterSubmit.clear();
-  state.usedQueriesAfterSubmit.clear();
+  state.IsRecording = false;
+  state.IsExecutable = false;
+  state.BeginFlags = 0;
+  state.DependencyKeys.clear();
+  state.BeginCommandBuffer.clear();
+  state.EndCommandBuffer.clear();
+  state.RecordedCommands.clear();
+  state.RecordedCommandIds.clear();
+  state.EventStatesAfterSubmit.clear();
+  state.ResetQueriesAfterSubmit.clear();
+  state.UsedQueriesAfterSubmit.clear();
 }
 
 void CommandBufferLifecycleService::OnAllocate(vkAllocateCommandBuffersCommand& command) {
@@ -52,9 +52,9 @@ void CommandBufferLifecycleService::OnAllocate(vkAllocateCommandBuffersCommand& 
 
   for (uint32_t i = 0; i < command.m_pCommandBuffers.Size; ++i) {
     auto state = std::make_unique<CommandBufferState>();
-    state->key = command.m_pCommandBuffers.Keys[i];
-    state->parentKey = command.m_device.Key;
-    state->poolKey = poolKey;
+    state->Key = command.m_pCommandBuffers.Keys[i];
+    state->ParentKey = command.m_device.Key;
+    state->PoolKey = poolKey;
 
     // Synthetic single-CB allocation command for this CB only.
     vkAllocateCommandBuffersCommand singleCmd;
@@ -71,10 +71,10 @@ void CommandBufferLifecycleService::OnAllocate(vkAllocateCommandBuffersCommand& 
     singleCmd.m_pCommandBuffers.Keys = {command.m_pCommandBuffers.Keys[i]};
     singleCmd.m_Return.Value = VK_SUCCESS;
 
-    state->creationCommandId = singleCmd.GetId();
+    state->CreationCommandId = singleCmd.GetId();
     uint32_t size = GetSize(singleCmd);
-    state->creationCommandBuffer.resize(size);
-    Encode(singleCmd, state->creationCommandBuffer.data());
+    state->CreationCommandBuffer.resize(size);
+    Encode(singleCmd, state->CreationCommandBuffer.data());
     m_StateTracking.StoreState(std::move(state));
   }
 }
@@ -95,12 +95,12 @@ void CommandBufferLifecycleService::OnBegin(vkBeginCommandBufferCommand& command
   }
   // vkBeginCommandBuffer implicitly resets the CB - clear any previous recording.
   ClearState(*state);
-  state->isRecording = true;
-  state->beginFlags = (command.m_pBeginInfo.Value ? command.m_pBeginInfo.Value->flags : 0);
+  state->IsRecording = true;
+  state->BeginFlags = (command.m_pBeginInfo.Value ? command.m_pBeginInfo.Value->flags : 0);
 
   uint32_t size = GetSize(command);
-  state->beginCommandBuffer.resize(size);
-  Encode(command, state->beginCommandBuffer.data());
+  state->BeginCommandBuffer.resize(size);
+  Encode(command, state->BeginCommandBuffer.data());
 }
 
 void CommandBufferLifecycleService::OnEnd(vkEndCommandBufferCommand& command) {
@@ -112,20 +112,20 @@ void CommandBufferLifecycleService::OnEnd(vkEndCommandBufferCommand& command) {
   // is not executable.  Keep our tracking consistent with that so RestoreState
   // does not try to submit an unrecordable CB.
   if (command.m_Return.Value != VK_SUCCESS) {
-    state->isRecording = false;
-    state->isExecutable = false;
-    state->endCommandBuffer.clear();
+    state->IsRecording = false;
+    state->IsExecutable = false;
+    state->EndCommandBuffer.clear();
     return;
   }
-  // The CB transitions from recording to executable.  Keep beginCommandBuffer
-  // and recordedCommands: an executable CB can be submitted multiple times
+  // The CB transitions from recording to executable.  Keep BeginCommandBuffer
+  // and RecordedCommands: an executable CB can be submitted multiple times
   // (unless it has ONE_TIME_SUBMIT_BIT) and must be re-closed during restore.
-  state->isRecording = false;
-  state->isExecutable = true;
+  state->IsRecording = false;
+  state->IsExecutable = true;
 
   uint32_t size = GetSize(command);
-  state->endCommandBuffer.resize(size);
-  Encode(command, state->endCommandBuffer.data());
+  state->EndCommandBuffer.resize(size);
+  Encode(command, state->EndCommandBuffer.data());
 }
 
 void CommandBufferLifecycleService::OnReset(uint64_t cbKey) {
@@ -140,11 +140,11 @@ void CommandBufferLifecycleService::OnResetPool(uint64_t poolKey) {
   // regardless of their individual reset flag.
   for (auto& [_, statePtr] : m_StateTracking.GetStates()) {
     ObjectState* objState = statePtr.get();
-    if (!objState || objState->creationCommandId != CommandId::ID_VKALLOCATECOMMANDBUFFERS) {
+    if (!objState || objState->CreationCommandId != CommandId::ID_VKALLOCATECOMMANDBUFFERS) {
       continue;
     }
     auto* cbState = static_cast<CommandBufferState*>(objState);
-    if (cbState->poolKey == poolKey) {
+    if (cbState->PoolKey == poolKey) {
       ClearState(*cbState);
     }
   }
@@ -157,11 +157,11 @@ void CommandBufferLifecycleService::OnDestroyPool(uint64_t poolKey) {
   std::vector<uint64_t> toRemove;
   for (auto& [key, statePtr] : m_StateTracking.GetStates()) {
     ObjectState* objState = statePtr.get();
-    if (!objState || objState->creationCommandId != CommandId::ID_VKALLOCATECOMMANDBUFFERS) {
+    if (!objState || objState->CreationCommandId != CommandId::ID_VKALLOCATECOMMANDBUFFERS) {
       continue;
     }
     auto* cbState = static_cast<CommandBufferState*>(objState);
-    if (cbState->poolKey == poolKey) {
+    if (cbState->PoolKey == poolKey) {
       toRemove.push_back(key);
     }
   }
@@ -175,20 +175,20 @@ void CommandBufferLifecycleService::TrackHandleDependency(uint64_t cbKey, uint64
     return;
   }
   auto* state = m_StateTracking.GetState<CommandBufferState>(cbKey);
-  if (state && state->isRecording) {
-    state->dependencyKeys.push_back(handleKey);
+  if (state && state->IsRecording) {
+    state->DependencyKeys.push_back(handleKey);
   }
 }
 
 void CommandBufferLifecycleService::TrackHandleDependencies(
     uint64_t cbKey, const std::vector<uint64_t>& handleKeys) {
   auto* state = m_StateTracking.GetState<CommandBufferState>(cbKey);
-  if (!state || !state->isRecording) {
+  if (!state || !state->IsRecording) {
     return;
   }
   for (uint64_t key : handleKeys) {
     if (key) {
-      state->dependencyKeys.push_back(key);
+      state->DependencyKeys.push_back(key);
     }
   }
 }

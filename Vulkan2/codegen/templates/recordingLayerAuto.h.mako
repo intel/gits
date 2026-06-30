@@ -64,14 +64,14 @@ private:
       return;
     }
     auto* state = m_StateTracking->GetState<CommandBufferState>(cmd.m_commandBuffer.Key);
-    if (!state || !state->isRecording) {
+    if (!state || !state->IsRecording) {
       return;
     }
     uint32_t sz = GetSize(cmd);
     std::vector<char> buf(sz);
     Encode(cmd, buf.data());
-    state->recordedCommandIds.push_back(static_cast<CommandId>(cmd.GetId()));
-    state->recordedCommands.push_back(std::move(buf));
+    state->RecordedCommandIds.push_back(static_cast<CommandId>(cmd.GetId()));
+    state->RecordedCommands.push_back(std::move(buf));
   }
 
   SubcaptureRecorder& m_Recorder;

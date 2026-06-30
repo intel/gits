@@ -45,8 +45,8 @@ public:
   // vkCmdBeginRenderPass records which images are bound as attachments so that
   // vkCmdEndRenderPass can apply the implicit finalLayout transitions.
   //
-  // renderPassKey:   key of the VkRenderPass (carries attachmentFinalLayouts)
-  // framebufferKey:  key of the VkFramebuffer (carries attachmentImageViewKeys)
+  // renderPassKey:   key of the VkRenderPass (carries AttachmentFinalLayouts)
+  // framebufferKey:  key of the VkFramebuffer (carries AttachmentImageViewKeys)
   void OnBeginRenderPass(uint64_t cbKey, uint64_t renderPassKey, uint64_t framebufferKey);
 
   // Apply the finalLayout of every render-pass attachment to currentLayout and

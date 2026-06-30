@@ -34,7 +34,7 @@ void ImageLayoutService::OnPipelineBarrier(const VkImageMemoryBarrier* barriers,
       if (b.newLayout != VK_IMAGE_LAYOUT_UNDEFINED) {
         auto* imgState = m_StateTracking.GetState<ImageState>(imageKey);
         if (imgState) {
-          imgState->currentLayout = b.newLayout;
+          imgState->CurrentLayout = b.newLayout;
         }
       }
     }
@@ -52,7 +52,7 @@ void ImageLayoutService::OnPipelineBarrier2(const VkDependencyInfo& depInfo,
     if (b.newLayout != VK_IMAGE_LAYOUT_UNDEFINED) {
       auto* imgState = m_StateTracking.GetState<ImageState>(handleKeys[keyIdx]);
       if (imgState) {
-        imgState->currentLayout = b.newLayout;
+        imgState->CurrentLayout = b.newLayout;
       }
     }
   }
@@ -74,8 +74,8 @@ void ImageLayoutService::OnBeginRenderPass(uint64_t cbKey,
   ImageLayoutPairs& pairs = m_ActiveRenderPasses[cbKey];
   pairs.clear();
 
-  const auto& finalLayouts = rp->attachmentFinalLayouts;
-  const auto& ivKeys = fb->attachmentImageViewKeys;
+  const auto& finalLayouts = rp->AttachmentFinalLayouts;
+  const auto& ivKeys = fb->AttachmentImageViewKeys;
   const uint32_t count = static_cast<uint32_t>(std::min(finalLayouts.size(), ivKeys.size()));
 
   for (uint32_t i = 0; i < count; ++i) {
@@ -84,13 +84,13 @@ void ImageLayoutService::OnBeginRenderPass(uint64_t cbKey,
       continue; // null slot (imageless framebuffer placeholder)
     }
     const auto* iv = m_StateTracking.GetState<ImageViewState>(ivKey);
-    if (!iv || !iv->imageKey) {
+    if (!iv || !iv->ImageKey) {
       continue;
     }
     // Only record non-UNDEFINED final layouts - UNDEFINED means "contents discarded,
     // no specific layout guaranteed", so we leave currentLayout unchanged.
     if (finalLayouts[i] != VK_IMAGE_LAYOUT_UNDEFINED) {
-      pairs.emplace_back(iv->imageKey, finalLayouts[i]);
+      pairs.emplace_back(iv->ImageKey, finalLayouts[i]);
     }
   }
 }
@@ -112,7 +112,7 @@ void ImageLayoutService::ApplyPendingFinalLayouts(uint64_t cbKey) {
   for (const auto& [imageKey, finalLayout] : it->second) {
     auto* imgState = m_StateTracking.GetState<ImageState>(imageKey);
     if (imgState) {
-      imgState->currentLayout = finalLayout;
+      imgState->CurrentLayout = finalLayout;
     }
   }
 }

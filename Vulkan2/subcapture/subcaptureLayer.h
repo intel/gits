@@ -173,8 +173,8 @@ public:
 
   // ---- vkCmd* dependency tracking -------------------------------------
   // When RecordingLayer stores a pre-range vkCmd* command into
-  // CommandBufferState::recordedCommands, the objects it references are not
-  // automatically added to dependencyKeys.  These Post hooks fill that gap so
+  // CommandBufferState::RecordedCommands, the objects it references are not
+  // automatically added to DependencyKeys.  These Post hooks fill that gap so
   // RestoreOne restores every referenced object before emitting the CB.
   void Post(vkCmdBeginRenderPassCommand& command) override;
   void Post(vkCmdBeginRenderPass2Command& command) override;
@@ -291,7 +291,7 @@ private:
   // command buffer that is not currently recording.
   void RecordCmdEventState(uint64_t cbKey, uint64_t eventKey, bool signaled);
 
-  // Encode the creation command into state->creationCommandBuffer and transfer
+  // Encode the creation command into state->CreationCommandBuffer and transfer
   // ownership of state into the persistent tracking table.
   //
   // Only the encoded bytes are stored, not a decoded TCommand, because all
@@ -305,10 +305,10 @@ private:
   // is being written.
   template <typename TCommand>
   void StoreState(std::unique_ptr<ObjectState> state, const TCommand& command) {
-    state->creationCommandId = command.GetId();
+    state->CreationCommandId = command.GetId();
     uint32_t size = GetSize(command);
-    state->creationCommandBuffer.resize(size);
-    Encode(command, state->creationCommandBuffer.data());
+    state->CreationCommandBuffer.resize(size);
+    Encode(command, state->CreationCommandBuffer.data());
     m_StateTracking.StoreState(std::move(state));
   }
 
@@ -348,10 +348,10 @@ private:
   // Pending window geometry: set when a CreateWindowMetaCommand is observed,
   // consumed when the next surface creation command is processed.
   struct PendingWindowInfo {
-    int32_t x{}, y{}, width{}, height{};
-    bool visible{true};
-    uint64_t hwndKey{}, hinstanceKey{};
-    bool valid{false};
+    int32_t X{}, Y{}, Width{}, Height{};
+    bool Visible{true};
+    uint64_t HwndKey{}, HinstanceKey{};
+    bool Valid{false};
   };
   PendingWindowInfo m_PendingWindow;
 

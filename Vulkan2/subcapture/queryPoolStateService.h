@@ -29,7 +29,7 @@ class StateTrackingService;
 //
 // Queries take effect on the GPU at submit time, not at vkCmd* record time, so
 // the per-command-buffer effects are buffered in CommandBufferState
-// (reset/usedQueriesAfterSubmit) and applied to the pool when the CB is
+// (reset/UsedQueriesAfterSubmit) and applied to the pool when the CB is
 // submitted.  Mirrors the legacy vulkanStateTracking / RestoreQueryPool logic.
 //
 // Extracted from SubcaptureLayer / StateTrackingService to keep all query-pool

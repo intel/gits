@@ -99,7 +99,7 @@ public:
   // Store ownership of a newly created object state.
   void StoreState(std::unique_ptr<ObjectState> state);
 
-  // Remove a destroyed object (if it exists).
+  // Remove a Destroyed object (if it exists).
   void RemoveState(uint64_t key);
 
   // Retrieve a typed state pointer; returns nullptr if not found or wrong type.
@@ -121,7 +121,7 @@ public:
     return it->second.get();
   }
 
-  // Returns true if key is currently tracked (not yet destroyed).
+  // Returns true if key is currently tracked (not yet Destroyed).
   bool HasState(uint64_t key) const;
 
   // Returns true if key was successfully restored during the current pass
@@ -129,7 +129,7 @@ public:
   // HandleMapService).  Use this instead of HasState() when checking
   // whether a resource is safe to reference in a descriptor write: an object
   // may still be in m_States but have failed to restore (e.g. an image view
-  // whose backing image was destroyed before the subcapture point).
+  // whose backing image was Destroyed before the subcapture point).
   bool IsRestored(uint64_t key) const {
     return m_RestoredThisPass.count(key) != 0;
   }
@@ -137,11 +137,11 @@ public:
   // Force-restore the live state at key now (idempotent).  Used by
   // collaborators (e.g. DescriptorSetUpdateService::RestoreUpdates) to pull
   // in resources referenced indirectly via tracked state that are not on
-  // the standard dependencyKeys chain, so that the referenced object lands
+  // the standard DependencyKeys chain, so that the referenced object lands
   // in m_RestoredThisPass before its enclosing object is emitted.
   //
-  // No-op when the key is unknown (e.g. the resource was destroyed by the
-  // app and its state was removed): destroyed resources are NOT resurrected
+  // No-op when the key is unknown (e.g. the resource was Destroyed by the
+  // app and its state was removed): Destroyed resources are NOT resurrected
   // and the caller's subsequent IsRestored() check returns false, matching
   // legacy "omit on missing" semantics.
   void EnsureRestored(uint64_t key);
@@ -252,7 +252,7 @@ private:
   // skipped.  Primaries that call vkCmdExecuteCommands must not replay their own
   // recording when a secondary is in this set (transitive failure propagation).
   std::unordered_set<uint64_t> m_CommandBuffersRecordingReplaySkipped;
-  // keys of destroyed objects that were transiently re-created as pipeline
+  // keys of Destroyed objects that were transiently re-created as pipeline
   // dependencies; destroy commands for these are emitted after all pipelines
   // have been created, mirroring the old Vulkan state-restore approach.
   std::unordered_set<uint64_t> m_TransientlyRestored;
