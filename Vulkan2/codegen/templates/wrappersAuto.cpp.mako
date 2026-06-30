@@ -96,7 +96,10 @@ ${command.return_type} ${command.name}Wrapper(
 	% for param in command.params:
 	% if param.is_handle_output:
 	% if command.return_type != 'void':
-	if (result == VK_SUCCESS) {
+<%
+	success_condition = ' || '.join(f'result == {code}' for code in command.success_codes) if command.success_codes else 'result == VK_SUCCESS'
+%>
+	if (${success_condition}) {
 	  UpdateOutputHandle(manager, command.m_${param.name});
 	}
 	% else:
@@ -104,7 +107,10 @@ ${command.return_type} ${command.name}Wrapper(
 	% endif
 	% elif param.is_struct_with_output_handles and param.is_pointer and not param.is_const:
 	% if command.return_type != 'void':
-	if (result == VK_SUCCESS) {
+<%
+	success_condition = ' || '.join(f'result == {code}' for code in command.success_codes) if command.success_codes else 'result == VK_SUCCESS'
+%>
+	if (${success_condition}) {
 	  UpdateOutputHandle(manager, command.m_${param.name});
 	}
 	% else:
@@ -112,7 +118,10 @@ ${command.return_type} ${command.name}Wrapper(
 	% endif
 	% elif param.is_struct_with_handles and param.is_pointer and not param.is_const:
 	% if command.return_type != 'void':
-	if (result == VK_SUCCESS) {
+<%
+	success_condition = ' || '.join(f'result == {code}' for code in command.success_codes) if command.success_codes else 'result == VK_SUCCESS'
+%>
+	if (${success_condition}) {
 	  UpdateHandle(manager, command.m_${param.name});
 	}
 	% else:

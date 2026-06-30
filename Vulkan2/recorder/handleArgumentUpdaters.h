@@ -88,6 +88,14 @@ void UpdateOutputHandle(CaptureManager& manager, HandleArrayOutputArgument<T>& a
     return;
   }
   for (uint32_t i = 0; i < arg.Size; ++i) {
+    // A null produced handle (e.g. VK_PIPELINE_COMPILE_REQUIRED_EXT or
+    // VK_INCOMPATIBLE_SHADER_BINARY_EXT for this batch entry) gets no key:
+    // leave Keys[i] at its default null GITSKey and create no mapping. This
+    // mirrors the player-side skip added in 665e7991e so the per-index Keys
+    // slots stay aligned between record and replay.
+    if (!arg.Value[i]) {
+      continue;
+    }
     auto handle = reinterpret_cast<std::uint64_t>(arg.Value[i]);
     GITSKey existingKey = HandleMapService::Get().TryGetKey(handle);
     if (existingKey) {
