@@ -66,6 +66,7 @@ third_party/*
 !third_party/patch
 !third_party/IntelExtensions
 !third_party/dependencies.yaml
+venv/
 
 # GITS config
 recorder/gits_config.txt
@@ -136,3 +137,4 @@ ccode/**/*Auto.cpp
 ccode/**/*Auto.h
 ccode/generated
 ccode/Build
+CCodeFiles/

@@ -36,7 +36,6 @@ set_target_properties(fastOutput PROPERTIES FOLDER "common")
 
 if(WIN32)
   add_subdirectory(traceIpc)
+elseif(UNIX)
+  add_subdirectory(traceIpcLinux)
 endif()
-
-
-

@@ -15,6 +15,9 @@
 #include <memory>
 #include <string>
 #include <fstream>
+#ifdef __linux__
+#include <semaphore.h>
+#endif
 
 namespace gits {
 
@@ -135,6 +138,18 @@ private:
     void* Buf;
     void* MapFile;
     void* Event;
+  } m_FlushInfo{};
+#elif defined(__linux__)
+  void InitializeIpcFlush();
+  static constexpr const char* SEM_BASE_NAME = "/GitsGraphicsAPITraceSem";
+  static constexpr const char* SHARED_MEMORY_BASE_NAME = "/GitsGraphicsAPITraceShm";
+  struct FlushInfo {
+    bool Initialized = false;
+    void* Buf = MAP_FAILED;
+    int ShmFd = -1;
+    sem_t* Sem = SEM_FAILED;
+    std::string ShmName;
+    std::string SemName;
   } m_FlushInfo{};
 #endif
   FlushMethod m_FlushMethod;
