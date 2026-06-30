@@ -15,46 +15,6 @@
 namespace gits {
 namespace vulkan {
 
-FastOStream& operator<<(FastOStream& stream, const VkDependencyInfo& value) {
-  stream << "VkDependencyInfo{";
-  stream << value.sType << ", ";
-  stream << value.pNext << ", ";
-  PrintVkDependencyFlags(stream, value.dependencyFlags) << ", ";
-
-  if (value.memoryBarrierCount > 0) {
-    stream << value.memoryBarrierCount << ", ";
-    stream << value.pMemoryBarriers << ", ";
-  } else {
-    stream << "0, nullptr, ";
-  }
-
-  if (value.bufferMemoryBarrierCount > 0) {
-    stream << value.bufferMemoryBarrierCount << ", ";
-    stream << value.pBufferMemoryBarriers << ", ";
-  } else {
-    stream << "0, nullptr, ";
-  }
-
-  if (value.imageMemoryBarrierCount > 0) {
-    stream << value.imageMemoryBarrierCount << ", ";
-    stream << value.pImageMemoryBarriers;
-  } else {
-    stream << "0, nullptr";
-  }
-
-  stream << "}";
-  return stream;
-}
-
-FastOStream& operator<<(FastOStream& stream, const VkDependencyInfo* value) {
-  if (value) {
-    stream << *value;
-  } else {
-    stream << "nullptr";
-  }
-  return stream;
-}
-
 FastOStream& operator<<(FastOStream& stream, const VkGraphicsPipelineCreateInfo& value) {
   stream << "VkGraphicsPipelineCreateInfo{";
   stream << value.sType << ", ";
@@ -110,154 +70,7 @@ FastOStream& operator<<(FastOStream& stream, const VkGraphicsPipelineCreateInfo&
   return stream;
 }
 
-FastOStream& operator<<(FastOStream& stream, const VkPipelineVertexInputStateCreateInfo& value) {
-  stream << "VkPipelineVertexInputStateCreateInfo{";
-  stream << value.sType << ", ";
-  stream << value.pNext << ", ";
-  stream << value.flags << ", ";
-  stream << value.vertexBindingDescriptionCount << ", ";
-  if (value.vertexBindingDescriptionCount) {
-    stream << value.pVertexBindingDescriptions << ", ";
-  } else {
-    stream << "nullptr, ";
-  }
-  stream << value.vertexAttributeDescriptionCount << ", ";
-  if (value.vertexAttributeDescriptionCount) {
-    stream << value.pVertexAttributeDescriptions;
-  } else {
-    stream << "nullptr";
-  }
-  stream << "}";
-  return stream;
-}
-
-FastOStream& operator<<(FastOStream& stream, const VkPipelineVertexInputStateCreateInfo* value) {
-  if (value) {
-    stream << *value;
-  } else {
-    stream << "nullptr";
-  }
-  return stream;
-}
-
 FastOStream& operator<<(FastOStream& stream, const VkGraphicsPipelineCreateInfo* value) {
-  if (value) {
-    stream << *value;
-  } else {
-    stream << "nullptr";
-  }
-  return stream;
-}
-
-FastOStream& operator<<(FastOStream& stream, const VkPipelineColorBlendStateCreateInfo& value) {
-  stream << "VkPipelineColorBlendStateCreateInfo{";
-  stream << value.sType << ", ";
-  stream << value.pNext << ", ";
-  stream << value.flags << ", ";
-  stream << value.logicOpEnable << ", ";
-  stream << value.logicOp << ", ";
-  stream << value.attachmentCount << ", ";
-  if (value.attachmentCount) {
-    stream << value.pAttachments << ", ";
-  } else {
-    stream << "nullptr, ";
-  }
-  PrintStaticArray(stream, value.blendConstants);
-  stream << "}";
-  return stream;
-}
-
-FastOStream& operator<<(FastOStream& stream, const VkPipelineColorBlendStateCreateInfo* value) {
-  if (value) {
-    stream << *value;
-  } else {
-    stream << "nullptr";
-  }
-  return stream;
-}
-
-FastOStream& operator<<(FastOStream& stream, const VkPipelineDynamicStateCreateInfo& value) {
-  stream << "VkPipelineDynamicStateCreateInfo{";
-  stream << value.sType << ", ";
-  stream << value.pNext << ", ";
-  stream << value.flags << ", ";
-  stream << value.dynamicStateCount << ", ";
-  if (value.dynamicStateCount) {
-    stream << value.pDynamicStates;
-  } else {
-    stream << "nullptr";
-  }
-  stream << "}";
-  return stream;
-}
-
-FastOStream& operator<<(FastOStream& stream, const VkPipelineDynamicStateCreateInfo* value) {
-  if (value) {
-    stream << *value;
-  } else {
-    stream << "nullptr";
-  }
-  return stream;
-}
-
-FastOStream& operator<<(FastOStream& stream, const VkRenderPassBeginInfo& value) {
-  stream << "VkRenderPassBeginInfo{";
-  stream << value.sType << ", ";
-  stream << value.pNext << ", ";
-  stream << value.renderPass << ", ";
-  stream << value.framebuffer << ", ";
-  stream << value.renderArea << ", ";
-  stream << value.clearValueCount << ", ";
-  if (value.clearValueCount) {
-    stream << value.pClearValues;
-  } else {
-    stream << "nullptr";
-  }
-  stream << "}";
-  return stream;
-}
-
-FastOStream& operator<<(FastOStream& stream, const VkRenderPassBeginInfo* value) {
-  if (value) {
-    stream << *value;
-  } else {
-    stream << "nullptr";
-  }
-  return stream;
-}
-
-FastOStream& operator<<(FastOStream& stream, const VkSubmitInfo& value) {
-  stream << "VkSubmitInfo{";
-  stream << value.sType << ", ";
-  stream << value.pNext << ", ";
-
-  if (value.waitSemaphoreCount > 0) {
-    stream << value.waitSemaphoreCount << ", ";
-    stream << value.pWaitSemaphores << ", ";
-    PrintVkPipelineStageFlags(stream, value.pWaitDstStageMask) << ", ";
-  } else {
-    stream << "0, nullptr, nullptr, ";
-  }
-
-  if (value.commandBufferCount) {
-    stream << value.commandBufferCount << ", ";
-    stream << value.pCommandBuffers << ", ";
-  } else {
-    stream << "0, nullptr, ";
-  }
-
-  if (value.signalSemaphoreCount > 0) {
-    stream << value.signalSemaphoreCount << ", ";
-    stream << value.pSignalSemaphores;
-  } else {
-    stream << "0, nullptr";
-  }
-
-  stream << "}";
-  return stream;
-}
-
-FastOStream& operator<<(FastOStream& stream, const VkSubmitInfo* value) {
   if (value) {
     stream << *value;
   } else {
@@ -298,6 +111,37 @@ FastOStream& operator<<(FastOStream& stream, const VkWriteDescriptorSet& value) 
 }
 
 FastOStream& operator<<(FastOStream& stream, const VkWriteDescriptorSet* value) {
+  if (value) {
+    stream << *value;
+  } else {
+    stream << "nullptr";
+  }
+  return stream;
+}
+
+FastOStream& operator<<(FastOStream& stream, const VkSubmitInfo& value) {
+  stream << "VkSubmitInfo{";
+  stream << value.sType << ", ";
+  stream << value.pNext << ", ";
+  stream << value.waitSemaphoreCount << ", ";
+  if (value.waitSemaphoreCount > 0) {
+    stream << value.pWaitSemaphores << ", ";
+    // pWaitDstStageMask is only valid when waitSemaphoreCount > 0
+    PrintVkPipelineStageFlags(stream, value.pWaitDstStageMask) << ", ";
+  }
+  stream << value.commandBufferCount << ", ";
+  if (value.commandBufferCount > 0) {
+    stream << value.pCommandBuffers << ", ";
+  }
+  stream << value.signalSemaphoreCount << ", ";
+  if (value.signalSemaphoreCount > 0) {
+    stream << value.pSignalSemaphores;
+  }
+  stream << "}";
+  return stream;
+}
+
+FastOStream& operator<<(FastOStream& stream, const VkSubmitInfo* value) {
   if (value) {
     stream << *value;
   } else {
