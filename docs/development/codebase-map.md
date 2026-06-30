@@ -25,7 +25,8 @@ Each graphics API has its own top-level directory with recorder, player, and API
 | Directory | Contents |
 |-----------|----------|
 | `DirectX/` | DirectX 12 recorder, player, layers (e.g. resource_dumping, subcapture, ccode), and common utilities. Windows x64 only. |
-| `Vulkan/` | Vulkan implementation. |
+| `Vulkan/` | Legacy Vulkan implementation (default recording/replay backend). |
+| `Vulkan2/` | New Vulkan implementation. Registered alongside `Vulkan/` by default (explicit layer; enable one at a time). Streams are tagged `API_VULKAN2` and replay through the Vulkan2 path. |
 | `OpenGL/` | OpenGL implementation. |
 | `OpenCL/` | OpenCL implementation. |
 | `LevelZero/` | Intel oneAPI Level Zero implementation. |

@@ -83,4 +83,16 @@ cmake --install . --config Release --prefix dist
 > Note:
 > If you move the install folder somewhere else, you will need to manually adjust paths in config files.
 
+## Optional CMake options
+
+| Option | Default | Description |
+| ------ | ------- | ----------- |
+| `REGISTER_VULKAN2_LAYER` | `ON` | Windows only. When `ON` (default), the install step registers the new Vulkan2 GITS recorder layer (`Recorder\VulkanLayer2\gits_recorder.json`) with the OS alongside the legacy layer. Both are explicit layers, so neither records until enabled - see [Vulkan: legacy vs Vulkan2 backends](usage.md#vulkan-legacy-vs-vulkan2-backends). Set to `OFF` to register the legacy Vulkan layer only. |
+
+Example (register the legacy Vulkan layer only on Windows):
+
+```batch
+cmake -A x64 -DREGISTER_VULKAN2_LAYER=OFF ..\
+```
+
 Find how to use GITS [here](usage.md).

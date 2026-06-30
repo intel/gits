@@ -37,6 +37,12 @@ if(WITH_VULKAN)
   add_definitions(-DWITH_VULKAN)
 endif()
 
+# Register the new Vulkan2 GITS recorder layer with the OS at install time.
+# ON by default: both the legacy and the Vulkan2 layers are registered and
+# available side by side. They are explicit layers, so neither records until a
+# user explicitly enables it. Turn this OFF to register the legacy layer only.
+option(REGISTER_VULKAN2_LAYER "Register the Vulkan2 GITS recorder layer at install time" ON)
+
 option(WITH_OPENCL "Build OpenCL component" ON)
 if(WITH_OPENCL)
   add_definitions(-DWITH_OPENCL)
@@ -331,6 +337,15 @@ if(WIN32)
     set(INSTALL_GITS_VK_LAYER ${CMAKE_CURRENT_SOURCE_DIR}/Scripts/Installer/install_vulkan_layer.bat)
 	set(LAYER_DLL_PATH "Recorder\\\\${VulkanLayer_INSTALL_SUBDIR}")
     install(CODE "execute_process(COMMAND cmd /c \"${INSTALL_GITS_VK_LAYER}\" \"${PLATFORM}\" \"\${CMAKE_INSTALL_PREFIX}\\\\${LAYER_DLL_PATH}\\\\\")")
+    # ON by default (REGISTER_VULKAN2_LAYER): also register the Vulkan2 recorder
+    # layer alongside the legacy one. Both are explicit layers, so neither
+    # records until a user explicitly enables it. Configure with
+    # -DREGISTER_VULKAN2_LAYER=OFF to register the legacy layer only.
+    if(REGISTER_VULKAN2_LAYER)
+      set(INSTALL_GITS_VK_LAYER2 ${CMAKE_CURRENT_SOURCE_DIR}/Scripts/Installer/install_vulkan2_layer.bat)
+      set(LAYER2_DLL_PATH "Recorder\\\\${VulkanLayer2_INSTALL_SUBDIR}")
+      install(CODE "execute_process(COMMAND cmd /c \"${INSTALL_GITS_VK_LAYER2}\" \"${PLATFORM}\" \"\${CMAKE_INSTALL_PREFIX}\\\\${LAYER2_DLL_PATH}\\\\\")")
+    endif()
   endif()
 endif()
 

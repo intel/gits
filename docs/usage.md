@@ -39,6 +39,34 @@ To record the API-calls from an application you first need to identify the *corr
 
 Once the files are in place you simply start the application normally while GITS initiates the recording. For information on how to adjust parameters of the recording please see the [configuration section](#configuration).
 
+## Vulkan: legacy vs Vulkan2 backends
+
+GITS ships two Vulkan capture/replay backends that are installed side by side:
+
+- **Legacy Vulkan** (`Vulkan/` module): the original backend.
+- **Vulkan2** (`Vulkan2/` module): the newer backend.
+
+Both the legacy and Vulkan2 GITS recorder layers are registered and available by default. They are **explicit** layers, so neither records until you enable it. Enable **exactly one** per application run:
+
+- In **Vulkan Configurator**, set one layer to On and leave the other Application-Controlled/Off.
+- Or set `VK_INSTANCE_LAYERS` to a single layer name.
+
+Never force-enable both layers, and do not combine a GITS layer with the GITS `vulkan-1.dll` interceptor - either combination chains two recorders and produces a corrupt stream.
+
+The layer names are `VK_LAYER_INTEL_vulkan_GITS_recorder` (legacy, in `Recorder/VulkanLayer`) and `VK_LAYER_INTEL_vulkan_GITS_recorder_2` (Vulkan2, in `Recorder/VulkanLayer2`).
+
+Per-OS notes:
+
+- **Windows**: both layers are registered automatically at install time. To register the legacy layer only, configure with `-DREGISTER_VULKAN2_LAYER=OFF` before building, or untick the *"Register the Vulkan2 GITS recorder layer"* task in the installer. (`Scripts/Installer/install_vulkan2_layer.bat <Win32|x64> <path-to>\Recorder\VulkanLayer2\` registers the Vulkan2 layer manually.)
+- **Linux**: point the loader at the layer you want, for example Vulkan2:
+
+```bash
+export VK_LAYER_PATH=<install>/Recorder/VulkanLayer2
+export VK_INSTANCE_LAYERS=VK_LAYER_INTEL_vulkan_GITS_recorder_2
+```
+
+> **Replay must match the recording backend.** A stream is tagged in its header with the producing API (`API_VULKAN` for legacy, `API_VULKAN2` for Vulkan2). `gitsPlayer` reads this tag and automatically dispatches a legacy stream to the legacy replay path and a Vulkan2 stream to the Vulkan2 replay path, so you do not select the backend at playback time.
+
 # Playback
 
 To playback a binary stream you can use the commandline to run `gitsPlayer` with the arguments as needed.
