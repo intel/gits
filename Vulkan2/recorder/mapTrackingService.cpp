@@ -14,10 +14,16 @@
 #include <csignal>
 #include <sys/mman.h>
 
-static void SigsegvHandler(int sig, siginfo_t* si, void* unused) {
+static void SigsegvHandler(int sig, siginfo_t* si, [[maybe_unused]] void* unused) {
   void* faultAddr = si->si_addr;
+  bool isWrite = true;
+
+#if defined(__x86_64__) || defined(__i386__)
+  // On x86/x86_64, the CPU stores error code flags in the ucontext
   ucontext_t* context = reinterpret_cast<ucontext_t*>(unused);
-  bool isWrite = (context->uc_mcontext.gregs[REG_ERR] & 0x2) != 0;
+  isWrite = (context->uc_mcontext.gregs[REG_ERR] & 0x2) != 0;
+#endif
+
   if (!gits::vulkan::CaptureManager::Get().GetMapTrackingService().HandleAddress(faultAddr,
                                                                                  isWrite)) {
     LOG_ERROR << "MapTrackingService signal handler caught unhandled signal: "
