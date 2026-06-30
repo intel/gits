@@ -13,6 +13,7 @@
 #include "testLayerAuto.h"
 #include "encoderLayerAuto.h"
 #include "captureCustomizationLayer.h"
+#include "logVkErrorLayerAuto.h"
 
 namespace gits {
 namespace vulkan {
@@ -23,6 +24,7 @@ void CaptureLayerManager::LoadLayers(CaptureManager& captureManager,
   auto& cfg = Configurator::Get();
 
   //std::unique_ptr<Layer> testLayer = std::make_unique<TestLayerAuto>();
+  std::unique_ptr<Layer> logVkErrorLayer = std::make_unique<LogVkErrorLayer>();
   std::unique_ptr<Layer> encoderLayer;
   std::unique_ptr<Layer> captureCustomizationLayer;
 
@@ -70,6 +72,7 @@ void CaptureLayerManager::LoadLayers(CaptureManager& captureManager,
     }
   };
 
+  enablePostLayer(logVkErrorLayer);
   enablePostLayer(captureCustomizationLayer);
   enablePostLayer(encoderLayer);
   //enablePostLayer(testLayer);
@@ -88,6 +91,7 @@ void CaptureLayerManager::LoadLayers(CaptureManager& captureManager,
 
   retainLayer(std::move(captureCustomizationLayer));
   retainLayer(std::move(encoderLayer));
+  retainLayer(std::move(logVkErrorLayer));
   //retainLayer(std::move(testLayer));
   retainLayer(std::move(traceLayer));
 

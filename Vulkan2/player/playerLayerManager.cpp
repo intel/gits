@@ -17,6 +17,7 @@
 #include "analyzerLayerAuto.h"
 #include "analyzerResults.h"
 #include "configurator.h"
+#include "logVkErrorLayerAuto.h"
 
 namespace gits {
 namespace vulkan {
@@ -25,6 +26,7 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
 
   std::unique_ptr<Layer> replayCustomizationLayer =
       std::make_unique<ReplayCustomizationLayer>(playerManager);
+  std::unique_ptr<Layer> logVkErrorLayer = std::make_unique<LogVkErrorLayer>();
 
   const auto& traceCfg = Configurator::Get().common.shared.trace;
   const auto& screenshotsCfg = Configurator::Get().common.shared.screenshots;
@@ -97,6 +99,7 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
   }
   enablePreLayer(subcaptureLayer);
   enablePreLayer(analyzerLayer);
+  enablePreLayer(logVkErrorLayer);
 
   auto enablePostLayer = [this](std::unique_ptr<Layer>& layer) {
     if (layer) {
@@ -104,6 +107,7 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
     }
   };
 
+  enablePostLayer(logVkErrorLayer);
   enablePostLayer(replayCustomizationLayer);
   if (traceCfg.enabled && traceCfg.print.postCalls) {
     enablePostLayer(traceLayer);
@@ -125,6 +129,7 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
   };
 
   retainLayer(std::move(replayCustomizationLayer));
+  retainLayer(std::move(logVkErrorLayer));
   retainLayer(std::move(traceLayer));
   // SubcaptureLayer owns the AnalyzerService that AnalyzerLayer references, so it
   // must be retained (and therefore destroyed) after the AnalyzerLayer.

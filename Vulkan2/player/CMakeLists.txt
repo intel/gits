@@ -80,6 +80,7 @@ target_link_libraries(Vulkan_player_2 PRIVATE
   Vulkan_subcapture_2
   Vulkan_resource_dumping
   Vulkan_utils
+  Vulkan_api_debug
 )
 
 if(UNIX)

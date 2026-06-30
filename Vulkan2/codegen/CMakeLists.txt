@@ -27,6 +27,7 @@ set(SCRIPTS_SRC
   generator_interceptor.py
   plugin_generator.py
   generator_subcapture.py
+  generator_api_debug.py
 )
 source_group("scripts" FILES ${SCRIPTS_SRC})
 

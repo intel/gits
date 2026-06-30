@@ -65,6 +65,7 @@ target_link_libraries(Vulkan_recorder_2 PRIVATE
   Vulkan_resource_dumping
   Vulkan_coders
   Vulkan_utils
+  Vulkan_api_debug
   tbb
 )
 
