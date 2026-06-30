@@ -37,7 +37,7 @@ ${command.return_type} ${command.name}Wrapper(
   auto& manager = CaptureManager::Get();
   if (auto recursionDepth = RecursionGuard()) {
     ${command.name}Command command(
-	  GetCurrentThreadId(),
+	  GITS_GET_THREAD_ID(),
 	  % for param in command.params:
 	  ${param.name}${',' if not loop.last else ''}
 	  % endfor

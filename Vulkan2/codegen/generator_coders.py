@@ -100,6 +100,8 @@ def get_size_lines(structure, structures_list, var_name):
             lines.append('}')
         elif member.is_pointer and member.base_type == 'void':
             lines.append('blobSize += sizeof(void*);')
+        elif member.is_opaque_pointer:
+            lines.append('blobSize += sizeof(void*);')
         elif complex_struct:
             if member.length and member.is_pointer_to_pointer:
                 outer = member.length[0]
@@ -208,6 +210,12 @@ def get_encode_lines(structure, structures_list, var_name_src, var_name_dst):
             lines.append(f'  std::memcpy(dst + offset, &marker, sizeof(void*));')
             lines.append(f'  offset += sizeof(void*);')
             lines.append(f'  {var_name_dst}->{member.name} = nullptr;')
+            lines.append('}')
+        elif member.is_opaque_pointer:
+            lines.append('{')
+            lines.append(f'  void* opaquePointer = reinterpret_cast<void*>({var_name_src}->{member.name});')
+            lines.append(f'  std::memcpy(dst + offset, &opaquePointer, sizeof(void*));')
+            lines.append(f'  offset += sizeof(void*);')
             lines.append('}')
         elif complex_struct:
             if member.length and member.is_pointer_to_pointer:
@@ -328,6 +336,13 @@ def get_decode_lines(structure, structures_list, var_name):
             lines.append(f'  std::memcpy(&marker, src + offset,sizeof(void*));')
             lines.append(f'  offset += sizeof(void*);')
             lines.append(f'  {var_name}->{member.name} = nullptr;')
+            lines.append('}')
+        elif member.is_opaque_pointer:
+            lines.append('{')
+            lines.append(f'  void* opaqueHandle;')
+            lines.append(f'  std::memcpy(&opaqueHandle, src + offset, sizeof(void*));')
+            lines.append(f'  offset += sizeof(void*);')
+            lines.append(f'  {var_name}->{member.name} = reinterpret_cast<{member.base_type}*>(opaqueHandle);')
             lines.append('}')
         elif complex_struct:
             if member.length and member.is_pointer_to_pointer:

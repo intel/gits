@@ -27,6 +27,7 @@ class Parameter:
     is_struct: bool = False
     is_struct_with_handles: bool = False
     is_union: bool = False
+    is_opaque_pointer: bool = False
 
 @dataclass
 class Command:
@@ -56,6 +57,7 @@ class Member:
     is_struct: bool = False
     is_struct_with_handles: bool = False
     is_union: bool = False
+    is_opaque_pointer: bool = False
 
 @dataclass
 class Structure:

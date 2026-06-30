@@ -44,7 +44,7 @@ add_custom_command(
   COMMAND ${Python3_EXECUTABLE} ${VULKAN_SCRIPTS_DIR}/generator.py --xml ${VK_XML_PATH} --output ${VULKAN_SCRIPT_OUTPUT_DIR}
   COMMAND ${CMAKE_COMMAND} -DOUT_DIR=${VULKAN_SCRIPT_OUTPUT_DIR} -DCLANG_FORMAT=${CLANG_FORMAT_EXE} -P ${VULKAN_SCRIPTS_DIR}/run_clang_format.cmake
   COMMAND ${CMAKE_COMMAND} -E touch ${STAMP_FILE}
-  COMMAND ${CMAKE_COMMAND} -E echo "Vulkan generation completed (${STAMP_FILE})."
+  COMMAND ${CMAKE_COMMAND} -E echo "Vulkan generation completed - ${STAMP_FILE}"
   WORKING_DIRECTORY ${VULKAN_SCRIPTS_DIR}
 )
 

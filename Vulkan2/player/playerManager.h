@@ -74,7 +74,7 @@ private:
   static PlayerManager* m_Instance;
   PlayerLayerManager m_LayerManager;
   bool m_ExecuteCommands{true};
-
+  dl::SharedObject m_Lib{nullptr};
   PFN_vkGetInstanceProcAddr m_GetInstanceProcAddr{nullptr};
   VkGlobalLevelDispatchTable m_GlobalDispatchTable{};
   std::unordered_map<void*, VkInstanceLevelDispatchTable> m_InstanceDispatchTable{};

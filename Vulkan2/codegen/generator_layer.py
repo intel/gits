@@ -24,8 +24,13 @@ def generate_params_for_function(command):
             if param.length:
                 s += 'Array'
             s += f"OutputArgument<{param.base_type}>"
-        elif param.is_pointer and not param.length:
-            s += f"PointerArgument<{param.base_type}>"
+        elif param.is_opaque_pointer:
+            s += f"OpaquePointerArgument<{param.base_type}>"
+        elif param.is_pointer and not param.is_opaque_pointer and not param.length:
+            if param.is_void:
+                s += f"OpaqueBufferArgument"
+            else:
+                s += f"PointerArgument<{param.base_type}>"
         elif param.is_pointer and param.length:
             if param.is_void:
                 s += f"BufferArgument"

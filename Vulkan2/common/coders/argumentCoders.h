@@ -8,7 +8,10 @@
 
 #pragma once
 
+#include "vulkanHeader.h"
 #include "arguments.h"
+
+#include <cstring>
 
 namespace gits {
 namespace vulkan {
@@ -116,26 +119,20 @@ void Encode(char* dest, uint32_t& offset, const Argument<T>& arg) {
 }
 
 template <typename T>
-inline uint32_t GetSize(const PointerArgument<T>& arg) {
+uint32_t GetSize(const PointerArgument<T>& arg) {
   if (!arg.Value) {
     return sizeof(void*);
   }
-  if constexpr (std::is_void_v<T>) {
-    return sizeof(void*);
-  } else {
-    return sizeof(void*) + sizeof(T);
-  }
+  return sizeof(void*) + sizeof(T);
 }
 
 template <typename T>
-inline void Encode(char* dest, uint32_t& offset, const PointerArgument<T>& arg) {
+void Encode(char* dest, uint32_t& offset, const PointerArgument<T>& arg) {
   if (EncodeNullPtr(dest, offset, arg.Value)) {
     return;
   }
-  if constexpr (!std::is_void_v<T>) {
-    std::memcpy(dest + offset, arg.Value, sizeof(T));
-    offset += sizeof(T);
-  }
+  std::memcpy(dest + offset, arg.Value, sizeof(T));
+  offset += sizeof(T);
 }
 
 template <typename T>
@@ -217,11 +214,80 @@ void Encode(char* dest, uint32_t& offset, const HandleArrayOutputArgument<T>& ar
   offset += sizeof(GITSKey) * arg.Size;
 }
 
+inline uint32_t GetSize(const BufferArgument& arg) {
+  if (!arg.Value) {
+    return sizeof(void*);
+  }
+  return sizeof(void*) + sizeof(arg.Size) + arg.Size;
+}
+
+inline void Encode(char* dest, uint32_t& offset, const BufferArgument& arg) {
+  if (EncodeNullPtr(dest, offset, arg.Value)) {
+    return;
+  }
+  std::memcpy(dest + offset, &arg.Size, sizeof(arg.Size));
+  offset += sizeof(arg.Size);
+  std::memcpy(dest + offset, arg.Value, arg.Size);
+  offset += arg.Size;
+}
+
+inline uint32_t GetSize(const OpaqueBufferArgument& arg) {
+  return sizeof(void*);
+}
+
+inline void Encode(char* dest, uint32_t& offset, const OpaqueBufferArgument& arg) {
+  EncodeNullPtr(dest, offset, arg.Value);
+}
+
 inline uint32_t GetSize(const BufferOutputArgument& arg) {
   return sizeof(void*);
 }
 
 inline void Encode(char* dest, uint32_t& offset, const BufferOutputArgument& arg) {
+  EncodeNullPtr(dest, offset, arg.Value);
+}
+
+template <typename T>
+uint32_t GetSize(const ArrayOfArrays<T>& arg) {
+  if (!arg.Value) {
+    return sizeof(void*);
+  }
+
+  uint32_t size = sizeof(void*) + sizeof(arg.Size);
+  for (uint32_t i = 0; i < arg.Size; ++i) {
+    size += sizeof(void*);
+    size += sizeof(uint32_t);
+    size += sizeof(T) * static_cast<uint32_t>(arg.Data[i].size());
+  }
+  return size;
+}
+
+template <typename T>
+void Encode(char* dest, uint32_t& offset, const ArrayOfArrays<T>& arg) {
+  if (EncodeNullPtr(dest, offset, arg.Value)) {
+    return;
+  }
+  std::memcpy(dest + offset, &arg.Size, sizeof(arg.Size));
+  offset += sizeof(arg.Size);
+  for (uint32_t i = 0; i < arg.Size; ++i) {
+    const void* ptr = arg.Pointers[i];
+    std::memcpy(dest + offset, &ptr, sizeof(void*));
+    offset += sizeof(void*);
+    uint32_t count = static_cast<uint32_t>(arg.Data[i].size());
+    std::memcpy(dest + offset, &count, sizeof(count));
+    offset += sizeof(count);
+    std::memcpy(dest + offset, arg.Data[i].data(), sizeof(T) * count);
+    offset += sizeof(T) * count;
+  }
+}
+
+template <typename T>
+uint32_t GetSize(const OpaquePointerArgument<T>& arg) {
+  return sizeof(void*);
+}
+
+template <typename T>
+void Encode(char* dest, uint32_t& offset, const OpaquePointerArgument<T>& arg) {
   EncodeNullPtr(dest, offset, arg.Value);
 }
 
@@ -257,17 +323,7 @@ void Decode(char* src, uint32_t& offset, PointerArgument<T>& arg) {
     return;
   }
   arg.Value = reinterpret_cast<T*>(src + offset);
-  if constexpr (!std::is_void_v<T>) {
-    offset += sizeof(T);
-  }
-}
-
-template <>
-inline void Decode(char* src, uint32_t& offset, PointerArgument<void>& arg) {
-  if (DecodeNullPtr(src, offset, arg)) {
-    return;
-  }
-  arg.Value = src + offset;
+  offset += sizeof(T);
 }
 
 template <typename T>
@@ -329,9 +385,53 @@ void Decode(char* src, uint32_t& offset, HandleArrayOutputArgument<T>& arg) {
   arg.Value = new T[arg.Size]{};
 }
 
+inline void Decode(char* src, uint32_t& offset, BufferArgument& arg) {
+  if (DecodeNullPtr(src, offset, arg)) {
+    arg.Size = 0;
+    return;
+  }
+  std::memcpy(&arg.Size, src + offset, sizeof(arg.Size));
+  offset += sizeof(arg.Size);
+  arg.Value = src + offset;
+  offset += arg.Size;
+}
+
+inline void Decode(char* src, uint32_t& offset, OpaqueBufferArgument& arg) {
+  DecodeNullPtr(src, offset, arg);
+}
+
 inline void Decode(char* src, uint32_t& offset, BufferOutputArgument& arg) {
   DecodeNullPtr(src, offset, arg);
   arg.Value = &arg.Data;
+}
+
+template <typename T>
+void Decode(char* src, uint32_t& offset, ArrayOfArrays<T>& arg) {
+  if (DecodeNullPtr(src, offset, arg)) {
+    arg.Size = 0;
+    arg.Data.clear();
+    arg.Pointers.clear();
+    return;
+  }
+  std::memcpy(&arg.Size, src + offset, sizeof(arg.Size));
+  offset += sizeof(arg.Size);
+  arg.Data.resize(arg.Size);
+  arg.Pointers.resize(arg.Size);
+  for (uint32_t i = 0; i < arg.Size; ++i) {
+    std::memcpy(&arg.Pointers[i], src + offset, sizeof(void*));
+    offset += sizeof(void*);
+    uint32_t count{};
+    std::memcpy(&count, src + offset, sizeof(count));
+    offset += sizeof(count);
+    arg.Data[i].resize(count);
+    std::memcpy(arg.Data[i].data(), src + offset, sizeof(T) * count);
+    offset += sizeof(T) * count;
+  }
+}
+
+template <typename T>
+void Decode(char* src, uint32_t& offset, OpaquePointerArgument<T>& arg) {
+  DecodeNullPtr(src, offset, arg);
 }
 
 } // namespace vulkan

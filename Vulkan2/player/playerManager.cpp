@@ -30,6 +30,8 @@ PlayerManager& PlayerManager::Get() {
 PlayerManager::~PlayerManager() {
   try {
     LOG_INFO << "PlayerManager: Playback completed. Cleaning up...";
+    dl::close_library(m_Lib);
+    m_Lib = nullptr;
   } catch (...) {
     topmost_exception_handler("PlayerManager::~PlayerManager");
   }
@@ -45,10 +47,10 @@ PlayerManager::PlayerManager() {
 
 void PlayerManager::LoadGlobalFunctions() {
   auto& cfg = Configurator::Get();
-  auto vulkanLib = LoadLibrary(cfg.common.player.libVK.string().c_str());
-  GITS_ASSERT(vulkanLib);
-  m_GetInstanceProcAddr = reinterpret_cast<PFN_vkGetInstanceProcAddr>(
-      GetProcAddress(vulkanLib, "vkGetInstanceProcAddr"));
+  m_Lib = dl::open_library(cfg.common.player.libVK.string().c_str());
+  GITS_ASSERT(m_Lib);
+  m_GetInstanceProcAddr =
+      reinterpret_cast<PFN_vkGetInstanceProcAddr>(dl::load_symbol(m_Lib, "vkGetInstanceProcAddr"));
   LoadGlobalLevelFunctions(m_GetInstanceProcAddr, m_GlobalDispatchTable);
 }
 

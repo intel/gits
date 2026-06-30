@@ -6,8 +6,6 @@
 //
 // ===================== end_copyright_notice ==============================
 
-#pragma once
-
 #include "argumentCoders.h"
 
 namespace gits {

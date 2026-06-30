@@ -60,21 +60,20 @@ struct ArrayOfArrays {
   T** Value{};
   uint32_t Size{};
   std::vector<std::vector<T>> Data{};
-  std::vector<T*> Pointers{};
+  std::vector<const T*> Pointers{};
   ArrayOfArrays() {}
   ArrayOfArrays(const T* const* v,
                 uint32_t s,
                 const VkAccelerationStructureBuildGeometryInfoKHR* infos)
-      : Size(s) {
+      : Value(const_cast<T**>(v)), Size(s) {
     if (v && infos) {
       Data.resize(Size);
       Pointers.resize(Size);
       for (uint32_t i = 0; i < Size; ++i) {
         uint32_t count = infos[i].geometryCount;
         Data[i].assign(v[i], v[i] + count);
-        Pointers[i] = Data[i].data();
+        Pointers[i] = v[i];
       }
-      Value = Pointers.data();
     }
   }
 };
@@ -103,6 +102,13 @@ struct BufferArgument {
   BufferArgument(void* v, size_t* s) : Value(v), Size(*s) {}
   BufferArgument(const void* v, size_t s) : Value(const_cast<void*>(v)), Size(s) {}
   BufferArgument(const void* v, size_t* s) : Value(const_cast<void*>(v)), Size(*s) {}
+};
+
+struct OpaqueBufferArgument {
+  void* Value{};
+  OpaqueBufferArgument() {}
+  OpaqueBufferArgument(void* v) : Value(v) {}
+  OpaqueBufferArgument(const void* v) : Value(const_cast<void*>(v)) {}
 };
 
 struct BufferOutputArgument {
@@ -167,6 +173,13 @@ struct HandleArrayOutputArgument {
       Keys.resize(Size);
     }
   }
+};
+
+template <typename T>
+struct OpaquePointerArgument {
+  T* Value{};
+  OpaquePointerArgument() {}
+  OpaquePointerArgument(T* v) : Value(v) {}
 };
 
 } // namespace vulkan

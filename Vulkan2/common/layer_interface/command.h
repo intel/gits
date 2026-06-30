@@ -24,13 +24,13 @@ public:
     return m_Id;
   }
 
+private:
+  CommandId m_Id{};
+
 public:
   GITSKey m_Key{};
   uint32_t m_ThreadId{};
   bool m_Skip{};
-
-private:
-  CommandId m_Id{};
 };
 
 } // namespace vulkan

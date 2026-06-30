@@ -462,6 +462,8 @@ def postprocess(commands, structures, unions, handles, enums, bitmasks, flags, e
     structure_names = set(structure.name for structure in structures)
     union_names = set(union.name for union in unions)
 
+    OPAQUE_POINTER_TYPES = {'xcb_connection_t', 'Display', 'wl_display', 'wl_surface'}
+
     structure_with_handles = set()
     for structure in structures:
         for member in structure.members:
@@ -473,6 +475,8 @@ def postprocess(commands, structures, unions, handles, enums, bitmasks, flags, e
                 member.is_struct = True
             if member.base_type in union_names:
                 member.is_union = True
+            if member.base_type in OPAQUE_POINTER_TYPES:
+                member.is_opaque_pointer = True
 
     # Second pass to mark struct member that are structs with handles
     for structure in structures:
@@ -502,3 +506,5 @@ def postprocess(commands, structures, unions, handles, enums, bitmasks, flags, e
                 param.is_struct = True
             if param.base_type in union_names:
                 param.is_union = True
+            if param.base_type in OPAQUE_POINTER_TYPES:
+                param.is_opaque_pointer = True

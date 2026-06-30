@@ -54,7 +54,7 @@ void MapTrackingService::ScheduleMemoryUpdate(GITSKey deviceKey, GITSKey deviceM
   const char* current = static_cast<const char*>(entry.Ptr);
   const VkDeviceSize totalSize = entry.Size;
 
-  MappedDataMetaCommand command(GetCurrentThreadId());
+  MappedDataMetaCommand command(GITS_GET_THREAD_ID());
   command.m_Key = CaptureManager::Get().CreateCommandKey();
   command.m_Device.Key = deviceKey;
   command.m_Memory.Key = deviceMemoryKey;
