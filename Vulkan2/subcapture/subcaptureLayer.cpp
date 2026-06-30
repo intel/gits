@@ -1096,24 +1096,31 @@ void SubcaptureLayer::Post(vkCreateDescriptorPoolCommand& command) {
 }
 
 void SubcaptureLayer::RemoveDescriptorSetsByPool(uint64_t poolKey) {
-  std::vector<uint64_t> setKeys;
-  for (const auto& [key, statePtr] : m_StateTracking.GetStates()) {
-    if (statePtr->CreationCommandId == CommandId::ID_VKALLOCATEDESCRIPTORSETS) {
-      auto* ds = static_cast<DescriptorSetState*>(statePtr.get());
-      if (ds->PoolKey == poolKey) {
-        setKeys.push_back(key);
-      }
-    }
+  // Reset / destroy reclaims every set allocated from this pool.  Walk only the
+  // pool's own set index (maintained by Post(vkAllocateDescriptorSets) /
+  // Post(vkFreeDescriptorSets)) so the cost is O(sets in this pool) rather than a
+  // scan over every tracked object -- vkResetDescriptorPool is one of the hottest
+  // calls in descriptor-churn-heavy titles (tens of millions of calls).
+  auto* poolState = m_StateTracking.GetState<DescriptorPoolState>(poolKey);
+  if (!poolState) {
+    // Unknown / already-destroyed pool (e.g. a reset on a pool whose creation
+    // failed or whose key was never tracked): nothing to remove.
+    return;
   }
-  for (uint64_t setKey : setKeys) {
+  // Empty-pool early-out: ~most resets target pools with no live sets, so skip
+  // the (already empty) walk entirely.  The index is kept in lockstep with the
+  // tracked sets, so empty here means there is genuinely nothing to remove.
+  if (poolState->AllocatedSetKeys.empty()) {
+    return;
+  }
+  for (uint64_t setKey : poolState->AllocatedSetKeys) {
     m_StateTracking.RemoveState(setKey);
     m_StateTracking.GetDescriptorSetUpdateService().RemoveDescriptorSet(setKey);
   }
+  poolState->AllocatedSetKeys.clear();
   // vkResetDescriptorPool frees every set at once; the pool itself stays alive,
   // so zero the live count but keep PeakLiveSets (the all-time high-water mark).
-  if (auto* poolState = m_StateTracking.GetState<DescriptorPoolState>(poolKey)) {
-    poolState->LiveSets = 0;
-  }
+  poolState->LiveSets = 0;
 }
 
 void SubcaptureLayer::Post(vkDestroyDescriptorPoolCommand& command) {
@@ -1139,12 +1146,19 @@ void SubcaptureLayer::Post(vkAllocateDescriptorSetsCommand& command) {
   const bool allocHasPNext = command.m_pAllocateInfo.Value->pNext != nullptr;
 
   // Track per-pool live/peak set counts so state restore can size the re-created
-  // pool from observed demand rather than a blind multiplier.
-  if (auto* poolState = m_StateTracking.GetState<DescriptorPoolState>(poolKey)) {
+  // pool from observed demand rather than a blind multiplier.  The same pool
+  // state owns the per-pool set index used by RemoveDescriptorSetsByPool; grab
+  // it once here and feed both.  std::map is node-based so this pointer stays
+  // valid across the StoreState insertions below.
+  auto* poolState = m_StateTracking.GetState<DescriptorPoolState>(poolKey);
+  if (poolState) {
     poolState->LiveSets += command.m_pDescriptorSets.Size;
     if (poolState->LiveSets > poolState->PeakLiveSets) {
       poolState->PeakLiveSets = poolState->LiveSets;
     }
+    // Grow the index's bucket count once for the whole batch.
+    poolState->AllocatedSetKeys.reserve(poolState->AllocatedSetKeys.size() +
+                                        command.m_pDescriptorSets.Size);
   }
 
   // Build a single-set VkDescriptorSetAllocateInfo so each stored set state
@@ -1160,10 +1174,18 @@ void SubcaptureLayer::Post(vkAllocateDescriptorSetsCommand& command) {
   singleAllocInfo.descriptorSetCount = 1;
 
   for (uint32_t i = 0; i < command.m_pDescriptorSets.Size; ++i) {
+    const uint64_t setKey = command.m_pDescriptorSets.Keys[i];
     auto state = std::make_unique<DescriptorSetState>();
-    state->Key = command.m_pDescriptorSets.Keys[i];
+    state->Key = setKey;
     state->ParentKey = command.m_device.Key;
     state->PoolKey = poolKey;
+    // Index this set under its pool so reset/destroy can reclaim it without a
+    // full state scan.  Only real (stored) keys are indexed; StoreState skips
+    // key 0, so guarding here keeps the index == the set of tracked sets.
+    // Keys are unique per allocated set, so this never inserts a duplicate.
+    if (poolState && setKey) {
+      poolState->AllocatedSetKeys.insert(setKey);
+    }
 
     // HandleKeys layout in the original command: [0]=pool, [1+i]=pSetLayouts[i].
     // Add the layout as a dependency so RestoreOne restores it before emitting
@@ -1208,8 +1230,8 @@ void SubcaptureLayer::Post(vkFreeDescriptorSetsCommand& command) {
   if (command.m_Return.Value != VK_SUCCESS) {
     return;
   }
-  if (auto* poolState =
-          m_StateTracking.GetState<DescriptorPoolState>(command.m_descriptorPool.Key)) {
+  auto* poolState = m_StateTracking.GetState<DescriptorPoolState>(command.m_descriptorPool.Key);
+  if (poolState) {
     poolState->LiveSets = (command.m_descriptorSetCount.Value <= poolState->LiveSets)
                               ? poolState->LiveSets - command.m_descriptorSetCount.Value
                               : 0;
@@ -1218,6 +1240,11 @@ void SubcaptureLayer::Post(vkFreeDescriptorSetsCommand& command) {
     const uint64_t setKey = command.m_pDescriptorSets.Keys[i];
     m_StateTracking.RemoveState(setKey);
     m_StateTracking.GetDescriptorSetUpdateService().RemoveDescriptorSet(setKey);
+    // Keep the per-pool set index consistent.  unordered_set::erase is O(1)
+    // average, so titles that free sets one at a time stay cheap.
+    if (poolState) {
+      poolState->AllocatedSetKeys.erase(setKey);
+    }
   }
 }
 
@@ -1912,6 +1939,41 @@ void SubcaptureLayer::Post(CreateWindowMetaCommand& command) {
   m_PendingWindow.HwndKey = command.m_Hwnd.Value;
   m_PendingWindow.HinstanceKey = command.m_Hinstance.Value;
   m_PendingWindow.Valid = true;
+}
+
+void SubcaptureLayer::Post(UpdateWindowMetaCommand& command) {
+  // The recorder emits an UpdateWindowMetaCommand whenever the application's
+  // window changes (per present), keyed by HWND.  SurfaceState holds the window
+  // geometry that RestoreSurface re-emits at the subcapture boundary; without
+  // folding these updates in, restore would resurrect the day-one geometry
+  // captured at vkCreate*SurfaceKHR (e.g. a hidden / wrong-size / mispositioned
+  // window) instead of the actual state at the restore point.  Patch every
+  // matching SurfaceState in place so the latest values win, mirroring how
+  // ImageState/MappedMemory absorb their latest mutations during the pre-range
+  // pass.
+  //
+  // Value-space caveat: CreateWindowMetaRunner rewrites the command's hwnd to the
+  // player's runtime HWND (commandRunnersCustom.cpp) *before* the post-layers
+  // run, so SurfaceState::HwndKey holds the PLAYBACK hwnd.  UpdateWindowMetaRunner
+  // performs no such rewrite, so this command still carries the original CAPTURE
+  // hwnd.  Translate through WindowService -- the same capture->playback map the
+  // CreateWindowMeta runner populated -- before matching; fall back to the raw
+  // value when no mapping exists (e.g. a non-executing pass, where HwndKey is the
+  // capture hwnd too).
+  const uint64_t playbackHwnd =
+      PlayerManager::Get().GetWindowService().GetCurrentWindowHandle(command.m_Hwnd.Value);
+  const uint64_t targetHwnd = playbackHwnd != 0 ? playbackHwnd : command.m_Hwnd.Value;
+  for (const auto& [key, statePtr] : m_StateTracking.GetStates()) {
+    auto* surf = dynamic_cast<SurfaceState*>(statePtr.get());
+    if (surf == nullptr || surf->HwndKey != targetHwnd) {
+      continue;
+    }
+    surf->WindowX = command.m_X.Value;
+    surf->WindowY = command.m_Y.Value;
+    surf->WindowWidth = command.m_Width.Value;
+    surf->WindowHeight = command.m_Height.Value;
+    surf->WindowVisible = command.m_Visible.Value;
+  }
 }
 
 #ifdef VK_USE_PLATFORM_WIN32_KHR

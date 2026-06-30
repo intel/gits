@@ -51,11 +51,27 @@ void CommandBufferLifecycleService::OnAllocate(vkAllocateCommandBuffersCommand& 
   VkCommandBufferAllocateInfo singleAllocInfo = *command.m_pAllocateInfo.Value;
   singleAllocInfo.commandBufferCount = 1;
 
+  // The owning pool state holds the per-pool CB index used by OnResetPool /
+  // OnDestroyPool; grab it once.  std::map is node-based so this pointer stays
+  // valid across the StoreState insertions below.
+  auto* poolState = m_StateTracking.GetState<CommandPoolState>(poolKey);
+  if (poolState) {
+    poolState->AllocatedCommandBufferKeys.reserve(poolState->AllocatedCommandBufferKeys.size() +
+                                                  command.m_pCommandBuffers.Size);
+  }
+
   for (uint32_t i = 0; i < command.m_pCommandBuffers.Size; ++i) {
+    const uint64_t cbKey = command.m_pCommandBuffers.Keys[i];
     auto state = std::make_unique<CommandBufferState>();
-    state->Key = command.m_pCommandBuffers.Keys[i];
+    state->Key = cbKey;
     state->ParentKey = command.m_device.Key;
     state->PoolKey = poolKey;
+    // Index this CB under its pool so reset/destroy can walk only this pool's
+    // buffers.  Only real (stored) keys are indexed; StoreState skips key 0.
+    // Keys are unique per allocated CB, so this never inserts a duplicate.
+    if (poolState && cbKey) {
+      poolState->AllocatedCommandBufferKeys.insert(cbKey);
+    }
 
     // Synthetic single-CB allocation command for this CB only.
     vkAllocateCommandBuffersCommand singleCmd;
@@ -82,6 +98,14 @@ void CommandBufferLifecycleService::OnAllocate(vkAllocateCommandBuffersCommand& 
 
 void CommandBufferLifecycleService::OnFree(const std::vector<uint64_t>& cbKeys) {
   for (uint64_t key : cbKeys) {
+    // Keep the owning pool's CB index consistent before dropping the state.
+    // unordered_set::erase is O(1) average, so titles that free command buffers
+    // one at a time stay cheap.
+    if (auto* cbState = m_StateTracking.GetState<CommandBufferState>(key)) {
+      if (auto* poolState = m_StateTracking.GetState<CommandPoolState>(cbState->PoolKey)) {
+        poolState->AllocatedCommandBufferKeys.erase(key);
+      }
+    }
     m_StateTracking.RemoveState(key);
   }
 }
@@ -138,14 +162,16 @@ void CommandBufferLifecycleService::OnReset(uint64_t cbKey) {
 
 void CommandBufferLifecycleService::OnResetPool(uint64_t poolKey) {
   // vkResetCommandPool resets ALL command buffers in the pool to initial state,
-  // regardless of their individual reset flag.
-  for (auto& [_, statePtr] : m_StateTracking.GetStates()) {
-    ObjectState* objState = statePtr.get();
-    if (!objState || objState->CreationCommandId != CommandId::ID_VKALLOCATECOMMANDBUFFERS) {
-      continue;
-    }
-    auto* cbState = static_cast<CommandBufferState*>(objState);
-    if (cbState->PoolKey == poolKey) {
+  // regardless of their individual reset flag.  Walk only this pool's CB index
+  // (maintained by OnAllocate / OnFree) instead of scanning every tracked
+  // object -- O(buffers in this pool) rather than O(all objects).
+  auto* poolState = m_StateTracking.GetState<CommandPoolState>(poolKey);
+  if (!poolState) {
+    // Unknown / already-destroyed pool: nothing to reset.
+    return;
+  }
+  for (uint64_t cbKey : poolState->AllocatedCommandBufferKeys) {
+    if (auto* cbState = m_StateTracking.GetState<CommandBufferState>(cbKey)) {
       ClearState(*cbState);
     }
   }
@@ -154,21 +180,19 @@ void CommandBufferLifecycleService::OnResetPool(uint64_t poolKey) {
 void CommandBufferLifecycleService::OnDestroyPool(uint64_t poolKey) {
   // vkDestroyCommandPool implicitly frees all command buffers allocated from
   // the pool.  Remove them from state tracking so RestoreOne does not try to
-  // emit vkAllocateCommandBuffers referencing the now-gone pool key.
-  std::vector<uint64_t> toRemove;
-  for (auto& [key, statePtr] : m_StateTracking.GetStates()) {
-    ObjectState* objState = statePtr.get();
-    if (!objState || objState->CreationCommandId != CommandId::ID_VKALLOCATECOMMANDBUFFERS) {
-      continue;
-    }
-    auto* cbState = static_cast<CommandBufferState*>(objState);
-    if (cbState->PoolKey == poolKey) {
-      toRemove.push_back(key);
-    }
+  // emit vkAllocateCommandBuffers referencing the now-gone pool key.  Walk only
+  // this pool's CB index instead of scanning every tracked object.  RemoveState
+  // erases from m_States but does not touch this vector, so iterate it directly
+  // and clear the index afterwards (the pool state itself is removed by the
+  // caller right after this returns).
+  auto* poolState = m_StateTracking.GetState<CommandPoolState>(poolKey);
+  if (!poolState) {
+    return;
   }
-  for (uint64_t key : toRemove) {
-    m_StateTracking.RemoveState(key);
+  for (uint64_t cbKey : poolState->AllocatedCommandBufferKeys) {
+    m_StateTracking.RemoveState(cbKey);
   }
+  poolState->AllocatedCommandBufferKeys.clear();
 }
 
 void CommandBufferLifecycleService::TrackHandleDependency(uint64_t cbKey, uint64_t handleKey) {

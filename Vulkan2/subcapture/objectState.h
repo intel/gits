@@ -229,6 +229,15 @@ struct DescriptorPoolState : ObjectState {
   // pools, too large wastes driver memory on the big ones.
   uint32_t LiveSets{0};
   uint32_t PeakLiveSets{0};
+  // Keys of every descriptor set currently allocated (live) from this pool.
+  // Maintained in lockstep with LiveSets: inserted on vkAllocateDescriptorSets,
+  // erased on vkFreeDescriptorSets, cleared on vkResetDescriptorPool /
+  // vkDestroyDescriptorPool.  Lets a pool reset reclaim its sets in
+  // O(sets in this pool) instead of scanning every tracked object -- critical
+  // for descriptor-churn-heavy titles that reset pools millions of times.  An
+  // unordered_set keeps individual vkFreeDescriptorSets erase O(1) average for
+  // titles that free sets one at a time (a std::vector erase would be O(n)).
+  std::unordered_set<uint64_t> AllocatedSetKeys;
 };
 
 struct DescriptorUpdateTemplateState : ObjectState {};
@@ -256,6 +265,13 @@ struct SamplerYcbcrConversionState : ObjectState {};
 
 struct CommandPoolState : ObjectState {
   uint32_t QueueFamilyIndex{UINT32_MAX};
+  // Keys of every command buffer currently allocated (live) from this pool.
+  // Maintained in lockstep with allocation: inserted on vkAllocateCommandBuffers,
+  // erased on vkFreeCommandBuffers, cleared on vkDestroyCommandPool.  Lets a
+  // command-pool reset / destroy walk only this pool's buffers instead of
+  // scanning every tracked object (mirrors DescriptorPoolState::AllocatedSetKeys).
+  // An unordered_set keeps individual vkFreeCommandBuffers erase O(1) average.
+  std::unordered_set<uint64_t> AllocatedCommandBufferKeys;
 };
 
 struct CommandBufferState : ObjectState {

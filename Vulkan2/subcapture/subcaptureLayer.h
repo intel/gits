@@ -81,6 +81,11 @@ public:
   // interceptor/recorder and replayed by the player before the matching
   // vkCreate*SurfaceKHR.
   void Post(CreateWindowMetaCommand& command) override;
+  // Fold the application's live window timeline into the tracked SurfaceState so
+  // state restore re-emits the LATEST observed geometry/visibility, not the
+  // day-one state captured at surface creation.  Mirrors how other object
+  // states absorb their latest mutations (e.g. image layout, mapped memory).
+  void Post(UpdateWindowMetaCommand& command) override;
 
   // ---- Instance / device -----------------------------------------------
   void Post(vkCreateInstanceCommand& command) override;
