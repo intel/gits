@@ -109,6 +109,21 @@ private:
   stream::BaseStreamReader* m_StreamReader{};
 };
 
+#else
+
+class MessageLoop {
+public:
+  MessageLoop(stream::BaseStreamReader* streamReader, Timer* playbackTimer)
+      : m_StreamReader(streamReader), m_PlaybackTimer(playbackTimer) {}
+  void RunLoop(unsigned frame) {}
+
+private:
+  stream::BaseStreamReader* m_StreamReader{};
+  Timer* m_PlaybackTimer{};
+};
+
+#endif
+
 class StateRestoreBeginRunner : public stream::CommandRunner {
 public:
   StateRestoreBeginRunner(Timer* stateRestoreTimer) : m_StateRestoreTimer(stateRestoreTimer) {}
@@ -143,6 +158,7 @@ public:
     static unsigned frameCount = 0;
     ++frameCount;
 
+#ifdef GITS_PLATFORM_WINDOWS_X64
     HWND window = GetWindowHandle();
     if (window) {
       static bool procChanged = false;
@@ -155,6 +171,8 @@ public:
         SetWindowTextA(window, title.c_str());
       }
     }
+#endif
+
     m_MessageLoop->RunLoop(frameCount);
 
     if (frameCount == Configurator::Get().common.player.exitFrame) {
@@ -205,7 +223,7 @@ void PlayStream(const std::filesystem::path& streamPath) {
 
   std::vector<stream::CommandFactory*> commandFactories;
 
-#if defined WITH_DIRECTX
+#if defined GITS_PLATFORM_WINDOWS_X64 && defined WITH_DIRECTX
   DirectX::DirectXCommandFactory directXCommandFactory;
   if (header.GetApi() == stream::StreamHeader::Api::API_DIRECTX) {
     commandFactories.push_back(&directXCommandFactory);
@@ -222,11 +240,15 @@ void PlayStream(const std::filesystem::path& streamPath) {
   commandFactories.push_back(&commonCommandFactory);
 
   std::unique_ptr<stream::BaseStreamReader> streamReader;
+#if defined GITS_PLATFORM_WINDOWS_X64
   if (stream::StreamHeader::Get().IsLegacyStream()) {
     streamReader.reset(new stream::StreamLegacyReader(commandFactories, stream));
   } else {
     streamReader.reset(new stream::StreamReader(commandFactories, stream));
   }
+#else
+  streamReader.reset(new stream::StreamReader(commandFactories, stream));
+#endif
 
   commonCommandFactory.Initialize(streamReader.get(), &stateRestoreTimer, &playbackTimer);
   playbackTimer.Start();
@@ -241,10 +263,6 @@ void PlayStream(const std::filesystem::path& streamPath) {
   MessageBus::get().publish({PUBLISHER_PLAYER, TOPIC_PROGRAM_EXIT},
                             std::make_shared<ProgramMessage>());
 }
-
-#else
-void PlayStream(const std::filesystem::path& streamPath) {}
-#endif // GITS_PLATFORM_WINDOWS_X64
 
 class ApiExtractor : public stream::CommandFactory {
 public:
