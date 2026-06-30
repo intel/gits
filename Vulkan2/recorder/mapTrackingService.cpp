@@ -22,15 +22,18 @@ MapTrackingService::MapTrackingService(GitsRecorder& gitsRecorder) : m_GitsRecor
 }
 
 void MapTrackingService::StorePhysicalDevice(GITSKey deviceKey, GITSKey physicalDeviceKey) {
+  std::lock_guard<std::mutex> lock(m_Mutex);
   m_DeviceToPhysicalDevice[deviceKey] = physicalDeviceKey;
 }
 
 void MapTrackingService::StorePhysicalDeviceMemoryProperties(
     GITSKey physicalDeviceKey, const VkPhysicalDeviceMemoryProperties& memoryProperties) {
+  std::lock_guard<std::mutex> lock(m_Mutex);
   m_PhysicalDeviceMemoryProperties[physicalDeviceKey] = memoryProperties;
 }
 
 bool MapTrackingService::IsMemoryMappable(GITSKey deviceKey, uint32_t memoryTypeIndex) {
+  std::lock_guard<std::mutex> lock(m_Mutex);
   auto deviceIt = m_DeviceToPhysicalDevice.find(deviceKey);
   GITS_ASSERT(deviceIt != m_DeviceToPhysicalDevice.end());
   GITSKey physicalDeviceKey = deviceIt->second;
@@ -41,18 +44,20 @@ bool MapTrackingService::IsMemoryMappable(GITSKey deviceKey, uint32_t memoryType
           VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) == VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 }
 
-void* MapTrackingService::EnableExternalMemory(GITSKey deviceKey,
-                                               VkMemoryAllocateInfo* allocationInfo) {
+void* MapTrackingService::EnableExternalMemory(
+    GITSKey deviceKey,
+    VkMemoryAllocateInfo* allocationInfo,
+    std::optional<VkImportMemoryHostPointerInfoEXT>& hostPointerInfo) {
 #ifdef GITS_PLATFORM_WINDOWS
   void* hostPtr = VirtualAlloc(nullptr, static_cast<SIZE_T>(allocationInfo->allocationSize),
                                MEM_RESERVE | MEM_COMMIT | MEM_WRITE_WATCH, PAGE_READWRITE);
-
-  m_HostPointerInfo = std::make_unique<VkImportMemoryHostPointerInfoEXT>();
-  m_HostPointerInfo->sType = VK_STRUCTURE_TYPE_IMPORT_MEMORY_HOST_POINTER_INFO_EXT;
-  m_HostPointerInfo->pNext = allocationInfo->pNext;
-  m_HostPointerInfo->handleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_HOST_ALLOCATION_BIT_EXT;
-  m_HostPointerInfo->pHostPointer = hostPtr;
-  allocationInfo->pNext = m_HostPointerInfo.get();
+  GITS_ASSERT(hostPtr != nullptr);
+  hostPointerInfo = VkImportMemoryHostPointerInfoEXT{};
+  hostPointerInfo->sType = VK_STRUCTURE_TYPE_IMPORT_MEMORY_HOST_POINTER_INFO_EXT;
+  hostPointerInfo->pNext = allocationInfo->pNext;
+  hostPointerInfo->handleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_HOST_ALLOCATION_BIT_EXT;
+  hostPointerInfo->pHostPointer = hostPtr;
+  allocationInfo->pNext = &hostPointerInfo.value();
   return hostPtr;
 #else
   return nullptr;
@@ -64,6 +69,7 @@ void MapTrackingService::StoreAllocationInfo(GITSKey deviceKey,
                                              VkDeviceMemory memory,
                                              const VkMemoryAllocateInfo& allocateInfo,
                                              void* externalPtr) {
+  std::lock_guard<std::mutex> lock(m_Mutex);
   AllocationInfo allocationInfo{};
   allocationInfo.DeviceKey = deviceKey;
   allocationInfo.Memory = memory;
@@ -71,10 +77,10 @@ void MapTrackingService::StoreAllocationInfo(GITSKey deviceKey,
   allocationInfo.MemoryTypeIndex = allocateInfo.memoryTypeIndex;
   allocationInfo.ExternalMemory = externalPtr;
   m_Allocations[deviceMemoryKey] = allocationInfo;
-  m_HostPointerInfo.reset();
 }
 
 void MapTrackingService::FreeExternalMemory(GITSKey deviceMemoryKey) {
+  std::lock_guard<std::mutex> lock(m_Mutex);
 #ifdef GITS_PLATFORM_WINDOWS
   auto it = m_Allocations.find(deviceMemoryKey);
   if (it == m_Allocations.end()) {
@@ -91,6 +97,7 @@ void MapTrackingService::StoreData(GITSKey deviceMemoryKey,
                                    VkDeviceSize offset,
                                    VkDeviceSize size,
                                    void* data) {
+  std::lock_guard<std::mutex> lock(m_Mutex);
   auto it = m_Allocations.find(deviceMemoryKey);
   GITS_ASSERT(it != m_Allocations.end());
   auto& allocationInfo = it->second;
@@ -104,6 +111,7 @@ void MapTrackingService::StoreData(GITSKey deviceMemoryKey,
 }
 
 void MapTrackingService::RemoveData(GITSKey deviceMemoryKey) {
+  std::lock_guard<std::mutex> lock(m_Mutex);
   auto it = m_Allocations.find(deviceMemoryKey);
   GITS_ASSERT(it != m_Allocations.end());
   if (it->second.IsMapped) {
@@ -116,6 +124,7 @@ void MapTrackingService::RemoveData(GITSKey deviceMemoryKey) {
 }
 
 void MapTrackingService::SnapshotAllMapped() {
+  std::lock_guard<std::mutex> lock(m_Mutex);
   for (const auto& [deviceMemoryKey, allocationInfo] : m_Allocations) {
     if (allocationInfo.IsMapped) {
       ScheduleMemoryUpdate(deviceMemoryKey);

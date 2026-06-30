@@ -10,6 +10,8 @@
 
 #include "layerAuto.h"
 #include "gitsRecorder.h"
+#include "vulkanHeader2.h"
+#include <optional>
 
 namespace gits {
 namespace vulkan {
@@ -53,6 +55,8 @@ private:
     VkMemoryAllocateInfo AllocateInfoModified{};
 
     void* ExternalMemory{nullptr};
+    // Owned per-thread to avoid shared state race between concurrent vkAllocateMemory calls
+    std::optional<VkImportMemoryHostPointerInfoEXT> HostPointerInfo;
 
     AllocateInfo() = default;
     AllocateInfo(VkMemoryAllocateInfo* p) {

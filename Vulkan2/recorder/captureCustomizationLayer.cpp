@@ -74,8 +74,8 @@ void CaptureCustomizationLayer::Pre(vkAllocateMemoryCommand& command) {
   }
   s_AllocateInfo = AllocateInfo(command.m_pAllocateInfo.Value);
   command.m_pAllocateInfo.Value = &s_AllocateInfo.AllocateInfoModified;
-  s_AllocateInfo.ExternalMemory =
-      mapTrackingService.EnableExternalMemory(command.m_device.Key, command.m_pAllocateInfo.Value);
+  s_AllocateInfo.ExternalMemory = mapTrackingService.EnableExternalMemory(
+      command.m_device.Key, command.m_pAllocateInfo.Value, s_AllocateInfo.HostPointerInfo);
 }
 
 void CaptureCustomizationLayer::Post(vkAllocateMemoryCommand& command) {

@@ -14,6 +14,8 @@
 
 #include <vector>
 #include <unordered_map>
+#include <mutex>
+#include <optional>
 
 namespace gits {
 namespace vulkan {
@@ -25,7 +27,9 @@ public:
   void StorePhysicalDeviceMemoryProperties(
       GITSKey physicalDeviceKey, const VkPhysicalDeviceMemoryProperties& memoryProperties);
   bool IsMemoryMappable(GITSKey deviceKey, uint32_t memoryTypeIndex);
-  void* EnableExternalMemory(GITSKey deviceKey, VkMemoryAllocateInfo* allocationInfo);
+  void* EnableExternalMemory(GITSKey deviceKey,
+                             VkMemoryAllocateInfo* allocationInfo,
+                             std::optional<VkImportMemoryHostPointerInfoEXT>& hostPointerInfo);
   void StoreAllocationInfo(GITSKey deviceKey,
                            GITSKey deviceMemoryKey,
                            VkDeviceMemory memory,
@@ -41,8 +45,6 @@ private:
   void RecordMappedDataMetaCommand(GITSKey deviceKey,
                                    GITSKey memoryKey,
                                    const std::vector<MemoryRegions::Region>& regions);
-
-  std::unique_ptr<VkImportMemoryHostPointerInfoEXT> m_HostPointerInfo;
 
   struct AllocationInfo {
     GITSKey DeviceKey;
@@ -61,6 +63,7 @@ private:
   std::unordered_map<GITSKey, VkPhysicalDeviceMemoryProperties> m_PhysicalDeviceMemoryProperties;
   std::unordered_map<GITSKey, AllocationInfo> m_Allocations;
   GitsRecorder& m_GitsRecorder;
+  std::mutex m_Mutex;
 };
 
 } // namespace vulkan
