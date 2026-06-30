@@ -22,8 +22,8 @@ namespace vulkan {
 //
 // "Frame 1" in GITS convention is the first frame after state restore ends,
 // so a range of "1" means trimming mode - state restore fires immediately
-// before any present is observed (currentFrame_ == 0 at construction, the
-// first FrameEnd call makes it 1).
+// before any present is observed (m_CurrentFrame == 1 at construction, so the
+// >= check in IsRestorePoint() is satisfied on the first present).
 class SubcaptureRange {
 public:
   // Parses the frames string from configuration.
@@ -50,7 +50,10 @@ private:
   bool m_Enabled{false};
   uint32_t m_StartFrame{1};
   uint32_t m_EndFrame{1};
-  uint32_t m_CurrentFrame{0}; // incremented by FrameEnd; starts at 0
+  uint32_t m_CurrentFrame{1}; // 1-based number of the frame currently being
+                              // rendered; advanced to the next frame after each
+                              // present (FrameEnd). Starts at 1 (frame 1 is in
+                              // progress before the first present).
   mutable bool m_RestoreFired{false};
 };
 

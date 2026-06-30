@@ -45,11 +45,16 @@ bool SubcaptureRange::IsRestorePoint() const {
   if (!m_Enabled || m_RestoreFired) {
     return false;
   }
-  // Trimming mode: start frame is 1, so restore before any frame is presented.
-  // General case: restore after Present of frame (startFrame - 1).
-  // m_CurrentFrame is incremented by FrameEnd *after* the present, so at the
-  // moment of the present call m_CurrentFrame == startFrame - 1.
-  if (m_CurrentFrame == m_StartFrame - 1) {
+  // m_CurrentFrame is the 1-based number of the frame currently being rendered.
+  // State restore must be captured at the start of m_StartFrame, i.e. on the
+  // present that completes frame (m_StartFrame - 1).
+  // Using ">=" together with the m_RestoreFired latch above also covers the
+  // trimming case (m_StartFrame == 1): there is no earlier frame to restore
+  // from, so the condition is satisfied on the very first present and restore
+  // fires once before any frame is recorded. For m_StartFrame >= 2 the counter
+  // passes through every value, so ">=" first becomes true exactly at
+  // m_CurrentFrame == m_StartFrame - 1, identical to the previous "==" check.
+  if (m_CurrentFrame >= m_StartFrame - 1) {
     m_RestoreFired = true;
     return true;
   }
