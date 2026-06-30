@@ -12,6 +12,7 @@
 #include "orderingRecorder.h"
 #include "vulkanHeader2.h"
 #include <optional>
+#include <unordered_map>
 
 namespace gits {
 namespace vulkan {
@@ -24,7 +25,9 @@ public:
       : Layer("CaptureCustomization"), m_Manager(manager), m_Recorder(recorder) {}
 #ifdef VK_USE_PLATFORM_WIN32_KHR
   void Pre(vkCreateWin32SurfaceKHRCommand& command) override;
+  void Post(vkCreateWin32SurfaceKHRCommand& command) override;
 #endif
+  void Post(vkCreateSwapchainKHRCommand& command) override;
 
   void Post(vkCreateDeviceCommand& command) override;
   void Post(vkGetPhysicalDeviceMemoryPropertiesCommand& command) override;
@@ -74,6 +77,9 @@ private:
   static thread_local AllocateInfo s_AllocateInfo;
   CaptureManager& m_Manager;
   stream::OrderingRecorder& m_Recorder;
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+  std::unordered_map<VkSurfaceKHR, uint64_t> m_SurfaceHwndMap;
+#endif
 };
 
 } // namespace vulkan

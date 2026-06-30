@@ -65,6 +65,19 @@ public:
   }
 };
 
+class UpdateWindowMetaSerializer : public stream::CommandSerializer {
+public:
+  UpdateWindowMetaSerializer(UpdateWindowMetaCommand& command) {
+    m_DataSize = GetSize(command);
+    m_Data.reset(new char[m_DataSize]);
+    Encode(command, m_Data.get());
+  }
+
+  uint32_t Id() const override {
+    return static_cast<uint32_t>(CommandId::ID_META_UPDATE_WINDOW);
+  }
+};
+
 class MappedDataMetaSerializer : public stream::CommandSerializer {
 public:
   MappedDataMetaSerializer(MappedDataMetaCommand& command) {

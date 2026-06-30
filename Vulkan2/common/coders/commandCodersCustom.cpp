@@ -58,6 +58,31 @@ void Decode(char* src, CreateWindowMetaCommand& command) {
   Decode(src, offset, command.m_Hinstance);
 }
 
+uint32_t GetSize(const UpdateWindowMetaCommand& command) {
+  return GetSize(command.m_Key) + GetSize(command.m_ThreadId) + GetSize(command.m_Hwnd) +
+         GetSize(command.m_Width) + GetSize(command.m_Height) + GetSize(command.m_Visible);
+}
+
+void Encode(const UpdateWindowMetaCommand& command, char* dest) {
+  uint32_t offset = 0;
+  Encode(dest, offset, command.m_Key);
+  Encode(dest, offset, command.m_ThreadId);
+  Encode(dest, offset, command.m_Hwnd);
+  Encode(dest, offset, command.m_Width);
+  Encode(dest, offset, command.m_Height);
+  Encode(dest, offset, command.m_Visible);
+}
+
+void Decode(char* src, UpdateWindowMetaCommand& command) {
+  uint32_t offset = 0;
+  Decode(src, offset, command.m_Key);
+  Decode(src, offset, command.m_ThreadId);
+  Decode(src, offset, command.m_Hwnd);
+  Decode(src, offset, command.m_Width);
+  Decode(src, offset, command.m_Height);
+  Decode(src, offset, command.m_Visible);
+}
+
 uint32_t GetSize(const MappedDataMetaCommand& command) {
   return GetSize(command.m_Key) + GetSize(command.m_ThreadId) + GetSize(command.m_Device) +
          GetSize(command.m_Memory) + GetSize(command.m_Regions);

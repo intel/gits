@@ -44,7 +44,39 @@ void CaptureCustomizationLayer::Pre(vkCreateWin32SurfaceKHRCommand& command) {
   m_Recorder.Record(createWindowMetaCommand.m_Key,
                     new CreateWindowMetaSerializer(createWindowMetaCommand));
 }
+
+void CaptureCustomizationLayer::Post(vkCreateWin32SurfaceKHRCommand& command) {
+  if (command.m_Return.Value == VK_SUCCESS && command.m_pSurface.Value) {
+    m_SurfaceHwndMap[*command.m_pSurface.Value] =
+        reinterpret_cast<uint64_t>(command.m_pCreateInfo.Value->hwnd);
+  }
+}
 #endif
+
+void CaptureCustomizationLayer::Post(vkCreateSwapchainKHRCommand& command) {
+  if (command.m_Return.Value != VK_SUCCESS || !command.m_pCreateInfo.Value ||
+      !command.m_pSwapchain.Value) {
+    return;
+  }
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+  VkSurfaceKHR surface = command.m_pCreateInfo.Value->surface;
+  auto it = m_SurfaceHwndMap.find(surface);
+  if (it == m_SurfaceHwndMap.end()) {
+    return;
+  }
+  UpdateWindowMetaCommand updateWindowMetaCommand(command.m_ThreadId);
+  updateWindowMetaCommand.m_Key = m_Manager.CreateCommandKey();
+  updateWindowMetaCommand.m_Hwnd.Value = it->second;
+  updateWindowMetaCommand.m_Width.Value =
+      static_cast<int32_t>(command.m_pCreateInfo.Value->imageExtent.width);
+  updateWindowMetaCommand.m_Height.Value =
+      static_cast<int32_t>(command.m_pCreateInfo.Value->imageExtent.height);
+  updateWindowMetaCommand.m_Visible.Value =
+      IsWindowVisible(reinterpret_cast<HWND>(it->second)) == TRUE;
+  m_Recorder.Record(updateWindowMetaCommand.m_Key,
+                    new UpdateWindowMetaSerializer(updateWindowMetaCommand));
+#endif
+}
 
 void CaptureCustomizationLayer::Post(vkCreateDeviceCommand& command) {
   m_Manager.GetMapTrackingService().StorePhysicalDevice(command.m_pDevice.Key,

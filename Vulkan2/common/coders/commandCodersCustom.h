@@ -21,6 +21,10 @@ uint32_t GetSize(const CreateWindowMetaCommand& command);
 void Encode(const CreateWindowMetaCommand& command, char* dest);
 void Decode(char* src, CreateWindowMetaCommand& command);
 
+uint32_t GetSize(const UpdateWindowMetaCommand& command);
+void Encode(const UpdateWindowMetaCommand& command, char* dest);
+void Decode(char* src, UpdateWindowMetaCommand& command);
+
 uint32_t GetSize(const MappedDataMetaCommand& command);
 void Encode(const MappedDataMetaCommand& command, char* dest);
 void Decode(char* src, MappedDataMetaCommand& command);

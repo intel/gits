@@ -24,11 +24,19 @@ public:
                      int32_t width,
                      int32_t height,
                      bool visible);
+  void UpdateWindow(uint64_t handle, int32_t width, int32_t height, bool visible);
   uint64_t GetCurrentWindowHandle(uint64_t captureWindow);
   uint64_t GetCurrentInstance(uint64_t captureInstance);
 
 private:
-  std::unordered_map<uint64_t, uint64_t> m_WindowMap;
+  struct WindowState {
+    uint64_t playbackHandle{};
+    uint32_t width{};
+    uint32_t height{};
+    bool visible{};
+  };
+
+  std::unordered_map<uint64_t, WindowState> m_WindowMap;
   std::unordered_map<uint64_t, uint64_t> m_InstanceMap;
 };
 

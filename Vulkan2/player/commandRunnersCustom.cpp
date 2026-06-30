@@ -34,6 +34,23 @@ void CreateWindowMetaRunner::Run() {
   }
 }
 
+void UpdateWindowMetaRunner::Run() {
+  auto& manager = PlayerManager::Get();
+
+  for (Layer* layer : manager.GetPreLayers()) {
+    layer->Pre(m_Command);
+  }
+
+  if (manager.ExecuteCommands() && !m_Command.m_Skip) {
+    manager.GetWindowService().UpdateWindow(m_Command.m_Hwnd.Value, m_Command.m_Width.Value,
+                                            m_Command.m_Height.Value, m_Command.m_Visible.Value);
+  }
+
+  for (Layer* layer : manager.GetPostLayers()) {
+    layer->Post(m_Command);
+  }
+}
+
 void MappedDataMetaRunner::Run() {
   auto& manager = PlayerManager::Get();
 

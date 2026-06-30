@@ -28,6 +28,19 @@ private:
   CreateWindowMetaCommand m_Command;
 };
 
+class UpdateWindowMetaRunner : public stream::CommandRunner {
+public:
+  void Run() override;
+
+protected:
+  void DecodeCommand() override {
+    Decode(m_Data, m_Command);
+  }
+
+private:
+  UpdateWindowMetaCommand m_Command;
+};
+
 class MappedDataMetaRunner : public stream::CommandRunner {
 public:
   void Run() override;

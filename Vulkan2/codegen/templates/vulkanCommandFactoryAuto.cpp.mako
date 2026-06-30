@@ -19,6 +19,8 @@ stream::CommandRunner* VulkanCommandFactory::CreateCommand(unsigned id) {
   switch (static_cast<CommandId>(id)) {
   case CommandId::ID_META_CREATE_WINDOW:
     return new CreateWindowMetaRunner();
+  case CommandId::ID_META_UPDATE_WINDOW:
+    return new UpdateWindowMetaRunner();
   case CommandId::ID_META_MAPPED_DATA:
     return new MappedDataMetaRunner();
   % for command in commands:

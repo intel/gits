@@ -32,6 +32,9 @@ public:
   virtual void Pre(MappedDataMetaCommand& command) {}
   virtual void Post(MappedDataMetaCommand& command) {}
   
+  virtual void Pre(UpdateWindowMetaCommand& command) {}
+  virtual void Post(UpdateWindowMetaCommand& command) {}
+
   %for command in commands:
   <% define = get_define(command.platform) %>\
   % if define:

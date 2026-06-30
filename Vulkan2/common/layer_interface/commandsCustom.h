@@ -58,6 +58,19 @@ public:
   Argument<uint64_t> m_Hinstance{};
 };
 
+class UpdateWindowMetaCommand : public Command {
+public:
+  UpdateWindowMetaCommand(uint32_t threadId)
+      : Command{CommandId::ID_META_UPDATE_WINDOW, threadId} {}
+  UpdateWindowMetaCommand() : Command(CommandId::ID_META_UPDATE_WINDOW) {}
+
+public:
+  Argument<uint64_t> m_Hwnd{};
+  Argument<int32_t> m_Width{};
+  Argument<int32_t> m_Height{};
+  Argument<bool> m_Visible{};
+};
+
 class MappedDataMetaCommand : public Command {
 public:
   MappedDataMetaCommand(uint32_t threadId) : Command{CommandId::ID_META_MAPPED_DATA, threadId} {}
