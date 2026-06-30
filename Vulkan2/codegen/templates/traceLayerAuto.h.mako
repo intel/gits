@@ -42,14 +42,14 @@ public:
   % endfor
 
   // TraceLayerCustom
-  void Pre(StateRestoreBeginCommand& command);
-  void Post(StateRestoreBeginCommand& command);
+  void Pre(StateRestoreBeginCommand& command) override;
+  void Post(StateRestoreBeginCommand& command) override;
 
-  void Pre(StateRestoreEndCommand& command);
-  void Post(StateRestoreEndCommand& command);
+  void Pre(StateRestoreEndCommand& command) override;
+  void Post(StateRestoreEndCommand& command) override;
 
-  void Pre(MarkerUInt64Command& command);
-  void Post(MarkerUInt64Command& command);
+  void Pre(MarkerUInt64Command& command) override;
+  void Post(MarkerUInt64Command& command) override;
 
   void Pre(CreateWindowMetaCommand& command) override;
   void Post(CreateWindowMetaCommand& command) override;
