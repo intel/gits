@@ -245,6 +245,8 @@ public:
   void Post(vkCmdResetEvent2Command& command) override;
   void Post(vkCmdResetEvent2KHRCommand& command) override;
   void Post(vkCmdWaitEventsCommand& command) override;
+  void Post(vkCmdWaitEvents2Command& command) override;
+  void Post(vkCmdWaitEvents2KHRCommand& command) override;
   // Indirect draw/dispatch
   void Post(vkCmdDrawIndirectCommand& command) override;
   void Post(vkCmdDrawIndexedIndirectCommand& command) override;
@@ -313,6 +315,16 @@ public:
   }
 
 private:
+  // Feed the per-event VkDependencyInfo image barriers carried by a sync2
+  // event wait (vkCmdWaitEvents2/KHR) into image-layout tracking, mirroring the
+  // sync2 pipeline-barrier path.  handleKeys is the flat, array-order
+  // concatenation of every dependency info's handle keys ([buffers][images]
+  // per element); it is sliced back into per-element ranges here.
+  void TrackWaitEvents2ImageLayouts(uint64_t cbKey,
+                                    const VkDependencyInfo* dependencyInfos,
+                                    uint32_t infoCount,
+                                    const std::vector<uint64_t>& handleKeys);
+
   // Records the net signaled state an event ends up in after the given
   // (still recording) command buffer executes.  No-op for zero keys or a
   // command buffer that is not currently recording.

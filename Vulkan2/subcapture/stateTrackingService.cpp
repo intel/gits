@@ -681,6 +681,22 @@ static bool FindQueueAndPoolForFamily(
 
 } // namespace
 
+bool StateTrackingService::IsAcquiredSwapchainImage(const ImageState* img) {
+  if (!img || img->CreationCommandId != CommandId::ID_VKGETSWAPCHAINIMAGESKHR) {
+    return false;
+  }
+  const auto* sc = GetState<SwapchainState>(img->ParentKey);
+  if (!sc) {
+    return false;
+  }
+  for (uint32_t idx = 0; idx < static_cast<uint32_t>(sc->ImageKeys.size()); ++idx) {
+    if (sc->ImageKeys[idx] == img->Key) {
+      return sc->AcquiredImages.count(idx) != 0;
+    }
+  }
+  return false;
+}
+
 void StateTrackingService::EmitImageLayoutTransitions() {
   // Collect images per device that need a layout transition (i.e. their
   // layout at the subcapture point is neither UNDEFINED nor PREINITIALIZED).
@@ -706,42 +722,29 @@ void StateTrackingService::EmitImageLayoutTransitions() {
       continue;
     }
 
-    // For regular images: skip UNDEFINED / PREINITIALIZED; the second player
-    // creates them in UNDEFINED already so there is nothing to restore.
-    // For swapchain images: always transition to PRESENT_SRC_KHR.  Their tracked
-    // layout is reset to UNDEFINED by ImageLayoutService::OnQueuePresent (called
-    // at vkQueuePresentKHR time), but the player may call vkQueuePresentKHR on
-    // any acquired swapchain image during the index-rewind phase, so every
-    // swapchain image must be in PRESENT_SRC_KHR when the subcapture starts.
+    // Layout-restore policy at the cut:
+    //   * Regular image: transition to its tracked CurrentLayout; skip
+    //     UNDEFINED / PREINITIALIZED (the second player creates it UNDEFINED).
+    //   * Non-acquired swapchain image: always transition to PRESENT_SRC_KHR.
+    //     Its tracked layout is reset to UNDEFINED by
+    //     ImageLayoutService::OnQueuePresent, but the player may present any
+    //     swapchain image during the index-rewind phase, so all of them must be
+    //     in PRESENT_SRC_KHR when the subcapture starts.
+    //   * Acquired swapchain image: owned by the application at the cut.  The
+    //     vkAcquireNextImageKHR that RestoreSwapchain re-emits returns the image
+    //     in UNDEFINED, so it needs the same tracked-layout restore as a regular
+    //     image; otherwise the first recorded use mismatches (e.g. expecting
+    //     PRESENT_SRC_KHR while UNDEFINED, VUID-vkCmdDraw-None-09600).
     const bool isSwapchainImage =
         (state->CreationCommandId == CommandId::ID_VKGETSWAPCHAINIMAGESKHR);
+    const bool forcePresentSrc = isSwapchainImage && !IsAcquiredSwapchainImage(img);
 
-    // Currently-acquired swapchain images are handled by the re-acquire calls
-    // emitted in RestoreSwapchain; skip them here so we don't redundantly
-    // transition an image the app already owns after the re-acquire.
-    if (isSwapchainImage) {
-      const auto* sc = GetState<SwapchainState>(img->ParentKey);
-      if (sc) {
-        bool isAcquired = false;
-        for (uint32_t idx = 0; idx < static_cast<uint32_t>(sc->ImageKeys.size()); ++idx) {
-          if (sc->ImageKeys[idx] == state->Key) {
-            isAcquired = sc->AcquiredImages.count(idx) != 0;
-            break;
-          }
-        }
-        if (isAcquired) {
-          continue;
-        }
-      }
-    }
-
-    // For non-acquired swapchain images we will force PRESENT_SRC_KHR below in
-    // the per-image barrier-building loop; for regular images we will reuse
-    // the current tracked layout there.  We only need the skip decision here:
-    // regular images already in UNDEFINED/PREINITIALIZED need no transition,
-    // because the second player creates them in UNDEFINED.
-    if (!isSwapchainImage && (img->CurrentLayout == VK_IMAGE_LAYOUT_UNDEFINED ||
-                              img->CurrentLayout == VK_IMAGE_LAYOUT_PREINITIALIZED)) {
+    // Images that resolve to their tracked CurrentLayout (regular images and
+    // acquired swapchain images) need no transition if that layout is
+    // UNDEFINED / PREINITIALIZED.  Non-acquired swapchain images are forced to
+    // PRESENT_SRC_KHR regardless of tracked layout.
+    if (!forcePresentSrc && (img->CurrentLayout == VK_IMAGE_LAYOUT_UNDEFINED ||
+                             img->CurrentLayout == VK_IMAGE_LAYOUT_PREINITIALIZED)) {
       continue;
     }
     // Determine device key: direct parent for regular images; grandparent for
@@ -829,9 +832,11 @@ void StateTrackingService::EmitImageLayoutTransitions() {
       }
       const bool isSwapchain = (img->CreationCommandId == CommandId::ID_VKGETSWAPCHAINIMAGESKHR);
       VkImageLayout targetLayout;
-      if (isSwapchain) {
+      if (isSwapchain && !IsAcquiredSwapchainImage(img)) {
+        // Non-acquired swapchain image: force PRESENT_SRC_KHR for present rewind.
         targetLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
       } else {
+        // Regular image or acquired swapchain image: restore its tracked layout.
         targetLayout = img->CurrentLayout;
       }
       VkImageMemoryBarrier b{};
@@ -955,6 +960,13 @@ void StateTrackingService::RestoreQueryPools() {
     if (qp->QueryCount == 0) {
       continue;
     }
+    bool anyReset = false;
+    for (bool reset : qp->ResetQueries) {
+      if (reset) {
+        anyReset = true;
+        break;
+      }
+    }
     bool anyUsed = false;
     for (bool used : qp->UsedQueries) {
       if (used) {
@@ -962,7 +974,23 @@ void StateTrackingService::RestoreQueryPools() {
         break;
       }
     }
-    if (!anyUsed) {
+    // Restore every pool that was touched before the cut, exactly as legacy
+    // gits::Vulkan::RestoreQueryPool (vulkanStateRestore.cpp) does: it iterates
+    // all pools and, per pool, re-emits a vkCmdResetQueryPool for the queries
+    // that were reset before the cut (resetQueries[i]) and a fake query for the
+    // ones written before the cut (usedQueries[i]).  We reproduce that exactly
+    // below; the only difference is structural -- pool *creation* happens in the
+    // generic object-restore pass here, not in this function.
+    //
+    // A pool with neither reset nor written queries before the cut is left
+    // untouched.  This is NOT an assumption about what the recording range does
+    // with it: such a pool has no recorded queue family (RecordQueueFamily only
+    // runs on a reset/use), so we cannot pick a transient command buffer for it,
+    // and -- matching legacy -- its resetQueries/usedQueries are all false, so
+    // legacy would emit no reset and no fake query for it either.  Whatever the
+    // recording range later does (including resetting it before first use) is
+    // self-contained and needs no pre-cut state to be reconstructed.
+    if (!anyReset && !anyUsed) {
       continue;
     }
     // The pool itself must have been re-created this pass; otherwise the
@@ -972,7 +1000,7 @@ void StateTrackingService::RestoreQueryPools() {
     }
     if (qp->RestoreQueueFamily == UINT32_MAX) {
       LOG_WARNING << "Vulkan2 subcapture: query pool key=" << qp->Key
-                  << " has written queries but no recorded queue family; skipping its restore";
+                  << " needs query restore but has no recorded queue family; skipping its restore";
       continue;
     }
     if (qp->ParentKey) {
@@ -1047,16 +1075,40 @@ void StateTrackingService::RestoreQueryPools() {
           continue;
         }
 
-        // Reset the whole pool: a query must be in the post-reset state before it
-        // can be written, and resetting unused queries is harmless (the recording
-        // range resets again before its own use).
+        // Reset every query that was in the post-reset state at the cut.  The
+        // application's vkCmdResetQueryPool calls happened before the recording
+        // range, so without re-emitting them a recording-range vkCmdBeginQuery /
+        // vkCmdWriteTimestamp would hit an unreset query
+        // (VUID-vkCmdBeginQuery-None-00807).  Contiguous reset runs are coalesced
+        // into a single vkCmdResetQueryPool to minimise command count, mirroring
+        // legacy gits::Vulkan::RestoreQueryPool (vulkanStateRestore.cpp).
         {
-          vkCmdResetQueryPoolCommand resetCmd;
-          resetCmd.m_commandBuffer.Key = kTempCBKey;
-          resetCmd.m_queryPool.Key = poolKey;
-          resetCmd.m_firstQuery.Value = 0;
-          resetCmd.m_queryCount.Value = qp->QueryCount;
-          m_Recorder.Record(vkCmdResetQueryPoolSerializer(resetCmd));
+          const uint32_t resetCountTotal =
+              std::min<uint32_t>(qp->QueryCount, static_cast<uint32_t>(qp->ResetQueries.size()));
+          uint32_t start = 0;
+          uint32_t count = 0;
+          auto emitReset = [&](uint32_t firstQuery, uint32_t queryCount) {
+            vkCmdResetQueryPoolCommand resetCmd;
+            resetCmd.m_commandBuffer.Key = kTempCBKey;
+            resetCmd.m_queryPool.Key = poolKey;
+            resetCmd.m_firstQuery.Value = firstQuery;
+            resetCmd.m_queryCount.Value = queryCount;
+            m_Recorder.Record(vkCmdResetQueryPoolSerializer(resetCmd));
+          };
+          for (uint32_t i = 0; i < resetCountTotal; ++i) {
+            if (qp->ResetQueries[i]) {
+              ++count;
+            } else {
+              if (count > 0) {
+                emitReset(start, count);
+              }
+              count = 0;
+              start = i + 1;
+            }
+          }
+          if (count > 0) {
+            emitReset(start, count);
+          }
         }
 
         // Issue a fake query for every query that was written before the cut so a
@@ -1900,9 +1952,14 @@ void StateTrackingService::RestoreSwapchain(ObjectState* state) {
 
   // Re-acquire any images that were acquired but not yet presented at the
   // subcapture boundary.  This mirrors the old-backend RestoreSwapchainKHR
-  // which emits vkAcquireNextImageKHR for each index in AcquiredImages.
-  // The image arrives in the correct state via the recorded frame's own
-  // acquire+barrier path, so no separate layout barrier is needed for these.
+  // (vulkanStateRestore.cpp), which emits one vkAcquireNextImageKHR per index in
+  // acquiredImages with a VK_NULL_HANDLE semaphore and fence.  Passing both as
+  // null is technically a spec violation (VUID-vkAcquireNextImageKHR-semaphore-
+  // 01780), but it is a benign one: the call only rewinds the swapchain's
+  // internal acquire index so the recording range's own acquire returns the
+  // expected image, and matching legacy keeps the two backends identical.  The
+  // re-acquired image arrives in UNDEFINED layout; EmitImageLayoutTransitions
+  // (run later in RestoreState) transitions it to the layout tracked at the cut.
   for (uint32_t imageIndex : sc->AcquiredImages) {
     vkAcquireNextImageKHRCommand acquireCmd;
     acquireCmd.m_device.Key = state->ParentKey;

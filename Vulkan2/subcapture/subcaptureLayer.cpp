@@ -414,6 +414,11 @@ void SubcaptureLayer::Post(vkQueueSubmitCommand& command) {
   }
   m_SyncState.OnQueueSubmit(command.m_pSubmits.Value, command.m_pSubmits.Size,
                             command.m_pSubmits.HandleKeys, command.m_fence.Key);
+  // Commit each submitted CB's buffered image-layout transitions to
+  // ImageState::CurrentLayout in submission order (layouts take effect at
+  // submit time, not record time).
+  m_ImageLayout.OnQueueSubmit(command.m_pSubmits.Value, command.m_pSubmits.Size,
+                              command.m_pSubmits.HandleKeys);
 }
 
 void SubcaptureLayer::Post(vkQueueSubmit2Command& command) {
@@ -422,6 +427,8 @@ void SubcaptureLayer::Post(vkQueueSubmit2Command& command) {
   }
   m_SyncState.OnQueueSubmit2(command.m_pSubmits.Value, command.m_pSubmits.Size,
                              command.m_pSubmits.HandleKeys, command.m_fence.Key);
+  m_ImageLayout.OnQueueSubmit2(command.m_pSubmits.Value, command.m_pSubmits.Size,
+                               command.m_pSubmits.HandleKeys);
 }
 
 void SubcaptureLayer::Post(vkQueueSubmit2KHRCommand& command) {
@@ -430,6 +437,8 @@ void SubcaptureLayer::Post(vkQueueSubmit2KHRCommand& command) {
   }
   m_SyncState.OnQueueSubmit2(command.m_pSubmits.Value, command.m_pSubmits.Size,
                              command.m_pSubmits.HandleKeys, command.m_fence.Key);
+  m_ImageLayout.OnQueueSubmit2(command.m_pSubmits.Value, command.m_pSubmits.Size,
+                               command.m_pSubmits.HandleKeys);
 }
 
 void SubcaptureLayer::Post(vkResetFencesCommand& command) {
@@ -1590,6 +1599,14 @@ void SubcaptureLayer::Post(vkCmdResetEvent2KHRCommand& command) {
 }
 
 void SubcaptureLayer::Post(vkCmdWaitEventsCommand& command) {
+  // An event wait carries the same VkImageMemoryBarrier array as an explicit
+  // pipeline barrier and can transition image layouts (e.g. TRANSFER_DST ->
+  // SHADER_READ_ONLY).  These transitions must feed image-layout tracking, or
+  // ImageState::CurrentLayout goes stale and state restore transitions images
+  // to the wrong layout (VUID-vkCmdDraw-None-09600).
+  m_ImageLayout.OnPipelineBarrier(command.m_commandBuffer.Key, command.m_pImageMemoryBarriers.Value,
+                                  command.m_pImageMemoryBarriers.Size,
+                                  command.m_pImageMemoryBarriers.HandleKeys);
   m_CommandBufferLifecycle.TrackHandleDependencies(command.m_commandBuffer.Key,
                                                    command.m_pEvents.Keys);
   m_CommandBufferLifecycle.TrackHandleDependencies(command.m_commandBuffer.Key,
@@ -1663,18 +1680,19 @@ void SubcaptureLayer::Post(vkCmdCopyQueryPoolResultsCommand& command) {
 void SubcaptureLayer::Post(vkCmdExecuteCommandsCommand& command) {
   m_CommandBufferLifecycle.TrackHandleDependencies(command.m_commandBuffer.Key,
                                                    command.m_pCommandBuffers.Keys);
-  // Fold each secondary's buffered query effects into the primary so they are
-  // applied to the query pools when the primary is submitted.
+  // Fold each secondary's buffered query effects and image-layout transitions
+  // into the primary so they are applied when the primary is submitted.
   for (uint64_t secondaryKey : command.m_pCommandBuffers.Keys) {
     m_StateTracking.GetQueryPoolStateService().MergeSecondary(command.m_commandBuffer.Key,
                                                               secondaryKey);
+    m_ImageLayout.MergeSecondary(command.m_commandBuffer.Key, secondaryKey);
   }
 }
 
 // ---- Image layout tracking ---------------------------------------------
 
 void SubcaptureLayer::Post(vkCmdPipelineBarrierCommand& command) {
-  m_ImageLayout.OnPipelineBarrier(command.m_pImageMemoryBarriers.Value,
+  m_ImageLayout.OnPipelineBarrier(command.m_commandBuffer.Key, command.m_pImageMemoryBarriers.Value,
                                   command.m_pImageMemoryBarriers.Size,
                                   command.m_pImageMemoryBarriers.HandleKeys);
   m_CommandBufferLifecycle.TrackHandleDependencies(command.m_commandBuffer.Key,
@@ -1685,7 +1703,7 @@ void SubcaptureLayer::Post(vkCmdPipelineBarrierCommand& command) {
 
 void SubcaptureLayer::Post(vkCmdPipelineBarrier2Command& command) {
   if (command.m_pDependencyInfo.Value) {
-    m_ImageLayout.OnPipelineBarrier2(*command.m_pDependencyInfo.Value,
+    m_ImageLayout.OnPipelineBarrier2(command.m_commandBuffer.Key, *command.m_pDependencyInfo.Value,
                                      command.m_pDependencyInfo.HandleKeys);
   }
   m_CommandBufferLifecycle.TrackHandleDependencies(command.m_commandBuffer.Key,
@@ -1694,11 +1712,72 @@ void SubcaptureLayer::Post(vkCmdPipelineBarrier2Command& command) {
 
 void SubcaptureLayer::Post(vkCmdPipelineBarrier2KHRCommand& command) {
   if (command.m_pDependencyInfo.Value) {
-    m_ImageLayout.OnPipelineBarrier2(*command.m_pDependencyInfo.Value,
+    m_ImageLayout.OnPipelineBarrier2(command.m_commandBuffer.Key, *command.m_pDependencyInfo.Value,
                                      command.m_pDependencyInfo.HandleKeys);
   }
   m_CommandBufferLifecycle.TrackHandleDependencies(command.m_commandBuffer.Key,
                                                    command.m_pDependencyInfo.HandleKeys);
+}
+
+void SubcaptureLayer::TrackWaitEvents2ImageLayouts(uint64_t cbKey,
+                                                   const VkDependencyInfo* dependencyInfos,
+                                                   uint32_t infoCount,
+                                                   const std::vector<uint64_t>& handleKeys) {
+  if (dependencyInfos == nullptr) {
+    return;
+  }
+  // CollectHandleKeys (handleArgumentUpdatersAuto.cpp) appends, per dependency
+  // info, the buffer-barrier buffer keys followed by the image-barrier image
+  // keys, and the array updater concatenates those across all events.  A
+  // VkDependencyInfo pNext chain could in theory contribute extra keys, which
+  // would desync the per-element offsets below; guard against that by checking
+  // the total against the barrier counts and skipping layout tracking (rather
+  // than risk mis-assigning a key) when they disagree.
+  uint64_t expectedKeys = 0;
+  for (uint32_t i = 0; i < infoCount; ++i) {
+    expectedKeys += dependencyInfos[i].bufferMemoryBarrierCount;
+    expectedKeys += dependencyInfos[i].imageMemoryBarrierCount;
+  }
+  if (expectedKeys != handleKeys.size()) {
+    return;
+  }
+  uint32_t offset = 0;
+  for (uint32_t i = 0; i < infoCount; ++i) {
+    const VkDependencyInfo& info = dependencyInfos[i];
+    const uint32_t elemKeyCount = info.bufferMemoryBarrierCount + info.imageMemoryBarrierCount;
+    // OnPipelineBarrier2 expects this element's keys laid out as
+    // [buffers][images], which is exactly this slice of the flat array.
+    const std::vector<uint64_t> elemKeys(handleKeys.begin() + offset,
+                                         handleKeys.begin() + offset + elemKeyCount);
+    m_ImageLayout.OnPipelineBarrier2(cbKey, info, elemKeys);
+    offset += elemKeyCount;
+  }
+}
+
+void SubcaptureLayer::Post(vkCmdWaitEvents2Command& command) {
+  // A sync2 event wait carries its image-layout transitions inside the
+  // per-event VkDependencyInfo array, just like vkCmdPipelineBarrier2.  Without
+  // feeding these into image-layout tracking, ImageState::CurrentLayout goes
+  // stale and state restore transitions images to the wrong layout
+  // (VUID-vkCmdDraw-None-09600) -- the sync2 counterpart of the sync1
+  // vkCmdWaitEvents fix above.
+  TrackWaitEvents2ImageLayouts(command.m_commandBuffer.Key, command.m_pDependencyInfos.Value,
+                               command.m_pDependencyInfos.Size,
+                               command.m_pDependencyInfos.HandleKeys);
+  m_CommandBufferLifecycle.TrackHandleDependencies(command.m_commandBuffer.Key,
+                                                   command.m_pEvents.Keys);
+  m_CommandBufferLifecycle.TrackHandleDependencies(command.m_commandBuffer.Key,
+                                                   command.m_pDependencyInfos.HandleKeys);
+}
+
+void SubcaptureLayer::Post(vkCmdWaitEvents2KHRCommand& command) {
+  TrackWaitEvents2ImageLayouts(command.m_commandBuffer.Key, command.m_pDependencyInfos.Value,
+                               command.m_pDependencyInfos.Size,
+                               command.m_pDependencyInfos.HandleKeys);
+  m_CommandBufferLifecycle.TrackHandleDependencies(command.m_commandBuffer.Key,
+                                                   command.m_pEvents.Keys);
+  m_CommandBufferLifecycle.TrackHandleDependencies(command.m_commandBuffer.Key,
+                                                   command.m_pDependencyInfos.HandleKeys);
 }
 
 // ---- Swapchain / surface -------------------------------------------------

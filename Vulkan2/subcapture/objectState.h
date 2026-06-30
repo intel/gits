@@ -292,6 +292,15 @@ struct CommandBufferState : ObjectState {
   // resetQueriesAfterSubmit / usedQueriesAfterSubmit.
   std::unordered_map<uint64_t, std::unordered_set<uint32_t>> ResetQueriesAfterSubmit;
   std::unordered_map<uint64_t, std::unordered_set<uint32_t>> UsedQueriesAfterSubmit;
+  // Net layout each image (key) ends up in after this command buffer is
+  // submitted and executed.  Populated at record time by the pipeline-barrier,
+  // event-wait and render-pass Post handlers (last write wins per image);
+  // applied to ImageState::CurrentLayout when the CB is submitted.  Image
+  // layout transitions take effect on the GPU at submit time, not at vkCmd*
+  // record time, so applying them at record time captures stale mid-frame
+  // layouts (e.g. the next frame's command buffers being recorded ahead).
+  // Mirrors legacy CCommandBufferState::imageLayoutAfterSubmit.
+  std::unordered_map<uint64_t, VkImageLayout> ImageLayoutAfterSubmit;
 };
 
 // ---- Swapchain / surface -----------------------------------------------

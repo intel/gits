@@ -32,6 +32,7 @@ void CommandBufferLifecycleService::ClearState(CommandBufferState& state) {
   state.EventStatesAfterSubmit.clear();
   state.ResetQueriesAfterSubmit.clear();
   state.UsedQueriesAfterSubmit.clear();
+  state.ImageLayoutAfterSubmit.clear();
 }
 
 void CommandBufferLifecycleService::OnAllocate(vkAllocateCommandBuffersCommand& command) {

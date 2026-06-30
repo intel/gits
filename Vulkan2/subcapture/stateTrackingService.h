@@ -234,6 +234,12 @@ private:
   // have been re-created, before the StateRestoreEnd marker.
   void EmitImageLayoutTransitions();
 
+  // True if `img` is a swapchain image that was acquired (and not yet presented)
+  // at the subcapture cut.  Such images are owned by the application: their
+  // tracked layout must be restored like a regular image, whereas non-acquired
+  // swapchain images are forced to PRESENT_SRC_KHR for the present-index rewind.
+  bool IsAcquiredSwapchainImage(const ImageState* img);
+
   // Emit, per device, the commands needed to restore VkQueryPool contents:
   // reset the touched queries and issue a fake query (vkCmdWriteTimestamp, or
   // vkCmdBeginQuery + vkCmdEndQuery) for every query that was written before
