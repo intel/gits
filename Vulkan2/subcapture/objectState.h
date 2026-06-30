@@ -273,6 +273,13 @@ struct CommandBufferState : ObjectState {
   // corresponding EventState::isSignaled when the CB is submitted.  Mirrors the
   // legacy CCommandBufferState::eventStatesAfterSubmit.
   std::unordered_map<uint64_t, bool> eventStatesAfterSubmit;
+  // Per query pool (key) -> set of query indices reset / used by the vkCmd*
+  // calls recorded into this command buffer.  Applied to the QueryPoolState
+  // when the CB is submitted (queries take effect on the GPU at submit time,
+  // not at record time).  Mirrors legacy CCommandBufferState::
+  // resetQueriesAfterSubmit / usedQueriesAfterSubmit.
+  std::unordered_map<uint64_t, std::unordered_set<uint32_t>> resetQueriesAfterSubmit;
+  std::unordered_map<uint64_t, std::unordered_set<uint32_t>> usedQueriesAfterSubmit;
 };
 
 // ---- Swapchain / surface -----------------------------------------------
@@ -305,7 +312,30 @@ struct SwapchainState : ObjectState {
 
 // ---- Query pool --------------------------------------------------------
 
-struct QueryPoolState : ObjectState {};
+struct QueryPoolState : ObjectState {
+  // Captured at vkCreateQueryPool.  queryType selects how a query is made
+  // "available" again during state restore (timestamp write vs. begin/end);
+  // queryCount sizes the per-query bitmaps below.
+  uint32_t queryType{};
+  uint32_t queryCount{0};
+  // Queue family index of the command pool the application used to reset/write
+  // this pool's queries.  That family is, by construction, capable of the query
+  // operations (the app issued them successfully), so the state-restore pass
+  // must replay its reset / fake-query commands on a queue of the same family.
+  // Picking an arbitrary family (e.g. a transfer-only one) violates
+  // VUID-vkCmdResetQueryPool-commandBuffer-cmdpool and can lose the device.
+  uint32_t restoreQueueFamily{UINT32_MAX};
+  // Per-query state at the subcapture cut, accumulated as command buffers that
+  // touch this pool are submitted.  resetQueries[i] == true: query i was reset
+  // (vkCmd/vkResetQueryPool) and is in the post-reset (writable) state.
+  // usedQueries[i] == true: query i was written before the cut and is therefore
+  // *available* for reading.  Such queries must be re-created with a fake
+  // result during state restore, otherwise the recording range's
+  // vkGetQueryPoolResults reads an uninitialized query and the device is lost.
+  // Mirrors the legacy CQueryPoolState resetQueries / usedQueries.
+  std::vector<bool> resetQueries;
+  std::vector<bool> usedQueries;
+};
 
 // ---- Misc extension objects --------------------------------------------
 

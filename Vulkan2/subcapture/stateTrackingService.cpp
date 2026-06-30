@@ -289,6 +289,12 @@ void StateTrackingService::RestoreState() {
 
   EmitImageLayoutTransitions();
 
+  // Restore query-pool contents (reset + fake-fill written queries) so the
+  // recording range can read results for queries that were written before the
+  // cut.  Emitted before the device-wait-idle loop below so its transient
+  // submits are drained along with the layout-transition submits.
+  RestoreQueryPools();
+
   // Drain all pre-recording-range GPU work before the recording range begins.
   // Mirrors legacy Vulkan::FinishStateRestore (Vulkan/recorder/vulkanStateRestore.cpp
   // ~4206 lines):
@@ -577,6 +583,44 @@ static bool FindQueueAndPool(const std::map<uint64_t, std::unique_ptr<ObjectStat
   return false;
 }
 
+// Find a queue key and command pool key on deviceKey that both belong to the
+// given queue family.  Used by query-pool restore, which must run on the same
+// family the application used (and therefore a query-capable one), unlike the
+// generic FindQueueAndPool above which returns the first family that pairs.
+static bool FindQueueAndPoolForFamily(
+    const std::map<uint64_t, std::unique_ptr<ObjectState>>& states,
+    uint64_t deviceKey,
+    uint32_t familyIndex,
+    uint64_t& outQueueKey,
+    uint64_t& outPoolKey) {
+  outQueueKey = 0;
+  outPoolKey = 0;
+  if (familyIndex == UINT32_MAX) {
+    return false;
+  }
+
+  for (const auto& [k, sp] : states) {
+    if (sp->destroyed || sp->parentKey != deviceKey) {
+      continue;
+    }
+    if ((sp->creationCommandId == CommandId::ID_VKGETDEVICEQUEUE ||
+         sp->creationCommandId == CommandId::ID_VKGETDEVICEQUEUE2) &&
+        outQueueKey == 0) {
+      auto* qs = static_cast<QueueState*>(sp.get());
+      if (qs->queueFamilyIndex == familyIndex) {
+        outQueueKey = k;
+      }
+    } else if (sp->creationCommandId == CommandId::ID_VKCREATECOMMANDPOOL && outPoolKey == 0) {
+      auto* ps = static_cast<CommandPoolState*>(sp.get());
+      if (ps->queueFamilyIndex == familyIndex) {
+        outPoolKey = k;
+      }
+    }
+  }
+
+  return outQueueKey != 0 && outPoolKey != 0;
+}
+
 } // namespace
 
 void StateTrackingService::EmitImageLayoutTransitions() {
@@ -818,6 +862,227 @@ void StateTrackingService::EmitImageLayoutTransitions() {
 
     LOG_INFO << "Vulkan2 subcapture: emitted layout transitions for " << barriers.size()
              << " image(s) on device key=" << deviceKey;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// RestoreQueryPools
+// ---------------------------------------------------------------------------
+
+void StateTrackingService::RestoreQueryPools() {
+  // Collect, per device, the query pools that have at least one query written
+  // before the subcapture cut (usedQueries).  A pool whose queries are only
+  // reset (never written) needs no restore: the recording range resets and
+  // writes them itself before reading.  A pool with a *written* query, on the
+  // other hand, leaves the recording range a result it never produced; on a
+  // freshly created (uninitialized) pool the matching vkGetQueryPoolResults
+  // returns VK_ERROR_DEVICE_LOST.
+  // Grouped by device, then by the queue family the application used for the
+  // pool's queries: each (device, family) pair gets one transient command
+  // buffer allocated from a command pool of that family.
+  std::unordered_map<uint64_t, std::map<uint32_t, std::vector<uint64_t>>> poolsByDeviceAndFamily;
+
+  for (auto& [_, statePtr] : m_States) {
+    ObjectState* state = statePtr.get();
+    if (state->destroyed) {
+      continue;
+    }
+    if (state->creationCommandId != CommandId::ID_VKCREATEQUERYPOOL) {
+      continue;
+    }
+    auto* qp = static_cast<QueryPoolState*>(state);
+    if (qp->queryCount == 0) {
+      continue;
+    }
+    bool anyUsed = false;
+    for (size_t i = 0; i < qp->usedQueries.size(); ++i) {
+      if (qp->usedQueries[i]) {
+        anyUsed = true;
+        break;
+      }
+    }
+    if (!anyUsed) {
+      continue;
+    }
+    // The pool itself must have been re-created this pass; otherwise the
+    // player has no handle to remap our query commands onto.
+    if (!m_RestoredThisPass.count(qp->key)) {
+      continue;
+    }
+    if (qp->restoreQueueFamily == UINT32_MAX) {
+      LOG_WARNING << "Vulkan2 subcapture: query pool key=" << qp->key
+                  << " has written queries but no recorded queue family; skipping its restore";
+      continue;
+    }
+    if (qp->parentKey) {
+      poolsByDeviceAndFamily[qp->parentKey][qp->restoreQueueFamily].push_back(qp->key);
+    }
+  }
+
+  if (poolsByDeviceAndFamily.empty()) {
+    return;
+  }
+
+  // Synthetic high-value key for the temporary command buffer; must not collide
+  // with any recording key.  EmitImageLayoutTransitions already allocated and
+  // freed its own (-2) CB before we run, but use a distinct value anyway.
+  constexpr uint64_t kTempCBKey = static_cast<uint64_t>(-3);
+
+  for (auto& [deviceKey, poolsByFamily] : poolsByDeviceAndFamily) {
+    for (auto& [familyIndex, poolKeys] : poolsByFamily) {
+      uint64_t queueKey = 0;
+      uint64_t commandPoolKey = 0;
+      if (!FindQueueAndPoolForFamily(m_States, deviceKey, familyIndex, queueKey, commandPoolKey)) {
+        LOG_WARNING << "Vulkan2 subcapture: cannot restore query pools for device key=" << deviceKey
+                    << " queue family=" << familyIndex
+                    << " (no restored queue and command pool of that family)";
+        continue;
+      }
+      if (!m_RestoredThisPass.count(queueKey) || !m_RestoredThisPass.count(commandPoolKey)) {
+        LOG_WARNING << "Vulkan2 subcapture: queue or pool was not restored, skipping query pool "
+                       "restore for device key="
+                    << deviceKey << " queue family=" << familyIndex;
+        continue;
+      }
+
+      // Allocate a temporary command buffer from the existing command pool.
+      {
+        VkCommandBufferAllocateInfo allocInfo{};
+        allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        allocInfo.commandBufferCount = 1;
+        allocInfo.commandPool = reinterpret_cast<VkCommandPool>(0x1ULL);
+
+        static VkCommandBuffer kDummyCBSlot = VK_NULL_HANDLE;
+
+        vkAllocateCommandBuffersCommand allocCmd;
+        allocCmd.m_device.Key = deviceKey;
+        allocCmd.m_pAllocateInfo.Value = &allocInfo;
+        allocCmd.m_pAllocateInfo.HandleKeys = {commandPoolKey};
+        allocCmd.m_pCommandBuffers.Value = &kDummyCBSlot;
+        allocCmd.m_pCommandBuffers.Size = 1;
+        allocCmd.m_pCommandBuffers.Keys = {kTempCBKey};
+        allocCmd.m_Return.Value = VK_SUCCESS;
+        m_Recorder.Record(vkAllocateCommandBuffersSerializer(allocCmd));
+      }
+
+      // Begin the temporary command buffer.
+      {
+        VkCommandBufferBeginInfo beginInfo{};
+        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+        vkBeginCommandBufferCommand beginCmd;
+        beginCmd.m_commandBuffer.Key = kTempCBKey;
+        beginCmd.m_pBeginInfo.Value = &beginInfo;
+        beginCmd.m_Return.Value = VK_SUCCESS;
+        m_Recorder.Record(vkBeginCommandBufferSerializer(beginCmd));
+      }
+
+      uint32_t fakeQueryCount = 0;
+      for (uint64_t poolKey : poolKeys) {
+        auto* qp = static_cast<QueryPoolState*>(GetState(poolKey));
+        if (!qp || qp->queryCount == 0) {
+          continue;
+        }
+
+        // Reset the whole pool: a query must be in the post-reset state before it
+        // can be written, and resetting unused queries is harmless (the recording
+        // range resets again before its own use).
+        {
+          vkCmdResetQueryPoolCommand resetCmd;
+          resetCmd.m_commandBuffer.Key = kTempCBKey;
+          resetCmd.m_queryPool.Key = poolKey;
+          resetCmd.m_firstQuery.Value = 0;
+          resetCmd.m_queryCount.Value = qp->queryCount;
+          m_Recorder.Record(vkCmdResetQueryPoolSerializer(resetCmd));
+        }
+
+        // Issue a fake query for every query that was written before the cut so a
+        // subsequent vkGetQueryPoolResults sees an available result.
+        for (uint32_t i = 0; i < qp->queryCount && i < qp->usedQueries.size(); ++i) {
+          if (!qp->usedQueries[i]) {
+            continue;
+          }
+          if (qp->queryType == VK_QUERY_TYPE_TIMESTAMP) {
+            vkCmdWriteTimestampCommand tsCmd;
+            tsCmd.m_commandBuffer.Key = kTempCBKey;
+            tsCmd.m_pipelineStage.Value = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+            tsCmd.m_queryPool.Key = poolKey;
+            tsCmd.m_query.Value = i;
+            m_Recorder.Record(vkCmdWriteTimestampSerializer(tsCmd));
+          } else {
+            vkCmdBeginQueryCommand beginQueryCmd;
+            beginQueryCmd.m_commandBuffer.Key = kTempCBKey;
+            beginQueryCmd.m_queryPool.Key = poolKey;
+            beginQueryCmd.m_query.Value = i;
+            beginQueryCmd.m_flags.Value = 0;
+            m_Recorder.Record(vkCmdBeginQuerySerializer(beginQueryCmd));
+
+            vkCmdEndQueryCommand endQueryCmd;
+            endQueryCmd.m_commandBuffer.Key = kTempCBKey;
+            endQueryCmd.m_queryPool.Key = poolKey;
+            endQueryCmd.m_query.Value = i;
+            m_Recorder.Record(vkCmdEndQuerySerializer(endQueryCmd));
+          }
+          ++fakeQueryCount;
+        }
+      }
+
+      // End and submit the command buffer.
+      {
+        vkEndCommandBufferCommand endCmd;
+        endCmd.m_commandBuffer.Key = kTempCBKey;
+        endCmd.m_Return.Value = VK_SUCCESS;
+        m_Recorder.Record(vkEndCommandBufferSerializer(endCmd));
+      }
+
+      {
+        static VkCommandBuffer kDummyCBSlot2 = VK_NULL_HANDLE;
+        kDummyCBSlot2 = reinterpret_cast<VkCommandBuffer>(kTempCBKey);
+
+        VkSubmitInfo submitInfo{};
+        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers = &kDummyCBSlot2;
+
+        vkQueueSubmitCommand submitCmd;
+        submitCmd.m_queue.Key = queueKey;
+        submitCmd.m_fence.Key = 0;
+        submitCmd.m_Return.Value = VK_SUCCESS;
+        submitCmd.m_submitCount.Value = 1;
+        submitCmd.m_pSubmits.Value = &submitInfo;
+        submitCmd.m_pSubmits.Size = 1;
+        submitCmd.m_pSubmits.HandleKeys = {kTempCBKey};
+        m_Recorder.Record(vkQueueSubmitSerializer(submitCmd));
+      }
+
+      // Wait for the GPU before freeing the temporary command buffer.
+      {
+        vkQueueWaitIdleCommand waitCmd;
+        waitCmd.m_queue.Key = queueKey;
+        waitCmd.m_Return.Value = VK_SUCCESS;
+        m_Recorder.Record(vkQueueWaitIdleSerializer(waitCmd));
+      }
+
+      // Free the temporary command buffer.
+      {
+        static VkCommandBuffer kDummyCBSlot3 = VK_NULL_HANDLE;
+
+        vkFreeCommandBuffersCommand freeCmd;
+        freeCmd.m_device.Key = deviceKey;
+        freeCmd.m_commandPool.Key = commandPoolKey;
+        freeCmd.m_commandBufferCount.Value = 1;
+        freeCmd.m_pCommandBuffers.Value = &kDummyCBSlot3;
+        freeCmd.m_pCommandBuffers.Size = 1;
+        freeCmd.m_pCommandBuffers.Keys = {kTempCBKey};
+        m_Recorder.Record(vkFreeCommandBuffersSerializer(freeCmd));
+      }
+
+      LOG_INFO << "Vulkan2 subcapture: restored " << fakeQueryCount << " query result(s) across "
+               << poolKeys.size() << " query pool(s) on device key=" << deviceKey
+               << " queue family=" << familyIndex;
+    }
   }
 }
 

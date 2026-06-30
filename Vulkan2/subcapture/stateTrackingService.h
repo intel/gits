@@ -11,6 +11,7 @@
 #include "objectState.h"
 #include "subcaptureRecorder.h"
 #include "descriptorSetUpdateService.h"
+#include "queryPoolStateService.h"
 
 #include <map>
 #include <memory>
@@ -161,6 +162,12 @@ public:
     return m_DescriptorSetUpdateService;
   }
 
+  // Expose the query-pool state tracker so SubcaptureLayer (record-time
+  // tracking) and SyncStateService (submit-time application) can feed it.
+  QueryPoolStateService& GetQueryPoolStateService() {
+    return m_QueryPoolState;
+  }
+
   // Inject the GPU readback helper (provided by the player module).
   void SetGpuReadbackHelper(IGpuReadbackHelper* helper) {
     m_GpuReadbackHelper = helper;
@@ -210,6 +217,14 @@ private:
   // have been re-created, before the StateRestoreEnd marker.
   void EmitImageLayoutTransitions();
 
+  // Emit, per device, the commands needed to restore VkQueryPool contents:
+  // reset the touched queries and issue a fake query (vkCmdWriteTimestamp, or
+  // vkCmdBeginQuery + vkCmdEndQuery) for every query that was written before
+  // the subcapture cut, so the recording range's vkGetQueryPoolResults reads an
+  // available result instead of losing the device.  Uses the same transient
+  // command-buffer + submit + wait-idle pattern as EmitImageLayoutTransitions.
+  void RestoreQueryPools();
+
   // Emit a pre-encoded command directly from a raw byte buffer (used for
   // replaying in-flight command buffer commands during state restore).
   void EmitRawCommand(CommandId id, const std::vector<char>& encoded);
@@ -217,6 +232,7 @@ private:
   SubcaptureRecorder& m_Recorder;
   IGpuReadbackHelper* m_GpuReadbackHelper{nullptr};
   DescriptorSetUpdateService m_DescriptorSetUpdateService;
+  QueryPoolStateService m_QueryPoolState{*this};
   // Single ordered container: key (sequential integer) -> owned state.
   // std::map keeps entries sorted by key, which equals creation order because
   // Vulkan2 keys are sequential integers assigned by the coder, exactly the

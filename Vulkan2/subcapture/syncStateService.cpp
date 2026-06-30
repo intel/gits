@@ -35,6 +35,7 @@ void SyncStateService::OnQueueSubmit(const VkSubmitInfo* pSubmits,
       for (uint32_t c = 0; c < info.commandBufferCount && keyIdx < handleKeys.size();
            ++c, ++keyIdx) {
         ApplyCommandBufferEventStates(handleKeys[keyIdx]);
+        m_StateTracking.GetQueryPoolStateService().ApplyCommandBuffer(handleKeys[keyIdx]);
       }
       for (uint32_t s = 0; s < info.signalSemaphoreCount && keyIdx < handleKeys.size();
            ++s, ++keyIdx) {
@@ -67,6 +68,7 @@ void SyncStateService::OnQueueSubmit2(const VkSubmitInfo2* pSubmits,
       for (uint32_t c = 0; c < info.commandBufferInfoCount && keyIdx < handleKeys.size();
            ++c, ++keyIdx) {
         ApplyCommandBufferEventStates(handleKeys[keyIdx]);
+        m_StateTracking.GetQueryPoolStateService().ApplyCommandBuffer(handleKeys[keyIdx]);
       }
       for (uint32_t s = 0; s < info.signalSemaphoreInfoCount && keyIdx < handleKeys.size();
            ++s, ++keyIdx) {
@@ -161,6 +163,8 @@ void SyncStateService::InvalidateCBIfOneTimeSubmit(uint64_t key) {
     cbState->recordedCommands.clear();
     cbState->recordedCommandIds.clear();
     cbState->eventStatesAfterSubmit.clear();
+    cbState->resetQueriesAfterSubmit.clear();
+    cbState->usedQueriesAfterSubmit.clear();
   }
 }
 

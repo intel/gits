@@ -30,6 +30,8 @@ void CommandBufferLifecycleService::ClearState(CommandBufferState& state) {
   state.recordedCommands.clear();
   state.recordedCommandIds.clear();
   state.eventStatesAfterSubmit.clear();
+  state.resetQueriesAfterSubmit.clear();
+  state.usedQueriesAfterSubmit.clear();
 }
 
 void CommandBufferLifecycleService::OnAllocate(vkAllocateCommandBuffersCommand& command) {

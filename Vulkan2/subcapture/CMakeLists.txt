@@ -18,6 +18,8 @@ set(STATE_TRACKING_SRC
   ${SRC_DIR}/descriptorSetUpdateService.cpp
   ${SRC_DIR}/syncStateService.h
   ${SRC_DIR}/syncStateService.cpp
+  ${SRC_DIR}/queryPoolStateService.h
+  ${SRC_DIR}/queryPoolStateService.cpp
   ${SRC_DIR}/imageLayoutService.h
   ${SRC_DIR}/imageLayoutService.cpp
   ${SRC_DIR}/commandBufferLifecycleService.h

@@ -1472,31 +1472,44 @@ void SubcaptureLayer::Post(vkCmdDispatchIndirectCommand& command) {
 void SubcaptureLayer::Post(vkCmdBeginQueryCommand& command) {
   m_CommandBufferLifecycle.TrackHandleDependency(command.m_commandBuffer.Key,
                                                  command.m_queryPool.Key);
+  m_StateTracking.GetQueryPoolStateService().OnCmdUseQuery(
+      command.m_commandBuffer.Key, command.m_queryPool.Key, command.m_query.Value);
 }
 
 void SubcaptureLayer::Post(vkCmdEndQueryCommand& command) {
   m_CommandBufferLifecycle.TrackHandleDependency(command.m_commandBuffer.Key,
                                                  command.m_queryPool.Key);
+  m_StateTracking.GetQueryPoolStateService().OnCmdUseQuery(
+      command.m_commandBuffer.Key, command.m_queryPool.Key, command.m_query.Value);
 }
 
 void SubcaptureLayer::Post(vkCmdResetQueryPoolCommand& command) {
   m_CommandBufferLifecycle.TrackHandleDependency(command.m_commandBuffer.Key,
                                                  command.m_queryPool.Key);
+  m_StateTracking.GetQueryPoolStateService().OnCmdResetQueryPool(
+      command.m_commandBuffer.Key, command.m_queryPool.Key, command.m_firstQuery.Value,
+      command.m_queryCount.Value);
 }
 
 void SubcaptureLayer::Post(vkCmdWriteTimestampCommand& command) {
   m_CommandBufferLifecycle.TrackHandleDependency(command.m_commandBuffer.Key,
                                                  command.m_queryPool.Key);
+  m_StateTracking.GetQueryPoolStateService().OnCmdUseQuery(
+      command.m_commandBuffer.Key, command.m_queryPool.Key, command.m_query.Value);
 }
 
 void SubcaptureLayer::Post(vkCmdWriteTimestamp2Command& command) {
   m_CommandBufferLifecycle.TrackHandleDependency(command.m_commandBuffer.Key,
                                                  command.m_queryPool.Key);
+  m_StateTracking.GetQueryPoolStateService().OnCmdUseQuery(
+      command.m_commandBuffer.Key, command.m_queryPool.Key, command.m_query.Value);
 }
 
 void SubcaptureLayer::Post(vkCmdWriteTimestamp2KHRCommand& command) {
   m_CommandBufferLifecycle.TrackHandleDependency(command.m_commandBuffer.Key,
                                                  command.m_queryPool.Key);
+  m_StateTracking.GetQueryPoolStateService().OnCmdUseQuery(
+      command.m_commandBuffer.Key, command.m_queryPool.Key, command.m_query.Value);
 }
 
 void SubcaptureLayer::Post(vkCmdCopyQueryPoolResultsCommand& command) {
@@ -1509,6 +1522,12 @@ void SubcaptureLayer::Post(vkCmdCopyQueryPoolResultsCommand& command) {
 void SubcaptureLayer::Post(vkCmdExecuteCommandsCommand& command) {
   m_CommandBufferLifecycle.TrackHandleDependencies(command.m_commandBuffer.Key,
                                                    command.m_pCommandBuffers.Keys);
+  // Fold each secondary's buffered query effects into the primary so they are
+  // applied to the query pools when the primary is submitted.
+  for (uint64_t secondaryKey : command.m_pCommandBuffers.Keys) {
+    m_StateTracking.GetQueryPoolStateService().MergeSecondary(command.m_commandBuffer.Key,
+                                                              secondaryKey);
+  }
 }
 
 // ---- Image layout tracking ---------------------------------------------
@@ -1715,7 +1734,15 @@ void SubcaptureLayer::Post(vkCreateQueryPoolCommand& command) {
   auto state = std::make_unique<QueryPoolState>();
   state->key = command.m_pQueryPool.Key;
   state->parentKey = command.m_device.Key;
+  const uint64_t poolKey = command.m_pQueryPool.Key;
+  uint32_t queryType = 0;
+  uint32_t queryCount = 0;
+  if (command.m_pCreateInfo.Value) {
+    queryType = static_cast<uint32_t>(command.m_pCreateInfo.Value->queryType);
+    queryCount = command.m_pCreateInfo.Value->queryCount;
+  }
   StoreState(std::move(state), command);
+  m_StateTracking.GetQueryPoolStateService().OnCreateQueryPool(poolKey, queryType, queryCount);
 }
 
 void SubcaptureLayer::Post(vkDestroyQueryPoolCommand& command) {
