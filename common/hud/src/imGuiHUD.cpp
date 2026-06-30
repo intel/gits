@@ -276,6 +276,7 @@ void ImGuiHUD::SetupImGUI(float dpi_scale) {
                static_cast<int>(cfgHud.fields.backBufferResolution) +
                static_cast<int>(cfgHud.fields.frameNumber) + static_cast<int>(cfgHud.fields.fps);
 
+  _dataTable.clear();
   std::generate_n(std::back_inserter(_dataTable), _tableRows, []() {
     return std::array<std::string, 2>{"", ""};
   });

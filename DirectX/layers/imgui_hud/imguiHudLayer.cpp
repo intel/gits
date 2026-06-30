@@ -27,18 +27,18 @@ ImGuiHUDLayer::~ImGuiHUDLayer() {
   Shutdown();
 }
 
-void ImGuiHUDLayer::Shutdown() {
+void ImGuiHUDLayer::ReleaseHud() {
   if (m_Initialized) {
     if (m_Fence) {
       m_Fence->SetEventOnCompletion(m_FenceValue, NULL);
     }
     ImGui_ImplDX12_Shutdown();
+    ImGui_ImplWin32_Shutdown();
+    ImGui::DestroyContext();
   }
 
   m_FrameContext.clear();
   m_BackBufferKeys.clear();
-  m_XefgCmdQueue = nullptr;
-  m_XefgContextKey = 0;
 
   m_Fence.Reset();
   m_Device.Reset();
@@ -49,10 +49,17 @@ void ImGuiHUDLayer::Shutdown() {
   m_SwapChain.Reset();
 
   m_Initialized = false;
+  m_Owner = HudOwner::None;
   m_FenceValue = 0;
   m_FirstExecuteInFrame = true;
   m_Window = nullptr;
   m_ResizeBuffersWarning = false;
+}
+
+void ImGuiHUDLayer::Shutdown() {
+  ReleaseHud();
+  m_XefgCmdQueue = nullptr;
+  m_XefgContextKey = 0;
 }
 
 void ImGuiHUDLayer::Post(IDXGISwapChainGetBufferCommand& c) {
@@ -97,11 +104,7 @@ void ImGuiHUDLayer::Post(IDXGIFactoryCreateSwapChainCommand& c) {
     return;
   }
 
-  m_Initialized = InitializeResources(c.m_pDevice.Value, *c.m_ppSwapChain.Value);
-  if (!m_Initialized) {
-    LOG_ERROR << "ImGui HUD: Failed to initialize resources";
-    return;
-  }
+  EnsureInitialized(c.m_pDevice.Value, *c.m_ppSwapChain.Value, /*isXefgProxy=*/false);
 }
 
 void ImGuiHUDLayer::Post(IDXGIFactory2CreateSwapChainForHwndCommand& c) {
@@ -109,11 +112,7 @@ void ImGuiHUDLayer::Post(IDXGIFactory2CreateSwapChainForHwndCommand& c) {
     return;
   }
 
-  m_Initialized = InitializeResources(c.m_pDevice.Value, *c.m_ppSwapChain.Value);
-  if (!m_Initialized) {
-    LOG_ERROR << "ImGui HUD: Failed to initialize resources";
-    return;
-  }
+  EnsureInitialized(c.m_pDevice.Value, *c.m_ppSwapChain.Value, /*isXefgProxy=*/false);
 }
 
 void ImGuiHUDLayer::Pre(xefgSwapChainDestroyCommand& c) {
@@ -154,11 +153,7 @@ void ImGuiHUDLayer::Post(xefgSwapChainD3D12GetSwapChainPtrCommand& c) {
   auto* swapChain = static_cast<IDXGISwapChain*>(*c.m_ppSwapChain.Value);
   GITS_ASSERT(swapChain);
 
-  m_Initialized = InitializeResources(m_XefgCmdQueue, swapChain);
-  if (!m_Initialized) {
-    LOG_ERROR << "ImGui HUD: Failed to initialize resources";
-    return;
-  }
+  EnsureInitialized(m_XefgCmdQueue, swapChain, /*isXefgProxy=*/true);
 }
 
 void ImGuiHUDLayer::Pre(IDXGISwapChainPresentCommand& c) {
@@ -277,6 +272,31 @@ bool ImGuiHUDLayer::CreateFrameContext(unsigned bufferCount) {
   }
 
   return true;
+}
+
+void ImGuiHUDLayer::EnsureInitialized(IUnknown* device,
+                                      IDXGISwapChain* swapChain,
+                                      bool isXefgProxy) {
+  // The first valid swapchain owns the HUD. Subsequent app swapchains are
+  // ignored; the XeFG presenter supersedes an app-owned HUD via a clean re-init.
+  if (m_Owner == HudOwner::XefgProxy) {
+    return;
+  }
+  if (m_Owner == HudOwner::AppSwapChain) {
+    if (!isXefgProxy) {
+      return;
+    }
+    ReleaseHud(); // hand off from the app swapchain to the XeFG presenter
+  }
+
+  if (InitializeResources(device, swapChain)) {
+    m_Initialized = true;
+    m_Owner = isXefgProxy ? HudOwner::XefgProxy : HudOwner::AppSwapChain;
+  } else {
+    LOG_ERROR << "ImGui HUD: Failed to initialize resources";
+    m_Initialized = false;
+    m_Owner = HudOwner::None;
+  }
 }
 
 bool ImGuiHUDLayer::InitializeResources(IUnknown* device, IDXGISwapChain* swapChain) {

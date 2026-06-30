@@ -54,7 +54,9 @@ public:
 
 private:
   void Shutdown();
+  void ReleaseHud();
   bool CreateFrameContext(unsigned bufferCount);
+  void EnsureInitialized(IUnknown* device, IDXGISwapChain* swapChain, bool isXefgProxy);
   bool InitializeResources(IUnknown* device, IDXGISwapChain* swapChain);
   void InitializeImGui(DXGI_FORMAT format);
   void OnPrePresent();
@@ -63,7 +65,14 @@ private:
   void Present();
 
 private:
+  enum class HudOwner {
+    None,
+    AppSwapChain,
+    XefgProxy
+  };
+
   bool m_Initialized = false;
+  HudOwner m_Owner = HudOwner::None;
 
   std::mutex m_Mutex;
   std::unordered_set<unsigned> m_BackBufferKeys;
