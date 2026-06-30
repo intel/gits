@@ -22,6 +22,7 @@ from generator_player import generate_player_files
 from generator_trace import generate_trace_files
 from generator_vk_layer import generate_vk_layer_json
 from generator_interceptor import generate_interceptor_files
+from plugin_generator import generate_plugin_artifacts
 from generator_subcapture import generate_subcapture_files
 
 def main():
@@ -67,6 +68,11 @@ def main():
     generate_vk_layer_json(context, os.path.join(output_path, 'layer'))
     generate_interceptor_files(context, os.path.join(output_path, 'interceptor'))
 
+    plugin_directories = [
+        os.path.join(output_path, '../plugins/Vulkan'),
+        os.path.join(output_path, '../plugins/internal/Vulkan')
+    ]
+    generate_plugin_artifacts(context, plugin_directories)
 
 if __name__ == "__main__":
     main()
