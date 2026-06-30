@@ -11,6 +11,7 @@
 #include "layerAuto.h"
 #include "tools_lite.h"
 #include "orderingRecorder.h"
+#include "resourceDumpingLayerGroup.h"
 #include "traceLayerGroup.h"
 
 #include <vector>
@@ -40,6 +41,7 @@ private:
   std::vector<Layer*> m_PostLayers;
   std::vector<std::unique_ptr<Layer>> m_LayersOwner;
   std::unique_ptr<TraceLayerGroup> m_TraceLayerGroup;
+  std::unique_ptr<ResourceDumpingLayerGroup> m_ResourceDumpingLayerGroup;
 };
 
 } // namespace vulkan

@@ -37,6 +37,9 @@ CaptureManager::CaptureManager() {
 
   m_MapTrackingService.reset(new MapTrackingService(*m_Recorder));
 
+  m_DispatchTablesHolder = std::make_unique<DispatchTablesHolder>(
+      m_InstanceDispatchTable, m_DeviceDispatchTable, m_DispatchTablesMutex);
+
   m_PluginService.LoadPlugins();
   m_LayerManager.LoadLayers(*this, *m_Recorder.get(), m_PluginService);
 }
@@ -50,17 +53,20 @@ void CaptureManager::LoadGlobalFunctions(PFN_vkGetInstanceProcAddr getProcAddr) 
 void CaptureManager::LoadInstanceFunctions(PFN_vkGetInstanceProcAddr getProcAddr,
                                            VkInstance instance) {
   void* dispatchKey = *reinterpret_cast<void**>(instance);
+  std::unique_lock lock(m_DispatchTablesMutex);
   auto& dispatchTable = m_InstanceDispatchTable[dispatchKey];
   LoadInstanceLevelFunctions(getProcAddr, instance, dispatchTable);
 }
 
 void CaptureManager::LoadDeviceFunctions(PFN_vkGetDeviceProcAddr getProcAddr, VkDevice device) {
   void* dispatchKey = *reinterpret_cast<void**>(device);
+  std::unique_lock lock(m_DispatchTablesMutex);
   auto& dispatchTable = m_DeviceDispatchTable[dispatchKey];
   LoadDeviceLevelFunctions(getProcAddr, device, dispatchTable);
 }
 
 void CaptureManager::LoadDeviceFunctions(void* dispatchKey, VkDevice device) {
+  std::unique_lock lock(m_DispatchTablesMutex);
   auto& instanceTable = m_InstanceDispatchTable[dispatchKey];
   PFN_vkGetDeviceProcAddr getDeviceProcAddr = reinterpret_cast<PFN_vkGetDeviceProcAddr>(
       instanceTable.vkGetInstanceProcAddr(instanceTable.instance, "vkGetDeviceProcAddr"));

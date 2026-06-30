@@ -20,7 +20,6 @@ set(CAPTURE_SRC
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkanRecorderInterface.h
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkanRecorder.h
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkanRecorder.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/dispatchTableAuto.h
   ${CMAKE_CURRENT_SOURCE_DIR}/wrappersAuto.h
   ${CMAKE_CURRENT_SOURCE_DIR}/wrappersAuto.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/testLayerAuto.h
@@ -63,6 +62,7 @@ target_link_libraries(Vulkan_recorder_2 PRIVATE
   Vulkan_layer_interface
   Vulkan_services
   Vulkan_trace
+  Vulkan_resource_dumping
   Vulkan_coders
   Vulkan_utils
   tbb

@@ -44,6 +44,9 @@ PlayerManager::~PlayerManager() {
 PlayerManager::PlayerManager() {
   LoadGlobalFunctions();
 
+  m_DispatchTablesHolder = std::make_unique<DispatchTablesHolder>(
+      m_InstanceDispatchTable, m_DeviceDispatchTable, m_DispatchTablesMutex);
+
   m_PluginService = std::make_unique<PluginService>();
   m_PluginService->LoadPlugins();
   m_LayerManager.LoadLayers(*this, *m_PluginService);
@@ -60,11 +63,13 @@ void PlayerManager::LoadGlobalFunctions() {
 
 void PlayerManager::LoadInstanceFunctions(VkInstance instance) {
   void* dispatchKey = *reinterpret_cast<void**>(instance);
+  std::unique_lock lock(m_DispatchTablesMutex);
   auto& dispatchTable = m_InstanceDispatchTable[dispatchKey];
   LoadInstanceLevelFunctions(m_GetInstanceProcAddr, instance, dispatchTable);
 }
 
 void PlayerManager::LoadDeviceFunctions(void* dispatchKey, VkDevice device) {
+  std::unique_lock lock(m_DispatchTablesMutex);
   auto& instanceTable = m_InstanceDispatchTable[dispatchKey];
   PFN_vkGetDeviceProcAddr getDeviceProcAddr = reinterpret_cast<PFN_vkGetDeviceProcAddr>(
       instanceTable.vkGetInstanceProcAddr(instanceTable.instance, "vkGetDeviceProcAddr"));

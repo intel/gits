@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "captureLayerManager.h"
+#include "captureManager.h"
 #include "configurator.h"
 #include "pluginService.h"
 #include "testLayerAuto.h"
@@ -26,11 +27,20 @@ void CaptureLayerManager::LoadLayers(CaptureManager& captureManager,
   std::unique_ptr<Layer> captureCustomizationLayer;
 
   const auto& traceCfg = Configurator::Get().common.shared.trace;
+  const auto& screenshotsCfg = Configurator::Get().common.shared.screenshots;
 
   std::unique_ptr<Layer> traceLayer;
   if (traceCfg.enabled) {
     m_TraceLayerGroup = std::make_unique<TraceLayerGroup>();
     traceLayer = m_TraceLayerGroup->GetTraceLayer();
+  }
+
+  Layer* screenshotLayer = nullptr;
+  if (screenshotsCfg.enabled) {
+    m_ResourceDumpingLayerGroup =
+        std::make_unique<ResourceDumpingLayerGroup>(captureManager.GetDispatchTablesHolder());
+    m_ResourceDumpingLayerGroup->loadLayers();
+    screenshotLayer = m_ResourceDumpingLayerGroup->getScreenshotLayer();
   }
 
   if (cfg.common.recorder.enabled) {
@@ -50,6 +60,9 @@ void CaptureLayerManager::LoadLayers(CaptureManager& captureManager,
   if (traceCfg.enabled && traceCfg.print.preCalls) {
     enablePreLayer(traceLayer);
   }
+  if (screenshotsCfg.enabled) {
+    m_PreLayers.push_back(screenshotLayer);
+  }
 
   auto enablePostLayer = [this](std::unique_ptr<Layer>& layer) {
     if (layer) {
@@ -62,6 +75,9 @@ void CaptureLayerManager::LoadLayers(CaptureManager& captureManager,
   //enablePostLayer(testLayer);
   if (traceCfg.enabled && traceCfg.print.postCalls) {
     enablePostLayer(traceLayer);
+  }
+  if (screenshotsCfg.enabled) {
+    m_PostLayers.push_back(screenshotLayer);
   }
 
   auto retainLayer = [this](std::unique_ptr<Layer>&& layer) {

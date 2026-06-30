@@ -18,6 +18,8 @@ set(ALL_SRC
   ${CMAKE_CURRENT_SOURCE_DIR}/arguments.h
   ${CMAKE_CURRENT_SOURCE_DIR}/arguments.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/commandsCustom.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/dispatchTablesHolder.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/dispatchTableAuto.h
 )
 
 set_auto_generated_property(FILE_LIST ${ALL_SRC})

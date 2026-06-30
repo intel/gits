@@ -7,6 +7,8 @@
 // ===================== end_copyright_notice ==============================
 
 #include "playerLayerManager.h"
+#include "playerManager.h"
+#include "dispatchTablesHolder.h"
 #include "pluginService.h"
 #include "replayCustomizationLayer.h"
 #include "log.h"
@@ -20,11 +22,20 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
       std::make_unique<ReplayCustomizationLayer>(playerManager);
 
   const auto& traceCfg = Configurator::Get().common.shared.trace;
+  const auto& screenshotsCfg = Configurator::Get().common.shared.screenshots;
 
   std::unique_ptr<Layer> traceLayer;
   if (traceCfg.enabled) {
     m_TraceLayerGroup = std::make_unique<TraceLayerGroup>();
     traceLayer = m_TraceLayerGroup->GetTraceLayer();
+  }
+
+  Layer* screenshotLayer = nullptr;
+  m_ResourceDumpingLayerGroup =
+      std::make_unique<ResourceDumpingLayerGroup>(playerManager.GetDispatchTablesHolder());
+  if (screenshotsCfg.enabled) {
+    m_ResourceDumpingLayerGroup->loadLayers();
+    screenshotLayer = m_ResourceDumpingLayerGroup->getScreenshotLayer();
   }
 
   auto enablePreLayer = [this](std::unique_ptr<Layer>& layer) {
@@ -37,6 +48,9 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
   if (traceCfg.enabled && traceCfg.print.preCalls) {
     enablePreLayer(traceLayer);
   }
+  if (screenshotsCfg.enabled) {
+    m_PreLayers.push_back(screenshotLayer);
+  }
 
   auto enablePostLayer = [this](std::unique_ptr<Layer>& layer) {
     if (layer) {
@@ -47,6 +61,9 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
   enablePostLayer(replayCustomizationLayer);
   if (traceCfg.enabled && traceCfg.print.postCalls) {
     enablePostLayer(traceLayer);
+  }
+  if (screenshotsCfg.enabled) {
+    m_PostLayers.push_back(screenshotLayer);
   }
 
   auto retainLayer = [this](std::unique_ptr<Layer>&& layer) {

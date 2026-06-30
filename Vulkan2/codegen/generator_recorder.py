@@ -19,7 +19,6 @@ def generate_recorder_files(context, output_path):
       'custom_handle_structs': CUSTOM_HANDLE_STRUCTS
     }
     files_to_generate = [
-      'dispatchTableAuto.h',
       'wrappersAuto.h',
       'wrappersAuto.cpp',
       'testLayerAuto.h',

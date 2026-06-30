@@ -61,8 +61,8 @@ bool SavePng(const std::string& filename,
              bool hasAlpha,
              const void* bytes,
              bool flip = true,
-             bool sRGB = false,
-             bool bgr = false);
+             bool bgr = false,
+             bool sRGB = false);
 
 void SaveJsonFile(const nlohmann::ordered_json& json, const std::filesystem::path& path);
 

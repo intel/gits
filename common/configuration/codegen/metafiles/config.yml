@@ -192,6 +192,23 @@ Configuration:
                     Type: bool
                     Default: false
                     Description: Print a timestamp before each API call
+          - Name: Screenshots
+            Type: Group
+            Options:
+              - Name: Enabled
+                Type: bool
+                Default: false
+                Description: Whether screenshots are enabled or not
+              - Name: Frames
+                Type: std::string
+                Default: ""
+                Description:
+                  Frame range (supports multiple ranges and strides). For example
+                  '3-6:2,9'
+              - Name: Format
+                Type: ImageFormat
+                Default: PNG
+                Description: Format (PNG/JPEG/DDS)
           - Name: plugins
             Type: std::vector<std::string>
             Default: []

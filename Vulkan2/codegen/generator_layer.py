@@ -72,7 +72,8 @@ def generate_layer_files(context, out_path):
     files_to_generate = [
       'commandIdsAuto.h',
       'commandsAuto.h',
-      'layerAuto.h'
+      'layerAuto.h',
+      'dispatchTableAuto.h'
     ]
     for file_name in files_to_generate:
         generate_file(context | additional_context, file_name, out_path)

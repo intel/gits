@@ -17,7 +17,6 @@ set(ROOT_SRC
 source_group("" FILES ${ROOT_SRC})
 
 set(PLAYER_SRC
-  ${CMAKE_CURRENT_SOURCE_DIR}/dispatchTableAuto.h
   ${CMAKE_CURRENT_SOURCE_DIR}/replayCustomizationLayer.h
   ${CMAKE_CURRENT_SOURCE_DIR}/replayCustomizationLayer.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/handleArgumentUpdaters.h
@@ -76,6 +75,7 @@ target_link_libraries(Vulkan_player_2 PRIVATE
   Vulkan_coders
   Vulkan_services
   Vulkan_trace
+  Vulkan_resource_dumping
   Vulkan_utils
 )
 

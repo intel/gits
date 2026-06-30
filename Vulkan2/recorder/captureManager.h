@@ -14,11 +14,13 @@
 #include "pluginService.h"
 #include "captureLayerManager.h"
 #include "dispatchTableAuto.h"
+#include "dispatchTablesHolder.h"
 #include "mapTrackingService.h"
 #include "descriptorUpdateTemplateService.h"
 #include "orderingRecorder.h"
 
 #include <atomic>
+#include <shared_mutex>
 
 namespace gits {
 namespace vulkan {
@@ -43,13 +45,19 @@ public:
   template <typename Handle>
   VkInstanceLevelDispatchTable& GetInstanceDispatchTable(Handle handle) {
     void* dispatchKey = *reinterpret_cast<void**>(handle);
+    std::shared_lock lock(m_DispatchTablesMutex);
     return m_InstanceDispatchTable[dispatchKey];
   }
 
   template <typename Handle>
   VkDeviceLevelDispatchTable& GetDeviceDispatchTable(Handle handle) {
     void* dispatchKey = *reinterpret_cast<void**>(handle);
+    std::shared_lock lock(m_DispatchTablesMutex);
     return m_DeviceDispatchTable[dispatchKey];
+  }
+
+  DispatchTablesHolder& GetDispatchTablesHolder() {
+    return *m_DispatchTablesHolder;
   }
 
   std::vector<Layer*>& GetPreLayers() {
@@ -98,8 +106,10 @@ private:
   std::atomic<GITSKey> m_CommandUniqueKey{0};
   std::atomic<GITSKey> m_HandleUniqueKey{0};
   VkGlobalLevelDispatchTable m_GlobalDispatchTable{};
+  std::shared_mutex m_DispatchTablesMutex;
   std::unordered_map<void*, VkInstanceLevelDispatchTable> m_InstanceDispatchTable{};
   std::unordered_map<void*, VkDeviceLevelDispatchTable> m_DeviceDispatchTable{};
+  std::unique_ptr<DispatchTablesHolder> m_DispatchTablesHolder;
 
   std::unique_ptr<MapTrackingService> m_MapTrackingService;
   DescriptorUpdateTemplateService m_DescriptorUpdateTemplateService;

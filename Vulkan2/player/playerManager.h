@@ -11,12 +11,15 @@
 #include "gits.h"
 #include "descriptorUpdateTemplateService.h"
 #include "dispatchTableAuto.h"
+#include "dispatchTablesHolder.h"
 #include "layerAuto.h"
 #include "mapTrackingService.h"
 #include "playerLayerManager.h"
 #include "windowService.h"
 
 #include <memory>
+#include <shared_mutex>
+#include <unordered_map>
 
 namespace gits {
 namespace vulkan {
@@ -47,6 +50,10 @@ public:
   void LoadGlobalFunctions();
   void LoadInstanceFunctions(VkInstance instance);
   void LoadDeviceFunctions(void* dispatchKey, VkDevice device);
+
+  DispatchTablesHolder& GetDispatchTablesHolder() {
+    return *m_DispatchTablesHolder;
+  }
 
   VkGlobalLevelDispatchTable& GetGlobalDispatchTable() {
     return m_GlobalDispatchTable;
@@ -87,8 +94,10 @@ private:
   dl::SharedObject m_Lib{nullptr};
   PFN_vkGetInstanceProcAddr m_GetInstanceProcAddr{nullptr};
   VkGlobalLevelDispatchTable m_GlobalDispatchTable{};
+  std::shared_mutex m_DispatchTablesMutex;
   std::unordered_map<void*, VkInstanceLevelDispatchTable> m_InstanceDispatchTable{};
   std::unordered_map<void*, VkDeviceLevelDispatchTable> m_DeviceDispatchTable{};
+  std::unique_ptr<DispatchTablesHolder> m_DispatchTablesHolder;
 
   WindowService m_WindowService;
   MapTrackingService m_MapTrackingService;

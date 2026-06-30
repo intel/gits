@@ -31,6 +31,7 @@ add_subdirectory(common/coders)
 add_subdirectory(recorder)
 add_subdirectory(layer)
 add_subdirectory(layers/trace)
+add_subdirectory(layers/resource_dumping)
 add_subdirectory(interceptor)
 add_subdirectory(player)
 

@@ -18,7 +18,6 @@ def generate_player_files(context, output_path):
       'custom_handle_structs': CUSTOM_HANDLE_STRUCTS
     }
     files_to_generate = [
-      'dispatchTableAuto.h',
       'commandRunnersAuto.h',
       'commandRunnersAuto.cpp',
       'vulkanCommandFactoryAuto.cpp',
