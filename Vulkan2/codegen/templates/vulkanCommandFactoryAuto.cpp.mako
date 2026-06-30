@@ -17,6 +17,10 @@ namespace vulkan {
 
 stream::CommandRunner* VulkanCommandFactory::CreateCommand(unsigned id) {
   switch (static_cast<CommandId>(id)) {
+  case CommandId::ID_INIT_START:
+    return new StateRestoreBeginRunner();
+  case CommandId::ID_INIT_END:
+    return new StateRestoreEndRunner();
   case CommandId::ID_META_CREATE_WINDOW:
     return new CreateWindowMetaRunner();
   case CommandId::ID_META_UPDATE_WINDOW:

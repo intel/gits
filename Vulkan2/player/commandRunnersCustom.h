@@ -15,6 +15,22 @@
 namespace gits {
 namespace vulkan {
 
+class StateRestoreBeginRunner : public stream::CommandRunner {
+public:
+  void Run() override;
+
+private:
+  StateRestoreBeginCommand m_Command;
+};
+
+class StateRestoreEndRunner : public stream::CommandRunner {
+public:
+  void Run() override;
+
+private:
+  StateRestoreEndCommand m_Command;
+};
+
 class CreateWindowMetaRunner : public stream::CommandRunner {
 public:
   void Run() override;
