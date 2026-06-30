@@ -31,6 +31,27 @@ private:
   StateRestoreEndCommand m_Command;
 };
 
+class FrameEndRunner : public stream::CommandRunner {
+public:
+  void Run() override;
+
+private:
+  FrameEndCommand m_Command;
+};
+
+class MarkerUInt64Runner : public stream::CommandRunner {
+public:
+  void Run() override;
+
+protected:
+  void DecodeCommand() override {
+    Decode(m_Data, m_Command);
+  }
+
+private:
+  MarkerUInt64Command m_Command;
+};
+
 class CreateWindowMetaRunner : public stream::CommandRunner {
 public:
   void Run() override;

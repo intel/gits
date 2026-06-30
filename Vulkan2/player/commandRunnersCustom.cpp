@@ -33,6 +33,26 @@ void StateRestoreEndRunner::Run() {
   }
 }
 
+void FrameEndRunner::Run() {
+  auto& manager = PlayerManager::Get();
+  for (Layer* layer : manager.GetPreLayers()) {
+    layer->Pre(m_Command);
+  }
+  for (Layer* layer : manager.GetPostLayers()) {
+    layer->Post(m_Command);
+  }
+}
+
+void MarkerUInt64Runner::Run() {
+  auto& manager = PlayerManager::Get();
+  for (Layer* layer : manager.GetPreLayers()) {
+    layer->Pre(m_Command);
+  }
+  for (Layer* layer : manager.GetPostLayers()) {
+    layer->Post(m_Command);
+  }
+}
+
 void CreateWindowMetaRunner::Run() {
   auto& manager = PlayerManager::Get();
 

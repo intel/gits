@@ -21,6 +21,10 @@ stream::CommandRunner* VulkanCommandFactory::CreateCommand(unsigned id) {
     return new StateRestoreBeginRunner();
   case CommandId::ID_INIT_END:
     return new StateRestoreEndRunner();
+  case CommandId::ID_FRAME_END:
+    return new FrameEndRunner();
+  case CommandId::ID_MARKER_UINT64:
+    return new MarkerUInt64Runner();
   case CommandId::ID_META_CREATE_WINDOW:
     return new CreateWindowMetaRunner();
   case CommandId::ID_META_UPDATE_WINDOW:
