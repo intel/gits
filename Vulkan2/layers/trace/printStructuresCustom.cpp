@@ -9,8 +9,8 @@
 #include "printStructuresCustom.h"
 #include "printBitmasksAuto.h"
 #include "printEnumsAuto.h"
+#include "printPnextAuto.h"
 #include "printCustom.h"
-#include <cassert>
 
 namespace gits {
 namespace vulkan {
@@ -18,10 +18,14 @@ namespace vulkan {
 FastOStream& operator<<(FastOStream& stream, const VkGraphicsPipelineCreateInfo& value) {
   stream << "VkGraphicsPipelineCreateInfo{";
   stream << value.sType << ", ";
-  stream << value.pNext << ", ";
+  PrintPNext(stream, value.pNext) << ", ";
   stream << value.flags << ", ";
   stream << value.stageCount << ", ";
-  stream << value.pStages << ", ";
+  if (value.stageCount > 0) {
+    stream << value.pStages << ", ";
+  } else {
+    stream << "nullptr, ";
+  }
   stream << value.pVertexInputState << ", ";
   stream << value.pInputAssemblyState << ", ";
 
@@ -82,7 +86,7 @@ FastOStream& operator<<(FastOStream& stream, const VkGraphicsPipelineCreateInfo*
 FastOStream& operator<<(FastOStream& stream, const VkWriteDescriptorSet& value) {
   stream << "VkWriteDescriptorSet{";
   stream << value.sType << ", ";
-  stream << value.pNext << ", ";
+  PrintPNext(stream, value.pNext) << ", ";
   stream << value.dstSet << ", ";
   stream << value.dstBinding << ", ";
   stream << value.dstArrayElement << ", ";
@@ -104,7 +108,7 @@ FastOStream& operator<<(FastOStream& stream, const VkWriteDescriptorSet& value) 
              value.descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER) {
     stream << value.pTexelBufferView;
   } else {
-    assert(false && "Could not handle value.descriptorType!");
+    stream << "unhandled_descriptor_type(" << value.descriptorType << ")";
   }
   stream << "}";
   return stream;
@@ -122,20 +126,27 @@ FastOStream& operator<<(FastOStream& stream, const VkWriteDescriptorSet* value) 
 FastOStream& operator<<(FastOStream& stream, const VkSubmitInfo& value) {
   stream << "VkSubmitInfo{";
   stream << value.sType << ", ";
-  stream << value.pNext << ", ";
+  PrintPNext(stream, value.pNext) << ", ";
   stream << value.waitSemaphoreCount << ", ";
   if (value.waitSemaphoreCount > 0) {
     stream << value.pWaitSemaphores << ", ";
     // pWaitDstStageMask is only valid when waitSemaphoreCount > 0
     PrintVkPipelineStageFlags(stream, value.pWaitDstStageMask) << ", ";
+  } else {
+    stream << "nullptr, ";
+    stream << "nullptr, ";
   }
   stream << value.commandBufferCount << ", ";
   if (value.commandBufferCount > 0) {
     stream << value.pCommandBuffers << ", ";
+  } else {
+    stream << "nullptr, ";
   }
   stream << value.signalSemaphoreCount << ", ";
   if (value.signalSemaphoreCount > 0) {
     stream << value.pSignalSemaphores;
+  } else {
+    stream << "nullptr";
   }
   stream << "}";
   return stream;
