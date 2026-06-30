@@ -42,7 +42,7 @@ public:
   void SnapshotAllMapped();
 
 #ifdef GITS_PLATFORM_LINUX
-  bool HandleAddress(void* address);
+  bool HandleAddress(void* address, bool isWrite);
 #endif
 
 private:
@@ -63,6 +63,7 @@ private:
     void* MappedData{nullptr};
     void* ShadowMemory{nullptr};
     std::unordered_set<uintptr_t> TouchedPages;
+    std::unordered_set<uintptr_t> ReadTriggeredPages;
   };
 
   uint32_t m_PageSize;

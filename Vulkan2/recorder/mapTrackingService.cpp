@@ -15,7 +15,11 @@
 #include <sys/mman.h>
 
 static void SigsegvHandler(int sig, siginfo_t* si, void* unused) {
-  if (!gits::vulkan::CaptureManager::Get().GetMapTrackingService().HandleAddress(si->si_addr)) {
+  void* faultAddr = si->si_addr;
+  ucontext_t* context = reinterpret_cast<ucontext_t*>(unused);
+  bool isWrite = (context->uc_mcontext.gregs[REG_ERR] & 0x2) != 0;
+  if (!gits::vulkan::CaptureManager::Get().GetMapTrackingService().HandleAddress(faultAddr,
+                                                                                 isWrite)) {
     LOG_ERROR << "MapTrackingService signal handler caught unhandled signal: "
               << " errno: " << si->si_errno << " at address: " << si->si_addr;
     exit(1);
@@ -130,12 +134,14 @@ void MapTrackingService::StoreData(GITSKey deviceMemoryKey,
 #ifdef GITS_PLATFORM_WINDOWS
   ResetWriteWatch(allocationInfo.MappedData, static_cast<SIZE_T>(allocationInfo.MapSize));
 #else
+  allocationInfo.TouchedPages.clear();
+  allocationInfo.ReadTriggeredPages.clear();
   size_t shadowSize = static_cast<size_t>(allocationInfo.MapSize);
   allocationInfo.ShadowMemory =
       mmap(nullptr, shadowSize, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
   GITS_ASSERT(allocationInfo.ShadowMemory != MAP_FAILED);
   std::memcpy(allocationInfo.ShadowMemory, *ppData, shadowSize);
-  int ret = mprotect(allocationInfo.ShadowMemory, shadowSize, PROT_READ);
+  int ret = mprotect(allocationInfo.ShadowMemory, shadowSize, PROT_NONE);
   GITS_ASSERT(ret != -1);
   *ppData = allocationInfo.ShadowMemory;
 #endif
@@ -225,63 +231,74 @@ void MapTrackingService::ScheduleMemoryUpdate(GITSKey deviceMemoryKey) {
   regions.push_back({offset, currentSize, currentPage});
   RecordMappedDataMetaCommand(allocationInfo.DeviceKey, deviceMemoryKey, regions);
 #else
-  if (allocationInfo.TouchedPages.empty()) {
+  if (allocationInfo.TouchedPages.empty() && allocationInfo.ReadTriggeredPages.empty()) {
     return;
   }
 
-  std::vector<uintptr_t> sortedPages(allocationInfo.TouchedPages.begin(),
-                                     allocationInfo.TouchedPages.end());
-  std::sort(sortedPages.begin(), sortedPages.end());
-
-  char* baseAddress = static_cast<char*>(allocationInfo.ShadowMemory);
-  uintptr_t mapStart = reinterpret_cast<uintptr_t>(baseAddress);
-  uintptr_t mapEnd = mapStart + allocationInfo.MapSize;
-
-  std::vector<MemoryRegions::Region> regions;
-
-  uintptr_t regionStart = sortedPages[0];
-  uintptr_t regionEnd = regionStart + m_PageSize;
-
-  auto flushRegion = [&](uintptr_t start, uintptr_t end) {
-    if (start < mapStart) {
-      start = mapStart;
+  if (!allocationInfo.TouchedPages.empty()) {
+    for (uintptr_t page : allocationInfo.TouchedPages) {
+      int ret = mprotect(reinterpret_cast<void*>(page), m_PageSize, PROT_READ);
+      GITS_ASSERT(ret != -1);
     }
-    if (end > mapEnd) {
-      end = mapEnd;
-    }
-    if (end > start) {
-      uint64_t offset = start - mapStart;
-      uint64_t size = end - start;
-      regions.push_back({offset, size, reinterpret_cast<char*>(start)});
-    }
-  };
 
-  for (size_t i = 1; i < sortedPages.size(); ++i) {
-    if (sortedPages[i] == regionEnd) {
-      regionEnd += m_PageSize;
-    } else {
-      flushRegion(regionStart, regionEnd);
-      regionStart = sortedPages[i];
-      regionEnd = regionStart + m_PageSize;
+    std::vector<MemoryRegions::Region> regions;
+
+    std::vector<uintptr_t> sortedPages(allocationInfo.TouchedPages.begin(),
+                                       allocationInfo.TouchedPages.end());
+    std::sort(sortedPages.begin(), sortedPages.end());
+
+    char* baseAddress = static_cast<char*>(allocationInfo.ShadowMemory);
+    uintptr_t mapStart = reinterpret_cast<uintptr_t>(baseAddress);
+    uintptr_t mapEnd = mapStart + allocationInfo.MapSize;
+
+    uintptr_t regionStart = sortedPages[0];
+    uintptr_t regionEnd = regionStart + m_PageSize;
+
+    auto flushRegion = [&](uintptr_t start, uintptr_t end) {
+      if (start < mapStart) {
+        start = mapStart;
+      }
+      if (end > mapEnd) {
+        end = mapEnd;
+      }
+      if (end > start) {
+        uint64_t offset = start - mapStart;
+        uint64_t size = end - start;
+        regions.push_back({offset, size, reinterpret_cast<char*>(start)});
+      }
+    };
+
+    for (size_t i = 1; i < sortedPages.size(); ++i) {
+      if (sortedPages[i] == regionEnd) {
+        regionEnd += m_PageSize;
+      } else {
+        flushRegion(regionStart, regionEnd);
+        regionStart = sortedPages[i];
+        regionEnd = regionStart + m_PageSize;
+      }
+    }
+    flushRegion(regionStart, regionEnd);
+
+    for (const auto& region : regions) {
+      std::memcpy(static_cast<char*>(allocationInfo.MappedData) + region.Offset, region.Data,
+                  region.Size);
+    }
+
+    if (!regions.empty()) {
+      RecordMappedDataMetaCommand(allocationInfo.DeviceKey, deviceMemoryKey, regions);
     }
   }
-  flushRegion(regionStart, regionEnd);
 
-  for (const auto& region : regions) {
-    std::memcpy((char*)allocationInfo.MappedData + region.Offset, region.Data, region.Size);
-  }
-
-  for (uintptr_t page : allocationInfo.TouchedPages) {
+  std::unordered_set<uintptr_t> pagesToReprotect = allocationInfo.TouchedPages;
+  pagesToReprotect.insert(allocationInfo.ReadTriggeredPages.begin(),
+                          allocationInfo.ReadTriggeredPages.end());
+  for (uintptr_t page : pagesToReprotect) {
     errno = 0;
-    int ret = mprotect(reinterpret_cast<void*>(page), m_PageSize, PROT_READ);
+    int ret = mprotect(reinterpret_cast<void*>(page), m_PageSize, PROT_NONE);
     GITS_ASSERT(ret != -1);
   }
   allocationInfo.TouchedPages.clear();
-
-  if (!regions.empty()) {
-    RecordMappedDataMetaCommand(allocationInfo.DeviceKey, deviceMemoryKey, regions);
-  }
-
+  allocationInfo.ReadTriggeredPages.clear();
 #endif
 }
 
@@ -297,24 +314,35 @@ void MapTrackingService::RecordMappedDataMetaCommand(
 }
 
 #ifdef GITS_PLATFORM_LINUX
-bool MapTrackingService::HandleAddress(void* address) {
+bool MapTrackingService::HandleAddress(void* address, bool isWrite) {
   uintptr_t addr = reinterpret_cast<uintptr_t>(address);
   uintptr_t pageAddr = addr - (addr % m_PageSize);
 
   std::lock_guard<std::mutex> lock(m_Mutex);
   for (auto& [key, alloc] : m_Allocations) {
-    if (!alloc.IsMapped) {
+    if (!alloc.IsMapped || alloc.ShadowMemory == nullptr) {
       continue;
     }
 
-    uintptr_t shadowMemoryBegin = reinterpret_cast<uintptr_t>(alloc.ShadowMemory);
-    uintptr_t shadowMemoryEnd = shadowMemoryBegin + alloc.MapSize;
+    uintptr_t shadowBegin = reinterpret_cast<uintptr_t>(alloc.ShadowMemory);
+    uintptr_t shadowEnd = shadowBegin + alloc.MapSize;
 
-    if (pageAddr >= shadowMemoryBegin && pageAddr < shadowMemoryEnd) {
+    if (pageAddr >= shadowBegin && pageAddr < shadowEnd) {
       errno = 0;
       int ret = mprotect(reinterpret_cast<void*>(pageAddr), m_PageSize, PROT_READ | PROT_WRITE);
       GITS_ASSERT(ret != -1);
-      alloc.TouchedPages.insert(pageAddr);
+      if (isWrite) {
+        alloc.TouchedPages.insert(pageAddr);
+      } else {
+        uintptr_t pageOffset = pageAddr - shadowBegin;
+        size_t copySize = std::min(static_cast<size_t>(m_PageSize),
+                                   static_cast<size_t>(alloc.MapSize - pageOffset));
+        std::memcpy(reinterpret_cast<void*>(pageAddr),
+                    static_cast<char*>(alloc.MappedData) + pageOffset, copySize);
+        ret = mprotect(reinterpret_cast<void*>(pageAddr), m_PageSize, PROT_READ);
+        GITS_ASSERT(ret != -1);
+        alloc.ReadTriggeredPages.insert(pageAddr);
+      }
       return true;
     }
   }
