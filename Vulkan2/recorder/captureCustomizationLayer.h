@@ -38,6 +38,9 @@ public:
 #endif
   void Post(vkCreateSwapchainKHRCommand& command) override;
 
+  void Pre(vkCreateBufferCommand& command) override;
+  void Pre(vkCreateImageCommand& command) override;
+
   void Post(vkCreateDeviceCommand& command) override;
   void Post(vkGetPhysicalDeviceMemoryPropertiesCommand& command) override;
   void Post(vkGetPhysicalDeviceMemoryProperties2Command& command) override;
@@ -84,6 +87,8 @@ private:
   };
 
   static thread_local AllocateInfo s_AllocateInfo;
+  static thread_local VkBufferCreateInfo s_BufferCreateInfo;
+  static thread_local VkImageCreateInfo s_ImageCreateInfo;
   CaptureManager& m_Manager;
   stream::OrderingRecorder& m_Recorder;
 #ifdef VK_USE_PLATFORM_WIN32_KHR

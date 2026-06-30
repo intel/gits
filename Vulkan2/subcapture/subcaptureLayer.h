@@ -80,6 +80,10 @@ public:
   void Post(vkFreeMemoryCommand& command) override;
   void Post(vkMapMemoryCommand& command) override;
   void Post(vkUnmapMemoryCommand& command) override;
+  void Post(vkMapMemory2Command& command) override;
+  void Post(vkMapMemory2KHRCommand& command) override;
+  void Post(vkUnmapMemory2Command& command) override;
+  void Post(vkUnmapMemory2KHRCommand& command) override;
   // Track mapped data snapshots so memory content can be restored.
   void Post(MappedDataMetaCommand& command) override;
 

@@ -2499,9 +2499,9 @@ void StateTrackingService::RestoreBufferContents() {
     if (buf->BufferSize == 0 || buf->BoundMemoryKey == 0) {
       continue;
     }
-    //if (!(buf->UsageFlags & VK_BUFFER_USAGE_TRANSFER_SRC_BIT)) {
-    //  continue;
-    //}
+    if (!(buf->UsageFlags & VK_BUFFER_USAGE_TRANSFER_SRC_BIT)) {
+      continue;
+    }
 
     // Skip if the bound memory is host-visible — RestoreMappedMemory already
     // handled it (or it will be written via the app's own map calls).
@@ -2614,10 +2614,10 @@ void StateTrackingService::RestoreImageContents() {
     if (img->Samples != VK_SAMPLE_COUNT_1_BIT) {
       continue;
     }
-    //// Skip images without VK_IMAGE_USAGE_TRANSFER_SRC_BIT -- cannot use as copy source.
-    //if (!(img->UsageFlags & VK_IMAGE_USAGE_TRANSFER_SRC_BIT)) {
-    //  continue;
-    //}
+    // Skip images without VK_IMAGE_USAGE_TRANSFER_SRC_BIT -- cannot use as copy source.
+    if (!(img->UsageFlags & VK_IMAGE_USAGE_TRANSFER_SRC_BIT)) {
+      continue;
+    }
     // Skip zero-size images.
     if (img->Extent.width == 0 || img->Extent.height == 0) {
       continue;

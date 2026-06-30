@@ -278,6 +278,47 @@ void SubcaptureLayer::Post(vkUnmapMemoryCommand& command) {
   m_MappedMemory.OnUnmapMemory(command.m_memory.Key);
 }
 
+void SubcaptureLayer::Post(vkMapMemory2Command& command) {
+  if (command.m_Return.Value != VK_SUCCESS || !command.m_pMemoryMapInfo.Value) {
+    return;
+  }
+  const VkMemoryMapInfo& info = *command.m_pMemoryMapInfo.Value;
+  // HandleKeys[0] is the recorder-side key for VkMemoryMapInfo::memory.
+  if (command.m_pMemoryMapInfo.HandleKeys.empty()) {
+    return;
+  }
+  const uint64_t memoryKey = command.m_pMemoryMapInfo.HandleKeys[0];
+  m_MappedMemory.OnMapMemory(memoryKey, info.offset, info.size, info.flags);
+}
+
+void SubcaptureLayer::Post(vkMapMemory2KHRCommand& command) {
+  if (command.m_Return.Value != VK_SUCCESS || !command.m_pMemoryMapInfo.Value) {
+    return;
+  }
+  const VkMemoryMapInfo& info = *command.m_pMemoryMapInfo.Value;
+  if (command.m_pMemoryMapInfo.HandleKeys.empty()) {
+    return;
+  }
+  const uint64_t memoryKey = command.m_pMemoryMapInfo.HandleKeys[0];
+  m_MappedMemory.OnMapMemory(memoryKey, info.offset, info.size, info.flags);
+}
+
+void SubcaptureLayer::Post(vkUnmapMemory2Command& command) {
+  if (!command.m_pMemoryUnmapInfo.Value || command.m_pMemoryUnmapInfo.HandleKeys.empty()) {
+    return;
+  }
+  const uint64_t memoryKey = command.m_pMemoryUnmapInfo.HandleKeys[0];
+  m_MappedMemory.OnUnmapMemory(memoryKey);
+}
+
+void SubcaptureLayer::Post(vkUnmapMemory2KHRCommand& command) {
+  if (!command.m_pMemoryUnmapInfo.Value || command.m_pMemoryUnmapInfo.HandleKeys.empty()) {
+    return;
+  }
+  const uint64_t memoryKey = command.m_pMemoryUnmapInfo.HandleKeys[0];
+  m_MappedMemory.OnUnmapMemory(memoryKey);
+}
+
 // When the player replays a MappedDataMetaCommand it has already written the
 // bytes into the mapped host pointer.  We snapshot those bytes here so that
 // state restore can re-emit the same command and the subcapture player starts

@@ -14,6 +14,8 @@ namespace gits {
 namespace vulkan {
 
 thread_local CaptureCustomizationLayer::AllocateInfo CaptureCustomizationLayer::s_AllocateInfo;
+thread_local VkBufferCreateInfo CaptureCustomizationLayer::s_BufferCreateInfo;
+thread_local VkImageCreateInfo CaptureCustomizationLayer::s_ImageCreateInfo;
 
 #ifdef VK_USE_PLATFORM_WIN32_KHR
 void CaptureCustomizationLayer::Pre(vkCreateWin32SurfaceKHRCommand& command) {
@@ -145,6 +147,24 @@ void CaptureCustomizationLayer::Pre(vkCreateWaylandSurfaceKHRCommand& command) {
                     new CreateWindowMetaSerializer(createWindowMetaCommand));
 }
 #endif
+
+void CaptureCustomizationLayer::Pre(vkCreateBufferCommand& command) {
+  if (!command.m_pCreateInfo.Value) {
+    return;
+  }
+  s_BufferCreateInfo = *command.m_pCreateInfo.Value;
+  s_BufferCreateInfo.usage |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+  command.m_pCreateInfo.Value = &s_BufferCreateInfo;
+}
+
+void CaptureCustomizationLayer::Pre(vkCreateImageCommand& command) {
+  if (!command.m_pCreateInfo.Value) {
+    return;
+  }
+  s_ImageCreateInfo = *command.m_pCreateInfo.Value;
+  s_ImageCreateInfo.usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+  command.m_pCreateInfo.Value = &s_ImageCreateInfo;
+}
 
 void CaptureCustomizationLayer::Post(vkCreateSwapchainKHRCommand& command) {
   if (command.m_Return.Value != VK_SUCCESS || !command.m_pCreateInfo.Value ||
