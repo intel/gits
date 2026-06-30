@@ -23,7 +23,7 @@ namespace vulkan {
 class MapTrackingService {
 public:
   MapTrackingService(stream::OrderingRecorder& recorder);
-  void StorePhysicalDevice(GITSKey physicalDeviceKey, GITSKey deviceKey);
+  void StorePhysicalDevice(GITSKey deviceKey, GITSKey physicalDeviceKey);
   void StorePhysicalDeviceMemoryProperties(
       GITSKey physicalDeviceKey, const VkPhysicalDeviceMemoryProperties& memoryProperties);
   bool IsMemoryMappable(GITSKey deviceKey, uint32_t memoryTypeIndex);

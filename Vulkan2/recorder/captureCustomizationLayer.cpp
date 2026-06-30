@@ -101,11 +101,39 @@ void CaptureCustomizationLayer::Post(vkMapMemoryCommand& command) {
                                               command.m_size.Value, *command.m_ppData.Value);
 }
 
+void CaptureCustomizationLayer::Post(vkMapMemory2Command& command) {
+  m_Manager.GetMapTrackingService().StoreData(
+      command.m_pMemoryMapInfo.HandleKeys[0], command.m_pMemoryMapInfo.Value->offset,
+      command.m_pMemoryMapInfo.Value->size, *command.m_ppData.Value);
+}
+
+void CaptureCustomizationLayer::Post(vkMapMemory2KHRCommand& command) {
+  m_Manager.GetMapTrackingService().StoreData(
+      command.m_pMemoryMapInfo.HandleKeys[0], command.m_pMemoryMapInfo.Value->offset,
+      command.m_pMemoryMapInfo.Value->size, *command.m_ppData.Value);
+}
+
 void CaptureCustomizationLayer::Pre(vkUnmapMemoryCommand& command) {
   m_Manager.GetMapTrackingService().RemoveData(command.m_memory.Key);
 }
 
+void CaptureCustomizationLayer::Pre(vkUnmapMemory2Command& command) {
+  m_Manager.GetMapTrackingService().RemoveData(command.m_pMemoryUnmapInfo.HandleKeys[0]);
+}
+
+void CaptureCustomizationLayer::Pre(vkUnmapMemory2KHRCommand& command) {
+  m_Manager.GetMapTrackingService().RemoveData(command.m_pMemoryUnmapInfo.HandleKeys[0]);
+}
+
 void CaptureCustomizationLayer::Pre(vkQueueSubmitCommand& command) {
+  m_Manager.GetMapTrackingService().SnapshotAllMapped();
+}
+
+void CaptureCustomizationLayer::Pre(vkQueueSubmit2Command& command) {
+  m_Manager.GetMapTrackingService().SnapshotAllMapped();
+}
+
+void CaptureCustomizationLayer::Pre(vkQueueSubmit2KHRCommand& command) {
   m_Manager.GetMapTrackingService().SnapshotAllMapped();
 }
 

@@ -27,7 +27,11 @@ public:
 #endif
   void Post(vkAllocateMemoryCommand& command) override;
   void Post(vkMapMemoryCommand& command) override;
+  void Post(vkMapMemory2Command& command) override;
+  void Post(vkMapMemory2KHRCommand& command) override;
   void Pre(vkUnmapMemoryCommand& command) override;
+  void Pre(vkUnmapMemory2Command& command) override;
+  void Pre(vkUnmapMemory2KHRCommand& command) override;
 
   void Pre(vkGetFenceStatusCommand& command) override;
   void Post(vkGetFenceStatusCommand& command) override;

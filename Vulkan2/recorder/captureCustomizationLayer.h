@@ -34,8 +34,14 @@ public:
   void Post(vkAllocateMemoryCommand& command) override;
   void Post(vkFreeMemoryCommand& command) override;
   void Post(vkMapMemoryCommand& command) override;
+  void Post(vkMapMemory2Command& command) override;
+  void Post(vkMapMemory2KHRCommand& command) override;
   void Pre(vkUnmapMemoryCommand& command) override;
+  void Pre(vkUnmapMemory2Command& command) override;
+  void Pre(vkUnmapMemory2KHRCommand& command) override;
   void Pre(vkQueueSubmitCommand& command) override;
+  void Pre(vkQueueSubmit2Command& command) override;
+  void Pre(vkQueueSubmit2KHRCommand& command) override;
 
   void Post(vkCreateDescriptorUpdateTemplateCommand& command) override;
   void Post(vkCreateDescriptorUpdateTemplateKHRCommand& command) override;

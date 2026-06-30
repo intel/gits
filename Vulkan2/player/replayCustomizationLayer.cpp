@@ -56,6 +56,28 @@ void ReplayCustomizationLayer::Pre(vkUnmapMemoryCommand& command) {
   m_Manager.GetMapTrackingService().RemoveData(command.m_device.Key, command.m_memory.Key);
 }
 
+void ReplayCustomizationLayer::Post(vkMapMemory2Command& command) {
+  m_Manager.GetMapTrackingService().StoreData(
+      command.m_device.Key, command.m_pMemoryMapInfo.HandleKeys[0], command.m_ppData.Data,
+      command.m_pMemoryMapInfo.Value->size);
+}
+
+void ReplayCustomizationLayer::Post(vkMapMemory2KHRCommand& command) {
+  m_Manager.GetMapTrackingService().StoreData(
+      command.m_device.Key, command.m_pMemoryMapInfo.HandleKeys[0], command.m_ppData.Data,
+      command.m_pMemoryMapInfo.Value->size);
+}
+
+void ReplayCustomizationLayer::Pre(vkUnmapMemory2Command& command) {
+  m_Manager.GetMapTrackingService().RemoveData(command.m_device.Key,
+                                               command.m_pMemoryUnmapInfo.HandleKeys[0]);
+}
+
+void ReplayCustomizationLayer::Pre(vkUnmapMemory2KHRCommand& command) {
+  m_Manager.GetMapTrackingService().RemoveData(command.m_device.Key,
+                                               command.m_pMemoryUnmapInfo.HandleKeys[0]);
+}
+
 // vkGetFenceStatus
 
 void ReplayCustomizationLayer::Pre(vkGetFenceStatusCommand& command) {
