@@ -40,7 +40,7 @@ vkCreateInstanceGITSLayer(const VkInstanceCreateInfo* pCreateInfo,
                        chainInfo->function != VK_LAYER_LINK_INFO)) {
     chainInfo = (VkLayerInstanceCreateInfo*)chainInfo->pNext;
   }
-  if (chainInfo == NULL) {
+  if (chainInfo == nullptr) {
     return VK_ERROR_INITIALIZATION_FAILED;
   }
 
@@ -75,7 +75,7 @@ vkCreateDeviceGITSLayer(VkPhysicalDevice physicalDevice,
                        chainInfo->function != VK_LAYER_LINK_INFO)) {
     chainInfo = (VkLayerDeviceCreateInfo*)chainInfo->pNext;
   }
-  if (chainInfo == NULL) {
+  if (chainInfo == nullptr) {
     return VK_ERROR_INITIALIZATION_FAILED;
   }
 

@@ -15,6 +15,7 @@ namespace vulkan {
 
 class IRecorderWrapper {
 public:
+  virtual ~IRecorderWrapper() = default;
   virtual void LoadGlobalLevelFunctions(PFN_vkGetInstanceProcAddr getProcAddr) = 0;
   virtual void LoadInstanceLevelFunctions(PFN_vkGetInstanceProcAddr getProcAddr,
                                           VkInstance instance) = 0;

@@ -15,6 +15,7 @@ namespace vulkan {
 
 class RecorderWrapper : public IRecorderWrapper {
 public:
+  ~RecorderWrapper() override = default;
   void LoadGlobalLevelFunctions(PFN_vkGetInstanceProcAddr getProcAddr) override;
   void LoadInstanceLevelFunctions(PFN_vkGetInstanceProcAddr getProcAddr,
                                   VkInstance instance) override;
