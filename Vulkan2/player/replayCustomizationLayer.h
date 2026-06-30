@@ -30,6 +30,7 @@ public:
 #endif
 #ifdef VK_USE_PLATFORM_XCB_KHR
   void Pre(vkCreateXcbSurfaceKHRCommand& command) override;
+  void Pre(vkGetPhysicalDeviceXcbPresentationSupportKHRCommand& command) override;
 #endif
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
   void Pre(vkCreateWaylandSurfaceKHRCommand& command) override;

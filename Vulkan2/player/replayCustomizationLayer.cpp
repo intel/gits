@@ -53,6 +53,10 @@ void ReplayCustomizationLayer::Pre(vkCreateXlibSurfaceKHRCommand& command) {
     command.m_pCreateInfo.Value->window = reinterpret_cast<Window>(currentWindow);
   }
 }
+
+void ReplayCustomizationLayer::Pre(vkGetPhysicalDeviceXcbPresentationSupportKHRCommand& command) {
+  command.m_Skip = true;
+}
 #endif
 
 #ifdef VK_USE_PLATFORM_XCB_KHR
