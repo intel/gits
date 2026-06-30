@@ -62,6 +62,17 @@ public:
   // Called after a successful vkResetFences.
   void OnResetFences(const std::vector<uint64_t>& fenceKeys);
 
+  // Called after an operation that signals a fence other than a queue submit:
+  // vkAcquireNextImageKHR / vkAcquireNextImage2KHR (fence parameter) and
+  // vkQueueBindSparse.  The fence becomes signaled once the operation succeeds,
+  // so mark it so state restore re-creates it with VK_FENCE_CREATE_SIGNALED_BIT
+  // (see StateTrackingService::RestoreOne, ID_VKCREATEFENCE); otherwise a first
+  // recorded vkGetFenceStatus / vkWaitForFences poll on a pre-cut acquire fence
+  // never observes VK_SUCCESS and the replay hangs.  Mirrors the legacy backend
+  // setting fenceUsed=true in vkAcquireNextImageKHR_SD / vkQueueBindSparse_SD.
+  // A no-op for a null key.
+  void OnFenceSignaled(uint64_t fenceKey);
+
   // Called after a successful vkSignalSemaphore / vkSignalSemaphoreKHR.
   // semKey: GITS key of the semaphore.  value: VkSemaphoreSignalInfo::value.
   void OnSignalSemaphore(uint64_t semKey, uint64_t value);

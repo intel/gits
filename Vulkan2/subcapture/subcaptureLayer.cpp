@@ -401,6 +401,14 @@ void SubcaptureLayer::Post(vkCreateFenceCommand& command) {
   auto state = std::make_unique<FenceState>();
   state->Key = command.m_pFence.Key;
   state->ParentKey = command.m_device.Key;
+  // Honor the create-time signaled flag: a fence created with
+  // VK_FENCE_CREATE_SIGNALED_BIT starts signaled, so if it is never used or
+  // reset before the cut it must still be restored signaled.  Mirrors the
+  // legacy CFenceState constructor (fenceUsed = flags & SIGNALED_BIT).
+  if (command.m_pCreateInfo.Value &&
+      (command.m_pCreateInfo.Value->flags & VK_FENCE_CREATE_SIGNALED_BIT)) {
+    state->IsSignaled = true;
+  }
   StoreState(std::move(state), command);
 }
 
@@ -439,6 +447,19 @@ void SubcaptureLayer::Post(vkQueueSubmit2KHRCommand& command) {
                              command.m_pSubmits.HandleKeys, command.m_fence.Key);
   m_ImageLayout.OnQueueSubmit2(command.m_pSubmits.Value, command.m_pSubmits.Size,
                                command.m_pSubmits.HandleKeys);
+}
+
+void SubcaptureLayer::Post(vkQueueBindSparseCommand& command) {
+  if (command.m_Return.Value != VK_SUCCESS) {
+    return;
+  }
+  // vkQueueBindSparse signals its fence (if supplied) when the bind completes.
+  // Track it so a fence signaled by a pre-cut sparse bind is restored signaled
+  // (see Post(vkAcquireNextImageKHRCommand)).  Mirrors legacy
+  // vkQueueBindSparse_SD setting fenceUsed=true.  NOTE: the per-VkBindSparseInfo
+  // pSignalSemaphores are intentionally not tracked here, matching legacy, which
+  // also tracks only the fence for sparse binds.
+  m_SyncState.OnFenceSignaled(command.m_fence.Key);
 }
 
 void SubcaptureLayer::Post(vkResetFencesCommand& command) {
@@ -1951,6 +1972,10 @@ void SubcaptureLayer::Post(vkAcquireNextImageKHRCommand& command) {
   // The acquire signals the binary semaphore; track it so state restore
   // re-signals it for any first recorded submit that waits on it.
   m_SyncState.OnImageAcquired(command.m_semaphore.Key);
+  // The acquire also signals the fence (if supplied).  Without tracking it, a
+  // fence signaled by a pre-cut acquire is restored unsignaled and a first
+  // recorded vkGetFenceStatus / vkWaitForFences poll on it hangs forever.
+  m_SyncState.OnFenceSignaled(command.m_fence.Key);
 }
 
 void SubcaptureLayer::Post(vkAcquireNextImage2KHRCommand& command) {
@@ -1971,6 +1996,11 @@ void SubcaptureLayer::Post(vkAcquireNextImage2KHRCommand& command) {
   // The acquire signals the binary semaphore; track it (see vkAcquireNextImageKHR).
   if (command.m_pAcquireInfo.HandleKeys.size() > 1) {
     m_SyncState.OnImageAcquired(command.m_pAcquireInfo.HandleKeys[1]);
+  }
+  // The acquire also signals the fence (HandleKeys[2]) if supplied; track it so
+  // a pre-cut acquire fence is restored signaled (see vkAcquireNextImageKHR).
+  if (command.m_pAcquireInfo.HandleKeys.size() > 2) {
+    m_SyncState.OnFenceSignaled(command.m_pAcquireInfo.HandleKeys[2]);
   }
 }
 

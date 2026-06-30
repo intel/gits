@@ -12,6 +12,8 @@
 
 #include <thread>
 #include <chrono>
+#include <cstdint>
+#include <vector>
 
 namespace gits {
 namespace vulkan {
@@ -143,12 +145,22 @@ void ReplayCustomizationLayer::Pre(vkGetFenceStatusCommand& command) {
 }
 
 void ReplayCustomizationLayer::Post(vkGetFenceStatusCommand& command) {
-  if (command.m_Return.Value != VK_SUCCESS && command.m_Return.Value != tl_recorderReturnValue) {
+  // Catch-up only when the recording observed VK_SUCCESS, the live device says
+  // otherwise, AND the fence actually has a pending signal.  The pending guard
+  // mirrors legacy (vulkanPlayerRunWrap.h:1000-1001): a fence with no pending
+  // signal (its signalling submit was before the subcapture cut, or it was
+  // reset and not resubmitted) will never become signalled in this replay
+  // range, so we must not wait on it -- doing so either deadlocks or stalls on
+  // every one of this stream's thousands of polls.
+  if (command.m_Return.Value != VK_SUCCESS && command.m_Return.Value != tl_recorderReturnValue &&
+      m_Manager.GetFencePendingSignalService().IsPending(command.m_fence.Value)) {
     auto& dispatchTable = m_Manager.GetDeviceDispatchTable(command.m_device.Value);
     VkFence fence = command.m_fence.Value;
-    dispatchTable.vkWaitForFences(command.m_device.Value, 1, &fence, VK_TRUE, 0xFFFFFFFFFFFFFFFF);
-    command.m_Return.Value =
-        dispatchTable.vkGetFenceStatus(command.m_device.Value, command.m_fence.Value);
+    // The fence has a pending signal, so it will become signalled; wait
+    // indefinitely then re-query, exactly matching legacy
+    // vkGetFenceStatus_WRAPRUN (vulkanPlayerRunWrap.h:1002-1004).
+    dispatchTable.vkWaitForFences(command.m_device.Value, 1, &fence, VK_TRUE, UINT64_MAX);
+    command.m_Return.Value = dispatchTable.vkGetFenceStatus(command.m_device.Value, fence);
   }
 }
 
@@ -243,9 +255,29 @@ void ReplayCustomizationLayer::Pre(vkWaitForFencesCommand& command) {
 
 void ReplayCustomizationLayer::Post(vkWaitForFencesCommand& command) {
   if (command.m_Return.Value != VK_SUCCESS && command.m_Return.Value != tl_recorderReturnValue) {
+    // Only wait on fences that have a pending signal, mirroring legacy
+    // vkWaitForFences_WRAPRUN which filters the array on fenceUsed
+    // (vulkanPlayerRunWrap.h:1420-1425).  Fences with no pending signal will
+    // never become signalled in this replay range; waiting on them deadlocks /
+    // stalls, so they are dropped from the catch-up wait.
+    std::vector<VkFence> pending;
+    for (uint32_t i = 0; i < command.m_pFences.Size; ++i) {
+      if (m_Manager.GetFencePendingSignalService().IsPending(command.m_pFences.Value[i])) {
+        pending.push_back(command.m_pFences.Value[i]);
+      }
+    }
+    if (pending.empty()) {
+      // Nothing to wait for: adopt the recorded return value (legacy leaves
+      // recRetVal untouched when the filtered array is empty).
+      command.m_Return.Value = tl_recorderReturnValue;
+      return;
+    }
+    // The pending subset will become signalled; wait indefinitely on it then
+    // replay the original wait, exactly matching legacy vkWaitForFences_WRAPRUN
+    // (vulkanPlayerRunWrap.h:1426-1433).
     auto& dispatchTable = m_Manager.GetDeviceDispatchTable(command.m_device.Value);
-    dispatchTable.vkWaitForFences(command.m_device.Value, command.m_pFences.Size,
-                                  command.m_pFences.Value, VK_TRUE, 0xFFFFFFFFFFFFFFFF);
+    dispatchTable.vkWaitForFences(command.m_device.Value, static_cast<uint32_t>(pending.size()),
+                                  pending.data(), VK_TRUE, UINT64_MAX);
     command.m_Return.Value = dispatchTable.vkWaitForFences(
         command.m_device.Value, command.m_pFences.Size, command.m_pFences.Value,
         command.m_waitAll.Value, command.m_timeout.Value);
@@ -385,6 +417,81 @@ void ReplayCustomizationLayer::Pre(vkAcquireNextImageKHRCommand& command) {
 
 void ReplayCustomizationLayer::Pre(vkAcquireNextImage2KHRCommand& command) {
   m_Manager.GetSwapchainImageSyncService().HandleAcquireNextImage2(command);
+}
+
+// Per-fence pending-signal tracking is owned by FencePendingSignalService; the
+// handlers below simply feed it the signalling/reset events.
+
+// A fence created with VK_FENCE_CREATE_SIGNALED_BIT starts signalled, which is a
+// consumable pending signal exactly like a submit/acquire.  The legacy state
+// dynamic initializes fenceUsed = (flags & SIGNALED_BIT) in the CFenceState ctor
+// (vulkanStateDynamic.h:1271), and that runs during replay too, so mirror it
+// here.  Note the player replays vkCreateFence with the original create flags,
+// so the live fence really is created signalled and a status poll will already
+// observe VK_SUCCESS; this marking keeps the pending set a faithful mirror of
+// legacy fenceUsed and guards the (filtered) vkWaitForFences subset selection.
+void ReplayCustomizationLayer::Post(vkCreateFenceCommand& command) {
+  if (command.m_Return.Value == VK_SUCCESS && command.m_pCreateInfo.Value != nullptr &&
+      (command.m_pCreateInfo.Value->flags & VK_FENCE_CREATE_SIGNALED_BIT)) {
+    m_Manager.GetFencePendingSignalService().MarkPending(*command.m_pFence.Value);
+  }
+}
+
+// A queue submit / sparse bind / acquire that carries a fence signals it, so the
+// fence gains a pending signal (legacy vkQueueSubmit_SD etc. set fenceUsed=true).
+void ReplayCustomizationLayer::Post(vkQueueSubmitCommand& command) {
+  if (command.m_Return.Value == VK_SUCCESS) {
+    m_Manager.GetFencePendingSignalService().MarkPending(command.m_fence.Value);
+  }
+}
+
+void ReplayCustomizationLayer::Post(vkQueueSubmit2Command& command) {
+  if (command.m_Return.Value == VK_SUCCESS) {
+    m_Manager.GetFencePendingSignalService().MarkPending(command.m_fence.Value);
+  }
+}
+
+void ReplayCustomizationLayer::Post(vkQueueSubmit2KHRCommand& command) {
+  if (command.m_Return.Value == VK_SUCCESS) {
+    m_Manager.GetFencePendingSignalService().MarkPending(command.m_fence.Value);
+  }
+}
+
+void ReplayCustomizationLayer::Post(vkQueueBindSparseCommand& command) {
+  if (command.m_Return.Value == VK_SUCCESS) {
+    m_Manager.GetFencePendingSignalService().MarkPending(command.m_fence.Value);
+  }
+}
+
+void ReplayCustomizationLayer::Post(vkAcquireNextImageKHRCommand& command) {
+  // VK_SUBOPTIMAL_KHR still acquires (and signals); only a hard error does not.
+  if (command.m_Return.Value == VK_SUCCESS || command.m_Return.Value == VK_SUBOPTIMAL_KHR) {
+    m_Manager.GetFencePendingSignalService().MarkPending(command.m_fence.Value);
+  }
+}
+
+void ReplayCustomizationLayer::Post(vkAcquireNextImage2KHRCommand& command) {
+  if ((command.m_Return.Value == VK_SUCCESS || command.m_Return.Value == VK_SUBOPTIMAL_KHR) &&
+      command.m_pAcquireInfo.Value != nullptr) {
+    m_Manager.GetFencePendingSignalService().MarkPending(command.m_pAcquireInfo.Value->fence);
+  }
+}
+
+// vkResetFences clears the pending signal for every fence in the array (legacy
+// vkResetFences_SD sets fenceUsed=false for all fenceCount fences).
+void ReplayCustomizationLayer::Post(vkResetFencesCommand& command) {
+  if (command.m_Return.Value != VK_SUCCESS) {
+    return;
+  }
+  for (uint32_t i = 0; i < command.m_pFences.Size; ++i) {
+    m_Manager.GetFencePendingSignalService().ClearPending(command.m_pFences.Value[i]);
+  }
+}
+
+// Drop tracking on destroy so a recycled VkFence handle does not inherit stale
+// pending state.
+void ReplayCustomizationLayer::Post(vkDestroyFenceCommand& command) {
+  m_Manager.GetFencePendingSignalService().ClearPending(command.m_fence.Value);
 }
 
 } // namespace vulkan

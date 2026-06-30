@@ -1490,12 +1490,18 @@ bool StateTrackingService::EmitCreationCommand(ObjectState* state) {
   case CommandId::ID_VKCREATEFENCE: {
     vkCreateFenceCommand cmd;
     Decode(buf, cmd);
-    // If the fence was signaled at the subcapture point (submitted to a queue
-    // and not subsequently reset), recreate it in the signaled state so that
-    // any vkWaitForFences in the first recorded frame does not hang.
-    if (static_cast<FenceState*>(state)->IsSignaled) {
-      if (cmd.m_pCreateInfo.Value) {
+    // Recreate the fence with the exact signaled state tracked at the cut so
+    // that a first recorded vkWaitForFences / vkGetFenceStatus poll behaves as
+    // it did originally.  Force the VK_FENCE_CREATE_SIGNALED_BIT to match
+    // IsSignaled in BOTH directions: set it when signaled (else the poll hangs),
+    // and CLEAR it when not signaled (else a fence whose recorded create-info
+    // carried the signaled bit but was reset before the cut would be wrongly
+    // restored signaled).  Mirrors legacy vulkanStateRestore.cpp:2164-2169.
+    if (cmd.m_pCreateInfo.Value) {
+      if (static_cast<FenceState*>(state)->IsSignaled) {
         cmd.m_pCreateInfo.Value->flags |= VK_FENCE_CREATE_SIGNALED_BIT;
+      } else {
+        cmd.m_pCreateInfo.Value->flags &= ~VK_FENCE_CREATE_SIGNALED_BIT;
       }
     }
     m_Recorder.Record(vkCreateFenceSerializer(cmd));

@@ -122,6 +122,10 @@ void SyncStateService::OnResetFences(const std::vector<uint64_t>& fenceKeys) {
   }
 }
 
+void SyncStateService::OnFenceSignaled(uint64_t fenceKey) {
+  SignalFence(fenceKey);
+}
+
 void SyncStateService::SignalFence(uint64_t fenceKey) {
   if (!fenceKey) {
     return;

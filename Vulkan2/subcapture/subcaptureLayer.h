@@ -109,6 +109,7 @@ public:
   void Post(vkQueueSubmitCommand& command) override;
   void Post(vkQueueSubmit2Command& command) override;
   void Post(vkQueueSubmit2KHRCommand& command) override;
+  void Post(vkQueueBindSparseCommand& command) override;
   void Post(vkResetFencesCommand& command) override;
   void Post(vkGetDeviceQueueCommand& command) override;
   void Post(vkGetDeviceQueue2Command& command) override;

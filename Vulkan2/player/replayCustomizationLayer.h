@@ -85,6 +85,24 @@ public:
   void Pre(vkCreateGraphicsPipelinesCommand& command) override;
   void Pre(vkAcquireNextImageKHRCommand& command) override;
   void Pre(vkAcquireNextImage2KHRCommand& command) override;
+  // Per-fence "pending signal" tracking, delegated to FencePendingSignalService.
+  // It mirrors the legacy player's SD()._fencestates[fence]->fenceUsed guard
+  // (vulkanPlayerRunWrap.h:1000-1004,1422): a fence is pending once a
+  // submit/acquire/sparse-bind that signals it has been replayed and stays
+  // pending until it is reset (or destroyed).  The fence catch-up wait in
+  // Post(vkGetFenceStatus)/Post(vkWaitForFences) is only injected for pending
+  // fences; polling a fence with no pending signal (e.g. a subcapture
+  // frame-pacing fence whose signalling submit is before the cut) must NOT wait,
+  // otherwise the player either deadlocks or stalls on every poll.
+  void Post(vkCreateFenceCommand& command) override;
+  void Post(vkQueueSubmitCommand& command) override;
+  void Post(vkQueueSubmit2Command& command) override;
+  void Post(vkQueueSubmit2KHRCommand& command) override;
+  void Post(vkQueueBindSparseCommand& command) override;
+  void Post(vkAcquireNextImageKHRCommand& command) override;
+  void Post(vkAcquireNextImage2KHRCommand& command) override;
+  void Post(vkResetFencesCommand& command) override;
+  void Post(vkDestroyFenceCommand& command) override;
 
 private:
   PlayerManager& m_Manager;

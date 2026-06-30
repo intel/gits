@@ -10,6 +10,7 @@
 
 #include "gits.h"
 #include "descriptorUpdateTemplateService.h"
+#include "fencePendingSignalService.h"
 #include "dispatchTableAuto.h"
 #include "dispatchTablesHolder.h"
 #include "layerAuto.h"
@@ -88,6 +89,10 @@ public:
     return m_SwapchainImageSyncService;
   }
 
+  FencePendingSignalService& GetFencePendingSignalService() {
+    return m_FencePendingSignalService;
+  }
+
 private:
   PlayerManager();
 
@@ -108,6 +113,7 @@ private:
   MapTrackingService m_MapTrackingService;
   DescriptorUpdateTemplateService m_DescriptorUpdateTemplateService;
   SwapchainImageSyncService m_SwapchainImageSyncService;
+  FencePendingSignalService m_FencePendingSignalService;
 };
 
 } // namespace vulkan

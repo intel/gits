@@ -36,6 +36,8 @@ set(SERVICES_SRC
   ${CMAKE_CURRENT_SOURCE_DIR}/descriptorUpdateTemplateService.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/swapchainImageSyncService.h
   ${CMAKE_CURRENT_SOURCE_DIR}/swapchainImageSyncService.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/fencePendingSignalService.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/fencePendingSignalService.cpp
 )
 source_group("services" FILES ${SERVICES_SRC})
 
