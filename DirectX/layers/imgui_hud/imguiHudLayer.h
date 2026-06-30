@@ -48,6 +48,8 @@ public:
 
   // XeFG SwapChain support
   void Pre(xefgSwapChainDestroyCommand& command) override;
+  void Pre(xefgSwapChainD3D12InitFromSwapChainCommand& command) override;
+  void Pre(xefgSwapChainD3D12InitFromSwapChainDescCommand& command) override;
   void Post(xefgSwapChainD3D12InitFromSwapChainCommand& command) override;
   void Post(xefgSwapChainD3D12InitFromSwapChainDescCommand& command) override;
   void Post(xefgSwapChainD3D12GetSwapChainPtrCommand& command) override;

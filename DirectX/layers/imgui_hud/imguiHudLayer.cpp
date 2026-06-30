@@ -123,6 +123,13 @@ void ImGuiHUDLayer::Pre(xefgSwapChainDestroyCommand& c) {
   Shutdown();
 }
 
+void ImGuiHUDLayer::Pre(xefgSwapChainD3D12InitFromSwapChainCommand& c) {
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  if (m_Owner == HudOwner::AppSwapChain) {
+    ReleaseHud();
+  }
+}
+
 void ImGuiHUDLayer::Post(xefgSwapChainD3D12InitFromSwapChainCommand& c) {
   if (c.m_Result.Value != XEFG_SWAPCHAIN_RESULT_SUCCESS) {
     return;
@@ -130,6 +137,13 @@ void ImGuiHUDLayer::Post(xefgSwapChainD3D12InitFromSwapChainCommand& c) {
 
   m_XefgContextKey = c.m_hSwapChain.Key;
   m_XefgCmdQueue = c.m_pCmdQueue.Value;
+}
+
+void ImGuiHUDLayer::Pre(xefgSwapChainD3D12InitFromSwapChainDescCommand& c) {
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  if (m_Owner == HudOwner::AppSwapChain) {
+    ReleaseHud();
+  }
 }
 
 void ImGuiHUDLayer::Post(xefgSwapChainD3D12InitFromSwapChainDescCommand& c) {
