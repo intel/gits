@@ -73,20 +73,22 @@ void SubcaptureLayer::Post(vkQueuePresentKHRCommand& command) {
 
   m_SubcaptureRange.FrameEnd();
 
+  // RecordingLayer (registered immediately after SubcaptureLayer in the post
+  // order) is the sole owner of stream output: it records the in-range
+  // vkQueuePresentKHR, emits the trailing FrameEnd marker, and finalizes the
+  // stream once the range closes.  This handler must therefore only advance the
+  // range.  Emitting a FrameEnd marker or calling FinishRecording() here would
+  // run *before* RecordingLayer's present handler and close the stream one
+  // command too early, dropping the final vkQueuePresentKHR (and duplicating
+  // FrameEnd markers) for every subcapture.
   if (m_SubcaptureRange.InRange()) {
-    // Start (or continue) recording.  Emit a FrameEndCommand so the player of
-    // the subcapture can detect frame boundaries.
     if (!m_Recording) {
       m_Recording = true;
       LOG_INFO << "Vulkan2 subcapture: entering recording range";
     }
-    FrameEndCommand fec;
-    m_Recorder.Record(FrameEndSerializer(fec));
   } else if (m_Recording) {
-    // We just left the range - close the stream.
     m_Recording = false;
-    m_Recorder.FinishRecording();
-    LOG_INFO << "Vulkan2 subcapture: recording range complete, stream closed";
+    LOG_INFO << "Vulkan2 subcapture: recording range complete";
   }
 }
 
