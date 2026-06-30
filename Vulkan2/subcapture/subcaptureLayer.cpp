@@ -1452,10 +1452,13 @@ void SubcaptureLayer::Post(vkResetCommandPoolCommand& command) {
 void SubcaptureLayer::Post(vkCmdBeginRenderPassCommand& command) {
   m_CommandBufferLifecycle.TrackHandleDependencies(command.m_commandBuffer.Key,
                                                    command.m_pRenderPassBegin.HandleKeys);
-  // HandleKeys layout for VkRenderPassBeginInfo: [renderPassKey, framebufferKey, ...]
+  // HandleKeys layout for VkRenderPassBeginInfo: [renderPassKey, framebufferKey,
+  // imagelessAttachmentKeys...].  keys[2..] are the image-view keys from
+  // VkRenderPassAttachmentBeginInfo (only present for imageless framebuffers).
   const auto& keys = command.m_pRenderPassBegin.HandleKeys;
   if (keys.size() >= 2) {
-    m_ImageLayout.OnBeginRenderPass(command.m_commandBuffer.Key, keys[0], keys[1]);
+    m_ImageLayout.OnBeginRenderPass(command.m_commandBuffer.Key, keys[0], keys[1],
+                                    {keys.begin() + 2, keys.end()});
   }
 }
 
@@ -1464,7 +1467,8 @@ void SubcaptureLayer::Post(vkCmdBeginRenderPass2Command& command) {
                                                    command.m_pRenderPassBegin.HandleKeys);
   const auto& keys = command.m_pRenderPassBegin.HandleKeys;
   if (keys.size() >= 2) {
-    m_ImageLayout.OnBeginRenderPass(command.m_commandBuffer.Key, keys[0], keys[1]);
+    m_ImageLayout.OnBeginRenderPass(command.m_commandBuffer.Key, keys[0], keys[1],
+                                    {keys.begin() + 2, keys.end()});
   }
 }
 
@@ -1473,7 +1477,8 @@ void SubcaptureLayer::Post(vkCmdBeginRenderPass2KHRCommand& command) {
                                                    command.m_pRenderPassBegin.HandleKeys);
   const auto& keys = command.m_pRenderPassBegin.HandleKeys;
   if (keys.size() >= 2) {
-    m_ImageLayout.OnBeginRenderPass(command.m_commandBuffer.Key, keys[0], keys[1]);
+    m_ImageLayout.OnBeginRenderPass(command.m_commandBuffer.Key, keys[0], keys[1],
+                                    {keys.begin() + 2, keys.end()});
   }
 }
 

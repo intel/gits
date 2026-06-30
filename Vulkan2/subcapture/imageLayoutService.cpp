@@ -75,7 +75,8 @@ void ImageLayoutService::OnPipelineBarrier2(uint64_t cbKey,
 
 void ImageLayoutService::OnBeginRenderPass(uint64_t cbKey,
                                            uint64_t renderPassKey,
-                                           uint64_t framebufferKey) {
+                                           uint64_t framebufferKey,
+                                           const std::vector<uint64_t>& beginInfoAttachmentKeys) {
   auto* rp = m_StateTracking.GetState<RenderPassState>(renderPassKey);
   auto* fb = m_StateTracking.GetState<FramebufferState>(framebufferKey);
   if (!rp || !fb) {
@@ -86,13 +87,16 @@ void ImageLayoutService::OnBeginRenderPass(uint64_t cbKey,
   pairs.clear();
 
   const auto& finalLayouts = rp->AttachmentFinalLayouts;
-  const auto& ivKeys = fb->AttachmentImageViewKeys;
+  // For imageless framebuffers, AttachmentImageViewKeys is empty (pAttachments == NULL
+  // at create time); fall back to the per-begin keys from VkRenderPassAttachmentBeginInfo.
+  const auto& ivKeys =
+      fb->AttachmentImageViewKeys.empty() ? beginInfoAttachmentKeys : fb->AttachmentImageViewKeys;
   const uint32_t count = static_cast<uint32_t>(std::min(finalLayouts.size(), ivKeys.size()));
 
   for (uint32_t i = 0; i < count; ++i) {
     const uint64_t ivKey = ivKeys[i];
     if (!ivKey) {
-      continue; // null slot (imageless framebuffer placeholder)
+      continue;
     }
     const auto* iv = m_StateTracking.GetState<ImageViewState>(ivKey);
     if (!iv || !iv->ImageKey) {

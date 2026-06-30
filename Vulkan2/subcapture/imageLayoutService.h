@@ -59,9 +59,16 @@ public:
   // vkCmdBeginRenderPass records which images are bound as attachments so that
   // vkCmdEndRenderPass can buffer the implicit finalLayout transitions.
   //
-  // renderPassKey:   key of the VkRenderPass (carries AttachmentFinalLayouts)
-  // framebufferKey:  key of the VkFramebuffer (carries AttachmentImageViewKeys)
-  void OnBeginRenderPass(uint64_t cbKey, uint64_t renderPassKey, uint64_t framebufferKey);
+  // renderPassKey:              key of the VkRenderPass (carries AttachmentFinalLayouts)
+  // framebufferKey:             key of the VkFramebuffer (carries AttachmentImageViewKeys)
+  // beginInfoAttachmentKeys:    image-view keys from VkRenderPassAttachmentBeginInfo
+  //                             (keys[2..] of VkRenderPassBeginInfo.HandleKeys).
+  //                             Used for imageless framebuffers whose AttachmentImageViewKeys
+  //                             are empty because pAttachments == NULL at create time.
+  void OnBeginRenderPass(uint64_t cbKey,
+                         uint64_t renderPassKey,
+                         uint64_t framebufferKey,
+                         const std::vector<uint64_t>& beginInfoAttachmentKeys);
 
   // Buffer the finalLayout of every render-pass attachment into the recording
   // command buffer and clear the per-CB render-pass tracking entry.
