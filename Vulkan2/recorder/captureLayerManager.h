@@ -19,10 +19,13 @@ namespace gits {
 namespace vulkan {
 
 class CaptureManager;
+class PluginService;
 
 class CaptureLayerManager : public gits::noncopyable {
 public:
-  void LoadLayers(CaptureManager& captureManager, stream::OrderingRecorder& recorder);
+  void LoadLayers(CaptureManager& captureManager,
+                  stream::OrderingRecorder& recorder,
+                  PluginService& pluginService);
 
   std::vector<Layer*>& GetPreLayers() {
     return m_PreLayers;

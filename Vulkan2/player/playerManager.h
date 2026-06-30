@@ -9,15 +9,19 @@
 #pragma once
 
 #include "gits.h"
-#include "layerAuto.h"
-#include "playerLayerManager.h"
-#include "dispatchTableAuto.h"
-#include "windowService.h"
-#include "mapTrackingService.h"
 #include "descriptorUpdateTemplateService.h"
+#include "dispatchTableAuto.h"
+#include "layerAuto.h"
+#include "mapTrackingService.h"
+#include "playerLayerManager.h"
+#include "windowService.h"
+
+#include <memory>
 
 namespace gits {
 namespace vulkan {
+
+class PluginService;
 
 class PlayerManager : public gits::noncopyable {
 public:
@@ -78,6 +82,7 @@ private:
 private:
   static PlayerManager* m_Instance;
   PlayerLayerManager m_LayerManager;
+  std::unique_ptr<PluginService> m_PluginService;
   bool m_ExecuteCommands{true};
   dl::SharedObject m_Lib{nullptr};
   PFN_vkGetInstanceProcAddr m_GetInstanceProcAddr{nullptr};

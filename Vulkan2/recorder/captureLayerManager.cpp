@@ -8,6 +8,7 @@
 
 #include "captureLayerManager.h"
 #include "configurator.h"
+#include "pluginService.h"
 #include "testLayerAuto.h"
 #include "encoderLayerAuto.h"
 #include "captureCustomizationLayer.h"
@@ -16,7 +17,8 @@ namespace gits {
 namespace vulkan {
 
 void CaptureLayerManager::LoadLayers(CaptureManager& captureManager,
-                                     stream::OrderingRecorder& recorder) {
+                                     stream::OrderingRecorder& recorder,
+                                     PluginService& pluginService) {
   auto& cfg = Configurator::Get();
 
   //std::unique_ptr<Layer> testLayer = std::make_unique<TestLayerAuto>();
@@ -57,6 +59,14 @@ void CaptureLayerManager::LoadLayers(CaptureManager& captureManager,
   retainLayer(std::move(captureCustomizationLayer));
   retainLayer(std::move(encoderLayer));
   //retainLayer(std::move(testLayer));
+
+  for (const auto& plugin : pluginService.GetPlugins()) {
+    Layer* layer = static_cast<Layer*>(plugin.Impl->getImpl());
+    if (layer) {
+      m_PreLayers.push_back(layer);
+      m_PostLayers.push_back(layer);
+    }
+  }
 }
 
 } // namespace vulkan

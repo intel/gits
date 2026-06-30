@@ -7,6 +7,9 @@
 // ===================== end_copyright_notice ==============================
 
 #include "playerManager.h"
+#include "pluginService.h"
+#include "configurator.h"
+#include "log.h"
 
 namespace gits {
 namespace vulkan {
@@ -30,6 +33,7 @@ PlayerManager& PlayerManager::Get() {
 PlayerManager::~PlayerManager() {
   try {
     LOG_INFO << "PlayerManager: Playback completed. Cleaning up...";
+    m_PluginService.reset();
     dl::close_library(m_Lib);
     m_Lib = nullptr;
   } catch (...) {
@@ -38,11 +42,11 @@ PlayerManager::~PlayerManager() {
 }
 
 PlayerManager::PlayerManager() {
-  auto& cfg = Configurator::Get();
-
   LoadGlobalFunctions();
 
-  m_LayerManager.LoadLayers(*this);
+  m_PluginService = std::make_unique<PluginService>();
+  m_PluginService->LoadPlugins();
+  m_LayerManager.LoadLayers(*this, *m_PluginService);
 }
 
 void PlayerManager::LoadGlobalFunctions() {

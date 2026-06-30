@@ -63,6 +63,7 @@ target_link_libraries(Vulkan_recorder_2 PRIVATE
   Vulkan_layer_interface
   Vulkan_services
   Vulkan_coders
+  Vulkan_utils
   tbb
 )
 

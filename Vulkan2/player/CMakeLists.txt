@@ -70,6 +70,7 @@ target_link_libraries(Vulkan_player_2 PRIVATE
   Vulkan_layer_interface
   Vulkan_coders
   Vulkan_services
+  Vulkan_utils
 )
 
 set_target_properties(Vulkan_player_2 PROPERTIES FOLDER Vulkan2)

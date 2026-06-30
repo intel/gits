@@ -18,10 +18,11 @@ namespace gits {
 namespace vulkan {
 
 class PlayerManager;
+class PluginService;
 
 class PlayerLayerManager : public gits::noncopyable {
 public:
-  void LoadLayers(PlayerManager& playerManager);
+  void LoadLayers(PlayerManager& playerManager, PluginService& pluginService);
 
   std::vector<Layer*>& GetPreLayers() {
     return m_PreLayers;

@@ -11,6 +11,7 @@
 #include "gits.h"
 
 #include "vulkanHeader2.h"
+#include "pluginService.h"
 #include "captureLayerManager.h"
 #include "dispatchTableAuto.h"
 #include "mapTrackingService.h"
@@ -88,6 +89,7 @@ private:
 private:
   static CaptureManager* m_Instance;
   CaptureLayerManager m_LayerManager;
+  PluginService m_PluginService;
 
   std::unique_ptr<stream::OrderingRecorder> m_Recorder;
   //std::atomic<uint32_t> m_RecursionDepth{0};

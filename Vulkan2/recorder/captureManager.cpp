@@ -30,7 +30,8 @@ CaptureManager::CaptureManager() {
 
   m_MapTrackingService.reset(new MapTrackingService(*m_Recorder));
 
-  m_LayerManager.LoadLayers(*this, *m_Recorder.get());
+  m_PluginService.LoadPlugins();
+  m_LayerManager.LoadLayers(*this, *m_Recorder.get(), m_PluginService);
 }
 
 void CaptureManager::LoadGlobalFunctions(PFN_vkGetInstanceProcAddr getProcAddr) {
