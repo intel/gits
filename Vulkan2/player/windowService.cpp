@@ -27,7 +27,7 @@ uint64_t WindowService::SetWindow(uint32_t protocol,
                                   int32_t width,
                                   int32_t height,
                                   bool visible) {
-#ifdef VK_USE_PLATFORM_WIN32_KHR
+
   auto it = m_WindowMap.find(handle);
   if (it != m_WindowMap.end()) {
     auto& state = it->second;
@@ -35,17 +35,32 @@ uint64_t WindowService::SetWindow(uint32_t protocol,
     uint32_t wndWidth = cfg.forceWindowSize.enabled ? cfg.forceWindowSize.width : width;
     uint32_t wndHeight = cfg.forceWindowSize.enabled ? cfg.forceWindowSize.height : height;
     if (state.width != wndWidth || state.height != wndHeight) {
-      ResizeWin(reinterpret_cast<HWND>(state.playbackHandle), wndWidth, wndHeight);
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+      if (protocol == CreateWindowMetaCommand::DisplayProtocol::WIN) {
+        ResizeWin(reinterpret_cast<HWND>(state.playbackHandle), wndWidth, wndHeight);
+      }
+#endif
+#ifdef VK_USE_PLATFORM_XLIB_KHR
+      if (protocol == CreateWindowMetaCommand::DisplayProtocol::XLIB) {
+        ResizeXlibWindow(state.playbackHandle, m_InstanceMap[instance], wndWidth, wndHeight);
+      }
+#endif
+#ifdef VK_USE_PLATFORM_XCB_KHR
+      if (protocol == CreateWindowMetaCommand::DisplayProtocol::XCB) {
+        ResizeXcbWindow(state.playbackHandle, m_InstanceMap[instance], wndWidth, wndHeight);
+      }
+#endif
       state.width = wndWidth;
       state.height = wndHeight;
     }
     if (state.visible != visible) {
+#ifdef VK_USE_PLATFORM_WIN32_KHR
       WinVisibility(reinterpret_cast<HWND>(state.playbackHandle), visible);
       state.visible = visible;
+#endif
     }
     return state.playbackHandle;
   }
-#endif
 
   auto& cfg = Configurator::Get().common.player;
   uint32_t wndPosX = cfg.forceWindowPos.enabled ? cfg.forceWindowPos.x : x;
@@ -174,6 +189,16 @@ std::pair<uint64_t, uint64_t> WindowService::CreateXlibWindow(
   return std::make_pair(reinterpret_cast<uint64_t>(display), reinterpret_cast<uint64_t>(window));
 }
 
+void WindowService::ResizeXlibWindow(uint64_t display,
+                                     uint64_t window,
+                                     uint32_t width,
+                                     uint32_t height) {
+  Display* dpy = reinterpret_cast<Display*>(display);
+  Window win = reinterpret_cast<Window>(window);
+  XResizeWindow(dpy, win, width, height);
+  XFlush(dpy);
+}
+
 std::pair<uint64_t, uint64_t> WindowService::CreateXcbWindow(
     int32_t x, int32_t y, int32_t width, int32_t height, bool visible) {
   XInitThreads();
@@ -252,6 +277,17 @@ std::pair<uint64_t, uint64_t> WindowService::CreateXcbWindow(
   GITS_ASSERT(flushResult > 0, "Failed to flush XCB commands after moving window");
 
   return std::make_pair(reinterpret_cast<uint64_t>(connection), static_cast<uint64_t>(window));
+}
+
+void WindowService::ResizeXcbWindow(uint64_t connection,
+                                    uint64_t window,
+                                    uint32_t width,
+                                    uint32_t height) {
+  xcb_connection_t* conn = reinterpret_cast<xcb_connection_t*>(connection);
+  xcb_window_t win = static_cast<xcb_window_t>(window);
+  const uint32_t values[] = {width, height};
+  xcb_configure_window(conn, win, XCB_CONFIG_WINDOW_WIDTH | XCB_CONFIG_WINDOW_HEIGHT, values);
+  xcb_flush(conn);
 }
 
 std::pair<uint64_t, uint64_t> WindowService::CreateWaylandWindow(

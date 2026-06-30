@@ -33,8 +33,10 @@ private:
 #ifdef GITS_PLATFORM_LINUX
   std::pair<uint64_t, uint64_t> CreateXlibWindow(
       int32_t x, int32_t y, int32_t width, int32_t height, bool visible);
+  void ResizeXlibWindow(uint64_t display, uint64_t window, uint32_t width, uint32_t height);
   std::pair<uint64_t, uint64_t> CreateXcbWindow(
       int32_t x, int32_t y, int32_t width, int32_t height, bool visible);
+  void ResizeXcbWindow(uint64_t connection, uint64_t window, uint32_t width, uint32_t height);
   std::pair<uint64_t, uint64_t> CreateWaylandWindow(
       int32_t x, int32_t y, int32_t width, int32_t height, bool visible);
 #endif
