@@ -7,30 +7,22 @@
 // ===================== end_copyright_notice ==============================
 ${header}
 
-#include "printEnumsAuto.h"
-#include "enumToStrAuto.h"
+#pragma once
+
+#include "fastOStream.h"
+#include "vulkanHeader2.h"
 
 namespace gits {
 namespace vulkan {
 
-%for enum in enums:
-<% define = get_define(enum.platform) %>\
+%for bitmask in bitmasks:
+<% define = get_define(bitmask.platform) %>\
 % if define:
 #ifdef ${define}
 % endif
 
-FastOStream& operator<<(FastOStream& stream, ${enum.name} value) {
-  return stream << toStr(value);
-}
-
-FastOStream& operator<<(FastOStream& stream, const ${enum.name}* value) {
-  if (value) {
-    stream << *value;
-  } else {
-    stream << "nullptr";
-  }
-  return stream;
-}
+FastOStream& Print${bitmask.flag_name}(FastOStream& stream, const ${bitmask.flag_name} value);
+FastOStream& Print${bitmask.flag_name}(FastOStream& stream, const ${bitmask.flag_name}* value);
 
 % if define:
 #endif

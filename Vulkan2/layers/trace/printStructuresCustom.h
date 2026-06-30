@@ -14,8 +14,8 @@
 namespace gits {
 namespace vulkan {
 
-FastOStream& operator<<(FastOStream& stream, const VkWriteDescriptorSet& value);
-FastOStream& operator<<(FastOStream& stream, const VkWriteDescriptorSet* value);
+FastOStream& operator<<(FastOStream& stream, const VkDependencyInfo& value);
+FastOStream& operator<<(FastOStream& stream, const VkDependencyInfo* value);
 
 FastOStream& operator<<(FastOStream& stream, const VkGraphicsPipelineCreateInfo& value);
 FastOStream& operator<<(FastOStream& stream, const VkGraphicsPipelineCreateInfo* value);
@@ -28,6 +28,12 @@ FastOStream& operator<<(FastOStream& stream, const VkPipelineColorBlendStateCrea
 
 FastOStream& operator<<(FastOStream& stream, const VkPipelineDynamicStateCreateInfo& value);
 FastOStream& operator<<(FastOStream& stream, const VkPipelineDynamicStateCreateInfo* value);
+
+FastOStream& operator<<(FastOStream& stream, const VkSubmitInfo& value);
+FastOStream& operator<<(FastOStream& stream, const VkSubmitInfo* value);
+
+FastOStream& operator<<(FastOStream& stream, const VkWriteDescriptorSet& value);
+FastOStream& operator<<(FastOStream& stream, const VkWriteDescriptorSet* value);
 
 } // namespace vulkan
 } // namespace gits

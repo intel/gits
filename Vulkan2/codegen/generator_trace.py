@@ -9,15 +9,26 @@
 # ===================== end_copyright_notice ==============================
 
 from generator_helpers import generate_file, get_define
+import sys
 
-def print_members(name, members):
+bitmasks_dict = {}
+
+def print_members(name, members, bitmasks):
+    global bitmasks_dict
+    if not bitmasks_dict:
+        bitmasks_dict = {b.flag_name: b for b in bitmasks}
+    
     str = f'  stream << "{name}{{";\n'
     for i, member in enumerate(members):
         is_last = (i == (len(members) - 1))
         separator = '' if is_last else ' << ", "'
         memberVal = f'value.{member.name}'
-            
-        if member.base_type == 'char' and member.is_pointer:
+        
+        bitmask = bitmasks_dict.get(member.base_type)
+        
+        if bitmask is not None:
+            str += f'  Print{bitmask.flag_name}(stream, value.{member.name}){separator};\n'
+        elif member.base_type == 'char' and member.is_pointer:
             str += f'  PrintString(stream, value.{member.name}){separator};\n'
         elif member.base_type == 'char' and member.is_pointer_to_pointer:
             str += f'  PrintStringArray(stream, value.{member.length}, value.{member.name}){separator};\n'
@@ -30,34 +41,26 @@ def print_members(name, members):
     str += '  stream << "}";\n'
     return str
 
-def print_struct_members(struct):
-    return print_members(struct.name, struct.members)
+def print_struct_members(struct, bitmasks):
+    return print_members(struct.name, struct.members, bitmasks)
 
-def print_union_members(union):
-    return print_members(union.name, union.members)
+def print_union_members(union, bitmasks):
+    return print_members(union.name, union.members, bitmasks)
 
 def generate_trace_files(context, out_path):
-    excluded_enums = [
-        'VkFaultLevel',
-        'VkFaultType',
-        'VkFaultQueryBehavior',
-        'VkPipelineMatchControl',
-        'VkPipelineCacheValidationVersion',
-        'VkSciSyncClientTypeNV',
-        'VkSciSyncPrimitiveTypeNV',
-    ]
     structs_with_custom_print = [
+        'VkDependencyInfo',
         'VkGraphicsPipelineCreateInfo',
         'VkPipelineColorBlendStateCreateInfo',
         'VkPipelineDynamicStateCreateInfo',
         'VkPipelineVertexInputStateCreateInfo',
         'VkRenderPassBeginInfo',
+        'VkSubmitInfo',
         'VkWriteDescriptorSet',
     ]
     additional_context = {
         'print_struct_members': print_struct_members,
         'print_union_members': print_union_members,
-        'excluded_enums': excluded_enums,
         'structs_with_custom_print': structs_with_custom_print,
         'get_define': get_define,
     }
@@ -66,6 +69,8 @@ def generate_trace_files(context, out_path):
       'traceLayerAuto.cpp',
       'enumToStrAuto.h',
       'enumToStrAuto.cpp',
+      'printBitmasksAuto.h',
+      'printBitmasksAuto.cpp',
       'printEnumsAuto.h',
       'printEnumsAuto.cpp',
       'printUnionsAuto.h',

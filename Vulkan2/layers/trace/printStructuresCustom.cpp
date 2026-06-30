@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "printStructuresCustom.h"
+#include "printBitmasksAuto.h"
 #include "printEnumsAuto.h"
 #include "printCustom.h"
 #include <cassert>
@@ -14,38 +15,38 @@
 namespace gits {
 namespace vulkan {
 
-FastOStream& operator<<(FastOStream& stream, const VkWriteDescriptorSet& value) {
-  stream << "VkWriteDescriptorSet{";
+FastOStream& operator<<(FastOStream& stream, const VkDependencyInfo& value) {
+  stream << "VkDependencyInfo{";
   stream << value.sType << ", ";
   stream << value.pNext << ", ";
-  stream << value.dstSet << ", ";
-  stream << value.dstBinding << ", ";
-  stream << value.dstArrayElement << ", ";
-  stream << value.descriptorCount << ", ";
-  stream << value.descriptorType << ", ";
-  // Print only the structures that are relevant for the descriptor type
-  if (value.descriptorType == VK_DESCRIPTOR_TYPE_SAMPLER ||
-      value.descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER ||
-      value.descriptorType == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE ||
-      value.descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE ||
-      value.descriptorType == VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT) {
-    stream << value.pImageInfo;
-  } else if (value.descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER ||
-             value.descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER ||
-             value.descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC ||
-             value.descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC) {
-    stream << value.pBufferInfo;
-  } else if (value.descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER ||
-             value.descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER) {
-    stream << value.pTexelBufferView;
+  PrintVkDependencyFlags(stream, value.dependencyFlags) << ", ";
+
+  if (value.memoryBarrierCount > 0) {
+    stream << value.memoryBarrierCount << ", ";
+    stream << value.pMemoryBarriers << ", ";
   } else {
-    assert(false && "Could not handle value.descriptorType!");
+    stream << "0, nullptr, ";
   }
+
+  if (value.bufferMemoryBarrierCount > 0) {
+    stream << value.bufferMemoryBarrierCount << ", ";
+    stream << value.pBufferMemoryBarriers << ", ";
+  } else {
+    stream << "0, nullptr, ";
+  }
+
+  if (value.imageMemoryBarrierCount > 0) {
+    stream << value.imageMemoryBarrierCount << ", ";
+    stream << value.pImageMemoryBarriers;
+  } else {
+    stream << "0, nullptr";
+  }
+
   stream << "}";
   return stream;
 }
 
-FastOStream& operator<<(FastOStream& stream, const VkWriteDescriptorSet* value) {
+FastOStream& operator<<(FastOStream& stream, const VkDependencyInfo* value) {
   if (value) {
     stream << *value;
   } else {
@@ -217,6 +218,86 @@ FastOStream& operator<<(FastOStream& stream, const VkRenderPassBeginInfo& value)
 }
 
 FastOStream& operator<<(FastOStream& stream, const VkRenderPassBeginInfo* value) {
+  if (value) {
+    stream << *value;
+  } else {
+    stream << "nullptr";
+  }
+  return stream;
+}
+
+FastOStream& operator<<(FastOStream& stream, const VkSubmitInfo& value) {
+  stream << "VkSubmitInfo{";
+  stream << value.sType << ", ";
+  stream << value.pNext << ", ";
+
+  if (value.waitSemaphoreCount > 0) {
+    stream << value.waitSemaphoreCount << ", ";
+    stream << value.pWaitSemaphores << ", ";
+    PrintVkPipelineStageFlags(stream, value.pWaitDstStageMask) << ", ";
+  } else {
+    stream << "0, nullptr, nullptr, ";
+  }
+
+  if (value.commandBufferCount) {
+    stream << value.commandBufferCount << ", ";
+    stream << value.pCommandBuffers << ", ";
+  } else {
+    stream << "0, nullptr, ";
+  }
+
+  if (value.signalSemaphoreCount > 0) {
+    stream << value.signalSemaphoreCount << ", ";
+    stream << value.pSignalSemaphores;
+  } else {
+    stream << "0, nullptr";
+  }
+
+  stream << "}";
+  return stream;
+}
+
+FastOStream& operator<<(FastOStream& stream, const VkSubmitInfo* value) {
+  if (value) {
+    stream << *value;
+  } else {
+    stream << "nullptr";
+  }
+  return stream;
+}
+
+FastOStream& operator<<(FastOStream& stream, const VkWriteDescriptorSet& value) {
+  stream << "VkWriteDescriptorSet{";
+  stream << value.sType << ", ";
+  stream << value.pNext << ", ";
+  stream << value.dstSet << ", ";
+  stream << value.dstBinding << ", ";
+  stream << value.dstArrayElement << ", ";
+  stream << value.descriptorCount << ", ";
+  stream << value.descriptorType << ", ";
+  // Print only the structures that are relevant for the descriptor type
+  if (value.descriptorType == VK_DESCRIPTOR_TYPE_SAMPLER ||
+      value.descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER ||
+      value.descriptorType == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE ||
+      value.descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE ||
+      value.descriptorType == VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT) {
+    stream << value.pImageInfo;
+  } else if (value.descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER ||
+             value.descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER ||
+             value.descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC ||
+             value.descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC) {
+    stream << value.pBufferInfo;
+  } else if (value.descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER ||
+             value.descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER) {
+    stream << value.pTexelBufferView;
+  } else {
+    assert(false && "Could not handle value.descriptorType!");
+  }
+  stream << "}";
+  return stream;
+}
+
+FastOStream& operator<<(FastOStream& stream, const VkWriteDescriptorSet* value) {
   if (value) {
     stream << *value;
   } else {

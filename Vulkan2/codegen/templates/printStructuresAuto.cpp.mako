@@ -8,6 +8,7 @@
 ${header}
 
 #include "printStructuresAuto.h"
+#include "printBitmasksAuto.h"
 #include "printEnumsAuto.h"
 #include "printCustom.h"
 
@@ -23,7 +24,7 @@ namespace vulkan {
 % endif
 
 FastOStream& operator<<(FastOStream& stream, const ${structure.name}& value) {
-${print_struct_members(structure)}\
+${print_struct_members(structure, bitmasks)}\
   return stream;
 }
 

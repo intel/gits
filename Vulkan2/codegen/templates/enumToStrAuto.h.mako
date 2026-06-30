@@ -16,7 +16,6 @@ namespace gits {
 namespace vulkan {
 
 %for enum in enums:
-%if enum.name not in excluded_enums:
 <% define = get_define(enum.platform) %>\
 % if define:
 #ifdef ${define}
@@ -25,7 +24,6 @@ std::string toStr(${enum.name} value);
 % if define:
 #endif
 % endif
-%endif
 %endfor
 
 } // namespace vulkan

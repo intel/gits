@@ -21,10 +21,8 @@ namespace vulkan {
 #ifdef ${define}
 % endif
 
-%if enum.name not in excluded_enums:
 FastOStream& operator<<(FastOStream& stream, ${enum.name} value);
 FastOStream& operator<<(FastOStream& stream, const ${enum.name}* value);
-%endif
 
 % if define:
 #endif

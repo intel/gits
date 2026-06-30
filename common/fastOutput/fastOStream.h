@@ -30,7 +30,12 @@ void Print(StreamT& stream, const T& arg) {
   } else if constexpr (std::is_same_v<T, char>) {
     fast_io::io::print(stream, fast_io::mnp::chvw(arg));
   } else if constexpr (std::is_pointer_v<T>) {
-    fast_io::io::print(stream, fast_io::mnp::uhexupperfull(reinterpret_cast<std::uintptr_t>(arg)));
+    if (arg == nullptr) {
+      fast_io::io::print(stream, "nullptr");
+    } else {
+      fast_io::io::print(stream,
+                         fast_io::mnp::uhexupperfull(reinterpret_cast<std::uintptr_t>(arg)));
+    }
   } else if constexpr (std::is_enum_v<T>) {
     fast_io::io::print(stream, fast_io::mnp::enum_int_view(arg));
   } else {

@@ -17,6 +17,8 @@ set(TRACE_SRC
   ${SRC_DIR}/printArguments.h
   ${SRC_DIR}/printCustom.h
   ${SRC_DIR}/printCustom.cpp
+  ${SRC_DIR}/printBitmasksAuto.h
+  ${SRC_DIR}/printBitmasksAuto.cpp
   ${SRC_DIR}/printEnumsAuto.h
   ${SRC_DIR}/printEnumsAuto.cpp
   ${SRC_DIR}/printUnionsAuto.h

@@ -20,7 +20,7 @@ namespace vulkan {
 % endif
 
 FastOStream& operator<<(FastOStream& stream, const ${union.name}& value) {
-${print_union_members(union)}\
+${print_union_members(union, bitmasks)}\
   return stream;
 }
 

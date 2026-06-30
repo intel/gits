@@ -471,7 +471,7 @@ def postprocess(commands, structures, unions, handles, enums, bitmasks, flags, e
     for enum in enums:
         enum.platform = platform_map.get(enum.name, '')
     for bitmask in bitmasks:
-        bitmask.platform = platform_map.get(bitmask.name, '')
+        bitmask.platform = platform_map.get(bitmask.flag_name, '')
 
     handle_names = set(handle.name for handle in handles)
     handle_map = {handle.name: handle for handle in handles}
