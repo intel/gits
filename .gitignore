@@ -121,6 +121,8 @@ plugins/DirectX/**/*Auto.h
 Vulkan2/**/*Auto.h
 Vulkan2/**/*Auto.cpp
 Vulkan2/layer/gits_recorder.json
+plugins/Vulkan/**/*Auto.cpp
+plugins/Vulkan/**/*Auto.h
 
 # Configuration
 common/**/*Auto.cpp
