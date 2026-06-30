@@ -1,0 +1,33 @@
+// ===================== begin_copyright_notice ============================
+//
+// Copyright (C) 2023-2026 Intel Corporation
+//
+// SPDX-License-Identifier: MIT
+//
+// ===================== end_copyright_notice ==============================
+
+#pragma once
+
+#include "fastOStream.h"
+#include "vulkanHeader2.h"
+
+namespace gits {
+namespace vulkan {
+
+FastOStream& operator<<(FastOStream& stream, const VkWriteDescriptorSet& value);
+FastOStream& operator<<(FastOStream& stream, const VkWriteDescriptorSet* value);
+
+FastOStream& operator<<(FastOStream& stream, const VkGraphicsPipelineCreateInfo& value);
+FastOStream& operator<<(FastOStream& stream, const VkGraphicsPipelineCreateInfo* value);
+
+FastOStream& operator<<(FastOStream& stream, const VkPipelineVertexInputStateCreateInfo& value);
+FastOStream& operator<<(FastOStream& stream, const VkPipelineVertexInputStateCreateInfo* value);
+
+FastOStream& operator<<(FastOStream& stream, const VkPipelineColorBlendStateCreateInfo& value);
+FastOStream& operator<<(FastOStream& stream, const VkPipelineColorBlendStateCreateInfo* value);
+
+FastOStream& operator<<(FastOStream& stream, const VkPipelineDynamicStateCreateInfo& value);
+FastOStream& operator<<(FastOStream& stream, const VkPipelineDynamicStateCreateInfo* value);
+
+} // namespace vulkan
+} // namespace gits

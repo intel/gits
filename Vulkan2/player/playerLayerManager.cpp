@@ -19,6 +19,14 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
   std::unique_ptr<Layer> replayCustomizationLayer =
       std::make_unique<ReplayCustomizationLayer>(playerManager);
 
+  const auto& traceCfg = Configurator::Get().common.shared.trace;
+
+  std::unique_ptr<Layer> traceLayer;
+  if (traceCfg.enabled) {
+    m_TraceLayerGroup = std::make_unique<TraceLayerGroup>();
+    traceLayer = m_TraceLayerGroup->GetTraceLayer();
+  }
+
   auto enablePreLayer = [this](std::unique_ptr<Layer>& layer) {
     if (layer) {
       m_PreLayers.push_back(layer.get());
@@ -26,6 +34,9 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
   };
 
   enablePreLayer(replayCustomizationLayer);
+  if (traceCfg.enabled && traceCfg.print.preCalls) {
+    enablePreLayer(traceLayer);
+  }
 
   auto enablePostLayer = [this](std::unique_ptr<Layer>& layer) {
     if (layer) {
@@ -34,6 +45,9 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
   };
 
   enablePostLayer(replayCustomizationLayer);
+  if (traceCfg.enabled && traceCfg.print.postCalls) {
+    enablePostLayer(traceLayer);
+  }
 
   auto retainLayer = [this](std::unique_ptr<Layer>&& layer) {
     if (layer) {
@@ -42,6 +56,7 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
   };
 
   retainLayer(std::move(replayCustomizationLayer));
+  retainLayer(std::move(traceLayer));
 
   for (const auto& plugin : pluginService.GetPlugins()) {
     Layer* layer = static_cast<Layer*>(plugin.Impl->getImpl());

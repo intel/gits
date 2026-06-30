@@ -10,9 +10,12 @@
 
 #include "gits.h"
 #include "layerAuto.h"
+#include "traceLayerGroup.h"
 
 #include <vector>
 #include <memory>
+#include <fstream>
+#include <mutex>
 
 namespace gits {
 namespace vulkan {
@@ -36,6 +39,7 @@ private:
   std::vector<Layer*> m_PreLayers;
   std::vector<Layer*> m_PostLayers;
   std::vector<std::unique_ptr<Layer>> m_LayersOwner;
+  std::unique_ptr<TraceLayerGroup> m_TraceLayerGroup;
 };
 
 } // namespace vulkan

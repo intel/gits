@@ -1,0 +1,33 @@
+// ===================== begin_copyright_notice ============================
+//
+// Copyright (C) 2023-2026 Intel Corporation
+//
+// SPDX-License-Identifier: MIT
+//
+// ===================== end_copyright_notice ==============================
+${header}
+
+#pragma once
+
+#include "fastOStream.h"
+#include "vulkanHeader2.h"
+
+namespace gits {
+namespace vulkan {
+
+%for union in unions:
+<% define = get_define(union.platform) %>\
+% if define:
+#ifdef ${define}
+% endif
+
+FastOStream& operator<<(FastOStream& stream, const ${union.name}& value);
+FastOStream& operator<<(FastOStream& stream, const ${union.name}* value);
+
+% if define:
+#endif
+% endif
+%endfor
+
+} // namespace vulkan
+} // namespace gits

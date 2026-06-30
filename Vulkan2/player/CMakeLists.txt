@@ -65,11 +65,17 @@ target_include_directories(Vulkan_player_2 PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
+target_include_directories(Vulkan_player_2 PRIVATE
+  ${VULKAN2_DIR}/layers/trace
+)
+
+
 target_link_libraries(Vulkan_player_2 PRIVATE
   stream
   Vulkan_layer_interface
   Vulkan_coders
   Vulkan_services
+  Vulkan_trace
   Vulkan_utils
 )
 
