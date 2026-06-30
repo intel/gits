@@ -11,6 +11,7 @@
 #include "gits.h"
 #include "layerAuto.h"
 #include "traceLayerGroup.h"
+#include "subcaptureLayer.h"
 #include "resourceDumpingLayerGroup.h"
 
 #include <vector>

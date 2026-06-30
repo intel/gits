@@ -122,6 +122,11 @@ struct OpaqueBufferArgument {
 struct DescriptorTemplateDataArgument {
   void* Value{};            // points into Data after decode, or into app memory during capture
   std::vector<char> Data{}; // owned serialized buffer (populated during capture Pre / decode)
+  // Player-side: patched copy of Data where GITSKeys are replaced with player handles.
+  // Populated by DescriptorUpdateTemplateService::RemapHandles.  Value is set to point here
+  // so the Vulkan call receives the correct handles while Data is left intact for serialization
+  // (e.g. RecordingLayer still serializes original GITSKeys into the subcapture stream).
+  std::vector<char> PatchedData{};
   DescriptorTemplateDataArgument() {}
   DescriptorTemplateDataArgument(const void* v) : Value(const_cast<void*>(v)) {}
 };

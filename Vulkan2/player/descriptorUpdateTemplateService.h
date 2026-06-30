@@ -27,7 +27,8 @@ public:
                      const VkDescriptorUpdateTemplateCreateInfo* pCreateInfo);
   void RemoveTemplate(VkDescriptorUpdateTemplate tmpl);
 
-  // Patches Vulkan handles embedded in arg.Data in-place and updates arg.Value.
+  // Patches Vulkan handles embedded in arg.Data into arg.PatchedData and
+  // updates arg.Value to point there.
   void RemapHandles(VkDescriptorUpdateTemplate tmpl, DescriptorTemplateDataArgument& arg);
 
 private:

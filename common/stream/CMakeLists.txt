@@ -27,6 +27,7 @@ set(STREAM_SRC_HEADERS
   ${STREAM_HEADER_DIR}/streamWriter.h
   ${STREAM_HEADER_DIR}/commandId.h
   ${STREAM_HEADER_DIR}/streamCompressor.h
+  ${STREAM_HEADER_DIR}/diskSpaceCheck.h
   ${TBB_DEPENDENT_HEADERS}
 )
 set(STREAM_SRC_SOURCES
@@ -35,6 +36,7 @@ set(STREAM_SRC_SOURCES
   ${STREAM_SOURCE_DIR}/streamLegacyReader.cpp
   ${STREAM_SOURCE_DIR}/streamWriter.cpp
   ${STREAM_SOURCE_DIR}/streamCompressor.cpp
+  ${STREAM_SOURCE_DIR}/diskSpaceCheck.cpp
   ${TBB_DEPENDENT_SOURCES}
 )
 

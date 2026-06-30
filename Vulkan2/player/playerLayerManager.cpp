@@ -12,6 +12,9 @@
 #include "pluginService.h"
 #include "replayCustomizationLayer.h"
 #include "log.h"
+#include "subcaptureLayer.h"
+#include "recordingLayerAuto.h"
+#include "configurator.h"
 
 namespace gits {
 namespace vulkan {
@@ -38,6 +41,30 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
     screenshotLayer = m_ResourceDumpingLayerGroup->getScreenshotLayer();
   }
 
+  // Subcapture-related layers (SubcaptureLayer, RecordingLayer) only make sense
+  // when the user has actually requested a subcapture run.  Outside of that
+  // mode we must not instantiate them: they install Post overrides for every
+  // Vulkan command, which adds per-call overhead, allocates state tracking
+  // tables, and (in SubcaptureRecorder's ctor) opens the output stream.
+  const auto& cfg = Configurator::Get();
+  const bool subcaptureEnabled =
+      cfg.common.features.subcapture.enabled && !cfg.common.features.subcapture.frames.empty();
+
+  std::unique_ptr<Layer> subcaptureLayer;
+  std::unique_ptr<Layer> recordingLayer;
+  if (subcaptureEnabled) {
+    subcaptureLayer =
+        std::make_unique<SubcaptureLayer>(playerManager, cfg.common.features.subcapture.frames);
+
+    // RecordingLayer shares the recorder and range owned by SubcaptureLayer so
+    // it can write every in-range command to the output stream.  It also receives
+    // the StateTrackingService pointer so it can store vkCmd* commands into the
+    // owning command buffer's recorded-commands log for state restore.
+    auto* sc = static_cast<SubcaptureLayer*>(subcaptureLayer.get());
+    recordingLayer = std::make_unique<RecordingLayer>(sc->GetRecorder(), sc->GetRange(),
+                                                      &sc->GetStateTrackingService());
+  }
+
   auto enablePreLayer = [this](std::unique_ptr<Layer>& layer) {
     if (layer) {
       m_PreLayers.push_back(layer.get());
@@ -51,6 +78,7 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
   if (screenshotsCfg.enabled) {
     m_PreLayers.push_back(screenshotLayer);
   }
+  enablePreLayer(subcaptureLayer);
 
   auto enablePostLayer = [this](std::unique_ptr<Layer>& layer) {
     if (layer) {
@@ -65,6 +93,8 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
   if (screenshotsCfg.enabled) {
     m_PostLayers.push_back(screenshotLayer);
   }
+  enablePostLayer(subcaptureLayer);
+  enablePostLayer(recordingLayer);
 
   auto retainLayer = [this](std::unique_ptr<Layer>&& layer) {
     if (layer) {
@@ -74,6 +104,8 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
 
   retainLayer(std::move(replayCustomizationLayer));
   retainLayer(std::move(traceLayer));
+  retainLayer(std::move(subcaptureLayer));
+  retainLayer(std::move(recordingLayer));
 
   for (const auto& plugin : pluginService.GetPlugins()) {
     Layer* layer = static_cast<Layer*>(plugin.Impl->getImpl());

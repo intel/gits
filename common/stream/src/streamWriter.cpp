@@ -11,6 +11,7 @@
 #include "log.h"
 #include "configurator.h"
 #include "exception.h"
+#include "diskSpaceCheck.h"
 
 namespace gits {
 namespace stream {
@@ -20,6 +21,7 @@ StreamWriter::StreamWriter(const std::filesystem::path& streamDir,
   LOG_INFO << "Stream will be written to: " << streamDir;
   m_StreamDir = streamDir.string();
   std::filesystem::create_directories(streamDir);
+  CheckAvailableDiskSpace(streamDir, "stream output");
   m_Stream.exceptions(std::ofstream::failbit | std::ofstream::badbit);
   m_Stream.open(streamDir / "stream.gits2", std::ios::out | std::ios::binary);
 

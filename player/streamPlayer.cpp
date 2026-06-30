@@ -128,6 +128,7 @@ class StateRestoreBeginRunner : public stream::CommandRunner {
 public:
   StateRestoreBeginRunner(Timer* stateRestoreTimer) : m_StateRestoreTimer(stateRestoreTimer) {}
   void Run() override {
+    LOG_INFO << "State restore replay started";
     m_StateRestoreTimer->Start();
   }
 
@@ -141,6 +142,8 @@ public:
       : m_MessageLoop(messageLoop), m_StateRestoreTimer(stateRestoreTimer) {}
   void Run() override {
     m_StateRestoreTimer->Pause();
+    LOG_INFO << "State restore replay finished, duration " << m_StateRestoreTimer->Get() / 1e6
+             << " ms.";
     m_MessageLoop->RunLoop(0);
   }
 

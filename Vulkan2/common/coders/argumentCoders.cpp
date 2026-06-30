@@ -75,7 +75,7 @@ void EncodeStringArray(const char* const* arr, uint32_t count, char* dst, uint32
   if (!arr || count == 0) {
     return;
   }
-  // Write count null pointer placeholders — patched in-place at decode time.
+  // Write count null pointer placeholders - patched in-place at decode time.
   const char* null_placeholder = nullptr;
   unsigned ptrArrayOffset = offset;
   for (uint32_t i = 0; i < count; ++i) {

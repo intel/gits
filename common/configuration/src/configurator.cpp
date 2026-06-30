@@ -56,8 +56,40 @@ void Configurator::PrepareSubcapturePath() {
   const std::string rangePlaceholder = "%r%";
   std::string::size_type rangePos = preparedPath.find(rangePlaceholder);
   if (rangePos != std::string::npos) {
+    // DX12 still uses its own DirectX.Features.Subcapture group, while Vulkan2
+    // (and any other API migrated to the shared structure) uses
+    // Common.Features.Subcapture.  Pick the frames string from whichever side
+    // is actually enabled.  If both are enabled the configuration is ambiguous
+    // for an output path that contains %r% - prefer DX12 (legacy behaviour)
+    // and emit a warning so the user can disambiguate.
+    const bool dxEnabled =
+        cfg.directx.features.subcapture.enabled && !cfg.directx.features.subcapture.frames.empty();
+    const bool commonEnabled =
+        cfg.common.features.subcapture.enabled && !cfg.common.features.subcapture.frames.empty();
+
+    std::string framesStr;
+    if (dxEnabled && commonEnabled) {
+      LOG_WARNING << "Both DirectX.Features.Subcapture and Common.Features.Subcapture are "
+                     "enabled; using DirectX frames ('"
+                  << cfg.directx.features.subcapture.frames
+                  << "') to resolve %r% in Common.Player.SubcapturePath.";
+      framesStr = cfg.directx.features.subcapture.frames;
+    } else if (dxEnabled) {
+      framesStr = cfg.directx.features.subcapture.frames;
+    } else if (commonEnabled) {
+      framesStr = cfg.common.features.subcapture.frames;
+    } else {
+      // Neither side is enabled - keep the previous best-effort behaviour of
+      // picking whichever frames string is non-empty.  This preserves the
+      // semantics of a user who sets Frames= without Enabled= (e.g. via the
+      // launcher) and still wants %r% to resolve to something sensible.
+      framesStr = !cfg.directx.features.subcapture.frames.empty()
+                      ? cfg.directx.features.subcapture.frames
+                      : cfg.common.features.subcapture.frames;
+    }
+
     std::stringstream str;
-    str << "frames-" << cfg.directx.features.subcapture.frames;
+    str << "frames-" << framesStr;
     std::string left = preparedPath.substr(0, rangePos);
     std::string right = preparedPath.substr(rangePos + rangePlaceholder.size());
     preparedPath = left + str.str() + right;

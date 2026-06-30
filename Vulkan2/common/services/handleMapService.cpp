@@ -40,5 +40,17 @@ uint64_t HandleMapService::GetHandle(GITSKey key) {
   return it->second;
 }
 
+uint64_t HandleMapService::TryGetHandle(GITSKey key) {
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  auto it = m_KeyToHandle.find(key);
+  return it != m_KeyToHandle.end() ? it->second : 0;
+}
+
+GITSKey HandleMapService::TryGetKey(uint64_t handle) {
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  auto it = m_HandleToKey.find(handle);
+  return it != m_HandleToKey.end() ? it->second : 0;
+}
+
 } // namespace vulkan
 } // namespace gits

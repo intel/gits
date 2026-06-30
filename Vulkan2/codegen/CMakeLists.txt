@@ -25,6 +25,7 @@ set(SCRIPTS_SRC
   generator_trace.py
   generator_vk_layer.py
   generator_interceptor.py
+  generator_subcapture.py
 )
 source_group("scripts" FILES ${SCRIPTS_SRC})
 

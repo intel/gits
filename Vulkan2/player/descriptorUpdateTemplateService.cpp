@@ -16,8 +16,11 @@ namespace vulkan {
 
 namespace {
 
-// Reads a GITSKey from the data buffer at byteOffset and writes back the
-// player-side handle obtained from HandleMapService.
+// Reads a GITSKey from the data buffer at byteOffset, resolves it to a
+// player-side handle via TryGetHandle (returns VK_NULL_HANDLE if not mapped),
+// and writes the handle back at the same offset.
+// Reads a GITSKey from the data buffer at byteOffset, resolves it to a
+// player-side handle via GetHandle, and writes the handle back at the same offset.
 template <typename HandleT>
 void RemapHandle(std::vector<char>& data, size_t byteOffset) {
   GITS_ASSERT(sizeof(HandleT) == sizeof(GITSKey),
@@ -30,7 +33,8 @@ void RemapHandle(std::vector<char>& data, size_t byteOffset) {
   if (!key) {
     return;
   }
-  auto playerHandle = reinterpret_cast<HandleT>(HandleMapService::Get().GetHandle(key));
+  auto rawHandle = HandleMapService::Get().GetHandle(key);
+  auto playerHandle = reinterpret_cast<HandleT>(rawHandle);
   std::memcpy(data.data() + byteOffset, &playerHandle, sizeof(HandleT));
 }
 
@@ -66,6 +70,14 @@ void DescriptorUpdateTemplateService::RemapHandles(VkDescriptorUpdateTemplate tm
     return;
   }
 
+  // Copy Data into PatchedData so we can substitute GITSKeys with player-side
+  // handles without touching Data.  Data must remain intact (containing the
+  // original GITSKeys) so that RecordingLayer can serialise it correctly into
+  // the subcapture stream - if we patched Data in-place the live commands in
+  // the subcapture stream would contain first-player handle values instead of
+  // GITSKeys, causing the second player to misinterpret them.
+  arg.PatchedData = arg.Data;
+
   for (const auto& entry : it->second.entries) {
     for (uint32_t i = 0; i < entry.descriptorCount; ++i) {
       size_t base = entry.offset + static_cast<size_t>(i) * entry.stride;
@@ -75,15 +87,14 @@ void DescriptorUpdateTemplateService::RemapHandles(VkDescriptorUpdateTemplate tm
       case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
       case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
       case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT: {
-        // VkDescriptorImageInfo: { VkSampler, VkImageView, VkImageLayout }
         size_t samplerOffset = base + offsetof(VkDescriptorImageInfo, sampler);
         size_t imageViewOffset = base + offsetof(VkDescriptorImageInfo, imageView);
         if (entry.descriptorType == VK_DESCRIPTOR_TYPE_SAMPLER ||
             entry.descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) {
-          RemapHandle<VkSampler>(arg.Data, samplerOffset);
+          RemapHandle<VkSampler>(arg.PatchedData, samplerOffset);
         }
         if (entry.descriptorType != VK_DESCRIPTOR_TYPE_SAMPLER) {
-          RemapHandle<VkImageView>(arg.Data, imageViewOffset);
+          RemapHandle<VkImageView>(arg.PatchedData, imageViewOffset);
         }
         break;
       }
@@ -91,15 +102,13 @@ void DescriptorUpdateTemplateService::RemapHandles(VkDescriptorUpdateTemplate tm
       case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
       case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
       case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC: {
-        // VkDescriptorBufferInfo: { VkBuffer, VkDeviceSize offset, VkDeviceSize range }
         size_t bufferOffset = base + offsetof(VkDescriptorBufferInfo, buffer);
-        RemapHandle<VkBuffer>(arg.Data, bufferOffset);
+        RemapHandle<VkBuffer>(arg.PatchedData, bufferOffset);
         break;
       }
       case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
       case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER: {
-        // VkBufferView stored directly
-        RemapHandle<VkBufferView>(arg.Data, base);
+        RemapHandle<VkBufferView>(arg.PatchedData, base);
         break;
       }
       default:
@@ -108,8 +117,9 @@ void DescriptorUpdateTemplateService::RemapHandles(VkDescriptorUpdateTemplate tm
     }
   }
 
-  // Value must point into the (now-patched) Data buffer
-  arg.Value = arg.Data.data();
+  // Value points into PatchedData (player handles) for the Vulkan call.
+  // Data is left intact (GITSKeys) for any subsequent serialization.
+  arg.Value = arg.PatchedData.data();
 }
 
 } // namespace vulkan

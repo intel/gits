@@ -56,9 +56,14 @@ void UpdateOutputHandle(CaptureManager& manager, HandleArrayOutputArgument<T>& a
     return;
   }
   for (uint32_t i = 0; i < arg.Size; ++i) {
-    arg.Keys[i] = manager.CreateHandleKey();
     auto handle = reinterpret_cast<std::uint64_t>(arg.Value[i]);
-    HandleMapService::Get().SetKey(handle, arg.Keys[i]);
+    GITSKey existingKey = HandleMapService::Get().TryGetKey(handle);
+    if (existingKey) {
+      arg.Keys[i] = existingKey;
+    } else {
+      arg.Keys[i] = manager.CreateHandleKey();
+      HandleMapService::Get().SetKey(handle, arg.Keys[i]);
+    }
   }
 }
 

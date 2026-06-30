@@ -833,6 +833,30 @@ Configuration:
             Type: WindowsKeyHandling
             Default: MessageLoop
             OSVisibility: [WINDOWS]
+      - Name: Features
+        Type: Group
+        Options:
+          - Name: Subcapture
+            Type: Group
+            Description:
+              Common subcapture settings used by APIs whose subcapture pipeline is
+              not yet integrated with the API-specific Features.Subcapture groups
+              (currently Vulkan2). DirectX still uses DirectX.Features.Subcapture
+              and ignores these values; both sides may be enabled simultaneously
+              but a warning will be emitted if so.
+            Options:
+              - Name: enabled
+                Type: bool
+                Default: false
+                Description: Whether subcapture is enabled or not
+              - Name: frames
+                Type: std::string
+                Default: ""
+                Description: Frame range for subcapture, e.g. '3' or '3-6'
+              - Name: compressionType
+                Type: CompressionType
+                Default: ZSTD
+                Description: Compression type for the subcapture output stream (LZ4/ZSTD)
   - Name: DirectX
     Type: Group
     OSVisibility: [WINDOWS]
