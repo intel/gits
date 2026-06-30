@@ -126,7 +126,9 @@ uint32_t GetSize(const PointerArgument<T>& arg) {
   if (!arg.Value) {
     return sizeof(void*);
   }
-  return sizeof(void*) + sizeof(T);
+  uint32_t size = sizeof(void*) + sizeof(T);
+  size += sizeof(uint32_t) + static_cast<uint32_t>(arg.HandleKeys.size()) * sizeof(GITSKey);
+  return size;
 }
 
 template <typename T>
@@ -136,6 +138,13 @@ void Encode(char* dest, uint32_t& offset, const PointerArgument<T>& arg) {
   }
   std::memcpy(dest + offset, arg.Value, sizeof(T));
   offset += sizeof(T);
+  uint32_t keyCount = static_cast<uint32_t>(arg.HandleKeys.size());
+  std::memcpy(dest + offset, &keyCount, sizeof(keyCount));
+  offset += sizeof(keyCount);
+  if (keyCount > 0) {
+    std::memcpy(dest + offset, arg.HandleKeys.data(), sizeof(GITSKey) * keyCount);
+    offset += sizeof(GITSKey) * keyCount;
+  }
 }
 
 template <typename T>
@@ -143,7 +152,9 @@ uint32_t GetSize(const ArrayArgument<T>& arg) {
   if (!arg.Value) {
     return sizeof(void*);
   }
-  return sizeof(void*) + sizeof(arg.Size) + sizeof(T) * arg.Size;
+  uint32_t size = sizeof(void*) + sizeof(arg.Size) + sizeof(T) * arg.Size;
+  size += sizeof(uint32_t) + static_cast<uint32_t>(arg.HandleKeys.size()) * sizeof(GITSKey);
+  return size;
 }
 
 template <typename T>
@@ -155,6 +166,13 @@ void Encode(char* dest, uint32_t& offset, const ArrayArgument<T>& arg) {
   offset += sizeof(arg.Size);
   std::memcpy(dest + offset, arg.Value, sizeof(T) * arg.Size);
   offset += sizeof(T) * arg.Size;
+  uint32_t keyCount = static_cast<uint32_t>(arg.HandleKeys.size());
+  std::memcpy(dest + offset, &keyCount, sizeof(keyCount));
+  offset += sizeof(keyCount);
+  if (keyCount > 0) {
+    std::memcpy(dest + offset, arg.HandleKeys.data(), sizeof(GITSKey) * keyCount);
+    offset += sizeof(GITSKey) * keyCount;
+  }
 }
 
 template <typename T>
@@ -348,6 +366,14 @@ void Decode(char* src, uint32_t& offset, PointerArgument<T>& arg) {
   }
   arg.Value = reinterpret_cast<T*>(src + offset);
   offset += sizeof(T);
+  uint32_t keyCount{};
+  std::memcpy(&keyCount, src + offset, sizeof(keyCount));
+  offset += sizeof(keyCount);
+  if (keyCount > 0) {
+    arg.HandleKeys.resize(keyCount);
+    std::memcpy(arg.HandleKeys.data(), src + offset, sizeof(GITSKey) * keyCount);
+    offset += sizeof(GITSKey) * keyCount;
+  }
 }
 
 template <typename T>
@@ -363,6 +389,14 @@ void Decode(char* src, uint32_t& offset, ArrayArgument<T>& arg) {
   arg.Value = reinterpret_cast<T*>(src + offset);
   if constexpr (!std::is_void_v<T>) {
     offset += sizeof(T) * arg.Size;
+  }
+  uint32_t keyCount{};
+  std::memcpy(&keyCount, src + offset, sizeof(keyCount));
+  offset += sizeof(keyCount);
+  if (keyCount > 0) {
+    arg.HandleKeys.resize(keyCount);
+    std::memcpy(arg.HandleKeys.data(), src + offset, sizeof(GITSKey) * keyCount);
+    offset += sizeof(GITSKey) * keyCount;
   }
 }
 

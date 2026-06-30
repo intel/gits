@@ -10,7 +10,15 @@
 
 import re
 
-from generator_helpers import generate_file
+from generator_helpers import generate_file, get_define
+
+# Structs that need custom CollectHandleKeys/ResolveHandleKeys implementations
+# because the auto-generated ones are incorrect (e.g., VkWriteDescriptorSet has
+# pImageInfo/pBufferInfo/pTexelBufferView but only one is valid depending on descriptorType).
+CUSTOM_HANDLE_STRUCTS = {
+    'VkWriteDescriptorSet',
+    'VkPushDescriptorSetInfo',
+}
 
 def is_complex_struct(base_type, structures_by_name):
     s = structures_by_name.get(base_type)
@@ -79,22 +87,11 @@ def get_size_lines(structure, structures_list, var_name):
             else:
                 lines.append(f'blobSize += GetPNextChainSizeInput({var_name}->pNext);')
         elif member.is_handle:
-            if member.is_pointer and not member.length:
-                lines.append(f'if ({var_name}->{member.name}) {{')
-                lines.append(f'  blobSize += sizeof(GITSKey);')
-                lines.append('}')
-            elif member.is_pointer and member.length:
-                lines.append(f'if ({var_name}->{member.name} && {var_name}->{member.length} > 0) {{')
-                lines.append(f'  blobSize += sizeof(GITSKey) * {var_name}->{member.length};')
-                lines.append('}')
-            elif not member.is_pointer and member.length:
-                lines.append(f'blobSize += sizeof(GITSKey) * {var_name}->{member.length};')
-            else:
-                lines.append(f'if ({var_name}->{member.name} != VK_NULL_HANDLE) {{')
-                lines.append('  blobSize += sizeof(GITSKey);')
-                lines.append('}')
-        elif member.is_handle and member.length:
-            lines.append(f'blobSize += sizeof(GITSKey) * {var_name}->{member.length};')
+            # All handle members (single, pointer, array) are handled via HandleKeys vector.
+            # Non-pointer handles are already in sizeof(struct). Pointer-to-handle arrays
+            # will be allocated from HandleKeys by ResolveHandleKeys on the player side.
+            # No extra blob space or encoding/decoding needed.
+            pass
         elif member.is_pointer and member.is_null_terminated:
             lines.append(f'blobSize += GetStringSize({var_name}->{member.name});')
         elif member.is_pointer_to_pointer and member.is_null_terminated:
@@ -178,34 +175,9 @@ def get_encode_lines(structure, structures_list, var_name_src, var_name_dst):
                 lines.append(f'  {var_name_dst}->pNext = nullptr;')
                 lines.append(f'}}')
         elif member.is_handle:
-            if member.is_pointer and not member.length:
-                lines.append(f'if ({var_name_src}->{member.name}) {{')
-                lines.append(f'  {var_name_dst}->{member.name} = reinterpret_cast<{member.base_type}>(static_cast<uintptr_t>(offset));')
-                lines.append(f'  GITSKey key = HandleMapService::Get().GetKey(reinterpret_cast<uint64_t>(*{var_name_src}->{member.name}));')
-                lines.append(f'  std::memcpy(dst + offset, &key, sizeof(GITSKey));')
-                lines.append(f'  offset += sizeof(GITSKey);')
-                lines.append('}')
-            elif member.is_pointer and member.length:
-                lines.append(f'if ({var_name_src}->{member.name} && {var_name_src}->{member.length} > 0) {{')
-                lines.append(f'  {var_name_dst}->{member.name} = reinterpret_cast<{member.base_type}*>(static_cast<uintptr_t>(offset));')
-                lines.append(f'  for (uint32_t j = 0; j < {var_name_src}->{member.length}; ++j) {{')
-                lines.append(f'    GITSKey key = {var_name_src}->{member.name}[j] != VK_NULL_HANDLE ? HandleMapService::Get().GetKey(reinterpret_cast<uint64_t>({var_name_src}->{member.name}[j])) : GITSKey{{0}};')
-                lines.append(f'    std::memcpy(dst + offset, &key, sizeof(GITSKey));')
-                lines.append(f'    offset += sizeof(GITSKey);')
-                lines.append('  }')
-                lines.append('}')
-            elif not member.is_pointer and member.length:
-                lines.append(f'for (uint32_t j = 0; j < {var_name_src}->{member.length}; ++j) {{')
-                lines.append(f'  GITSKey key = {var_name_src}->{member.name}[j] != VK_NULL_HANDLE ? HandleMapService::Get().GetKey(reinterpret_cast<uint64_t>({var_name_src}->{member.name}[j])) : GITSKey{{0}};')
-                lines.append(f'  std::memcpy(dst + offset, &key, sizeof(GITSKey));')
-                lines.append(f'  offset += sizeof(GITSKey);')
-                lines.append('}')
-            else:
-                lines.append(f'if ({var_name_src}->{member.name} != VK_NULL_HANDLE) {{')
-                lines.append(f'  GITSKey key = HandleMapService::Get().GetKey(reinterpret_cast<uint64_t>({var_name_src}->{member.name}));')
-                lines.append(f'  std::memcpy(dst + offset, &key, sizeof(GITSKey));')
-                lines.append(f'  offset += sizeof(GITSKey);')
-                lines.append('}')
+            # All handle members are handled via HandleKeys vector.
+            # No blob encoding needed - ResolveHandleKeys allocates and sets pointers.
+            pass
         elif member.is_pointer and member.is_null_terminated:
             lines.append(f'if ({var_name_src}->{member.name}) {{')
             lines.append(f'  {var_name_dst}->{member.name} = reinterpret_cast<const char*>(static_cast<uintptr_t>(offset));')
@@ -320,30 +292,9 @@ def get_decode_lines(structure, structures_list, var_name):
                 lines.append(f'  DecodePNextChainInput(src, offset, const_cast<void**>(&{var_name}->pNext));')
                 lines.append(f'}}')
         elif member.is_handle:
-            if member.is_pointer and not member.length:
-                lines.append(f'if ({var_name}->{member.name}) {{')
-                lines.append(f'  {var_name}->{member.name} = AddPtrs({var_name}->{member.name}, src);')
-                lines.append(f'  offset += sizeof(GITSKey);')
-                lines.append('}')
-            elif member.is_pointer and member.length:
-                lines.append(f'if ({var_name}->{member.name} && {var_name}->{member.length} > 0) {{')
-                lines.append(f'  {var_name}->{member.name} = AddPtrs({var_name}->{member.name}, src);')
-                lines.append(f'  offset += sizeof(GITSKey) * {var_name}->{member.length};')
-                lines.append('}')
-            elif not member.is_pointer and member.length:
-                lines.append(f'for (uint32_t j = 0; j < {var_name}->{member.length}; ++j) {{')
-                lines.append(f'  GITSKey key;')
-                lines.append(f'  std::memcpy(&key, src + offset, sizeof(GITSKey));')
-                lines.append(f'  offset += sizeof(GITSKey);')
-                lines.append(f'  {var_name}->{member.name}[j] = reinterpret_cast<{member.base_type}>(key);')
-                lines.append('}')
-            else:
-                lines.append(f'if ({var_name}->{member.name} != VK_NULL_HANDLE) {{')
-                lines.append(f'  GITSKey key;')
-                lines.append(f'  std::memcpy(&key, src + offset, sizeof(GITSKey));')
-                lines.append(f'  offset += sizeof(GITSKey);')
-                lines.append(f'  {var_name}->{member.name} = reinterpret_cast<{member.base_type}>(key);')
-                lines.append('}')
+            # All handle members are handled via HandleKeys vector.
+            # No blob decoding needed - ResolveHandleKeys allocates and sets pointers.
+            pass
         elif member.is_pointer and member.is_null_terminated:
             lines.append(f'DecodeString(src, offset, &{var_name}->{member.name});')
         elif member.is_pointer_to_pointer and member.is_null_terminated:
@@ -429,12 +380,135 @@ def get_decode_lines(structure, structures_list, var_name):
 
     return lines
 
+def generate_child_handle_keys(child_handles, elem_expr='elem'):
+    """Generate C++ lines to collect handle keys from child handle members of a struct element."""
+    lines = []
+    for child_kind, child_access, child_length, child_base_type, child_member_name in child_handles:
+        if child_kind == 'handle_single':
+            lines.append(f'    keys.push_back({elem_expr}.{child_access} != VK_NULL_HANDLE ? HandleMapService::Get().GetKey(reinterpret_cast<uint64_t>({elem_expr}.{child_access})) : 0);')
+        elif child_kind == 'handle_ptr':
+            lines.append(f'    if ({elem_expr}.{child_access}) {{')
+            lines.append(f'      keys.push_back(HandleMapService::Get().GetKey(reinterpret_cast<uint64_t>(*{elem_expr}.{child_access})));')
+            lines.append(f'    }} else {{')
+            lines.append(f'      keys.push_back(0);')
+            lines.append(f'    }}')
+        elif child_kind == 'handle_array_ptr':
+            lines.append(f'    if ({elem_expr}.{child_access} && {elem_expr}.{child_length} > 0) {{')
+            lines.append(f'      for (uint32_t handleIdx = 0; handleIdx < {elem_expr}.{child_length}; ++handleIdx) {{')
+            lines.append(f'        keys.push_back({elem_expr}.{child_access}[handleIdx] != VK_NULL_HANDLE ? HandleMapService::Get().GetKey(reinterpret_cast<uint64_t>({elem_expr}.{child_access}[handleIdx])) : 0);')
+            lines.append(f'      }}')
+            lines.append(f'    }}')
+    return '\n'.join(lines)
+
+def collect_handle_members(structure, structures_by_name, prefix=''):
+    """Recursively collect handle members from a structure.
+    Returns list of tuples: (kind, access_expr, length, base_type, member_name)
+    """
+    results = []
+    for member in structure.members:
+        if member.name in ('sType', 'pNext'):
+            continue
+        if member.is_handle:
+            access = f'{prefix}{member.name}'
+            if member.is_pointer and member.length:
+                length = f'{prefix}{member.length}' if prefix else member.length
+                results.append(('handle_array_ptr', access, length, member.base_type, member.name))
+            elif member.is_pointer and not member.length:
+                results.append(('handle_ptr', access, None, member.base_type, member.name))
+            elif not member.is_pointer and member.length:
+                length = f'{prefix}{member.length}' if prefix else member.length
+                results.append(('handle_fixed_array', access, length, member.base_type, member.name))
+            else:
+                results.append(('handle_single', access, None, member.base_type, member.name))
+        elif member.is_struct_with_handles and not member.is_pointer:
+            child_struct = structures_by_name.get(member.base_type)
+            if child_struct:
+                results.extend(collect_handle_members(child_struct, structures_by_name, f'{prefix}{member.name}.'))
+        elif member.is_struct_with_handles and member.is_pointer and member.length:
+            child_struct = structures_by_name.get(member.base_type)
+            if child_struct:
+                child_handles = collect_handle_members(child_struct, structures_by_name)
+                if child_handles:
+                    length = f'{prefix}{member.length}' if prefix else member.length
+                    results.append(('handle_struct_array_ptr', f'{prefix}{member.name}', length, member.base_type, child_handles))
+        elif member.is_struct_with_handles and member.is_pointer and not member.length:
+            child_struct = structures_by_name.get(member.base_type)
+            if child_struct:
+                child_handles = collect_handle_members(child_struct, structures_by_name)
+                if child_handles:
+                    results.append(('handle_struct_ptr', f'{prefix}{member.name}', None, member.base_type, child_handles))
+    return results
+
+def collect_pnext_handle_structs(structures):
+    """Return pnext_input structs that contain at least one handle member.
+    Used to generate pNext-chain handle collection (recorder) and remapping (player).
+    Returns a list of (structure, handle_members) sorted by stype_value.
+    """
+    structures_by_name = {s.name: s for s in structures}
+    result = []
+    for s in structures:
+        if not s.pnext_input or not s.stype_value:
+            continue
+        handle_members = collect_handle_members(s, structures_by_name)
+        if handle_members:
+            result.append((s, handle_members))
+    result.sort(key=lambda x: x[0].stype_value)
+    return result
+
+def collect_structs_needing_handle_updater(commands, structures):
+    """Return a list of structs that need UpdateHandle/ResolveHandleKeys generated for them.
+
+    This is the pre-computed, pre-filtered equivalent of the structs_needing_updater
+    logic that was previously duplicated in both handleArgumentUpdaters mako templates.
+
+    Returns a sorted list of dicts, each containing:
+      - 'name': struct name (str)
+      - 'structure': the Structure object
+      - 'has_pnext': bool, whether the struct has a pNext member
+      - 'handle_members': list from collect_handle_members()
+      - 'define': platform #ifdef guard string or None
+    """
+    structures_by_name = {s.name: s for s in structures}
+    pnext_handle_structs = collect_pnext_handle_structs(structures)
+
+    names = set()
+    for command in commands:
+        for param in command.params:
+            if param.is_struct_with_handles:
+                names.add(param.base_type)
+            elif param.is_struct:
+                struct_def = structures_by_name.get(param.base_type)
+                if struct_def is not None and any(m.name == 'pNext' for m in struct_def.members):
+                    names.add(param.base_type)
+
+    result = []
+    for struct_name in sorted(names):
+        structure = structures_by_name.get(struct_name)
+        if structure is None:
+            continue
+        if struct_name in CUSTOM_HANDLE_STRUCTS:
+            continue
+        has_pnext = any(m.name == 'pNext' for m in structure.members)
+        handle_members = collect_handle_members(structure, structures_by_name)
+        if not handle_members and not (has_pnext and pnext_handle_structs):
+            continue
+        result.append({
+            'name': struct_name,
+            'structure': structure,
+            'has_pnext': has_pnext,
+            'handle_members': handle_members,
+            'define': get_define(structure.platform),
+        })
+    return result
+
 def generate_coders_files(context, out_path):
     additional_context = {
       'struct_needs_coder': struct_needs_coder,
       'get_size_lines': get_size_lines,
       'get_encode_lines': get_encode_lines,
-      'get_decode_lines': get_decode_lines
+      'get_decode_lines': get_decode_lines,
+      'collect_handle_members': collect_handle_members,
+      'custom_handle_structs': CUSTOM_HANDLE_STRUCTS
     }
     files_to_generate = [
       'commandCodersAuto.h',

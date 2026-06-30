@@ -33,6 +33,10 @@ set(CAPTURE_SRC
   ${CMAKE_CURRENT_SOURCE_DIR}/captureCustomizationLayer.h
   ${CMAKE_CURRENT_SOURCE_DIR}/captureCustomizationLayer.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/handleArgumentUpdaters.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/handleArgumentUpdatersAuto.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/handleArgumentUpdatersAuto.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/handleArgumentUpdatersCustom.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/handleArgumentUpdatersCustom.cpp
 )
 source_group("capture" FILES ${CAPTURE_SRC})
 

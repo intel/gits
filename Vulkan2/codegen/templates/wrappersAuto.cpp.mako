@@ -16,6 +16,10 @@ ${header}
 namespace gits {
 namespace vulkan {
 
+<%
+pnext_handle_structs = collect_pnext_handle_structs(structures)
+structures_by_name = {s.name: s for s in structures}
+%>
 % for command in commands:
 <%
 args = generate_args(command)
@@ -46,6 +50,16 @@ ${command.return_type} ${command.name}Wrapper(
 	% for param in command.params:
 	% if param.is_handle:
 	UpdateHandle(manager, command.m_${param.name});
+	% elif param.is_struct_with_handles and not (param.is_pointer and not param.is_const):
+	UpdateHandle(manager, command.m_${param.name});
+	% elif param.is_struct and not param.is_struct_with_handles:
+<%
+  struct_def = structures_by_name.get(param.base_type)
+  has_pnext = struct_def is not None and any(m.name == 'pNext' for m in struct_def.members)
+%>\
+	% if has_pnext and pnext_handle_structs:
+	UpdateHandle(manager, command.m_${param.name});
+	% endif
 	% endif
 	% endfor
 
@@ -65,6 +79,8 @@ ${command.return_type} ${command.name}Wrapper(
 	% for param in command.params:
 	% if param.is_handle_output:
 	UpdateOutputHandle(manager, command.m_${param.name});
+	% elif param.is_struct_with_handles and param.is_pointer and not param.is_const:
+	UpdateHandle(manager, command.m_${param.name});
 	% endif
 	% endfor
 

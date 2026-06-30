@@ -46,6 +46,7 @@ add_custom_command(
   COMMAND ${CMAKE_COMMAND} -E touch ${STAMP_FILE}
   COMMAND ${CMAKE_COMMAND} -E echo "Vulkan generation completed - ${STAMP_FILE}"
   WORKING_DIRECTORY ${VULKAN_SCRIPTS_DIR}
+  DEPENDS ${SCRIPTS_SRC} ${MAKO_TEMPLATES} ${VK_XML_PATH}
 )
 
 unset(Vulkan_codegen_2 CACHE)

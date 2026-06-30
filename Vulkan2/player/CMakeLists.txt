@@ -21,7 +21,10 @@ set(PLAYER_SRC
   ${CMAKE_CURRENT_SOURCE_DIR}/replayCustomizationLayer.h
   ${CMAKE_CURRENT_SOURCE_DIR}/replayCustomizationLayer.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/handleArgumentUpdaters.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/handleArgumentUpdaters.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/handleArgumentUpdatersPlayerAuto.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/handleArgumentUpdatersPlayerAuto.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/handleArgumentUpdatersCustom.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/handleArgumentUpdatersCustom.cpp
 )
 source_group("player" FILES ${PLAYER_SRC})
 

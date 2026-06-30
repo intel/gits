@@ -497,11 +497,19 @@ def postprocess(commands, structures, unions, handles, enums, bitmasks, flags, e
             if member.base_type in OPAQUE_POINTER_TYPES:
                 member.is_opaque_pointer = True
 
-    # Second pass to mark struct member that are structs with handles
-    for structure in structures:
-        for member in structure.members:
-            if member.base_type in structure_with_handles:
-                member.is_struct_with_handles = True
+    # Second pass to transitively mark structs that contain (directly or indirectly)
+    # members whose type is a struct with handles, until convergence.
+    changed = True
+    while changed:
+        changed = False
+        for structure in structures:
+            for member in structure.members:
+                if member.base_type in structure_with_handles:
+                    if not member.is_struct_with_handles:
+                        member.is_struct_with_handles = True
+                    if structure.name not in structure_with_handles:
+                        structure_with_handles.add(structure.name)
+                        changed = True
 
     for command in commands:
         first_param_type = command.params[0].base_type

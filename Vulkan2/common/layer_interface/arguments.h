@@ -34,6 +34,8 @@ struct PointerArgument {
       Value = new T();
       *Value = *arg.Value;
     }
+    HandleKeys = arg.HandleKeys;
+    HandleData = arg.HandleData;
     Copy = true;
   }
   ~PointerArgument() {
@@ -42,6 +44,8 @@ struct PointerArgument {
     }
   }
   T* Value{};
+  std::vector<GITSKey> HandleKeys{};
+  std::vector<uint64_t> HandleData{};
   bool Copy{};
 };
 
@@ -49,6 +53,8 @@ template <typename T>
 struct ArrayArgument {
   T* Value{};
   uint32_t Size{};
+  std::vector<GITSKey> HandleKeys{};
+  std::vector<uint64_t> HandleData{};
   ArrayArgument() {}
   ArrayArgument(const T* v, uint32_t s) : Value(const_cast<T*>(v)), Size(s) {}
   ArrayArgument(const T* v, uint32_t* s) : Value(const_cast<T*>(v)), Size(*s) {}

@@ -16,18 +16,12 @@ ${header}
 namespace gits {
 namespace vulkan {
 
-<%
-# Structs whose GetSize/Encode/Decode are hand-written in argumentCodersCustom.cpp.
-custom_structs = {
-    "VkWriteDescriptorSet",
-}
-%>\
 % for structure in structures:
 <%
 define = get_define(structure.platform)
 needs_coder = struct_needs_coder(structure, structures)
 %>\
-% if needs_coder and structure.name not in custom_structs:
+% if needs_coder and structure.name not in custom_handle_structs:
 % if define:
 #ifdef ${define}
 % endif

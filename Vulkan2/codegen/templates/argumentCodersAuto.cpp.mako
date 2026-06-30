@@ -9,7 +9,6 @@ ${header}
 
 #include "argumentCodersAuto.h"
 #include "argumentCoders.h"
-#include "handleMapService.h"
 
 namespace gits {
 namespace vulkan {
@@ -17,11 +16,6 @@ namespace vulkan {
 <%
 pnext_input_structs  = [s for s in structures if s.pnext_input  and s.stype_value]
 pnext_output_structs = [s for s in structures if s.pnext_output and s.stype_value]
-# Structs whose GetSize/Encode/Decode are hand-written in argumentCodersCustom.cpp.
-# Add struct names here to exclude them from auto-generation.
-custom_structs = {
-    'VkWriteDescriptorSet',
-}
 %>\
 // ============================================================================
 // pNext chain - encoding format per node: [VkStructureType][struct_bytes...]
@@ -212,7 +206,7 @@ void DecodePNextChainOutput(char* src, uint32_t& offset, void** pNext) {
 define = get_define(structure.platform)
 needs_coder = struct_needs_coder(structure, structures)
 %>\
-% if needs_coder and structure.name not in custom_structs:
+% if needs_coder and structure.name not in custom_handle_structs:
 % if define:
 #ifdef ${define}
 % endif
@@ -263,7 +257,8 @@ uint32_t GetSize(const PointerArgument<${structure.name}>& arg) {
   if (!arg.Value) {
     return sizeof(void*);
   }
-  return sizeof(void*) + GetSize(arg.Value, 1);
+  return sizeof(void*) + GetSize(arg.Value, 1)
+       + sizeof(uint32_t) + static_cast<uint32_t>(arg.HandleKeys.size()) * sizeof(GITSKey);
 }
 
 void Encode(char* dst, uint32_t& offset, const PointerArgument<${structure.name}>& arg) {
@@ -273,6 +268,13 @@ void Encode(char* dst, uint32_t& offset, const PointerArgument<${structure.name}
     return;
   }
   Encode(arg.Value, 1, dst, offset);
+  uint32_t keyCount = static_cast<uint32_t>(arg.HandleKeys.size());
+  std::memcpy(dst + offset, &keyCount, sizeof(keyCount));
+  offset += sizeof(keyCount);
+  if (keyCount > 0) {
+    std::memcpy(dst + offset, arg.HandleKeys.data(), sizeof(GITSKey) * keyCount);
+    offset += sizeof(GITSKey) * keyCount;
+  }
 }
 
 void Decode(char* src, uint32_t& offset, PointerArgument<${structure.name}>& arg) {
@@ -283,6 +285,14 @@ void Decode(char* src, uint32_t& offset, PointerArgument<${structure.name}>& arg
   }
   arg.Value = reinterpret_cast<${structure.name}*>(src + offset);
   Decode(arg.Value, 1, src, offset);
+  uint32_t keyCount{};
+  std::memcpy(&keyCount, src + offset, sizeof(keyCount));
+  offset += sizeof(keyCount);
+  if (keyCount > 0) {
+    arg.HandleKeys.resize(keyCount);
+    std::memcpy(arg.HandleKeys.data(), src + offset, sizeof(GITSKey) * keyCount);
+    offset += sizeof(GITSKey) * keyCount;
+  }
 }
 
 // ArrayArgument overloads for ${structure.name}
@@ -290,7 +300,8 @@ uint32_t GetSize(const ArrayArgument<${structure.name}>& arg) {
   if (!arg.Value) {
     return sizeof(void*);
   }
-  return sizeof(void*) + sizeof(arg.Size) + GetSize(arg.Value, arg.Size);
+  return sizeof(void*) + sizeof(arg.Size) + GetSize(arg.Value, arg.Size)
+       + sizeof(uint32_t) + static_cast<uint32_t>(arg.HandleKeys.size()) * sizeof(GITSKey);
 }
 
 void Encode(char* dst, uint32_t& offset, const ArrayArgument<${structure.name}>& arg) {
@@ -302,6 +313,13 @@ void Encode(char* dst, uint32_t& offset, const ArrayArgument<${structure.name}>&
   std::memcpy(dst + offset, &arg.Size, sizeof(arg.Size));
   offset += sizeof(arg.Size);
   Encode(arg.Value, arg.Size, dst, offset);
+  uint32_t keyCount = static_cast<uint32_t>(arg.HandleKeys.size());
+  std::memcpy(dst + offset, &keyCount, sizeof(keyCount));
+  offset += sizeof(keyCount);
+  if (keyCount > 0) {
+    std::memcpy(dst + offset, arg.HandleKeys.data(), sizeof(GITSKey) * keyCount);
+    offset += sizeof(GITSKey) * keyCount;
+  }
 }
 
 void Decode(char* src, uint32_t& offset, ArrayArgument<${structure.name}>& arg) {
@@ -315,6 +333,14 @@ void Decode(char* src, uint32_t& offset, ArrayArgument<${structure.name}>& arg) 
   offset += sizeof(arg.Size);
   arg.Value = reinterpret_cast<${structure.name}*>(src + offset);
   Decode(arg.Value, arg.Size, src, offset);
+  uint32_t keyCount{};
+  std::memcpy(&keyCount, src + offset, sizeof(keyCount));
+  offset += sizeof(keyCount);
+  if (keyCount > 0) {
+    arg.HandleKeys.resize(keyCount);
+    std::memcpy(arg.HandleKeys.data(), src + offset, sizeof(GITSKey) * keyCount);
+    offset += sizeof(GITSKey) * keyCount;
+  }
 }
 % if define:
 #endif

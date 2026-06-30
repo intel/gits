@@ -7,6 +7,8 @@
 // ===================== end_copyright_notice ==============================
 ${header}
 
+#pragma once
+
 #include "commandPlayer.h"
 #include "commandsAuto.h"
 #include "commandsCustom.h"

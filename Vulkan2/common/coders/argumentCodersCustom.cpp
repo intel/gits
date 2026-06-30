@@ -167,7 +167,8 @@ uint32_t GetSize(const PointerArgument<VkWriteDescriptorSet>& arg) {
   if (!arg.Value) {
     return sizeof(void*);
   }
-  return sizeof(void*) + GetSize(arg.Value, 1);
+  return sizeof(void*) + GetSize(arg.Value, 1) + sizeof(uint32_t) +
+         static_cast<uint32_t>(arg.HandleKeys.size()) * sizeof(GITSKey);
 }
 
 void Encode(char* dst, uint32_t& offset, const PointerArgument<VkWriteDescriptorSet>& arg) {
@@ -177,6 +178,13 @@ void Encode(char* dst, uint32_t& offset, const PointerArgument<VkWriteDescriptor
     return;
   }
   Encode(arg.Value, 1, dst, offset);
+  uint32_t keyCount = static_cast<uint32_t>(arg.HandleKeys.size());
+  std::memcpy(dst + offset, &keyCount, sizeof(keyCount));
+  offset += sizeof(keyCount);
+  if (keyCount > 0) {
+    std::memcpy(dst + offset, arg.HandleKeys.data(), sizeof(GITSKey) * keyCount);
+    offset += sizeof(GITSKey) * keyCount;
+  }
 }
 
 void Decode(char* src, uint32_t& offset, PointerArgument<VkWriteDescriptorSet>& arg) {
@@ -187,6 +195,14 @@ void Decode(char* src, uint32_t& offset, PointerArgument<VkWriteDescriptorSet>& 
   }
   arg.Value = reinterpret_cast<VkWriteDescriptorSet*>(src + offset);
   Decode(arg.Value, 1, src, offset);
+  uint32_t keyCount{};
+  std::memcpy(&keyCount, src + offset, sizeof(keyCount));
+  offset += sizeof(keyCount);
+  if (keyCount > 0) {
+    arg.HandleKeys.resize(keyCount);
+    std::memcpy(arg.HandleKeys.data(), src + offset, sizeof(GITSKey) * keyCount);
+    offset += sizeof(GITSKey) * keyCount;
+  }
 }
 
 // ArrayArgument overloads for VkWriteDescriptorSet
@@ -194,7 +210,8 @@ uint32_t GetSize(const ArrayArgument<VkWriteDescriptorSet>& arg) {
   if (!arg.Value) {
     return sizeof(void*);
   }
-  return sizeof(void*) + sizeof(arg.Size) + GetSize(arg.Value, arg.Size);
+  return sizeof(void*) + sizeof(arg.Size) + GetSize(arg.Value, arg.Size) + sizeof(uint32_t) +
+         static_cast<uint32_t>(arg.HandleKeys.size()) * sizeof(GITSKey);
 }
 
 void Encode(char* dst, uint32_t& offset, const ArrayArgument<VkWriteDescriptorSet>& arg) {
@@ -206,6 +223,13 @@ void Encode(char* dst, uint32_t& offset, const ArrayArgument<VkWriteDescriptorSe
   std::memcpy(dst + offset, &arg.Size, sizeof(arg.Size));
   offset += sizeof(arg.Size);
   Encode(arg.Value, arg.Size, dst, offset);
+  uint32_t keyCount = static_cast<uint32_t>(arg.HandleKeys.size());
+  std::memcpy(dst + offset, &keyCount, sizeof(keyCount));
+  offset += sizeof(keyCount);
+  if (keyCount > 0) {
+    std::memcpy(dst + offset, arg.HandleKeys.data(), sizeof(GITSKey) * keyCount);
+    offset += sizeof(GITSKey) * keyCount;
+  }
 }
 
 void Decode(char* src, uint32_t& offset, ArrayArgument<VkWriteDescriptorSet>& arg) {
@@ -219,6 +243,14 @@ void Decode(char* src, uint32_t& offset, ArrayArgument<VkWriteDescriptorSet>& ar
   offset += sizeof(arg.Size);
   arg.Value = reinterpret_cast<VkWriteDescriptorSet*>(src + offset);
   Decode(arg.Value, arg.Size, src, offset);
+  uint32_t keyCount{};
+  std::memcpy(&keyCount, src + offset, sizeof(keyCount));
+  offset += sizeof(keyCount);
+  if (keyCount > 0) {
+    arg.HandleKeys.resize(keyCount);
+    std::memcpy(arg.HandleKeys.data(), src + offset, sizeof(GITSKey) * keyCount);
+    offset += sizeof(GITSKey) * keyCount;
+  }
 }
 
 // DescriptorTemplateDataArgument coders
