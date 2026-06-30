@@ -244,6 +244,21 @@ void SubcaptureLayer::Post(vkAllocateMemoryCommand& command) {
     state->allocationSize = command.m_pAllocateInfo.Value->allocationSize;
     state->memoryTypeIndex = command.m_pAllocateInfo.Value->memoryTypeIndex;
   }
+  // VkMemoryAllocateInfo itself has no handle members, but its pNext chain
+  // can carry VkMemoryDedicatedAllocateInfo (image / buffer) and other
+  // pNext extensions whose handles are referenced by the captured allocate
+  // command's HandleKeys.  The top-level RestoreState loop iterates
+  // m_States in unordered map order; without these dependency keys it can
+  // emit vkAllocateMemory before the dedicated image / buffer has been
+  // restored, and the subcapture player then asserts inside
+  // ResolvePNextHandleKeys -> HandleMapService::GetHandle on a key that
+  // has not yet been registered.  Promote every non-zero HandleKey to a
+  // dependency so RestoreOne restores them first.
+  for (uint64_t dep : command.m_pAllocateInfo.HandleKeys) {
+    if (dep) {
+      state->dependencyKeys.push_back(dep);
+    }
+  }
   StoreState(std::move(state), command);
 }
 

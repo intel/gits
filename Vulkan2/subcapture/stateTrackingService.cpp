@@ -1181,6 +1181,16 @@ bool StateTrackingService::RestoreBuffer(ObjectState* state) {
     return false;
   }
 
+  // Mark the buffer key as restored *now*, before recursing into bound memory.
+  // For dedicated allocations DeviceMemoryState::dependencyKeys carries this
+  // buffer's key (promoted from vkAllocateMemory's pNext HandleKeys), creating
+  // a buffer<->memory back-edge.  Without this early insert RestoreOne(memory)
+  // would re-enter RestoreOne(buffer) before the unconditional insert at the
+  // end of RestoreOne fires, recursing until stack overflow.  The vkCreateBuffer
+  // command above has already registered the handle in HandleMapService, so the
+  // "restored = handle registered" contract still holds.
+  m_RestoredThisPass.insert(state->key);
+
   if (buf->boundMemoryKey && buf->parentKey) {
     RestoreOne(GetState(buf->boundMemoryKey));
     if (!m_RestoredThisPass.count(buf->boundMemoryKey)) {
@@ -1254,6 +1264,16 @@ bool StateTrackingService::RestoreImage(ObjectState* state) {
     }
     m_Recorder.Record(vkCreateImageSerializer(cmd));
   }
+
+  // Mark the image key as restored *now*, before recursing into bound memory.
+  // For dedicated allocations DeviceMemoryState::dependencyKeys carries this
+  // image's key (promoted from vkAllocateMemory's pNext HandleKeys), creating
+  // an image<->memory back-edge.  Without this early insert RestoreOne(memory)
+  // would re-enter RestoreOne(image) before the unconditional insert at the
+  // end of RestoreOne fires, recursing until stack overflow.  The vkCreateImage
+  // command above has already registered the handle in HandleMapService, so the
+  // "restored = handle registered" contract still holds.
+  m_RestoredThisPass.insert(state->key);
 
   if (img->boundMemoryKey && img->parentKey) {
     RestoreOne(GetState(img->boundMemoryKey));
