@@ -74,7 +74,10 @@ def get_size_lines(structure, structures_list, var_name):
         complex_struct = is_complex_struct(member.base_type, structures_by_name)
         basic_struct = is_basic_struct(member.base_type, structures_by_name)
         if member.name == 'pNext':
-            lines.append(f'blobSize += GetPNextChainSize({var_name}->pNext);')
+            if structure.pnext_output:
+                lines.append(f'blobSize += GetPNextChainSizeOutput({var_name}->pNext);')
+            else:
+                lines.append(f'blobSize += GetPNextChainSizeInput({var_name}->pNext);')
         elif member.is_handle:
             if member.is_pointer and not member.length:
                 lines.append(f'if ({var_name}->{member.name}) {{')
@@ -119,6 +122,8 @@ def get_size_lines(structure, structures_list, var_name):
                 lines.append(f'if ({var_name}->{member.name}) {{')
                 lines.append(f'  blobSize += GetSize({var_name}->{member.name}, 1);')
                 lines.append('}')
+            else:
+                lines.append(f'blobSize += GetSize(&{var_name}->{member.name}, 1);')
         elif basic_struct:
             if member.length and member.is_pointer_to_pointer:
                 outer = member.length[0]
@@ -163,8 +168,15 @@ def get_encode_lines(structure, structures_list, var_name_src, var_name_dst):
         complex_struct = is_complex_struct(member.base_type, structures_by_name)
         basic_struct = is_basic_struct(member.base_type, structures_by_name)
         if member.name == 'pNext':
-            lines.append(f'EncodePNextChain(dst, offset, {var_name_src}->pNext);')
-            lines.append(f'{var_name_dst}->pNext = nullptr;')
+            if structure.pnext_output:
+                lines.append(f'EncodePNextChainOutput(dst, offset, {var_name_src}->pNext);')
+            else:
+                lines.append(f'if ({var_name_src}->pNext) {{')
+                lines.append(f'  {var_name_dst}->pNext = reinterpret_cast<decltype({var_name_dst}->pNext)>(static_cast<uintptr_t>(offset));')
+                lines.append(f'  EncodePNextChainInput(dst, offset, {var_name_src}->pNext);')
+                lines.append(f'}} else {{')
+                lines.append(f'  {var_name_dst}->pNext = nullptr;')
+                lines.append(f'}}')
         elif member.is_handle:
             if member.is_pointer and not member.length:
                 lines.append(f'if ({var_name_src}->{member.name}) {{')
@@ -177,14 +189,14 @@ def get_encode_lines(structure, structures_list, var_name_src, var_name_dst):
                 lines.append(f'if ({var_name_src}->{member.name} && {var_name_src}->{member.length} > 0) {{')
                 lines.append(f'  {var_name_dst}->{member.name} = reinterpret_cast<{member.base_type}*>(static_cast<uintptr_t>(offset));')
                 lines.append(f'  for (uint32_t j = 0; j < {var_name_src}->{member.length}; ++j) {{')
-                lines.append(f'    GITSKey key = HandleMapService::Get().GetKey(reinterpret_cast<uint64_t>({var_name_src}->{member.name}[j]));')
+                lines.append(f'    GITSKey key = {var_name_src}->{member.name}[j] != VK_NULL_HANDLE ? HandleMapService::Get().GetKey(reinterpret_cast<uint64_t>({var_name_src}->{member.name}[j])) : GITSKey{{0}};')
                 lines.append(f'    std::memcpy(dst + offset, &key, sizeof(GITSKey));')
                 lines.append(f'    offset += sizeof(GITSKey);')
                 lines.append('  }')
                 lines.append('}')
             elif not member.is_pointer and member.length:
                 lines.append(f'for (uint32_t j = 0; j < {var_name_src}->{member.length}; ++j) {{')
-                lines.append(f'  GITSKey key = HandleMapService::Get().GetKey(reinterpret_cast<uint64_t>({var_name_src}->{member.name}[j]));')
+                lines.append(f'  GITSKey key = {var_name_src}->{member.name}[j] != VK_NULL_HANDLE ? HandleMapService::Get().GetKey(reinterpret_cast<uint64_t>({var_name_src}->{member.name}[j])) : GITSKey{{0}};')
                 lines.append(f'  std::memcpy(dst + offset, &key, sizeof(GITSKey));')
                 lines.append(f'  offset += sizeof(GITSKey);')
                 lines.append('}')
@@ -194,6 +206,8 @@ def get_encode_lines(structure, structures_list, var_name_src, var_name_dst):
                 lines.append(f'  std::memcpy(dst + offset, &key, sizeof(GITSKey));')
                 lines.append(f'  offset += sizeof(GITSKey);')
                 lines.append('}')
+        elif member.is_handle and member.length:
+            lines.append(f'blobSize += sizeof(GITSKey) * {var_name}->{member.length};')
         elif member.is_pointer and member.is_null_terminated:
             lines.append(f'if ({var_name_src}->{member.name}) {{')
             lines.append(f'  {var_name_dst}->{member.name} = reinterpret_cast<const char*>(static_cast<uintptr_t>(offset));')
@@ -237,6 +251,8 @@ def get_encode_lines(structure, structures_list, var_name_src, var_name_dst):
                 lines.append(f'  {var_name_dst}->{member.name} = reinterpret_cast<{member.base_type}*>(static_cast<uintptr_t>(offset));')
                 lines.append(f'  Encode({var_name_src}->{member.name}, 1, dst, offset);')
                 lines.append('}')
+            else:
+                lines.append(f'Encode(&{var_name_src}->{member.name}, 1, dst, offset);')
         elif basic_struct:
             if member.length and member.is_pointer_to_pointer:
                 outer = member.length[0]
@@ -295,10 +311,16 @@ def get_decode_lines(structure, structures_list, var_name):
         complex_struct = is_complex_struct(member.base_type, structures_by_name)
         basic_struct = is_basic_struct(member.base_type, structures_by_name)
         if member.name == 'pNext':
-            if member.base_type != 'void':
-                lines.append(f'DecodePNextChain(src, offset, reinterpret_cast<void**>(const_cast<{member.base_type}**>(&{var_name}->pNext)));')
+            if structure.pnext_output:
+                lines.append(f'DecodePNextChainOutput(src, offset, &{var_name}->pNext);')
+            elif member.base_type != 'void':
+                lines.append(f'if ({var_name}->pNext) {{')
+                lines.append(f'  DecodePNextChainInput(src, offset, reinterpret_cast<void**>(const_cast<{member.base_type}**>(&{var_name}->pNext)));')
+                lines.append(f'}}')
             else:
-                lines.append(f'DecodePNextChain(src, offset, const_cast<void**>(&{var_name}->pNext));')
+                lines.append(f'if ({var_name}->pNext) {{')
+                lines.append(f'  DecodePNextChainInput(src, offset, const_cast<void**>(&{var_name}->pNext));')
+                lines.append(f'}}')
         elif member.is_handle:
             if member.is_pointer and not member.length:
                 lines.append(f'if ({var_name}->{member.name}) {{')
@@ -364,6 +386,8 @@ def get_decode_lines(structure, structures_list, var_name):
                 lines.append(f'  {var_name}->{member.name} = AddPtrs({var_name}->{member.name}, src);')
                 lines.append(f'  Decode({var_name}->{member.name}, 1, src, offset);')
                 lines.append('}')
+            else:
+                lines.append(f'Decode(&{var_name}->{member.name}, 1, src, offset);')
         elif basic_struct:
             if member.length and member.is_pointer_to_pointer:
                 outer = member.length[0]
@@ -424,3 +448,4 @@ def generate_coders_files(context, out_path):
     ]
     for file_name in files_to_generate:
         generate_file(context | additional_context, file_name, out_path)
+

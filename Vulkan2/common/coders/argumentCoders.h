@@ -69,11 +69,14 @@ inline unsigned HandleKeySize() {
   return sizeof(GITSKey);
 }
 
-uint32_t GetPNextChainSize(const void* pNext);
+uint32_t GetPNextChainSizeInput(const void* pNext);
+uint32_t GetPNextChainSizeOutput(const void* pNext);
 
-void EncodePNextChain(char* dst, uint32_t& offset, const void* pNext);
+void EncodePNextChainInput(char* dst, uint32_t& offset, const void* pNext);
+void EncodePNextChainOutput(char* dst, uint32_t& offset, const void* pNext);
 
-void DecodePNextChain(char* src, uint32_t& offset, void** pNext);
+void DecodePNextChainInput(char* src, uint32_t& offset, void** pNext);
+void DecodePNextChainOutput(char* src, uint32_t& offset, void** pNext);
 
 //uint32_t GetSize(const VkAllocationCallbacks* src, uint32_t count);
 //void Encode(const VkAllocationCallbacks* src, uint32_t count, char* dst, uint32_t& offset);

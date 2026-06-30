@@ -110,17 +110,27 @@ def parse_structures(vk_xml_root) -> list[Structure]:
         if alias:
             alias_map[name] = alias
             continue
+        struct_extends_str = struct_node.get('structextends') or ''
+        struct_extends = [s.strip() for s in struct_extends_str.split(',')] if struct_extends_str else []
+        returned_only = struct_node.get('returnedonly') == 'true'
         members = []
+        stype_value = ''
         member_nodes = struct_node.findall("member")
         for member_node in member_nodes:
             api = member_node.get("api")
             if api is not None and "vulkan" not in api.split(","):
                 continue
             member = parse_member(member_node)
+            if member.name == 'sType' and member.values:
+                stype_value = member.values
             members.append(member)
         struct = Structure(
             name=name,
-            members=members
+            members=members,
+            pnext_input=bool(struct_extends) and not returned_only,
+            pnext_output=returned_only and bool(struct_extends),
+            stype_value=stype_value,
+            struct_extends=struct_extends,
         )
         structs_map[name] = struct
 

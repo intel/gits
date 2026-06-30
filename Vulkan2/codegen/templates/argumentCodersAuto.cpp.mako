@@ -14,6 +14,194 @@ ${header}
 namespace gits {
 namespace vulkan {
 
+<%
+pnext_input_structs  = [s for s in structures if s.pnext_input  and s.stype_value]
+pnext_output_structs = [s for s in structures if s.pnext_output and s.stype_value]
+%>\
+// ============================================================================
+// pNext chain - encoding format per node: [VkStructureType][struct_bytes...]
+// terminated by VK_STRUCTURE_TYPE_MAX_ENUM
+// ============================================================================
+
+<%def name="pnext_switch_cases(structs, action)">\
+% for s in structs:
+<% define = get_define(s.platform) %>
+% if define:
+#ifdef ${define}
+% endif
+      case ${s.stype_value}: {
+${action(s)}\
+        break;
+      }
+% if define:
+#endif
+% endif
+% endfor
+</%def>\
+
+<%def name="getsize_action(s)">\
+% if struct_needs_coder(s, structures):
+        size += GetSize(reinterpret_cast<const ${s.name}*>(node), 1);
+% else:
+        size += static_cast<uint32_t>(sizeof(${s.name}));
+% endif
+        size += sizeof(VkStructureType);
+</%def>\
+
+<%def name="encode_action(s)">\
+        std::memcpy(dst + offset, &node->sType, sizeof(VkStructureType));
+        offset += sizeof(VkStructureType);
+% if struct_needs_coder(s, structures):
+        Encode(reinterpret_cast<const ${s.name}*>(node), 1, dst, offset);
+% else:
+        std::memcpy(dst + offset, node, sizeof(${s.name}));
+        offset += static_cast<uint32_t>(sizeof(${s.name}));
+% endif
+</%def>\
+
+uint32_t GetPNextChainSizeInput(const void* pNext) {
+  uint32_t size = sizeof(VkStructureType);
+  const auto* node = reinterpret_cast<const VkBaseInStructure*>(pNext);
+  while (node) {
+    switch (node->sType) {
+${pnext_switch_cases(pnext_input_structs, getsize_action)}\
+      default:
+        break;
+    }
+    node = node->pNext;
+  }
+  return size;
+}
+
+uint32_t GetPNextChainSizeOutput(const void* pNext) {
+  uint32_t size = sizeof(VkStructureType);
+  const auto* node = reinterpret_cast<const VkBaseOutStructure*>(pNext);
+  while (node) {
+    switch (node->sType) {
+${pnext_switch_cases(pnext_output_structs, getsize_action)}\
+      default:
+        break;
+    }
+    node = node->pNext;
+  }
+  return size;
+}
+
+void EncodePNextChainInput(char* dst, uint32_t& offset, const void* pNext) {
+  const auto* node = reinterpret_cast<const VkBaseInStructure*>(pNext);
+  while (node) {
+    switch (node->sType) {
+${pnext_switch_cases(pnext_input_structs, encode_action)}\
+      default:
+        break;
+    }
+    node = node->pNext;
+  }
+  VkStructureType terminator = VK_STRUCTURE_TYPE_MAX_ENUM;
+  std::memcpy(dst + offset, &terminator, sizeof(VkStructureType));
+  offset += sizeof(VkStructureType);
+}
+
+void EncodePNextChainOutput(char* dst, uint32_t& offset, const void* pNext) {
+  const auto* node = reinterpret_cast<const VkBaseOutStructure*>(pNext);
+  while (node) {
+    switch (node->sType) {
+${pnext_switch_cases(pnext_output_structs, encode_action)}\
+      default:
+        break;
+    }
+    node = node->pNext;
+  }
+  VkStructureType terminator = VK_STRUCTURE_TYPE_MAX_ENUM;
+  std::memcpy(dst + offset, &terminator, sizeof(VkStructureType));
+  offset += sizeof(VkStructureType);
+}
+
+void DecodePNextChainInput(char* src, uint32_t& offset, void** pNext) {
+  VkStructureType sType = VK_STRUCTURE_TYPE_MAX_ENUM;
+  VkBaseInStructure** chain = reinterpret_cast<VkBaseInStructure**>(pNext);
+  *chain = nullptr;
+  VkBaseInStructure** tail = chain;
+
+  for (;;) {
+    std::memcpy(&sType, src + offset, sizeof(VkStructureType));
+    if (sType == VK_STRUCTURE_TYPE_MAX_ENUM) {
+      offset += sizeof(VkStructureType);
+      break;
+    }
+    offset += sizeof(VkStructureType);
+    switch (sType) {
+% for s in pnext_input_structs:
+<% define = get_define(s.platform) %>
+% if define:
+#ifdef ${define}
+% endif
+      case ${s.stype_value}: {
+        auto* node = reinterpret_cast<${s.name}*>(src + offset);
+% if struct_needs_coder(s, structures):
+        Decode(node, 1, src, offset);
+% else:
+        offset += static_cast<uint32_t>(sizeof(${s.name}));
+% endif
+        *tail = reinterpret_cast<VkBaseInStructure*>(node);
+        tail = const_cast<VkBaseInStructure**>(&(*tail)->pNext);
+        *tail = nullptr;
+        break;
+      }
+% if define:
+#endif
+% endif
+% endfor
+      default:
+        break;
+    }
+  }
+}
+
+void DecodePNextChainOutput(char* src, uint32_t& offset, void** pNext) {
+  // Output pNext chains are pre-allocated by the caller before the Vulkan call.
+  // Walk the existing chain and decode data into each matching slot by sType.
+  for (;;) {
+    VkStructureType sType = VK_STRUCTURE_TYPE_MAX_ENUM;
+    std::memcpy(&sType, src + offset, sizeof(VkStructureType));
+    if (sType == VK_STRUCTURE_TYPE_MAX_ENUM) {
+      offset += sizeof(VkStructureType);
+      break;
+    }
+    offset += sizeof(VkStructureType);
+    auto* node = reinterpret_cast<VkBaseOutStructure*>(*pNext);
+    while (node && node->sType != sType) {
+      node = node->pNext;
+    }
+    switch (sType) {
+% for s in pnext_output_structs:
+<% define = get_define(s.platform) %>
+% if define:
+#ifdef ${define}
+% endif
+      case ${s.stype_value}: {
+% if struct_needs_coder(s, structures):
+        if (node) {
+          Decode(reinterpret_cast<${s.name}*>(node), 1, src, offset);
+        } else {
+          ${s.name} tmp{};
+          Decode(&tmp, 1, src, offset);
+        }
+% else:
+        offset += static_cast<uint32_t>(sizeof(${s.name}));
+% endif
+        break;
+      }
+% if define:
+#endif
+% endif
+% endfor
+      default:
+        break;
+    }
+  }
+}
+
 % for structure in structures:
 <% 
 define = get_define(structure.platform)

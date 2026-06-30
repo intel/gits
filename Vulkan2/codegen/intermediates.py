@@ -66,6 +66,10 @@ class Structure:
     has_handles: bool = False
     platform: str = ''
     aliases: list[str] = field(default_factory=list)
+    pnext_input: bool = False
+    pnext_output: bool = False
+    stype_value: str = ''
+    struct_extends: list[str] = field(default_factory=list)
 
 @dataclass
 class Union:

@@ -21,38 +21,6 @@ void WriteData(const char* src, unsigned srcSize, char* dst, unsigned& offset) {
 }
 
 // ============================================================================
-// pNext chain  - dropped: encoded as nullptr, decoded as nullptr
-// ============================================================================
-
-unsigned GetPNextChainSize(const void* /*pNext*/) {
-  return 0;
-}
-
-void EncodePNextChain(char* /*dst*/, uint32_t& /*offset*/, const void* /*pNext*/) {}
-
-void DecodePNextChain(char* /*src*/, uint32_t& /*offset*/, void** pNext) {
-  *pNext = nullptr;
-}
-
-// ============================================================================
-// VkAllocationCallbacks - always nullptr
-// ============================================================================
-
-//uint32_t GetSize(const VkAllocationCallbacks* /*src*/, uint32_t /*count*/) {
-//  return 0;
-//}
-
-//void Encode(const VkAllocationCallbacks* /*src*/,
-//            uint32_t /*count*/,
-//            char* /*dst*/,
-//            uint32_t& /*offset*/) {}
-
-//void Decode(const VkAllocationCallbacks* /*dst*/,
-//            uint32_t /*count*/,
-//            char* /*src*/,
-//            uint32_t& /*offset*/) {}
-
-// ============================================================================
 // String helpers
 // ============================================================================
 

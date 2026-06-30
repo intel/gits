@@ -100,6 +100,14 @@ vkCreateDeviceGITSLayer(VkPhysicalDevice physicalDevice,
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL
+vkGetDeviceProcAddrGITSLayer(VkDevice device, const char* pName) {
+  if (strcmp(pName, "vkGetDeviceProcAddr") == 0) {
+    return reinterpret_cast<PFN_vkVoidFunction>(vkGetDeviceProcAddrGITSLayer);
+  }
+  return g_RecorderWrapper->GetFunctionWrapper(pName);
+}
+
+VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL
 vkGetInstanceProcAddrGITSLayer(VkInstance instance, const char* pName) {
   Initialize();
 
@@ -107,13 +115,10 @@ vkGetInstanceProcAddrGITSLayer(VkInstance instance, const char* pName) {
     return reinterpret_cast<PFN_vkVoidFunction>(vkCreateInstanceGITSLayer);
   } else if (strcmp(pName, "vkCreateDevice") == 0) {
     return reinterpret_cast<PFN_vkVoidFunction>(vkCreateDeviceGITSLayer);
+  } else if (strcmp(pName, "vkGetDeviceProcAddr") == 0) {
+    return reinterpret_cast<PFN_vkVoidFunction>(vkGetDeviceProcAddrGITSLayer);
   }
 
-  return g_RecorderWrapper->GetFunctionWrapper(pName);
-}
-
-VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL
-vkGetDeviceProcAddrGITSLayer(VkDevice device, const char* pName) {
   return g_RecorderWrapper->GetFunctionWrapper(pName);
 }
 

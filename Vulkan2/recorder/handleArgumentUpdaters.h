@@ -29,7 +29,9 @@ void UpdateHandle(CaptureManager& manager, HandleArrayArgument<T>& arg) {
   }
 
   for (uint32_t i = 0; i < arg.Size; ++i) {
-    arg.Keys[i] = HandleMapService::Get().GetKey(reinterpret_cast<std::uint64_t>(arg.Value[i]));
+    if (arg.Value[i] != VK_NULL_HANDLE) {
+      arg.Keys[i] = HandleMapService::Get().GetKey(reinterpret_cast<std::uint64_t>(arg.Value[i]));
+    }
   }
 }
 
