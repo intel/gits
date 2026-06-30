@@ -22,8 +22,6 @@ set(CAPTURE_SRC
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkanRecorder.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/wrappersAuto.h
   ${CMAKE_CURRENT_SOURCE_DIR}/wrappersAuto.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/testLayerAuto.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/testLayerAuto.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/encoderLayerAuto.h
   ${CMAKE_CURRENT_SOURCE_DIR}/encoderLayerAuto.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/captureCustomizationLayer.h

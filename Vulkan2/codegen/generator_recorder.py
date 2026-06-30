@@ -21,8 +21,6 @@ def generate_recorder_files(context, output_path):
     files_to_generate = [
       'wrappersAuto.h',
       'wrappersAuto.cpp',
-      'testLayerAuto.h',
-      'testLayerAuto.cpp',
       'encoderLayerAuto.h',
       'encoderLayerAuto.cpp',
       'handleArgumentUpdatersAuto.h',

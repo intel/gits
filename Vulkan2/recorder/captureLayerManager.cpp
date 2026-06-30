@@ -10,7 +10,6 @@
 #include "captureManager.h"
 #include "configurator.h"
 #include "pluginService.h"
-#include "testLayerAuto.h"
 #include "encoderLayerAuto.h"
 #include "captureCustomizationLayer.h"
 #include "logVkErrorLayerAuto.h"
@@ -23,7 +22,6 @@ void CaptureLayerManager::LoadLayers(CaptureManager& captureManager,
                                      PluginService& pluginService) {
   auto& cfg = Configurator::Get();
 
-  //std::unique_ptr<Layer> testLayer = std::make_unique<TestLayerAuto>();
   std::unique_ptr<Layer> logVkErrorLayer = std::make_unique<LogVkErrorLayer>();
   std::unique_ptr<Layer> encoderLayer;
   std::unique_ptr<Layer> captureCustomizationLayer;
@@ -57,7 +55,6 @@ void CaptureLayerManager::LoadLayers(CaptureManager& captureManager,
     }
   };
 
-  //enablePreLayer(testLayer);
   enablePreLayer(captureCustomizationLayer);
   if (traceCfg.enabled && traceCfg.print.preCalls) {
     enablePreLayer(traceLayer);
@@ -74,7 +71,6 @@ void CaptureLayerManager::LoadLayers(CaptureManager& captureManager,
 
   enablePostLayer(logVkErrorLayer);
   enablePostLayer(captureCustomizationLayer);
-  //enablePostLayer(testLayer);
   if (traceCfg.enabled && traceCfg.print.postCalls) {
     enablePostLayer(traceLayer);
   }
@@ -92,7 +88,6 @@ void CaptureLayerManager::LoadLayers(CaptureManager& captureManager,
 
   retainLayer(std::move(captureCustomizationLayer));
   retainLayer(std::move(logVkErrorLayer));
-  //retainLayer(std::move(testLayer));
   retainLayer(std::move(traceLayer));
   retainLayer(std::move(encoderLayer));
 
