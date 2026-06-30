@@ -6,7 +6,7 @@
 //
 // ===================== end_copyright_notice ==============================
 
-#include "vulkanHeader.h"
+#include "vulkanHeader2.h"
 #include "gitsLoader.h"
 #include "vulkanRecorderInterface.h"
 

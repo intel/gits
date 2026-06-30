@@ -9,7 +9,7 @@
 add_library(Vulkan_layer_interface STATIC)
 
 set(ALL_SRC
-  ${CMAKE_CURRENT_SOURCE_DIR}/vulkanHeader.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkanHeader2.h
   ${CMAKE_CURRENT_SOURCE_DIR}/commandIdsAuto.h
   ${CMAKE_CURRENT_SOURCE_DIR}/commandsAuto.h
   ${CMAKE_CURRENT_SOURCE_DIR}/layerAuto.h
