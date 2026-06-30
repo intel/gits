@@ -30,9 +30,12 @@ void SyncStateService::OnQueueSubmit(const VkSubmitInfo* pSubmits,
            ++w, ++keyIdx) {
         UnsignalBinarySemaphore(handleKeys[keyIdx]);
       }
-      // Skip command buffer keys to reach the signal semaphore keys.
-      keyIdx += std::min<uint32_t>(info.commandBufferCount,
-                                   static_cast<uint32_t>(handleKeys.size()) - keyIdx);
+      // Apply each submitted command buffer's net event set/reset effects, then
+      // advance keyIdx past the command buffer keys to the signal semaphore keys.
+      for (uint32_t c = 0; c < info.commandBufferCount && keyIdx < handleKeys.size();
+           ++c, ++keyIdx) {
+        ApplyCommandBufferEventStates(handleKeys[keyIdx]);
+      }
       for (uint32_t s = 0; s < info.signalSemaphoreCount && keyIdx < handleKeys.size();
            ++s, ++keyIdx) {
         SignalBinarySemaphore(handleKeys[keyIdx]);
@@ -59,9 +62,12 @@ void SyncStateService::OnQueueSubmit2(const VkSubmitInfo2* pSubmits,
            ++w, ++keyIdx) {
         UnsignalBinarySemaphore(handleKeys[keyIdx]);
       }
-      // Skip command buffer info keys to reach the signal semaphore info keys.
-      keyIdx += std::min<uint32_t>(info.commandBufferInfoCount,
-                                   static_cast<uint32_t>(handleKeys.size()) - keyIdx);
+      // Apply each submitted command buffer's net event set/reset effects, then
+      // advance keyIdx past the command buffer info keys to the signal sem keys.
+      for (uint32_t c = 0; c < info.commandBufferInfoCount && keyIdx < handleKeys.size();
+           ++c, ++keyIdx) {
+        ApplyCommandBufferEventStates(handleKeys[keyIdx]);
+      }
       for (uint32_t s = 0; s < info.signalSemaphoreInfoCount && keyIdx < handleKeys.size();
            ++s, ++keyIdx) {
         SignalBinarySemaphore(handleKeys[keyIdx]);
@@ -79,6 +85,13 @@ void SyncStateService::OnQueuePresent(const VkPresentInfoKHR& presentInfo,
   for (uint32_t w = 0; w < presentInfo.waitSemaphoreCount && w < handleKeys.size(); ++w) {
     UnsignalBinarySemaphore(handleKeys[w]);
   }
+}
+
+void SyncStateService::OnImageAcquired(uint64_t semaphoreKey) {
+  if (!semaphoreKey) {
+    return;
+  }
+  SignalBinarySemaphore(semaphoreKey);
 }
 
 void SyncStateService::OnResetFences(const std::vector<uint64_t>& fenceKeys) {
@@ -101,16 +114,34 @@ void SyncStateService::SignalFence(uint64_t fenceKey) {
 }
 
 void SyncStateService::UnsignalBinarySemaphore(uint64_t semKey) {
-  auto* state = m_StateTracking.GetState(semKey);
-  if (state && static_cast<SemaphoreState*>(state)->isBinary) {
-    static_cast<SemaphoreState*>(state)->isSignaled = false;
+  // GetState<SemaphoreState> is a typed (dynamic_cast) lookup, so a key that
+  // resolves to a different object type (e.g. a fence key) is a clean no-op
+  // rather than a wrong-type reinterpretation.
+  auto* state = m_StateTracking.GetState<SemaphoreState>(semKey);
+  if (state && state->isBinary) {
+    state->isSignaled = false;
   }
 }
 
 void SyncStateService::SignalBinarySemaphore(uint64_t semKey) {
-  auto* state = m_StateTracking.GetState(semKey);
-  if (state && static_cast<SemaphoreState*>(state)->isBinary) {
-    static_cast<SemaphoreState*>(state)->isSignaled = true;
+  // Typed lookup: see UnsignalBinarySemaphore.  Guards against an acquire/submit
+  // HandleKeys slot that turns out not to be a semaphore (e.g. a fence key).
+  auto* state = m_StateTracking.GetState<SemaphoreState>(semKey);
+  if (state && state->isBinary) {
+    state->isSignaled = true;
+  }
+}
+
+void SyncStateService::ApplyCommandBufferEventStates(uint64_t cbKey) {
+  auto* cb = m_StateTracking.GetState<CommandBufferState>(cbKey);
+  if (!cb) {
+    return;
+  }
+  for (const auto& [eventKey, signaled] : cb->eventStatesAfterSubmit) {
+    auto* ev = m_StateTracking.GetState<EventState>(eventKey);
+    if (ev) {
+      ev->isSignaled = signaled;
+    }
   }
 }
 
@@ -129,6 +160,7 @@ void SyncStateService::InvalidateCBIfOneTimeSubmit(uint64_t key) {
     cbState->endCommandBuffer.clear();
     cbState->recordedCommands.clear();
     cbState->recordedCommandIds.clear();
+    cbState->eventStatesAfterSubmit.clear();
   }
 }
 

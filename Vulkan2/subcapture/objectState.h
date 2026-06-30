@@ -12,6 +12,7 @@
 #include "command.h"
 
 #include <memory>
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 #include <cstdint>
@@ -106,12 +107,21 @@ struct SemaphoreState : ObjectState {
   // True if this is a binary semaphore (as opposed to a timeline semaphore).
   bool isBinary{true};
   // True if the semaphore was signaled (via pSignalSemaphores in a queue
-  // submit) and not subsequently waited on.  Used during state restore to
-  // signal the semaphore via a dummy queue submission.
+  // submit, or by a vkAcquireNextImageKHR / vkAcquireNextImage2KHR acquire)
+  // and not subsequently waited on.  Used during state restore to signal the
+  // semaphore via a dummy queue submission.
   bool isSignaled{false};
 };
 
-struct EventState : ObjectState {};
+struct EventState : ObjectState {
+  // True if the event was in the signaled (set) state at the subcapture point,
+  // either via a host vkSetEvent or a device vkCmdSetEvent that has executed.
+  // Used during state restore to re-set the event (vkSetEvent) so that a
+  // recording-range vkGetEventStatus / vkCmdWaitEvents poll does not hang
+  // waiting for a signal that was produced before the cut.  Mirrors the legacy
+  // CEventState::eventUsed flag + RestoreEvents logic.
+  bool isSignaled{false};
+};
 
 // ---- Buffers / images --------------------------------------------------
 
@@ -237,6 +247,12 @@ struct CommandBufferState : ObjectState {
   // restore in submission order.
   std::vector<std::vector<char>> recordedCommands;
   std::vector<CommandId> recordedCommandIds;
+  // Net signaled state each event ends up in after this command buffer is
+  // submitted and executed (event key -> set/reset).  Populated by
+  // vkCmdSetEvent / vkCmdResetEvent (and the 2/2KHR variants); applied to the
+  // corresponding EventState::isSignaled when the CB is submitted.  Mirrors the
+  // legacy CCommandBufferState::eventStatesAfterSubmit.
+  std::unordered_map<uint64_t, bool> eventStatesAfterSubmit;
 };
 
 // ---- Swapchain / surface -----------------------------------------------

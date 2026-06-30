@@ -255,6 +255,26 @@ void StateTrackingService::RestoreState() {
     }
   }
 
+  // Re-set events that were signaled at the subcapture point.  The original
+  // signal (host vkSetEvent or a device vkCmdSetEvent that executed before the
+  // cut) is not part of the recording range, so without this a recording-range
+  // vkGetEventStatus / vkCmdWaitEvents that polls for the set state would hang
+  // forever.  Mirrors the legacy Vulkan RestoreEvents() logic.
+  for (auto& [_, statePtr] : m_States) {
+    ObjectState* state = statePtr.get();
+    if (state->destroyed || state->creationCommandId != CommandId::ID_VKCREATEEVENT) {
+      continue;
+    }
+    if (!static_cast<EventState*>(state)->isSignaled) {
+      continue;
+    }
+    vkSetEventCommand setCmd;
+    setCmd.m_device.Key = state->parentKey;
+    setCmd.m_event.Key = state->key;
+    setCmd.m_Return.Value = VK_SUCCESS;
+    m_Recorder.Record(vkSetEventSerializer(setCmd));
+  }
+
   // Restore GPU-local resource contents.  Must run after all objects are
   // created (m_RestoredThisPass is fully populated) and before
   // EmitImageLayoutTransitions (which skips images whose copy ends in the

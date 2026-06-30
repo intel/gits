@@ -96,6 +96,8 @@ public:
   void Post(vkDestroySemaphoreCommand& command) override;
   void Post(vkCreateEventCommand& command) override;
   void Post(vkDestroyEventCommand& command) override;
+  void Post(vkSetEventCommand& command) override;
+  void Post(vkResetEventCommand& command) override;
 
   // ---- Buffers / images ------------------------------------------------
   void Post(vkCreateBufferCommand& command) override;
@@ -215,7 +217,11 @@ public:
   void Post(vkCmdCopyImageToBuffer2KHRCommand& command) override;
   // Events
   void Post(vkCmdSetEventCommand& command) override;
+  void Post(vkCmdSetEvent2Command& command) override;
+  void Post(vkCmdSetEvent2KHRCommand& command) override;
   void Post(vkCmdResetEventCommand& command) override;
+  void Post(vkCmdResetEvent2Command& command) override;
+  void Post(vkCmdResetEvent2KHRCommand& command) override;
   void Post(vkCmdWaitEventsCommand& command) override;
   // Indirect draw/dispatch
   void Post(vkCmdDrawIndirectCommand& command) override;
@@ -280,6 +286,11 @@ public:
   }
 
 private:
+  // Records the net signaled state an event ends up in after the given
+  // (still recording) command buffer executes.  No-op for zero keys or a
+  // command buffer that is not currently recording.
+  void RecordCmdEventState(uint64_t cbKey, uint64_t eventKey, bool signaled);
+
   // Encode the creation command into state->creationCommandBuffer and transfer
   // ownership of state into the persistent tracking table.
   //

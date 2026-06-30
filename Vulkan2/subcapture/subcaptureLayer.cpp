@@ -429,6 +429,25 @@ void SubcaptureLayer::Post(vkDestroyEventCommand& command) {
   m_StateTracking.RemoveState(command.m_event.Key);
 }
 
+void SubcaptureLayer::Post(vkSetEventCommand& command) {
+  // Host-side signal.  The spec leaves the event unchanged on failure.
+  if (command.m_Return.Value != VK_SUCCESS) {
+    return;
+  }
+  if (auto* ev = m_StateTracking.GetState<EventState>(command.m_event.Key)) {
+    ev->isSignaled = true;
+  }
+}
+
+void SubcaptureLayer::Post(vkResetEventCommand& command) {
+  if (command.m_Return.Value != VK_SUCCESS) {
+    return;
+  }
+  if (auto* ev = m_StateTracking.GetState<EventState>(command.m_event.Key)) {
+    ev->isSignaled = false;
+  }
+}
+
 // ---- Buffers / images ----------------------------------------------------
 
 void SubcaptureLayer::Post(vkCreateBufferCommand& command) {
@@ -1359,12 +1378,47 @@ void SubcaptureLayer::Post(vkCmdCopyImageToBuffer2KHRCommand& command) {
                                                    command.m_pCopyImageToBufferInfo.HandleKeys);
 }
 
+// Records the net signaled state an event ends up in after the given (still
+// recording) command buffer executes.  Applied to EventState::isSignaled when
+// the command buffer is submitted (see SyncStateService::OnQueueSubmit).
+void SubcaptureLayer::RecordCmdEventState(uint64_t cbKey, uint64_t eventKey, bool signaled) {
+  if (!cbKey || !eventKey) {
+    return;
+  }
+  auto* cb = m_StateTracking.GetState<CommandBufferState>(cbKey);
+  if (cb && cb->isRecording) {
+    cb->eventStatesAfterSubmit[eventKey] = signaled;
+  }
+}
+
 void SubcaptureLayer::Post(vkCmdSetEventCommand& command) {
   m_CommandBufferLifecycle.TrackHandleDependency(command.m_commandBuffer.Key, command.m_event.Key);
+  RecordCmdEventState(command.m_commandBuffer.Key, command.m_event.Key, true);
+}
+
+void SubcaptureLayer::Post(vkCmdSetEvent2Command& command) {
+  m_CommandBufferLifecycle.TrackHandleDependency(command.m_commandBuffer.Key, command.m_event.Key);
+  RecordCmdEventState(command.m_commandBuffer.Key, command.m_event.Key, true);
+}
+
+void SubcaptureLayer::Post(vkCmdSetEvent2KHRCommand& command) {
+  m_CommandBufferLifecycle.TrackHandleDependency(command.m_commandBuffer.Key, command.m_event.Key);
+  RecordCmdEventState(command.m_commandBuffer.Key, command.m_event.Key, true);
 }
 
 void SubcaptureLayer::Post(vkCmdResetEventCommand& command) {
   m_CommandBufferLifecycle.TrackHandleDependency(command.m_commandBuffer.Key, command.m_event.Key);
+  RecordCmdEventState(command.m_commandBuffer.Key, command.m_event.Key, false);
+}
+
+void SubcaptureLayer::Post(vkCmdResetEvent2Command& command) {
+  m_CommandBufferLifecycle.TrackHandleDependency(command.m_commandBuffer.Key, command.m_event.Key);
+  RecordCmdEventState(command.m_commandBuffer.Key, command.m_event.Key, false);
+}
+
+void SubcaptureLayer::Post(vkCmdResetEvent2KHRCommand& command) {
+  m_CommandBufferLifecycle.TrackHandleDependency(command.m_commandBuffer.Key, command.m_event.Key);
+  RecordCmdEventState(command.m_commandBuffer.Key, command.m_event.Key, false);
 }
 
 void SubcaptureLayer::Post(vkCmdWaitEventsCommand& command) {
@@ -1599,6 +1653,9 @@ void SubcaptureLayer::Post(vkAcquireNextImageKHRCommand& command) {
   if (sc) {
     sc->acquiredImages.insert(*command.m_pImageIndex.Value);
   }
+  // The acquire signals the binary semaphore; track it so state restore
+  // re-signals it for any first recorded submit that waits on it.
+  m_SyncState.OnImageAcquired(command.m_semaphore.Key);
 }
 
 void SubcaptureLayer::Post(vkAcquireNextImage2KHRCommand& command) {
@@ -1606,7 +1663,8 @@ void SubcaptureLayer::Post(vkAcquireNextImage2KHRCommand& command) {
       !command.m_pImageIndex.Value || !command.m_pAcquireInfo.Value) {
     return;
   }
-  // HandleKeys layout for pAcquireInfo: [swapchainKey, ...]
+  // HandleKeys layout for pAcquireInfo (VkAcquireNextImageInfoKHR handle
+  // members, in struct order): [swapchainKey, semaphoreKey, fenceKey].
   if (command.m_pAcquireInfo.HandleKeys.empty()) {
     return;
   }
@@ -1614,6 +1672,10 @@ void SubcaptureLayer::Post(vkAcquireNextImage2KHRCommand& command) {
   auto* sc = m_StateTracking.GetState<SwapchainState>(swapchainKey);
   if (sc) {
     sc->acquiredImages.insert(*command.m_pImageIndex.Value);
+  }
+  // The acquire signals the binary semaphore; track it (see vkAcquireNextImageKHR).
+  if (command.m_pAcquireInfo.HandleKeys.size() > 1) {
+    m_SyncState.OnImageAcquired(command.m_pAcquireInfo.HandleKeys[1]);
   }
 }
 
