@@ -113,13 +113,11 @@ private:
 
 class MessageLoop {
 public:
-  MessageLoop(stream::BaseStreamReader* streamReader, Timer* playbackTimer)
-      : m_StreamReader(streamReader), m_PlaybackTimer(playbackTimer) {}
+  MessageLoop(stream::BaseStreamReader* streamReader, Timer* playbackTimer) {
+    (void)streamReader;
+    (void)playbackTimer;
+  }
   void RunLoop(unsigned frame) {}
-
-private:
-  stream::BaseStreamReader* m_StreamReader{};
-  Timer* m_PlaybackTimer{};
 };
 
 #endif
@@ -206,6 +204,8 @@ public:
       return new StateRestoreEndRunner(m_MessageLoop.get(), m_StateRestoreTimer);
     case stream::CommonCommandId::ID_FRAME_END:
       return new FrameEndCommandRunner(m_MessageLoop.get(), m_StreamReader);
+    case stream::CommonCommandId::ID_MARKER_UINT64:
+      return nullptr;
     }
     return nullptr;
   }
