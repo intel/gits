@@ -17,14 +17,19 @@ set(COMMON_SRC
 source_group("common" FILES ${COMMON_SRC})
 
 set(ROOT_SRC
-  ${CMAKE_CURRENT_SOURCE_DIR}/interceptor.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/interceptor.def
+  ${CMAKE_CURRENT_SOURCE_DIR}/interceptorAuto.cpp
 )
 source_group("" FILES ${ROOT_SRC})
 
-target_sources(Vulkan_interceptor_2 PRIVATE
+set(ALL_SRC
   ${COMMON_SRC}
   ${ROOT_SRC}
+)
+
+set_auto_generated_property(FILE_LIST ${ALL_SRC})
+
+target_sources(Vulkan_interceptor_2 PRIVATE
+  ${ALL_SRC}
 )
 
 target_include_directories(Vulkan_interceptor_2 PRIVATE

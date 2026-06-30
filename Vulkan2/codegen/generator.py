@@ -21,6 +21,7 @@ from generator_coders import generate_coders_files
 from generator_player import generate_player_files
 from generator_trace import generate_trace_files
 from generator_vk_layer import generate_vk_layer_json
+from generator_interceptor import generate_interceptor_files
 
 def main():
     parser = argparse.ArgumentParser(description='Generate vulkan files.')
@@ -62,6 +63,7 @@ def main():
     generate_player_files(context, os.path.join(output_path, 'player'))
     generate_trace_files(context, os.path.join(output_path, 'layers/trace'))
     generate_vk_layer_json(context, os.path.join(output_path, 'layer'))
+    generate_interceptor_files(context, os.path.join(output_path, 'interceptor'))
 
 
 if __name__ == "__main__":
