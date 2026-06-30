@@ -11,12 +11,7 @@
 #include "configurator.h"
 #include "log.h"
 
-// On Windows, STB_IMAGE_WRITE_IMPLEMENTATION is compiled in a separate translation unit.
-#ifdef __linux__
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#endif
 #include <stb_image_write.h>
-
 #include <cstring>
 
 namespace gits {

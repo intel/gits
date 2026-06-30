@@ -35,6 +35,7 @@ target_sources(Vulkan_resource_dumping PRIVATE
 )
 
 target_link_libraries(Vulkan_resource_dumping PRIVATE
+  stb_implementation
   Vulkan_layer_interface
   Vulkan_utils
 )
