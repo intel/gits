@@ -10,6 +10,20 @@
 #include "captureManager.h"
 #include "commandSerializersCustom.h"
 
+#ifdef GITS_PLATFORM_LINUX
+#include <csignal>
+#include <sys/mman.h>
+
+static void SigsegvHandler(int sig, siginfo_t* si, void* unused) {
+  if (!gits::vulkan::CaptureManager::Get().GetMapTrackingService().HandleAddress(si->si_addr)) {
+    LOG_ERROR << "MapTrackingService signal handler caught unhandled signal: "
+              << " errno: " << si->si_errno << " at address: " << si->si_addr;
+    exit(1);
+  }
+}
+
+#endif
+
 namespace gits {
 namespace vulkan {
 
@@ -18,6 +32,14 @@ MapTrackingService::MapTrackingService(stream::OrderingRecorder& recorder) : m_R
   SYSTEM_INFO si;
   GetSystemInfo(&si);
   m_PageSize = si.dwPageSize;
+#else
+  m_PageSize = static_cast<uint64_t>(sysconf(_SC_PAGESIZE));
+  struct sigaction sa = {};
+  sa.sa_flags = SA_SIGINFO;
+  sa.sa_sigaction = SigsegvHandler;
+  sigemptyset(&sa.sa_mask);
+  int ret = sigaction(SIGSEGV, &sa, nullptr);
+  GITS_ASSERT(ret != -1, "Sigaction setup for SIGSEGV failed.");
 #endif
 }
 
@@ -96,7 +118,7 @@ void MapTrackingService::FreeExternalMemory(GITSKey deviceMemoryKey) {
 void MapTrackingService::StoreData(GITSKey deviceMemoryKey,
                                    VkDeviceSize offset,
                                    VkDeviceSize size,
-                                   void* data) {
+                                   void** ppData) {
   std::lock_guard<std::mutex> lock(m_Mutex);
   auto it = m_Allocations.find(deviceMemoryKey);
   GITS_ASSERT(it != m_Allocations.end());
@@ -104,9 +126,18 @@ void MapTrackingService::StoreData(GITSKey deviceMemoryKey,
   allocationInfo.IsMapped = true;
   allocationInfo.MapOffset = offset;
   allocationInfo.MapSize = (size == VK_WHOLE_SIZE) ? allocationInfo.AllocationSize - offset : size;
-  allocationInfo.MappedData = data;
+  allocationInfo.MappedData = *ppData;
 #ifdef GITS_PLATFORM_WINDOWS
-  ResetWriteWatch(data, static_cast<SIZE_T>(allocationInfo.MapSize));
+  ResetWriteWatch(allocationInfo.MappedData, static_cast<SIZE_T>(allocationInfo.MapSize));
+#else
+  size_t shadowSize = static_cast<size_t>(allocationInfo.MapSize);
+  allocationInfo.ShadowMemory =
+      mmap(nullptr, shadowSize, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+  GITS_ASSERT(allocationInfo.ShadowMemory != MAP_FAILED);
+  std::memcpy(allocationInfo.ShadowMemory, *ppData, shadowSize);
+  int ret = mprotect(allocationInfo.ShadowMemory, shadowSize, PROT_READ);
+  GITS_ASSERT(ret != -1);
+  *ppData = allocationInfo.ShadowMemory;
 #endif
 }
 
@@ -117,6 +148,13 @@ void MapTrackingService::RemoveData(GITSKey deviceMemoryKey) {
   if (it->second.IsMapped) {
     ScheduleMemoryUpdate(deviceMemoryKey);
   }
+#ifdef GITS_PLATFORM_LINUX
+  if (it->second.ShadowMemory) {
+    int ret = munmap(it->second.ShadowMemory, static_cast<size_t>(it->second.MapSize));
+    GITS_ASSERT(ret != -1);
+    it->second.ShadowMemory = nullptr;
+  }
+#endif
   it->second.IsMapped = false;
   it->second.MapOffset = 0;
   it->second.MapSize = 0;
@@ -187,9 +225,63 @@ void MapTrackingService::ScheduleMemoryUpdate(GITSKey deviceMemoryKey) {
   regions.push_back({offset, currentSize, currentPage});
   RecordMappedDataMetaCommand(allocationInfo.DeviceKey, deviceMemoryKey, regions);
 #else
+  if (allocationInfo.TouchedPages.empty()) {
+    return;
+  }
+
+  std::vector<uintptr_t> sortedPages(allocationInfo.TouchedPages.begin(),
+                                     allocationInfo.TouchedPages.end());
+  std::sort(sortedPages.begin(), sortedPages.end());
+
+  char* baseAddress = static_cast<char*>(allocationInfo.ShadowMemory);
+  uintptr_t mapStart = reinterpret_cast<uintptr_t>(baseAddress);
+  uintptr_t mapEnd = mapStart + allocationInfo.MapSize;
+
   std::vector<MemoryRegions::Region> regions;
-  regions.push_back({0, allocationInfo.MapSize, static_cast<char*>(allocationInfo.MappedData)});
-  RecordMappedDataMetaCommand(allocationInfo.DeviceKey, deviceMemoryKey, regions);
+
+  uintptr_t regionStart = sortedPages[0];
+  uintptr_t regionEnd = regionStart + m_PageSize;
+
+  auto flushRegion = [&](uintptr_t start, uintptr_t end) {
+    if (start < mapStart) {
+      start = mapStart;
+    }
+    if (end > mapEnd) {
+      end = mapEnd;
+    }
+    if (end > start) {
+      uint64_t offset = start - mapStart;
+      uint64_t size = end - start;
+      regions.push_back({offset, size, reinterpret_cast<char*>(start)});
+    }
+  };
+
+  for (size_t i = 1; i < sortedPages.size(); ++i) {
+    if (sortedPages[i] == regionEnd) {
+      regionEnd += m_PageSize;
+    } else {
+      flushRegion(regionStart, regionEnd);
+      regionStart = sortedPages[i];
+      regionEnd = regionStart + m_PageSize;
+    }
+  }
+  flushRegion(regionStart, regionEnd);
+
+  for (const auto& region : regions) {
+    std::memcpy((char*)allocationInfo.MappedData + region.Offset, region.Data, region.Size);
+  }
+
+  for (uintptr_t page : allocationInfo.TouchedPages) {
+    errno = 0;
+    int ret = mprotect(reinterpret_cast<void*>(page), m_PageSize, PROT_READ);
+    GITS_ASSERT(ret != -1);
+  }
+  allocationInfo.TouchedPages.clear();
+
+  if (!regions.empty()) {
+    RecordMappedDataMetaCommand(allocationInfo.DeviceKey, deviceMemoryKey, regions);
+  }
+
 #endif
 }
 
@@ -203,6 +295,32 @@ void MapTrackingService::RecordMappedDataMetaCommand(
   command.m_Regions.Regions = regions;
   m_Recorder.Record(command.m_Key, new MappedDataMetaSerializer(command));
 }
+
+#ifdef GITS_PLATFORM_LINUX
+bool MapTrackingService::HandleAddress(void* address) {
+  uintptr_t addr = reinterpret_cast<uintptr_t>(address);
+  uintptr_t pageAddr = addr - (addr % m_PageSize);
+
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  for (auto& [key, alloc] : m_Allocations) {
+    if (!alloc.IsMapped) {
+      continue;
+    }
+
+    uintptr_t shadowMemoryBegin = reinterpret_cast<uintptr_t>(alloc.ShadowMemory);
+    uintptr_t shadowMemoryEnd = shadowMemoryBegin + alloc.MapSize;
+
+    if (pageAddr >= shadowMemoryBegin && pageAddr < shadowMemoryEnd) {
+      errno = 0;
+      int ret = mprotect(reinterpret_cast<void*>(pageAddr), m_PageSize, PROT_READ | PROT_WRITE);
+      GITS_ASSERT(ret != -1);
+      alloc.TouchedPages.insert(pageAddr);
+      return true;
+    }
+  }
+  return false;
+}
+#endif
 
 } // namespace vulkan
 } // namespace gits

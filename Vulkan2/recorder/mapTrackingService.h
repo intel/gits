@@ -16,6 +16,7 @@
 #include <unordered_map>
 #include <mutex>
 #include <optional>
+#include <unordered_set>
 
 namespace gits {
 namespace vulkan {
@@ -36,9 +37,13 @@ public:
                            const VkMemoryAllocateInfo& allocateInfo,
                            void* externalPtr);
   void FreeExternalMemory(GITSKey deviceMemoryKey);
-  void StoreData(GITSKey deviceMemoryKey, VkDeviceSize offset, VkDeviceSize size, void* data);
+  void StoreData(GITSKey deviceMemoryKey, VkDeviceSize offset, VkDeviceSize size, void** ppData);
   void RemoveData(GITSKey deviceMemoryKey);
   void SnapshotAllMapped();
+
+#ifdef GITS_PLATFORM_LINUX
+  bool HandleAddress(void* address);
+#endif
 
 private:
   void ScheduleMemoryUpdate(GITSKey deviceMemoryKey);
@@ -56,6 +61,8 @@ private:
     VkDeviceSize MapOffset;
     VkDeviceSize MapSize;
     void* MappedData{nullptr};
+    void* ShadowMemory{nullptr};
+    std::unordered_set<uintptr_t> TouchedPages;
   };
 
   uint32_t m_PageSize;

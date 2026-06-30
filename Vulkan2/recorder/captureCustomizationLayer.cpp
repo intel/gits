@@ -202,19 +202,19 @@ void CaptureCustomizationLayer::Post(vkFreeMemoryCommand& command) {
 
 void CaptureCustomizationLayer::Post(vkMapMemoryCommand& command) {
   m_Manager.GetMapTrackingService().StoreData(command.m_memory.Key, command.m_offset.Value,
-                                              command.m_size.Value, *command.m_ppData.Value);
+                                              command.m_size.Value, command.m_ppData.Value);
 }
 
 void CaptureCustomizationLayer::Post(vkMapMemory2Command& command) {
   m_Manager.GetMapTrackingService().StoreData(
       command.m_pMemoryMapInfo.HandleKeys[0], command.m_pMemoryMapInfo.Value->offset,
-      command.m_pMemoryMapInfo.Value->size, *command.m_ppData.Value);
+      command.m_pMemoryMapInfo.Value->size, command.m_ppData.Value);
 }
 
 void CaptureCustomizationLayer::Post(vkMapMemory2KHRCommand& command) {
   m_Manager.GetMapTrackingService().StoreData(
       command.m_pMemoryMapInfo.HandleKeys[0], command.m_pMemoryMapInfo.Value->offset,
-      command.m_pMemoryMapInfo.Value->size, *command.m_ppData.Value);
+      command.m_pMemoryMapInfo.Value->size, command.m_ppData.Value);
 }
 
 void CaptureCustomizationLayer::Pre(vkUnmapMemoryCommand& command) {
