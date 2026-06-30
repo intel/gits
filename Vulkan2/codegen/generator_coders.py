@@ -246,7 +246,12 @@ def get_encode_lines(structure, structures_list, var_name_src, var_name_dst):
                 lines.append(f'  Encode({var_name_src}->{member.name}, 1, dst, offset);')
                 lines.append('}')
             else:
-                lines.append(f'Encode(&{var_name_src}->{member.name}, 1, dst, offset);')
+                lines.append('{')
+                lines.append(f'  uint32_t memberBase_{member.name} = offset;')
+                lines.append(f'  Encode(&{var_name_src}->{member.name}, 1, dst, offset);')
+                lines.append(f'  {var_name_dst}->{member.name} = *reinterpret_cast<{member.base_type}*>(dst + memberBase_{member.name});')
+                lines.append('}')
+
         elif basic_struct:
             if member.length and member.is_pointer_to_pointer:
                 outer = member.length[0]
