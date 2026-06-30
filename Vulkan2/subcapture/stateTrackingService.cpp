@@ -474,17 +474,27 @@ void StateTrackingService::RestoreOne(ObjectState* state) {
     // a swapchain image key is never marked restored unless its handle was
     // actually registered in the player handle map.
     return;
+#ifdef VK_USE_PLATFORM_WIN32_KHR
   case CommandId::ID_VKCREATEWIN32SURFACEKHR:
     RestoreSurface(state);
     break;
-#ifdef GITS_PLATFORM_X11
-  case CommandId::ID_VKCREATEXCBSURFACEKHR:
-    RestoreSurface(state);
-    break;
+#endif
+#ifdef VK_USE_PLATFORM_XLIB_KHR
   case CommandId::ID_VKCREATEXLIBSURFACEKHR:
     RestoreSurface(state);
     break;
 #endif
+#ifdef VK_USE_PLATFORM_XCB_KHR
+  case CommandId::ID_VKCREATEXCBSURFACEKHR:
+    RestoreSurface(state);
+    break;
+#endif
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+  case CommandId::ID_VKCREATEWAYLANDSURFACEKHR:
+    RestoreSurface(state);
+    break;
+#endif
+
   default:
     if (!EmitCreationCommand(state)) {
       return;
@@ -1355,11 +1365,17 @@ bool StateTrackingService::EmitCreationCommand(ObjectState* state) {
   case CommandId::ID_VKCREATEWIN32SURFACEKHR:
     EMIT_DECODED(vkCreateWin32SurfaceKHR)
 #endif
-#ifdef GITS_PLATFORM_X11
-  case CommandId::ID_VKCREATEXCBSURFACEKHR:
-    EMIT_DECODED(vkCreateXcbSurfaceKHR)
+#ifdef VK_USE_PLATFORM_XLIB_KHR
   case CommandId::ID_VKCREATEXLIBSURFACEKHR:
     EMIT_DECODED(vkCreateXlibSurfaceKHR)
+#endif
+#ifdef VK_USE_PLATFORM_XCB_KHR
+  case CommandId::ID_VKCREATEXCBSURFACEKHR:
+    EMIT_DECODED(vkCreateXcbSurfaceKHR)
+#endif
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+  case CommandId::ID_VKCREATEWAYLANDSURFACEKHR:
+    EMIT_DECODED(vkCreateWaylandSurfaceKHR)
 #endif
   case CommandId::ID_VKCREATESWAPCHAINKHR:
     EMIT_DECODED(vkCreateSwapchainKHR)
@@ -1459,6 +1475,7 @@ void StateTrackingService::RestoreSurface(ObjectState* state) {
   auto* surf = static_cast<SurfaceState*>(state);
   if (surf->HwndKey != 0) {
     CreateWindowMetaCommand win;
+    win.m_DisplayProtocol.Value = surf->Protocol;
     win.m_X.Value = surf->WindowX;
     win.m_Y.Value = surf->WindowY;
     win.m_Width.Value = surf->WindowWidth;
@@ -1490,6 +1507,54 @@ void StateTrackingService::RestoreSurface(ObjectState* state) {
       cmd.m_pCreateInfo.Value->hinstance = reinterpret_cast<HINSTANCE>(surf->HinstanceKey);
     }
     m_Recorder.Record(vkCreateWin32SurfaceKHRSerializer(cmd));
+    return;
+  }
+#endif
+
+#ifdef VK_USE_PLATFORM_XLIB_KHR
+  if (state->CreationCommandId == CommandId::ID_VKCREATEXLIBSURFACEKHR &&
+      !state->CreationCommandBuffer.empty() && surf->HwndKey != 0) {
+    std::vector<char> scratch = state->CreationCommandBuffer;
+    char* buf = scratch.data();
+    vkCreateXlibSurfaceKHRCommand cmd;
+    Decode(buf, cmd);
+    if (cmd.m_pCreateInfo.Value) {
+      cmd.m_pCreateInfo.Value->dpy = reinterpret_cast<Display*>(surf->HwndKey);
+      cmd.m_pCreateInfo.Value->window = reinterpret_cast<Window>(surf->HinstanceKey);
+    }
+    m_Recorder.Record(vkCreateXlibSurfaceKHRSerializer(cmd));
+    return;
+  }
+#endif
+
+#ifdef VK_USE_PLATFORM_XCB_KHR
+  if (state->CreationCommandId == CommandId::ID_VKCREATEXCBSURFACEKHR &&
+      !state->CreationCommandBuffer.empty() && surf->HwndKey != 0) {
+    std::vector<char> scratch = state->CreationCommandBuffer;
+    char* buf = scratch.data();
+    vkCreateXcbSurfaceKHRCommand cmd;
+    Decode(buf, cmd);
+    if (cmd.m_pCreateInfo.Value) {
+      cmd.m_pCreateInfo.Value->connection = reinterpret_cast<xcb_connection_t*>(surf->HwndKey);
+      cmd.m_pCreateInfo.Value->window = static_cast<xcb_window_t>(surf->HinstanceKey);
+    }
+    m_Recorder.Record(vkCreateXcbSurfaceKHRSerializer(cmd));
+    return;
+  }
+#endif
+
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+  if (state->CreationCommandId == CommandId::ID_VKCREATEWAYLANDSURFACEKHR &&
+      !state->CreationCommandBuffer.empty() && surf->HwndKey != 0) {
+    std::vector<char> scratch = state->CreationCommandBuffer;
+    char* buf = scratch.data();
+    vkCreateWaylandSurfaceKHRCommand cmd;
+    Decode(buf, cmd);
+    if (cmd.m_pCreateInfo.Value) {
+      cmd.m_pCreateInfo.Value->display = reinterpret_cast<wl_display*>(surf->HwndKey);
+      cmd.m_pCreateInfo.Value->surface = reinterpret_cast<wl_surface*>(surf->HinstanceKey);
+    }
+    m_Recorder.Record(vkCreateWaylandSurfaceKHRSerializer(cmd));
     return;
   }
 #endif

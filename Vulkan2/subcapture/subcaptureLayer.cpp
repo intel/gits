@@ -1619,6 +1619,7 @@ void SubcaptureLayer::Post(CreateWindowMetaCommand& command) {
   // creation command.  The player emits this token before each
   // vkCreate*SurfaceKHR; we store it here and attach it to the SurfaceState
   // so RestoreState can re-emit the window command before the surface.
+  m_PendingWindow.Protocol = command.m_DisplayProtocol.Value;
   m_PendingWindow.X = command.m_X.Value;
   m_PendingWindow.Y = command.m_Y.Value;
   m_PendingWindow.Width = command.m_Width.Value;
@@ -1638,6 +1639,7 @@ void SubcaptureLayer::Post(vkCreateWin32SurfaceKHRCommand& command) {
   state->Key = command.m_pSurface.Key;
   state->ParentKey = command.m_instance.Key;
   if (m_PendingWindow.Valid) {
+    state->Protocol = m_PendingWindow.Protocol;
     state->WindowX = m_PendingWindow.X;
     state->WindowY = m_PendingWindow.Y;
     state->WindowWidth = m_PendingWindow.Width;
@@ -1651,7 +1653,7 @@ void SubcaptureLayer::Post(vkCreateWin32SurfaceKHRCommand& command) {
 }
 #endif
 
-#ifdef GITS_PLATFORM_X11
+#ifdef VK_USE_PLATFORM_XCB_KHR
 void SubcaptureLayer::Post(vkCreateXcbSurfaceKHRCommand& command) {
   if (command.m_Return.Value != VK_SUCCESS) {
     return;
@@ -1660,6 +1662,7 @@ void SubcaptureLayer::Post(vkCreateXcbSurfaceKHRCommand& command) {
   state->Key = command.m_pSurface.Key;
   state->ParentKey = command.m_instance.Key;
   if (m_PendingWindow.Valid) {
+    state->Protocol = m_PendingWindow.Protocol;
     state->WindowX = m_PendingWindow.X;
     state->WindowY = m_PendingWindow.Y;
     state->WindowWidth = m_PendingWindow.Width;
@@ -1671,7 +1674,9 @@ void SubcaptureLayer::Post(vkCreateXcbSurfaceKHRCommand& command) {
   }
   StoreState(std::move(state), command);
 }
+#endif
 
+#ifdef VK_USE_PLATFORM_XLIB_KHR
 void SubcaptureLayer::Post(vkCreateXlibSurfaceKHRCommand& command) {
   if (command.m_Return.Value != VK_SUCCESS) {
     return;
@@ -1680,6 +1685,30 @@ void SubcaptureLayer::Post(vkCreateXlibSurfaceKHRCommand& command) {
   state->Key = command.m_pSurface.Key;
   state->ParentKey = command.m_instance.Key;
   if (m_PendingWindow.Valid) {
+    state->Protocol = m_PendingWindow.Protocol;
+    state->WindowX = m_PendingWindow.X;
+    state->WindowY = m_PendingWindow.Y;
+    state->WindowWidth = m_PendingWindow.Width;
+    state->WindowHeight = m_PendingWindow.Height;
+    state->WindowVisible = m_PendingWindow.Visible;
+    state->HwndKey = m_PendingWindow.HwndKey;
+    state->HinstanceKey = m_PendingWindow.HinstanceKey;
+    m_PendingWindow.Valid = false;
+  }
+  StoreState(std::move(state), command);
+}
+#endif
+
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+void SubcaptureLayer::Post(vkCreateWaylandSurfaceKHRCommand& command) {
+  if (command.m_Return.Value != VK_SUCCESS) {
+    return;
+  }
+  auto state = std::make_unique<SurfaceState>();
+  state->Key = command.m_pSurface.Key;
+  state->ParentKey = command.m_instance.Key;
+  if (m_PendingWindow.Valid) {
+    state->Protocol = m_PendingWindow.Protocol;
     state->WindowX = m_PendingWindow.X;
     state->WindowY = m_PendingWindow.Y;
     state->WindowWidth = m_PendingWindow.Width;

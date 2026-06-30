@@ -260,9 +260,14 @@ public:
 #ifdef VK_USE_PLATFORM_WIN32_KHR
   void Post(vkCreateWin32SurfaceKHRCommand& command) override;
 #endif
-#ifdef GITS_PLATFORM_X11
+#ifdef VK_USE_PLATFORM_XCB_KHR
   void Post(vkCreateXcbSurfaceKHRCommand& command) override;
+#endif
+#ifdef VK_USE_PLATFORM_XLIB_KHR
   void Post(vkCreateXlibSurfaceKHRCommand& command) override;
+#endif
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+  void Post(vkCreateWaylandSurfaceKHRCommand& command) override;
 #endif
   void Post(vkDestroySurfaceKHRCommand& command) override;
   void Post(vkCreateSwapchainKHRCommand& command) override;
@@ -352,6 +357,7 @@ private:
   // Pending window geometry: set when a CreateWindowMetaCommand is observed,
   // consumed when the next surface creation command is processed.
   struct PendingWindowInfo {
+    uint32_t Protocol{};
     int32_t X{}, Y{}, Width{}, Height{};
     bool Visible{true};
     uint64_t HwndKey{}, HinstanceKey{};

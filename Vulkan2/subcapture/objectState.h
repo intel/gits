@@ -288,6 +288,7 @@ struct SurfaceState : ObjectState {
   // Window geometry captured from the CreateWindowMetaCommand that preceded
   // the surface creation.  Re-emitted as a CreateWindowMetaCommand before the
   // surface creation command during state restore.
+  uint32_t Protocol{};
   int32_t WindowX{};
   int32_t WindowY{};
   int32_t WindowWidth{};
