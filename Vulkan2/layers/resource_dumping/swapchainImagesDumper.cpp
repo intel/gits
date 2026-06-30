@@ -13,6 +13,7 @@
 
 #include <stb_image_write.h>
 #include <cstring>
+#include <cerrno>
 
 namespace gits {
 namespace vulkan {
@@ -324,7 +325,8 @@ void SwapchainImagesDumper::DumpStagedFrame(StagedFrame& stagedFrame, const std:
   }
 
   if (!saved) {
-    LOG_ERROR << "ScreenshotLayer: failed to write file: " << filename;
+    LOG_ERROR << "ScreenshotLayer: failed to write file: " << filename << " errno=" << errno << " ("
+              << std::strerror(errno) << ")";
   }
   m_DispatchTable.vkUnmapMemory(m_Device, stagedFrame.StagingMemory);
 }
@@ -343,7 +345,6 @@ void SwapchainImagesDumper::WorkerThread() {
         return;
       }
     }
-
     if (m_Shutdown) {
       LOG_WARNING << "WorkerThread: shutdown is in progress, DumpStagedFrame is executing";
     }

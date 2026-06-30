@@ -29,6 +29,17 @@ class PlayerLayerManager : public gits::noncopyable {
 public:
   void LoadLayers(PlayerManager& playerManager, PluginService& pluginService);
 
+  // Destroy all owned layers (and their layer groups) while the Vulkan library
+  // and dispatch tables are still valid.  Must be called at playback end before
+  // PlayerManager closes the driver library: the ScreenshotsLayer owns
+  // SwapchainImagesDumper instances that flush their last screenshot
+  // asynchronously on a worker thread, and that worker (plus the dumper's own
+  // resource cleanup) needs a live device dispatch table.  Relying on member
+  // destruction order would run this after the library is closed and the
+  // dispatch-table maps are gone, dropping the final present's screenshot --
+  // which is the ONLY screenshot for a single-frame stream.  Idempotent.
+  void Shutdown();
+
   std::vector<Layer*>& GetPreLayers() {
     return m_PreLayers;
   }

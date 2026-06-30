@@ -102,6 +102,17 @@ void ScreenshotsLayer::Post(vkCreateSwapchainKHRCommand& command) {
   m_SwapchainInfos[swapchain] = std::move(info);
 }
 
+void ScreenshotsLayer::Pre(vkDestroySwapchainKHRCommand& command) {
+  // Runs before the driver destroys the swapchain, so the device and swapchain
+  // images are still valid here.  Erasing the entry destroys the
+  // SwapchainImagesDumper, whose destructor joins its worker thread (writing any
+  // pending screenshot, e.g. the last frame's) and frees its Vulkan resources.
+  auto it = m_SwapchainInfos.find(command.m_swapchain.Value);
+  if (it != m_SwapchainInfos.end()) {
+    m_SwapchainInfos.erase(it);
+  }
+}
+
 void ScreenshotsLayer::Pre(vkQueuePresentKHRCommand& command) {
   ++m_CurrentFrame;
   if (!m_ScreenshotRange[m_CurrentFrame]) {

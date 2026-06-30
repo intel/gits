@@ -144,5 +144,20 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
         << m_PostLayers.size() << " post-layers";
 }
 
+void PlayerLayerManager::Shutdown() {
+  // Drop the raw Layer* views first so nothing can dereference a layer that is
+  // about to be destroyed (plugin layers in these vectors are owned elsewhere).
+  m_PreLayers.clear();
+  m_PostLayers.clear();
+  // Destroy the owned layers and layer groups now, while the caller guarantees
+  // the device dispatch tables and driver library are still alive.  Destroying
+  // the ResourceDumpingLayerGroup tears down the ScreenshotsLayer, whose
+  // SwapchainImagesDumper destructors join their worker threads and so flush the
+  // final (and, for a single-frame stream, only) screenshot to disk.
+  m_LayersOwner.clear();
+  m_ResourceDumpingLayerGroup.reset();
+  m_TraceLayerGroup.reset();
+}
+
 } // namespace vulkan
 } // namespace gits
