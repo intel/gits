@@ -29,8 +29,34 @@ public:
   void Post(vkMapMemoryCommand& command) override;
   void Pre(vkUnmapMemoryCommand& command) override;
 
+  void Pre(vkGetFenceStatusCommand& command) override;
+  void Post(vkGetFenceStatusCommand& command) override;
+
+  void Pre(vkGetEventStatusCommand& command) override;
+  void Post(vkGetEventStatusCommand& command) override;
+
+  void Pre(vkGetSemaphoreCounterValueCommand& command) override;
+  void Post(vkGetSemaphoreCounterValueCommand& command) override;
+
+  void Pre(vkGetSemaphoreCounterValueKHRCommand& command) override;
+  void Post(vkGetSemaphoreCounterValueKHRCommand& command) override;
+
+  void Pre(vkGetQueryPoolResultsCommand& command) override;
+  void Post(vkGetQueryPoolResultsCommand& command) override;
+
+  void Pre(vkWaitForFencesCommand& command) override;
+  void Post(vkWaitForFencesCommand& command) override;
+
+  void Pre(vkWaitSemaphoresCommand& command) override;
+  void Post(vkWaitSemaphoresCommand& command) override;
+
+  void Pre(vkWaitSemaphoresKHRCommand& command) override;
+  void Post(vkWaitSemaphoresKHRCommand& command) override;
+
 private:
   PlayerManager& m_Manager;
+  static thread_local VkResult tl_recorderReturnValue;
+  static thread_local uint64_t tl_recorderSemaphoreCounterValue;
 };
 
 } // namespace vulkan

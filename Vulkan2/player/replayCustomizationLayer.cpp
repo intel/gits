@@ -9,8 +9,14 @@
 #include "replayCustomizationLayer.h"
 #include "playerManager.h"
 
+#include <thread>
+#include <chrono>
+
 namespace gits {
 namespace vulkan {
+
+thread_local VkResult ReplayCustomizationLayer::tl_recorderReturnValue{VK_SUCCESS};
+thread_local uint64_t ReplayCustomizationLayer::tl_recorderSemaphoreCounterValue{0};
 
 void ReplayCustomizationLayer::Post(vkCreateInstanceCommand& command) {
   m_Manager.LoadInstanceFunctions(*command.m_pInstance.Value);
@@ -48,6 +54,154 @@ void ReplayCustomizationLayer::Post(vkMapMemoryCommand& command) {
 
 void ReplayCustomizationLayer::Pre(vkUnmapMemoryCommand& command) {
   m_Manager.GetMapTrackingService().RemoveData(command.m_device.Key, command.m_memory.Key);
+}
+
+// vkGetFenceStatus
+
+void ReplayCustomizationLayer::Pre(vkGetFenceStatusCommand& command) {
+  tl_recorderReturnValue = command.m_Return.Value;
+}
+
+void ReplayCustomizationLayer::Post(vkGetFenceStatusCommand& command) {
+  if (command.m_Return.Value != VK_SUCCESS && command.m_Return.Value != tl_recorderReturnValue) {
+    auto& dispatchTable = m_Manager.GetDeviceDispatchTable(command.m_device.Value);
+    VkFence fence = command.m_fence.Value;
+    dispatchTable.vkWaitForFences(command.m_device.Value, 1, &fence, VK_TRUE, 0xFFFFFFFFFFFFFFFF);
+    command.m_Return.Value =
+        dispatchTable.vkGetFenceStatus(command.m_device.Value, command.m_fence.Value);
+  }
+}
+
+// vkGetEventStatus
+
+void ReplayCustomizationLayer::Pre(vkGetEventStatusCommand& command) {
+  tl_recorderReturnValue = command.m_Return.Value;
+}
+
+void ReplayCustomizationLayer::Post(vkGetEventStatusCommand& command) {
+  while (command.m_Return.Value != VK_EVENT_SET &&
+         command.m_Return.Value != tl_recorderReturnValue) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    auto& dispatchTable = m_Manager.GetDeviceDispatchTable(command.m_device.Value);
+    command.m_Return.Value =
+        dispatchTable.vkGetEventStatus(command.m_device.Value, command.m_event.Value);
+  }
+}
+
+// vkGetSemaphoreCounterValue
+
+void ReplayCustomizationLayer::Pre(vkGetSemaphoreCounterValueCommand& command) {
+  tl_recorderReturnValue = command.m_Return.Value;
+  tl_recorderSemaphoreCounterValue =
+      (command.m_pValue.Value != nullptr) ? *command.m_pValue.Value : 0;
+}
+
+void ReplayCustomizationLayer::Post(vkGetSemaphoreCounterValueCommand& command) {
+  if (command.m_Return.Value != VK_SUCCESS || tl_recorderReturnValue != VK_SUCCESS) {
+    return;
+  }
+  uint64_t currentValue = (command.m_pValue.Value != nullptr) ? *command.m_pValue.Value : 0;
+  if (currentValue < tl_recorderSemaphoreCounterValue) {
+    VkSemaphore semaphore = command.m_semaphore.Value;
+    VkSemaphoreWaitInfo waitInfo{};
+    waitInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO;
+    waitInfo.pNext = nullptr;
+    waitInfo.flags = 0;
+    waitInfo.semaphoreCount = 1;
+    waitInfo.pSemaphores = &semaphore;
+    waitInfo.pValues = &tl_recorderSemaphoreCounterValue;
+    auto& dispatchTable = m_Manager.GetDeviceDispatchTable(command.m_device.Value);
+    dispatchTable.vkWaitSemaphores(command.m_device.Value, &waitInfo, 0xFFFFFFFFFFFFFFFF);
+  }
+}
+
+// vkGetSemaphoreCounterValueKHR
+
+void ReplayCustomizationLayer::Pre(vkGetSemaphoreCounterValueKHRCommand& command) {
+  tl_recorderReturnValue = command.m_Return.Value;
+  tl_recorderSemaphoreCounterValue =
+      (command.m_pValue.Value != nullptr) ? *command.m_pValue.Value : 0;
+}
+
+void ReplayCustomizationLayer::Post(vkGetSemaphoreCounterValueKHRCommand& command) {
+  if (command.m_Return.Value != VK_SUCCESS || tl_recorderReturnValue != VK_SUCCESS) {
+    return;
+  }
+  uint64_t currentValue = (command.m_pValue.Value != nullptr) ? *command.m_pValue.Value : 0;
+  if (currentValue < tl_recorderSemaphoreCounterValue) {
+    VkSemaphore semaphore = command.m_semaphore.Value;
+    VkSemaphoreWaitInfo waitInfo{};
+    waitInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO;
+    waitInfo.pNext = nullptr;
+    waitInfo.flags = 0;
+    waitInfo.semaphoreCount = 1;
+    waitInfo.pSemaphores = &semaphore;
+    waitInfo.pValues = &tl_recorderSemaphoreCounterValue;
+    auto& dispatchTable = m_Manager.GetDeviceDispatchTable(command.m_device.Value);
+    dispatchTable.vkWaitSemaphoresKHR(command.m_device.Value, &waitInfo, 0xFFFFFFFFFFFFFFFF);
+  }
+}
+
+// vkGetQueryPoolResults
+
+void ReplayCustomizationLayer::Pre(vkGetQueryPoolResultsCommand& command) {
+  tl_recorderReturnValue = command.m_Return.Value;
+}
+
+void ReplayCustomizationLayer::Post(vkGetQueryPoolResultsCommand& command) {
+  if (command.m_Return.Value != VK_SUCCESS && command.m_Return.Value != tl_recorderReturnValue) {
+    auto& dispatchTable = m_Manager.GetDeviceDispatchTable(command.m_device.Value);
+    dispatchTable.vkDeviceWaitIdle(command.m_device.Value);
+  }
+}
+
+// vkWaitForFences
+
+void ReplayCustomizationLayer::Pre(vkWaitForFencesCommand& command) {
+  tl_recorderReturnValue = command.m_Return.Value;
+}
+
+void ReplayCustomizationLayer::Post(vkWaitForFencesCommand& command) {
+  if (command.m_Return.Value != VK_SUCCESS && command.m_Return.Value != tl_recorderReturnValue) {
+    auto& dispatchTable = m_Manager.GetDeviceDispatchTable(command.m_device.Value);
+    dispatchTable.vkWaitForFences(command.m_device.Value, command.m_pFences.Size,
+                                  command.m_pFences.Value, VK_TRUE, 0xFFFFFFFFFFFFFFFF);
+    command.m_Return.Value = dispatchTable.vkWaitForFences(
+        command.m_device.Value, command.m_pFences.Size, command.m_pFences.Value,
+        command.m_waitAll.Value, command.m_timeout.Value);
+  }
+}
+
+// vkWaitSemaphores
+
+void ReplayCustomizationLayer::Pre(vkWaitSemaphoresCommand& command) {
+  tl_recorderReturnValue = command.m_Return.Value;
+}
+
+void ReplayCustomizationLayer::Post(vkWaitSemaphoresCommand& command) {
+  if (command.m_Return.Value != VK_SUCCESS && command.m_Return.Value != tl_recorderReturnValue) {
+    auto& dispatchTable = m_Manager.GetDeviceDispatchTable(command.m_device.Value);
+    dispatchTable.vkWaitSemaphores(command.m_device.Value, command.m_pWaitInfo.Value,
+                                   0xFFFFFFFFFFFFFFFF);
+    command.m_Return.Value = dispatchTable.vkWaitSemaphores(
+        command.m_device.Value, command.m_pWaitInfo.Value, command.m_timeout.Value);
+  }
+}
+
+// vkWaitSemaphoresKHR
+
+void ReplayCustomizationLayer::Pre(vkWaitSemaphoresKHRCommand& command) {
+  tl_recorderReturnValue = command.m_Return.Value;
+}
+
+void ReplayCustomizationLayer::Post(vkWaitSemaphoresKHRCommand& command) {
+  if (command.m_Return.Value != VK_SUCCESS && command.m_Return.Value != tl_recorderReturnValue) {
+    auto& dispatchTable = m_Manager.GetDeviceDispatchTable(command.m_device.Value);
+    dispatchTable.vkWaitSemaphoresKHR(command.m_device.Value, command.m_pWaitInfo.Value,
+                                      0xFFFFFFFFFFFFFFFF);
+    command.m_Return.Value = dispatchTable.vkWaitSemaphoresKHR(
+        command.m_device.Value, command.m_pWaitInfo.Value, command.m_timeout.Value);
+  }
 }
 
 } // namespace vulkan
