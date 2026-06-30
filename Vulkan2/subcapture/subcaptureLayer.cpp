@@ -125,7 +125,8 @@ void SubcaptureLayer::Post(vkDestroyInstanceCommand& command) {
 }
 
 void SubcaptureLayer::Post(vkEnumeratePhysicalDevicesCommand& command) {
-  if (command.m_Return.Value != VK_SUCCESS || !command.m_pPhysicalDevices.Value) {
+  if ((command.m_Return.Value != VK_SUCCESS && command.m_Return.Value != VK_INCOMPLETE) ||
+      !command.m_pPhysicalDevices.Value) {
     return;
   }
   // We do NOT store the recorded vkEnumeratePhysicalDevices blob.  Two reasons:
