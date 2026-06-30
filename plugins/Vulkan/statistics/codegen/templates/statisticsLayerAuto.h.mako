@@ -29,7 +29,6 @@ public:
 
   void Post(StateRestoreBeginCommand& c) override;
   void Post(StateRestoreEndCommand& c) override;
-  void Post(FrameEndCommand& c) override;
   void Post(MarkerUInt64Command& c) override;
   void Post(CreateWindowMetaCommand& command) override;
   void Post(MappedDataMetaCommand& command) override;

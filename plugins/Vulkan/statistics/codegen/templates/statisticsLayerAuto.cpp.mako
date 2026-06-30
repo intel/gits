@@ -19,6 +19,9 @@ namespace vulkan {
 % endif
 void StatisticsLayer::Post(${command.name}Command& command) {
   m_StatisticsService.Command("${command.name}");
+% if command.name == 'vkQueuePresentKHR':
+  m_StatisticsService.FrameEnd();
+% endif
 }
 % if define:
 #endif

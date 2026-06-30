@@ -22,10 +22,6 @@ void StatisticsLayer::Post(StateRestoreEndCommand& c) {
   m_StatisticsService.StateRestoreEnd();
 }
 
-void StatisticsLayer::Post(FrameEndCommand& c) {
-  m_StatisticsService.FrameEnd();
-}
-
 void StatisticsLayer::Post(MarkerUInt64Command& c) {}
 
 void StatisticsLayer::Post(CreateWindowMetaCommand& command) {
