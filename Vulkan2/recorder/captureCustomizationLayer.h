@@ -9,7 +9,7 @@
 #pragma once
 
 #include "layerAuto.h"
-#include "gitsRecorder.h"
+#include "orderingRecorder.h"
 #include "vulkanHeader2.h"
 #include <optional>
 
@@ -20,7 +20,7 @@ class CaptureManager;
 
 class CaptureCustomizationLayer : public Layer {
 public:
-  CaptureCustomizationLayer(CaptureManager& manager, GitsRecorder& recorder)
+  CaptureCustomizationLayer(CaptureManager& manager, stream::OrderingRecorder& recorder)
       : Layer("CaptureCustomization"), m_Manager(manager), m_Recorder(recorder) {}
 #ifdef VK_USE_PLATFORM_WIN32_KHR
   void Pre(vkCreateWin32SurfaceKHRCommand& command) override;
@@ -67,7 +67,7 @@ private:
 
   static thread_local AllocateInfo s_AllocateInfo;
   CaptureManager& m_Manager;
-  GitsRecorder& m_Recorder;
+  stream::OrderingRecorder& m_Recorder;
 };
 
 } // namespace vulkan

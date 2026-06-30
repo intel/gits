@@ -39,13 +39,12 @@ set(SERVICES_SRC
 source_group("services" FILES ${SERVICES_SRC})
 
 set(RUNNER_SRC
-  ${CMAKE_CURRENT_SOURCE_DIR}/vulkanLibrary2.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/vulkanLibrary2Auto.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/commandPlayer.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/commandPlayersAuto.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/commandPlayersAuto.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/commandPlayersCustom.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/commandPlayersCustom.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/commandRunnersAuto.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/commandRunnersAuto.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/commandRunnersCustom.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/commandRunnersCustom.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkanCommandFactory.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkanCommandFactoryAuto.cpp
 )
 source_group("runner" FILES ${RUNNER_SRC})
 
@@ -67,6 +66,7 @@ target_include_directories(Vulkan_player_2 PUBLIC
 )
 
 target_link_libraries(Vulkan_player_2 PRIVATE
+  stream
   Vulkan_layer_interface
   Vulkan_coders
   Vulkan_services

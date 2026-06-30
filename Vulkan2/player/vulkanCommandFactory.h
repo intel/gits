@@ -8,13 +8,16 @@
 
 #pragma once
 
-#include "commandWriter.h"
-#include "commandsAuto.h"
+#include "commandRunner.h"
+#include "commandFactory.h"
 
 namespace gits {
 namespace vulkan {
 
-CommandWriter* CreateCommandWriter(Command* command);
+class VulkanCommandFactory : public stream::CommandFactory {
+public:
+  stream::CommandRunner* CreateCommand(unsigned id) override;
+};
 
 } // namespace vulkan
 } // namespace gits

@@ -513,10 +513,10 @@ def generate_coders_files(context, out_path):
     files_to_generate = [
       'commandCodersAuto.h',
       'commandCodersAuto.cpp',
-      'commandWritersAuto.h',
-      'commandWritersFactoryAuto.cpp',
       'argumentCodersAuto.h',
-      'argumentCodersAuto.cpp'
+      'argumentCodersAuto.cpp',
+      'commandSerializersAuto.h',
+      'commandSerializersFactoryAuto.cpp'
     ]
     for file_name in files_to_generate:
         generate_file(context | additional_context, file_name, out_path)

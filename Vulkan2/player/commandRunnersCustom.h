@@ -8,45 +8,33 @@
 
 #pragma once
 
-#include "commandPlayer.h"
+#include "commandRunner.h"
 #include "commandsCustom.h"
 #include "commandCodersCustom.h"
 
 namespace gits {
 namespace vulkan {
 
-class CreateWindowMetaPlayer : public CommandPlayer {
+class CreateWindowMetaRunner : public stream::CommandRunner {
 public:
-  unsigned Id() const override {
-    return static_cast<unsigned>(CommandId::ID_META_CREATE_WINDOW);
-  }
-  const char* Name() const override {
-    return "CreateWindowMetaCommand";
-  }
   void Run() override;
 
 protected:
   void DecodeCommand() override {
-    Decode(m_Data.get(), m_Command);
+    Decode(m_Data, m_Command);
   }
 
 private:
   CreateWindowMetaCommand m_Command;
 };
 
-class MappedDataMetaPlayer : public CommandPlayer {
+class MappedDataMetaRunner : public stream::CommandRunner {
 public:
-  unsigned Id() const override {
-    return static_cast<unsigned>(CommandId::ID_META_MAPPED_DATA);
-  }
-  const char* Name() const override {
-    return "MappedDataMetaCommand";
-  }
   void Run() override;
 
 protected:
   void DecodeCommand() override {
-    Decode(m_Data.get(), m_Command);
+    Decode(m_Data, m_Command);
   }
 
 private:

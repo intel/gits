@@ -9,9 +9,11 @@ ${header}
 
 #pragma once
 
-#include "commandWriter.h"
+#include "commandRunner.h"
 #include "commandsAuto.h"
+#include "commandsCustom.h"
 #include "commandCodersAuto.h"
+#include "commandCodersCustom.h"
 
 namespace gits {
 namespace vulkan {
@@ -21,17 +23,17 @@ namespace vulkan {
 % if define:
 #ifdef ${define}
 % endif
-class ${command.name}Writer : public CommandWriter {
+class ${command.name}Runner : public stream::CommandRunner {
 public:
-  ${command.name}Writer(${command.name}Command& command) {
-    m_DataSize = GetSize(command);
-    m_Data.reset(new char[m_DataSize]);
-    Encode(command, m_Data.get());
+  void Run() override;
+
+protected:
+  void DecodeCommand() override {
+    Decode(m_Data, command);
   }
 
-  uint32_t Id() const override {
-    return static_cast<uint32_t>(CommandId::ID_${command.name.upper()});
-  }
+private:
+  ${command.name}Command command;
 };
 % if define:
 #endif

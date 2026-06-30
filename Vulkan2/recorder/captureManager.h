@@ -15,6 +15,7 @@
 #include "dispatchTableAuto.h"
 #include "mapTrackingService.h"
 #include "descriptorUpdateTemplateService.h"
+#include "orderingRecorder.h"
 
 #include <atomic>
 
@@ -88,7 +89,7 @@ private:
   static CaptureManager* m_Instance;
   CaptureLayerManager m_LayerManager;
 
-  std::unique_ptr<GitsRecorder> m_Recorder;
+  std::unique_ptr<stream::OrderingRecorder> m_Recorder;
   //std::atomic<uint32_t> m_RecursionDepth{0};
   static thread_local uint32_t m_RecursionDepth;
   std::atomic<GITSKey> m_CommandUniqueKey{0};

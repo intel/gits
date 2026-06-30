@@ -10,14 +10,14 @@ ${header}
 #pragma once
 
 #include "layerAuto.h"
-#include "gitsRecorder.h"
+#include "orderingRecorder.h"
 
 namespace gits {
 namespace vulkan {
 
 class EncoderLayer : public Layer {
 public:
-  EncoderLayer(GitsRecorder& recorder) : Layer("Encoder"), m_Recorder(recorder) {}
+  EncoderLayer(stream::OrderingRecorder& recorder) : Layer("Encoder"), m_Recorder(recorder) {}
 
   % for command in commands:
   <% define = get_define(command.platform) %>\
@@ -31,7 +31,7 @@ public:
   % endfor
 
 private:
-  GitsRecorder& m_Recorder;
+  stream::OrderingRecorder& m_Recorder;
 };
 
 } // namespace vulkan

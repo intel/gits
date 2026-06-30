@@ -22,18 +22,17 @@ set(CODERS_SRC
 )
 source_group("coders" FILES ${CODERS_SRC})
 
-set(WRITERS_SRC
-  ${CMAKE_CURRENT_SOURCE_DIR}/commandWritersFactory.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/commandWritersFactoryAuto.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/commandWriter.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/commandWritersAuto.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/commandWritersCustom.h
+set(SERIALIZERS_SRC
+  ${CMAKE_CURRENT_SOURCE_DIR}/commandSerializersAuto.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/commandSerializersCustom.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/commandSerializersFactory.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/commandSerializersFactoryAuto.cpp
 )
-source_group("writers" FILES ${WRITERS_SRC})
+source_group("serializers" FILES ${SERIALIZERS_SRC})
 
 set(ALL_SRC
   ${CODERS_SRC}
-  ${WRITERS_SRC}
+  ${SERIALIZERS_SRC}
 )
 
 set_auto_generated_property(FILE_LIST ${ALL_SRC})
@@ -46,7 +45,8 @@ target_include_directories(Vulkan_coders PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-target_link_libraries(Vulkan_coders PUBLIC
+target_link_libraries(Vulkan_coders PRIVATE
+  stream
   Vulkan_layer_interface
   Vulkan_services
 )

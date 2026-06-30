@@ -15,7 +15,8 @@
 namespace gits {
 namespace vulkan {
 
-void CaptureLayerManager::LoadLayers(CaptureManager& captureManager, GitsRecorder& gitsRecorder) {
+void CaptureLayerManager::LoadLayers(CaptureManager& captureManager,
+                                     stream::OrderingRecorder& recorder) {
   auto& cfg = Configurator::Get();
 
   //std::unique_ptr<Layer> testLayer = std::make_unique<TestLayerAuto>();
@@ -24,8 +25,8 @@ void CaptureLayerManager::LoadLayers(CaptureManager& captureManager, GitsRecorde
 
   if (cfg.common.recorder.enabled) {
     captureCustomizationLayer =
-        std::make_unique<CaptureCustomizationLayer>(captureManager, gitsRecorder);
-    encoderLayer = std::make_unique<EncoderLayer>(gitsRecorder);
+        std::make_unique<CaptureCustomizationLayer>(captureManager, recorder);
+    encoderLayer = std::make_unique<EncoderLayer>(recorder);
   }
 
   auto enablePreLayer = [this](std::unique_ptr<Layer>& layer) {

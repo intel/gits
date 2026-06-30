@@ -15,6 +15,33 @@
 namespace gits {
 namespace vulkan {
 
+class StateRestoreBeginCommand : public Command {
+public:
+  StateRestoreBeginCommand() : Command(CommandId::ID_INIT_START) {}
+};
+
+class StateRestoreEndCommand : public Command {
+public:
+  StateRestoreEndCommand() : Command(CommandId::ID_INIT_END) {}
+};
+
+class FrameEndCommand : public Command {
+public:
+  FrameEndCommand() : Command(CommandId::ID_FRAME_END) {}
+};
+
+class MarkerUInt64Command : public Command {
+public:
+  enum Value : uint64_t {
+    NONE = 0x10000 + 1, // CTokenMarkerUInt64::COMMON_RESERVED + 1
+  };
+  MarkerUInt64Command(uint64_t value) : Command(CommandId::ID_MARKER_UINT64), value_(value) {}
+  MarkerUInt64Command() : Command(CommandId::ID_MARKER_UINT64) {}
+
+public:
+  Argument<uint64_t> value_{};
+};
+
 class CreateWindowMetaCommand : public Command {
 public:
   CreateWindowMetaCommand(uint32_t threadId)

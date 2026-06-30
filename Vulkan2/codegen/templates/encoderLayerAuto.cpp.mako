@@ -8,7 +8,9 @@
 ${header}
 
 #include "encoderLayerAuto.h"
-#include "commandWritersAuto.h"
+#include "commandSerializersAuto.h"
+#include "commandSerializersCustom.h"
+#include "captureManager.h"
 
 namespace gits {
 namespace vulkan {
@@ -19,10 +21,11 @@ namespace vulkan {
 #ifdef ${define}
 % endif
 void EncoderLayer::Post(${command.name}Command& command) {
+  m_Recorder.Record(command.m_Key, new ${command.name}Serializer(command));
   % if command.name == 'vkQueuePresentKHR':
-  m_Recorder.frameEnd(command.m_Key);
+  GITSKey key = CaptureManager::Get().CreateCommandKey();
+  m_Recorder.Record(key, new FrameEndSerializer(FrameEndCommand()));
   % endif
-  m_Recorder.record(command.m_Key, new ${command.name}Writer(command));
 }
 % if define:
 #endif

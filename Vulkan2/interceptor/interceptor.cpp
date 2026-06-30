@@ -29,7 +29,7 @@ void Initialize() {
   MessageBox(0, "Waiting for debugger...", "Waiting for debugger...", 0);
 #endif
   s_Initialized = true;
-  g_GitsLoader = std::make_unique<gits::CGitsLoader>("GITSRecorderVulkan2");
+  g_GitsLoader = std::make_unique<gits::CGitsLoader>("GITSRecorderVulkan2", false);
   g_RecorderWrapper =
       reinterpret_cast<gits::vulkan::IRecorderWrapper*>(g_GitsLoader->GetRecorderWrapperPtr());
 

@@ -6,14 +6,14 @@
 //
 // ===================== end_copyright_notice ==============================
 
-#include "commandPlayersCustom.h"
+#include "commandRunnersCustom.h"
 #include "layerAuto.h"
 #include "playerManager.h"
 
 namespace gits {
 namespace vulkan {
 
-void CreateWindowMetaPlayer::Run() {
+void CreateWindowMetaRunner::Run() {
   auto& manager = PlayerManager::Get();
 
   for (Layer* layer : manager.GetPreLayers()) {
@@ -34,7 +34,7 @@ void CreateWindowMetaPlayer::Run() {
   }
 }
 
-void MappedDataMetaPlayer::Run() {
+void MappedDataMetaRunner::Run() {
   auto& manager = PlayerManager::Get();
 
   for (Layer* layer : manager.GetPreLayers()) {

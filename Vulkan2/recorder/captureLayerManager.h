@@ -10,7 +10,7 @@
 
 #include "layerAuto.h"
 #include "tools_lite.h"
-#include "gitsRecorder.h"
+#include "orderingRecorder.h"
 
 #include <vector>
 #include <memory>
@@ -22,7 +22,7 @@ class CaptureManager;
 
 class CaptureLayerManager : public gits::noncopyable {
 public:
-  void LoadLayers(CaptureManager& captureManager, GitsRecorder& gitsRecorder);
+  void LoadLayers(CaptureManager& captureManager, stream::OrderingRecorder& recorder);
 
   std::vector<Layer*>& GetPreLayers() {
     return m_PreLayers;

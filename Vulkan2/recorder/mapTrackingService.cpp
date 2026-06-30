@@ -8,12 +8,12 @@
 
 #include "mapTrackingService.h"
 #include "captureManager.h"
-#include "commandWritersCustom.h"
+#include "commandSerializersCustom.h"
 
 namespace gits {
 namespace vulkan {
 
-MapTrackingService::MapTrackingService(GitsRecorder& gitsRecorder) : m_GitsRecorder(gitsRecorder) {
+MapTrackingService::MapTrackingService(stream::OrderingRecorder& recorder) : m_Recorder(recorder) {
 #ifdef GITS_PLATFORM_WINDOWS
   SYSTEM_INFO si;
   GetSystemInfo(&si);
@@ -201,7 +201,7 @@ void MapTrackingService::RecordMappedDataMetaCommand(
   command.m_Memory.Key = memoryKey;
   command.m_Regions.Size = static_cast<uint32_t>(regions.size());
   command.m_Regions.Regions = regions;
-  m_GitsRecorder.record(command.m_Key, new MappedDataMetaWriter(command));
+  m_Recorder.Record(command.m_Key, new MappedDataMetaSerializer(command));
 }
 
 } // namespace vulkan

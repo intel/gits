@@ -7,24 +7,26 @@
 // ===================== end_copyright_notice ==============================
 ${header}
 
-#include "commandWritersFactory.h"
-#include "commandWritersAuto.h"
-#include "commandWritersCustom.h"
+#include "commandSerializersFactory.h"
+#include "commandSerializersAuto.h"
+#include "commandSerializersCustom.h"
 
 namespace gits {
 namespace vulkan {
 
-CommandWriter* CreateCommandWriter(Command* command) {
+stream::CommandSerializer* CreateCommandSerializer(Command* command) {
   switch (command->GetId()) {
     case CommandId::ID_META_CREATE_WINDOW:
-      return new CreateWindowMetaWriter(*static_cast<CreateWindowMetaCommand*>(command));
+      return new CreateWindowMetaSerializer(*static_cast<CreateWindowMetaCommand*>(command));
+    case CommandId::ID_META_MAPPED_DATA:
+      return new MappedDataMetaSerializer(*static_cast<MappedDataMetaCommand*>(command));
     % for command in commands:
     <% define = get_define(command.platform) %>\
     % if define:
     #ifdef ${define}
     % endif
     case CommandId::ID_${command.name.upper()}:
-      return new ${command.name}Writer(*static_cast<${command.name}Command*>(command));
+      return new ${command.name}Serializer(*static_cast<${command.name}Command*>(command));
     % if define:
     #endif
     % endif

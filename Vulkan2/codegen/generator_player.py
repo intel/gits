@@ -19,9 +19,9 @@ def generate_player_files(context, output_path):
     }
     files_to_generate = [
       'dispatchTableAuto.h',
-      'vulkanLibrary2Auto.cpp',
-      'commandPlayersAuto.h',
-      'commandPlayersAuto.cpp',
+      'commandRunnersAuto.h',
+      'commandRunnersAuto.cpp',
+      'vulkanCommandFactoryAuto.cpp',
       'handleArgumentUpdatersPlayerAuto.h',
       'handleArgumentUpdatersPlayerAuto.cpp',
     ]

@@ -25,7 +25,7 @@ void Initialize() {
     return;
   }
   s_Initialized = true;
-  g_GitsLoader = std::make_unique<gits::CGitsLoader>("GITSRecorderVulkan2");
+  g_GitsLoader = std::make_unique<gits::CGitsLoader>("GITSRecorderVulkan2", false);
   g_RecorderWrapper =
       reinterpret_cast<gits::vulkan::IRecorderWrapper*>(g_GitsLoader->GetRecorderWrapperPtr());
 }

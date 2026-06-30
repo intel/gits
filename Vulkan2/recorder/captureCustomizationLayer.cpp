@@ -8,7 +8,7 @@
 
 #include "captureCustomizationLayer.h"
 #include "captureManager.h"
-#include "commandWritersCustom.h"
+#include "commandSerializersCustom.h"
 
 namespace gits {
 namespace vulkan {
@@ -41,8 +41,8 @@ void CaptureCustomizationLayer::Pre(vkCreateWin32SurfaceKHRCommand& command) {
   createWindowMetaCommand.m_Hinstance.Value =
       reinterpret_cast<uint64_t>(command.m_pCreateInfo.Value->hinstance);
 
-  m_Recorder.record(createWindowMetaCommand.m_Key,
-                    new CreateWindowMetaWriter(createWindowMetaCommand));
+  m_Recorder.Record(createWindowMetaCommand.m_Key,
+                    new CreateWindowMetaSerializer(createWindowMetaCommand));
 }
 #endif
 

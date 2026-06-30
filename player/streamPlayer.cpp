@@ -28,6 +28,9 @@
 #endif
 #include <windows.h>
 #endif
+#if defined WITH_VULKAN
+#include "vulkanCommandFactory.h"
+#endif
 
 namespace gits {
 
@@ -204,7 +207,15 @@ void PlayStream(const std::filesystem::path& streamPath) {
 
 #if defined WITH_DIRECTX
   DirectX::DirectXCommandFactory directXCommandFactory;
-  commandFactories.push_back(&directXCommandFactory);
+  if (header.GetApi() == stream::StreamHeader::Api::API_DIRECTX) {
+    commandFactories.push_back(&directXCommandFactory);
+  }
+#endif
+#if defined WITH_VULKAN
+  vulkan::VulkanCommandFactory vulkanCommandFactory;
+  if (header.GetApi() == stream::StreamHeader::Api::API_VULKAN2) {
+    commandFactories.push_back(&vulkanCommandFactory);
+  }
 #endif
 
   CommonCommandFactory commonCommandFactory;
@@ -274,7 +285,8 @@ bool IsLegacyStream(const std::filesystem::path& streamPath) {
     stream::ApiId apiId = apiExtractor.GetApi();
     return apiId != stream::ApiId::ID_DIRECTX;
   } else {
-    return header.GetApi() != stream::StreamHeader::Api::API_DIRECTX;
+    return header.GetApi() != stream::StreamHeader::Api::API_DIRECTX &&
+           header.GetApi() != stream::StreamHeader::Api::API_VULKAN2;
   }
 }
 

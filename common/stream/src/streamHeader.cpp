@@ -192,6 +192,8 @@ StreamHeader::Api StreamHeader::TranslateApi(ApiId id) {
     return Api::API_LEVELZERO;
   case ApiId::ID_DIRECTX:
     return Api::API_DIRECTX;
+  case ApiId::ID_VULKAN2:
+    return Api::API_VULKAN2;
   default:
     return Api::API_NOT_SET;
   }

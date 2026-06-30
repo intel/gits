@@ -52,6 +52,8 @@ def generate_default_configuration(task, template_manager):
         conditions = ['is_compute']
     if task.directx:
         conditions = ['is_directx']
+    if task.vulkan2:
+        conditions = ['is_vulkan2']
     context = {'data': configuration, 'platform': task.platform, 'installpath': task.installpath, 'conditions': conditions}
     template_manager.render_task(task, context)
 

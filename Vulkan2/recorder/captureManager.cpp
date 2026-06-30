@@ -9,7 +9,6 @@
 #include "captureManager.h"
 #include "gits.h"
 #include "log.h"
-#include "vulkanApiIfaceRecorder.h"
 #include "wrappersAuto.h"
 
 namespace gits {
@@ -27,10 +26,7 @@ CaptureManager& CaptureManager::Get() {
 }
 
 CaptureManager::CaptureManager() {
-  CGits::Instance().apis.UseApi3dIface(
-      std::shared_ptr<gits::ApisIface::Api3d>(new VulkanApiIfaceRecorder()));
-
-  m_Recorder.reset(new GitsRecorder());
+  m_Recorder.reset(new stream::OrderingRecorder());
 
   m_MapTrackingService.reset(new MapTrackingService(*m_Recorder));
 

@@ -37,6 +37,9 @@ add_dependencies(Vulkan_layer_interface
 
 target_link_libraries(Vulkan_layer_interface PUBLIC
   common
+  stream
+  log
+  configuration
 )
 
 set_target_properties(Vulkan_layer_interface PROPERTIES FOLDER Vulkan2/Vulkan_common)

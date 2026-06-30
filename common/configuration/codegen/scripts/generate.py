@@ -16,7 +16,7 @@ from template_manager import TemplateManager, Step
 
 
 class GeneratorTask:
-    def __init__(self, step, metafile_config, metafile_enum, output_path, label = "", platform="", installpath="", compute=False, directx=False):
+    def __init__(self, step, metafile_config, metafile_enum, output_path, label = "", platform="", installpath="", compute=False, directx=False, vulkan2=False):
         self.name = label
         self.step = step
         self.input_config = metafile_config
@@ -26,6 +26,7 @@ class GeneratorTask:
         self.installpath = installpath
         self.compute = compute
         self.directx = directx
+        self.vulkan2 = vulkan2
 
 
     def __str__(self) -> str:
@@ -73,6 +74,7 @@ def main():
     parser.add_argument('--installpath', help='Installation path', default='skip')
     parser.add_argument('--compute', help='Internal build flag', action='store_true')
     parser.add_argument('--directx', help='Internal build flag', action='store_true')
+    parser.add_argument('--vulkan2', help='Internal build flag', action='store_true')
 
     try:
       args = parser.parse_args()
@@ -103,7 +105,7 @@ def main():
     try:
       template_manager = TemplateManager(template_directory, root_directory)
 
-      task = GeneratorTask(args.step, args.configYML, args.enumYML, output_path, "", args.platform, install_path, args.compute, args.directx)
+      task = GeneratorTask(args.step, args.configYML, args.enumYML, output_path, "", args.platform, install_path, args.compute, args.directx, args.vulkan2)
       print(f" Generator step `{task.step}` ==> {output_path}")
       generate(task, template_manager)
       print(f" done.")

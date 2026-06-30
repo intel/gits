@@ -17,7 +17,6 @@ set(ROOT_SRC
 source_group("" FILES ${ROOT_SRC})
 
 set(CAPTURE_SRC
-  ${CMAKE_CURRENT_SOURCE_DIR}/vulkanApiIfaceRecorder.h
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkanRecorderInterface.h
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkanRecorder.h
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkanRecorder.cpp
@@ -28,8 +27,6 @@ set(CAPTURE_SRC
   ${CMAKE_CURRENT_SOURCE_DIR}/testLayerAuto.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/encoderLayerAuto.h
   ${CMAKE_CURRENT_SOURCE_DIR}/encoderLayerAuto.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/gitsRecorder.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/gitsRecorder.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/captureCustomizationLayer.h
   ${CMAKE_CURRENT_SOURCE_DIR}/captureCustomizationLayer.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/handleArgumentUpdaters.h
@@ -61,10 +58,12 @@ target_sources(Vulkan_recorder_2 PRIVATE
 )
 
 target_link_libraries(Vulkan_recorder_2 PRIVATE
+  stream
   gits_recorder_interface
   Vulkan_layer_interface
   Vulkan_services
   Vulkan_coders
+  tbb
 )
 
 set_target_properties(Vulkan_recorder_2 PROPERTIES FOLDER Vulkan2)

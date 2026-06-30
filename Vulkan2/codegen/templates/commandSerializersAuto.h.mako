@@ -9,11 +9,9 @@ ${header}
 
 #pragma once
 
-#include "commandPlayer.h"
+#include "commandSerializer.h"
 #include "commandsAuto.h"
-#include "commandsCustom.h"
 #include "commandCodersAuto.h"
-#include "commandCodersCustom.h"
 
 namespace gits {
 namespace vulkan {
@@ -23,25 +21,17 @@ namespace vulkan {
 % if define:
 #ifdef ${define}
 % endif
-class ${command.name}Player : public CommandPlayer {
+class ${command.name}Serializer : public stream::CommandSerializer {
 public:
+  ${command.name}Serializer(const ${command.name}Command& command) {
+    m_DataSize = GetSize(command);
+    m_Data.reset(new char[m_DataSize]);
+    Encode(command, m_Data.get());
+  }
+
   uint32_t Id() const override {
-	return static_cast<uint32_t>(CommandId::ID_${command.name.upper()});
+    return static_cast<uint32_t>(CommandId::ID_${command.name.upper()});
   }
-
-  const char* Name() const override {
-    return "${command.name}";
-  }
-
-  void Run() override;
-
-protected:
-  void DecodeCommand() override {
-	Decode(m_Data.get(), command);
-  }
-
-private:
-  ${command.name}Command command;
 };
 % if define:
 #endif

@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include "gitsRecorder.h"
+#include "orderingRecorder.h"
 #include "command.h"
 #include "arguments.h"
 
@@ -22,7 +22,7 @@ namespace vulkan {
 
 class MapTrackingService {
 public:
-  MapTrackingService(GitsRecorder& gitsRecorder);
+  MapTrackingService(stream::OrderingRecorder& recorder);
   void StorePhysicalDevice(GITSKey physicalDeviceKey, GITSKey deviceKey);
   void StorePhysicalDeviceMemoryProperties(
       GITSKey physicalDeviceKey, const VkPhysicalDeviceMemoryProperties& memoryProperties);
@@ -62,7 +62,7 @@ private:
   std::unordered_map<GITSKey, GITSKey> m_DeviceToPhysicalDevice;
   std::unordered_map<GITSKey, VkPhysicalDeviceMemoryProperties> m_PhysicalDeviceMemoryProperties;
   std::unordered_map<GITSKey, AllocationInfo> m_Allocations;
-  GitsRecorder& m_GitsRecorder;
+  stream::OrderingRecorder& m_Recorder;
   std::mutex m_Mutex;
 };
 

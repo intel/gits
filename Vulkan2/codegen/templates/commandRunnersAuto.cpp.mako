@@ -7,7 +7,7 @@
 // ===================== end_copyright_notice ==============================
 ${header}
 
-#include "commandPlayersAuto.h"
+#include "commandRunnersAuto.h"
 #include "commandsAuto.h"
 #include "layerAuto.h"
 #include "playerManager.h"
@@ -30,7 +30,7 @@ dispatch_table = get_dispatch_table(command)
 % if define:
 #ifdef ${define}
 % endif
-void ${command.name}Player::Run() {
+void ${command.name}Runner::Run() {
   auto& manager = PlayerManager::Get();
 
   % for param in command.params:

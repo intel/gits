@@ -9,16 +9,18 @@ ${header}
 
 #pragma once
 
+#include "commandId.h"
+
 namespace gits {
 namespace vulkan {
 
 enum class CommandId {
-  ID_INIT_START = 0x0,
-  ID_INIT_END = 0x1,
-  ID_FRAME_START = 0x2,
-  ID_FRAME_END = 0x3,
-  ID_MARKER_UINT64 = 0x4,
+  ID_INIT_START = stream::CommonCommandId::ID_INIT_START,
+  ID_INIT_END = stream::CommonCommandId::ID_INIT_END,
+  ID_FRAME_END = stream::CommonCommandId::ID_FRAME_END,
+  ID_MARKER_UINT64 = stream::CommonCommandId::ID_MARKER_UINT64,
 
+  // gits::ApiId::ID_VULKAN2 * 0x10000 = 0xe0000
   ID_META_BEGIN = 0xe0000,
   ID_META_CREATE_WINDOW = 0xe0001,
   ID_META_MAPPED_DATA = 0xe0002,

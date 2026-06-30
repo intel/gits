@@ -13,6 +13,10 @@
 namespace gits {
 namespace vulkan {
 
+uint32_t GetSize(const MarkerUInt64Command& command);
+void Encode(const MarkerUInt64Command& command, char* dest);
+void Decode(char* src, MarkerUInt64Command& command);
+
 uint32_t GetSize(const CreateWindowMetaCommand& command);
 void Encode(const CreateWindowMetaCommand& command, char* dest);
 void Decode(char* src, CreateWindowMetaCommand& command);

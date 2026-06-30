@@ -38,7 +38,8 @@ public:
     API_VULKAN,
     API_OPENCL,
     API_LEVELZERO,
-    API_DIRECTX
+    API_DIRECTX,
+    API_VULKAN2
   };
   Api GetApi() const;
 

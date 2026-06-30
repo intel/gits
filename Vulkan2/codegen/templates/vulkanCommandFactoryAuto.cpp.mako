@@ -7,37 +7,33 @@
 // ===================== end_copyright_notice ==============================
 ${header}
 
-#include "vulkanLibrary2.h"
-#include "commandPlayersAuto.h"
-#include "commandPlayersCustom.h"
+#include "vulkanCommandFactory.h"
+#include "commandRunnersAuto.h"
+#include "commandRunnersCustom.h"
 #include "commandIdsAuto.h"
 
 namespace gits {
 namespace vulkan {
 
-VulkanLibrary2& VulkanLibrary2::Get() {
-  return static_cast<VulkanLibrary2&>(CGits::Instance().Library(ID_VULKAN2));
-}
-
-gits::CFunction* VulkanLibrary2::FunctionCreate(unsigned type) const {
-  switch (static_cast<CommandId>(type)) {
+stream::CommandRunner* VulkanCommandFactory::CreateCommand(unsigned id) {
+  switch (static_cast<CommandId>(id)) {
   case CommandId::ID_META_CREATE_WINDOW:
-	return new CreateWindowMetaPlayer();
+    return new CreateWindowMetaRunner();
   case CommandId::ID_META_MAPPED_DATA:
-    return new MappedDataMetaPlayer();
+    return new MappedDataMetaRunner();
   % for command in commands:
   <% define = get_define(command.platform) %>\
   % if define:
   #ifdef ${define}
   % endif
   case CommandId::ID_${command.name.upper()}:
-	return new ${command.name}Player();
+    return new ${command.name}Runner();
   % if define:
   #endif
   % endif
   % endfor
   default:
-	return nullptr;
+    return nullptr;
   }
 }
 
