@@ -105,6 +105,15 @@ void CommandBufferLifecycleService::OnEnd(vkEndCommandBufferCommand& command) {
   if (!state) {
     return;
   }
+  // Per spec: if vkEndCommandBuffer fails the CB enters the invalid state and
+  // is not executable.  Keep our tracking consistent with that so RestoreState
+  // does not try to submit an unrecordable CB.
+  if (command.m_Return.Value != VK_SUCCESS) {
+    state->isRecording = false;
+    state->isExecutable = false;
+    state->endCommandBuffer.clear();
+    return;
+  }
   // The CB transitions from recording to executable.  Keep beginCommandBuffer
   // and recordedCommands: an executable CB can be submitted multiple times
   // (unless it has ONE_TIME_SUBMIT_BIT) and must be re-closed during restore.

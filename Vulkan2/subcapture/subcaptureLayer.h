@@ -247,7 +247,9 @@ public:
   void Post(vkCmdEndRenderPass2KHRCommand& command) override;
 
   // ---- Swapchain / surface ---------------------------------------------
+#ifdef VK_USE_PLATFORM_WIN32_KHR
   void Post(vkCreateWin32SurfaceKHRCommand& command) override;
+#endif
 #ifdef GITS_PLATFORM_X11
   void Post(vkCreateXcbSurfaceKHRCommand& command) override;
   void Post(vkCreateXlibSurfaceKHRCommand& command) override;

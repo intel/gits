@@ -29,50 +29,39 @@ bool IsTexelBufferDescriptorType(VkDescriptorType type) {
 }
 
 void CollectHandleKeys(std::vector<GITSKey>& keys, const VkWriteDescriptorSet& s) {
-  keys.push_back(s.dstSet != VK_NULL_HANDLE
-                     ? HandleMapService::Get().GetKey(reinterpret_cast<uint64_t>(s.dstSet))
-                     : 0);
+  keys.push_back(HandleMapService::Get().GetKeyLenient(reinterpret_cast<uint64_t>(s.dstSet)));
   if (IsImageDescriptorType(s.descriptorType) && s.pImageInfo && s.descriptorCount > 0) {
     for (uint32_t elemIdx = 0; elemIdx < s.descriptorCount; ++elemIdx) {
       const auto& elem = s.pImageInfo[elemIdx];
       if (s.descriptorType == VK_DESCRIPTOR_TYPE_SAMPLER ||
           s.descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) {
         keys.push_back(
-            elem.sampler != VK_NULL_HANDLE
-                ? HandleMapService::Get().GetKey(reinterpret_cast<uint64_t>(elem.sampler))
-                : 0);
+            HandleMapService::Get().GetKeyLenient(reinterpret_cast<uint64_t>(elem.sampler)));
       }
       if (s.descriptorType != VK_DESCRIPTOR_TYPE_SAMPLER) {
         keys.push_back(
-            elem.imageView != VK_NULL_HANDLE
-                ? HandleMapService::Get().GetKey(reinterpret_cast<uint64_t>(elem.imageView))
-                : 0);
+            HandleMapService::Get().GetKeyLenient(reinterpret_cast<uint64_t>(elem.imageView)));
       }
     }
   }
   if (IsBufferDescriptorType(s.descriptorType) && s.pBufferInfo && s.descriptorCount > 0) {
     for (uint32_t elemIdx = 0; elemIdx < s.descriptorCount; ++elemIdx) {
       const auto& elem = s.pBufferInfo[elemIdx];
-      keys.push_back(elem.buffer != VK_NULL_HANDLE
-                         ? HandleMapService::Get().GetKey(reinterpret_cast<uint64_t>(elem.buffer))
-                         : 0);
+      keys.push_back(
+          HandleMapService::Get().GetKeyLenient(reinterpret_cast<uint64_t>(elem.buffer)));
     }
   }
   if (IsTexelBufferDescriptorType(s.descriptorType) && s.pTexelBufferView &&
       s.descriptorCount > 0) {
     for (uint32_t handleIdx = 0; handleIdx < s.descriptorCount; ++handleIdx) {
-      keys.push_back(s.pTexelBufferView[handleIdx] != VK_NULL_HANDLE
-                         ? HandleMapService::Get().GetKey(
-                               reinterpret_cast<uint64_t>(s.pTexelBufferView[handleIdx]))
-                         : 0);
+      keys.push_back(HandleMapService::Get().GetKeyLenient(
+          reinterpret_cast<uint64_t>(s.pTexelBufferView[handleIdx])));
     }
   }
 }
 
 void CollectHandleKeys(std::vector<GITSKey>& keys, const VkPushDescriptorSetInfo& s) {
-  keys.push_back(s.layout != VK_NULL_HANDLE
-                     ? HandleMapService::Get().GetKey(reinterpret_cast<uint64_t>(s.layout))
-                     : 0);
+  keys.push_back(HandleMapService::Get().GetKeyLenient(reinterpret_cast<uint64_t>(s.layout)));
   if (s.pDescriptorWrites && s.descriptorWriteCount > 0) {
     for (uint32_t elemIdx = 0; elemIdx < s.descriptorWriteCount; ++elemIdx) {
       CollectHandleKeys(keys, s.pDescriptorWrites[elemIdx]);

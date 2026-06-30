@@ -102,22 +102,54 @@ void SubcaptureLayer::Post(vkCreateInstanceCommand& command) {
 }
 
 void SubcaptureLayer::Post(vkDestroyInstanceCommand& command) {
-  m_StateTracking.RemoveState(command.m_instance.Key);
+  // vkDestroyInstance implicitly invalidates every VkPhysicalDevice obtained
+  // from this instance.  Drop their tracked state so a subsequent
+  // vkCreateInstance + vkEnumeratePhysicalDevices on the same hardware (which
+  // returns the same VkPhysicalDevice handle, and therefore the same recorder
+  // key via TryGetKey) re-tracks them under the new instance instead of
+  // leaving stale state pointing at the destroyed instance.
+  const uint64_t instanceKey = command.m_instance.Key;
+  std::vector<uint64_t> orphanedPDs;
+  for (const auto& [key, statePtr] : m_StateTracking.GetStates()) {
+    if (statePtr->creationCommandId == CommandId::ID_VKENUMERATEPHYSICALDEVICES &&
+        statePtr->parentKey == instanceKey) {
+      orphanedPDs.push_back(key);
+    }
+  }
+  for (uint64_t pdKey : orphanedPDs) {
+    m_StateTracking.RemoveState(pdKey);
+  }
+  m_StateTracking.RemoveState(instanceKey);
 }
 
 void SubcaptureLayer::Post(vkEnumeratePhysicalDevicesCommand& command) {
   if (command.m_Return.Value != VK_SUCCESS || !command.m_pPhysicalDevices.Value) {
     return;
   }
+  // We do NOT store the recorded vkEnumeratePhysicalDevices blob.  Two reasons:
+  //   1. Storing the same encoded command on every PhysicalDeviceState would
+  //      cause the enumerate call to be re-emitted N times during state restore
+  //      (once per physical device).
+  //   2. The encoded blob captures the original VkInstance key, so if the app
+  //      destroys and recreates the instance (probe-then-real pattern, common
+  //      for extension detection) the blob references a key the player never
+  //      registered, and the stale state survives because TryGetKey reuses the
+  //      same VkPhysicalDevice handle.
+  // Instead, we register a typed-only PhysicalDeviceState (no creation blob)
+  // and StateTrackingService::RestorePhysicalDevice lazily synthesizes ONE
+  // vkEnumeratePhysicalDevices per live parent instance during restore.
   for (uint32_t i = 0; i < command.m_pPhysicalDevices.Size; ++i) {
     uint64_t key = command.m_pPhysicalDevices.Keys[i];
-    if (m_StateTracking.HasState(key)) {
-      continue;
-    }
     auto state = std::make_unique<PhysicalDeviceState>();
     state->key = key;
     state->parentKey = command.m_instance.Key;
-    StoreState(std::move(state), command);
+    state->creationCommandId = command.GetId();
+    if (m_StateTracking.HasState(key)) {
+      // Re-enumeration on a (possibly new) instance: refresh parentKey so the
+      // synthesis attaches the device to whichever instance is current.
+      m_StateTracking.RemoveState(key);
+    }
+    m_StateTracking.StoreState(std::move(state));
   }
 }
 
@@ -136,6 +168,14 @@ void SubcaptureLayer::Post(vkEnumeratePhysicalDeviceGroupsCommand& command) {
     const auto& group = command.m_pPhysicalDeviceGroupProperties.Value[i];
     for (uint32_t j = 0; j < group.physicalDeviceCount; ++j) {
       if (keyIdx >= command.m_pPhysicalDeviceGroupProperties.HandleKeys.size()) {
+        // Bail out silently used to hide a real recorder/codegen bug: a group
+        // declares more devices than HandleKeys provides, so subsequent groups
+        // will be skipped entirely.  Surface it so it can be diagnosed.
+        LOG_WARNING << "Vulkan2 subcapture: vkEnumeratePhysicalDeviceGroups HandleKeys size="
+                    << command.m_pPhysicalDeviceGroupProperties.HandleKeys.size()
+                    << " is smaller than the cumulative physicalDeviceCount; "
+                    << "remaining devices in group " << i
+                    << " and later groups will not be tracked";
         return;
       }
       const uint64_t key = command.m_pPhysicalDeviceGroupProperties.HandleKeys[keyIdx++];
@@ -158,6 +198,12 @@ void SubcaptureLayer::Post(vkEnumeratePhysicalDeviceGroupsKHRCommand& command) {
     const auto& group = command.m_pPhysicalDeviceGroupProperties.Value[i];
     for (uint32_t j = 0; j < group.physicalDeviceCount; ++j) {
       if (keyIdx >= command.m_pPhysicalDeviceGroupProperties.HandleKeys.size()) {
+        // See vkEnumeratePhysicalDeviceGroups for rationale.
+        LOG_WARNING << "Vulkan2 subcapture: vkEnumeratePhysicalDeviceGroupsKHR HandleKeys size="
+                    << command.m_pPhysicalDeviceGroupProperties.HandleKeys.size()
+                    << " is smaller than the cumulative physicalDeviceCount; "
+                    << "remaining devices in group " << i
+                    << " and later groups will not be tracked";
         return;
       }
       const uint64_t key = command.m_pPhysicalDeviceGroupProperties.HandleKeys[keyIdx++];
@@ -293,6 +339,12 @@ void SubcaptureLayer::Post(vkQueueSubmit2KHRCommand& command) {
 }
 
 void SubcaptureLayer::Post(vkResetFencesCommand& command) {
+  // On VK_ERROR_OUT_OF_*_MEMORY the spec leaves fence states unchanged; do
+  // not advance our shadow state in that case or we'll mark fences as reset
+  // that the driver actually still considers signalled.
+  if (command.m_Return.Value != VK_SUCCESS) {
+    return;
+  }
   m_SyncState.OnResetFences(command.m_pFences.Keys);
 }
 
@@ -694,6 +746,7 @@ void SubcaptureLayer::Post(vkCreateGraphicsPipelinesCommand& command) {
   if (command.m_Return.Value != VK_SUCCESS) {
     return;
   }
+
   // Collect all handle dependencies (shader modules, pipeline layout, render pass,
   // base pipeline) from the encoded HandleKeys for all create infos in the batch.
   // pipelineCache is a top-level handle not included in pCreateInfos.HandleKeys,
@@ -707,11 +760,21 @@ void SubcaptureLayer::Post(vkCreateGraphicsPipelinesCommand& command) {
       batchDeps.push_back(dep);
     }
   }
+  // Collect all output pipeline keys for this batch.  batchPipelineKeys is
+  // stored on every sibling PipelineState so that RestoreOne can mark all
+  // siblings as restored after the first one emits the shared batch command,
+  // preventing N redundant full-batch emissions for a batch of N pipelines.
+  std::vector<uint64_t> batchKeys;
+  batchKeys.reserve(command.m_createInfoCount.Value);
+  for (uint32_t i = 0; i < command.m_createInfoCount.Value; ++i) {
+    batchKeys.push_back(command.m_pPipelines.Keys[i]);
+  }
   for (uint32_t i = 0; i < command.m_createInfoCount.Value; ++i) {
     auto state = std::make_unique<PipelineState>();
     state->key = command.m_pPipelines.Keys[i];
     state->parentKey = command.m_device.Key;
     state->dependencyKeys = batchDeps;
+    state->batchPipelineKeys = batchKeys;
     StoreState(std::move(state), command);
   }
 }
@@ -732,11 +795,17 @@ void SubcaptureLayer::Post(vkCreateComputePipelinesCommand& command) {
       batchDeps.push_back(dep);
     }
   }
+  std::vector<uint64_t> batchKeys;
+  batchKeys.reserve(command.m_createInfoCount.Value);
+  for (uint32_t i = 0; i < command.m_createInfoCount.Value; ++i) {
+    batchKeys.push_back(command.m_pPipelines.Keys[i]);
+  }
   for (uint32_t i = 0; i < command.m_createInfoCount.Value; ++i) {
     auto state = std::make_unique<PipelineState>();
     state->key = command.m_pPipelines.Keys[i];
     state->parentKey = command.m_device.Key;
     state->dependencyKeys = batchDeps;
+    state->batchPipelineKeys = batchKeys;
     StoreState(std::move(state), command);
   }
 }
@@ -754,11 +823,17 @@ void SubcaptureLayer::Post(vkCreateRayTracingPipelinesKHRCommand& command) {
       batchDeps.push_back(dep);
     }
   }
+  std::vector<uint64_t> batchKeys;
+  batchKeys.reserve(command.m_createInfoCount.Value);
+  for (uint32_t i = 0; i < command.m_createInfoCount.Value; ++i) {
+    batchKeys.push_back(command.m_pPipelines.Keys[i]);
+  }
   for (uint32_t i = 0; i < command.m_createInfoCount.Value; ++i) {
     auto state = std::make_unique<PipelineState>();
     state->key = command.m_pPipelines.Keys[i];
     state->parentKey = command.m_device.Key;
     state->dependencyKeys = batchDeps;
+    state->batchPipelineKeys = batchKeys;
     StoreState(std::move(state), command);
   }
 }
@@ -776,11 +851,17 @@ void SubcaptureLayer::Post(vkCreateRayTracingPipelinesNVCommand& command) {
       batchDeps.push_back(dep);
     }
   }
+  std::vector<uint64_t> batchKeys;
+  batchKeys.reserve(command.m_createInfoCount.Value);
+  for (uint32_t i = 0; i < command.m_createInfoCount.Value; ++i) {
+    batchKeys.push_back(command.m_pPipelines.Keys[i]);
+  }
   for (uint32_t i = 0; i < command.m_createInfoCount.Value; ++i) {
     auto state = std::make_unique<PipelineState>();
     state->key = command.m_pPipelines.Keys[i];
     state->parentKey = command.m_device.Key;
     state->dependencyKeys = batchDeps;
+    state->batchPipelineKeys = batchKeys;
     StoreState(std::move(state), command);
   }
 }
@@ -864,29 +945,72 @@ void SubcaptureLayer::Post(vkResetDescriptorPoolCommand& command) {
 }
 
 void SubcaptureLayer::Post(vkAllocateDescriptorSetsCommand& command) {
-  if (command.m_Return.Value != VK_SUCCESS) {
+  if (command.m_Return.Value != VK_SUCCESS || !command.m_pAllocateInfo.Value) {
     return;
   }
+
+  const uint64_t poolKey =
+      command.m_pAllocateInfo.HandleKeys.empty() ? 0 : command.m_pAllocateInfo.HandleKeys[0];
+
+  // Build a single-set VkDescriptorSetAllocateInfo so each stored set state
+  // carries an allocation command sized for ONE descriptor set.  Storing the
+  // original batch command on every DescriptorSetState would cause RestoreOne
+  // to re-emit the N-set vkAllocateDescriptorSets once per set (N times), and
+  // every emission consumes pool capacity - exhausting the pool, leaving
+  // later sets unallocated, and crashing subsequent vkUpdateDescriptorSets /
+  // vkCmdBindDescriptorSets in the recording range when their dstSet key
+  // never appears in the player's HandleMap.  Mirrors the per-CB split in
+  // CommandBufferLifecycleService::OnAllocate.
+  VkDescriptorSetAllocateInfo singleAllocInfo = *command.m_pAllocateInfo.Value;
+  singleAllocInfo.descriptorSetCount = 1;
+
   for (uint32_t i = 0; i < command.m_pDescriptorSets.Size; ++i) {
     auto state = std::make_unique<DescriptorSetState>();
     state->key = command.m_pDescriptorSets.Keys[i];
     state->parentKey = command.m_device.Key;
-    state->poolKey =
-        command.m_pAllocateInfo.HandleKeys.empty() ? 0 : command.m_pAllocateInfo.HandleKeys[0];
-    // HandleKeys layout: [0]=pool, [1+i]=pSetLayouts[i].
+    state->poolKey = poolKey;
+
+    // HandleKeys layout in the original command: [0]=pool, [1+i]=pSetLayouts[i].
     // Add the layout as a dependency so RestoreOne restores it before emitting
     // vkAllocateDescriptorSets (which references the layout handle).
     const uint32_t layoutIdx = 1 + i;
+    uint64_t layoutKey = 0;
     if (layoutIdx < command.m_pAllocateInfo.HandleKeys.size()) {
-      if (uint64_t layoutKey = command.m_pAllocateInfo.HandleKeys[layoutIdx]) {
+      layoutKey = command.m_pAllocateInfo.HandleKeys[layoutIdx];
+      if (layoutKey) {
         state->dependencyKeys.push_back(layoutKey);
       }
     }
-    StoreState(std::move(state), command);
+
+    // Synthetic single-set allocation command for this set only.  pSetLayouts
+    // points into the original array slot; Encode reads pSetLayouts[0..count)
+    // so we slice by aiming pSetLayouts at element i with descriptorSetCount=1.
+    singleAllocInfo.pSetLayouts = command.m_pAllocateInfo.Value->pSetLayouts + i;
+
+    vkAllocateDescriptorSetsCommand singleCmd;
+    singleCmd.m_device = command.m_device;
+    singleCmd.m_pAllocateInfo.Value = &singleAllocInfo;
+    singleCmd.m_pAllocateInfo.HandleKeys = {poolKey, layoutKey};
+    // Value must be non-null (HandleArrayOutputArgument encodes a null-flag
+    // when null).  Point at the i-th slot of the original output array; the
+    // pointer content does not flow through, only Keys/Size do.
+    singleCmd.m_pDescriptorSets.Value = command.m_pDescriptorSets.Value + i;
+    singleCmd.m_pDescriptorSets.Size = 1;
+    singleCmd.m_pDescriptorSets.Keys = {command.m_pDescriptorSets.Keys[i]};
+    singleCmd.m_Return.Value = VK_SUCCESS;
+
+    StoreState(std::move(state), singleCmd);
   }
 }
 
 void SubcaptureLayer::Post(vkFreeDescriptorSetsCommand& command) {
+  // vkFreeDescriptorSets returns VkResult; on failure (VK_ERROR_OUT_OF_*) the
+  // descriptor sets remain valid in the pool, so do NOT drop our state for
+  // them or a subsequent vkUpdateDescriptorSets / vkCmdBindDescriptorSets
+  // referencing the same key would silently misbehave.
+  if (command.m_Return.Value != VK_SUCCESS) {
+    return;
+  }
   for (uint32_t i = 0; i < command.m_descriptorSetCount.Value; ++i) {
     const uint64_t setKey = command.m_pDescriptorSets.Keys[i];
     m_StateTracking.RemoveState(setKey);
@@ -1337,6 +1461,7 @@ void SubcaptureLayer::Post(CreateWindowMetaCommand& command) {
   m_PendingWindow.valid = true;
 }
 
+#ifdef VK_USE_PLATFORM_WIN32_KHR
 void SubcaptureLayer::Post(vkCreateWin32SurfaceKHRCommand& command) {
   if (command.m_Return.Value != VK_SUCCESS) {
     return;
@@ -1356,6 +1481,7 @@ void SubcaptureLayer::Post(vkCreateWin32SurfaceKHRCommand& command) {
   }
   StoreState(std::move(state), command);
 }
+#endif
 
 #ifdef GITS_PLATFORM_X11
 void SubcaptureLayer::Post(vkCreateXcbSurfaceKHRCommand& command) {

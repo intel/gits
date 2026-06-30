@@ -75,6 +75,46 @@ uint32_t GpuReadbackHelper::FindStagingMemoryType(uint64_t physDevKey, uint32_t 
 }
 
 // ---------------------------------------------------------------------------
+// QueryStagingBufferRequirements
+//
+// Create a throwaway VkBuffer with the requested size+usage, query its memory
+// requirements via vkGetBufferMemoryRequirements, then immediately destroy the
+// buffer.  The reported req.size (alignment-rounded) and req.memoryTypeBits
+// (driver-allowed types) feed into the staging-buffer commands the recorder
+// emits into the stream, so the second player's vkAllocateMemory +
+// vkBindBufferMemory satisfy the actual driver requirements rather than
+// guessing from the raw data length.
+// ---------------------------------------------------------------------------
+bool GpuReadbackHelper::QueryStagingBufferRequirements(uint64_t deviceKey,
+                                                       VkDeviceSize size,
+                                                       VkBufferUsageFlags usage,
+                                                       VkMemoryRequirements& outReq) {
+  auto device = reinterpret_cast<VkDevice>(HandleMapService::Get().TryGetHandle(deviceKey));
+  if (!device) {
+    LOG_WARNING << "GpuReadbackHelper: QueryStagingBufferRequirements: invalid device key="
+                << deviceKey;
+    return false;
+  }
+  auto& dt = m_Player.GetDeviceDispatchTable(device);
+
+  VkBufferCreateInfo bci{};
+  bci.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+  bci.size = size;
+  bci.usage = usage;
+  bci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+  VkBuffer tempBuf = VK_NULL_HANDLE;
+  if (dt.vkCreateBuffer(device, &bci, nullptr, &tempBuf) != VK_SUCCESS) {
+    LOG_WARNING << "GpuReadbackHelper: QueryStagingBufferRequirements: vkCreateBuffer failed";
+    return false;
+  }
+  outReq = {};
+  dt.vkGetBufferMemoryRequirements(device, tempBuf, &outReq);
+  dt.vkDestroyBuffer(device, tempBuf, nullptr);
+  return true;
+}
+
+// ---------------------------------------------------------------------------
 // AllocateStagingBuffer
 // ---------------------------------------------------------------------------
 

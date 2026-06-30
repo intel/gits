@@ -450,49 +450,62 @@ void DescriptorSetUpdateService::RestoreUpdates(uint64_t setKey,
         flushRun(e);
         continue;
       }
-      // Resource-validity checks: use IsRestored() rather than HasState() so
-      // that we skip bindings whose resource exists in state but failed to
-      // restore (e.g. an image view whose backing image was destroyed before
-      // the subcapture point).  This mirrors the old Vulkan
-      // RestoreDescriptorSetsUpdates helpers which walk the full object chain
-      // (sampler ? imageView ? image) and skip if any link is missing.
+      // Resource-validity checks: descriptor sets are visited in key order
+      // during RestoreState (which equals creation order), so resources
+      // that are still alive but were created AFTER this descriptor set
+      // have not yet been processed by the iteration loop.  Call
+      // EnsureRestored to pull each live referenced resource into the
+      // current restore pass before checking IsRestored.  Resources whose
+      // state was already removed (destroyed by the app before subcapture
+      // start) are NOT resurrected: EnsureRestored is a no-op when no
+      // state exists for the key, and IsRestored remains false, so the
+      // write is omitted.  This matches the legacy Vulkan
+      // RestoreDescriptorSetsUpdates behaviour ("Omitting restore of
+      // vkUpdateDescriptorSets ... doesn't exist").
       bool valid = true;
       if (IsImageDescriptorType(ed.descriptorType)) {
-        if ((ed.descriptorType == VK_DESCRIPTOR_TYPE_SAMPLER ||
-             ed.descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) &&
-            ed.samplerKey != 0 && !sts.IsRestored(ed.samplerKey)) {
-          LOG_INFO << "Vulkan2 subcapture: omitting descriptor write for set key=" << setKey
-                   << " binding=" << binding << " element=" << e
-                   << " because VkSampler key=" << ed.samplerKey << " was not restored.";
-          valid = false;
+        if (ed.descriptorType == VK_DESCRIPTOR_TYPE_SAMPLER ||
+            ed.descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) {
+          sts.EnsureRestored(ed.samplerKey);
+          if (ed.samplerKey != 0 && !sts.IsRestored(ed.samplerKey)) {
+            LOG_TRACE << "Vulkan2 subcapture: omitting descriptor write for set key=" << setKey
+                      << " binding=" << binding << " element=" << e
+                      << " because VkSampler key=" << ed.samplerKey << " was not restored.";
+            valid = false;
+          }
         }
-        if (valid && ed.descriptorType != VK_DESCRIPTOR_TYPE_SAMPLER && ed.imageViewKey != 0 &&
-            !sts.IsRestored(ed.imageViewKey)) {
-          LOG_INFO << "Vulkan2 subcapture: omitting descriptor write for set key=" << setKey
-                   << " binding=" << binding << " element=" << e
-                   << " because VkImageView key=" << ed.imageViewKey << " was not restored.";
-          valid = false;
+        if (valid && ed.descriptorType != VK_DESCRIPTOR_TYPE_SAMPLER) {
+          sts.EnsureRestored(ed.imageViewKey);
+          if (ed.imageViewKey != 0 && !sts.IsRestored(ed.imageViewKey)) {
+            LOG_TRACE << "Vulkan2 subcapture: omitting descriptor write for set key=" << setKey
+                      << " binding=" << binding << " element=" << e
+                      << " because VkImageView key=" << ed.imageViewKey << " was not restored.";
+            valid = false;
+          }
         }
       } else if (IsBufferDescriptorType(ed.descriptorType)) {
+        sts.EnsureRestored(ed.bufferKey);
         if (ed.bufferKey != 0 && !sts.IsRestored(ed.bufferKey)) {
-          LOG_INFO << "Vulkan2 subcapture: omitting descriptor write for set key=" << setKey
-                   << " binding=" << binding << " element=" << e
-                   << " because VkBuffer key=" << ed.bufferKey << " was not restored.";
+          LOG_TRACE << "Vulkan2 subcapture: omitting descriptor write for set key=" << setKey
+                    << " binding=" << binding << " element=" << e
+                    << " because VkBuffer key=" << ed.bufferKey << " was not restored.";
           valid = false;
         }
       } else if (IsTexelBufferDescriptorType(ed.descriptorType)) {
+        sts.EnsureRestored(ed.bufferViewKey);
         if (ed.bufferViewKey != 0 && !sts.IsRestored(ed.bufferViewKey)) {
-          LOG_INFO << "Vulkan2 subcapture: omitting descriptor write for set key=" << setKey
-                   << " binding=" << binding << " element=" << e
-                   << " because VkBufferView key=" << ed.bufferViewKey << " was not restored.";
+          LOG_TRACE << "Vulkan2 subcapture: omitting descriptor write for set key=" << setKey
+                    << " binding=" << binding << " element=" << e
+                    << " because VkBufferView key=" << ed.bufferViewKey << " was not restored.";
           valid = false;
         }
       } else if (ed.descriptorType == VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR) {
+        sts.EnsureRestored(ed.accelerationStructureKey);
         if (ed.accelerationStructureKey != 0 && !sts.IsRestored(ed.accelerationStructureKey)) {
-          LOG_INFO << "Vulkan2 subcapture: omitting descriptor write for set key=" << setKey
-                   << " binding=" << binding << " element=" << e
-                   << " because VkAccelerationStructureKHR key=" << ed.accelerationStructureKey
-                   << " was not restored.";
+          LOG_TRACE << "Vulkan2 subcapture: omitting descriptor write for set key=" << setKey
+                    << " binding=" << binding << " element=" << e
+                    << " because VkAccelerationStructureKHR key=" << ed.accelerationStructureKey
+                    << " was not restored.";
           valid = false;
         }
       }
@@ -515,8 +528,8 @@ void DescriptorSetUpdateService::RestoreUpdates(uint64_t setKey,
     // its key won't be in HandleMapService and playback would assert.
     ObjectState* dsState = sts.GetState(setKey);
     if (!dsState) {
-      LOG_INFO << "Vulkan2 subcapture: skipping descriptor update restore for set key=" << setKey
-               << " because the descriptor set state no longer exists.";
+      LOG_TRACE << "Vulkan2 subcapture: skipping descriptor update restore for set key=" << setKey
+                << " because the descriptor set state no longer exists.";
       return;
     }
     uint64_t deviceKey = dsState->parentKey;

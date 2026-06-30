@@ -179,7 +179,16 @@ struct FramebufferState : ObjectState {
 
 struct PipelineCacheState : ObjectState {};
 struct PipelineLayoutState : ObjectState {};
-struct PipelineState : ObjectState {};
+
+struct PipelineState : ObjectState {
+  // Keys of every VkPipeline handle produced by the same vkCreate*Pipelines
+  // batch call (including this state's own key).  Populated in
+  // SubcaptureLayer::Post so that RestoreOne can mark all sibling handles
+  // as restored after emitting the batch command once, preventing N redundant
+  // full-batch emissions when a batch of N pipelines is state-restored.
+  std::vector<uint64_t> batchPipelineKeys;
+};
+
 struct ShaderModuleState : ObjectState {};
 
 // ---- Descriptors -------------------------------------------------------

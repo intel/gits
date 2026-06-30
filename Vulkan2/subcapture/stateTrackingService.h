@@ -40,6 +40,22 @@ public:
   // staging buffer of 'memoryTypeBits' requirements.  Returns UINT32_MAX on failure.
   virtual uint32_t FindStagingMemoryType(uint64_t physDevKey, uint32_t memoryTypeBits) = 0;
 
+  // Query memory requirements for a hypothetical staging buffer of the given
+  // size+usage on the given device.  The recorder uses this when emitting
+  // staging-buffer creation commands during state-restore content upload, to
+  // ensure mai.allocationSize >= req.size (VUID-vkBindBufferMemory-None-10741)
+  // and that FindStagingMemoryType is filtered by the buffer's allowed
+  // memoryTypeBits (VUID-vkBindBufferMemory-memory-01035).  Without this we
+  // were under-allocating (e.g. 65520 < required 65536) and picking a memory
+  // type whose bit was not in the buffer's memoryTypeBits (e.g. type 2 / 0x6
+  // when buffer required 0x11), corrupting every restored buffer/image.
+  // Returns false when the temporary buffer creation or the requirements
+  // query fails (e.g. device handle no longer valid).
+  virtual bool QueryStagingBufferRequirements(uint64_t deviceKey,
+                                              VkDeviceSize size,
+                                              VkBufferUsageFlags usage,
+                                              VkMemoryRequirements& outReq) = 0;
+
   // Reads the contents of a GPU-local VkBuffer into outData.
   // queueKey / commandPoolKey identify Vulkan objects to use for the transfer.
   // Returns false when readback is not possible.
@@ -117,6 +133,18 @@ public:
     return m_RestoredThisPass.count(key) != 0;
   }
 
+  // Force-restore the live state at key now (idempotent).  Used by
+  // collaborators (e.g. DescriptorSetUpdateService::RestoreUpdates) to pull
+  // in resources referenced indirectly via tracked state that are not on
+  // the standard dependencyKeys chain, so that the referenced object lands
+  // in m_RestoredThisPass before its enclosing object is emitted.
+  //
+  // No-op when the key is unknown (e.g. the resource was destroyed by the
+  // app and its state was removed): destroyed resources are NOT resurrected
+  // and the caller's subsequent IsRestored() check returns false, matching
+  // legacy "omit on missing" semantics.
+  void EnsureRestored(uint64_t key);
+
   // Returns all states in key order (== creation order, since keys are
   // sequential integers).  Prefer iterating this map over a separate ordered
   // container; the map is the single source of truth.
@@ -156,6 +184,12 @@ private:
   void RestoreSurface(ObjectState* state);
   void RestoreSwapchain(ObjectState* state);
   bool RestoreDescriptorSets(ObjectState* state);
+  // Lazily synthesize one vkEnumeratePhysicalDevices for the parent instance
+  // of `state`, covering every live PhysicalDeviceState that shares that
+  // parent.  Marks all sibling PD keys as restored so subsequent RestoreOne
+  // calls for siblings short-circuit.  Returns false if the parent instance
+  // could not be restored (the physical device cannot be enumerated then).
+  bool RestorePhysicalDevice(ObjectState* state);
   CommandBufferRestoreOutcome RestoreCommandBuffers(ObjectState* state);
   void RestoreMappedMemory(ObjectState* state);
   void RestoreBufferContents();

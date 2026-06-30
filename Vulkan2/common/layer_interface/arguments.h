@@ -104,10 +104,23 @@ struct BufferArgument {
   void* Value{};
   size_t Size{};
   BufferArgument() {}
-  BufferArgument(void* v, size_t s) : Value(v), Size(s) {}
-  BufferArgument(void* v, size_t* s) : Value(v), Size(*s) {}
-  BufferArgument(const void* v, size_t s) : Value(const_cast<void*>(v)), Size(s) {}
-  BufferArgument(const void* v, size_t* s) : Value(const_cast<void*>(v)), Size(*s) {}
+  // Templated size parameter so the generated brace-init `m_pData{ptr, length}`
+  // does not trip MSVC's C2398 narrowing check when `length` is VkDeviceSize
+  // (unsigned long long) but Size is size_t (unsigned __int64).  Both are
+  // 64-bit unsigned on Windows x64 but MSVC treats them as distinct types in
+  // brace-init.  The only affected codegen site today is vkCmdUpdateBuffer
+  // (commandsAuto.h ~3149) but several other vk* commands take VkDeviceSize
+  // lengths so the templated form is more robust than per-call casts.
+  template <typename SizeT>
+  BufferArgument(void* v, SizeT s) : Value(v), Size(static_cast<size_t>(s)) {}
+  template <typename SizeT>
+  BufferArgument(void* v, SizeT* s) : Value(v), Size(static_cast<size_t>(*s)) {}
+  template <typename SizeT>
+  BufferArgument(const void* v, SizeT s)
+      : Value(const_cast<void*>(v)), Size(static_cast<size_t>(s)) {}
+  template <typename SizeT>
+  BufferArgument(const void* v, SizeT* s)
+      : Value(const_cast<void*>(v)), Size(static_cast<size_t>(*s)) {}
 };
 
 struct OpaqueBufferArgument {

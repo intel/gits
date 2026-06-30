@@ -27,6 +27,11 @@ public:
 
   uint32_t FindStagingMemoryType(uint64_t physDevKey, uint32_t memoryTypeBits) override;
 
+  bool QueryStagingBufferRequirements(uint64_t deviceKey,
+                                      VkDeviceSize size,
+                                      VkBufferUsageFlags usage,
+                                      VkMemoryRequirements& outReq) override;
+
   bool ReadBuffer(uint64_t deviceKey,
                   uint64_t physDevKey,
                   uint64_t queueKey,

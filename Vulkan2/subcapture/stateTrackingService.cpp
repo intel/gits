@@ -76,6 +76,17 @@ bool StateTrackingService::HasState(uint64_t key) const {
   return m_States.count(key) != 0;
 }
 
+void StateTrackingService::EnsureRestored(uint64_t key) {
+  if (!key) {
+    return;
+  }
+  ObjectState* state = GetState(key);
+  if (!state) {
+    return;
+  }
+  RestoreOne(state);
+}
+
 // ---------------------------------------------------------------------------
 // RestoreState -- public entry point
 // ---------------------------------------------------------------------------
@@ -255,6 +266,35 @@ void StateTrackingService::RestoreState() {
 
   EmitImageLayoutTransitions();
 
+  // Drain all pre-recording-range GPU work before the recording range begins.
+  // Mirrors legacy Vulkan::FinishStateRestore (Vulkan/recorder/vulkanStateRestore.cpp
+  // ~4206 lines):
+  //   for each device: drvVk.vkDeviceWaitIdle(...) + scheduler.Register(CvkDeviceWaitIdle(...));
+  // Without this, helper submits emitted earlier in restore (binary-semaphore
+  // re-signal submits with fence=0, queue submits for image-layout transitions
+  // whose vkQueueWaitIdle is only per-queue, etc.) can still be in flight when
+  // the first recorded command executes, producing a cascade of validation
+  // errors around semaphore / fence / command-buffer / swapchain state:
+  //   vkAcquireNextImageKHR-semaphore-01779, vkQueueSubmit-pWaitSemaphores-03238,
+  //   vkQueueSubmit-pSignalSemaphores-00067, vkBeginCommandBuffer-commandBuffer-00049,
+  //   vkResetFences-pFences-01123, vkQueueSubmit-pCommandBuffers-00071,
+  //   VkPresentInfoKHR-pImageIndices-01430.
+  // One vkDeviceWaitIdle per device covers every queue on that device, which
+  // matches legacy's per-device loop.
+  for (auto& [_, statePtr] : m_States) {
+    ObjectState* state = statePtr.get();
+    if (state->destroyed) {
+      continue;
+    }
+    if (state->creationCommandId != CommandId::ID_VKCREATEDEVICE) {
+      continue;
+    }
+    vkDeviceWaitIdleCommand waitCmd;
+    waitCmd.m_device.Key = state->key;
+    waitCmd.m_Return.Value = VK_SUCCESS;
+    m_Recorder.Record(vkDeviceWaitIdleSerializer(waitCmd));
+  }
+
   // Emit StateRestoreEnd marker
   {
     StateRestoreEndCommand cmd;
@@ -323,6 +363,24 @@ void StateTrackingService::RestoreOne(ObjectState* state) {
         }
       }
     }
+  }
+
+  // PhysicalDeviceState intentionally carries no recorded creation blob:
+  // SubcaptureLayer doesn't encode the original vkEnumeratePhysicalDevices
+  // because the same call would be re-emitted N times (once per PD) and
+  // reference a stale instance key after a destroy/recreate sequence.
+  // Instead, RestorePhysicalDevice synthesizes one enumerate per live parent
+  // instance and marks every sibling PD restored.  Handled BEFORE the
+  // empty-blob guard below.
+  if (state->creationCommandId == CommandId::ID_VKENUMERATEPHYSICALDEVICES) {
+    if (!RestorePhysicalDevice(state)) {
+      return;
+    }
+    // RestorePhysicalDevice already inserted the keys; the unconditional
+    // insert at the end of this function would only re-insert idempotently,
+    // but skip the pipeline-sibling block by returning early.
+    m_RestoredThisPass.insert(state->key);
+    return;
   }
 
   if (state->creationCommandBuffer.empty()) {
@@ -402,6 +460,25 @@ void StateTrackingService::RestoreOne(ObjectState* state) {
   // registered by RestoreSwapchain).  Mark as fully restored so dependents
   // can safely look up its handle in HandleMapService.
   m_RestoredThisPass.insert(state->key);
+
+  // For batch pipeline creation (createInfoCount > 1), all sibling handles
+  // are produced by the same vkCreate*Pipelines command that was just emitted.
+  // Mark every sibling as restored now so that subsequent RestoreOne calls for
+  // other states in the same batch are no-ops and do not re-emit the full batch
+  // command N times (once per pipeline), which would cause N×N pipeline objects
+  // in the subcapture stream and corrupt handle-map entries for GPL library
+  // pipelines that the link pipeline depends on.
+  const bool isVkPipelineCreate =
+      state->creationCommandId == CommandId::ID_VKCREATEGRAPHICSPIPELINES ||
+      state->creationCommandId == CommandId::ID_VKCREATECOMPUTEPIPELINES ||
+      state->creationCommandId == CommandId::ID_VKCREATERAYTRACINGPIPELINESKHR ||
+      state->creationCommandId == CommandId::ID_VKCREATERAYTRACINGPIPELINESNV;
+  if (isVkPipelineCreate) {
+    auto* ps = static_cast<PipelineState*>(state);
+    for (uint64_t sibKey : ps->batchPipelineKeys) {
+      m_RestoredThisPass.insert(sibKey);
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -530,23 +607,14 @@ void StateTrackingService::EmitImageLayoutTransitions() {
       }
     }
 
-    VkImageLayout targetLayout;
-    if (isSwapchainImage) {
-      // Non-acquired swapchain images MUST be in PRESENT_SRC_KHR: the Vulkan
-      // spec requires this before vkQueuePresentKHR.  We only track explicit
-      // pipeline barriers, not implicit render-pass final-layout transitions,
-      // so currentLayout may be stale (e.g. COLOR_ATTACHMENT_OPTIMAL from the
-      // last barrier before a render pass whose finalLayout = PRESENT_SRC_KHR
-      // without any follow-up explicit barrier).  Force PRESENT_SRC_KHR
-      // unconditionally to avoid emitting the wrong target layout.
-      targetLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-    } else if (img->currentLayout == VK_IMAGE_LAYOUT_UNDEFINED ||
-               img->currentLayout == VK_IMAGE_LAYOUT_PREINITIALIZED) {
-      // Regular images in UNDEFINED/PREINITIALIZED: the second player already
-      // creates them in UNDEFINED, so no transition is needed.
+    // For non-acquired swapchain images we will force PRESENT_SRC_KHR below in
+    // the per-image barrier-building loop; for regular images we will reuse
+    // the current tracked layout there.  We only need the skip decision here:
+    // regular images already in UNDEFINED/PREINITIALIZED need no transition,
+    // because the second player creates them in UNDEFINED.
+    if (!isSwapchainImage && (img->currentLayout == VK_IMAGE_LAYOUT_UNDEFINED ||
+                              img->currentLayout == VK_IMAGE_LAYOUT_PREINITIALIZED)) {
       continue;
-    } else {
-      targetLayout = img->currentLayout;
     }
     // Determine device key: direct parent for regular images; grandparent for
     // swapchain images whose parent is the swapchain key.
@@ -680,7 +748,6 @@ void StateTrackingService::EmitImageLayoutTransitions() {
     }
 
     {
-      static const VkSemaphore kDummySemaphoreSlot = VK_NULL_HANDLE;
       static VkCommandBuffer kDummyCBSlot2 = VK_NULL_HANDLE;
       kDummyCBSlot2 = reinterpret_cast<VkCommandBuffer>(kTempCBKey);
 
@@ -739,8 +806,12 @@ bool StateTrackingService::EmitCreationCommand(ObjectState* state) {
   if (state->creationCommandBuffer.empty()) {
     return false;
   }
-
-  char* buf = state->creationCommandBuffer.data();
+  // Decode converts relative offsets to absolute pointers in-place via AddPtrs,
+  // mutating the source buffer.  Work on a copy so creationCommandBuffer remains
+  // pristine and a second call (e.g. after a transient failure that left the key
+  // out of m_RestoredThisPass) does not read already-rebased addresses as offsets.
+  std::vector<char> scratch = state->creationCommandBuffer;
+  char* buf = scratch.data();
 
 #define EMIT_DECODED(Prefix)                                                                       \
   {                                                                                                \
@@ -790,22 +861,157 @@ bool StateTrackingService::EmitCreationCommand(ObjectState* state) {
     EMIT_DECODED(vkCreatePipelineLayout)
   case CommandId::ID_VKCREATESHADERMODULE:
     EMIT_DECODED(vkCreateShaderModule)
-  case CommandId::ID_VKCREATEGRAPHICSPIPELINES:
-    EMIT_DECODED(vkCreateGraphicsPipelines)
-  case CommandId::ID_VKCREATECOMPUTEPIPELINES:
-    EMIT_DECODED(vkCreateComputePipelines)
-  case CommandId::ID_VKCREATERAYTRACINGPIPELINESKHR:
-    EMIT_DECODED(vkCreateRayTracingPipelinesKHR)
-  case CommandId::ID_VKCREATERAYTRACINGPIPELINESNV:
-    EMIT_DECODED(vkCreateRayTracingPipelinesNV)
+  case CommandId::ID_VKCREATEGRAPHICSPIPELINES: {
+    vkCreateGraphicsPipelinesCommand cmd;
+    Decode(buf, cmd);
+    // Workaround for an Intel driver (igvk64) crash inside vkCreateGraphicsPipelines
+    // when state-restoring GPL fast-path attempts.  The captured app uses the two-step
+    // pattern: try a link with VK_PIPELINE_CREATE_FAIL_ON_PIPELINE_COMPILE_REQUIRED_BIT
+    // and fall back to a full link with VK_PIPELINE_CREATE_LINK_TIME_OPTIMIZATION_BIT_EXT
+    // on VK_PIPELINE_COMPILE_REQUIRED.  In the original capture (and in full-stream
+    // replay) the driver cache is warmed by the surrounding command stream and the
+    // fast-path succeeds.  During subcapture state restore all pipelines are emitted
+    // back-to-back; the driver hits a code path inside its GPL fast-path lookup that
+    // crashes at offset ~0xA6EE on some create infos (data is spec-valid; verified by
+    // ReplayCustomizationLayer::Pre diagnostics).
+    //
+    // Legacy GITS already removed VK_PIPELINE_CREATE_FAIL_ON_PIPELINE_COMPILE_REQUIRED_BIT
+    // during state restore for the same reason.  We do the same here, and for GPL link
+    // pipelines (link consumes libraries via VkPipelineLibraryCreateInfoKHR) we also
+    // set VK_PIPELINE_CREATE_LINK_TIME_OPTIMIZATION_BIT_EXT so the driver fully links
+    // and properly propagates state (e.g. VkPipelineRenderingCreateInfo) from the
+    // libraries rather than relying on the fast-path cache lookup.
+    for (uint32_t i = 0; i < cmd.m_createInfoCount.Value; ++i) {
+      auto& ci = const_cast<VkGraphicsPipelineCreateInfo&>(cmd.m_pCreateInfos.Value[i]);
+      const bool hasFailOnCompile =
+          (ci.flags & VK_PIPELINE_CREATE_FAIL_ON_PIPELINE_COMPILE_REQUIRED_BIT) != 0;
+      if (!hasFailOnCompile) {
+        continue;
+      }
+      // Detect GPL link pipeline: not itself a library (no LIBRARY_BIT_KHR) and
+      // consumes one or more libraries via VkPipelineLibraryCreateInfoKHR in pNext.
+      const bool isLibrary = (ci.flags & VK_PIPELINE_CREATE_LIBRARY_BIT_KHR) != 0;
+      bool consumesLibraries = false;
+      if (!isLibrary) {
+        const auto* node = reinterpret_cast<const VkBaseInStructure*>(ci.pNext);
+        while (node) {
+          if (node->sType == VK_STRUCTURE_TYPE_PIPELINE_LIBRARY_CREATE_INFO_KHR) {
+            const auto& lib = *reinterpret_cast<const VkPipelineLibraryCreateInfoKHR*>(node);
+            if (lib.libraryCount > 0) {
+              consumesLibraries = true;
+              break;
+            }
+          }
+          node = node->pNext;
+        }
+      }
+      const VkPipelineCreateFlags originalFlags = ci.flags;
+      ci.flags &= ~VK_PIPELINE_CREATE_FAIL_ON_PIPELINE_COMPILE_REQUIRED_BIT;
+      if (consumesLibraries) {
+        ci.flags |= VK_PIPELINE_CREATE_LINK_TIME_OPTIMIZATION_BIT_EXT;
+      }
+      LOG_TRACE << "Vulkan2 subcapture: rewrote vkCreateGraphicsPipelines flags for state restore"
+                << " stateKey=" << state->key << " [" << i << "/" << cmd.m_createInfoCount.Value
+                << "] 0x" << std::hex << originalFlags << " -> 0x" << ci.flags << std::dec
+                << (consumesLibraries ? " (GPL link)" : " (standalone)");
+    }
+    m_Recorder.Record(vkCreateGraphicsPipelinesSerializer(cmd));
+    break;
+  }
+  case CommandId::ID_VKCREATECOMPUTEPIPELINES: {
+    vkCreateComputePipelinesCommand cmd;
+    Decode(buf, cmd);
+    // Same fast-path workaround as vkCreateGraphicsPipelines: strip
+    // VK_PIPELINE_CREATE_FAIL_ON_PIPELINE_COMPILE_REQUIRED_BIT during state restore
+    // so the driver always produces a valid pipeline for the captured key.  Compute
+    // pipelines have no GPL libraries, so no LINK_TIME_OPTIMIZATION bit is added.
+    for (uint32_t i = 0; i < cmd.m_createInfoCount.Value; ++i) {
+      auto& ci = const_cast<VkComputePipelineCreateInfo&>(cmd.m_pCreateInfos.Value[i]);
+      if (ci.flags & VK_PIPELINE_CREATE_FAIL_ON_PIPELINE_COMPILE_REQUIRED_BIT) {
+        const VkPipelineCreateFlags originalFlags = ci.flags;
+        ci.flags &= ~VK_PIPELINE_CREATE_FAIL_ON_PIPELINE_COMPILE_REQUIRED_BIT;
+        LOG_TRACE << "Vulkan2 subcapture: rewrote vkCreateComputePipelines flags for state restore"
+                  << " stateKey=" << state->key << " [" << i << "/" << cmd.m_createInfoCount.Value
+                  << "] 0x" << std::hex << originalFlags << " -> 0x" << ci.flags << std::dec;
+      }
+    }
+    m_Recorder.Record(vkCreateComputePipelinesSerializer(cmd));
+    break;
+  }
+  case CommandId::ID_VKCREATERAYTRACINGPIPELINESKHR: {
+    vkCreateRayTracingPipelinesKHRCommand cmd;
+    Decode(buf, cmd);
+    for (uint32_t i = 0; i < cmd.m_createInfoCount.Value; ++i) {
+      auto& ci = const_cast<VkRayTracingPipelineCreateInfoKHR&>(cmd.m_pCreateInfos.Value[i]);
+      if (ci.flags & VK_PIPELINE_CREATE_FAIL_ON_PIPELINE_COMPILE_REQUIRED_BIT) {
+        const VkPipelineCreateFlags originalFlags = ci.flags;
+        ci.flags &= ~VK_PIPELINE_CREATE_FAIL_ON_PIPELINE_COMPILE_REQUIRED_BIT;
+        LOG_TRACE
+            << "Vulkan2 subcapture: rewrote vkCreateRayTracingPipelinesKHR flags for state restore"
+            << " stateKey=" << state->key << " [" << i << "/" << cmd.m_createInfoCount.Value
+            << "] 0x" << std::hex << originalFlags << " -> 0x" << ci.flags << std::dec;
+      }
+    }
+    m_Recorder.Record(vkCreateRayTracingPipelinesKHRSerializer(cmd));
+    break;
+  }
+  case CommandId::ID_VKCREATERAYTRACINGPIPELINESNV: {
+    vkCreateRayTracingPipelinesNVCommand cmd;
+    Decode(buf, cmd);
+    for (uint32_t i = 0; i < cmd.m_createInfoCount.Value; ++i) {
+      auto& ci = const_cast<VkRayTracingPipelineCreateInfoNV&>(cmd.m_pCreateInfos.Value[i]);
+      if (ci.flags & VK_PIPELINE_CREATE_FAIL_ON_PIPELINE_COMPILE_REQUIRED_BIT) {
+        const VkPipelineCreateFlags originalFlags = ci.flags;
+        ci.flags &= ~VK_PIPELINE_CREATE_FAIL_ON_PIPELINE_COMPILE_REQUIRED_BIT;
+        LOG_TRACE
+            << "Vulkan2 subcapture: rewrote vkCreateRayTracingPipelinesNV flags for state restore"
+            << " stateKey=" << state->key << " [" << i << "/" << cmd.m_createInfoCount.Value
+            << "] 0x" << std::hex << originalFlags << " -> 0x" << ci.flags << std::dec;
+      }
+    }
+    m_Recorder.Record(vkCreateRayTracingPipelinesNVSerializer(cmd));
+    break;
+  }
   case CommandId::ID_VKCREATEDESCRIPTORSETLAYOUT:
     EMIT_DECODED(vkCreateDescriptorSetLayout)
   case CommandId::ID_VKCREATEDESCRIPTORUPDATETEMPLATE:
     EMIT_DECODED(vkCreateDescriptorUpdateTemplate)
   case CommandId::ID_VKCREATEDESCRIPTORUPDATETEMPLATEKHR:
     EMIT_DECODED(vkCreateDescriptorUpdateTemplateKHR)
-  case CommandId::ID_VKCREATEDESCRIPTORPOOL:
-    EMIT_DECODED(vkCreateDescriptorPool)
+  case CommandId::ID_VKCREATEDESCRIPTORPOOL: {
+    // Inflate maxSets and per-type pool sizes when re-creating the pool during
+    // state restore.  The original capture may have allocated and freed
+    // descriptor sets in a churn pattern that left the pool well below
+    // capacity at the cut.  At restore time we only re-allocate the sets that
+    // are currently alive, so the freshly created pool starts compact -- if
+    // it then matches the original maxSets exactly, the very first
+    // recording-range vkAllocateDescriptorSets can return
+    // VK_ERROR_OUT_OF_POOL_MEMORY when the original peak was reached again.
+    // The player would then crash on the next vkUpdateDescriptorSets /
+    // vkCmdBindDescriptorSets because the never-allocated set's GITSKey is
+    // missing from HandleMap.  The 4x headroom is cheap in driver memory and
+    // tolerates any reasonable churn between the restore snapshot and
+    // recording-range allocations; revisit if a real workload exceeds it.
+    vkCreateDescriptorPoolCommand cmd;
+    Decode(buf, cmd);
+    if (cmd.m_pCreateInfo.Value) {
+      auto* createInfo = const_cast<VkDescriptorPoolCreateInfo*>(cmd.m_pCreateInfo.Value);
+      constexpr uint32_t kHeadroomMultiplier = 4;
+      const uint32_t newMaxSets = createInfo->maxSets * kHeadroomMultiplier;
+      if (newMaxSets > createInfo->maxSets) {
+        createInfo->maxSets = newMaxSets;
+      }
+      auto* sizes = const_cast<VkDescriptorPoolSize*>(createInfo->pPoolSizes);
+      for (uint32_t i = 0; i < createInfo->poolSizeCount && sizes; ++i) {
+        const uint32_t newCount = sizes[i].descriptorCount * kHeadroomMultiplier;
+        if (newCount > sizes[i].descriptorCount) {
+          sizes[i].descriptorCount = newCount;
+        }
+      }
+    }
+    m_Recorder.Record(vkCreateDescriptorPoolSerializer(cmd));
+    break;
+  }
   case CommandId::ID_VKALLOCATEDESCRIPTORSETS:
     EMIT_DECODED(vkAllocateDescriptorSets)
   case CommandId::ID_VKCREATESAMPLER:
@@ -814,8 +1020,10 @@ bool StateTrackingService::EmitCreationCommand(ObjectState* state) {
     EMIT_DECODED(vkCreateCommandPool)
   case CommandId::ID_VKALLOCATECOMMANDBUFFERS:
     EMIT_DECODED(vkAllocateCommandBuffers)
+#ifdef VK_USE_PLATFORM_WIN32_KHR
   case CommandId::ID_VKCREATEWIN32SURFACEKHR:
     EMIT_DECODED(vkCreateWin32SurfaceKHR)
+#endif
 #ifdef GITS_PLATFORM_X11
   case CommandId::ID_VKCREATEXCBSURFACEKHR:
     EMIT_DECODED(vkCreateXcbSurfaceKHR)
@@ -867,6 +1075,55 @@ bool StateTrackingService::EmitCreationCommand(ObjectState* state) {
 // Per-type special-case restores
 // ---------------------------------------------------------------------------
 
+bool StateTrackingService::RestorePhysicalDevice(ObjectState* state) {
+  // The parent VkInstance must already be restored (RestoreOne walks parents
+  // first).  If it could not be restored we cannot enumerate.
+  if (!state->parentKey || !m_RestoredThisPass.count(state->parentKey)) {
+    return false;
+  }
+
+  // Gather every live PhysicalDeviceState that shares this parent instance.
+  // Sort the keys so the synthesized command's HandleKeys are deterministic
+  // across runs (helps diff-debugging restore streams).
+  std::vector<uint64_t> pdKeys;
+  for (const auto& [key, statePtr] : m_States) {
+    if (statePtr->creationCommandId != CommandId::ID_VKENUMERATEPHYSICALDEVICES) {
+      continue;
+    }
+    if (statePtr->destroyed || statePtr->parentKey != state->parentKey) {
+      continue;
+    }
+    pdKeys.push_back(key);
+  }
+  if (pdKeys.empty()) {
+    // Defensive: state we were called for must have appeared in the loop.
+    return false;
+  }
+
+  // Build a synthetic vkEnumeratePhysicalDevices.  The encoder needs non-null
+  // Value pointers for HandleArrayOutputArgument / PointerArgument, but the
+  // player allocates fresh storage based on the encoded Size/Keys when it
+  // decodes - the values themselves do not flow through.
+  uint32_t count = static_cast<uint32_t>(pdKeys.size());
+  static VkPhysicalDevice kDummyPDSlot = VK_NULL_HANDLE;
+
+  vkEnumeratePhysicalDevicesCommand cmd;
+  cmd.m_Return.Value = VK_SUCCESS;
+  cmd.m_instance.Key = state->parentKey;
+  cmd.m_pPhysicalDeviceCount.Value = &count;
+  cmd.m_pPhysicalDevices.Value = &kDummyPDSlot;
+  cmd.m_pPhysicalDevices.Size = count;
+  cmd.m_pPhysicalDevices.Keys = pdKeys;
+  m_Recorder.Record(vkEnumeratePhysicalDevicesSerializer(cmd));
+
+  // Mark every sibling PD as restored so subsequent RestoreOne calls for
+  // them short-circuit (idempotency guard at the top of RestoreOne).
+  for (uint64_t pdKey : pdKeys) {
+    m_RestoredThisPass.insert(pdKey);
+  }
+  return true;
+}
+
 void StateTrackingService::RestoreSurface(ObjectState* state) {
   auto* surf = static_cast<SurfaceState*>(state);
   if (surf->hwndKey != 0) {
@@ -891,7 +1148,10 @@ void StateTrackingService::RestoreSurface(ObjectState* state) {
   // first-player values.  Decode the command, patch the fields, and re-emit.
   if (state->creationCommandId == CommandId::ID_VKCREATEWIN32SURFACEKHR &&
       !state->creationCommandBuffer.empty() && surf->hwndKey != 0) {
-    char* buf = state->creationCommandBuffer.data();
+    // Decode rebases offsets in place; mirror EmitCreationCommand and decode
+    // into a scratch copy so creationCommandBuffer stays pristine.
+    std::vector<char> scratch = state->creationCommandBuffer;
+    char* buf = scratch.data();
     vkCreateWin32SurfaceKHRCommand cmd;
     Decode(buf, cmd);
     if (cmd.m_pCreateInfo.Value) {
@@ -933,9 +1193,9 @@ bool StateTrackingService::RestoreBuffer(ObjectState* state) {
     }
 
     vkBindBufferMemoryCommand bind;
-    bind.m_device.Key = static_cast<uint32_t>(buf->parentKey);
-    bind.m_buffer.Key = static_cast<uint32_t>(buf->key);
-    bind.m_memory.Key = static_cast<uint32_t>(buf->boundMemoryKey);
+    bind.m_device.Key = buf->parentKey;
+    bind.m_buffer.Key = buf->key;
+    bind.m_memory.Key = buf->boundMemoryKey;
     bind.m_memoryOffset.Value = buf->memoryOffset;
     bind.m_Return.Value = VK_SUCCESS;
     m_Recorder.Record(vkBindBufferMemorySerializer(bind));
@@ -955,8 +1215,44 @@ bool StateTrackingService::RestoreImage(ObjectState* state) {
   // so its handle must be registered in HandleMapService before vkAllocateMemory
   // is emitted; otherwise ResolvePNextHandleKeys crashes on the missing key.
   // For non-dedicated allocations the order makes no difference.
-  if (!EmitCreationCommand(state)) {
-    return false;
+  //
+  // We do NOT call the generic EmitCreationCommand here: the stored
+  // vkCreateImage usage reflects what the application requested at recording
+  // time, which is typically SAMPLED | COLOR_ATTACHMENT etc. without
+  // TRANSFER_DST.  During the second player's state-restore phase,
+  // RestoreImageContents emits vkCmdCopyBufferToImage to upload texel data
+  // into this image; that copy requires the destination image to have been
+  // created with VK_IMAGE_USAGE_TRANSFER_DST_BIT, otherwise validation fires
+  // VUID-vkCmdCopyBufferToImage-dstImage-00177 and the copy may behave as a
+  // no-op depending on the driver, leaving the image content uninitialised.
+  //
+  // Mirrors legacy Vulkan/recorder/vulkanStateRestore.cpp line ~734:
+  //   imageCreateInfo.usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+  //
+  // The fix must NOT touch the original (first-player) image creation -- only
+  // the create command that the SECOND player will run during state restore.
+  // Decode the stored blob into a scratch copy, OR in TRANSFER_DST, re-emit.
+  //
+  // KNOWN LIMITATION / FUTURE WORK:
+  // Adding TRANSFER_DST here can legitimately change the image's
+  // vkGetImageMemoryRequirements (size / alignment / memoryTypeBits), which
+  // means the original vkAllocateMemory (sized for the app's requested usage
+  // only) may no longer satisfy the new bind on some drivers.  The
+  // spec-correct path is to promote TRANSFER_SRC | TRANSFER_DST in the legacy
+  // interceptor (recExecWrap_vkCreateImage in
+  // Vulkan/interceptor/include/vulkanExecWrap.h) so the captured
+  // vkAllocateMemory is sized for the worst-case usage from day one.  Then
+  // this state-restore-side OR becomes a no-op (usage already includes both
+  // flags) and there is no requirements mismatch.  Tracking as follow-up.
+  {
+    std::vector<char> scratch = img->creationCommandBuffer;
+    char* buf = scratch.data();
+    vkCreateImageCommand cmd;
+    Decode(buf, cmd);
+    if (cmd.m_pCreateInfo.Value) {
+      cmd.m_pCreateInfo.Value->usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    }
+    m_Recorder.Record(vkCreateImageSerializer(cmd));
   }
 
   if (img->boundMemoryKey && img->parentKey) {
@@ -971,9 +1267,9 @@ bool StateTrackingService::RestoreImage(ObjectState* state) {
     }
 
     vkBindImageMemoryCommand bind;
-    bind.m_device.Key = static_cast<uint32_t>(img->parentKey);
-    bind.m_image.Key = static_cast<uint32_t>(img->key);
-    bind.m_memory.Key = static_cast<uint32_t>(img->boundMemoryKey);
+    bind.m_device.Key = img->parentKey;
+    bind.m_image.Key = img->key;
+    bind.m_memory.Key = img->boundMemoryKey;
     bind.m_memoryOffset.Value = img->memoryOffset;
     bind.m_Return.Value = VK_SUCCESS;
     m_Recorder.Record(vkBindImageMemorySerializer(bind));
@@ -1015,7 +1311,29 @@ bool StateTrackingService::RestoreImageView(ObjectState* state) {
 }
 
 void StateTrackingService::RestoreSwapchain(ObjectState* state) {
-  if (!EmitCreationCommand(state)) {
+  // Same rationale as RestoreImage: the second player's content restore copies
+  // texel data into swapchain images via vkCmdCopyBufferToImage, so the
+  // swapchain images must be created with VK_IMAGE_USAGE_TRANSFER_DST_BIT.
+  // The application typically requests only COLOR_ATTACHMENT, which makes the
+  // restore copy spec-illegal (VUID-vkCmdCopyBufferToImage-dstImage-00177) and
+  // a potential no-op depending on the driver.
+  //
+  // Mirrors legacy Vulkan/recorder/vulkanStateRestore.cpp line ~622:
+  //   swapchainCreateInfo.imageUsage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+  //
+  // Same KNOWN LIMITATION as RestoreImage above re: memory requirements
+  // delta vs the original allocation.  Long-term: do the imageUsage promotion
+  // at the legacy interceptor (recExecWrap_vkCreateSwapchainKHR).
+  if (!state->creationCommandBuffer.empty()) {
+    std::vector<char> scratch = state->creationCommandBuffer;
+    char* buf = scratch.data();
+    vkCreateSwapchainKHRCommand cmd;
+    Decode(buf, cmd);
+    if (cmd.m_pCreateInfo.Value) {
+      cmd.m_pCreateInfo.Value->imageUsage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    }
+    m_Recorder.Record(vkCreateSwapchainKHRSerializer(cmd));
+  } else {
     LOG_WARNING << "Vulkan2 subcapture: failed to emit vkCreateSwapchainKHR for swapchain key="
                 << state->key;
     return;
@@ -1085,6 +1403,9 @@ bool StateTrackingService::RestoreDescriptorSets(ObjectState* state) {
   auto* ds = static_cast<DescriptorSetState*>(state);
 
   if (state->creationCommandBuffer.empty()) {
+    LOG_WARNING << "Vulkan2 subcapture: skipping descriptor set key=" << ds->key
+                << " because creationCommandBuffer is empty (vkAllocateDescriptorSets blob was "
+                   "never stored)";
     return false;
   }
 
@@ -1098,6 +1419,10 @@ bool StateTrackingService::RestoreDescriptorSets(ObjectState* state) {
   }
 
   if (!EmitCreationCommand(state)) {
+    LOG_WARNING << "Vulkan2 subcapture: skipping descriptor set key=" << ds->key
+                << " because EmitCreationCommand failed (likely a missing dependency such as "
+                   "VkDescriptorSetLayout key="
+                << (ds->dependencyKeys.empty() ? 0 : ds->dependencyKeys.front()) << ")";
     return false;
   }
   // Re-emit all tracked descriptor writes / copies / template updates for
@@ -1220,8 +1545,8 @@ void StateTrackingService::RestoreMappedMemory(ObjectState* state) {
   if (hasDirtyData) {
     {
       vkMapMemoryCommand map;
-      map.m_device.Key = static_cast<uint32_t>(mem->parentKey);
-      map.m_memory.Key = static_cast<uint32_t>(mem->key);
+      map.m_device.Key = mem->parentKey;
+      map.m_memory.Key = mem->key;
       map.m_offset.Value = mapOffset;
       map.m_size.Value = mapSize;
       map.m_flags.Value = mapFlags;
@@ -1231,8 +1556,8 @@ void StateTrackingService::RestoreMappedMemory(ObjectState* state) {
 
     {
       MappedDataMetaCommand mdc;
-      mdc.m_Device.Key = static_cast<uint32_t>(mem->parentKey);
-      mdc.m_Memory.Key = static_cast<uint32_t>(mem->key);
+      mdc.m_Device.Key = mem->parentKey;
+      mdc.m_Memory.Key = mem->key;
       MemoryRegions::Region region;
       // region.Offset must be relative to the mapped-range start so the player
       // writes to the correct allocation byte: mapOffset + region.Offset = shadowDirtyBegin.
@@ -1249,8 +1574,8 @@ void StateTrackingService::RestoreMappedMemory(ObjectState* state) {
     // OR we used a broader mapping that differs from the original.
     if (!mem->isMapped || useBroaderMapping) {
       vkUnmapMemoryCommand unmap;
-      unmap.m_device.Key = static_cast<uint32_t>(mem->parentKey);
-      unmap.m_memory.Key = static_cast<uint32_t>(mem->key);
+      unmap.m_device.Key = mem->parentKey;
+      unmap.m_memory.Key = mem->key;
       m_Recorder.Record(vkUnmapMemorySerializer(unmap));
     }
   }
@@ -1260,8 +1585,8 @@ void StateTrackingService::RestoreMappedMemory(ObjectState* state) {
   // (b) memory is mapped AND there was no dirty data (mapping state still needs restoring).
   if (mem->isMapped && (useBroaderMapping || !hasDirtyData)) {
     vkMapMemoryCommand map;
-    map.m_device.Key = static_cast<uint32_t>(mem->parentKey);
-    map.m_memory.Key = static_cast<uint32_t>(mem->key);
+    map.m_device.Key = mem->parentKey;
+    map.m_memory.Key = mem->key;
     map.m_offset.Value = mem->mappingOffset;
     map.m_size.Value = mem->mappingSize;
     map.m_flags.Value = mem->mappingFlags;
@@ -1297,10 +1622,16 @@ static void EmitStagingUploadAndCopyBuffer(SubcaptureRecorder& recorder,
                                            uint64_t commandPoolKey,
                                            uint64_t dstBufKey,
                                            VkDeviceSize bufSize,
+                                           VkDeviceSize stagingAllocationSize,
                                            uint32_t stagingMemTypeIndex,
                                            const std::vector<uint8_t>& data) {
 
   // --- Create staging buffer ---
+  // bci.size is the buffer's logical length (used for vkCmdCopyBuffer); the
+  // *memory* we allocate must be >= the requirements-reported size
+  // (alignment-rounded), passed in as stagingAllocationSize.  Without the
+  // separation we hit VUID-vkBindBufferMemory-None-10741 ("allocationSize ...
+  // must be at least as large as VkMemoryRequirements::size").
   VkBufferCreateInfo bci{};
   bci.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
   bci.size = bufSize;
@@ -1316,7 +1647,7 @@ static void EmitStagingUploadAndCopyBuffer(SubcaptureRecorder& recorder,
 
   VkMemoryAllocateInfo mai{};
   mai.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-  mai.allocationSize = bufSize;
+  mai.allocationSize = stagingAllocationSize;
   mai.memoryTypeIndex = stagingMemTypeIndex;
 
   vkAllocateMemoryCommand allocMemCmd;
@@ -1414,8 +1745,6 @@ static void EmitStagingUploadAndCopyBuffer(SubcaptureRecorder& recorder,
   recorder.Record(vkCmdPipelineBarrierSerializer(preBarrierCmd));
 
   VkBufferCopy copyRegion{0, 0, bufSize};
-  static VkBuffer kDummySrcBuf = reinterpret_cast<VkBuffer>(0x1ULL);
-  static VkBuffer kDummyDstBuf = reinterpret_cast<VkBuffer>(0x2ULL);
 
   vkCmdCopyBufferCommand copyCmd;
   copyCmd.m_commandBuffer.Key = kContentCBKey;
@@ -1491,11 +1820,13 @@ static void EmitStagingUploadAndCopyImage(SubcaptureRecorder& recorder,
                                           VkImageLayout finalLayout,
                                           VkImageAspectFlags aspectMask,
                                           VkDeviceSize stagingSize,
+                                          VkDeviceSize stagingAllocationSize,
                                           uint32_t stagingMemTypeIndex,
                                           const std::vector<uint8_t>& data,
                                           const std::vector<VkBufferImageCopy>& regions) {
 
-  // Create staging buffer
+  // Create staging buffer - see EmitStagingUploadAndCopyBuffer for the
+  // rationale behind the bci.size vs mai.allocationSize split.
   VkBufferCreateInfo bci{};
   bci.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
   bci.size = stagingSize;
@@ -1511,7 +1842,7 @@ static void EmitStagingUploadAndCopyImage(SubcaptureRecorder& recorder,
 
   VkMemoryAllocateInfo mai{};
   mai.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-  mai.allocationSize = stagingSize;
+  mai.allocationSize = stagingAllocationSize;
   mai.memoryTypeIndex = stagingMemTypeIndex;
 
   vkAllocateMemoryCommand allocMemCmd;
@@ -1608,9 +1939,6 @@ static void EmitStagingUploadAndCopyImage(SubcaptureRecorder& recorder,
   recorder.Record(vkCmdPipelineBarrierSerializer(preBarrierCmd));
 
   // vkCmdCopyBufferToImage
-  static VkBuffer kDummySrcBufImg = reinterpret_cast<VkBuffer>(0x1ULL);
-  static VkImage kDummyDstImg = reinterpret_cast<VkImage>(0x1ULL);
-
   vkCmdCopyBufferToImageCommand copyCmd;
   copyCmd.m_commandBuffer.Key = kContentCBKey;
   copyCmd.m_srcBuffer.Key = kStagingBufKey;
@@ -1764,18 +2092,36 @@ void StateTrackingService::RestoreBufferContents() {
         continue;
       }
 
-      // Find a HOST_VISIBLE staging memory type for the second player.
-      auto* mem = GetState<DeviceMemoryState>(buf->boundMemoryKey);
-      uint32_t stagingMemType = m_GpuReadbackHelper->FindStagingMemoryType(physDevKey, 0xFFFFFFFF);
+      // Query the actual memory requirements the second player's driver will
+      // report for a TRANSFER_SRC buffer of this size, so we can pick a memory
+      // type the buffer is allowed to use (req.memoryTypeBits, fixes
+      // VUID-vkBindBufferMemory-memory-01035: previously we passed 0xFFFFFFFF
+      // and could land on a HOST_VISIBLE type with no bit in common with the
+      // buffer's allowed types) and allocate enough memory for it (req.size,
+      // fixes VUID-vkBindBufferMemory-None-10741: previously we used the raw
+      // data length, missing alignment overhead).  Both bugs corrupted the
+      // staging upload and propagated to every restored buffer's contents.
+      VkMemoryRequirements stagingReq{};
+      if (!m_GpuReadbackHelper->QueryStagingBufferRequirements(
+              deviceKey, buf->bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, stagingReq)) {
+        LOG_WARNING << "Vulkan2 subcapture: failed to query staging buffer requirements for key="
+                    << bufKey;
+        continue;
+      }
+      uint32_t stagingMemType =
+          m_GpuReadbackHelper->FindStagingMemoryType(physDevKey, stagingReq.memoryTypeBits);
       if (stagingMemType == UINT32_MAX) {
-        LOG_WARNING << "Vulkan2 subcapture: no staging memory type for buffer key=" << bufKey;
+        LOG_WARNING << "Vulkan2 subcapture: no HOST_VISIBLE memory type satisfying buffer "
+                       "memoryTypeBits=0x"
+                    << std::hex << stagingReq.memoryTypeBits << std::dec
+                    << " for buffer key=" << bufKey;
         continue;
       }
 
       EmitStagingUploadAndCopyBuffer(m_Recorder, deviceKey, queueKey, poolKey, bufKey,
-                                     buf->bufferSize, stagingMemType, data);
-      LOG_INFO << "Vulkan2 subcapture: restored buffer content, key=" << bufKey
-               << " size=" << buf->bufferSize;
+                                     buf->bufferSize, stagingReq.size, stagingMemType, data);
+      LOG_TRACE << "Vulkan2 subcapture: restored buffer content, key=" << bufKey
+                << " size=" << buf->bufferSize << " allocSize=" << stagingReq.size;
     }
   }
 }
@@ -1850,13 +2196,6 @@ void StateTrackingService::RestoreImageContents() {
       continue;
     }
 
-    uint32_t stagingMemType = m_GpuReadbackHelper->FindStagingMemoryType(physDevKey, 0xFFFFFFFF);
-    if (stagingMemType == UINT32_MAX) {
-      LOG_WARNING << "Vulkan2 subcapture: no staging memory type for images on device key="
-                  << deviceKey;
-      continue;
-    }
-
     for (uint64_t imgKey : imgKeys) {
       auto* img = static_cast<ImageState*>(GetState(imgKey));
       if (!img) {
@@ -1877,16 +2216,42 @@ void StateTrackingService::RestoreImageContents() {
         continue;
       }
 
+      // Per-image staging memory query (same rationale as RestoreBufferContents
+      // above): the previous code hoisted FindStagingMemoryType(_, 0xFFFFFFFF)
+      // out of the loop so every image's staging buffer used the SAME
+      // memoryTypeIndex, which need not be in the buffer's allowed
+      // memoryTypeBits, and used data.size() as both bci.size AND
+      // mai.allocationSize, missing the driver's alignment-rounded
+      // requirement.  Querying per-image is one extra create/destroy per image
+      // but is cheap compared to ReadImage and produces a spec-valid stream.
+      const VkDeviceSize stagingDataSize = static_cast<VkDeviceSize>(data.size());
+      VkMemoryRequirements stagingReq{};
+      if (!m_GpuReadbackHelper->QueryStagingBufferRequirements(
+              deviceKey, stagingDataSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, stagingReq)) {
+        LOG_WARNING << "Vulkan2 subcapture: failed to query staging buffer requirements for image"
+                       " key="
+                    << imgKey;
+        continue;
+      }
+      uint32_t stagingMemType =
+          m_GpuReadbackHelper->FindStagingMemoryType(physDevKey, stagingReq.memoryTypeBits);
+      if (stagingMemType == UINT32_MAX) {
+        LOG_WARNING << "Vulkan2 subcapture: no HOST_VISIBLE memory type satisfying buffer "
+                       "memoryTypeBits=0x"
+                    << std::hex << stagingReq.memoryTypeBits << std::dec
+                    << " for image key=" << imgKey;
+        continue;
+      }
+
       VkImageAspectFlags aspectMask = AspectMaskFromFormat(img->format);
       EmitStagingUploadAndCopyImage(m_Recorder, deviceKey, queueKey, poolKey, imgKey, img->format,
-                                    img->extent, img->currentLayout, aspectMask,
-                                    static_cast<VkDeviceSize>(data.size()), stagingMemType, data,
-                                    regions);
+                                    img->extent, img->currentLayout, aspectMask, stagingDataSize,
+                                    stagingReq.size, stagingMemType, data, regions);
 
       img->contentRestored = true;
-      LOG_INFO << "Vulkan2 subcapture: restored image content, key=" << imgKey << " "
-               << img->extent.width << "x" << img->extent.height << " mips=" << img->mipLevels
-               << " layers=" << img->arrayLayers;
+      LOG_TRACE << "Vulkan2 subcapture: restored image content, key=" << imgKey << " "
+                << img->extent.width << "x" << img->extent.height << " mips=" << img->mipLevels
+                << " layers=" << img->arrayLayers;
     }
   }
 }
@@ -1902,9 +2267,11 @@ void StateTrackingService::EmitRawCommand(CommandId id, const std::vector<char>&
   class RawSerializer : public stream::CommandSerializer {
   public:
     RawSerializer(CommandId cmdId, const std::vector<char>& data) : m_CmdId(cmdId) {
-      m_DataSize = static_cast<uint32_t>(data.size());
-      m_Data.reset(new char[m_DataSize]);
-      std::memcpy(m_Data.get(), data.data(), m_DataSize);
+      // Base class m_DataSize is uint64_t; preserve full size to avoid
+      // silently truncating very large encoded blobs.
+      m_DataSize = static_cast<uint64_t>(data.size());
+      m_Data.reset(new char[data.size()]);
+      std::memcpy(m_Data.get(), data.data(), data.size());
     }
     uint32_t Id() const override {
       return static_cast<uint32_t>(m_CmdId);

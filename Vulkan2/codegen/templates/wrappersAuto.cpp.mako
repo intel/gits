@@ -29,6 +29,18 @@ define = get_define(command.platform)
 % if define:
 #ifdef ${define}
 % endif
+<%
+# Precompute the destroy/free target (last handle param) so the UpdateHandle
+# loop below can emit a lenient lookup for it.  Strict UpdateHandle is kept
+# for every other handle parameter (device, parent pool, ...).
+is_destroy_or_free = command.name.startswith('vkDestroy') or command.name.startswith('vkFree')
+destroy_target_name = None
+if is_destroy_or_free:
+	for p in reversed(command.params):
+		if p.is_handle:
+			destroy_target_name = p.name
+			break
+%>\
 ${command.return_type} ${command.name}Wrapper(
   % for param in command.params:
 	${param.full_type}${',' if not loop.last else ''}
@@ -49,7 +61,11 @@ ${command.return_type} ${command.name}Wrapper(
     
 	% for param in command.params:
 	% if param.is_handle:
+	% if param.name == destroy_target_name:
+	UpdateHandleLenient(manager, command.m_${param.name});
+	% else:
 	UpdateHandle(manager, command.m_${param.name});
+	% endif
 	% elif param.is_struct_with_handles and not (param.is_pointer and not param.is_const):
 	UpdateHandle(manager, command.m_${param.name});
 	% elif param.is_struct and not param.is_struct_with_handles:
@@ -112,6 +128,36 @@ ${command.return_type} ${command.name}Wrapper(
     for (Layer* layer : manager.GetPostLayers()) {
 	  layer->Post(command);
 	}
+
+	% if command.name.startswith('vkDestroy') or command.name.startswith('vkFree'):
+<%
+	destroy_target = None
+	for p in reversed(command.params):
+		if p.is_handle:
+			destroy_target = p
+			break
+%>\
+	% if destroy_target is not None:
+	// Drop the recorder-side HandleMapService mapping(s) for the destroyed
+	// handle(s).  Without this, a subsequent vkCreate* call that the driver
+	// happens to satisfy by recycling the same VkXxx handle would, via
+	// UpdateOutputHandle's "reuse existing key" path, end up with the
+	// destroyed object's GITSKey -- silently aliasing the new object onto the
+	// old state-tracking entry.  See HandleMapService::RemoveHandle for the
+	// full rationale.
+	% if destroy_target.is_pointer:
+	if (command.m_${destroy_target.name}.Value) {
+	  for (uint32_t i = 0; i < command.m_${destroy_target.name}.Size; ++i) {
+	    HandleMapService::Get().RemoveHandle(
+	        reinterpret_cast<uint64_t>(command.m_${destroy_target.name}.Value[i]));
+	  }
+	}
+	% else:
+	HandleMapService::Get().RemoveHandle(
+	    reinterpret_cast<uint64_t>(command.m_${destroy_target.name}.Value));
+	% endif
+	% endif
+	% endif
     
   } else {
     ${'result = ' if command.return_type != 'void' else ''}manager.${dispatch_table}(${f'{command.params[0].name}' if dispatch_table != 'GetGlobalDispatchTable' else ''}).${command.name}(

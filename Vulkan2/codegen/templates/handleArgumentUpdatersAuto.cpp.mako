@@ -29,24 +29,24 @@ void CollectPNextHandleKeys(std::vector<GITSKey>& keys, const void* pNext) {
         const auto& s = *reinterpret_cast<const ${structure.name}*>(node);
 % for kind, access, length, base_type, member_name in handle_members:
 % if kind == 'handle_single':
-        keys.push_back(s.${access} != VK_NULL_HANDLE ? HandleMapService::Get().GetKey(reinterpret_cast<uint64_t>(s.${access})) : 0);
+        keys.push_back(HandleMapService::Get().GetKeyLenient(reinterpret_cast<uint64_t>(s.${access})));
 % elif kind == 'handle_typed_uint64':
-        keys.push_back(s.${access} != 0 ? HandleMapService::Get().GetKey(s.${access}) : 0);
+        keys.push_back(HandleMapService::Get().GetKeyLenient(s.${access}));
 % elif kind == 'handle_ptr':
         if (s.${access}) {
-          keys.push_back(HandleMapService::Get().GetKey(reinterpret_cast<uint64_t>(*s.${access})));
+          keys.push_back(HandleMapService::Get().GetKeyLenient(reinterpret_cast<uint64_t>(*s.${access})));
         } else {
           keys.push_back(0);
         }
 % elif kind == 'handle_array_ptr':
         if (s.${access} && s.${length} > 0) {
           for (uint32_t handleIdx = 0; handleIdx < s.${length}; ++handleIdx) {
-            keys.push_back(s.${access}[handleIdx] != VK_NULL_HANDLE ? HandleMapService::Get().GetKey(reinterpret_cast<uint64_t>(s.${access}[handleIdx])) : 0);
+            keys.push_back(HandleMapService::Get().GetKeyLenient(reinterpret_cast<uint64_t>(s.${access}[handleIdx])));
           }
         }
 % elif kind == 'handle_fixed_array':
         for (uint32_t handleIdx = 0; handleIdx < s.${length}; ++handleIdx) {
-          keys.push_back(s.${access}[handleIdx] != VK_NULL_HANDLE ? HandleMapService::Get().GetKey(reinterpret_cast<uint64_t>(s.${access}[handleIdx])) : 0);
+          keys.push_back(HandleMapService::Get().GetKeyLenient(reinterpret_cast<uint64_t>(s.${access}[handleIdx])));
         }
 % endif
 % endfor
@@ -78,24 +78,24 @@ define = entry['define']
 void CollectHandleKeys(std::vector<GITSKey>& keys, const ${struct_name}& s) {
 % for kind, access, length, base_type, member_name in handle_members:
 % if kind == 'handle_single':
-  keys.push_back(s.${access} != VK_NULL_HANDLE ? HandleMapService::Get().GetKey(reinterpret_cast<uint64_t>(s.${access})) : 0);
+  keys.push_back(HandleMapService::Get().GetKeyLenient(reinterpret_cast<uint64_t>(s.${access})));
 % elif kind == 'handle_typed_uint64':
-  keys.push_back(s.${access} != 0 ? HandleMapService::Get().GetKey(s.${access}) : 0);
+  keys.push_back(HandleMapService::Get().GetKeyLenient(s.${access}));
 % elif kind == 'handle_ptr':
   if (s.${access}) {
-    keys.push_back(HandleMapService::Get().GetKey(reinterpret_cast<uint64_t>(*s.${access})));
+    keys.push_back(HandleMapService::Get().GetKeyLenient(reinterpret_cast<uint64_t>(*s.${access})));
   } else {
     keys.push_back(0);
   }
 % elif kind == 'handle_array_ptr':
   if (s.${access} && s.${length} > 0) {
     for (uint32_t handleIdx = 0; handleIdx < s.${length}; ++handleIdx) {
-      keys.push_back(s.${access}[handleIdx] != VK_NULL_HANDLE ? HandleMapService::Get().GetKey(reinterpret_cast<uint64_t>(s.${access}[handleIdx])) : 0);
+      keys.push_back(HandleMapService::Get().GetKeyLenient(reinterpret_cast<uint64_t>(s.${access}[handleIdx])));
     }
   }
 % elif kind == 'handle_fixed_array':
   for (uint32_t handleIdx = 0; handleIdx < s.${length}; ++handleIdx) {
-    keys.push_back(s.${access}[handleIdx] != VK_NULL_HANDLE ? HandleMapService::Get().GetKey(reinterpret_cast<uint64_t>(s.${access}[handleIdx])) : 0);
+    keys.push_back(HandleMapService::Get().GetKeyLenient(reinterpret_cast<uint64_t>(s.${access}[handleIdx])));
   }
 % elif kind == 'handle_struct_array_ptr':
   if (s.${access} && s.${length} > 0) {

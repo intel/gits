@@ -40,6 +40,38 @@ void UpdateHandle(CaptureManager& manager, HandleArrayArgument<T>& arg) {
   }
 }
 
+// Lenient variants for the *destroy target* of vkDestroy* / vkFree* wrappers.
+// Codegen emits these only for the parameter being destroyed; every other
+// handle argument (device, parent pool, ...) keeps the strict UpdateHandle.
+//
+// Rationale: shipped applications occasionally double-destroy a handle (the
+// driver typically tolerates it as a no-op), or destroy a handle that is
+// already gone from our recorder map for other reasons.  The strict GetKey
+// would assert; the lenient path records key=0 (player translates back to
+// VK_NULL_HANDLE, which vkDestroy*/vkFree* are required by spec to ignore)
+// and lets the call pass through to the driver unchanged.  GetKeyLenient
+// emits one classified warning per unique missing handle.
+template <typename T>
+void UpdateHandleLenient(CaptureManager& manager, HandleArgument<T>& arg) {
+  if (!arg.Value) {
+    return;
+  }
+  arg.Key = HandleMapService::Get().GetKeyLenient(reinterpret_cast<std::uint64_t>(arg.Value));
+}
+
+template <typename T>
+void UpdateHandleLenient(CaptureManager& manager, HandleArrayArgument<T>& arg) {
+  if (!arg.Value) {
+    return;
+  }
+  for (uint32_t i = 0; i < arg.Size; ++i) {
+    if (arg.Value[i] != VK_NULL_HANDLE) {
+      arg.Keys[i] =
+          HandleMapService::Get().GetKeyLenient(reinterpret_cast<std::uint64_t>(arg.Value[i]));
+    }
+  }
+}
+
 template <typename T>
 void UpdateOutputHandle(CaptureManager& manager, HandleOutputArgument<T>& arg) {
   if (!arg.Value || !*arg.Value) {
