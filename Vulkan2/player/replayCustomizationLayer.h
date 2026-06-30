@@ -57,6 +57,9 @@ public:
   void Pre(vkWaitSemaphoresKHRCommand& command) override;
   void Post(vkWaitSemaphoresKHRCommand& command) override;
 
+  void Pre(vkCreateDebugUtilsMessengerEXTCommand& command) override;
+  void Pre(vkCreateDebugReportCallbackEXTCommand& command) override;
+
   void Post(vkCreateDescriptorUpdateTemplateCommand& command) override;
   void Post(vkCreateDescriptorUpdateTemplateKHRCommand& command) override;
   void Pre(vkDestroyDescriptorUpdateTemplateCommand& command) override;

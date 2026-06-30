@@ -60,6 +60,7 @@ class Member:
     is_struct_with_handles: bool = False
     is_union: bool = False
     is_opaque_pointer: bool = False
+    is_typed_handle: bool = False  # uint64_t member with objecttype="..." in vk.xml (type-erased handle)
 
 @dataclass
 class Structure:

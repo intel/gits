@@ -226,6 +226,42 @@ void ReplayCustomizationLayer::Post(vkWaitSemaphoresKHRCommand& command) {
   }
 }
 
+// vkCreateDebugUtilsMessengerEXT / vkCreateDebugReportCallbackEXT
+// The pCreateInfo contains a captured pfnUserCallback/pfnCallback pointing into
+// the original application's address space. Replace the callback pointer with a
+// no-op stub before replay so the driver call succeeds without invoking invalid memory.
+
+VKAPI_ATTR VkBool32 VKAPI_CALL
+debugUtilsMessengerNoOpCallback(VkDebugUtilsMessageSeverityFlagBitsEXT /*messageSeverity*/,
+                                VkDebugUtilsMessageTypeFlagsEXT /*messageType*/,
+                                const VkDebugUtilsMessengerCallbackDataEXT* /*pCallbackData*/,
+                                void* /*pUserData*/) {
+  return VK_FALSE;
+}
+
+void ReplayCustomizationLayer::Pre(vkCreateDebugUtilsMessengerEXTCommand& command) {
+  if (command.m_pCreateInfo.Value) {
+    command.m_pCreateInfo.Value->pfnUserCallback = debugUtilsMessengerNoOpCallback;
+  }
+}
+
+VKAPI_ATTR VkBool32 VKAPI_CALL debugReportNoOpCallback(VkDebugReportFlagsEXT /*flags*/,
+                                                       VkDebugReportObjectTypeEXT /*objectType*/,
+                                                       uint64_t /*object*/,
+                                                       size_t /*location*/,
+                                                       int32_t /*messageCode*/,
+                                                       const char* /*pLayerPrefix*/,
+                                                       const char* /*pMessage*/,
+                                                       void* /*pUserData*/) {
+  return VK_FALSE;
+}
+
+void ReplayCustomizationLayer::Pre(vkCreateDebugReportCallbackEXTCommand& command) {
+  if (command.m_pCreateInfo.Value) {
+    command.m_pCreateInfo.Value->pfnCallback = debugReportNoOpCallback;
+  }
+}
+
 // vkCreateDescriptorUpdateTemplate / KHR
 
 void ReplayCustomizationLayer::Post(vkCreateDescriptorUpdateTemplateCommand& command) {

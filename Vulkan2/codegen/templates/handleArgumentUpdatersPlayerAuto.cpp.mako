@@ -26,6 +26,11 @@ void ResolvePNextHandleKeys(const std::vector<GITSKey>& keys, uint32_t& idx, std
           GITSKey key = keys[idx++];
           s.${access} = key ? reinterpret_cast<${base_type}>(HandleMapService::Get().GetHandle(key)) : VK_NULL_HANDLE;
         }
+% elif kind == 'handle_typed_uint64':
+        if (idx < keys.size()) {
+          GITSKey key = keys[idx++];
+          s.${access} = key ? HandleMapService::Get().GetHandle(key) : 0;
+        }
 % elif kind == 'handle_ptr':
         if (idx < keys.size()) {
           GITSKey key = keys[idx++];
@@ -96,6 +101,11 @@ void ResolveHandleKeys(const std::vector<GITSKey>& keys, uint32_t& idx, std::vec
   if (idx < keys.size()) {
     GITSKey key = keys[idx++];
     s.${access} = key ? reinterpret_cast<${base_type}>(HandleMapService::Get().GetHandle(key)) : VK_NULL_HANDLE;
+  }
+% elif kind == 'handle_typed_uint64':
+  if (idx < keys.size()) {
+    GITSKey key = keys[idx++];
+    s.${access} = key ? HandleMapService::Get().GetHandle(key) : 0;
   }
 % elif kind == 'handle_ptr':
   if (idx < keys.size()) {

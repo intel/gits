@@ -410,7 +410,10 @@ def collect_handle_members(structure, structures_by_name, prefix=''):
     for member in structure.members:
         if member.name in ('sType', 'pNext'):
             continue
-        if member.is_handle:
+        if member.is_typed_handle:
+            access = f'{prefix}{member.name}'
+            results.append(('handle_typed_uint64', access, None, member.base_type, member.name))
+        elif member.is_handle:
             access = f'{prefix}{member.name}'
             if member.is_pointer and member.length:
                 length = f'{prefix}{member.length}' if prefix else member.length

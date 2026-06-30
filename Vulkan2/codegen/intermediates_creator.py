@@ -82,6 +82,9 @@ def parse_member(node) -> Member:
     values = node.get('values') or ''
     is_pointer_to_pointer=bool(re.search(r'\*\s*(const\s*)?\*', full_type))
     is_pointer='*' in full_type and not is_pointer_to_pointer
+    # objecttype attribute marks a uint64_t member that carries a type-erased Vulkan handle
+    # whose concrete type is indicated by a sibling enum member (e.g. VkObjectType).
+    is_typed_handle = node.get('objecttype') is not None and base_type == 'uint64_t'
 
     member = Member(
         name=name,
@@ -95,7 +98,8 @@ def parse_member(node) -> Member:
         is_null_terminated=is_null_terminated,
         fixed_array_size=fixed_array_size,
         bitfield=int(full_type.split(':')[1]) if ':' in full_type else None,
-        values=values
+        values=values,
+        is_typed_handle=is_typed_handle,
     )
 
     return member
@@ -493,6 +497,9 @@ def postprocess(commands, structures, unions, handles, enums, bitmasks, flags, e
         for member in structure.members:
             if member.base_type in handle_names:
                 member.is_handle = True
+                structure.has_handles = True
+                structure_with_handles.add(structure.name)
+            if member.is_typed_handle:
                 structure.has_handles = True
                 structure_with_handles.add(structure.name)
             if member.base_type in structure_names:

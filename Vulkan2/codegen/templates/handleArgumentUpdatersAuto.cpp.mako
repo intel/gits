@@ -23,6 +23,8 @@ void CollectPNextHandleKeys(std::vector<GITSKey>& keys, const void* pNext) {
 % for kind, access, length, base_type, member_name in handle_members:
 % if kind == 'handle_single':
         keys.push_back(s.${access} != VK_NULL_HANDLE ? HandleMapService::Get().GetKey(reinterpret_cast<uint64_t>(s.${access})) : 0);
+% elif kind == 'handle_typed_uint64':
+        keys.push_back(s.${access} != 0 ? HandleMapService::Get().GetKey(s.${access}) : 0);
 % elif kind == 'handle_ptr':
         if (s.${access}) {
           keys.push_back(HandleMapService::Get().GetKey(reinterpret_cast<uint64_t>(*s.${access})));
@@ -70,6 +72,8 @@ void CollectHandleKeys(std::vector<GITSKey>& keys, const ${struct_name}& s) {
 % for kind, access, length, base_type, member_name in handle_members:
 % if kind == 'handle_single':
   keys.push_back(s.${access} != VK_NULL_HANDLE ? HandleMapService::Get().GetKey(reinterpret_cast<uint64_t>(s.${access})) : 0);
+% elif kind == 'handle_typed_uint64':
+  keys.push_back(s.${access} != 0 ? HandleMapService::Get().GetKey(s.${access}) : 0);
 % elif kind == 'handle_ptr':
   if (s.${access}) {
     keys.push_back(HandleMapService::Get().GetKey(reinterpret_cast<uint64_t>(*s.${access})));
