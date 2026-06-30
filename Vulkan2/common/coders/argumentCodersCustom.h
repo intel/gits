@@ -30,5 +30,13 @@ uint32_t GetSize(const ArrayArgument<VkWriteDescriptorSet>& arg);
 void Encode(char* dst, uint32_t& offset, const ArrayArgument<VkWriteDescriptorSet>& arg);
 void Decode(char* src, uint32_t& offset, ArrayArgument<VkWriteDescriptorSet>& arg);
 
+// DescriptorTemplateDataArgument - serializes the pData buffer for
+// vkUpdateDescriptorSetWithTemplate[KHR] and vkCmdPushDescriptorSetWithTemplate[KHR].
+// The Data vector is populated during capture (Pre layer) and contains the
+// typed descriptor entries built from the template's create info.
+uint32_t GetSize(const DescriptorTemplateDataArgument& arg);
+void Encode(char* dst, uint32_t& offset, const DescriptorTemplateDataArgument& arg);
+void Decode(char* src, uint32_t& offset, DescriptorTemplateDataArgument& arg);
+
 } // namespace vulkan
 } // namespace gits

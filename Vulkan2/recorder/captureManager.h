@@ -14,6 +14,7 @@
 #include "captureLayerManager.h"
 #include "dispatchTableAuto.h"
 #include "mapTrackingService.h"
+#include "descriptorUpdateTemplateService.h"
 
 #include <atomic>
 
@@ -75,6 +76,10 @@ public:
     return *m_MapTrackingService;
   }
 
+  DescriptorUpdateTemplateService& GetDescriptorUpdateTemplateService() {
+    return m_DescriptorUpdateTemplateService;
+  }
+
 private:
   CaptureManager();
   ~CaptureManager();
@@ -93,6 +98,7 @@ private:
   std::unordered_map<void*, VkDeviceLevelDispatchTable> m_DeviceDispatchTable{};
 
   std::unique_ptr<MapTrackingService> m_MapTrackingService;
+  DescriptorUpdateTemplateService m_DescriptorUpdateTemplateService;
 };
 
 class RecursionGuard : public gits::noncopyable {

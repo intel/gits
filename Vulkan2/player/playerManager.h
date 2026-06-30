@@ -14,6 +14,7 @@
 #include "dispatchTableAuto.h"
 #include "windowService.h"
 #include "mapTrackingService.h"
+#include "descriptorUpdateTemplateService.h"
 
 namespace gits {
 namespace vulkan {
@@ -67,6 +68,10 @@ public:
     return m_MapTrackingService;
   }
 
+  DescriptorUpdateTemplateService& GetDescriptorUpdateTemplateService() {
+    return m_DescriptorUpdateTemplateService;
+  }
+
 private:
   PlayerManager();
 
@@ -82,6 +87,7 @@ private:
 
   WindowService m_WindowService;
   MapTrackingService m_MapTrackingService;
+  DescriptorUpdateTemplateService m_DescriptorUpdateTemplateService;
 };
 
 } // namespace vulkan

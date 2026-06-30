@@ -11,8 +11,6 @@
 #include "layerAuto.h"
 #include "gitsRecorder.h"
 
-#include <unordered_map>
-
 namespace gits {
 namespace vulkan {
 
@@ -30,6 +28,16 @@ public:
   void Post(vkMapMemoryCommand& command) override;
   void Pre(vkUnmapMemoryCommand& command) override;
   void Pre(vkQueueSubmitCommand& command) override;
+
+  void Post(vkCreateDescriptorUpdateTemplateCommand& command) override;
+  void Post(vkCreateDescriptorUpdateTemplateKHRCommand& command) override;
+  void Pre(vkDestroyDescriptorUpdateTemplateCommand& command) override;
+  void Pre(vkDestroyDescriptorUpdateTemplateKHRCommand& command) override;
+
+  void Pre(vkUpdateDescriptorSetWithTemplateCommand& command) override;
+  void Pre(vkUpdateDescriptorSetWithTemplateKHRCommand& command) override;
+  void Pre(vkCmdPushDescriptorSetWithTemplateCommand& command) override;
+  void Pre(vkCmdPushDescriptorSetWithTemplateKHRCommand& command) override;
 
 private:
   CaptureManager& m_Manager;

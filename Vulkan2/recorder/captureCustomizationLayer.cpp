@@ -63,5 +63,49 @@ void CaptureCustomizationLayer::Pre(vkQueueSubmitCommand& command) {
   m_Manager.GetMapTrackingService().SnapshotAllMapped();
 }
 
+void CaptureCustomizationLayer::Post(vkCreateDescriptorUpdateTemplateCommand& command) {
+  if (command.m_Return.Value == VK_SUCCESS && command.m_pDescriptorUpdateTemplate.Value) {
+    m_Manager.GetDescriptorUpdateTemplateService().StoreTemplate(
+        *command.m_pDescriptorUpdateTemplate.Value, command.m_pCreateInfo.Value);
+  }
+}
+
+void CaptureCustomizationLayer::Post(vkCreateDescriptorUpdateTemplateKHRCommand& command) {
+  if (command.m_Return.Value == VK_SUCCESS && command.m_pDescriptorUpdateTemplate.Value) {
+    m_Manager.GetDescriptorUpdateTemplateService().StoreTemplate(
+        *command.m_pDescriptorUpdateTemplate.Value, command.m_pCreateInfo.Value);
+  }
+}
+
+void CaptureCustomizationLayer::Pre(vkDestroyDescriptorUpdateTemplateCommand& command) {
+  m_Manager.GetDescriptorUpdateTemplateService().RemoveTemplate(
+      command.m_descriptorUpdateTemplate.Value);
+}
+
+void CaptureCustomizationLayer::Pre(vkDestroyDescriptorUpdateTemplateKHRCommand& command) {
+  m_Manager.GetDescriptorUpdateTemplateService().RemoveTemplate(
+      command.m_descriptorUpdateTemplate.Value);
+}
+
+void CaptureCustomizationLayer::Pre(vkUpdateDescriptorSetWithTemplateCommand& command) {
+  m_Manager.GetDescriptorUpdateTemplateService().SerializeData(
+      command.m_descriptorUpdateTemplate.Value, command.m_pData.Value, command.m_pData);
+}
+
+void CaptureCustomizationLayer::Pre(vkUpdateDescriptorSetWithTemplateKHRCommand& command) {
+  m_Manager.GetDescriptorUpdateTemplateService().SerializeData(
+      command.m_descriptorUpdateTemplate.Value, command.m_pData.Value, command.m_pData);
+}
+
+void CaptureCustomizationLayer::Pre(vkCmdPushDescriptorSetWithTemplateCommand& command) {
+  m_Manager.GetDescriptorUpdateTemplateService().SerializeData(
+      command.m_descriptorUpdateTemplate.Value, command.m_pData.Value, command.m_pData);
+}
+
+void CaptureCustomizationLayer::Pre(vkCmdPushDescriptorSetWithTemplateKHRCommand& command) {
+  m_Manager.GetDescriptorUpdateTemplateService().SerializeData(
+      command.m_descriptorUpdateTemplate.Value, command.m_pData.Value, command.m_pData);
+}
+
 } // namespace vulkan
 } // namespace gits

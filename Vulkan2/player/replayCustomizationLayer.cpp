@@ -204,5 +204,57 @@ void ReplayCustomizationLayer::Post(vkWaitSemaphoresKHRCommand& command) {
   }
 }
 
+// vkCreateDescriptorUpdateTemplate / KHR
+
+void ReplayCustomizationLayer::Post(vkCreateDescriptorUpdateTemplateCommand& command) {
+  if (command.m_Return.Value != VK_SUCCESS) {
+    return;
+  }
+  m_Manager.GetDescriptorUpdateTemplateService().StoreTemplate(
+      *command.m_pDescriptorUpdateTemplate.Value, command.m_pCreateInfo.Value);
+}
+
+void ReplayCustomizationLayer::Post(vkCreateDescriptorUpdateTemplateKHRCommand& command) {
+  if (command.m_Return.Value != VK_SUCCESS) {
+    return;
+  }
+  m_Manager.GetDescriptorUpdateTemplateService().StoreTemplate(
+      *command.m_pDescriptorUpdateTemplate.Value, command.m_pCreateInfo.Value);
+}
+
+void ReplayCustomizationLayer::Pre(vkDestroyDescriptorUpdateTemplateCommand& command) {
+  m_Manager.GetDescriptorUpdateTemplateService().RemoveTemplate(
+      command.m_descriptorUpdateTemplate.Value);
+}
+
+void ReplayCustomizationLayer::Pre(vkDestroyDescriptorUpdateTemplateKHRCommand& command) {
+  m_Manager.GetDescriptorUpdateTemplateService().RemoveTemplate(
+      command.m_descriptorUpdateTemplate.Value);
+}
+
+// vkUpdateDescriptorSetWithTemplate / KHR
+
+void ReplayCustomizationLayer::Pre(vkUpdateDescriptorSetWithTemplateCommand& command) {
+  m_Manager.GetDescriptorUpdateTemplateService().RemapHandles(
+      command.m_descriptorUpdateTemplate.Value, command.m_pData);
+}
+
+void ReplayCustomizationLayer::Pre(vkUpdateDescriptorSetWithTemplateKHRCommand& command) {
+  m_Manager.GetDescriptorUpdateTemplateService().RemapHandles(
+      command.m_descriptorUpdateTemplate.Value, command.m_pData);
+}
+
+// vkCmdPushDescriptorSetWithTemplate / KHR
+
+void ReplayCustomizationLayer::Pre(vkCmdPushDescriptorSetWithTemplateCommand& command) {
+  m_Manager.GetDescriptorUpdateTemplateService().RemapHandles(
+      command.m_descriptorUpdateTemplate.Value, command.m_pData);
+}
+
+void ReplayCustomizationLayer::Pre(vkCmdPushDescriptorSetWithTemplateKHRCommand& command) {
+  m_Manager.GetDescriptorUpdateTemplateService().RemapHandles(
+      command.m_descriptorUpdateTemplate.Value, command.m_pData);
+}
+
 } // namespace vulkan
 } // namespace gits

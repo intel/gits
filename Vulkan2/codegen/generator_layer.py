@@ -28,7 +28,10 @@ def generate_params_for_function(command):
             s += f"OpaquePointerArgument<{param.base_type}>"
         elif param.is_pointer and not param.is_opaque_pointer and not param.length:
             if param.is_void:
-                s += f"OpaqueBufferArgument"
+                if param.is_descriptor_template_data:
+                    s += f"DescriptorTemplateDataArgument"
+                else:
+                    s += f"OpaqueBufferArgument"
             else:
                 s += f"PointerArgument<{param.base_type}>"
         elif param.is_pointer and param.length:

@@ -53,6 +53,16 @@ public:
   void Pre(vkWaitSemaphoresKHRCommand& command) override;
   void Post(vkWaitSemaphoresKHRCommand& command) override;
 
+  void Post(vkCreateDescriptorUpdateTemplateCommand& command) override;
+  void Post(vkCreateDescriptorUpdateTemplateKHRCommand& command) override;
+  void Pre(vkDestroyDescriptorUpdateTemplateCommand& command) override;
+  void Pre(vkDestroyDescriptorUpdateTemplateKHRCommand& command) override;
+
+  void Pre(vkUpdateDescriptorSetWithTemplateCommand& command) override;
+  void Pre(vkUpdateDescriptorSetWithTemplateKHRCommand& command) override;
+  void Pre(vkCmdPushDescriptorSetWithTemplateCommand& command) override;
+  void Pre(vkCmdPushDescriptorSetWithTemplateKHRCommand& command) override;
+
 private:
   PlayerManager& m_Manager;
   static thread_local VkResult tl_recorderReturnValue;

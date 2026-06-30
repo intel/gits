@@ -111,6 +111,15 @@ struct OpaqueBufferArgument {
   OpaqueBufferArgument(const void* v) : Value(const_cast<void*>(v)) {}
 };
 
+// Argument for vkUpdateDescriptorSetWithTemplate pData: holds the serialized
+// descriptor data buffer so it can be properly encoded/decoded on the stream.
+struct DescriptorTemplateDataArgument {
+  void* Value{};            // points into Data after decode, or into app memory during capture
+  std::vector<char> Data{}; // owned serialized buffer (populated during capture Pre / decode)
+  DescriptorTemplateDataArgument() {}
+  DescriptorTemplateDataArgument(const void* v) : Value(const_cast<void*>(v)) {}
+};
+
 struct BufferOutputArgument {
   void** Value{};
   void* Data{};

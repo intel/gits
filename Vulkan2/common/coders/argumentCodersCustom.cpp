@@ -221,5 +221,37 @@ void Decode(char* src, uint32_t& offset, ArrayArgument<VkWriteDescriptorSet>& ar
   Decode(arg.Value, arg.Size, src, offset);
 }
 
+// DescriptorTemplateDataArgument coders
+// The Data vector is filled during capture (Pre layer) with the serialized descriptor entries.
+// We encode its size followed by its raw bytes; on decode we restore the bytes and point Value
+// into the buffer so the player call receives the correct data.
+uint32_t GetSize(const DescriptorTemplateDataArgument& arg) {
+  return sizeof(uint32_t) + static_cast<uint32_t>(arg.Data.size());
+}
+
+void Encode(char* dst, uint32_t& offset, const DescriptorTemplateDataArgument& arg) {
+  uint32_t dataSize = static_cast<uint32_t>(arg.Data.size());
+  std::memcpy(dst + offset, &dataSize, sizeof(dataSize));
+  offset += sizeof(dataSize);
+  if (dataSize > 0) {
+    std::memcpy(dst + offset, arg.Data.data(), dataSize);
+    offset += dataSize;
+  }
+}
+
+void Decode(char* src, uint32_t& offset, DescriptorTemplateDataArgument& arg) {
+  uint32_t dataSize = 0;
+  std::memcpy(&dataSize, src + offset, sizeof(dataSize));
+  offset += sizeof(dataSize);
+  if (dataSize > 0) {
+    arg.Data.resize(dataSize);
+    std::memcpy(arg.Data.data(), src + offset, dataSize);
+    offset += dataSize;
+    arg.Value = arg.Data.data();
+  } else {
+    arg.Value = nullptr;
+  }
+}
+
 } // namespace vulkan
 } // namespace gits

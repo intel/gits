@@ -206,8 +206,6 @@ def get_encode_lines(structure, structures_list, var_name_src, var_name_dst):
                 lines.append(f'  std::memcpy(dst + offset, &key, sizeof(GITSKey));')
                 lines.append(f'  offset += sizeof(GITSKey);')
                 lines.append('}')
-        elif member.is_handle and member.length:
-            lines.append(f'blobSize += sizeof(GITSKey) * {var_name}->{member.length};')
         elif member.is_pointer and member.is_null_terminated:
             lines.append(f'if ({var_name_src}->{member.name}) {{')
             lines.append(f'  {var_name_dst}->{member.name} = reinterpret_cast<const char*>(static_cast<uintptr_t>(offset));')

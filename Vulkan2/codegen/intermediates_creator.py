@@ -474,6 +474,15 @@ def postprocess(commands, structures, unions, handles, enums, bitmasks, flags, e
 
     OPAQUE_POINTER_TYPES = {'xcb_connection_t', 'Display', 'wl_display', 'wl_surface'}
 
+    # Commands whose void* pData parameter carries descriptor update template data
+    # and must be serialized as DescriptorTemplateDataArgument.
+    DESCRIPTOR_TEMPLATE_COMMANDS = {
+        'vkUpdateDescriptorSetWithTemplate',
+        'vkUpdateDescriptorSetWithTemplateKHR',
+        'vkCmdPushDescriptorSetWithTemplate',
+        'vkCmdPushDescriptorSetWithTemplateKHR',
+    }
+
     structure_with_handles = set()
     for structure in structures:
         for member in structure.members:
@@ -518,3 +527,5 @@ def postprocess(commands, structures, unions, handles, enums, bitmasks, flags, e
                 param.is_union = True
             if param.base_type in OPAQUE_POINTER_TYPES:
                 param.is_opaque_pointer = True
+            if command.name in DESCRIPTOR_TEMPLATE_COMMANDS and param.name == 'pData':
+                param.is_descriptor_template_data = True
