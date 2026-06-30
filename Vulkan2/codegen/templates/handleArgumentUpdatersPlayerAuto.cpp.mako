@@ -239,6 +239,40 @@ void ResolveHandleKeys(const std::vector<GITSKey>& keys, uint32_t& idx, std::vec
 % endif
 % endfor
       }
+% elif child_kind == 'handle_struct_array_ptr':
+<%
+    inner_child_handles = child_member_name
+%>
+## Mirror of the recorder's generate_child_handle_keys handle_struct_array_ptr branch:
+## same null/empty guard, same element iteration order, one key consumed per inner handle,
+## so per-index keys stay aligned with recorder collect. For the current registry the only
+## occurrences are VkBindSparseInfo pBufferBinds/pImageBinds/pImageOpaqueBinds[].pBinds ->
+## VkSparse*MemoryBind.memory, whose inner handle members are all handle_single.
+      if (elem.${child_access} && elem.${child_length} > 0) {
+        for (uint32_t innerIdx = 0; innerIdx < elem.${child_length}; ++innerIdx) {
+          auto& innerElem = const_cast<${child_base_type}&>(elem.${child_access}[innerIdx]);
+% for i_kind, i_access, i_length, i_base_type, i_name in inner_child_handles:
+% if i_kind == 'handle_single':
+          if (idx < keys.size()) {
+            GITSKey key = keys[idx++];
+            innerElem.${i_access} = key ? reinterpret_cast<${i_base_type}>(HandleMapService::Get().GetHandle(key)) : VK_NULL_HANDLE;
+          }
+% elif i_kind == 'handle_array_ptr':
+          if (innerElem.${i_access} && innerElem.${i_length} > 0) {
+            size_t dataOffset = handleData.size();
+            handleData.resize(handleData.size() + innerElem.${i_length});
+            for (uint32_t handleIdx = 0; handleIdx < innerElem.${i_length} && idx < keys.size(); ++handleIdx) {
+              GITSKey key = keys[idx++];
+              handleData[dataOffset + handleIdx] = key ? HandleMapService::Get().GetHandle(key) : 0;
+            }
+            innerElem.${i_access} = reinterpret_cast<${i_base_type}*>(&handleData[dataOffset]);
+          }
+% endif
+## handle_typed_uint64 inner members (objectHandle) are intentionally left un-remapped here,
+## matching the recorder which pushes no key for them, so indices remain aligned.
+% endfor
+        }
+      }
 % endif
 % endfor
     }

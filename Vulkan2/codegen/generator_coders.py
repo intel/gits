@@ -423,11 +423,16 @@ def get_decode_lines(structure, structures_list, var_name):
 
     return lines
 
-def generate_child_handle_keys(child_handles, elem_expr='elem'):
+def generate_child_handle_keys(child_handles, elem_expr='elem', depth=0):
     """Generate C++ lines to collect handle keys from child handle members of a struct element.
 
     Misses are tolerated via HandleMapService::GetKeyLenient (returns 0 and warns once
     per unique handle).  See handleMapService.h for rationale.
+
+    The key push order produced here MUST stay byte-for-byte consistent with the player's
+    ResolveHandleKeys child loops in handleArgumentUpdatersPlayerAuto.cpp.mako; both walk the
+    same child_handles list in the same order with the same null convention so per-index keys
+    stay aligned across recorder collect and player resolve.
     """
     lines = []
     for child_kind, child_access, child_length, child_base_type, child_member_name in child_handles:
@@ -447,11 +452,34 @@ def generate_child_handle_keys(child_handles, elem_expr='elem'):
             lines.append(f'    }}')
         elif child_kind == 'handle_struct_ptr':
             nested_child_handles = child_member_name
-            nested_lines = generate_child_handle_keys(nested_child_handles, f'(*{elem_expr}.{child_access})')
+            nested_lines = generate_child_handle_keys(nested_child_handles, f'(*{elem_expr}.{child_access})', depth + 1)
             if nested_lines:
                 lines.append(f'    if ({elem_expr}.{child_access}) {{')
                 lines.append(nested_lines)
                 lines.append(f'    }}')
+        elif child_kind == 'handle_struct_array_ptr':
+            # Nested array-of-structs that itself carries handles, e.g. VkBindSparseInfo
+            # pBufferBinds[].pBinds -> VkSparseMemoryBind.memory. Mirror the TOP-LEVEL
+            # handle_struct_array_ptr collection exactly (guard null/empty, iterate count
+            # elements, recurse with this same helper) so the emitted key order is identical
+            # to how a top-level array-of-structs is collected, and identical to the player's
+            # ResolveHandleKeys consume order. Loop var is depth-suffixed to avoid shadowing.
+            nested_child_handles = child_member_name
+            inner_idx = f'innerIdx{depth}'
+            nested_lines = generate_child_handle_keys(nested_child_handles, f'{elem_expr}.{child_access}[{inner_idx}]', depth + 1)
+            if nested_lines:
+                lines.append(f'    if ({elem_expr}.{child_access} && {elem_expr}.{child_length} > 0) {{')
+                lines.append(f'      for (uint32_t {inner_idx} = 0; {inner_idx} < {elem_expr}.{child_length}; ++{inner_idx}) {{')
+                lines.append(nested_lines)
+                lines.append(f'      }}')
+                lines.append(f'    }}')
+        elif child_kind == 'handle_typed_uint64':
+            # Intentionally NOT remapped: an objecttype-tagged uint64 handle that appears as a
+            # child (e.g. VkDebugUtilsMessengerCallbackDataEXT.pObjects[].objectHandle) is a
+            # contextual/ambiguous value keyed by VkObjectType, purely informational inside a
+            # debug callback, and not safely remappable here. No key is pushed so the recorder
+            # and player stay index-aligned (the player skips it symmetrically).
+            pass
     return '\n'.join(lines)
 
 def collect_handle_members(structure, structures_by_name, prefix=''):
