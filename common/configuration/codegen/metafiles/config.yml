@@ -319,7 +319,6 @@ Configuration:
           - Name: subcapturePath
             Type: std::filesystem::path
             Default: "{install_path}\\dump\\%f%_%r%"
-            OSVisibility: [WINDOWS]
           - Name: tokenBurst
             Type: uint32_t
             Default: 10000

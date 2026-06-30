@@ -79,9 +79,7 @@ public:
   }
 #endif
 
-#ifdef GITS_PLATFORM_WINDOWS
   static void PrepareSubcapturePath();
-#endif
 
   static std::string ConfigFileName() {
     return "gits_config.yml";

@@ -35,7 +35,6 @@ bool Configurator::ConfigurationValid() {
   return g_configurationValid;
 }
 
-#ifdef GITS_PLATFORM_WINDOWS
 void Configurator::PrepareSubcapturePath() {
   auto& cfg = GetMutable();
   std::string preparedPath = cfg.common.player.subcapturePath.string();
@@ -97,7 +96,6 @@ void Configurator::PrepareSubcapturePath() {
 
   cfg.common.player.subcapturePath = preparedPath;
 }
-#endif
 
 Configurator& Configurator::Instance() {
   static Configurator instance;

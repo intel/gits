@@ -124,9 +124,9 @@ bool ConfigurePlayer(const std::filesystem::path& playerPath, ArgumentParser& ar
       LOG_INFO << "Using stream file '" << streamPath;
     }
 
-    streamPath = std::filesystem::absolute(streamPath);
+    streamPath = std::filesystem::absolute(streamPath).lexically_normal();
     cfg.common.player.streamPath = streamPath;
-    cfg.common.player.streamDir = streamPath.parent_path();
+    cfg.common.player.streamDir = streamPath.parent_path().lexically_normal();
   }
 
   if (cfg.common.player.streamPath.empty()) {
@@ -152,9 +152,7 @@ bool ConfigurePlayer(const std::filesystem::path& playerPath, ArgumentParser& ar
   }
 #endif
 
-#ifdef GITS_PLATFORM_WINDOWS
   Configurator::PrepareSubcapturePath();
-#endif
 
   return true;
 }
