@@ -783,12 +783,14 @@ void SubcaptureLayer::Post(vkCreateGraphicsPipelinesCommand& command) {
 
   // Collect all handle dependencies (shader modules, pipeline layout, render pass,
   // base pipeline) from the encoded HandleKeys for all create infos in the batch.
-  // pipelineCache is a top-level handle not included in pCreateInfos.HandleKeys,
-  // so add it explicitly. RestoreOne will restore every dependency before the pipeline.
+  // NOTE: pipelineCache is deliberately NOT treated as a dependency.  It is a pure
+  // optimization hint that engines frequently destroy right after building their
+  // pipelines; as a hard dependency a destroyed (and thus removed) cache would make
+  // every pipeline built from it unrestorable and crash later at vkCmdBindPipeline.
+  // A live cache is still restored on its own in RestoreState's first pass, and
+  // EmitCreationCommand nulls the cache handle when it is no longer live -- mirroring
+  // legacy RestorePipelines, which builds restore pipelines against a temporary cache.
   std::vector<uint64_t> batchDeps;
-  if (command.m_pipelineCache.Key) {
-    batchDeps.push_back(command.m_pipelineCache.Key);
-  }
   for (uint64_t dep : command.m_pCreateInfos.HandleKeys) {
     if (dep) {
       batchDeps.push_back(dep);
@@ -818,12 +820,10 @@ void SubcaptureLayer::Post(vkCreateComputePipelinesCommand& command) {
     return;
   }
   // Collect handle dependencies (shader module, pipeline layout, base pipeline)
-  // so RestoreOne restores them before the pipeline. pipelineCache is a top-level
-  // handle not captured inside pCreateInfos.HandleKeys; add it explicitly.
+  // so RestoreOne restores them before the pipeline. pipelineCache is intentionally
+  // NOT a dependency (see vkCreateGraphicsPipelines): it is an optional hint that may
+  // be destroyed before the cut; EmitCreationCommand nulls it when no longer live.
   std::vector<uint64_t> batchDeps;
-  if (command.m_pipelineCache.Key) {
-    batchDeps.push_back(command.m_pipelineCache.Key);
-  }
   for (uint64_t dep : command.m_pCreateInfos.HandleKeys) {
     if (dep) {
       batchDeps.push_back(dep);
@@ -848,10 +848,10 @@ void SubcaptureLayer::Post(vkCreateRayTracingPipelinesKHRCommand& command) {
   if (command.m_Return.Value != VK_SUCCESS) {
     return;
   }
+  // pipelineCache is intentionally NOT a dependency (see vkCreateGraphicsPipelines):
+  // an optional hint that may be destroyed before the cut; EmitCreationCommand nulls
+  // it when no longer live.
   std::vector<uint64_t> batchDeps;
-  if (command.m_pipelineCache.Key) {
-    batchDeps.push_back(command.m_pipelineCache.Key);
-  }
   for (uint64_t dep : command.m_pCreateInfos.HandleKeys) {
     if (dep) {
       batchDeps.push_back(dep);
@@ -876,10 +876,10 @@ void SubcaptureLayer::Post(vkCreateRayTracingPipelinesNVCommand& command) {
   if (command.m_Return.Value != VK_SUCCESS) {
     return;
   }
+  // pipelineCache is intentionally NOT a dependency (see vkCreateGraphicsPipelines):
+  // an optional hint that may be destroyed before the cut; EmitCreationCommand nulls
+  // it when no longer live.
   std::vector<uint64_t> batchDeps;
-  if (command.m_pipelineCache.Key) {
-    batchDeps.push_back(command.m_pipelineCache.Key);
-  }
   for (uint64_t dep : command.m_pCreateInfos.HandleKeys) {
     if (dep) {
       batchDeps.push_back(dep);

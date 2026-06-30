@@ -884,6 +884,16 @@ bool StateTrackingService::EmitCreationCommand(ObjectState* state) {
   case CommandId::ID_VKCREATEGRAPHICSPIPELINES: {
     vkCreateGraphicsPipelinesCommand cmd;
     Decode(buf, cmd);
+    // pipelineCache is an optional optimization hint, not a dependency.  If the app
+    // destroyed it before the cut (its state was removed), or it otherwise failed to
+    // restore, its key no longer resolves in the player handle map -- creating the
+    // pipeline against it would crash vkCreateGraphicsPipelinesRunner.  A live cache
+    // was already re-created in RestoreState's first pass and is kept; otherwise null
+    // it so the pipeline is built without a cache (matching legacy RestorePipelines).
+    if (cmd.m_pipelineCache.Key && !m_RestoredThisPass.count(cmd.m_pipelineCache.Key)) {
+      cmd.m_pipelineCache.Key = 0;
+      cmd.m_pipelineCache.Value = VK_NULL_HANDLE;
+    }
     // Workaround for an Intel driver (igvk64) crash inside vkCreateGraphicsPipelines
     // when state-restoring GPL fast-path attempts.  The captured app uses the two-step
     // pattern: try a link with VK_PIPELINE_CREATE_FAIL_ON_PIPELINE_COMPILE_REQUIRED_BIT
@@ -941,6 +951,11 @@ bool StateTrackingService::EmitCreationCommand(ObjectState* state) {
   case CommandId::ID_VKCREATECOMPUTEPIPELINES: {
     vkCreateComputePipelinesCommand cmd;
     Decode(buf, cmd);
+    // See vkCreateGraphicsPipelines: null a pipeline cache that is no longer live.
+    if (cmd.m_pipelineCache.Key && !m_RestoredThisPass.count(cmd.m_pipelineCache.Key)) {
+      cmd.m_pipelineCache.Key = 0;
+      cmd.m_pipelineCache.Value = VK_NULL_HANDLE;
+    }
     // Same fast-path workaround as vkCreateGraphicsPipelines: strip
     // VK_PIPELINE_CREATE_FAIL_ON_PIPELINE_COMPILE_REQUIRED_BIT during state restore
     // so the driver always produces a valid pipeline for the captured key.  Compute
@@ -961,6 +976,11 @@ bool StateTrackingService::EmitCreationCommand(ObjectState* state) {
   case CommandId::ID_VKCREATERAYTRACINGPIPELINESKHR: {
     vkCreateRayTracingPipelinesKHRCommand cmd;
     Decode(buf, cmd);
+    // See vkCreateGraphicsPipelines: null a pipeline cache that is no longer live.
+    if (cmd.m_pipelineCache.Key && !m_RestoredThisPass.count(cmd.m_pipelineCache.Key)) {
+      cmd.m_pipelineCache.Key = 0;
+      cmd.m_pipelineCache.Value = VK_NULL_HANDLE;
+    }
     for (uint32_t i = 0; i < cmd.m_createInfoCount.Value; ++i) {
       auto& ci = const_cast<VkRayTracingPipelineCreateInfoKHR&>(cmd.m_pCreateInfos.Value[i]);
       if (ci.flags & VK_PIPELINE_CREATE_FAIL_ON_PIPELINE_COMPILE_REQUIRED_BIT) {
@@ -978,6 +998,11 @@ bool StateTrackingService::EmitCreationCommand(ObjectState* state) {
   case CommandId::ID_VKCREATERAYTRACINGPIPELINESNV: {
     vkCreateRayTracingPipelinesNVCommand cmd;
     Decode(buf, cmd);
+    // See vkCreateGraphicsPipelines: null a pipeline cache that is no longer live.
+    if (cmd.m_pipelineCache.Key && !m_RestoredThisPass.count(cmd.m_pipelineCache.Key)) {
+      cmd.m_pipelineCache.Key = 0;
+      cmd.m_pipelineCache.Value = VK_NULL_HANDLE;
+    }
     for (uint32_t i = 0; i < cmd.m_createInfoCount.Value; ++i) {
       auto& ci = const_cast<VkRayTracingPipelineCreateInfoNV&>(cmd.m_pCreateInfos.Value[i]);
       if (ci.flags & VK_PIPELINE_CREATE_FAIL_ON_PIPELINE_COMPILE_REQUIRED_BIT) {
