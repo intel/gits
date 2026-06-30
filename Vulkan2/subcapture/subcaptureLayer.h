@@ -180,6 +180,10 @@ public:
   // ---- Sampler ---------------------------------------------------------
   void Post(vkCreateSamplerCommand& command) override;
   void Post(vkDestroySamplerCommand& command) override;
+  void Post(vkCreateSamplerYcbcrConversionCommand& command) override;
+  void Post(vkCreateSamplerYcbcrConversionKHRCommand& command) override;
+  void Post(vkDestroySamplerYcbcrConversionCommand& command) override;
+  void Post(vkDestroySamplerYcbcrConversionKHRCommand& command) override;
 
   // ---- Command pool / buffers ------------------------------------------
   void Post(vkCreateCommandPoolCommand& command) override;
@@ -310,6 +314,13 @@ public:
   // ---- Deferred operations ---------------------------------------------
   void Post(vkCreateDeferredOperationKHRCommand& command) override;
   void Post(vkDestroyDeferredOperationKHRCommand& command) override;
+
+  // ---- Video sessions --------------------------------------------------
+  void Post(vkCreateVideoSessionKHRCommand& command) override;
+  void Post(vkDestroyVideoSessionKHRCommand& command) override;
+  void Post(vkBindVideoSessionMemoryKHRCommand& command) override;
+  void Post(vkCreateVideoSessionParametersKHRCommand& command) override;
+  void Post(vkDestroyVideoSessionParametersKHRCommand& command) override;
 
   void SetGpuReadbackHelper(IGpuReadbackHelper* helper) {
     m_StateTracking.SetGpuReadbackHelper(helper);

@@ -317,6 +317,15 @@ struct FormatBlockInfo {
   bool IsDepthStencil{false};
   uint32_t DepthBytes{0};   // 0 = no depth
   uint32_t StencilBytes{0}; // 0 = no stencil
+  // Multi-planar YCbCr formats: copy requires one region per plane with
+  // VK_IMAGE_ASPECT_PLANE_*_BIT and per-plane extent/stride.
+  bool IsMultiPlanar{false};
+  uint8_t PlaneCount{0};
+  struct PlaneDesc {
+    uint32_t WidthDivisor{1};  // plane width  = image width  / WidthDivisor
+    uint32_t HeightDivisor{1}; // plane height = image height / HeightDivisor
+    uint32_t BytesPerPixel{1};
+  } Planes[3]{};
 };
 
 static FormatBlockInfo GetFormatBlockInfo(VkFormat fmt) {
@@ -400,6 +409,116 @@ static FormatBlockInfo GetFormatBlockInfo(VkFormat fmt) {
   case VK_FORMAT_BC7_UNORM_BLOCK:
   case VK_FORMAT_BC7_SRGB_BLOCK:
     return {4, 4, 16};
+  // ---- YCbCr packed single-plane ----
+  // 4 bytes cover a 2-wide texel pair (macropixel).
+  case VK_FORMAT_G8B8G8R8_422_UNORM:
+  case VK_FORMAT_B8G8R8G8_422_UNORM:
+    return {2, 1, 4};
+  // ---- YCbCr multi-planar ----
+  // 2-plane 4:2:0 (NV12 / P010 / P012 / P016):
+  //   plane 0 = luma  (Y),    full resolution, bytesPerPixel=1 (8b) or 2 (10/12/16b)
+  //   plane 1 = chroma (CbCr), half width+height, bytesPerPixel=2 or 4
+  case VK_FORMAT_G8_B8R8_2PLANE_420_UNORM: {
+    FormatBlockInfo fi{};
+    fi.IsMultiPlanar = true;
+    fi.PlaneCount = 2;
+    fi.Planes[0] = {1, 1, 1};
+    fi.Planes[1] = {2, 2, 2};
+    return fi;
+  }
+  case VK_FORMAT_G10X6_B10X6R10X6_2PLANE_420_UNORM_3PACK16:
+  case VK_FORMAT_G12X4_B12X4R12X4_2PLANE_420_UNORM_3PACK16:
+  case VK_FORMAT_G16_B16R16_2PLANE_420_UNORM: {
+    FormatBlockInfo fi{};
+    fi.IsMultiPlanar = true;
+    fi.PlaneCount = 2;
+    fi.Planes[0] = {1, 1, 2};
+    fi.Planes[1] = {2, 2, 4};
+    return fi;
+  }
+  // 3-plane 4:2:0 (I420 / YV12 variants):
+  //   plane 0 = Y (full), plane 1 = Cb (quarter area), plane 2 = Cr (quarter area)
+  case VK_FORMAT_G8_B8_R8_3PLANE_420_UNORM: {
+    FormatBlockInfo fi{};
+    fi.IsMultiPlanar = true;
+    fi.PlaneCount = 3;
+    fi.Planes[0] = {1, 1, 1};
+    fi.Planes[1] = {2, 2, 1};
+    fi.Planes[2] = {2, 2, 1};
+    return fi;
+  }
+  case VK_FORMAT_G10X6_B10X6_R10X6_3PLANE_420_UNORM_3PACK16:
+  case VK_FORMAT_G12X4_B12X4_R12X4_3PLANE_420_UNORM_3PACK16:
+  case VK_FORMAT_G16_B16_R16_3PLANE_420_UNORM: {
+    FormatBlockInfo fi{};
+    fi.IsMultiPlanar = true;
+    fi.PlaneCount = 3;
+    fi.Planes[0] = {1, 1, 2};
+    fi.Planes[1] = {2, 2, 2};
+    fi.Planes[2] = {2, 2, 2};
+    return fi;
+  }
+  // 2-plane 4:2:2: chroma is half-width but full-height
+  case VK_FORMAT_G8_B8R8_2PLANE_422_UNORM: {
+    FormatBlockInfo fi{};
+    fi.IsMultiPlanar = true;
+    fi.PlaneCount = 2;
+    fi.Planes[0] = {1, 1, 1};
+    fi.Planes[1] = {2, 1, 2};
+    return fi;
+  }
+  case VK_FORMAT_G10X6_B10X6R10X6_2PLANE_422_UNORM_3PACK16:
+  case VK_FORMAT_G12X4_B12X4R12X4_2PLANE_422_UNORM_3PACK16:
+  case VK_FORMAT_G16_B16R16_2PLANE_422_UNORM: {
+    FormatBlockInfo fi{};
+    fi.IsMultiPlanar = true;
+    fi.PlaneCount = 2;
+    fi.Planes[0] = {1, 1, 2};
+    fi.Planes[1] = {2, 1, 4};
+    return fi;
+  }
+  // 3-plane 4:2:2: chroma is half-width, full-height, per-channel
+  case VK_FORMAT_G8_B8_R8_3PLANE_422_UNORM: {
+    FormatBlockInfo fi{};
+    fi.IsMultiPlanar = true;
+    fi.PlaneCount = 3;
+    fi.Planes[0] = {1, 1, 1};
+    fi.Planes[1] = {2, 1, 1};
+    fi.Planes[2] = {2, 1, 1};
+    return fi;
+  }
+  case VK_FORMAT_G10X6_B10X6_R10X6_3PLANE_422_UNORM_3PACK16:
+  case VK_FORMAT_G12X4_B12X4_R12X4_3PLANE_422_UNORM_3PACK16:
+  case VK_FORMAT_G16_B16_R16_3PLANE_422_UNORM: {
+    FormatBlockInfo fi{};
+    fi.IsMultiPlanar = true;
+    fi.PlaneCount = 3;
+    fi.Planes[0] = {1, 1, 2};
+    fi.Planes[1] = {2, 1, 2};
+    fi.Planes[2] = {2, 1, 2};
+    return fi;
+  }
+  // 3-plane 4:4:4: no chroma subsampling, all planes full resolution
+  case VK_FORMAT_G8_B8_R8_3PLANE_444_UNORM: {
+    FormatBlockInfo fi{};
+    fi.IsMultiPlanar = true;
+    fi.PlaneCount = 3;
+    fi.Planes[0] = {1, 1, 1};
+    fi.Planes[1] = {1, 1, 1};
+    fi.Planes[2] = {1, 1, 1};
+    return fi;
+  }
+  case VK_FORMAT_G10X6_B10X6_R10X6_3PLANE_444_UNORM_3PACK16:
+  case VK_FORMAT_G12X4_B12X4_R12X4_3PLANE_444_UNORM_3PACK16:
+  case VK_FORMAT_G16_B16_R16_3PLANE_444_UNORM: {
+    FormatBlockInfo fi{};
+    fi.IsMultiPlanar = true;
+    fi.PlaneCount = 3;
+    fi.Planes[0] = {1, 1, 2};
+    fi.Planes[1] = {1, 1, 2};
+    fi.Planes[2] = {1, 1, 2};
+    return fi;
+  }
   // ---- Depth / stencil ----
   case VK_FORMAT_D16_UNORM:
     return {1, 1, 0, true, 2, 0};
@@ -459,7 +578,18 @@ static VkDeviceSize ComputeImageStagingLayout(VkFormat format,
       uint32_t h = std::max(1u, extent.height >> mip);
       uint32_t d = std::max(1u, extent.depth >> mip);
 
-      if (!fi.IsDepthStencil) {
+      if (fi.IsMultiPlanar) {
+        static constexpr VkImageAspectFlags kPlaneAspect[3] = {
+            VK_IMAGE_ASPECT_PLANE_0_BIT,
+            VK_IMAGE_ASPECT_PLANE_1_BIT,
+            VK_IMAGE_ASPECT_PLANE_2_BIT,
+        };
+        for (uint8_t p = 0; p < fi.PlaneCount; ++p) {
+          uint32_t pw = std::max(1u, w / fi.Planes[p].WidthDivisor);
+          uint32_t ph = std::max(1u, h / fi.Planes[p].HeightDivisor);
+          addRegion(kPlaneAspect[p], layer, mip, pw, ph, d, 1, 1, fi.Planes[p].BytesPerPixel);
+        }
+      } else if (!fi.IsDepthStencil) {
         addRegion(VK_IMAGE_ASPECT_COLOR_BIT, layer, mip, w, h, d, fi.BlockWidth, fi.BlockHeight,
                   fi.BytesPerBlock);
       } else {
@@ -538,6 +668,20 @@ bool GpuReadbackHelper::ReadImage(uint64_t deviceKey,
     }
     if (fi.StencilBytes > 0) {
       transitionAspect |= VK_IMAGE_ASPECT_STENCIL_BIT;
+    }
+  } else if (fi.IsMultiPlanar) {
+    // Multi-planar images in video-decode layouts (VIDEO_DECODE_DST_KHR,
+    // VIDEO_DECODE_DPB_KHR) require per-plane aspect bits in barriers;
+    // VK_IMAGE_ASPECT_COLOR_BIT is only valid for GENERAL / UNDEFINED /
+    // TRANSFER_* layouts (VUID-VkImageMemoryBarrier-image-01672).
+    static constexpr VkImageAspectFlags kPlaneAspect[3] = {
+        VK_IMAGE_ASPECT_PLANE_0_BIT,
+        VK_IMAGE_ASPECT_PLANE_1_BIT,
+        VK_IMAGE_ASPECT_PLANE_2_BIT,
+    };
+    transitionAspect = 0;
+    for (uint8_t p = 0; p < fi.PlaneCount; ++p) {
+      transitionAspect |= kPlaneAspect[p];
     }
   }
 

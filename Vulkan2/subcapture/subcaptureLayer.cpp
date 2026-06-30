@@ -731,13 +731,17 @@ void SubcaptureLayer::Post(vkCreateImageViewCommand& command) {
   auto state = std::make_unique<ImageViewState>();
   state->Key = command.m_pView.Key;
   state->ParentKey = command.m_device.Key;
-  // VkImageViewCreateInfo::image is the first handle in HandleKeys.
-  // Store in imageKey for other consumers, and in DependencyKeys so RestoreOne
-  // ensures the image exists before the view is created.
+  // HandleKeys layout: [0] = VkImageViewCreateInfo::image,
+  //                    [1] = VkSamplerYcbcrConversionInfo::conversion (pNext, if present).
   state->ImageKey =
       command.m_pCreateInfo.HandleKeys.empty() ? 0 : command.m_pCreateInfo.HandleKeys[0];
   if (state->ImageKey) {
     state->DependencyKeys.push_back(state->ImageKey);
+  }
+  state->YcbcrConversionKey =
+      command.m_pCreateInfo.HandleKeys.size() > 1 ? command.m_pCreateInfo.HandleKeys[1] : 0;
+  if (state->YcbcrConversionKey) {
+    state->DependencyKeys.push_back(state->YcbcrConversionKey);
   }
   StoreState(std::move(state), command);
 }
@@ -1319,6 +1323,93 @@ void SubcaptureLayer::Post(vkCreateSamplerCommand& command) {
 
 void SubcaptureLayer::Post(vkDestroySamplerCommand& command) {
   m_StateTracking.RemoveState(command.m_sampler.Key);
+}
+
+// ---- Sampler YCbCr conversion --------------------------------------------
+
+void SubcaptureLayer::Post(vkCreateSamplerYcbcrConversionCommand& command) {
+  if (command.m_Return.Value != VK_SUCCESS) {
+    return;
+  }
+  auto state = std::make_unique<SamplerYcbcrConversionState>();
+  state->Key = command.m_pYcbcrConversion.Key;
+  state->ParentKey = command.m_device.Key;
+  StoreState(std::move(state), command);
+}
+
+void SubcaptureLayer::Post(vkCreateSamplerYcbcrConversionKHRCommand& command) {
+  if (command.m_Return.Value != VK_SUCCESS) {
+    return;
+  }
+  auto state = std::make_unique<SamplerYcbcrConversionState>();
+  state->Key = command.m_pYcbcrConversion.Key;
+  state->ParentKey = command.m_device.Key;
+  StoreState(std::move(state), command);
+}
+
+void SubcaptureLayer::Post(vkDestroySamplerYcbcrConversionCommand& command) {
+  m_StateTracking.RemoveState(command.m_ycbcrConversion.Key);
+}
+
+void SubcaptureLayer::Post(vkDestroySamplerYcbcrConversionKHRCommand& command) {
+  m_StateTracking.RemoveState(command.m_ycbcrConversion.Key);
+}
+
+// ---- Video sessions ------------------------------------------------------
+
+void SubcaptureLayer::Post(vkCreateVideoSessionKHRCommand& command) {
+  if (command.m_Return.Value != VK_SUCCESS) {
+    return;
+  }
+  auto state = std::make_unique<VideoSessionState>();
+  state->Key = command.m_pVideoSession.Key;
+  state->ParentKey = command.m_device.Key;
+  StoreState(std::move(state), command);
+}
+
+void SubcaptureLayer::Post(vkDestroyVideoSessionKHRCommand& command) {
+  m_StateTracking.RemoveState(command.m_videoSession.Key);
+}
+
+void SubcaptureLayer::Post(vkBindVideoSessionMemoryKHRCommand& command) {
+  if (command.m_Return.Value != VK_SUCCESS) {
+    return;
+  }
+  auto* state = m_StateTracking.GetState<VideoSessionState>(command.m_videoSession.Key);
+  if (!state) {
+    return;
+  }
+  uint32_t size = GetSize(command);
+  state->BindCommandBuffer.resize(size);
+  Encode(command, state->BindCommandBuffer.data());
+  for (auto key : command.m_pBindSessionMemoryInfos.HandleKeys) {
+    if (key) {
+      state->MemoryKeys.push_back(key);
+    }
+  }
+}
+
+void SubcaptureLayer::Post(vkCreateVideoSessionParametersKHRCommand& command) {
+  if (command.m_Return.Value != VK_SUCCESS) {
+    return;
+  }
+  auto state = std::make_unique<VideoSessionParametersState>();
+  state->Key = command.m_pVideoSessionParameters.Key;
+  state->ParentKey = command.m_device.Key;
+  // CollectHandleKeys order for VkVideoSessionParametersCreateInfoKHR:
+  //   keys[0] = videoSessionParametersTemplate, keys[1] = videoSession
+  const auto& keys = command.m_pCreateInfo.HandleKeys;
+  if (keys.size() >= 2 && keys[1]) {
+    state->DependencyKeys.push_back(keys[1]); // videoSession must be restored first
+  }
+  if (keys.size() >= 1 && keys[0]) {
+    state->DependencyKeys.push_back(keys[0]); // template, if present
+  }
+  StoreState(std::move(state), command);
+}
+
+void SubcaptureLayer::Post(vkDestroyVideoSessionParametersKHRCommand& command) {
+  m_StateTracking.RemoveState(command.m_videoSessionParameters.Key);
 }
 
 // ---- Command pool / buffers ----------------------------------------------

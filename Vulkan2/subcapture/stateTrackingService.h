@@ -205,6 +205,7 @@ private:
   bool RestoreBuffer(ObjectState* state);
   bool RestoreImage(ObjectState* state);
   bool RestoreImageView(ObjectState* state);
+  bool RestoreVideoSession(ObjectState* state);
   void RestoreSurface(ObjectState* state);
   void RestoreSwapchain(ObjectState* state);
   bool RestoreDescriptorSets(ObjectState* state);

@@ -160,6 +160,31 @@ void ResolveHandleKeys(const std::vector<GITSKey>& keys, uint32_t& idx, std::vec
       }
       elem.${child_access} = reinterpret_cast<${child_base_type}*>(&handleData[dataOffset]);
     }
+% elif child_kind == 'handle_struct_ptr':
+<%
+    nested_child_handles = child_member_name
+%>
+    if (elem.${child_access}) {
+      auto& nestedElem = const_cast<${child_base_type}&>(*elem.${child_access});
+% for n_kind, n_access, n_length, n_base_type, n_name in nested_child_handles:
+% if n_kind == 'handle_single':
+      if (idx < keys.size()) {
+        GITSKey key = keys[idx++];
+        nestedElem.${n_access} = key ? reinterpret_cast<${n_base_type}>(HandleMapService::Get().GetHandle(key)) : VK_NULL_HANDLE;
+      }
+% elif n_kind == 'handle_array_ptr':
+      if (nestedElem.${n_access} && nestedElem.${n_length} > 0) {
+        size_t dataOffset = handleData.size();
+        handleData.resize(handleData.size() + nestedElem.${n_length});
+        for (uint32_t handleIdx = 0; handleIdx < nestedElem.${n_length} && idx < keys.size(); ++handleIdx) {
+          GITSKey key = keys[idx++];
+          handleData[dataOffset + handleIdx] = key ? HandleMapService::Get().GetHandle(key) : 0;
+        }
+        nestedElem.${n_access} = reinterpret_cast<${n_base_type}*>(&handleData[dataOffset]);
+      }
+% endif
+% endfor
+    }
 % endif
 % endfor
   }
@@ -188,6 +213,31 @@ void ResolveHandleKeys(const std::vector<GITSKey>& keys, uint32_t& idx, std::vec
           handleData[dataOffset + handleIdx] = key ? HandleMapService::Get().GetHandle(key) : 0;
         }
         elem.${child_access} = reinterpret_cast<${child_base_type}*>(&handleData[dataOffset]);
+      }
+% elif child_kind == 'handle_struct_ptr':
+<%
+    nested_child_handles = child_member_name
+%>
+      if (elem.${child_access}) {
+        auto& nestedElem = const_cast<${child_base_type}&>(*elem.${child_access});
+% for n_kind, n_access, n_length, n_base_type, n_name in nested_child_handles:
+% if n_kind == 'handle_single':
+        if (idx < keys.size()) {
+          GITSKey key = keys[idx++];
+          nestedElem.${n_access} = key ? reinterpret_cast<${n_base_type}>(HandleMapService::Get().GetHandle(key)) : VK_NULL_HANDLE;
+        }
+% elif n_kind == 'handle_array_ptr':
+        if (nestedElem.${n_access} && nestedElem.${n_length} > 0) {
+          size_t dataOffset = handleData.size();
+          handleData.resize(handleData.size() + nestedElem.${n_length});
+          for (uint32_t handleIdx = 0; handleIdx < nestedElem.${n_length} && idx < keys.size(); ++handleIdx) {
+            GITSKey key = keys[idx++];
+            handleData[dataOffset + handleIdx] = key ? HandleMapService::Get().GetHandle(key) : 0;
+          }
+          nestedElem.${n_access} = reinterpret_cast<${n_base_type}*>(&handleData[dataOffset]);
+        }
+% endif
+% endfor
       }
 % endif
 % endfor

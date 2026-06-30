@@ -445,6 +445,13 @@ def generate_child_handle_keys(child_handles, elem_expr='elem'):
             lines.append(f'        keys.push_back(HandleMapService::Get().GetKeyLenient(reinterpret_cast<uint64_t>({elem_expr}.{child_access}[handleIdx])));')
             lines.append(f'      }}')
             lines.append(f'    }}')
+        elif child_kind == 'handle_struct_ptr':
+            nested_child_handles = child_member_name
+            nested_lines = generate_child_handle_keys(nested_child_handles, f'(*{elem_expr}.{child_access})')
+            if nested_lines:
+                lines.append(f'    if ({elem_expr}.{child_access}) {{')
+                lines.append(nested_lines)
+                lines.append(f'    }}')
     return '\n'.join(lines)
 
 def collect_handle_members(structure, structures_by_name, prefix=''):

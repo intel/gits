@@ -501,6 +501,11 @@ void StateTrackingService::RestoreOne(ObjectState* state) {
     }
     break;
   }
+  case CommandId::ID_VKCREATEVIDEOSESSIONKHR:
+    if (!RestoreVideoSession(state)) {
+      return; // Do NOT insert into m_RestoredThisPass - dependents must skip this object.
+    }
+    break;
   case CommandId::ID_VKALLOCATEMEMORY:
     if (!EmitCreationCommand(state)) {
       return;
@@ -1003,6 +1008,15 @@ void StateTrackingService::RestoreQueryPools() {
                   << " needs query restore but has no recorded queue family; skipping its restore";
       continue;
     }
+    if (qp->QueryType == static_cast<uint32_t>(VK_QUERY_TYPE_RESULT_STATUS_ONLY_KHR)) {
+      // Result-status queries can only be reset and written inside a video coding
+      // scope (VUID-vkCmdBeginQuery-queryType-09438).  Submitting even a bare
+      // vkCmdResetQueryPool for such a pool to the video decode queue causes a
+      // GPU hang on some drivers when no prior video coding scope has been opened
+      // on that queue.  Skip these pools entirely; the captured video decode
+      // commands will reset and repopulate them naturally.
+      continue;
+    }
     if (qp->ParentKey) {
       poolsByDeviceAndFamily[qp->ParentKey][qp->RestoreQueueFamily].push_back(qp->Key);
     }
@@ -1124,6 +1138,12 @@ void StateTrackingService::RestoreQueryPools() {
             tsCmd.m_queryPool.Key = poolKey;
             tsCmd.m_query.Value = i;
             m_Recorder.Record(vkCmdWriteTimestampSerializer(tsCmd));
+          } else if (qp->QueryType == static_cast<uint32_t>(VK_QUERY_TYPE_RESULT_STATUS_ONLY_KHR)) {
+            // vkCmdBeginQuery for result-status queries requires an active video
+            // coding scope (VUID-vkCmdBeginQuery-queryType-09438). We cannot open
+            // one here without a valid VkVideoSessionKHR. Skip the fake query;
+            // the captured video decode commands will repopulate the status.
+            continue;
           } else {
             vkCmdBeginQueryCommand beginQueryCmd;
             beginQueryCmd.m_commandBuffer.Key = kTempCBKey;
@@ -1453,6 +1473,10 @@ bool StateTrackingService::EmitCreationCommand(ObjectState* state) {
     EMIT_DECODED(vkAllocateDescriptorSets)
   case CommandId::ID_VKCREATESAMPLER:
     EMIT_DECODED(vkCreateSampler)
+  case CommandId::ID_VKCREATESAMPLERYCBCRCONVERSION:
+    EMIT_DECODED(vkCreateSamplerYcbcrConversion)
+  case CommandId::ID_VKCREATESAMPLERYCBCRCONVERSIONKHR:
+    EMIT_DECODED(vkCreateSamplerYcbcrConversionKHR)
   case CommandId::ID_VKCREATECOMMANDPOOL:
     EMIT_DECODED(vkCreateCommandPool)
   case CommandId::ID_VKALLOCATECOMMANDBUFFERS:
@@ -1485,6 +1509,10 @@ bool StateTrackingService::EmitCreationCommand(ObjectState* state) {
     EMIT_DECODED(vkCreateAccelerationStructureNV)
   case CommandId::ID_VKCREATEDEFERREDOPERATIONKHR:
     EMIT_DECODED(vkCreateDeferredOperationKHR)
+  case CommandId::ID_VKCREATEVIDEOSESSIONKHR:
+    EMIT_DECODED(vkCreateVideoSessionKHR)
+  case CommandId::ID_VKCREATEVIDEOSESSIONPARAMETERSKHR:
+    EMIT_DECODED(vkCreateVideoSessionParametersKHR)
   case CommandId::ID_VKCREATEEVENT:
     EMIT_DECODED(vkCreateEvent)
   case CommandId::ID_VKCREATEFENCE: {
@@ -1741,6 +1769,44 @@ bool StateTrackingService::RestoreBuffer(ObjectState* state) {
     bind.m_memoryOffset.Value = buf->MemoryOffset;
     bind.m_Return.Value = VK_SUCCESS;
     m_Recorder.Record(vkBindBufferMemorySerializer(bind));
+  }
+  return true;
+}
+
+bool StateTrackingService::RestoreVideoSession(ObjectState* stateBase) {
+  auto* state = static_cast<VideoSessionState*>(stateBase);
+
+  // Emit vkCreateVideoSessionKHR before restoring bound memory. For dedicated
+  // allocations VkMemoryDedicatedAllocateInfo may reference this session, so
+  // its handle must be registered in HandleMapService first.
+  if (!EmitCreationCommand(stateBase)) {
+    return false;
+  }
+
+  // Mark as restored early to break the potential circular dependency:
+  // video-session memory is typically dedicated, so its VkMemoryDedicatedAllocateInfo
+  // carries the session key, creating a session<->memory back-edge.
+  m_RestoredThisPass.insert(stateBase->Key);
+
+  if (!state->BindCommandBuffer.empty()) {
+    for (uint64_t memKey : state->MemoryKeys) {
+      if (!memKey) {
+        continue;
+      }
+      auto* memState = GetState(memKey);
+      if (memState) {
+        RestoreOne(memState);
+      }
+    }
+
+    // Re-emit the encoded vkBindVideoSessionMemoryKHR. Decode modifies the
+    // buffer in-place (AddPtrs), so work on a copy to keep BindCommandBuffer
+    // pristine for any future re-emission.
+    std::vector<char> scratch = state->BindCommandBuffer;
+    char* buf = scratch.data();
+    vkBindVideoSessionMemoryKHRCommand bindCmd;
+    Decode(buf, bindCmd);
+    m_Recorder.Record(vkBindVideoSessionMemoryKHRSerializer(bindCmd));
   }
   return true;
 }

@@ -179,6 +179,9 @@ struct BufferViewState : ObjectState {};
 struct ImageViewState : ObjectState {
   // Needed for dependency-order restore: image must be restored before its views.
   uint64_t ImageKey{};
+  // Non-zero when VkImageViewCreateInfo::pNext carries VkSamplerYcbcrConversionInfo.
+  // The conversion must be restored before this view.
+  uint64_t YcbcrConversionKey{};
 };
 
 // ---- Render pass / framebuffer -----------------------------------------
@@ -363,6 +366,19 @@ struct QueryPoolState : ObjectState {
 
 struct AccelerationStructureState : ObjectState {};
 struct DeferredOperationState : ObjectState {};
+
+// ---- Video session objects ---------------------------------------------
+
+struct VideoSessionState : ObjectState {
+  // Encoded vkBindVideoSessionMemoryKHR command bytes (stored from the Post
+  // handler so RestoreVideoSession can re-emit it after memory is allocated).
+  std::vector<char> BindCommandBuffer;
+  // GITSKeys for every VkDeviceMemory bound via vkBindVideoSessionMemoryKHR,
+  // collected for dependency ordering in RestoreVideoSession.
+  std::vector<uint64_t> MemoryKeys;
+};
+
+struct VideoSessionParametersState : ObjectState {};
 
 } // namespace vulkan
 } // namespace gits
