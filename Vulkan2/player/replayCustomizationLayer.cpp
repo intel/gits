@@ -361,5 +361,12 @@ void ReplayCustomizationLayer::Pre(vkCmdPushDescriptorSetWithTemplateKHRCommand&
       command.m_descriptorUpdateTemplate.Value, command.m_pData);
 }
 
+void ReplayCustomizationLayer::Pre(vkCreateGraphicsPipelinesCommand& command) {
+  for (uint32_t i = 0; i < command.m_createInfoCount.Value; ++i) {
+    command.m_pCreateInfos.Value[i].flags &=
+        ~VK_PIPELINE_CREATE_FAIL_ON_PIPELINE_COMPILE_REQUIRED_BIT;
+  }
+}
+
 } // namespace vulkan
 } // namespace gits

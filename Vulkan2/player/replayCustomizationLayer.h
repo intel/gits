@@ -80,6 +80,8 @@ public:
   void Pre(vkCmdPushDescriptorSetWithTemplateCommand& command) override;
   void Pre(vkCmdPushDescriptorSetWithTemplateKHRCommand& command) override;
 
+  void Pre(vkCreateGraphicsPipelinesCommand& command) override;
+
 private:
   PlayerManager& m_Manager;
   static thread_local VkResult tl_recorderReturnValue;
