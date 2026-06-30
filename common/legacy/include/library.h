@@ -52,6 +52,7 @@ public:
     ID_LEVELZERO,
     ID_OCLOC,
     ID_DirectX,
+    ID_VULKAN2,
     ID_NUM
   };
 

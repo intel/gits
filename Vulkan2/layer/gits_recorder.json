@@ -1,0 +1,17 @@
+{
+    "file_format_version" : "1.2.0",
+    "layer" : {
+        "name": "VK_LAYER_INTEL_vulkan_GITS_recorder_2",
+        "type": "GLOBAL",
+        "library_path": ".\\VkLayer_vulkan_GITS_recorder.dll",
+        "api_version": "1.4.335",
+        "implementation_version": "1",
+        "description": "Vulkan layer used to record GITS Vulkan streams",
+		"functions": {
+			"vkGetInstanceProcAddr": "vkGetInstanceProcAddrGITSLayer",
+			"vkGetDeviceProcAddr": "vkGetDeviceProcAddrGITSLayer",
+			"vkGetPhysicalDeviceProcAddr": "vkGetPhysicalDeviceProcAddrGITSLayer",
+			"vkNegotiateLoaderLayerInterfaceVersion": "vkNegotiateLoaderLayerInterfaceVersionGITSLayer"
+		}
+    }
+}

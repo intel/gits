@@ -1,0 +1,25 @@
+// ===================== begin_copyright_notice ============================
+//
+// Copyright (C) 2023-2026 Intel Corporation
+//
+// SPDX-License-Identifier: MIT
+//
+// ===================== end_copyright_notice ==============================
+
+#pragma once
+
+#include "commandsCustom.h"
+
+namespace gits {
+namespace vulkan {
+
+uint32_t GetSize(const CreateWindowMetaCommand& command);
+void Encode(const CreateWindowMetaCommand& command, char* dest);
+void Decode(char* src, CreateWindowMetaCommand& command);
+
+uint32_t GetSize(const MappedDataMetaCommand& command);
+void Encode(const MappedDataMetaCommand& command, char* dest);
+void Decode(char* src, MappedDataMetaCommand& command);
+
+} // namespace vulkan
+} // namespace gits

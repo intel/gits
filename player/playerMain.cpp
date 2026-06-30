@@ -31,6 +31,7 @@
 #endif
 #ifdef WITH_VULKAN
 #include "vulkanLibrary.h"
+#include "vulkanLibrary2.h"
 #endif
 #if defined WITH_LEVELZERO
 #include "l0Library.h"
@@ -319,6 +320,7 @@ int MainBody(int argc, char* argv[]) {
     inst.Register(std::shared_ptr<CLibrary>(new OpenGL::CLibrary));
 #ifdef WITH_VULKAN
     inst.Register(std::shared_ptr<CLibrary>(new Vulkan::CLibrary));
+    inst.Register(std::shared_ptr<CLibrary>(new vulkan::VulkanLibrary2));
 #endif
 #ifdef WITH_LEVELZERO
     inst.Register(std::shared_ptr<CLibrary>(new l0::CLibrary));

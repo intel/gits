@@ -49,6 +49,7 @@ endif()
 
 if(WITH_VULKAN)
   target_link_libraries(gits_player PRIVATE Vulkan_common)
+  target_link_libraries(gits_player PRIVATE Vulkan_player_2)
 endif()
 
 if(WITH_OCLOC)

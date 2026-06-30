@@ -23,7 +23,8 @@ if(MSVC)
   endif()
   if(WITH_VULKAN)
     file(APPEND ${recorder_DEF}
-      "  GITSRecorderVulkan\n")
+      "  GITSRecorderVulkan\n
+         GITSRecorderVulkan2\n")
   endif()
   if(WITH_LEVELZERO)
     file(APPEND ${recorder_DEF}
@@ -71,7 +72,7 @@ set(recorderCommonLibs ${recorderCommonLibs} OpenGL_common)
 set(frameworks ${frameworks} "-framework OpenGL")
 
 if(WITH_VULKAN)
-  set(recorderIfaceLibs ${recorderIfaceLibs} ${libPrefix} Vulkan_recorder)
+  set(recorderIfaceLibs ${recorderIfaceLibs} ${libPrefix} Vulkan_recorder Vulkan_recorder_2)
   set(recorderCommonLibs ${recorderCommonLibs} Vulkan_common)
 endif()
 if(WITH_OPENCL)

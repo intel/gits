@@ -116,6 +116,10 @@ DirectX/**/*Auto.h
 plugins/DirectX/**/*Auto.cpp
 plugins/DirectX/**/*Auto.h
 
+#Vulkan2
+Vulkan2/**/*Auto.h
+Vulkan2/**/*Auto.cpp
+
 # Configuration
 common/**/*Auto.cpp
 common/**/*Auto.h
