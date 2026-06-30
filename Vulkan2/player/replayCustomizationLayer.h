@@ -27,6 +27,8 @@ public:
 #ifdef VK_USE_PLATFORM_WIN32_KHR
   void Pre(vkCreateWin32SurfaceKHRCommand& command) override;
 #endif
+  void Post(vkCreateSwapchainKHRCommand& command) override;
+  void Pre(vkQueuePresentKHRCommand& command) override;
 #ifdef VK_USE_PLATFORM_XLIB_KHR
   void Pre(vkCreateXlibSurfaceKHRCommand& command) override;
 #endif

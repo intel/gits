@@ -9,6 +9,7 @@
 #include "replayCustomizationLayer.h"
 #include "playerManager.h"
 #include "swapchainImageSyncService.h"
+#include "configurator.h"
 
 #include <thread>
 #include <chrono>
@@ -100,6 +101,61 @@ void ReplayCustomizationLayer::Pre(vkCreateWaylandSurfaceKHRCommand& command) {
   }
 }
 #endif
+
+// Offscreen replay swapchain handling. The contract is: pre-acquire all
+// swapchain images once, and never issue a real present.
+void ReplayCustomizationLayer::Post(vkCreateSwapchainKHRCommand& command) {
+  if (!Configurator::Get().common.player.renderOffscreen) {
+    return;
+  }
+  if (command.m_Return.Value != VK_SUCCESS || command.m_pSwapchain.Value == nullptr) {
+    return;
+  }
+  VkDevice device = command.m_device.Value;
+  VkSwapchainKHR swapchain = *command.m_pSwapchain.Value;
+  auto& dt = m_Manager.GetDeviceDispatchTable(device);
+
+  uint32_t imageCount = 0;
+  dt.vkGetSwapchainImagesKHR(device, swapchain, &imageCount, nullptr);
+  // Acquire every image (no semaphore/fence). Offscreen replay never presents, so
+  // the images are never released and stay valid for the whole replay.
+  for (uint32_t i = 0; i < imageCount; ++i) {
+    uint32_t imageIndex = 0;
+    auto ret = dt.vkAcquireNextImageKHR(device, swapchain, 3000000000ULL, VK_NULL_HANDLE,
+                                        VK_NULL_HANDLE, &imageIndex);
+    if (ret != VK_SUCCESS && ret != VK_SUBOPTIMAL_KHR) {
+      LOG_WARNING
+          << "ReplayCustomizationLayer: renderOffscreen: vkAcquireNextImageKHR failed swapchain "
+             "image "
+          << i << " with return value " << ret;
+    }
+  }
+}
+
+void ReplayCustomizationLayer::Pre(vkQueuePresentKHRCommand& command) {
+  if (!Configurator::Get().common.player.renderOffscreen) {
+    return;
+  }
+  // Consume the present's wait semaphores with an empty submit (so downstream work
+  // is not left blocked on them), then skip the real present.
+  VkPresentInfoKHR* presentInfo = command.m_pPresentInfo.Value;
+  if (presentInfo != nullptr && presentInfo->waitSemaphoreCount > 0 &&
+      presentInfo->pWaitSemaphores != nullptr) {
+    std::vector<VkPipelineStageFlags> waitStages(presentInfo->waitSemaphoreCount,
+                                                 VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.waitSemaphoreCount = presentInfo->waitSemaphoreCount;
+    submitInfo.pWaitSemaphores = presentInfo->pWaitSemaphores;
+    submitInfo.pWaitDstStageMask = waitStages.data();
+    m_Manager.GetDeviceDispatchTable(command.m_queue.Value)
+        .vkQueueSubmit(command.m_queue.Value, 1, &submitInfo, VK_NULL_HANDLE);
+    // Clear so any other layer (e.g. screenshots) does not wait on them again.
+    presentInfo->waitSemaphoreCount = 0;
+    presentInfo->pWaitSemaphores = nullptr;
+  }
+  command.m_Skip = true;
+}
 
 void ReplayCustomizationLayer::Post(vkAllocateMemoryCommand& command) {
   m_Manager.GetMapTrackingService().StoreAllocationInfo(
