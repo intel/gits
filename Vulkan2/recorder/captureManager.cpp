@@ -36,6 +36,7 @@ CaptureManager::CaptureManager() {
   m_Recorder.reset(new stream::OrderingRecorder());
 
   m_MapTrackingService.reset(new MapTrackingService(*m_Recorder));
+  m_WindowTrackingService.reset(new WindowTrackingService(*m_Recorder));
 
   m_DispatchTablesHolder = std::make_unique<DispatchTablesHolder>(
       m_InstanceDispatchTable, m_DeviceDispatchTable, m_DispatchTablesMutex);

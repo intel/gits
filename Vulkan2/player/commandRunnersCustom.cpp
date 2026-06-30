@@ -82,7 +82,8 @@ void UpdateWindowMetaRunner::Run() {
   }
 
   if (manager.ExecuteCommands() && !m_Command.m_Skip) {
-    manager.GetWindowService().UpdateWindow(m_Command.m_Hwnd.Value, m_Command.m_Width.Value,
+    manager.GetWindowService().UpdateWindow(m_Command.m_Hwnd.Value, m_Command.m_X.Value,
+                                            m_Command.m_Y.Value, m_Command.m_Width.Value,
                                             m_Command.m_Height.Value, m_Command.m_Visible.Value);
   }
 

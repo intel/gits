@@ -50,8 +50,20 @@ void CaptureCustomizationLayer::Pre(vkCreateWin32SurfaceKHRCommand& command) {
 
 void CaptureCustomizationLayer::Post(vkCreateWin32SurfaceKHRCommand& command) {
   if (command.m_Return.Value == VK_SUCCESS && command.m_pSurface.Value) {
-    m_SurfaceHwndMap[*command.m_pSurface.Value] =
-        reinterpret_cast<uint64_t>(command.m_pCreateInfo.Value->hwnd);
+    HWND hwnd = command.m_pCreateInfo.Value->hwnd;
+    RECT clientRect;
+    BOOL ret = GetClientRect(hwnd, &clientRect);
+    GITS_ASSERT(ret);
+    int32_t width = clientRect.right - clientRect.left;
+    int32_t height = clientRect.bottom - clientRect.top;
+    RECT windowRect;
+    ret = GetWindowRect(hwnd, &windowRect);
+    GITS_ASSERT(ret);
+    int32_t x = windowRect.left;
+    int32_t y = windowRect.top;
+    bool visible = IsWindowVisible(hwnd) == TRUE;
+    m_Manager.GetWindowTrackingService().StoreSurface(
+        *command.m_pSurface.Value, reinterpret_cast<uint64_t>(hwnd), x, y, width, height, visible);
   }
 }
 #endif
@@ -172,24 +184,34 @@ void CaptureCustomizationLayer::Post(vkCreateSwapchainKHRCommand& command) {
     return;
   }
 #ifdef VK_USE_PLATFORM_WIN32_KHR
-  VkSurfaceKHR surface = command.m_pCreateInfo.Value->surface;
-  auto it = m_SurfaceHwndMap.find(surface);
-  if (it == m_SurfaceHwndMap.end()) {
-    return;
-  }
-  UpdateWindowMetaCommand updateWindowMetaCommand(command.m_ThreadId);
-  updateWindowMetaCommand.m_Key = m_Manager.CreateCommandKey();
-  updateWindowMetaCommand.m_Hwnd.Value = it->second;
-  updateWindowMetaCommand.m_Width.Value =
-      static_cast<int32_t>(command.m_pCreateInfo.Value->imageExtent.width);
-  updateWindowMetaCommand.m_Height.Value =
-      static_cast<int32_t>(command.m_pCreateInfo.Value->imageExtent.height);
-  updateWindowMetaCommand.m_Visible.Value =
-      IsWindowVisible(reinterpret_cast<HWND>(it->second)) == TRUE;
-  m_Recorder.Record(updateWindowMetaCommand.m_Key,
-                    new UpdateWindowMetaSerializer(updateWindowMetaCommand));
+  m_Manager.GetWindowTrackingService().StoreSwapchain(
+      *command.m_pSwapchain.Value, command.m_pCreateInfo.Value->surface, command.m_ThreadId,
+      static_cast<int32_t>(command.m_pCreateInfo.Value->imageExtent.width),
+      static_cast<int32_t>(command.m_pCreateInfo.Value->imageExtent.height));
 #endif
 }
+
+void CaptureCustomizationLayer::Post(vkDestroySwapchainKHRCommand& command) {
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+  m_Manager.GetWindowTrackingService().RemoveSwapchain(command.m_swapchain.Value);
+#endif
+}
+
+void CaptureCustomizationLayer::Post(vkDestroySurfaceKHRCommand& command) {
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+  m_Manager.GetWindowTrackingService().RemoveSurface(command.m_surface.Value);
+#endif
+}
+
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+void CaptureCustomizationLayer::Pre(vkQueuePresentKHRCommand& command) {
+  const VkPresentInfoKHR* presentInfo = command.m_pPresentInfo.Value;
+  if (!presentInfo) {
+    return;
+  }
+  m_Manager.GetWindowTrackingService().UpdateWindowsForPresent(command.m_ThreadId, *presentInfo);
+}
+#endif
 
 void CaptureCustomizationLayer::Post(vkCreateDeviceCommand& command) {
   m_Manager.GetMapTrackingService().StorePhysicalDevice(command.m_pDevice.Key,

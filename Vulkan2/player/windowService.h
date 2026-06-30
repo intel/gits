@@ -25,7 +25,8 @@ public:
                      int32_t width,
                      int32_t height,
                      bool visible);
-  void UpdateWindow(uint64_t handle, int32_t width, int32_t height, bool visible);
+  void UpdateWindow(
+      uint64_t handle, int32_t x, int32_t y, int32_t width, int32_t height, bool visible);
   uint64_t GetCurrentWindowHandle(uint64_t captureWindow);
   uint64_t GetCurrentInstance(uint64_t captureInstance);
 
@@ -43,6 +44,8 @@ private:
 
   struct WindowState {
     uint64_t playbackHandle{};
+    int32_t x{};
+    int32_t y{};
     uint32_t width{};
     uint32_t height{};
     bool visible{};

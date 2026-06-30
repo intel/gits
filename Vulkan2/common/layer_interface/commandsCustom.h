@@ -74,6 +74,8 @@ public:
 
 public:
   Argument<uint64_t> m_Hwnd{};
+  Argument<int32_t> m_X{};
+  Argument<int32_t> m_Y{};
   Argument<int32_t> m_Width{};
   Argument<int32_t> m_Height{};
   Argument<bool> m_Visible{};

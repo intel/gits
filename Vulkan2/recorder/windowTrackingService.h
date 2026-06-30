@@ -1,0 +1,76 @@
+// ===================== begin_copyright_notice ============================
+//
+// Copyright (C) 2023-2026 Intel Corporation
+//
+// SPDX-License-Identifier: MIT
+//
+// ===================== end_copyright_notice ==============================
+
+#pragma once
+
+#include "orderingRecorder.h"
+#include "vulkanHeader2.h"
+
+#include <unordered_map>
+#include <mutex>
+
+namespace gits {
+namespace vulkan {
+
+// Tracks the surface/swapchain/window relationships needed to record the
+// application's live window timeline (visibility/size) during capture. Owned by
+// CaptureManager and emits UpdateWindowMetaCommand itself, mirroring
+// MapTrackingService.
+class WindowTrackingService {
+public:
+  WindowTrackingService(stream::OrderingRecorder& recorder);
+
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+  // Records surface -> HWND and seeds the last-known window state so per-present
+  // polling only emits updates when the window actually changes.
+  void StoreSurface(VkSurfaceKHR surface,
+                    uint64_t hwnd,
+                    int32_t x,
+                    int32_t y,
+                    int32_t width,
+                    int32_t height,
+                    bool visible);
+  // Records swapchain -> surface (so vkQueuePresentKHR can resolve
+  // swapchain -> surface -> HWND) and emits an UpdateWindowMetaCommand carrying
+  // the swapchain image extent, matching the legacy behaviour at swapchain
+  // creation.
+  void StoreSwapchain(VkSwapchainKHR swapchain,
+                      VkSurfaceKHR surface,
+                      uint32_t threadId,
+                      int32_t imageWidth,
+                      int32_t imageHeight);
+  void RemoveSurface(VkSurfaceKHR surface);
+  void RemoveSwapchain(VkSwapchainKHR swapchain);
+  // Polls the live window state for each presented swapchain and records an
+  // UpdateWindowMetaCommand whenever it changed since the last present.
+  void UpdateWindowsForPresent(uint32_t threadId, const VkPresentInfoKHR& presentInfo);
+#endif
+
+private:
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+  // Last-known window state per HWND, used to detect changes between presents
+  // (mirrors the legacy CHWNDState polling). Position is intentionally not
+  // tracked because UpdateWindowMetaCommand carries no position and the player
+  // does not reposition windows on update.
+  struct WindowState {
+    int32_t X{};
+    int32_t Y{};
+    int32_t Width{};
+    int32_t Height{};
+    bool Visible{};
+  };
+  std::unordered_map<VkSurfaceKHR, uint64_t> m_SurfaceHwnd;
+  std::unordered_map<VkSwapchainKHR, VkSurfaceKHR> m_SwapchainSurface;
+  std::unordered_map<uint64_t, WindowState> m_HwndState;
+#endif
+  stream::OrderingRecorder& m_Recorder;
+  std::mutex m_Mutex;
+};
+
+} // namespace vulkan
+} // namespace gits

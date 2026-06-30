@@ -12,7 +12,6 @@
 #include "orderingRecorder.h"
 #include "vulkanHeader2.h"
 #include <optional>
-#include <unordered_map>
 
 namespace gits {
 namespace vulkan {
@@ -26,6 +25,7 @@ public:
 #ifdef VK_USE_PLATFORM_WIN32_KHR
   void Pre(vkCreateWin32SurfaceKHRCommand& command) override;
   void Post(vkCreateWin32SurfaceKHRCommand& command) override;
+  void Pre(vkQueuePresentKHRCommand& command) override;
 #endif
 #ifdef VK_USE_PLATFORM_XLIB_KHR
   void Pre(vkCreateXlibSurfaceKHRCommand& command) override;
@@ -37,6 +37,8 @@ public:
   void Pre(vkCreateWaylandSurfaceKHRCommand& command) override;
 #endif
   void Post(vkCreateSwapchainKHRCommand& command) override;
+  void Post(vkDestroySwapchainKHRCommand& command) override;
+  void Post(vkDestroySurfaceKHRCommand& command) override;
 
   void Pre(vkCreateBufferCommand& command) override;
   void Pre(vkCreateImageCommand& command) override;
@@ -91,9 +93,6 @@ private:
   static thread_local VkImageCreateInfo s_ImageCreateInfo;
   CaptureManager& m_Manager;
   stream::OrderingRecorder& m_Recorder;
-#ifdef VK_USE_PLATFORM_WIN32_KHR
-  std::unordered_map<VkSurfaceKHR, uint64_t> m_SurfaceHwndMap;
-#endif
 };
 
 } // namespace vulkan

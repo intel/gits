@@ -39,6 +39,8 @@ source_group("capture" FILES ${CAPTURE_SRC})
 set(SERVICES_SRC
   ${CMAKE_CURRENT_SOURCE_DIR}/mapTrackingService.h
   ${CMAKE_CURRENT_SOURCE_DIR}/mapTrackingService.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/windowTrackingService.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/windowTrackingService.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/descriptorUpdateTemplateService.h
   ${CMAKE_CURRENT_SOURCE_DIR}/descriptorUpdateTemplateService.cpp
 )

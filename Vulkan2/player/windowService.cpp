@@ -27,6 +27,12 @@ uint64_t WindowService::SetWindow(uint32_t protocol,
                                   int32_t width,
                                   int32_t height,
                                   bool visible) {
+  // Workaround that forces all windows visible regardless of the recorded flag.
+  // forceInvisibleWindows still wins downstream in CreateWin/WinVisibility
+  // (message_pump.cpp).
+  if (Configurator::Get().common.player.showWindowsWA) {
+    visible = true;
+  }
 
   auto it = m_WindowMap.find(handle);
   if (it != m_WindowMap.end()) {
@@ -109,17 +115,28 @@ uint64_t WindowService::SetWindow(uint32_t protocol,
   }
   }
 
-  m_WindowMap[handle] = {currentHandle, wndWidth, wndHeight, visible};
+  m_WindowMap[handle] = {currentHandle,
+                         static_cast<int32_t>(wndPosX),
+                         static_cast<int32_t>(wndPosY),
+                         wndWidth,
+                         wndHeight,
+                         visible};
   m_InstanceMap[instance] = currentInstance;
 
   return currentHandle;
 }
 
-void WindowService::UpdateWindow(uint64_t handle, int32_t width, int32_t height, bool visible) {
+void WindowService::UpdateWindow(
+    uint64_t handle, int32_t x, int32_t y, int32_t width, int32_t height, bool visible) {
 #ifdef VK_USE_PLATFORM_WIN32_KHR
+  if (Configurator::Get().common.player.showWindowsWA) {
+    visible = true;
+  }
   auto it = m_WindowMap.find(handle);
   if (it != m_WindowMap.end()) {
     auto& cfg = Configurator::Get().common.player;
+    int32_t wndPosX = cfg.forceWindowPos.enabled ? cfg.forceWindowPos.x : x;
+    int32_t wndPosY = cfg.forceWindowPos.enabled ? cfg.forceWindowPos.y : y;
     uint32_t wndWidth = cfg.forceWindowSize.enabled ? cfg.forceWindowSize.width : width;
     uint32_t wndHeight = cfg.forceWindowSize.enabled ? cfg.forceWindowSize.height : height;
 
@@ -128,6 +145,11 @@ void WindowService::UpdateWindow(uint64_t handle, int32_t width, int32_t height,
       ResizeWin(reinterpret_cast<HWND>(state.playbackHandle), wndWidth, wndHeight);
       state.width = wndWidth;
       state.height = wndHeight;
+    }
+    if (state.x != wndPosX || state.y != wndPosY) {
+      MoveWin(reinterpret_cast<HWND>(state.playbackHandle), wndPosX, wndPosY);
+      state.x = wndPosX;
+      state.y = wndPosY;
     }
     if (state.visible != visible) {
       WinVisibility(reinterpret_cast<HWND>(state.playbackHandle), visible);

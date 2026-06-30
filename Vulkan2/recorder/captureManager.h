@@ -16,6 +16,7 @@
 #include "dispatchTableAuto.h"
 #include "dispatchTablesHolder.h"
 #include "mapTrackingService.h"
+#include "windowTrackingService.h"
 #include "descriptorUpdateTemplateService.h"
 #include "orderingRecorder.h"
 
@@ -87,6 +88,10 @@ public:
     return *m_MapTrackingService;
   }
 
+  WindowTrackingService& GetWindowTrackingService() {
+    return *m_WindowTrackingService;
+  }
+
   DescriptorUpdateTemplateService& GetDescriptorUpdateTemplateService() {
     return m_DescriptorUpdateTemplateService;
   }
@@ -112,6 +117,7 @@ private:
   std::unique_ptr<DispatchTablesHolder> m_DispatchTablesHolder;
 
   std::unique_ptr<MapTrackingService> m_MapTrackingService;
+  std::unique_ptr<WindowTrackingService> m_WindowTrackingService;
   DescriptorUpdateTemplateService m_DescriptorUpdateTemplateService;
 };
 
