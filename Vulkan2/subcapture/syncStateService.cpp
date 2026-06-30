@@ -10,6 +10,7 @@
 #include "stateTrackingService.h"
 #include "objectState.h"
 #include "commandIdsAuto.h"
+#include <algorithm>
 
 namespace gits {
 namespace vulkan {
@@ -37,9 +38,22 @@ void SyncStateService::OnQueueSubmit(const VkSubmitInfo* pSubmits,
         ApplyCommandBufferEventStates(handleKeys[keyIdx]);
         m_StateTracking.GetQueryPoolStateService().ApplyCommandBuffer(handleKeys[keyIdx]);
       }
+      // Walk the pNext chain once per submit info to find the timeline values.
+      const VkTimelineSemaphoreSubmitInfo* pTimeline = nullptr;
+      for (const auto* pNext = static_cast<const VkBaseInStructure*>(info.pNext); pNext;
+           pNext = pNext->pNext) {
+        if (pNext->sType == VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO) {
+          pTimeline = reinterpret_cast<const VkTimelineSemaphoreSubmitInfo*>(pNext);
+          break;
+        }
+      }
       for (uint32_t s = 0; s < info.signalSemaphoreCount && keyIdx < handleKeys.size();
            ++s, ++keyIdx) {
         SignalBinarySemaphore(handleKeys[keyIdx]);
+        if (pTimeline && pTimeline->pSignalSemaphoreValues &&
+            s < pTimeline->signalSemaphoreValueCount) {
+          UpdateTimelineSemaphoreValue(handleKeys[keyIdx], pTimeline->pSignalSemaphoreValues[s]);
+        }
       }
     }
   }
@@ -73,6 +87,9 @@ void SyncStateService::OnQueueSubmit2(const VkSubmitInfo2* pSubmits,
       for (uint32_t s = 0; s < info.signalSemaphoreInfoCount && keyIdx < handleKeys.size();
            ++s, ++keyIdx) {
         SignalBinarySemaphore(handleKeys[keyIdx]);
+        // VkSemaphoreSubmitInfo::value is the timeline value; 0 for binary
+        // semaphores (spec-compliant apps leave it at 0).
+        UpdateTimelineSemaphoreValue(handleKeys[keyIdx], info.pSignalSemaphoreInfos[s].value);
       }
     }
   }
@@ -144,6 +161,17 @@ void SyncStateService::ApplyCommandBufferEventStates(uint64_t cbKey) {
     if (ev) {
       ev->IsSignaled = signaled;
     }
+  }
+}
+
+void SyncStateService::OnSignalSemaphore(uint64_t semKey, uint64_t value) {
+  UpdateTimelineSemaphoreValue(semKey, value);
+}
+
+void SyncStateService::UpdateTimelineSemaphoreValue(uint64_t semKey, uint64_t value) {
+  auto* state = m_StateTracking.GetState<SemaphoreState>(semKey);
+  if (state && !state->IsBinary) {
+    state->LastSignaledValue = std::max(state->LastSignaledValue, value);
   }
 }
 

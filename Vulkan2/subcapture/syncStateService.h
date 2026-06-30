@@ -62,10 +62,16 @@ public:
   // Called after a successful vkResetFences.
   void OnResetFences(const std::vector<uint64_t>& fenceKeys);
 
+  // Called after a successful vkSignalSemaphore / vkSignalSemaphoreKHR.
+  // semKey: GITS key of the semaphore.  value: VkSemaphoreSignalInfo::value.
+  void OnSignalSemaphore(uint64_t semKey, uint64_t value);
+
 private:
   void SignalFence(uint64_t fenceKey);
   void UnsignalBinarySemaphore(uint64_t semKey);
   void SignalBinarySemaphore(uint64_t semKey);
+  // Updates LastSignaledValue = max(current, value) for timeline semaphores.
+  void UpdateTimelineSemaphoreValue(uint64_t semKey, uint64_t value);
   // Applies a submitted command buffer's recorded vkCmdSetEvent / vkCmdResetEvent
   // net effects to the corresponding EventState::IsSignaled.  No-op for non-CB keys.
   void ApplyCommandBufferEventStates(uint64_t cbKey);

@@ -114,6 +114,8 @@ public:
   void Post(vkGetDeviceQueue2Command& command) override;
   void Post(vkCreateSemaphoreCommand& command) override;
   void Post(vkDestroySemaphoreCommand& command) override;
+  void Post(vkSignalSemaphoreCommand& command) override;
+  void Post(vkSignalSemaphoreKHRCommand& command) override;
   void Post(vkCreateEventCommand& command) override;
   void Post(vkDestroyEventCommand& command) override;
   void Post(vkSetEventCommand& command) override;

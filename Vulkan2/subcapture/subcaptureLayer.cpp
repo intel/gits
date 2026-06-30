@@ -252,6 +252,16 @@ void SubcaptureLayer::Post(vkCreateDeviceCommand& command) {
   auto state = std::make_unique<DeviceState>();
   state->Key = command.m_pDevice.Key;
   state->ParentKey = command.m_physicalDevice.Key;
+  if (command.m_pCreateInfo.Value) {
+    const auto& ci = *command.m_pCreateInfo.Value;
+    for (uint32_t i = 0; i < ci.enabledExtensionCount; ++i) {
+      if (ci.ppEnabledExtensionNames[i] &&
+          strcmp(ci.ppEnabledExtensionNames[i], VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME) == 0) {
+        state->HasTimelineSemaphoreKHR = true;
+        break;
+      }
+    }
+  }
   StoreState(std::move(state), command);
 }
 
@@ -482,6 +492,25 @@ void SubcaptureLayer::Post(vkCreateSemaphoreCommand& command) {
 
 void SubcaptureLayer::Post(vkDestroySemaphoreCommand& command) {
   m_StateTracking.RemoveState(command.m_semaphore.Key);
+}
+
+void SubcaptureLayer::Post(vkSignalSemaphoreCommand& command) {
+  if (command.m_Return.Value != VK_SUCCESS || !command.m_pSignalInfo.Value ||
+      command.m_pSignalInfo.HandleKeys.empty()) {
+    return;
+  }
+  // HandleKeys[0] is the recorder-side key for VkSemaphoreSignalInfo::semaphore.
+  m_SyncState.OnSignalSemaphore(command.m_pSignalInfo.HandleKeys[0],
+                                command.m_pSignalInfo.Value->value);
+}
+
+void SubcaptureLayer::Post(vkSignalSemaphoreKHRCommand& command) {
+  if (command.m_Return.Value != VK_SUCCESS || !command.m_pSignalInfo.Value ||
+      command.m_pSignalInfo.HandleKeys.empty()) {
+    return;
+  }
+  m_SyncState.OnSignalSemaphore(command.m_pSignalInfo.HandleKeys[0],
+                                command.m_pSignalInfo.Value->value);
 }
 
 void SubcaptureLayer::Post(vkCreateEventCommand& command) {

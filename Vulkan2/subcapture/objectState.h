@@ -61,7 +61,12 @@ struct InstanceState : ObjectState {};
 // physical device, so it can be re-emitted during state restore.
 struct PhysicalDeviceState : ObjectState {};
 
-struct DeviceState : ObjectState {};
+struct DeviceState : ObjectState {
+  // True if VK_KHR_timeline_semaphore was listed in ppEnabledExtensionNames at
+  // vkCreateDevice time.  When set, state-restore timeline semaphore signals
+  // must use vkSignalSemaphoreKHR instead of the Vulkan 1.2 core function.
+  bool HasTimelineSemaphoreKHR{false};
+};
 
 // ---- Memory ------------------------------------------------------------
 
@@ -106,11 +111,18 @@ struct QueueState : ObjectState {
 struct SemaphoreState : ObjectState {
   // True if this is a binary semaphore (as opposed to a timeline semaphore).
   bool IsBinary{true};
-  // True if the semaphore was signaled (via pSignalSemaphores in a queue
-  // submit, or by a vkAcquireNextImageKHR / vkAcquireNextImage2KHR acquire)
-  // and not subsequently waited on.  Used during state restore to signal the
-  // semaphore via a dummy queue submission.
+  // For binary semaphores only: true if the semaphore was signaled (via
+  // pSignalSemaphores in a queue submit, or by a vkAcquireNextImageKHR /
+  // vkAcquireNextImage2KHR acquire) and not subsequently waited on.  Used
+  // during state restore to re-signal via a dummy queue submission.
   bool IsSignaled{false};
+  // For timeline semaphores only: the highest counter value observed since
+  // creation (from pSignalSemaphoreValues in a vkQueueSubmit pNext chain,
+  // VkSemaphoreSubmitInfo::value in vkQueueSubmit2, or a host-side
+  // vkSignalSemaphore / vkSignalSemaphoreKHR call).  Zero means no signals
+  // have been observed beyond the create-time VkSemaphoreTypeCreateInfo::
+  // initialValue and no extra restore command is needed.
+  uint64_t LastSignaledValue{};
 };
 
 struct EventState : ObjectState {

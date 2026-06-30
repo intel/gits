@@ -1449,8 +1449,42 @@ bool StateTrackingService::EmitCreationCommand(ObjectState* state) {
     m_Recorder.Record(vkCreateFenceSerializer(cmd));
     break;
   }
-  case CommandId::ID_VKCREATESEMAPHORE:
-    EMIT_DECODED(vkCreateSemaphore)
+  case CommandId::ID_VKCREATESEMAPHORE: {
+    vkCreateSemaphoreCommand cmd;
+    Decode(buf, cmd);
+    m_Recorder.Record(vkCreateSemaphoreSerializer(cmd));
+    // For timeline semaphores that were signaled beyond their create-time
+    // initialValue, emit a host-side vkSignalSemaphore to advance the
+    // counter to the value observed at the subcapture point.  Without this,
+    // any recording-range vkWaitSemaphores(value=N) where N was produced by
+    // a pre-subcapture signal would block forever.
+    auto* sem = static_cast<SemaphoreState*>(state);
+    if (!sem->IsBinary && sem->LastSignaledValue > 0) {
+      static VkSemaphore kDummySemaphoreSlot = VK_NULL_HANDLE;
+      VkSemaphoreSignalInfo signalInfo{};
+      signalInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SIGNAL_INFO;
+      signalInfo.semaphore = kDummySemaphoreSlot; // remapped by player from HandleKeys[0]
+      signalInfo.value = sem->LastSignaledValue;
+
+      const auto* devState = GetState<DeviceState>(sem->ParentKey);
+      if (devState && devState->HasTimelineSemaphoreKHR) {
+        vkSignalSemaphoreKHRCommand signalCmd;
+        signalCmd.m_device.Key = sem->ParentKey;
+        signalCmd.m_pSignalInfo.Value = &signalInfo;
+        signalCmd.m_pSignalInfo.HandleKeys = {sem->Key};
+        signalCmd.m_Return.Value = VK_SUCCESS;
+        m_Recorder.Record(vkSignalSemaphoreKHRSerializer(signalCmd));
+      } else {
+        vkSignalSemaphoreCommand signalCmd;
+        signalCmd.m_device.Key = sem->ParentKey;
+        signalCmd.m_pSignalInfo.Value = &signalInfo;
+        signalCmd.m_pSignalInfo.HandleKeys = {sem->Key};
+        signalCmd.m_Return.Value = VK_SUCCESS;
+        m_Recorder.Record(vkSignalSemaphoreSerializer(signalCmd));
+      }
+    }
+    break;
+  }
   default:
     LOG_WARNING << "Vulkan2 subcapture: unhandled CommandId "
                 << static_cast<uint32_t>(state->CreationCommandId)
