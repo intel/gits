@@ -9,11 +9,13 @@
 #include "windowService.h"
 #include "message_pump.h"
 #include "configurator.h"
+#include "commandsCustom.h"
 
 namespace gits {
 namespace vulkan {
 
-uint64_t WindowService::SetWindow(uint64_t handle,
+uint64_t WindowService::SetWindow(uint32_t protocol,
+                                  uint64_t handle,
                                   uint64_t instance,
                                   int32_t x,
                                   int32_t y,
@@ -21,8 +23,6 @@ uint64_t WindowService::SetWindow(uint64_t handle,
                                   int32_t height,
                                   bool visible) {
 #ifdef VK_USE_PLATFORM_WIN32_KHR
-  uint64_t currentHandle{};
-  uint64_t currentInstance{};
   auto it = m_WindowMap.find(handle);
   if (it != m_WindowMap.end()) {
     auto& state = it->second;
@@ -40,6 +40,7 @@ uint64_t WindowService::SetWindow(uint64_t handle,
     }
     return state.playbackHandle;
   }
+#endif
 
   auto& cfg = Configurator::Get().common.player;
   uint32_t wndPosX = cfg.forceWindowPos.enabled ? cfg.forceWindowPos.x : x;
@@ -47,19 +48,43 @@ uint64_t WindowService::SetWindow(uint64_t handle,
   uint32_t wndWidth = cfg.forceWindowSize.enabled ? cfg.forceWindowSize.width : width;
   uint32_t wndHeight = cfg.forceWindowSize.enabled ? cfg.forceWindowSize.height : height;
 
-  HWND currentHWND = CreateWin(wndWidth, wndHeight, wndPosX, wndPosY, visible);
-  WinTitle(currentHWND, "Vulkan-GITS");
-  HINSTANCE hInstance = reinterpret_cast<HINSTANCE>(GetWindowLongPtr(currentHWND, GWLP_HINSTANCE));
-  currentHandle = reinterpret_cast<uint64_t>(currentHWND);
-  currentInstance = reinterpret_cast<uint64_t>(hInstance);
+  uint64_t currentHandle{};
+  uint64_t currentInstance{};
+
+  switch (protocol) {
+  case CreateWindowMetaCommand::DisplayProtocol::WIN: {
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+    HWND currentHWND = CreateWin(wndWidth, wndHeight, wndPosX, wndPosY, visible);
+    WinTitle(currentHWND, "Vulkan-GITS");
+    HINSTANCE hInstance =
+        reinterpret_cast<HINSTANCE>(GetWindowLongPtr(currentHWND, GWLP_HINSTANCE));
+    currentHandle = reinterpret_cast<uint64_t>(currentHWND);
+    currentInstance = reinterpret_cast<uint64_t>(hInstance);
+#endif
+    break;
+  }
+  case CreateWindowMetaCommand::DisplayProtocol::XLIB: {
+#ifdef VK_USE_PLATFORM_XLIB_KHR
+    auto winParams = CreateXlibWindow(wndPosX, wndPosY, wndWidth, wndHeight, visible);
+    currentHandle = winParams.first;
+    currentInstance = winParams.second;
+#endif
+    break;
+  }
+  case CreateWindowMetaCommand::DisplayProtocol::XCB: {
+#ifdef VK_USE_PLATFORM_XCB_KHR
+    auto winParams = CreateXcbWindow(wndPosX, wndPosY, wndWidth, wndHeight, visible);
+    currentHandle = winParams.first;
+    currentInstance = winParams.second;
+#endif
+    break;
+  }
+  }
 
   m_WindowMap[handle] = {currentHandle, wndWidth, wndHeight, visible};
   m_InstanceMap[instance] = currentInstance;
 
   return currentHandle;
-#endif
-
-  return 0;
 }
 
 void WindowService::UpdateWindow(uint64_t handle, int32_t width, int32_t height, bool visible) {
@@ -85,24 +110,138 @@ void WindowService::UpdateWindow(uint64_t handle, int32_t width, int32_t height,
 }
 
 uint64_t WindowService::GetCurrentWindowHandle(uint64_t captureWindow) {
-#ifdef VK_USE_PLATFORM_WIN32_KHR
   auto it = m_WindowMap.find(captureWindow);
   if (it != m_WindowMap.end()) {
     return it->second.playbackHandle;
   }
-#endif
   return 0;
 }
 
 uint64_t WindowService::GetCurrentInstance(uint64_t captureInstance) {
-#ifdef VK_USE_PLATFORM_WIN32_KHR
   auto it = m_InstanceMap.find(captureInstance);
   if (it != m_InstanceMap.end()) {
     return it->second;
   }
-#endif
   return 0;
 }
+
+#ifdef GITS_PLATFORM_LINUX
+std::pair<uint64_t, uint64_t> WindowService::CreateXlibWindow(
+    int32_t x, int32_t y, int32_t width, int32_t height, bool visible) {
+  XInitThreads();
+  Display* display = XOpenDisplay(nullptr);
+  int screen = DefaultScreen(display);
+  Window root = RootWindow(display, screen);
+  Visual* visual = DefaultVisual(display, screen);
+  int depth = DefaultDepth(display, screen);
+  Colormap cmap = XCreateColormap(display, root, visual, AllocNone);
+
+  XSetWindowAttributes attributes;
+  attributes.background_pixel = XWhitePixel(display, screen);
+  attributes.border_pixel = 0;
+  attributes.colormap = cmap;
+  attributes.override_redirect = true;
+  attributes.event_mask = KeyPressMask;
+
+  Window window = XCreateWindow(
+      display, root, x, y, width, height,
+      0, // border_width
+      depth, InputOutput, visual,
+      CWBorderPixel | CWColormap | CWBackPixel | CWEventMask | CWOverrideRedirect, &attributes);
+
+  visible = true;
+  if (visible) {
+    XMapWindow(display, window);
+  }
+  XFlush(display);
+
+  XMoveWindow(display, window, x, y);
+  XFlush(display);
+
+  return std::make_pair(reinterpret_cast<uint64_t>(display), reinterpret_cast<uint64_t>(window));
+}
+
+std::pair<uint64_t, uint64_t> WindowService::CreateXcbWindow(
+    int32_t x, int32_t y, int32_t width, int32_t height, bool visible) {
+  XInitThreads();
+  Display* display = XOpenDisplay(nullptr);
+  xcb_connection_t* connection = XGetXCBConnection(display);
+  const xcb_setup_t* setup = xcb_get_setup(connection);
+  xcb_screen_iterator_t iter = xcb_setup_roots_iterator(setup);
+  int scr = DefaultScreen(display);
+  while (scr-- > 0) {
+    xcb_screen_next(&iter);
+  }
+  xcb_screen_t* screen = iter.data;
+  xcb_window_t window = xcb_generate_id(connection);
+
+  uint32_t valueMask = XCB_CW_BACK_PIXEL | XCB_CW_EVENT_MASK;
+  uint32_t valueList[32];
+  valueList[0] = screen->black_pixel;
+  valueList[1] =
+      XCB_EVENT_MASK_KEY_RELEASE | XCB_EVENT_MASK_EXPOSURE | XCB_EVENT_MASK_STRUCTURE_NOTIFY;
+
+  xcb_void_cookie_t cookie = xcb_create_window_checked(
+      connection, XCB_COPY_FROM_PARENT, window, screen->root, x, y, width, height, 0,
+      XCB_WINDOW_CLASS_INPUT_OUTPUT, screen->root_visual, valueMask, valueList);
+
+  xcb_generic_error_t* error = xcb_request_check(connection, cookie);
+  GITS_ASSERT(error == nullptr, "Could not create XCB window");
+  free(error);
+
+  const char* netWmPidStr = "_NET_WM_PID";
+  xcb_intern_atom_cookie_t cookiePid =
+      xcb_intern_atom(connection, 0, strlen(netWmPidStr), netWmPidStr);
+  xcb_intern_atom_reply_t* replyPid = xcb_intern_atom_reply(connection, cookiePid, nullptr);
+  pid_t pid = getpid();
+  xcb_change_property(connection, XCB_PROP_MODE_REPLACE, window, replyPid->atom, XCB_ATOM_CARDINAL,
+                      32, 1, &pid);
+  free(replyPid);
+
+  // Remove border
+  const char* mwmHintsStr = "_MOTIF_WM_HINTS";
+  xcb_intern_atom_cookie_t cookieHints =
+      xcb_intern_atom(connection, 0, strlen(mwmHintsStr), mwmHintsStr);
+  xcb_intern_atom_reply_t* replyHints = xcb_intern_atom_reply(connection, cookieHints, nullptr);
+  constexpr uint32_t MWM_HINTS_DECORATIONS = 1L << 1;
+  struct MotifHints {
+    uint32_t flags;
+    uint32_t functions;
+    uint32_t decorations;
+    int32_t input_mode;
+    uint32_t status;
+  };
+  MotifHints hints{};
+  hints.flags = MWM_HINTS_DECORATIONS;
+  hints.decorations = 0;
+
+  xcb_change_property(connection, XCB_PROP_MODE_REPLACE, window, replyHints->atom, replyHints->atom,
+                      32, 5, &hints);
+  free(replyHints);
+  int flushResult = xcb_flush(connection);
+  GITS_ASSERT(flushResult > 0, "Failed to flush XCB commands after removing window border");
+
+  visible = true;
+  if (visible) {
+    cookie = xcb_map_window_checked(connection, window);
+    error = xcb_request_check(connection, cookie);
+    GITS_ASSERT(error == nullptr, "Could not map XCB window");
+    free(error);
+  }
+
+  flushResult = xcb_flush(connection);
+  GITS_ASSERT(flushResult > 0, "Failed to flush XCB commands after window creation");
+
+  const int32_t positionValues[] = {x, y};
+  xcb_configure_window(connection, window, XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y,
+                       positionValues);
+  flushResult = xcb_flush(connection);
+  GITS_ASSERT(flushResult > 0, "Failed to flush XCB commands after moving window");
+
+  return std::make_pair(reinterpret_cast<uint64_t>(connection), static_cast<uint64_t>(window));
+}
+
+#endif
 
 } // namespace vulkan
 } // namespace gits

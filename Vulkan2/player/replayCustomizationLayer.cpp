@@ -41,6 +41,35 @@ void ReplayCustomizationLayer::Pre(vkCreateWin32SurfaceKHRCommand& command) {
 }
 #endif
 
+#ifdef VK_USE_PLATFORM_XLIB_KHR
+void ReplayCustomizationLayer::Pre(vkCreateXlibSurfaceKHRCommand& command) {
+  auto& windowService = m_Manager.GetWindowService();
+  uint64_t currentDisplay = windowService.GetCurrentWindowHandle(
+      reinterpret_cast<uint64_t>(command.m_pCreateInfo.Value->dpy));
+  uint64_t currentWindow = windowService.GetCurrentInstance(
+      reinterpret_cast<uint64_t>(command.m_pCreateInfo.Value->window));
+  if (currentDisplay && currentWindow) {
+    command.m_pCreateInfo.Value->dpy = reinterpret_cast<Display*>(currentDisplay);
+    command.m_pCreateInfo.Value->window = reinterpret_cast<Window>(currentWindow);
+  }
+}
+#endif
+
+#ifdef VK_USE_PLATFORM_XCB_KHR
+void ReplayCustomizationLayer::Pre(vkCreateXcbSurfaceKHRCommand& command) {
+  auto& windowService = m_Manager.GetWindowService();
+  uint64_t currentConnection = windowService.GetCurrentWindowHandle(
+      reinterpret_cast<uint64_t>(command.m_pCreateInfo.Value->connection));
+  uint64_t currentWindow =
+      windowService.GetCurrentInstance(static_cast<uint64_t>(command.m_pCreateInfo.Value->window));
+  if (currentConnection && currentWindow) {
+    command.m_pCreateInfo.Value->connection =
+        reinterpret_cast<xcb_connection_t*>(currentConnection);
+    command.m_pCreateInfo.Value->window = static_cast<xcb_window_t>(currentWindow);
+  }
+}
+#endif
+
 void ReplayCustomizationLayer::Post(vkAllocateMemoryCommand& command) {
   m_Manager.GetMapTrackingService().StoreAllocationInfo(
       command.m_device.Key, command.m_pMemory.Key, command.m_pAllocateInfo.Value->allocationSize,

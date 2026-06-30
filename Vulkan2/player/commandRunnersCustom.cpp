@@ -22,8 +22,8 @@ void CreateWindowMetaRunner::Run() {
 
   if (manager.ExecuteCommands() && !m_Command.m_Skip) {
     uint64_t hWnd = manager.GetWindowService().SetWindow(
-        m_Command.m_Hwnd.Value, m_Command.m_Hinstance.Value, m_Command.m_X.Value,
-        m_Command.m_Y.Value, m_Command.m_Width.Value, m_Command.m_Height.Value,
+        m_Command.m_DisplayProtocol.Value, m_Command.m_Hwnd.Value, m_Command.m_Hinstance.Value,
+        m_Command.m_X.Value, m_Command.m_Y.Value, m_Command.m_Width.Value, m_Command.m_Height.Value,
         m_Command.m_Visible.Value);
 
     m_Command.m_Hwnd.Value = hWnd;

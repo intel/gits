@@ -27,15 +27,17 @@ void Decode(char* src, MarkerUInt64Command& command) {
 }
 
 uint32_t GetSize(const CreateWindowMetaCommand& command) {
-  return GetSize(command.m_Key) + GetSize(command.m_ThreadId) + GetSize(command.m_X) +
-         GetSize(command.m_Y) + GetSize(command.m_Width) + GetSize(command.m_Height) +
-         GetSize(command.m_Visible) + GetSize(command.m_Hwnd) + GetSize(command.m_Hinstance);
+  return GetSize(command.m_Key) + GetSize(command.m_ThreadId) + GetSize(command.m_DisplayProtocol) +
+         GetSize(command.m_X) + GetSize(command.m_Y) + GetSize(command.m_Width) +
+         GetSize(command.m_Height) + GetSize(command.m_Visible) + GetSize(command.m_Hwnd) +
+         GetSize(command.m_Hinstance);
 }
 
 void Encode(const CreateWindowMetaCommand& command, char* dest) {
   uint32_t offset = 0;
   Encode(dest, offset, command.m_Key);
   Encode(dest, offset, command.m_ThreadId);
+  Encode(dest, offset, command.m_DisplayProtocol);
   Encode(dest, offset, command.m_X);
   Encode(dest, offset, command.m_Y);
   Encode(dest, offset, command.m_Width);
@@ -49,6 +51,7 @@ void Decode(char* src, CreateWindowMetaCommand& command) {
   uint32_t offset = 0;
   Decode(src, offset, command.m_Key);
   Decode(src, offset, command.m_ThreadId);
+  Decode(src, offset, command.m_DisplayProtocol);
   Decode(src, offset, command.m_X);
   Decode(src, offset, command.m_Y);
   Decode(src, offset, command.m_Width);

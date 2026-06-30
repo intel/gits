@@ -17,7 +17,8 @@ namespace vulkan {
 
 class WindowService {
 public:
-  uint64_t SetWindow(uint64_t handle,
+  uint64_t SetWindow(uint32_t protocol,
+                     uint64_t handle,
                      uint64_t instance,
                      int32_t x,
                      int32_t y,
@@ -29,6 +30,13 @@ public:
   uint64_t GetCurrentInstance(uint64_t captureInstance);
 
 private:
+#ifdef GITS_PLATFORM_LINUX
+  std::pair<uint64_t, uint64_t> CreateXlibWindow(
+      int32_t x, int32_t y, int32_t width, int32_t height, bool visible);
+  std::pair<uint64_t, uint64_t> CreateXcbWindow(
+      int32_t x, int32_t y, int32_t width, int32_t height, bool visible);
+#endif
+
   struct WindowState {
     uint64_t playbackHandle{};
     uint32_t width{};

@@ -31,6 +31,7 @@ void CaptureCustomizationLayer::Pre(vkCreateWin32SurfaceKHRCommand& command) {
 
   CreateWindowMetaCommand createWindowMetaCommand(command.m_ThreadId);
   createWindowMetaCommand.m_Key = m_Manager.CreateCommandKey();
+  createWindowMetaCommand.m_DisplayProtocol.Value = CreateWindowMetaCommand::DisplayProtocol::WIN;
   createWindowMetaCommand.m_X.Value = x;
   createWindowMetaCommand.m_Y.Value = y;
   createWindowMetaCommand.m_Width.Value = width;
@@ -50,6 +51,77 @@ void CaptureCustomizationLayer::Post(vkCreateWin32SurfaceKHRCommand& command) {
     m_SurfaceHwndMap[*command.m_pSurface.Value] =
         reinterpret_cast<uint64_t>(command.m_pCreateInfo.Value->hwnd);
   }
+}
+#endif
+
+#ifdef VK_USE_PLATFORM_XLIB_KHR
+void CaptureCustomizationLayer::Pre(vkCreateXlibSurfaceKHRCommand& command) {
+  Display* display = command.m_pCreateInfo.Value->dpy;
+  Window window = command.m_pCreateInfo.Value->window;
+
+  XWindowAttributes attrs;
+  XGetWindowAttributes(display, window, &attrs);
+
+  CreateWindowMetaCommand createWindowMetaCommand(command.m_ThreadId);
+  createWindowMetaCommand.m_Key = m_Manager.CreateCommandKey();
+  createWindowMetaCommand.m_DisplayProtocol.Value = CreateWindowMetaCommand::DisplayProtocol::XLIB;
+  createWindowMetaCommand.m_X.Value = attrs.x;
+  createWindowMetaCommand.m_Y.Value = attrs.y;
+  createWindowMetaCommand.m_Width.Value = attrs.width;
+  createWindowMetaCommand.m_Height.Value = attrs.height;
+  createWindowMetaCommand.m_Visible.Value = (attrs.map_state == IsViewable);
+  createWindowMetaCommand.m_Hwnd.Value = reinterpret_cast<uint64_t>(display);
+  createWindowMetaCommand.m_Hinstance.Value = reinterpret_cast<uint64_t>(window);
+
+  m_Recorder.Record(createWindowMetaCommand.m_Key,
+                    new CreateWindowMetaSerializer(createWindowMetaCommand));
+}
+#endif
+
+#ifdef VK_USE_PLATFORM_XCB_KHR
+void CaptureCustomizationLayer::Pre(vkCreateXcbSurfaceKHRCommand& command) {
+  xcb_connection_t* connection = command.m_pCreateInfo.Value->connection;
+  xcb_window_t window = command.m_pCreateInfo.Value->window;
+
+  int32_t x{};
+  int32_t y{};
+  int32_t width{};
+  int32_t height{};
+  bool visible{true};
+
+  xcb_get_geometry_cookie_t geom_cookie = xcb_get_geometry(connection, window);
+  xcb_get_geometry_reply_t* geom = xcb_get_geometry_reply(connection, geom_cookie, nullptr);
+
+  if (geom) {
+    x = geom->x;
+    y = geom->y;
+    width = geom->width;
+    height = geom->height;
+    free(geom);
+  }
+
+  xcb_get_window_attributes_cookie_t attr_cookie = xcb_get_window_attributes(connection, window);
+  xcb_get_window_attributes_reply_t* attr =
+      xcb_get_window_attributes_reply(connection, attr_cookie, nullptr);
+
+  if (attr) {
+    visible = attr->map_state == XCB_MAP_STATE_VIEWABLE;
+    free(attr);
+  }
+
+  CreateWindowMetaCommand createWindowMetaCommand(command.m_ThreadId);
+  createWindowMetaCommand.m_Key = m_Manager.CreateCommandKey();
+  createWindowMetaCommand.m_DisplayProtocol.Value = CreateWindowMetaCommand::DisplayProtocol::XCB;
+  createWindowMetaCommand.m_X.Value = x;
+  createWindowMetaCommand.m_Y.Value = y;
+  createWindowMetaCommand.m_Width.Value = width;
+  createWindowMetaCommand.m_Height.Value = height;
+  createWindowMetaCommand.m_Visible.Value = visible;
+  createWindowMetaCommand.m_Hwnd.Value = reinterpret_cast<uint64_t>(connection);
+  createWindowMetaCommand.m_Hinstance.Value = static_cast<uint64_t>(window);
+
+  m_Recorder.Record(createWindowMetaCommand.m_Key,
+                    new CreateWindowMetaSerializer(createWindowMetaCommand));
 }
 #endif
 

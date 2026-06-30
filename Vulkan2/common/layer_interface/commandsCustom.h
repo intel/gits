@@ -44,11 +44,18 @@ public:
 
 class CreateWindowMetaCommand : public Command {
 public:
+  enum DisplayProtocol : uint32_t {
+    WIN,
+    XLIB,
+    XCB
+  };
+
   CreateWindowMetaCommand(uint32_t threadId)
       : Command{CommandId::ID_META_CREATE_WINDOW, threadId} {}
   CreateWindowMetaCommand() : Command(CommandId::ID_META_CREATE_WINDOW) {}
 
 public:
+  Argument<uint32_t> m_DisplayProtocol{};
   Argument<int32_t> m_X{};
   Argument<int32_t> m_Y{};
   Argument<int32_t> m_Width{};
