@@ -164,18 +164,23 @@ std::pair<uint64_t, uint64_t> WindowService::CreateXlibWindow(
   int depth = DefaultDepth(display, screen);
   Colormap cmap = XCreateColormap(display, root, visual, AllocNone);
 
+  const bool borderless = !Configurator::Get().common.player.showWindowBorder;
+
   XSetWindowAttributes attributes;
   attributes.background_pixel = XWhitePixel(display, screen);
   attributes.border_pixel = 0;
   attributes.colormap = cmap;
-  attributes.override_redirect = true;
+  attributes.override_redirect = borderless;
   attributes.event_mask = KeyPressMask;
 
-  Window window = XCreateWindow(
-      display, root, x, y, width, height,
-      0, // border_width
-      depth, InputOutput, visual,
-      CWBorderPixel | CWColormap | CWBackPixel | CWEventMask | CWOverrideRedirect, &attributes);
+  unsigned long attributeMask = CWBorderPixel | CWColormap | CWBackPixel | CWEventMask;
+  if (borderless) {
+    attributeMask |= CWOverrideRedirect;
+  }
+
+  Window window = XCreateWindow(display, root, x, y, width, height,
+                                0, // border_width
+                                depth, InputOutput, visual, attributeMask, &attributes);
 
   visible = true;
   if (visible) {
@@ -236,28 +241,30 @@ std::pair<uint64_t, uint64_t> WindowService::CreateXcbWindow(
                       32, 1, &pid);
   free(replyPid);
 
-  // Remove border
-  const char* mwmHintsStr = "_MOTIF_WM_HINTS";
-  xcb_intern_atom_cookie_t cookieHints =
-      xcb_intern_atom(connection, 0, strlen(mwmHintsStr), mwmHintsStr);
-  xcb_intern_atom_reply_t* replyHints = xcb_intern_atom_reply(connection, cookieHints, nullptr);
-  constexpr uint32_t MWM_HINTS_DECORATIONS = 1L << 1;
-  struct MotifHints {
-    uint32_t flags;
-    uint32_t functions;
-    uint32_t decorations;
-    int32_t input_mode;
-    uint32_t status;
-  };
-  MotifHints hints{};
-  hints.flags = MWM_HINTS_DECORATIONS;
-  hints.decorations = 0;
+  int flushResult = 0;
+  if (!Configurator::Get().common.player.showWindowBorder) {
+    const char* mwmHintsStr = "_MOTIF_WM_HINTS";
+    xcb_intern_atom_cookie_t cookieHints =
+        xcb_intern_atom(connection, 0, strlen(mwmHintsStr), mwmHintsStr);
+    xcb_intern_atom_reply_t* replyHints = xcb_intern_atom_reply(connection, cookieHints, nullptr);
+    constexpr uint32_t MWM_HINTS_DECORATIONS = 1L << 1;
+    struct MotifHints {
+      uint32_t flags;
+      uint32_t functions;
+      uint32_t decorations;
+      int32_t input_mode;
+      uint32_t status;
+    };
+    MotifHints hints{};
+    hints.flags = MWM_HINTS_DECORATIONS;
+    hints.decorations = 0;
 
-  xcb_change_property(connection, XCB_PROP_MODE_REPLACE, window, replyHints->atom, replyHints->atom,
-                      32, 5, &hints);
-  free(replyHints);
-  int flushResult = xcb_flush(connection);
-  GITS_ASSERT(flushResult > 0, "Failed to flush XCB commands after removing window border");
+    xcb_change_property(connection, XCB_PROP_MODE_REPLACE, window, replyHints->atom,
+                        replyHints->atom, 32, 5, &hints);
+    free(replyHints);
+    flushResult = xcb_flush(connection);
+    GITS_ASSERT(flushResult > 0, "Failed to flush XCB commands after removing window border");
+  }
 
   visible = true;
   if (visible) {
@@ -292,6 +299,12 @@ void WindowService::ResizeXcbWindow(uint64_t connection,
 
 std::pair<uint64_t, uint64_t> WindowService::CreateWaylandWindow(
     int32_t x, int32_t y, int32_t width, int32_t height, bool visible) {
+  (void)x;
+  (void)y;
+  (void)width;
+  (void)height;
+  (void)visible;
+
   static wl_display* display = nullptr;
   static wl_compositor* compositor = nullptr;
   static xdg_wm_base* wmBase = nullptr;
@@ -303,6 +316,8 @@ std::pair<uint64_t, uint64_t> WindowService::CreateWaylandWindow(
     static const wl_registry_listener registryListener = {
         [](void* data, wl_registry* registry, uint32_t name, const char* interface,
            uint32_t version) {
+          (void)data;
+          (void)version;
           if (strcmp(interface, wl_compositor_interface.name) == 0) {
             compositor = static_cast<wl_compositor*>(
                 wl_registry_bind(registry, name, &wl_compositor_interface, 1));
