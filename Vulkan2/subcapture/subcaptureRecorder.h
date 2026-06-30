@@ -25,7 +25,10 @@ namespace vulkan {
 // created and Record() is a no-op.
 class SubcaptureRecorder {
 public:
-  SubcaptureRecorder();
+  // enabled == false keeps the recorder permanently closed even when subcapture
+  // is configured.  Used by the analysis pass, which tracks state and writes the
+  // analysis file but must never open (and thus overwrite) the output stream.
+  explicit SubcaptureRecorder(bool enabled = true);
   ~SubcaptureRecorder();
   SubcaptureRecorder(const SubcaptureRecorder&) = delete;
   SubcaptureRecorder& operator=(const SubcaptureRecorder&) = delete;

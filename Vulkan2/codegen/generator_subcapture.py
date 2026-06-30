@@ -29,6 +29,8 @@ def generate_subcapture_files(context, output_path):
     files_to_generate = [
       'recordingLayerAuto.h',
       'recordingLayerAuto.cpp',
+      'analyzerLayerAuto.h',
+      'analyzerLayerAuto.cpp',
     ]
     for file_name in files_to_generate:
         generate_file(context | additional_context, file_name, output_path)

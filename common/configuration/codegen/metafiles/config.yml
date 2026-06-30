@@ -852,6 +852,10 @@ Configuration:
                 Type: std::string
                 Default: ""
                 Description: Frame range for subcapture, e.g. '3' or '3-6'
+              - Name: optimize
+                Type: bool
+                Default: true
+                Description: Uses optimization information from subcapture analysis to restore only necessary objects
               - Name: compressionType
                 Type: CompressionType
                 Default: ZSTD

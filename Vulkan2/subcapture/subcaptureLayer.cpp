@@ -16,9 +16,13 @@
 namespace gits {
 namespace vulkan {
 
-SubcaptureLayer::SubcaptureLayer(PlayerManager& playerManager, const std::string& framesStr)
+SubcaptureLayer::SubcaptureLayer(PlayerManager& playerManager,
+                                 const std::string& framesStr,
+                                 bool analysisMode)
     : Layer("Subcapture"),
+      m_AnalysisMode(analysisMode),
       m_SubcaptureRange(framesStr),
+      m_Recorder(!analysisMode),
       m_GpuReadbackHelper(playerManager),
       m_StateTracking(m_Recorder),
       m_SyncState(m_StateTracking),
@@ -26,6 +30,15 @@ SubcaptureLayer::SubcaptureLayer(PlayerManager& playerManager, const std::string
       m_CommandBufferLifecycle(m_StateTracking),
       m_MappedMemory(m_StateTracking) {
   m_StateTracking.SetGpuReadbackHelper(&m_GpuReadbackHelper);
+  if (m_AnalysisMode) {
+    // Analysis pass: collect in-range object usage; never restore.
+    m_AnalyzerService = std::make_unique<AnalyzerService>(m_StateTracking, m_SubcaptureRange);
+  } else {
+    // Recording pass: gate restore by the analysis results (a no-op that
+    // restores everything when optimization is off or the analysis set is
+    // empty / absent).
+    m_StateTracking.SetAnalyzerResults(&m_AnalyzerResults);
+  }
 }
 
 // ---- Frame boundary ------------------------------------------------------
@@ -61,6 +74,18 @@ void SubcaptureLayer::Post(vkQueuePresentKHRCommand& command) {
   }
 
   if (!m_SubcaptureRange.IsEnabled()) {
+    return;
+  }
+
+  // Analysis pass: advance the frame counter and dump the analysis file when
+  // the range ends.  No restore and no recording happen here.
+  if (m_AnalysisMode) {
+    const bool wasInRange = m_SubcaptureRange.InRange();
+    m_SubcaptureRange.FrameEnd();
+    const bool nowInRange = m_SubcaptureRange.InRange();
+    if (wasInRange && !nowInRange && m_AnalyzerService) {
+      m_AnalyzerService->DumpAnalysisFile();
+    }
     return;
   }
 
@@ -1147,6 +1172,17 @@ void SubcaptureLayer::Post(vkCreateDescriptorUpdateTemplateCommand& command) {
   auto state = std::make_unique<DescriptorUpdateTemplateState>();
   state->Key = command.m_pDescriptorUpdateTemplate.Key;
   state->ParentKey = command.m_device.Key;
+  // VkDescriptorUpdateTemplateCreateInfo HandleKeys: [descriptorSetLayout,
+  // pipelineLayout].  Either may be 0 (VK_NULL_HANDLE) depending on templateType.
+  // Track the non-zero ones as dependencies so RestoreOne creates them before the
+  // template and the analyzer keeps them in the restore closure (otherwise a
+  // restored vkCreateDescriptorUpdateTemplate would reference a pruned layout key
+  // and the player would assert in HandleMapService::GetHandle).
+  for (uint64_t dep : command.m_pCreateInfo.HandleKeys) {
+    if (dep) {
+      state->DependencyKeys.push_back(dep);
+    }
+  }
   m_StateTracking.GetDescriptorSetUpdateService().StoreTemplateEntries(
       command.m_pDescriptorUpdateTemplate.Key, command.m_pCreateInfo.Value);
   StoreState(std::move(state), command);
@@ -1159,6 +1195,13 @@ void SubcaptureLayer::Post(vkCreateDescriptorUpdateTemplateKHRCommand& command) 
   auto state = std::make_unique<DescriptorUpdateTemplateState>();
   state->Key = command.m_pDescriptorUpdateTemplate.Key;
   state->ParentKey = command.m_device.Key;
+  // See vkCreateDescriptorUpdateTemplate: track non-zero descriptorSetLayout /
+  // pipelineLayout keys so they survive analyzer pruning and restore ordering.
+  for (uint64_t dep : command.m_pCreateInfo.HandleKeys) {
+    if (dep) {
+      state->DependencyKeys.push_back(dep);
+    }
+  }
   m_StateTracking.GetDescriptorSetUpdateService().StoreTemplateEntries(
       command.m_pDescriptorUpdateTemplate.Key, command.m_pCreateInfo.Value);
   StoreState(std::move(state), command);
@@ -1176,16 +1219,31 @@ void SubcaptureLayer::Post(vkDestroyDescriptorUpdateTemplateKHRCommand& command)
   m_StateTracking.RemoveState(command.m_descriptorUpdateTemplate.Key);
 }
 
+void SubcaptureLayer::NotifyTemplateUpdateHandles(uint64_t templateKey,
+                                                  const std::vector<char>& dataBytes) {
+  if (!m_AnalyzerService) {
+    return;
+  }
+  std::vector<uint64_t> embeddedKeys;
+  m_StateTracking.GetDescriptorSetUpdateService().CollectTemplateUpdateHandleKeys(
+      templateKey, dataBytes, embeddedKeys);
+  m_AnalyzerService->NotifyObjects(embeddedKeys);
+}
+
 void SubcaptureLayer::Post(vkUpdateDescriptorSetWithTemplateCommand& command) {
   // RemapHandles leaves arg.Data intact (GITSKeys) and patches arg.PatchedData,
   // so arg.Data is safe to read here in Post.
-  m_StateTracking.GetDescriptorSetUpdateService().TrackTemplateUpdate(
-      command.m_descriptorSet.Key, command.m_descriptorUpdateTemplate.Key, command.m_pData.Data);
+  auto& dsus = m_StateTracking.GetDescriptorSetUpdateService();
+  dsus.TrackTemplateUpdate(command.m_descriptorSet.Key, command.m_descriptorUpdateTemplate.Key,
+                           command.m_pData.Data);
+  NotifyTemplateUpdateHandles(command.m_descriptorUpdateTemplate.Key, command.m_pData.Data);
 }
 
 void SubcaptureLayer::Post(vkUpdateDescriptorSetWithTemplateKHRCommand& command) {
-  m_StateTracking.GetDescriptorSetUpdateService().TrackTemplateUpdate(
-      command.m_descriptorSet.Key, command.m_descriptorUpdateTemplate.Key, command.m_pData.Data);
+  auto& dsus = m_StateTracking.GetDescriptorSetUpdateService();
+  dsus.TrackTemplateUpdate(command.m_descriptorSet.Key, command.m_descriptorUpdateTemplate.Key,
+                           command.m_pData.Data);
+  NotifyTemplateUpdateHandles(command.m_descriptorUpdateTemplate.Key, command.m_pData.Data);
 }
 
 // ---- Sampler ------------------------------------------------------------

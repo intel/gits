@@ -21,6 +21,8 @@
 namespace gits {
 namespace vulkan {
 
+class AnalyzerResults;
+
 // ---------------------------------------------------------------------------
 // IGpuReadbackHelper: interface injected from the player module.
 //
@@ -173,6 +175,16 @@ public:
     m_GpuReadbackHelper = helper;
   }
 
+  // Inject the analysis results consumed during the recording pass.  When set
+  // to a non-null pointer with optimization enabled and a non-empty restore
+  // set, RestoreState() only restores objects in that set (plus the
+  // dependencies pulled transitively by RestoreOne).  When null (or the
+  // results say "restore everything") behavior is identical to the legacy
+  // single-pass flow.
+  void SetAnalyzerResults(const AnalyzerResults* results) {
+    m_AnalyzerResults = results;
+  }
+
 private:
   enum class CommandBufferRestoreOutcome {
     FailedNoAllocation,
@@ -180,6 +192,11 @@ private:
     AllocationOkRecordingReplaySkipped,
     AllocationOkFullRecordingReplay,
   };
+
+  // True if the object identified by key should be restored.  Returns true
+  // (restore everything) when no analysis results are attached, mirroring the
+  // legacy behavior.
+  bool ShouldRestore(uint64_t key) const;
 
   // Recursively restore a single object (parent-first).
   void RestoreOne(ObjectState* state);
@@ -231,6 +248,7 @@ private:
 
   SubcaptureRecorder& m_Recorder;
   IGpuReadbackHelper* m_GpuReadbackHelper{nullptr};
+  const AnalyzerResults* m_AnalyzerResults{nullptr};
   DescriptorSetUpdateService m_DescriptorSetUpdateService;
   QueryPoolStateService m_QueryPoolState{*this};
   // Single ordered container: key (sequential integer) -> owned state.

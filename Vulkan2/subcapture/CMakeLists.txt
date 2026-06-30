@@ -30,6 +30,10 @@ set(STATE_TRACKING_SRC
   ${SRC_DIR}/subcaptureRange.cpp
   ${SRC_DIR}/subcaptureRecorder.h
   ${SRC_DIR}/subcaptureRecorder.cpp
+  ${SRC_DIR}/analyzerResults.h
+  ${SRC_DIR}/analyzerResults.cpp
+  ${SRC_DIR}/analyzerService.h
+  ${SRC_DIR}/analyzerService.cpp
 )
 source_group("state_tracking" FILES ${STATE_TRACKING_SRC})
 
@@ -39,6 +43,8 @@ set(LAYER_SRC
   ${SRC_DIR}/recordingLayerAuto.h
   ${SRC_DIR}/recordingLayerAuto.cpp
   ${SRC_DIR}/recordingLayerCustom.cpp
+  ${SRC_DIR}/analyzerLayerAuto.h
+  ${SRC_DIR}/analyzerLayerAuto.cpp
   ${SRC_DIR}/gpuReadbackHelper.h
   ${SRC_DIR}/gpuReadbackHelper.cpp
 )

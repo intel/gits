@@ -100,6 +100,18 @@ public:
                            uint64_t templateKey,
                            const std::vector<char>& pDataBytes);
 
+  // Collect every non-zero object key embedded in a template-update data blob
+  // (image views, samplers, buffers, buffer views) by walking the stored
+  // template entries and reading the GITSKeys at each entry's handle offsets.
+  // Used by the analyzer pass to keep these objects in the restore set: unlike
+  // vkUpdateDescriptorSets (whose embedded handles are exposed as a flat
+  // HandleKeys array the generated AnalyzerLayer can notify), the template
+  // path's handles only exist inside the serialized pData blob, so they must be
+  // recovered here.  Mirrors TrackTemplateUpdate's per-entry offset logic.
+  void CollectTemplateUpdateHandleKeys(uint64_t templateKey,
+                                       const std::vector<char>& pDataBytes,
+                                       std::vector<uint64_t>& outKeys) const;
+
   // Remove all tracked state for a descriptor set (freed / pool reset).
   void RemoveDescriptorSet(uint64_t setKey);
 

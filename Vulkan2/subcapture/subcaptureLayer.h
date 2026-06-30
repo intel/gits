@@ -18,9 +18,13 @@
 #include "mappedMemoryService.h"
 #include "subcaptureRange.h"
 #include "subcaptureRecorder.h"
+#include "analyzerResults.h"
+#include "analyzerService.h"
 #include "commandCodersAuto.h"
 
+#include <memory>
 #include <string>
+#include <vector>
 
 namespace gits {
 namespace vulkan {
@@ -36,10 +40,22 @@ class SubcaptureLayer : public Layer {
 public:
   // framesStr: frame range string from config, e.g. "5" or "3-6".
   // An empty/"-" string disables subcapture.
-  explicit SubcaptureLayer(PlayerManager& playerManager, const std::string& framesStr);
+  //
+  // analysisMode == true selects the analysis pass: the recorder is kept closed
+  // (no output stream), no state restore is emitted, and an AnalyzerService is
+  // created so the AnalyzerLayer can collect in-range object usage and dump the
+  // analysis file.  analysisMode == false is the regular recording pass.
+  explicit SubcaptureLayer(PlayerManager& playerManager,
+                           const std::string& framesStr,
+                           bool analysisMode = false);
 
   StateTrackingService& GetStateTrackingService() {
     return m_StateTracking;
+  }
+
+  // Non-null only in analysis mode.  Passed to the AnalyzerLayer.
+  AnalyzerService* GetAnalyzerService() {
+    return m_AnalyzerService.get();
   }
 
   SubcaptureRange& GetSubcaptureRange() {
@@ -345,6 +361,14 @@ private:
 
   void RemoveDescriptorSetsByPool(uint64_t poolKey);
 
+  // Analysis pass only: mark every object handle embedded in a
+  // vkUpdateDescriptorSetWithTemplate[KHR] data blob as used so the analyzer
+  // keeps it in the restore set.  No-op outside analysis mode.
+  void NotifyTemplateUpdateHandles(uint64_t templateKey, const std::vector<char>& dataBytes);
+
+  // True for the analysis pass.  Declared first so it can be used in the
+  // member initializer list (e.g. to keep the recorder closed).
+  bool m_AnalysisMode{false};
   SubcaptureRange m_SubcaptureRange;
   SubcaptureRecorder m_Recorder;
   GpuReadbackHelper m_GpuReadbackHelper;
@@ -353,6 +377,11 @@ private:
   ImageLayoutService m_ImageLayout;
   CommandBufferLifecycleService m_CommandBufferLifecycle;
   MappedMemoryService m_MappedMemory;
+  // Recording pass: consumed by StateTrackingService to gate restore.
+  AnalyzerResults m_AnalyzerResults;
+  // Analysis pass only: collects in-range object usage and dumps the analysis
+  // file.  Null in recording mode.
+  std::unique_ptr<AnalyzerService> m_AnalyzerService;
 
   // Pending window geometry: set when a CreateWindowMetaCommand is observed,
   // consumed when the next surface creation command is processed.

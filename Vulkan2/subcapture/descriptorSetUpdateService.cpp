@@ -304,6 +304,55 @@ void DescriptorSetUpdateService::TrackTemplateUpdate(uint64_t setKey,
 }
 
 // ---------------------------------------------------------------------------
+// CollectTemplateUpdateHandleKeys
+// ---------------------------------------------------------------------------
+
+void DescriptorSetUpdateService::CollectTemplateUpdateHandleKeys(
+    uint64_t templateKey,
+    const std::vector<char>& pDataBytes,
+    std::vector<uint64_t>& outKeys) const {
+  auto it = m_TemplateEntries.find(templateKey);
+  if (it == m_TemplateEntries.end()) {
+    return;
+  }
+
+  auto readKey = [&](size_t off) -> uint64_t {
+    uint64_t key = 0;
+    if (off + sizeof(uint64_t) <= pDataBytes.size()) {
+      std::memcpy(&key, pDataBytes.data() + off, sizeof(uint64_t));
+    }
+    return key;
+  };
+  auto pushIfNonZero = [&](uint64_t key) {
+    if (key) {
+      outKeys.push_back(key);
+    }
+  };
+
+  for (const auto& entry : it->second) {
+    for (uint32_t i = 0; i < entry.descriptorCount; ++i) {
+      const size_t base = entry.offset + static_cast<size_t>(i) * entry.stride;
+
+      if (IsImageDescriptorType(entry.descriptorType)) {
+        if (entry.descriptorType == VK_DESCRIPTOR_TYPE_SAMPLER ||
+            entry.descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) {
+          pushIfNonZero(readKey(base + offsetof(VkDescriptorImageInfo, sampler)));
+        }
+        if (entry.descriptorType != VK_DESCRIPTOR_TYPE_SAMPLER) {
+          pushIfNonZero(readKey(base + offsetof(VkDescriptorImageInfo, imageView)));
+        }
+      } else if (IsBufferDescriptorType(entry.descriptorType)) {
+        pushIfNonZero(readKey(base + offsetof(VkDescriptorBufferInfo, buffer)));
+      } else if (IsTexelBufferDescriptorType(entry.descriptorType)) {
+        pushIfNonZero(readKey(base));
+      }
+      // VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR: not represented in
+      // template-update tracking (see TrackTemplateUpdate), so nothing to keep.
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
 // RemoveDescriptorSet
 // ---------------------------------------------------------------------------
 

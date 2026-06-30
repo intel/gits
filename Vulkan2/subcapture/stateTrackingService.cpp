@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "stateTrackingService.h"
+#include "analyzerResults.h"
 #include "commandSerializersAuto.h"
 #include "commandSerializersCustom.h"
 #include "commandSerializersFactory.h"
@@ -60,6 +61,31 @@ void EmitGetPhysicalDeviceQueueFamilyProperties(SubcaptureRecorder& recorder,
 // ---------------------------------------------------------------------------
 
 StateTrackingService::StateTrackingService(SubcaptureRecorder& recorder) : m_Recorder(recorder) {}
+
+bool StateTrackingService::ShouldRestore(uint64_t key) const {
+  if (!m_AnalyzerResults) {
+    return true;
+  }
+  // Queues and command pools are always restored regardless of the analysis
+  // results. They are few per device and cheap to recreate, and the restore
+  // helpers (FindQueueAndPool / FindQueueAndPoolForFamily) need a live queue and
+  // command pool of whatever family they pick. Pruning them would leave an
+  // in-range vkQueueSubmit's VkQueue (or a helper's command pool) unmapped,
+  // crashing vkQueueSubmitRunner::Run() on HandleMapService::GetHandle. Their
+  // owning VkDevice is pulled in automatically by RestoreOne (parent-first).
+  auto it = m_States.find(key);
+  if (it != m_States.end()) {
+    switch (it->second->CreationCommandId) {
+    case CommandId::ID_VKGETDEVICEQUEUE:
+    case CommandId::ID_VKGETDEVICEQUEUE2:
+    case CommandId::ID_VKCREATECOMMANDPOOL:
+      return true;
+    default:
+      break;
+    }
+  }
+  return m_AnalyzerResults->RestoreObject(key);
+}
 
 // ---------------------------------------------------------------------------
 // StoreState / RemoveState / HasState
@@ -135,6 +161,9 @@ void StateTrackingService::RestoreState() {
     if (state->CreationCommandId == CommandId::ID_VKALLOCATECOMMANDBUFFERS) {
       continue;
     }
+    if (!ShouldRestore(state->Key)) {
+      continue;
+    }
     RestoreOne(state);
   }
 
@@ -151,6 +180,9 @@ void StateTrackingService::RestoreState() {
     if (m_RestoredThisPass.count(state->Key)) {
       continue;
     }
+    if (!ShouldRestore(state->Key)) {
+      continue;
+    }
     RestoreOne(state);
   }
 
@@ -160,6 +192,9 @@ void StateTrackingService::RestoreState() {
       continue;
     }
     if (state->CreationCommandId != CommandId::ID_VKALLOCATECOMMANDBUFFERS) {
+      continue;
+    }
+    if (!ShouldRestore(state->Key)) {
       continue;
     }
     RestoreOne(state);
@@ -209,6 +244,9 @@ void StateTrackingService::RestoreState() {
         continue;
       }
       if (state->CreationCommandId != CommandId::ID_VKCREATESEMAPHORE) {
+        continue;
+      }
+      if (!ShouldRestore(state->Key)) {
         continue;
       }
       auto* sem = static_cast<SemaphoreState*>(state);
@@ -273,6 +311,9 @@ void StateTrackingService::RestoreState() {
   for (auto& [_, statePtr] : m_States) {
     ObjectState* state = statePtr.get();
     if (state->Destroyed || state->CreationCommandId != CommandId::ID_VKCREATEEVENT) {
+      continue;
+    }
+    if (!ShouldRestore(state->Key)) {
       continue;
     }
     if (!static_cast<EventState*>(state)->IsSignaled) {
@@ -654,6 +695,9 @@ void StateTrackingService::EmitImageLayoutTransitions() {
     }
     if (state->CreationCommandId != CommandId::ID_VKCREATEIMAGE &&
         state->CreationCommandId != CommandId::ID_VKGETSWAPCHAINIMAGESKHR) {
+      continue;
+    }
+    if (!ShouldRestore(state->Key)) {
       continue;
     }
     auto* img = static_cast<ImageState*>(state);

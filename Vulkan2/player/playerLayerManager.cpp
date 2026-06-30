@@ -14,6 +14,8 @@
 #include "log.h"
 #include "subcaptureLayer.h"
 #include "recordingLayerAuto.h"
+#include "analyzerLayerAuto.h"
+#include "analyzerResults.h"
 #include "configurator.h"
 
 namespace gits {
@@ -49,10 +51,25 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
   const auto& cfg = Configurator::Get();
   const bool subcaptureEnabled =
       cfg.common.features.subcapture.enabled && !cfg.common.features.subcapture.frames.empty();
+  // Two-pass optimization is only engaged when optimize is enabled and no
+  // analysis file exists yet.  When optimize is off (or an analysis file is
+  // present) we go straight to the recording pass, restoring everything exactly
+  // like the legacy single-pass flow.
+  const bool subcaptureAnalysis = subcaptureEnabled && cfg.common.features.subcapture.optimize &&
+                                  !AnalyzerResults::IsAnalysis();
 
   std::unique_ptr<Layer> subcaptureLayer;
+  std::unique_ptr<Layer> analyzerLayer;
   std::unique_ptr<Layer> recordingLayer;
-  if (subcaptureEnabled) {
+  if (subcaptureAnalysis) {
+    // Analysis pass: track state and collect in-range object usage, then dump
+    // the analysis file.  No output stream is produced; the user must run again.
+    subcaptureLayer = std::make_unique<SubcaptureLayer>(
+        playerManager, cfg.common.features.subcapture.frames, /*analysisMode=*/true);
+    auto* sc = static_cast<SubcaptureLayer*>(subcaptureLayer.get());
+    analyzerLayer = std::make_unique<AnalyzerLayer>(*sc->GetAnalyzerService());
+    LOG_INFO << "SUBCAPTURE ANALYSIS. RUN AGAIN FOR SUBCAPTURE RECORDING.";
+  } else if (subcaptureEnabled) {
     subcaptureLayer =
         std::make_unique<SubcaptureLayer>(playerManager, cfg.common.features.subcapture.frames);
 
@@ -79,6 +96,7 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
     m_PreLayers.push_back(screenshotLayer);
   }
   enablePreLayer(subcaptureLayer);
+  enablePreLayer(analyzerLayer);
 
   auto enablePostLayer = [this](std::unique_ptr<Layer>& layer) {
     if (layer) {
@@ -93,6 +111,10 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
   if (screenshotsCfg.enabled) {
     m_PostLayers.push_back(screenshotLayer);
   }
+  // AnalyzerLayer must run before SubcaptureLayer in the post order: the latter
+  // advances the frame counter and dumps the analysis file at range end, so the
+  // analyzer needs to observe the final in-range present first.
+  enablePostLayer(analyzerLayer);
   enablePostLayer(subcaptureLayer);
   enablePostLayer(recordingLayer);
 
@@ -104,7 +126,10 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
 
   retainLayer(std::move(replayCustomizationLayer));
   retainLayer(std::move(traceLayer));
+  // SubcaptureLayer owns the AnalyzerService that AnalyzerLayer references, so it
+  // must be retained (and therefore destroyed) after the AnalyzerLayer.
   retainLayer(std::move(subcaptureLayer));
+  retainLayer(std::move(analyzerLayer));
   retainLayer(std::move(recordingLayer));
 
   for (const auto& plugin : pluginService.GetPlugins()) {

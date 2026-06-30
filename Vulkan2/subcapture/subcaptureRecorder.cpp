@@ -18,10 +18,11 @@
 namespace gits {
 namespace vulkan {
 
-SubcaptureRecorder::SubcaptureRecorder() {
+SubcaptureRecorder::SubcaptureRecorder(bool enabled) {
   const auto& cfg = Configurator::Get();
 
-  if (!cfg.common.features.subcapture.enabled || cfg.common.features.subcapture.frames.empty()) {
+  if (!enabled || !cfg.common.features.subcapture.enabled ||
+      cfg.common.features.subcapture.frames.empty()) {
     return;
   }
 
