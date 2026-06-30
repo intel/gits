@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "handleArgumentUpdatersCustom.h"
+#include "handleArgumentUpdatersAuto.h"
 
 namespace gits {
 namespace vulkan {
@@ -69,6 +70,8 @@ void CollectHandleKeys(std::vector<GITSKey>& keys, const VkPushDescriptorSetInfo
   }
 }
 
+void CollectHandleKeys(std::vector<GITSKey>& keys, const VkImageCreateInfo& s) {}
+
 void UpdateHandle(CaptureManager& manager, PointerArgument<VkWriteDescriptorSet>& arg) {
   if (!arg.Value) {
     return;
@@ -121,6 +124,24 @@ void UpdateOutputHandle(CaptureManager& manager,
       }
       arg.HandleKeys.push_back(HandleMapService::Get().GetKey(handle));
     }
+  }
+}
+
+void UpdateHandle(CaptureManager& manager, PointerArgument<VkImageCreateInfo>& arg) {
+  if (!arg.Value) {
+    return;
+  }
+  CollectHandleKeys(arg.HandleKeys, *arg.Value);
+  CollectPNextHandleKeys(arg.HandleKeys, arg.Value->pNext);
+}
+
+void UpdateHandle(CaptureManager& manager, ArrayArgument<VkImageCreateInfo>& arg) {
+  if (!arg.Value || arg.Size == 0) {
+    return;
+  }
+  for (uint32_t i = 0; i < arg.Size; ++i) {
+    CollectHandleKeys(arg.HandleKeys, arg.Value[i]);
+    CollectPNextHandleKeys(arg.HandleKeys, arg.Value[i].pNext);
   }
 }
 

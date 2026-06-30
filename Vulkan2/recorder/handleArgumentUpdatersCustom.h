@@ -21,6 +21,7 @@ bool IsTexelBufferDescriptorType(VkDescriptorType type);
 
 void CollectHandleKeys(std::vector<GITSKey>& keys, const VkWriteDescriptorSet& s);
 void CollectHandleKeys(std::vector<GITSKey>& keys, const VkPushDescriptorSetInfo& s);
+void CollectHandleKeys(std::vector<GITSKey>& keys, const VkImageCreateInfo& s);
 
 void UpdateOutputHandle(CaptureManager& manager,
                         ArrayArgument<VkPhysicalDeviceGroupProperties>& arg);
@@ -29,6 +30,8 @@ void UpdateHandle(CaptureManager& manager, PointerArgument<VkWriteDescriptorSet>
 void UpdateHandle(CaptureManager& manager, ArrayArgument<VkWriteDescriptorSet>& arg);
 void UpdateHandle(CaptureManager& manager, PointerArgument<VkPushDescriptorSetInfo>& arg);
 void UpdateHandle(CaptureManager& manager, ArrayArgument<VkPushDescriptorSetInfo>& arg);
+void UpdateHandle(CaptureManager& manager, PointerArgument<VkImageCreateInfo>& arg);
+void UpdateHandle(CaptureManager& manager, ArrayArgument<VkImageCreateInfo>& arg);
 
 } // namespace vulkan
 } // namespace gits

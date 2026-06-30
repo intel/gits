@@ -262,5 +262,169 @@ void Decode(char* src, uint32_t& offset, DescriptorTemplateDataArgument& arg) {
   }
 }
 
+static bool UsesConcurrentSharingMode(const VkImageCreateInfo* info) {
+  return info && info->sharingMode == VkSharingMode::VK_SHARING_MODE_CONCURRENT &&
+         info->pQueueFamilyIndices && info->queueFamilyIndexCount > 0;
+}
+
+uint32_t GetSize(const VkImageCreateInfo* src, uint32_t count) {
+  if (!src) {
+    return 0;
+  }
+  auto blobSize = static_cast<uint32_t>(sizeof(VkImageCreateInfo) * count);
+  for (uint32_t i = 0; i < count; ++i) {
+    const auto* imageInfo = &src[i];
+    if (imageInfo->pNext) {
+      blobSize += GetPNextChainSizeInput(imageInfo->pNext);
+    }
+    if (UsesConcurrentSharingMode(imageInfo)) {
+      blobSize += sizeof(uint32_t) * imageInfo->queueFamilyIndexCount;
+    }
+  }
+  return blobSize;
+}
+
+void Encode(const VkImageCreateInfo* src, uint32_t count, char* dst, uint32_t& offset) {
+  if (!src || !dst) {
+    return;
+  }
+  auto* srcDesc = src;
+  auto* dstDesc = reinterpret_cast<VkImageCreateInfo*>(&dst[offset]);
+  WriteData(reinterpret_cast<const char*>(src), sizeof(VkImageCreateInfo) * count, dst, offset);
+
+  for (uint32_t i = 0; i < count; ++i) {
+    auto* currentSrcDesc = const_cast<VkImageCreateInfo*>(&srcDesc[i]);
+    auto* currentDstDesc = &dstDesc[i];
+
+    if (currentSrcDesc->pNext) {
+      currentDstDesc->pNext =
+          reinterpret_cast<decltype(currentDstDesc->pNext)>(static_cast<uintptr_t>(offset));
+      EncodePNextChainInput(dst, offset, currentSrcDesc->pNext);
+    } else {
+      currentDstDesc->pNext = nullptr;
+    }
+
+    if (UsesConcurrentSharingMode(currentSrcDesc)) {
+      currentDstDesc->pQueueFamilyIndices =
+          reinterpret_cast<uint32_t*>(static_cast<uintptr_t>(offset));
+      std::memcpy(dst + offset, currentSrcDesc->pQueueFamilyIndices,
+                  sizeof(uint32_t) * currentSrcDesc->queueFamilyIndexCount);
+      offset += sizeof(uint32_t) * currentSrcDesc->queueFamilyIndexCount;
+    } else {
+      currentDstDesc->pQueueFamilyIndices = nullptr;
+    }
+  }
+}
+
+void Decode(const VkImageCreateInfo* dst, uint32_t count, char* src, uint32_t& offset) {
+  offset += sizeof(VkImageCreateInfo) * count;
+
+  for (uint32_t i = 0; i < count; ++i) {
+    auto* currentDstDesc = const_cast<VkImageCreateInfo*>(&dst[i]);
+
+    if (currentDstDesc->pNext) {
+      DecodePNextChainInput(src, offset, const_cast<void**>(&currentDstDesc->pNext));
+    }
+
+    if (UsesConcurrentSharingMode(currentDstDesc)) {
+      currentDstDesc->pQueueFamilyIndices = AddPtrs(currentDstDesc->pQueueFamilyIndices, src);
+      offset += sizeof(uint32_t) * currentDstDesc->queueFamilyIndexCount;
+    } else {
+      currentDstDesc->pQueueFamilyIndices = nullptr;
+    }
+  }
+}
+
+// PointerArgument overloads for VkImageCreateInfo
+uint32_t GetSize(const PointerArgument<VkImageCreateInfo>& arg) {
+  if (!arg.Value) {
+    return sizeof(void*);
+  }
+  return sizeof(void*) + GetSize(arg.Value, 1) + sizeof(uint32_t) +
+         static_cast<uint32_t>(arg.HandleKeys.size()) * sizeof(GITSKey);
+}
+
+void Encode(char* dst, uint32_t& offset, const PointerArgument<VkImageCreateInfo>& arg) {
+  std::memcpy(dst + offset, &arg.Value, sizeof(void*));
+  offset += sizeof(void*);
+  if (!arg.Value) {
+    return;
+  }
+  Encode(arg.Value, 1, dst, offset);
+  uint32_t keyCount = static_cast<uint32_t>(arg.HandleKeys.size());
+  std::memcpy(dst + offset, &keyCount, sizeof(keyCount));
+  offset += sizeof(keyCount);
+  if (keyCount > 0) {
+    std::memcpy(dst + offset, arg.HandleKeys.data(), sizeof(GITSKey) * keyCount);
+    offset += sizeof(GITSKey) * keyCount;
+  }
+}
+
+void Decode(char* src, uint32_t& offset, PointerArgument<VkImageCreateInfo>& arg) {
+  std::memcpy(&arg.Value, src + offset, sizeof(void*));
+  offset += sizeof(void*);
+  if (!arg.Value) {
+    return;
+  }
+  arg.Value = reinterpret_cast<VkImageCreateInfo*>(src + offset);
+  Decode(arg.Value, 1, src, offset);
+  uint32_t keyCount{};
+  std::memcpy(&keyCount, src + offset, sizeof(keyCount));
+  offset += sizeof(keyCount);
+  if (keyCount > 0) {
+    arg.HandleKeys.resize(keyCount);
+    std::memcpy(arg.HandleKeys.data(), src + offset, sizeof(GITSKey) * keyCount);
+    offset += sizeof(GITSKey) * keyCount;
+  }
+}
+
+// ArrayArgument overloads for VkImageCreateInfo
+uint32_t GetSize(const ArrayArgument<VkImageCreateInfo>& arg) {
+  if (!arg.Value) {
+    return sizeof(void*);
+  }
+  return sizeof(void*) + sizeof(arg.Size) + GetSize(arg.Value, arg.Size) + sizeof(uint32_t) +
+         static_cast<uint32_t>(arg.HandleKeys.size()) * sizeof(GITSKey);
+}
+
+void Encode(char* dst, uint32_t& offset, const ArrayArgument<VkImageCreateInfo>& arg) {
+  std::memcpy(dst + offset, &arg.Value, sizeof(void*));
+  offset += sizeof(void*);
+  if (!arg.Value) {
+    return;
+  }
+  std::memcpy(dst + offset, &arg.Size, sizeof(arg.Size));
+  offset += sizeof(arg.Size);
+  Encode(arg.Value, arg.Size, dst, offset);
+  uint32_t keyCount = static_cast<uint32_t>(arg.HandleKeys.size());
+  std::memcpy(dst + offset, &keyCount, sizeof(keyCount));
+  offset += sizeof(keyCount);
+  if (keyCount > 0) {
+    std::memcpy(dst + offset, arg.HandleKeys.data(), sizeof(GITSKey) * keyCount);
+    offset += sizeof(GITSKey) * keyCount;
+  }
+}
+
+void Decode(char* src, uint32_t& offset, ArrayArgument<VkImageCreateInfo>& arg) {
+  std::memcpy(&arg.Value, src + offset, sizeof(void*));
+  offset += sizeof(void*);
+  if (!arg.Value) {
+    arg.Size = 0;
+    return;
+  }
+  std::memcpy(&arg.Size, src + offset, sizeof(arg.Size));
+  offset += sizeof(arg.Size);
+  arg.Value = reinterpret_cast<VkImageCreateInfo*>(src + offset);
+  Decode(arg.Value, arg.Size, src, offset);
+  uint32_t keyCount{};
+  std::memcpy(&keyCount, src + offset, sizeof(keyCount));
+  offset += sizeof(keyCount);
+  if (keyCount > 0) {
+    arg.HandleKeys.resize(keyCount);
+    std::memcpy(arg.HandleKeys.data(), src + offset, sizeof(GITSKey) * keyCount);
+    offset += sizeof(GITSKey) * keyCount;
+  }
+}
+
 } // namespace vulkan
 } // namespace gits

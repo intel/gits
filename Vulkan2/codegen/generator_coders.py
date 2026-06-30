@@ -18,6 +18,7 @@ from generator_helpers import generate_file, get_define
 CUSTOM_HANDLE_STRUCTS = {
     'VkWriteDescriptorSet',
     'VkPushDescriptorSetInfo',
+    'VkImageCreateInfo'
 }
 
 def is_complex_struct(base_type, structures_by_name):

@@ -27,6 +27,10 @@ void ResolveHandleKeys(const std::vector<GITSKey>& keys,
                        uint32_t& idx,
                        std::vector<uint64_t>& handleData,
                        VkPushDescriptorSetInfo& s);
+void ResolveHandleKeys(const std::vector<GITSKey>& keys,
+                       uint32_t& idx,
+                       std::vector<uint64_t>& handleData,
+                       VkImageCreateInfo& s);
 
 void CollectHandleKeys(std::vector<GITSKey>& keys, const VkWriteDescriptorSet& s);
 void CollectHandleKeys(std::vector<GITSKey>& keys, const VkPushDescriptorSetInfo& s);
@@ -39,6 +43,8 @@ void UpdateHandle(PlayerManager& manager, PointerArgument<VkWriteDescriptorSet>&
 void UpdateHandle(PlayerManager& manager, ArrayArgument<VkWriteDescriptorSet>& arg);
 void UpdateHandle(PlayerManager& manager, PointerArgument<VkPushDescriptorSetInfo>& arg);
 void UpdateHandle(PlayerManager& manager, ArrayArgument<VkPushDescriptorSetInfo>& arg);
+void UpdateHandle(PlayerManager& manager, PointerArgument<VkImageCreateInfo>& arg);
+void UpdateHandle(PlayerManager& manager, ArrayArgument<VkImageCreateInfo>& arg);
 
 } // namespace vulkan
 } // namespace gits

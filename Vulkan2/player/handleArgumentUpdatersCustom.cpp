@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "handleArgumentUpdatersCustom.h"
+#include "handleArgumentUpdatersPlayerAuto.h"
 
 #include "log.h"
 
@@ -98,6 +99,11 @@ void ResolveHandleKeys(const std::vector<GITSKey>& keys,
   }
 }
 
+void ResolveHandleKeys(const std::vector<GITSKey>& keys,
+                       uint32_t& idx,
+                       std::vector<uint64_t>& handleData,
+                       VkImageCreateInfo& s) {}
+
 void UpdateHandle(PlayerManager& manager, PointerArgument<VkWriteDescriptorSet>& arg) {
   if (!arg.Value || arg.HandleKeys.empty()) {
     return;
@@ -183,6 +189,35 @@ void UpdateOutputHandle(PlayerManager& manager,
       }
       ++keyIdx;
     }
+  }
+}
+
+void UpdateHandle(PlayerManager& manager, PointerArgument<VkImageCreateInfo>& arg) {
+  if (!arg.Value || arg.HandleKeys.empty()) {
+    return;
+  }
+  uint32_t idx = 0;
+  if (arg.Value->pNext) {
+    arg.HandleData.reserve(arg.HandleKeys.size());
+  }
+  ResolveHandleKeys(arg.HandleKeys, idx, arg.HandleData, *arg.Value);
+  ResolvePNextHandleKeys(arg.HandleKeys, idx, arg.HandleData, arg.Value->pNext);
+}
+
+void UpdateHandle(PlayerManager& manager, ArrayArgument<VkImageCreateInfo>& arg) {
+  if (!arg.Value || arg.Size == 0 || arg.HandleKeys.empty()) {
+    return;
+  }
+  uint32_t idx = 0;
+  for (uint32_t i = 0; i < arg.Size; ++i) {
+    if (arg.Value[i].pNext) {
+      arg.HandleData.reserve(arg.HandleKeys.size());
+      break;
+    }
+  }
+  for (uint32_t i = 0; i < arg.Size; ++i) {
+    ResolveHandleKeys(arg.HandleKeys, idx, arg.HandleData, arg.Value[i]);
+    ResolvePNextHandleKeys(arg.HandleKeys, idx, arg.HandleData, arg.Value[i].pNext);
   }
 }
 
