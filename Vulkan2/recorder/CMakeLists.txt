@@ -62,6 +62,7 @@ target_link_libraries(Vulkan_recorder_2 PRIVATE
   gits_recorder_interface
   Vulkan_layer_interface
   Vulkan_services
+  Vulkan_trace
   Vulkan_coders
   Vulkan_utils
   tbb

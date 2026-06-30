@@ -11,6 +11,7 @@
 #include "layerAuto.h"
 #include "tools_lite.h"
 #include "orderingRecorder.h"
+#include "traceLayerGroup.h"
 
 #include <vector>
 #include <memory>
@@ -38,6 +39,7 @@ private:
   std::vector<Layer*> m_PreLayers;
   std::vector<Layer*> m_PostLayers;
   std::vector<std::unique_ptr<Layer>> m_LayersOwner;
+  std::unique_ptr<TraceLayerGroup> m_TraceLayerGroup;
 };
 
 } // namespace vulkan

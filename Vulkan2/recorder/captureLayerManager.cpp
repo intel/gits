@@ -25,6 +25,14 @@ void CaptureLayerManager::LoadLayers(CaptureManager& captureManager,
   std::unique_ptr<Layer> encoderLayer;
   std::unique_ptr<Layer> captureCustomizationLayer;
 
+  const auto& traceCfg = Configurator::Get().common.shared.trace;
+
+  std::unique_ptr<Layer> traceLayer;
+  if (traceCfg.enabled) {
+    m_TraceLayerGroup = std::make_unique<TraceLayerGroup>();
+    traceLayer = m_TraceLayerGroup->GetTraceLayer();
+  }
+
   if (cfg.common.recorder.enabled) {
     captureCustomizationLayer =
         std::make_unique<CaptureCustomizationLayer>(captureManager, recorder);
@@ -39,6 +47,9 @@ void CaptureLayerManager::LoadLayers(CaptureManager& captureManager,
 
   //enablePreLayer(testLayer);
   enablePreLayer(captureCustomizationLayer);
+  if (traceCfg.enabled && traceCfg.print.preCalls) {
+    enablePreLayer(traceLayer);
+  }
 
   auto enablePostLayer = [this](std::unique_ptr<Layer>& layer) {
     if (layer) {
@@ -49,6 +60,9 @@ void CaptureLayerManager::LoadLayers(CaptureManager& captureManager,
   enablePostLayer(captureCustomizationLayer);
   enablePostLayer(encoderLayer);
   //enablePostLayer(testLayer);
+  if (traceCfg.enabled && traceCfg.print.postCalls) {
+    enablePostLayer(traceLayer);
+  }
 
   auto retainLayer = [this](std::unique_ptr<Layer>&& layer) {
     if (layer) {
@@ -59,6 +73,7 @@ void CaptureLayerManager::LoadLayers(CaptureManager& captureManager,
   retainLayer(std::move(captureCustomizationLayer));
   retainLayer(std::move(encoderLayer));
   //retainLayer(std::move(testLayer));
+  retainLayer(std::move(traceLayer));
 
   for (const auto& plugin : pluginService.GetPlugins()) {
     Layer* layer = static_cast<Layer*>(plugin.Impl->getImpl());
