@@ -19,6 +19,7 @@
 
 #include <memory>
 #include <shared_mutex>
+#include "swapchainImageSyncService.h"
 #include <unordered_map>
 
 namespace gits {
@@ -83,6 +84,10 @@ public:
     return m_DescriptorUpdateTemplateService;
   }
 
+  SwapchainImageSyncService& GetSwapchainImageSyncService() {
+    return m_SwapchainImageSyncService;
+  }
+
 private:
   PlayerManager();
 
@@ -102,6 +107,7 @@ private:
   WindowService m_WindowService;
   MapTrackingService m_MapTrackingService;
   DescriptorUpdateTemplateService m_DescriptorUpdateTemplateService;
+  SwapchainImageSyncService m_SwapchainImageSyncService;
 };
 
 } // namespace vulkan

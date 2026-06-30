@@ -41,7 +41,7 @@ PlayerManager::~PlayerManager() {
   }
 }
 
-PlayerManager::PlayerManager() {
+PlayerManager::PlayerManager() : m_SwapchainImageSyncService(*this) {
   LoadGlobalFunctions();
 
   m_DispatchTablesHolder = std::make_unique<DispatchTablesHolder>(

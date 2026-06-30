@@ -34,6 +34,8 @@ set(SERVICES_SRC
   ${CMAKE_CURRENT_SOURCE_DIR}/mapTrackingService.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/descriptorUpdateTemplateService.h
   ${CMAKE_CURRENT_SOURCE_DIR}/descriptorUpdateTemplateService.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/swapchainImageSyncService.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/swapchainImageSyncService.cpp
 )
 source_group("services" FILES ${SERVICES_SRC})
 

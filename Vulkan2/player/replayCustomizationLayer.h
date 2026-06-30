@@ -22,6 +22,8 @@ public:
 
   void Post(vkCreateInstanceCommand& command) override;
   void Post(vkCreateDeviceCommand& command) override;
+  void Post(vkGetDeviceQueueCommand& command) override;
+  void Post(vkGetDeviceQueue2Command& command) override;
 #ifdef VK_USE_PLATFORM_WIN32_KHR
   void Pre(vkCreateWin32SurfaceKHRCommand& command) override;
 #endif
@@ -81,6 +83,8 @@ public:
   void Pre(vkCmdPushDescriptorSetWithTemplateKHRCommand& command) override;
 
   void Pre(vkCreateGraphicsPipelinesCommand& command) override;
+  void Pre(vkAcquireNextImageKHRCommand& command) override;
+  void Pre(vkAcquireNextImage2KHRCommand& command) override;
 
 private:
   PlayerManager& m_Manager;

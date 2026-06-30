@@ -8,6 +8,7 @@
 
 #include "replayCustomizationLayer.h"
 #include "playerManager.h"
+#include "swapchainImageSyncService.h"
 
 #include <thread>
 #include <chrono>
@@ -25,6 +26,16 @@ void ReplayCustomizationLayer::Post(vkCreateInstanceCommand& command) {
 void ReplayCustomizationLayer::Post(vkCreateDeviceCommand& command) {
   void* dispatchKey = *reinterpret_cast<void**>(command.m_physicalDevice.Value);
   m_Manager.LoadDeviceFunctions(dispatchKey, *command.m_pDevice.Value);
+}
+
+void ReplayCustomizationLayer::Post(vkGetDeviceQueueCommand& command) {
+  m_Manager.GetSwapchainImageSyncService().TrackQueue(command.m_device.Value,
+                                                      *command.m_pQueue.Value);
+}
+
+void ReplayCustomizationLayer::Post(vkGetDeviceQueue2Command& command) {
+  m_Manager.GetSwapchainImageSyncService().TrackQueue(command.m_device.Value,
+                                                      *command.m_pQueue.Value);
 }
 
 #ifdef VK_USE_PLATFORM_WIN32_KHR
@@ -366,6 +377,14 @@ void ReplayCustomizationLayer::Pre(vkCreateGraphicsPipelinesCommand& command) {
     command.m_pCreateInfos.Value[i].flags &=
         ~VK_PIPELINE_CREATE_FAIL_ON_PIPELINE_COMPILE_REQUIRED_BIT;
   }
+}
+
+void ReplayCustomizationLayer::Pre(vkAcquireNextImageKHRCommand& command) {
+  m_Manager.GetSwapchainImageSyncService().HandleAcquireNextImage(command);
+}
+
+void ReplayCustomizationLayer::Pre(vkAcquireNextImage2KHRCommand& command) {
+  m_Manager.GetSwapchainImageSyncService().HandleAcquireNextImage2(command);
 }
 
 } // namespace vulkan
