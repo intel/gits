@@ -40,10 +40,26 @@ PFN_vkVoidFunction RecorderWrapper::GetFunctionWrapper(const char* name) {
 
 std::unique_ptr<gits::vulkan::RecorderWrapper> g_RecorderWrapper;
 
+#ifdef GITS_PLATFORM_LINUX
+namespace {
+void DetachVulkan2() {
+  static bool finished = false;
+  if (!finished) {
+    finished = true;
+    gits::vulkan::CaptureManager::Cleanup();
+    LOG_INFO << "Recording done";
+  }
+}
+} // namespace
+#endif
+
 gits::vulkan::IRecorderWrapper* STDCALL GITSRecorderVulkan2() {
   if (!g_RecorderWrapper) {
     try {
       g_RecorderWrapper = std::make_unique<gits::vulkan::RecorderWrapper>();
+#ifdef GITS_PLATFORM_LINUX
+      std::atexit(DetachVulkan2);
+#endif
     } catch (const std::exception& e) {
       LOG_ERROR << "Cannot initialize recorder: " << e.what() << std::endl;
       exit(EXIT_FAILURE);

@@ -13,7 +13,7 @@
 #if defined(GITS_PLATFORM_WINDOWS)
 #define VK_INTERCEPTOR_EXPORT extern "C"
 #elif defined(GITS_PLATFORM_X11)
-#define VK_INTERCEPTOR_EXPORT __attribute__((visibility("default")))
+#define VK_INTERCEPTOR_EXPORT extern "C" __attribute__((visibility("default")))
 #endif
 
 std::unique_ptr<gits::CGitsLoader> g_GitsLoader;
@@ -25,9 +25,6 @@ void Initialize() {
   if (s_Initialized) {
     return;
   }
-#if _DEBUG
-  MessageBox(0, "Waiting for debugger...", "Waiting for debugger...", 0);
-#endif
   s_Initialized = true;
   g_GitsLoader = std::make_unique<gits::CGitsLoader>("GITSRecorderVulkan2", false);
   g_RecorderWrapper =

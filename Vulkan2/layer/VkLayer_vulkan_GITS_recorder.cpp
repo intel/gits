@@ -13,7 +13,7 @@
 #if defined(GITS_PLATFORM_WINDOWS)
 #define VK_LAYER_EXPORT extern "C" __declspec(dllexport)
 #elif defined(GITS_PLATFORM_X11)
-#define VK_LAYER_EXPORT __attribute__((visibility("default")))
+#define VK_LAYER_EXPORT extern "C" __attribute__((visibility("default")))
 #endif
 
 std::unique_ptr<gits::CGitsLoader> g_GitsLoader;

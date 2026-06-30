@@ -26,6 +26,7 @@ namespace vulkan {
 class CaptureManager : public gits::noncopyable {
 public:
   static CaptureManager& Get();
+  static void Cleanup();
 
   GITSKey CreateCommandKey() {
     return m_CommandUniqueKey.fetch_add(1, std::memory_order_relaxed) + 1;

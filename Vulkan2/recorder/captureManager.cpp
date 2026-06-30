@@ -25,6 +25,13 @@ CaptureManager& CaptureManager::Get() {
   return *m_Instance;
 }
 
+void CaptureManager::Cleanup() {
+  if (m_Instance) {
+    delete m_Instance;
+    m_Instance = nullptr;
+  }
+}
+
 CaptureManager::CaptureManager() {
   m_Recorder.reset(new stream::OrderingRecorder());
 
@@ -33,6 +40,8 @@ CaptureManager::CaptureManager() {
   m_PluginService.LoadPlugins();
   m_LayerManager.LoadLayers(*this, *m_Recorder.get(), m_PluginService);
 }
+
+CaptureManager::~CaptureManager() {}
 
 void CaptureManager::LoadGlobalFunctions(PFN_vkGetInstanceProcAddr getProcAddr) {
   LoadGlobalLevelFunctions(getProcAddr, m_GlobalDispatchTable);

@@ -15,10 +15,10 @@ namespace gits {
 namespace vulkan {
 
 enum class CommandId {
-  ID_INIT_START = stream::CommonCommandId::ID_INIT_START,
-  ID_INIT_END = stream::CommonCommandId::ID_INIT_END,
-  ID_FRAME_END = stream::CommonCommandId::ID_FRAME_END,
-  ID_MARKER_UINT64 = stream::CommonCommandId::ID_MARKER_UINT64,
+  ID_INIT_START = static_cast<int>(stream::CommonCommandId::ID_INIT_START),
+  ID_INIT_END = static_cast<int>(stream::CommonCommandId::ID_INIT_END),
+  ID_FRAME_END = static_cast<int>(stream::CommonCommandId::ID_FRAME_END),
+  ID_MARKER_UINT64 = static_cast<int>(stream::CommonCommandId::ID_MARKER_UINT64),
 
   // gits::ApiId::ID_VULKAN2 * 0x10000 = 0xe0000
   ID_META_BEGIN = 0xe0000,

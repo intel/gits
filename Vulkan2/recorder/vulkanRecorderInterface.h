@@ -29,5 +29,5 @@ public:
 typedef gits::vulkan::IRecorderWrapper*(STDCALL* FGITSRecorderVulkan2)();
 
 extern "C" {
-gits::vulkan::IRecorderWrapper* STDCALL GITSRecorderVulkan2();
+gits::vulkan::IRecorderWrapper* STDCALL GITSRecorderVulkan2() VISIBLE;
 }

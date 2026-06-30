@@ -23,6 +23,7 @@ set(SCRIPTS_SRC
   generator_coders.py
   generator_player.py
   generator_trace.py
+  generator_vk_layer.py
 )
 source_group("scripts" FILES ${SCRIPTS_SRC})
 
