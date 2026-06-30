@@ -101,7 +101,14 @@ def get_size_lines(structure, structures_list, var_name):
             lines.append(f'  blobSize += GetStringArraySize({var_name}->{member.name}, {var_name}->{member.length});')
             lines.append('}')
         elif member.is_pointer and member.base_type == 'void':
-            lines.append('blobSize += sizeof(void*);')
+            if member.length:
+                length_expr = get_length_expression(member.length, var_name)
+                lines.append('blobSize += sizeof(void*);')
+                lines.append(f'if ({var_name}->{member.name} && {length_expr} > 0) {{')
+                lines.append(f'  blobSize += {length_expr};')
+                lines.append('}')
+            else:
+                lines.append('blobSize += sizeof(void*);')
         elif member.is_opaque_pointer:
             lines.append('blobSize += sizeof(void*);')
         elif complex_struct:
@@ -191,12 +198,27 @@ def get_encode_lines(structure, structures_list, var_name_src, var_name_dst):
             lines.append(f'  EncodeStringArray({var_name_src}->{member.name}, {var_name_src}->{member.length}, dst, offset);')
             lines.append('}')
         elif member.is_pointer and member.base_type == 'void':
-            lines.append('{')
-            lines.append(f'  void* marker = const_cast<void*>({var_name_src}->{member.name});')
-            lines.append(f'  std::memcpy(dst + offset, &marker, sizeof(void*));')
-            lines.append(f'  offset += sizeof(void*);')
-            lines.append(f'  {var_name_dst}->{member.name} = nullptr;')
-            lines.append('}')
+            if member.length:
+                length_expr = get_length_expression(member.length, var_name_src)
+                lines.append('{')
+                lines.append(f'  void* marker = const_cast<void*>({var_name_src}->{member.name});')
+                lines.append(f'  std::memcpy(dst + offset, &marker, sizeof(void*));')
+                lines.append(f'  offset += sizeof(void*);')
+                lines.append(f'  if ({var_name_src}->{member.name} && {length_expr} > 0) {{')
+                lines.append(f'    {var_name_dst}->{member.name} = reinterpret_cast<void*>(static_cast<uintptr_t>(offset));')
+                lines.append(f'    std::memcpy(dst + offset, {var_name_src}->{member.name}, {length_expr});')
+                lines.append(f'    offset += {length_expr};')
+                lines.append(f'  }} else {{')
+                lines.append(f'    {var_name_dst}->{member.name} = nullptr;')
+                lines.append(f'  }}')
+                lines.append('}')
+            else:
+                lines.append('{')
+                lines.append(f'  void* marker = const_cast<void*>({var_name_src}->{member.name});')
+                lines.append(f'  std::memcpy(dst + offset, &marker, sizeof(void*));')
+                lines.append(f'  offset += sizeof(void*);')
+                lines.append(f'  {var_name_dst}->{member.name} = nullptr;')
+                lines.append('}')
         elif member.is_opaque_pointer:
             lines.append('{')
             lines.append(f'  void* opaquePointer = reinterpret_cast<void*>({var_name_src}->{member.name});')
@@ -304,12 +326,26 @@ def get_decode_lines(structure, structures_list, var_name):
             lines.append(f'  DecodeStringArray(src, offset, const_cast<const char***>(reinterpret_cast<const char* const**>(&{var_name}->{member.name})), {var_name}->{member.length});')
             lines.append('}')
         elif member.is_pointer and member.base_type == 'void':
-            lines.append('{')
-            lines.append(f'  void* marker;')
-            lines.append(f'  std::memcpy(&marker, src + offset,sizeof(void*));')
-            lines.append(f'  offset += sizeof(void*);')
-            lines.append(f'  {var_name}->{member.name} = nullptr;')
-            lines.append('}')
+            if member.length:
+                length_expr = get_length_expression(member.length, var_name)
+                lines.append('{')
+                lines.append(f'  void* marker;')
+                lines.append(f'  std::memcpy(&marker, src + offset, sizeof(void*));')
+                lines.append(f'  offset += sizeof(void*);')
+                lines.append(f'  if (marker && {length_expr} > 0) {{')
+                lines.append(f'    {var_name}->{member.name} = AddPtrs({var_name}->{member.name}, src);')
+                lines.append(f'    offset += {length_expr};')
+                lines.append(f'  }} else {{')
+                lines.append(f'    {var_name}->{member.name} = nullptr;')
+                lines.append(f'  }}')
+                lines.append('}')
+            else:
+                lines.append('{')
+                lines.append(f'  void* marker;')
+                lines.append(f'  std::memcpy(&marker, src + offset, sizeof(void*));')
+                lines.append(f'  offset += sizeof(void*);')
+                lines.append(f'  {var_name}->{member.name} = nullptr;')
+                lines.append('}')
         elif member.is_opaque_pointer:
             lines.append('{')
             lines.append(f'  void* opaqueHandle;')
