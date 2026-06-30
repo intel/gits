@@ -22,7 +22,10 @@ structs_required_update = [
   'VkCommandBufferAllocateInfo',
   'VkDescriptorSetAllocateInfo',
   'VkImageViewCreateInfo',
+  'VkBufferViewCreateInfo',
+  'VkRenderingInfo',
   'VkPipelineLayoutCreateInfo',
+  'VkDescriptorSetLayoutCreateInfo',
   'VkSwapchainCreateInfoKHR',
   'VkFramebufferCreateInfo',
   'VkRenderPassBeginInfo',
@@ -34,7 +37,14 @@ structs_required_update = [
   'VkImageMemoryBarrier',
   'VkBufferMemoryBarrier',
   'VkSubmitInfo',
-  'VkSubmitInfo2'
+  'VkSubmitInfo2',
+  'VkImageMemoryRequirementsInfo2',
+  'VkDescriptorUpdateTemplateCreateInfo',
+  'VkDependencyInfo',
+  'VkBufferMemoryRequirementsInfo2',
+  'VkBufferDeviceAddressInfo',
+  'VkMemoryAllocateInfo',
+  'VkMappedMemoryRange'
 ]
 %>\
 % for command in commands:

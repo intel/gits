@@ -73,6 +73,18 @@ void UpdateHandle(PlayerManager& manager, ArrayArgument<VkSwapchainCreateInfoKHR
 void UpdateHandle(PlayerManager& manager, PointerArgument<VkFramebufferCreateInfo>& arg);
 void UpdateHandle(PlayerManager& manager, PointerArgument<VkRenderPassBeginInfo>& arg);
 void UpdateHandle(PlayerManager& manager, PointerArgument<VkPresentInfoKHR>& arg);
+void UpdateHandle(PlayerManager& manager, PointerArgument<VkDescriptorSetLayoutCreateInfo>& arg);
+void UpdateHandle(PlayerManager& manager, PointerArgument<VkImageMemoryRequirementsInfo2>& arg);
+void UpdateHandle(PlayerManager& manager,
+                  PointerArgument<VkDescriptorUpdateTemplateCreateInfo>& arg);
+void UpdateHandle(PlayerManager& manager, PointerArgument<VkDependencyInfo>& arg);
+void UpdateHandle(PlayerManager& manager, ArrayArgument<VkDependencyInfo>& arg);
+void UpdateHandle(PlayerManager& manager, PointerArgument<VkBufferMemoryRequirementsInfo2>& arg);
+void UpdateHandle(PlayerManager& manager, PointerArgument<VkBufferDeviceAddressInfo>& arg);
+void UpdateHandle(PlayerManager& manager, PointerArgument<VkBufferViewCreateInfo>& arg);
+void UpdateHandle(PlayerManager& manager, PointerArgument<VkRenderingInfo>& arg);
+void UpdateHandle(PlayerManager& manager, PointerArgument<VkMemoryAllocateInfo>& arg);
+void UpdateHandle(PlayerManager& manager, ArrayArgument<VkMappedMemoryRange>& arg);
 
 } // namespace vulkan
 } // namespace gits

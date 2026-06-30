@@ -124,6 +124,24 @@ void UpdateHandle(PlayerManager& manager, ArrayArgument<VkGraphicsPipelineCreate
         }
       }
     }
+
+    auto* pNext = reinterpret_cast<VkBaseInStructure*>(
+        const_cast<void*>(static_cast<const void*>(pipelineInfo.pNext)));
+    while (pNext != nullptr) {
+      if (pNext->sType == VK_STRUCTURE_TYPE_PIPELINE_LIBRARY_CREATE_INFO_KHR) {
+        auto* libInfo = reinterpret_cast<VkPipelineLibraryCreateInfoKHR*>(pNext);
+        auto* libs = const_cast<VkPipeline*>(libInfo->pLibraries);
+        for (uint32_t j = 0; j < libInfo->libraryCount; ++j) {
+          GITSKey libKey = reinterpret_cast<uint64_t>(libs[j]);
+          if (libKey) {
+            libs[j] = reinterpret_cast<VkPipeline>(HandleMapService::Get().GetHandle(libKey));
+          } else {
+            libs[j] = VK_NULL_HANDLE;
+          }
+        }
+      }
+      pNext = const_cast<VkBaseInStructure*>(pNext->pNext);
+    }
   }
 }
 
@@ -236,51 +254,72 @@ void UpdateHandle(PlayerManager& manager, ArrayArgument<VkWriteDescriptorSet>& a
       write.dstSet = VK_NULL_HANDLE;
     }
 
-    if (write.pBufferInfo && write.descriptorCount > 0) {
-      for (uint32_t j = 0; j < write.descriptorCount; ++j) {
-        VkDescriptorBufferInfo& bufferInfo =
-            const_cast<VkDescriptorBufferInfo&>(write.pBufferInfo[j]);
-        GITSKey bufferKey = reinterpret_cast<uint64_t>(bufferInfo.buffer);
-        if (bufferKey) {
-          bufferInfo.buffer =
-              reinterpret_cast<VkBuffer>(HandleMapService::Get().GetHandle(bufferKey));
-        } else {
-          bufferInfo.buffer = VK_NULL_HANDLE;
+    if (write.descriptorCount > 0) {
+      switch (write.descriptorType) {
+      case VK_DESCRIPTOR_TYPE_SAMPLER:
+      case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
+      case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
+      case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
+      case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
+        if (write.pImageInfo) {
+          for (uint32_t j = 0; j < write.descriptorCount; ++j) {
+            VkDescriptorImageInfo& imageInfo =
+                const_cast<VkDescriptorImageInfo&>(write.pImageInfo[j]);
+            GITSKey imageViewKey = reinterpret_cast<uint64_t>(imageInfo.imageView);
+            if (imageViewKey) {
+              imageInfo.imageView =
+                  reinterpret_cast<VkImageView>(HandleMapService::Get().GetHandle(imageViewKey));
+            } else {
+              imageInfo.imageView = VK_NULL_HANDLE;
+            }
+            GITSKey samplerKey = reinterpret_cast<uint64_t>(imageInfo.sampler);
+            if (samplerKey) {
+              imageInfo.sampler =
+                  reinterpret_cast<VkSampler>(HandleMapService::Get().GetHandle(samplerKey));
+            } else {
+              imageInfo.sampler = VK_NULL_HANDLE;
+            }
+          }
         }
-      }
-    }
+        break;
 
-    if (write.pImageInfo && write.descriptorCount > 0) {
-      for (uint32_t j = 0; j < write.descriptorCount; ++j) {
-        VkDescriptorImageInfo& imageInfo = const_cast<VkDescriptorImageInfo&>(write.pImageInfo[j]);
-        GITSKey imageViewKey = reinterpret_cast<uint64_t>(imageInfo.imageView);
-        if (imageViewKey) {
-          imageInfo.imageView =
-              reinterpret_cast<VkImageView>(HandleMapService::Get().GetHandle(imageViewKey));
-        } else {
-          imageInfo.imageView = VK_NULL_HANDLE;
+      case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+      case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
+      case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
+      case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
+        if (write.pBufferInfo) {
+          for (uint32_t j = 0; j < write.descriptorCount; ++j) {
+            VkDescriptorBufferInfo& bufferInfo =
+                const_cast<VkDescriptorBufferInfo&>(write.pBufferInfo[j]);
+            GITSKey bufferKey = reinterpret_cast<uint64_t>(bufferInfo.buffer);
+            if (bufferKey) {
+              bufferInfo.buffer =
+                  reinterpret_cast<VkBuffer>(HandleMapService::Get().GetHandle(bufferKey));
+            } else {
+              bufferInfo.buffer = VK_NULL_HANDLE;
+            }
+          }
         }
+        break;
 
-        GITSKey samplerKey = reinterpret_cast<uint64_t>(imageInfo.sampler);
-        if (samplerKey) {
-          imageInfo.sampler =
-              reinterpret_cast<VkSampler>(HandleMapService::Get().GetHandle(samplerKey));
-        } else {
-          imageInfo.sampler = VK_NULL_HANDLE;
+      case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
+      case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
+        if (write.pTexelBufferView) {
+          for (uint32_t j = 0; j < write.descriptorCount; ++j) {
+            VkBufferView& texelBufferView = const_cast<VkBufferView&>(write.pTexelBufferView[j]);
+            GITSKey bufferViewKey = reinterpret_cast<uint64_t>(texelBufferView);
+            if (bufferViewKey) {
+              texelBufferView =
+                  reinterpret_cast<VkBufferView>(HandleMapService::Get().GetHandle(bufferViewKey));
+            } else {
+              texelBufferView = VK_NULL_HANDLE;
+            }
+          }
         }
-      }
-    }
+        break;
 
-    if (write.pTexelBufferView && write.descriptorCount > 0) {
-      for (uint32_t j = 0; j < write.descriptorCount; ++j) {
-        VkBufferView& texelBufferView = const_cast<VkBufferView&>(write.pTexelBufferView[j]);
-        GITSKey bufferViewKey = reinterpret_cast<uint64_t>(texelBufferView);
-        if (bufferViewKey) {
-          texelBufferView =
-              reinterpret_cast<VkBufferView>(HandleMapService::Get().GetHandle(bufferViewKey));
-        } else {
-          texelBufferView = VK_NULL_HANDLE;
-        }
+      default:
+        break;
       }
     }
   }
@@ -522,6 +561,255 @@ void UpdateHandle(PlayerManager& manager, PointerArgument<VkPresentInfoKHR>& arg
       } else {
         const_cast<VkSwapchainKHR*>(arg.Value->pSwapchains)[i] = VK_NULL_HANDLE;
       }
+    }
+  }
+}
+
+void UpdateHandle(PlayerManager& manager, PointerArgument<VkDescriptorSetLayoutCreateInfo>& arg) {
+  if (!arg.Value) {
+    return;
+  }
+
+  if (arg.Value->pBindings && arg.Value->bindingCount > 0) {
+    for (uint32_t i = 0; i < arg.Value->bindingCount; ++i) {
+      VkDescriptorSetLayoutBinding& binding =
+          const_cast<VkDescriptorSetLayoutBinding&>(arg.Value->pBindings[i]);
+      if (binding.pImmutableSamplers && binding.descriptorCount > 0) {
+        for (uint32_t j = 0; j < binding.descriptorCount; ++j) {
+          GITSKey key = reinterpret_cast<uint64_t>(binding.pImmutableSamplers[j]);
+          if (key) {
+            const_cast<VkSampler*>(binding.pImmutableSamplers)[j] =
+                reinterpret_cast<VkSampler>(HandleMapService::Get().GetHandle(key));
+          } else {
+            const_cast<VkSampler*>(binding.pImmutableSamplers)[j] = VK_NULL_HANDLE;
+          }
+        }
+      }
+    }
+  }
+}
+
+void UpdateHandle(PlayerManager& manager, PointerArgument<VkImageMemoryRequirementsInfo2>& arg) {
+  if (!arg.Value) {
+    return;
+  }
+  GITSKey key = reinterpret_cast<uint64_t>(arg.Value->image);
+  if (key) {
+    arg.Value->image = reinterpret_cast<VkImage>(HandleMapService::Get().GetHandle(key));
+  } else {
+    arg.Value->image = VK_NULL_HANDLE;
+  }
+}
+
+void UpdateHandle(PlayerManager& manager,
+                  PointerArgument<VkDescriptorUpdateTemplateCreateInfo>& arg) {
+  if (!arg.Value) {
+    return;
+  }
+
+  GITSKey descriptorSetLayoutKey = reinterpret_cast<uint64_t>(arg.Value->descriptorSetLayout);
+  if (descriptorSetLayoutKey) {
+    arg.Value->descriptorSetLayout = reinterpret_cast<VkDescriptorSetLayout>(
+        HandleMapService::Get().GetHandle(descriptorSetLayoutKey));
+  } else {
+    arg.Value->descriptorSetLayout = VK_NULL_HANDLE;
+  }
+
+  GITSKey pipelineLayoutKey = reinterpret_cast<uint64_t>(arg.Value->pipelineLayout);
+  if (pipelineLayoutKey) {
+    arg.Value->pipelineLayout =
+        reinterpret_cast<VkPipelineLayout>(HandleMapService::Get().GetHandle(pipelineLayoutKey));
+  } else {
+    arg.Value->pipelineLayout = VK_NULL_HANDLE;
+  }
+}
+
+void UpdateHandle(PlayerManager& manager, PointerArgument<VkDependencyInfo>& arg) {
+  if (!arg.Value) {
+    return;
+  }
+
+  if (arg.Value->pBufferMemoryBarriers && arg.Value->bufferMemoryBarrierCount > 0) {
+    for (uint32_t i = 0; i < arg.Value->bufferMemoryBarrierCount; ++i) {
+      VkBufferMemoryBarrier2& barrier =
+          const_cast<VkBufferMemoryBarrier2&>(arg.Value->pBufferMemoryBarriers[i]);
+      GITSKey bufferKey = reinterpret_cast<uint64_t>(barrier.buffer);
+      if (bufferKey) {
+        barrier.buffer = reinterpret_cast<VkBuffer>(HandleMapService::Get().GetHandle(bufferKey));
+      } else {
+        barrier.buffer = VK_NULL_HANDLE;
+      }
+    }
+  }
+
+  if (arg.Value->pImageMemoryBarriers && arg.Value->imageMemoryBarrierCount > 0) {
+    for (uint32_t i = 0; i < arg.Value->imageMemoryBarrierCount; ++i) {
+      VkImageMemoryBarrier2& barrier =
+          const_cast<VkImageMemoryBarrier2&>(arg.Value->pImageMemoryBarriers[i]);
+      GITSKey imageKey = reinterpret_cast<uint64_t>(barrier.image);
+      if (imageKey) {
+        barrier.image = reinterpret_cast<VkImage>(HandleMapService::Get().GetHandle(imageKey));
+      } else {
+        barrier.image = VK_NULL_HANDLE;
+      }
+    }
+  }
+}
+
+void UpdateHandle(PlayerManager& manager, ArrayArgument<VkDependencyInfo>& arg) {
+  if (!arg.Value || arg.Size == 0) {
+    return;
+  }
+
+  for (uint32_t i = 0; i < arg.Size; ++i) {
+    VkDependencyInfo& depInfo = arg.Value[i];
+
+    if (depInfo.pBufferMemoryBarriers && depInfo.bufferMemoryBarrierCount > 0) {
+      for (uint32_t j = 0; j < depInfo.bufferMemoryBarrierCount; ++j) {
+        VkBufferMemoryBarrier2& barrier =
+            const_cast<VkBufferMemoryBarrier2&>(depInfo.pBufferMemoryBarriers[j]);
+        GITSKey bufferKey = reinterpret_cast<uint64_t>(barrier.buffer);
+        if (bufferKey) {
+          barrier.buffer = reinterpret_cast<VkBuffer>(HandleMapService::Get().GetHandle(bufferKey));
+        } else {
+          barrier.buffer = VK_NULL_HANDLE;
+        }
+      }
+    }
+
+    if (depInfo.pImageMemoryBarriers && depInfo.imageMemoryBarrierCount > 0) {
+      for (uint32_t j = 0; j < depInfo.imageMemoryBarrierCount; ++j) {
+        VkImageMemoryBarrier2& barrier =
+            const_cast<VkImageMemoryBarrier2&>(depInfo.pImageMemoryBarriers[j]);
+        GITSKey imageKey = reinterpret_cast<uint64_t>(barrier.image);
+        if (imageKey) {
+          barrier.image = reinterpret_cast<VkImage>(HandleMapService::Get().GetHandle(imageKey));
+        } else {
+          barrier.image = VK_NULL_HANDLE;
+        }
+      }
+    }
+  }
+}
+
+void UpdateHandle(PlayerManager& manager, PointerArgument<VkBufferMemoryRequirementsInfo2>& arg) {
+  if (!arg.Value) {
+    return;
+  }
+  GITSKey key = reinterpret_cast<uint64_t>(arg.Value->buffer);
+  if (key) {
+    arg.Value->buffer = reinterpret_cast<VkBuffer>(HandleMapService::Get().GetHandle(key));
+  } else {
+    arg.Value->buffer = VK_NULL_HANDLE;
+  }
+}
+
+void UpdateHandle(PlayerManager& manager, PointerArgument<VkBufferDeviceAddressInfo>& arg) {
+  if (!arg.Value) {
+    return;
+  }
+  GITSKey key = reinterpret_cast<uint64_t>(arg.Value->buffer);
+  if (key) {
+    arg.Value->buffer = reinterpret_cast<VkBuffer>(HandleMapService::Get().GetHandle(key));
+  } else {
+    arg.Value->buffer = VK_NULL_HANDLE;
+  }
+}
+
+void UpdateHandle(PlayerManager& manager, PointerArgument<VkBufferViewCreateInfo>& arg) {
+  if (!arg.Value) {
+    return;
+  }
+  GITSKey key = reinterpret_cast<uint64_t>(arg.Value->buffer);
+  if (key) {
+    arg.Value->buffer = reinterpret_cast<VkBuffer>(HandleMapService::Get().GetHandle(key));
+  } else {
+    arg.Value->buffer = VK_NULL_HANDLE;
+  }
+}
+
+void UpdateHandle(PlayerManager& manager, PointerArgument<VkRenderingInfo>& arg) {
+  if (!arg.Value) {
+    return;
+  }
+
+  auto updateAttachment = [](VkRenderingAttachmentInfo& attachment) {
+    GITSKey imageViewKey = reinterpret_cast<uint64_t>(attachment.imageView);
+    if (imageViewKey) {
+      attachment.imageView =
+          reinterpret_cast<VkImageView>(HandleMapService::Get().GetHandle(imageViewKey));
+    } else {
+      attachment.imageView = VK_NULL_HANDLE;
+    }
+
+    GITSKey resolveImageViewKey = reinterpret_cast<uint64_t>(attachment.resolveImageView);
+    if (resolveImageViewKey) {
+      attachment.resolveImageView =
+          reinterpret_cast<VkImageView>(HandleMapService::Get().GetHandle(resolveImageViewKey));
+    } else {
+      attachment.resolveImageView = VK_NULL_HANDLE;
+    }
+  };
+
+  if (arg.Value->pColorAttachments && arg.Value->colorAttachmentCount > 0) {
+    for (uint32_t i = 0; i < arg.Value->colorAttachmentCount; ++i) {
+      updateAttachment(const_cast<VkRenderingAttachmentInfo&>(arg.Value->pColorAttachments[i]));
+    }
+  }
+
+  if (arg.Value->pDepthAttachment) {
+    updateAttachment(const_cast<VkRenderingAttachmentInfo&>(*arg.Value->pDepthAttachment));
+  }
+
+  if (arg.Value->pStencilAttachment) {
+    updateAttachment(const_cast<VkRenderingAttachmentInfo&>(*arg.Value->pStencilAttachment));
+  }
+}
+
+void UpdateHandle(PlayerManager& manager, PointerArgument<VkMemoryAllocateInfo>& arg) {
+  if (!arg.Value) {
+    return;
+  }
+
+  auto* dedicatedAllocateInfo =
+      reinterpret_cast<VkMemoryDedicatedAllocateInfo*>(const_cast<void*>(arg.Value->pNext));
+  while (dedicatedAllocateInfo) {
+    if (dedicatedAllocateInfo->sType == VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO) {
+      GITSKey imageKey = reinterpret_cast<uint64_t>(dedicatedAllocateInfo->image);
+      if (imageKey) {
+        dedicatedAllocateInfo->image =
+            reinterpret_cast<VkImage>(HandleMapService::Get().GetHandle(imageKey));
+      } else {
+        dedicatedAllocateInfo->image = VK_NULL_HANDLE;
+      }
+
+      GITSKey bufferKey = reinterpret_cast<uint64_t>(dedicatedAllocateInfo->buffer);
+      if (bufferKey) {
+        dedicatedAllocateInfo->buffer =
+            reinterpret_cast<VkBuffer>(HandleMapService::Get().GetHandle(bufferKey));
+      } else {
+        dedicatedAllocateInfo->buffer = VK_NULL_HANDLE;
+      }
+      break;
+    }
+    dedicatedAllocateInfo =
+        reinterpret_cast<VkMemoryDedicatedAllocateInfo*>(reinterpret_cast<uintptr_t>(
+            reinterpret_cast<const VkBaseInStructure*>(dedicatedAllocateInfo)->pNext));
+  }
+}
+
+void UpdateHandle(PlayerManager& manager, ArrayArgument<VkMappedMemoryRange>& arg) {
+  if (!arg.Value || arg.Size == 0) {
+    return;
+  }
+
+  for (uint32_t i = 0; i < arg.Size; ++i) {
+    VkMappedMemoryRange& range = arg.Value[i];
+    GITSKey key = reinterpret_cast<uint64_t>(range.memory);
+    if (key) {
+      range.memory = reinterpret_cast<VkDeviceMemory>(HandleMapService::Get().GetHandle(key));
+    } else {
+      range.memory = VK_NULL_HANDLE;
     }
   }
 }
