@@ -60,17 +60,14 @@ uint32_t GetSize(const VkWriteDescriptorSet* src, uint32_t count) {
   for (uint32_t i = 0; i < count; ++i) {
     const auto* desc = &src[i];
     blobSize += GetPNextChainSizeInput(desc->pNext);
-    if (desc->dstSet != VK_NULL_HANDLE) {
-      blobSize += sizeof(GITSKey);
-    }
+    // dstSet key is in HandleKeys (collected by CollectHandleKeys) - no inline blob entry.
     if (desc->descriptorCount > 0) {
       if (UsesImageInfo(desc->descriptorType) && desc->pImageInfo) {
         blobSize += GetSize(desc->pImageInfo, desc->descriptorCount);
       } else if (UsesBufferInfo(desc->descriptorType) && desc->pBufferInfo) {
         blobSize += GetSize(desc->pBufferInfo, desc->descriptorCount);
-      } else if (UsesTexelBufferView(desc->descriptorType) && desc->pTexelBufferView) {
-        blobSize += sizeof(GITSKey) * desc->descriptorCount;
       }
+      // pTexelBufferView keys are in HandleKeys - no inline blob entries.
     }
   }
   return blobSize;
@@ -96,12 +93,8 @@ void Encode(const VkWriteDescriptorSet* src, uint32_t count, char* dst, uint32_t
       currentDstDesc->pNext = nullptr;
     }
 
-    if (currentSrcDesc->dstSet != VK_NULL_HANDLE) {
-      GITSKey key =
-          HandleMapService::Get().GetKey(reinterpret_cast<uint64_t>(currentSrcDesc->dstSet));
-      std::memcpy(dst + offset, &key, sizeof(GITSKey));
-      offset += sizeof(GITSKey);
-    }
+    // dstSet key is collected into HandleKeys by CollectHandleKeys - no inline
+    // blob entry here.  ResolveHandleKeys (player side) reads it from HandleKeys.
 
     if (currentSrcDesc->descriptorCount > 0) {
       if (UsesImageInfo(currentSrcDesc->descriptorType) && currentSrcDesc->pImageInfo) {
@@ -112,19 +105,10 @@ void Encode(const VkWriteDescriptorSet* src, uint32_t count, char* dst, uint32_t
         currentDstDesc->pBufferInfo =
             reinterpret_cast<VkDescriptorBufferInfo*>(static_cast<uintptr_t>(offset));
         Encode(currentSrcDesc->pBufferInfo, currentSrcDesc->descriptorCount, dst, offset);
-      } else if (UsesTexelBufferView(currentSrcDesc->descriptorType) &&
-                 currentSrcDesc->pTexelBufferView) {
-        currentDstDesc->pTexelBufferView =
-            reinterpret_cast<VkBufferView*>(static_cast<uintptr_t>(offset));
-        for (uint32_t j = 0; j < currentSrcDesc->descriptorCount; ++j) {
-          GITSKey key = currentSrcDesc->pTexelBufferView[j] != VK_NULL_HANDLE
-                            ? HandleMapService::Get().GetKey(
-                                  reinterpret_cast<uint64_t>(currentSrcDesc->pTexelBufferView[j]))
-                            : GITSKey{0};
-          std::memcpy(dst + offset, &key, sizeof(GITSKey));
-          offset += sizeof(GITSKey);
-        }
       }
+      // pTexelBufferView keys are collected into HandleKeys by CollectHandleKeys.
+      // ResolveHandleKeys allocates handleData and redirects pTexelBufferView -
+      // no inline blob entry needed here.
     }
   }
 }
@@ -139,12 +123,7 @@ void Decode(const VkWriteDescriptorSet* dst, uint32_t count, char* src, uint32_t
       DecodePNextChainInput(src, offset, const_cast<void**>(&currentDstDesc->pNext));
     }
 
-    if (currentDstDesc->dstSet != VK_NULL_HANDLE) {
-      GITSKey key;
-      std::memcpy(&key, src + offset, sizeof(GITSKey));
-      offset += sizeof(GITSKey);
-      currentDstDesc->dstSet = reinterpret_cast<VkDescriptorSet>(key);
-    }
+    // dstSet is resolved from HandleKeys by ResolveHandleKeys - no inline blob key to read.
 
     if (currentDstDesc->descriptorCount > 0) {
       if (UsesImageInfo(currentDstDesc->descriptorType) && currentDstDesc->pImageInfo) {
@@ -153,11 +132,9 @@ void Decode(const VkWriteDescriptorSet* dst, uint32_t count, char* src, uint32_t
       } else if (UsesBufferInfo(currentDstDesc->descriptorType) && currentDstDesc->pBufferInfo) {
         currentDstDesc->pBufferInfo = AddPtrs(currentDstDesc->pBufferInfo, src);
         Decode(currentDstDesc->pBufferInfo, currentDstDesc->descriptorCount, src, offset);
-      } else if (UsesTexelBufferView(currentDstDesc->descriptorType) &&
-                 currentDstDesc->pTexelBufferView) {
-        currentDstDesc->pTexelBufferView = AddPtrs(currentDstDesc->pTexelBufferView, src);
-        offset += sizeof(GITSKey) * currentDstDesc->descriptorCount;
       }
+      // pTexelBufferView is resolved from HandleKeys by ResolveHandleKeys -
+      // no inline blob data to decode here.
     }
   }
 }
