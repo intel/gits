@@ -13,6 +13,8 @@
 #include "configurator.h"
 #include "log.h"
 
+#include "yaml-cpp/yaml.h"
+
 #include <fstream>
 
 namespace gits {
@@ -114,13 +116,31 @@ void AnalyzerService::DumpAnalysisFile() {
     AddClosure(key, closure);
   }
 
-  std::ofstream out(AnalyzerResults::GetAnalysisFileName());
-  out << "OBJECTS\n";
+  // Emit YAML in a deterministic order so the completion marker ("Complete") is
+  // the very last thing written.  If the analysis run is interrupted (crash /
+  // kill) the file is left truncated without that marker, which the loader
+  // (AnalyzerResults) detects and treats as an incomplete/corrupt analysis.
+  YAML::Emitter emitter;
+  emitter << YAML::BeginMap;
+  emitter << YAML::Key << "Objects" << YAML::Value << YAML::BeginSeq;
   for (uint64_t key : closure) {
     if (key) {
-      out << key << "\n";
+      emitter << key;
     }
   }
+  emitter << YAML::EndSeq;
+  // Completion marker -- emitted last on purpose (see comment above).
+  emitter << YAML::Key << "Complete" << YAML::Value << true;
+  emitter << YAML::EndMap;
+
+  const std::string fileName = AnalyzerResults::GetAnalysisFileName();
+  std::ofstream out(fileName);
+  if (!out) {
+    LOG_ERROR << "Vulkan2 subcapture: failed to open analysis file '" << fileName
+              << "' for writing";
+    return;
+  }
+  out << emitter.c_str() << "\n";
 
   LOG_INFO << "Vulkan2 subcapture: analysis written (" << m_ObjectsForRestore.size()
            << " used objects, " << closure.size() << " objects in restore closure)";

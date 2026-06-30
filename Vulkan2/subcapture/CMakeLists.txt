@@ -82,6 +82,7 @@ target_link_libraries(Vulkan_subcapture_2 PRIVATE
   Vulkan_layer_interface
   Vulkan_coders
   Vulkan_services
+  yamlcpp
 )
 
 set_target_properties(Vulkan_subcapture_2 PROPERTIES FOLDER Vulkan2)

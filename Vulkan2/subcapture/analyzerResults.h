@@ -41,6 +41,12 @@ public:
   static std::string GetAnalysisFileName();
 
 private:
+  // True if the analysis file exists, parses as YAML and carries the trailing
+  // completion marker written by a fully finished analysis pass.  A missing,
+  // truncated or unparsable file (e.g. from an interrupted analysis run) returns
+  // false so it is treated as "no valid analysis".
+  static bool IsCompleteAnalysisFile(const std::string& fileName);
+
   bool m_Optimize{};
   std::unordered_set<uint64_t> m_ObjectKeys;
 };
