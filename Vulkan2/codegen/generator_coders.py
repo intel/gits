@@ -85,7 +85,9 @@ def get_size_lines(structure, structures_list, var_name):
             if structure.pnext_output:
                 lines.append(f'blobSize += GetPNextChainSizeOutput({var_name}->pNext);')
             else:
-                lines.append(f'blobSize += GetPNextChainSizeInput({var_name}->pNext);')
+                lines.append(f'if ({var_name}->pNext) {{')
+                lines.append(f'  blobSize += GetPNextChainSizeInput({var_name}->pNext);')
+                lines.append(f'}}')
         elif member.is_handle:
             # All handle members (single, pointer, array) are handled via HandleKeys vector.
             # Non-pointer handles are already in sizeof(struct). Pointer-to-handle arrays

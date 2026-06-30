@@ -40,15 +40,21 @@ void ResolveHandleKeys(const std::vector<GITSKey>& keys,
   if (IsImageDescriptorType(s.descriptorType) && s.pImageInfo && s.descriptorCount > 0) {
     for (uint32_t elemIdx = 0; elemIdx < s.descriptorCount; ++elemIdx) {
       auto& elem = const_cast<VkDescriptorImageInfo&>(s.pImageInfo[elemIdx]);
-      if (idx < keys.size()) {
-        GITSKey key = keys[idx++];
-        elem.sampler = key ? reinterpret_cast<VkSampler>(HandleMapService::Get().GetHandle(key))
-                           : VK_NULL_HANDLE;
-      }
-      if (idx < keys.size()) {
-        GITSKey key = keys[idx++];
-        elem.imageView = key ? reinterpret_cast<VkImageView>(HandleMapService::Get().GetHandle(key))
+      if (s.descriptorType == VK_DESCRIPTOR_TYPE_SAMPLER ||
+          s.descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) {
+        if (idx < keys.size()) {
+          GITSKey key = keys[idx++];
+          elem.sampler = key ? reinterpret_cast<VkSampler>(HandleMapService::Get().GetHandle(key))
                              : VK_NULL_HANDLE;
+        }
+      }
+      if (s.descriptorType != VK_DESCRIPTOR_TYPE_SAMPLER) {
+        if (idx < keys.size()) {
+          GITSKey key = keys[idx++];
+          elem.imageView =
+              key ? reinterpret_cast<VkImageView>(HandleMapService::Get().GetHandle(key))
+                  : VK_NULL_HANDLE;
+        }
       }
     }
   }

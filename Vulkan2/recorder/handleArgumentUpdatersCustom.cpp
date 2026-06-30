@@ -35,13 +35,19 @@ void CollectHandleKeys(std::vector<GITSKey>& keys, const VkWriteDescriptorSet& s
   if (IsImageDescriptorType(s.descriptorType) && s.pImageInfo && s.descriptorCount > 0) {
     for (uint32_t elemIdx = 0; elemIdx < s.descriptorCount; ++elemIdx) {
       const auto& elem = s.pImageInfo[elemIdx];
-      keys.push_back(elem.sampler != VK_NULL_HANDLE
-                         ? HandleMapService::Get().GetKey(reinterpret_cast<uint64_t>(elem.sampler))
-                         : 0);
-      keys.push_back(
-          elem.imageView != VK_NULL_HANDLE
-              ? HandleMapService::Get().GetKey(reinterpret_cast<uint64_t>(elem.imageView))
-              : 0);
+      if (s.descriptorType == VK_DESCRIPTOR_TYPE_SAMPLER ||
+          s.descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) {
+        keys.push_back(
+            elem.sampler != VK_NULL_HANDLE
+                ? HandleMapService::Get().GetKey(reinterpret_cast<uint64_t>(elem.sampler))
+                : 0);
+      }
+      if (s.descriptorType != VK_DESCRIPTOR_TYPE_SAMPLER) {
+        keys.push_back(
+            elem.imageView != VK_NULL_HANDLE
+                ? HandleMapService::Get().GetKey(reinterpret_cast<uint64_t>(elem.imageView))
+                : 0);
+      }
     }
   }
   if (IsBufferDescriptorType(s.descriptorType) && s.pBufferInfo && s.descriptorCount > 0) {
