@@ -27,6 +27,10 @@ void RecorderWrapper::LoadDeviceLevelFunctions(PFN_vkGetDeviceProcAddr getProcAd
   CaptureManager::Get().LoadDeviceFunctions(getProcAddr, device);
 }
 
+void RecorderWrapper::LoadDeviceLevelFunctions(void* dispatchKey, VkDevice device) {
+  CaptureManager::Get().LoadDeviceFunctions(dispatchKey, device);
+}
+
 PFN_vkVoidFunction RecorderWrapper::GetFunctionWrapper(const char* name) {
   return CaptureManager::Get().GetFunctionWrapper(name);
 }

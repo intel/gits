@@ -19,6 +19,7 @@ public:
   void LoadInstanceLevelFunctions(PFN_vkGetInstanceProcAddr getProcAddr,
                                   VkInstance instance) override;
   void LoadDeviceLevelFunctions(PFN_vkGetDeviceProcAddr getProcAddr, VkDevice device) override;
+  void LoadDeviceLevelFunctions(void* dispatchKey, VkDevice device) override;
   PFN_vkVoidFunction GetFunctionWrapper(const char* name) override;
 };
 

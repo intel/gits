@@ -54,6 +54,15 @@ void CaptureManager::LoadDeviceFunctions(PFN_vkGetDeviceProcAddr getProcAddr, Vk
   LoadDeviceLevelFunctions(getProcAddr, device, dispatchTable);
 }
 
+void CaptureManager::LoadDeviceFunctions(void* dispatchKey, VkDevice device) {
+  auto& instanceTable = m_InstanceDispatchTable[dispatchKey];
+  PFN_vkGetDeviceProcAddr getDeviceProcAddr = reinterpret_cast<PFN_vkGetDeviceProcAddr>(
+      instanceTable.vkGetInstanceProcAddr(instanceTable.instance, "vkGetDeviceProcAddr"));
+  void* deviceDispatchKey = *reinterpret_cast<void**>(device);
+  auto& dispatchTable = m_DeviceDispatchTable[deviceDispatchKey];
+  LoadDeviceLevelFunctions(getDeviceProcAddr, device, dispatchTable);
+}
+
 PFN_vkVoidFunction CaptureManager::GetFunctionWrapper(const char* name) {
   auto it = g_FunctionWrappers.find(name);
   if (it != g_FunctionWrappers.end()) {

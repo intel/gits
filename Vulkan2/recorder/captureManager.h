@@ -67,6 +67,7 @@ public:
   void LoadGlobalFunctions(PFN_vkGetInstanceProcAddr getProcAddr);
   void LoadInstanceFunctions(PFN_vkGetInstanceProcAddr getProcAddr, VkInstance instance);
   void LoadDeviceFunctions(PFN_vkGetDeviceProcAddr getProcAddr, VkDevice device);
+  void LoadDeviceFunctions(void* dispatchKey, VkDevice device);
 
   PFN_vkVoidFunction GetFunctionWrapper(const char* name);
 
