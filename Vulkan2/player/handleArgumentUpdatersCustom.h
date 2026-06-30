@@ -33,6 +33,7 @@ void CollectHandleKeys(std::vector<GITSKey>& keys, const VkPushDescriptorSetInfo
 
 void UpdateOutputHandle(PlayerManager& manager,
                         ArrayArgument<VkPhysicalDeviceGroupProperties>& arg);
+void UpdateOutputHandle(PlayerManager& manager, HandleArrayOutputArgument<VkPhysicalDevice>& arg);
 
 void UpdateHandle(PlayerManager& manager, PointerArgument<VkWriteDescriptorSet>& arg);
 void UpdateHandle(PlayerManager& manager, ArrayArgument<VkWriteDescriptorSet>& arg);

@@ -8,6 +8,8 @@
 
 #include "handleArgumentUpdatersCustom.h"
 
+#include "log.h"
+
 namespace gits {
 namespace vulkan {
 
@@ -133,6 +135,36 @@ void UpdateHandle(PlayerManager& manager, ArrayArgument<VkPushDescriptorSetInfo>
   arg.HandleData.reserve(arg.HandleKeys.size());
   for (uint32_t i = 0; i < arg.Size; ++i) {
     ResolveHandleKeys(arg.HandleKeys, idx, arg.HandleData, arg.Value[i]);
+  }
+}
+
+void UpdateOutputHandle(PlayerManager& manager, HandleArrayOutputArgument<VkPhysicalDevice>& arg) {
+  if (!arg.Value || arg.Size == 0) {
+    return;
+  }
+  // Clamp any surplus captured keys onto a valid physical device so replay
+  // proceeds on the available GPU instead of crashing.
+  uint64_t fallback = 0;
+  for (uint32_t i = 0; i < arg.Size; ++i) {
+    if (arg.Value[i]) {
+      fallback = reinterpret_cast<uint64_t>(arg.Value[i]);
+      break;
+    }
+  }
+  if (!fallback) {
+    LOG_ERROR << "vkEnumeratePhysicalDevices returned no physical devices on replay; "
+                 "cannot map captured physical-device handles.";
+    return;
+  }
+  for (uint32_t i = 0; i < arg.Size; ++i) {
+    const bool filled = arg.Value[i] != VK_NULL_HANDLE;
+    if (!filled) {
+      LOG_WARNING << "Replay enumerated fewer physical devices than capture; mapping "
+                     "captured physical device #"
+                  << i << " onto device #0.";
+    }
+    HandleMapService::Get().SetHandle(arg.Keys[i],
+                                      filled ? reinterpret_cast<uint64_t>(arg.Value[i]) : fallback);
   }
 }
 
