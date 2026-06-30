@@ -65,7 +65,10 @@ void ${command.name}Runner::Run() {
     % for param in command.params:
     % if param.is_handle_output:
     % if command.return_type != 'void':
-    if (command.m_Return.Value == VK_SUCCESS) {
+<%
+    success_condition = ' || '.join(f'command.m_Return.Value == {code}' for code in command.success_codes) if command.success_codes else 'command.m_Return.Value == VK_SUCCESS'
+%>
+    if (${success_condition}) {
       UpdateOutputHandle(manager, command.m_${param.name});
     }
     % else:
@@ -73,7 +76,10 @@ void ${command.name}Runner::Run() {
     % endif
     % elif param.is_struct_with_output_handles and param.is_pointer and not param.is_const:
     % if command.return_type != 'void':
-    if (command.m_Return.Value == VK_SUCCESS) {
+<%
+    success_condition = ' || '.join(f'command.m_Return.Value == {code}' for code in command.success_codes) if command.success_codes else 'command.m_Return.Value == VK_SUCCESS'
+%>
+    if (${success_condition}) {
       UpdateOutputHandle(manager, command.m_${param.name});
     }
     % else:

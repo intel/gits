@@ -54,6 +54,9 @@ void UpdateOutputHandle(PlayerManager& manager, HandleArrayOutputArgument<T>& ar
     return;
   }
   for (uint32_t i = 0; i < arg.Size; ++i) {
+    if (!arg.Value[i]) {
+      continue;
+    }
     auto handle = reinterpret_cast<std::uint64_t>(arg.Value[i]);
     HandleMapService::Get().SetHandle(arg.Keys[i], handle);
   }
