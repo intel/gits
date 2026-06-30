@@ -60,7 +60,9 @@ void InterceptorCustomizationLayer::Pre(IUnknownReleaseCommand& c) {
 }
 
 void InterceptorCustomizationLayer::RemoveSwapChainBufferWrappersOnResize(unsigned swapChainKey) {
-  // XeFG keeps an extra reference on swap chain buffers and drops it internally on resize
+  // XeFG keeps an extra reference on swap chain buffers and drops it internally on resize.
+  // Should be done in pre call, removing wrappers in post could to late
+  // for object creation in other threads.
 
   auto itBuffers = m_BuffersBySwapChainKey.find(swapChainKey);
   if (itBuffers == m_BuffersBySwapChainKey.end()) {
@@ -76,22 +78,28 @@ void InterceptorCustomizationLayer::RemoveSwapChainBufferWrappersOnResize(unsign
   m_BuffersBySwapChainKey.erase(itBuffers);
 }
 
+void InterceptorCustomizationLayer::Pre(IDXGISwapChainResizeBuffersCommand& c) {
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  RemoveSwapChainBufferWrappersOnResize(c.m_Object.Key);
+}
+
 void InterceptorCustomizationLayer::Post(IDXGISwapChainResizeBuffersCommand& c) {
   if (c.m_Result.Value != S_OK) {
-    return;
+    LOG_ERROR << "Failed IDXGISwapChain::ResizeBuffers not handled - swap chain buffer wrappers "
+                 "removed!";
   }
+}
 
+void InterceptorCustomizationLayer::Pre(IDXGISwapChain3ResizeBuffers1Command& c) {
   std::lock_guard<std::mutex> lock(m_Mutex);
   RemoveSwapChainBufferWrappersOnResize(c.m_Object.Key);
 }
 
 void InterceptorCustomizationLayer::Post(IDXGISwapChain3ResizeBuffers1Command& c) {
   if (c.m_Result.Value != S_OK) {
-    return;
+    LOG_ERROR << "Failed IDXGISwapChain3::ResizeBuffers1 not handled - swap chain buffer wrappers "
+                 "removed!";
   }
-
-  std::lock_guard<std::mutex> lock(m_Mutex);
-  RemoveSwapChainBufferWrappersOnResize(c.m_Object.Key);
 }
 
 void InterceptorCustomizationLayer::Pre(D3D12CreateDeviceCommand& command) {

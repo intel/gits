@@ -24,7 +24,9 @@ public:
 
   void Post(IDXGISwapChainGetBufferCommand& command) override;
   void Pre(IUnknownReleaseCommand& command) override;
+  void Pre(IDXGISwapChainResizeBuffersCommand& command) override;
   void Post(IDXGISwapChainResizeBuffersCommand& command) override;
+  void Pre(IDXGISwapChain3ResizeBuffers1Command& command) override;
   void Post(IDXGISwapChain3ResizeBuffers1Command& command) override;
 
   void Pre(D3D12CreateDeviceCommand& command) override;
