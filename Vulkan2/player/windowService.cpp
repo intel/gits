@@ -11,6 +11,11 @@
 #include "configurator.h"
 #include "commandsCustom.h"
 
+#ifdef GITS_PLATFORM_LINUX
+#include <wayland-client.h>
+#include "xdg-shell-client-protocol.h"
+#endif
+
 namespace gits {
 namespace vulkan {
 
@@ -74,6 +79,14 @@ uint64_t WindowService::SetWindow(uint32_t protocol,
   case CreateWindowMetaCommand::DisplayProtocol::XCB: {
 #ifdef VK_USE_PLATFORM_XCB_KHR
     auto winParams = CreateXcbWindow(wndPosX, wndPosY, wndWidth, wndHeight, visible);
+    currentHandle = winParams.first;
+    currentInstance = winParams.second;
+#endif
+    break;
+  }
+  case CreateWindowMetaCommand::DisplayProtocol::WAYLAND: {
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+    auto winParams = CreateWaylandWindow(wndPosX, wndPosY, wndWidth, wndHeight, visible);
     currentHandle = winParams.first;
     currentInstance = winParams.second;
 #endif
@@ -241,6 +254,66 @@ std::pair<uint64_t, uint64_t> WindowService::CreateXcbWindow(
   return std::make_pair(reinterpret_cast<uint64_t>(connection), static_cast<uint64_t>(window));
 }
 
+std::pair<uint64_t, uint64_t> WindowService::CreateWaylandWindow(
+    int32_t x, int32_t y, int32_t width, int32_t height, bool visible) {
+  static wl_display* display = nullptr;
+  static wl_compositor* compositor = nullptr;
+  static xdg_wm_base* wmBase = nullptr;
+
+  if (display == nullptr) {
+    display = wl_display_connect(nullptr);
+    GITS_ASSERT(display != nullptr, "Failed to connect to Wayland display");
+
+    static const wl_registry_listener registryListener = {
+        [](void* data, wl_registry* registry, uint32_t name, const char* interface,
+           uint32_t version) {
+          if (strcmp(interface, wl_compositor_interface.name) == 0) {
+            compositor = static_cast<wl_compositor*>(
+                wl_registry_bind(registry, name, &wl_compositor_interface, 1));
+          } else if (strcmp(interface, xdg_wm_base_interface.name) == 0) {
+            wmBase = static_cast<xdg_wm_base*>(
+                wl_registry_bind(registry, name, &xdg_wm_base_interface, 1));
+          }
+        },
+        [](void*, wl_registry*, uint32_t) {},
+    };
+
+    wl_registry* registry = wl_display_get_registry(display);
+    wl_registry_add_listener(registry, &registryListener, nullptr);
+    wl_display_roundtrip(display);
+    wl_registry_destroy(registry);
+
+    GITS_ASSERT(compositor != nullptr, "Failed to bind wl_compositor");
+    GITS_ASSERT(wmBase != nullptr, "Failed to bind xdg_wm_base");
+
+    static const xdg_wm_base_listener wmBaseListener = {
+        [](void*, xdg_wm_base* base, uint32_t serial) { xdg_wm_base_pong(base, serial); },
+    };
+    xdg_wm_base_add_listener(wmBase, &wmBaseListener, nullptr);
+  }
+
+  wl_surface* surface = wl_compositor_create_surface(compositor);
+  GITS_ASSERT(surface != nullptr, "Failed to create Wayland surface");
+
+  xdg_surface* xdgSurface = xdg_wm_base_get_xdg_surface(wmBase, surface);
+  GITS_ASSERT(xdgSurface != nullptr, "Failed to create xdg_surface");
+
+  static const xdg_surface_listener xdgSurfaceListener = {
+      [](void*, xdg_surface* xdgSurf, uint32_t serial) {
+        xdg_surface_ack_configure(xdgSurf, serial);
+      },
+  };
+  xdg_surface_add_listener(xdgSurface, &xdgSurfaceListener, nullptr);
+
+  xdg_toplevel* toplevel = xdg_surface_get_toplevel(xdgSurface);
+  GITS_ASSERT(toplevel != nullptr, "Failed to create xdg_toplevel");
+  xdg_toplevel_set_title(toplevel, "Vulkan-GITS");
+
+  wl_surface_commit(surface);
+  wl_display_roundtrip(display);
+
+  return std::make_pair(reinterpret_cast<uint64_t>(display), reinterpret_cast<uint64_t>(surface));
+}
 #endif
 
 } // namespace vulkan

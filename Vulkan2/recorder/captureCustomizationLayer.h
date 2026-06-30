@@ -33,6 +33,9 @@ public:
 #ifdef VK_USE_PLATFORM_XCB_KHR
   void Pre(vkCreateXcbSurfaceKHRCommand& command) override;
 #endif
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+  void Pre(vkCreateWaylandSurfaceKHRCommand& command) override;
+#endif
   void Post(vkCreateSwapchainKHRCommand& command) override;
 
   void Post(vkCreateDeviceCommand& command) override;

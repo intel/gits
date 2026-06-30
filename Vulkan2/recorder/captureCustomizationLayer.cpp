@@ -125,6 +125,27 @@ void CaptureCustomizationLayer::Pre(vkCreateXcbSurfaceKHRCommand& command) {
 }
 #endif
 
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+void CaptureCustomizationLayer::Pre(vkCreateWaylandSurfaceKHRCommand& command) {
+  CreateWindowMetaCommand createWindowMetaCommand(command.m_ThreadId);
+  createWindowMetaCommand.m_Key = m_Manager.CreateCommandKey();
+  createWindowMetaCommand.m_DisplayProtocol.Value =
+      CreateWindowMetaCommand::DisplayProtocol::WAYLAND;
+  createWindowMetaCommand.m_X.Value = 0;
+  createWindowMetaCommand.m_Y.Value = 0;
+  createWindowMetaCommand.m_Width.Value = 0;
+  createWindowMetaCommand.m_Height.Value = 0;
+  createWindowMetaCommand.m_Visible.Value = true;
+  createWindowMetaCommand.m_Hwnd.Value =
+      reinterpret_cast<uint64_t>(command.m_pCreateInfo.Value->display);
+  createWindowMetaCommand.m_Hinstance.Value =
+      reinterpret_cast<uint64_t>(command.m_pCreateInfo.Value->surface);
+
+  m_Recorder.Record(createWindowMetaCommand.m_Key,
+                    new CreateWindowMetaSerializer(createWindowMetaCommand));
+}
+#endif
+
 void CaptureCustomizationLayer::Post(vkCreateSwapchainKHRCommand& command) {
   if (command.m_Return.Value != VK_SUCCESS || !command.m_pCreateInfo.Value ||
       !command.m_pSwapchain.Value) {

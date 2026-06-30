@@ -70,6 +70,20 @@ void ReplayCustomizationLayer::Pre(vkCreateXcbSurfaceKHRCommand& command) {
 }
 #endif
 
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+void ReplayCustomizationLayer::Pre(vkCreateWaylandSurfaceKHRCommand& command) {
+  auto& windowService = m_Manager.GetWindowService();
+  uint64_t currentDisplay = windowService.GetCurrentWindowHandle(
+      reinterpret_cast<uint64_t>(command.m_pCreateInfo.Value->display));
+  uint64_t currentWindow = windowService.GetCurrentInstance(
+      reinterpret_cast<uint64_t>(command.m_pCreateInfo.Value->surface));
+  if (currentDisplay && currentWindow) {
+    command.m_pCreateInfo.Value->display = reinterpret_cast<wl_display*>(currentDisplay);
+    command.m_pCreateInfo.Value->surface = reinterpret_cast<wl_surface*>(currentWindow);
+  }
+}
+#endif
+
 void ReplayCustomizationLayer::Post(vkAllocateMemoryCommand& command) {
   m_Manager.GetMapTrackingService().StoreAllocationInfo(
       command.m_device.Key, command.m_pMemory.Key, command.m_pAllocateInfo.Value->allocationSize,

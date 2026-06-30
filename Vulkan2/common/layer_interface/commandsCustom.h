@@ -47,7 +47,8 @@ public:
   enum DisplayProtocol : uint32_t {
     WIN,
     XLIB,
-    XCB
+    XCB,
+    WAYLAND
   };
 
   CreateWindowMetaCommand(uint32_t threadId)

@@ -79,4 +79,50 @@ target_link_libraries(Vulkan_player_2 PRIVATE
   Vulkan_utils
 )
 
+if(UNIX)
+  find_program(WAYLAND_SCANNER wayland-scanner)
+  if(NOT WAYLAND_SCANNER)
+    message(FATAL_ERROR "wayland-scanner not found")
+  endif()
+
+  find_path(WAYLAND_PROTOCOLS_DIR
+    NAMES stable/xdg-shell/xdg-shell.xml
+    PATHS
+      /usr/share/wayland-protocols
+      /usr/local/share/wayland-protocols
+  )
+  if(NOT WAYLAND_PROTOCOLS_DIR)
+    message(FATAL_ERROR "wayland-protocols not found")
+  endif()
+
+  set(XDG_SHELL_XML ${WAYLAND_PROTOCOLS_DIR}/stable/xdg-shell/xdg-shell.xml)
+  set(XDG_SHELL_HEADER ${CMAKE_CURRENT_BINARY_DIR}/xdg-shell-client-protocol.h)
+  set(XDG_SHELL_SOURCE ${CMAKE_CURRENT_BINARY_DIR}/xdg-shell-protocol.c)
+
+  add_custom_target(generate_xdg_shell_protocol
+    COMMAND ${WAYLAND_SCANNER} client-header ${XDG_SHELL_XML} ${XDG_SHELL_HEADER}
+    COMMAND ${WAYLAND_SCANNER} private-code ${XDG_SHELL_XML} ${XDG_SHELL_SOURCE}
+    BYPRODUCTS
+      ${XDG_SHELL_HEADER}
+      ${XDG_SHELL_SOURCE}
+    COMMENT "Generating xdg-shell protocol files"
+  )
+
+  target_sources(Vulkan_player_2 PRIVATE
+    ${XDG_SHELL_SOURCE}
+    ${XDG_SHELL_HEADER}
+  )
+
+  target_include_directories(Vulkan_player_2 PRIVATE
+    ${CMAKE_CURRENT_BINARY_DIR}
+  )
+
+  add_dependencies(Vulkan_codegen_2 generate_xdg_shell_protocol)
+  add_dependencies(Vulkan_player_2 generate_xdg_shell_protocol)
+
+  target_link_libraries(Vulkan_player_2 PRIVATE
+    wayland-client
+  )
+endif()
+
 set_target_properties(Vulkan_player_2 PROPERTIES FOLDER Vulkan2)

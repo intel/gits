@@ -35,6 +35,8 @@ private:
       int32_t x, int32_t y, int32_t width, int32_t height, bool visible);
   std::pair<uint64_t, uint64_t> CreateXcbWindow(
       int32_t x, int32_t y, int32_t width, int32_t height, bool visible);
+  std::pair<uint64_t, uint64_t> CreateWaylandWindow(
+      int32_t x, int32_t y, int32_t width, int32_t height, bool visible);
 #endif
 
   struct WindowState {
