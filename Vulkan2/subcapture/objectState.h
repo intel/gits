@@ -204,12 +204,32 @@ struct ShaderModuleState : ObjectState {};
 // ---- Descriptors -------------------------------------------------------
 
 struct DescriptorSetLayoutState : ObjectState {};
-struct DescriptorPoolState : ObjectState {};
+
+struct DescriptorPoolState : ObjectState {
+  // High-water mark of simultaneously-live descriptor sets allocated from this
+  // pool over the whole observed stream.  Used at state-restore time to size the
+  // re-created pool from actual demand: a heavily-churned pool gets proportional
+  // fragmentation headroom while a lightly-used (possibly huge) pool gets almost
+  // none, which a flat multiplier cannot express -- too small starves the busy
+  // pools, too large wastes driver memory on the big ones.
+  uint32_t liveSets{0};
+  uint32_t peakLiveSets{0};
+};
+
 struct DescriptorUpdateTemplateState : ObjectState {};
 
 struct DescriptorSetState : ObjectState {
   // Needed for dependency-order restore: pool must exist before allocating sets.
   uint64_t poolKey{};
+  // The single VkDescriptorSetLayout this set was allocated with.  Cached so the
+  // batched restore path can build one vkAllocateDescriptorSets for many sets of
+  // the same pool without re-decoding each set's stored allocation blob.
+  uint64_t layoutKey{};
+  // True when the original vkAllocateDescriptorSets carried a pNext chain (e.g.
+  // VkDescriptorSetVariableDescriptorCountAllocateInfo).  Such sets carry
+  // per-set pNext arrays that cannot be merged into a single batched call, so
+  // they are restored one at a time from their stored blob (mirrors legacy).
+  bool hasAllocPNext{false};
 };
 
 // ---- Sampler -----------------------------------------------------------

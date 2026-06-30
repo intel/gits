@@ -16,7 +16,9 @@
 #include "commandsCustom.h"
 #include "log.h"
 
+#include <algorithm>
 #include <cstring>
+#include <limits>
 #include <memory>
 #include <unordered_map>
 
@@ -100,6 +102,7 @@ void StateTrackingService::RestoreState() {
   LOG_INFO << "Vulkan2 subcapture: emitting state restore (" << m_States.size() << " objects)";
 
   m_RestoredThisPass.clear();
+  m_DescriptorSetsAllocated.clear();
   m_CommandBuffersRecordingReplaySkipped.clear();
   m_TransientlyRestored.clear();
 
@@ -1024,33 +1027,44 @@ bool StateTrackingService::EmitCreationCommand(ObjectState* state) {
   case CommandId::ID_VKCREATEDESCRIPTORUPDATETEMPLATEKHR:
     EMIT_DECODED(vkCreateDescriptorUpdateTemplateKHR)
   case CommandId::ID_VKCREATEDESCRIPTORPOOL: {
-    // Inflate maxSets and per-type pool sizes when re-creating the pool during
-    // state restore.  The original capture may have allocated and freed
-    // descriptor sets in a churn pattern that left the pool well below
-    // capacity at the cut.  At restore time we only re-allocate the sets that
-    // are currently alive, so the freshly created pool starts compact -- if
-    // it then matches the original maxSets exactly, the very first
-    // recording-range vkAllocateDescriptorSets can return
-    // VK_ERROR_OUT_OF_POOL_MEMORY when the original peak was reached again.
-    // The player would then crash on the next vkUpdateDescriptorSets /
-    // vkCmdBindDescriptorSets because the never-allocated set's GITSKey is
-    // missing from HandleMap.  The 4x headroom is cheap in driver memory and
-    // tolerates any reasonable churn between the restore snapshot and
-    // recording-range allocations; revisit if a real workload exceeds it.
+    // Size the re-created pool from the observed peak demand, not a flat
+    // multiplier.  The batched restore allocation (AllocateDescriptorSetBatchForPool)
+    // packs the surviving sets coherently, but that alone is not enough for
+    // heavily-churned FREE_DESCRIPTOR_SET pools: the seam between the restored
+    // survivors and the recording-range alloc/free history still fragments the
+    // driver's free list, so a later vkAllocateDescriptorSets can return
+    // OUT_OF_POOL_MEMORY below maxSets.  The needed headroom scales with how hard
+    // the pool is used (peakLiveSets), which a flat percentage cannot express --
+    // a small flat value starves busy pools, a large one bloats idle huge pools.
+    // Formula: ~2x the peak simultaneously-live set count, never below the app's
+    // own maxSets, capped at max(4x original, original + 256) so an idle huge
+    // pool stays near original and a busy one cannot push vkCreateDescriptorPool
+    // into OUT_OF_DEVICE_MEMORY.  (Core Vulkan defines no explicit device limit on
+    // pool maxSets / sizes, so the cap is a bounded-growth + uint32 overflow guard.)
     vkCreateDescriptorPoolCommand cmd;
     Decode(buf, cmd);
     if (cmd.m_pCreateInfo.Value) {
       auto* createInfo = const_cast<VkDescriptorPoolCreateInfo*>(cmd.m_pCreateInfo.Value);
-      constexpr uint32_t kHeadroomMultiplier = 4;
-      const uint32_t newMaxSets = createInfo->maxSets * kHeadroomMultiplier;
-      if (newMaxSets > createInfo->maxSets) {
+      const uint32_t originalMaxSets = createInfo->maxSets;
+      if (originalMaxSets > 0) {
+        const uint32_t peak = static_cast<const DescriptorPoolState*>(state)->peakLiveSets;
+        uint64_t want = static_cast<uint64_t>(peak) + std::max<uint64_t>(peak, 64);
+        want = std::max<uint64_t>(want, originalMaxSets);
+        uint64_t ceiling = std::max<uint64_t>(static_cast<uint64_t>(originalMaxSets) * 4,
+                                              static_cast<uint64_t>(originalMaxSets) + 256);
+        ceiling = std::min<uint64_t>(ceiling, std::numeric_limits<uint32_t>::max());
+        const uint32_t newMaxSets = static_cast<uint32_t>(std::min(want, ceiling));
         createInfo->maxSets = newMaxSets;
-      }
-      auto* sizes = const_cast<VkDescriptorPoolSize*>(createInfo->pPoolSizes);
-      for (uint32_t i = 0; i < createInfo->poolSizeCount && sizes; ++i) {
-        const uint32_t newCount = sizes[i].descriptorCount * kHeadroomMultiplier;
-        if (newCount > sizes[i].descriptorCount) {
-          sizes[i].descriptorCount = newCount;
+
+        // Scale per-type pool sizes by the same ratio so per-set descriptor
+        // density is preserved (round up, clamp to uint32).
+        auto* sizes = const_cast<VkDescriptorPoolSize*>(createInfo->pPoolSizes);
+        for (uint32_t i = 0; i < createInfo->poolSizeCount && sizes; ++i) {
+          const uint64_t scaled =
+              (static_cast<uint64_t>(sizes[i].descriptorCount) * newMaxSets + originalMaxSets - 1) /
+              originalMaxSets;
+          sizes[i].descriptorCount = static_cast<uint32_t>(
+              std::min<uint64_t>(scaled, std::numeric_limits<uint32_t>::max()));
         }
       }
     }
@@ -1506,17 +1520,110 @@ bool StateTrackingService::RestoreDescriptorSets(ObjectState* state) {
     }
   }
 
-  if (!EmitCreationCommand(state)) {
-    LOG_WARNING << "Vulkan2 subcapture: skipping descriptor set key=" << ds->key
-                << " because EmitCreationCommand failed (likely a missing dependency such as "
-                   "VkDescriptorSetLayout key="
-                << (ds->dependencyKeys.empty() ? 0 : ds->dependencyKeys.front()) << ")";
-    return false;
+  // Allocation step (emitted once per set).  pNext-free sets are allocated in a
+  // single batched vkAllocateDescriptorSets per pool; sets that carried a pNext
+  // chain are allocated individually from their stored single-set blob.
+  if (!m_DescriptorSetsAllocated.count(ds->key)) {
+    if (ds->hasAllocPNext || ds->poolKey == 0) {
+      if (!EmitCreationCommand(state)) {
+        LOG_WARNING << "Vulkan2 subcapture: skipping descriptor set key=" << ds->key
+                    << " because EmitCreationCommand failed (likely a missing dependency such as "
+                       "VkDescriptorSetLayout key="
+                    << (ds->dependencyKeys.empty() ? 0 : ds->dependencyKeys.front()) << ")";
+        return false;
+      }
+      m_DescriptorSetsAllocated.insert(ds->key);
+    } else {
+      AllocateDescriptorSetBatchForPool(ds->poolKey);
+      if (!m_DescriptorSetsAllocated.count(ds->key)) {
+        LOG_WARNING << "Vulkan2 subcapture: skipping descriptor set key=" << ds->key
+                    << " because its batched allocation failed (likely a missing "
+                       "VkDescriptorSetLayout key="
+                    << ds->layoutKey << ")";
+        return false;
+      }
+    }
   }
+
   // Re-emit all tracked descriptor writes / copies / template updates for
-  // this set so the second player ends up with the same binding state.
+  // this set so the second player ends up with the same binding state.  Done
+  // per set in normal object order so the writes appear after the buffers /
+  // images they reference have been re-created in the restore stream.
   m_DescriptorSetUpdateService.RestoreUpdates(ds->key, m_Recorder, *this);
   return true;
+}
+
+void StateTrackingService::AllocateDescriptorSetBatchForPool(uint64_t poolKey) {
+  ObjectState* poolState = GetState(poolKey);
+  if (!poolState) {
+    return;
+  }
+  const uint64_t deviceKey = poolState->parentKey;
+
+  // Collect every live, pNext-free, not-yet-allocated set of this pool whose
+  // layout can be restored.  Sets whose layout is gone are skipped (left out of
+  // m_DescriptorSetsAllocated so the caller reports the failure for that set).
+  std::vector<uint64_t> setKeys;
+  std::vector<uint64_t> layoutKeys;
+  for (auto& [_, statePtr] : m_States) {
+    ObjectState* s = statePtr.get();
+    if (s->destroyed || s->creationCommandId != CommandId::ID_VKALLOCATEDESCRIPTORSETS) {
+      continue;
+    }
+    auto* ds = static_cast<DescriptorSetState*>(s);
+    if (ds->poolKey != poolKey || ds->hasAllocPNext) {
+      continue;
+    }
+    if (m_DescriptorSetsAllocated.count(ds->key) || ds->creationCommandBuffer.empty()) {
+      continue;
+    }
+    if (ds->layoutKey) {
+      RestoreOne(GetState(ds->layoutKey));
+      if (!m_RestoredThisPass.count(ds->layoutKey)) {
+        LOG_WARNING << "Vulkan2 subcapture: omitting descriptor set key=" << ds->key
+                    << " from batch because VkDescriptorSetLayout key=" << ds->layoutKey
+                    << " could not be restored";
+        continue;
+      }
+    }
+    setKeys.push_back(ds->key);
+    layoutKeys.push_back(ds->layoutKey);
+  }
+  if (setKeys.empty()) {
+    return;
+  }
+
+  // Build one vkAllocateDescriptorSets for the whole group.  Handle resolution
+  // is driven entirely by HandleKeys ([0]=pool, [1+i]=pSetLayouts[i]) and the
+  // output Keys; the Value handles are placeholders overwritten by the player.
+  const uint32_t count = static_cast<uint32_t>(setKeys.size());
+  std::vector<VkDescriptorSetLayout> layouts(count, VK_NULL_HANDLE);
+  std::vector<VkDescriptorSet> outSets(count, VK_NULL_HANDLE);
+
+  VkDescriptorSetAllocateInfo allocInfo{};
+  allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+  allocInfo.pNext = nullptr;
+  allocInfo.descriptorPool = VK_NULL_HANDLE; // remapped from HandleKeys[0]
+  allocInfo.descriptorSetCount = count;
+  allocInfo.pSetLayouts = layouts.data();
+
+  vkAllocateDescriptorSetsCommand cmd;
+  cmd.m_device.Key = deviceKey;
+  cmd.m_pAllocateInfo.Value = &allocInfo;
+  cmd.m_pAllocateInfo.HandleKeys.reserve(count + 1);
+  cmd.m_pAllocateInfo.HandleKeys.push_back(poolKey);
+  for (uint64_t layoutKey : layoutKeys) {
+    cmd.m_pAllocateInfo.HandleKeys.push_back(layoutKey);
+  }
+  cmd.m_pDescriptorSets.Value = outSets.data();
+  cmd.m_pDescriptorSets.Size = count;
+  cmd.m_pDescriptorSets.Keys = setKeys;
+  cmd.m_Return.Value = VK_SUCCESS;
+  m_Recorder.Record(vkAllocateDescriptorSetsSerializer(cmd));
+
+  for (uint64_t setKey : setKeys) {
+    m_DescriptorSetsAllocated.insert(setKey);
+  }
 }
 
 StateTrackingService::CommandBufferRestoreOutcome StateTrackingService::RestoreCommandBuffers(

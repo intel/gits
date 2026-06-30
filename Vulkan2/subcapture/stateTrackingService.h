@@ -184,6 +184,12 @@ private:
   void RestoreSurface(ObjectState* state);
   void RestoreSwapchain(ObjectState* state);
   bool RestoreDescriptorSets(ObjectState* state);
+  // Emit a single vkAllocateDescriptorSets that allocates every live, pNext-free
+  // descriptor set of the given pool that has not yet been allocated this pass.
+  // Batching reproduces the application's own packing far better than 1877
+  // single-set calls, which is what actually defeats the descriptor-pool
+  // fragmentation that caused recording-range VK_ERROR_OUT_OF_POOL_MEMORY.
+  void AllocateDescriptorSetBatchForPool(uint64_t poolKey);
   // Lazily synthesize one vkEnumeratePhysicalDevices for the parent instance
   // of `state`, covering every live PhysicalDeviceState that shares that
   // parent.  Marks all sibling PD keys as restored so subsequent RestoreOne
@@ -220,6 +226,12 @@ private:
   // registered).  Inserted only after successful creation so dependents can
   // rely on the presence of a key here as proof the object actually exists.
   std::unordered_set<uint64_t> m_RestoredThisPass;
+  // Descriptor set keys whose vkAllocateDescriptorSets has already been emitted
+  // this pass (via the per-pool batch or, for pNext sets, individually).  Kept
+  // separate from m_RestoredThisPass because a set is "allocated" before its
+  // descriptor writes are restored, and the writes must still be emitted in the
+  // normal object order (after the buffers/images they reference are created).
+  std::unordered_set<uint64_t> m_DescriptorSetsAllocated;
   // VkCommandBuffer keys where allocation was replayed but recorded commands were
   // skipped.  Primaries that call vkCmdExecuteCommands must not replay their own
   // recording when a secondary is in this set (transitive failure propagation).

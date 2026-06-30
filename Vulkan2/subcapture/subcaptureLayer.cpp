@@ -967,6 +967,11 @@ void SubcaptureLayer::RemoveDescriptorSetsByPool(uint64_t poolKey) {
     m_StateTracking.RemoveState(setKey);
     m_StateTracking.GetDescriptorSetUpdateService().RemoveDescriptorSet(setKey);
   }
+  // vkResetDescriptorPool frees every set at once; the pool itself stays alive,
+  // so zero the live count but keep peakLiveSets (the all-time high-water mark).
+  if (auto* poolState = m_StateTracking.GetState<DescriptorPoolState>(poolKey)) {
+    poolState->liveSets = 0;
+  }
 }
 
 void SubcaptureLayer::Post(vkDestroyDescriptorPoolCommand& command) {
@@ -985,6 +990,20 @@ void SubcaptureLayer::Post(vkAllocateDescriptorSetsCommand& command) {
 
   const uint64_t poolKey =
       command.m_pAllocateInfo.HandleKeys.empty() ? 0 : command.m_pAllocateInfo.HandleKeys[0];
+
+  // Sets allocated with a pNext chain (e.g. variable descriptor counts) cannot
+  // be merged into a single batched restore allocation; flag them so state
+  // restore allocates them individually.
+  const bool allocHasPNext = command.m_pAllocateInfo.Value->pNext != nullptr;
+
+  // Track per-pool live/peak set counts so state restore can size the re-created
+  // pool from observed demand rather than a blind multiplier.
+  if (auto* poolState = m_StateTracking.GetState<DescriptorPoolState>(poolKey)) {
+    poolState->liveSets += command.m_pDescriptorSets.Size;
+    if (poolState->liveSets > poolState->peakLiveSets) {
+      poolState->peakLiveSets = poolState->liveSets;
+    }
+  }
 
   // Build a single-set VkDescriptorSetAllocateInfo so each stored set state
   // carries an allocation command sized for ONE descriptor set.  Storing the
@@ -1015,6 +1034,8 @@ void SubcaptureLayer::Post(vkAllocateDescriptorSetsCommand& command) {
         state->dependencyKeys.push_back(layoutKey);
       }
     }
+    state->layoutKey = layoutKey;
+    state->hasAllocPNext = allocHasPNext;
 
     // Synthetic single-set allocation command for this set only.  pSetLayouts
     // points into the original array slot; Encode reads pSetLayouts[0..count)
@@ -1044,6 +1065,12 @@ void SubcaptureLayer::Post(vkFreeDescriptorSetsCommand& command) {
   // referencing the same key would silently misbehave.
   if (command.m_Return.Value != VK_SUCCESS) {
     return;
+  }
+  if (auto* poolState =
+          m_StateTracking.GetState<DescriptorPoolState>(command.m_descriptorPool.Key)) {
+    poolState->liveSets = (command.m_descriptorSetCount.Value <= poolState->liveSets)
+                              ? poolState->liveSets - command.m_descriptorSetCount.Value
+                              : 0;
   }
   for (uint32_t i = 0; i < command.m_descriptorSetCount.Value; ++i) {
     const uint64_t setKey = command.m_pDescriptorSets.Keys[i];
