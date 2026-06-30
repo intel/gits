@@ -450,7 +450,9 @@ def postprocess(commands, structures, unions, handles, enums, bitmasks, flags, e
     structures[:] = [s for s in structures if s.name not in excluded_names]
     unions[:] = [u for u in unions if u.name not in excluded_names]
     handles[:] = [h for h in handles if h.name not in excluded_names]
-    flags[:] = [f for f in flags if f.name not in excluded_names]
+    flags[:] = [f for f in flags if f.name not in excluded_names and f.bitmask_name not in excluded_names]
+    bitmasks[:] = [b for b in bitmasks if b.name not in excluded_names and b.flag_name not in excluded_names]
+    enums[:] = [e for e in enums if e.name not in excluded_names]
 
     for enum in enums:
         enum.values = {k: v for k, v in enum.values.items() if k not in excluded_names}
