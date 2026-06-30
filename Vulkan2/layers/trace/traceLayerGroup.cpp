@@ -6,7 +6,7 @@
 //
 // ===================== end_copyright_notice ==============================
 
-#include "TraceLayerGroup.h"
+#include "traceLayerGroup.h"
 #include "traceLayerAuto.h"
 #include "configurator.h"
 #include "streamHeader.h"
