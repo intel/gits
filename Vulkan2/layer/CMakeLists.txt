@@ -44,9 +44,9 @@ set_target_properties(Vulkan_layer_2 PROPERTIES OUTPUT_NAME VkLayer_vulkan_GITS_
 set_target_properties(Vulkan_layer_2 PROPERTIES FOLDER Vulkan2)
 
 if(MSVC)
-  install(FILES $<TARGET_PDB_FILE:Vulkan_layer_2> DESTINATION Recorder/VulkanLayer2 OPTIONAL)
+  install(FILES $<TARGET_PDB_FILE:Vulkan_layer_2> DESTINATION Recorder/${VulkanLayer2_INSTALL_SUBDIR} OPTIONAL)
 endif()
-install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/gits_recorder.json DESTINATION Recorder/VulkanLayer2)
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/gits_recorder.json DESTINATION Recorder/${VulkanLayer2_INSTALL_SUBDIR})
 install(TARGETS Vulkan_layer_2
-  RUNTIME DESTINATION Recorder/VulkanLayer2
-  LIBRARY DESTINATION Recorder/VulkanLayer2)
+  RUNTIME DESTINATION Recorder/${VulkanLayer2_INSTALL_SUBDIR}
+  LIBRARY DESTINATION Recorder/${VulkanLayer2_INSTALL_SUBDIR})

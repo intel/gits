@@ -56,9 +56,9 @@ endif()
 set_target_properties(Vulkan_interceptor_2 PROPERTIES FOLDER Vulkan2)
 
 if(MSVC)
-  install(FILES $<TARGET_PDB_FILE:Vulkan_interceptor_2> DESTINATION Recorder/FilesToCopyVulkan2 OPTIONAL)
+  install(FILES $<TARGET_PDB_FILE:Vulkan_interceptor_2> DESTINATION Recorder/${Vulkan2_INSTALL_SUBDIR} OPTIONAL)
 endif()
 
 install(TARGETS Vulkan_interceptor_2
-  RUNTIME DESTINATION Recorder/FilesToCopyVulkan2
-  LIBRARY DESTINATION Recorder/FilesToCopyVulkan2)
+  RUNTIME DESTINATION Recorder/${Vulkan2_INSTALL_SUBDIR}
+  LIBRARY DESTINATION Recorder/${Vulkan2_INSTALL_SUBDIR})

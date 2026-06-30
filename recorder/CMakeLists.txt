@@ -154,7 +154,7 @@ if(UNIX)
     ln -sf libGitsGLCapture.so libGL.so.1
     cd ../${Vulkan_INSTALL_SUBDIR}/
     ln -sf libVulkan.so libvulkan.so.1
-	cd ../FilesToCopyVulkan2/
+    cd ../${Vulkan2_INSTALL_SUBDIR}/
     ln -sf libVulkan.so libvulkan.so.1
   \")")
 endif()

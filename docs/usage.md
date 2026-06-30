@@ -26,6 +26,8 @@ The **Recorder** is split into multiple folders depending on the API you wish to
 | :simple-opengl: OpenCL         | `FilesToCopyOCL`     | `OpenCL`      |
 | :simple-vulkan: Vulkan         | `FilesToCopyVulkan`  | `Vulkan`      |
 | :simple-vulkan: Vulkan Layer   | `VulkanLayer`        | `VulkanLayer` |
+| :simple-vulkan: Vulkan 2       | `FilesToCopyVulkan2` | `Vulkan2`     |
+| :simple-vulkan: Vulkan 2 Layer | `VulkanLayer2`       | `VulkanLayer2` |
 
 # Record
 
