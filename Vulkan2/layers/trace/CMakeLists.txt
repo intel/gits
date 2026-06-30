@@ -27,6 +27,8 @@ set(TRACE_SRC
   ${SRC_DIR}/printStructuresCustom.cpp
   ${SRC_DIR}/printStructuresAuto.h
   ${SRC_DIR}/printStructuresAuto.cpp
+  ${SRC_DIR}/printPnextAuto.h
+  ${SRC_DIR}/printPnextAuto.cpp
   ${SRC_DIR}/traceLayerCustom.cpp
   ${SRC_DIR}/traceLayerAuto.h
   ${SRC_DIR}/traceLayerAuto.cpp

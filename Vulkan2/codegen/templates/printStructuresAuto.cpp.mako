@@ -8,6 +8,7 @@
 ${header}
 
 #include "printStructuresAuto.h"
+#include "printPnextAuto.h"
 #include "printBitmasksAuto.h"
 #include "printEnumsAuto.h"
 #include "printCustom.h"

@@ -72,8 +72,10 @@ def print_members(name, members, bitmasks):
         memberVal = f'value.{member.name}'
         
         bitmask = bitmasks_dict.get(member.base_type)
-        
-        if bitmask is not None:
+
+        if member.name == 'pNext' and member.is_void and member.is_pointer:
+            str += f'  PrintPNext(stream, value.pNext){separator};\n'
+        elif bitmask is not None:
             str += f'  Print{bitmask.flag_name}(stream, value.{member.name}){separator};\n'
         elif member.base_type == 'char' and member.is_pointer:
             str += f'  PrintString(stream, value.{member.name}){separator};\n'
@@ -134,7 +136,9 @@ def generate_trace_files(context, out_path):
       'printUnionsAuto.h',
       'printUnionsAuto.cpp',
       'printStructuresAuto.h',
-      'printStructuresAuto.cpp'
+      'printStructuresAuto.cpp',
+      'printPnextAuto.h',
+      'printPnextAuto.cpp'
     ]
     for file_name in files_to_generate:
         generate_file(context | additional_context, file_name, out_path)
