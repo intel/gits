@@ -25,7 +25,9 @@ StatisticsService::StatisticsService(const StatisticsConfig& cfg, gits::MessageB
   }
 }
 
-StatisticsService::~StatisticsService() {}
+StatisticsService::~StatisticsService() {
+  m_MsgBus.unsubscribe(m_SubscriptionId);
+}
 
 void StatisticsService::StateRestoreBegin() {
   m_StateRestore = true;

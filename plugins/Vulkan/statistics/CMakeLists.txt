@@ -41,13 +41,22 @@ PRIVATE
   ${PLUGINS_DIR}
 )
 
+# Link only the layer interface (plus yaml-cpp for config parsing).  The heavy
+# GITS core libraries (common, configuration, log) arrive transitively through
+# Vulkan_layer_interface (-> configuration -> common), so linking them directly
+# here is redundant and only duplicates that runtime inside the plugin DLL.
+# This mirrors the DirectX statistics plugin, which links a single thin target.
 target_link_libraries(Vulkan_statistics PRIVATE
   Vulkan_layer_interface
   yamlcpp
-  configuration
-  common
-  log
 )
+
+# The statisticsLayerAuto.{h,cpp} sources are produced by the central Vulkan2
+# code generator (which also regenerates them against the current headers).
+# Depend on it so building this plugin on a clean tree generates the sources
+# first, matching how the other Vulkan2 targets (e.g. Vulkan_subcapture_2,
+# Vulkan_layer_interface) consume generated code.
+add_dependencies(Vulkan_statistics Vulkan_codegen_2)
 
 set_target_properties(Vulkan_statistics PROPERTIES FOLDER Plugins/Vulkan)
 
