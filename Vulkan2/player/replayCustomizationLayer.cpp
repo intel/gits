@@ -373,38 +373,107 @@ void ReplayCustomizationLayer::Post(vkWaitSemaphoresKHRCommand& command) {
 }
 
 // vkCreateDebugUtilsMessengerEXT / vkCreateDebugReportCallbackEXT
-// The pCreateInfo contains a captured pfnUserCallback/pfnCallback pointing into
-// the original application's address space. Replace the callback pointer with a
-// no-op stub before replay so the driver call succeeds without invoking invalid memory.
+//
+// The captured pCreateInfo holds a pfnUserCallback/pfnCallback pointing into the
+// recording process' address space (for some apps, JIT-compiled code). Replayed
+// verbatim, the loader/driver would jump to a now-invalid address and crash.
+// Replace it with a GITS-owned callback that forwards the message to the GITS
+// log (mirroring gfxreconstruct): the messenger stays functional so driver/layer
+// diagnostics are still surfaced during replay, but always points at valid,
+// replay-process code. pUserData is intentionally left untouched and unused --
+// the callback logs through the global GITS logger, so the captured (now
+// meaningless) pUserData value is never dereferenced.
 
 VKAPI_ATTR VkBool32 VKAPI_CALL
-debugUtilsMessengerNoOpCallback(VkDebugUtilsMessageSeverityFlagBitsEXT /*messageSeverity*/,
-                                VkDebugUtilsMessageTypeFlagsEXT /*messageType*/,
-                                const VkDebugUtilsMessengerCallbackDataEXT* /*pCallbackData*/,
-                                void* /*pUserData*/) {
+debugUtilsMessengerLogCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+                               VkDebugUtilsMessageTypeFlagsEXT /*messageType*/,
+                               const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
+                               void* /*pUserData*/) {
+  const char* message = (pCallbackData && pCallbackData->pMessage) ? pCallbackData->pMessage : "";
+  if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
+    LOG_ERROR << "Vulkan debug messenger: " << message;
+  } else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
+    LOG_WARNING << "Vulkan debug messenger: " << message;
+  } else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT) {
+    LOG_INFO << "Vulkan debug messenger: " << message;
+  } else {
+    LOG_TRACE << "Vulkan debug messenger: " << message;
+  }
   return VK_FALSE;
 }
 
 void ReplayCustomizationLayer::Pre(vkCreateDebugUtilsMessengerEXTCommand& command) {
   if (command.m_pCreateInfo.Value) {
-    command.m_pCreateInfo.Value->pfnUserCallback = debugUtilsMessengerNoOpCallback;
+    command.m_pCreateInfo.Value->pfnUserCallback = debugUtilsMessengerLogCallback;
   }
 }
 
-VKAPI_ATTR VkBool32 VKAPI_CALL debugReportNoOpCallback(VkDebugReportFlagsEXT /*flags*/,
-                                                       VkDebugReportObjectTypeEXT /*objectType*/,
-                                                       uint64_t /*object*/,
-                                                       size_t /*location*/,
-                                                       int32_t /*messageCode*/,
-                                                       const char* /*pLayerPrefix*/,
-                                                       const char* /*pMessage*/,
-                                                       void* /*pUserData*/) {
+VKAPI_ATTR VkBool32 VKAPI_CALL debugReportLogCallback(VkDebugReportFlagsEXT flags,
+                                                      VkDebugReportObjectTypeEXT /*objectType*/,
+                                                      uint64_t /*object*/,
+                                                      size_t /*location*/,
+                                                      int32_t /*messageCode*/,
+                                                      const char* pLayerPrefix,
+                                                      const char* pMessage,
+                                                      void* /*pUserData*/) {
+  const char* prefix = pLayerPrefix ? pLayerPrefix : "";
+  const char* message = pMessage ? pMessage : "";
+  if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT) {
+    LOG_ERROR << "Vulkan debug report [" << prefix << "]: " << message;
+  } else if (flags &
+             (VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT)) {
+    LOG_WARNING << "Vulkan debug report [" << prefix << "]: " << message;
+  } else if (flags & VK_DEBUG_REPORT_INFORMATION_BIT_EXT) {
+    LOG_INFO << "Vulkan debug report [" << prefix << "]: " << message;
+  } else {
+    LOG_TRACE << "Vulkan debug report [" << prefix << "]: " << message;
+  }
   return VK_FALSE;
 }
 
 void ReplayCustomizationLayer::Pre(vkCreateDebugReportCallbackEXTCommand& command) {
   if (command.m_pCreateInfo.Value) {
-    command.m_pCreateInfo.Value->pfnCallback = debugReportNoOpCallback;
+    command.m_pCreateInfo.Value->pfnCallback = debugReportLogCallback;
+  }
+}
+
+// An application may embed a VkDebugUtilsMessengerCreateInfoEXT (or the older
+// VkDebugReportCallbackCreateInfoEXT) directly in the VkInstanceCreateInfo
+// pNext chain so the driver emits diagnostics during vkCreateInstance /
+// vkDestroyInstance themselves, before any standalone messenger exists. Its
+// pfnUserCallback/pfnCallback is a raw pointer into the recording process'
+// address space (for some apps, JIT-compiled code), captured verbatim. Replayed
+// as-is, the loader walks the chain during vkCreateInstance and jumps to a now-
+// invalid address, crashing with an execute access violation. The standalone
+// vkCreateDebugUtilsMessengerEXT / vkCreateDebugReportCallbackEXT paths are
+// already redirected above; do the same for every messenger / report struct in
+// the pNext chain (an app may chain more than one) by pointing each callback at
+// the GITS logging stub.  This only ever rewrites callbacks the app already set
+// up -- nothing is installed when the app used no debug messenger, so it is a
+// no-op for the common case and adds no per-call overhead (it runs once, at
+// instance creation).
+static void RedirectDebugCallbacksInPNext(const void* pNext) {
+  auto* node = static_cast<VkBaseOutStructure*>(const_cast<void*>(pNext));
+  while (node) {
+    switch (node->sType) {
+    case VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT:
+      reinterpret_cast<VkDebugUtilsMessengerCreateInfoEXT*>(node)->pfnUserCallback =
+          debugUtilsMessengerLogCallback;
+      break;
+    case VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT:
+      reinterpret_cast<VkDebugReportCallbackCreateInfoEXT*>(node)->pfnCallback =
+          debugReportLogCallback;
+      break;
+    default:
+      break;
+    }
+    node = node->pNext;
+  }
+}
+
+void ReplayCustomizationLayer::Pre(vkCreateInstanceCommand& command) {
+  if (command.m_pCreateInfo.Value) {
+    RedirectDebugCallbacksInPNext(command.m_pCreateInfo.Value->pNext);
   }
 }
 

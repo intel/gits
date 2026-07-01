@@ -20,6 +20,7 @@ public:
   ReplayCustomizationLayer(PlayerManager& manager)
       : Layer("ReplayCustomization"), m_Manager(manager) {}
 
+  void Pre(vkCreateInstanceCommand& command) override;
   void Post(vkCreateInstanceCommand& command) override;
   void Post(vkCreateDeviceCommand& command) override;
   void Post(vkGetDeviceQueueCommand& command) override;
