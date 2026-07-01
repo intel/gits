@@ -185,15 +185,15 @@ StreamHeader::Api StreamHeader::TranslateApi(ApiId id) {
     return Api::API_OPENGL;
   case ApiId::ID_OPENCL:
     return Api::API_OPENCL;
-  case ApiId::ID_VULKAN:
-    return Api::API_VULKAN;
+  case ApiId::ID_VULKAN_LEGACY:
+    return Api::API_VULKAN_LEGACY;
   case ApiId::ID_LEVELZERO:
   case ApiId::ID_OCLOC:
     return Api::API_LEVELZERO;
   case ApiId::ID_DIRECTX:
     return Api::API_DIRECTX;
-  case ApiId::ID_VULKAN2:
-    return Api::API_VULKAN2;
+  case ApiId::ID_VULKAN:
+    return Api::API_VULKAN;
   default:
     return Api::API_NOT_SET;
   }

@@ -48,11 +48,11 @@ public:
   enum TId {
     ID_OPENGL, /**< @brief identifier of OpenGL library */
     ID_OPENCL, /**< @brief identifier of OpenCL library */
-    ID_VULKAN,
+    ID_VULKAN_LEGACY,
     ID_LEVELZERO,
     ID_OCLOC,
     ID_DirectX,
-    ID_VULKAN2,
+    ID_VULKAN,
     ID_NUM
   };
 

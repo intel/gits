@@ -6,59 +6,38 @@
 #
 # ===================== end_copyright_notice ==============================
 
-set(Vulkan_SCRIPTS_DIR "${CMAKE_SOURCE_DIR}/Vulkan/codegen")
+set(VK_XML_PATH ${CMAKE_SOURCE_DIR}/third_party/Vulkan-Headers/registry/vk.xml)
+set(VULKAN_DIR ${CMAKE_SOURCE_DIR}/Vulkan)
 
-add_custom_command(
-  OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/Vulkan_codegen.stamp"
-  COMMAND ${Python3_EXECUTABLE} "${Vulkan_SCRIPTS_DIR}/generate_vk.py"
-  COMMAND ${CMAKE_COMMAND} -E touch "${CMAKE_CURRENT_BINARY_DIR}/Vulkan_codegen.stamp"
-  WORKING_DIRECTORY "${Vulkan_SCRIPTS_DIR}"
-  DEPENDS
-    "${Vulkan_SCRIPTS_DIR}/generate_vk.py"
-    "${Vulkan_SCRIPTS_DIR}/generator_vulkan.py"
-)
-add_custom_target(Vulkan_codegen DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/Vulkan_codegen.stamp")
-set_target_properties(Vulkan_codegen PROPERTIES FOLDER Vulkan)
+function(set_auto_generated_property)
+  # Parse function arguments
+  set(options "")
+  set(oneValueArgs "")
+  set(multiValueArgs FILE_LIST)
+  cmake_parse_arguments(PARSE_ARGV 0 ARG "${options}" "${oneValueArgs}" "${multiValueArgs}")
+  # Iterate over files
+  foreach(FILE IN LISTS ARG_FILE_LIST)
+    if(FILE MATCHES ".*Auto\\.h$" OR FILE MATCHES ".*Auto\\.cpp$")
+      set_source_files_properties(${FILE} PROPERTIES GENERATED 1)
+    endif()
+  endforeach()
+endfunction()
 
-# GENERATED property is set in CMakeLists.txt in each directory, but this
-# staying here doesn't do any harm
-set_source_files_properties(
-  ${CMAKE_CURRENT_SOURCE_DIR}/common/include/vulkanIDs.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/interceptor/vulkanPrePostAuto.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/common/include/vulkanLogAuto.inl
-  ${CMAKE_CURRENT_SOURCE_DIR}/common/vulkanLogAuto.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/common/include/vulkanTracerAuto.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/common/vulkanTracerAuto.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/common/include/vulkanHeader.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/common/include/vulkanDriversAuto.inl
-  ${CMAKE_CURRENT_SOURCE_DIR}/interceptor/vkPlugin.def
-  ${CMAKE_CURRENT_SOURCE_DIR}/layer/vkLayer.def
-  ${CMAKE_CURRENT_SOURCE_DIR}/common/vulkanArgumentsAuto.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/common/include/vulkanArgumentsAuto.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/common/vulkanStructStorageAuto.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/common/include/vulkanStructStorageAuto.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/common/include/vulkanFunctions.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/common/vulkanFunctions.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/common/include/vulkanIDswitch.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/recorder/include/vulkanRecorderWrapperAuto.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/recorder/vulkanRecorderWrapperAuto.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/recorder/include/vulkanRecorderWrapperIfaceAuto.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/common/include/vulkanLuaEnums.h
-  PROPERTIES GENERATED 1
-)
-
-add_subdirectory(common)
+add_subdirectory(codegen)
+add_subdirectory(common/layer_interface)
+add_subdirectory(common/services)
+add_subdirectory(common/utils)
+add_subdirectory(common/coders)
+add_subdirectory(subcapture)
 add_subdirectory(recorder)
-add_subdirectory(interceptor)
 add_subdirectory(layer)
+add_subdirectory(layers/trace)
+add_subdirectory(layers/api_debug)
+add_subdirectory(layers/resource_dumping)
+add_subdirectory(interceptor)
+add_subdirectory(player)
 
-add_dependencies(Vulkan_common Vulkan_codegen config_codegen)
-add_dependencies(Vulkan_recorder Vulkan_codegen config_codegen)
-add_dependencies(Vulkan_interceptor Vulkan_codegen config_codegen)
-add_dependencies(Vulkan_layer Vulkan_codegen config_codegen)
-
-set(Vulkan_Layer_files
-  layer/VkLayer_vulkan_GITS_recorder.json
-)
-
-install(FILES ${Vulkan_Layer_files} DESTINATION Recorder/${VulkanLayer_INSTALL_SUBDIR})
+if(WIN32)
+  set(PLUGINS_DIR ${CMAKE_SOURCE_DIR}/plugins)
+  add_subdirectory(${PLUGINS_DIR}/Vulkan ${CMAKE_CURRENT_BINARY_DIR}/Vulkan_plugins)
+endif()

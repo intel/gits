@@ -6,57 +6,44 @@
 #
 # ===================== end_copyright_notice ==============================
 
-set_source_files_properties(
-  ${CMAKE_CURRENT_SOURCE_DIR}/vulkanPrePostAuto.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/vkPlugin.def
-  PROPERTIES GENERATED 1
+add_library(Vulkan_interceptor SHARED)
+
+set(COMMON_SRC
+  ${CMAKE_SOURCE_DIR}/common/legacy/tools_lite.cpp
+  ${CMAKE_SOURCE_DIR}/common/legacy/exception.cpp
+  ${CMAKE_SOURCE_DIR}/common/legacy/dynamic_linker.cpp
+  ${CMAKE_SOURCE_DIR}/common/legacy/gitsLoader.cpp
+)
+source_group("common" FILES ${COMMON_SRC})
+
+set(ROOT_SRC
+  ${CMAKE_CURRENT_SOURCE_DIR}/interceptorAuto.cpp
+)
+source_group("" FILES ${ROOT_SRC})
+
+set(ALL_SRC
+  ${COMMON_SRC}
+  ${ROOT_SRC}
 )
 
-set(Vulkan_DEF )
-if(MSVC)
-  set(Vulkan_DEF vkPlugin.def)
-endif()
+set_auto_generated_property(FILE_LIST ${ALL_SRC})
 
-add_definitions(-DBUILD_FOR_VULKAN_INTERCEPTOR)
-
-list(APPEND Vulkan_interceptor_external_cpps
-  ../../common/legacy/tools_lite.cpp
-  ../../common/legacy/exception.cpp
-  ../../common/legacy/dynamic_linker.cpp
-  ../../common/legacy/gitsLoader.cpp
-)
-if(WIN32)
-  list(APPEND Vulkan_interceptor_external_cpps ../../common/legacy/tools_windows.cpp)
-endif()
-
-add_library(Vulkan_interceptor SHARED
-  include/gitsPluginVulkan.h
-  include/vulkanExecWrap.h
-  include/vulkanThreadSync.h
-
-  ${Vulkan_interceptor_external_cpps}
-  include/gitsPluginVulkan.cpp
-  vulkanPrePostAuto.cpp
-  ${Vulkan_DEF}
+target_sources(Vulkan_interceptor PRIVATE
+  ${ALL_SRC}
 )
 
-if(WIN32)
-    target_compile_definitions(Vulkan_interceptor PRIVATE PLOG_IMPORT)
-else()
-    target_compile_definitions(Vulkan_interceptor PRIVATE PLOG_GLOBAL)
-endif()
+target_include_directories(Vulkan_interceptor PRIVATE
+  ${VULKAN_HEADERS_DIR}
+  ${VULKAN_DIR}/recorder
+)
+target_link_libraries(Vulkan_interceptor PRIVATE
+  gits_recorder_interface
+  Vulkan_layer_interface
+  Vulkan_recorder
+)
 
-source_group("External Files" FILES ${Vulkan_interceptor_external_cpps})
-source_group("Generated Files" FILES ${Vulkan_DEF} REGULAR_EXPRESSION ".*Auto.*")
-
-if(WIN32)
-    target_link_options(Vulkan_interceptor PRIVATE "/DELAYLOAD:gitsRecorder.dll")
-endif()
-
-target_include_directories(Vulkan_interceptor PRIVATE ${VULKAN_HEADERS_DIR})
-target_link_libraries(Vulkan_interceptor PRIVATE gits_recorder gits_recorder_interface common_interface configuration log)
-if(WIN32)
-  target_link_libraries(Vulkan_interceptor PRIVATE hud)
+if(NOT WIN32)
+  target_link_libraries(Vulkan_interceptor PRIVATE pthread dl)
 endif()
 
 if(MSVC)

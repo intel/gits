@@ -81,7 +81,7 @@ Currently the following API-based groups are available:
 More groups will be coming in the future, and will be based on their intended
 target audience and usage.
 
-## Vulkan: legacy vs Vulkan2 streams
+## Vulkan: VulkanLegacy vs Vulkan streams
 
-There are two Vulkan recording backends (see [Vulkan: legacy vs Vulkan2 backends](../usage.md#vulkan-legacy-vs-vulkan2-backends)). Each stream is tagged in its header with the producing API: `API_VULKAN` for the legacy `Vulkan/` backend and `API_VULKAN2` for the new `Vulkan2/` backend. `gitsPlayer` reads this tag and automatically routes a legacy stream to the legacy replay path and a Vulkan2 stream to the Vulkan2 replay path. There is no command-line switch to choose the Vulkan backend at playback time; a stream recorded with one backend replays with the same backend.
+There are two Vulkan recording backends (see [Vulkan: VulkanLegacy vs Vulkan backends](../usage.md#vulkan-vulkanlegacy-vs-vulkan-backends)). Each stream is tagged in its header with the producing API: `API_VULKAN_LEGACY` for the `VulkanLegacy/` backend and `API_VULKAN` for the new `Vulkan/` backend. `gitsPlayer` reads this tag and automatically routes a VulkanLegacy stream to the VulkanLegacy replay path and a Vulkan stream to the Vulkan replay path. There is no command-line switch to choose the Vulkan backend at playback time; a stream recorded with one backend replays with the same backend.
 

@@ -19,11 +19,11 @@ enum class ApiId {
   ID_GLX = 5,
   ID_EGL = 6,
   ID_OPENCL = 7,
-  ID_VULKAN = 10,
+  ID_VULKAN_LEGACY = 10,
   ID_LEVELZERO = 11,
   ID_OCLOC = 12,
   ID_DIRECTX = 13,
-  ID_VULKAN2 = 14,
+  ID_VULKAN = 14,
 };
 
 inline ApiId ExtractApiIdentifier(unsigned commandId) {

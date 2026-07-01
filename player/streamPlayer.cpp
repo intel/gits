@@ -234,7 +234,7 @@ void PlayStream(const std::filesystem::path& streamPath) {
 #endif
 #if defined WITH_VULKAN
   vulkan::VulkanCommandFactory vulkanCommandFactory;
-  if (header.GetApi() == stream::StreamHeader::Api::API_VULKAN2) {
+  if (header.GetApi() == stream::StreamHeader::Api::API_VULKAN) {
     commandFactories.push_back(&vulkanCommandFactory);
   }
 #endif
@@ -307,7 +307,7 @@ bool IsLegacyStream(const std::filesystem::path& streamPath) {
     return apiId != stream::ApiId::ID_DIRECTX;
   } else {
     return header.GetApi() != stream::StreamHeader::Api::API_DIRECTX &&
-           header.GetApi() != stream::StreamHeader::Api::API_VULKAN2;
+           header.GetApi() != stream::StreamHeader::Api::API_VULKAN;
   }
 }
 

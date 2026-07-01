@@ -72,8 +72,8 @@ set(recorderCommonLibs ${recorderCommonLibs} OpenGL_common)
 set(frameworks ${frameworks} "-framework OpenGL")
 
 if(WITH_VULKAN)
-  set(recorderIfaceLibs ${recorderIfaceLibs} ${libPrefix} Vulkan_recorder Vulkan_recorder_2)
-  set(recorderCommonLibs ${recorderCommonLibs} Vulkan_common)
+  set(recorderIfaceLibs ${recorderIfaceLibs} ${libPrefix} VulkanLegacy_recorder Vulkan_recorder)
+  set(recorderCommonLibs ${recorderCommonLibs} VulkanLegacy_common)
 endif()
 if(WITH_OPENCL)
   set(recorderIfaceLibs ${recorderIfaceLibs} ${libPrefix} OpenCL_recorder)
@@ -152,9 +152,9 @@ if(UNIX)
     ln -sf libGitsGLCapture.so libGLESv1_CM.so.1
     ln -sf libGitsGLCapture.so libGLESv2.so.2
     ln -sf libGitsGLCapture.so libGL.so.1
-    cd ../${Vulkan_INSTALL_SUBDIR}/
+    cd ../${VulkanLegacy_INSTALL_SUBDIR}/
     ln -sf libVulkan.so libvulkan.so.1
-    cd ../${Vulkan2_INSTALL_SUBDIR}/
+    cd ../${Vulkan_INSTALL_SUBDIR}/
     ln -sf libVulkan.so libvulkan.so.1
   \")")
 endif()

@@ -52,10 +52,11 @@ public:
     ID_GLX = 5 * 0x10000,
     ID_EGL = 6 * 0x10000,
     ID_OPENCL = 7 * 0x10000,
-    ID_VULKAN = 10 * 0x10000,
+    ID_VULKAN_LEGACY = 10 * 0x10000,
     ID_LEVELZERO = 11 * 0x10000,
     ID_OCLOC = 12 * 0x10000,
     ID_DirectX = 13 * 0x10000,
+    ID_VULKAN = 14 * 0x10000,
   };
   virtual ~CToken() = 0;
 

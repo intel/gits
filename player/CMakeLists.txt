@@ -48,8 +48,8 @@ if(WITH_OPENCL)
 endif()
 
 if(WITH_VULKAN)
-  target_link_libraries(gits_player PRIVATE Vulkan_common)
-  target_link_libraries(gits_player PRIVATE Vulkan_player_2)
+  target_link_libraries(gits_player PRIVATE VulkanLegacy_common)
+  target_link_libraries(gits_player PRIVATE Vulkan_player)
 endif()
 
 if(WITH_OCLOC)

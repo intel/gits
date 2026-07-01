@@ -51,12 +51,12 @@ target_link_libraries(Vulkan_statistics PRIVATE
   yamlcpp
 )
 
-# The statisticsLayerAuto.{h,cpp} sources are produced by the central Vulkan2
+# The statisticsLayerAuto.{h,cpp} sources are produced by the central Vulkan
 # code generator (which also regenerates them against the current headers).
 # Depend on it so building this plugin on a clean tree generates the sources
-# first, matching how the other Vulkan2 targets (e.g. Vulkan_subcapture_2,
+# first, matching how the other Vulkan targets (e.g. Vulkan_subcapture,
 # Vulkan_layer_interface) consume generated code.
-add_dependencies(Vulkan_statistics Vulkan_codegen_2)
+add_dependencies(Vulkan_statistics Vulkan_codegen)
 
 set_target_properties(Vulkan_statistics PROPERTIES FOLDER Plugins/Vulkan)
 

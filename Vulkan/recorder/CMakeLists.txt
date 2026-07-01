@@ -6,27 +6,67 @@
 #
 # ===================== end_copyright_notice ==============================
 
-set_source_files_properties(
-  ${CMAKE_CURRENT_SOURCE_DIR}/include/vulkanRecorderWrapperAuto.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/vulkanRecorderWrapperAuto.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/include/vulkanRecorderWrapperIfaceAuto.h
-  PROPERTIES GENERATED 1
+add_library(Vulkan_recorder STATIC)
+
+set(ROOT_SRC
+  ${CMAKE_CURRENT_SOURCE_DIR}/captureManager.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/captureManager.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/captureLayerManager.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/captureLayerManager.cpp
+)
+source_group("" FILES ${ROOT_SRC})
+
+set(CAPTURE_SRC
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkanRecorderInterface.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkanRecorder.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkanRecorder.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/wrappersAuto.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/wrappersAuto.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/encoderLayerAuto.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/encoderLayerAuto.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/captureCustomizationLayer.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/captureCustomizationLayer.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/handleArgumentUpdaters.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/handleArgumentUpdatersAuto.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/handleArgumentUpdatersAuto.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/handleArgumentUpdatersCustom.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/handleArgumentUpdatersCustom.cpp
+)
+source_group("capture" FILES ${CAPTURE_SRC})
+
+set(SERVICES_SRC
+  ${CMAKE_CURRENT_SOURCE_DIR}/mapTrackingService.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/mapTrackingService.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/windowTrackingService.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/windowTrackingService.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/descriptorUpdateTemplateService.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/descriptorUpdateTemplateService.cpp
+)
+source_group("services" FILES ${SERVICES_SRC})
+
+set(ALL_SRC
+  ${ROOT_SRC}
+  ${CAPTURE_SRC}
+  ${SERVICES_SRC}
 )
 
-add_library(Vulkan_recorder
-  include/vulkanRecorderSubwrappers.h
-  include/vulkanRecorderWrapper.h
-  include/vulkanRecorderWrapperAuto.h
-  include/vulkanRecorderWrapperIface.h
-  include/vulkanRecorderWrapperIfaceAuto.h
-  include/vulkanStateRestore.h
+set_auto_generated_property(FILE_LIST ${ALL_SRC})
 
-  vulkanRecorderWrapper.cpp
-  vulkanRecorderWrapperAuto.cpp
-  vulkanStateRestore.cpp
+target_sources(Vulkan_recorder PRIVATE
+  ${ALL_SRC}
 )
 
-source_group("Generated Files" REGULAR_EXPRESSION ".*Auto.*")
+target_link_libraries(Vulkan_recorder PRIVATE
+  stream
+  gits_recorder_interface
+  Vulkan_layer_interface
+  Vulkan_services
+  Vulkan_trace
+  Vulkan_resource_dumping
+  Vulkan_coders
+  Vulkan_utils
+  Vulkan_api_debug
+  tbb
+)
 
-target_link_libraries(Vulkan_recorder PRIVATE gits_recorder_interface common configuration Vulkan_common)
 set_target_properties(Vulkan_recorder PROPERTIES FOLDER Vulkan)

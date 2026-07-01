@@ -55,7 +55,7 @@ void Configurator::PrepareSubcapturePath() {
   const std::string rangePlaceholder = "%r%";
   std::string::size_type rangePos = preparedPath.find(rangePlaceholder);
   if (rangePos != std::string::npos) {
-    // DX12 still uses its own DirectX.Features.Subcapture group, while Vulkan2
+    // DX12 still uses its own DirectX.Features.Subcapture group, while Vulkan
     // (and any other API migrated to the shared structure) uses
     // Common.Features.Subcapture.  Pick the frames string from whichever side
     // is actually enabled.  If both are enabled the configuration is ambiguous
