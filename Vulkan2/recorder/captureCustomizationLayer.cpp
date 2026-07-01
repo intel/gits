@@ -73,17 +73,37 @@ void CaptureCustomizationLayer::Pre(vkCreateXlibSurfaceKHRCommand& command) {
   Display* display = command.m_pCreateInfo.Value->dpy;
   Window window = command.m_pCreateInfo.Value->window;
 
+  int32_t x{};
+  int32_t y{};
+  int32_t width{};
+  int32_t height{};
+  bool visible{true};
+
   XWindowAttributes attrs;
-  XGetWindowAttributes(display, window, &attrs);
+  if (XGetWindowAttributes(display, window, &attrs)) {
+    x = attrs.x;
+    y = attrs.y;
+    width = attrs.width;
+    height = attrs.height;
+    visible = (attrs.map_state == IsViewable);
+
+    Window child{};
+    int rootX{};
+    int rootY{};
+    if (XTranslateCoordinates(display, window, attrs.root, 0, 0, &rootX, &rootY, &child)) {
+      x = rootX;
+      y = rootY;
+    }
+  }
 
   CreateWindowMetaCommand createWindowMetaCommand(command.m_ThreadId);
   createWindowMetaCommand.m_Key = m_Manager.CreateCommandKey();
   createWindowMetaCommand.m_DisplayProtocol.Value = CreateWindowMetaCommand::DisplayProtocol::XLIB;
-  createWindowMetaCommand.m_X.Value = attrs.x;
-  createWindowMetaCommand.m_Y.Value = attrs.y;
-  createWindowMetaCommand.m_Width.Value = attrs.width;
-  createWindowMetaCommand.m_Height.Value = attrs.height;
-  createWindowMetaCommand.m_Visible.Value = (attrs.map_state == IsViewable);
+  createWindowMetaCommand.m_X.Value = x;
+  createWindowMetaCommand.m_Y.Value = y;
+  createWindowMetaCommand.m_Width.Value = width;
+  createWindowMetaCommand.m_Height.Value = height;
+  createWindowMetaCommand.m_Visible.Value = visible;
   createWindowMetaCommand.m_Hwnd.Value = reinterpret_cast<uint64_t>(display);
   createWindowMetaCommand.m_Hinstance.Value = reinterpret_cast<uint64_t>(window);
 
@@ -102,6 +122,7 @@ void CaptureCustomizationLayer::Pre(vkCreateXcbSurfaceKHRCommand& command) {
   int32_t width{};
   int32_t height{};
   bool visible{true};
+  xcb_window_t rootWindow{};
 
   xcb_get_geometry_cookie_t geom_cookie = xcb_get_geometry(connection, window);
   xcb_get_geometry_reply_t* geom = xcb_get_geometry_reply(connection, geom_cookie, nullptr);
@@ -111,7 +132,20 @@ void CaptureCustomizationLayer::Pre(vkCreateXcbSurfaceKHRCommand& command) {
     y = geom->y;
     width = geom->width;
     height = geom->height;
+    rootWindow = geom->root;
     free(geom);
+  }
+
+  if (rootWindow != 0) {
+    xcb_translate_coordinates_cookie_t translateCookie =
+        xcb_translate_coordinates(connection, window, rootWindow, 0, 0);
+    xcb_translate_coordinates_reply_t* translated =
+        xcb_translate_coordinates_reply(connection, translateCookie, nullptr);
+    if (translated) {
+      x = translated->dst_x;
+      y = translated->dst_y;
+      free(translated);
+    }
   }
 
   xcb_get_window_attributes_cookie_t attr_cookie = xcb_get_window_attributes(connection, window);
