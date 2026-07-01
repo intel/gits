@@ -63,7 +63,9 @@ void CaptureCustomizationLayer::Post(vkCreateWin32SurfaceKHRCommand& command) {
     int32_t y = windowRect.top;
     bool visible = IsWindowVisible(hwnd) == TRUE;
     m_Manager.GetWindowTrackingService().StoreSurface(
-        *command.m_pSurface.Value, reinterpret_cast<uint64_t>(hwnd), x, y, width, height, visible);
+        *command.m_pSurface.Value, reinterpret_cast<uint64_t>(hwnd),
+        reinterpret_cast<uint64_t>(command.m_pCreateInfo.Value->hinstance), x, y, width, height,
+        visible);
   }
 }
 #endif

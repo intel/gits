@@ -26,10 +26,11 @@ public:
   WindowTrackingService(stream::OrderingRecorder& recorder);
 
 #ifdef VK_USE_PLATFORM_WIN32_KHR
-  // Records surface -> HWND and seeds the last-known window state so per-present
-  // polling only emits updates when the window actually changes.
+  // Records surface -> Win32 window identity and seeds the last-known window state
+  // so per-present polling only emits updates when the window actually changes.
   void StoreSurface(VkSurfaceKHR surface,
                     uint64_t hwnd,
+                    uint64_t hinstance,
                     int32_t x,
                     int32_t y,
                     int32_t width,
@@ -53,10 +54,11 @@ public:
 
 private:
 #ifdef VK_USE_PLATFORM_WIN32_KHR
-  // Last-known window state per HWND, used to detect changes between presents
-  // (mirrors the legacy CHWNDState polling). Position is intentionally not
-  // tracked because UpdateWindowMetaCommand carries no position and the player
-  // does not reposition windows on update.
+  struct SurfaceWindow {
+    uint64_t Hwnd{};
+    uint64_t Hinstance{};
+  };
+  // Last-known geometry/visibility per capture HWND (mirrors legacy CHWNDState).
   struct WindowState {
     int32_t X{};
     int32_t Y{};
@@ -64,9 +66,10 @@ private:
     int32_t Height{};
     bool Visible{};
   };
-  std::unordered_map<VkSurfaceKHR, uint64_t> m_SurfaceHwnd;
-  std::unordered_map<VkSwapchainKHR, VkSurfaceKHR> m_SwapchainSurface;
+
+  std::unordered_map<VkSurfaceKHR, SurfaceWindow> m_SurfaceWindow;
   std::unordered_map<uint64_t, WindowState> m_HwndState;
+  std::unordered_map<VkSwapchainKHR, VkSurfaceKHR> m_SwapchainSurface;
 #endif
   stream::OrderingRecorder& m_Recorder;
   std::mutex m_Mutex;

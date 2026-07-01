@@ -63,8 +63,8 @@ void Decode(char* src, CreateWindowMetaCommand& command) {
 
 uint32_t GetSize(const UpdateWindowMetaCommand& command) {
   return GetSize(command.m_Key) + GetSize(command.m_ThreadId) + GetSize(command.m_Hwnd) +
-         GetSize(command.m_X) + GetSize(command.m_Y) + GetSize(command.m_Width) +
-         GetSize(command.m_Height) + GetSize(command.m_Visible);
+         GetSize(command.m_Hinstance) + GetSize(command.m_X) + GetSize(command.m_Y) +
+         GetSize(command.m_Width) + GetSize(command.m_Height) + GetSize(command.m_Visible);
 }
 
 void Encode(const UpdateWindowMetaCommand& command, char* dest) {
@@ -72,6 +72,7 @@ void Encode(const UpdateWindowMetaCommand& command, char* dest) {
   Encode(dest, offset, command.m_Key);
   Encode(dest, offset, command.m_ThreadId);
   Encode(dest, offset, command.m_Hwnd);
+  Encode(dest, offset, command.m_Hinstance);
   Encode(dest, offset, command.m_X);
   Encode(dest, offset, command.m_Y);
   Encode(dest, offset, command.m_Width);
@@ -84,6 +85,7 @@ void Decode(char* src, UpdateWindowMetaCommand& command) {
   Decode(src, offset, command.m_Key);
   Decode(src, offset, command.m_ThreadId);
   Decode(src, offset, command.m_Hwnd);
+  Decode(src, offset, command.m_Hinstance);
   Decode(src, offset, command.m_X);
   Decode(src, offset, command.m_Y);
   Decode(src, offset, command.m_Width);

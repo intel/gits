@@ -74,6 +74,7 @@ public:
 
 public:
   Argument<uint64_t> m_Hwnd{};
+  Argument<uint64_t> m_Hinstance{};
   Argument<int32_t> m_X{};
   Argument<int32_t> m_Y{};
   Argument<int32_t> m_Width{};
