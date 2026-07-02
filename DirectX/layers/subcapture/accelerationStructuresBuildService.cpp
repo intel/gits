@@ -24,18 +24,22 @@ namespace gits {
 namespace DirectX {
 
 AccelerationStructuresBuildService::AccelerationStructuresBuildService(
-    StateTrackingService& m_StateService,
-    SubcaptureRecorder& m_Recorder,
+    StateTrackingService& stateService,
+    SubcaptureRecorder& recorder,
     ReservedResourcesService& reservedResourcesService,
     ResourceStateTracker& resourceStateTracker,
     CapturePlayerGpuAddressService& gpuAddressService)
-    : m_StateService(m_StateService),
-      m_Recorder(m_Recorder),
+    : m_StateService(stateService),
+      m_Recorder(recorder),
       m_ReservedResourcesService(reservedResourcesService),
-      m_BufferContentRestore(m_StateService),
       m_ResourceStateTracker(resourceStateTracker),
       m_GpuAddressService(gpuAddressService),
-      m_OptimizationService(m_StateService, m_BufferContentRestore) {
+      m_OptimizationService(stateService),
+      m_InputBuffersService(stateService,
+                            reservedResourcesService,
+                            resourceStateTracker,
+                            gpuAddressService,
+                            recorder) {
   m_SerializeMode = Configurator::Get().directx.features.subcapture.serializeAccelerationStructures;
   m_RestoreTlas = Configurator::Get().directx.features.subcapture.restoreTLASes;
   m_Optimize = Configurator::Get().directx.features.subcapture.optimize;
@@ -84,7 +88,7 @@ void AccelerationStructuresBuildService::BuildAccelerationStructure(
   BuildRaytracingAccelerationStructureCommand* command =
       new BuildRaytracingAccelerationStructureCommand();
   command->CommandKey = c.Key;
-  command->CommandListKey = m_CommandListDirectKeys.CommandListKey;
+  command->CommandListKey = m_CommandListKey;
   command->Type = RaytracingAccelerationStructureCommand::CommandType::Build;
   command->DestKey = c.m_pDesc.DestAccelerationStructureKey;
   command->DestOffset = c.m_pDesc.DestAccelerationStructureOffset;
@@ -105,9 +109,6 @@ void AccelerationStructuresBuildService::BuildAccelerationStructure(
 
   m_StateService.KeepState(c.m_pDesc.DestAccelerationStructureKey);
 
-  InputBufferService inputBufferService(m_StateService, m_BufferContentRestore,
-                                        m_ReservedResourcesService, m_ResourceStateTracker,
-                                        m_GpuAddressService);
   // get input buffer regions
   {
     unsigned inputIndex = 0;
@@ -117,8 +118,8 @@ void AccelerationStructuresBuildService::BuildAccelerationStructure(
       if (inputs.DescsLayout == D3D12_ELEMENTS_LAYOUT_ARRAY_OF_POINTERS) {
         size = inputs.NumDescs * sizeof(D3D12_GPU_VIRTUAL_ADDRESS);
       }
-      inputBufferService.AddBufferRegion(c.m_pDesc.InputKeys[inputIndex],
-                                         c.m_pDesc.InputOffsets[inputIndex], size);
+      m_InputBuffersService.StoreBufferRegion(c.m_pDesc.InputKeys[inputIndex],
+                                              c.m_pDesc.InputOffsets[inputIndex], size);
     } else if (inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL) {
       for (unsigned i = 0; i < inputs.NumDescs; ++i) {
         D3D12_RAYTRACING_GEOMETRY_DESC& desc = const_cast<D3D12_RAYTRACING_GEOMETRY_DESC&>(
@@ -128,15 +129,15 @@ void AccelerationStructuresBuildService::BuildAccelerationStructure(
         if (desc.Type == D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES) {
           if (desc.Triangles.Transform3x4) {
             unsigned size = sizeof(float) * 3 * 4;
-            inputBufferService.AddBufferRegion(c.m_pDesc.InputKeys[inputIndex],
-                                               c.m_pDesc.InputOffsets[inputIndex], size);
+            m_InputBuffersService.StoreBufferRegion(c.m_pDesc.InputKeys[inputIndex],
+                                                    c.m_pDesc.InputOffsets[inputIndex], size);
           }
           ++inputIndex;
           if (desc.Triangles.IndexBuffer && desc.Triangles.IndexCount) {
             unsigned size = desc.Triangles.IndexCount *
                             (desc.Triangles.IndexFormat == DXGI_FORMAT_R16_UINT ? 2 : 4);
-            inputBufferService.AddBufferRegion(c.m_pDesc.InputKeys[inputIndex],
-                                               c.m_pDesc.InputOffsets[inputIndex], size);
+            m_InputBuffersService.StoreBufferRegion(c.m_pDesc.InputKeys[inputIndex],
+                                                    c.m_pDesc.InputOffsets[inputIndex], size);
           }
           ++inputIndex;
           if (desc.Triangles.VertexBuffer.StartAddress && desc.Triangles.VertexCount) {
@@ -147,15 +148,15 @@ void AccelerationStructuresBuildService::BuildAccelerationStructure(
               }
             }
             unsigned size = desc.Triangles.VertexCount * stride;
-            inputBufferService.AddBufferRegion(c.m_pDesc.InputKeys[inputIndex],
-                                               c.m_pDesc.InputOffsets[inputIndex], size);
+            m_InputBuffersService.StoreBufferRegion(c.m_pDesc.InputKeys[inputIndex],
+                                                    c.m_pDesc.InputOffsets[inputIndex], size);
           }
           ++inputIndex;
         } else if (desc.Type == D3D12_RAYTRACING_GEOMETRY_TYPE_PROCEDURAL_PRIMITIVE_AABBS) {
           if (desc.AABBs.AABBs.StartAddress && desc.AABBs.AABBCount) {
             unsigned size = desc.AABBs.AABBCount * desc.AABBs.AABBs.StrideInBytes;
-            inputBufferService.AddBufferRegion(c.m_pDesc.InputKeys[inputIndex],
-                                               c.m_pDesc.InputOffsets[inputIndex], size);
+            m_InputBuffersService.StoreBufferRegion(c.m_pDesc.InputKeys[inputIndex],
+                                                    c.m_pDesc.InputOffsets[inputIndex], size);
           }
           ++inputIndex;
         } else if (desc.Type == D3D12_RAYTRACING_GEOMETRY_TYPE_OMM_TRIANGLES) {
@@ -163,15 +164,15 @@ void AccelerationStructuresBuildService::BuildAccelerationStructure(
             auto& triangles = *desc.OmmTriangles.pTriangles;
             if (triangles.Transform3x4) {
               unsigned size = sizeof(float) * 3 * 4;
-              inputBufferService.AddBufferRegion(c.m_pDesc.InputKeys[inputIndex],
-                                                 c.m_pDesc.InputOffsets[inputIndex], size);
+              m_InputBuffersService.StoreBufferRegion(c.m_pDesc.InputKeys[inputIndex],
+                                                      c.m_pDesc.InputOffsets[inputIndex], size);
             }
             ++inputIndex;
             if (triangles.IndexBuffer && triangles.IndexCount) {
               unsigned size =
                   triangles.IndexCount * (triangles.IndexFormat == DXGI_FORMAT_R16_UINT ? 2 : 4);
-              inputBufferService.AddBufferRegion(c.m_pDesc.InputKeys[inputIndex],
-                                                 c.m_pDesc.InputOffsets[inputIndex], size);
+              m_InputBuffersService.StoreBufferRegion(c.m_pDesc.InputKeys[inputIndex],
+                                                      c.m_pDesc.InputOffsets[inputIndex], size);
             }
             ++inputIndex;
             if (triangles.VertexBuffer.StartAddress && triangles.VertexCount) {
@@ -182,8 +183,8 @@ void AccelerationStructuresBuildService::BuildAccelerationStructure(
                 }
               }
               unsigned size = triangles.VertexCount * stride;
-              inputBufferService.AddBufferRegion(c.m_pDesc.InputKeys[inputIndex],
-                                                 c.m_pDesc.InputOffsets[inputIndex], size);
+              m_InputBuffersService.StoreBufferRegion(c.m_pDesc.InputKeys[inputIndex],
+                                                      c.m_pDesc.InputOffsets[inputIndex], size);
             }
             ++inputIndex;
           }
@@ -222,8 +223,8 @@ void AccelerationStructuresBuildService::BuildAccelerationStructure(
               }
               unsigned size = ommCount * stride;
               if (size) {
-                inputBufferService.AddBufferRegion(c.m_pDesc.InputKeys[inputIndex],
-                                                   c.m_pDesc.InputOffsets[inputIndex], size);
+                m_InputBuffersService.StoreBufferRegion(c.m_pDesc.InputKeys[inputIndex],
+                                                        c.m_pDesc.InputOffsets[inputIndex], size);
               }
             }
             ++inputIndex;
@@ -258,8 +259,8 @@ void AccelerationStructuresBuildService::BuildAccelerationStructure(
 
         if (ommDesc.InputBuffer) {
           GITS_ASSERT(ommDesc.InputBuffer % 128 == 0);
-          inputBufferService.AddBufferRegion(c.m_pDesc.InputKeys[inputIndex],
-                                             c.m_pDesc.InputOffsets[inputIndex], totalInputSize);
+          m_InputBuffersService.StoreBufferRegion(
+              c.m_pDesc.InputKeys[inputIndex], c.m_pDesc.InputOffsets[inputIndex], totalInputSize);
         }
         ++inputIndex;
         if (ommDesc.PerOmmDescs.StartAddress) {
@@ -270,15 +271,15 @@ void AccelerationStructuresBuildService::BuildAccelerationStructure(
           GITS_ASSERT(ommDesc.PerOmmDescs.StartAddress % 4 == 0);
           GITS_ASSERT(stride % 4 == 0);
           unsigned size = totalOmmCount * stride;
-          inputBufferService.AddBufferRegion(c.m_pDesc.InputKeys[inputIndex],
-                                             c.m_pDesc.InputOffsets[inputIndex], size);
+          m_InputBuffersService.StoreBufferRegion(c.m_pDesc.InputKeys[inputIndex],
+                                                  c.m_pDesc.InputOffsets[inputIndex], size);
         }
         ++inputIndex;
       }
     }
   }
 
-  inputBufferService.StoreBuffers(c.Key, c.m_Object.Value, command);
+  m_InputBuffersService.StoreBuffers(c.Key, c.m_Object.Value);
   m_OptimizationService.AddCommand(c.m_Object.Key, command);
 }
 
@@ -294,7 +295,7 @@ void AccelerationStructuresBuildService::CopyAccelerationStructure(
   CopyRaytracingAccelerationStructureCommand* command =
       new CopyRaytracingAccelerationStructureCommand();
   command->CommandKey = c.Key;
-  command->CommandListKey = m_CommandListDirectKeys.CommandListKey;
+  command->CommandListKey = m_CommandListKey;
   command->Type = RaytracingAccelerationStructureCommand::CommandType::Copy;
   command->DestAccelerationStructureData = c.m_DestAccelerationStructureData.Value;
   command->DestKey = c.m_DestAccelerationStructureData.InterfaceKey;
@@ -345,7 +346,7 @@ void AccelerationStructuresBuildService::NvapiBuildAccelerationStructureEx(
   NvAPIBuildRaytracingAccelerationStructureExCommand* command =
       new NvAPIBuildRaytracingAccelerationStructureExCommand();
   command->CommandKey = c.Key;
-  command->CommandListKey = m_CommandListDirectKeys.CommandListKey;
+  command->CommandListKey = m_CommandListKey;
   command->Type = RaytracingAccelerationStructureCommand::CommandType::NvAPIBuild;
   command->DestKey = c.m_pParams.DestAccelerationStructureKey;
   command->DestOffset = c.m_pParams.DestAccelerationStructureOffset;
@@ -366,17 +367,14 @@ void AccelerationStructuresBuildService::NvapiBuildAccelerationStructureEx(
 
   m_StateService.KeepState(c.m_pParams.DestAccelerationStructureKey);
 
-  InputBufferService inputBufferService(m_StateService, m_BufferContentRestore,
-                                        m_ReservedResourcesService, m_ResourceStateTracker,
-                                        m_GpuAddressService);
   // get input buffer regions
   {
     unsigned inputIndex = 0;
     if (inputs.type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL && inputs.numDescs) {
       if (inputs.numDescs) {
         unsigned size = inputs.numDescs * sizeof(D3D12_RAYTRACING_INSTANCE_DESC);
-        inputBufferService.AddBufferRegion(c.m_pParams.InputKeys[inputIndex],
-                                           c.m_pParams.InputOffsets[inputIndex], size);
+        m_InputBuffersService.StoreBufferRegion(c.m_pParams.InputKeys[inputIndex],
+                                                c.m_pParams.InputOffsets[inputIndex], size);
       }
     } else {
       for (unsigned i = 0; i < inputs.numDescs; ++i) {
@@ -391,15 +389,15 @@ void AccelerationStructuresBuildService::NvapiBuildAccelerationStructureEx(
         if (desc.type == D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES) {
           if (desc.triangles.Transform3x4) {
             unsigned size = sizeof(float) * 3 * 4;
-            inputBufferService.AddBufferRegion(c.m_pParams.InputKeys[inputIndex],
-                                               c.m_pParams.InputOffsets[inputIndex], size);
+            m_InputBuffersService.StoreBufferRegion(c.m_pParams.InputKeys[inputIndex],
+                                                    c.m_pParams.InputOffsets[inputIndex], size);
           }
           ++inputIndex;
           if (desc.triangles.IndexBuffer && desc.triangles.IndexCount) {
             unsigned size = desc.triangles.IndexCount *
                             (desc.triangles.IndexFormat == DXGI_FORMAT_R16_UINT ? 2 : 4);
-            inputBufferService.AddBufferRegion(c.m_pParams.InputKeys[inputIndex],
-                                               c.m_pParams.InputOffsets[inputIndex], size);
+            m_InputBuffersService.StoreBufferRegion(c.m_pParams.InputKeys[inputIndex],
+                                                    c.m_pParams.InputOffsets[inputIndex], size);
           }
           ++inputIndex;
           if (desc.triangles.VertexBuffer.StartAddress && desc.triangles.VertexCount) {
@@ -410,30 +408,30 @@ void AccelerationStructuresBuildService::NvapiBuildAccelerationStructureEx(
               }
             }
             unsigned size = desc.triangles.VertexCount * stride;
-            inputBufferService.AddBufferRegion(c.m_pParams.InputKeys[inputIndex],
-                                               c.m_pParams.InputOffsets[inputIndex], size);
+            m_InputBuffersService.StoreBufferRegion(c.m_pParams.InputKeys[inputIndex],
+                                                    c.m_pParams.InputOffsets[inputIndex], size);
           }
           ++inputIndex;
         } else if (desc.type == D3D12_RAYTRACING_GEOMETRY_TYPE_PROCEDURAL_PRIMITIVE_AABBS) {
           if (desc.aabbs.AABBs.StartAddress && desc.aabbs.AABBCount) {
             unsigned size = desc.aabbs.AABBCount * desc.aabbs.AABBs.StrideInBytes;
-            inputBufferService.AddBufferRegion(c.m_pParams.InputKeys[inputIndex],
-                                               c.m_pParams.InputOffsets[inputIndex], size);
+            m_InputBuffersService.StoreBufferRegion(c.m_pParams.InputKeys[inputIndex],
+                                                    c.m_pParams.InputOffsets[inputIndex], size);
           }
           ++inputIndex;
         } else if (desc.type == NVAPI_D3D12_RAYTRACING_GEOMETRY_TYPE_OMM_TRIANGLES_EX) {
           if (desc.ommTriangles.triangles.Transform3x4) {
             unsigned size = sizeof(float) * 3 * 4;
-            inputBufferService.AddBufferRegion(c.m_pParams.InputKeys[inputIndex],
-                                               c.m_pParams.InputOffsets[inputIndex], size);
+            m_InputBuffersService.StoreBufferRegion(c.m_pParams.InputKeys[inputIndex],
+                                                    c.m_pParams.InputOffsets[inputIndex], size);
           }
           ++inputIndex;
           if (desc.ommTriangles.triangles.IndexBuffer && desc.ommTriangles.triangles.IndexCount) {
             unsigned size =
                 desc.ommTriangles.triangles.IndexCount *
                 (desc.ommTriangles.triangles.IndexFormat == DXGI_FORMAT_R16_UINT ? 2 : 4);
-            inputBufferService.AddBufferRegion(c.m_pParams.InputKeys[inputIndex],
-                                               c.m_pParams.InputOffsets[inputIndex], size);
+            m_InputBuffersService.StoreBufferRegion(c.m_pParams.InputKeys[inputIndex],
+                                                    c.m_pParams.InputOffsets[inputIndex], size);
           }
           ++inputIndex;
           if (desc.ommTriangles.triangles.VertexBuffer.StartAddress &&
@@ -445,8 +443,8 @@ void AccelerationStructuresBuildService::NvapiBuildAccelerationStructureEx(
               }
             }
             unsigned size = desc.ommTriangles.triangles.VertexCount * stride;
-            inputBufferService.AddBufferRegion(c.m_pParams.InputKeys[inputIndex],
-                                               c.m_pParams.InputOffsets[inputIndex], size);
+            m_InputBuffersService.StoreBufferRegion(c.m_pParams.InputKeys[inputIndex],
+                                                    c.m_pParams.InputOffsets[inputIndex], size);
           }
           ++inputIndex;
           if (desc.ommTriangles.ommAttachment.opacityMicromapIndexBuffer.StartAddress) {
@@ -465,8 +463,8 @@ void AccelerationStructuresBuildService::NvapiBuildAccelerationStructureEx(
             unsigned ommCount = desc.ommTriangles.triangles.IndexCount / 3;
             unsigned size = ommCount * stride;
             if (size) {
-              inputBufferService.AddBufferRegion(c.m_pParams.InputKeys[inputIndex],
-                                                 c.m_pParams.InputOffsets[inputIndex], size);
+              m_InputBuffersService.StoreBufferRegion(c.m_pParams.InputKeys[inputIndex],
+                                                      c.m_pParams.InputOffsets[inputIndex], size);
             }
           }
           ++inputIndex;
@@ -474,16 +472,16 @@ void AccelerationStructuresBuildService::NvapiBuildAccelerationStructureEx(
         } else if (desc.type == NVAPI_D3D12_RAYTRACING_GEOMETRY_TYPE_DMM_TRIANGLES_EX) {
           if (desc.dmmTriangles.triangles.Transform3x4) {
             unsigned size = sizeof(float) * 3 * 4;
-            inputBufferService.AddBufferRegion(c.m_pParams.InputKeys[inputIndex],
-                                               c.m_pParams.InputOffsets[inputIndex], size);
+            m_InputBuffersService.StoreBufferRegion(c.m_pParams.InputKeys[inputIndex],
+                                                    c.m_pParams.InputOffsets[inputIndex], size);
           }
           ++inputIndex;
           if (desc.dmmTriangles.triangles.IndexBuffer && desc.dmmTriangles.triangles.IndexCount) {
             unsigned size =
                 desc.dmmTriangles.triangles.IndexCount *
                 (desc.dmmTriangles.triangles.IndexFormat == DXGI_FORMAT_R16_UINT ? 2 : 4);
-            inputBufferService.AddBufferRegion(c.m_pParams.InputKeys[inputIndex],
-                                               c.m_pParams.InputOffsets[inputIndex], size);
+            m_InputBuffersService.StoreBufferRegion(c.m_pParams.InputKeys[inputIndex],
+                                                    c.m_pParams.InputOffsets[inputIndex], size);
           }
           ++inputIndex;
           if (desc.dmmTriangles.triangles.VertexBuffer.StartAddress &&
@@ -495,8 +493,8 @@ void AccelerationStructuresBuildService::NvapiBuildAccelerationStructureEx(
               }
             }
             unsigned size = desc.dmmTriangles.triangles.VertexCount * stride;
-            inputBufferService.AddBufferRegion(c.m_pParams.InputKeys[inputIndex],
-                                               c.m_pParams.InputOffsets[inputIndex], size);
+            m_InputBuffersService.StoreBufferRegion(c.m_pParams.InputKeys[inputIndex],
+                                                    c.m_pParams.InputOffsets[inputIndex], size);
           }
           ++inputIndex;
           if (desc.dmmTriangles.dmmAttachment.triangleMicromapIndexBuffer.StartAddress) {
@@ -521,15 +519,15 @@ void AccelerationStructuresBuildService::NvapiBuildAccelerationStructureEx(
             }
             unsigned size = dmmCount * stride;
             if (size) {
-              inputBufferService.AddBufferRegion(c.m_pParams.InputKeys[inputIndex],
-                                                 c.m_pParams.InputOffsets[inputIndex], size);
+              m_InputBuffersService.StoreBufferRegion(c.m_pParams.InputKeys[inputIndex],
+                                                      c.m_pParams.InputOffsets[inputIndex], size);
             }
           }
           ++inputIndex;
           if (desc.dmmTriangles.dmmAttachment.trianglePrimitiveFlagsBuffer.StartAddress) {
             unsigned size = desc.dmmTriangles.triangles.VertexCount;
-            inputBufferService.AddBufferRegion(c.m_pParams.InputKeys[inputIndex],
-                                               c.m_pParams.InputOffsets[inputIndex], size);
+            m_InputBuffersService.StoreBufferRegion(c.m_pParams.InputKeys[inputIndex],
+                                                    c.m_pParams.InputOffsets[inputIndex], size);
           }
           ++inputIndex;
           if (desc.dmmTriangles.dmmAttachment.vertexBiasAndScaleBuffer.StartAddress) {
@@ -546,8 +544,8 @@ void AccelerationStructuresBuildService::NvapiBuildAccelerationStructureEx(
             }
             GITS_ASSERT(stride);
             unsigned size = desc.dmmTriangles.triangles.VertexCount * stride;
-            inputBufferService.AddBufferRegion(c.m_pParams.InputKeys[inputIndex],
-                                               c.m_pParams.InputOffsets[inputIndex], size);
+            m_InputBuffersService.StoreBufferRegion(c.m_pParams.InputKeys[inputIndex],
+                                                    c.m_pParams.InputOffsets[inputIndex], size);
           }
           ++inputIndex;
           if (desc.dmmTriangles.dmmAttachment.vertexDisplacementVectorBuffer.StartAddress) {
@@ -567,8 +565,8 @@ void AccelerationStructuresBuildService::NvapiBuildAccelerationStructureEx(
             }
             GITS_ASSERT(stride);
             unsigned size = desc.dmmTriangles.triangles.VertexCount * stride;
-            inputBufferService.AddBufferRegion(c.m_pParams.InputKeys[inputIndex],
-                                               c.m_pParams.InputOffsets[inputIndex], size);
+            m_InputBuffersService.StoreBufferRegion(c.m_pParams.InputKeys[inputIndex],
+                                                    c.m_pParams.InputOffsets[inputIndex], size);
           }
           ++inputIndex;
           ++inputIndex;
@@ -583,8 +581,8 @@ void AccelerationStructuresBuildService::NvapiBuildAccelerationStructureEx(
             }
             GITS_ASSERT(stride);
             unsigned size = desc.spheres.vertexCount * stride;
-            inputBufferService.AddBufferRegion(c.m_pParams.InputKeys[inputIndex],
-                                               c.m_pParams.InputOffsets[inputIndex], size);
+            m_InputBuffersService.StoreBufferRegion(c.m_pParams.InputKeys[inputIndex],
+                                                    c.m_pParams.InputOffsets[inputIndex], size);
           }
           ++inputIndex;
           if (desc.spheres.vertexRadiusBuffer.StartAddress) {
@@ -596,8 +594,8 @@ void AccelerationStructuresBuildService::NvapiBuildAccelerationStructureEx(
             }
             GITS_ASSERT(stride);
             unsigned size = desc.spheres.vertexCount * stride;
-            inputBufferService.AddBufferRegion(c.m_pParams.InputKeys[inputIndex],
-                                               c.m_pParams.InputOffsets[inputIndex], size);
+            m_InputBuffersService.StoreBufferRegion(c.m_pParams.InputKeys[inputIndex],
+                                                    c.m_pParams.InputOffsets[inputIndex], size);
           }
           ++inputIndex;
           if (desc.spheres.indexBuffer.StartAddress) {
@@ -613,8 +611,8 @@ void AccelerationStructuresBuildService::NvapiBuildAccelerationStructureEx(
             }
             GITS_ASSERT(stride);
             unsigned size = desc.spheres.indexCount * stride;
-            inputBufferService.AddBufferRegion(c.m_pParams.InputKeys[inputIndex],
-                                               c.m_pParams.InputOffsets[inputIndex], size);
+            m_InputBuffersService.StoreBufferRegion(c.m_pParams.InputKeys[inputIndex],
+                                                    c.m_pParams.InputOffsets[inputIndex], size);
           }
           ++inputIndex;
         } else if (desc.type == NVAPI_D3D12_RAYTRACING_GEOMETRY_TYPE_LSS_EX) {
@@ -628,8 +626,8 @@ void AccelerationStructuresBuildService::NvapiBuildAccelerationStructureEx(
             }
             GITS_ASSERT(stride);
             unsigned size = desc.lss.primitiveCount * stride;
-            inputBufferService.AddBufferRegion(c.m_pParams.InputKeys[inputIndex],
-                                               c.m_pParams.InputOffsets[inputIndex], size);
+            m_InputBuffersService.StoreBufferRegion(c.m_pParams.InputKeys[inputIndex],
+                                                    c.m_pParams.InputOffsets[inputIndex], size);
           }
           ++inputIndex;
           if (desc.lss.vertexRadiusBuffer.StartAddress) {
@@ -641,8 +639,8 @@ void AccelerationStructuresBuildService::NvapiBuildAccelerationStructureEx(
             }
             GITS_ASSERT(stride);
             unsigned size = desc.lss.primitiveCount * stride;
-            inputBufferService.AddBufferRegion(c.m_pParams.InputKeys[inputIndex],
-                                               c.m_pParams.InputOffsets[inputIndex], size);
+            m_InputBuffersService.StoreBufferRegion(c.m_pParams.InputKeys[inputIndex],
+                                                    c.m_pParams.InputOffsets[inputIndex], size);
           }
           ++inputIndex;
           if (desc.lss.indexBuffer.StartAddress) {
@@ -658,8 +656,8 @@ void AccelerationStructuresBuildService::NvapiBuildAccelerationStructureEx(
             }
             GITS_ASSERT(stride);
             unsigned size = desc.lss.indexCount * stride;
-            inputBufferService.AddBufferRegion(c.m_pParams.InputKeys[inputIndex],
-                                               c.m_pParams.InputOffsets[inputIndex], size);
+            m_InputBuffersService.StoreBufferRegion(c.m_pParams.InputKeys[inputIndex],
+                                                    c.m_pParams.InputOffsets[inputIndex], size);
           }
           ++inputIndex;
         }
@@ -667,7 +665,7 @@ void AccelerationStructuresBuildService::NvapiBuildAccelerationStructureEx(
     }
   }
 
-  inputBufferService.StoreBuffers(c.Key, c.m_pCommandList.Value, command);
+  m_InputBuffersService.StoreBuffers(c.Key, c.m_pCommandList.Value);
   m_OptimizationService.AddCommand(c.m_pCommandList.Key, command);
 }
 
@@ -701,7 +699,7 @@ void AccelerationStructuresBuildService::NvapiBuildOpacityMicromapArray(
   NvAPIBuildRaytracingOpacityMicromapArrayCommand* command =
       new NvAPIBuildRaytracingOpacityMicromapArrayCommand();
   command->CommandKey = c.Key;
-  command->CommandListKey = m_CommandListDirectKeys.CommandListKey;
+  command->CommandListKey = m_CommandListKey;
   command->Type = RaytracingAccelerationStructureCommand::CommandType::NvAPIOMM;
   command->DestKey = c.m_pParams.DestOpacityMicromapArrayDataKey;
   command->DestOffset = c.m_pParams.DestOpacityMicromapArrayDataOffset;
@@ -711,9 +709,6 @@ void AccelerationStructuresBuildService::NvapiBuildOpacityMicromapArray(
 
   m_StateService.KeepState(c.m_pParams.DestOpacityMicromapArrayDataKey);
 
-  InputBufferService inputBufferService(m_StateService, m_BufferContentRestore,
-                                        m_ReservedResourcesService, m_ResourceStateTracker,
-                                        m_GpuAddressService);
   // get input buffer regions
   {
     unsigned ommCount{};
@@ -743,20 +738,20 @@ void AccelerationStructuresBuildService::NvapiBuildOpacityMicromapArray(
     inputSize = alignUp(inputSize, 256);
 
     if (buildDesc->inputs.inputBuffer) {
-      inputBufferService.AddBufferRegion(c.m_pParams.InputBufferKey, c.m_pParams.InputBufferOffset,
-                                         inputSize);
+      m_InputBuffersService.StoreBufferRegion(c.m_pParams.InputBufferKey,
+                                              c.m_pParams.InputBufferOffset, inputSize);
     }
     if (buildDesc->inputs.perOMMDescs.StartAddress) {
       unsigned stride = buildDesc->inputs.perOMMDescs.StrideInBytes;
       if (!stride) {
         stride = sizeof(NVAPI_D3D12_RAYTRACING_OPACITY_MICROMAP_USAGE_COUNT);
       }
-      inputBufferService.AddBufferRegion(c.m_pParams.PerOMMDescsKey, c.m_pParams.PerOMMDescsOffset,
-                                         stride * ommCount);
+      m_InputBuffersService.StoreBufferRegion(c.m_pParams.PerOMMDescsKey,
+                                              c.m_pParams.PerOMMDescsOffset, stride * ommCount);
     }
   }
 
-  inputBufferService.StoreBuffers(c.Key, c.m_pCommandList.Value, command);
+  m_InputBuffersService.StoreBuffers(c.Key, c.m_pCommandList.Value);
   m_OptimizationService.AddCommand(c.m_pCommandList.Key, command);
 }
 
@@ -767,46 +762,15 @@ void AccelerationStructuresBuildService::RestoreAccelerationStructures() {
     return;
   }
 
-  m_BufferContentRestore.WaitUntilDumped();
-
-  InitUploadBuffer();
-  {
-    m_CommandListCopyKeys.CommandQueueKey = m_StateService.GetUniqueObjectKey();
-    D3D12_COMMAND_QUEUE_DESC commandQueueDesc{};
-    commandQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_COPY;
-    ID3D12DeviceCreateCommandQueueCommand createCommandQueue;
-    createCommandQueue.Key = m_StateService.GetUniqueCommandKey();
-    createCommandQueue.m_Object.Key = m_DeviceKey;
-    createCommandQueue.m_pDesc.Value = &commandQueueDesc;
-    createCommandQueue.m_riid.Value = IID_ID3D12CommandQueue;
-    createCommandQueue.m_ppCommandQueue.Key = m_CommandListCopyKeys.CommandQueueKey;
-    m_StateService.GetRecorder().Record(
-        ID3D12DeviceCreateCommandQueueSerializer(createCommandQueue));
-
-    m_CommandListCopyKeys.CommandAllocatorKey = m_StateService.GetUniqueObjectKey();
-    ID3D12DeviceCreateCommandAllocatorCommand createCommandAllocator;
-    createCommandAllocator.Key = m_StateService.GetUniqueCommandKey();
-    createCommandAllocator.m_Object.Key = m_DeviceKey;
-    createCommandAllocator.m_type.Value = D3D12_COMMAND_LIST_TYPE_COPY;
-    createCommandAllocator.m_riid.Value = IID_ID3D12CommandAllocator;
-    createCommandAllocator.m_ppCommandAllocator.Key = m_CommandListCopyKeys.CommandAllocatorKey;
-    m_StateService.GetRecorder().Record(
-        ID3D12DeviceCreateCommandAllocatorSerializer(createCommandAllocator));
-
-    m_CommandListCopyKeys.CommandListKey = m_StateService.GetUniqueObjectKey();
-    ID3D12DeviceCreateCommandListCommand createCommandList;
-    createCommandList.Key = m_StateService.GetUniqueCommandKey();
-    createCommandList.m_Object.Key = m_DeviceKey;
-    createCommandList.m_nodeMask.Value = 0;
-    createCommandList.m_pCommandAllocator.Key = createCommandAllocator.m_ppCommandAllocator.Key;
-    createCommandList.m_type.Value = D3D12_COMMAND_LIST_TYPE_COPY;
-    createCommandList.m_pInitialState.Value = nullptr;
-    createCommandList.m_riid.Value = IID_ID3D12CommandList;
-    createCommandList.m_ppCommandList.Key = m_CommandListCopyKeys.CommandListKey;
-    m_StateService.GetRecorder().Record(ID3D12DeviceCreateCommandListSerializer(createCommandList));
+  std::vector<unsigned> commandKeys;
+  commandKeys.reserve(m_OptimizationService.GetCommands().size());
+  for (OptimizationService::CommandNode* node : m_OptimizationService.GetCommands()) {
+    commandKeys.push_back(node->Command->CommandKey);
   }
+  m_InputBuffersService.RestoreBuffersInitialization(commandKeys);
+
   {
-    m_CommandListDirectKeys.CommandQueueKey = m_StateService.GetUniqueObjectKey();
+    m_CommandQueueKey = m_StateService.GetUniqueObjectKey();
     D3D12_COMMAND_QUEUE_DESC commandQueueDesc{};
     commandQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
     ID3D12DeviceCreateCommandQueueCommand createCommandQueue;
@@ -814,21 +778,21 @@ void AccelerationStructuresBuildService::RestoreAccelerationStructures() {
     createCommandQueue.m_Object.Key = m_DeviceKey;
     createCommandQueue.m_pDesc.Value = &commandQueueDesc;
     createCommandQueue.m_riid.Value = IID_ID3D12CommandQueue;
-    createCommandQueue.m_ppCommandQueue.Key = m_CommandListDirectKeys.CommandQueueKey;
+    createCommandQueue.m_ppCommandQueue.Key = m_CommandQueueKey;
     m_StateService.GetRecorder().Record(
         ID3D12DeviceCreateCommandQueueSerializer(createCommandQueue));
 
-    m_CommandListDirectKeys.CommandAllocatorKey = m_StateService.GetUniqueObjectKey();
+    m_CommandAllocatorKey = m_StateService.GetUniqueObjectKey();
     ID3D12DeviceCreateCommandAllocatorCommand createCommandAllocator;
     createCommandAllocator.Key = m_StateService.GetUniqueCommandKey();
     createCommandAllocator.m_Object.Key = m_DeviceKey;
     createCommandAllocator.m_type.Value = D3D12_COMMAND_LIST_TYPE_DIRECT;
     createCommandAllocator.m_riid.Value = IID_ID3D12CommandAllocator;
-    createCommandAllocator.m_ppCommandAllocator.Key = m_CommandListDirectKeys.CommandAllocatorKey;
+    createCommandAllocator.m_ppCommandAllocator.Key = m_CommandAllocatorKey;
     m_StateService.GetRecorder().Record(
         ID3D12DeviceCreateCommandAllocatorSerializer(createCommandAllocator));
 
-    m_CommandListDirectKeys.CommandListKey = m_StateService.GetUniqueObjectKey();
+    m_CommandListKey = m_StateService.GetUniqueObjectKey();
     ID3D12DeviceCreateCommandListCommand createCommandList;
     createCommandList.Key = m_StateService.GetUniqueCommandKey();
     createCommandList.m_Object.Key = m_DeviceKey;
@@ -837,7 +801,7 @@ void AccelerationStructuresBuildService::RestoreAccelerationStructures() {
     createCommandList.m_type.Value = D3D12_COMMAND_LIST_TYPE_DIRECT;
     createCommandList.m_pInitialState.Value = nullptr;
     createCommandList.m_riid.Value = IID_ID3D12CommandList;
-    createCommandList.m_ppCommandList.Key = m_CommandListDirectKeys.CommandListKey;
+    createCommandList.m_ppCommandList.Key = m_CommandListKey;
     m_StateService.GetRecorder().Record(ID3D12DeviceCreateCommandListSerializer(createCommandList));
   }
   {
@@ -936,41 +900,20 @@ void AccelerationStructuresBuildService::RestoreAccelerationStructures() {
     {
       IUnknownReleaseCommand releaseCommandList{};
       releaseCommandList.Key = m_StateService.GetUniqueCommandKey();
-      releaseCommandList.m_Object.Key = m_CommandListDirectKeys.CommandListKey;
+      releaseCommandList.m_Object.Key = m_CommandListKey;
       m_StateService.GetRecorder().Record(IUnknownReleaseSerializer(releaseCommandList));
 
       IUnknownReleaseCommand releaseCommandAllocator{};
       releaseCommandAllocator.Key = m_StateService.GetUniqueCommandKey();
-      releaseCommandAllocator.m_Object.Key = m_CommandListDirectKeys.CommandAllocatorKey;
+      releaseCommandAllocator.m_Object.Key = m_CommandAllocatorKey;
       m_StateService.GetRecorder().Record(IUnknownReleaseSerializer(releaseCommandAllocator));
 
       IUnknownReleaseCommand releaseCommandQueue{};
       releaseCommandQueue.Key = m_StateService.GetUniqueCommandKey();
-      releaseCommandQueue.m_Object.Key = m_CommandListDirectKeys.CommandQueueKey;
+      releaseCommandQueue.m_Object.Key = m_CommandQueueKey;
       m_StateService.GetRecorder().Record(IUnknownReleaseSerializer(releaseCommandQueue));
     }
-    {
-      IUnknownReleaseCommand releaseCommandList{};
-      releaseCommandList.Key = m_StateService.GetUniqueCommandKey();
-      releaseCommandList.m_Object.Key = m_CommandListCopyKeys.CommandListKey;
-      m_StateService.GetRecorder().Record(IUnknownReleaseSerializer(releaseCommandList));
-
-      IUnknownReleaseCommand releaseCommandAllocator{};
-      releaseCommandAllocator.Key = m_StateService.GetUniqueCommandKey();
-      releaseCommandAllocator.m_Object.Key = m_CommandListCopyKeys.CommandAllocatorKey;
-      m_StateService.GetRecorder().Record(IUnknownReleaseSerializer(releaseCommandAllocator));
-
-      IUnknownReleaseCommand releaseCommandQueue{};
-      releaseCommandQueue.Key = m_StateService.GetUniqueCommandKey();
-      releaseCommandQueue.m_Object.Key = m_CommandListCopyKeys.CommandQueueKey;
-      m_StateService.GetRecorder().Record(IUnknownReleaseSerializer(releaseCommandQueue));
-    }
-    if (m_UploadBufferKey) {
-      IUnknownReleaseCommand releaseUploadBuffer{};
-      releaseUploadBuffer.Key = m_StateService.GetUniqueCommandKey();
-      releaseUploadBuffer.m_Object.Key = m_UploadBufferKey;
-      m_StateService.GetRecorder().Record(IUnknownReleaseSerializer(releaseUploadBuffer));
-    }
+    m_InputBuffersService.RestoreBuffersCleanup();
   }
 
   m_Restored = true;
@@ -982,138 +925,33 @@ void AccelerationStructuresBuildService::ExecuteCommandLists(
     return;
   }
   m_OptimizationService.OnExecute(c.m_ppCommandLists.Keys);
-  m_BufferContentRestore.ExecuteCommandLists(c.Key, c.m_Object.Key, c.m_Object.Value,
-                                             c.m_ppCommandLists.Value, c.m_NumCommandLists.Value);
+  m_InputBuffersService.ExecuteCommandLists(c);
 }
 
 void AccelerationStructuresBuildService::CommandQueueWait(ID3D12CommandQueueWaitCommand& c) {
-  m_BufferContentRestore.CommandQueueWait(c.Key, c.m_Object.Key, c.m_pFence.Key, c.m_Value.Value);
+  m_InputBuffersService.CommandQueueWait(c);
 }
 
 void AccelerationStructuresBuildService::CommandQueueSignal(ID3D12CommandQueueSignalCommand& c) {
-  m_BufferContentRestore.CommandQueueSignal(c.Key, c.m_Object.Key, c.m_pFence.Key, c.m_Value.Value);
+  m_InputBuffersService.CommandQueueSignal(c);
 }
 
 void AccelerationStructuresBuildService::FenceSignal(unsigned key,
                                                      unsigned fenceKey,
                                                      UINT64 fenceValue) {
-  m_BufferContentRestore.FenceSignal(key, fenceKey, fenceValue);
-}
-
-void AccelerationStructuresBuildService::InitUploadBuffer() {
-  size_t maxPerBuildUploadSize = 0;
-  for (OptimizationService::CommandNode* node : m_OptimizationService.GetCommands()) {
-    std::vector<AccelerationStructuresBufferContentRestore::BufferRestoreInfo>& restoreInfos =
-        m_BufferContentRestore.GetRestoreInfos(node->Command->CommandKey);
-    size_t uploadSize = 0;
-    for (AccelerationStructuresBufferContentRestore::BufferRestoreInfo& info : restoreInfos) {
-      if (!info.IsMappable) {
-        uploadSize += info.BufferData->size();
-      }
-    }
-    if (uploadSize > maxPerBuildUploadSize) {
-      maxPerBuildUploadSize = uploadSize;
-    }
-  }
-  if (maxPerBuildUploadSize == 0) {
-    return;
-  }
-  m_UploadBufferSize = maxPerBuildUploadSize;
-
-  D3D12_HEAP_PROPERTIES heapPropertiesUpload{};
-  heapPropertiesUpload.Type = D3D12_HEAP_TYPE_UPLOAD;
-  heapPropertiesUpload.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
-  heapPropertiesUpload.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
-  heapPropertiesUpload.CreationNodeMask = 1;
-  heapPropertiesUpload.VisibleNodeMask = 1;
-
-  D3D12_RESOURCE_DESC resourceDesc{};
-  resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-  resourceDesc.Alignment = 0;
-  resourceDesc.Width = m_UploadBufferSize;
-  resourceDesc.Height = 1;
-  resourceDesc.DepthOrArraySize = 1;
-  resourceDesc.MipLevels = 1;
-  resourceDesc.Format = DXGI_FORMAT_UNKNOWN;
-  resourceDesc.SampleDesc.Count = 1;
-  resourceDesc.SampleDesc.Quality = 0;
-  resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-  resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
-
-  m_UploadBufferKey = m_StateService.GetUniqueObjectKey();
-
-  ID3D12DeviceCreateCommittedResourceCommand createUploadResource;
-  createUploadResource.Key = m_StateService.GetUniqueCommandKey();
-  createUploadResource.m_Object.Key = m_DeviceKey;
-  createUploadResource.m_pHeapProperties.Value = &heapPropertiesUpload;
-  createUploadResource.m_HeapFlags.Value = D3D12_HEAP_FLAG_NONE;
-  createUploadResource.m_pDesc.Value = &resourceDesc;
-  createUploadResource.m_InitialResourceState.Value = D3D12_RESOURCE_STATE_GENERIC_READ;
-  createUploadResource.m_pOptimizedClearValue.Value = nullptr;
-  createUploadResource.m_riidResource.Value = IID_ID3D12Resource;
-  createUploadResource.m_ppvResource.Key = m_UploadBufferKey;
-  m_Recorder.Record(ID3D12DeviceCreateCommittedResourceSerializer(createUploadResource));
+  m_InputBuffersService.FenceSignal(key, fenceKey, fenceValue);
 }
 
 void AccelerationStructuresBuildService::RestoreCommand(
     BuildRaytracingAccelerationStructureCommand* command) {
-  std::vector<AccelerationStructuresBufferContentRestore::BufferRestoreInfo>& restoreInfos =
-      m_BufferContentRestore.GetRestoreInfos(command->CommandKey);
 
   ResourceResidencyService residencyService(m_StateService, m_DeviceKey);
-  for (const auto& info : restoreInfos) {
-    residencyService.AddResource(info.BufferKey);
-  }
+  m_InputBuffersService.MakeBuffersResident(command->CommandKey, residencyService);
   residencyService.AddResource(command->Desc->DestAccelerationStructureKey);
   residencyService.AddResource(command->Desc->SourceAccelerationStructureKey);
   residencyService.RecordMakeResident();
 
-  std::unordered_set<unsigned> restoredBuffers;
-  size_t uploadBufferOffset{};
-  for (AccelerationStructuresBufferContentRestore::BufferRestoreInfo& info : restoreInfos) {
-    auto itHash = m_BufferHashesByKeyOffset.find(std::pair(info.BufferKey, info.Offset));
-    if (itHash != m_BufferHashesByKeyOffset.end() && itHash->second == info.BufferHash) {
-      continue;
-    }
-    m_BufferHashesByKeyOffset[std::pair(info.BufferKey, info.Offset)] = info.BufferHash;
-    restoredBuffers.insert(info.BufferKey);
-
-    for (auto& itTiledResource : command->TiledResources) {
-      auto it = m_TiledResourceUpdatesRestored.find(info.BufferKey);
-      if (it == m_TiledResourceUpdatesRestored.end() ||
-          it->second.find(itTiledResource.second.UpdateId) == it->second.end()) {
-        m_ReservedResourcesService.UpdateTileMappings(
-            itTiledResource.second, m_CommandListCopyKeys.CommandQueueKey, nullptr);
-        m_TiledResourceUpdatesRestored[info.BufferKey].insert(itTiledResource.second.UpdateId);
-      }
-    }
-
-    uploadBufferOffset += RestoreBuffer(info, uploadBufferOffset);
-  }
-
-  RecordExecuteCommandLists(m_CommandListCopyKeys);
-
-  for (auto& it : command->Buffers) {
-    if (!it.second->IsMappable && restoredBuffers.find(it.first) != restoredBuffers.end()) {
-      ID3D12GraphicsCommandListResourceBarrierCommand barrierCommand;
-      barrierCommand.Key = m_StateService.GetUniqueCommandKey();
-      barrierCommand.m_Object.Key = m_CommandListDirectKeys.CommandListKey;
-      barrierCommand.m_NumBarriers.Value = 1;
-      D3D12_RESOURCE_BARRIER barrier{};
-      barrierCommand.m_pBarriers.Value = &barrier;
-      barrierCommand.m_pBarriers.Size = 1;
-      barrierCommand.m_pBarriers.ResourceKeys.resize(1);
-      barrierCommand.m_pBarriers.ResourceAfterKeys.resize(1);
-      barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-      barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-      barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-      barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
-      barrier.Transition.StateAfter = it.second->CurrentState;
-      barrierCommand.m_pBarriers.ResourceKeys[0] = it.first;
-      m_StateService.GetRecorder().Record(
-          ID3D12GraphicsCommandListResourceBarrierSerializer(barrierCommand));
-    }
-  }
+  m_InputBuffersService.RestoreBuffers(command->CommandKey, m_CommandListKey);
 
   command->Desc->ScratchAccelerationStructureKey = m_ScratchResourceKey;
   command->Desc->ScratchAccelerationStructureOffset = 0;
@@ -1121,7 +959,7 @@ void AccelerationStructuresBuildService::RestoreCommand(
   {
     ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand build;
     build.Key = command->CommandKey;
-    build.m_Object.Key = m_CommandListDirectKeys.CommandListKey;
+    build.m_Object.Key = m_CommandListKey;
     build.m_pDesc.Value = command->Desc->Value;
     build.m_pDesc.DestAccelerationStructureKey = command->Desc->DestAccelerationStructureKey;
     build.m_pDesc.DestAccelerationStructureOffset = command->Desc->DestAccelerationStructureOffset;
@@ -1139,7 +977,7 @@ void AccelerationStructuresBuildService::RestoreCommand(
         ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureSerializer(build));
   }
 
-  RecordExecuteCommandLists(m_CommandListDirectKeys);
+  RecordExecuteCommandLists();
   residencyService.RecordEvict();
 }
 
@@ -1152,7 +990,7 @@ void AccelerationStructuresBuildService::RestoreCommand(
 
   ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand copy;
   copy.Key = command->CommandKey;
-  copy.m_Object.Key = m_CommandListDirectKeys.CommandListKey;
+  copy.m_Object.Key = m_CommandListKey;
   copy.m_DestAccelerationStructureData.Value = command->DestAccelerationStructureData;
   copy.m_DestAccelerationStructureData.InterfaceKey = command->DestKey;
   copy.m_DestAccelerationStructureData.Offset = command->DestOffset;
@@ -1163,69 +1001,20 @@ void AccelerationStructuresBuildService::RestoreCommand(
   m_StateService.GetRecorder().Record(
       ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureSerializer(copy));
 
-  RecordExecuteCommandLists(m_CommandListDirectKeys);
+  RecordExecuteCommandLists();
   residencyService.RecordEvict();
 }
 
 void AccelerationStructuresBuildService::RestoreCommand(
     NvAPIBuildRaytracingAccelerationStructureExCommand* command) {
-  std::vector<AccelerationStructuresBufferContentRestore::BufferRestoreInfo>& restoreInfos =
-      m_BufferContentRestore.GetRestoreInfos(command->CommandKey);
 
   ResourceResidencyService residencyService(m_StateService, m_DeviceKey);
-  for (const auto& info : restoreInfos) {
-    residencyService.AddResource(info.BufferKey);
-  }
+  m_InputBuffersService.MakeBuffersResident(command->CommandKey, residencyService);
   residencyService.AddResource(command->Desc->DestAccelerationStructureKey);
   residencyService.AddResource(command->Desc->SourceAccelerationStructureKey);
   residencyService.RecordMakeResident();
 
-  std::unordered_set<unsigned> restoredBuffers;
-  size_t uploadBufferOffset{};
-  for (AccelerationStructuresBufferContentRestore::BufferRestoreInfo& info : restoreInfos) {
-    auto itHash = m_BufferHashesByKeyOffset.find(std::pair(info.BufferKey, info.Offset));
-    if (itHash != m_BufferHashesByKeyOffset.end() && itHash->second == info.BufferHash) {
-      continue;
-    }
-    m_BufferHashesByKeyOffset[std::pair(info.BufferKey, info.Offset)] = info.BufferHash;
-    restoredBuffers.insert(info.BufferKey);
-
-    for (auto& itTiledResource : command->TiledResources) {
-      auto it = m_TiledResourceUpdatesRestored.find(info.BufferKey);
-      if (it == m_TiledResourceUpdatesRestored.end() ||
-          it->second.find(itTiledResource.second.UpdateId) == it->second.end()) {
-        m_ReservedResourcesService.UpdateTileMappings(
-            itTiledResource.second, m_CommandListCopyKeys.CommandQueueKey, nullptr);
-        m_TiledResourceUpdatesRestored[info.BufferKey].insert(itTiledResource.second.UpdateId);
-      }
-    }
-
-    uploadBufferOffset += RestoreBuffer(info, uploadBufferOffset);
-  }
-
-  RecordExecuteCommandLists(m_CommandListCopyKeys);
-
-  for (auto& it : command->Buffers) {
-    if (!it.second->IsMappable && restoredBuffers.find(it.first) != restoredBuffers.end()) {
-      ID3D12GraphicsCommandListResourceBarrierCommand barrierCommand;
-      barrierCommand.Key = m_StateService.GetUniqueCommandKey();
-      barrierCommand.m_Object.Key = m_CommandListDirectKeys.CommandListKey;
-      barrierCommand.m_NumBarriers.Value = 1;
-      D3D12_RESOURCE_BARRIER barrier{};
-      barrierCommand.m_pBarriers.Value = &barrier;
-      barrierCommand.m_pBarriers.Size = 1;
-      barrierCommand.m_pBarriers.ResourceKeys.resize(1);
-      barrierCommand.m_pBarriers.ResourceAfterKeys.resize(1);
-      barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-      barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-      barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-      barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
-      barrier.Transition.StateAfter = it.second->CurrentState;
-      barrierCommand.m_pBarriers.ResourceKeys[0] = it.first;
-      m_StateService.GetRecorder().Record(
-          ID3D12GraphicsCommandListResourceBarrierSerializer(barrierCommand));
-    }
-  }
+  m_InputBuffersService.RestoreBuffers(command->CommandKey, m_CommandListKey);
 
   command->Desc->ScratchAccelerationStructureKey = m_ScratchResourceKey;
   command->Desc->ScratchAccelerationStructureOffset = 0;
@@ -1233,7 +1022,7 @@ void AccelerationStructuresBuildService::RestoreCommand(
   {
     NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand build;
     build.Key = command->CommandKey;
-    build.m_pCommandList.Key = m_CommandListDirectKeys.CommandListKey;
+    build.m_pCommandList.Key = m_CommandListKey;
     build.m_pParams.Value = command->Desc->Value;
     build.m_pParams.DestAccelerationStructureKey = command->Desc->DestAccelerationStructureKey;
     build.m_pParams.DestAccelerationStructureOffset =
@@ -1252,19 +1041,15 @@ void AccelerationStructuresBuildService::RestoreCommand(
     m_Recorder.Record(NvAPI_D3D12_BuildRaytracingAccelerationStructureExSerializer(build));
   }
 
-  RecordExecuteCommandLists(m_CommandListDirectKeys);
+  RecordExecuteCommandLists();
   residencyService.RecordEvict();
 }
 
 void AccelerationStructuresBuildService::RestoreCommand(
     NvAPIBuildRaytracingOpacityMicromapArrayCommand* command) {
-  std::vector<AccelerationStructuresBufferContentRestore::BufferRestoreInfo>& restoreInfos =
-      m_BufferContentRestore.GetRestoreInfos(command->CommandKey);
 
   ResourceResidencyService residencyService(m_StateService, m_DeviceKey);
-  for (const auto& info : restoreInfos) {
-    residencyService.AddResource(info.BufferKey);
-  }
+  m_InputBuffersService.MakeBuffersResident(command->CommandKey, residencyService);
   residencyService.AddResource(command->Desc->DestOpacityMicromapArrayDataKey);
   residencyService.AddResource(command->Desc->InputBufferKey);
   residencyService.AddResource(command->Desc->PerOMMDescsKey);
@@ -1273,52 +1058,7 @@ void AccelerationStructuresBuildService::RestoreCommand(
   }
   residencyService.RecordMakeResident();
 
-  std::unordered_set<unsigned> restoredBuffers;
-  size_t uploadBufferOffset{};
-  for (AccelerationStructuresBufferContentRestore::BufferRestoreInfo& info : restoreInfos) {
-    auto itHash = m_BufferHashesByKeyOffset.find(std::pair(info.BufferKey, info.Offset));
-    if (itHash != m_BufferHashesByKeyOffset.end() && itHash->second == info.BufferHash) {
-      continue;
-    }
-    m_BufferHashesByKeyOffset[std::pair(info.BufferKey, info.Offset)] = info.BufferHash;
-    restoredBuffers.insert(info.BufferKey);
-
-    for (auto& itTiledResource : command->TiledResources) {
-      auto it = m_TiledResourceUpdatesRestored.find(info.BufferKey);
-      if (it == m_TiledResourceUpdatesRestored.end() ||
-          it->second.find(itTiledResource.second.UpdateId) == it->second.end()) {
-        m_ReservedResourcesService.UpdateTileMappings(
-            itTiledResource.second, m_CommandListCopyKeys.CommandQueueKey, nullptr);
-        m_TiledResourceUpdatesRestored[info.BufferKey].insert(itTiledResource.second.UpdateId);
-      }
-    }
-
-    uploadBufferOffset += RestoreBuffer(info, uploadBufferOffset);
-  }
-
-  RecordExecuteCommandLists(m_CommandListCopyKeys);
-
-  for (auto& it : command->Buffers) {
-    if (!it.second->IsMappable && restoredBuffers.find(it.first) != restoredBuffers.end()) {
-      ID3D12GraphicsCommandListResourceBarrierCommand barrierCommand;
-      barrierCommand.Key = m_StateService.GetUniqueCommandKey();
-      barrierCommand.m_Object.Key = m_CommandListDirectKeys.CommandListKey;
-      barrierCommand.m_NumBarriers.Value = 1;
-      D3D12_RESOURCE_BARRIER barrier{};
-      barrierCommand.m_pBarriers.Value = &barrier;
-      barrierCommand.m_pBarriers.Size = 1;
-      barrierCommand.m_pBarriers.ResourceKeys.resize(1);
-      barrierCommand.m_pBarriers.ResourceAfterKeys.resize(1);
-      barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-      barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-      barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-      barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
-      barrier.Transition.StateAfter = it.second->CurrentState;
-      barrierCommand.m_pBarriers.ResourceKeys[0] = it.first;
-      m_StateService.GetRecorder().Record(
-          ID3D12GraphicsCommandListResourceBarrierSerializer(barrierCommand));
-    }
-  }
+  m_InputBuffersService.RestoreBuffers(command->CommandKey, m_CommandListKey);
 
   command->Desc->ScratchOpacityMicromapArrayDataKey = m_ScratchResourceKey;
   command->Desc->ScratchOpacityMicromapArrayDataOffset = 0;
@@ -1326,7 +1066,7 @@ void AccelerationStructuresBuildService::RestoreCommand(
   {
     NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand build;
     build.Key = command->CommandKey;
-    build.m_pCommandList.Key = m_CommandListDirectKeys.CommandListKey;
+    build.m_pCommandList.Key = m_CommandListKey;
     build.m_pParams.Value = command->Desc->Value;
     build.m_pParams.DestOpacityMicromapArrayDataKey =
         command->Desc->DestOpacityMicromapArrayDataKey;
@@ -1345,30 +1085,30 @@ void AccelerationStructuresBuildService::RestoreCommand(
     m_Recorder.Record(NvAPI_D3D12_BuildRaytracingOpacityMicromapArraySerializer(build));
   }
 
-  RecordExecuteCommandLists(m_CommandListDirectKeys);
+  RecordExecuteCommandLists();
   residencyService.RecordEvict();
 }
 
-void AccelerationStructuresBuildService::RecordExecuteCommandLists(const CommandListKeys& keys) {
+void AccelerationStructuresBuildService::RecordExecuteCommandLists() {
   ID3D12GraphicsCommandListCloseCommand commandListClose;
   commandListClose.Key = m_StateService.GetUniqueCommandKey();
-  commandListClose.m_Object.Key = keys.CommandListKey;
+  commandListClose.m_Object.Key = m_CommandListKey;
   m_StateService.GetRecorder().Record(ID3D12GraphicsCommandListCloseSerializer(commandListClose));
 
   ID3D12CommandQueueExecuteCommandListsCommand executeCommandLists;
   executeCommandLists.Key = m_StateService.GetUniqueCommandKey();
-  executeCommandLists.m_Object.Key = keys.CommandQueueKey;
+  executeCommandLists.m_Object.Key = m_CommandQueueKey;
   executeCommandLists.m_NumCommandLists.Value = 1;
   executeCommandLists.m_ppCommandLists.Value = reinterpret_cast<ID3D12CommandList**>(1);
   executeCommandLists.m_ppCommandLists.Size = 1;
   executeCommandLists.m_ppCommandLists.Keys.resize(1);
-  executeCommandLists.m_ppCommandLists.Keys[0] = keys.CommandListKey;
+  executeCommandLists.m_ppCommandLists.Keys[0] = m_CommandListKey;
   m_StateService.GetRecorder().Record(
       ID3D12CommandQueueExecuteCommandListsSerializer(executeCommandLists));
 
   ID3D12CommandQueueSignalCommand commandQueueSignal;
   commandQueueSignal.Key = m_StateService.GetUniqueCommandKey();
-  commandQueueSignal.m_Object.Key = keys.CommandQueueKey;
+  commandQueueSignal.m_Object.Key = m_CommandQueueKey;
   commandQueueSignal.m_pFence.Key = m_FenceKey;
   commandQueueSignal.m_Value.Value = ++m_RecordedFenceValue;
   m_StateService.GetRecorder().Record(ID3D12CommandQueueSignalSerializer(commandQueueSignal));
@@ -1381,156 +1121,15 @@ void AccelerationStructuresBuildService::RecordExecuteCommandLists(const Command
 
   ID3D12CommandAllocatorResetCommand commandAllocatorReset;
   commandAllocatorReset.Key = m_StateService.GetUniqueCommandKey();
-  commandAllocatorReset.m_Object.Key = keys.CommandAllocatorKey;
+  commandAllocatorReset.m_Object.Key = m_CommandAllocatorKey;
   m_StateService.GetRecorder().Record(ID3D12CommandAllocatorResetSerializer(commandAllocatorReset));
 
   ID3D12GraphicsCommandListResetCommand commandListReset;
   commandListReset.Key = m_StateService.GetUniqueCommandKey();
-  commandListReset.m_Object.Key = keys.CommandListKey;
-  commandListReset.m_pAllocator.Key = keys.CommandAllocatorKey;
+  commandListReset.m_Object.Key = m_CommandListKey;
+  commandListReset.m_pAllocator.Key = m_CommandAllocatorKey;
   commandListReset.m_pInitialState.Key = 0;
   m_StateService.GetRecorder().Record(ID3D12GraphicsCommandListResetSerializer(commandListReset));
-}
-
-size_t AccelerationStructuresBuildService::RestoreBuffer(
-    const AccelerationStructuresBufferContentRestore::BufferRestoreInfo& restoreInfo,
-    size_t uploadBufferOffset) {
-  if (restoreInfo.IsMappable) {
-    ID3D12ResourceMapCommand mapCommand;
-    mapCommand.Key = m_StateService.GetUniqueCommandKey();
-    mapCommand.m_Object.Key = restoreInfo.BufferKey;
-    mapCommand.m_Subresource.Value = 0;
-    mapCommand.m_pReadRange.Value = nullptr;
-    mapCommand.m_ppData.CaptureValue = m_StateService.GetUniqueFakePointer();
-    mapCommand.m_ppData.Value = &mapCommand.m_ppData.CaptureValue;
-    m_Recorder.Record(ID3D12ResourceMapSerializer(mapCommand));
-
-    MappedDataMetaCommand metaCommand;
-    metaCommand.Key = m_StateService.GetUniqueCommandKey();
-    metaCommand.m_resource.Key = restoreInfo.BufferKey;
-    metaCommand.m_mappedAddress.Value = mapCommand.m_ppData.CaptureValue;
-    metaCommand.m_offset.Value = restoreInfo.Offset;
-    metaCommand.m_data.Value = const_cast<char*>(restoreInfo.BufferData->data());
-    metaCommand.m_data.Size = restoreInfo.BufferData->size();
-    m_Recorder.Record(MappedDataMetaSerializer(metaCommand));
-
-    ID3D12ResourceUnmapCommand unmapCommand;
-    unmapCommand.Key = m_StateService.GetUniqueCommandKey();
-    unmapCommand.m_Object.Key = restoreInfo.BufferKey;
-    unmapCommand.m_Subresource.Value = 0;
-    unmapCommand.m_pWrittenRange.Value = nullptr;
-    m_Recorder.Record(ID3D12ResourceUnmapSerializer(unmapCommand));
-
-    return 0;
-  } else {
-    GITS_ASSERT(uploadBufferOffset + restoreInfo.BufferData->size() <= m_UploadBufferSize);
-
-    ID3D12ResourceMapCommand mapCommand;
-    mapCommand.Key = m_StateService.GetUniqueCommandKey();
-    mapCommand.m_Object.Key = m_UploadBufferKey;
-    mapCommand.m_Subresource.Value = 0;
-    mapCommand.m_pReadRange.Value = nullptr;
-    mapCommand.m_ppData.CaptureValue = m_StateService.GetUniqueFakePointer();
-    mapCommand.m_ppData.Value = &mapCommand.m_ppData.CaptureValue;
-    m_Recorder.Record(ID3D12ResourceMapSerializer(mapCommand));
-
-    MappedDataMetaCommand metaCommand;
-    metaCommand.Key = m_StateService.GetUniqueCommandKey();
-    metaCommand.m_resource.Key = m_UploadBufferKey;
-    metaCommand.m_mappedAddress.Value = mapCommand.m_ppData.CaptureValue;
-    metaCommand.m_offset.Value = uploadBufferOffset;
-    metaCommand.m_data.Value = const_cast<char*>(restoreInfo.BufferData->data());
-    metaCommand.m_data.Size = restoreInfo.BufferData->size();
-    m_Recorder.Record(MappedDataMetaSerializer(metaCommand));
-
-    ID3D12ResourceUnmapCommand unmapCommand;
-    unmapCommand.Key = m_StateService.GetUniqueCommandKey();
-    unmapCommand.m_Object.Key = m_UploadBufferKey;
-    unmapCommand.m_Subresource.Value = 0;
-    unmapCommand.m_pWrittenRange.Value = nullptr;
-    m_Recorder.Record(ID3D12ResourceUnmapSerializer(unmapCommand));
-
-    ID3D12GraphicsCommandListCopyBufferRegionCommand copyBufferRegion;
-    copyBufferRegion.Key = m_StateService.GetUniqueCommandKey();
-    copyBufferRegion.m_Object.Key = m_CommandListCopyKeys.CommandListKey;
-    copyBufferRegion.m_pDstBuffer.Key = restoreInfo.BufferKey;
-    copyBufferRegion.m_DstOffset.Value = restoreInfo.Offset;
-    copyBufferRegion.m_pSrcBuffer.Key = m_UploadBufferKey;
-    copyBufferRegion.m_SrcOffset.Value = uploadBufferOffset;
-    copyBufferRegion.m_NumBytes.Value = restoreInfo.BufferData->size();
-    m_Recorder.Record(ID3D12GraphicsCommandListCopyBufferRegionSerializer(copyBufferRegion));
-
-    return restoreInfo.BufferData->size();
-  }
-}
-
-void AccelerationStructuresBuildService::InputBufferService::AddBufferRegion(unsigned key,
-                                                                             unsigned offset,
-                                                                             unsigned size) {
-  m_BufferRegionsByInputKey[key].emplace_back(offset, offset + size);
-}
-
-void AccelerationStructuresBuildService::InputBufferService::StoreBuffers(
-    unsigned commandKey,
-    ID3D12GraphicsCommandList* commandList,
-    RaytracingAccelerationStructureCommand* command) {
-  for (auto& [inputKey, bufferRegions] : m_BufferRegionsByInputKey) {
-
-    std::sort(bufferRegions.begin(), bufferRegions.end(),
-              [](const BufferRegion& a, const BufferRegion& b) { return a.Start < b.Start; });
-
-    std::vector<BufferRegion> bufferRegionsMerged;
-    for (BufferRegion bufferRegion : bufferRegions) {
-      if (bufferRegionsMerged.empty() || bufferRegionsMerged.back().End < bufferRegion.Start) {
-        bufferRegionsMerged.push_back(bufferRegion);
-      } else {
-        bufferRegionsMerged.back().End = std::max(bufferRegionsMerged.back().End, bufferRegion.End);
-      }
-    }
-
-    for (BufferRegion bufferRegion : bufferRegionsMerged) {
-      StoreBuffer(inputKey, bufferRegion.Start, bufferRegion.End - bufferRegion.Start, commandKey,
-                  commandList, command);
-    }
-  }
-}
-
-void AccelerationStructuresBuildService::InputBufferService::StoreBuffer(
-    unsigned inputKey,
-    unsigned inputOffset,
-    unsigned size,
-    unsigned commandKey,
-    ID3D12GraphicsCommandList* commandList,
-    RaytracingAccelerationStructureCommand* command) {
-  m_StateService.KeepState(inputKey);
-  ResourceState* bufferState = static_cast<ResourceState*>(m_StateService.GetState(inputKey));
-  bufferState->CurrentState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
-  if (bufferState->DenyShaderResource) {
-    bufferState->CurrentState = D3D12_RESOURCE_STATE_COMMON;
-  }
-
-  BarrierState currentState = GetAdjustedCurrentState(
-      m_ResourceStateTracker, m_GpuAddressService, commandList,
-      bufferState->GpuVirtualAddress + inputOffset,
-      static_cast<ID3D12Resource*>(bufferState->Object), inputKey, bufferState->CurrentState);
-
-  m_BufferContentRestore.StoreBuffer(commandList, static_cast<ID3D12Resource*>(bufferState->Object),
-                                     inputKey, inputOffset, size, currentState, commandKey,
-                                     bufferState->IsMappable);
-  command->Buffers[inputKey] = bufferState;
-  ReservedResourcesService::TiledResource* tiledResource =
-      m_ReservedResourcesService.GetTiledResource(inputKey);
-  if (tiledResource) {
-    auto it = command->TiledResources.find(inputKey);
-    if (it == command->TiledResources.end()) {
-      command->TiledResources[inputKey] = *tiledResource;
-    }
-    for (ReservedResourcesService::Tile& tile : tiledResource->Tiles) {
-      if (tile.HeapKey) {
-        m_StateService.KeepState(tile.HeapKey);
-      }
-    }
-  }
 }
 
 void AccelerationStructuresBuildService::OptimizationService::OnExecute(
@@ -1592,7 +1191,6 @@ void AccelerationStructuresBuildService::OptimizationService::StoreCommand(
   }
   m_CommandByKeyOffset[{node->Command->DestKey, node->Command->DestOffset}] = node;
   if (previousNode && previousNode != sourceNode && previousNode->Destinations.empty()) {
-    m_BufferContentRestore.RemoveBuild(previousNode->Command->CommandKey);
     if (previousNode->Source) {
       previousNode->Source->Destinations.erase(previousNode);
     }

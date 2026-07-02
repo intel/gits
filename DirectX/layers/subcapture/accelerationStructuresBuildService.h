@@ -12,6 +12,7 @@
 #include "commandsAuto.h"
 #include "commandsCustom.h"
 #include "accelerationStructuresBufferContentRestore.h"
+#include "accelerationStructuresInputBuffersService.h"
 #include "reservedResourcesService.h"
 #include "objectState.h"
 #include "resourceStateTracker.h"
@@ -44,7 +45,7 @@ public:
   void NvapiBuildOpacityMicromapArray(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& c);
   void SetDeviceKey(unsigned deviceKey) {
     m_DeviceKey = deviceKey;
-    m_BufferContentRestore.SetDeviceKey(deviceKey);
+    m_InputBuffersService.SetDeviceKey(deviceKey);
   }
   void RestoreAccelerationStructures();
   void ExecuteCommandLists(ID3D12CommandQueueExecuteCommandListsCommand& c);
@@ -56,7 +57,7 @@ private:
   StateTrackingService& m_StateService;
   SubcaptureRecorder& m_Recorder;
   ReservedResourcesService& m_ReservedResourcesService;
-  AccelerationStructuresBufferContentRestore m_BufferContentRestore;
+  AccelerationStructuresInputBuffersService m_InputBuffersService;
   ResourceStateTracker& m_ResourceStateTracker;
   CapturePlayerGpuAddressService& m_GpuAddressService;
 
@@ -110,22 +111,12 @@ private:
   unsigned m_MaxBuildScratchSpace{};
   unsigned m_DeviceKey{};
 
-  struct CommandListKeys {
-    unsigned CommandQueueKey{};
-    unsigned CommandAllocatorKey{};
-    unsigned CommandListKey{};
-  };
-  CommandListKeys m_CommandListCopyKeys{};
-  CommandListKeys m_CommandListDirectKeys{};
-
+  unsigned m_CommandQueueKey{};
+  unsigned m_CommandAllocatorKey{};
+  unsigned m_CommandListKey{};
   unsigned m_FenceKey{};
-  unsigned m_UploadBufferKey{};
   unsigned m_ScratchResourceKey{};
   UINT64 m_RecordedFenceValue{};
-  size_t m_UploadBufferSize{};
-
-  std::map<std::pair<unsigned, unsigned>, uint64_t> m_BufferHashesByKeyOffset;
-  std::unordered_map<unsigned, std::unordered_set<unsigned>> m_TiledResourceUpdatesRestored;
 
   bool m_Restored{};
   bool m_SerializeMode{};
@@ -133,60 +124,16 @@ private:
   bool m_Optimize{};
 
 private:
-  void InitUploadBuffer();
   void RestoreCommand(BuildRaytracingAccelerationStructureCommand* command);
   void RestoreCommand(CopyRaytracingAccelerationStructureCommand* command);
   void RestoreCommand(NvAPIBuildRaytracingAccelerationStructureExCommand* command);
   void RestoreCommand(NvAPIBuildRaytracingOpacityMicromapArrayCommand* command);
-  void RecordExecuteCommandLists(const CommandListKeys& keys);
-  size_t RestoreBuffer(
-      const AccelerationStructuresBufferContentRestore::BufferRestoreInfo& restoreInfo,
-      size_t uploadBufferOffset);
+  void RecordExecuteCommandLists();
 
 private:
-  class InputBufferService {
-  public:
-    InputBufferService(StateTrackingService& stateService,
-                       AccelerationStructuresBufferContentRestore& bufferContentRestore,
-                       ReservedResourcesService& reservedResourcesService,
-                       ResourceStateTracker& resourceStateTracker,
-                       CapturePlayerGpuAddressService& gpuAddressService)
-        : m_StateService(stateService),
-          m_BufferContentRestore(bufferContentRestore),
-          m_ReservedResourcesService(reservedResourcesService),
-          m_ResourceStateTracker(resourceStateTracker),
-          m_GpuAddressService(gpuAddressService) {}
-    void AddBufferRegion(unsigned key, unsigned offset, unsigned size);
-    void StoreBuffers(unsigned commandKey,
-                      ID3D12GraphicsCommandList* commandList,
-                      RaytracingAccelerationStructureCommand* state);
-
-  private:
-    void StoreBuffer(unsigned inputKey,
-                     unsigned inputOffset,
-                     unsigned size,
-                     unsigned commandKey,
-                     ID3D12GraphicsCommandList* commandList,
-                     RaytracingAccelerationStructureCommand* state);
-
-  private:
-    StateTrackingService& m_StateService;
-    AccelerationStructuresBufferContentRestore& m_BufferContentRestore;
-    ReservedResourcesService& m_ReservedResourcesService;
-    ResourceStateTracker& m_ResourceStateTracker;
-    CapturePlayerGpuAddressService& m_GpuAddressService;
-    struct BufferRegion {
-      unsigned Start{};
-      unsigned End{};
-    };
-    std::unordered_map<unsigned, std::vector<BufferRegion>> m_BufferRegionsByInputKey;
-  };
-
   class OptimizationService {
   public:
-    OptimizationService(StateTrackingService& stateService,
-                        AccelerationStructuresBufferContentRestore& bufferContentRestore)
-        : m_StateService(stateService), m_BufferContentRestore(bufferContentRestore) {}
+    OptimizationService(StateTrackingService& stateService) : m_StateService(stateService) {}
     void AddCommand(unsigned commandListKey, RaytracingAccelerationStructureCommand* command) {
       m_CommandsByCommandList[commandListKey].emplace_back(command);
     }
@@ -211,7 +158,6 @@ private:
 
   private:
     StateTrackingService& m_StateService;
-    AccelerationStructuresBufferContentRestore& m_BufferContentRestore;
     unsigned m_CommandUniqueId{};
     std::unordered_map<unsigned,
                        std::vector<std::unique_ptr<RaytracingAccelerationStructureCommand>>>
