@@ -57,6 +57,11 @@ public:
   void Post(D3D12CreateDeviceCommand& c) override;
   void Post(D3D12EnableExperimentalFeaturesCommand& c) override;
   void Post(D3D12GetInterfaceCommand& Command) override;
+  void Pre(ID3D12DeviceCreateCommandQueueCommand& c) override;
+  void Pre(ID3D12Device9CreateCommandQueue1Command& c) override;
+  void Pre(ID3D12DeviceCreateCommandListCommand& c) override;
+  void Pre(ID3D12Device4CreateCommandList1Command& c) override;
+  void Pre(ID3D12DeviceCreateCommandAllocatorCommand& c) override;
   void Post(ID3D12DeviceCreateCommandQueueCommand& c) override;
   void Post(ID3D12Device9CreateCommandQueue1Command& c) override;
   void Pre(IDXGIFactoryCreateSwapChainCommand& c) override;
@@ -299,6 +304,7 @@ private:
   MetaCommandsService m_MetaCommandsService;
   std::unordered_map<unsigned, std::unordered_set<unsigned>> m_ResourceHeaps;
   std::unordered_map<unsigned, std::vector<unsigned>> m_SwapchainBuffers;
+  bool m_ForceDirectCommandListType{};
 
   class CommandQueueSwapChainRefCountTracker {
   public:
