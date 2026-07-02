@@ -408,7 +408,7 @@ Configuration:
             Description: Enables performance measurement in OpenGL streams on frame base. Results are being stored in benchmark.csv file in CWD or
           - Name: showWindowBorder
             Type: bool
-            Default: false
+            Default: true
             Arguments: [showWindowBorder]
             Description: Forces player to show window border (ignored in fullscreen).
           - Name: captureFrames
