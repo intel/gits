@@ -11,35 +11,31 @@
 #include "commandSerializersAuto.h"
 #include "commandSerializersCustom.h"
 
+#include "xxhash.h"
 #include <algorithm>
 
 namespace gits {
 namespace DirectX {
 
-void AccelerationStructuresInputBuffersService::SetDeviceKey(unsigned deviceKey) {
-  m_DeviceKey = deviceKey;
-  m_BufferContentRestore.SetDeviceKey(deviceKey);
-}
-
 void AccelerationStructuresInputBuffersService::ExecuteCommandLists(
     ID3D12CommandQueueExecuteCommandListsCommand& c) {
-  m_BufferContentRestore.ExecuteCommandLists(c.Key, c.m_Object.Key, c.m_Object.Value,
-                                             c.m_ppCommandLists.Value, c.m_NumCommandLists.Value);
+  m_BufferInputDump.ExecuteCommandLists(c.Key, c.m_Object.Key, c.m_Object.Value,
+                                        c.m_ppCommandLists.Value, c.m_NumCommandLists.Value);
 }
 
 void AccelerationStructuresInputBuffersService::CommandQueueWait(ID3D12CommandQueueWaitCommand& c) {
-  m_BufferContentRestore.CommandQueueWait(c.Key, c.m_Object.Key, c.m_pFence.Key, c.m_Value.Value);
+  m_BufferInputDump.CommandQueueWait(c.Key, c.m_Object.Key, c.m_pFence.Key, c.m_Value.Value);
 }
 
 void AccelerationStructuresInputBuffersService::CommandQueueSignal(
     ID3D12CommandQueueSignalCommand& c) {
-  m_BufferContentRestore.CommandQueueSignal(c.Key, c.m_Object.Key, c.m_pFence.Key, c.m_Value.Value);
+  m_BufferInputDump.CommandQueueSignal(c.Key, c.m_Object.Key, c.m_pFence.Key, c.m_Value.Value);
 }
 
 void AccelerationStructuresInputBuffersService::FenceSignal(unsigned key,
                                                             unsigned fenceKey,
                                                             UINT64 fenceValue) {
-  m_BufferContentRestore.FenceSignal(key, fenceKey, fenceValue);
+  m_BufferInputDump.FenceSignal(key, fenceKey, fenceValue);
 }
 
 void AccelerationStructuresInputBuffersService::StoreBufferRegion(unsigned bufferKey,
@@ -84,9 +80,10 @@ void AccelerationStructuresInputBuffersService::StoreBuffers(
           bufferState->GpuVirtualAddress + inputOffset,
           static_cast<ID3D12Resource*>(bufferState->Object), inputKey, bufferState->CurrentState);
 
-      m_BufferContentRestore.StoreBuffer(
-          commandList, static_cast<ID3D12Resource*>(bufferState->Object), inputKey, inputOffset,
-          inputSize, currentState, commandKey, bufferState->IsMappable);
+      m_BufferInputDump.DumpBuffer(commandList, static_cast<ID3D12Resource*>(bufferState->Object),
+                                   inputKey, inputOffset, inputSize, currentState, commandKey,
+                                   bufferState->IsMappable);
+
       inputBuffers->Buffers[inputKey] = bufferState;
       ReservedResourcesService::TiledResource* tiledResource =
           m_ReservedResourcesService.GetTiledResource(inputKey);
@@ -107,18 +104,18 @@ void AccelerationStructuresInputBuffersService::StoreBuffers(
 }
 
 void AccelerationStructuresInputBuffersService::RestoreBuffersInitialization(
-    std::vector<unsigned>& commandKeys) {
+    std::vector<unsigned>& commandKeys, unsigned deviceKey) {
 
-  m_BufferContentRestore.WaitUntilDumped();
+  m_BufferInputDump.WaitUntilDumped();
 
   size_t maxPerBuildUploadSize = 0;
   for (unsigned commandKey : commandKeys) {
-    std::vector<AccelerationStructuresBufferContentRestore::BufferRestoreInfo>& restoreInfos =
-        m_BufferContentRestore.GetRestoreInfos(commandKey);
+    std::vector<BufferInputDump::InputBuffer>& inputBuffers =
+        m_BufferInputDump.GetInputBuffers(commandKey);
     size_t uploadSize = 0;
-    for (AccelerationStructuresBufferContentRestore::BufferRestoreInfo& info : restoreInfos) {
-      if (!info.IsMappable) {
-        uploadSize += info.BufferData->size();
+    for (BufferInputDump::InputBuffer& inputBuffer : inputBuffers) {
+      if (!inputBuffer.IsMappable) {
+        uploadSize += inputBuffer.BufferData->size();
       }
     }
     if (uploadSize > maxPerBuildUploadSize) {
@@ -155,7 +152,7 @@ void AccelerationStructuresInputBuffersService::RestoreBuffersInitialization(
 
   ID3D12DeviceCreateCommittedResourceCommand createUploadResource;
   createUploadResource.Key = m_StateService.GetUniqueCommandKey();
-  createUploadResource.m_Object.Key = m_DeviceKey;
+  createUploadResource.m_Object.Key = deviceKey;
   createUploadResource.m_pHeapProperties.Value = &heapPropertiesUpload;
   createUploadResource.m_HeapFlags.Value = D3D12_HEAP_FLAG_NONE;
   createUploadResource.m_pDesc.Value = &resourceDesc;
@@ -170,7 +167,7 @@ void AccelerationStructuresInputBuffersService::RestoreBuffersInitialization(
   commandQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_COPY;
   ID3D12DeviceCreateCommandQueueCommand createCommandQueue;
   createCommandQueue.Key = m_StateService.GetUniqueCommandKey();
-  createCommandQueue.m_Object.Key = m_DeviceKey;
+  createCommandQueue.m_Object.Key = deviceKey;
   createCommandQueue.m_pDesc.Value = &commandQueueDesc;
   createCommandQueue.m_riid.Value = IID_ID3D12CommandQueue;
   createCommandQueue.m_ppCommandQueue.Key = m_CommandQueueKey;
@@ -179,7 +176,7 @@ void AccelerationStructuresInputBuffersService::RestoreBuffersInitialization(
   m_CommandAllocatorKey = m_StateService.GetUniqueObjectKey();
   ID3D12DeviceCreateCommandAllocatorCommand createCommandAllocator;
   createCommandAllocator.Key = m_StateService.GetUniqueCommandKey();
-  createCommandAllocator.m_Object.Key = m_DeviceKey;
+  createCommandAllocator.m_Object.Key = deviceKey;
   createCommandAllocator.m_type.Value = D3D12_COMMAND_LIST_TYPE_COPY;
   createCommandAllocator.m_riid.Value = IID_ID3D12CommandAllocator;
   createCommandAllocator.m_ppCommandAllocator.Key = m_CommandAllocatorKey;
@@ -189,7 +186,7 @@ void AccelerationStructuresInputBuffersService::RestoreBuffersInitialization(
   m_CommandListKey = m_StateService.GetUniqueObjectKey();
   ID3D12DeviceCreateCommandListCommand createCommandList;
   createCommandList.Key = m_StateService.GetUniqueCommandKey();
-  createCommandList.m_Object.Key = m_DeviceKey;
+  createCommandList.m_Object.Key = deviceKey;
   createCommandList.m_nodeMask.Value = 0;
   createCommandList.m_pCommandAllocator.Key = createCommandAllocator.m_ppCommandAllocator.Key;
   createCommandList.m_type.Value = D3D12_COMMAND_LIST_TYPE_COPY;
@@ -201,7 +198,7 @@ void AccelerationStructuresInputBuffersService::RestoreBuffersInitialization(
   m_FenceKey = m_StateService.GetUniqueObjectKey();
   ID3D12DeviceCreateFenceCommand createFence;
   createFence.Key = m_StateService.GetUniqueCommandKey();
-  createFence.m_Object.Key = m_DeviceKey;
+  createFence.m_Object.Key = deviceKey;
   createFence.m_InitialValue.Value = 0;
   createFence.m_Flags.Value = D3D12_FENCE_FLAG_NONE;
   createFence.m_riid.Value = IID_ID3D12Fence;
@@ -211,20 +208,20 @@ void AccelerationStructuresInputBuffersService::RestoreBuffersInitialization(
 
 void AccelerationStructuresInputBuffersService::MakeBuffersResident(
     unsigned commandKey, ResourceResidencyService& residencyService) {
-  for (const auto& info : m_BufferContentRestore.GetRestoreInfos(commandKey)) {
-    residencyService.AddResource(info.BufferKey);
+  for (BufferInputDump::InputBuffer& inputBuffer : m_BufferInputDump.GetInputBuffers(commandKey)) {
+    residencyService.AddResource(inputBuffer.BufferKey);
   }
 }
 
 void AccelerationStructuresInputBuffersService::RestoreBuffers(unsigned commandKey,
                                                                unsigned commandListBarriersKey) {
-  std::vector<AccelerationStructuresBufferContentRestore::BufferRestoreInfo>& restoreInfos =
-      m_BufferContentRestore.GetRestoreInfos(commandKey);
-  InputBuffers* inputBuffer = m_InputBuffers[commandKey].get();
+  std::vector<BufferInputDump::InputBuffer>& inputBufferDumps =
+      m_BufferInputDump.GetInputBuffers(commandKey);
+  InputBuffers* inputBuffers = m_InputBuffers[commandKey].get();
 
   std::unordered_set<unsigned> restoredBuffers;
   size_t uploadBufferOffset{};
-  for (AccelerationStructuresBufferContentRestore::BufferRestoreInfo& info : restoreInfos) {
+  for (BufferInputDump::InputBuffer& info : inputBufferDumps) {
     auto itHash = m_BufferHashesByKeyOffset.find(std::pair(info.BufferKey, info.Offset));
     if (itHash != m_BufferHashesByKeyOffset.end() && itHash->second == info.BufferHash) {
       continue;
@@ -232,7 +229,7 @@ void AccelerationStructuresInputBuffersService::RestoreBuffers(unsigned commandK
     m_BufferHashesByKeyOffset[std::pair(info.BufferKey, info.Offset)] = info.BufferHash;
     restoredBuffers.insert(info.BufferKey);
 
-    for (auto& itTiledResource : inputBuffer->TiledResources) {
+    for (auto& itTiledResource : inputBuffers->TiledResources) {
       auto it = m_TiledResourceUpdatesRestored.find(info.BufferKey);
       if (it == m_TiledResourceUpdatesRestored.end() ||
           it->second.find(itTiledResource.second.UpdateId) == it->second.end()) {
@@ -289,7 +286,7 @@ void AccelerationStructuresInputBuffersService::RestoreBuffers(unsigned commandK
     m_StateService.GetRecorder().Record(ID3D12GraphicsCommandListResetSerializer(commandListReset));
   }
 
-  for (auto& it : inputBuffer->Buffers) {
+  for (auto& it : inputBuffers->Buffers) {
     if (!it.second->IsMappable && restoredBuffers.find(it.first) != restoredBuffers.end()) {
       ID3D12GraphicsCommandListResourceBarrierCommand barrierCommand;
       barrierCommand.Key = m_StateService.GetUniqueCommandKey();
@@ -342,8 +339,7 @@ void AccelerationStructuresInputBuffersService::RestoreBuffersCleanup() {
 }
 
 size_t AccelerationStructuresInputBuffersService::RestoreBuffer(
-    const AccelerationStructuresBufferContentRestore::BufferRestoreInfo& restoreInfo,
-    size_t uploadBufferOffset) {
+    const BufferInputDump::InputBuffer& restoreInfo, size_t uploadBufferOffset) {
   if (restoreInfo.IsMappable) {
     ID3D12ResourceMapCommand mapCommand;
     mapCommand.Key = m_StateService.GetUniqueCommandKey();
@@ -411,6 +407,39 @@ size_t AccelerationStructuresInputBuffersService::RestoreBuffer(
 
     return restoreInfo.BufferData->size();
   }
+}
+
+void AccelerationStructuresInputBuffersService::BufferInputDump::DumpBuffer(
+    ID3D12GraphicsCommandList* commandList,
+    ID3D12Resource* resource,
+    unsigned resourceKey,
+    unsigned offset,
+    unsigned size,
+    BarrierState resourceState,
+    unsigned buildCallKey,
+    bool isMappable) {
+  BufferInfo* info = new BufferInfo();
+  info->Offset = offset;
+  info->Size = size;
+  info->BuildCallKey = buildCallKey;
+  info->ResourceKey = resourceKey;
+  info->IsMappable = isMappable;
+  StageResource(commandList, resource, resourceState, *info);
+}
+
+void AccelerationStructuresInputBuffersService::BufferInputDump::DumpBuffer(DumpInfo& dumpInfo,
+                                                                            void* data) {
+  BufferInfo& info = static_cast<BufferInfo&>(dumpInfo);
+  InputBuffer restoreInfo{};
+  restoreInfo.BufferKey = info.ResourceKey;
+  restoreInfo.Offset = info.Offset;
+  restoreInfo.IsMappable = info.IsMappable;
+  restoreInfo.BufferHash = XXH32(data, info.Size, 0);
+  restoreInfo.BufferData = std::make_unique<std::vector<char>>(
+      static_cast<char*>(data), static_cast<char*>(data) + info.Size);
+
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  m_InputBuffersByBuildKey[info.BuildCallKey].push_back(std::move(restoreInfo));
 }
 
 } // namespace DirectX

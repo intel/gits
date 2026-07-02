@@ -767,7 +767,7 @@ void AccelerationStructuresBuildService::RestoreAccelerationStructures() {
   for (OptimizationService::CommandNode* node : m_OptimizationService.GetCommands()) {
     commandKeys.push_back(node->Command->CommandKey);
   }
-  m_InputBuffersService.RestoreBuffersInitialization(commandKeys);
+  m_InputBuffersService.RestoreBuffersInitialization(commandKeys, m_DeviceKey);
 
   {
     m_CommandQueueKey = m_StateService.GetUniqueObjectKey();

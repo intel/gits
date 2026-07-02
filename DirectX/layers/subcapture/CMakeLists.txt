@@ -56,8 +56,6 @@ set(STATE_TRACKING_SRC
   ${SRC_DIR}/accelerationStructuresBuildService.cpp
   ${SRC_DIR}/accelerationStructuresSerializeService.h
   ${SRC_DIR}/accelerationStructuresSerializeService.cpp
-  ${SRC_DIR}/accelerationStructuresBufferContentRestore.h
-  ${SRC_DIR}/accelerationStructuresBufferContentRestore.cpp
   ${SRC_DIR}/accelerationStructuresInputBuffersService.h
   ${SRC_DIR}/accelerationStructuresInputBuffersService.cpp
   ${SRC_DIR}/gpuExecutionFlusher.h

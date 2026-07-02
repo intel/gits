@@ -11,7 +11,6 @@
 #include "subcaptureRecorder.h"
 #include "commandsAuto.h"
 #include "commandsCustom.h"
-#include "accelerationStructuresBufferContentRestore.h"
 #include "accelerationStructuresInputBuffersService.h"
 #include "reservedResourcesService.h"
 #include "objectState.h"
@@ -45,7 +44,6 @@ public:
   void NvapiBuildOpacityMicromapArray(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& c);
   void SetDeviceKey(unsigned deviceKey) {
     m_DeviceKey = deviceKey;
-    m_InputBuffersService.SetDeviceKey(deviceKey);
   }
   void RestoreAccelerationStructures();
   void ExecuteCommandLists(ID3D12CommandQueueExecuteCommandListsCommand& c);
