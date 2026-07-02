@@ -9,6 +9,7 @@
 #include "reservedResourcesService.h"
 #include "resourceStateTrackingService.h"
 #include "stateTrackingService.h"
+#include "subcaptureRecorder.h"
 #include "commandSerializersAuto.h"
 #include "commandSerializersCustom.h"
 #include "resourceSizeUtils.h"

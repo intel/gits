@@ -8,6 +8,7 @@
 
 #include "accelerationStructuresBuildService.h"
 #include "stateTrackingService.h"
+#include "analyzerResults.h"
 #include "resourceStateEnhanced.h"
 #include "arguments.h"
 #include "commandSerializersAuto.h"

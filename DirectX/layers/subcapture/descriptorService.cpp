@@ -10,6 +10,8 @@
 #include "commandsAuto.h"
 #include "commandSerializersAuto.h"
 #include "stateTrackingService.h"
+#include "subcaptureRecorder.h"
+#include "analyzerResults.h"
 #include "resourceForCBVRestoreService.h"
 #include "log.h"
 

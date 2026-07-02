@@ -8,6 +8,7 @@
 
 #include "resourceResidencyService.h"
 #include "stateTrackingService.h"
+#include "subcaptureRecorder.h"
 
 namespace gits {
 namespace DirectX {

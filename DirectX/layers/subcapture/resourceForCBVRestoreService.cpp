@@ -8,6 +8,7 @@
 
 #include "resourceForCBVRestoreService.h"
 #include "stateTrackingService.h"
+#include "subcaptureRecorder.h"
 #include "commandSerializersFactory.h"
 #include "commandSerializersCustom.h"
 

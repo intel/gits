@@ -25,6 +25,7 @@
 #include "accelerationStructuresSerializeService.h"
 #include "gpuExecutionFlusher.h"
 #include "residencyService.h"
+#include "resourceUsageTrackingService.h"
 #include "analyzerResults.h"
 #include "resourceForCBVRestoreService.h"
 #include "resourceStateTracker.h"

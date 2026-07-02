@@ -9,12 +9,11 @@
 #include "commandListService.h"
 #include "commandsAuto.h"
 #include "stateTrackingService.h"
+#include "subcaptureRecorder.h"
 #include "commandSerializersAuto.h"
 #include "analyzerResults.h"
 #include "commandSerializersFactory.h"
 #include "log.h"
-
-#include <fstream>
 
 namespace gits {
 namespace DirectX {

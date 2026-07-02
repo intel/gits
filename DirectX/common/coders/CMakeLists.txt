@@ -27,6 +27,8 @@ set(ENCODERS_SRC
   ${SRC_DIR}/include/commandEncodersAuto.h
   ${SRC_DIR}/argumentEncoders.cpp
   ${SRC_DIR}/commandEncodersAuto.cpp
+  ${SRC_DIR}/commandSerializersAuto.cpp
+  ${SRC_DIR}/commandSerializersCustom.cpp
   ${SRC_DIR}/commandEncodersCustom.cpp
   ${SRC_DIR}/commandSerializersFactoryAuto.cpp
   ${SRC_DIR}/commandCopyFactoryAuto.cpp

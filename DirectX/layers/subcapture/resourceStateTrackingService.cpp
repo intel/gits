@@ -8,6 +8,7 @@
 
 #include "resourceStateTrackingService.h"
 #include "stateTrackingService.h"
+#include "subcaptureRecorder.h"
 #include "commandsAuto.h"
 #include "commandSerializersAuto.h"
 #include "commandsCustom.h"
@@ -15,8 +16,6 @@
 #include "resourceSizeUtils.h"
 #include "resourceResidencyService.h"
 #include "log.h"
-
-#include <wrl/client.h>
 
 namespace gits {
 namespace DirectX {

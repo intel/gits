@@ -8,8 +8,10 @@
 
 #include "residencyService.h"
 #include "stateTrackingService.h"
+#include "subcaptureRecorder.h"
 #include "commandsAuto.h"
 #include "commandSerializersAuto.h"
+#include "log.h"
 
 namespace gits {
 namespace DirectX {

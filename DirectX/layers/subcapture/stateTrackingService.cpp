@@ -11,7 +11,23 @@
 #include "commandSerializersCustom.h"
 #include "commandSerializersFactory.h"
 #include "log.h"
-#include "configurationLib.h"
+
+#include "subcaptureRecorder.h"
+#include "fenceTrackingService.h"
+#include "mapStateService.h"
+#include "resourceStateTrackingService.h"
+#include "reservedResourcesService.h"
+#include "descriptorService.h"
+#include "commandListService.h"
+#include "commandQueueService.h"
+#include "xessStateService.h"
+#include "accelerationStructuresBuildService.h"
+#include "accelerationStructuresSerializeService.h"
+#include "residencyService.h"
+#include "analyzerResults.h"
+#include "resourceUsageTrackingService.h"
+#include "resourceForCBVRestoreService.h"
+#include "metaCommandsService.h"
 
 #include <array>
 #include <wrl/client.h>

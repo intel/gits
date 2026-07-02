@@ -8,8 +8,11 @@
 
 #include "metaCommandsService.h"
 #include "stateTrackingService.h"
+#include "subcaptureRecorder.h"
+#include "analyzerResults.h"
 #include "commandSerializersAuto.h"
 #include "commandSerializersCustom.h"
+#include "log.h"
 
 namespace gits {
 namespace DirectX {

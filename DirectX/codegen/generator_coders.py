@@ -31,6 +31,7 @@ def generate_coders_files(context, out_path):
         'include/commandDecodersAuto.h',
         'commandDecodersAuto.cpp',
         'include/commandSerializersAuto.h',
+        'commandSerializersAuto.cpp',
         'commandSerializersFactoryAuto.cpp',
         'commandCopyFactoryAuto.cpp'
     ]

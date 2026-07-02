@@ -11,9 +11,10 @@
 #include "arguments.h"
 #include "commandSerializersAuto.h"
 #include "commandSerializersCustom.h"
-#include "reservedResourcesService.h"
 #include "log.h"
 #include "configurationLib.h"
+
+#include <wrl/client.h>
 
 namespace gits {
 namespace DirectX {

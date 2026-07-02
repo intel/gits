@@ -9,6 +9,7 @@
 #include "commandQueueService.h"
 #include "commandSerializersAuto.h"
 #include "stateTrackingService.h"
+#include "subcaptureRecorder.h"
 
 namespace gits {
 namespace DirectX {

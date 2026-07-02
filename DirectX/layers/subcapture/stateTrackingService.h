@@ -8,24 +8,8 @@
 
 #pragma once
 
-#include "subcaptureRecorder.h"
 #include "objectState.h"
 #include "resourceContentRestore.h"
-#include "fenceTrackingService.h"
-#include "mapStateService.h"
-#include "resourceStateTrackingService.h"
-#include "reservedResourcesService.h"
-#include "descriptorService.h"
-#include "commandListService.h"
-#include "commandQueueService.h"
-#include "xessStateService.h"
-#include "accelerationStructuresBuildService.h"
-#include "accelerationStructuresSerializeService.h"
-#include "residencyService.h"
-#include "resourceUsageTrackingService.h"
-#include "analyzerResults.h"
-#include "resourceForCBVRestoreService.h"
-#include "metaCommandsService.h"
 #include "keyUtils.h"
 #include "commandSerializersAuto.h"
 
@@ -35,6 +19,25 @@
 
 namespace gits {
 namespace DirectX {
+class SubcaptureRecorder;
+class FenceTrackingService;
+class MapStateService;
+class ResourceStateTrackingService;
+class ReservedResourcesService;
+class DescriptorService;
+class CommandListService;
+class CommandQueueService;
+class XessStateService;
+class AccelerationStructuresSerializeService;
+class AccelerationStructuresBuildService;
+class ResidencyService;
+class AnalyzerResults;
+class ResourceUsageTrackingService;
+class ResourceForCBVRestoreService;
+class XellStateService;
+class XefgStateService;
+class MetaCommandsService;
+
 class INTC_D3D12_SetApplicationInfoCommand;
 
 class StateTrackingService {

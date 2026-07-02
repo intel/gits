@@ -9,13 +9,14 @@
 #include "resourceContentRestore.h"
 #include "resourceStateTrackingService.h"
 #include "stateTrackingService.h"
+#include "subcaptureRecorder.h"
 #include "commandsAuto.h"
 #include "commandSerializersAuto.h"
 #include "commandsCustom.h"
 #include "commandSerializersCustom.h"
 #include "resourceSizeUtils.h"
+#include "log.h"
 
-#include <limits>
 #include <wrl/client.h>
 
 namespace gits {

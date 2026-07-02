@@ -8,6 +8,7 @@
 
 #include "mapStateService.h"
 #include "stateTrackingService.h"
+#include "subcaptureRecorder.h"
 #include "commandsAuto.h"
 #include "commandSerializersAuto.h"
 
