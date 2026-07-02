@@ -101,13 +101,15 @@ HRESULT PipelineLibraryService::LoadPipelineState(PipelineLibrary* pipelineLibra
     std::lock_guard<std::mutex> lock(m_Mutex);
     refCount = m_PipelineStateRefCounts[pipelineStateKey] += 1;
   }
+  ID3D12PipelineState* outputPipelineState =
+      hr == S_OK ? static_cast<ID3D12PipelineState*>(*ppPipelineState) : pipelineState;
+  outputPipelineState->AddRef();
+  unsigned currentRefCount = outputPipelineState->Release();
+  while (currentRefCount < refCount) {
+    currentRefCount = outputPipelineState->AddRef();
+  }
   if (hr != S_OK) {
-    pipelineState->AddRef();
-    unsigned currentRefCount = pipelineState->Release();
-    while (currentRefCount < refCount) {
-      currentRefCount = pipelineState->AddRef();
-    }
-    *ppPipelineState = pipelineState;
+    *ppPipelineState = outputPipelineState;
     hr = S_OK;
   }
 
