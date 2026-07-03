@@ -10,6 +10,8 @@
 #include "layerAuto.h"
 #include "playerManager.h"
 
+#include "log.h"
+
 namespace gits {
 namespace vulkan {
 
@@ -102,9 +104,24 @@ void MappedDataMetaRunner::Run() {
   if (manager.ExecuteCommands() && !m_Command.m_Skip) {
     auto mappedEntry =
         manager.GetMapTrackingService().GetData(m_Command.m_Device.Key, m_Command.m_Memory.Key);
-    for (const auto& region : m_Command.m_Regions.Regions) {
-      char* dstPtr = static_cast<char*>(mappedEntry->Ptr) + region.Offset;
-      std::memcpy(dstPtr, region.Data, region.Size);
+    // If the memory isn't currently mapped, skip the update and warn instead of
+    // dereferencing a null/stale pointer.
+    if (mappedEntry == nullptr || mappedEntry->Ptr == nullptr) {
+      LOG_WARNING << "MappedDataMetaRunner: no live host mapping for device key "
+                  << m_Command.m_Device.Key << ", memory key " << m_Command.m_Memory.Key
+                  << " - skipping memory update.";
+    } else {
+      for (const auto& region : m_Command.m_Regions.Regions) {
+        if (region.Offset + region.Size > mappedEntry->Size) {
+          LOG_WARNING << "MappedDataMetaRunner: region [offset " << region.Offset << ", size "
+                      << region.Size << "] exceeds mapped range (" << mappedEntry->Size
+                      << ") for device key " << m_Command.m_Device.Key << ", memory key "
+                      << m_Command.m_Memory.Key << " - skipping region.";
+          continue;
+        }
+        char* dstPtr = static_cast<char*>(mappedEntry->Ptr) + region.Offset;
+        std::memcpy(dstPtr, region.Data, region.Size);
+      }
     }
   }
 
