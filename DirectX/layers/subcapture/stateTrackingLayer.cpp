@@ -431,12 +431,6 @@ void StateTrackingLayer::Post(D3D12GetInterfaceCommand& c) {
 }
 
 void StateTrackingLayer::Pre(ID3D12DeviceCreateCommandQueueCommand& c) {
-  if (m_StateRestored) {
-    return;
-  }
-  if (c.m_Result.Value != S_OK) {
-    return;
-  }
   m_ForceDirectCommandListType = c.m_pDesc.Value->Type == D3D12_COMMAND_LIST_TYPE_COMPUTE;
   if (m_ForceDirectCommandListType) {
     c.m_pDesc.Value->Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
@@ -444,12 +438,6 @@ void StateTrackingLayer::Pre(ID3D12DeviceCreateCommandQueueCommand& c) {
 }
 
 void StateTrackingLayer::Pre(ID3D12Device9CreateCommandQueue1Command& c) {
-  if (m_StateRestored) {
-    return;
-  }
-  if (c.m_Result.Value != S_OK) {
-    return;
-  }
   m_ForceDirectCommandListType = c.m_pDesc.Value->Type == D3D12_COMMAND_LIST_TYPE_COMPUTE;
   if (m_ForceDirectCommandListType) {
     c.m_pDesc.Value->Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
@@ -457,12 +445,6 @@ void StateTrackingLayer::Pre(ID3D12Device9CreateCommandQueue1Command& c) {
 }
 
 void StateTrackingLayer::Pre(ID3D12DeviceCreateCommandListCommand& c) {
-  if (m_StateRestored) {
-    return;
-  }
-  if (c.m_Result.Value != S_OK) {
-    return;
-  }
   m_ForceDirectCommandListType = c.m_type.Value == D3D12_COMMAND_LIST_TYPE_COMPUTE;
   if (m_ForceDirectCommandListType) {
     c.m_type.Value = D3D12_COMMAND_LIST_TYPE_DIRECT;
@@ -470,12 +452,6 @@ void StateTrackingLayer::Pre(ID3D12DeviceCreateCommandListCommand& c) {
 }
 
 void StateTrackingLayer::Pre(ID3D12Device4CreateCommandList1Command& c) {
-  if (m_StateRestored) {
-    return;
-  }
-  if (c.m_Result.Value != S_OK) {
-    return;
-  }
   m_ForceDirectCommandListType = c.m_type.Value == D3D12_COMMAND_LIST_TYPE_COMPUTE;
   if (m_ForceDirectCommandListType) {
     c.m_type.Value = D3D12_COMMAND_LIST_TYPE_DIRECT;
@@ -483,12 +459,6 @@ void StateTrackingLayer::Pre(ID3D12Device4CreateCommandList1Command& c) {
 }
 
 void StateTrackingLayer::Pre(ID3D12DeviceCreateCommandAllocatorCommand& c) {
-  if (m_StateRestored) {
-    return;
-  }
-  if (c.m_Result.Value != S_OK) {
-    return;
-  }
   m_ForceDirectCommandListType = c.m_type.Value == D3D12_COMMAND_LIST_TYPE_COMPUTE;
   if (m_ForceDirectCommandListType) {
     c.m_type.Value = D3D12_COMMAND_LIST_TYPE_DIRECT;
@@ -496,15 +466,15 @@ void StateTrackingLayer::Pre(ID3D12DeviceCreateCommandAllocatorCommand& c) {
 }
 
 void StateTrackingLayer::Post(ID3D12DeviceCreateCommandQueueCommand& c) {
+  if (m_ForceDirectCommandListType) {
+    c.m_pDesc.Value->Type = D3D12_COMMAND_LIST_TYPE_COMPUTE;
+    m_ForceDirectCommandListType = false;
+  }
   if (m_StateRestored) {
     return;
   }
   if (c.m_Result.Value != S_OK) {
     return;
-  }
-  if (m_ForceDirectCommandListType) {
-    c.m_pDesc.Value->Type = D3D12_COMMAND_LIST_TYPE_COMPUTE;
-    m_ForceDirectCommandListType = false;
   }
   ObjectState* state = new ObjectState();
   state->ParentKey = c.m_Object.Key;
@@ -520,15 +490,15 @@ void StateTrackingLayer::Post(ID3D12DeviceCreateCommandQueueCommand& c) {
 }
 
 void StateTrackingLayer::Post(ID3D12Device9CreateCommandQueue1Command& c) {
+  if (m_ForceDirectCommandListType) {
+    c.m_pDesc.Value->Type = D3D12_COMMAND_LIST_TYPE_COMPUTE;
+    m_ForceDirectCommandListType = false;
+  }
   if (m_StateRestored) {
     return;
   }
   if (c.m_Result.Value != S_OK) {
     return;
-  }
-  if (m_ForceDirectCommandListType) {
-    c.m_pDesc.Value->Type = D3D12_COMMAND_LIST_TYPE_COMPUTE;
-    m_ForceDirectCommandListType = false;
   }
   ObjectState* state = new ObjectState();
   state->ParentKey = c.m_Object.Key;
@@ -926,15 +896,15 @@ void StateTrackingLayer::Post(ID3D12Device15TryCreateDepthStencilViewCommand& c)
 }
 
 void StateTrackingLayer::Post(ID3D12DeviceCreateCommandAllocatorCommand& c) {
+  if (m_ForceDirectCommandListType) {
+    c.m_type.Value = D3D12_COMMAND_LIST_TYPE_COMPUTE;
+    m_ForceDirectCommandListType = false;
+  }
   if (m_StateRestored) {
     return;
   }
   if (c.m_Result.Value != S_OK) {
     return;
-  }
-  if (m_ForceDirectCommandListType) {
-    c.m_type.Value = D3D12_COMMAND_LIST_TYPE_COMPUTE;
-    m_ForceDirectCommandListType = false;
   }
   ObjectState* state = new ObjectState();
   state->Key = c.m_ppCommandAllocator.Key;
@@ -1137,15 +1107,15 @@ void StateTrackingLayer::Post(ID3D12Device7AddToStateObjectCommand& c) {
 }
 
 void StateTrackingLayer::Post(ID3D12DeviceCreateCommandListCommand& c) {
+  if (m_ForceDirectCommandListType) {
+    c.m_type.Value = D3D12_COMMAND_LIST_TYPE_COMPUTE;
+    m_ForceDirectCommandListType = false;
+  }
   if (m_StateRestored) {
     return;
   }
   if (c.m_Result.Value != S_OK) {
     return;
-  }
-  if (m_ForceDirectCommandListType) {
-    c.m_type.Value = D3D12_COMMAND_LIST_TYPE_COMPUTE;
-    m_ForceDirectCommandListType = false;
   }
   CommandListState* state = new CommandListState();
   state->ParentKey = c.m_Object.Key;
@@ -1159,15 +1129,15 @@ void StateTrackingLayer::Post(ID3D12DeviceCreateCommandListCommand& c) {
 }
 
 void StateTrackingLayer::Post(ID3D12Device4CreateCommandList1Command& c) {
+  if (m_ForceDirectCommandListType) {
+    c.m_type.Value = D3D12_COMMAND_LIST_TYPE_COMPUTE;
+    m_ForceDirectCommandListType = false;
+  }
   if (m_StateRestored) {
     return;
   }
   if (c.m_Result.Value != S_OK) {
     return;
-  }
-  if (m_ForceDirectCommandListType) {
-    c.m_type.Value = D3D12_COMMAND_LIST_TYPE_COMPUTE;
-    m_ForceDirectCommandListType = false;
   }
   CommandListState* state = new CommandListState();
   state->ParentKey = c.m_Object.Key;
