@@ -276,12 +276,15 @@ void DescriptorService::RestoreD3D12UnorderedAccessView(D3D12UnorderedAccessView
 }
 
 void DescriptorService::RestoreD3D12ConstantBufferView(D3D12ConstantBufferViewState* state) {
-  if (m_StateService->GetState(state->ResourceKey)) {
-    m_StateService->RestoreState(state->ResourceKey);
-  } else if (state->ResourceKey) {
-    bool restored = m_ResourceForCBVRestoreService->RestoreResourceObject(state->ResourceKey);
-    if (!restored) {
-      return;
+  if (state->ResourceKey) {
+    ObjectState* resourceState = m_StateService->GetState(state->ResourceKey);
+    if (resourceState && !resourceState->Destroyed) {
+      m_StateService->RestoreState(state->ResourceKey);
+    } else {
+      bool restored = m_ResourceForCBVRestoreService->RestoreResourceObject(state->ResourceKey);
+      if (!restored) {
+        return;
+      }
     }
   }
 
