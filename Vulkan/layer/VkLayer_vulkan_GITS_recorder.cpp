@@ -123,7 +123,7 @@ vkGetInstanceProcAddrGITSLayer(VkInstance instance, const char* pName) {
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL
-GetPhysicalDeviceProcAddrGITSLayer(VkInstance instance, const char* pName) {
+vkGetPhysicalDeviceProcAddrGITSLayer(VkInstance instance, const char* pName) {
   return g_RecorderWrapper->GetFunctionWrapper(pName);
 }
 
@@ -136,7 +136,7 @@ vkNegotiateLoaderLayerInterfaceVersionGITSLayer(VkNegotiateLayerInterface* pVers
   if (pVersionStruct->loaderLayerInterfaceVersion >= 2) {
     pVersionStruct->pfnGetInstanceProcAddr = vkGetInstanceProcAddrGITSLayer;
     pVersionStruct->pfnGetDeviceProcAddr = vkGetDeviceProcAddrGITSLayer;
-    pVersionStruct->pfnGetPhysicalDeviceProcAddr = GetPhysicalDeviceProcAddrGITSLayer;
+    pVersionStruct->pfnGetPhysicalDeviceProcAddr = vkGetPhysicalDeviceProcAddrGITSLayer;
   }
 
   return VK_SUCCESS;
