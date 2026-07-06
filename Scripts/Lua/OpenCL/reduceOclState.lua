@@ -151,6 +151,23 @@ function clCreateBufferWithPropertiesINTEL(context, properties, flags, size, hos
   return memory
 end
 
+function clCreateBufferWithProperties(context, properties, flags, size, host_ptr, err)
+  mem_ctr = mem_ctr + 1
+  memory = gits.nullUdt()
+  if dump_mode then
+    memory = drvCl.clCreateBufferWithProperties(context, properties, flags, size, host_ptr, err)
+    mem_to_num_map[gits.udtToInt(memory)] = mem_ctr
+    if usm_to_num_map[gits.udtToInt(host_ptr)] ~= nil then
+      mem_usm_dep[gits.udtToInt(memory)] = gits.udtToInt(host_ptr)
+    end
+  elseif mem_nums_req[mem_ctr] ~= nil then
+    memory = drvCl.clCreateBufferWithProperties(context, properties, flags, size, host_ptr, err)
+  else
+    skipped_funcs_ctr = skipped_funcs_ctr + 1
+  end
+  return memory
+end
+
 function clCreateSubBuffer(buffer, flags, buffer_create_type, buffer_create_info, errcode_ret)
   mem_ctr = mem_ctr + 1
   memory = gits.nullUdt()

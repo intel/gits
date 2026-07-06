@@ -163,6 +163,17 @@ inline void clCreateBufferWithPropertiesINTEL_SD(cl_mem return_value,
   }
 }
 
+inline void clCreateBufferWithProperties_SD(cl_mem return_value,
+                                            cl_context context,
+                                            cl_mem_properties_intel* properties,
+                                            cl_mem_flags flags,
+                                            size_t size,
+                                            void* host_ptr,
+                                            cl_int* errcode_ret) {
+  clCreateBufferWithPropertiesINTEL_SD(return_value, context, properties, flags, size, host_ptr,
+                                       errcode_ret);
+}
+
 inline void clCreateCommandQueue_SD(cl_command_queue return_value,
                                     cl_context context,
                                     cl_device_id device,

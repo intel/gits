@@ -70,6 +70,16 @@ arg4=ArgDef(name='host_ptr',tag='in',type='void*',wrapType='CAsyncBinaryData',wr
 arg5=ArgDef(name='errcode_ret',tag='out',type='cl_int*')
 )
 
+Function(name='clCreateBufferWithProperties',enabled=True,availableFrom='3.0',extension=False,type=Creator,stateTrack=True,passToken=True,runWrap=True,recWrap=True,
+retV=RetDef(type='cl_mem'),
+arg1=ArgDef(name='context',tag='in',type='cl_context'),
+arg2=ArgDef(name='properties',tag='in',type='cl_mem_properties_intel*',wrapParams='{name}, 0, 2'),
+arg3=ArgDef(name='flags',tag='in',type='cl_mem_flags'),
+arg4=ArgDef(name='size',tag='in',type='size_t'),
+arg5=ArgDef(name='host_ptr',tag='in',type='void*',wrapType='CAsyncBinaryData',wrapParams='{name} ? size : 0, {name}'),
+arg6=ArgDef(name='errcode_ret',tag='out',type='cl_int*')
+)
+
 Function(name='clCreateBufferWithPropertiesINTEL',enabled=True,availableFrom='1.0',extension=True,type=Creator,stateTrack=True,passToken=True,runWrap=True,recWrap=True,
 retV=RetDef(type='cl_mem'),
 arg1=ArgDef(name='context',tag='in',type='cl_context'),

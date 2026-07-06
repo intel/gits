@@ -2248,6 +2248,38 @@ inline void clCreateBufferWithPropertiesINTEL_RECWRAP(CRecorder& recorder,
   }
 }
 
+inline void clCreateBufferWithProperties_RECWRAP(CRecorder& recorder,
+                                                 cl_mem return_value,
+                                                 cl_context context,
+                                                 cl_mem_properties_intel* properties,
+                                                 cl_mem_flags flags,
+                                                 size_t size,
+                                                 void* host_ptr,
+                                                 cl_int* errcode_ret) {
+  if (recorder.Running()) {
+    recorder.Schedule(new CclCreateBufferWithProperties(return_value, context, properties, flags,
+                                                        size, host_ptr, errcode_ret));
+  }
+  clCreateBufferWithProperties_SD(return_value, context, properties, flags, size, host_ptr,
+                                  errcode_ret);
+  bool isUsingHostPtr = false;
+  if (properties != nullptr) {
+    isUsingHostPtr =
+        GetPropertyVal(properties, CL_MEM_FLAGS) & (CL_MEM_COPY_HOST_PTR | CL_MEM_USE_HOST_PTR);
+  }
+  isUsingHostPtr = isUsingHostPtr || (flags & (CL_MEM_COPY_HOST_PTR | CL_MEM_USE_HOST_PTR));
+  if (recorder.Running() && ErrCodeSuccess(errcode_ret) && !isUsingHostPtr &&
+      CheckCfgZeroInitialization(Configurator::Get(), IsReadOnlyBuffer(flags, properties))) {
+    const auto commandQueue = GetCommandQueueRec(context, &recorder);
+    if (commandQueue != nullptr && ZeroInitializeBuffer(commandQueue, return_value, size)) {
+      const auto zeroBuffer = std::vector<char>(size, 0);
+      recorder.Schedule(new CclEnqueueWriteBuffer(CL_SUCCESS, commandQueue, return_value,
+                                                  CL_BLOCKING, 0, zeroBuffer.size(),
+                                                  zeroBuffer.data(), 0, nullptr, nullptr));
+    }
+  }
+}
+
 inline void clCreateImage_RECWRAP(CRecorder& recorder,
                                   cl_mem return_value,
                                   cl_context context,

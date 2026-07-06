@@ -974,6 +974,51 @@ inline void clCreateBufferWithPropertiesINTEL_RUNWRAP(
   }
 }
 
+inline void clCreateBufferWithProperties_RUNWRAP(CFunction* _token,
+                                                 Ccl_mem& _return_value,
+                                                 Ccl_context& _context,
+                                                 Ccl_mem_properties_intel::CSArray& _properties,
+                                                 Ccl_mem_flags& _flags,
+                                                 Csize_t& _size,
+                                                 CAsyncBinaryData& _host_ptr,
+                                                 CCLResult::CSArray& _errcode_ret) {
+  const auto& cfg = Configurator::Get().opencl.player;
+  const auto signature = GenerateSignature();
+  auto size = *_size;
+  if (cfg.aubSignaturesCL) {
+    size += sizeof(mem_signature_t);
+  }
+  auto mappedProps = MapMemPropertiesIntel(_properties);
+  const cl_mem_flags propFlags = GetPropertyVal(mappedProps.data(), CL_MEM_FLAGS);
+  CBinaryResource::PointerProxy ptr = *_host_ptr;
+  char* buffer_ptr;
+  if ((const void*)ptr != nullptr) {
+    SD()._buffers.emplace_back((const char*)ptr, (const char*)ptr + *_size);
+    if (cfg.aubSignaturesCL) {
+      AddSignature(SD()._buffers.back(), signature);
+    }
+    buffer_ptr = SD()._buffers.back().data();
+  } else {
+    buffer_ptr = nullptr;
+  }
+  _return_value.Assign(drvOcl.clCreateBufferWithProperties(*_context, mappedProps.data(), *_flags,
+                                                           size, buffer_ptr, *_errcode_ret));
+  clCreateBufferWithProperties_SD(*_return_value, *_context, mappedProps.data(), *_flags, *_size,
+                                  buffer_ptr, *_errcode_ret);
+  if (buffer_ptr && (!FlagUseHostPtr(*_flags) || !FlagUseHostPtr(propFlags))) {
+    DeallocateVector(SD()._buffers.back());
+  }
+  const auto isUsingHostPtr =
+      (*_properties != nullptr && (propFlags & (CL_MEM_COPY_HOST_PTR | CL_MEM_USE_HOST_PTR))) ||
+      (*_flags & (CL_MEM_COPY_HOST_PTR | CL_MEM_USE_HOST_PTR));
+  if (ErrCodeSuccess(*_errcode_ret) && !isUsingHostPtr &&
+      CheckCfgZeroInitialization(Configurator::Get(), IsReadOnlyBuffer(*_flags, *_properties))) {
+    const auto device = GetGpuDevice();
+    const auto commandQueue = GetCommandQueue(*_context, device);
+    ZeroInitializeBuffer(commandQueue, *_return_value, size);
+  }
+}
+
 inline void clCreateProgramWithSource_RUNWRAP(CFunction* _token,
                                               Ccl_program& _return_value,
                                               Ccl_context& _context,
