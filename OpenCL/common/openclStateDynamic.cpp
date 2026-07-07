@@ -290,7 +290,7 @@ void CCLProgramState::GetProgramInfoNumDevices(const cl_uint& num_devices) {
 }
 
 void CCLProgramState::GetProgramInfoBinaries(const size_t& size, void* value) {
-  const auto nDevices = size / sizeof(uint8_t*);
+  const auto nDevices = std::min(size / sizeof(uint8_t*), _binarySizes.size());
   auto* ptr = reinterpret_cast<const uint8_t**>(value);
   if (Configurator::IsRecorder()) {
     _binaryHash = HashBinaryData(nDevices, ptr, _binarySizes.data());
