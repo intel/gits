@@ -6,5 +6,6 @@
 #
 # ===================== end_copyright_notice ==============================
 
+add_subdirectory(benchmark)
 add_subdirectory(hello_plugin)
 add_subdirectory(statistics)
