@@ -67,6 +67,21 @@ list(APPEND LAUNCHER_PANEL_SOURCE
   ${LAUNCHER_HEADER_DIR}/optionsPanel.h
   ${LAUNCHER_HEADER_DIR}/yamlPanel.h
   )
+
+if(WIN64)
+list(APPEND LAUNCHER_SOURCE
+  ${LAUNCHER_SOURCE_DIR}/registryManager.cpp
+
+  ${LAUNCHER_HEADER_DIR}/registryManager.h
+)
+
+list(APPEND LAUNCHER_PANEL_SOURCE
+  ${LAUNCHER_SOURCE_DIR}/systemSetupPanel.cpp
+
+  ${LAUNCHER_HEADER_DIR}/systemSetupPanel.h
+)
+endif()
+
 source_group("Panels" FILES ${LAUNCHER_PANEL_SOURCE})
 
 list(APPEND IMGUI_BACKEND_SOURCE
@@ -141,6 +156,12 @@ install(TARGETS gits_launcher
   DESTINATION .
   COMPONENT gits_launcher
 )
+if(WIN64)
+  install(FILES ${LAUNCHER_SOURCE_DIR}/registryKeys.yml
+    DESTINATION Launcher
+    COMPONENT gits_launcher
+  )
+endif()
 if(MSVC)
   install(FILES $<TARGET_PDB_FILE:gits_launcher>
     DESTINATION .

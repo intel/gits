@@ -32,7 +32,7 @@ SubcaptureOptionsPanel::SubcaptureOptionsPanel() : BasePanel() {
 
 void SubcaptureOptionsPanel::Render() {
   auto& context = Context::GetInstance();
-  auto changed = false;
+  static auto changed = true;
 
   // Common subcapture option (shared with playback)
   changed |= ImGui::Checkbox(Labels::EXECUTABLE_NAME_ENABLED,
@@ -73,15 +73,7 @@ void SubcaptureOptionsPanel::Render() {
   ImGui::Text(Labels::NOTICE_2);
   ImGui::PopStyleColor();
 
-  ImGui::Text(Labels::SUBCAPTURE);
-
-  ImGui::SetNextItemWidth(widthLabel / 4.0f);
-  changed |= ImGui::InputInt(Labels::SUBCAPTURE_START_FRAME, &SubcaptureConfig.StartFrame, 1, 10);
-  ImGui::SameLine();
-  ImGui::SetNextItemWidth(widthLabel / 4.0f);
-  changed |= ImGui::InputInt(Labels::SUBCAPTURE_END_FRAME, &SubcaptureConfig.EndFrame, 1, 10);
-  config_options_gui_helpers::ConfigOptionHelpButton(
-      ConfigMetadata::DirectX::Features::Subcapture::frames);
+  RowSubcapturePath();
 
   changed |= ImGui::Checkbox(Labels::SUBCAPTURE_OPTIMIZE, &config_options::SubcaptureOptimize());
   config_options_gui_helpers::ConfigOptionHelpButton(
@@ -92,13 +84,94 @@ void SubcaptureOptionsPanel::Render() {
   config_options_gui_helpers::ConfigOptionHelpButton(
       ConfigMetadata::DirectX::Features::Subcapture::executionSerialization);
 
-  RowSubcapturePath();
+  // Mode Selector
+  ImGui::Separator();
+
+  enum class SubcaptureMode {
+    Subcapture = 0,
+    CommandListSubcapture = 1,
+    CommandSubcapture = 2
+  };
+  static SubcaptureMode selectedMode = SubcaptureMode::Subcapture;
+
+  auto modeChanged = false;
+  modeChanged |= ImGui::RadioButton(Labels::SUBCAPTURE, reinterpret_cast<int*>(&selectedMode), 0);
+  ImGui::SameLine();
+  modeChanged |=
+      ImGui::RadioButton(Labels::COMMAND_LIST_SUBCAPTURE, reinterpret_cast<int*>(&selectedMode), 1);
+  //ImGui::SameLine();
+  //modeChanged |= ImGui::RadioButton("Command Subcapture", reinterpret_cast<int*>(&selectedMode), 2);
+
+  if (modeChanged) {
+    if (selectedMode == SubcaptureMode::Subcapture) {
+      config_options::CommandListExecutions() = "";
+    }
+    if (selectedMode == SubcaptureMode::CommandSubcapture) {
+      // Not yet supported
+    }
+    changed = true;
+  }
+
+  ImGui::Separator();
+
+  // Mode-specific Content
+  if (selectedMode == SubcaptureMode::Subcapture) {
+    ImGui::SetNextItemWidth(widthLabel / 4.0f);
+    changed |= ImGui::InputInt(Labels::SUBCAPTURE_START_FRAME, &SubcaptureConfig.StartFrame, 1, 10);
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(widthLabel / 4.0f);
+    changed |= ImGui::InputInt(Labels::SUBCAPTURE_END_FRAME, &SubcaptureConfig.EndFrame, 1, 10);
+    config_options_gui_helpers::ConfigOptionHelpButton(
+        ConfigMetadata::DirectX::Features::Subcapture::frames);
+  }
+
+  if (selectedMode == SubcaptureMode::CommandListSubcapture) {
+    const bool isSerialized =
+        context.ConfigurationForMode(Mode::SUBCAPTURE).MetaData.IsASerializedSubcapture;
+    if (!isSerialized) {
+      ImGui::PushStyleColor(ImGuiCol_Text, ImGuiHelper::Colors::WARNING);
+      ImGui::Text(Labels::COMMAND_LIST_SUBCAPTURE_NOTICE);
+      ImGui::PopStyleColor();
+    }
+    ImGui::BeginDisabled(!isSerialized);
+    ImGui::SetNextItemWidth(widthLabel / 4.0f);
+    changed |= ImGui::InputInt(Labels::COMMAND_LIST_SUBCAPTURE_FRAME,
+                               &SubcaptureConfig.CommandListSubcaptureFrame, 1, 10);
+    ImGuiHelper::HelpButton(Labels::COMMAND_LIST_SUBCAPTURE_FRAME_HINT,
+                            Labels::COMMAND_LIST_SUBCAPTURE_FRAME_HINT,
+                            Labels::COMMAND_LIST_SUBCAPTURE_FRAME_HELP);
+    ImGui::SetNextItemWidth(widthLabel / 4.0f);
+    changed |= ImGui::InputInt(Labels::COMMAND_LIST_SUBCAPTURE_EXECUTIONS_START,
+                               &SubcaptureConfig.CommandListExecutionsStart, 1, 10);
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(widthLabel / 4.0f);
+    changed |= ImGui::InputInt(Labels::COMMAND_LIST_SUBCAPTURE_EXECUTIONS_END,
+                               &SubcaptureConfig.CommandListExecutionsEnd, 1, 10);
+    config_options_gui_helpers::ConfigOptionHelpButton(
+        ConfigMetadata::DirectX::Features::Subcapture::commandListExecutions);
+    ImGui::EndDisabled();
+  }
+
+  if (selectedMode == SubcaptureMode::CommandSubcapture) {
+    ImGui::Text("Not yet supported");
+  }
 
   DroppedFilePath.reset();
 
   if (changed) {
-    config_options::SubcaptureFrames() = SubcaptureConfig.Range();
+    if (selectedMode == SubcaptureMode::Subcapture) {
+      config_options::SubcaptureFrames() = SubcaptureConfig.FramesRange();
+    }
+    if (selectedMode == SubcaptureMode::CommandListSubcapture) {
+      config_options::SubcaptureFrames() =
+          std::to_string(SubcaptureConfig.CommandListSubcaptureFrame);
+      config_options::CommandListExecutions() = SubcaptureConfig.CommandListExecutionsRange();
+    }
+    if (selectedMode == SubcaptureMode::CommandSubcapture) {
+      // Not yet supported
+    }
     context.UpdateInMemoryConfig(Mode::SUBCAPTURE);
+    changed = false;
   }
 }
 

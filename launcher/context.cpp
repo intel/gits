@@ -30,6 +30,7 @@
 
 #include "captureActions.h"
 #include "fileActions.h"
+#include "labels.h"
 #include "launcherConfig.h"
 #include "log.h"
 #include "launcherActions.h"
@@ -51,6 +52,14 @@
 #include "yamlUtils.h"
 
 namespace gits::gui {
+
+namespace {
+
+#ifdef _WIN32
+constexpr const char* REGISTRY_KEYS_FILE_NAME = "registryKeys.yml";
+#endif
+
+} // namespace
 
 void Context::UpdateFixedLauncherArguments() {
   FixedLauncherArguments = "";
@@ -252,6 +261,17 @@ std::filesystem::path Context::GetGITSPlayerPath() const {
   return Paths.BasePath / "Player" / "gitsPlayer.exe";
 }
 
+#ifdef _WIN32
+std::filesystem::path Context::GetRegistryKeysYamlPath() const {
+  const auto gitsBasePath = GetPathSafe(Path::GITS_BASE);
+  if (gitsBasePath.empty()) {
+    return {};
+  }
+
+  return gitsBasePath / "Launcher" / REGISTRY_KEYS_FILE_NAME;
+}
+#endif
+
 bool Context::IsPlayback() {
   return AppMode == Mode::PLAYBACK;
 }
@@ -414,7 +434,11 @@ Context::Context()
     : CaptureGitsConfig(g_BaseConfigValidityFlag, g_ModifiedConfigValidityFlag),
       PlaybackGitsConfig(g_BaseConfigValidityFlag, g_ModifiedConfigValidityFlag),
       SubcaptureGitsConfig(g_BaseConfigValidityFlag, g_ModifiedConfigValidityFlag),
-      BtnsSideBar(nullptr) {}
+      BtnsSideBar(nullptr) {
+#ifdef _WIN32
+  IsAdminMode = IsElevated();
+#endif
+}
 
 void TextEditorAppender::write(const plog::Record& record) {
   if (!m_Editor) {

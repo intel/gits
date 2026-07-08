@@ -109,13 +109,11 @@ STREAM_META_DATA GetStreamMetaData(std::filesystem::path streamPath) {
                 metaData.RecorderConfig =
                     metaData.RecorderConfig.substr(1, metaData.RecorderConfig.size() - 2);
               }
-              for (size_t pos = 0;
-                   (pos = metaData.RecorderConfig.find("\\n", pos)) != std::string::npos;
-                   pos += 1) {
-                metaData.RecorderConfig.replace(pos, 2, "\n");
-              } // This might sometimes wrongly replace "\n" in strings or Windows paths
-              // It would be hard to cover every possibility
-              // Since this is just a print I think it's fine
+              if (Configurator::Instance().Load(metaData.RecorderConfig)) {
+                metaData.IsASerializedSubcapture =
+                    Configurator::Get().directx.features.subcapture.executionSerialization;
+              }
+
               j["diag"]["gits"].erase("config");
             }
             metaData.RecorderDiags = std::move(j);

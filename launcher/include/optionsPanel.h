@@ -9,13 +9,13 @@
 #pragma once
 
 #include "basePanel.h"
-#include "eventBus.h"
-#include "textEditorWidget.h"
-#include "metaDataPanel.h"
 #include "pluginsPanel.h"
 #include "captureOptionsPanel.h"
 #include "playbackOptionsPanel.h"
 #include "subcaptureOptionsPanel.h"
+#ifdef _WIN32
+#include "systemSetupPanel.h"
+#endif
 
 namespace gits::gui {
 
@@ -32,6 +32,9 @@ private:
   SubcaptureOptionsPanel m_SubcaptureOptionsPanel;
 
   PluginsPanel m_PluginsPanel;
+#ifdef _WIN32
+  SystemSetupPanel m_SystemSetupPanel;
+#endif
 };
 
 } // namespace gits::gui

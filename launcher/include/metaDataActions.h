@@ -25,6 +25,7 @@ struct STREAM_META_DATA {
   std::string RecorderConfig = std::string();      // Config that the stream was captured with
   ApisIface::TApi Api3D = ApisIface::TApi::ApiNotSet;
   ApisIface::TApi ApiCompute = ApisIface::TApi::ApiNotSet;
+  bool IsASerializedSubcapture = false;
 };
 
 STREAM_META_DATA GetStreamMetaData(std::filesystem::path streamPath);

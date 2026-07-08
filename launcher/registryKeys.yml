@@ -1,0 +1,22 @@
+# ===================== begin_copyright_notice ============================
+#
+# Copyright (C) 2023-2026 Intel Corporation
+#
+# SPDX-License-Identifier: MIT
+#
+# ===================== end_copyright_notice ==============================
+
+RegistryKeys:
+  # Example:
+  # - Name: ExampleRegistryEntry (Each entry can have multiple values under it)
+  #   Remark: Description of the entry. (Optional)
+  #   Values:
+  #     - Path: HKLM\SOFTWARE\Vendor\Driver\ExampleOne
+  #       Type: REG_DWORD
+  #       Value: 1
+  #       Remark: Description of the first value. (Optional)
+  #     - Path: HKLM\SOFTWARE\Vendor\Driver\ExampleTwo
+  #       Type: REG_DWORD
+  #       Value: 2
+  #       Remark: Description of the second value. (Optional)
+

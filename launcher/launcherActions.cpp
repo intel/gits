@@ -65,6 +65,49 @@ std::string QuoteWindowsPath(const std::string& path) {
   }
   return "\"" + result + "\"";
 }
+
+bool IsElevated() {
+  HANDLE token = nullptr;
+  if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &token)) {
+    return false;
+  }
+
+  TOKEN_ELEVATION elevation = {};
+  DWORD size = sizeof(TOKEN_ELEVATION);
+  bool result = false;
+  if (GetTokenInformation(token, TokenElevation, &elevation, sizeof(elevation), &size)) {
+    result = elevation.TokenIsElevated != 0;
+  }
+
+  CloseHandle(token);
+  return result;
+}
+
+void RelaunchAsAdmin() {
+  wchar_t path[MAX_PATH] = {};
+  if (!GetModuleFileNameW(nullptr, path, MAX_PATH)) {
+    return;
+  }
+
+  SHELLEXECUTEINFOW sei = {};
+  sei.cbSize = sizeof(sei);
+  sei.lpVerb = L"runas";
+  sei.lpFile = path;
+  sei.nShow = SW_NORMAL;
+
+  if (!ShellExecuteExW(&sei)) {
+    DWORD error = GetLastError();
+    if (error == ERROR_CANCELLED) {
+      LOG_WARNING << "[LauncherActions] User declined UAC prompt\n";
+    } else {
+      LOG_ERROR << "[LauncherActions] Failed to relaunch as admin: " << error << "\n";
+    }
+    return;
+  }
+
+  LOG_INFO << "[LauncherActions] Relaunched as admin, closing current instance\n";
+  PostQuitMessage(0);
+}
 #endif
 
 void UpdateCLICall() {

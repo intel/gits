@@ -30,9 +30,17 @@ private:
   struct SubcaptureConfig {
     int StartFrame = 1;
     int EndFrame = 1;
+    int CommandListSubcaptureFrame = 1;
+    int CommandListExecutionsStart = 1;
+    int CommandListExecutionsEnd = 1;
 
-    std::string Range() const {
+    std::string FramesRange() const {
       return std::to_string(StartFrame) + "-" + std::to_string(EndFrame);
+    }
+
+    std::string CommandListExecutionsRange() const {
+      return std::to_string(CommandListExecutionsStart) + "-" +
+             std::to_string(CommandListExecutionsEnd);
     }
   } SubcaptureConfig;
   std::optional<std::filesystem::path> DroppedFilePath;

@@ -93,4 +93,5 @@ bool& SubcaptureEnabled(std::optional<Mode> mode = std::nullopt);
 std::string& SubcaptureFrames(std::optional<Mode> mode = std::nullopt);
 bool& SubcaptureOptimize(std::optional<Mode> mode = std::nullopt);
 bool& SubcaptureExecutionSerialization(std::optional<Mode> mode = std::nullopt);
+std::string& CommandListExecutions(std::optional<Mode> mode = std::nullopt);
 } // namespace gits::gui::config_options

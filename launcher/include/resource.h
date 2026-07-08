@@ -10,9 +10,17 @@
 
 #define APP_ICON      101
 #define APP_FILE_ICON 102
-#define APP_VERSION   "1.0.0"
+#define APP_VERSION   "1.1"
 
 inline const char* RELEASE_NOTES = R"(
+Release Notes v1.1
+====================
+- New System setup panel (Windows only)
+  - Registry keys setting
+  - Shader cache clearing
+- Add Command List subcapture mode
+- Minor text label changes
+
 Release Notes v1.0.0
 ====================
 - New YAML-Editor panel:

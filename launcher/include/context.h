@@ -116,6 +116,8 @@ public:
   LauncherConfig LauncherConfiguration;
   std::optional<float> UIScaleDelta = std::nullopt;
 
+  bool IsAdminMode = false;
+
   bool ShouldQuit = false;
 
   void UpdateFixedLauncherArguments();
@@ -132,6 +134,9 @@ public:
                Path pathType,
                std::optional<Mode> appMode = std::nullopt);
   std::filesystem::path GetGITSPlayerPath() const;
+#ifdef _WIN32
+  std::filesystem::path GetRegistryKeysYamlPath() const;
+#endif
 
   bool IsPlayback();
   bool IsCapture();

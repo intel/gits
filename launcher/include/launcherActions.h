@@ -30,6 +30,8 @@ std::optional<std::string> ValidateYaml(const std::string& text);
 std::optional<std::string> ValidateGITSConfig(const std::string& config);
 #ifdef _WIN32
 std::string QuoteWindowsPath(const std::string& path);
+bool IsElevated();
+void RelaunchAsAdmin();
 #endif
 void UpdateCLICall();
 void SetImGuiStyle(size_t selectedItem);

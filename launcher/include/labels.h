@@ -51,7 +51,7 @@ struct Labels {
   static constexpr const char* CAPTURE_HINT = "Capture a new stream";
   static constexpr const char* PLAYBACK = "Playback";
   static constexpr const char* PLAYBACK_HINT = "Playback an existing stream";
-  static constexpr const char* SUBCAPTURE = "Subcapture (DX)";
+  static constexpr const char* SUBCAPTURE = "Frame Subcapture";
   static constexpr const char* SUBCAPTURE_HINT = "Subcapture (DX only!) an existing stream";
   static constexpr const char* START = "Start";
   static constexpr const char* START_HINT = "Start playback/capture";
@@ -132,6 +132,22 @@ struct Labels {
   static constexpr const char* SUBCAPTURE_EXECUTION_SERIALIZATION =
       "Serialize CPU and GPU execution";
   static constexpr const char* SUBCAPTURE_COMMAND_LIST_EXECUTIONS = "Command lists execution range";
+  static constexpr const char* COMMAND_LIST_SUBCAPTURE = "Command List Subcapture";
+  static constexpr const char* COMMAND_LIST_SUBCAPTURE_NOTICE =
+      "Creating a Command List Subcapture requires a serialized Subcapture.\n"
+      "Please use the \"Serialize CPU and GPU execution\" option"
+      " to create a serialized Subcapture, and then create a "
+      "trace from it to select the execution indices";
+  static constexpr const char* COMMAND_LIST_SUBCAPTURE_FRAME = "Frame###CommandListSubcaptureFrame";
+  static constexpr const char* COMMAND_LIST_SUBCAPTURE_FRAME_HINT =
+      "Frame for the command list subcapture";
+  static constexpr const char* COMMAND_LIST_SUBCAPTURE_FRAME_HELP =
+      "Command list subcaptures can only be performed from "
+      "a single frame";
+  static constexpr const char* COMMAND_LIST_SUBCAPTURE_EXECUTIONS_START =
+      "Executions start###CommandListExecutionsStart";
+  static constexpr const char* COMMAND_LIST_SUBCAPTURE_EXECUTIONS_END =
+      "Executions end###CommandListExecutionsEnd";
 
   // Capture cleanup
   static constexpr const char* CLEAN_RECORDER_FILES = "Recorder files";
@@ -340,6 +356,54 @@ struct Labels {
   static constexpr const char* CCODE_PATH_INPUT_HINT = "Path to CCode template folder";
   static constexpr const char* CCODE_GENERATION_CANCEL_BUTTON = "Cancel";
   static constexpr const char* CCODE_GENERATION_GO_BUTTON = "Generate";
+
+#ifdef WIN32
+  // System setup panel
+  static constexpr const char* UNKNOWN_WINDOWS_ERROR = "Unknown error";
+  static constexpr const char* SYSTEM_SETUP_REGISTRY_KEYS_SEPARATOR = "Registry keys";
+  static constexpr const char* SYSTEM_SETUP_SHADER_CACHE_SEPARATOR = "Shader cache";
+  static constexpr const char* RESYNC_REGISTRY_BUTTON = "Resync Registry";
+  static constexpr const char* CLEAR_ALL_REGISTRY_KEYS_BUTTON = "Clear All Registry Keys";
+  static constexpr const char* REGISTRY_ACTIVE_COUNT_FORMAT = "(%d / %d active)";
+  static constexpr const char* SYSTEM_SETUP_ADMIN_REQUIRED_TEXT =
+      "Registry operations require administrator privileges.";
+  static constexpr const char* SYSTEM_SETUP_RELAUNCH_AS_ADMIN_BUTTON = "Relaunch As Admin";
+  static constexpr const char* CLEAR_SHADER_CACHE_BUTTON = "Clear Shader Cache";
+  static constexpr const char* CLEAR_SHADER_CACHE_CONFIRM_POPUP_ID = "Clear Shader Cache##confirm";
+  static constexpr const char* CLEAR_SHADER_CACHE_CONFIRM_TEXT =
+      "This will clear all files in the following directory:\n%s\n\nAre you sure you want to "
+      "proceed?";
+  static constexpr const char* CLEAR_SHADER_CACHE_CONFIRM_YES_BUTTON = "Yes##clear_confirm";
+  static constexpr const char* CLEAR_SHADER_CACHE_CONFIRM_NO_BUTTON = "No##clear_cancel";
+  static constexpr const char* SHADER_CACHE_PATH_INTEL_DIR = "Intel";
+  static constexpr const char* SHADER_CACHE_PATH_CACHE_DIR = "ShaderCache";
+  static constexpr const char* REGISTRY_TOOLTIP_KEY_PATH_FORMAT = "%s";
+  static constexpr const char* REGISTRY_TOOLTIP_VALUE_FORMAT = "   -> %s = %s";
+  static constexpr const char* LOG_LOCAL_APPDATA_LOW_FAILURE =
+      "[SystemSetupPanel] Failed to get LocalAppDataLow folder path\n";
+  static constexpr const char* LOG_SHADER_CACHE_CLEARED_PREFIX =
+      "[SystemSetupPanel] Cleared shader cache at ";
+  static constexpr const char* LOG_SHADER_CACHE_REMOVED_PREFIX = " (removed ";
+  static constexpr const char* LOG_SHADER_CACHE_REMOVED_SUFFIX = " items)\n";
+  static constexpr const char* LOG_SHADER_CACHE_PATH_MISSING_PREFIX =
+      "[SystemSetupPanel] Shader cache path does not exist: ";
+  static constexpr const char* LOG_SHADER_CACHE_PATH_MISSING_SUFFIX = "\n";
+  static constexpr const char* LOG_SHADER_CACHE_CLEAR_FAILURE_PREFIX =
+      "[SystemSetupPanel] Failed to clear shader cache: ";
+  static constexpr const char* LOG_SHADER_CACHE_CLEAR_FAILURE_SUFFIX = "\n";
+  static constexpr const char* LOG_SHADER_CACHE_PARTIAL_PREFIX =
+      "[SystemSetupPanel] Shader cache clear completed with skipped items at ";
+  static constexpr const char* LOG_SHADER_CACHE_PARTIAL_MIDDLE = " (removed ";
+  static constexpr const char* LOG_SHADER_CACHE_PARTIAL_SKIPPED_MIDDLE = " items, skipped ";
+  static constexpr const char* LOG_SHADER_CACHE_PARTIAL_SUFFIX = " items)\n";
+  static constexpr const char* LOG_SHADER_CACHE_ITERATION_ERROR_PREFIX =
+      "[SystemSetupPanel] Failed while enumerating shader cache entries: ";
+  static constexpr const char* LOG_SHADER_CACHE_ITERATION_ERROR_SUFFIX = "\n";
+  static constexpr const char* LOG_LAUNCHER_ADMIN_MODE_PREFIX =
+      "Launcher running with admin privileges: ";
+  static constexpr const char* LOG_LAUNCHER_ADMIN_MODE_YES = "yes";
+  static constexpr const char* LOG_LAUNCHER_ADMIN_MODE_NO = "no";
+#endif
 
   static const std::string MainAction(Mode action) {
     switch (action) {

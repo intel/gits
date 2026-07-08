@@ -257,6 +257,12 @@ void GUIController::SetupGui() {
 
   plog::get()->addAppender(context.LogAppender.get());
 
+#ifdef _WIN32
+  LOG_INFO << Labels::LOG_LAUNCHER_ADMIN_MODE_PREFIX
+           << (context.IsAdminMode ? Labels::LOG_LAUNCHER_ADMIN_MODE_YES
+                                   : Labels::LOG_LAUNCHER_ADMIN_MODE_NO);
+#endif
+
   context.BtnsSideBar =
       new ImGuiHelper::TabGroup<Context::SideBarItem>(Labels::SIDE_BAR(), false, true);
 

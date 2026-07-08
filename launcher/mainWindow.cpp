@@ -12,6 +12,9 @@
 #include "tabGroup.h"
 #include "labels.h"
 #include "launcherActions.h"
+#ifdef _WIN32
+#include "registryManager.h"
+#endif
 #include "resource.h"
 #include "contextHelper.h"
 #include "metaDataActions.h"
@@ -64,6 +67,11 @@ MainWindow::MainWindow() {
       {ActionEvent::Type::Capture});
   EventBus::GetInstance().subscribe<PathEvent>(
       std::bind(&MainWindow::PathCallback, this, std::placeholders::_1));
+
+#ifdef _WIN32
+  RegistryManager::Instance().LoadEntriesFromYamlFile(
+      Context::GetInstance().GetRegistryKeysYamlPath());
+#endif
 };
 
 MainWindow::~MainWindow() {
@@ -439,6 +447,13 @@ void MainWindow::PathCallback(const Event& e) {
 
   auto& context = Context::GetInstance();
   context.LauncherConfiguration.ToFile();
+
+#ifdef _WIN32
+  if (pathEvent.EventType == PathEvent::Type::GITS_BASE) {
+    RegistryManager::Instance().LoadEntriesFromYamlFile(context.GetRegistryKeysYamlPath());
+    return;
+  }
+#endif
 
   if (!pathEvent.Mode.has_value() || pathEvent.Mode == Mode::CAPTURE) {
     return;

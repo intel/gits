@@ -19,7 +19,11 @@ OptionsPanel::OptionsPanel()
     : m_CaptureOptionsPanel(),
       m_PlaybackOptionsPanel(),
       m_SubcaptureOptionsPanel(),
-      m_PluginsPanel() {}
+#ifdef WIN32
+      m_SystemSetupPanel(),
+#endif
+      m_PluginsPanel() {
+}
 
 void OptionsPanel::Render() {
   if (ImGui::BeginTabBar("OptionsTabs")) {
@@ -44,6 +48,12 @@ void OptionsPanel::Render() {
       m_PluginsPanel.Render();
       ImGui::EndTabItem();
     }
+#ifdef WIN32
+    if (Context::GetInstance().AppMode == Mode::CAPTURE && ImGui::BeginTabItem("System setup")) {
+      m_SystemSetupPanel.Render();
+      ImGui::EndTabItem();
+    }
+#endif
     ImGui::EndTabBar();
   }
 }

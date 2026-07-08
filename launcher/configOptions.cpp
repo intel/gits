@@ -322,4 +322,9 @@ bool& SubcaptureExecutionSerialization(std::optional<Mode> mode) {
       .ConfigurationForMode(mode)
       .ModifiedGitsConfiguration.directx.features.subcapture.executionSerialization;
 }
+std::string& CommandListExecutions(std::optional<Mode> mode) {
+  return Context::GetInstance()
+      .ConfigurationForMode(mode)
+      .ModifiedGitsConfiguration.directx.features.subcapture.commandListExecutions;
+}
 } // namespace gits::gui::config_options
