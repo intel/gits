@@ -129,6 +129,7 @@ target_include_directories(DirectX_player PRIVATE
 
 target_link_libraries(DirectX_player PRIVATE
   stream
+  windowing
   DirectX_layer_interface
   DirectX_api_debug
   DirectX_trace

@@ -39,17 +39,17 @@ uint64_t WindowService::SetWindow(uint32_t protocol,
     if (state.width != wndWidth || state.height != wndHeight) {
 #ifdef VK_USE_PLATFORM_WIN32_KHR
       if (protocol == CreateWindowMetaCommand::DisplayProtocol::WIN) {
-        ResizeWin(reinterpret_cast<HWND>(state.playbackHandle), wndWidth, wndHeight);
+        ResizeWin32Window(state.playbackInstance, state.playbackHandle, wndWidth, wndHeight);
       }
 #endif
 #ifdef VK_USE_PLATFORM_XLIB_KHR
       if (protocol == CreateWindowMetaCommand::DisplayProtocol::XLIB) {
-        ResizeXlibWindow(state.playbackHandle, m_InstanceMap[instance], wndWidth, wndHeight);
+        ResizeXlibWindow(state.playbackHandle, state.playbackInstance, wndWidth, wndHeight);
       }
 #endif
 #ifdef VK_USE_PLATFORM_XCB_KHR
       if (protocol == CreateWindowMetaCommand::DisplayProtocol::XCB) {
-        ResizeXcbWindow(state.playbackHandle, m_InstanceMap[instance], wndWidth, wndHeight);
+        ResizeXcbWindow(state.playbackHandle, state.playbackInstance, wndWidth, wndHeight);
       }
 #endif
       state.width = wndWidth;
@@ -76,12 +76,12 @@ uint64_t WindowService::SetWindow(uint32_t protocol,
   switch (protocol) {
   case CreateWindowMetaCommand::DisplayProtocol::WIN: {
 #ifdef VK_USE_PLATFORM_WIN32_KHR
-    HWND currentHWND = CreateWin(wndWidth, wndHeight, wndPosX, wndPosY, visible);
-    WinTitle(currentHWND, "Vulkan-GITS");
-    HINSTANCE hInstance =
-        reinterpret_cast<HINSTANCE>(GetWindowLongPtr(currentHWND, GWLP_HINSTANCE));
-    currentHandle = reinterpret_cast<uint64_t>(currentHWND);
-    currentInstance = reinterpret_cast<uint64_t>(hInstance);
+    auto winParams =
+        CreateWin32Window(static_cast<int32_t>(wndPosX), static_cast<int32_t>(wndPosY),
+                          static_cast<int32_t>(wndWidth), static_cast<int32_t>(wndHeight), visible);
+    currentHandle = winParams.second;
+    currentInstance = winParams.first;
+    windowing::WindowManager::Get().SetTitle("Vulkan-GITS");
 #endif
     break;
   }
@@ -112,6 +112,7 @@ uint64_t WindowService::SetWindow(uint32_t protocol,
   }
 
   m_WindowMap[handle] = {currentHandle,
+                         currentInstance,
                          static_cast<int32_t>(wndPosX),
                          static_cast<int32_t>(wndPosY),
                          wndWidth,
@@ -138,7 +139,7 @@ void WindowService::UpdateWindow(
 
     auto& state = it->second;
     if (state.width != wndWidth || state.height != wndHeight) {
-      ResizeWin(reinterpret_cast<HWND>(state.playbackHandle), wndWidth, wndHeight);
+      ResizeWin32Window(state.playbackInstance, state.playbackHandle, wndWidth, wndHeight);
       state.width = wndWidth;
       state.height = wndHeight;
     }
@@ -170,6 +171,22 @@ uint64_t WindowService::GetCurrentInstance(uint64_t captureInstance) {
   }
   return 0;
 }
+
+#ifdef GITS_PLATFORM_WINDOWS
+std::pair<uint64_t, uint64_t> WindowService::CreateWin32Window(
+    int32_t x, int32_t y, int32_t width, int32_t height, bool visible) {
+  return windowing::WindowManager::Get().CreatePlayerWindow(windowing::WindowProtocol::Win, x, y,
+                                                            width, height, visible);
+}
+
+void WindowService::ResizeWin32Window(uint64_t hinstance,
+                                      uint64_t hwnd,
+                                      uint32_t width,
+                                      uint32_t height) {
+  windowing::WindowManager::Get().ResizeWindow(windowing::WindowProtocol::Win, hinstance, hwnd,
+                                               width, height);
+}
+#endif
 
 #ifdef GITS_PLATFORM_LINUX
 std::pair<uint64_t, uint64_t> WindowService::CreateXlibWindow(

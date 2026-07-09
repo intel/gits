@@ -30,25 +30,12 @@
 #endif
 #if defined WITH_VULKAN
 #include "vulkanCommandFactory.h"
-#if defined GITS_PLATFORM_X11
+#endif
 #include "windowManager.h"
-#endif
-#endif
 
 namespace gits {
 
-#if defined GITS_PLATFORM_WINDOWS_X64
-
-LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
-  switch (uMsg) {
-  case WM_CLOSE:
-    PostMessage(hWnd, uMsg, wParam, lParam);
-    break;
-  default:
-    return DefWindowProc(hWnd, uMsg, wParam, lParam);
-  }
-  return 0;
-}
+#if defined GITS_PLATFORM_WINDOWS && (defined WITH_VULKAN || defined WITH_DIRECTX)
 
 class MessageLoop {
 public:
@@ -59,12 +46,71 @@ public:
   }
 
   void RunLoop(unsigned frame) {
-    MSG msg{};
+    if (Configurator::Get().common.player.showWindowBorder) {
+      windowing::WindowManager::Get().SetTitle("Current frame: " + std::to_string(frame));
+    }
+
     do {
       if (m_Interactive || m_StopAfterFrames[frame]) {
         m_Paused = true;
         m_PlaybackTimer->Pause();
       }
+
+      auto events = windowing::WindowManager::Get().PollEvents();
+      for (auto event : events) {
+        switch (event) {
+        case windowing::WindowEvent::Close:
+        case windowing::WindowEvent::Stop:
+          m_StreamReader->Close();
+          m_Paused = false;
+          m_Interactive = false;
+          break;
+        case windowing::WindowEvent::TogglePause:
+          m_Paused = !m_Paused;
+          if (m_Paused) {
+            m_PlaybackTimer->Pause();
+          } else {
+            m_PlaybackTimer->Resume();
+          }
+          break;
+        case windowing::WindowEvent::ToggleInteractive:
+          m_Interactive = !m_Interactive;
+          if (!m_Interactive) {
+            m_Paused = false;
+            m_PlaybackTimer->Resume();
+          }
+          break;
+        }
+      }
+    } while (m_Paused);
+  }
+
+private:
+  stream::BaseStreamReader* m_StreamReader{};
+  Timer* m_PlaybackTimer{};
+  bool m_Paused{};
+  bool m_Interactive{};
+  BitRange m_StopAfterFrames;
+};
+
+#elif defined GITS_PLATFORM_WINDOWS
+
+class MessageLoop {
+public:
+  MessageLoop(stream::BaseStreamReader* streamReader, Timer* playbackTimer)
+      : m_StreamReader(streamReader), m_PlaybackTimer(playbackTimer) {
+    m_Interactive = Configurator::Get().common.player.interactive;
+    m_StopAfterFrames = Configurator::Get().common.player.stopAfterFrames;
+  }
+
+  void RunLoop(unsigned frame) {
+    do {
+      if (m_Interactive || m_StopAfterFrames[frame]) {
+        m_Paused = true;
+        m_PlaybackTimer->Pause();
+      }
+
+      MSG msg{};
       while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
         TranslateMessage(&msg);
         if (msg.message == WM_CLOSE) {
@@ -105,11 +151,11 @@ public:
   }
 
 private:
+  stream::BaseStreamReader* m_StreamReader{};
+  Timer* m_PlaybackTimer{};
   bool m_Paused{};
   bool m_Interactive{};
   BitRange m_StopAfterFrames;
-  Timer* m_PlaybackTimer{};
-  stream::BaseStreamReader* m_StreamReader{};
 };
 
 #elif defined GITS_PLATFORM_X11 && defined WITH_VULKAN
@@ -209,21 +255,6 @@ public:
     static unsigned frameCount = 0;
     ++frameCount;
 
-#ifdef GITS_PLATFORM_WINDOWS_X64
-    HWND window = GetWindowHandle();
-    if (window) {
-      static bool procChanged = false;
-      if (!procChanged) {
-        SetWindowLongPtrA(window, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(WindowProc));
-        procChanged = true;
-      }
-      if (Configurator::Get().common.player.showWindowBorder) {
-        std::string title = "Current frame: " + std::to_string(frameCount);
-        SetWindowTextA(window, title.c_str());
-      }
-    }
-#endif
-
     m_MessageLoop->RunLoop(frameCount);
 
     if (frameCount == Configurator::Get().common.player.exitFrame) {
@@ -307,8 +338,12 @@ void PlayStream(const std::filesystem::path& streamPath) {
   playbackTimer.Start();
   streamReader->Run();
   playbackTimer.Pause();
-#if defined GITS_PLATFORM_X11 && defined WITH_VULKAN
-  windowing::WindowManager::Get().DestroyAllWindows();
+#if (defined GITS_PLATFORM_WINDOWS && (defined WITH_VULKAN || defined WITH_DIRECTX)) ||            \
+    (defined GITS_PLATFORM_X11 && defined WITH_VULKAN)
+  if (header.GetApi() == stream::StreamHeader::Api::API_VULKAN ||
+      header.GetApi() == stream::StreamHeader::Api::API_DIRECTX) {
+    windowing::WindowManager::Get().DestroyAllWindows();
+  }
 #endif
 
   LOG_INFO << "";

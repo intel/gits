@@ -18,9 +18,17 @@
 namespace gits {
 namespace windowing {
 
+std::unique_ptr<PlayerWindow> CreatePlayerWindowXlib(
+    int x, int y, int width, int height, bool visible);
+std::unique_ptr<PlayerWindow> CreatePlayerWindowXcb(
+    int x, int y, int width, int height, bool visible);
+std::unique_ptr<PlayerWindow> CreatePlayerWindowWayland(
+    int x, int y, int width, int height, bool visible);
+std::unique_ptr<PlayerWindow> CreatePlayerWindowWin(
+    int x, int y, int width, int height, bool visible);
+
 namespace {
 
-#if defined GITS_PLATFORM_X11
 const char* WindowProtocolName(WindowProtocol protocol) {
   switch (protocol) {
   case WindowProtocol::Xlib:
@@ -34,16 +42,8 @@ const char* WindowProtocolName(WindowProtocol protocol) {
   }
   return "unknown";
 }
-#endif
 
 } // namespace
-
-std::unique_ptr<PlayerWindow> CreatePlayerWindowXlib(
-    int x, int y, int width, int height, bool visible);
-std::unique_ptr<PlayerWindow> CreatePlayerWindowXcb(
-    int x, int y, int width, int height, bool visible);
-std::unique_ptr<PlayerWindow> CreatePlayerWindowWayland(
-    int x, int y, int width, int height, bool visible);
 
 WindowManager& WindowManager::Get() {
   static WindowManager manager;
@@ -52,10 +52,14 @@ WindowManager& WindowManager::Get() {
 
 std::pair<uint64_t, uint64_t> WindowManager::CreatePlayerWindow(
     WindowProtocol protocol, int x, int y, int width, int height, bool visible) {
-#if defined GITS_PLATFORM_X11
   std::unique_ptr<PlayerWindow> window;
-
   switch (protocol) {
+#if defined GITS_PLATFORM_WINDOWS
+  case WindowProtocol::Win:
+    window = CreatePlayerWindowWin(x, y, width, height, visible);
+    break;
+#endif
+#if defined GITS_PLATFORM_X11
   case WindowProtocol::Xlib:
     window = CreatePlayerWindowXlib(x, y, width, height, visible);
     break;
@@ -65,7 +69,7 @@ std::pair<uint64_t, uint64_t> WindowManager::CreatePlayerWindow(
   case WindowProtocol::Wayland:
     window = CreatePlayerWindowWayland(x, y, width, height, visible);
     break;
-  case WindowProtocol::Win:
+#endif
   default:
     break;
   }
@@ -79,15 +83,6 @@ std::pair<uint64_t, uint64_t> WindowManager::CreatePlayerWindow(
   auto handles = window->NativeHandles();
   m_Windows.push_back({protocol, std::move(window)});
   return handles;
-#else
-  (void)protocol;
-  (void)x;
-  (void)y;
-  (void)width;
-  (void)height;
-  (void)visible;
-  return std::make_pair(0ULL, 0ULL);
-#endif
 }
 
 void WindowManager::ResizeWindow(WindowProtocol protocol,

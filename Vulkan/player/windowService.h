@@ -31,6 +31,11 @@ public:
   uint64_t GetCurrentInstance(uint64_t captureInstance);
 
 private:
+#ifdef GITS_PLATFORM_WINDOWS
+  std::pair<uint64_t, uint64_t> CreateWin32Window(
+      int32_t x, int32_t y, int32_t width, int32_t height, bool visible);
+  void ResizeWin32Window(uint64_t hinstance, uint64_t hwnd, uint32_t width, uint32_t height);
+#endif
 #ifdef GITS_PLATFORM_LINUX
   std::pair<uint64_t, uint64_t> CreateXlibWindow(
       int32_t x, int32_t y, int32_t width, int32_t height, bool visible);
@@ -44,6 +49,7 @@ private:
 
   struct WindowState {
     uint64_t playbackHandle{};
+    uint64_t playbackInstance{};
     int32_t x{};
     int32_t y{};
     uint32_t width{};

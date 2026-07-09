@@ -7,9 +7,9 @@
 // ===================== end_copyright_notice ==============================
 
 #include "windowService.h"
-#include "playerManager.h"
-#include "message_pump.h"
 #include "configurator.h"
+#include "log.h"
+#include "windowManager.h"
 
 namespace gits {
 namespace DirectX {
@@ -31,12 +31,17 @@ HWND WindowService::CreatePlayerWindow(HWND captureHwnd, int width, int height) 
 
   auto it = m_WindowMap.find(captureHwnd);
   if (it != m_WindowMap.end()) {
-    ResizeWin(it->second, wndWidth, wndHeight);
+    const uint64_t hinstance = reinterpret_cast<uint64_t>(GetModuleHandle(nullptr));
+    windowing::WindowManager::Get().ResizeWindow(windowing::WindowProtocol::Win, hinstance,
+                                                 reinterpret_cast<uint64_t>(it->second), wndWidth,
+                                                 wndHeight);
     return it->second;
   }
 
-  HWND newWindow = CreateWin(wndWidth, wndHeight, wndPosX, wndPosY, true);
-  WinTitle(newWindow, "DX12-GITS");
+  auto handles = windowing::WindowManager::Get().CreatePlayerWindow(
+      windowing::WindowProtocol::Win, wndPosX, wndPosY, wndWidth, wndHeight, true);
+  HWND newWindow = reinterpret_cast<HWND>(handles.second);
+  windowing::WindowManager::Get().SetTitle("DX12-GITS");
   m_WindowMap[captureHwnd] = newWindow;
   return newWindow;
 }

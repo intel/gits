@@ -20,6 +20,7 @@ set(WINDOWING_SRC_SOURCES
   ${WINDOWING_SOURCE_DIR}/playerWindowXlib.cpp
   ${WINDOWING_SOURCE_DIR}/playerWindowXcb.cpp
   ${WINDOWING_SOURCE_DIR}/playerWindowWayland.cpp
+  ${WINDOWING_SOURCE_DIR}/playerWindowWin.cpp
 )
 
 add_library(windowing STATIC ${WINDOWING_SRC_HEADERS} ${WINDOWING_SRC_SOURCES})
@@ -85,4 +86,8 @@ if(UNIX)
 	xkbcommon
 	dl
   )
+endif()
+
+if(WIN32)
+  target_link_libraries(windowing PRIVATE user32)
 endif()
