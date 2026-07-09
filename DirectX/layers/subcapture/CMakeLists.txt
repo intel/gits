@@ -93,6 +93,8 @@ set(ANALYSIS_SRC
   ${SRC_DIR}/bindingTablesDump.cpp
   ${SRC_DIR}/analyzerExecuteIndirectDump.h
   ${SRC_DIR}/analyzerExecuteIndirectDump.cpp
+  ${SRC_DIR}/raytracingOptimizationService.h
+  ${SRC_DIR}/raytracingOptimizationService.cpp
 )
 source_group("analysis" FILES ${ANALYSIS_SRC})
 

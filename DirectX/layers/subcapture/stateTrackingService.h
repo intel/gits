@@ -19,6 +19,7 @@
 
 namespace gits {
 namespace DirectX {
+
 class SubcaptureRecorder;
 class FenceTrackingService;
 class MapStateService;
@@ -37,7 +38,6 @@ class ResourceForCBVRestoreService;
 class XellStateService;
 class XefgStateService;
 class MetaCommandsService;
-
 class INTC_D3D12_SetApplicationInfoCommand;
 
 class StateTrackingService {

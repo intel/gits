@@ -43,8 +43,6 @@ AnalyzerResults::AnalyzerResults() {
       } else if (str == "BLASES") {
         tlases = false;
         blases = true;
-      } else if (str == "AS_SOURCES") {
-        blases = false;
       } else {
         unsigned key = std::stoi(str);
         if (commandLists) {
@@ -61,12 +59,8 @@ AnalyzerResults::AnalyzerResults() {
           m_Tlases.insert(key);
         } else if (blases) {
           analysis >> str;
-          unsigned offset = std::stoi(str);
-          m_Blases.insert(std::make_pair(key, offset));
-        } else {
-          analysis >> str;
-          unsigned offset = std::stoi(str);
-          m_AsSources.insert(std::make_pair(key, offset));
+          unsigned source = std::stoi(str);
+          m_Blases.insert(std::make_pair(key, source));
         }
       }
     }
@@ -91,19 +85,20 @@ bool AnalyzerResults::RestoreDescriptor(unsigned heapKey, unsigned index) {
   return m_Descriptors.find(std::make_pair(heapKey, index)) != m_Descriptors.end();
 }
 
-bool AnalyzerResults::RestoreTlas(unsigned blasBuildKey) {
-  return m_Tlases.find(blasBuildKey) != m_Tlases.end();
+bool AnalyzerResults::RestoreTlas(unsigned buildKey) {
+  return m_Tlases.contains(buildKey);
 }
 
-bool AnalyzerResults::RestoreBlas(std::pair<unsigned, unsigned> blas) {
-  if (!m_Optimize) {
-    return true;
+bool AnalyzerResults::RestoreBlas(unsigned buildKey) {
+  return m_Blases.contains(buildKey);
+}
+
+unsigned AnalyzerResults::GetBlasSourceBuild(unsigned buildKey) {
+  auto it = m_Blases.find(buildKey);
+  if (it != m_Blases.end()) {
+    return it->second;
   }
-  bool found = m_Blases.find(blas) != m_Blases.end();
-  if (!found) {
-    found = m_AsSources.find(blas) != m_AsSources.end();
-  }
-  return found;
+  return 0;
 }
 
 bool AnalyzerResults::IsAnalysis() {

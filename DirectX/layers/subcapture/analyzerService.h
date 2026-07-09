@@ -14,6 +14,7 @@
 #include "analyzerRaytracingService.h"
 #include "analyzerExecuteIndirectService.h"
 #include "subcaptureRange.h"
+#include "raytracingOptimizationService.h"
 
 #include <set>
 #include <string>
@@ -27,7 +28,8 @@ public:
   AnalyzerService(SubcaptureRange& subcaptureRange,
                   AnalyzerCommandListService& commandListService,
                   AnalyzerRaytracingService& raytracingService,
-                  AnalyzerExecuteIndirectService& executeIndirectService);
+                  AnalyzerExecuteIndirectService& executeIndirectService,
+                  RaytracingOptimizationService& raytracingOptimizationService);
   ~AnalyzerService();
   AnalyzerService(const AnalyzerService&) = delete;
   AnalyzerService& operator=(const AnalyzerService&) = delete;
@@ -82,6 +84,7 @@ private:
   AnalyzerCommandListService& m_CommandListService;
   AnalyzerRaytracingService& m_RaytracingService;
   AnalyzerExecuteIndirectService& m_ExecuteIndirectService;
+  RaytracingOptimizationService& m_RaytracingOptimizationService;
   bool m_Optimize{};
 
   std::unordered_map<unsigned, std::vector<unsigned>> m_ParentKeys;

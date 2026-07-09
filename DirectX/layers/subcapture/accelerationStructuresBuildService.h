@@ -143,9 +143,6 @@ private:
     struct CommandNode {
       unsigned Id{};
       std::unique_ptr<RaytracingAccelerationStructureCommand> Command{};
-      CommandNode* Source{};
-      std::unordered_set<CommandNode*> Destinations;
-      bool Restore{};
     };
     std::vector<CommandNode*>& GetCommands() {
       return m_RestoreCommands;
@@ -160,9 +157,8 @@ private:
     std::unordered_map<unsigned,
                        std::vector<std::unique_ptr<RaytracingAccelerationStructureCommand>>>
         m_CommandsByCommandList;
-    std::unordered_map<std::pair<unsigned, unsigned>, CommandNode*, UnsignedPairHash>
-        m_CommandByKeyOffset;
     std::unordered_map<unsigned, std::unique_ptr<CommandNode>> m_CommandById;
+    std::unordered_map<unsigned, RaytracingAccelerationStructureCommand*> m_CommandByBuildKey;
     std::vector<CommandNode*> m_RestoreCommands;
   };
 

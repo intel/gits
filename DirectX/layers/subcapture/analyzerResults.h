@@ -8,9 +8,11 @@
 
 #pragma once
 
+#include "hashUtils.h"
+
 #include <string>
 #include <unordered_set>
-#include <set>
+#include <unordered_map>
 
 namespace gits {
 namespace DirectX {
@@ -30,8 +32,9 @@ public:
   }
   bool RestoreObject(unsigned objectKey);
   bool RestoreDescriptor(unsigned heapKey, unsigned index);
-  bool RestoreTlas(unsigned blasBuildKey);
-  bool RestoreBlas(std::pair<unsigned, unsigned> blas);
+  bool RestoreTlas(unsigned buildKey);
+  bool RestoreBlas(unsigned buildKey);
+  unsigned GetBlasSourceBuild(unsigned buildKey);
 
   static bool IsAnalysis();
   static std::string GetAnalysisFileName();
@@ -41,10 +44,9 @@ private:
   std::unordered_set<unsigned> m_CommandListKeys;
   std::unordered_set<unsigned> m_CommandQueueCommands;
   std::unordered_set<unsigned> m_ObjectKeys;
-  std::set<std::pair<unsigned, unsigned>> m_Descriptors;
+  std::unordered_set<std::pair<unsigned, unsigned>, UnsignedPairHash> m_Descriptors;
   std::unordered_set<unsigned> m_Tlases;
-  std::set<std::pair<unsigned, unsigned>> m_Blases;
-  std::set<std::pair<unsigned, unsigned>> m_AsSources;
+  std::unordered_map<unsigned, unsigned> m_Blases;
 };
 
 } // namespace DirectX

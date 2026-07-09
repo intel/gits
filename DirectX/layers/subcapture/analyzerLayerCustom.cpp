@@ -19,8 +19,11 @@ namespace DirectX {
 AnalyzerLayer::AnalyzerLayer(SubcaptureRange& subcaptureRange)
     : Layer("Analyzer"),
       m_SubcaptureRange(subcaptureRange),
-      m_AnalyzerService(
-          subcaptureRange, m_CommandListService, m_RaytracingService, m_ExecuteIndirectService),
+      m_AnalyzerService(subcaptureRange,
+                        m_CommandListService,
+                        m_RaytracingService,
+                        m_ExecuteIndirectService,
+                        m_RaytracingOptimizationService),
       m_CommandListService(m_AnalyzerService,
                            m_DescriptorService,
                            m_RootSignatureService,
@@ -82,6 +85,9 @@ void AnalyzerLayer::Post(ID3D12CommandQueueExecuteCommandListsCommand& c) {
     m_ExecuteIndirectService.ExecuteCommandLists(c.Key, c.m_Object.Key, c.m_Object.Value,
                                                  c.m_ppCommandLists.Value,
                                                  c.m_NumCommandLists.Value);
+    if (m_AnalyzerService.BeforeRange()) {
+      m_RaytracingOptimizationService.ExecuteCommandLists(c);
+    }
   }
 }
 
@@ -679,6 +685,9 @@ void AnalyzerLayer::Pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStr
   }
   if (m_Optimize) {
     m_CommandListService.Command(c);
+    if (m_AnalyzerService.BeforeRange()) {
+      m_RaytracingOptimizationService.BuildAccelerationStructure(c);
+    }
   }
 }
 
@@ -688,6 +697,9 @@ void AnalyzerLayer::Pre(ID3D12GraphicsCommandList4CopyRaytracingAccelerationStru
   }
   if (m_Optimize) {
     m_CommandListService.Command(c);
+    if (m_AnalyzerService.BeforeRange()) {
+      m_RaytracingOptimizationService.CopyAccelerationStructure(c);
+    }
   }
 }
 
@@ -707,6 +719,9 @@ void AnalyzerLayer::Pre(NvAPI_D3D12_BuildRaytracingAccelerationStructureExComman
   }
   if (m_Optimize) {
     m_CommandListService.Command(c);
+    if (m_AnalyzerService.BeforeRange()) {
+      m_RaytracingOptimizationService.NvapiBuildAccelerationStructureEx(c);
+    }
   }
 }
 
@@ -716,6 +731,9 @@ void AnalyzerLayer::Pre(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& 
   }
   if (m_Optimize) {
     m_CommandListService.Command(c);
+    if (m_AnalyzerService.BeforeRange()) {
+      m_RaytracingOptimizationService.NvapiBuildOpacityMicromapArray(c);
+    }
   }
 }
 

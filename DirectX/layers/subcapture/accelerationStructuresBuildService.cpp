@@ -48,25 +48,25 @@ AccelerationStructuresBuildService::AccelerationStructuresBuildService(
 
 void AccelerationStructuresBuildService::BuildAccelerationStructure(
     ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c) {
-  {
-    if (m_SerializeMode &&
-        c.m_pDesc.Value->Inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL) {
-      return;
-    }
-    if (c.m_pDesc.Value->Inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
-      if (m_Optimize) {
-        if (!m_StateService.GetAnalyzerResults().RestoreTlas(c.Key)) {
-          return;
-        }
-      } else {
-        if (!m_Recorder.CommandListSubcapture() && !m_RestoreTlas) {
-          return;
-        }
+  if (m_Restored) {
+    return;
+  }
+  if (m_SerializeMode &&
+      c.m_pDesc.Value->Inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL) {
+    return;
+  }
+  if (c.m_pDesc.Value->Inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
+    if (m_Optimize) {
+      if (!m_StateService.GetAnalyzerResults().RestoreTlas(c.Key)) {
+        return;
+      }
+    } else {
+      if (!m_Recorder.CommandListSubcapture() && !m_RestoreTlas) {
+        return;
       }
     }
-    if (m_Restored) {
-      return;
-    }
+  } else if (!m_StateService.GetAnalyzerResults().RestoreBlas(c.Key)) {
+    return;
   }
 
   D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS& inputs = c.m_pDesc.Value->Inputs;
@@ -286,6 +286,9 @@ void AccelerationStructuresBuildService::BuildAccelerationStructure(
 
 void AccelerationStructuresBuildService::CopyAccelerationStructure(
     ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& c) {
+  if (m_Restored) {
+    return;
+  }
   if (m_SerializeMode) {
     auto it = m_TlasesKeyOffsets.find(std::make_pair(c.m_DestAccelerationStructureData.InterfaceKey,
                                                      c.m_DestAccelerationStructureData.Offset));
@@ -293,6 +296,10 @@ void AccelerationStructuresBuildService::CopyAccelerationStructure(
       return;
     }
   }
+  if (!m_StateService.GetAnalyzerResults().RestoreBlas(c.Key)) {
+    return;
+  }
+
   CopyRaytracingAccelerationStructureCommand* command =
       new CopyRaytracingAccelerationStructureCommand();
   command->CommandKey = c.Key;
@@ -312,14 +319,16 @@ void AccelerationStructuresBuildService::CopyAccelerationStructure(
 
 void AccelerationStructuresBuildService::NvapiBuildAccelerationStructureEx(
     NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& c) {
+  if (m_Restored) {
+    return;
+  }
   const NVAPI_D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC_EX* buildDesc =
       c.m_pParams.Value->pDesc;
   if (!m_RestoreTlas &&
       buildDesc->inputs.type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
     return;
   }
-
-  if (m_Restored) {
+  if (!m_StateService.GetAnalyzerResults().RestoreBlas(c.Key)) {
     return;
   }
 
@@ -673,6 +682,9 @@ void AccelerationStructuresBuildService::NvapiBuildAccelerationStructureEx(
 void AccelerationStructuresBuildService::NvapiBuildOpacityMicromapArray(
     NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& c) {
   if (m_Restored) {
+    return;
+  }
+  if (!m_StateService.GetAnalyzerResults().RestoreBlas(c.Key)) {
     return;
   }
 
@@ -1152,87 +1164,38 @@ void AccelerationStructuresBuildService::OptimizationService::StoreCommand(
   node->Command.swap(command);
   node->Id = ++m_CommandUniqueId;
   m_CommandById[node->Id].reset(node);
-
-  CommandNode* sourceNode{};
-  if (node->Command->SourceKey) {
-    auto it = m_CommandByKeyOffset.find({node->Command->SourceKey, node->Command->SourceOffset});
-    GITS_ASSERT(it != m_CommandByKeyOffset.end() && it->second);
-    sourceNode = it->second;
-  }
+  m_CommandByBuildKey[node->Command->CommandKey] = node->Command.get();
 
   // skip intermediate update build command
   if (node->Command->Update) {
-    GITS_ASSERT(sourceNode);
-    if (sourceNode->Source) {
-      sourceNode = sourceNode->Source;
-      node->Command->SourceKey = sourceNode->Command->DestKey;
-      node->Command->SourceOffset = sourceNode->Command->DestOffset;
+    unsigned sourceKey =
+        m_StateService.GetAnalyzerResults().GetBlasSourceBuild(node->Command->CommandKey);
+    if (sourceKey) {
+      auto it = m_CommandByBuildKey.find(sourceKey);
+      GITS_ASSERT(it != m_CommandByBuildKey.end());
+      RaytracingAccelerationStructureCommand* source = it->second;
+      GITS_ASSERT(source);
       switch (node->Command->Type) {
       case RaytracingAccelerationStructureCommand::CommandType::Build: {
         auto* build =
             static_cast<BuildRaytracingAccelerationStructureCommand*>(node->Command.get());
-        build->Desc->SourceAccelerationStructureKey = sourceNode->Command->DestKey;
-        build->Desc->SourceAccelerationStructureOffset = sourceNode->Command->DestOffset;
+        build->Desc->SourceAccelerationStructureKey = source->DestKey;
+        build->Desc->SourceAccelerationStructureOffset = source->DestOffset;
       } break;
       case RaytracingAccelerationStructureCommand::CommandType::NvAPIBuild: {
         auto* build =
             static_cast<NvAPIBuildRaytracingAccelerationStructureExCommand*>(node->Command.get());
-        build->Desc->SourceAccelerationStructureKey = sourceNode->Command->DestKey;
-        build->Desc->SourceAccelerationStructureOffset = sourceNode->Command->DestOffset;
+        build->Desc->SourceAccelerationStructureKey = source->DestKey;
+        build->Desc->SourceAccelerationStructureOffset = source->DestOffset;
       } break;
       }
     }
   }
-
-  // handle previous command in the same location
-  CommandNode* previousNode{};
-  auto it = m_CommandByKeyOffset.find({node->Command->DestKey, node->Command->DestOffset});
-  if (it != m_CommandByKeyOffset.end()) {
-    previousNode = it->second;
-  }
-  m_CommandByKeyOffset[{node->Command->DestKey, node->Command->DestOffset}] = node;
-  if (previousNode && previousNode != sourceNode && previousNode->Destinations.empty()) {
-    if (previousNode->Source) {
-      previousNode->Source->Destinations.erase(previousNode);
-    }
-    m_CommandById.erase(previousNode->Id);
-  }
-
-  if (sourceNode) {
-    sourceNode->Destinations.insert(node);
-    node->Source = sourceNode;
-  }
 }
 
 void AccelerationStructuresBuildService::OptimizationService::ProcessCommands() {
-  if (Configurator::Get().directx.features.subcapture.optimize) {
-    for (auto& [keyOffset, node] : m_CommandByKeyOffset) {
-      if (m_StateService.GetAnalyzerResults().RestoreBlas(keyOffset) || node->Command->TlasBuild) {
-        node->Restore = true;
-      }
-    }
-
-    // mark source nodes for restoration
-    for (auto& it : m_CommandById) {
-      CommandNode* node = it.second.get();
-      if (node->Restore) {
-        while (node->Source) {
-          node->Source->Restore = true;
-          node = node->Source;
-        }
-      } else {
-        if (node->Command->Type == RaytracingAccelerationStructureCommand::CommandType::NvAPIOMM) {
-          node->Restore = true;
-        }
-      }
-    }
-  }
-
-  // prepare sorted commands
   for (auto& it : m_CommandById) {
-    if (it.second->Restore || !Configurator::Get().directx.features.subcapture.optimize) {
-      m_RestoreCommands.push_back(it.second.get());
-    }
+    m_RestoreCommands.push_back(it.second.get());
   }
   std::sort(m_RestoreCommands.begin(), m_RestoreCommands.end(),
             [](const CommandNode* a, const CommandNode* b) { return a->Id < b->Id; });
@@ -1240,8 +1203,8 @@ void AccelerationStructuresBuildService::OptimizationService::ProcessCommands() 
 
 void AccelerationStructuresBuildService::OptimizationService::Cleanup() {
   m_CommandsByCommandList.clear();
-  m_CommandByKeyOffset.clear();
   m_CommandById.clear();
+  m_CommandByBuildKey.clear();
   m_RestoreCommands.clear();
 }
 

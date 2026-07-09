@@ -21,11 +21,13 @@ namespace DirectX {
 AnalyzerService::AnalyzerService(SubcaptureRange& subcaptureRange,
                                  AnalyzerCommandListService& commandListService,
                                  AnalyzerRaytracingService& raytracingService,
-                                 AnalyzerExecuteIndirectService& executeIndirectService)
+                                 AnalyzerExecuteIndirectService& executeIndirectService,
+                                 RaytracingOptimizationService& raytracingOptimizationService)
     : m_SubcaptureRange(subcaptureRange),
       m_CommandListService(commandListService),
       m_RaytracingService(raytracingService),
-      m_ExecuteIndirectService(executeIndirectService) {
+      m_ExecuteIndirectService(executeIndirectService),
+      m_RaytracingOptimizationService(raytracingOptimizationService) {
   m_Optimize = Configurator::Get().directx.features.subcapture.optimize;
 }
 
@@ -316,20 +318,18 @@ void AnalyzerService::DumpAnalysisFile() {
   }
 
   out << "BLASES\n";
-  std::set<std::pair<unsigned, unsigned>> ases;
+  std::unordered_set<std::pair<unsigned, unsigned>, UnsignedPairHash> ases;
   for (unsigned buildKey : m_CommandListService.GetTlases()) {
-    for (auto& blas : m_RaytracingService.GetBlases(buildKey)) {
-      ases.insert(blas);
+    for (auto& as : m_RaytracingService.GetBlases(buildKey)) {
+      ases.insert(as);
     }
   }
-  for (auto& [resourceKey, offset] : ases) {
-    out << resourceKey << " " << offset << "\n";
+  for (auto& as : m_RaytracingService.GetSources()) {
+    ases.insert(as);
   }
-
-  out << "AS_SOURCES\n";
-  std::set<std::pair<unsigned, unsigned>>& sources = m_RaytracingService.GetSources();
-  for (auto& [resourceKey, offset] : sources) {
-    out << resourceKey << " " << offset << "\n";
+  m_RaytracingOptimizationService.Optimize(ases);
+  for (auto& [buildKey, source] : m_RaytracingOptimizationService.GetOptimizedCommands()) {
+    out << buildKey << " " << source << "\n";
   }
 }
 
