@@ -19,7 +19,7 @@ namespace DirectX {
 
 ScreenshotsLayer::ScreenshotsLayer()
     : Layer("Screenshots"),
-      m_ScreenshotRange(Configurator::Get().directx.features.screenshots.frames) {
+      m_ScreenshotRange(Configurator::Get().common.shared.screenshots.frames) {
   auto dumpPath = Configurator::Get().common.player.outputDir;
   if (Configurator::IsRecorder()) {
     dumpPath = Configurator::Get().common.recorder.dumpPath / "gitsScreenshots/gitsRecorder";

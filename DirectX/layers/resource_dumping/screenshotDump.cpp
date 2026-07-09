@@ -19,7 +19,7 @@ namespace gits {
 namespace DirectX {
 
 ScreenshotDump::ScreenshotDump(ID3D12CommandQueue* commandQueue) {
-  m_Format = Configurator::Get().directx.features.screenshots.format;
+  m_Format = Configurator::Get().common.shared.screenshots.format;
 
   HRESULT hr = commandQueue->QueryInterface(IID_PPV_ARGS(&m_CommandQueue));
   GITS_ASSERT(hr == S_OK);

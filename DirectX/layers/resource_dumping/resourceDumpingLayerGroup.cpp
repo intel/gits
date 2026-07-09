@@ -21,7 +21,7 @@ namespace gits {
 namespace DirectX {
 
 void ResourceDumpingLayerGroup::LoadLayers() {
-  if (Configurator::Get().directx.features.screenshots.enabled ||
+  if (Configurator::Get().common.shared.screenshots.enabled ||
       !Configurator::Get().common.player.captureFrames.empty()) {
     AddLayer(std::make_unique<ScreenshotsLayer>());
   }

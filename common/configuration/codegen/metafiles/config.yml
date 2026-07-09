@@ -206,16 +206,19 @@ Configuration:
                 Type: bool
                 Default: false
                 Description: Whether screenshots are enabled or not
+                LegacyPaths: ["DirectX.Features.Screenshots.Enabled"]
               - Name: Frames
                 Type: std::string
                 Default: ""
                 Description:
                   Frame range (supports multiple ranges and strides). For example
                   '3-6:2,9'
+                LegacyPaths: ["DirectX.Features.Screenshots.Frames"]
               - Name: Format
                 Type: ImageFormat
                 Default: PNG
                 Description: Format (PNG/JPEG/DDS)
+                LegacyPaths: ["DirectX.Features.Screenshots.Format"]
           - Name: plugins
             Type: std::vector<std::string>
             Default: []
@@ -1199,23 +1202,6 @@ Configuration:
                 Type: CompressionType
                 Default: ZSTD
                 Description: Compression type (LZ4/ZSTD)
-          - Name: Screenshots
-            Type: Group
-            Options:
-              - Name: enabled
-                Type: bool
-                Default: false
-                Description: Whether screenshots are enabled or not
-              - Name: frames
-                Type: std::string
-                Default: ""
-                Description:
-                  Frame range (supports multiple ranges and strides). For example
-                  '3-6:2,9'
-              - Name: format
-                Type: ImageFormat
-                Default: PNG
-                Description: Format (PNG/JPEG/DDS)
           - Name: ResourcesDump
             Type: Group
             Options:

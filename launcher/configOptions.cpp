@@ -96,13 +96,13 @@ std::vector<ApiBool>& HudEnabled(std::optional<Mode> mode) {
 bool& ScreenshotsEnabled(std::optional<Mode> mode) {
   return Context::GetInstance()
       .ConfigurationForMode(mode)
-      .ModifiedGitsConfiguration.directx.features.screenshots.enabled;
+      .ModifiedGitsConfiguration.common.shared.screenshots.enabled;
 }
 
 std::string& ScreenshotsFrames(std::optional<Mode> mode) {
   return Context::GetInstance()
       .ConfigurationForMode(mode)
-      .ModifiedGitsConfiguration.directx.features.screenshots.frames;
+      .ModifiedGitsConfiguration.common.shared.screenshots.frames;
 }
 
 bool& TraceEnabled(std::optional<Mode> mode) {
