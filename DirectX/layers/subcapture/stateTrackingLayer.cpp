@@ -149,6 +149,7 @@ void StateTrackingLayer::Pre(IUnknownReleaseCommand& c) {
     m_ResourceUsageTrackingService.DestroyResource(c.m_Object.Key);
     m_GpuAddressService.DestroyInterface(c.m_Object.Key);
     m_MetaCommandsService.DestroyMetaCommand(c.m_Object.Key);
+    m_AccelerationStructuresBuildService.DestroyResource(c.Key, c.m_Object.Key);
 
     auto it = m_ResourceHeaps.find(c.m_Object.Key);
     if (it != m_ResourceHeaps.end()) {

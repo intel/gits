@@ -40,7 +40,8 @@ AccelerationStructuresBuildService::AccelerationStructuresBuildService(
                             reservedResourcesService,
                             resourceStateTracker,
                             gpuAddressService,
-                            recorder) {
+                            recorder),
+      m_BufferReleaseService(recorder) {
   m_SerializeMode = Configurator::Get().directx.features.subcapture.serializeAccelerationStructures;
   m_RestoreTlas = Configurator::Get().directx.features.subcapture.restoreTLASes;
   m_Optimize = Configurator::Get().directx.features.subcapture.optimize;
@@ -282,6 +283,12 @@ void AccelerationStructuresBuildService::BuildAccelerationStructure(
 
   m_InputBuffersService.StoreBuffers(c.Key, c.m_Object.Value);
   m_OptimizationService.AddCommand(c.m_Object.Key, command);
+
+  m_BufferReleaseService.AddBuffer(c.m_pDesc.DestAccelerationStructureKey);
+  m_BufferReleaseService.AddBuffer(c.m_pDesc.SourceAccelerationStructureKey);
+  for (unsigned key : c.m_pDesc.InputKeys) {
+    m_BufferReleaseService.AddBuffer(key);
+  }
 }
 
 void AccelerationStructuresBuildService::CopyAccelerationStructure(
@@ -315,6 +322,9 @@ void AccelerationStructuresBuildService::CopyAccelerationStructure(
 
   m_StateService.KeepState(c.m_DestAccelerationStructureData.InterfaceKey);
   m_OptimizationService.AddCommand(c.m_Object.Key, command);
+
+  m_BufferReleaseService.AddBuffer(c.m_DestAccelerationStructureData.InterfaceKey);
+  m_BufferReleaseService.AddBuffer(c.m_SourceAccelerationStructureData.InterfaceKey);
 }
 
 void AccelerationStructuresBuildService::NvapiBuildAccelerationStructureEx(
@@ -677,6 +687,12 @@ void AccelerationStructuresBuildService::NvapiBuildAccelerationStructureEx(
 
   m_InputBuffersService.StoreBuffers(c.Key, c.m_pCommandList.Value);
   m_OptimizationService.AddCommand(c.m_pCommandList.Key, command);
+
+  m_BufferReleaseService.AddBuffer(c.m_pParams.DestAccelerationStructureKey);
+  m_BufferReleaseService.AddBuffer(c.m_pParams.SourceAccelerationStructureKey);
+  for (unsigned key : c.m_pParams.InputKeys) {
+    m_BufferReleaseService.AddBuffer(key);
+  }
 }
 
 void AccelerationStructuresBuildService::NvapiBuildOpacityMicromapArray(
@@ -766,6 +782,10 @@ void AccelerationStructuresBuildService::NvapiBuildOpacityMicromapArray(
 
   m_InputBuffersService.StoreBuffers(c.Key, c.m_pCommandList.Value);
   m_OptimizationService.AddCommand(c.m_pCommandList.Key, command);
+
+  m_BufferReleaseService.AddBuffer(c.m_pParams.DestOpacityMicromapArrayDataKey);
+  m_BufferReleaseService.AddBuffer(c.m_pParams.InputBufferKey);
+  m_BufferReleaseService.AddBuffer(c.m_pParams.PerOMMDescsKey);
 }
 
 void AccelerationStructuresBuildService::RestoreAccelerationStructures() {
@@ -893,6 +913,8 @@ void AccelerationStructuresBuildService::RestoreAccelerationStructures() {
     } else {
       GITS_ASSERT(0 && "unknown command");
     }
+
+    m_BufferReleaseService.ProcessReleases(node->Command->CommandKey);
   }
 
   // cleanup
@@ -953,6 +975,11 @@ void AccelerationStructuresBuildService::FenceSignal(unsigned key,
                                                      unsigned fenceKey,
                                                      UINT64 fenceValue) {
   m_InputBuffersService.FenceSignal(key, fenceKey, fenceValue);
+}
+
+void AccelerationStructuresBuildService::DestroyResource(unsigned commandKey,
+                                                         unsigned resourceKey) {
+  m_BufferReleaseService.AddRelease(commandKey, resourceKey);
 }
 
 void AccelerationStructuresBuildService::RestoreCommand(
@@ -1206,6 +1233,33 @@ void AccelerationStructuresBuildService::OptimizationService::Cleanup() {
   m_CommandById.clear();
   m_CommandByBuildKey.clear();
   m_RestoreCommands.clear();
+}
+
+void AccelerationStructuresBuildService::BufferReleaseService::AddBuffer(unsigned key) {
+  if (key) {
+    m_Buffers.insert(key);
+  }
+}
+
+void AccelerationStructuresBuildService::BufferReleaseService::AddRelease(unsigned commandKey,
+                                                                          unsigned bufferKey) {
+  auto it = m_Buffers.find(bufferKey);
+  if (it != m_Buffers.end()) {
+    m_Releases[commandKey] = bufferKey;
+    m_Buffers.erase(it);
+  }
+}
+
+void AccelerationStructuresBuildService::BufferReleaseService::ProcessReleases(
+    unsigned commandKey) {
+  auto endIt = m_Releases.lower_bound(commandKey);
+  for (auto it = m_Releases.begin(); it != endIt;) {
+    IUnknownReleaseCommand release{};
+    release.Key = it->first;
+    release.m_Object.Key = it->second;
+    m_Recorder.Record(IUnknownReleaseSerializer(release));
+    it = m_Releases.erase(it);
+  }
 }
 
 } // namespace DirectX

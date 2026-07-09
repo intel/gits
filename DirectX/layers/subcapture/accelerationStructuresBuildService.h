@@ -21,7 +21,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <memory>
-#include <set>
+#include <map>
 
 namespace gits {
 namespace DirectX {
@@ -50,6 +50,7 @@ public:
   void CommandQueueWait(ID3D12CommandQueueWaitCommand& c);
   void CommandQueueSignal(ID3D12CommandQueueSignalCommand& c);
   void FenceSignal(unsigned key, unsigned fenceKey, UINT64 fenceValue);
+  void DestroyResource(unsigned commandKey, unsigned resourceKey);
 
 private:
   StateTrackingService& m_StateService;
@@ -104,7 +105,7 @@ private:
     std::unique_ptr<PointerArgument<NVAPI_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_PARAMS>> Desc{};
   };
 
-  std::set<std::pair<unsigned, unsigned>> m_TlasesKeyOffsets;
+  std::unordered_set<std::pair<unsigned, unsigned>, UnsignedPairHash> m_TlasesKeyOffsets;
 
   unsigned m_MaxBuildScratchSpace{};
   unsigned m_DeviceKey{};
@@ -161,8 +162,22 @@ private:
     std::unordered_map<unsigned, RaytracingAccelerationStructureCommand*> m_CommandByBuildKey;
     std::vector<CommandNode*> m_RestoreCommands;
   };
-
   OptimizationService m_OptimizationService;
+
+private:
+  class BufferReleaseService {
+  public:
+    BufferReleaseService(SubcaptureRecorder& recorder) : m_Recorder(recorder) {}
+    void AddBuffer(unsigned key);
+    void AddRelease(unsigned commandKey, unsigned bufferKey);
+    void ProcessReleases(unsigned commandKey);
+
+  private:
+    SubcaptureRecorder& m_Recorder;
+    std::unordered_set<unsigned> m_Buffers;
+    std::map<unsigned, unsigned> m_Releases;
+  };
+  BufferReleaseService m_BufferReleaseService;
 };
 
 } // namespace DirectX
