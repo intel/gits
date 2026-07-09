@@ -25,17 +25,20 @@ public:
 #ifdef VK_USE_PLATFORM_WIN32_KHR
   void Pre(vkCreateWin32SurfaceKHRCommand& command) override;
   void Post(vkCreateWin32SurfaceKHRCommand& command) override;
-  void Pre(vkQueuePresentKHRCommand& command) override;
 #endif
 #ifdef VK_USE_PLATFORM_XLIB_KHR
   void Pre(vkCreateXlibSurfaceKHRCommand& command) override;
+  void Post(vkCreateXlibSurfaceKHRCommand& command) override;
 #endif
 #ifdef VK_USE_PLATFORM_XCB_KHR
   void Pre(vkCreateXcbSurfaceKHRCommand& command) override;
+  void Post(vkCreateXcbSurfaceKHRCommand& command) override;
 #endif
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
   void Pre(vkCreateWaylandSurfaceKHRCommand& command) override;
+  void Post(vkCreateWaylandSurfaceKHRCommand& command) override;
 #endif
+  void Pre(vkQueuePresentKHRCommand& command) override;
   void Post(vkCreateSwapchainKHRCommand& command) override;
   void Post(vkDestroySwapchainKHRCommand& command) override;
   void Post(vkDestroySurfaceKHRCommand& command) override;
