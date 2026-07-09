@@ -9,6 +9,7 @@
 #include "windowManager.h"
 
 #include "playerWindow.h"
+#include "log.h"
 #include "platform.h"
 
 #include <algorithm>
@@ -16,6 +17,26 @@
 
 namespace gits {
 namespace windowing {
+
+namespace {
+
+#if defined GITS_PLATFORM_X11
+const char* WindowProtocolName(WindowProtocol protocol) {
+  switch (protocol) {
+  case WindowProtocol::Xlib:
+    return "Xlib";
+  case WindowProtocol::Xcb:
+    return "Xcb";
+  case WindowProtocol::Wayland:
+    return "Wayland";
+  case WindowProtocol::Win:
+    return "Win";
+  }
+  return "unknown";
+}
+#endif
+
+} // namespace
 
 std::unique_ptr<PlayerWindow> CreatePlayerWindowXlib(
     int x, int y, int width, int height, bool visible);
@@ -50,6 +71,8 @@ std::pair<uint64_t, uint64_t> WindowManager::CreatePlayerWindow(
   }
 
   if (!window) {
+    LOG_ERROR << "Failed to create player window (protocol: " << WindowProtocolName(protocol)
+              << ")";
     return std::make_pair(0ULL, 0ULL);
   }
 
@@ -72,10 +95,11 @@ void WindowManager::ResizeWindow(WindowProtocol protocol,
                                  uint64_t nativeWindow,
                                  uint32_t width,
                                  uint32_t height) {
-  (void)protocol;
-
   auto it = std::find_if(m_Windows.begin(), m_Windows.end(),
-                         [nativeDisplay, nativeWindow](const auto& w) {
+                         [protocol, nativeDisplay, nativeWindow](const auto& w) {
+                           if (w.protocol != protocol) {
+                             return false;
+                           }
                            auto handles = w.window->NativeHandles();
                            return handles.first == nativeDisplay && handles.second == nativeWindow;
                          });

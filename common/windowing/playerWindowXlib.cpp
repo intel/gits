@@ -11,6 +11,7 @@
 #include "configurator.h"
 #include "log.h"
 #include "platform.h"
+#include "playerWindowX11Shared.h"
 
 #if defined GITS_PLATFORM_X11
 #define XVisualInfo XVisualInfo_
@@ -21,6 +22,7 @@
 #undef XVisualInfo
 #include <X11/Xlib.h>
 #include <X11/keysym.h>
+#include <unistd.h>
 #endif
 
 #include <memory>
@@ -42,23 +44,21 @@ public:
   };
 
   PlayerWindowXlib(int x, int y, int width, int height, bool visible) {
-    XInitThreads();
-
-    m_Display = XOpenDisplay(nullptr);
-    GITS_ASSERT(m_Display != nullptr, "Failed to open Xlib display");
+    m_Display = GetPlayerX11Display();
+    GITS_ASSERT(m_Display != nullptr, "Failed to open X11 display");
 
     int screen = DefaultScreen(m_Display);
     Window root = RootWindow(m_Display, screen);
     Visual* visual = DefaultVisual(m_Display, screen);
     int depth = DefaultDepth(m_Display, screen);
-    Colormap cmap = XCreateColormap(m_Display, root, visual, AllocNone);
+    m_Colormap = XCreateColormap(m_Display, root, visual, AllocNone);
 
     const bool borderless = !Configurator::Get().common.player.showWindowBorder;
 
     XSetWindowAttributes attributes;
     attributes.background_pixel = XWhitePixel(m_Display, screen);
     attributes.border_pixel = 0;
-    attributes.colormap = cmap;
+    attributes.colormap = m_Colormap;
     attributes.event_mask = KeyPressMask | StructureNotifyMask;
 
     unsigned long attributeMask = CWBorderPixel | CWColormap | CWBackPixel | CWEventMask;
@@ -66,9 +66,19 @@ public:
     m_Window = XCreateWindow(m_Display, root, x, y, width, height,
                              0, // border_width
                              depth, InputOutput, visual, attributeMask, &attributes);
+    GITS_ASSERT(m_Window != 0, "XCreateWindow failed");
+
+    XStoreName(m_Display, m_Window, "gitsPlayer");
 
     m_WmDeleteWindow = XInternAtom(m_Display, "WM_DELETE_WINDOW", False);
     XSetWMProtocols(m_Display, m_Window, &m_WmDeleteWindow, 1);
+
+    const Atom netWmPidAtom = XInternAtom(m_Display, "_NET_WM_PID", False);
+    if (netWmPidAtom != None) {
+      const pid_t pid = getpid();
+      XChangeProperty(m_Display, m_Window, netWmPidAtom, XA_CARDINAL, 32, PropModeReplace,
+                      reinterpret_cast<const unsigned char*>(&pid), 1);
+    }
 
     if (borderless) {
       constexpr unsigned long MWM_HINTS_DECORATIONS = 1UL << 1;
@@ -80,7 +90,8 @@ public:
                       reinterpret_cast<const unsigned char*>(&hints), 5);
     }
 
-    if (visible) {
+    const bool mapWindow = visible && !Configurator::Get().common.player.forceInvisibleWindows;
+    if (mapWindow) {
       XMapWindow(m_Display, m_Window);
     }
     XFlush(m_Display);
@@ -90,11 +101,11 @@ public:
   }
 
   ~PlayerWindowXlib() override {
-    if (m_Display != nullptr) {
-      if (m_Window != 0) {
-        XDestroyWindow(m_Display, m_Window);
-      }
-      XCloseDisplay(m_Display);
+    if (m_Window != 0) {
+      XDestroyWindow(m_Display, m_Window);
+    }
+    if (m_Colormap != 0) {
+      XFreeColormap(m_Display, m_Colormap);
     }
   }
 
@@ -157,6 +168,7 @@ public:
 private:
   Display* m_Display{};
   Window m_Window{};
+  Colormap m_Colormap{};
   Atom m_WmDeleteWindow{};
 };
 #endif

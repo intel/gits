@@ -79,8 +79,6 @@ public:
     static const xdg_toplevel_listener toplevelListener = {
         ToplevelConfigure,
         ToplevelClose,
-        ToplevelConfigureBounds,
-        ToplevelWmCapabilities,
     };
     xdg_toplevel_add_listener(m_Toplevel, &toplevelListener, this);
     xdg_toplevel_set_title(m_Toplevel, "Vulkan-GITS");
@@ -235,22 +233,6 @@ private:
     (void)toplevel;
     auto* self = static_cast<PlayerWindowWayland*>(data);
     self->m_PendingEvents.push_back(WindowEvent::Close);
-  }
-
-  static void ToplevelConfigureBounds(void* data,
-                                      xdg_toplevel* toplevel,
-                                      int32_t width,
-                                      int32_t height) {
-    (void)data;
-    (void)toplevel;
-    (void)width;
-    (void)height;
-  }
-
-  static void ToplevelWmCapabilities(void* data, xdg_toplevel* toplevel, wl_array* capabilities) {
-    (void)data;
-    (void)toplevel;
-    (void)capabilities;
   }
 
   static void SeatCapabilities(void* data, wl_seat* seat, uint32_t capabilities) {

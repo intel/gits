@@ -11,6 +11,7 @@
 #include "configurator.h"
 #include "log.h"
 #include "platform.h"
+#include "playerWindowX11Shared.h"
 
 #if defined GITS_PLATFORM_X11
 #define XVisualInfo XVisualInfo_
@@ -28,6 +29,7 @@
 
 #include <cstring>
 #include <memory>
+#include <utility>
 
 namespace gits {
 namespace windowing {
@@ -35,16 +37,34 @@ namespace windowing {
 namespace {
 
 #if defined GITS_PLATFORM_X11
+void FlushXcbConnection(xcb_connection_t* connection, const char* context) {
+  const int flushResult = xcb_flush(connection);
+  GITS_ASSERT(flushResult >= 0, context);
+}
+
 class PlayerWindowXcb final : public PlayerWindow {
 public:
   PlayerWindowXcb(int x, int y, int width, int height, bool visible) {
-    XInitThreads();
+    m_Display = GetPlayerX11Display();
+    GITS_ASSERT(m_Display != nullptr, "Failed to open X11 display");
+    m_Connection = GetPlayerX11XcbConnection();
+    GITS_ASSERT(m_Connection != nullptr, "XCB connection is null");
 
-    m_Display = XOpenDisplay(nullptr);
-    GITS_ASSERT(m_Display != nullptr, "Failed to open X display for XCB window");
-
-    m_Connection = XGetXCBConnection(m_Display);
-    GITS_ASSERT(m_Connection != nullptr, "Failed to get XCB connection from X display");
+    const auto internAtom = [this](const char* name, xcb_atom_t* atomOut) -> bool {
+      xcb_intern_atom_cookie_t cookie = xcb_intern_atom(m_Connection, 0, strlen(name), name);
+      xcb_generic_error_t* atomError = nullptr;
+      xcb_intern_atom_reply_t* reply = xcb_intern_atom_reply(m_Connection, cookie, &atomError);
+      if (atomError != nullptr) {
+        free(atomError);
+      }
+      if (reply == nullptr) {
+        LOG_WARNING << "Failed to intern XCB atom: " << name;
+        return false;
+      }
+      *atomOut = reply->atom;
+      free(reply);
+      return true;
+    };
 
     const xcb_setup_t* setup = xcb_get_setup(m_Connection);
     xcb_screen_iterator_t iter = xcb_setup_roots_iterator(setup);
@@ -67,70 +87,72 @@ public:
         XCB_WINDOW_CLASS_INPUT_OUTPUT, screen->root_visual, valueMask, valueList);
 
     xcb_generic_error_t* error = xcb_request_check(m_Connection, cookie);
-    GITS_ASSERT(error == nullptr, "Could not create XCB window");
-    free(error);
+    if (error != nullptr) {
+      LOG_ERROR << "Could not create XCB window, X error code "
+                << static_cast<int>(error->error_code);
+      free(error);
+      GITS_ASSERT(false, "Could not create XCB window");
+    }
+
+    xcb_change_property(m_Connection, XCB_PROP_MODE_REPLACE, m_Window, XCB_ATOM_WM_NAME,
+                        XCB_ATOM_STRING, 8, 10, "gitsPlayer");
 
     const char* netWmPidStr = "_NET_WM_PID";
-    xcb_intern_atom_cookie_t cookiePid =
-        xcb_intern_atom(m_Connection, 0, strlen(netWmPidStr), netWmPidStr);
-    xcb_intern_atom_reply_t* replyPid = xcb_intern_atom_reply(m_Connection, cookiePid, nullptr);
-    pid_t pid = getpid();
-    xcb_change_property(m_Connection, XCB_PROP_MODE_REPLACE, m_Window, replyPid->atom,
-                        XCB_ATOM_CARDINAL, 32, 1, &pid);
-    free(replyPid);
+    xcb_atom_t netWmPidAtom{};
+    if (internAtom(netWmPidStr, &netWmPidAtom)) {
+      pid_t pid = getpid();
+      xcb_change_property(m_Connection, XCB_PROP_MODE_REPLACE, m_Window, netWmPidAtom,
+                          XCB_ATOM_CARDINAL, 32, 1, &pid);
+    }
 
     if (!Configurator::Get().common.player.showWindowBorder) {
       const char* mwmHintsStr = "_MOTIF_WM_HINTS";
-      xcb_intern_atom_cookie_t cookieHints =
-          xcb_intern_atom(m_Connection, 0, strlen(mwmHintsStr), mwmHintsStr);
-      xcb_intern_atom_reply_t* replyHints =
-          xcb_intern_atom_reply(m_Connection, cookieHints, nullptr);
-      constexpr uint32_t MWM_HINTS_DECORATIONS = 1L << 1;
-      struct MotifHints {
-        uint32_t flags;
-        uint32_t functions;
-        uint32_t decorations;
-        int32_t input_mode;
-        uint32_t status;
-      };
-      MotifHints hints{};
-      hints.flags = MWM_HINTS_DECORATIONS;
-      hints.decorations = 0;
+      xcb_atom_t mwmHintsAtom{};
+      if (internAtom(mwmHintsStr, &mwmHintsAtom)) {
+        constexpr uint32_t MWM_HINTS_DECORATIONS = 1L << 1;
+        struct MotifHints {
+          uint32_t flags;
+          uint32_t functions;
+          uint32_t decorations;
+          int32_t input_mode;
+          uint32_t status;
+        };
+        MotifHints hints{};
+        hints.flags = MWM_HINTS_DECORATIONS;
+        hints.decorations = 0;
 
-      xcb_change_property(m_Connection, XCB_PROP_MODE_REPLACE, m_Window, replyHints->atom,
-                          replyHints->atom, 32, 5, &hints);
-      free(replyHints);
-      int flushResult = xcb_flush(m_Connection);
-      GITS_ASSERT(flushResult > 0, "Failed to flush XCB commands after border configuration");
+        xcb_change_property(m_Connection, XCB_PROP_MODE_REPLACE, m_Window, mwmHintsAtom,
+                            mwmHintsAtom, 32, 5, &hints);
+        FlushXcbConnection(m_Connection, "Failed to flush XCB commands after border configuration");
+      }
     }
 
     m_WmDeleteWindow = XInternAtom(m_Display, "WM_DELETE_WINDOW", False);
     XSetWMProtocols(m_Display, m_Window, &m_WmDeleteWindow, 1);
 
-    if (visible) {
+    const bool mapWindow = visible && !Configurator::Get().common.player.forceInvisibleWindows;
+    if (mapWindow) {
       cookie = xcb_map_window_checked(m_Connection, m_Window);
       error = xcb_request_check(m_Connection, cookie);
-      GITS_ASSERT(error == nullptr, "Could not map XCB window");
-      free(error);
+      if (error != nullptr) {
+        LOG_ERROR << "Could not map XCB window, X error code "
+                  << static_cast<int>(error->error_code);
+        free(error);
+        GITS_ASSERT(false, "Could not map XCB window");
+      }
     }
 
-    int flushResult = xcb_flush(m_Connection);
-    GITS_ASSERT(flushResult > 0, "Failed to flush XCB commands after window creation");
+    FlushXcbConnection(m_Connection, "Failed to flush XCB commands after window creation");
 
     const int32_t positionValues[] = {x, y};
     xcb_configure_window(m_Connection, m_Window, XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y,
                          reinterpret_cast<const uint32_t*>(positionValues));
-    flushResult = xcb_flush(m_Connection);
-    GITS_ASSERT(flushResult > 0, "Failed to flush XCB commands after moving window");
+    FlushXcbConnection(m_Connection, "Failed to flush XCB commands after moving window");
   }
 
   ~PlayerWindowXcb() override {
-    if (m_Connection != nullptr && m_Window != 0) {
+    if (m_Window != 0) {
       xcb_destroy_window(m_Connection, m_Window);
-      xcb_flush(m_Connection);
-    }
-    if (m_Display != nullptr) {
-      XCloseDisplay(m_Display);
     }
   }
 

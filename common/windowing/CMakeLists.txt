@@ -16,6 +16,7 @@ set(WINDOWING_SRC_HEADERS
 
 set(WINDOWING_SRC_SOURCES
   ${WINDOWING_SOURCE_DIR}/windowManager.cpp
+  ${WINDOWING_SOURCE_DIR}/playerWindowX11Shared.cpp
   ${WINDOWING_SOURCE_DIR}/playerWindowXlib.cpp
   ${WINDOWING_SOURCE_DIR}/playerWindowXcb.cpp
   ${WINDOWING_SOURCE_DIR}/playerWindowWayland.cpp
