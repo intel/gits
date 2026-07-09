@@ -215,6 +215,12 @@ public:
     }
 
     switch (msg) {
+    case WM_GETMINMAXINFO: {
+      auto* mmi = reinterpret_cast<MINMAXINFO*>(lParam);
+      mmi->ptMaxTrackSize.x = 32768;
+      mmi->ptMaxTrackSize.y = 32768;
+      break;
+    }
     case WM_KEYDOWN:
       switch (wParam) {
       case VK_ESCAPE:
