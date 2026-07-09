@@ -48,7 +48,7 @@ CommandPrinter::CommandPrinter(FastOStream& stream,
     return;
   }
 
-  if (Configurator::Get().directx.features.trace.print.timestamp) {
+  if (Configurator::Get().common.shared.trace.print.timestamp) {
     printDateTime(m_Stream);
   }
   if (command.Skip) {

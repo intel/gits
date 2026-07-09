@@ -218,10 +218,10 @@ void DebugInfo::TraceMessage(D3D12_MESSAGE_SEVERITY severity, const char* messag
   auto& cfg = Configurator::Get();
 
   // Check if the message should be added to the trace file
-  if (!cfg.directx.features.trace.enabled) {
+  if (!cfg.common.shared.trace.enabled) {
     return;
   }
-  if (!cfg.directx.features.trace.print.debugLayerWarnings &&
+  if (!cfg.common.shared.trace.print.debugLayerWarnings &&
       severity >= D3D12_MESSAGE_SEVERITY_WARNING) {
     return;
   }

@@ -157,6 +157,7 @@ Configuration:
                 Type: bool
                 Default: false
                 Description: Whether tracing is enabled or not
+                LegacyPaths: ["DirectX.Features.Trace.Enabled"]
               - Name: flushMethod
                 Type: std::string
                 Default: ipc
@@ -168,6 +169,7 @@ Configuration:
                   * `off`: Does not flush the stream
                   * `ipc`: Flush into shared memory and save to file from a different process
                   * `file`: Flush directly into a file
+                LegacyPaths: ["DirectX.Features.Trace.FlushMethod"]
               - Name: Print
                 Type: Group
                 Options:
@@ -175,23 +177,28 @@ Configuration:
                     Type: bool
                     Default: true
                     Description: Print information after API calls
+                    LegacyPaths: ["DirectX.Features.Trace.Print.PostCalls"]
                   - Name: preCalls
                     Type: bool
                     Default: false
                     Description: Print information before API calls
+                    LegacyPaths: ["DirectX.Features.Trace.Print.PreCalls"]
                   - Name: debugLayerWarnings
                     Type: bool
                     Default: false
                     Description: Print debug layer warnings
+                    LegacyPaths: ["DirectX.Features.Trace.Print.DebugLayerWarnings"]
                   - Name: gpuExecution
                     Type: bool
                     Default: false
                     Description: Print GPU execution information
                     ConfigName: gPUExecution
+                    LegacyPaths: ["DirectX.Features.Trace.Print.GPUExecution"]
                   - Name: timestamp
                     Type: bool
                     Default: false
                     Description: Print a timestamp before each API call
+                    LegacyPaths: ["DirectX.Features.Trace.Print.Timestamp"]
           - Name: Screenshots
             Type: Group
             Options:
@@ -1155,51 +1162,6 @@ Configuration:
       - Name: Features
         Type: Group
         Options:
-          - Name: Trace
-            Type: Group
-            Description: 
-              Trace is used to output a text file (tracefile.txt) with all the API calls as they
-              are being executed (or recorded)
-            Options:
-              - Name: enabled
-                Type: bool
-                Default: false
-                Description: Whether tracing is enabled or not
-              - Name: flushMethod
-                Type: std::string
-                Default: ipc
-                Description: Method used to flush the trace file (off/ipc/file)
-                LongDescription: |
-                  Method used to flush the trace file.
-                  Options:
-
-                  * `off`: Does not flush the stream
-                  * `ipc`: Flush into shared memory and save to file from a different process
-                  * `file`: Flush directly into a file
-              - Name: Print
-                Type: Group
-                Options:
-                  - Name: postCalls
-                    Type: bool
-                    Default: true
-                    Description: Print information after API calls
-                  - Name: preCalls
-                    Type: bool
-                    Default: false
-                    Description: Print information before API calls
-                  - Name: debugLayerWarnings
-                    Type: bool
-                    Default: false
-                    Description: Print debug layer warnings
-                  - Name: gpuExecution
-                    Type: bool
-                    Default: false
-                    Description: Print GPU execution information
-                    ConfigName: gPUExecution
-                  - Name: timestamp
-                    Type: bool
-                    Default: false
-                    Description: Print a timestamp before each API call
           - Name: Subcapture
             Type: Group
             Options:

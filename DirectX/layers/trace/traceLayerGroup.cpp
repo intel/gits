@@ -62,25 +62,24 @@ void TraceLayerGroup::LoadLayers() {
   const std::string finalOutputPathPre = filepathBasePre.string() + fileNum + fileExt;
   const std::string finalOutputPathExecution = filepathBaseExecution.string() + fileNum + fileExt;
 
-  const auto& configDirectX = Configurator::Get().directx;
-  const auto flushMethod = configDirectX.features.trace.flushMethod == "file"
-                               ? FastOStringStream::FlushMethod::File
-                               : FastOStringStream::FlushMethod::Ipc;
+  const auto& traceCfg = Configurator::Get().common.shared.trace;
+  const auto flushMethod = traceCfg.flushMethod == "file" ? FastOStringStream::FlushMethod::File
+                                                          : FastOStringStream::FlushMethod::Ipc;
 
-  if (configDirectX.features.trace.enabled) {
+  if (traceCfg.enabled) {
 
     m_TraceStream = std::make_unique<FastOFileStream>();
     m_TraceStreamPre = std::make_unique<FastOFileStream>();
 
-    if (configDirectX.features.trace.print.postCalls) {
-      if (configDirectX.features.trace.flushMethod == "ipc") {
+    if (traceCfg.print.postCalls) {
+      if (traceCfg.flushMethod == "ipc") {
         m_TraceStream = std::make_unique<FastOStringStream>(finalOutputPath);
       } else {
         m_TraceStream = std::make_unique<FastOFileStream>(finalOutputPath);
       }
     }
-    if (configDirectX.features.trace.print.preCalls) {
-      if (configDirectX.features.trace.flushMethod == "ipc") {
+    if (traceCfg.print.preCalls) {
+      if (traceCfg.flushMethod == "ipc") {
         m_TraceStreamPre = std::make_unique<FastOStringStream>(finalOutputPathPre);
       } else {
         m_TraceStreamPre = std::make_unique<FastOFileStream>(finalOutputPathPre);
@@ -88,9 +87,9 @@ void TraceLayerGroup::LoadLayers() {
     }
 
     AddLayer(std::make_unique<TraceLayer>(*m_TraceStreamPre, *m_TraceStream, m_TraceMutex,
-                                          configDirectX.features.trace.flushMethod != "off"));
+                                          traceCfg.flushMethod != "off"));
 
-    if (configDirectX.features.trace.print.gpuExecution) {
+    if (traceCfg.print.gpuExecution) {
       m_ShowExecutionStream =
           std::make_unique<FastOStringStream>(finalOutputPathExecution, flushMethod);
       AddLayer(std::make_unique<ShowExecutionLayer>(*m_ShowExecutionStream));

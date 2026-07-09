@@ -108,7 +108,7 @@ std::string& ScreenshotsFrames(std::optional<Mode> mode) {
 bool& TraceEnabled(std::optional<Mode> mode) {
   return Context::GetInstance()
       .ConfigurationForMode(mode)
-      .ModifiedGitsConfiguration.directx.features.trace.enabled;
+      .ModifiedGitsConfiguration.common.shared.trace.enabled;
 }
 
 std::vector<std::string>& PlayerPlugins(std::optional<Mode> mode) {
