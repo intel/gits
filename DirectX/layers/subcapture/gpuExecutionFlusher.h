@@ -18,7 +18,7 @@ namespace DirectX {
 
 class GpuExecutionFlusher : public GpuExecutionTracker {
 public:
-  void CreateCommandQueue(unsigned commandQueueKey, ID3D12CommandQueue* commandQueue);
+  void ExecuteCommandLists(unsigned commandQueueKey, ID3D12CommandQueue* commandQueue);
   void DestroyCommandQueue(unsigned commandQueueKey);
   void FlushCommandQueues();
 

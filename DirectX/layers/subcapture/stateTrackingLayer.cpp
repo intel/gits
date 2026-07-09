@@ -486,8 +486,6 @@ void StateTrackingLayer::Post(ID3D12DeviceCreateCommandQueueCommand& c) {
 
   m_AccelerationStructuresSerializeService.SetDevice(c.m_Object.Value, c.m_Object.Key);
   m_AccelerationStructuresBuildService.SetDeviceKey(c.m_Object.Key);
-  m_GpuExecutionFlusher.CreateCommandQueue(
-      c.m_ppCommandQueue.Key, *reinterpret_cast<ID3D12CommandQueue**>(c.m_ppCommandQueue.Value));
 }
 
 void StateTrackingLayer::Post(ID3D12Device9CreateCommandQueue1Command& c) {
@@ -507,9 +505,6 @@ void StateTrackingLayer::Post(ID3D12Device9CreateCommandQueue1Command& c) {
   state->Object = static_cast<IUnknown*>(*c.m_ppCommandQueue.Value);
   state->CreationCommand.reset(new ID3D12Device9CreateCommandQueue1Command(c));
   m_StateService.StoreState(state);
-
-  m_GpuExecutionFlusher.CreateCommandQueue(
-      c.m_ppCommandQueue.Key, *reinterpret_cast<ID3D12CommandQueue**>(c.m_ppCommandQueue.Value));
 }
 
 void StateTrackingLayer::Pre(IDXGIFactoryCreateSwapChainCommand& c) {
@@ -1958,9 +1953,6 @@ void StateTrackingLayer::Post(INTC_D3D12_CreateCommandQueueCommand& c) {
   state->Object = static_cast<IUnknown*>(*c.m_ppCommandQueue.Value);
   state->CreationCommand.reset(new INTC_D3D12_CreateCommandQueueCommand(c));
   m_StateService.StoreState(state);
-
-  m_GpuExecutionFlusher.CreateCommandQueue(
-      c.m_ppCommandQueue.Key, *reinterpret_cast<ID3D12CommandQueue**>(c.m_ppCommandQueue.Value));
 }
 
 void StateTrackingLayer::Post(INTC_D3D12_CreateHeapCommand& c) {
@@ -2024,6 +2016,9 @@ void StateTrackingLayer::Post(ID3D12Device1SetResidencyPriorityCommand& c) {
 void StateTrackingLayer::Post(ID3D12CommandQueueExecuteCommandListsCommand& c) {
   if (m_StateRestored) {
     return;
+  }
+  if (c.m_NumCommandLists.Value > 0) {
+    m_GpuExecutionFlusher.ExecuteCommandLists(c.m_Object.Key, c.m_Object.Value);
   }
   if (m_AnalyzerResults.RestoreCommandQueueCommand(c.Key)) {
     m_CommandQueueService.AddExecuteCommandLists(c);

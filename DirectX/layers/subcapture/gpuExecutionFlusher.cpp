@@ -12,8 +12,11 @@
 namespace gits {
 namespace DirectX {
 
-void GpuExecutionFlusher::CreateCommandQueue(unsigned commandQueueKey,
-                                             ID3D12CommandQueue* commandQueue) {
+void GpuExecutionFlusher::ExecuteCommandLists(unsigned commandQueueKey,
+                                              ID3D12CommandQueue* commandQueue) {
+  if (m_CommandQueues.contains(commandQueueKey)) {
+    return;
+  }
   CommandQueueInfo info{};
   info.CommandQueue = commandQueue;
   Microsoft::WRL::ComPtr<ID3D12Device> device;
