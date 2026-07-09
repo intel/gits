@@ -206,7 +206,7 @@ private:
   void FillGpuAddressArgument(D3D12_GPU_VIRTUAL_ADDRESS_Argument& arg);
   void FillGpuDescriptorHandleArgument(DescriptorHandleArgument<D3D12_GPU_DESCRIPTOR_HANDLE>& arg);
   void FillCpuDescriptorHandleArgument(DescriptorHandleArgument<D3D12_CPU_DESCRIPTOR_HANDLE>& arg);
-  void WaitForFence(unsigned commandKey, ID3D12Fence* fence, unsigned fenceValue);
+  void WaitForFence(unsigned commandKey, ID3D12Fence* fence, UINT64 fenceValue);
   void RemoveCachedPso(D3D12_PIPELINE_STATE_STREAM_DESC& desc);
 
 private:

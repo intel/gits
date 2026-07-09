@@ -1948,7 +1948,7 @@ void ReplayCustomizationLayer::FillCpuDescriptorHandleArgument(
 
 void ReplayCustomizationLayer::WaitForFence(unsigned commandKey,
                                             ID3D12Fence* fence,
-                                            unsigned fenceValue) {
+                                            UINT64 fenceValue) {
   UINT64 value = fence->GetCompletedValue();
   if (value >= fenceValue) {
     return;
