@@ -920,12 +920,17 @@ void StateTrackingLayer::Post(ID3D12DeviceCreateRootSignatureCommand& c) {
   if (c.m_Result.Value != S_OK) {
     return;
   }
-  ObjectState* state = new ObjectState();
-  state->ParentKey = c.m_Object.Key;
-  state->Key = c.m_ppvRootSignature.Key;
-  state->Object = static_cast<IUnknown*>(*c.m_ppvRootSignature.Value);
-  state->CreationCommand.reset(new ID3D12DeviceCreateRootSignatureCommand(c));
-  m_StateService.StoreState(state);
+  ObjectState* existingState = m_StateService.GetState(c.m_ppvRootSignature.Key);
+  if (existingState) {
+    ++existingState->RefCount;
+  } else {
+    ObjectState* state = new ObjectState();
+    state->ParentKey = c.m_Object.Key;
+    state->Key = c.m_ppvRootSignature.Key;
+    state->Object = static_cast<IUnknown*>(*c.m_ppvRootSignature.Value);
+    state->CreationCommand.reset(new ID3D12DeviceCreateRootSignatureCommand(c));
+    m_StateService.StoreState(state);
+  }
 }
 
 void StateTrackingLayer::Post(ID3D12Device1CreatePipelineLibraryCommand& c) {
@@ -950,9 +955,9 @@ void StateTrackingLayer::Post(ID3D12PipelineLibrary1LoadPipelineCommand& c) {
   if (c.m_Result.Value != S_OK) {
     return;
   }
-  ObjectState* exisitingState = m_StateService.GetState(c.m_ppPipelineState.Key);
-  if (exisitingState) {
-    ++exisitingState->RefCount;
+  ObjectState* existingState = m_StateService.GetState(c.m_ppPipelineState.Key);
+  if (existingState) {
+    ++existingState->RefCount;
   } else {
     ObjectState* state = new ObjectState();
     state->ParentKey = c.m_Object.Key;
@@ -970,9 +975,9 @@ void StateTrackingLayer::Post(ID3D12PipelineLibraryLoadGraphicsPipelineCommand& 
   if (c.m_Result.Value != S_OK) {
     return;
   }
-  ObjectState* exisitingState = m_StateService.GetState(c.m_ppPipelineState.Key);
-  if (exisitingState) {
-    ++exisitingState->RefCount;
+  ObjectState* existingState = m_StateService.GetState(c.m_ppPipelineState.Key);
+  if (existingState) {
+    ++existingState->RefCount;
   } else {
     ObjectState* state = new ObjectState();
     state->ParentKey = c.m_Object.Key;
@@ -990,9 +995,9 @@ void StateTrackingLayer::Post(ID3D12PipelineLibraryLoadComputePipelineCommand& c
   if (c.m_Result.Value != S_OK) {
     return;
   }
-  ObjectState* exisitingState = m_StateService.GetState(c.m_ppPipelineState.Key);
-  if (exisitingState) {
-    ++exisitingState->RefCount;
+  ObjectState* existingState = m_StateService.GetState(c.m_ppPipelineState.Key);
+  if (existingState) {
+    ++existingState->RefCount;
   } else {
     ObjectState* state = new ObjectState();
     state->ParentKey = c.m_Object.Key;
