@@ -50,6 +50,20 @@ WindowManager& WindowManager::Get() {
   return manager;
 }
 
+PlayerWindow* WindowManager::FindPlayerWindow(WindowProtocol protocol,
+                                              uint64_t nativeDisplay,
+                                              uint64_t nativeWindow) {
+  auto it = std::find_if(m_Windows.begin(), m_Windows.end(),
+                         [protocol, nativeDisplay, nativeWindow](const auto& w) {
+                           if (w.protocol != protocol) {
+                             return false;
+                           }
+                           auto handles = w.window->NativeHandles();
+                           return handles.first == nativeDisplay && handles.second == nativeWindow;
+                         });
+  return it != m_Windows.end() ? it->window.get() : nullptr;
+}
+
 std::pair<uint64_t, uint64_t> WindowManager::CreatePlayerWindow(
     WindowProtocol protocol, int x, int y, int width, int height, bool visible) {
   std::unique_ptr<PlayerWindow> window;
@@ -90,17 +104,24 @@ void WindowManager::ResizeWindow(WindowProtocol protocol,
                                  uint64_t nativeWindow,
                                  uint32_t width,
                                  uint32_t height) {
-  auto it = std::find_if(m_Windows.begin(), m_Windows.end(),
-                         [protocol, nativeDisplay, nativeWindow](const auto& w) {
-                           if (w.protocol != protocol) {
-                             return false;
-                           }
-                           auto handles = w.window->NativeHandles();
-                           return handles.first == nativeDisplay && handles.second == nativeWindow;
-                         });
+  if (PlayerWindow* window = FindPlayerWindow(protocol, nativeDisplay, nativeWindow)) {
+    window->Resize(width, height);
+  }
+}
 
-  if (it != m_Windows.end()) {
-    it->window->Resize(width, height);
+void WindowManager::MoveWindow(
+    WindowProtocol protocol, uint64_t nativeDisplay, uint64_t nativeWindow, int32_t x, int32_t y) {
+  if (PlayerWindow* window = FindPlayerWindow(protocol, nativeDisplay, nativeWindow)) {
+    window->SetPosition(x, y);
+  }
+}
+
+void WindowManager::SetWindowVisibility(WindowProtocol protocol,
+                                        uint64_t nativeDisplay,
+                                        uint64_t nativeWindow,
+                                        bool visible) {
+  if (PlayerWindow* window = FindPlayerWindow(protocol, nativeDisplay, nativeWindow)) {
+    window->SetVisibility(visible);
   }
 }
 

@@ -153,6 +153,28 @@ public:
     }
   }
 
+  void SetPosition(int32_t x, int32_t y) override {
+    if (m_Display != nullptr && m_Window != 0) {
+      XMoveWindow(m_Display, m_Window, x, y);
+      XFlush(m_Display);
+    }
+  }
+
+  void SetVisibility(bool visible) override {
+    if (m_Display == nullptr || m_Window == 0) {
+      return;
+    }
+    if (Configurator::Get().common.player.forceInvisibleWindows) {
+      visible = false;
+    }
+    if (visible) {
+      XMapWindow(m_Display, m_Window);
+    } else {
+      XUnmapWindow(m_Display, m_Window);
+    }
+    XFlush(m_Display);
+  }
+
   void SetTitle(const std::string& title) override {
     if (m_Display != nullptr && m_Window != 0) {
       XStoreName(m_Display, m_Window, title.c_str());

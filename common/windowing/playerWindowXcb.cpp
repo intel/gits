@@ -202,6 +202,30 @@ public:
     }
   }
 
+  void SetPosition(int32_t x, int32_t y) override {
+    if (m_Connection != nullptr && m_Window != 0) {
+      const int32_t values[] = {x, y};
+      xcb_configure_window(m_Connection, m_Window, XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y,
+                           reinterpret_cast<const uint32_t*>(values));
+      xcb_flush(m_Connection);
+    }
+  }
+
+  void SetVisibility(bool visible) override {
+    if (m_Connection == nullptr || m_Window == 0) {
+      return;
+    }
+    if (Configurator::Get().common.player.forceInvisibleWindows) {
+      visible = false;
+    }
+    if (visible) {
+      xcb_map_window(m_Connection, m_Window);
+    } else {
+      xcb_unmap_window(m_Connection, m_Window);
+    }
+    xcb_flush(m_Connection);
+  }
+
   void SetTitle(const std::string& title) override {
     if (m_Connection != nullptr && m_Window != 0) {
       xcb_change_property(m_Connection, XCB_PROP_MODE_REPLACE, m_Window, XCB_ATOM_WM_NAME,

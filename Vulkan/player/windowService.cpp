@@ -7,7 +7,6 @@
 // ===================== end_copyright_notice ==============================
 
 #include "windowService.h"
-#include "message_pump.h"
 #include "configurator.h"
 #include "commandsCustom.h"
 #include "windowManager.h"
@@ -24,8 +23,7 @@ uint64_t WindowService::SetWindow(uint32_t protocol,
                                   int32_t height,
                                   bool visible) {
   // Workaround that forces all windows visible regardless of the recorded flag.
-  // forceInvisibleWindows still wins downstream in CreateWin/WinVisibility
-  // (message_pump.cpp).
+  // forceInvisibleWindows is applied in common/windowing player window backends.
   if (Configurator::Get().common.player.showWindowsWA) {
     visible = true;
   }
@@ -57,9 +55,11 @@ uint64_t WindowService::SetWindow(uint32_t protocol,
     }
     if (state.visible != visible) {
 #ifdef VK_USE_PLATFORM_WIN32_KHR
-      WinVisibility(reinterpret_cast<HWND>(state.playbackHandle), visible);
-      state.visible = visible;
+      if (protocol == CreateWindowMetaCommand::DisplayProtocol::WIN) {
+        SetWin32WindowVisibility(state.playbackInstance, state.playbackHandle, visible);
+      }
 #endif
+      state.visible = visible;
     }
     return state.playbackHandle;
   }
@@ -144,12 +144,12 @@ void WindowService::UpdateWindow(
       state.height = wndHeight;
     }
     if (state.x != wndPosX || state.y != wndPosY) {
-      MoveWin(reinterpret_cast<HWND>(state.playbackHandle), wndPosX, wndPosY);
+      MoveWin32Window(state.playbackInstance, state.playbackHandle, wndPosX, wndPosY);
       state.x = wndPosX;
       state.y = wndPosY;
     }
     if (state.visible != visible) {
-      WinVisibility(reinterpret_cast<HWND>(state.playbackHandle), visible);
+      SetWin32WindowVisibility(state.playbackInstance, state.playbackHandle, visible);
       state.visible = visible;
     }
   }
@@ -185,6 +185,15 @@ void WindowService::ResizeWin32Window(uint64_t hinstance,
                                       uint32_t height) {
   windowing::WindowManager::Get().ResizeWindow(windowing::WindowProtocol::Win, hinstance, hwnd,
                                                width, height);
+}
+
+void WindowService::MoveWin32Window(uint64_t hinstance, uint64_t hwnd, int32_t x, int32_t y) {
+  windowing::WindowManager::Get().MoveWindow(windowing::WindowProtocol::Win, hinstance, hwnd, x, y);
+}
+
+void WindowService::SetWin32WindowVisibility(uint64_t hinstance, uint64_t hwnd, bool visible) {
+  windowing::WindowManager::Get().SetWindowVisibility(windowing::WindowProtocol::Win, hinstance,
+                                                      hwnd, visible);
 }
 #endif
 

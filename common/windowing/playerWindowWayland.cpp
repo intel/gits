@@ -168,6 +168,15 @@ public:
     (void)height;
   }
 
+  void SetPosition(int32_t x, int32_t y) override {
+    (void)x;
+    (void)y;
+  }
+
+  void SetVisibility(bool visible) override {
+    (void)visible;
+  }
+
   void SetTitle(const std::string& title) override {
     if (m_Toplevel != nullptr && m_Surface != nullptr) {
       xdg_toplevel_set_title(m_Toplevel, title.c_str());

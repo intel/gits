@@ -154,6 +154,31 @@ public:
     }
   }
 
+  void SetPosition(int32_t x, int32_t y) override {
+    if (m_Hwnd == nullptr) {
+      return;
+    }
+    if (Configurator::Get().common.player.windowMode == gits::WindowMode::EXCLUSIVE_FULLSCREEN) {
+      return;
+    }
+    SetLastError(NO_ERROR);
+    if (SetWindowPos(m_Hwnd, nullptr, x, y, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE) ==
+        0) {
+      LOG_ERROR << "SetWindowPos failed, GetLastError() = " << GetLastError();
+      GITS_ASSERT(false, "SetWindowPos failed");
+    }
+  }
+
+  void SetVisibility(bool visible) override {
+    if (m_Hwnd == nullptr) {
+      return;
+    }
+    if (Configurator::Get().common.player.forceInvisibleWindows) {
+      visible = false;
+    }
+    ShowWindow(m_Hwnd, visible ? SW_SHOW : SW_HIDE);
+  }
+
   void SetTitle(const std::string& title) override {
     if (m_Hwnd == nullptr) {
       return;

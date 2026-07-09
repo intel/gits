@@ -35,6 +35,8 @@ private:
   std::pair<uint64_t, uint64_t> CreateWin32Window(
       int32_t x, int32_t y, int32_t width, int32_t height, bool visible);
   void ResizeWin32Window(uint64_t hinstance, uint64_t hwnd, uint32_t width, uint32_t height);
+  void MoveWin32Window(uint64_t hinstance, uint64_t hwnd, int32_t x, int32_t y);
+  void SetWin32WindowVisibility(uint64_t hinstance, uint64_t hwnd, bool visible);
 #endif
 #ifdef GITS_PLATFORM_LINUX
   std::pair<uint64_t, uint64_t> CreateXlibWindow(

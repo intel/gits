@@ -38,6 +38,12 @@ public:
                     uint64_t nativeWindow,
                     uint32_t width,
                     uint32_t height);
+  void MoveWindow(
+      WindowProtocol protocol, uint64_t nativeDisplay, uint64_t nativeWindow, int32_t x, int32_t y);
+  void SetWindowVisibility(WindowProtocol protocol,
+                           uint64_t nativeDisplay,
+                           uint64_t nativeWindow,
+                           bool visible);
   void SetTitle(const std::string& title);
   std::vector<WindowEvent> PollEvents();
   void DestroyAllWindows();
@@ -46,6 +52,10 @@ private:
   WindowManager() = default;
   WindowManager(const WindowManager& other) = delete;
   WindowManager& operator=(const WindowManager& other) = delete;
+
+  PlayerWindow* FindPlayerWindow(WindowProtocol protocol,
+                                 uint64_t nativeDisplay,
+                                 uint64_t nativeWindow);
 
   struct ManagedWindow {
     WindowProtocol protocol{};

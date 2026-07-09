@@ -29,6 +29,8 @@ public:
 
   virtual std::vector<WindowEvent> Poll() = 0;
   virtual void Resize(uint32_t width, uint32_t height) = 0;
+  virtual void SetPosition(int32_t x, int32_t y) = 0;
+  virtual void SetVisibility(bool visible) = 0;
   virtual void SetTitle(const std::string& title) = 0;
   virtual std::pair<uint64_t, uint64_t> NativeHandles() const = 0;
 };
