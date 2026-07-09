@@ -893,6 +893,41 @@ void AnalyzerCommandListService::CommandAnalysis(
       m_RaytracingService.AddAccelerationStructureSource(
           c.m_pDesc.SourceAccelerationStructureKey, c.m_pDesc.SourceAccelerationStructureOffset);
     }
+    unsigned inputIndex = 0;
+    D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS& inputs = c.m_pDesc.Value->Inputs;
+    for (unsigned i = 0; i < inputs.NumDescs; ++i) {
+      D3D12_RAYTRACING_GEOMETRY_DESC& desc = const_cast<D3D12_RAYTRACING_GEOMETRY_DESC&>(
+          inputs.DescsLayout == D3D12_ELEMENTS_LAYOUT_ARRAY ? inputs.pGeometryDescs[i]
+                                                            : *inputs.ppGeometryDescs[i]);
+      if (desc.Type == D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES) {
+        inputIndex += 3;
+      } else if (desc.Type == D3D12_RAYTRACING_GEOMETRY_TYPE_PROCEDURAL_PRIMITIVE_AABBS) {
+        ++inputIndex;
+      } else if (desc.Type == D3D12_RAYTRACING_GEOMETRY_TYPE_OMM_TRIANGLES) {
+        if (desc.OmmTriangles.pTriangles) {
+          inputIndex += 3;
+        }
+        if (desc.OmmTriangles.pOmmLinkage) {
+          ++inputIndex;
+          m_RaytracingService.AddAccelerationStructureSource(c.m_pDesc.InputKeys[inputIndex],
+                                                             c.m_pDesc.InputOffsets[inputIndex]);
+          ++inputIndex;
+        }
+      }
+    }
+  }
+  AddObjectForRestore(c.m_pDesc.DestAccelerationStructureKey);
+  if (c.m_pDesc.SourceAccelerationStructureKey) {
+    AddObjectForRestore(c.m_pDesc.SourceAccelerationStructureKey);
+  }
+  if (!IsStateRestoreKey(c.m_pDesc.ScratchAccelerationStructureKey)) {
+    AddObjectForRestore(c.m_pDesc.ScratchAccelerationStructureKey);
+  }
+  for (unsigned key : c.m_pDesc.InputKeys) {
+    AddObjectForRestore(key);
+  }
+  for (unsigned key : c.m_pPostbuildInfoDescs.DestBufferKeys) {
+    AddObjectForRestore(key);
   }
   AddObjectForRestore(c.m_pDesc.DestAccelerationStructureKey);
   if (c.m_pDesc.SourceAccelerationStructureKey) {
@@ -944,6 +979,48 @@ void AnalyzerCommandListService::CommandAnalysis(
           c.m_pParams.SourceAccelerationStructureKey,
           c.m_pParams.SourceAccelerationStructureOffset);
     }
+    unsigned inputIndex = 0;
+    const NVAPI_D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS_EX& inputs =
+        c.m_pParams.Value->pDesc->inputs;
+    for (unsigned i = 0; i < inputs.numDescs; ++i) {
+      const NVAPI_D3D12_RAYTRACING_GEOMETRY_DESC_EX& desc =
+          inputs.descsLayout == D3D12_ELEMENTS_LAYOUT_ARRAY
+              ? *reinterpret_cast<const NVAPI_D3D12_RAYTRACING_GEOMETRY_DESC_EX*>(
+                    reinterpret_cast<const char*>(inputs.pGeometryDescs) +
+                    inputs.geometryDescStrideInBytes * i)
+              : *inputs.ppGeometryDescs[i];
+      if (desc.type == D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES) {
+        inputIndex += 3;
+      } else if (desc.type == D3D12_RAYTRACING_GEOMETRY_TYPE_PROCEDURAL_PRIMITIVE_AABBS) {
+        ++inputIndex;
+      } else if (desc.type == NVAPI_D3D12_RAYTRACING_GEOMETRY_TYPE_OMM_TRIANGLES_EX) {
+        inputIndex += 4;
+        if (desc.ommTriangles.ommAttachment.opacityMicromapArray) {
+          m_RaytracingService.AddAccelerationStructureSource(c.m_pParams.InputKeys[inputIndex],
+                                                             c.m_pParams.InputOffsets[inputIndex]);
+        }
+        ++inputIndex;
+      } else if (desc.type == NVAPI_D3D12_RAYTRACING_GEOMETRY_TYPE_DMM_TRIANGLES_EX) {
+        inputIndex += 8;
+      } else if (desc.type == NVAPI_D3D12_RAYTRACING_GEOMETRY_TYPE_SPHERES_EX) {
+        inputIndex += 3;
+      } else if (desc.type == NVAPI_D3D12_RAYTRACING_GEOMETRY_TYPE_LSS_EX) {
+        inputIndex += 3;
+      }
+    }
+  }
+  AddObjectForRestore(c.m_pParams.DestAccelerationStructureKey);
+  if (c.m_pParams.SourceAccelerationStructureKey) {
+    AddObjectForRestore(c.m_pParams.SourceAccelerationStructureKey);
+  }
+  if (!IsStateRestoreKey(c.m_pParams.ScratchAccelerationStructureKey)) {
+    AddObjectForRestore(c.m_pParams.ScratchAccelerationStructureKey);
+  }
+  for (unsigned key : c.m_pParams.InputKeys) {
+    AddObjectForRestore(key);
+  }
+  for (unsigned key : c.m_pParams.DestPostBuildBufferKeys) {
+    AddObjectForRestore(key);
   }
   AddObjectForRestore(c.m_pParams.DestAccelerationStructureKey);
   if (c.m_pParams.SourceAccelerationStructureKey) {

@@ -50,6 +50,8 @@ private:
     RaytracingCommand* Source{};
     bool Restore{};
     std::unordered_set<unsigned> Buffers;
+    std::unordered_set<std::pair<unsigned, unsigned>, UnsignedPairHash> OmmLinkages;
+    std::vector<RaytracingCommand*> OpacityMicromapArrays;
   };
 
   unsigned m_CommandUniqueId{};

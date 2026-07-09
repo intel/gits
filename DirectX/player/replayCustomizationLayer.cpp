@@ -1655,11 +1655,9 @@ void ReplayCustomizationLayer::Pre(NvAPI_D3D12_BuildRaytracingAccelerationStruct
       NVAPI_D3D12_RAYTRACING_GEOMETRY_DESC_EX& desc =
           const_cast<NVAPI_D3D12_RAYTRACING_GEOMETRY_DESC_EX&>(
               pDescMod->inputs.descsLayout == D3D12_ELEMENTS_LAYOUT_ARRAY
-                  ? *(NVAPI_D3D12_RAYTRACING_GEOMETRY_DESC_EX*)((char*)(pDescMod->inputs
-                                                                            .pGeometryDescs) +
-                                                                pDescMod->inputs
-                                                                        .geometryDescStrideInBytes *
-                                                                    i)
+                  ? *reinterpret_cast<const NVAPI_D3D12_RAYTRACING_GEOMETRY_DESC_EX*>(
+                        reinterpret_cast<const char*>(pDescMod->inputs.pGeometryDescs) +
+                        pDescMod->inputs.geometryDescStrideInBytes * i)
                   : *pDescMod->inputs.ppGeometryDescs[i]);
       if (desc.type == D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES) {
         desc.triangles.Transform3x4 = m_Manager.GetGpuAddressService().GetGpuAddress(

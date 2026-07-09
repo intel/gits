@@ -32,9 +32,29 @@ void RaytracingOptimizationService::BuildAccelerationStructure(
   for (unsigned key : c.m_pDesc.InputKeys) {
     command->Buffers.insert(key);
   }
-  if (c.m_pDesc.Value->Inputs.Type ==
-      D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_OPACITY_MICROMAP_ARRAY) {
-    command->Restore = true;
+  if (c.m_pDesc.Value->Inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL) {
+    unsigned inputIndex = 0;
+    D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS& inputs = c.m_pDesc.Value->Inputs;
+    for (unsigned i = 0; i < inputs.NumDescs; ++i) {
+      D3D12_RAYTRACING_GEOMETRY_DESC& desc = const_cast<D3D12_RAYTRACING_GEOMETRY_DESC&>(
+          inputs.DescsLayout == D3D12_ELEMENTS_LAYOUT_ARRAY ? inputs.pGeometryDescs[i]
+                                                            : *inputs.ppGeometryDescs[i]);
+      if (desc.Type == D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES) {
+        inputIndex += 3;
+      } else if (desc.Type == D3D12_RAYTRACING_GEOMETRY_TYPE_PROCEDURAL_PRIMITIVE_AABBS) {
+        ++inputIndex;
+      } else if (desc.Type == D3D12_RAYTRACING_GEOMETRY_TYPE_OMM_TRIANGLES) {
+        if (desc.OmmTriangles.pTriangles) {
+          inputIndex += 3;
+        }
+        if (desc.OmmTriangles.pOmmLinkage) {
+          ++inputIndex;
+          command->OmmLinkages.insert(
+              {c.m_pDesc.InputKeys[inputIndex], c.m_pDesc.InputOffsets[inputIndex]});
+          ++inputIndex;
+        }
+      }
+    }
   }
   m_CommandsByCommandList[c.m_Object.Key].emplace_back(command);
 }
@@ -73,6 +93,38 @@ void RaytracingOptimizationService::NvapiBuildAccelerationStructureEx(
   for (unsigned key : c.m_pParams.InputKeys) {
     command->Buffers.insert(key);
   }
+  if (c.m_pParams.Value->pDesc->inputs.type ==
+      D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL) {
+    unsigned inputIndex = 0;
+    const NVAPI_D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS_EX& inputs =
+        c.m_pParams.Value->pDesc->inputs;
+    for (unsigned i = 0; i < inputs.numDescs; ++i) {
+      const NVAPI_D3D12_RAYTRACING_GEOMETRY_DESC_EX& desc =
+          inputs.descsLayout == D3D12_ELEMENTS_LAYOUT_ARRAY
+              ? *reinterpret_cast<const NVAPI_D3D12_RAYTRACING_GEOMETRY_DESC_EX*>(
+                    reinterpret_cast<const char*>(inputs.pGeometryDescs) +
+                    inputs.geometryDescStrideInBytes * i)
+              : *inputs.ppGeometryDescs[i];
+      if (desc.type == D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES) {
+        inputIndex += 3;
+      } else if (desc.type == D3D12_RAYTRACING_GEOMETRY_TYPE_PROCEDURAL_PRIMITIVE_AABBS) {
+        ++inputIndex;
+      } else if (desc.type == NVAPI_D3D12_RAYTRACING_GEOMETRY_TYPE_OMM_TRIANGLES_EX) {
+        inputIndex += 4;
+        if (desc.ommTriangles.ommAttachment.opacityMicromapArray) {
+          command->OmmLinkages.insert(
+              {c.m_pParams.InputKeys[inputIndex], c.m_pParams.InputOffsets[inputIndex]});
+        }
+        ++inputIndex;
+      } else if (desc.type == NVAPI_D3D12_RAYTRACING_GEOMETRY_TYPE_DMM_TRIANGLES_EX) {
+        inputIndex += 8;
+      } else if (desc.type == NVAPI_D3D12_RAYTRACING_GEOMETRY_TYPE_SPHERES_EX) {
+        inputIndex += 3;
+      } else if (desc.type == NVAPI_D3D12_RAYTRACING_GEOMETRY_TYPE_LSS_EX) {
+        inputIndex += 3;
+      }
+    }
+  }
   m_CommandsByCommandList[c.m_pCommandList.Key].emplace_back(command);
 }
 
@@ -82,7 +134,6 @@ void RaytracingOptimizationService::NvapiBuildOpacityMicromapArray(
   command->CommandKey = c.Key;
   command->DestKey = c.m_pParams.DestOpacityMicromapArrayDataKey;
   command->DestOffset = c.m_pParams.DestOpacityMicromapArrayDataOffset;
-  command->Restore = true;
   command->Buffers.insert(c.m_pParams.DestOpacityMicromapArrayDataKey);
   if (c.m_pParams.InputBufferKey) {
     command->Buffers.insert(c.m_pParams.InputBufferKey);
@@ -119,6 +170,12 @@ void RaytracingOptimizationService::StoreCommand(std::unique_ptr<RaytracingComma
     source = it->second;
   }
 
+  for (auto& [key, offset] : command->OmmLinkages) {
+    auto it = m_CommandByKeyOffset.find({key, offset});
+    GITS_ASSERT(it != m_CommandByKeyOffset.end() && it->second);
+    command->OpacityMicromapArrays.push_back(it->second);
+  }
+
   // skip intermediate update build command
   if (command->UpdateBuild) {
     GITS_ASSERT(source);
@@ -151,6 +208,13 @@ void RaytracingOptimizationService::Optimize(
       while (command->Source) {
         command->Source->Restore = true;
         command = command->Source;
+      }
+      for (RaytracingCommand* ommArray : command->OpacityMicromapArrays) {
+        ommArray->Restore = true;
+        while (ommArray->Source) {
+          ommArray->Source->Restore = true;
+          ommArray = ommArray->Source;
+        }
       }
     }
   }
