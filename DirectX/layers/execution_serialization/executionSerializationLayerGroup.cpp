@@ -16,12 +16,12 @@ namespace DirectX {
 
 void ExecutionSerializationLayerGroup::LoadLayers() {
 
-  if (!Configurator::Get().directx.features.subcapture.enabled ||
+  if (!Configurator::Get().common.features.subcapture.enabled ||
       !Configurator::Get().directx.features.subcapture.executionSerialization) {
     return;
   }
 
-  const std::string& frames = Configurator::Get().directx.features.subcapture.frames;
+  const std::string& frames = Configurator::Get().common.features.subcapture.frames;
   try {
     int startFrame = std::stoi(frames);
     if (startFrame != 1) {
@@ -30,7 +30,7 @@ void ExecutionSerializationLayerGroup::LoadLayers() {
     }
   } catch (...) {
     LOG_ERROR << "Invalid execution serialization range: '" +
-                     Configurator::Get().directx.features.subcapture.frames + "'";
+                     Configurator::Get().common.features.subcapture.frames + "'";
     exit(EXIT_FAILURE);
   }
 

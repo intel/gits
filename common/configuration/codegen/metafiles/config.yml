@@ -853,28 +853,28 @@ Configuration:
           - Name: Subcapture
             Type: Group
             Description:
-              Common subcapture settings used by APIs whose subcapture pipeline is
-              not yet integrated with the API-specific Features.Subcapture groups
-              (currently Vulkan). DirectX still uses DirectX.Features.Subcapture
-              and ignores these values; both sides may be enabled simultaneously
-              but a warning will be emitted if so.
+              Common subcapture settings shared across all APIs (Vulkan, DirectX).
             Options:
               - Name: enabled
                 Type: bool
                 Default: false
                 Description: Whether subcapture is enabled or not
+                LegacyPaths: ["DirectX.Features.Subcapture.Enabled"]
               - Name: frames
                 Type: std::string
                 Default: ""
                 Description: Frame range for subcapture, e.g. '3' or '3-6'
+                LegacyPaths: ["DirectX.Features.Subcapture.Frames"]
               - Name: optimize
                 Type: bool
                 Default: true
                 Description: Uses optimization information from subcapture analysis to restore only necessary objects
+                LegacyPaths: ["DirectX.Features.Subcapture.Optimize"]
               - Name: compressionType
                 Type: CompressionType
                 Default: ZSTD
                 Description: Compression type for the subcapture output stream (LZ4/ZSTD)
+                LegacyPaths: ["DirectX.Features.Subcapture.CompressionType"]
   - Name: DirectX
     Type: Group
     OSVisibility: [WINDOWS]
@@ -1168,20 +1168,12 @@ Configuration:
           - Name: Subcapture
             Type: Group
             Options:
-              - Name: enabled
-                Type: bool
-                Default: false
-                Description: Whether subcapture is enabled or not
               - Name: serializeAccelerationStructures
                 Type: bool
                 Default: false
               - Name: restoreTLASes
                 Type: bool
                 Default: false
-              - Name: frames
-                Type: std::string
-                Default: ""
-                Description: Frame range. For example '3-6'
               - Name: commandListExecutions
                 Type: std::string
                 Default: ""
@@ -1194,14 +1186,6 @@ Configuration:
                 Type: std::string
                 Default: ""
                 Description: Split serialized stream at command list command keys. For example, '42' (where '42' is a command key of a draw call) will extract the draw call into a separate execution containing only that draw call and the necessary command list state restoration commands. Multiple keys and key ranges are supported. Ranges containing only state commands are invalid. Use 'all' to split at every GPU work command. Leave empty to disable.
-              - Name: optimize
-                Type: bool
-                Default: true
-                Description: Uses optimization information from subcapture analysis to restore only necessary objects
-              - Name: compressionType
-                Type: CompressionType
-                Default: ZSTD
-                Description: Compression type (LZ4/ZSTD)
           - Name: ResourcesDump
             Type: Group
             Options:

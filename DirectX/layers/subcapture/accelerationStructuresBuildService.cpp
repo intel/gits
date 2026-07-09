@@ -44,7 +44,7 @@ AccelerationStructuresBuildService::AccelerationStructuresBuildService(
       m_BufferReleaseService(recorder) {
   m_SerializeMode = Configurator::Get().directx.features.subcapture.serializeAccelerationStructures;
   m_RestoreTlas = Configurator::Get().directx.features.subcapture.restoreTLASes;
-  m_Optimize = Configurator::Get().directx.features.subcapture.optimize;
+  m_Optimize = Configurator::Get().common.features.subcapture.optimize;
 }
 
 void AccelerationStructuresBuildService::BuildAccelerationStructure(

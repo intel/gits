@@ -305,17 +305,17 @@ std::string& RootSignatureDumpRootSignatureKeys(std::optional<Mode> mode) {
 bool& SubcaptureEnabled(std::optional<Mode> mode) {
   return Context::GetInstance()
       .ConfigurationForMode(mode)
-      .ModifiedGitsConfiguration.directx.features.subcapture.enabled;
+      .ModifiedGitsConfiguration.common.features.subcapture.enabled;
 }
 std::string& SubcaptureFrames(std::optional<Mode> mode) {
   return Context::GetInstance()
       .ConfigurationForMode(mode)
-      .ModifiedGitsConfiguration.directx.features.subcapture.frames;
+      .ModifiedGitsConfiguration.common.features.subcapture.frames;
 }
 bool& SubcaptureOptimize(std::optional<Mode> mode) {
   return Context::GetInstance()
       .ConfigurationForMode(mode)
-      .ModifiedGitsConfiguration.directx.features.subcapture.optimize;
+      .ModifiedGitsConfiguration.common.features.subcapture.optimize;
 }
 bool& SubcaptureExecutionSerialization(std::optional<Mode> mode) {
   return Context::GetInstance()

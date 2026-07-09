@@ -139,7 +139,7 @@ bool ConfigurePlayer(const std::filesystem::path& playerPath, ArgumentParser& ar
   // TODO: Config - This should store current config, not only the file
 #if defined(WITH_DIRECTX) && defined(GITS_PLATFORM_WINDOWS)
   if ((Configurator::Get().common.mode == GITSMode::MODE_PLAYER) &&
-      (Configurator::Get().directx.features.subcapture.enabled)) {
+      (Configurator::Get().common.features.subcapture.enabled)) {
     // create file data and register it in GITS
     gits::CGits& inst = gits::CGits::Instance();
     std::unique_ptr<gits::CFile> file(new gits::CFile(inst.Version()));

@@ -28,7 +28,7 @@ AnalyzerService::AnalyzerService(SubcaptureRange& subcaptureRange,
       m_RaytracingService(raytracingService),
       m_ExecuteIndirectService(executeIndirectService),
       m_RaytracingOptimizationService(raytracingOptimizationService) {
-  m_Optimize = Configurator::Get().directx.features.subcapture.optimize;
+  m_Optimize = Configurator::Get().common.features.subcapture.optimize;
 }
 
 AnalyzerService::~AnalyzerService() {

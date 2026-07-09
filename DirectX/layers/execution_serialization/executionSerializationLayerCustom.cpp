@@ -26,7 +26,7 @@ ExecutionSerializationLayer::ExecutionSerializationLayer(ExecutionSerializationR
       m_ExecutionService(recorder, m_CpuDescriptorsService),
       m_CpuDescriptorsService(recorder, m_ExecutionService) {
 
-  const std::string& frames = Configurator::Get().directx.features.subcapture.frames;
+  const std::string& frames = Configurator::Get().common.features.subcapture.frames;
   size_t pos = frames.find("-");
   if (pos != std::string::npos) {
     m_EndFrame = std::stoi(frames.substr(pos + 1));

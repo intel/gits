@@ -14,7 +14,7 @@ namespace gits {
 namespace DirectX {
 
 void CommandListSplitLayerGroup::LoadLayers() {
-  if (!Configurator::Get().directx.features.subcapture.enabled ||
+  if (!Configurator::Get().common.features.subcapture.enabled ||
       Configurator::Get().directx.features.subcapture.commandListSplit.empty()) {
     return;
   }

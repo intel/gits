@@ -178,13 +178,13 @@ gits::CRecorder::CRecorder()
   // create file data and register it in GITS
 #if defined GITS_PLATFORM_WINDOWS
   if (config.common.recorder.enabled ||
-      (Configurator::IsPlayer() && config.directx.features.subcapture.enabled)) {
+      (Configurator::IsPlayer() && config.common.features.subcapture.enabled)) {
 #else
   if (config.common.recorder.enabled) {
 #endif
 #if defined WITH_DIRECTX
     auto outputpath = config.common.recorder.dumpPath;
-    if (Configurator::IsPlayer() && config.directx.features.subcapture.enabled) {
+    if (Configurator::IsPlayer() && config.common.features.subcapture.enabled) {
       outputpath = config.common.player.subcapturePath;
     }
 #else
@@ -211,7 +211,7 @@ gits::CRecorder::CRecorder()
   std::ostringstream message;
 #if defined GITS_PLATFORM_WINDOWS
   bool recEnabled = config.common.recorder.enabled ||
-                    (Configurator::IsPlayer() && config.directx.features.subcapture.enabled);
+                    (Configurator::IsPlayer() && config.common.features.subcapture.enabled);
 #else
   bool recEnabled = config.common.recorder.enabled;
 #endif
@@ -423,8 +423,7 @@ void gits::CRecorder::Register(std::unique_ptr<CBehavior> behavior) {
   auto& rec = cmm.recorder;
 #if defined GITS_PLATFORM_WINDOWS
   auto& directx = cfg.directx;
-  bool recEnabled =
-      rec.enabled || (Configurator::IsPlayer() && directx.features.subcapture.enabled);
+  bool recEnabled = rec.enabled || (Configurator::IsPlayer() && cmm.features.subcapture.enabled);
 #else
   bool recEnabled = rec.enabled;
 #endif
@@ -447,7 +446,7 @@ void gits::CRecorder::Register(std::unique_ptr<CBehavior> behavior) {
 
 #if defined GITS_PLATFORM_WINDOWS
   auto outputpath = rec.dumpPath;
-  if (Configurator::IsPlayer() && directx.features.subcapture.enabled) {
+  if (Configurator::IsPlayer() && cmm.features.subcapture.enabled) {
     outputpath = cmm.player.subcapturePath;
   }
 #else
@@ -456,7 +455,7 @@ void gits::CRecorder::Register(std::unique_ptr<CBehavior> behavior) {
   auto filePath = (outputpath / "stream").string();
 #if defined GITS_PLATFORM_WINDOWS
   if ((Configurator::IsRecorder() && rec.enabled) ||
-      (Configurator::IsPlayer() && directx.features.subcapture.enabled)) {
+      (Configurator::IsPlayer() && cmm.features.subcapture.enabled)) {
 #else
   if (Configurator::IsRecorder() && rec.enabled) {
 #endif
@@ -627,7 +626,7 @@ void gits::CRecorder::Save() {
   auto& cfg = Configurator::Get();
 #if defined GITS_PLATFORM_WINDOWS
   bool recEnabled = cfg.common.recorder.enabled ||
-                    (Configurator::IsPlayer() && cfg.directx.features.subcapture.enabled);
+                    (Configurator::IsPlayer() && cfg.common.features.subcapture.enabled);
 #else
   bool recEnabled = cfg.common.recorder.enabled;
 #endif

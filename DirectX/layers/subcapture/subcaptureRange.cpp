@@ -18,12 +18,12 @@ namespace DirectX {
 SubcaptureRange::SubcaptureRange() {
   const gits::Configuration& config = Configurator::Get();
 
-  if (!config.directx.features.subcapture.enabled ||
+  if (!config.common.features.subcapture.enabled ||
       config.directx.features.subcapture.executionSerialization) {
     return;
   }
 
-  const std::string& frames = Configurator::Get().directx.features.subcapture.frames;
+  const std::string& frames = Configurator::Get().common.features.subcapture.frames;
   size_t pos = frames.find("-");
   try {
     if (pos != std::string::npos) {
@@ -35,7 +35,7 @@ SubcaptureRange::SubcaptureRange() {
     }
   } catch (...) {
     throw Exception("Invalid subcapture range: '" +
-                    Configurator::Get().directx.features.subcapture.frames + "'");
+                    Configurator::Get().common.features.subcapture.frames + "'");
   }
 
   std::string commandListExecutions = config.directx.features.subcapture.commandListExecutions;

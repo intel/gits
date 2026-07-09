@@ -20,7 +20,7 @@ namespace DirectX {
 SubcaptureRecorder::SubcaptureRecorder() {
   const gits::Configuration& config = Configurator::Get();
 
-  if (!config.directx.features.subcapture.enabled ||
+  if (!config.common.features.subcapture.enabled ||
       config.directx.features.subcapture.executionSerialization) {
     return;
   }
@@ -31,7 +31,7 @@ SubcaptureRecorder::SubcaptureRecorder() {
   if (!commandListExecutions.empty()) {
     std::string path = subcapturePath.parent_path().string();
     path += "/" + config.common.player.streamDir.filename().string();
-    path += "_frames_" + config.directx.features.subcapture.frames;
+    path += "_frames_" + config.common.features.subcapture.frames;
     path += "_executions_" + commandListExecutions;
     const_cast<std::filesystem::path&>(config.common.player.subcapturePath) = path;
     subcapturePath = path;
@@ -39,7 +39,7 @@ SubcaptureRecorder::SubcaptureRecorder() {
   }
 
   m_Recorder.reset(
-      new stream::StreamWriter(subcapturePath, config.directx.features.subcapture.compressionType));
+      new stream::StreamWriter(subcapturePath, config.common.features.subcapture.compressionType));
 
   CopyAuxiliaryFiles();
 }

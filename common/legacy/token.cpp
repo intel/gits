@@ -179,7 +179,7 @@ void CTokenMarker::Run() {
       sleep_millisec(Configurator::Get().common.player.endFrameSleep);
     }
 #ifdef GITS_PLATFORM_WINDOWS
-    if (!cfg.directx.features.subcapture.enabled) {
+    if (!cfg.common.features.subcapture.enabled) {
       CGits::Instance().FrameCountUp();
     }
 #else

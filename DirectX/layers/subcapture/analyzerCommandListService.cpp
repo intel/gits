@@ -28,7 +28,7 @@ AnalyzerCommandListService::AnalyzerCommandListService(
       m_ExecuteIndirectService(executeIndirectService),
       m_CommandListSubcapture(CommandListSubcapture) {
   m_RestoreTlases = Configurator::Get().directx.features.subcapture.restoreTLASes;
-  m_Optimize = Configurator::Get().directx.features.subcapture.optimize;
+  m_Optimize = Configurator::Get().common.features.subcapture.optimize;
 }
 
 std::set<unsigned>& AnalyzerCommandListService::GetTlases() {
