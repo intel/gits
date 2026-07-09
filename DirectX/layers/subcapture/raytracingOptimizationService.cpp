@@ -32,6 +32,10 @@ void RaytracingOptimizationService::BuildAccelerationStructure(
   for (unsigned key : c.m_pDesc.InputKeys) {
     command->Buffers.insert(key);
   }
+  if (c.m_pDesc.Value->Inputs.Type ==
+      D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_OPACITY_MICROMAP_ARRAY) {
+    command->Restore = true;
+  }
   m_CommandsByCommandList[c.m_Object.Key].emplace_back(command);
 }
 
