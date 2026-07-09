@@ -19,10 +19,10 @@ BindingTableDump::BindingTableDump(const Configuration& gitsConfig) : ResourceDu
   if (gitsConfig.common.features.subcapture.enabled) {
     m_DumpDir = gitsConfig.common.player.subcapturePath;
     m_Frames = BitRange(gitsConfig.common.features.subcapture.frames);
-    if (gitsConfig.directx.features.subcapture.commandListExecutions.empty()) {
+    if (gitsConfig.common.features.subcapture.directx.commandListExecutions.empty()) {
       m_Executions = BitRange("all");
     } else {
-      m_Executions = BitRange(gitsConfig.directx.features.subcapture.commandListExecutions);
+      m_Executions = BitRange(gitsConfig.common.features.subcapture.directx.commandListExecutions);
     }
   } else {
     m_DumpDir = gitsConfig.common.player.streamDir;

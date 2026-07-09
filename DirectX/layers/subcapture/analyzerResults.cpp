@@ -114,7 +114,8 @@ std::string AnalyzerResults::GetAnalysisFileName() {
   fileName << config.common.player.streamDir.filename().string() << "_frames-"
            << config.common.features.subcapture.frames;
 
-  std::string commandListExecutions = config.directx.features.subcapture.commandListExecutions;
+  std::string commandListExecutions =
+      config.common.features.subcapture.directx.commandListExecutions;
   if (!commandListExecutions.empty()) {
     fileName << "_executions_" << commandListExecutions;
   }

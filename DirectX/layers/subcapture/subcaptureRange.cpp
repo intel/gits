@@ -19,7 +19,7 @@ SubcaptureRange::SubcaptureRange() {
   const gits::Configuration& config = Configurator::Get();
 
   if (!config.common.features.subcapture.enabled ||
-      config.directx.features.subcapture.executionSerialization) {
+      config.common.features.subcapture.directx.executionSerialization) {
     return;
   }
 
@@ -38,7 +38,8 @@ SubcaptureRange::SubcaptureRange() {
                     Configurator::Get().common.features.subcapture.frames + "'");
   }
 
-  std::string commandListExecutions = config.directx.features.subcapture.commandListExecutions;
+  std::string commandListExecutions =
+      config.common.features.subcapture.directx.commandListExecutions;
   if (!commandListExecutions.empty()) {
     size_t pos = commandListExecutions.find("-");
     if (pos != std::string::npos) {

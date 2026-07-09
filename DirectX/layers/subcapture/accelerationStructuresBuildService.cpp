@@ -42,8 +42,9 @@ AccelerationStructuresBuildService::AccelerationStructuresBuildService(
                             gpuAddressService,
                             recorder),
       m_BufferReleaseService(recorder) {
-  m_SerializeMode = Configurator::Get().directx.features.subcapture.serializeAccelerationStructures;
-  m_RestoreTlas = Configurator::Get().directx.features.subcapture.restoreTLASes;
+  m_SerializeMode =
+      Configurator::Get().common.features.subcapture.directx.serializeAccelerationStructures;
+  m_RestoreTlas = Configurator::Get().common.features.subcapture.directx.restoreTLASes;
   m_Optimize = Configurator::Get().common.features.subcapture.optimize;
 }
 

@@ -22,7 +22,8 @@ namespace DirectX {
 AccelerationStructuresSerializeService::AccelerationStructuresSerializeService(
     StateTrackingService& stateService, SubcaptureRecorder& recorder)
     : m_StateService(stateService), m_Recorder(recorder) {
-  m_SerializeMode = Configurator::Get().directx.features.subcapture.serializeAccelerationStructures;
+  m_SerializeMode =
+      Configurator::Get().common.features.subcapture.directx.serializeAccelerationStructures;
 }
 
 void AccelerationStructuresSerializeService::BuildAccelerationStructure(

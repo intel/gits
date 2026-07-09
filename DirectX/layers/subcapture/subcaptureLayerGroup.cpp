@@ -21,14 +21,14 @@ namespace DirectX {
 void SubcaptureLayerGroup::LoadLayers() {
 
   if (!Configurator::Get().common.features.subcapture.enabled ||
-      Configurator::Get().directx.features.subcapture.executionSerialization ||
-      !Configurator::Get().directx.features.subcapture.commandListSplit.empty()) {
+      Configurator::Get().common.features.subcapture.directx.executionSerialization ||
+      !Configurator::Get().common.features.subcapture.directx.commandListSplit.empty()) {
     return;
   }
 
   const std::string& frames = Configurator::Get().common.features.subcapture.frames;
   const std::string& executions =
-      Configurator::Get().directx.features.subcapture.commandListExecutions;
+      Configurator::Get().common.features.subcapture.directx.commandListExecutions;
   bool trimmingMode = false;
   try {
     if (executions.empty()) {

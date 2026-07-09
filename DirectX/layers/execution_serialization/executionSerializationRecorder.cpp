@@ -19,7 +19,7 @@ ExecutionSerializationRecorder::ExecutionSerializationRecorder() {
   const gits::Configuration& config = Configurator::Get();
 
   if (!config.common.features.subcapture.enabled ||
-      !config.directx.features.subcapture.executionSerialization) {
+      !config.common.features.subcapture.directx.executionSerialization) {
     return;
   }
 

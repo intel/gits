@@ -15,7 +15,7 @@ namespace DirectX {
 
 void CommandListSplitLayerGroup::LoadLayers() {
   if (!Configurator::Get().common.features.subcapture.enabled ||
-      Configurator::Get().directx.features.subcapture.commandListSplit.empty()) {
+      Configurator::Get().common.features.subcapture.directx.commandListSplit.empty()) {
     return;
   }
 

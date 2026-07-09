@@ -20,7 +20,7 @@ CommandListSplitRecorder::CommandListSplitRecorder() {
   gits::Configuration& config = Configurator::GetMutable();
 
   if (!config.common.features.subcapture.enabled ||
-      config.directx.features.subcapture.commandListSplit.empty()) {
+      config.common.features.subcapture.directx.commandListSplit.empty()) {
     return;
   }
 
