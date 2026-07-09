@@ -118,7 +118,7 @@ void RaytracingOptimizationService::StoreCommand(std::unique_ptr<RaytracingComma
   // skip intermediate update build command
   if (command->UpdateBuild) {
     GITS_ASSERT(source);
-    if (source->Source) {
+    if (source->Source && source->UpdateBuild) {
       source = source->Source;
       command->SourceKey = source->DestKey;
       command->SourceOffset = source->DestOffset;
