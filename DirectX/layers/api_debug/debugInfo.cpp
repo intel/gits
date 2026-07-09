@@ -245,7 +245,7 @@ void DebugInfo::TraceMessage(D3D12_MESSAGE_SEVERITY severity, const char* messag
     break;
   }
 
-  // The message to be logged in the trace files if DirectX.Features.Trace is enabled
+  // The message to be logged in the trace files if Common.Shared.Trace is enabled
   static auto publisherId = Configurator::IsPlayer() ? PUBLISHER_PLAYER : PUBLISHER_RECORDER;
   gits::MessageBus::get().publish(
       {publisherId, TOPIC_LOG},

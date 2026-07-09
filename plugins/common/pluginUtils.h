@@ -12,7 +12,7 @@
 
 namespace gits {
 // Log message with LogLevel::TRACE
-// The message to be also logged in the trace files if DirectX.Features.Trace is enabled
+// The message to be also logged in the trace files if Common.Shared.Trace is enabled
 template <typename... Args>
 void logT(MessageBus* msgBus, Args&&... args) {
   GITS_ASSERT(msgBus != nullptr);
