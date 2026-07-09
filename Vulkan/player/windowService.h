@@ -42,11 +42,17 @@ private:
   std::pair<uint64_t, uint64_t> CreateXlibWindow(
       int32_t x, int32_t y, int32_t width, int32_t height, bool visible);
   void ResizeXlibWindow(uint64_t display, uint64_t window, uint32_t width, uint32_t height);
+  void MoveXlibWindow(uint64_t display, uint64_t window, int32_t x, int32_t y);
+  void SetXlibWindowVisibility(uint64_t display, uint64_t window, bool visible);
   std::pair<uint64_t, uint64_t> CreateXcbWindow(
       int32_t x, int32_t y, int32_t width, int32_t height, bool visible);
   void ResizeXcbWindow(uint64_t connection, uint64_t window, uint32_t width, uint32_t height);
+  void MoveXcbWindow(uint64_t connection, uint64_t window, int32_t x, int32_t y);
+  void SetXcbWindowVisibility(uint64_t connection, uint64_t window, bool visible);
   std::pair<uint64_t, uint64_t> CreateWaylandWindow(
       int32_t x, int32_t y, int32_t width, int32_t height, bool visible);
+  void MoveWaylandWindow(uint64_t display, uint64_t surface, int32_t x, int32_t y);
+  void SetWaylandWindowVisibility(uint64_t display, uint64_t surface, bool visible);
 #endif
 
   struct WindowState {
@@ -57,6 +63,7 @@ private:
     uint32_t width{};
     uint32_t height{};
     bool visible{};
+    uint32_t protocol{};
   };
 
   std::unordered_map<uint64_t, WindowState> m_WindowMap;

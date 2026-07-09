@@ -59,6 +59,21 @@ uint64_t WindowService::SetWindow(uint32_t protocol,
         SetWin32WindowVisibility(state.playbackInstance, state.playbackHandle, visible);
       }
 #endif
+#ifdef VK_USE_PLATFORM_XLIB_KHR
+      if (protocol == CreateWindowMetaCommand::DisplayProtocol::XLIB) {
+        SetXlibWindowVisibility(state.playbackHandle, state.playbackInstance, visible);
+      }
+#endif
+#ifdef VK_USE_PLATFORM_XCB_KHR
+      if (protocol == CreateWindowMetaCommand::DisplayProtocol::XCB) {
+        SetXcbWindowVisibility(state.playbackHandle, state.playbackInstance, visible);
+      }
+#endif
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+      if (protocol == CreateWindowMetaCommand::DisplayProtocol::WAYLAND) {
+        SetWaylandWindowVisibility(state.playbackHandle, state.playbackInstance, visible);
+      }
+#endif
       state.visible = visible;
     }
     return state.playbackHandle;
@@ -117,7 +132,8 @@ uint64_t WindowService::SetWindow(uint32_t protocol,
                          static_cast<int32_t>(wndPosY),
                          wndWidth,
                          wndHeight,
-                         visible};
+                         visible,
+                         protocol};
   m_InstanceMap[instance] = currentInstance;
 
   return currentHandle;
@@ -125,35 +141,89 @@ uint64_t WindowService::SetWindow(uint32_t protocol,
 
 void WindowService::UpdateWindow(
     uint64_t handle, int32_t x, int32_t y, int32_t width, int32_t height, bool visible) {
-#ifdef VK_USE_PLATFORM_WIN32_KHR
   if (Configurator::Get().common.player.showWindowsWA) {
     visible = true;
   }
   auto it = m_WindowMap.find(handle);
-  if (it != m_WindowMap.end()) {
-    auto& cfg = Configurator::Get().common.player;
-    int32_t wndPosX = cfg.forceWindowPos.enabled ? cfg.forceWindowPos.x : x;
-    int32_t wndPosY = cfg.forceWindowPos.enabled ? cfg.forceWindowPos.y : y;
-    uint32_t wndWidth = cfg.forceWindowSize.enabled ? cfg.forceWindowSize.width : width;
-    uint32_t wndHeight = cfg.forceWindowSize.enabled ? cfg.forceWindowSize.height : height;
-
-    auto& state = it->second;
-    if (state.width != wndWidth || state.height != wndHeight) {
-      ResizeWin32Window(state.playbackInstance, state.playbackHandle, wndWidth, wndHeight);
-      state.width = wndWidth;
-      state.height = wndHeight;
-    }
-    if (state.x != wndPosX || state.y != wndPosY) {
-      MoveWin32Window(state.playbackInstance, state.playbackHandle, wndPosX, wndPosY);
-      state.x = wndPosX;
-      state.y = wndPosY;
-    }
-    if (state.visible != visible) {
-      SetWin32WindowVisibility(state.playbackInstance, state.playbackHandle, visible);
-      state.visible = visible;
-    }
+  if (it == m_WindowMap.end()) {
+    return;
   }
+
+  auto& cfg = Configurator::Get().common.player;
+  int32_t wndPosX = cfg.forceWindowPos.enabled ? cfg.forceWindowPos.x : x;
+  int32_t wndPosY = cfg.forceWindowPos.enabled ? cfg.forceWindowPos.y : y;
+  uint32_t wndWidth = cfg.forceWindowSize.enabled ? cfg.forceWindowSize.width : width;
+  uint32_t wndHeight = cfg.forceWindowSize.enabled ? cfg.forceWindowSize.height : height;
+
+  auto& state = it->second;
+  const uint32_t protocol = state.protocol;
+
+  if (state.width != wndWidth || state.height != wndHeight) {
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+    if (protocol == CreateWindowMetaCommand::DisplayProtocol::WIN) {
+      ResizeWin32Window(state.playbackInstance, state.playbackHandle, wndWidth, wndHeight);
+    }
 #endif
+#ifdef VK_USE_PLATFORM_XLIB_KHR
+    if (protocol == CreateWindowMetaCommand::DisplayProtocol::XLIB) {
+      ResizeXlibWindow(state.playbackHandle, state.playbackInstance, wndWidth, wndHeight);
+    }
+#endif
+#ifdef VK_USE_PLATFORM_XCB_KHR
+    if (protocol == CreateWindowMetaCommand::DisplayProtocol::XCB) {
+      ResizeXcbWindow(state.playbackHandle, state.playbackInstance, wndWidth, wndHeight);
+    }
+#endif
+    state.width = wndWidth;
+    state.height = wndHeight;
+  }
+  if (state.x != wndPosX || state.y != wndPosY) {
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+    if (protocol == CreateWindowMetaCommand::DisplayProtocol::WIN) {
+      MoveWin32Window(state.playbackInstance, state.playbackHandle, wndPosX, wndPosY);
+    }
+#endif
+#ifdef VK_USE_PLATFORM_XLIB_KHR
+    if (protocol == CreateWindowMetaCommand::DisplayProtocol::XLIB) {
+      MoveXlibWindow(state.playbackHandle, state.playbackInstance, wndPosX, wndPosY);
+    }
+#endif
+#ifdef VK_USE_PLATFORM_XCB_KHR
+    if (protocol == CreateWindowMetaCommand::DisplayProtocol::XCB) {
+      MoveXcbWindow(state.playbackHandle, state.playbackInstance, wndPosX, wndPosY);
+    }
+#endif
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+    if (protocol == CreateWindowMetaCommand::DisplayProtocol::WAYLAND) {
+      MoveWaylandWindow(state.playbackHandle, state.playbackInstance, wndPosX, wndPosY);
+    }
+#endif
+    state.x = wndPosX;
+    state.y = wndPosY;
+  }
+  if (state.visible != visible) {
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+    if (protocol == CreateWindowMetaCommand::DisplayProtocol::WIN) {
+      SetWin32WindowVisibility(state.playbackInstance, state.playbackHandle, visible);
+    }
+#endif
+#ifdef VK_USE_PLATFORM_XLIB_KHR
+    if (protocol == CreateWindowMetaCommand::DisplayProtocol::XLIB) {
+      SetXlibWindowVisibility(state.playbackHandle, state.playbackInstance, visible);
+    }
+#endif
+#ifdef VK_USE_PLATFORM_XCB_KHR
+    if (protocol == CreateWindowMetaCommand::DisplayProtocol::XCB) {
+      SetXcbWindowVisibility(state.playbackHandle, state.playbackInstance, visible);
+    }
+#endif
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+    if (protocol == CreateWindowMetaCommand::DisplayProtocol::WAYLAND) {
+      SetWaylandWindowVisibility(state.playbackHandle, state.playbackInstance, visible);
+    }
+#endif
+    state.visible = visible;
+  }
 }
 
 uint64_t WindowService::GetCurrentWindowHandle(uint64_t captureWindow) {
@@ -212,6 +282,16 @@ void WindowService::ResizeXlibWindow(uint64_t display,
                                                width, height);
 }
 
+void WindowService::MoveXlibWindow(uint64_t display, uint64_t window, int32_t x, int32_t y) {
+  windowing::WindowManager::Get().MoveWindow(windowing::WindowProtocol::Xlib, display, window, x,
+                                             y);
+}
+
+void WindowService::SetXlibWindowVisibility(uint64_t display, uint64_t window, bool visible) {
+  windowing::WindowManager::Get().SetWindowVisibility(windowing::WindowProtocol::Xlib, display,
+                                                      window, visible);
+}
+
 std::pair<uint64_t, uint64_t> WindowService::CreateXcbWindow(
     int32_t x, int32_t y, int32_t width, int32_t height, bool visible) {
   return windowing::WindowManager::Get().CreatePlayerWindow(windowing::WindowProtocol::Xcb, x, y,
@@ -226,10 +306,30 @@ void WindowService::ResizeXcbWindow(uint64_t connection,
                                                width, height);
 }
 
+void WindowService::MoveXcbWindow(uint64_t connection, uint64_t window, int32_t x, int32_t y) {
+  windowing::WindowManager::Get().MoveWindow(windowing::WindowProtocol::Xcb, connection, window, x,
+                                             y);
+}
+
+void WindowService::SetXcbWindowVisibility(uint64_t connection, uint64_t window, bool visible) {
+  windowing::WindowManager::Get().SetWindowVisibility(windowing::WindowProtocol::Xcb, connection,
+                                                      window, visible);
+}
+
 std::pair<uint64_t, uint64_t> WindowService::CreateWaylandWindow(
     int32_t x, int32_t y, int32_t width, int32_t height, bool visible) {
   return windowing::WindowManager::Get().CreatePlayerWindow(windowing::WindowProtocol::Wayland, x,
                                                             y, width, height, visible);
+}
+
+void WindowService::MoveWaylandWindow(uint64_t display, uint64_t surface, int32_t x, int32_t y) {
+  windowing::WindowManager::Get().MoveWindow(windowing::WindowProtocol::Wayland, display, surface,
+                                             x, y);
+}
+
+void WindowService::SetWaylandWindowVisibility(uint64_t display, uint64_t surface, bool visible) {
+  windowing::WindowManager::Get().SetWindowVisibility(windowing::WindowProtocol::Wayland, display,
+                                                      surface, visible);
 }
 #endif
 
