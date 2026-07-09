@@ -38,6 +38,7 @@ target_include_directories(gits_player PRIVATE ${PLAYER_HEADER_DIR})
 
 add_dependencies(gits_player config_codegen)
 target_link_libraries(gits_player PRIVATE common OpenGL_common)
+target_link_libraries(gits_player PRIVATE windowing)
 
 if(WITH_LEVELZERO)
   target_link_libraries(gits_player PRIVATE L0_common)

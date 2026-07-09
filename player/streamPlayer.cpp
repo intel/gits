@@ -30,6 +30,9 @@
 #endif
 #if defined WITH_VULKAN
 #include "vulkanCommandFactory.h"
+#if defined GITS_PLATFORM_X11
+#include "windowManager.h"
+#endif
 #endif
 
 namespace gits {
@@ -109,15 +112,62 @@ private:
   stream::BaseStreamReader* m_StreamReader{};
 };
 
-#else
+#elif defined GITS_PLATFORM_X11 && defined WITH_VULKAN
 
 class MessageLoop {
 public:
-  MessageLoop(stream::BaseStreamReader* streamReader, Timer* playbackTimer) {
-    (void)streamReader;
-    (void)playbackTimer;
+  MessageLoop(stream::BaseStreamReader* streamReader, Timer* playbackTimer)
+      : m_StreamReader(streamReader), m_PlaybackTimer(playbackTimer) {
+    m_Interactive = Configurator::Get().common.player.interactive;
+    m_StopAfterFrames = Configurator::Get().common.player.stopAfterFrames;
   }
-  void RunLoop(unsigned frame) {}
+
+  void RunLoop(unsigned frame) {
+    if (Configurator::Get().common.player.showWindowBorder) {
+      windowing::WindowManager::Get().SetTitle("Current frame: " + std::to_string(frame));
+    }
+
+    do {
+      if (m_Interactive || m_StopAfterFrames[frame]) {
+        m_Paused = true;
+        m_PlaybackTimer->Pause();
+      }
+
+      auto events = windowing::WindowManager::Get().PollEvents();
+      for (auto event : events) {
+        switch (event) {
+        case windowing::WindowEvent::Close:
+        case windowing::WindowEvent::Stop:
+          m_StreamReader->Close();
+          m_Paused = false;
+          m_Interactive = false;
+          break;
+        case windowing::WindowEvent::TogglePause:
+          m_Paused = !m_Paused;
+          if (m_Paused) {
+            m_PlaybackTimer->Pause();
+          } else {
+            m_PlaybackTimer->Resume();
+          }
+          break;
+        case windowing::WindowEvent::ToggleInteractive:
+          m_Interactive = !m_Interactive;
+          if (!m_Interactive) {
+            m_Paused = false;
+            m_PlaybackTimer->Resume();
+          }
+          break;
+        }
+      }
+    } while (m_Paused);
+  }
+
+private:
+  stream::BaseStreamReader* m_StreamReader{};
+  Timer* m_PlaybackTimer{};
+  bool m_Paused{};
+  bool m_Interactive{};
+  BitRange m_StopAfterFrames;
 };
 
 #endif
@@ -257,6 +307,9 @@ void PlayStream(const std::filesystem::path& streamPath) {
   playbackTimer.Start();
   streamReader->Run();
   playbackTimer.Pause();
+#if defined GITS_PLATFORM_X11 && defined WITH_VULKAN
+  windowing::WindowManager::Get().DestroyAllWindows();
+#endif
 
   LOG_INFO << "";
   LOG_INFO << "State restored in: " << stateRestoreTimer.Get() / 1e6 << "ms";
