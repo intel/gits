@@ -411,6 +411,11 @@ Configuration:
             Default: true
             Arguments: [showWindowBorder]
             Description: Forces player to show window border (ignored in fullscreen).
+          - Name: showFrameNumberInTitle
+            Type: bool
+            Default: false
+            Arguments: [showFrameNumberInTitle]
+            Description: Updates the window title with the current frame number every frame (requires showWindowBorder to be visible).
           - Name: captureFrames
             Type: BitRange
             Default: "-"

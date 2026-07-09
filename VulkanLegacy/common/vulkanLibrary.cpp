@@ -83,7 +83,7 @@ void CLibrary::RegisterEvents() {
       }
       break;
     case CToken::TId::ID_FRAME_END:
-      if (cfg.common.player.showWindowBorder) {
+      if (cfg.common.player.showWindowBorder && cfg.common.player.showFrameNumberInTitle) {
         win_ptr_t window = GetWindowHandle();
         if (window) {
 #if defined(GITS_PLATFORM_X11)

@@ -167,7 +167,7 @@ void CTokenMarker::Run() {
                                               std::make_shared<GitsEventMessage>(data));
 
 #if defined(GITS_PLATFORM_WINDOWS)
-    if (cfg.common.player.showWindowBorder) {
+    if (cfg.common.player.showWindowBorder && cfg.common.player.showFrameNumberInTitle) {
       win_ptr_t window = GetWindowHandle();
       if (window) {
         WinTitle(window, "Current frame: " + std::to_string(CGits::Instance().CurrentFrame()));

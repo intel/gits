@@ -20,7 +20,7 @@ Run `gitsPlayer.exe` twice; use `--exitFrame` to stop right after the sub-captur
 
 > **Notes**
 >
-> - To pick a range, use screenshots, or `--showWindowBorder` so the window title shows the frame number.
+> - To pick a range, use screenshots, or `--showWindowBorder --showFrameNumberInTitle` so the window title shows the frame number (`--showWindowBorder` is required for the title bar to be visible).
 > - Output streams are written under `Common.Player.SubcapturePath` (see `gits_config.yml`).
 
 ## Serialized sub-capture
@@ -92,7 +92,7 @@ Use the **serialized** trace from [Serialized sub-capture](#serialized-sub-captu
 Example for **1-frame serialized trace** (`--DirectX.Features.Subcapture.Frames 1`, `--exitFrame 1`):
 
 ```text
-gitsPlayer.exe --DirectX.Features.Subcapture.Enabled --DirectX.Features.Subcapture.Frames 1 --DirectX.Features.Subcapture.CommandListExecutions 7-11 --exitFrame 1 --showWindowBorder C:\path\to\serialized_trace.gits2
+gitsPlayer.exe --DirectX.Features.Subcapture.Enabled --DirectX.Features.Subcapture.Frames 1 --DirectX.Features.Subcapture.CommandListExecutions 7-11 --exitFrame 1 --showWindowBorder --showFrameNumberInTitle C:\path\to\serialized_trace.gits2
 ```
 
 

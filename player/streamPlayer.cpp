@@ -43,7 +43,8 @@ public:
   }
 
   void RunLoop(unsigned frame) {
-    if (Configurator::Get().common.player.showWindowBorder) {
+    if (Configurator::Get().common.player.showWindowBorder &&
+        Configurator::Get().common.player.showFrameNumberInTitle) {
       windowing::WindowManager::Get().SetTitle("Current frame: " + std::to_string(frame));
     }
 
