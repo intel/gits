@@ -277,6 +277,18 @@ void AnalyzerService::DumpAnalysisFile() {
   m_RaytracingService.Flush();
   m_ExecuteIndirectService.Flush();
 
+  // optimize raytracing
+  std::unordered_set<std::pair<unsigned, unsigned>, UnsignedPairHash> blases;
+  for (unsigned buildKey : m_CommandListService.GetTlases()) {
+    for (auto& as : m_RaytracingService.GetBlases(buildKey)) {
+      blases.insert(as);
+    }
+  }
+  for (auto& as : m_RaytracingService.GetSources()) {
+    blases.insert(as);
+  }
+  m_RaytracingOptimizationService.Optimize(blases);
+
   out << "OBJECTS\n";
   for (unsigned key : m_ObjectsForRestore) {
     objectKeys.insert(key);
@@ -291,6 +303,10 @@ void AnalyzerService::DumpAnalysisFile() {
     FindParents(key, objectKeys);
   }
   for (unsigned key : m_ExecuteIndirectService.GetArgumentBuffersResources()) {
+    objectKeys.insert(key);
+    FindParents(key, objectKeys);
+  }
+  for (unsigned key : m_RaytracingOptimizationService.GetOptimizedBuffers()) {
     objectKeys.insert(key);
     FindParents(key, objectKeys);
   }
@@ -318,16 +334,6 @@ void AnalyzerService::DumpAnalysisFile() {
   }
 
   out << "BLASES\n";
-  std::unordered_set<std::pair<unsigned, unsigned>, UnsignedPairHash> ases;
-  for (unsigned buildKey : m_CommandListService.GetTlases()) {
-    for (auto& as : m_RaytracingService.GetBlases(buildKey)) {
-      ases.insert(as);
-    }
-  }
-  for (auto& as : m_RaytracingService.GetSources()) {
-    ases.insert(as);
-  }
-  m_RaytracingOptimizationService.Optimize(ases);
   for (auto& [buildKey, source] : m_RaytracingOptimizationService.GetOptimizedCommands()) {
     out << buildKey << " " << source << "\n";
   }

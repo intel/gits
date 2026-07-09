@@ -25,6 +25,13 @@ void RaytracingOptimizationService::BuildAccelerationStructure(
   command->SourceOffset = c.m_pDesc.SourceAccelerationStructureOffset;
   command->UpdateBuild = c.m_pDesc.Value->Inputs.Flags &
                          D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PERFORM_UPDATE;
+  command->Buffers.insert(c.m_pDesc.DestAccelerationStructureKey);
+  if (c.m_pDesc.SourceAccelerationStructureKey) {
+    command->Buffers.insert(c.m_pDesc.SourceAccelerationStructureKey);
+  }
+  for (unsigned key : c.m_pDesc.InputKeys) {
+    command->Buffers.insert(key);
+  }
   m_CommandsByCommandList[c.m_Object.Key].emplace_back(command);
 }
 
@@ -36,6 +43,8 @@ void RaytracingOptimizationService::CopyAccelerationStructure(
   command->DestOffset = c.m_DestAccelerationStructureData.Offset;
   command->SourceKey = c.m_SourceAccelerationStructureData.InterfaceKey;
   command->SourceOffset = c.m_SourceAccelerationStructureData.Offset;
+  command->Buffers.insert(c.m_DestAccelerationStructureData.InterfaceKey);
+  command->Buffers.insert(c.m_SourceAccelerationStructureData.InterfaceKey);
   m_CommandsByCommandList[c.m_Object.Key].emplace_back(command);
 }
 
@@ -53,6 +62,13 @@ void RaytracingOptimizationService::NvapiBuildAccelerationStructureEx(
   command->SourceOffset = c.m_pParams.SourceAccelerationStructureOffset;
   command->UpdateBuild = c.m_pParams.Value->pDesc->inputs.flags &
                          NVAPI_D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PERFORM_UPDATE_EX;
+  command->Buffers.insert(c.m_pParams.DestAccelerationStructureKey);
+  if (c.m_pParams.SourceAccelerationStructureKey) {
+    command->Buffers.insert(c.m_pParams.SourceAccelerationStructureKey);
+  }
+  for (unsigned key : c.m_pParams.InputKeys) {
+    command->Buffers.insert(key);
+  }
   m_CommandsByCommandList[c.m_pCommandList.Key].emplace_back(command);
 }
 
@@ -63,6 +79,13 @@ void RaytracingOptimizationService::NvapiBuildOpacityMicromapArray(
   command->DestKey = c.m_pParams.DestOpacityMicromapArrayDataKey;
   command->DestOffset = c.m_pParams.DestOpacityMicromapArrayDataOffset;
   command->Restore = true;
+  command->Buffers.insert(c.m_pParams.DestOpacityMicromapArrayDataKey);
+  if (c.m_pParams.InputBufferKey) {
+    command->Buffers.insert(c.m_pParams.InputBufferKey);
+  }
+  if (c.m_pParams.PerOMMDescsKey) {
+    command->Buffers.insert(c.m_pParams.PerOMMDescsKey);
+  }
   m_CommandsByCommandList[c.m_pCommandList.Key].emplace_back(command);
 }
 
@@ -105,7 +128,6 @@ void RaytracingOptimizationService::StoreCommand(std::unique_ptr<RaytracingComma
   m_CommandByKeyOffset[{command->DestKey, command->DestOffset}] = command;
 
   if (source) {
-    source->Destinations.insert(command);
     command->Source = source;
   }
 }
@@ -131,13 +153,17 @@ void RaytracingOptimizationService::Optimize(
 
   // prepare sorted commands
   for (auto& it : m_CommandById) {
-    if (it.second->Restore) {
-      unsigned commandKey = it.second->CommandKey;
+    RaytracingCommand* command = it.second.get();
+    if (command->Restore) {
+      unsigned commandKey = command->CommandKey;
       unsigned sourceKey = 0;
-      if (it.second->Source) {
-        sourceKey = it.second->Source->CommandKey;
+      if (command->Source) {
+        sourceKey = command->Source->CommandKey;
       }
       m_OptimizedCommandsWithSources.emplace_back(commandKey, sourceKey);
+      for (unsigned key : command->Buffers) {
+        m_OptimizedBuffers.insert(key);
+      }
     }
   }
   std::sort(m_OptimizedCommandsWithSources.begin(), m_OptimizedCommandsWithSources.end());

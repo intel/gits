@@ -123,6 +123,7 @@ private:
   void CommandAnalysis(ID3D12GraphicsCommandList4ExecuteMetaCommandCommand& c);
   void CommandAnalysis(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c);
   void CommandAnalysis(NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& c);
+  void CommandAnalysis(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& c);
   void CommandAnalysis(
       ID3D12GraphicsCommandList4EmitRaytracingAccelerationStructurePostbuildInfoCommand& c);
   void CommandAnalysis(ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& c);

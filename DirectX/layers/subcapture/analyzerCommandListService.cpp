@@ -894,6 +894,19 @@ void AnalyzerCommandListService::CommandAnalysis(
           c.m_pDesc.SourceAccelerationStructureKey, c.m_pDesc.SourceAccelerationStructureOffset);
     }
   }
+  AddObjectForRestore(c.m_pDesc.DestAccelerationStructureKey);
+  if (c.m_pDesc.SourceAccelerationStructureKey) {
+    AddObjectForRestore(c.m_pDesc.SourceAccelerationStructureKey);
+  }
+  if (!IsStateRestoreKey(c.m_pDesc.ScratchAccelerationStructureKey)) {
+    AddObjectForRestore(c.m_pDesc.ScratchAccelerationStructureKey);
+  }
+  for (unsigned key : c.m_pDesc.InputKeys) {
+    AddObjectForRestore(key);
+  }
+  for (unsigned key : c.m_pPostbuildInfoDescs.DestBufferKeys) {
+    AddObjectForRestore(key);
+  }
 }
 
 void AnalyzerCommandListService::Command(
@@ -912,20 +925,8 @@ void AnalyzerCommandListService::Command(
       (m_FirstFrame || m_RestoreTlases || m_CommandListSubcapture)) {
     m_TlasBuildKeys.insert(c.Key);
     m_RaytracingService.BuildTlas(c);
-  }
-
-  if (m_Optimize) {
     AddObjectForRestore(c.m_pDesc.DestAccelerationStructureKey);
-    if (c.m_pDesc.SourceAccelerationStructureKey) {
-      AddObjectForRestore(c.m_pDesc.SourceAccelerationStructureKey);
-    }
-    if (!IsStateRestoreKey(c.m_pDesc.ScratchAccelerationStructureKey)) {
-      AddObjectForRestore(c.m_pDesc.ScratchAccelerationStructureKey);
-    }
     for (unsigned key : c.m_pDesc.InputKeys) {
-      AddObjectForRestore(key);
-    }
-    for (unsigned key : c.m_pPostbuildInfoDescs.DestBufferKeys) {
       AddObjectForRestore(key);
     }
   }
@@ -944,6 +945,19 @@ void AnalyzerCommandListService::CommandAnalysis(
           c.m_pParams.SourceAccelerationStructureOffset);
     }
   }
+  AddObjectForRestore(c.m_pParams.DestAccelerationStructureKey);
+  if (c.m_pParams.SourceAccelerationStructureKey) {
+    AddObjectForRestore(c.m_pParams.SourceAccelerationStructureKey);
+  }
+  if (!IsStateRestoreKey(c.m_pParams.ScratchAccelerationStructureKey)) {
+    AddObjectForRestore(c.m_pParams.ScratchAccelerationStructureKey);
+  }
+  for (unsigned key : c.m_pParams.InputKeys) {
+    AddObjectForRestore(key);
+  }
+  for (unsigned key : c.m_pParams.DestPostBuildBufferKeys) {
+    AddObjectForRestore(key);
+  }
 }
 
 void AnalyzerCommandListService::Command(
@@ -961,40 +975,35 @@ void AnalyzerCommandListService::Command(
       D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
     LOG_ERROR << "NvAPI top level build not handled";
   }
+}
 
-  if (m_Optimize) {
-    AddObjectForRestore(c.m_pParams.DestAccelerationStructureKey);
-    if (c.m_pParams.SourceAccelerationStructureKey) {
-      AddObjectForRestore(c.m_pParams.SourceAccelerationStructureKey);
-    }
-    if (!IsStateRestoreKey(c.m_pParams.ScratchAccelerationStructureKey)) {
-      AddObjectForRestore(c.m_pParams.ScratchAccelerationStructureKey);
-    }
-    for (unsigned key : c.m_pParams.InputKeys) {
-      AddObjectForRestore(key);
-    }
-    for (unsigned key : c.m_pParams.DestPostBuildBufferKeys) {
-      AddObjectForRestore(key);
-    }
+void AnalyzerCommandListService::CommandAnalysis(
+    NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& c) {
+  AddObjectForRestore(c.m_pParams.DestOpacityMicromapArrayDataKey);
+  if (c.m_pParams.InputBufferKey) {
+    AddObjectForRestore(c.m_pParams.InputBufferKey);
+  }
+  if (c.m_pParams.PerOMMDescsKey) {
+    AddObjectForRestore(c.m_pParams.PerOMMDescsKey);
+  }
+  if (!IsStateRestoreKey(c.m_pParams.ScratchOpacityMicromapArrayDataKey)) {
+    AddObjectForRestore(c.m_pParams.ScratchOpacityMicromapArrayDataKey);
+  }
+  for (unsigned key : c.m_pParams.DestPostBuildBufferKeys) {
+    AddObjectForRestore(key);
   }
 }
 
 void AnalyzerCommandListService::Command(
     NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& c) {
-  if (m_Optimize) {
-    AddObjectForRestore(c.m_pParams.DestOpacityMicromapArrayDataKey);
-    if (c.m_pParams.InputBufferKey) {
-      AddObjectForRestore(c.m_pParams.InputBufferKey);
+  if (m_AnalyzerService.InRange()) {
+    if (!m_ResetCommandLists[c.m_pCommandList.Key]) {
+      CommandListRestore(c.m_pCommandList.Key);
     }
-    if (c.m_pParams.PerOMMDescsKey) {
-      AddObjectForRestore(c.m_pParams.PerOMMDescsKey);
-    }
-    if (!IsStateRestoreKey(c.m_pParams.ScratchOpacityMicromapArrayDataKey)) {
-      AddObjectForRestore(c.m_pParams.ScratchOpacityMicromapArrayDataKey);
-    }
-    for (unsigned key : c.m_pParams.DestPostBuildBufferKeys) {
-      AddObjectForRestore(key);
-    }
+    CommandAnalysis(c);
+  } else if (!m_CommandListSubcapture) {
+    m_CommandsByCommandList[c.m_pCommandList.Key].emplace_back(
+        new NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand(c));
   }
 }
 
@@ -1024,17 +1033,14 @@ void AnalyzerCommandListService::Command(
     m_CommandsByCommandList[c.m_Object.Key].emplace_back(
         new ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand(c));
   }
-
-  if (m_Optimize) {
-    AddObjectForRestore(c.m_DestAccelerationStructureData.InterfaceKey);
-    AddObjectForRestore(c.m_SourceAccelerationStructureData.InterfaceKey);
-  }
 }
 
 void AnalyzerCommandListService::CommandAnalysis(
     ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& c) {
   m_RaytracingService.AddAccelerationStructureSource(
       c.m_SourceAccelerationStructureData.InterfaceKey, c.m_SourceAccelerationStructureData.Offset);
+  AddObjectForRestore(c.m_DestAccelerationStructureData.InterfaceKey);
+  AddObjectForRestore(c.m_SourceAccelerationStructureData.InterfaceKey);
 }
 
 void AnalyzerCommandListService::CommandAnalysis(

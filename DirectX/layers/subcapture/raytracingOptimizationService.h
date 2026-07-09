@@ -34,6 +34,9 @@ public:
   std::vector<std::pair<unsigned, unsigned>>& GetOptimizedCommands() {
     return m_OptimizedCommandsWithSources;
   }
+  std::unordered_set<unsigned>& GetOptimizedBuffers() {
+    return m_OptimizedBuffers;
+  }
 
 private:
   struct RaytracingCommand {
@@ -45,8 +48,8 @@ private:
     unsigned SourceOffset{};
     bool UpdateBuild{};
     RaytracingCommand* Source{};
-    std::unordered_set<RaytracingCommand*> Destinations;
     bool Restore{};
+    std::unordered_set<unsigned> Buffers;
   };
 
   unsigned m_CommandUniqueId{};
@@ -57,6 +60,7 @@ private:
   std::unordered_map<unsigned, std::unique_ptr<RaytracingCommand>> m_CommandById;
 
   std::vector<std::pair<unsigned, unsigned>> m_OptimizedCommandsWithSources;
+  std::unordered_set<unsigned> m_OptimizedBuffers;
 
 private:
   void StoreCommand(std::unique_ptr<RaytracingCommand>& command);
