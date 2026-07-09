@@ -90,6 +90,9 @@ bool AnalyzerResults::RestoreTlas(unsigned buildKey) {
 }
 
 bool AnalyzerResults::RestoreBlas(unsigned buildKey) {
+  if (!m_Optimize) {
+    return true;
+  }
   return m_Blases.contains(buildKey);
 }
 
