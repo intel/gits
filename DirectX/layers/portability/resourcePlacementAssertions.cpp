@@ -117,13 +117,19 @@ void ResourcePlacementAssertions::checkCompatibility(const AllocationInfo& alloc
               << " Layout=" << toStr(resourceDesc.Layout) << " Flags=" << toStr(resourceDesc.Flags);
   };
 
-  if (allocationInfo.pre.Alignment != allocationInfo.post.Alignment) {
+  // Compatible when playback alignment is <= capture alignment and capture alignment is a multiple of playback alignment
+  uint64_t captureAlignment = allocationInfo.pre.Alignment;
+  uint64_t currentAlignment = allocationInfo.post.Alignment;
+  bool alignmentCompatible = currentAlignment != 0 && captureAlignment >= currentAlignment &&
+                             captureAlignment % currentAlignment == 0;
+
+  if (!alignmentCompatible) {
     LOG_ERROR << "Portability - Incompatible alignment for resource: O" << resourceKey;
-    LOG_ERROR << "Portability - Capture alignment: " << allocationInfo.pre.Alignment
-              << " Current alignment: " << allocationInfo.post.Alignment;
+    LOG_ERROR << "Portability - Capture alignment: " << captureAlignment
+              << " Current alignment: " << currentAlignment;
     logResourceDesc(desc);
   }
-  GITS_ASSERT(allocationInfo.pre.Alignment == allocationInfo.post.Alignment);
+  GITS_ASSERT(alignmentCompatible);
 
   if (allocationInfo.pre.SizeInBytes < allocationInfo.post.SizeInBytes) {
     LOG_ERROR << "Portability - Incompatible size for resource: O" << resourceKey;
