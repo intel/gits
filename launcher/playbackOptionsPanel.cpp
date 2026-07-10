@@ -126,7 +126,7 @@ void PlaybackOptionsPanel::Render() {
   changed |=
       ImGui::Checkbox(Labels::SCREENSHOTS, &config_options::ScreenshotsEnabled(Mode::PLAYBACK));
   config_options_gui_helpers::ConfigOptionHelpButton(
-      ConfigMetadata::DirectX::Features::Screenshots::enabled);
+      ConfigMetadata::Common::Shared::Screenshots::enabled);
 
   ImGui::BeginDisabled(!config_options::ScreenshotsEnabled(Mode::PLAYBACK));
   ImGui::Indent(indent);
@@ -139,7 +139,7 @@ void PlaybackOptionsPanel::Render() {
       ScreenshotsConfig.TmpEndFrame, ScreenshotsConfig.TmpStepFrame, Labels::SCREENSHOTS_ADD_RANGE,
       Labels::SCREENSHOTS_ADD_FRAME);
   config_options_gui_helpers::ConfigOptionHelpButton(
-      ConfigMetadata::DirectX::Features::Screenshots::frames);
+      ConfigMetadata::Common::Shared::Screenshots::frames);
 
   ImGui::Text(Labels::SCREENSHOTS_PATH);
   ImGui::SameLine();

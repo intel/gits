@@ -27,7 +27,7 @@ bool Trace(Mode mode, float indentation) {
       mode == Mode::CAPTURE ? Labels::BASE_ON_TARGET_PATH : Labels::BASE_ON_STREAMPATH;
 
   changed |= ImGui::Checkbox(Labels::TRACE_EXPORT, &config_options::TraceEnabled(mode));
-  ConfigOptionHelpButton(ConfigMetadata::DirectX::Features::Trace::enabled);
+  ConfigOptionHelpButton(ConfigMetadata::Common::Shared::Trace::enabled);
 
   ImGui::BeginDisabled(!config_options::TraceEnabled(mode));
   if (indentation > 0.0f) {
