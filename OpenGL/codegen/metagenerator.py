@@ -13,6 +13,7 @@
 # will be based on it, but won't save the intermediate format on disk.
 
 import re
+import sys  # For sys.path.insert.
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
@@ -31,12 +32,21 @@ from generator import (
     Token,
     get_enums,
     get_enums_from_xml_data,
+    get_functions_from_xml_data,
 )
+
+# Add the OpenGL-Registry/xml directory to sys.path so we can import reg.py.
+_THIRD_PARTY_DIR = Path(__file__).resolve().parents[2] / 'third_party'
+sys.path.insert(0, str(_THIRD_PARTY_DIR / 'OpenGL-Registry/xml'))
+
 from reg import Registry
 from xml_data_exploration import (
     find_duplicate_enum_values,
     inspect_cross_file_enums,
     inspect_enums,
+    inspect_functions,
+    inspect_function_params,
+    check_function_groups_against_enums,
     print_duplicate_analysis,
 )
 
@@ -48,8 +58,6 @@ AUTO_GENERATED_HEADER = f"""
 """.strip('\n')
 
 # TODO: Take dirs as arguments, like Vulkan's new generator.py does.
-_SCRIPT_DIR = Path(__file__).resolve().parent
-_THIRD_PARTY_DIR = _SCRIPT_DIR.parent.parent / 'third_party'
 _FILE_TO_API: dict[Path, Api] = {
     _THIRD_PARTY_DIR / 'OpenGL-Registry/xml/gl.xml': Api.GL,
     _THIRD_PARTY_DIR / 'OpenGL-Registry/xml/wgl.xml': Api.WGL,
@@ -65,7 +73,7 @@ _FILE_TO_API: dict[Path, Api] = {
 def mako_render(inpath: str, **kwargs) -> str | None:
     """Render a Mako template into a string."""
     # Objects used by all (or almost all) Mako templates.
-    common_objects = {
+    common_objects: dict[str, Any] = {
         'EnumType': EnumType,
         'EnumValue': EnumValue,
         'FuncType': FuncType,
@@ -102,8 +110,89 @@ def mako_write(inpath: str, outpath: str, **kwargs) -> None:
         fout.write(rendered)
 
 
-def get_enums_from_xml(paths_and_apis: dict[Path, Api]) -> dict[Api, list[EnumValue]]:
-    """Load XML registry files, return a dict mapping each to a list of its enums."""
+def normalize_type_text(type_text: str) -> str:
+    """Normalize whitespace in reconstructed C/C++ type text."""
+    return re.sub(r'\s+', ' ', type_text).strip()
+
+
+def reconstruct_type_from_xml_elem(elem: Any) -> str:
+    """Reconstruct declaration type text from XML mixed content before <name>.
+
+    XML proto and param elements split C declarations across text nodes, an
+    optional <ptype> child, and their tails. This function joins everything up
+    to the <name> child and normalizes whitespace to recover the type string
+    (e.g. 'const void *') used for the Token's return value and argument types.
+    """
+    fragments: list[str] = []
+    if elem.text:
+        fragments.append(elem.text)
+
+    for child in elem:
+        if child.tag == 'name':
+            break
+        if child.text:
+            fragments.append(child.text)
+        if child.tail:
+            fragments.append(child.tail)
+
+    return normalize_type_text(''.join(fragments))
+
+
+def extract_functions_from_registry(registry: Registry) -> list[dict[str, Any]]:
+    """Extract raw function data from a registry's cmddict.
+
+    For each <command> returns a dict with:
+      - 'command_attribs': <command> attributes ('name' injected by reg.py plus
+        an optional 'comment').
+      - 'return_value': {'type': return type reconstructed from <proto>, 'attribs':
+        <proto> attributes (group/class/kind)}.
+      - 'params': list of {'name', 'type', 'attribs'}, where 'attribs' are the
+        <param> attributes (group/class/kind/len).
+      - 'alias_attribs': <alias> attributes (the aliased command's 'name').
+
+    Type strings are reconstructed from each element's mixed content (everything
+    before its <name> child). The <glx>/<vecequiv> child elements and the info
+    reg.py derives from them are ignored.
+    """
+    raw_functions: list[dict[str, Any]] = []
+
+    for cmd_obj in registry.cmddict.values():
+        cmd_elem = cmd_obj.elem
+        proto_elem = cmd_elem.find('proto')
+        alias_elem = cmd_elem.find('alias')
+
+        cmd_name = cmd_elem.attrib.get('name')
+        if cmd_name is None:
+            raise ValueError("<command> element has no 'name' attribute")
+        if proto_elem is None:
+            raise ValueError(f"<command> '{cmd_name}' has no <proto> element")
+
+        params: list[dict[str, Any]] = []
+        for param_elem in cmd_elem.findall('param'):
+            name_elem = param_elem.find('name')
+            if name_elem is None:
+                raise ValueError(f"<param> in command '{cmd_name}' has no <name> element")
+            params.append({
+                'name': name_elem.text or '',
+                'type': reconstruct_type_from_xml_elem(param_elem),
+                'attribs': dict(param_elem.attrib),
+            })
+
+        raw_functions.append({
+            'command_attribs': dict(cmd_elem.attrib),
+            'return_value': {
+                'type': reconstruct_type_from_xml_elem(proto_elem),
+                'attribs': dict(proto_elem.attrib),
+            },
+            'params': params,
+            'alias_attribs': dict(alias_elem.attrib) if alias_elem is not None else {},
+        })
+
+    return raw_functions
+
+
+def load_registries_and_extract_xml_data(paths_and_apis: dict[Path, Api]) -> tuple[dict[Api, list[EnumValue]], dict[Api, list[Token]]]:
+    """Load XML registry files, return (enums_by_api, functions_by_api)."""
     missing_paths = [path for path in paths_and_apis if not path.is_file()]
     if missing_paths:
         paths = '\n'.join(f'  - {path}' for path in missing_paths)
@@ -114,21 +203,38 @@ def get_enums_from_xml(paths_and_apis: dict[Path, Api]) -> dict[Api, list[EnumVa
         )
 
     raw_enums_by_api: dict[Api, list[dict[str, Any]]] = {api: [] for api in Api}
+    raw_functions_by_api: dict[Api, list[dict[str, Any]]] = {api: [] for api in Api}
 
     for path, api in paths_and_apis.items():
         registry = Registry()
-        registry.loadFile(str(path))
+        registry.loadFile(path)
 
+        # Extract enums.
         raw_enums: list[dict[str, Any]]
         raw_enums = [dict(**e.elem.attrib) for e in registry.enumdict.values()]
         raw_enums_by_api[api] = raw_enums
 
         # Check for unknown enum attributes.
-        novel: set[str] = find_unknown_enum_attributes(raw_enums)
-        if novel:
-            print(f'WARNING: Unknown enum attributes in {path}: {novel}')
+        novel_enum_attribs: set[str] = find_unknown_enum_attributes(raw_enums)
+        if novel_enum_attribs:
+            print(f'WARNING: Unknown enum attributes in {path}: {novel_enum_attribs}')
 
-    return get_enums_from_xml_data(raw_enums_by_api)
+        # Extract functions.
+        raw_functions: list[dict[str, Any]] = extract_functions_from_registry(registry)
+        raw_functions_by_api[api] = raw_functions
+
+        # Check for unknown function attributes.
+        novel_func_attribs: set[str] = find_unknown_function_attributes(raw_functions)
+        if novel_func_attribs:
+            print(f'WARNING: Unknown function attributes in {path}: {sorted(novel_func_attribs)}')
+
+    # Convert raw enums to EnumValue objects.
+    enums_by_api = get_enums_from_xml_data(raw_enums_by_api)
+
+    # Convert raw functions to Token objects.
+    functions_by_api = get_functions_from_xml_data(raw_functions_by_api)
+
+    return enums_by_api, functions_by_api
 
 
 # ---------------------------------------------------------------------------
@@ -247,6 +353,63 @@ def test_registry(gl: Registry) -> None:
     #     group = EnumGroup(**groupxml.elem.attrib)
     #     print(f'{enum.name} reports group {enum.group}')
     #     print(f'{group.name} contains: {group.enumerators}')
+
+
+def find_unknown_function_attributes(raw_functions: list[dict[str, Any]]) -> set[str]:
+    """Return XML attributes on functions (and their children) not on the known list.
+
+    Inspects XML attributes on <command> and its children (<proto>, <param>, and <alias>;
+    <glx> is ignored). Anything not on the allowlists below is reported so we notice
+    new/unexpected attributes when the registries change.
+
+    Attributes encountered across the four registries (gl/wgl/glx/egl):
+        | element  | gl.xml                  | wgl.xml | glx.xml | egl.xml |
+        |----------|-------------------------|---------|---------|---------|
+        | command  | name*, comment          | name*   | name*   | name*   |
+        | proto    | group, class, kind      | -       | -       | -       |
+        | param    | group, class, kind, len | -       | -       | -       |
+        | alias    | name                    | -       | -       | name    |
+
+    Note: <command> has no 'name' attribute in the XML files; reg.py injects it based on
+    <proto>'s <name>.
+    """
+    known_command_attribs: set[str] = {
+        'name',  # reg.py injects this from <proto><name>; not present in the XML.
+        'comment',
+    }
+    known_proto_attribs: set[str] = {
+        'group',
+        'class',
+        'kind',
+    }
+    known_param_attribs: set[str] = {
+        'group',
+        'class',
+        'kind',
+        'len',
+    }
+    known_alias_attribs: set[str] = {
+        'name',
+    }
+
+    novel: set[str] = set()
+
+    for func in raw_functions:
+        for attrib in func['command_attribs']:
+            if attrib not in known_command_attribs:
+                novel.add(f'command:{attrib}')
+        for attrib in func['return_value']['attribs']:
+            if attrib not in known_proto_attribs:
+                novel.add(f'proto:{attrib}')
+        for param in func['params']:
+            for attrib in param['attribs']:
+                if attrib not in known_param_attribs:
+                    novel.add(f'param:{attrib}')
+        for attrib in func['alias_attribs']:
+            if attrib not in known_alias_attribs:
+                novel.add(f'alias:{attrib}')
+
+    return novel
 
 
 def find_unknown_enum_attributes(raw_enums: list[dict[str, Any]]) -> set[str]:
@@ -382,14 +545,15 @@ def diff_xml_and_generator_enums(
 
 def main() -> None:
     """Update the OpenGL generator data based on gl.xml and similar files."""
-    enums_from_xml: dict[Api, list[EnumValue]] = get_enums_from_xml(_FILE_TO_API)
+    enums_from_xml: dict[Api, list[EnumValue]]
+    functions_from_xml: dict[Api, list[Token]]
+    enums_from_xml, functions_from_xml = load_registries_and_extract_xml_data(_FILE_TO_API)
 
     # Detect differences between XML enums and generator enums.
     generator_enums: dict[Api, list[EnumValue]] = get_enums()
-
     diff_xml_and_generator_enums(enums_from_xml, generator_enums)
 
-    # Detect collisions - enums that have the same value and group.
+    # Inspect enum data per API.
     for api, api_enums in enums_from_xml.items():
         # print(f"\n\n\n        {api}        \n\n\n")
         # Old OpenGL backend will need few if any data updates, new backend won't
@@ -401,7 +565,15 @@ def main() -> None:
         inspect_enums(api, api_enums)
     inspect_cross_file_enums(enums_from_xml)
 
+    # Inspect function data per API.
+    for api, api_functions in functions_from_xml.items():
+        inspect_functions(api, api_functions)
+        inspect_function_params(api, api_functions)
+    check_function_groups_against_enums(functions_from_xml, enums_from_xml)
+
+    # Generate output.
     mako_write('templates/meta_enums.py.mako', 'meta_enums.py', enums_by_api=enums_from_xml)
+    # TODO: write a functions template and use it.
 
 
 if __name__ == '__main__':

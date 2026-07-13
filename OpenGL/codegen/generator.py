@@ -151,6 +151,10 @@ class Argument:
 
     name: str
     type: str
+    group: str | None = None
+    class_: str | None = None
+    kinds: tuple[str, ...] = ()
+    len: str | None = None
     wrap_type: str | None = None
     wrap_params: str | None = None
     remove_mapping: bool = False
@@ -162,6 +166,10 @@ class ReturnValue(Argument):
 
     name: str = field(init=False, default='return_value')
     type: str
+    group: str | None = None
+    class_: str | None = None
+    kinds: tuple[str, ...] = ()
+    len: str | None = field(init=False, default=None)
     wrap_type: str | None = None
     wrap_params: str | None = None
     remove_mapping: bool = field(init=False, default=False)
@@ -174,6 +182,10 @@ class Token:
     name: str
     enabled: bool
     function_type: FuncType
+    comment: str | None = None
+    alias: str | None = None
+    return_value: ReturnValue
+    args: list[Argument]
     version: int = 0
     custom: bool = False  # TODO: It's unused in OpenGL, should we remove it?
     state_track: bool | str = False
@@ -191,8 +203,6 @@ class Token:
     pre_token: str | None = None
     pre_schedule: str | None = None
     remove_mapping: bool = False
-    return_value: ReturnValue
-    args: list[Argument]
 
 
 # Separate enum list for each API.
@@ -366,6 +376,24 @@ def handle_inheritance(functions_dict: dict[str, list[dict[str, Any]]]) -> None:
             func.pop('inherit_from', None)
 
 
+def normalize_attribs(attribs: dict[str, Any]) -> dict[str, Any]:
+    """Normalize raw XML attributes for use as Argument/ReturnValue keyword arguments.
+
+    - Renames 'class' to 'class_' to avoid conflict with the Python keyword.
+    - Converts 'kind' into 'kinds': a list of comma-separated values (stripped),
+      since gl.xml uses multi-valued annotations like 'Clamped[0; 1],Color'.
+    """
+    result: dict[str, Any] = {}
+    for k, v in attribs.items():
+        if k == 'class':
+            result['class_'] = v
+        elif k == 'kind':
+            result['kinds'] = tuple(part.strip() for part in v.split(',') if part.strip())
+        else:
+            result[k] = v
+    return result
+
+
 def function(**kwargs) -> None:
     """Process function data and save it to a dict."""
     name: str = kwargs['name']
@@ -402,6 +430,52 @@ def get_tokens(*, include_disabled: bool) -> dict[str, list[Token]]:
     tokens.default_factory = None
 
     return tokens
+
+# TODO info:
+# - Currently it simply creates Tokens directly from raw XML data.
+# - Tokens from raw generator data need more processing of the raw data before creation, see `get_tokens`.
+# - Similar processing needs to be added also to `get_functions_from_xml_data` to apply it to raw XML data too.
+# - There might be differences in processing of raw XML data vs raw generator data.
+# - Perhaps we need to get rid of the global and do the processing locally, like we do with enums?
+# - For generator data, derive the `alias` field from `inherit_from`?
+def get_functions_from_xml_data(raw_functions: dict[Api, list[dict[str, Any]]]) -> dict[Api, list[Token]]:
+    """Take raw function data from XML and return processed functions; both grouped by API (registry)."""
+    result: dict[Api, list[Token]] = {api: [] for api in Api}
+
+    for api, function_list in raw_functions.items():
+        tokens: list[Token] = []
+        for raw_function in function_list:
+            command_attribs: dict[str, Any] = raw_function['command_attribs']
+            raw_return_value: dict[str, Any] = raw_function['return_value']
+
+            # The XML gives us the signature and a few annotations; classification
+            # flags and enablement aren't present there, so we use neutral defaults.
+            args = [
+                Argument(
+                    name=param['name'],
+                    type=param['type'],
+                    **normalize_attribs(param['attribs']),
+                )
+                for param in raw_function['params']
+            ]
+            return_value = ReturnValue(
+                type=raw_return_value['type'],
+                **normalize_attribs(raw_return_value['attribs']),
+            )
+
+            tokens.append(Token(
+                name=command_attribs['name'],
+                enabled=False,
+                function_type=FuncType.NONE,
+                comment=command_attribs.get('comment'),
+                alias=raw_function['alias_attribs'].get('name'),
+                return_value=return_value,
+                args=args,
+            ))
+
+        result[api] = tokens
+
+    return result
 
 
 ####### Actual data #######

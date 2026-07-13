@@ -14,7 +14,7 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass
 
 from generate_gl import strip_suffix
-from generator import EnumValue
+from generator import Api, EnumValue, Token
 
 # ---------------------------------------------------------------------------
 # Helpers for find_duplicate_enum_values
@@ -177,7 +177,7 @@ def print_duplicate_analysis(
 
 
 # ---------------------------------------------------------------------------
-# Per-file inspection
+# Enum inspection
 # ---------------------------------------------------------------------------
 
 def inspect_enums(label: str, enums: list[EnumValue]) -> None:
@@ -225,10 +225,6 @@ def inspect_enums(label: str, enums: list[EnumValue]) -> None:
     print(f'  Enums without groups: {groupless}, distinct groups: {len(distinct_groups)}')
 
 
-# ---------------------------------------------------------------------------
-# Cross-file inspection
-# ---------------------------------------------------------------------------
-
 def inspect_cross_file_enums(labeled_enums: dict[str, list[EnumValue]]) -> None:
     # TODO: adjust logic to match new input type (dict instead of list of tuples).
     """Print cross-file assumption checks for a collection of enum lists."""
@@ -251,20 +247,185 @@ def inspect_cross_file_enums(labeled_enums: dict[str, list[EnumValue]]) -> None:
         for label, e in entries:
             print(f'    [{label}] {e.value}')
 
-    # Check if cross-file aliases exist.
-    all_names = {e.name for enums in labeled_enums.values() for e in enums}
-    name_to_file = {e.name: label for label, enums in labeled_enums.items() for e in enums}
+    # Cross-file alias check omitted: per-registry inspect_enums already reports
+    # any alias whose target is absent from the local file.
 
-    cross_aliases: list[tuple[str, str, str]] = []
-    for label, enums in labeled_enums.items():
-        file_names = {e.name for e in enums}
-        for e in enums:
-            if e.alias and e.alias not in file_names and e.alias in all_names:
-                cross_aliases.append((label, e.name, e.alias))
 
-    if cross_aliases:
-        print(f'  Cross-file aliases ({len(cross_aliases)}):')
-        for src_label, name, target in cross_aliases:
-            print(f'    [{src_label}] {name} -> {target} (in {name_to_file[target]})')
+# ---------------------------------------------------------------------------
+# Function (command) inspection helpers
+# ---------------------------------------------------------------------------
+
+# Function name prefixes used in each registry.
+_API_PREFIX: dict[Api, str] = {
+    Api.GL:  'gl',
+    Api.WGL: 'wgl',
+    Api.EGL: 'egl',
+    Api.GLX: 'glX',  # This is why we can't just lowercase the Api.
+}
+
+
+def _classify_len(len_str: str, param_names: set[str]) -> str:
+    """Categorize a len annotation.
+
+    Categories: 'integer', 'param-name', 'COMPSIZE', 'other', 'empty'.
+    """
+    if not len_str:
+        print('WARNING: empty `len`, indicating erroneous XML data')
+        return 'empty'
+    if len_str.isdigit():
+        return 'integer'
+    if len_str in param_names:
+        return 'param-name'
+    if len_str.startswith('COMPSIZE'):
+        return 'COMPSIZE'
+    return 'other'
+
+
+# ---------------------------------------------------------------------------
+# Function (command) inspection
+# ---------------------------------------------------------------------------
+
+def inspect_functions(label: str, tokens: list[Token]) -> None:
+    """Print stats and assumption checks for functions from a single registry.
+
+    Checks:
+    - Alias structure: count, mutual aliases (expect 0), alias chains (expect 0),
+      locally-unresolved aliases (targets not in this registry, expect 0).
+    - Return-type integrity: tokens whose return_value.type is empty (expect 0).
+    - Name prefix: each name should start with the registry's canonical prefix
+      (gl/wgl/glX/egl). Violations are informational; WGL legitimately includes
+      a handful of unprefixed GDI functions.
+    """
+    print(f'\n=== {label} ({len(tokens)} functions) ===')
+
+    # Alias structure.
+    name_to_token: dict[str, Token] = {t.name: t for t in tokens}
+    with_alias = [t for t in tokens if t.alias is not None]
+    print(f'  Functions with alias: {len(with_alias)}')
+
+    mutual = [
+        t.name for t in with_alias
+        if t.alias in name_to_token and name_to_token[t.alias].alias == t.name
+    ]
+    print(f'  Mutual aliases: {len(mutual)}' + (f': {mutual}' if mutual else ''))
+
+    chains = [
+        t.name for t in with_alias
+        if t.alias in name_to_token and name_to_token[t.alias].alias is not None
+    ]
+    print(f'  Alias chains (target is itself an alias): {len(chains)}'
+          + (f': {chains}' if chains else ''))
+
+    unresolved = [t.name for t in with_alias if t.alias not in name_to_token]
+    if unresolved:
+        print(f'  Aliases pointing outside this registry ({len(unresolved)}): {unresolved}')
     else:
-        print('  No cross-file aliases.')
+        print('  All aliases resolve within this registry.')
+
+    # Return-type integrity.
+    empty_return = [t.name for t in tokens if not t.return_value.type]
+    if empty_return:
+        print(f'  WARNING: Empty return type ({len(empty_return)}): {empty_return}')
+    else:
+        print('  All return types present.')
+
+    # Name prefix.
+    # Note: WGL includes six legacy unprefixed GDI pixel-format functions
+    # (e.g. ChoosePixelFormat), so violations aren't necessarily errors.
+    expected_prefix = _API_PREFIX.get(Api(label), '')
+    if expected_prefix:
+        wrong_prefix = [t.name for t in tokens if not t.name.startswith(expected_prefix)]
+        if wrong_prefix:
+            print(f'  Names without expected prefix {expected_prefix!r} ({len(wrong_prefix)}): {wrong_prefix}')
+        else:
+            print(f'  All names have expected prefix {expected_prefix!r}.')
+
+
+def inspect_function_params(label: str, tokens: list[Token]) -> None:
+    """Inspect argument and annotation quality for functions from a single registry.
+
+    Checks:
+    - Signature integrity: warns on every argument with an empty name or type.
+    - Annotation coverage: counts and distinct values for group, class_, kind
+      across all arguments and return values.
+    - len automatability: classifies non-empty len annotations into
+      integer / param-name / COMPSIZE / other, with samples of 'other'.
+    """
+    print(f'\n=== {label} function parameters ===')
+
+    total_args = sum(len(t.args) for t in tokens)
+    print(f'  Total arguments: {total_args}')
+
+    # Signature integrity: warn on every bad argument.
+    for token in tokens:
+        for arg in token.args:
+            if not arg.name:
+                print(f'  WARNING: {token.name}: argument has empty name (type={arg.type!r})')
+            if not arg.type:
+                print(f'  WARNING: {token.name}: argument {arg.name!r} has empty type')
+
+    # Annotation coverage over return values and arguments.
+    all_annotated = [token.return_value for token in tokens] + [
+        arg for token in tokens for arg in token.args
+    ]
+    groups  = [a.group  for a in all_annotated if a.group  is not None]
+    classes = [a.class_ for a in all_annotated if a.class_ is not None]
+    kinds   = [k for a in all_annotated for k in a.kinds]
+    print(f'  Annotation coverage (return values + arguments):')
+    print(f'    group:  {len(groups)} present, {len(set(groups))} distinct')
+    print(f'    class_: {len(classes)} present, {len(set(classes))} distinct')
+    print(f'    kind:   {len(kinds)} present, {len(set(kinds))} distinct')
+
+    # len automatability breakdown (arguments only).
+    len_counts: Counter[str] = Counter()
+    other_samples: list[str] = []
+    for token in tokens:
+        param_names = {arg.name for arg in token.args}
+        for arg in token.args:
+            if arg.len is not None:
+                category = _classify_len(arg.len, param_names)
+                len_counts[category] += 1
+                if category == 'other' and len(other_samples) < 8:
+                    other_samples.append(f'{token.name}: {arg.name} len={arg.len!r}')
+    if len_counts:
+        print(f'  len annotations: {dict(len_counts)}')
+        if other_samples:
+            print('  Other len samples (may need manual review):')
+            for sample in other_samples:
+                print(f'    {sample}')
+    else:
+        print('  No len annotations.')
+
+
+def check_function_groups_against_enums(
+    labeled_tokens: dict[Api, list[Token]],
+    labeled_enums: dict[Api, list[EnumValue]],
+) -> None:
+    """Verify that every group annotation on a function argument or return value
+    names a group that exists in the enum data.
+
+    The documented semantic is that function group annotations restrict allowed
+    values to a named enum group, so every group name should match one of the
+    groups present on enums in the same registry. Groups that don't match any
+    enum group indicate a mismatch worth investigating.
+    """
+    print('\n=== Function group annotations vs enum groups ===')
+
+    for api in labeled_tokens:
+        tokens = labeled_tokens[api]
+        enums  = labeled_enums.get(api, [])
+
+        enum_groups: set[str] = {g for e in enums for g in e.groups}
+
+        unknown: list[tuple[str, str, str]] = []  # (function, param, group)
+        for token in tokens:
+            for annotated in [token.return_value, *token.args]:
+                if annotated.group is not None and annotated.group not in enum_groups:
+                    unknown.append((token.name, annotated.name, annotated.group))
+
+        if unknown:
+            print(f'  [{api}] {len(unknown)} group annotation(s) not found in enum groups:')
+            for fn, param, group in unknown:
+                print(f'    {fn}: {param} group={group!r}')
+        else:
+            print(f'  [{api}] All function group annotations match enum groups (or none present).')
