@@ -8,6 +8,10 @@
 #
 # ===================== end_copyright_notice ==============================
 
+# This script takes GL registry files (XML) and outputs their data in an
+# intermediate format ingested by the old OpenGL code generator. New generator
+# will be based on it, but won't save the intermediate format on disk.
+
 import re
 from collections import defaultdict
 from datetime import datetime
@@ -251,7 +255,7 @@ def find_unknown_enum_attributes(raw_enums: list[dict[str, Any]]) -> set[str]:
     known_attribs.remove('groups')
     known_attribs.add('group') # XMLs use 'group', our EnumValue uses 'groups'.
 
-    novel = set()
+    novel: set[str] = set()
     for enum_dict in raw_enums:
         for attrib in enum_dict.keys():
             if attrib not in known_attribs:
@@ -366,10 +370,10 @@ def diff_xml_and_generator_enums(
 
     if only_in_xml:
         print("####### Enums only present in XML #######")
-        print(mako_render('templates/meta_enums.mako', enums_by_api=only_in_xml))
+        print(mako_render('templates/meta_enums.py.mako', enums_by_api=only_in_xml))
     if only_in_generator:
         print("####### Enums only present in generator #######")
-        print(mako_render('templates/meta_enums.mako', enums_by_api=only_in_generator))
+        print(mako_render('templates/meta_enums.py.mako', enums_by_api=only_in_generator))
 
 
 # ---------------------------------------------------------------------------
@@ -397,7 +401,7 @@ def main() -> None:
         inspect_enums(api, api_enums)
     inspect_cross_file_enums(enums_from_xml)
 
-    mako_write('templates/meta_enums.mako', 'meta_enums.py', enums_by_api=enums_from_xml)
+    mako_write('templates/meta_enums.py.mako', 'meta_enums.py', enums_by_api=enums_from_xml)
 
 
 if __name__ == '__main__':

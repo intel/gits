@@ -6,7 +6,9 @@
 #
 # ===================== end_copyright_notice ==============================
 
-import re
+# This file exists to research the OpenGL registry files (XML) and decide what
+# kind of data structures and processing logic are needed in the metagenerator.
+
 import sys
 from collections import Counter, defaultdict
 from dataclasses import dataclass
@@ -40,7 +42,7 @@ def _build_suffix_candidates(alias_clusters: list[list[EnumValue]]) -> list[list
     """Merge alias clusters that share a generic (suffix-stripped) name."""
     merged: dict[str, list[EnumValue]] = defaultdict(list)
     for cluster in alias_clusters:
-        merged[strip_suffix(_canonical(cluster))].extend(cluster)
+        merged[strip_suffix(_canonical(cluster).name)].extend(cluster)
     return list(merged.values())
 
 
@@ -253,7 +255,7 @@ def inspect_cross_file_enums(labeled_enums: dict[str, list[EnumValue]]) -> None:
     all_names = {e.name for enums in labeled_enums.values() for e in enums}
     name_to_file = {e.name: label for label, enums in labeled_enums.items() for e in enums}
 
-    cross_aliases = []
+    cross_aliases: list[tuple[str, str, str]] = []
     for label, enums in labeled_enums.items():
         file_names = {e.name for e in enums}
         for e in enums:
