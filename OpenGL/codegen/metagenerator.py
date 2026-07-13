@@ -13,7 +13,6 @@
 # will be based on it, but won't save the intermediate format on disk.
 
 import re
-import sys  # For sys.path.insert.
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
@@ -35,12 +34,7 @@ from generator import (
     get_enums_from_xml_data,
     get_functions_from_xml_data,
 )
-
-# Add the OpenGL-Registry/xml directory to sys.path so we can import reg.py.
-_THIRD_PARTY_DIR = Path(__file__).resolve().parents[2] / 'third_party'
-sys.path.insert(0, str(_THIRD_PARTY_DIR / 'OpenGL-Registry/xml'))
-
-from reg import Registry
+from registry import Registry
 from xml_data_exploration import (
     find_duplicate_enum_values,
     inspect_cross_file_enums,
@@ -58,6 +52,7 @@ AUTO_GENERATED_HEADER = f"""
 ##
 """.strip('\n')
 
+_THIRD_PARTY_DIR = Path(__file__).resolve().parents[2] / 'third_party'
 # TODO: Take dirs as arguments, like Vulkan's new generator.py does.
 _FILE_TO_API: dict[Path, Api] = {
     _THIRD_PARTY_DIR / 'OpenGL-Registry/xml/gl.xml': Api.GL,
@@ -160,7 +155,7 @@ def extract_functions_from_registry(registry: Registry) -> list[dict[str, Any]]:
     raw_functions: list[dict[str, Any]] = []
 
     for cmd_obj in registry.cmddict.values():
-        cmd_elem = cmd_obj.elem
+        cmd_elem = cmd_obj
         proto_elem = cmd_elem.find('proto')
         alias_elem = cmd_elem.find('alias')
 
@@ -214,7 +209,7 @@ def load_registries_and_extract_xml_data(paths_and_apis: dict[Path, Api]) -> tup
 
         # Extract enums.
         raw_enums: list[dict[str, Any]]
-        raw_enums = [dict(**e.elem.attrib) for e in registry.enumdict.values()]
+        raw_enums = [dict(**e.attrib) for e in registry.enumdict.values()]
         raw_enums_by_api[api] = raw_enums
 
         # Check for unknown enum attributes.
@@ -249,7 +244,7 @@ def test_registry(gl: Registry) -> None:
     # Test aliases.
     # k: str
     # for k, v in gl.enumdict.items():
-    #     enum = EnumValue(**v.elem.attrib)
+    #     enum = EnumValue(**v.attrib)
     #     if enum.alias:
     #         match = False
     #         mutual_match = False
@@ -257,7 +252,7 @@ def test_registry(gl: Registry) -> None:
     #             if key == enum.alias:
     #                 print(f'Match: {enum.name} aka {enum.alias} = {key}')
     #                 match = True
-    #                 if gl.enumdict[key].elem.get('alias') == enum.name:
+    #                 if gl.enumdict[key].get('alias') == enum.name:
     #                     mutual_match = True
     #                     print(f'Mutual match: {enum.name} aka {enum.alias} = {key}')
     #         if not match:
@@ -267,7 +262,7 @@ def test_registry(gl: Registry) -> None:
 
     # Test types.
     # for k, v in gl.enumdict.items():
-    #     enum = EnumValue(**v.elem.attrib)
+    #     enum = EnumValue(**v.attrib)
     #     if enum.type != EnumType.INT:
     #         print(f'Non-int enum: {enum.name} type={enum.type}')
 
@@ -276,10 +271,10 @@ def test_registry(gl: Registry) -> None:
     # values: dict[int, list[str]] = defaultdict(list)
     # names: dict[str, list[EnumValue]] = defaultdict(list)
     # for k, v in gl.enumdict.items():
-    #     enum = EnumValue(**v.elem.attrib)
+    #     enum = EnumValue(**v.attrib)
     #     # values[enum.value].append(enum)
-    #     name: str = v.elem.attrib['name']
-    #     values[v.elem.attrib['value']].append(name)
+    #     name: str = v.attrib['name']
+    #     values[v.attrib['value']].append(name)
     #     names[name].append(enum)
     # # Print values and their associated enums names.
     # for value, enums in values.items():
@@ -295,16 +290,16 @@ def test_registry(gl: Registry) -> None:
     # print('\n\n###### Checking group data: ######')
     # # Can't do it because there is no group data in the registry.
     # for k, v in gl.enumdict.items():
-    #     enum = EnumValue(**v.elem.attrib)
+    #     enum = EnumValue(**v.attrib)
     #     print(enum)
     #     groupxml = gl.groupdict[enum.group]
-    #     group = EnumGroup(**groupxml.elem.attrib)
+    #     group = EnumGroup(**groupxml.attrib)
     #     print(f'{enum.name} reports group {enum.group}')
     #     print(f'{group.name} contains: {group.enumerators}')
     # Test aliases.
     # k: str
     # for k, v in gl.enumdict.items():
-    #     enum = EnumValue(**v.elem.attrib)
+    #     enum = EnumValue(**v.attrib)
     #     if enum.alias:
     #         match = False
     #         mutual_match = False
@@ -312,7 +307,7 @@ def test_registry(gl: Registry) -> None:
     #             if key == enum.alias:
     #                 print(f'Match: {enum.name} aka {enum.alias} = {key}')
     #                 match = True
-    #                 if gl.enumdict[key].elem.get('alias') == enum.name:
+    #                 if gl.enumdict[key].get('alias') == enum.name:
     #                     mutual_match = True
     #                     print(f'Mutual match: {enum.name} aka {enum.alias} = {key}')
     #         if not match:
@@ -322,7 +317,7 @@ def test_registry(gl: Registry) -> None:
 
     # Test types.
     # for k, v in gl.enumdict.items():
-    #     enum = EnumValue(**v.elem.attrib)
+    #     enum = EnumValue(**v.attrib)
     #     if enum.type != EnumType.INT:
     #         print(f'Non-int enum: {enum.name} type={enum.type}')
 
@@ -331,10 +326,10 @@ def test_registry(gl: Registry) -> None:
     # values: dict[int, list[str]] = defaultdict(list)
     # names: dict[str, list[EnumValue]] = defaultdict(list)
     # for k, v in gl.enumdict.items():
-    #     enum = EnumValue(**v.elem.attrib)
+    #     enum = EnumValue(**v.attrib)
     #     # values[enum.value].append(enum)
-    #     name: str = v.elem.attrib['name']
-    #     values[v.elem.attrib['value']].append(name)
+    #     name: str = v.attrib['name']
+    #     values[v.attrib['value']].append(name)
     #     names[name].append(enum)
     # # Print values and their associated enums names.
     # for value, enums in values.items():
@@ -350,10 +345,10 @@ def test_registry(gl: Registry) -> None:
     # print('\n\n###### Checking group data: ######')
     # # Can't do it because there is no group data in the registry.
     # for k, v in gl.enumdict.items():
-    #     enum = EnumValue(**v.elem.attrib)
+    #     enum = EnumValue(**v.attrib)
     #     print(enum)
     #     groupxml = gl.groupdict[enum.group]
-    #     group = EnumGroup(**groupxml.elem.attrib)
+    #     group = EnumGroup(**groupxml.attrib)
     #     print(f'{enum.name} reports group {enum.group}')
     #     print(f'{group.name} contains: {group.enumerators}')
 
