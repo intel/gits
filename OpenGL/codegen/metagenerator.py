@@ -8,10 +8,10 @@
 #
 # ===================== end_copyright_notice ==============================
 
-import os.path
 import re
 from collections import defaultdict
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 import mako.exceptions
@@ -43,12 +43,14 @@ AUTO_GENERATED_HEADER = f"""
 ##
 """.strip('\n')
 
-# TODO: Perhaps use a Path instead of a str?
-_FILE_TO_API: dict[str, Api] = {
-    'gl.xml':  Api.GL,
-    'wgl.xml': Api.WGL,
-    'egl.xml': Api.EGL,
-    'glx.xml': Api.GLX,
+# TODO: Take dirs as arguments, like Vulkan's new generator.py does.
+_SCRIPT_DIR = Path(__file__).resolve().parent
+_THIRD_PARTY_DIR = _SCRIPT_DIR.parent.parent / 'third_party'
+_FILE_TO_API: dict[Path, Api] = {
+    _THIRD_PARTY_DIR / 'OpenGL-Registry/xml/gl.xml': Api.GL,
+    _THIRD_PARTY_DIR / 'OpenGL-Registry/xml/wgl.xml': Api.WGL,
+    _THIRD_PARTY_DIR / 'OpenGL-Registry/xml/glx.xml': Api.GLX,
+    _THIRD_PARTY_DIR / 'EGL-Registry/api/egl.xml': Api.EGL,
 }
 
 
@@ -81,7 +83,7 @@ def mako_render(inpath: str, **kwargs) -> str | None:
             print(f"{filename}({lineno}) : error in {function}")
             print(line, "\n")
         print(f"{traceback.error.__class__.__name__}: {traceback.error}")
-        print(f"Could not render template {os.path.basename(inpath)}, skipping.")
+        print(f"Could not render template {Path(inpath).name}, skipping.")
         return None
 
 
@@ -91,18 +93,27 @@ def mako_write(inpath: str, outpath: str, **kwargs) -> None:
     if rendered is None:
         return
 
-    destination = os.path.join('..', outpath)
-    with open(destination, 'w') as fout:
+    destination = Path('..') / outpath
+    with destination.open('w') as fout:
         fout.write(rendered)
 
 
-def get_enums_from_xml(paths_and_apis: dict[str, Api]) -> dict[Api, list[EnumValue]]:
+def get_enums_from_xml(paths_and_apis: dict[Path, Api]) -> dict[Api, list[EnumValue]]:
     """Load XML registry files, return a dict mapping each to a list of its enums."""
+    missing_paths = [path for path in paths_and_apis if not path.is_file()]
+    if missing_paths:
+        paths = '\n'.join(f'  - {path}' for path in missing_paths)
+        raise FileNotFoundError(
+            'Missing registry XML files:\n'
+            f'{paths}\n'
+            'Ensure OpenGL and EGL registries are downloaded in third_party.'
+        )
+
     raw_enums_by_api: dict[Api, list[dict[str, Any]]] = {api: [] for api in Api}
 
     for path, api in paths_and_apis.items():
         registry = Registry()
-        registry.loadFile(path)
+        registry.loadFile(str(path))
 
         raw_enums: list[dict[str, Any]]
         raw_enums = [dict(**e.elem.attrib) for e in registry.enumdict.values()]

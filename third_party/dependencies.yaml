@@ -45,6 +45,18 @@ dependencies:
       argument: clheaders
       url: https://github.com/KhronosGroup/OpenCL-Headers.git
       branch: v2022.09.30
+    - name: OpenGL-Registry
+      argument: glregistry
+      commit_id: 9d527dbc81bb76e35ba284fe385ed8a5ddb90cbc
+      url: https://github.com/KhronosGroup/OpenGL-Registry.git
+      branch: main
+      sparse_checkout: api xml
+    - name: EGL-Registry
+      argument: eglregistry
+      commit_id: 3d7796b3721d93976b6bfe536aa97bbc4bce8667
+      url: https://github.com/KhronosGroup/EGL-Registry.git
+      branch: main
+      sparse_checkout: api
     - name: Detours
       url: https://github.com/microsoft/Detours.git
       branch: main
