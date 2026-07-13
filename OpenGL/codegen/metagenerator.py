@@ -31,6 +31,7 @@ from generator import (
     ReturnValue,
     Token,
     get_enums,
+    get_tokens,
     get_enums_from_xml_data,
     get_functions_from_xml_data,
 )
@@ -110,9 +111,11 @@ def mako_write(inpath: str, outpath: str, **kwargs) -> None:
         fout.write(rendered)
 
 
-def normalize_type_text(type_text: str) -> str:
+def normalize_type(type_text: str) -> str:
     """Normalize whitespace in reconstructed C/C++ type text."""
-    return re.sub(r'\s+', ' ', type_text).strip()
+    text = re.sub(r'\s+', ' ', type_text).strip()
+    # Ensure single space before asterisk (or a group of them).
+    return re.sub(r'\s*(\*+)', r' \1', text)
 
 
 def reconstruct_type_from_xml_elem(elem: Any) -> str:
@@ -135,7 +138,7 @@ def reconstruct_type_from_xml_elem(elem: Any) -> str:
         if child.tail:
             fragments.append(child.tail)
 
-    return normalize_type_text(''.join(fragments))
+    return normalize_type(''.join(fragments))
 
 
 def extract_functions_from_registry(registry: Registry) -> list[dict[str, Any]]:
@@ -539,6 +542,84 @@ def diff_xml_and_generator_enums(
         print(mako_render('templates/meta_enums.py.mako', enums_by_api=only_in_generator))
 
 
+TokenDifferencesType = dict[str, tuple[Any, Any]]  # Field name -> (xml value, generator value)
+
+def compare_function_tokens(xml_token: Token, generator_token: Token) -> TokenDifferencesType:
+    """Return the XML-vs-generator differences for the core function signature."""
+    differences: TokenDifferencesType = {}
+
+    if xml_token.name != generator_token.name:
+        differences['name'] = (xml_token.name, generator_token.name)
+    if xml_token.alias != generator_token.alias:
+        differences['alias'] = (xml_token.alias, generator_token.alias)
+    xml_retval_type = normalize_type(xml_token.return_value.type)
+    gen_retval_type = normalize_type(generator_token.return_value.type)
+    if xml_retval_type != gen_retval_type:
+        differences['return_type'] = (xml_retval_type, gen_retval_type)
+
+    xml_args = tuple(f'{arg.name}:{normalize_type(arg.type)}' for arg in xml_token.args)
+    generator_args = tuple(f'{arg.name}:{normalize_type(arg.type)}' for arg in generator_token.args)
+    if xml_args != generator_args:
+        differences['args'] = (xml_args, generator_args)
+
+    return differences
+
+
+def only_newest_token_versions(generator_functions: dict[str, list[Token]]) -> dict[str, Token]:
+    """Return the highest-version token for each generator function name."""
+    selected: dict[str, Token] = {}
+    for name, versions in generator_functions.items():
+        if not versions:
+            continue  # TODO: This means broken data!
+        selected[name] = max(versions, key=lambda token: token.version)
+    return selected
+
+
+def diff_xml_and_generator_functions(
+    xml_functions: dict[Api, list[Token]],
+    generator_functions: dict[str, list[Token]],
+) -> None:
+    """Diff functions from XML with those from legacy generator data."""
+    xml_gl_tokens: list[Token] = xml_functions.get(Api.GL, [])  # TODO: Support other APIs (WGL, GLX, EGL) in the future.
+    xml_tokens_by_name: dict[str, Token] = {token.name: token for token in xml_gl_tokens}
+    generator_tokens_by_name = only_newest_token_versions(generator_functions)
+
+    xml_names: set[str] = set(xml_tokens_by_name)
+    generator_names: set[str] = set(generator_tokens_by_name)
+
+    only_in_xml: list[Token] = [
+        xml_tokens_by_name[name]
+        for name in sorted(xml_names - generator_names)
+    ]
+    only_in_generator: list[Token] = [
+        generator_tokens_by_name[name]
+        for name in sorted(generator_names - xml_names)
+    ]
+
+    mismatches: list[tuple[str, TokenDifferencesType]] = []
+    for name in sorted(xml_names & generator_names):
+        differences = compare_function_tokens(xml_tokens_by_name[name], generator_tokens_by_name[name])
+        if differences:
+            mismatches.append((name, differences))
+
+    if only_in_xml:
+        print("####### Functions only present in XML (GL) #######")
+        for token in only_in_xml:
+            print(f"- {token.name}")
+
+    if only_in_generator:
+        print("####### Functions only present in generator (GL) #######")
+        for token in only_in_generator:
+            print(f"- {token.name}")
+
+    if mismatches:
+        print("####### Functions with signature differences (GL) #######")
+        for name, differences in mismatches:
+            print(f"- {name}")
+            for field, values in differences.items():
+                print(f"    {field}: xml={values[0]!r}, generator={values[1]!r}")
+
+
 # ---------------------------------------------------------------------------
 # Main function.
 # ---------------------------------------------------------------------------
@@ -549,9 +630,11 @@ def main() -> None:
     functions_from_xml: dict[Api, list[Token]]
     enums_from_xml, functions_from_xml = load_registries_and_extract_xml_data(_FILE_TO_API)
 
-    # Detect differences between XML enums and generator enums.
+    # Detect differences between XML and existing generator data.
     generator_enums: dict[Api, list[EnumValue]] = get_enums()
     diff_xml_and_generator_enums(enums_from_xml, generator_enums)
+    generator_functions: dict[str, list[Token]] = get_tokens(include_disabled=True)
+    diff_xml_and_generator_functions(functions_from_xml, generator_functions)
 
     # Inspect enum data per API.
     for api, api_enums in enums_from_xml.items():

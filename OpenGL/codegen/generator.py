@@ -366,11 +366,12 @@ def handle_inheritance(functions_dict: dict[str, list[dict[str, Any]]]) -> None:
                 parent: dict[str, Any] = parents[0]
                 child = parent.copy()
                 child |= func
+                child['alias'] = parent_name
                 # Replace func with child.
                 func.clear()
                 func.update(child)
 
-    # We no longer need inherit_from and we don't store it in Token.
+    # We no longer need inherit_from.
     for funcs in functions_dict.values():
         for func in funcs:
             func.pop('inherit_from', None)
