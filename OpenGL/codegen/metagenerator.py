@@ -656,7 +656,7 @@ def main() -> None:
 
     # Generate output.
     mako_write('templates/meta_enums.py.mako', 'meta_enums.py', enums_by_api=enums_from_xml)
-    # TODO: write a functions template and use it.
+    mako_write('templates/meta_functions.py.mako', 'meta_functions.py', functions_by_api=functions_from_xml)
 
 
 if __name__ == '__main__':
