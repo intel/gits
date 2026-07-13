@@ -1177,7 +1177,7 @@ void argumentToCpp(D3D12_SHADER_RESOURCE_VIEW_DESC_Argument& arg,
     toCpp(value.Texture2DArray, paramInfo, paramOut);
     break;
   case D3D12_SRV_DIMENSION_TEXTURE2DMS:
-    paramInfo.type = "D3D12_TEX2DMS_ARRAY_SRV";
+    paramInfo.type = "D3D12_TEX2DMS_SRV";
     paramInfo.name = "Texture2DMS";
     toCpp(value.Texture2DMS, paramInfo, paramOut);
     break;
