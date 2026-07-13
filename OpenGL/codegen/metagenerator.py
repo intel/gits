@@ -626,6 +626,8 @@ def diff_xml_and_generator_functions(
 
 def main() -> None:
     """Update the OpenGL generator data based on gl.xml and similar files."""
+    inspect_data: bool = False  # Disabled by default because of long output.
+
     enums_from_xml: dict[Api, list[EnumValue]]
     functions_from_xml: dict[Api, list[Token]]
     enums_from_xml, functions_from_xml = load_registries_and_extract_xml_data(_FILE_TO_API)
@@ -636,23 +638,24 @@ def main() -> None:
     generator_functions: dict[str, list[Token]] = get_tokens(include_disabled=True)
     diff_xml_and_generator_functions(functions_from_xml, generator_functions)
 
-    # Inspect enum data per API.
-    for api, api_enums in enums_from_xml.items():
-        # print(f"\n\n\n        {api}        \n\n\n")
-        # Old OpenGL backend will need few if any data updates, new backend won't
-        # even store the data in intermediate form. This is why we don't bother
-        # updating detect_duplicate_enum_values to support CANONICAL_NAME_OVERRIDES
-        # from generate_gl.py or running it by default. It can be run manually
-        # if we know we need to update enum data.
-        # detect_duplicate_enum_values(api_enums)
-        inspect_enums(api, api_enums)
-    inspect_cross_file_enums(enums_from_xml)
+    if inspect_data:
+        # Inspect enum data per API.
+        for api, api_enums in enums_from_xml.items():
+            # print(f"\n\n\n        {api}        \n\n\n")
+            # Old OpenGL backend will need few if any data updates, new backend won't
+            # even store the data in intermediate form. This is why we don't bother
+            # updating detect_duplicate_enum_values to support CANONICAL_NAME_OVERRIDES
+            # from generate_gl.py or running it by default. It can be run manually
+            # if we know we need to update enum data.
+            # detect_duplicate_enum_values(api_enums)
+            inspect_enums(api, api_enums)
+        inspect_cross_file_enums(enums_from_xml)
 
-    # Inspect function data per API.
-    for api, api_functions in functions_from_xml.items():
-        inspect_functions(api, api_functions)
-        inspect_function_params(api, api_functions)
-    check_function_groups_against_enums(functions_from_xml, enums_from_xml)
+        # Inspect function data per API.
+        for api, api_functions in functions_from_xml.items():
+            inspect_functions(api, api_functions)
+            inspect_function_params(api, api_functions)
+        check_function_groups_against_enums(functions_from_xml, enums_from_xml)
 
     # Generate output.
     mako_write('templates/meta_enums.py.mako', 'meta_enums.py', enums_by_api=enums_from_xml)
