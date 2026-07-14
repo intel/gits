@@ -111,6 +111,7 @@ nav:
   - Development:
     - 'development/project.md'
     - 'development/codebase-map.md'
+    - 'development/codebase-map-vulkan.md'
     - 'development/configuration.md'
     - 'development/dependencies.md'
     - 'development/documentation.md'
