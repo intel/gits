@@ -120,8 +120,9 @@ void ShowExecutionLayer::Post(ID3D12CommandQueueExecuteCommandListsCommand& comm
             frameDrawSuffix = baseStr.substr(pos);
             baseStr.resize(pos);
           }
+          ++drawCount;
           m_OutBuff << "      " << baseStr << " Frame Execute #" << m_ExecuteCount
-                    << " CommandList #" << i + 1 << " CommandList Draw #" << ++drawCount << " (e_"
+                    << " CommandList #" << i + 1 << " CommandList Draw #" << drawCount << " (e_"
                     << m_CurrentFrame << "_" << m_ExecuteCount << "_" << i + 1 << "_" << drawCount
                     << ")" << frameDrawSuffix << "\n";
         } else {

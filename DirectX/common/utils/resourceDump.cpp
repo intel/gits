@@ -14,23 +14,24 @@
 
 #include <fstream>
 #include <algorithm>
+#include <stdexcept>
 #include <wincodec.h>
 
 namespace gits {
 namespace DirectX {
 
-ResourceDump::ResourceDump(ImageFormat format, const std::string& textureRescaleRange) {
-  m_Format = format;
+ResourceDump::ResourceDump(ImageFormat format, const std::string& textureRescaleRange)
+    : m_Format(format) {
   if (!textureRescaleRange.empty()) {
     try {
       float min = std::stof(textureRescaleRange);
       size_t pos = textureRescaleRange.find('-');
       if (pos == std::string::npos) {
-        throw;
+        throw std::invalid_argument("TextureRescaleRange: missing '-' separator");
       }
       float max = std::stof(textureRescaleRange.substr(pos + 1));
       if (min < 0 || min > 1 || min > max || max < 0 || max > 1) {
-        throw;
+        throw std::invalid_argument("TextureRescaleRange: values out of range");
       }
       m_TextureRescaleRange = std::make_pair(min, max);
     } catch (...) {
