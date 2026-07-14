@@ -21,8 +21,8 @@ namespace vulkan {
 SubcaptureRecorder::SubcaptureRecorder(bool enabled) {
   const auto& cfg = Configurator::Get();
 
-  if (!enabled || !cfg.common.features.subcapture.enabled ||
-      cfg.common.features.subcapture.frames.empty()) {
+  if (!enabled || !cfg.common.player.subcapture.enabled ||
+      cfg.common.player.subcapture.frames.empty()) {
     return;
   }
 
@@ -32,7 +32,7 @@ SubcaptureRecorder::SubcaptureRecorder(bool enabled) {
   m_StreamPath = cfg.common.player.subcapturePath;
 
   m_Writer = std::make_unique<stream::StreamWriter>(m_StreamPath,
-                                                    cfg.common.features.subcapture.compressionType);
+                                                    cfg.common.player.subcapture.compressionType);
   LOG_INFO << "Vulkan subcapture: output stream opened at " << m_StreamPath.string();
 }
 

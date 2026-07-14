@@ -52,13 +52,13 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
   // tables, and (in SubcaptureRecorder's ctor) opens the output stream.
   const auto& cfg = Configurator::Get();
   const bool subcaptureEnabled =
-      cfg.common.features.subcapture.enabled && !cfg.common.features.subcapture.frames.empty();
+      cfg.common.player.subcapture.enabled && !cfg.common.player.subcapture.frames.empty();
   // Two-pass optimization is only engaged when optimize is enabled and no
   // analysis file exists yet.  When optimize is off (or an analysis file is
   // present) we go straight to the recording pass, restoring everything exactly
   // like the legacy single-pass flow.
-  const bool subcaptureAnalysis = subcaptureEnabled && cfg.common.features.subcapture.optimize &&
-                                  !AnalyzerResults::IsAnalysis();
+  const bool subcaptureAnalysis =
+      subcaptureEnabled && cfg.common.player.subcapture.optimize && !AnalyzerResults::IsAnalysis();
 
   std::unique_ptr<Layer> subcaptureLayer;
   std::unique_ptr<Layer> analyzerLayer;
@@ -67,13 +67,13 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
     // Analysis pass: track state and collect in-range object usage, then dump
     // the analysis file.  No output stream is produced; the user must run again.
     subcaptureLayer = std::make_unique<SubcaptureLayer>(
-        playerManager, cfg.common.features.subcapture.frames, /*analysisMode=*/true);
+        playerManager, cfg.common.player.subcapture.frames, /*analysisMode=*/true);
     auto* sc = static_cast<SubcaptureLayer*>(subcaptureLayer.get());
     analyzerLayer = std::make_unique<AnalyzerLayer>(*sc->GetAnalyzerService());
     LOG_INFO << "SUBCAPTURE ANALYSIS. RUN AGAIN FOR SUBCAPTURE RECORDING.";
   } else if (subcaptureEnabled) {
     subcaptureLayer =
-        std::make_unique<SubcaptureLayer>(playerManager, cfg.common.features.subcapture.frames);
+        std::make_unique<SubcaptureLayer>(playerManager, cfg.common.player.subcapture.frames);
 
     // RecordingLayer shares the recorder and range owned by SubcaptureLayer so
     // it can write every in-range command to the output stream.  It also receives

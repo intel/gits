@@ -19,7 +19,7 @@ namespace gits {
 namespace vulkan {
 
 AnalyzerResults::AnalyzerResults() {
-  m_Optimize = Configurator::Get().common.features.subcapture.optimize;
+  m_Optimize = Configurator::Get().common.player.subcapture.optimize;
 
   const std::string fileName = GetAnalysisFileName();
   if (!std::filesystem::exists(fileName)) {
@@ -82,7 +82,7 @@ std::string AnalyzerResults::GetAnalysisFileName() {
   const Configuration& config = Configurator::Get();
   std::stringstream fileName;
   fileName << config.common.player.streamDir.filename().string() << "_frames-"
-           << config.common.features.subcapture.frames << "_analysis.yml";
+           << config.common.player.subcapture.frames << "_analysis.yml";
   return fileName.str();
 }
 

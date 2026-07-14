@@ -305,26 +305,26 @@ std::string& RootSignatureDumpRootSignatureKeys(std::optional<Mode> mode) {
 bool& SubcaptureEnabled(std::optional<Mode> mode) {
   return Context::GetInstance()
       .ConfigurationForMode(mode)
-      .ModifiedGitsConfiguration.common.features.subcapture.enabled;
+      .ModifiedGitsConfiguration.common.player.subcapture.enabled;
 }
 std::string& SubcaptureFrames(std::optional<Mode> mode) {
   return Context::GetInstance()
       .ConfigurationForMode(mode)
-      .ModifiedGitsConfiguration.common.features.subcapture.frames;
+      .ModifiedGitsConfiguration.common.player.subcapture.frames;
 }
 bool& SubcaptureOptimize(std::optional<Mode> mode) {
   return Context::GetInstance()
       .ConfigurationForMode(mode)
-      .ModifiedGitsConfiguration.common.features.subcapture.optimize;
+      .ModifiedGitsConfiguration.common.player.subcapture.optimize;
 }
 bool& SubcaptureExecutionSerialization(std::optional<Mode> mode) {
   return Context::GetInstance()
       .ConfigurationForMode(mode)
-      .ModifiedGitsConfiguration.common.features.subcapture.directx.executionSerialization;
+      .ModifiedGitsConfiguration.common.player.subcapture.directx.executionSerialization;
 }
 std::string& CommandListExecutions(std::optional<Mode> mode) {
   return Context::GetInstance()
       .ConfigurationForMode(mode)
-      .ModifiedGitsConfiguration.common.features.subcapture.directx.commandListExecutions;
+      .ModifiedGitsConfiguration.common.player.subcapture.directx.commandListExecutions;
 }
 } // namespace gits::gui::config_options

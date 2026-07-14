@@ -356,7 +356,7 @@ int MainBody(int argc, char* argv[]) {
     }
 
 #if defined WITH_DIRECTX
-    if (cfg.common.features.subcapture.enabled && legacyMode) {
+    if (cfg.common.player.subcapture.enabled && legacyMode) {
       CGits::Instance().FileRecorder().SetProperty(
           "diag.original_app.name", CGits::Instance().FilePlayer().GetApplicationName());
     }
@@ -484,7 +484,7 @@ int MainBody(int argc, char* argv[]) {
                                             std::make_shared<ProgramMessage>());
 
 #if defined GITS_PLATFORM_WINDOWS
-  if (legacyMode && Configurator::Get().common.features.subcapture.enabled &&
+  if (legacyMode && Configurator::Get().common.player.subcapture.enabled &&
       CRecorder::Instance().IsMarkedForDeletion()) {
     CRecorder::Instance().Close();
   }

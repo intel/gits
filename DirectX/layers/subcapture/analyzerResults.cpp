@@ -65,7 +65,7 @@ AnalyzerResults::AnalyzerResults() {
       }
     }
   }
-  m_Optimize = Configurator::Get().common.features.subcapture.optimize;
+  m_Optimize = Configurator::Get().common.player.subcapture.optimize;
 }
 
 bool AnalyzerResults::RestoreObject(unsigned objectKey) {
@@ -112,10 +112,9 @@ std::string AnalyzerResults::GetAnalysisFileName() {
   const Configuration& config = Configurator::Get();
   std::stringstream fileName;
   fileName << config.common.player.streamDir.filename().string() << "_frames-"
-           << config.common.features.subcapture.frames;
+           << config.common.player.subcapture.frames;
 
-  std::string commandListExecutions =
-      config.common.features.subcapture.directx.commandListExecutions;
+  std::string commandListExecutions = config.common.player.subcapture.directx.commandListExecutions;
   if (!commandListExecutions.empty()) {
     fileName << "_executions_" << commandListExecutions;
   }

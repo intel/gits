@@ -230,6 +230,60 @@ Configuration:
       - Name: Player
         Type: Group
         Options:
+          - Name: Subcapture
+            Type: Group
+            Description:
+              Common subcapture settings shared across all APIs (Vulkan, DirectX).
+              API-specific options live in dedicated subsections (e.g. DirectX).
+            Options:
+              - Name: enabled
+                Type: bool
+                Default: false
+                Description: Whether subcapture is enabled or not
+                LegacyPaths: ["DirectX.Features.Subcapture.Enabled"]
+              - Name: frames
+                Type: std::string
+                Default: ""
+                Description: Frame range for subcapture, e.g. '3' or '3-6'
+                LegacyPaths: ["DirectX.Features.Subcapture.Frames"]
+              - Name: optimize
+                Type: bool
+                Default: true
+                Description: Uses optimization information from subcapture analysis to restore only necessary objects
+                LegacyPaths: ["DirectX.Features.Subcapture.Optimize"]
+              - Name: compressionType
+                Type: CompressionType
+                Default: ZSTD
+                Description: Compression type for the subcapture output stream (LZ4/ZSTD)
+                LegacyPaths: ["DirectX.Features.Subcapture.CompressionType"]
+              - Name: DirectX
+                Type: Group
+                Description:
+                  DirectX-specific subcapture settings. Only used by the DirectX backend.
+                Options:
+                  - Name: serializeAccelerationStructures
+                    Type: bool
+                    Default: false
+                    LegacyPaths: ["DirectX.Features.Subcapture.SerializeAccelerationStructures"]
+                  - Name: restoreTLASes
+                    Type: bool
+                    Default: false
+                    LegacyPaths: ["DirectX.Features.Subcapture.RestoreTLASes"]
+                  - Name: commandListExecutions
+                    Type: std::string
+                    Default: ""
+                    Description: Command lists executions range for command lists subcapture, can be used only with serialized executions stream
+                    LegacyPaths: ["DirectX.Features.Subcapture.CommandListExecutions"]
+                  - Name: executionSerialization
+                    Type: bool
+                    Default: false
+                    Description: Creates stream with serialized CPU and GPU execution
+                    LegacyPaths: ["DirectX.Features.Subcapture.ExecutionSerialization"]
+                  - Name: commandListSplit
+                    Type: std::string
+                    Default: ""
+                    Description: Split serialized stream at command list command keys. For example, '42' (where '42' is a command key of a draw call) will extract the draw call into a separate execution containing only that draw call and the necessary command list state restoration commands. Multiple keys and key ranges are supported. Ranges containing only state commands are invalid. Use 'all' to split at every GPU work command. Leave empty to disable.
+                    LegacyPaths: ["DirectX.Features.Subcapture.CommandListSplit"]
           - Name: logToConsole
             Type: bool
             Default: true
@@ -847,63 +901,6 @@ Configuration:
             Type: WindowsKeyHandling
             Default: MessageLoop
             OSVisibility: [WINDOWS]
-      - Name: Features
-        Type: Group
-        Options:
-          - Name: Subcapture
-            Type: Group
-            Description:
-              Common subcapture settings shared across all APIs (Vulkan, DirectX).
-              API-specific options live in dedicated subsections (e.g. DirectX).
-            Options:
-              - Name: enabled
-                Type: bool
-                Default: false
-                Description: Whether subcapture is enabled or not
-                LegacyPaths: ["DirectX.Features.Subcapture.Enabled"]
-              - Name: frames
-                Type: std::string
-                Default: ""
-                Description: Frame range for subcapture, e.g. '3' or '3-6'
-                LegacyPaths: ["DirectX.Features.Subcapture.Frames"]
-              - Name: optimize
-                Type: bool
-                Default: true
-                Description: Uses optimization information from subcapture analysis to restore only necessary objects
-                LegacyPaths: ["DirectX.Features.Subcapture.Optimize"]
-              - Name: compressionType
-                Type: CompressionType
-                Default: ZSTD
-                Description: Compression type for the subcapture output stream (LZ4/ZSTD)
-                LegacyPaths: ["DirectX.Features.Subcapture.CompressionType"]
-              - Name: DirectX
-                Type: Group
-                Description:
-                  DirectX-specific subcapture settings. Only used by the DirectX backend.
-                Options:
-                  - Name: serializeAccelerationStructures
-                    Type: bool
-                    Default: false
-                    LegacyPaths: ["DirectX.Features.Subcapture.SerializeAccelerationStructures"]
-                  - Name: restoreTLASes
-                    Type: bool
-                    Default: false
-                    LegacyPaths: ["DirectX.Features.Subcapture.RestoreTLASes"]
-                  - Name: commandListExecutions
-                    Type: std::string
-                    Default: ""
-                    Description: Command lists executions range for command lists subcapture, can be used only with serialized executions stream
-                    LegacyPaths: ["DirectX.Features.Subcapture.CommandListExecutions"]
-                  - Name: executionSerialization
-                    Type: bool
-                    Default: false
-                    Description: Creates stream with serialized CPU and GPU execution
-                    LegacyPaths: ["DirectX.Features.Subcapture.ExecutionSerialization"]
-                  - Name: commandListSplit
-                    Type: std::string
-                    Default: ""
-                    Description: Split serialized stream at command list command keys. For example, '42' (where '42' is a command key of a draw call) will extract the draw call into a separate execution containing only that draw call and the necessary command list state restoration commands. Multiple keys and key ranges are supported. Ranges containing only state commands are invalid. Use 'all' to split at every GPU work command. Leave empty to disable.
-                    LegacyPaths: ["DirectX.Features.Subcapture.CommandListSplit"]
   - Name: DirectX
     Type: Group
     OSVisibility: [WINDOWS]

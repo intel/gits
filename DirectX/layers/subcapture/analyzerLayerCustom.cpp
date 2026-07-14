@@ -39,7 +39,7 @@ AnalyzerLayer::AnalyzerLayer(SubcaptureRange& subcaptureRange)
                           m_ResourceStateTracker),
       m_ExecuteIndirectService(
           m_ResourceStateTracker, m_GpuAddressService, m_RaytracingService, m_CommandListService) {
-  m_Optimize = Configurator::Get().common.features.subcapture.optimize;
+  m_Optimize = Configurator::Get().common.player.subcapture.optimize;
   if (m_Optimize) {
     m_ShaderIdentifierService.EnablePlayerIdentifierLookup();
   }

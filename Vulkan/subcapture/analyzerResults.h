@@ -19,7 +19,7 @@ namespace vulkan {
 // answers per-object "should this object be restored?" queries during the
 // recording pass.  Mirrors the DirectX AnalyzerResults design.
 //
-// When optimization is disabled (Features.Subcapture.optimize == false) or the
+// When optimization is disabled (Common.Player.Subcapture.optimize == false) or the
 // analysis file is empty / missing, RestoreObject() always returns true so the
 // state-restore behaves exactly as the legacy single-pass flow (restore every
 // live object).

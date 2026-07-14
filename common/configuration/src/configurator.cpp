@@ -55,10 +55,10 @@ void Configurator::PrepareSubcapturePath() {
   const std::string rangePlaceholder = "%r%";
   std::string::size_type rangePos = preparedPath.find(rangePlaceholder);
   if (rangePos != std::string::npos) {
-    // All APIs now share Common.Features.Subcapture, so resolve %r% from the
+    // All APIs now share Common.Player.Subcapture, so resolve %r% from the
     // common frames range.
     std::stringstream str;
-    str << "frames-" << cfg.common.features.subcapture.frames;
+    str << "frames-" << cfg.common.player.subcapture.frames;
     std::string left = preparedPath.substr(0, rangePos);
     std::string right = preparedPath.substr(rangePos + rangePlaceholder.size());
     preparedPath = left + str.str() + right;

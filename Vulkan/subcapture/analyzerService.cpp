@@ -23,7 +23,7 @@ namespace vulkan {
 AnalyzerService::AnalyzerService(StateTrackingService& stateTracking,
                                  SubcaptureRange& subcaptureRange)
     : m_StateTracking(stateTracking), m_SubcaptureRange(subcaptureRange) {
-  m_Optimize = Configurator::Get().common.features.subcapture.optimize;
+  m_Optimize = Configurator::Get().common.player.subcapture.optimize;
 }
 
 AnalyzerService::~AnalyzerService() {

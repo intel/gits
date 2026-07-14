@@ -111,7 +111,7 @@ STREAM_META_DATA GetStreamMetaData(std::filesystem::path streamPath) {
               }
               if (Configurator::Instance().Load(metaData.RecorderConfig)) {
                 metaData.IsASerializedSubcapture =
-                    Configurator::Get().common.features.subcapture.directx.executionSerialization;
+                    Configurator::Get().common.player.subcapture.directx.executionSerialization;
               }
 
               j["diag"]["gits"].erase("config");

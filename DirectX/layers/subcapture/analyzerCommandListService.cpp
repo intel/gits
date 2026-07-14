@@ -27,8 +27,8 @@ AnalyzerCommandListService::AnalyzerCommandListService(
       m_RaytracingService(raytracingService),
       m_ExecuteIndirectService(executeIndirectService),
       m_CommandListSubcapture(CommandListSubcapture) {
-  m_RestoreTlases = Configurator::Get().common.features.subcapture.directx.restoreTLASes;
-  m_Optimize = Configurator::Get().common.features.subcapture.optimize;
+  m_RestoreTlases = Configurator::Get().common.player.subcapture.directx.restoreTLASes;
+  m_Optimize = Configurator::Get().common.player.subcapture.optimize;
 }
 
 std::set<unsigned>& AnalyzerCommandListService::GetTlases() {

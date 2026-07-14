@@ -25,13 +25,13 @@ ExecuteIndirectDump::ExecuteIndirectDump(
       m_ResourceStateTracker(resourceStateTracker),
       m_AddressService(addressService),
       m_ResourceByKey(resourceByKey) {
-  if (gitsConfig.common.features.subcapture.enabled) {
+  if (gitsConfig.common.player.subcapture.enabled) {
     m_DumpDir = gitsConfig.common.player.subcapturePath;
-    m_Frames = BitRange(gitsConfig.common.features.subcapture.frames);
-    if (gitsConfig.common.features.subcapture.directx.commandListExecutions.empty()) {
+    m_Frames = BitRange(gitsConfig.common.player.subcapture.frames);
+    if (gitsConfig.common.player.subcapture.directx.commandListExecutions.empty()) {
       m_Executions = BitRange("all");
     } else {
-      m_Executions = BitRange(gitsConfig.common.features.subcapture.directx.commandListExecutions);
+      m_Executions = BitRange(gitsConfig.common.player.subcapture.directx.commandListExecutions);
     }
   } else {
     m_DumpDir = gitsConfig.common.player.streamDir;

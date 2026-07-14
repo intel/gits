@@ -20,15 +20,15 @@ namespace DirectX {
 
 void SubcaptureLayerGroup::LoadLayers() {
 
-  if (!Configurator::Get().common.features.subcapture.enabled ||
-      Configurator::Get().common.features.subcapture.directx.executionSerialization ||
-      !Configurator::Get().common.features.subcapture.directx.commandListSplit.empty()) {
+  if (!Configurator::Get().common.player.subcapture.enabled ||
+      Configurator::Get().common.player.subcapture.directx.executionSerialization ||
+      !Configurator::Get().common.player.subcapture.directx.commandListSplit.empty()) {
     return;
   }
 
-  const std::string& frames = Configurator::Get().common.features.subcapture.frames;
+  const std::string& frames = Configurator::Get().common.player.subcapture.frames;
   const std::string& executions =
-      Configurator::Get().common.features.subcapture.directx.commandListExecutions;
+      Configurator::Get().common.player.subcapture.directx.commandListExecutions;
   bool trimmingMode = false;
   try {
     if (executions.empty()) {
@@ -46,7 +46,7 @@ void SubcaptureLayerGroup::LoadLayers() {
     }
   } catch (...) {
     LOG_ERROR << "Invalid subcapture range: '" +
-                     Configurator::Get().common.features.subcapture.frames + "'";
+                     Configurator::Get().common.player.subcapture.frames + "'";
     exit(EXIT_FAILURE);
   }
 

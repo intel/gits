@@ -24,35 +24,35 @@ namespace DirectX {
 
 CommandListSplitService::CommandListSplitService(CommandListSplitRecorder& recorder)
     : m_Recorder(recorder),
-      m_Split(ParseConfigKeys(
-          Configurator::Get().common.features.subcapture.directx.commandListSplit)) {
-  if (m_Split.empty() || m_Split == "all") {
-    return;
-  }
+      m_Split =
+          ParseConfigKeys(Configurator::Get().common.player.subcapture.directx.commandListSplit);
+if (m_Split.empty() || m_Split == "all") {
+  return;
+}
 
-  try {
-    const char* p = m_Split.data();
-    do {
-      const char* begin = p;
-      while (*p != ',' && *p) {
-        ++p;
-      }
-      const std::string token(begin, p);
-      GITS_ASSERT(!token.empty(), "CommandListSplit - Failed to parse split intervals");
-      const size_t dash = token.find('-');
-      if (dash == std::string::npos) {
-        AddInterval(static_cast<unsigned>(std::stoul(token)),
-                    static_cast<unsigned>(std::stoul(token)));
-      } else {
-        GITS_ASSERT(token.find('-', dash + 1) == std::string::npos,
-                    "CommandListSplit - Failed to parse split intervals (multiple '-' in token)");
-        AddInterval(static_cast<unsigned>(std::stoul(token.substr(0, dash))),
-                    static_cast<unsigned>(std::stoul(token.substr(dash + 1))));
-      }
-    } while (*p++);
-  } catch (...) {
-    GITS_ASSERT(false, "CommandListSplit - Failed to parse split intervals");
-  }
+try {
+  const char* p = m_Split.data();
+  do {
+    const char* begin = p;
+    while (*p != ',' && *p) {
+      ++p;
+    }
+    const std::string token(begin, p);
+    GITS_ASSERT(!token.empty(), "CommandListSplit - Failed to parse split intervals");
+    const size_t dash = token.find('-');
+    if (dash == std::string::npos) {
+      AddInterval(static_cast<unsigned>(std::stoul(token)),
+                  static_cast<unsigned>(std::stoul(token)));
+    } else {
+      GITS_ASSERT(token.find('-', dash + 1) == std::string::npos,
+                  "CommandListSplit - Failed to parse split intervals (multiple '-' in token)");
+      AddInterval(static_cast<unsigned>(std::stoul(token.substr(0, dash))),
+                  static_cast<unsigned>(std::stoul(token.substr(dash + 1))));
+    }
+  } while (*p++);
+} catch (...) {
+  GITS_ASSERT(false, "CommandListSplit - Failed to parse split intervals");
+}
 }
 
 void CommandListSplitService::CreateCommandList(unsigned commandListKey,

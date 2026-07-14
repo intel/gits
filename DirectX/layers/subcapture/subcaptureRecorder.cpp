@@ -20,19 +20,18 @@ namespace DirectX {
 SubcaptureRecorder::SubcaptureRecorder() {
   const gits::Configuration& config = Configurator::Get();
 
-  if (!config.common.features.subcapture.enabled ||
-      config.common.features.subcapture.directx.executionSerialization) {
+  if (!config.common.player.subcapture.enabled ||
+      config.common.player.subcapture.directx.executionSerialization) {
     return;
   }
 
   Configurator::PrepareSubcapturePath();
   std::filesystem::path subcapturePath = config.common.player.subcapturePath;
-  std::string commandListExecutions =
-      config.common.features.subcapture.directx.commandListExecutions;
+  std::string commandListExecutions = config.common.player.subcapture.directx.commandListExecutions;
   if (!commandListExecutions.empty()) {
     std::string path = subcapturePath.parent_path().string();
     path += "/" + config.common.player.streamDir.filename().string();
-    path += "_frames_" + config.common.features.subcapture.frames;
+    path += "_frames_" + config.common.player.subcapture.frames;
     path += "_executions_" + commandListExecutions;
     const_cast<std::filesystem::path&>(config.common.player.subcapturePath) = path;
     subcapturePath = path;
@@ -40,7 +39,7 @@ SubcaptureRecorder::SubcaptureRecorder() {
   }
 
   m_Recorder.reset(
-      new stream::StreamWriter(subcapturePath, config.common.features.subcapture.compressionType));
+      new stream::StreamWriter(subcapturePath, config.common.player.subcapture.compressionType));
 
   CopyAuxiliaryFiles();
 }

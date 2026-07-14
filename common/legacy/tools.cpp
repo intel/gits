@@ -299,7 +299,7 @@ void CheckMinimumAvailableDiskSize() {
   auto& config = Configurator::Get();
 #if defined GITS_PLATFORM_WINDOWS
   auto path = config.common.recorder.dumpPath;
-  if (Configurator::IsPlayer() && config.common.features.subcapture.enabled) {
+  if (Configurator::IsPlayer() && config.common.player.subcapture.enabled) {
     path = config.common.player.subcapturePath;
   }
 #else

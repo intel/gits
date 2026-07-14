@@ -77,12 +77,12 @@ void SubcaptureOptionsPanel::Render() {
 
   changed |= ImGui::Checkbox(Labels::SUBCAPTURE_OPTIMIZE, &config_options::SubcaptureOptimize());
   config_options_gui_helpers::ConfigOptionHelpButton(
-      ConfigMetadata::Common::Features::Subcapture::optimize);
+      ConfigMetadata::Common::Player::Subcapture::optimize);
 
   changed |= ImGui::Checkbox(Labels::SUBCAPTURE_EXECUTION_SERIALIZATION,
                              &config_options::SubcaptureExecutionSerialization());
   config_options_gui_helpers::ConfigOptionHelpButton(
-      ConfigMetadata::Common::Features::Subcapture::DirectX::executionSerialization);
+      ConfigMetadata::Common::Player::Subcapture::DirectX::executionSerialization);
 
   // Mode Selector
   ImGui::Separator();
@@ -122,7 +122,7 @@ void SubcaptureOptionsPanel::Render() {
     ImGui::SetNextItemWidth(widthLabel / 4.0f);
     changed |= ImGui::InputInt(Labels::SUBCAPTURE_END_FRAME, &SubcaptureConfig.EndFrame, 1, 10);
     config_options_gui_helpers::ConfigOptionHelpButton(
-        ConfigMetadata::Common::Features::Subcapture::frames);
+        ConfigMetadata::Common::Player::Subcapture::frames);
   }
 
   if (selectedMode == SubcaptureMode::CommandListSubcapture) {
@@ -148,7 +148,7 @@ void SubcaptureOptionsPanel::Render() {
     changed |= ImGui::InputInt(Labels::COMMAND_LIST_SUBCAPTURE_EXECUTIONS_END,
                                &SubcaptureConfig.CommandListExecutionsEnd, 1, 10);
     config_options_gui_helpers::ConfigOptionHelpButton(
-        ConfigMetadata::Common::Features::Subcapture::DirectX::commandListExecutions);
+        ConfigMetadata::Common::Player::Subcapture::DirectX::commandListExecutions);
     ImGui::EndDisabled();
   }
 

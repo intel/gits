@@ -19,12 +19,12 @@ namespace DirectX {
 CommandListSplitRecorder::CommandListSplitRecorder() {
   gits::Configuration& config = Configurator::GetMutable();
 
-  if (!config.common.features.subcapture.enabled ||
-      config.common.features.subcapture.directx.commandListSplit.empty()) {
+  if (!config.common.player.subcapture.enabled ||
+      config.common.player.subcapture.directx.commandListSplit.empty()) {
     return;
   }
 
-  config.common.features.subcapture.frames = "";
+  config.common.player.subcapture.frames = "";
   Configurator::PrepareSubcapturePath();
   std::string subcapturePath = config.common.player.subcapturePath.string();
   const std::string sub = "frames-";
@@ -36,7 +36,7 @@ CommandListSplitRecorder::CommandListSplitRecorder() {
   config.common.player.subcapturePath = subcapturePath;
 
   m_Recorder.reset(
-      new stream::StreamWriter(subcapturePath, config.common.features.subcapture.compressionType));
+      new stream::StreamWriter(subcapturePath, config.common.player.subcapture.compressionType));
 
   CopyAuxiliaryFiles();
 }

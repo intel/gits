@@ -122,7 +122,7 @@ CGits::~CGits() {
     }
     if ((Configurator::IsRecorder() && Configurator::Get().common.recorder.enabled)
 #ifdef GITS_PLATFORM_WINDOWS
-        || (Configurator::IsPlayer() && Configurator::Get().common.features.subcapture.enabled)
+        || (Configurator::IsPlayer() && Configurator::Get().common.player.subcapture.enabled)
 #endif
     ) {
       CGits::Instance().GetMessageBus().publish(
