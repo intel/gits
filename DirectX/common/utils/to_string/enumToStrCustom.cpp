@@ -30,7 +30,7 @@ static std::string enumToStr(const std::unordered_map<int, std::string>& enumMap
   if (result.empty() || remainingValue != 0) {
     return std::to_string(value);
   }
-  return std::move(result);
+  return result;
 }
 
 std::string toStr(NVAPI_D3D12_PIPELINE_CREATION_STATE_FLAGS value) {

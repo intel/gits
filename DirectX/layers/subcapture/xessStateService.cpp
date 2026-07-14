@@ -129,7 +129,8 @@ void XellStateService::TrackMarker(unsigned key,
   frameMarkers.push_back(marker);
 }
 
-bool XellStateService::AreMarkersRegistered(std::vector<xell_latency_marker_type_t> markers) const {
+bool XellStateService::AreMarkersRegistered(
+    const std::vector<xell_latency_marker_type_t>& markers) const {
   std::set<xell_latency_marker_type_t> markerTypes(markers.begin(), markers.end());
   return markerTypes.count(XELL_RENDERSUBMIT_END) && markerTypes.count(XELL_PRESENT_END);
 }

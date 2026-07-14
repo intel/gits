@@ -883,8 +883,7 @@ void AnalyzerCommandListService::CommandAnalysis(
 void AnalyzerCommandListService::CommandAnalysis(
     ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c) {
   if (c.m_pDesc.Value->Inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
-    if (m_TlasBuildKeys.find(c.Key) == m_TlasBuildKeys.end()) {
-      m_TlasBuildKeys.insert(c.Key);
+    if (m_TlasBuildKeys.insert(c.Key).second) {
       m_RaytracingService.BuildTlas(c);
     }
   } else if (c.m_pDesc.Value->Inputs.Type ==

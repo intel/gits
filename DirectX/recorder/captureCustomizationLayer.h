@@ -130,16 +130,10 @@ private:
     D3D12_HEAP_FLAGS Flags{D3D12_HEAP_FLAG_NONE};
 
     HeapInfo() = default;
-    HeapInfo(D3D12_HEAP_PROPERTIES* p, D3D12_HEAP_FLAGS f) {
-      PropertiesPtr = p;
-      Properties = *p;
-      Flags = f;
-    }
-    HeapInfo(D3D12_HEAP_PROPERTIES& p, D3D12_HEAP_FLAGS f) {
-      PropertiesPtr = &p;
-      Properties = p;
-      Flags = f;
-    }
+    HeapInfo(D3D12_HEAP_PROPERTIES* p, D3D12_HEAP_FLAGS f)
+        : PropertiesPtr(p), Properties(*p), Flags(f) {}
+    HeapInfo(D3D12_HEAP_PROPERTIES& p, D3D12_HEAP_FLAGS f)
+        : PropertiesPtr(&p), Properties(p), Flags(f) {}
   };
 
   void FillGpuAddressArgument(D3D12_GPU_VIRTUAL_ADDRESS_Argument& arg);

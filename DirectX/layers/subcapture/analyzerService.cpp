@@ -343,8 +343,7 @@ void AnalyzerService::FindParents(unsigned key, std::set<unsigned>& objectKeys) 
   auto it = m_ParentKeys.find(key);
   if (it != m_ParentKeys.end()) {
     for (unsigned parentKey : it->second) {
-      if (objectKeys.find(parentKey) == objectKeys.end()) {
-        objectKeys.insert(parentKey);
+      if (objectKeys.insert(parentKey).second) {
         FindParents(parentKey, objectKeys);
       }
     }

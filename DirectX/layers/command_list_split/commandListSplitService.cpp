@@ -23,9 +23,9 @@ namespace gits {
 namespace DirectX {
 
 CommandListSplitService::CommandListSplitService(CommandListSplitRecorder& recorder)
-    : m_Recorder(recorder) {
-  m_Split =
-      ParseConfigKeys(Configurator::Get().common.features.subcapture.directx.commandListSplit);
+    : m_Recorder(recorder),
+      m_Split(ParseConfigKeys(
+          Configurator::Get().common.features.subcapture.directx.commandListSplit)) {
   if (m_Split.empty() || m_Split == "all") {
     return;
   }

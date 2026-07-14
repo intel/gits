@@ -13,9 +13,10 @@
 namespace gits {
 namespace DirectX {
 
-DirectStorageLayer::DirectStorageLayer() : Layer("DirectStoragePlayer") {
-  m_ResourcesFilePath = Configurator::Get().common.player.streamDir / "DirectStorageResources.bin";
-}
+DirectStorageLayer::DirectStorageLayer()
+    : Layer("DirectStoragePlayer"),
+      m_ResourcesFilePath(Configurator::Get().common.player.streamDir /
+                          "DirectStorageResources.bin") {}
 
 DirectStorageLayer::~DirectStorageLayer() {
   CompleteAllBatches();

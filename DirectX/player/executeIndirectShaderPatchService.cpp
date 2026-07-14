@@ -16,10 +16,10 @@
 namespace gits {
 namespace DirectX {
 
-ExecuteIndirectShaderPatchService::ExecuteIndirectShaderPatchService() {
-  m_DxilDll = LoadLibrary(".\\D3D12\\dxil.dll");
+ExecuteIndirectShaderPatchService::ExecuteIndirectShaderPatchService()
+    : m_DxilDll(LoadLibrary(".\\D3D12\\dxil.dll")),
+      m_DxcDll(LoadLibrary(".\\D3D12\\dxcompiler.dll")) {
   GITS_ASSERT(m_DxilDll);
-  m_DxcDll = LoadLibrary(".\\D3D12\\dxcompiler.dll");
   GITS_ASSERT(m_DxcDll);
 }
 

@@ -86,7 +86,7 @@ public:
 
 private:
   void RestoreContextState(ContextState* state);
-  bool AreMarkersRegistered(std::vector<xell_latency_marker_type_t> markers) const;
+  bool AreMarkersRegistered(const std::vector<xell_latency_marker_type_t>& markers) const;
 
 private:
   StateTrackingService& m_StateService;
