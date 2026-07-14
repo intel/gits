@@ -11,7 +11,7 @@ This page aims to provide a general overview of how to use gits. For an in-depth
 
 - **Recorder**: Libraries used to intercept (and record) API calls into a stream
 - **Player**: Executable to playback a stream
-- **Plugins, Utilities and Tools**: Miscalaneus binaries for specialized use cases
+- **Plugins, Utilities and Tools**: Miscellaneous binaries for specialized use cases
 
 You can find all the binaries in the output folders of GITS. After completing the [build & install process](building.md) you will have multiple folders in the installation directory (default location: `<gits-root-folder>\<build-folder>\<install-folder>`).
 
