@@ -39,11 +39,18 @@ ScreenshotDump::ScreenshotDump(ID3D12CommandQueue* commandQueue)
 }
 
 ScreenshotDump::~ScreenshotDump() {
-  if (m_DumpThread && m_DumpThread->joinable()) {
-    m_DumpThread->join();
-  }
-  if (m_FenceEvent) {
-    CloseHandle(m_FenceEvent);
+  Close();
+}
+
+void ScreenshotDump::Close() {
+  if (!m_Closed) {
+    if (m_DumpThread && m_DumpThread->joinable()) {
+      m_DumpThread->join();
+    }
+    if (m_FenceEvent) {
+      CloseHandle(m_FenceEvent);
+    }
+    m_Closed = true;
   }
 }
 

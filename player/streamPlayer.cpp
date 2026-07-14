@@ -211,6 +211,9 @@ void PlayStream(const std::filesystem::path& streamPath) {
   playbackTimer.Start();
   streamReader->Run();
   playbackTimer.Pause();
+
+  MessageBus::get().publish({PUBLISHER_PLAYER, TOPIC_END}, std::make_shared<ProgramMessage>());
+
   if (header.GetApi() == stream::StreamHeader::Api::API_VULKAN ||
       header.GetApi() == stream::StreamHeader::Api::API_DIRECTX) {
     windowing::WindowManager::Get().DestroyAllWindows();

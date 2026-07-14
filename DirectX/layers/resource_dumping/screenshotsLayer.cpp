@@ -10,6 +10,7 @@
 #include "keyUtils.h"
 #include "log.h"
 #include "configurator.h"
+#include "messageBus.h"
 
 #include <wrl/client.h>
 #include <filesystem>
@@ -33,6 +34,15 @@ ScreenshotsLayer::ScreenshotsLayer()
 
   if (!Configurator::Get().common.player.captureFrames.empty()) {
     m_ScreenshotRange = Configurator::Get().common.player.captureFrames;
+  }
+
+  gits::MessageBus::get().subscribe({PUBLISHER_PLAYER, TOPIC_END},
+                                    [this](Topic t, const MessagePtr& m) { Close(); });
+}
+
+void ScreenshotsLayer::Close() {
+  for (auto& it : m_ScreenshotDump) {
+    it.second->Close();
   }
 }
 

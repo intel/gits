@@ -27,6 +27,7 @@ public:
   ScreenshotDump& operator=(const ScreenshotDump&) = delete;
 
   void Dump(ID3D12Resource* backBuffer, const std::wstring& dumpName);
+  void Close();
 
 private:
   void CreateStagingBuffer();
@@ -44,6 +45,7 @@ private:
   Microsoft::WRL::ComPtr<ID3D12Resource> m_StagingBuffer;
   std::unique_ptr<std::thread> m_DumpThread{};
   ImageFormat m_Format{ImageFormat::PNG};
+  bool m_Closed{};
 };
 
 } // namespace DirectX

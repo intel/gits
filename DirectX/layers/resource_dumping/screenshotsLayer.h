@@ -30,6 +30,7 @@ public:
   void Pre(IDXGISwapChain1Present1Command& c) override;
 
 private:
+  void Close();
   void SwapChainCreate(unsigned swapChainKey, IUnknown* commandQueue);
   void SwapChainPresent(unsigned swapChainKey, IDXGISwapChain* swapChain);
 
