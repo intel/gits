@@ -47,6 +47,10 @@ ScreenshotsLayer::ScreenshotsLayer(DispatchTablesHolder& dispatchTablesHolder)
     std::filesystem::create_directories(dumpPath);
   }
   m_DumpPath = dumpPath;
+
+  if (!Configurator::Get().common.player.captureFrames.empty()) {
+    m_ScreenshotRange = Configurator::Get().common.player.captureFrames;
+  }
 }
 
 void ScreenshotsLayer::Post(vkCreateDeviceCommand& command) {

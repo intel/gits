@@ -18,7 +18,8 @@ ResourceDumpingLayerGroup::ResourceDumpingLayerGroup(DispatchTablesHolder& dispa
     : m_DispatchTablesHolder(dispatchTablesHolder) {}
 
 void ResourceDumpingLayerGroup::loadLayers() {
-  if (Configurator::Get().common.shared.screenshots.enabled) {
+  if (Configurator::Get().common.shared.screenshots.enabled ||
+      !Configurator::Get().common.player.captureFrames.empty()) {
     addLayer(std::make_unique<ScreenshotsLayer>(m_DispatchTablesHolder));
   }
 }
