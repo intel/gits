@@ -82,6 +82,7 @@ target_link_libraries(Vulkan_player PRIVATE
   Vulkan_trace
   Vulkan_subcapture
   Vulkan_resource_dumping
+  Vulkan_portability
   Vulkan_utils
   Vulkan_api_debug
 )

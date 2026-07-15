@@ -34,6 +34,7 @@ add_subdirectory(layer)
 add_subdirectory(layers/trace)
 add_subdirectory(layers/api_debug)
 add_subdirectory(layers/resource_dumping)
+add_subdirectory(layers/portability)
 add_subdirectory(interceptor)
 add_subdirectory(player)
 

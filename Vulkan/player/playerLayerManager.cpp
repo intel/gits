@@ -11,6 +11,7 @@
 #include "dispatchTablesHolder.h"
 #include "pluginService.h"
 #include "replayCustomizationLayer.h"
+#include "portabilityLayer.h"
 #include "log.h"
 #include "subcaptureLayer.h"
 #include "recordingLayerAuto.h"
@@ -27,6 +28,11 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
   std::unique_ptr<Layer> replayCustomizationLayer =
       std::make_unique<ReplayCustomizationLayer>(playerManager);
   std::unique_ptr<Layer> logVkErrorLayer = std::make_unique<LogVkErrorLayer>();
+
+  std::unique_ptr<Layer> portabilityLayer;
+  if (Configurator::Get().vulkan.player.portability.remapQueueFamilies) {
+    portabilityLayer = std::make_unique<PortabilityLayer>();
+  }
 
   const auto& traceCfg = Configurator::Get().common.shared.trace;
   const auto& screenshotsCfg = Configurator::Get().common.shared.screenshots;
@@ -90,6 +96,8 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
     }
   };
 
+  // Portability must rewrite queue family indices before any other layer
+  enablePreLayer(portabilityLayer);
   enablePreLayer(replayCustomizationLayer);
   if (traceCfg.enabled && traceCfg.print.preCalls) {
     enablePreLayer(traceLayer);
@@ -107,6 +115,7 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
     }
   };
 
+  enablePostLayer(portabilityLayer);
   enablePostLayer(logVkErrorLayer);
   enablePostLayer(replayCustomizationLayer);
   if (traceCfg.enabled && traceCfg.print.postCalls) {
@@ -128,6 +137,7 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
     }
   };
 
+  retainLayer(std::move(portabilityLayer));
   retainLayer(std::move(replayCustomizationLayer));
   retainLayer(std::move(logVkErrorLayer));
   retainLayer(std::move(traceLayer));

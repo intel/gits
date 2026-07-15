@@ -1807,6 +1807,23 @@ Configuration:
             Default: false
             Arguments: [exitOnVkQueueSubmitFail]
             Description: Stop playback when vkQueueSubmit returns error value.
+          - Name: Portability
+            Type: Group
+            Description:
+              Adapts a stream recorded on one GPU for replay on a GPU with a
+              different hardware configuration by patching Vulkan API parameters
+              at replay time.
+            Options:
+              - Name: remapQueueFamilies
+                Type: bool
+                Default: false
+                Arguments: [vkRemapQueueFamilies]
+                Description:
+                  Remap recorded queue family indices to compatible queue families
+                  available on the replay device. The recorded (source) queue
+                  family properties stored in the stream are matched against the
+                  replay (target) device queue families by capability in a single
+                  replay pass; colliding logical-device queue requests are merged.
           - Name: captureVulkanSubmits
             Type: BitRange
             Default: "-"
