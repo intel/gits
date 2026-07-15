@@ -58,10 +58,13 @@ bool CapturePlayerShaderIdentifierService::GetMappings(
   std::sort(mappings.begin(), mappings.end(), [](const auto& mappingA, const auto& mappingB) {
     using ShaderIdentifierGpu =
         std::array<uint64_t, D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES / sizeof(uint64_t)>;
+    static_assert(sizeof(ShaderIdentifierGpu) == D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
     ShaderIdentifierGpu captureIdentifierA;
-    memcpy(captureIdentifierA.data(), &mappingA.CaptureIdentifier, sizeof(ShaderIdentifierGpu));
+    memcpy(captureIdentifierA.data(), &mappingA.CaptureIdentifier,
+           D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
     ShaderIdentifierGpu captureIdentifierB;
-    memcpy(captureIdentifierB.data(), &mappingB.CaptureIdentifier, sizeof(ShaderIdentifierGpu));
+    memcpy(captureIdentifierB.data(), &mappingB.CaptureIdentifier,
+           D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
     return captureIdentifierA < captureIdentifierB;
   });
 

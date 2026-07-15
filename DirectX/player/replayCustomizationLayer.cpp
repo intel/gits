@@ -705,11 +705,8 @@ void ReplayCustomizationLayer::Pre(ID3D12GraphicsCommandListSOSetTargetsCommand&
   if (c.m_pViews.Value) {
     for (unsigned i = 0; i < c.m_NumViews.Value; ++i) {
       if (c.m_pViews.Value[i].BufferLocation) {
-
-        if (c.m_pViews.Value[i].BufferLocation) {
-          c.m_pViews.Value[i].BufferLocation = m_Manager.GetGpuAddressService().GetGpuAddress(
-              c.m_pViews.BufferLocationKeys[i], c.m_pViews.BufferLocationOffsets[i]);
-        }
+        c.m_pViews.Value[i].BufferLocation = m_Manager.GetGpuAddressService().GetGpuAddress(
+            c.m_pViews.BufferLocationKeys[i], c.m_pViews.BufferLocationOffsets[i]);
         if (c.m_pViews.Value[i].BufferFilledSizeLocation) {
           c.m_pViews.Value[i].BufferFilledSizeLocation =
               m_Manager.GetGpuAddressService().GetGpuAddress(

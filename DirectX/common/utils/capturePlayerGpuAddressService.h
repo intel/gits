@@ -31,8 +31,8 @@ public:
     virtual bool Overlapping() {
       return false;
     }
-    ID3D12Resource* Resource;
-    unsigned Key;
+    ID3D12Resource* Resource{};
+    unsigned Key{};
   };
 
   void CreatePlacedResource(unsigned heapKey, unsigned resourceKey, D3D12_RESOURCE_FLAGS flags) {
@@ -103,7 +103,7 @@ private:
       bool Overlapping() override {
         return !Intersecting.empty();
       }
-      unsigned Layer;
+      unsigned Layer{};
       std::unordered_set<PlacedResourceInfo*> Intersecting;
     };
 

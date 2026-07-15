@@ -65,8 +65,8 @@ private:
   std::unordered_map<unsigned, HeapAllocationInfo> m_HeapAddressRanges;
 
   struct HeapInfo {
-    unsigned m_HeapKey;
-    UINT64 m_Offset;
+    unsigned m_HeapKey{};
+    UINT64 m_Offset{};
   };
   std::unordered_map<unsigned, HeapInfo> m_HeapInfoByPlacedResource;
 };

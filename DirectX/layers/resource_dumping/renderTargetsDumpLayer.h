@@ -73,15 +73,15 @@ private:
   unsigned m_CurrentFrame{1};
 
   struct RenderTarget {
-    unsigned slot;
-    ID3D12Resource* resource;
-    unsigned ResourceKey;
+    unsigned slot{};
+    ID3D12Resource* resource{};
+    unsigned ResourceKey{};
     bool isDesc{};
     D3D12_RENDER_TARGET_VIEW_DESC desc{};
   };
   struct DepthStencil {
-    ID3D12Resource* resource;
-    unsigned ResourceKey;
+    ID3D12Resource* resource{};
+    unsigned ResourceKey{};
     bool isDesc{};
     D3D12_DEPTH_STENCIL_VIEW_DESC desc{};
   };

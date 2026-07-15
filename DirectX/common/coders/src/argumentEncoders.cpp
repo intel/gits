@@ -2363,7 +2363,7 @@ void Encode(char* dest, unsigned& offset, const ArrayArgument<D3D12_META_COMMAND
   memcpy(dest + offset, &arg.Size, sizeof(arg.Size));
   offset += sizeof(arg.Size);
 
-  auto* values = (D3D12_META_COMMAND_DESC*)(dest + offset);
+  auto* values = reinterpret_cast<D3D12_META_COMMAND_DESC*>(dest + offset);
   memcpy(dest + offset, arg.Value, sizeof(D3D12_META_COMMAND_DESC) * arg.Size);
   offset += sizeof(D3D12_META_COMMAND_DESC) * arg.Size;
 

@@ -28,7 +28,7 @@ void Decode(char* src, unsigned& offset, BufferArgument& arg) {
 }
 
 void Decode(char* src, unsigned& offset, OutputBufferArgument& arg) {
-  memcpy(&arg.CaptureValue, src + offset, sizeof(void*));
+  memcpy(&arg.CaptureValue, src + offset, sizeof(arg.CaptureValue));
   offset += sizeof(void*);
   if (arg.CaptureValue) {
     arg.Value = &arg.Data;

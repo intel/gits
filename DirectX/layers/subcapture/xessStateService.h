@@ -123,9 +123,9 @@ public:
   };
 
   struct SwapChainPtrState {
-    IID Riid;
-    IDXGISwapChain* SwapChain;
-    unsigned SwapChainKey;
+    IID Riid{};
+    IDXGISwapChain* SwapChain{};
+    unsigned SwapChainKey{};
   };
 
   struct DescriptorHeapState {
@@ -134,9 +134,9 @@ public:
   };
 
   struct DebugFeatureState {
-    xefg_swapchain_debug_feature_t FeatureId;
-    uint32_t Enable;
-    void* Argument;
+    xefg_swapchain_debug_feature_t FeatureId{};
+    uint32_t Enable{};
+    void* Argument{};
   };
 
   struct ExternalHeapOnResizeState {

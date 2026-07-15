@@ -33,11 +33,11 @@ public:
 
 private:
   struct FenceInfo {
-    ID3D12Fence* Fence;
-    unsigned FenceKey;
-    UINT64 Value;
-    HANDLE Event;
-    bool Signaled;
+    ID3D12Fence* Fence{};
+    unsigned FenceKey{};
+    UINT64 Value{};
+    HANDLE Event{};
+    bool Signaled{};
   };
   std::unordered_map<HANDLE, std::unordered_map<unsigned, FenceInfo>> m_FencesByHandle;
   std::unordered_set<unsigned> m_Fences;

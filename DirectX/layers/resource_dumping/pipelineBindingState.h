@@ -50,12 +50,12 @@ private:
   D3D12_ROOT_SIGNATURE_DESC2* m_RootSignatureDesc{};
 
   struct Binding {
-    D3D12_ROOT_PARAMETER_TYPE Type;
+    D3D12_ROOT_PARAMETER_TYPE Type{};
     union {
       struct {
         unsigned DescriptorHeapKey;
         unsigned DescriptorHeapIndex;
-      } DescriptorTable;
+      } DescriptorTable{};
       struct {
         unsigned ResourceKey;
         unsigned ResourceOffset;

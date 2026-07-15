@@ -67,7 +67,7 @@ public:
 
 private:
   std::vector<D3D12_GPU_VIRTUAL_ADDRESS> m_CaptureGpuAddresses;
-  std::array<uint8_t, D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES> m_CaptureShaderIdentifier;
+  std::array<uint8_t, D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES> m_CaptureShaderIdentifier{};
   D3D12_GPU_DESCRIPTOR_HANDLE m_CaptureGpuDescriptorHandle{};
 };
 

@@ -39,21 +39,21 @@ public:
 
 private:
   struct HeapInfo {
-    unsigned Key;
-    D3D12_GPU_VIRTUAL_ADDRESS Start;
-    D3D12_GPU_VIRTUAL_ADDRESS End;
+    unsigned Key{};
+    D3D12_GPU_VIRTUAL_ADDRESS Start{};
+    D3D12_GPU_VIRTUAL_ADDRESS End{};
   };
   struct ResourceInfo {
-    unsigned Key;
-    D3D12_GPU_VIRTUAL_ADDRESS Start;
-    D3D12_GPU_VIRTUAL_ADDRESS End;
+    unsigned Key{};
+    D3D12_GPU_VIRTUAL_ADDRESS Start{};
+    D3D12_GPU_VIRTUAL_ADDRESS End{};
     virtual ~ResourceInfo() = default;
   };
   struct PlacedResourceInfo : public ResourceInfo {
-    HeapInfo* HeapInfo;
-    unsigned HeapKey;
-    unsigned Layer;
-    bool RaytracingAS;
+    HeapInfo* HeapInfo{};
+    unsigned HeapKey{};
+    unsigned Layer{};
+    bool RaytracingAS{};
     std::unordered_set<PlacedResourceInfo*> Intersecting;
   };
   struct HeapInfoLayered : public HeapInfo {

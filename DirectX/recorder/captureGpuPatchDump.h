@@ -42,10 +42,10 @@ protected:
   struct ExecuteIndirectDumpInfo : public DumpInfo {
     D3D12_COMMAND_SIGNATURE_DESC* CommandSignature{};
     DumpInfo CountDumpInfo;
-    unsigned CallKey;
+    unsigned CallKey{};
   };
   struct InstancesArrayOfPointersDumpInfo : public DumpInfo {
-    unsigned CallKey;
+    unsigned CallKey{};
   };
 
   void DumpStagedResource(DumpInfo& dumpInfo) override;

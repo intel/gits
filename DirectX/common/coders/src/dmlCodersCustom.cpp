@@ -52,13 +52,15 @@ unsigned GetSizeT(const char* src, unsigned count) {
 template <>
 void EncodeT(const char* src, unsigned count, char* dst, unsigned& offset) {
   GITS_ASSERT(count == 1);
-  EncodeT<std::byte>((std::byte*)src, strnlen_s(src, DML_MAX_NAME_LENGTH) + 1, dst, offset);
+  EncodeT<std::byte>(reinterpret_cast<const std::byte*>(src),
+                     strnlen_s(src, DML_MAX_NAME_LENGTH) + 1, dst, offset);
 }
 
 template <>
 void DecodeT(const char* dst, unsigned count, char* src, unsigned& offset) {
   GITS_ASSERT(count == 1);
-  DecodeT<std::byte>((std::byte*)dst, strnlen_s(dst, DML_MAX_NAME_LENGTH) + 1, src, offset);
+  DecodeT<std::byte>(reinterpret_cast<const std::byte*>(dst),
+                     strnlen_s(dst, DML_MAX_NAME_LENGTH) + 1, src, offset);
 }
 
 } // namespace dml

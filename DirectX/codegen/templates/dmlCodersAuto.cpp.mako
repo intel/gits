@@ -79,7 +79,7 @@ void Encode(const ${struct.name}* src, unsigned count, char* dst, unsigned& offs
     currentDstDesc->Type = currentSrcDesc->Type;
     currentDstDesc->Desc = nullptr;
     if (currentSrcDesc->Desc) {
-      currentDstDesc->Desc = (const void*)offset;
+      currentDstDesc->Desc = reinterpret_cast<const void*>(static_cast<uintptr_t>(offset));
     }
 
     switch (currentSrcDesc->Type) {
@@ -154,7 +154,7 @@ void Encode(const ${struct.name}* src, unsigned count, char* dst, unsigned& offs
 
   auto* srcDesc = src;
   auto* dstDesc = reinterpret_cast<${struct.name}*>(&dst[offset]);
-  writeData((char*)src, sizeof(${struct.name}) * count, dst, offset);
+  writeData(reinterpret_cast<const char*>(src), sizeof(${struct.name}) * count, dst, offset);
 
   for (unsigned i = 0; i < count; ++i) {
     auto* currentSrcDesc = &srcDesc[i];
@@ -165,7 +165,7 @@ void Encode(const ${struct.name}* src, unsigned count, char* dst, unsigned& offs
 <% continue %>
 %endif
     if (currentSrcDesc->${field.name}) {
-      currentDstDesc->${field.name} = (const ${field.type}*) offset;
+      currentDstDesc->${field.name} = reinterpret_cast<const ${field.type}*>(static_cast<uintptr_t>(offset));
       Encode(currentSrcDesc->${field.name}, ${get_field_count(field, 'currentSrcDesc->')}, dst, offset);
     }
 %endfor

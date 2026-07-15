@@ -40,7 +40,7 @@ public:
 
 private:
   struct DescriptorHeapInfo {
-    unsigned InterfaceKey;
+    unsigned InterfaceKey{};
     size_t Start{};
     size_t End{};
   };

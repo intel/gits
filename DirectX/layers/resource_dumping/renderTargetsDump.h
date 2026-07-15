@@ -37,7 +37,7 @@ public:
 
 protected:
   struct RenderTargetDumpInfo : public DumpInfo {
-    unsigned CommandListDrawCount;
+    unsigned CommandListDrawCount{};
     std::wstring ExecutionCount;
   };
 

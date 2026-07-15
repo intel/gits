@@ -44,11 +44,11 @@ private:
     MappedInfo(const MappedInfo&) = delete;
     MappedInfo& operator=(const MappedInfo&) = delete;
 
-    unsigned ResourceKey;
-    char* MappedAddress;
-    char* ShadowAddress;
-    size_t Size;
-    int MapCount;
+    unsigned ResourceKey{};
+    char* MappedAddress{};
+    char* ShadowAddress{};
+    size_t Size{};
+    int MapCount{};
     std::vector<void*> WatchedPages;
   };
   std::unordered_map<unsigned, std::map<unsigned, std::unique_ptr<MappedInfo>>> m_MappedData;

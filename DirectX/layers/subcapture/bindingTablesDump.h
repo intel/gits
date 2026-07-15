@@ -23,7 +23,7 @@ class AnalyzerRaytracingService;
 class BindingTablesDump : public ResourceDump {
 public:
   struct StateObjectInfo {
-    unsigned GlobalRootSignature;
+    unsigned GlobalRootSignature{};
     std::unordered_map<std::wstring, unsigned> ExportToRootSignature;
   };
   struct DescriptorHeaps {

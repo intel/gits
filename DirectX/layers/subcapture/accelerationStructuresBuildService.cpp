@@ -392,11 +392,9 @@ void AccelerationStructuresBuildService::NvapiBuildAccelerationStructureEx(
   {
     unsigned inputIndex = 0;
     if (inputs.type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL && inputs.numDescs) {
-      if (inputs.numDescs) {
-        unsigned size = inputs.numDescs * sizeof(D3D12_RAYTRACING_INSTANCE_DESC);
-        m_InputBuffersService.StoreBufferRegion(c.m_pParams.InputKeys[inputIndex],
-                                                c.m_pParams.InputOffsets[inputIndex], size);
-      }
+      unsigned size = inputs.numDescs * sizeof(D3D12_RAYTRACING_INSTANCE_DESC);
+      m_InputBuffersService.StoreBufferRegion(c.m_pParams.InputKeys[inputIndex],
+                                              c.m_pParams.InputOffsets[inputIndex], size);
     } else {
       for (unsigned i = 0; i < inputs.numDescs; ++i) {
         const NVAPI_D3D12_RAYTRACING_GEOMETRY_DESC_EX& desc =

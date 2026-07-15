@@ -69,8 +69,8 @@ private:
   DescriptorHeap<RtvDsvDescriptorSize> m_DsvDescriptorHeap;
 
   struct DescriptorHandle {
-    D3D12_DESCRIPTOR_HEAP_TYPE Type;
-    unsigned Index;
+    D3D12_DESCRIPTOR_HEAP_TYPE Type{};
+    unsigned Index{};
   };
   std::unordered_map<unsigned, std::vector<DescriptorHandle>> m_DescriptorsByCommandList;
 };

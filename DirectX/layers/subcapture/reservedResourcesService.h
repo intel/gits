@@ -45,7 +45,7 @@ public:
   struct TileRegion {
     D3D12_TILED_RESOURCE_COORDINATE Coord;
     D3D12_TILE_REGION_SIZE Size;
-    bool Packed;
+    bool Packed{};
   };
   using TileRegionsBySubresource = std::unordered_map<unsigned, std::vector<TileRegion>>;
 
