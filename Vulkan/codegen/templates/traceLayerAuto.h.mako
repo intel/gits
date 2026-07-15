@@ -57,6 +57,12 @@ public:
   void Pre(MappedDataMetaCommand& command) override;
   void Post(MappedDataMetaCommand& command) override;
 
+  void Pre(RestoreContentManifestCommand& command) override;
+  void Post(RestoreContentManifestCommand& command) override;
+
+  void Pre(RestoreContentDataCommand& command) override;
+  void Post(RestoreContentDataCommand& command) override;
+
 protected:
   CommandPrinterState statePre_;
   CommandPrinterState statePost_;

@@ -130,5 +130,55 @@ void TraceLayer::Post(MappedDataMetaCommand& command) {
   }
 }
 
+void TraceLayer::Pre(RestoreContentManifestCommand& command) {
+  if (printPre_) {
+    CommandPrinter p(streamPre_, statePre_, command, "RestoreContentManifestCommand");
+    uint64_t bufferCount = command.m_Buffers.size();
+    uint64_t imageCount = command.m_Images.size();
+    p.addArgument(command.m_DeviceKey);
+    p.addArgument(command.m_PhysDevKey);
+    p.addArgument(command.m_QueueKey);
+    p.addArgument(command.m_CommandPoolKey);
+    p.addArgument(command.m_TotalBytes);
+    p.addArgument(bufferCount);
+    p.addArgument(imageCount);
+    p.print(flush_);
+  }
+}
+
+void TraceLayer::Post(RestoreContentManifestCommand& command) {
+  if (printPost_) {
+    CommandPrinter p(streamPost_, statePost_, command, "RestoreContentManifestCommand");
+    uint64_t bufferCount = command.m_Buffers.size();
+    uint64_t imageCount = command.m_Images.size();
+    p.addArgument(command.m_DeviceKey);
+    p.addArgument(command.m_PhysDevKey);
+    p.addArgument(command.m_QueueKey);
+    p.addArgument(command.m_CommandPoolKey);
+    p.addArgument(command.m_TotalBytes);
+    p.addArgument(bufferCount);
+    p.addArgument(imageCount);
+    p.print(flush_);
+  }
+}
+
+void TraceLayer::Pre(RestoreContentDataCommand& command) {
+  if (printPre_) {
+    CommandPrinter p(streamPre_, statePre_, command, "RestoreContentDataCommand");
+    p.addArgument(command.m_DeviceKey);
+    p.addArgument(command.m_Regions);
+    p.print(flush_);
+  }
+}
+
+void TraceLayer::Post(RestoreContentDataCommand& command) {
+  if (printPost_) {
+    CommandPrinter p(streamPost_, statePost_, command, "RestoreContentDataCommand");
+    p.addArgument(command.m_DeviceKey);
+    p.addArgument(command.m_Regions);
+    p.print(flush_);
+  }
+}
+
 } // namespace vulkan
 } // namespace gits
