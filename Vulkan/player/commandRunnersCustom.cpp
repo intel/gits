@@ -130,5 +130,37 @@ void MappedDataMetaRunner::Run() {
   }
 }
 
+void RestoreContentManifestRunner::Run() {
+  auto& manager = PlayerManager::Get();
+
+  for (Layer* layer : manager.GetPreLayers()) {
+    layer->Pre(m_Command);
+  }
+
+  if (manager.ExecuteCommands() && !m_Command.m_Skip) {
+    manager.GetRestoreContentService().Manifest(m_Command);
+  }
+
+  for (Layer* layer : manager.GetPostLayers()) {
+    layer->Post(m_Command);
+  }
+}
+
+void RestoreContentDataRunner::Run() {
+  auto& manager = PlayerManager::Get();
+
+  for (Layer* layer : manager.GetPreLayers()) {
+    layer->Pre(m_Command);
+  }
+
+  if (manager.ExecuteCommands() && !m_Command.m_Skip) {
+    manager.GetRestoreContentService().OnData(m_Command);
+  }
+
+  for (Layer* layer : manager.GetPostLayers()) {
+    layer->Post(m_Command);
+  }
+}
+
 } // namespace vulkan
 } // namespace gits

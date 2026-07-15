@@ -29,5 +29,13 @@ uint32_t GetSize(const MappedDataMetaCommand& command);
 void Encode(const MappedDataMetaCommand& command, char* dest);
 void Decode(char* src, MappedDataMetaCommand& command);
 
+uint32_t GetSize(const RestoreContentManifestCommand& command);
+void Encode(const RestoreContentManifestCommand& command, char* dest);
+void Decode(char* src, RestoreContentManifestCommand& command);
+
+uint32_t GetSize(const RestoreContentDataCommand& command);
+void Encode(const RestoreContentDataCommand& command, char* dest);
+void Decode(char* src, RestoreContentDataCommand& command);
+
 } // namespace vulkan
 } // namespace gits

@@ -47,6 +47,12 @@ public:
   virtual void Pre(UpdateWindowMetaCommand& command) {}
   virtual void Post(UpdateWindowMetaCommand& command) {}
 
+  virtual void Pre(RestoreContentManifestCommand& command) {}
+  virtual void Post(RestoreContentManifestCommand& command) {}
+
+  virtual void Pre(RestoreContentDataCommand& command) {}
+  virtual void Post(RestoreContentDataCommand& command) {}
+
   %for command in commands:
   <% define = get_define(command.platform) %>\
   % if define:

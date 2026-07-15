@@ -40,6 +40,12 @@ public:
                   VkDeviceSize size,
                   std::vector<uint8_t>& outData) override;
 
+  VkDeviceSize GetImageStagingLayout(VkFormat format,
+                                     const VkExtent3D& extent,
+                                     uint32_t mipLevels,
+                                     uint32_t arrayLayers,
+                                     std::vector<VkBufferImageCopy>& outRegions) override;
+
   bool ReadImage(uint64_t deviceKey,
                  uint64_t physDevKey,
                  uint64_t queueKey,

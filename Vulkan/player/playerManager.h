@@ -16,6 +16,7 @@
 #include "layerAuto.h"
 #include "mapTrackingService.h"
 #include "playerLayerManager.h"
+#include "restoreContentService.h"
 #include "windowService.h"
 
 #include <memory>
@@ -93,6 +94,10 @@ public:
     return m_FencePendingSignalService;
   }
 
+  RestoreContentService& GetRestoreContentService() {
+    return m_RestoreContentService;
+  }
+
 private:
   PlayerManager();
 
@@ -114,6 +119,7 @@ private:
   DescriptorUpdateTemplateService m_DescriptorUpdateTemplateService;
   SwapchainImageSyncService m_SwapchainImageSyncService;
   FencePendingSignalService m_FencePendingSignalService;
+  RestoreContentService m_RestoreContentService{*this};
 };
 
 } // namespace vulkan

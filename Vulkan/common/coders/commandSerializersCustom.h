@@ -91,5 +91,31 @@ public:
   }
 };
 
+class RestoreContentManifestSerializer : public stream::CommandSerializer {
+public:
+  RestoreContentManifestSerializer(RestoreContentManifestCommand& command) {
+    m_DataSize = GetSize(command);
+    m_Data.reset(new char[m_DataSize]);
+    Encode(command, m_Data.get());
+  }
+
+  uint32_t Id() const override {
+    return static_cast<uint32_t>(CommandId::ID_META_RESTORE_CONTENT_MANIFEST);
+  }
+};
+
+class RestoreContentDataSerializer : public stream::CommandSerializer {
+public:
+  RestoreContentDataSerializer(RestoreContentDataCommand& command) {
+    m_DataSize = GetSize(command);
+    m_Data.reset(new char[m_DataSize]);
+    Encode(command, m_Data.get());
+  }
+
+  uint32_t Id() const override {
+    return static_cast<uint32_t>(CommandId::ID_META_RESTORE_CONTENT_DATA);
+  }
+};
+
 } // namespace vulkan
 } // namespace gits

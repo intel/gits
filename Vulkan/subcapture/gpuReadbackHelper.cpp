@@ -755,5 +755,16 @@ bool GpuReadbackHelper::ReadImage(uint64_t deviceKey,
   return ok;
 }
 
+VkDeviceSize GpuReadbackHelper::GetImageStagingLayout(VkFormat format,
+                                                      const VkExtent3D& extent,
+                                                      uint32_t mipLevels,
+                                                      uint32_t arrayLayers,
+                                                      std::vector<VkBufferImageCopy>& outRegions) {
+  if (extent.width == 0 || extent.height == 0 || extent.depth == 0) {
+    return 0;
+  }
+  return ComputeImageStagingLayout(format, extent, mipLevels, arrayLayers, outRegions);
+}
+
 } // namespace vulkan
 } // namespace gits

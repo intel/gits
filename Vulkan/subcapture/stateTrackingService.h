@@ -70,6 +70,18 @@ public:
                           VkDeviceSize size,
                           std::vector<uint8_t>& outData) = 0;
 
+  // Compute the tightly-packed staging layout for an image (one
+  // VkBufferImageCopy per subresource, bufferOffset relative to the image's
+  // data start) and return the total byte size, WITHOUT reading pixel data.
+  // The recorder uses this to build the content-restore manifest up front so
+  // it can stream per-image bytes afterwards while keeping peak host memory
+  // bounded to a single image.  Returns 0 when the image cannot be laid out.
+  virtual VkDeviceSize GetImageStagingLayout(VkFormat format,
+                                             const VkExtent3D& extent,
+                                             uint32_t mipLevels,
+                                             uint32_t arrayLayers,
+                                             std::vector<VkBufferImageCopy>& outRegions) = 0;
+
   // Reads the contents of a GPU-local VkImage into outData.
   // outRegions is populated with one VkBufferImageCopy per subresource
   // (layer, mip, aspect), matching outData's layout.

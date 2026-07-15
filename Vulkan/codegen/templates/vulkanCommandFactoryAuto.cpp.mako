@@ -31,6 +31,10 @@ stream::CommandRunner* VulkanCommandFactory::CreateCommand(unsigned id) {
     return new UpdateWindowMetaRunner();
   case CommandId::ID_META_MAPPED_DATA:
     return new MappedDataMetaRunner();
+  case CommandId::ID_META_RESTORE_CONTENT_MANIFEST:
+    return new RestoreContentManifestRunner();
+  case CommandId::ID_META_RESTORE_CONTENT_DATA:
+    return new RestoreContentDataRunner();
   % for command in commands:
   <% define = get_define(command.platform) %>\
   % if define:

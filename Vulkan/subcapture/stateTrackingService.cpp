@@ -2338,426 +2338,16 @@ void StateTrackingService::RestoreMappedMemory(ObjectState* state) {
 // RestoreBufferContents / RestoreImageContents
 // ---------------------------------------------------------------------------
 
-// Synthetic GITSKeys for temporary staging resources created in the stream.
-// Must not collide with real keys (which are sequential starting from 1).
-// kTempCBKey = UINT64_MAX-1 is used by EmitImageLayoutTransitions.
-static constexpr uint64_t kStagingBufKey = static_cast<uint64_t>(-3);
-static constexpr uint64_t kStagingMemKey = static_cast<uint64_t>(-4);
-static constexpr uint64_t kContentCBKey = static_cast<uint64_t>(-5);
-
 // ---------------------------------------------------------------------------
-// Emit stream commands that create a staging buffer, upload data, copy it to
-// the destination resource, and then tear the staging buffer down.
-// The content CB (kContentCBKey) is allocated from commandPoolKey.
-//
-// For buffers: the stream emits  vkCmdCopyBuffer (staging → dstBufKey).
-// For images:  the stream emits  vkCmdCopyBufferToImage (staging → dstImageKey)
-//              followed by a pipeline barrier to the correct finalLayout.
-// ---------------------------------------------------------------------------
-
-static void EmitStagingUploadAndCopyBuffer(SubcaptureRecorder& recorder,
-                                           uint64_t deviceKey,
-                                           uint64_t queueKey,
-                                           uint64_t commandPoolKey,
-                                           uint64_t dstBufKey,
-                                           VkDeviceSize bufSize,
-                                           VkDeviceSize stagingAllocationSize,
-                                           uint32_t stagingMemTypeIndex,
-                                           const std::vector<uint8_t>& data) {
-
-  // --- Create staging buffer ---
-  // bci.size is the buffer's logical length (used for vkCmdCopyBuffer); the
-  // *memory* we allocate must be >= the requirements-reported size
-  // (alignment-rounded), passed in as stagingAllocationSize.  Without the
-  // separation we hit VUID-vkBindBufferMemory-None-10741 ("allocationSize ...
-  // must be at least as large as VkMemoryRequirements::size").
-  VkBufferCreateInfo bci{};
-  bci.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-  bci.size = bufSize;
-  bci.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-  bci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-  vkCreateBufferCommand createBufCmd;
-  createBufCmd.m_device.Key = deviceKey;
-  createBufCmd.m_pCreateInfo.Value = &bci;
-  createBufCmd.m_pBuffer.Key = kStagingBufKey;
-  createBufCmd.m_Return.Value = VK_SUCCESS;
-  recorder.Record(vkCreateBufferSerializer(createBufCmd));
-
-  VkMemoryAllocateInfo mai{};
-  mai.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-  mai.allocationSize = stagingAllocationSize;
-  mai.memoryTypeIndex = stagingMemTypeIndex;
-
-  vkAllocateMemoryCommand allocMemCmd;
-  allocMemCmd.m_device.Key = deviceKey;
-  allocMemCmd.m_pAllocateInfo.Value = &mai;
-  allocMemCmd.m_pMemory.Key = kStagingMemKey;
-  allocMemCmd.m_Return.Value = VK_SUCCESS;
-  recorder.Record(vkAllocateMemorySerializer(allocMemCmd));
-
-  vkBindBufferMemoryCommand bindCmd;
-  bindCmd.m_device.Key = deviceKey;
-  bindCmd.m_buffer.Key = kStagingBufKey;
-  bindCmd.m_memory.Key = kStagingMemKey;
-  bindCmd.m_memoryOffset.Value = 0;
-  bindCmd.m_Return.Value = VK_SUCCESS;
-  recorder.Record(vkBindBufferMemorySerializer(bindCmd));
-
-  // --- Upload data into staging via map + MappedDataMetaCommand ---
-  vkMapMemoryCommand mapCmd;
-  mapCmd.m_device.Key = deviceKey;
-  mapCmd.m_memory.Key = kStagingMemKey;
-  mapCmd.m_offset.Value = 0;
-  mapCmd.m_size.Value = VK_WHOLE_SIZE;
-  mapCmd.m_flags.Value = 0;
-  mapCmd.m_Return.Value = VK_SUCCESS;
-  recorder.Record(vkMapMemorySerializer(mapCmd));
-
-  MappedDataMetaCommand mdc;
-  mdc.m_Device.Key = deviceKey;
-  mdc.m_Memory.Key = kStagingMemKey;
-  MemoryRegions::Region region;
-  region.Offset = 0;
-  region.Size = bufSize;
-  region.Data = const_cast<char*>(reinterpret_cast<const char*>(data.data()));
-  mdc.m_Regions.Regions.push_back(region);
-  mdc.m_Regions.Size = 1;
-  recorder.Record(MappedDataMetaSerializer(mdc));
-
-  vkUnmapMemoryCommand unmapCmd;
-  unmapCmd.m_device.Key = deviceKey;
-  unmapCmd.m_memory.Key = kStagingMemKey;
-  recorder.Record(vkUnmapMemorySerializer(unmapCmd));
-
-  // --- Allocate one-shot CB and issue copy ---
-  VkCommandBufferAllocateInfo cbai{};
-  cbai.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-  cbai.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-  cbai.commandBufferCount = 1;
-  cbai.commandPool = reinterpret_cast<VkCommandPool>(0x1ULL); // sentinel
-
-  static VkCommandBuffer kDummyCB = VK_NULL_HANDLE;
-  vkAllocateCommandBuffersCommand allocCBCmd;
-  allocCBCmd.m_device.Key = deviceKey;
-  allocCBCmd.m_pAllocateInfo.Value = &cbai;
-  allocCBCmd.m_pAllocateInfo.HandleKeys = {commandPoolKey};
-  allocCBCmd.m_pCommandBuffers.Value = &kDummyCB;
-  allocCBCmd.m_pCommandBuffers.Size = 1;
-  allocCBCmd.m_pCommandBuffers.Keys = {kContentCBKey};
-  allocCBCmd.m_Return.Value = VK_SUCCESS;
-  recorder.Record(vkAllocateCommandBuffersSerializer(allocCBCmd));
-
-  VkCommandBufferBeginInfo cbbi{};
-  cbbi.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-  cbbi.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-  vkBeginCommandBufferCommand beginCBCmd;
-  beginCBCmd.m_commandBuffer.Key = kContentCBKey;
-  beginCBCmd.m_pBeginInfo.Value = &cbbi;
-  beginCBCmd.m_Return.Value = VK_SUCCESS;
-  recorder.Record(vkBeginCommandBufferSerializer(beginCBCmd));
-
-  // Barrier: staging TRANSFER_SRC → dstBuf TRANSFER_DST
-  VkBufferMemoryBarrier barriers[2]{};
-  barriers[0].sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-  barriers[0].srcAccessMask = 0;
-  barriers[0].dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-  barriers[0].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-  barriers[0].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-  barriers[0].buffer = reinterpret_cast<VkBuffer>(0x1ULL); // sentinel
-  barriers[0].size = VK_WHOLE_SIZE;
-  barriers[1] = barriers[0];
-  barriers[1].dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-  barriers[1].buffer = reinterpret_cast<VkBuffer>(0x2ULL); // sentinel
-
-  vkCmdPipelineBarrierCommand preBarrierCmd;
-  preBarrierCmd.m_commandBuffer.Key = kContentCBKey;
-  preBarrierCmd.m_srcStageMask.Value = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-  preBarrierCmd.m_dstStageMask.Value = VK_PIPELINE_STAGE_TRANSFER_BIT;
-  preBarrierCmd.m_dependencyFlags.Value = 0;
-  preBarrierCmd.m_memoryBarrierCount.Value = 0;
-  preBarrierCmd.m_bufferMemoryBarrierCount.Value = 2;
-  preBarrierCmd.m_pBufferMemoryBarriers.Value = barriers;
-  preBarrierCmd.m_pBufferMemoryBarriers.Size = 2;
-  preBarrierCmd.m_pBufferMemoryBarriers.HandleKeys = {dstBufKey, kStagingBufKey};
-  preBarrierCmd.m_imageMemoryBarrierCount.Value = 0;
-  recorder.Record(vkCmdPipelineBarrierSerializer(preBarrierCmd));
-
-  VkBufferCopy copyRegion{0, 0, bufSize};
-
-  vkCmdCopyBufferCommand copyCmd;
-  copyCmd.m_commandBuffer.Key = kContentCBKey;
-  copyCmd.m_srcBuffer.Key = kStagingBufKey;
-  copyCmd.m_dstBuffer.Key = dstBufKey;
-  copyCmd.m_regionCount.Value = 1;
-  copyCmd.m_pRegions.Value = &copyRegion;
-  copyCmd.m_pRegions.Size = 1;
-  recorder.Record(vkCmdCopyBufferSerializer(copyCmd));
-
-  // Post-barrier: TRANSFER_DST → MEMORY_READ|WRITE (generic)
-  barriers[0].srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-  barriers[0].dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
-  preBarrierCmd.m_srcStageMask.Value = VK_PIPELINE_STAGE_TRANSFER_BIT;
-  preBarrierCmd.m_dstStageMask.Value = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
-  preBarrierCmd.m_bufferMemoryBarrierCount.Value = 1;
-  preBarrierCmd.m_pBufferMemoryBarriers.Size = 1;
-  preBarrierCmd.m_pBufferMemoryBarriers.HandleKeys = {dstBufKey};
-  recorder.Record(vkCmdPipelineBarrierSerializer(preBarrierCmd));
-
-  vkEndCommandBufferCommand endCBCmd;
-  endCBCmd.m_commandBuffer.Key = kContentCBKey;
-  endCBCmd.m_Return.Value = VK_SUCCESS;
-  recorder.Record(vkEndCommandBufferSerializer(endCBCmd));
-
-  static VkCommandBuffer kDummyCBSlot = VK_NULL_HANDLE;
-  kDummyCBSlot = reinterpret_cast<VkCommandBuffer>(kContentCBKey);
-  VkSubmitInfo si{
-      VK_STRUCTURE_TYPE_SUBMIT_INFO, nullptr, 0, nullptr, nullptr, 1, &kDummyCBSlot, 0, nullptr};
-  vkQueueSubmitCommand submitCmd;
-  submitCmd.m_queue.Key = queueKey;
-  submitCmd.m_fence.Key = 0;
-  submitCmd.m_Return.Value = VK_SUCCESS;
-  submitCmd.m_submitCount.Value = 1;
-  submitCmd.m_pSubmits.Value = &si;
-  submitCmd.m_pSubmits.Size = 1;
-  submitCmd.m_pSubmits.HandleKeys = {kContentCBKey};
-  recorder.Record(vkQueueSubmitSerializer(submitCmd));
-
-  vkQueueWaitIdleCommand waitCmd;
-  waitCmd.m_queue.Key = queueKey;
-  waitCmd.m_Return.Value = VK_SUCCESS;
-  recorder.Record(vkQueueWaitIdleSerializer(waitCmd));
-
-  static VkCommandBuffer kDummyCBFree = VK_NULL_HANDLE;
-  vkFreeCommandBuffersCommand freeCBCmd;
-  freeCBCmd.m_device.Key = deviceKey;
-  freeCBCmd.m_commandPool.Key = commandPoolKey;
-  freeCBCmd.m_commandBufferCount.Value = 1;
-  freeCBCmd.m_pCommandBuffers.Value = &kDummyCBFree;
-  freeCBCmd.m_pCommandBuffers.Size = 1;
-  freeCBCmd.m_pCommandBuffers.Keys = {kContentCBKey};
-  recorder.Record(vkFreeCommandBuffersSerializer(freeCBCmd));
-
-  vkDestroyBufferCommand destroyBufCmd;
-  destroyBufCmd.m_device.Key = deviceKey;
-  destroyBufCmd.m_buffer.Key = kStagingBufKey;
-  recorder.Record(vkDestroyBufferSerializer(destroyBufCmd));
-
-  vkFreeMemoryCommand freeMemCmd;
-  freeMemCmd.m_device.Key = deviceKey;
-  freeMemCmd.m_memory.Key = kStagingMemKey;
-  recorder.Record(vkFreeMemorySerializer(freeMemCmd));
-}
-
-static void EmitStagingUploadAndCopyImage(SubcaptureRecorder& recorder,
-                                          uint64_t deviceKey,
-                                          uint64_t queueKey,
-                                          uint64_t commandPoolKey,
-                                          uint64_t dstImageKey,
-                                          VkFormat format,
-                                          const VkExtent3D& /*extent*/,
-                                          VkImageLayout finalLayout,
-                                          VkImageAspectFlags aspectMask,
-                                          VkDeviceSize stagingSize,
-                                          VkDeviceSize stagingAllocationSize,
-                                          uint32_t stagingMemTypeIndex,
-                                          const std::vector<uint8_t>& data,
-                                          const std::vector<VkBufferImageCopy>& regions) {
-
-  // Create staging buffer - see EmitStagingUploadAndCopyBuffer for the
-  // rationale behind the bci.size vs mai.allocationSize split.
-  VkBufferCreateInfo bci{};
-  bci.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-  bci.size = stagingSize;
-  bci.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-  bci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-  vkCreateBufferCommand createBufCmd;
-  createBufCmd.m_device.Key = deviceKey;
-  createBufCmd.m_pCreateInfo.Value = &bci;
-  createBufCmd.m_pBuffer.Key = kStagingBufKey;
-  createBufCmd.m_Return.Value = VK_SUCCESS;
-  recorder.Record(vkCreateBufferSerializer(createBufCmd));
-
-  VkMemoryAllocateInfo mai{};
-  mai.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-  mai.allocationSize = stagingAllocationSize;
-  mai.memoryTypeIndex = stagingMemTypeIndex;
-
-  vkAllocateMemoryCommand allocMemCmd;
-  allocMemCmd.m_device.Key = deviceKey;
-  allocMemCmd.m_pAllocateInfo.Value = &mai;
-  allocMemCmd.m_pMemory.Key = kStagingMemKey;
-  allocMemCmd.m_Return.Value = VK_SUCCESS;
-  recorder.Record(vkAllocateMemorySerializer(allocMemCmd));
-
-  vkBindBufferMemoryCommand bindCmd;
-  bindCmd.m_device.Key = deviceKey;
-  bindCmd.m_buffer.Key = kStagingBufKey;
-  bindCmd.m_memory.Key = kStagingMemKey;
-  bindCmd.m_memoryOffset.Value = 0;
-  bindCmd.m_Return.Value = VK_SUCCESS;
-  recorder.Record(vkBindBufferMemorySerializer(bindCmd));
-
-  // Upload data
-  vkMapMemoryCommand mapCmd;
-  mapCmd.m_device.Key = deviceKey;
-  mapCmd.m_memory.Key = kStagingMemKey;
-  mapCmd.m_offset.Value = 0;
-  mapCmd.m_size.Value = VK_WHOLE_SIZE;
-  mapCmd.m_flags.Value = 0;
-  mapCmd.m_Return.Value = VK_SUCCESS;
-  recorder.Record(vkMapMemorySerializer(mapCmd));
-
-  MappedDataMetaCommand mdc;
-  mdc.m_Device.Key = deviceKey;
-  mdc.m_Memory.Key = kStagingMemKey;
-  MemoryRegions::Region region;
-  region.Offset = 0;
-  region.Size = stagingSize;
-  region.Data = const_cast<char*>(reinterpret_cast<const char*>(data.data()));
-  mdc.m_Regions.Regions.push_back(region);
-  mdc.m_Regions.Size = 1;
-  recorder.Record(MappedDataMetaSerializer(mdc));
-
-  vkUnmapMemoryCommand unmapCmd;
-  unmapCmd.m_device.Key = deviceKey;
-  unmapCmd.m_memory.Key = kStagingMemKey;
-  recorder.Record(vkUnmapMemorySerializer(unmapCmd));
-
-  // Allocate content CB
-  VkCommandBufferAllocateInfo cbai{};
-  cbai.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-  cbai.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-  cbai.commandBufferCount = 1;
-  cbai.commandPool = reinterpret_cast<VkCommandPool>(0x1ULL);
-
-  static VkCommandBuffer kDummyCBImg = VK_NULL_HANDLE;
-  vkAllocateCommandBuffersCommand allocCBCmd;
-  allocCBCmd.m_device.Key = deviceKey;
-  allocCBCmd.m_pAllocateInfo.Value = &cbai;
-  allocCBCmd.m_pAllocateInfo.HandleKeys = {commandPoolKey};
-  allocCBCmd.m_pCommandBuffers.Value = &kDummyCBImg;
-  allocCBCmd.m_pCommandBuffers.Size = 1;
-  allocCBCmd.m_pCommandBuffers.Keys = {kContentCBKey};
-  allocCBCmd.m_Return.Value = VK_SUCCESS;
-  recorder.Record(vkAllocateCommandBuffersSerializer(allocCBCmd));
-
-  VkCommandBufferBeginInfo cbbi{};
-  cbbi.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-  cbbi.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-  vkBeginCommandBufferCommand beginCBCmd;
-  beginCBCmd.m_commandBuffer.Key = kContentCBKey;
-  beginCBCmd.m_pBeginInfo.Value = &cbbi;
-  beginCBCmd.m_Return.Value = VK_SUCCESS;
-  recorder.Record(vkBeginCommandBufferSerializer(beginCBCmd));
-
-  // Barrier: UNDEFINED → TRANSFER_DST_OPTIMAL
-  VkImageMemoryBarrier toDst{};
-  toDst.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-  toDst.srcAccessMask = 0;
-  toDst.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-  toDst.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-  toDst.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-  toDst.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-  toDst.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-  toDst.image = reinterpret_cast<VkImage>(0x1ULL);
-  toDst.subresourceRange = {aspectMask, 0, VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_ARRAY_LAYERS};
-
-  vkCmdPipelineBarrierCommand preBarrierCmd;
-  preBarrierCmd.m_commandBuffer.Key = kContentCBKey;
-  preBarrierCmd.m_srcStageMask.Value = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-  preBarrierCmd.m_dstStageMask.Value = VK_PIPELINE_STAGE_TRANSFER_BIT;
-  preBarrierCmd.m_dependencyFlags.Value = 0;
-  preBarrierCmd.m_memoryBarrierCount.Value = 0;
-  preBarrierCmd.m_bufferMemoryBarrierCount.Value = 0;
-  preBarrierCmd.m_imageMemoryBarrierCount.Value = 1;
-  preBarrierCmd.m_pImageMemoryBarriers.Value = &toDst;
-  preBarrierCmd.m_pImageMemoryBarriers.Size = 1;
-  preBarrierCmd.m_pImageMemoryBarriers.HandleKeys = {dstImageKey};
-  recorder.Record(vkCmdPipelineBarrierSerializer(preBarrierCmd));
-
-  // vkCmdCopyBufferToImage
-  vkCmdCopyBufferToImageCommand copyCmd;
-  copyCmd.m_commandBuffer.Key = kContentCBKey;
-  copyCmd.m_srcBuffer.Key = kStagingBufKey;
-  copyCmd.m_dstImage.Key = dstImageKey;
-  copyCmd.m_dstImageLayout.Value = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-  copyCmd.m_regionCount.Value = static_cast<uint32_t>(regions.size());
-  copyCmd.m_pRegions.Value = const_cast<VkBufferImageCopy*>(regions.data());
-  copyCmd.m_pRegions.Size = static_cast<uint32_t>(regions.size());
-  recorder.Record(vkCmdCopyBufferToImageSerializer(copyCmd));
-
-  // Barrier: TRANSFER_DST_OPTIMAL → finalLayout
-  VkImageMemoryBarrier toFinal{};
-  toFinal.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-  toFinal.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-  toFinal.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
-  toFinal.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-  toFinal.newLayout = finalLayout;
-  toFinal.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-  toFinal.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-  toFinal.image = reinterpret_cast<VkImage>(0x1ULL);
-  toFinal.subresourceRange = {aspectMask, 0, VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_ARRAY_LAYERS};
-
-  vkCmdPipelineBarrierCommand postBarrierCmd;
-  postBarrierCmd.m_commandBuffer.Key = kContentCBKey;
-  postBarrierCmd.m_srcStageMask.Value = VK_PIPELINE_STAGE_TRANSFER_BIT;
-  postBarrierCmd.m_dstStageMask.Value = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
-  postBarrierCmd.m_dependencyFlags.Value = 0;
-  postBarrierCmd.m_memoryBarrierCount.Value = 0;
-  postBarrierCmd.m_bufferMemoryBarrierCount.Value = 0;
-  postBarrierCmd.m_imageMemoryBarrierCount.Value = 1;
-  postBarrierCmd.m_pImageMemoryBarriers.Value = &toFinal;
-  postBarrierCmd.m_pImageMemoryBarriers.Size = 1;
-  postBarrierCmd.m_pImageMemoryBarriers.HandleKeys = {dstImageKey};
-  recorder.Record(vkCmdPipelineBarrierSerializer(postBarrierCmd));
-
-  vkEndCommandBufferCommand endCBCmd;
-  endCBCmd.m_commandBuffer.Key = kContentCBKey;
-  endCBCmd.m_Return.Value = VK_SUCCESS;
-  recorder.Record(vkEndCommandBufferSerializer(endCBCmd));
-
-  static VkCommandBuffer kDummyCBSlotImg = VK_NULL_HANDLE;
-  kDummyCBSlotImg = reinterpret_cast<VkCommandBuffer>(kContentCBKey);
-  VkSubmitInfo si{
-      VK_STRUCTURE_TYPE_SUBMIT_INFO, nullptr, 0, nullptr, nullptr, 1, &kDummyCBSlotImg, 0, nullptr};
-  vkQueueSubmitCommand submitCmd;
-  submitCmd.m_queue.Key = queueKey;
-  submitCmd.m_fence.Key = 0;
-  submitCmd.m_Return.Value = VK_SUCCESS;
-  submitCmd.m_submitCount.Value = 1;
-  submitCmd.m_pSubmits.Value = &si;
-  submitCmd.m_pSubmits.Size = 1;
-  submitCmd.m_pSubmits.HandleKeys = {kContentCBKey};
-  recorder.Record(vkQueueSubmitSerializer(submitCmd));
-
-  vkQueueWaitIdleCommand waitCmd;
-  waitCmd.m_queue.Key = queueKey;
-  waitCmd.m_Return.Value = VK_SUCCESS;
-  recorder.Record(vkQueueWaitIdleSerializer(waitCmd));
-
-  static VkCommandBuffer kDummyCBFreeImg = VK_NULL_HANDLE;
-  vkFreeCommandBuffersCommand freeCBCmd;
-  freeCBCmd.m_device.Key = deviceKey;
-  freeCBCmd.m_commandPool.Key = commandPoolKey;
-  freeCBCmd.m_commandBufferCount.Value = 1;
-  freeCBCmd.m_pCommandBuffers.Value = &kDummyCBFreeImg;
-  freeCBCmd.m_pCommandBuffers.Size = 1;
-  freeCBCmd.m_pCommandBuffers.Keys = {kContentCBKey};
-  recorder.Record(vkFreeCommandBuffersSerializer(freeCBCmd));
-
-  vkDestroyBufferCommand destroyBufCmd;
-  destroyBufCmd.m_device.Key = deviceKey;
-  destroyBufCmd.m_buffer.Key = kStagingBufKey;
-  recorder.Record(vkDestroyBufferSerializer(destroyBufCmd));
-
-  vkFreeMemoryCommand freeMemCmd;
-  freeMemCmd.m_device.Key = deviceKey;
-  freeMemCmd.m_memory.Key = kStagingMemKey;
-  recorder.Record(vkFreeMemorySerializer(freeMemCmd));
-}
-
+// Content restore is streamed to the player as a compact manifest
+// (RestoreContentManifest) plus exactly one RestoreContentData token per
+// manifest entry (a zero-length region when a resource's readback failed).
+// All transient staging objects (buffers, memory, command buffers, fences)
+// live on the player side (RestoreContentService), which sizes them from live
+// device memory and batches the uploads, flushing and tearing down once it has
+// consumed manifest-many data tokens.  Nothing staging-related is written into
+// the stream, and the recorder streams the readback bytes one resource at a
+// time so peak host memory stays bounded to a single resource.
 // ---------------------------------------------------------------------------
 
 void StateTrackingService::RestoreBufferContents() {
@@ -2818,49 +2408,62 @@ void StateTrackingService::RestoreBufferContents() {
       continue;
     }
 
+    // Build the manifest: every candidate buffer, in a dense index order the
+    // data tokens will reference.  The player sizes and batches its own
+    // staging from these sizes at replay time.
+    RestoreContentManifestCommand manifest;
+    manifest.m_DeviceKey = deviceKey;
+    manifest.m_PhysDevKey = physDevKey;
+    manifest.m_QueueKey = queueKey;
+    manifest.m_CommandPoolKey = poolKey;
+
+    std::vector<uint64_t> orderedKeys;
     for (uint64_t bufKey : bufKeys) {
       auto* buf = static_cast<BufferState*>(GetState(bufKey));
       if (!buf) {
         continue;
       }
+      RestoreContentManifestCommand::BufferEntry entry;
+      entry.DstBufferKey = bufKey;
+      entry.Size = buf->BufferSize;
+      manifest.m_Buffers.push_back(entry);
+      manifest.m_TotalBytes += buf->BufferSize;
+      orderedKeys.push_back(bufKey);
+    }
+    if (manifest.m_Buffers.empty()) {
+      continue;
+    }
+    m_Recorder.Record(RestoreContentManifestSerializer(manifest));
 
+    // Stream each buffer's bytes one at a time so peak host RAM stays bounded.
+    // Emit exactly one data token per manifest entry (a zero-length region when
+    // readback fails) so the player knows the stream is complete after
+    // consuming manifest-many tokens, without a separate end token.
+    static char sEmptyByte = 0;
+    for (size_t i = 0; i < orderedKeys.size(); ++i) {
+      const uint64_t bufKey = orderedKeys[i];
       std::vector<uint8_t> data;
-      if (!m_GpuReadbackHelper->ReadBuffer(deviceKey, physDevKey, queueKey, poolKey, bufKey,
-                                           buf->BufferSize, data)) {
-        LOG_WARNING << "Vulkan subcapture: GPU readback failed for buffer key=" << bufKey;
-        continue;
+      auto* buf = static_cast<BufferState*>(GetState(bufKey));
+      if (buf) {
+        if (!m_GpuReadbackHelper->ReadBuffer(deviceKey, physDevKey, queueKey, poolKey, bufKey,
+                                             buf->BufferSize, data)) {
+          LOG_WARNING << "Vulkan subcapture: GPU readback failed for buffer key=" << bufKey;
+          data.clear();
+        }
       }
 
-      // Query the actual memory requirements the second player's driver will
-      // report for a TRANSFER_SRC buffer of this size, so we can pick a memory
-      // type the buffer is allowed to use (req.memoryTypeBits, fixes
-      // VUID-vkBindBufferMemory-memory-01035: previously we passed 0xFFFFFFFF
-      // and could land on a HOST_VISIBLE type with no bit in common with the
-      // buffer's allowed types) and allocate enough memory for it (req.size,
-      // fixes VUID-vkBindBufferMemory-None-10741: previously we used the raw
-      // data length, missing alignment overhead).  Both bugs corrupted the
-      // staging upload and propagated to every restored buffer's contents.
-      VkMemoryRequirements stagingReq{};
-      if (!m_GpuReadbackHelper->QueryStagingBufferRequirements(
-              deviceKey, buf->BufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, stagingReq)) {
-        LOG_WARNING << "Vulkan subcapture: failed to query staging buffer requirements for key="
-                    << bufKey;
-        continue;
-      }
-      uint32_t stagingMemType =
-          m_GpuReadbackHelper->FindStagingMemoryType(physDevKey, stagingReq.memoryTypeBits);
-      if (stagingMemType == UINT32_MAX) {
-        LOG_WARNING << "Vulkan subcapture: no HOST_VISIBLE memory type satisfying buffer "
-                       "memoryTypeBits=0x"
-                    << std::hex << stagingReq.memoryTypeBits << std::dec
-                    << " for buffer key=" << bufKey;
-        continue;
-      }
+      RestoreContentDataCommand dataCmd;
+      dataCmd.m_DeviceKey = deviceKey;
+      MemoryRegions::Region region;
+      region.Offset = static_cast<uint64_t>(i); // resource index, not a byte offset
+      region.Size = static_cast<uint64_t>(data.size());
+      region.Data = data.empty() ? &sEmptyByte : reinterpret_cast<char*>(data.data());
+      dataCmd.m_Regions.Regions.push_back(region);
+      dataCmd.m_Regions.Size = 1;
+      m_Recorder.Record(RestoreContentDataSerializer(dataCmd));
 
-      EmitStagingUploadAndCopyBuffer(m_Recorder, deviceKey, queueKey, poolKey, bufKey,
-                                     buf->BufferSize, stagingReq.size, stagingMemType, data);
-      LOG_TRACE << "Vulkan subcapture: restored buffer content, key=" << bufKey
-                << " size=" << buf->BufferSize << " allocSize=" << stagingReq.size;
+      LOG_TRACE << "Vulkan subcapture: streamed buffer content, key=" << bufKey
+                << " size=" << data.size();
     }
   }
 }
@@ -2935,62 +2538,76 @@ void StateTrackingService::RestoreImageContents() {
       continue;
     }
 
+    // Build the manifest first (layout + size per image, no pixel data) so the
+    // player knows the full footprint before any bytes stream in.  The layout
+    // is computed the same way ReadImage lays out its readback, so the region
+    // offsets match the bytes streamed below.
+    RestoreContentManifestCommand manifest;
+    manifest.m_DeviceKey = deviceKey;
+    manifest.m_PhysDevKey = physDevKey;
+    manifest.m_QueueKey = queueKey;
+    manifest.m_CommandPoolKey = poolKey;
+
+    std::vector<uint64_t> orderedKeys;
     for (uint64_t imgKey : imgKeys) {
       auto* img = static_cast<ImageState*>(GetState(imgKey));
       if (!img) {
         continue;
       }
+      RestoreContentManifestCommand::ImageEntry entry;
+      entry.Size = m_GpuReadbackHelper->GetImageStagingLayout(
+          img->Format, img->Extent, img->MipLevels, img->ArrayLayers, entry.Regions);
+      if (entry.Size == 0 || entry.Regions.empty()) {
+        continue;
+      }
+      entry.DstImageKey = imgKey;
+      entry.Format = static_cast<uint32_t>(img->Format);
+      entry.FinalLayout = static_cast<uint32_t>(img->CurrentLayout);
+      entry.AspectMask = static_cast<uint32_t>(AspectMaskFromFormat(img->Format));
+      manifest.m_Images.push_back(std::move(entry));
+      manifest.m_TotalBytes += manifest.m_Images.back().Size;
+      orderedKeys.push_back(imgKey);
+    }
+    if (manifest.m_Images.empty()) {
+      continue;
+    }
+    m_Recorder.Record(RestoreContentManifestSerializer(manifest));
 
+    // Stream each image's bytes one at a time.  Emit exactly one data token per
+    // manifest entry (zero-length on failure) so the player can detect stream
+    // completion by counting tokens, without a separate end token.
+    static char sEmptyByte = 0;
+    for (size_t i = 0; i < orderedKeys.size(); ++i) {
+      const uint64_t imgKey = orderedKeys[i];
       std::vector<uint8_t> data;
       std::vector<VkBufferImageCopy> regions;
-
-      if (!m_GpuReadbackHelper->ReadImage(
-              deviceKey, physDevKey, queueKey, poolKey, imgKey, img->Format, img->Extent,
-              img->MipLevels, img->ArrayLayers, img->Samples, img->CurrentLayout, data, regions)) {
-        LOG_WARNING << "Vulkan subcapture: GPU readback failed for image key=" << imgKey;
-        continue;
+      auto* img = static_cast<ImageState*>(GetState(imgKey));
+      if (img) {
+        if (!m_GpuReadbackHelper->ReadImage(deviceKey, physDevKey, queueKey, poolKey, imgKey,
+                                            img->Format, img->Extent, img->MipLevels,
+                                            img->ArrayLayers, img->Samples, img->CurrentLayout,
+                                            data, regions)) {
+          LOG_WARNING << "Vulkan subcapture: GPU readback failed for image key=" << imgKey;
+          data.clear();
+        } else {
+          // The player's upload leaves the image in its tracked layout, so
+          // EmitImageLayoutTransitions must skip it.
+          img->ContentRestored = true;
+        }
       }
 
-      if (data.empty() || regions.empty()) {
-        continue;
-      }
+      RestoreContentDataCommand dataCmd;
+      dataCmd.m_DeviceKey = deviceKey;
+      MemoryRegions::Region region;
+      region.Offset = static_cast<uint64_t>(i); // resource index, not a byte offset
+      region.Size = static_cast<uint64_t>(data.size());
+      region.Data = data.empty() ? &sEmptyByte : reinterpret_cast<char*>(data.data());
+      dataCmd.m_Regions.Regions.push_back(region);
+      dataCmd.m_Regions.Size = 1;
+      m_Recorder.Record(RestoreContentDataSerializer(dataCmd));
 
-      // Per-image staging memory query (same rationale as RestoreBufferContents
-      // above): the previous code hoisted FindStagingMemoryType(_, 0xFFFFFFFF)
-      // out of the loop so every image's staging buffer used the SAME
-      // memoryTypeIndex, which need not be in the buffer's allowed
-      // memoryTypeBits, and used data.size() as both bci.size AND
-      // mai.allocationSize, missing the driver's alignment-rounded
-      // requirement.  Querying per-image is one extra create/destroy per image
-      // but is cheap compared to ReadImage and produces a spec-valid stream.
-      const VkDeviceSize stagingDataSize = static_cast<VkDeviceSize>(data.size());
-      VkMemoryRequirements stagingReq{};
-      if (!m_GpuReadbackHelper->QueryStagingBufferRequirements(
-              deviceKey, stagingDataSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, stagingReq)) {
-        LOG_WARNING << "Vulkan subcapture: failed to query staging buffer requirements for image"
-                       " key="
-                    << imgKey;
-        continue;
-      }
-      uint32_t stagingMemType =
-          m_GpuReadbackHelper->FindStagingMemoryType(physDevKey, stagingReq.memoryTypeBits);
-      if (stagingMemType == UINT32_MAX) {
-        LOG_WARNING << "Vulkan subcapture: no HOST_VISIBLE memory type satisfying buffer "
-                       "memoryTypeBits=0x"
-                    << std::hex << stagingReq.memoryTypeBits << std::dec
-                    << " for image key=" << imgKey;
-        continue;
-      }
-
-      VkImageAspectFlags aspectMask = AspectMaskFromFormat(img->Format);
-      EmitStagingUploadAndCopyImage(m_Recorder, deviceKey, queueKey, poolKey, imgKey, img->Format,
-                                    img->Extent, img->CurrentLayout, aspectMask, stagingDataSize,
-                                    stagingReq.size, stagingMemType, data, regions);
-
-      img->ContentRestored = true;
-      LOG_TRACE << "Vulkan subcapture: restored image content, key=" << imgKey << " "
-                << img->Extent.width << "x" << img->Extent.height << " mips=" << img->MipLevels
-                << " layers=" << img->ArrayLayers;
+      LOG_TRACE << "Vulkan subcapture: streamed image content, key=" << imgKey
+                << " size=" << data.size();
     }
   }
 }

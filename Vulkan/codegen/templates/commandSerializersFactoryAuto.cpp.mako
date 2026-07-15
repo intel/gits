@@ -20,6 +20,11 @@ stream::CommandSerializer* CreateCommandSerializer(Command* command) {
       return new CreateWindowMetaSerializer(*static_cast<CreateWindowMetaCommand*>(command));
     case CommandId::ID_META_MAPPED_DATA:
       return new MappedDataMetaSerializer(*static_cast<MappedDataMetaCommand*>(command));
+    case CommandId::ID_META_RESTORE_CONTENT_MANIFEST:
+      return new RestoreContentManifestSerializer(
+          *static_cast<RestoreContentManifestCommand*>(command));
+    case CommandId::ID_META_RESTORE_CONTENT_DATA:
+      return new RestoreContentDataSerializer(*static_cast<RestoreContentDataCommand*>(command));
     % for command in commands:
     <% define = get_define(command.platform) %>\
     % if define:

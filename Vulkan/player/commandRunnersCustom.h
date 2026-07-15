@@ -91,5 +91,31 @@ private:
   MappedDataMetaCommand m_Command;
 };
 
+class RestoreContentManifestRunner : public stream::CommandRunner {
+public:
+  void Run() override;
+
+protected:
+  void DecodeCommand() override {
+    Decode(m_Data, m_Command);
+  }
+
+private:
+  RestoreContentManifestCommand m_Command;
+};
+
+class RestoreContentDataRunner : public stream::CommandRunner {
+public:
+  void Run() override;
+
+protected:
+  void DecodeCommand() override {
+    Decode(m_Data, m_Command);
+  }
+
+private:
+  RestoreContentDataCommand m_Command;
+};
+
 } // namespace vulkan
 } // namespace gits

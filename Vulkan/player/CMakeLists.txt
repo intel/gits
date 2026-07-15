@@ -32,6 +32,8 @@ set(SERVICES_SRC
   ${CMAKE_CURRENT_SOURCE_DIR}/windowService.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/mapTrackingService.h
   ${CMAKE_CURRENT_SOURCE_DIR}/mapTrackingService.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/restoreContentService.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/restoreContentService.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/descriptorUpdateTemplateService.h
   ${CMAKE_CURRENT_SOURCE_DIR}/descriptorUpdateTemplateService.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/swapchainImageSyncService.h
