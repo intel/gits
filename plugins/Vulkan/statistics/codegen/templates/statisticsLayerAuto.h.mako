@@ -33,6 +33,8 @@ public:
   void Post(CreateWindowMetaCommand& command) override;
   void Post(MappedDataMetaCommand& command) override;
   void Post(UpdateWindowMetaCommand& command) override;
+  void Post(RestoreContentManifestCommand& command) override;
+  void Post(RestoreContentDataCommand& command) override;
   %for command in commands:
   <% define = get_define(command.platform) %>\
   % if define:

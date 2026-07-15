@@ -36,5 +36,13 @@ void StatisticsLayer::Post(UpdateWindowMetaCommand& command) {
   m_StatisticsService.Command("UpdateWindowMeta");
 }
 
+void StatisticsLayer::Post(RestoreContentManifestCommand& command) {
+  m_StatisticsService.Command("RestoreContentManifest");
+}
+
+void StatisticsLayer::Post(RestoreContentDataCommand& command) {
+  m_StatisticsService.Command("RestoreContentData");
+}
+
 } // namespace vulkan
 } // namespace gits
