@@ -87,7 +87,7 @@ void DumpPipelineStateStreamDesc(const D3D12_PIPELINE_STATE_STREAM_DESC_Argument
         stream << "\t\t\tComponentCount " << static_cast<unsigned>(entry.ComponentCount) << "\n";
         stream << "\t\t\tOutputSlot " << static_cast<unsigned>(entry.OutputSlot) << "\n";
       }
-      stream << "\t\BufferStrides " << desc.NumStrides;
+      stream << "\tBufferStrides " << desc.NumStrides;
       for (unsigned i = 0; i < desc.NumStrides; ++i) {
         stream << " " << desc.pBufferStrides[i];
       }

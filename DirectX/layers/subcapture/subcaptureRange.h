@@ -16,6 +16,8 @@ public:
   SubcaptureRange();
 
   void FrameEnd(bool stateRestore);
+  void StateRestoreBegin();
+  void StateRestoreEnd();
   bool IsFrameRangeStart(bool stateRestore);
   void ExecutionStart();
   void ExecutionEnd();
@@ -28,7 +30,7 @@ private:
   unsigned m_ExecutionRangeStart{};
   unsigned m_ExecutionRangeEnd{};
   bool m_InsideExecution{};
-  bool m_ZeroOrFirstFrame{true};
+  bool m_StateRestore{};
 
   bool m_InFrameRange{};
   bool m_TrimmingMode{};

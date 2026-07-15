@@ -86,12 +86,14 @@ void RecordingLayer::Post(ID3D12FenceGetCompletedValueCommand& Command) {
 }
 
 void RecordingLayer::Post(StateRestoreBeginCommand& Command) {
+  m_SubcaptureRange.StateRestoreBegin();
   if (m_SubcaptureRange.InRange()) {
     m_Recorder.Record(StateRestoreBeginSerializer(Command));
   }
 }
 
 void RecordingLayer::Post(StateRestoreEndCommand& Command) {
+  m_SubcaptureRange.StateRestoreEnd();
   if (m_SubcaptureRange.InRange()) {
     m_Recorder.Record(StateRestoreEndSerializer(Command));
   }

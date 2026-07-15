@@ -47,6 +47,9 @@ SubcaptureRange::SubcaptureRange() {
     } else {
       m_ExecutionRangeStart = m_ExecutionRangeEnd = std::stoi(commandListExecutions);
     }
+    if (m_StartFrame == 1) {
+      m_InFrameRange = true;
+    }
   } else if (m_StartFrame == 1) {
     m_TrimmingMode = true;
     m_InFrameRange = true;
@@ -55,7 +58,6 @@ SubcaptureRange::SubcaptureRange() {
 
 void SubcaptureRange::FrameEnd(bool stateRestore) {
   m_ExecutionCount = 0;
-  m_ZeroOrFirstFrame = false;
 
   if (!stateRestore) {
     ++m_CurrentFrame;
@@ -66,6 +68,15 @@ void SubcaptureRange::FrameEnd(bool stateRestore) {
   } else {
     m_InFrameRange = false;
   }
+}
+
+void SubcaptureRange::StateRestoreBegin() {
+  m_StateRestore = true;
+}
+
+void SubcaptureRange::StateRestoreEnd() {
+  m_StateRestore = false;
+  m_ExecutionCount = 0;
 }
 
 bool SubcaptureRange::IsFrameRangeStart(bool stateRestore) {
@@ -85,17 +96,14 @@ void SubcaptureRange::ExecutionEnd() {
 }
 
 bool SubcaptureRange::IsExecutionRangeStart() {
-  if (m_ZeroOrFirstFrame) {
-    return false;
-  }
-  if (!m_ExecutionRangeStart || !m_InFrameRange) {
+  if (m_StateRestore || !m_ExecutionRangeStart || !m_InFrameRange) {
     return false;
   }
   return m_ExecutionCount == m_ExecutionRangeStart - 1;
 }
 
 bool SubcaptureRange::InRange() {
-  if (m_ZeroOrFirstFrame && !m_TrimmingMode) {
+  if (m_StateRestore && !m_TrimmingMode) {
     return false;
   }
   if (!m_ExecutionRangeStart || !m_InFrameRange) {

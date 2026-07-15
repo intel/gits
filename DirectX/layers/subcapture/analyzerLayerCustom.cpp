@@ -45,6 +45,14 @@ AnalyzerLayer::AnalyzerLayer(SubcaptureRange& subcaptureRange)
   }
 }
 
+void AnalyzerLayer::Post(StateRestoreBeginCommand& c) {
+  m_SubcaptureRange.StateRestoreBegin();
+}
+
+void AnalyzerLayer::Post(StateRestoreEndCommand& c) {
+  m_SubcaptureRange.StateRestoreEnd();
+}
+
 void AnalyzerLayer::Post(IDXGISwapChainPresentCommand& c) {
   if (m_AnalyzerService.AfterRange()) {
     return;

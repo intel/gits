@@ -74,6 +74,8 @@ public:
   void Pre(ID3D12GraphicsCommandListDrawInstancedCommand& c) override;
   void Pre(ID3D12ResourceGetGPUVirtualAddressCommand& c) override;
   void Pre(ID3D12DescriptorHeapGetGPUDescriptorHandleForHeapStartCommand& c) override;
+  void Post(StateRestoreBeginCommand& c) override;
+  void Post(StateRestoreEndCommand& c) override;
 
 private:
   bool m_Optimize{};
