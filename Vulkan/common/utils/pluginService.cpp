@@ -49,7 +49,8 @@ PluginService::~PluginService() {
 
 void PluginService::LoadPlugins() {
   auto& cfg = Configurator::Get();
-  const auto& pluginNames = cfg.common.shared.plugins;
+  const auto& pluginNames =
+      Configurator::IsPlayer() ? cfg.common.player.plugins : cfg.common.recorder.plugins;
   if (pluginNames.empty()) {
     return;
   }

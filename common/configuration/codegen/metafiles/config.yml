@@ -219,17 +219,17 @@ Configuration:
                 Default: PNG
                 Description: Format (PNG/JPEG/DDS)
                 LegacyPaths: ["DirectX.Features.Screenshots.Format"]
-          - Name: plugins
-            Type: std::vector<std::string>
-            Default: []
-            Description: List of plugins to enable
-            LongDescription: |
-              GITS plugins are shared libraries that are loaded by GITS Player or Recorder at runtime.
-              For now, this option is only used by the new Vulkan backend. For DirectX12 plugins use the
-              older DirectX.Player.Plugins and DirectX.Recorder.Plugins options.
       - Name: Player
         Type: Group
         Options:
+          - Name: plugins
+            Type: std::vector<std::string>
+            Default: []
+            Description: List of plugins to enable during playback
+            LongDescription: |
+              GITS plugins are shared libraries that are loaded by GITS Player at runtime.
+              For now, this option is only used by the new Vulkan backend. For DirectX12 plugins use the
+              older DirectX.Player.Plugins option.
           - Name: Subcapture
             Type: Group
             Description:
@@ -737,6 +737,14 @@ Configuration:
       - Name: Recorder
         Type: Group
         Options:
+          - Name: plugins
+            Type: std::vector<std::string>
+            Default: []
+            Description: List of plugins to enable during recording
+            LongDescription: |
+              GITS plugins are shared libraries that are loaded by GITS Recorder at runtime.
+              For now, this option is only used by the new Vulkan backend. For DirectX12 plugins use the
+              older DirectX.Recorder.Plugins option.
           - Name: enabled
             Type: bool
             Default: true
