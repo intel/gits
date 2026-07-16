@@ -30,7 +30,7 @@ The Portability Layer can be used to help with resource placement compatibility.
 
 1. Generate `resourcePlacementData.dat` on **Platform B** (🖥️)
 
-   - Playback: Set `DirectX.Player.Portability.ResourcePlacement` to `'store'` and `DirectX.Player.Execute` to `false`
+   - Playback: Set `DirectX.Player.Portability.ResourcePlacement` to `'store'` and `Common.Player.Execute` to `false`
    - `resourcePlacementData.dat` will be written next to `stream.gits2`
 
 2. Playback stream on **Platform B** (💻)

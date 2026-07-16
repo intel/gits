@@ -22,10 +22,11 @@ void PortabilityLayerGroup::LoadLayers(
     AddLayer(std::make_unique<PortabilityLayer>());
   } else if (Configurator::IsPlayer()) {
     auto& playerConfig = Configurator::Get().directx.player;
-    if (playerConfig.execute && (playerConfig.portability.resourcePlacement != "none" ||
-                                 playerConfig.portability.portabilityChecks ||
-                                 playerConfig.portability.portabilityAssertions ||
-                                 playerConfig.portability.forcePlacedToCommittedResources)) {
+    if (Configurator::Get().common.player.execute &&
+        (playerConfig.portability.resourcePlacement != "none" ||
+         playerConfig.portability.portabilityChecks ||
+         playerConfig.portability.portabilityAssertions ||
+         playerConfig.portability.forcePlacedToCommittedResources)) {
       if (registerResource) {
         AddLayer(std::make_unique<PortabilityLayer>(std::move(registerResource)));
       } else {

@@ -71,7 +71,7 @@ PlayerManager::PlayerManager() {
 
   m_LayerManager.LoadLayers(*this, *m_PluginService.get());
 
-  m_ExecuteCommands = Configurator::Get().directx.player.execute;
+  m_ExecuteCommands = Configurator::Get().common.player.execute;
 }
 
 void PlayerManager::AddObject(unsigned objectKey, IUnknown* object) {

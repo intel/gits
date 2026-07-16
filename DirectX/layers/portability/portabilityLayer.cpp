@@ -22,33 +22,33 @@ PortabilityLayer::PortabilityLayer() : Layer("Portability") {
           Configurator::Get().directx.recorder.portability.resourcePlacementStorage ||
       Configurator::IsPlayer() &&
           Configurator::Get().directx.player.portability.resourcePlacement == "store" &&
-          Configurator::Get().directx.player.execute) {
+          Configurator::Get().common.player.execute) {
     m_StoreResourcePlacementData = true;
   }
   if (Configurator::IsPlayer() &&
       Configurator::Get().directx.player.portability.resourcePlacement == "store" &&
-      !Configurator::Get().directx.player.execute) {
+      !Configurator::Get().common.player.execute) {
     LOG_WARNING << "Portability - storing placement data without execution is experimental";
     m_StoreResourcePlacementDataNoExecute = true;
   }
   if (Configurator::IsPlayer() &&
       Configurator::Get().directx.player.portability.resourcePlacement == "use" &&
-      Configurator::Get().directx.player.execute) {
+      Configurator::Get().common.player.execute) {
     m_UseResourcePlacementData = true;
   }
   if (Configurator::IsPlayer() &&
       Configurator::Get().directx.player.portability.portabilityChecks &&
-      Configurator::Get().directx.player.execute) {
+      Configurator::Get().common.player.execute) {
     m_PortabilityChecks = true;
   }
   if (Configurator::IsPlayer() &&
       Configurator::Get().directx.player.portability.portabilityAssertions &&
-      Configurator::Get().directx.player.execute && !m_UseResourcePlacementData) {
+      Configurator::Get().common.player.execute && !m_UseResourcePlacementData) {
     m_PortabilityAssertions = true;
   }
   if (Configurator::IsPlayer() &&
       Configurator::Get().directx.player.portability.forcePlacedToCommittedResources &&
-      Configurator::Get().directx.player.execute && !m_UseResourcePlacementData) {
+      Configurator::Get().common.player.execute && !m_UseResourcePlacementData) {
     m_ForcePlacedToCommittedResources = true;
   }
   if (Configurator::IsRecorder()) {

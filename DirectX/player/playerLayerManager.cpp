@@ -69,7 +69,7 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
       m_ResourceDumpingLayerGroup.GetLayer("AccelerationStructuresDump");
   Layer* rootSignatureDumpLayer = m_ResourceDumpingLayerGroup.GetLayer("RootSignatureDump");
   Layer* addressPinningLayer = nullptr;
-  if (cfg.player.execute) {
+  if (Configurator::Get().common.player.execute) {
     addressPinningLayer = m_AddressPinningLayerGroup.GetLayer("AddressPinningUse");
     if (!addressPinningLayer) {
       addressPinningLayer = m_AddressPinningLayerGroup.GetLayer("AddressPinningStore");
@@ -90,7 +90,7 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
   std::unique_ptr<Layer> dllOverrideUseLayer;
   std::unique_ptr<Layer> ccodeLayer;
 
-  if (cfg.player.execute) {
+  if (Configurator::Get().common.player.execute) {
     replayCustomizationLayer = std::make_unique<ReplayCustomizationLayer>(playerManager);
     if (cfg.player.patchGpuBuffers) {
       gpuPatchLayer = std::make_unique<GpuPatchLayer>(playerManager);

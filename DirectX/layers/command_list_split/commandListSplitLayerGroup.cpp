@@ -19,7 +19,7 @@ void CommandListSplitLayerGroup::LoadLayers() {
     return;
   }
 
-  Configurator::GetMutable().directx.player.execute = false;
+  Configurator::GetMutable().common.player.execute = false;
   LOG_INFO << "Command list split mode. Execution disabled.";
 
   m_Recorder = std::make_unique<CommandListSplitRecorder>();

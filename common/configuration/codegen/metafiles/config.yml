@@ -226,6 +226,7 @@ Configuration:
             Type: bool
             Default: true
             Description: Execute the API commands (driver / null driver)
+            LegacyPaths: ["DirectX.Player.Execute"]
           - Name: plugins
             Type: std::vector<std::string>
             Default: []
@@ -920,11 +921,6 @@ Configuration:
       - Name: Player
         Type: Group
         Options:
-          - Name: execute
-            Type: bool
-            Default: true
-            Description: Execute the API commands (driver / null driver)
-            LegacyPaths: ["DirectX.Playback.Execute"]
           - Name: debugLayer
             Type: bool
             Default: false

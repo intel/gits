@@ -28,7 +28,7 @@ public:
   }
 
   void* getImpl() override {
-    if (!m_PluginLayer && m_Context.config->directx.player.execute) {
+    if (!m_PluginLayer && m_Context.config->common.player.execute) {
       m_PluginLayer = std::make_unique<CpuPatchLayer>(m_Context);
     }
     return m_PluginLayer.get();

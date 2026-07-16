@@ -35,7 +35,7 @@ void SubcaptureLayerGroup::LoadLayers() {
       int startFrame = std::stoi(frames);
       if (startFrame == 1) {
         trimmingMode = true;
-        Configurator::GetMutable().directx.player.execute = false;
+        Configurator::GetMutable().common.player.execute = false;
         LOG_INFO << "Subcapture in trimming mode. Execution disabled.";
       }
     } else {
