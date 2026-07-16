@@ -244,7 +244,7 @@ ${func.get('type')} __zecall default_${func.get('name')}(
     if (!load_l0_function(drv.original.${func.get('name')}, "${func.get('name')}")) {
     %endif
       LOG_ERROR << "Could not load ${func.get('name')} function.";
-      return ${'ZE_RESULT_ERROR_UNINITIALIZED' if func.get('type') == 'ze_result_t' else (f'0' if func.get('type') == 'uint32_t' else 'nullptr')};
+      return ${'ZE_RESULT_ERROR_UNINITIALIZED' if func.get('type') == 'ze_result_t' else (f'0' if func.get('type') in ('uint32_t', 'ze_bool_t') else 'nullptr')};
     %if func.get('component') not in npu_components:
     }
     %endif

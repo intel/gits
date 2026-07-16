@@ -8041,6 +8041,10 @@ arg2=ArgDef(name='handleIn',type='void *',tag='in',wrapType='COutArgument'),
 arg3=ArgDef(name='handleOut',type='void **',tag='inout',wrapType='COutArgument'),
 )
 
+Function(name='zelCheckIsLoaderInTearDown',component='zel',enabled=False,
+retV=RetDef(type='ze_bool_t'),
+)
+
 Function(name='zeGetCommandListProcAddrTable',component='ze_dditable',enabled=True,skipRun=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='version',type='ze_api_version_t',tag='in'),
