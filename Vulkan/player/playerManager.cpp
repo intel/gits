@@ -64,6 +64,8 @@ PlayerManager::PlayerManager() : m_SwapchainImageSyncService(*this) {
   m_PluginService = std::make_unique<PluginService>();
   m_PluginService->LoadPlugins();
   m_LayerManager.LoadLayers(*this, *m_PluginService);
+
+  m_ExecuteCommands = Configurator::Get().common.player.execute;
 }
 
 void PlayerManager::LoadGlobalFunctions() {

@@ -32,23 +32,30 @@ dispatch_table = get_dispatch_table(command)
 % endif
 void ${command.name}Runner::Run() {
   auto& manager = PlayerManager::Get();
-
-  % for param in command.params:
-  % if param.is_handle:
-  UpdateHandle(manager, command.m_${param.name});
-  % elif param.is_struct_with_handles and not param.is_struct_with_output_handles:
-  UpdateHandle(manager, command.m_${param.name});
-  % elif param.is_struct:
 <%
-  struct_def = structures_by_name.get(param.base_type)
-  pnext_member = next((m for m in struct_def.members if m.name == 'pNext'), None) if struct_def else None
-  has_pnext = pnext_member is not None and pnext_member.is_const
-%>
-  % if has_pnext and pnext_handle_structs:
-  UpdateHandle(manager, command.m_${param.name});
-  % endif
-  % endif
-  % endfor
+  input_handle_params = []
+  for param in command.params:
+    if param.is_handle:
+      input_handle_params.append(param.name)
+    elif param.is_struct_with_handles and not param.is_struct_with_output_handles:
+      input_handle_params.append(param.name)
+    elif param.is_struct:
+      struct_def = structures_by_name.get(param.base_type)
+      pnext_member = next((m for m in struct_def.members if m.name == 'pNext'), None) if struct_def else None
+      has_pnext = pnext_member is not None and pnext_member.is_const
+      if has_pnext and pnext_handle_structs:
+        input_handle_params.append(param.name)
+%>\
+% if input_handle_params:
+
+  // Handles are only registered when commands are dispatched, so in a
+  // null-driver run (ExecuteCommands() == false) the map is empty; skip.
+  if (manager.ExecuteCommands()) {
+    % for name in input_handle_params:
+    UpdateHandle(manager, command.m_${name});
+    % endfor
+  }
+% endif
 
   for (Layer* layer : manager.GetPreLayers()) {
     layer->Pre(command);

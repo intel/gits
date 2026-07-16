@@ -25,12 +25,20 @@ namespace vulkan {
 
 void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService& pluginService) {
 
-  std::unique_ptr<Layer> replayCustomizationLayer =
-      std::make_unique<ReplayCustomizationLayer>(playerManager);
+  // Null-driver runs (Common.Player.Execute == false) never dispatch to the
+  // driver, so the layers that only adapt commands for real execution
+  // (ReplayCustomization, Portability) would operate on results that are never
+  // produced.  Skip instantiating them, mirroring the DirectX player.
+  const bool execute = Configurator::Get().common.player.execute;
+
+  std::unique_ptr<Layer> replayCustomizationLayer;
+  if (execute) {
+    replayCustomizationLayer = std::make_unique<ReplayCustomizationLayer>(playerManager);
+  }
   std::unique_ptr<Layer> logVkErrorLayer = std::make_unique<LogVkErrorLayer>();
 
   std::unique_ptr<Layer> portabilityLayer;
-  if (Configurator::Get().vulkan.player.portability.remapQueueFamilies) {
+  if (execute && Configurator::Get().vulkan.player.portability.remapQueueFamilies) {
     portabilityLayer = std::make_unique<PortabilityLayer>();
   }
 
@@ -43,12 +51,24 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
     traceLayer = m_TraceLayerGroup->GetTraceLayer();
   }
 
+  // The ScreenshotsLayer serves both Common.Shared.Screenshots and the
+  // Common.Player.CaptureFrames (--captureFrames) option, which selects frames
+  // to dump independently of the screenshots feature; honor either one.
+  const bool screenshotsRequested =
+      screenshotsCfg.enabled || !Configurator::Get().common.player.captureFrames.empty();
+  // Screenshots read the swapchain images back through the driver, so they can
+  // only be produced when the API commands are actually executed.  In a
+  // null-driver run (Common.Player.Execute == false) there is no live swapchain
+  // to dump, so skip the layer and tell the user why.
   Layer* screenshotLayer = nullptr;
   m_ResourceDumpingLayerGroup =
       std::make_unique<ResourceDumpingLayerGroup>(playerManager.GetDispatchTablesHolder());
-  if (screenshotsCfg.enabled) {
+  if (screenshotsRequested && execute) {
     m_ResourceDumpingLayerGroup->loadLayers();
     screenshotLayer = m_ResourceDumpingLayerGroup->getScreenshotLayer();
+  } else if (screenshotsRequested) {
+    LOG_WARNING << "Screenshots/frame capture requested but Common.Player.Execute is false; "
+                   "skipping capture (it requires driver execution).";
   }
 
   // Subcapture-related layers (SubcaptureLayer, RecordingLayer) only make sense
@@ -59,12 +79,20 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
   const auto& cfg = Configurator::Get();
   const bool subcaptureEnabled =
       cfg.common.player.subcapture.enabled && !cfg.common.player.subcapture.frames.empty();
+  // Subcapture reconstructs the live GPU state at the cut point, which requires
+  // dispatching the recorded commands to the driver.  A null-driver run cannot
+  // do that, so skip the subcapture layers and tell the user why.
+  if (subcaptureEnabled && !execute) {
+    LOG_WARNING << "Subcapture requested but Common.Player.Execute is false; "
+                   "skipping subcapture (recording one requires driver execution).";
+  }
+  const bool subcaptureActive = subcaptureEnabled && execute;
   // Two-pass optimization is only engaged when optimize is enabled and no
   // analysis file exists yet.  When optimize is off (or an analysis file is
   // present) we go straight to the recording pass, restoring everything exactly
   // like the legacy single-pass flow.
   const bool subcaptureAnalysis =
-      subcaptureEnabled && cfg.common.player.subcapture.optimize && !AnalyzerResults::IsAnalysis();
+      subcaptureActive && cfg.common.player.subcapture.optimize && !AnalyzerResults::IsAnalysis();
 
   std::unique_ptr<Layer> subcaptureLayer;
   std::unique_ptr<Layer> analyzerLayer;
@@ -77,7 +105,7 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
     auto* sc = static_cast<SubcaptureLayer*>(subcaptureLayer.get());
     analyzerLayer = std::make_unique<AnalyzerLayer>(*sc->GetAnalyzerService());
     LOG_INFO << "SUBCAPTURE ANALYSIS. RUN AGAIN FOR SUBCAPTURE RECORDING.";
-  } else if (subcaptureEnabled) {
+  } else if (subcaptureActive) {
     subcaptureLayer =
         std::make_unique<SubcaptureLayer>(playerManager, cfg.common.player.subcapture.frames);
 
@@ -102,7 +130,7 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
   if (traceCfg.enabled && traceCfg.print.preCalls) {
     enablePreLayer(traceLayer);
   }
-  if (screenshotsCfg.enabled) {
+  if (screenshotLayer) {
     m_PreLayers.push_back(screenshotLayer);
   }
   enablePreLayer(subcaptureLayer);
@@ -121,7 +149,7 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
   if (traceCfg.enabled && traceCfg.print.postCalls) {
     enablePostLayer(traceLayer);
   }
-  if (screenshotsCfg.enabled) {
+  if (screenshotLayer) {
     m_PostLayers.push_back(screenshotLayer);
   }
   // AnalyzerLayer must run before SubcaptureLayer in the post order: the latter

@@ -222,6 +222,10 @@ Configuration:
       - Name: Player
         Type: Group
         Options:
+          - Name: execute
+            Type: bool
+            Default: true
+            Description: Execute the API commands (driver / null driver)
           - Name: plugins
             Type: std::vector<std::string>
             Default: []
