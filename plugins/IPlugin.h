@@ -29,6 +29,9 @@ namespace gits {
 class CGits;
 class MessageBus;
 struct Configuration;
+namespace vulkan {
+struct VkDeviceLevelDispatchTable;
+}
 } // namespace gits
 
 namespace plog {
@@ -40,6 +43,8 @@ struct IPluginContext {
   gits::CGits* gits;
   gits::MessageBus* msgBus;
   plog::IAppender* logAppender;
+  // Active VkDevice dispatch table (set on vkCreateDevice)
+  gits::vulkan::VkDeviceLevelDispatchTable** vkDeviceDispatchTable = nullptr;
 };
 
 class IPlugin {

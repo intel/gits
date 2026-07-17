@@ -92,6 +92,9 @@ void PlayerManager::LoadDeviceFunctions(void* dispatchKey, VkDevice device) {
   void* deviceDispatchKey = *reinterpret_cast<void**>(device);
   auto& dispatchTable = m_DeviceDispatchTable[deviceDispatchKey];
   LoadDeviceLevelFunctions(getDeviceProcAddr, device, dispatchTable);
+  if (m_PluginService) {
+    m_PluginService->SetVulkanDeviceDispatchTable(&dispatchTable);
+  }
 }
 
 } // namespace vulkan

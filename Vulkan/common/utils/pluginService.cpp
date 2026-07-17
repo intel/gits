@@ -47,6 +47,10 @@ PluginService::~PluginService() {
   }
 }
 
+void PluginService::SetVulkanDeviceDispatchTable(VkDeviceLevelDispatchTable* table) {
+  m_VulkanDeviceDispatchTable = table;
+}
+
 void PluginService::LoadPlugins() {
   auto& cfg = Configurator::Get();
   const auto& pluginNames =
@@ -147,6 +151,7 @@ void PluginService::LoadPlugins() {
     pluginContext.msgBus = &gits::MessageBus::get();
     pluginContext.config = &cfg;
     pluginContext.logAppender = plog::get();
+    pluginContext.vkDeviceDispatchTable = &m_VulkanDeviceDispatchTable;
 
     plugin.DestroyPlugin =
         reinterpret_cast<DestroyPluginPtr>(GetProcAddress(mainDll, "destroyPlugin"));
