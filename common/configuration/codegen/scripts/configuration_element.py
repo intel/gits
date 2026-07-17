@@ -309,6 +309,11 @@ class ConfigurationOption(ConfigurationEntry):
         if self.type != 'bool':
           raise ValueError('get_bool_value_shorthands called on a non bool option')
         tmp_list = [self.argument_path + ".Value" + ConfigurationOption.ARGS_SUFFIX_HIDE_OPTION]
+        # Mirror get_shorthands(): also accept the legacy ".Value" spellings so
+        # callers (e.g. the test framework) that still pass the old bool flag as
+        # "<LegacyPath>.Value=0/1" keep working after a LegacyPaths migration.
+        for legacy_path in self.legacy_paths:
+          tmp_list.append('.'.join(legacy_path[0]) + ".Value" + ConfigurationOption.ARGS_SUFFIX_HIDE_OPTION)
         lst = [f"'{item}'" for item in tmp_list if len(item) == 1]
         lst.extend([f'"{item}"' for item in tmp_list if len(item) > 1])
         return ", ".join(lst)
