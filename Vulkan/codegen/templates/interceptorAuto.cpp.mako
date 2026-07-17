@@ -11,6 +11,7 @@ ${header}
 #include "vulkanHeader2.h"
 #include "gitsLoader.h"
 #include "vulkanRecorderInterface.h"
+#include "log.h"
 
 #include <mutex>
 
@@ -23,6 +24,7 @@ ${header}
 std::unique_ptr<gits::CGitsLoader> g_GitsLoader;
 gits::vulkan::IRecorderWrapper* g_RecorderWrapper = nullptr;
 PFN_vkGetInstanceProcAddr g_vkGetInstanceProcAddr = nullptr;
+PFN_vkGetDeviceProcAddr g_vkGetDeviceProcAddr = nullptr;
 
 class VulkanLibHandler {
 public:
@@ -55,6 +57,8 @@ void Initialize() {
     GITS_ASSERT(g_VulkanLibHandler->Get() != nullptr);
     g_vkGetInstanceProcAddr = reinterpret_cast<PFN_vkGetInstanceProcAddr>(dl::load_symbol(g_VulkanLibHandler->Get(), "vkGetInstanceProcAddr"));
     GITS_ASSERT(g_vkGetInstanceProcAddr != nullptr);
+    g_vkGetDeviceProcAddr = reinterpret_cast<PFN_vkGetDeviceProcAddr>(dl::load_symbol(g_VulkanLibHandler->Get(), "vkGetDeviceProcAddr"));
+    GITS_ASSERT(g_vkGetDeviceProcAddr != nullptr);
     g_RecorderWrapper->LoadGlobalLevelFunctions(g_vkGetInstanceProcAddr);
   });
 }
@@ -99,7 +103,20 @@ VK_INTERCEPTOR_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAd
   if (strcmp(pName, "vkGetDeviceProcAddr") == 0) {
     return reinterpret_cast<PFN_vkVoidFunction>(vkGetDeviceProcAddr);
   }
-  return g_RecorderWrapper->GetFunctionWrapper(pName);
+  // Only expose entry points that the underlying driver actually provides for
+  // this device.  Otherwise GITS would hand out a wrapper that dispatches to a
+  // null driver pointer, crashing the app when it calls the returned function.
+  PFN_vkVoidFunction driverFunction = g_vkGetDeviceProcAddr(device, pName);
+  if (driverFunction == nullptr) {
+    return nullptr;
+  }
+  PFN_vkVoidFunction wrapper = g_RecorderWrapper->GetFunctionWrapper(pName);
+  if (wrapper != nullptr) {
+    return wrapper;
+  }
+  // GITS does not wrap this function; pass the driver's implementation through.
+  LOG_WARNING << "vkGetDeviceProcAddr() returned driver function for: " << pName;
+  return driverFunction;
 }
 
 VK_INTERCEPTOR_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL
@@ -114,7 +131,21 @@ vkGetInstanceProcAddr(VkInstance instance, const char* pName) {
     return reinterpret_cast<PFN_vkVoidFunction>(vkGetDeviceProcAddr);
   }
 
-  return g_RecorderWrapper->GetFunctionWrapper(pName);
+  // Only expose entry points that the underlying loader/driver actually provides
+  // for this instance.  Returning a wrapper for an unavailable function (e.g. an
+  // extension the app did not enable) would make the app call into a null driver
+  // dispatch slot and crash on first use.
+  PFN_vkVoidFunction driverFunction = g_vkGetInstanceProcAddr(instance, pName);
+  if (driverFunction == nullptr) {
+    return nullptr;
+  }
+  PFN_vkVoidFunction wrapper = g_RecorderWrapper->GetFunctionWrapper(pName);
+  if (wrapper != nullptr) {
+    return wrapper;
+  }
+  // GITS does not wrap this function; pass the driver's implementation through.
+  LOG_WARNING << "vkGetInstanceProcAddr() returned driver function for: " << pName;
+  return driverFunction;
 }
 
 VK_INTERCEPTOR_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
