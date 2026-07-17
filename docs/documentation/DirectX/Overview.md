@@ -43,6 +43,3 @@ All application-specific configuration overrides can be found under `Overrides` 
 
 The only expected compatibility option to toggle is `DirectX.Recorder.ShadowMemory`, which affects how mapped/unmapped resources are tracked and may impact the stability of certain applications. If there is a problem recording (or playing back) a stream for a given application, set `DirectX.Recorder.ShadowMemory` to `true` and try again.
 
-# Issues, Comments, and Feedback
-
-Please let us know if you encounter any issues with D3D12 GITS. Send an email to GITS Developers (<gits.developers@intel.com>) with any details you can provide.
