@@ -28,15 +28,23 @@ GITS registers as a Khronos **explicit layer** named
 `VK_LAYER_INTEL_vulkan_GITS_recorder` (installed under `Recorder/VulkanLayer`).
 Because it is explicit, it records nothing until you enable it:
 
-- **Windows:** the layer is registered automatically at install time. Enable it
-  in **Vulkan Configurator** (set only this layer to *On*), or set
-  `VK_INSTANCE_LAYERS=VK_LAYER_INTEL_vulkan_GITS_recorder`.
+- **Windows:** the installer registers the layer, so enabling it in **Vulkan
+  Configurator** (set this layer's control to *Enable*) or setting
+  `VK_INSTANCE_LAYERS=VK_LAYER_INTEL_vulkan_GITS_recorder` is enough. If you use a
+  portable build that was not installed (so the layer isn't registered), also set
+  `VK_LAYER_PATH=<install>/Recorder/VulkanLayer`, as on Linux.
 - **Linux:** point the loader at the layer directory and enable it:
 
 ```bash
 export VK_LAYER_PATH=<install>/Recorder/VulkanLayer
 export VK_INSTANCE_LAYERS=VK_LAYER_INTEL_vulkan_GITS_recorder
 ```
+
+> **Note:** the **Vulkan Configurator** GUI (`vkconfig`) is part of the
+> [LunarG Vulkan SDK](https://vulkan.lunarg.com/), so enabling the layer that way
+> requires the SDK to be installed. The `VK_INSTANCE_LAYERS` (and, on Linux,
+> `VK_LAYER_PATH`) environment-variable method needs only the Vulkan
+> loader/runtime that ships with the GPU driver and does **not** require the SDK.
 
 The layer works even when replacing the loader DLL is not feasible, and it can
 coexist with other layers (for example validation).
