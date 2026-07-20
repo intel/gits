@@ -198,6 +198,7 @@ void RaytracingOptimizationService::Optimize(
   for (auto& [keyOffset, command] : m_CommandByKeyOffset) {
     if (ases.contains(keyOffset)) {
       command->Restore = true;
+      m_ExistingBuffers.insert(command->DestKey);
     }
   }
 
@@ -210,6 +211,7 @@ void RaytracingOptimizationService::Optimize(
         command = command->Source;
       }
       for (RaytracingCommand* ommArray : command->OpacityMicromapArrays) {
+        m_ExistingBuffers.insert(ommArray->DestKey);
         ommArray->Restore = true;
         while (ommArray->Source) {
           ommArray->Source->Restore = true;
@@ -219,7 +221,7 @@ void RaytracingOptimizationService::Optimize(
     }
   }
 
-  // prepare sorted commands
+  // prepare commands
   for (auto& it : m_CommandById) {
     RaytracingCommand* command = it.second.get();
     if (command->Restore) {
@@ -229,12 +231,8 @@ void RaytracingOptimizationService::Optimize(
         sourceKey = command->Source->CommandKey;
       }
       m_OptimizedCommandsWithSources.emplace_back(commandKey, sourceKey);
-      for (unsigned key : command->Buffers) {
-        m_OptimizedBuffers.insert(key);
-      }
     }
   }
-  std::sort(m_OptimizedCommandsWithSources.begin(), m_OptimizedCommandsWithSources.end());
 }
 
 } // namespace DirectX

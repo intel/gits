@@ -44,6 +44,7 @@ public:
   void NvapiBuildOpacityMicromapArray(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& c);
   void SetDeviceKey(unsigned deviceKey) {
     m_DeviceKey = deviceKey;
+    m_BufferLifetimeService.SetDeviceKey(deviceKey);
   }
   void RestoreAccelerationStructures();
   void ExecuteCommandLists(ID3D12CommandQueueExecuteCommandListsCommand& c);
@@ -165,19 +166,34 @@ private:
   OptimizationService m_OptimizationService;
 
 private:
-  class BufferReleaseService {
+  class BufferLifetimeService {
   public:
-    BufferReleaseService(SubcaptureRecorder& recorder) : m_Recorder(recorder) {}
-    void AddBuffer(unsigned key);
-    void AddRelease(unsigned commandKey, unsigned bufferKey);
-    void ProcessReleases(unsigned commandKey);
+    BufferLifetimeService(StateTrackingService& stateService) : m_StateService(stateService) {}
+    void AddBuffer(unsigned commandKey, unsigned bufferKey);
+    void CreateBuffers();
+    void ReleaseBuffers();
+    void SetDeviceKey(unsigned deviceKey) {
+      m_DeviceKey = deviceKey;
+    }
 
   private:
-    SubcaptureRecorder& m_Recorder;
+    struct ResourceInfo {
+      unsigned Size{};
+      bool UploadHeap{};
+    };
+    ResourceInfo GetPlacedResourceInfo(ResourceState* state);
+    void RestorePlacedResource(ResourceState* state, unsigned heapKey, unsigned offset);
+    unsigned Align(unsigned value);
+
+  private:
+    StateTrackingService& m_StateService;
     std::unordered_set<unsigned> m_Buffers;
-    std::map<unsigned, unsigned> m_Releases;
+    std::unordered_set<unsigned> m_CreatedBuffers;
+    unsigned m_DeviceKey{};
+    unsigned m_UploadHeapKey{};
+    unsigned m_DefaultHeapKey{};
   };
-  BufferReleaseService m_BufferReleaseService;
+  BufferLifetimeService m_BufferLifetimeService;
 };
 
 } // namespace DirectX

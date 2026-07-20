@@ -11,7 +11,7 @@
 #include "analyzerResults.h"
 #include "resourceStateEnhanced.h"
 #include "arguments.h"
-#include "commandSerializersAuto.h"
+#include "commandSerializersFactory.h"
 #include "commandSerializersCustom.h"
 #include "reservedResourcesService.h"
 #include "resourceResidencyService.h"
@@ -41,7 +41,7 @@ AccelerationStructuresBuildService::AccelerationStructuresBuildService(
                             resourceStateTracker,
                             gpuAddressService,
                             recorder),
-      m_BufferReleaseService(recorder) {
+      m_BufferLifetimeService(stateService) {
   m_SerializeMode =
       Configurator::Get().common.player.subcapture.directx.serializeAccelerationStructures;
   m_RestoreTlas = Configurator::Get().common.player.subcapture.directx.restoreTLASes;
@@ -285,10 +285,10 @@ void AccelerationStructuresBuildService::BuildAccelerationStructure(
   m_InputBuffersService.StoreBuffers(c.Key, c.m_Object.Value);
   m_OptimizationService.AddCommand(c.m_Object.Key, command);
 
-  m_BufferReleaseService.AddBuffer(c.m_pDesc.DestAccelerationStructureKey);
-  m_BufferReleaseService.AddBuffer(c.m_pDesc.SourceAccelerationStructureKey);
+  m_BufferLifetimeService.AddBuffer(c.Key, c.m_pDesc.DestAccelerationStructureKey);
+  m_BufferLifetimeService.AddBuffer(c.Key, c.m_pDesc.SourceAccelerationStructureKey);
   for (unsigned key : c.m_pDesc.InputKeys) {
-    m_BufferReleaseService.AddBuffer(key);
+    m_BufferLifetimeService.AddBuffer(c.Key, key);
   }
 }
 
@@ -324,8 +324,8 @@ void AccelerationStructuresBuildService::CopyAccelerationStructure(
   m_StateService.KeepState(c.m_DestAccelerationStructureData.InterfaceKey);
   m_OptimizationService.AddCommand(c.m_Object.Key, command);
 
-  m_BufferReleaseService.AddBuffer(c.m_DestAccelerationStructureData.InterfaceKey);
-  m_BufferReleaseService.AddBuffer(c.m_SourceAccelerationStructureData.InterfaceKey);
+  m_BufferLifetimeService.AddBuffer(c.Key, c.m_DestAccelerationStructureData.InterfaceKey);
+  m_BufferLifetimeService.AddBuffer(c.Key, c.m_SourceAccelerationStructureData.InterfaceKey);
 }
 
 void AccelerationStructuresBuildService::NvapiBuildAccelerationStructureEx(
@@ -687,10 +687,10 @@ void AccelerationStructuresBuildService::NvapiBuildAccelerationStructureEx(
   m_InputBuffersService.StoreBuffers(c.Key, c.m_pCommandList.Value);
   m_OptimizationService.AddCommand(c.m_pCommandList.Key, command);
 
-  m_BufferReleaseService.AddBuffer(c.m_pParams.DestAccelerationStructureKey);
-  m_BufferReleaseService.AddBuffer(c.m_pParams.SourceAccelerationStructureKey);
+  m_BufferLifetimeService.AddBuffer(c.Key, c.m_pParams.DestAccelerationStructureKey);
+  m_BufferLifetimeService.AddBuffer(c.Key, c.m_pParams.SourceAccelerationStructureKey);
   for (unsigned key : c.m_pParams.InputKeys) {
-    m_BufferReleaseService.AddBuffer(key);
+    m_BufferLifetimeService.AddBuffer(c.Key, key);
   }
 }
 
@@ -782,9 +782,9 @@ void AccelerationStructuresBuildService::NvapiBuildOpacityMicromapArray(
   m_InputBuffersService.StoreBuffers(c.Key, c.m_pCommandList.Value);
   m_OptimizationService.AddCommand(c.m_pCommandList.Key, command);
 
-  m_BufferReleaseService.AddBuffer(c.m_pParams.DestOpacityMicromapArrayDataKey);
-  m_BufferReleaseService.AddBuffer(c.m_pParams.InputBufferKey);
-  m_BufferReleaseService.AddBuffer(c.m_pParams.PerOMMDescsKey);
+  m_BufferLifetimeService.AddBuffer(c.Key, c.m_pParams.DestOpacityMicromapArrayDataKey);
+  m_BufferLifetimeService.AddBuffer(c.Key, c.m_pParams.InputBufferKey);
+  m_BufferLifetimeService.AddBuffer(c.Key, c.m_pParams.PerOMMDescsKey);
 }
 
 void AccelerationStructuresBuildService::RestoreAccelerationStructures() {
@@ -889,8 +889,11 @@ void AccelerationStructuresBuildService::RestoreAccelerationStructures() {
     m_Recorder.Record(ID3D12ResourceGetGPUVirtualAddressSerializer(getAddress));
   }
 
+  m_BufferLifetimeService.CreateBuffers();
+
   // restoring RTAS
   for (OptimizationService::CommandNode* node : m_OptimizationService.GetCommands()) {
+
     if (node->Command->Type == RaytracingAccelerationStructureCommand::CommandType::Build) {
       BuildRaytracingAccelerationStructureCommand* build =
           static_cast<BuildRaytracingAccelerationStructureCommand*>(node->Command.get());
@@ -912,43 +915,41 @@ void AccelerationStructuresBuildService::RestoreAccelerationStructures() {
     } else {
       GITS_ASSERT(0 && "unknown command");
     }
-
-    m_BufferReleaseService.ProcessReleases(node->Command->CommandKey);
   }
+
+  m_BufferLifetimeService.ReleaseBuffers();
 
   // cleanup
+  m_OptimizationService.Cleanup();
   {
-    m_OptimizationService.Cleanup();
-    {
-      IUnknownReleaseCommand releaseScratchResource{};
-      releaseScratchResource.Key = m_StateService.GetUniqueCommandKey();
-      releaseScratchResource.m_Object.Key = m_ScratchResourceKey;
-      m_StateService.GetRecorder().Record(IUnknownReleaseSerializer(releaseScratchResource));
-    }
-    {
-      IUnknownReleaseCommand releaseFence{};
-      releaseFence.Key = m_StateService.GetUniqueCommandKey();
-      releaseFence.m_Object.Key = m_FenceKey;
-      m_StateService.GetRecorder().Record(IUnknownReleaseSerializer(releaseFence));
-    }
-    {
-      IUnknownReleaseCommand releaseCommandList{};
-      releaseCommandList.Key = m_StateService.GetUniqueCommandKey();
-      releaseCommandList.m_Object.Key = m_CommandListKey;
-      m_StateService.GetRecorder().Record(IUnknownReleaseSerializer(releaseCommandList));
-
-      IUnknownReleaseCommand releaseCommandAllocator{};
-      releaseCommandAllocator.Key = m_StateService.GetUniqueCommandKey();
-      releaseCommandAllocator.m_Object.Key = m_CommandAllocatorKey;
-      m_StateService.GetRecorder().Record(IUnknownReleaseSerializer(releaseCommandAllocator));
-
-      IUnknownReleaseCommand releaseCommandQueue{};
-      releaseCommandQueue.Key = m_StateService.GetUniqueCommandKey();
-      releaseCommandQueue.m_Object.Key = m_CommandQueueKey;
-      m_StateService.GetRecorder().Record(IUnknownReleaseSerializer(releaseCommandQueue));
-    }
-    m_InputBuffersService.RestoreBuffersCleanup();
+    IUnknownReleaseCommand releaseScratchResource{};
+    releaseScratchResource.Key = m_StateService.GetUniqueCommandKey();
+    releaseScratchResource.m_Object.Key = m_ScratchResourceKey;
+    m_StateService.GetRecorder().Record(IUnknownReleaseSerializer(releaseScratchResource));
   }
+  {
+    IUnknownReleaseCommand releaseFence{};
+    releaseFence.Key = m_StateService.GetUniqueCommandKey();
+    releaseFence.m_Object.Key = m_FenceKey;
+    m_StateService.GetRecorder().Record(IUnknownReleaseSerializer(releaseFence));
+  }
+  {
+    IUnknownReleaseCommand releaseCommandList{};
+    releaseCommandList.Key = m_StateService.GetUniqueCommandKey();
+    releaseCommandList.m_Object.Key = m_CommandListKey;
+    m_StateService.GetRecorder().Record(IUnknownReleaseSerializer(releaseCommandList));
+
+    IUnknownReleaseCommand releaseCommandAllocator{};
+    releaseCommandAllocator.Key = m_StateService.GetUniqueCommandKey();
+    releaseCommandAllocator.m_Object.Key = m_CommandAllocatorKey;
+    m_StateService.GetRecorder().Record(IUnknownReleaseSerializer(releaseCommandAllocator));
+
+    IUnknownReleaseCommand releaseCommandQueue{};
+    releaseCommandQueue.Key = m_StateService.GetUniqueCommandKey();
+    releaseCommandQueue.m_Object.Key = m_CommandQueueKey;
+    m_StateService.GetRecorder().Record(IUnknownReleaseSerializer(releaseCommandQueue));
+  }
+  m_InputBuffersService.RestoreBuffersCleanup();
 
   m_Restored = true;
 }
@@ -977,9 +978,7 @@ void AccelerationStructuresBuildService::FenceSignal(unsigned key,
 }
 
 void AccelerationStructuresBuildService::DestroyResource(unsigned commandKey,
-                                                         unsigned resourceKey) {
-  m_BufferReleaseService.AddRelease(commandKey, resourceKey);
-}
+                                                         unsigned resourceKey) {}
 
 void AccelerationStructuresBuildService::RestoreCommand(
     BuildRaytracingAccelerationStructureCommand* command) {
@@ -1234,31 +1233,191 @@ void AccelerationStructuresBuildService::OptimizationService::Cleanup() {
   m_RestoreCommands.clear();
 }
 
-void AccelerationStructuresBuildService::BufferReleaseService::AddBuffer(unsigned key) {
-  if (key) {
-    m_Buffers.insert(key);
-  }
-}
-
-void AccelerationStructuresBuildService::BufferReleaseService::AddRelease(unsigned commandKey,
+void AccelerationStructuresBuildService::BufferLifetimeService::AddBuffer(unsigned commandKey,
                                                                           unsigned bufferKey) {
-  auto it = m_Buffers.find(bufferKey);
-  if (it != m_Buffers.end()) {
-    m_Releases[commandKey] = bufferKey;
-    m_Buffers.erase(it);
+  if (bufferKey) {
+    m_Buffers.insert(bufferKey);
   }
 }
 
-void AccelerationStructuresBuildService::BufferReleaseService::ProcessReleases(
-    unsigned commandKey) {
-  auto endIt = m_Releases.lower_bound(commandKey);
-  for (auto it = m_Releases.begin(); it != endIt;) {
-    IUnknownReleaseCommand release{};
-    release.Key = it->first;
-    release.m_Object.Key = it->second;
-    m_Recorder.Record(IUnknownReleaseSerializer(release));
-    it = m_Releases.erase(it);
+void AccelerationStructuresBuildService::BufferLifetimeService::CreateBuffers() {
+  std::unordered_map<ResourceState*, unsigned> placedResourcesDefault;
+  std::unordered_map<ResourceState*, unsigned> placedResourcesUpload;
+  unsigned heapSizeDefault{};
+  unsigned heapSizeUpload{};
+  for (unsigned bufferKey : m_Buffers) {
+    ResourceState* bufferState = static_cast<ResourceState*>(m_StateService.GetState(bufferKey));
+    GITS_ASSERT(bufferState);
+    if (m_StateService.GetAnalyzerResults().RestoreObject(bufferKey)) {
+      continue;
+    }
+    if (bufferState->HeapKey) {
+      ResourceInfo info = GetPlacedResourceInfo(bufferState);
+      if (info.UploadHeap) {
+        heapSizeUpload += info.Size;
+        heapSizeUpload = Align(heapSizeUpload);
+        placedResourcesUpload.insert({bufferState, info.Size});
+      } else {
+        heapSizeDefault += info.Size;
+        heapSizeDefault = Align(heapSizeDefault);
+        placedResourcesDefault.insert({bufferState, info.Size});
+      }
+    } else {
+      m_StateService.GetRecorder().Record(
+          *createCommandSerializer(bufferState->CreationCommand.get()));
+    }
+    m_CreatedBuffers.insert(bufferKey);
   }
+  if (heapSizeUpload) {
+    m_UploadHeapKey = m_StateService.GetUniqueObjectKey();
+
+    D3D12_HEAP_DESC heapDesc{};
+    heapDesc.SizeInBytes = heapSizeUpload;
+    heapDesc.Properties.Type = D3D12_HEAP_TYPE_UPLOAD;
+    heapDesc.Properties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+    heapDesc.Properties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+    heapDesc.Properties.CreationNodeMask = 1;
+    heapDesc.Properties.VisibleNodeMask = 1;
+    heapDesc.Alignment = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
+    heapDesc.Flags = D3D12_HEAP_FLAG_NONE;
+
+    ID3D12DeviceCreateHeapCommand create;
+    create.Key = m_StateService.GetUniqueCommandKey();
+    create.m_Object.Key = m_DeviceKey;
+    create.m_riid.Value = IID_ID3D12Heap;
+    create.m_pDesc.Value = &heapDesc;
+    create.m_ppvHeap.Key = m_UploadHeapKey;
+    m_StateService.GetRecorder().Record(ID3D12DeviceCreateHeapSerializer(create));
+
+    unsigned offset = 0;
+    for (auto& [state, size] : placedResourcesUpload) {
+      RestorePlacedResource(state, m_UploadHeapKey, offset);
+      offset += size;
+      offset = Align(offset);
+    }
+  }
+  if (heapSizeDefault) {
+    m_DefaultHeapKey = m_StateService.GetUniqueObjectKey();
+
+    D3D12_HEAP_DESC heapDesc{};
+    heapDesc.SizeInBytes = heapSizeDefault;
+    heapDesc.Properties.Type = D3D12_HEAP_TYPE_DEFAULT;
+    heapDesc.Properties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+    heapDesc.Properties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+    heapDesc.Properties.CreationNodeMask = 1;
+    heapDesc.Properties.VisibleNodeMask = 1;
+    heapDesc.Alignment = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
+    heapDesc.Flags = D3D12_HEAP_FLAG_NONE;
+
+    ID3D12DeviceCreateHeapCommand create;
+    create.Key = m_StateService.GetUniqueCommandKey();
+    create.m_Object.Key = m_DeviceKey;
+    create.m_riid.Value = IID_ID3D12Heap;
+    create.m_pDesc.Value = &heapDesc;
+    create.m_ppvHeap.Key = m_DefaultHeapKey;
+    m_StateService.GetRecorder().Record(ID3D12DeviceCreateHeapSerializer(create));
+
+    unsigned offset = 0;
+    for (auto& [state, size] : placedResourcesDefault) {
+      RestorePlacedResource(state, m_DefaultHeapKey, offset);
+      offset += size;
+      offset = Align(offset);
+    }
+  }
+}
+
+void AccelerationStructuresBuildService::BufferLifetimeService::ReleaseBuffers() {
+  for (unsigned bufferKey : m_CreatedBuffers) {
+    IUnknownReleaseCommand release{};
+    release.Key = m_StateService.GetUniqueCommandKey();
+    release.m_Object.Key = bufferKey;
+    m_StateService.GetRecorder().Record(IUnknownReleaseSerializer(release));
+  }
+  if (m_UploadHeapKey) {
+    IUnknownReleaseCommand release{};
+    release.Key = m_StateService.GetUniqueCommandKey();
+    release.m_Object.Key = m_UploadHeapKey;
+    m_StateService.GetRecorder().Record(IUnknownReleaseSerializer(release));
+  }
+  if (m_DefaultHeapKey) {
+    IUnknownReleaseCommand release{};
+    release.Key = m_StateService.GetUniqueCommandKey();
+    release.m_Object.Key = m_DefaultHeapKey;
+    m_StateService.GetRecorder().Record(IUnknownReleaseSerializer(release));
+  }
+}
+
+AccelerationStructuresBuildService::BufferLifetimeService::ResourceInfo
+AccelerationStructuresBuildService::BufferLifetimeService::GetPlacedResourceInfo(
+    ResourceState* state) {
+  ResourceInfo info{};
+  info.UploadHeap = state->IsMappable;
+  switch (state->CreationCommand->GetId()) {
+  case CommandId::ID_ID3D12DEVICE_CREATEPLACEDRESOURCE: {
+    auto* command =
+        static_cast<ID3D12DeviceCreatePlacedResourceCommand*>(state->CreationCommand.get());
+    D3D12_RESOURCE_DESC* desc = command->m_pDesc.Value;
+    info.Size = desc->Width;
+  } break;
+  case CommandId::ID_ID3D12DEVICE8_CREATEPLACEDRESOURCE1: {
+    auto* command =
+        static_cast<ID3D12Device8CreatePlacedResource1Command*>(state->CreationCommand.get());
+    D3D12_RESOURCE_DESC1* desc = command->m_pDesc.Value;
+    info.Size = desc->Width;
+  } break;
+  case CommandId::ID_ID3D12DEVICE10_CREATEPLACEDRESOURCE2: {
+    auto* command =
+        static_cast<ID3D12Device10CreatePlacedResource2Command*>(state->CreationCommand.get());
+    D3D12_RESOURCE_DESC1* desc = command->m_pDesc.Value;
+    info.Size = desc->Width;
+  } break;
+  case CommandId::INTC_D3D12_CREATEPLACEDRESOURCE: {
+    auto* command =
+        static_cast<INTC_D3D12_CreatePlacedResourceCommand*>(state->CreationCommand.get());
+    D3D12_RESOURCE_DESC* desc = command->m_pDesc.Value->pD3D12Desc;
+    info.Size = desc->Width;
+  } break;
+  }
+  return info;
+}
+
+void AccelerationStructuresBuildService::BufferLifetimeService::RestorePlacedResource(
+    ResourceState* state, unsigned heapKey, unsigned offset) {
+  switch (state->CreationCommand->GetId()) {
+  case CommandId::ID_ID3D12DEVICE_CREATEPLACEDRESOURCE: {
+    auto* command =
+        static_cast<ID3D12DeviceCreatePlacedResourceCommand*>(state->CreationCommand.get());
+    command->m_pHeap.Key = heapKey;
+    command->m_HeapOffset.Value = offset;
+    m_StateService.GetRecorder().Record(ID3D12DeviceCreatePlacedResourceSerializer(*command));
+  } break;
+  case CommandId::ID_ID3D12DEVICE8_CREATEPLACEDRESOURCE1: {
+    auto* command =
+        static_cast<ID3D12Device8CreatePlacedResource1Command*>(state->CreationCommand.get());
+    command->m_pHeap.Key = heapKey;
+    command->m_HeapOffset.Value = offset;
+    m_StateService.GetRecorder().Record(ID3D12Device8CreatePlacedResource1Serializer(*command));
+  } break;
+  case CommandId::ID_ID3D12DEVICE10_CREATEPLACEDRESOURCE2: {
+    auto* command =
+        static_cast<ID3D12Device10CreatePlacedResource2Command*>(state->CreationCommand.get());
+    command->m_pHeap.Key = heapKey;
+    command->m_HeapOffset.Value = offset;
+    m_StateService.GetRecorder().Record(ID3D12Device10CreatePlacedResource2Serializer(*command));
+  } break;
+  case CommandId::INTC_D3D12_CREATEPLACEDRESOURCE: {
+    auto* command =
+        static_cast<INTC_D3D12_CreatePlacedResourceCommand*>(state->CreationCommand.get());
+    command->m_pHeap.Key = heapKey;
+    command->m_HeapOffset.Value = offset;
+    m_StateService.GetRecorder().Record(INTC_D3D12_CreatePlacedResourceSerializer(*command));
+  } break;
+  }
+}
+
+unsigned AccelerationStructuresBuildService::BufferLifetimeService::Align(unsigned value) {
+  return ((value - 1) / D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT + 1) *
+         D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
 }
 
 } // namespace DirectX

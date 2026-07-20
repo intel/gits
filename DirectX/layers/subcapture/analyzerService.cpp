@@ -306,7 +306,7 @@ void AnalyzerService::DumpAnalysisFile() {
     objectKeys.insert(key);
     FindParents(key, objectKeys);
   }
-  for (unsigned key : m_RaytracingOptimizationService.GetOptimizedBuffers()) {
+  for (unsigned key : m_RaytracingOptimizationService.GetExistingBuffers()) {
     objectKeys.insert(key);
     FindParents(key, objectKeys);
   }

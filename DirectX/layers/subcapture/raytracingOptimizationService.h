@@ -34,8 +34,8 @@ public:
   std::vector<std::pair<unsigned, unsigned>>& GetOptimizedCommands() {
     return m_OptimizedCommandsWithSources;
   }
-  std::unordered_set<unsigned>& GetOptimizedBuffers() {
-    return m_OptimizedBuffers;
+  std::unordered_set<unsigned>& GetExistingBuffers() {
+    return m_ExistingBuffers;
   }
 
 private:
@@ -62,7 +62,7 @@ private:
   std::unordered_map<unsigned, std::unique_ptr<RaytracingCommand>> m_CommandById;
 
   std::vector<std::pair<unsigned, unsigned>> m_OptimizedCommandsWithSources;
-  std::unordered_set<unsigned> m_OptimizedBuffers;
+  std::unordered_set<unsigned> m_ExistingBuffers;
 
 private:
   void StoreCommand(std::unique_ptr<RaytracingCommand>& command);
