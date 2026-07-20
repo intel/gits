@@ -10,6 +10,8 @@
 
 #include "layerAuto.h"
 
+#include <vector>
+
 namespace gits {
 namespace vulkan {
 
@@ -111,6 +113,12 @@ private:
   PlayerManager& m_Manager;
   static thread_local VkResult tl_recorderReturnValue;
   static thread_local uint64_t tl_recorderSemaphoreCounterValue;
+  // Backing storage for the filtered ppEnabledLayerNames array produced by the
+  // Common.Vulkan.Shared.SuppressLayers (--suppressVKLayers) handling. Must
+  // outlive the create call, hence stored on the layer rather than a local.
+  // Instance-only: device-level layers (VkDeviceCreateInfo::ppEnabledLayerNames)
+  // were deprecated in Vulkan 1.0.13 and are ignored by every conformant loader.
+  static thread_local std::vector<const char*> tl_instanceLayerNames;
 };
 
 } // namespace vulkan

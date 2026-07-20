@@ -14,6 +14,7 @@ target_sources(Vulkan_utils
 PRIVATE
   ${SRC_DIR}/pluginService.h
   ${SRC_DIR}/pluginService.cpp
+  ${SRC_DIR}/suppressNames.h
 )
 
 target_include_directories(Vulkan_utils

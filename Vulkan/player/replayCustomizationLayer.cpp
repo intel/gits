@@ -10,6 +10,8 @@
 #include "playerManager.h"
 #include "swapchainImageSyncService.h"
 #include "configurator.h"
+#include "suppressNames.h"
+#include "log.h"
 
 #include <thread>
 #include <chrono>
@@ -21,6 +23,7 @@ namespace vulkan {
 
 thread_local VkResult ReplayCustomizationLayer::tl_recorderReturnValue{VK_SUCCESS};
 thread_local uint64_t ReplayCustomizationLayer::tl_recorderSemaphoreCounterValue{0};
+thread_local std::vector<const char*> ReplayCustomizationLayer::tl_instanceLayerNames;
 
 void ReplayCustomizationLayer::Post(vkCreateInstanceCommand& command) {
   m_Manager.LoadInstanceFunctions(*command.m_pInstance.Value);
@@ -474,6 +477,17 @@ static void RedirectDebugCallbacksInPNext(const void* pNext) {
 void ReplayCustomizationLayer::Pre(vkCreateInstanceCommand& command) {
   if (command.m_pCreateInfo.Value) {
     RedirectDebugCallbacksInPNext(command.m_pCreateInfo.Value->pNext);
+
+    // Drop layers the user asked to suppress from the recorded instance so the
+    // driver does not try to load them on this machine (--suppressVKLayers).
+    VkInstanceCreateInfo* createInfo = command.m_pCreateInfo.Value;
+    const uint32_t removed = RemoveSuppressedNames(
+        Configurator::Get().vulkan.shared.suppressLayers, createInfo->enabledLayerCount,
+        createInfo->ppEnabledLayerNames, tl_instanceLayerNames);
+    if (removed > 0) {
+      LOG_INFO << "ReplayCustomization: suppressed " << removed
+               << " instance layer(s) during vkCreateInstance.";
+    }
   }
 }
 
