@@ -99,17 +99,7 @@ void SwapchainImagesDumper::StartWorkerThread() {
 }
 
 SwapchainImagesDumper::~SwapchainImagesDumper() {
-  {
-    std::lock_guard<std::mutex> lock(m_Mutex);
-    m_Shutdown = true;
-  }
-  m_FrameCopySubmittedCV.notify_all();
-
-  for (auto& worker : m_Workers) {
-    if (worker.joinable()) {
-      worker.join();
-    }
-  }
+  Flush();
 
   for (auto& stagedFrame : m_StagedFrames) {
     if (stagedFrame.StagingBuffer) {
@@ -125,6 +115,26 @@ SwapchainImagesDumper::~SwapchainImagesDumper() {
   for (auto& [queueFamilyIndex, commandPool] : m_CommandPools) {
     if (commandPool) {
       m_DispatchTable.vkDestroyCommandPool(m_Device, commandPool, nullptr);
+    }
+  }
+}
+
+void SwapchainImagesDumper::Flush() {
+  {
+    std::lock_guard<std::mutex> lock(m_Mutex);
+    if (m_Shutdown) {
+      return;
+    }
+    m_Shutdown = true;
+  }
+  // Wake the workers (to drain the queue and exit) and any producer waiting for
+  // a free staged frame (so it can observe the shutdown).
+  m_FrameCopySubmittedCV.notify_all();
+  m_StagedFrameFreeCV.notify_all();
+
+  for (auto& worker : m_Workers) {
+    if (worker.joinable()) {
+      worker.join();
     }
   }
 }

@@ -44,6 +44,13 @@ public:
   void AllocateBuffers(const std::vector<uint32_t>& queueFamilyIndices);
   void StartWorkerThread();
 
+  // Drains the submitted-frame queue and joins the worker threads, guaranteeing
+  // every already-submitted screenshot copy has completed and been written to
+  // disk. Idempotent; device resources are left intact so the destructor can
+  // release them afterwards. Called both at end of playback (before windows are
+  // destroyed) and from the destructor.
+  void Flush();
+
   // Records and submits the copy on the present queue, waiting on the given
   // semaphores (typically the present's original wait semaphores) before the
   // transfer read. Returns true if the copy was actually submitted - i.e. the

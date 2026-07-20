@@ -11,6 +11,7 @@
 #include "dispatchTablesHolder.h"
 #include "log.h"
 #include "configurator.h"
+#include "messageBus.h"
 
 #include <algorithm>
 #include <filesystem>
@@ -50,6 +51,23 @@ ScreenshotsLayer::ScreenshotsLayer(DispatchTablesHolder& dispatchTablesHolder)
 
   if (!Configurator::Get().common.player.captureFrames.empty()) {
     m_ScreenshotRange = Configurator::Get().common.player.captureFrames;
+  }
+
+  // Flush pending screenshots before the player destroys its windows (published
+  // right after the playback loop, ahead of DestroyAllWindows). Streams that
+  // destroy their swapchain already flush via Pre(vkDestroySwapchainKHRCommand),
+  // but truncated/one-frame substreams may not; this closes that gap so the
+  // final present's screenshot is completed while the swapchain is still valid.
+  gits::MessageBus::get().subscribe({PUBLISHER_PLAYER, TOPIC_END},
+                                    [this](Topic t, const MessagePtr& m) { Close(); });
+}
+
+void ScreenshotsLayer::Close() {
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  for (auto& [swapchain, info] : m_SwapchainInfos) {
+    if (info.Dumper) {
+      info.Dumper->Flush();
+    }
   }
 }
 

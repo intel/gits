@@ -43,6 +43,10 @@ public:
   void Post(vkQueuePresentKHRCommand& command) override;
 
 private:
+  // Flushes every swapchain's async image dumper so all pending screenshots are
+  // written to disk. Triggered by TOPIC_END, before the player destroys windows.
+  void Close();
+
   struct SwapchainInfo {
     VkDevice Device{};
     std::vector<VkImage> Images;
