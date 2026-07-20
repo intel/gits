@@ -51,7 +51,6 @@ void ImGuiHUDLayer::ReleaseHud() {
   m_Initialized = false;
   m_Owner = HudOwner::None;
   m_FenceValue = 0;
-  m_FirstExecuteInFrame = true;
   m_Window = nullptr;
   m_ResizeBuffersWarning = false;
 }
@@ -90,13 +89,6 @@ void ImGuiHUDLayer::Pre(IUnknownReleaseCommand& c) {
   }
 
   m_BackBufferKeys.clear();
-}
-
-void ImGuiHUDLayer::Pre(ID3D12CommandQueueExecuteCommandListsCommand& c) {
-  if (m_SwapChain && m_FirstExecuteInFrame) {
-    WaitForCurrentFrame();
-    m_FirstExecuteInFrame = false;
-  }
 }
 
 void ImGuiHUDLayer::Post(IDXGIFactoryCreateSwapChainCommand& c) {
@@ -183,7 +175,6 @@ void ImGuiHUDLayer::Post(IDXGISwapChainPresentCommand& c) {
     return;
   }
   CGits::Instance().FrameCountUp();
-  m_FirstExecuteInFrame = true;
 }
 
 void ImGuiHUDLayer::Pre(IDXGISwapChain1Present1Command& c) {
@@ -199,7 +190,6 @@ void ImGuiHUDLayer::Post(IDXGISwapChain1Present1Command& c) {
     return;
   }
   CGits::Instance().FrameCountUp();
-  m_FirstExecuteInFrame = true;
 }
 
 void ImGuiHUDLayer::Post(IDXGISwapChainResizeBuffersCommand& command) {

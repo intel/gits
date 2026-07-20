@@ -36,7 +36,6 @@ public:
 
   void Post(IDXGISwapChainGetBufferCommand& c) override;
   void Pre(IUnknownReleaseCommand& c) override;
-  void Pre(ID3D12CommandQueueExecuteCommandListsCommand& c) override;
   void Post(IDXGIFactoryCreateSwapChainCommand& c) override;
   void Post(IDXGIFactory2CreateSwapChainForHwndCommand& c) override;
   void Pre(IDXGISwapChainPresentCommand& command) override;
@@ -89,7 +88,6 @@ private:
   Microsoft::WRL::ComPtr<IDXGISwapChain3> m_SwapChain = nullptr;
 
   UINT64 m_FenceValue = 0;
-  bool m_FirstExecuteInFrame = true;
 
   void* m_Window = nullptr;
   bool m_ResizeBuffersWarning = false;
