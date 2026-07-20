@@ -88,9 +88,9 @@ private:
   CapturePlayerShaderIdentifierService m_ShaderIdentifierService;
   AnalyzerRaytracingService m_RaytracingService;
   AnalyzerExecuteIndirectService m_ExecuteIndirectService;
-  AnalyzerService m_AnalyzerService;
   ResourceStateTracker m_ResourceStateTracker;
   RaytracingOptimizationService m_RaytracingOptimizationService;
+  AnalyzerService m_AnalyzerService;
 };
 
 } // namespace DirectX
