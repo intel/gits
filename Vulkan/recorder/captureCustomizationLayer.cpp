@@ -9,6 +9,8 @@
 #include "captureCustomizationLayer.h"
 #include "captureManager.h"
 #include "commandSerializersCustom.h"
+#include "configurator.h"
+#include "suppressNames.h"
 
 namespace gits {
 namespace vulkan {
@@ -16,6 +18,37 @@ namespace vulkan {
 thread_local CaptureCustomizationLayer::AllocateInfo CaptureCustomizationLayer::s_AllocateInfo;
 thread_local VkBufferCreateInfo CaptureCustomizationLayer::s_BufferCreateInfo;
 thread_local VkImageCreateInfo CaptureCustomizationLayer::s_ImageCreateInfo;
+
+void CaptureCustomizationLayer::Pre(vkEnumerateInstanceLayerPropertiesCommand& command) {
+  const auto& suppressLayers = Configurator::Get().vulkan.shared.suppressLayers;
+  if (suppressLayers.empty()) {
+    return;
+  }
+  command.m_Skip = true;
+  VkGlobalLevelDispatchTable& dispatchTable = m_Manager.GetGlobalDispatchTable();
+  ProduceFilteredLayers(
+      suppressLayers,
+      [&dispatchTable](uint32_t* count, VkLayerProperties* properties) {
+        return dispatchTable.vkEnumerateInstanceLayerProperties(count, properties);
+      },
+      command.m_pPropertyCount.Value, command.m_pProperties.Value);
+}
+
+void CaptureCustomizationLayer::Pre(vkEnumerateDeviceLayerPropertiesCommand& command) {
+  const auto& suppressLayers = Configurator::Get().vulkan.shared.suppressLayers;
+  if (suppressLayers.empty()) {
+    return;
+  }
+  command.m_Skip = true;
+  VkPhysicalDevice physicalDevice = command.m_physicalDevice.Value;
+  VkInstanceLevelDispatchTable& dispatchTable = m_Manager.GetInstanceDispatchTable(physicalDevice);
+  ProduceFilteredLayers(
+      suppressLayers,
+      [&dispatchTable, physicalDevice](uint32_t* count, VkLayerProperties* properties) {
+        return dispatchTable.vkEnumerateDeviceLayerProperties(physicalDevice, count, properties);
+      },
+      command.m_pPropertyCount.Value, command.m_pProperties.Value);
+}
 
 #ifdef VK_USE_PLATFORM_WIN32_KHR
 void CaptureCustomizationLayer::Pre(vkCreateWin32SurfaceKHRCommand& command) {

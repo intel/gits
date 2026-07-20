@@ -8,6 +8,8 @@
 
 #pragma once
 
+#include "vulkanHeader2.h"
+
 #include <algorithm>
 #include <cstdint>
 #include <string>
@@ -50,6 +52,49 @@ inline uint32_t RemoveSuppressedNames(const std::vector<std::string>& suppressed
     names = storage.data();
   }
   return removed;
+}
+
+// Enumerates a layer list via `driverEnumerate` (a callable with the same
+// signature as vkEnumerate{Instance,Device}LayerProperties, minus the
+// physical device handle, which the caller should already have bound), drops
+// the layers named in `suppressed` and writes the filtered result into
+// `pProperties`, honoring the Vulkan two-call enumeration idiom
+// (pProperties == nullptr queries the count).
+template <typename DriverEnumerate>
+void ProduceFilteredLayers(const std::vector<std::string>& suppressed,
+                           DriverEnumerate&& driverEnumerate,
+                           uint32_t* pPropertyCount,
+                           VkLayerProperties* pProperties) {
+  if (pPropertyCount == nullptr) {
+    return;
+  }
+
+  uint32_t count = 0;
+  std::vector<VkLayerProperties> properties;
+  if (driverEnumerate(&count, nullptr) == VK_SUCCESS && count > 0) {
+    properties.resize(count);
+    if (driverEnumerate(&count, properties.data()) == VK_SUCCESS) {
+      properties.resize(count);
+      properties.erase(std::remove_if(properties.begin(), properties.end(),
+                                      [&suppressed](const VkLayerProperties& layer) {
+                                        return std::any_of(suppressed.begin(), suppressed.end(),
+                                                           [&layer](const std::string& name) {
+                                                             return name == layer.layerName;
+                                                           });
+                                      }),
+                       properties.end());
+    }
+  }
+
+  if (pProperties == nullptr) {
+    *pPropertyCount = static_cast<uint32_t>(properties.size());
+  } else {
+    const uint32_t writable = std::min(*pPropertyCount, static_cast<uint32_t>(properties.size()));
+    for (uint32_t i = 0; i < writable; ++i) {
+      pProperties[i] = properties[i];
+    }
+    *pPropertyCount = writable;
+  }
 }
 
 } // namespace vulkan

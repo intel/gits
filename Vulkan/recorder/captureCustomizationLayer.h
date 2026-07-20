@@ -43,6 +43,9 @@ public:
   void Post(vkDestroySwapchainKHRCommand& command) override;
   void Post(vkDestroySurfaceKHRCommand& command) override;
 
+  void Pre(vkEnumerateInstanceLayerPropertiesCommand& command) override;
+  void Pre(vkEnumerateDeviceLayerPropertiesCommand& command) override;
+
   void Pre(vkCreateBufferCommand& command) override;
   void Pre(vkCreateImageCommand& command) override;
 
