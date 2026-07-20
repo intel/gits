@@ -34,6 +34,8 @@ stream::CommandRunner* DirectXCommandFactory::CreateCommand(unsigned id) {
     return new MappedDataMetaRunner();
   case CommandId::ID_CREATE_HEAP_ALLOCATION:
     return new CreateHeapAllocationMetaRunner();
+  case CommandId::ID_WAIT_FOR_FENCE_SIGNALED_DEPRECATED:
+    return new WaitForFenceSignaledDeprecatedRunner();
   case CommandId::ID_WAIT_FOR_FENCE_SIGNALED:
     return new WaitForFenceSignaledRunner();
   case CommandId::ID_META_DLL_CONTAINER:

@@ -105,6 +105,20 @@ void Encode(const CreateHeapAllocationMetaCommand& command, char* dest) {
   Encode(dest, offset, command.m_data);
 }
 
+unsigned GetSize(const WaitForFenceSignaledDeprecatedCommand& command) {
+  return GetSize(command.Key) + GetSize(command.ThreadId) + GetSize(command.m_event) +
+         GetSize(command.m_fence) + GetSize(command.m_Value);
+}
+
+void Encode(const WaitForFenceSignaledDeprecatedCommand& command, char* dest) {
+  unsigned offset = 0;
+  Encode(dest, offset, command.Key);
+  Encode(dest, offset, command.ThreadId);
+  Encode(dest, offset, command.m_event);
+  Encode(dest, offset, command.m_fence);
+  Encode(dest, offset, command.m_Value);
+}
+
 unsigned GetSize(const WaitForFenceSignaledCommand& command) {
   return GetSize(command.Key) + GetSize(command.ThreadId) + GetSize(command.m_event) +
          GetSize(command.m_fence) + GetSize(command.m_Value);

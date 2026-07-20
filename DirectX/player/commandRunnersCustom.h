@@ -142,6 +142,19 @@ private:
   CreateHeapAllocationMetaCommand command;
 };
 
+class WaitForFenceSignaledDeprecatedRunner : public stream::CommandRunner {
+public:
+  void Run() override;
+
+protected:
+  void DecodeCommand() override {
+    Decode(m_Data, command);
+  }
+
+private:
+  WaitForFenceSignaledDeprecatedCommand command;
+};
+
 class WaitForFenceSignaledRunner : public stream::CommandRunner {
 public:
   void Run() override;

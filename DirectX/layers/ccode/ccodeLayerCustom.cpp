@@ -140,6 +140,14 @@ void CCodeLayer::Post(CreateWindowMetaCommand& c) {
      << c.m_height.Value << ");" << std::endl;
 }
 
+void CCodeLayer::Post(WaitForFenceSignaledDeprecatedCommand& c) {
+  using namespace ccode;
+  auto& stream = CCodeStream::getInstance();
+  auto& ss = stream.getCurrentBlock();
+  ss << "directx::WaitForFence(" << objKeyToPtrStr(c.m_fence.Key) << ", " << c.m_Value.Value << ");"
+     << std::endl;
+}
+
 void CCodeLayer::Post(WaitForFenceSignaledCommand& c) {
   using namespace ccode;
   auto& stream = CCodeStream::getInstance();

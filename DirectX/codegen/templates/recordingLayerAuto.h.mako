@@ -33,6 +33,7 @@ public:
   void Post(CreateWindowMetaCommand& command) override;
   void Post(MappedDataMetaCommand& command) override;
   void Post(CreateHeapAllocationMetaCommand& command) override;
+  void Post(WaitForFenceSignaledDeprecatedCommand& command) override;
   void Post(WaitForFenceSignaledCommand& command) override;
   void Post(DllContainerMetaCommand& command) override;
   void Post(IUnknownQueryInterfaceCommand& command) override;

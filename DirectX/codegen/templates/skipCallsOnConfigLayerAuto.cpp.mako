@@ -35,6 +35,13 @@ void SkipCallsOnConfigLayer::Pre(CreateHeapAllocationMetaCommand& command) {
   }
 }
 
+void SkipCallsOnConfigLayer::Pre(WaitForFenceSignaledDeprecatedCommand& command) {
+  if (m_KeyRange[command.Key]) {
+    command.Skip = true;
+    LOG_INFO << "[SKIPPED] call " << keyToStr(command.Key) << " WaitForFenceSignaled";
+  }
+}
+
 void SkipCallsOnConfigLayer::Pre(WaitForFenceSignaledCommand& command) {
   if (m_KeyRange[command.Key]) {
     command.Skip = true;

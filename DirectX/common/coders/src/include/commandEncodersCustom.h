@@ -32,6 +32,9 @@ void Encode(const MappedDataMetaCommand& command, char* dest);
 unsigned GetSize(const CreateHeapAllocationMetaCommand& command);
 void Encode(const CreateHeapAllocationMetaCommand& command, char* dest);
 
+unsigned GetSize(const WaitForFenceSignaledDeprecatedCommand& command);
+void Encode(const WaitForFenceSignaledDeprecatedCommand& command, char* dest);
+
 unsigned GetSize(const WaitForFenceSignaledCommand& command);
 void Encode(const WaitForFenceSignaledCommand& command, char* dest);
 

@@ -96,6 +96,8 @@ void CommandListSplitLayer::Pre(CreateHeapAllocationMetaCommand& c) {
   m_Recorder.Record(CreateHeapAllocationMetaSerializer(c));
 }
 
+void CommandListSplitLayer::Pre(WaitForFenceSignaledDeprecatedCommand& c) {}
+
 void CommandListSplitLayer::Pre(WaitForFenceSignaledCommand& c) {}
 
 void CommandListSplitLayer::Pre(DllContainerMetaCommand& c) {

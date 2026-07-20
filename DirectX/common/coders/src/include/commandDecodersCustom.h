@@ -19,6 +19,7 @@ void Decode(char* src, IUnknownReleaseCommand& command);
 void Decode(char* src, CreateWindowMetaCommand& command);
 void Decode(char* src, MappedDataMetaCommand& command);
 void Decode(char* src, CreateHeapAllocationMetaCommand& command);
+void Decode(char* src, WaitForFenceSignaledDeprecatedCommand& command);
 void Decode(char* src, WaitForFenceSignaledCommand& command);
 void Decode(char* src, DllContainerMetaCommand& command);
 void Decode(char* src, INTC_D3D12_GetSupportedVersionsCommand& command);

@@ -47,6 +47,10 @@ void StatisticsLayer::Post(CreateHeapAllocationMetaCommand& command) {
   m_StatisticsService.Command("CreateHeapAllocationMeta");
 }
 
+void StatisticsLayer::Post(WaitForFenceSignaledDeprecatedCommand& command) {
+  m_StatisticsService.Command("WaitForFenceSignaled");
+}
+
 void StatisticsLayer::Post(WaitForFenceSignaledCommand& command) {
   m_StatisticsService.Command("WaitForFenceSignaled");
 }

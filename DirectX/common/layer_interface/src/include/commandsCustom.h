@@ -667,6 +667,21 @@ public:
   BufferArgument m_data{};
 };
 
+// Deprecated: kept only to decode/replay streams recorded before the fence
+// value was changed to UINT64. New streams use WaitForFenceSignaledCommand.
+class WaitForFenceSignaledDeprecatedCommand : public Command {
+public:
+  WaitForFenceSignaledDeprecatedCommand(unsigned threadId)
+      : Command{CommandId::ID_WAIT_FOR_FENCE_SIGNALED_DEPRECATED, threadId} {}
+  WaitForFenceSignaledDeprecatedCommand()
+      : Command(CommandId::ID_WAIT_FOR_FENCE_SIGNALED_DEPRECATED) {}
+
+public:
+  Argument<HANDLE> m_event{};
+  InterfaceArgument<ID3D12Fence> m_fence{};
+  Argument<unsigned> m_Value{};
+};
+
 class WaitForFenceSignaledCommand : public Command {
 public:
   WaitForFenceSignaledCommand(unsigned threadId)
@@ -676,7 +691,7 @@ public:
 public:
   Argument<HANDLE> m_event{};
   InterfaceArgument<ID3D12Fence> m_fence{};
-  Argument<unsigned> m_Value{};
+  Argument<UINT64> m_Value{};
 };
 
 class DllContainerMetaCommand : public Command {

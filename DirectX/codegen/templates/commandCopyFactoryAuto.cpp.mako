@@ -36,6 +36,8 @@ std::unique_ptr<Command> CreateCommandCopy(const Command* command) {
     return std::make_unique<MappedDataMetaCommand>(*static_cast<const MappedDataMetaCommand*>(command));
   case CommandId::ID_CREATE_HEAP_ALLOCATION:
     return std::make_unique<CreateHeapAllocationMetaCommand>(*static_cast<const CreateHeapAllocationMetaCommand*>(command));
+  case CommandId::ID_WAIT_FOR_FENCE_SIGNALED_DEPRECATED:
+    return std::make_unique<WaitForFenceSignaledDeprecatedCommand>(*static_cast<const WaitForFenceSignaledDeprecatedCommand*>(command));
   case CommandId::ID_WAIT_FOR_FENCE_SIGNALED:
     return std::make_unique<WaitForFenceSignaledCommand>(*static_cast<const WaitForFenceSignaledCommand*>(command));
   case CommandId::ID_META_DLL_CONTAINER:

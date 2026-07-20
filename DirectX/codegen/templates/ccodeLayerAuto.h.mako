@@ -38,6 +38,7 @@ public:
 
   // Used for extra metadata
   void Post(CreateWindowMetaCommand& command);
+  void Post(WaitForFenceSignaledDeprecatedCommand& command);
   void Post(WaitForFenceSignaledCommand& command);
   void Post(MappedDataMetaCommand& command);
   void Post(CreateHeapAllocationMetaCommand& command);

@@ -248,6 +248,8 @@ void ExecutionSerializationLayer::Pre(CreateHeapAllocationMetaCommand& c) {
   }
 }
 
+void ExecutionSerializationLayer::Pre(WaitForFenceSignaledDeprecatedCommand& c) {}
+
 void ExecutionSerializationLayer::Pre(WaitForFenceSignaledCommand& c) {}
 
 void ExecutionSerializationLayer::Pre(DllContainerMetaCommand& c) {

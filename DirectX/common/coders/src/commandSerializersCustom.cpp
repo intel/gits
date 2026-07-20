@@ -103,6 +103,17 @@ unsigned CreateHeapAllocationMetaSerializer::Id() const {
   return static_cast<unsigned>(CommandId::ID_CREATE_HEAP_ALLOCATION);
 }
 
+WaitForFenceSignaledDeprecatedSerializer::WaitForFenceSignaledDeprecatedSerializer(
+    const WaitForFenceSignaledDeprecatedCommand& command) {
+  m_DataSize = GetSize(command);
+  m_Data.reset(new char[m_DataSize]);
+  Encode(command, m_Data.get());
+}
+
+unsigned WaitForFenceSignaledDeprecatedSerializer::Id() const {
+  return static_cast<unsigned>(CommandId::ID_WAIT_FOR_FENCE_SIGNALED_DEPRECATED);
+}
+
 WaitForFenceSignaledSerializer::WaitForFenceSignaledSerializer(
     const WaitForFenceSignaledCommand& command) {
   m_DataSize = GetSize(command);

@@ -123,6 +123,12 @@ void RecordingLayer::Post(CreateHeapAllocationMetaCommand& Command) {
   }
 }
 
+void RecordingLayer::Post(WaitForFenceSignaledDeprecatedCommand& Command) {
+  if (m_SubcaptureRange.InRange()) {
+    m_Recorder.Record(WaitForFenceSignaledDeprecatedSerializer(Command));
+  }
+}
+
 void RecordingLayer::Post(WaitForFenceSignaledCommand& Command) {
   if (m_SubcaptureRange.InRange()) {
     m_Recorder.Record(WaitForFenceSignaledSerializer(Command));

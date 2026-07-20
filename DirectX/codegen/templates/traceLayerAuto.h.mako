@@ -56,6 +56,9 @@ public:
   void Pre(CreateHeapAllocationMetaCommand& command) override;
   void Post(CreateHeapAllocationMetaCommand& command) override;
 
+  void Pre(WaitForFenceSignaledDeprecatedCommand& command) override;
+  void Post(WaitForFenceSignaledDeprecatedCommand& command) override;
+
   void Pre(WaitForFenceSignaledCommand& command) override;
   void Post(WaitForFenceSignaledCommand& command) override;
 

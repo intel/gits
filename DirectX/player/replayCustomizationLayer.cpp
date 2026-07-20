@@ -408,6 +408,16 @@ void ReplayCustomizationLayer::Post(ID3D12FenceGetCompletedValueCommand& c) {
   c.m_Result.Value = c.m_Object.Value->GetCompletedValue();
 }
 
+void ReplayCustomizationLayer::Post(WaitForFenceSignaledDeprecatedCommand& c) {
+  if (c.Skip) {
+    return;
+  }
+  // fence could be removed before wait is signaled
+  if (c.m_fence.Value) {
+    WaitForFence(c.Key, c.m_fence.Value, c.m_Value.Value);
+  }
+}
+
 void ReplayCustomizationLayer::Post(WaitForFenceSignaledCommand& c) {
   if (c.Skip) {
     return;

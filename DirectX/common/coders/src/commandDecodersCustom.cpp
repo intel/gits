@@ -71,6 +71,15 @@ void Decode(char* src, CreateHeapAllocationMetaCommand& command) {
   Decode(src, offset, command.m_data);
 }
 
+void Decode(char* src, WaitForFenceSignaledDeprecatedCommand& command) {
+  unsigned offset = 0;
+  Decode(src, offset, command.Key);
+  Decode(src, offset, command.ThreadId);
+  Decode(src, offset, command.m_event);
+  Decode(src, offset, command.m_fence);
+  Decode(src, offset, command.m_Value);
+}
+
 void Decode(char* src, WaitForFenceSignaledCommand& command) {
   unsigned offset = 0;
   Decode(src, offset, command.Key);

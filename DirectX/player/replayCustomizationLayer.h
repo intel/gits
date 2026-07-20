@@ -58,6 +58,7 @@ public:
   void Pre(ID3D12Device1SetEventOnMultipleFenceCompletionCommand& command) override;
   void Pre(ID3D12FenceGetCompletedValueCommand& command) override;
   void Post(ID3D12FenceGetCompletedValueCommand& command) override;
+  void Post(WaitForFenceSignaledDeprecatedCommand& command) override;
   void Post(WaitForFenceSignaledCommand& command) override;
   void Post(ID3D12DeviceCreateCommittedResourceCommand& command) override;
   void Post(ID3D12Device4CreateCommittedResource1Command& command) override;

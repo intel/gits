@@ -47,6 +47,9 @@ public:
   virtual void Pre(CreateHeapAllocationMetaCommand& command) {}
   virtual void Post(CreateHeapAllocationMetaCommand& command) {}
 
+  virtual void Pre(WaitForFenceSignaledDeprecatedCommand& command) {}
+  virtual void Post(WaitForFenceSignaledDeprecatedCommand& command) {}
+
   virtual void Pre(WaitForFenceSignaledCommand& command) {}
   virtual void Post(WaitForFenceSignaledCommand& command) {}
 

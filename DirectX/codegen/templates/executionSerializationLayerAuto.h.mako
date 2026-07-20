@@ -31,6 +31,7 @@ public:
   void Pre(CreateWindowMetaCommand& c) override;
   void Pre(MappedDataMetaCommand& c) override;
   void Pre(CreateHeapAllocationMetaCommand& c) override;
+  void Pre(WaitForFenceSignaledDeprecatedCommand& c) override;
   void Pre(WaitForFenceSignaledCommand& c) override;
   void Pre(DllContainerMetaCommand& c) override;
   void Pre(IUnknownQueryInterfaceCommand& c) override;

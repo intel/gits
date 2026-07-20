@@ -151,6 +151,26 @@ void TraceLayer::Post(CreateHeapAllocationMetaCommand& command) {
 
 #pragma endregion
 
+void TraceLayer::Pre(WaitForFenceSignaledDeprecatedCommand& command) {
+  if (m_PrintPre) {
+    CommandPrinter p(m_StreamPre, m_StatePre, command, "WaitForFenceSignaledCommand");
+    p.AddArgument(command.m_event);
+    p.AddArgument(command.m_fence);
+    p.AddArgument(command.m_Value);
+    p.Print(m_Flush);
+  }
+}
+
+void TraceLayer::Post(WaitForFenceSignaledDeprecatedCommand& command) {
+  if (m_PrintPost) {
+    CommandPrinter p(m_StreamPost, m_StatePost, command, "WaitForFenceSignaledCommand");
+    p.AddArgument(command.m_event);
+    p.AddArgument(command.m_fence);
+    p.AddArgument(command.m_Value);
+    p.Print(m_Flush);
+  }
+}
+
 void TraceLayer::Pre(WaitForFenceSignaledCommand& command) {
   if (m_PrintPre) {
     CommandPrinter p(m_StreamPre, m_StatePre, command, "WaitForFenceSignaledCommand");

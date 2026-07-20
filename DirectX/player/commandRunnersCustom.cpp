@@ -187,6 +187,21 @@ void CreateHeapAllocationMetaRunner::Run() {
 
 #pragma endregion
 
+void WaitForFenceSignaledDeprecatedRunner::Run() {
+  auto& manager = PlayerManager::Get();
+  UpdateInterface(manager, command.m_fence);
+
+  for (Layer* layer : manager.GetPreLayers()) {
+    layer->Pre(command);
+  }
+
+  // handled in ReplayCustomizationLayer
+
+  for (Layer* layer : manager.GetPostLayers()) {
+    layer->Post(command);
+  }
+}
+
 void WaitForFenceSignaledRunner::Run() {
   auto& manager = PlayerManager::Get();
   UpdateInterface(manager, command.m_fence);
