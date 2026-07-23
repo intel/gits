@@ -15,7 +15,6 @@ set(XESS_HEADERS_DIR ${XESS_SDK_DIR}/inc)
 
 set(DIRECTX_DIR ${CMAKE_SOURCE_DIR}/DirectX)
 set(PLUGINS_DIR ${CMAKE_SOURCE_DIR}/plugins)
-set(BUILD_DIRECTX_PLUGINS ON)
 
 function(set_auto_generated_property)
   # Parse function arguments
@@ -51,4 +50,3 @@ add_subdirectory(layers/imgui_hud)
 add_subdirectory(layers/print_status)
 add_subdirectory(layers/address_pinning)
 add_subdirectory(layers/ccode)
-add_subdirectory(${PLUGINS_DIR} DirectX_plugins)

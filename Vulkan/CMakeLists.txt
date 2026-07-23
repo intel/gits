@@ -37,8 +37,3 @@ add_subdirectory(layers/resource_dumping)
 add_subdirectory(layers/portability)
 add_subdirectory(interceptor)
 add_subdirectory(player)
-
-if(WIN32)
-  set(PLUGINS_DIR ${CMAKE_SOURCE_DIR}/plugins)
-  add_subdirectory(${PLUGINS_DIR}/Vulkan ${CMAKE_CURRENT_BINARY_DIR}/Vulkan_plugins)
-endif()
