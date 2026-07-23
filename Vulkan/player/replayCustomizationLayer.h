@@ -9,6 +9,7 @@
 #pragma once
 
 #include "layerAuto.h"
+#include "rayTracingReplayService.h"
 
 #include <vector>
 
@@ -108,9 +109,11 @@ public:
   void Post(vkAcquireNextImage2KHRCommand& command) override;
   void Post(vkResetFencesCommand& command) override;
   void Post(vkDestroyFenceCommand& command) override;
+  void Pre(vkCreateRayTracingPipelinesKHRCommand& command) override;
 
 private:
   PlayerManager& m_Manager;
+  RayTracingReplayService m_RayTracingService;
   static thread_local VkResult tl_recorderReturnValue;
   static thread_local uint64_t tl_recorderSemaphoreCounterValue;
   // Backing storage for the filtered ppEnabledLayerNames array produced by the

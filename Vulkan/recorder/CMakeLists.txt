@@ -13,6 +13,7 @@ set(ROOT_SRC
   ${CMAKE_CURRENT_SOURCE_DIR}/captureManager.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/captureLayerManager.h
   ${CMAKE_CURRENT_SOURCE_DIR}/captureLayerManager.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/../common/utils/vulkanHelpers.h
 )
 source_group("" FILES ${ROOT_SRC})
 
@@ -41,6 +42,8 @@ set(SERVICES_SRC
   ${CMAKE_CURRENT_SOURCE_DIR}/windowTrackingService.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/descriptorUpdateTemplateService.h
   ${CMAKE_CURRENT_SOURCE_DIR}/descriptorUpdateTemplateService.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/rayTracingCaptureService.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/rayTracingCaptureService.cpp
 )
 source_group("services" FILES ${SERVICES_SRC})
 

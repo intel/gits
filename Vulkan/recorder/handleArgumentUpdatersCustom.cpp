@@ -8,30 +8,20 @@
 
 #include "handleArgumentUpdatersCustom.h"
 #include "handleArgumentUpdatersAuto.h"
+#include "vulkanHelpers.h"
 
 namespace gits {
 namespace vulkan {
 
-bool IsImageDescriptorType(VkDescriptorType type) {
-  return type == VK_DESCRIPTOR_TYPE_SAMPLER || type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER ||
-         type == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE || type == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE ||
-         type == VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
-}
-
-bool IsBufferDescriptorType(VkDescriptorType type) {
-  return type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER || type == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER ||
-         type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC ||
-         type == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
-}
-
-bool IsTexelBufferDescriptorType(VkDescriptorType type) {
-  return type == VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER ||
-         type == VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
-}
+/////////////////////////////////////////////////////////////////////////////////////////////////
 
 void CollectHandleKeys(std::vector<GITSKey>& keys, const VkWriteDescriptorSet& s) {
   keys.push_back(HandleMapService::Get().GetKeyLenient(reinterpret_cast<uint64_t>(s.dstSet)));
-  if (IsImageDescriptorType(s.descriptorType) && s.pImageInfo && s.descriptorCount > 0) {
+  if (s.descriptorCount == 0) {
+    return;
+  }
+
+  if (IsImageDescriptorType(s)) {
     for (uint32_t elemIdx = 0; elemIdx < s.descriptorCount; ++elemIdx) {
       const auto& elem = s.pImageInfo[elemIdx];
       if (s.descriptorType == VK_DESCRIPTOR_TYPE_SAMPLER ||
@@ -45,32 +35,28 @@ void CollectHandleKeys(std::vector<GITSKey>& keys, const VkWriteDescriptorSet& s
       }
     }
   }
-  if (IsBufferDescriptorType(s.descriptorType) && s.pBufferInfo && s.descriptorCount > 0) {
+  if (IsBufferDescriptorType(s)) {
     for (uint32_t elemIdx = 0; elemIdx < s.descriptorCount; ++elemIdx) {
       const auto& elem = s.pBufferInfo[elemIdx];
       keys.push_back(
           HandleMapService::Get().GetKeyLenient(reinterpret_cast<uint64_t>(elem.buffer)));
     }
   }
-  if (IsTexelBufferDescriptorType(s.descriptorType) && s.pTexelBufferView &&
-      s.descriptorCount > 0) {
+  if (IsTexelBufferDescriptorType(s)) {
     for (uint32_t handleIdx = 0; handleIdx < s.descriptorCount; ++handleIdx) {
       keys.push_back(HandleMapService::Get().GetKeyLenient(
           reinterpret_cast<uint64_t>(s.pTexelBufferView[handleIdx])));
     }
   }
-}
-
-void CollectHandleKeys(std::vector<GITSKey>& keys, const VkPushDescriptorSetInfo& s) {
-  keys.push_back(HandleMapService::Get().GetKeyLenient(reinterpret_cast<uint64_t>(s.layout)));
-  if (s.pDescriptorWrites && s.descriptorWriteCount > 0) {
-    for (uint32_t elemIdx = 0; elemIdx < s.descriptorWriteCount; ++elemIdx) {
-      CollectHandleKeys(keys, s.pDescriptorWrites[elemIdx]);
+  if (IsAccelerationStructureDescriptorType(s)) {
+    auto* pASWrite = (VkWriteDescriptorSetAccelerationStructureKHR*)getPNextStructure(
+        s.pNext, VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR);
+    for (uint32_t handleIdx = 0; handleIdx < s.descriptorCount; ++handleIdx) {
+      keys.push_back(HandleMapService::Get().GetKeyLenient(
+          reinterpret_cast<uint64_t>(pASWrite->pAccelerationStructures[handleIdx])));
     }
   }
 }
-
-void CollectHandleKeys(std::vector<GITSKey>& keys, const VkImageCreateInfo& s) {}
 
 void UpdateHandle(CaptureManager& manager, PointerArgument<VkWriteDescriptorSet>& arg) {
   if (!arg.Value) {
@@ -85,6 +71,17 @@ void UpdateHandle(CaptureManager& manager, ArrayArgument<VkWriteDescriptorSet>& 
   }
   for (uint32_t i = 0; i < arg.Size; ++i) {
     CollectHandleKeys(arg.HandleKeys, arg.Value[i]);
+  }
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+
+void CollectHandleKeys(std::vector<GITSKey>& keys, const VkPushDescriptorSetInfo& s) {
+  keys.push_back(HandleMapService::Get().GetKeyLenient(reinterpret_cast<uint64_t>(s.layout)));
+  if (s.pDescriptorWrites && s.descriptorWriteCount > 0) {
+    for (uint32_t elemIdx = 0; elemIdx < s.descriptorWriteCount; ++elemIdx) {
+      CollectHandleKeys(keys, s.pDescriptorWrites[elemIdx]);
+    }
   }
 }
 
@@ -103,6 +100,73 @@ void UpdateHandle(CaptureManager& manager, ArrayArgument<VkPushDescriptorSetInfo
     CollectHandleKeys(arg.HandleKeys, arg.Value[i]);
   }
 }
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+
+void CollectHandleKeys(std::vector<GITSKey>& keys, const VkImageCreateInfo& s) {}
+
+void UpdateHandle(CaptureManager& manager, PointerArgument<VkImageCreateInfo>& arg) {
+  if (!arg.Value) {
+    return;
+  }
+  CollectHandleKeys(arg.HandleKeys, *arg.Value);
+  CollectPNextHandleKeys(arg.HandleKeys, arg.Value->pNext);
+}
+
+void UpdateHandle(CaptureManager& manager, ArrayArgument<VkImageCreateInfo>& arg) {
+  if (!arg.Value || arg.Size == 0) {
+    return;
+  }
+  for (uint32_t i = 0; i < arg.Size; ++i) {
+    CollectHandleKeys(arg.HandleKeys, arg.Value[i]);
+    CollectPNextHandleKeys(arg.HandleKeys, arg.Value[i].pNext);
+  }
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+
+void CollectHandleKeys(std::vector<GITSKey>& keys, const VkRayTracingPipelineCreateInfoKHR& s) {
+  if (s.pStages && s.stageCount > 0) {
+    for (uint32_t elemIdx = 0; elemIdx < s.stageCount; ++elemIdx) {
+      const auto& elem = s.pStages[elemIdx];
+      keys.push_back(
+          HandleMapService::Get().GetKeyLenient(reinterpret_cast<uint64_t>(elem.module)));
+    }
+  }
+  if (s.pLibraryInfo) {
+    const auto& elem = *s.pLibraryInfo;
+    if (elem.pLibraries && elem.libraryCount > 0) {
+      for (uint32_t handleIdx = 0; handleIdx < elem.libraryCount; ++handleIdx) {
+        keys.push_back(HandleMapService::Get().GetKeyLenient(
+            reinterpret_cast<uint64_t>(elem.pLibraries[handleIdx])));
+      }
+    }
+  }
+  keys.push_back(HandleMapService::Get().GetKeyLenient(reinterpret_cast<uint64_t>(s.layout)));
+  keys.push_back(
+      HandleMapService::Get().GetKeyLenient(reinterpret_cast<uint64_t>(s.basePipelineHandle)));
+}
+
+void UpdateHandle(CaptureManager& manager,
+                  PointerArgument<VkRayTracingPipelineCreateInfoKHR>& arg) {
+  if (!arg.Value) {
+    return;
+  }
+  CollectHandleKeys(arg.HandleKeys, *arg.Value);
+  CollectPNextHandleKeys(arg.HandleKeys, arg.Value->pNext);
+}
+
+void UpdateHandle(CaptureManager& manager, ArrayArgument<VkRayTracingPipelineCreateInfoKHR>& arg) {
+  if (!arg.Value || arg.Size == 0) {
+    return;
+  }
+  for (uint32_t i = 0; i < arg.Size; ++i) {
+    CollectHandleKeys(arg.HandleKeys, arg.Value[i]);
+    CollectPNextHandleKeys(arg.HandleKeys, arg.Value[i].pNext);
+  }
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
 
 void UpdateOutputHandle(CaptureManager& manager,
                         ArrayArgument<VkPhysicalDeviceGroupProperties>& arg) {
@@ -124,24 +188,6 @@ void UpdateOutputHandle(CaptureManager& manager,
       }
       arg.HandleKeys.push_back(HandleMapService::Get().GetKey(handle));
     }
-  }
-}
-
-void UpdateHandle(CaptureManager& manager, PointerArgument<VkImageCreateInfo>& arg) {
-  if (!arg.Value) {
-    return;
-  }
-  CollectHandleKeys(arg.HandleKeys, *arg.Value);
-  CollectPNextHandleKeys(arg.HandleKeys, arg.Value->pNext);
-}
-
-void UpdateHandle(CaptureManager& manager, ArrayArgument<VkImageCreateInfo>& arg) {
-  if (!arg.Value || arg.Size == 0) {
-    return;
-  }
-  for (uint32_t i = 0; i < arg.Size; ++i) {
-    CollectHandleKeys(arg.HandleKeys, arg.Value[i]);
-    CollectPNextHandleKeys(arg.HandleKeys, arg.Value[i].pNext);
   }
 }
 

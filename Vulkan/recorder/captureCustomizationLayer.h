@@ -11,6 +11,7 @@
 #include "layerAuto.h"
 #include "orderingRecorder.h"
 #include "vulkanHeader2.h"
+#include "rayTracingCaptureService.h"
 #include <optional>
 
 namespace gits {
@@ -21,7 +22,11 @@ class CaptureManager;
 class CaptureCustomizationLayer : public Layer {
 public:
   CaptureCustomizationLayer(CaptureManager& manager, stream::OrderingRecorder& recorder)
-      : Layer("CaptureCustomization"), m_Manager(manager), m_Recorder(recorder) {}
+      : Layer("CaptureCustomization"),
+        m_Manager(manager),
+        m_Recorder(recorder),
+        m_RayTracingService(manager) {}
+
 #ifdef VK_USE_PLATFORM_WIN32_KHR
   void Pre(vkCreateWin32SurfaceKHRCommand& command) override;
   void Post(vkCreateWin32SurfaceKHRCommand& command) override;
@@ -39,6 +44,10 @@ public:
   void Post(vkCreateWaylandSurfaceKHRCommand& command) override;
 #endif
   void Pre(vkQueuePresentKHRCommand& command) override;
+
+  void Pre(vkCreateDeviceCommand& command) override;
+  void Post(vkCreateDeviceCommand& command) override;
+
   void Post(vkCreateSwapchainKHRCommand& command) override;
   void Post(vkDestroySwapchainKHRCommand& command) override;
   void Post(vkDestroySurfaceKHRCommand& command) override;
@@ -47,9 +56,9 @@ public:
   void Pre(vkEnumerateDeviceLayerPropertiesCommand& command) override;
 
   void Pre(vkCreateBufferCommand& command) override;
+  void Post(vkCreateBufferCommand& command) override;
   void Pre(vkCreateImageCommand& command) override;
 
-  void Post(vkCreateDeviceCommand& command) override;
   void Post(vkGetPhysicalDeviceMemoryPropertiesCommand& command) override;
   void Post(vkGetPhysicalDeviceMemoryProperties2Command& command) override;
   void Post(vkGetPhysicalDeviceMemoryProperties2KHRCommand& command) override;
@@ -76,6 +85,11 @@ public:
   void Pre(vkCmdPushDescriptorSetWithTemplateCommand& command) override;
   void Pre(vkCmdPushDescriptorSetWithTemplateKHRCommand& command) override;
 
+  void Post(vkCreateAccelerationStructureKHRCommand& command) override;
+  void Post(vkCreateMicromapEXTCommand& command) override;
+  void Pre(vkCreateRayTracingPipelinesKHRCommand& command) override;
+  void Post(vkCreateRayTracingPipelinesKHRCommand& command) override;
+
 private:
   struct AllocateInfo {
     // Pointer to the original data
@@ -95,11 +109,11 @@ private:
   };
 
   static thread_local AllocateInfo s_AllocateInfo;
-  static thread_local VkBufferCreateInfo s_BufferCreateInfo;
-  static thread_local VkImageCreateInfo s_ImageCreateInfo;
+
   CaptureManager& m_Manager;
   stream::OrderingRecorder& m_Recorder;
-};
+  RayTracingCaptureService m_RayTracingService;
+}; // class CaptureCustomizationLayer
 
 } // namespace vulkan
 } // namespace gits

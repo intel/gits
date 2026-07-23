@@ -61,6 +61,19 @@ struct ArrayArgument {
   ArrayArgument(const T* v, int s) : Value(const_cast<T*>(v)), Size(static_cast<uint32_t>(s)) {}
 };
 
+template <>
+struct ArrayArgument<VkRayTracingPipelineCreateInfoKHR> {
+  VkRayTracingPipelineCreateInfoKHR* Value{};
+  uint32_t Size{};
+  std::vector<GITSKey> HandleKeys{};
+  std::vector<uint64_t> HandleData{};
+  uint32_t CaptureReplayHandleSize{};
+  std::vector<uint8_t> CaptureReplayHandlesData;
+  ArrayArgument() {}
+  ArrayArgument(const VkRayTracingPipelineCreateInfoKHR* v, uint32_t s)
+      : Value(const_cast<VkRayTracingPipelineCreateInfoKHR*>(v)), Size(s) {}
+};
+
 template <typename T>
 struct ArrayOfArrays {
   T** Value{};

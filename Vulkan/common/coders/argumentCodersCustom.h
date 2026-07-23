@@ -54,5 +54,55 @@ uint32_t GetSize(const ArrayArgument<VkImageCreateInfo>& arg);
 void Encode(char* dst, uint32_t& offset, const ArrayArgument<VkImageCreateInfo>& arg);
 void Decode(char* src, uint32_t& offset, ArrayArgument<VkImageCreateInfo>& arg);
 
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+
+uint32_t GetSize(const VkRayTracingShaderGroupCreateInfoKHR* src, uint32_t count);
+void Encode(const VkRayTracingShaderGroupCreateInfoKHR* src,
+            uint32_t count,
+            char* dst,
+            uint32_t& offset);
+void Decode(const VkRayTracingShaderGroupCreateInfoKHR* dst,
+            uint32_t count,
+            char* src,
+            uint32_t& offset);
+
+uint32_t GetSize(const PointerArgument<VkRayTracingShaderGroupCreateInfoKHR>& arg);
+void Encode(char* dst,
+            uint32_t& offset,
+            const PointerArgument<VkRayTracingShaderGroupCreateInfoKHR>& arg);
+void Decode(char* src,
+            uint32_t& offset,
+            PointerArgument<VkRayTracingShaderGroupCreateInfoKHR>& arg);
+
+uint32_t GetSize(const ArrayArgument<VkRayTracingShaderGroupCreateInfoKHR>& arg);
+void Encode(char* dst,
+            uint32_t& offset,
+            const ArrayArgument<VkRayTracingShaderGroupCreateInfoKHR>& arg);
+void Decode(char* src, uint32_t& offset, ArrayArgument<VkRayTracingShaderGroupCreateInfoKHR>& arg);
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+
+uint32_t GetSize(const VkRayTracingPipelineCreateInfoKHR* src, uint32_t count);
+void Encode(const VkRayTracingPipelineCreateInfoKHR* src,
+            uint32_t count,
+            char* dst,
+            uint32_t& offset);
+void Decode(const VkRayTracingPipelineCreateInfoKHR* dst,
+            uint32_t count,
+            char* src,
+            uint32_t& offset);
+
+uint32_t GetSize(const PointerArgument<VkRayTracingPipelineCreateInfoKHR>& arg);
+void Encode(char* dst,
+            uint32_t& offset,
+            const PointerArgument<VkRayTracingPipelineCreateInfoKHR>& arg);
+void Decode(char* src, uint32_t& offset, PointerArgument<VkRayTracingPipelineCreateInfoKHR>& arg);
+
+uint32_t GetSize(const ArrayArgument<VkRayTracingPipelineCreateInfoKHR>& arg);
+void Encode(char* dst,
+            uint32_t& offset,
+            const ArrayArgument<VkRayTracingPipelineCreateInfoKHR>& arg);
+void Decode(char* src, uint32_t& offset, ArrayArgument<VkRayTracingPipelineCreateInfoKHR>& arg);
+
 } // namespace vulkan
 } // namespace gits

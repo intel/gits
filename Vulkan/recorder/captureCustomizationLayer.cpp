@@ -11,13 +11,12 @@
 #include "commandSerializersCustom.h"
 #include "configurator.h"
 #include "suppressNames.h"
+#include "vulkanHelpers.h"
 
 namespace gits {
 namespace vulkan {
 
 thread_local CaptureCustomizationLayer::AllocateInfo CaptureCustomizationLayer::s_AllocateInfo;
-thread_local VkBufferCreateInfo CaptureCustomizationLayer::s_BufferCreateInfo;
-thread_local VkImageCreateInfo CaptureCustomizationLayer::s_ImageCreateInfo;
 
 void CaptureCustomizationLayer::Pre(vkEnumerateInstanceLayerPropertiesCommand& command) {
   const auto& suppressLayers = Configurator::Get().vulkan.shared.suppressLayers;
@@ -333,18 +332,28 @@ void CaptureCustomizationLayer::Pre(vkCreateBufferCommand& command) {
   if (!command.m_pCreateInfo.Value) {
     return;
   }
-  s_BufferCreateInfo = *command.m_pCreateInfo.Value;
-  s_BufferCreateInfo.usage |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-  command.m_pCreateInfo.Value = &s_BufferCreateInfo;
+
+  command.m_pCreateInfo.Value->usage |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+
+  m_RayTracingService.OnPreCreateBuffer(command);
+}
+
+void CaptureCustomizationLayer::Post(vkCreateBufferCommand& command) {
+  if (!command.m_pCreateInfo.Value) {
+    return;
+  }
+
+  m_RayTracingService.OnPostCreateBuffer(command);
 }
 
 void CaptureCustomizationLayer::Pre(vkCreateImageCommand& command) {
   if (!command.m_pCreateInfo.Value) {
     return;
   }
-  s_ImageCreateInfo = *command.m_pCreateInfo.Value;
-  s_ImageCreateInfo.usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
-  command.m_pCreateInfo.Value = &s_ImageCreateInfo;
+
+  if (!isBitSet(command.m_pCreateInfo.Value->usage, VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT)) {
+    command.m_pCreateInfo.Value->usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+  }
 }
 
 void CaptureCustomizationLayer::Post(vkCreateSwapchainKHRCommand& command) {
@@ -374,9 +383,24 @@ void CaptureCustomizationLayer::Pre(vkQueuePresentKHRCommand& command) {
   m_Manager.GetWindowTrackingService().UpdateWindowsForPresent(command.m_ThreadId, *presentInfo);
 }
 
+void CaptureCustomizationLayer::Pre(vkCreateDeviceCommand& command) {
+  if (!command.m_pCreateInfo.Value || !command.m_pDevice.Value) {
+    return;
+  }
+
+  m_RayTracingService.OnPreCreateDevice(command);
+}
+
 void CaptureCustomizationLayer::Post(vkCreateDeviceCommand& command) {
+  if (!command.m_pDevice.Value || (*command.m_pDevice.Value == VK_NULL_HANDLE) ||
+      !command.m_pCreateInfo.Value || (command.m_Return.Value != VK_SUCCESS)) {
+    return;
+  }
+
   m_Manager.GetMapTrackingService().StorePhysicalDevice(command.m_pDevice.Key,
                                                         command.m_physicalDevice.Key);
+
+  m_RayTracingService.OnPostCreateDevice(command);
 }
 
 void CaptureCustomizationLayer::Post(vkGetPhysicalDeviceMemoryPropertiesCommand& command) {
@@ -395,29 +419,41 @@ void CaptureCustomizationLayer::Post(vkGetPhysicalDeviceMemoryProperties2KHRComm
 }
 
 void CaptureCustomizationLayer::Pre(vkAllocateMemoryCommand& command) {
-  auto& mapTrackingService = m_Manager.GetMapTrackingService();
-  if (!mapTrackingService.IsMemoryMappable(command.m_device.Key,
-                                           command.m_pAllocateInfo.Value->memoryTypeIndex)) {
+  if (!command.m_pAllocateInfo.Value) {
     return;
   }
+
   s_AllocateInfo = AllocateInfo(command.m_pAllocateInfo.Value);
   command.m_pAllocateInfo.Value = &s_AllocateInfo.AllocateInfoModified;
+
+  m_RayTracingService.OnPreAllocateMemory(command);
+
+  auto& mapTrackingService = m_Manager.GetMapTrackingService();
+  if (!mapTrackingService.IsMemoryMappable(command.m_device.Key,
+                                           s_AllocateInfo.AllocateInfoModified.memoryTypeIndex)) {
+    return;
+  }
+
   s_AllocateInfo.ExternalMemory = mapTrackingService.EnableExternalMemory(
       command.m_device.Key, command.m_pAllocateInfo.Value, s_AllocateInfo.HostPointerInfo);
 }
 
 void CaptureCustomizationLayer::Post(vkAllocateMemoryCommand& command) {
-  auto& mapTrackingService = m_Manager.GetMapTrackingService();
-  if (!mapTrackingService.IsMemoryMappable(command.m_device.Key,
-                                           command.m_pAllocateInfo.Value->memoryTypeIndex)) {
+  if (!command.m_pAllocateInfo.Value) {
     return;
   }
 
-  VkMemoryAllocateInfo modifiedAllocateInfo = *command.m_pAllocateInfo.Value;
+  m_RayTracingService.OnPostAllocateMemory(command);
+
+  auto& mapTrackingService = m_Manager.GetMapTrackingService();
+  if (!mapTrackingService.IsMemoryMappable(command.m_device.Key,
+                                           s_AllocateInfo.AllocateInfoModified.memoryTypeIndex)) {
+    return;
+  }
+
   m_Manager.GetMapTrackingService().StoreAllocationInfo(
-      command.m_device.Key, command.m_pMemory.Key, *command.m_pMemory.Value, modifiedAllocateInfo,
-      s_AllocateInfo.ExternalMemory);
-  command.m_pAllocateInfo.Value = s_AllocateInfo.AllocateInfoPtr;
+      command.m_device.Key, command.m_pMemory.Key, *command.m_pMemory.Value,
+      s_AllocateInfo.AllocateInfoModified, s_AllocateInfo.ExternalMemory);
 }
 
 void CaptureCustomizationLayer::Post(vkFreeMemoryCommand& command) {
@@ -507,6 +543,41 @@ void CaptureCustomizationLayer::Pre(vkCmdPushDescriptorSetWithTemplateCommand& c
 void CaptureCustomizationLayer::Pre(vkCmdPushDescriptorSetWithTemplateKHRCommand& command) {
   m_Manager.GetDescriptorUpdateTemplateService().SerializeData(
       command.m_descriptorUpdateTemplate.Value, command.m_pData.Value, command.m_pData);
+}
+
+void CaptureCustomizationLayer::Post(vkCreateAccelerationStructureKHRCommand& command) {
+  if ((command.m_Return.Value != VK_SUCCESS) || !command.m_pAccelerationStructure.Value ||
+      (*command.m_pAccelerationStructure.Value == VK_NULL_HANDLE)) {
+    return;
+  }
+
+  m_RayTracingService.OnPostCreateAccelerationStructureKHR(command);
+}
+
+void CaptureCustomizationLayer::Post(vkCreateMicromapEXTCommand& command) {
+  if ((command.m_Return.Value != VK_SUCCESS) || !command.m_pCreateInfo.Value ||
+      !command.m_pMicromap.Value || (*command.m_pMicromap.Value == VK_NULL_HANDLE)) {
+    return;
+  }
+
+  m_RayTracingService.OnPostCreateMicromapEXT(command);
+}
+
+void CaptureCustomizationLayer::Pre(vkCreateRayTracingPipelinesKHRCommand& command) {
+  if (!command.m_createInfoCount.Value || !command.m_pCreateInfos.Value) {
+    return;
+  }
+
+  m_RayTracingService.OnPreCreateRayTracingPipelinesKHR(command);
+}
+
+void CaptureCustomizationLayer::Post(vkCreateRayTracingPipelinesKHRCommand& command) {
+  if ((command.m_Return.Value != VK_SUCCESS) || !command.m_createInfoCount.Value ||
+      !command.m_pCreateInfos.Value) {
+    return;
+  }
+
+  m_RayTracingService.OnPostCreateRayTracingPipelinesKHR(command);
 }
 
 } // namespace vulkan

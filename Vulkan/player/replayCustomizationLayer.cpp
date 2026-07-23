@@ -633,5 +633,9 @@ void ReplayCustomizationLayer::Post(vkDestroyFenceCommand& command) {
   m_Manager.GetFencePendingSignalService().ClearPending(command.m_fence.Value);
 }
 
+void ReplayCustomizationLayer::Pre(vkCreateRayTracingPipelinesKHRCommand& command) {
+  m_RayTracingService.OnPreCreateRayTracingPipelines(command);
+}
+
 } // namespace vulkan
 } // namespace gits

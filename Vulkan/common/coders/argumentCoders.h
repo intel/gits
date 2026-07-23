@@ -484,7 +484,9 @@ void Decode(char* src, uint32_t& offset, ArrayOfArrays<T>& arg) {
     arg.Data[i].resize(count);
     std::memcpy(arg.Data[i].data(), src + offset, sizeof(T) * count);
     offset += sizeof(T) * count;
+    arg.Pointers[i] = arg.Data[i].data();
   }
+  arg.Value = const_cast<T**>(arg.Pointers.data());
 }
 
 template <typename T>

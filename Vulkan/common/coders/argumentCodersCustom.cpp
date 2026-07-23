@@ -426,5 +426,410 @@ void Decode(char* src, uint32_t& offset, ArrayArgument<VkImageCreateInfo>& arg) 
   }
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////
+
+uint32_t GetSize(const VkRayTracingShaderGroupCreateInfoKHR* src, uint32_t count) {
+  if (!src) {
+    return 0;
+  }
+  auto blobSize = sizeof(VkRayTracingShaderGroupCreateInfoKHR) * count;
+  for (uint32_t i = 0; i < count; ++i) {
+    auto* currentSrcDesc = &src[i];
+    if (currentSrcDesc->pNext) {
+      blobSize += GetPNextChainSizeInput(currentSrcDesc->pNext);
+    }
+    blobSize += sizeof(void*);
+  }
+  return blobSize;
+}
+
+void Encode(const VkRayTracingShaderGroupCreateInfoKHR* src,
+            uint32_t count,
+            char* dst,
+            uint32_t& offset) {
+  if (!src || !dst) {
+    return;
+  }
+  auto* srcDesc = src;
+  auto* dstDesc = reinterpret_cast<VkRayTracingShaderGroupCreateInfoKHR*>(&dst[offset]);
+  WriteData(reinterpret_cast<const char*>(src),
+            sizeof(VkRayTracingShaderGroupCreateInfoKHR) * count, dst, offset);
+
+  for (uint32_t i = 0; i < count; ++i) {
+    auto* currentSrcDesc = const_cast<VkRayTracingShaderGroupCreateInfoKHR*>(&srcDesc[i]);
+    auto* currentDstDesc = &dstDesc[i];
+    if (currentSrcDesc->pNext) {
+      currentDstDesc->pNext =
+          reinterpret_cast<decltype(currentDstDesc->pNext)>(static_cast<uintptr_t>(offset));
+      EncodePNextChainInput(dst, offset, currentSrcDesc->pNext);
+    } else {
+      currentDstDesc->pNext = nullptr;
+    }
+    {
+      void* marker = const_cast<void*>(currentSrcDesc->pShaderGroupCaptureReplayHandle);
+      std::memcpy(dst + offset, &marker, sizeof(void*));
+      offset += sizeof(void*);
+      currentDstDesc->pShaderGroupCaptureReplayHandle = nullptr;
+    }
+  }
+}
+
+void Decode(const VkRayTracingShaderGroupCreateInfoKHR* dst,
+            uint32_t count,
+            char* src,
+            uint32_t& offset) {
+  offset += sizeof(VkRayTracingShaderGroupCreateInfoKHR) * count;
+
+  for (uint32_t i = 0; i < count; ++i) {
+    auto* currentDstDesc = const_cast<VkRayTracingShaderGroupCreateInfoKHR*>(&dst[i]);
+    if (currentDstDesc->pNext) {
+      DecodePNextChainInput(src, offset, const_cast<void**>(&currentDstDesc->pNext));
+    }
+    {
+      void* marker;
+      std::memcpy(&marker, src + offset, sizeof(void*));
+      offset += sizeof(void*);
+      currentDstDesc->pShaderGroupCaptureReplayHandle = nullptr;
+    }
+  }
+}
+
+// PointerArgument overloads for VkRayTracingShaderGroupCreateInfoKHR
+uint32_t GetSize(const PointerArgument<VkRayTracingShaderGroupCreateInfoKHR>& arg) {
+  if (!arg.Value) {
+    return sizeof(void*);
+  }
+  return sizeof(void*) + GetSize(arg.Value, 1) + sizeof(uint32_t) +
+         static_cast<uint32_t>(arg.HandleKeys.size()) * sizeof(GITSKey);
+}
+
+void Encode(char* dst,
+            uint32_t& offset,
+            const PointerArgument<VkRayTracingShaderGroupCreateInfoKHR>& arg) {
+  std::memcpy(dst + offset, &arg.Value, sizeof(void*));
+  offset += sizeof(void*);
+  if (!arg.Value) {
+    return;
+  }
+  Encode(arg.Value, 1, dst, offset);
+  uint32_t keyCount = static_cast<uint32_t>(arg.HandleKeys.size());
+  std::memcpy(dst + offset, &keyCount, sizeof(keyCount));
+  offset += sizeof(keyCount);
+  if (keyCount > 0) {
+    std::memcpy(dst + offset, arg.HandleKeys.data(), sizeof(GITSKey) * keyCount);
+    offset += sizeof(GITSKey) * keyCount;
+  }
+}
+
+void Decode(char* src,
+            uint32_t& offset,
+            PointerArgument<VkRayTracingShaderGroupCreateInfoKHR>& arg) {
+  std::memcpy(&arg.Value, src + offset, sizeof(void*));
+  offset += sizeof(void*);
+  if (!arg.Value) {
+    return;
+  }
+  arg.Value = reinterpret_cast<VkRayTracingShaderGroupCreateInfoKHR*>(src + offset);
+  Decode(arg.Value, 1, src, offset);
+  uint32_t keyCount{};
+  std::memcpy(&keyCount, src + offset, sizeof(keyCount));
+  offset += sizeof(keyCount);
+  if (keyCount > 0) {
+    arg.HandleKeys.resize(keyCount);
+    std::memcpy(arg.HandleKeys.data(), src + offset, sizeof(GITSKey) * keyCount);
+    offset += sizeof(GITSKey) * keyCount;
+  }
+}
+
+// ArrayArgument overloads for VkRayTracingShaderGroupCreateInfoKHR
+uint32_t GetSize(const ArrayArgument<VkRayTracingShaderGroupCreateInfoKHR>& arg) {
+  if (!arg.Value) {
+    return sizeof(void*);
+  }
+  return sizeof(void*) + sizeof(arg.Size) + GetSize(arg.Value, arg.Size) + sizeof(uint32_t) +
+         static_cast<uint32_t>(arg.HandleKeys.size()) * sizeof(GITSKey);
+}
+
+void Encode(char* dst,
+            uint32_t& offset,
+            const ArrayArgument<VkRayTracingShaderGroupCreateInfoKHR>& arg) {
+  std::memcpy(dst + offset, &arg.Value, sizeof(void*));
+  offset += sizeof(void*);
+  if (!arg.Value) {
+    return;
+  }
+  std::memcpy(dst + offset, &arg.Size, sizeof(arg.Size));
+  offset += sizeof(arg.Size);
+  Encode(arg.Value, arg.Size, dst, offset);
+  uint32_t keyCount = static_cast<uint32_t>(arg.HandleKeys.size());
+  std::memcpy(dst + offset, &keyCount, sizeof(keyCount));
+  offset += sizeof(keyCount);
+  if (keyCount > 0) {
+    std::memcpy(dst + offset, arg.HandleKeys.data(), sizeof(GITSKey) * keyCount);
+    offset += sizeof(GITSKey) * keyCount;
+  }
+}
+
+void Decode(char* src, uint32_t& offset, ArrayArgument<VkRayTracingShaderGroupCreateInfoKHR>& arg) {
+  std::memcpy(&arg.Value, src + offset, sizeof(void*));
+  offset += sizeof(void*);
+  if (!arg.Value) {
+    arg.Size = 0;
+    return;
+  }
+  std::memcpy(&arg.Size, src + offset, sizeof(arg.Size));
+  offset += sizeof(arg.Size);
+  arg.Value = reinterpret_cast<VkRayTracingShaderGroupCreateInfoKHR*>(src + offset);
+  Decode(arg.Value, arg.Size, src, offset);
+  uint32_t keyCount{};
+  std::memcpy(&keyCount, src + offset, sizeof(keyCount));
+  offset += sizeof(keyCount);
+  if (keyCount > 0) {
+    arg.HandleKeys.resize(keyCount);
+    std::memcpy(arg.HandleKeys.data(), src + offset, sizeof(GITSKey) * keyCount);
+    offset += sizeof(GITSKey) * keyCount;
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+
+uint32_t GetSize(const VkRayTracingPipelineCreateInfoKHR* src, uint32_t count) {
+  if (!src) {
+    return 0;
+  }
+  auto blobSize = sizeof(VkRayTracingPipelineCreateInfoKHR) * count;
+  for (uint32_t i = 0; i < count; ++i) {
+    auto* currentSrcDesc = &src[i];
+    if (currentSrcDesc->pNext) {
+      blobSize += GetPNextChainSizeInput(currentSrcDesc->pNext);
+    }
+    if (currentSrcDesc->pStages && currentSrcDesc->stageCount > 0) {
+      blobSize += GetSize(currentSrcDesc->pStages, currentSrcDesc->stageCount);
+    }
+    if (currentSrcDesc->pGroups && currentSrcDesc->groupCount > 0) {
+      blobSize += GetSize(currentSrcDesc->pGroups, currentSrcDesc->groupCount);
+    }
+    if (currentSrcDesc->pLibraryInfo) {
+      blobSize += GetSize(currentSrcDesc->pLibraryInfo, 1);
+    }
+    if (currentSrcDesc->pLibraryInterface) {
+      blobSize += GetSize(currentSrcDesc->pLibraryInterface, 1);
+    }
+    if (currentSrcDesc->pDynamicState) {
+      blobSize += GetSize(currentSrcDesc->pDynamicState, 1);
+    }
+  }
+  return blobSize;
+}
+
+void Encode(const VkRayTracingPipelineCreateInfoKHR* src,
+            uint32_t count,
+            char* dst,
+            uint32_t& offset) {
+  if (!src || !dst) {
+    return;
+  }
+  auto* srcDesc = src;
+  auto* dstDesc = reinterpret_cast<VkRayTracingPipelineCreateInfoKHR*>(&dst[offset]);
+  WriteData(reinterpret_cast<const char*>(src), sizeof(VkRayTracingPipelineCreateInfoKHR) * count,
+            dst, offset);
+
+  for (uint32_t i = 0; i < count; ++i) {
+    auto* currentSrcDesc = const_cast<VkRayTracingPipelineCreateInfoKHR*>(&srcDesc[i]);
+    auto* currentDstDesc = &dstDesc[i];
+    if (currentSrcDesc->pNext) {
+      currentDstDesc->pNext =
+          reinterpret_cast<decltype(currentDstDesc->pNext)>(static_cast<uintptr_t>(offset));
+      EncodePNextChainInput(dst, offset, currentSrcDesc->pNext);
+    } else {
+      currentDstDesc->pNext = nullptr;
+    }
+    if (currentSrcDesc->pStages && currentSrcDesc->stageCount > 0) {
+      currentDstDesc->pStages =
+          reinterpret_cast<VkPipelineShaderStageCreateInfo*>(static_cast<uintptr_t>(offset));
+      Encode(currentSrcDesc->pStages, currentSrcDesc->stageCount, dst, offset);
+    }
+    if (currentSrcDesc->pGroups && currentSrcDesc->groupCount > 0) {
+      currentDstDesc->pGroups =
+          reinterpret_cast<VkRayTracingShaderGroupCreateInfoKHR*>(static_cast<uintptr_t>(offset));
+      Encode(currentSrcDesc->pGroups, currentSrcDesc->groupCount, dst, offset);
+    }
+    if (currentSrcDesc->pLibraryInfo) {
+      currentDstDesc->pLibraryInfo =
+          reinterpret_cast<VkPipelineLibraryCreateInfoKHR*>(static_cast<uintptr_t>(offset));
+      Encode(currentSrcDesc->pLibraryInfo, 1, dst, offset);
+    }
+    if (currentSrcDesc->pLibraryInterface) {
+      currentDstDesc->pLibraryInterface =
+          reinterpret_cast<VkRayTracingPipelineInterfaceCreateInfoKHR*>(
+              static_cast<uintptr_t>(offset));
+      Encode(currentSrcDesc->pLibraryInterface, 1, dst, offset);
+    }
+    if (currentSrcDesc->pDynamicState) {
+      currentDstDesc->pDynamicState =
+          reinterpret_cast<VkPipelineDynamicStateCreateInfo*>(static_cast<uintptr_t>(offset));
+      Encode(currentSrcDesc->pDynamicState, 1, dst, offset);
+    }
+  }
+}
+
+void Decode(const VkRayTracingPipelineCreateInfoKHR* dst,
+            uint32_t count,
+            char* src,
+            uint32_t& offset) {
+  offset += sizeof(VkRayTracingPipelineCreateInfoKHR) * count;
+
+  for (uint32_t i = 0; i < count; ++i) {
+    auto* currentDstDesc = const_cast<VkRayTracingPipelineCreateInfoKHR*>(&dst[i]);
+    if (currentDstDesc->pNext) {
+      DecodePNextChainInput(src, offset, const_cast<void**>(&currentDstDesc->pNext));
+    }
+    if (currentDstDesc->pStages && currentDstDesc->stageCount > 0) {
+      currentDstDesc->pStages = AddPtrs(currentDstDesc->pStages, src);
+      Decode(currentDstDesc->pStages, currentDstDesc->stageCount, src, offset);
+    }
+    if (currentDstDesc->pGroups && currentDstDesc->groupCount > 0) {
+      currentDstDesc->pGroups = AddPtrs(currentDstDesc->pGroups, src);
+      Decode(currentDstDesc->pGroups, currentDstDesc->groupCount, src, offset);
+    }
+    if (currentDstDesc->pLibraryInfo) {
+      currentDstDesc->pLibraryInfo = AddPtrs(currentDstDesc->pLibraryInfo, src);
+      Decode(currentDstDesc->pLibraryInfo, 1, src, offset);
+    }
+    if (currentDstDesc->pLibraryInterface) {
+      currentDstDesc->pLibraryInterface = AddPtrs(currentDstDesc->pLibraryInterface, src);
+      Decode(currentDstDesc->pLibraryInterface, 1, src, offset);
+    }
+    if (currentDstDesc->pDynamicState) {
+      currentDstDesc->pDynamicState = AddPtrs(currentDstDesc->pDynamicState, src);
+      Decode(currentDstDesc->pDynamicState, 1, src, offset);
+    }
+  }
+}
+
+// PointerArgument overloads for VkRayTracingPipelineCreateInfoKHR
+uint32_t GetSize(const PointerArgument<VkRayTracingPipelineCreateInfoKHR>& arg) {
+  if (!arg.Value) {
+    return sizeof(void*);
+  }
+  return sizeof(void*) + GetSize(arg.Value, 1) + sizeof(uint32_t) +
+         static_cast<uint32_t>(arg.HandleKeys.size()) * sizeof(GITSKey);
+}
+
+void Encode(char* dst,
+            uint32_t& offset,
+            const PointerArgument<VkRayTracingPipelineCreateInfoKHR>& arg) {
+  std::memcpy(dst + offset, &arg.Value, sizeof(void*));
+  offset += sizeof(void*);
+  if (!arg.Value) {
+    return;
+  }
+  Encode(arg.Value, 1, dst, offset);
+  uint32_t keyCount = static_cast<uint32_t>(arg.HandleKeys.size());
+  std::memcpy(dst + offset, &keyCount, sizeof(keyCount));
+  offset += sizeof(keyCount);
+  if (keyCount > 0) {
+    std::memcpy(dst + offset, arg.HandleKeys.data(), sizeof(GITSKey) * keyCount);
+    offset += sizeof(GITSKey) * keyCount;
+  }
+}
+
+void Decode(char* src, uint32_t& offset, PointerArgument<VkRayTracingPipelineCreateInfoKHR>& arg) {
+  std::memcpy(&arg.Value, src + offset, sizeof(void*));
+  offset += sizeof(void*);
+  if (!arg.Value) {
+    return;
+  }
+  arg.Value = reinterpret_cast<VkRayTracingPipelineCreateInfoKHR*>(src + offset);
+  Decode(arg.Value, 1, src, offset);
+  uint32_t keyCount{};
+  std::memcpy(&keyCount, src + offset, sizeof(keyCount));
+  offset += sizeof(keyCount);
+  if (keyCount > 0) {
+    arg.HandleKeys.resize(keyCount);
+    std::memcpy(arg.HandleKeys.data(), src + offset, sizeof(GITSKey) * keyCount);
+    offset += sizeof(GITSKey) * keyCount;
+  }
+}
+
+// ArrayArgument overloads for VkRayTracingPipelineCreateInfoKHR
+uint32_t GetSize(const ArrayArgument<VkRayTracingPipelineCreateInfoKHR>& arg) {
+  if (!arg.Value) {
+    return sizeof(void*);
+  }
+  return sizeof(void*) + sizeof(arg.Size) + GetSize(arg.Value, arg.Size) + sizeof(uint32_t) +
+         static_cast<uint32_t>(arg.HandleKeys.size()) * sizeof(GITSKey) +
+         sizeof(arg.CaptureReplayHandleSize) + sizeof(uint32_t) +
+         static_cast<uint32_t>(arg.CaptureReplayHandlesData.size());
+}
+
+void Encode(char* dst,
+            uint32_t& offset,
+            const ArrayArgument<VkRayTracingPipelineCreateInfoKHR>& arg) {
+  std::memcpy(dst + offset, &arg.Value, sizeof(void*));
+  offset += sizeof(void*);
+  if (!arg.Value) {
+    return;
+  }
+  std::memcpy(dst + offset, &arg.Size, sizeof(arg.Size));
+  offset += sizeof(arg.Size);
+  Encode(arg.Value, arg.Size, dst, offset);
+  uint32_t keyCount = static_cast<uint32_t>(arg.HandleKeys.size());
+  std::memcpy(dst + offset, &keyCount, sizeof(keyCount));
+  offset += sizeof(keyCount);
+  if (keyCount > 0) {
+    std::memcpy(dst + offset, arg.HandleKeys.data(), sizeof(GITSKey) * keyCount);
+    offset += sizeof(GITSKey) * keyCount;
+  }
+
+  uint32_t captureReplayHandleSize = static_cast<uint32_t>(arg.CaptureReplayHandleSize);
+  std::memcpy(dst + offset, &captureReplayHandleSize, sizeof(captureReplayHandleSize));
+  offset += sizeof(captureReplayHandleSize);
+
+  uint32_t captureReplayHandlesDataSize =
+      static_cast<uint32_t>(arg.CaptureReplayHandlesData.size());
+  std::memcpy(dst + offset, &captureReplayHandlesDataSize, sizeof(captureReplayHandlesDataSize));
+  offset += sizeof(captureReplayHandlesDataSize);
+
+  if (captureReplayHandlesDataSize > 0) {
+    std::memcpy(dst + offset, arg.CaptureReplayHandlesData.data(), captureReplayHandlesDataSize);
+    offset += captureReplayHandlesDataSize;
+  }
+}
+
+void Decode(char* src, uint32_t& offset, ArrayArgument<VkRayTracingPipelineCreateInfoKHR>& arg) {
+  std::memcpy(&arg.Value, src + offset, sizeof(void*));
+  offset += sizeof(void*);
+  if (!arg.Value) {
+    arg.Size = 0;
+    return;
+  }
+  std::memcpy(&arg.Size, src + offset, sizeof(arg.Size));
+  offset += sizeof(arg.Size);
+  arg.Value = reinterpret_cast<VkRayTracingPipelineCreateInfoKHR*>(src + offset);
+  Decode(arg.Value, arg.Size, src, offset);
+  uint32_t keyCount{};
+  std::memcpy(&keyCount, src + offset, sizeof(keyCount));
+  offset += sizeof(keyCount);
+  if (keyCount > 0) {
+    arg.HandleKeys.resize(keyCount);
+    std::memcpy(arg.HandleKeys.data(), src + offset, sizeof(GITSKey) * keyCount);
+    offset += sizeof(GITSKey) * keyCount;
+  }
+
+  std::memcpy(&arg.CaptureReplayHandleSize, src + offset, sizeof(arg.CaptureReplayHandleSize));
+  offset += sizeof(arg.CaptureReplayHandleSize);
+
+  uint32_t captureReplayHandlesDataSize{};
+  std::memcpy(&captureReplayHandlesDataSize, src + offset, sizeof(captureReplayHandlesDataSize));
+  offset += sizeof(captureReplayHandlesDataSize);
+
+  if (captureReplayHandlesDataSize > 0) {
+    arg.CaptureReplayHandlesData.resize(captureReplayHandlesDataSize);
+    std::memcpy(arg.CaptureReplayHandlesData.data(), src + offset, captureReplayHandlesDataSize);
+    offset += captureReplayHandlesDataSize;
+  }
+}
+
 } // namespace vulkan
 } // namespace gits
