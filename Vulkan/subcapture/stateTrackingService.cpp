@@ -2360,6 +2360,74 @@ void StateTrackingService::RestoreMappedMemory(ObjectState* state) {
 // time so peak host memory stays bounded to a single resource.
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Content-restore policy
+//
+// Images/textures: ALWAYS restored via GPU readback + staging upload,
+// regardless of the bound memory's host-visibility.  An OPTIMAL-tiled image has
+// an opaque, vendor-specific memory layout, so raw host bytes (the CPU shadow /
+// mapped-memory path) cannot reconstruct it -- only vkCmdCopyBufferToImage can.
+// GPU-written content is also invisible to the CPU-write tracker, so a GPU copy
+// is the only mechanism that restores image contents correctly.
+//
+// Buffers: ALWAYS restored via GPU readback + staging upload, PLUS a guarded
+// "compare-and-skip" optimization for HOST_VISIBLE buffers.  The CPU shadow
+// (RestoreMappedMemory) restores host-visible memory on replay with a cheap host
+// memcpy and NO GPU copy.  When that shadow already holds the exact live content
+// of a buffer, streaming the readback bytes and issuing a player-side
+// vkCmdCopyBuffer is pure waste, so we skip it (emit a zero-length content token)
+// and let the mapped-memory restore cover the buffer.
+//
+// Compare-and-skip is only correct when BOTH hold (any uncertainty -> copy):
+//   (1) COVERAGE: the buffer's entire bound range
+//       [MemoryOffset, MemoryOffset+BufferSize) lies inside the single
+//       contiguous dirty interval [ShadowDirtyBegin, ShadowDirtyEnd) that
+//       RestoreMappedMemory emits.  Bytes outside that interval are NOT written
+//       by the mapped-memory restore (freshly allocated memory is undefined), so
+//       equality alone is insufficient.
+//   (2) EQUALITY: the shadow bytes for that range match the live GPU readback
+//       byte-for-byte.
+// If the GPU wrote content the CPU tracker never saw (e.g. ReBAR
+// DEVICE_LOCAL|HOST_VISIBLE render targets), equality fails and the buffer is
+// copied.  Device-local buffers are never host-visible/shadowed, so they always
+// copy.
+// ---------------------------------------------------------------------------
+
+namespace {
+
+// Returns true when the CPU shadow of `mem` fully covers `buf`'s entire bound
+// range and its bytes match the live GPU readback `data` exactly.  See the
+// coverage + equality rules documented above; callers MUST fall back to a GPU
+// copy whenever this returns false (conservative, always-correct default).
+bool ShadowFullyCoversAndMatches(const BufferState& buf,
+                                 const DeviceMemoryState& mem,
+                                 const std::vector<uint8_t>& data) {
+  // A shadow must exist to rely on the mapped-memory restore.
+  if (mem.ShadowBuffer.empty()) {
+    return false;
+  }
+  // The readback must have produced exactly the buffer's bytes.
+  if (data.size() != static_cast<size_t>(buf.BufferSize)) {
+    return false;
+  }
+  const VkDeviceSize begin = buf.MemoryOffset;
+  const VkDeviceSize end = buf.MemoryOffset + buf.BufferSize;
+  // Overflow / out-of-range guard against the shadow storage.
+  if (end < begin || end > static_cast<VkDeviceSize>(mem.ShadowBuffer.size())) {
+    return false;
+  }
+  // (1) COVERAGE: whole bound range inside [ShadowDirtyBegin, ShadowDirtyEnd).
+  if (mem.ShadowDirtyEnd <= mem.ShadowDirtyBegin || begin < mem.ShadowDirtyBegin ||
+      end > mem.ShadowDirtyEnd) {
+    return false;
+  }
+  // (2) EQUALITY: shadow bytes for the range match the live readback.
+  return std::memcmp(data.data(), mem.ShadowBuffer.data() + static_cast<size_t>(begin),
+                     static_cast<size_t>(buf.BufferSize)) == 0;
+}
+
+} // namespace
+
 void StateTrackingService::RestoreBufferContents() {
   // Group buffers by device.
   std::unordered_map<uint64_t, std::vector<uint64_t>> buffersByDevice;
@@ -2382,19 +2450,11 @@ void StateTrackingService::RestoreBufferContents() {
       continue;
     }
 
-    // Skip if the bound memory is host-visible — RestoreMappedMemory already
-    // handled it (or it will be written via the app's own map calls).
-    auto* mem = GetState<DeviceMemoryState>(buf->BoundMemoryKey);
-    if (!mem) {
-      continue;
-    }
-    // ParentKey of buf = deviceKey; ParentKey of deviceState = physDevKey
-    auto* devState = GetState<ObjectState>(buf->ParentKey);
-    uint64_t physDevKey = devState ? devState->ParentKey : 0;
-    if (physDevKey && m_GpuReadbackHelper->IsHostVisible(physDevKey, mem->MemoryTypeIndex)) {
-      continue;
-    }
-
+    // Host-visible buffers are NOT skipped here: the CPU shadow only captures
+    // CPU writes, so GPU-written host-visible content (e.g. ReBAR render
+    // targets) must be restored via the live readback path too.  The
+    // compare-and-skip optimization in the data loop below still avoids the
+    // player-side GPU copy when the shadow already holds the exact content.
     buffersByDevice[buf->ParentKey].push_back(key);
   }
 
@@ -2418,9 +2478,19 @@ void StateTrackingService::RestoreBufferContents() {
       continue;
     }
 
-    // Build the manifest: every candidate buffer, in a dense index order the
-    // data tokens will reference.  The player sizes and batches its own
-    // staging from these sizes at replay time.
+    // Build the manifest: every candidate buffer that actually needs a GPU
+    // copy, in a dense index order the data tokens will reference.  The player
+    // sizes and batches its own staging from these sizes at replay time.
+    //
+    // Compare-and-skip is decided HERE (phase 1) rather than in the data pass so
+    // that a skipped buffer is fully omitted: it never enters the manifest,
+    // never gets a data token, and never inflates the player's staging size or
+    // batch count.  A HOST_VISIBLE buffer whose live content is already fully
+    // covered by, and byte-for-byte matches, the CPU shadow is excluded because
+    // RestoreMappedMemory restores it on replay with a cheap host memcpy;
+    // including it would only schedule a redundant player-side vkCmdCopyBuffer.
+    // Any uncertainty (device-local, missing memory, partial coverage,
+    // mismatch, or a probe readback failure) falls back to inclusion (copy).
     RestoreContentManifestCommand manifest;
     manifest.m_DeviceKey = deviceKey;
     manifest.m_PhysDevKey = physDevKey;
@@ -2433,6 +2503,27 @@ void StateTrackingService::RestoreBufferContents() {
       if (!buf) {
         continue;
       }
+
+      // Only host-visible buffers are skip-eligible; probe their live content
+      // now and exclude them when the CPU shadow already covers and matches it.
+      // The probe bytes are discarded; the data pass below re-reads the live
+      // bytes of the buffers that survive (recorder-side readback cost is
+      // acceptable and peak host memory stays bounded to one resource).
+      auto* mem = GetState<DeviceMemoryState>(buf->BoundMemoryKey);
+      const bool hostVisible =
+          mem != nullptr && m_GpuReadbackHelper->IsHostVisible(physDevKey, mem->MemoryTypeIndex);
+      if (hostVisible) {
+        std::vector<uint8_t> probe;
+        if (m_GpuReadbackHelper->ReadBuffer(deviceKey, physDevKey, queueKey, poolKey, bufKey,
+                                            buf->BufferSize, probe) &&
+            ShadowFullyCoversAndMatches(*buf, *mem, probe)) {
+          LOG_TRACE << "Vulkan subcapture: buffer key=" << bufKey
+                    << " matches CPU shadow - excluded from content manifest "
+                       "(mapped-memory restore covers it)";
+          continue; // omit entirely: no manifest entry, no token, no staging
+        }
+      }
+
       RestoreContentManifestCommand::BufferEntry entry;
       entry.DstBufferKey = bufKey;
       entry.Size = buf->BufferSize;
@@ -2445,10 +2536,13 @@ void StateTrackingService::RestoreBufferContents() {
     }
     m_Recorder.Record(RestoreContentManifestSerializer(manifest));
 
-    // Stream each buffer's bytes one at a time so peak host RAM stays bounded.
-    // Emit exactly one data token per manifest entry (a zero-length region when
-    // readback fails) so the player knows the stream is complete after
-    // consuming manifest-many tokens, without a separate end token.
+    // Stream each surviving buffer's bytes one at a time so peak host RAM stays
+    // bounded.  The manifest and the data tokens are 1:1 (compare-and-skip
+    // already excluded the redundant buffers above), so emit exactly one token
+    // per manifest entry.  A zero-length region is emitted only if a phase-2
+    // readback unexpectedly fails after the phase-1 probe succeeded: the token
+    // is still emitted so the player's token count matches the manifest and the
+    // stream terminates cleanly without a separate end token.
     static char sEmptyByte = 0;
     for (size_t i = 0; i < orderedKeys.size(); ++i) {
       const uint64_t bufKey = orderedKeys[i];
@@ -2479,6 +2573,8 @@ void StateTrackingService::RestoreBufferContents() {
 }
 
 void StateTrackingService::RestoreImageContents() {
+  // Images are ALWAYS restored via GPU copy (see policy note above): there is no
+  // configuration switch; only the technical skips below apply.
   std::unordered_map<uint64_t, std::vector<uint64_t>> imagesByDevice;
 
   for (const auto& [key, sp] : m_States) {
@@ -2515,16 +2611,10 @@ void StateTrackingService::RestoreImageContents() {
       continue;
     }
 
-    auto* mem = GetState<DeviceMemoryState>(img->BoundMemoryKey);
-    if (!mem) {
-      continue;
-    }
-    auto* devState = GetState<ObjectState>(img->ParentKey);
-    uint64_t physDevKey = devState ? devState->ParentKey : 0;
-    if (physDevKey && m_GpuReadbackHelper->IsHostVisible(physDevKey, mem->MemoryTypeIndex)) {
-      continue;
-    }
-
+    // Images are ALWAYS GPU-copied regardless of host-visibility: an
+    // OPTIMAL-tiled image cannot be reconstructed from raw host bytes (the
+    // shadow / mapped-memory path), and GPU-written content is invisible to the
+    // CPU-write tracker.  This matches the legacy backend's always-copy policy.
     imagesByDevice[img->ParentKey].push_back(key);
   }
 
