@@ -17,6 +17,14 @@ namespace vulkan {
 static std::string Uint64MarkerToStr(uint64_t value) {
   static const std::unordered_map<uint64_t, std::string> enumMap = {
       {MarkerUInt64Command::Value::NONE, "NONE"},
+      {MarkerUInt64Command::Value::STATE_RESTORE_OBJECTS_BEGIN, "STATE_RESTORE_OBJECTS_BEGIN"},
+      {MarkerUInt64Command::Value::STATE_RESTORE_OBJECTS_END, "STATE_RESTORE_OBJECTS_END"},
+      {MarkerUInt64Command::Value::STATE_RESTORE_RTAS_BEGIN, "STATE_RESTORE_RTAS_BEGIN"},
+      {MarkerUInt64Command::Value::STATE_RESTORE_RTAS_END, "STATE_RESTORE_RTAS_END"},
+      {MarkerUInt64Command::Value::STATE_RESTORE_RESOURCES_BEGIN, "STATE_RESTORE_RESOURCES_BEGIN"},
+      {MarkerUInt64Command::Value::STATE_RESTORE_RESOURCES_END, "STATE_RESTORE_RESOURCES_END"},
+      {MarkerUInt64Command::Value::GPU_EXECUTION_BEGIN, "GPU_EXECUTION_BEGIN"},
+      {MarkerUInt64Command::Value::GPU_EXECUTION_END, "GPU_EXECUTION_END"},
   };
 
   return enumMap.contains(value) ? enumMap.at(value) : "UNKNOWN";

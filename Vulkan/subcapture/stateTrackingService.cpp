@@ -145,6 +145,12 @@ void StateTrackingService::RestoreState() {
     m_Recorder.Record(StateRestoreBeginSerializer(cmd));
   }
 
+  auto recordStatus = [this](MarkerUInt64Command::Value state) {
+    m_Recorder.Record(MarkerUInt64Serializer(MarkerUInt64Command(state)));
+  };
+
+  recordStatus(MarkerUInt64Command::Value::STATE_RESTORE_OBJECTS_BEGIN);
+
   // Restore order mirrors legacy CState::Schedule (vulkanStateRestore.h): pipeline
   // objects are compiled *before* RestoreCommandBuffers. A single map-order pass
   // interleaves vkAllocateCommandBuffers (CB replay) with other objects; delaying
@@ -326,14 +332,18 @@ void StateTrackingService::RestoreState() {
     m_Recorder.Record(vkSetEventSerializer(setCmd));
   }
 
+  recordStatus(MarkerUInt64Command::Value::STATE_RESTORE_OBJECTS_END);
+
   // Restore GPU-local resource contents.  Must run after all objects are
   // created (m_RestoredThisPass is fully populated) and before
   // EmitImageLayoutTransitions (which skips images whose copy ends in the
   // correct layout already).
+  recordStatus(MarkerUInt64Command::Value::STATE_RESTORE_RESOURCES_BEGIN);
   if (m_GpuReadbackHelper) {
     RestoreBufferContents();
     RestoreImageContents();
   }
+  recordStatus(MarkerUInt64Command::Value::STATE_RESTORE_RESOURCES_END);
 
   EmitImageLayoutTransitions();
 
