@@ -13,8 +13,16 @@ ${header}
 #include "captureManager.h"
 #include "handleArgumentUpdaters.h"
 
+#include <mutex>
+
 namespace gits {
 namespace vulkan {
+
+namespace {
+
+std::mutex g_Mutex;
+
+} // namespace
 
 <%
 pnext_handle_structs = collect_pnext_handle_structs(structures)
@@ -34,6 +42,7 @@ define = get_define(command.platform)
 # loop below can emit a lenient lookup for it.  Strict UpdateHandle is kept
 # for every other handle parameter (device, parent pool, ...).
 is_destroy_or_free = command.name.startswith('vkDestroy') or command.name.startswith('vkFree')
+is_create_or_allocate = command.name.startswith('vkCreate') or command.name.startswith('vkAllocate')
 destroy_target_name = None
 if is_destroy_or_free:
 	for p in reversed(command.params):
@@ -58,7 +67,11 @@ ${command.return_type} ${command.name}Wrapper(
 	  ${param.name}${',' if not loop.last else ''}
 	  % endfor
 	  );
-    
+
+	% if is_create_or_allocate or is_destroy_or_free:
+	std::lock_guard<std::mutex> lock(g_Mutex);
+	% endif
+
 	% for param in command.params:
 	% if param.is_handle:
 	% if param.name == destroy_target_name:

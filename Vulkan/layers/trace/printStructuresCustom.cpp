@@ -131,7 +131,7 @@ FastOStream& operator<<(FastOStream& stream, const VkSubmitInfo& value) {
   if (value.waitSemaphoreCount > 0) {
     stream << value.pWaitSemaphores << ", ";
     // pWaitDstStageMask is only valid when waitSemaphoreCount > 0
-    PrintVkPipelineStageFlags(stream, value.pWaitDstStageMask) << ", ";
+    PrintVkPipelineStageFlags(stream, value.waitSemaphoreCount, value.pWaitDstStageMask) << ", ";
   } else {
     stream << "nullptr, ";
     stream << "nullptr, ";

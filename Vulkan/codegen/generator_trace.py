@@ -76,7 +76,13 @@ def print_members(name, members, bitmasks):
         if member.name == 'pNext' and member.is_void and member.is_pointer:
             str += f'  PrintPNext(stream, value.pNext){separator};\n'
         elif bitmask is not None:
-            str += f'  Print{bitmask.flag_name}(stream, value.{member.name}){separator};\n'
+            if member.is_pointer:
+                length = '1'
+                if member.length:
+                    length = f'value.{member.length}'
+                str += f'  Print{bitmask.flag_name}(stream, {length}, value.{member.name}){separator};\n'
+            else:
+                str += f'  Print{bitmask.flag_name}(stream, value.{member.name}){separator};\n'
         elif member.base_type == 'char' and member.is_pointer:
             str += f'  PrintString(stream, value.{member.name}){separator};\n'
         elif member.base_type == 'char' and member.is_pointer_to_pointer:

@@ -22,7 +22,7 @@ namespace vulkan {
 % endif
 
 FastOStream& Print${bitmask.flag_name}(FastOStream& stream, const ${bitmask.flag_name} value);
-FastOStream& Print${bitmask.flag_name}(FastOStream& stream, const ${bitmask.flag_name}* value);
+FastOStream& Print${bitmask.flag_name}(FastOStream& stream, uint32_t count, const ${bitmask.flag_name}* value);
 
 % if define:
 #endif

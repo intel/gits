@@ -74,9 +74,14 @@ FastOStream& Print${bitmask.flag_name}(FastOStream& stream, const ${bitmask.flag
   return stream;
 }
 
-FastOStream& Print${bitmask.flag_name}(FastOStream& stream, const ${bitmask.flag_name}* value) {
+FastOStream& Print${bitmask.flag_name}(FastOStream& stream, uint32_t count, const ${bitmask.flag_name}* value) {
   if (value) {
-    Print${bitmask.flag_name}(stream, *value);
+    stream << "{ ";
+    for(uint32_t i = 0; i < count; ++i) {
+      Print${bitmask.flag_name}(stream, value[i]);
+      stream << " ";
+    }
+    stream << "}";
   } else {
     stream << "nullptr";
   }
