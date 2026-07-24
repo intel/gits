@@ -16,7 +16,7 @@ Configure sub-capture in `gits_config.yml` (next to the player) or override on t
 1. Set `Common.Player.Subcapture.Enabled` to `true`.
 2. Set `Common.Player.Subcapture.Frames` to the desired range (for example `1800-1803`).
 
-Run `gitsPlayer.exe` twice; use `--exitFrame` to stop right after the sub-capture range finishes.
+Run `gitsPlayer.exe` twice; use `--Common.Player.ExitFrame` to stop right after the sub-capture range finishes.
 
 > **Notes**
 >
@@ -36,13 +36,13 @@ Point the player at your original trace. Enable sub-capture and **execution seri
 Example **1-frame source trace** (target frame 1):
 
 ```text
-gitsPlayer.exe --Common.Player.Subcapture.Enabled --Common.Player.Subcapture.DirectX.ExecutionSerialization --Common.Player.Subcapture.Frames 1 --exitFrame 1 C:\path\to\1frame_trace.gits2
+gitsPlayer.exe --Common.Player.Subcapture.Enabled --Common.Player.Subcapture.DirectX.ExecutionSerialization --Common.Player.Subcapture.Frames 1 --Common.Player.ExitFrame 1 C:\path\to\1frame_trace.gits2
 ```
 
 Example **3-frame source trace** (serialize executions for frames 1–2, exit after frame 2):
 
 ```text
-gitsPlayer.exe --Common.Player.Subcapture.Enabled --Common.Player.Subcapture.DirectX.ExecutionSerialization --Common.Player.Subcapture.Frames 1-2 --exitFrame 2 C:\path\to\3frame_trace.gits2
+gitsPlayer.exe --Common.Player.Subcapture.Enabled --Common.Player.Subcapture.DirectX.ExecutionSerialization --Common.Player.Subcapture.Frames 1-2 --Common.Player.ExitFrame 2 C:\path\to\3frame_trace.gits2
 ```
 
 The serialized `*.gits2` is created under the dump directory implied by `Common.Player.SubcapturePath` in `gits_config.yml` (same convention as other sub-captures).
@@ -89,10 +89,10 @@ For each execution index **1 … N** from subsection **2**, the player is run **
 
 Use the **serialized** trace from [Serialized sub-capture](#serialized-sub-capture) as input. **Do not** pass `ExecutionSerialization` here.
 
-Example for **1-frame serialized trace** (`--Common.Player.Subcapture.Frames 1`, `--exitFrame 1`):
+Example for **1-frame serialized trace** (`--Common.Player.Subcapture.Frames 1`, `--Common.Player.ExitFrame 1`):
 
 ```text
-gitsPlayer.exe --Common.Player.Subcapture.Enabled --Common.Player.Subcapture.Frames 1 --Common.Player.Subcapture.DirectX.CommandListExecutions 7-11 --exitFrame 1 --showWindowBorder --showFrameNumberInTitle C:\path\to\serialized_trace.gits2
+gitsPlayer.exe --Common.Player.Subcapture.Enabled --Common.Player.Subcapture.Frames 1 --Common.Player.Subcapture.DirectX.CommandListExecutions 7-11 --Common.Player.ExitFrame 1 --showWindowBorder --showFrameNumberInTitle C:\path\to\serialized_trace.gits2
 ```
 
 
@@ -101,13 +101,13 @@ Replace `7-11` with the range of Command Lists you want to sub-capture.
 If subsection **2** reports **50** executions on the target frame, you can generate **50** Command List sub-captures. Example for the 1-frame case:
 
 ```text
-gitsPlayer.exe ... --Common.Player.Subcapture.DirectX.CommandListExecutions 1 --exitFrame 1 ...   # analysis
-gitsPlayer.exe ... --Common.Player.Subcapture.DirectX.CommandListExecutions 1 --exitFrame 1 ...   # sub-capture
-gitsPlayer.exe ... --Common.Player.Subcapture.DirectX.CommandListExecutions 2 --exitFrame 1 ...   # analysis
-gitsPlayer.exe ... --Common.Player.Subcapture.DirectX.CommandListExecutions 2 --exitFrame 1 ...   # sub-capture
+gitsPlayer.exe ... --Common.Player.Subcapture.DirectX.CommandListExecutions 1 --Common.Player.ExitFrame 1 ...   # analysis
+gitsPlayer.exe ... --Common.Player.Subcapture.DirectX.CommandListExecutions 1 --Common.Player.ExitFrame 1 ...   # sub-capture
+gitsPlayer.exe ... --Common.Player.Subcapture.DirectX.CommandListExecutions 2 --Common.Player.ExitFrame 1 ...   # analysis
+gitsPlayer.exe ... --Common.Player.Subcapture.DirectX.CommandListExecutions 2 --Common.Player.ExitFrame 1 ...   # sub-capture
 # ... repeat the analysis/sub-capture pair for executions 3 through 49 ...
-gitsPlayer.exe ... --Common.Player.Subcapture.DirectX.CommandListExecutions 50 --exitFrame 1 ...  # analysis
-gitsPlayer.exe ... --Common.Player.Subcapture.DirectX.CommandListExecutions 50 --exitFrame 1 ...  # sub-capture
+gitsPlayer.exe ... --Common.Player.Subcapture.DirectX.CommandListExecutions 50 --Common.Player.ExitFrame 1 ...  # analysis
+gitsPlayer.exe ... --Common.Player.Subcapture.DirectX.CommandListExecutions 50 --Common.Player.ExitFrame 1 ...  # sub-capture
 ```
 
 Each pair emits a separate `*.gits2` under `Common.Player.SubcapturePath`.
@@ -137,3 +137,4 @@ Example split pass (adjust keys and paths):
 ```text
 gitsPlayer.exe --Common.Player.Subcapture.Enabled --Common.Player.Subcapture.DirectX.CommandListSplit 100-105,200 C:\path\to\serialized_trace.gits2
 ```
+

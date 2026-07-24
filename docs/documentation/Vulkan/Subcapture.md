@@ -113,3 +113,5 @@ The output location is `Common.Player.SubcapturePath` (default
 > `CommandListExecutions`, `CommandListSplit`, `SerializeAccelerationStructures`,
 > `RestoreTLASes`) are used only by the DirectX backend and are ignored by the
 > Vulkan backend, which supports frame-range sub-capture only.
+
+
