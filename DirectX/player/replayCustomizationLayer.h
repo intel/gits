@@ -11,6 +11,8 @@
 #include "layerAuto.h"
 #include "pipelineLibraryService.h"
 
+#include <windows.h>
+
 #include <wrl/client.h>
 #include <unordered_map>
 #include <unordered_set>
@@ -29,6 +31,8 @@ public:
   void Pre(IDXGISwapChainSetFullscreenStateCommand& command) override;
   void Pre(IDXGIFactoryCreateSwapChainCommand& command) override;
   void Pre(IDXGIFactory2CreateSwapChainForHwndCommand& command) override;
+  void Post(IDXGISwapChainResizeBuffersCommand& command) override;
+  void Post(IDXGISwapChain3ResizeBuffers1Command& command) override;
   void Pre(IDXGIFactoryMakeWindowAssociationCommand& command) override;
   void Post(ID3D12ResourceMapCommand& command) override;
   void Post(ID3D12DeviceCreateDescriptorHeapCommand& command) override;
@@ -184,6 +188,7 @@ public:
   void Pre(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& command) override;
   void Pre(NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand& command) override;
   void Post(CreateDXGIFactory2Command& command) override;
+  void Post(CreateWindowMetaCommand& command) override;
   void Pre(xefgSwapChainD3D12InitFromSwapChainDescCommand& command) override;
   void Pre(xefgSwapChainSetLoggingCallbackCommand& command) override;
   void Pre(xessSetLoggingCallbackCommand& command) override;
@@ -218,6 +223,7 @@ private:
   std::vector<NvAPIShaderExtnSlot> m_NvapiShaderExtnSlotsUsed;
   bool m_UseAddressPinning{};
   bool m_AfterAddRef{};
+  HWND m_Hwnd{};
 };
 
 } // namespace DirectX

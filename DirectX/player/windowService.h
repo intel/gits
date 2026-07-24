@@ -17,6 +17,7 @@ namespace DirectX {
 class WindowService {
 public:
   HWND CreatePlayerWindow(HWND captureHwnd, int width, int height);
+  void ResizePlayerWindow(HWND playerHwnd, int width, int height);
   HWND GetCurrentHwnd(HWND captureHwnd);
 
 private:

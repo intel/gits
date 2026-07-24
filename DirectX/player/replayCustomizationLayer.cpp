@@ -137,6 +137,29 @@ void ReplayCustomizationLayer::Pre(IDXGIFactoryMakeWindowAssociationCommand& c) 
   c.m_WindowHandle.Value = m_Manager.GetWindowService().GetCurrentHwnd(c.m_WindowHandle.Value);
 }
 
+void ReplayCustomizationLayer::Post(CreateWindowMetaCommand& c) {
+  if (c.Skip) {
+    return;
+  }
+  m_Hwnd = c.m_hWnd.Value;
+}
+
+void ReplayCustomizationLayer::Post(IDXGISwapChainResizeBuffersCommand& c) {
+  if (c.Skip || c.m_Result.Value != S_OK || m_Hwnd == nullptr) {
+    return;
+  }
+  m_Manager.GetWindowService().ResizePlayerWindow(m_Hwnd, static_cast<int>(c.m_Width.Value),
+                                                  static_cast<int>(c.m_Height.Value));
+}
+
+void ReplayCustomizationLayer::Post(IDXGISwapChain3ResizeBuffers1Command& c) {
+  if (c.Skip || c.m_Result.Value != S_OK || m_Hwnd == nullptr) {
+    return;
+  }
+  m_Manager.GetWindowService().ResizePlayerWindow(m_Hwnd, static_cast<int>(c.m_Width.Value),
+                                                  static_cast<int>(c.m_Height.Value));
+}
+
 void ReplayCustomizationLayer::Post(ID3D12ResourceMapCommand& c) {
   if (c.Skip) {
     return;
