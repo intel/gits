@@ -74,13 +74,6 @@ public:
   unsigned Id() const override;
 };
 
-class WaitForFenceSignaledDeprecatedSerializer : public stream::CommandSerializer {
-public:
-  explicit WaitForFenceSignaledDeprecatedSerializer(
-      const WaitForFenceSignaledDeprecatedCommand& command);
-  unsigned Id() const override;
-};
-
 class WaitForFenceSignaledSerializer : public stream::CommandSerializer {
 public:
   explicit WaitForFenceSignaledSerializer(const WaitForFenceSignaledCommand& command);

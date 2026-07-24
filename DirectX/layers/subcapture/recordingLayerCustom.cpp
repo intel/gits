@@ -125,7 +125,15 @@ void RecordingLayer::Post(CreateHeapAllocationMetaCommand& Command) {
 
 void RecordingLayer::Post(WaitForFenceSignaledDeprecatedCommand& Command) {
   if (m_SubcaptureRange.InRange()) {
-    m_Recorder.Record(WaitForFenceSignaledDeprecatedSerializer(Command));
+    // Deprecated commands are never written to new streams. Record the
+    // non-deprecated 64-bit variant so subcaptures contain only the current
+    // command.
+    WaitForFenceSignaledCommand newCommand(Command.ThreadId);
+    newCommand.Key = Command.Key;
+    newCommand.m_event = Command.m_event;
+    newCommand.m_fence = Command.m_fence;
+    newCommand.m_Value.Value = Command.m_Value.Value;
+    m_Recorder.Record(WaitForFenceSignaledSerializer(newCommand));
   }
 }
 
