@@ -46,7 +46,8 @@ void ImGuiHUDLayer::ReleaseHud() {
   m_SrvDescHeap.Reset();
   m_CommandQueue.Reset();
   m_CommandList.Reset();
-  m_SwapChain.Reset();
+  m_SwapChain = nullptr;
+  m_SwapChainKey = 0;
 
   m_Initialized = false;
   m_Owner = HudOwner::None;
@@ -80,6 +81,10 @@ void ImGuiHUDLayer::Pre(IUnknownReleaseCommand& c) {
   }
 
   std::lock_guard<std::mutex> lock(m_Mutex);
+  if (c.m_Object.Key == m_SwapChainKey) {
+    ReleaseHud();
+    return;
+  }
   if (!m_BackBufferKeys.contains(c.m_Object.Key)) {
     return;
   }
@@ -96,7 +101,8 @@ void ImGuiHUDLayer::Post(IDXGIFactoryCreateSwapChainCommand& c) {
     return;
   }
 
-  EnsureInitialized(c.m_pDevice.Value, *c.m_ppSwapChain.Value, /*isXefgProxy=*/false);
+  EnsureInitialized(c.m_pDevice.Value, *c.m_ppSwapChain.Value, c.m_ppSwapChain.Key,
+                    /*isXefgProxy=*/false);
 }
 
 void ImGuiHUDLayer::Post(IDXGIFactory2CreateSwapChainForHwndCommand& c) {
@@ -104,7 +110,8 @@ void ImGuiHUDLayer::Post(IDXGIFactory2CreateSwapChainForHwndCommand& c) {
     return;
   }
 
-  EnsureInitialized(c.m_pDevice.Value, *c.m_ppSwapChain.Value, /*isXefgProxy=*/false);
+  EnsureInitialized(c.m_pDevice.Value, *c.m_ppSwapChain.Value, c.m_ppSwapChain.Key,
+                    /*isXefgProxy=*/false);
 }
 
 void ImGuiHUDLayer::Pre(xefgSwapChainDestroyCommand& c) {
@@ -159,7 +166,7 @@ void ImGuiHUDLayer::Post(xefgSwapChainD3D12GetSwapChainPtrCommand& c) {
   auto* swapChain = static_cast<IDXGISwapChain*>(*c.m_ppSwapChain.Value);
   GITS_ASSERT(swapChain);
 
-  EnsureInitialized(m_XefgCmdQueue, swapChain, /*isXefgProxy=*/true);
+  EnsureInitialized(m_XefgCmdQueue, swapChain, c.m_ppSwapChain.Key, /*isXefgProxy=*/true);
 }
 
 void ImGuiHUDLayer::Pre(IDXGISwapChainPresentCommand& c) {
@@ -280,6 +287,7 @@ bool ImGuiHUDLayer::CreateFrameContext(unsigned bufferCount) {
 
 void ImGuiHUDLayer::EnsureInitialized(IUnknown* device,
                                       IDXGISwapChain* swapChain,
+                                      unsigned swapChainKey,
                                       bool isXefgProxy) {
   // The first valid swapchain owns the HUD. Subsequent app swapchains are
   // ignored; the XeFG presenter supersedes an app-owned HUD via a clean re-init.
@@ -295,6 +303,7 @@ void ImGuiHUDLayer::EnsureInitialized(IUnknown* device,
 
   if (InitializeResources(device, swapChain)) {
     m_Initialized = true;
+    m_SwapChainKey = swapChainKey;
     m_Owner = isXefgProxy ? HudOwner::XefgProxy : HudOwner::AppSwapChain;
   } else {
     LOG_ERROR << "ImGui HUD: Failed to initialize resources";
@@ -304,12 +313,17 @@ void ImGuiHUDLayer::EnsureInitialized(IUnknown* device,
 }
 
 bool ImGuiHUDLayer::InitializeResources(IUnknown* device, IDXGISwapChain* swapChain) {
+  Microsoft::WRL::ComPtr<IDXGISwapChain3> swapChain3;
+
   device->QueryInterface(IID_PPV_ARGS(&m_CommandQueue));
-  swapChain->QueryInterface(IID_PPV_ARGS(&m_SwapChain));
-  m_SwapChain->GetDevice(IID_PPV_ARGS(&m_Device));
-  if (!m_CommandQueue || !m_SwapChain || !m_Device) {
+  swapChain->QueryInterface(IID_PPV_ARGS(&swapChain3));
+  if (swapChain3) {
+    swapChain3->GetDevice(IID_PPV_ARGS(&m_Device));
+  }
+  if (!m_CommandQueue || !swapChain3 || !m_Device) {
     return false;
   }
+  m_SwapChain = swapChain;
 
   DXGI_SWAP_CHAIN_DESC swapChainDesc;
   m_SwapChain->GetDesc(&swapChainDesc);
@@ -393,8 +407,15 @@ void ImGuiHUDLayer::OnPrePresent() {
   Present();
 }
 
+UINT ImGuiHUDLayer::GetCurrentBackBufferIndex() {
+  Microsoft::WRL::ComPtr<IDXGISwapChain3> swapChain3;
+  HRESULT hr = m_SwapChain->QueryInterface(IID_PPV_ARGS(&swapChain3));
+  GITS_ASSERT(hr == S_OK);
+  return swapChain3->GetCurrentBackBufferIndex();
+}
+
 void ImGuiHUDLayer::WaitForCurrentFrame() {
-  UINT backBufferIdx = m_SwapChain->GetCurrentBackBufferIndex();
+  UINT backBufferIdx = GetCurrentBackBufferIndex();
   WaitForFrame(backBufferIdx);
 }
 
@@ -420,7 +441,7 @@ void ImGuiHUDLayer::Present() {
 
   CGits::Instance().GetImGuiHUD()->Render();
 
-  UINT backBufferIdx = m_SwapChain->GetCurrentBackBufferIndex();
+  UINT backBufferIdx = GetCurrentBackBufferIndex();
   FrameContext& frameCtx = m_FrameContext[backBufferIdx];
 
   frameCtx.commandAllocator->Reset();

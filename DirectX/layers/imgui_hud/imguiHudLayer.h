@@ -57,10 +57,14 @@ private:
   void Shutdown();
   void ReleaseHud();
   bool CreateFrameContext(unsigned bufferCount);
-  void EnsureInitialized(IUnknown* device, IDXGISwapChain* swapChain, bool isXefgProxy);
+  void EnsureInitialized(IUnknown* device,
+                         IDXGISwapChain* swapChain,
+                         unsigned swapChainKey,
+                         bool isXefgProxy);
   bool InitializeResources(IUnknown* device, IDXGISwapChain* swapChain);
   void InitializeImGui(DXGI_FORMAT format);
   void OnPrePresent();
+  UINT GetCurrentBackBufferIndex();
   void WaitForCurrentFrame();
   void WaitForFrame(unsigned bufferIndex);
   void Present();
@@ -85,7 +89,9 @@ private:
   Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_SrvDescHeap = nullptr;
   Microsoft::WRL::ComPtr<ID3D12CommandQueue> m_CommandQueue = nullptr;
   Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> m_CommandList = nullptr;
-  Microsoft::WRL::ComPtr<IDXGISwapChain3> m_SwapChain = nullptr;
+  // Non-owning so the recorder wrapper observes the final application release.
+  IDXGISwapChain* m_SwapChain = nullptr;
+  unsigned m_SwapChainKey = 0;
 
   UINT64 m_FenceValue = 0;
 
