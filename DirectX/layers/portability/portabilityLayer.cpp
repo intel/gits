@@ -251,14 +251,24 @@ void PortabilityLayer::Post(ID3D12Device8CreatePlacedResource1Command& c) {
   if (m_ForcePlacedToCommittedResources && c.Skip) {
     m_ForcedCommittedResources.insert(c.m_ppvResource.Key);
   }
-  D3D12_RESOURCE_DESC desc =
-      (*reinterpret_cast<ID3D12Resource**>(c.m_ppvResource.Value))->GetDesc();
-  if (m_StoreResourcePlacementData) {
-    m_ResourcePlacementCapture.createPlacedResource(c.m_pHeap.Key, c.m_ppvResource.Key,
-                                                    c.m_HeapOffset.Value, c.m_Object.Value, desc);
-  } else if (m_StoreResourcePlacementDataNoExecute) {
+  if (m_StoreResourcePlacementDataNoExecute) {
+    if (!c.m_pDesc.Value) {
+      return;
+    }
+    D3D12_RESOURCE_DESC desc = {
+        c.m_pDesc.Value->Dimension, c.m_pDesc.Value->Alignment,        c.m_pDesc.Value->Width,
+        c.m_pDesc.Value->Height,    c.m_pDesc.Value->DepthOrArraySize, c.m_pDesc.Value->MipLevels,
+        c.m_pDesc.Value->Format,    c.m_pDesc.Value->SampleDesc,       c.m_pDesc.Value->Layout,
+        c.m_pDesc.Value->Flags};
     m_ResourcePlacementCaptureNoExecute.createPlacedResource(
         c.m_pHeap.Key, c.m_ppvResource.Key, c.m_HeapOffset.Value, c.m_Object.Value, desc);
+    return;
+  }
+  if (m_StoreResourcePlacementData) {
+    D3D12_RESOURCE_DESC desc =
+        (*reinterpret_cast<ID3D12Resource**>(c.m_ppvResource.Value))->GetDesc();
+    m_ResourcePlacementCapture.createPlacedResource(c.m_pHeap.Key, c.m_ppvResource.Key,
+                                                    c.m_HeapOffset.Value, c.m_Object.Value, desc);
   }
 }
 
@@ -322,14 +332,24 @@ void PortabilityLayer::Post(ID3D12Device10CreatePlacedResource2Command& c) {
   if (m_ForcePlacedToCommittedResources && c.Skip) {
     m_ForcedCommittedResources.insert(c.m_ppvResource.Key);
   }
-  D3D12_RESOURCE_DESC desc =
-      (*reinterpret_cast<ID3D12Resource**>(c.m_ppvResource.Value))->GetDesc();
-  if (m_StoreResourcePlacementData) {
-    m_ResourcePlacementCapture.createPlacedResource(c.m_pHeap.Key, c.m_ppvResource.Key,
-                                                    c.m_HeapOffset.Value, c.m_Object.Value, desc);
-  } else if (m_StoreResourcePlacementDataNoExecute) {
+  if (m_StoreResourcePlacementDataNoExecute) {
+    if (!c.m_pDesc.Value) {
+      return;
+    }
+    D3D12_RESOURCE_DESC desc = {
+        c.m_pDesc.Value->Dimension, c.m_pDesc.Value->Alignment,        c.m_pDesc.Value->Width,
+        c.m_pDesc.Value->Height,    c.m_pDesc.Value->DepthOrArraySize, c.m_pDesc.Value->MipLevels,
+        c.m_pDesc.Value->Format,    c.m_pDesc.Value->SampleDesc,       c.m_pDesc.Value->Layout,
+        c.m_pDesc.Value->Flags};
     m_ResourcePlacementCaptureNoExecute.createPlacedResource(
         c.m_pHeap.Key, c.m_ppvResource.Key, c.m_HeapOffset.Value, c.m_Object.Value, desc);
+    return;
+  }
+  if (m_StoreResourcePlacementData) {
+    D3D12_RESOURCE_DESC desc =
+        (*reinterpret_cast<ID3D12Resource**>(c.m_ppvResource.Value))->GetDesc();
+    m_ResourcePlacementCapture.createPlacedResource(c.m_pHeap.Key, c.m_ppvResource.Key,
+                                                    c.m_HeapOffset.Value, c.m_Object.Value, desc);
   }
 }
 
