@@ -39,6 +39,22 @@ void GetCopyableFootprintsSafe(ID3D12Device* device,
     descCopy.Alignment = 0;
     device->GetCopyableFootprints(&descCopy, firstSubresource, numSubresources, BaseOffset,
                                   pLayouts, pNumRows, pRowSizeInBytes, pTotalBytes);
+    if (*pTotalBytes == UINT64_MAX &&
+        (descCopy.Flags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS)) {
+      static bool logged = false;
+      if (!logged) {
+        LOG_WARNING << "Retrying GetCopyableFootprints after removing "
+                       "D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS. This can happen "
+                       "when high-interface resource creation (e.g. CreateCommittedResource3 with "
+                       "castable formats) creates a resource whose primary format is incompatible "
+                       "with unordered access while the UAV flag is set because a castable format "
+                       "is compatible.";
+        logged = true;
+      }
+      descCopy.Flags &= ~D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+      device->GetCopyableFootprints(&descCopy, firstSubresource, numSubresources, BaseOffset,
+                                    pLayouts, pNumRows, pRowSizeInBytes, pTotalBytes);
+    }
     GITS_ASSERT(*pTotalBytes != UINT64_MAX);
   }
 }
