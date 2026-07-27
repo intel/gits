@@ -40,6 +40,62 @@
 using namespace gits;
 namespace {
 
+bool safeFloatCompare(const std::string& a, const std::string& b) {
+    try {
+        return std::fabs(std::stof(a) - std::stof(b)) < 1e-6f;
+    } catch (const std::invalid_argument&) {
+        return a == b; // fallback to string compare
+    } catch (const std::out_of_range&) {
+        return a == b;
+    }
+}
+
+std::optional<uint32_t> parseUint32(const std::string& str) {
+    if (str.empty()) return std::nullopt;
+
+    try {
+        size_t pos = 0;
+        uint32_t result = 0;
+
+        // Binary: "0b..." or "0B..."
+        if (str.size() > 2 && str[0] == '0' && (str[1] == 'b' || str[1] == 'B')) {
+            result = static_cast<uint32_t>(std::stoull(str.substr(2), &pos, 2));
+            if (pos != str.size() - 2) return std::nullopt; // trailing garbage
+        }
+        // Hex: "0x..." or "0X..."
+        else if (str.size() > 2 && str[0] == '0' && (str[1] == 'x' || str[1] == 'X')) {
+            result = static_cast<uint32_t>(std::stoull(str.substr(2), &pos, 16));
+            if (pos != str.size() - 2) return std::nullopt;
+        }
+        // Decimal (default)
+        else {
+            uint64_t val = std::stoull(str, &pos, 10);
+            if (pos != str.size()) return std::nullopt; // trailing garbage
+            if (val > UINT32_MAX) return std::nullopt;  // overflow check
+            result = static_cast<uint32_t>(val);
+        }
+
+        return result;
+
+    } catch (const std::invalid_argument&) {
+        return std::nullopt;
+    } catch (const std::out_of_range&) {
+        return std::nullopt;
+    }
+}
+
+bool compareUint32Strings(const std::string& a, const std::string& b) {
+    auto va = parseUint32(a);
+    auto vb = parseUint32(b);
+
+    if (!va.has_value() || !vb.has_value()) {
+        // Fallback: if either fails to parse, do raw string compare
+        return a == b;
+    }
+
+    return va.value() == vb.value();
+}
+
 std::unordered_set<std::string> g_KnownLegacyPaths = {
 % for path in known_legacy_paths:
   "${path}",
@@ -166,7 +222,13 @@ bool convert<${group.namespace_str}>::decode(const Node& node, ${group.namespace
 %       endif
 %       if not option.is_vector_type:
     const auto& configValue = node["${option.config_name}"].Scalar();
+%         if option.numeric_format != None: # this must be uint32_t in non decimal format
+    if (!compareUint32Strings(configValue, defaultValue)) {
+%         elif option.type == "float":
+    if (!safeFloatCompare(configValue, defaultValue)) {
+%         else:
     if (configValue != defaultValue) {
+%         endif
 %       else:
     const auto& vecYAML = node["${option.config_name}"].as<${option.type}>();
     const auto& vecConfig = stringTo<${option.type}>(defaultValue);

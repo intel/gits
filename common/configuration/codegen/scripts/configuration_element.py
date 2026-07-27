@@ -131,7 +131,10 @@ class ConfigurationOption(ConfigurationEntry):
         super().__init__(option, namespace, instance_namespace)
 
         # namespace (- "Configuration" prefix) + current name
-        namespace_lst = namespace + [self.name]
+        self.option_name = self.name
+        if self.config_name:
+            self.option_name = self.config_name
+        namespace_lst = namespace + [self.option_name]
         if len(namespace_lst) > 1:
             if namespace_lst[0] == "Configuration":
                 namespace_lst = namespace_lst[1:]
@@ -141,9 +144,11 @@ class ConfigurationOption(ConfigurationEntry):
         self.yaml_path = (namespace_lst, "".join([f"[\"{e}\"]" for e in namespace_lst]))
         self.instance_path = '.'.join(instance_namespace[1:]) # Without the "Configuration" prefix
         self.default = get_if_present(option, 'Default', "")
+        self.numeric_format = None
         if 'NumericFormat' in option:
             try:
                 target_format = option['NumericFormat']
+                self.numeric_format = target_format
                 if target_format == 'Hexadecimal':
                     self.default = hex(self.default)
                 elif target_format == 'Binary':

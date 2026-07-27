@@ -28,17 +28,35 @@ Common:
     StopAfterFrames: 23
 ```
 
+# Environment Variables
+
+_Every_ option can be set by an environment variable in the form of the full keypath in the Yaml file with prefix `GITS_` and `_` as seperators:
+
+```bash
+export GITS_COMMON_PLAYER_STOPAFTERFRAMES=23
+export GITS_COMMON_PLAYER_FULLSCREEN=true
+```
+
 # Command Line Arguments
 
-GITS provides a regular command line interface. For our example settings there are dedicated arguments defined:
+!!! Note
+    For obvious reasons only the `gitsPlayer` can be configured using the commandline.  
+    In the following examples we're ommitting the stream to be played back for readability. The correct usage of `gitsPlayer` is
+    ```bash
+    gitsPlayer {OPTIONS} [path to stream]
+    ```
+
+GITS provides a regular command line interface. For our example settings used above there are dedicated arguments defined:
 
 ```bash
 gitsPlayer --stopAfterFrames=23
 
 # it's a flag, so presence ==> true
-gitsPlayer -f 
+gitsPlayer -f
 gitsPlayer --fullscreen
 ```
+
+## Hidden Arguments
 
 Apart from the _regular_ argument command line interface GITS also has _hidden arguments_, that allow to set any configuration value. The _hidden argument_ is created from the full keypath in the Yaml file, e.g.:
 
@@ -48,18 +66,22 @@ gitsPlayer --Common.Player.StopAfterFrames=23
 gitsPlayer --Common.Player.Fullscreen # flag again
 ```
 
-To offer full flexibility the system also allows to explicitly set a **bool value** with a _hidden argument_ that consists of the keypath with the suffix ".Value":
+## Setting flags to false
+
+Flags are always set a value to **`true`**, but sometimes a value needs to be set to false explicitly. For this reason there's a _hidden argument_ for every **bool value** that consists of the full keypath with the suffix ".Value" which can be set to either `0` (meaning `false`)or `1` (meaning `true`):
 
 ```bash
-gitsPlayer --Common.Player.Fullscreen.Value=0 # 0=false, 1=true
+gitsPlayer --Common.Player.Fullscreen.Value=0 # Set the fullscreen set to false
+gitsPlayer --Common.Player.Fullscreen.Value=1 # Set the fullscreen set to true
 ```
 
-# Environment Variables
+## Setting arrays
 
-_Every_ option can be set by an environment variable in the form of a keypath with prefix `GITS_`:
+Some GITS options consist of an array, e.g. the built-in HUD can be enabled for an array of APIs:
 
 ```bash
-export GITS_COMMON_PLAYER_STOPAFTERFRAMES=23
-export GITS_COMMON_PLAYER_FULLSCREEN=true
+gitsPlayer --Common.Shared.HUD.Enabled=DX    # Enable HUD for DX only
+gitsPlayer --Common.Shared.HUD.Enabled=DX,VK # Enable HUD for DX and VK
+gitsPlayer --Common.Shared.HUD.Enabled=[]    # Disable HUD completely
 ```
 

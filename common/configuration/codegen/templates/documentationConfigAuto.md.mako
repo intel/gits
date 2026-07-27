@@ -58,7 +58,7 @@ Below is an (auto-generated) list of all configuration options for the current t
 |-|-|-|
 % for option in group.get_config_options():
 % if not option.is_derived:
-| [${option.name}](#${option.name.lower()})  <button class="btn" title="Copy full path to clipboard" data-clipboard-target="#copy-id-${option.name}">:material-clipboard-text-outline:</button> | ${f"[{option.type}](EnumsAuto.md#{option.type.lower()})" if get_enum_values(option.type, enums) else option.type} | ${get_defaults(option)} |
+| [${option.option_name}](#${option.name.lower()})  <button class="btn" title="Copy full path to clipboard" data-clipboard-target="#copy-id-${option.name}">:material-clipboard-text-outline:</button> | ${f"[{option.type}](EnumsAuto.md#{option.type.lower()})" if get_enum_values(option.type, enums) else option.type} | ${get_defaults(option)} |
 % endif
 % endfor
 % endif
