@@ -19,7 +19,7 @@ static constexpr const char* CAPTURE_TARGET_PATH_KEY = "Capture.CaptureTargetPat
 static constexpr const char* CAPTURE_OUTPUT_STREAM_PATH_KEY = "Capture.OutputStreamPath";
 static constexpr const char* PLAYBACK_CONFIG_PATH_KEY = "Playback.ConfigPath";
 static constexpr const char* PLAYBACK_INPUT_STREAM_PATH_KEY = "Playback.InputStreamPath";
-static constexpr const char* PLAYBACK_SCREENSHOTS_PATH_KEY = "Playback.ScreenshotsPath";
+static constexpr const char* PLAYBACK_ARTIFACTS_PATH_KEY = "Playback.ScreenshotsPath";
 static constexpr const char* PLAYBACK_TRACE_PATH_KEY = "Playback.TracePath";
 static constexpr const char* SUBCAPTURE_CONFIG_PATH_KEY = "Subcapture.ConfigPath";
 static constexpr const char* SUBCAPTURE_INPUT_STREAM_PATH_KEY = "Subcapture.InputStreamPath";
@@ -70,11 +70,11 @@ void LauncherPaths::Read(YAML::Node& yaml) {
         Playback.InputStreamPath = playbackInputStreamPath;
       }
     }
-    if (yaml[PLAYBACK_SCREENSHOTS_PATH_KEY]) {
+    if (yaml[PLAYBACK_ARTIFACTS_PATH_KEY]) {
       const auto playbackScreenshotsPath =
-          std::filesystem::path(yaml[PLAYBACK_SCREENSHOTS_PATH_KEY].as<std::string>());
+          std::filesystem::path(yaml[PLAYBACK_ARTIFACTS_PATH_KEY].as<std::string>());
       if (std::filesystem::exists(playbackScreenshotsPath)) {
-        Playback.ScreenshotsPath = playbackScreenshotsPath;
+        Playback.ArtifactsPath = playbackScreenshotsPath;
       }
     }
     if (yaml[PLAYBACK_TRACE_PATH_KEY]) {
@@ -119,8 +119,7 @@ void LauncherPaths::Write(YAML::Emitter& out) {
   out << YAML::Key << PLAYBACK_CONFIG_PATH_KEY << YAML::Value << Playback.ConfigPath.string();
   out << YAML::Key << PLAYBACK_INPUT_STREAM_PATH_KEY << YAML::Value
       << Playback.InputStreamPath.string();
-  out << YAML::Key << PLAYBACK_SCREENSHOTS_PATH_KEY << YAML::Value
-      << Playback.ScreenshotsPath.string();
+  out << YAML::Key << PLAYBACK_ARTIFACTS_PATH_KEY << YAML::Value << Playback.ArtifactsPath.string();
   out << YAML::Key << PLAYBACK_TRACE_PATH_KEY << YAML::Value << Playback.TracePath.string();
   out << YAML::Key << SUBCAPTURE_CONFIG_PATH_KEY << YAML::Value << Subcapture.ConfigPath.string();
   out << YAML::Key << SUBCAPTURE_INPUT_STREAM_PATH_KEY << YAML::Value

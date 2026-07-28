@@ -100,7 +100,7 @@ std::optional<std::filesystem::path> Context::GetPath(Path pathType,
     return Paths.BasePath;
 
   // unique paths - independent of mode
-  case Path::SCREENSHOTS:
+  case Path::ARTIFACTS:
     if (noMode || mode == Mode::PLAYBACK) {
       return config_options::OutputDir(Mode::PLAYBACK);
     }
@@ -181,7 +181,7 @@ bool Context::SetPath(std::filesystem::path path, Path pathType, std::optional<M
         Paths.Playback.InputStreamPath = path;
         result = true;
         break;
-      case Path::SCREENSHOTS:
+      case Path::ARTIFACTS:
         config_options::OutputDir(Mode::PLAYBACK) = path;
         configModified = true;
         result = true;
@@ -255,6 +255,11 @@ bool Context::SetPath(std::filesystem::path path, Path pathType, std::optional<M
   }
 
   return result;
+}
+
+Api Context::GetStreamAPI() {
+  auto& config = ConfigurationForMode();
+  return TApiToApi(config.MetaData.Api3D);
 }
 
 std::filesystem::path Context::GetGITSPlayerPath() const {
@@ -332,8 +337,8 @@ void Context::SendAllPathsSetEvents() {
   if (!Paths.Playback.InputStreamPath.empty()) {
     eventBus.publish(PathEvent::Type::INPUT_STREAM, Mode::PLAYBACK);
   }
-  if (!Paths.Playback.ScreenshotsPath.empty()) {
-    eventBus.publish(PathEvent::Type::SCREENSHOTS, Mode::PLAYBACK);
+  if (!Paths.Playback.ArtifactsPath.empty()) {
+    eventBus.publish(PathEvent::Type::ARTIFACTS, Mode::PLAYBACK);
   }
   if (!Paths.Playback.TracePath.empty()) {
     eventBus.publish(PathEvent::Type::TRACE, Mode::PLAYBACK);

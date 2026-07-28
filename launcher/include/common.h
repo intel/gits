@@ -11,6 +11,8 @@
 #include <string>
 #include <filesystem>
 
+#include "apis_iface.h"
+
 namespace gits::gui {
 
 namespace filesystem_names {
@@ -33,12 +35,31 @@ static constexpr const char* OVERRIDES_KEY = "Overrides";
 enum class Api {
   UNKNOWN = 0,
   DIRECTX,
-  OPENGL,
   VULKAN,
+  OPENGL,
   OPENCL,
   LEVELZERO,
   COUNT
 };
+
+static Api TApiToApi(gits::ApisIface::TApi api) {
+  switch (api) {
+  case ApisIface::TApi::ApiNotSet:
+    return Api::UNKNOWN;
+  case ApisIface::TApi::OpenGL:
+    return Api::OPENGL;
+  case ApisIface::TApi::Vulkan:
+    return Api::VULKAN;
+  case ApisIface::TApi::OpenCL:
+    return Api::OPENCL;
+  case ApisIface::TApi::LevelZero:
+    return Api::LEVELZERO;
+  case ApisIface::TApi::DirectX:
+    return Api::DIRECTX;
+  default:
+    return Api::UNKNOWN;
+  };
+}
 
 enum class Mode {
   CAPTURE = 0,
@@ -50,7 +71,7 @@ enum class Path {
   // universal paths
   GITS_BASE = 0,
   // unique paths - independent of mode
-  SCREENSHOTS,
+  ARTIFACTS,
   CAPTURE_TARGET,
   // shared paths across modes
   CONFIG,

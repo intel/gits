@@ -49,6 +49,10 @@ float WidthOf(Widgets widget, const std::string& label) {
     // TODO: Can this be handled better?
     // Right now the size is based on a "magic string"
     return ImGui::CalcTextSize("N/A   ").x + style.FramePadding.x * 3 + textWidth;
+  case Widgets::Checkbox:
+    // TODO: Can this be handled better?
+    // Right now the size is based on a "magic checkbox width"
+    return textWidth + padding + 48.f;
   default:
     return 0.0f; // Unknown widget type
   }
@@ -331,9 +335,11 @@ bool RangeControls(const char* label,
   return localChanged;
 }
 
-void HelpButton(const std::string& id, const std::string& tooltip, const std::string& description) {
-  std::string buttonId = "?##HelpBtn" + id;
-  std::string popupId = id + "##HelpPopup";
+void HelpButton(const std::string& title,
+                const std::string& tooltip,
+                const std::string& description) {
+  std::string buttonId = "?##HelpBtn" + title;
+  std::string popupId = title + "##HelpPopup";
 
   float buttonSize = ImGui::GetFrameHeight();
   ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, buttonSize * 0.5f);

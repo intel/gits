@@ -33,34 +33,36 @@ void CaptureOptionsPanel::Render() {
       ImGui::Checkbox(Labels::RECORDING_ENABLED, &config_options::RecorderEnabled(Mode::CAPTURE));
   config_options_gui_helpers::ConfigOptionHelpButton(ConfigMetadata::Common::Recorder::enabled);
 
-  ImGui::PushStyleColor(ImGuiCol_Text, ImGuiHelper::Colors::WARNING);
-  ImGui::Text(Labels::NOTICE_2);
-  ImGui::PopStyleColor();
+  auto& context = Context::GetInstance();
+  auto api = context.SelectedApiForCapture;
 
-  auto& hudApis = config_options::HudEnabled(Mode::CAPTURE);
-  auto dxHudEnabled = std::find(hudApis.begin(), hudApis.end(), gits::ApiBool::DX) != hudApis.end();
-  changed |= ImGui::Checkbox(Labels::HUD_ENABLED, &dxHudEnabled);
-  if (changed) {
-    auto it = std::find(hudApis.begin(), hudApis.end(), gits::ApiBool::DX);
-    if (dxHudEnabled && it == hudApis.end()) {
-      hudApis.push_back(gits::ApiBool::DX);
-    } else if (!dxHudEnabled && it != hudApis.end()) {
-      hudApis.erase(it);
+  if (api == Api::DIRECTX) {
+    auto& hudApis = config_options::HudEnabled(Mode::CAPTURE);
+    auto dxHudEnabled =
+        std::find(hudApis.begin(), hudApis.end(), gits::ApiBool::DX) != hudApis.end();
+    changed |= ImGui::Checkbox(Labels::HUD_ENABLED, &dxHudEnabled);
+    if (changed) {
+      auto it = std::find(hudApis.begin(), hudApis.end(), gits::ApiBool::DX);
+      if (dxHudEnabled && it == hudApis.end()) {
+        hudApis.push_back(gits::ApiBool::DX);
+      } else if (!dxHudEnabled && it != hudApis.end()) {
+        hudApis.erase(it);
+      }
     }
-  }
-  config_options_gui_helpers::ConfigOptionHelpButton(
-      ConfigMetadata::Common::Shared::HUD::GroupMetadata);
+    config_options_gui_helpers::ConfigOptionHelpButton(
+        ConfigMetadata::Common::Shared::HUD::GroupMetadata);
 
-  changed |= ImGui::Checkbox(Labels::SHADOW_MEMORY, &config_options::ShadowMemory(Mode::CAPTURE));
-  config_options_gui_helpers::ConfigOptionHelpButton(
-      ConfigMetadata::DirectX::Recorder::shadowMemory);
+    changed |= ImGui::Checkbox(Labels::SHADOW_MEMORY, &config_options::ShadowMemory(Mode::CAPTURE));
+    config_options_gui_helpers::ConfigOptionHelpButton(
+        ConfigMetadata::DirectX::Recorder::shadowMemory);
 
-  const auto indent = ImGuiHelper::WidthOf(ImGuiHelper::Widgets::Button, "  ");
+    const auto indent = ImGuiHelper::WidthOf(ImGuiHelper::Widgets::Button, "  ");
 
-  changed |= config_options_gui_helpers::Trace(Mode::CAPTURE, indent);
+    changed |= config_options_gui_helpers::Trace(Mode::CAPTURE, indent);
 
-  if (changed) {
-    Context::GetInstance().UpdateInMemoryConfig(Mode::CAPTURE);
+    if (changed) {
+      Context::GetInstance().UpdateInMemoryConfig(Mode::CAPTURE);
+    }
   }
 }
 

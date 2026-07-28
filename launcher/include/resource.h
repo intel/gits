@@ -10,9 +10,20 @@
 
 #define APP_ICON      101
 #define APP_FILE_ICON 102
-#define APP_VERSION   "1.1"
+#define APP_VERSION   "1.2"
 
 inline const char* RELEASE_NOTES = R"(
+Release Notes v1.2
+====================
+- Add capture process monitoring to help with applications that relaunch themselves
+- The launcher will now always start with configurations from the installed GITS base path
+- Fixed issues with opening folders in the GITS Launcher menu
+- Minor UI improvements
+ - Show stream API
+ - Show only API relevant config options
+ - Export or send Launcher Log via email
+ - Introduced Artifacts Path for screenshots, resources & CCode.
+
 Release Notes v1.1
 ====================
 - New System setup panel (Windows only)

@@ -63,7 +63,7 @@ void SetTracePathFromTargetExecutable();
 void OpenURL(const std::string& url);
 bool OpenFolder(const std::filesystem::path& path);
 bool OpenFolder(const std::string& path);
-std::string CreateEmailBodyWithLog(const std::string& logText);
+std::string CreateEmailBodyWithLog(const std::string& bodyText, const std::string& logText);
 void SendEmail(const std::string& recipient, const std::string& subject, const std::string& body);
 void SendLogByEmail(const std::string& recipient,
                     const std::string& subject,

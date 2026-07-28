@@ -102,6 +102,7 @@ public:
 
   Mode AppMode = Mode::CAPTURE;
   Api SelectedApiForCapture = Api::DIRECTX;
+  Api GetStreamAPI();
   std::atomic<bool> SubcaptureInProgress = false;
 
   size_t ImguiIDs = 0;

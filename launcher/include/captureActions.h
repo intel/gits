@@ -26,4 +26,5 @@ std::optional<std::filesystem::path> GetStreamDirectoryFromLog(const std::string
 void CaptureStream();
 std::vector<std::string> GetRecorderFilesForApi(Api api);
 bool CleanupRecorderFiles(Api api, CapturePanel::CaptureCleanupOptions cleanupSelections);
+void StartPostExitMonitoring(const std::filesystem::path& executablePath);
 } // namespace gits::gui::capture_actions

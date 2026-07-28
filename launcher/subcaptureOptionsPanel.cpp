@@ -68,110 +68,110 @@ void SubcaptureOptionsPanel::Render() {
   ImGui::Separator();
 
   // Dedicated subcapture options
+  auto api = context.GetStreamAPI();
   const float widthLabel = ImGui::CalcTextSize(Labels::SUBCAPTURE_START_FRAME).x * 2.0f;
-  ImGui::PushStyleColor(ImGuiCol_Text, ImGuiHelper::Colors::WARNING);
-  ImGui::Text(Labels::NOTICE_2);
-  ImGui::PopStyleColor();
+  if (api == Api::DIRECTX) {
+    RowSubcapturePath();
 
-  RowSubcapturePath();
-
-  changed |= ImGui::Checkbox(Labels::SUBCAPTURE_OPTIMIZE, &config_options::SubcaptureOptimize());
-  config_options_gui_helpers::ConfigOptionHelpButton(
-      ConfigMetadata::Common::Player::Subcapture::optimize);
-
-  changed |= ImGui::Checkbox(Labels::SUBCAPTURE_EXECUTION_SERIALIZATION,
-                             &config_options::SubcaptureExecutionSerialization());
-  config_options_gui_helpers::ConfigOptionHelpButton(
-      ConfigMetadata::Common::Player::Subcapture::DirectX::executionSerialization);
-
-  // Mode Selector
-  ImGui::Separator();
-
-  enum class SubcaptureMode {
-    Subcapture = 0,
-    CommandListSubcapture = 1,
-    CommandSubcapture = 2
-  };
-  static SubcaptureMode selectedMode = SubcaptureMode::Subcapture;
-
-  auto modeChanged = false;
-  modeChanged |= ImGui::RadioButton(Labels::SUBCAPTURE, reinterpret_cast<int*>(&selectedMode), 0);
-  ImGui::SameLine();
-  modeChanged |=
-      ImGui::RadioButton(Labels::COMMAND_LIST_SUBCAPTURE, reinterpret_cast<int*>(&selectedMode), 1);
-  //ImGui::SameLine();
-  //modeChanged |= ImGui::RadioButton("Command Subcapture", reinterpret_cast<int*>(&selectedMode), 2);
-
-  if (modeChanged) {
-    if (selectedMode == SubcaptureMode::Subcapture) {
-      config_options::CommandListExecutions() = "";
-    }
-    if (selectedMode == SubcaptureMode::CommandSubcapture) {
-      // Not yet supported
-    }
-    changed = true;
-  }
-
-  ImGui::Separator();
-
-  // Mode-specific Content
-  if (selectedMode == SubcaptureMode::Subcapture) {
-    ImGui::SetNextItemWidth(widthLabel / 4.0f);
-    changed |= ImGui::InputInt(Labels::SUBCAPTURE_START_FRAME, &SubcaptureConfig.StartFrame, 1, 10);
-    ImGui::SameLine();
-    ImGui::SetNextItemWidth(widthLabel / 4.0f);
-    changed |= ImGui::InputInt(Labels::SUBCAPTURE_END_FRAME, &SubcaptureConfig.EndFrame, 1, 10);
+    changed |= ImGui::Checkbox(Labels::SUBCAPTURE_OPTIMIZE, &config_options::SubcaptureOptimize());
     config_options_gui_helpers::ConfigOptionHelpButton(
-        ConfigMetadata::Common::Player::Subcapture::frames);
-  }
+        ConfigMetadata::Common::Player::Subcapture::optimize);
 
-  if (selectedMode == SubcaptureMode::CommandListSubcapture) {
-    const bool isSerialized =
-        context.ConfigurationForMode(Mode::SUBCAPTURE).MetaData.IsASerializedSubcapture;
-    if (!isSerialized) {
-      ImGui::PushStyleColor(ImGuiCol_Text, ImGuiHelper::Colors::WARNING);
-      ImGui::Text(Labels::COMMAND_LIST_SUBCAPTURE_NOTICE);
-      ImGui::PopStyleColor();
-    }
-    ImGui::BeginDisabled(!isSerialized);
-    ImGui::SetNextItemWidth(widthLabel / 4.0f);
-    changed |= ImGui::InputInt(Labels::COMMAND_LIST_SUBCAPTURE_FRAME,
-                               &SubcaptureConfig.CommandListSubcaptureFrame, 1, 10);
-    ImGuiHelper::HelpButton(Labels::COMMAND_LIST_SUBCAPTURE_FRAME_HINT,
-                            Labels::COMMAND_LIST_SUBCAPTURE_FRAME_HINT,
-                            Labels::COMMAND_LIST_SUBCAPTURE_FRAME_HELP);
-    ImGui::SetNextItemWidth(widthLabel / 4.0f);
-    changed |= ImGui::InputInt(Labels::COMMAND_LIST_SUBCAPTURE_EXECUTIONS_START,
-                               &SubcaptureConfig.CommandListExecutionsStart, 1, 10);
-    ImGui::SameLine();
-    ImGui::SetNextItemWidth(widthLabel / 4.0f);
-    changed |= ImGui::InputInt(Labels::COMMAND_LIST_SUBCAPTURE_EXECUTIONS_END,
-                               &SubcaptureConfig.CommandListExecutionsEnd, 1, 10);
+    changed |= ImGui::Checkbox(Labels::SUBCAPTURE_EXECUTION_SERIALIZATION,
+                               &config_options::SubcaptureExecutionSerialization());
     config_options_gui_helpers::ConfigOptionHelpButton(
-        ConfigMetadata::Common::Player::Subcapture::DirectX::commandListExecutions);
-    ImGui::EndDisabled();
-  }
+        ConfigMetadata::Common::Player::Subcapture::DirectX::executionSerialization);
 
-  if (selectedMode == SubcaptureMode::CommandSubcapture) {
-    ImGui::Text("Not yet supported");
-  }
+    // Mode Selector
+    ImGui::Separator();
 
-  DroppedFilePath.reset();
+    enum class SubcaptureMode {
+      Subcapture = 0,
+      CommandListSubcapture = 1,
+      CommandSubcapture = 2
+    };
+    static SubcaptureMode selectedMode = SubcaptureMode::Subcapture;
 
-  if (changed) {
-    if (selectedMode == SubcaptureMode::Subcapture) {
-      config_options::SubcaptureFrames() = SubcaptureConfig.FramesRange();
+    auto modeChanged = false;
+    modeChanged |= ImGui::RadioButton(Labels::SUBCAPTURE, reinterpret_cast<int*>(&selectedMode), 0);
+    ImGui::SameLine();
+    modeChanged |= ImGui::RadioButton(Labels::COMMAND_LIST_SUBCAPTURE,
+                                      reinterpret_cast<int*>(&selectedMode), 1);
+    //ImGui::SameLine();
+    //modeChanged |= ImGui::RadioButton("Command Subcapture", reinterpret_cast<int*>(&selectedMode), 2);
+
+    if (modeChanged) {
+      if (selectedMode == SubcaptureMode::Subcapture) {
+        config_options::CommandListExecutions() = "";
+      }
+      if (selectedMode == SubcaptureMode::CommandSubcapture) {
+        // Not yet supported
+      }
+      changed = true;
     }
+
+    ImGui::Separator();
+
+    // Mode-specific Content
+    if (selectedMode == SubcaptureMode::Subcapture) {
+      ImGui::SetNextItemWidth(widthLabel / 4.0f);
+      changed |=
+          ImGui::InputInt(Labels::SUBCAPTURE_START_FRAME, &SubcaptureConfig.StartFrame, 1, 10);
+      ImGui::SameLine();
+      ImGui::SetNextItemWidth(widthLabel / 4.0f);
+      changed |= ImGui::InputInt(Labels::SUBCAPTURE_END_FRAME, &SubcaptureConfig.EndFrame, 1, 10);
+      config_options_gui_helpers::ConfigOptionHelpButton(
+          ConfigMetadata::Common::Player::Subcapture::frames);
+    }
+
     if (selectedMode == SubcaptureMode::CommandListSubcapture) {
-      config_options::SubcaptureFrames() =
-          std::to_string(SubcaptureConfig.CommandListSubcaptureFrame);
-      config_options::CommandListExecutions() = SubcaptureConfig.CommandListExecutionsRange();
+      const bool isSerialized =
+          context.ConfigurationForMode(Mode::SUBCAPTURE).MetaData.IsASerializedSubcapture;
+      if (!isSerialized) {
+        ImGui::PushStyleColor(ImGuiCol_Text, ImGuiHelper::Colors::WARNING);
+        ImGui::Text(Labels::COMMAND_LIST_SUBCAPTURE_NOTICE);
+        ImGui::PopStyleColor();
+      }
+      ImGui::BeginDisabled(!isSerialized);
+      ImGui::SetNextItemWidth(widthLabel / 4.0f);
+      changed |= ImGui::InputInt(Labels::COMMAND_LIST_SUBCAPTURE_FRAME,
+                                 &SubcaptureConfig.CommandListSubcaptureFrame, 1, 10);
+      ImGuiHelper::HelpButton(Labels::COMMAND_LIST_SUBCAPTURE_FRAME_HINT,
+                              Labels::COMMAND_LIST_SUBCAPTURE_FRAME_HINT,
+                              Labels::COMMAND_LIST_SUBCAPTURE_FRAME_HELP);
+      ImGui::SetNextItemWidth(widthLabel / 4.0f);
+      changed |= ImGui::InputInt(Labels::COMMAND_LIST_SUBCAPTURE_EXECUTIONS_START,
+                                 &SubcaptureConfig.CommandListExecutionsStart, 1, 10);
+      ImGui::SameLine();
+      ImGui::SetNextItemWidth(widthLabel / 4.0f);
+      changed |= ImGui::InputInt(Labels::COMMAND_LIST_SUBCAPTURE_EXECUTIONS_END,
+                                 &SubcaptureConfig.CommandListExecutionsEnd, 1, 10);
+      config_options_gui_helpers::ConfigOptionHelpButton(
+          ConfigMetadata::Common::Player::Subcapture::DirectX::commandListExecutions);
+      ImGui::EndDisabled();
     }
+
     if (selectedMode == SubcaptureMode::CommandSubcapture) {
-      // Not yet supported
+      ImGui::Text("Not yet supported");
     }
-    context.UpdateInMemoryConfig(Mode::SUBCAPTURE);
-    changed = false;
+
+    DroppedFilePath.reset();
+
+    if (changed) {
+      if (selectedMode == SubcaptureMode::Subcapture) {
+        config_options::SubcaptureFrames() = SubcaptureConfig.FramesRange();
+      }
+      if (selectedMode == SubcaptureMode::CommandListSubcapture) {
+        config_options::SubcaptureFrames() =
+            std::to_string(SubcaptureConfig.CommandListSubcaptureFrame);
+        config_options::CommandListExecutions() = SubcaptureConfig.CommandListExecutionsRange();
+      }
+      if (selectedMode == SubcaptureMode::CommandSubcapture) {
+        // Not yet supported
+      }
+      context.UpdateInMemoryConfig(Mode::SUBCAPTURE);
+      changed = false;
+    }
   }
 }
 

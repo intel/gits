@@ -27,8 +27,6 @@
 #include "configurationYAMLAuto.h"
 
 namespace {
-static constexpr const char* SCREENSHOTS_SUB_PATH = "gitsScreenshots";
-
 std::optional<std::filesystem::path> GetPath(bool flag, std::string path) {
   if (flag) {
     if (!path.empty()) {
@@ -55,7 +53,7 @@ void PlaybackOptionsPanel::Render() {
   auto indent = ImGuiHelper::WidthOf(ImGuiHelper::Widgets::Button, "  ");
   auto windowWidth = ImGui::GetContentRegionAvail().x;
 
-  const auto labels = {Labels::SCREENSHOTS_RANGES, Labels::SCREENSHOTS_PATH, Labels::TRACE_PATH};
+  const auto labels = {Labels::SCREENSHOTS_RANGES, Labels::ARTIFACTS_PATH, Labels::TRACE_PATH};
   auto labelWidth =
       std::ranges::max(labels | std::views::transform([](const auto& label) {
                          return ImGuiHelper::WidthOf(ImGuiHelper::Widgets::Text, label);
@@ -66,7 +64,7 @@ void PlaybackOptionsPanel::Render() {
   auto screenshotRangeFieldInputWidth =
       ImGuiHelper::WidthOf(ImGuiHelper::Widgets::Label, "12345678901234");
 
-  auto labelSize = ImGuiHelper::WidthOf(ImGuiHelper::Widgets::Label, Labels::SCREENSHOTS_PATH);
+  auto labelSize = ImGuiHelper::WidthOf(ImGuiHelper::Widgets::Label, Labels::ARTIFACTS_PATH);
 
   auto changed = false;
 
@@ -102,57 +100,18 @@ void PlaybackOptionsPanel::Render() {
       ConfigMetadata::Common::Player::ExecutableNameOverride::GroupMetadata);
   ImGui::EndDisabled();
 
-  ImGui::Separator();
-
-  // Dedicated playback options
-  ImGui::PushStyleColor(ImGuiCol_Text, ImGuiHelper::Colors::WARNING);
-  ImGui::Text(Labels::NOTICE_2);
-  ImGui::PopStyleColor();
-
-  auto& hudApis = config_options::HudEnabled(Mode::PLAYBACK);
-  auto dxHudEnabled = std::find(hudApis.begin(), hudApis.end(), gits::ApiBool::DX) != hudApis.end();
-  changed |= ImGui::Checkbox(Labels::HUD_ENABLED, &dxHudEnabled);
-  if (changed) {
-    auto it = std::find(hudApis.begin(), hudApis.end(), gits::ApiBool::DX);
-    if (dxHudEnabled && it == hudApis.end()) {
-      hudApis.push_back(gits::ApiBool::DX);
-    } else if (!dxHudEnabled && it != hudApis.end()) {
-      hudApis.erase(it);
-    }
-  }
-  config_options_gui_helpers::ConfigOptionHelpButton(
-      ConfigMetadata::Common::Shared::HUD::GroupMetadata);
-
-  changed |=
-      ImGui::Checkbox(Labels::SCREENSHOTS, &config_options::ScreenshotsEnabled(Mode::PLAYBACK));
-  config_options_gui_helpers::ConfigOptionHelpButton(
-      ConfigMetadata::Common::Shared::Screenshots::enabled);
-
-  ImGui::BeginDisabled(!config_options::ScreenshotsEnabled(Mode::PLAYBACK));
-  ImGui::Indent(indent);
-  auto inputPosition = ImGui::GetCursorPosX() + labelWidth - indent;
-
-  changed |= ImGuiHelper::RangeControls(
-      Labels::SCREENSHOTS_RANGES, labelWidth - indent, screenshotRangeInputWidth,
-      screenshotRangeFieldInputWidth, "###ScreenshotsRANGES", nullptr,
-      config_options::ScreenshotsFrames(Mode::PLAYBACK), ScreenshotsConfig.TmpStartFrame,
-      ScreenshotsConfig.TmpEndFrame, ScreenshotsConfig.TmpStepFrame, Labels::SCREENSHOTS_ADD_RANGE,
-      Labels::SCREENSHOTS_ADD_FRAME);
-  config_options_gui_helpers::ConfigOptionHelpButton(
-      ConfigMetadata::Common::Shared::Screenshots::frames);
-
-  ImGui::Text(Labels::SCREENSHOTS_PATH);
+  ImGui::Text(Labels::ARTIFACTS_LABEL);
   ImGui::SameLine();
+  ImGuiHelper::HelpButton(Labels::ARTIFACTS_HELP_TITLE, Labels::ARTIFACTS_HELP_TOOLTIP,
+                          Labels::ARTIFACTS_HELP_DESCRIPTION);
+  ImGui::SameLine();
+  auto artifacts = ImGui::GetContentRegionAvail().x -
+                   ImGuiHelper::WidthOf(ImGuiHelper::Widgets::Button, Labels::BASE_ON_STREAMPATH) -
+                   ImGuiHelper::WidthOf(ImGuiHelper::Widgets::Button, Labels::CHOOSE_TARGET) -
+                   16.0f;
 
-  ImGui::SetCursorPosX(inputPosition);
-  auto screenshotsPathInputWidth =
-      ImGui::GetContentRegionAvail().x -
-      ImGuiHelper::WidthOf(ImGuiHelper::Widgets::Button, Labels::BASE_ON_STREAMPATH) -
-      ImGuiHelper::WidthOf(ImGuiHelper::Widgets::Button, Labels::CHOOSE_TARGET) - 16.0f;
-
-  context_helper::PathInput("###ScreenshotsPath", Path::SCREENSHOTS, Mode::PLAYBACK, 0,
-                            screenshotsPathInputWidth);
-
+  context_helper::PathInput("###ArtifactsPath", Path::ARTIFACTS, Mode::PLAYBACK, 0, artifacts);
+  ImGuiHelper::AddTooltip(Labels::ARTIFACTS_HINT);
   ImGui::SameLine();
   ImGui::PushID(++context.ImguiIDs);
   if (ImGui::Button(Labels::BASE_ON_STREAMPATH)) {
@@ -162,25 +121,62 @@ void PlaybackOptionsPanel::Render() {
   ImGui::SameLine();
   ImGui::PushID(++context.ImguiIDs);
   if (ImGui::Button(Labels::CHOOSE_TARGET)) {
-    ShowFileDialog(FileDialogKey{Path::SCREENSHOTS, Mode::PLAYBACK});
+    ShowFileDialog(FileDialogKey{Path::ARTIFACTS, Mode::PLAYBACK});
   }
   ImGui::PopID();
+  ImGui::Separator();
 
-  ImGui::Unindent(indent);
-  ImGui::EndDisabled();
+  auto api = context.GetStreamAPI();
 
-  changed |= config_options_gui_helpers::Trace(Mode::PLAYBACK, indent);
+  if (api == Api::DIRECTX) {
+    auto& hudApis = config_options::HudEnabled(Mode::PLAYBACK);
+    auto dxHudEnabled =
+        std::find(hudApis.begin(), hudApis.end(), gits::ApiBool::DX) != hudApis.end();
+    changed |= ImGui::Checkbox(Labels::HUD_ENABLED, &dxHudEnabled);
+    if (changed) {
+      auto it = std::find(hudApis.begin(), hudApis.end(), gits::ApiBool::DX);
+      if (dxHudEnabled && it == hudApis.end()) {
+        hudApis.push_back(gits::ApiBool::DX);
+      } else if (!dxHudEnabled && it != hudApis.end()) {
+        hudApis.erase(it);
+      }
+    }
+    config_options_gui_helpers::ConfigOptionHelpButton(
+        ConfigMetadata::Common::Shared::HUD::GroupMetadata);
 
-  if (changed) {
-    context.UpdateInMemoryConfig(Mode::PLAYBACK);
+    changed |=
+        ImGui::Checkbox(Labels::SCREENSHOTS, &config_options::ScreenshotsEnabled(Mode::PLAYBACK));
+    config_options_gui_helpers::ConfigOptionHelpButton(
+        ConfigMetadata::Common::Shared::Screenshots::enabled);
+
+    ImGui::BeginDisabled(!config_options::ScreenshotsEnabled(Mode::PLAYBACK));
+    ImGui::Indent(indent);
+    auto inputPosition = ImGui::GetCursorPosX() + labelWidth - indent;
+
+    changed |= ImGuiHelper::RangeControls(
+        Labels::SCREENSHOTS_RANGES, labelWidth - indent, screenshotRangeInputWidth,
+        screenshotRangeFieldInputWidth, "###ScreenshotsRANGES", nullptr,
+        config_options::ScreenshotsFrames(Mode::PLAYBACK), ScreenshotsConfig.TmpStartFrame,
+        ScreenshotsConfig.TmpEndFrame, ScreenshotsConfig.TmpStepFrame,
+        Labels::SCREENSHOTS_ADD_RANGE, Labels::SCREENSHOTS_ADD_FRAME);
+    config_options_gui_helpers::ConfigOptionHelpButton(
+        ConfigMetadata::Common::Shared::Screenshots::frames);
+    ImGui::Unindent(indent);
+    ImGui::EndDisabled();
+
+    changed |= config_options_gui_helpers::Trace(Mode::PLAYBACK, indent);
+
+    if (changed) {
+      context.UpdateInMemoryConfig(Mode::PLAYBACK);
+    }
   }
 }
 
 void PlaybackOptionsPanel::SetScreenshotPathFromInputStream() {
   auto& context = Context::GetInstance();
   auto streamPath = context.GetPathSafe(Path::INPUT_STREAM, Mode::PLAYBACK);
-  const auto screenshotPath = streamPath.parent_path() / SCREENSHOTS_SUB_PATH;
-  context.SetPath(screenshotPath, Path::SCREENSHOTS, Mode::PLAYBACK);
+  const auto screenshotPath = streamPath.parent_path();
+  context.SetPath(screenshotPath, Path::ARTIFACTS, Mode::PLAYBACK);
 }
 
 void PlaybackOptionsPanel::ContextCallback(const Event& e) {
@@ -204,7 +200,7 @@ void PlaybackOptionsPanel::ContextCallback(const Event& e) {
 
   if (contextEvent.Mode == Mode::PLAYBACK &&
       contextEvent.EventType == ContextEvent::Type::ConfigFileLoaded) {
-    auto screenshotPath = context.GetPathSafe(Path::SCREENSHOTS, Mode::PLAYBACK);
+    auto screenshotPath = context.GetPathSafe(Path::ARTIFACTS, Mode::PLAYBACK);
     if (screenshotPath.empty()) {
       SetScreenshotPathFromInputStream();
     }
@@ -218,7 +214,7 @@ void PlaybackOptionsPanel::ContextCallback(const Event& e) {
 void PlaybackOptionsPanel::PathCallback(const Event& e) {
   const PathEvent& pathEvent = static_cast<const PathEvent&>(e);
   if (pathEvent.EventType == PathEvent::Type::INPUT_STREAM) {
-    auto screenshotPath = Context::GetInstance().GetPathSafe(Path::SCREENSHOTS, Mode::PLAYBACK);
+    auto screenshotPath = Context::GetInstance().GetPathSafe(Path::ARTIFACTS, Mode::PLAYBACK);
     if (screenshotPath.empty()) {
       SetScreenshotPathFromInputStream();
     }

@@ -88,12 +88,20 @@ void PlaybackPanel::RowStreamPath() {
   }
   ImGui::PopID();
   ImGuiHelper::AddTooltip(Labels::CHOOSE_STREAM_HINT);
+
+  ImGui::SetCursorPosX(context.TheMainWindow->WidthLeftColumn);
+  auto apiText = "Stream API: " + Labels::ApiToString(context.GetStreamAPI());
+  ImGui::Text(apiText.c_str());
 }
 
 void PlaybackPanel::RowArguments() {
   auto& context = Context::GetInstance();
   auto availableWidth = ImGui::GetContentRegionAvail().x;
   ImGui::Text(Labels::CUSTOM_ARGS);
+  ImGui::SameLine();
+  ImGuiHelper::HelpButton(Labels::CUSTOM_ARGS_PLAYBACK_HELP_TITLE,
+                          Labels::CUSTOM_ARGS_PLAYBACK_HELP_HINT,
+                          Labels::CUSTOM_ARGS_PLAYBACK_HELP_TEXT);
   ImGui::SameLine();
   ImGui::SetCursorPosX(context.TheMainWindow->WidthLeftColumn);
 
@@ -102,7 +110,7 @@ void PlaybackPanel::RowArguments() {
                                remainingWidth)) {
     // nothing
   }
-  ImGuiHelper::AddTooltip(Labels::CUSTOM_ARGS_INPUT_HINT);
+  ImGuiHelper::AddTooltip(Labels::CUSTOM_ARGS_PLAYBACK_HINT);
 
   ImGui::SameLine();
   ImGui::PushID(++context.ImguiIDs);

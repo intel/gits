@@ -8,15 +8,123 @@
 
 #include "captureActions.h"
 
+#include <algorithm>
+#include <cctype>
+#include <chrono>
+#include <cwchar>
 #include <optional>
+#include <thread>
+
+#ifdef _WIN32
+#include <windows.h>
+#include <tlhelp32.h>
+#endif
 
 #include "context.h"
 #include "fileActions.h"
 #include <yaml-cpp/yaml.h>
 #include "launcherActions.h"
 #include "eventBus.h"
+#include "labels.h"
 
 namespace gits::gui::capture_actions {
+namespace {
+
+bool IsProcessRunning(const std::filesystem::path& executablePath) {
+#ifdef _WIN32
+  std::error_code targetPathError;
+  const auto normalizedTargetProcessPath =
+      std::filesystem::weakly_canonical(executablePath, targetPathError).wstring();
+  const auto targetProcessPath =
+      targetPathError ? executablePath.wstring() : normalizedTargetProcessPath;
+
+  HANDLE processSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+  if (processSnapshot == INVALID_HANDLE_VALUE) {
+    LOG_WARNING << Labels::LOG_CAPTURE_MONITORING_PROCESS_SNAPSHOT_FAILURE;
+    return false;
+  }
+
+  PROCESSENTRY32W processEntry = {};
+  processEntry.dwSize = sizeof(PROCESSENTRY32W);
+
+  if (Process32FirstW(processSnapshot, &processEntry)) {
+    do {
+      HANDLE processHandle =
+          OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, processEntry.th32ProcessID);
+      if (processHandle != nullptr) {
+        std::wstring runningProcessPath(32768, L'\0');
+        DWORD runningProcessPathLength = static_cast<DWORD>(runningProcessPath.size());
+        if (QueryFullProcessImageNameW(processHandle, 0, runningProcessPath.data(),
+                                       &runningProcessPathLength) != 0) {
+          runningProcessPath.resize(runningProcessPathLength);
+
+          std::error_code runningPathError;
+          const auto normalizedRunningProcessPath =
+              std::filesystem::weakly_canonical(std::filesystem::path(runningProcessPath),
+                                                runningPathError)
+                  .wstring();
+
+          const auto& candidatePath =
+              runningPathError ? runningProcessPath : normalizedRunningProcessPath;
+
+          if (_wcsicmp(candidatePath.c_str(), targetProcessPath.c_str()) == 0) {
+            CloseHandle(processHandle);
+            CloseHandle(processSnapshot);
+            return true;
+          }
+        }
+        CloseHandle(processHandle);
+      }
+    } while (Process32NextW(processSnapshot, &processEntry));
+  }
+
+  CloseHandle(processSnapshot);
+  return false;
+#else
+  std::error_code targetPathError;
+  const auto normalizedTargetProcessPath =
+      std::filesystem::weakly_canonical(executablePath, targetPathError);
+  const auto targetProcessPath = targetPathError ? executablePath : normalizedTargetProcessPath;
+
+  std::error_code procError;
+  std::filesystem::directory_iterator procIterator("/proc", procError);
+  if (procError) {
+    LOG_WARNING << Labels::LOG_CAPTURE_MONITORING_PROC_ENUMERATION_FAILURE;
+    return false;
+  }
+
+  for (const auto& procEntry : procIterator) {
+    const auto pidDirName = procEntry.path().filename().string();
+    const bool isPidDirectory =
+        !pidDirName.empty() && std::all_of(pidDirName.begin(), pidDirName.end(), [](char c) {
+          return std::isdigit(static_cast<unsigned char>(c)) != 0;
+        });
+    if (!isPidDirectory) {
+      continue;
+    }
+
+    std::error_code symlinkError;
+    auto candidateExePath = std::filesystem::read_symlink(procEntry.path() / "exe", symlinkError);
+    if (symlinkError) {
+      continue;
+    }
+
+    std::error_code candidatePathError;
+    const auto normalizedCandidatePath =
+        std::filesystem::weakly_canonical(candidateExePath, candidatePathError);
+    const auto& candidatePath = candidatePathError ? candidateExePath : normalizedCandidatePath;
+
+    if (candidatePath == targetProcessPath) {
+      return true;
+    }
+  }
+
+  return false;
+#endif
+}
+
+} // namespace
+
 bool UpdateConfigDumpPath() {
   auto& context = Context::GetInstance();
 
@@ -326,5 +434,49 @@ bool CleanupRecorderFiles(Api api, gui::CapturePanel::CaptureCleanupOptions clea
   }
 
   return result;
+}
+
+void StartPostExitMonitoring(const std::filesystem::path& executablePath) {
+  std::thread([executablePath]() {
+    constexpr auto pollingInterval = std::chrono::milliseconds(500);
+    constexpr auto quietPeriod = std::chrono::seconds(3);
+
+    LOG_INFO << Labels::LOG_CAPTURE_MONITORING_STARTED_PREFIX << executablePath.filename().string()
+             << Labels::LOG_CAPTURE_MONITORING_STARTED_MIDDLE
+             << std::chrono::duration_cast<std::chrono::seconds>(quietPeriod).count()
+             << Labels::LOG_CAPTURE_MONITORING_STARTED_SUFFIX;
+
+    bool matchingProcessObserved = false;
+    std::chrono::steady_clock::time_point noProcessSince;
+
+    while (true) {
+      const bool isRunning = IsProcessRunning(executablePath);
+      const auto now = std::chrono::steady_clock::now();
+
+      if (isRunning) {
+        if (noProcessSince != std::chrono::steady_clock::time_point()) {
+          LOG_INFO << Labels::LOG_CAPTURE_MONITORING_DETECTED_AGAIN;
+        } else if (!matchingProcessObserved) {
+          LOG_INFO << Labels::LOG_CAPTURE_MONITORING_DETECTED_AFTER_EXIT;
+        }
+        matchingProcessObserved = true;
+        noProcessSince = std::chrono::steady_clock::time_point();
+      } else {
+        if (noProcessSince == std::chrono::steady_clock::time_point()) {
+          noProcessSince = now;
+          LOG_INFO << Labels::LOG_CAPTURE_MONITORING_QUIET_PERIOD_STARTED;
+        } else if (now - noProcessSince >= quietPeriod) {
+          LOG_INFO << Labels::LOG_CAPTURE_MONITORING_FINALIZING;
+          ActionEvent event;
+          event.EventType = ActionEvent::Type::Capture;
+          event.ActionState = ActionEvent::State::Ended;
+          EventBus::GetInstance().publish(event);
+          return;
+        }
+      }
+
+      std::this_thread::sleep_for(pollingInterval);
+    }
+  }).detach();
 }
 } // namespace gits::gui::capture_actions

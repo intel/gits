@@ -634,7 +634,7 @@ void NewLauncherSession() {
   context.SetPath(emptyPath, Path::OUTPUT_STREAM, Mode::CAPTURE);
 
   context.SetPath(emptyPath, Path::INPUT_STREAM, Mode::PLAYBACK);
-  context.SetPath(emptyPath, Path::SCREENSHOTS, Mode::PLAYBACK);
+  context.SetPath(emptyPath, Path::ARTIFACTS, Mode::PLAYBACK);
   context.SetPath(emptyPath, Path::TRACE, Mode::PLAYBACK);
 
   context.SetPath(emptyPath, Path::INPUT_STREAM, Mode::SUBCAPTURE);
@@ -656,38 +656,36 @@ void SetTracePathFromTargetExecutable() {
 void OpenURL(const std::string& url) {
 #ifdef _WIN32
   system(("start " + url).c_str());
-#elif __APPLE__
-  system(("open " + url).c_str());
-#elif __linux__
+#else
   system(("xdg-open " + url).c_str());
 #endif
 }
 
 bool OpenFolder(const std::filesystem::path& path) {
-  if (path.empty()) {
+  const auto normalizedPath = std::filesystem::path(path).make_preferred();
+
+  if (normalizedPath.empty()) {
     LOG_ERROR << "Couldn't open directory. No path was provided.";
 
     return false;
   }
 
-  if (!std::filesystem::exists(path)) {
-    LOG_ERROR << "Given directory: " << path << " doesn't exist.";
+  if (!std::filesystem::exists(normalizedPath)) {
+    LOG_ERROR << "Given directory: " << normalizedPath << " doesn't exist.";
 
     return false;
   }
 
-  if (!std::filesystem::is_directory(path)) {
-    LOG_ERROR << "Given path: " << path << " is not a directory";
+  if (!std::filesystem::is_directory(normalizedPath)) {
+    LOG_ERROR << "Given path: " << normalizedPath << " is not a directory";
 
     return false;
   }
 
 #ifdef _WIN32
-  int result = system(("explorer " + path.string()).c_str());
-#elif __APPLE__
-  int result = system(("open " + path.string()).c_str());
-#elif __linux__
-  int result = system(("xdg-open " + path.string()).c_str());
+  int result = system(("explorer " + normalizedPath.string()).c_str());
+#else
+  int result = system(("xdg-open " + normalizedPath.string()).c_str());
 #endif
 
   return result == 0;
@@ -697,8 +695,8 @@ bool OpenFolder(const std::string& path) {
   return OpenFolder(std::filesystem::path(path));
 }
 
-std::string CreateEmailBodyWithLog(const std::string& logText) {
-  return std::string(Labels::EMAIL_LOG_BODY_HEADER) + logText;
+std::string CreateEmailBodyWithLog(const std::string& bodyText, const std::string& logText) {
+  return bodyText + logText;
 }
 
 void SendEmail(const std::string& recipient, const std::string& subject, const std::string& body) {

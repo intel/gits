@@ -27,10 +27,6 @@ struct Labels {
   static constexpr const char* VERSION = "Version";
   static constexpr const char* TITLE = "GITS Launcher";
   static constexpr const char* HELP_BUTTON = "?";
-  static constexpr const char* NOTICE = "GITS Launcher is currently designed to support DirectX. "
-                                        "Not all features work for other APIs.";
-  static constexpr const char* NOTICE_2 = "The following options are exclusive to DirectX. For "
-                                          "other APIs please modify the config file.";
   static constexpr const char* NEW_SESSION_BUTTON = "New Session";
   static constexpr const char* NEW_SESSION_BUTTON_TOOLTIP =
       "Clear all paths except the GITS base path";
@@ -77,7 +73,16 @@ struct Labels {
       "Open File Dialog to choose the GITS base path to be used";
   static constexpr const char* CUSTOM_ARGS = "Custom Args";
   static constexpr const char* CUSTOM_ARGS_INPUT_HINT =
-      "Additional command line arguments for the target application";
+      "Additional command line arguments for the target application.";
+  static constexpr const char* CUSTOM_ARGS_PLAYBACK_HINT =
+      "Additional command line arguments for GITS Player. Not validated by GITS Launcher.";
+  static constexpr const char* CUSTOM_ARGS_PLAYBACK_HELP_TITLE = "GITS Player Custom Arguments";
+  static constexpr const char* CUSTOM_ARGS_PLAYBACK_HELP_HINT =
+      "Set custom arguments to the GITS Player";
+  static constexpr const char* CUSTOM_ARGS_PLAYBACK_HELP_TEXT =
+      "The Arguments set here are not validated by the GITS Launcher and have thus no influence on "
+      "the YAML configuration shown. Config values set here have precedence over the YAML config "
+      "file.";
   static constexpr const char* CAPTURE_CUSTOM_ARGS = "Custom Args";
   static constexpr const char* CAPTURE_CUSTOM_ARGS_INPUT_HINT =
       "Additional command line arguments for the target application";
@@ -112,8 +117,18 @@ struct Labels {
 
   static constexpr const char* HUD_ENABLED = "Show HUD";
   static constexpr const char* BASE_ON_STREAMPATH = "Base on stream path";
+  static constexpr const char* ARTIFACTS_LABEL = "Artifacts";
+  static constexpr const char* ARTIFACTS_PATH = "Path";
+  static constexpr const char* ARTIFACTS_HINT =
+      "All artifacts (screenshots, resources, CCode) are written into respective subfolders";
+  static constexpr const char* ARTIFACTS_HELP_TITLE = "Artifacts";
+  static constexpr const char* ARTIFACTS_HELP_TOOLTIP =
+      "Artifacts are screenshots, resources and CCode.";
+  static constexpr const char* ARTIFACTS_HELP_DESCRIPTION =
+      "All artifacts (screenshots, resources, CCode) are written into respective subfolders of the "
+      "specified path. If the path is empty, the artifacts will be written into the same folder as "
+      "the stream file.";
   static constexpr const char* SCREENSHOTS = "Screenshots";
-  static constexpr const char* SCREENSHOTS_PATH = "Path";
   static constexpr const char* SCREENSHOTS_RANGES = "Range";
   static constexpr const char* SCREENSHOTS_START_FRAME = "Start Frame###Screenshot1";
   static constexpr const char* SCREENSHOTS_END_FRAME = "End Frame###Screenshot2";
@@ -177,7 +192,7 @@ struct Labels {
   static constexpr const char* GITS_STREAM_SUBCAPTURE_BUTTON = "Open Subcapture Stream folder";
   static constexpr const char* GITS_TARGET_BUTTON = "Open Target folder";
   static constexpr const char* GITS_CAPTURE_BUTTON = "Open Capture folder";
-  static constexpr const char* GITS_SCREENSHOT_BUTTON = "Open Screenshots folder";
+  static constexpr const char* GITS_ARTIFACTS_BUTTON = "Open Artifacts folder";
   static constexpr const char* GITS_TRACE_BUTTON = "Open Trace folder";
   static constexpr const char* GITS_SUBCAPTURE_BUTTON = "Open Subcapture folder";
   static constexpr const char* RELEASE_NOTES_WINDOW_TITLE = "Release Notes";
@@ -196,7 +211,7 @@ struct Labels {
       "Set all config paths based on the GITS base path (playback, subcapture and capture)";
 
   static constexpr const char* API_LABEL = "API";
-  static constexpr const char* API_NAME_DX = "DirectX";
+  static constexpr const char* API_NAME_DX = "DirectX 12";
   static constexpr const char* API_NAME_SHORT_DX = "DX";
   static constexpr const char* API_NAME_GL = "OpenGL";
   static constexpr const char* API_NAME_SHORT_GL = "GL";
@@ -352,8 +367,8 @@ struct Labels {
   static constexpr const char* CCODE_WRAP_CALLS_CHECKBOX_HINT =
       "Whether to wrap API calls in the generated CCode with additional code (for example to "
       "capture resource states)";
-  static constexpr const char* CCODE_PATH_INPUT = "CCode input path";
-  static constexpr const char* CCODE_PATH_INPUT_HINT = "Path to CCode template folder";
+  static constexpr const char* CCODE_OUTPUT_HINT =
+      "CCode files are generated into the artifacts directory in a subfolder called 'CCode'";
   static constexpr const char* CCODE_GENERATION_CANCEL_BUTTON = "Cancel";
   static constexpr const char* CCODE_GENERATION_GO_BUTTON = "Generate";
 
@@ -405,6 +420,43 @@ struct Labels {
   static constexpr const char* LOG_LAUNCHER_ADMIN_MODE_NO = "no";
 #endif
 
+  static constexpr const char* LOG_CAPTURE_MONITORING_PROCESS_SNAPSHOT_FAILURE =
+      "Failed to create process snapshot when monitoring capture process.";
+  static constexpr const char* LOG_CAPTURE_MONITORING_PROC_ENUMERATION_FAILURE =
+      "Failed to enumerate /proc when monitoring capture process.";
+  static constexpr const char* LOG_CAPTURE_MONITORING_STARTED_PREFIX =
+      "Auto-detect monitoring started after initial process exit for: ";
+  static constexpr const char* LOG_CAPTURE_MONITORING_STARTED_MIDDLE = ". Finalizing after ";
+  static constexpr const char* LOG_CAPTURE_MONITORING_STARTED_SUFFIX = "s of no matching process.";
+  static constexpr const char* LOG_CAPTURE_MONITORING_DETECTED_AGAIN =
+      "Auto-detect monitoring: matching process detected again. Cancelling quiet period timer.";
+  static constexpr const char* LOG_CAPTURE_MONITORING_DETECTED_AFTER_EXIT =
+      "Auto-detect monitoring: matching process detected after initial exit. Continuing "
+      "monitoring.";
+  static constexpr const char* LOG_CAPTURE_MONITORING_QUIET_PERIOD_STARTED =
+      "Auto-detect monitoring: no matching process detected. Starting quiet period timer.";
+  static constexpr const char* LOG_CAPTURE_MONITORING_FINALIZING =
+      "Auto-detect monitoring: quiet period elapsed after process exit. Finalizing capture.";
+
+  static const std::string ApiToString(Api api) {
+    switch (api) {
+    case Api::UNKNOWN:
+      return "Unknown";
+    case Api::DIRECTX:
+      return API_NAME_DX;
+    case Api::OPENGL:
+      return API_NAME_GL;
+    case Api::VULKAN:
+      return API_NAME_VK;
+    case Api::OPENCL:
+      return API_NAME_CL;
+    case Api::LEVELZERO:
+      return API_NAME_L0;
+    default:
+      return "";
+    }
+  }
+
   static const std::string MainAction(Mode action) {
     switch (action) {
     case Mode::PLAYBACK:
@@ -423,8 +475,8 @@ struct Labels {
     case Path::GITS_BASE:
       return "Choose GITS installation directory";
       break;
-    case Path::SCREENSHOTS:
-      return "Choose directory where to output screenshots";
+    case Path::ARTIFACTS:
+      return "Choose directory where to output artifacts";
       break;
     case Path::TRACE:
       return "Choose directory where to output trace info";
@@ -518,7 +570,7 @@ struct Labels {
 
   static const auto& API_BUTTONS() {
     static const std::map<Api, gits::ImGuiHelper::ButtonGroupItem> items = {
-        {Api::DIRECTX, {"DirectX", "DirectX API options"}},
+        {Api::DIRECTX, {"DirectX 12", "DirectX 12 API options"}},
         {Api::OPENGL, {"OpenGL", "OpenGL API options"}},
         {Api::VULKAN, {"Vulkan", "Vulkan API options"}},
         {Api::OPENCL, {"OpenCL", "OpenCL API options"}},
@@ -548,12 +600,19 @@ struct Labels {
 
   // Email
   static constexpr const char* EMAIL_LOG_RECIPIENT = "";
-  static constexpr const char* EMAIL_LOG_SUBJECT = "GITS Log Report";
-  static constexpr const char* EMAIL_LOG_BODY_HEADER =
+  static constexpr const char* EMAIL_GITS_LOG_SUBJECT = "GITS Log Report";
+  static constexpr const char* EMAIL_GITS_LOG_BODY_HEADER =
       "Description of the problem:\n"
       "[Please describe the issue you encountered here]\n"
       "\n"
       "---\n"
       "GITS log: \n\n";
+  static constexpr const char* EMAIL_LAUNCHER_LOG_SUBJECT = "GITS Log Report";
+  static constexpr const char* EMAIL_LAUNCHER_LOG_BODY_HEADER =
+      "Description of the problem:\n"
+      "[Please describe the issue you encountered here]\n"
+      "\n"
+      "---\n"
+      "Launcher log: \n\n";
 };
 } // namespace gits::gui

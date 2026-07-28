@@ -24,7 +24,7 @@ struct LauncherPaths {
   struct PlaybackPaths {
     std::filesystem::path ConfigPath;
     std::filesystem::path InputStreamPath;
-    std::filesystem::path ScreenshotsPath;
+    std::filesystem::path ArtifactsPath;
     std::filesystem::path TracePath;
   } Playback;
 

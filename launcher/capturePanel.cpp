@@ -86,9 +86,9 @@ CapturePanel::CapturePanel() : BasePanel() {
 
 void CapturePanel::Render() {
   RowTargetPath();
+  RowArguments();
   RowCleanup();
   RowConfigPath();
-  RowArguments();
   RowOutputPath();
   DroppedFilePath.reset();
 }
@@ -329,18 +329,14 @@ void CapturePanel::CaptureStream() {
   event.EventType = ActionEvent::Type::Capture;
   event.ActionState = ActionEvent::State::Started;
   EventBus::GetInstance().publish(event);
+
   FileActions::LaunchExecutableThreadCallbackOnExit(
       executablePath, context.CLIArguments, executablePath.parent_path(),
       [](std::string msg) {
         // We pass an empty lambda to the onOutput argument, since we only care about the recorder log which we load after
         // TODO: Maybe this could change and play nicely with logToConsole
       },
-      [executablePath, &context]() {
-        ActionEvent event;
-        event.EventType = ActionEvent::Type::Capture;
-        event.ActionState = ActionEvent::State::Ended;
-        EventBus::GetInstance().publish(event);
-      });
+      [executablePath]() { capture_actions::StartPostExitMonitoring(executablePath); });
 }
 
 void CapturePanel::PathCallback(const Event& e) {

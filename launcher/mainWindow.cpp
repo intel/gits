@@ -120,14 +120,6 @@ void MainWindow::Render() {
 
   MainActionButtons();
 
-  ImGui::Separator();
-  ImGui::SetCursorPosX((ImGui::GetWindowWidth() -
-                        ImGuiHelper::WidthOf(ImGuiHelper::Widgets::Label, Labels::NOTICE)) /
-                       2.0f);
-  ImGui::PushStyleColor(ImGuiCol_Text, ImGuiHelper::Colors::WARNING);
-  ImGui::Text(Labels::NOTICE);
-  ImGui::PopStyleColor();
-
   GITSBaseRow();
 
   ImGui::Separator();
@@ -187,7 +179,7 @@ void MainWindow::GITSButton() {
     context_helper::PathMenuItem(Labels::GITS_TARGET_BUTTON, Path::CAPTURE_TARGET, Mode::CAPTURE);
     context_helper::PathMenuItem(Labels::GITS_CAPTURE_BUTTON, Path::OUTPUT_STREAM, Mode::CAPTURE);
 
-    context_helper::PathMenuItem(Labels::GITS_SCREENSHOT_BUTTON, Path::SCREENSHOTS, Mode::PLAYBACK);
+    context_helper::PathMenuItem(Labels::GITS_ARTIFACTS_BUTTON, Path::ARTIFACTS, Mode::PLAYBACK);
     context_helper::PathMenuItem(Labels::GITS_TRACE_BUTTON, Path::TRACE, Mode::PLAYBACK);
     context_helper::PathMenuItem(Labels::GITS_SUBCAPTURE_BUTTON, Path::OUTPUT_STREAM,
                                  Mode::SUBCAPTURE);
@@ -349,22 +341,25 @@ void MainWindow::ShowCCodeModal() {
   ImGuiViewport* viewport = ImGui::GetMainViewport();
   ImVec2 viewportSize = viewport->Size;
 
-  ImVec2 modalSize = ImVec2(viewportSize.x * 0.8f, -1.0f);
-
   ImVec2 center = viewport->GetCenter();
+  const auto labels = {Labels::CCODE_COMMANDS_PER_BLOCK_INPUT, Labels::CCODE_WRAP_CALLS_CHECKBOX};
+  auto labelWidth =
+      std::ranges::max(labels | std::views::transform([](const auto& label) {
+                         return ImGuiHelper::WidthOf(ImGuiHelper::Widgets::Text, label);
+                       }));
+  auto remainingWidth = ImGui::GetContentRegionAvail().x - labelWidth - 16; // 16 for spacing
+
+  auto maxWidth =
+      labelWidth + 32 + ImGuiHelper::WidthOf(ImGuiHelper::Widgets::Input, "01234567890");
+  maxWidth = std::max(maxWidth,
+                      ImGuiHelper::WidthOf(ImGuiHelper::Widgets::Label, Labels::CCODE_OUTPUT_HINT));
+  ImVec2 modalSize = ImVec2(maxWidth, -1.0f);
+
   ImGui::SetNextWindowPos(center, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
   ImGui::SetNextWindowSize(modalSize, ImGuiCond_Always);
 
   if (ImGui::BeginPopupModal(Labels::CCODE_GENERATION_WINDOW_TITLE, &m_ShowCCodeGeneration,
                              ImGuiWindowFlags_NoResize)) {
-
-    const auto labels = {Labels::CCODE_COMMANDS_PER_BLOCK_INPUT, Labels::CCODE_WRAP_CALLS_CHECKBOX,
-                         Labels::CCODE_PATH_INPUT};
-    auto labelWidth =
-        std::ranges::max(labels | std::views::transform([](const auto& label) {
-                           return ImGuiHelper::WidthOf(ImGuiHelper::Widgets::Text, label);
-                         }));
-    auto remainingWidth = ImGui::GetContentRegionAvail().x - labelWidth - 16; // 16 for spacing
 
     ImGui::Text(Labels::CCODE_COMMANDS_PER_BLOCK_INPUT);
     ImGui::SameLine(labelWidth + 16); // 16 for spacing
@@ -377,11 +372,7 @@ void MainWindow::ShowCCodeModal() {
     ImGui::Checkbox("###2", &m_CCodeParameters.WrapAPICalls);
     ImGuiHelper::AddTooltip(Labels::CCODE_WRAP_CALLS_CHECKBOX_HINT);
 
-    ImGui::Text(Labels::CCODE_PATH_INPUT);
-    ImGui::SameLine(labelWidth + 16); // 16 for spacing
-    ImGuiHelper::InputString("###3", m_CCodeParameters.CCodePath, ImGuiInputTextFlags_ReadOnly,
-                             remainingWidth);
-    ImGuiHelper::AddTooltip(Labels::CCODE_PATH_INPUT_HINT);
+    ImGui::Text(Labels::CCODE_OUTPUT_HINT);
 
     if (ImGui::Button(Labels::CCODE_GENERATION_CANCEL_BUTTON)) {
       m_ShowCCodeGeneration = false;

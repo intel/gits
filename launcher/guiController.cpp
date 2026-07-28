@@ -143,6 +143,8 @@ void GUIController::SetupGui() {
     context.Paths.Subcapture = context.LauncherConfiguration.Paths.Subcapture;
   }
 
+  SetAllConfigsFromBasePath();
+
   LOG_INFO << "Attempting to restore window size and position from last session: "
            << ImGuiHelper::ToStr(context.LauncherConfiguration.WindowPos) << "@"
            << ImGuiHelper::ToStr(context.LauncherConfiguration.WindowSize);
@@ -243,15 +245,43 @@ void GUIController::SetupGui() {
   };
   context.GITSLogEditor->SetExportCallback(gitsLogOnExportCallback);
   context.GITSLogEditor->SetSendByEmailCallback([](const std::string& logText) {
-    SendLogByEmail(Labels::EMAIL_LOG_RECIPIENT, Labels::EMAIL_LOG_SUBJECT,
-                   CreateEmailBodyWithLog(logText));
+    SendLogByEmail(Labels::EMAIL_LOG_RECIPIENT, Labels::EMAIL_GITS_LOG_SUBJECT,
+                   CreateEmailBodyWithLog(Labels::EMAIL_GITS_LOG_BODY_HEADER, logText));
   });
 
   context.LogEditor = std::make_unique<TextEditorWidget>("LogEditor");
-  context.LogEditor->SetConfig(TextEditorWidget::Config{.ShowToolbar = false});
+  context.LogEditor->SetConfig(logConfig);
   context.LogEditor->GetEditor().SetReadOnly(true);
   context.LogEditor->GetEditor().SetShowWhitespaces(false);
   context.LogEditor->GetEditor().SetTabSize(4);
+  const auto launcherLogOnExportCallback = [](std::filesystem::path logPath) {
+    auto& context = Context::GetInstance();
+    switch (context.AppMode) {
+    case Mode::CAPTURE:
+      logPath = context.GetPathSafe(Path::OUTPUT_STREAM, Mode::CAPTURE);
+      break;
+    case Mode::PLAYBACK:
+      logPath = context.GetPathSafe(Path::INPUT_STREAM, Mode::PLAYBACK);
+      break;
+    case Mode::SUBCAPTURE:
+      logPath = context.GetPathSafe(Path::INPUT_STREAM, Mode::SUBCAPTURE);
+      break;
+    }
+    if (!logPath.empty()) {
+      logPath = logPath.parent_path();
+      auto timestamp = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+      std::stringstream ss;
+      ss << "launcher_log_" << std::put_time(std::localtime(&timestamp), "%Y-%m-%d_%H-%M-%S")
+         << ".txt";
+      logPath /= ss.str();
+    }
+    ShowFileDialog(FileDialogKey{.Path = Path::GITS_LOG, .Mode = context.AppMode}, logPath);
+  };
+  context.LogEditor->SetExportCallback(launcherLogOnExportCallback);
+  context.LogEditor->SetSendByEmailCallback([](const std::string& logText) {
+    SendLogByEmail(Labels::EMAIL_LOG_RECIPIENT, Labels::EMAIL_LAUNCHER_LOG_SUBJECT,
+                   CreateEmailBodyWithLog(Labels::EMAIL_LAUNCHER_LOG_BODY_HEADER, logText));
+  });
 
   context.LogAppender = std::make_unique<TextEditorAppender>(context.LogEditor.get());
 

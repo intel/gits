@@ -40,6 +40,7 @@ enum class Widgets {
   ArrowButton,
   Text,
   Combo,
+  Checkbox,
   Unknown
 };
 
@@ -109,7 +110,9 @@ bool RangeControls(const char* label,
                    const char* addRangeLabel,
                    const char* addSingleLabel);
 
-void HelpButton(const std::string& id, const std::string& tooltip, const std::string& description);
+void HelpButton(const std::string& title,
+                const std::string& tooltip,
+                const std::string& description);
 
 }; // namespace ImGuiHelper
 }; // namespace gits
