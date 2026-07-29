@@ -10,9 +10,9 @@
 
 #include "layerAuto.h"
 #include "pipelineLibraryService.h"
+#include "gpuExecutionTracker.h"
 
 #include <windows.h>
-
 #include <wrl/client.h>
 #include <unordered_map>
 #include <unordered_set>
@@ -64,6 +64,11 @@ public:
   void Post(ID3D12FenceGetCompletedValueCommand& command) override;
   void Post(WaitForFenceSignaledDeprecatedCommand& command) override;
   void Post(WaitForFenceSignaledCommand& command) override;
+  void Post(ID3D12CommandQueueWaitCommand& command) override;
+  void Post(ID3D12CommandQueueSignalCommand& command) override;
+  void Post(ID3D12FenceSignalCommand& command) override;
+  void Post(ID3D12DeviceCreateFenceCommand& command) override;
+  void Post(ID3D12Device3EnqueueMakeResidentCommand& command) override;
   void Post(ID3D12DeviceCreateCommittedResourceCommand& command) override;
   void Post(ID3D12Device4CreateCommittedResource1Command& command) override;
   void Post(ID3D12Device8CreateCommittedResource2Command& command) override;
@@ -212,7 +217,12 @@ private:
   void FillGpuAddressArgument(D3D12_GPU_VIRTUAL_ADDRESS_Argument& arg);
   void FillGpuDescriptorHandleArgument(DescriptorHandleArgument<D3D12_GPU_DESCRIPTOR_HANDLE>& arg);
   void FillCpuDescriptorHandleArgument(DescriptorHandleArgument<D3D12_CPU_DESCRIPTOR_HANDLE>& arg);
-  void WaitForFence(unsigned commandKey, ID3D12Fence* fence, UINT64 fenceValue);
+  void WaitForFence(unsigned commandKey, unsigned fenceKey, ID3D12Fence* fence, UINT64 fenceValue);
+  void WaitForFenceIncremental(unsigned commandKey, ID3D12Fence* fence, UINT64 fenceValue);
+  void WaitForFenceNonIncremental(unsigned commandKey,
+                                  unsigned fenceKey,
+                                  ID3D12Fence* fence,
+                                  UINT64 fenceValue);
   void RemoveCachedPso(D3D12_PIPELINE_STATE_STREAM_DESC& desc);
 
 private:
@@ -222,8 +232,10 @@ private:
   UINT64 m_CapturedFenceValue{};
   std::vector<NvAPIShaderExtnSlot> m_NvapiShaderExtnSlotsUsed;
   bool m_UseAddressPinning{};
+  bool m_NonIncrementalFenceWait{};
   bool m_AfterAddRef{};
   HWND m_Hwnd{};
+  GpuExecutionTracker m_GpuExecutionTracker;
 };
 
 } // namespace DirectX

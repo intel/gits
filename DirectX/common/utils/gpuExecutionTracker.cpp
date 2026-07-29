@@ -105,5 +105,13 @@ void GpuExecutionTracker::Execute(unsigned callKey,
   }
 }
 
+std::optional<UINT64> GpuExecutionTracker::GetFenceValue(unsigned fenceKey) const {
+  auto it = m_SignaledFences.find(fenceKey);
+  if (it == m_SignaledFences.end()) {
+    return std::nullopt;
+  }
+  return it->second;
+}
+
 } // namespace DirectX
 } // namespace gits

@@ -18,6 +18,7 @@
 #include <setupapi.h>
 #include <ntddvdeo.h>
 #include <igdext.h>
+#include <chrono>
 
 namespace gits {
 namespace DirectX {
@@ -46,6 +47,7 @@ ReplayCustomizationLayer::ReplayCustomizationLayer(PlayerManager& manager)
       m_PipelineLibraryService(manager.GetPipelineLibraryService()) {
   m_UseAddressPinning =
       Configurator::Get().directx.player.addressPinning == AddressPinningMode::USE;
+  m_NonIncrementalFenceWait = Configurator::Get().directx.player.nonIncrementalFenceWait;
 }
 
 void ReplayCustomizationLayer::Post(IUnknownReleaseCommand& c) {
@@ -427,7 +429,7 @@ void ReplayCustomizationLayer::Post(ID3D12FenceGetCompletedValueCommand& c) {
   if (c.Skip) {
     return;
   }
-  WaitForFence(c.Key, c.m_Object.Value, m_CapturedFenceValue);
+  WaitForFence(c.Key, c.m_Object.Key, c.m_Object.Value, m_CapturedFenceValue);
   c.m_Result.Value = c.m_Object.Value->GetCompletedValue();
 }
 
@@ -437,7 +439,7 @@ void ReplayCustomizationLayer::Post(WaitForFenceSignaledDeprecatedCommand& c) {
   }
   // fence could be removed before wait is signaled
   if (c.m_fence.Value) {
-    WaitForFence(c.Key, c.m_fence.Value, c.m_Value.Value);
+    WaitForFence(c.Key, c.m_fence.Key, c.m_fence.Value, c.m_Value.Value);
   }
 }
 
@@ -447,8 +449,43 @@ void ReplayCustomizationLayer::Post(WaitForFenceSignaledCommand& c) {
   }
   // fence could be removed before wait is signaled
   if (c.m_fence.Value) {
-    WaitForFence(c.Key, c.m_fence.Value, c.m_Value.Value);
+    WaitForFence(c.Key, c.m_fence.Key, c.m_fence.Value, c.m_Value.Value);
   }
+}
+
+void ReplayCustomizationLayer::Post(ID3D12CommandQueueWaitCommand& c) {
+  if (c.Skip || !m_NonIncrementalFenceWait) {
+    return;
+  }
+  m_GpuExecutionTracker.CommandQueueWait(c.Key, c.m_Object.Key, c.m_pFence.Key, c.m_Value.Value);
+}
+
+void ReplayCustomizationLayer::Post(ID3D12CommandQueueSignalCommand& c) {
+  if (c.Skip || !m_NonIncrementalFenceWait) {
+    return;
+  }
+  m_GpuExecutionTracker.CommandQueueSignal(c.Key, c.m_Object.Key, c.m_pFence.Key, c.m_Value.Value);
+}
+
+void ReplayCustomizationLayer::Post(ID3D12FenceSignalCommand& c) {
+  if (c.Skip || !m_NonIncrementalFenceWait) {
+    return;
+  }
+  m_GpuExecutionTracker.FenceSignal(c.Key, c.m_Object.Key, c.m_Value.Value);
+}
+
+void ReplayCustomizationLayer::Post(ID3D12DeviceCreateFenceCommand& c) {
+  if (c.Skip || !m_NonIncrementalFenceWait) {
+    return;
+  }
+  m_GpuExecutionTracker.FenceSignal(c.Key, c.m_ppFence.Key, c.m_InitialValue.Value);
+}
+
+void ReplayCustomizationLayer::Post(ID3D12Device3EnqueueMakeResidentCommand& c) {
+  if (c.Skip || !m_NonIncrementalFenceWait) {
+    return;
+  }
+  m_GpuExecutionTracker.FenceSignal(c.Key, c.m_pFenceToSignal.Key, c.m_FenceValueToSignal.Value);
 }
 
 void ReplayCustomizationLayer::Post(ID3D12DeviceCreateCommittedResourceCommand& c) {
@@ -1975,8 +2012,19 @@ void ReplayCustomizationLayer::FillCpuDescriptorHandleArgument(
 }
 
 void ReplayCustomizationLayer::WaitForFence(unsigned commandKey,
+                                            unsigned fenceKey,
                                             ID3D12Fence* fence,
                                             UINT64 fenceValue) {
+  if (m_NonIncrementalFenceWait) {
+    WaitForFenceNonIncremental(commandKey, fenceKey, fence, fenceValue);
+  } else {
+    WaitForFenceIncremental(commandKey, fence, fenceValue);
+  }
+}
+
+void ReplayCustomizationLayer::WaitForFenceIncremental(unsigned commandKey,
+                                                       ID3D12Fence* fence,
+                                                       UINT64 fenceValue) {
   UINT64 value = fence->GetCompletedValue();
   if (value >= fenceValue) {
     return;
@@ -1996,6 +2044,50 @@ void ReplayCustomizationLayer::WaitForFence(unsigned commandKey,
     value = fence->GetCompletedValue();
     LOG_ERROR << "GetCompletedValue - timeout while waiting for fence value " << fenceValue
               << ". Current value " << value << ". Command " << commandKey;
+  }
+}
+
+void ReplayCustomizationLayer::WaitForFenceNonIncremental(unsigned commandKey,
+                                                          unsigned fenceKey,
+                                                          ID3D12Fence* fence,
+                                                          UINT64 fenceValue) {
+  std::optional<UINT64> trackedValue = m_GpuExecutionTracker.GetFenceValue(fenceKey);
+  GITS_ASSERT(trackedValue.has_value());
+  const auto deadline = Configurator::Get().directx.player.infiniteWaitForFence
+                            ? std::chrono::steady_clock::time_point::max()
+                            : std::chrono::steady_clock::now() + std::chrono::milliseconds(60000);
+
+  auto pollUntil = [&](const auto& isDone) {
+    UINT64 value = fence->GetCompletedValue();
+    if (fenceValue != UINT64_MAX && value == UINT64_MAX) {
+      return;
+    }
+    while (!isDone(value)) {
+      if (std::chrono::steady_clock::now() >= deadline) {
+        LOG_ERROR << "GetCompletedValue - timeout while waiting for fence value " << fenceValue
+                  << ". Current value " << value << ". Command " << commandKey;
+        return;
+      }
+      value = fence->GetCompletedValue();
+      if (fenceValue != UINT64_MAX && value == UINT64_MAX) {
+        return;
+      }
+    }
+  };
+
+  if (*trackedValue == fenceValue) {
+    pollUntil([&](UINT64 v) { return v == fenceValue; });
+    return;
+  } else if (*trackedValue > fenceValue) {
+    pollUntil([&](UINT64 v) { return v >= fenceValue; });
+  } else {
+    static bool logged = false;
+    if (!logged) {
+      LOG_WARNING << "Non-incremental fence wait skipped: fence value " << fenceValue
+                  << " is unreachable (tracked value " << *trackedValue << "). Command "
+                  << commandKey;
+      logged = true;
+    }
   }
 }
 

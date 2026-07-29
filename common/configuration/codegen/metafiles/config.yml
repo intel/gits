@@ -948,6 +948,12 @@ Configuration:
               Set the timeout to INFINITE when waiting for fences (GPU to CPU synchronization) instead
               of the default (5sec)
             LegacyPaths: ["DirectX.Playback.InfiniteWaitForFence"]
+          - Name: nonIncrementalFenceWait
+            Type: bool
+            Default: true
+            Description:
+              Use GpuExecutionTracker during replay to skip unreachable fence waits and apply reachable ones
+              when fence values are not incremental
           - Name: multithreadedShaderCompilation
             Type: bool
             Default: true

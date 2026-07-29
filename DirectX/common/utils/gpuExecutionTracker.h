@@ -12,6 +12,7 @@
 #include <unordered_map>
 #include <deque>
 #include <functional>
+#include <optional>
 #include <basetsd.h>
 
 namespace gits {
@@ -65,6 +66,7 @@ public:
   void FenceSignal(unsigned callKey, unsigned fenceKey, UINT64 fenceValue);
   bool IsCommandQueueWaiting(unsigned commandQueueKey);
   void Execute(unsigned callKey, unsigned commandQueueKey, Executable* executable);
+  std::optional<UINT64> GetFenceValue(unsigned fenceKey) const;
   std::vector<Executable*>& GetReadyExecutables() {
     return m_ReadyExecutables;
   }
