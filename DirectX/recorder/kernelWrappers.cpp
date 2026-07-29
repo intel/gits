@@ -78,11 +78,14 @@ DWORD SignalObjectAndWait(HANDLE hObjectToSignal,
                           BOOL bAlertable) {
 
   auto& manager = CaptureManager::get();
-  DWORD ret =
-      manager.getKernel32DispatchTable().WaitForSingleObject(hObjectToWaitOn, dwMilliseconds);
+  auto& fenceService = manager.getFenceService();
+  fenceService.WaitSignaled(hObjectToSignal);
+
+  DWORD ret = manager.getKernel32DispatchTable().SignalObjectAndWait(
+      hObjectToSignal, hObjectToWaitOn, dwMilliseconds, bAlertable);
 
   if (ret == WAIT_OBJECT_0) {
-    manager.getFenceService().WaitSignaled(hObjectToWaitOn, hObjectToSignal);
+    fenceService.WaitSignaled(hObjectToWaitOn);
   }
 
   return ret;

@@ -104,24 +104,6 @@ void FenceService::WaitSignaled(HANDLE handle) {
   }
 }
 
-void FenceService::WaitSignaled(HANDLE hObjectToWaitOn, HANDLE hObjectToSignal) {
-
-  m_Mutex.lock();
-
-  auto it = m_FencesByHandle.find(hObjectToWaitOn);
-  if (it == m_FencesByHandle.end()) {
-    m_Mutex.unlock();
-    return;
-  }
-
-  static bool printed = false;
-  if (!printed) {
-    LOG_ERROR << "SignalObjectAndWait is not handled!";
-    printed = true;
-  }
-  m_Mutex.unlock();
-}
-
 void FenceService::WaitSignaled(DWORD count, const HANDLE* handles) {
 
   m_Mutex.lock();
