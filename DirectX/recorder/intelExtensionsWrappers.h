@@ -34,6 +34,13 @@ HRESULT INTC_D3D12_CreateDeviceExtensionContext1Wrapper(
     INTCExtensionInfo* pExtensionInfo,
     INTCExtensionAppInfo1* pExtensionAppInfo);
 
+HRESULT INTC_D3D12_CreateDeviceExtensionContext2Wrapper(
+    PFNINTCDX12EXT_CREATEDEVICEEXTENSIONCONTEXT2 pfnCreateDeviceExtensionContext2,
+    const ID3D12Device* pDevice,
+    INTCExtensionContext** ppExtensionContext,
+    INTCExtensionInfo1* pExtensionInfo,
+    INTCExtensionAppInfo1* pExtensionAppInfo);
+
 HRESULT INTC_DestroyDeviceExtensionContextWrapper(
     PFNINTCEXT_DESTROYDEVICEEXTENSIONCONTEXT pfnDestroyDeviceExtensionContext,
     INTCExtensionContext** ppExtensionContext);
@@ -214,6 +221,24 @@ HRESULT INTC_D3D12_RemoveShaderBinariesPathWrapper(
 HRESULT INTC_D3D12_SetApplicationInfoWrapper(
     PFNINTCDX12EXT_SETAPPLICATIONINFO pfnSetApplicationInfo,
     INTCExtensionAppInfo1* pExtensionAppInfo);
+
+uint64_t INTC_D3D12_GetCommandListHandleWrapper(
+    PFNINTCDX12EXT_GETCOMMANDLISTHANDLE pfnGetCommandListHandle,
+    INTCExtensionContext* pExtensionContext,
+    void* pCommandList);
+
+void INTC_D3D12_SetEventMarkerWrapper(PFNINTCDX12EXT_SETEVENTMARKER pfnSetEventMarker,
+                                      INTCExtensionContext* pExtensionContext,
+                                      ID3D12GraphicsCommandList* pCommandList,
+                                      uint32_t eventType,
+                                      const void* marker,
+                                      uint32_t markerSize);
+
+HRESULT INTC_D3D12_GetCachedBlobWrapper(PFNINTCDX12EXT_GETCACHEDBLOB pfnGetCachedBlob,
+                                        INTCExtensionContext* pExtensionContext,
+                                        ID3D12PipelineState* pPipelineState,
+                                        ID3DBlob** ppBlob,
+                                        INTC_D3D12_CACHED_BLOB_FLAGS flags);
 
 } // namespace DirectX
 } // namespace gits

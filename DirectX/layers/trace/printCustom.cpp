@@ -732,6 +732,26 @@ FastOStream& operator<<(FastOStream& stream, const INTCExtensionInfo* value) {
   return stream;
 }
 
+FastOStream& operator<<(FastOStream& stream, const INTCExtensionInfo1& value) {
+  stream << "INTCExtensionInfo1{";
+  stream << value.RequestedExtensionVersion << ", ";
+  stream << value.IntelDeviceInfo << ", ";
+  PrintString(stream, value.pDeviceDriverDesc) << ", ";
+  PrintString(stream, value.pDeviceDriverVersion) << ", ";
+  stream << value.DeviceDriverBuildNumber;
+  stream << "}";
+  return stream;
+}
+
+FastOStream& operator<<(FastOStream& stream, const INTCExtensionInfo1* value) {
+  if (value) {
+    stream << *value;
+  } else {
+    stream << "nullptr";
+  }
+  return stream;
+}
+
 FastOStream& operator<<(FastOStream& stream, const INTCExtensionVersion& value) {
   stream << "INTCExtensionVersion{";
   stream << value.HWFeatureLevel << ", ";
@@ -764,6 +784,24 @@ FastOStream& operator<<(FastOStream& stream, const INTCDeviceInfo& value) {
 }
 
 FastOStream& operator<<(FastOStream& stream, const INTCDeviceInfo* value) {
+  if (value) {
+    stream << *value;
+  } else {
+    stream << "nullptr";
+  }
+  return stream;
+}
+
+FastOStream& operator<<(FastOStream& stream, const INTCDeviceInfo1& value) {
+  stream << "INTCDeviceInfo1{";
+  stream << static_cast<const INTCDeviceInfo&>(value) << ", ";
+  stream << value.GMDID << ", ";
+  stream << value.XeCoresCount;
+  stream << "}";
+  return stream;
+}
+
+FastOStream& operator<<(FastOStream& stream, const INTCDeviceInfo1* value) {
   if (value) {
     stream << *value;
   } else {

@@ -48,6 +48,8 @@ std::unique_ptr<stream::CommandSerializer> createCommandSerializer(const Command
     return std::make_unique<INTC_D3D12_CreateDeviceExtensionContextSerializer>(*static_cast<const INTC_D3D12_CreateDeviceExtensionContextCommand*>(command));
   case CommandId::INTC_D3D12_CREATEDEVICEEXTENSIONCONTEXT1:
     return std::make_unique<INTC_D3D12_CreateDeviceExtensionContext1Serializer>(*static_cast<const INTC_D3D12_CreateDeviceExtensionContext1Command*>(command));
+  case CommandId::INTC_D3D12_CREATEDEVICEEXTENSIONCONTEXT2:
+    return std::make_unique<INTC_D3D12_CreateDeviceExtensionContext2Serializer>(*static_cast<const INTC_D3D12_CreateDeviceExtensionContext2Command*>(command));
   case CommandId::INTC_D3D12_SETAPPLICATIONINFO:
     return std::make_unique<INTC_D3D12_SetApplicationInfoSerializer>(*static_cast<const INTC_D3D12_SetApplicationInfoCommand*>(command));
   case CommandId::INTC_DESTROYDEVICEEXTENSIONCONTEXT:

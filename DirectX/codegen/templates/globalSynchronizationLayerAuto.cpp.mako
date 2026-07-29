@@ -60,6 +60,14 @@ void GlobalSynchronizationLayer::Post(INTC_D3D12_CreateDeviceExtensionContext1Co
   mutex_.unlock();
 }
 
+void GlobalSynchronizationLayer::Pre(INTC_D3D12_CreateDeviceExtensionContext2Command& command) {
+  mutex_.lock();
+}
+
+void GlobalSynchronizationLayer::Post(INTC_D3D12_CreateDeviceExtensionContext2Command& command) {
+  mutex_.unlock();
+}
+
 void GlobalSynchronizationLayer::Pre(INTC_D3D12_SetApplicationInfoCommand& command) {
   mutex_.lock();
 }

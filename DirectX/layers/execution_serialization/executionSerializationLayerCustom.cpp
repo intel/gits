@@ -288,6 +288,12 @@ void ExecutionSerializationLayer::Pre(INTC_D3D12_CreateDeviceExtensionContext1Co
   }
 }
 
+void ExecutionSerializationLayer::Pre(INTC_D3D12_CreateDeviceExtensionContext2Command& c) {
+  if (InRange()) {
+    m_Recorder.Record(INTC_D3D12_CreateDeviceExtensionContext2Serializer(c));
+  }
+}
+
 void ExecutionSerializationLayer::Pre(INTC_D3D12_SetApplicationInfoCommand& c) {
   if (InRange()) {
     m_Recorder.Record(INTC_D3D12_SetApplicationInfoSerializer(c));

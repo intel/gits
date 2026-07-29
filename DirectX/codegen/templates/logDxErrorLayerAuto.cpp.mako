@@ -124,6 +124,16 @@ void LogDxErrorLayer::Post(INTC_D3D12_CreateDeviceExtensionContext1Command& comm
   }
 }
 
+void LogDxErrorLayer::Pre(INTC_D3D12_CreateDeviceExtensionContext2Command& command) {
+  m_PreResult = command.m_Result.Value;
+}
+
+void LogDxErrorLayer::Post(INTC_D3D12_CreateDeviceExtensionContext2Command& command) {
+  if (isFailure(command.m_Result.Value)) {
+    LOG_ERROR << keyToStr(command.Key) << " INTC_D3D12_CreateDeviceExtensionContext2 failed " << printResult(command.m_Result.Value);
+  }
+}
+
 void LogDxErrorLayer::Pre(INTC_D3D12_SetApplicationInfoCommand& command) {
   m_PreResult = command.m_Result.Value;
 }

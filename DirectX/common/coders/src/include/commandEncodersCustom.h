@@ -46,6 +46,8 @@ void Encode(const INTC_D3D12_CreateDeviceExtensionContextCommand& command, char*
 
 unsigned GetSize(const INTC_D3D12_CreateDeviceExtensionContext1Command& command);
 void Encode(const INTC_D3D12_CreateDeviceExtensionContext1Command& command, char* dest);
+unsigned GetSize(const INTC_D3D12_CreateDeviceExtensionContext2Command& command);
+void Encode(const INTC_D3D12_CreateDeviceExtensionContext2Command& command, char* dest);
 
 unsigned GetSize(const INTC_D3D12_SetApplicationInfoCommand& command);
 void Encode(const INTC_D3D12_SetApplicationInfoCommand& command, char* dest);

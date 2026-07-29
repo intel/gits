@@ -107,6 +107,13 @@ public:
   unsigned Id() const override;
 };
 
+class INTC_D3D12_CreateDeviceExtensionContext2Serializer : public stream::CommandSerializer {
+public:
+  explicit INTC_D3D12_CreateDeviceExtensionContext2Serializer(
+      const INTC_D3D12_CreateDeviceExtensionContext2Command& command);
+  unsigned Id() const override;
+};
+
 class INTC_D3D12_SetApplicationInfoSerializer : public stream::CommandSerializer {
 public:
   explicit INTC_D3D12_SetApplicationInfoSerializer(

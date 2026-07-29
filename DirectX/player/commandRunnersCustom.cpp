@@ -312,6 +312,40 @@ void INTC_D3D12_CreateDeviceExtensionContext1Runner::Run() {
   }
 }
 
+void INTC_D3D12_CreateDeviceExtensionContext2Runner::Run() {
+  auto& manager = PlayerManager::Get();
+
+  UpdateInterface(manager, command.m_pDevice);
+
+  for (Layer* layer : manager.GetPreLayers()) {
+    layer->Pre(command);
+  }
+
+  if (manager.ExecuteCommands()) {
+    if (!command.Skip) {
+      command.m_Result.Value = INTC_D3D12_CreateDeviceExtensionContext2(
+          command.m_pDevice.Value, command.m_ppExtensionContext.Value,
+          command.m_pExtensionInfo.Value, command.m_pExtensionAppInfo.Value);
+    }
+
+    if (command.m_Result.Value == S_OK) {
+      manager.GetIntelExtensionsContextMap().SetContext(
+          command.m_ppExtensionContext.Key,
+          reinterpret_cast<std::uintptr_t>(*command.m_ppExtensionContext.Value));
+    }
+  }
+
+  if (command.m_pExtensionAppInfo.Value) {
+    command.m_pExtensionAppInfo.Value->pApplicationName =
+        command.m_pExtensionAppInfo.ApplicationName;
+    command.m_pExtensionAppInfo.Value->pEngineName = command.m_pExtensionAppInfo.EngineName;
+  }
+
+  for (Layer* layer : manager.GetPostLayers()) {
+    layer->Post(command);
+  }
+}
+
 void INTC_D3D12_SetApplicationInfoRunner::Run() {
   auto& manager = PlayerManager::Get();
 

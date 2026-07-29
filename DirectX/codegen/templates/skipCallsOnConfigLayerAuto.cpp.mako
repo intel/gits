@@ -91,6 +91,13 @@ void SkipCallsOnConfigLayer::Pre(INTC_D3D12_CreateDeviceExtensionContext1Command
   }
 }
 
+void SkipCallsOnConfigLayer::Pre(INTC_D3D12_CreateDeviceExtensionContext2Command& command) {
+  if (m_KeyRange[command.Key]) {
+    command.Skip = true;
+    LOG_INFO << "[SKIPPED] call " << keyToStr(command.Key) << " INTC_D3D12_CreateDeviceExtensionContext2";
+  }
+}
+
 void SkipCallsOnConfigLayer::Pre(INTC_D3D12_SetApplicationInfoCommand& command) {
   if (m_KeyRange[command.Key]) {
     command.Skip = true;

@@ -159,6 +159,18 @@ unsigned INTC_D3D12_CreateDeviceExtensionContext1Serializer::Id() const {
   return static_cast<unsigned>(CommandId::INTC_D3D12_CREATEDEVICEEXTENSIONCONTEXT1);
 }
 
+INTC_D3D12_CreateDeviceExtensionContext2Serializer::
+    INTC_D3D12_CreateDeviceExtensionContext2Serializer(
+        const INTC_D3D12_CreateDeviceExtensionContext2Command& command) {
+  m_DataSize = GetSize(command);
+  m_Data.reset(new char[m_DataSize]);
+  Encode(command, m_Data.get());
+}
+
+unsigned INTC_D3D12_CreateDeviceExtensionContext2Serializer::Id() const {
+  return static_cast<unsigned>(CommandId::INTC_D3D12_CREATEDEVICEEXTENSIONCONTEXT2);
+}
+
 INTC_D3D12_SetApplicationInfoSerializer::INTC_D3D12_SetApplicationInfoSerializer(
     const INTC_D3D12_SetApplicationInfoCommand& command) {
   m_DataSize = GetSize(command);

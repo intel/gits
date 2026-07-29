@@ -224,6 +224,19 @@ private:
   INTC_D3D12_CreateDeviceExtensionContext1Command command;
 };
 
+class INTC_D3D12_CreateDeviceExtensionContext2Runner : public stream::CommandRunner {
+public:
+  void Run() override;
+
+protected:
+  void DecodeCommand() override {
+    Decode(m_Data, command);
+  }
+
+private:
+  INTC_D3D12_CreateDeviceExtensionContext2Command command;
+};
+
 class INTC_D3D12_SetApplicationInfoRunner : public stream::CommandRunner {
 public:
   void Run() override;

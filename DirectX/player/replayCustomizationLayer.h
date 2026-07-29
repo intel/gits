@@ -185,6 +185,7 @@ public:
   void Pre(INTC_D3D12_SetApplicationInfoCommand& command) override;
   void Pre(INTC_D3D12_CreateDeviceExtensionContextCommand& command) override;
   void Pre(INTC_D3D12_CreateDeviceExtensionContext1Command& command) override;
+  void Pre(INTC_D3D12_CreateDeviceExtensionContext2Command& command) override;
   void Pre(INTC_D3D12_GetSupportedVersionsCommand& command) override;
   void Pre(NvAPI_D3D12_SetCreatePipelineStateOptionsCommand& command) override;
   void Pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& command) override;

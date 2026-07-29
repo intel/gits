@@ -129,6 +129,17 @@ void Decode(char* src, INTC_D3D12_CreateDeviceExtensionContext1Command& command)
   Decode(src, offset, command.m_Result);
 }
 
+void Decode(char* src, INTC_D3D12_CreateDeviceExtensionContext2Command& command) {
+  unsigned offset = 0;
+  Decode(src, offset, command.Key);
+  Decode(src, offset, command.ThreadId);
+  Decode(src, offset, command.m_pDevice);
+  Decode(src, offset, command.m_ppExtensionContext);
+  Decode(src, offset, command.m_pExtensionInfo);
+  Decode(src, offset, command.m_pExtensionAppInfo);
+  Decode(src, offset, command.m_Result);
+}
+
 void Decode(char* src, INTC_D3D12_SetApplicationInfoCommand& command) {
   unsigned offset = 0;
   Decode(src, offset, command.Key);

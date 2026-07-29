@@ -87,6 +87,9 @@ public:
   virtual void Pre(INTC_D3D12_CreateDeviceExtensionContext1Command& command) {}
   virtual void Post(INTC_D3D12_CreateDeviceExtensionContext1Command& command) {}
 
+  virtual void Pre(INTC_D3D12_CreateDeviceExtensionContext2Command& command) {}
+  virtual void Post(INTC_D3D12_CreateDeviceExtensionContext2Command& command) {}
+
   virtual void Pre(INTC_D3D12_SetApplicationInfoCommand& command) {}
   virtual void Post(INTC_D3D12_SetApplicationInfoCommand& command) {}
 

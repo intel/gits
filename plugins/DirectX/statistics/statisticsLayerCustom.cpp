@@ -79,6 +79,10 @@ void StatisticsLayer::Post(INTC_D3D12_CreateDeviceExtensionContext1Command& comm
   m_StatisticsService.Command("INTC_D3D12_CreateDeviceExtensionContext1");
 }
 
+void StatisticsLayer::Post(INTC_D3D12_CreateDeviceExtensionContext2Command& command) {
+  m_StatisticsService.Command("INTC_D3D12_CreateDeviceExtensionContext2");
+}
+
 void StatisticsLayer::Post(INTC_D3D12_SetApplicationInfoCommand& command) {
   m_StatisticsService.Command("INTC_D3D12_SetApplicationInfo");
 }

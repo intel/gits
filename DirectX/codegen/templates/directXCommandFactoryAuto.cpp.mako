@@ -52,6 +52,8 @@ stream::CommandRunner* DirectXCommandFactory::CreateCommand(unsigned id) {
     return new INTC_D3D12_CreateDeviceExtensionContextRunner();
   case CommandId::INTC_D3D12_CREATEDEVICEEXTENSIONCONTEXT1:
     return new INTC_D3D12_CreateDeviceExtensionContext1Runner();
+  case CommandId::INTC_D3D12_CREATEDEVICEEXTENSIONCONTEXT2:
+    return new INTC_D3D12_CreateDeviceExtensionContext2Runner();
   case CommandId::INTC_DESTROYDEVICEEXTENSIONCONTEXT:
     return new INTC_DestroyDeviceExtensionContextRunner();
   case CommandId::INTC_D3D12_CHECKFEATURESUPPORT:

@@ -130,6 +130,11 @@ void CommandListSplitLayer::Pre(INTC_D3D12_CreateDeviceExtensionContext1Command&
   m_Recorder.Record(INTC_D3D12_CreateDeviceExtensionContext1Serializer(c));
 }
 
+void CommandListSplitLayer::Pre(INTC_D3D12_CreateDeviceExtensionContext2Command& c) {
+  m_SplitService.GetKeyAllocator().RemapCommandKey(c.Key);
+  m_Recorder.Record(INTC_D3D12_CreateDeviceExtensionContext2Serializer(c));
+}
+
 void CommandListSplitLayer::Pre(INTC_D3D12_SetApplicationInfoCommand& c) {
   m_SplitService.GetKeyAllocator().RemapCommandKey(c.Key);
   m_Recorder.Record(INTC_D3D12_SetApplicationInfoSerializer(c));

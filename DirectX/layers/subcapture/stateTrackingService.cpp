@@ -195,6 +195,7 @@ void StateTrackingService::RestoreState(ObjectState* state) {
     break;
   case CommandId::INTC_D3D12_CREATEDEVICEEXTENSIONCONTEXT:
   case CommandId::INTC_D3D12_CREATEDEVICEEXTENSIONCONTEXT1:
+  case CommandId::INTC_D3D12_CREATEDEVICEEXTENSIONCONTEXT2:
     RestoreD3D12INTCDeviceExtensionContext(state);
     break;
   case CommandId::ID_ID3D12DEVICE5_CREATESTATEOBJECT:

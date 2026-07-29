@@ -180,6 +180,7 @@ void Decode(char* src,
             unsigned& offset,
             PointerArgument<D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC>& arg);
 void Decode(char* src, unsigned& offset, PointerArgument<INTCExtensionInfo>& arg);
+void Decode(char* src, unsigned& offset, PointerArgument<INTCExtensionInfo1>& arg);
 void Decode(char* src, unsigned& offset, PointerArgument<INTCExtensionAppInfo>& arg);
 void Decode(char* src, unsigned& offset, PointerArgument<INTCExtensionAppInfo1>& arg);
 void Decode(char* src, unsigned& offset, PointerArgument<D3D12_APPLICATION_DESC>& arg);

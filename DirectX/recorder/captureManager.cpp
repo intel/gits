@@ -800,49 +800,67 @@ void CaptureManager::loadIntelExtension(const uint32_t& vendorID, const uint32_t
   }
   LOGI << "IntelExtensions - Loaded Intel Extensions for device 0x" << std::hex << deviceID;
 
-  INTC_D3D12_API_CALLBACKS callbacks{0};
-  callbacks.INTC_D3D12_GetSupportedVersions = INTC_D3D12_GetSupportedVersionsWrapper;
-  callbacks.INTC_D3D12_CreateDeviceExtensionContext =
-      INTC_D3D12_CreateDeviceExtensionContextWrapper;
-  callbacks.INTC_D3D12_CreateDeviceExtensionContext1 =
-      INTC_D3D12_CreateDeviceExtensionContext1Wrapper;
-  callbacks.INTC_DestroyDeviceExtensionContext = INTC_DestroyDeviceExtensionContextWrapper;
-  callbacks.INTC_D3D12_CreateCommandQueue = INTC_D3D12_CreateCommandQueueWrapper;
-  callbacks.INTC_D3D12_CreateComputePipelineState = INTC_D3D12_CreateComputePipelineStateWrapper;
-  callbacks.INTC_D3D12_CreateReservedResource = INTC_D3D12_CreateReservedResourceWrapper;
-  callbacks.INTC_D3D12_CreateCommittedResource = INTC_D3D12_CreateCommittedResourceWrapper;
-  callbacks.INTC_D3D12_CreateCommittedResource1 = INTC_D3D12_CreateCommittedResource1Wrapper;
-  callbacks.INTC_D3D12_CreateHeap = INTC_D3D12_CreateHeapWrapper;
-  callbacks.INTC_D3D12_CreatePlacedResource = INTC_D3D12_CreatePlacedResourceWrapper;
-  callbacks.INTC_D3D12_CreateHostRTASResource = INTC_D3D12_CreateHostRTASResourceWrapper;
-  callbacks.INTC_D3D12_BuildRaytracingAccelerationStructure_Host =
-      INTC_D3D12_BuildRaytracingAccelerationStructure_HostWrapper;
-  callbacks.INTC_D3D12_CopyRaytracingAccelerationStructure_Host =
-      INTC_D3D12_CopyRaytracingAccelerationStructure_HostWrapper;
-  callbacks.INTC_D3D12_EmitRaytracingAccelerationStructurePostbuildInfo_Host =
-      INTC_D3D12_EmitRaytracingAccelerationStructurePostbuildInfo_HostWrapper;
-  callbacks.INTC_D3D12_GetRaytracingAccelerationStructurePrebuildInfo_Host =
-      INTC_D3D12_GetRaytracingAccelerationStructurePrebuildInfo_HostWrapper;
-  callbacks.INTC_D3D12_TransferHostRTAS = INTC_D3D12_TransferHostRTASWrapper;
-  callbacks.INTC_D3D12_SetDriverEventMetadata = INTC_D3D12_SetDriverEventMetadataWrapper;
-  callbacks.INTC_D3D12_QueryCpuVisibleVidmem = INTC_D3D12_QueryCpuVisibleVidmemWrapper;
-  callbacks.INTC_D3D12_CreateStateObject = INTC_D3D12_CreateStateObjectWrapper;
-  callbacks.INTC_D3D12_BuildRaytracingAccelerationStructure =
-      INTC_D3D12_BuildRaytracingAccelerationStructureWrapper;
-  callbacks.INTC_D3D12_GetRaytracingAccelerationStructurePrebuildInfo =
-      INTC_D3D12_GetRaytracingAccelerationStructurePrebuildInfoWrapper;
-  callbacks.INTC_D3D12_SetFeatureSupport = INTC_D3D12_SetFeatureSupportWrapper;
-  callbacks.INTC_D3D12_GetResourceAllocationInfo = INTC_D3D12_GetResourceAllocationInfoWrapper;
-  callbacks.INTC_D3D12_CheckFeatureSupport = INTC_D3D12_CheckFeatureSupportWrapper;
-  callbacks.INTC_D3D12_AddShaderBinariesPath = INTC_D3D12_AddShaderBinariesPathWrapper;
-  callbacks.INTC_D3D12_RemoveShaderBinariesPath = INTC_D3D12_RemoveShaderBinariesPathWrapper;
-  callbacks.INTC_D3D12_SetApplicationInfo = INTC_D3D12_SetApplicationInfoWrapper;
+  const auto assignSharedCallbacks = []<typename CallbacksT>(CallbacksT& callbacks) {
+    callbacks.INTC_D3D12_GetSupportedVersions = INTC_D3D12_GetSupportedVersionsWrapper;
+    callbacks.INTC_D3D12_CreateDeviceExtensionContext =
+        INTC_D3D12_CreateDeviceExtensionContextWrapper;
+    callbacks.INTC_D3D12_CreateDeviceExtensionContext1 =
+        INTC_D3D12_CreateDeviceExtensionContext1Wrapper;
+    callbacks.INTC_DestroyDeviceExtensionContext = INTC_DestroyDeviceExtensionContextWrapper;
+    callbacks.INTC_D3D12_CreateCommandQueue = INTC_D3D12_CreateCommandQueueWrapper;
+    callbacks.INTC_D3D12_CreateComputePipelineState = INTC_D3D12_CreateComputePipelineStateWrapper;
+    callbacks.INTC_D3D12_CreateReservedResource = INTC_D3D12_CreateReservedResourceWrapper;
+    callbacks.INTC_D3D12_CreateCommittedResource = INTC_D3D12_CreateCommittedResourceWrapper;
+    callbacks.INTC_D3D12_CreateCommittedResource1 = INTC_D3D12_CreateCommittedResource1Wrapper;
+    callbacks.INTC_D3D12_CreateHeap = INTC_D3D12_CreateHeapWrapper;
+    callbacks.INTC_D3D12_CreatePlacedResource = INTC_D3D12_CreatePlacedResourceWrapper;
+    callbacks.INTC_D3D12_CreateHostRTASResource = INTC_D3D12_CreateHostRTASResourceWrapper;
+    callbacks.INTC_D3D12_BuildRaytracingAccelerationStructure_Host =
+        INTC_D3D12_BuildRaytracingAccelerationStructure_HostWrapper;
+    callbacks.INTC_D3D12_CopyRaytracingAccelerationStructure_Host =
+        INTC_D3D12_CopyRaytracingAccelerationStructure_HostWrapper;
+    callbacks.INTC_D3D12_EmitRaytracingAccelerationStructurePostbuildInfo_Host =
+        INTC_D3D12_EmitRaytracingAccelerationStructurePostbuildInfo_HostWrapper;
+    callbacks.INTC_D3D12_GetRaytracingAccelerationStructurePrebuildInfo_Host =
+        INTC_D3D12_GetRaytracingAccelerationStructurePrebuildInfo_HostWrapper;
+    callbacks.INTC_D3D12_TransferHostRTAS = INTC_D3D12_TransferHostRTASWrapper;
+    callbacks.INTC_D3D12_SetDriverEventMetadata = INTC_D3D12_SetDriverEventMetadataWrapper;
+    callbacks.INTC_D3D12_QueryCpuVisibleVidmem = INTC_D3D12_QueryCpuVisibleVidmemWrapper;
+    callbacks.INTC_D3D12_CreateStateObject = INTC_D3D12_CreateStateObjectWrapper;
+    callbacks.INTC_D3D12_BuildRaytracingAccelerationStructure =
+        INTC_D3D12_BuildRaytracingAccelerationStructureWrapper;
+    callbacks.INTC_D3D12_GetRaytracingAccelerationStructurePrebuildInfo =
+        INTC_D3D12_GetRaytracingAccelerationStructurePrebuildInfoWrapper;
+    callbacks.INTC_D3D12_SetFeatureSupport = INTC_D3D12_SetFeatureSupportWrapper;
+    callbacks.INTC_D3D12_GetResourceAllocationInfo = INTC_D3D12_GetResourceAllocationInfoWrapper;
+    callbacks.INTC_D3D12_CheckFeatureSupport = INTC_D3D12_CheckFeatureSupportWrapper;
+    callbacks.INTC_D3D12_AddShaderBinariesPath = INTC_D3D12_AddShaderBinariesPathWrapper;
+    callbacks.INTC_D3D12_RemoveShaderBinariesPath = INTC_D3D12_RemoveShaderBinariesPathWrapper;
+    callbacks.INTC_D3D12_SetApplicationInfo = INTC_D3D12_SetApplicationInfoWrapper;
+    callbacks.INTC_D3D12_GetCommandListHandle = INTC_D3D12_GetCommandListHandleWrapper;
+    callbacks.INTC_D3D12_SetEventMarker = INTC_D3D12_SetEventMarkerWrapper;
+  };
 
-  result = INTC_D3D12_RegisterApplicationCallbacks(&callbacks);
+  INTC_D3D12_API_CALLBACKS1 callbacks{};
+  INTC_D3D12_API_CALLBACKS_INIT(callbacks);
+  assignSharedCallbacks(callbacks);
+  callbacks.INTC_D3D12_CreateDeviceExtensionContext2 =
+      INTC_D3D12_CreateDeviceExtensionContext2Wrapper;
+  callbacks.INTC_D3D12_GetCachedBlob = INTC_D3D12_GetCachedBlobWrapper;
+
+  result = INTC_D3D12_RegisterApplicationCallbacks1(&callbacks);
   if (SUCCEEDED(result)) {
-    LOGI << "IntelExtensions - Registered INTC_D3D12_API_CALLBACKS";
+    LOGI << "IntelExtensions - Registered INTC_D3D12_API_CALLBACKS1";
   } else {
-    LOG_ERROR << "IntelExtensions - INTC_D3D12_RegisterApplicationCallbacks failed!";
+    LOG_ERROR << "IntelExtensions - INTC_D3D12_RegisterApplicationCallbacks1 failed!";
+    INTC_D3D12_API_CALLBACKS legacyCallbacks{};
+    assignSharedCallbacks(legacyCallbacks);
+    result = INTC_D3D12_RegisterApplicationCallbacks(&legacyCallbacks);
+    if (SUCCEEDED(result)) {
+      LOG_WARNING << "IntelExtensions - Registered INTC_D3D12_API_CALLBACKS (legacy fallback)";
+    } else {
+      LOG_ERROR << "IntelExtensions - INTC_D3D12_RegisterApplicationCallbacks failed!";
+    }
   }
 
   INTCParamValue captureMode{0};

@@ -76,10 +76,14 @@ FastOStream& operator<<(FastOStream& stream, const DML_SCALAR_UNION& value);
 
 FastOStream& operator<<(FastOStream& stream, const INTCExtensionInfo& value);
 FastOStream& operator<<(FastOStream& stream, const INTCExtensionInfo* value);
+FastOStream& operator<<(FastOStream& stream, const INTCExtensionInfo1& value);
+FastOStream& operator<<(FastOStream& stream, const INTCExtensionInfo1* value);
 FastOStream& operator<<(FastOStream& stream, const INTCExtensionVersion& value);
 FastOStream& operator<<(FastOStream& stream, const INTCExtensionVersion* value);
 FastOStream& operator<<(FastOStream& stream, const INTCDeviceInfo& value);
 FastOStream& operator<<(FastOStream& stream, const INTCDeviceInfo* value);
+FastOStream& operator<<(FastOStream& stream, const INTCDeviceInfo1& value);
+FastOStream& operator<<(FastOStream& stream, const INTCDeviceInfo1* value);
 FastOStream& operator<<(FastOStream& stream, const INTCExtensionAppInfo& value);
 FastOStream& operator<<(FastOStream& stream, const INTCExtensionAppInfo* value);
 FastOStream& operator<<(FastOStream& stream, const INTCAppInfoVersion& value);

@@ -416,6 +416,31 @@ void TraceLayer::Post(INTC_D3D12_CreateDeviceExtensionContext1Command& command) 
   }
 }
 
+void TraceLayer::Pre(INTC_D3D12_CreateDeviceExtensionContext2Command& command) {
+  if (m_PrintPre) {
+    CommandPrinter p(m_StreamPre, m_StatePre, command, "INTC_D3D12_CreateDeviceExtensionContext2");
+    p.AddArgument(command.m_pDevice);
+    p.AddArgument(command.m_ppExtensionContext);
+    p.AddArgument(command.m_pExtensionInfo);
+    p.AddArgument(command.m_pExtensionAppInfo);
+    p.AddResult(command.m_Result);
+    p.Print(m_Flush);
+  }
+}
+
+void TraceLayer::Post(INTC_D3D12_CreateDeviceExtensionContext2Command& command) {
+  if (m_PrintPost) {
+    CommandPrinter p(m_StreamPost, m_StatePost, command,
+                     "INTC_D3D12_CreateDeviceExtensionContext2");
+    p.AddArgument(command.m_pDevice);
+    p.AddArgument(command.m_ppExtensionContext);
+    p.AddArgument(command.m_pExtensionInfo);
+    p.AddArgument(command.m_pExtensionAppInfo);
+    p.AddResult(command.m_Result);
+    p.Print(m_Flush);
+  }
+}
+
 void TraceLayer::Pre(INTC_D3D12_SetApplicationInfoCommand& command) {
   if (m_PrintPre) {
     CommandPrinter p(m_StreamPre, m_StatePre, command, "INTC_D3D12_SetApplicationInfo");

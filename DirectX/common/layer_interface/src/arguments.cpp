@@ -1936,6 +1936,42 @@ PointerArgument<INTCExtensionInfo>::~PointerArgument() {
   }
 }
 
+PointerArgument<INTCExtensionInfo1>::PointerArgument(
+    const PointerArgument<INTCExtensionInfo1>& arg) {
+  if (!arg.Value) {
+    return;
+  }
+  Value = new INTCExtensionInfo1();
+  *Value = *arg.Value;
+  if (Value->pDeviceDriverDesc) {
+    unsigned len = wcslen(Value->pDeviceDriverDesc);
+    Value->pDeviceDriverDesc = new wchar_t[len + 1];
+    memcpy(const_cast<wchar_t*>(Value->pDeviceDriverDesc), arg.Value->pDeviceDriverDesc,
+           len * 2 + 2);
+    CopyDeviceDriverDesc = true;
+  }
+  if (Value->pDeviceDriverVersion) {
+    unsigned len = wcslen(Value->pDeviceDriverVersion);
+    Value->pDeviceDriverVersion = new wchar_t[len + 1];
+    memcpy(const_cast<wchar_t*>(Value->pDeviceDriverVersion), arg.Value->pDeviceDriverVersion,
+           len * 2 + 2);
+    CopyDeviceDriverVersion = true;
+  }
+  Copy = true;
+}
+
+PointerArgument<INTCExtensionInfo1>::~PointerArgument() {
+  if (Copy) {
+    if (CopyDeviceDriverDesc) {
+      delete[] Value->pDeviceDriverDesc;
+    }
+    if (CopyDeviceDriverVersion) {
+      delete[] Value->pDeviceDriverVersion;
+    }
+    delete Value;
+  }
+}
+
 ArrayArgument<INTCExtensionVersion>::ArrayArgument(const ArrayArgument<INTCExtensionVersion>& arg) {
   if (!arg.Value) {
     return;

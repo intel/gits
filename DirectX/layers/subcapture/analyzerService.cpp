@@ -236,6 +236,11 @@ void AnalyzerService::CreateDeviceExtensionContext(
   m_ObjectsForRestore.insert(c.m_ppExtensionContext.Key);
 }
 
+void AnalyzerService::CreateDeviceExtensionContext(
+    INTC_D3D12_CreateDeviceExtensionContext2Command& c) {
+  m_ObjectsForRestore.insert(c.m_ppExtensionContext.Key);
+}
+
 void AnalyzerService::AddParent(unsigned key, unsigned parentKey) {
   if (key && parentKey) {
     m_ParentKeys[key].push_back(parentKey);

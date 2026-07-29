@@ -128,6 +128,7 @@ public:
   void Post(ID3D12DeviceCopyDescriptorsCommand& c) override;
   void Post(INTC_D3D12_CreateDeviceExtensionContextCommand& c) override;
   void Post(INTC_D3D12_CreateDeviceExtensionContext1Command& c) override;
+  void Post(INTC_D3D12_CreateDeviceExtensionContext2Command& c) override;
   void Post(INTC_D3D12_SetApplicationInfoCommand& c) override;
   void Post(INTC_DestroyDeviceExtensionContextCommand& c) override;
   void Post(INTC_D3D12_SetFeatureSupportCommand& c) override;

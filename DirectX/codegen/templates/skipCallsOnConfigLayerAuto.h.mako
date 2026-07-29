@@ -34,6 +34,7 @@ public:
 
   virtual void Pre(INTC_D3D12_CreateDeviceExtensionContextCommand& command) override;
   virtual void Pre(INTC_D3D12_CreateDeviceExtensionContext1Command& command) override;
+  virtual void Pre(INTC_D3D12_CreateDeviceExtensionContext2Command& command) override;
   virtual void Pre(INTC_D3D12_SetApplicationInfoCommand& command) override;
   virtual void Pre(INTC_DestroyDeviceExtensionContextCommand& command) override;
   virtual void Pre(INTC_D3D12_CheckFeatureSupportCommand& command) override;

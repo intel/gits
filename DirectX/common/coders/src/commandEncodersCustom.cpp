@@ -182,6 +182,23 @@ void Encode(const INTC_D3D12_CreateDeviceExtensionContext1Command& command, char
   Encode(dest, offset, command.m_Result);
 }
 
+unsigned GetSize(const INTC_D3D12_CreateDeviceExtensionContext2Command& command) {
+  return GetSize(command.Key) + GetSize(command.ThreadId) + GetSize(command.m_pDevice) +
+         GetSize(command.m_ppExtensionContext) + GetSize(command.m_pExtensionInfo) +
+         GetSize(command.m_pExtensionAppInfo) + GetSize(command.m_Result);
+}
+
+void Encode(const INTC_D3D12_CreateDeviceExtensionContext2Command& command, char* dest) {
+  unsigned offset = 0;
+  Encode(dest, offset, command.Key);
+  Encode(dest, offset, command.ThreadId);
+  Encode(dest, offset, command.m_pDevice);
+  Encode(dest, offset, command.m_ppExtensionContext);
+  Encode(dest, offset, command.m_pExtensionInfo);
+  Encode(dest, offset, command.m_pExtensionAppInfo);
+  Encode(dest, offset, command.m_Result);
+}
+
 unsigned GetSize(const INTC_D3D12_SetApplicationInfoCommand& command) {
   return GetSize(command.Key) + GetSize(command.ThreadId) + GetSize(command.m_pExtensionAppInfo) +
          GetSize(command.m_Result);

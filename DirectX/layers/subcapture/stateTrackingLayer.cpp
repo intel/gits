@@ -1816,6 +1816,19 @@ void StateTrackingLayer::Post(INTC_D3D12_CreateDeviceExtensionContext1Command& c
   m_DeviceByINTCExtensionContext[state->Key] = c.m_pDevice.Key;
 }
 
+void StateTrackingLayer::Post(INTC_D3D12_CreateDeviceExtensionContext2Command& c) {
+  if (m_StateRestored) {
+    return;
+  }
+  ObjectState* state = new ObjectState();
+  state->Key = c.m_ppExtensionContext.Key;
+  state->CreationCommand.reset(new INTC_D3D12_CreateDeviceExtensionContext2Command(c));
+  m_StateService.StoreState(state);
+
+  SetAsChildInParent(c.m_pDevice.Key, state->Key);
+  m_DeviceByINTCExtensionContext[state->Key] = c.m_pDevice.Key;
+}
+
 void StateTrackingLayer::Post(INTC_D3D12_SetApplicationInfoCommand& c) {
   if (m_StateRestored) {
     return;

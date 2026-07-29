@@ -305,6 +305,29 @@ void CCodeLayer::Post(INTC_D3D12_CreateDeviceExtensionContext1Command& c) {
   nextCommand();
 }
 
+void CCodeLayer::Post(INTC_D3D12_CreateDeviceExtensionContext2Command& c) {
+  using namespace ccode;
+
+  CppParameterInfo pDeviceInfo("ID3D12Device", "pDevice");
+  pDeviceInfo.isPtr = true;
+  CppParameterInfo ppExtensionContextInfo("INTCExtensionContext", "ppExtensionContext");
+  CppParameterInfo pExtensionInfoInfo("INTCExtensionInfo1", "pExtensionInfo");
+  pExtensionInfoInfo.isPtr = true;
+  CppParameterInfo pExtensionAppInfoInfo("INTCExtensionAppInfo1", "pExtensionAppInfo");
+  pExtensionAppInfoInfo.isPtr = true;
+
+  CommandPrinter p(c, "INTC_D3D12_CreateDeviceExtensionContext2");
+  preProcess(p, c);
+  p.addArgument(c.m_pDevice, pDeviceInfo);
+  p.addArgument(c.m_ppExtensionContext, ppExtensionContextInfo);
+  p.addArgument(c.m_pExtensionInfo, pExtensionInfoInfo);
+  p.addArgument(c.m_pExtensionAppInfo, pExtensionAppInfoInfo);
+  postProcess(p, c);
+  p.print();
+
+  nextCommand();
+}
+
 void CCodeLayer::Post(INTC_DestroyDeviceExtensionContextCommand& c) {
   using namespace ccode;
 

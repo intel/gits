@@ -39,6 +39,10 @@ void EncoderLayer::Post(INTC_D3D12_CreateDeviceExtensionContext1Command& command
   m_Recorder.Record(command.Key, new INTC_D3D12_CreateDeviceExtensionContext1Serializer(command));
 }
 
+void EncoderLayer::Post(INTC_D3D12_CreateDeviceExtensionContext2Command& command) {
+  m_Recorder.Record(command.Key, new INTC_D3D12_CreateDeviceExtensionContext2Serializer(command));
+}
+
 void EncoderLayer::Post(INTC_D3D12_SetApplicationInfoCommand& command) {
   m_Recorder.Record(command.Key, new INTC_D3D12_SetApplicationInfoSerializer(command));
 }

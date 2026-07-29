@@ -25,6 +25,7 @@ void Decode(char* src, DllContainerMetaCommand& command);
 void Decode(char* src, INTC_D3D12_GetSupportedVersionsCommand& command);
 void Decode(char* src, INTC_D3D12_CreateDeviceExtensionContextCommand& command);
 void Decode(char* src, INTC_D3D12_CreateDeviceExtensionContext1Command& command);
+void Decode(char* src, INTC_D3D12_CreateDeviceExtensionContext2Command& command);
 void Decode(char* src, INTC_D3D12_SetApplicationInfoCommand& command);
 void Decode(char* src, INTC_DestroyDeviceExtensionContextCommand& command);
 void Decode(char* src, INTC_D3D12_CheckFeatureSupportCommand& command);

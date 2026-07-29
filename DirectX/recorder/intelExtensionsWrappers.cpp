@@ -159,6 +159,58 @@ HRESULT INTC_D3D12_CreateDeviceExtensionContext1Wrapper(
   return result;
 }
 
+HRESULT INTC_D3D12_CreateDeviceExtensionContext2Wrapper(
+    PFNINTCDX12EXT_CREATEDEVICEEXTENSIONCONTEXT2 pfnCreateDeviceExtensionContext2,
+    const ID3D12Device* pDevice,
+    INTCExtensionContext** ppExtensionContext,
+    INTCExtensionInfo1* pExtensionInfo,
+    INTCExtensionAppInfo1* pExtensionAppInfo) {
+
+  HRESULT result{};
+
+  auto& manager = CaptureManager::get();
+  if (auto atTopOfStack = AtTopOfStackLocal()) {
+
+    INTC_D3D12_CreateDeviceExtensionContext2Command command(
+        GetCurrentThreadId(), pDevice, ppExtensionContext, pExtensionInfo, pExtensionAppInfo);
+
+    UpdateInterface(command.m_pDevice, const_cast<ID3D12Device*>(pDevice));
+
+    for (Layer* layer : manager.GetPreLayers()) {
+      layer->Pre(command);
+    }
+
+    command.Key = manager.createCommandKey();
+    if (!command.Skip) {
+      result = pfnCreateDeviceExtensionContext2(
+          command.m_pDevice.Value, command.m_ppExtensionContext.Value,
+          command.m_pExtensionInfo.Value, command.m_pExtensionAppInfo.Value);
+    }
+    if (result == S_OK) {
+      command.m_ppExtensionContext.Key = manager.createWrapperKey();
+      manager.getIntelExtensionsContextMap().SetContext(
+          reinterpret_cast<std::uintptr_t>(*command.m_ppExtensionContext.Value),
+          command.m_ppExtensionContext.Key);
+    }
+    command.m_Result.Value = result;
+
+    if (command.m_pExtensionAppInfo.Value) {
+      command.m_pExtensionAppInfo.Value->pApplicationName =
+          command.m_pExtensionAppInfo.ApplicationName;
+      command.m_pExtensionAppInfo.Value->pEngineName = command.m_pExtensionAppInfo.EngineName;
+    }
+
+    for (Layer* layer : manager.GetPostLayers()) {
+      layer->Post(command);
+    }
+  } else {
+    result = pfnCreateDeviceExtensionContext2(pDevice, ppExtensionContext, pExtensionInfo,
+                                              pExtensionAppInfo);
+  }
+
+  return result;
+}
+
 HRESULT INTC_DestroyDeviceExtensionContextWrapper(
     PFNINTCEXT_DESTROYDEVICEEXTENSIONCONTEXT pfnDestroyDeviceExtensionContext,
     INTCExtensionContext** ppExtensionContext) {
@@ -818,6 +870,45 @@ HRESULT INTC_D3D12_SetApplicationInfoWrapper(
   }
 
   return result;
+}
+
+uint64_t INTC_D3D12_GetCommandListHandleWrapper(
+    PFNINTCDX12EXT_GETCOMMANDLISTHANDLE pfnGetCommandListHandle,
+    INTCExtensionContext* pExtensionContext,
+    void* pCommandList) {
+  static bool logged = false;
+  if (!logged) {
+    LOG_ERROR << "INTC_D3D12_GetCommandListHandle not handled.";
+    logged = true;
+  }
+  return pfnGetCommandListHandle(pExtensionContext, pCommandList);
+}
+
+void INTC_D3D12_SetEventMarkerWrapper(PFNINTCDX12EXT_SETEVENTMARKER pfnSetEventMarker,
+                                      INTCExtensionContext* pExtensionContext,
+                                      ID3D12GraphicsCommandList* pCommandList,
+                                      uint32_t eventType,
+                                      const void* marker,
+                                      uint32_t markerSize) {
+  static bool logged = false;
+  if (!logged) {
+    LOG_ERROR << "INTC_D3D12_SetEventMarker not handled.";
+    logged = true;
+  }
+  pfnSetEventMarker(pExtensionContext, pCommandList, eventType, marker, markerSize);
+}
+
+HRESULT INTC_D3D12_GetCachedBlobWrapper(PFNINTCDX12EXT_GETCACHEDBLOB pfnGetCachedBlob,
+                                        INTCExtensionContext* pExtensionContext,
+                                        ID3D12PipelineState* pPipelineState,
+                                        ID3DBlob** ppBlob,
+                                        INTC_D3D12_CACHED_BLOB_FLAGS flags) {
+  static bool logged = false;
+  if (!logged) {
+    LOG_ERROR << "INTC_D3D12_GetCachedBlob not handled.";
+    logged = true;
+  }
+  return pfnGetCachedBlob(pExtensionContext, pPipelineState, ppBlob, flags);
 }
 
 } // namespace DirectX

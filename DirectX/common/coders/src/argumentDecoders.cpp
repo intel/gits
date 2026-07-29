@@ -1369,6 +1369,18 @@ void Decode(char* src, unsigned& offset, PointerArgument<INTCExtensionInfo>& arg
   arg.Value->pDeviceDriverVersion = 0;
 }
 
+void Decode(char* src, unsigned& offset, PointerArgument<INTCExtensionInfo1>& arg) {
+  if (DecodeNullPtr(src, offset, arg)) {
+    return;
+  }
+
+  arg.Value = reinterpret_cast<INTCExtensionInfo1*>(src + offset);
+  offset += sizeof(INTCExtensionInfo1);
+
+  arg.Value->pDeviceDriverDesc = 0;
+  arg.Value->pDeviceDriverVersion = 0;
+}
+
 void Decode(char* src, unsigned& offset, PointerArgument<INTCExtensionAppInfo>& arg) {
   if (DecodeNullPtr(src, offset, arg)) {
     return;

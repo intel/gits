@@ -25,6 +25,7 @@ public:
   void Post(INTC_D3D12_GetSupportedVersionsCommand& command) override;
   void Post(INTC_D3D12_CreateDeviceExtensionContextCommand& command) override;
   void Post(INTC_D3D12_CreateDeviceExtensionContext1Command& command) override;
+  void Post(INTC_D3D12_CreateDeviceExtensionContext2Command& command) override;
   void Post(INTC_D3D12_SetApplicationInfoCommand& command) override;
   void Post(INTC_DestroyDeviceExtensionContextCommand& command) override;
   void Post(INTC_D3D12_CheckFeatureSupportCommand& command) override;

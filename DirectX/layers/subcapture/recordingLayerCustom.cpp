@@ -179,6 +179,12 @@ void RecordingLayer::Post(INTC_D3D12_CreateDeviceExtensionContext1Command& Comma
   }
 }
 
+void RecordingLayer::Post(INTC_D3D12_CreateDeviceExtensionContext2Command& Command) {
+  if (m_SubcaptureRange.InRange()) {
+    m_Recorder.Record(INTC_D3D12_CreateDeviceExtensionContext2Serializer(Command));
+  }
+}
+
 void RecordingLayer::Post(INTC_D3D12_SetApplicationInfoCommand& Command) {
   if (m_SubcaptureRange.InRange()) {
     m_Recorder.Record(INTC_D3D12_SetApplicationInfoSerializer(Command));

@@ -1642,6 +1642,22 @@ void ReplayCustomizationLayer::Pre(INTC_D3D12_CreateDeviceExtensionContext1Comma
            << AppInfoToStr(c.m_pExtensionAppInfo.Value);
 }
 
+void ReplayCustomizationLayer::Pre(INTC_D3D12_CreateDeviceExtensionContext2Command& c) {
+  if (c.Skip || !c.m_pExtensionAppInfo.Value) {
+    return;
+  }
+
+  if (Configurator::Get().directx.player.applicationInfoOverride.enabled) {
+    const auto& appInfo = m_Manager.GetIntelExtensionsService().GetAppInfo();
+    c.m_pExtensionAppInfo.Value->pApplicationName = appInfo.pApplicationName;
+    c.m_pExtensionAppInfo.Value->ApplicationVersion = appInfo.ApplicationVersion;
+    c.m_pExtensionAppInfo.Value->pEngineName = appInfo.pEngineName;
+    c.m_pExtensionAppInfo.Value->EngineVersion = appInfo.EngineVersion;
+  }
+  LOG_INFO << "INTC_D3D12_CreateDeviceExtensionContext2 - "
+           << AppInfoToStr(c.m_pExtensionAppInfo.Value);
+}
+
 void ReplayCustomizationLayer::Pre(INTC_D3D12_GetSupportedVersionsCommand& c) {
   c.Skip = true;
 }

@@ -21,6 +21,7 @@ struct INTC_D3D12_FEATURE;
 struct INTC_D3D12_RESOURCE_DESC;
 struct INTC_D3D12_COMMAND_QUEUE_DESC_0001;
 struct INTCExtensionInfo;
+struct INTCExtensionInfo1;
 struct INTCExtensionVersion;
 
 #include <vector>
@@ -841,6 +842,20 @@ struct PointerArgument<INTCExtensionInfo> {
   PointerArgument& operator=(const PointerArgument<INTCExtensionInfo>&) = delete;
   ~PointerArgument();
   INTCExtensionInfo* Value{};
+  bool Copy{};
+  bool CopyDeviceDriverDesc{};
+  bool CopyDeviceDriverVersion{};
+};
+
+template <>
+struct PointerArgument<INTCExtensionInfo1> {
+  PointerArgument(const INTCExtensionInfo1* value_)
+      : Value(const_cast<INTCExtensionInfo1*>(value_)) {}
+  PointerArgument() {}
+  PointerArgument(const PointerArgument<INTCExtensionInfo1>& arg);
+  PointerArgument& operator=(const PointerArgument<INTCExtensionInfo1>&) = delete;
+  ~PointerArgument();
+  INTCExtensionInfo1* Value{};
   bool Copy{};
   bool CopyDeviceDriverDesc{};
   bool CopyDeviceDriverVersion{};

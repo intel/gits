@@ -71,6 +71,7 @@ public:
   void ForceApplicationSwapChainRestore(unsigned key);
   void CreateDeviceExtensionContext(INTC_D3D12_CreateDeviceExtensionContextCommand& c);
   void CreateDeviceExtensionContext(INTC_D3D12_CreateDeviceExtensionContext1Command& c);
+  void CreateDeviceExtensionContext(INTC_D3D12_CreateDeviceExtensionContext2Command& c);
 
   void AddParent(unsigned key, unsigned parentKey);
 

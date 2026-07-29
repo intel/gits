@@ -963,6 +963,13 @@ void CaptureCustomizationLayer::Pre(INTC_D3D12_CreateDeviceExtensionContext1Comm
   }
 }
 
+void CaptureCustomizationLayer::Pre(INTC_D3D12_CreateDeviceExtensionContext2Command& c) {
+  if (c.m_pExtensionAppInfo.Value) {
+    c.m_pExtensionAppInfo.ApplicationName = c.m_pExtensionAppInfo.Value->pApplicationName;
+    c.m_pExtensionAppInfo.EngineName = c.m_pExtensionAppInfo.Value->pEngineName;
+  }
+}
+
 void CaptureCustomizationLayer::Pre(INTC_D3D12_SetApplicationInfoCommand& c) {
   if (c.m_pExtensionAppInfo.Value) {
     c.m_pExtensionAppInfo.ApplicationName = c.m_pExtensionAppInfo.Value->pApplicationName;

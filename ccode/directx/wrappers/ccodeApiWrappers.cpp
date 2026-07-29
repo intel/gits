@@ -117,6 +117,14 @@ HRESULT CC_INTC_D3D12_CreateDeviceExtensionContext1(const ID3D12Device* pDevice,
                                                   pExtensionAppInfo);
 }
 
+HRESULT CC_INTC_D3D12_CreateDeviceExtensionContext2(const ID3D12Device* pDevice,
+                                                    INTCExtensionContext** ppExtensionContext,
+                                                    INTCExtensionInfo1* pExtensionInfo,
+                                                    INTCExtensionAppInfo1* pExtensionAppInfo) {
+  return INTC_D3D12_CreateDeviceExtensionContext2(pDevice, ppExtensionContext, pExtensionInfo,
+                                                  pExtensionAppInfo);
+}
+
 D3D12_RESOURCE_ALLOCATION_INFO CC_INTC_D3D12_GetResourceAllocationInfo(
     INTCExtensionContext* pExtensionContext,
     UINT visibleMask,

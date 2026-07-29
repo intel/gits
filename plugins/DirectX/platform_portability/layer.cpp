@@ -63,6 +63,10 @@ void PlatformPortabilityLayer::Pre(INTC_D3D12_CreateDeviceExtensionContext1Comma
   command.Skip = true;
 }
 
+void PlatformPortabilityLayer::Pre(INTC_D3D12_CreateDeviceExtensionContext2Command& command) {
+  command.Skip = true;
+}
+
 void PlatformPortabilityLayer::Pre(INTC_D3D12_SetApplicationInfoCommand& command) {
   command.Skip = true;
 }

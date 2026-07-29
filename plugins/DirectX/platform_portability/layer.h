@@ -38,6 +38,7 @@ public:
 
   void Pre(INTC_D3D12_CreateDeviceExtensionContextCommand& command) override;
   void Pre(INTC_D3D12_CreateDeviceExtensionContext1Command& command) override;
+  void Pre(INTC_D3D12_CreateDeviceExtensionContext2Command& command) override;
   void Pre(INTC_D3D12_SetApplicationInfoCommand& command) override;
   void Pre(INTC_D3D12_SetFeatureSupportCommand& command) override;
   void Pre(INTC_D3D12_CreatePlacedResourceCommand& command) override;

@@ -1223,6 +1223,16 @@ void AnalyzerLayer::Post(INTC_D3D12_CreateDeviceExtensionContext1Command& c) {
   m_AnalyzerService.AddParent(c.m_ppExtensionContext.Key, c.m_pDevice.Key);
 }
 
+void AnalyzerLayer::Post(INTC_D3D12_CreateDeviceExtensionContext2Command& c) {
+  if (m_AnalyzerService.AfterRange()) {
+    return;
+  }
+  m_AnalyzerService.NotifyObject(c.m_pDevice.Key);
+  m_AnalyzerService.NotifyObject(c.m_ppExtensionContext.Key);
+  m_AnalyzerService.CreateDeviceExtensionContext(c);
+  m_AnalyzerService.AddParent(c.m_ppExtensionContext.Key, c.m_pDevice.Key);
+}
+
 void AnalyzerLayer::Post(INTC_DestroyDeviceExtensionContextCommand& c) {
   if (m_AnalyzerService.AfterRange()) {
     return;

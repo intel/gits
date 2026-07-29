@@ -19,6 +19,7 @@ struct INTCExtensionContext;
 enum INTC_D3D12_FEATURES;
 struct INTC_D3D12_FEATURE;
 struct INTCExtensionInfo;
+struct INTCExtensionInfo1;
 struct INTCExtensionAppInfo;
 struct INTCExtensionAppInfo1;
 struct INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC;
@@ -375,6 +376,29 @@ public:
   InterfaceArgument<ID3D12Device> m_pDevice;
   INTCExtensionContextOutputArgument m_ppExtensionContext;
   PointerArgument<INTCExtensionInfo> m_pExtensionInfo;
+  PointerArgument<INTCExtensionAppInfo1> m_pExtensionAppInfo;
+  Argument<HRESULT> m_Result{};
+};
+
+class INTC_D3D12_CreateDeviceExtensionContext2Command : public Command {
+public:
+  INTC_D3D12_CreateDeviceExtensionContext2Command(unsigned threadId,
+                                                  const ID3D12Device* pDevice,
+                                                  INTCExtensionContext** ppExtensionContext,
+                                                  INTCExtensionInfo1* pExtensionInfo,
+                                                  INTCExtensionAppInfo1* pExtensionAppInfo)
+      : Command{CommandId::INTC_D3D12_CREATEDEVICEEXTENSIONCONTEXT2, threadId},
+        m_pDevice{const_cast<ID3D12Device*>(pDevice)},
+        m_ppExtensionContext{ppExtensionContext},
+        m_pExtensionInfo{pExtensionInfo},
+        m_pExtensionAppInfo{pExtensionAppInfo} {}
+  INTC_D3D12_CreateDeviceExtensionContext2Command()
+      : Command(CommandId::INTC_D3D12_CREATEDEVICEEXTENSIONCONTEXT2) {}
+
+public:
+  InterfaceArgument<ID3D12Device> m_pDevice;
+  INTCExtensionContextOutputArgument m_ppExtensionContext;
+  PointerArgument<INTCExtensionInfo1> m_pExtensionInfo;
   PointerArgument<INTCExtensionAppInfo1> m_pExtensionAppInfo;
   Argument<HRESULT> m_Result{};
 };
