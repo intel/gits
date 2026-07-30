@@ -21,6 +21,14 @@
 
 namespace {
 // Helpers and messages / labels
+gits::gui::Api GetPluginsApi() {
+  auto& context = gits::gui::Context::GetInstance();
+  if (context.AppMode == gits::gui::Mode::CAPTURE) {
+    return context.SelectedApiForCapture;
+  }
+  return context.GetStreamAPI();
+}
+
 const std::filesystem::path GetPluginsDirectory() {
   const auto& gitsBasePath =
       gits::gui::Context::GetInstance().GetPathSafe(gits::gui::Path::GITS_BASE);
@@ -29,8 +37,14 @@ const std::filesystem::path GetPluginsDirectory() {
     return std::string();
   }
 
-  // As of now plugins are DirectX only
-  return gitsBasePath / "Plugins" / "DirectX";
+  switch (GetPluginsApi()) {
+  case gits::gui::Api::DIRECTX:
+    return gitsBasePath / "Plugins" / "DirectX";
+  case gits::gui::Api::VULKAN:
+    return gitsBasePath / "Plugins" / "Vulkan";
+  default:
+    return "";
+  }
 }
 
 static constexpr const char* PLUGIN_CONFIG_FILENAME = "config.yml";
@@ -43,6 +57,8 @@ static constexpr const char* GITS_BASE_PATH_DOESNT_EXIST_MESSAGE =
     "Couldn't find plugins directory. Selected GITS base path doesn't exist.";
 static constexpr const char* INVALID_GITS_CONFIG_PATH_MESSAGE =
     "Enabling plugins requires a GITS config. Please select a valid config path.";
+static constexpr const char* UNSUPPORTED_API_MESSAGE =
+    "Plugins are supported only for DirectX 12 and Vulkan.";
 } // namespace
 
 namespace gits::gui {
@@ -72,6 +88,11 @@ void PluginsPanel::Render() {
   }
 
   const auto& pluginsPath = GetPluginsDirectory();
+
+  if (pluginsPath.empty()) {
+    ImGui::Text(UNSUPPORTED_API_MESSAGE);
+    return;
+  }
 
   if (!std::filesystem::exists(pluginsPath)) {
     ImGui::Text(("Couldn't find plugins directory. Expected directory: " + pluginsPath.string() +
@@ -134,8 +155,7 @@ bool PluginsPanel::LoadPluginConfig(const std::filesystem::path& pluginDirectory
 
 std::filesystem::path PluginsPanel::GetPluginConfigPath(
     const std::filesystem::path& pluginDirectoryName) {
-  const auto pluginsPath =
-      Context::GetInstance().GetPathSafe(Path::GITS_BASE) / "Plugins" / "DirectX";
+  const auto pluginsPath = GetPluginsDirectory();
 
   if (pluginsPath.empty()) {
     return std::filesystem::path();
@@ -191,9 +211,13 @@ std::optional<PluginsPanel::PluginListEntry> PluginsPanel::GetPluginListEntry(
     return std::nullopt;
   }
 
-  const auto& pluginsList = Context::GetInstance().AppMode == Mode::CAPTURE
-                                ? config_options::RecorderPlugins()
-                                : config_options::PlayerPlugins();
+  auto& context = Context::GetInstance();
+
+  const auto& api =
+      context.AppMode == Mode::CAPTURE ? context.SelectedApiForCapture : context.GetStreamAPI();
+
+  const auto& pluginsList = context.AppMode == Mode::CAPTURE ? config_options::RecorderPlugins(api)
+                                                             : config_options::PlayerPlugins(api);
 
   entry.value().Enabled = std::ranges::find(pluginsList, entry.value().Name) != pluginsList.end();
 
@@ -202,6 +226,7 @@ std::optional<PluginsPanel::PluginListEntry> PluginsPanel::GetPluginListEntry(
 
 void PluginsPanel::LoadPluginsList() {
   m_PluginsList.clear();
+  m_CurrentSelection = -1;
 
   const auto& pluginsPath = GetPluginsDirectory();
 
@@ -230,12 +255,14 @@ void PluginsPanel::UpdateGitsConfig(const std::string& pluginName, const bool en
   }
 
   if (enable) {
-    LOG_INFO << "Enabling " << pluginName << "DirectX plugin";
+    LOG_INFO << "Enabling plugin: " << pluginName;
   } else {
-    LOG_INFO << "Disabling " << pluginName << "DirectX plugin";
+    LOG_INFO << "Disabling plugin: " << pluginName;
   }
-  auto& pluginsList = context.AppMode == Mode::CAPTURE ? config_options::RecorderPlugins()
-                                                       : config_options::PlayerPlugins();
+  const auto api =
+      context.AppMode == Mode::CAPTURE ? context.SelectedApiForCapture : context.GetStreamAPI();
+  auto& pluginsList = context.AppMode == Mode::CAPTURE ? config_options::RecorderPlugins(api)
+                                                       : config_options::PlayerPlugins(api);
 
   if (enable) {
     pluginsList.push_back(pluginName);
@@ -249,6 +276,11 @@ void PluginsPanel::UpdateGitsConfig(const std::string& pluginName, const bool en
 void PluginsPanel::RenderPluginsList() {
   const auto& pluginsPath = GetPluginsDirectory();
   ImGui::Text(("Plugins path: " + pluginsPath.string()).c_str());
+
+  if (m_LastPluginsPath != pluginsPath) {
+    m_LastPluginsPath = pluginsPath;
+    InvalidatePluginsList();
+  }
 
   if (m_PluginsListNeedsUpdating) {
     LoadPluginsList();

@@ -146,7 +146,7 @@ target_compile_options(gits_launcher PRIVATE
 
 target_compile_definitions(gits_launcher PRIVATE IMGUI_IMPL_VULKAN_NO_PROTOTYPES)
 
-target_link_libraries(gits_launcher PRIVATE imgui_common log common ${CMAKE_DL_LIBS})
+target_link_libraries(gits_launcher PRIVATE imgui_common log common stream ${CMAKE_DL_LIBS})
 if(NOT WIN64)
 target_link_libraries(gits_launcher PRIVATE glfw)
 endif()

@@ -24,6 +24,8 @@ namespace gits::gui {
 CaptureOptionsPanel::CaptureOptionsPanel() : BasePanel() {
   EventBus::GetInstance().subscribe<PathEvent>(
       std::bind(&CaptureOptionsPanel::PathCallback, this, std::placeholders::_1));
+  EventBus::GetInstance().subscribe<ContextEvent>(
+      std::bind(&CaptureOptionsPanel::ContextCallback, this, std::placeholders::_1));
 };
 
 void CaptureOptionsPanel::Render() {
@@ -59,16 +61,33 @@ void CaptureOptionsPanel::Render() {
     const auto indent = ImGuiHelper::WidthOf(ImGuiHelper::Widgets::Button, "  ");
 
     changed |= config_options_gui_helpers::Trace(Mode::CAPTURE, indent);
+  }
 
-    if (changed) {
-      Context::GetInstance().UpdateInMemoryConfig(Mode::CAPTURE);
-    }
+  if (api == Api::VULKAN) {
+    const auto indent = ImGuiHelper::WidthOf(ImGuiHelper::Widgets::Button, "  ");
+
+    changed |= config_options_gui_helpers::Trace(Mode::CAPTURE, indent);
+  }
+
+  if (changed) {
+    Context::GetInstance().UpdateInMemoryConfig(Mode::CAPTURE);
   }
 }
 
 void CaptureOptionsPanel::PathCallback(const Event& e) {
   const PathEvent& pathEvent = static_cast<const PathEvent&>(e);
   if (pathEvent.EventType == PathEvent::Type::CAPTURE_TARGET) {
+    auto tracePath = Context::GetInstance().GetPathSafe(Path::TRACE, Mode::CAPTURE);
+    if (tracePath.empty()) {
+      SetTracePathFromTargetExecutable();
+    }
+  }
+}
+
+void CaptureOptionsPanel::ContextCallback(const Event& e) {
+  const ContextEvent& contextEvent = static_cast<const ContextEvent&>(e);
+  if (contextEvent.Mode == Mode::CAPTURE &&
+      contextEvent.EventType == ContextEvent::Type::ConfigFileLoaded) {
     auto tracePath = Context::GetInstance().GetPathSafe(Path::TRACE, Mode::CAPTURE);
     if (tracePath.empty()) {
       SetTracePathFromTargetExecutable();

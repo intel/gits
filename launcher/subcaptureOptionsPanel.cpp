@@ -173,6 +173,32 @@ void SubcaptureOptionsPanel::Render() {
       changed = false;
     }
   }
+
+  if (api == Api::VULKAN) {
+    RowSubcapturePath();
+
+    changed |= ImGui::Checkbox(Labels::SUBCAPTURE_OPTIMIZE, &config_options::SubcaptureOptimize());
+    config_options_gui_helpers::ConfigOptionHelpButton(
+        ConfigMetadata::Common::Player::Subcapture::optimize);
+
+    ImGui::Separator();
+
+    ImGui::SetNextItemWidth(widthLabel / 4.0f);
+    changed |= ImGui::InputInt(Labels::SUBCAPTURE_START_FRAME, &SubcaptureConfig.StartFrame, 1, 10);
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(widthLabel / 4.0f);
+    changed |= ImGui::InputInt(Labels::SUBCAPTURE_END_FRAME, &SubcaptureConfig.EndFrame, 1, 10);
+    config_options_gui_helpers::ConfigOptionHelpButton(
+        ConfigMetadata::Common::Player::Subcapture::frames);
+
+    DroppedFilePath.reset();
+
+    if (changed) {
+      config_options::SubcaptureFrames() = SubcaptureConfig.FramesRange();
+      context.UpdateInMemoryConfig(Mode::SUBCAPTURE);
+      changed = false;
+    }
+  }
 }
 
 void SubcaptureOptionsPanel::RowSubcapturePath() {
@@ -214,7 +240,8 @@ void SubcaptureOptionsPanel::ContextCallback(const Event& e) {
       (contextEvent.EventType == ContextEvent::Type::MetadataLoaded ||
        contextEvent.EventType == ContextEvent::Type::ConfigFileLoaded)) {
     try {
-      auto& recorderDiags = context.ConfigurationForMode(Mode::SUBCAPTURE).MetaData.RecorderDiags;
+      const auto& recorderDiags =
+          context.ConfigurationForMode(Mode::SUBCAPTURE).MetaData.RecorderDiags;
       config_options::ExecutableNameOverrideCustomName(Mode::SUBCAPTURE) =
           recorderDiags["/original_app/name"_json_pointer].get<std::string>();
       context.UpdateInMemoryConfig(Mode::SUBCAPTURE);

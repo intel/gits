@@ -203,20 +203,26 @@ void FileActions::LaunchExecutableThreadCallbackOnExit(
     const std::vector<std::string>& arguments,
     const std::filesystem::path& workingDirectory,
     std::function<void(const std::string&)> onOutput,
-    std::function<void()> callback) {
+    std::function<void()> callback,
+    std::function<void(uint32_t)> onStarted) {
   const auto sharedArgs = std::make_shared<std::vector<std::string>>(arguments);
 #ifdef _WIN32
   std::thread([executablePath, sharedArgs, workingDirectory, onOutput = std::move(onOutput),
-               callback = std::move(callback)]() {
+               callback = std::move(callback), onStarted = std::move(onStarted)]() {
     LaunchExecutableWindows(executablePath, *sharedArgs, true, workingDirectory,
-                            std::move(onOutput));
-    callback();
+                            std::move(onOutput), std::move(onStarted));
+    if (callback) {
+      callback();
+    }
   }).detach();
 #else
   std::thread([executablePath, sharedArgs, workingDirectory, onOutput = std::move(onOutput),
-               callback = std::move(callback)]() {
-    LaunchExecutableUnix(executablePath, *sharedArgs, true, workingDirectory, std::move(onOutput));
-    callback();
+               callback = std::move(callback), onStarted = std::move(onStarted)]() {
+    LaunchExecutableUnix(executablePath, *sharedArgs, true, workingDirectory, std::move(onOutput),
+                         std::move(onStarted));
+    if (callback) {
+      callback();
+    }
   }).detach();
 #endif
 }
@@ -226,7 +232,8 @@ bool FileActions::LaunchExecutableWindows(const fs::path& executablePath,
                                           const std::vector<std::string>& arguments,
                                           bool waitForCompletion,
                                           const fs::path& workingDirectory,
-                                          std::function<void(const std::string&)> onOutput) {
+                                          std::function<void(const std::string&)> onOutput,
+                                          std::function<void(uint32_t)> onStarted) {
   std::string cmdLine = "\"" + executablePath.string() + "\"";
   for (const auto& arg : arguments) {
     cmdLine += " " + arg;
@@ -275,6 +282,9 @@ bool FileActions::LaunchExecutableWindows(const fs::path& executablePath,
   }
 
   LOG_INFO << "Launched: " << executablePath;
+  if (onStarted) {
+    onStarted(pi.dwProcessId);
+  }
 
   // Read output
   char buffer[4096];
@@ -303,7 +313,8 @@ bool FileActions::LaunchExecutableUnix(const fs::path& executablePath,
                                        const std::vector<std::string>& arguments,
                                        bool waitForCompletion,
                                        const fs::path& workingDirectory,
-                                       std::function<void(const std::string&)> onOutput) {
+                                       std::function<void(const std::string&)> onOutput,
+                                       std::function<void(uint32_t)> onStarted) {
   std::string execPathStr = executablePath.string();
   std::vector<char*> args;
   args.push_back(const_cast<char*>(execPathStr.c_str()));
@@ -336,6 +347,9 @@ bool FileActions::LaunchExecutableUnix(const fs::path& executablePath,
     exit(1);
   } else if (pid > 0) {
     // Parent
+    if (onStarted) {
+      onStarted(static_cast<uint32_t>(pid));
+    }
     close(pipefd[1]); // close write end
     char buffer[4096];
     ssize_t bytesRead;

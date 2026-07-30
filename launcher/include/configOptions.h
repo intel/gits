@@ -42,9 +42,9 @@ std::string& ScreenshotsFrames(std::optional<Mode> mode = std::nullopt);
 
 bool& TraceEnabled(std::optional<Mode> mode = std::nullopt);
 
-std::vector<std::string>& PlayerPlugins(std::optional<Mode> mode = std::nullopt);
+std::vector<std::string>& PlayerPlugins(Api api, std::optional<Mode> mode = std::nullopt);
 
-std::vector<std::string>& RecorderPlugins(std::optional<Mode> mode = std::nullopt);
+std::vector<std::string>& RecorderPlugins(Api api, std::optional<Mode> mode = std::nullopt);
 
 bool& RecorderEnabled(std::optional<Mode> mode = std::nullopt);
 

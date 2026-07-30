@@ -165,10 +165,34 @@ void PlaybackOptionsPanel::Render() {
     ImGui::EndDisabled();
 
     changed |= config_options_gui_helpers::Trace(Mode::PLAYBACK, indent);
+  }
 
-    if (changed) {
-      context.UpdateInMemoryConfig(Mode::PLAYBACK);
-    }
+  if (api == Api::VULKAN) {
+    changed |=
+        ImGui::Checkbox(Labels::SCREENSHOTS, &config_options::ScreenshotsEnabled(Mode::PLAYBACK));
+    config_options_gui_helpers::ConfigOptionHelpButton(
+        ConfigMetadata::Common::Shared::Screenshots::enabled);
+
+    ImGui::BeginDisabled(!config_options::ScreenshotsEnabled(Mode::PLAYBACK));
+    ImGui::Indent(indent);
+    auto inputPosition = ImGui::GetCursorPosX() + labelWidth - indent;
+
+    changed |= ImGuiHelper::RangeControls(
+        Labels::SCREENSHOTS_RANGES, labelWidth - indent, screenshotRangeInputWidth,
+        screenshotRangeFieldInputWidth, "###ScreenshotsRANGES", nullptr,
+        config_options::ScreenshotsFrames(Mode::PLAYBACK), ScreenshotsConfig.TmpStartFrame,
+        ScreenshotsConfig.TmpEndFrame, ScreenshotsConfig.TmpStepFrame,
+        Labels::SCREENSHOTS_ADD_RANGE, Labels::SCREENSHOTS_ADD_FRAME);
+    config_options_gui_helpers::ConfigOptionHelpButton(
+        ConfigMetadata::Common::Shared::Screenshots::frames);
+    ImGui::Unindent(indent);
+    ImGui::EndDisabled();
+
+    changed |= config_options_gui_helpers::Trace(Mode::PLAYBACK, indent);
+  }
+
+  if (changed) {
+    context.UpdateInMemoryConfig(Mode::PLAYBACK);
   }
 }
 
@@ -188,7 +212,8 @@ void PlaybackOptionsPanel::ContextCallback(const Event& e) {
       (contextEvent.EventType == ContextEvent::Type::MetadataLoaded ||
        contextEvent.EventType == ContextEvent::Type::ConfigFileLoaded)) {
     try {
-      auto& recorderDiags = context.ConfigurationForMode(Mode::PLAYBACK).MetaData.RecorderDiags;
+      const auto& recorderDiags =
+          context.ConfigurationForMode(Mode::PLAYBACK).MetaData.RecorderDiags;
       config_options::ExecutableNameOverrideCustomName(Mode::PLAYBACK) =
           recorderDiags["/original_app/name"_json_pointer].get<std::string>();
       context.UpdateInMemoryConfig(Mode::PLAYBACK);

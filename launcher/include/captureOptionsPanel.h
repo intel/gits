@@ -21,6 +21,7 @@ public:
 
 private:
   void PathCallback(const Event& e);
+  void ContextCallback(const Event& e);
 };
 
 } // namespace gits::gui

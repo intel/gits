@@ -11,6 +11,7 @@
 #include "enumsAuto.h"
 #include "commandId.h"
 
+#include <array>
 #include <fstream>
 #include <memory>
 #include "nlohmann/json.hpp"
@@ -28,6 +29,7 @@ public:
     return m_SchedulerVersion == 0;
   }
   std::string GetApplicationName();
+  std::array<unsigned, 4> GetVersion() const;
   std::string GetPropertiesDump() const;
   std::optional<nlohmann::ordered_json> FindProperty(const std::string& keyPath) const;
   CompressionType GetCompressionType() const;

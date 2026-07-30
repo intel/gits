@@ -32,6 +32,7 @@ private:
 
   std::vector<PluginListEntry> m_PluginsList;
   bool m_PluginsListNeedsUpdating = true;
+  std::filesystem::path m_LastPluginsPath;
   int m_CurrentSelection = -1; // Currently selected plugin
   gits::ImGuiHelper::TextEditorWidget m_PluginConfigEditor;
 

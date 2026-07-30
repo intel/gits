@@ -328,6 +328,9 @@ void CapturePanel::CaptureStream() {
   ActionEvent event;
   event.EventType = ActionEvent::Type::Capture;
   event.ActionState = ActionEvent::State::Started;
+  context.CaptureInQuietPeriod = false;
+  context.CaptureMonitoredPid = 0;
+  context.CaptureQuietPeriodStartTick = 0;
   EventBus::GetInstance().publish(event);
 
   FileActions::LaunchExecutableThreadCallbackOnExit(
@@ -336,7 +339,12 @@ void CapturePanel::CaptureStream() {
         // We pass an empty lambda to the onOutput argument, since we only care about the recorder log which we load after
         // TODO: Maybe this could change and play nicely with logToConsole
       },
-      [executablePath]() { capture_actions::StartPostExitMonitoring(executablePath); });
+      [executablePath]() { capture_actions::StartPostExitMonitoring(executablePath); },
+      [&context](uint32_t pid) {
+        context.CaptureMonitoredPid = pid;
+        context.CaptureInQuietPeriod = false;
+        context.CaptureQuietPeriodStartTick = 0;
+      });
 }
 
 void CapturePanel::PathCallback(const Event& e) {

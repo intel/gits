@@ -12,11 +12,15 @@
 #include <vector>
 #include <string>
 #include <optional>
+#include <chrono>
 
 #include "context.h"
 #include "capturePanel.h"
 
 namespace gits::gui::capture_actions {
+
+constexpr auto QUIET_PERIOD = std::chrono::seconds(3);
+
 bool UpdateConfigDumpPath();
 bool CopyRecorderFiles(std::filesystem::path gitsBasePath,
                        std::filesystem::path targetDirectory,

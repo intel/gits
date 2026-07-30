@@ -505,12 +505,14 @@ void SetImGuiStyle(size_t idx) {
 }
 
 std::string GetRecorderDirectoryNameForApi(Api api) {
-  const std::map<Api, std::string> recorderDirectoryForApi{{Api::UNKNOWN, ""},
-                                                           {Api::DIRECTX, "FilesToCopyDirectX"},
-                                                           {Api::OPENGL, "FilesToCopyOGL"},
-                                                           {Api::VULKAN, "FilesToCopyVulkan"},
-                                                           {Api::OPENCL, "FilesToCopyOCL"},
-                                                           {Api::LEVELZERO, "FilesToCopyL0"}};
+  const std::map<Api, std::string> recorderDirectoryForApi{
+      {Api::UNKNOWN, ""},
+      {Api::DIRECTX, "FilesToCopyDirectX"},
+      {Api::OPENGL, "FilesToCopyOGL"},
+      {Api::VULKAN, "FilesToCopyVulkan"},
+      {Api::VULKAN_LEGACY, "FilesToCopyVulkan"},
+      {Api::OPENCL, "FilesToCopyOCL"},
+      {Api::LEVELZERO, "FilesToCopyL0"}};
 
   return recorderDirectoryForApi.at(api);
 }

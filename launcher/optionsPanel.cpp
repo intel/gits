@@ -13,6 +13,15 @@
 #include "context.h"
 #include "common.h"
 
+namespace {
+bool ArePluginsSupported() {
+  auto& context = gits::gui::Context::GetInstance();
+  const auto api = context.AppMode == gits::gui::Mode::CAPTURE ? context.SelectedApiForCapture
+                                                               : context.GetStreamAPI();
+  return api == gits::gui::Api::DIRECTX || api == gits::gui::Api::VULKAN;
+};
+} // namespace
+
 namespace gits::gui {
 
 OptionsPanel::OptionsPanel()
@@ -26,6 +35,7 @@ OptionsPanel::OptionsPanel()
 }
 
 void OptionsPanel::Render() {
+
   if (ImGui::BeginTabBar("OptionsTabs")) {
     if (ImGui::BeginTabItem("Options")) {
       auto& context = Context::GetInstance();
@@ -44,7 +54,7 @@ void OptionsPanel::Render() {
       }
       ImGui::EndTabItem();
     }
-    if (ImGui::BeginTabItem("Plugins")) {
+    if (ArePluginsSupported() && ImGui::BeginTabItem("Plugins")) {
       m_PluginsPanel.Render();
       ImGui::EndTabItem();
     }

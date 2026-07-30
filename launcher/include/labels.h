@@ -216,6 +216,7 @@ struct Labels {
   static constexpr const char* API_NAME_GL = "OpenGL";
   static constexpr const char* API_NAME_SHORT_GL = "GL";
   static constexpr const char* API_NAME_VK = "Vulkan";
+  static constexpr const char* API_NAME_VK_LEGACY = "Vulkan (legacy)";
   static constexpr const char* API_NAME_SHORT_VK = "VK";
   static constexpr const char* API_NAME_CL = "OpenCL";
   static constexpr const char* API_NAME_SHORT_CL = "CL";
@@ -355,6 +356,12 @@ struct Labels {
       "Couldn't get recorder diagnostic information for given trace.";
   static constexpr const char* EMPTY_RECORDER_CONFIG_MESSAGE =
       "Couldn't get recorder config for given trace.";
+  static constexpr const char* METADATA_BOTH_APIS_FOUND_WARNING =
+      "Both 3D and Compute APIs found in stream metadata; using 3D API";
+  static constexpr const char* METADATA_NO_API_FOUND_WARNING =
+      "No 3D or Compute API meta data could be read";
+  static constexpr const char* METADATA_MALFORMED_STREAM_WARNING =
+      "The stream file might be malformed or corrupted";
 
   static constexpr const char* CCODE_GENERATION_BUTTON = "Generate CCode";
   static constexpr const char* CCODE_GENERATION_BUTTON_HINT =
@@ -438,6 +445,15 @@ struct Labels {
   static constexpr const char* LOG_CAPTURE_MONITORING_FINALIZING =
       "Auto-detect monitoring: quiet period elapsed after process exit. Finalizing capture.";
 
+  static constexpr const char* CAPTURE_MONITORING_TITLE = "Capture monitoring";
+  static constexpr const char* CAPTURE_MONITORING_STATE_ACTIVE = "Capture in progress";
+  static constexpr const char* CAPTURE_MONITORING_STATE_WAITING =
+      "Waiting for 3-second quiet period after process exit";
+  static constexpr const char* CAPTURE_MONITORING_TIMER_FORMAT = " (%.1fs / %.0fs)";
+  static constexpr const char* CAPTURE_MONITORING_PID_LABEL = "PID";
+  static constexpr const char* CAPTURE_MONITORING_EXECUTABLE_LABEL = "Executable";
+  static constexpr const char* SUBCAPTURE_MONITORING_TITLE = "Subcapture";
+
   static const std::string ApiToString(Api api) {
     switch (api) {
     case Api::UNKNOWN:
@@ -448,6 +464,8 @@ struct Labels {
       return API_NAME_GL;
     case Api::VULKAN:
       return API_NAME_VK;
+    case Api::VULKAN_LEGACY:
+      return API_NAME_VK_LEGACY;
     case Api::OPENCL:
       return API_NAME_CL;
     case Api::LEVELZERO:

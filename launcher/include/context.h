@@ -12,6 +12,8 @@
 #include <optional>
 #include <memory>
 #include <atomic>
+#include <chrono>
+#include <cstdint>
 #include <yaml-cpp/node/node.h>
 #include <vector>
 #include <configurationAuto.h>
@@ -104,6 +106,9 @@ public:
   Api SelectedApiForCapture = Api::DIRECTX;
   Api GetStreamAPI();
   std::atomic<bool> SubcaptureInProgress = false;
+  std::atomic<uint32_t> CaptureMonitoredPid = 0;
+  std::atomic<bool> CaptureInQuietPeriod = false;
+  std::atomic<std::chrono::steady_clock::duration::rep> CaptureQuietPeriodStartTick = 0;
 
   size_t ImguiIDs = 0;
 

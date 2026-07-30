@@ -10,9 +10,14 @@
 
 #define APP_ICON      101
 #define APP_FILE_ICON 102
-#define APP_VERSION   "1.2"
+#define APP_VERSION   "1.3"
 
 inline const char* RELEASE_NOTES = R"(
+Release Notes v1.3
+====================
+- Added initial support for the new Vulkan backend
+- Improved the placeholders rendered while Capture or Subcapture is in progress
+
 Release Notes v1.2
 ====================
 - Add capture process monitoring to help with applications that relaunch themselves

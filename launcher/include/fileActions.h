@@ -14,6 +14,7 @@
 
 #include <numeric>
 #include <functional>
+#include <cstdint>
 #include <plog/Log.h>
 #include <fstream>
 #include <iterator>
@@ -53,7 +54,8 @@ public:
       const std::vector<std::string>& arguments = {},
       const std::filesystem::path& workingDirectory = "",
       std::function<void(const std::string&)> onOutput = nullptr,
-      std::function<void()> callback = nullptr);
+      std::function<void()> callback = nullptr,
+      std::function<void(uint32_t)> onStarted = nullptr);
 
   template <typename T>
   static bool UpdateConfigYamlPath(const std::filesystem::path configPath,
@@ -136,13 +138,15 @@ private:
                                       const std::vector<std::string>& arguments,
                                       bool waitForCompletion,
                                       const std::filesystem::path& workingDirectory,
-                                      std::function<void(const std::string&)> onOutput);
+                                      std::function<void(const std::string&)> onOutput,
+                                      std::function<void(uint32_t)> onStarted = nullptr);
 #else
   static bool LaunchExecutableUnix(const std::filesystem::path& executablePath,
                                    const std::vector<std::string>& arguments,
                                    bool waitForCompletion,
                                    const std::filesystem::path& workingDirectory,
-                                   std::function<void(const std::string&)> onOutput);
+                                   std::function<void(const std::string&)> onOutput,
+                                   std::function<void(uint32_t)> onStarted = nullptr);
 #endif
 
   // Helper function

@@ -111,16 +111,20 @@ bool& TraceEnabled(std::optional<Mode> mode) {
       .ModifiedGitsConfiguration.common.shared.trace.enabled;
 }
 
-std::vector<std::string>& PlayerPlugins(std::optional<Mode> mode) {
-  return Context::GetInstance()
-      .ConfigurationForMode(mode)
-      .ModifiedGitsConfiguration.directx.player.plugins;
+std::vector<std::string>& PlayerPlugins(Api api, std::optional<Mode> mode) {
+  auto& config = Context::GetInstance().ConfigurationForMode(mode).ModifiedGitsConfiguration;
+  if (api == Api::DIRECTX) {
+    return config.directx.player.plugins;
+  }
+  return config.common.player.plugins;
 }
 
-std::vector<std::string>& RecorderPlugins(std::optional<Mode> mode) {
-  return Context::GetInstance()
-      .ConfigurationForMode(mode)
-      .ModifiedGitsConfiguration.directx.recorder.plugins;
+std::vector<std::string>& RecorderPlugins(Api api, std::optional<Mode> mode) {
+  auto& config = Context::GetInstance().ConfigurationForMode(mode).ModifiedGitsConfiguration;
+  if (api == Api::DIRECTX) {
+    return config.directx.recorder.plugins;
+  }
+  return config.common.recorder.plugins;
 }
 
 bool& RecorderEnabled(std::optional<Mode> mode) {

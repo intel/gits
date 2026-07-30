@@ -18,40 +18,193 @@
 #include "resource.h"
 #include "contextHelper.h"
 #include "metaDataActions.h"
+#include "captureActions.h"
+
+#include <algorithm>
+#include <chrono>
+#include <cstdio>
 
 namespace {
-using namespace gits::gui;
+
+std::string BuildCaptureStatusBadgeText(const gits::gui::Context& context,
+                                        bool waitingForQuietPeriod) {
+  if (!waitingForQuietPeriod) {
+    return gits::gui::Labels::CAPTURE_MONITORING_STATE_ACTIVE;
+  }
+
+  std::string statusBadgeText = gits::gui::Labels::CAPTURE_MONITORING_STATE_WAITING;
+  const auto quietPeriodStartTick = context.CaptureQuietPeriodStartTick.load();
+  if (quietPeriodStartTick <= 0) {
+    return statusBadgeText;
+  }
+
+  const auto nowTick = std::chrono::steady_clock::now().time_since_epoch().count();
+  if (nowTick <= quietPeriodStartTick) {
+    return statusBadgeText;
+  }
+
+  const auto elapsedTicks = nowTick - quietPeriodStartTick;
+  const auto quietPeriodSeconds =
+      std::chrono::duration<double>(gits::gui::capture_actions::QUIET_PERIOD).count();
+  const auto elapsedSeconds = std::min(
+      quietPeriodSeconds,
+      std::chrono::duration<double>(std::chrono::steady_clock::duration(elapsedTicks)).count());
+
+  char timerSuffix[48] = {};
+  std::snprintf(timerSuffix, sizeof(timerSuffix),
+                gits::gui::Labels::CAPTURE_MONITORING_TIMER_FORMAT, elapsedSeconds,
+                quietPeriodSeconds);
+  statusBadgeText += timerSuffix;
+
+  return statusBadgeText;
+}
+
+std::string BuildCapturePidText(uint32_t monitoredPid) {
+  return monitoredPid == 0 ? gits::gui::Labels::NOT_AVAILABLE
+                           : std::to_string(static_cast<unsigned long long>(monitoredPid));
+}
+
+void RenderCenteredStatusPanel(const char* panelId,
+                               const std::string& text,
+                               const ImVec4& backgroundColor,
+                               const ImVec4& borderColor,
+                               float panelHeight = 0.0f) {
+  ImGui::PushStyleColor(ImGuiCol_ChildBg, backgroundColor);
+  ImGui::PushStyleColor(ImGuiCol_Border, borderColor);
+
+  const auto effectiveHeight = panelHeight > 0.0f ? panelHeight : ImGui::GetFrameHeight() + 8.0f;
+  if (ImGui::BeginChild(panelId, ImVec2(-1.0f, effectiveHeight), true,
+                        ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse)) {
+    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.98f, 0.98f, 0.98f, 1.0f));
+    const auto textSize = ImGui::CalcTextSize(text.c_str());
+    const auto available = ImGui::GetContentRegionAvail();
+    ImGui::SetCursorPosX(std::max(0.0f, (available.x - textSize.x) * 0.5f));
+    ImGui::SetCursorPosY(
+        std::max(0.0f, (effectiveHeight - ImGui::GetTextLineHeight()) * 0.5f - 1.0f));
+    ImGui::TextUnformatted(text.c_str());
+    ImGui::PopStyleColor();
+  }
+  ImGui::EndChild();
+  ImGui::PopStyleColor(2);
+}
+
+void RenderCapturePlaceholderContent(const gits::gui::Context& context, float cardWidth) {
+  const auto executablePath = context.GetPathSafe(gits::gui::Path::CAPTURE_TARGET);
+  const auto monitoredPid = context.CaptureMonitoredPid.load();
+  const auto waitingForQuietPeriod = context.CaptureInQuietPeriod.load();
+  const std::string statusBadgeText = BuildCaptureStatusBadgeText(context, waitingForQuietPeriod);
+  const std::string pidText = BuildCapturePidText(monitoredPid);
+
+  const auto statusBaseColor = waitingForQuietPeriod ? gits::ImGuiHelper::Colors::WARNING
+                                                     : gits::ImGuiHelper::Colors::FAILURE;
+
+  const auto valueColumnX = std::min(130.0f, std::max(95.0f, cardWidth * 0.18f));
+
+  ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.97f, 0.88f, 0.88f, 1.0f));
+  ImGui::TextUnformatted(gits::gui::Labels::CAPTURE_MONITORING_TITLE);
+  ImGui::Separator();
+
+  ImGui::Spacing();
+  RenderCenteredStatusPanel("CaptureStatusPanel", statusBadgeText, statusBaseColor,
+                            statusBaseColor);
+
+  ImGui::Spacing();
+  ImGui::TextUnformatted(gits::gui::Labels::CAPTURE_MONITORING_PID_LABEL);
+  ImGui::SameLine(valueColumnX);
+  ImGui::TextUnformatted(pidText.c_str());
+
+  ImGui::TextUnformatted(gits::gui::Labels::CAPTURE_MONITORING_EXECUTABLE_LABEL);
+  ImGui::SameLine(valueColumnX);
+  ImGui::BeginGroup();
+  ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.08f, 0.08f, 0.08f, 0.38f));
+  ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.42f, 0.42f, 0.42f, 0.40f));
+  const auto pathBoxHeight = 78.0f;
+  if (ImGui::BeginChild("CapturePathBox", ImVec2(-1.0f, pathBoxHeight), true)) {
+    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.88f, 0.90f, 0.92f, 1.0f));
+    ImGui::TextWrapped("%s", executablePath.empty() ? gits::gui::Labels::NOT_AVAILABLE
+                                                    : executablePath.string().c_str());
+    ImGui::PopStyleColor();
+  }
+  ImGui::EndChild();
+  ImGui::PopStyleColor(2);
+  ImGui::EndGroup();
+
+  ImGui::PopStyleColor();
+}
+
+void RenderSubcapturePlaceholderContent(const gits::gui::Context& context) {
+  const auto streamPath =
+      context.GetPathSafe(gits::gui::Path::INPUT_STREAM, gits::gui::Mode::SUBCAPTURE);
+  const std::string streamPathText =
+      streamPath.empty() ? gits::gui::Labels::NOT_AVAILABLE : streamPath.string();
+
+  ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.97f, 0.88f, 0.88f, 1.0f));
+  ImGui::TextUnformatted(gits::gui::Labels::SUBCAPTURE_MONITORING_TITLE);
+  ImGui::Separator();
+
+  ImGui::Spacing();
+  RenderCenteredStatusPanel(
+      "SubcaptureStatusPanel", gits::gui::Labels::PlaceholderText(gits::gui::Mode::SUBCAPTURE),
+      gits::ImGuiHelper::Colors::FAILURE, gits::ImGuiHelper::Colors::FAILURE, 48.0f);
+
+  ImGui::Spacing();
+  ImGui::TextWrapped("%s", streamPathText.c_str());
+  ImGui::PopStyleColor();
+}
 
 void RenderPlaceholder() {
-  auto& context = Context::GetInstance();
+  auto& context = gits::gui::Context::GetInstance();
 
-  auto msg = Labels::PlaceholderText(context.AppMode);
+  const auto windowPos = ImGui::GetWindowPos();
+  const auto windowSize = ImGui::GetWindowSize();
+  auto* drawList = ImGui::GetWindowDrawList();
+  const ImVec2 bgMin(windowPos.x, windowPos.y);
+  const ImVec2 bgMax(windowPos.x + windowSize.x, windowPos.y + windowSize.y);
 
-  auto windowSize = ImGui::GetWindowSize();
-  auto textSize = ImGui::CalcTextSize(msg.c_str());
+  // Fill the whole window area so fullscreen mode looks intentional, not empty.
+  drawList->AddRectFilledMultiColor(bgMin, bgMax,
+                                    ImGui::GetColorU32(ImVec4(0.10f, 0.07f, 0.07f, 0.85f)),
+                                    ImGui::GetColorU32(ImVec4(0.10f, 0.07f, 0.07f, 0.85f)),
+                                    ImGui::GetColorU32(ImVec4(0.07f, 0.06f, 0.06f, 0.92f)),
+                                    ImGui::GetColorU32(ImVec4(0.07f, 0.06f, 0.06f, 0.92f)));
 
-  auto spacingX = 16.0f;
-  auto spacingY = 16.0f;
-
-  auto cols = static_cast<int>((windowSize.x + spacingX) / (textSize.x + spacingX));
-  auto rows = static_cast<int>((windowSize.y + spacingY) / (textSize.y + spacingY));
-
-  auto gridWidth = cols * textSize.x + (cols - 1) * spacingX;
-  auto gridHeight = rows * textSize.y + (rows - 1) * spacingY;
-
-  auto offsetX = (windowSize.x - gridWidth) / 2.0f;
-  auto offsetY = (windowSize.y - gridHeight) / 2.0f;
-
-  ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.15f, 0.15f, 1.0f));
-  for (auto row = 0; row < rows; ++row) {
-    for (auto col = 0; col < cols; ++col) {
-      auto x = offsetX + col * (textSize.x + spacingX);
-      auto y = offsetY + row * (textSize.y + spacingY);
-      ImGui::SetCursorPos(ImVec2(x, y));
-      ImGui::TextUnformatted(msg.c_str());
-    }
+  for (float y = bgMin.y + 24.0f; y < bgMax.y; y += 36.0f) {
+    drawList->AddLine(ImVec2(bgMin.x + 20.0f, y), ImVec2(bgMax.x - 20.0f, y),
+                      ImGui::GetColorU32(ImVec4(0.75f, 0.45f, 0.45f, 0.05f)));
   }
-  ImGui::PopStyleColor();
+
+  const auto cardWidth = std::max(420.0f, std::min(windowSize.x - 48.0f, 900.0f));
+  const auto cardHeight = 250.0f;
+  const auto cardX = std::max(24.0f, (windowSize.x - cardWidth) * 0.5f);
+  const auto cardY = std::max(40.0f, (windowSize.y - cardHeight) * 0.5f);
+
+  ImGui::SetCursorPos(ImVec2(cardX, cardY));
+  ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 8.0f);
+  ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(10.0f, 8.0f));
+  ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.62f, 0.31f, 0.31f, 0.48f));
+  ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.11f, 0.08f, 0.08f, 0.45f));
+
+  if (!ImGui::BeginChild("CaptureStatusCard", ImVec2(cardWidth, cardHeight), true)) {
+    ImGui::EndChild();
+    ImGui::PopStyleColor(2);
+    ImGui::PopStyleVar(2);
+    return;
+  }
+
+  if (context.AppMode == gits::gui::Mode::CAPTURE) {
+    RenderCapturePlaceholderContent(context, cardWidth);
+  } else if (context.AppMode == gits::gui::Mode::SUBCAPTURE) {
+    RenderSubcapturePlaceholderContent(context);
+  } else {
+    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.95f, 0.80f, 0.80f, 1.0f));
+    ImGui::SetCursorPosY(std::max(16.0f, (cardHeight - ImGui::GetTextLineHeight()) * 0.5f));
+    ImGui::TextUnformatted(gits::gui::Labels::PlaceholderText(context.AppMode).c_str());
+    ImGui::PopStyleColor();
+  }
+
+  ImGui::EndChild();
+  ImGui::PopStyleColor(2);
+  ImGui::PopStyleVar(2);
 }
 } // namespace
 
@@ -427,6 +580,9 @@ void MainWindow::CaptureActionCallback(const Event& e) {
     break;
   case ActionEvent::State::Ended:
     m_CaptureInProgress = false;
+    context.CaptureInQuietPeriod = false;
+    context.CaptureMonitoredPid = 0;
+    context.CaptureQuietPeriodStartTick = 0;
     break;
   default:
     break;
@@ -455,7 +611,7 @@ void MainWindow::PathCallback(const Event& e) {
   if (pathEvent.EventType == PathEvent::Type::INPUT_STREAM) {
     const auto& streamPath = context.GetPathSafe(Path::INPUT_STREAM, eventMode);
     if (!streamPath.empty()) {
-      context.ConfigurationForMode(eventMode).MetaData = GetStreamMetaData(streamPath);
+      context.ConfigurationForMode(eventMode).MetaData = LoadStreamMetaData(streamPath);
       EventBus::GetInstance().publish(ContextEvent::Type::MetadataLoaded, eventMode);
     }
   } else if (pathEvent.EventType == PathEvent::Type::GITS_LOG) {

@@ -259,7 +259,7 @@ bool Context::SetPath(std::filesystem::path path, Path pathType, std::optional<M
 
 Api Context::GetStreamAPI() {
   auto& config = ConfigurationForMode();
-  return TApiToApi(config.MetaData.Api3D);
+  return config.MetaData.StreamApi;
 }
 
 std::filesystem::path Context::GetGITSPlayerPath() const {
@@ -287,10 +287,11 @@ bool Context::IsCapture() {
 
 void Context::ChangeMode(Mode mode) {
   AppMode = mode;
-  //based on app mode
+  //based on app mode / API
   BtnsSideBar->SetVisible(Context::SideBarItem::LABEL_STREAM, IsPlayback());
   BtnsSideBar->SetVisible(Context::SideBarItem::STATS, IsPlayback());
-  BtnsSideBar->SetVisible(Context::SideBarItem::RESOURCE_DUMP, IsPlayback());
+  BtnsSideBar->SetVisible(Context::SideBarItem::RESOURCE_DUMP,
+                          IsPlayback() && Context::GetStreamAPI() == Api::DIRECTX);
 
   BtnsSideBar->SelectEntry(Context::SideBarItem::OPTIONS);
 

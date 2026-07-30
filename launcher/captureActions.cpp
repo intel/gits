@@ -30,7 +30,7 @@
 namespace gits::gui::capture_actions {
 namespace {
 
-bool IsProcessRunning(const std::filesystem::path& executablePath) {
+std::optional<uint32_t> FindMatchingProcessPid(const std::filesystem::path& executablePath) {
 #ifdef _WIN32
   std::error_code targetPathError;
   const auto normalizedTargetProcessPath =
@@ -41,7 +41,7 @@ bool IsProcessRunning(const std::filesystem::path& executablePath) {
   HANDLE processSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
   if (processSnapshot == INVALID_HANDLE_VALUE) {
     LOG_WARNING << Labels::LOG_CAPTURE_MONITORING_PROCESS_SNAPSHOT_FAILURE;
-    return false;
+    return std::nullopt;
   }
 
   PROCESSENTRY32W processEntry = {};
@@ -68,9 +68,10 @@ bool IsProcessRunning(const std::filesystem::path& executablePath) {
               runningPathError ? runningProcessPath : normalizedRunningProcessPath;
 
           if (_wcsicmp(candidatePath.c_str(), targetProcessPath.c_str()) == 0) {
+            const auto pid = processEntry.th32ProcessID;
             CloseHandle(processHandle);
             CloseHandle(processSnapshot);
-            return true;
+            return pid;
           }
         }
         CloseHandle(processHandle);
@@ -79,7 +80,7 @@ bool IsProcessRunning(const std::filesystem::path& executablePath) {
   }
 
   CloseHandle(processSnapshot);
-  return false;
+  return std::nullopt;
 #else
   std::error_code targetPathError;
   const auto normalizedTargetProcessPath =
@@ -90,7 +91,7 @@ bool IsProcessRunning(const std::filesystem::path& executablePath) {
   std::filesystem::directory_iterator procIterator("/proc", procError);
   if (procError) {
     LOG_WARNING << Labels::LOG_CAPTURE_MONITORING_PROC_ENUMERATION_FAILURE;
-    return false;
+    return std::nullopt;
   }
 
   for (const auto& procEntry : procIterator) {
@@ -115,11 +116,11 @@ bool IsProcessRunning(const std::filesystem::path& executablePath) {
     const auto& candidatePath = candidatePathError ? candidateExePath : normalizedCandidatePath;
 
     if (candidatePath == targetProcessPath) {
-      return true;
+      return static_cast<uint32_t>(std::stoul(pidDirName));
     }
   }
 
-  return false;
+  return std::nullopt;
 #endif
 }
 
@@ -266,9 +267,9 @@ void CaptureStream() {
 
   context.GITSLogEditor->SetText("");
 
-  const std::map<Api, std::string> stringForApi = {{Api::UNKNOWN, "N/A"}, {Api::DIRECTX, "DX"},
-                                                   {Api::OPENGL, "GL"},   {Api::VULKAN, "VK"},
-                                                   {Api::OPENCL, "CL"},   {Api::LEVELZERO, "L0"}};
+  const std::map<Api, std::string> stringForApi = {
+      {Api::UNKNOWN, "N/A"},      {Api::DIRECTX, "DX"}, {Api::OPENGL, "GL"},   {Api::VULKAN, "VK"},
+      {Api::VULKAN_LEGACY, "VK"}, {Api::OPENCL, "CL"},  {Api::LEVELZERO, "L0"}};
 
   std::filesystem::path executablePath = context.GetPathSafe(Path::CAPTURE_TARGET);
   if (executablePath.empty()) {
@@ -438,8 +439,9 @@ bool CleanupRecorderFiles(Api api, gui::CapturePanel::CaptureCleanupOptions clea
 
 void StartPostExitMonitoring(const std::filesystem::path& executablePath) {
   std::thread([executablePath]() {
+    auto& context = Context::GetInstance();
     constexpr auto pollingInterval = std::chrono::milliseconds(500);
-    constexpr auto quietPeriod = std::chrono::seconds(3);
+    constexpr auto quietPeriod = QUIET_PERIOD;
 
     LOG_INFO << Labels::LOG_CAPTURE_MONITORING_STARTED_PREFIX << executablePath.filename().string()
              << Labels::LOG_CAPTURE_MONITORING_STARTED_MIDDLE
@@ -448,12 +450,20 @@ void StartPostExitMonitoring(const std::filesystem::path& executablePath) {
 
     bool matchingProcessObserved = false;
     std::chrono::steady_clock::time_point noProcessSince;
+    context.CaptureInQuietPeriod = true;
+    context.CaptureMonitoredPid = 0;
+    context.CaptureQuietPeriodStartTick =
+        std::chrono::steady_clock::now().time_since_epoch().count();
 
     while (true) {
-      const bool isRunning = IsProcessRunning(executablePath);
+      const auto matchingPid = FindMatchingProcessPid(executablePath);
+      const bool isRunning = matchingPid.has_value();
       const auto now = std::chrono::steady_clock::now();
 
       if (isRunning) {
+        context.CaptureMonitoredPid = matchingPid.value();
+        context.CaptureInQuietPeriod = false;
+        context.CaptureQuietPeriodStartTick = 0;
         if (noProcessSince != std::chrono::steady_clock::time_point()) {
           LOG_INFO << Labels::LOG_CAPTURE_MONITORING_DETECTED_AGAIN;
         } else if (!matchingProcessObserved) {
@@ -462,8 +472,11 @@ void StartPostExitMonitoring(const std::filesystem::path& executablePath) {
         matchingProcessObserved = true;
         noProcessSince = std::chrono::steady_clock::time_point();
       } else {
+        context.CaptureMonitoredPid = 0;
+        context.CaptureInQuietPeriod = true;
         if (noProcessSince == std::chrono::steady_clock::time_point()) {
           noProcessSince = now;
+          context.CaptureQuietPeriodStartTick = now.time_since_epoch().count();
           LOG_INFO << Labels::LOG_CAPTURE_MONITORING_QUIET_PERIOD_STARTED;
         } else if (now - noProcessSince >= quietPeriod) {
           LOG_INFO << Labels::LOG_CAPTURE_MONITORING_FINALIZING;

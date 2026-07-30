@@ -173,6 +173,10 @@ std::string StreamHeader::GetApplicationName() {
   return appName;
 }
 
+std::array<unsigned, 4> StreamHeader::GetVersion() const {
+  return {m_Version[0], m_Version[1], m_Version[2], m_Version[3]};
+}
+
 StreamHeader::Api StreamHeader::TranslateApi(ApiId id) {
   switch (id) {
   case ApiId::ID_COMMON:

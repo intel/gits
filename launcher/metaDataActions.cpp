@@ -9,7 +9,9 @@
 #include "metaDataActions.h"
 #include "streams.h"
 #include "gits.h"
+#include "streamHeader.h"
 #include "common.h"
+#include "labels.h"
 
 #include <plog/Log.h>
 
@@ -41,35 +43,61 @@ YAML::Node orderedJsonToYaml(const nlohmann::ordered_json& j) {
   return node;
 }
 
-} // namespace
-
-namespace gits::gui {
-STREAM_META_DATA GetStreamMetaData(std::filesystem::path streamPath) {
-  // This function consists (mostly) of an already existing gits code with some calls removed
-  // That way we can operate purely on the file, without engaging unnecessary GITS logic
-  // In the future potentially GITS and the launcher could share one code path for this
-  STREAM_META_DATA metaData;
+std::optional<std::filesystem::path> normalizeStreamPath(std::filesystem::path streamPath) {
   if (streamPath.empty()) {
     LOG_DEBUG << "Couldn't read stream meta data. No stream path was provided.";
-    return STREAM_META_DATA();
+    return std::nullopt;
   }
 
   if (std::filesystem::exists(streamPath) && std::filesystem::is_directory(streamPath)) {
-    // If the streamPath is a directory rather than the stream filename, we try to find the stream under the default name
-    streamPath = streamPath / filesystem_names::GITS_STREAM;
+    streamPath = streamPath / gits::gui::filesystem_names::GITS_STREAM;
   }
 
   if (!std::filesystem::exists(streamPath)) {
     LOG_DEBUG << "Couldn't read stream meta data. Stream path:  " << streamPath
               << " doesn't exist.";
-    return STREAM_META_DATA();
+    return std::nullopt;
   }
 
+  return streamPath;
+}
+
+} // namespace
+
+namespace gits::gui {
+Api StreamHeaderApiToApi(stream::StreamHeader::Api api) {
+  switch (api) {
+  case stream::StreamHeader::Api::API_DIRECTX:
+    return Api::DIRECTX;
+  case stream::StreamHeader::Api::API_VULKAN:
+    return Api::VULKAN;
+  case stream::StreamHeader::Api::API_VULKAN_LEGACY:
+    return Api::VULKAN_LEGACY;
+  case stream::StreamHeader::Api::API_OPENGL:
+    return Api::OPENGL;
+  case stream::StreamHeader::Api::API_OPENCL:
+    return Api::OPENCL;
+  case stream::StreamHeader::Api::API_LEVELZERO:
+    return Api::LEVELZERO;
+  default:
+    return Api::UNKNOWN;
+  }
+}
+
+namespace {
+STREAM_META_DATA GetLegacyStreamMetaData(const std::filesystem::path& streamPath) {
+  // This function consists (mostly) of an already existing gits code with some calls removed
+  // That way we can operate purely on the file, without engaging unnecessary GITS logic
+  // In the future potentially GITS and the launcher could share one code path for this
+  STREAM_META_DATA metaData;
+
   try {
-    CBinIStream stream(streamPath);
-    CVersion version;
+    gits::CBinIStream stream(streamPath);
+    gits::CVersion version;
     stream >> version;
+    metaData.IsValid = true;
     metaData.Version = version;
+    metaData.IsLegacyStream = true;
 
     // We don't make use of this but we read it in order to get to the recorder diagnostics
     uint32_t skipNum = 0U;
@@ -86,7 +114,6 @@ STREAM_META_DATA GetStreamMetaData(std::filesystem::path streamPath) {
 
     uint32_t propsLength = 0;
     stream.ReadHelper(reinterpret_cast<char*>(&propsLength), sizeof(propsLength));
-    nlohmann::ordered_json properties;
     if (propsLength <= UINT32_MAX) {
       std::string props(propsLength, '\0');
       stream.ReadHelper(&props[0], propsLength);
@@ -96,11 +123,8 @@ STREAM_META_DATA GetStreamMetaData(std::filesystem::path streamPath) {
         result = true;
       } else {
         nlohmann::ordered_json j = nlohmann::ordered_json::parse(props, nullptr, false);
-        if (j.is_discarded()) {
-          result = false;
-        } else {
+        if (!j.is_discarded()) {
           if (!j.empty()) {
-            // After getting the recorder config from the diags, we store it and erase it from diags
             if (j.contains("diag") && j["diag"].contains("gits") &&
                 j["diag"]["gits"].contains("config")) {
               metaData.RecorderConfig = j["diag"]["gits"]["config"];
@@ -109,11 +133,11 @@ STREAM_META_DATA GetStreamMetaData(std::filesystem::path streamPath) {
                 metaData.RecorderConfig =
                     metaData.RecorderConfig.substr(1, metaData.RecorderConfig.size() - 2);
               }
-              if (Configurator::Instance().Load(metaData.RecorderConfig)) {
+              if (gits::Configurator::Instance().Load(metaData.RecorderConfig)) {
                 metaData.IsASerializedSubcapture =
-                    Configurator::Get().common.player.subcapture.directx.executionSerialization;
+                    gits::Configurator::Get()
+                        .common.player.subcapture.directx.executionSerialization;
               }
-
               j["diag"]["gits"].erase("config");
             }
             metaData.RecorderDiags = std::move(j);
@@ -134,17 +158,23 @@ STREAM_META_DATA GetStreamMetaData(std::filesystem::path streamPath) {
     }
 
     if (version.version() >= GITS_API_INFO) {
-      ApisIface::TApi api3D = ApisIface::TApi::ApiNotSet;
-      stream.ReadHelper(reinterpret_cast<char*>(&api3D), sizeof(ApisIface::TApi));
-      metaData.Api3D = api3D;
+      gits::ApisIface::TApi api3D = gits::ApisIface::TApi::ApiNotSet;
+      stream.ReadHelper(reinterpret_cast<char*>(&api3D), sizeof(gits::ApisIface::TApi));
 
-      ApisIface::TApi apiCompute = ApisIface::TApi::ApiNotSet;
-      stream.ReadHelper(reinterpret_cast<char*>(&apiCompute), sizeof(ApisIface::TApi));
-      metaData.ApiCompute = apiCompute;
+      gits::ApisIface::TApi apiCompute = gits::ApisIface::TApi::ApiNotSet;
+      stream.ReadHelper(reinterpret_cast<char*>(&apiCompute), sizeof(gits::ApisIface::TApi));
 
-      if (api3D == ApisIface::TApi::ApiNotSet && apiCompute == ApisIface::TApi::ApiNotSet) {
-        LOG_WARNING << "No 3D or Compute API meta data could be read";
-        LOG_WARNING << "The stream file might be malformed or corrupted";
+      // Use 3D API if present, otherwise use compute API
+      if (api3D != gits::ApisIface::TApi::ApiNotSet) {
+        metaData.StreamApi = TApiToApi(api3D);
+        if (apiCompute != gits::ApisIface::TApi::ApiNotSet) {
+          LOG_WARNING << Labels::METADATA_BOTH_APIS_FOUND_WARNING;
+        }
+      } else if (apiCompute != gits::ApisIface::TApi::ApiNotSet) {
+        metaData.StreamApi = TApiToApi(apiCompute);
+      } else {
+        LOG_WARNING << Labels::METADATA_NO_API_FOUND_WARNING;
+        LOG_WARNING << Labels::METADATA_MALFORMED_STREAM_WARNING;
       }
     }
   } catch (const std::exception& e) {
@@ -154,4 +184,78 @@ STREAM_META_DATA GetStreamMetaData(std::filesystem::path streamPath) {
 
   return metaData;
 }
+
+STREAM_META_DATA GetStreamMetaData(const std::filesystem::path& streamPath) {
+  STREAM_META_DATA metaData;
+
+  try {
+    std::ifstream stream(streamPath, std::ios::binary);
+    if (!stream.is_open()) {
+      LOG_ERROR << "Couldn't open stream file for reading metadata. Stream path: " << streamPath;
+      return STREAM_META_DATA();
+    }
+
+    auto& streamHeader = stream::StreamHeader::Get();
+    streamHeader.ReadHeader(stream);
+
+    metaData.IsValid = true;
+    metaData.IsLegacyStream = false;
+    const auto version = streamHeader.GetVersion();
+    metaData.Version =
+        gits::CVersion(GITS_MAKE_VERSION4(version[0], version[1], version[2], version[3]));
+    metaData.StreamApi = StreamHeaderApiToApi(streamHeader.GetApi());
+    metaData.Compression = streamHeader.GetCompressionType();
+
+    if (auto recorderConfig = streamHeader.FindProperty("diag.gits.config"); recorderConfig) {
+      if (recorderConfig->is_string()) {
+        metaData.RecorderConfig = recorderConfig->get<std::string>();
+      } else {
+        metaData.RecorderConfig = recorderConfig->dump();
+      }
+      if (gits::Configurator::Instance().Load(metaData.RecorderConfig)) {
+        metaData.IsASerializedSubcapture =
+            gits::Configurator::Get().common.player.subcapture.directx.executionSerialization;
+      }
+    }
+
+    if (auto recorderDiags = streamHeader.FindProperty("diag"); recorderDiags) {
+      metaData.RecorderDiags = *recorderDiags;
+      metaData.RecorderDiagsYAML = orderedJsonToYaml(metaData.RecorderDiags);
+    }
+  } catch (const std::exception& e) {
+    LOG_ERROR << "Couldn't get stream metadata from new stream header. Error: " << e.what();
+    return STREAM_META_DATA();
+  }
+
+  return metaData;
+}
+} // namespace
+
+STREAM_META_DATA LoadStreamMetaData(std::filesystem::path streamPath) {
+  auto normalizedPath = normalizeStreamPath(streamPath);
+  if (!normalizedPath) {
+    return STREAM_META_DATA();
+  }
+
+  try {
+    std::ifstream stream(*normalizedPath, std::ios::binary);
+    if (!stream.is_open()) {
+      LOG_ERROR << "Couldn't open stream file for reading metadata. Stream path: "
+                << *normalizedPath;
+      return STREAM_META_DATA();
+    }
+
+    auto& header = stream::StreamHeader::Get();
+    header.ReadHeader(stream);
+    if (header.IsLegacyStream()) {
+      return GetLegacyStreamMetaData(*normalizedPath);
+    }
+  } catch (const std::exception& e) {
+    LOG_ERROR << "Couldn't determine stream metadata loading path. Error: " << e.what();
+    return STREAM_META_DATA();
+  }
+
+  return GetStreamMetaData(*normalizedPath);
+}
+
 } // namespace gits::gui
