@@ -25,6 +25,7 @@ public:
 
   void Pre(vkCreateInstanceCommand& command) override;
   void Post(vkCreateInstanceCommand& command) override;
+  void Pre(vkCreateDeviceCommand& command) override;
   void Post(vkCreateDeviceCommand& command) override;
   void Post(vkGetDeviceQueueCommand& command) override;
   void Post(vkGetDeviceQueue2Command& command) override;
@@ -116,12 +117,15 @@ private:
   RayTracingReplayService m_RayTracingService;
   static thread_local VkResult tl_recorderReturnValue;
   static thread_local uint64_t tl_recorderSemaphoreCounterValue;
-  // Backing storage for the filtered ppEnabledLayerNames array produced by the
-  // Common.Vulkan.Shared.SuppressLayers (--suppressVKLayers) handling. Must
-  // outlive the create call, hence stored on the layer rather than a local.
-  // Instance-only: device-level layers (VkDeviceCreateInfo::ppEnabledLayerNames)
-  // were deprecated in Vulkan 1.0.13 and are ignored by every conformant loader.
+  // Backing storage for the filtered ppEnabled{Layer,Extension}Names arrays
+  // produced by the Common.Vulkan.Shared.Suppress{Layers,Extensions} handling.
+  // Must outlive the create call, hence stored on the layer rather than a local.
+  // Layers are instance-only: device-level layers
+  // (VkDeviceCreateInfo::ppEnabledLayerNames) were deprecated in Vulkan 1.0.13
+  // and are ignored by every conformant loader.
   static thread_local std::vector<const char*> tl_instanceLayerNames;
+  static thread_local std::vector<const char*> tl_instanceExtensionNames;
+  static thread_local std::vector<const char*> tl_deviceExtensionNames;
 };
 
 } // namespace vulkan

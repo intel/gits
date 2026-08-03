@@ -54,6 +54,8 @@ public:
 
   void Pre(vkEnumerateInstanceLayerPropertiesCommand& command) override;
   void Pre(vkEnumerateDeviceLayerPropertiesCommand& command) override;
+  void Pre(vkEnumerateInstanceExtensionPropertiesCommand& command) override;
+  void Pre(vkEnumerateDeviceExtensionPropertiesCommand& command) override;
 
   void Pre(vkCreateBufferCommand& command) override;
   void Post(vkCreateBufferCommand& command) override;

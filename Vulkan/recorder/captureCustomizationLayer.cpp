@@ -25,11 +25,12 @@ void CaptureCustomizationLayer::Pre(vkEnumerateInstanceLayerPropertiesCommand& c
   }
   command.m_Skip = true;
   VkGlobalLevelDispatchTable& dispatchTable = m_Manager.GetGlobalDispatchTable();
-  ProduceFilteredLayers(
+  ProduceFilteredProperties<VkLayerProperties>(
       suppressLayers,
       [&dispatchTable](uint32_t* count, VkLayerProperties* properties) {
         return dispatchTable.vkEnumerateInstanceLayerProperties(count, properties);
       },
+      [](const VkLayerProperties& layer) { return layer.layerName; },
       command.m_pPropertyCount.Value, command.m_pProperties.Value);
 }
 
@@ -41,11 +42,49 @@ void CaptureCustomizationLayer::Pre(vkEnumerateDeviceLayerPropertiesCommand& com
   command.m_Skip = true;
   VkPhysicalDevice physicalDevice = command.m_physicalDevice.Value;
   VkInstanceLevelDispatchTable& dispatchTable = m_Manager.GetInstanceDispatchTable(physicalDevice);
-  ProduceFilteredLayers(
+  ProduceFilteredProperties<VkLayerProperties>(
       suppressLayers,
       [&dispatchTable, physicalDevice](uint32_t* count, VkLayerProperties* properties) {
         return dispatchTable.vkEnumerateDeviceLayerProperties(physicalDevice, count, properties);
       },
+      [](const VkLayerProperties& layer) { return layer.layerName; },
+      command.m_pPropertyCount.Value, command.m_pProperties.Value);
+}
+
+void CaptureCustomizationLayer::Pre(vkEnumerateInstanceExtensionPropertiesCommand& command) {
+  const auto& suppressExtensions = Configurator::Get().vulkan.shared.suppressExtensions;
+  if (suppressExtensions.empty()) {
+    return;
+  }
+  command.m_Skip = true;
+  const char* layerName = command.m_pLayerName.Value;
+  VkGlobalLevelDispatchTable& dispatchTable = m_Manager.GetGlobalDispatchTable();
+  ProduceFilteredProperties<VkExtensionProperties>(
+      suppressExtensions,
+      [&dispatchTable, layerName](uint32_t* count, VkExtensionProperties* properties) {
+        return dispatchTable.vkEnumerateInstanceExtensionProperties(layerName, count, properties);
+      },
+      [](const VkExtensionProperties& extension) { return extension.extensionName; },
+      command.m_pPropertyCount.Value, command.m_pProperties.Value);
+}
+
+void CaptureCustomizationLayer::Pre(vkEnumerateDeviceExtensionPropertiesCommand& command) {
+  const auto& suppressExtensions = Configurator::Get().vulkan.shared.suppressExtensions;
+  if (suppressExtensions.empty()) {
+    return;
+  }
+  command.m_Skip = true;
+  const char* layerName = command.m_pLayerName.Value;
+  VkPhysicalDevice physicalDevice = command.m_physicalDevice.Value;
+  VkInstanceLevelDispatchTable& dispatchTable = m_Manager.GetInstanceDispatchTable(physicalDevice);
+  ProduceFilteredProperties<VkExtensionProperties>(
+      suppressExtensions,
+      [&dispatchTable, physicalDevice, layerName](uint32_t* count,
+                                                  VkExtensionProperties* properties) {
+        return dispatchTable.vkEnumerateDeviceExtensionProperties(physicalDevice, layerName, count,
+                                                                  properties);
+      },
+      [](const VkExtensionProperties& extension) { return extension.extensionName; },
       command.m_pPropertyCount.Value, command.m_pProperties.Value);
 }
 

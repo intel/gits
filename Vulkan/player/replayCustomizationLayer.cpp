@@ -24,6 +24,8 @@ namespace vulkan {
 thread_local VkResult ReplayCustomizationLayer::tl_recorderReturnValue{VK_SUCCESS};
 thread_local uint64_t ReplayCustomizationLayer::tl_recorderSemaphoreCounterValue{0};
 thread_local std::vector<const char*> ReplayCustomizationLayer::tl_instanceLayerNames;
+thread_local std::vector<const char*> ReplayCustomizationLayer::tl_instanceExtensionNames;
+thread_local std::vector<const char*> ReplayCustomizationLayer::tl_deviceExtensionNames;
 
 void ReplayCustomizationLayer::Post(vkCreateInstanceCommand& command) {
   m_Manager.LoadInstanceFunctions(*command.m_pInstance.Value);
@@ -478,15 +480,40 @@ void ReplayCustomizationLayer::Pre(vkCreateInstanceCommand& command) {
   if (command.m_pCreateInfo.Value) {
     RedirectDebugCallbacksInPNext(command.m_pCreateInfo.Value->pNext);
 
-    // Drop layers the user asked to suppress from the recorded instance so the
-    // driver does not try to load them on this machine (--suppressVKLayers).
+    // Drop layers and extensions the user asked to suppress from the recorded
+    // instance so the driver does not try to load them on this machine.
     VkInstanceCreateInfo* createInfo = command.m_pCreateInfo.Value;
-    const uint32_t removed = RemoveSuppressedNames(
-        Configurator::Get().vulkan.shared.suppressLayers, createInfo->enabledLayerCount,
-        createInfo->ppEnabledLayerNames, tl_instanceLayerNames);
-    if (removed > 0) {
-      LOG_INFO << "ReplayCustomization: suppressed " << removed
+    const auto& vulkanShared = Configurator::Get().vulkan.shared;
+
+    const uint32_t removedLayers =
+        RemoveSuppressedNames(vulkanShared.suppressLayers, createInfo->enabledLayerCount,
+                              createInfo->ppEnabledLayerNames, tl_instanceLayerNames);
+    if (removedLayers > 0) {
+      LOG_INFO << "ReplayCustomization: suppressed " << removedLayers
                << " instance layer(s) during vkCreateInstance.";
+    }
+
+    const uint32_t removedExtensions =
+        RemoveSuppressedNames(vulkanShared.suppressExtensions, createInfo->enabledExtensionCount,
+                              createInfo->ppEnabledExtensionNames, tl_instanceExtensionNames);
+    if (removedExtensions > 0) {
+      LOG_INFO << "ReplayCustomization: suppressed " << removedExtensions
+               << " instance extension(s) during vkCreateInstance.";
+    }
+  }
+}
+
+void ReplayCustomizationLayer::Pre(vkCreateDeviceCommand& command) {
+  if (command.m_pCreateInfo.Value) {
+    // Device-level layers were deprecated in Vulkan 1.0.13, so only extensions
+    // are stripped from the recorded device here.
+    VkDeviceCreateInfo* createInfo = command.m_pCreateInfo.Value;
+    const uint32_t removedExtensions = RemoveSuppressedNames(
+        Configurator::Get().vulkan.shared.suppressExtensions, createInfo->enabledExtensionCount,
+        createInfo->ppEnabledExtensionNames, tl_deviceExtensionNames);
+    if (removedExtensions > 0) {
+      LOG_INFO << "ReplayCustomization: suppressed " << removedExtensions
+               << " device extension(s) during vkCreateDevice.";
     }
   }
 }

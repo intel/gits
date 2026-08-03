@@ -54,33 +54,34 @@ inline uint32_t RemoveSuppressedNames(const std::vector<std::string>& suppressed
   return removed;
 }
 
-// Enumerates a layer list via `driverEnumerate` (a callable with the same
-// signature as vkEnumerate{Instance,Device}LayerProperties, minus the
-// physical device handle, which the caller should already have bound), drops
-// the layers named in `suppressed` and writes the filtered result into
-// `pProperties`, honoring the Vulkan two-call enumeration idiom
-// (pProperties == nullptr queries the count).
-template <typename DriverEnumerate>
-void ProduceFilteredLayers(const std::vector<std::string>& suppressed,
-                           DriverEnumerate&& driverEnumerate,
-                           uint32_t* pPropertyCount,
-                           VkLayerProperties* pProperties) {
+// Enumerates a property list via `driverEnumerate` (a callable with the same
+// signature as vkEnumerate{Instance,Device}{Layer,Extension}Properties, minus
+// any handle the caller should already have bound), drops every entry whose
+// name (obtained through `nameOf`) is listed in `suppressed` and writes the
+// filtered result into `pProperties`, honoring the Vulkan two-call enumeration
+// idiom (pProperties == nullptr queries the count).
+template <typename Property, typename DriverEnumerate, typename NameOf>
+void ProduceFilteredProperties(const std::vector<std::string>& suppressed,
+                               DriverEnumerate&& driverEnumerate,
+                               NameOf&& nameOf,
+                               uint32_t* pPropertyCount,
+                               Property* pProperties) {
   if (pPropertyCount == nullptr) {
     return;
   }
 
   uint32_t count = 0;
-  std::vector<VkLayerProperties> properties;
+  std::vector<Property> properties;
   if (driverEnumerate(&count, nullptr) == VK_SUCCESS && count > 0) {
     properties.resize(count);
     if (driverEnumerate(&count, properties.data()) == VK_SUCCESS) {
       properties.resize(count);
       properties.erase(std::remove_if(properties.begin(), properties.end(),
-                                      [&suppressed](const VkLayerProperties& layer) {
-                                        return std::any_of(suppressed.begin(), suppressed.end(),
-                                                           [&layer](const std::string& name) {
-                                                             return name == layer.layerName;
-                                                           });
+                                      [&](const Property& property) {
+                                        const char* name = nameOf(property);
+                                        return std::any_of(
+                                            suppressed.begin(), suppressed.end(),
+                                            [name](const std::string& s) { return s == name; });
                                       }),
                        properties.end());
     }
