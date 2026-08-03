@@ -57,6 +57,10 @@ public:
   void Pre(vkEnumerateInstanceExtensionPropertiesCommand& command) override;
   void Pre(vkEnumerateDeviceExtensionPropertiesCommand& command) override;
 
+  void Post(vkGetPhysicalDeviceFeaturesCommand& command) override;
+  void Post(vkGetPhysicalDeviceFeatures2Command& command) override;
+  void Post(vkGetPhysicalDeviceFeatures2KHRCommand& command) override;
+
   void Pre(vkCreateBufferCommand& command) override;
   void Post(vkCreateBufferCommand& command) override;
   void Pre(vkCreateImageCommand& command) override;

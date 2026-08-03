@@ -508,12 +508,32 @@ void ReplayCustomizationLayer::Pre(vkCreateDeviceCommand& command) {
     // Device-level layers were deprecated in Vulkan 1.0.13, so only extensions
     // are stripped from the recorded device here.
     VkDeviceCreateInfo* createInfo = command.m_pCreateInfo.Value;
-    const uint32_t removedExtensions = RemoveSuppressedNames(
-        Configurator::Get().vulkan.shared.suppressExtensions, createInfo->enabledExtensionCount,
-        createInfo->ppEnabledExtensionNames, tl_deviceExtensionNames);
+    const auto& vulkanShared = Configurator::Get().vulkan.shared;
+
+    const uint32_t removedExtensions =
+        RemoveSuppressedNames(vulkanShared.suppressExtensions, createInfo->enabledExtensionCount,
+                              createInfo->ppEnabledExtensionNames, tl_deviceExtensionNames);
     if (removedExtensions > 0) {
       LOG_INFO << "ReplayCustomization: suppressed " << removedExtensions
                << " device extension(s) during vkCreateDevice.";
+    }
+
+    // Features can be enabled either through pEnabledFeatures or a
+    // VkPhysicalDeviceFeatures2 chained into pNext; handle both.
+    uint32_t suppressedFeatures = SuppressPhysicalDeviceFeatures(
+        vulkanShared.suppressPhysicalDeviceFeatures,
+        const_cast<VkPhysicalDeviceFeatures*>(createInfo->pEnabledFeatures));
+    for (auto* node = static_cast<VkBaseOutStructure*>(const_cast<void*>(createInfo->pNext)); node;
+         node = node->pNext) {
+      if (node->sType == VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2) {
+        suppressedFeatures += SuppressPhysicalDeviceFeatures(
+            vulkanShared.suppressPhysicalDeviceFeatures,
+            &reinterpret_cast<VkPhysicalDeviceFeatures2*>(node)->features);
+      }
+    }
+    if (suppressedFeatures > 0) {
+      LOG_INFO << "ReplayCustomization: suppressed " << suppressedFeatures
+               << " physical device feature(s) during vkCreateDevice.";
     }
   }
 }

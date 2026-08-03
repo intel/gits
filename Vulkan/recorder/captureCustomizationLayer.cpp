@@ -88,6 +88,25 @@ void CaptureCustomizationLayer::Pre(vkEnumerateDeviceExtensionPropertiesCommand&
       command.m_pPropertyCount.Value, command.m_pProperties.Value);
 }
 
+void CaptureCustomizationLayer::Post(vkGetPhysicalDeviceFeaturesCommand& command) {
+  SuppressPhysicalDeviceFeatures(Configurator::Get().vulkan.shared.suppressPhysicalDeviceFeatures,
+                                 command.m_pFeatures.Value);
+}
+
+void CaptureCustomizationLayer::Post(vkGetPhysicalDeviceFeatures2Command& command) {
+  if (command.m_pFeatures.Value) {
+    SuppressPhysicalDeviceFeatures(Configurator::Get().vulkan.shared.suppressPhysicalDeviceFeatures,
+                                   &command.m_pFeatures.Value->features);
+  }
+}
+
+void CaptureCustomizationLayer::Post(vkGetPhysicalDeviceFeatures2KHRCommand& command) {
+  if (command.m_pFeatures.Value) {
+    SuppressPhysicalDeviceFeatures(Configurator::Get().vulkan.shared.suppressPhysicalDeviceFeatures,
+                                   &command.m_pFeatures.Value->features);
+  }
+}
+
 #ifdef VK_USE_PLATFORM_WIN32_KHR
 void CaptureCustomizationLayer::Pre(vkCreateWin32SurfaceKHRCommand& command) {
   RECT clientRect;
