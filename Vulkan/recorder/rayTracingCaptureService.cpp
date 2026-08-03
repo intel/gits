@@ -302,6 +302,7 @@ void RayTracingCaptureService::OnPostCreateMicromapEXT(vkCreateMicromapEXTComman
 void RayTracingCaptureService::OnPreCreateRayTracingPipelinesKHR(
     vkCreateRayTracingPipelinesKHRCommand& command) {
   command.m_deferredOperation.Value = VK_NULL_HANDLE;
+  command.m_deferredOperation.Key = 0;
 
   if (!m_Caps[command.m_device.Key].m_RayTracingPipelineShaderGroupHandleCaptureReplay) {
     return;
