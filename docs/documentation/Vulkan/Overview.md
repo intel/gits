@@ -49,6 +49,17 @@ export VK_INSTANCE_LAYERS=VK_LAYER_INTEL_vulkan_GITS_recorder
 The layer works even when replacing the loader DLL is not feasible, and it can
 coexist with other layers (for example validation).
 
+> **Instance-level suppression caveat:** `Common.Vulkan.Shared.SuppressExtensions`
+> and `SuppressLayers` are **not** applied to *instance*-level extensions and
+> layers in layer mode. The Vulkan loader answers the pre-instance queries
+> (`vkEnumerateInstanceExtensionProperties` /
+> `vkEnumerateInstanceLayerProperties`) itself and does not route them through an
+> explicit layer, so GITS cannot hide them during capture this way. Instance-level
+> entries are instead filtered at **replay** time; capturing through the
+> [interceptor](#method-2-copy-the-interceptor-dll-windows) additionally suppresses
+> them during capture. Device-level extension suppression and
+> `SuppressPhysicalDeviceFeatures` work in both layer and interceptor modes.
+
 ## Method 2: Copy the interceptor DLL (Windows)
 
 The interceptor is a drop-in replacement for the system Vulkan loader
