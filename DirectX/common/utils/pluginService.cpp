@@ -151,6 +151,13 @@ void PluginService::LoadPlugins() {
       continue;
     }
 
+    // Initialize the plugin (this will call the plugin's layer constructor)
+    if (!plugin.Impl->getImpl()) {
+      LOG_ERROR << "PluginService - Failed to initialize plugin: " << pluginName;
+      plugin.Free();
+      continue;
+    }
+
     LOG_INFO << "PluginService - Loaded '" << pluginName << "' plugin";
     m_Plugins.emplace_back(std::move(plugin));
   }

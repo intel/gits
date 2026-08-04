@@ -14,7 +14,9 @@
 #include "log.h"
 #include "exception.h"
 #include "gits.h"
+#include "configurator.h"
 
+#include <algorithm>
 #include <wrl/client.h>
 
 namespace gits {
@@ -59,6 +61,17 @@ PlayerManager::~PlayerManager() {
 }
 
 PlayerManager::PlayerManager() {
+  // CpuPatch plugin is required for CCode generation
+  if (Configurator::Get().common.player.execute &&
+      Configurator::Get().directx.player.cCode.enabled) {
+    Configurator::GetMutable().directx.player.plugins.push_back("CpuPatch");
+  }
+
+  // Load plugins
+  // Note: Plugins must be loaded first to inject any required DLLs before any DirectX calls are made
+  m_PluginService = std::make_unique<PluginService>();
+  m_PluginService->LoadPlugins();
+
   // Load DirectX runtimes
   LoadDirectML();
   LoadDirectStorage();
@@ -66,8 +79,6 @@ PlayerManager::PlayerManager() {
   GetAdapterService().LoadAdapters();
   GetIntelExtensionsService().LoadIntelExtensions(GetAdapterService().GetAdapter());
   GetIntelExtensionsService().SetApplicationInfo();
-
-  m_PluginService = std::make_unique<PluginService>();
 
   m_LayerManager.LoadLayers(*this, *m_PluginService.get());
 

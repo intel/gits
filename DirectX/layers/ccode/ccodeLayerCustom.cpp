@@ -58,9 +58,7 @@ static void present(ccode::CommandPrinter& p, unsigned swapChainKey) {
   p.setPreCommand(ss.str());
 }
 
-CCodeLayer::CCodeLayer() : Layer("CCode") {
-  Configurator::GetMutable().directx.player.plugins.push_back("CpuPatch");
-}
+CCodeLayer::CCodeLayer() : Layer("CCode") {}
 
 void CCodeLayer::Pre(ID3D12ResourceGetGPUVirtualAddressCommand& c) {
   m_ExportGpuVirtualAddressCapture = c.m_Result.Value;

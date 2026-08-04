@@ -116,6 +116,7 @@ CaptureManager::CaptureManager() {
   m_MapTrackingService.reset(new MapTrackingService(*m_Recorder));
   m_FenceService.reset(new FenceService(*m_Recorder));
 
+  m_PluginService.LoadPlugins();
   m_LayerManager.LoadLayers(*this, *m_Recorder.get(), m_GpuAddressService, m_PluginService);
 }
 

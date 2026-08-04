@@ -185,7 +185,6 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
   enablePostLayer(ccodeLayer.get());
 
   // Enable plugin layers
-  pluginService.LoadPlugins();
   for (const auto& plugin : pluginService.GetPlugins()) {
     Layer* layer = static_cast<Layer*>(plugin.Impl->getImpl());
     enablePreLayer(layer);
