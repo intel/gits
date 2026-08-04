@@ -32,13 +32,13 @@ def wrappers_update_created(function):
 
 def get_dispatch_table(function):
     dispatch_tables = {
-        Api.DXGI: "getDXGIDispatchTable()",
-        Api.D3D12: "getD3D12DispatchTable()",
-        Api.DML: "getDMLDispatchTable()",
-        Api.XESS: "getXessDispatchTable()",
-        Api.DSTORAGE: "getDStorageDispatchTable()",
-        Api.XELL: "getXellDispatchTable()",
-        Api.XEFG: "getXefgDispatchTable()"
+        Api.DXGI: "GetDXGIDispatchTable()",
+        Api.D3D12: "GetD3D12DispatchTable()",
+        Api.DML: "GetDMLDispatchTable()",
+        Api.XESS: "GetXessDispatchTable()",
+        Api.DSTORAGE: "GetDStorageDispatchTable()",
+        Api.XELL: "GetXellDispatchTable()",
+        Api.XEFG: "GetXefgDispatchTable()"
     }
     return dispatch_tables[function.api]
 

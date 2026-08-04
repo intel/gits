@@ -40,7 +40,7 @@ ${generate_return(function)} ${function.name}Wrapper(${'' if params else ') {'}
   ${generate_return(function)} result{};
   %endif
 
-  auto& manager = CaptureManager::get();
+  auto& manager = CaptureManager::Get();
   %if 'xess' in function.name or 'xell' in function.name or 'xefg' in function.name:
   if (auto atTopOfStack = AtTopOfStackLocal()) {
   %else:
@@ -58,7 +58,7 @@ ${generate_return(function)} ${function.name}Wrapper(${'' if params else ') {'}
     %if param.is_context:
     command.m_${param.name}.Key = manager.${get_context_map(function)}.GetKey(reinterpret_cast<std::uintptr_t>(${param.name}));
     %elif param.name == 'hXeLLContext' and function.name == 'xefgSwapChainSetLatencyReduction':
-    command.m_${param.name}.Key = manager.getXellContextMap().GetKey(reinterpret_cast<std::uintptr_t>(${param.name}));
+    command.m_${param.name}.Key = manager.GetXellContextMap().GetKey(reinterpret_cast<std::uintptr_t>(${param.name}));
     %elif param.is_interface and not param.is_interface_creation and not param.is_const:
     %if not param.sal_size:
     UpdateInterface(command.m_${param.name}, ${param.name});
@@ -71,7 +71,7 @@ ${generate_return(function)} ${function.name}Wrapper(${'' if params else ') {'}
     UpdateInterfaceT<${param.type}_Argument, ${param.type}> update_${param.name}(command.m_${param.name}, ${param.name});
     %endif
     %if is_xess_sdk_init_param(param):
-    command.m_${param.name}.Key = manager.createWrapperKey(); // Used for subcapture restore order
+    command.m_${param.name}.Key = manager.CreateWrapperKey(); // Used for subcapture restore order
     %endif
     %endfor
 
@@ -79,7 +79,7 @@ ${generate_return(function)} ${function.name}Wrapper(${'' if params else ') {'}
       layer->Pre(command);
     }
 
-    command.Key = manager.createCommandKey();
+    command.Key = manager.CreateCommandKey();
     if (!command.Skip) {
       ${'result = ' if not function.ret.is_void else ''}manager.${dispatch_table}.${function.name}(${'' if args else ');'}
           %if args:
@@ -93,7 +93,7 @@ ${generate_return(function)} ${function.name}Wrapper(${'' if params else ') {'}
     %for param in function.params:
     %if param.is_context_output:
     if (result == ${get_success_return_value(function)}) {
-      command.m_${param.name}.Key = manager.createWrapperKey();
+      command.m_${param.name}.Key = manager.CreateWrapperKey();
       auto context = reinterpret_cast<std::uintptr_t>(*command.m_${param.name}.Value);
       manager.${get_context_map(function)}.SetContext(context, command.m_${param.name}.Key);
     }
@@ -146,7 +146,7 @@ ${generate_return(function)} ${interface.name}Wrapper::${function.name}(${'' if 
   ${generate_return(function)} result{};
   %endif
 
-  auto& manager = CaptureManager::get();
+  auto& manager = CaptureManager::Get();
   if (auto atTopOfStack = AtTopOfStackLocal()) {
 
     ${interface.name}${function.name}Command command(
@@ -178,7 +178,7 @@ ${generate_return(function)} ${interface.name}Wrapper::${function.name}(${'' if 
       layer->Pre(command);
     }
 
-    command.Key = manager.createCommandKey();
+    command.Key = manager.CreateCommandKey();
     if (!command.Skip) {
       ${'result = ' if not function.ret.is_void else ''}command.m_Object.Value->${function.name}(${'' if args else ');'}
           %if args:

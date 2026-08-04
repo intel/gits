@@ -18,13 +18,13 @@ namespace gits {
 namespace DirectX {
 
 struct PluginInfo {
-  std::filesystem::path dllPath = {};
-  HMODULE dll = 0;
-  IPlugin* impl = nullptr;
-  std::vector<HMODULE> dependencies = {};
-  DestroyPluginPtr destroyPlugin = nullptr;
+  std::filesystem::path DllPath = {};
+  HMODULE Dll = 0;
+  IPlugin* Impl = nullptr;
+  std::vector<HMODULE> Dependencies = {};
+  DestroyPluginPtr DestroyPlugin = nullptr;
 
-  void free();
+  void Free();
 };
 
 class PluginService {
@@ -34,11 +34,11 @@ public:
   PluginService(const PluginService&) = delete;
   PluginService& operator=(const PluginService&) = delete;
 
-  void loadPlugins();
-  const std::vector<PluginInfo>& getPlugins();
+  void LoadPlugins();
+  const std::vector<PluginInfo>& GetPlugins() const;
 
 private:
-  std::vector<PluginInfo> plugins_;
+  std::vector<PluginInfo> m_Plugins;
 };
 
 } // namespace DirectX

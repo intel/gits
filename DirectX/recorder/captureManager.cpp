@@ -29,20 +29,20 @@ CaptureManager* CaptureManager::m_Instance = nullptr;
 
 thread_local unsigned CaptureManager::m_LocalStackDepth = 0;
 
-CaptureManager& CaptureManager::get() {
+CaptureManager& CaptureManager::Get() {
   if (!m_Instance) {
     m_Instance = new CaptureManager();
-    m_Instance->interceptKernelFunctions();
+    m_Instance->InterceptKernelFunctions();
     if (Configurator::Get().directx.recorder.captureDirectStorage) {
-      m_Instance->interceptDirectStorageFunctions();
+      m_Instance->InterceptDirectStorageFunctions();
     }
     if (Configurator::Get().directx.recorder.captureDirectML) {
-      m_Instance->interceptDirectMLFunctions();
+      m_Instance->InterceptDirectMLFunctions();
     }
     if (Configurator::Get().directx.recorder.captureNvAPI) {
-      m_Instance->interceptNvAPIFunctions();
+      m_Instance->InterceptNvAPIFunctions();
     }
-    m_Instance->interceptD3D11On12Functions();
+    m_Instance->InterceptD3D11On12Functions();
   }
 
   return *m_Instance;
@@ -78,13 +78,13 @@ CaptureManager::~CaptureManager() {
   }
 }
 
-void CaptureManager::exchangeDXGIDispatchTables(const DXGIDispatchTable& systemTable,
+void CaptureManager::ExchangeDXGIDispatchTables(const DXGIDispatchTable& systemTable,
                                                 DXGIDispatchTable& wrapperTable) {
   m_DxgiDispatchTableSystem = systemTable;
   wrapperTable = m_DxgiDispatchTableWrapper;
 }
 
-void CaptureManager::exchangeD3D12DispatchTables(const D3D12DispatchTable& systemTable,
+void CaptureManager::ExchangeD3D12DispatchTables(const D3D12DispatchTable& systemTable,
                                                  D3D12DispatchTable& wrapperTable) {
   m_D3D12DispatchTableSystem = systemTable;
   wrapperTable = m_D3D12DispatchTableWrapper;
@@ -119,7 +119,7 @@ CaptureManager::CaptureManager() {
   m_LayerManager.LoadLayers(*this, *m_Recorder.get(), m_GpuAddressService, m_PluginService);
 }
 
-void CaptureManager::interceptDirectMLFunctions() {
+void CaptureManager::InterceptDirectMLFunctions() {
   // Load DirectML.dll from the current directory or System32
   // Most DirectML applications include the DirectML runtime
   m_DmlDll = LoadLibrary("DirectML.dll");
@@ -144,7 +144,7 @@ void CaptureManager::interceptDirectMLFunctions() {
   GITS_ASSERT(ret == NO_ERROR);
 }
 
-void CaptureManager::interceptDirectStorageFunctions() {
+void CaptureManager::InterceptDirectStorageFunctions() {
   // Load directstorage.dll from the current directory
   // If not available the game does not use directstorage.dll so no need to do anything
   m_DstorageDll = LoadLibrary("dstorage.dll");
@@ -183,28 +183,28 @@ void CaptureManager::interceptDirectStorageFunctions() {
   GITS_ASSERT(ret == NO_ERROR);
 }
 
-std::pair<unsigned, unsigned> CaptureManager::createCommandKeyRange(unsigned rangeSize) {
+std::pair<unsigned, unsigned> CaptureManager::CreateCommandKeyRange(unsigned rangeSize) {
   std::pair<unsigned, unsigned> range;
   range.first = m_CommandUniqueKey.fetch_add(rangeSize, std::memory_order_relaxed) + 1;
   range.second = range.first + rangeSize - 1;
   return range;
 }
 
-void CaptureManager::addWrapper(IUnknownWrapper* wrapper) {
+void CaptureManager::AddWrapper(IUnknownWrapper* wrapper) {
   std::lock_guard<std::mutex> lock(m_WrappersMutex);
   m_Wrappers[wrapper->GetRootIUnknown()] = wrapper;
 }
-void CaptureManager::removeWrapper(IUnknownWrapper* wrapper) {
+void CaptureManager::RemoveWrapper(IUnknownWrapper* wrapper) {
   std::lock_guard<std::mutex> lock(m_WrappersMutex);
   m_Wrappers.erase(wrapper->GetRootIUnknown());
 }
-IUnknownWrapper* CaptureManager::findWrapper(IUnknown* object) {
+IUnknownWrapper* CaptureManager::FindWrapper(IUnknown* object) {
   std::lock_guard<std::mutex> lock(m_WrappersMutex);
   auto it = m_Wrappers.find(IUnknownWrapper::GetRootIUnknown(object));
   return it != m_Wrappers.end() ? it->second : nullptr;
 }
 
-void CaptureManager::interceptKernelFunctions() {
+void CaptureManager::InterceptKernelFunctions() {
 
   if (m_KernelDll) {
     return;
@@ -274,7 +274,7 @@ void CaptureManager::interceptKernelFunctions() {
   GITS_ASSERT(ret == NO_ERROR);
 }
 
-void CaptureManager::interceptXessFunctions() {
+void CaptureManager::InterceptXessFunctions() {
 
   if (m_XessDll || m_LoadingXessDll || !Configurator::Get().directx.recorder.captureXess) {
     return;
@@ -488,7 +488,7 @@ void CaptureManager::interceptXessFunctions() {
   GITS_ASSERT(ret == NO_ERROR);
 }
 
-void CaptureManager::interceptXellFunctions() {
+void CaptureManager::InterceptXellFunctions() {
   if (m_XellDll || m_LoadingXellDll || !Configurator::Get().directx.recorder.captureXell) {
     return;
   }
@@ -571,7 +571,7 @@ void CaptureManager::interceptXellFunctions() {
   GITS_ASSERT(ret == NO_ERROR);
 }
 
-void CaptureManager::interceptXefgFunctions() {
+void CaptureManager::InterceptXefgFunctions() {
   if (m_XefgDll || m_LoadingXefgDll || !Configurator::Get().directx.recorder.captureXefg) {
     return;
   }
@@ -789,7 +789,7 @@ void CaptureManager::interceptXefgFunctions() {
   GITS_ASSERT(ret == NO_ERROR);
 }
 
-void CaptureManager::loadIntelExtension(const uint32_t& vendorID, const uint32_t& deviceID) {
+void CaptureManager::LoadIntelExtension(const uint32_t& vendorID, const uint32_t& deviceID) {
   if (m_IntelExtensionLoaded || !Configurator::Get().directx.recorder.captureIntelExtensions) {
     return;
   }
@@ -878,7 +878,7 @@ void CaptureManager::loadIntelExtension(const uint32_t& vendorID, const uint32_t
   m_IntelExtensionLoaded = true;
 }
 
-void CaptureManager::interceptNvAPIFunctions() {
+void CaptureManager::InterceptNvAPIFunctions() {
   {
     NvAPI_Status status = NvAPI_Initialize();
     if (status != NVAPI_OK) {
@@ -1012,7 +1012,7 @@ void CaptureManager::interceptNvAPIFunctions() {
   GITS_ASSERT(ret == NO_ERROR);
 }
 
-void CaptureManager::interceptD3D11On12Functions() {
+void CaptureManager::InterceptD3D11On12Functions() {
   if (m_D3D11Dll) {
     return;
   }

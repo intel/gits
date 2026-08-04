@@ -39,31 +39,31 @@ bool wrapObjectNoStore(REFIID riid, void** object) {
 
 AtTopOfStackGlobal::~AtTopOfStackGlobal() {
   try {
-    auto& manager = CaptureManager::get();
-    manager.decrementGlobalStackDepth();
-    manager.decrementLocalStackDepth();
+    auto& manager = CaptureManager::Get();
+    manager.DecrementGlobalStackDepth();
+    manager.DecrementLocalStackDepth();
   } catch (...) {
     topmost_exception_handler("AtTopOfStackGlobal::~AtTopOfStackGlobal()");
   }
 }
 
 AtTopOfStackGlobal::operator bool() {
-  auto& manager = CaptureManager::get();
-  unsigned globalStackDepth = manager.incrementGlobalStackDepth();
-  unsigned localStackDepth = manager.incrementLocalStackDepth();
+  auto& manager = CaptureManager::Get();
+  unsigned globalStackDepth = manager.IncrementGlobalStackDepth();
+  unsigned localStackDepth = manager.IncrementLocalStackDepth();
   return globalStackDepth == 1 && localStackDepth == 1;
 }
 
 AtTopOfStackLocal::~AtTopOfStackLocal() {
   try {
-    CaptureManager::get().decrementLocalStackDepth();
+    CaptureManager::Get().DecrementLocalStackDepth();
   } catch (...) {
     topmost_exception_handler("AtTopOfStackLocal::~AtTopOfStackLocal()");
   }
 }
 
 AtTopOfStackLocal::operator bool() {
-  unsigned localStackDepth = CaptureManager::get().incrementLocalStackDepth();
+  unsigned localStackDepth = CaptureManager::Get().IncrementLocalStackDepth();
   return localStackDepth == 1;
 }
 

@@ -24,7 +24,7 @@ HRESULT D3D11On12CreateDeviceWrapper(IUnknown* pDevice,
                                      ID3D11DeviceContext** ppImmediateContext,
                                      D3D_FEATURE_LEVEL* pChosenFeatureLevel) {
   HRESULT result{};
-  auto& manager = CaptureManager::get();
+  auto& manager = CaptureManager::Get();
   if (auto atTopOfStack = AtTopOfStackGlobal()) {
     IUnknown* pDeviceUnwrap{};
     if (pDevice) {
@@ -36,11 +36,11 @@ HRESULT D3D11On12CreateDeviceWrapper(IUnknown* pDevice,
       IUnknownWrapper* commandQueuesWrapper = reinterpret_cast<IUnknownWrapper*>(*ppCommandQueues);
       pCommandQueuesUnwrapped = commandQueuesWrapper->GetWrappedObject<IUnknown>();
     }
-    result = manager.getd3d11on12DispatchTable().D3D11On12CreateDevice(
+    result = manager.GetD3D11On12DispatchTable().D3D11On12CreateDevice(
         pDeviceUnwrap, Flags, pFeatureLevels, FeatureLevels, &pCommandQueuesUnwrapped, NumQueues,
         NodeMask, ppDevice, ppImmediateContext, pChosenFeatureLevel);
   } else {
-    result = manager.getd3d11on12DispatchTable().D3D11On12CreateDevice(
+    result = manager.GetD3D11On12DispatchTable().D3D11On12CreateDevice(
         pDevice, Flags, pFeatureLevels, FeatureLevels, ppCommandQueues, NumQueues, NodeMask,
         ppDevice, ppImmediateContext, pChosenFeatureLevel);
   }

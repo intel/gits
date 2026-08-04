@@ -94,7 +94,7 @@ void FenceService::WaitSignaled(HANDLE handle) {
   for (unsigned i = 0; i < fenceInfos.size(); ++i) {
 
     WaitForFenceSignaledCommand command{};
-    command.Key = CaptureManager::get().createCommandKey();
+    command.Key = CaptureManager::Get().CreateCommandKey();
     command.ThreadId = GetCurrentThreadId();
     command.m_event.Value = handle;
     command.m_fence.Key = fenceInfos[i].FenceKey;
@@ -157,7 +157,7 @@ void FenceService::WaitSignaled(DWORD count, const HANDLE* handles) {
   for (unsigned i = 0; i < fenceInfos.size(); ++i) {
 
     WaitForFenceSignaledCommand command{};
-    command.Key = CaptureManager::get().createCommandKey();
+    command.Key = CaptureManager::Get().CreateCommandKey();
     command.ThreadId = GetCurrentThreadId();
     command.m_event.Value = fenceInfos[i].Event;
     command.m_fence.Key = fenceInfos[i].FenceKey;

@@ -23,7 +23,7 @@ HRESULT INTC_D3D12_GetSupportedVersionsWrapper(
 
   HRESULT result{};
 
-  auto& manager = CaptureManager::get();
+  auto& manager = CaptureManager::Get();
   if (auto atTopOfStack = AtTopOfStackLocal()) {
 
     INTC_D3D12_GetSupportedVersionsCommand command(
@@ -34,7 +34,7 @@ HRESULT INTC_D3D12_GetSupportedVersionsWrapper(
       layer->Pre(command);
     }
 
-    command.Key = manager.createCommandKey();
+    command.Key = manager.CreateCommandKey();
     if (!command.Skip) {
       result =
           pfnGetSupportedVersions(command.m_pDevice.Value, command.m_pSupportedExtVersions.Value,
@@ -60,7 +60,7 @@ HRESULT INTC_D3D12_CreateDeviceExtensionContextWrapper(
 
   HRESULT result{};
 
-  auto& manager = CaptureManager::get();
+  auto& manager = CaptureManager::Get();
   if (auto atTopOfStack = AtTopOfStackLocal()) {
 
     INTC_D3D12_CreateDeviceExtensionContextCommand command(
@@ -72,15 +72,15 @@ HRESULT INTC_D3D12_CreateDeviceExtensionContextWrapper(
       layer->Pre(command);
     }
 
-    command.Key = manager.createCommandKey();
+    command.Key = manager.CreateCommandKey();
     if (!command.Skip) {
       result = pfnCreateDeviceExtensionContext(
           command.m_pDevice.Value, command.m_ppExtensionContext.Value,
           command.m_pExtensionInfo.Value, command.m_pExtensionAppInfo.Value);
     }
     if (result == S_OK) {
-      command.m_ppExtensionContext.Key = manager.createWrapperKey();
-      manager.getIntelExtensionsContextMap().SetContext(
+      command.m_ppExtensionContext.Key = manager.CreateWrapperKey();
+      manager.GetIntelExtensionsContextMap().SetContext(
           reinterpret_cast<std::uintptr_t>(*command.m_ppExtensionContext.Value),
           command.m_ppExtensionContext.Key);
     }
@@ -114,7 +114,7 @@ HRESULT INTC_D3D12_CreateDeviceExtensionContext1Wrapper(
 
   HRESULT result{};
 
-  auto& manager = CaptureManager::get();
+  auto& manager = CaptureManager::Get();
   if (auto atTopOfStack = AtTopOfStackLocal()) {
 
     INTC_D3D12_CreateDeviceExtensionContext1Command command(
@@ -126,15 +126,15 @@ HRESULT INTC_D3D12_CreateDeviceExtensionContext1Wrapper(
       layer->Pre(command);
     }
 
-    command.Key = manager.createCommandKey();
+    command.Key = manager.CreateCommandKey();
     if (!command.Skip) {
       result = pfnCreateDeviceExtensionContext1(
           command.m_pDevice.Value, command.m_ppExtensionContext.Value,
           command.m_pExtensionInfo.Value, command.m_pExtensionAppInfo.Value);
     }
     if (result == S_OK) {
-      command.m_ppExtensionContext.Key = manager.createWrapperKey();
-      manager.getIntelExtensionsContextMap().SetContext(
+      command.m_ppExtensionContext.Key = manager.CreateWrapperKey();
+      manager.GetIntelExtensionsContextMap().SetContext(
           reinterpret_cast<std::uintptr_t>(*command.m_ppExtensionContext.Value),
           command.m_ppExtensionContext.Key);
     }
@@ -168,7 +168,7 @@ HRESULT INTC_D3D12_CreateDeviceExtensionContext2Wrapper(
 
   HRESULT result{};
 
-  auto& manager = CaptureManager::get();
+  auto& manager = CaptureManager::Get();
   if (auto atTopOfStack = AtTopOfStackLocal()) {
 
     INTC_D3D12_CreateDeviceExtensionContext2Command command(
@@ -180,15 +180,15 @@ HRESULT INTC_D3D12_CreateDeviceExtensionContext2Wrapper(
       layer->Pre(command);
     }
 
-    command.Key = manager.createCommandKey();
+    command.Key = manager.CreateCommandKey();
     if (!command.Skip) {
       result = pfnCreateDeviceExtensionContext2(
           command.m_pDevice.Value, command.m_ppExtensionContext.Value,
           command.m_pExtensionInfo.Value, command.m_pExtensionAppInfo.Value);
     }
     if (result == S_OK) {
-      command.m_ppExtensionContext.Key = manager.createWrapperKey();
-      manager.getIntelExtensionsContextMap().SetContext(
+      command.m_ppExtensionContext.Key = manager.CreateWrapperKey();
+      manager.GetIntelExtensionsContextMap().SetContext(
           reinterpret_cast<std::uintptr_t>(*command.m_ppExtensionContext.Value),
           command.m_ppExtensionContext.Key);
     }
@@ -217,20 +217,20 @@ HRESULT INTC_DestroyDeviceExtensionContextWrapper(
 
   HRESULT result{};
 
-  auto& manager = CaptureManager::get();
+  auto& manager = CaptureManager::Get();
   if (auto atTopOfStack = AtTopOfStackLocal()) {
 
     INTC_DestroyDeviceExtensionContextCommand command(GetCurrentThreadId(), ppExtensionContext);
 
     auto context = reinterpret_cast<std::uintptr_t>(*command.m_ppExtensionContext.Value);
-    command.m_ppExtensionContext.Key = manager.getIntelExtensionsContextMap().GetKey(context);
-    manager.getIntelExtensionsContextMap().RemoveContext(context);
+    command.m_ppExtensionContext.Key = manager.GetIntelExtensionsContextMap().GetKey(context);
+    manager.GetIntelExtensionsContextMap().RemoveContext(context);
 
     for (Layer* layer : manager.GetPreLayers()) {
       layer->Pre(command);
     }
 
-    command.Key = manager.createCommandKey();
+    command.Key = manager.CreateCommandKey();
     if (!command.Skip) {
       result = pfnDestroyDeviceExtensionContext(command.m_ppExtensionContext.Value);
     }
@@ -254,20 +254,20 @@ HRESULT INTC_D3D12_CreateCommandQueueWrapper(
     void** ppCommandQueue) {
   HRESULT result{};
 
-  auto& manager = CaptureManager::get();
+  auto& manager = CaptureManager::Get();
   if (auto atTopOfStack = AtTopOfStackLocal()) {
 
     INTC_D3D12_CreateCommandQueueCommand command(GetCurrentThreadId(), pExtensionContext, pDesc,
                                                  riid, ppCommandQueue);
 
-    command.m_pExtensionContext.Key = manager.getIntelExtensionsContextMap().GetKey(
+    command.m_pExtensionContext.Key = manager.GetIntelExtensionsContextMap().GetKey(
         reinterpret_cast<std::uintptr_t>(command.m_pExtensionContext.Value));
 
     for (Layer* layer : manager.GetPreLayers()) {
       layer->Pre(command);
     }
 
-    command.Key = manager.createCommandKey();
+    command.Key = manager.CreateCommandKey();
     if (!command.Skip) {
       result = pfnCreateCommandQueue(command.m_pExtensionContext.Value, command.m_pDesc.Value,
                                      command.m_riid.Value, command.m_ppCommandQueue.Value);
@@ -295,13 +295,13 @@ HRESULT INTC_D3D12_CreateComputePipelineStateWrapper(
 
   HRESULT result{};
 
-  auto& manager = CaptureManager::get();
+  auto& manager = CaptureManager::Get();
   if (auto atTopOfStack = AtTopOfStackLocal()) {
 
     INTC_D3D12_CreateComputePipelineStateCommand command(GetCurrentThreadId(), pExtensionContext,
                                                          pDesc, riid, ppPipelineState);
 
-    command.m_pExtensionContext.Key = manager.getIntelExtensionsContextMap().GetKey(
+    command.m_pExtensionContext.Key = manager.GetIntelExtensionsContextMap().GetKey(
         reinterpret_cast<std::uintptr_t>(command.m_pExtensionContext.Value));
     UpdateInterfaceT<PointerArgument<INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC>,
                      INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC>
@@ -311,7 +311,7 @@ HRESULT INTC_D3D12_CreateComputePipelineStateWrapper(
       layer->Pre(command);
     }
 
-    command.Key = manager.createCommandKey();
+    command.Key = manager.CreateCommandKey();
     if (!command.Skip) {
       result =
           pfnCreateComputePipelineState(command.m_pExtensionContext.Value, command.m_pDesc.Value,
@@ -341,21 +341,21 @@ HRESULT INTC_D3D12_CreateReservedResourceWrapper(
     void** ppvResource) {
   HRESULT result{};
 
-  auto& manager = CaptureManager::get();
+  auto& manager = CaptureManager::Get();
   if (auto atTopOfStack = AtTopOfStackLocal()) {
 
     INTC_D3D12_CreateReservedResourceCommand command(GetCurrentThreadId(), pExtensionContext, pDesc,
                                                      InitialState, pOptimizedClearValue, riid,
                                                      ppvResource);
 
-    command.m_pExtensionContext.Key = manager.getIntelExtensionsContextMap().GetKey(
+    command.m_pExtensionContext.Key = manager.GetIntelExtensionsContextMap().GetKey(
         reinterpret_cast<std::uintptr_t>(command.m_pExtensionContext.Value));
 
     for (Layer* layer : manager.GetPreLayers()) {
       layer->Pre(command);
     }
 
-    command.Key = manager.createCommandKey();
+    command.Key = manager.CreateCommandKey();
     if (!command.Skip) {
       result = pfnCreateReservedResource(
           command.m_pExtensionContext.Value, command.m_pDesc.Value, command.m_InitialState.Value,
@@ -389,21 +389,21 @@ HRESULT INTC_D3D12_CreateCommittedResourceWrapper(
 
   HRESULT result{};
 
-  auto& manager = CaptureManager::get();
+  auto& manager = CaptureManager::Get();
   if (auto atTopOfStack = AtTopOfStackLocal()) {
 
     INTC_D3D12_CreateCommittedResourceCommand command(
         GetCurrentThreadId(), pExtensionContext, pHeapProperties, HeapFlags, pDesc,
         InitialResourceState, pOptimizedClearValue, riidResource, ppvResource);
 
-    command.m_pExtensionContext.Key = manager.getIntelExtensionsContextMap().GetKey(
+    command.m_pExtensionContext.Key = manager.GetIntelExtensionsContextMap().GetKey(
         reinterpret_cast<std::uintptr_t>(command.m_pExtensionContext.Value));
 
     for (Layer* layer : manager.GetPreLayers()) {
       layer->Pre(command);
     }
 
-    command.Key = manager.createCommandKey();
+    command.Key = manager.CreateCommandKey();
     if (!command.Skip) {
       result = pfnCreateCommittedResource(pExtensionContext, pHeapProperties, HeapFlags, pDesc,
                                           InitialResourceState, pOptimizedClearValue, riidResource,
@@ -453,20 +453,20 @@ HRESULT INTC_D3D12_CreateHeapWrapper(PFNINTCDX12EXT_CREATEHEAP pfnCreateHeap,
                                      void** ppvHeap) {
   HRESULT result{};
 
-  auto& manager = CaptureManager::get();
+  auto& manager = CaptureManager::Get();
   if (auto atTopOfStack = AtTopOfStackLocal()) {
 
     INTC_D3D12_CreateHeapCommand command(GetCurrentThreadId(), pExtensionContext, pDesc, riid,
                                          ppvHeap);
 
-    command.m_pExtensionContext.Key = manager.getIntelExtensionsContextMap().GetKey(
+    command.m_pExtensionContext.Key = manager.GetIntelExtensionsContextMap().GetKey(
         reinterpret_cast<std::uintptr_t>(command.m_pExtensionContext.Value));
 
     for (Layer* layer : manager.GetPreLayers()) {
       layer->Pre(command);
     }
 
-    command.Key = manager.createCommandKey();
+    command.Key = manager.CreateCommandKey();
     if (!command.Skip) {
       result = pfnCreateHeap(command.m_pExtensionContext.Value, command.m_pDesc.Value,
                              command.m_riid.Value, command.m_ppvHeap.Value);
@@ -498,14 +498,14 @@ HRESULT INTC_D3D12_CreatePlacedResourceWrapper(
 
   HRESULT result{};
 
-  auto& manager = CaptureManager::get();
+  auto& manager = CaptureManager::Get();
   if (auto atTopOfStack = AtTopOfStackLocal()) {
 
     INTC_D3D12_CreatePlacedResourceCommand command(GetCurrentThreadId(), pExtensionContext, pHeap,
                                                    HeapOffset, pDesc, InitialState,
                                                    pOptimizedClearValue, riid, ppvResource);
 
-    command.m_pExtensionContext.Key = manager.getIntelExtensionsContextMap().GetKey(
+    command.m_pExtensionContext.Key = manager.GetIntelExtensionsContextMap().GetKey(
         reinterpret_cast<std::uintptr_t>(command.m_pExtensionContext.Value));
     UpdateInterface(command.m_pHeap, pHeap);
 
@@ -513,7 +513,7 @@ HRESULT INTC_D3D12_CreatePlacedResourceWrapper(
       layer->Pre(command);
     }
 
-    command.Key = manager.createCommandKey();
+    command.Key = manager.CreateCommandKey();
     if (!command.Skip) {
       result = pfnCreatePlacedResource(
           command.m_pExtensionContext.Value, command.m_pHeap.Value, command.m_HeapOffset.Value,
@@ -711,19 +711,19 @@ HRESULT INTC_D3D12_SetFeatureSupportWrapper(PFNINTCDX12EXT_SETFEATURESUPPORT pfn
 
   HRESULT result{};
 
-  auto& manager = CaptureManager::get();
+  auto& manager = CaptureManager::Get();
   if (auto atTopOfStack = AtTopOfStackLocal()) {
 
     INTC_D3D12_SetFeatureSupportCommand command(GetCurrentThreadId(), pExtensionContext, pFeature);
 
-    command.m_pExtensionContext.Key = manager.getIntelExtensionsContextMap().GetKey(
+    command.m_pExtensionContext.Key = manager.GetIntelExtensionsContextMap().GetKey(
         reinterpret_cast<std::uintptr_t>(command.m_pExtensionContext.Value));
 
     for (Layer* layer : manager.GetPreLayers()) {
       layer->Pre(command);
     }
 
-    command.Key = manager.createCommandKey();
+    command.Key = manager.CreateCommandKey();
     if (!command.Skip) {
       result = pfnSetFeatureSupport(command.m_pExtensionContext.Value, command.m_pFeature.Value);
     }
@@ -747,19 +747,19 @@ D3D12_RESOURCE_ALLOCATION_INFO INTC_D3D12_GetResourceAllocationInfoWrapper(
 
   D3D12_RESOURCE_ALLOCATION_INFO result{};
 
-  auto& manager = CaptureManager::get();
+  auto& manager = CaptureManager::Get();
   if (auto atTopOfStack = AtTopOfStackLocal()) {
 
     INTC_D3D12_GetResourceAllocationInfoCommand command(
         GetCurrentThreadId(), pExtensionContext, visibleMask, numResourceDescs, pResourceDescs);
-    command.m_pExtensionContext.Key = manager.getIntelExtensionsContextMap().GetKey(
+    command.m_pExtensionContext.Key = manager.GetIntelExtensionsContextMap().GetKey(
         reinterpret_cast<std::uintptr_t>(command.m_pExtensionContext.Value));
 
     for (Layer* layer : manager.GetPreLayers()) {
       layer->Pre(command);
     }
 
-    command.Key = manager.createCommandKey();
+    command.Key = manager.CreateCommandKey();
     if (!command.Skip) {
       result = pfnGetResourceAllocationInfo(
           command.m_pExtensionContext.Value, command.m_visibleMask.Value,
@@ -786,19 +786,19 @@ HRESULT INTC_D3D12_CheckFeatureSupportWrapper(
 
   HRESULT result{};
 
-  auto& manager = CaptureManager::get();
+  auto& manager = CaptureManager::Get();
   if (auto atTopOfStack = AtTopOfStackLocal()) {
 
     INTC_D3D12_CheckFeatureSupportCommand command(GetCurrentThreadId(), pExtensionContext, Feature,
                                                   pFeatureSupportData, FeatureSupportDataSize);
-    command.m_pExtensionContext.Key = manager.getIntelExtensionsContextMap().GetKey(
+    command.m_pExtensionContext.Key = manager.GetIntelExtensionsContextMap().GetKey(
         reinterpret_cast<std::uintptr_t>(command.m_pExtensionContext.Value));
 
     for (Layer* layer : manager.GetPreLayers()) {
       layer->Pre(command);
     }
 
-    command.Key = manager.createCommandKey();
+    command.Key = manager.CreateCommandKey();
     if (!command.Skip) {
       result = pfnCheckFeatureSupport(command.m_pExtensionContext.Value, command.m_Feature.Value,
                                       command.m_pFeatureSupportData.Value,
@@ -848,7 +848,7 @@ HRESULT INTC_D3D12_SetApplicationInfoWrapper(
     INTCExtensionAppInfo1* pExtensionAppInfo) {
   HRESULT result{};
 
-  auto& manager = CaptureManager::get();
+  auto& manager = CaptureManager::Get();
   if (auto atTopOfStack = AtTopOfStackLocal()) {
 
     INTC_D3D12_SetApplicationInfoCommand command(GetCurrentThreadId(), pExtensionAppInfo);
@@ -857,7 +857,7 @@ HRESULT INTC_D3D12_SetApplicationInfoWrapper(
       layer->Pre(command);
     }
 
-    command.Key = manager.createCommandKey();
+    command.Key = manager.CreateCommandKey();
     if (!command.Skip) {
       result = pfnSetApplicationInfo(command.m_pExtensionAppInfo.Value);
     }

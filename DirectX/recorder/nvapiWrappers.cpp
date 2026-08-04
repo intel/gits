@@ -16,9 +16,9 @@ namespace gits {
 namespace DirectX {
 
 void* nvapi_QueryInterfaceWrapper(unsigned int id) {
-  auto& manager = CaptureManager::get();
+  auto& manager = CaptureManager::Get();
 
-  const auto& nvapiFunctionIds = manager.getNvAPIFunctionIds();
+  const auto& nvapiFunctionIds = manager.GetNvAPIFunctionIds();
   for (const auto& [functionName, functionId] : nvapiFunctionIds) {
     if (functionId == id) {
       LOG_VERBOSE << functionName;
@@ -26,7 +26,7 @@ void* nvapi_QueryInterfaceWrapper(unsigned int id) {
     }
   }
 
-  auto result = manager.getNvAPIDispatchTable().nvapi_QueryInterface(id);
+  auto result = manager.GetNvAPIDispatchTable().nvapi_QueryInterface(id);
 
   return result;
 }
@@ -34,7 +34,7 @@ void* nvapi_QueryInterfaceWrapper(unsigned int id) {
 NvAPI_Status NvAPI_InitializeWrapper() {
   NvAPI_Status result{};
 
-  auto& manager = CaptureManager::get();
+  auto& manager = CaptureManager::Get();
   if (auto atTopOfStack = AtTopOfStackLocal()) {
 
     NvAPI_InitializeCommand command(GetCurrentThreadId());
@@ -43,16 +43,16 @@ NvAPI_Status NvAPI_InitializeWrapper() {
       layer->Pre(command);
     }
 
-    command.Key = manager.createCommandKey();
+    command.Key = manager.CreateCommandKey();
     if (!command.Skip) {
-      result = manager.getNvAPIDispatchTable().NvAPI_Initialize();
+      result = manager.GetNvAPIDispatchTable().NvAPI_Initialize();
     }
     command.m_Result.Value = result;
     for (Layer* layer : manager.GetPostLayers()) {
       layer->Post(command);
     }
   } else {
-    result = manager.getNvAPIDispatchTable().NvAPI_Initialize();
+    result = manager.GetNvAPIDispatchTable().NvAPI_Initialize();
   }
 
   return result;
@@ -61,7 +61,7 @@ NvAPI_Status NvAPI_InitializeWrapper() {
 NvAPI_Status NvAPI_UnloadWrapper() {
   NvAPI_Status result{};
 
-  auto& manager = CaptureManager::get();
+  auto& manager = CaptureManager::Get();
   if (auto atTopOfStack = AtTopOfStackLocal()) {
 
     NvAPI_UnloadCommand command(GetCurrentThreadId());
@@ -70,16 +70,16 @@ NvAPI_Status NvAPI_UnloadWrapper() {
       layer->Pre(command);
     }
 
-    command.Key = manager.createCommandKey();
+    command.Key = manager.CreateCommandKey();
     if (!command.Skip) {
-      result = manager.getNvAPIDispatchTable().NvAPI_Unload();
+      result = manager.GetNvAPIDispatchTable().NvAPI_Unload();
     }
     command.m_Result.Value = result;
     for (Layer* layer : manager.GetPostLayers()) {
       layer->Post(command);
     }
   } else {
-    result = manager.getNvAPIDispatchTable().NvAPI_Unload();
+    result = manager.GetNvAPIDispatchTable().NvAPI_Unload();
   }
 
   return result;
@@ -89,7 +89,7 @@ NvAPI_Status NvAPI_D3D12_SetCreatePipelineStateOptionsWrapper(
     ID3D12Device5* pDevice, const NVAPI_D3D12_SET_CREATE_PIPELINE_STATE_OPTIONS_PARAMS* pState) {
   NvAPI_Status result{};
 
-  auto& manager = CaptureManager::get();
+  auto& manager = CaptureManager::Get();
   if (auto atTopOfStack = AtTopOfStackLocal()) {
     GITS_ASSERT(pState->version == NVAPI_D3D12_SET_CREATE_PIPELINE_STATE_OPTIONS_PARAMS_VER);
 
@@ -100,9 +100,9 @@ NvAPI_Status NvAPI_D3D12_SetCreatePipelineStateOptionsWrapper(
       layer->Pre(command);
     }
 
-    command.Key = manager.createCommandKey();
+    command.Key = manager.CreateCommandKey();
     if (!command.Skip) {
-      result = manager.getNvAPIDispatchTable().NvAPI_D3D12_SetCreatePipelineStateOptions(pDevice,
+      result = manager.GetNvAPIDispatchTable().NvAPI_D3D12_SetCreatePipelineStateOptions(pDevice,
                                                                                          pState);
     }
     command.m_Result.Value = result;
@@ -111,7 +111,7 @@ NvAPI_Status NvAPI_D3D12_SetCreatePipelineStateOptionsWrapper(
     }
   } else {
     result =
-        manager.getNvAPIDispatchTable().NvAPI_D3D12_SetCreatePipelineStateOptions(pDevice, pState);
+        manager.GetNvAPIDispatchTable().NvAPI_D3D12_SetCreatePipelineStateOptions(pDevice, pState);
   }
 
   return result;
@@ -122,7 +122,7 @@ NvAPI_Status NvAPI_D3D12_SetNvShaderExtnSlotSpaceWrapper(IUnknown* pDev,
                                                          NvU32 uavSpace) {
   NvAPI_Status result{};
 
-  auto& manager = CaptureManager::get();
+  auto& manager = CaptureManager::Get();
   if (auto atTopOfStack = AtTopOfStackLocal()) {
     NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand command(GetCurrentThreadId(), pDev, uavSlot,
                                                         uavSpace);
@@ -132,9 +132,9 @@ NvAPI_Status NvAPI_D3D12_SetNvShaderExtnSlotSpaceWrapper(IUnknown* pDev,
       layer->Pre(command);
     }
 
-    command.Key = manager.createCommandKey();
+    command.Key = manager.CreateCommandKey();
     if (!command.Skip) {
-      result = manager.getNvAPIDispatchTable().NvAPI_D3D12_SetNvShaderExtnSlotSpace(pDev, uavSlot,
+      result = manager.GetNvAPIDispatchTable().NvAPI_D3D12_SetNvShaderExtnSlotSpace(pDev, uavSlot,
                                                                                     uavSpace);
     }
     command.m_Result.Value = result;
@@ -142,7 +142,7 @@ NvAPI_Status NvAPI_D3D12_SetNvShaderExtnSlotSpaceWrapper(IUnknown* pDev,
       layer->Post(command);
     }
   } else {
-    result = manager.getNvAPIDispatchTable().NvAPI_D3D12_SetNvShaderExtnSlotSpace(pDev, uavSlot,
+    result = manager.GetNvAPIDispatchTable().NvAPI_D3D12_SetNvShaderExtnSlotSpace(pDev, uavSlot,
                                                                                   uavSpace);
   }
 
@@ -154,7 +154,7 @@ NvAPI_Status NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadWrapper(IUnknown* pD
                                                                     NvU32 uavSpace) {
   NvAPI_Status result{};
 
-  auto& manager = CaptureManager::get();
+  auto& manager = CaptureManager::Get();
   if (auto atTopOfStack = AtTopOfStackLocal()) {
     NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand command(GetCurrentThreadId(), pDev,
                                                                    uavSlot, uavSpace);
@@ -164,9 +164,9 @@ NvAPI_Status NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadWrapper(IUnknown* pD
       layer->Pre(command);
     }
 
-    command.Key = manager.createCommandKey();
+    command.Key = manager.CreateCommandKey();
     if (!command.Skip) {
-      result = manager.getNvAPIDispatchTable().NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThread(
+      result = manager.GetNvAPIDispatchTable().NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThread(
           pDev, uavSlot, uavSpace);
     }
     command.m_Result.Value = result;
@@ -174,7 +174,7 @@ NvAPI_Status NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadWrapper(IUnknown* pD
       layer->Post(command);
     }
   } else {
-    result = manager.getNvAPIDispatchTable().NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThread(
+    result = manager.GetNvAPIDispatchTable().NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThread(
         pDev, uavSlot, uavSpace);
   }
 
@@ -186,7 +186,7 @@ NvAPI_Status NvAPI_D3D12_BuildRaytracingAccelerationStructureExWrapper(
     const NVAPI_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_EX_PARAMS* pParams) {
   NvAPI_Status result{};
 
-  auto& manager = CaptureManager::get();
+  auto& manager = CaptureManager::Get();
   if (auto atTopOfStack = AtTopOfStackLocal()) {
     GITS_ASSERT(pParams->version == NVAPI_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_EX_PARAMS_VER);
 
@@ -198,9 +198,9 @@ NvAPI_Status NvAPI_D3D12_BuildRaytracingAccelerationStructureExWrapper(
       layer->Pre(command);
     }
 
-    command.Key = manager.createCommandKey();
+    command.Key = manager.CreateCommandKey();
     if (!command.Skip) {
-      result = manager.getNvAPIDispatchTable().NvAPI_D3D12_BuildRaytracingAccelerationStructureEx(
+      result = manager.GetNvAPIDispatchTable().NvAPI_D3D12_BuildRaytracingAccelerationStructureEx(
           pCommandList, pParams);
     }
     command.m_Result.Value = result;
@@ -208,7 +208,7 @@ NvAPI_Status NvAPI_D3D12_BuildRaytracingAccelerationStructureExWrapper(
       layer->Post(command);
     }
   } else {
-    result = manager.getNvAPIDispatchTable().NvAPI_D3D12_BuildRaytracingAccelerationStructureEx(
+    result = manager.GetNvAPIDispatchTable().NvAPI_D3D12_BuildRaytracingAccelerationStructureEx(
         pCommandList, pParams);
   }
 
@@ -220,7 +220,7 @@ NvAPI_Status NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayWrapper(
     NVAPI_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_PARAMS* pParams) {
   NvAPI_Status result{};
 
-  auto& manager = CaptureManager::get();
+  auto& manager = CaptureManager::Get();
   if (auto atTopOfStack = AtTopOfStackLocal()) {
     GITS_ASSERT(pParams->version == NVAPI_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_PARAMS_VER);
 
@@ -232,9 +232,9 @@ NvAPI_Status NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayWrapper(
       layer->Pre(command);
     }
 
-    command.Key = manager.createCommandKey();
+    command.Key = manager.CreateCommandKey();
     if (!command.Skip) {
-      result = manager.getNvAPIDispatchTable().NvAPI_D3D12_BuildRaytracingOpacityMicromapArray(
+      result = manager.GetNvAPIDispatchTable().NvAPI_D3D12_BuildRaytracingOpacityMicromapArray(
           pCommandList, pParams);
     }
     command.m_Result.Value = result;
@@ -242,7 +242,7 @@ NvAPI_Status NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayWrapper(
       layer->Post(command);
     }
   } else {
-    result = manager.getNvAPIDispatchTable().NvAPI_D3D12_BuildRaytracingOpacityMicromapArray(
+    result = manager.GetNvAPIDispatchTable().NvAPI_D3D12_BuildRaytracingOpacityMicromapArray(
         pCommandList, pParams);
   }
 
@@ -257,8 +257,8 @@ NvAPI_Status NvAPI_D3D12_RelocateRaytracingOpacityMicromapArrayWrapper(
     LOG_ERROR << "NvAPI_D3D12_RelocateRaytracingOpacityMicromapArray not handled!";
     logged = true;
   }
-  auto& manager = CaptureManager::get();
-  return manager.getNvAPIDispatchTable().NvAPI_D3D12_RelocateRaytracingOpacityMicromapArray(
+  auto& manager = CaptureManager::Get();
+  return manager.GetNvAPIDispatchTable().NvAPI_D3D12_RelocateRaytracingOpacityMicromapArray(
       pCommandList, pParams);
 }
 
@@ -270,8 +270,8 @@ NvAPI_Status NvAPI_D3D12_EmitRaytracingOpacityMicromapArrayPostbuildInfoWrapper(
     LOG_ERROR << "NvAPI_D3D12_EmitRaytracingOpacityMicromapArrayPostbuildInfo not handled!";
     logged = true;
   }
-  auto& manager = CaptureManager::get();
-  return manager.getNvAPIDispatchTable()
+  auto& manager = CaptureManager::Get();
+  return manager.GetNvAPIDispatchTable()
       .NvAPI_D3D12_EmitRaytracingOpacityMicromapArrayPostbuildInfo(pCommandList, pParams);
 }
 
@@ -280,7 +280,7 @@ NvAPI_Status NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationWrapper(
     const NVAPI_RAYTRACING_EXECUTE_MULTI_INDIRECT_CLUSTER_OPERATION_PARAMS* pParams) {
   NvAPI_Status result{};
 
-  auto& manager = CaptureManager::get();
+  auto& manager = CaptureManager::Get();
   if (auto atTopOfStack = AtTopOfStackLocal()) {
     GITS_ASSERT(pParams->version ==
                 NVAPI_RAYTRACING_EXECUTE_MULTI_INDIRECT_CLUSTER_OPERATION_PARAMS_VER);
@@ -293,10 +293,10 @@ NvAPI_Status NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationWrapper(
       layer->Pre(command);
     }
 
-    command.Key = manager.createCommandKey();
+    command.Key = manager.CreateCommandKey();
     if (!command.Skip) {
       result =
-          manager.getNvAPIDispatchTable()
+          manager.GetNvAPIDispatchTable()
               .NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperation(pCommandList, pParams);
     }
     command.m_Result.Value = result;
@@ -305,7 +305,7 @@ NvAPI_Status NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationWrapper(
     }
   } else {
     result =
-        manager.getNvAPIDispatchTable().NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperation(
+        manager.GetNvAPIDispatchTable().NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperation(
             pCommandList, pParams);
   }
 
@@ -320,8 +320,8 @@ NvAPI_Status NvAPI_D3D12_BuildRaytracingPartitionedTlasIndirectWrapper(
     LOG_ERROR << "NvAPI_D3D12_BuildRaytracingPartitionedTlasIndirect not handled!";
     logged = true;
   }
-  auto& manager = CaptureManager::get();
-  return manager.getNvAPIDispatchTable().NvAPI_D3D12_BuildRaytracingPartitionedTlasIndirect(
+  auto& manager = CaptureManager::Get();
+  return manager.GetNvAPIDispatchTable().NvAPI_D3D12_BuildRaytracingPartitionedTlasIndirect(
       pCommandList, pParams);
 }
 

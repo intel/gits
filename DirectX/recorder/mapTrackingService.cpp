@@ -196,7 +196,7 @@ void MapTrackingService::CaptureData(
     unsigned resourceKey, void* mappedAddress, unsigned offset, void* data, unsigned dataSize) {
 
   MappedDataMetaCommand command(GetCurrentThreadId());
-  command.Key = CaptureManager::get().createCommandKey();
+  command.Key = CaptureManager::Get().CreateCommandKey();
   command.m_resource.Key = resourceKey;
   command.m_mappedAddress.Value = mappedAddress;
   command.m_offset.Value = offset;

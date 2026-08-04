@@ -15,12 +15,12 @@ namespace DirectX {
 
 void RecorderWrapper::ExchangeDXGIDispatchTables(const DXGIDispatchTable& systemTable,
                                                  DXGIDispatchTable& wrapperTable) {
-  CaptureManager::get().exchangeDXGIDispatchTables(systemTable, wrapperTable);
+  CaptureManager::Get().ExchangeDXGIDispatchTables(systemTable, wrapperTable);
 }
 
 void RecorderWrapper::ExchangeD3D12DispatchTables(const D3D12DispatchTable& systemTable,
                                                   D3D12DispatchTable& wrapperTable) {
-  CaptureManager::get().exchangeD3D12DispatchTables(systemTable, wrapperTable);
+  CaptureManager::Get().ExchangeD3D12DispatchTables(systemTable, wrapperTable);
 }
 
 } // namespace DirectX

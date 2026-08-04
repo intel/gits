@@ -13,35 +13,35 @@ namespace gits {
 namespace DirectX {
 
 void CaptureSynchronizationLayer::Pre(ID3D12FenceSignalCommand& command) {
-  m_Manager.getFenceService().getGlobalMutex().lock();
+  m_Manager.GetFenceService().getGlobalMutex().lock();
 }
 
 void CaptureSynchronizationLayer::Post(ID3D12FenceSignalCommand& command) {
-  m_Manager.getFenceService().getGlobalMutex().unlock();
+  m_Manager.GetFenceService().getGlobalMutex().unlock();
 }
 
 void CaptureSynchronizationLayer::Pre(ID3D12CommandQueueSignalCommand& command) {
-  m_Manager.getFenceService().getGlobalMutex().lock();
+  m_Manager.GetFenceService().getGlobalMutex().lock();
 }
 
 void CaptureSynchronizationLayer::Post(ID3D12CommandQueueSignalCommand& command) {
-  m_Manager.getFenceService().getGlobalMutex().unlock();
+  m_Manager.GetFenceService().getGlobalMutex().unlock();
 }
 
 void CaptureSynchronizationLayer::Pre(ID3D12CommandQueueWaitCommand& command) {
-  m_Manager.getFenceService().getGlobalMutex().lock();
+  m_Manager.GetFenceService().getGlobalMutex().lock();
 }
 
 void CaptureSynchronizationLayer::Post(ID3D12CommandQueueWaitCommand& command) {
-  m_Manager.getFenceService().getGlobalMutex().unlock();
+  m_Manager.GetFenceService().getGlobalMutex().unlock();
 }
 
 void CaptureSynchronizationLayer::Pre(ID3D12FenceGetCompletedValueCommand& command) {
-  m_Manager.getFenceService().getGlobalMutex().lock();
+  m_Manager.GetFenceService().getGlobalMutex().lock();
 }
 
 void CaptureSynchronizationLayer::Post(ID3D12FenceGetCompletedValueCommand& command) {
-  m_Manager.getFenceService().getGlobalMutex().unlock();
+  m_Manager.GetFenceService().getGlobalMutex().unlock();
 }
 
 } // namespace DirectX

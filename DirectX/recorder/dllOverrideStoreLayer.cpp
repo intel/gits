@@ -85,7 +85,7 @@ void DllOverrideStoreLayer::CaptureAgilitySDKDll(Command& c) {
   }
 
   if (CaptureDll(L"D3D12Core.dll", c.ThreadId)) {
-    m_Manager.updateCommandKey(c);
+    m_Manager.UpdateCommandKey(c);
   }
 
   m_AgilitySdkDllChecked = true;
@@ -153,7 +153,7 @@ bool DllOverrideStoreLayer::CaptureDll(const std::wstring& dllName, unsigned thr
   }
 
   DllContainerMetaCommand command(threadId);
-  command.Key = m_Manager.createCommandKey();
+  command.Key = m_Manager.CreateCommandKey();
   command.m_dllName.Value = const_cast<wchar_t*>(dllName.c_str());
   command.m_dllData.Size = size;
   command.m_dllData.Value = content.data();

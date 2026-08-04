@@ -126,7 +126,7 @@ void EncoderLayer::Post(
 }
 
 void EncoderLayer::Post(IDXGISwapChainPresentCommand& c) {
-  const auto keys = CaptureManager::get().createCommandKeyRange(2);
+  const auto keys = CaptureManager::Get().CreateCommandKeyRange(2);
   m_Recorder.Skip(c.Key);
   c.Key = keys.first;
 
@@ -143,7 +143,7 @@ void EncoderLayer::Post(IDXGISwapChainPresentCommand& c) {
 }
 
 void EncoderLayer::Post(IDXGISwapChain1Present1Command& c) {
-  const auto keys = CaptureManager::get().createCommandKeyRange(2);
+  const auto keys = CaptureManager::Get().CreateCommandKeyRange(2);
   m_Recorder.Skip(c.Key);
   c.Key = keys.first;
 

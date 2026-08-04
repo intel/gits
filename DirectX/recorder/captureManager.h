@@ -41,41 +41,41 @@ class IUnknownWrapper;
 
 class CaptureManager {
 public:
-  static CaptureManager& get();
+  static CaptureManager& Get();
 
-  void exchangeDXGIDispatchTables(const DXGIDispatchTable& systemTable,
+  void ExchangeDXGIDispatchTables(const DXGIDispatchTable& systemTable,
                                   DXGIDispatchTable& wrapperTable);
-  void exchangeD3D12DispatchTables(const D3D12DispatchTable& systemTable,
+  void ExchangeD3D12DispatchTables(const D3D12DispatchTable& systemTable,
                                    D3D12DispatchTable& wrapperTable);
 
-  DXGIDispatchTable& getDXGIDispatchTable() {
+  DXGIDispatchTable& GetDXGIDispatchTable() {
     return m_DxgiDispatchTableSystem;
   }
-  D3D12DispatchTable& getD3D12DispatchTable() {
+  D3D12DispatchTable& GetD3D12DispatchTable() {
     return m_D3D12DispatchTableSystem;
   }
-  DMLDispatchTable& getDMLDispatchTable() {
+  DMLDispatchTable& GetDMLDispatchTable() {
     return m_DmlDispatchTable;
   }
-  DStorageDispatchTable& getDStorageDispatchTable() {
+  DStorageDispatchTable& GetDStorageDispatchTable() {
     return m_DstorageDispatchTable;
   }
-  Kernel32DispatchTable& getKernel32DispatchTable() {
+  Kernel32DispatchTable& GetKernel32DispatchTable() {
     return m_Kernel32DispatchTableSystem;
   }
-  XessDispatchTable& getXessDispatchTable() {
+  XessDispatchTable& GetXessDispatchTable() {
     return m_XessDispatchTable;
   }
-  NvAPIDispatchTable& getNvAPIDispatchTable() {
+  NvAPIDispatchTable& GetNvAPIDispatchTable() {
     return m_NvapiDispatchTable;
   }
-  D3D11On12DispatchTable& getd3d11on12DispatchTable() {
+  D3D11On12DispatchTable& GetD3D11On12DispatchTable() {
     return m_D3D11On12DispatchTable;
   }
-  XellDispatchTable& getXellDispatchTable() {
+  XellDispatchTable& GetXellDispatchTable() {
     return m_XellDispatchTable;
   }
-  XefgDispatchTable& getXefgDispatchTable() {
+  XefgDispatchTable& GetXefgDispatchTable() {
     return m_XefgDispatchTable;
   }
 
@@ -86,71 +86,71 @@ public:
     return m_LayerManager.GetPostLayers();
   }
 
-  unsigned incrementGlobalStackDepth() {
+  unsigned IncrementGlobalStackDepth() {
     return ++m_GlobalStackDepth;
   }
-  unsigned decrementGlobalStackDepth() {
+  unsigned DecrementGlobalStackDepth() {
     return --m_GlobalStackDepth;
   }
-  unsigned incrementLocalStackDepth() {
+  unsigned IncrementLocalStackDepth() {
     return ++m_LocalStackDepth;
   }
-  unsigned decrementLocalStackDepth() {
+  unsigned DecrementLocalStackDepth() {
     return --m_LocalStackDepth;
   }
 
-  unsigned createWrapperKey() {
+  unsigned CreateWrapperKey() {
     return m_WrapperUniqueKey.fetch_add(1, std::memory_order_relaxed) + 1;
   }
-  unsigned createCommandKey() {
+  unsigned CreateCommandKey() {
     return m_CommandUniqueKey.fetch_add(1, std::memory_order_relaxed) + 1;
   }
-  std::pair<unsigned, unsigned> createCommandKeyRange(unsigned rangeSize);
+  std::pair<unsigned, unsigned> CreateCommandKeyRange(unsigned rangeSize);
 
-  void updateCommandKey(Command& command) {
+  void UpdateCommandKey(Command& command) {
     m_Recorder->Skip(command.Key);
-    command.Key = createCommandKey();
+    command.Key = CreateCommandKey();
   }
 
-  void addWrapper(IUnknownWrapper* wrapper);
-  void removeWrapper(IUnknownWrapper* wrapper);
-  IUnknownWrapper* findWrapper(IUnknown* object);
+  void AddWrapper(IUnknownWrapper* wrapper);
+  void RemoveWrapper(IUnknownWrapper* wrapper);
+  IUnknownWrapper* FindWrapper(IUnknown* object);
 
-  CaptureDescriptorHandleService& getDescriptorHandleService() {
+  CaptureDescriptorHandleService& GetDescriptorHandleService() {
     return m_DescriptorHandleService;
   }
-  MapTrackingService& getMapTrackingService() {
+  MapTrackingService& GetMapTrackingService() {
     return *m_MapTrackingService;
   }
-  RootSignatureService& getRootSignatureService() {
+  RootSignatureService& GetRootSignatureService() {
     return m_RootSignatureService;
   }
-  GpuAddressService& getGpuAddressService() {
+  GpuAddressService& GetGpuAddressService() {
     return m_GpuAddressService;
   }
-  FenceService& getFenceService() {
+  FenceService& GetFenceService() {
     return *m_FenceService;
   }
-  ContextMapService& getIntelExtensionsContextMap() {
+  ContextMapService& GetIntelExtensionsContextMap() {
     return m_IntelExtensionsContextMap;
   }
-  ContextMapService& getXessContextMap() {
+  ContextMapService& GetXessContextMap() {
     return m_XessContextMap;
   }
-  ContextMapService& getXellContextMap() {
+  ContextMapService& GetXellContextMap() {
     return m_XellContextMap;
   }
-  ContextMapService& getXefgContextMap() {
+  ContextMapService& GetXefgContextMap() {
     return m_XefgContextMap;
   }
-  std::unordered_map<std::string, unsigned int>& getNvAPIFunctionIds() {
+  std::unordered_map<std::string, unsigned int>& GetNvAPIFunctionIds() {
     return m_NvapiFunctionIds;
   }
 
-  void interceptXessFunctions();
-  void interceptXellFunctions();
-  void interceptXefgFunctions();
-  void loadIntelExtension(const uint32_t& vendorID, const uint32_t& deviceID);
+  void InterceptXessFunctions();
+  void InterceptXellFunctions();
+  void InterceptXefgFunctions();
+  void LoadIntelExtension(const uint32_t& vendorID, const uint32_t& deviceID);
 
 private:
   CaptureManager();
@@ -158,12 +158,12 @@ private:
   CaptureManager(const CaptureManager&) = delete;
   CaptureManager& operator=(const CaptureManager&) = delete;
 
-  void close();
-  void interceptDirectMLFunctions();
-  void interceptDirectStorageFunctions();
-  void interceptKernelFunctions();
-  void interceptNvAPIFunctions();
-  void interceptD3D11On12Functions();
+  void Close();
+  void InterceptDirectMLFunctions();
+  void InterceptDirectStorageFunctions();
+  void InterceptKernelFunctions();
+  void InterceptNvAPIFunctions();
+  void InterceptD3D11On12Functions();
 
 private:
   static CaptureManager* m_Instance;

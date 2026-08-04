@@ -22,7 +22,7 @@ namespace DirectX {
 
 IUnknownWrapper::IUnknownWrapper(REFIID riid, IUnknown* object) : m_Iid(riid), m_Object(object) {
   InsertIID(IID_IUnknown);
-  m_Key = CaptureManager::get().createWrapperKey();
+  m_Key = CaptureManager::Get().CreateWrapperKey();
 }
 
 HRESULT STDMETHODCALLTYPE IUnknownWrapper::QueryInterface(REFIID riid, void** ppvObject) {
@@ -34,7 +34,7 @@ HRESULT STDMETHODCALLTYPE IUnknownWrapper::QueryInterface(REFIID riid, void** pp
 
   HRESULT result{};
 
-  auto& manager = CaptureManager::get();
+  auto& manager = CaptureManager::Get();
   if (auto atTopOfStack = AtTopOfStackLocal()) {
 
     IUnknownQueryInterfaceCommand command(GetCurrentThreadId(), reinterpret_cast<IUnknown*>(this),
@@ -45,7 +45,7 @@ HRESULT STDMETHODCALLTYPE IUnknownWrapper::QueryInterface(REFIID riid, void** pp
       layer->Pre(command);
     }
 
-    command.Key = manager.createCommandKey();
+    command.Key = manager.CreateCommandKey();
     result = m_Object->QueryInterface(command.m_riid.Value, command.m_ppvObject.Value);
 
     m_Object->AddRef();
@@ -91,7 +91,7 @@ ULONG STDMETHODCALLTYPE IUnknownWrapper::AddRef() {
 
   ULONG result{};
 
-  auto& manager = CaptureManager::get();
+  auto& manager = CaptureManager::Get();
   if (auto atTopOfStack = AtTopOfStackLocal()) {
 
     IUnknownAddRefCommand command(GetCurrentThreadId(), reinterpret_cast<IUnknown*>(this));
@@ -101,7 +101,7 @@ ULONG STDMETHODCALLTYPE IUnknownWrapper::AddRef() {
       layer->Pre(command);
     }
 
-    command.Key = manager.createCommandKey();
+    command.Key = manager.CreateCommandKey();
     result = m_Object->AddRef();
     command.m_Result.Value = result;
 
@@ -119,7 +119,7 @@ ULONG STDMETHODCALLTYPE IUnknownWrapper::Release() {
 
   ULONG result{};
 
-  auto& manager = CaptureManager::get();
+  auto& manager = CaptureManager::Get();
   if (auto atTopOfStack = AtTopOfStackLocal()) {
 
     IUnknownReleaseCommand command(GetCurrentThreadId(), reinterpret_cast<IUnknown*>(this));
@@ -129,12 +129,12 @@ ULONG STDMETHODCALLTYPE IUnknownWrapper::Release() {
       layer->Pre(command);
     }
 
-    command.Key = manager.createCommandKey();
+    command.Key = manager.CreateCommandKey();
     m_Object->AddRef();
     result = m_Object->Release();
 
     if (result == 1) {
-      CaptureManager::get().removeWrapper(this);
+      CaptureManager::Get().RemoveWrapper(this);
     }
 
     result = m_Object->Release();

@@ -19,10 +19,10 @@ const IID IID_ID3DDestructionNotifier = {
     0XA06EB39A, 0X50DA, 0X425B, {0X8C, 0X31, 0X4E, 0XEC, 0XD6, 0XC2, 0X70, 0XF3}};
 
 void wrapIUnknown(REFIID riid, void** object) {
-  IUnknownWrapper* wrapper = CaptureManager::get().findWrapper(*reinterpret_cast<IUnknown**>(object));
+  IUnknownWrapper* wrapper = CaptureManager::Get().FindWrapper(*reinterpret_cast<IUnknown**>(object));
   if (!wrapper) {
     wrapper = new IUnknownWrapper(riid, *reinterpret_cast<IUnknown**>(object));
-    CaptureManager::get().addWrapper(wrapper);
+    CaptureManager::Get().AddWrapper(wrapper);
   }
   *object = wrapper;
 }
@@ -33,10 +33,10 @@ void wrapIUnknownNoStore(REFIID riid, void** object) {
 
 %for interface in interfaces:
 void wrap${interface.name}(REFIID riid, void** object) {
-  IUnknownWrapper* wrapper = CaptureManager::get().findWrapper(*reinterpret_cast<IUnknown**>(object));
+  IUnknownWrapper* wrapper = CaptureManager::Get().FindWrapper(*reinterpret_cast<IUnknown**>(object));
   if (!wrapper) {
     wrapper = new ${interface.latest_interface}Wrapper(riid, *reinterpret_cast<IUnknown**>(object));
-    CaptureManager::get().addWrapper(wrapper);
+    CaptureManager::Get().AddWrapper(wrapper);
   }
   *object = wrapper;
 }

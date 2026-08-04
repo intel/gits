@@ -27,7 +27,7 @@ void InterceptorCustomizationLayer::Post(IDXGISwapChainGetBufferCommand& c) {
 
 void InterceptorCustomizationLayer::Pre(IUnknownReleaseCommand& c) {
   // Handle swap chain buffers shared reference count
-  // Needs to be done in pre layer, because objects need to be alive for removeWrapper call
+  // Needs to be done in pre layer, because objects need to be alive for RemoveWrapper call
 
   c.m_Object.Value->AddRef();
   auto result = c.m_Object.Value->Release();
@@ -50,10 +50,10 @@ void InterceptorCustomizationLayer::Pre(IUnknownReleaseCommand& c) {
     if (bufferObject == c.m_Object.Value) {
       continue;
     }
-    auto* bufferWrapper = CaptureManager::get().findWrapper(bufferObject);
+    auto* bufferWrapper = CaptureManager::Get().FindWrapper(bufferObject);
     GITS_ASSERT(bufferWrapper != nullptr, "Can't remove a nonexistent buffer wrapper.");
     m_SwapChainByBufferKey.erase(bufferWrapper->GetKey());
-    CaptureManager::get().removeWrapper(bufferWrapper);
+    CaptureManager::Get().RemoveWrapper(bufferWrapper);
   }
   m_SwapChainByBufferKey.erase(itSwapChain);
   m_BuffersBySwapChainKey.erase(itBuffers);
@@ -70,10 +70,10 @@ void InterceptorCustomizationLayer::RemoveSwapChainBufferWrappersOnResize(unsign
   }
 
   for (IUnknown* bufferObject : itBuffers->second) {
-    auto* bufferWrapper = CaptureManager::get().findWrapper(bufferObject);
+    auto* bufferWrapper = CaptureManager::Get().FindWrapper(bufferObject);
     GITS_ASSERT(bufferWrapper != nullptr, "Can't remove a nonexistent buffer wrapper.");
     m_SwapChainByBufferKey.erase(bufferWrapper->GetKey());
-    CaptureManager::get().removeWrapper(bufferWrapper);
+    CaptureManager::Get().RemoveWrapper(bufferWrapper);
   }
   m_BuffersBySwapChainKey.erase(itBuffers);
 }
@@ -119,13 +119,13 @@ void InterceptorCustomizationLayer::Pre(D3D12CreateDeviceCommand& command) {
   HRESULT hr = adapter->GetDesc(&desc);
   GITS_ASSERT(hr == S_OK);
 
-  CaptureManager::get().loadIntelExtension(desc.VendorId, desc.DeviceId);
+  CaptureManager::Get().LoadIntelExtension(desc.VendorId, desc.DeviceId);
 }
 
 void InterceptorCustomizationLayer::Post(D3D12CreateDeviceCommand& command) {
-  CaptureManager::get().interceptXessFunctions();
-  CaptureManager::get().interceptXellFunctions();
-  CaptureManager::get().interceptXefgFunctions();
+  CaptureManager::Get().InterceptXessFunctions();
+  CaptureManager::Get().InterceptXellFunctions();
+  CaptureManager::Get().InterceptXefgFunctions();
 }
 
 } // namespace DirectX

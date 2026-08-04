@@ -114,9 +114,9 @@ def generate_plugin_file(context, file_name, out_path):
 
 def get_context_map(function):
     context_map = {
-      Api.XESS: "getXessContextMap()",
-      Api.XELL: "getXellContextMap()",
-      Api.XEFG: "getXefgContextMap()"
+      Api.XESS: "GetXessContextMap()",
+      Api.XELL: "GetXellContextMap()",
+      Api.XEFG: "GetXefgContextMap()"
     }
     return context_map[function.api]
 

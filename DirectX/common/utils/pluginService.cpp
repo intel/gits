@@ -16,23 +16,23 @@
 namespace gits {
 namespace DirectX {
 
-void PluginInfo::free() {
-  if (destroyPlugin) {
-    destroyPlugin();
+void PluginInfo::Free() {
+  if (DestroyPlugin) {
+    DestroyPlugin();
   }
-  FreeLibrary(dll);
-  for (auto dep : dependencies) {
+  FreeLibrary(Dll);
+  for (auto dep : Dependencies) {
     FreeLibrary(dep);
   }
 }
 
 PluginService::~PluginService() {
-  for (auto& plugin : plugins_) {
-    plugin.free();
+  for (auto& plugin : m_Plugins) {
+    plugin.Free();
   }
 }
 
-void PluginService::loadPlugins() {
+void PluginService::LoadPlugins() {
   const auto isValidPluginsPath = [](const std::filesystem::path& path) -> bool {
     return std::filesystem::exists(path) && std::filesystem::is_directory(path);
   };
@@ -93,7 +93,7 @@ void PluginService::loadPlugins() {
     }
 
     PluginInfo plugin = {};
-    plugin.dllPath = std::move(pluginPath);
+    plugin.DllPath = std::move(pluginPath);
 
     // Preload all the plugin dependencies (DLLs)
     auto dependenciesPath = entry.path() / "dependencies";
@@ -107,23 +107,23 @@ void PluginService::loadPlugins() {
           LOG_ERROR << "PluginService - Failed to load dependency DLL: " << dependency.path();
           continue;
         }
-        plugin.dependencies.push_back(dll);
+        plugin.Dependencies.push_back(dll);
       }
     }
 
     // Load the main plugin DLL
-    plugin.dll = LoadLibrary(plugin.dllPath.string().c_str());
-    if (!plugin.dll) {
-      LOG_ERROR << "PluginService - Failed to load Plugin DLL: " << plugin.dllPath;
+    plugin.Dll = LoadLibrary(plugin.DllPath.string().c_str());
+    if (!plugin.Dll) {
+      LOG_ERROR << "PluginService - Failed to load Plugin DLL: " << plugin.DllPath;
       continue;
     }
 
     auto createPlugin =
-        reinterpret_cast<CreatePluginPtr>(GetProcAddress(plugin.dll, "createPlugin"));
+        reinterpret_cast<CreatePluginPtr>(GetProcAddress(plugin.Dll, "createPlugin"));
     if (!createPlugin) {
       LOG_ERROR << "PluginService - Failed to locate the 'createPlugin' function in DLL: "
-                << plugin.dllPath;
-      plugin.free();
+                << plugin.DllPath;
+      plugin.Free();
       continue;
     }
 
@@ -133,37 +133,37 @@ void PluginService::loadPlugins() {
     pluginContext.config = &cfg;
     pluginContext.logAppender = plog::get();
 
-    plugin.destroyPlugin =
-        reinterpret_cast<DestroyPluginPtr>(GetProcAddress(plugin.dll, "destroyPlugin"));
-    plugin.impl = createPlugin(pluginContext, plugin.dllPath.string().c_str());
-    if (!plugin.impl) {
+    plugin.DestroyPlugin =
+        reinterpret_cast<DestroyPluginPtr>(GetProcAddress(plugin.Dll, "destroyPlugin"));
+    plugin.Impl = createPlugin(pluginContext, plugin.DllPath.string().c_str());
+    if (!plugin.Impl) {
       LOG_ERROR << "PluginService - Could not create the plugin instance for DLL: "
-                << plugin.dllPath;
-      plugin.free();
+                << plugin.DllPath;
+      plugin.Free();
       continue;
     }
 
-    auto pluginName = plugin.impl->getName();
+    auto pluginName = plugin.Impl->getName();
     if (pluginsToEnable.count(toLowerCase(pluginName)) == 0) {
       LOG_DEBUG << "PluginService - Plugin '" << pluginName
                 << "' found but not enabled in the GITS config file";
-      plugin.free();
+      plugin.Free();
       continue;
     }
 
     LOG_INFO << "PluginService - Loaded '" << pluginName << "' plugin";
-    plugins_.emplace_back(std::move(plugin));
+    m_Plugins.emplace_back(std::move(plugin));
   }
 
-  if (plugins_.size() != pluginNames.size()) {
-    LOG_ERROR << "PluginService - Loaded " << plugins_.size() << " plugins out of "
+  if (m_Plugins.size() != pluginNames.size()) {
+    LOG_ERROR << "PluginService - Loaded " << m_Plugins.size() << " plugins out of "
               << pluginNames.size() << " requested";
     LOG_ERROR << "PluginService - Check the plugin names in the GITS config file";
   }
 }
 
-const std::vector<PluginInfo>& PluginService::getPlugins() {
-  return plugins_;
+const std::vector<PluginInfo>& PluginService::GetPlugins() const {
+  return m_Plugins;
 }
 
 } // namespace DirectX
