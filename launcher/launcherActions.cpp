@@ -9,6 +9,9 @@
 #include "launcherActions.h"
 
 #include <cstdlib>
+#include <chrono>
+#include <iomanip>
+#include <sstream>
 #ifdef _WIN32
 #include <windows.h>
 #include <shellapi.h>
@@ -399,10 +402,19 @@ TemporaryConfigInfo PrepareTemporaryConfigFile(Mode mode, const std::filesystem:
            : filesystem_names::
                  PLAYER_TEMPORARY_CONFIG_FILENAME); // For Playback and Subcapture, we can use the --config argument to pass that temporary file so we can have an arbitrary name for it
   auto originalNeedsRestoring = false;
-  const std::filesystem::path originalBackupPath = directory / "gits_config_backup.yml";
+  std::filesystem::path originalBackupPath;
   if (mode == Mode::CAPTURE && std::filesystem::exists(tmpConfigPath)) {
     originalNeedsRestoring = true;
-    std::filesystem::copy_file(tmpConfigPath, originalBackupPath);
+    // Generate timestamped backup filename to avoid collisions
+    auto now = std::chrono::system_clock::now();
+    auto timeT = std::chrono::system_clock::to_time_t(now);
+    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) % 1000;
+    std::ostringstream oss;
+    oss << "gits_config_backup_" << std::put_time(std::localtime(&timeT), "%Y%m%d_%H%M%S") << '_'
+        << std::setfill('0') << std::setw(3) << ms.count() << ".yml";
+    originalBackupPath = directory / oss.str();
+    std::filesystem::copy_file(tmpConfigPath, originalBackupPath,
+                               std::filesystem::copy_options::overwrite_existing);
   }
 
   std::ofstream file(tmpConfigPath);

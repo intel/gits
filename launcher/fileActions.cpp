@@ -93,10 +93,16 @@ bool FileActions::CopyDirectory(const fs::path& source, const fs::path& destinat
 }
 
 bool FileActions::CopyDirectoryContents(const std::filesystem::path& source,
-                                        const std::filesystem::path& destination) {
+                                        const std::filesystem::path& destination,
+                                        const std::unordered_set<std::string>& excludedFilenames) {
   try {
     for (const auto& item : fs::directory_iterator(source)) {
       const auto& source_path = item.path();
+      const auto filename = source_path.filename().string();
+      if (excludedFilenames.count(filename) > 0) {
+        LOG_DEBUG << "Skipping excluded file: " << filename;
+        continue;
+      }
       const auto destination_path = destination / source_path.filename();
       fs::copy(source_path, destination_path,
                fs::copy_options::recursive | fs::copy_options::overwrite_existing);

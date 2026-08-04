@@ -11,6 +11,7 @@
 #include <filesystem>
 #include <vector>
 #include <string>
+#include <unordered_set>
 
 #include <numeric>
 #include <functional>
@@ -30,7 +31,8 @@ public:
   static bool CopyDirectory(const std::filesystem::path& source,
                             const std::filesystem::path& destination);
   static bool CopyDirectoryContents(const std::filesystem::path& source,
-                                    const std::filesystem::path& destination);
+                                    const std::filesystem::path& destination,
+                                    const std::unordered_set<std::string>& excludedFilenames = {});
   static bool DeleteFileSafe(const std::filesystem::path& filePath);
   static bool DeleteFiles(const std::vector<std::filesystem::path>& filePaths);
   static bool DeleteDirectorySafe(const std::filesystem::path& directoryPath);

@@ -195,7 +195,9 @@ bool CopyRecorderFiles(std::filesystem::path gitsBasePath,
     return false;
   }
 
-  if (!FileActions::CopyDirectoryContents(apiDirectory, targetDirectory)) {
+  // Copy recorder files, excluding gits_config.yml to avoid overwriting any existing config (launcher will create its own temporary config file)
+  std::unordered_set<std::string> excludedFiles{filesystem_names::RECORDER_CONFIG_FILENAME};
+  if (!FileActions::CopyDirectoryContents(apiDirectory, targetDirectory, excludedFiles)) {
     LOG_ERROR << "Couldn't copy recorder files to the target directory";
 
     return false;

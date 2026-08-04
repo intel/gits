@@ -165,9 +165,9 @@ struct Labels {
       "Executions end###CommandListExecutionsEnd";
 
   // Capture cleanup
-  static constexpr const char* CLEAN_RECORDER_FILES = "Recorder files";
+  static constexpr const char* CLEAN_RECORDER_FILES = "Interposers";
   static constexpr const char* CLEAN_RECORDER_FILES_HINT =
-      "Remove the recorder files (e.g. DLLs) after recording";
+      "Remove the interposer files after recording";
   static constexpr const char* CLEAN_RECORDER_CONFIG = "Config";
   static constexpr const char* CLEAN_RECORDER_CONFIG_HINT =
       "Remove the recorder config file after recording";

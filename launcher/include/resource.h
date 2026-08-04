@@ -10,9 +10,14 @@
 
 #define APP_ICON      101
 #define APP_FILE_ICON 102
-#define APP_VERSION   "1.3"
+#define APP_VERSION   "1.3.1"
 
 inline const char* RELEASE_NOTES = R"(
+Release Notes v1.3.1
+====================
+- Fixed a crash when trying to create a config backup file if a backup was already present in the directory
+- Minor text label changes
+
 Release Notes v1.3
 ====================
 - Added initial support for the new Vulkan backend
