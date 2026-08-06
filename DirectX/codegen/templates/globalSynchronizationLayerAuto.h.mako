@@ -85,7 +85,7 @@ public:
   %endfor
 
 private:
-  std::mutex mutex_;
+  std::recursive_mutex mutex_; // std::recursive_mutex is needed when capturing nested API calls
 };
 
 } // namespace DirectX

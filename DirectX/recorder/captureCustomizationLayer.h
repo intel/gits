@@ -11,6 +11,7 @@
 #include "layerAuto.h"
 #include "orderingRecorder.h"
 #include "directStorageService.h"
+#include "destructionCallbackService.h"
 
 namespace gits {
 namespace DirectX {
@@ -118,6 +119,10 @@ public:
   void Pre(xefgSwapChainD3D12InitFromSwapChainDescCommand& c) override;
   void Post(IDXGISwapChainPresentCommand& command) override;
   void Post(IDXGISwapChain1Present1Command& command) override;
+  void Post(ID3D12ObjectSetPrivateDataInterfaceCommand& command) override;
+  void Post(IDXGIObjectSetPrivateDataInterfaceCommand& command) override;
+  void Pre(ID3DDestructionNotifierRegisterDestructionCallbackCommand& command) override;
+  void Post(ID3DDestructionNotifierRegisterDestructionCallbackCommand& command) override;
 
 private:
   void NewFrame();
@@ -147,6 +152,7 @@ private:
   CaptureManager& m_Manager;
   stream::OrderingRecorder& m_Recorder;
   DirectStorageService m_DirectStorageService;
+  DestructionCallbackService m_DestructionCallbackService;
 };
 
 } // namespace DirectX

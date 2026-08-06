@@ -76,6 +76,8 @@ set(SERVICES_SRC
   ${SRC_DIR}/gpuAddressService.cpp
   ${SRC_DIR}/fenceService.h
   ${SRC_DIR}/fenceService.cpp
+  ${SRC_DIR}/destructionCallbackService.h
+  ${SRC_DIR}/destructionCallbackService.cpp
   ${SRC_DIR}/contextMapService.h
   ${SRC_DIR}/directStorageService.h
   ${SRC_DIR}/directStorageService.cpp

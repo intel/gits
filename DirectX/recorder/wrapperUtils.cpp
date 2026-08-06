@@ -67,6 +67,22 @@ AtTopOfStackLocal::operator bool() {
   return localStackDepth == 1;
 }
 
+NestedCaptureScope::NestedCaptureScope() {
+  try {
+    CaptureManager::Get().DecrementLocalStackDepth();
+  } catch (...) {
+    topmost_exception_handler("NestedCaptureScope::NestedCaptureScope()");
+  }
+}
+
+NestedCaptureScope::~NestedCaptureScope() {
+  try {
+    CaptureManager::Get().IncrementLocalStackDepth();
+  } catch (...) {
+    topmost_exception_handler("NestedCaptureScope::~NestedCaptureScope()");
+  }
+}
+
 unsigned getWrapperKey(const IUnknown* object) {
   if (object) {
     IUnknownWrapper* wrapper = nullptr;

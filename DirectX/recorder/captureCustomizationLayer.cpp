@@ -1256,5 +1256,21 @@ void CaptureCustomizationLayer::FillCpuDescriptorHandleArgument(
   arg.Index = info.Index;
 }
 
+void CaptureCustomizationLayer::Post(ID3D12ObjectSetPrivateDataInterfaceCommand& c) {
+  m_DestructionCallbackService.PostSetPrivateDataInterface(c);
+}
+
+void CaptureCustomizationLayer::Post(IDXGIObjectSetPrivateDataInterfaceCommand& c) {
+  m_DestructionCallbackService.PostSetPrivateDataInterface(c);
+}
+
+void CaptureCustomizationLayer::Pre(ID3DDestructionNotifierRegisterDestructionCallbackCommand& c) {
+  m_DestructionCallbackService.PreRegisterDestructionCallback(c);
+}
+
+void CaptureCustomizationLayer::Post(ID3DDestructionNotifierRegisterDestructionCallbackCommand& c) {
+  m_DestructionCallbackService.PostRegisterDestructionCallback(c);
+}
+
 } // namespace DirectX
 } // namespace gits

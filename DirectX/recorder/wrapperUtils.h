@@ -42,6 +42,15 @@ public:
   operator bool();
 };
 
+// Lowers thread-local capture stack depth for nested API recording
+class NestedCaptureScope {
+public:
+  NestedCaptureScope();
+  ~NestedCaptureScope();
+  NestedCaptureScope(const NestedCaptureScope&) = delete;
+  NestedCaptureScope& operator=(const NestedCaptureScope&) = delete;
+};
+
 unsigned getWrapperKey(const IUnknown* object);
 
 template <typename T>
