@@ -13,6 +13,7 @@
 #include "subcaptureRecorder.h"
 #include "analyzerResults.h"
 #include "resourceForCBVRestoreService.h"
+#include "configurator.h"
 #include "log.h"
 
 namespace gits {
@@ -279,11 +280,13 @@ void DescriptorService::RestoreD3D12ConstantBufferView(D3D12ConstantBufferViewSt
     ObjectState* resourceState = m_StateService->GetState(state->ResourceKey);
     if (resourceState && !resourceState->Destroyed) {
       m_StateService->RestoreState(state->ResourceKey);
-    } else {
+    } else if (Configurator::Get().common.player.subcapture.directx.restoreReleasedCB) {
       bool restored = m_ResourceForCBVRestoreService->RestoreResourceObject(state->ResourceKey);
       if (!restored) {
         return;
       }
+    } else {
+      return;
     }
   }
 

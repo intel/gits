@@ -274,6 +274,10 @@ Configuration:
                     Type: bool
                     Default: false
                     LegacyPaths: ["DirectX.Features.Subcapture.RestoreTLASes"]
+                  - Name: restoreReleasedCB
+                    Type: bool
+                    Default: false
+                    Description: Restore released placed resource object for constant buffer view
                   - Name: commandListExecutions
                     Type: std::string
                     Default: ""
