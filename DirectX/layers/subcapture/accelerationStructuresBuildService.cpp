@@ -889,10 +889,10 @@ void AccelerationStructuresBuildService::RestoreAccelerationStructures() {
     m_Recorder.Record(ID3D12ResourceGetGPUVirtualAddressSerializer(getAddress));
   }
 
-  m_BufferLifetimeService.CreateBuffers();
-
   // restoring RTAS
   for (OptimizationService::CommandNode* node : m_OptimizationService.GetCommands()) {
+
+    m_BufferLifetimeService.CreateBuffers(node->Command->CommandKey);
 
     if (node->Command->Type == RaytracingAccelerationStructureCommand::CommandType::Build) {
       BuildRaytracingAccelerationStructureCommand* build =
@@ -915,9 +915,9 @@ void AccelerationStructuresBuildService::RestoreAccelerationStructures() {
     } else {
       GITS_ASSERT(0 && "unknown command");
     }
-  }
 
-  m_BufferLifetimeService.ReleaseBuffers();
+    m_BufferLifetimeService.ReleaseBuffers(node->Command->CommandKey);
+  }
 
   // cleanup
   m_OptimizationService.Cleanup();
@@ -978,7 +978,9 @@ void AccelerationStructuresBuildService::FenceSignal(unsigned key,
 }
 
 void AccelerationStructuresBuildService::DestroyResource(unsigned commandKey,
-                                                         unsigned resourceKey) {}
+                                                         unsigned resourceKey) {
+  m_BufferLifetimeService.AddRelease(commandKey, resourceKey);
+}
 
 void AccelerationStructuresBuildService::RestoreCommand(
     BuildRaytracingAccelerationStructureCommand* command) {
@@ -1236,188 +1238,38 @@ void AccelerationStructuresBuildService::OptimizationService::Cleanup() {
 void AccelerationStructuresBuildService::BufferLifetimeService::AddBuffer(unsigned commandKey,
                                                                           unsigned bufferKey) {
   if (bufferKey) {
+    m_BuffersByBuild[commandKey].insert(bufferKey);
     m_Buffers.insert(bufferKey);
   }
 }
 
-void AccelerationStructuresBuildService::BufferLifetimeService::CreateBuffers() {
-  std::unordered_map<ResourceState*, unsigned> placedResourcesDefault;
-  std::unordered_map<ResourceState*, unsigned> placedResourcesUpload;
-  unsigned heapSizeDefault{};
-  unsigned heapSizeUpload{};
-  for (unsigned bufferKey : m_Buffers) {
+void AccelerationStructuresBuildService::BufferLifetimeService::AddRelease(unsigned commandKey,
+                                                                           unsigned bufferKey) {
+  auto it = m_Buffers.find(bufferKey);
+  if (it != m_Buffers.end()) {
+    m_Releases[commandKey] = bufferKey;
+    m_Buffers.erase(it);
+  }
+}
+
+void AccelerationStructuresBuildService::BufferLifetimeService::CreateBuffers(unsigned commandKey) {
+  for (unsigned bufferKey : m_BuffersByBuild[commandKey]) {
     ResourceState* bufferState = static_cast<ResourceState*>(m_StateService.GetState(bufferKey));
     GITS_ASSERT(bufferState);
-    if (m_StateService.GetAnalyzerResults().RestoreObject(bufferKey)) {
-      continue;
-    }
-    if (bufferState->HeapKey) {
-      ResourceInfo info = GetPlacedResourceInfo(bufferState);
-      if (info.UploadHeap) {
-        heapSizeUpload += info.Size;
-        heapSizeUpload = Align(heapSizeUpload);
-        placedResourcesUpload.insert({bufferState, info.Size});
-      } else {
-        heapSizeDefault += info.Size;
-        heapSizeDefault = Align(heapSizeDefault);
-        placedResourcesDefault.insert({bufferState, info.Size});
-      }
-    } else {
-      m_StateService.GetRecorder().Record(
-          *createCommandSerializer(bufferState->CreationCommand.get()));
-    }
-    m_CreatedBuffers.insert(bufferKey);
-  }
-  if (heapSizeUpload) {
-    m_UploadHeapKey = m_StateService.GetUniqueObjectKey();
-
-    D3D12_HEAP_DESC heapDesc{};
-    heapDesc.SizeInBytes = heapSizeUpload;
-    heapDesc.Properties.Type = D3D12_HEAP_TYPE_UPLOAD;
-    heapDesc.Properties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
-    heapDesc.Properties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
-    heapDesc.Properties.CreationNodeMask = 1;
-    heapDesc.Properties.VisibleNodeMask = 1;
-    heapDesc.Alignment = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
-    heapDesc.Flags = D3D12_HEAP_FLAG_NONE;
-
-    ID3D12DeviceCreateHeapCommand create;
-    create.Key = m_StateService.GetUniqueCommandKey();
-    create.m_Object.Key = m_DeviceKey;
-    create.m_riid.Value = IID_ID3D12Heap;
-    create.m_pDesc.Value = &heapDesc;
-    create.m_ppvHeap.Key = m_UploadHeapKey;
-    m_StateService.GetRecorder().Record(ID3D12DeviceCreateHeapSerializer(create));
-
-    unsigned offset = 0;
-    for (auto& [state, size] : placedResourcesUpload) {
-      RestorePlacedResource(state, m_UploadHeapKey, offset);
-      offset += size;
-      offset = Align(offset);
-    }
-  }
-  if (heapSizeDefault) {
-    m_DefaultHeapKey = m_StateService.GetUniqueObjectKey();
-
-    D3D12_HEAP_DESC heapDesc{};
-    heapDesc.SizeInBytes = heapSizeDefault;
-    heapDesc.Properties.Type = D3D12_HEAP_TYPE_DEFAULT;
-    heapDesc.Properties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
-    heapDesc.Properties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
-    heapDesc.Properties.CreationNodeMask = 1;
-    heapDesc.Properties.VisibleNodeMask = 1;
-    heapDesc.Alignment = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
-    heapDesc.Flags = D3D12_HEAP_FLAG_NONE;
-
-    ID3D12DeviceCreateHeapCommand create;
-    create.Key = m_StateService.GetUniqueCommandKey();
-    create.m_Object.Key = m_DeviceKey;
-    create.m_riid.Value = IID_ID3D12Heap;
-    create.m_pDesc.Value = &heapDesc;
-    create.m_ppvHeap.Key = m_DefaultHeapKey;
-    m_StateService.GetRecorder().Record(ID3D12DeviceCreateHeapSerializer(create));
-
-    unsigned offset = 0;
-    for (auto& [state, size] : placedResourcesDefault) {
-      RestorePlacedResource(state, m_DefaultHeapKey, offset);
-      offset += size;
-      offset = Align(offset);
-    }
+    m_StateService.RestoreState(bufferKey);
   }
 }
 
-void AccelerationStructuresBuildService::BufferLifetimeService::ReleaseBuffers() {
-  for (unsigned bufferKey : m_CreatedBuffers) {
+void AccelerationStructuresBuildService::BufferLifetimeService::ReleaseBuffers(
+    unsigned commandKey) {
+  auto endIt = m_Releases.lower_bound(commandKey);
+  for (auto it = m_Releases.begin(); it != endIt;) {
     IUnknownReleaseCommand release{};
-    release.Key = m_StateService.GetUniqueCommandKey();
-    release.m_Object.Key = bufferKey;
+    release.Key = it->first;
+    release.m_Object.Key = it->second;
     m_StateService.GetRecorder().Record(IUnknownReleaseSerializer(release));
+    it = m_Releases.erase(it);
   }
-  if (m_UploadHeapKey) {
-    IUnknownReleaseCommand release{};
-    release.Key = m_StateService.GetUniqueCommandKey();
-    release.m_Object.Key = m_UploadHeapKey;
-    m_StateService.GetRecorder().Record(IUnknownReleaseSerializer(release));
-  }
-  if (m_DefaultHeapKey) {
-    IUnknownReleaseCommand release{};
-    release.Key = m_StateService.GetUniqueCommandKey();
-    release.m_Object.Key = m_DefaultHeapKey;
-    m_StateService.GetRecorder().Record(IUnknownReleaseSerializer(release));
-  }
-}
-
-AccelerationStructuresBuildService::BufferLifetimeService::ResourceInfo
-AccelerationStructuresBuildService::BufferLifetimeService::GetPlacedResourceInfo(
-    ResourceState* state) {
-  ResourceInfo info{};
-  info.UploadHeap = state->IsMappable;
-  switch (state->CreationCommand->GetId()) {
-  case CommandId::ID_ID3D12DEVICE_CREATEPLACEDRESOURCE: {
-    auto* command =
-        static_cast<ID3D12DeviceCreatePlacedResourceCommand*>(state->CreationCommand.get());
-    D3D12_RESOURCE_DESC* desc = command->m_pDesc.Value;
-    info.Size = desc->Width;
-  } break;
-  case CommandId::ID_ID3D12DEVICE8_CREATEPLACEDRESOURCE1: {
-    auto* command =
-        static_cast<ID3D12Device8CreatePlacedResource1Command*>(state->CreationCommand.get());
-    D3D12_RESOURCE_DESC1* desc = command->m_pDesc.Value;
-    info.Size = desc->Width;
-  } break;
-  case CommandId::ID_ID3D12DEVICE10_CREATEPLACEDRESOURCE2: {
-    auto* command =
-        static_cast<ID3D12Device10CreatePlacedResource2Command*>(state->CreationCommand.get());
-    D3D12_RESOURCE_DESC1* desc = command->m_pDesc.Value;
-    info.Size = desc->Width;
-  } break;
-  case CommandId::INTC_D3D12_CREATEPLACEDRESOURCE: {
-    auto* command =
-        static_cast<INTC_D3D12_CreatePlacedResourceCommand*>(state->CreationCommand.get());
-    D3D12_RESOURCE_DESC* desc = command->m_pDesc.Value->pD3D12Desc;
-    info.Size = desc->Width;
-  } break;
-  }
-  return info;
-}
-
-void AccelerationStructuresBuildService::BufferLifetimeService::RestorePlacedResource(
-    ResourceState* state, unsigned heapKey, unsigned offset) {
-  switch (state->CreationCommand->GetId()) {
-  case CommandId::ID_ID3D12DEVICE_CREATEPLACEDRESOURCE: {
-    auto* command =
-        static_cast<ID3D12DeviceCreatePlacedResourceCommand*>(state->CreationCommand.get());
-    command->m_pHeap.Key = heapKey;
-    command->m_HeapOffset.Value = offset;
-    m_StateService.GetRecorder().Record(ID3D12DeviceCreatePlacedResourceSerializer(*command));
-  } break;
-  case CommandId::ID_ID3D12DEVICE8_CREATEPLACEDRESOURCE1: {
-    auto* command =
-        static_cast<ID3D12Device8CreatePlacedResource1Command*>(state->CreationCommand.get());
-    command->m_pHeap.Key = heapKey;
-    command->m_HeapOffset.Value = offset;
-    m_StateService.GetRecorder().Record(ID3D12Device8CreatePlacedResource1Serializer(*command));
-  } break;
-  case CommandId::ID_ID3D12DEVICE10_CREATEPLACEDRESOURCE2: {
-    auto* command =
-        static_cast<ID3D12Device10CreatePlacedResource2Command*>(state->CreationCommand.get());
-    command->m_pHeap.Key = heapKey;
-    command->m_HeapOffset.Value = offset;
-    m_StateService.GetRecorder().Record(ID3D12Device10CreatePlacedResource2Serializer(*command));
-  } break;
-  case CommandId::INTC_D3D12_CREATEPLACEDRESOURCE: {
-    auto* command =
-        static_cast<INTC_D3D12_CreatePlacedResourceCommand*>(state->CreationCommand.get());
-    command->m_pHeap.Key = heapKey;
-    command->m_HeapOffset.Value = offset;
-    m_StateService.GetRecorder().Record(INTC_D3D12_CreatePlacedResourceSerializer(*command));
-  } break;
-  }
-}
-
-unsigned AccelerationStructuresBuildService::BufferLifetimeService::Align(unsigned value) {
-  return ((value - 1) / D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT + 1) *
-         D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
 }
 
 } // namespace DirectX

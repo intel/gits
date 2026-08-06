@@ -44,7 +44,6 @@ public:
   void NvapiBuildOpacityMicromapArray(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& c);
   void SetDeviceKey(unsigned deviceKey) {
     m_DeviceKey = deviceKey;
-    m_BufferLifetimeService.SetDeviceKey(deviceKey);
   }
   void RestoreAccelerationStructures();
   void ExecuteCommandLists(ID3D12CommandQueueExecuteCommandListsCommand& c);
@@ -170,28 +169,15 @@ private:
   public:
     BufferLifetimeService(StateTrackingService& stateService) : m_StateService(stateService) {}
     void AddBuffer(unsigned commandKey, unsigned bufferKey);
-    void CreateBuffers();
-    void ReleaseBuffers();
-    void SetDeviceKey(unsigned deviceKey) {
-      m_DeviceKey = deviceKey;
-    }
-
-  private:
-    struct ResourceInfo {
-      unsigned Size{};
-      bool UploadHeap{};
-    };
-    ResourceInfo GetPlacedResourceInfo(ResourceState* state);
-    void RestorePlacedResource(ResourceState* state, unsigned heapKey, unsigned offset);
-    unsigned Align(unsigned value);
+    void AddRelease(unsigned commandKey, unsigned bufferKey);
+    void CreateBuffers(unsigned commandKey);
+    void ReleaseBuffers(unsigned commandKey);
 
   private:
     StateTrackingService& m_StateService;
+    std::unordered_map<unsigned, std::unordered_set<unsigned>> m_BuffersByBuild;
     std::unordered_set<unsigned> m_Buffers;
-    std::unordered_set<unsigned> m_CreatedBuffers;
-    unsigned m_DeviceKey{};
-    unsigned m_UploadHeapKey{};
-    unsigned m_DefaultHeapKey{};
+    std::map<unsigned, unsigned> m_Releases;
   };
   BufferLifetimeService m_BufferLifetimeService;
 };

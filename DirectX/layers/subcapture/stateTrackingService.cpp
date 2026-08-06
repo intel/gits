@@ -49,29 +49,41 @@ void StateTrackingService::RestoreState() {
   m_Recorder.Record(StateRestoreBeginSerializer(StateRestoreBeginCommand()));
   RestoreDllContainers();
   m_ApplicationIdentityService.RestoreApplicationIdentity();
+
   recordStatus(MarkerUInt64Command::Value::STATE_RESTORE_OBJECTS_BEGIN);
   for (auto& it : m_StatesByKey) {
     if (!it.second->Destroyed || it.second->KeepDestroyed) {
-      if (m_AnalyzerResults.RestoreObject(it.first)) {
+      if (m_AnalyzerResults.RestoreObject(it.first) && !dynamic_cast<ResourceState*>(it.second)) {
         RestoreState(it.second);
       }
     }
   }
   RestoreStateObjectProperties();
   recordStatus(MarkerUInt64Command::Value::STATE_RESTORE_OBJECTS_END);
+
   m_MetaCommandsService.RestoreState();
   m_NvapiGlobalStateService.RestoreInitializeCount();
   m_XessStateService.RestoreState();
   m_XellStateService.RestoreState();
   m_XefgStateService.RestoreState();
-  m_DescriptorService.RestoreState();
+
   recordStatus(MarkerUInt64Command::Value::STATE_RESTORE_RTAS_BEGIN);
   m_AccelerationStructuresSerializeService.RestoreAccelerationStructures();
   m_AccelerationStructuresBuildService.RestoreAccelerationStructures();
   recordStatus(MarkerUInt64Command::Value::STATE_RESTORE_RTAS_END);
+
   recordStatus(MarkerUInt64Command::Value::STATE_RESTORE_RESOURCES_BEGIN);
+  for (auto& it : m_StatesByKey) {
+    if (!it.second->Destroyed || it.second->KeepDestroyed) {
+      if (m_AnalyzerResults.RestoreObject(it.first) && dynamic_cast<ResourceState*>(it.second)) {
+        RestoreState(it.second);
+      }
+    }
+  }
+  m_DescriptorService.RestoreState();
   RestoreResources();
   recordStatus(MarkerUInt64Command::Value::STATE_RESTORE_RESOURCES_END);
+
   m_MapStateService.RestoreMapState();
   m_ResidencyService.RestoreResidency();
   m_CommandListService.RestoreCommandLists();
