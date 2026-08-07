@@ -118,7 +118,6 @@ target_include_directories(DirectX_player PRIVATE
   ${DIRECTX_DIR}/layers/resource_dumping
   ${DIRECTX_DIR}/layers/skip_calls
   ${DIRECTX_DIR}/layers/portability
-  ${DIRECTX_DIR}/layers/print_status
   ${DIRECTX_DIR}/layers/address_pinning
   ${DIRECTX_DIR}/layers/ccode
   ${DIRECTX_DIR}/recorder
@@ -142,7 +141,6 @@ target_link_libraries(DirectX_player PRIVATE
   DirectX_utils
   DirectX_skip_calls
   DirectX_portability
-  DirectX_print_status
   DirectX_address_pinning
   DirectX_ccode
   ${INTEL_EXT_DIR}/lib/igdext64.lib

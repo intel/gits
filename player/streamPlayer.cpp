@@ -16,11 +16,16 @@
 #include "streamHeader.h"
 #include "commandFactory.h"
 #include "commandId.h"
+#include "commandRunner.h"
 #include "timer.h"
 
+#include <chrono>
+#include <cstring>
 #include <fstream>
-#include <vector>
+#include <iomanip>
 #include <memory>
+#include <sstream>
+#include <vector>
 
 #if defined GITS_PLATFORM_WINDOWS_X64
 #if defined WITH_DIRECTX
@@ -33,6 +38,26 @@
 #include "windowManager.h"
 
 namespace gits {
+
+namespace {
+
+template <typename Duration>
+std::string FormatDuration(Duration duration) {
+  using namespace std::chrono;
+
+  auto hrs = duration_cast<hours>(duration).count();
+  auto mins = duration_cast<minutes>(duration).count() % 60;
+  auto secs = duration_cast<seconds>(duration).count() % 60;
+  auto msecs = duration_cast<milliseconds>(duration).count() % 1000;
+
+  std::ostringstream oss;
+  oss << std::setfill('0') << std::setw(2) << hrs << ":" << std::setfill('0') << std::setw(2)
+      << mins << ":" << std::setfill('0') << std::setw(2) << secs << "." << std::setfill('0')
+      << std::setw(3) << msecs;
+  return oss.str();
+}
+
+} // namespace
 
 class MessageLoop {
 public:
@@ -95,7 +120,7 @@ class StateRestoreBeginRunner : public stream::CommandRunner {
 public:
   StateRestoreBeginRunner(Timer* stateRestoreTimer) : m_StateRestoreTimer(stateRestoreTimer) {}
   void Run() override {
-    LOG_INFO << "State restore replay started";
+    LOG_INFO << "State restore started";
     m_StateRestoreTimer->Start();
   }
 
@@ -109,9 +134,10 @@ public:
       : m_MessageLoop(messageLoop), m_StateRestoreTimer(stateRestoreTimer) {}
   void Run() override {
     m_StateRestoreTimer->Pause();
-    LOG_INFO << "State restore replay finished, duration " << m_StateRestoreTimer->Get() / 1e6
-             << " ms.";
+    LOG_INFO << "State restore completed in "
+             << FormatDuration(std::chrono::nanoseconds(m_StateRestoreTimer->Get()));
     m_MessageLoop->RunLoop(0);
+    LOG_INFO << "Playback started";
   }
 
 private:
@@ -140,6 +166,43 @@ private:
   stream::BaseStreamReader* m_StreamReader{};
 };
 
+class MarkerUInt64StatusRunner : public stream::CommandRunner {
+public:
+  void Run() override {
+    using Value = stream::MarkerUInt64Value;
+    static auto segmentBegin = std::chrono::steady_clock::now();
+    switch (static_cast<Value>(m_Value)) {
+    case Value::STATE_RESTORE_OBJECTS_BEGIN:
+    case Value::STATE_RESTORE_RTAS_BEGIN:
+    case Value::STATE_RESTORE_RESOURCES_BEGIN:
+      segmentBegin = std::chrono::steady_clock::now();
+      break;
+    case Value::STATE_RESTORE_OBJECTS_END:
+      LOG_INFO << "Objects restored in "
+               << FormatDuration(std::chrono::steady_clock::now() - segmentBegin);
+      break;
+    case Value::STATE_RESTORE_RTAS_END:
+      LOG_INFO << "RTAS restored in "
+               << FormatDuration(std::chrono::steady_clock::now() - segmentBegin);
+      break;
+    case Value::STATE_RESTORE_RESOURCES_END:
+      LOG_INFO << "Resources restored in "
+               << FormatDuration(std::chrono::steady_clock::now() - segmentBegin);
+      break;
+    default:
+      break;
+    }
+  }
+
+protected:
+  void DecodeCommand() override {
+    std::memcpy(&m_Value, m_Data, sizeof(m_Value));
+  }
+
+private:
+  uint64_t m_Value{};
+};
+
 class CommonCommandFactory : public stream::CommandFactory {
 public:
   void Initialize(stream::BaseStreamReader* streamReader,
@@ -159,7 +222,7 @@ public:
     case stream::CommonCommandId::ID_FRAME_END:
       return new FrameEndCommandRunner(m_MessageLoop.get(), m_StreamReader);
     case stream::CommonCommandId::ID_MARKER_UINT64:
-      return nullptr;
+      return new MarkerUInt64StatusRunner();
     }
     return nullptr;
   }
@@ -219,10 +282,13 @@ void PlayStream(const std::filesystem::path& streamPath) {
     windowing::WindowManager::Get().DestroyAllWindows();
   }
 
-  LOG_INFO << "";
-  LOG_INFO << "State restored in: " << stateRestoreTimer.Get() / 1e6 << "ms";
-  LOG_INFO << "Played back in: " << (playbackTimer.Get() - stateRestoreTimer.Get()) / 1e6 << "ms";
-  LOG_INFO << "Total runtime: " << playbackTimer.Get() / 1e6 << "ms";
+  LOG_INFO << "Playback completed";
+  LOG_INFO << "  State restore duration: "
+           << FormatDuration(std::chrono::nanoseconds(stateRestoreTimer.Get()));
+  LOG_INFO << "  Playback duration: "
+           << FormatDuration(
+                  std::chrono::nanoseconds(playbackTimer.Get() - stateRestoreTimer.Get()));
+  LOG_INFO << "  Total duration: " << FormatDuration(std::chrono::nanoseconds(playbackTimer.Get()));
 
   MessageBus::get().publish({PUBLISHER_PLAYER, TOPIC_PROGRAM_EXIT},
                             std::make_shared<ProgramMessage>());

@@ -14,7 +14,6 @@
 #include "multithreadedObjectCreationLayer.h"
 #include "multithreadedObjectAwaitLayer.h"
 #include "dstorage/directStorageLayer.h"
-#include "printStatusLayer.h"
 #include "dllOverrideUseLayer.h"
 #include "debugInfoLayerAuto.h"
 #include "debugHelperLayer.h"
@@ -86,7 +85,6 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
   std::unique_ptr<Layer> debugHelperLayer;
   std::unique_ptr<Layer> logDxErrorLayer = std::make_unique<LogDxErrorLayer>();
   std::unique_ptr<Layer> imGuiHUDLayer;
-  std::unique_ptr<Layer> printStatusLayer = std::make_unique<PrintStatusLayer>();
   std::unique_ptr<Layer> dllOverrideUseLayer;
   std::unique_ptr<Layer> ccodeLayer;
 
@@ -146,7 +144,6 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
   enablePreLayer(multithreadedObjectCreationLayer.get());
   enablePreLayer(directStorageLayer.get());
   enablePreLayer(accelerationStructuresDumpLayer);
-  enablePreLayer(printStatusLayer.get());
   enablePreLayer(imGuiHUDLayer.get());
   enablePreLayer(ccodeLayer.get());
 
@@ -180,7 +177,6 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
   enablePostLayer(recordingLayer);
   enablePostLayer(executionSerializationLayer);
   enablePostLayer(commandListSplitLayer);
-  enablePostLayer(printStatusLayer.get());
   enablePostLayer(imGuiHUDLayer.get());
   enablePostLayer(ccodeLayer.get());
 
@@ -209,7 +205,6 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
   retainLayer(std::move(logDxErrorLayer));
   retainLayer(std::move(directStorageLayer));
   retainLayer(std::move(imGuiHUDLayer));
-  retainLayer(std::move(printStatusLayer));
   retainLayer(std::move(dllOverrideUseLayer));
   retainLayer(std::move(ccodeLayer));
 }

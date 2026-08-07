@@ -8,6 +8,8 @@
 
 #pragma once
 
+#include <cstdint>
+
 namespace gits {
 namespace stream {
 
@@ -35,6 +37,19 @@ enum class CommonCommandId {
   ID_INIT_END = 2,
   ID_FRAME_END = 4,
   ID_MARKER_UINT64 = 12,
+};
+
+// Payload values for ID_MARKER_UINT64; match MarkerUInt64Command::Value in DirectX/Vulkan.
+enum class MarkerUInt64Value : uint64_t {
+  NONE = 0x10000 + 1,
+  STATE_RESTORE_OBJECTS_BEGIN,
+  STATE_RESTORE_OBJECTS_END,
+  STATE_RESTORE_RTAS_BEGIN,
+  STATE_RESTORE_RTAS_END,
+  STATE_RESTORE_RESOURCES_BEGIN,
+  STATE_RESTORE_RESOURCES_END,
+  GPU_EXECUTION_BEGIN,
+  GPU_EXECUTION_END
 };
 
 } // namespace stream
