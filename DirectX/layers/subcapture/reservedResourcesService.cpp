@@ -15,6 +15,7 @@
 #include "resourceSizeUtils.h"
 #include "log.h"
 
+#include <d3dx12.h>
 #include <wrl/client.h>
 #include <set>
 
@@ -199,19 +200,26 @@ void ReservedResourcesService::InitTiledResource(TiledResource& tiledResource) {
         tiledResource.Desc.MipLevels - tiledResource.PackedMipInfo.NumPackedMips;
     unsigned arraySliceSize = tiledResource.Subresources.size() / arraySize;
     unsigned tilesPerArraySlice = tilesNum / arraySize;
+    const unsigned planes = arraySliceSize / tiledResource.Desc.MipLevels;
     for (unsigned arrayIndex = 0; arrayIndex < arraySize; ++arrayIndex) {
       SubresourceRange range{};
-      range.subresourceIndex = arrayIndex * arraySliceSize + firstPackedMip;
+      range.subresourceIndex = D3D12CalcSubresource(firstPackedMip, arrayIndex, 0,
+                                                    tiledResource.Desc.MipLevels, arraySize);
       range.startTile = arrayIndex * tilesPerArraySlice +
                         tiledResource.PackedMipInfo.StartTileIndexInOverallResource;
       range.numTiles = tiledResource.PackedMipInfo.NumTilesForPackedMips;
       range.packed = true;
       subresourceRanges.push_back(range);
 
-      for (unsigned subresourceInSlice = firstPackedMip; subresourceInSlice < arraySliceSize;
-           ++subresourceInSlice) {
-        unsigned subresourceIndex = arrayIndex * arraySliceSize + subresourceInSlice;
-        tiledResource.PackedSubresourcesStartTiles[subresourceIndex] = range.startTile;
+      for (unsigned plane = 0; plane < planes; ++plane) {
+        for (unsigned mip = firstPackedMip; mip < tiledResource.Desc.MipLevels; ++mip) {
+          unsigned subresourceIndex =
+              D3D12CalcSubresource(mip, arrayIndex, plane, tiledResource.Desc.MipLevels, arraySize);
+          if (tiledResource.Subresources[subresourceIndex].StartTileIndexInOverallResource ==
+              D3D12_PACKED_TILE) {
+            tiledResource.PackedSubresourcesStartTiles[subresourceIndex] = range.startTile;
+          }
+        }
       }
     }
   }
@@ -325,6 +333,38 @@ void ReservedResourcesService::CopySourceBarrier(ID3D12Resource* resource,
     Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList7> commandList7;
     if (SUCCEEDED(m_CommandList->QueryInterface(IID_PPV_ARGS(&commandList7)))) {
       commandList7->Barrier(enhancedBarrierGroups.size(), enhancedBarrierGroups.data());
+    }
+  }
+}
+
+void ReservedResourcesService::MarkSubresourceNotFullyMapped(
+    const TiledResource& tiledResource,
+    const Tile& tile,
+    std::vector<bool>& subresourceFullyMappedFlags) {
+  if (!tile.Packed) {
+    subresourceFullyMappedFlags.at(tile.SubresourceIndex) = false;
+    return;
+  }
+
+  GITS_ASSERT(tiledResource.PackedMipInfo.NumPackedMips);
+
+  const unsigned arraySize = tiledResource.Desc.Dimension != D3D12_RESOURCE_DIMENSION_TEXTURE3D
+                                 ? tiledResource.Desc.DepthOrArraySize
+                                 : 1;
+  const unsigned mipLevels = tiledResource.Desc.MipLevels;
+  const unsigned firstPackedMip = mipLevels - tiledResource.PackedMipInfo.NumPackedMips;
+  const unsigned arraySliceSize = tiledResource.Subresources.size() / arraySize;
+  const unsigned planes = arraySliceSize / mipLevels;
+  const unsigned arrayIndex = (tile.SubresourceIndex - firstPackedMip) / mipLevels;
+
+  for (unsigned plane = 0; plane < planes; ++plane) {
+    for (unsigned mip = firstPackedMip; mip < mipLevels; ++mip) {
+      const unsigned subresourceIndex =
+          D3D12CalcSubresource(mip, arrayIndex, plane, mipLevels, arraySize);
+      if (tiledResource.Subresources[subresourceIndex].StartTileIndexInOverallResource ==
+          D3D12_PACKED_TILE) {
+        subresourceFullyMappedFlags.at(subresourceIndex) = false;
+      }
     }
   }
 }
@@ -493,7 +533,7 @@ void ReservedResourcesService::RestoreContent(const std::vector<unsigned>& resou
     std::set<unsigned> heapKeys;
     for (const auto& tile : tiledResource->Tiles) {
       if (!tile.HeapKey) {
-        subresourceFullyMappedFlags.at(tile.SubresourceIndex) = false;
+        MarkSubresourceNotFullyMapped(*tiledResource, tile, subresourceFullyMappedFlags);
       } else {
         heapKeys.insert(tile.HeapKey);
       }
@@ -813,7 +853,7 @@ void ReservedResourcesService::InitRestore() {
       if (tile.HeapKey) {
         ++numTilesBySubresourceIndex[tile.SubresourceIndex];
       } else {
-        subresourceFullyMappedFlags.at(tile.SubresourceIndex) = false;
+        MarkSubresourceNotFullyMapped(*tiledResource.second, tile, subresourceFullyMappedFlags);
       }
     }
 
