@@ -82,6 +82,10 @@ place of the real loader and records the application's calls.
 Learn more about the configuration file options
 [here](../../configuration/VulkanAuto.md).
 
+## Plugins
+
+Plugins can extend the **Vulkan** backend during capture and replay (Windows today). See [Plugins](../Plugins.md) for shared configuration and the [Vulkan plugin catalog](Plugins.md).
+
 # Sub-capture
 
 Sub-capture trims a stream down to a frame range, producing a smaller,

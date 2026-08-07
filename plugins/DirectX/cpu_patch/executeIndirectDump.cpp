@@ -46,7 +46,7 @@ ExecuteIndirectDump::ExecuteIndirectDump(
 ExecuteIndirectDump::~ExecuteIndirectDump() {
   WaitUntilDumped();
   LOG_INFO << "CpuPatch - ExecuteIndirectDump - files dumped: " << std::to_string(m_NumFiles)
-           << ", total size: " << FormatMemorySize(m_FilesTotalSize);
+           << ", total size: " << gits::FormatMemorySize(m_FilesTotalSize);
 }
 
 void ExecuteIndirectDump::ExecuteIndirect(

@@ -26,12 +26,14 @@ endfunction()
 add_definitions(-DGITS_PLUGIN_DLL)
 add_definitions(-DGITS_PLUGIN_EXPORT_API)
 
+add_subdirectory(common)
+
 if(BUILD_DIRECTX_PLUGINS)
   set(D3D12_HEADERS_DIR ${AGILITY_SDK_DIR}/include)
   set(INTEL_EXT_DIR ${CMAKE_SOURCE_DIR}/third_party/IntelExtensions)
 
-  add_subdirectory(DirectX/hello_plugin)
   add_subdirectory(DirectX/common/utils)
+  add_subdirectory(DirectX/hello_plugin)
   add_subdirectory(DirectX/benchmark)
   add_subdirectory(DirectX/rtas_cache)
   add_subdirectory(DirectX/rtas_size_check)

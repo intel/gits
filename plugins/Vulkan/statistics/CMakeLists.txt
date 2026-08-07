@@ -49,6 +49,7 @@ PRIVATE
 target_link_libraries(Vulkan_statistics PRIVATE
   Vulkan_layer_interface
   yamlcpp
+  plugin_utils
 )
 
 # The statisticsLayerAuto.{h,cpp} sources are produced by the central Vulkan

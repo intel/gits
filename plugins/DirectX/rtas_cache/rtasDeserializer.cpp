@@ -90,7 +90,7 @@ bool RtasDeserializer::PreloadCache(ID3D12Device5* device) {
   }
 
   LOG_INFO << "RtasCache - Cache file read successfully, total BLASes: " << m_CacheData.size();
-  LOG_INFO << "RtasCache - Buffer pool size: " << FormatMemorySize(m_MaxBufferSize);
+  LOG_INFO << "RtasCache - Buffer pool size: " << gits::FormatMemorySize(m_MaxBufferSize);
 
   return true;
 }
@@ -158,7 +158,7 @@ bool RtasDeserializer::Deserialize(unsigned buildKey,
   if (size <= m_MaxBufferSize) {
     buffer = m_BufferPool.AcquireBuffer(buildKey);
   } else {
-    LOG_WARNING << "RtasCache - BLAS " << key << " with size " << FormatMemorySize(size)
+    LOG_WARNING << "RtasCache - BLAS " << key << " with size " << gits::FormatMemorySize(size)
                 << " does not fit in the buffer pool";
     buffer = CreateBuffer(device.Get(), size);
     m_TmpBuffers[buildKey] = buffer;

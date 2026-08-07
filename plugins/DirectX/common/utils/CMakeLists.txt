@@ -29,6 +29,7 @@ target_link_libraries(DirectX_plugin_utils
 PUBLIC
   DirectX_layer_interface
   DirectX_utils
+  plugin_utils
 )
 
 set_target_properties(DirectX_plugin_utils PROPERTIES FOLDER Plugins/DirectX/DirectX_common)

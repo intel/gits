@@ -11,5 +11,6 @@ Info:
   Description: 'Example Vulkan GITS plugin. Logs queue presents and queue submits when enabled in config.'
 
 Config:
+  # Optional env overrides: GITS_PLUGIN_HELLOPLUGIN_<KEY> (see docs/documentation/Plugins.md)
   PrintFrames: true
   PrintQueueSubmits: true

@@ -37,7 +37,7 @@ InstancesDump::InstancesDump(const Configuration& gitsConfig) : ResourceDump() {
 InstancesDump::~InstancesDump() {
   WaitUntilDumped();
   LOG_INFO << "CpuPatch - InstancesDump - files dumped: " << std::to_string(m_NumFiles)
-           << ", total size: " << FormatMemorySize(m_FilesTotalSize);
+           << ", total size: " << gits::FormatMemorySize(m_FilesTotalSize);
 }
 
 void InstancesDump::BuildTlas(ID3D12GraphicsCommandList* commandList,

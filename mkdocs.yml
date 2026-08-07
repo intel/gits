@@ -87,6 +87,7 @@ nav:
     - 'documentation/player.md'
     - 'documentation/launcher.md'
     - 'documentation/terminology.md'
+    - 'documentation/Plugins.md'
     - Streams:
       - 'documentation/streams/binary_stream.md'
     - API:
@@ -101,6 +102,7 @@ nav:
       - Vulkan:
         - 'documentation/Vulkan/Overview.md'
         - 'documentation/Vulkan/Subcapture.md'
+        - 'documentation/Vulkan/Plugins.md'
       - Level Zero:
         - 'documentation/LevelZero/l0_gits_indirect_access_pointers_locations.md'
         - 'documentation/LevelZero/lua.md'

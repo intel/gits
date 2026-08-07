@@ -38,6 +38,7 @@ PRIVATE
   configuration
   common
   log
+  plugin_utils
 )
 
 set_target_properties(Vulkan_hello_plugin PROPERTIES FOLDER Plugins/Vulkan)

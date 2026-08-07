@@ -17,7 +17,7 @@ title: Overview
 
 ## Plugins
 
-Plugins can be used to extend the feature set of the **DirectX** backend during both capture and replay. Learn more about plugins [here](Plugins.md).
+Plugins can be used to extend the feature set of the **DirectX** backend during both capture and replay. See [Plugins](../Plugins.md) for shared configuration and the [DirectX plugin catalog](Plugins.md).
 
 # Basic Usage
 

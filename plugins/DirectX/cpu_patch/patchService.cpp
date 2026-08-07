@@ -95,7 +95,7 @@ PatchService::PatchService(const Configuration& gitsConfig,
   m_PatchBufferSize = Align(m_PatchBufferSize + maxNumOffsetsPerPatchBuffer *
                                                     D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT,
                             D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT);
-  LOG_INFO << "CpuPatch - patch buffer size: " << FormatMemorySize(m_PatchBufferSize);
+  LOG_INFO << "CpuPatch - patch buffer size: " << gits::FormatMemorySize(m_PatchBufferSize);
 
   LoadExecuteIndirectDispatchRays();
 }

@@ -2,17 +2,12 @@
 icon: material/microsoft
 title: Plugins
 ---
-GITS supports plugins for both capture and replay. GITS plugins are dynamic libraries loaded at runtime by `gitsPlayer.exe` or `gitsRecorder.dll`. Built plugins are installed under `Plugins/DirectX/`.
 
-Each plugin folder contains:
-
-- `plugin.dll`: Main library containing the plugin logic.
-- `config.yml`: Configuration file (may also contain documentation).
-- `dependencies/`: Optional directory with extra DLLs the plugin depends on.
+DirectX 12 plugins extend capture and replay for the **DirectX** backend. Built plugins install under `Plugins/DirectX/`. For shared concepts (`config.yml`, environment overrides, interceptor-only runs), see [Plugins](../Plugins.md).
 
 # Usage
 
-Enable plugins under `DirectX.Recorder` or `DirectX.Player` using the `Plugins` list. Each entry must match the name returned by the DLL (`IPlugin::getName()`) which should match the `Info.Name` value in that plugin’s `config.yml`.
+Enable plugins under `DirectX.Recorder` or `DirectX.Player` using the `Plugins` list. Each entry must match the name returned by the DLL (`IPlugin::getName()`), which should match the `Info.Name` value in that plugin’s `config.yml`.
 
 ```yaml
 DirectX:
@@ -38,15 +33,9 @@ DirectX:
 
 Use the **Name** column from the [summary table](#directx-plugins). Full defaults and comments are in each plugin’s `config.yml` beside `plugin.dll`.
 
-## Interceptor only
+## Configuration overrides
 
-Plugins can run without recording a stream. Disable the recorder and load a plugin as usual:
-
-```yml
-Common:
-  Recorder:
-    Enabled: false
-```
+Scalar `Config:` keys can be overridden with `GITS_PLUGIN_*` environment variables. See [Environment overrides](../Plugins.md#environment-overrides) in the general plugins guide.
 
 # DirectX plugins
 

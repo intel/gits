@@ -47,6 +47,7 @@ target_link_libraries(Vulkan_benchmark
 PRIVATE
   Vulkan_layer_interface
   yamlcpp
+  plugin_utils
 )
 
 set_target_properties(Vulkan_benchmark PROPERTIES FOLDER Plugins/Vulkan)

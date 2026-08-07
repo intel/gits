@@ -37,7 +37,7 @@ BindingTableDump::BindingTableDump(const Configuration& gitsConfig) : ResourceDu
 BindingTableDump::~BindingTableDump() {
   WaitUntilDumped();
   LOG_INFO << "CpuPatch - BindingTableDump - files dumped: " << std::to_string(m_NumFiles)
-           << ", total size: " << FormatMemorySize(m_FilesTotalSize);
+           << ", total size: " << gits::FormatMemorySize(m_FilesTotalSize);
 }
 
 void BindingTableDump::DispatchRays(ID3D12GraphicsCommandList* commandList,

@@ -11,5 +11,6 @@ Info:
   Description: 'Example starting point for a DirectX GITS plugin. Annotates presents and GPU executions in the log.'
 
 Config:
+  # Optional env overrides: GITS_PLUGIN_HELLOPLUGIN_<KEY> (see docs/documentation/Plugins.md)
   PrintFrames: true
   PrintGPUSubmissions: true

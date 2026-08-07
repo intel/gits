@@ -11,6 +11,7 @@
 #include "layer.h"
 #include "log.h"
 
+#include "pluginUtils.h"
 #include "yaml-cpp/yaml.h"
 #include <filesystem>
 #include <memory>
@@ -35,7 +36,7 @@ public:
   void* getImpl() override {
     if (!m_PluginLayer) {
       auto cfgPath = m_PluginPath.parent_path() / "config.yml";
-      auto cfgYaml = YAML::LoadFile(cfgPath.string());
+      auto cfgYaml = gits::LoadPluginConfig(cfgPath, getName());
       if (!cfgYaml) {
         throw std::runtime_error("Config file did not load correctly");
       }
