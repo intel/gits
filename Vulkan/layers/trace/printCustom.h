@@ -25,13 +25,13 @@ FastOStream& PrintString(FastOStream& stream, const char* s);
 FastOStream& PrintStringArray(FastOStream& stream, uint32_t count, const char* const* s);
 
 template <typename T>
-FastOStream& PrintArray(FastOStream& stream, unsigned dimension, T* data) {
+FastOStream& PrintArray(FastOStream& stream, size_t dimension, T* data) {
   if (!data) {
     return stream << "nullptr";
   }
 
   stream << "{";
-  for (unsigned i = 0; i < dimension; ++i) {
+  for (size_t i = 0; i < dimension; ++i) {
     if (i > 0) {
       stream << ", ";
     }

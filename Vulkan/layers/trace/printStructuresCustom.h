@@ -23,5 +23,8 @@ FastOStream& operator<<(FastOStream& stream, const VkWriteDescriptorSet* value);
 FastOStream& operator<<(FastOStream& stream, const VkSubmitInfo& value);
 FastOStream& operator<<(FastOStream& stream, const VkSubmitInfo* value);
 
+FastOStream& operator<<(FastOStream& stream, const VkShaderModuleCreateInfo& value);
+FastOStream& operator<<(FastOStream& stream, const VkShaderModuleCreateInfo* value);
+
 } // namespace vulkan
 } // namespace gits

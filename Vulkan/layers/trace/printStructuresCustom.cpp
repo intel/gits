@@ -161,5 +161,26 @@ FastOStream& operator<<(FastOStream& stream, const VkSubmitInfo* value) {
   return stream;
 }
 
+FastOStream& operator<<(FastOStream& stream, const VkShaderModuleCreateInfo& value) {
+  stream << "VkShaderModuleCreateInfo{";
+  stream << value.sType << ", ";
+  PrintPNext(stream, value.pNext) << ", ";
+  PrintVkShaderModuleCreateFlags(stream, value.flags) << ", ";
+  stream << value.codeSize << ", ";
+  // Do not print the shader code, it can be very large
+  stream << "{}";
+  stream << "}";
+  return stream;
+}
+
+FastOStream& operator<<(FastOStream& stream, const VkShaderModuleCreateInfo* value) {
+  if (value) {
+    stream << *value;
+  } else {
+    stream << "nullptr";
+  }
+  return stream;
+}
+
 } // namespace vulkan
 } // namespace gits

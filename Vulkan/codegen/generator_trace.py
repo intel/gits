@@ -57,6 +57,31 @@ def add_prefix_to_calculated_len(len_value: str, prefix: str = "value.") -> str:
 
     return identifier_pattern.sub(_add_prefix, len_value)
 
+def get_array_len_expr(member) -> str:
+    """
+    Returns the C++ expression with the number of elements a member points to.
+    """
+    if is_calculated_len(member.length):
+        return add_prefix_to_calculated_len(member.length)
+    # Multi-dimensional len in vk.xml arrays of pointers point to a single element.
+    # E.g. ("geometryCount,1"). 
+    return f'value.{parse_multidimensional_len(member.length)[0]}'
+
+# Contains all vk.xml types that are printable and scalars.
+# Other types (e.g. the StdVideo* structures) are not printable.
+printable_types = {
+    'char', 'int', 'float', 'double', 'size_t', 'int8_t', 'int16_t', 'int32_t',
+    'int64_t', 'uint8_t', 'uint16_t', 'uint32_t', 'uint64_t', 'VkBool32',
+    'VkDeviceAddress', 'VkDeviceSize', 'VkSampleMask',
+}
+
+def is_printable_pointer(member) -> bool:
+    if not member.is_pointer and not member.is_pointer_to_pointer:
+        return False
+    if member.is_void:
+        # 'void*' is an opaque blob, but 'void* const*' is an array of addresses.
+        return member.is_pointer_to_pointer
+    return member.base_type in printable_types
 
 bitmasks_dict = {}
 
@@ -91,17 +116,11 @@ def print_members(name, members, bitmasks):
             str += f'  PrintStaticArray(stream, value.{member.name}){separator};\n'
         elif len(member.fixed_array_size) == 2:
             str += f'  PrintStatic2DArray(stream, value.{member.name}){separator};\n'
-        elif member.length != '' and is_calculated_len(member.length):
-            len_expr = add_prefix_to_calculated_len(member.length)
-            str += f'  if ({len_expr} > 0) {{\n'
-            str += f'    stream << {memberVal}{separator};\n'
-            str += f'  }}\n'
-            str += f'  else {{\n'
-            str += f'    stream << "nullptr"{separator};\n'
-            str += f'  }}\n'
+        elif member.length != '' and is_printable_pointer(member):
+            str += f'  PrintArray(stream, {get_array_len_expr(member)}, {memberVal}){separator};\n'
         elif member.length != '':
-            len_member_name = parse_multidimensional_len(member.length)[0]
-            str += f'  if (value.{len_member_name} > 0) {{\n'
+            len_expr = get_array_len_expr(member)
+            str += f'  if ({len_expr} > 0) {{\n'
             str += f'    stream << {memberVal}{separator};\n'
             str += f'  }}\n'
             str += f'  else {{\n'
@@ -119,10 +138,21 @@ def print_union_members(union, bitmasks):
     return print_members(union.name, union.members, bitmasks)
 
 def generate_trace_files(context, out_path):
+    printable_types.update(
+        {structure.name for structure in context['structures']}
+        | {union.name for union in context['unions']}
+        | {enum.name for enum in context['enums']}
+        | {handle.name for handle in context['handles']}
+        | {bitmask.name for bitmask in context['bitmasks']}
+        | {bitmask.flag_name for bitmask in context['bitmasks']}
+        | {flag.name for flag in context['flags']}
+    )
+
     structs_with_custom_print = [
       'VkGraphicsPipelineCreateInfo',
       'VkWriteDescriptorSet',
-      'VkSubmitInfo'
+      'VkSubmitInfo',
+      'VkShaderModuleCreateInfo'
     ]
     additional_context = {
         'print_struct_members': print_struct_members,
