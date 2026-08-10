@@ -151,10 +151,8 @@ void StateTrackingService::EnsureRestored(uint64_t key) {
 // ---------------------------------------------------------------------------
 
 void StateTrackingService::RestoreState() {
-  if (!m_Recorder.IsOpen()) {
-    LOG_WARNING << "Vulkan subcapture: RestoreState called but recorder is not open";
-    return;
-  }
+  GITS_ASSERT(m_GpuReadbackHelper);
+  GITS_ASSERT(m_Recorder.IsOpen());
 
   LOG_INFO << "Vulkan subcapture: emitting state restore (" << m_States.size() << " objects)";
 
@@ -363,12 +361,12 @@ void StateTrackingService::RestoreState() {
   // created (m_RestoredThisPass is fully populated) and before
   // EmitImageLayoutTransitions (which skips images whose copy ends in the
   // correct layout already).
+  recordStatus(MarkerUInt64Command::Value::STATE_RESTORE_RTAS_BEGIN);
+  RestoreAccelerationStructureContents();
+  recordStatus(MarkerUInt64Command::Value::STATE_RESTORE_RTAS_END);
   recordStatus(MarkerUInt64Command::Value::STATE_RESTORE_RESOURCES_BEGIN);
-  if (m_GpuReadbackHelper) {
-    RestoreAccelerationStructureContents();
-    RestoreBufferContents();
-    RestoreImageContents();
-  }
+  RestoreBufferContents();
+  RestoreImageContents();
   recordStatus(MarkerUInt64Command::Value::STATE_RESTORE_RESOURCES_END);
 
   EmitImageLayoutTransitions();
@@ -760,6 +758,8 @@ const std::vector<uint8_t>* StateTrackingService::GetAsBuildInputContent(uint64_
 
 void StateTrackingService::ApplyAsInputReadbacksAfterSubmit(uint64_t cbKey,
                                                             uint64_t submitQueueKey) {
+  GITS_ASSERT(m_GpuReadbackHelper);
+
   // Fire the analysis-pass hook first (queue-execution-synced TLAS readback).
   // Unset in the recording pass.
   if (m_OnCommandBufferSubmitted) {
@@ -767,8 +767,7 @@ void StateTrackingService::ApplyAsInputReadbacksAfterSubmit(uint64_t cbKey,
   }
 
   auto* cbState = GetState<CommandBufferState>(cbKey);
-  if (!cbState || cbState->AsInputReadbacksAfterSubmit.empty() || !m_GpuReadbackHelper ||
-      submitQueueKey == 0) {
+  if (!cbState || cbState->AsInputReadbacksAfterSubmit.empty() || submitQueueKey == 0) {
     return;
   }
   const uint64_t deviceKey = cbState->ParentKey;
@@ -4041,7 +4040,9 @@ bool StateTrackingService::EmitRelocatedAccelerationStructureCreate(
     const AccelerationStructureState& asState,
     uint64_t bufKey,
     uint64_t memKey) {
-  if (!m_GpuReadbackHelper || asState.CreationCommandBuffer.empty() || asState.Size == 0 ||
+  GITS_ASSERT(m_GpuReadbackHelper);
+
+  if (asState.CreationCommandBuffer.empty() || asState.Size == 0 ||
       asState.CreationCommandId != CommandId::ID_VKCREATEACCELERATIONSTRUCTUREKHR) {
     return false;
   }
