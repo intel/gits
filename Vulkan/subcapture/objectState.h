@@ -91,6 +91,14 @@ struct DeviceMemoryState : ObjectState {
   // whether this allocation is HOST_VISIBLE (already covered by RestoreMappedMemory)
   // so GPU-readback content restore can skip it.
   uint32_t MemoryTypeIndex{UINT32_MAX};
+  // VkMemoryOpaqueCaptureAddressAllocateInfo::opaqueCaptureAddress (0 if absent).
+  // Needed to recreate the memory at the same capture/replay device address. The
+  // buffer-side opaque address alone is not always enough.
+  uint64_t OpaqueCaptureAddress{};
+  // True if this allocation backs an acceleration-structure storage buffer. Such a
+  // state survives vkFreeMemory (flagged Destroyed) because RestoreBlasChain may need
+  // to re-create it transiently. See BufferState::AsBacking.
+  bool AsBacking{};
 };
 
 // ---- Synchronization primitives ----------------------------------------
@@ -147,6 +155,19 @@ struct BufferState : ObjectState {
   // Stored at vkCreateBuffer time for GPU-readback content restore.
   VkDeviceSize BufferSize{};
   VkBufferUsageFlags UsageFlags{};
+  // VkBufferOpaqueCaptureAddressCreateInfo::opaqueCaptureAddress, if present. Cached
+  // here so it can be looked up without re-decoding the creation command.
+  uint64_t OpaqueCaptureAddress{};
+  // Populated by Post(vkGetBufferDeviceAddress[KHR/EXT]) and fed into
+  // DeviceAddressTrackingService.
+  VkDeviceAddress DeviceAddress{};
+  // True once the content has been copied into the subcapture stream (an input buffer
+  // shared across builds must not be uploaded twice).
+  bool ContentRestored{false};
+  // True if this buffer is the storage buffer of an acceleration structure. Such a
+  // state survives vkDestroyBuffer (flagged Destroyed) because RestoreBlasChain may
+  // need to re-create it - with its acceleration structure - for one chain op.
+  bool AsBacking{};
 };
 
 // format, extent, mipLevels etc. are kept for resource-content restore helpers
@@ -274,6 +295,56 @@ struct CommandPoolState : ObjectState {
   std::unordered_set<uint64_t> AllocatedCommandBufferKeys;
 };
 
+// One referenced byte range of an acceleration-structure build input buffer.
+struct CapturedBuildInputRegion {
+  VkDeviceSize SrcOffset{}; // byte offset within the owning buffer
+  VkDeviceSize RangeSize{}; // number of referenced bytes
+  uint64_t Hash{};          // key into StateTrackingService content store
+};
+
+// The referenced sub-ranges of one acceleration-structure build input buffer, plus the
+// capture/replay metadata needed to recreate the buffer at its original device address
+// during restore. The bytes themselves live in the content store, keyed by hash.
+struct CapturedBuildInputBuffer {
+  uint64_t BufferKey{};                  // original buffer key (to detect if still restored)
+  VkDeviceSize Size{};                   // full buffer size in bytes (for recreate)
+  uint64_t BufferOpaqueCaptureAddress{}; // VkBufferOpaqueCaptureAddressCreateInfo
+  uint64_t MemoryOpaqueCaptureAddress{}; // VkMemoryOpaqueCaptureAddressAllocateInfo
+  uint32_t MemoryTypeIndex{UINT32_MAX};  // original backing-memory type index
+  // vkBindBufferMemory offset within that allocation. A non-zero offset (or an
+  // allocation shared with another input of the same build) makes the captured address
+  // unreproducible by a dedicated recreate, so the restore relocates such an input.
+  VkDeviceSize MemoryOffset{};
+  // Base device address at build time, used to relocate the build command's baked
+  // geometry addresses when the captured opaque address cannot be reproduced.
+  VkDeviceAddress BaseDeviceAddress{};
+  std::vector<CapturedBuildInputRegion> Regions; // merged, sorted by SrcOffset
+};
+
+// Live staging resources for an acceleration-structure build-input readback. These are
+// raw driver handles, not GITS keys. They live as long as the command buffer may be
+// resubmitted and are released when its staged list is cleared.
+struct StagedInputReadback {
+  VkDevice Device{VK_NULL_HANDLE};
+  VkBuffer Buffer{VK_NULL_HANDLE};
+  VkDeviceMemory Memory{VK_NULL_HANDLE};
+  void* Mapped{nullptr};
+  VkDeviceSize Size{}; // packed size = sum of the buffer's merged region sizes
+};
+
+// An acceleration-structure build whose input buffers are copied into staging at
+// build-record time and read back after the command buffer is submitted (the inputs
+// are only guaranteed valid at build execution, not at record time). Consumed by
+// StateTrackingService::ApplyAsInputReadbacksAfterSubmit.
+struct PendingAsInputReadback {
+  uint64_t AsKey{};
+  // Key of the vkCmdBuildAccelerationStructuresKHR command this dst belongs to. A
+  // multi-info build produces one PendingAsInputReadback per dst, all sharing it.
+  uint64_t CommandKey{};
+  std::vector<CapturedBuildInputBuffer> Buffers;
+  std::vector<StagedInputReadback> Staging; // parallel to Buffers
+};
+
 struct CommandBufferState : ObjectState {
   // Needed for dependency-order restore: pool must exist before allocating buffers.
   uint64_t PoolKey{};
@@ -320,6 +391,10 @@ struct CommandBufferState : ObjectState {
   // layouts (e.g. the next frame's command buffers being recorded ahead).
   // Mirrors legacy CCommandBufferState::imageLayoutAfterSubmit.
   std::unordered_map<uint64_t, VkImageLayout> ImageLayoutAfterSubmit;
+  // Acceleration-structure builds whose input buffers must be read back after this CB is
+  // submitted. Folded onto the executing primary at vkCmdExecuteCommands. Cleared on CB
+  // reset and one-time-submit invalidation.
+  std::vector<PendingAsInputReadback> AsInputReadbacksAfterSubmit;
 };
 
 // ---- Swapchain / surface -----------------------------------------------
@@ -380,7 +455,39 @@ struct QueryPoolState : ObjectState {
 
 // ---- Misc extension objects --------------------------------------------
 
-struct AccelerationStructureState : ObjectState {};
+struct AccelerationStructureState : ObjectState {
+  // From VkAccelerationStructureCreateInfoKHR.
+  VkAccelerationStructureTypeKHR Type{};
+  uint64_t BufferKey{}; // backing VkBuffer (createInfo.buffer)
+  VkDeviceSize Offset{};
+  VkDeviceSize Size{};
+  // VkAccelerationStructureCreateInfoKHR::deviceAddress: unlike VkBuffer's
+  // opaque capture address, this is a direct create-info field, not a pNext.
+  uint64_t OpaqueCaptureAddress{};
+  // Populated by Post(vkGetAccelerationStructureDeviceAddressKHR) and fed into
+  // DeviceAddressTrackingService.
+  VkDeviceAddress DeviceAddress{};
+  // Encoded bytes of the last vkCmdBuildAccelerationStructuresKHR that built this AS.
+  // The rebuild content-restore path replays this build against re-uploaded inputs
+  // instead of serializing/deserializing the AS itself.
+  CommandId LastBuildCommandId{static_cast<CommandId>(0)};
+  std::vector<char> LastBuildCommandBytes;
+  // Every destination AS key touched by the same build call, including this one, so a
+  // multi-info build is emitted once rather than per destination AS.
+  std::vector<uint64_t> LastBuildSiblingAsKeys;
+  // True if the last build's instances geometry used arrayOfPointers layout. Such a TLAS
+  // is not rebuilt at state restore (its scattered instance structs cannot be captured at
+  // record time) but in-range by the application. Its referenced BLASes are retained via
+  // analysis-pass discovery.
+  bool ArrayOfPointersInstances{false};
+
+  // Referenced sub-ranges of each build input buffer (vertex/index/transform/instances/
+  // aabbs). The rebuild content-restore recreates each input at its original
+  // capture/replay device address and re-uploads only these bytes, even if the
+  // application already destroyed the buffer, so the replayed build resolves the same
+  // baked addresses with no patching. Scratch is regenerated fresh instead.
+  std::vector<CapturedBuildInputBuffer> CapturedBuildInputs;
+};
 struct DeferredOperationState : ObjectState {};
 
 // ---- Video session objects ---------------------------------------------

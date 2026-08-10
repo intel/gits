@@ -112,6 +112,10 @@ public:
                                        const std::vector<char>& pDataBytes,
                                        std::vector<uint64_t>& outKeys) const;
 
+  // Collect every non-zero object key currently bound into a descriptor set: image
+  // views, samplers, buffers, buffer views, acceleration structures.
+  void CollectBoundKeys(uint64_t setKey, std::vector<uint64_t>& outKeys) const;
+
   // Remove all tracked state for a descriptor set (freed / pool reset).
   void RemoveDescriptorSet(uint64_t setKey);
 

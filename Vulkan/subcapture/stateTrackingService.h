@@ -12,10 +12,14 @@
 #include "subcaptureRecorder.h"
 #include "descriptorSetUpdateService.h"
 #include "queryPoolStateService.h"
+#include "deviceAddressTrackingService.h"
 
+#include <functional>
 #include <map>
 #include <memory>
+#include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 namespace gits {
@@ -59,14 +63,25 @@ public:
                                               VkBufferUsageFlags usage,
                                               VkMemoryRequirements& outReq) = 0;
 
-  // Reads the contents of a GPU-local VkBuffer into outData.
-  // queueKey / commandPoolKey identify Vulkan objects to use for the transfer.
-  // Returns false when readback is not possible.
+  // Always probe with the same create-info the buffer will actually be created with:
+  // flags and pNext change what the driver requires (notably
+  // VK_BUFFER_CREATE_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT can coarsen the reported
+  // alignment), so the size+usage shorthand above would under-report req.size and the
+  // emitted allocation would be too small to back the buffer.
+  virtual bool QueryBufferRequirements(uint64_t deviceKey,
+                                       const VkBufferCreateInfo& createInfo,
+                                       VkMemoryRequirements& outReq) = 0;
+
+  // Reads 'size' bytes starting at 'srcOffset' of a GPU-local VkBuffer into outData.
+  // The caller must keep srcOffset+size within the buffer. Pass the queue on whose
+  // timeline the producing work has completed, so the copy observes the intended
+  // contents. Returns false when readback is not possible.
   virtual bool ReadBuffer(uint64_t deviceKey,
                           uint64_t physDevKey,
                           uint64_t queueKey,
                           uint64_t commandPoolKey,
                           uint64_t bufferKey,
+                          VkDeviceSize srcOffset,
                           VkDeviceSize size,
                           std::vector<uint8_t>& outData) = 0;
 
@@ -81,6 +96,29 @@ public:
                                              uint32_t mipLevels,
                                              uint32_t arrayLayers,
                                              std::vector<VkBufferImageCopy>& outRegions) = 0;
+
+  // Record into the application's command buffer appCbKey a barrier + vkCmdCopyBuffer
+  // that copies the given (merged, sorted) regions of srcBufferKey into a fresh
+  // host-visible staging buffer, packed in region order. Because the copy executes
+  // with the application's own submission, it snapshots the inputs at the build's point
+  // in the timeline. outStaging is then read via ReadStaged and released via
+  // FreeStaged. Returns false on failure.
+  virtual bool StageBufferRegions(uint64_t deviceKey,
+                                  uint64_t physDevKey,
+                                  uint64_t appCbKey,
+                                  uint64_t srcBufferKey,
+                                  const std::vector<CapturedBuildInputRegion>& regions,
+                                  StagedInputReadback& outStaging) = 0;
+
+  // Copy the whole staging buffer's contents into outData, once the GPU copy staged by
+  // StageBufferRegions has completed. Returns false if staging is invalid.
+  virtual bool ReadStaged(const StagedInputReadback& staging, std::vector<uint8_t>& outData) = 0;
+
+  // Release the staging resources created by StageBufferRegions.
+  virtual void FreeStaged(const StagedInputReadback& staging) = 0;
+
+  // vkQueueWaitIdle, so a staged copy is finished before ReadStaged maps it.
+  virtual bool WaitQueueIdle(uint64_t deviceKey, uint64_t queueKey) = 0;
 
   // Reads the contents of a GPU-local VkImage into outData.
   // outRegions is populated with one VkBufferImageCopy per subresource
@@ -99,6 +137,49 @@ public:
                          VkImageLayout currentLayout,
                          std::vector<uint8_t>& outData,
                          std::vector<VkBufferImageCopy>& outRegions) = 0;
+
+  // Reads the serialized bytes of a VkAccelerationStructureKHR into outData, via a
+  // throwaway capture/replay buffer. outDeviceAddress is that buffer's device address.
+  // outOpaqueCaptureAddress / outMemoryOpaqueCaptureAddress are its buffer- and
+  // memory-side opaque addresses, both of which the caller must re-supply when it
+  // recreates an equivalent buffer for the deserialize-restore commands. Doing so
+  // reproduces outDeviceAddress, which is why it can be hardcoded into those commands.
+  // Returns false when readback is not possible.
+  virtual bool ReadAccelerationStructureSerialized(uint64_t deviceKey,
+                                                   uint64_t physDevKey,
+                                                   uint64_t queueKey,
+                                                   uint64_t commandPoolKey,
+                                                   uint64_t accelerationStructureKey,
+                                                   std::vector<uint8_t>& outData,
+                                                   VkDeviceAddress& outDeviceAddress,
+                                                   uint64_t& outOpaqueCaptureAddress,
+                                                   uint64_t& outMemoryOpaqueCaptureAddress) = 0;
+
+  // Live query of the real accelerationStructureSize / updateScratchSize /
+  // buildScratchSize for buildInfo. The captured scratch buffer cannot be trusted to be
+  // large enough for a replayed build. pMaxPrimitiveCounts must have
+  // buildInfo.geometryCount entries.
+  virtual bool QueryAccelerationStructureBuildSizes(
+      uint64_t deviceKey,
+      const VkAccelerationStructureBuildGeometryInfoKHR& buildInfo,
+      const uint32_t* pMaxPrimitiveCounts,
+      VkAccelerationStructureBuildSizesInfoKHR& outSizes) = 0;
+
+  // Reserves a capture/replay-stable VkDeviceAddress for a not-yet-created scratch
+  // buffer of 'size' bytes. The caller emits creation commands supplying these same
+  // opaque addresses, so the driver reproduces outDeviceAddress and it can be hardcoded
+  // into the replayed build's scratchData.deviceAddress.
+  virtual bool ReserveScratchBufferAddress(uint64_t deviceKey,
+                                           uint64_t physDevKey,
+                                           VkDeviceSize size,
+                                           VkDeviceAddress& outDeviceAddress,
+                                           uint64_t& outOpaqueCaptureAddress,
+                                           uint64_t& outMemoryOpaqueCaptureAddress) = 0;
+
+  // Destroys every throwaway buffer that ReserveScratchBufferAddress kept alive. Call
+  // it once a rebuild's transient creation commands have all been authored: until then
+  // the addresses must stay reserved so two coexisting transients cannot alias.
+  virtual void ReleaseReservedAddresses() = 0;
 };
 
 // Owns and manages the per-object state tables populated by SubcaptureLayer.
@@ -182,6 +263,11 @@ public:
     return m_QueryPoolState;
   }
 
+  // Fed by SubcaptureLayer from the vkGet*DeviceAddress Post hooks.
+  DeviceAddressTrackingService& GetDeviceAddressTracking() {
+    return m_DeviceAddressTracking;
+  }
+
   // Inject the GPU readback helper (provided by the player module).
   void SetGpuReadbackHelper(IGpuReadbackHelper* helper) {
     m_GpuReadbackHelper = helper;
@@ -195,6 +281,37 @@ public:
   // single-pass flow.
   void SetAnalyzerResults(const AnalyzerResults* results) {
     m_AnalyzerResults = results;
+  }
+
+  // Find a live queue key and command pool key of deviceKey that share the same queue
+  // family index, for one-shot GPU readback. False if no such pair exists.
+  bool FindQueueAndPool(uint64_t deviceKey, uint64_t& outQueueKey, uint64_t& outPoolKey) const;
+
+  // Read back the build inputs staged on cbKey now that its build has executed: reads
+  // each referenced sub-range, hashes/stores the bytes and moves the finalized inputs
+  // onto the destination AccelerationStructureState (last submit before the cut wins).
+  void ApplyAsInputReadbacksAfterSubmit(uint64_t cbKey, uint64_t submitQueueKey);
+
+  // Fold a secondary command buffer's staged AS build-input readbacks into the primary
+  // so they run when the primary is submitted.
+  void MergeSecondaryAsInputReadbacks(uint64_t primaryKey, uint64_t secondaryKey);
+
+  // Record a retained BLAS chain command's encoded bytes for RestoreBlasChain (recording
+  // pass only). No-op unless this command key is part of a loaded BlasChain. A
+  // multi-info build is stored once under its key.
+  void StoreRetainedAsCommandBytes(uint64_t commandKey,
+                                   const std::vector<char>& bytes,
+                                   bool isCopy);
+
+  // Release the live staging buffers behind a command buffer's staged AS build-input
+  // readbacks. Call before its staged list is cleared, so they are not leaked.
+  void FreeCommandBufferStagedReadbacks(CommandBufferState& cb);
+
+  // Extra per-command-buffer callback fired at submit time, taking the submitted command
+  // buffer and the queue. Set by the analysis pass for its TLAS instance readback. The
+  // recording pass leaves it unset.
+  void SetSubmittedCommandBufferCallback(std::function<void(uint64_t, uint64_t)> cb) {
+    m_OnCommandBufferSubmitted = std::move(cb);
   }
 
 private:
@@ -237,6 +354,91 @@ private:
   void RestoreMappedMemory(ObjectState* state);
   void RestoreBufferContents();
   void RestoreImageContents();
+  void RestoreAccelerationStructureContents();
+
+  // Flag asKey's backing buffer as content-restored so RestoreBufferContents leaves it
+  // alone. Must be called for every acceleration structure whose content a restore path
+  // regenerates. See the definition for why a raw byte copy over its storage is invalid.
+  void MarkAccelerationStructureBackingContentRestored(uint64_t asKey);
+
+  // Rebuild-from-inputs content restore: replays asKey's last captured
+  // vkCmdBuildAccelerationStructuresKHR (re-uploading its input buffers first), and its update
+  // source's before that. Reads no BlasChain, so it only runs for TLASes the chain does not cover.
+  // Aborts the run if asKey cannot be rebuilt.
+  void RestoreAccelerationStructureByRebuild(
+      uint64_t asKey, uint64_t deviceKey, uint64_t physDevKey, uint64_t queueKey, uint64_t poolKey);
+
+  // Replays asState's stored build command bytes in a one-shot command buffer, patching
+  // their CB key (the stored one is the original app CB's, dead by restore time).
+  void EmitAccelerationStructureRebuild(uint64_t deviceKey,
+                                        uint64_t physDevKey,
+                                        uint64_t queueKey,
+                                        uint64_t poolKey,
+                                        const AccelerationStructureState& asState);
+
+  // Core replay used by both the per-AS wrapper above and the chain replay. Replays the
+  // build command bytes verbatim - each info keeps the mode the application recorded -
+  // against re-uploaded captured inputs and a freshly reserved scratch buffer. logAsKey
+  // is used only for logging.
+  //
+  // updateSourceByDstAs maps a destination AS key to the source an UPDATE-mode info
+  // targeting it must refit from, replacing the recorded source that the chain reduction
+  // may have dropped. Only the chain replay supplies it, since the per-AS path retains no
+  // predecessor. An UPDATE-mode info with no source available aborts the run rather
+  // than being rewritten into a BUILD, which would emit a different operation.
+  void EmitAccelerationStructureRebuildBytes(
+      uint64_t deviceKey,
+      uint64_t physDevKey,
+      uint64_t queueKey,
+      uint64_t poolKey,
+      const std::vector<char>& commandBytes,
+      const std::vector<CapturedBuildInputBuffer>& capturedInputs,
+      uint64_t logAsKey,
+      const std::unordered_map<uint64_t, uint64_t>* updateSourceByDstAs = nullptr);
+
+  // Probed with the exact create-info EmitCaptureReplayBufferCreate uses. Never probe
+  // such a buffer with IGpuReadbackHelper::QueryStagingBufferRequirements: it omits the
+  // capture/replay flag and would under-report req.size.
+  bool QueryCaptureReplayBufferRequirements(uint64_t deviceKey,
+                                            VkDeviceSize size,
+                                            VkBufferUsageFlags usage,
+                                            VkMemoryRequirements& outReq);
+
+  // True for a Destroyed object kept in the state map solely so RestoreBlasChain can
+  // transiently re-create it. Every other restore path must treat such an object as
+  // untracked. See the definition for the rationale.
+  bool IsChainRetainedOnly(const ObjectState* state) const;
+
+  // Replay the analyzer's reduced BLAS chain in order: each build/update as a
+  // build-from-inputs, each copy verbatim (its source AS was produced by an earlier op).
+  // Used instead of the per-AS rebuild for BLASes when a BlasChain was loaded.
+  void RestoreBlasChain();
+
+  // Emit a stored copy command (vkCmdCopyAccelerationStructureKHR) in a one-shot
+  // command buffer, patching its CB key. Used by RestoreBlasChain for CLONE/COMPACT.
+  void EmitAccelerationStructureCopyReplay(uint64_t deviceKey,
+                                           uint64_t queueKey,
+                                           uint64_t poolKey,
+                                           const std::vector<char>& commandBytes);
+
+  // Re-create a Destroyed acceleration structure on a freshly reserved capture/replay
+  // address instead of its captured one, backed by a dedicated storage buffer and
+  // allocation under the caller-supplied synthetic keys. A verbatim re-create would fail
+  // with VK_ERROR_INVALID_OPAQUE_CAPTURE_ADDRESS, since the driver routinely hands the
+  // freed structure's address out again. Relocating is safe because the chain ops that
+  // read an intermediate BLAS reference it by handle, not by address.
+  // Returns false if no address could be reserved (nothing emitted).
+  bool EmitRelocatedAccelerationStructureCreate(uint64_t deviceKey,
+                                                uint64_t physDevKey,
+                                                const AccelerationStructureState& asState,
+                                                uint64_t bufKey,
+                                                uint64_t memKey);
+
+  // Insert bytes into the AS build-input content store and return their hash key. On a
+  // hash collision the content is compared and probed to a fresh key, never aliased.
+  uint64_t StoreAsBuildInputContent(std::vector<uint8_t> bytes);
+  // Look up previously stored AS build-input bytes by hash, or nullptr.
+  const std::vector<uint8_t>* GetAsBuildInputContent(uint64_t hash) const;
 
   // Emit the stored creation command bytes directly as a serializer.
   // Returns false if CommandId is not handled (no bytes emitted).
@@ -270,6 +472,7 @@ private:
   const AnalyzerResults* m_AnalyzerResults{nullptr};
   DescriptorSetUpdateService m_DescriptorSetUpdateService;
   QueryPoolStateService m_QueryPoolState{*this};
+  DeviceAddressTrackingService m_DeviceAddressTracking;
   // Single ordered container: key (sequential integer) -> owned state.
   // std::map keeps entries sorted by key, which equals creation order because
   // Vulkan keys are sequential integers assigned by the coder, exactly the
@@ -293,6 +496,26 @@ private:
   // dependencies; destroy commands for these are emitted after all pipelines
   // have been created, mirroring the old Vulkan state-restore approach.
   std::unordered_set<uint64_t> m_TransientlyRestored;
+  // AS keys already covered by a rebuild emitted this pass, directly or as a sibling
+  // destination of the same multi-info build command.
+  std::unordered_set<uint64_t> m_RebuiltAsKeys;
+  // Retained BLAS chain commands (recording pass), keyed by command key. Populated by
+  // StoreRetainedAsCommandBytes (bytes) and ApplyAsInputReadbacksAfterSubmit (inputs).
+  struct RetainedAsCommand {
+    std::vector<char> CommandBytes;
+    std::vector<CapturedBuildInputBuffer> Inputs; // build/update only
+    bool IsCopy{};
+  };
+  std::unordered_map<uint64_t, RetainedAsCommand> m_RetainedAsCommands;
+  // AS build-input byte ranges keyed by content hash, deduplicating identical input
+  // bytes across builds, buffers and frames.
+  std::map<uint64_t, std::vector<uint8_t>> m_AsBuildInputContent;
+  // Per-restore-pass dedup of emitted input uploads: (buffer key, dst offset) -> last
+  // uploaded content hash. Lets a re-referenced range of a reused input buffer skip a
+  // redundant upload. Reset at the start of RestoreState.
+  std::map<std::pair<uint64_t, uint64_t>, uint64_t> m_RestoredInputRegionHashes;
+  // See SetSubmittedCommandBufferCallback.
+  std::function<void(uint64_t, uint64_t)> m_OnCommandBufferSubmitted;
 };
 
 } // namespace vulkan

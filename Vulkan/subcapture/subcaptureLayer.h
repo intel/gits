@@ -20,6 +20,8 @@
 #include "subcaptureRecorder.h"
 #include "analyzerResults.h"
 #include "analyzerService.h"
+#include "analyzerRaytracingService.h"
+#include "raytracingOptimizationService.h"
 #include "commandCodersAuto.h"
 
 #include <memory>
@@ -53,9 +55,14 @@ public:
     return m_StateTracking;
   }
 
-  // Non-null only in analysis mode.  Passed to the AnalyzerLayer.
+  // Non-null only in analysis mode. Passed to the AnalyzerLayer.
   AnalyzerService* GetAnalyzerService() {
     return m_AnalyzerService.get();
+  }
+
+  // Non-null only in analysis mode. Passed to the AnalyzerLayer.
+  AnalyzerRaytracingService* GetAnalyzerRaytracingService() {
+    return m_AnalyzerRaytracingService.get();
   }
 
   SubcaptureRange& GetSubcaptureRange() {
@@ -139,6 +146,12 @@ public:
   void Post(vkBindImageMemoryCommand& command) override;
   void Post(vkBindImageMemory2Command& command) override;
   void Post(vkBindImageMemory2KHRCommand& command) override;
+
+  // Device-address plumbing: pure tracking (address -> object key). Feeds
+  // DeviceAddressTrackingService and the states' DeviceAddress fields.
+  void Post(vkGetBufferDeviceAddressCommand& command) override;
+  void Post(vkGetBufferDeviceAddressKHRCommand& command) override;
+  void Post(vkGetBufferDeviceAddressEXTCommand& command) override;
 
   void Post(vkCreateBufferViewCommand& command) override;
   void Post(vkDestroyBufferViewCommand& command) override;
@@ -271,6 +284,40 @@ public:
   void Post(vkCmdCopyQueryPoolResultsCommand& command) override;
   // Execute secondary command buffers
   void Post(vkCmdExecuteCommandsCommand& command) override;
+  // Acceleration structures: Pre records the input-buffer readback copies into the
+  // application's command buffer. Post tracks dependencies and snapshots the raw build
+  // command for the rebuild-from-inputs content restore path.
+  void Pre(vkCmdBuildAccelerationStructuresKHRCommand& command) override;
+  void Post(vkCmdBuildAccelerationStructuresKHRCommand& command) override;
+  void Post(vkCmdCopyAccelerationStructureKHRCommand& command) override;
+
+  // Every other way of writing acceleration structure or micromap content. None is tracked -
+  // not by the chain graph, the build-input capture, or the analysis pass's TLAS->BLAS
+  // discovery - so a structure written by one would be restored with stale contents or none,
+  // and a TLAS built by one would leave its BLASes out of the restore set. Rather than emit
+  // that silently, refuse the stream (see faithfull_subcapture.md).
+  //
+  // Deliberately absent are the readers (*ToMemory, WriteProperties), which write no
+  // structure content. WriteProperties is part of the supported compaction flow.
+  void Post(vkCmdBuildAccelerationStructuresIndirectKHRCommand& command) override;
+  void Post(vkBuildAccelerationStructuresKHRCommand& command) override;
+  void Post(vkCopyAccelerationStructureKHRCommand& command) override;
+  void Post(vkCmdCopyMemoryToAccelerationStructureKHRCommand& command) override;
+  void Post(vkCopyMemoryToAccelerationStructureKHRCommand& command) override;
+  void Post(vkCmdBuildAccelerationStructureNVCommand& command) override;
+  void Post(vkCmdCopyAccelerationStructureNVCommand& command) override;
+  void Post(vkCmdBuildMicromapsEXTCommand& command) override;
+  void Post(vkBuildMicromapsEXTCommand& command) override;
+  void Post(vkCmdCopyMicromapEXTCommand& command) override;
+  void Post(vkCopyMicromapEXTCommand& command) override;
+  void Post(vkCmdCopyMemoryToMicromapEXTCommand& command) override;
+  void Post(vkCopyMemoryToMicromapEXTCommand& command) override;
+
+  // Ray tracing dispatch: the 4 SBT regions carry only raw device addresses, so each is
+  // resolved back to its backing buffer and promoted as a command buffer dependency. The
+  // bound RT pipeline and descriptor sets are already promoted by the bind-time hooks.
+  void Post(vkCmdTraceRaysKHRCommand& command) override;
+  void Post(vkCmdTraceRaysIndirectKHRCommand& command) override;
 
   // ---- Image layout tracking ------------------------------------------
   // Update ImageState::currentLayout as pipeline barriers execute so that
@@ -315,6 +362,7 @@ public:
   void Post(vkDestroyAccelerationStructureKHRCommand& command) override;
   void Post(vkCreateAccelerationStructureNVCommand& command) override;
   void Post(vkDestroyAccelerationStructureNVCommand& command) override;
+  void Post(vkGetAccelerationStructureDeviceAddressKHRCommand& command) override;
 
   // ---- Deferred operations ---------------------------------------------
   void Post(vkCreateDeferredOperationKHRCommand& command) override;
@@ -397,6 +445,19 @@ private:
   // keeps it in the restore set.  No-op outside analysis mode.
   void NotifyTemplateUpdateHandles(uint64_t templateKey, const std::vector<char>& dataBytes);
 
+  // Recording pass: abort when the application builds acceleration structures before the
+  // range but no reduced chain was loaded, leaving nothing to replay them from. No-op in
+  // analysis mode, in serialize mode, or once a chain is present.
+  void RequireBlasChainForRaytracing(const char* commandName);
+
+  void RefuseGenericAccelerationStructure(uint64_t asKey, VkAccelerationStructureTypeKHR type);
+
+  // Abort because the stream writes acceleration structure or micromap content through a
+  // command subcapture does not track. Also applies in range: such a build is recorded
+  // faithfully, but the analysis pass cannot see what it reads, so that may be trimmed. Use
+  // after the range has finished is ignored, since it cannot affect the output.
+  void RefuseUnsupportedRaytracingCommand(const char* commandName);
+
   // True for the analysis pass.  Declared first so it can be used in the
   // member initializer list (e.g. to keep the recorder closed).
   bool m_AnalysisMode{false};
@@ -413,6 +474,12 @@ private:
   // Analysis pass only: collects in-range object usage and dumps the analysis
   // file.  Null in recording mode.
   std::unique_ptr<AnalyzerService> m_AnalyzerService;
+  // Analysis pass only: TLAS->BLAS discovery via GPU readback of TLAS instance
+  // buffers. Null in recording mode.
+  std::unique_ptr<AnalyzerRaytracingService> m_AnalyzerRaytracingService;
+  // Analysis pass only: reduces pre-range BLAS build/update/copy chains to the
+  // minimal restore set. Null in recording mode.
+  std::unique_ptr<RaytracingOptimizationService> m_RaytracingOptimizationService;
 
   // Pending window geometry: set when a CreateWindowMetaCommand is observed,
   // consumed when the next surface creation command is processed.

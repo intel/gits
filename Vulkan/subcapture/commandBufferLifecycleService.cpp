@@ -33,6 +33,7 @@ void CommandBufferLifecycleService::ClearState(CommandBufferState& state) {
   state.ResetQueriesAfterSubmit.clear();
   state.UsedQueriesAfterSubmit.clear();
   state.ImageLayoutAfterSubmit.clear();
+  state.AsInputReadbacksAfterSubmit.clear();
 }
 
 void CommandBufferLifecycleService::OnAllocate(vkAllocateCommandBuffersCommand& command) {
@@ -102,6 +103,7 @@ void CommandBufferLifecycleService::OnFree(const std::vector<uint64_t>& cbKeys) 
     // unordered_set::erase is O(1) average, so titles that free command buffers
     // one at a time stay cheap.
     if (auto* cbState = m_StateTracking.GetState<CommandBufferState>(key)) {
+      m_StateTracking.FreeCommandBufferStagedReadbacks(*cbState);
       if (auto* poolState = m_StateTracking.GetState<CommandPoolState>(cbState->PoolKey)) {
         poolState->AllocatedCommandBufferKeys.erase(key);
       }
@@ -119,6 +121,7 @@ void CommandBufferLifecycleService::OnBegin(vkBeginCommandBufferCommand& command
     return;
   }
   // vkBeginCommandBuffer implicitly resets the CB - clear any previous recording.
+  m_StateTracking.FreeCommandBufferStagedReadbacks(*state);
   ClearState(*state);
   state->IsRecording = true;
   state->BeginFlags = (command.m_pBeginInfo.Value ? command.m_pBeginInfo.Value->flags : 0);
@@ -156,6 +159,7 @@ void CommandBufferLifecycleService::OnEnd(vkEndCommandBufferCommand& command) {
 void CommandBufferLifecycleService::OnReset(uint64_t cbKey) {
   auto* state = m_StateTracking.GetState<CommandBufferState>(cbKey);
   if (state) {
+    m_StateTracking.FreeCommandBufferStagedReadbacks(*state);
     ClearState(*state);
   }
 }
@@ -172,6 +176,7 @@ void CommandBufferLifecycleService::OnResetPool(uint64_t poolKey) {
   }
   for (uint64_t cbKey : poolState->AllocatedCommandBufferKeys) {
     if (auto* cbState = m_StateTracking.GetState<CommandBufferState>(cbKey)) {
+      m_StateTracking.FreeCommandBufferStagedReadbacks(*cbState);
       ClearState(*cbState);
     }
   }
@@ -190,6 +195,9 @@ void CommandBufferLifecycleService::OnDestroyPool(uint64_t poolKey) {
     return;
   }
   for (uint64_t cbKey : poolState->AllocatedCommandBufferKeys) {
+    if (auto* cbState = m_StateTracking.GetState<CommandBufferState>(cbKey)) {
+      m_StateTracking.FreeCommandBufferStagedReadbacks(*cbState);
+    }
     m_StateTracking.RemoveState(cbKey);
   }
   poolState->AllocatedCommandBufferKeys.clear();

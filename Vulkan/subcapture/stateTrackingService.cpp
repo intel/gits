@@ -8,6 +8,7 @@
 
 #include "stateTrackingService.h"
 #include "analyzerResults.h"
+#include "subcaptureFatal.h"
 #include "commandSerializersAuto.h"
 #include "commandSerializersCustom.h"
 #include "commandSerializersFactory.h"
@@ -15,13 +16,16 @@
 #include "commandIdsAuto.h"
 #include "commandsAuto.h"
 #include "commandsCustom.h"
+#include "configurator.h"
 #include "log.h"
+#include "tools.h"
 
 #include <algorithm>
 #include <cstring>
 #include <limits>
 #include <memory>
 #include <unordered_map>
+#include <utility>
 
 namespace gits {
 namespace vulkan {
@@ -111,12 +115,32 @@ bool StateTrackingService::HasState(uint64_t key) const {
   return m_States.count(key) != 0;
 }
 
+// True for a Destroyed object whose state is retained *only* so RestoreBlasChain can
+// transiently re-create it while replaying a chain op. Unlike the other
+// Destroyed-but-kept object kinds (shader modules, pipeline layouts, ...), these must
+// not be resurrected as an incidental dependency, which would leave a live handle
+// parked on a capture/replay device address for the rest of the stream. Callers
+// therefore treat them as no longer tracked.
+bool StateTrackingService::IsChainRetainedOnly(const ObjectState* state) const {
+  if (!state || !state->Destroyed) {
+    return false;
+  }
+  switch (state->CreationCommandId) {
+  case CommandId::ID_VKCREATEACCELERATIONSTRUCTUREKHR:
+  case CommandId::ID_VKCREATEBUFFER:
+  case CommandId::ID_VKALLOCATEMEMORY:
+    return true;
+  default:
+    return false;
+  }
+}
+
 void StateTrackingService::EnsureRestored(uint64_t key) {
   if (!key) {
     return;
   }
   ObjectState* state = GetState(key);
-  if (!state) {
+  if (!state || IsChainRetainedOnly(state)) {
     return;
   }
   RestoreOne(state);
@@ -138,6 +162,7 @@ void StateTrackingService::RestoreState() {
   m_DescriptorSetsAllocated.clear();
   m_CommandBuffersRecordingReplaySkipped.clear();
   m_TransientlyRestored.clear();
+  m_RestoredInputRegionHashes.clear();
 
   // Emit StateRestoreBegin marker
   {
@@ -340,6 +365,7 @@ void StateTrackingService::RestoreState() {
   // correct layout already).
   recordStatus(MarkerUInt64Command::Value::STATE_RESTORE_RESOURCES_BEGIN);
   if (m_GpuReadbackHelper) {
+    RestoreAccelerationStructureContents();
     RestoreBufferContents();
     RestoreImageContents();
   }
@@ -435,7 +461,7 @@ void StateTrackingService::RestoreOne(ObjectState* state) {
   if (state->CreationCommandId != CommandId::ID_VKALLOCATECOMMANDBUFFERS) {
     for (uint64_t dep : state->DependencyKeys) {
       if (dep) {
-        if (!HasState(dep)) {
+        if (!HasState(dep) || IsChainRetainedOnly(GetState(dep))) {
           LOG_WARNING << "Vulkan subcapture: skipping object key=" << state->Key
                       << " (commandId=" << static_cast<uint32_t>(state->CreationCommandId)
                       << ") because dependency key=" << dep << " is no longer tracked";
@@ -696,6 +722,184 @@ static bool FindQueueAndPoolForFamily(
 
 } // namespace
 
+bool StateTrackingService::FindQueueAndPool(uint64_t deviceKey,
+                                            uint64_t& outQueueKey,
+                                            uint64_t& outPoolKey) const {
+  return ::gits::vulkan::FindQueueAndPool(m_States, deviceKey, outQueueKey, outPoolKey);
+}
+
+uint64_t StateTrackingService::StoreAsBuildInputContent(std::vector<uint8_t> bytes) {
+  // Widen the 32-bit XX hash with the size, then verify on collision so a genuine clash
+  // never aliases two different byte ranges (which would upload the wrong geometry).
+  uint64_t key = gits::ComputeHash(bytes.data(), bytes.size(), gits::THashType::XX);
+  key ^= static_cast<uint64_t>(bytes.size()) * 0x9E3779B97F4A7C15ull;
+  if (key == 0) {
+    key = 0x9E3779B97F4A7C15ull; // reserve 0 to mean "no content"
+  }
+  for (;;) {
+    auto it = m_AsBuildInputContent.find(key);
+    if (it == m_AsBuildInputContent.end()) {
+      m_AsBuildInputContent.emplace(key, std::move(bytes));
+      return key;
+    }
+    if (it->second.size() == bytes.size() &&
+        std::equal(it->second.begin(), it->second.end(), bytes.begin())) {
+      return key; // identical content already stored - dedup
+    }
+    key = key * 0x100000001B3ull + 0x9E3779B1ull; // probe past a rare true collision
+    if (key == 0) {
+      key = 1;
+    }
+  }
+}
+
+const std::vector<uint8_t>* StateTrackingService::GetAsBuildInputContent(uint64_t hash) const {
+  auto it = m_AsBuildInputContent.find(hash);
+  return it == m_AsBuildInputContent.end() ? nullptr : &it->second;
+}
+
+void StateTrackingService::ApplyAsInputReadbacksAfterSubmit(uint64_t cbKey,
+                                                            uint64_t submitQueueKey) {
+  // Fire the analysis-pass hook first (queue-execution-synced TLAS readback).
+  // Unset in the recording pass.
+  if (m_OnCommandBufferSubmitted) {
+    m_OnCommandBufferSubmitted(cbKey, submitQueueKey);
+  }
+
+  auto* cbState = GetState<CommandBufferState>(cbKey);
+  if (!cbState || cbState->AsInputReadbacksAfterSubmit.empty() || !m_GpuReadbackHelper ||
+      submitQueueKey == 0) {
+    return;
+  }
+  const uint64_t deviceKey = cbState->ParentKey;
+
+  // The copies were recorded into this CB and have now been submitted on submitQueueKey.
+  // Drain the queue so they are complete before we map staging.
+  m_GpuReadbackHelper->WaitQueueIdle(deviceKey, submitQueueKey);
+
+  // On a resubmit we re-read fresh content, so a retained command's accumulated inputs
+  // are cleared the first time we see it here - last submit wins.
+  std::unordered_set<uint64_t> clearedRetainedThisCall;
+
+  for (auto& pending : cbState->AsInputReadbacksAfterSubmit) {
+    auto* asState = GetState<AccelerationStructureState>(pending.AsKey);
+    if (!asState) {
+      continue;
+    }
+    // A retained op is only replayable if its inputs were captured. A missing range
+    // would be rebuilt over whatever the recreated input buffer happens to hold.
+    // Strict membership, since RestoreBlasCommand also answers yes with no chain.
+    const bool retainedByChain =
+        m_AnalyzerResults && m_AnalyzerResults->IsRetainedBlasCommand(pending.CommandKey);
+    std::vector<CapturedBuildInputBuffer> finalized;
+    finalized.reserve(pending.Buffers.size());
+    for (size_t b = 0; b < pending.Buffers.size(); ++b) {
+      CapturedBuildInputBuffer buf = pending.Buffers[b];
+      std::vector<uint8_t> allBytes;
+      if (b < pending.Staging.size() &&
+          m_GpuReadbackHelper->ReadStaged(pending.Staging[b], allBytes)) {
+        // Regions were packed into staging in this exact order (see
+        // GpuReadbackHelper::StageBufferRegions), so slice by running offset.
+        VkDeviceSize offset = 0;
+        for (auto& region : buf.Regions) {
+          if (region.RangeSize == 0) {
+            continue;
+          }
+          if (offset + region.RangeSize <= allBytes.size()) {
+            std::vector<uint8_t> bytes(allBytes.begin() + static_cast<ptrdiff_t>(offset),
+                                       allBytes.begin() +
+                                           static_cast<ptrdiff_t>(offset + region.RangeSize));
+            region.Hash = StoreAsBuildInputContent(std::move(bytes));
+          } else if (retainedByChain) {
+            FatalSubcaptureError("staged build input of acceleration structure key=" +
+                                 std::to_string(pending.AsKey) +
+                                 " (input buffer key=" + std::to_string(buf.BufferKey) +
+                                 ", command key=" + std::to_string(pending.CommandKey) +
+                                 ") read back short: " + std::to_string(allBytes.size()) +
+                                 " bytes for a range ending at " +
+                                 std::to_string(offset + region.RangeSize) +
+                                 ", so this retained op's inputs cannot be reproduced");
+          } else {
+            region.Hash = 0;
+          }
+          offset += region.RangeSize;
+        }
+      } else {
+        if (retainedByChain) {
+          FatalSubcaptureError("failed to read back a staged build input of acceleration structure "
+                               "key=" +
+                               std::to_string(pending.AsKey) +
+                               " (input buffer key=" + std::to_string(buf.BufferKey) +
+                               ", command key=" + std::to_string(pending.CommandKey) +
+                               "), so this retained op's inputs cannot be reproduced");
+        }
+        LOG_WARNING << "Vulkan subcapture: failed to read staged acceleration structure build "
+                       "input (buffer key="
+                    << buf.BufferKey << "); rebuild may be incomplete";
+        for (auto& region : buf.Regions) {
+          region.Hash = 0;
+        }
+      }
+      finalized.push_back(std::move(buf));
+    }
+    // Route to the per-command chain-replay store (recording pass, retained BLAS
+    // commands only): a multi-info build's dsts accumulate under one command key.
+    if (m_AnalyzerResults && m_AnalyzerResults->UseAsChainRestore() &&
+        m_AnalyzerResults->RestoreBlasCommand(pending.CommandKey)) {
+      auto& rc = m_RetainedAsCommands[pending.CommandKey];
+      if (clearedRetainedThisCall.insert(pending.CommandKey).second) {
+        rc.Inputs.clear();
+      }
+      for (const auto& b : finalized) {
+        rc.Inputs.push_back(b);
+      }
+    }
+    // Last submit before the cut wins (matches "only the latest build per AS is
+    // retained").
+    asState->CapturedBuildInputs = std::move(finalized);
+  }
+  // Staging is not freed here: a reused CB re-executes the recorded copies on every
+  // resubmit. FreeCommandBufferStagedReadbacks does it when the staged list is cleared.
+}
+
+void StateTrackingService::FreeCommandBufferStagedReadbacks(CommandBufferState& cb) {
+  if (!m_GpuReadbackHelper) {
+    return;
+  }
+  for (auto& pending : cb.AsInputReadbacksAfterSubmit) {
+    for (const auto& staging : pending.Staging) {
+      m_GpuReadbackHelper->FreeStaged(staging);
+    }
+    pending.Staging.clear();
+  }
+}
+
+void StateTrackingService::MergeSecondaryAsInputReadbacks(uint64_t primaryKey,
+                                                          uint64_t secondaryKey) {
+  auto* prim = GetState<CommandBufferState>(primaryKey);
+  auto* sec = GetState<CommandBufferState>(secondaryKey);
+  if (!prim || !sec || sec->AsInputReadbacksAfterSubmit.empty()) {
+    return;
+  }
+  for (const auto& pending : sec->AsInputReadbacksAfterSubmit) {
+    prim->AsInputReadbacksAfterSubmit.push_back(pending);
+  }
+}
+
+void StateTrackingService::StoreRetainedAsCommandBytes(uint64_t commandKey,
+                                                       const std::vector<char>& bytes,
+                                                       bool isCopy) {
+  // Only relevant when the chain restore will run.
+  // Not worth holding when the serialized-blob path is in use.
+  if (!m_AnalyzerResults || !m_AnalyzerResults->UseAsChainRestore() ||
+      !m_AnalyzerResults->RestoreBlasCommand(commandKey)) {
+    return;
+  }
+  auto& rc = m_RetainedAsCommands[commandKey];
+  rc.CommandBytes = bytes;
+  rc.IsCopy = isCopy;
+}
+
 bool StateTrackingService::IsAcquiredSwapchainImage(const ImageState* img) {
   if (!img || img->CreationCommandId != CommandId::ID_VKGETSWAPCHAINIMAGESKHR) {
     return false;
@@ -786,7 +990,7 @@ void StateTrackingService::EmitImageLayoutTransitions() {
   for (auto& [deviceKey, imgKeys] : imagesByDevice) {
     uint64_t queueKey = 0;
     uint64_t commandPoolKey = 0;
-    if (!FindQueueAndPool(m_States, deviceKey, queueKey, commandPoolKey)) {
+    if (!::gits::vulkan::FindQueueAndPool(m_States, deviceKey, queueKey, commandPoolKey)) {
       LOG_WARNING << "Vulkan subcapture: cannot emit image layout transitions for device key="
                   << deviceKey << " (no queue and command pool with matching queue family indices)";
       continue;
@@ -1742,13 +1946,29 @@ void StateTrackingService::RestoreSurface(ObjectState* state) {
 bool StateTrackingService::RestoreBuffer(ObjectState* state) {
   auto* buf = static_cast<BufferState*>(state);
 
+  if (buf->CreationCommandBuffer.empty()) {
+    return false;
+  }
+
   // Emit vkCreateBuffer BEFORE restoring bound memory. For dedicated
   // allocations VkMemoryDedicatedAllocateInfo::buffer references this buffer,
   // so its handle must be registered in HandleMapService before vkAllocateMemory
   // is emitted; otherwise ResolvePNextHandleKeys crashes on the missing key.
   // For non-dedicated allocations the order makes no difference.
-  if (!EmitCreationCommand(state)) {
-    return false;
+  //
+  // EmitCreationCommand is not used here: the stored usage is what the application
+  // requested, which may not include TRANSFER_DST, and the content-restore paths upload
+  // through vkCmdCopyBuffer. Mirrors RestoreImage's OR-in of TRANSFER_DST below,
+  // including its KNOWN LIMITATION about memory requirements shifting.
+  {
+    std::vector<char> scratch = buf->CreationCommandBuffer;
+    char* bufPtr = scratch.data();
+    vkCreateBufferCommand cmd;
+    Decode(bufPtr, cmd);
+    if (cmd.m_pCreateInfo.Value) {
+      cmd.m_pCreateInfo.Value->usage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    }
+    m_Recorder.Record(vkCreateBufferSerializer(cmd));
   }
 
   // Mark the buffer key as restored *now*, before recursing into bound memory.
@@ -2218,7 +2438,7 @@ StateTrackingService::CommandBufferRestoreOutcome StateTrackingService::RestoreC
     if (!dep) {
       continue;
     }
-    if (!HasState(dep)) {
+    if (!HasState(dep) || IsChainRetainedOnly(GetState(dep))) {
       LOG_WARNING << "Vulkan subcapture: omitting restore of VkCommandBuffer key=" << cb->Key
                   << " because referenced object key=" << dep << " is no longer tracked";
       return CommandBufferRestoreOutcome::AllocationOkRecordingReplaySkipped;
@@ -2360,6 +2580,29 @@ void StateTrackingService::RestoreMappedMemory(ObjectState* state) {
 // time so peak host memory stays bounded to a single resource.
 // ---------------------------------------------------------------------------
 
+// Synthetic GITSKeys for temporary staging resources created in the stream.
+// Must not collide with real keys (which are sequential starting from 1).
+// kTempCBKey = UINT64_MAX-1 is used by EmitImageLayoutTransitions.
+static constexpr uint64_t kStagingBufKey = static_cast<uint64_t>(-3);
+static constexpr uint64_t kStagingMemKey = static_cast<uint64_t>(-4);
+static constexpr uint64_t kContentCBKey = static_cast<uint64_t>(-5);
+// Base for the (buffer,memory) key pairs synthesized during a single
+// EmitAccelerationStructureRebuild: its scratch buffer(s) and any transient build-input
+// buffers. Allocated downward within one rebuild call and torn down at its end, so the
+// range is reused across acceleration structures.
+static constexpr uint64_t kRebuildTransientKeyBase = static_cast<uint64_t>(-64);
+// Base for the (buffer,memory) key pairs synthesized by RestoreBlasChain for a relocated
+// acceleration structure. Allocated downward across the whole chain replay, so it must
+// stay disjoint from kRebuildTransientKeyBase, which every rebuild in the chain reuses.
+static constexpr uint64_t kChainTransientKeyBase = static_cast<uint64_t>(-4096);
+
+// Defined below, next to EmitCaptureReplayBufferCreate. Declared here so the
+// serialize/deserialize path can build its staging buffer the same way.
+static VkBufferCreateInfo MakeCaptureReplayBufferCreateInfo(
+    VkDeviceSize size,
+    VkBufferUsageFlags usage,
+    const VkBufferOpaqueCaptureAddressCreateInfo* opaqueAddrCI);
+
 // ---------------------------------------------------------------------------
 // Content-restore policy
 //
@@ -2428,6 +2671,1858 @@ bool ShadowFullyCoversAndMatches(const BufferState& buf,
 
 } // namespace
 
+static void EmitStagingUploadAndCopyBuffer(SubcaptureRecorder& recorder,
+                                           uint64_t deviceKey,
+                                           uint64_t queueKey,
+                                           uint64_t commandPoolKey,
+                                           uint64_t dstBufKey,
+                                           VkDeviceSize dstOffset,
+                                           VkDeviceSize bufSize,
+                                           VkDeviceSize stagingAllocationSize,
+                                           uint32_t stagingMemTypeIndex,
+                                           const std::vector<uint8_t>& data) {
+
+  // --- Create staging buffer ---
+  // bci.size is the buffer's logical length. The memory allocated must be >= the
+  // requirements-reported size (alignment-rounded), passed in as stagingAllocationSize.
+  VkBufferCreateInfo bci{};
+  bci.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+  bci.size = bufSize;
+  bci.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+  bci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+  vkCreateBufferCommand createBufCmd;
+  createBufCmd.m_device.Key = deviceKey;
+  createBufCmd.m_pCreateInfo.Value = &bci;
+  createBufCmd.m_pBuffer.Key = kStagingBufKey;
+  createBufCmd.m_Return.Value = VK_SUCCESS;
+  recorder.Record(vkCreateBufferSerializer(createBufCmd));
+
+  VkMemoryAllocateInfo mai{};
+  mai.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+  mai.allocationSize = stagingAllocationSize;
+  mai.memoryTypeIndex = stagingMemTypeIndex;
+
+  vkAllocateMemoryCommand allocMemCmd;
+  allocMemCmd.m_device.Key = deviceKey;
+  allocMemCmd.m_pAllocateInfo.Value = &mai;
+  allocMemCmd.m_pMemory.Key = kStagingMemKey;
+  allocMemCmd.m_Return.Value = VK_SUCCESS;
+  recorder.Record(vkAllocateMemorySerializer(allocMemCmd));
+
+  vkBindBufferMemoryCommand bindCmd;
+  bindCmd.m_device.Key = deviceKey;
+  bindCmd.m_buffer.Key = kStagingBufKey;
+  bindCmd.m_memory.Key = kStagingMemKey;
+  bindCmd.m_memoryOffset.Value = 0;
+  bindCmd.m_Return.Value = VK_SUCCESS;
+  recorder.Record(vkBindBufferMemorySerializer(bindCmd));
+
+  // --- Upload data into staging via map + MappedDataMetaCommand ---
+  vkMapMemoryCommand mapCmd;
+  mapCmd.m_device.Key = deviceKey;
+  mapCmd.m_memory.Key = kStagingMemKey;
+  mapCmd.m_offset.Value = 0;
+  mapCmd.m_size.Value = VK_WHOLE_SIZE;
+  mapCmd.m_flags.Value = 0;
+  mapCmd.m_Return.Value = VK_SUCCESS;
+  recorder.Record(vkMapMemorySerializer(mapCmd));
+
+  MappedDataMetaCommand mdc;
+  mdc.m_Device.Key = deviceKey;
+  mdc.m_Memory.Key = kStagingMemKey;
+  MemoryRegions::Region region;
+  region.Offset = 0;
+  region.Size = bufSize;
+  region.Data = const_cast<char*>(reinterpret_cast<const char*>(data.data()));
+  mdc.m_Regions.Regions.push_back(region);
+  mdc.m_Regions.Size = 1;
+  recorder.Record(MappedDataMetaSerializer(mdc));
+
+  vkUnmapMemoryCommand unmapCmd;
+  unmapCmd.m_device.Key = deviceKey;
+  unmapCmd.m_memory.Key = kStagingMemKey;
+  recorder.Record(vkUnmapMemorySerializer(unmapCmd));
+
+  // --- Allocate one-shot CB and issue copy ---
+  VkCommandBufferAllocateInfo cbai{};
+  cbai.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+  cbai.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+  cbai.commandBufferCount = 1;
+  cbai.commandPool = reinterpret_cast<VkCommandPool>(0x1ULL); // sentinel
+
+  static VkCommandBuffer kDummyCB = VK_NULL_HANDLE;
+  vkAllocateCommandBuffersCommand allocCBCmd;
+  allocCBCmd.m_device.Key = deviceKey;
+  allocCBCmd.m_pAllocateInfo.Value = &cbai;
+  allocCBCmd.m_pAllocateInfo.HandleKeys = {commandPoolKey};
+  allocCBCmd.m_pCommandBuffers.Value = &kDummyCB;
+  allocCBCmd.m_pCommandBuffers.Size = 1;
+  allocCBCmd.m_pCommandBuffers.Keys = {kContentCBKey};
+  allocCBCmd.m_Return.Value = VK_SUCCESS;
+  recorder.Record(vkAllocateCommandBuffersSerializer(allocCBCmd));
+
+  VkCommandBufferBeginInfo cbbi{};
+  cbbi.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+  cbbi.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+  vkBeginCommandBufferCommand beginCBCmd;
+  beginCBCmd.m_commandBuffer.Key = kContentCBKey;
+  beginCBCmd.m_pBeginInfo.Value = &cbbi;
+  beginCBCmd.m_Return.Value = VK_SUCCESS;
+  recorder.Record(vkBeginCommandBufferSerializer(beginCBCmd));
+
+  // Barrier: staging TRANSFER_SRC → dstBuf TRANSFER_DST
+  VkBufferMemoryBarrier barriers[2]{};
+  barriers[0].sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+  barriers[0].srcAccessMask = 0;
+  barriers[0].dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+  barriers[0].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  barriers[0].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  barriers[0].buffer = reinterpret_cast<VkBuffer>(0x1ULL); // sentinel
+  barriers[0].size = VK_WHOLE_SIZE;
+  barriers[1] = barriers[0];
+  barriers[1].dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+  barriers[1].buffer = reinterpret_cast<VkBuffer>(0x2ULL); // sentinel
+
+  vkCmdPipelineBarrierCommand preBarrierCmd;
+  preBarrierCmd.m_commandBuffer.Key = kContentCBKey;
+  preBarrierCmd.m_srcStageMask.Value = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+  preBarrierCmd.m_dstStageMask.Value = VK_PIPELINE_STAGE_TRANSFER_BIT;
+  preBarrierCmd.m_dependencyFlags.Value = 0;
+  preBarrierCmd.m_memoryBarrierCount.Value = 0;
+  preBarrierCmd.m_bufferMemoryBarrierCount.Value = 2;
+  preBarrierCmd.m_pBufferMemoryBarriers.Value = barriers;
+  preBarrierCmd.m_pBufferMemoryBarriers.Size = 2;
+  preBarrierCmd.m_pBufferMemoryBarriers.HandleKeys = {dstBufKey, kStagingBufKey};
+  preBarrierCmd.m_imageMemoryBarrierCount.Value = 0;
+  recorder.Record(vkCmdPipelineBarrierSerializer(preBarrierCmd));
+
+  VkBufferCopy copyRegion{0, dstOffset, bufSize};
+
+  vkCmdCopyBufferCommand copyCmd;
+  copyCmd.m_commandBuffer.Key = kContentCBKey;
+  copyCmd.m_srcBuffer.Key = kStagingBufKey;
+  copyCmd.m_dstBuffer.Key = dstBufKey;
+  copyCmd.m_regionCount.Value = 1;
+  copyCmd.m_pRegions.Value = &copyRegion;
+  copyCmd.m_pRegions.Size = 1;
+  recorder.Record(vkCmdCopyBufferSerializer(copyCmd));
+
+  // Post-barrier: TRANSFER_DST → MEMORY_READ|WRITE (generic)
+  barriers[0].srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+  barriers[0].dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
+  preBarrierCmd.m_srcStageMask.Value = VK_PIPELINE_STAGE_TRANSFER_BIT;
+  preBarrierCmd.m_dstStageMask.Value = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+  preBarrierCmd.m_bufferMemoryBarrierCount.Value = 1;
+  preBarrierCmd.m_pBufferMemoryBarriers.Size = 1;
+  preBarrierCmd.m_pBufferMemoryBarriers.HandleKeys = {dstBufKey};
+  recorder.Record(vkCmdPipelineBarrierSerializer(preBarrierCmd));
+
+  vkEndCommandBufferCommand endCBCmd;
+  endCBCmd.m_commandBuffer.Key = kContentCBKey;
+  endCBCmd.m_Return.Value = VK_SUCCESS;
+  recorder.Record(vkEndCommandBufferSerializer(endCBCmd));
+
+  static VkCommandBuffer kDummyCBSlot = VK_NULL_HANDLE;
+  kDummyCBSlot = reinterpret_cast<VkCommandBuffer>(kContentCBKey);
+  VkSubmitInfo si{
+      VK_STRUCTURE_TYPE_SUBMIT_INFO, nullptr, 0, nullptr, nullptr, 1, &kDummyCBSlot, 0, nullptr};
+  vkQueueSubmitCommand submitCmd;
+  submitCmd.m_queue.Key = queueKey;
+  submitCmd.m_fence.Key = 0;
+  submitCmd.m_Return.Value = VK_SUCCESS;
+  submitCmd.m_submitCount.Value = 1;
+  submitCmd.m_pSubmits.Value = &si;
+  submitCmd.m_pSubmits.Size = 1;
+  submitCmd.m_pSubmits.HandleKeys = {kContentCBKey};
+  recorder.Record(vkQueueSubmitSerializer(submitCmd));
+
+  vkQueueWaitIdleCommand waitCmd;
+  waitCmd.m_queue.Key = queueKey;
+  waitCmd.m_Return.Value = VK_SUCCESS;
+  recorder.Record(vkQueueWaitIdleSerializer(waitCmd));
+
+  static VkCommandBuffer kDummyCBFree = VK_NULL_HANDLE;
+  vkFreeCommandBuffersCommand freeCBCmd;
+  freeCBCmd.m_device.Key = deviceKey;
+  freeCBCmd.m_commandPool.Key = commandPoolKey;
+  freeCBCmd.m_commandBufferCount.Value = 1;
+  freeCBCmd.m_pCommandBuffers.Value = &kDummyCBFree;
+  freeCBCmd.m_pCommandBuffers.Size = 1;
+  freeCBCmd.m_pCommandBuffers.Keys = {kContentCBKey};
+  recorder.Record(vkFreeCommandBuffersSerializer(freeCBCmd));
+
+  vkDestroyBufferCommand destroyBufCmd;
+  destroyBufCmd.m_device.Key = deviceKey;
+  destroyBufCmd.m_buffer.Key = kStagingBufKey;
+  recorder.Record(vkDestroyBufferSerializer(destroyBufCmd));
+
+  vkFreeMemoryCommand freeMemCmd;
+  freeMemCmd.m_device.Key = deviceKey;
+  freeMemCmd.m_memory.Key = kStagingMemKey;
+  recorder.Record(vkFreeMemorySerializer(freeMemCmd));
+}
+
+// ---------------------------------------------------------------------------
+// Emit stream commands that create a staging buffer holding a serialized acceleration
+// structure blob, then deserialize it into dstAsKey via
+// vkCmdCopyMemoryToAccelerationStructureKHR.
+//
+// Both the buffer- and memory-side captured opaque addresses are re-supplied, so the
+// driver assigns the buffer the same device address it had at analysis time. That is
+// what lets capturedDeviceAddress be hardcoded into the copy command's src.deviceAddress
+// even though the buffer does not exist yet when the stream is authored.
+// ---------------------------------------------------------------------------
+
+static void EmitAccelerationStructureDeserialize(SubcaptureRecorder& recorder,
+                                                 uint64_t deviceKey,
+                                                 uint64_t queueKey,
+                                                 uint64_t commandPoolKey,
+                                                 uint64_t dstAsKey,
+                                                 VkDeviceSize dataSize,
+                                                 VkDeviceSize stagingAllocationSize,
+                                                 uint32_t stagingMemTypeIndex,
+                                                 VkDeviceAddress capturedDeviceAddress,
+                                                 uint64_t capturedOpaqueCaptureAddress,
+                                                 uint64_t capturedMemoryOpaqueCaptureAddress,
+                                                 const std::vector<uint8_t>& data) {
+
+  // --- Create staging buffer (capture/replay-stable address) ---
+  VkBufferOpaqueCaptureAddressCreateInfo opaqueAddrCI{};
+  opaqueAddrCI.sType = VK_STRUCTURE_TYPE_BUFFER_OPAQUE_CAPTURE_ADDRESS_CREATE_INFO;
+  opaqueAddrCI.opaqueCaptureAddress = capturedOpaqueCaptureAddress;
+
+  VkBufferCreateInfo bci = MakeCaptureReplayBufferCreateInfo(
+      dataSize, VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR, &opaqueAddrCI);
+
+  vkCreateBufferCommand createBufCmd;
+  createBufCmd.m_device.Key = deviceKey;
+  createBufCmd.m_pCreateInfo.Value = &bci;
+  createBufCmd.m_pBuffer.Key = kStagingBufKey;
+  createBufCmd.m_Return.Value = VK_SUCCESS;
+  recorder.Record(vkCreateBufferSerializer(createBufCmd));
+
+  VkMemoryOpaqueCaptureAddressAllocateInfo memOpaqueAddrCI{};
+  memOpaqueAddrCI.sType = VK_STRUCTURE_TYPE_MEMORY_OPAQUE_CAPTURE_ADDRESS_ALLOCATE_INFO;
+  memOpaqueAddrCI.opaqueCaptureAddress = capturedMemoryOpaqueCaptureAddress;
+
+  VkMemoryAllocateFlagsInfo allocFlagsInfo{};
+  allocFlagsInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO;
+  allocFlagsInfo.pNext = &memOpaqueAddrCI;
+  allocFlagsInfo.flags =
+      VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT | VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT;
+
+  VkMemoryAllocateInfo mai{};
+  mai.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+  mai.pNext = &allocFlagsInfo;
+  mai.allocationSize = stagingAllocationSize;
+  mai.memoryTypeIndex = stagingMemTypeIndex;
+
+  vkAllocateMemoryCommand allocMemCmd;
+  allocMemCmd.m_device.Key = deviceKey;
+  allocMemCmd.m_pAllocateInfo.Value = &mai;
+  allocMemCmd.m_pMemory.Key = kStagingMemKey;
+  allocMemCmd.m_Return.Value = VK_SUCCESS;
+  recorder.Record(vkAllocateMemorySerializer(allocMemCmd));
+
+  vkBindBufferMemoryCommand bindCmd;
+  bindCmd.m_device.Key = deviceKey;
+  bindCmd.m_buffer.Key = kStagingBufKey;
+  bindCmd.m_memory.Key = kStagingMemKey;
+  bindCmd.m_memoryOffset.Value = 0;
+  bindCmd.m_Return.Value = VK_SUCCESS;
+  recorder.Record(vkBindBufferMemorySerializer(bindCmd));
+
+  // --- Upload serialized bytes into staging via map + MappedDataMetaCommand ---
+  vkMapMemoryCommand mapCmd;
+  mapCmd.m_device.Key = deviceKey;
+  mapCmd.m_memory.Key = kStagingMemKey;
+  mapCmd.m_offset.Value = 0;
+  mapCmd.m_size.Value = VK_WHOLE_SIZE;
+  mapCmd.m_flags.Value = 0;
+  mapCmd.m_Return.Value = VK_SUCCESS;
+  recorder.Record(vkMapMemorySerializer(mapCmd));
+
+  MappedDataMetaCommand mdc;
+  mdc.m_Device.Key = deviceKey;
+  mdc.m_Memory.Key = kStagingMemKey;
+  MemoryRegions::Region region;
+  region.Offset = 0;
+  region.Size = dataSize;
+  region.Data = const_cast<char*>(reinterpret_cast<const char*>(data.data()));
+  mdc.m_Regions.Regions.push_back(region);
+  mdc.m_Regions.Size = 1;
+  recorder.Record(MappedDataMetaSerializer(mdc));
+
+  vkUnmapMemoryCommand unmapCmd;
+  unmapCmd.m_device.Key = deviceKey;
+  unmapCmd.m_memory.Key = kStagingMemKey;
+  recorder.Record(vkUnmapMemorySerializer(unmapCmd));
+
+  // --- Allocate one-shot CB and issue the deserialize copy ---
+  VkCommandBufferAllocateInfo cbai{};
+  cbai.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+  cbai.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+  cbai.commandBufferCount = 1;
+  cbai.commandPool = reinterpret_cast<VkCommandPool>(0x1ULL); // sentinel
+
+  static VkCommandBuffer kDummyCB = VK_NULL_HANDLE;
+  vkAllocateCommandBuffersCommand allocCBCmd;
+  allocCBCmd.m_device.Key = deviceKey;
+  allocCBCmd.m_pAllocateInfo.Value = &cbai;
+  allocCBCmd.m_pAllocateInfo.HandleKeys = {commandPoolKey};
+  allocCBCmd.m_pCommandBuffers.Value = &kDummyCB;
+  allocCBCmd.m_pCommandBuffers.Size = 1;
+  allocCBCmd.m_pCommandBuffers.Keys = {kContentCBKey};
+  allocCBCmd.m_Return.Value = VK_SUCCESS;
+  recorder.Record(vkAllocateCommandBuffersSerializer(allocCBCmd));
+
+  VkCommandBufferBeginInfo cbbi{};
+  cbbi.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+  cbbi.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+  vkBeginCommandBufferCommand beginCBCmd;
+  beginCBCmd.m_commandBuffer.Key = kContentCBKey;
+  beginCBCmd.m_pBeginInfo.Value = &cbbi;
+  beginCBCmd.m_Return.Value = VK_SUCCESS;
+  recorder.Record(vkBeginCommandBufferSerializer(beginCBCmd));
+
+  // Barrier: staging buffer host-write -> the AS-build stage that performs the
+  // deserialize copy, whose source reads use VK_ACCESS_TRANSFER_READ_BIT.
+  VkBufferMemoryBarrier barrier{};
+  barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+  barrier.srcAccessMask = 0;
+  barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+  barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  barrier.buffer = reinterpret_cast<VkBuffer>(0x1ULL); // sentinel
+  barrier.size = VK_WHOLE_SIZE;
+
+  vkCmdPipelineBarrierCommand barrierCmd;
+  barrierCmd.m_commandBuffer.Key = kContentCBKey;
+  barrierCmd.m_srcStageMask.Value = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+  barrierCmd.m_dstStageMask.Value = VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR;
+  barrierCmd.m_dependencyFlags.Value = 0;
+  barrierCmd.m_memoryBarrierCount.Value = 0;
+  barrierCmd.m_bufferMemoryBarrierCount.Value = 1;
+  barrierCmd.m_pBufferMemoryBarriers.Value = &barrier;
+  barrierCmd.m_pBufferMemoryBarriers.Size = 1;
+  barrierCmd.m_pBufferMemoryBarriers.HandleKeys = {kStagingBufKey};
+  barrierCmd.m_imageMemoryBarrierCount.Value = 0;
+  recorder.Record(vkCmdPipelineBarrierSerializer(barrierCmd));
+
+  VkCopyMemoryToAccelerationStructureInfoKHR copyInfo{};
+  copyInfo.sType = VK_STRUCTURE_TYPE_COPY_MEMORY_TO_ACCELERATION_STRUCTURE_INFO_KHR;
+  copyInfo.src.deviceAddress = capturedDeviceAddress;
+  copyInfo.mode = VK_COPY_ACCELERATION_STRUCTURE_MODE_DESERIALIZE_KHR;
+
+  vkCmdCopyMemoryToAccelerationStructureKHRCommand copyCmd;
+  copyCmd.m_commandBuffer.Key = kContentCBKey;
+  copyCmd.m_pInfo.Value = &copyInfo;
+  copyCmd.m_pInfo.HandleKeys = {dstAsKey};
+  recorder.Record(vkCmdCopyMemoryToAccelerationStructureKHRSerializer(copyCmd));
+
+  vkEndCommandBufferCommand endCBCmd;
+  endCBCmd.m_commandBuffer.Key = kContentCBKey;
+  endCBCmd.m_Return.Value = VK_SUCCESS;
+  recorder.Record(vkEndCommandBufferSerializer(endCBCmd));
+
+  static VkCommandBuffer kDummyCBSlot = VK_NULL_HANDLE;
+  kDummyCBSlot = reinterpret_cast<VkCommandBuffer>(kContentCBKey);
+  VkSubmitInfo si{
+      VK_STRUCTURE_TYPE_SUBMIT_INFO, nullptr, 0, nullptr, nullptr, 1, &kDummyCBSlot, 0, nullptr};
+  vkQueueSubmitCommand submitCmd;
+  submitCmd.m_queue.Key = queueKey;
+  submitCmd.m_fence.Key = 0;
+  submitCmd.m_Return.Value = VK_SUCCESS;
+  submitCmd.m_submitCount.Value = 1;
+  submitCmd.m_pSubmits.Value = &si;
+  submitCmd.m_pSubmits.Size = 1;
+  submitCmd.m_pSubmits.HandleKeys = {kContentCBKey};
+  recorder.Record(vkQueueSubmitSerializer(submitCmd));
+
+  vkQueueWaitIdleCommand waitCmd;
+  waitCmd.m_queue.Key = queueKey;
+  waitCmd.m_Return.Value = VK_SUCCESS;
+  recorder.Record(vkQueueWaitIdleSerializer(waitCmd));
+
+  static VkCommandBuffer kDummyCBFree = VK_NULL_HANDLE;
+  vkFreeCommandBuffersCommand freeCBCmd;
+  freeCBCmd.m_device.Key = deviceKey;
+  freeCBCmd.m_commandPool.Key = commandPoolKey;
+  freeCBCmd.m_commandBufferCount.Value = 1;
+  freeCBCmd.m_pCommandBuffers.Value = &kDummyCBFree;
+  freeCBCmd.m_pCommandBuffers.Size = 1;
+  freeCBCmd.m_pCommandBuffers.Keys = {kContentCBKey};
+  recorder.Record(vkFreeCommandBuffersSerializer(freeCBCmd));
+
+  vkDestroyBufferCommand destroyBufCmd;
+  destroyBufCmd.m_device.Key = deviceKey;
+  destroyBufCmd.m_buffer.Key = kStagingBufKey;
+  recorder.Record(vkDestroyBufferSerializer(destroyBufCmd));
+
+  vkFreeMemoryCommand freeMemCmd2;
+  freeMemCmd2.m_device.Key = deviceKey;
+  freeMemCmd2.m_memory.Key = kStagingMemKey;
+  recorder.Record(vkFreeMemorySerializer(freeMemCmd2));
+}
+
+static void EmitStagingUploadAndCopyImage(SubcaptureRecorder& recorder,
+                                          uint64_t deviceKey,
+                                          uint64_t queueKey,
+                                          uint64_t commandPoolKey,
+                                          uint64_t dstImageKey,
+                                          VkFormat format,
+                                          const VkExtent3D& /*extent*/,
+                                          VkImageLayout finalLayout,
+                                          VkImageAspectFlags aspectMask,
+                                          VkDeviceSize stagingSize,
+                                          VkDeviceSize stagingAllocationSize,
+                                          uint32_t stagingMemTypeIndex,
+                                          const std::vector<uint8_t>& data,
+                                          const std::vector<VkBufferImageCopy>& regions) {
+
+  // Create staging buffer - see EmitStagingUploadAndCopyBuffer for the
+  // rationale behind the bci.size vs mai.allocationSize split.
+  VkBufferCreateInfo bci{};
+  bci.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+  bci.size = stagingSize;
+  bci.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+  bci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+  vkCreateBufferCommand createBufCmd;
+  createBufCmd.m_device.Key = deviceKey;
+  createBufCmd.m_pCreateInfo.Value = &bci;
+  createBufCmd.m_pBuffer.Key = kStagingBufKey;
+  createBufCmd.m_Return.Value = VK_SUCCESS;
+  recorder.Record(vkCreateBufferSerializer(createBufCmd));
+
+  VkMemoryAllocateInfo mai{};
+  mai.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+  mai.allocationSize = stagingAllocationSize;
+  mai.memoryTypeIndex = stagingMemTypeIndex;
+
+  vkAllocateMemoryCommand allocMemCmd;
+  allocMemCmd.m_device.Key = deviceKey;
+  allocMemCmd.m_pAllocateInfo.Value = &mai;
+  allocMemCmd.m_pMemory.Key = kStagingMemKey;
+  allocMemCmd.m_Return.Value = VK_SUCCESS;
+  recorder.Record(vkAllocateMemorySerializer(allocMemCmd));
+
+  vkBindBufferMemoryCommand bindCmd;
+  bindCmd.m_device.Key = deviceKey;
+  bindCmd.m_buffer.Key = kStagingBufKey;
+  bindCmd.m_memory.Key = kStagingMemKey;
+  bindCmd.m_memoryOffset.Value = 0;
+  bindCmd.m_Return.Value = VK_SUCCESS;
+  recorder.Record(vkBindBufferMemorySerializer(bindCmd));
+
+  // Upload data
+  vkMapMemoryCommand mapCmd;
+  mapCmd.m_device.Key = deviceKey;
+  mapCmd.m_memory.Key = kStagingMemKey;
+  mapCmd.m_offset.Value = 0;
+  mapCmd.m_size.Value = VK_WHOLE_SIZE;
+  mapCmd.m_flags.Value = 0;
+  mapCmd.m_Return.Value = VK_SUCCESS;
+  recorder.Record(vkMapMemorySerializer(mapCmd));
+
+  MappedDataMetaCommand mdc;
+  mdc.m_Device.Key = deviceKey;
+  mdc.m_Memory.Key = kStagingMemKey;
+  MemoryRegions::Region region;
+  region.Offset = 0;
+  region.Size = stagingSize;
+  region.Data = const_cast<char*>(reinterpret_cast<const char*>(data.data()));
+  mdc.m_Regions.Regions.push_back(region);
+  mdc.m_Regions.Size = 1;
+  recorder.Record(MappedDataMetaSerializer(mdc));
+
+  vkUnmapMemoryCommand unmapCmd;
+  unmapCmd.m_device.Key = deviceKey;
+  unmapCmd.m_memory.Key = kStagingMemKey;
+  recorder.Record(vkUnmapMemorySerializer(unmapCmd));
+
+  // Allocate content CB
+  VkCommandBufferAllocateInfo cbai{};
+  cbai.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+  cbai.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+  cbai.commandBufferCount = 1;
+  cbai.commandPool = reinterpret_cast<VkCommandPool>(0x1ULL);
+
+  static VkCommandBuffer kDummyCBImg = VK_NULL_HANDLE;
+  vkAllocateCommandBuffersCommand allocCBCmd;
+  allocCBCmd.m_device.Key = deviceKey;
+  allocCBCmd.m_pAllocateInfo.Value = &cbai;
+  allocCBCmd.m_pAllocateInfo.HandleKeys = {commandPoolKey};
+  allocCBCmd.m_pCommandBuffers.Value = &kDummyCBImg;
+  allocCBCmd.m_pCommandBuffers.Size = 1;
+  allocCBCmd.m_pCommandBuffers.Keys = {kContentCBKey};
+  allocCBCmd.m_Return.Value = VK_SUCCESS;
+  recorder.Record(vkAllocateCommandBuffersSerializer(allocCBCmd));
+
+  VkCommandBufferBeginInfo cbbi{};
+  cbbi.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+  cbbi.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+  vkBeginCommandBufferCommand beginCBCmd;
+  beginCBCmd.m_commandBuffer.Key = kContentCBKey;
+  beginCBCmd.m_pBeginInfo.Value = &cbbi;
+  beginCBCmd.m_Return.Value = VK_SUCCESS;
+  recorder.Record(vkBeginCommandBufferSerializer(beginCBCmd));
+
+  // Barrier: UNDEFINED → TRANSFER_DST_OPTIMAL
+  VkImageMemoryBarrier toDst{};
+  toDst.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+  toDst.srcAccessMask = 0;
+  toDst.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+  toDst.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+  toDst.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+  toDst.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  toDst.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  toDst.image = reinterpret_cast<VkImage>(0x1ULL);
+  toDst.subresourceRange = {aspectMask, 0, VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_ARRAY_LAYERS};
+
+  vkCmdPipelineBarrierCommand preBarrierCmd;
+  preBarrierCmd.m_commandBuffer.Key = kContentCBKey;
+  preBarrierCmd.m_srcStageMask.Value = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+  preBarrierCmd.m_dstStageMask.Value = VK_PIPELINE_STAGE_TRANSFER_BIT;
+  preBarrierCmd.m_dependencyFlags.Value = 0;
+  preBarrierCmd.m_memoryBarrierCount.Value = 0;
+  preBarrierCmd.m_bufferMemoryBarrierCount.Value = 0;
+  preBarrierCmd.m_imageMemoryBarrierCount.Value = 1;
+  preBarrierCmd.m_pImageMemoryBarriers.Value = &toDst;
+  preBarrierCmd.m_pImageMemoryBarriers.Size = 1;
+  preBarrierCmd.m_pImageMemoryBarriers.HandleKeys = {dstImageKey};
+  recorder.Record(vkCmdPipelineBarrierSerializer(preBarrierCmd));
+
+  // vkCmdCopyBufferToImage
+  vkCmdCopyBufferToImageCommand copyCmd;
+  copyCmd.m_commandBuffer.Key = kContentCBKey;
+  copyCmd.m_srcBuffer.Key = kStagingBufKey;
+  copyCmd.m_dstImage.Key = dstImageKey;
+  copyCmd.m_dstImageLayout.Value = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+  copyCmd.m_regionCount.Value = static_cast<uint32_t>(regions.size());
+  copyCmd.m_pRegions.Value = const_cast<VkBufferImageCopy*>(regions.data());
+  copyCmd.m_pRegions.Size = static_cast<uint32_t>(regions.size());
+  recorder.Record(vkCmdCopyBufferToImageSerializer(copyCmd));
+
+  // Barrier: TRANSFER_DST_OPTIMAL → finalLayout
+  VkImageMemoryBarrier toFinal{};
+  toFinal.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+  toFinal.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+  toFinal.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
+  toFinal.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+  toFinal.newLayout = finalLayout;
+  toFinal.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  toFinal.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  toFinal.image = reinterpret_cast<VkImage>(0x1ULL);
+  toFinal.subresourceRange = {aspectMask, 0, VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_ARRAY_LAYERS};
+
+  vkCmdPipelineBarrierCommand postBarrierCmd;
+  postBarrierCmd.m_commandBuffer.Key = kContentCBKey;
+  postBarrierCmd.m_srcStageMask.Value = VK_PIPELINE_STAGE_TRANSFER_BIT;
+  postBarrierCmd.m_dstStageMask.Value = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+  postBarrierCmd.m_dependencyFlags.Value = 0;
+  postBarrierCmd.m_memoryBarrierCount.Value = 0;
+  postBarrierCmd.m_bufferMemoryBarrierCount.Value = 0;
+  postBarrierCmd.m_imageMemoryBarrierCount.Value = 1;
+  postBarrierCmd.m_pImageMemoryBarriers.Value = &toFinal;
+  postBarrierCmd.m_pImageMemoryBarriers.Size = 1;
+  postBarrierCmd.m_pImageMemoryBarriers.HandleKeys = {dstImageKey};
+  recorder.Record(vkCmdPipelineBarrierSerializer(postBarrierCmd));
+
+  vkEndCommandBufferCommand endCBCmd;
+  endCBCmd.m_commandBuffer.Key = kContentCBKey;
+  endCBCmd.m_Return.Value = VK_SUCCESS;
+  recorder.Record(vkEndCommandBufferSerializer(endCBCmd));
+
+  static VkCommandBuffer kDummyCBSlotImg = VK_NULL_HANDLE;
+  kDummyCBSlotImg = reinterpret_cast<VkCommandBuffer>(kContentCBKey);
+  VkSubmitInfo si{
+      VK_STRUCTURE_TYPE_SUBMIT_INFO, nullptr, 0, nullptr, nullptr, 1, &kDummyCBSlotImg, 0, nullptr};
+  vkQueueSubmitCommand submitCmd;
+  submitCmd.m_queue.Key = queueKey;
+  submitCmd.m_fence.Key = 0;
+  submitCmd.m_Return.Value = VK_SUCCESS;
+  submitCmd.m_submitCount.Value = 1;
+  submitCmd.m_pSubmits.Value = &si;
+  submitCmd.m_pSubmits.Size = 1;
+  submitCmd.m_pSubmits.HandleKeys = {kContentCBKey};
+  recorder.Record(vkQueueSubmitSerializer(submitCmd));
+
+  vkQueueWaitIdleCommand waitCmd;
+  waitCmd.m_queue.Key = queueKey;
+  waitCmd.m_Return.Value = VK_SUCCESS;
+  recorder.Record(vkQueueWaitIdleSerializer(waitCmd));
+
+  static VkCommandBuffer kDummyCBFreeImg = VK_NULL_HANDLE;
+  vkFreeCommandBuffersCommand freeCBCmd;
+  freeCBCmd.m_device.Key = deviceKey;
+  freeCBCmd.m_commandPool.Key = commandPoolKey;
+  freeCBCmd.m_commandBufferCount.Value = 1;
+  freeCBCmd.m_pCommandBuffers.Value = &kDummyCBFreeImg;
+  freeCBCmd.m_pCommandBuffers.Size = 1;
+  freeCBCmd.m_pCommandBuffers.Keys = {kContentCBKey};
+  recorder.Record(vkFreeCommandBuffersSerializer(freeCBCmd));
+
+  vkDestroyBufferCommand destroyBufCmd;
+  destroyBufCmd.m_device.Key = deviceKey;
+  destroyBufCmd.m_buffer.Key = kStagingBufKey;
+  recorder.Record(vkDestroyBufferSerializer(destroyBufCmd));
+
+  vkFreeMemoryCommand freeMemCmd;
+  freeMemCmd.m_device.Key = deviceKey;
+  freeMemCmd.m_memory.Key = kStagingMemKey;
+  recorder.Record(vkFreeMemorySerializer(freeMemCmd));
+}
+
+// The single definition of what a capture/replay transient buffer looks like. Both
+// EmitCaptureReplayBufferCreate and QueryCaptureReplayBufferRequirements must go through
+// here, because the driver's requirements depend on these fields: the capture/replay flag
+// can raise the reported alignment, so probing without it under-reports req.size and the
+// buffer's tail ends up unbacked.
+static VkBufferCreateInfo MakeCaptureReplayBufferCreateInfo(
+    VkDeviceSize size,
+    VkBufferUsageFlags usage,
+    const VkBufferOpaqueCaptureAddressCreateInfo* opaqueAddrCI) {
+  VkBufferCreateInfo bci{};
+  bci.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+  bci.pNext = opaqueAddrCI;
+  bci.flags = VK_BUFFER_CREATE_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT;
+  bci.size = size;
+  bci.usage = usage | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+  bci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+  return bci;
+}
+
+// Create a buffer at a specific capture/replay address (buffer- and memory-side
+// opaque capture addresses), under caller-supplied synthetic keys, so a replayed build
+// resolves the same device addresses.
+static void EmitCaptureReplayBufferCreate(SubcaptureRecorder& recorder,
+                                          uint64_t deviceKey,
+                                          uint64_t bufKey,
+                                          uint64_t memKey,
+                                          VkDeviceSize bufferSize,
+                                          VkDeviceSize allocationSize,
+                                          uint32_t memTypeIndex,
+                                          VkBufferUsageFlags usage,
+                                          uint64_t opaqueCaptureAddress,
+                                          uint64_t memoryOpaqueCaptureAddress) {
+  VkBufferOpaqueCaptureAddressCreateInfo opaqueAddrCI{};
+  opaqueAddrCI.sType = VK_STRUCTURE_TYPE_BUFFER_OPAQUE_CAPTURE_ADDRESS_CREATE_INFO;
+  opaqueAddrCI.opaqueCaptureAddress = opaqueCaptureAddress;
+
+  VkBufferCreateInfo bci = MakeCaptureReplayBufferCreateInfo(bufferSize, usage, &opaqueAddrCI);
+
+  vkCreateBufferCommand createBufCmd;
+  createBufCmd.m_device.Key = deviceKey;
+  createBufCmd.m_pCreateInfo.Value = &bci;
+  createBufCmd.m_pBuffer.Key = bufKey;
+  createBufCmd.m_Return.Value = VK_SUCCESS;
+  recorder.Record(vkCreateBufferSerializer(createBufCmd));
+
+  VkMemoryOpaqueCaptureAddressAllocateInfo memOpaqueAddrCI{};
+  memOpaqueAddrCI.sType = VK_STRUCTURE_TYPE_MEMORY_OPAQUE_CAPTURE_ADDRESS_ALLOCATE_INFO;
+  memOpaqueAddrCI.opaqueCaptureAddress = memoryOpaqueCaptureAddress;
+
+  VkMemoryAllocateFlagsInfo allocFlagsInfo{};
+  allocFlagsInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO;
+  allocFlagsInfo.pNext = &memOpaqueAddrCI;
+  allocFlagsInfo.flags =
+      VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT | VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT;
+
+  VkMemoryAllocateInfo mai{};
+  mai.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+  mai.pNext = &allocFlagsInfo;
+  mai.allocationSize = allocationSize;
+  mai.memoryTypeIndex = memTypeIndex;
+
+  vkAllocateMemoryCommand allocMemCmd;
+  allocMemCmd.m_device.Key = deviceKey;
+  allocMemCmd.m_pAllocateInfo.Value = &mai;
+  allocMemCmd.m_pMemory.Key = memKey;
+  allocMemCmd.m_Return.Value = VK_SUCCESS;
+  recorder.Record(vkAllocateMemorySerializer(allocMemCmd));
+
+  vkBindBufferMemoryCommand bindCmd;
+  bindCmd.m_device.Key = deviceKey;
+  bindCmd.m_buffer.Key = bufKey;
+  bindCmd.m_memory.Key = memKey;
+  bindCmd.m_memoryOffset.Value = 0;
+  bindCmd.m_Return.Value = VK_SUCCESS;
+  recorder.Record(vkBindBufferMemorySerializer(bindCmd));
+}
+
+static void EmitCaptureReplayBufferDestroy(SubcaptureRecorder& recorder,
+                                           uint64_t deviceKey,
+                                           uint64_t bufKey,
+                                           uint64_t memKey) {
+  vkDestroyBufferCommand destroyBufCmd;
+  destroyBufCmd.m_device.Key = deviceKey;
+  destroyBufCmd.m_buffer.Key = bufKey;
+  recorder.Record(vkDestroyBufferSerializer(destroyBufCmd));
+
+  vkFreeMemoryCommand freeMemCmd;
+  freeMemCmd.m_device.Key = deviceKey;
+  freeMemCmd.m_memory.Key = memKey;
+  recorder.Record(vkFreeMemorySerializer(freeMemCmd));
+}
+
+void StateTrackingService::EmitAccelerationStructureRebuild(
+    uint64_t deviceKey,
+    uint64_t physDevKey,
+    uint64_t queueKey,
+    uint64_t poolKey,
+    const AccelerationStructureState& asState) {
+  // The per-AS last-build path replays the AS's single stored build command. No source
+  // map: only that one op is retained, so nothing produced the contents an update would
+  // refit from, and an update-mode info aborts the run instead of becoming a build.
+  EmitAccelerationStructureRebuildBytes(deviceKey, physDevKey, queueKey, poolKey,
+                                        asState.LastBuildCommandBytes, asState.CapturedBuildInputs,
+                                        asState.Key);
+}
+
+bool StateTrackingService::QueryCaptureReplayBufferRequirements(uint64_t deviceKey,
+                                                                VkDeviceSize size,
+                                                                VkBufferUsageFlags usage,
+                                                                VkMemoryRequirements& outReq) {
+  // Probe without the opaque-address pNext: the requirements do not depend on *which*
+  // address is requested, and naming one would transiently claim an address we are about
+  // to hand to the real buffer. Everything that does affect them is identical.
+  VkBufferCreateInfo bci = MakeCaptureReplayBufferCreateInfo(size, usage, nullptr);
+  return m_GpuReadbackHelper->QueryBufferRequirements(deviceKey, bci, outReq);
+}
+
+void StateTrackingService::EmitAccelerationStructureRebuildBytes(
+    uint64_t deviceKey,
+    uint64_t physDevKey,
+    uint64_t queueKey,
+    uint64_t poolKey,
+    const std::vector<char>& commandBytes,
+    const std::vector<CapturedBuildInputBuffer>& capturedInputs,
+    uint64_t logAsKey,
+    const std::unordered_map<uint64_t, uint64_t>* updateSourceByDstAs) {
+  if (commandBytes.empty()) {
+    return;
+  }
+  // Decode mutates the source buffer (AddPtrs), so work on a copy. Its m_commandBuffer
+  // holds the original app CB's key, which refers to nothing at restore-emission time and
+  // is patched to the one-shot CB allocated below - after the input uploads, which each
+  // run their own one-shot submit and must not nest inside this recording.
+  std::vector<char> scratch = commandBytes;
+  vkCmdBuildAccelerationStructuresKHRCommand cmd;
+  Decode(scratch.data(), cmd);
+  cmd.m_commandBuffer.Key = kContentCBKey;
+
+  // Synthetic (buffer,memory) keys for this rebuild's transients - recreated inputs and
+  // fresh scratch - allocated downward and destroyed after the build.
+  uint64_t nextTransientKey = kRebuildTransientKeyBase;
+  auto newTransientKey = [&nextTransientKey]() { return nextTransientKey--; };
+  std::vector<std::pair<uint64_t, uint64_t>> transientBufs; // (bufKey, memKey)
+
+  // A build input recreated at a freshly reserved address needs the build command's baked
+  // geometry addresses that point into it relocated to the new base.
+  struct InputRemap {
+    VkDeviceAddress OldBase;
+    VkDeviceSize Size;
+    VkDeviceAddress NewBase;
+  };
+  std::vector<InputRemap> inputRemaps;
+
+  // Capture/replay address ranges already owned by objects restored this pass. An app may
+  // free an AS build input and the driver later hand that same range to a different object
+  // that is live at the cut, so recreating the input at its captured address would be
+  // rejected with VK_ERROR_INVALID_OPAQUE_CAPTURE_ADDRESS - detect the recycling and
+  // relocate the input instead.
+  //
+  // Buffer- and memory-side opaque addresses come out of one shared linear address space,
+  // so they go into a single set and either kind is tested against all of it. Ranges are
+  // compared by overlap, not equal base: a recycled input typically lands in the middle of
+  // a larger live allocation.
+  struct ClaimedRange {
+    uint64_t Begin;
+    uint64_t End; // exclusive
+  };
+  std::vector<ClaimedRange> claimedRanges;
+  auto rangeEnd = [](uint64_t base, VkDeviceSize size) {
+    // A zero/unknown size still reserves its base address.
+    const VkDeviceSize span = size ? size : 1;
+    return (span > UINT64_MAX - base) ? UINT64_MAX : base + span;
+  };
+  auto addClaimedRange = [&claimedRanges, &rangeEnd](uint64_t base, VkDeviceSize size) {
+    if (base == 0) {
+      return;
+    }
+    claimedRanges.push_back({base, rangeEnd(base, size)});
+  };
+  auto collidesWithClaimed = [&claimedRanges, &rangeEnd](uint64_t base, VkDeviceSize size) {
+    if (base == 0) {
+      return false;
+    }
+    const uint64_t end = rangeEnd(base, size);
+    for (const auto& r : claimedRanges) {
+      if (base < r.End && r.Begin < end) {
+        return true;
+      }
+    }
+    return false;
+  };
+  for (const auto& [key, sp] : m_States) {
+    if (sp->Destroyed || !m_RestoredThisPass.count(key)) {
+      continue;
+    }
+    if (auto* b = dynamic_cast<BufferState*>(sp.get())) {
+      addClaimedRange(b->OpaqueCaptureAddress, b->BufferSize);
+    } else if (auto* m = dynamic_cast<DeviceMemoryState*>(sp.get())) {
+      addClaimedRange(m->OpaqueCaptureAddress, m->AllocationSize);
+    }
+  }
+
+  // Inputs that shared one backing allocation cannot each be recreated as a dedicated
+  // allocation at its captured address - the second would request an address the first
+  // already took. Count the uses so those are relocated instead.
+  std::unordered_map<uint64_t, uint32_t> capturedInputsPerAllocation;
+  for (const auto& in : capturedInputs) {
+    if (in.Size && in.MemoryOpaqueCaptureAddress) {
+      ++capturedInputsPerAllocation[in.MemoryOpaqueCaptureAddress];
+    }
+  }
+  auto sharesCapturedAllocation = [&capturedInputsPerAllocation](uint64_t memOpaque) {
+    auto it = capturedInputsPerAllocation.find(memOpaque);
+    return it != capturedInputsPerAllocation.end() && it->second > 1;
+  };
+
+  // --- Recreate/refill build-input buffers from captured content ---
+  // The app may have destroyed the vertex/index/transform/instances buffers right after the
+  // build. Recreate each at its original capture/replay device address (so the build's baked
+  // geometry addresses resolve unchanged) and upload the snapshotted bytes. An input still
+  // restored as a normal object this pass is reused instead - its address is already claimed
+  // - and only refilled, since RestoreBufferContents runs later than the build.
+  for (const auto& in : capturedInputs) {
+    if (in.Size == 0) {
+      continue;
+    }
+    uint64_t dstBufKey = in.BufferKey;
+    const bool reuseExisting = m_RestoredThisPass.count(in.BufferKey) != 0;
+    if (!reuseExisting) {
+      const VkBufferUsageFlags usage =
+          VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR |
+          VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+      VkMemoryRequirements req{};
+      if (!QueryCaptureReplayBufferRequirements(deviceKey, in.Size, usage, req)) {
+        // The input buffer would be missing entirely from the replay, leaving the
+        // op's baked geometry addresses pointing at nothing.
+        FatalSubcaptureError(
+            "failed to query requirements for a recreated build input of acceleration structure "
+            "key=" +
+            std::to_string(logAsKey) + " (input buffer key=" + std::to_string(in.BufferKey) + ")");
+      }
+
+      // Can this input be recreated verbatim, at its captured address? Not if
+      //  - its captured range (req.size, the span the driver reserves) collides with one a
+      //    live restored object already claimed, or
+      //  - it was suballocated at a non-zero offset of its backing allocation, or shared
+      //    that allocation with another input of this build, so a dedicated allocation
+      //    based at the captured allocation address reproduces neither, or
+      //  - nothing pins its address at all (neither opaque address was captured).
+      // Each case is relocated to a freshly reserved address instead, with the build's
+      // baked geometry addresses patched to match.
+      const bool addressRecycled = collidesWithClaimed(in.BufferOpaqueCaptureAddress, req.size) ||
+                                   collidesWithClaimed(in.MemoryOpaqueCaptureAddress, req.size);
+      const bool allocationNotReproducible =
+          in.MemoryOffset != 0 || sharesCapturedAllocation(in.MemoryOpaqueCaptureAddress);
+      const bool addressUnpinned =
+          in.BufferOpaqueCaptureAddress == 0 && in.MemoryOpaqueCaptureAddress == 0;
+      const bool mustRelocate = addressRecycled || allocationNotReproducible || addressUnpinned;
+
+      uint64_t bufOpaque = in.BufferOpaqueCaptureAddress;
+      uint64_t memOpaque = in.MemoryOpaqueCaptureAddress;
+      uint32_t memType = UINT32_MAX;
+      VkDeviceSize allocSize = req.size;
+
+      if (mustRelocate) {
+        // Reserve a brand-new address and record a remap so the build command's baked
+        // geometry addresses into this buffer are relocated below. Relocation needs the
+        // original base address. Without it the build cannot be patched.
+        VkDeviceAddress freshDeviceAddress = 0;
+        VkMemoryRequirements freshReq{};
+        if (in.BaseDeviceAddress != 0 &&
+            m_GpuReadbackHelper->ReserveScratchBufferAddress(
+                deviceKey, physDevKey, in.Size, freshDeviceAddress, bufOpaque, memOpaque) &&
+            QueryCaptureReplayBufferRequirements(deviceKey, in.Size, usage, freshReq)) {
+          memType = m_GpuReadbackHelper->FindStagingMemoryType(physDevKey, freshReq.memoryTypeBits);
+          allocSize = freshReq.size;
+        }
+        if (memType == UINT32_MAX) {
+          LOG_WARNING << "Vulkan subcapture: could not relocate acceleration structure build input "
+                         "buffer that cannot be recreated at its captured address (orig key="
+                      << in.BufferKey << ", AS key=" << logAsKey << ", recycled=" << addressRecycled
+                      << ", suballocated=" << allocationNotReproducible
+                      << ", unpinned=" << addressUnpinned
+                      << "); the rebuild is emitted without this input";
+          continue;
+        }
+        inputRemaps.push_back({in.BaseDeviceAddress, in.Size, freshDeviceAddress});
+      } else {
+        memType = in.MemoryTypeIndex;
+        if (memType == UINT32_MAX || !((req.memoryTypeBits >> memType) & 1u)) {
+          memType = UINT32_MAX;
+          for (uint32_t t = 0; t < 32; ++t) {
+            if ((req.memoryTypeBits >> t) & 1u) {
+              memType = t;
+              break;
+            }
+          }
+        }
+        if (memType == UINT32_MAX) {
+          LOG_WARNING << "Vulkan subcapture: no memory type for recreated acceleration structure "
+                         "input buffer (orig key="
+                      << in.BufferKey << ")";
+          continue;
+        }
+      }
+      const uint64_t bufKey = newTransientKey();
+      const uint64_t memKey = newTransientKey();
+      EmitCaptureReplayBufferCreate(m_Recorder, deviceKey, bufKey, memKey, in.Size, allocSize,
+                                    memType, usage, bufOpaque, memOpaque);
+      // The addresses this input just took are claimed for the rest of the
+      // rebuild, so a later input of the same build is tested against them too.
+      addClaimedRange(bufOpaque, allocSize);
+      addClaimedRange(memOpaque, allocSize);
+      transientBufs.emplace_back(bufKey, memKey);
+      dstBufKey = bufKey;
+    }
+
+    // Upload each referenced sub-range from the content store via a host-visible staging
+    // buffer. For a reused buffer, skip a range whose identical bytes an earlier rebuild
+    // this pass already uploaded to the same (buffer, offset) slot. A freshly recreated
+    // transient buffer is empty, so it is never deduped.
+    for (const auto& region : in.Regions) {
+      if (region.RangeSize == 0) {
+        continue;
+      }
+      const std::vector<uint8_t>* bytes = GetAsBuildInputContent(region.Hash);
+      if (!bytes) {
+        // Replaying the op without this range builds the structure over whatever the
+        // recreated input buffer happens to contain - for instance data, addresses that
+        // point nowhere.
+        FatalSubcaptureError(
+            "no captured content for a build input of acceleration structure key=" +
+            std::to_string(logAsKey) + " (input buffer key=" + std::to_string(in.BufferKey) +
+            ", offset=" + std::to_string(region.SrcOffset) + ", " +
+            std::to_string(region.RangeSize) + " bytes), so its build cannot be replayed");
+      }
+      if (reuseExisting) {
+        const auto slot = std::make_pair(in.BufferKey, region.SrcOffset);
+        auto it = m_RestoredInputRegionHashes.find(slot);
+        if (it != m_RestoredInputRegionHashes.end() && it->second == region.Hash) {
+          continue; // identical bytes already uploaded to this stable buffer slot
+        }
+        m_RestoredInputRegionHashes[slot] = region.Hash;
+      }
+      // As above: skipping the upload would leave this range of the input buffer
+      // holding whatever it holds, and the replayed op would build over it.
+      VkMemoryRequirements stagingReq{};
+      if (!m_GpuReadbackHelper->QueryStagingBufferRequirements(
+              deviceKey, region.RangeSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, stagingReq)) {
+        FatalSubcaptureError("failed to query staging requirements for a build input of "
+                             "acceleration structure key=" +
+                             std::to_string(logAsKey) +
+                             " (input buffer key=" + std::to_string(in.BufferKey) + ")");
+      }
+      const uint32_t stagingMemType =
+          m_GpuReadbackHelper->FindStagingMemoryType(physDevKey, stagingReq.memoryTypeBits);
+      if (stagingMemType == UINT32_MAX) {
+        FatalSubcaptureError(
+            "no HOST_VISIBLE memory type for a build input of acceleration structure key=" +
+            std::to_string(logAsKey) + " (input buffer key=" + std::to_string(in.BufferKey) +
+            ", memoryTypeBits=" + std::to_string(stagingReq.memoryTypeBits) + ")");
+      }
+      EmitStagingUploadAndCopyBuffer(m_Recorder, deviceKey, queueKey, poolKey, dstBufKey,
+                                     region.SrcOffset, region.RangeSize, stagingReq.size,
+                                     stagingMemType, *bytes);
+    }
+  }
+
+  // Relocate the build command's baked geometry device addresses for any relocated input.
+  // Mirrors CollectGeometryInputBufferKeys' field walk. TLAS-instance BLAS references live
+  // in the buffer content, not these fields, and are unaffected.
+  if (!inputRemaps.empty()) {
+    auto relocate = [&inputRemaps](VkDeviceAddress& addr) {
+      if (addr == 0) {
+        return;
+      }
+      for (const auto& r : inputRemaps) {
+        if (addr >= r.OldBase && addr < r.OldBase + r.Size) {
+          addr = r.NewBase + (addr - r.OldBase);
+          return;
+        }
+      }
+    };
+    for (uint32_t i = 0; i < cmd.m_infoCount.Value && cmd.m_pInfos.Value; ++i) {
+      VkAccelerationStructureBuildGeometryInfoKHR& info = cmd.m_pInfos.Value[i];
+      for (uint32_t g = 0; g < info.geometryCount; ++g) {
+        VkAccelerationStructureGeometryKHR* geom = nullptr;
+        if (info.pGeometries) {
+          geom = const_cast<VkAccelerationStructureGeometryKHR*>(&info.pGeometries[g]);
+        } else if (info.ppGeometries && info.ppGeometries[g]) {
+          geom = const_cast<VkAccelerationStructureGeometryKHR*>(info.ppGeometries[g]);
+        }
+        if (!geom) {
+          continue;
+        }
+        switch (geom->geometryType) {
+        case VK_GEOMETRY_TYPE_TRIANGLES_KHR: {
+          auto& tri = geom->geometry.triangles;
+          relocate(tri.vertexData.deviceAddress);
+          if (tri.indexType != VK_INDEX_TYPE_NONE_KHR) {
+            relocate(tri.indexData.deviceAddress);
+          }
+          relocate(tri.transformData.deviceAddress);
+          break;
+        }
+        case VK_GEOMETRY_TYPE_AABBS_KHR:
+          relocate(geom->geometry.aabbs.data.deviceAddress);
+          break;
+        case VK_GEOMETRY_TYPE_INSTANCES_KHR:
+          if (!geom->geometry.instances.arrayOfPointers) {
+            relocate(geom->geometry.instances.data.deviceAddress);
+          }
+          break;
+        default:
+          break;
+        }
+      }
+    }
+  }
+
+  // --- Per info: keep the recorded mode, repoint the source, reserve fresh scratch ---
+  // Scratch is pure working memory (never captured), so a new one is always allocated and
+  // scratchData repointed at it. The mode is left exactly as recorded, so the emitted
+  // stream performs the same operations the application did. Rewriting an update into a
+  // build would also be invalid on a compacted destination, which
+  // VUID-vkCmdBuildAccelerationStructuresKHR-pInfos-10126 allows to be as small as its
+  // COMPACTED_SIZE query result while a build must satisfy the full build size.
+  for (uint32_t i = 0; i < cmd.m_infoCount.Value && cmd.m_pInfos.Value &&
+                       2 * static_cast<size_t>(i) + 1 < cmd.m_pInfos.HandleKeys.size();
+       ++i) {
+    VkAccelerationStructureBuildGeometryInfoKHR& info = cmd.m_pInfos.Value[i];
+    const bool isUpdate = info.mode == VK_BUILD_ACCELERATION_STRUCTURE_MODE_UPDATE_KHR;
+    const uint64_t dstAsKey = cmd.m_pInfos.HandleKeys[2 * static_cast<size_t>(i) + 1];
+
+    // Repoint an update at the source the reduced chain actually produced. The recorded
+    // one may be an intermediate the reduction dropped. Handles travel only via
+    // HandleKeys (see generator_coders.py), so that slot is the one to write.
+    if (isUpdate) {
+      uint64_t chainSrcAsKey = 0;
+      if (updateSourceByDstAs) {
+        auto srcIt = updateSourceByDstAs->find(dstAsKey);
+        if (srcIt != updateSourceByDstAs->end()) {
+          chainSrcAsKey = srcIt->second;
+        }
+      }
+      if (!chainSrcAsKey) {
+        const std::string what =
+            "acceleration structure key=" + std::to_string(dstAsKey) +
+            " must be restored by replaying an update (command key=" + std::to_string(cmd.m_Key) +
+            "), but the structure that update refits from is not known, so it cannot be replayed";
+        if (!updateSourceByDstAs) {
+          // The per-AS path: no operation chain is tracked for this structure, so
+          // there is no predecessor to refit from. Top-level structures live here.
+          FatalSubcaptureError(
+              what +
+              ". No operation chain is tracked for it - TLAS update (refit) "
+              "by the application are not supported yet. Set "
+              "Common.Player.Subcapture.Vulkan.CaptureASBuildInputs=false to restore all "
+              "acceleration structures from serialized blobs instead (replayable only on this GPU "
+              "and driver)");
+        }
+        FatalSubcaptureError(what + ". Delete '" + AnalyzerResults::GetAnalysisFileName() +
+                             "' and re-run so the analysis pass regenerates it");
+      }
+      cmd.m_pInfos.HandleKeys[2 * static_cast<size_t>(i)] = chainSrcAsKey;
+    }
+
+    std::vector<uint32_t> maxPrimitiveCounts(info.geometryCount, 0);
+    if (i < cmd.m_ppBuildRangeInfos.Data.size()) {
+      const auto& ranges = cmd.m_ppBuildRangeInfos.Data[i];
+      for (uint32_t g = 0; g < info.geometryCount && g < ranges.size(); ++g) {
+        maxPrimitiveCounts[g] = ranges[g].primitiveCount;
+      }
+    }
+
+    // vkGetAccelerationStructureBuildSizesKHR ignores mode, srcAccelerationStructure and
+    // dstAccelerationStructure, so one call yields the sizes for either mode. They are
+    // still neutralized in a local copy: the decoded handles belong to the recorded
+    // process and must not reach the driver.
+    VkAccelerationStructureBuildGeometryInfoKHR sizeQueryInfo = info;
+    sizeQueryInfo.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
+    sizeQueryInfo.srcAccelerationStructure = VK_NULL_HANDLE;
+    sizeQueryInfo.dstAccelerationStructure = VK_NULL_HANDLE;
+
+    VkAccelerationStructureBuildSizesInfoKHR sizes{};
+    if (!m_GpuReadbackHelper->QueryAccelerationStructureBuildSizes(
+            deviceKey, sizeQueryInfo, maxPrimitiveCounts.data(), sizes) ||
+        sizes.buildScratchSize == 0) {
+      // Without the sizes there is no scratch to give the op. Emitting it against the
+      // application's long-freed scratch address would fault on replay.
+      FatalSubcaptureError(
+          "failed to query build sizes for acceleration structure key=" + std::to_string(dstAsKey) +
+          " (command key=" + std::to_string(cmd.m_Key) + "), so its build cannot be replayed");
+    }
+
+    // Sanity check, not a policy decision: the op replays in its recorded mode, so the size
+    // the application satisfied is the size needed. A smaller destination means the size
+    // query or the tracked create size is wrong.
+    auto* dstAsState = GetState<AccelerationStructureState>(dstAsKey);
+    if (!isUpdate && dstAsState && dstAsState->Size &&
+        sizes.accelerationStructureSize > dstAsState->Size) {
+      FatalSubcaptureError("acceleration structure key=" + std::to_string(dstAsKey) +
+                           " was created with size=" + std::to_string(dstAsState->Size) +
+                           " but replaying its build (command key=" + std::to_string(cmd.m_Key) +
+                           ") needs " + std::to_string(sizes.accelerationStructureSize));
+    }
+
+    // An update needs only updateScratchSize. Reserve whatever the replayed mode
+    // requires, never less than the driver asked for.
+    const VkDeviceSize scratchSize =
+        isUpdate && sizes.updateScratchSize ? sizes.updateScratchSize : sizes.buildScratchSize;
+
+    VkDeviceAddress scratchAddress = 0;
+    uint64_t scratchOpaqueAddress = 0;
+    uint64_t scratchMemOpaqueAddress = 0;
+    VkMemoryRequirements scratchReq{};
+    uint32_t scratchMemType = UINT32_MAX;
+    if (m_GpuReadbackHelper->ReserveScratchBufferAddress(deviceKey, physDevKey, scratchSize,
+                                                         scratchAddress, scratchOpaqueAddress,
+                                                         scratchMemOpaqueAddress) &&
+        QueryCaptureReplayBufferRequirements(deviceKey, scratchSize,
+                                             VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, scratchReq)) {
+      scratchMemType =
+          m_GpuReadbackHelper->FindStagingMemoryType(physDevKey, scratchReq.memoryTypeBits);
+    }
+    if (scratchMemType == UINT32_MAX) {
+      // Same reasoning as the size query above: the alternative is an op pointed at
+      // the application's freed scratch address.
+      FatalSubcaptureError("could not reserve a scratch buffer for acceleration structure key=" +
+                           std::to_string(dstAsKey) + " (command key=" + std::to_string(cmd.m_Key) +
+                           "), so its build cannot be replayed");
+    }
+    const uint64_t scratchBufKey = newTransientKey();
+    const uint64_t scratchMemKey = newTransientKey();
+    EmitCaptureReplayBufferCreate(m_Recorder, deviceKey, scratchBufKey, scratchMemKey, scratchSize,
+                                  scratchReq.size, scratchMemType,
+                                  VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, scratchOpaqueAddress,
+                                  scratchMemOpaqueAddress);
+    transientBufs.emplace_back(scratchBufKey, scratchMemKey);
+    info.scratchData.deviceAddress = scratchAddress;
+  }
+
+  // Allocate and begin the build's one-shot command buffer only now - after all
+  // input uploads have run and freed their own use of kContentCBKey.
+  VkCommandBufferAllocateInfo cbai{};
+  cbai.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+  cbai.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+  cbai.commandBufferCount = 1;
+  cbai.commandPool = reinterpret_cast<VkCommandPool>(0x1ULL); // sentinel
+
+  static VkCommandBuffer kDummyCB = VK_NULL_HANDLE;
+  vkAllocateCommandBuffersCommand allocCBCmd;
+  allocCBCmd.m_device.Key = deviceKey;
+  allocCBCmd.m_pAllocateInfo.Value = &cbai;
+  allocCBCmd.m_pAllocateInfo.HandleKeys = {poolKey};
+  allocCBCmd.m_pCommandBuffers.Value = &kDummyCB;
+  allocCBCmd.m_pCommandBuffers.Size = 1;
+  allocCBCmd.m_pCommandBuffers.Keys = {kContentCBKey};
+  allocCBCmd.m_Return.Value = VK_SUCCESS;
+  m_Recorder.Record(vkAllocateCommandBuffersSerializer(allocCBCmd));
+
+  VkCommandBufferBeginInfo cbbi{};
+  cbbi.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+  cbbi.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+  vkBeginCommandBufferCommand beginCBCmd;
+  beginCBCmd.m_commandBuffer.Key = kContentCBKey;
+  beginCBCmd.m_pBeginInfo.Value = &cbbi;
+  beginCBCmd.m_Return.Value = VK_SUCCESS;
+  m_Recorder.Record(vkBeginCommandBufferSerializer(beginCBCmd));
+
+  m_Recorder.Record(vkCmdBuildAccelerationStructuresKHRSerializer(cmd));
+
+  vkEndCommandBufferCommand endCBCmd;
+  endCBCmd.m_commandBuffer.Key = kContentCBKey;
+  endCBCmd.m_Return.Value = VK_SUCCESS;
+  m_Recorder.Record(vkEndCommandBufferSerializer(endCBCmd));
+
+  static VkCommandBuffer kDummyCBSlot = VK_NULL_HANDLE;
+  kDummyCBSlot = reinterpret_cast<VkCommandBuffer>(kContentCBKey);
+  VkSubmitInfo si{
+      VK_STRUCTURE_TYPE_SUBMIT_INFO, nullptr, 0, nullptr, nullptr, 1, &kDummyCBSlot, 0, nullptr};
+  vkQueueSubmitCommand submitCmd;
+  submitCmd.m_queue.Key = queueKey;
+  submitCmd.m_fence.Key = 0;
+  submitCmd.m_Return.Value = VK_SUCCESS;
+  submitCmd.m_submitCount.Value = 1;
+  submitCmd.m_pSubmits.Value = &si;
+  submitCmd.m_pSubmits.Size = 1;
+  submitCmd.m_pSubmits.HandleKeys = {kContentCBKey};
+  m_Recorder.Record(vkQueueSubmitSerializer(submitCmd));
+
+  vkQueueWaitIdleCommand waitCmd;
+  waitCmd.m_queue.Key = queueKey;
+  waitCmd.m_Return.Value = VK_SUCCESS;
+  m_Recorder.Record(vkQueueWaitIdleSerializer(waitCmd));
+
+  static VkCommandBuffer kDummyCBFree = VK_NULL_HANDLE;
+  vkFreeCommandBuffersCommand freeCBCmd;
+  freeCBCmd.m_device.Key = deviceKey;
+  freeCBCmd.m_commandPool.Key = poolKey;
+  freeCBCmd.m_commandBufferCount.Value = 1;
+  freeCBCmd.m_pCommandBuffers.Value = &kDummyCBFree;
+  freeCBCmd.m_pCommandBuffers.Size = 1;
+  freeCBCmd.m_pCommandBuffers.Keys = {kContentCBKey};
+  m_Recorder.Record(vkFreeCommandBuffersSerializer(freeCBCmd));
+
+  // Tear down every transient (recreated input + fresh scratch) now the build
+  // has completed and its results live in the AS backing buffer.
+  for (const auto& [bufKey, memKey] : transientBufs) {
+    EmitCaptureReplayBufferDestroy(m_Recorder, deviceKey, bufKey, memKey);
+  }
+
+  // All transient addresses for this rebuild have been authored. A later rebuild may
+  // safely reuse the freed addresses: its transients live in a separate command stream.
+  m_GpuReadbackHelper->ReleaseReservedAddresses();
+}
+
+// Restore TLAS asKey's content by replaying the last build command against re-uploaded inputs.
+void StateTrackingService::RestoreAccelerationStructureByRebuild(
+    uint64_t asKey, uint64_t deviceKey, uint64_t physDevKey, uint64_t queueKey, uint64_t poolKey) {
+  if (m_RebuiltAsKeys.count(asKey)) {
+    return;
+  }
+  const std::string useBlobs =
+      ". Set Common.Player.Subcapture.Vulkan.CaptureASBuildInputs=false to restore all "
+      "acceleration structures from serialized blobs instead (replayable only on this GPU and "
+      "driver)";
+
+  auto* asState = GetState<AccelerationStructureState>(asKey);
+  if (!asState || asState->LastBuildCommandBytes.empty()) {
+    FatalSubcaptureError("acceleration structure key=" + std::to_string(asKey) +
+                         " must be restored, but no acceleration structure build that writes "
+                         "it was recorded before the subcapture range, so it cannot be rebuilt" +
+                         useBlobs);
+  }
+
+  // An array-of-pointers TLAS cannot be rebuilt from inputs: its instance structs are
+  // scattered behind a pointer table whose values are only known at build execution, so the
+  // recording pass captures no instance content for it.
+  if (asState->ArrayOfPointersInstances) {
+    FatalSubcaptureError(
+        "acceleration structure key=" + std::to_string(asKey) +
+        " is built from array-of-pointers instances, whose instance structs are only reachable "
+        "at build execution, so the recording pass captured no content to rebuild it from" +
+        useBlobs);
+  }
+
+  // An update-mode build's source AS (src != dst) is carried in DependencyKeys. Rebuild it
+  // first so this AS does not refit from uninitialized source content.
+  //
+  // EmitAccelerationStructureRebuild replays the *entire* captured build command, which may
+  // update several destinations at once (LastBuildSiblingAsKeys), each refitting from its
+  // own source. So every sibling's sources are walked here, not just this AS's.
+  std::vector<uint64_t> siblingKeys = asState->LastBuildSiblingAsKeys;
+  if (siblingKeys.empty()) {
+    siblingKeys.push_back(asKey);
+  }
+  for (uint64_t sibKey : siblingKeys) {
+    auto* sibState = GetState<AccelerationStructureState>(sibKey);
+    if (!sibState) {
+      continue;
+    }
+    for (uint64_t dep : sibState->DependencyKeys) {
+      if (GetState<AccelerationStructureState>(dep)) {
+        RestoreAccelerationStructureByRebuild(dep, deviceKey, physDevKey, queueKey, poolKey);
+      }
+    }
+  }
+
+  // The build (emitted below) regenerates the AS backing-buffer content.
+  MarkAccelerationStructureBackingContentRestored(asKey);
+
+  // The rebuild is self-contained: it recreates the build inputs from the captured content
+  // and reserves a fresh scratch, so no live input buffers are required here.
+  EmitAccelerationStructureRebuild(deviceKey, physDevKey, queueKey, poolKey, *asState);
+  for (uint64_t sibling : asState->LastBuildSiblingAsKeys) {
+    m_RebuiltAsKeys.insert(sibling);
+  }
+  m_RebuiltAsKeys.insert(asKey);
+  LOG_TRACE << "Vulkan subcapture: restored acceleration structure content via rebuild, key="
+            << asKey;
+}
+
+void StateTrackingService::EmitAccelerationStructureCopyReplay(
+    uint64_t deviceKey,
+    uint64_t queueKey,
+    uint64_t poolKey,
+    const std::vector<char>& commandBytes) {
+  if (commandBytes.empty()) {
+    return;
+  }
+  // Decode mutates the buffer in place (AddPtrs), so work on a copy. The stored
+  // bytes carry the original app CB key, which is patched to the one-shot CB.
+  std::vector<char> scratch = commandBytes;
+  vkCmdCopyAccelerationStructureKHRCommand cmd;
+  Decode(scratch.data(), cmd);
+  cmd.m_commandBuffer.Key = kContentCBKey;
+
+  VkCommandBufferAllocateInfo cbai{};
+  cbai.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+  cbai.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+  cbai.commandBufferCount = 1;
+  cbai.commandPool = reinterpret_cast<VkCommandPool>(0x1ULL); // sentinel
+  static VkCommandBuffer kDummyCB = VK_NULL_HANDLE;
+  vkAllocateCommandBuffersCommand allocCBCmd;
+  allocCBCmd.m_device.Key = deviceKey;
+  allocCBCmd.m_pAllocateInfo.Value = &cbai;
+  allocCBCmd.m_pAllocateInfo.HandleKeys = {poolKey};
+  allocCBCmd.m_pCommandBuffers.Value = &kDummyCB;
+  allocCBCmd.m_pCommandBuffers.Size = 1;
+  allocCBCmd.m_pCommandBuffers.Keys = {kContentCBKey};
+  allocCBCmd.m_Return.Value = VK_SUCCESS;
+  m_Recorder.Record(vkAllocateCommandBuffersSerializer(allocCBCmd));
+
+  VkCommandBufferBeginInfo cbbi{};
+  cbbi.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+  cbbi.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+  vkBeginCommandBufferCommand beginCBCmd;
+  beginCBCmd.m_commandBuffer.Key = kContentCBKey;
+  beginCBCmd.m_pBeginInfo.Value = &cbbi;
+  beginCBCmd.m_Return.Value = VK_SUCCESS;
+  m_Recorder.Record(vkBeginCommandBufferSerializer(beginCBCmd));
+
+  m_Recorder.Record(vkCmdCopyAccelerationStructureKHRSerializer(cmd));
+
+  vkEndCommandBufferCommand endCBCmd;
+  endCBCmd.m_commandBuffer.Key = kContentCBKey;
+  endCBCmd.m_Return.Value = VK_SUCCESS;
+  m_Recorder.Record(vkEndCommandBufferSerializer(endCBCmd));
+
+  static VkCommandBuffer kDummyCBSlot = VK_NULL_HANDLE;
+  kDummyCBSlot = reinterpret_cast<VkCommandBuffer>(kContentCBKey);
+  VkSubmitInfo si{
+      VK_STRUCTURE_TYPE_SUBMIT_INFO, nullptr, 0, nullptr, nullptr, 1, &kDummyCBSlot, 0, nullptr};
+  vkQueueSubmitCommand submitCmd;
+  submitCmd.m_queue.Key = queueKey;
+  submitCmd.m_fence.Key = 0;
+  submitCmd.m_Return.Value = VK_SUCCESS;
+  submitCmd.m_submitCount.Value = 1;
+  submitCmd.m_pSubmits.Value = &si;
+  submitCmd.m_pSubmits.Size = 1;
+  submitCmd.m_pSubmits.HandleKeys = {kContentCBKey};
+  m_Recorder.Record(vkQueueSubmitSerializer(submitCmd));
+
+  vkQueueWaitIdleCommand waitCmd;
+  waitCmd.m_queue.Key = queueKey;
+  waitCmd.m_Return.Value = VK_SUCCESS;
+  m_Recorder.Record(vkQueueWaitIdleSerializer(waitCmd));
+
+  static VkCommandBuffer kDummyCBFree = VK_NULL_HANDLE;
+  vkFreeCommandBuffersCommand freeCBCmd;
+  freeCBCmd.m_device.Key = deviceKey;
+  freeCBCmd.m_commandPool.Key = poolKey;
+  freeCBCmd.m_commandBufferCount.Value = 1;
+  freeCBCmd.m_pCommandBuffers.Value = &kDummyCBFree;
+  freeCBCmd.m_pCommandBuffers.Size = 1;
+  freeCBCmd.m_pCommandBuffers.Keys = {kContentCBKey};
+  m_Recorder.Record(vkFreeCommandBuffersSerializer(freeCBCmd));
+}
+
+bool StateTrackingService::EmitRelocatedAccelerationStructureCreate(
+    uint64_t deviceKey,
+    uint64_t physDevKey,
+    const AccelerationStructureState& asState,
+    uint64_t bufKey,
+    uint64_t memKey) {
+  if (!m_GpuReadbackHelper || asState.CreationCommandBuffer.empty() || asState.Size == 0 ||
+      asState.CreationCommandId != CommandId::ID_VKCREATEACCELERATIONSTRUCTUREKHR) {
+    return false;
+  }
+
+  // A dedicated storage buffer sized exactly to the acceleration structure, on a
+  // capture/replay address the driver has just told us is free.
+  const VkBufferUsageFlags usage = VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR |
+                                   VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+  VkDeviceAddress freshDeviceAddress = 0;
+  uint64_t bufOpaque = 0;
+  uint64_t memOpaque = 0;
+  VkMemoryRequirements req{};
+  if (!m_GpuReadbackHelper->ReserveScratchBufferAddress(deviceKey, physDevKey, asState.Size,
+                                                        freshDeviceAddress, bufOpaque, memOpaque) ||
+      !QueryCaptureReplayBufferRequirements(deviceKey, asState.Size, usage, req)) {
+    return false;
+  }
+  const uint32_t memType =
+      m_GpuReadbackHelper->FindStagingMemoryType(physDevKey, req.memoryTypeBits);
+  if (memType == UINT32_MAX) {
+    return false;
+  }
+
+  // Re-emit the original create against the relocated buffer. The captured deviceAddress is
+  // dropped along with the create flag that gives it meaning - that address is taken, which
+  // is the whole reason for relocating.
+  std::vector<char> scratch = asState.CreationCommandBuffer;
+  vkCreateAccelerationStructureKHRCommand cmd;
+  Decode(scratch.data(), cmd);
+  if (!cmd.m_pCreateInfo.Value || cmd.m_pCreateInfo.HandleKeys.empty()) {
+    return false;
+  }
+
+  EmitCaptureReplayBufferCreate(m_Recorder, deviceKey, bufKey, memKey, asState.Size, req.size,
+                                memType, usage, bufOpaque, memOpaque);
+
+  // Handle members travel exclusively via HandleKeys (see generator_coders.py).
+  cmd.m_pCreateInfo.HandleKeys[0] = bufKey;
+  cmd.m_pCreateInfo.Value->offset = 0;
+  cmd.m_pCreateInfo.Value->deviceAddress = 0;
+  cmd.m_pCreateInfo.Value->createFlags &= ~static_cast<VkAccelerationStructureCreateFlagsKHR>(
+      VK_ACCELERATION_STRUCTURE_CREATE_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT_KHR);
+  cmd.m_Return.Value = VK_SUCCESS;
+  m_Recorder.Record(vkCreateAccelerationStructureKHRSerializer(cmd));
+  return true;
+}
+
+void StateTrackingService::RestoreBlasChain() {
+  if (!m_AnalyzerResults) {
+    return;
+  }
+  const std::vector<BlasChainOp>& chain = m_AnalyzerResults->GetBlasChain();
+  if (chain.empty()) {
+    return;
+  }
+
+  // Per-device queue/pool/physDev context, resolved lazily and cached.
+  struct DevCtx {
+    uint64_t PhysDev{};
+    uint64_t Queue{};
+    uint64_t Pool{};
+    bool Ok{};
+  };
+  std::unordered_map<uint64_t, DevCtx> devCtxByDevice;
+  auto resolveDev = [&](uint64_t deviceKey) -> const DevCtx* {
+    auto it = devCtxByDevice.find(deviceKey);
+    if (it != devCtxByDevice.end()) {
+      return it->second.Ok ? &it->second : nullptr;
+    }
+    DevCtx ctx{};
+    uint64_t queueKey = 0, poolKey = 0;
+    if (::gits::vulkan::FindQueueAndPool(m_States, deviceKey, queueKey, poolKey) &&
+        m_RestoredThisPass.count(queueKey) && m_RestoredThisPass.count(poolKey)) {
+      auto* devState = GetState<ObjectState>(deviceKey);
+      if (devState && devState->ParentKey) {
+        ctx = {devState->ParentKey, queueKey, poolKey, true};
+      }
+    }
+    const DevCtx& stored = (devCtxByDevice[deviceKey] = ctx);
+    return stored.Ok ? &stored : nullptr;
+  };
+
+  // Reduced-chain source AS per (command key, destination AS), handed to
+  // EmitAccelerationStructureRebuildBytes so it can repoint each retained update at the
+  // structure this chain really produces. Multi-info commands contribute one entry per
+  // destination.
+  std::unordered_map<uint64_t, std::unordered_map<uint64_t, uint64_t>> updateSourceByCmd;
+  for (const BlasChainOp& op : chain) {
+    if (!op.IsCopy && op.SrcAsKey) {
+      updateSourceByCmd[op.CommandKey][op.DstAsKey] = op.SrcAsKey;
+    }
+  }
+
+  // Acceleration-structure handles a retained command references when it replays, i.e. the
+  // set the player resolves through HandleMapService. Destinations come straight out of the
+  // encoded HandleKeys, since a multi-info command replays wholesale, including destinations
+  // that are not themselves retained. Sources come from the reduced chain rather than the
+  // bytes, because that is what the emit patches the source slot to. A copy is replayed
+  // verbatim and reads both [src, dst] by handle.
+  auto referencedAsKeys = [&updateSourceByCmd](const RetainedAsCommand& rc, uint64_t commandKey) {
+    std::vector<uint64_t> keys;
+    std::vector<char> scratch = rc.CommandBytes;
+    if (rc.IsCopy) {
+      vkCmdCopyAccelerationStructureKHRCommand cmd;
+      Decode(scratch.data(), cmd);
+      for (uint64_t key : cmd.m_pInfo.HandleKeys) {
+        if (key) {
+          keys.push_back(key);
+        }
+      }
+    } else {
+      vkCmdBuildAccelerationStructuresKHRCommand cmd;
+      Decode(scratch.data(), cmd);
+      const auto& handleKeys = cmd.m_pInfos.HandleKeys; // [src, dst] per info
+      for (size_t i = 1; i < handleKeys.size(); i += 2) {
+        if (handleKeys[i]) {
+          keys.push_back(handleKeys[i]);
+        }
+      }
+      auto cmdIt = updateSourceByCmd.find(commandKey);
+      if (cmdIt != updateSourceByCmd.end()) {
+        for (const auto& [dstAsKey, srcAsKey] : cmdIt->second) {
+          if (srcAsKey && srcAsKey != dstAsKey) {
+            keys.push_back(srcAsKey);
+          }
+        }
+      }
+    }
+    return keys;
+  };
+
+  // Resolve the required handles per chain entry once, then note the last entry that needs
+  // each one. A transiently re-created acceleration structure is torn down as soon as the
+  // chain stops reading it, reproducing the lifetime the application gave it: it freed each
+  // intermediate BLAS before allocating the next, so keeping them all alive at once would
+  // collide on a recycled capture/replay address.
+  std::vector<std::vector<uint64_t>> requiredByOp(chain.size());
+  std::unordered_map<uint64_t, size_t> lastUse;
+  for (size_t i = 0; i < chain.size(); ++i) {
+    auto rcIt = m_RetainedAsCommands.find(chain[i].CommandKey);
+    if (rcIt == m_RetainedAsCommands.end() || rcIt->second.CommandBytes.empty()) {
+      // The analysis says this op is needed but the recording pass never captured it.
+      // Usually a stale analysis file whose command keys no longer match this run.
+      FatalSubcaptureError(
+          "no captured command bytes for retained acceleration structure chain op (command key=" +
+          std::to_string(chain[i].CommandKey) +
+          ", destination AS key=" + std::to_string(chain[i].DstAsKey) + "); delete '" +
+          AnalyzerResults::GetAnalysisFileName() +
+          "' and re-run so the analysis pass regenerates it");
+    }
+    requiredByOp[i] = referencedAsKeys(rcIt->second, chain[i].CommandKey);
+    for (uint64_t key : requiredByOp[i]) {
+      lastUse[key] = i;
+    }
+  }
+
+  // Resources we created for an acceleration structure the application had
+  // already destroyed, to be released again after its last chain use.
+  struct TransientAs {
+    uint64_t DeviceKey{};
+    uint64_t BufferKey{}; // 0 when the storage buffer was already live
+    uint64_t MemoryKey{}; // 0 when the allocation was already live
+  };
+  std::unordered_map<uint64_t, TransientAs> transientAs;
+  uint64_t nextChainTransientKey = kChainTransientKeyBase;
+
+  // Destroy whichever of a transient acceleration structure's storage resources
+  // we created ourselves (either may be 0 when it was already live).
+  auto releaseTransientStorage = [&](uint64_t deviceKey, uint64_t bufKey, uint64_t memKey) {
+    if (bufKey) {
+      vkDestroyBufferCommand destroyBuf;
+      destroyBuf.m_device.Key = deviceKey;
+      destroyBuf.m_buffer.Key = bufKey;
+      m_Recorder.Record(vkDestroyBufferSerializer(destroyBuf));
+      m_RestoredThisPass.erase(bufKey);
+    }
+    if (memKey) {
+      vkFreeMemoryCommand freeMem;
+      freeMem.m_device.Key = deviceKey;
+      freeMem.m_memory.Key = memKey;
+      m_Recorder.Record(vkFreeMemorySerializer(freeMem));
+      m_RestoredThisPass.erase(memKey);
+    }
+  };
+
+  // Give a Destroyed acceleration structure a live handle again for the duration of the chain
+  // ops that read it, on a freshly reserved capture/replay address. Re-using the captured
+  // one fails with VK_ERROR_INVALID_OPAQUE_CAPTURE_ADDRESS, because the driver hands the
+  // freed intermediate's address out again - observed both against objects live at the cut
+  // and between two intermediates of the same chain. Relocating is safe because every chain
+  // op that reads an intermediate BLAS names it by handle, never by address.
+  auto resurrect = [&](uint64_t asKey) -> bool {
+    auto* as = GetState<AccelerationStructureState>(asKey);
+    if (!as) {
+      LOG_WARNING << "Vulkan subcapture: acceleration structure key=" << asKey
+                  << " needed by the BLAS chain is not tracked";
+      return false;
+    }
+    if (!as->Destroyed) {
+      // Still live at the cut, just not restored yet. Bring it up, but never enrol it for
+      // teardown: only structures the application itself destroyed may be destroyed again.
+      RestoreOne(as);
+      return m_RestoredThisPass.count(asKey) != 0;
+    }
+    const uint64_t bufKey = nextChainTransientKey--;
+    const uint64_t memKey = nextChainTransientKey--;
+    const DevCtx* dev = resolveDev(as->ParentKey);
+    if (!dev || !EmitRelocatedAccelerationStructureCreate(as->ParentKey, dev->PhysDev, *as, bufKey,
+                                                          memKey)) {
+      LOG_WARNING << "Vulkan subcapture: failed to re-create destroyed acceleration structure key="
+                  << asKey
+                  << " needed by the BLAS chain; its content will be missing from the subcapture";
+      return false;
+    }
+    TransientAs transient{};
+    transient.DeviceKey = as->ParentKey;
+    transient.BufferKey = bufKey;
+    transient.MemoryKey = memKey;
+    // EmitRelocatedAccelerationStructureCreate emitted the create directly rather
+    // than going through RestoreOne, so register the handle as restored by hand.
+    m_RestoredThisPass.insert(asKey);
+    transientAs[asKey] = transient;
+    return true;
+  };
+
+  // Release a transiently re-created acceleration structure, and the storage buffer and
+  // allocation created with it, once the chain no longer reads it. Each op ends in a
+  // vkQueueWaitIdle, so the work that used it has completed.
+  auto teardown = [&](uint64_t asKey) {
+    auto it = transientAs.find(asKey);
+    if (it == transientAs.end()) {
+      return;
+    }
+    const TransientAs transient = it->second;
+    transientAs.erase(it);
+
+    vkDestroyAccelerationStructureKHRCommand destroyAs;
+    destroyAs.m_device.Key = transient.DeviceKey;
+    destroyAs.m_accelerationStructure.Key = asKey;
+    m_Recorder.Record(vkDestroyAccelerationStructureKHRSerializer(destroyAs));
+    m_RestoredThisPass.erase(asKey);
+
+    // The storage buffer / allocation can be shared with another transient
+    // acceleration structure that is still needed further down the chain.
+    auto stillUsed = [&](uint64_t resourceKey) {
+      for (const auto& [otherAs, other] : transientAs) {
+        if (other.BufferKey == resourceKey || other.MemoryKey == resourceKey) {
+          return true;
+        }
+      }
+      return false;
+    };
+    releaseTransientStorage(transient.DeviceKey,
+                            stillUsed(transient.BufferKey) ? 0 : transient.BufferKey,
+                            stillUsed(transient.MemoryKey) ? 0 : transient.MemoryKey);
+  };
+
+  // Replay the reduced chain in the analyzer's execution (Id) order. A multi-info build is
+  // replayed once (dedup by command key) since it rebuilds all its destinations. Copies
+  // replay verbatim, their source AS already produced by an earlier op in this order.
+  std::unordered_set<uint64_t> replayedBuildCmds;
+
+  for (size_t i = 0; i < chain.size(); ++i) {
+    const BlasChainOp& op = chain[i];
+    // Wrapped so the emit block still falls through to the teardown below. Every failure in
+    // here is fatal: dropping an op the analysis determined is needed leaves its destination
+    // holding uninitialized memory.
+    [&]() {
+      auto rcIt = m_RetainedAsCommands.find(op.CommandKey);
+      GITS_ASSERT(rcIt != m_RetainedAsCommands.end()); // checked when building requiredByOp
+      auto* dstState = GetState<AccelerationStructureState>(op.DstAsKey);
+      if (!dstState) {
+        FatalSubcaptureError(
+            "destination acceleration structure key=" + std::to_string(op.DstAsKey) +
+            " of retained chain op (command key=" + std::to_string(op.CommandKey) +
+            ") is not tracked, so the op cannot be replayed");
+      }
+      const DevCtx* dev = resolveDev(dstState->ParentKey);
+      if (!dev) {
+        FatalSubcaptureError(
+            "no restored queue and command pool with matching queue family indices on device key=" +
+            std::to_string(dstState->ParentKey) +
+            ", so retained acceleration structure chain op (command key=" +
+            std::to_string(op.CommandKey) + ") cannot be replayed");
+      }
+
+      // Give every acceleration structure this command references a live handle, re-creating
+      // the ones the application already destroyed (build-then-compact destroys the
+      // uncompacted intermediate right after the copy that reads it).
+      for (uint64_t key : requiredByOp[i]) {
+        if (m_RestoredThisPass.count(key)) {
+          continue;
+        }
+        if (!resurrect(key)) {
+          FatalSubcaptureError(
+              "acceleration structure key=" + std::to_string(key) +
+              " is required by retained chain op (command key=" + std::to_string(op.CommandKey) +
+              ") but cannot be given a live handle, so the op cannot be replayed");
+        }
+      }
+
+      if (op.IsCopy) {
+        EmitAccelerationStructureCopyReplay(dstState->ParentKey, dev->Queue, dev->Pool,
+                                            rcIt->second.CommandBytes);
+      } else if (replayedBuildCmds.insert(op.CommandKey).second) {
+        // Replayed in its recorded mode. updateSourceByCmd repoints each update info at the
+        // structure this chain produces, which the loop above has already made live.
+        auto srcMapIt = updateSourceByCmd.find(op.CommandKey);
+        EmitAccelerationStructureRebuildBytes(
+            dstState->ParentKey, dev->PhysDev, dev->Queue, dev->Pool, rcIt->second.CommandBytes,
+            rcIt->second.Inputs, op.DstAsKey,
+            srcMapIt != updateSourceByCmd.end() ? &srcMapIt->second : nullptr);
+      }
+    }();
+
+    for (uint64_t key : requiredByOp[i]) {
+      auto lastIt = lastUse.find(key);
+      if (lastIt != lastUse.end() && lastIt->second == i) {
+        teardown(key);
+      }
+    }
+  }
+
+  // Every key has a last use, so nothing should be left. Belt and braces so no
+  // transient handle stays parked on a capture/replay address after the chain.
+  while (!transientAs.empty()) {
+    teardown(transientAs.begin()->first);
+  }
+}
+
+// An acceleration structure's storage is opaque: the only spec-sanctioned way to populate it
+// from bytes is vkCmdCopyMemoryToAccelerationStructureKHR after a
+// vkGetDeviceAccelerationStructureCompatibilityKHR check. The plain vkCmdCopyBuffer that
+// RestoreBufferContents emits would leave the buffer out of sync with the structure the
+// driver just built on the player, its captured internal references still pointing at the
+// original process's input addresses. The first trace then traverses a malformed BVH and
+// hangs the GPU.
+void StateTrackingService::MarkAccelerationStructureBackingContentRestored(uint64_t asKey) {
+  auto* asState = GetState<AccelerationStructureState>(asKey);
+  if (!asState) {
+    return;
+  }
+  if (auto* backing = GetState<BufferState>(asState->BufferKey)) {
+    backing->ContentRestored = true;
+  }
+}
+
+void StateTrackingService::RestoreAccelerationStructureContents() {
+  // Two mutually exclusive paths: chain (Optimize + Vulkan.CaptureASBuildInputs), serialized blobs.
+  const bool useChain = m_AnalyzerResults && m_AnalyzerResults->UseAsChainRestore();
+  LOG_INFO << "Vulkan subcapture: restoring acceleration structure content by "
+           << (useChain ? "replaying captured build operations (portable)"
+                        : "deserializing content at the state restore dump (not portable "
+                          "and stream playback may fail on different GPU or driver)");
+
+  std::unordered_set<uint64_t> chainDestinationAsKeys;
+  if (useChain) {
+    RestoreBlasChain();
+    for (const BlasChainOp& op : m_AnalyzerResults->GetBlasChain()) {
+      chainDestinationAsKeys.insert(op.DstAsKey);
+    }
+  }
+
+  // Group acceleration structures by device.
+  std::unordered_map<uint64_t, std::vector<uint64_t>> asByDevice;
+  for (const auto& [key, sp] : m_States) {
+    if (sp->Destroyed) {
+      continue;
+    }
+    if (sp->CreationCommandId != CommandId::ID_VKCREATEACCELERATIONSTRUCTUREKHR) {
+      continue;
+    }
+    if (!m_RestoredThisPass.count(key)) {
+      continue;
+    }
+    asByDevice[sp->ParentKey].push_back(key);
+    // Claim the backing buffer for the acceleration-structure restore paths before
+    // RestoreBufferContents runs. Done here rather than in each path so none can forget it,
+    // and unconditional on the restore succeeding - a raw byte copy is not a valid fallback
+    // for an acceleration structure either.
+    MarkAccelerationStructureBackingContentRestored(key);
+  }
+
+  for (auto& [deviceKey, asKeys] : asByDevice) {
+    // Every restore mechanism below needs a queue and pool to submit through, so
+    // without one the structures on this device would all stay uninitialized.
+    uint64_t queueKey = 0, poolKey = 0;
+    if (!::gits::vulkan::FindQueueAndPool(m_States, deviceKey, queueKey, poolKey)) {
+      FatalSubcaptureError(
+          "no queue and command pool with matching queue family indices on device key=" +
+          std::to_string(deviceKey) +
+          ", so acceleration structure content cannot be restored there");
+    }
+    if (!m_RestoredThisPass.count(queueKey) || !m_RestoredThisPass.count(poolKey)) {
+      FatalSubcaptureError("queue key=" + std::to_string(queueKey) +
+                           " or command pool key=" + std::to_string(poolKey) +
+                           " was not restored on device key=" + std::to_string(deviceKey) +
+                           ", so acceleration structure content cannot be restored there");
+    }
+
+    auto* devState = GetState<ObjectState>(deviceKey);
+    uint64_t physDevKey = devState ? devState->ParentKey : 0;
+    if (!physDevKey) {
+      FatalSubcaptureError("device key=" + std::to_string(deviceKey) +
+                           " has no physical device, so acceleration structure content cannot be "
+                           "restored there");
+    }
+
+    for (uint64_t asKey : asKeys) {
+      // The chain path (RestoreBlasChain) has already reconstructed every BLAS,
+      // so the per-AS rebuild below handles only TLAS.
+      if (useChain) {
+        auto* as = GetState<AccelerationStructureState>(asKey);
+        if (as && as->Type == VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR) {
+          // No chain op writes this structure, so it is restored with no contents. That means
+          // no pre-range submitted build or copy targeted it, which is legitimate and common:
+          // its builds may all be in range, it may not have been built yet, or its build may
+          // sit in a command buffer that was never submitted - in each case uninitialized *is*
+          // its state at the cut. Trace level, since only the analysis pass can tell whether
+          // something fills it before the first trace.
+          if (!chainDestinationAsKeys.count(asKey)) {
+            LOG_TRACE << "Vulkan subcapture: bottom-level acceleration structure key=" << asKey
+                      << " is restored with no contents - no retained chain operation writes it";
+          }
+          continue;
+        }
+      }
+      if (useChain) {
+        if (auto* as = GetState<AccelerationStructureState>(asKey);
+            as && as->Type != VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR) {
+          FatalSubcaptureError(
+              "acceleration structure key=" + std::to_string(asKey) + " has type " +
+              std::to_string(static_cast<int>(as->Type)) +
+              ", which is neither top- nor bottom-level, so subcapture cannot restore it");
+        }
+        // Aborts the run if it cannot be rebuilt.
+        RestoreAccelerationStructureByRebuild(asKey, deviceKey, physDevKey, queueKey, poolKey);
+        continue;
+      }
+
+      std::vector<uint8_t> data;
+      VkDeviceAddress stagingDeviceAddress = 0;
+      uint64_t stagingOpaqueCaptureAddress = 0;
+      uint64_t stagingMemoryOpaqueCaptureAddress = 0;
+      if (!m_GpuReadbackHelper->ReadAccelerationStructureSerialized(
+              deviceKey, physDevKey, queueKey, poolKey, asKey, data, stagingDeviceAddress,
+              stagingOpaqueCaptureAddress, stagingMemoryOpaqueCaptureAddress)) {
+        // Skipping leaves the structure uninitialized - its backing buffer is claimed, so
+        // nothing else fills it either - and the first trace over it loses the device.
+        FatalSubcaptureError("GPU readback failed for acceleration structure key=" +
+                             std::to_string(asKey) + ", so its content cannot be restored");
+      }
+
+      // EmitAccelerationStructureDeserialize creates this staging buffer at a capture/replay
+      // address, so it must be probed as such.
+      VkBufferUsageFlags stagingUsage = VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR;
+      VkMemoryRequirements stagingReq{};
+      if (!QueryCaptureReplayBufferRequirements(deviceKey, data.size(), stagingUsage, stagingReq)) {
+        FatalSubcaptureError(
+            "failed to query staging buffer requirements for acceleration structure key=" +
+            std::to_string(asKey) + ", so its content cannot be restored");
+      }
+      uint32_t stagingMemType =
+          m_GpuReadbackHelper->FindStagingMemoryType(physDevKey, stagingReq.memoryTypeBits);
+      if (stagingMemType == UINT32_MAX) {
+        FatalSubcaptureError("no HOST_VISIBLE memory type satisfying staging memoryTypeBits=" +
+                             std::to_string(stagingReq.memoryTypeBits) +
+                             " for acceleration structure key=" + std::to_string(asKey) +
+                             ", so its content cannot be restored");
+      }
+
+      EmitAccelerationStructureDeserialize(m_Recorder, deviceKey, queueKey, poolKey, asKey,
+                                           data.size(), stagingReq.size, stagingMemType,
+                                           stagingDeviceAddress, stagingOpaqueCaptureAddress,
+                                           stagingMemoryOpaqueCaptureAddress, data);
+      LOG_TRACE << "Vulkan subcapture: restored acceleration structure content, key=" << asKey
+                << " size=" << data.size() << " allocSize=" << stagingReq.size;
+    }
+  }
+}
+
 void StateTrackingService::RestoreBufferContents() {
   // Group buffers by device.
   std::unordered_map<uint64_t, std::vector<uint64_t>> buffersByDevice;
@@ -2443,11 +4538,23 @@ void StateTrackingService::RestoreBufferContents() {
     }
 
     auto* buf = static_cast<BufferState*>(sp.get());
+    if (buf->ContentRestored) {
+      continue;
+    }
     if (buf->BufferSize == 0 || buf->BoundMemoryKey == 0) {
       continue;
     }
     if (!(buf->UsageFlags & VK_BUFFER_USAGE_TRANSFER_SRC_BIT)) {
       continue;
+    }
+    // Diagnostic only. If this buffer really does back an acceleration structure the copy
+    // below will corrupt it, but the usage bit alone does not prove that: applications
+    // over-declare usage, and may sub-allocate structures out of a buffer that also holds
+    // ordinary data which must still be restored. So warn and continue rather than skip.
+    if (buf->UsageFlags & VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR) {
+      LOG_WARNING << "Vulkan subcapture: restoring raw content of buffer key=" << key
+                  << " which declares ACCELERATION_STRUCTURE_STORAGE usage; if it backs an "
+                     "acceleration structure, its content restore path failed to claim it";
     }
 
     // Host-visible buffers are NOT skipped here: the CPU shadow only captures
@@ -2460,7 +4567,7 @@ void StateTrackingService::RestoreBufferContents() {
 
   for (auto& [deviceKey, bufKeys] : buffersByDevice) {
     uint64_t queueKey = 0, poolKey = 0;
-    if (!FindQueueAndPool(m_States, deviceKey, queueKey, poolKey)) {
+    if (!::gits::vulkan::FindQueueAndPool(m_States, deviceKey, queueKey, poolKey)) {
       LOG_WARNING << "Vulkan subcapture: skipping buffer content restore for device key="
                   << deviceKey << " (no queue and command pool with matching queue family indices)";
       continue;
@@ -2515,7 +4622,7 @@ void StateTrackingService::RestoreBufferContents() {
       if (hostVisible) {
         std::vector<uint8_t> probe;
         if (m_GpuReadbackHelper->ReadBuffer(deviceKey, physDevKey, queueKey, poolKey, bufKey,
-                                            buf->BufferSize, probe) &&
+                                            /*srcOffset=*/0, buf->BufferSize, probe) &&
             ShadowFullyCoversAndMatches(*buf, *mem, probe)) {
           LOG_TRACE << "Vulkan subcapture: buffer key=" << bufKey
                     << " matches CPU shadow - excluded from content manifest "
@@ -2550,7 +4657,7 @@ void StateTrackingService::RestoreBufferContents() {
       auto* buf = static_cast<BufferState*>(GetState(bufKey));
       if (buf) {
         if (!m_GpuReadbackHelper->ReadBuffer(deviceKey, physDevKey, queueKey, poolKey, bufKey,
-                                             buf->BufferSize, data)) {
+                                             /*srcOffset=*/0, buf->BufferSize, data)) {
           LOG_WARNING << "Vulkan subcapture: GPU readback failed for buffer key=" << bufKey;
           data.clear();
         }
@@ -2620,7 +4727,7 @@ void StateTrackingService::RestoreImageContents() {
 
   for (auto& [deviceKey, imgKeys] : imagesByDevice) {
     uint64_t queueKey = 0, poolKey = 0;
-    if (!FindQueueAndPool(m_States, deviceKey, queueKey, poolKey)) {
+    if (!::gits::vulkan::FindQueueAndPool(m_States, deviceKey, queueKey, poolKey)) {
       LOG_WARNING << "Vulkan subcapture: skipping image content restore for device key="
                   << deviceKey << " (no queue and command pool with matching queue family indices)";
       continue;

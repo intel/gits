@@ -34,7 +34,8 @@ public:
   void OnQueueSubmit(const VkSubmitInfo* pSubmits,
                      uint32_t submitCount,
                      const std::vector<uint64_t>& handleKeys,
-                     uint64_t fenceKey);
+                     uint64_t fenceKey,
+                     uint64_t submitQueueKey);
 
   // Called after a successful vkQueueSubmit2 / vkQueueSubmit2KHR.
   // handleKeys: m_pSubmits.HandleKeys from the decoded command.
@@ -42,7 +43,8 @@ public:
   void OnQueueSubmit2(const VkSubmitInfo2* pSubmits,
                       uint32_t submitCount,
                       const std::vector<uint64_t>& handleKeys,
-                      uint64_t fenceKey);
+                      uint64_t fenceKey,
+                      uint64_t submitQueueKey);
 
   // Called after vkQueuePresentKHR (regardless of return value) to unsignal
   // the binary semaphores consumed by the present operation.

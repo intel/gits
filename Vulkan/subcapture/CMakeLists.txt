@@ -20,12 +20,15 @@ set(STATE_TRACKING_SRC
   ${SRC_DIR}/syncStateService.cpp
   ${SRC_DIR}/queryPoolStateService.h
   ${SRC_DIR}/queryPoolStateService.cpp
+  ${SRC_DIR}/deviceAddressTrackingService.h
+  ${SRC_DIR}/deviceAddressTrackingService.cpp
   ${SRC_DIR}/imageLayoutService.h
   ${SRC_DIR}/imageLayoutService.cpp
   ${SRC_DIR}/commandBufferLifecycleService.h
   ${SRC_DIR}/commandBufferLifecycleService.cpp
   ${SRC_DIR}/mappedMemoryService.h
   ${SRC_DIR}/mappedMemoryService.cpp
+  ${SRC_DIR}/subcaptureFatal.h
   ${SRC_DIR}/subcaptureRange.h
   ${SRC_DIR}/subcaptureRange.cpp
   ${SRC_DIR}/subcaptureRecorder.h
@@ -34,6 +37,12 @@ set(STATE_TRACKING_SRC
   ${SRC_DIR}/analyzerResults.cpp
   ${SRC_DIR}/analyzerService.h
   ${SRC_DIR}/analyzerService.cpp
+  ${SRC_DIR}/analyzerRaytracingService.h
+  ${SRC_DIR}/analyzerRaytracingService.cpp
+  ${SRC_DIR}/raytracingOptimizationService.h
+  ${SRC_DIR}/raytracingOptimizationService.cpp
+  ${SRC_DIR}/raytracingInstancesDump.h
+  ${SRC_DIR}/raytracingInstancesDump.cpp
 )
 source_group("state_tracking" FILES ${STATE_TRACKING_SRC})
 
@@ -45,6 +54,7 @@ set(LAYER_SRC
   ${SRC_DIR}/recordingLayerCustom.cpp
   ${SRC_DIR}/analyzerLayerAuto.h
   ${SRC_DIR}/analyzerLayerAuto.cpp
+  ${SRC_DIR}/analyzerLayerCustom.cpp
   ${SRC_DIR}/gpuReadbackHelper.h
   ${SRC_DIR}/gpuReadbackHelper.cpp
 )

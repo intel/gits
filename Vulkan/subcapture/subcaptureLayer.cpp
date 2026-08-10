@@ -11,7 +11,12 @@
 #include "commandSerializersCustom.h"
 #include "commandSerializersAuto.h"
 #include "commandCodersAuto.h"
+#include "configurator.h"
 #include "log.h"
+#include "subcaptureFatal.h"
+
+#include <algorithm>
+#include <map>
 
 namespace gits {
 namespace vulkan {
@@ -33,6 +38,19 @@ SubcaptureLayer::SubcaptureLayer(PlayerManager& playerManager,
   if (m_AnalysisMode) {
     // Analysis pass: collect in-range object usage; never restore.
     m_AnalyzerService = std::make_unique<AnalyzerService>(m_StateTracking, m_SubcaptureRange);
+    m_AnalyzerRaytracingService =
+        std::make_unique<AnalyzerRaytracingService>(m_StateTracking, m_GpuReadbackHelper);
+    m_RaytracingOptimizationService = std::make_unique<RaytracingOptimizationService>();
+    m_AnalyzerService->SetRaytracingService(m_AnalyzerRaytracingService.get());
+    m_AnalyzerService->SetOptimizationService(m_RaytracingOptimizationService.get());
+    // Drive the analyzer's TLAS instance readback and flush the chain-reduction graph at
+    // submit time, once the staged builds/copies have executed. Flushing at submit gives
+    // the chain graph true GPU execution order across command buffers.
+    m_StateTracking.SetSubmittedCommandBufferCallback(
+        [this](uint64_t cbKey, uint64_t submitQueueKey) {
+          m_AnalyzerRaytracingService->ReadStagedTlasInstances(cbKey, submitQueueKey);
+          m_RaytracingOptimizationService->OnQueueSubmit(cbKey);
+        });
   } else {
     // Recording pass: gate restore by the analysis results (a no-op that
     // restores everything when optimization is off or the analysis set is
@@ -181,68 +199,69 @@ void SubcaptureLayer::Post(vkEnumeratePhysicalDevicesCommand& command) {
   }
 }
 
-// Physical devices obtained via vkEnumeratePhysicalDeviceGroups[KHR] are embedded
-// inside VkPhysicalDeviceGroupProperties::physicalDevices[].  The HandleKeys layout
-// mirrors UpdateOutputHandle: one key per physical device, in group/slot order.
-// Without these handlers games that use the device-group enumeration path would have
-// no PhysicalDeviceState entries, causing state restore to fail when vkCreateDevice
-// references a physical device key that was never tracked.
-void SubcaptureLayer::Post(vkEnumeratePhysicalDeviceGroupsCommand& command) {
-  if (command.m_Return.Value != VK_SUCCESS || !command.m_pPhysicalDeviceGroupProperties.Value) {
-    return;
-  }
+// Physical devices obtained via vkEnumeratePhysicalDeviceGroups[KHR] are embedded inside
+// VkPhysicalDeviceGroupProperties::physicalDevices[]. The HandleKeys layout mirrors
+// UpdateOutputHandle: one key per physical device, in group/slot order. Without these
+// handlers, games using the device-group enumeration path would have no
+// PhysicalDeviceState entries and state restore would fail on vkCreateDevice.
+namespace {
+template <typename TCommand>
+void TrackPhysicalDeviceGroups(StateTrackingService& stateTracking,
+                               const TCommand& command,
+                               const char* apiName) {
   uint32_t keyIdx = 0;
-  for (uint32_t i = 0; i < command.m_pPhysicalDeviceGroupProperties.Size; ++i) {
-    const auto& group = command.m_pPhysicalDeviceGroupProperties.Value[i];
+  const auto& groupProps = command.m_pPhysicalDeviceGroupProperties;
+  for (uint32_t i = 0; i < groupProps.Size; ++i) {
+    const auto& group = groupProps.Value[i];
     for (uint32_t j = 0; j < group.physicalDeviceCount; ++j) {
-      if (keyIdx >= command.m_pPhysicalDeviceGroupProperties.HandleKeys.size()) {
-        // Bail out silently used to hide a real recorder/codegen bug: a group
-        // declares more devices than HandleKeys provides, so subsequent groups
-        // will be skipped entirely.  Surface it so it can be diagnosed.
-        LOG_WARNING << "Vulkan subcapture: vkEnumeratePhysicalDeviceGroups HandleKeys size="
-                    << command.m_pPhysicalDeviceGroupProperties.HandleKeys.size()
+      if (keyIdx >= groupProps.HandleKeys.size()) {
+        // A group declaring more devices than HandleKeys provides is a recorder/codegen
+        // bug. Log it rather than silently skipping the remaining groups.
+        LOG_WARNING << "Vulkan subcapture: " << apiName
+                    << " HandleKeys size=" << groupProps.HandleKeys.size()
                     << " is smaller than the cumulative physicalDeviceCount; "
                     << "remaining devices in group " << i
                     << " and later groups will not be tracked";
         return;
       }
-      const uint64_t key = command.m_pPhysicalDeviceGroupProperties.HandleKeys[keyIdx++];
-      if (key && !m_StateTracking.HasState(key)) {
-        auto state = std::make_unique<PhysicalDeviceState>();
-        state->Key = key;
-        state->ParentKey = command.m_instance.Key;
-        StoreState(std::move(state), command);
+      const uint64_t key = groupProps.HandleKeys[keyIdx++];
+      if (!key) {
+        continue;
       }
+      auto state = std::make_unique<PhysicalDeviceState>();
+      state->Key = key;
+      state->ParentKey = command.m_instance.Key;
+      // Typed-only state (no creation blob): normalizing the command id routes the device
+      // through RestorePhysicalDevice, which synthesizes one robust
+      // vkEnumeratePhysicalDevices per live instance, and lets vkDestroyInstance drop it.
+      state->CreationCommandId = CommandId::ID_VKENUMERATEPHYSICALDEVICES;
+      if (stateTracking.HasState(key)) {
+        // Re-enumeration on a possibly new instance: refresh ParentKey.
+        stateTracking.RemoveState(key);
+      }
+      stateTracking.StoreState(std::move(state));
     }
   }
 }
+} // namespace
 
-void SubcaptureLayer::Post(vkEnumeratePhysicalDeviceGroupsKHRCommand& command) {
-  if (command.m_Return.Value != VK_SUCCESS || !command.m_pPhysicalDeviceGroupProperties.Value) {
+void SubcaptureLayer::Post(vkEnumeratePhysicalDeviceGroupsCommand& command) {
+  // VK_INCOMPLETE still yields valid handles, and dropping them would leave the device
+  // with no PhysicalDeviceState. Mirrors Post(vkEnumeratePhysicalDevicesCommand).
+  if ((command.m_Return.Value != VK_SUCCESS && command.m_Return.Value != VK_INCOMPLETE) ||
+      !command.m_pPhysicalDeviceGroupProperties.Value) {
     return;
   }
-  uint32_t keyIdx = 0;
-  for (uint32_t i = 0; i < command.m_pPhysicalDeviceGroupProperties.Size; ++i) {
-    const auto& group = command.m_pPhysicalDeviceGroupProperties.Value[i];
-    for (uint32_t j = 0; j < group.physicalDeviceCount; ++j) {
-      if (keyIdx >= command.m_pPhysicalDeviceGroupProperties.HandleKeys.size()) {
-        // See vkEnumeratePhysicalDeviceGroups for rationale.
-        LOG_WARNING << "Vulkan subcapture: vkEnumeratePhysicalDeviceGroupsKHR HandleKeys size="
-                    << command.m_pPhysicalDeviceGroupProperties.HandleKeys.size()
-                    << " is smaller than the cumulative physicalDeviceCount; "
-                    << "remaining devices in group " << i
-                    << " and later groups will not be tracked";
-        return;
-      }
-      const uint64_t key = command.m_pPhysicalDeviceGroupProperties.HandleKeys[keyIdx++];
-      if (key && !m_StateTracking.HasState(key)) {
-        auto state = std::make_unique<PhysicalDeviceState>();
-        state->Key = key;
-        state->ParentKey = command.m_instance.Key;
-        StoreState(std::move(state), command);
-      }
-    }
+  TrackPhysicalDeviceGroups(m_StateTracking, command, "vkEnumeratePhysicalDeviceGroups");
+}
+
+void SubcaptureLayer::Post(vkEnumeratePhysicalDeviceGroupsKHRCommand& command) {
+  // See Post(vkEnumeratePhysicalDeviceGroupsCommand): accept VK_INCOMPLETE too.
+  if ((command.m_Return.Value != VK_SUCCESS && command.m_Return.Value != VK_INCOMPLETE) ||
+      !command.m_pPhysicalDeviceGroupProperties.Value) {
+    return;
   }
+  TrackPhysicalDeviceGroups(m_StateTracking, command, "vkEnumeratePhysicalDeviceGroupsKHR");
 }
 
 void SubcaptureLayer::Post(vkCreateDeviceCommand& command) {
@@ -281,6 +300,18 @@ void SubcaptureLayer::Post(vkAllocateMemoryCommand& command) {
   if (command.m_pAllocateInfo.Value) {
     state->AllocationSize = command.m_pAllocateInfo.Value->allocationSize;
     state->MemoryTypeIndex = command.m_pAllocateInfo.Value->memoryTypeIndex;
+    // Capture the memory-side opaque capture/replay address (if present) so a build input
+    // backed by this memory can be recreated at the same device address.
+    const auto* pNext = static_cast<const VkBaseInStructure*>(command.m_pAllocateInfo.Value->pNext);
+    while (pNext) {
+      if (pNext->sType == VK_STRUCTURE_TYPE_MEMORY_OPAQUE_CAPTURE_ADDRESS_ALLOCATE_INFO) {
+        state->OpaqueCaptureAddress =
+            reinterpret_cast<const VkMemoryOpaqueCaptureAddressAllocateInfo*>(pNext)
+                ->opaqueCaptureAddress;
+        break;
+      }
+      pNext = pNext->pNext;
+    }
   }
   // VkMemoryAllocateInfo itself has no handle members, but its pNext chain
   // can carry VkMemoryDedicatedAllocateInfo (image / buffer) and other
@@ -301,6 +332,13 @@ void SubcaptureLayer::Post(vkAllocateMemoryCommand& command) {
 }
 
 void SubcaptureLayer::Post(vkFreeMemoryCommand& command) {
+  // RestoreBlasChain needs the AS backing memory, so it is flagged Destroyed rather than
+  // erased. Other memory is erased as before.
+  auto* state = m_StateTracking.GetState<DeviceMemoryState>(command.m_memory.Key);
+  if (state && state->AsBacking) {
+    state->Destroyed = true;
+    return;
+  }
   m_StateTracking.RemoveState(command.m_memory.Key);
 }
 
@@ -421,7 +459,8 @@ void SubcaptureLayer::Post(vkQueueSubmitCommand& command) {
     return;
   }
   m_SyncState.OnQueueSubmit(command.m_pSubmits.Value, command.m_pSubmits.Size,
-                            command.m_pSubmits.HandleKeys, command.m_fence.Key);
+                            command.m_pSubmits.HandleKeys, command.m_fence.Key,
+                            command.m_queue.Key);
   // Commit each submitted CB's buffered image-layout transitions to
   // ImageState::CurrentLayout in submission order (layouts take effect at
   // submit time, not record time).
@@ -434,7 +473,8 @@ void SubcaptureLayer::Post(vkQueueSubmit2Command& command) {
     return;
   }
   m_SyncState.OnQueueSubmit2(command.m_pSubmits.Value, command.m_pSubmits.Size,
-                             command.m_pSubmits.HandleKeys, command.m_fence.Key);
+                             command.m_pSubmits.HandleKeys, command.m_fence.Key,
+                             command.m_queue.Key);
   m_ImageLayout.OnQueueSubmit2(command.m_pSubmits.Value, command.m_pSubmits.Size,
                                command.m_pSubmits.HandleKeys);
 }
@@ -444,7 +484,8 @@ void SubcaptureLayer::Post(vkQueueSubmit2KHRCommand& command) {
     return;
   }
   m_SyncState.OnQueueSubmit2(command.m_pSubmits.Value, command.m_pSubmits.Size,
-                             command.m_pSubmits.HandleKeys, command.m_fence.Key);
+                             command.m_pSubmits.HandleKeys, command.m_fence.Key,
+                             command.m_queue.Key);
   m_ImageLayout.OnQueueSubmit2(command.m_pSubmits.Value, command.m_pSubmits.Size,
                                command.m_pSubmits.HandleKeys);
 }
@@ -588,11 +629,30 @@ void SubcaptureLayer::Post(vkCreateBufferCommand& command) {
   if (command.m_pCreateInfo.Value) {
     state->BufferSize = command.m_pCreateInfo.Value->size;
     state->UsageFlags = command.m_pCreateInfo.Value->usage;
+    // Detect a capture/replay opaque address via pNext chain (unlike AS,
+    // VkBufferCreateInfo has no direct opaqueCaptureAddress field).
+    const auto* pNext = static_cast<const VkBaseInStructure*>(command.m_pCreateInfo.Value->pNext);
+    while (pNext) {
+      if (pNext->sType == VK_STRUCTURE_TYPE_BUFFER_OPAQUE_CAPTURE_ADDRESS_CREATE_INFO) {
+        const auto* addrInfo =
+            reinterpret_cast<const VkBufferOpaqueCaptureAddressCreateInfo*>(pNext);
+        state->OpaqueCaptureAddress = addrInfo->opaqueCaptureAddress;
+        break;
+      }
+      pNext = pNext->pNext;
+    }
   }
   StoreState(std::move(state), command);
 }
 
 void SubcaptureLayer::Post(vkDestroyBufferCommand& command) {
+  // An AS storage buffer is flagged Destroyed rather than erased - see
+  // Post(vkFreeMemoryCommand&). Other buffers are erased as before.
+  auto* state = m_StateTracking.GetState<BufferState>(command.m_buffer.Key);
+  if (state && state->AsBacking) {
+    state->Destroyed = true;
+    return;
+  }
   m_StateTracking.RemoveState(command.m_buffer.Key);
 }
 
@@ -704,6 +764,34 @@ void SubcaptureLayer::Post(vkBindImageMemory2KHRCommand& command) {
       state->MemoryOffset = command.m_pBindInfos.Value[i].memoryOffset;
     }
   }
+}
+
+namespace {
+template <typename TCommand>
+void TrackBufferDeviceAddress(StateTrackingService& stateTracking, TCommand& command) {
+  if (command.m_Return.Value == 0 || command.m_pInfo.HandleKeys.empty()) {
+    return;
+  }
+  const uint64_t bufferKey = command.m_pInfo.HandleKeys[0];
+  auto* state = stateTracking.GetState<BufferState>(bufferKey);
+  if (!state) {
+    return;
+  }
+  state->DeviceAddress = command.m_Return.Value;
+  stateTracking.GetDeviceAddressTracking().Track(command.m_Return.Value, bufferKey);
+}
+} // namespace
+
+void SubcaptureLayer::Post(vkGetBufferDeviceAddressCommand& command) {
+  TrackBufferDeviceAddress(m_StateTracking, command);
+}
+
+void SubcaptureLayer::Post(vkGetBufferDeviceAddressKHRCommand& command) {
+  TrackBufferDeviceAddress(m_StateTracking, command);
+}
+
+void SubcaptureLayer::Post(vkGetBufferDeviceAddressEXTCommand& command) {
+  TrackBufferDeviceAddress(m_StateTracking, command);
 }
 
 void SubcaptureLayer::Post(vkCreateBufferViewCommand& command) {
@@ -1317,7 +1405,7 @@ void SubcaptureLayer::NotifyTemplateUpdateHandles(uint64_t templateKey,
   std::vector<uint64_t> embeddedKeys;
   m_StateTracking.GetDescriptorSetUpdateService().CollectTemplateUpdateHandleKeys(
       templateKey, dataBytes, embeddedKeys);
-  m_AnalyzerService->NotifyObjects(embeddedKeys);
+  m_AnalyzerService->AddObjectsForRestore(embeddedKeys);
 }
 
 void SubcaptureLayer::Post(vkUpdateDescriptorSetWithTemplateCommand& command) {
@@ -1830,6 +1918,531 @@ void SubcaptureLayer::Post(vkCmdExecuteCommandsCommand& command) {
     m_StateTracking.GetQueryPoolStateService().MergeSecondary(command.m_commandBuffer.Key,
                                                               secondaryKey);
     m_ImageLayout.MergeSecondary(command.m_commandBuffer.Key, secondaryKey);
+    m_StateTracking.MergeSecondaryAsInputReadbacks(command.m_commandBuffer.Key, secondaryKey);
+    if (m_AnalyzerRaytracingService) {
+      m_AnalyzerRaytracingService->MergeSecondary(command.m_commandBuffer.Key, secondaryKey);
+    }
+    if (m_RaytracingOptimizationService) {
+      m_RaytracingOptimizationService->MergeSecondary(command.m_commandBuffer.Key, secondaryKey);
+    }
+  }
+}
+
+// ---- Acceleration structure build/copy dependency tracking -------------
+// Beyond ordinary CB-dependency tracking, a build snapshots its own raw command bytes onto
+// the destination AS state(s) for the rebuild-from-inputs content restore, and folds every
+// source-AS key it can resolve into that AS's DependencyKeys. That single list is then
+// consumed generically by RestoreOne's dependency walk and AnalyzerService::AddClosure.
+namespace {
+void ResolveAndTrackBufferAddress(StateTrackingService& stateTracking,
+                                  VkDeviceAddress address,
+                                  std::vector<uint64_t>& depKeys) {
+  if (address == 0) {
+    return;
+  }
+  auto found = stateTracking.GetDeviceAddressTracking().FindContaining(address);
+  if (found) {
+    depKeys.push_back(found->first);
+  }
+}
+
+void CollectGeometryInputBufferKeys(StateTrackingService& stateTracking,
+                                    const VkAccelerationStructureGeometryKHR& geometry,
+                                    std::vector<uint64_t>& depKeys) {
+  switch (geometry.geometryType) {
+  case VK_GEOMETRY_TYPE_TRIANGLES_KHR: {
+    const VkAccelerationStructureGeometryTrianglesDataKHR& tri = geometry.geometry.triangles;
+    ResolveAndTrackBufferAddress(stateTracking, tri.vertexData.deviceAddress, depKeys);
+    if (tri.indexType != VK_INDEX_TYPE_NONE_KHR) {
+      ResolveAndTrackBufferAddress(stateTracking, tri.indexData.deviceAddress, depKeys);
+    }
+    ResolveAndTrackBufferAddress(stateTracking, tri.transformData.deviceAddress, depKeys);
+    break;
+  }
+  case VK_GEOMETRY_TYPE_AABBS_KHR:
+    ResolveAndTrackBufferAddress(stateTracking, geometry.geometry.aabbs.data.deviceAddress,
+                                 depKeys);
+    break;
+  case VK_GEOMETRY_TYPE_INSTANCES_KHR:
+    if (!geometry.geometry.instances.arrayOfPointers) {
+      ResolveAndTrackBufferAddress(stateTracking, geometry.geometry.instances.data.deviceAddress,
+                                   depKeys);
+    }
+    break;
+  default:
+    break;
+  }
+}
+
+// A raw [Start, End) byte interval within an input buffer, before merging.
+struct RawInputRegion {
+  VkDeviceSize Start{};
+  VkDeviceSize End{};
+};
+
+// Append the exact referenced byte range(s) of one geometry to regionsByBuffer, keyed by the
+// owning buffer. Everything the range math needs - stride/count/format plus the
+// per-geometry build range - is available at build-record time. Vertex spans round the last
+// vertex up to a full stride, so they may run one trailing stride past a tightly-packed
+// buffer. MergeInputRegions clamps that to the buffer size.
+void ComputeGeometryInputRegions(StateTrackingService& stateTracking,
+                                 const VkAccelerationStructureGeometryKHR& geometry,
+                                 const VkAccelerationStructureBuildRangeInfoKHR& range,
+                                 std::map<uint64_t, std::vector<RawInputRegion>>& regionsByBuffer) {
+  auto addRegion = [&](VkDeviceAddress address, VkDeviceSize extraOffset, VkDeviceSize size) {
+    if (address == 0 || size == 0) {
+      return;
+    }
+    auto found = stateTracking.GetDeviceAddressTracking().FindContaining(address);
+    if (!found) {
+      return;
+    }
+    const VkDeviceSize start = found->second + extraOffset;
+    regionsByBuffer[found->first].push_back({start, start + size});
+  };
+
+  switch (geometry.geometryType) {
+  case VK_GEOMETRY_TYPE_TRIANGLES_KHR: {
+    const VkAccelerationStructureGeometryTrianglesDataKHR& tri = geometry.geometry.triangles;
+    if (tri.transformData.deviceAddress != 0) {
+      addRegion(tri.transformData.deviceAddress, range.transformOffset,
+                sizeof(VkTransformMatrixKHR));
+    }
+    if (tri.indexType != VK_INDEX_TYPE_NONE_KHR) {
+      const VkDeviceSize elem = (tri.indexType == VK_INDEX_TYPE_UINT16) ? 2 : 4;
+      addRegion(tri.indexData.deviceAddress, range.primitiveOffset,
+                static_cast<VkDeviceSize>(range.primitiveCount) * 3 * elem);
+      // Indexed: vertices are addressed at vertexData + stride*(firstVertex + index), where
+      // maxVertex is already the highest *effective* index (VUID-...-10774), so firstVertex
+      // must not be added on top of it. Span: [firstVertex, maxVertex + 1) strides.
+      addRegion(tri.vertexData.deviceAddress,
+                static_cast<VkDeviceSize>(range.firstVertex) * tri.vertexStride,
+                (static_cast<VkDeviceSize>(tri.maxVertex) + 1 - range.firstVertex) *
+                    tri.vertexStride);
+    } else {
+      // Non-indexed: vertices are addressed at
+      // vertexData + primitiveOffset + stride*(firstVertex + i), i in [0, primitiveCount*3).
+      addRegion(tri.vertexData.deviceAddress,
+                range.primitiveOffset +
+                    static_cast<VkDeviceSize>(range.firstVertex) * tri.vertexStride,
+                static_cast<VkDeviceSize>(range.primitiveCount) * 3 * tri.vertexStride);
+    }
+    break;
+  }
+  case VK_GEOMETRY_TYPE_AABBS_KHR: {
+    const VkAccelerationStructureGeometryAabbsDataKHR& aabbs = geometry.geometry.aabbs;
+    addRegion(aabbs.data.deviceAddress, range.primitiveOffset,
+              static_cast<VkDeviceSize>(range.primitiveCount) * aabbs.stride);
+    break;
+  }
+  case VK_GEOMETRY_TYPE_INSTANCES_KHR: {
+    const VkAccelerationStructureGeometryInstancesDataKHR& inst = geometry.geometry.instances;
+    if (!inst.arrayOfPointers) {
+      addRegion(inst.data.deviceAddress, range.primitiveOffset,
+                static_cast<VkDeviceSize>(range.primitiveCount) *
+                    sizeof(VkAccelerationStructureInstanceKHR));
+    }
+    // arrayOfPointers instance data is not captured (parity with the analyzer's
+    // TLAS->BLAS discovery, which also skips it).
+    break;
+  }
+  default:
+    break;
+  }
+}
+
+// Merge overlapping/adjacent raw regions into minimal sorted intervals, clamped to the
+// buffer size. Hash is left 0, filled at submit-time readback.
+std::vector<CapturedBuildInputRegion> MergeInputRegions(std::vector<RawInputRegion> regions,
+                                                        VkDeviceSize bufferSize) {
+  std::vector<CapturedBuildInputRegion> merged;
+  if (regions.empty()) {
+    return merged;
+  }
+  std::sort(regions.begin(), regions.end(),
+            [](const RawInputRegion& a, const RawInputRegion& b) { return a.Start < b.Start; });
+  VkDeviceSize curStart = regions[0].Start;
+  VkDeviceSize curEnd = regions[0].End;
+  // A region may run one trailing vertex-stride past a tightly-packed buffer. Clamping is
+  // safe, since the GPU cannot read past the buffer end either.
+  auto flush = [&]() {
+    VkDeviceSize s = std::min(curStart, bufferSize);
+    VkDeviceSize e = std::min(curEnd, bufferSize);
+    if (e > s) {
+      merged.push_back({s, e - s, 0});
+    }
+  };
+  for (size_t i = 1; i < regions.size(); ++i) {
+    if (regions[i].Start <= curEnd) {
+      curEnd = std::max(curEnd, regions[i].End);
+    } else {
+      flush();
+      curStart = regions[i].Start;
+      curEnd = regions[i].End;
+    }
+  }
+  flush();
+  return merged;
+}
+} // namespace
+
+void SubcaptureLayer::Pre(vkCmdBuildAccelerationStructuresKHRCommand& command) {
+  // Record the input-buffer readback copies into the application's command buffer before the
+  // build. Relevant only for subcapture run (not analysis).
+  if (m_AnalysisMode || !m_AnalyzerResults.UseAsChainRestore()) {
+    return;
+  }
+  const uint32_t infoCount = command.m_infoCount.Value;
+  if (infoCount == 0 || !command.m_pInfos.Value ||
+      command.m_pInfos.HandleKeys.size() < 2 * static_cast<size_t>(infoCount)) {
+    return;
+  }
+  const uint64_t cbKey = command.m_commandBuffer.Key;
+  auto* cbState = m_StateTracking.GetState<CommandBufferState>(cbKey);
+  if (!cbState) {
+    return;
+  }
+  auto* poolState = m_StateTracking.GetState<CommandPoolState>(cbState->PoolKey);
+  if (!poolState) {
+    return;
+  }
+  const uint64_t deviceKey = poolState->ParentKey;
+  auto* devState = m_StateTracking.GetState<DeviceState>(deviceKey);
+  if (!devState) {
+    return;
+  }
+  const uint64_t physDevKey = devState->ParentKey;
+
+  for (uint32_t i = 0; i < infoCount; ++i) {
+    const VkAccelerationStructureBuildGeometryInfoKHR& info = command.m_pInfos.Value[i];
+    const uint64_t dstKey = command.m_pInfos.HandleKeys[2 * i + 1];
+    if (!dstKey) {
+      continue;
+    }
+    std::map<uint64_t, std::vector<RawInputRegion>> regionsByBuffer;
+    for (uint32_t g = 0; g < info.geometryCount; ++g) {
+      const VkAccelerationStructureGeometryKHR* geometry = nullptr;
+      if (info.pGeometries) {
+        geometry = &info.pGeometries[g];
+      } else if (info.ppGeometries && info.ppGeometries[g]) {
+        geometry = info.ppGeometries[g];
+      }
+      if (!geometry) {
+        continue;
+      }
+      VkAccelerationStructureBuildRangeInfoKHR range{};
+      if (i < command.m_ppBuildRangeInfos.Data.size() &&
+          g < command.m_ppBuildRangeInfos.Data[i].size()) {
+        range = command.m_ppBuildRangeInfos.Data[i][g];
+      }
+      ComputeGeometryInputRegions(m_StateTracking, *geometry, range, regionsByBuffer);
+    }
+    if (regionsByBuffer.empty()) {
+      continue;
+    }
+
+    PendingAsInputReadback pending;
+    pending.AsKey = dstKey;
+    pending.CommandKey = command.m_Key;
+    for (auto& [bufKey, raw] : regionsByBuffer) {
+      // Destroyed buffers are retained only when they back an acceleration structure, and
+      // their handles are dead, so a stale device-address hit means "no such buffer".
+      auto* buf = m_StateTracking.GetState<BufferState>(bufKey);
+      if (!buf || buf->Destroyed || buf->BufferSize == 0 || buf->BoundMemoryKey == 0) {
+        continue;
+      }
+      auto* mem = m_StateTracking.GetState<DeviceMemoryState>(buf->BoundMemoryKey);
+      if (!mem || mem->Destroyed) {
+        continue;
+      }
+      CapturedBuildInputBuffer cbuf;
+      cbuf.BufferKey = bufKey;
+      cbuf.Size = buf->BufferSize;
+      cbuf.BufferOpaqueCaptureAddress = buf->OpaqueCaptureAddress;
+      cbuf.MemoryOpaqueCaptureAddress = mem->OpaqueCaptureAddress;
+      cbuf.MemoryTypeIndex = mem->MemoryTypeIndex;
+      cbuf.MemoryOffset = buf->MemoryOffset;
+      cbuf.BaseDeviceAddress = buf->DeviceAddress;
+      cbuf.Regions = MergeInputRegions(std::move(raw), buf->BufferSize);
+      if (cbuf.Regions.empty()) {
+        continue;
+      }
+      StagedInputReadback staging;
+      if (!m_GpuReadbackHelper.StageBufferRegions(deviceKey, physDevKey, cbKey, bufKey,
+                                                  cbuf.Regions, staging)) {
+        LOG_WARNING << "Vulkan subcapture: failed to stage acceleration structure build input copy "
+                       "(buffer key="
+                    << bufKey << "); rebuild may be incomplete if this buffer is freed";
+        continue;
+      }
+      pending.Buffers.push_back(std::move(cbuf));
+      pending.Staging.push_back(staging);
+    }
+    if (!pending.Buffers.empty()) {
+      cbState->AsInputReadbacksAfterSubmit.push_back(std::move(pending));
+    }
+  }
+}
+
+void SubcaptureLayer::RequireBlasChainForRaytracing(const char* commandName) {
+  if (m_AnalysisMode || !m_SubcaptureRange.BeforeRange() ||
+      !m_AnalyzerResults.CaptureAsBuildInputs() || m_AnalyzerResults.HasBlasChain()) {
+    return;
+  }
+  FatalSubcaptureError(
+      std::string("the stream calls ") + commandName +
+      " before the subcapture range, which needs the analysis pass so the "
+      "rtas chain can be captured. Run with Common.Player.Subcapture.Optimize=true, or set "
+      "Common.Player.Subcapture.Vulkan.CaptureASBuildInputs=false to restore "
+      "acceleration structures from serialized blobs (replayable only on this GPU and driver)");
+}
+
+void SubcaptureLayer::Post(vkCmdBuildAccelerationStructuresKHRCommand& command) {
+  const uint32_t infoCount = command.m_infoCount.Value;
+  if (infoCount == 0 || !command.m_pInfos.Value ||
+      command.m_pInfos.HandleKeys.size() < 2 * static_cast<size_t>(infoCount)) {
+    return;
+  }
+
+  RequireBlasChainForRaytracing("vkCmdBuildAccelerationStructuresKHR");
+
+  m_CommandBufferLifecycle.TrackHandleDependencies(command.m_commandBuffer.Key,
+                                                   command.m_pInfos.HandleKeys);
+
+  std::vector<uint64_t> dstKeys;
+  for (uint32_t i = 0; i < infoCount; ++i) {
+    uint64_t dstKey = command.m_pInfos.HandleKeys[2 * i + 1];
+    if (dstKey) {
+      dstKeys.push_back(dstKey);
+    }
+  }
+
+  uint32_t sz = GetSize(command);
+  std::vector<char> encoded(sz);
+  Encode(command, encoded.data());
+  const CommandId cmdId = command.GetId();
+
+  for (uint32_t i = 0; i < infoCount; ++i) {
+    const VkAccelerationStructureBuildGeometryInfoKHR& info = command.m_pInfos.Value[i];
+    uint64_t srcKey = command.m_pInfos.HandleKeys[2 * i];
+    uint64_t dstKey = command.m_pInfos.HandleKeys[2 * i + 1];
+    if (!dstKey) {
+      continue;
+    }
+    auto* dstState = m_StateTracking.GetState<AccelerationStructureState>(dstKey);
+    if (!dstState) {
+      continue;
+    }
+    RefuseGenericAccelerationStructure(dstKey, dstState->Type);
+
+    // Analysis pass: feed the chain-reduction graph with this pre-range BLAS build/update.
+    // TLAS builds are skipped, being rebuilt in-range with their BLASes pulled in via
+    // GetReferencedBlases, as are in-range and post-range builds, which replay live.
+    if (m_AnalysisMode && m_RaytracingOptimizationService && m_SubcaptureRange.BeforeRange() &&
+        info.type != VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR) {
+      const bool isUpdate = info.mode == VK_BUILD_ACCELERATION_STRUCTURE_MODE_UPDATE_KHR;
+      m_RaytracingOptimizationService->RecordBuild(command.m_commandBuffer.Key, command.m_Key,
+                                                   dstKey, srcKey, isUpdate);
+    }
+
+    // Resolve all buffers this build touches for command-buffer lifecycle tracking, but
+    // deliberately not for the AS's DependencyKeys: the app may destroy the scratch and
+    // geometry buffers right after a one-time build, and gating AS creation or the analyzer
+    // closure on them would wrongly drop the AS.
+    std::vector<uint64_t> cbDepKeys;
+    if (srcKey && srcKey != dstKey) {
+      cbDepKeys.push_back(srcKey);
+    }
+    ResolveAndTrackBufferAddress(m_StateTracking, info.scratchData.deviceAddress, cbDepKeys);
+
+    // Resolve each geometry's input buffers for command-buffer lifecycle tracking. Scratch is
+    // excluded, being regenerated fresh at restore. Also note whether this is an
+    // array-of-pointers TLAS build, which cannot be rebuilt at restore.
+    bool arrayOfPointers = false;
+    for (uint32_t g = 0; g < info.geometryCount; ++g) {
+      const VkAccelerationStructureGeometryKHR* geometry = nullptr;
+      if (info.pGeometries) {
+        geometry = &info.pGeometries[g];
+      } else if (info.ppGeometries && info.ppGeometries[g]) {
+        geometry = info.ppGeometries[g];
+      }
+      if (!geometry) {
+        continue;
+      }
+      CollectGeometryInputBufferKeys(m_StateTracking, *geometry, cbDepKeys);
+      if (geometry->geometryType == VK_GEOMETRY_TYPE_INSTANCES_KHR &&
+          geometry->geometry.instances.arrayOfPointers != VK_FALSE) {
+        arrayOfPointers = true;
+      }
+    }
+
+    for (uint64_t dep : cbDepKeys) {
+      m_CommandBufferLifecycle.TrackHandleDependency(command.m_commandBuffer.Key, dep);
+    }
+    // An update-mode source acceleration structure (src != dst) is a real dependency: it is
+    // persistent, unlike an input buffer, and must be restored and rebuilt before this one.
+    if (srcKey && srcKey != dstKey &&
+        m_StateTracking.GetState<AccelerationStructureState>(srcKey)) {
+      dstState->DependencyKeys.push_back(srcKey);
+    }
+    dstState->LastBuildCommandId = cmdId;
+    dstState->LastBuildCommandBytes = encoded;
+    dstState->LastBuildSiblingAsKeys = dstKeys;
+    dstState->ArrayOfPointersInstances = arrayOfPointers;
+  }
+
+  // Recording pass: keep the whole command's bytes for chain replay if it is a
+  // retained BLAS op (no-op in analysis mode / without a loaded BlasChain).
+  m_StateTracking.StoreRetainedAsCommandBytes(command.m_Key, encoded, /*isCopy=*/false);
+}
+
+// VK_ACCELERATION_STRUCTURE_TYPE_GENERIC_KHR is currently not supported.
+void SubcaptureLayer::RefuseGenericAccelerationStructure(uint64_t asKey,
+                                                         VkAccelerationStructureTypeKHR type) {
+  if (type != VK_ACCELERATION_STRUCTURE_TYPE_GENERIC_KHR) {
+    return;
+  }
+  if (!m_SubcaptureRange.BeforeRange() && !m_SubcaptureRange.InRange()) {
+    return; // after the range: cannot affect the subcapture
+  }
+  FatalSubcaptureError(
+      "the stream writes acceleration structure key=" + std::to_string(asKey) +
+      ", which was created with VK_ACCELERATION_STRUCTURE_TYPE_GENERIC_KHR. Subcapture restores "
+      "only top-level and bottom-level structures");
+}
+
+void SubcaptureLayer::RefuseUnsupportedRaytracingCommand(const char* commandName) {
+  if (!m_SubcaptureRange.BeforeRange() && !m_SubcaptureRange.InRange()) {
+    return; // after the range: cannot affect the subcapture
+  }
+  FatalSubcaptureError(
+      std::string("the stream calls ") + commandName +
+      ", which subcapture does not track. Acceleration structure and micromap content "
+      "written by it cannot be restored, and structures and buffers it reads are invisible "
+      "to the analysis pass, so they may be dropped from the restore set. Only "
+      "vkCmdBuildAccelerationStructuresKHR and vkCmdCopyAccelerationStructureKHR are "
+      "supported so far; subcapturing this stream is not possible yet");
+}
+
+// Untracked writers of acceleration structure or micromap content. See the declarations
+// for why they are refused rather than handled.
+void SubcaptureLayer::Post(vkCmdBuildAccelerationStructuresIndirectKHRCommand& command) {
+  RefuseUnsupportedRaytracingCommand("vkCmdBuildAccelerationStructuresIndirectKHR");
+}
+
+void SubcaptureLayer::Post(vkBuildAccelerationStructuresKHRCommand& command) {
+  RefuseUnsupportedRaytracingCommand("vkBuildAccelerationStructuresKHR");
+}
+
+void SubcaptureLayer::Post(vkCopyAccelerationStructureKHRCommand& command) {
+  RefuseUnsupportedRaytracingCommand("vkCopyAccelerationStructureKHR");
+}
+
+void SubcaptureLayer::Post(vkCmdCopyMemoryToAccelerationStructureKHRCommand& command) {
+  RefuseUnsupportedRaytracingCommand("vkCmdCopyMemoryToAccelerationStructureKHR");
+}
+
+void SubcaptureLayer::Post(vkCopyMemoryToAccelerationStructureKHRCommand& command) {
+  RefuseUnsupportedRaytracingCommand("vkCopyMemoryToAccelerationStructureKHR");
+}
+
+void SubcaptureLayer::Post(vkCmdBuildAccelerationStructureNVCommand& command) {
+  RefuseUnsupportedRaytracingCommand("vkCmdBuildAccelerationStructureNV");
+}
+
+void SubcaptureLayer::Post(vkCmdCopyAccelerationStructureNVCommand& command) {
+  RefuseUnsupportedRaytracingCommand("vkCmdCopyAccelerationStructureNV");
+}
+
+void SubcaptureLayer::Post(vkCmdBuildMicromapsEXTCommand& command) {
+  RefuseUnsupportedRaytracingCommand("vkCmdBuildMicromapsEXT");
+}
+
+void SubcaptureLayer::Post(vkBuildMicromapsEXTCommand& command) {
+  RefuseUnsupportedRaytracingCommand("vkBuildMicromapsEXT");
+}
+
+void SubcaptureLayer::Post(vkCmdCopyMicromapEXTCommand& command) {
+  RefuseUnsupportedRaytracingCommand("vkCmdCopyMicromapEXT");
+}
+
+void SubcaptureLayer::Post(vkCopyMicromapEXTCommand& command) {
+  RefuseUnsupportedRaytracingCommand("vkCopyMicromapEXT");
+}
+
+void SubcaptureLayer::Post(vkCmdCopyMemoryToMicromapEXTCommand& command) {
+  RefuseUnsupportedRaytracingCommand("vkCmdCopyMemoryToMicromapEXT");
+}
+
+void SubcaptureLayer::Post(vkCopyMemoryToMicromapEXTCommand& command) {
+  RefuseUnsupportedRaytracingCommand("vkCopyMemoryToMicromapEXT");
+}
+
+void SubcaptureLayer::Post(vkCmdCopyAccelerationStructureKHRCommand& command) {
+  RequireBlasChainForRaytracing("vkCmdCopyAccelerationStructureKHR");
+
+  m_CommandBufferLifecycle.TrackHandleDependencies(command.m_commandBuffer.Key,
+                                                   command.m_pInfo.HandleKeys);
+
+  // HandleKeys mirrors VkCopyAccelerationStructureInfoKHR field order: [src, dst].
+  const uint64_t dstKey =
+      command.m_pInfo.HandleKeys.size() >= 2 ? command.m_pInfo.HandleKeys[1] : 0;
+  auto* dstState = m_StateTracking.GetState<AccelerationStructureState>(dstKey);
+  if (dstState) {
+    RefuseGenericAccelerationStructure(dstKey, dstState->Type);
+  }
+
+  // Recording pass: keep this copy's bytes for chain replay if it is a retained
+  // BLAS op (CLONE/COMPACT). Encode once.
+  {
+    uint32_t sz = GetSize(command);
+    std::vector<char> encoded(sz);
+    Encode(command, encoded.data());
+    m_StateTracking.StoreRetainedAsCommandBytes(command.m_Key, encoded, /*isCopy=*/true);
+  }
+
+  // Analysis pass: feed the chain-reduction graph with this pre-range copy, which can only be
+  // CLONE/COMPACT here (the serialize variants are separate commands). TLAS destinations are
+  // skipped, not being part of the BLAS restore.
+  if (m_AnalysisMode && m_RaytracingOptimizationService && m_SubcaptureRange.BeforeRange() &&
+      command.m_pInfo.Value && command.m_pInfo.HandleKeys.size() >= 2 && dstState &&
+      dstState->Type != VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR) {
+    m_RaytracingOptimizationService->RecordCopy(command.m_commandBuffer.Key, command.m_Key, dstKey,
+                                                command.m_pInfo.HandleKeys[0],
+                                                command.m_pInfo.Value->mode);
+  }
+}
+
+namespace {
+void ResolveShaderBindingTableRegion(StateTrackingService& stateTracking,
+                                     const PointerArgument<VkStridedDeviceAddressRegionKHR>& region,
+                                     std::vector<uint64_t>& depKeys) {
+  if (region.Value) {
+    ResolveAndTrackBufferAddress(stateTracking, region.Value->deviceAddress, depKeys);
+  }
+}
+} // namespace
+
+void SubcaptureLayer::Post(vkCmdTraceRaysKHRCommand& command) {
+  std::vector<uint64_t> depKeys;
+  ResolveShaderBindingTableRegion(m_StateTracking, command.m_pRaygenShaderBindingTable, depKeys);
+  ResolveShaderBindingTableRegion(m_StateTracking, command.m_pMissShaderBindingTable, depKeys);
+  ResolveShaderBindingTableRegion(m_StateTracking, command.m_pHitShaderBindingTable, depKeys);
+  ResolveShaderBindingTableRegion(m_StateTracking, command.m_pCallableShaderBindingTable, depKeys);
+  for (uint64_t dep : depKeys) {
+    m_CommandBufferLifecycle.TrackHandleDependency(command.m_commandBuffer.Key, dep);
+  }
+}
+
+void SubcaptureLayer::Post(vkCmdTraceRaysIndirectKHRCommand& command) {
+  std::vector<uint64_t> depKeys;
+  ResolveShaderBindingTableRegion(m_StateTracking, command.m_pRaygenShaderBindingTable, depKeys);
+  ResolveShaderBindingTableRegion(m_StateTracking, command.m_pMissShaderBindingTable, depKeys);
+  ResolveShaderBindingTableRegion(m_StateTracking, command.m_pHitShaderBindingTable, depKeys);
+  ResolveShaderBindingTableRegion(m_StateTracking, command.m_pCallableShaderBindingTable, depKeys);
+  ResolveAndTrackBufferAddress(m_StateTracking, command.m_indirectDeviceAddress.Value, depKeys);
+  for (uint64_t dep : depKeys) {
+    m_CommandBufferLifecycle.TrackHandleDependency(command.m_commandBuffer.Key, dep);
   }
 }
 
@@ -2195,11 +2808,55 @@ void SubcaptureLayer::Post(vkCreateAccelerationStructureKHRCommand& command) {
   auto state = std::make_unique<AccelerationStructureState>();
   state->Key = command.m_pAccelerationStructure.Key;
   state->ParentKey = command.m_device.Key;
+  if (command.m_pCreateInfo.Value) {
+    const auto& ci = *command.m_pCreateInfo.Value;
+    state->Type = ci.type;
+    state->Offset = ci.offset;
+    state->Size = ci.size;
+    // Unlike VkBuffer, the opaque capture/replay address is a direct
+    // create-info field here, not a pNext extension struct.
+    state->OpaqueCaptureAddress = ci.deviceAddress;
+  }
+  // VkAccelerationStructureCreateInfoKHR::buffer is the only handle member.
+  if (!command.m_pCreateInfo.HandleKeys.empty()) {
+    state->BufferKey = command.m_pCreateInfo.HandleKeys[0];
+    state->DependencyKeys.push_back(state->BufferKey);
+    // Flag the storage buffer, and the memory it is bound to (binding always precedes AS
+    // creation), so their states survive the application's destroy/free and RestoreBlasChain
+    // can re-create them transiently.
+    if (auto* bufState = m_StateTracking.GetState<BufferState>(state->BufferKey)) {
+      bufState->AsBacking = true;
+      if (auto* memState = m_StateTracking.GetState<DeviceMemoryState>(bufState->BoundMemoryKey)) {
+        memState->AsBacking = true;
+      }
+    }
+  }
   StoreState(std::move(state), command);
 }
 
 void SubcaptureLayer::Post(vkDestroyAccelerationStructureKHRCommand& command) {
-  m_StateTracking.RemoveState(command.m_accelerationStructure.Key);
+  // Keep the state (flagged Destroyed) instead of erasing it. An application that compacts a
+  // BLAS destroys the uncompacted intermediate right after the copy that reads it. Without
+  // the state the chain replay has no creation blob for that source and would emit the copy
+  // with an unmapped source handle.
+  auto* state =
+      m_StateTracking.GetState<AccelerationStructureState>(command.m_accelerationStructure.Key);
+  if (state) {
+    state->Destroyed = true;
+  }
+}
+
+void SubcaptureLayer::Post(vkGetAccelerationStructureDeviceAddressKHRCommand& command) {
+  if (command.m_Return.Value == 0 || command.m_pInfo.HandleKeys.empty()) {
+    return;
+  }
+  const uint64_t asKey = command.m_pInfo.HandleKeys[0];
+  auto* state = m_StateTracking.GetState<AccelerationStructureState>(asKey);
+  if (!state) {
+    return;
+  }
+  state->DeviceAddress = command.m_Return.Value;
+  m_StateTracking.GetDeviceAddressTracking().Track(command.m_Return.Value, asKey);
 }
 
 void SubcaptureLayer::Post(vkCreateAccelerationStructureNVCommand& command) {

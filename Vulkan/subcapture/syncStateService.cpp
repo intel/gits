@@ -20,7 +20,8 @@ SyncStateService::SyncStateService(StateTrackingService& sts) : m_StateTracking(
 void SyncStateService::OnQueueSubmit(const VkSubmitInfo* pSubmits,
                                      uint32_t submitCount,
                                      const std::vector<uint64_t>& handleKeys,
-                                     uint64_t fenceKey) {
+                                     uint64_t fenceKey,
+                                     uint64_t submitQueueKey) {
   SignalFence(fenceKey);
 
   if (pSubmits && !handleKeys.empty()) {
@@ -37,6 +38,9 @@ void SyncStateService::OnQueueSubmit(const VkSubmitInfo* pSubmits,
            ++c, ++keyIdx) {
         ApplyCommandBufferEventStates(handleKeys[keyIdx]);
         m_StateTracking.GetQueryPoolStateService().ApplyCommandBuffer(handleKeys[keyIdx]);
+        // Read back this CB's acceleration-structure build inputs now that the build
+        // has executed.
+        m_StateTracking.ApplyAsInputReadbacksAfterSubmit(handleKeys[keyIdx], submitQueueKey);
       }
       // Walk the pNext chain once per submit info to find the timeline values.
       const VkTimelineSemaphoreSubmitInfo* pTimeline = nullptr;
@@ -66,7 +70,8 @@ void SyncStateService::OnQueueSubmit(const VkSubmitInfo* pSubmits,
 void SyncStateService::OnQueueSubmit2(const VkSubmitInfo2* pSubmits,
                                       uint32_t submitCount,
                                       const std::vector<uint64_t>& handleKeys,
-                                      uint64_t fenceKey) {
+                                      uint64_t fenceKey,
+                                      uint64_t submitQueueKey) {
   SignalFence(fenceKey);
 
   if (pSubmits && !handleKeys.empty()) {
@@ -83,6 +88,7 @@ void SyncStateService::OnQueueSubmit2(const VkSubmitInfo2* pSubmits,
            ++c, ++keyIdx) {
         ApplyCommandBufferEventStates(handleKeys[keyIdx]);
         m_StateTracking.GetQueryPoolStateService().ApplyCommandBuffer(handleKeys[keyIdx]);
+        m_StateTracking.ApplyAsInputReadbacksAfterSubmit(handleKeys[keyIdx], submitQueueKey);
       }
       for (uint32_t s = 0; s < info.signalSemaphoreInfoCount && keyIdx < handleKeys.size();
            ++s, ++keyIdx) {
@@ -186,6 +192,7 @@ void SyncStateService::InvalidateCBIfOneTimeSubmit(uint64_t key) {
   }
   auto* cbState = static_cast<CommandBufferState*>(objState);
   if (cbState->BeginFlags & VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT) {
+    m_StateTracking.FreeCommandBufferStagedReadbacks(*cbState);
     cbState->IsRecording = false;
     cbState->IsExecutable = false;
     cbState->BeginFlags = 0;
@@ -197,6 +204,7 @@ void SyncStateService::InvalidateCBIfOneTimeSubmit(uint64_t key) {
     cbState->EventStatesAfterSubmit.clear();
     cbState->ResetQueriesAfterSubmit.clear();
     cbState->UsedQueriesAfterSubmit.clear();
+    cbState->AsInputReadbacksAfterSubmit.clear();
   }
 }
 

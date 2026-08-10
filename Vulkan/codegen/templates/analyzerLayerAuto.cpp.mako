@@ -17,19 +17,21 @@ namespace vulkan {
 % if define:
 #ifdef ${define}
 % endif
+% if command.name not in analyzer_layer_custom_commands:
 void AnalyzerLayer::Post(${command.name}Command& command) {
 % for param in command.params:
 % if param.is_handle or param.is_handle_output:
 % if param.length:
-  m_AnalyzerService.NotifyObjects(command.m_${param.name}.Keys);
+  m_AnalyzerService.AddObjectsForRestore(command.m_${param.name}.Keys);
 % else:
-  m_AnalyzerService.NotifyObject(command.m_${param.name}.Key);
+  m_AnalyzerService.AddObjectForRestore(command.m_${param.name}.Key);
 % endif
 % elif param.is_struct_with_handles and param.is_pointer and not param.is_pointer_to_pointer:
-  m_AnalyzerService.NotifyObjects(command.m_${param.name}.HandleKeys);
+  m_AnalyzerService.AddObjectsForRestore(command.m_${param.name}.HandleKeys);
 % endif
 % endfor
 }
+% endif
 % if define:
 #endif
 % endif

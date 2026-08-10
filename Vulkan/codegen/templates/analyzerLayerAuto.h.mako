@@ -13,6 +13,7 @@ ${header}
 #include "commandsAuto.h"
 #include "commandsCustom.h"
 #include "analyzerService.h"
+#include "analyzerRaytracingService.h"
 
 namespace gits {
 namespace vulkan {
@@ -24,18 +25,28 @@ namespace vulkan {
 // the necessary objects.  Mirrors the DirectX AnalyzerLayer.
 class AnalyzerLayer : public Layer {
 public:
-  explicit AnalyzerLayer(AnalyzerService& analyzerService)
-      : Layer("Analyzer"), m_AnalyzerService(analyzerService) {}
+  AnalyzerLayer(AnalyzerService& analyzerService, AnalyzerRaytracingService& raytracingService)
+      : Layer("Analyzer"), m_AnalyzerService(analyzerService),
+        m_RaytracingService(raytracingService) {}
+  ~AnalyzerLayer();
 
   AnalyzerLayer(const AnalyzerLayer&) = delete;
   AnalyzerLayer& operator=(const AnalyzerLayer&) = delete;
 
+  // Custom-handled commands (implemented in analyzerLayerCustom.cpp).
+  void Post(vkCmdBuildAccelerationStructuresKHRCommand& command) override;
+  void Post(vkCmdTraceRaysKHRCommand& command) override;
+  void Post(vkCmdTraceRaysIndirectKHRCommand& command) override;
+
+  // Auto-generated Post overrides for every other Vulkan command.
   % for command in commands:
   <% define = get_define(command.platform) %>\
   % if define:
 #ifdef ${define}
   % endif
+  % if command.name not in analyzer_layer_custom_commands:
   void Post(${command.name}Command& command) override;
+  % endif
   % if define:
 #endif
   % endif
@@ -43,6 +54,7 @@ public:
 
 private:
   AnalyzerService& m_AnalyzerService;
+  AnalyzerRaytracingService& m_RaytracingService;
 };
 
 } // namespace vulkan

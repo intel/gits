@@ -18,6 +18,8 @@ namespace gits {
 namespace vulkan {
 
 class StateTrackingService;
+class AnalyzerRaytracingService;
+class RaytracingOptimizationService;
 
 // Collects the set of objects actually referenced by commands inside the
 // subcapture frame range during the analysis pass, expands that set into its
@@ -36,23 +38,41 @@ public:
   AnalyzerService(const AnalyzerService&) = delete;
   AnalyzerService& operator=(const AnalyzerService&) = delete;
 
-  // Mark a single object key as used.  No-op outside the range, for zero keys,
-  // or when optimization is disabled.
-  void NotifyObject(uint64_t objectKey);
+  // Add a single object key to the restore set. No-op outside the range, for
+  // zero keys, or when optimization is disabled.
+  void AddObjectForRestore(uint64_t objectKey);
 
-  // Mark a batch of object keys as used (e.g. a handle array / struct HandleKeys).
-  void NotifyObjects(const std::vector<uint64_t>& objectKeys);
+  // Add a batch of object keys (e.g. a handle array / struct HandleKeys).
+  void AddObjectsForRestore(const std::vector<uint64_t>& objectKeys);
 
   // Compute the dependency closure of the collected roots and write the
   // analysis file.  Idempotent: only the first call writes.
   void DumpAnalysisFile();
 
+  // Optional: lets AddClosure pull a TLAS's referenced BLASes into the restore
+  // closure. When unset, no BLAS is pulled in on a TLAS's behalf.
+  void SetRaytracingService(AnalyzerRaytracingService* raytracingService) {
+    m_RaytracingService = raytracingService;
+  }
+
+  // Optional: computes the retained BLAS ops for the analysis file's BlasChain section.
+  void SetOptimizationService(RaytracingOptimizationService* optimizationService) {
+    m_OptimizationService = optimizationService;
+  }
+
 private:
   // Recursively add key and everything it depends on to outKeys.
   void AddClosure(uint64_t key, std::set<uint64_t>& outKeys);
 
+  // Add every live buffer whose device address the application queried, plus its
+  // closure. A shader can reach such a buffer through the address alone, which the
+  // handle-based closure walk cannot see.
+  void AddDeviceAddressBufferClosure(std::set<uint64_t>& outKeys);
+
   StateTrackingService& m_StateTracking;
   SubcaptureRange& m_SubcaptureRange;
+  AnalyzerRaytracingService* m_RaytracingService{nullptr};
+  RaytracingOptimizationService* m_OptimizationService{nullptr};
   bool m_Optimize{};
   bool m_Dumped{false};
   std::set<uint64_t> m_ObjectsForRestore;

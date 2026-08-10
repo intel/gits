@@ -41,6 +41,10 @@ public:
   // Returns true while the current frame is within [startFrame_, endFrame_].
   bool InRange() const;
 
+  bool BeforeRange() const {
+    return m_CurrentFrame < m_StartFrame;
+  }
+
   // Returns true if subcapture is enabled at all.
   bool IsEnabled() const {
     return m_Enabled;

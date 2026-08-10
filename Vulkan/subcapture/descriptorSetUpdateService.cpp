@@ -353,6 +353,41 @@ void DescriptorSetUpdateService::CollectTemplateUpdateHandleKeys(
 }
 
 // ---------------------------------------------------------------------------
+// CollectBoundKeys
+// ---------------------------------------------------------------------------
+
+void DescriptorSetUpdateService::CollectBoundKeys(uint64_t setKey,
+                                                  std::vector<uint64_t>& outKeys) const {
+  auto setIt = m_Updates.find(setKey);
+  if (setIt == m_Updates.end()) {
+    return;
+  }
+
+  auto pushIfNonZero = [&](uint64_t key) {
+    if (key) {
+      outKeys.push_back(key);
+    }
+  };
+
+  for (const auto& [binding, bindData] : setIt->second) {
+    for (const auto& ed : bindData.Elements) {
+      switch (ed.DescriptorType) {
+      case VK_DESCRIPTOR_TYPE_MAX_ENUM:
+        break; // never explicitly written - skip
+      default:
+        // Only the slots relevant to this element's type are non-zero.
+        pushIfNonZero(ed.SamplerKey);
+        pushIfNonZero(ed.ImageViewKey);
+        pushIfNonZero(ed.BufferKey);
+        pushIfNonZero(ed.BufferViewKey);
+        pushIfNonZero(ed.AccelerationStructureKey);
+        break;
+      }
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
 // RemoveDescriptorSet
 // ---------------------------------------------------------------------------
 

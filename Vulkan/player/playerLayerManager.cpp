@@ -103,7 +103,8 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
     subcaptureLayer = std::make_unique<SubcaptureLayer>(
         playerManager, cfg.common.player.subcapture.frames, /*analysisMode=*/true);
     auto* sc = static_cast<SubcaptureLayer*>(subcaptureLayer.get());
-    analyzerLayer = std::make_unique<AnalyzerLayer>(*sc->GetAnalyzerService());
+    analyzerLayer = std::make_unique<AnalyzerLayer>(*sc->GetAnalyzerService(),
+                                                    *sc->GetAnalyzerRaytracingService());
     LOG_INFO << "SUBCAPTURE ANALYSIS. RUN AGAIN FOR SUBCAPTURE RECORDING.";
   } else if (subcaptureActive) {
     subcaptureLayer =

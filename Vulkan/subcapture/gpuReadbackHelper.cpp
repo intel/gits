@@ -89,23 +89,31 @@ bool GpuReadbackHelper::QueryStagingBufferRequirements(uint64_t deviceKey,
                                                        VkDeviceSize size,
                                                        VkBufferUsageFlags usage,
                                                        VkMemoryRequirements& outReq) {
-  auto device = reinterpret_cast<VkDevice>(HandleMapService::Get().TryGetHandle(deviceKey));
-  if (!device) {
-    LOG_WARNING << "GpuReadbackHelper: QueryStagingBufferRequirements: invalid device key="
-                << deviceKey;
-    return false;
-  }
-  auto& dt = m_Player.GetDeviceDispatchTable(device);
-
   VkBufferCreateInfo bci{};
   bci.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
   bci.size = size;
   bci.usage = usage;
   bci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+  return QueryBufferRequirements(deviceKey, bci, outReq);
+}
+
+// ---------------------------------------------------------------------------
+// QueryBufferRequirements
+// ---------------------------------------------------------------------------
+
+bool GpuReadbackHelper::QueryBufferRequirements(uint64_t deviceKey,
+                                                const VkBufferCreateInfo& createInfo,
+                                                VkMemoryRequirements& outReq) {
+  auto device = reinterpret_cast<VkDevice>(HandleMapService::Get().TryGetHandle(deviceKey));
+  if (!device) {
+    LOG_WARNING << "GpuReadbackHelper: QueryBufferRequirements: invalid device key=" << deviceKey;
+    return false;
+  }
+  auto& dt = m_Player.GetDeviceDispatchTable(device);
 
   VkBuffer tempBuf = VK_NULL_HANDLE;
-  if (dt.vkCreateBuffer(device, &bci, nullptr, &tempBuf) != VK_SUCCESS) {
-    LOG_WARNING << "GpuReadbackHelper: QueryStagingBufferRequirements: vkCreateBuffer failed";
+  if (dt.vkCreateBuffer(device, &createInfo, nullptr, &tempBuf) != VK_SUCCESS) {
+    LOG_WARNING << "GpuReadbackHelper: QueryBufferRequirements: vkCreateBuffer failed";
     return false;
   }
   outReq = {};
@@ -123,13 +131,16 @@ bool GpuReadbackHelper::AllocateStagingBuffer(VkDevice device,
                                               VkDeviceSize size,
                                               VkBuffer& outBuf,
                                               VkDeviceMemory& outMem,
-                                              void*& outMapped) {
+                                              void*& outMapped,
+                                              VkBufferUsageFlags extraUsage,
+                                              VkBufferCreateFlags extraCreateFlags) {
   auto& dt = m_Player.GetDeviceDispatchTable(device);
 
   VkBufferCreateInfo bci{};
   bci.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+  bci.flags = extraCreateFlags;
   bci.size = size;
-  bci.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+  bci.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | extraUsage;
   bci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
   if (dt.vkCreateBuffer(device, &bci, nullptr, &outBuf) != VK_SUCCESS) {
@@ -148,8 +159,21 @@ bool GpuReadbackHelper::AllocateStagingBuffer(VkDevice device,
     return false;
   }
 
+  VkMemoryAllocateFlagsInfo allocFlagsInfo{};
+  allocFlagsInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO;
+  allocFlagsInfo.flags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT;
+  // If the capture/replay bit is set on the buffer, it must be set on the allocation too.
+  const bool captureReplay =
+      (extraCreateFlags & VK_BUFFER_CREATE_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT) != 0;
+  if (captureReplay) {
+    allocFlagsInfo.flags |= VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT;
+  }
+
   VkMemoryAllocateInfo mai{};
   mai.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+  if ((extraUsage & VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT) || captureReplay) {
+    mai.pNext = &allocFlagsInfo;
+  }
   mai.allocationSize = req.size;
   mai.memoryTypeIndex = memType;
 
@@ -230,6 +254,7 @@ bool GpuReadbackHelper::ReadBuffer(uint64_t deviceKey,
                                    uint64_t queueKey,
                                    uint64_t commandPoolKey,
                                    uint64_t bufferKey,
+                                   VkDeviceSize srcOffset,
                                    VkDeviceSize size,
                                    std::vector<uint8_t>& outData) {
   auto& hms = HandleMapService::Get();
@@ -267,7 +292,7 @@ bool GpuReadbackHelper::ReadBuffer(uint64_t deviceKey,
     dt.vkCmdPipelineBarrier(cb, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
                             0, 0, nullptr, 1, &srcBarrier, 0, nullptr);
 
-    VkBufferCopy region{0, 0, size};
+    VkBufferCopy region{srcOffset, 0, size};
     dt.vkCmdCopyBuffer(cb, buffer, stagingBuf, 1, &region);
 
     // Barrier: staging ? host-read.
@@ -302,6 +327,386 @@ bool GpuReadbackHelper::ReadBuffer(uint64_t deviceKey,
   dt.vkFreeMemory(device, stagingMem, nullptr);
 
   return ok;
+}
+
+// ---------------------------------------------------------------------------
+// StageBufferRegions / ReadStaged / FreeStaged / WaitQueueIdle
+//
+// In-command-buffer readback: the copy is recorded into the application's own command
+// buffer, so it observes the input contents at the build's exact point in the
+// submission. Read on the host once the submission completes.
+// ---------------------------------------------------------------------------
+
+bool GpuReadbackHelper::StageBufferRegions(uint64_t deviceKey,
+                                           uint64_t physDevKey,
+                                           uint64_t appCbKey,
+                                           uint64_t srcBufferKey,
+                                           const std::vector<CapturedBuildInputRegion>& regions,
+                                           StagedInputReadback& outStaging) {
+  outStaging = {};
+  if (regions.empty()) {
+    return false;
+  }
+  auto& hms = HandleMapService::Get();
+  auto device = reinterpret_cast<VkDevice>(hms.TryGetHandle(deviceKey));
+  auto physDevice = reinterpret_cast<VkPhysicalDevice>(hms.TryGetHandle(physDevKey));
+  auto appCb = reinterpret_cast<VkCommandBuffer>(hms.TryGetHandle(appCbKey));
+  auto srcBuffer = reinterpret_cast<VkBuffer>(hms.TryGetHandle(srcBufferKey));
+  if (!device || !physDevice || !appCb || !srcBuffer) {
+    return false;
+  }
+
+  // Pack regions sequentially into staging (region order == read order).
+  VkDeviceSize total = 0;
+  std::vector<VkBufferCopy> copies;
+  copies.reserve(regions.size());
+  for (const auto& r : regions) {
+    if (r.RangeSize == 0) {
+      continue;
+    }
+    copies.push_back({r.SrcOffset, total, r.RangeSize});
+    total += r.RangeSize;
+  }
+  if (total == 0 || copies.empty()) {
+    return false;
+  }
+
+  VkBuffer stagingBuf = VK_NULL_HANDLE;
+  VkDeviceMemory stagingMem = VK_NULL_HANDLE;
+  void* mapped = nullptr;
+  if (!AllocateStagingBuffer(device, physDevice, total, stagingBuf, stagingMem, mapped)) {
+    return false;
+  }
+
+  auto& dt = m_Player.GetDeviceDispatchTable(device);
+
+  // Make prior writes to the source buffer visible to our transfer read.
+  VkBufferMemoryBarrier preBarrier{};
+  preBarrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+  preBarrier.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT;
+  preBarrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+  preBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  preBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  preBarrier.buffer = srcBuffer;
+  preBarrier.offset = 0;
+  preBarrier.size = VK_WHOLE_SIZE;
+  dt.vkCmdPipelineBarrier(appCb, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                          0, 0, nullptr, 1, &preBarrier, 0, nullptr);
+
+  dt.vkCmdCopyBuffer(appCb, srcBuffer, stagingBuf, static_cast<uint32_t>(copies.size()),
+                     copies.data());
+
+  // Staging transfer-write -> host-read.
+  VkBufferMemoryBarrier postBarrier{};
+  postBarrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+  postBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+  postBarrier.dstAccessMask = VK_ACCESS_HOST_READ_BIT;
+  postBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  postBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  postBarrier.buffer = stagingBuf;
+  postBarrier.offset = 0;
+  postBarrier.size = VK_WHOLE_SIZE;
+  dt.vkCmdPipelineBarrier(appCb, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_HOST_BIT, 0, 0,
+                          nullptr, 1, &postBarrier, 0, nullptr);
+
+  outStaging.Device = device;
+  outStaging.Buffer = stagingBuf;
+  outStaging.Memory = stagingMem;
+  outStaging.Mapped = mapped;
+  outStaging.Size = total;
+  return true;
+}
+
+bool GpuReadbackHelper::ReadStaged(const StagedInputReadback& staging,
+                                   std::vector<uint8_t>& outData) {
+  if (!staging.Device || !staging.Memory || !staging.Mapped || staging.Size == 0) {
+    return false;
+  }
+  auto& dt = m_Player.GetDeviceDispatchTable(staging.Device);
+  VkMappedMemoryRange range{};
+  range.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+  range.memory = staging.Memory;
+  range.offset = 0;
+  range.size = VK_WHOLE_SIZE;
+  dt.vkInvalidateMappedMemoryRanges(staging.Device, 1, &range);
+  outData.resize(static_cast<size_t>(staging.Size));
+  std::memcpy(outData.data(), staging.Mapped, static_cast<size_t>(staging.Size));
+  return true;
+}
+
+void GpuReadbackHelper::FreeStaged(const StagedInputReadback& staging) {
+  if (!staging.Device) {
+    return;
+  }
+  auto& dt = m_Player.GetDeviceDispatchTable(staging.Device);
+  if (staging.Memory) {
+    dt.vkUnmapMemory(staging.Device, staging.Memory);
+  }
+  if (staging.Buffer) {
+    dt.vkDestroyBuffer(staging.Device, staging.Buffer, nullptr);
+  }
+  if (staging.Memory) {
+    dt.vkFreeMemory(staging.Device, staging.Memory, nullptr);
+  }
+}
+
+bool GpuReadbackHelper::WaitQueueIdle(uint64_t deviceKey, uint64_t queueKey) {
+  auto& hms = HandleMapService::Get();
+  auto device = reinterpret_cast<VkDevice>(hms.TryGetHandle(deviceKey));
+  auto queue = reinterpret_cast<VkQueue>(hms.TryGetHandle(queueKey));
+  if (!device || !queue) {
+    return false;
+  }
+  auto& dt = m_Player.GetDeviceDispatchTable(device);
+  return dt.vkQueueWaitIdle(queue) == VK_SUCCESS;
+}
+
+// ---------------------------------------------------------------------------
+// ReadAccelerationStructureSerialized
+// ---------------------------------------------------------------------------
+
+bool GpuReadbackHelper::ReadAccelerationStructureSerialized(
+    uint64_t deviceKey,
+    uint64_t physDevKey,
+    uint64_t queueKey,
+    uint64_t commandPoolKey,
+    uint64_t accelerationStructureKey,
+    std::vector<uint8_t>& outData,
+    VkDeviceAddress& outDeviceAddress,
+    uint64_t& outOpaqueCaptureAddress,
+    uint64_t& outMemoryOpaqueCaptureAddress) {
+  auto& hms = HandleMapService::Get();
+  auto device = reinterpret_cast<VkDevice>(hms.TryGetHandle(deviceKey));
+  auto physDevice = reinterpret_cast<VkPhysicalDevice>(hms.TryGetHandle(physDevKey));
+  auto queue = reinterpret_cast<VkQueue>(hms.TryGetHandle(queueKey));
+  auto pool = reinterpret_cast<VkCommandPool>(hms.TryGetHandle(commandPoolKey));
+  auto accelStruct =
+      reinterpret_cast<VkAccelerationStructureKHR>(hms.TryGetHandle(accelerationStructureKey));
+
+  if (!device || !physDevice || !queue || !pool || !accelStruct) {
+    return false;
+  }
+
+  auto& dt = m_Player.GetDeviceDispatchTable(device);
+
+  // Step 1: query the serialized size. The staging buffer below cannot be sized
+  // before it is known.
+  VkQueryPoolCreateInfo qpci{};
+  qpci.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
+  qpci.queryType = VK_QUERY_TYPE_ACCELERATION_STRUCTURE_SERIALIZATION_SIZE_KHR;
+  qpci.queryCount = 1;
+
+  VkQueryPool queryPool = VK_NULL_HANDLE;
+  if (dt.vkCreateQueryPool(device, &qpci, nullptr, &queryPool) != VK_SUCCESS) {
+    LOG_WARNING << "GpuReadbackHelper: vkCreateQueryPool for AS serialization size failed";
+    return false;
+  }
+
+  bool queried = SubmitOneShot(device, queue, pool, [&](VkCommandBuffer cb) {
+    dt.vkCmdResetQueryPool(cb, queryPool, 0, 1);
+    dt.vkCmdWriteAccelerationStructuresPropertiesKHR(
+        cb, 1, &accelStruct, VK_QUERY_TYPE_ACCELERATION_STRUCTURE_SERIALIZATION_SIZE_KHR, queryPool,
+        0);
+  });
+
+  uint64_t serializedSize = 0;
+  VkResult queryResult = VK_ERROR_UNKNOWN;
+  if (queried) {
+    queryResult = dt.vkGetQueryPoolResults(device, queryPool, 0, 1, sizeof(serializedSize),
+                                           &serializedSize, sizeof(serializedSize),
+                                           VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT);
+  }
+  dt.vkDestroyQueryPool(device, queryPool, nullptr);
+
+  if (!queried || queryResult != VK_SUCCESS || serializedSize == 0) {
+    LOG_WARNING << "GpuReadbackHelper: failed to query AS serialized size for key="
+                << accelerationStructureKey;
+    return false;
+  }
+
+  // Step 2: allocate the staging buffer for the serialized bytes. SHADER_DEVICE_ADDRESS
+  // + ACCELERATION_STRUCTURE_STORAGE are required because the serialize copy addresses
+  // its destination by raw VkDeviceAddress. CAPTURE_REPLAY makes that address
+  // reproducible, so the caller can hardcode it into the deserialize-restore commands.
+  VkBuffer stagingBuf = VK_NULL_HANDLE;
+  VkDeviceMemory stagingMem = VK_NULL_HANDLE;
+  void* mappedPtr = nullptr;
+
+  if (!AllocateStagingBuffer(device, physDevice, serializedSize, stagingBuf, stagingMem, mappedPtr,
+                             VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
+                                 VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR,
+                             VK_BUFFER_CREATE_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT)) {
+    return false;
+  }
+
+  VkBufferDeviceAddressInfo addressInfo{};
+  addressInfo.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
+  addressInfo.buffer = stagingBuf;
+  auto vkGetBufferDeviceAddressUnified =
+      dt.vkGetBufferDeviceAddress ? dt.vkGetBufferDeviceAddress : dt.vkGetBufferDeviceAddressKHR;
+  VkDeviceAddress stagingAddress = vkGetBufferDeviceAddressUnified(device, &addressInfo);
+
+  auto vkGetBufferOpaqueCaptureAddressUnified = dt.vkGetBufferOpaqueCaptureAddress
+                                                    ? dt.vkGetBufferOpaqueCaptureAddress
+                                                    : dt.vkGetBufferOpaqueCaptureAddressKHR;
+  uint64_t stagingOpaqueAddress = vkGetBufferOpaqueCaptureAddressUnified(device, &addressInfo);
+
+  // Both the buffer- and memory-side opaque addresses must be re-supplied on replay
+  // to reproduce stagingAddress.
+  VkDeviceMemoryOpaqueCaptureAddressInfo memAddressInfo{};
+  memAddressInfo.sType = VK_STRUCTURE_TYPE_DEVICE_MEMORY_OPAQUE_CAPTURE_ADDRESS_INFO;
+  memAddressInfo.memory = stagingMem;
+  auto vkGetDeviceMemoryOpaqueCaptureAddressUnified =
+      dt.vkGetDeviceMemoryOpaqueCaptureAddress ? dt.vkGetDeviceMemoryOpaqueCaptureAddress
+                                               : dt.vkGetDeviceMemoryOpaqueCaptureAddressKHR;
+  uint64_t stagingMemoryOpaqueAddress =
+      vkGetDeviceMemoryOpaqueCaptureAddressUnified(device, &memAddressInfo);
+
+  // Step 3: serialize the AS into the staging buffer.
+  bool ok = SubmitOneShot(device, queue, pool, [&](VkCommandBuffer cb) {
+    // Barrier: prior writes to the AS -> serialize copy.
+    VkMemoryBarrier preBarrier{};
+    preBarrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
+    preBarrier.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT;
+    preBarrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+    dt.vkCmdPipelineBarrier(cb, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+                            VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR, 0, 1,
+                            &preBarrier, 0, nullptr, 0, nullptr);
+
+    VkCopyAccelerationStructureToMemoryInfoKHR copyInfo{};
+    copyInfo.sType = VK_STRUCTURE_TYPE_COPY_ACCELERATION_STRUCTURE_TO_MEMORY_INFO_KHR;
+    copyInfo.src = accelStruct;
+    copyInfo.dst.deviceAddress = stagingAddress;
+    copyInfo.mode = VK_COPY_ACCELERATION_STRUCTURE_MODE_SERIALIZE_KHR;
+    dt.vkCmdCopyAccelerationStructureToMemoryKHR(cb, &copyInfo);
+
+    // Barrier: staging buffer write -> host read.
+    VkBufferMemoryBarrier dstBarrier{};
+    dstBarrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+    dstBarrier.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT;
+    dstBarrier.dstAccessMask = VK_ACCESS_HOST_READ_BIT;
+    dstBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    dstBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    dstBarrier.buffer = stagingBuf;
+    dstBarrier.offset = 0;
+    dstBarrier.size = VK_WHOLE_SIZE;
+    dt.vkCmdPipelineBarrier(cb, VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR,
+                            VK_PIPELINE_STAGE_HOST_BIT, 0, 0, nullptr, 1, &dstBarrier, 0, nullptr);
+  });
+
+  if (ok) {
+    VkMappedMemoryRange range{};
+    range.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+    range.memory = stagingMem;
+    range.offset = 0;
+    range.size = VK_WHOLE_SIZE;
+    dt.vkInvalidateMappedMemoryRanges(device, 1, &range);
+
+    outData.resize(static_cast<size_t>(serializedSize));
+    std::memcpy(outData.data(), mappedPtr, static_cast<size_t>(serializedSize));
+    outDeviceAddress = stagingAddress;
+    outOpaqueCaptureAddress = stagingOpaqueAddress;
+    outMemoryOpaqueCaptureAddress = stagingMemoryOpaqueAddress;
+  }
+
+  dt.vkUnmapMemory(device, stagingMem);
+  dt.vkDestroyBuffer(device, stagingBuf, nullptr);
+  dt.vkFreeMemory(device, stagingMem, nullptr);
+
+  return ok;
+}
+
+// ---------------------------------------------------------------------------
+// QueryAccelerationStructureBuildSizes
+// ---------------------------------------------------------------------------
+bool GpuReadbackHelper::QueryAccelerationStructureBuildSizes(
+    uint64_t deviceKey,
+    const VkAccelerationStructureBuildGeometryInfoKHR& buildInfo,
+    const uint32_t* pMaxPrimitiveCounts,
+    VkAccelerationStructureBuildSizesInfoKHR& outSizes) {
+  auto device = reinterpret_cast<VkDevice>(HandleMapService::Get().TryGetHandle(deviceKey));
+  if (!device) {
+    LOG_WARNING << "GpuReadbackHelper: QueryAccelerationStructureBuildSizes: invalid device key="
+                << deviceKey;
+    return false;
+  }
+  auto& dt = m_Player.GetDeviceDispatchTable(device);
+
+  outSizes = {};
+  outSizes.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR;
+  dt.vkGetAccelerationStructureBuildSizesKHR(device,
+                                             VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR,
+                                             &buildInfo, pMaxPrimitiveCounts, &outSizes);
+  return true;
+}
+
+// ---------------------------------------------------------------------------
+// ReserveScratchBufferAddress
+//
+// Creates a throwaway buffer with capture/replay addressing and captures its
+// addresses, so a restored build can use them for its scratch buffer.
+// ---------------------------------------------------------------------------
+bool GpuReadbackHelper::ReserveScratchBufferAddress(uint64_t deviceKey,
+                                                    uint64_t physDevKey,
+                                                    VkDeviceSize size,
+                                                    VkDeviceAddress& outDeviceAddress,
+                                                    uint64_t& outOpaqueCaptureAddress,
+                                                    uint64_t& outMemoryOpaqueCaptureAddress) {
+  auto& hms = HandleMapService::Get();
+  auto device = reinterpret_cast<VkDevice>(hms.TryGetHandle(deviceKey));
+  auto physDevice = reinterpret_cast<VkPhysicalDevice>(hms.TryGetHandle(physDevKey));
+  if (!device || !physDevice) {
+    LOG_WARNING << "GpuReadbackHelper: ReserveScratchBufferAddress: invalid device/physDevice key";
+    return false;
+  }
+  auto& dt = m_Player.GetDeviceDispatchTable(device);
+
+  VkBuffer scratchBuf = VK_NULL_HANDLE;
+  VkDeviceMemory scratchMem = VK_NULL_HANDLE;
+  void* mappedPtr = nullptr;
+  if (!AllocateStagingBuffer(device, physDevice, size, scratchBuf, scratchMem, mappedPtr,
+                             VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
+                                 VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                             VK_BUFFER_CREATE_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT)) {
+    return false;
+  }
+
+  VkBufferDeviceAddressInfo addressInfo{};
+  addressInfo.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
+  addressInfo.buffer = scratchBuf;
+  auto vkGetBufferDeviceAddressUnified =
+      dt.vkGetBufferDeviceAddress ? dt.vkGetBufferDeviceAddress : dt.vkGetBufferDeviceAddressKHR;
+  outDeviceAddress = vkGetBufferDeviceAddressUnified(device, &addressInfo);
+
+  auto vkGetBufferOpaqueCaptureAddressUnified = dt.vkGetBufferOpaqueCaptureAddress
+                                                    ? dt.vkGetBufferOpaqueCaptureAddress
+                                                    : dt.vkGetBufferOpaqueCaptureAddressKHR;
+  outOpaqueCaptureAddress = vkGetBufferOpaqueCaptureAddressUnified(device, &addressInfo);
+
+  VkDeviceMemoryOpaqueCaptureAddressInfo memAddressInfo{};
+  memAddressInfo.sType = VK_STRUCTURE_TYPE_DEVICE_MEMORY_OPAQUE_CAPTURE_ADDRESS_INFO;
+  memAddressInfo.memory = scratchMem;
+  auto vkGetDeviceMemoryOpaqueCaptureAddressUnified =
+      dt.vkGetDeviceMemoryOpaqueCaptureAddress ? dt.vkGetDeviceMemoryOpaqueCaptureAddress
+                                               : dt.vkGetDeviceMemoryOpaqueCaptureAddressKHR;
+  outMemoryOpaqueCaptureAddress =
+      vkGetDeviceMemoryOpaqueCaptureAddressUnified(device, &memAddressInfo);
+
+  dt.vkUnmapMemory(device, scratchMem);
+  // Kept alive so a subsequent reservation does not get the same address back.
+  // ReleaseReservedAddresses tears them all down.
+  m_ReservedAddressBuffers.push_back({device, scratchBuf, scratchMem});
+
+  return true;
+}
+
+void GpuReadbackHelper::ReleaseReservedAddresses() {
+  for (const auto& r : m_ReservedAddressBuffers) {
+    auto& dt = m_Player.GetDeviceDispatchTable(r.Device);
+    dt.vkDestroyBuffer(r.Device, r.Buffer, nullptr);
+    dt.vkFreeMemory(r.Device, r.Memory, nullptr);
+  }
+  m_ReservedAddressBuffers.clear();
 }
 
 // ---------------------------------------------------------------------------
