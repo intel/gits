@@ -751,6 +751,28 @@ void CCodeLayer::preProcess(ccode::CommandPrinter& p,
   p.skip();
 }
 
+void CCodeLayer::preProcess(ccode::CommandPrinter& p, IDStorageStatusArrayIsCompleteCommand& c) {
+  using namespace ccode;
+  if (!c.m_Result.Value) {
+    return;
+  }
+  std::ostringstream ss;
+  ss << "directx::DirectStorageService::Get().WaitForStatusArray(" << objKeyToPtrStr(c.m_Object.Key)
+     << ", " << c.m_index.Value << ");" << std::endl;
+  p.setPreCommand(ss.str());
+}
+
+void CCodeLayer::preProcess(ccode::CommandPrinter& p, IDStorageStatusArrayGetHResultCommand& c) {
+  using namespace ccode;
+  if (c.m_Result.Value == E_PENDING) {
+    return;
+  }
+  std::ostringstream ss;
+  ss << "directx::DirectStorageService::Get().WaitForStatusArray(" << objKeyToPtrStr(c.m_Object.Key)
+     << ", " << c.m_index.Value << ");" << std::endl;
+  p.setPreCommand(ss.str());
+}
+
 void CCodeLayer::postProcess(ccode::CommandPrinter& p, IDXGIFactoryCreateSwapChainCommand& c) {
   createSwapChain(p, c.m_ppSwapChain.Key, c.m_pDevice.Key);
 }

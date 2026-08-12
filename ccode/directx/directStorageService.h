@@ -30,6 +30,7 @@ public:
 
   void PrepareEnqueueRequest(unsigned queueKey, DSTORAGE_REQUEST* request, uint64_t newOffset);
   void OnSubmit(unsigned queueKey, IDStorageQueue1* queue);
+  void WaitForStatusArray(IDStorageStatusArray* statusArray, UINT32 index);
   void CompleteAllBatches();
 
 private:

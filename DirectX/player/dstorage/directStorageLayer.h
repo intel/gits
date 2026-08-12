@@ -27,6 +27,8 @@ public:
   void Pre(IDStorageFactoryOpenFileCommand& c) override;
   void Pre(IDStorageQueueEnqueueRequestCommand& c) override;
   void Pre(IDStorageQueueSubmitCommand& c) override;
+  void Pre(IDStorageStatusArrayIsCompleteCommand& c) override;
+  void Pre(IDStorageStatusArrayGetHResultCommand& c) override;
 
   // Skip
   void Pre(IDStorageQueue1EnqueueSetEventCommand& c) override;
@@ -42,6 +44,7 @@ private:
 
   void ClearCompletedBatches(unsigned queueKey);
   void CompleteAllBatches();
+  void WaitForStatusArray(IDStorageStatusArray* statusArray, UINT32 index);
 
   std::wstring m_ResourcesFilePath;
   std::unordered_map<unsigned, std::list<Buffer>> m_Buffers;

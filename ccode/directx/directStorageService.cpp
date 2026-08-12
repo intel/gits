@@ -12,6 +12,7 @@
 
 #include <plog/Log.h>
 
+#include <chrono>
 #include <filesystem>
 #include <mutex>
 
@@ -95,6 +96,20 @@ void DirectStorageService::CompleteAllBatches() {
       dq.pop_front();
     }
     it = m_InflightBatches.erase(it);
+  }
+}
+
+void DirectStorageService::WaitForStatusArray(IDStorageStatusArray* statusArray, UINT32 index) {
+  if (!statusArray) {
+    return;
+  }
+  const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(60000);
+
+  while (!statusArray->IsComplete(index)) {
+    if (std::chrono::steady_clock::now() >= deadline) {
+      LOG_ERROR << "DirectStorageService - Timeout waiting for status array index " << index;
+      return;
+    }
   }
 }
 

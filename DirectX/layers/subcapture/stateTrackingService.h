@@ -28,6 +28,7 @@ class ReservedResourcesService;
 class DescriptorService;
 class CommandListService;
 class CommandQueueService;
+class DirectStorageQueueService;
 class XessStateService;
 class AccelerationStructuresSerializeService;
 class AccelerationStructuresBuildService;
@@ -51,6 +52,7 @@ public:
       DescriptorService& descriptorService,
       CommandListService& commandListService,
       CommandQueueService& commandQueueService,
+      DirectStorageQueueService& directStorageQueueService,
       XessStateService& xessStateService,
       AccelerationStructuresSerializeService& accelerationStructuresSerializeService,
       AccelerationStructuresBuildService& accelerationStructuresBuildService,
@@ -72,6 +74,7 @@ public:
         m_DescriptorService(descriptorService),
         m_CommandListService(commandListService),
         m_CommandQueueService(commandQueueService),
+        m_DirectStorageQueueService(directStorageQueueService),
         m_XessStateService(xessStateService),
         m_AccelerationStructuresSerializeService(accelerationStructuresSerializeService),
         m_AccelerationStructuresBuildService(accelerationStructuresBuildService),
@@ -233,6 +236,7 @@ private:
   DescriptorService& m_DescriptorService;
   CommandListService& m_CommandListService;
   CommandQueueService& m_CommandQueueService;
+  DirectStorageQueueService& m_DirectStorageQueueService;
   XessStateService& m_XessStateService;
   XellStateService& m_XellStateService;
   XefgStateService& m_XefgStateService;

@@ -20,6 +20,7 @@
 #include "descriptorService.h"
 #include "commandListService.h"
 #include "commandQueueService.h"
+#include "directStorageQueueService.h"
 #include "xessStateService.h"
 #include "accelerationStructuresBuildService.h"
 #include "accelerationStructuresSerializeService.h"
@@ -88,6 +89,7 @@ void StateTrackingService::RestoreState() {
   m_ResidencyService.RestoreResidency();
   m_CommandListService.RestoreCommandLists();
   m_CommandQueueService.RestoreCommandQueues();
+  m_DirectStorageQueueService.RestoreDirectStorageQueues();
   RestoreReferenceCount();
   m_NvapiGlobalStateService.FinalizeRestore();
   m_SwapChainService.RestoreBackBufferSequence(m_Recorder.CommandListSubcapture());

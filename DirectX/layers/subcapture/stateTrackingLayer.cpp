@@ -31,6 +31,7 @@ StateTrackingLayer::StateTrackingLayer(SubcaptureRecorder& recorder,
                      m_DescriptorService,
                      m_CommandListService,
                      m_CommandQueueService,
+                     m_DirectStorageQueueService,
                      m_XessStateService,
                      m_AccelerationStructuresSerializeService,
                      m_AccelerationStructuresBuildService,
@@ -50,6 +51,7 @@ StateTrackingLayer::StateTrackingLayer(SubcaptureRecorder& recorder,
       m_DescriptorService(&m_StateService, &m_ResourceForCBVRestoreService),
       m_CommandListService(m_StateService),
       m_CommandQueueService(m_StateService),
+      m_DirectStorageQueueService(m_StateService),
       m_XessStateService(m_StateService, m_Recorder),
       m_XellStateService(m_StateService, m_Recorder),
       m_XefgStateService(m_StateService, m_Recorder),
@@ -149,6 +151,7 @@ void StateTrackingLayer::Pre(IUnknownReleaseCommand& c) {
     m_ResourceUsageTrackingService.DestroyResource(c.m_Object.Key);
     m_GpuAddressService.DestroyInterface(c.m_Object.Key);
     m_MetaCommandsService.DestroyMetaCommand(c.m_Object.Key);
+    m_DirectStorageQueueService.DestroyObject(c.m_Object.Key);
     m_AccelerationStructuresBuildService.DestroyResource(c.Key, c.m_Object.Key);
 
     auto it = m_ResourceHeaps.find(c.m_Object.Key);
@@ -3229,6 +3232,13 @@ void StateTrackingLayer::Post(IDStorageFactoryCreateStatusArrayCommand& c) {
   m_StateService.StoreState(state);
 
   SetAsChildInParent(state->ParentKey, state->Key);
+}
+
+void StateTrackingLayer::Post(IDStorageQueueEnqueueStatusCommand& c) {
+  if (m_StateRestored) {
+    return;
+  }
+  m_DirectStorageQueueService.AddEnqueueStatus(c);
 }
 
 void StateTrackingLayer::Post(NvAPI_InitializeCommand& c) {

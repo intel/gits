@@ -20,6 +20,7 @@
 #include "descriptorService.h"
 #include "commandListService.h"
 #include "commandQueueService.h"
+#include "directStorageQueueService.h"
 #include "xessStateService.h"
 #include "accelerationStructuresBuildService.h"
 #include "accelerationStructuresSerializeService.h"
@@ -235,6 +236,7 @@ public:
   void Post(IDStorageFactoryOpenFileCommand& c) override;
   void Post(IDStorageFactoryCreateQueueCommand& c) override;
   void Post(IDStorageFactoryCreateStatusArrayCommand& c) override;
+  void Post(IDStorageQueueEnqueueStatusCommand& c) override;
   void Post(NvAPI_InitializeCommand& c) override;
   void Post(NvAPI_UnloadCommand& c) override;
   void Post(NvAPI_D3D12_SetCreatePipelineStateOptionsCommand& c) override;
@@ -293,6 +295,7 @@ private:
   DescriptorService m_DescriptorService;
   CommandListService m_CommandListService;
   CommandQueueService m_CommandQueueService;
+  DirectStorageQueueService m_DirectStorageQueueService;
   XessStateService m_XessStateService;
   XellStateService m_XellStateService;
   XefgStateService m_XefgStateService;

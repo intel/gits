@@ -113,6 +113,8 @@ private:
   void preProcess(ccode::CommandPrinter& p, IDStorageFactoryOpenFileCommand& c);
   void preProcess(ccode::CommandPrinter& p, IDStorageQueue1EnqueueSetEventCommand& c);
   void preProcess(ccode::CommandPrinter& p, IDStorageCustomDecompressionQueueSetRequestResultsCommand& c);
+  void preProcess(ccode::CommandPrinter& p, IDStorageStatusArrayIsCompleteCommand& c);
+  void preProcess(ccode::CommandPrinter& p, IDStorageStatusArrayGetHResultCommand& c);
   
   // Custom command post process
   // Used after the arguments have been processed and the command is ready to be printed

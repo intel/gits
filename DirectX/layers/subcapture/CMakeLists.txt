@@ -50,6 +50,8 @@ set(STATE_TRACKING_SRC
   ${SRC_DIR}/commandListService.cpp
   ${SRC_DIR}/commandQueueService.h
   ${SRC_DIR}/commandQueueService.cpp
+  ${SRC_DIR}/directStorageQueueService.h
+  ${SRC_DIR}/directStorageQueueService.cpp
   ${SRC_DIR}/xessStateService.h
   ${SRC_DIR}/xessStateService.cpp
   ${SRC_DIR}/accelerationStructuresBuildService.h

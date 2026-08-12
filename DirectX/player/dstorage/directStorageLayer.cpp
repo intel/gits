@@ -10,6 +10,8 @@
 #include "configurationLib.h"
 #include "log.h"
 
+#include <chrono>
+
 namespace gits {
 namespace DirectX {
 
@@ -58,6 +60,22 @@ void DirectStorageLayer::CompleteAllBatches() {
       dq.pop_front();
     }
     m_InflightBatches.erase(itMap);
+  }
+}
+
+void DirectStorageLayer::WaitForStatusArray(IDStorageStatusArray* statusArray, UINT32 index) {
+  if (!statusArray) {
+    return;
+  }
+  const auto deadline = Configurator::Get().directx.player.infiniteWaitForFence
+                            ? std::chrono::steady_clock::time_point::max()
+                            : std::chrono::steady_clock::now() + std::chrono::milliseconds(60000);
+
+  while (!statusArray->IsComplete(index)) {
+    if (std::chrono::steady_clock::now() >= deadline) {
+      LOG_ERROR << "DirectStorageLayer - Timeout waiting for status array index " << index;
+      return;
+    }
   }
 }
 
@@ -113,6 +131,24 @@ void DirectStorageLayer::Pre(IDStorageQueueSubmitCommand& c) {
   queue->EnqueueSetEvent(batch->CompletionEvent.Get());
 
   m_InflightBatches[queueKey].push_back(std::move(batch));
+}
+
+void DirectStorageLayer::Pre(IDStorageStatusArrayIsCompleteCommand& c) {
+  if (c.Skip) {
+    return;
+  }
+  if (c.m_Result.Value) {
+    WaitForStatusArray(c.m_Object.Value, c.m_index.Value);
+  }
+}
+
+void DirectStorageLayer::Pre(IDStorageStatusArrayGetHResultCommand& c) {
+  if (c.Skip) {
+    return;
+  }
+  if (c.m_Result.Value != E_PENDING) {
+    WaitForStatusArray(c.m_Object.Value, c.m_index.Value);
+  }
 }
 
 } // namespace DirectX
