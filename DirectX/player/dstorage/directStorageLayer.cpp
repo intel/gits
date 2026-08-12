@@ -9,6 +9,7 @@
 #include "directStorageLayer.h"
 #include "configurationLib.h"
 #include "log.h"
+#include "to_string/toStr.h"
 
 #include <chrono>
 
@@ -22,7 +23,12 @@ DirectStorageLayer::DirectStorageLayer()
 
 DirectStorageLayer::~DirectStorageLayer() {
   CompleteAllBatches();
-  GITS_ASSERT(m_Buffers.empty());
+  if (!m_Buffers.empty()) {
+    for (const auto& [queueKey, buffers] : m_Buffers) {
+      LOG_WARNING << "DirectStorageLayer - Queue O" << keyToStr(queueKey) << " has "
+                  << buffers.size() << " unsubmitted memory destination request(s) at shutdown";
+    }
+  }
 }
 
 void DirectStorageLayer::ClearCompletedBatches(unsigned queueKey) {
