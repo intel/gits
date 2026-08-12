@@ -24,6 +24,7 @@ void SetPlaybackDefaults() {
 void SetSubcaptureDefaults() {
   gits::gui::config_options::SubcaptureEnabled(gits::gui::Mode::SUBCAPTURE) = true;
   gits::gui::config_options::ExecutableNameOverrideEnabled(gits::gui::Mode::SUBCAPTURE) = true;
+  gits::gui::config_options::HudEnabled(gits::gui::Mode::SUBCAPTURE) = {};
 
   gits::gui::Context::GetInstance().UpdateInMemoryConfig(gits::gui::Mode::SUBCAPTURE);
 };

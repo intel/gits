@@ -65,10 +65,28 @@ void SubcaptureOptionsPanel::Render() {
       ConfigMetadata::Common::Player::ExecutableNameOverride::GroupMetadata);
   ImGui::EndDisabled();
 
+  auto api = context.GetStreamAPI();
+
+  if (api == Api::DIRECTX) {
+    auto& hudApis = config_options::HudEnabled(Mode::SUBCAPTURE);
+    auto dxHudEnabled =
+        std::find(hudApis.begin(), hudApis.end(), gits::ApiBool::DX) != hudApis.end();
+    changed |= ImGui::Checkbox(Labels::HUD_ENABLED, &dxHudEnabled);
+    if (changed) {
+      auto it = std::find(hudApis.begin(), hudApis.end(), gits::ApiBool::DX);
+      if (dxHudEnabled && it == hudApis.end()) {
+        hudApis.push_back(gits::ApiBool::DX);
+      } else if (!dxHudEnabled && it != hudApis.end()) {
+        hudApis.erase(it);
+      }
+    }
+    config_options_gui_helpers::ConfigOptionHelpButton(
+        ConfigMetadata::Common::Shared::HUD::GroupMetadata);
+  }
+
   ImGui::Separator();
 
   // Dedicated subcapture options
-  auto api = context.GetStreamAPI();
   const float widthLabel = ImGui::CalcTextSize(Labels::SUBCAPTURE_START_FRAME).x * 2.0f;
   if (api == Api::DIRECTX) {
     RowSubcapturePath();

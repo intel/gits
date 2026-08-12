@@ -10,9 +10,13 @@
 
 #define APP_ICON      101
 #define APP_FILE_ICON 102
-#define APP_VERSION   "1.3.1"
+#define APP_VERSION   "1.4"
 
 inline const char* RELEASE_NOTES = R"(
+Release Notes v1.4
+====================
+- Added a checkbox for enabling/disabling the HUD in Subcapture mode (disabled by default)
+
 Release Notes v1.3.1
 ====================
 - Fixed a crash when trying to create a config backup file if a backup was already present in the directory
