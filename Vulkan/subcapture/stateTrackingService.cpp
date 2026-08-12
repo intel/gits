@@ -4478,6 +4478,14 @@ void StateTrackingService::RestoreAccelerationStructureContents() {
               std::to_string(static_cast<int>(as->Type)) +
               ", which is neither top- nor bottom-level, so subcapture cannot restore it");
         }
+        // A live TLAS may have no contents at the subcapture boundary
+        if (auto* as = GetState<AccelerationStructureState>(asKey);
+            as && as->Type == VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR &&
+            as->LastBuildCommandBytes.empty()) {
+          LOG_TRACE << "Vulkan subcapture: TLAS (key=" << asKey
+                    << ") is restored with no contents - no pre-range build writes it";
+          continue;
+        }
         // Aborts the run if it cannot be rebuilt.
         RestoreAccelerationStructureByRebuild(asKey, deviceKey, physDevKey, queueKey, poolKey);
         continue;
