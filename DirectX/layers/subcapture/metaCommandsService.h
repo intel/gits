@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #pragma once
+#include "arguments.h"
 
 #include "commandsAuto.h"
 
@@ -23,8 +24,8 @@ public:
   MetaCommandsService(StateTrackingService& stateService) : m_StateService(stateService) {}
   void RestoreState();
   void InitializeMetaCommand(ID3D12GraphicsCommandList4InitializeMetaCommandCommand& command);
-  void SetDeviceKey(unsigned deviceKey);
-  void DestroyMetaCommand(unsigned key);
+  void SetDeviceKey(GITSKey deviceKey);
+  void DestroyMetaCommand(GITSKey key);
 
 private:
   void RestoreStateInitialize();
@@ -32,12 +33,12 @@ private:
 
 private:
   StateTrackingService& m_StateService;
-  unsigned m_DeviceKey{};
-  unsigned m_CommandQueueKey{};
-  unsigned m_CommandAllocatorKey{};
-  unsigned m_CommandListKey{};
-  unsigned m_FenceKey{};
-  std::unordered_map<unsigned, std::vector<uint8_t>> m_MetaCommandData;
+  GITSKey m_DeviceKey{};
+  GITSKey m_CommandQueueKey{};
+  GITSKey m_CommandAllocatorKey{};
+  GITSKey m_CommandListKey{};
+  GITSKey m_FenceKey{};
+  std::unordered_map<GITSKey, std::vector<uint8_t>> m_MetaCommandData;
 };
 
 } // namespace DirectX

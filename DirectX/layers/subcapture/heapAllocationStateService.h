@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #pragma once
+#include "arguments.h"
 
 #include "objectState.h"
 #include "log.h"
@@ -22,7 +23,7 @@ public:
     m_HeapStates[state->Key] = state;
   }
 
-  D3D12HeapFromAddressState* GetHeapState(unsigned heapKey) {
+  D3D12HeapFromAddressState* GetHeapState(GITSKey heapKey) {
     auto it = m_HeapStates.find(heapKey);
     GITS_ASSERT(it != m_HeapStates.end());
 
@@ -31,12 +32,12 @@ public:
     return state;
   }
 
-  void DestroyHeap(unsigned heapKey) {
+  void DestroyHeap(GITSKey heapKey) {
     m_HeapStates.erase(heapKey);
   }
 
 private:
-  std::unordered_map<unsigned, D3D12HeapFromAddressState*> m_HeapStates;
+  std::unordered_map<GITSKey, D3D12HeapFromAddressState*> m_HeapStates;
 };
 
 } // namespace DirectX

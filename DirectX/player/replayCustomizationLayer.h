@@ -205,7 +205,7 @@ public:
 
 private:
   struct NvAPIShaderExtnSlot {
-    unsigned DeviceKey{};
+    GITSKey DeviceKey{};
     unsigned UavSlot{};
     unsigned UavSpace{};
 
@@ -218,10 +218,10 @@ private:
   void FillGpuAddressArgument(D3D12_GPU_VIRTUAL_ADDRESS_Argument& arg);
   void FillGpuDescriptorHandleArgument(DescriptorHandleArgument<D3D12_GPU_DESCRIPTOR_HANDLE>& arg);
   void FillCpuDescriptorHandleArgument(DescriptorHandleArgument<D3D12_CPU_DESCRIPTOR_HANDLE>& arg);
-  void WaitForFence(unsigned commandKey, unsigned fenceKey, ID3D12Fence* fence, UINT64 fenceValue);
-  void WaitForFenceIncremental(unsigned commandKey, ID3D12Fence* fence, UINT64 fenceValue);
-  void WaitForFenceNonIncremental(unsigned commandKey,
-                                  unsigned fenceKey,
+  void WaitForFence(GITSKey commandKey, GITSKey fenceKey, ID3D12Fence* fence, UINT64 fenceValue);
+  void WaitForFenceIncremental(GITSKey commandKey, ID3D12Fence* fence, UINT64 fenceValue);
+  void WaitForFenceNonIncremental(GITSKey commandKey,
+                                  GITSKey fenceKey,
                                   ID3D12Fence* fence,
                                   UINT64 fenceValue);
   void RemoveCachedPso(D3D12_PIPELINE_STATE_STREAM_DESC& desc);

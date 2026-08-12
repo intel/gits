@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #pragma once
+#include "arguments.h"
 
 #include <map>
 #include <unordered_map>
@@ -16,14 +17,14 @@ namespace DirectX {
 
 class HeapAllocationService {
 public:
-  void CreateHeapAllocation(unsigned heapKey, void* captureAddress, void* data, size_t size);
+  void CreateHeapAllocation(GITSKey heapKey, void* captureAddress, void* data, size_t size);
   void* GetHeapAllocation(void* captureAddress);
-  void DestroyHeapAllocation(unsigned heapKey);
+  void DestroyHeapAllocation(GITSKey heapKey);
 
 private:
   std::map<void*, void*> m_HeapAllocationsByCaptureAddress;
   std::map<void*, void*> m_HeapAllocationsByReplayAddress;
-  std::unordered_map<unsigned, void*> m_HeapAllocationsCaptureAddressByHeapKey;
+  std::unordered_map<GITSKey, void*> m_HeapAllocationsCaptureAddressByHeapKey;
 };
 
 } // namespace DirectX

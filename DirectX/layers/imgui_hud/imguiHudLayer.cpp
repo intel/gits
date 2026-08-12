@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "imguiHudLayer.h"
+#include "arguments.h"
 
 #include <imgui.h>
 #include <imgui_impl_win32.h>
@@ -287,7 +288,7 @@ bool ImGuiHUDLayer::CreateFrameContext(unsigned bufferCount) {
 
 void ImGuiHUDLayer::EnsureInitialized(IUnknown* device,
                                       IDXGISwapChain* swapChain,
-                                      unsigned swapChainKey,
+                                      GITSKey swapChainKey,
                                       bool isXefgProxy) {
   // The first valid swapchain owns the HUD. Subsequent app swapchains are
   // ignored; the XeFG presenter supersedes an app-owned HUD via a clean re-init.

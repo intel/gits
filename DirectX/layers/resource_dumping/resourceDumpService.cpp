@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "resourceDumpService.h"
+#include "arguments.h"
 #include "to_string/toStr.h"
 #include "configurationLib.h"
 
@@ -30,7 +31,7 @@ ResourceDumpService::ResourceDumpService()
   m_DumpPath = dumpPath;
 }
 
-void ResourceDumpService::CreateResource(unsigned resourceKey,
+void ResourceDumpService::CreateResource(GITSKey resourceKey,
                                          ID3D12Resource* resource,
                                          D3D12_RESOURCE_STATES initialState) {
   if (!m_ResourceKeys.Contains(resourceKey)) {
@@ -40,19 +41,18 @@ void ResourceDumpService::CreateResource(unsigned resourceKey,
   m_Resources[resourceKey] = resource;
 }
 
-void ResourceDumpService::DestroyResource(unsigned resourceKey) {
+void ResourceDumpService::DestroyResource(GITSKey resourceKey) {
   if (!m_ResourceKeys.Contains(resourceKey)) {
     return;
   }
   m_Resources.erase(resourceKey);
 }
 
-void ResourceDumpService::CommandListCall(unsigned callKey,
-                                          ID3D12GraphicsCommandList* commandList) {
+void ResourceDumpService::CommandListCall(GITSKey callKey, ID3D12GraphicsCommandList* commandList) {
   if (!m_CallKeys.Contains(callKey)) {
     return;
   }
-  for (unsigned resourceKey : m_ResourceKeys) {
+  for (GITSKey resourceKey : m_ResourceKeys) {
     auto it = m_Resources.find(resourceKey);
     if (it != m_Resources.end()) {
 
@@ -109,8 +109,8 @@ void ResourceDumpService::ResourceBarrier(ID3D12GraphicsCommandListResourceBarri
                                          c.m_NumBarriers.Value, c.m_pBarriers.ResourceKeys.data());
 }
 
-void ResourceDumpService::ExecuteCommandLists(unsigned key,
-                                              unsigned commandQueueKey,
+void ResourceDumpService::ExecuteCommandLists(GITSKey key,
+                                              GITSKey commandQueueKey,
                                               ID3D12CommandQueue* commandQueue,
                                               ID3D12CommandList** commandLists,
                                               unsigned commandListNum) {
@@ -120,21 +120,21 @@ void ResourceDumpService::ExecuteCommandLists(unsigned key,
                                      commandListNum);
 }
 
-void ResourceDumpService::CommandQueueWait(unsigned key,
-                                           unsigned commandQueueKey,
-                                           unsigned fenceKey,
+void ResourceDumpService::CommandQueueWait(GITSKey key,
+                                           GITSKey commandQueueKey,
+                                           GITSKey fenceKey,
                                            UINT64 fenceValue) {
   m_ResourceDump.CommandQueueWait(key, commandQueueKey, fenceKey, fenceValue);
 }
 
-void ResourceDumpService::CommandQueueSignal(unsigned key,
-                                             unsigned commandQueueKey,
-                                             unsigned fenceKey,
+void ResourceDumpService::CommandQueueSignal(GITSKey key,
+                                             GITSKey commandQueueKey,
+                                             GITSKey fenceKey,
                                              UINT64 fenceValue) {
   m_ResourceDump.CommandQueueSignal(key, commandQueueKey, fenceKey, fenceValue);
 }
 
-void ResourceDumpService::FenceSignal(unsigned key, unsigned fenceKey, UINT64 fenceValue) {
+void ResourceDumpService::FenceSignal(GITSKey key, GITSKey fenceKey, UINT64 fenceValue) {
   m_ResourceDump.FenceSignal(key, fenceKey, fenceValue);
 }
 

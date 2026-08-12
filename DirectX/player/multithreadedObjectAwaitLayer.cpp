@@ -7,13 +7,14 @@
 // ===================== end_copyright_notice ==============================
 
 #include "multithreadedObjectAwaitLayer.h"
+#include "arguments.h"
 #include "interfaceArgumentUpdaters.h"
 
 namespace gits {
 namespace DirectX {
 
 std::optional<MultithreadedObjectCreationService::ObjectCreationOutput>
-MultithreadedObjectAwaitLayer::CollectResult(unsigned objectKey) {
+MultithreadedObjectAwaitLayer::CollectResult(GITSKey objectKey) {
   auto it = m_PreCollectedOutputs.find(objectKey);
   if (it != m_PreCollectedOutputs.end()) {
     auto result = it->second;
@@ -23,7 +24,7 @@ MultithreadedObjectAwaitLayer::CollectResult(unsigned objectKey) {
   return m_Manager.GetMultithreadedObjectCreationService().Complete(objectKey);
 }
 
-bool MultithreadedObjectAwaitLayer::CompleteObject(unsigned key, bool forceCompletePendingObject) {
+bool MultithreadedObjectAwaitLayer::CompleteObject(GITSKey key, bool forceCompletePendingObject) {
   if (!key || forceCompletePendingObject ? false : m_Manager.FindObject(key)) {
     return false;
   }
@@ -198,7 +199,7 @@ void MultithreadedObjectAwaitLayer::Pre(ID3D12Device5CreateStateObjectCommand& c
     D3D12_STATE_SUBOBJECT* subobject =
         const_cast<D3D12_STATE_SUBOBJECT*>(&(c.m_pDesc.Value->pSubobjects[index]));
     if (subobject->Type == D3D12_STATE_SUBOBJECT_TYPE_EXISTING_COLLECTION) {
-      unsigned objectKey = c.m_pDesc.InterfaceKeysBySubobject[index];
+      GITSKey objectKey = c.m_pDesc.InterfaceKeysBySubobject[index];
       if (!objectKey || m_Manager.FindObject(objectKey)) {
         continue;
       }
@@ -220,7 +221,7 @@ void MultithreadedObjectAwaitLayer::Pre(ID3D12Device7AddToStateObjectCommand& c)
     D3D12_STATE_SUBOBJECT* subobject =
         const_cast<D3D12_STATE_SUBOBJECT*>(&(c.m_pAddition.Value->pSubobjects[index]));
     if (subobject->Type == D3D12_STATE_SUBOBJECT_TYPE_EXISTING_COLLECTION) {
-      unsigned objectKey = c.m_pAddition.InterfaceKeysBySubobject[index];
+      GITSKey objectKey = c.m_pAddition.InterfaceKeysBySubobject[index];
       if (!objectKey || m_Manager.FindObject(objectKey)) {
         continue;
       }

@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "raytracingOptimizationService.h"
+#include "arguments.h"
 #include "log.h"
 
 namespace gits {
@@ -29,7 +30,7 @@ void RaytracingOptimizationService::BuildAccelerationStructure(
   if (c.m_pDesc.SourceAccelerationStructureKey) {
     command->Buffers.insert(c.m_pDesc.SourceAccelerationStructureKey);
   }
-  for (unsigned key : c.m_pDesc.InputKeys) {
+  for (GITSKey key : c.m_pDesc.InputKeys) {
     command->Buffers.insert(key);
   }
   if (c.m_pDesc.Value->Inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL) {
@@ -90,7 +91,7 @@ void RaytracingOptimizationService::NvapiBuildAccelerationStructureEx(
   if (c.m_pParams.SourceAccelerationStructureKey) {
     command->Buffers.insert(c.m_pParams.SourceAccelerationStructureKey);
   }
-  for (unsigned key : c.m_pParams.InputKeys) {
+  for (GITSKey key : c.m_pParams.InputKeys) {
     command->Buffers.insert(key);
   }
   if (c.m_pParams.Value->pDesc->inputs.type ==
@@ -146,7 +147,7 @@ void RaytracingOptimizationService::NvapiBuildOpacityMicromapArray(
 
 void RaytracingOptimizationService::ExecuteCommandLists(
     ID3D12CommandQueueExecuteCommandListsCommand& c) {
-  for (unsigned commandListKey : c.m_ppCommandLists.Keys) {
+  for (GITSKey commandListKey : c.m_ppCommandLists.Keys) {
     auto it = m_CommandsByCommandList.find(commandListKey);
     if (it != m_CommandsByCommandList.end()) {
       for (auto& command : it->second) {
@@ -225,8 +226,8 @@ void RaytracingOptimizationService::Optimize(
   for (auto& it : m_CommandById) {
     RaytracingCommand* command = it.second.get();
     if (command->Restore) {
-      unsigned commandKey = command->CommandKey;
-      unsigned sourceKey = 0;
+      GITSKey commandKey = command->CommandKey;
+      GITSKey sourceKey = 0;
       if (command->Source) {
         sourceKey = command->Source->CommandKey;
       }

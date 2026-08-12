@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "gpuAddressService.h"
+#include "arguments.h"
 #include "log.h"
 
 #include <wrl/client.h>
@@ -14,7 +15,7 @@
 namespace gits {
 namespace DirectX {
 
-void GpuAddressService::CreateResource(unsigned resourceKey, ID3D12Resource* resource) {
+void GpuAddressService::CreateResource(GITSKey resourceKey, ID3D12Resource* resource) {
 
   D3D12_RESOURCE_DESC desc = resource->GetDesc();
   if (desc.Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
@@ -52,9 +53,9 @@ void GpuAddressService::CreateResource(unsigned resourceKey, ID3D12Resource* res
   m_ResourcesByKey[resourceKey].reset(resourceInfo);
 }
 
-void GpuAddressService::CreatePlacedResource(unsigned resourceKey,
+void GpuAddressService::CreatePlacedResource(GITSKey resourceKey,
                                              ID3D12Resource* resource,
-                                             unsigned heapKey,
+                                             GITSKey heapKey,
                                              ID3D12Heap* heap,
                                              UINT64 heapOffset,
                                              bool raytracingAS) {
@@ -115,7 +116,7 @@ void GpuAddressService::CreatePlacedResource(unsigned resourceKey,
   m_PlacedResourcesByHeap[resourceInfo->HeapInfo->Key].insert(resourceInfo->Key);
 }
 
-void GpuAddressService::CreateHeap(unsigned heapKey, ID3D12Heap* heap) {
+void GpuAddressService::CreateHeap(GITSKey heapKey, ID3D12Heap* heap) {
 
   D3D12_HEAP_DESC desc = heap->GetDesc();
   if (desc.Flags & D3D12_HEAP_FLAG_DENY_BUFFERS) {
@@ -299,7 +300,7 @@ const GpuAddressService::ResourceInfo* GpuAddressService::GetResourceFromHeap(
   return resourceInfo;
 }
 
-void GpuAddressService::DestroyInterface(unsigned interfaceKey) {
+void GpuAddressService::DestroyInterface(GITSKey interfaceKey) {
 
   tbb::spin_rw_mutex::scoped_lock lock(m_RwMutex);
 
@@ -335,7 +336,7 @@ void GpuAddressService::DestroyInterface(unsigned interfaceKey) {
 
     auto itPlacedResourceHeap = m_PlacedResourcesByHeap.find(interfaceKey);
     if (itPlacedResourceHeap != m_PlacedResourcesByHeap.end()) {
-      for (unsigned placedResourceKey : itPlacedResourceHeap->second) {
+      for (GITSKey placedResourceKey : itPlacedResourceHeap->second) {
         m_PlacedResourcesByKey.erase(placedResourceKey);
       }
 

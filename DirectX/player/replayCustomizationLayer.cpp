@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "replayCustomizationLayer.h"
+#include "arguments.h"
 #include "configurator.h"
 #include "playerManager.h"
 #include "interfaceArgumentUpdaters.h"
@@ -1536,7 +1537,7 @@ void ReplayCustomizationLayer::Pre(ID3D12GraphicsCommandList4DispatchRaysCommand
 
   auto& desc = *c.m_pDesc.Value;
   auto patchStartAddressIfEmptyTable = [this](D3D12_GPU_VIRTUAL_ADDRESS& start, UINT64 sizeInBytes,
-                                              unsigned key, unsigned offset) {
+                                              GITSKey key, unsigned offset) {
     if (!sizeInBytes && start) {
       start = m_Manager.GetGpuAddressService().GetGpuAddress(key, offset);
     }
@@ -2027,8 +2028,8 @@ void ReplayCustomizationLayer::FillCpuDescriptorHandleArgument(
       arg.InterfaceKey, ReplayDescriptorHandleService::HandleType::CpuHandle, arg.Index);
 }
 
-void ReplayCustomizationLayer::WaitForFence(unsigned commandKey,
-                                            unsigned fenceKey,
+void ReplayCustomizationLayer::WaitForFence(GITSKey commandKey,
+                                            GITSKey fenceKey,
                                             ID3D12Fence* fence,
                                             UINT64 fenceValue) {
   if (m_NonIncrementalFenceWait) {
@@ -2038,7 +2039,7 @@ void ReplayCustomizationLayer::WaitForFence(unsigned commandKey,
   }
 }
 
-void ReplayCustomizationLayer::WaitForFenceIncremental(unsigned commandKey,
+void ReplayCustomizationLayer::WaitForFenceIncremental(GITSKey commandKey,
                                                        ID3D12Fence* fence,
                                                        UINT64 fenceValue) {
   UINT64 value = fence->GetCompletedValue();
@@ -2063,8 +2064,8 @@ void ReplayCustomizationLayer::WaitForFenceIncremental(unsigned commandKey,
   }
 }
 
-void ReplayCustomizationLayer::WaitForFenceNonIncremental(unsigned commandKey,
-                                                          unsigned fenceKey,
+void ReplayCustomizationLayer::WaitForFenceNonIncremental(GITSKey commandKey,
+                                                          GITSKey fenceKey,
                                                           ID3D12Fence* fence,
                                                           UINT64 fenceValue) {
   std::optional<UINT64> trackedValue = m_GpuExecutionTracker.GetFenceValue(fenceKey);

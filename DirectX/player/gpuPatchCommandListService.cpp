@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "gpuPatchCommandListService.h"
+#include "arguments.h"
 
 namespace gits {
 namespace DirectX {
@@ -98,11 +99,11 @@ void GpuPatchCommandListService::StoreCommand(ID3D12GraphicsCommandListSetPipeli
   m_CommandLists[c.m_Object.Key].CurrentPipelineState = {c.m_pPipelineState.Value, false};
 }
 
-void GpuPatchCommandListService::Remove(unsigned commandListKey) {
+void GpuPatchCommandListService::Remove(GITSKey commandListKey) {
   m_CommandLists.erase(commandListKey);
 }
 
-void GpuPatchCommandListService::Reset(unsigned commandListKey, ID3D12PipelineState* initialState) {
+void GpuPatchCommandListService::Reset(GITSKey commandListKey, ID3D12PipelineState* initialState) {
   if (initialState) {
     m_CommandLists[commandListKey] = CommandListState{};
     m_CommandLists[commandListKey].CurrentPipelineState = {initialState, false};
@@ -111,7 +112,7 @@ void GpuPatchCommandListService::Reset(unsigned commandListKey, ID3D12PipelineSt
   }
 }
 
-void GpuPatchCommandListService::RestoreState(unsigned commandListKey,
+void GpuPatchCommandListService::RestoreState(GITSKey commandListKey,
                                               ID3D12GraphicsCommandList* commandList) {
   auto itCommandLists = m_CommandLists.find(commandListKey);
   if (itCommandLists == m_CommandLists.end()) {

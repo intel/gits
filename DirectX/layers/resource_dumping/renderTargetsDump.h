@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #pragma once
+#include "arguments.h"
 
 #include "resourceDump.h"
 
@@ -25,8 +26,8 @@ public:
                     unsigned mipLevel,
                     DXGI_FORMAT format,
                     unsigned commandListDrawCount);
-  void ExecuteCommandLists(unsigned key,
-                           unsigned commandQueueKey,
+  void ExecuteCommandLists(GITSKey key,
+                           GITSKey commandQueueKey,
                            ID3D12CommandQueue* commandQueue,
                            ID3D12CommandList** commandLists,
                            unsigned commandListNum,

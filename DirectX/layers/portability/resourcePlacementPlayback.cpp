@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "resourcePlacementPlayback.h"
+#include "arguments.h"
 #include "log.h"
 #include "configurationLib.h"
 
@@ -16,7 +17,7 @@
 namespace gits {
 namespace DirectX {
 
-void ResourcePlacementPlayback::createHeap(ID3D12Device* device, unsigned heapKey, UINT64& size) {
+void ResourcePlacementPlayback::createHeap(ID3D12Device* device, GITSKey heapKey, UINT64& size) {
   if (!m_Initialized) {
     calculateResourcePlacement(device);
     m_Initialized = true;
@@ -30,7 +31,7 @@ void ResourcePlacementPlayback::createHeap(ID3D12Device* device, unsigned heapKe
   }
 }
 
-void ResourcePlacementPlayback::createPlacedResource(unsigned resourceKey, UINT64& offset) {
+void ResourcePlacementPlayback::createPlacedResource(GITSKey resourceKey, UINT64& offset) {
   auto it = m_ChangedResourceOffsets.find(resourceKey);
   if (it != m_ChangedResourceOffsets.end()) {
     offset = it->second;
@@ -78,7 +79,7 @@ void ResourcePlacementPlayback::calculateResourcePlacement(ID3D12Device* device)
 }
 
 void ResourcePlacementPlayback::calculateResourcePlacement(
-    ID3D12Device* device, unsigned heapKey, std::vector<ResourcePlacementShiftInfo>& infos) {
+    ID3D12Device* device, GITSKey heapKey, std::vector<ResourcePlacementShiftInfo>& infos) {
 
   unsigned sizeChanged = 0;
   for (ResourcePlacementShiftInfo& info : infos) {

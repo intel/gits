@@ -8,6 +8,8 @@
 
 #pragma once
 
+#include "arguments.h"
+
 #include <mutex>
 #include <unordered_map>
 
@@ -16,12 +18,12 @@ namespace DirectX {
 
 class ContextMapService {
 public:
-  void SetContext(std::uintptr_t context, unsigned key) {
+  void SetContext(std::uintptr_t context, GITSKey key) {
     std::lock_guard<std::mutex> lock(m_Mutex);
     m_ContextMap[context] = key;
   }
 
-  unsigned GetKey(std::uintptr_t context) {
+  GITSKey GetKey(std::uintptr_t context) {
     if (!context) {
       return 0;
     }
@@ -37,7 +39,7 @@ public:
   }
 
 private:
-  std::unordered_map<std::uintptr_t, unsigned> m_ContextMap{};
+  std::unordered_map<std::uintptr_t, GITSKey> m_ContextMap{};
   std::mutex m_Mutex;
 };
 

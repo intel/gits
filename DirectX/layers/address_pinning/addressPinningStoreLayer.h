@@ -56,19 +56,19 @@ private:
 
 private:
   std::mutex m_Mutex;
-  std::unordered_map<unsigned, D3D12_GPU_VIRTUAL_ADDRESS_RANGE> m_ResourceAddressRanges;
+  std::unordered_map<GITSKey, D3D12_GPU_VIRTUAL_ADDRESS_RANGE> m_ResourceAddressRanges;
 
   struct HeapAllocationInfo {
     D3D12_GPU_VIRTUAL_ADDRESS_RANGE m_AddressRange;
     UINT64 m_Alignment;
   };
-  std::unordered_map<unsigned, HeapAllocationInfo> m_HeapAddressRanges;
+  std::unordered_map<GITSKey, HeapAllocationInfo> m_HeapAddressRanges;
 
   struct HeapInfo {
-    unsigned m_HeapKey{};
+    GITSKey m_HeapKey{};
     UINT64 m_Offset{};
   };
-  std::unordered_map<unsigned, HeapInfo> m_HeapInfoByPlacedResource;
+  std::unordered_map<GITSKey, HeapInfo> m_HeapInfoByPlacedResource;
 };
 
 } // namespace DirectX

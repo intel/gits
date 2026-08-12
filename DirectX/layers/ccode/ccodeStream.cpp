@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "ccodeStream.h"
+#include "arguments.h"
 #include "ccodeStringLiterals.h"
 #include "ccodeUtilsAuto.h"
 #include "to_string/toStr.h"
@@ -186,7 +187,7 @@ size_t CCodeStream::getDataOffset() const {
   return m_DataOffset;
 }
 
-void CCodeStream::addInterface(unsigned key, REFIID iid) {
+void CCodeStream::addInterface(GITSKey key, REFIID iid) {
   const auto& latestIID = getLatestInterface(iid);
   auto iidStr = toStr(latestIID);
   if (iidStr.starts_with("IID_")) {
@@ -195,7 +196,7 @@ void CCodeStream::addInterface(unsigned key, REFIID iid) {
   m_InterfaceMap[key] = std::move(iidStr);
 }
 
-std::string CCodeStream::getInterfaceName(unsigned key) const {
+std::string CCodeStream::getInterfaceName(GITSKey key) const {
   auto it = m_InterfaceMap.find(key);
   return (it != m_InterfaceMap.end()) ? it->second : std::string();
 }

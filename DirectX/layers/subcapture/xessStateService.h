@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #pragma once
+#include "arguments.h"
 
 #include "subcaptureRecorder.h"
 #include "commandsAuto.h"
@@ -27,8 +28,8 @@ class StateTrackingService;
 class XessStateService {
 public:
   struct ContextState {
-    unsigned Key{};
-    unsigned DeviceKey{};
+    GITSKey Key{};
+    GITSKey DeviceKey{};
     ID3D12Device* Device{};
     std::optional<xess_d3d12_init_params_t_Argument> InitParams;
     std::unique_ptr<float[]> JitterScale;
@@ -42,11 +43,11 @@ public:
       : m_StateService(stateService), m_Recorder(recorder) {}
   void RestoreState();
   void StoreContextState(ContextState* state);
-  ContextState* GetContextState(unsigned key) {
+  ContextState* GetContextState(GITSKey key) {
     return m_ContextStatesByContextKey[key].get();
   }
-  void DestroyDevice(unsigned key);
-  void DestroyContext(unsigned key);
+  void DestroyDevice(GITSKey key);
+  void DestroyContext(GITSKey key);
 
 private:
   void RestoreContextState(ContextState* state);
@@ -54,8 +55,8 @@ private:
 private:
   StateTrackingService& m_StateService;
   SubcaptureRecorder& m_Recorder;
-  std::map<unsigned, std::unique_ptr<ContextState>> m_ContextStatesByContextKey;
-  std::map<unsigned, ContextState*> m_ContextStatesByDeviceKey;
+  std::map<GITSKey, std::unique_ptr<ContextState>> m_ContextStatesByContextKey;
+  std::map<GITSKey, ContextState*> m_ContextStatesByDeviceKey;
 };
 
 #pragma endregion
@@ -65,8 +66,8 @@ private:
 class XellStateService {
 public:
   struct ContextState {
-    unsigned Key{};
-    unsigned DeviceKey{};
+    GITSKey Key{};
+    GITSKey DeviceKey{};
     ID3D12Device* Device{};
     std::optional<xell_sleep_params_t> SleepParams;
     std::unordered_map<uint32_t, std::vector<xell_latency_marker_type_t>> RegisteredMarkers;
@@ -77,12 +78,12 @@ public:
       : m_StateService(stateService), m_Recorder(recorder) {}
   void RestoreState();
   void StoreContextState(ContextState* state);
-  ContextState* GetContextState(unsigned key) {
+  ContextState* GetContextState(GITSKey key) {
     return m_ContextStatesByContextKey[key].get();
   }
-  void TrackMarker(unsigned key, uint32_t frame, xell_latency_marker_type_t marker);
-  void DestroyDevice(unsigned key);
-  void DestroyContext(unsigned key);
+  void TrackMarker(GITSKey key, uint32_t frame, xell_latency_marker_type_t marker);
+  void DestroyDevice(GITSKey key);
+  void DestroyContext(GITSKey key);
 
 private:
   void RestoreContextState(ContextState* state);
@@ -91,8 +92,8 @@ private:
 private:
   StateTrackingService& m_StateService;
   SubcaptureRecorder& m_Recorder;
-  std::map<unsigned, std::unique_ptr<ContextState>> m_ContextStatesByContextKey;
-  std::map<unsigned, ContextState*> m_ContextStatesByDeviceKey;
+  std::map<GITSKey, std::unique_ptr<ContextState>> m_ContextStatesByContextKey;
+  std::map<GITSKey, ContextState*> m_ContextStatesByDeviceKey;
   bool m_Restored{};
 };
 
@@ -107,7 +108,7 @@ public:
         : InitParams(initParams_) {}
     xefg_swapchain_d3d12_init_params_t_Argument InitParams;
     ID3D12CommandQueue* CmdQueue{};
-    unsigned CmdQueueKey{};
+    GITSKey CmdQueueKey{};
   };
 
   struct InitFromSwapChainDescState {
@@ -118,18 +119,18 @@ public:
     DXGI_SWAP_CHAIN_DESC1 SwapChainDesc{};
     std::optional<DXGI_SWAP_CHAIN_FULLSCREEN_DESC> FullscreenDesc;
     ID3D12CommandQueue* CmdQueue{};
-    unsigned CmdQueueKey{};
-    unsigned DxgiFactoryKey{};
+    GITSKey CmdQueueKey{};
+    GITSKey DxgiFactoryKey{};
   };
 
   struct SwapChainPtrState {
     IID Riid{};
     IDXGISwapChain* SwapChain{};
-    unsigned SwapChainKey{};
+    GITSKey SwapChainKey{};
   };
 
   struct DescriptorHeapState {
-    unsigned DescriptorHeapKey;
+    GITSKey DescriptorHeapKey;
     uint32_t DescriptorHeapOffsetInBytes;
   };
 
@@ -140,15 +141,15 @@ public:
   };
 
   struct ExternalHeapOnResizeState {
-    unsigned TempBufferHeapKey{};
+    GITSKey TempBufferHeapKey{};
     uint64_t TempBufferHeapOffset{};
-    unsigned TempTextureHeapKey{};
+    GITSKey TempTextureHeapKey{};
     uint64_t TempTextureHeapOffset{};
   };
 
   struct ContextState {
-    unsigned Key{};
-    unsigned DeviceKey{};
+    GITSKey Key{};
+    GITSKey DeviceKey{};
     ID3D12Device* Device{};
     bool Enabled{};
     XELLContextArgument XellContext{};
@@ -168,11 +169,11 @@ public:
       : m_StateService(stateService), m_Recorder(recorder) {}
   void RestoreState();
   void StoreContextState(ContextState* state);
-  ContextState* GetContextState(unsigned key) {
+  ContextState* GetContextState(GITSKey key) {
     return m_ContextStatesByContextKey[key].get();
   }
-  void DestroyDevice(unsigned key);
-  void DestroyContext(unsigned key);
+  void DestroyDevice(GITSKey key);
+  void DestroyContext(GITSKey key);
 
 private:
   void RestoreContextState(ContextState* state);
@@ -180,8 +181,8 @@ private:
 private:
   StateTrackingService& m_StateService;
   SubcaptureRecorder& m_Recorder;
-  std::map<unsigned, std::unique_ptr<ContextState>> m_ContextStatesByContextKey;
-  std::map<unsigned, ContextState*> m_ContextStatesByDeviceKey;
+  std::map<GITSKey, std::unique_ptr<ContextState>> m_ContextStatesByContextKey;
+  std::map<GITSKey, ContextState*> m_ContextStatesByDeviceKey;
   bool m_Restored{};
 };
 

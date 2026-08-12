@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #pragma once
+#include "arguments.h"
 
 #include "resourcePlacementCapture.h"
 
@@ -20,10 +21,10 @@ class ResourcePlacementAssertions {
 public:
   ResourcePlacementAssertions();
 
-  void createPlacedResource(unsigned resourceKey,
+  void createPlacedResource(GITSKey resourceKey,
                             const D3D12_RESOURCE_DESC& desc,
                             ID3D12Device* device);
-  void createPlacedResource(unsigned resourceKey,
+  void createPlacedResource(GITSKey resourceKey,
                             const D3D12_RESOURCE_DESC1& desc,
                             ID3D12Device* device);
 
@@ -33,17 +34,17 @@ private:
     D3D12_RESOURCE_ALLOCATION_INFO post{};
   };
 
-  const ResourcePlacementInfo* findPlacementData(unsigned resourceKey);
+  const ResourcePlacementInfo* findPlacementData(GITSKey resourceKey);
   D3D12_RESOURCE_ALLOCATION_INFO queryAllocationFromDevice(ID3D12Device* device,
                                                            const D3D12_RESOURCE_DESC& desc,
-                                                           unsigned resourceKey);
+                                                           GITSKey resourceKey);
   void checkCompatibility(const AllocationInfo& allocationInfo,
                           const D3D12_RESOURCE_DESC& desc,
-                          unsigned resourceKey);
+                          GITSKey resourceKey);
 
   void loadResourcePlacementData();
 
-  std::unordered_map<unsigned, ResourcePlacementInfo> m_PlacementDataFromFile;
+  std::unordered_map<GITSKey, ResourcePlacementInfo> m_PlacementDataFromFile;
   bool m_PlacementDataLoaded{};
 };
 

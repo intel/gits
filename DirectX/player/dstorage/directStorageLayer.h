@@ -42,13 +42,13 @@ private:
     std::list<Buffer> Buffers;
   };
 
-  void ClearCompletedBatches(unsigned queueKey);
+  void ClearCompletedBatches(GITSKey queueKey);
   void CompleteAllBatches();
   void WaitForStatusArray(IDStorageStatusArray* statusArray, UINT32 index);
 
   std::wstring m_ResourcesFilePath;
-  std::unordered_map<unsigned, std::list<Buffer>> m_Buffers;
-  std::unordered_map<unsigned, std::deque<std::unique_ptr<Batch>>> m_InflightBatches;
+  std::unordered_map<GITSKey, std::list<Buffer>> m_Buffers;
+  std::unordered_map<GITSKey, std::deque<std::unique_ptr<Batch>>> m_InflightBatches;
 };
 
 } // namespace DirectX

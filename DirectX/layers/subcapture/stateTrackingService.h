@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #pragma once
+#include "arguments.h"
 
 #include "objectState.h"
 #include "resourceContentRestore.h"
@@ -91,25 +92,25 @@ public:
   StateTrackingService& operator=(StateTrackingService&) = delete;
 
   void RestoreState();
-  void KeepState(unsigned objectKey);
+  void KeepState(GITSKey objectKey);
   void StoreState(ObjectState* state);
-  void RemoveState(unsigned key);
+  void RemoveState(GITSKey key);
   void StoreINTCFeature(INTC_D3D12_FEATURE feature);
   void StoreINTCApplicationInfo(INTC_D3D12_SetApplicationInfoCommand& c);
   void StoreD3D12EnableExperimentalFeatures(const D3D12EnableExperimentalFeaturesCommand& c);
   void StoreDllContainer(const DllContainerMetaCommand& c);
-  void ReleaseObject(unsigned key, ULONG result);
-  void SetReferenceCount(unsigned objectKey, ULONG referenceCount);
-  ObjectState* GetState(unsigned key);
-  void RestoreState(unsigned key);
-  bool StateRestored(unsigned key);
-  void AddBackBuffer(unsigned buffer, unsigned resourceKey, ID3D12Resource* resource);
+  void ReleaseObject(GITSKey key, ULONG result);
+  void SetReferenceCount(GITSKey objectKey, ULONG referenceCount);
+  ObjectState* GetState(GITSKey key);
+  void RestoreState(GITSKey key);
+  bool StateRestored(GITSKey key);
+  void AddBackBuffer(unsigned buffer, GITSKey resourceKey, ID3D12Resource* resource);
   void SetXefgSwapChainFlag();
 
-  unsigned GetUniqueCommandKey() {
+  GITSKey GetUniqueCommandKey() {
     return ++m_RestoreCommandKey;
   };
-  unsigned GetUniqueObjectKey() {
+  GITSKey GetUniqueObjectKey() {
     return ++m_RestoreObjectKey;
   };
   void* GetUniqueFakePointer() {
@@ -127,7 +128,7 @@ public:
   ResourceStateTrackingService& GetResourceStateTrackingService() {
     return m_ResourceStateTrackingService;
   }
-  unsigned GetDeviceKey() {
+  GITSKey GetDeviceKey() {
     return m_DeviceKey;
   }
 
@@ -143,13 +144,13 @@ public:
     void AddSetNvShaderExtnSlotSpaceLocalThreadCommand(
         const NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& Command);
     void RestoreInitializeCount();
-    void RestoreCreatePipelineStateOptionsBeforeCommand(unsigned commandKey);
-    void RestoreShaderExtnSlotSpaceBeforeCommand(unsigned commandKey);
+    void RestoreCreatePipelineStateOptionsBeforeCommand(GITSKey commandKey);
+    void RestoreShaderExtnSlotSpaceBeforeCommand(GITSKey commandKey);
     void FinalizeRestore();
 
   private:
     struct OrderedCommand {
-      unsigned Key{};
+      GITSKey Key{};
       std::unique_ptr<Command> SerializedCommand;
     };
 
@@ -179,7 +180,7 @@ public:
 
   private:
     StateTrackingService& m_StateService;
-    std::unordered_map<unsigned,
+    std::unordered_map<GITSKey,
                        std::unique_ptr<ID3D12ApplicationIdentitySetApplicationIdentitySerializer>>
         m_ApplicationIdentities;
   };
@@ -201,8 +202,8 @@ private:
   void RestoreD3D12EnableExperimentalFeatures();
   void RestoreDllContainers();
   void RestoreStateObjectProperties();
-  void RestoreResidencyPriority(unsigned deviceKey,
-                                unsigned objectKey,
+  void RestoreResidencyPriority(GITSKey deviceKey,
+                                GITSKey objectKey,
                                 D3D12_RESIDENCY_PRIORITY residencyPriority);
   void RestoreDXGISwapChain(ObjectState* state);
   void RestoreDXGIAdapter(ObjectState* state);
@@ -224,9 +225,9 @@ private:
 private:
   SubcaptureRecorder& m_Recorder;
   ResourceContentRestore m_ResourceContentRestore;
-  std::map<unsigned, ObjectState*> m_StatesByKey;
-  unsigned m_RestoreCommandKey{STATE_RESTORE_KEY_MASK};
-  unsigned m_RestoreObjectKey{STATE_RESTORE_KEY_MASK};
+  std::map<GITSKey, ObjectState*> m_StatesByKey;
+  GITSKey m_RestoreCommandKey{STATE_RESTORE_KEY_MASK};
+  GITSKey m_RestoreObjectKey{STATE_RESTORE_KEY_MASK};
   unsigned m_RestoreFakePointer{};
   AnalyzerResults& m_AnalyzerResults;
   FenceTrackingService& m_FenceTrackingService;
@@ -246,7 +247,7 @@ private:
   ResourceUsageTrackingService& m_ResourceUsageTrackingService;
   ResourceForCBVRestoreService& m_ResourceForCBVRestoreService;
   MetaCommandsService& m_MetaCommandsService;
-  unsigned m_DeviceKey{};
+  GITSKey m_DeviceKey{};
   INTC_D3D12_FEATURE m_IntcFeature{};
   std::unique_ptr<INTC_D3D12_SetApplicationInfoCommand> m_SetApplicationInfoCommand;
   std::unique_ptr<D3D12EnableExperimentalFeaturesCommand> m_EnableExperimentalFeaturesCommand;
@@ -260,27 +261,27 @@ private:
   class SwapChainService {
   public:
     SwapChainService(StateTrackingService& stateService) : m_StateService(stateService) {}
-    void SetSwapChain(unsigned commandQueueKey,
+    void SetSwapChain(GITSKey commandQueueKey,
                       ID3D12CommandQueue* commandQueue,
-                      unsigned swapChainKey,
+                      GITSKey swapChainKey,
                       IDXGISwapChain* swapChain,
                       unsigned backBuffersCount);
     void RestoreBackBufferSequence(bool CommandListSubcapture);
     void RecordSwapChainPresent();
-    void AddBackBuffer(unsigned buffer, unsigned resourceKey, ID3D12Resource* resource);
+    void AddBackBuffer(unsigned buffer, GITSKey resourceKey, ID3D12Resource* resource);
     unsigned GetBackBuffersCount() {
       return m_BackBuffersCount;
     }
 
   private:
     StateTrackingService& m_StateService;
-    unsigned m_SwapChainKey{};
+    GITSKey m_SwapChainKey{};
     ID3D12CommandQueue* m_CommandQueue{};
-    unsigned m_CommandQueueKey{};
+    GITSKey m_CommandQueueKey{};
     IDXGISwapChain* m_SwapChain{};
     unsigned m_BackBufferShift{};
     unsigned m_BackBuffersCount{};
-    std::unordered_map<unsigned, std::pair<unsigned, ID3D12Resource*>> m_BackBuffers;
+    std::unordered_map<GITSKey, std::pair<unsigned, ID3D12Resource*>> m_BackBuffers;
   };
   SwapChainService m_SwapChainService;
 };

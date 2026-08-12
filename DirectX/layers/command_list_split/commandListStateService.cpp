@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "commandListStateService.h"
+#include "arguments.h"
 
 #include "commandCopyFactory.h"
 #include "log.h"
@@ -19,7 +20,7 @@
 namespace gits {
 namespace DirectX {
 
-CommandListStateService::CommandListStateService(unsigned commandListKey)
+CommandListStateService::CommandListStateService(GITSKey commandListKey)
     : m_CommandListKey(commandListKey) {}
 
 bool CommandListStateService::IsStateCommand(CommandId id) {
@@ -339,7 +340,7 @@ void CommandListStateService::StoreCommand(
   if (!m_State->DescriptorHeaps.has_value() ||
       !sameDescriptorHeapSet(m_State->DescriptorHeaps.value().m_ppDescriptorHeaps.Keys,
                              c.m_ppDescriptorHeaps.Keys)) {
-    auto removeArguments = [](std::map<unsigned, std::unique_ptr<Command>>& arguments,
+    auto removeArguments = [](std::map<GITSKey, std::unique_ptr<Command>>& arguments,
                               const CommandId commandId) {
       std::erase_if(arguments, [commandId](const auto& command) {
         return command.second->GetId() == commandId;
@@ -525,7 +526,7 @@ void CommandListStateService::StoreCommand(const ID3D12GraphicsCommandListResetC
   SetPipelineState(c.m_pInitialState.Key);
 }
 
-void CommandListStateService::SetPipelineState(unsigned pipelineStateKey) {
+void CommandListStateService::SetPipelineState(GITSKey pipelineStateKey) {
   if (!pipelineStateKey) {
     return;
   }
@@ -538,7 +539,7 @@ void CommandListStateService::SetPipelineState(unsigned pipelineStateKey) {
 }
 
 void CommandListStateService::AppendRootCommands(
-    const std::map<unsigned, std::unique_ptr<Command>>& args,
+    const std::map<GITSKey, std::unique_ptr<Command>>& args,
     std::vector<std::unique_ptr<Command>>& out) const {
   for (const auto& rootArgument : args) {
     auto command = CreateCommandCopy(rootArgument.second.get());

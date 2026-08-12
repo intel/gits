@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #pragma once
+#include "arguments.h"
 
 #include "command.h"
 #include "intelExtensions.h"
@@ -25,10 +26,10 @@ struct ObjectState {
   ObjectState() {}
   virtual ~ObjectState() = default;
   std::unique_ptr<Command> CreationCommand;
-  unsigned Key{};
-  unsigned ParentKey{};
-  unsigned LinkedLifetimeKey{};
-  std::unordered_set<unsigned> ChildrenKeys{};
+  GITSKey Key{};
+  GITSKey ParentKey{};
+  GITSKey LinkedLifetimeKey{};
+  std::unordered_set<GITSKey> ChildrenKeys{};
   IUnknown* Object{};
   std::wstring Name;
   D3D12_RESIDENCY_PRIORITY ResidencyPriority{};
@@ -40,7 +41,7 @@ struct ObjectState {
 
 struct ResourceState : public ObjectState {
   ResourceState() {}
-  unsigned DeviceKey{};
+  GITSKey DeviceKey{};
   D3D12_RESOURCE_STATES InitialState{};
   D3D12_BARRIER_LAYOUT InitialLayout{};
   D3D12_RESOURCE_DIMENSION Dimension{};
@@ -50,12 +51,12 @@ struct ResourceState : public ObjectState {
   bool BarrierRestricted{};
   bool DenyShaderResource{};
   D3D12_RESOURCE_STATES CurrentState{};
-  unsigned HeapKey{};
+  GITSKey HeapKey{};
   bool IsRtas{};
 };
 
 struct HeapState : public ObjectState {
-  unsigned DeviceKey{};
+  GITSKey DeviceKey{};
 };
 
 struct D3D12DescriptorHeapState : public ObjectState {

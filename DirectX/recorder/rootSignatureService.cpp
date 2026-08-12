@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "rootSignatureService.h"
+#include "arguments.h"
 #include "captureManager.h"
 
 #include <wrl/client.h>
@@ -15,7 +16,7 @@ namespace gits {
 namespace DirectX {
 
 void RootSignatureService::SerializeRootSignature(D3D12_ROOT_SIGNATURE_DESC* desc,
-                                                  unsigned blobKey) {
+                                                  GITSKey blobKey) {
 
   std::lock_guard<std::mutex> lock(m_Mutex);
 
@@ -25,7 +26,7 @@ void RootSignatureService::SerializeRootSignature(D3D12_ROOT_SIGNATURE_DESC* des
 }
 
 void RootSignatureService::SerializeVersionedRootSignature(
-    D3D12_VERSIONED_ROOT_SIGNATURE_DESC* desc, unsigned blobKey) {
+    D3D12_VERSIONED_ROOT_SIGNATURE_DESC* desc, GITSKey blobKey) {
 
   std::lock_guard<std::mutex> lock(m_Mutex);
 
@@ -68,7 +69,7 @@ void RootSignatureService::ParseRootSignatureDesc(ROOT_SIGNATURE_DESC& desc,
   }
 }
 
-void RootSignatureService::SetBlobBufferPointer(unsigned blobKey, void* blobPointer) {
+void RootSignatureService::SetBlobBufferPointer(GITSKey blobKey, void* blobPointer) {
 
   std::lock_guard<std::mutex> lock(m_Mutex);
 
@@ -81,7 +82,7 @@ void RootSignatureService::SetBlobBufferPointer(unsigned blobKey, void* blobPoin
 
 void RootSignatureService::CreateRootSignature(void* blobPointer,
                                                unsigned blobLength,
-                                               unsigned RootSignatureKey) {
+                                               GITSKey RootSignatureKey) {
 
   std::lock_guard<std::mutex> lock(m_Mutex);
 
@@ -108,30 +109,30 @@ void RootSignatureService::CreateRootSignature(void* blobPointer,
   m_RootSignatureByRootSignatureKey[RootSignatureKey] = info;
 }
 
-void RootSignatureService::SetGraphicsRootSignature(unsigned commandListKey,
-                                                    unsigned RootSignatureKey) {
+void RootSignatureService::SetGraphicsRootSignature(GITSKey commandListKey,
+                                                    GITSKey RootSignatureKey) {
   std::lock_guard<std::mutex> lock(m_Mutex);
   auto it = m_RootSignatureByRootSignatureKey.find(RootSignatureKey);
   GITS_ASSERT(it != m_RootSignatureByRootSignatureKey.end());
   m_GraphicsRootSignatureByCommandListKey[commandListKey] = it->second;
 }
 
-void RootSignatureService::SetComputeRootSignature(unsigned commandListKey,
-                                                   unsigned RootSignatureKey) {
+void RootSignatureService::SetComputeRootSignature(GITSKey commandListKey,
+                                                   GITSKey RootSignatureKey) {
   std::lock_guard<std::mutex> lock(m_Mutex);
   auto it = m_RootSignatureByRootSignatureKey.find(RootSignatureKey);
   GITS_ASSERT(it != m_RootSignatureByRootSignatureKey.end());
   m_ComputeRootSignatureByCommandListKey[commandListKey] = it->second;
 }
 
-void RootSignatureService::ResetRootSignatures(unsigned commandListKey) {
+void RootSignatureService::ResetRootSignatures(GITSKey commandListKey) {
   std::lock_guard<std::mutex> lock(m_Mutex);
   m_GraphicsRootSignatureByCommandListKey.erase(commandListKey);
   m_ComputeRootSignatureByCommandListKey.erase(commandListKey);
 }
 
 D3D12_DESCRIPTOR_HEAP_TYPE RootSignatureService::GetGraphicsRootSignatureDescriptorHeapType(
-    unsigned commandListKey, unsigned parameterIndex) {
+    GITSKey commandListKey, unsigned parameterIndex) {
   std::lock_guard<std::mutex> lock(m_Mutex);
   D3D12_DESCRIPTOR_HEAP_TYPE type{};
   auto it = m_GraphicsRootSignatureByCommandListKey.find(commandListKey);
@@ -142,7 +143,7 @@ D3D12_DESCRIPTOR_HEAP_TYPE RootSignatureService::GetGraphicsRootSignatureDescrip
 }
 
 D3D12_DESCRIPTOR_HEAP_TYPE RootSignatureService::GetComputeRootSignatureDescriptorHeapType(
-    unsigned commandListKey, unsigned parameterIndex) {
+    GITSKey commandListKey, unsigned parameterIndex) {
   std::lock_guard<std::mutex> lock(m_Mutex);
   D3D12_DESCRIPTOR_HEAP_TYPE type{};
   auto it = m_ComputeRootSignatureByCommandListKey.find(commandListKey);

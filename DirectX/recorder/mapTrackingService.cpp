@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "mapTrackingService.h"
+#include "arguments.h"
 #include "commandSerializersCustom.h"
 #include "captureManager.h"
 #include "log.h"
@@ -39,7 +40,7 @@ void MapTrackingService::EnableWriteWatch(D3D12_HEAP_PROPERTIES& properties,
   }
 }
 
-void MapTrackingService::MapResource(unsigned resourceKey,
+void MapTrackingService::MapResource(GITSKey resourceKey,
                                      ID3D12Resource* resource,
                                      unsigned subresourceIndex,
                                      void** mappedData) {
@@ -96,7 +97,7 @@ void MapTrackingService::MapResource(unsigned resourceKey,
   m_Mutex.unlock();
 }
 
-void MapTrackingService::UnmapResource(unsigned resourceKey, unsigned subresourceIndex) {
+void MapTrackingService::UnmapResource(GITSKey resourceKey, unsigned subresourceIndex) {
 
   std::lock_guard<std::mutex> lock(m_Mutex);
 
@@ -124,7 +125,7 @@ void MapTrackingService::ExecuteCommandLists() {
   }
 }
 
-void MapTrackingService::DestroyResource(unsigned resourceKey) {
+void MapTrackingService::DestroyResource(GITSKey resourceKey) {
 
   std::lock_guard<std::mutex> lock(m_Mutex);
 
@@ -193,7 +194,7 @@ void MapTrackingService::CaptureModifiedData(MappedInfo* info) {
 }
 
 void MapTrackingService::CaptureData(
-    unsigned resourceKey, void* mappedAddress, unsigned offset, void* data, unsigned dataSize) {
+    GITSKey resourceKey, void* mappedAddress, unsigned offset, void* data, unsigned dataSize) {
 
   MappedDataMetaCommand command(GetCurrentThreadId());
   command.Key = CaptureManager::Get().CreateCommandKey();

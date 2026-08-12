@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #pragma once
+#include "arguments.h"
 
 #include "commandsAuto.h"
 #include "commandsCustom.h"
@@ -40,19 +41,19 @@ public:
   std::set<std::pair<unsigned, unsigned>>& GetDescriptors() {
     return m_Descriptors;
   }
-  unsigned GetComputeRootSignatureKey(unsigned commandListKey) {
+  GITSKey GetComputeRootSignatureKey(GITSKey commandListKey) {
     return m_CommandListInfos[commandListKey].computeRootSignature;
   }
 
-  std::set<unsigned>& GetTlases();
+  std::set<GITSKey>& GetTlases();
 
-  void AddObjectForRestore(unsigned key) {
+  void AddObjectForRestore(GITSKey key) {
     if (key && m_Optimize) {
       m_ObjectsForRestore.insert(key);
     }
   }
 
-  void CommandListsRestore(const std::set<unsigned>& commandLists);
+  void CommandListsRestore(const std::set<GITSKey>& commandLists);
   void CommandListReset(ID3D12GraphicsCommandListResetCommand& c);
   void CreateDescriptorHeap(ID3D12DeviceCreateDescriptorHeapCommand& c);
   void CreateCommandSignature(ID3D12DeviceCreateCommandSignatureCommand& c);
@@ -68,9 +69,9 @@ public:
   void Command(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& c);
 
 private:
-  void CommandListRestore(unsigned commandListKey);
-  void SetBindlessDescriptors(unsigned rootSignatureKey,
-                              unsigned descriptorHeapKey,
+  void CommandListRestore(GITSKey commandListKey);
+  void SetBindlessDescriptors(GITSKey rootSignatureKey,
+                              GITSKey descriptorHeapKey,
                               D3D12_DESCRIPTOR_HEAP_TYPE heapType,
                               unsigned heapNumDescriptors);
   bool InRange();
@@ -150,26 +151,26 @@ private:
     unsigned viewDescriptorHeap{};
     unsigned samplerDescriptorHeap{};
   };
-  std::unordered_map<unsigned, CommandListInfo> m_CommandListInfos;
+  std::unordered_map<GITSKey, CommandListInfo> m_CommandListInfos;
 
   struct DescriptorHeapInfo {
     D3D12_DESCRIPTOR_HEAP_TYPE type{};
     unsigned numDescriptors{};
   };
-  std::unordered_map<unsigned, DescriptorHeapInfo> m_DescriptorHeapInfos;
+  std::unordered_map<GITSKey, DescriptorHeapInfo> m_DescriptorHeapInfos;
   std::unordered_set<unsigned> m_DispatchRaysCommandSignatures;
 
-  std::unordered_map<unsigned, std::vector<std::unique_ptr<::gits::DirectX::Command>>>
+  std::unordered_map<GITSKey, std::vector<std::unique_ptr<::gits::DirectX::Command>>>
       m_CommandsByCommandList;
-  std::unordered_map<unsigned, bool> m_ResetCommandLists;
+  std::unordered_map<GITSKey, bool> m_ResetCommandLists;
 
-  std::set<unsigned> m_CheckedStateObjectSubobjects;
+  std::set<GITSKey> m_CheckedStateObjectSubobjects;
 
   std::unordered_set<unsigned> m_ObjectsForRestore;
   std::set<std::pair<unsigned, unsigned>> m_Descriptors;
 
   bool m_RestoreTlases{};
-  std::set<unsigned> m_TlasBuildKeys;
+  std::set<GITSKey> m_TlasBuildKeys;
 };
 
 template <typename CommandListCommand>

@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "commandListSplitService.h"
+#include "arguments.h"
 #include "commandListStateService.h"
 #include "commandsAuto.h"
 #include "commandSerializersAuto.h"
@@ -55,8 +56,8 @@ CommandListSplitService::CommandListSplitService(CommandListSplitRecorder& recor
   }
 }
 
-void CommandListSplitService::CreateCommandList(unsigned commandListKey,
-                                                unsigned allocatorKey,
+void CommandListSplitService::CreateCommandList(GITSKey commandListKey,
+                                                GITSKey allocatorKey,
                                                 unsigned initialState) {
   m_AllocatorByCommandList[commandListKey] = allocatorKey;
   CommandList& commandList = m_CommandListsByKey[commandListKey];
@@ -70,7 +71,7 @@ void CommandListSplitService::CreateCommandList(unsigned commandListKey,
   }
 }
 
-void CommandListSplitService::CommandListCommand(unsigned commandListKey, const Command& command) {
+void CommandListSplitService::CommandListCommand(GITSKey commandListKey, const Command& command) {
   CommandList& commandList = m_CommandListsByKey[commandListKey];
   commandList.CommandListKey = commandListKey;
   if (m_Split == "all" && !CommandListStateService::IsStateCommand(command.GetId()) &&
@@ -83,8 +84,8 @@ void CommandListSplitService::CommandListCommand(unsigned commandListKey, const 
   commandList.Commands.push_back(CreateCommandCopy(&command));
 }
 
-void CommandListSplitService::CommandListReset(unsigned commandListKey,
-                                               unsigned allocatorKey,
+void CommandListSplitService::CommandListReset(GITSKey commandListKey,
+                                               GITSKey allocatorKey,
                                                unsigned initialState) {
   m_AllocatorByCommandList[commandListKey] = allocatorKey;
   CommandList& commandList = m_CommandListsByKey[commandListKey];
@@ -94,14 +95,14 @@ void CommandListSplitService::CommandListReset(unsigned commandListKey,
   commandList.Commands.clear();
 }
 
-void CommandListSplitService::ExecuteCommandLists(unsigned commandQueueKey,
-                                                  std::vector<unsigned>& commandListKeys) {
+void CommandListSplitService::ExecuteCommandLists(GITSKey commandQueueKey,
+                                                  std::vector<GITSKey>& commandListKeys) {
   GITS_ASSERT(commandListKeys.size() == 1);
   m_LastExecuteInfo = {commandQueueKey, commandListKeys.back()};
 }
 
-void CommandListSplitService::CommandQueueSignal(unsigned commandQueueKey,
-                                                 unsigned fenceKey,
+void CommandListSplitService::CommandQueueSignal(GITSKey commandQueueKey,
+                                                 GITSKey fenceKey,
                                                  uint64_t fenceValue) {
   GITS_ASSERT(m_LastExecuteInfo.commandQueueKey == commandQueueKey);
 
@@ -301,7 +302,7 @@ void CommandListSplitService::AddInterval(unsigned a, unsigned b) {
   m_SplitIntervals[a] = b;
 }
 
-std::optional<std::pair<unsigned, unsigned>> CommandListSplitService::GetInterval(unsigned key) {
+std::optional<std::pair<GITSKey, GITSKey>> CommandListSplitService::GetInterval(GITSKey key) {
   if (m_SplitIntervals.empty()) {
     return std::nullopt;
   }

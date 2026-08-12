@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "resourceForCBVRestoreService.h"
+#include "arguments.h"
 #include "stateTrackingService.h"
 #include "subcaptureRecorder.h"
 #include "commandSerializersFactory.h"
@@ -15,15 +16,15 @@
 namespace gits {
 namespace DirectX {
 
-void ResourceForCBVRestoreService::AddResourceCreationCommand(unsigned resourceKey,
-                                                              unsigned heapKey,
+void ResourceForCBVRestoreService::AddResourceCreationCommand(GITSKey resourceKey,
+                                                              GITSKey heapKey,
                                                               Command* creationCommand) {
   auto& info = m_ResourceCreationInfo[resourceKey];
   info.HeapKey = heapKey;
   info.CreationCommand.reset(creationCommand);
 }
 
-bool ResourceForCBVRestoreService::RestoreResourceObject(unsigned resourceKey) {
+bool ResourceForCBVRestoreService::RestoreResourceObject(GITSKey resourceKey) {
   if (m_RestoredResourceObjects.find(resourceKey) != m_RestoredResourceObjects.end()) {
     return true;
   }
@@ -47,7 +48,7 @@ bool ResourceForCBVRestoreService::RestoreResourceObject(unsigned resourceKey) {
 }
 
 void ResourceForCBVRestoreService::ReleaseResources() {
-  for (unsigned key : m_RestoredResourceObjects) {
+  for (GITSKey key : m_RestoredResourceObjects) {
     IUnknownReleaseCommand c;
     c.Key = m_StateService.GetUniqueCommandKey();
     c.m_Object.Key = key;
@@ -55,7 +56,7 @@ void ResourceForCBVRestoreService::ReleaseResources() {
   }
 }
 
-bool ResourceForCBVRestoreService::ResourceRestored(unsigned resourceKey) {
+bool ResourceForCBVRestoreService::ResourceRestored(GITSKey resourceKey) {
   auto it = m_RestoredResourceObjects.find(resourceKey);
   return it != m_RestoredResourceObjects.end();
 }

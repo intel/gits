@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #pragma once
+#include "arguments.h"
 
 #include <dxgi.h>
 #include <map>
@@ -21,8 +22,8 @@ public:
   bool IsAdapterOverride() const;
   IDXGIAdapter1* GetAdapter() const;
 
-  void SetCaptureAdapterLuid(unsigned key, LUID captureLuid);
-  void SetCurrentAdapterLuid(unsigned key, LUID currentLuid);
+  void SetCaptureAdapterLuid(GITSKey key, LUID captureLuid);
+  void SetCurrentAdapterLuid(GITSKey key, LUID currentLuid);
   LUID GetCurrentLuid(LUID captureLuid);
 
 private:
@@ -35,7 +36,7 @@ private:
   };
 
   Microsoft::WRL::ComPtr<IDXGIAdapter1> m_Adapter;
-  std::map<unsigned, LUID> m_CaptureLuids;
+  std::map<GITSKey, LUID> m_CaptureLuids;
   std::map<LUID, LUID, LessLuid> m_LuidsByCaptureLuid;
 };
 

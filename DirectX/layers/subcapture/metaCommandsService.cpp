@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "metaCommandsService.h"
+#include "arguments.h"
 #include "stateTrackingService.h"
 #include "subcaptureRecorder.h"
 #include "analyzerResults.h"
@@ -25,14 +26,14 @@ void MetaCommandsService::InitializeMetaCommand(
          command.m_InitializationParametersDataSizeInBytes.Value);
 }
 
-void MetaCommandsService::SetDeviceKey(unsigned deviceKey) {
+void MetaCommandsService::SetDeviceKey(GITSKey deviceKey) {
   if (m_DeviceKey && m_DeviceKey != deviceKey) {
     LOG_ERROR << "MetaCommandsService - multiple devices not supported!";
   }
   m_DeviceKey = deviceKey;
 }
 
-void MetaCommandsService::DestroyMetaCommand(unsigned key) {
+void MetaCommandsService::DestroyMetaCommand(GITSKey key) {
   m_MetaCommandData.erase(key);
 }
 

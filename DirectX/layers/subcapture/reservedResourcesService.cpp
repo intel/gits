@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "reservedResourcesService.h"
+#include "arguments.h"
 #include "resourceStateTrackingService.h"
 #include "stateTrackingService.h"
 #include "subcaptureRecorder.h"
@@ -40,7 +41,7 @@ void ReservedResourcesService::AddUpdateTileMappings(
     InitTiledResource(*tiledResource);
   }
 
-  unsigned heapKey = c.m_pHeap.Key;
+  GITSKey heapKey = c.m_pHeap.Key;
 
   if (heapKey) {
     m_ResourcesByHeapKey[heapKey].insert(c.m_pResource.Key);
@@ -240,7 +241,7 @@ void ReservedResourcesService::InitTiledResource(TiledResource& tiledResource) {
 }
 
 void ReservedResourcesService::CopySourceBarrier(ID3D12Resource* resource,
-                                                 unsigned resourceKey,
+                                                 GITSKey resourceKey,
                                                  bool restoreState) {
   ResourceStateTrackingService::ResourceStates& resourceStates =
       m_StateService.GetResourceStateTrackingService().GetResourceStates(resourceKey);
@@ -369,7 +370,7 @@ void ReservedResourcesService::MarkSubresourceNotFullyMapped(
   }
 }
 
-void ReservedResourcesService::DestroyObject(unsigned objectKey) {
+void ReservedResourcesService::DestroyObject(GITSKey objectKey) {
   auto itResource = m_Resources.find(objectKey);
   if (itResource != m_Resources.end()) {
     itResource->second->Destroyed = true;
@@ -380,7 +381,7 @@ void ReservedResourcesService::DestroyObject(unsigned objectKey) {
   if (itHeap == m_ResourcesByHeapKey.end()) {
     return;
   }
-  for (unsigned ResourceKey : itHeap->second) {
+  for (GITSKey ResourceKey : itHeap->second) {
     auto itResource = m_Resources.find(ResourceKey);
     if (itResource == m_Resources.end()) {
       continue;
@@ -396,7 +397,7 @@ void ReservedResourcesService::DestroyObject(unsigned objectKey) {
 }
 
 ReservedResourcesService::TiledResource* ReservedResourcesService::GetTiledResource(
-    unsigned resourceKey) {
+    GITSKey resourceKey) {
   auto it = m_Resources.find(resourceKey);
   if (it == m_Resources.end()) {
     return nullptr;
@@ -405,20 +406,20 @@ ReservedResourcesService::TiledResource* ReservedResourcesService::GetTiledResou
 }
 
 void ReservedResourcesService::UpdateTileMappings(TiledResource& tiledResource,
-                                                  unsigned commandQueueKey,
+                                                  GITSKey commandQueueKey,
                                                   TileRegionsBySubresource* tileRegions) {
   unsigned arraySize = tiledResource.Desc.Dimension != D3D12_RESOURCE_DIMENSION_TEXTURE3D
                            ? tiledResource.Desc.DepthOrArraySize
                            : 1;
 
-  std::set<unsigned> heapKeys;
+  std::set<GITSKey> heapKeys;
   for (Tile& tile : tiledResource.Tiles) {
     if (tile.HeapKey) {
       heapKeys.insert(tile.HeapKey);
     }
   }
 
-  for (unsigned heapKey : heapKeys) {
+  for (GITSKey heapKey : heapKeys) {
     m_StateService.RestoreState(heapKey);
 
     ID3D12CommandQueueUpdateTileMappingsCommand Command;
@@ -502,14 +503,14 @@ void ReservedResourcesService::UpdateTileMappings(TiledResource& tiledResource,
   }
 }
 
-void ReservedResourcesService::RestoreContent(const std::vector<unsigned>& resourceKeys) {
+void ReservedResourcesService::RestoreContent(const std::vector<GITSKey>& resourceKeys) {
   if (m_Resources.empty()) {
     return;
   }
 
   InitRestore();
 
-  for (unsigned ResourceKey : resourceKeys) {
+  for (GITSKey ResourceKey : resourceKeys) {
     if (m_Resources.find(ResourceKey) == m_Resources.end()) {
       continue;
     }
@@ -530,7 +531,7 @@ void ReservedResourcesService::RestoreContent(const std::vector<unsigned>& resou
     // copy resources contents into readback resource
 
     std::vector<bool> subresourceFullyMappedFlags(tiledResource->Subresources.size(), true);
-    std::set<unsigned> heapKeys;
+    std::set<GITSKey> heapKeys;
     for (const auto& tile : tiledResource->Tiles) {
       if (!tile.HeapKey) {
         MarkSubresourceNotFullyMapped(*tiledResource, tile, subresourceFullyMappedFlags);
@@ -658,7 +659,7 @@ void ReservedResourcesService::RestoreContent(const std::vector<unsigned>& resou
 
     // create upload resource with resources contents in subcaptured stream
 
-    unsigned deviceKey = m_StateService.GetDeviceKey();
+    GITSKey deviceKey = m_StateService.GetDeviceKey();
 
     void* mappedData{};
     hr = readbackResource->Map(0, nullptr, &mappedData);
@@ -775,7 +776,7 @@ void ReservedResourcesService::RestoreContent(const std::vector<unsigned>& resou
       ID3D12Pageable* fakePtr = reinterpret_cast<ID3D12Pageable*>(1);
       MakeResident.m_ppObjects.Value = &fakePtr;
       MakeResident.m_ppObjects.Size = heapKeys.size();
-      for (unsigned key : heapKeys) {
+      for (GITSKey key : heapKeys) {
         MakeResident.m_ppObjects.Keys.push_back(key);
       }
       m_StateService.GetRecorder().Record(ID3D12DeviceMakeResidentSerializer(MakeResident));
@@ -828,7 +829,7 @@ void ReservedResourcesService::RestoreContent(const std::vector<unsigned>& resou
       ID3D12Pageable* fakePtr = reinterpret_cast<ID3D12Pageable*>(1);
       Evict.m_ppObjects.Value = &fakePtr;
       Evict.m_ppObjects.Size = heapKeys.size();
-      for (unsigned key : heapKeys) {
+      for (GITSKey key : heapKeys) {
         Evict.m_ppObjects.Keys.push_back(key);
       }
       m_StateService.GetRecorder().Record(ID3D12DeviceEvictSerializer(Evict));
@@ -848,7 +849,7 @@ void ReservedResourcesService::InitRestore() {
     }
 
     std::vector<bool> subresourceFullyMappedFlags(tiledResource.second->Subresources.size(), true);
-    std::map<unsigned, unsigned> numTilesBySubresourceIndex;
+    std::map<GITSKey, GITSKey> numTilesBySubresourceIndex;
     for (const auto& tile : tiledResource.second->Tiles) {
       if (tile.HeapKey) {
         ++numTilesBySubresourceIndex[tile.SubresourceIndex];
@@ -878,7 +879,7 @@ void ReservedResourcesService::InitRestore() {
 
   m_UploadResourceSize = maxUploadSize;
 
-  unsigned deviceKey = m_StateService.GetDeviceKey();
+  GITSKey deviceKey = m_StateService.GetDeviceKey();
 
   if (m_UploadResourceSize) {
     m_UploadResourceKey = m_StateService.GetUniqueObjectKey();

@@ -9,6 +9,7 @@
 #pragma once
 
 #include "fenceService.h"
+#include "arguments.h"
 #include "commandsAuto.h"
 #include "captureManager.h"
 #include "commandSerializersCustom.h"
@@ -20,7 +21,7 @@ namespace DirectX {
 FenceService::FenceService(stream::OrderingRecorder& recorder) : m_Recorder(recorder) {}
 
 void FenceService::SetEventOnCompletion(ID3D12Fence* fence,
-                                        unsigned fenceKey,
+                                        GITSKey fenceKey,
                                         UINT64 value,
                                         HANDLE event) {
   std::lock_guard<std::mutex> fenceLock(m_Mutex);
@@ -35,7 +36,7 @@ void FenceService::SetEventOnCompletion(ID3D12Fence* fence,
   m_Fences.insert(fenceKey);
 }
 
-void FenceService::DestroyFence(unsigned fenceKey) {
+void FenceService::DestroyFence(GITSKey fenceKey) {
   std::lock_guard<std::mutex> fenceLock(m_Mutex);
   auto it = m_Fences.find(fenceKey);
   if (it == m_Fences.end()) {

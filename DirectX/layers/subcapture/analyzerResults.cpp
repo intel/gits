@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "analyzerResults.h"
+#include "arguments.h"
 #include "log.h"
 #include "configurator.h"
 
@@ -44,7 +45,7 @@ AnalyzerResults::AnalyzerResults() {
         tlases = false;
         blases = true;
       } else {
-        unsigned key = std::stoi(str);
+        GITSKey key = std::stoi(str);
         if (commandLists) {
           m_CommandListKeys.insert(key);
         } else if (commandQueues) {
@@ -68,14 +69,14 @@ AnalyzerResults::AnalyzerResults() {
   m_Optimize = Configurator::Get().common.player.subcapture.optimize;
 }
 
-bool AnalyzerResults::RestoreObject(unsigned objectKey) {
+bool AnalyzerResults::RestoreObject(GITSKey objectKey) {
   if (!m_Optimize || m_ObjectKeys.empty()) {
     return true;
   }
   return m_ObjectKeys.find(objectKey) != m_ObjectKeys.end();
 }
 
-bool AnalyzerResults::RestoreDescriptor(unsigned heapKey, unsigned index) {
+bool AnalyzerResults::RestoreDescriptor(GITSKey heapKey, unsigned index) {
   if (!m_Optimize) {
     return true;
   }
@@ -85,18 +86,18 @@ bool AnalyzerResults::RestoreDescriptor(unsigned heapKey, unsigned index) {
   return m_Descriptors.find(std::make_pair(heapKey, index)) != m_Descriptors.end();
 }
 
-bool AnalyzerResults::RestoreTlas(unsigned buildKey) {
+bool AnalyzerResults::RestoreTlas(GITSKey buildKey) {
   return m_Tlases.contains(buildKey);
 }
 
-bool AnalyzerResults::RestoreBlas(unsigned buildKey) {
+bool AnalyzerResults::RestoreBlas(GITSKey buildKey) {
   if (!m_Optimize) {
     return true;
   }
   return m_Blases.contains(buildKey);
 }
 
-unsigned AnalyzerResults::GetBlasSourceBuild(unsigned buildKey) {
+unsigned AnalyzerResults::GetBlasSourceBuild(GITSKey buildKey) {
   auto it = m_Blases.find(buildKey);
   if (it != m_Blases.end()) {
     return it->second;

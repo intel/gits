@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "stateTrackingService.h"
+#include "arguments.h"
 #include "commandsAuto.h"
 #include "commandSerializersCustom.h"
 #include "commandSerializersFactory.h"
@@ -100,7 +101,7 @@ void StateTrackingService::RestoreState() {
   }
 }
 
-void StateTrackingService::KeepState(unsigned objectKey) {
+void StateTrackingService::KeepState(GITSKey objectKey) {
   auto it = m_StatesByKey.find(objectKey);
   GITS_ASSERT(it != m_StatesByKey.end());
   ObjectState* state = it->second;
@@ -117,13 +118,13 @@ void StateTrackingService::KeepState(unsigned objectKey) {
   }
 }
 
-void StateTrackingService::RestoreState(unsigned key) {
+void StateTrackingService::RestoreState(GITSKey key) {
   auto it = m_StatesByKey.find(key);
   GITS_ASSERT(it != m_StatesByKey.end());
   RestoreState(it->second);
 }
 
-bool StateTrackingService::StateRestored(unsigned key) {
+bool StateTrackingService::StateRestored(GITSKey key) {
   auto it = m_StatesByKey.find(key);
   if (it != m_StatesByKey.end()) {
     return it->second->Restored;
@@ -133,7 +134,7 @@ bool StateTrackingService::StateRestored(unsigned key) {
 }
 
 void StateTrackingService::AddBackBuffer(unsigned buffer,
-                                         unsigned resourceKey,
+                                         GITSKey resourceKey,
                                          ID3D12Resource* resource) {
   m_SwapChainService.AddBackBuffer(buffer, resourceKey, resource);
 }
@@ -249,7 +250,7 @@ void StateTrackingService::StoreState(ObjectState* state) {
   }
 }
 
-void StateTrackingService::RemoveState(unsigned key) {
+void StateTrackingService::RemoveState(GITSKey key) {
   auto it = m_StatesByKey.find(key);
   if (it != m_StatesByKey.end() && !m_AnalyzerResults.RestoreObject(key)) {
     delete it->second;
@@ -257,7 +258,7 @@ void StateTrackingService::RemoveState(unsigned key) {
   }
 }
 
-void StateTrackingService::ReleaseObject(unsigned key, ULONG result) {
+void StateTrackingService::ReleaseObject(GITSKey key, ULONG result) {
   auto itState = m_StatesByKey.find(key);
   if (itState == m_StatesByKey.end()) {
     return;
@@ -276,7 +277,7 @@ void StateTrackingService::ReleaseObject(unsigned key, ULONG result) {
     return;
   }
 
-  unsigned linkedLifetimeKey = itState->second->LinkedLifetimeKey;
+  GITSKey linkedLifetimeKey = itState->second->LinkedLifetimeKey;
   if (linkedLifetimeKey) {
     auto itLinkedLifetimeState = m_StatesByKey.find(linkedLifetimeKey);
     if (itLinkedLifetimeState != m_StatesByKey.end()) {
@@ -290,7 +291,7 @@ void StateTrackingService::ReleaseObject(unsigned key, ULONG result) {
     }
   }
 
-  for (unsigned childKey : itState->second->ChildrenKeys) {
+  for (GITSKey childKey : itState->second->ChildrenKeys) {
     if (childKey) {
       auto itChildState = m_StatesByKey.find(childKey);
       if (itChildState != m_StatesByKey.end() && !itChildState->second->Destroyed) {
@@ -300,7 +301,7 @@ void StateTrackingService::ReleaseObject(unsigned key, ULONG result) {
   }
 }
 
-void StateTrackingService::SetReferenceCount(unsigned objectKey, ULONG referenceCount) {
+void StateTrackingService::SetReferenceCount(GITSKey objectKey, ULONG referenceCount) {
   auto itState = m_StatesByKey.find(objectKey);
   if (itState == m_StatesByKey.end()) {
     return;
@@ -308,7 +309,7 @@ void StateTrackingService::SetReferenceCount(unsigned objectKey, ULONG reference
   itState->second->RefCount = referenceCount;
 }
 
-ObjectState* StateTrackingService::GetState(unsigned key) {
+ObjectState* StateTrackingService::GetState(GITSKey key) {
   auto it = m_StatesByKey.find(key);
   if (it == m_StatesByKey.end()) {
     return nullptr;
@@ -388,7 +389,7 @@ void StateTrackingService::RestoreResources() {
   // prepare batches
   {
     ResourceBatchType prevType{};
-    for (unsigned resourceKey : orderedResources) {
+    for (GITSKey resourceKey : orderedResources) {
       ResourceState* state = static_cast<ResourceState*>(GetState(resourceKey));
       if (!state || state->IsRtas) {
         continue;
@@ -471,8 +472,8 @@ D3D12_BARRIER_LAYOUT StateTrackingService::GetResourceInitialLayout(
   return D3D12_BARRIER_LAYOUT_COPY_DEST;
 }
 
-void StateTrackingService::RestoreResidencyPriority(unsigned deviceKey,
-                                                    unsigned objectKey,
+void StateTrackingService::RestoreResidencyPriority(GITSKey deviceKey,
+                                                    GITSKey objectKey,
                                                     D3D12_RESIDENCY_PRIORITY residencyPriority) {
   if (!residencyPriority) {
     return;
@@ -625,8 +626,8 @@ void StateTrackingService::RestoreD3D12Fence(ObjectState* state) {
 void StateTrackingService::RestoreD3D12CommandList(ObjectState* state) {
   GITS_ASSERT(state);
   auto* command = static_cast<ID3D12DeviceCreateCommandListCommand*>(state->CreationCommand.get());
-  unsigned allocatorKey = command->m_pCommandAllocator.Key;
-  unsigned initialStateKey = command->m_pInitialState.Key;
+  GITSKey allocatorKey = command->m_pCommandAllocator.Key;
+  GITSKey initialStateKey = command->m_pInitialState.Key;
 
   ObjectState* allocatorState = GetState(allocatorKey);
   if (!allocatorState) {
@@ -851,7 +852,7 @@ void StateTrackingService::RestoreD3D12StateObject(ObjectState* state) {
       state->CreationCommand->Key);
   m_NvapiGlobalStateService.RestoreShaderExtnSlotSpaceBeforeCommand(state->CreationCommand->Key);
   m_Recorder.Record(*createCommandSerializer(state->CreationCommand.get()));
-  for (unsigned key : state->ChildrenKeys) {
+  for (GITSKey key : state->ChildrenKeys) {
     auto it = m_StatesByKey.find(key);
     GITS_ASSERT(it != m_StatesByKey.end());
     RestoreState(it->second);
@@ -920,9 +921,9 @@ void StateTrackingService::RestoreStateObjectProperties() {
   }
 }
 
-void StateTrackingService::SwapChainService::SetSwapChain(unsigned commandQueueKey,
+void StateTrackingService::SwapChainService::SetSwapChain(GITSKey commandQueueKey,
                                                           ID3D12CommandQueue* commandQueue,
-                                                          unsigned swapChainKey,
+                                                          GITSKey swapChainKey,
                                                           IDXGISwapChain* swapChain,
                                                           unsigned backBuffersCount) {
   m_CommandQueueKey = commandQueueKey;
@@ -978,7 +979,7 @@ void StateTrackingService::SwapChainService::RecordSwapChainPresent() {
 }
 
 void StateTrackingService::SwapChainService::AddBackBuffer(unsigned buffer,
-                                                           unsigned resourceKey,
+                                                           GITSKey resourceKey,
                                                            ID3D12Resource* resource) {
   m_BackBuffers[buffer] = {resourceKey, resource};
 }
@@ -1021,7 +1022,7 @@ void StateTrackingService::NvAPIGlobalStateService::RestoreInitializeCount() {
 }
 
 void StateTrackingService::NvAPIGlobalStateService::RestoreCreatePipelineStateOptionsBeforeCommand(
-    unsigned commandKey) {
+    GITSKey commandKey) {
   while (!m_SetCreatePipelineStateOptionsCommands.empty()) {
     const auto& command = m_SetCreatePipelineStateOptionsCommands.top();
     if (command.Key >= commandKey) {
@@ -1033,7 +1034,7 @@ void StateTrackingService::NvAPIGlobalStateService::RestoreCreatePipelineStateOp
 }
 
 void StateTrackingService::NvAPIGlobalStateService::RestoreShaderExtnSlotSpaceBeforeCommand(
-    unsigned commandKey) {
+    GITSKey commandKey) {
   while (!m_SetNvShaderExtnSlotSpaceCommands.empty()) {
     const auto& command = m_SetNvShaderExtnSlotSpaceCommands.top();
     if (command.Key >= commandKey) {

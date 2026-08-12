@@ -268,20 +268,20 @@ public:
   void Post(xefgSwapChainD3D12UpdateExternalHeapOnResizeCommand& c) override;
 
 private:
-  void SetAsChildInParent(unsigned parentKey, unsigned childKey);
+  void SetAsChildInParent(GITSKey parentKey, GITSKey childKey);
   bool IsResourceHeapMappable(const D3D12_HEAP_PROPERTIES& heapProperties,
                               const D3D12_TEXTURE_LAYOUT& textureLayout) {
     return !(heapProperties.Type == D3D12_HEAP_TYPE_DEFAULT ||
              heapProperties.CPUPageProperty == D3D12_CPU_PAGE_PROPERTY_NOT_AVAILABLE ||
              textureLayout == D3D12_TEXTURE_LAYOUT_UNKNOWN);
   }
-  bool IsResourceHeapMappable(unsigned heapKey, const D3D12_TEXTURE_LAYOUT& textureLayout);
+  bool IsResourceHeapMappable(GITSKey heapKey, const D3D12_TEXTURE_LAYOUT& textureLayout);
   bool IsResourceBarrierRestricted(D3D12_RESOURCE_FLAGS flags);
-  void ReleaseSwapChainBuffers(unsigned key, unsigned referenceCount);
+  void ReleaseSwapChainBuffers(GITSKey key, unsigned referenceCount);
 
 private:
   bool m_StateRestored{};
-  std::map<unsigned, unsigned> m_DeviceByINTCExtensionContext;
+  std::map<GITSKey, GITSKey> m_DeviceByINTCExtensionContext;
   StateTrackingService m_StateService;
   SubcaptureRecorder& m_Recorder;
   SubcaptureRange& m_SubcaptureRange;
@@ -307,25 +307,25 @@ private:
   ResourceStateTracker m_ResourceStateTracker;
   CapturePlayerGpuAddressService m_GpuAddressService;
   MetaCommandsService m_MetaCommandsService;
-  std::unordered_map<unsigned, std::unordered_set<unsigned>> m_ResourceHeaps;
-  std::unordered_map<unsigned, std::vector<unsigned>> m_SwapchainBuffers;
+  std::unordered_map<GITSKey, std::unordered_set<GITSKey>> m_ResourceHeaps;
+  std::unordered_map<GITSKey, std::vector<GITSKey>> m_SwapchainBuffers;
   bool m_ForceDirectCommandListType{};
 
   class CommandQueueSwapChainRefCountTracker {
   public:
-    void PreCreateSwapChain(unsigned commandQueueKey,
+    void PreCreateSwapChain(GITSKey commandQueueKey,
                             ID3D12CommandQueue* commandQueue,
-                            unsigned swapChainKey);
-    void PostCreateSwapChain(unsigned commandQueueKey,
+                            GITSKey swapChainKey);
+    void PostCreateSwapChain(GITSKey commandQueueKey,
                              ID3D12CommandQueue* commandQueue,
-                             unsigned swapChainKey);
-    unsigned DestroySwapChain(unsigned swapChainKey);
+                             GITSKey swapChainKey);
+    unsigned DestroySwapChain(GITSKey swapChainKey);
 
   private:
     unsigned m_RefCountPre{};
-    std::unordered_map<unsigned, std::unordered_map<unsigned, unsigned>> m_RefCountIncrements;
-    std::unordered_map<unsigned, unsigned> m_CommandQueueBySwapChain;
-    std::unordered_map<unsigned, ID3D12CommandQueue*> m_CommandQueues;
+    std::unordered_map<GITSKey, std::unordered_map<GITSKey, unsigned>> m_RefCountIncrements;
+    std::unordered_map<GITSKey, GITSKey> m_CommandQueueBySwapChain;
+    std::unordered_map<GITSKey, ID3D12CommandQueue*> m_CommandQueues;
   };
   CommandQueueSwapChainRefCountTracker m_CommandQueueSwapChainRefCountTracker;
 };

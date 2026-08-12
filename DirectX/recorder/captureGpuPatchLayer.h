@@ -43,11 +43,11 @@ public:
   void Post(ID3D12Device10CreateCommittedResource3Command& c) override;
 
 private:
-  std::unordered_map<unsigned, D3D12_COMMAND_SIGNATURE_DESC> m_CommandSignatures;
+  std::unordered_map<GITSKey, D3D12_COMMAND_SIGNATURE_DESC> m_CommandSignatures;
   CaptureGpuPatchDump m_GpuPatchDump;
   GpuAddressService& m_GpuAddressService;
   std::unordered_set<unsigned> m_GenericReadResources;
-  std::unordered_map<unsigned, ID3D12Resource*> m_ResourcesByKey;
+  std::unordered_map<GITSKey, ID3D12Resource*> m_ResourcesByKey;
   std::mutex m_Mutex;
 };
 

@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "captureDescriptorHandleService.h"
+#include "arguments.h"
 #include "log.h"
 
 #include <wrl/client.h>
@@ -14,7 +15,7 @@
 namespace gits {
 namespace DirectX {
 
-void CaptureDescriptorHandleService::CreateDescriptorHeap(unsigned descriptorHeapKey,
+void CaptureDescriptorHandleService::CreateDescriptorHeap(GITSKey descriptorHeapKey,
                                                           ID3D12DescriptorHeap* descriptorHeap,
                                                           const D3D12_DESCRIPTOR_HEAP_DESC* desc) {
   tbb::spin_rw_mutex::scoped_lock lock(m_RwMutex);
@@ -75,7 +76,7 @@ CaptureDescriptorHandleService::HandleInfo CaptureDescriptorHandleService::GetDe
   return handleInfo;
 }
 
-void CaptureDescriptorHandleService::DestroyDescriptorHeap(unsigned descriptorHeapKey) {
+void CaptureDescriptorHandleService::DestroyDescriptorHeap(GITSKey descriptorHeapKey) {
 
   tbb::spin_rw_mutex::scoped_lock lock(m_RwMutex);
 

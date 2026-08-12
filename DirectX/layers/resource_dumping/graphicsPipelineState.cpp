@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "graphicsPipelineState.h"
+#include "arguments.h"
 #include "pipelineStateStreamDescDump.h"
 #include "to_string/toStr.h"
 #include "to_string/enumToStrAuto.h"
@@ -30,7 +31,7 @@ void GraphicsPipelineState::Reset() {
   m_ScissorRects.clear();
 }
 
-void GraphicsPipelineState::SetRootSignature(unsigned rootSignatureKey,
+void GraphicsPipelineState::SetRootSignature(GITSKey rootSignatureKey,
                                              D3D12_ROOT_SIGNATURE_DESC2* desc) {
   m_RootSignatureKey = rootSignatureKey;
   m_RootSignatureDesc = desc;

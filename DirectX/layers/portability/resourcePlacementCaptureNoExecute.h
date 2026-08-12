@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #pragma once
+#include "arguments.h"
 
 #include <d3d12.h>
 #include <vector>
@@ -19,8 +20,8 @@ namespace DirectX {
 
 class ResourcePlacementCaptureNoExecute {
 public:
-  void createPlacedResource(unsigned heapKey,
-                            unsigned resourceKey,
+  void createPlacedResource(GITSKey heapKey,
+                            GITSKey resourceKey,
                             UINT64 offset,
                             ID3D12Device* device,
                             D3D12_RESOURCE_DESC& desc);
@@ -34,8 +35,8 @@ public:
 
 private:
   struct ResourcePlacementInfo {
-    unsigned heapKey{};
-    unsigned key{};
+    GITSKey heapKey{};
+    GITSKey key{};
     UINT64 offset{};
     UINT64 size{};
     UINT64 alignment{};
@@ -77,7 +78,7 @@ private:
     }
   };
 
-  std::map<unsigned, ResourcePlacementInfo> m_ResourcePlacementInfos;
+  std::map<GITSKey, ResourcePlacementInfo> m_ResourcePlacementInfos;
   std::unordered_set<unsigned> m_PlacedResources;
   std::unordered_map<D3D12_RESOURCE_DESC,
                      D3D12_RESOURCE_ALLOCATION_INFO,

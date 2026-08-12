@@ -287,7 +287,7 @@ void AccelerationStructuresBuildService::BuildAccelerationStructure(
 
   m_BufferLifetimeService.AddRtasBuffer(c.Key, c.m_pDesc.DestAccelerationStructureKey);
   m_BufferLifetimeService.AddRtasBuffer(c.Key, c.m_pDesc.SourceAccelerationStructureKey);
-  for (unsigned key : c.m_pDesc.InputKeys) {
+  for (GITSKey key : c.m_pDesc.InputKeys) {
     m_BufferLifetimeService.AddInputBuffer(c.Key, key);
   }
 }
@@ -689,7 +689,7 @@ void AccelerationStructuresBuildService::NvapiBuildAccelerationStructureEx(
 
   m_BufferLifetimeService.AddRtasBuffer(c.Key, c.m_pParams.DestAccelerationStructureKey);
   m_BufferLifetimeService.AddRtasBuffer(c.Key, c.m_pParams.SourceAccelerationStructureKey);
-  for (unsigned key : c.m_pParams.InputKeys) {
+  for (GITSKey key : c.m_pParams.InputKeys) {
     m_BufferLifetimeService.AddInputBuffer(c.Key, key);
   }
 }
@@ -794,7 +794,7 @@ void AccelerationStructuresBuildService::RestoreAccelerationStructures() {
     return;
   }
 
-  std::vector<unsigned> commandKeys;
+  std::vector<GITSKey> commandKeys;
   commandKeys.reserve(m_OptimizationService.GetCommands().size());
   for (OptimizationService::CommandNode* node : m_OptimizationService.GetCommands()) {
     commandKeys.push_back(node->Command->CommandKey);
@@ -971,14 +971,13 @@ void AccelerationStructuresBuildService::CommandQueueSignal(ID3D12CommandQueueSi
   m_InputBuffersService.CommandQueueSignal(c);
 }
 
-void AccelerationStructuresBuildService::FenceSignal(unsigned key,
-                                                     unsigned fenceKey,
+void AccelerationStructuresBuildService::FenceSignal(GITSKey key,
+                                                     GITSKey fenceKey,
                                                      UINT64 fenceValue) {
   m_InputBuffersService.FenceSignal(key, fenceKey, fenceValue);
 }
 
-void AccelerationStructuresBuildService::DestroyResource(unsigned commandKey,
-                                                         unsigned resourceKey) {
+void AccelerationStructuresBuildService::DestroyResource(GITSKey commandKey, GITSKey resourceKey) {
   m_BufferLifetimeService.AddRelease(commandKey, resourceKey);
 }
 
@@ -1093,7 +1092,7 @@ void AccelerationStructuresBuildService::RestoreCommand(
   residencyService.AddResource(command->Desc->DestOpacityMicromapArrayDataKey);
   residencyService.AddResource(command->Desc->InputBufferKey);
   residencyService.AddResource(command->Desc->PerOMMDescsKey);
-  for (unsigned key : command->Desc->DestPostBuildBufferKeys) {
+  for (GITSKey key : command->Desc->DestPostBuildBufferKeys) {
     residencyService.AddResource(key);
   }
   residencyService.RecordMakeResident();
@@ -1173,8 +1172,8 @@ void AccelerationStructuresBuildService::RecordExecuteCommandLists() {
 }
 
 void AccelerationStructuresBuildService::OptimizationService::OnExecute(
-    std::vector<unsigned>& commandListKeys) {
-  for (unsigned commandListKey : commandListKeys) {
+    std::vector<GITSKey>& commandListKeys) {
+  for (GITSKey commandListKey : commandListKeys) {
     auto itStates = m_CommandsByCommandList.find(commandListKey);
     if (itStates != m_CommandsByCommandList.end()) {
       for (auto& command : itStates->second) {
@@ -1195,7 +1194,7 @@ void AccelerationStructuresBuildService::OptimizationService::StoreCommand(
 
   // skip intermediate update build command
   if (node->Command->Update) {
-    unsigned sourceKey =
+    GITSKey sourceKey =
         m_StateService.GetAnalyzerResults().GetBlasSourceBuild(node->Command->CommandKey);
     if (sourceKey) {
       auto it = m_CommandByBuildKey.find(sourceKey);
@@ -1235,24 +1234,24 @@ void AccelerationStructuresBuildService::OptimizationService::Cleanup() {
   m_RestoreCommands.clear();
 }
 
-void AccelerationStructuresBuildService::BufferLifetimeService::AddInputBuffer(unsigned commandKey,
-                                                                               unsigned bufferKey) {
+void AccelerationStructuresBuildService::BufferLifetimeService::AddInputBuffer(GITSKey commandKey,
+                                                                               GITSKey bufferKey) {
   if (bufferKey) {
     m_InputBuffersByBuild[commandKey].insert(bufferKey);
     m_Buffers.insert(bufferKey);
   }
 }
 
-void AccelerationStructuresBuildService::BufferLifetimeService::AddRtasBuffer(unsigned commandKey,
-                                                                              unsigned bufferKey) {
+void AccelerationStructuresBuildService::BufferLifetimeService::AddRtasBuffer(GITSKey commandKey,
+                                                                              GITSKey bufferKey) {
   if (bufferKey) {
     m_RtasBuffersByBuild[commandKey].insert(bufferKey);
     m_Buffers.insert(bufferKey);
   }
 }
 
-void AccelerationStructuresBuildService::BufferLifetimeService::AddRelease(unsigned commandKey,
-                                                                           unsigned bufferKey) {
+void AccelerationStructuresBuildService::BufferLifetimeService::AddRelease(GITSKey commandKey,
+                                                                           GITSKey bufferKey) {
   auto it = m_Buffers.find(bufferKey);
   if (it != m_Buffers.end()) {
     m_Releases[commandKey] = bufferKey;
@@ -1260,13 +1259,13 @@ void AccelerationStructuresBuildService::BufferLifetimeService::AddRelease(unsig
   }
 }
 
-void AccelerationStructuresBuildService::BufferLifetimeService::CreateBuffers(unsigned commandKey) {
-  for (unsigned bufferKey : m_InputBuffersByBuild[commandKey]) {
+void AccelerationStructuresBuildService::BufferLifetimeService::CreateBuffers(GITSKey commandKey) {
+  for (GITSKey bufferKey : m_InputBuffersByBuild[commandKey]) {
     ResourceState* bufferState = static_cast<ResourceState*>(m_StateService.GetState(bufferKey));
     GITS_ASSERT(bufferState);
     m_StateService.RestoreState(bufferKey);
   }
-  for (unsigned bufferKey : m_RtasBuffersByBuild[commandKey]) {
+  for (GITSKey bufferKey : m_RtasBuffersByBuild[commandKey]) {
     ResourceState* bufferState = static_cast<ResourceState*>(m_StateService.GetState(bufferKey));
     GITS_ASSERT(bufferState);
     m_StateService.RestoreState(bufferKey);
@@ -1274,8 +1273,7 @@ void AccelerationStructuresBuildService::BufferLifetimeService::CreateBuffers(un
   }
 }
 
-void AccelerationStructuresBuildService::BufferLifetimeService::ReleaseBuffers(
-    unsigned commandKey) {
+void AccelerationStructuresBuildService::BufferLifetimeService::ReleaseBuffers(GITSKey commandKey) {
   auto endIt = m_Releases.lower_bound(commandKey);
   for (auto it = m_Releases.begin(); it != endIt;) {
     IUnknownReleaseCommand release{};

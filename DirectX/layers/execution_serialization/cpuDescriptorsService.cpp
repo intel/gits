@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "cpuDescriptorsService.h"
+#include "arguments.h"
 #include "commandsAuto.h"
 #include "commandSerializersAuto.h"
 #include "to_string/enumToStrAuto.h"
@@ -15,15 +16,15 @@
 namespace gits {
 namespace DirectX {
 
-void CpuDescriptorsService::CreateCommandList(unsigned deviceKey) {
+void CpuDescriptorsService::CreateCommandList(GITSKey deviceKey) {
   if (m_DeviceKey && m_DeviceKey != deviceKey) {
     LOG_ERROR << "Execution serialization - multiple devices not handled";
   }
   m_DeviceKey = deviceKey;
 }
 
-void CpuDescriptorsService::ExecuteCommandLists(std::vector<unsigned>& commandListKeys) {
-  for (unsigned key : commandListKeys) {
+void CpuDescriptorsService::ExecuteCommandLists(std::vector<GITSKey>& commandListKeys) {
+  for (GITSKey key : commandListKeys) {
     auto it = m_DescriptorsByCommandList.find(key);
     if (it != m_DescriptorsByCommandList.end()) {
       for (DescriptorHandle& descriptor : it->second) {
@@ -47,7 +48,7 @@ void CpuDescriptorsService::ExecuteCommandLists(std::vector<unsigned>& commandLi
 void CpuDescriptorsService::PreserveDescriptor(
     ID3D12GraphicsCommandListOMSetRenderTargetsCommand& c) {
 
-  unsigned heapKey{};
+  GITSKey heapKey{};
   unsigned heapIndex{};
   for (unsigned i = 0; i < c.m_NumRenderTargetDescriptors.Value; ++i) {
     if (i == 0 || !c.m_RTsSingleHandleToDescriptorRange.Value) {
@@ -116,7 +117,7 @@ void CpuDescriptorsService::PreserveDescriptor(
 }
 
 template <unsigned SIZE>
-unsigned CpuDescriptorsService::DescriptorHeap<SIZE>::PreserveDescriptor(unsigned heapKey,
+unsigned CpuDescriptorsService::DescriptorHeap<SIZE>::PreserveDescriptor(GITSKey heapKey,
                                                                          unsigned heapIndex) {
   if (!m_DescriptorHeapKey) {
     CreateDescriptorHeap();

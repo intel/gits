@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "interfaceArgumentUpdaters.h"
+#include "arguments.h"
 #include "log.h"
 
 #include <d3dx12/d3dx12_pipeline_state_stream.h>
@@ -393,7 +394,7 @@ UpdateInterfaceT<D3D12_BARRIER_GROUPs_Argument, D3D12_BARRIER_GROUP>::UpdateInte
   m_Unwrapped.resize(arg.Size);
   arg.Value = m_Unwrapped.data();
 
-  unsigned resourceKeyIndex = 0;
+  GITSKey resourceKeyIndex = 0;
 
   for (unsigned i = 0; i < arg.Size; ++i) {
     const D3D12_BARRIER_GROUP& barrierGroup = value[i];

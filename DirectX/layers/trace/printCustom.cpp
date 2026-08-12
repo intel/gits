@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "printCustom.h"
+#include "arguments.h"
 #include "to_string/guidToStrAuto.h"
 #include "to_string/toStr.h"
 
@@ -15,7 +16,7 @@
 namespace gits {
 namespace DirectX {
 
-FastOStream& PrintObjectKey(FastOStream& stream, unsigned key) {
+FastOStream& PrintObjectKey(FastOStream& stream, GITSKey key) {
   if (!key) {
     stream << "nullptr";
   } else {

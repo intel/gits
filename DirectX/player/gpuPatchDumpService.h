@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #pragma once
+#include "arguments.h"
 
 #include "raytracingResourceDump.h"
 #include "capturePlayerGpuAddressService.h"
@@ -35,18 +36,18 @@ public:
                       CapturePlayerDescriptorHandleService& descriptorHandleService);
   void DumpInstances(ID3D12GraphicsCommandList* commandList,
                      ID3D12Resource* resource,
-                     unsigned resourceKey,
+                     GITSKey resourceKey,
                      unsigned size,
                      BarrierState resourceState,
-                     unsigned callKey,
+                     GITSKey callKey,
                      bool prePatch);
   void DumpInstancesArrayOfPointers(ID3D12GraphicsCommandList* commandList,
                                     ID3D12Resource* resource,
-                                    unsigned resourceKey,
+                                    GITSKey resourceKey,
                                     unsigned offset,
                                     unsigned size,
                                     BarrierState resourceState,
-                                    unsigned callKey,
+                                    GITSKey callKey,
                                     bool prePatch);
   void DumpBindingTable(ID3D12GraphicsCommandList* commandList,
                         ID3D12Resource* resource,
@@ -54,7 +55,7 @@ public:
                         unsigned size,
                         unsigned stride,
                         BarrierState resourceState,
-                        unsigned callKey,
+                        GITSKey callKey,
                         BindingTableType bindingTableType,
                         bool prePatch);
   void DumpExecuteIndirectArgumentBuffer(ID3D12GraphicsCommandList* commandList,
@@ -66,22 +67,19 @@ public:
                                          ID3D12Resource* countBuffer,
                                          unsigned countBufferOffset,
                                          BarrierState countBufferState,
-                                         unsigned callKey,
+                                         GITSKey callKey,
                                          bool prePatch);
-  void ExecuteCommandLists(unsigned key,
-                           unsigned commandQueueKey,
+  void ExecuteCommandLists(GITSKey key,
+                           GITSKey commandQueueKey,
                            ID3D12CommandQueue* commandQueue,
                            ID3D12CommandList** commandLists,
                            unsigned commandListNum);
-  void CommandQueueWait(unsigned key,
-                        unsigned commandQueueKey,
-                        unsigned fenceKey,
-                        UINT64 fenceValue);
-  void CommandQueueSignal(unsigned key,
-                          unsigned commandQueueKey,
-                          unsigned fenceKey,
+  void CommandQueueWait(GITSKey key, GITSKey commandQueueKey, GITSKey fenceKey, UINT64 fenceValue);
+  void CommandQueueSignal(GITSKey key,
+                          GITSKey commandQueueKey,
+                          GITSKey fenceKey,
                           UINT64 fenceValue);
-  void FenceSignal(unsigned key, unsigned fenceKey, UINT64 fenceValue);
+  void FenceSignal(GITSKey key, GITSKey fenceKey, UINT64 fenceValue);
 
 private:
   RaytracingResourceDump m_ResourceDump;

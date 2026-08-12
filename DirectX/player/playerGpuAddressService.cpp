@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "playerGpuAddressService.h"
+#include "arguments.h"
 #include "log.h"
 
 #include <wrl/client.h>
@@ -14,7 +15,7 @@
 namespace gits {
 namespace DirectX {
 
-void PlayerGpuAddressService::CreateResource(unsigned resourceKey, ID3D12Resource* resource) {
+void PlayerGpuAddressService::CreateResource(GITSKey resourceKey, ID3D12Resource* resource) {
 
   D3D12_RESOURCE_DESC desc = resource->GetDesc();
   if (desc.Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
@@ -27,9 +28,9 @@ void PlayerGpuAddressService::CreateResource(unsigned resourceKey, ID3D12Resourc
   m_StartAddressesByKey[resourceKey] = startAddress;
 }
 
-void PlayerGpuAddressService::CreatePlacedResource(unsigned resourceKey,
+void PlayerGpuAddressService::CreatePlacedResource(GITSKey resourceKey,
                                                    ID3D12Resource* resource,
-                                                   unsigned heapKey,
+                                                   GITSKey heapKey,
                                                    ID3D12Heap* heap,
                                                    UINT64 heapOffset) {
 
@@ -52,7 +53,7 @@ void PlayerGpuAddressService::CreatePlacedResource(unsigned resourceKey,
   m_PlacedResources.insert(resourceKey);
 }
 
-void PlayerGpuAddressService::CreateHeap(unsigned heapKey, ID3D12Heap* heap) {
+void PlayerGpuAddressService::CreateHeap(GITSKey heapKey, ID3D12Heap* heap) {
 
   D3D12_HEAP_DESC desc = heap->GetDesc();
   if (desc.Flags & D3D12_HEAP_FLAG_DENY_BUFFERS) {
@@ -104,7 +105,7 @@ D3D12_GPU_VIRTUAL_ADDRESS PlayerGpuAddressService::GetHeapGpuVirtualAddress(ID3D
   return gpuAddress;
 }
 
-D3D12_GPU_VIRTUAL_ADDRESS PlayerGpuAddressService::GetGpuAddress(unsigned resourceKey,
+D3D12_GPU_VIRTUAL_ADDRESS PlayerGpuAddressService::GetGpuAddress(GITSKey resourceKey,
                                                                  unsigned offset) {
   if (!resourceKey) {
     return 0;
@@ -125,7 +126,7 @@ D3D12_GPU_VIRTUAL_ADDRESS PlayerGpuAddressService::GetGpuAddress(unsigned resour
   }
 }
 
-void PlayerGpuAddressService::DestroyInterface(unsigned interfaceKey) {
+void PlayerGpuAddressService::DestroyInterface(GITSKey interfaceKey) {
 
   if (m_PlacedResources.contains(interfaceKey)) {
     m_ReleasedPlacedResources[interfaceKey] = m_StartAddressesByKey[interfaceKey];

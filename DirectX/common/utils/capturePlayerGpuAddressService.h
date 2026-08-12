@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #pragma once
+#include "arguments.h"
 
 #include <map>
 #include <unordered_map>
@@ -32,10 +33,10 @@ public:
       return false;
     }
     ID3D12Resource* Resource{};
-    unsigned Key{};
+    GITSKey Key{};
   };
 
-  void CreatePlacedResource(unsigned heapKey, unsigned resourceKey, D3D12_RESOURCE_FLAGS flags) {
+  void CreatePlacedResource(GITSKey heapKey, GITSKey resourceKey, D3D12_RESOURCE_FLAGS flags) {
     std::lock_guard<std::mutex> lock(m_Mutex);
     m_GpuAddressService.CreatePlacedResource(heapKey, resourceKey, flags);
     if (m_GpuPlayerAddress) {
@@ -43,14 +44,14 @@ public:
     }
   }
   void AddGpuCaptureAddress(ID3D12Resource* resource,
-                            unsigned resourceKey,
+                            GITSKey resourceKey,
                             unsigned size,
                             D3D12_GPU_VIRTUAL_ADDRESS captureAddress) {
     std::lock_guard<std::mutex> lock(m_Mutex);
     m_GpuAddressService.AddGpuCaptureAddress(resource, resourceKey, size, captureAddress);
   }
   void AddGpuPlayerAddress(ID3D12Resource* resource,
-                           unsigned resourceKey,
+                           GITSKey resourceKey,
                            unsigned size,
                            D3D12_GPU_VIRTUAL_ADDRESS playerAddress) {
     std::lock_guard<std::mutex> lock(m_Mutex);
@@ -60,7 +61,7 @@ public:
       m_GpuPlayerAddress->AddGpuPlayerAddress(resourceKey, playerAddress);
     }
   }
-  void DestroyInterface(unsigned interfaceKey) {
+  void DestroyInterface(GITSKey interfaceKey) {
     std::lock_guard<std::mutex> lock(m_Mutex);
     m_GpuAddressService.DestroyInterface(interfaceKey);
     if (m_GpuPlayerAddress) {
@@ -88,13 +89,13 @@ public:
 private:
   class GpuAddressService {
   public:
-    void CreatePlacedResource(unsigned heapKey, unsigned resourceKey, D3D12_RESOURCE_FLAGS flags);
+    void CreatePlacedResource(GITSKey heapKey, GITSKey resourceKey, D3D12_RESOURCE_FLAGS flags);
     void AddGpuCaptureAddress(ID3D12Resource* resource,
-                              unsigned resourceKey,
+                              GITSKey resourceKey,
                               unsigned size,
                               D3D12_GPU_VIRTUAL_ADDRESS captureAddress);
-    void AddGpuPlayerAddress(unsigned resourceKey, D3D12_GPU_VIRTUAL_ADDRESS playerAddress);
-    void DestroyInterface(unsigned interfaceKey);
+    void AddGpuPlayerAddress(GITSKey resourceKey, D3D12_GPU_VIRTUAL_ADDRESS playerAddress);
+    void DestroyInterface(GITSKey interfaceKey);
     void GetMappings(std::vector<GpuAddressMapping>& mappings);
     ResourceInfo* GetResourceInfo(D3D12_GPU_VIRTUAL_ADDRESS address);
 
@@ -118,11 +119,11 @@ private:
       std::unordered_set<unsigned> Resources;
     };
 
-    std::unordered_map<unsigned, std::unique_ptr<HeapInfo>> m_HeapsByKey;
-    std::unordered_map<unsigned, HeapInfo*> m_HeapsByResourceKey;
+    std::unordered_map<GITSKey, std::unique_ptr<HeapInfo>> m_HeapsByKey;
+    std::unordered_map<GITSKey, HeapInfo*> m_HeapsByResourceKey;
 
-    std::unordered_map<unsigned, std::unique_ptr<ResourceInfo>> m_ResourcesByKey;
-    std::unordered_map<unsigned, std::unique_ptr<PlacedResourceInfo>> m_PlacedResourcesByKey;
+    std::unordered_map<GITSKey, std::unique_ptr<ResourceInfo>> m_ResourcesByKey;
+    std::unordered_map<GITSKey, std::unique_ptr<PlacedResourceInfo>> m_PlacedResourcesByKey;
     std::unordered_set<unsigned> m_DeniedShaderResources;
   };
   GpuAddressService m_GpuAddressService;

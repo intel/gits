@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #pragma once
+#include "arguments.h"
 
 #include "directx.h"
 
@@ -34,18 +35,18 @@ public:
   using CreationFunction = std::function<ObjectCreationOutput()>;
 
   void Shutdown();
-  void Schedule(CreationFunction creationFunction, unsigned objectKey);
-  void AddDependency(unsigned providerKey, unsigned consumerKey);
-  std::vector<unsigned> CollectConsumers(unsigned providerKey);
-  std::optional<ObjectCreationOutput> Complete(unsigned objectKey);
+  void Schedule(CreationFunction creationFunction, GITSKey objectKey);
+  void AddDependency(GITSKey providerKey, GITSKey consumerKey);
+  std::vector<GITSKey> CollectConsumers(GITSKey providerKey);
+  std::optional<ObjectCreationOutput> Complete(GITSKey objectKey);
   std::vector<std::pair<unsigned, ObjectCreationOutput>> CompleteAll();
-  bool ScheduleUpdateRefCount(unsigned objectKey, int count);
+  bool ScheduleUpdateRefCount(GITSKey objectKey, int count);
 
 private:
   struct ObjectCreationTask {
-    ObjectCreationTask(CreationFunction creationFunction, unsigned objectKey);
+    ObjectCreationTask(CreationFunction creationFunction, GITSKey objectKey);
     CreationFunction CreationFunctor;
-    unsigned ObjectKey{};
+    GITSKey ObjectKey{};
     std::future<CreationFunction::result_type> StartedTask;
   };
 
@@ -54,10 +55,10 @@ private:
   void WorkerThread();
 
   bool m_Initialized = false;
-  std::unordered_map<unsigned, std::vector<unsigned>> m_Dependencies;
+  std::unordered_map<GITSKey, std::vector<GITSKey>> m_Dependencies;
   std::vector<std::thread> m_Workers;
-  std::unordered_map<unsigned, std::unique_ptr<ObjectCreationTask>> m_Tasks;
-  std::unordered_map<unsigned, int> m_RefCounts;
+  std::unordered_map<GITSKey, std::unique_ptr<ObjectCreationTask>> m_Tasks;
+  std::unordered_map<GITSKey, int> m_RefCounts;
   std::deque<ObjectCreationTask*> m_TasksQueue;
   std::mutex m_Mutex;
   std::condition_variable m_Cv;

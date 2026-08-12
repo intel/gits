@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "directStorageLayer.h"
+#include "arguments.h"
 #include "configurationLib.h"
 #include "log.h"
 #include "to_string/toStr.h"
@@ -31,7 +32,7 @@ DirectStorageLayer::~DirectStorageLayer() {
   }
 }
 
-void DirectStorageLayer::ClearCompletedBatches(unsigned queueKey) {
+void DirectStorageLayer::ClearCompletedBatches(GITSKey queueKey) {
   auto itDeque = m_InflightBatches.find(queueKey);
   if (itDeque == m_InflightBatches.end()) {
     return;

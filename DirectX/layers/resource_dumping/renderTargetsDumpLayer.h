@@ -68,34 +68,34 @@ private:
   bool m_DryRun{};
   unsigned m_DrawCount{};
   unsigned m_ExecuteCount{};
-  std::unordered_map<unsigned, unsigned> m_DrawCountByCommandList;
+  std::unordered_map<GITSKey, unsigned> m_DrawCountByCommandList;
   ResourceStateTracker m_ResourceStateTracker;
   unsigned m_CurrentFrame{1};
 
   struct RenderTarget {
     unsigned slot{};
     ID3D12Resource* resource{};
-    unsigned ResourceKey{};
+    GITSKey ResourceKey{};
     bool isDesc{};
     D3D12_RENDER_TARGET_VIEW_DESC desc{};
   };
   struct DepthStencil {
     ID3D12Resource* resource{};
-    unsigned ResourceKey{};
+    GITSKey ResourceKey{};
     bool isDesc{};
     D3D12_DEPTH_STENCIL_VIEW_DESC desc{};
   };
   std::map<std::pair<unsigned, unsigned>, RenderTarget> m_RenderTargetsByDescriptorHandle;
   std::map<std::pair<unsigned, unsigned>, DepthStencil> m_DepthStencilsByDescriptorHandle;
-  std::unordered_map<unsigned, std::vector<RenderTarget>> m_RenderTargetsByCommandList;
-  std::unordered_map<unsigned, DepthStencil> m_DepthStencilByCommandList;
+  std::unordered_map<GITSKey, std::vector<RenderTarget>> m_RenderTargetsByCommandList;
+  std::unordered_map<GITSKey, DepthStencil> m_DepthStencilByCommandList;
 
   struct DryRunInfo {
-    std::map<unsigned, std::set<unsigned>> drawsWithTextureByFrame;
+    std::map<GITSKey, std::set<GITSKey>> drawsWithTextureByFrame;
   } m_DryRunInfo;
 
 private:
-  void OnDraw(ID3D12GraphicsCommandList* commandList, unsigned commandListKey);
+  void OnDraw(ID3D12GraphicsCommandList* commandList, GITSKey commandListKey);
   void DumpRenderTarget(ID3D12GraphicsCommandList* commandList,
                         RenderTarget& renderTarget,
                         unsigned frame,
@@ -108,9 +108,9 @@ private:
                         unsigned frameDraw);
   template <typename Descriptors>
   void CopyDescriptors(Descriptors& descriptors,
-                       unsigned srcHeapKey,
+                       GITSKey srcHeapKey,
                        unsigned srcHeapIndex,
-                       unsigned destHeapKey,
+                       GITSKey destHeapKey,
                        unsigned destHeapIndex);
 };
 

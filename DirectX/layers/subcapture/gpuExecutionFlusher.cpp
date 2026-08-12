@@ -7,12 +7,13 @@
 // ===================== end_copyright_notice ==============================
 
 #include "gpuExecutionFlusher.h"
+#include "arguments.h"
 #include "log.h"
 
 namespace gits {
 namespace DirectX {
 
-void GpuExecutionFlusher::ExecuteCommandLists(unsigned commandQueueKey,
+void GpuExecutionFlusher::ExecuteCommandLists(GITSKey commandQueueKey,
                                               ID3D12CommandQueue* commandQueue) {
   if (m_CommandQueues.contains(commandQueueKey)) {
     return;
@@ -27,7 +28,7 @@ void GpuExecutionFlusher::ExecuteCommandLists(unsigned commandQueueKey,
   m_CommandQueues[commandQueueKey] = info;
 }
 
-void GpuExecutionFlusher::DestroyCommandQueue(unsigned commandQueueKey) {
+void GpuExecutionFlusher::DestroyCommandQueue(GITSKey commandQueueKey) {
   m_CommandQueues.erase(commandQueueKey);
 }
 

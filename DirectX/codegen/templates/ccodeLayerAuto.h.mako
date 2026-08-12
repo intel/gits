@@ -99,7 +99,7 @@ private:
   D3D12_GPU_VIRTUAL_ADDRESS m_ExportGpuVirtualAddressCapture{};
   D3D12_GPU_DESCRIPTOR_HANDLE m_ExportGpuDescriptorHandleCapture{};
   std::array<uint8_t, D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES> m_ExportShaderIdentifierCapture{};
-  std::unordered_map<unsigned, unsigned> m_XefgCmdQueueKeyByHandleKey;
+  std::unordered_map<GITSKey, GITSKey> m_XefgCmdQueueKeyByHandleKey;
 
   // Custom command pre process
   // Used before arguments have been processed

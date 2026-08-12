@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #pragma once
+#include "arguments.h"
 
 #include "orderingRecorder.h"
 
@@ -24,13 +25,13 @@ public:
   MapTrackingService(stream::OrderingRecorder& recorder);
 
   void EnableWriteWatch(D3D12_HEAP_PROPERTIES& properties, D3D12_HEAP_FLAGS& flags);
-  void MapResource(unsigned resourceKey,
+  void MapResource(GITSKey resourceKey,
                    ID3D12Resource* resource,
                    unsigned subresourceIndex,
                    void** mappedData);
-  void UnmapResource(unsigned resourceKey, unsigned subresourceIndex);
+  void UnmapResource(GITSKey resourceKey, unsigned subresourceIndex);
   void ExecuteCommandLists();
-  void DestroyResource(unsigned resourceKey);
+  void DestroyResource(GITSKey resourceKey);
 
 private:
   bool m_ShadowMemory{false};
@@ -44,14 +45,14 @@ private:
     MappedInfo(const MappedInfo&) = delete;
     MappedInfo& operator=(const MappedInfo&) = delete;
 
-    unsigned ResourceKey{};
+    GITSKey ResourceKey{};
     char* MappedAddress{};
     char* ShadowAddress{};
     size_t Size{};
     int MapCount{};
     std::vector<void*> WatchedPages;
   };
-  std::unordered_map<unsigned, std::map<unsigned, std::unique_ptr<MappedInfo>>> m_MappedData;
+  std::unordered_map<GITSKey, std::map<GITSKey, std::unique_ptr<MappedInfo>>> m_MappedData;
 
   size_t m_PageSize{0};
   std::mutex m_Mutex;
@@ -62,7 +63,7 @@ private:
   bool IsUploadHeap(D3D12_HEAP_TYPE heapType, D3D12_CPU_PAGE_PROPERTY cpuPageProperty);
   void CaptureModifiedData(MappedInfo* info);
   void CaptureData(
-      unsigned resourceKey, void* mappedAddress, unsigned offset, void* data, unsigned dataSize);
+      GITSKey resourceKey, void* mappedAddress, unsigned offset, void* data, unsigned dataSize);
   size_t GetSubresourceSize(ID3D12Resource* resource, unsigned subresource);
 };
 

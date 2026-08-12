@@ -9,6 +9,7 @@
 #pragma once
 
 #include "log.h"
+#include "arguments.h"
 
 #include <unordered_map>
 
@@ -20,11 +21,11 @@ public:
   ContextMapService() = default;
   ~ContextMapService() = default;
 
-  void SetContext(unsigned key, std::uintptr_t context) {
+  void SetContext(GITSKey key, std::uintptr_t context) {
     m_ContextMap[key] = context;
   }
 
-  std::uintptr_t GetContext(unsigned key) {
+  std::uintptr_t GetContext(GITSKey key) {
     if (!key) {
       return {};
     }
@@ -33,12 +34,12 @@ public:
     return it->second;
   }
 
-  void RemoveContext(unsigned key) {
+  void RemoveContext(GITSKey key) {
     m_ContextMap.erase(key);
   }
 
 private:
-  std::unordered_map<unsigned, std::uintptr_t> m_ContextMap{};
+  std::unordered_map<GITSKey, std::uintptr_t> m_ContextMap{};
 };
 
 } // namespace DirectX

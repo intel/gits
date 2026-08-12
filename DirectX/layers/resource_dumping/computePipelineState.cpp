@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "computePipelineState.h"
+#include "arguments.h"
 #include "pipelineStateStreamDescDump.h"
 #include "to_string/toStr.h"
 
@@ -23,7 +24,7 @@ void ComputePipelineState::Reset() {
   m_BindingState.Reset();
 }
 
-void ComputePipelineState::SetRootSignature(unsigned rootSignatureKey,
+void ComputePipelineState::SetRootSignature(GITSKey rootSignatureKey,
                                             D3D12_ROOT_SIGNATURE_DESC2* desc) {
   m_RootSignatureKey = rootSignatureKey;
   m_RootSignatureDesc = desc;

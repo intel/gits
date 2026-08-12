@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "capturePlayerShaderIdentifierService.h"
+#include "arguments.h"
 #include "log.h"
 
 #include <algorithm>
@@ -15,7 +16,7 @@ namespace gits {
 namespace DirectX {
 
 void CapturePlayerShaderIdentifierService::AddCaptureShaderIdentifier(
-    unsigned commandKey, ShaderIdentifier captureIdentifier, LPWSTR exportName) {
+    GITSKey commandKey, ShaderIdentifier captureIdentifier, LPWSTR exportName) {
   std::lock_guard<std::mutex> lock(m_Mutex);
 
   m_ShaderIdentifiersByCommandKey[commandKey] = captureIdentifier;
@@ -25,7 +26,7 @@ void CapturePlayerShaderIdentifierService::AddCaptureShaderIdentifier(
 }
 
 void CapturePlayerShaderIdentifierService::AddPlayerShaderIdentifier(
-    unsigned commandKey, ShaderIdentifier playerIdentifier, LPWSTR exportName) {
+    GITSKey commandKey, ShaderIdentifier playerIdentifier, LPWSTR exportName) {
   std::lock_guard<std::mutex> lock(m_Mutex);
 
   auto itByCommandKey = m_ShaderIdentifiersByCommandKey.find(commandKey);

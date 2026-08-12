@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #pragma once
+#include "arguments.h"
 
 #include "command.h"
 
@@ -22,20 +23,20 @@ class StateTrackingService;
 class ResourceForCBVRestoreService {
 public:
   ResourceForCBVRestoreService(StateTrackingService& stateService) : m_StateService(stateService) {}
-  void AddResourceCreationCommand(unsigned resourceKey, unsigned heapKey, Command* creationCommand);
-  bool RestoreResourceObject(unsigned resourceKey);
+  void AddResourceCreationCommand(GITSKey resourceKey, GITSKey heapKey, Command* creationCommand);
+  bool RestoreResourceObject(GITSKey resourceKey);
   void ReleaseResources();
-  bool ResourceRestored(unsigned resourceKey);
+  bool ResourceRestored(GITSKey resourceKey);
 
 private:
   struct ResourceForCBVRestoreInfo {
     std::unique_ptr<Command> CreationCommand;
-    unsigned HeapKey{};
+    GITSKey HeapKey{};
   };
 
   StateTrackingService& m_StateService;
-  std::unordered_map<unsigned, ResourceForCBVRestoreInfo> m_ResourceCreationInfo;
-  std::set<unsigned> m_RestoredResourceObjects;
+  std::unordered_map<GITSKey, ResourceForCBVRestoreInfo> m_ResourceCreationInfo;
+  std::set<GITSKey> m_RestoredResourceObjects;
 };
 
 } // namespace DirectX

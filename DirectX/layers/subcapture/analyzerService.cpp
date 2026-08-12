@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "analyzerService.h"
+#include "arguments.h"
 #include "analyzerResults.h"
 #include "keyUtils.h"
 #include "log.h"
@@ -42,7 +43,7 @@ AnalyzerService::~AnalyzerService() {
   }
 }
 
-void AnalyzerService::NotifyObject(unsigned objectKey) {
+void AnalyzerService::NotifyObject(GITSKey objectKey) {
   if (m_Optimize && m_InRange) {
     if (objectKey) {
       m_ObjectsForRestore.insert(objectKey);
@@ -50,9 +51,9 @@ void AnalyzerService::NotifyObject(unsigned objectKey) {
   }
 }
 
-void AnalyzerService::NotifyObjects(const std::vector<unsigned>& objectKeys) {
+void AnalyzerService::NotifyObjects(const std::vector<GITSKey>& objectKeys) {
   if (m_Optimize && m_InRange) {
-    for (unsigned key : objectKeys) {
+    for (GITSKey key : objectKeys) {
       if (key) {
         m_ObjectsForRestore.insert(key);
       }
@@ -60,7 +61,7 @@ void AnalyzerService::NotifyObjects(const std::vector<unsigned>& objectKeys) {
   }
 }
 
-void AnalyzerService::CommandListCommand(unsigned commandListKey) {
+void AnalyzerService::CommandListCommand(GITSKey commandListKey) {
   if (m_SubcaptureRange.CommandListSubcapture()) {
     return;
   }
@@ -72,7 +73,7 @@ void AnalyzerService::CommandListCommand(unsigned commandListKey) {
   }
 }
 
-void AnalyzerService::Present(unsigned callKey, unsigned swapChainKey) {
+void AnalyzerService::Present(GITSKey callKey, GITSKey swapChainKey) {
   if (m_SubcaptureRange.CommandListSubcapture()) {
     m_ObjectsForRestore.insert(swapChainKey);
     m_SubcaptureRange.FrameEnd(IsStateRestoreKey(callKey));
@@ -86,14 +87,14 @@ void AnalyzerService::Present(unsigned callKey, unsigned swapChainKey) {
     auto& queueEvents = m_GpuExecutionTracker.GetQueueEvents();
     for (auto& commandQueue : queueEvents) {
       for (GpuExecutionTracker::QueueEvent* event : commandQueue.second) {
-        std::vector<unsigned>& objectKeys = m_CommandQueueCommandsForRestore[event->CallKey];
+        std::vector<GITSKey>& objectKeys = m_CommandQueueCommandsForRestore[event->CallKey];
         if (event->CommandQueueKey) {
           objectKeys.push_back(event->CommandQueueKey);
         }
         switch (event->Kind) {
         case GpuExecutionTracker::QueueEventKind::Execute: {
           auto* execute = static_cast<ExecuteCommandListCommand*>(event);
-          for (unsigned commandListKey : execute->CommandListKeys) {
+          for (GITSKey commandListKey : execute->CommandListKeys) {
             m_CommandListsForRestore.insert(commandListKey);
           }
         } break;
@@ -122,9 +123,9 @@ void AnalyzerService::Present(unsigned callKey, unsigned swapChainKey) {
   }
 }
 
-void AnalyzerService::ExecuteCommandLists(unsigned callKey,
-                                          unsigned commandQueueKey,
-                                          std::vector<unsigned>& commandListKeys) {
+void AnalyzerService::ExecuteCommandLists(GITSKey callKey,
+                                          GITSKey commandQueueKey,
+                                          std::vector<GITSKey>& commandListKeys) {
   if (m_SubcaptureRange.CommandListSubcapture()) {
     return;
   }
@@ -136,7 +137,7 @@ void AnalyzerService::ExecuteCommandLists(unsigned callKey,
       m_GpuExecutionTracker.Execute(callKey, commandQueueKey, executable);
     }
   } else if (m_InRange) {
-    for (unsigned commandListKey : commandListKeys) {
+    for (GITSKey commandListKey : commandListKeys) {
       auto it = m_CommandListsResetBeforeExecution.find(commandListKey);
       if (it == m_CommandListsResetBeforeExecution.end()) {
         m_CommandListsForRestore.insert(commandListKey);
@@ -146,9 +147,9 @@ void AnalyzerService::ExecuteCommandLists(unsigned callKey,
   }
 }
 
-void AnalyzerService::CommandListReset(unsigned commandListKey,
-                                       unsigned allocatorKey,
-                                       unsigned initialStateKey) {
+void AnalyzerService::CommandListReset(GITSKey commandListKey,
+                                       GITSKey allocatorKey,
+                                       GITSKey initialStateKey) {
   if (m_SubcaptureRange.CommandListSubcapture()) {
     if (m_InRange) {
       m_ObjectsForRestore.insert(commandListKey);
@@ -180,31 +181,31 @@ void AnalyzerService::ExecutionEnd() {
   }
 }
 
-void AnalyzerService::CommandQueueWait(unsigned callKey,
-                                       unsigned commandQueueKey,
-                                       unsigned fenceKey,
+void AnalyzerService::CommandQueueWait(GITSKey callKey,
+                                       GITSKey commandQueueKey,
+                                       GITSKey fenceKey,
                                        UINT64 fenceValue) {
   if (m_BeforeRange) {
     m_GpuExecutionTracker.CommandQueueWait(callKey, commandQueueKey, fenceKey, fenceValue);
   }
 }
 
-void AnalyzerService::CommandQueueSignal(unsigned callKey,
-                                         unsigned commandQueueKey,
-                                         unsigned fenceKey,
+void AnalyzerService::CommandQueueSignal(GITSKey callKey,
+                                         GITSKey commandQueueKey,
+                                         GITSKey fenceKey,
                                          UINT64 fenceValue) {
   if (m_BeforeRange) {
     m_GpuExecutionTracker.CommandQueueSignal(callKey, commandQueueKey, fenceKey, fenceValue);
   }
 }
 
-void AnalyzerService::FenceSignal(unsigned callKey, unsigned fenceKey, UINT64 fenceValue) {
+void AnalyzerService::FenceSignal(GITSKey callKey, GITSKey fenceKey, UINT64 fenceValue) {
   if (m_BeforeRange) {
     m_GpuExecutionTracker.FenceSignal(callKey, fenceKey, fenceValue);
   }
 }
 
-void AnalyzerService::MappedDataMeta(unsigned resourceKey) {
+void AnalyzerService::MappedDataMeta(GITSKey resourceKey) {
   if (m_InRange) {
     m_ObjectsForRestore.insert(resourceKey);
   }
@@ -222,7 +223,7 @@ void AnalyzerService::CreateXefgContext(xefgSwapChainD3D12CreateContextCommand& 
   m_ObjectsForRestore.insert(c.m_phSwapChain.Key);
 }
 
-void AnalyzerService::ForceApplicationSwapChainRestore(unsigned key) {
+void AnalyzerService::ForceApplicationSwapChainRestore(GITSKey key) {
   m_ObjectsForRestore.insert(key);
 }
 
@@ -241,7 +242,7 @@ void AnalyzerService::CreateDeviceExtensionContext(
   m_ObjectsForRestore.insert(c.m_ppExtensionContext.Key);
 }
 
-void AnalyzerService::AddParent(unsigned key, unsigned parentKey) {
+void AnalyzerService::AddParent(GITSKey key, GITSKey parentKey) {
   if (key && parentKey) {
     m_ParentKeys[key].push_back(parentKey);
   }
@@ -259,10 +260,10 @@ void AnalyzerService::ClearReadyExecutables() {
 void AnalyzerService::DumpAnalysisFile() {
   std::ofstream out(AnalyzerResults::GetAnalysisFileName());
 
-  std::set<unsigned> objectKeys;
+  std::set<GITSKey> objectKeys;
 
   out << "COMMAND_LIST_KEYS\n";
-  for (unsigned key : m_CommandListsForRestore) {
+  for (GITSKey key : m_CommandListsForRestore) {
     out << key << "\n";
     if (m_Optimize) {
       objectKeys.insert(key);
@@ -273,7 +274,7 @@ void AnalyzerService::DumpAnalysisFile() {
   for (auto& it : m_CommandQueueCommandsForRestore) {
     out << it.first << "\n";
     if (m_Optimize) {
-      for (unsigned key : it.second) {
+      for (GITSKey key : it.second) {
         objectKeys.insert(key);
       }
     }
@@ -284,7 +285,7 @@ void AnalyzerService::DumpAnalysisFile() {
 
   // optimize raytracing
   std::unordered_set<std::pair<unsigned, unsigned>, UnsignedPairHash> blases;
-  for (unsigned buildKey : m_CommandListService.GetTlases()) {
+  for (GITSKey buildKey : m_CommandListService.GetTlases()) {
     for (auto& as : m_RaytracingService.GetBlases(buildKey)) {
       blases.insert(as);
     }
@@ -295,27 +296,27 @@ void AnalyzerService::DumpAnalysisFile() {
   m_RaytracingOptimizationService.Optimize(blases);
 
   out << "OBJECTS\n";
-  for (unsigned key : m_ObjectsForRestore) {
+  for (GITSKey key : m_ObjectsForRestore) {
     objectKeys.insert(key);
     FindParents(key, objectKeys);
   }
-  for (unsigned key : m_CommandListService.GetObjectsForRestore()) {
+  for (GITSKey key : m_CommandListService.GetObjectsForRestore()) {
     objectKeys.insert(key);
     FindParents(key, objectKeys);
   }
-  for (unsigned key : m_RaytracingService.GetBindingTablesResources()) {
+  for (GITSKey key : m_RaytracingService.GetBindingTablesResources()) {
     objectKeys.insert(key);
     FindParents(key, objectKeys);
   }
-  for (unsigned key : m_ExecuteIndirectService.GetArgumentBuffersResources()) {
+  for (GITSKey key : m_ExecuteIndirectService.GetArgumentBuffersResources()) {
     objectKeys.insert(key);
     FindParents(key, objectKeys);
   }
-  for (unsigned key : m_RaytracingOptimizationService.GetExistingBuffers()) {
+  for (GITSKey key : m_RaytracingOptimizationService.GetExistingBuffers()) {
     objectKeys.insert(key);
     FindParents(key, objectKeys);
   }
-  for (unsigned key : objectKeys) {
+  for (GITSKey key : objectKeys) {
     if (key) {
       out << key << "\n";
     }
@@ -334,7 +335,7 @@ void AnalyzerService::DumpAnalysisFile() {
   }
 
   out << "TLASES\n";
-  for (unsigned buildKey : m_CommandListService.GetTlases()) {
+  for (GITSKey buildKey : m_CommandListService.GetTlases()) {
     out << buildKey << "\n";
   }
 
@@ -344,10 +345,10 @@ void AnalyzerService::DumpAnalysisFile() {
   }
 }
 
-void AnalyzerService::FindParents(unsigned key, std::set<unsigned>& objectKeys) {
+void AnalyzerService::FindParents(GITSKey key, std::set<GITSKey>& objectKeys) {
   auto it = m_ParentKeys.find(key);
   if (it != m_ParentKeys.end()) {
-    for (unsigned parentKey : it->second) {
+    for (GITSKey parentKey : it->second) {
       if (objectKeys.insert(parentKey).second) {
         FindParents(parentKey, objectKeys);
       }

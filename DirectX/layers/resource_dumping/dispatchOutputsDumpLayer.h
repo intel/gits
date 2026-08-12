@@ -86,7 +86,7 @@ private:
   unsigned m_DispatchCount{};
   unsigned m_ExecuteCount{};
   unsigned m_CurrentFrame{1};
-  std::unordered_map<unsigned, unsigned> m_DispatchCountByCommandList;
+  std::unordered_map<GITSKey, unsigned> m_DispatchCountByCommandList;
 };
 
 } // namespace DirectX

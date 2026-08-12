@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "toStr.h"
+#include "arguments.h"
 #include "keyUtils.h"
 
 namespace gits {
@@ -30,7 +31,7 @@ std::string toStr(const wchar_t* s) {
   return std::string(wStr.begin(), wStr.end());
 }
 
-std::string keyToStr(unsigned key) {
+std::string keyToStr(GITSKey key) {
   std::string result;
   if (IsStateRestoreKey(key)) {
     result += 'S';
@@ -42,7 +43,7 @@ std::string keyToStr(unsigned key) {
   return result + std::to_string(key);
 }
 
-std::wstring keyToWStr(unsigned key) {
+std::wstring keyToWStr(GITSKey key) {
   std::string keyStr = keyToStr(key);
   return std::wstring(keyStr.begin(), keyStr.end());
 }

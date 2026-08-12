@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #pragma once
+#include "arguments.h"
 
 #include "commandsAuto.h"
 
@@ -19,10 +20,10 @@ namespace DirectX {
 class DescriptorHeapTracker {
 public:
   struct Descriptor {
-    unsigned HeapKey{};
+    GITSKey HeapKey{};
     unsigned DescriptorIndex{};
-    unsigned ResourceKey{};
-    unsigned UavCounterResourceKey{};
+    GITSKey ResourceKey{};
+    GITSKey UavCounterResourceKey{};
     enum class DescriptorType {
       Unknown,
       RTV,
@@ -45,20 +46,20 @@ public:
   };
 
   void CreateDescriptor(Descriptor* descriptor);
-  void DestroyObject(unsigned key);
+  void DestroyObject(GITSKey key);
   void CopyDescriptors(ID3D12DeviceCopyDescriptorsSimpleCommand& c);
   void CopyDescriptors(ID3D12DeviceCopyDescriptorsCommand& c);
-  Descriptor* GetDescriptor(unsigned heapKey, unsigned descriptorIndex) {
+  Descriptor* GetDescriptor(GITSKey heapKey, unsigned descriptorIndex) {
     return m_DescriptorByHeapByIndex[heapKey][descriptorIndex].get();
   }
 
 private:
   Descriptor* CopyDescriptor(Descriptor* descriptor,
-                             unsigned destHeapKey,
+                             GITSKey destHeapKey,
                              unsigned destDescriptorIndex);
 
 private:
-  std::unordered_map<unsigned, std::unordered_map<unsigned, std::unique_ptr<Descriptor>>>
+  std::unordered_map<GITSKey, std::unordered_map<GITSKey, std::unique_ptr<Descriptor>>>
       m_DescriptorByHeapByIndex;
 };
 

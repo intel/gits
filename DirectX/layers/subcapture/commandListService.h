@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #pragma once
+#include "arguments.h"
 
 #include "objectState.h"
 #include "commandIdsAuto.h"
@@ -21,17 +22,17 @@ namespace gits {
 namespace DirectX {
 
 struct CommandListCommand {
-  CommandListCommand(CommandId id_, unsigned key, unsigned commandListKey)
+  CommandListCommand(CommandId id_, GITSKey key, GITSKey commandListKey)
       : Id(id_), CommandKey(key), CommandListKey(commandListKey) {}
   virtual ~CommandListCommand() = default;
   CommandId Id{};
-  unsigned CommandKey{};
-  unsigned CommandListKey{};
+  GITSKey CommandKey{};
+  GITSKey CommandListKey{};
   std::unique_ptr<stream::CommandSerializer> CommandSerializer;
 };
 
 struct CommandListOMSetRenderTargets : public CommandListCommand {
-  CommandListOMSetRenderTargets(unsigned key, unsigned commandListKey)
+  CommandListOMSetRenderTargets(GITSKey key, GITSKey commandListKey)
       : CommandListCommand(
             CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_OMSETRENDERTARGETS, key, commandListKey) {}
   std::vector<std::unique_ptr<D3D12RenderTargetViewState>> RenderTargetViews;
@@ -40,7 +41,7 @@ struct CommandListOMSetRenderTargets : public CommandListCommand {
 };
 
 struct CommandListClearRenderTargetView : public CommandListCommand {
-  CommandListClearRenderTargetView(unsigned key, unsigned commandListKey)
+  CommandListClearRenderTargetView(GITSKey key, GITSKey commandListKey)
       : CommandListCommand(
             CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_CLEARRENDERTARGETVIEW, key, commandListKey) {}
   std::unique_ptr<D3D12RenderTargetViewState> RenderTargetView;
@@ -49,7 +50,7 @@ struct CommandListClearRenderTargetView : public CommandListCommand {
 };
 
 struct CommandListClearDepthStencilView : public CommandListCommand {
-  CommandListClearDepthStencilView(unsigned key, unsigned commandListKey)
+  CommandListClearDepthStencilView(GITSKey key, GITSKey commandListKey)
       : CommandListCommand(
             CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_CLEARDEPTHSTENCILVIEW, key, commandListKey) {}
   std::unique_ptr<D3D12DepthStencilViewState> m_DepthStencilView;
@@ -59,25 +60,25 @@ struct CommandListClearDepthStencilView : public CommandListCommand {
 };
 
 struct CommandListClearUnorderedAccessViewUint : public CommandListCommand {
-  CommandListClearUnorderedAccessViewUint(unsigned key, unsigned commandListKey)
+  CommandListClearUnorderedAccessViewUint(GITSKey key, GITSKey commandListKey)
       : CommandListCommand(CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_CLEARUNORDEREDACCESSVIEWUINT,
                            key,
                            commandListKey) {}
   std::unique_ptr<D3D12UnorderedAccessViewState> ViewGPUHandleInCurrentHeap;
   std::unique_ptr<D3D12UnorderedAccessViewState> ViewCPUHandle;
-  unsigned ResourceKey{};
+  GITSKey ResourceKey{};
   UINT Values[4]{};
   std::vector<D3D12_RECT> Rects{};
 };
 
 struct CommandListClearUnorderedAccessViewFloat : public CommandListCommand {
-  CommandListClearUnorderedAccessViewFloat(unsigned key, unsigned commandListKey)
+  CommandListClearUnorderedAccessViewFloat(GITSKey key, GITSKey commandListKey)
       : CommandListCommand(CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_CLEARUNORDEREDACCESSVIEWFLOAT,
                            key,
                            commandListKey) {}
   std::unique_ptr<D3D12UnorderedAccessViewState> ViewGPUHandleInCurrentHeap;
   std::unique_ptr<D3D12UnorderedAccessViewState> ViewCPUHandle;
-  unsigned ResourceKey{};
+  GITSKey ResourceKey{};
   FLOAT Values[4]{};
   std::vector<D3D12_RECT> Rects{};
 };
@@ -96,12 +97,12 @@ struct CommandListState : public ObjectState {
     }
     Commands.clear();
   }
-  unsigned AllocatorKey{};
+  GITSKey AllocatorKey{};
   UINT NodeMask{};
   D3D12_COMMAND_LIST_TYPE Type{};
   IID Iid{};
   std::vector<CommandListCommand*> Commands;
-  std::vector<unsigned> DescriptorHeapKeys{};
+  std::vector<GITSKey> DescriptorHeapKeys{};
   bool Closed{};
 };
 
@@ -111,7 +112,7 @@ class CommandListService {
 public:
   CommandListService(StateTrackingService& stateService);
   void AddCommandList(CommandListState* state);
-  void RemoveCommandList(unsigned key);
+  void RemoveCommandList(GITSKey key);
   void RestoreCommandLists();
 
 private:
@@ -120,10 +121,10 @@ private:
   void RestoreCommandState(CommandListClearDepthStencilView* Command);
   template <typename CommandListClearUnorderedAccessView>
   void RestoreCommandState(CommandListClearUnorderedAccessView* Command);
-  void InitAuxiliaryRtvHeap(unsigned deviceKey);
-  void InitAuxiliaryDsvHeap(unsigned deviceKey);
-  void InitAuxiliaryUavGpuHeap(unsigned deviceKey);
-  void InitAuxiliaryUavCpuHeap(unsigned deviceKey);
+  void InitAuxiliaryRtvHeap(GITSKey deviceKey);
+  void InitAuxiliaryDsvHeap(GITSKey deviceKey);
+  void InitAuxiliaryUavGpuHeap(GITSKey deviceKey);
+  void InitAuxiliaryUavCpuHeap(GITSKey deviceKey);
   void CreateAuxiliaryRtv(D3D12RenderTargetViewState* view);
   void CreateAuxiliaryDsv(D3D12DepthStencilViewState* view);
   void CreateAuxiliaryUavGpu(D3D12UnorderedAccessViewState* view);
@@ -135,15 +136,15 @@ private:
 private:
   StateTrackingService& m_StateService;
   bool m_RestoreCommandLists{false};
-  std::unordered_map<unsigned, CommandListState*> m_CommandListsByKey;
+  std::unordered_map<GITSKey, CommandListState*> m_CommandListsByKey;
 
-  unsigned m_AuxiliaryRtvDescriptorHeapKey{};
+  GITSKey m_AuxiliaryRtvDescriptorHeapKey{};
   unsigned m_AuxiliaryRtvDescriptorHeapIndex{};
-  unsigned m_AuxiliaryDsvDescriptorHeapKey{};
+  GITSKey m_AuxiliaryDsvDescriptorHeapKey{};
   unsigned m_AuxiliaryDsvDescriptorHeapIndex{};
-  unsigned m_AuxiliaryUavGpuDescriptorHeapKey{};
+  GITSKey m_AuxiliaryUavGpuDescriptorHeapKey{};
   unsigned m_AuxiliaryUavGpuDescriptorHeapIndex{};
-  unsigned m_AuxiliaryUavCpuDescriptorHeapKey{};
+  GITSKey m_AuxiliaryUavCpuDescriptorHeapKey{};
   unsigned m_AuxiliaryUavCpuDescriptorHeapIndex{};
   const unsigned m_AuxiliaryHeapSize{96};
 };

@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "heapAllocationService.h"
+#include "arguments.h"
 #include "log.h"
 
 #include <windows.h>
@@ -14,7 +15,7 @@
 namespace gits {
 namespace DirectX {
 
-void HeapAllocationService::CreateHeapAllocation(unsigned heapKey,
+void HeapAllocationService::CreateHeapAllocation(GITSKey heapKey,
                                                  void* captureAddress,
                                                  void* data,
                                                  size_t size) {
@@ -31,7 +32,7 @@ void* HeapAllocationService::GetHeapAllocation(void* captureAddress) {
   return it->second;
 }
 
-void HeapAllocationService::DestroyHeapAllocation(unsigned heapKey) {
+void HeapAllocationService::DestroyHeapAllocation(GITSKey heapKey) {
   auto itCaptureAddress = m_HeapAllocationsCaptureAddressByHeapKey.find(heapKey);
   if (itCaptureAddress == m_HeapAllocationsCaptureAddressByHeapKey.end()) {
     return;

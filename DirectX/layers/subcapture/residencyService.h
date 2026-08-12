@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #pragma once
+#include "arguments.h"
 
 #include <unordered_map>
 
@@ -18,20 +19,20 @@ class StateTrackingService;
 class ResidencyService {
 public:
   ResidencyService(StateTrackingService& stateService) : m_StateService(stateService) {}
-  void CreateNotResident(unsigned key, unsigned deviceKey);
-  void MakeResident(const std::vector<unsigned>& keys, unsigned deviceKey);
-  void Evict(const std::vector<unsigned>& keys, unsigned deviceKey);
-  void DestroyObject(unsigned key);
+  void CreateNotResident(GITSKey key, GITSKey deviceKey);
+  void MakeResident(const std::vector<GITSKey>& keys, GITSKey deviceKey);
+  void Evict(const std::vector<GITSKey>& keys, GITSKey deviceKey);
+  void DestroyObject(GITSKey key);
   void RestoreResidency();
 
 private:
   struct ResidencyInfo {
     unsigned ResidencyCount{};
-    unsigned DeviceKey{};
+    GITSKey DeviceKey{};
     bool CreatedNotResident{};
   };
   StateTrackingService& m_StateService;
-  std::unordered_map<unsigned, ResidencyInfo> m_Residency;
+  std::unordered_map<GITSKey, ResidencyInfo> m_Residency;
 };
 
 } // namespace DirectX

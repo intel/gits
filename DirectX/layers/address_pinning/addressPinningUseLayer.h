@@ -73,12 +73,12 @@ private:
 
 private:
   std::vector<D3D12_GPU_VIRTUAL_ADDRESS_RANGE> m_AddressRanges;
-  std::unordered_map<unsigned, D3D12_GPU_VIRTUAL_ADDRESS_RANGE> m_ResourceAddressRanges;
+  std::unordered_map<GITSKey, D3D12_GPU_VIRTUAL_ADDRESS_RANGE> m_ResourceAddressRanges;
   struct HeapAllocationInfo {
     D3D12_GPU_VIRTUAL_ADDRESS_RANGE m_AddressRange;
     UINT64 m_Alignment;
   };
-  std::unordered_map<unsigned, HeapAllocationInfo> m_HeapAddressRanges;
+  std::unordered_map<GITSKey, HeapAllocationInfo> m_HeapAddressRanges;
   std::unordered_set<unsigned> m_ChangedHeaps;
   Microsoft::WRL::ComPtr<ID3D12Tools1> m_D3d12Tools;
   Microsoft::WRL::ComPtr<ID3D12DeviceTools> m_DeviceTools;

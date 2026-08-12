@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "adapterService.h"
+#include "arguments.h"
 #include "to_string/toStr.h"
 #include "log.h"
 #include "configurator.h"
@@ -88,11 +89,11 @@ IDXGIAdapter1* AdapterService::GetAdapter() const {
   return m_Adapter.Get();
 }
 
-void AdapterService::SetCaptureAdapterLuid(unsigned key, LUID captureLuid) {
+void AdapterService::SetCaptureAdapterLuid(GITSKey key, LUID captureLuid) {
   m_CaptureLuids[key] = captureLuid;
 }
 
-void AdapterService::SetCurrentAdapterLuid(unsigned key, LUID currentLuid) {
+void AdapterService::SetCurrentAdapterLuid(GITSKey key, LUID currentLuid) {
   auto it = m_CaptureLuids.find(key);
   GITS_ASSERT(it != m_CaptureLuids.end());
   m_LuidsByCaptureLuid[it->second] = currentLuid;

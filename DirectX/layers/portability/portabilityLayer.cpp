@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "portabilityLayer.h"
+#include "arguments.h"
 #include "to_string/toStr.h"
 #include "log.h"
 #include "configurationLib.h"
@@ -498,7 +499,7 @@ void PortabilityLayer::ConfigureHeapMemoryPool(ID3D12Device* device, D3D12_HEAP_
   }
 }
 
-void PortabilityLayer::CheckHeapCreationFlags(unsigned heapKey,
+void PortabilityLayer::CheckHeapCreationFlags(GITSKey heapKey,
                                               ID3D12Device* device,
                                               D3D12_HEAP_DESC* desc) {
   D3D12_FEATURE_DATA_D3D12_OPTIONS featureOptions{};
@@ -1046,8 +1047,8 @@ std::string PortabilityLayer::GetPlacedToCommittedIncompatibilityReasons(
 
 std::string PortabilityLayer::GetPlacedToCommittedFailureContext(
     const char* apiName,
-    unsigned commandKey,
-    unsigned heapKey,
+    GITSKey commandKey,
+    GITSKey heapKey,
     const D3D12_HEAP_DESC& heapDesc,
     const D3D12_RESOURCE_DESC& resourceDesc) const {
   std::ostringstream stream;
@@ -1062,8 +1063,8 @@ std::string PortabilityLayer::GetPlacedToCommittedFailureContext(
 
 void PortabilityLayer::FailPlacedToCommittedIncompatibility(
     const char* apiName,
-    unsigned commandKey,
-    unsigned heapKey,
+    GITSKey commandKey,
+    GITSKey heapKey,
     const D3D12_HEAP_DESC& heapDesc,
     const D3D12_RESOURCE_DESC& resourceDesc) const {
   std::ostringstream stream;
@@ -1077,8 +1078,8 @@ void PortabilityLayer::FailPlacedToCommittedIncompatibility(
 }
 
 void PortabilityLayer::FailPlacedToCommittedCreation(const char* apiName,
-                                                     unsigned commandKey,
-                                                     unsigned heapKey,
+                                                     GITSKey commandKey,
+                                                     GITSKey heapKey,
                                                      UINT64 heapOffset,
                                                      const D3D12_RESOURCE_DESC& resourceDesc,
                                                      D3D12_RESOURCE_STATES initialState,
@@ -1095,8 +1096,8 @@ void PortabilityLayer::FailPlacedToCommittedCreation(const char* apiName,
 }
 
 void PortabilityLayer::FailPlacedToCommittedCreation(const char* apiName,
-                                                     unsigned commandKey,
-                                                     unsigned heapKey,
+                                                     GITSKey commandKey,
+                                                     GITSKey heapKey,
                                                      UINT64 heapOffset,
                                                      const D3D12_RESOURCE_DESC& resourceDesc,
                                                      D3D12_BARRIER_LAYOUT initialLayout,

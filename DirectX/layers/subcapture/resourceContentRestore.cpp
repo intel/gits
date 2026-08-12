@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "resourceContentRestore.h"
+#include "arguments.h"
 #include "resourceStateTrackingService.h"
 #include "stateTrackingService.h"
 #include "subcaptureRecorder.h"
@@ -59,7 +60,7 @@ void ResourceContentRestore::AddPlacedResourceState(ResourceState* resourceState
   }
 }
 
-void ResourceContentRestore::RestoreContent(const std::vector<unsigned>& resourceKeys,
+void ResourceContentRestore::RestoreContent(const std::vector<GITSKey>& resourceKeys,
                                             bool backBuffer) {
   enum ResourceBatchType {
     MappableResource,
@@ -73,7 +74,7 @@ void ResourceContentRestore::RestoreContent(const std::vector<unsigned>& resourc
   {
     ResourceBatchType prevType{};
 
-    for (unsigned resourceKey : resourceKeys) {
+    for (GITSKey resourceKey : resourceKeys) {
       ResourceBatchType type{};
       ResourceInfo resourceInfo{};
       if (m_MappableResourceStates.find(resourceKey) != m_MappableResourceStates.end()) {
@@ -214,10 +215,10 @@ unsigned ResourceContentRestore::RestoreUnmappableResources(
 
   // make resources resident if residency changed
 
-  std::vector<unsigned> residencyKeys;
+  std::vector<GITSKey> residencyKeys;
   std::vector<ID3D12Pageable*> residencyObjects;
   {
-    std::set<unsigned> residencyKeysUnique;
+    std::set<GITSKey> residencyKeysUnique;
     std::set<ID3D12Pageable*> residencyObjectsUnique;
     for (unsigned i = 0; i < resourcesCount; ++i) {
       ResourceInfo& state = unmappableResourceStates[i + resourceStartIndex];
@@ -343,7 +344,7 @@ unsigned ResourceContentRestore::RestoreUnmappableResources(
 
   // create upload resource with resources contents in subcaptured stream
 
-  unsigned deviceKey = m_StateService.GetDeviceKey();
+  GITSKey deviceKey = m_StateService.GetDeviceKey();
 
   void* mappedData{};
   hr = readbackResource->Map(0, nullptr, &mappedData);
@@ -385,7 +386,7 @@ unsigned ResourceContentRestore::RestoreUnmappableResources(
     ID3D12Pageable* fakePtr = reinterpret_cast<ID3D12Pageable*>(1);
     makeResident.m_ppObjects.Value = &fakePtr;
     makeResident.m_ppObjects.Size = residencyKeys.size();
-    for (unsigned key : residencyKeys) {
+    for (GITSKey key : residencyKeys) {
       makeResident.m_ppObjects.Keys.push_back(key);
     }
     m_StateService.GetRecorder().Record(ID3D12DeviceMakeResidentSerializer(makeResident));
@@ -394,11 +395,11 @@ unsigned ResourceContentRestore::RestoreUnmappableResources(
   // restore resources contents from upload resource in subcaptured stream
 
   unsigned offsetUpload = 0;
-  std::vector<unsigned> auxiliaryPlacedResourceKeys;
+  std::vector<GITSKey> auxiliaryPlacedResourceKeys;
   for (unsigned resourceIndex = 0; resourceIndex < resourcesCount; ++resourceIndex) {
     ResourceInfo& state = unmappableResourceStates[resourceIndex + resourceStartIndex];
     D3D12_RESOURCE_DESC desc = state.Resource->GetDesc();
-    unsigned resourceKey = state.Key;
+    GITSKey resourceKey = state.Key;
     if (IsBarrierRestricted(state.Key)) {
       resourceKey = CreateSubcaptureAuxiliaryPlacedResource(state.Key);
       auxiliaryPlacedResourceKeys.push_back(resourceKey);
@@ -579,7 +580,7 @@ void ResourceContentRestore::InitRestoreUnmappableResources(bool backBuffer) {
   heapPropertiesUpload.CreationNodeMask = 1;
   heapPropertiesUpload.VisibleNodeMask = 1;
 
-  unsigned deviceKey = m_StateService.GetDeviceKey();
+  GITSKey deviceKey = m_StateService.GetDeviceKey();
 
   ID3D12DeviceCreateCommittedResourceCommand createUploadResource;
   createUploadResource.Key = m_StateService.GetUniqueCommandKey();
@@ -703,8 +704,8 @@ void ResourceContentRestore::CleanupRestoreUnmappableResources() {
 }
 
 void ResourceContentRestore::RestoreBackBuffer(ID3D12CommandQueue* commandQueue,
-                                               unsigned commandQueueKey,
-                                               unsigned resourceKey,
+                                               GITSKey commandQueueKey,
+                                               GITSKey resourceKey,
                                                ID3D12Resource* resource) {
   m_CommandQueue = commandQueue;
   m_CommandQueueKey = commandQueueKey;
@@ -716,7 +717,7 @@ void ResourceContentRestore::RestoreBackBuffer(ID3D12CommandQueue* commandQueue,
     m_UnmappableResourceTextures[resourceKey] = ResourceInfo{resource, resourceKey};
   }
 
-  std::vector<unsigned> ResourceKeys;
+  std::vector<GITSKey> ResourceKeys;
   ResourceKeys.push_back(resourceKey);
   RestoreContent(ResourceKeys, true);
 }
@@ -728,13 +729,13 @@ UINT64 ResourceContentRestore::GetAlignedSize(UINT64 size) {
                    D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT;
 }
 
-bool ResourceContentRestore::IsBarrierRestricted(unsigned resourceKey) {
+bool ResourceContentRestore::IsBarrierRestricted(GITSKey resourceKey) {
   ObjectState* resourceObjectState = m_StateService.GetState(resourceKey);
   GITS_ASSERT(resourceObjectState);
   return static_cast<ResourceState*>(resourceObjectState)->BarrierRestricted;
 }
 
-ID3D12Resource* ResourceContentRestore::CreateAuxiliaryPlacedResource(unsigned primaryResourceKey) {
+ID3D12Resource* ResourceContentRestore::CreateAuxiliaryPlacedResource(GITSKey primaryResourceKey) {
   ObjectState* resourceObjectState = m_StateService.GetState(primaryResourceKey);
   ID3D12Resource* auxiliaryResource{};
   if (resourceObjectState->CreationCommand->GetId() ==
@@ -791,9 +792,9 @@ ID3D12Resource* ResourceContentRestore::CreateAuxiliaryPlacedResource(unsigned p
 }
 
 unsigned ResourceContentRestore::CreateSubcaptureAuxiliaryPlacedResource(
-    unsigned primaryResourceKey) {
+    GITSKey primaryResourceKey) {
   ObjectState* resourceObjectState = m_StateService.GetState(primaryResourceKey);
-  unsigned auxiliaryResourceKey{};
+  GITSKey auxiliaryResourceKey{};
   if (resourceObjectState->CreationCommand->GetId() ==
       CommandId::ID_ID3D12DEVICE_CREATEPLACEDRESOURCE) {
     auto* command = static_cast<ID3D12DeviceCreatePlacedResourceCommand*>(
@@ -876,14 +877,14 @@ void ResourceContentRestore::EvictPrevResidencyObjects() {
     return;
   }
 
-  std::vector<unsigned> residencyKeys(m_PrevResidencyKeys.begin(), m_PrevResidencyKeys.end());
+  std::vector<GITSKey> residencyKeys(m_PrevResidencyKeys.begin(), m_PrevResidencyKeys.end());
   std::vector<ID3D12Pageable*> residencyObjects(m_PrevResidencyObjects.begin(),
                                                 m_PrevResidencyObjects.end());
 
   HRESULT hr = m_Device->Evict(residencyObjects.size(), residencyObjects.data());
   GITS_ASSERT(hr == S_OK);
 
-  unsigned deviceKey = m_StateService.GetDeviceKey();
+  GITSKey deviceKey = m_StateService.GetDeviceKey();
 
   ID3D12DeviceEvictCommand evict;
   evict.Key = m_StateService.GetUniqueCommandKey();
@@ -892,7 +893,7 @@ void ResourceContentRestore::EvictPrevResidencyObjects() {
   ID3D12Pageable* fakePtr = reinterpret_cast<ID3D12Pageable*>(1);
   evict.m_ppObjects.Value = &fakePtr;
   evict.m_ppObjects.Size = residencyKeys.size();
-  for (unsigned key : residencyKeys) {
+  for (GITSKey key : residencyKeys) {
     evict.m_ppObjects.Keys.push_back(key);
   }
   m_StateService.GetRecorder().Record(ID3D12DeviceEvictSerializer(evict));

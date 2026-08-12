@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #pragma once
+#include "arguments.h"
 
 #include "commandsAuto.h"
 
@@ -31,9 +32,9 @@ public:
   void StoreCommand(ID3D12GraphicsCommandList4SetPipelineState1Command& c);
   void StoreCommand(ID3D12DeviceCreateCommandListCommand& c);
   void StoreCommand(ID3D12GraphicsCommandListSetPipelineStateCommand& c);
-  void Remove(unsigned commandListKey);
-  void Reset(unsigned commandListKey, ID3D12PipelineState* initialState);
-  void RestoreState(unsigned commandListKey, ID3D12GraphicsCommandList* commandList);
+  void Remove(GITSKey commandListKey);
+  void Reset(GITSKey commandListKey, ID3D12PipelineState* initialState);
+  void RestoreState(GITSKey commandListKey, ID3D12GraphicsCommandList* commandList);
 
 private:
   struct CommandState {
@@ -66,10 +67,10 @@ private:
     };
     PipelineState CurrentPipelineState{};
     ID3D12RootSignature* CurrentRootSignature{};
-    std::map<unsigned, std::unique_ptr<CommandState>> CurrentRootArguments;
+    std::map<GITSKey, std::unique_ptr<CommandState>> CurrentRootArguments;
   };
 
-  std::unordered_map<unsigned, CommandListState> m_CommandLists;
+  std::unordered_map<GITSKey, CommandListState> m_CommandLists;
 };
 
 } // namespace DirectX

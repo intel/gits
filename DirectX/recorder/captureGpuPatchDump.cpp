@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "captureGpuPatchDump.h"
+#include "arguments.h"
 #include "log.h"
 #include "exception.h"
 
@@ -36,7 +37,7 @@ void CaptureGpuPatchDump::DumpArgumentBuffer(ID3D12GraphicsCommandList* commandL
                                              ID3D12Resource* countBuffer,
                                              unsigned countBufferOffset,
                                              BarrierState countBufferState,
-                                             unsigned callKey) {
+                                             GITSKey callKey) {
   ExecuteIndirectDumpInfo* dumpInfo = new ExecuteIndirectDumpInfo();
   dumpInfo->CommandSignature = &commandSignature;
   dumpInfo->Offset = argumentBufferOffset;
@@ -58,7 +59,7 @@ void CaptureGpuPatchDump::DumpInstancesArrayOfPointers(ID3D12GraphicsCommandList
                                                        unsigned offset,
                                                        unsigned pointersCount,
                                                        BarrierState bufferState,
-                                                       unsigned callKey) {
+                                                       GITSKey callKey) {
   InstancesArrayOfPointersDumpInfo* dumpInfo = new InstancesArrayOfPointersDumpInfo();
   dumpInfo->Offset = offset;
   dumpInfo->Size = sizeof(D3D12_GPU_VIRTUAL_ADDRESS) * pointersCount;

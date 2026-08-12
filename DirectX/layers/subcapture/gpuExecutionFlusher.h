@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #pragma once
+#include "arguments.h"
 
 #include "gpuExecutionTracker.h"
 
@@ -18,8 +19,8 @@ namespace DirectX {
 
 class GpuExecutionFlusher : public GpuExecutionTracker {
 public:
-  void ExecuteCommandLists(unsigned commandQueueKey, ID3D12CommandQueue* commandQueue);
-  void DestroyCommandQueue(unsigned commandQueueKey);
+  void ExecuteCommandLists(GITSKey commandQueueKey, ID3D12CommandQueue* commandQueue);
+  void DestroyCommandQueue(GITSKey commandQueueKey);
   void FlushCommandQueues();
 
 private:
@@ -28,7 +29,7 @@ private:
     Microsoft::WRL::ComPtr<ID3D12Fence> Fence;
     UINT64 FenceValue{};
   };
-  std::unordered_map<unsigned, CommandQueueInfo> m_CommandQueues;
+  std::unordered_map<GITSKey, CommandQueueInfo> m_CommandQueues;
 };
 
 } // namespace DirectX

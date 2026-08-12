@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #pragma once
+#include "arguments.h"
 
 #include <windows.h>
 #include <unordered_map>
@@ -16,15 +17,15 @@ namespace DirectX {
 
 class FenceTrackingService {
 public:
-  void SetFenceValue(unsigned fenceKey, UINT64 fenceValue) {
+  void SetFenceValue(GITSKey fenceKey, UINT64 fenceValue) {
     m_FenceValues[fenceKey] = fenceValue;
   }
-  UINT64 GetFenceValue(unsigned fenceKey) {
+  UINT64 GetFenceValue(GITSKey fenceKey) {
     return m_FenceValues[fenceKey];
   }
 
 private:
-  std::unordered_map<unsigned, UINT64> m_FenceValues;
+  std::unordered_map<GITSKey, UINT64> m_FenceValues;
 };
 
 } // namespace DirectX

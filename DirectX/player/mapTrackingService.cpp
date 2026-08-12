@@ -7,12 +7,13 @@
 // ===================== end_copyright_notice ==============================
 
 #include "mapTrackingService.h"
+#include "arguments.h"
 #include "log.h"
 
 namespace gits {
 namespace DirectX {
 
-void MapTrackingService::MapResource(unsigned resourceKey,
+void MapTrackingService::MapResource(GITSKey resourceKey,
                                      unsigned subresourceIndex,
                                      void* captureAddress,
                                      void** currentAddress) {
@@ -22,7 +23,7 @@ void MapTrackingService::MapResource(unsigned resourceKey,
   m_MappedData[captureAddress] = MappedInfo{*currentAddress, resourceKey};
 }
 
-void MapTrackingService::DestroyResource(unsigned resourceKey) {
+void MapTrackingService::DestroyResource(GITSKey resourceKey) {
 
   auto itAddresses = m_MappedDataByResource.find(resourceKey);
   if (itAddresses == m_MappedDataByResource.end()) {

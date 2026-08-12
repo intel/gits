@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #pragma once
+#include "arguments.h"
 
 #include "gpuExecutionTracker.h"
 
@@ -19,30 +20,30 @@ namespace DirectX {
 
 class ResourceUsageTrackingService {
 public:
-  void AddResource(unsigned resourceKey);
-  void CommandListResourceUsage(unsigned commandListKey, unsigned resourceKey);
-  void CommandListResourceUsage(unsigned commandListKey, std::vector<unsigned>& resourceKeys);
-  void CommandListReset(unsigned commandListKey);
-  void ExecuteCommandLists(unsigned commandKey,
-                           unsigned commandQueueKey,
-                           std::vector<unsigned>& commandListKeys);
-  void DestroyResource(unsigned resourceKey);
+  void AddResource(GITSKey resourceKey);
+  void CommandListResourceUsage(GITSKey commandListKey, GITSKey resourceKey);
+  void CommandListResourceUsage(GITSKey commandListKey, std::vector<GITSKey>& resourceKeys);
+  void CommandListReset(GITSKey commandListKey);
+  void ExecuteCommandLists(GITSKey commandKey,
+                           GITSKey commandQueueKey,
+                           std::vector<GITSKey>& commandListKeys);
+  void DestroyResource(GITSKey resourceKey);
 
-  void CommandQueueWait(unsigned commandKey,
-                        unsigned commandQueueKey,
-                        unsigned fenceKey,
+  void CommandQueueWait(GITSKey commandKey,
+                        GITSKey commandQueueKey,
+                        GITSKey fenceKey,
                         UINT64 fenceValue);
-  void CommandQueueSignal(unsigned commandKey,
-                          unsigned commandQueueKey,
-                          unsigned fenceKey,
+  void CommandQueueSignal(GITSKey commandKey,
+                          GITSKey commandQueueKey,
+                          GITSKey fenceKey,
                           UINT64 fenceValue);
-  void FenceSignal(unsigned commandKey, unsigned fenceKey, UINT64 fenceValue);
+  void FenceSignal(GITSKey commandKey, GITSKey fenceKey, UINT64 fenceValue);
 
   std::vector<unsigned> GetOrderedResources();
 
 private:
   struct UsageNumber {
-    unsigned ExecuteKey{};
+    GITSKey ExecuteKey{};
     unsigned CommandNumber{};
 
     bool operator<(const UsageNumber& rhs) const {
@@ -62,8 +63,8 @@ private:
 
   unsigned m_ExecuteNumber{};
   GpuExecutionTracker m_GpuExecutionTracker;
-  std::map<unsigned, UsageNumber> m_UsageByResource;
-  std::unordered_map<unsigned, std::vector<unsigned>> m_CommandListResourceUsage;
+  std::map<GITSKey, UsageNumber> m_UsageByResource;
+  std::unordered_map<GITSKey, std::vector<GITSKey>> m_CommandListResourceUsage;
 };
 
 } // namespace DirectX

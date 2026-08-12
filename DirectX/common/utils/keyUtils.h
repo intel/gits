@@ -8,28 +8,30 @@
 
 #pragma once
 
+#include "arguments.h"
+
 #include <string>
 #include <unordered_set>
 
 namespace gits {
 namespace DirectX {
 
-inline constexpr unsigned STATE_RESTORE_KEY_MASK = 1u << 31;
-inline constexpr unsigned EXECUTION_SERIALIZATION_KEY_MASK = 1u << 30;
+inline constexpr GITSKey STATE_RESTORE_KEY_MASK = GITSKey(1u << 31);
+inline constexpr GITSKey EXECUTION_SERIALIZATION_KEY_MASK = GITSKey(1u << 30);
 
-inline bool IsStateRestoreKey(unsigned key) {
+inline bool IsStateRestoreKey(GITSKey key) {
   return key & STATE_RESTORE_KEY_MASK;
 }
 
-inline unsigned ExtractStateRestoreKey(unsigned key) {
+inline GITSKey ExtractStateRestoreKey(GITSKey key) {
   return key & ~STATE_RESTORE_KEY_MASK;
 }
 
-inline bool IsExecutionSerializationKey(unsigned key) {
+inline bool IsExecutionSerializationKey(GITSKey key) {
   return key & EXECUTION_SERIALIZATION_KEY_MASK;
 }
 
-inline unsigned ExtractExecutionSerializationKey(unsigned key) {
+inline GITSKey ExtractExecutionSerializationKey(GITSKey key) {
   return key & ~EXECUTION_SERIALIZATION_KEY_MASK;
 }
 
@@ -41,7 +43,7 @@ public:
   bool Empty() const {
     return m_CommandKeys.empty();
   }
-  bool Contains(unsigned key) const {
+  bool Contains(GITSKey key) const {
     return m_CommandKeys.find(key) != m_CommandKeys.end();
   }
   auto begin() const {
@@ -52,7 +54,7 @@ public:
   }
 
 private:
-  std::unordered_set<unsigned> m_CommandKeys;
+  std::unordered_set<GITSKey> m_CommandKeys;
 };
 
 } // namespace DirectX

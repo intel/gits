@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "capturePlayerGpuAddressService.h"
+#include "arguments.h"
 #include "log.h"
 
 #include <algorithm>
@@ -15,7 +16,7 @@ namespace gits {
 namespace DirectX {
 
 void CapturePlayerGpuAddressService::GpuAddressService::CreatePlacedResource(
-    unsigned heapKey, unsigned resourceKey, D3D12_RESOURCE_FLAGS flags) {
+    GITSKey heapKey, GITSKey resourceKey, D3D12_RESOURCE_FLAGS flags) {
   HeapInfo* heapInfo{};
   auto it = m_HeapsByKey.find(heapKey);
   if (it != m_HeapsByKey.end()) {
@@ -34,7 +35,7 @@ void CapturePlayerGpuAddressService::GpuAddressService::CreatePlacedResource(
 
 void CapturePlayerGpuAddressService::GpuAddressService::AddGpuCaptureAddress(
     ID3D12Resource* resource,
-    unsigned resourceKey,
+    GITSKey resourceKey,
     unsigned size,
     D3D12_GPU_VIRTUAL_ADDRESS captureAddress) {
   if (!captureAddress) {
@@ -100,7 +101,7 @@ void CapturePlayerGpuAddressService::GpuAddressService::AddGpuCaptureAddress(
 }
 
 void CapturePlayerGpuAddressService::GpuAddressService::AddGpuPlayerAddress(
-    unsigned resourceKey, D3D12_GPU_VIRTUAL_ADDRESS playerAddress) {
+    GITSKey resourceKey, D3D12_GPU_VIRTUAL_ADDRESS playerAddress) {
   auto itHeap = m_HeapsByResourceKey.find(resourceKey);
   if (itHeap != m_HeapsByResourceKey.end()) {
     PlacedResourceInfo* info = m_PlacedResourcesByKey[resourceKey].get();
@@ -123,7 +124,7 @@ void CapturePlayerGpuAddressService::GpuAddressService::AddGpuPlayerAddress(
   }
 }
 
-void CapturePlayerGpuAddressService::GpuAddressService::DestroyInterface(unsigned interfaceKey) {
+void CapturePlayerGpuAddressService::GpuAddressService::DestroyInterface(GITSKey interfaceKey) {
   {
     auto it = m_ResourcesByKey.find(interfaceKey);
     if (it != m_ResourcesByKey.end()) {
@@ -157,10 +158,10 @@ void CapturePlayerGpuAddressService::GpuAddressService::DestroyInterface(unsigne
     if (it != m_HeapsByKey.end()) {
       HeapInfo* heapInfo = it->second.get();
       std::vector<unsigned> resources;
-      for (unsigned resourceKey : heapInfo->Resources) {
+      for (GITSKey resourceKey : heapInfo->Resources) {
         resources.push_back(resourceKey);
       }
-      for (unsigned resourceKey : resources) {
+      for (GITSKey resourceKey : resources) {
         DestroyInterface(resourceKey);
       }
       m_HeapsByKey.erase(it);

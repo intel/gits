@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "addressPinningUseLayer.h"
+#include "arguments.h"
 #include "configurationLib.h"
 #include "log.h"
 #include "intelExtensions.h"
@@ -356,7 +357,7 @@ void AddressPinningUseLayer::ReadAddressRanges() {
     }
 
     std::istringstream lineStream(line);
-    unsigned key{};
+    GITSKey key{};
     D3D12_GPU_VIRTUAL_ADDRESS_RANGE range{};
     UINT64 alignment{};
 

@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #pragma once
+#include "arguments.h"
 
 #include "commandsAuto.h"
 #include "commandsCustom.h"
@@ -22,7 +23,7 @@ namespace DirectX {
 
 class CommandListStateService {
 public:
-  explicit CommandListStateService(unsigned commandListKey);
+  explicit CommandListStateService(GITSKey commandListKey);
   static bool IsStateCommand(CommandId id);
   void StoreCommand(const Command& c);
   std::vector<std::unique_ptr<Command>> RestoreState() const;
@@ -83,10 +84,10 @@ private:
     std::optional<ID3D12GraphicsCommandListSetDescriptorHeapsCommand> DescriptorHeaps{};
 
     std::optional<ID3D12GraphicsCommandListSetGraphicsRootSignatureCommand> GraphicsRootSignature{};
-    std::map<unsigned, std::unique_ptr<Command>> GraphicsRootArguments;
+    std::map<GITSKey, std::unique_ptr<Command>> GraphicsRootArguments;
 
     std::optional<ID3D12GraphicsCommandListSetComputeRootSignatureCommand> ComputeRootSignature{};
-    std::map<unsigned, std::unique_ptr<Command>> ComputeRootArguments;
+    std::map<GITSKey, std::unique_ptr<Command>> ComputeRootArguments;
 
     std::optional<ID3D12GraphicsCommandListIASetPrimitiveTopologyCommand> PrimitiveTopology{};
 
@@ -129,11 +130,11 @@ private:
     std::vector<std::unique_ptr<ID3D12GraphicsCommandListSOSetTargetsCommand>> StreamOutput;
   };
 
-  void SetPipelineState(unsigned pipelineStateKey);
-  void AppendRootCommands(const std::map<unsigned, std::unique_ptr<Command>>& args,
+  void SetPipelineState(GITSKey pipelineStateKey);
+  void AppendRootCommands(const std::map<GITSKey, std::unique_ptr<Command>>& args,
                           std::vector<std::unique_ptr<Command>>& out) const;
 
-  unsigned m_CommandListKey{};
+  GITSKey m_CommandListKey{};
   std::unique_ptr<CommandListState> m_State{std::make_unique<CommandListState>()};
 };
 

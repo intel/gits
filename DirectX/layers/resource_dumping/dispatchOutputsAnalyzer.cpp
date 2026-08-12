@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "dispatchOutputsAnalyzer.h"
+#include "arguments.h"
 #include "configurationLib.h"
 
 #include <fstream>
@@ -42,7 +43,7 @@ void DispatchOutputsAnalyzer::DumpAnalysisFile() {
       std::copy(bindings.Resources.cbegin(), bindings.Resources.cend(), sortedResources.begin());
       std::sort(sortedResources.begin(), sortedResources.end());
 
-      for (unsigned resourceKey : sortedResources) {
+      for (GITSKey resourceKey : sortedResources) {
         analysisFile << " " << resourceKey;
       }
       analysisFile << "\n";
@@ -55,7 +56,7 @@ void DispatchOutputsAnalyzer::ReadAnalysisFile() {
   std::string line;
   while (std::getline(analysisFile, line)) {
     std::istringstream iss(line);
-    unsigned dispatchKey{};
+    GITSKey dispatchKey{};
     iss >> dispatchKey;
     Bindings bindings{};
     iss >> bindings.Slot;
@@ -66,7 +67,7 @@ void DispatchOutputsAnalyzer::ReadAnalysisFile() {
     if (unbounded == 'u') {
       bindings.Unbounded = true;
     }
-    unsigned resourceKey{};
+    GITSKey resourceKey{};
     while (iss >> resourceKey) {
       bindings.Resources.push_back(resourceKey);
     }
@@ -75,7 +76,7 @@ void DispatchOutputsAnalyzer::ReadAnalysisFile() {
 }
 
 std::vector<DispatchOutputsAnalyzer::Bindings>* DispatchOutputsAnalyzer::GetDispatchBindings(
-    unsigned dispatchKey) {
+    GITSKey dispatchKey) {
   auto it = m_DispatchBindings.find(dispatchKey);
   if (it != m_DispatchBindings.end()) {
     return &it->second;
@@ -89,7 +90,7 @@ void DispatchOutputsAnalyzer::CreateDescriptorHeap(ID3D12DeviceCreateDescriptorH
   desc.NumDescriptors = c.m_pDescriptorHeapDesc.Value->NumDescriptors;
 }
 
-void DispatchOutputsAnalyzer::CreateResource(ID3D12Resource* resource, unsigned resourceKey) {
+void DispatchOutputsAnalyzer::CreateResource(ID3D12Resource* resource, GITSKey resourceKey) {
   m_ResourceByKey[resourceKey] = resource;
 }
 
@@ -131,7 +132,7 @@ void DispatchOutputsAnalyzer::SetComputeRootDescriptorTable(
   if (!c.m_BaseDescriptor.Value.ptr) {
     return;
   }
-  unsigned rootSignatureKey = m_RootSignatureByCommandList[c.m_Object.Key];
+  GITSKey rootSignatureKey = m_RootSignatureByCommandList[c.m_Object.Key];
   GITS_ASSERT(rootSignatureKey);
   unsigned numDescriptors = m_DescriptorHeaps[c.m_BaseDescriptor.InterfaceKey].NumDescriptors;
   GITS_ASSERT(numDescriptors);
@@ -198,7 +199,7 @@ void DispatchOutputsAnalyzer::ClearCommandList(unsigned commandList) {
   m_DescriptorTableBySlotByDispatchByCommandList.erase(commandList);
 }
 
-void DispatchOutputsAnalyzer::DestroyInterface(unsigned interfaceKey) {
+void DispatchOutputsAnalyzer::DestroyInterface(GITSKey interfaceKey) {
   m_RootSignatureByCommandList.erase(interfaceKey);
   m_DescriptorBySlotByCommandList.erase(interfaceKey);
   m_DescriptorTableBySlotByCommandList.erase(interfaceKey);

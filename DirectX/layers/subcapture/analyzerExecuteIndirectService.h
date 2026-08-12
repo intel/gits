@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #pragma once
+#include "arguments.h"
 
 #include "capturePlayerGpuAddressService.h"
 #include "analyzerRaytracingService.h"
@@ -32,20 +33,17 @@ public:
   void ExecuteIndirect(ID3D12GraphicsCommandListExecuteIndirectCommand& c);
 
   void Flush();
-  void ExecuteCommandLists(unsigned key,
-                           unsigned commandQueueKey,
+  void ExecuteCommandLists(GITSKey key,
+                           GITSKey commandQueueKey,
                            ID3D12CommandQueue* commandQueue,
                            ID3D12CommandList** commandLists,
                            unsigned commandListNum);
-  void CommandQueueWait(unsigned key,
-                        unsigned commandQueueKey,
-                        unsigned fenceKey,
-                        UINT64 fenceValue);
-  void CommandQueueSignal(unsigned key,
-                          unsigned commandQueueKey,
-                          unsigned fenceKey,
+  void CommandQueueWait(GITSKey key, GITSKey commandQueueKey, GITSKey fenceKey, UINT64 fenceValue);
+  void CommandQueueSignal(GITSKey key,
+                          GITSKey commandQueueKey,
+                          GITSKey fenceKey,
                           UINT64 fenceValue);
-  void FenceSignal(unsigned key, unsigned fenceKey, UINT64 fenceValue);
+  void FenceSignal(GITSKey key, GITSKey fenceKey, UINT64 fenceValue);
 
   std::unordered_set<unsigned>& GetArgumentBuffersResources() {
     return m_ExecuteIndirectDump.GetArgumentBuffersResources();
@@ -65,8 +63,8 @@ private:
   AnalyzerCommandListService& m_CommandListService;
   AnalyzerExecuteIndirectDump m_ExecuteIndirectDump;
 
-  std::unordered_map<unsigned, D3D12_DISPATCH_RAYS_DESC> m_ExecuteIndirectDispatchRays;
-  std::unordered_map<unsigned, D3D12_COMMAND_SIGNATURE_DESC> m_CommandSignatures;
+  std::unordered_map<GITSKey, D3D12_DISPATCH_RAYS_DESC> m_ExecuteIndirectDispatchRays;
+  std::unordered_map<GITSKey, D3D12_COMMAND_SIGNATURE_DESC> m_CommandSignatures;
 };
 
 } // namespace DirectX

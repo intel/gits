@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #pragma once
+#include "arguments.h"
 
 #include "commandsAuto.h"
 #include "commandIdsAuto.h"
@@ -34,9 +35,9 @@ private:
   StateTrackingService& m_StateService;
 
   struct CommandQueueCommand {
-    CommandQueueCommand(CommandId id_, unsigned key) : Id(id_), CommandKey(key) {}
+    CommandQueueCommand(CommandId id_, GITSKey key) : Id(id_), CommandKey(key) {}
     CommandId Id{};
-    unsigned CommandKey{};
+    GITSKey CommandKey{};
     std::unique_ptr<stream::CommandSerializer> CommandSerializer;
   };
   std::vector<CommandQueueCommand*> m_Commands;

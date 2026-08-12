@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #pragma once
+#include "arguments.h"
 
 #include "commandsAuto.h"
 
@@ -23,28 +24,28 @@ public:
   DescriptorRootSignatureService& operator=(const DescriptorRootSignatureService&) = delete;
   ~DescriptorRootSignatureService();
   void CreateRootSignature(ID3D12DeviceCreateRootSignatureCommand& command);
-  std::vector<unsigned> GetDescriptorTableIndexes(unsigned rootSignatureKey,
-                                                  unsigned descriptorHeapKey,
+  std::vector<unsigned> GetDescriptorTableIndexes(GITSKey rootSignatureKey,
+                                                  GITSKey descriptorHeapKey,
                                                   unsigned parameterIndex,
                                                   unsigned baseIndex,
                                                   unsigned heapNumDescriptors,
                                                   bool checkRetrieved = true,
                                                   bool* unbounded = nullptr);
-  std::vector<unsigned> GetBindlessDescriptorIndexes(unsigned rootSignatureKey,
-                                                     unsigned descriptorHeapKey,
+  std::vector<unsigned> GetBindlessDescriptorIndexes(GITSKey rootSignatureKey,
+                                                     GITSKey descriptorHeapKey,
                                                      D3D12_DESCRIPTOR_HEAP_TYPE heapType,
                                                      unsigned heapNumDescriptors,
                                                      bool checkRetrieved = true);
-  D3D12_ROOT_SIGNATURE_DESC* GetRootSignatureDesc(unsigned rootSignatureKey);
+  D3D12_ROOT_SIGNATURE_DESC* GetRootSignatureDesc(GITSKey rootSignatureKey);
 
 private:
-  bool UnboundedRetrieved(unsigned descriptorHeapKey, unsigned index);
-  bool BoundedRetrieved(unsigned descriptorHeapKey, unsigned index, unsigned numDescriptors);
+  bool UnboundedRetrieved(GITSKey descriptorHeapKey, unsigned index);
+  bool BoundedRetrieved(GITSKey descriptorHeapKey, unsigned index, unsigned numDescriptors);
 
 private:
-  std::unordered_map<unsigned, D3D12_ROOT_SIGNATURE_DESC*> m_RootSignatureDescs;
-  std::unordered_map<unsigned, unsigned> m_UnboundedRetrieved;
-  std::unordered_map<unsigned, std::unordered_map<unsigned, unsigned>> m_BoundedRetrieved;
+  std::unordered_map<GITSKey, D3D12_ROOT_SIGNATURE_DESC*> m_RootSignatureDescs;
+  std::unordered_map<GITSKey, GITSKey> m_UnboundedRetrieved;
+  std::unordered_map<GITSKey, std::unordered_map<GITSKey, unsigned>> m_BoundedRetrieved;
   std::mutex m_Mutex;
 };
 

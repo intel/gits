@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #pragma once
+#include "arguments.h"
 
 #include <unordered_map>
 #include <unordered_set>
@@ -20,17 +21,17 @@ class StateTrackingService;
 class MapStateService {
 public:
   MapStateService(StateTrackingService& stateService) : m_StateService(stateService) {}
-  void MapResource(unsigned resourceKey, unsigned subresourceIndex, void* captureAddress) {
+  void MapResource(GITSKey resourceKey, unsigned subresourceIndex, void* captureAddress) {
     m_MappedDataBySubresource[resourceKey][subresourceIndex] = captureAddress;
   }
-  void DestroyResource(unsigned resourceKey) {
+  void DestroyResource(GITSKey resourceKey) {
     m_MappedDataBySubresource.erase(resourceKey);
   }
   void RestoreMapState();
 
 private:
   StateTrackingService& m_StateService;
-  std::unordered_map<unsigned, std::unordered_map<unsigned, void*>> m_MappedDataBySubresource;
+  std::unordered_map<GITSKey, std::unordered_map<GITSKey, void*>> m_MappedDataBySubresource;
   std::unordered_set<unsigned> m_RestoredResources;
 };
 

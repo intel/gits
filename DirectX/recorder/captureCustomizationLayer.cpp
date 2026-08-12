@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "captureCustomizationLayer.h"
+#include "arguments.h"
 #include "captureManager.h"
 #include "commandsCustom.h"
 #include "commandSerializersCustom.h"
@@ -641,13 +642,13 @@ void CaptureCustomizationLayer::Pre(ID3D12GraphicsCommandList2WriteBufferImmedia
 }
 
 void CaptureCustomizationLayer::Post(ID3D12FenceGetCompletedValueCommand& c) {
-  static constexpr unsigned maxCommandKeyDifference = 10;
+  static constexpr GITSKey maxCommandKeyDifference = 10;
 
-  static thread_local unsigned prevCommandKey = 0;
-  static thread_local unsigned prevFenceKey = 0;
+  static thread_local GITSKey prevCommandKey = 0;
+  static thread_local GITSKey prevFenceKey = 0;
   static thread_local unsigned prevValue = 0;
-  unsigned commandKey = c.Key;
-  unsigned fenceKey = c.m_Object.Key;
+  GITSKey commandKey = c.Key;
+  GITSKey fenceKey = c.m_Object.Key;
   unsigned value = c.m_Result.Value;
   if (commandKey <= prevCommandKey + maxCommandKeyDifference) {
     if (fenceKey == prevFenceKey && value == prevValue) {

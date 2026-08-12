@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #pragma once
+#include "arguments.h"
 
 #include "commandsAuto.h"
 #include "reservedResourcesService.h"
@@ -42,14 +43,14 @@ public:
   void ExecuteCommandLists(ID3D12CommandQueueExecuteCommandListsCommand& c);
   void CommandQueueWait(ID3D12CommandQueueWaitCommand& c);
   void CommandQueueSignal(ID3D12CommandQueueSignalCommand& c);
-  void FenceSignal(unsigned key, unsigned fenceKey, UINT64 fenceValue);
+  void FenceSignal(GITSKey key, GITSKey fenceKey, UINT64 fenceValue);
 
-  void StoreBufferRegion(unsigned bufferKey, unsigned bufferOffset, unsigned bufferSize);
-  void StoreBuffers(unsigned commandKey, ID3D12GraphicsCommandList* commandList);
+  void StoreBufferRegion(GITSKey bufferKey, unsigned bufferOffset, unsigned bufferSize);
+  void StoreBuffers(GITSKey commandKey, ID3D12GraphicsCommandList* commandList);
 
-  void RestoreBuffersInitialization(std::vector<unsigned>& commandKeys, unsigned deviceKey);
-  void MakeBuffersResident(unsigned commandKey, ResourceResidencyService& residencyService);
-  void RestoreBuffers(unsigned commandKey, unsigned commandListBarriersKey);
+  void RestoreBuffersInitialization(std::vector<GITSKey>& commandKeys, GITSKey deviceKey);
+  void MakeBuffersResident(GITSKey commandKey, ResourceResidencyService& residencyService);
+  void RestoreBuffers(GITSKey commandKey, GITSKey commandListBarriersKey);
   void RestoreBuffersCleanup();
 
 private:
@@ -63,23 +64,23 @@ private:
     unsigned Start{};
     unsigned End{};
   };
-  std::unordered_map<unsigned, std::vector<BufferRegion>> m_BufferRegionsByInputKey;
+  std::unordered_map<GITSKey, std::vector<BufferRegion>> m_BufferRegionsByInputKey;
 
   struct InputBuffers {
-    std::unordered_map<unsigned, ResourceState*> Buffers;
-    std::unordered_map<unsigned, ReservedResourcesService::TiledResource> TiledResources;
+    std::unordered_map<GITSKey, ResourceState*> Buffers;
+    std::unordered_map<GITSKey, ReservedResourcesService::TiledResource> TiledResources;
   };
-  std::unordered_map<unsigned, std::unique_ptr<InputBuffers>> m_InputBuffers;
+  std::unordered_map<GITSKey, std::unique_ptr<InputBuffers>> m_InputBuffers;
 
   std::unordered_map<std::pair<unsigned, unsigned>, uint64_t, UnsignedPairHash>
       m_BufferHashesByKeyOffset;
-  std::unordered_map<unsigned, std::unordered_set<unsigned>> m_TiledResourceUpdatesRestored;
+  std::unordered_map<GITSKey, std::unordered_set<GITSKey>> m_TiledResourceUpdatesRestored;
 
-  unsigned m_CommandQueueKey{};
-  unsigned m_CommandAllocatorKey{};
-  unsigned m_CommandListKey{};
-  unsigned m_FenceKey{};
-  unsigned m_UploadBufferKey{};
+  GITSKey m_CommandQueueKey{};
+  GITSKey m_CommandAllocatorKey{};
+  GITSKey m_CommandListKey{};
+  GITSKey m_FenceKey{};
+  GITSKey m_UploadBufferKey{};
   UINT64 m_RecordedFenceValue{};
   size_t m_UploadBufferSize{};
 
@@ -88,33 +89,33 @@ private:
   public:
     void DumpBuffer(ID3D12GraphicsCommandList* commandList,
                     ID3D12Resource* resource,
-                    unsigned resourceKey,
+                    GITSKey resourceKey,
                     unsigned offset,
                     unsigned size,
                     BarrierState resourceState,
-                    unsigned buildCallKey,
+                    GITSKey buildCallKey,
                     bool isMappable);
 
   public:
     struct InputBuffer {
-      unsigned BufferKey{};
+      GITSKey BufferKey{};
       unsigned Offset{};
       unsigned BufferHash{};
       bool IsMappable{};
       std::unique_ptr<std::vector<char>> BufferData;
     };
-    std::vector<InputBuffer>& GetInputBuffers(unsigned buildKey) {
+    std::vector<InputBuffer>& GetInputBuffers(GITSKey buildKey) {
       return m_InputBuffersByBuildKey[buildKey];
     }
 
   private:
-    std::unordered_map<unsigned, std::vector<InputBuffer>> m_InputBuffersByBuildKey;
+    std::unordered_map<GITSKey, std::vector<InputBuffer>> m_InputBuffersByBuildKey;
     std::mutex m_Mutex;
 
   protected:
     struct BufferInfo : public DumpInfo {
-      unsigned ResourceKey;
-      unsigned BuildCallKey;
+      GITSKey ResourceKey;
+      GITSKey BuildCallKey;
       bool IsMappable;
     };
     void DumpBuffer(DumpInfo& dumpInfo, void* data) override;

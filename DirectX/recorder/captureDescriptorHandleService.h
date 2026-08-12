@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #pragma once
+#include "arguments.h"
 
 #include "directx.h"
 #include "tbb/spin_rw_mutex.h"
@@ -22,7 +23,7 @@ namespace DirectX {
 class CaptureDescriptorHandleService {
 public:
   struct HandleInfo {
-    unsigned InterfaceKey;
+    GITSKey InterfaceKey;
     unsigned Index;
   };
   enum class HandleType {
@@ -30,22 +31,22 @@ public:
     GpuHandle
   };
 
-  void CreateDescriptorHeap(unsigned descriptorHeapKey,
+  void CreateDescriptorHeap(GITSKey descriptorHeapKey,
                             ID3D12DescriptorHeap* descriptorHeap,
                             const D3D12_DESCRIPTOR_HEAP_DESC* desc);
   HandleInfo GetDescriptorHandleInfo(D3D12_DESCRIPTOR_HEAP_TYPE heapType,
                                      HandleType handleType,
                                      size_t handle) const;
-  void DestroyDescriptorHeap(unsigned descriptorHeapKey);
+  void DestroyDescriptorHeap(GITSKey descriptorHeapKey);
 
 private:
   struct DescriptorHeapInfo {
-    unsigned InterfaceKey{};
+    GITSKey InterfaceKey{};
     size_t Start{};
     size_t End{};
   };
 
-  std::array<std::unordered_map<unsigned, std::map<size_t, DescriptorHeapInfo>>,
+  std::array<std::unordered_map<GITSKey, std::map<size_t, DescriptorHeapInfo>>,
              D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES>
       m_DescriptorHeapsByCpuStartAddress{};
   std::array<std::map<size_t, DescriptorHeapInfo>, D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES>
@@ -54,7 +55,7 @@ private:
   std::array<unsigned, D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES> m_DescriptorHeapIncrements{};
   bool m_Initialized{false};
 
-  std::unordered_set<unsigned> m_DescriptorHeapKeys;
+  std::unordered_set<GITSKey> m_DescriptorHeapKeys;
 
   mutable tbb::spin_rw_mutex m_RwMutex;
 };

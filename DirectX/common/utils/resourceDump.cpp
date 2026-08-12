@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "resourceDump.h"
+#include "arguments.h"
 #include "resourceSizeUtils.h"
 #include "resourceStateEnhanced.h"
 #include "log.h"
@@ -219,8 +220,8 @@ void ResourceDump::StageResource(ID3D12GraphicsCommandList* commandList,
   }
 }
 
-void ResourceDump::ExecuteCommandLists(unsigned key,
-                                       unsigned commandQueueKey,
+void ResourceDump::ExecuteCommandLists(GITSKey key,
+                                       GITSKey commandQueueKey,
                                        ID3D12CommandQueue* commandQueue,
                                        ID3D12CommandList** commandLists,
                                        unsigned commandListNum) {
@@ -264,21 +265,21 @@ void ResourceDump::ExecuteCommandLists(unsigned key,
   m_GpuExecutionTracker.Execute(key, commandQueueKey, threadInfo);
 }
 
-void ResourceDump::CommandQueueWait(unsigned key,
-                                    unsigned commandQueueKey,
-                                    unsigned fenceKey,
+void ResourceDump::CommandQueueWait(GITSKey key,
+                                    GITSKey commandQueueKey,
+                                    GITSKey fenceKey,
                                     UINT64 fenceValue) {
   m_GpuExecutionTracker.CommandQueueWait(key, commandQueueKey, fenceKey, fenceValue);
 }
 
-void ResourceDump::CommandQueueSignal(unsigned key,
-                                      unsigned commandQueueKey,
-                                      unsigned fenceKey,
+void ResourceDump::CommandQueueSignal(GITSKey key,
+                                      GITSKey commandQueueKey,
+                                      GITSKey fenceKey,
                                       UINT64 fenceValue) {
   m_GpuExecutionTracker.CommandQueueSignal(key, commandQueueKey, fenceKey, fenceValue);
 }
 
-void ResourceDump::FenceSignal(unsigned key, unsigned fenceKey, UINT64 fenceValue) {
+void ResourceDump::FenceSignal(GITSKey key, GITSKey fenceKey, UINT64 fenceValue) {
   m_GpuExecutionTracker.FenceSignal(key, fenceKey, fenceValue);
 }
 

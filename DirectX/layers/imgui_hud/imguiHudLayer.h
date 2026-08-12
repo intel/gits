@@ -59,7 +59,7 @@ private:
   bool CreateFrameContext(unsigned bufferCount);
   void EnsureInitialized(IUnknown* device,
                          IDXGISwapChain* swapChain,
-                         unsigned swapChainKey,
+                         GITSKey swapChainKey,
                          bool isXefgProxy);
   bool InitializeResources(IUnknown* device, IDXGISwapChain* swapChain);
   void InitializeImGui(DXGI_FORMAT format);
@@ -80,7 +80,7 @@ private:
   HudOwner m_Owner = HudOwner::None;
 
   std::mutex m_Mutex;
-  std::unordered_set<unsigned> m_BackBufferKeys;
+  std::unordered_set<GITSKey> m_BackBufferKeys;
 
   std::vector<FrameContext> m_FrameContext = {};
   Microsoft::WRL::ComPtr<ID3D12Fence> m_Fence = nullptr;
@@ -91,7 +91,7 @@ private:
   Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> m_CommandList = nullptr;
   // Non-owning so the recorder wrapper observes the final application release.
   IDXGISwapChain* m_SwapChain = nullptr;
-  unsigned m_SwapChainKey = 0;
+  GITSKey m_SwapChainKey = 0;
 
   UINT64 m_FenceValue = 0;
 
@@ -99,7 +99,7 @@ private:
   bool m_ResizeBuffersWarning = false;
 
   ID3D12CommandQueue* m_XefgCmdQueue = nullptr;
-  unsigned m_XefgContextKey = 0;
+  GITSKey m_XefgContextKey = 0;
 };
 
 } // namespace DirectX

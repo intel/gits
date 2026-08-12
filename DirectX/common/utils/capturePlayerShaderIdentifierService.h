@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #pragma once
+#include "arguments.h"
 
 #include <map>
 #include <vector>
@@ -27,10 +28,10 @@ public:
   };
 
 public:
-  void AddCaptureShaderIdentifier(unsigned commandKey,
+  void AddCaptureShaderIdentifier(GITSKey commandKey,
                                   ShaderIdentifier captureIdentifier,
                                   LPWSTR exportName);
-  void AddPlayerShaderIdentifier(unsigned commandKey,
+  void AddPlayerShaderIdentifier(GITSKey commandKey,
                                  ShaderIdentifier playerIdentifier,
                                  LPWSTR exportName);
   bool GetMappings(std::vector<ShaderIdentifierMapping>& mappings);
@@ -48,7 +49,7 @@ public:
 
 private:
   std::map<ShaderIdentifier, ShaderIdentifierMapping> m_ShaderIdentifiers;
-  std::map<unsigned, ShaderIdentifier> m_ShaderIdentifiersByCommandKey;
+  std::map<GITSKey, ShaderIdentifier> m_ShaderIdentifiersByCommandKey;
   std::map<ShaderIdentifier, std::wstring> m_ExportNamesByCaptureIdentifier;
   std::map<ShaderIdentifier, std::wstring> m_ExportNamesByPlayerIdentifier;
   bool m_Changed{};

@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "showExecutionLayer.h"
+#include "arguments.h"
 #include "log.h"
 #include "keyUtils.h"
 
@@ -585,7 +586,7 @@ void ShowExecutionLayer::Post(ID3D12CommandQueueWaitCommand& command) {
   }
 }
 
-void ShowExecutionLayer::FenceSignal(unsigned callKey, unsigned fenceKey, UINT64 fenceValue) {
+void ShowExecutionLayer::FenceSignal(GITSKey callKey, GITSKey fenceKey, UINT64 fenceValue) {
   m_GpuExecutionTracker.FenceSignal(callKey, fenceKey, fenceValue);
   auto count = m_GpuExecutionTracker.GetReadyExecutables().size();
   if (count > 0) {
@@ -595,8 +596,8 @@ void ShowExecutionLayer::FenceSignal(unsigned callKey, unsigned fenceKey, UINT64
   DumpReadyCommandQueueEvents();
 }
 
-void ShowExecutionLayer::StageCommandQueueEvent(unsigned commandKey,
-                                                unsigned commandQueueKey,
+void ShowExecutionLayer::StageCommandQueueEvent(GITSKey commandKey,
+                                                GITSKey commandQueueKey,
                                                 const std::string& str) {
   auto* event = new CommandQueueEvent{};
   event->m_Str = str;

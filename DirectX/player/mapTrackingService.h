@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #pragma once
+#include "arguments.h"
 
 #include <unordered_map>
 #include <unordered_set>
@@ -17,20 +18,20 @@ namespace DirectX {
 
 class MapTrackingService {
 public:
-  void MapResource(unsigned resourceKey,
+  void MapResource(GITSKey resourceKey,
                    unsigned subresourceIndex,
                    void* captureAddress,
                    void** currentAddress);
-  void DestroyResource(unsigned resourceKey);
+  void DestroyResource(GITSKey resourceKey);
   void* GetCurrentAddress(void* captureAddress);
 
 private:
   struct MappedInfo {
     void* CurrentAddress{};
-    unsigned ResourceKey{};
+    GITSKey ResourceKey{};
   };
   std::unordered_map<void*, MappedInfo> m_MappedData;
-  std::unordered_map<unsigned, std::unordered_set<void*>> m_MappedDataByResource;
+  std::unordered_map<GITSKey, std::unordered_set<void*>> m_MappedDataByResource;
 };
 
 } // namespace DirectX

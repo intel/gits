@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #pragma once
+#include "arguments.h"
 
 #include "commandsAuto.h"
 #include "commandSerializersAuto.h"
@@ -26,19 +27,19 @@ public:
   DirectStorageQueueService& operator=(const DirectStorageQueueService&) = delete;
 
   void AddEnqueueStatus(IDStorageQueueEnqueueStatusCommand& c);
-  void DestroyObject(unsigned objectKey);
+  void DestroyObject(GITSKey objectKey);
   void RestoreDirectStorageQueues();
 
 private:
   struct EnqueueStatus {
-    unsigned QueueKey{};
+    GITSKey QueueKey{};
     std::unique_ptr<IDStorageQueueEnqueueStatusSerializer> Serializer;
   };
 
-  void RecordQueueSubmit(unsigned queueKey);
+  void RecordQueueSubmit(GITSKey queueKey);
 
   StateTrackingService& m_StateService;
-  std::map<unsigned, std::map<unsigned, EnqueueStatus>> m_EnqueueStatusByIndexByArray;
+  std::map<GITSKey, std::map<GITSKey, EnqueueStatus>> m_EnqueueStatusByIndexByArray;
 };
 
 } // namespace DirectX

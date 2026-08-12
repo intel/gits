@@ -84,8 +84,8 @@ void Decode(char* src, unsigned& offset, InterfaceArrayArgument<T>& arg) {
   arg.Value = arg.Data.data();
 
   arg.Keys.resize(arg.Size);
-  memcpy(arg.Keys.data(), src + offset, arg.Size * sizeof(unsigned));
-  offset += arg.Size * sizeof(unsigned);
+  memcpy(arg.Keys.data(), src + offset, arg.Size * sizeof(GITSKey));
+  offset += arg.Size * sizeof(GITSKey);
 }
 
 template <typename T>
@@ -118,8 +118,8 @@ void Decode(char* src, unsigned& offset, DescriptorHandleArrayArgument<T>& arg) 
   arg.Value = arg.Data.data();
 
   arg.InterfaceKeys.resize(arg.Size);
-  memcpy(arg.InterfaceKeys.data(), src + offset, arg.Size * sizeof(unsigned));
-  offset += arg.Size * sizeof(unsigned);
+  memcpy(arg.InterfaceKeys.data(), src + offset, arg.Size * sizeof(GITSKey));
+  offset += arg.Size * sizeof(GITSKey);
 
   arg.Indexes.resize(arg.Size);
   memcpy(arg.Indexes.data(), src + offset, arg.Size * sizeof(unsigned));

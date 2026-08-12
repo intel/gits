@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #pragma once
+#include "arguments.h"
 
 #include <unordered_set>
 
@@ -17,16 +18,16 @@ class StateTrackingService;
 
 class ResourceResidencyService {
 public:
-  ResourceResidencyService(StateTrackingService& stateService, unsigned deviceKey)
+  ResourceResidencyService(StateTrackingService& stateService, GITSKey deviceKey)
       : m_StateService(stateService), m_DeviceKey(deviceKey) {}
-  void AddResource(unsigned resourceKey);
+  void AddResource(GITSKey resourceKey);
   void RecordMakeResident();
   void RecordEvict();
 
 private:
   StateTrackingService& m_StateService;
-  unsigned m_DeviceKey{};
-  std::unordered_set<unsigned> m_ResidencyKeys;
+  GITSKey m_DeviceKey{};
+  std::unordered_set<GITSKey> m_ResidencyKeys;
 };
 
 } // namespace DirectX

@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #pragma once
+#include "arguments.h"
 
 #include <comip.h>
 #include <unknwn.h>
@@ -51,7 +52,7 @@ public:
     return GetRootIUnknown(m_Object);
   }
 
-  unsigned GetKey() {
+  GITSKey GetKey() {
     return m_Key;
   }
 
@@ -68,7 +69,7 @@ private:
 private:
   IID m_Iid;
   IUnknown* m_Object;
-  unsigned m_Key;
+  GITSKey m_Key;
   std::unordered_set<IID, IIDHash> m_Iids;
   std::vector<std::unique_ptr<IUnknownWrapper>> m_SecondaryWrappers;
 };

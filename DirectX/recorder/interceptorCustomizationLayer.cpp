@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "interceptorCustomizationLayer.h"
+#include "arguments.h"
 #include "wrapperUtils.h"
 #include "captureManager.h"
 #include "intelExtensionsWrappers.h"
@@ -59,7 +60,7 @@ void InterceptorCustomizationLayer::Pre(IUnknownReleaseCommand& c) {
   m_BuffersBySwapChainKey.erase(itBuffers);
 }
 
-void InterceptorCustomizationLayer::RemoveSwapChainBufferWrappersOnResize(unsigned swapChainKey) {
+void InterceptorCustomizationLayer::RemoveSwapChainBufferWrappersOnResize(GITSKey swapChainKey) {
   // XeFG keeps an extra reference on swap chain buffers and drops it internally on resize.
   // Should be done in pre call, removing wrappers in post could to late
   // for object creation in other threads.

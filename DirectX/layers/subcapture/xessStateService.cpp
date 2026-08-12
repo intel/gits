@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "xessStateService.h"
+#include "arguments.h"
 #include "stateTrackingService.h"
 #include "commandsAuto.h"
 #include "commandSerializersAuto.h"
@@ -28,7 +29,7 @@ void XessStateService::StoreContextState(ContextState* state) {
   m_ContextStatesByDeviceKey[state->DeviceKey] = state;
 }
 
-void XessStateService::DestroyDevice(unsigned key) {
+void XessStateService::DestroyDevice(GITSKey key) {
   auto it = m_ContextStatesByDeviceKey.find(key);
   if (it != m_ContextStatesByDeviceKey.end()) {
     m_ContextStatesByContextKey.erase(it->second->Key);
@@ -36,7 +37,7 @@ void XessStateService::DestroyDevice(unsigned key) {
   }
 }
 
-void XessStateService::DestroyContext(unsigned key) {
+void XessStateService::DestroyContext(GITSKey key) {
   auto it = m_ContextStatesByContextKey.find(key);
   if (it != m_ContextStatesByContextKey.end()) {
     m_ContextStatesByDeviceKey.erase(it->second->DeviceKey);
@@ -117,9 +118,7 @@ void XellStateService::StoreContextState(ContextState* state) {
   m_ContextStatesByDeviceKey[state->DeviceKey] = state;
 }
 
-void XellStateService::TrackMarker(unsigned key,
-                                   uint32_t frame,
-                                   xell_latency_marker_type_t marker) {
+void XellStateService::TrackMarker(GITSKey key, uint32_t frame, xell_latency_marker_type_t marker) {
   auto it = m_ContextStatesByContextKey.find(key);
   if (it == m_ContextStatesByContextKey.end()) {
     return;
@@ -135,7 +134,7 @@ bool XellStateService::AreMarkersRegistered(
   return markerTypes.count(XELL_RENDERSUBMIT_END) && markerTypes.count(XELL_PRESENT_END);
 }
 
-void XellStateService::DestroyDevice(unsigned key) {
+void XellStateService::DestroyDevice(GITSKey key) {
   auto it = m_ContextStatesByDeviceKey.find(key);
   if (it != m_ContextStatesByDeviceKey.end()) {
     m_ContextStatesByContextKey.erase(it->second->Key);
@@ -143,7 +142,7 @@ void XellStateService::DestroyDevice(unsigned key) {
   }
 }
 
-void XellStateService::DestroyContext(unsigned key) {
+void XellStateService::DestroyContext(GITSKey key) {
   auto it = m_ContextStatesByContextKey.find(key);
   if (it != m_ContextStatesByContextKey.end()) {
     m_ContextStatesByDeviceKey.erase(it->second->DeviceKey);
@@ -200,7 +199,7 @@ void XefgStateService::StoreContextState(ContextState* state) {
   m_ContextStatesByDeviceKey[state->DeviceKey] = state;
 }
 
-void XefgStateService::DestroyDevice(unsigned key) {
+void XefgStateService::DestroyDevice(GITSKey key) {
   auto it = m_ContextStatesByDeviceKey.find(key);
   if (it != m_ContextStatesByDeviceKey.end()) {
     m_ContextStatesByContextKey.erase(it->second->Key);
@@ -208,7 +207,7 @@ void XefgStateService::DestroyDevice(unsigned key) {
   }
 }
 
-void XefgStateService::DestroyContext(unsigned key) {
+void XefgStateService::DestroyContext(GITSKey key) {
   auto it = m_ContextStatesByContextKey.find(key);
   if (it != m_ContextStatesByContextKey.end()) {
     m_ContextStatesByDeviceKey.erase(it->second->DeviceKey);

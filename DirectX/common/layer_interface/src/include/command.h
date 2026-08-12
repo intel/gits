@@ -9,6 +9,7 @@
 #pragma once
 
 #include "commandIdsAuto.h"
+#include "arguments.h"
 
 #include <vector>
 
@@ -26,7 +27,7 @@ public:
   }
 
 public:
-  unsigned Key{};
+  GITSKey Key{};
   unsigned ThreadId{};
   bool Skip{false};
 

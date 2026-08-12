@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "bindingTablesDump.h"
+#include "arguments.h"
 #include "analyzerRaytracingService.h"
 #include "capturePlayerGpuAddressService.h"
 #include "capturePlayerDescriptorHandleService.h"
@@ -23,7 +24,7 @@ void BindingTablesDump::DumpBindingTable(ID3D12GraphicsCommandList* commandList,
                                          BarrierState state,
                                          StateObjectInfo* StateObjectInfo,
                                          DescriptorHeaps descriptorHeaps,
-                                         unsigned rootSignatureKey) {
+                                         GITSKey rootSignatureKey) {
   BindingTablesInfo* info = new BindingTablesInfo();
   info->Offset = offset;
   info->Size = size;
@@ -43,7 +44,7 @@ void BindingTablesDump::DumpBuffer(DumpInfo& dumpInfo, void* data) {
   for (unsigned recordIndex = 0; recordIndex < recordCount; ++recordIndex) {
     uint8_t* p = static_cast<uint8_t*>(data) + recordIndex * info.Stride;
 
-    unsigned rootSignatureKey = info.StateObjectInfo->GlobalRootSignature;
+    GITSKey rootSignatureKey = info.StateObjectInfo->GlobalRootSignature;
     if (!rootSignatureKey) {
       rootSignatureKey = info.RootSignatureKey;
     }
@@ -96,7 +97,7 @@ void BindingTablesDump::DumpBuffer(DumpInfo& dumpInfo, void* data) {
 
         UINT64* descriptor = reinterpret_cast<UINT64*>(p + byteOffset);
         if (*descriptor) {
-          unsigned descriptorHeapKey{};
+          GITSKey descriptorHeapKey{};
           unsigned descriptorHeapSize{};
           CapturePlayerDescriptorHandleService::DescriptorHeapInfo* heapInfo{};
 

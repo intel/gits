@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "interfaceArgumentUpdaters.h"
+#include "arguments.h"
 
 #include <d3dx12/d3dx12_pipeline_state_stream.h>
 
@@ -276,7 +277,7 @@ void UpdateInterface(PlayerManager& manager, D3D12_BARRIER_GROUPs_Argument& arg)
     return;
   }
 
-  unsigned resourceKeyIndex = 0;
+  GITSKey resourceKeyIndex = 0;
 
   for (unsigned i = 0; i < arg.Size; ++i) {
     D3D12_BARRIER_GROUP& barrierGroup = arg.Value[i];
@@ -327,9 +328,7 @@ void UpdateInterface(PlayerManager& manager, DML_BINDING_TABLE_DESC_Argument& ar
   }
 }
 
-static void updateDmlBinding(PlayerManager& manager,
-                             unsigned resourceKey,
-                             const void* bindingDesc) {
+static void updateDmlBinding(PlayerManager& manager, GITSKey resourceKey, const void* bindingDesc) {
   if (!manager.ExecuteCommands()) {
     return;
   }

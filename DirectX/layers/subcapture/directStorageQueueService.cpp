@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "directStorageQueueService.h"
+#include "arguments.h"
 #include "commandSerializersAuto.h"
 #include "stateTrackingService.h"
 #include "analyzerResults.h"
@@ -20,7 +21,7 @@ namespace DirectX {
 DirectStorageQueueService::DirectStorageQueueService(StateTrackingService& stateService)
     : m_StateService(stateService) {}
 
-void DirectStorageQueueService::RecordQueueSubmit(unsigned queueKey) {
+void DirectStorageQueueService::RecordQueueSubmit(GITSKey queueKey) {
   IDStorageQueueSubmitCommand submit;
   submit.Key = m_StateService.GetUniqueCommandKey();
   submit.m_Object.Key = queueKey;
@@ -34,13 +35,13 @@ void DirectStorageQueueService::AddEnqueueStatus(IDStorageQueueEnqueueStatusComm
   enqueueStatus.Serializer = std::make_unique<IDStorageQueueEnqueueStatusSerializer>(c);
 }
 
-void DirectStorageQueueService::DestroyObject(unsigned objectKey) {
+void DirectStorageQueueService::DestroyObject(GITSKey objectKey) {
   m_EnqueueStatusByIndexByArray.erase(objectKey);
 }
 
 void DirectStorageQueueService::RestoreDirectStorageQueues() {
   AnalyzerResults& analyzerResults = m_StateService.GetAnalyzerResults();
-  std::map<unsigned, std::vector<IDStorageQueueEnqueueStatusSerializer*>> enqueueStatusByQueue;
+  std::map<GITSKey, std::vector<IDStorageQueueEnqueueStatusSerializer*>> enqueueStatusByQueue;
 
   for (const auto& [statusArrayKey, enqueueStatusByIndex] : m_EnqueueStatusByIndexByArray) {
     if (!analyzerResults.RestoreObject(statusArrayKey)) {

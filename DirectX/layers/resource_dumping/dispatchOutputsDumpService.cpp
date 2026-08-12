@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "dispatchOutputsDumpService.h"
+#include "arguments.h"
 #include "yaml-cpp/yaml.h"
 
 #include <d3dx12.h>
@@ -35,20 +36,20 @@ DispatchOutputsDumpService::DispatchOutputsDumpService(
 }
 
 void DispatchOutputsDumpService::CreateResource(ID3D12Resource* resource,
-                                                unsigned resourceKey,
+                                                GITSKey resourceKey,
                                                 D3D12_RESOURCE_STATES initialState) {
   m_ResourceByKey[resourceKey] = resource;
   m_ResourceStateTracker.AddResource(resource, resourceKey, initialState);
 }
 
 void DispatchOutputsDumpService::CreateResource(ID3D12Resource* resource,
-                                                unsigned resourceKey,
+                                                GITSKey resourceKey,
                                                 D3D12_BARRIER_LAYOUT initialLayout) {
   m_ResourceByKey[resourceKey] = resource;
   m_ResourceStateTracker.AddResource(resource, resourceKey, initialLayout);
 }
 
-void DispatchOutputsDumpService::DestroyInterface(unsigned interfaceKey) {
+void DispatchOutputsDumpService::DestroyInterface(GITSKey interfaceKey) {
   m_ResourceByKey.erase(interfaceKey);
 }
 
@@ -78,7 +79,7 @@ void DispatchOutputsDumpService::Dispatch(ID3D12GraphicsCommandListDispatchComma
       }
       unsigned resourceIndex{};
       unsigned resourceCount{};
-      for (unsigned resourceKey : slotBindings.Resources) {
+      for (GITSKey resourceKey : slotBindings.Resources) {
         ++resourceIndex;
         if (m_SlotResourcesRange[resourceIndex]) {
           ID3D12Resource* resource = m_ResourceByKey[resourceKey];
@@ -133,7 +134,7 @@ void DispatchOutputsDumpService::Barrier(ID3D12GraphicsCommandList7BarrierComman
 }
 
 bool DispatchOutputsDumpService::DumpComputeOutput(ID3D12GraphicsCommandList* commandList,
-                                                   unsigned resourceKey,
+                                                   GITSKey resourceKey,
                                                    ID3D12Resource* resource,
                                                    unsigned slot,
                                                    unsigned frame,

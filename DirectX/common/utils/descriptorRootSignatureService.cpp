@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "descriptorRootSignatureService.h"
+#include "arguments.h"
 #include "log.h"
 
 #include <wrl/client.h>
@@ -66,8 +67,8 @@ void DescriptorRootSignatureService::CreateRootSignature(
 }
 
 std::vector<unsigned> DescriptorRootSignatureService::GetDescriptorTableIndexes(
-    unsigned rootSignatureKey,
-    unsigned descriptorHeapKey,
+    GITSKey rootSignatureKey,
+    GITSKey descriptorHeapKey,
     unsigned parameterIndex,
     unsigned baseIndex,
     unsigned heapNumDescriptors,
@@ -117,8 +118,8 @@ std::vector<unsigned> DescriptorRootSignatureService::GetDescriptorTableIndexes(
 }
 
 std::vector<unsigned> DescriptorRootSignatureService::GetBindlessDescriptorIndexes(
-    unsigned rootSignatureKey,
-    unsigned descriptorHeapKey,
+    GITSKey rootSignatureKey,
+    GITSKey descriptorHeapKey,
     D3D12_DESCRIPTOR_HEAP_TYPE heapType,
     unsigned heapNumDescriptors,
     bool checkRetrieved) {
@@ -145,13 +146,12 @@ std::vector<unsigned> DescriptorRootSignatureService::GetBindlessDescriptorIndex
 }
 
 D3D12_ROOT_SIGNATURE_DESC* DescriptorRootSignatureService::GetRootSignatureDesc(
-    unsigned rootSignatureKey) {
+    GITSKey rootSignatureKey) {
   std::lock_guard<std::mutex> lock(m_Mutex);
   return m_RootSignatureDescs[rootSignatureKey];
 }
 
-bool DescriptorRootSignatureService::UnboundedRetrieved(unsigned descriptorHeapKey,
-                                                        unsigned index) {
+bool DescriptorRootSignatureService::UnboundedRetrieved(GITSKey descriptorHeapKey, unsigned index) {
   auto it = m_UnboundedRetrieved.find(descriptorHeapKey);
   if (it != m_UnboundedRetrieved.end() && it->second <= index) {
     return true;
@@ -160,7 +160,7 @@ bool DescriptorRootSignatureService::UnboundedRetrieved(unsigned descriptorHeapK
   return false;
 }
 
-bool DescriptorRootSignatureService::BoundedRetrieved(unsigned descriptorHeapKey,
+bool DescriptorRootSignatureService::BoundedRetrieved(GITSKey descriptorHeapKey,
                                                       unsigned index,
                                                       unsigned numDescriptors) {
   auto itHeap = m_BoundedRetrieved.find(descriptorHeapKey);

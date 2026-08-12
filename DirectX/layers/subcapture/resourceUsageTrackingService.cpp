@@ -7,33 +7,34 @@
 // ===================== end_copyright_notice ==============================
 
 #include "resourceUsageTrackingService.h"
+#include "arguments.h"
 #include "log.h"
 
 namespace gits {
 namespace DirectX {
-void ResourceUsageTrackingService::AddResource(unsigned resourceKey) {
+void ResourceUsageTrackingService::AddResource(GITSKey resourceKey) {
   m_UsageByResource[resourceKey] = {};
 }
 
-void ResourceUsageTrackingService::CommandListResourceUsage(unsigned commandListKey,
-                                                            unsigned resourceKey) {
+void ResourceUsageTrackingService::CommandListResourceUsage(GITSKey commandListKey,
+                                                            GITSKey resourceKey) {
   m_CommandListResourceUsage[commandListKey].push_back(resourceKey);
 }
 
-void ResourceUsageTrackingService::CommandListResourceUsage(unsigned commandListKey,
-                                                            std::vector<unsigned>& resourceKeys) {
+void ResourceUsageTrackingService::CommandListResourceUsage(GITSKey commandListKey,
+                                                            std::vector<GITSKey>& resourceKeys) {
   m_CommandListResourceUsage[commandListKey].insert(
       m_CommandListResourceUsage[commandListKey].end(), resourceKeys.begin(), resourceKeys.end());
 }
-void ResourceUsageTrackingService::CommandListReset(unsigned commandListKey) {
+void ResourceUsageTrackingService::CommandListReset(GITSKey commandListKey) {
   m_CommandListResourceUsage[commandListKey].clear();
 }
 
-void ResourceUsageTrackingService::ExecuteCommandLists(unsigned commandKey,
-                                                       unsigned commandQueueKey,
-                                                       std::vector<unsigned>& commandListKeys) {
+void ResourceUsageTrackingService::ExecuteCommandLists(GITSKey commandKey,
+                                                       GITSKey commandQueueKey,
+                                                       std::vector<GITSKey>& commandListKeys) {
   std::vector<unsigned> usedResources;
-  for (unsigned commandListKey : commandListKeys) {
+  for (GITSKey commandListKey : commandListKeys) {
     auto it = m_CommandListResourceUsage.find(commandListKey);
     if (it == m_CommandListResourceUsage.end()) {
       continue;
@@ -52,27 +53,27 @@ void ResourceUsageTrackingService::ExecuteCommandLists(unsigned commandKey,
   }
 }
 
-void ResourceUsageTrackingService::DestroyResource(unsigned resourceKey) {
+void ResourceUsageTrackingService::DestroyResource(GITSKey resourceKey) {
   m_UsageByResource.erase(resourceKey);
 }
 
-void ResourceUsageTrackingService::CommandQueueWait(unsigned commandKey,
-                                                    unsigned commandQueueKey,
-                                                    unsigned fenceKey,
+void ResourceUsageTrackingService::CommandQueueWait(GITSKey commandKey,
+                                                    GITSKey commandQueueKey,
+                                                    GITSKey fenceKey,
                                                     UINT64 fenceValue) {
   m_GpuExecutionTracker.CommandQueueWait(commandKey, commandQueueKey, fenceKey, fenceValue);
 }
 
-void ResourceUsageTrackingService::CommandQueueSignal(unsigned commandKey,
-                                                      unsigned commandQueueKey,
-                                                      unsigned fenceKey,
+void ResourceUsageTrackingService::CommandQueueSignal(GITSKey commandKey,
+                                                      GITSKey commandQueueKey,
+                                                      GITSKey fenceKey,
                                                       UINT64 fenceValue) {
   m_GpuExecutionTracker.CommandQueueSignal(commandKey, commandQueueKey, fenceKey, fenceValue);
   ProcessReadyExecutables();
 }
 
-void ResourceUsageTrackingService::FenceSignal(unsigned commandKey,
-                                               unsigned fenceKey,
+void ResourceUsageTrackingService::FenceSignal(GITSKey commandKey,
+                                               GITSKey fenceKey,
                                                UINT64 fenceValue) {
   m_GpuExecutionTracker.FenceSignal(commandKey, fenceKey, fenceValue);
   ProcessReadyExecutables();
@@ -106,7 +107,7 @@ void ResourceUsageTrackingService::UpdateUsage(const std::vector<unsigned>& used
   ++m_ExecuteNumber;
 
   unsigned commandNumber{};
-  for (unsigned resourceKey : usedResources) {
+  for (GITSKey resourceKey : usedResources) {
     m_UsageByResource[resourceKey] = {m_ExecuteNumber, ++commandNumber};
   }
 }

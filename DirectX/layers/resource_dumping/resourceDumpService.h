@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #pragma once
+#include "arguments.h"
 
 #include "commandsAuto.h"
 #include "resourceStateTracker.h"
@@ -23,32 +24,29 @@ namespace DirectX {
 class ResourceDumpService {
 public:
   ResourceDumpService();
-  void CreateResource(unsigned resourceKey,
+  void CreateResource(GITSKey resourceKey,
                       ID3D12Resource* resource,
                       D3D12_RESOURCE_STATES initialState);
-  void DestroyResource(unsigned resourceKey);
-  void CommandListCall(unsigned callKey, ID3D12GraphicsCommandList* commandList);
+  void DestroyResource(GITSKey resourceKey);
+  void CommandListCall(GITSKey callKey, ID3D12GraphicsCommandList* commandList);
   void ResourceBarrier(ID3D12GraphicsCommandListResourceBarrierCommand& c);
-  void ExecuteCommandLists(unsigned key,
-                           unsigned commandQueueKey,
+  void ExecuteCommandLists(GITSKey key,
+                           GITSKey commandQueueKey,
                            ID3D12CommandQueue* commandQueue,
                            ID3D12CommandList** commandLists,
                            unsigned commandListNum);
-  void CommandQueueWait(unsigned key,
-                        unsigned commandQueueKey,
-                        unsigned fenceKey,
-                        UINT64 fenceValue);
-  void CommandQueueSignal(unsigned key,
-                          unsigned commandQueueKey,
-                          unsigned fenceKey,
+  void CommandQueueWait(GITSKey key, GITSKey commandQueueKey, GITSKey fenceKey, UINT64 fenceValue);
+  void CommandQueueSignal(GITSKey key,
+                          GITSKey commandQueueKey,
+                          GITSKey fenceKey,
                           UINT64 fenceValue);
-  void FenceSignal(unsigned key, unsigned fenceKey, UINT64 fenceValue);
+  void FenceSignal(GITSKey key, GITSKey fenceKey, UINT64 fenceValue);
 
 private:
   ConfigKeySet m_ResourceKeys;
   ConfigKeySet m_CallKeys;
   std::wstring m_DumpPath;
-  std::map<unsigned, ID3D12Resource*> m_Resources;
+  std::map<GITSKey, ID3D12Resource*> m_Resources;
   ResourceStateTracker m_ResourceStateTracker;
   ResourceDump m_ResourceDump;
 };

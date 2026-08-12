@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "ccodeLayerAuto.h"
+#include "arguments.h"
 #include "ccodeTypes.h"
 #include "ccodeParameters.h"
 #include "ccodeCommandPrinter.h"
@@ -16,7 +17,7 @@
 namespace gits {
 namespace DirectX {
 
-static void createResource(ccode::CommandPrinter& p, unsigned resourceKey) {
+static void createResource(ccode::CommandPrinter& p, GITSKey resourceKey) {
   std::ostringstream ss;
   ss << "directx::GpuAddressService::Get().CreateResource(" << resourceKey << ", "
      << ccode::objKeyToPtrStr(resourceKey) << ");" << std::endl;
@@ -24,8 +25,8 @@ static void createResource(ccode::CommandPrinter& p, unsigned resourceKey) {
 }
 
 static void createPlacedResource(ccode::CommandPrinter& p,
-                                 unsigned resourceKey,
-                                 unsigned heapKey,
+                                 GITSKey resourceKey,
+                                 GITSKey heapKey,
                                  uint64_t heapOffset,
                                  const char* flagsExpr = "pDesc.Flags") {
   std::ostringstream ss;
@@ -37,14 +38,14 @@ static void createPlacedResource(ccode::CommandPrinter& p,
   p.setPostCommand(ss.str());
 }
 
-static void createHeap(ccode::CommandPrinter& p, unsigned heapKey) {
+static void createHeap(ccode::CommandPrinter& p, GITSKey heapKey) {
   std::ostringstream ss;
   ss << "directx::GpuAddressService::Get().CreateHeap(" << heapKey << ", "
      << ccode::objKeyToPtrStr(heapKey) << ");" << std::endl;
   p.setPostCommand(ss.str());
 }
 
-static void createSwapChain(ccode::CommandPrinter& p, unsigned swapChainKey, unsigned cmdQueueKey) {
+static void createSwapChain(ccode::CommandPrinter& p, GITSKey swapChainKey, GITSKey cmdQueueKey) {
   using namespace ccode;
   std::ostringstream ss;
   ss << "directx::ScreenshotService::Get().RegisterSwapChain(" << swapChainKey << ", "
@@ -52,7 +53,7 @@ static void createSwapChain(ccode::CommandPrinter& p, unsigned swapChainKey, uns
   p.setPostCommand(ss.str());
 }
 
-static void present(ccode::CommandPrinter& p, unsigned swapChainKey) {
+static void present(ccode::CommandPrinter& p, GITSKey swapChainKey) {
   std::ostringstream ss;
   ss << "directx::ScreenshotService::Get().CaptureFrame(" << swapChainKey << ");" << std::endl;
   p.setPreCommand(ss.str());

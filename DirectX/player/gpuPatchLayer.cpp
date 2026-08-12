@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "gpuPatchLayer.h"
+#include "arguments.h"
 #include "playerManager.h"
 #include "resourceStateEnhanced.h"
 #include "log.h"
@@ -176,7 +177,7 @@ void GpuPatchLayer::Pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStr
   commandList->CopyResource(m_MappingCountBuffers[mappingBufferIndex].Get(),
                             m_MappingCountStagingBuffers[mappingBufferIndex].Get());
 
-  unsigned instanceDescsKey = c.m_pDesc.InputKeys[0];
+  GITSKey instanceDescsKey = c.m_pDesc.InputKeys[0];
   ID3D12Resource* instanceDescs = m_ResourceByKey[instanceDescsKey];
   GITS_ASSERT(instanceDescs);
 
@@ -261,11 +262,11 @@ void GpuPatchLayer::Pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStr
     struct InstanceInfo {
       ID3D12Resource* resource{};
       unsigned patchBufferIndex{};
-      unsigned resourceKey{};
+      GITSKey resourceKey{};
       D3D12_GPU_VIRTUAL_ADDRESS captureStart;
-      std::set<unsigned> offsets;
+      std::set<GITSKey> offsets;
     };
-    std::unordered_map<unsigned, InstanceInfo> instancesByResourceKey;
+    std::unordered_map<GITSKey, InstanceInfo> instancesByResourceKey;
 
     std::vector<InstanceInfo*> instanceInfos(arrayOfPointers.size());
     for (unsigned i = 0; i < arrayOfPointers.size(); ++i) {
@@ -502,7 +503,7 @@ void GpuPatchLayer::PatchDispatchRays(ID3D12GraphicsCommandList* commandList,
                                       D3D12_DISPATCH_RAYS_DESC& dispatchRaysDesc,
                                       unsigned patchBufferIndex,
                                       unsigned mappingBufferIndex,
-                                      unsigned callKey) {
+                                      GITSKey callKey) {
 
   D3D12_GPU_VIRTUAL_ADDRESS patchBufferAddress =
       m_PatchBuffers[patchBufferIndex]->GetGPUVirtualAddress();
@@ -1061,7 +1062,7 @@ void GpuPatchLayer::Pre(ID3D12CommandQueueExecuteCommandListsCommand& c) {
     return;
   }
   std::vector<unsigned> mappingBuffers;
-  for (unsigned key : c.m_ppCommandLists.Keys) {
+  for (GITSKey key : c.m_ppCommandLists.Keys) {
     auto it = m_CurrentMappingsByCommandList.find(key);
     if (it != m_CurrentMappingsByCommandList.end()) {
       mappingBuffers.push_back(it->second);
@@ -1169,7 +1170,7 @@ void GpuPatchLayer::Post(ID3D12CommandQueueExecuteCommandListsCommand& c) {
   if (c.Skip) {
     return;
   }
-  for (unsigned key : c.m_ppCommandLists.Keys) {
+  for (GITSKey key : c.m_ppCommandLists.Keys) {
     auto itMappings = m_CurrentMappingsByCommandList.find(key);
     if (itMappings != m_CurrentMappingsByCommandList.end()) {
       unsigned mappingBufferIndex = itMappings->second;
@@ -1723,7 +1724,7 @@ void GpuPatchLayer::GetPatchOffsets(const D3D12_COMMAND_SIGNATURE_DESC& commandS
   }
 }
 
-unsigned GpuPatchLayer::GetMappingBufferIndex(unsigned commandListKey,
+unsigned GpuPatchLayer::GetMappingBufferIndex(GITSKey commandListKey,
                                               ID3D12GraphicsCommandList* commandList) {
   auto it = m_CurrentMappingsByCommandList.find(commandListKey);
   if (it != m_CurrentMappingsByCommandList.end()) {
@@ -1754,7 +1755,7 @@ unsigned GpuPatchLayer::GetMappingBufferIndex(unsigned commandListKey,
   return newIndex;
 }
 
-unsigned GpuPatchLayer::GetPatchBufferIndex(unsigned commandListKey,
+unsigned GpuPatchLayer::GetPatchBufferIndex(GITSKey commandListKey,
                                             ID3D12GraphicsCommandList* commandList,
                                             size_t size) {
   std::optional<unsigned> smallestFittingBuffer;
@@ -1806,7 +1807,7 @@ unsigned GpuPatchLayer::GetPatchBufferIndex(unsigned commandListKey,
   return patchBufferIndex;
 }
 
-unsigned GpuPatchLayer::GetInstancesAoPPatchBufferIndex(unsigned commandListKey) {
+unsigned GpuPatchLayer::GetInstancesAoPPatchBufferIndex(GITSKey commandListKey) {
   for (unsigned i = 0; i < INSTANCES_AOP_PATCH_BUFFER_POOL_SIZE; ++i) {
     if (m_InstancesAopPatchBufferFences[i].WaitingForExecute) {
       continue;
@@ -1827,7 +1828,7 @@ unsigned GpuPatchLayer::GetInstancesAoPPatchBufferIndex(unsigned commandListKey)
   exit(EXIT_FAILURE);
 }
 
-unsigned GpuPatchLayer::GetInstancesAoPStagingBufferIndex(unsigned commandListKey) {
+unsigned GpuPatchLayer::GetInstancesAoPStagingBufferIndex(GITSKey commandListKey) {
   for (unsigned i = 0; i < INSTANCES_AOP_STAGING_BUFFER_POOL_SIZE; ++i) {
     if (m_InstancesAopStagingBufferFences[i].WaitingForExecute) {
       continue;
@@ -1852,7 +1853,7 @@ void GpuPatchLayer::LoadExecuteIndirectDispatchRays() {
   std::filesystem::path dumpPath = Configurator::Get().common.player.streamDir;
   std::ifstream stream(dumpPath / "executeIndirectRaytracing.txt");
   while (true) {
-    unsigned callKey{};
+    GITSKey callKey{};
     D3D12_DISPATCH_RAYS_DESC desc{};
     stream >> callKey;
     if (!stream) {
@@ -1883,7 +1884,7 @@ void GpuPatchLayer::LoadInstancesArraysOfPointers() {
   std::filesystem::path dumpPath = Configurator::Get().common.player.streamDir;
   std::ifstream stream(dumpPath / "raytracingArraysOfPointers.dat", std::ios::binary);
   while (true) {
-    unsigned callKey{};
+    GITSKey callKey{};
     stream.read(reinterpret_cast<char*>(&callKey), sizeof(unsigned));
     if (!stream) {
       break;

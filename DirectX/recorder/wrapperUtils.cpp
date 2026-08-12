@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "wrapperUtils.h"
+#include "arguments.h"
 #include "wrapperCreatorsAuto.h"
 #include "captureManager.h"
 #include "exception.h"
@@ -83,7 +84,7 @@ NestedCaptureScope::~NestedCaptureScope() {
   }
 }
 
-unsigned getWrapperKey(const IUnknown* object) {
+GITSKey getWrapperKey(const IUnknown* object) {
   if (object) {
     IUnknownWrapper* wrapper = nullptr;
     if (SUCCEEDED(const_cast<IUnknown*>(object)->QueryInterface(

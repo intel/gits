@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #pragma once
+#include "arguments.h"
 
 #include "resourcePlacementCapture.h"
 #include "commandsAuto.h"
@@ -19,8 +20,8 @@ namespace DirectX {
 
 class ResourcePlacementPlayback {
 public:
-  void createHeap(ID3D12Device* device, unsigned heapKey, UINT64& size);
-  void createPlacedResource(unsigned resourceKey, UINT64& offset);
+  void createHeap(ID3D12Device* device, GITSKey heapKey, UINT64& size);
+  void createPlacedResource(GITSKey resourceKey, UINT64& offset);
   void updateTileMappings(ID3D12CommandQueueUpdateTileMappingsCommand& c);
   void calculateResourcePlacement(ID3D12Device* device);
 
@@ -31,14 +32,14 @@ private:
   };
 
   std::mutex m_Mutex;
-  std::unordered_map<unsigned, UINT64> m_ChangedResourceOffsets;
-  std::unordered_map<unsigned, UINT64> m_HeapSizeShifts;
+  std::unordered_map<GITSKey, UINT64> m_ChangedResourceOffsets;
+  std::unordered_map<GITSKey, UINT64> m_HeapSizeShifts;
   bool m_Initialized{};
-  std::unordered_map<unsigned, std::vector<ResourcePlacementShiftInfo>> m_Infos;
+  std::unordered_map<GITSKey, std::vector<ResourcePlacementShiftInfo>> m_Infos;
 
 private:
   void calculateResourcePlacement(ID3D12Device* device,
-                                  unsigned heapKey,
+                                  GITSKey heapKey,
                                   std::vector<ResourcePlacementShiftInfo>& infos);
   UINT64 getAlignedOffset(UINT64 alignment, UINT64 offset);
 };

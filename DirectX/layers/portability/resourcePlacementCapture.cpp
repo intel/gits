@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "resourcePlacementCapture.h"
+#include "arguments.h"
 #include "configurationLib.h"
 
 #include <filesystem>
@@ -15,8 +16,8 @@
 namespace gits {
 namespace DirectX {
 
-void ResourcePlacementCapture::createPlacedResource(unsigned heapKey,
-                                                    unsigned resourceKey,
+void ResourcePlacementCapture::createPlacedResource(GITSKey heapKey,
+                                                    GITSKey resourceKey,
                                                     UINT64 offset,
                                                     ID3D12Device* device,
                                                     D3D12_RESOURCE_DESC& desc) {

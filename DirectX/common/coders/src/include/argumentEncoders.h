@@ -108,7 +108,7 @@ unsigned GetSize(const InterfaceArrayArgument<T>& arg) {
   if (!arg.Value) {
     return sizeof(void*);
   }
-  return sizeof(void*) + sizeof(arg.Size) + sizeof(unsigned) * arg.Size;
+  return sizeof(void*) + sizeof(arg.Size) + sizeof(GITSKey) * arg.Size;
 }
 
 template <typename T>
@@ -118,8 +118,8 @@ void Encode(char* dest, unsigned& offset, const InterfaceArrayArgument<T>& arg) 
   }
   memcpy(dest + offset, &arg.Size, sizeof(arg.Size));
   offset += sizeof(arg.Size);
-  memcpy(dest + offset, arg.Keys.data(), sizeof(unsigned) * arg.Size);
-  offset += sizeof(unsigned) * arg.Size;
+  memcpy(dest + offset, arg.Keys.data(), sizeof(GITSKey) * arg.Size);
+  offset += sizeof(GITSKey) * arg.Size;
 }
 
 template <typename T>
@@ -154,7 +154,8 @@ unsigned GetSize(const DescriptorHandleArrayArgument<T>& arg) {
   if (!arg.Value) {
     return sizeof(void*);
   }
-  return sizeof(void*) + sizeof(arg.Size) + sizeof(unsigned) * arg.Size * 2;
+  return sizeof(void*) + sizeof(arg.Size) + sizeof(GITSKey) * arg.Size +
+         sizeof(unsigned) * arg.Size;
 }
 
 template <typename T>
@@ -164,8 +165,8 @@ void Encode(char* dest, unsigned& offset, const DescriptorHandleArrayArgument<T>
   }
   memcpy(dest + offset, &arg.Size, sizeof(arg.Size));
   offset += sizeof(arg.Size);
-  memcpy(dest + offset, arg.InterfaceKeys.data(), sizeof(unsigned) * arg.Size);
-  offset += sizeof(unsigned) * arg.Size;
+  memcpy(dest + offset, arg.InterfaceKeys.data(), sizeof(GITSKey) * arg.Size);
+  offset += sizeof(GITSKey) * arg.Size;
   memcpy(dest + offset, arg.Indexes.data(), sizeof(unsigned) * arg.Size);
   offset += sizeof(unsigned) * arg.Size;
 }

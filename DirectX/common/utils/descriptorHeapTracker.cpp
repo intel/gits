@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "descriptorHeapTracker.h"
+#include "arguments.h"
 
 #include <cassert>
 
@@ -17,7 +18,7 @@ void DescriptorHeapTracker::CreateDescriptor(Descriptor* descriptor) {
   m_DescriptorByHeapByIndex[descriptor->HeapKey][descriptor->DescriptorIndex].reset(descriptor);
 }
 
-void DescriptorHeapTracker::DestroyObject(unsigned key) {
+void DescriptorHeapTracker::DestroyObject(GITSKey key) {
   auto itHeap = m_DescriptorByHeapByIndex.find(key);
   if (itHeap != m_DescriptorByHeapByIndex.end()) {
     m_DescriptorByHeapByIndex.erase(itHeap);
@@ -54,7 +55,7 @@ void DescriptorHeapTracker::CopyDescriptors(ID3D12DeviceCopyDescriptorsCommand& 
   unsigned destRangeSize =
       c.m_pDestDescriptorRangeSizes.Value ? c.m_pDestDescriptorRangeSizes.Value[destRangeIndex] : 1;
 
-  unsigned destHeapKey = c.m_pDestDescriptorRangeStarts.InterfaceKeys[destRangeIndex];
+  GITSKey destHeapKey = c.m_pDestDescriptorRangeStarts.InterfaceKeys[destRangeIndex];
 
   for (unsigned srcRangeIndex = 0; srcRangeIndex < c.m_NumSrcDescriptorRanges.Value;
        ++srcRangeIndex) {
@@ -84,7 +85,7 @@ void DescriptorHeapTracker::CopyDescriptors(ID3D12DeviceCopyDescriptorsCommand& 
 }
 
 DescriptorHeapTracker::Descriptor* DescriptorHeapTracker::CopyDescriptor(
-    Descriptor* descriptor, unsigned destHeapKey, unsigned destDescriptorIndex) {
+    Descriptor* descriptor, GITSKey destHeapKey, unsigned destDescriptorIndex) {
   Descriptor* dest = new Descriptor(*descriptor);
   dest->HeapKey = destHeapKey;
   dest->DescriptorIndex = destDescriptorIndex;

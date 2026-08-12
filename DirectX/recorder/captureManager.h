@@ -26,6 +26,7 @@
 #include "contextMapService.h"
 #include "directx.h"
 #include "captureLayerManager.h"
+#include "arguments.h"
 
 #include <vector>
 #include <memory>
@@ -99,13 +100,13 @@ public:
     return --m_LocalStackDepth;
   }
 
-  unsigned CreateWrapperKey() {
-    return m_WrapperUniqueKey.fetch_add(1, std::memory_order_relaxed) + 1;
+  GITSKey CreateWrapperKey() {
+    return m_WrapperUniqueKey.fetch_add(GITSKey{1}, std::memory_order_relaxed) + GITSKey{1};
   }
-  unsigned CreateCommandKey() {
-    return m_CommandUniqueKey.fetch_add(1, std::memory_order_relaxed) + 1;
+  GITSKey CreateCommandKey() {
+    return m_CommandUniqueKey.fetch_add(GITSKey{1}, std::memory_order_relaxed) + GITSKey{1};
   }
-  std::pair<unsigned, unsigned> CreateCommandKeyRange(unsigned rangeSize);
+  std::pair<GITSKey, GITSKey> CreateCommandKeyRange(unsigned rangeSize);
 
   void UpdateCommandKey(Command& command) {
     m_Recorder->Skip(command.Key);
@@ -185,8 +186,8 @@ private:
   std::atomic<unsigned> m_GlobalStackDepth{0};
   static thread_local unsigned m_LocalStackDepth;
 
-  std::atomic<unsigned> m_WrapperUniqueKey{0};
-  std::atomic<unsigned> m_CommandUniqueKey{0};
+  std::atomic<GITSKey> m_WrapperUniqueKey{0};
+  std::atomic<GITSKey> m_CommandUniqueKey{0};
 
   std::unordered_map<IUnknown*, IUnknownWrapper*> m_Wrappers;
   std::mutex m_WrappersMutex;

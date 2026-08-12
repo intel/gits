@@ -31,15 +31,15 @@ public:
 
 private:
   void Close();
-  void SwapChainCreate(unsigned swapChainKey, IUnknown* commandQueue);
-  void SwapChainPresent(unsigned swapChainKey, IDXGISwapChain* swapChain);
+  void SwapChainCreate(GITSKey swapChainKey, IUnknown* commandQueue);
+  void SwapChainPresent(GITSKey swapChainKey, IDXGISwapChain* swapChain);
 
 private:
-  std::map<unsigned, std::unique_ptr<ScreenshotDump>> m_ScreenshotDump;
+  std::map<GITSKey, std::unique_ptr<ScreenshotDump>> m_ScreenshotDump;
   BitRange m_ScreenshotRange;
   std::wstring m_DumpPath;
   unsigned m_CurrentFrame{};
-  std::unordered_map<unsigned, ID3D12CommandQueue*> m_XefgToDeviceMap;
+  std::unordered_map<GITSKey, ID3D12CommandQueue*> m_XefgToDeviceMap;
 };
 
 } // namespace DirectX

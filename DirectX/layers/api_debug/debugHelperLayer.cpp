@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "debugHelperLayer.h"
+#include "arguments.h"
 #include "configurationLib.h"
 
 #include <sstream>
@@ -14,14 +15,14 @@
 namespace gits {
 namespace DirectX {
 
-void DebugHelperLayer::SetD3D12ObjectName(void* object, unsigned key) {
+void DebugHelperLayer::SetD3D12ObjectName(void* object, GITSKey key) {
   ID3D12Object* d3d12Object = static_cast<ID3D12Object*>(object);
   std::wstringstream s;
   s << "O" << key;
   d3d12Object->SetName(s.str().c_str());
 }
 
-void DebugHelperLayer::SetDXGIObjectName(void* object, unsigned key) {
+void DebugHelperLayer::SetDXGIObjectName(void* object, GITSKey key) {
   IDXGIObject* dxgiObject = static_cast<IDXGIObject*>(object);
   std::stringstream ss;
   ss << "O" << key;

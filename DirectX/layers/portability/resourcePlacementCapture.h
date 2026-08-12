@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #pragma once
+#include "arguments.h"
 
 #include <d3d12.h>
 #include <mutex>
@@ -16,8 +17,8 @@ namespace gits {
 namespace DirectX {
 
 struct ResourcePlacementInfo {
-  unsigned heapKey{};
-  unsigned key{};
+  GITSKey heapKey{};
+  GITSKey key{};
   UINT64 offset{};
   UINT64 size{};
   UINT64 alignment{};
@@ -26,8 +27,8 @@ struct ResourcePlacementInfo {
 
 class ResourcePlacementCapture {
 public:
-  void createPlacedResource(unsigned heapKey,
-                            unsigned resourceKey,
+  void createPlacedResource(GITSKey heapKey,
+                            GITSKey resourceKey,
                             UINT64 offset,
                             ID3D12Device* device,
                             D3D12_RESOURCE_DESC& desc);

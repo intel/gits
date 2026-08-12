@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #pragma once
+#include "arguments.h"
 
 #include "commandsAuto.h"
 
@@ -18,10 +19,10 @@ namespace DirectX {
 
 class PipelineLibraryService {
 public:
-  void ReleasePipelineState(unsigned pipelineStateKey, unsigned refCount);
-  void AddRefPipelineState(unsigned pipelineStateKey);
+  void ReleasePipelineState(GITSKey pipelineStateKey, unsigned refCount);
+  void AddRefPipelineState(GITSKey pipelineStateKey);
   void CreatePipelineLibrary(ID3D12Device1CreatePipelineLibraryCommand& c);
-  void CreatePipelineState(unsigned pipelineStateKey);
+  void CreatePipelineState(GITSKey pipelineStateKey);
   HRESULT LoadComputePipeline(ID3D12PipelineLibraryLoadComputePipelineCommand& c);
   HRESULT LoadGraphicsPipeline(ID3D12PipelineLibraryLoadGraphicsPipelineCommand& c);
   HRESULT LoadPipeline(ID3D12PipelineLibrary1LoadPipelineCommand& c);
@@ -31,11 +32,11 @@ public:
                             LPCWSTR name,
                             Desc* desc,
                             REFIID iid,
-                            unsigned pipelineStateKey,
+                            GITSKey pipelineStateKey,
                             void** ppPipelineState);
 
 private:
-  std::unordered_map<unsigned, unsigned> m_PipelineStateRefCounts;
+  std::unordered_map<GITSKey, unsigned> m_PipelineStateRefCounts;
   std::mutex m_Mutex;
 };
 

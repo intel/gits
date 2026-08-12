@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "analyzerRaytracingService.h"
+#include "arguments.h"
 #include "analyzerCommandListService.h"
 #include "resourceStateEnhanced.h"
 #include "log.h"
@@ -39,7 +40,7 @@ AnalyzerRaytracingService::AnalyzerRaytracingService(
 
 void AnalyzerRaytracingService::CreateStateObject(ID3D12Device5CreateStateObjectCommand& c) {
 
-  std::set<unsigned>& subobjects = m_StateObjectsDirectSubobjects[c.m_ppStateObject.Key];
+  std::set<GITSKey>& subobjects = m_StateObjectsDirectSubobjects[c.m_ppStateObject.Key];
   for (auto& it : c.m_pDesc.InterfaceKeysBySubobject) {
     subobjects.insert(it.second);
   }
@@ -50,7 +51,7 @@ void AnalyzerRaytracingService::CreateStateObject(ID3D12Device5CreateStateObject
 }
 
 void AnalyzerRaytracingService::AddToStateObject(ID3D12Device7AddToStateObjectCommand& c) {
-  std::set<unsigned>& subobjects = m_StateObjectsDirectSubobjects[c.m_ppNewStateObject.Key];
+  std::set<GITSKey>& subobjects = m_StateObjectsDirectSubobjects[c.m_ppNewStateObject.Key];
   for (auto& it : c.m_pAddition.InterfaceKeysBySubobject) {
     subobjects.insert(it.second);
   }
@@ -95,7 +96,7 @@ void AnalyzerRaytracingService::FillStateObjectInfo(
       }
     } break;
     case D3D12_STATE_SUBOBJECT_TYPE_EXISTING_COLLECTION: {
-      unsigned stateObjectKey = stateObjectDesc.InterfaceKeysBySubobject[i];
+      GITSKey stateObjectKey = stateObjectDesc.InterfaceKeysBySubobject[i];
       auto itCollection = m_StateObjectInfos.find(stateObjectKey);
       GITS_ASSERT(itCollection != m_StateObjectInfos.end());
       for (auto& it : itCollection->second->ExportToRootSignature) {
@@ -137,7 +138,7 @@ void AnalyzerRaytracingService::SetPipelineState(
   m_StateObjectByComandList[c.m_Object.Key] = c.m_pStateObject.Key;
 }
 
-void AnalyzerRaytracingService::SetDescriptorHeaps(unsigned commandListKey,
+void AnalyzerRaytracingService::SetDescriptorHeaps(GITSKey commandListKey,
                                                    const std::vector<DescriptorHeapInfo>& infos) {
   BindingTablesDump::DescriptorHeaps descriptorHeaps{};
   for (const DescriptorHeapInfo& info : infos) {
@@ -180,11 +181,11 @@ void AnalyzerRaytracingService::BuildTlas(
 
     struct InstanceInfo {
       ID3D12Resource* resource{};
-      unsigned resourceKey{};
+      GITSKey resourceKey{};
       D3D12_GPU_VIRTUAL_ADDRESS captureStart;
-      std::set<unsigned> offsets;
+      std::set<GITSKey> offsets;
     };
-    std::unordered_map<unsigned, InstanceInfo> instancesByResourceKey;
+    std::unordered_map<GITSKey, InstanceInfo> instancesByResourceKey;
 
     std::vector<InstanceInfo*> instanceInfos(arrayOfPointers.size());
     for (unsigned i = 0; i < arrayOfPointers.size(); ++i) {
@@ -236,7 +237,7 @@ void AnalyzerRaytracingService::BuildTlas(
 
 void AnalyzerRaytracingService::DispatchRays(ID3D12GraphicsCommandList4DispatchRaysCommand& c) {
 
-  auto dump = [&](unsigned resourceKey, unsigned offset, UINT64 size, UINT64 stride,
+  auto dump = [&](GITSKey resourceKey, unsigned offset, UINT64 size, UINT64 stride,
                   D3D12_GPU_VIRTUAL_ADDRESS address) {
     if (resourceKey && size) {
       ID3D12Resource* resource = m_ResourceByKey[resourceKey];
@@ -263,9 +264,9 @@ void AnalyzerRaytracingService::DispatchRays(ID3D12GraphicsCommandList4DispatchR
 }
 
 void AnalyzerRaytracingService::DumpBindingTable(ID3D12GraphicsCommandList* commandList,
-                                                 unsigned commandListKey,
+                                                 GITSKey commandListKey,
                                                  ID3D12Resource* resource,
-                                                 unsigned resourceKey,
+                                                 GITSKey resourceKey,
                                                  unsigned offset,
                                                  UINT64 size,
                                                  UINT64 stride,
@@ -274,7 +275,7 @@ void AnalyzerRaytracingService::DumpBindingTable(ID3D12GraphicsCommandList* comm
     stride = size;
   }
 
-  unsigned stateObjectKey = m_StateObjectByComandList[commandListKey];
+  GITSKey stateObjectKey = m_StateObjectByComandList[commandListKey];
   GITS_ASSERT(stateObjectKey);
   BindingTablesDump::StateObjectInfo* stateObjectInfo = m_StateObjectInfos[stateObjectKey].get();
   GITS_ASSERT(stateObjectInfo);
@@ -282,7 +283,7 @@ void AnalyzerRaytracingService::DumpBindingTable(ID3D12GraphicsCommandList* comm
   auto itDescriptorHeaps = m_DescriptorHeapsByComandList.find(commandListKey);
   GITS_ASSERT(itDescriptorHeaps != m_DescriptorHeapsByComandList.end());
 
-  unsigned rootSignatureKey = m_CommandListService.GetComputeRootSignatureKey(commandListKey);
+  GITSKey rootSignatureKey = m_CommandListService.GetComputeRootSignatureKey(commandListKey);
 
   BarrierState currentState = GetAdjustedCurrentState(
       m_ResourceStateTracker, m_GpuAddressService, commandList, address, resource, resourceKey,
@@ -298,8 +299,8 @@ void AnalyzerRaytracingService::Flush() {
   m_BindingTablesDump.WaitUntilDumped();
 }
 
-void AnalyzerRaytracingService::ExecuteCommandLists(unsigned key,
-                                                    unsigned commandQueueKey,
+void AnalyzerRaytracingService::ExecuteCommandLists(GITSKey key,
+                                                    GITSKey commandQueueKey,
                                                     ID3D12CommandQueue* commandQueue,
                                                     ID3D12CommandList** commandLists,
                                                     unsigned commandListNum) {
@@ -309,23 +310,23 @@ void AnalyzerRaytracingService::ExecuteCommandLists(unsigned key,
                                           commandListNum);
 }
 
-void AnalyzerRaytracingService::CommandQueueWait(unsigned key,
-                                                 unsigned commandQueueKey,
-                                                 unsigned fenceKey,
+void AnalyzerRaytracingService::CommandQueueWait(GITSKey key,
+                                                 GITSKey commandQueueKey,
+                                                 GITSKey fenceKey,
                                                  UINT64 fenceValue) {
   m_InstancesDump.CommandQueueWait(key, commandQueueKey, fenceKey, fenceValue);
   m_BindingTablesDump.CommandQueueWait(key, commandQueueKey, fenceKey, fenceValue);
 }
 
-void AnalyzerRaytracingService::CommandQueueSignal(unsigned key,
-                                                   unsigned commandQueueKey,
-                                                   unsigned fenceKey,
+void AnalyzerRaytracingService::CommandQueueSignal(GITSKey key,
+                                                   GITSKey commandQueueKey,
+                                                   GITSKey fenceKey,
                                                    UINT64 fenceValue) {
   m_InstancesDump.CommandQueueSignal(key, commandQueueKey, fenceKey, fenceValue);
   m_BindingTablesDump.CommandQueueSignal(key, commandQueueKey, fenceKey, fenceValue);
 }
 
-void AnalyzerRaytracingService::FenceSignal(unsigned key, unsigned fenceKey, UINT64 fenceValue) {
+void AnalyzerRaytracingService::FenceSignal(GITSKey key, GITSKey fenceKey, UINT64 fenceValue) {
   m_InstancesDump.FenceSignal(key, fenceKey, fenceValue);
   m_BindingTablesDump.FenceSignal(key, fenceKey, fenceValue);
 }
@@ -334,25 +335,25 @@ void AnalyzerRaytracingService::GetGPUVirtualAddress(ID3D12ResourceGetGPUVirtual
   m_ResourceByKey[c.m_Object.Key] = c.m_Object.Value;
 }
 
-std::set<unsigned> AnalyzerRaytracingService::GetStateObjectAllSubobjects(unsigned stateObjectKey) {
+std::set<GITSKey> AnalyzerRaytracingService::GetStateObjectAllSubobjects(GITSKey stateObjectKey) {
 
-  std::set<unsigned> subobjects;
+  std::set<GITSKey> subobjects;
   // search the graph of connected subobjects
   {
     std::queue<unsigned> subobjectsToProcess;
     {
-      std::set<unsigned>& directSubobjects = m_StateObjectsDirectSubobjects[stateObjectKey];
-      for (unsigned directSubobjectKey : directSubobjects) {
+      std::set<GITSKey>& directSubobjects = m_StateObjectsDirectSubobjects[stateObjectKey];
+      for (GITSKey directSubobjectKey : directSubobjects) {
         subobjectsToProcess.push(directSubobjectKey);
       }
     }
 
     while (!subobjectsToProcess.empty()) {
-      unsigned key = subobjectsToProcess.front();
+      GITSKey key = subobjectsToProcess.front();
       subobjectsToProcess.pop();
       subobjects.insert(key);
-      std::set<unsigned>& directSubobjects = m_StateObjectsDirectSubobjects[key];
-      for (unsigned directSubobjectKey : directSubobjects) {
+      std::set<GITSKey>& directSubobjects = m_StateObjectsDirectSubobjects[key];
+      for (GITSKey directSubobjectKey : directSubobjects) {
         if (subobjects.find(directSubobjectKey) == subobjects.end()) {
           subobjectsToProcess.push(directSubobjectKey);
         }
@@ -367,7 +368,7 @@ void AnalyzerRaytracingService::LoadInstancesArraysOfPointers() {
   std::filesystem::path dumpPath = Configurator::Get().common.player.streamDir;
   std::ifstream stream(dumpPath / "raytracingArraysOfPointers.dat", std::ios::binary);
   while (true) {
-    unsigned callKey{};
+    GITSKey callKey{};
     stream.read(reinterpret_cast<char*>(&callKey), sizeof(unsigned));
     if (!stream) {
       break;
@@ -390,7 +391,7 @@ unsigned AnalyzerRaytracingService::FindTlas(const KeyOffset& tlas) {
   return 0;
 }
 
-void AnalyzerRaytracingService::GetTlases(std::set<unsigned>& tlases) {
+void AnalyzerRaytracingService::GetTlases(std::set<GITSKey>& tlases) {
   for (auto& it : m_TlasBuildKeys) {
     tlases.insert(it.second);
   }

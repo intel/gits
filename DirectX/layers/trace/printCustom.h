@@ -24,7 +24,7 @@
 namespace gits {
 namespace DirectX {
 
-FastOStream& PrintObjectKey(FastOStream& stream, unsigned key);
+FastOStream& PrintObjectKey(FastOStream& stream, GITSKey key);
 FastOStream& PrintString(FastOStream& stream, const wchar_t* s);
 FastOStream& PrintString(FastOStream& stream, const char* s);
 

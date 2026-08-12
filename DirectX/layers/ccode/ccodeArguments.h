@@ -24,7 +24,7 @@ namespace gits {
 namespace DirectX {
 namespace ccode {
 
-void declareObject(const std::string& type, unsigned key);
+void declareObject(const std::string& type, GITSKey key);
 
 template <template <typename> typename Arg, typename T>
 void argumentToCpp(Arg<T>& arg, CppParameterInfo& info, CppParameterOutput& out) {

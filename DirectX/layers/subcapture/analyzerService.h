@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #pragma once
+#include "arguments.h"
 
 #include "commandsAuto.h"
 #include "gpuExecutionTracker.h"
@@ -44,39 +45,39 @@ public:
     return !m_BeforeRange && !m_InRange;
   }
 
-  void NotifyObject(unsigned objectKey);
-  void NotifyObjects(const std::vector<unsigned>& objectKeys);
+  void NotifyObject(GITSKey objectKey);
+  void NotifyObjects(const std::vector<GITSKey>& objectKeys);
 
-  void CommandListCommand(unsigned commandListKey);
-  void Present(unsigned callKey, unsigned swapChainKey);
-  void ExecuteCommandLists(unsigned callKey,
-                           unsigned commandQueueKey,
-                           std::vector<unsigned>& commandListKeys);
-  void CommandListReset(unsigned commandListKey, unsigned allocatorKey, unsigned initialStateKey);
+  void CommandListCommand(GITSKey commandListKey);
+  void Present(GITSKey callKey, GITSKey swapChainKey);
+  void ExecuteCommandLists(GITSKey callKey,
+                           GITSKey commandQueueKey,
+                           std::vector<GITSKey>& commandListKeys);
+  void CommandListReset(GITSKey commandListKey, GITSKey allocatorKey, GITSKey initialStateKey);
   void ExecutionStart();
   void ExecutionEnd();
-  void CommandQueueWait(unsigned callKey,
-                        unsigned commandQueueKey,
-                        unsigned fenceKey,
+  void CommandQueueWait(GITSKey callKey,
+                        GITSKey commandQueueKey,
+                        GITSKey fenceKey,
                         UINT64 fenceValue);
-  void CommandQueueSignal(unsigned callKey,
-                          unsigned commandQueueKey,
-                          unsigned fenceKey,
+  void CommandQueueSignal(GITSKey callKey,
+                          GITSKey commandQueueKey,
+                          GITSKey fenceKey,
                           UINT64 fenceValue);
-  void FenceSignal(unsigned callKey, unsigned fenceKey, UINT64 fenceValue);
-  void MappedDataMeta(unsigned resourceKey);
+  void FenceSignal(GITSKey callKey, GITSKey fenceKey, UINT64 fenceValue);
+  void MappedDataMeta(GITSKey resourceKey);
   void CreateXessContext(xessD3D12CreateContextCommand& c);
   void CreateXellContext(xellD3D12CreateContextCommand& c);
   void CreateXefgContext(xefgSwapChainD3D12CreateContextCommand& c);
-  void ForceApplicationSwapChainRestore(unsigned key);
+  void ForceApplicationSwapChainRestore(GITSKey key);
   void CreateDeviceExtensionContext(INTC_D3D12_CreateDeviceExtensionContextCommand& c);
   void CreateDeviceExtensionContext(INTC_D3D12_CreateDeviceExtensionContext1Command& c);
   void CreateDeviceExtensionContext(INTC_D3D12_CreateDeviceExtensionContext2Command& c);
 
-  void AddParent(unsigned key, unsigned parentKey);
+  void AddParent(GITSKey key, GITSKey parentKey);
 
 private:
-  void FindParents(unsigned key, std::set<unsigned>& objectKeys);
+  void FindParents(GITSKey key, std::set<GITSKey>& objectKeys);
   void ClearReadyExecutables();
   void DumpAnalysisFile();
 
@@ -88,24 +89,24 @@ private:
   RaytracingOptimizationService& m_RaytracingOptimizationService;
   bool m_Optimize{};
 
-  std::unordered_map<unsigned, std::vector<unsigned>> m_ParentKeys;
+  std::unordered_map<GITSKey, std::vector<GITSKey>> m_ParentKeys;
 
   struct ExecuteCommandListCommand : public GpuExecutionTracker::Executable {
-    std::vector<unsigned> CommandListKeys;
+    std::vector<GITSKey> CommandListKeys;
   };
 
   GpuExecutionTracker m_GpuExecutionTracker;
   bool m_BeforeRange{true};
   bool m_InRange{};
 
-  std::set<unsigned> m_CommandListsResetBeforeExecution;
-  std::set<unsigned> m_CommandListsExecuted;
-  std::set<unsigned> m_CommandListsReset;
-  std::set<unsigned> m_CommandListsForRestore;
+  std::set<GITSKey> m_CommandListsResetBeforeExecution;
+  std::set<GITSKey> m_CommandListsExecuted;
+  std::set<GITSKey> m_CommandListsReset;
+  std::set<GITSKey> m_CommandListsForRestore;
 
-  std::map<unsigned, std::vector<unsigned>> m_CommandQueueCommandsForRestore;
+  std::map<GITSKey, std::vector<GITSKey>> m_CommandQueueCommandsForRestore;
 
-  std::set<unsigned> m_ObjectsForRestore;
+  std::set<GITSKey> m_ObjectsForRestore;
 };
 
 } // namespace DirectX

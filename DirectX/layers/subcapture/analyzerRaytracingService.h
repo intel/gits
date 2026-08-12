@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #pragma once
+#include "arguments.h"
 
 #include "commandsAuto.h"
 #include "raytracingInstancesDump.h"
@@ -41,40 +42,37 @@ public:
   void SetPipelineState(ID3D12GraphicsCommandList4SetPipelineState1Command& c);
 
   struct DescriptorHeapInfo {
-    unsigned Key{};
+    GITSKey Key{};
     D3D12_DESCRIPTOR_HEAP_TYPE Type{};
     unsigned NumDescriptors{};
   };
-  void SetDescriptorHeaps(unsigned commandListKey, const std::vector<DescriptorHeapInfo>& infos);
+  void SetDescriptorHeaps(GITSKey commandListKey, const std::vector<DescriptorHeapInfo>& infos);
 
   void BuildTlas(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c);
   void DispatchRays(ID3D12GraphicsCommandList4DispatchRaysCommand& c);
   void DumpBindingTable(ID3D12GraphicsCommandList* commandList,
-                        unsigned commandListKey,
+                        GITSKey commandListKey,
                         ID3D12Resource* resource,
-                        unsigned resourceKey,
+                        GITSKey resourceKey,
                         unsigned offset,
                         UINT64 size,
                         UINT64 stride,
                         D3D12_GPU_VIRTUAL_ADDRESS address);
-  void AddAccelerationStructureSource(unsigned key, unsigned offset) {
+  void AddAccelerationStructureSource(GITSKey key, unsigned offset) {
     m_Sources.insert(std::make_pair(key, offset));
   }
   void Flush();
-  void ExecuteCommandLists(unsigned key,
-                           unsigned commandQueueKey,
+  void ExecuteCommandLists(GITSKey key,
+                           GITSKey commandQueueKey,
                            ID3D12CommandQueue* commandQueue,
                            ID3D12CommandList** commandLists,
                            unsigned commandListNum);
-  void CommandQueueWait(unsigned key,
-                        unsigned commandQueueKey,
-                        unsigned fenceKey,
-                        UINT64 fenceValue);
-  void CommandQueueSignal(unsigned key,
-                          unsigned commandQueueKey,
-                          unsigned fenceKey,
+  void CommandQueueWait(GITSKey key, GITSKey commandQueueKey, GITSKey fenceKey, UINT64 fenceValue);
+  void CommandQueueSignal(GITSKey key,
+                          GITSKey commandQueueKey,
+                          GITSKey fenceKey,
                           UINT64 fenceValue);
-  void FenceSignal(unsigned key, unsigned fenceKey, UINT64 fenceValue);
+  void FenceSignal(GITSKey key, GITSKey fenceKey, UINT64 fenceValue);
   void GetGPUVirtualAddress(ID3D12ResourceGetGPUVirtualAddressCommand& c);
 
   CapturePlayerGpuAddressService& GetGpuAddressService() {
@@ -93,9 +91,9 @@ public:
     return m_RootSignatureService;
   }
 
-  std::set<unsigned> GetStateObjectAllSubobjects(unsigned stateObjectKey);
-  using KeyOffset = std::pair<unsigned, unsigned>;
-  std::vector<KeyOffset>& GetBlases(unsigned tlasBuildKey) {
+  std::set<GITSKey> GetStateObjectAllSubobjects(GITSKey stateObjectKey);
+  using KeyOffset = std::pair<GITSKey, GITSKey>;
+  std::vector<KeyOffset>& GetBlases(GITSKey tlasBuildKey) {
     return m_BlasesByTlas[tlasBuildKey];
   }
   std::set<KeyOffset>& GetSources() {
@@ -109,7 +107,7 @@ public:
   }
 
   unsigned FindTlas(const KeyOffset& tlas);
-  void GetTlases(std::set<unsigned>& tlases);
+  void GetTlases(std::set<GITSKey>& tlases);
 
 private:
   void FillStateObjectInfo(D3D12_STATE_OBJECT_DESC_Argument& stateObjectDesc,
@@ -125,19 +123,19 @@ private:
   DescriptorRootSignatureService& m_RootSignatureService;
   ResourceStateTracker& m_ResourceStateTracker;
 
-  std::unordered_map<unsigned, std::set<unsigned>> m_StateObjectsDirectSubobjects;
-  std::unordered_map<unsigned, std::unique_ptr<BindingTablesDump::StateObjectInfo>>
+  std::unordered_map<GITSKey, std::set<GITSKey>> m_StateObjectsDirectSubobjects;
+  std::unordered_map<GITSKey, std::unique_ptr<BindingTablesDump::StateObjectInfo>>
       m_StateObjectInfos;
-  std::unordered_map<unsigned, unsigned> m_StateObjectByComandList;
-  std::unordered_map<unsigned, BindingTablesDump::DescriptorHeaps> m_DescriptorHeapsByComandList;
+  std::unordered_map<GITSKey, GITSKey> m_StateObjectByComandList;
+  std::unordered_map<GITSKey, BindingTablesDump::DescriptorHeaps> m_DescriptorHeapsByComandList;
 
   RaytracingInstancesDump m_InstancesDump;
   BindingTablesDump m_BindingTablesDump;
-  std::unordered_map<unsigned, std::vector<KeyOffset>> m_BlasesByTlas;
+  std::unordered_map<GITSKey, std::vector<KeyOffset>> m_BlasesByTlas;
   std::map<KeyOffset, unsigned> m_TlasBuildKeys;
   std::set<KeyOffset> m_Sources;
-  std::unordered_map<unsigned, ID3D12Resource*> m_ResourceByKey;
-  std::unordered_map<unsigned, std::vector<D3D12_GPU_VIRTUAL_ADDRESS>> m_InstancesArraysOfPointers;
+  std::unordered_map<GITSKey, ID3D12Resource*> m_ResourceByKey;
+  std::unordered_map<GITSKey, std::vector<D3D12_GPU_VIRTUAL_ADDRESS>> m_InstancesArraysOfPointers;
 };
 
 } // namespace DirectX

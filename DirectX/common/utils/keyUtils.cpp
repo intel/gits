@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "keyUtils.h"
+#include "arguments.h"
 
 #include <limits>
 #include <stdexcept>
@@ -28,7 +29,7 @@ ConfigKeySet::ConfigKeySet(const std::string& keys) {
         if (parsed > (std::numeric_limits<unsigned>::max() >> 2)) {
           throw std::out_of_range("Config key value out of range: " + key);
         }
-        unsigned k = static_cast<unsigned>(parsed);
+        GITSKey k = static_cast<GITSKey>(parsed);
         if (key[0] == 'S') {
           k |= STATE_RESTORE_KEY_MASK;
         } else if (key[0] == 'E') {
@@ -52,7 +53,7 @@ std::string ParseConfigKeys(const std::string& keys) {
       if (parsed > (std::numeric_limits<unsigned>::max() >> 2)) {
         throw std::out_of_range("Config key value out of range");
       }
-      unsigned k = static_cast<unsigned>(parsed);
+      GITSKey k = static_cast<GITSKey>(parsed);
       if (c == 'S') {
         k |= STATE_RESTORE_KEY_MASK;
       } else if (c == 'E') {

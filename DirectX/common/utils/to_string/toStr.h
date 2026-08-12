@@ -9,6 +9,7 @@
 #pragma once
 
 #include "directx.h"
+#include "arguments.h"
 #include "enumToStrAuto.h"
 #include "enumToStrCustom.h"
 #include "guidToStrAuto.h"
@@ -19,8 +20,8 @@ namespace gits {
 namespace DirectX {
 
 std::string toStr(const wchar_t* s);
-std::string keyToStr(unsigned key);
-std::wstring keyToWStr(unsigned key);
+std::string keyToStr(GITSKey key);
+std::wstring keyToWStr(GITSKey key);
 
 std::string toStr(const LARGE_INTEGER& i);
 std::string toStr(const float& f);

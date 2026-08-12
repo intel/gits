@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "screenshotsLayer.h"
+#include "arguments.h"
 #include "keyUtils.h"
 #include "log.h"
 #include "configurator.h"
@@ -103,14 +104,14 @@ void ScreenshotsLayer::Pre(IDXGISwapChain1Present1Command& c) {
   }
 }
 
-void ScreenshotsLayer::SwapChainCreate(unsigned swapChainKey, IUnknown* commandQueue) {
+void ScreenshotsLayer::SwapChainCreate(GITSKey swapChainKey, IUnknown* commandQueue) {
   Microsoft::WRL::ComPtr<ID3D12CommandQueue> d3d12CommandQueue;
   HRESULT hr = commandQueue->QueryInterface(IID_PPV_ARGS(&d3d12CommandQueue));
   GITS_ASSERT(hr == S_OK);
   m_ScreenshotDump[swapChainKey].reset(new ScreenshotDump(d3d12CommandQueue.Get()));
 }
 
-void ScreenshotsLayer::SwapChainPresent(unsigned swapChainKey, IDXGISwapChain* swapChain) {
+void ScreenshotsLayer::SwapChainPresent(GITSKey swapChainKey, IDXGISwapChain* swapChain) {
   auto it = m_ScreenshotDump.find(swapChainKey);
   GITS_ASSERT(it != m_ScreenshotDump.end());
 

@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #pragma once
+#include "arguments.h"
 
 #include "directx.h"
 #include "tbb/spin_rw_mutex.h"
@@ -22,36 +23,36 @@ namespace DirectX {
 class GpuAddressService {
 public:
   struct GpuAddressInfo {
-    unsigned ResourceKey;
+    GITSKey ResourceKey;
     unsigned Offset;
   };
 
-  void CreateResource(unsigned resourceKey, ID3D12Resource* resource);
-  void CreatePlacedResource(unsigned resourceKey,
+  void CreateResource(GITSKey resourceKey, ID3D12Resource* resource);
+  void CreatePlacedResource(GITSKey resourceKey,
                             ID3D12Resource* resource,
-                            unsigned heapKey,
+                            GITSKey heapKey,
                             ID3D12Heap* heap,
                             UINT64 heapOffset,
                             bool raytracingAS);
-  void CreateHeap(unsigned heapKey, ID3D12Heap* heap);
+  void CreateHeap(GITSKey heapKey, ID3D12Heap* heap);
   GpuAddressInfo GetGpuAddressInfo(UINT64 gpuAddress, bool raytracingAS = false) const;
-  void DestroyInterface(unsigned interfaceKey);
+  void DestroyInterface(GITSKey interfaceKey);
 
 private:
   struct HeapInfo {
-    unsigned Key{};
+    GITSKey Key{};
     D3D12_GPU_VIRTUAL_ADDRESS Start{};
     D3D12_GPU_VIRTUAL_ADDRESS End{};
   };
   struct ResourceInfo {
-    unsigned Key{};
+    GITSKey Key{};
     D3D12_GPU_VIRTUAL_ADDRESS Start{};
     D3D12_GPU_VIRTUAL_ADDRESS End{};
     virtual ~ResourceInfo() = default;
   };
   struct PlacedResourceInfo : public ResourceInfo {
     HeapInfo* HeapInfo{};
-    unsigned HeapKey{};
+    GITSKey HeapKey{};
     unsigned Layer{};
     bool RaytracingAS{};
     std::unordered_set<PlacedResourceInfo*> Intersecting;
@@ -63,10 +64,10 @@ private:
   std::map<D3D12_GPU_VIRTUAL_ADDRESS, ResourceInfo*> m_ResourcesByStartAddress;
   std::map<D3D12_GPU_VIRTUAL_ADDRESS, HeapInfoLayered*> m_HeapsByStartAddress;
 
-  std::unordered_map<unsigned, std::unique_ptr<ResourceInfo>> m_ResourcesByKey;
-  std::unordered_map<unsigned, std::unique_ptr<HeapInfoLayered>> m_HeapsByKey;
-  std::unordered_map<unsigned, std::unique_ptr<PlacedResourceInfo>> m_PlacedResourcesByKey;
-  std::unordered_map<unsigned, std::unordered_set<unsigned>> m_PlacedResourcesByHeap;
+  std::unordered_map<GITSKey, std::unique_ptr<ResourceInfo>> m_ResourcesByKey;
+  std::unordered_map<GITSKey, std::unique_ptr<HeapInfoLayered>> m_HeapsByKey;
+  std::unordered_map<GITSKey, std::unique_ptr<PlacedResourceInfo>> m_PlacedResourcesByKey;
+  std::unordered_map<GITSKey, std::unordered_set<GITSKey>> m_PlacedResourcesByHeap;
 
   mutable tbb::spin_rw_mutex m_RwMutex;
 

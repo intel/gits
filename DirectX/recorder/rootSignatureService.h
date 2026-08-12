@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #pragma once
+#include "arguments.h"
 
 #include "iunknownWrapper.h"
 #include "log.h"
@@ -20,17 +21,17 @@ namespace DirectX {
 
 class RootSignatureService {
 public:
-  void SerializeRootSignature(D3D12_ROOT_SIGNATURE_DESC* desc, unsigned blobKey);
-  void SerializeVersionedRootSignature(D3D12_VERSIONED_ROOT_SIGNATURE_DESC* desc, unsigned blobKey);
-  void SetBlobBufferPointer(unsigned blobKey, void* blobPointer);
-  void CreateRootSignature(void* blobPointer, unsigned blobLength, unsigned rootSignatureKey);
+  void SerializeRootSignature(D3D12_ROOT_SIGNATURE_DESC* desc, GITSKey blobKey);
+  void SerializeVersionedRootSignature(D3D12_VERSIONED_ROOT_SIGNATURE_DESC* desc, GITSKey blobKey);
+  void SetBlobBufferPointer(GITSKey blobKey, void* blobPointer);
+  void CreateRootSignature(void* blobPointer, unsigned blobLength, GITSKey rootSignatureKey);
 
-  void SetGraphicsRootSignature(unsigned commandListKey, unsigned rootSignatureKey);
-  void SetComputeRootSignature(unsigned commandListKey, unsigned rootSignatureKey);
-  void ResetRootSignatures(unsigned commandListKey);
-  D3D12_DESCRIPTOR_HEAP_TYPE GetGraphicsRootSignatureDescriptorHeapType(unsigned commandListKey,
+  void SetGraphicsRootSignature(GITSKey commandListKey, GITSKey rootSignatureKey);
+  void SetComputeRootSignature(GITSKey commandListKey, GITSKey rootSignatureKey);
+  void ResetRootSignatures(GITSKey commandListKey);
+  D3D12_DESCRIPTOR_HEAP_TYPE GetGraphicsRootSignatureDescriptorHeapType(GITSKey commandListKey,
                                                                         unsigned parameterIndex);
-  D3D12_DESCRIPTOR_HEAP_TYPE GetComputeRootSignatureDescriptorHeapType(unsigned commandListKey,
+  D3D12_DESCRIPTOR_HEAP_TYPE GetComputeRootSignatureDescriptorHeapType(GITSKey commandListKey,
                                                                        unsigned parameterIndex);
 
 private:
@@ -46,7 +47,7 @@ private:
     }
 
   private:
-    std::unordered_map<unsigned, D3D12_DESCRIPTOR_HEAP_TYPE>
+    std::unordered_map<GITSKey, D3D12_DESCRIPTOR_HEAP_TYPE>
         m_DescriptorTableHeapTypeByParameterIndex;
   };
 
@@ -55,12 +56,12 @@ private:
   void ParseRootSignatureDesc(ROOT_SIGNATURE_DESC& desc, RootSignatureInfo* rootSignatureInfo);
 
 private:
-  std::unordered_map<unsigned, RootSignatureInfo*> m_RootSignatureByBlobKey;
+  std::unordered_map<GITSKey, RootSignatureInfo*> m_RootSignatureByBlobKey;
   std::unordered_map<void*, RootSignatureInfo*> m_RootSignatureByBlobPointer;
-  std::unordered_map<unsigned, RootSignatureInfo*> m_RootSignatureByRootSignatureKey;
+  std::unordered_map<GITSKey, RootSignatureInfo*> m_RootSignatureByRootSignatureKey;
 
-  std::unordered_map<unsigned, RootSignatureInfo*> m_GraphicsRootSignatureByCommandListKey;
-  std::unordered_map<unsigned, RootSignatureInfo*> m_ComputeRootSignatureByCommandListKey;
+  std::unordered_map<GITSKey, RootSignatureInfo*> m_GraphicsRootSignatureByCommandListKey;
+  std::unordered_map<GITSKey, RootSignatureInfo*> m_ComputeRootSignatureByCommandListKey;
 
   std::mutex m_Mutex;
 };

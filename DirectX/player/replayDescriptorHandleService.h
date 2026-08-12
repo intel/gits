@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #pragma once
+#include "arguments.h"
 
 #include <d3d12.h>
 #include <array>
@@ -22,11 +23,11 @@ public:
     GpuHandle
   };
 
-  void CreateDescriptorHeap(unsigned descriptorHeapKey,
+  void CreateDescriptorHeap(GITSKey descriptorHeapKey,
                             ID3D12DescriptorHeap* descriptorHeap,
                             const D3D12_DESCRIPTOR_HEAP_DESC* desc);
-  size_t GetDescriptorHandle(unsigned descriptorHeapKey, HandleType handleType, unsigned index);
-  void DestroyDescriptorHeap(unsigned descriptorHeapKey);
+  size_t GetDescriptorHandle(GITSKey descriptorHeapKey, HandleType handleType, unsigned index);
+  void DestroyDescriptorHeap(GITSKey descriptorHeapKey);
 
 private:
   struct DescriptorHeapInfo {
@@ -34,7 +35,7 @@ private:
     size_t GpuStart{};
     unsigned Increment{};
   };
-  std::unordered_map<unsigned, DescriptorHeapInfo> m_DescriptorHeaps;
+  std::unordered_map<GITSKey, DescriptorHeapInfo> m_DescriptorHeaps;
 
   std::array<unsigned, D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES> m_DescriptorHeapIncrements{};
   bool m_Initialized{false};

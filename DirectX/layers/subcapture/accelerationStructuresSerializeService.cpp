@@ -61,7 +61,7 @@ void AccelerationStructuresSerializeService::CopyAccelerationStructure(
 
 void AccelerationStructuresSerializeService::ExecuteCommandLists(
     ID3D12CommandQueueExecuteCommandListsCommand& c) {
-  for (unsigned commandListKey : c.m_ppCommandLists.Keys) {
+  for (GITSKey commandListKey : c.m_ppCommandLists.Keys) {
     auto itByKey = m_AccelerationStructuresByCommandList.find(commandListKey);
     if (itByKey != m_AccelerationStructuresByCommandList.end()) {
       for (auto& it : itByKey->second) {
@@ -72,7 +72,7 @@ void AccelerationStructuresSerializeService::ExecuteCommandLists(
   }
 }
 
-void AccelerationStructuresSerializeService::DestroyResource(unsigned resourceKey) {
+void AccelerationStructuresSerializeService::DestroyResource(GITSKey resourceKey) {
   if (!m_SerializeMode) {
     return;
   }
@@ -187,7 +187,7 @@ void AccelerationStructuresSerializeService::RestoreAccelerationStructures() {
                                          IID_PPV_ARGS(&infoStagingResource));
   GITS_ASSERT(hr == S_OK);
 
-  std::map<unsigned, AccelerationStructure> accelerationStructuresByCallKey;
+  std::map<GITSKey, AccelerationStructure> accelerationStructuresByCallKey;
   for (auto& it : m_AccelerationStructures) {
     accelerationStructuresByCallKey[it.second.CallKey] = it.second;
   }
@@ -238,7 +238,7 @@ void AccelerationStructuresSerializeService::RestoreAccelerationStructures() {
       continue;
     }
 
-    unsigned DestKey = it.second.Key;
+    GITSKey DestKey = it.second.Key;
     unsigned DestOffset = it.second.Offset;
 
     // serialize acceleration structure
@@ -290,7 +290,7 @@ void AccelerationStructuresSerializeService::RestoreAccelerationStructures() {
 
     // create upload resource with serialize acceleration structure in subcaptured stream
 
-    unsigned uploadResourceKey = m_StateService.GetUniqueObjectKey();
+    GITSKey uploadResourceKey = m_StateService.GetUniqueObjectKey();
     heapProperties.Type = D3D12_HEAP_TYPE_UPLOAD;
     ID3D12DeviceCreateCommittedResourceCommand createUploadResource;
     createUploadResource.Key = m_StateService.GetUniqueCommandKey();

@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "accelerationStructuresDumpLayer.h"
+#include "arguments.h"
 #include "log.h"
 #include "configurationLib.h"
 
@@ -148,7 +149,7 @@ void AccelerationStructuresDumpLayer::CommandListModuloStep::Parse(const std::st
 }
 
 bool AccelerationStructuresDumpLayer::CommandListModuloStep::CheckNextCommandListCall(
-    unsigned commandListKey) {
+    GITSKey commandListKey) {
   if (!m_Step) {
     return true;
   }
@@ -161,7 +162,7 @@ bool AccelerationStructuresDumpLayer::CommandListModuloStep::CheckNextCommandLis
 }
 
 void AccelerationStructuresDumpLayer::CommandListModuloStep::ResetCommandList(
-    unsigned commandListKey) {
+    GITSKey commandListKey) {
   m_CommandListCalls.erase(commandListKey);
 }
 

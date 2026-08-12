@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "capturePlayerDescriptorHandleService.h"
+#include "arguments.h"
 #include "log.h"
 
 #include <wrl/client.h>
@@ -15,7 +16,7 @@ namespace gits {
 namespace DirectX {
 
 void CapturePlayerDescriptorHandleService::AddCaptureHandle(
-    ID3D12DescriptorHeap* heap, unsigned heapKey, D3D12_GPU_DESCRIPTOR_HANDLE captureHandle) {
+    ID3D12DescriptorHeap* heap, GITSKey heapKey, D3D12_GPU_DESCRIPTOR_HANDLE captureHandle) {
   std::lock_guard<std::mutex> lock(m_Mutex);
 
   auto itView = m_ViewHeapsByKey.find(heapKey);
@@ -58,7 +59,7 @@ void CapturePlayerDescriptorHandleService::AddCaptureHandle(
 }
 
 void CapturePlayerDescriptorHandleService::AddPlayerHandle(
-    unsigned heapKey, D3D12_GPU_DESCRIPTOR_HANDLE playerHandle) {
+    GITSKey heapKey, D3D12_GPU_DESCRIPTOR_HANDLE playerHandle) {
   std::lock_guard<std::mutex> lock(m_Mutex);
 
   auto it = m_ViewHeapsByKey.find(heapKey);
@@ -78,7 +79,7 @@ void CapturePlayerDescriptorHandleService::AddPlayerHandle(
   }
 }
 
-void CapturePlayerDescriptorHandleService::DestroyHeap(unsigned heapKey) {
+void CapturePlayerDescriptorHandleService::DestroyHeap(GITSKey heapKey) {
   std::lock_guard<std::mutex> lock(m_Mutex);
 
   auto itView = m_ViewHeapsByKey.find(heapKey);

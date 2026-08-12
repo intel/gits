@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #pragma once
+#include "arguments.h"
 
 #include "commandsAuto.h"
 #include "directx.h"
@@ -32,12 +33,12 @@ struct DescriptorState {
   DescriptorState(StateId id_) : Id(id_) {}
   virtual ~DescriptorState() = default;
   StateId Id{};
-  unsigned DeviceKey{};
+  GITSKey DeviceKey{};
   D3D12_CPU_DESCRIPTOR_HANDLE DestDescriptor{};
-  unsigned DestDescriptorKey{};
+  GITSKey DestDescriptorKey{};
   unsigned DestDescriptorIndex{};
-  unsigned ResourceKey{};
-  unsigned AuxiliaryResourceKey{};
+  GITSKey ResourceKey{};
+  GITSKey AuxiliaryResourceKey{};
 };
 
 struct D3D12RenderTargetViewState : public DescriptorState {
@@ -88,16 +89,16 @@ public:
       : m_StateService(stateService),
         m_ResourceForCBVRestoreService(resourceForCBVRestoreService) {}
   void StoreState(DescriptorState* state);
-  void RemoveState(unsigned key);
+  void RemoveState(GITSKey key);
   void RestoreState();
   void CopyDescriptors(ID3D12DeviceCopyDescriptorsSimpleCommand& c);
   void CopyDescriptors(ID3D12DeviceCopyDescriptorsCommand& c);
-  DescriptorState* GetDescriptorState(unsigned heapKey, unsigned DescriptorIndex);
+  DescriptorState* GetDescriptorState(GITSKey heapKey, unsigned DescriptorIndex);
 
 private:
   void RestoreState(DescriptorState* state);
   DescriptorState* CopyDescriptor(DescriptorState* state,
-                                  unsigned destHeapKey,
+                                  GITSKey destHeapKey,
                                   unsigned destHeapIndex);
   void RestoreD3D12RenderTargetView(D3D12RenderTargetViewState* state);
   void RestoreD3D12DepthStencilView(D3D12DepthStencilViewState* state);
@@ -109,8 +110,8 @@ private:
 private:
   StateTrackingService* m_StateService{};
   ResourceForCBVRestoreService* m_ResourceForCBVRestoreService{};
-  std::map<unsigned, std::map<unsigned, std::unique_ptr<DescriptorState>>> m_StatesByHeapIndex;
-  std::set<unsigned> m_Resources;
+  std::map<GITSKey, std::map<GITSKey, std::unique_ptr<DescriptorState>>> m_StatesByHeapIndex;
+  std::set<GITSKey> m_Resources;
   std::mutex m_Mutex;
 };
 

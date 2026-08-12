@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #pragma once
+#include "arguments.h"
 
 #include "commandsAuto.h"
 #include "commandsCustom.h"
@@ -28,7 +29,7 @@ public:
   void ExecuteCommandLists(ID3D12CommandQueueExecuteCommandListsCommand& c);
   void ClearCommandList(unsigned commandList);
   void CreateDescriptorHeap(ID3D12DeviceCreateDescriptorHeapCommand& c);
-  void CreateResource(ID3D12Resource* resource, unsigned resourceKey);
+  void CreateResource(ID3D12Resource* resource, GITSKey resourceKey);
   void CreateRootSignature(ID3D12DeviceCreateRootSignatureCommand& c);
   void CreateDescriptor(DescriptorHeapTracker::Descriptor* descriptor);
   void CopyDescriptors(ID3D12DeviceCopyDescriptorsSimpleCommand& c);
@@ -39,7 +40,7 @@ public:
   void SetComputeRootDescriptorTable(
       ID3D12GraphicsCommandListSetComputeRootDescriptorTableCommand& c);
   void Dispatch(ID3D12GraphicsCommandListDispatchCommand& c);
-  void DestroyInterface(unsigned interfaceKey);
+  void DestroyInterface(GITSKey interfaceKey);
 
   void DumpAnalysisFile();
   void ReadAnalysisFile();
@@ -52,26 +53,26 @@ public:
     bool Unbounded{};
     std::vector<unsigned> Resources;
   };
-  std::vector<Bindings>* GetDispatchBindings(unsigned dispatchKey);
+  std::vector<Bindings>* GetDispatchBindings(GITSKey dispatchKey);
 
 private:
   DescriptorRootSignatureService m_RootSignatureService;
   DescriptorHeapTracker m_DescriptorService;
 
   std::filesystem::path m_AnalysisFilePath;
-  std::unordered_map<unsigned, std::vector<Bindings>> m_DispatchBindings;
+  std::unordered_map<GITSKey, std::vector<Bindings>> m_DispatchBindings;
 
-  std::unordered_map<unsigned, ID3D12Resource*> m_ResourceByKey;
+  std::unordered_map<GITSKey, ID3D12Resource*> m_ResourceByKey;
 
   struct DescriptorHeap {
     D3D12_DESCRIPTOR_HEAP_TYPE Type{};
     unsigned NumDescriptors{};
   };
-  std::unordered_map<unsigned, DescriptorHeap> m_DescriptorHeaps;
+  std::unordered_map<GITSKey, DescriptorHeap> m_DescriptorHeaps;
 
-  std::unordered_map<unsigned, unsigned> m_RootSignatureByCommandList;
+  std::unordered_map<GITSKey, GITSKey> m_RootSignatureByCommandList;
 
-  std::unordered_map<unsigned, std::unordered_map<unsigned, unsigned>>
+  std::unordered_map<GITSKey, std::unordered_map<GITSKey, unsigned>>
       m_DescriptorBySlotByCommandList;
 
   struct DesciptorTable {
@@ -79,17 +80,17 @@ private:
     unsigned DescriptorHeap{};
     bool Unbounded{};
   };
-  std::unordered_map<unsigned, std::unordered_map<unsigned, DesciptorTable>>
+  std::unordered_map<GITSKey, std::unordered_map<GITSKey, DesciptorTable>>
       m_DescriptorTableBySlotByCommandList;
-  std::unordered_map<unsigned,
-                     std::unordered_map<unsigned, std::unordered_map<unsigned, DesciptorTable>>>
+  std::unordered_map<GITSKey,
+                     std::unordered_map<GITSKey, std::unordered_map<GITSKey, DesciptorTable>>>
       m_DescriptorTableBySlotByDispatchByCommandList;
 
   struct AnalysisBindings {
     bool Unbounded{};
     std::unordered_set<unsigned> Resources;
   };
-  std::map<unsigned, std::map<unsigned, AnalysisBindings>> m_BindingsBySlotByDispatch;
+  std::map<GITSKey, std::map<GITSKey, AnalysisBindings>> m_BindingsBySlotByDispatch;
 };
 
 } // namespace DirectX

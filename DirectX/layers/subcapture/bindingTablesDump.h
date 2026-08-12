@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #pragma once
+#include "arguments.h"
 
 #include "resourceDump.h"
 
@@ -27,9 +28,9 @@ public:
     std::unordered_map<std::wstring, unsigned> ExportToRootSignature;
   };
   struct DescriptorHeaps {
-    unsigned ViewDescriptorHeapKey;
+    GITSKey ViewDescriptorHeapKey;
     unsigned ViewDescriptorHeapSize;
-    unsigned SamplerHeapKey;
+    GITSKey SamplerHeapKey;
     unsigned SamplerHeapSize;
   };
 
@@ -44,7 +45,7 @@ public:
                         BarrierState state,
                         StateObjectInfo* stateObjectInfo,
                         DescriptorHeaps descriptorHeaps,
-                        unsigned rootSignatureKey);
+                        GITSKey rootSignatureKey);
 
   std::unordered_set<unsigned>& GetBindingTablesResources() {
     return m_BindingTablesResources;
@@ -67,7 +68,7 @@ private:
     unsigned Stride{};
     StateObjectInfo* StateObjectInfo{};
     DescriptorHeaps DescriptorHeaps{};
-    unsigned RootSignatureKey{};
+    GITSKey RootSignatureKey{};
   };
 };
 

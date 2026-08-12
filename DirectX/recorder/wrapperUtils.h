@@ -51,10 +51,10 @@ public:
   NestedCaptureScope& operator=(const NestedCaptureScope&) = delete;
 };
 
-unsigned getWrapperKey(const IUnknown* object);
+GITSKey getWrapperKey(const IUnknown* object);
 
 template <typename T>
-void getWrapperKeys(std::vector<unsigned>& keys, T** objects) {
+void getWrapperKeys(std::vector<GITSKey>& keys, T** objects) {
   for (int i = 0; i < keys.size(); ++i) {
     keys[i] = getWrapperKey(reinterpret_cast<IUnknown*>(objects[i]));
   }

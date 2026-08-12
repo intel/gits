@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #pragma once
+#include "arguments.h"
 
 #include "orderingRecorder.h"
 #include "directx.h"
@@ -21,10 +22,10 @@ namespace DirectX {
 class FenceService {
 public:
   FenceService(stream::OrderingRecorder& recorder);
-  void SetEventOnCompletion(ID3D12Fence* fence, unsigned fenceKey, UINT64 value, HANDLE event);
+  void SetEventOnCompletion(ID3D12Fence* fence, GITSKey fenceKey, UINT64 value, HANDLE event);
   void WaitSignaled(HANDLE handle);
   void WaitSignaled(DWORD count, const HANDLE* handles);
-  void DestroyFence(unsigned fenceKey);
+  void DestroyFence(GITSKey fenceKey);
 
   std::mutex& getGlobalMutex() {
     return m_GlobalMutex;
@@ -33,13 +34,13 @@ public:
 private:
   struct FenceInfo {
     ID3D12Fence* Fence{};
-    unsigned FenceKey{};
+    GITSKey FenceKey{};
     UINT64 Value{};
     HANDLE Event{};
     bool Signaled{};
   };
-  std::unordered_map<HANDLE, std::unordered_map<unsigned, FenceInfo>> m_FencesByHandle;
-  std::unordered_set<unsigned> m_Fences;
+  std::unordered_map<HANDLE, std::unordered_map<GITSKey, FenceInfo>> m_FencesByHandle;
+  std::unordered_set<GITSKey> m_Fences;
 
   std::mutex m_Mutex;
   stream::OrderingRecorder& m_Recorder;

@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #pragma once
+#include "arguments.h"
 
 #include "commandsAuto.h"
 #include "commandsCustom.h"
@@ -41,10 +42,10 @@ public:
 private:
   struct RaytracingCommand {
     unsigned Id{};
-    unsigned CommandKey{};
-    unsigned DestKey{};
+    GITSKey CommandKey{};
+    GITSKey DestKey{};
     unsigned DestOffset{};
-    unsigned SourceKey{};
+    GITSKey SourceKey{};
     unsigned SourceOffset{};
     bool UpdateBuild{};
     RaytracingCommand* Source{};
@@ -55,11 +56,11 @@ private:
   };
 
   unsigned m_CommandUniqueId{};
-  std::unordered_map<unsigned, std::vector<std::unique_ptr<RaytracingCommand>>>
+  std::unordered_map<GITSKey, std::vector<std::unique_ptr<RaytracingCommand>>>
       m_CommandsByCommandList;
   std::unordered_map<std::pair<unsigned, unsigned>, RaytracingCommand*, UnsignedPairHash>
       m_CommandByKeyOffset;
-  std::unordered_map<unsigned, std::unique_ptr<RaytracingCommand>> m_CommandById;
+  std::unordered_map<GITSKey, std::unique_ptr<RaytracingCommand>> m_CommandById;
 
   std::vector<std::pair<unsigned, unsigned>> m_OptimizedCommandsWithSources;
   std::unordered_set<unsigned> m_ExistingBuffers;

@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #pragma once
+#include "arguments.h"
 
 #include "subcaptureRecorder.h"
 #include "commandsAuto.h"
@@ -29,29 +30,29 @@ public:
       ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c);
   void CopyAccelerationStructure(
       ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& c);
-  void SetDevice(ID3D12Device* device, unsigned deviceKey) {
+  void SetDevice(ID3D12Device* device, GITSKey deviceKey) {
     m_Device = device;
     m_DeviceKey = deviceKey;
   }
   void RestoreAccelerationStructures();
   void ExecuteCommandLists(ID3D12CommandQueueExecuteCommandListsCommand& c);
-  void DestroyResource(unsigned resourceKey);
+  void DestroyResource(GITSKey resourceKey);
 
 private:
   StateTrackingService& m_StateService;
   SubcaptureRecorder& m_Recorder;
 
   struct AccelerationStructure {
-    unsigned CallKey{};
-    unsigned Key{};
+    GITSKey CallKey{};
+    GITSKey Key{};
     unsigned Offset{};
     D3D12_GPU_VIRTUAL_ADDRESS Address{};
   };
   using AccelerationStructures = std::map<D3D12_GPU_VIRTUAL_ADDRESS, AccelerationStructure>;
-  std::map<unsigned, AccelerationStructures> m_AccelerationStructuresByCommandList;
+  std::map<GITSKey, AccelerationStructures> m_AccelerationStructuresByCommandList;
   AccelerationStructures m_AccelerationStructures;
 
-  std::unordered_map<unsigned, std::unordered_set<D3D12_GPU_VIRTUAL_ADDRESS>>
+  std::unordered_map<GITSKey, std::unordered_set<D3D12_GPU_VIRTUAL_ADDRESS>>
       m_AccelerationStructuresByResource;
 
   bool m_SerializeMode{};
@@ -61,11 +62,11 @@ private:
   ID3D12GraphicsCommandList4* m_CommandList{};
   ID3D12Fence* m_Fence{};
   UINT64 m_CurrentFenceValue{};
-  unsigned m_DeviceKey{};
-  unsigned m_CommandQueueKey{};
-  unsigned m_CommandAllocatorKey{};
-  unsigned m_CommandListKey{};
-  unsigned m_FenceKey{};
+  GITSKey m_DeviceKey{};
+  GITSKey m_CommandQueueKey{};
+  GITSKey m_CommandAllocatorKey{};
+  GITSKey m_CommandListKey{};
+  GITSKey m_FenceKey{};
   UINT64 m_RecordedFenceValue{};
 };
 

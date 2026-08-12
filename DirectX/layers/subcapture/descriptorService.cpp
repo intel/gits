@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "descriptorService.h"
+#include "arguments.h"
 #include "commandsAuto.h"
 #include "commandSerializersAuto.h"
 #include "stateTrackingService.h"
@@ -26,7 +27,7 @@ void DescriptorService::StoreState(DescriptorState* state) {
   m_Resources.insert(state->ResourceKey);
 }
 
-void DescriptorService::RemoveState(unsigned key) {
+void DescriptorService::RemoveState(GITSKey key) {
   std::lock_guard<std::mutex> lock(m_Mutex);
 
   auto itHeap = m_StatesByHeapIndex.find(key);
@@ -78,7 +79,7 @@ void DescriptorService::RestoreState(DescriptorState* state) {
 }
 
 DescriptorState* DescriptorService::CopyDescriptor(DescriptorState* state,
-                                                   unsigned destHeapKey,
+                                                   GITSKey destHeapKey,
                                                    unsigned destHeapIndex) {
   DescriptorState* destState = nullptr;
   switch (state->Id) {
@@ -147,7 +148,7 @@ void DescriptorService::CopyDescriptors(ID3D12DeviceCopyDescriptorsCommand& c) {
   unsigned destRangeSize =
       c.m_pDestDescriptorRangeSizes.Value ? c.m_pDestDescriptorRangeSizes.Value[destRangeIndex] : 1;
 
-  unsigned destHeapKey = c.m_pDestDescriptorRangeStarts.InterfaceKeys[destRangeIndex];
+  GITSKey destHeapKey = c.m_pDestDescriptorRangeStarts.InterfaceKeys[destRangeIndex];
 
   for (unsigned srcRangeIndex = 0; srcRangeIndex < c.m_NumSrcDescriptorRanges.Value;
        ++srcRangeIndex) {
@@ -181,7 +182,7 @@ void DescriptorService::CopyDescriptors(ID3D12DeviceCopyDescriptorsCommand& c) {
   }
 }
 
-DescriptorState* DescriptorService::GetDescriptorState(unsigned heapKey, unsigned DescriptorIndex) {
+DescriptorState* DescriptorService::GetDescriptorState(GITSKey heapKey, unsigned DescriptorIndex) {
   std::lock_guard<std::mutex> lock(m_Mutex);
 
   auto heapIt = m_StatesByHeapIndex.find(heapKey);

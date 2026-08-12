@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "multithreadedObjectCreationLayer.h"
+#include "arguments.h"
 #include "interfaceArgumentUpdaters.h"
 #include "pipelineLibraryService.h"
 
@@ -15,7 +16,7 @@ namespace DirectX {
 
 namespace {
 
-void setD3D12ObjectName(void* obj, unsigned key) {
+void setD3D12ObjectName(void* obj, GITSKey key) {
   ID3D12Object* object = static_cast<ID3D12Object*>(obj);
   std::wstringstream s;
   s << "O" << key;
@@ -41,7 +42,7 @@ void MultithreadedObjectCreationLayer::ScheduleCreate(CommandT& c) {
 
   auto device = c.m_Object.Value;
   REFIID riid = c.m_riid.Value;
-  unsigned key = state->Key;
+  GITSKey key = state->Key;
 
   auto& service = m_Manager.GetMultithreadedObjectCreationService();
   service.AddDependency(c.m_Object.Key, key);
@@ -98,7 +99,7 @@ void MultithreadedObjectCreationLayer::ScheduleLoad(CommandT& c) {
   auto library = c.m_Object.Value;
   REFIID riid = c.m_riid.Value;
   std::wstring name = c.m_pName.Value;
-  unsigned key = c.m_ppPipelineState.Key;
+  GITSKey key = c.m_ppPipelineState.Key;
 
   auto& service = m_Manager.GetMultithreadedObjectCreationService();
   service.AddDependency(c.m_Object.Key, key);

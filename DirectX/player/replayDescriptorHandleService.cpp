@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "replayDescriptorHandleService.h"
+#include "arguments.h"
 #include "log.h"
 
 #include <wrl/client.h>
@@ -14,7 +15,7 @@
 namespace gits {
 namespace DirectX {
 
-void ReplayDescriptorHandleService::CreateDescriptorHeap(unsigned DescriptorHeapKey,
+void ReplayDescriptorHandleService::CreateDescriptorHeap(GITSKey DescriptorHeapKey,
                                                          ID3D12DescriptorHeap* descriptorHeap,
                                                          const D3D12_DESCRIPTOR_HEAP_DESC* desc) {
 
@@ -40,7 +41,7 @@ void ReplayDescriptorHandleService::CreateDescriptorHeap(unsigned DescriptorHeap
   m_DescriptorHeaps[DescriptorHeapKey] = heapInfo;
 }
 
-size_t ReplayDescriptorHandleService::GetDescriptorHandle(unsigned descriptorHeapKey,
+size_t ReplayDescriptorHandleService::GetDescriptorHandle(GITSKey descriptorHeapKey,
                                                           HandleType handleType,
                                                           unsigned index) {
   if (!descriptorHeapKey) {
@@ -54,7 +55,7 @@ size_t ReplayDescriptorHandleService::GetDescriptorHandle(unsigned descriptorHea
   return start + index * info.Increment;
 }
 
-void ReplayDescriptorHandleService::DestroyDescriptorHeap(unsigned descriptorHeapKey) {
+void ReplayDescriptorHandleService::DestroyDescriptorHeap(GITSKey descriptorHeapKey) {
   m_DescriptorHeaps.erase(descriptorHeapKey);
 }
 

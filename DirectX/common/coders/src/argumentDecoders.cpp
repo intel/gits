@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "argumentDecoders.h"
+#include "arguments.h"
 #include "dmlCodersAuto.h"
 #include "log.h"
 
@@ -79,8 +80,8 @@ void Decode(char* src, unsigned& offset, D3D12_GPU_VIRTUAL_ADDRESSs_Argument& ar
   offset += sizeof(D3D12_GPU_VIRTUAL_ADDRESS) * arg.Size;
 
   arg.InterfaceKeys.resize(arg.Size);
-  memcpy(arg.InterfaceKeys.data(), src + offset, arg.Size * sizeof(unsigned));
-  offset += arg.Size * sizeof(unsigned);
+  memcpy(arg.InterfaceKeys.data(), src + offset, arg.Size * sizeof(GITSKey));
+  offset += arg.Size * sizeof(GITSKey);
 
   arg.Offsets.resize(arg.Size);
   memcpy(arg.Offsets.data(), src + offset, arg.Size * sizeof(unsigned));
@@ -197,12 +198,12 @@ void Decode(char* src, unsigned& offset, D3D12_RESOURCE_BARRIERs_Argument& arg) 
   offset += arg.Size * sizeof(D3D12_RESOURCE_BARRIER);
 
   arg.ResourceKeys.resize(arg.Size);
-  memcpy(arg.ResourceKeys.data(), src + offset, arg.Size * sizeof(unsigned));
-  offset += arg.Size * sizeof(unsigned);
+  memcpy(arg.ResourceKeys.data(), src + offset, arg.Size * sizeof(GITSKey));
+  offset += arg.Size * sizeof(GITSKey);
 
   arg.ResourceAfterKeys.resize(arg.Size);
-  memcpy(arg.ResourceAfterKeys.data(), src + offset, arg.Size * sizeof(unsigned));
-  offset += arg.Size * sizeof(unsigned);
+  memcpy(arg.ResourceAfterKeys.data(), src + offset, arg.Size * sizeof(GITSKey));
+  offset += arg.Size * sizeof(GITSKey);
 }
 
 void Decode(char* src, unsigned& offset, PointerArgument<D3D12_ROOT_SIGNATURE_DESC>& arg) {
@@ -351,8 +352,8 @@ void Decode(char* src, unsigned& offset, D3D12_VERTEX_BUFFER_VIEWs_Argument& arg
   offset += arg.Size * sizeof(D3D12_VERTEX_BUFFER_VIEW);
 
   arg.BufferLocationKeys.resize(arg.Size);
-  memcpy(arg.BufferLocationKeys.data(), src + offset, arg.Size * sizeof(unsigned));
-  offset += arg.Size * sizeof(unsigned);
+  memcpy(arg.BufferLocationKeys.data(), src + offset, arg.Size * sizeof(GITSKey));
+  offset += arg.Size * sizeof(GITSKey);
 
   arg.BufferLocationOffsets.resize(arg.Size);
   memcpy(arg.BufferLocationOffsets.data(), src + offset, arg.Size * sizeof(unsigned));
@@ -371,16 +372,16 @@ void Decode(char* src, unsigned& offset, D3D12_STREAM_OUTPUT_BUFFER_VIEWs_Argume
   offset += arg.Size * sizeof(D3D12_STREAM_OUTPUT_BUFFER_VIEW);
 
   arg.BufferLocationKeys.resize(arg.Size);
-  memcpy(arg.BufferLocationKeys.data(), src + offset, arg.Size * sizeof(unsigned));
-  offset += arg.Size * sizeof(unsigned);
+  memcpy(arg.BufferLocationKeys.data(), src + offset, arg.Size * sizeof(GITSKey));
+  offset += arg.Size * sizeof(GITSKey);
 
   arg.BufferLocationOffsets.resize(arg.Size);
   memcpy(arg.BufferLocationOffsets.data(), src + offset, arg.Size * sizeof(unsigned));
   offset += arg.Size * sizeof(unsigned);
 
   arg.BufferFilledSizeLocationKeys.resize(arg.Size);
-  memcpy(arg.BufferFilledSizeLocationKeys.data(), src + offset, arg.Size * sizeof(unsigned));
-  offset += arg.Size * sizeof(unsigned);
+  memcpy(arg.BufferFilledSizeLocationKeys.data(), src + offset, arg.Size * sizeof(GITSKey));
+  offset += arg.Size * sizeof(GITSKey);
 
   arg.BufferFilledSizeLocationOffsets.resize(arg.Size);
   memcpy(arg.BufferFilledSizeLocationOffsets.data(), src + offset, arg.Size * sizeof(unsigned));
@@ -399,8 +400,8 @@ void Decode(char* src, unsigned& offset, D3D12_WRITEBUFFERIMMEDIATE_PARAMETERs_A
   offset += arg.Size * sizeof(D3D12_WRITEBUFFERIMMEDIATE_PARAMETER);
 
   arg.DestKeys.resize(arg.Size);
-  memcpy(arg.DestKeys.data(), src + offset, arg.Size * sizeof(unsigned));
-  offset += arg.Size * sizeof(unsigned);
+  memcpy(arg.DestKeys.data(), src + offset, arg.Size * sizeof(GITSKey));
+  offset += arg.Size * sizeof(GITSKey);
 
   arg.DestOffsets.resize(arg.Size);
   memcpy(arg.DestOffsets.data(), src + offset, arg.Size * sizeof(unsigned));
@@ -607,8 +608,8 @@ void Decode(char* src, unsigned& offset, D3D12_STATE_OBJECT_DESC_Argument& arg) 
     for (unsigned i = 0; i < *size; ++i) {
       unsigned* index = reinterpret_cast<unsigned*>(src + offset);
       offset += sizeof(unsigned);
-      unsigned* key = reinterpret_cast<unsigned*>(src + offset);
-      offset += sizeof(unsigned);
+      GITSKey* key = reinterpret_cast<GITSKey*>(src + offset);
+      offset += sizeof(GITSKey);
 
       arg.InterfaceKeysBySubobject[*index] = *key;
     }
@@ -851,8 +852,8 @@ void Decode(char* src, unsigned& offset, D3D12_BARRIER_GROUPs_Argument& arg) {
   }
 
   arg.ResourceKeys.resize(numResourceKeys);
-  memcpy(arg.ResourceKeys.data(), src + offset, numResourceKeys * sizeof(unsigned));
-  offset += numResourceKeys * sizeof(unsigned);
+  memcpy(arg.ResourceKeys.data(), src + offset, numResourceKeys * sizeof(GITSKey));
+  offset += numResourceKeys * sizeof(GITSKey);
 }
 
 void Decode(char* src, unsigned& offset, DML_BINDING_DESC_Argument& arg) {
@@ -867,8 +868,8 @@ void Decode(char* src, unsigned& offset, DML_BINDING_DESC_Argument& arg) {
   offset += sizeof(arg.ResourceKeysSize);
 
   arg.ResourceKeys.resize(arg.ResourceKeysSize);
-  memcpy(arg.ResourceKeys.data(), src + offset, arg.ResourceKeysSize * sizeof(unsigned));
-  offset += arg.ResourceKeysSize * sizeof(unsigned);
+  memcpy(arg.ResourceKeys.data(), src + offset, arg.ResourceKeysSize * sizeof(GITSKey));
+  offset += arg.ResourceKeysSize * sizeof(GITSKey);
 }
 
 void Decode(char* src, unsigned& offset, DML_BINDING_DESCs_Argument& arg) {
@@ -886,8 +887,8 @@ void Decode(char* src, unsigned& offset, DML_BINDING_DESCs_Argument& arg) {
   offset += sizeof(arg.ResourceKeysSize);
 
   arg.ResourceKeys.resize(arg.ResourceKeysSize);
-  memcpy(arg.ResourceKeys.data(), src + offset, arg.ResourceKeysSize * sizeof(unsigned));
-  offset += arg.ResourceKeysSize * sizeof(unsigned);
+  memcpy(arg.ResourceKeys.data(), src + offset, arg.ResourceKeysSize * sizeof(GITSKey));
+  offset += arg.ResourceKeysSize * sizeof(GITSKey);
 }
 
 void Decode(char* src, unsigned& offset, DML_BINDING_TABLE_DESC_Argument& arg) {
@@ -921,8 +922,8 @@ void Decode(char* src, unsigned& offset, DML_GRAPH_DESC_Argument& arg) {
   offset += sizeof(unsigned);
 
   arg.OperatorKeys.resize(arg.OperatorKeysSize);
-  memcpy(arg.OperatorKeys.data(), src + offset, arg.OperatorKeysSize * sizeof(unsigned));
-  offset += arg.OperatorKeysSize * sizeof(unsigned);
+  memcpy(arg.OperatorKeys.data(), src + offset, arg.OperatorKeysSize * sizeof(GITSKey));
+  offset += arg.OperatorKeysSize * sizeof(GITSKey);
 }
 
 void Decode(char* src, unsigned& offset, DML_CheckFeatureSupport_BufferArgument& arg) {
@@ -1021,7 +1022,7 @@ void Decode(char* src,
   offset += sizeof(size);
 
   arg.InputKeys.resize(size);
-  memcpy(arg.InputKeys.data(), src + offset, size * sizeof(unsigned));
+  memcpy(arg.InputKeys.data(), src + offset, size * sizeof(GITSKey));
   offset += size * sizeof(unsigned);
 
   arg.InputOffsets.resize(size);
@@ -1132,7 +1133,7 @@ void Decode(char* src,
   offset += sizeof(size);
 
   arg.InputKeys.resize(size);
-  memcpy(arg.InputKeys.data(), src + offset, size * sizeof(unsigned));
+  memcpy(arg.InputKeys.data(), src + offset, size * sizeof(GITSKey));
   offset += size * sizeof(unsigned);
 
   arg.InputOffsets.resize(size);
@@ -1185,8 +1186,8 @@ void Decode(char* src,
   offset += sizeof(D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC) * arg.Size;
 
   arg.DestBufferKeys.resize(arg.Size);
-  memcpy(arg.DestBufferKeys.data(), src + offset, arg.Size * sizeof(unsigned));
-  offset += arg.Size * sizeof(unsigned);
+  memcpy(arg.DestBufferKeys.data(), src + offset, arg.Size * sizeof(GITSKey));
+  offset += arg.Size * sizeof(GITSKey);
 
   arg.DestBufferOffsets.resize(arg.Size);
   memcpy(arg.DestBufferOffsets.data(), src + offset, arg.Size * sizeof(unsigned));
@@ -1233,8 +1234,8 @@ void Decode(char* src, unsigned& offset, D3D12_RENDER_PASS_RENDER_TARGET_DESCs_A
   }
 
   arg.DescriptorKeys.resize(arg.Size);
-  memcpy(arg.DescriptorKeys.data(), src + offset, arg.Size * sizeof(unsigned));
-  offset += arg.Size * sizeof(unsigned);
+  memcpy(arg.DescriptorKeys.data(), src + offset, arg.Size * sizeof(GITSKey));
+  offset += arg.Size * sizeof(GITSKey);
 
   arg.DescriptorIndexes.resize(arg.Size);
   memcpy(arg.DescriptorIndexes.data(), src + offset, arg.Size * sizeof(unsigned));
@@ -1245,11 +1246,11 @@ void Decode(char* src, unsigned& offset, D3D12_RENDER_PASS_RENDER_TARGET_DESCs_A
   offset += sizeof(size);
 
   arg.ResolveSrcResourceKeys.resize(size);
-  memcpy(arg.ResolveSrcResourceKeys.data(), src + offset, size * sizeof(unsigned));
+  memcpy(arg.ResolveSrcResourceKeys.data(), src + offset, size * sizeof(GITSKey));
   offset += size * sizeof(unsigned);
 
   arg.ResolveDstResourceKeys.resize(size);
-  memcpy(arg.ResolveDstResourceKeys.data(), src + offset, size * sizeof(unsigned));
+  memcpy(arg.ResolveDstResourceKeys.data(), src + offset, size * sizeof(GITSKey));
   offset += size * sizeof(unsigned);
 }
 
@@ -1320,15 +1321,15 @@ void Decode(char* src,
   offset += arg.Size * sizeof(D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO);
 
   arg.DestKey.resize(arg.Size);
-  memcpy(arg.DestKey.data(), src + offset, arg.Size * sizeof(unsigned));
-  offset += arg.Size * sizeof(unsigned);
+  memcpy(arg.DestKey.data(), src + offset, arg.Size * sizeof(GITSKey));
+  offset += arg.Size * sizeof(GITSKey);
   arg.DestOffset.resize(arg.Size);
   memcpy(arg.DestOffset.data(), src + offset, arg.Size * sizeof(unsigned));
   offset += arg.Size * sizeof(unsigned);
 
   arg.SourceKey.resize(arg.Size);
-  memcpy(arg.SourceKey.data(), src + offset, arg.Size * sizeof(unsigned));
-  offset += arg.Size * sizeof(unsigned);
+  memcpy(arg.SourceKey.data(), src + offset, arg.Size * sizeof(GITSKey));
+  offset += arg.Size * sizeof(GITSKey);
   arg.SourceOffset.resize(arg.Size);
   memcpy(arg.SourceOffset.data(), src + offset, arg.Size * sizeof(unsigned));
   offset += arg.Size * sizeof(unsigned);
@@ -1724,7 +1725,7 @@ void Decode(char* src,
   offset += sizeof(size);
 
   arg.InputKeys.resize(size);
-  memcpy(arg.InputKeys.data(), src + offset, size * sizeof(unsigned));
+  memcpy(arg.InputKeys.data(), src + offset, size * sizeof(GITSKey));
   offset += size * sizeof(unsigned);
 
   arg.InputOffsets.resize(size);

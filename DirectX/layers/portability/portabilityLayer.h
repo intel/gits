@@ -26,7 +26,7 @@ class PortabilityLayer : public Layer {
 
 public:
   using ResourceRegistrationCallback =
-      std::function<void(unsigned resourceKey, ID3D12Resource* resource)>;
+      std::function<void(GITSKey resourceKey, ID3D12Resource* resource)>;
 
   PortabilityLayer();
   PortabilityLayer(ResourceRegistrationCallback registerResource);
@@ -57,7 +57,7 @@ public:
 
 private:
   void ConfigureHeapMemoryPool(ID3D12Device* device, D3D12_HEAP_DESC* heapDesc);
-  void CheckHeapCreationFlags(unsigned heapKey, ID3D12Device* device, D3D12_HEAP_DESC* desc);
+  void CheckHeapCreationFlags(GITSKey heapKey, ID3D12Device* device, D3D12_HEAP_DESC* desc);
 
   HRESULT CreateCommittedResource(ID3D12Heap* heap,
                                   const D3D12_RESOURCE_DESC* desc,
@@ -107,25 +107,25 @@ private:
   std::string GetPlacedToCommittedIncompatibilityReasons(
       const D3D12_HEAP_DESC& heapDesc, const D3D12_RESOURCE_DESC& resourceDesc) const;
   std::string GetPlacedToCommittedFailureContext(const char* apiName,
-                                                 unsigned commandKey,
-                                                 unsigned heapKey,
+                                                 GITSKey commandKey,
+                                                 GITSKey heapKey,
                                                  const D3D12_HEAP_DESC& heapDesc,
                                                  const D3D12_RESOURCE_DESC& resourceDesc) const;
   void FailPlacedToCommittedIncompatibility(const char* apiName,
-                                            unsigned commandKey,
-                                            unsigned heapKey,
+                                            GITSKey commandKey,
+                                            GITSKey heapKey,
                                             const D3D12_HEAP_DESC& heapDesc,
                                             const D3D12_RESOURCE_DESC& resourceDesc) const;
   void FailPlacedToCommittedCreation(const char* apiName,
-                                     unsigned commandKey,
-                                     unsigned heapKey,
+                                     GITSKey commandKey,
+                                     GITSKey heapKey,
                                      UINT64 heapOffset,
                                      const D3D12_RESOURCE_DESC& resourceDesc,
                                      D3D12_RESOURCE_STATES initialState,
                                      HRESULT hr) const;
   void FailPlacedToCommittedCreation(const char* apiName,
-                                     unsigned commandKey,
-                                     unsigned heapKey,
+                                     GITSKey commandKey,
+                                     GITSKey heapKey,
                                      UINT64 heapOffset,
                                      const D3D12_RESOURCE_DESC& resourceDesc,
                                      D3D12_BARRIER_LAYOUT initialLayout,

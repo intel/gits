@@ -79,12 +79,12 @@ public:
   void Post(ID3D12GraphicsCommandListSetComputeRootDescriptorTableCommand& c) override;
 
 private:
-  GraphicsPipelineState* GetGraphicsState(unsigned commandListKey) {
+  GraphicsPipelineState* GetGraphicsState(GITSKey commandListKey) {
     return m_GraphicsPipelineStates
         .try_emplace(commandListKey, std::make_unique<GraphicsPipelineState>(m_DescriptorService))
         .first->second.get();
   }
-  ComputePipelineState* GetComputeState(unsigned commandListKey) {
+  ComputePipelineState* GetComputeState(GITSKey commandListKey) {
     return m_ComputePipelineStates
         .try_emplace(commandListKey, std::make_unique<ComputePipelineState>(m_DescriptorService))
         .first->second.get();
@@ -93,19 +93,19 @@ private:
 private:
   DescriptorHeapTracker m_DescriptorService;
   DescriptorRootSignatureService m_RootSignatureService;
-  std::unordered_map<unsigned, std::unique_ptr<GraphicsPipelineState>> m_GraphicsPipelineStates;
-  std::unordered_map<unsigned, std::unique_ptr<ComputePipelineState>> m_ComputePipelineStates;
+  std::unordered_map<GITSKey, std::unique_ptr<GraphicsPipelineState>> m_GraphicsPipelineStates;
+  std::unordered_map<GITSKey, std::unique_ptr<ComputePipelineState>> m_ComputePipelineStates;
   std::wstring m_DumpDir;
   ConfigKeySet m_CommandKeys;
 
-  std::unordered_map<unsigned, std::unique_ptr<D3D12_GRAPHICS_PIPELINE_STATE_DESC_Argument>>
+  std::unordered_map<GITSKey, std::unique_ptr<D3D12_GRAPHICS_PIPELINE_STATE_DESC_Argument>>
       m_GraphicsPipelineStateDescs;
-  std::unordered_map<unsigned, std::unique_ptr<D3D12_COMPUTE_PIPELINE_STATE_DESC_Argument>>
+  std::unordered_map<GITSKey, std::unique_ptr<D3D12_COMPUTE_PIPELINE_STATE_DESC_Argument>>
       m_ComputePipelineStateDescs;
-  std::unordered_map<unsigned, std::unique_ptr<D3D12_PIPELINE_STATE_STREAM_DESC_Argument>>
+  std::unordered_map<GITSKey, std::unique_ptr<D3D12_PIPELINE_STATE_STREAM_DESC_Argument>>
       m_PipelineStateDescs;
-  std::unordered_map<unsigned, D3D12_DESCRIPTOR_HEAP_DESC> m_DescriptorHeaps;
-  std::unordered_map<unsigned, D3D12_ROOT_SIGNATURE_DESC2*> m_RootSignatures;
+  std::unordered_map<GITSKey, D3D12_DESCRIPTOR_HEAP_DESC> m_DescriptorHeaps;
+  std::unordered_map<GITSKey, D3D12_ROOT_SIGNATURE_DESC2*> m_RootSignatures;
 };
 
 } // namespace DirectX

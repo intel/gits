@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "analyzerExecuteIndirectService.h"
+#include "arguments.h"
 #include "analyzerCommandListService.h"
 #include "log.h"
 
@@ -117,8 +118,8 @@ void AnalyzerExecuteIndirectService::Flush() {
   m_ExecuteIndirectDump.WaitUntilDumped();
 }
 
-void AnalyzerExecuteIndirectService::ExecuteCommandLists(unsigned key,
-                                                         unsigned commandQueueKey,
+void AnalyzerExecuteIndirectService::ExecuteCommandLists(GITSKey key,
+                                                         GITSKey commandQueueKey,
                                                          ID3D12CommandQueue* commandQueue,
                                                          ID3D12CommandList** commandLists,
                                                          unsigned commandListNum) {
@@ -126,23 +127,21 @@ void AnalyzerExecuteIndirectService::ExecuteCommandLists(unsigned key,
                                             commandListNum);
 }
 
-void AnalyzerExecuteIndirectService::CommandQueueWait(unsigned key,
-                                                      unsigned commandQueueKey,
-                                                      unsigned fenceKey,
+void AnalyzerExecuteIndirectService::CommandQueueWait(GITSKey key,
+                                                      GITSKey commandQueueKey,
+                                                      GITSKey fenceKey,
                                                       UINT64 fenceValue) {
   m_ExecuteIndirectDump.CommandQueueWait(key, commandQueueKey, fenceKey, fenceValue);
 }
 
-void AnalyzerExecuteIndirectService::CommandQueueSignal(unsigned key,
-                                                        unsigned commandQueueKey,
-                                                        unsigned fenceKey,
+void AnalyzerExecuteIndirectService::CommandQueueSignal(GITSKey key,
+                                                        GITSKey commandQueueKey,
+                                                        GITSKey fenceKey,
                                                         UINT64 fenceValue) {
   m_ExecuteIndirectDump.CommandQueueSignal(key, commandQueueKey, fenceKey, fenceValue);
 }
 
-void AnalyzerExecuteIndirectService::FenceSignal(unsigned key,
-                                                 unsigned fenceKey,
-                                                 UINT64 fenceValue) {
+void AnalyzerExecuteIndirectService::FenceSignal(GITSKey key, GITSKey fenceKey, UINT64 fenceValue) {
   m_ExecuteIndirectDump.FenceSignal(key, fenceKey, fenceValue);
 }
 
@@ -150,7 +149,7 @@ void AnalyzerExecuteIndirectService::LoadExecuteIndirectDispatchRays() {
   std::filesystem::path dumpPath = Configurator::Get().common.player.streamDir;
   std::ifstream stream(dumpPath / "executeIndirectRaytracing.txt");
   while (true) {
-    unsigned callKey{};
+    GITSKey callKey{};
     D3D12_DISPATCH_RAYS_DESC desc{};
     stream >> callKey;
     if (!stream) {

@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #pragma once
+#include "arguments.h"
 
 #include "keyUtils.h"
 
@@ -15,7 +16,7 @@ namespace DirectX {
 
 class ExecutionSerializationKeyAllocator {
 public:
-  unsigned GetUniqueCommandKey() {
+  GITSKey GetUniqueCommandKey() {
     return ++m_CommandKey;
   }
   void RemapCommandKey(unsigned& key) {
@@ -25,7 +26,7 @@ public:
   }
 
 private:
-  unsigned m_CommandKey{EXECUTION_SERIALIZATION_KEY_MASK};
+  GITSKey m_CommandKey{EXECUTION_SERIALIZATION_KEY_MASK};
 };
 
 } // namespace DirectX

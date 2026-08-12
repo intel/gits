@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #pragma once
+#include "arguments.h"
 
 #include "windowService.h"
 #include "replayDescriptorHandleService.h"
@@ -85,9 +86,9 @@ public:
     return m_PipelineLibraryService;
   }
 
-  void AddObject(unsigned objectKey, IUnknown* object);
-  void RemoveObject(unsigned objectKey);
-  IUnknown* FindObject(unsigned objectKey);
+  void AddObject(GITSKey objectKey, IUnknown* object);
+  void RemoveObject(GITSKey objectKey);
+  IUnknown* FindObject(GITSKey objectKey);
 
   ContextMapService& GetIntelExtensionsContextMap() {
     return m_IntelExtensionsContextMap;
@@ -136,7 +137,7 @@ private:
   HMODULE m_DStorageDll{};
   HMODULE m_DStorageCoreDll{};
 
-  std::unordered_map<unsigned, IUnknown*> m_Objects;
+  std::unordered_map<GITSKey, IUnknown*> m_Objects;
   ContextMapService m_IntelExtensionsContextMap;
   ContextMapService m_XessContextMap;
   ContextMapService m_XellContextMap;

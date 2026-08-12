@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "ccodeTypes.h"
+#include "arguments.h"
 #include "ccodeStream.h"
 #include "command.h"
 #include "log.h"
@@ -31,12 +32,12 @@ std::string makeRawStringLiteral(const std::string& content, const char* prefix)
 
 } // namespace
 
-std::string objKeyToStr(unsigned key) {
+std::string objKeyToStr(GITSKey key) {
   GITS_ASSERT(key);
   return "O" + keyToStr(key);
 }
 
-std::string objKeyToPtrStr(unsigned key) {
+std::string objKeyToPtrStr(GITSKey key) {
   if (!key) {
     return "nullptr";
   }

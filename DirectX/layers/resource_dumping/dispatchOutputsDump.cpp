@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "dispatchOutputsDump.h"
+#include "arguments.h"
 
 namespace gits {
 namespace DirectX {
@@ -33,8 +34,8 @@ void DispatchOutputsDump::DumpResource(ID3D12GraphicsCommandList* commandList,
   StageResource(commandList, resource, resourceState, *dumpInfo);
 }
 
-void DispatchOutputsDump::ExecuteCommandLists(unsigned key,
-                                              unsigned commandQueueKey,
+void DispatchOutputsDump::ExecuteCommandLists(GITSKey key,
+                                              GITSKey commandQueueKey,
                                               ID3D12CommandQueue* commandQueue,
                                               ID3D12CommandList** commandLists,
                                               unsigned commandListNum,

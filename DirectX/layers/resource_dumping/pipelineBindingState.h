@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #pragma once
+#include "arguments.h"
 
 #include "descriptorHeapTracker.h"
 
@@ -25,19 +26,15 @@ public:
   void Reset();
   void SetRootSignature(D3D12_ROOT_SIGNATURE_DESC2* desc);
   void SetDescriptorTable(unsigned parameterIndex,
-                          unsigned descriptorHeapKey,
+                          GITSKey descriptorHeapKey,
                           unsigned descriptorHeapIndex);
   void SetConstant(unsigned parameterIndex, unsigned data, unsigned offset);
   void SetConstants(unsigned parameterIndex, unsigned* data, unsigned offset, unsigned size);
-  void SetConstantBufferView(unsigned parameterIndex,
-                             unsigned resourceKey,
-                             unsigned resourceOffset);
+  void SetConstantBufferView(unsigned parameterIndex, GITSKey resourceKey, unsigned resourceOffset);
   void SetUnorderedAccessView(unsigned parameterIndex,
-                              unsigned resourceKey,
+                              GITSKey resourceKey,
                               unsigned resourceOffset);
-  void SetShaderResourceView(unsigned parameterIndex,
-                             unsigned resourceKey,
-                             unsigned resourceOffset);
+  void SetShaderResourceView(unsigned parameterIndex, GITSKey resourceKey, unsigned resourceOffset);
   void DumpState(std::ofstream& stream);
 
 private:
@@ -53,18 +50,18 @@ private:
     D3D12_ROOT_PARAMETER_TYPE Type{};
     union {
       struct {
-        unsigned DescriptorHeapKey;
+        GITSKey DescriptorHeapKey;
         unsigned DescriptorHeapIndex;
       } DescriptorTable{};
       struct {
-        unsigned ResourceKey;
+        GITSKey ResourceKey;
         unsigned ResourceOffset;
       } Descriptor;
       struct {
       } Constant;
     };
   };
-  std::unordered_map<unsigned, Binding> m_Bindings;
+  std::unordered_map<GITSKey, Binding> m_Bindings;
 };
 
 } // namespace DirectX

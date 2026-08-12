@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "commandListService.h"
+#include "arguments.h"
 #include "commandsAuto.h"
 #include "stateTrackingService.h"
 #include "subcaptureRecorder.h"
@@ -27,7 +28,7 @@ CommandListService::CommandListService(StateTrackingService& stateService)
 void CommandListService::AddCommandList(CommandListState* state) {
   m_CommandListsByKey[state->Key] = state;
 }
-void CommandListService::RemoveCommandList(unsigned key) {
+void CommandListService::RemoveCommandList(GITSKey key) {
   m_CommandListsByKey.erase(key);
 }
 
@@ -36,8 +37,8 @@ void CommandListService::RestoreCommandLists() {
     return;
   }
 
-  std::map<unsigned, CommandListCommand*> commandsByKey;
-  std::map<unsigned, unsigned> commandListAllocatorsForReset;
+  std::map<GITSKey, CommandListCommand*> commandsByKey;
+  std::map<GITSKey, GITSKey> commandListAllocatorsForReset;
 
   for (auto& it : m_CommandListsByKey) {
     if (!m_StateService.GetAnalyzerResults().RestoreCommandList(it.first)) {
@@ -288,7 +289,7 @@ void CommandListService::RestoreCommandState(CommandListClearUnorderedAccessView
   }
 }
 
-void CommandListService::InitAuxiliaryRtvHeap(unsigned deviceKey) {
+void CommandListService::InitAuxiliaryRtvHeap(GITSKey deviceKey) {
   if (m_AuxiliaryRtvDescriptorHeapKey) {
     return;
   }
@@ -307,7 +308,7 @@ void CommandListService::InitAuxiliaryRtvHeap(unsigned deviceKey) {
   m_StateService.GetRecorder().Record(ID3D12DeviceCreateDescriptorHeapSerializer(c));
 }
 
-void CommandListService::InitAuxiliaryDsvHeap(unsigned deviceKey) {
+void CommandListService::InitAuxiliaryDsvHeap(GITSKey deviceKey) {
   if (m_AuxiliaryDsvDescriptorHeapKey) {
     return;
   }
@@ -326,7 +327,7 @@ void CommandListService::InitAuxiliaryDsvHeap(unsigned deviceKey) {
   m_StateService.GetRecorder().Record(ID3D12DeviceCreateDescriptorHeapSerializer(c));
 }
 
-void CommandListService::InitAuxiliaryUavGpuHeap(unsigned deviceKey) {
+void CommandListService::InitAuxiliaryUavGpuHeap(GITSKey deviceKey) {
   if (m_AuxiliaryUavGpuDescriptorHeapKey) {
     return;
   }
@@ -345,7 +346,7 @@ void CommandListService::InitAuxiliaryUavGpuHeap(unsigned deviceKey) {
   m_StateService.GetRecorder().Record(ID3D12DeviceCreateDescriptorHeapSerializer(c));
 }
 
-void CommandListService::InitAuxiliaryUavCpuHeap(unsigned deviceKey) {
+void CommandListService::InitAuxiliaryUavCpuHeap(GITSKey deviceKey) {
   if (m_AuxiliaryUavCpuDescriptorHeapKey) {
     return;
   }
