@@ -285,10 +285,10 @@ void AccelerationStructuresBuildService::BuildAccelerationStructure(
   m_InputBuffersService.StoreBuffers(c.Key, c.m_Object.Value);
   m_OptimizationService.AddCommand(c.m_Object.Key, command);
 
-  m_BufferLifetimeService.AddBuffer(c.Key, c.m_pDesc.DestAccelerationStructureKey);
-  m_BufferLifetimeService.AddBuffer(c.Key, c.m_pDesc.SourceAccelerationStructureKey);
+  m_BufferLifetimeService.AddRtasBuffer(c.Key, c.m_pDesc.DestAccelerationStructureKey);
+  m_BufferLifetimeService.AddRtasBuffer(c.Key, c.m_pDesc.SourceAccelerationStructureKey);
   for (unsigned key : c.m_pDesc.InputKeys) {
-    m_BufferLifetimeService.AddBuffer(c.Key, key);
+    m_BufferLifetimeService.AddInputBuffer(c.Key, key);
   }
 }
 
@@ -324,8 +324,8 @@ void AccelerationStructuresBuildService::CopyAccelerationStructure(
   m_StateService.KeepState(c.m_DestAccelerationStructureData.InterfaceKey);
   m_OptimizationService.AddCommand(c.m_Object.Key, command);
 
-  m_BufferLifetimeService.AddBuffer(c.Key, c.m_DestAccelerationStructureData.InterfaceKey);
-  m_BufferLifetimeService.AddBuffer(c.Key, c.m_SourceAccelerationStructureData.InterfaceKey);
+  m_BufferLifetimeService.AddRtasBuffer(c.Key, c.m_DestAccelerationStructureData.InterfaceKey);
+  m_BufferLifetimeService.AddRtasBuffer(c.Key, c.m_SourceAccelerationStructureData.InterfaceKey);
 }
 
 void AccelerationStructuresBuildService::NvapiBuildAccelerationStructureEx(
@@ -687,10 +687,10 @@ void AccelerationStructuresBuildService::NvapiBuildAccelerationStructureEx(
   m_InputBuffersService.StoreBuffers(c.Key, c.m_pCommandList.Value);
   m_OptimizationService.AddCommand(c.m_pCommandList.Key, command);
 
-  m_BufferLifetimeService.AddBuffer(c.Key, c.m_pParams.DestAccelerationStructureKey);
-  m_BufferLifetimeService.AddBuffer(c.Key, c.m_pParams.SourceAccelerationStructureKey);
+  m_BufferLifetimeService.AddRtasBuffer(c.Key, c.m_pParams.DestAccelerationStructureKey);
+  m_BufferLifetimeService.AddRtasBuffer(c.Key, c.m_pParams.SourceAccelerationStructureKey);
   for (unsigned key : c.m_pParams.InputKeys) {
-    m_BufferLifetimeService.AddBuffer(c.Key, key);
+    m_BufferLifetimeService.AddInputBuffer(c.Key, key);
   }
 }
 
@@ -782,9 +782,9 @@ void AccelerationStructuresBuildService::NvapiBuildOpacityMicromapArray(
   m_InputBuffersService.StoreBuffers(c.Key, c.m_pCommandList.Value);
   m_OptimizationService.AddCommand(c.m_pCommandList.Key, command);
 
-  m_BufferLifetimeService.AddBuffer(c.Key, c.m_pParams.DestOpacityMicromapArrayDataKey);
-  m_BufferLifetimeService.AddBuffer(c.Key, c.m_pParams.InputBufferKey);
-  m_BufferLifetimeService.AddBuffer(c.Key, c.m_pParams.PerOMMDescsKey);
+  m_BufferLifetimeService.AddRtasBuffer(c.Key, c.m_pParams.DestOpacityMicromapArrayDataKey);
+  m_BufferLifetimeService.AddInputBuffer(c.Key, c.m_pParams.InputBufferKey);
+  m_BufferLifetimeService.AddInputBuffer(c.Key, c.m_pParams.PerOMMDescsKey);
 }
 
 void AccelerationStructuresBuildService::RestoreAccelerationStructures() {
@@ -1235,10 +1235,18 @@ void AccelerationStructuresBuildService::OptimizationService::Cleanup() {
   m_RestoreCommands.clear();
 }
 
-void AccelerationStructuresBuildService::BufferLifetimeService::AddBuffer(unsigned commandKey,
-                                                                          unsigned bufferKey) {
+void AccelerationStructuresBuildService::BufferLifetimeService::AddInputBuffer(unsigned commandKey,
+                                                                               unsigned bufferKey) {
   if (bufferKey) {
-    m_BuffersByBuild[commandKey].insert(bufferKey);
+    m_InputBuffersByBuild[commandKey].insert(bufferKey);
+    m_Buffers.insert(bufferKey);
+  }
+}
+
+void AccelerationStructuresBuildService::BufferLifetimeService::AddRtasBuffer(unsigned commandKey,
+                                                                              unsigned bufferKey) {
+  if (bufferKey) {
+    m_RtasBuffersByBuild[commandKey].insert(bufferKey);
     m_Buffers.insert(bufferKey);
   }
 }
@@ -1253,10 +1261,16 @@ void AccelerationStructuresBuildService::BufferLifetimeService::AddRelease(unsig
 }
 
 void AccelerationStructuresBuildService::BufferLifetimeService::CreateBuffers(unsigned commandKey) {
-  for (unsigned bufferKey : m_BuffersByBuild[commandKey]) {
+  for (unsigned bufferKey : m_InputBuffersByBuild[commandKey]) {
     ResourceState* bufferState = static_cast<ResourceState*>(m_StateService.GetState(bufferKey));
     GITS_ASSERT(bufferState);
     m_StateService.RestoreState(bufferKey);
+  }
+  for (unsigned bufferKey : m_RtasBuffersByBuild[commandKey]) {
+    ResourceState* bufferState = static_cast<ResourceState*>(m_StateService.GetState(bufferKey));
+    GITS_ASSERT(bufferState);
+    m_StateService.RestoreState(bufferKey);
+    bufferState->IsRtas = true;
   }
 }
 

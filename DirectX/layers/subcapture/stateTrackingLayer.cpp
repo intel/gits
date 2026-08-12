@@ -1183,6 +1183,8 @@ void StateTrackingLayer::Post(ID3D12DeviceCreateCommittedResourceCommand& c) {
                                                state->Key, state->InitialState, !state->IsMappable);
     m_ResourceStateTracker.AddResource(*reinterpret_cast<ID3D12Resource**>(c.m_ppvResource.Value),
                                        c.m_ppvResource.Key, c.m_InitialResourceState.Value);
+  } else {
+    state->IsRtas = true;
   }
   if (c.m_HeapFlags.Value & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
     m_ResidencyService.CreateNotResident(state->Key, state->DeviceKey);
@@ -1218,6 +1220,8 @@ void StateTrackingLayer::Post(ID3D12Device4CreateCommittedResource1Command& c) {
                                                state->Key, state->InitialState, !state->IsMappable);
     m_ResourceStateTracker.AddResource(*reinterpret_cast<ID3D12Resource**>(c.m_ppvResource.Value),
                                        c.m_ppvResource.Key, c.m_InitialResourceState.Value);
+  } else {
+    state->IsRtas = true;
   }
   if (c.m_HeapFlags.Value & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
     m_ResidencyService.CreateNotResident(state->Key, state->DeviceKey);
@@ -1254,6 +1258,8 @@ void StateTrackingLayer::Post(ID3D12Device8CreateCommittedResource2Command& c) {
                                                state->Key, state->InitialState, !state->IsMappable);
     m_ResourceStateTracker.AddResource(*reinterpret_cast<ID3D12Resource**>(c.m_ppvResource.Value),
                                        c.m_ppvResource.Key, c.m_InitialResourceState.Value);
+  } else {
+    state->IsRtas = true;
   }
   if (c.m_HeapFlags.Value & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
     m_ResidencyService.CreateNotResident(state->Key, state->DeviceKey);
@@ -1331,6 +1337,8 @@ void StateTrackingLayer::Post(ID3D12DeviceCreatePlacedResourceCommand& c) {
         state->InitialState, !(state->IsMappable || state->BarrierRestricted));
     m_ResourceStateTracker.AddResource(*reinterpret_cast<ID3D12Resource**>(c.m_ppvResource.Value),
                                        c.m_ppvResource.Key, c.m_InitialState.Value);
+  } else {
+    state->IsRtas = true;
   }
   m_GpuAddressService.CreatePlacedResource(c.m_pHeap.Key, c.m_ppvResource.Key,
                                            c.m_pDesc.Value->Flags);
@@ -1373,6 +1381,8 @@ void StateTrackingLayer::Post(ID3D12Device8CreatePlacedResource1Command& c) {
         state->InitialState, !(state->IsMappable || state->BarrierRestricted));
     m_ResourceStateTracker.AddResource(*reinterpret_cast<ID3D12Resource**>(c.m_ppvResource.Value),
                                        c.m_ppvResource.Key, c.m_InitialState.Value);
+  } else {
+    state->IsRtas = true;
   }
   m_GpuAddressService.CreatePlacedResource(c.m_pHeap.Key, c.m_ppvResource.Key,
                                            c.m_pDesc.Value->Flags);
@@ -1447,6 +1457,8 @@ void StateTrackingLayer::Post(ID3D12DeviceCreateReservedResourceCommand& c) {
                                                state->Key, state->InitialState, !state->IsMappable);
     m_ResourceStateTracker.AddResource(*reinterpret_cast<ID3D12Resource**>(c.m_ppvResource.Value),
                                        c.m_ppvResource.Key, c.m_InitialState.Value);
+  } else {
+    state->IsRtas = true;
   }
 }
 
@@ -1479,6 +1491,8 @@ void StateTrackingLayer::Post(ID3D12Device4CreateReservedResource1Command& c) {
                                                state->Key, state->InitialState, !state->IsMappable);
     m_ResourceStateTracker.AddResource(*reinterpret_cast<ID3D12Resource**>(c.m_ppvResource.Value),
                                        c.m_ppvResource.Key, c.m_InitialState.Value);
+  } else {
+    state->IsRtas = true;
   }
 }
 
@@ -1883,6 +1897,8 @@ void StateTrackingLayer::Post(INTC_D3D12_CreateCommittedResourceCommand& c) {
                                                state->Key, state->InitialState, !state->IsMappable);
     m_ResourceStateTracker.AddResource(*reinterpret_cast<ID3D12Resource**>(c.m_ppvResource.Value),
                                        c.m_ppvResource.Key, c.m_InitialResourceState.Value);
+  } else {
+    state->IsRtas = true;
   }
   if (c.m_HeapFlags.Value & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
     m_ResidencyService.CreateNotResident(state->Key, state->DeviceKey);
@@ -1924,6 +1940,8 @@ void StateTrackingLayer::Post(INTC_D3D12_CreatePlacedResourceCommand& c) {
         state->InitialState, !(state->IsMappable || state->BarrierRestricted));
     m_ResourceStateTracker.AddResource(*reinterpret_cast<ID3D12Resource**>(c.m_ppvResource.Value),
                                        c.m_ppvResource.Key, c.m_InitialState.Value);
+  } else {
+    state->IsRtas = true;
   }
 }
 
@@ -1954,6 +1972,8 @@ void StateTrackingLayer::Post(INTC_D3D12_CreateReservedResourceCommand& c) {
                                                state->Key, state->InitialState, !state->IsMappable);
     m_ResourceStateTracker.AddResource(*reinterpret_cast<ID3D12Resource**>(c.m_ppvResource.Value),
                                        c.m_ppvResource.Key, c.m_InitialState.Value);
+  } else {
+    state->IsRtas = true;
   }
 }
 

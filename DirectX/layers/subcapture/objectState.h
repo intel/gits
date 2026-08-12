@@ -51,6 +51,7 @@ struct ResourceState : public ObjectState {
   bool DenyShaderResource{};
   D3D12_RESOURCE_STATES CurrentState{};
   unsigned HeapKey{};
+  bool IsRtas{};
 };
 
 struct HeapState : public ObjectState {

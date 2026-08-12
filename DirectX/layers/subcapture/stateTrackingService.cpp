@@ -390,7 +390,7 @@ void StateTrackingService::RestoreResources() {
     ResourceBatchType prevType{};
     for (unsigned resourceKey : orderedResources) {
       ResourceState* state = static_cast<ResourceState*>(GetState(resourceKey));
-      if (!state) {
+      if (!state || state->IsRtas) {
         continue;
       }
 

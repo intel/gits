@@ -168,14 +168,16 @@ private:
   class BufferLifetimeService {
   public:
     BufferLifetimeService(StateTrackingService& stateService) : m_StateService(stateService) {}
-    void AddBuffer(unsigned commandKey, unsigned bufferKey);
+    void AddInputBuffer(unsigned commandKey, unsigned bufferKey);
+    void AddRtasBuffer(unsigned commandKey, unsigned bufferKey);
     void AddRelease(unsigned commandKey, unsigned bufferKey);
     void CreateBuffers(unsigned commandKey);
     void ReleaseBuffers(unsigned commandKey);
 
   private:
     StateTrackingService& m_StateService;
-    std::unordered_map<unsigned, std::unordered_set<unsigned>> m_BuffersByBuild;
+    std::unordered_map<unsigned, std::unordered_set<unsigned>> m_InputBuffersByBuild;
+    std::unordered_map<unsigned, std::unordered_set<unsigned>> m_RtasBuffersByBuild;
     std::unordered_set<unsigned> m_Buffers;
     std::map<unsigned, unsigned> m_Releases;
   };
