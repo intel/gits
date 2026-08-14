@@ -13,6 +13,7 @@
 
 #include <algorithm>
 #include <cstring>
+#include <utility>
 #include <vector>
 
 namespace gits {
@@ -371,6 +372,10 @@ void RestoreContentService::FlushBatch(Session& session, size_t batchIdx) {
     return;
   }
 
+  // Published only once the submit below succeeds - an image whose barriers were never
+  // submitted keeps whatever layout it had.
+  std::vector<std::pair<uint64_t, VkImageLayout>> appliedImageLayouts;
+
   VkCommandBufferAllocateInfo ai{};
   ai.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
   ai.commandPool = session.Pool;
@@ -467,6 +472,7 @@ void RestoreContentService::FlushBatch(Session& session, size_t batchIdx) {
       dt.vkCmdPipelineBarrier(slot.Cb, VK_PIPELINE_STAGE_TRANSFER_BIT,
                               VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr, 0, nullptr, 1,
                               &toFinal);
+      appliedImageLayouts.emplace_back(r->DstKey, r->FinalLayout);
     }
   }
 
@@ -483,6 +489,12 @@ void RestoreContentService::FlushBatch(Session& session, size_t batchIdx) {
     return;
   }
   slot.InFlight = true;
+  m_AppliedImageLayouts.insert(m_AppliedImageLayouts.end(), appliedImageLayouts.begin(),
+                               appliedImageLayouts.end());
+}
+
+std::vector<std::pair<uint64_t, VkImageLayout>> RestoreContentService::DrainAppliedImageLayouts() {
+  return std::exchange(m_AppliedImageLayouts, {});
 }
 
 void RestoreContentService::OnData(const RestoreContentDataCommand& command) {

@@ -114,6 +114,9 @@ public:
   void Post(vkUnmapMemory2KHRCommand& command) override;
   // Track mapped data snapshots so memory content can be restored.
   void Post(MappedDataMetaCommand& command) override;
+  // Adopt the image layouts left by player-side uploads, whose internal barriers bypass
+  // layer callbacks.
+  void Post(RestoreContentDataCommand& command) override;
 
   // ---- Synchronization -------------------------------------------------
   void Post(vkCreateFenceCommand& command) override;
@@ -380,6 +383,9 @@ public:
   }
 
 private:
+  // Query every bound address buffer because a parent trim may omit the original query.
+  void TrackBoundBufferDeviceAddress(uint64_t bufferKey);
+
   // Feed the per-event VkDependencyInfo image barriers carried by a sync2
   // event wait (vkCmdWaitEvents2/KHR) into image-layout tracking, mirroring the
   // sync2 pipeline-barrier path.  handleKeys is the flat, array-order

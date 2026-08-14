@@ -37,6 +37,7 @@ public:
   void Post(vkCreateDeviceCommand& command) override;
   void Post(vkGetDeviceQueueCommand& command) override;
   void Post(vkGetDeviceQueue2Command& command) override;
+  void Pre(vkCreateSwapchainKHRCommand& command) override;
   void Post(vkCreateSwapchainKHRCommand& command) override;
   void Pre(vkDestroySwapchainKHRCommand& command) override;
   void Pre(vkQueuePresentKHRCommand& command) override;

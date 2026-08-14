@@ -36,6 +36,9 @@ public:
                                const VkBufferCreateInfo& createInfo,
                                VkMemoryRequirements& outReq) override;
 
+  // Query a bound buffer because a parent trim may omit the original address command.
+  VkDeviceAddress QueryBufferDeviceAddress(uint64_t deviceKey, uint64_t bufferKey);
+
   bool ReadBuffer(uint64_t deviceKey,
                   uint64_t physDevKey,
                   uint64_t queueKey,

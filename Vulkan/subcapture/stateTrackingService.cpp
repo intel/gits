@@ -60,6 +60,45 @@ void EmitGetPhysicalDeviceQueueFamilyProperties(SubcaptureRecorder& recorder,
 
 } // namespace
 
+void StateTrackingService::EmitGetBufferDeviceAddress(uint64_t deviceKey,
+                                                      uint64_t bufferKey,
+                                                      VkDeviceAddress address) {
+  GITS_ASSERT(m_Recorder.IsOpen());
+  GITS_ASSERT(deviceKey, "EmitGetBufferDeviceAddress: deviceKey is null");
+  GITS_ASSERT(bufferKey, "EmitGetBufferDeviceAddress: bufferKey is null");
+  GITS_ASSERT(address, "EmitGetBufferDeviceAddress: address is null");
+
+  VkBufferDeviceAddressInfo info{};
+  info.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
+
+  const auto* deviceState = GetState<DeviceState>(deviceKey);
+  GITS_ASSERT(deviceState);
+  // Emit the variant the device actually enabled - the core entry point does not exist on a
+  // Vulkan 1.1 device that reached buffer device address through an extension.
+  if (deviceState->HasBufferDeviceAddressKHR) {
+    vkGetBufferDeviceAddressKHRCommand cmd;
+    cmd.m_device.Key = deviceKey;
+    cmd.m_pInfo.Value = &info;
+    cmd.m_pInfo.HandleKeys = {bufferKey};
+    cmd.m_Return.Value = address;
+    m_Recorder.Record(vkGetBufferDeviceAddressKHRSerializer(cmd));
+  } else if (deviceState->HasBufferDeviceAddressEXT) {
+    vkGetBufferDeviceAddressEXTCommand cmd;
+    cmd.m_device.Key = deviceKey;
+    cmd.m_pInfo.Value = &info;
+    cmd.m_pInfo.HandleKeys = {bufferKey};
+    cmd.m_Return.Value = address;
+    m_Recorder.Record(vkGetBufferDeviceAddressEXTSerializer(cmd));
+  } else {
+    vkGetBufferDeviceAddressCommand cmd;
+    cmd.m_device.Key = deviceKey;
+    cmd.m_pInfo.Value = &info;
+    cmd.m_pInfo.HandleKeys = {bufferKey};
+    cmd.m_Return.Value = address;
+    m_Recorder.Record(vkGetBufferDeviceAddressSerializer(cmd));
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Construction
 // ---------------------------------------------------------------------------
@@ -515,6 +554,11 @@ void StateTrackingService::RestoreOne(ObjectState* state) {
   case CommandId::ID_VKCREATEIMAGEVIEW:
     if (!RestoreImageView(state)) {
       return; // Do NOT insert into m_RestoredThisPass.
+    }
+    break;
+  case CommandId::ID_VKCREATEACCELERATIONSTRUCTUREKHR:
+    if (!RestoreAccelerationStructure(state)) {
+      return;
     }
     break;
   case CommandId::ID_VKCREATESWAPCHAINKHR:
@@ -1848,6 +1892,37 @@ bool StateTrackingService::RestorePhysicalDevice(ObjectState* state) {
   return true;
 }
 
+bool StateTrackingService::RestoreAccelerationStructure(ObjectState* state) {
+  auto* asState = static_cast<AccelerationStructureState*>(state);
+  if (!EmitCreationCommand(state)) {
+    return false;
+  }
+
+  // Make the capture/replay address explicit in the restored stream. Besides satisfying
+  // consumers that expect a queried address, this lets a later subcapture pass populate its
+  // DeviceAddressTrackingService and resolve TLAS instance references back to the restored
+  // BLAS handles.
+  //
+  // A zero address means nothing ever asked for one - the usual case for a TLAS, which is
+  // reached through a descriptor rather than by address. Emitting the query anyway would only
+  // add a call whose recorded return the player overwrites, so skip it.
+  if (asState->DeviceAddress == 0) {
+    return true;
+  }
+
+  VkAccelerationStructureDeviceAddressInfoKHR info{};
+  info.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR;
+  info.accelerationStructure = reinterpret_cast<VkAccelerationStructureKHR>(0x1ULL); // sentinel
+
+  vkGetAccelerationStructureDeviceAddressKHRCommand addressCmd;
+  addressCmd.m_device.Key = state->ParentKey;
+  addressCmd.m_pInfo.Value = &info;
+  addressCmd.m_pInfo.HandleKeys = {state->Key};
+  addressCmd.m_Return.Value = asState->DeviceAddress;
+  m_Recorder.Record(vkGetAccelerationStructureDeviceAddressKHRSerializer(addressCmd));
+  return true;
+}
+
 void StateTrackingService::RestoreSurface(ObjectState* state) {
   auto* surf = static_cast<SurfaceState*>(state);
   if (surf->HwndKey != 0) {
@@ -1999,6 +2074,12 @@ bool StateTrackingService::RestoreBuffer(ObjectState* state) {
     bind.m_Return.Value = VK_SUCCESS;
     m_Recorder.Record(vkBindBufferMemorySerializer(bind));
   }
+
+  // Preserve the buffer-address association for nested subcaptures.
+  if (buf->BoundMemoryKey && (buf->UsageFlags & VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT)) {
+    GITS_ASSERT(buf->DeviceAddress);
+    EmitGetBufferDeviceAddress(state->ParentKey, state->Key, buf->DeviceAddress);
+  }
   return true;
 }
 
@@ -2068,7 +2149,7 @@ bool StateTrackingService::RestoreImage(ObjectState* state) {
   //
   // The fix must NOT touch the original (first-player) image creation -- only
   // the create command that the SECOND player will run during state restore.
-  // Decode the stored blob into a scratch copy, OR in TRANSFER_DST, re-emit.
+  // Re-emit with TRANSFER_DST, except for incompatible transient attachments.
   //
   // KNOWN LIMITATION / FUTURE WORK:
   // Adding TRANSFER_DST here can legitimately change the image's
@@ -2086,7 +2167,8 @@ bool StateTrackingService::RestoreImage(ObjectState* state) {
     char* buf = scratch.data();
     vkCreateImageCommand cmd;
     Decode(buf, cmd);
-    if (cmd.m_pCreateInfo.Value) {
+    if (cmd.m_pCreateInfo.Value &&
+        !(cmd.m_pCreateInfo.Value->usage & VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT)) {
       cmd.m_pCreateInfo.Value->usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     }
     m_Recorder.Record(vkCreateImageSerializer(cmd));
@@ -2873,19 +2955,18 @@ static void EmitStagingUploadAndCopyBuffer(SubcaptureRecorder& recorder,
 // even though the buffer does not exist yet when the stream is authored.
 // ---------------------------------------------------------------------------
 
-static void EmitAccelerationStructureDeserialize(SubcaptureRecorder& recorder,
-                                                 uint64_t deviceKey,
-                                                 uint64_t queueKey,
-                                                 uint64_t commandPoolKey,
-                                                 uint64_t dstAsKey,
-                                                 VkDeviceSize dataSize,
-                                                 VkDeviceSize stagingAllocationSize,
-                                                 uint32_t stagingMemTypeIndex,
-                                                 VkDeviceAddress capturedDeviceAddress,
-                                                 uint64_t capturedOpaqueCaptureAddress,
-                                                 uint64_t capturedMemoryOpaqueCaptureAddress,
-                                                 const std::vector<uint8_t>& data) {
-
+void StateTrackingService::EmitAccelerationStructureDeserialize(
+    uint64_t deviceKey,
+    uint64_t queueKey,
+    uint64_t commandPoolKey,
+    uint64_t dstAsKey,
+    VkDeviceSize dataSize,
+    VkDeviceSize stagingAllocationSize,
+    uint32_t stagingMemTypeIndex,
+    VkDeviceAddress capturedDeviceAddress,
+    uint64_t capturedOpaqueCaptureAddress,
+    uint64_t capturedMemoryOpaqueCaptureAddress,
+    const std::vector<uint8_t>& data) {
   // --- Create staging buffer (capture/replay-stable address) ---
   VkBufferOpaqueCaptureAddressCreateInfo opaqueAddrCI{};
   opaqueAddrCI.sType = VK_STRUCTURE_TYPE_BUFFER_OPAQUE_CAPTURE_ADDRESS_CREATE_INFO;
@@ -2899,7 +2980,7 @@ static void EmitAccelerationStructureDeserialize(SubcaptureRecorder& recorder,
   createBufCmd.m_pCreateInfo.Value = &bci;
   createBufCmd.m_pBuffer.Key = kStagingBufKey;
   createBufCmd.m_Return.Value = VK_SUCCESS;
-  recorder.Record(vkCreateBufferSerializer(createBufCmd));
+  m_Recorder.Record(vkCreateBufferSerializer(createBufCmd));
 
   VkMemoryOpaqueCaptureAddressAllocateInfo memOpaqueAddrCI{};
   memOpaqueAddrCI.sType = VK_STRUCTURE_TYPE_MEMORY_OPAQUE_CAPTURE_ADDRESS_ALLOCATE_INFO;
@@ -2922,7 +3003,7 @@ static void EmitAccelerationStructureDeserialize(SubcaptureRecorder& recorder,
   allocMemCmd.m_pAllocateInfo.Value = &mai;
   allocMemCmd.m_pMemory.Key = kStagingMemKey;
   allocMemCmd.m_Return.Value = VK_SUCCESS;
-  recorder.Record(vkAllocateMemorySerializer(allocMemCmd));
+  m_Recorder.Record(vkAllocateMemorySerializer(allocMemCmd));
 
   vkBindBufferMemoryCommand bindCmd;
   bindCmd.m_device.Key = deviceKey;
@@ -2930,7 +3011,8 @@ static void EmitAccelerationStructureDeserialize(SubcaptureRecorder& recorder,
   bindCmd.m_memory.Key = kStagingMemKey;
   bindCmd.m_memoryOffset.Value = 0;
   bindCmd.m_Return.Value = VK_SUCCESS;
-  recorder.Record(vkBindBufferMemorySerializer(bindCmd));
+  m_Recorder.Record(vkBindBufferMemorySerializer(bindCmd));
+  EmitGetBufferDeviceAddress(deviceKey, kStagingBufKey, capturedDeviceAddress);
 
   // --- Upload serialized bytes into staging via map + MappedDataMetaCommand ---
   vkMapMemoryCommand mapCmd;
@@ -2940,7 +3022,7 @@ static void EmitAccelerationStructureDeserialize(SubcaptureRecorder& recorder,
   mapCmd.m_size.Value = VK_WHOLE_SIZE;
   mapCmd.m_flags.Value = 0;
   mapCmd.m_Return.Value = VK_SUCCESS;
-  recorder.Record(vkMapMemorySerializer(mapCmd));
+  m_Recorder.Record(vkMapMemorySerializer(mapCmd));
 
   MappedDataMetaCommand mdc;
   mdc.m_Device.Key = deviceKey;
@@ -2951,12 +3033,12 @@ static void EmitAccelerationStructureDeserialize(SubcaptureRecorder& recorder,
   region.Data = const_cast<char*>(reinterpret_cast<const char*>(data.data()));
   mdc.m_Regions.Regions.push_back(region);
   mdc.m_Regions.Size = 1;
-  recorder.Record(MappedDataMetaSerializer(mdc));
+  m_Recorder.Record(MappedDataMetaSerializer(mdc));
 
   vkUnmapMemoryCommand unmapCmd;
   unmapCmd.m_device.Key = deviceKey;
   unmapCmd.m_memory.Key = kStagingMemKey;
-  recorder.Record(vkUnmapMemorySerializer(unmapCmd));
+  m_Recorder.Record(vkUnmapMemorySerializer(unmapCmd));
 
   // --- Allocate one-shot CB and issue the deserialize copy ---
   VkCommandBufferAllocateInfo cbai{};
@@ -2974,7 +3056,7 @@ static void EmitAccelerationStructureDeserialize(SubcaptureRecorder& recorder,
   allocCBCmd.m_pCommandBuffers.Size = 1;
   allocCBCmd.m_pCommandBuffers.Keys = {kContentCBKey};
   allocCBCmd.m_Return.Value = VK_SUCCESS;
-  recorder.Record(vkAllocateCommandBuffersSerializer(allocCBCmd));
+  m_Recorder.Record(vkAllocateCommandBuffersSerializer(allocCBCmd));
 
   VkCommandBufferBeginInfo cbbi{};
   cbbi.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -2983,7 +3065,7 @@ static void EmitAccelerationStructureDeserialize(SubcaptureRecorder& recorder,
   beginCBCmd.m_commandBuffer.Key = kContentCBKey;
   beginCBCmd.m_pBeginInfo.Value = &cbbi;
   beginCBCmd.m_Return.Value = VK_SUCCESS;
-  recorder.Record(vkBeginCommandBufferSerializer(beginCBCmd));
+  m_Recorder.Record(vkBeginCommandBufferSerializer(beginCBCmd));
 
   // Barrier: staging buffer host-write -> the AS-build stage that performs the
   // deserialize copy, whose source reads use VK_ACCESS_TRANSFER_READ_BIT.
@@ -3007,7 +3089,7 @@ static void EmitAccelerationStructureDeserialize(SubcaptureRecorder& recorder,
   barrierCmd.m_pBufferMemoryBarriers.Size = 1;
   barrierCmd.m_pBufferMemoryBarriers.HandleKeys = {kStagingBufKey};
   barrierCmd.m_imageMemoryBarrierCount.Value = 0;
-  recorder.Record(vkCmdPipelineBarrierSerializer(barrierCmd));
+  m_Recorder.Record(vkCmdPipelineBarrierSerializer(barrierCmd));
 
   VkCopyMemoryToAccelerationStructureInfoKHR copyInfo{};
   copyInfo.sType = VK_STRUCTURE_TYPE_COPY_MEMORY_TO_ACCELERATION_STRUCTURE_INFO_KHR;
@@ -3018,12 +3100,12 @@ static void EmitAccelerationStructureDeserialize(SubcaptureRecorder& recorder,
   copyCmd.m_commandBuffer.Key = kContentCBKey;
   copyCmd.m_pInfo.Value = &copyInfo;
   copyCmd.m_pInfo.HandleKeys = {dstAsKey};
-  recorder.Record(vkCmdCopyMemoryToAccelerationStructureKHRSerializer(copyCmd));
+  m_Recorder.Record(vkCmdCopyMemoryToAccelerationStructureKHRSerializer(copyCmd));
 
   vkEndCommandBufferCommand endCBCmd;
   endCBCmd.m_commandBuffer.Key = kContentCBKey;
   endCBCmd.m_Return.Value = VK_SUCCESS;
-  recorder.Record(vkEndCommandBufferSerializer(endCBCmd));
+  m_Recorder.Record(vkEndCommandBufferSerializer(endCBCmd));
 
   static VkCommandBuffer kDummyCBSlot = VK_NULL_HANDLE;
   kDummyCBSlot = reinterpret_cast<VkCommandBuffer>(kContentCBKey);
@@ -3037,12 +3119,12 @@ static void EmitAccelerationStructureDeserialize(SubcaptureRecorder& recorder,
   submitCmd.m_pSubmits.Value = &si;
   submitCmd.m_pSubmits.Size = 1;
   submitCmd.m_pSubmits.HandleKeys = {kContentCBKey};
-  recorder.Record(vkQueueSubmitSerializer(submitCmd));
+  m_Recorder.Record(vkQueueSubmitSerializer(submitCmd));
 
   vkQueueWaitIdleCommand waitCmd;
   waitCmd.m_queue.Key = queueKey;
   waitCmd.m_Return.Value = VK_SUCCESS;
-  recorder.Record(vkQueueWaitIdleSerializer(waitCmd));
+  m_Recorder.Record(vkQueueWaitIdleSerializer(waitCmd));
 
   static VkCommandBuffer kDummyCBFree = VK_NULL_HANDLE;
   vkFreeCommandBuffersCommand freeCBCmd;
@@ -3052,17 +3134,17 @@ static void EmitAccelerationStructureDeserialize(SubcaptureRecorder& recorder,
   freeCBCmd.m_pCommandBuffers.Value = &kDummyCBFree;
   freeCBCmd.m_pCommandBuffers.Size = 1;
   freeCBCmd.m_pCommandBuffers.Keys = {kContentCBKey};
-  recorder.Record(vkFreeCommandBuffersSerializer(freeCBCmd));
+  m_Recorder.Record(vkFreeCommandBuffersSerializer(freeCBCmd));
 
   vkDestroyBufferCommand destroyBufCmd;
   destroyBufCmd.m_device.Key = deviceKey;
   destroyBufCmd.m_buffer.Key = kStagingBufKey;
-  recorder.Record(vkDestroyBufferSerializer(destroyBufCmd));
+  m_Recorder.Record(vkDestroyBufferSerializer(destroyBufCmd));
 
   vkFreeMemoryCommand freeMemCmd2;
   freeMemCmd2.m_device.Key = deviceKey;
   freeMemCmd2.m_memory.Key = kStagingMemKey;
-  recorder.Record(vkFreeMemorySerializer(freeMemCmd2));
+  m_Recorder.Record(vkFreeMemorySerializer(freeMemCmd2));
 }
 
 static void EmitStagingUploadAndCopyImage(SubcaptureRecorder& recorder,
@@ -3296,16 +3378,21 @@ static VkBufferCreateInfo MakeCaptureReplayBufferCreateInfo(
 // Create a buffer at a specific capture/replay address (buffer- and memory-side
 // opaque capture addresses), under caller-supplied synthetic keys, so a replayed build
 // resolves the same device addresses.
-static void EmitCaptureReplayBufferCreate(SubcaptureRecorder& recorder,
-                                          uint64_t deviceKey,
-                                          uint64_t bufKey,
-                                          uint64_t memKey,
-                                          VkDeviceSize bufferSize,
-                                          VkDeviceSize allocationSize,
-                                          uint32_t memTypeIndex,
-                                          VkBufferUsageFlags usage,
-                                          uint64_t opaqueCaptureAddress,
-                                          uint64_t memoryOpaqueCaptureAddress) {
+void StateTrackingService::EmitCaptureReplayBufferCreate(uint64_t deviceKey,
+                                                         uint64_t bufKey,
+                                                         uint64_t memKey,
+                                                         VkDeviceSize bufferSize,
+                                                         VkDeviceSize allocationSize,
+                                                         uint32_t memTypeIndex,
+                                                         VkBufferUsageFlags usage,
+                                                         uint64_t opaqueCaptureAddress,
+                                                         uint64_t memoryOpaqueCaptureAddress,
+                                                         VkDeviceAddress deviceAddress) {
+  GITS_ASSERT(deviceKey);
+  GITS_ASSERT(bufKey);
+  GITS_ASSERT(memKey);
+  GITS_ASSERT(bufKey != memKey);
+
   VkBufferOpaqueCaptureAddressCreateInfo opaqueAddrCI{};
   opaqueAddrCI.sType = VK_STRUCTURE_TYPE_BUFFER_OPAQUE_CAPTURE_ADDRESS_CREATE_INFO;
   opaqueAddrCI.opaqueCaptureAddress = opaqueCaptureAddress;
@@ -3317,7 +3404,7 @@ static void EmitCaptureReplayBufferCreate(SubcaptureRecorder& recorder,
   createBufCmd.m_pCreateInfo.Value = &bci;
   createBufCmd.m_pBuffer.Key = bufKey;
   createBufCmd.m_Return.Value = VK_SUCCESS;
-  recorder.Record(vkCreateBufferSerializer(createBufCmd));
+  m_Recorder.Record(vkCreateBufferSerializer(createBufCmd));
 
   VkMemoryOpaqueCaptureAddressAllocateInfo memOpaqueAddrCI{};
   memOpaqueAddrCI.sType = VK_STRUCTURE_TYPE_MEMORY_OPAQUE_CAPTURE_ADDRESS_ALLOCATE_INFO;
@@ -3340,7 +3427,7 @@ static void EmitCaptureReplayBufferCreate(SubcaptureRecorder& recorder,
   allocMemCmd.m_pAllocateInfo.Value = &mai;
   allocMemCmd.m_pMemory.Key = memKey;
   allocMemCmd.m_Return.Value = VK_SUCCESS;
-  recorder.Record(vkAllocateMemorySerializer(allocMemCmd));
+  m_Recorder.Record(vkAllocateMemorySerializer(allocMemCmd));
 
   vkBindBufferMemoryCommand bindCmd;
   bindCmd.m_device.Key = deviceKey;
@@ -3348,13 +3435,19 @@ static void EmitCaptureReplayBufferCreate(SubcaptureRecorder& recorder,
   bindCmd.m_memory.Key = memKey;
   bindCmd.m_memoryOffset.Value = 0;
   bindCmd.m_Return.Value = VK_SUCCESS;
-  recorder.Record(vkBindBufferMemorySerializer(bindCmd));
+  m_Recorder.Record(vkBindBufferMemorySerializer(bindCmd));
+  EmitGetBufferDeviceAddress(deviceKey, bufKey, deviceAddress);
 }
 
 static void EmitCaptureReplayBufferDestroy(SubcaptureRecorder& recorder,
                                            uint64_t deviceKey,
                                            uint64_t bufKey,
                                            uint64_t memKey) {
+  GITS_ASSERT(deviceKey);
+  GITS_ASSERT(bufKey);
+  GITS_ASSERT(memKey);
+  GITS_ASSERT(bufKey != memKey);
+
   vkDestroyBufferCommand destroyBufCmd;
   destroyBufCmd.m_device.Key = deviceKey;
   destroyBufCmd.m_buffer.Key = bufKey;
@@ -3537,6 +3630,7 @@ void StateTrackingService::EmitAccelerationStructureRebuildBytes(
       uint64_t memOpaque = in.MemoryOpaqueCaptureAddress;
       uint32_t memType = UINT32_MAX;
       VkDeviceSize allocSize = req.size;
+      VkDeviceAddress replayDeviceAddress = in.BaseDeviceAddress;
 
       if (mustRelocate) {
         // Reserve a brand-new address and record a remap so the build command's baked
@@ -3561,6 +3655,7 @@ void StateTrackingService::EmitAccelerationStructureRebuildBytes(
           continue;
         }
         inputRemaps.push_back({in.BaseDeviceAddress, in.Size, freshDeviceAddress});
+        replayDeviceAddress = freshDeviceAddress;
       } else {
         memType = in.MemoryTypeIndex;
         if (memType == UINT32_MAX || !((req.memoryTypeBits >> memType) & 1u)) {
@@ -3581,8 +3676,8 @@ void StateTrackingService::EmitAccelerationStructureRebuildBytes(
       }
       const uint64_t bufKey = newTransientKey();
       const uint64_t memKey = newTransientKey();
-      EmitCaptureReplayBufferCreate(m_Recorder, deviceKey, bufKey, memKey, in.Size, allocSize,
-                                    memType, usage, bufOpaque, memOpaque);
+      EmitCaptureReplayBufferCreate(deviceKey, bufKey, memKey, in.Size, allocSize, memType, usage,
+                                    bufOpaque, memOpaque, replayDeviceAddress);
       // The addresses this input just took are claimed for the rest of the
       // rebuild, so a later input of the same build is tested against them too.
       addClaimedRange(bufOpaque, allocSize);
@@ -3808,10 +3903,10 @@ void StateTrackingService::EmitAccelerationStructureRebuildBytes(
     }
     const uint64_t scratchBufKey = newTransientKey();
     const uint64_t scratchMemKey = newTransientKey();
-    EmitCaptureReplayBufferCreate(m_Recorder, deviceKey, scratchBufKey, scratchMemKey, scratchSize,
+    EmitCaptureReplayBufferCreate(deviceKey, scratchBufKey, scratchMemKey, scratchSize,
                                   scratchReq.size, scratchMemType,
                                   VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, scratchOpaqueAddress,
-                                  scratchMemOpaqueAddress);
+                                  scratchMemOpaqueAddress, scratchAddress);
     transientBufs.emplace_back(scratchBufKey, scratchMemKey);
     info.scratchData.deviceAddress = scratchAddress;
   }
@@ -4076,8 +4171,8 @@ bool StateTrackingService::EmitRelocatedAccelerationStructureCreate(
     return false;
   }
 
-  EmitCaptureReplayBufferCreate(m_Recorder, deviceKey, bufKey, memKey, asState.Size, req.size,
-                                memType, usage, bufOpaque, memOpaque);
+  EmitCaptureReplayBufferCreate(deviceKey, bufKey, memKey, asState.Size, req.size, memType, usage,
+                                bufOpaque, memOpaque, freshDeviceAddress);
 
   // Handle members travel exclusively via HandleKeys (see generator_coders.py).
   cmd.m_pCreateInfo.HandleKeys[0] = bufKey;
@@ -4522,9 +4617,9 @@ void StateTrackingService::RestoreAccelerationStructureContents() {
                              ", so its content cannot be restored");
       }
 
-      EmitAccelerationStructureDeserialize(m_Recorder, deviceKey, queueKey, poolKey, asKey,
-                                           data.size(), stagingReq.size, stagingMemType,
-                                           stagingDeviceAddress, stagingOpaqueCaptureAddress,
+      EmitAccelerationStructureDeserialize(deviceKey, queueKey, poolKey, asKey, data.size(),
+                                           stagingReq.size, stagingMemType, stagingDeviceAddress,
+                                           stagingOpaqueCaptureAddress,
                                            stagingMemoryOpaqueCaptureAddress, data);
       LOG_TRACE << "Vulkan subcapture: restored acceleration structure content, key=" << asKey
                 << " size=" << data.size() << " allocSize=" << stagingReq.size;

@@ -274,10 +274,16 @@ void SubcaptureLayer::Post(vkCreateDeviceCommand& command) {
   if (command.m_pCreateInfo.Value) {
     const auto& ci = *command.m_pCreateInfo.Value;
     for (uint32_t i = 0; i < ci.enabledExtensionCount; ++i) {
-      if (ci.ppEnabledExtensionNames[i] &&
-          strcmp(ci.ppEnabledExtensionNames[i], VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME) == 0) {
+      const char* extensionName = ci.ppEnabledExtensionNames[i];
+      if (!extensionName) {
+        continue;
+      }
+      if (strcmp(extensionName, VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME) == 0) {
         state->HasTimelineSemaphoreKHR = true;
-        break;
+      } else if (strcmp(extensionName, VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME) == 0) {
+        state->HasBufferDeviceAddressKHR = true;
+      } else if (strcmp(extensionName, VK_EXT_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME) == 0) {
+        state->HasBufferDeviceAddressEXT = true;
       }
     }
   }
@@ -401,6 +407,20 @@ void SubcaptureLayer::Post(vkUnmapMemory2KHRCommand& command) {
 // with the correct initial memory contents.
 void SubcaptureLayer::Post(MappedDataMetaCommand& command) {
   m_MappedMemory.OnMappedData(command);
+}
+
+void SubcaptureLayer::Post(RestoreContentDataCommand& command) {
+  // The player uploads image content through barriers it records itself, so the layouts it
+  // leaves behind never reach this layer as commands. Reconstructing them from the manifest
+  // would have to mirror every failure path the upload can take, so take the layouts the
+  // upload actually applied instead. A data token can flush a batch, so drain after each.
+  for (const auto& [imageKey, layout] :
+       PlayerManager::Get().GetRestoreContentService().DrainAppliedImageLayouts()) {
+    auto* image = m_StateTracking.GetState<ImageState>(imageKey);
+    if (image) {
+      image->CurrentLayout = layout;
+    }
+  }
 }
 
 // ---- In-flight command buffer tracking -----------------------------------
@@ -648,6 +668,7 @@ void SubcaptureLayer::Post(vkCreateBufferCommand& command) {
 void SubcaptureLayer::Post(vkDestroyBufferCommand& command) {
   // An AS storage buffer is flagged Destroyed rather than erased - see
   // Post(vkFreeMemoryCommand&). Other buffers are erased as before.
+  m_StateTracking.GetDeviceAddressTracking().Untrack(command.m_buffer.Key);
   auto* state = m_StateTracking.GetState<BufferState>(command.m_buffer.Key);
   if (state && state->AsBacking) {
     state->Destroyed = true;
@@ -664,6 +685,7 @@ void SubcaptureLayer::Post(vkBindBufferMemoryCommand& command) {
   if (state) {
     state->BoundMemoryKey = command.m_memory.Key;
     state->MemoryOffset = command.m_memoryOffset.Value;
+    TrackBoundBufferDeviceAddress(state->Key);
   }
 }
 
@@ -680,6 +702,7 @@ void SubcaptureLayer::Post(vkBindBufferMemory2Command& command) {
     if (state && memKey) {
       state->BoundMemoryKey = memKey;
       state->MemoryOffset = command.m_pBindInfos.Value[i].memoryOffset;
+      TrackBoundBufferDeviceAddress(bufKey);
     }
   }
 }
@@ -696,8 +719,23 @@ void SubcaptureLayer::Post(vkBindBufferMemory2KHRCommand& command) {
     if (state && memKey) {
       state->BoundMemoryKey = memKey;
       state->MemoryOffset = command.m_pBindInfos.Value[i].memoryOffset;
+      TrackBoundBufferDeviceAddress(bufKey);
     }
   }
+}
+
+void SubcaptureLayer::TrackBoundBufferDeviceAddress(uint64_t bufferKey) {
+  auto* state = m_StateTracking.GetState<BufferState>(bufferKey);
+  if (!state || !(state->UsageFlags & VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT)) {
+    return;
+  }
+
+  const VkDeviceAddress address =
+      m_GpuReadbackHelper.QueryBufferDeviceAddress(state->ParentKey, bufferKey);
+  GITS_ASSERT(address);
+
+  state->DeviceAddress = address;
+  m_StateTracking.GetDeviceAddressTracking().Track(address, bufferKey, state->BufferSize);
 }
 
 void SubcaptureLayer::Post(vkCreateImageCommand& command) {
@@ -778,7 +816,8 @@ void TrackBufferDeviceAddress(StateTrackingService& stateTracking, TCommand& com
     return;
   }
   state->DeviceAddress = command.m_Return.Value;
-  stateTracking.GetDeviceAddressTracking().Track(command.m_Return.Value, bufferKey);
+  stateTracking.GetDeviceAddressTracking().Track(command.m_Return.Value, bufferKey,
+                                                 state->BufferSize);
 }
 } // namespace
 
@@ -2816,6 +2855,15 @@ void SubcaptureLayer::Post(vkCreateAccelerationStructureKHRCommand& command) {
     // Unlike VkBuffer, the opaque capture/replay address is a direct
     // create-info field here, not a pNext extension struct.
     state->OpaqueCaptureAddress = ci.deviceAddress;
+    // A successful capture/replay create places the acceleration structure at this exact
+    // device address. Track it immediately so analysis of an already-subcaptured stream can
+    // resolve TLAS instance references even when that stream predates the explicit address
+    // query emitted by state restore below.
+    if (ci.deviceAddress != 0) {
+      state->DeviceAddress = ci.deviceAddress;
+      m_StateTracking.GetDeviceAddressTracking().TrackAccelerationStructure(ci.deviceAddress,
+                                                                            state->Key);
+    }
   }
   // VkAccelerationStructureCreateInfoKHR::buffer is the only handle member.
   if (!command.m_pCreateInfo.HandleKeys.empty()) {
@@ -2835,6 +2883,10 @@ void SubcaptureLayer::Post(vkCreateAccelerationStructureKHRCommand& command) {
 }
 
 void SubcaptureLayer::Post(vkDestroyAccelerationStructureKHRCommand& command) {
+  // A TLAS instance reference must never resolve to a dead AS. Chain replay reaches a
+  // destroyed source by key, not by address, so it keeps working.
+  m_StateTracking.GetDeviceAddressTracking().UntrackAccelerationStructure(
+      command.m_accelerationStructure.Key);
   // Keep the state (flagged Destroyed) instead of erasing it. An application that compacts a
   // BLAS destroys the uncompacted intermediate right after the copy that reads it. Without
   // the state the chain replay has no creation blob for that source and would emit the copy
@@ -2856,7 +2908,8 @@ void SubcaptureLayer::Post(vkGetAccelerationStructureDeviceAddressKHRCommand& co
     return;
   }
   state->DeviceAddress = command.m_Return.Value;
-  m_StateTracking.GetDeviceAddressTracking().Track(command.m_Return.Value, asKey);
+  m_StateTracking.GetDeviceAddressTracking().TrackAccelerationStructure(command.m_Return.Value,
+                                                                        asKey);
 }
 
 void SubcaptureLayer::Post(vkCreateAccelerationStructureNVCommand& command) {

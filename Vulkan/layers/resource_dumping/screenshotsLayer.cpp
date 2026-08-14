@@ -95,6 +95,48 @@ void ScreenshotsLayer::Post(vkGetDeviceQueue2Command& command) {
   m_QueueToFamily[*command.m_pQueue.Value] = command.m_pQueueInfo.Value->queueFamilyIndex;
 }
 
+void ScreenshotsLayer::Pre(vkCreateSwapchainKHRCommand& command) {
+  if (!Configurator::IsPlayer() || command.m_pCreateInfo.Value == nullptr) {
+    return;
+  }
+
+  VkSwapchainCreateInfoKHR* createInfo = command.m_pCreateInfo.Value;
+  if (createInfo->imageUsage & VK_IMAGE_USAGE_TRANSFER_SRC_BIT) {
+    return;
+  }
+
+  VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
+  {
+    std::lock_guard<std::mutex> lock(m_Mutex);
+    auto it = m_DeviceToPhysicalDevice.find(command.m_device.Value);
+    GITS_ASSERT(it != m_DeviceToPhysicalDevice.end(),
+                "ScreenshotLayer: physical device is unknown.");
+    physicalDevice = it->second;
+  }
+
+  auto* dispatchTable = m_DispatchTablesHolder.GetInstanceDispatchTable(physicalDevice);
+  GITS_ASSERT(dispatchTable && dispatchTable->vkGetPhysicalDeviceSurfaceCapabilitiesKHR,
+              "ScreenshotLayer: surface capabilities are unavailable.");
+
+  VkSurfaceCapabilitiesKHR capabilities{};
+  VkResult result = dispatchTable->vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
+      physicalDevice, createInfo->surface, &capabilities);
+  if (result != VK_SUCCESS) {
+    LOG_WARNING << "ScreenshotLayer: surface-capabilities query failed with result " << result
+                << ", commandKey = " << command.m_Key;
+    return;
+  }
+
+  if (!(capabilities.supportedUsageFlags & VK_IMAGE_USAGE_TRANSFER_SRC_BIT)) {
+    LOG_WARNING << "ScreenshotLayer: surface does not support TRANSFER_SRC_BIT. "
+                   "Screenshots will be disabled, commandKey = "
+                << command.m_Key;
+    return;
+  }
+
+  createInfo->imageUsage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+}
+
 void ScreenshotsLayer::Post(vkCreateSwapchainKHRCommand& command) {
   if (command.m_Return.Value != VK_SUCCESS) {
     LOG_WARNING << "ScreenshotLayer: vkCreateSwapchainKHRCommand: the call to create swapchain "
@@ -104,15 +146,18 @@ void ScreenshotsLayer::Post(vkCreateSwapchainKHRCommand& command) {
   }
 
   VkSwapchainKHR* swapchainPtr = command.m_pSwapchain.Value;
-  if (swapchainPtr == nullptr) {
-    LOG_WARNING << "ScreenshotLayer: skipping screenshots for swapchain = nullptr, commandKey = "
-                << command.m_Key;
-    return;
-  }
+  GITS_ASSERT(swapchainPtr, "ScreenshotLayer: swapchainPtr is null.");
 
   VkSwapchainKHR swapchain = *swapchainPtr;
   VkDevice device = command.m_device.Value;
   const VkSwapchainCreateInfoKHR* pCreateInfo = command.m_pCreateInfo.Value;
+  GITS_ASSERT(pCreateInfo, "ScreenshotLayer: pCreateInfo is null.");
+  if (!(pCreateInfo->imageUsage & VK_IMAGE_USAGE_TRANSFER_SRC_BIT)) {
+    LOG_WARNING << "ScreenshotLayer: disabling screenshots because swapchain images do not support "
+                   "TRANSFER_SRC_BIT usage, commandKey = "
+                << command.m_Key;
+    return;
+  }
 
   SwapchainInfo info;
   info.Device = device;
@@ -120,10 +165,7 @@ void ScreenshotsLayer::Post(vkCreateSwapchainKHRCommand& command) {
   info.Extent = pCreateInfo->imageExtent;
 
   auto* deviceDispatchTable = m_DispatchTablesHolder.GetDeviceDispatchTable(device);
-  if (deviceDispatchTable == nullptr) {
-    LOG_ERROR << "ScreenshotLayer: could not find the device dispatch table";
-    return;
-  }
+  GITS_ASSERT(deviceDispatchTable, "ScreenshotLayer: deviceDispatchTable is null.");
 
   // Get the device and queue indices under a lock
   VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
@@ -131,10 +173,8 @@ void ScreenshotsLayer::Post(vkCreateSwapchainKHRCommand& command) {
   {
     std::lock_guard<std::mutex> lock(m_Mutex);
     auto physDevIt = m_DeviceToPhysicalDevice.find(device);
-    if (physDevIt == m_DeviceToPhysicalDevice.end()) {
-      LOG_ERROR << "ScreenshotLayer: could not find the physicalDevice by device";
-      return;
-    }
+    GITS_ASSERT(physDevIt != m_DeviceToPhysicalDevice.end(),
+                "ScreenshotLayer: could not find the physicalDevice by device.");
     physicalDevice = physDevIt->second;
 
     // A swapchain may be presented from more than one queue family
@@ -147,10 +187,7 @@ void ScreenshotsLayer::Post(vkCreateSwapchainKHRCommand& command) {
   }
 
   auto* instanceDispatchTable = m_DispatchTablesHolder.GetInstanceDispatchTable(physicalDevice);
-  if (instanceDispatchTable == nullptr) {
-    LOG_ERROR << "ScreenshotLayer: could not find the instance dispatch table";
-    return;
-  }
+  GITS_ASSERT(instanceDispatchTable, "ScreenshotLayer: instanceDispatchTable is null.");
 
   uint32_t imageCount = 0;
   deviceDispatchTable->vkGetSwapchainImagesKHR(device, swapchain, &imageCount, nullptr);

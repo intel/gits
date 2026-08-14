@@ -66,6 +66,12 @@ struct DeviceState : ObjectState {
   // vkCreateDevice time.  When set, state-restore timeline semaphore signals
   // must use vkSignalSemaphoreKHR instead of the Vulkan 1.2 core function.
   bool HasTimelineSemaphoreKHR{false};
+  // True if VK_KHR_buffer_device_address / VK_EXT_buffer_device_address was listed in
+  // ppEnabledExtensionNames at vkCreateDevice time.  Vulkan 1.1 devices expose only the
+  // extension entry point, so synthetic state-restore address queries must preserve that
+  // command variant.
+  bool HasBufferDeviceAddressKHR{false};
+  bool HasBufferDeviceAddressEXT{false};
 };
 
 // ---- Memory ------------------------------------------------------------
@@ -464,7 +470,8 @@ struct AccelerationStructureState : ObjectState {
   // VkAccelerationStructureCreateInfoKHR::deviceAddress: unlike VkBuffer's
   // opaque capture address, this is a direct create-info field, not a pNext.
   uint64_t OpaqueCaptureAddress{};
-  // Populated by Post(vkGetAccelerationStructureDeviceAddressKHR) and fed into
+  // Populated from a non-zero capture/replay deviceAddress at creation or by
+  // Post(vkGetAccelerationStructureDeviceAddressKHR), and fed into
   // DeviceAddressTrackingService.
   VkDeviceAddress DeviceAddress{};
   // Encoded bytes of the last vkCmdBuildAccelerationStructuresKHR that built this AS.

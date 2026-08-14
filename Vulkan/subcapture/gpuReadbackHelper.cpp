@@ -122,6 +122,27 @@ bool GpuReadbackHelper::QueryBufferRequirements(uint64_t deviceKey,
   return true;
 }
 
+VkDeviceAddress GpuReadbackHelper::QueryBufferDeviceAddress(uint64_t deviceKey,
+                                                            uint64_t bufferKey) {
+  auto device = reinterpret_cast<VkDevice>(HandleMapService::Get().TryGetHandle(deviceKey));
+  GITS_ASSERT(device, "QueryBufferDeviceAddress: failed to get device by key");
+  auto buffer = reinterpret_cast<VkBuffer>(HandleMapService::Get().TryGetHandle(bufferKey));
+  GITS_ASSERT(buffer, "QueryBufferDeviceAddress: failed to get buffer by key");
+
+  auto& dt = m_Player.GetDeviceDispatchTable(device);
+  // A Vulkan 1.1 device carries only the extension entry point, KHR or the older EXT one.
+  auto getBufferDeviceAddress = dt.vkGetBufferDeviceAddress      ? dt.vkGetBufferDeviceAddress
+                                : dt.vkGetBufferDeviceAddressKHR ? dt.vkGetBufferDeviceAddressKHR
+                                                                 : dt.vkGetBufferDeviceAddressEXT;
+  GITS_ASSERT(getBufferDeviceAddress,
+              "QueryBufferDeviceAddress: failed to get dispatchTable.getBufferDeviceAddress");
+
+  VkBufferDeviceAddressInfo info{};
+  info.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
+  info.buffer = buffer;
+  return getBufferDeviceAddress(device, &info);
+}
+
 // ---------------------------------------------------------------------------
 // AllocateStagingBuffer
 // ---------------------------------------------------------------------------

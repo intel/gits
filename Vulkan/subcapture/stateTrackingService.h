@@ -327,6 +327,9 @@ private:
   // legacy behavior.
   bool ShouldRestore(uint64_t key) const;
 
+  // Emit the buffer-device-address command variant supported by deviceKey.
+  void EmitGetBufferDeviceAddress(uint64_t deviceKey, uint64_t bufferKey, VkDeviceAddress address);
+
   // Recursively restore a single object (parent-first).
   void RestoreOne(ObjectState* state);
 
@@ -334,6 +337,7 @@ private:
   bool RestoreBuffer(ObjectState* state);
   bool RestoreImage(ObjectState* state);
   bool RestoreImageView(ObjectState* state);
+  bool RestoreAccelerationStructure(ObjectState* state);
   bool RestoreVideoSession(ObjectState* state);
   void RestoreSurface(ObjectState* state);
   void RestoreSwapchain(ObjectState* state);
@@ -355,6 +359,29 @@ private:
   void RestoreBufferContents();
   void RestoreImageContents();
   void RestoreAccelerationStructureContents();
+
+  void EmitAccelerationStructureDeserialize(uint64_t deviceKey,
+                                            uint64_t queueKey,
+                                            uint64_t commandPoolKey,
+                                            uint64_t dstAsKey,
+                                            VkDeviceSize dataSize,
+                                            VkDeviceSize stagingAllocationSize,
+                                            uint32_t stagingMemTypeIndex,
+                                            VkDeviceAddress capturedDeviceAddress,
+                                            uint64_t capturedOpaqueCaptureAddress,
+                                            uint64_t capturedMemoryOpaqueCaptureAddress,
+                                            const std::vector<uint8_t>& data);
+
+  void EmitCaptureReplayBufferCreate(uint64_t deviceKey,
+                                     uint64_t bufKey,
+                                     uint64_t memKey,
+                                     VkDeviceSize bufferSize,
+                                     VkDeviceSize allocationSize,
+                                     uint32_t memTypeIndex,
+                                     VkBufferUsageFlags usage,
+                                     uint64_t opaqueCaptureAddress,
+                                     uint64_t memoryOpaqueCaptureAddress,
+                                     VkDeviceAddress deviceAddress);
 
   // Flag asKey's backing buffer as content-restored so RestoreBufferContents leaves it
   // alone. Must be called for every acceleration structure whose content a restore path

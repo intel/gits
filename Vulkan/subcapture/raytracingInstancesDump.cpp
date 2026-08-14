@@ -32,6 +32,23 @@ std::vector<uint64_t> RaytracingInstancesDump::ReadReferencedBlases(
 
   auto& addressTracking = m_StateTracking.GetDeviceAddressTracking();
 
+  // Per-cause tallies of instances that contributed no BLAS, reported once at the end.
+  // Resolving runs per instance, so warning inline would flood the log on a large TLAS.
+  // A destroyed acceleration structure is untracked at destroy, so it lands here rather than
+  // in a separate tally - by the time an instance names it, the address is simply gone.
+  uint32_t droppedUnresolved = 0; // reference is not in the address map, or names a dead AS
+  uint32_t droppedUnlocated = 0;  // the instance struct bytes could not be located at all
+  auto reportDropped = [&]() {
+    const uint32_t dropped = droppedUnresolved + droppedUnlocated;
+    if (dropped == 0) {
+      return;
+    }
+    LOG_WARNING << "Vulkan subcapture: " << dropped << " of " << instanceCount
+                << " TLAS instances resolved to no BLAS (" << droppedUnresolved << " unresolved, "
+                << droppedUnlocated
+                << " unlocatable) - those BLASes will be missing from the subcapture";
+  };
+
   // Read the entire tracked buffer containing `address` into outData plus the offset
   // of `address` within it. Returns its key, or 0 on failure. ReadBuffer is a one-shot
   // submit + wait-idle, so read each buffer at most once.
@@ -65,17 +82,28 @@ std::vector<uint64_t> RaytracingInstancesDump::ReadReferencedBlases(
   auto resolveInstance = [&](const std::vector<uint8_t>& bytes, VkDeviceSize structOffset,
                              std::set<uint64_t>& blasKeys) {
     if (structOffset + sizeof(VkAccelerationStructureInstanceKHR) > bytes.size()) {
+      ++droppedUnlocated;
       return;
     }
     VkAccelerationStructureInstanceKHR instance{};
     std::memcpy(&instance, bytes.data() + static_cast<size_t>(structOffset), sizeof(instance));
+    // A zero reference disables an instance without changing the count, so it is not a drop.
     if (instance.accelerationStructureReference == 0) {
       return;
     }
-    auto blasKey = addressTracking.Find(instance.accelerationStructureReference);
-    if (blasKey) {
-      blasKeys.insert(*blasKey);
+    auto blasKey =
+        addressTracking.FindAccelerationStructure(instance.accelerationStructureReference);
+    if (!blasKey) {
+      ++droppedUnresolved;
+      return;
     }
+    // Defensive: AS states outlive their handle, and a dead one restores as an unmapped handle.
+    auto* blasState = m_StateTracking.GetState<AccelerationStructureState>(*blasKey);
+    if (!blasState || blasState->Destroyed) {
+      ++droppedUnresolved;
+      return;
+    }
+    blasKeys.insert(*blasKey);
   };
 
   std::set<uint64_t> blasKeys;
@@ -92,6 +120,7 @@ std::vector<uint64_t> RaytracingInstancesDump::ReadReferencedBlases(
           bytes, base + static_cast<VkDeviceSize>(i) * sizeof(VkAccelerationStructureInstanceKHR),
           blasKeys);
     }
+    reportDropped();
     return std::vector<uint64_t>(blasKeys.begin(), blasKeys.end());
   }
 
@@ -125,6 +154,8 @@ std::vector<uint64_t> RaytracingInstancesDump::ReadReferencedBlases(
     auto found = addressTracking.FindContaining(ptr);
     if (found) {
       offsetsByBuffer[found->first].insert(found->second);
+    } else {
+      ++droppedUnlocated;
     }
   }
 
@@ -132,6 +163,7 @@ std::vector<uint64_t> RaytracingInstancesDump::ReadReferencedBlases(
     // See the Destroyed note in readContainingBuffer above.
     auto* bufferState = m_StateTracking.GetState<BufferState>(bufferKey);
     if (!bufferState || bufferState->Destroyed || bufferState->BufferSize == 0) {
+      droppedUnlocated += static_cast<uint32_t>(offsets.size());
       continue;
     }
     std::vector<uint8_t> bytes;
@@ -139,6 +171,7 @@ std::vector<uint64_t> RaytracingInstancesDump::ReadReferencedBlases(
                                   /*srcOffset=*/0, bufferState->BufferSize, bytes)) {
       LOG_WARNING << "Vulkan subcapture: failed to read back TLAS instance-struct buffer key="
                   << bufferKey;
+      droppedUnlocated += static_cast<uint32_t>(offsets.size());
       continue;
     }
     for (VkDeviceSize structOffset : offsets) {
@@ -146,6 +179,7 @@ std::vector<uint64_t> RaytracingInstancesDump::ReadReferencedBlases(
     }
   }
 
+  reportDropped();
   return std::vector<uint64_t>(blasKeys.begin(), blasKeys.end());
 }
 

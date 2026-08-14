@@ -14,6 +14,7 @@
 #include <cstdint>
 #include <memory>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 namespace gits {
@@ -57,6 +58,13 @@ public:
 
   void Manifest(const RestoreContentManifestCommand& command);
   void OnData(const RestoreContentDataCommand& command);
+
+  // Images an upload was actually submitted for, paired with the layout its final barrier
+  // leaves them in. The barriers are recorded here rather than replayed from the stream, so
+  // a layer that tracks image layouts cannot see them and has to be told. Every failure path
+  // above skips its images, so what comes out is only what really happened. Drained by the
+  // caller: entries are reported once.
+  std::vector<std::pair<uint64_t, VkImageLayout>> DrainAppliedImageLayouts();
 
 private:
   struct ResourceDesc {
@@ -121,6 +129,7 @@ private:
 
   PlayerManager& m_Player;
   std::unordered_map<uint64_t, std::unique_ptr<Session>> m_Sessions;
+  std::vector<std::pair<uint64_t, VkImageLayout>> m_AppliedImageLayouts;
 };
 
 } // namespace vulkan
