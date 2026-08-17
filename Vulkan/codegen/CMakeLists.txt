@@ -34,6 +34,13 @@ source_group("scripts" FILES ${SCRIPTS_SRC})
 file(GLOB_RECURSE MAKO_TEMPLATES "templates/*.mako")
 source_group(mako FILES ${MAKO_TEMPLATES})
 
+# Plugins own their generators (see plugin_generator.py), so their scripts and
+# templates are inputs of this target as well.
+file(GLOB PLUGIN_CODEGEN_SRC
+  "${CMAKE_SOURCE_DIR}/plugins/Vulkan/*/codegen/*.py"
+  "${CMAKE_SOURCE_DIR}/plugins/Vulkan/*/codegen/templates/*.mako"
+)
+
 target_sources(Vulkan_codegen PRIVATE
   ${MAKO_TEMPLATES}
   ${SCRIPTS_SRC}
@@ -52,7 +59,7 @@ add_custom_command(
   COMMAND ${CMAKE_COMMAND} -E touch ${STAMP_FILE}
   COMMAND ${CMAKE_COMMAND} -E echo "Vulkan generation completed - ${STAMP_FILE}"
   WORKING_DIRECTORY ${VULKAN_SCRIPTS_DIR}
-  DEPENDS ${SCRIPTS_SRC} ${MAKO_TEMPLATES} ${VK_XML_PATH}
+  DEPENDS ${SCRIPTS_SRC} ${MAKO_TEMPLATES} ${PLUGIN_CODEGEN_SRC} ${VK_XML_PATH}
 )
 
 unset(Vulkan_codegen CACHE)

@@ -40,6 +40,10 @@ class Command:
     error_codes: list[str] = field(default_factory=list)
     dispatch_level: str = ''
     platform: str = ''
+    # vk.xml "tasks" attribute, e.g. ['action'], ['state'], ['action', 'indirection'].
+    # An 'action' command performs work on the device; everything else only affects
+    # command buffer state or synchronization.
+    tasks: list[str] = field(default_factory=list)
 
 @dataclass
 class Member:

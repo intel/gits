@@ -32,6 +32,7 @@ def parse_commands(vk_xml_root) -> list[Command]:
             return_type = proto_type_node.text.strip()
             success_codes = command_node.get("successcodes").split(",") if command_node.get("successcodes") is not None else []
             error_codes = command_node.get("errorcodes").split(",") if command_node.get("errorcodes") is not None else []
+            tasks = command_node.get("tasks").split(",") if command_node.get("tasks") is not None else []
             params = []
             param_nodes = command_node.findall("param")
             for param_node in param_nodes:
@@ -58,7 +59,8 @@ def parse_commands(vk_xml_root) -> list[Command]:
                 return_type=return_type,
                 params=params,
                 success_codes=success_codes,
-                error_codes=error_codes)
+                error_codes=error_codes,
+                tasks=tasks)
             commands_map[command_name] = command
 
         elif command_node.get("alias") is not None:
@@ -70,7 +72,8 @@ def parse_commands(vk_xml_root) -> list[Command]:
                 return_type=base_command.return_type,
                 params=base_command.params.copy(),
                 success_codes=base_command.success_codes.copy(),
-                error_codes=base_command.error_codes.copy()
+                error_codes=base_command.error_codes.copy(),
+                tasks=base_command.tasks.copy()
             )
             commands_map[alias_name] = aliased_command
     return list(commands_map.values())
