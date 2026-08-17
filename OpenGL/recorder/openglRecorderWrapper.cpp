@@ -62,6 +62,7 @@ gits::OpenGL::IRecorderWrapper* STDCALL GITSRecorderOpenGL() {
       exit(EXIT_FAILURE);
     }
   }
+  gits::Configurator::Instance().LogUnspportedConfigUsage(gits::ApiBool::OGL);
   return wrapper;
 }
 

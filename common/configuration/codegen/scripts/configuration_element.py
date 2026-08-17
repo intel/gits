@@ -80,6 +80,10 @@ class ConfigurationEntry:
         if 'OSVisibility' in node:
             self.os_visibility = node['OSVisibility']
 
+        self.supported_apis = None
+        if 'SupportedAPIs' in node:
+            self.supported_apis = node['SupportedAPIs']
+
 
     def __str__(self):
         return f'Type: {self.type}'
@@ -117,6 +121,17 @@ class ConfigurationEntry:
     def is_os_limited(self):
         return self.os_visibility is not None
 
+    def get_supported_apis(self):
+        if self.supported_apis is not None:
+            return ["ApiBool::" + api for api in self.supported_apis]
+        else:
+            return []
+
+    def get_supported_apis_string(self):
+        if self.supported_apis is not None:
+            return ", ".join(self.supported_apis)
+        else:
+            return ""
 
 class ConfigurationOption(ConfigurationEntry):
     ENVIRONMENT_PREFIX = 'GITS_'

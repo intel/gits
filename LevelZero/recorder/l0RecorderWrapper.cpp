@@ -39,6 +39,7 @@ gits::l0::IRecorderWrapper* STDCALL GITSRecorderL0() {
       exit(EXIT_FAILURE);
     }
   }
+  gits::Configurator::Instance().LogUnspportedConfigUsage(gits::ApiBool::L0);
   return wrapper;
 }
 

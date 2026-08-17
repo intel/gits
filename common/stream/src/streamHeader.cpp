@@ -207,6 +207,24 @@ StreamHeader::Api StreamHeader::GetApi() const {
   return m_Api;
 }
 
+ApiBool StreamHeader::GetApiBool() const {
+  switch (m_Api) {
+  case Api::API_OPENGL:
+    return ApiBool::OGL;
+  case Api::API_VULKAN_LEGACY:
+  case Api::API_VULKAN:
+    return ApiBool::VK;
+  case Api::API_OPENCL:
+    return ApiBool::OCL;
+  case Api::API_LEVELZERO:
+    return ApiBool::L0;
+  case Api::API_DIRECTX:
+    return ApiBool::DX;
+  default:
+    return ApiBool::NOT_SET;
+  }
+}
+
 CompressionType StreamHeader::GetCompressionType() const {
   return m_CompressionType;
 }

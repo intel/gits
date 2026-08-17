@@ -34,6 +34,23 @@ public:
     ACompute
   };
 
+  static gits::ApiBool ToApiBool(const TApi& api) {
+    switch (api) {
+    case OpenGL:
+      return gits::ApiBool::OGL;
+    case Vulkan:
+      return gits::ApiBool::VK;
+    case DirectX:
+      return gits::ApiBool::DX;
+    case OpenCL:
+      return gits::ApiBool::OCL;
+    case LevelZero:
+      return gits::ApiBool::L0;
+    default:
+      throw ENotImplemented(EXCEPTION_MESSAGE);
+    }
+  }
+
   class ApiIface {
     TApi _api;
     TApiType _type;

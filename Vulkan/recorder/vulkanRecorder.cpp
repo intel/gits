@@ -9,6 +9,7 @@
 #include "vulkanRecorder.h"
 #include "captureManager.h"
 #include "log.h"
+#include "configurator.h"
 
 namespace gits {
 namespace vulkan {
@@ -65,5 +66,6 @@ gits::vulkan::IRecorderWrapper* STDCALL GITSRecorderVulkan2() {
       exit(EXIT_FAILURE);
     }
   }
+  gits::Configurator::Instance().LogUnspportedConfigUsage(gits::ApiBool::VK);
   return g_RecorderWrapper.get();
 }

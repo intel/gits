@@ -9,6 +9,7 @@
 #include "d3d12Recorder.h"
 #include "captureManager.h"
 #include "log.h"
+#include "configurator.h"
 
 namespace gits {
 namespace DirectX {
@@ -37,5 +38,6 @@ gits::DirectX::IRecorderWrapper* __stdcall GITSRecorderD3D12() {
       exit(EXIT_FAILURE);
     }
   }
+  gits::Configurator::Instance().LogUnspportedConfigUsage(gits::ApiBool::DX);
   return g_recorderWrapper.get();
 }

@@ -13,6 +13,7 @@
 #include <iostream>
 #include <fstream>
 #include <regex>
+#include <tuple>
 
 #include "configurationAuto.h"
 #include "configurationYAMLAuto.h"
@@ -324,6 +325,35 @@ void Configurator::LogChangedFields() {
       } else {
         LOG_INFO << "--" << entry.Path << "=\"" << entry.Value << "\"";
       }
+    }
+  }
+}
+
+void Configurator::LogUnspportedConfigUsage(const ApiBool& api) {
+  auto isAnyEmpty =
+      std::any_of(ConfigEntry::SOURCES, std::end(ConfigEntry::SOURCES),
+                  [this](const auto& source) { return !changedFields[source].empty(); });
+  if (!isAnyEmpty) {
+    return;
+  }
+  std::vector<std::tuple<std::string, std::string, ConfigEntry::Source>> unsupportedEntries;
+  for (const auto& source : ConfigEntry::SOURCES) {
+    if (changedFields[source].empty()) {
+      continue;
+    }
+    for (const auto& entry : changedFields[source]) {
+      if (!IsConfigOptionSupportedByAPI(api, entry.Path)) {
+        unsupportedEntries.emplace_back(entry.Path, entry.Value, source);
+      }
+    }
+  }
+  if (!unsupportedEntries.empty()) {
+    LOG_WARNING
+        << "The following config values are not supported by the current API and will be ignored:";
+    for (const auto& tuple : unsupportedEntries) {
+      const auto& [path, value, source] = tuple;
+      LOG_WARNING << "--" << path << "=\"" << value << "\""
+                  << " (set via " << ConfigEntry::toString(source) << ")";
     }
   }
 }

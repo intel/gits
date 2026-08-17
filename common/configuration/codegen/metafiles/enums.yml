@@ -223,11 +223,18 @@ Enums:
   - Name: ApiBool
     Description: Specifies for which APIs the bool option should be true
     Values:
-     - Value: DX
-     - Value: VK
-     - Value: OGL
-     - Value: L0
-     - Value: OCL
+      - Value: DX
+        Description: DirectX 12
+      - Value: VK
+        Description: Vulkan
+      - Value: OGL
+        Description: OpenGL
+      - Value: L0
+        Description: Level Zero
+      - Value: OCL
+        Description: OpenCL
+      - Value: NOT_SET
+        Description: Not set
   - Name: VulkanIndexedVerticesSizeCalculationMethod
     Values:
       - Value: COUNT_ONLY

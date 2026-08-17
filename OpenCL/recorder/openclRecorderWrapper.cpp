@@ -47,6 +47,7 @@ gits::OpenCL::IRecorderWrapper* STDCALL GITSRecorderOpenCL() {
       exit(EXIT_FAILURE);
     }
   }
+  gits::Configurator::Instance().LogUnspportedConfigUsage(gits::ApiBool::OCL);
   return wrapper;
 }
 

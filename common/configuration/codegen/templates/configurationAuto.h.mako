@@ -26,6 +26,8 @@
 
 namespace gits {
 
+bool IsConfigOptionSupportedByAPI(const ApiBool& API, const std::string& optionPath);
+
 <%!
 def whitespace(number):
     return ' ' * number * 2

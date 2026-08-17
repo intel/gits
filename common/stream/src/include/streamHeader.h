@@ -44,6 +44,7 @@ public:
     API_VULKAN
   };
   Api GetApi() const;
+  ApiBool GetApiBool() const;
 
 private:
   friend class StreamWriter;

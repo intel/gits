@@ -57,6 +57,7 @@ gits::Vulkan::IRecorderWrapper* STDCALL GITSRecorderVulkan() {
       exit(EXIT_FAILURE);
     }
   }
+  gits::Configurator::Instance().LogUnspportedConfigUsage(gits::ApiBool::VK);
   return wrapper;
 }
 

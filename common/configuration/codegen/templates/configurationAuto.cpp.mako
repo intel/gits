@@ -25,6 +25,7 @@
 #include "deriveData.h"
 
 namespace gits {
+
 <%!
 def whitespace(number):
     return ' ' * number * 2
@@ -44,6 +45,34 @@ ${render_group(option)}\
   % endif
 % endfor
 </%def>
+
+<%def name="supported_api_check(common_group)">\
+% for option in common_group.options:
+  % if option.is_group:
+${supported_api_check(option)}
+  % else:
+    % if not option.supported_apis is None:
+  if (optionPath == "${option.get_path()}") {
+    return API == ${ " || API == ".join(option.get_supported_apis())};
+  }
+    % endif
+  % endif
+% endfor
+</%def>
+bool IsConfigOptionSupportedByAPI(const ApiBool& API, const std::string& optionPath) {
+<%
+  common_group = None
+  for option in data.options:
+    if option.name == "Common":
+      common_group = option
+      break
+%>
+  % if common_group is not None:
+  ${supported_api_check(common_group)}
+  % endif
+  return true;
+}
+
 Configuration::Configuration(bool& validityFlag) {
   // Initialize all the options to their default values
 ${render_group(data)}

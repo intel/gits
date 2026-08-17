@@ -121,6 +121,7 @@ public: // Singleton
                        const ConfigEntry::Source source,
                        const std::string& legacyPath = "");
   void LogChangedFields();
+  void LogUnspportedConfigUsage(const ApiBool& api);
 
 public: // Configuration
   void UpdateFromEnvironment();

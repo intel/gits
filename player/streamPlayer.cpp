@@ -18,6 +18,7 @@
 #include "commandId.h"
 #include "commandRunner.h"
 #include "timer.h"
+#include "apis_iface.h"
 
 #include <chrono>
 #include <cstring>
@@ -255,6 +256,8 @@ void PlayStream(const std::filesystem::path& streamPath) {
     commandFactories.push_back(&vulkanCommandFactory);
   }
 #endif
+
+  Configurator::Instance().LogUnspportedConfigUsage(header.GetApiBool());
 
   CommonCommandFactory commonCommandFactory;
   commandFactories.push_back(&commonCommandFactory);

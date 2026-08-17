@@ -41,6 +41,17 @@ def get_defaults(option):
 
 def format_description(description):
    return "  " + description.replace('\n', '  \n  ').replace('\n    \n', '\n  \n')
+
+def get_supported_api_string(option, enums):
+    apiBool_enum = None
+    for enum in enums:
+        if enum.name == "ApiBool":
+            apiBool_enum = enum
+            break
+    api_str = option.supported_apis
+    if apiBool_enum is not None:
+        api_str = [str(enum_value.short_description) for enum_value in apiBool_enum.values if enum_value.value in option.supported_apis]
+    return ", ".join(api_str)
 %>
 <%def name="render_group(group, indentation)">
 ${header(indentation)} ${group.get_config_path()} { : data-toc-label='${group.name}' }
@@ -82,6 +93,9 @@ Below is an (auto-generated) list of all configuration options for the current t
 
 % endif
 
+% if option.supported_apis is not None:
+  _Supported APIs: ${get_supported_api_string(option, enums)}_
+% endif
 
 
 ${format_description(option.description)}  
