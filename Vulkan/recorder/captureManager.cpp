@@ -57,6 +57,7 @@ void CaptureManager::LoadInstanceFunctions(PFN_vkGetInstanceProcAddr getProcAddr
   std::unique_lock lock(m_DispatchTablesMutex);
   auto& dispatchTable = m_InstanceDispatchTable[dispatchKey];
   LoadInstanceLevelFunctions(getProcAddr, instance, dispatchTable);
+  m_PluginService.SetVulkanInstanceDispatchTable(&dispatchTable);
 }
 
 void CaptureManager::LoadDeviceFunctions(PFN_vkGetDeviceProcAddr getProcAddr, VkDevice device) {
@@ -64,6 +65,7 @@ void CaptureManager::LoadDeviceFunctions(PFN_vkGetDeviceProcAddr getProcAddr, Vk
   std::unique_lock lock(m_DispatchTablesMutex);
   auto& dispatchTable = m_DeviceDispatchTable[dispatchKey];
   LoadDeviceLevelFunctions(getProcAddr, device, dispatchTable);
+  m_PluginService.SetVulkanDeviceDispatchTable(&dispatchTable);
 }
 
 void CaptureManager::LoadDeviceFunctions(void* dispatchKey, VkDevice device) {
@@ -74,6 +76,8 @@ void CaptureManager::LoadDeviceFunctions(void* dispatchKey, VkDevice device) {
   void* deviceDispatchKey = *reinterpret_cast<void**>(device);
   auto& dispatchTable = m_DeviceDispatchTable[deviceDispatchKey];
   LoadDeviceLevelFunctions(getDeviceProcAddr, device, dispatchTable);
+  m_PluginService.SetVulkanDeviceDispatchTable(&dispatchTable);
+  m_PluginService.SetVulkanInstanceDispatchTable(&instanceTable);
 }
 
 PFN_vkVoidFunction CaptureManager::GetFunctionWrapper(const char* name) {

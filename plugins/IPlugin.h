@@ -44,7 +44,16 @@ struct IPluginContext {
   gits::CGits* gits;
   gits::MessageBus* msgBus;
   plog::IAppender* logAppender;
-  // Active VkDevice dispatch table (set on vkCreateDevice)
+  // Active VkDevice dispatch table (set on vkCreateDevice). This is one
+  // shared pointer-to-pointer for the whole process: both the recorder and
+  // the player repoint it at whichever device's table was most recently
+  // created, for every plugin instance and every VkDevice, so
+  // *vkDeviceDispatchTable can change out from under a plugin between two of
+  // its own calls (e.g. a second, concurrently-live VkDevice appearing). A
+  // plugin that must keep operating on one specific device (for example
+  // because it rejected a second one) has to snapshot the pointed-to value
+  // once, when it commits to that device, and use its own copy from then on
+  // rather than dereferencing this field again.
   gits::vulkan::VkDeviceLevelDispatchTable** vkDeviceDispatchTable = nullptr;
   // Dispatch table of the instance owning that device, for the physical device
   // queries a stream is not guaranteed to contain (subcaptures rarely do).
