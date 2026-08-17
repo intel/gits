@@ -31,7 +31,8 @@ class MessageBus;
 struct Configuration;
 namespace vulkan {
 struct VkDeviceLevelDispatchTable;
-}
+struct VkInstanceLevelDispatchTable;
+} // namespace vulkan
 } // namespace gits
 
 namespace plog {
@@ -45,6 +46,11 @@ struct IPluginContext {
   plog::IAppender* logAppender;
   // Active VkDevice dispatch table (set on vkCreateDevice)
   gits::vulkan::VkDeviceLevelDispatchTable** vkDeviceDispatchTable = nullptr;
+  // Dispatch table of the instance owning that device, for the physical device
+  // queries a stream is not guaranteed to contain (subcaptures rarely do).
+  // Shares the same last-writer-wins, process-wide-single-pointer caveat as
+  // vkDeviceDispatchTable above.
+  gits::vulkan::VkInstanceLevelDispatchTable** vkInstanceDispatchTable = nullptr;
 };
 
 class IPlugin {

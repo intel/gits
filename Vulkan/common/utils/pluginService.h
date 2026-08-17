@@ -17,6 +17,7 @@ namespace gits {
 namespace vulkan {
 
 struct VkDeviceLevelDispatchTable;
+struct VkInstanceLevelDispatchTable;
 
 struct PluginInfo {
   std::filesystem::path DllPath = {};
@@ -37,11 +38,13 @@ public:
 
   void LoadPlugins();
   void SetVulkanDeviceDispatchTable(VkDeviceLevelDispatchTable* table);
+  void SetVulkanInstanceDispatchTable(VkInstanceLevelDispatchTable* table);
   const std::vector<PluginInfo>& GetPlugins() const;
 
 private:
   std::vector<PluginInfo> m_Plugins;
   VkDeviceLevelDispatchTable* m_VulkanDeviceDispatchTable = nullptr;
+  VkInstanceLevelDispatchTable* m_VulkanInstanceDispatchTable = nullptr;
 };
 
 } // namespace vulkan

@@ -94,6 +94,7 @@ void PlayerManager::LoadDeviceFunctions(void* dispatchKey, VkDevice device) {
   LoadDeviceLevelFunctions(getDeviceProcAddr, device, dispatchTable);
   if (m_PluginService) {
     m_PluginService->SetVulkanDeviceDispatchTable(&dispatchTable);
+    m_PluginService->SetVulkanInstanceDispatchTable(&instanceTable);
   }
 }
 
