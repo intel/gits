@@ -45,7 +45,7 @@ inline uint64_t ISTDHash(const char* data, uint32_t count) {
   uint32_t size_uint32_t = count / sizeof(uint32_t);
   const uint32_t* data_uint32 = reinterpret_cast<const uint32_t*>(data);
 
-  DWORD a = 0x428a2f98, hi = 0x71374491, lo = 0xb5c0fbcf;
+  uint32_t a = 0x428a2f98, hi = 0x71374491, lo = 0xb5c0fbcf;
   while (size_uint32_t--) {
     a ^= *(data_uint32++);
     HASH_JENKINS_MIX(a, hi, lo);
@@ -69,7 +69,7 @@ inline uint64_t ISTDHashPadding(const char* data, uint32_t count) {
   uint32_t size_uint32_t = count_new / sizeof(uint32_t);
   const uint32_t* data_uint32 = reinterpret_cast<const uint32_t*>(&new_source[0]);
 
-  DWORD a = 0x428a2f98, hi = 0x71374491, lo = 0xb5c0fbcf;
+  uint32_t a = 0x428a2f98, hi = 0x71374491, lo = 0xb5c0fbcf;
   while (size_uint32_t--) {
     a ^= *(data_uint32++);
     HASH_JENKINS_MIX(a, hi, lo);
