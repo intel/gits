@@ -12,6 +12,7 @@ set(ALL_SRC
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkanHeader2.h
   ${CMAKE_CURRENT_SOURCE_DIR}/commandIdsAuto.h
   ${CMAKE_CURRENT_SOURCE_DIR}/commandsAuto.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/handleTypeIndexAuto.h
   ${CMAKE_CURRENT_SOURCE_DIR}/layerAuto.h
   ${CMAKE_CURRENT_SOURCE_DIR}/layerGroup.h
   ${CMAKE_CURRENT_SOURCE_DIR}/command.h

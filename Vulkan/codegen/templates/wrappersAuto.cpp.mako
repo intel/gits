@@ -170,13 +170,11 @@ ${command.return_type} ${command.name}Wrapper(
 	% if destroy_target.is_pointer:
 	if (command.m_${destroy_target.name}.Value) {
 	  for (uint32_t i = 0; i < command.m_${destroy_target.name}.Size; ++i) {
-	    HandleMapService::Get().RemoveHandle(
-	        reinterpret_cast<uint64_t>(command.m_${destroy_target.name}.Value[i]));
+	    HandleMapService::Get().RemoveHandle(command.m_${destroy_target.name}.Value[i]);
 	  }
 	}
 	% else:
-	HandleMapService::Get().RemoveHandle(
-	    reinterpret_cast<uint64_t>(command.m_${destroy_target.name}.Value));
+	HandleMapService::Get().RemoveHandle(command.m_${destroy_target.name}.Value);
 	% endif
 	% endif
 	% endif

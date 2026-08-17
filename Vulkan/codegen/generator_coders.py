@@ -440,17 +440,17 @@ def generate_child_handle_keys(child_handles, elem_expr='elem', depth=0):
     lines = []
     for child_kind, child_access, child_length, child_base_type, child_member_name in child_handles:
         if child_kind == 'handle_single':
-            lines.append(f'    keys.push_back(HandleMapService::Get().GetKeyLenient(reinterpret_cast<uint64_t>({elem_expr}.{child_access})));')
+            lines.append(f'    keys.push_back(HandleMapService::Get().GetKeyLenient({elem_expr}.{child_access}));')
         elif child_kind == 'handle_ptr':
             lines.append(f'    if ({elem_expr}.{child_access}) {{')
-            lines.append(f'      keys.push_back(HandleMapService::Get().GetKeyLenient(reinterpret_cast<uint64_t>(*{elem_expr}.{child_access})));')
+            lines.append(f'      keys.push_back(HandleMapService::Get().GetKeyLenient(*{elem_expr}.{child_access}));')
             lines.append(f'    }} else {{')
             lines.append(f'      keys.push_back(0);')
             lines.append(f'    }}')
         elif child_kind == 'handle_array_ptr':
             lines.append(f'    if ({elem_expr}.{child_access} && {elem_expr}.{child_length} > 0) {{')
             lines.append(f'      for (uint32_t handleIdx = 0; handleIdx < {elem_expr}.{child_length}; ++handleIdx) {{')
-            lines.append(f'        keys.push_back(HandleMapService::Get().GetKeyLenient(reinterpret_cast<uint64_t>({elem_expr}.{child_access}[handleIdx])));')
+            lines.append(f'        keys.push_back(HandleMapService::Get().GetKeyLenient({elem_expr}.{child_access}[handleIdx]));')
             lines.append(f'      }}')
             lines.append(f'    }}')
         elif child_kind == 'handle_struct_ptr':

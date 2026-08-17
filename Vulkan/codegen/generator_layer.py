@@ -64,16 +64,36 @@ def generate_initializer_list(command):
         initializer_list.append(s)
     return initializer_list
 
+def collect_unique_handle_types(handles):
+    """Return handles deduplicated to one entry per distinct Vulkan object type.
+
+    Handle aliases (e.g. VkDescriptorUpdateTemplateKHR) share the objtypeenum of
+    their canonical type and are, at the C++ level, the same type; only the first
+    (canonical) occurrence is kept so HandleTypeIndex is specialized once per
+    underlying type. The returned order defines the contiguous bucket indices.
+    """
+    seen = set()
+    result = []
+    for handle in handles:
+        key = handle.type or handle.name
+        if key in seen:
+            continue
+        seen.add(key)
+        result.append(handle)
+    return result
+
 def generate_layer_files(context, out_path):
     additional_context = {
       'generate_params_for_function': generate_params_for_function,
-      'generate_initializer_list': generate_initializer_list
+      'generate_initializer_list': generate_initializer_list,
+      'collect_unique_handle_types': collect_unique_handle_types
     }
     files_to_generate = [
       'commandIdsAuto.h',
       'commandsAuto.h',
       'layerAuto.h',
-      'dispatchTableAuto.h'
+      'dispatchTableAuto.h',
+      'handleTypeIndexAuto.h'
     ]
     for file_name in files_to_generate:
         generate_file(context | additional_context, file_name, out_path)

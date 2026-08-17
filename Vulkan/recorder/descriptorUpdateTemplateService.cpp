@@ -47,7 +47,7 @@ void StoreKey(std::vector<char>& data, size_t byteOffset) {
   if (!handle) {
     return;
   }
-  GITSKey key = HandleMapService::Get().GetKey(reinterpret_cast<uint64_t>(handle));
+  GITSKey key = HandleMapService::Get().GetKey(handle);
   std::memcpy(data.data() + byteOffset, &key, sizeof(GITSKey));
 }
 

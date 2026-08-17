@@ -25,7 +25,7 @@ void UpdateHandle(CaptureManager& manager, HandleArgument<T>& arg) {
   if (!arg.Value) {
     return;
   }
-  arg.Key = HandleMapService::Get().GetKey(reinterpret_cast<std::uint64_t>(arg.Value));
+  arg.Key = HandleMapService::Get().GetKey(arg.Value);
 }
 
 template <typename T>
@@ -35,7 +35,7 @@ void UpdateHandle(CaptureManager& manager, HandleArrayArgument<T>& arg) {
   }
   for (uint32_t i = 0; i < arg.Size; ++i) {
     if (arg.Value[i] != VK_NULL_HANDLE) {
-      arg.Keys[i] = HandleMapService::Get().GetKey(reinterpret_cast<std::uint64_t>(arg.Value[i]));
+      arg.Keys[i] = HandleMapService::Get().GetKey(arg.Value[i]);
     }
   }
 }
@@ -56,7 +56,7 @@ void UpdateHandleLenient(CaptureManager& manager, HandleArgument<T>& arg) {
   if (!arg.Value) {
     return;
   }
-  arg.Key = HandleMapService::Get().GetKeyLenient(reinterpret_cast<std::uint64_t>(arg.Value));
+  arg.Key = HandleMapService::Get().GetKeyLenient(arg.Value);
 }
 
 template <typename T>
@@ -66,8 +66,7 @@ void UpdateHandleLenient(CaptureManager& manager, HandleArrayArgument<T>& arg) {
   }
   for (uint32_t i = 0; i < arg.Size; ++i) {
     if (arg.Value[i] != VK_NULL_HANDLE) {
-      arg.Keys[i] =
-          HandleMapService::Get().GetKeyLenient(reinterpret_cast<std::uint64_t>(arg.Value[i]));
+      arg.Keys[i] = HandleMapService::Get().GetKeyLenient(arg.Value[i]);
     }
   }
 }
@@ -78,8 +77,7 @@ void UpdateOutputHandle(CaptureManager& manager, HandleOutputArgument<T>& arg) {
     return;
   }
   arg.Key = manager.CreateHandleKey();
-  auto handle = reinterpret_cast<std::uint64_t>(*arg.Value);
-  HandleMapService::Get().SetKey(handle, arg.Key);
+  HandleMapService::Get().SetKey(*arg.Value, arg.Key);
 }
 
 template <typename T>
@@ -96,13 +94,12 @@ void UpdateOutputHandle(CaptureManager& manager, HandleArrayOutputArgument<T>& a
     if (!arg.Value[i]) {
       continue;
     }
-    auto handle = reinterpret_cast<std::uint64_t>(arg.Value[i]);
-    GITSKey existingKey = HandleMapService::Get().TryGetKey(handle);
+    GITSKey existingKey = HandleMapService::Get().TryGetKey(arg.Value[i]);
     if (existingKey) {
       arg.Keys[i] = existingKey;
     } else {
       arg.Keys[i] = manager.CreateHandleKey();
-      HandleMapService::Get().SetKey(handle, arg.Keys[i]);
+      HandleMapService::Get().SetKey(arg.Value[i], arg.Keys[i]);
     }
   }
 }
