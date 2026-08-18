@@ -426,6 +426,29 @@ void ReplayCustomizationLayer::Pre(ID3D12FenceGetCompletedValueCommand& c) {
   m_CapturedFenceValue = c.m_Result.Value;
 }
 
+void ReplayCustomizationLayer::Pre(xessD3D12ExecuteCommand& c) {
+  m_XessCommandLists.insert(c.m_pCommandList.Key);
+}
+
+void ReplayCustomizationLayer::Post(ID3D12CommandQueueExecuteCommandListsCommand& c) {
+  for (unsigned commandListKey : c.m_ppCommandLists.Keys) {
+    if (m_XessCommandLists.contains(commandListKey)) {
+      m_XessQueues.insert(c.m_Object.Key);
+      break;
+    }
+  }
+}
+
+void ReplayCustomizationLayer::Pre(xessDestroyContextCommand& c) {
+  if (m_XessProgressFence) {
+    if (m_XessProgressFence->GetCompletedValue() < m_XessSubmittedValue) {
+      LOG_WARNING << "xessDestroyContext: XeSS GPU work still outstanding and no application fence "
+                     "wait; draining before context destruction to keep replay valid";
+    }
+    WaitForFence(c.Key, m_XessFenceKey, m_XessProgressFence.Get(), m_XessSubmittedValue);
+  }
+}
+
 void ReplayCustomizationLayer::Post(ID3D12FenceGetCompletedValueCommand& c) {
   if (c.Skip) {
     return;
@@ -465,6 +488,13 @@ void ReplayCustomizationLayer::Post(ID3D12CommandQueueSignalCommand& c) {
   if (c.Skip || !m_NonIncrementalFenceWait) {
     return;
   }
+
+  if (m_XessQueues.contains(c.m_Object.Key) && c.m_pFence.Value) {
+    m_XessProgressFence = c.m_pFence.Value;
+    m_XessSubmittedValue = c.m_Value.Value;
+    m_XessFenceKey = c.m_pFence.Key;
+  }
+
   m_GpuExecutionTracker.CommandQueueSignal(c.Key, c.m_Object.Key, c.m_pFence.Key, c.m_Value.Value);
 }
 

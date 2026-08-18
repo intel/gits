@@ -14,6 +14,7 @@
 
 #include <windows.h>
 #include <wrl/client.h>
+#include <set>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -26,6 +27,8 @@ class ReplayCustomizationLayer : public Layer {
 public:
   ReplayCustomizationLayer(PlayerManager& manager);
   void Post(IUnknownReleaseCommand& command) override;
+  void Pre(xessD3D12ExecuteCommand& command) override;
+  void Pre(xessDestroyContextCommand& command) override;
   void Post(IUnknownAddRefCommand& command) override;
   void Pre(D3D12CreateDeviceCommand& command) override;
   void Pre(IDXGISwapChainSetFullscreenStateCommand& command) override;
@@ -64,6 +67,7 @@ public:
   void Post(ID3D12FenceGetCompletedValueCommand& command) override;
   void Post(WaitForFenceSignaledDeprecatedCommand& command) override;
   void Post(WaitForFenceSignaledCommand& command) override;
+  void Post(ID3D12CommandQueueExecuteCommandListsCommand& command) override;
   void Post(ID3D12CommandQueueWaitCommand& command) override;
   void Post(ID3D12CommandQueueSignalCommand& command) override;
   void Post(ID3D12FenceSignalCommand& command) override;
@@ -231,6 +235,11 @@ private:
   PipelineLibraryService& m_PipelineLibraryService;
   HANDLE m_WaitForFenceEvent{};
   UINT64 m_CapturedFenceValue{};
+  std::set<unsigned> m_XessCommandLists;
+  std::unordered_set<unsigned> m_XessQueues;
+  Microsoft::WRL::ComPtr<ID3D12Fence> m_XessProgressFence;
+  UINT64 m_XessSubmittedValue{};
+  GITSKey m_XessFenceKey{};
   std::vector<NvAPIShaderExtnSlot> m_NvapiShaderExtnSlotsUsed;
   bool m_UseAddressPinning{};
   bool m_NonIncrementalFenceWait{};
