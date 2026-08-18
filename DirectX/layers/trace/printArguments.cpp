@@ -1155,7 +1155,7 @@ FastOStream& operator<<(FastOStream& stream, D3D12_BARRIER_GROUPs_Argument& arg)
   if (!arg.Value) {
     return stream << "nullptr";
   }
-  GITSKey resourceKeyIndex{};
+  unsigned resourceKeyIndex{};
   stream << "D3D12_BARRIER_GROUP[";
   for (unsigned i = 0; i < arg.Size; ++i) {
     if (i > 0) {
@@ -1299,7 +1299,7 @@ FastOStream& operator<<(FastOStream& stream, DML_BINDING_DESCs_Argument& arg) {
   if (!arg.Value) {
     return stream << "nullptr";
   }
-  GITSKey currentKey = 0;
+  unsigned currentKey = 0;
   stream << "DML_BINDING_DESC[";
   for (unsigned i = 0; i < arg.Size; ++i) {
     if (i > 0) {

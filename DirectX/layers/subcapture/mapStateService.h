@@ -31,8 +31,8 @@ public:
 
 private:
   StateTrackingService& m_StateService;
-  std::unordered_map<GITSKey, std::unordered_map<GITSKey, void*>> m_MappedDataBySubresource;
-  std::unordered_set<unsigned> m_RestoredResources;
+  std::unordered_map<GITSKey, std::unordered_map<unsigned, void*>> m_MappedDataBySubresource;
+  std::unordered_set<GITSKey> m_RestoredResources;
 };
 
 } // namespace DirectX

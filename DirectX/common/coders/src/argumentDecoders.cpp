@@ -1023,7 +1023,7 @@ void Decode(char* src,
 
   arg.InputKeys.resize(size);
   memcpy(arg.InputKeys.data(), src + offset, size * sizeof(GITSKey));
-  offset += size * sizeof(unsigned);
+  offset += size * sizeof(GITSKey);
 
   arg.InputOffsets.resize(size);
   memcpy(arg.InputOffsets.data(), src + offset, size * sizeof(unsigned));
@@ -1134,7 +1134,7 @@ void Decode(char* src,
 
   arg.InputKeys.resize(size);
   memcpy(arg.InputKeys.data(), src + offset, size * sizeof(GITSKey));
-  offset += size * sizeof(unsigned);
+  offset += size * sizeof(GITSKey);
 
   arg.InputOffsets.resize(size);
   memcpy(arg.InputOffsets.data(), src + offset, size * sizeof(unsigned));
@@ -1205,8 +1205,8 @@ void Decode(char* src,
       reinterpret_cast<D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC*>(src + offset);
   offset += sizeof(D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC);
 
-  memcpy(&arg.destBufferKey, src + offset, sizeof(unsigned));
-  offset += sizeof(unsigned);
+  memcpy(&arg.destBufferKey, src + offset, sizeof(GITSKey));
+  offset += sizeof(GITSKey);
 
   memcpy(&arg.destBufferOffset, src + offset, sizeof(unsigned));
   offset += sizeof(unsigned);
@@ -1247,11 +1247,11 @@ void Decode(char* src, unsigned& offset, D3D12_RENDER_PASS_RENDER_TARGET_DESCs_A
 
   arg.ResolveSrcResourceKeys.resize(size);
   memcpy(arg.ResolveSrcResourceKeys.data(), src + offset, size * sizeof(GITSKey));
-  offset += size * sizeof(unsigned);
+  offset += size * sizeof(GITSKey);
 
   arg.ResolveDstResourceKeys.resize(size);
   memcpy(arg.ResolveDstResourceKeys.data(), src + offset, size * sizeof(GITSKey));
-  offset += size * sizeof(unsigned);
+  offset += size * sizeof(GITSKey);
 }
 
 void Decode(char* src, unsigned& offset, D3D12_RENDER_PASS_DEPTH_STENCIL_DESC_Argument& arg) {
@@ -1277,19 +1277,19 @@ void Decode(char* src, unsigned& offset, D3D12_RENDER_PASS_DEPTH_STENCIL_DESC_Ar
               arg.Value->StencilEndingAccess.Resolve.SubresourceCount;
   }
 
-  memcpy(&arg.DescriptorKey, src + offset, sizeof(unsigned));
-  offset += sizeof(unsigned);
+  memcpy(&arg.DescriptorKey, src + offset, sizeof(GITSKey));
+  offset += sizeof(GITSKey);
   memcpy(&arg.DescriptorIndex, src + offset, sizeof(unsigned));
   offset += sizeof(unsigned);
 
-  memcpy(&arg.ResolveSrcDepthKey, src + offset, sizeof(unsigned));
-  offset += sizeof(unsigned);
-  memcpy(&arg.ResolveDstDepthKey, src + offset, sizeof(unsigned));
-  offset += sizeof(unsigned);
-  memcpy(&arg.ResolveSrcStencilKey, src + offset, sizeof(unsigned));
-  offset += sizeof(unsigned);
-  memcpy(&arg.ResolveDstStencilKey, src + offset, sizeof(unsigned));
-  offset += sizeof(unsigned);
+  memcpy(&arg.ResolveSrcDepthKey, src + offset, sizeof(GITSKey));
+  offset += sizeof(GITSKey);
+  memcpy(&arg.ResolveDstDepthKey, src + offset, sizeof(GITSKey));
+  offset += sizeof(GITSKey);
+  memcpy(&arg.ResolveSrcStencilKey, src + offset, sizeof(GITSKey));
+  offset += sizeof(GITSKey);
+  memcpy(&arg.ResolveDstStencilKey, src + offset, sizeof(GITSKey));
+  offset += sizeof(GITSKey);
 }
 
 void Decode(char* src, unsigned& offset, D3D12_SHADER_RESOURCE_VIEW_DESC_Argument& arg) {
@@ -1300,8 +1300,8 @@ void Decode(char* src, unsigned& offset, D3D12_SHADER_RESOURCE_VIEW_DESC_Argumen
   offset += sizeof(D3D12_SHADER_RESOURCE_VIEW_DESC);
 
   if (arg.Value->ViewDimension == D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE) {
-    memcpy(&arg.RaytracingLocationKey, src + offset, sizeof(unsigned));
-    offset += sizeof(unsigned);
+    memcpy(&arg.RaytracingLocationKey, src + offset, sizeof(GITSKey));
+    offset += sizeof(GITSKey);
     memcpy(&arg.RaytracingLocationOffset, src + offset, sizeof(unsigned));
     offset += sizeof(unsigned);
   }
@@ -1726,7 +1726,7 @@ void Decode(char* src,
 
   arg.InputKeys.resize(size);
   memcpy(arg.InputKeys.data(), src + offset, size * sizeof(GITSKey));
-  offset += size * sizeof(unsigned);
+  offset += size * sizeof(GITSKey);
 
   arg.InputOffsets.resize(size);
   memcpy(arg.InputOffsets.data(), src + offset, size * sizeof(unsigned));
@@ -1741,8 +1741,8 @@ void Decode(char* src,
 
     arg.DestPostBuildBufferKeys.resize(arg.Value->numPostbuildInfoDescs);
     memcpy(arg.DestPostBuildBufferKeys.data(), src + offset,
-           sizeof(unsigned) * arg.Value->numPostbuildInfoDescs);
-    offset += sizeof(unsigned) * arg.Value->numPostbuildInfoDescs;
+           sizeof(GITSKey) * arg.Value->numPostbuildInfoDescs);
+    offset += sizeof(GITSKey) * arg.Value->numPostbuildInfoDescs;
 
     arg.DestPostBuildBufferOffsets.resize(arg.Value->numPostbuildInfoDescs);
     memcpy(arg.DestPostBuildBufferOffsets.data(), src + offset,
@@ -1807,8 +1807,8 @@ void Decode(char* src,
 
     arg.DestPostBuildBufferKeys.resize(arg.Value->numPostbuildInfoDescs);
     memcpy(arg.DestPostBuildBufferKeys.data(), src + offset,
-           sizeof(unsigned) * arg.Value->numPostbuildInfoDescs);
-    offset += sizeof(unsigned) * arg.Value->numPostbuildInfoDescs;
+           sizeof(GITSKey) * arg.Value->numPostbuildInfoDescs);
+    offset += sizeof(GITSKey) * arg.Value->numPostbuildInfoDescs;
 
     arg.DestPostBuildBufferOffsets.resize(arg.Value->numPostbuildInfoDescs);
     memcpy(arg.DestPostBuildBufferOffsets.data(), src + offset,

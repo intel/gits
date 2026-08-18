@@ -19,7 +19,7 @@ void RaytracingInstancesDump::BuildTlas(ID3D12GraphicsCommandList* commandList,
                                         unsigned offset,
                                         unsigned size,
                                         BarrierState state,
-                                        unsigned buildCall) {
+                                        GITSKey buildCall) {
   InstancesInfo* info = new InstancesInfo();
   info->Offset = offset;
   info->Size = size;
@@ -33,7 +33,7 @@ void RaytracingInstancesDump::BuildTlasArrayOfPointers(
     unsigned offset,
     unsigned size,
     BarrierState state,
-    unsigned buildCall,
+    GITSKey buildCall,
     std::vector<unsigned>& arrayOfPointersOffsets) {
   InstancesInfo* info = new InstancesInfo();
   info->Offset = offset;
@@ -47,7 +47,7 @@ void RaytracingInstancesDump::DumpBuffer(DumpInfo& dumpInfo, void* data) {
   std::lock_guard<std::mutex> lock(m_Mutex);
 
   InstancesInfo& instancesInfo = static_cast<InstancesInfo&>(dumpInfo);
-  std::vector<std::pair<unsigned, unsigned>>& blases =
+  std::vector<AnalyzerRaytracingService::KeyOffset>& blases =
       m_RaytracingService.GetBlases(instancesInfo.BuildCall);
 
   D3D12_RAYTRACING_INSTANCE_DESC* instances = static_cast<D3D12_RAYTRACING_INSTANCE_DESC*>(data);

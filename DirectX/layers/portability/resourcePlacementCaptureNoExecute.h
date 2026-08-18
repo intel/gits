@@ -79,7 +79,7 @@ private:
   };
 
   std::map<GITSKey, ResourcePlacementInfo> m_ResourcePlacementInfos;
-  std::unordered_set<unsigned> m_PlacedResources;
+  std::unordered_set<GITSKey> m_PlacedResources;
   std::unordered_map<D3D12_RESOURCE_DESC,
                      D3D12_RESOURCE_ALLOCATION_INFO,
                      D3D12_RESOURCE_DESC_Hash,

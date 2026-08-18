@@ -157,7 +157,7 @@ void CapturePlayerGpuAddressService::GpuAddressService::DestroyInterface(GITSKey
     auto it = m_HeapsByKey.find(interfaceKey);
     if (it != m_HeapsByKey.end()) {
       HeapInfo* heapInfo = it->second.get();
-      std::vector<unsigned> resources;
+      std::vector<GITSKey> resources;
       for (GITSKey resourceKey : heapInfo->Resources) {
         resources.push_back(resourceKey);
       }

@@ -38,7 +38,7 @@ public:
     D3D12_PACKED_MIP_INFO PackedMipInfo{};
     std::vector<D3D12_SUBRESOURCE_TILING> Subresources;
     std::vector<Tile> Tiles;
-    std::unordered_map<GITSKey, GITSKey> PackedSubresourcesStartTiles;
+    std::unordered_map<unsigned, unsigned> PackedSubresourcesStartTiles;
     unsigned UpdateId{};
     bool Destroyed{};
   };
@@ -48,7 +48,7 @@ public:
     D3D12_TILE_REGION_SIZE Size;
     bool Packed{};
   };
-  using TileRegionsBySubresource = std::unordered_map<GITSKey, std::vector<TileRegion>>;
+  using TileRegionsBySubresource = std::unordered_map<unsigned, std::vector<TileRegion>>;
 
 public:
   ReservedResourcesService(StateTrackingService& stateService) : m_StateService(stateService) {}

@@ -117,9 +117,9 @@ MultithreadedObjectCreationService::Complete(GITSKey objectKey) {
   }
 }
 
-std::vector<std::pair<unsigned, MultithreadedObjectCreationService::ObjectCreationOutput>>
+std::vector<std::pair<GITSKey, MultithreadedObjectCreationService::ObjectCreationOutput>>
 MultithreadedObjectCreationService::CompleteAll() {
-  std::vector<std::pair<unsigned, ObjectCreationOutput>> results;
+  std::vector<std::pair<GITSKey, ObjectCreationOutput>> results;
   while (!m_Tasks.empty()) {
     GITSKey key = m_Tasks.begin()->first;
     auto creationOutput = Complete(key);

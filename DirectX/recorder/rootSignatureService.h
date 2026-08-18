@@ -47,7 +47,7 @@ private:
     }
 
   private:
-    std::unordered_map<GITSKey, D3D12_DESCRIPTOR_HEAP_TYPE>
+    std::unordered_map<unsigned, D3D12_DESCRIPTOR_HEAP_TYPE>
         m_DescriptorTableHeapTypeByParameterIndex;
   };
 

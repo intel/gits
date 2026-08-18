@@ -33,7 +33,7 @@ void ResourceUsageTrackingService::CommandListReset(GITSKey commandListKey) {
 void ResourceUsageTrackingService::ExecuteCommandLists(GITSKey commandKey,
                                                        GITSKey commandQueueKey,
                                                        std::vector<GITSKey>& commandListKeys) {
-  std::vector<unsigned> usedResources;
+  std::vector<GITSKey> usedResources;
   for (GITSKey commandListKey : commandListKeys) {
     auto it = m_CommandListResourceUsage.find(commandListKey);
     if (it == m_CommandListResourceUsage.end()) {
@@ -79,13 +79,13 @@ void ResourceUsageTrackingService::FenceSignal(GITSKey commandKey,
   ProcessReadyExecutables();
 }
 
-std::vector<unsigned> ResourceUsageTrackingService::GetOrderedResources() {
-  std::map<UsageNumber, std::vector<unsigned>> resourceByCommandKey;
+std::vector<GITSKey> ResourceUsageTrackingService::GetOrderedResources() {
+  std::map<UsageNumber, std::vector<GITSKey>> resourceByCommandKey;
   for (const auto& [resourceKey, usageNumber] : m_UsageByResource) {
     resourceByCommandKey[usageNumber].push_back(resourceKey);
   }
 
-  std::vector<unsigned> orderedResources;
+  std::vector<GITSKey> orderedResources;
   for (const auto& [usageNumber, keys] : resourceByCommandKey) {
     orderedResources.insert(orderedResources.end(), keys.begin(), keys.end());
   }
@@ -103,7 +103,7 @@ void ResourceUsageTrackingService::ProcessReadyExecutables() {
   executables.clear();
 }
 
-void ResourceUsageTrackingService::UpdateUsage(const std::vector<unsigned>& usedResources) {
+void ResourceUsageTrackingService::UpdateUsage(const std::vector<GITSKey>& usedResources) {
   ++m_ExecuteNumber;
 
   unsigned commandNumber{};

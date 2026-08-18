@@ -45,7 +45,7 @@ AnalyzerResults::AnalyzerResults() {
         tlases = false;
         blases = true;
       } else {
-        GITSKey key = std::stoi(str);
+        GITSKey key = std::stoull(str);
         if (commandLists) {
           m_CommandListKeys.insert(key);
         } else if (commandQueues) {
@@ -60,7 +60,7 @@ AnalyzerResults::AnalyzerResults() {
           m_Tlases.insert(key);
         } else if (blases) {
           analysis >> str;
-          unsigned source = std::stoi(str);
+          GITSKey source = std::stoull(str);
           m_Blases.insert(std::make_pair(key, source));
         }
       }
@@ -97,7 +97,7 @@ bool AnalyzerResults::RestoreBlas(GITSKey buildKey) {
   return m_Blases.contains(buildKey);
 }
 
-unsigned AnalyzerResults::GetBlasSourceBuild(GITSKey buildKey) {
+GITSKey AnalyzerResults::GetBlasSourceBuild(GITSKey buildKey) {
   auto it = m_Blases.find(buildKey);
   if (it != m_Blases.end()) {
     return it->second;

@@ -220,7 +220,7 @@ void AccelerationStructuresInputBuffersService::RestoreBuffers(GITSKey commandKe
       m_BufferInputDump.GetInputBuffers(commandKey);
   InputBuffers* inputBuffers = m_InputBuffers[commandKey].get();
 
-  std::unordered_set<unsigned> restoredBuffers;
+  std::unordered_set<GITSKey> restoredBuffers;
   size_t uploadBufferOffset{};
   for (BufferInputDump::InputBuffer& info : inputBufferDumps) {
     auto itHash = m_BufferHashesByKeyOffset.find(std::pair(info.BufferKey, info.Offset));

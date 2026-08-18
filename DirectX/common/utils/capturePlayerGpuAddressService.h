@@ -116,7 +116,7 @@ private:
       D3D12_GPU_VIRTUAL_ADDRESS CaptureStart;
       D3D12_GPU_VIRTUAL_ADDRESS CaptureEnd;
       D3D12_GPU_VIRTUAL_ADDRESS PlayerStart;
-      std::unordered_set<unsigned> Resources;
+      std::unordered_set<GITSKey> Resources;
     };
 
     std::unordered_map<GITSKey, std::unique_ptr<HeapInfo>> m_HeapsByKey;
@@ -124,7 +124,7 @@ private:
 
     std::unordered_map<GITSKey, std::unique_ptr<ResourceInfo>> m_ResourcesByKey;
     std::unordered_map<GITSKey, std::unique_ptr<PlacedResourceInfo>> m_PlacedResourcesByKey;
-    std::unordered_set<unsigned> m_DeniedShaderResources;
+    std::unordered_set<GITSKey> m_DeniedShaderResources;
   };
   GpuAddressService m_GpuAddressService;
   std::unique_ptr<GpuAddressService> m_GpuPlayerAddress;

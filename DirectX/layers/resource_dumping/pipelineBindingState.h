@@ -61,7 +61,7 @@ private:
       } Constant;
     };
   };
-  std::unordered_map<GITSKey, Binding> m_Bindings;
+  std::unordered_map<unsigned, Binding> m_Bindings;
 };
 
 } // namespace DirectX

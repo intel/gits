@@ -233,7 +233,7 @@ unsigned ResourceContentRestore::RestoreUnmappableResources(
     }
 
     if (residencyKeysUnique != m_PrevResidencyKeys) {
-      residencyKeys = std::vector<unsigned>(residencyKeysUnique.begin(), residencyKeysUnique.end());
+      residencyKeys = std::vector<GITSKey>(residencyKeysUnique.begin(), residencyKeysUnique.end());
       residencyObjects = std::vector<ID3D12Pageable*>(residencyObjectsUnique.begin(),
                                                       residencyObjectsUnique.end());
       EvictPrevResidencyObjects();

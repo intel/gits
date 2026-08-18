@@ -394,7 +394,7 @@ UpdateInterfaceT<D3D12_BARRIER_GROUPs_Argument, D3D12_BARRIER_GROUP>::UpdateInte
   m_Unwrapped.resize(arg.Size);
   arg.Value = m_Unwrapped.data();
 
-  GITSKey resourceKeyIndex = 0;
+  unsigned resourceKeyIndex = 0;
 
   for (unsigned i = 0; i < arg.Size; ++i) {
     const D3D12_BARRIER_GROUP& barrierGroup = value[i];

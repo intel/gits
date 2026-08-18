@@ -39,7 +39,7 @@ public:
                           UINT64 fenceValue);
   void FenceSignal(GITSKey commandKey, GITSKey fenceKey, UINT64 fenceValue);
 
-  std::vector<unsigned> GetOrderedResources();
+  std::vector<GITSKey> GetOrderedResources();
 
 private:
   struct UsageNumber {
@@ -55,11 +55,11 @@ private:
     }
   };
   struct ResourceUsage : public GpuExecutionTracker::Executable {
-    std::vector<unsigned> UsedResources;
+    std::vector<GITSKey> UsedResources;
   };
 
   void ProcessReadyExecutables();
-  void UpdateUsage(const std::vector<unsigned>& usedResources);
+  void UpdateUsage(const std::vector<GITSKey>& usedResources);
 
   unsigned m_ExecuteNumber{};
   GpuExecutionTracker m_GpuExecutionTracker;

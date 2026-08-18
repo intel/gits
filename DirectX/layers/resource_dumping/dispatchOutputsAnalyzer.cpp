@@ -38,7 +38,7 @@ void DispatchOutputsAnalyzer::DumpAnalysisFile() {
       analysisFile << dispatchKey << " " << slot << " " << bindings.Resources.size() << " "
                    << (bindings.Unbounded ? 'u' : 'b');
 
-      std::vector<unsigned> sortedResources;
+      std::vector<GITSKey> sortedResources;
       sortedResources.resize(bindings.Resources.size());
       std::copy(bindings.Resources.cbegin(), bindings.Resources.cend(), sortedResources.begin());
       std::sort(sortedResources.begin(), sortedResources.end());
@@ -192,11 +192,11 @@ void DispatchOutputsAnalyzer::ExecuteCommandLists(ID3D12CommandQueueExecuteComma
   }
 }
 
-void DispatchOutputsAnalyzer::ClearCommandList(unsigned commandList) {
-  m_RootSignatureByCommandList.erase(commandList);
-  m_DescriptorBySlotByCommandList.erase(commandList);
-  m_DescriptorTableBySlotByCommandList.erase(commandList);
-  m_DescriptorTableBySlotByDispatchByCommandList.erase(commandList);
+void DispatchOutputsAnalyzer::ClearCommandList(GITSKey commandListKey) {
+  m_RootSignatureByCommandList.erase(commandListKey);
+  m_DescriptorBySlotByCommandList.erase(commandListKey);
+  m_DescriptorTableBySlotByCommandList.erase(commandListKey);
+  m_DescriptorTableBySlotByDispatchByCommandList.erase(commandListKey);
 }
 
 void DispatchOutputsAnalyzer::DestroyInterface(GITSKey interfaceKey) {

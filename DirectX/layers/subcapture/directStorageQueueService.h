@@ -39,7 +39,7 @@ private:
   void RecordQueueSubmit(GITSKey queueKey);
 
   StateTrackingService& m_StateService;
-  std::map<GITSKey, std::map<GITSKey, EnqueueStatus>> m_EnqueueStatusByIndexByArray;
+  std::map<GITSKey, std::map<unsigned, EnqueueStatus>> m_EnqueueStatusByIndexByArray;
 };
 
 } // namespace DirectX

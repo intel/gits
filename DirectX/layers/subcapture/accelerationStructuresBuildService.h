@@ -106,7 +106,7 @@ private:
     std::unique_ptr<PointerArgument<NVAPI_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_PARAMS>> Desc{};
   };
 
-  std::unordered_set<std::pair<GITSKey, GITSKey>, UnsignedPairHash> m_TlasesKeyOffsets;
+  std::unordered_set<std::pair<GITSKey, unsigned>, UnsignedPairHash> m_TlasesKeyOffsets;
 
   unsigned m_MaxBuildScratchSpace{};
   GITSKey m_DeviceKey{};

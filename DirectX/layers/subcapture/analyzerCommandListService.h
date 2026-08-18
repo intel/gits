@@ -35,10 +35,10 @@ public:
                              AnalyzerExecuteIndirectService& executeIndirectService,
                              bool CommandListSubcapture);
 
-  std::unordered_set<unsigned>& GetObjectsForRestore() {
+  std::unordered_set<GITSKey>& GetObjectsForRestore() {
     return m_ObjectsForRestore;
   }
-  std::set<std::pair<unsigned, unsigned>>& GetDescriptors() {
+  std::set<std::pair<GITSKey, unsigned>>& GetDescriptors() {
     return m_Descriptors;
   }
   GITSKey GetComputeRootSignatureKey(GITSKey commandListKey) {
@@ -146,10 +146,10 @@ private:
   bool m_FirstFrame{true};
 
   struct CommandListInfo {
-    unsigned computeRootSignature{};
-    unsigned graphicsRootSignature{};
-    unsigned viewDescriptorHeap{};
-    unsigned samplerDescriptorHeap{};
+    GITSKey computeRootSignature{};
+    GITSKey graphicsRootSignature{};
+    GITSKey viewDescriptorHeap{};
+    GITSKey samplerDescriptorHeap{};
   };
   std::unordered_map<GITSKey, CommandListInfo> m_CommandListInfos;
 
@@ -158,7 +158,7 @@ private:
     unsigned numDescriptors{};
   };
   std::unordered_map<GITSKey, DescriptorHeapInfo> m_DescriptorHeapInfos;
-  std::unordered_set<unsigned> m_DispatchRaysCommandSignatures;
+  std::unordered_set<GITSKey> m_DispatchRaysCommandSignatures;
 
   std::unordered_map<GITSKey, std::vector<std::unique_ptr<::gits::DirectX::Command>>>
       m_CommandsByCommandList;
@@ -166,8 +166,8 @@ private:
 
   std::set<GITSKey> m_CheckedStateObjectSubobjects;
 
-  std::unordered_set<unsigned> m_ObjectsForRestore;
-  std::set<std::pair<unsigned, unsigned>> m_Descriptors;
+  std::unordered_set<GITSKey> m_ObjectsForRestore;
+  std::set<std::pair<GITSKey, unsigned>> m_Descriptors;
 
   bool m_RestoreTlases{};
   std::set<GITSKey> m_TlasBuildKeys;

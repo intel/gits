@@ -85,8 +85,8 @@ private:
     bool isDesc{};
     D3D12_DEPTH_STENCIL_VIEW_DESC desc{};
   };
-  std::map<std::pair<unsigned, unsigned>, RenderTarget> m_RenderTargetsByDescriptorHandle;
-  std::map<std::pair<unsigned, unsigned>, DepthStencil> m_DepthStencilsByDescriptorHandle;
+  std::map<std::pair<GITSKey, unsigned>, RenderTarget> m_RenderTargetsByDescriptorHandle;
+  std::map<std::pair<GITSKey, unsigned>, DepthStencil> m_DepthStencilsByDescriptorHandle;
   std::unordered_map<GITSKey, std::vector<RenderTarget>> m_RenderTargetsByCommandList;
   std::unordered_map<GITSKey, DepthStencil> m_DepthStencilByCommandList;
 

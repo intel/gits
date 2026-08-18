@@ -183,7 +183,7 @@ void AnalyzerRaytracingService::BuildTlas(
       ID3D12Resource* resource{};
       GITSKey resourceKey{};
       D3D12_GPU_VIRTUAL_ADDRESS captureStart;
-      std::set<GITSKey> offsets;
+      std::set<unsigned> offsets;
     };
     std::unordered_map<GITSKey, InstanceInfo> instancesByResourceKey;
 
@@ -340,7 +340,7 @@ std::set<GITSKey> AnalyzerRaytracingService::GetStateObjectAllSubobjects(GITSKey
   std::set<GITSKey> subobjects;
   // search the graph of connected subobjects
   {
-    std::queue<unsigned> subobjectsToProcess;
+    std::queue<GITSKey> subobjectsToProcess;
     {
       std::set<GITSKey>& directSubobjects = m_StateObjectsDirectSubobjects[stateObjectKey];
       for (GITSKey directSubobjectKey : directSubobjects) {
@@ -369,7 +369,7 @@ void AnalyzerRaytracingService::LoadInstancesArraysOfPointers() {
   std::ifstream stream(dumpPath / "raytracingArraysOfPointers.dat", std::ios::binary);
   while (true) {
     GITSKey callKey{};
-    stream.read(reinterpret_cast<char*>(&callKey), sizeof(unsigned));
+    stream.read(reinterpret_cast<char*>(&callKey), sizeof(GITSKey));
     if (!stream) {
       break;
     }
@@ -383,12 +383,12 @@ void AnalyzerRaytracingService::LoadInstancesArraysOfPointers() {
   }
 }
 
-unsigned AnalyzerRaytracingService::FindTlas(const KeyOffset& tlas) {
+GITSKey AnalyzerRaytracingService::FindTlas(const KeyOffset& tlas) {
   auto it = m_TlasBuildKeys.find(tlas);
   if (it != m_TlasBuildKeys.end()) {
     return it->second;
   }
-  return 0;
+  return GITSKey{};
 }
 
 void AnalyzerRaytracingService::GetTlases(std::set<GITSKey>& tlases) {

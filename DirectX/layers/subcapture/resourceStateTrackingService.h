@@ -59,7 +59,7 @@ public:
   ResourceStates& GetResourceStates(GITSKey resourceKey);
   D3D12_RESOURCE_STATES GetResourceState(GITSKey resourceKey);
   D3D12_BARRIER_LAYOUT GetResourceLayout(GITSKey resourceKey);
-  void RestoreResourceStates(const std::vector<unsigned>& orderedResources);
+  void RestoreResourceStates(const std::vector<GITSKey>& orderedResources);
   void RestoreBackBufferState(GITSKey commandQueueKey,
                               GITSKey resourceKey,
                               D3D12_RESOURCE_STATES beforeState);
@@ -85,7 +85,7 @@ private:
 
   StateTrackingService& m_StateService;
   std::unordered_map<GITSKey, ResourceStates> m_ResourceStates;
-  std::unordered_set<unsigned> m_RecreateStateResources;
+  std::unordered_set<GITSKey> m_RecreateStateResources;
   GITSKey m_DeviceKey{};
 
   using AliasingBarrierKeys = std::pair<GITSKey, GITSKey>;

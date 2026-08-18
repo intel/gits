@@ -26,13 +26,13 @@ public:
                  unsigned offset,
                  unsigned size,
                  BarrierState state,
-                 unsigned buildCall);
+                 GITSKey buildCall);
   void BuildTlasArrayOfPointers(ID3D12GraphicsCommandList* commandList,
                                 ID3D12Resource* resource,
                                 unsigned offset,
                                 unsigned size,
                                 BarrierState state,
-                                unsigned buildCall,
+                                GITSKey buildCall,
                                 std::vector<unsigned>& arrayOfPointersOffsets);
 
 private:
@@ -43,7 +43,7 @@ private:
   std::mutex m_Mutex;
 
   struct InstancesInfo : DumpInfo {
-    unsigned BuildCall{};
+    GITSKey BuildCall{};
     std::vector<unsigned> ArrayOfPointersOffsets;
   };
 };

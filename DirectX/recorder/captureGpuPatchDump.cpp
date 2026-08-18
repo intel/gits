@@ -200,7 +200,7 @@ void CaptureGpuPatchDump::DumpInstancesBuffer(InstancesArrayOfPointersDumpInfo& 
     std::filesystem::path dumpPath = Configurator::Get().common.recorder.dumpPath;
     m_InstancesStream.open(dumpPath / "raytracingArraysOfPointers.dat", std::ios::binary);
   }
-  m_InstancesStream.write(reinterpret_cast<char*>(&dumpInfo.CallKey), sizeof(unsigned));
+  m_InstancesStream.write(reinterpret_cast<char*>(&dumpInfo.CallKey), sizeof(GITSKey));
   unsigned count = dumpInfo.Size / sizeof(D3D12_GPU_VIRTUAL_ADDRESS);
   m_InstancesStream.write(reinterpret_cast<char*>(&count), sizeof(unsigned));
   D3D12_GPU_VIRTUAL_ADDRESS* address = static_cast<D3D12_GPU_VIRTUAL_ADDRESS*>(data);

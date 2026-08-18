@@ -35,7 +35,7 @@ public:
                  CommandPrinterState& state,
                  Command& command,
                  const char* name,
-                 unsigned objectId = 0);
+                 GITSKey objectKey = 0);
 
   template <typename T>
   void AddArgument(T& arg) {

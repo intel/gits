@@ -104,7 +104,7 @@ unsigned GetSize(const D3D12_GPU_VIRTUAL_ADDRESSs_Argument& arg) {
     return sizeof(void*);
   }
   return sizeof(void*) + sizeof(arg.Size) +
-         (sizeof(D3D12_GPU_VIRTUAL_ADDRESS) + sizeof(unsigned) * 2) * arg.Size;
+         (sizeof(D3D12_GPU_VIRTUAL_ADDRESS) + sizeof(GITSKey) + sizeof(unsigned)) * arg.Size;
 }
 
 void Encode(char* dest, unsigned& offset, const D3D12_GPU_VIRTUAL_ADDRESSs_Argument& arg) {
@@ -482,7 +482,7 @@ unsigned GetSize(const D3D12_INDEX_BUFFER_VIEW_Argument& arg) {
   if (!arg.Value) {
     return sizeof(void*);
   }
-  return sizeof(void*) + sizeof(D3D12_INDEX_BUFFER_VIEW) + sizeof(unsigned) * 2;
+  return sizeof(void*) + sizeof(D3D12_INDEX_BUFFER_VIEW) + sizeof(GITSKey) + sizeof(unsigned);
 }
 
 void Encode(char* dest, unsigned& offset, const D3D12_INDEX_BUFFER_VIEW_Argument& arg) {
@@ -503,7 +503,8 @@ unsigned GetSize(const D3D12_CONSTANT_BUFFER_VIEW_DESC_Argument& arg) {
   if (!arg.Value) {
     return sizeof(void*);
   }
-  return sizeof(void*) + sizeof(D3D12_CONSTANT_BUFFER_VIEW_DESC) + sizeof(unsigned) * 2;
+  return sizeof(void*) + sizeof(D3D12_CONSTANT_BUFFER_VIEW_DESC) + sizeof(GITSKey) +
+         sizeof(unsigned);
 }
 
 void Encode(char* dest, unsigned& offset, const D3D12_CONSTANT_BUFFER_VIEW_DESC_Argument& arg) {
@@ -1468,7 +1469,7 @@ unsigned GetSize(const PointerArgument<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUC
     }
   }
 
-  size += sizeof(unsigned) * 6;
+  size += sizeof(GITSKey) * 3 + sizeof(unsigned) * 3;
   size += sizeof(unsigned) + sizeof(GITSKey) * arg.InputKeys.size() +
           sizeof(unsigned) * arg.InputKeys.size();
 
@@ -1583,7 +1584,7 @@ unsigned GetSize(const PointerArgument<D3D12_DISPATCH_RAYS_DESC>& arg) {
     return sizeof(void*);
   }
   unsigned size = sizeof(void*) + sizeof(D3D12_DISPATCH_RAYS_DESC);
-  size += sizeof(unsigned) * 8;
+  size += sizeof(GITSKey) * 4 + sizeof(unsigned) * 4;
   return size;
 }
 
@@ -1624,8 +1625,8 @@ unsigned GetSize(
     return sizeof(void*);
   }
   return sizeof(void*) + sizeof(arg.Size) +
-         (sizeof(D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC) +
-          sizeof(unsigned) * 2) *
+         (sizeof(D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC) + sizeof(GITSKey) +
+          sizeof(unsigned)) *
              arg.Size;
 }
 
@@ -1656,7 +1657,7 @@ unsigned GetSize(
     return sizeof(void*);
   }
   return sizeof(void*) + sizeof(D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC) +
-         sizeof(unsigned) * 2;
+         sizeof(GITSKey) + sizeof(unsigned);
 }
 
 void Encode(
@@ -1671,8 +1672,8 @@ void Encode(
          sizeof(D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC));
   offset += sizeof(D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC);
 
-  memcpy(dest + offset, &arg.destBufferKey, sizeof(unsigned));
-  offset += sizeof(unsigned);
+  memcpy(dest + offset, &arg.destBufferKey, sizeof(GITSKey));
+  offset += sizeof(GITSKey);
 
   memcpy(dest + offset, &arg.destBufferOffset, sizeof(unsigned));
   offset += sizeof(unsigned);
@@ -1732,9 +1733,9 @@ void Encode(char* dest,
   memcpy(dest + offset, &size, sizeof(size));
   offset += sizeof(size);
   memcpy(dest + offset, arg.ResolveSrcResourceKeys.data(), sizeof(GITSKey) * size);
-  offset += sizeof(unsigned) * size;
+  offset += sizeof(GITSKey) * size;
   memcpy(dest + offset, arg.ResolveDstResourceKeys.data(), sizeof(GITSKey) * size);
-  offset += sizeof(unsigned) * size;
+  offset += sizeof(GITSKey) * size;
 }
 
 unsigned GetSize(const D3D12_RENDER_PASS_DEPTH_STENCIL_DESC_Argument& arg) {
@@ -1752,7 +1753,7 @@ unsigned GetSize(const D3D12_RENDER_PASS_DEPTH_STENCIL_DESC_Argument& arg) {
             arg.Value->StencilEndingAccess.Resolve.SubresourceCount;
   }
 
-  size += sizeof(unsigned) * 6;
+  size += sizeof(GITSKey) * 5 + sizeof(unsigned);
   return size;
 }
 
@@ -1781,19 +1782,19 @@ void Encode(char* dest,
               arg.Value->StencilEndingAccess.Resolve.SubresourceCount;
   }
 
-  memcpy(dest + offset, &arg.DescriptorKey, sizeof(unsigned));
-  offset += sizeof(unsigned);
+  memcpy(dest + offset, &arg.DescriptorKey, sizeof(GITSKey));
+  offset += sizeof(GITSKey);
   memcpy(dest + offset, &arg.DescriptorIndex, sizeof(unsigned));
   offset += sizeof(unsigned);
 
-  memcpy(dest + offset, &arg.ResolveSrcDepthKey, sizeof(unsigned));
-  offset += sizeof(unsigned);
-  memcpy(dest + offset, &arg.ResolveDstDepthKey, sizeof(unsigned));
-  offset += sizeof(unsigned);
-  memcpy(dest + offset, &arg.ResolveSrcStencilKey, sizeof(unsigned));
-  offset += sizeof(unsigned);
-  memcpy(dest + offset, &arg.ResolveDstStencilKey, sizeof(unsigned));
-  offset += sizeof(unsigned);
+  memcpy(dest + offset, &arg.ResolveSrcDepthKey, sizeof(GITSKey));
+  offset += sizeof(GITSKey);
+  memcpy(dest + offset, &arg.ResolveDstDepthKey, sizeof(GITSKey));
+  offset += sizeof(GITSKey);
+  memcpy(dest + offset, &arg.ResolveSrcStencilKey, sizeof(GITSKey));
+  offset += sizeof(GITSKey);
+  memcpy(dest + offset, &arg.ResolveDstStencilKey, sizeof(GITSKey));
+  offset += sizeof(GITSKey);
 }
 
 unsigned GetSize(const D3D12_SHADER_RESOURCE_VIEW_DESC_Argument& arg) {
@@ -1803,7 +1804,7 @@ unsigned GetSize(const D3D12_SHADER_RESOURCE_VIEW_DESC_Argument& arg) {
   unsigned size = sizeof(void*) + sizeof(D3D12_SHADER_RESOURCE_VIEW_DESC);
 
   if (arg.Value->ViewDimension == D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE) {
-    size += sizeof(unsigned) * 2;
+    size += sizeof(GITSKey) + sizeof(unsigned);
   }
 
   return size;
@@ -1817,8 +1818,8 @@ void Encode(char* dest, unsigned& offset, const D3D12_SHADER_RESOURCE_VIEW_DESC_
   offset += sizeof(D3D12_SHADER_RESOURCE_VIEW_DESC);
 
   if (arg.Value->ViewDimension == D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE) {
-    memcpy(dest + offset, &arg.RaytracingLocationKey, sizeof(unsigned));
-    offset += sizeof(unsigned);
+    memcpy(dest + offset, &arg.RaytracingLocationKey, sizeof(GITSKey));
+    offset += sizeof(GITSKey);
     memcpy(dest + offset, &arg.RaytracingLocationOffset, sizeof(unsigned));
     offset += sizeof(unsigned);
   }
@@ -2036,7 +2037,7 @@ void Encode(char* dest, unsigned& offset, const DML_GRAPH_DESC_Argument& arg) {
   offset += sizeof(unsigned);
 
   memcpy(dest + offset, arg.OperatorKeys.data(), sizeof(GITSKey) * arg.OperatorKeysSize);
-  offset += sizeof(unsigned) * arg.OperatorKeysSize;
+  offset += sizeof(GITSKey) * arg.OperatorKeysSize;
 }
 
 unsigned GetSize(const DML_CheckFeatureSupport_BufferArgument& arg) {
@@ -2504,13 +2505,13 @@ unsigned GetSize(
     }
   }
 
-  size += sizeof(unsigned) * 6;
+  size += sizeof(GITSKey) * 3 + sizeof(unsigned) * 3;
   size += sizeof(unsigned) + sizeof(GITSKey) * arg.InputKeys.size() +
           sizeof(unsigned) * arg.InputKeys.size();
 
   if (arg.Value->pPostbuildInfoDescs) {
-    size += (sizeof(D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC) +
-             sizeof(unsigned) * 2) *
+    size += (sizeof(D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC) + sizeof(GITSKey) +
+             sizeof(unsigned)) *
             arg.Value->numPostbuildInfoDescs;
 
     size += sizeof(GITSKey) * arg.DestPostBuildBufferKeys.size() +
@@ -2645,8 +2646,8 @@ void Encode(char* dest,
               arg.Value->numPostbuildInfoDescs;
 
     memcpy(dest + offset, arg.DestPostBuildBufferKeys.data(),
-           sizeof(unsigned) * arg.Value->numPostbuildInfoDescs);
-    offset += sizeof(unsigned) * arg.Value->numPostbuildInfoDescs;
+           sizeof(GITSKey) * arg.Value->numPostbuildInfoDescs);
+    offset += sizeof(GITSKey) * arg.Value->numPostbuildInfoDescs;
 
     memcpy(dest + offset, arg.DestPostBuildBufferOffsets.data(),
            sizeof(unsigned) * arg.Value->numPostbuildInfoDescs);
@@ -2669,11 +2670,11 @@ unsigned GetSize(const PointerArgument<NVAPI_BUILD_RAYTRACING_OPACITY_MICROMAP_A
     }
   }
 
-  size += sizeof(unsigned) * 8;
+  size += sizeof(GITSKey) * 4 + sizeof(unsigned) * 4;
 
   if (arg.Value->pPostbuildInfoDescs) {
     size += (sizeof(NVAPI_D3D12_RAYTRACING_OPACITY_MICROMAP_ARRAY_POSTBUILD_INFO_DESC) +
-             sizeof(unsigned) * 2) *
+             sizeof(GITSKey) + sizeof(unsigned)) *
             arg.Value->numPostbuildInfoDescs;
 
     size += sizeof(GITSKey) * arg.DestPostBuildBufferKeys.size() +
@@ -2739,8 +2740,8 @@ void Encode(char* dest,
               arg.Value->numPostbuildInfoDescs;
 
     memcpy(dest + offset, arg.DestPostBuildBufferKeys.data(),
-           sizeof(unsigned) * arg.Value->numPostbuildInfoDescs);
-    offset += sizeof(unsigned) * arg.Value->numPostbuildInfoDescs;
+           sizeof(GITSKey) * arg.Value->numPostbuildInfoDescs);
+    offset += sizeof(GITSKey) * arg.Value->numPostbuildInfoDescs;
 
     memcpy(dest + offset, arg.DestPostBuildBufferOffsets.data(),
            sizeof(unsigned) * arg.Value->numPostbuildInfoDescs);
@@ -2760,7 +2761,7 @@ unsigned GetSize(
     size += sizeof(NVAPI_D3D12_RAYTRACING_MULTI_INDIRECT_CLUSTER_OPERATION_DESC);
   }
 
-  size += sizeof(unsigned) * 12;
+  size += sizeof(GITSKey) * 6 + sizeof(unsigned) * 6;
 
   return size;
 }

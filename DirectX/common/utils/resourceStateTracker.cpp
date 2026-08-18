@@ -122,7 +122,7 @@ void ResourceStateTracker::ResourceBarrier(ID3D12GraphicsCommandList* commandLis
     return states;
   };
 
-  GITSKey resourceKeyIndex = 0;
+  unsigned resourceKeyIndex = 0;
   for (unsigned i = 0; i < barriersNum; ++i) {
     if (barriers[i].Type == D3D12_BARRIER_TYPE_BUFFER) {
       for (unsigned j = 0; j < barriers[i].NumBarriers; ++j, ++resourceKeyIndex) {

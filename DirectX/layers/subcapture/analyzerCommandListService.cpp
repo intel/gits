@@ -574,7 +574,7 @@ void AnalyzerCommandListService::CommandAnalysis(
     ID3D12GraphicsCommandListSetComputeRootShaderResourceViewCommand& c) {
   AddObjectForRestore(c.m_BufferLocation.InterfaceKey);
 
-  unsigned tlasBuildKey = m_RaytracingService.FindTlas(AnalyzerRaytracingService::KeyOffset(
+  GITSKey tlasBuildKey = m_RaytracingService.FindTlas(AnalyzerRaytracingService::KeyOffset(
       c.m_BufferLocation.InterfaceKey, c.m_BufferLocation.Offset));
   if (tlasBuildKey) {
     m_TlasBuildKeys.insert(tlasBuildKey);

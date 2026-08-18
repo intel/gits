@@ -67,7 +67,7 @@ private:
     };
     PipelineState CurrentPipelineState{};
     ID3D12RootSignature* CurrentRootSignature{};
-    std::map<GITSKey, std::unique_ptr<CommandState>> CurrentRootArguments;
+    std::map<unsigned, std::unique_ptr<CommandState>> CurrentRootArguments;
   };
 
   std::unordered_map<GITSKey, CommandListState> m_CommandLists;

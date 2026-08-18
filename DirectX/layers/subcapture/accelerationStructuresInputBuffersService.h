@@ -72,7 +72,7 @@ private:
   };
   std::unordered_map<GITSKey, std::unique_ptr<InputBuffers>> m_InputBuffers;
 
-  std::unordered_map<std::pair<unsigned, unsigned>, uint64_t, UnsignedPairHash>
+  std::unordered_map<std::pair<GITSKey, unsigned>, uint64_t, UnsignedPairHash>
       m_BufferHashesByKeyOffset;
   std::unordered_map<GITSKey, std::unordered_set<GITSKey>> m_TiledResourceUpdatesRestored;
 

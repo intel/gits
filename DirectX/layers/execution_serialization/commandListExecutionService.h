@@ -72,7 +72,7 @@ private:
   GpuExecutionTracker m_ExecutionTracker;
   std::unordered_map<GITSKey, CommandList> m_CommandListsByKey;
   std::unordered_map<GITSKey, GITSKey> m_DeviceByCommandQueue;
-  std::unordered_map<GITSKey, std::pair<unsigned, UINT64>> m_FenceByCommandQueue;
+  std::unordered_map<GITSKey, std::pair<GITSKey, UINT64>> m_FenceByCommandQueue;
   std::unordered_map<GITSKey, GITSKey> m_CommandListCreationAllocators;
   GITSKey m_RestoreCommandKey{EXECUTION_SERIALIZATION_KEY_MASK};
   GITSKey m_RestoreObjectKey{EXECUTION_SERIALIZATION_KEY_MASK};

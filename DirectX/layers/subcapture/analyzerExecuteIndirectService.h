@@ -45,7 +45,7 @@ public:
                           UINT64 fenceValue);
   void FenceSignal(GITSKey key, GITSKey fenceKey, UINT64 fenceValue);
 
-  std::unordered_set<unsigned>& GetArgumentBuffersResources() {
+  std::unordered_set<GITSKey>& GetArgumentBuffersResources() {
     return m_ExecuteIndirectDump.GetArgumentBuffersResources();
   }
 

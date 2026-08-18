@@ -59,7 +59,7 @@ private:
                              unsigned destDescriptorIndex);
 
 private:
-  std::unordered_map<GITSKey, std::unordered_map<GITSKey, std::unique_ptr<Descriptor>>>
+  std::unordered_map<GITSKey, std::unordered_map<unsigned, std::unique_ptr<Descriptor>>>
       m_DescriptorByHeapByIndex;
 };
 

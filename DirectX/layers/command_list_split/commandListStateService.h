@@ -84,10 +84,10 @@ private:
     std::optional<ID3D12GraphicsCommandListSetDescriptorHeapsCommand> DescriptorHeaps{};
 
     std::optional<ID3D12GraphicsCommandListSetGraphicsRootSignatureCommand> GraphicsRootSignature{};
-    std::map<GITSKey, std::unique_ptr<Command>> GraphicsRootArguments;
+    std::map<unsigned, std::unique_ptr<Command>> GraphicsRootArguments;
 
     std::optional<ID3D12GraphicsCommandListSetComputeRootSignatureCommand> ComputeRootSignature{};
-    std::map<GITSKey, std::unique_ptr<Command>> ComputeRootArguments;
+    std::map<unsigned, std::unique_ptr<Command>> ComputeRootArguments;
 
     std::optional<ID3D12GraphicsCommandListIASetPrimitiveTopologyCommand> PrimitiveTopology{};
 
@@ -131,7 +131,7 @@ private:
   };
 
   void SetPipelineState(GITSKey pipelineStateKey);
-  void AppendRootCommands(const std::map<GITSKey, std::unique_ptr<Command>>& args,
+  void AppendRootCommands(const std::map<unsigned, std::unique_ptr<Command>>& args,
                           std::vector<std::unique_ptr<Command>>& out) const;
 
   GITSKey m_CommandListKey{};

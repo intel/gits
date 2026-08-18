@@ -110,7 +110,7 @@ private:
 private:
   StateTrackingService* m_StateService{};
   ResourceForCBVRestoreService* m_ResourceForCBVRestoreService{};
-  std::map<GITSKey, std::map<GITSKey, std::unique_ptr<DescriptorState>>> m_StatesByHeapIndex;
+  std::map<GITSKey, std::map<unsigned, std::unique_ptr<DescriptorState>>> m_StatesByHeapIndex;
   std::set<GITSKey> m_Resources;
   std::mutex m_Mutex;
 };

@@ -10,14 +10,17 @@
 
 #include "arguments.h"
 
+#include <limits>
 #include <string>
 #include <unordered_set>
 
 namespace gits {
 namespace DirectX {
 
-inline constexpr GITSKey STATE_RESTORE_KEY_MASK = GITSKey(1u << 31);
-inline constexpr GITSKey EXECUTION_SERIALIZATION_KEY_MASK = GITSKey(1u << 30);
+inline constexpr GITSKey STATE_RESTORE_KEY_MASK =
+    GITSKey(GITSKey{1} << (std::numeric_limits<GITSKey>::digits - 1));
+inline constexpr GITSKey EXECUTION_SERIALIZATION_KEY_MASK =
+    GITSKey(GITSKey{1} << (std::numeric_limits<GITSKey>::digits - 2));
 
 inline bool IsStateRestoreKey(GITSKey key) {
   return key & STATE_RESTORE_KEY_MASK;

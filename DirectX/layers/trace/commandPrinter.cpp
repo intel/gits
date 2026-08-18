@@ -10,6 +10,7 @@
 #include "layerAuto.h"
 #include "keyUtils.h"
 #include "configurator.h"
+#include "arguments.h"
 
 namespace gits {
 namespace DirectX {
@@ -32,7 +33,7 @@ CommandPrinter::CommandPrinter(FastOStream& stream,
                                CommandPrinterState& state,
                                Command& command,
                                const char* name,
-                               unsigned objectId)
+                               GITSKey objectKey)
     : m_State(state), m_Command(command), m_Stream(stream), m_Lock(state.Mutex) {
 
   if (m_Command.GetId() == CommandId::ID_INIT_START) {
@@ -56,9 +57,9 @@ CommandPrinter::CommandPrinter(FastOStream& stream,
   }
   m_Stream << keyToStr(command.Key);
   m_Stream << " T" << command.ThreadId;
-  if (objectId) {
+  if (objectKey) {
     m_Stream << " ";
-    PrintObjectKey(m_Stream, objectId);
+    PrintObjectKey(m_Stream, objectKey);
   }
   m_Stream << " " << name << "(";
 }

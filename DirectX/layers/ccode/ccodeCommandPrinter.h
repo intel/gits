@@ -26,7 +26,7 @@ namespace ccode {
 
 class CommandPrinter {
 public:
-  CommandPrinter(Command& command, const char* name, unsigned objectId = 0);
+  CommandPrinter(Command& command, const char* name, GITSKey objectKey = 0);
   ~CommandPrinter();
 
   template <typename T>
@@ -49,7 +49,7 @@ private:
   std::vector<std::string> m_CppArgInitializations{};
   std::string m_CppPreCommand{};
   std::string m_CppPostCommand{};
-  unsigned m_ObjectId{};
+  GITSKey m_ObjectKey{};
   bool m_Skip{false};
 };
 

@@ -375,7 +375,7 @@ void StateTrackingService::RestoreReferenceCount() {
 }
 
 void StateTrackingService::RestoreResources() {
-  std::vector<unsigned> orderedResources = m_ResourceUsageTrackingService.GetOrderedResources();
+  std::vector<GITSKey> orderedResources = m_ResourceUsageTrackingService.GetOrderedResources();
 
   enum ResourceBatchType {
     ReservedResourceBuffer,
@@ -383,8 +383,8 @@ void StateTrackingService::RestoreResources() {
     CommittedOrPlacedResource,
   };
 
-  std::vector<unsigned> reservedResourceBuffers; // handled separately
-  std::vector<std::pair<ResourceBatchType, std::vector<unsigned>>> batches;
+  std::vector<GITSKey> reservedResourceBuffers; // handled separately
+  std::vector<std::pair<ResourceBatchType, std::vector<GITSKey>>> batches;
 
   // prepare batches
   {

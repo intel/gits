@@ -24,8 +24,8 @@ class AnalyzerRaytracingService;
 class BindingTablesDump : public ResourceDump {
 public:
   struct StateObjectInfo {
-    unsigned GlobalRootSignature{};
-    std::unordered_map<std::wstring, unsigned> ExportToRootSignature;
+    GITSKey GlobalRootSignature{};
+    std::unordered_map<std::wstring, GITSKey> ExportToRootSignature;
   };
   struct DescriptorHeaps {
     GITSKey ViewDescriptorHeapKey;
@@ -47,10 +47,10 @@ public:
                         DescriptorHeaps descriptorHeaps,
                         GITSKey rootSignatureKey);
 
-  std::unordered_set<unsigned>& GetBindingTablesResources() {
+  std::unordered_set<GITSKey>& GetBindingTablesResources() {
     return m_BindingTablesResources;
   }
-  std::set<std::pair<unsigned, unsigned>>& GetBindingTablesDescriptors() {
+  std::set<std::pair<GITSKey, unsigned>>& GetBindingTablesDescriptors() {
     return m_BindingTablesDescriptors;
   }
 
@@ -61,8 +61,8 @@ private:
 private:
   AnalyzerRaytracingService& m_RaytracingService;
   std::mutex m_Mutex;
-  std::unordered_set<unsigned> m_BindingTablesResources;
-  std::set<std::pair<unsigned, unsigned>> m_BindingTablesDescriptors;
+  std::unordered_set<GITSKey> m_BindingTablesResources;
+  std::set<std::pair<GITSKey, unsigned>> m_BindingTablesDescriptors;
 
   struct BindingTablesInfo : DumpInfo {
     unsigned Stride{};

@@ -19,7 +19,7 @@ public:
   GITSKey GetUniqueCommandKey() {
     return ++m_CommandKey;
   }
-  void RemapCommandKey(unsigned& key) {
+  void RemapCommandKey(GITSKey& key) {
     if (key & EXECUTION_SERIALIZATION_KEY_MASK) {
       key = GetUniqueCommandKey();
     }

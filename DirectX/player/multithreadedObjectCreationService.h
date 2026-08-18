@@ -39,7 +39,7 @@ public:
   void AddDependency(GITSKey providerKey, GITSKey consumerKey);
   std::vector<GITSKey> CollectConsumers(GITSKey providerKey);
   std::optional<ObjectCreationOutput> Complete(GITSKey objectKey);
-  std::vector<std::pair<unsigned, ObjectCreationOutput>> CompleteAll();
+  std::vector<std::pair<GITSKey, ObjectCreationOutput>> CompleteAll();
   bool ScheduleUpdateRefCount(GITSKey objectKey, int count);
 
 private:

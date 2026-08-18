@@ -92,21 +92,21 @@ public:
   }
 
   std::set<GITSKey> GetStateObjectAllSubobjects(GITSKey stateObjectKey);
-  using KeyOffset = std::pair<GITSKey, GITSKey>;
+  using KeyOffset = std::pair<GITSKey, unsigned>;
   std::vector<KeyOffset>& GetBlases(GITSKey tlasBuildKey) {
     return m_BlasesByTlas[tlasBuildKey];
   }
   std::set<KeyOffset>& GetSources() {
     return m_Sources;
   }
-  std::unordered_set<unsigned>& GetBindingTablesResources() {
+  std::unordered_set<GITSKey>& GetBindingTablesResources() {
     return m_BindingTablesDump.GetBindingTablesResources();
   }
-  std::set<std::pair<unsigned, unsigned>>& GetBindingTablesDescriptors() {
+  std::set<std::pair<GITSKey, unsigned>>& GetBindingTablesDescriptors() {
     return m_BindingTablesDump.GetBindingTablesDescriptors();
   }
 
-  unsigned FindTlas(const KeyOffset& tlas);
+  GITSKey FindTlas(const KeyOffset& tlas);
   void GetTlases(std::set<GITSKey>& tlases);
 
 private:
@@ -132,7 +132,7 @@ private:
   RaytracingInstancesDump m_InstancesDump;
   BindingTablesDump m_BindingTablesDump;
   std::unordered_map<GITSKey, std::vector<KeyOffset>> m_BlasesByTlas;
-  std::map<KeyOffset, unsigned> m_TlasBuildKeys;
+  std::map<KeyOffset, GITSKey> m_TlasBuildKeys;
   std::set<KeyOffset> m_Sources;
   std::unordered_map<GITSKey, ID3D12Resource*> m_ResourceByKey;
   std::unordered_map<GITSKey, std::vector<D3D12_GPU_VIRTUAL_ADDRESS>> m_InstancesArraysOfPointers;

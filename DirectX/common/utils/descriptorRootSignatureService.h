@@ -44,8 +44,8 @@ private:
 
 private:
   std::unordered_map<GITSKey, D3D12_ROOT_SIGNATURE_DESC*> m_RootSignatureDescs;
-  std::unordered_map<GITSKey, GITSKey> m_UnboundedRetrieved;
-  std::unordered_map<GITSKey, std::unordered_map<GITSKey, unsigned>> m_BoundedRetrieved;
+  std::unordered_map<GITSKey, unsigned> m_UnboundedRetrieved;
+  std::unordered_map<GITSKey, std::unordered_map<unsigned, unsigned>> m_BoundedRetrieved;
   std::mutex m_Mutex;
 };
 

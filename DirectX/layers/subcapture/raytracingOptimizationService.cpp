@@ -195,7 +195,7 @@ void RaytracingOptimizationService::StoreCommand(std::unique_ptr<RaytracingComma
 }
 
 void RaytracingOptimizationService::Optimize(
-    std::unordered_set<std::pair<unsigned, unsigned>, UnsignedPairHash>& ases) {
+    std::unordered_set<std::pair<GITSKey, unsigned>, UnsignedPairHash>& ases) {
   for (auto& [keyOffset, command] : m_CommandByKeyOffset) {
     if (ases.contains(keyOffset)) {
       command->Restore = true;

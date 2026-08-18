@@ -284,7 +284,7 @@ void AnalyzerService::DumpAnalysisFile() {
   m_ExecuteIndirectService.Flush();
 
   // optimize raytracing
-  std::unordered_set<std::pair<unsigned, unsigned>, UnsignedPairHash> blases;
+  std::unordered_set<std::pair<GITSKey, unsigned>, UnsignedPairHash> blases;
   for (GITSKey buildKey : m_CommandListService.GetTlases()) {
     for (auto& as : m_RaytracingService.GetBlases(buildKey)) {
       blases.insert(as);
@@ -323,7 +323,7 @@ void AnalyzerService::DumpAnalysisFile() {
   }
 
   out << "DESCRIPTORS\n";
-  std::set<std::pair<unsigned, unsigned>> descriptors;
+  std::set<std::pair<GITSKey, unsigned>> descriptors;
   for (auto& [heapKey, index] : m_CommandListService.GetDescriptors()) {
     descriptors.insert({heapKey, index});
   }

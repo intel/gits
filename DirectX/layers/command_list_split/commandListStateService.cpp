@@ -326,13 +326,13 @@ void CommandListStateService::StoreCommand(
 void CommandListStateService::StoreCommand(
     const ID3D12GraphicsCommandListSetDescriptorHeapsCommand& c) {
   GITS_ASSERT(c.m_Object.Key == m_CommandListKey);
-  const auto sameDescriptorHeapSet = [](const std::vector<unsigned>& a,
-                                        const std::vector<unsigned>& b) {
+  const auto sameDescriptorHeapSet = [](const std::vector<GITSKey>& a,
+                                        const std::vector<GITSKey>& b) {
     if (a.size() != b.size()) {
       return false;
     }
-    std::vector<unsigned> sortedA = a;
-    std::vector<unsigned> sortedB = b;
+    std::vector<GITSKey> sortedA = a;
+    std::vector<GITSKey> sortedB = b;
     std::sort(sortedA.begin(), sortedA.end());
     std::sort(sortedB.begin(), sortedB.end());
     return sortedA == sortedB;
@@ -340,7 +340,7 @@ void CommandListStateService::StoreCommand(
   if (!m_State->DescriptorHeaps.has_value() ||
       !sameDescriptorHeapSet(m_State->DescriptorHeaps.value().m_ppDescriptorHeaps.Keys,
                              c.m_ppDescriptorHeaps.Keys)) {
-    auto removeArguments = [](std::map<GITSKey, std::unique_ptr<Command>>& arguments,
+    auto removeArguments = [](std::map<unsigned, std::unique_ptr<Command>>& arguments,
                               const CommandId commandId) {
       std::erase_if(arguments, [commandId](const auto& command) {
         return command.second->GetId() == commandId;
@@ -539,7 +539,7 @@ void CommandListStateService::SetPipelineState(GITSKey pipelineStateKey) {
 }
 
 void CommandListStateService::AppendRootCommands(
-    const std::map<GITSKey, std::unique_ptr<Command>>& args,
+    const std::map<unsigned, std::unique_ptr<Command>>& args,
     std::vector<std::unique_ptr<Command>>& out) const {
   for (const auto& rootArgument : args) {
     auto command = CreateCommandCopy(rootArgument.second.get());

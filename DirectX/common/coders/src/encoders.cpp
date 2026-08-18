@@ -418,7 +418,7 @@ unsigned GetSize(const D3D12_INDEX_BUFFER_VIEW_Argument& arg) {
   if (!arg.Value) {
     return sizeof(void*);
   }
-  return sizeof(void*) + sizeof(D3D12_INDEX_BUFFER_VIEW) + sizeof(unsigned) * 2;
+  return sizeof(void*) + sizeof(D3D12_INDEX_BUFFER_VIEW) + sizeof(GITSKey) + sizeof(unsigned);
 }
 
 void Encode(char* dest, unsigned& offset, const D3D12_INDEX_BUFFER_VIEW_Argument& arg) {
@@ -439,7 +439,8 @@ unsigned GetSize(const D3D12_CONSTANT_BUFFER_VIEW_DESC_Argument& arg) {
   if (!arg.Value) {
     return sizeof(void*);
   }
-  return sizeof(void*) + sizeof(D3D12_CONSTANT_BUFFER_VIEW_DESC) + sizeof(unsigned) * 2;
+  return sizeof(void*) + sizeof(D3D12_CONSTANT_BUFFER_VIEW_DESC) + sizeof(GITSKey) +
+         sizeof(unsigned);
 }
 
 void Encode(char* dest, unsigned& offset, const D3D12_CONSTANT_BUFFER_VIEW_DESC_Argument& arg) {

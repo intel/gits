@@ -849,7 +849,7 @@ void ReservedResourcesService::InitRestore() {
     }
 
     std::vector<bool> subresourceFullyMappedFlags(tiledResource.second->Subresources.size(), true);
-    std::map<GITSKey, GITSKey> numTilesBySubresourceIndex;
+    std::map<unsigned, unsigned> numTilesBySubresourceIndex;
     for (const auto& tile : tiledResource.second->Tiles) {
       if (tile.HeapKey) {
         ++numTilesBySubresourceIndex[tile.SubresourceIndex];

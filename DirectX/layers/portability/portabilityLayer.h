@@ -149,7 +149,7 @@ private:
   float m_AccelerationStructurePadding{1.0};
   float m_AccelerationStructureScratchPadding{1.0};
   uint32_t m_AccelerationStructureScratchMinSizeInBytes{0};
-  std::unordered_set<unsigned> m_ForcedCommittedResources{};
+  std::unordered_set<GITSKey> m_ForcedCommittedResources{};
 };
 
 } // namespace DirectX

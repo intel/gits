@@ -1503,7 +1503,7 @@ void argumentToCpp(D3D12_BARRIER_GROUPs_Argument& arg,
   std::ostringstream ss;
   ss << info.type << " " << info.name << "[" << arg.Size << "] = {};" << std::endl;
 
-  GITSKey resourceKeyIndex = 0;
+  unsigned resourceKeyIndex = 0;
   for (unsigned i = 0; i < arg.Size; ++i) {
     const D3D12_BARRIER_GROUP& group = arg.Value[i];
     const std::string groupIndex = std::to_string(i);

@@ -30,9 +30,9 @@ class CommandListSplitService {
 public:
   explicit CommandListSplitService(CommandListSplitRecorder& recorder);
 
-  void CreateCommandList(GITSKey commandListKey, GITSKey allocatorKey, unsigned initialState);
+  void CreateCommandList(GITSKey commandListKey, GITSKey allocatorKey, GITSKey initialState);
   void CommandListCommand(GITSKey commandListKey, const Command& command);
-  void CommandListReset(GITSKey commandListKey, GITSKey allocatorKey, unsigned initialState);
+  void CommandListReset(GITSKey commandListKey, GITSKey allocatorKey, GITSKey initialState);
   void ExecuteCommandLists(GITSKey commandQueueKey, std::vector<GITSKey>& commandListKeys);
   void CommandQueueSignal(GITSKey commandQueueKey, GITSKey fenceKey, uint64_t fenceValue);
 
@@ -46,14 +46,14 @@ public:
 private:
   struct CommandList {
     GITSKey CommandListKey{};
-    unsigned InitialState{};
+    GITSKey InitialState{};
     bool Split{};
     std::vector<std::unique_ptr<Command>> Commands;
   };
 
   std::vector<CommandList> SplitCommandList(CommandList commandList);
   bool IsBeginEndCommand(const Command& command);
-  void AddInterval(unsigned a, unsigned b);
+  void AddInterval(GITSKey a, GITSKey b);
   std::optional<std::pair<GITSKey, GITSKey>> GetInterval(GITSKey key);
 
   CommandListSplitRecorder& m_Recorder;
@@ -62,7 +62,7 @@ private:
   std::unordered_map<GITSKey, GITSKey> m_AllocatorByCommandList;
   std::string m_Split;
   std::map<GITSKey, GITSKey> m_SplitIntervals;
-  std::unordered_set<unsigned> m_ExecutedIntervalStarts;
+  std::unordered_set<GITSKey> m_ExecutedIntervalStarts;
 
   struct ExecuteInfo {
     GITSKey commandQueueKey{};

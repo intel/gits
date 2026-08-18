@@ -27,7 +27,7 @@ public:
   DispatchOutputsAnalyzer();
 
   void ExecuteCommandLists(ID3D12CommandQueueExecuteCommandListsCommand& c);
-  void ClearCommandList(unsigned commandList);
+  void ClearCommandList(GITSKey commandListKey);
   void CreateDescriptorHeap(ID3D12DeviceCreateDescriptorHeapCommand& c);
   void CreateResource(ID3D12Resource* resource, GITSKey resourceKey);
   void CreateRootSignature(ID3D12DeviceCreateRootSignatureCommand& c);
@@ -51,7 +51,7 @@ public:
   struct Bindings {
     unsigned Slot{};
     bool Unbounded{};
-    std::vector<unsigned> Resources;
+    std::vector<GITSKey> Resources;
   };
   std::vector<Bindings>* GetDispatchBindings(GITSKey dispatchKey);
 
@@ -72,25 +72,25 @@ private:
 
   std::unordered_map<GITSKey, GITSKey> m_RootSignatureByCommandList;
 
-  std::unordered_map<GITSKey, std::unordered_map<GITSKey, unsigned>>
+  std::unordered_map<GITSKey, std::unordered_map<unsigned, GITSKey>>
       m_DescriptorBySlotByCommandList;
 
   struct DesciptorTable {
     std::vector<unsigned> Indexes;
-    unsigned DescriptorHeap{};
+    GITSKey DescriptorHeap{};
     bool Unbounded{};
   };
-  std::unordered_map<GITSKey, std::unordered_map<GITSKey, DesciptorTable>>
+  std::unordered_map<GITSKey, std::unordered_map<unsigned, DesciptorTable>>
       m_DescriptorTableBySlotByCommandList;
   std::unordered_map<GITSKey,
-                     std::unordered_map<GITSKey, std::unordered_map<GITSKey, DesciptorTable>>>
+                     std::unordered_map<GITSKey, std::unordered_map<unsigned, DesciptorTable>>>
       m_DescriptorTableBySlotByDispatchByCommandList;
 
   struct AnalysisBindings {
     bool Unbounded{};
-    std::unordered_set<unsigned> Resources;
+    std::unordered_set<GITSKey> Resources;
   };
-  std::map<GITSKey, std::map<GITSKey, AnalysisBindings>> m_BindingsBySlotByDispatch;
+  std::map<GITSKey, std::map<unsigned, AnalysisBindings>> m_BindingsBySlotByDispatch;
 };
 
 } // namespace DirectX

@@ -40,7 +40,7 @@ void ResourceStateTrackingService::ResourceBarrier(GITSKey commandListKey,
                                                    unsigned barriersNum,
                                                    std::vector<GITSKey>& resourceKeys) {
   ResourceBarriers resourceBarriers;
-  GITSKey resourceKeyIndex = 0;
+  unsigned resourceKeyIndex = 0;
   for (unsigned i = 0; i < barriersNum; ++i) {
     D3D12_BARRIER_GROUP& barrierGroup = barriers[i];
     if (barrierGroup.Type == D3D12_BARRIER_TYPE_TEXTURE) {
@@ -276,7 +276,7 @@ void ResourceStateTrackingService::DestroyResource(GITSKey resourceKey) {
   m_RecreateStateResources.erase(resourceKey);
 }
 
-unsigned ResourceStateTrackingService::GetDeviceKeyForRestore() const {
+GITSKey ResourceStateTrackingService::GetDeviceKeyForRestore() const {
   if (m_DeviceKey != 0) {
     return m_DeviceKey;
   }
@@ -317,7 +317,7 @@ D3D12_BARRIER_LAYOUT ResourceStateTrackingService::GetResourceLayout(GITSKey res
 }
 
 void ResourceStateTrackingService::RestoreResourceStates(
-    const std::vector<unsigned>& orderedResources) {
+    const std::vector<GITSKey>& orderedResources) {
   if (orderedResources.empty() && m_AliasingBarriersOrdered.empty()) {
     return;
   }

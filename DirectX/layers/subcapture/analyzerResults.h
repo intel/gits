@@ -35,7 +35,7 @@ public:
   bool RestoreDescriptor(GITSKey heapKey, unsigned index);
   bool RestoreTlas(GITSKey buildKey);
   bool RestoreBlas(GITSKey buildKey);
-  unsigned GetBlasSourceBuild(GITSKey buildKey);
+  GITSKey GetBlasSourceBuild(GITSKey buildKey);
 
   static bool IsAnalysis();
   static std::string GetAnalysisFileName();
@@ -43,10 +43,10 @@ public:
 private:
   bool m_Optimize{};
   std::unordered_set<GITSKey> m_CommandListKeys;
-  std::unordered_set<unsigned> m_CommandQueueCommands;
+  std::unordered_set<GITSKey> m_CommandQueueCommands;
   std::unordered_set<GITSKey> m_ObjectKeys;
-  std::unordered_set<std::pair<unsigned, unsigned>, UnsignedPairHash> m_Descriptors;
-  std::unordered_set<unsigned> m_Tlases;
+  std::unordered_set<std::pair<GITSKey, unsigned>, UnsignedPairHash> m_Descriptors;
+  std::unordered_set<GITSKey> m_Tlases;
   std::unordered_map<GITSKey, GITSKey> m_Blases;
 };
 

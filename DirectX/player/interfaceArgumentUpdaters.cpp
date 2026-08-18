@@ -277,7 +277,7 @@ void UpdateInterface(PlayerManager& manager, D3D12_BARRIER_GROUPs_Argument& arg)
     return;
   }
 
-  GITSKey resourceKeyIndex = 0;
+  unsigned resourceKeyIndex = 0;
 
   for (unsigned i = 0; i < arg.Size; ++i) {
     D3D12_BARRIER_GROUP& barrierGroup = arg.Value[i];

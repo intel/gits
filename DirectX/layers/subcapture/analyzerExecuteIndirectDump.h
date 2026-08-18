@@ -31,7 +31,7 @@ public:
                           unsigned countBufferOffset,
                           BarrierState countBufferState);
 
-  std::unordered_set<unsigned>& GetArgumentBuffersResources() {
+  std::unordered_set<GITSKey>& GetArgumentBuffersResources() {
     return m_ArgumentBuffersResources;
   }
 
@@ -47,7 +47,7 @@ private:
 private:
   AnalyzerExecuteIndirectService& m_ExecuteIndirectService;
   std::mutex m_Mutex;
-  std::unordered_set<unsigned> m_ArgumentBuffersResources;
+  std::unordered_set<GITSKey> m_ArgumentBuffersResources;
 };
 
 } // namespace DirectX

@@ -52,7 +52,7 @@ private:
     int MapCount{};
     std::vector<void*> WatchedPages;
   };
-  std::unordered_map<GITSKey, std::map<GITSKey, std::unique_ptr<MappedInfo>>> m_MappedData;
+  std::unordered_map<GITSKey, std::map<unsigned, std::unique_ptr<MappedInfo>>> m_MappedData;
 
   size_t m_PageSize{0};
   std::mutex m_Mutex;

@@ -79,7 +79,7 @@ private:
     UINT64 m_Alignment;
   };
   std::unordered_map<GITSKey, HeapAllocationInfo> m_HeapAddressRanges;
-  std::unordered_set<unsigned> m_ChangedHeaps;
+  std::unordered_set<GITSKey> m_ChangedHeaps;
   Microsoft::WRL::ComPtr<ID3D12Tools1> m_D3d12Tools;
   Microsoft::WRL::ComPtr<ID3D12DeviceTools> m_DeviceTools;
 };
