@@ -55,6 +55,10 @@ void PluginService::SetVulkanInstanceDispatchTable(VkInstanceLevelDispatchTable*
   m_VulkanInstanceDispatchTable = table;
 }
 
+void PluginService::SetVkDriverRewindPresentCountPtr(std::uint64_t* count) {
+  m_VkDriverRewindPresentCountPtr = count;
+}
+
 void PluginService::LoadPlugins() {
   auto& cfg = Configurator::Get();
   const auto& pluginNames =
@@ -157,6 +161,7 @@ void PluginService::LoadPlugins() {
     pluginContext.logAppender = plog::get();
     pluginContext.vkDeviceDispatchTable = &m_VulkanDeviceDispatchTable;
     pluginContext.vkInstanceDispatchTable = &m_VulkanInstanceDispatchTable;
+    pluginContext.vkDriverRewindPresentCount = m_VkDriverRewindPresentCountPtr;
 
     plugin.DestroyPlugin =
         reinterpret_cast<DestroyPluginPtr>(GetProcAddress(mainDll, "destroyPlugin"));

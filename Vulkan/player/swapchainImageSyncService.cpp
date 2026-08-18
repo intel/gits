@@ -87,6 +87,7 @@ void SwapchainImageSyncService::RewindSwapchainImage(VkDevice device,
   }
 
   const VkResult presentResult = dt.vkQueuePresentKHR(queue, &presentInfo);
+  ++m_DriverRewindPresentCount;
   if (presentResult != VK_SUCCESS && presentResult != VK_SUBOPTIMAL_KHR) {
     LOG_WARNING << "SwapchainImageSyncService::RewindSwapchainImage: vkQueuePresentKHR returned "
                 << presentResult;

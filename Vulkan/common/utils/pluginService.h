@@ -39,12 +39,14 @@ public:
   void LoadPlugins();
   void SetVulkanDeviceDispatchTable(VkDeviceLevelDispatchTable* table);
   void SetVulkanInstanceDispatchTable(VkInstanceLevelDispatchTable* table);
+  void SetVkDriverRewindPresentCountPtr(std::uint64_t* count);
   const std::vector<PluginInfo>& GetPlugins() const;
 
 private:
   std::vector<PluginInfo> m_Plugins;
   VkDeviceLevelDispatchTable* m_VulkanDeviceDispatchTable = nullptr;
   VkInstanceLevelDispatchTable* m_VulkanInstanceDispatchTable = nullptr;
+  std::uint64_t* m_VkDriverRewindPresentCountPtr = nullptr;
 };
 
 } // namespace vulkan

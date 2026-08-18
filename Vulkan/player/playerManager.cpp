@@ -10,6 +10,7 @@
 #include "pluginService.h"
 #include "configurator.h"
 #include "log.h"
+#include "messageBus.h"
 
 namespace gits {
 namespace vulkan {
@@ -19,19 +20,10 @@ PlayerManager* PlayerManager::m_Instance = nullptr;
 PlayerManager& PlayerManager::Get() {
   if (!m_Instance) {
     m_Instance = new PlayerManager();
-    // Tear the manager down at end of playback, while the Vulkan device and
-    // driver library are still valid, so the asynchronous screenshot dumper
-    // worker threads owned by the layers get flushed/joined before teardown
-    // (otherwise the final present's screenshot of a one-frame substream is
-    // lost when the process exits).  The new StreamReader playback path used by
-    // Vulkan publishes {PUBLISHER_PLAYER, TOPIC_PROGRAM_EXIT} on the
-    // MessageBus::get() singleton right after the playback loop (see
-    // PlayStream); subscribe on that same bus so the synchronous publish()
-    // invokes this handler at that safe point.  Mirrors the DirectX player.
-    // Destroy() is idempotent (deletes and nulls the singleton), so it is safe
-    // even if invoked again or alongside normal static destruction.
-    MessageBus::get().subscribe({PUBLISHER_PLAYER, TOPIC_PROGRAM_EXIT},
-                                [](Topic t, const MessagePtr& m) { PlayerManager::Destroy(); });
+    // Tear down when playback finishes, same as DirectX PlayerManager.
+    gits::MessageBus::get().subscribe(
+        {PUBLISHER_PLAYER, TOPIC_PROGRAM_EXIT},
+        [](Topic t, const MessagePtr& m) { PlayerManager::Destroy(); });
   }
   return *m_Instance;
 }
@@ -62,6 +54,8 @@ PlayerManager::PlayerManager() : m_SwapchainImageSyncService(*this) {
       m_InstanceDispatchTable, m_DeviceDispatchTable, m_DispatchTablesMutex);
 
   m_PluginService = std::make_unique<PluginService>();
+  m_PluginService->SetVkDriverRewindPresentCountPtr(
+      m_SwapchainImageSyncService.GetDriverRewindPresentCountPtr());
   m_PluginService->LoadPlugins();
   m_LayerManager.LoadLayers(*this, *m_PluginService);
 

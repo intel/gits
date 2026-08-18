@@ -22,8 +22,9 @@
 #define GITS_PLUGIN_API
 #endif
 
-#include <string>
 #include <cassert>
+#include <cstdint>
+#include <string>
 
 namespace gits {
 class CGits;
@@ -60,6 +61,9 @@ struct IPluginContext {
   // Shares the same last-writer-wins, process-wide-single-pointer caveat as
   // vkDeviceDispatchTable above.
   gits::vulkan::VkInstanceLevelDispatchTable** vkInstanceDispatchTable = nullptr;
+  // Player-only: monotonic count of driver vkQueuePresentKHR calls issued by
+  // SwapchainImageSyncService during swapchain image rewind (not stream presents).
+  std::uint64_t* vkDriverRewindPresentCount = nullptr;
 };
 
 class IPlugin {

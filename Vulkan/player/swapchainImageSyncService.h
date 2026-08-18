@@ -11,6 +11,7 @@
 #include "vulkanHeader2.h"
 #include "commandsAuto.h"
 
+#include <cstdint>
 #include <unordered_map>
 
 namespace gits {
@@ -49,6 +50,14 @@ public:
   // Fully handles vkAcquireNextImage2KHR replay (same contract as above).
   void HandleAcquireNextImage2(vkAcquireNextImage2KHRCommand& command);
 
+  // Driver vkQueuePresentKHR calls issued by RewindSwapchainImage (not in the stream).
+  std::uint64_t GetDriverRewindPresentCount() const {
+    return m_DriverRewindPresentCount;
+  }
+  std::uint64_t* GetDriverRewindPresentCountPtr() {
+    return &m_DriverRewindPresentCount;
+  }
+
 private:
   // Offscreen path: use the recorded index, submit an empty batch to signal
   // the optional semaphore and fence.
@@ -74,6 +83,7 @@ private:
   PlayerManager& m_Manager;
   // device → first queue seen for that device
   std::unordered_map<VkDevice, VkQueue> m_DeviceQueues;
+  std::uint64_t m_DriverRewindPresentCount = 0;
 };
 
 } // namespace vulkan
