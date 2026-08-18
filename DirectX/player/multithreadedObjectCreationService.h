@@ -46,7 +46,7 @@ private:
   struct ObjectCreationTask {
     ObjectCreationTask(CreationFunction creationFunction, GITSKey objectKey);
     CreationFunction CreationFunctor;
-    GITSKey ObjectKey{};
+    GITSKey Key{};
     std::future<CreationFunction::result_type> StartedTask;
   };
 

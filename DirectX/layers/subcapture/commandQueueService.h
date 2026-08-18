@@ -35,9 +35,9 @@ private:
   StateTrackingService& m_StateService;
 
   struct CommandQueueCommand {
-    CommandQueueCommand(CommandId id_, GITSKey key) : Id(id_), CommandKey(key) {}
+    CommandQueueCommand(CommandId id_, GITSKey key) : Id(id_), Key(key) {}
     CommandId Id{};
-    GITSKey CommandKey{};
+    GITSKey Key{};
     std::unique_ptr<stream::CommandSerializer> CommandSerializer;
   };
   std::vector<CommandQueueCommand*> m_Commands;

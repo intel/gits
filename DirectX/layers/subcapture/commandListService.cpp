@@ -51,7 +51,7 @@ void CommandListService::RestoreCommandLists() {
       }
     }
     for (CommandListCommand* command : state->Commands) {
-      commandsByKey[command->CommandKey] = command;
+      commandsByKey[command->Key] = command;
     }
   }
 

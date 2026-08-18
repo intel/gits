@@ -19,7 +19,7 @@ void RaytracingOptimizationService::BuildAccelerationStructure(
     return;
   }
   RaytracingCommand* command = new RaytracingCommand{};
-  command->CommandKey = c.Key;
+  command->Key = c.Key;
   command->DestKey = c.m_pDesc.DestAccelerationStructureKey;
   command->DestOffset = c.m_pDesc.DestAccelerationStructureOffset;
   command->SourceKey = c.m_pDesc.SourceAccelerationStructureKey;
@@ -63,7 +63,7 @@ void RaytracingOptimizationService::BuildAccelerationStructure(
 void RaytracingOptimizationService::CopyAccelerationStructure(
     ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& c) {
   RaytracingCommand* command = new RaytracingCommand{};
-  command->CommandKey = c.Key;
+  command->Key = c.Key;
   command->DestKey = c.m_DestAccelerationStructureData.InterfaceKey;
   command->DestOffset = c.m_DestAccelerationStructureData.Offset;
   command->SourceKey = c.m_SourceAccelerationStructureData.InterfaceKey;
@@ -80,7 +80,7 @@ void RaytracingOptimizationService::NvapiBuildAccelerationStructureEx(
     return;
   }
   RaytracingCommand* command = new RaytracingCommand{};
-  command->CommandKey = c.Key;
+  command->Key = c.Key;
   command->DestKey = c.m_pParams.DestAccelerationStructureKey;
   command->DestOffset = c.m_pParams.DestAccelerationStructureOffset;
   command->SourceKey = c.m_pParams.SourceAccelerationStructureKey;
@@ -132,7 +132,7 @@ void RaytracingOptimizationService::NvapiBuildAccelerationStructureEx(
 void RaytracingOptimizationService::NvapiBuildOpacityMicromapArray(
     NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& c) {
   RaytracingCommand* command = new RaytracingCommand{};
-  command->CommandKey = c.Key;
+  command->Key = c.Key;
   command->DestKey = c.m_pParams.DestOpacityMicromapArrayDataKey;
   command->DestOffset = c.m_pParams.DestOpacityMicromapArrayDataOffset;
   command->Buffers.insert(c.m_pParams.DestOpacityMicromapArrayDataKey);
@@ -226,10 +226,10 @@ void RaytracingOptimizationService::Optimize(
   for (auto& it : m_CommandById) {
     RaytracingCommand* command = it.second.get();
     if (command->Restore) {
-      GITSKey commandKey = command->CommandKey;
+      GITSKey commandKey = command->Key;
       GITSKey sourceKey = 0;
       if (command->Source) {
-        sourceKey = command->Source->CommandKey;
+        sourceKey = command->Source->Key;
       }
       m_OptimizedCommandsWithSources.emplace_back(commandKey, sourceKey);
     }

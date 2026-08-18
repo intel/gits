@@ -72,7 +72,7 @@ private:
     };
     std::unordered_map<GITSKey, ResourceState*> Buffers;
     std::unordered_map<GITSKey, ReservedResourcesService::TiledResource> TiledResources;
-    GITSKey CommandKey{};
+    GITSKey Key{};
     GITSKey CommandListKey{};
     CommandType Type{};
     GITSKey DestKey{};

@@ -23,10 +23,10 @@ namespace DirectX {
 
 struct CommandListCommand {
   CommandListCommand(CommandId id_, GITSKey key, GITSKey commandListKey)
-      : Id(id_), CommandKey(key), CommandListKey(commandListKey) {}
+      : Id(id_), Key(key), CommandListKey(commandListKey) {}
   virtual ~CommandListCommand() = default;
   CommandId Id{};
-  GITSKey CommandKey{};
+  GITSKey Key{};
   GITSKey CommandListKey{};
   std::unique_ptr<stream::CommandSerializer> CommandSerializer;
 };

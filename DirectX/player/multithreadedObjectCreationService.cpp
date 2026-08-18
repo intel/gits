@@ -181,8 +181,8 @@ MultithreadedObjectCreationService::ObjectCreationOutput MultithreadedObjectCrea
   int refCount = 0;
   {
     std::lock_guard<std::mutex> guard(m_Mutex);
-    refCount = m_RefCounts[task->ObjectKey];
-    m_RefCounts.erase(task->ObjectKey);
+    refCount = m_RefCounts[task->Key];
+    m_RefCounts.erase(task->Key);
   }
 
   // Set the reference count on newly created object
@@ -202,7 +202,7 @@ MultithreadedObjectCreationService::ObjectCreationOutput MultithreadedObjectCrea
 
 MultithreadedObjectCreationService::ObjectCreationTask::ObjectCreationTask(
     CreationFunction creationFunction, GITSKey objectKey)
-    : CreationFunctor(std::move(creationFunction)), ObjectKey(objectKey) {}
+    : CreationFunctor(std::move(creationFunction)), Key(objectKey) {}
 
 } // namespace DirectX
 } // namespace gits

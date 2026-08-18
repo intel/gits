@@ -90,7 +90,7 @@ void AccelerationStructuresBuildService::BuildAccelerationStructure(
 
   BuildRaytracingAccelerationStructureCommand* command =
       new BuildRaytracingAccelerationStructureCommand();
-  command->CommandKey = c.Key;
+  command->Key = c.Key;
   command->CommandListKey = m_CommandListKey;
   command->Type = RaytracingAccelerationStructureCommand::CommandType::Build;
   command->DestKey = c.m_pDesc.DestAccelerationStructureKey;
@@ -310,7 +310,7 @@ void AccelerationStructuresBuildService::CopyAccelerationStructure(
 
   CopyRaytracingAccelerationStructureCommand* command =
       new CopyRaytracingAccelerationStructureCommand();
-  command->CommandKey = c.Key;
+  command->Key = c.Key;
   command->CommandListKey = m_CommandListKey;
   command->Type = RaytracingAccelerationStructureCommand::CommandType::Copy;
   command->DestAccelerationStructureData = c.m_DestAccelerationStructureData.Value;
@@ -366,7 +366,7 @@ void AccelerationStructuresBuildService::NvapiBuildAccelerationStructureEx(
 
   NvAPIBuildRaytracingAccelerationStructureExCommand* command =
       new NvAPIBuildRaytracingAccelerationStructureExCommand();
-  command->CommandKey = c.Key;
+  command->Key = c.Key;
   command->CommandListKey = m_CommandListKey;
   command->Type = RaytracingAccelerationStructureCommand::CommandType::NvAPIBuild;
   command->DestKey = c.m_pParams.DestAccelerationStructureKey;
@@ -726,7 +726,7 @@ void AccelerationStructuresBuildService::NvapiBuildOpacityMicromapArray(
 
   NvAPIBuildRaytracingOpacityMicromapArrayCommand* command =
       new NvAPIBuildRaytracingOpacityMicromapArrayCommand();
-  command->CommandKey = c.Key;
+  command->Key = c.Key;
   command->CommandListKey = m_CommandListKey;
   command->Type = RaytracingAccelerationStructureCommand::CommandType::NvAPIOMM;
   command->DestKey = c.m_pParams.DestOpacityMicromapArrayDataKey;
@@ -797,7 +797,7 @@ void AccelerationStructuresBuildService::RestoreAccelerationStructures() {
   std::vector<GITSKey> commandKeys;
   commandKeys.reserve(m_OptimizationService.GetCommands().size());
   for (OptimizationService::CommandNode* node : m_OptimizationService.GetCommands()) {
-    commandKeys.push_back(node->Command->CommandKey);
+    commandKeys.push_back(node->Command->Key);
   }
   m_InputBuffersService.RestoreBuffersInitialization(commandKeys, m_DeviceKey);
 
@@ -892,7 +892,7 @@ void AccelerationStructuresBuildService::RestoreAccelerationStructures() {
   // restoring RTAS
   for (OptimizationService::CommandNode* node : m_OptimizationService.GetCommands()) {
 
-    m_BufferLifetimeService.CreateBuffers(node->Command->CommandKey);
+    m_BufferLifetimeService.CreateBuffers(node->Command->Key);
 
     if (node->Command->Type == RaytracingAccelerationStructureCommand::CommandType::Build) {
       BuildRaytracingAccelerationStructureCommand* build =
@@ -916,7 +916,7 @@ void AccelerationStructuresBuildService::RestoreAccelerationStructures() {
       GITS_ASSERT(0 && "unknown command");
     }
 
-    m_BufferLifetimeService.ReleaseBuffers(node->Command->CommandKey);
+    m_BufferLifetimeService.ReleaseBuffers(node->Command->Key);
   }
 
   // cleanup
@@ -985,19 +985,19 @@ void AccelerationStructuresBuildService::RestoreCommand(
     BuildRaytracingAccelerationStructureCommand* command) {
 
   ResourceResidencyService residencyService(m_StateService, m_DeviceKey);
-  m_InputBuffersService.MakeBuffersResident(command->CommandKey, residencyService);
+  m_InputBuffersService.MakeBuffersResident(command->Key, residencyService);
   residencyService.AddResource(command->Desc->DestAccelerationStructureKey);
   residencyService.AddResource(command->Desc->SourceAccelerationStructureKey);
   residencyService.RecordMakeResident();
 
-  m_InputBuffersService.RestoreBuffers(command->CommandKey, m_CommandListKey);
+  m_InputBuffersService.RestoreBuffers(command->Key, m_CommandListKey);
 
   command->Desc->ScratchAccelerationStructureKey = m_ScratchResourceKey;
   command->Desc->ScratchAccelerationStructureOffset = 0;
 
   {
     ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand build;
-    build.Key = command->CommandKey;
+    build.Key = command->Key;
     build.m_Object.Key = m_CommandListKey;
     build.m_pDesc.Value = command->Desc->Value;
     build.m_pDesc.DestAccelerationStructureKey = command->Desc->DestAccelerationStructureKey;
@@ -1028,7 +1028,7 @@ void AccelerationStructuresBuildService::RestoreCommand(
   residencyService.RecordMakeResident();
 
   ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand copy;
-  copy.Key = command->CommandKey;
+  copy.Key = command->Key;
   copy.m_Object.Key = m_CommandListKey;
   copy.m_DestAccelerationStructureData.Value = command->DestAccelerationStructureData;
   copy.m_DestAccelerationStructureData.InterfaceKey = command->DestKey;
@@ -1048,19 +1048,19 @@ void AccelerationStructuresBuildService::RestoreCommand(
     NvAPIBuildRaytracingAccelerationStructureExCommand* command) {
 
   ResourceResidencyService residencyService(m_StateService, m_DeviceKey);
-  m_InputBuffersService.MakeBuffersResident(command->CommandKey, residencyService);
+  m_InputBuffersService.MakeBuffersResident(command->Key, residencyService);
   residencyService.AddResource(command->Desc->DestAccelerationStructureKey);
   residencyService.AddResource(command->Desc->SourceAccelerationStructureKey);
   residencyService.RecordMakeResident();
 
-  m_InputBuffersService.RestoreBuffers(command->CommandKey, m_CommandListKey);
+  m_InputBuffersService.RestoreBuffers(command->Key, m_CommandListKey);
 
   command->Desc->ScratchAccelerationStructureKey = m_ScratchResourceKey;
   command->Desc->ScratchAccelerationStructureOffset = 0;
 
   {
     NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand build;
-    build.Key = command->CommandKey;
+    build.Key = command->Key;
     build.m_pCommandList.Key = m_CommandListKey;
     build.m_pParams.Value = command->Desc->Value;
     build.m_pParams.DestAccelerationStructureKey = command->Desc->DestAccelerationStructureKey;
@@ -1088,7 +1088,7 @@ void AccelerationStructuresBuildService::RestoreCommand(
     NvAPIBuildRaytracingOpacityMicromapArrayCommand* command) {
 
   ResourceResidencyService residencyService(m_StateService, m_DeviceKey);
-  m_InputBuffersService.MakeBuffersResident(command->CommandKey, residencyService);
+  m_InputBuffersService.MakeBuffersResident(command->Key, residencyService);
   residencyService.AddResource(command->Desc->DestOpacityMicromapArrayDataKey);
   residencyService.AddResource(command->Desc->InputBufferKey);
   residencyService.AddResource(command->Desc->PerOMMDescsKey);
@@ -1097,14 +1097,14 @@ void AccelerationStructuresBuildService::RestoreCommand(
   }
   residencyService.RecordMakeResident();
 
-  m_InputBuffersService.RestoreBuffers(command->CommandKey, m_CommandListKey);
+  m_InputBuffersService.RestoreBuffers(command->Key, m_CommandListKey);
 
   command->Desc->ScratchOpacityMicromapArrayDataKey = m_ScratchResourceKey;
   command->Desc->ScratchOpacityMicromapArrayDataOffset = 0;
 
   {
     NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand build;
-    build.Key = command->CommandKey;
+    build.Key = command->Key;
     build.m_pCommandList.Key = m_CommandListKey;
     build.m_pParams.Value = command->Desc->Value;
     build.m_pParams.DestOpacityMicromapArrayDataKey =
@@ -1190,12 +1190,11 @@ void AccelerationStructuresBuildService::OptimizationService::StoreCommand(
   node->Command.swap(command);
   node->Id = ++m_CommandUniqueId;
   m_CommandById[node->Id].reset(node);
-  m_CommandByBuildKey[node->Command->CommandKey] = node->Command.get();
+  m_CommandByBuildKey[node->Command->Key] = node->Command.get();
 
   // skip intermediate update build command
   if (node->Command->Update) {
-    GITSKey sourceKey =
-        m_StateService.GetAnalyzerResults().GetBlasSourceBuild(node->Command->CommandKey);
+    GITSKey sourceKey = m_StateService.GetAnalyzerResults().GetBlasSourceBuild(node->Command->Key);
     if (sourceKey) {
       auto it = m_CommandByBuildKey.find(sourceKey);
       GITS_ASSERT(it != m_CommandByBuildKey.end());

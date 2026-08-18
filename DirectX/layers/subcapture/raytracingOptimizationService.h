@@ -42,7 +42,7 @@ public:
 private:
   struct RaytracingCommand {
     unsigned Id{};
-    GITSKey CommandKey{};
+    GITSKey Key{};
     GITSKey DestKey{};
     unsigned DestOffset{};
     GITSKey SourceKey{};
