@@ -14,9 +14,9 @@
 namespace gits {
 namespace DirectX {
 
-void GpuExecutionTracker::CommandQueueWait(unsigned callKey,
-                                           unsigned commandQueueKey,
-                                           unsigned fenceKey,
+void GpuExecutionTracker::CommandQueueWait(GITSKey callKey,
+                                           GITSKey commandQueueKey,
+                                           GITSKey fenceKey,
                                            UINT64 fenceValue) {
   auto it = m_SignaledFences.find(fenceKey);
   if (it != m_SignaledFences.end() && it->second >= fenceValue) {
@@ -31,9 +31,9 @@ void GpuExecutionTracker::CommandQueueWait(unsigned callKey,
   m_QueueEvents[commandQueueKey].push_back(waitEvent);
 }
 
-void GpuExecutionTracker::CommandQueueSignal(unsigned callKey,
-                                             unsigned commandQueueKey,
-                                             unsigned fenceKey,
+void GpuExecutionTracker::CommandQueueSignal(GITSKey callKey,
+                                             GITSKey commandQueueKey,
+                                             GITSKey fenceKey,
                                              UINT64 fenceValue) {
   auto it = m_QueueEvents.find(commandQueueKey);
   if (it == m_QueueEvents.end() || it->second.empty()) {
@@ -48,7 +48,7 @@ void GpuExecutionTracker::CommandQueueSignal(unsigned callKey,
   }
 }
 
-void GpuExecutionTracker::FenceSignal(unsigned callKey, unsigned fenceKey, UINT64 fenceValue) {
+void GpuExecutionTracker::FenceSignal(GITSKey callKey, GITSKey fenceKey, UINT64 fenceValue) {
   std::queue<SignalEvent*> signaled;
   auto* initialSignal = new SignalEvent{};
   initialSignal->CallKey = callKey;
@@ -84,7 +84,7 @@ void GpuExecutionTracker::FenceSignal(unsigned callKey, unsigned fenceKey, UINT6
   }
 }
 
-bool GpuExecutionTracker::IsCommandQueueWaiting(unsigned commandQueueKey) {
+bool GpuExecutionTracker::IsCommandQueueWaiting(GITSKey commandQueueKey) {
   auto it = m_QueueEvents.find(commandQueueKey);
   if (it == m_QueueEvents.end() || it->second.empty()) {
     return false;
@@ -92,8 +92,8 @@ bool GpuExecutionTracker::IsCommandQueueWaiting(unsigned commandQueueKey) {
   return true;
 }
 
-void GpuExecutionTracker::Execute(unsigned callKey,
-                                  unsigned commandQueueKey,
+void GpuExecutionTracker::Execute(GITSKey callKey,
+                                  GITSKey commandQueueKey,
                                   Executable* executable) {
   executable->CallKey = callKey;
   executable->CommandQueueKey = commandQueueKey;

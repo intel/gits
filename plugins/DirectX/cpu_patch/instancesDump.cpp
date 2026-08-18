@@ -45,7 +45,7 @@ void InstancesDump::BuildTlas(ID3D12GraphicsCommandList* commandList,
                               unsigned offset,
                               unsigned size,
                               D3D12_RESOURCE_STATES state,
-                              unsigned commandKey) {
+                              GITSKey commandKey) {
   Initialize();
 
   InstancesDumpInfo* info = new InstancesDumpInfo();
@@ -55,8 +55,8 @@ void InstancesDump::BuildTlas(ID3D12GraphicsCommandList* commandList,
   StageResource(commandList, resource, state, *info);
 }
 
-void InstancesDump::ExecuteCommandLists(unsigned key,
-                                        unsigned commandQueueKey,
+void InstancesDump::ExecuteCommandLists(GITSKey key,
+                                        GITSKey commandQueueKey,
                                         ID3D12CommandQueue* commandQueue,
                                         ID3D12CommandList** commandLists,
                                         unsigned commandListNum,

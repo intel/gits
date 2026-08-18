@@ -19,7 +19,7 @@ ExecuteIndirectDump::ExecuteIndirectDump(
     const Configuration& gitsConfig,
     ResourceStateTracker& resourceStateTracker,
     CapturePlayerGpuAddressService& addressService,
-    std::unordered_map<unsigned, ID3D12Resource*>& resourceByKey)
+    std::unordered_map<GITSKey, ID3D12Resource*>& resourceByKey)
     : ResourceDump(),
       m_GitsConfig(gitsConfig),
       m_ResourceStateTracker(resourceStateTracker),
@@ -142,8 +142,8 @@ void ExecuteIndirectDump::ExecuteIndirect(
   }
 }
 
-void ExecuteIndirectDump::ExecuteCommandLists(unsigned key,
-                                              unsigned commandQueueKey,
+void ExecuteIndirectDump::ExecuteCommandLists(GITSKey key,
+                                              GITSKey commandQueueKey,
                                               ID3D12CommandQueue* commandQueue,
                                               ID3D12CommandList** commandLists,
                                               unsigned commandListNum,
@@ -209,7 +209,7 @@ void ExecuteIndirectDump::LoadExecuteIndirectDispatchRays() {
   std::filesystem::path dumpPath = m_GitsConfig.common.player.streamDir;
   std::ifstream stream(dumpPath / "executeIndirectRaytracing.txt");
   while (true) {
-    unsigned callKey{};
+    GITSKey callKey{};
     D3D12_DISPATCH_RAYS_DESC desc{};
     stream >> callKey;
     if (!stream) {

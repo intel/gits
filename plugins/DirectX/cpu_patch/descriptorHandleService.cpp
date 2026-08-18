@@ -15,7 +15,7 @@ namespace gits {
 namespace DirectX {
 
 void DescriptorHandleService::AddCaptureHandle(ID3D12DescriptorHeap* heap,
-                                               unsigned heapKey,
+                                               GITSKey heapKey,
                                                D3D12_GPU_DESCRIPTOR_HANDLE captureHandle) {
   std::lock_guard<std::mutex> lock(m_Mutex);
 
@@ -58,7 +58,7 @@ void DescriptorHandleService::AddCaptureHandle(ID3D12DescriptorHeap* heap,
   }
 }
 
-void DescriptorHandleService::AddPlayerHandle(unsigned heapKey,
+void DescriptorHandleService::AddPlayerHandle(GITSKey heapKey,
                                               D3D12_GPU_DESCRIPTOR_HANDLE playerHandle) {
   std::lock_guard<std::mutex> lock(m_Mutex);
 
@@ -79,7 +79,7 @@ void DescriptorHandleService::AddPlayerHandle(unsigned heapKey,
   }
 }
 
-void DescriptorHandleService::DestroyHeap(unsigned heapKey) {
+void DescriptorHandleService::DestroyHeap(GITSKey heapKey) {
   std::lock_guard<std::mutex> lock(m_Mutex);
 
   auto itView = m_ViewHeapsByKey.find(heapKey);

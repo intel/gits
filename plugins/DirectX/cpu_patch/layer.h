@@ -88,7 +88,7 @@ private:
   std::unique_ptr<PatchService> m_PatchService;
   ResourceStateTracker m_ResourceStateTracker;
   CapturePlayerGpuAddressService m_AddressService;
-  std::unordered_map<unsigned, ID3D12Resource*> m_ResourceByKey;
+  std::unordered_map<GITSKey, ID3D12Resource*> m_ResourceByKey;
   unsigned m_CommandListExecutionCount{};
 };
 

@@ -25,7 +25,7 @@ RtasSerializer::~RtasSerializer() {
   WriteCache();
 }
 
-void RtasSerializer::Serialize(unsigned buildKey,
+void RtasSerializer::Serialize(GITSKey buildKey,
                                ID3D12GraphicsCommandList4* commandList,
                                D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC& desc) {
   Initialize();
@@ -164,18 +164,18 @@ void RtasSerializer::WriteCache() {
 
     LOG_INFO << "RtasCache - Writing " << m_CacheFile;
 
-    std::unordered_map<unsigned, unsigned> blases;
+    std::unordered_map<GITSKey, unsigned> blases;
     for (std::filesystem::directory_entry file :
          std::filesystem::directory_iterator(m_TmpCacheDir)) {
       std::string name = file.path().filename().string();
       unsigned size = file.file_size();
-      unsigned buildKey = std::stoi(name);
+      GITSKey buildKey = static_cast<GITSKey>(std::stoul(name));
       blases[buildKey] = size;
     }
 
     // Serialize the RTASes based on build key serialization order
     std::ofstream cache(m_CacheFile, std::ios_base::binary);
-    for (unsigned buildKey : m_BuildKeys) {
+    for (GITSKey buildKey : m_BuildKeys) {
       std::wstring name = std::to_wstring(buildKey);
       unsigned size = blases[buildKey];
       std::ifstream file(m_TmpCacheDir + L"/" + name, std::ios_base::binary);

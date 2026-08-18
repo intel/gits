@@ -43,7 +43,7 @@ public:
       ID3D12DescriptorHeapGetGPUDescriptorHandleForHeapStartCommand& command);
   void PostGetDescriptorHandle(
       ID3D12DescriptorHeapGetGPUDescriptorHandleForHeapStartCommand& command);
-  void CreateCommandSignature(unsigned commandSignatureKey,
+  void CreateCommandSignature(GITSKey commandSignatureKey,
                               const PointerArgument<D3D12_COMMAND_SIGNATURE_DESC>& desc);
 
 private:
@@ -67,7 +67,7 @@ private:
   void Initialize(ID3D12GraphicsCommandList* commandList);
   size_t Align(size_t value, size_t alignment);
   void AddPatchBuffer(ID3D12GraphicsCommandList* commandList);
-  unsigned GetPatchBufferIndex(unsigned commandListKey, ID3D12GraphicsCommandList* commandList);
+  unsigned GetPatchBufferIndex(GITSKey commandListKey, ID3D12GraphicsCommandList* commandList);
   void PatchBuild(
       const PatchInfo& patchInfo,
       const std::vector<CapturePlayerGpuAddressService::GpuAddressMapping>& gpuAddressMappings);
@@ -88,18 +88,18 @@ private:
   bool m_Initialized{};
 
   std::vector<FenceInfo> m_PatchBufferFences{};
-  std::unordered_map<unsigned, std::vector<unsigned>> m_CurrentPatchBuffersByCommandList;
+  std::unordered_map<GITSKey, std::vector<unsigned>> m_CurrentPatchBuffersByCommandList;
 
   static const unsigned PatchBufferInitialPoolSize{16};
   unsigned m_PatchBufferPoolSize{};
   std::vector<ID3D12Resource*> m_PatchBuffers{};
   unsigned m_PatchBufferSize{};
 
-  std::unordered_map<unsigned, std::vector<std::unique_ptr<PatchInfo>>> m_PatchInfoByCommandList;
+  std::unordered_map<GITSKey, std::vector<std::unique_ptr<PatchInfo>>> m_PatchInfoByCommandList;
 
-  std::unordered_map<unsigned, std::unique_ptr<PointerArgument<D3D12_COMMAND_SIGNATURE_DESC>>>
+  std::unordered_map<GITSKey, std::unique_ptr<PointerArgument<D3D12_COMMAND_SIGNATURE_DESC>>>
       m_CommandSignatures;
-  std::unordered_map<unsigned, std::vector<D3D12_DISPATCH_RAYS_DESC>> m_ExecuteIndirectDispatchRays;
+  std::unordered_map<GITSKey, std::vector<D3D12_DISPATCH_RAYS_DESC>> m_ExecuteIndirectDispatchRays;
   UINT64 m_ExecuteIndirectLastArgumentBufferOffset{};
 
   CapturePlayerGpuAddressService& m_AddressService;

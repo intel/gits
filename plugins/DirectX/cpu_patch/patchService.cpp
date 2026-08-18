@@ -43,13 +43,14 @@ PatchService::PatchService(const Configuration& gitsConfig,
   LOG_INFO << "CpuPatch - instances files found: " << std::to_string(instancesFilesCount);
 
   size_t bindingTableFilesCount{};
-  std::unordered_map<unsigned, size_t> bindingTablesSizes;
+  std::unordered_map<GITSKey, size_t> bindingTablesSizes;
   if (std::filesystem::exists(m_Path / "binding_table_dump")) {
     for (const auto& entry : std::filesystem::directory_iterator(m_Path / "binding_table_dump")) {
       if (std::filesystem::is_regular_file(entry.path())) {
         ++bindingTableFilesCount;
         size_t pos = entry.path().filename().string().find("-");
-        unsigned key = std::stoul(entry.path().filename().string().substr(0, pos));
+        GITSKey key =
+            static_cast<GITSKey>(std::stoul(entry.path().filename().string().substr(0, pos)));
         bindingTablesSizes[key] += entry.file_size();
       }
     }
@@ -60,7 +61,8 @@ PatchService::PatchService(const Configuration& gitsConfig,
       if (std::filesystem::is_regular_file(entry.path())) {
         ++bindingTableFilesCount;
         size_t pos = entry.path().filename().string().find("-");
-        unsigned key = std::stoul(entry.path().filename().string().substr(0, pos));
+        GITSKey key =
+            static_cast<GITSKey>(std::stoul(entry.path().filename().string().substr(0, pos)));
         bindingTablesSizes[key] += entry.file_size();
       }
     }
@@ -225,7 +227,7 @@ void PatchService::PostExecuteIndirect(ID3D12GraphicsCommandListExecuteIndirectC
 
 void PatchService::PreExecute(ID3D12CommandQueueExecuteCommandListsCommand& command) {
   std::vector<PatchInfo*> patchInfos;
-  for (unsigned key : command.m_ppCommandLists.Keys) {
+  for (GITSKey key : command.m_ppCommandLists.Keys) {
     auto it = m_PatchInfoByCommandList.find(key);
     if (it != m_PatchInfoByCommandList.end()) {
       for (auto& itPatchInfo : it->second) {
@@ -253,7 +255,7 @@ void PatchService::PreExecute(ID3D12CommandQueueExecuteCommandListsCommand& comm
 }
 
 void PatchService::PostExecute(ID3D12CommandQueueExecuteCommandListsCommand& command) {
-  for (unsigned key : command.m_ppCommandLists.Keys) {
+  for (GITSKey key : command.m_ppCommandLists.Keys) {
     auto itPatchInfo = m_PatchInfoByCommandList.find(key);
     if (itPatchInfo != m_PatchInfoByCommandList.end()) {
       m_PatchInfoByCommandList.erase(itPatchInfo);
@@ -305,7 +307,7 @@ void PatchService::PostGetDescriptorHandle(
 }
 
 void PatchService::CreateCommandSignature(
-    unsigned commandSignatureKey, const PointerArgument<D3D12_COMMAND_SIGNATURE_DESC>& desc) {
+    GITSKey commandSignatureKey, const PointerArgument<D3D12_COMMAND_SIGNATURE_DESC>& desc) {
   m_CommandSignatures[commandSignatureKey].reset(
       new PointerArgument<D3D12_COMMAND_SIGNATURE_DESC>(desc));
 }
@@ -365,7 +367,7 @@ void PatchService::AddPatchBuffer(ID3D12GraphicsCommandList* commandList) {
   ++m_PatchBufferPoolSize;
 }
 
-unsigned PatchService::GetPatchBufferIndex(unsigned commandListKey,
+unsigned PatchService::GetPatchBufferIndex(GITSKey commandListKey,
                                            ID3D12GraphicsCommandList* commandList) {
   for (unsigned i = 0; i < m_PatchBufferPoolSize; ++i) {
     if (m_PatchBufferFences[i].WaitingForExecute) {
@@ -791,7 +793,7 @@ void PatchService::LoadExecuteIndirectDispatchRays() {
   std::filesystem::path dumpPath = m_GitsConfig.common.player.streamDir;
   std::ifstream stream(dumpPath / "executeIndirectRaytracing.txt");
   while (true) {
-    unsigned callKey{};
+    GITSKey callKey{};
     D3D12_DISPATCH_RAYS_DESC desc{};
     stream >> callKey;
     if (!stream) {

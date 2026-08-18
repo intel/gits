@@ -8,6 +8,8 @@
 
 #pragma once
 
+#include "arguments.h"
+
 #include <vector>
 #include <unordered_map>
 #include <deque>
@@ -28,13 +30,13 @@ public:
   struct QueueEvent {
     QueueEvent(QueueEventKind kind) : Kind(kind) {}
     virtual ~QueueEvent() = default;
-    unsigned CallKey{};
-    unsigned CommandQueueKey{};
+    GITSKey CallKey{};
+    GITSKey CommandQueueKey{};
     QueueEventKind Kind{};
   };
 
   struct TrackedFence {
-    unsigned Key{};
+    GITSKey Key{};
     UINT64 Value{};
   };
 
@@ -54,27 +56,27 @@ public:
   };
 
 public:
-  void CommandQueueWait(unsigned callKey,
-                        unsigned commandQueueKey,
-                        unsigned fenceKey,
+  void CommandQueueWait(GITSKey callKey,
+                        GITSKey commandQueueKey,
+                        GITSKey fenceKey,
                         UINT64 fenceValue);
-  void CommandQueueSignal(unsigned callKey,
-                          unsigned commandQueueKey,
-                          unsigned fenceKey,
+  void CommandQueueSignal(GITSKey callKey,
+                          GITSKey commandQueueKey,
+                          GITSKey fenceKey,
                           UINT64 fenceValue);
-  void FenceSignal(unsigned callKey, unsigned fenceKey, UINT64 fenceValue);
-  bool IsCommandQueueWaiting(unsigned commandQueueKey);
-  void Execute(unsigned callKey, unsigned commandQueueKey, Executable* executable);
+  void FenceSignal(GITSKey callKey, GITSKey fenceKey, UINT64 fenceValue);
+  bool IsCommandQueueWaiting(GITSKey commandQueueKey);
+  void Execute(GITSKey callKey, GITSKey commandQueueKey, Executable* executable);
   std::vector<Executable*>& GetReadyExecutables() {
     return m_ReadyExecutables;
   }
-  std::unordered_map<unsigned, std::deque<QueueEvent*>>& GetQueueEvents() {
+  std::unordered_map<GITSKey, std::deque<QueueEvent*>>& GetQueueEvents() {
     return m_QueueEvents;
   }
 
 private:
-  std::unordered_map<unsigned, std::deque<QueueEvent*>> m_QueueEvents;
-  std::unordered_map<unsigned, UINT64> m_SignaledFences;
+  std::unordered_map<GITSKey, std::deque<QueueEvent*>> m_QueueEvents;
+  std::unordered_map<GITSKey, UINT64> m_SignaledFences;
   std::vector<Executable*> m_ReadyExecutables;
 };
 

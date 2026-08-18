@@ -8,6 +8,8 @@
 
 #pragma once
 
+#include "arguments.h"
+
 #include <map>
 #include <vector>
 #include <array>
@@ -28,10 +30,10 @@ public:
   };
 
 public:
-  void AddCaptureShaderIdentifier(unsigned commandKey,
+  void AddCaptureShaderIdentifier(GITSKey commandKey,
                                   ShaderIdentifier captureIdentifier,
                                   LPWSTR exportName);
-  void AddPlayerShaderIdentifier(unsigned commandKey,
+  void AddPlayerShaderIdentifier(GITSKey commandKey,
                                  ShaderIdentifier playerIdentifier,
                                  LPWSTR exportName);
   ShaderIdentifier* GetPlayerIdentifierByCaptureIdentifier(
@@ -58,7 +60,7 @@ private:
   };
 
   std::unordered_map<ShaderIdentifier, ShaderIdentifierMapping, ShaderIdHash> m_ShaderIdentifiers;
-  std::map<unsigned, ShaderIdentifier> m_ShaderIdentifiersByCommandKey;
+  std::map<GITSKey, ShaderIdentifier> m_ShaderIdentifiersByCommandKey;
   std::map<ShaderIdentifier, std::wstring> m_ExportNamesByCaptureIdentifier;
   std::map<ShaderIdentifier, std::wstring> m_ExportNamesByPlayerIdentifier;
   bool m_Changed{};

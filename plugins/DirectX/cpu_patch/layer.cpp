@@ -47,7 +47,7 @@ void CpuPatchLayer::Pre(
     }
 
     if (command.m_pDesc.Value->Inputs.DescsLayout == D3D12_ELEMENTS_LAYOUT_ARRAY) {
-      unsigned instanceDescsKey = command.m_pDesc.InputKeys[0];
+      GITSKey instanceDescsKey = command.m_pDesc.InputKeys[0];
       ID3D12Resource* instanceDescs = m_ResourceByKey[instanceDescsKey];
       GITS_ASSERT(instanceDescs);
 
@@ -71,7 +71,7 @@ void CpuPatchLayer::Pre(ID3D12GraphicsCommandList4DispatchRaysCommand& command) 
   if (m_Mode == Mode::Use) {
     m_PatchService->PreDispatchRays(command);
   } else if (m_Mode == Mode::Store) {
-    auto dumpBindingTable = [&](unsigned resourceKey, unsigned offset, UINT64 size, UINT64 stride,
+    auto dumpBindingTable = [&](GITSKey resourceKey, unsigned offset, UINT64 size, UINT64 stride,
                                 std::string type) {
       if (!resourceKey) {
         return;
