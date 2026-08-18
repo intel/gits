@@ -113,22 +113,26 @@ void DispatchOutputsAnalyzer::CopyDescriptors(ID3D12DeviceCopyDescriptorsCommand
 void DispatchOutputsAnalyzer::SetComputeRootSignature(
     ID3D12GraphicsCommandListSetComputeRootSignatureCommand& c) {
   m_RootSignatureByCommandList[c.m_Object.Key] = c.m_pRootSignature.Key;
+  m_DescriptorBySlotByCommandList.erase(c.m_Object.Key);
+  m_DescriptorTableBySlotByDispatchByCommandList.erase(c.m_Object.Key);
 }
 
 void DispatchOutputsAnalyzer::SetComputeRootUnorderedAccessView(
     ID3D12GraphicsCommandListSetComputeRootUnorderedAccessViewCommand& c) {
+  m_DescriptorBySlotByCommandList[c.m_Object.Key].erase(c.m_RootParameterIndex.Value);
+
   ID3D12Resource* resource = m_ResourceByKey[c.m_BufferLocation.InterfaceKey];
   if (!resource || resource->GetDesc().Dimension == D3D12_RESOURCE_DIMENSION_BUFFER) {
     return;
   }
-
-  m_DescriptorTableBySlotByCommandList[c.m_Object.Key].erase(c.m_RootParameterIndex.Value);
   m_DescriptorBySlotByCommandList[c.m_Object.Key][c.m_RootParameterIndex.Value] =
       c.m_BufferLocation.InterfaceKey;
 }
 
 void DispatchOutputsAnalyzer::SetComputeRootDescriptorTable(
     ID3D12GraphicsCommandListSetComputeRootDescriptorTableCommand& c) {
+  m_DescriptorTableBySlotByCommandList[c.m_Object.Key].erase(c.m_RootParameterIndex.Value);
+
   if (!c.m_BaseDescriptor.Value.ptr) {
     return;
   }
