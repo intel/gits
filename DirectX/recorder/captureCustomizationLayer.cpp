@@ -646,10 +646,10 @@ void CaptureCustomizationLayer::Post(ID3D12FenceGetCompletedValueCommand& c) {
 
   static thread_local GITSKey prevCommandKey = 0;
   static thread_local GITSKey prevFenceKey = 0;
-  static thread_local unsigned prevValue = 0;
+  static thread_local UINT64 prevValue = 0;
   GITSKey commandKey = c.Key;
   GITSKey fenceKey = c.m_Object.Key;
-  unsigned value = c.m_Result.Value;
+  UINT64 value = c.m_Result.Value;
   if (commandKey <= prevCommandKey + maxCommandKeyDifference) {
     if (fenceKey == prevFenceKey && value == prevValue) {
       m_Recorder.Skip(c.Key);
