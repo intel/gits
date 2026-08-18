@@ -59,14 +59,14 @@ private:
   std::unordered_map<GITSKey, D3D12_GPU_VIRTUAL_ADDRESS_RANGE> m_ResourceAddressRanges;
 
   struct HeapAllocationInfo {
-    D3D12_GPU_VIRTUAL_ADDRESS_RANGE m_AddressRange;
-    UINT64 m_Alignment;
+    D3D12_GPU_VIRTUAL_ADDRESS_RANGE AddressRange;
+    UINT64 Alignment;
   };
   std::unordered_map<GITSKey, HeapAllocationInfo> m_HeapAddressRanges;
 
   struct HeapInfo {
-    GITSKey m_HeapKey{};
-    UINT64 m_Offset{};
+    GITSKey HeapKey{};
+    UINT64 Offset{};
   };
   std::unordered_map<GITSKey, HeapInfo> m_HeapInfoByPlacedResource;
 };

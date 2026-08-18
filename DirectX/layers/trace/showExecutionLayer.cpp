@@ -114,8 +114,8 @@ void ShowExecutionLayer::Post(ID3D12CommandQueueExecuteCommandListsCommand& comm
                 << " CommandList #" << i + 1 << "\n";
 
       for (Command& cmdEntry : it->second) {
-        if (cmdEntry.m_IsDraw) {
-          std::string baseStr = cmdEntry.m_Str;
+        if (cmdEntry.IsDraw) {
+          std::string baseStr = cmdEntry.Str;
           std::string frameDrawSuffix;
           if (auto pos = baseStr.rfind(" Frame Draw #"); pos != std::string::npos) {
             frameDrawSuffix = baseStr.substr(pos);
@@ -127,7 +127,7 @@ void ShowExecutionLayer::Post(ID3D12CommandQueueExecuteCommandListsCommand& comm
                     << m_CurrentFrame << "_" << m_ExecuteCount << "_" << i + 1 << "_" << drawCount
                     << ")" << frameDrawSuffix << "\n";
         } else {
-          m_OutBuff << "      " << cmdEntry.m_Str;
+          m_OutBuff << "      " << cmdEntry.Str;
         }
       }
     }
@@ -600,7 +600,7 @@ void ShowExecutionLayer::StageCommandQueueEvent(GITSKey commandKey,
                                                 GITSKey commandQueueKey,
                                                 const std::string& str) {
   auto* event = new CommandQueueEvent{};
-  event->m_Str = str;
+  event->Str = str;
   m_GpuExecutionTracker.Execute(commandKey, commandQueueKey, event);
 }
 
@@ -609,7 +609,7 @@ void ShowExecutionLayer::DumpReadyCommandQueueEvents() {
       m_GpuExecutionTracker.GetReadyExecutables();
   for (GpuExecutionTracker::Executable* executable : executables) {
     CommandQueueEvent* event = static_cast<CommandQueueEvent*>(executable);
-    m_OutBuff << event->m_Str;
+    m_OutBuff << event->Str;
     m_OutBuff.Flush();
     delete event;
   }

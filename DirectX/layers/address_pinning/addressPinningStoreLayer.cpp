@@ -51,12 +51,12 @@ void AddressPinningStoreLayer::StoreAddressRanges() {
   }
   dumpFile << "HEAPS\n";
   for (const auto& [key, heapAllocationInfo] : m_HeapAddressRanges) {
-    if (heapAllocationInfo.m_AddressRange.StartAddress == 0) {
+    if (heapAllocationInfo.AddressRange.StartAddress == 0) {
       continue;
     }
-    dumpFile << key << " " << heapAllocationInfo.m_AddressRange.StartAddress << " "
-             << heapAllocationInfo.m_AddressRange.SizeInBytes << " "
-             << heapAllocationInfo.m_Alignment << "\n";
+    dumpFile << key << " " << heapAllocationInfo.AddressRange.StartAddress << " "
+             << heapAllocationInfo.AddressRange.SizeInBytes << " " << heapAllocationInfo.Alignment
+             << "\n";
   }
   dumpFile.flush();
 }
@@ -171,8 +171,8 @@ void AddressPinningStoreLayer::HandlePlacedResource(CommandT& command) {
 
   std::lock_guard<std::mutex> lock(m_Mutex);
   HeapInfo heapInfo{};
-  heapInfo.m_HeapKey = command.m_pHeap.Key;
-  heapInfo.m_Offset = command.m_HeapOffset.Value;
+  heapInfo.HeapKey = command.m_pHeap.Key;
+  heapInfo.Offset = command.m_HeapOffset.Value;
   m_HeapInfoByPlacedResource[command.m_ppvResource.Key] = heapInfo;
 }
 
@@ -193,8 +193,8 @@ void AddressPinningStoreLayer::HandleHeap(CommandT& command) {
   HeapAllocationInfo heapAllocationInfo{};
   D3D12_GPU_VIRTUAL_ADDRESS_RANGE range{};
   range.SizeInBytes = heapDesc.SizeInBytes;
-  heapAllocationInfo.m_AddressRange = range;
-  heapAllocationInfo.m_Alignment = heapDesc.Alignment;
+  heapAllocationInfo.AddressRange = range;
+  heapAllocationInfo.Alignment = heapDesc.Alignment;
   m_HeapAddressRanges[command.m_ppvHeap.Key] = heapAllocationInfo;
 }
 
@@ -216,16 +216,16 @@ void AddressPinningStoreLayer::HandleGetGPUVirtualAddress(CommandT& command) {
   if (itHeapInfo == m_HeapInfoByPlacedResource.end()) {
     return;
   }
-  auto itHeap = m_HeapAddressRanges.find(itHeapInfo->second.m_HeapKey);
+  auto itHeap = m_HeapAddressRanges.find(itHeapInfo->second.HeapKey);
   if (itHeap == m_HeapAddressRanges.end()) {
-    LOG_ERROR << "AddressPinningStoreLayer: Heap key " << itHeapInfo->second.m_HeapKey
+    LOG_ERROR << "AddressPinningStoreLayer: Heap key " << itHeapInfo->second.HeapKey
               << " not found in addressRanges for placed resource key " << command.m_Object.Key;
     return;
   }
-  if (itHeap->second.m_AddressRange.StartAddress) {
+  if (itHeap->second.AddressRange.StartAddress) {
     return;
   }
-  itHeap->second.m_AddressRange.StartAddress = command.m_Result.Value - itHeapInfo->second.m_Offset;
+  itHeap->second.AddressRange.StartAddress = command.m_Result.Value - itHeapInfo->second.Offset;
 }
 
 } // namespace DirectX

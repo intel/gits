@@ -71,7 +71,7 @@ void AddressPinningUseLayer::Pre(INTC_D3D12_CreateHeapCommand& command) {
   if (it == m_HeapAddressRanges.end()) {
     return;
   }
-  m_DeviceTools->SetNextAllocationAddress(it->second.m_AddressRange.StartAddress);
+  m_DeviceTools->SetNextAllocationAddress(it->second.AddressRange.StartAddress);
 }
 
 void AddressPinningUseLayer::Post(INTC_D3D12_CreateHeapCommand& command) {
@@ -93,7 +93,7 @@ void AddressPinningUseLayer::Post(INTC_D3D12_CreateHeapCommand& command) {
   D3D12_GPU_VIRTUAL_ADDRESS_RANGE range{};
   hr = pPageableTools->GetAllocation(&range);
   GITS_ASSERT(hr == S_OK);
-  GITS_ASSERT(it->second.m_AddressRange.StartAddress == range.StartAddress);
+  GITS_ASSERT(it->second.AddressRange.StartAddress == range.StartAddress);
 }
 
 void AddressPinningUseLayer::Pre(CreateHeapAllocationMetaCommand& command) {
@@ -264,7 +264,7 @@ void AddressPinningUseLayer::PreHeap(CommandT& command) {
   if (it == m_HeapAddressRanges.end()) {
     return;
   }
-  m_DeviceTools->SetNextAllocationAddress(it->second.m_AddressRange.StartAddress);
+  m_DeviceTools->SetNextAllocationAddress(it->second.AddressRange.StartAddress);
 }
 
 template <typename CommandT>
@@ -284,7 +284,7 @@ void AddressPinningUseLayer::PostHeap(CommandT& command) {
   D3D12_GPU_VIRTUAL_ADDRESS_RANGE range{};
   hr = pPageableTools->GetAllocation(&range);
   GITS_ASSERT(hr == S_OK);
-  GITS_ASSERT(it->second.m_AddressRange.StartAddress == range.StartAddress);
+  GITS_ASSERT(it->second.AddressRange.StartAddress == range.StartAddress);
 }
 
 template <typename CommandT>
@@ -303,7 +303,7 @@ void AddressPinningUseLayer::PreOpenExistingHeap(CommandT& command) {
   D3D12_HEAP_DESC heapDesc{};
   HRESULT hr{};
 
-  heapDesc.SizeInBytes = it->second.m_AddressRange.SizeInBytes;
+  heapDesc.SizeInBytes = it->second.AddressRange.SizeInBytes;
   heapDesc.Properties.Type = D3D12_HEAP_TYPE_CUSTOM;
   heapDesc.Properties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_WRITE_BACK;
   heapDesc.Properties.MemoryPoolPreference = D3D12_MEMORY_POOL_L0;
@@ -312,7 +312,7 @@ void AddressPinningUseLayer::PreOpenExistingHeap(CommandT& command) {
   heapDesc.Alignment = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
   heapDesc.Flags = D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS;
 
-  m_DeviceTools->SetNextAllocationAddress(it->second.m_AddressRange.StartAddress);
+  m_DeviceTools->SetNextAllocationAddress(it->second.AddressRange.StartAddress);
   hr = device->CreateHeap(&heapDesc, IID_PPV_ARGS(&heap));
   GITS_ASSERT(hr == S_OK);
 
@@ -322,7 +322,7 @@ void AddressPinningUseLayer::PreOpenExistingHeap(CommandT& command) {
   D3D12_GPU_VIRTUAL_ADDRESS_RANGE range{};
   hr = pPageableTools->GetAllocation(&range);
   GITS_ASSERT(hr == S_OK);
-  GITS_ASSERT(it->second.m_AddressRange.StartAddress == range.StartAddress);
+  GITS_ASSERT(it->second.AddressRange.StartAddress == range.StartAddress);
 
   m_ChangedHeaps.insert(command.m_ppvHeap.Key);
   *command.m_ppvHeap.Value = heap;
@@ -388,8 +388,8 @@ void AddressPinningUseLayer::ReadAddressRanges() {
         }
         m_AddressRanges.push_back(range);
         HeapAllocationInfo heapAllocationInfo{};
-        heapAllocationInfo.m_AddressRange = range;
-        heapAllocationInfo.m_Alignment = alignment;
+        heapAllocationInfo.AddressRange = range;
+        heapAllocationInfo.Alignment = alignment;
         m_HeapAddressRanges[key] = heapAllocationInfo;
       } else {
         LOG_ERROR << "AddressPinningUseLayer: Failed to parse heap address range line: " << line;

@@ -17,9 +17,9 @@
 namespace gits {
 namespace DirectX {
 
-void ResourcePlacementPlayback::createHeap(ID3D12Device* device, GITSKey heapKey, UINT64& size) {
+void ResourcePlacementPlayback::CreateHeap(ID3D12Device* device, GITSKey heapKey, UINT64& size) {
   if (!m_Initialized) {
-    calculateResourcePlacement(device);
+    CalculateResourcePlacement(device);
     m_Initialized = true;
     if (!m_HeapSizeShifts.empty()) {
       LOG_INFO << "Resource placement changed for " << m_HeapSizeShifts.size() << " heaps";
@@ -31,14 +31,14 @@ void ResourcePlacementPlayback::createHeap(ID3D12Device* device, GITSKey heapKey
   }
 }
 
-void ResourcePlacementPlayback::createPlacedResource(GITSKey resourceKey, UINT64& offset) {
+void ResourcePlacementPlayback::CreatePlacedResource(GITSKey resourceKey, UINT64& offset) {
   auto it = m_ChangedResourceOffsets.find(resourceKey);
   if (it != m_ChangedResourceOffsets.end()) {
     offset = it->second;
   }
 }
 
-void ResourcePlacementPlayback::updateTileMappings(ID3D12CommandQueueUpdateTileMappingsCommand& c) {
+void ResourcePlacementPlayback::UpdateTileMappings(ID3D12CommandQueueUpdateTileMappingsCommand& c) {
   auto it = m_Infos.find(c.m_pHeap.Key);
   if (it == m_Infos.end()) {
     return;
@@ -49,16 +49,16 @@ void ResourcePlacementPlayback::updateTileMappings(ID3D12CommandQueueUpdateTileM
     unsigned& tileOffset = c.m_pHeapRangeStartOffsets.Value[i];
     unsigned tileShift{};
     for (ResourcePlacementShiftInfo& info : infos) {
-      if (info.offset > tileOffset * tileSize) {
+      if (info.Offset > tileOffset * tileSize) {
         break;
       }
-      tileShift = info.shift / tileSize;
+      tileShift = info.Shift / tileSize;
     }
     tileOffset += tileShift;
   }
 }
 
-void ResourcePlacementPlayback::calculateResourcePlacement(ID3D12Device* device) {
+void ResourcePlacementPlayback::CalculateResourcePlacement(ID3D12Device* device) {
   std::filesystem::path filePath = Configurator::IsPlayer()
                                        ? Configurator::Get().common.player.streamDir
                                        : Configurator::Get().common.recorder.dumpPath;
@@ -70,27 +70,27 @@ void ResourcePlacementPlayback::calculateResourcePlacement(ID3D12Device* device)
     if (!file.read(reinterpret_cast<char*>(&info), sizeof(ResourcePlacementInfo))) {
       break;
     }
-    m_Infos[info.heapKey].push_back(info);
+    m_Infos[info.HeapKey].push_back(info);
   }
 
   for (auto& it : m_Infos) {
-    calculateResourcePlacement(device, it.first, it.second);
+    CalculateResourcePlacement(device, it.first, it.second);
   }
 }
 
-void ResourcePlacementPlayback::calculateResourcePlacement(
+void ResourcePlacementPlayback::CalculateResourcePlacement(
     ID3D12Device* device, GITSKey heapKey, std::vector<ResourcePlacementShiftInfo>& infos) {
 
   unsigned sizeChanged = 0;
   for (ResourcePlacementShiftInfo& info : infos) {
-    D3D12_RESOURCE_ALLOCATION_INFO allocInfo = device->GetResourceAllocationInfo(0, 1, &info.desc);
+    D3D12_RESOURCE_ALLOCATION_INFO allocInfo = device->GetResourceAllocationInfo(0, 1, &info.Desc);
     if (allocInfo.SizeInBytes == UINT64_MAX) {
-      LOG_ERROR << "Portability - GetResourceAllocationInfo failed for resource O" << info.key;
+      LOG_ERROR << "Portability - GetResourceAllocationInfo failed for resource O" << info.Key;
       continue;
     }
-    if (allocInfo.SizeInBytes > info.size) {
-      info.increment = allocInfo.SizeInBytes - info.size;
-      info.alignment = allocInfo.Alignment;
+    if (allocInfo.SizeInBytes > info.Size) {
+      info.Increment = allocInfo.SizeInBytes - info.Size;
+      info.Alignment = allocInfo.Alignment;
       ++sizeChanged;
     }
   }
@@ -101,55 +101,55 @@ void ResourcePlacementPlayback::calculateResourcePlacement(
 
   std::sort(infos.begin(), infos.end(),
             [](const ResourcePlacementInfo& a, const ResourcePlacementInfo& b) {
-              if (a.offset == b.offset) {
-                return a.size < b.size;
+              if (a.Offset == b.Offset) {
+                return a.Size < b.Size;
               }
-              return a.offset < b.offset;
+              return a.Offset < b.Offset;
             });
 
   for (unsigned infoIndex = 0; infoIndex < infos.size(); ++infoIndex) {
     ResourcePlacementShiftInfo& currentInfo = infos[infoIndex];
 
-    if (!currentInfo.increment) {
+    if (!currentInfo.Increment) {
       continue;
     }
 
-    UINT64 shiftStart = currentInfo.offset + currentInfo.shift + currentInfo.size;
-    UINT64 shiftEnd = shiftStart + currentInfo.increment;
+    UINT64 shiftStart = currentInfo.Offset + currentInfo.Shift + currentInfo.Size;
+    UINT64 shiftEnd = shiftStart + currentInfo.Increment;
     auto itShift = std::find_if(
         infos.begin() + infoIndex + 1, infos.end(), [&](ResourcePlacementShiftInfo& info) {
-          return info.offset + info.shift >= shiftStart && info.offset + info.shift < shiftEnd;
+          return info.Offset + info.Shift >= shiftStart && info.Offset + info.Shift < shiftEnd;
         });
     if (itShift == infos.end()) {
       continue;
     }
     ResourcePlacementShiftInfo& shiftInfo = *itShift;
 
-    UINT64 shift = shiftInfo.shift + currentInfo.increment;
-    UINT64 alignmentAdjustment = getAlignedOffset(shiftInfo.alignment, shift) - shift;
-    UINT64 alignedShift = currentInfo.increment + alignmentAdjustment;
+    UINT64 shift = shiftInfo.Shift + currentInfo.Increment;
+    UINT64 alignmentAdjustment = GetAlignedOffset(shiftInfo.Alignment, shift) - shift;
+    UINT64 alignedShift = currentInfo.Increment + alignmentAdjustment;
 
     for (auto& it = itShift; itShift != infos.end(); ++itShift) {
-      if (it->alignment > shiftInfo.alignment) {
-        UINT64 alignmentAdjustment = getAlignedOffset(it->alignment, alignedShift) - alignedShift;
+      if (it->Alignment > shiftInfo.Alignment) {
+        UINT64 alignmentAdjustment = GetAlignedOffset(it->Alignment, alignedShift) - alignedShift;
         alignedShift += alignmentAdjustment;
       }
-      it->shift += alignedShift;
+      it->Shift += alignedShift;
     }
   }
 
   UINT64 heapShift{};
   for (ResourcePlacementShiftInfo& info : infos) {
-    if (info.shift) {
-      m_ChangedResourceOffsets[info.key] = info.offset + info.shift;
+    if (info.Shift) {
+      m_ChangedResourceOffsets[info.Key] = info.Offset + info.Shift;
     }
-    heapShift = std::max(heapShift, info.shift + info.increment);
+    heapShift = std::max(heapShift, info.Shift + info.Increment);
   }
 
   m_HeapSizeShifts[heapKey] = heapShift;
 }
 
-UINT64 ResourcePlacementPlayback::getAlignedOffset(UINT64 alignment, UINT64 offset) {
+UINT64 ResourcePlacementPlayback::GetAlignedOffset(UINT64 alignment, UINT64 offset) {
   if (!alignment) {
     alignment = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
   }

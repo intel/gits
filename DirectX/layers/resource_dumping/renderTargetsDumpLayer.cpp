@@ -42,7 +42,7 @@ RenderTargetsDumpLayer::~RenderTargetsDumpLayer() {
     if (m_DryRun) {
       YAML::Node output;
       output["DrawsWithTextureByFrame"] = YAML::Node();
-      for (const auto& [frame, dispatchNumbers] : m_DryRunInfo.drawsWithTextureByFrame) {
+      for (const auto& [frame, dispatchNumbers] : m_DryRunInfo.DrawsWithTextureByFrame) {
         for (unsigned dispatchNumber : dispatchNumbers) {
           output["DrawsWithTextureByFrame"][frame].push_back(dispatchNumber);
         }
@@ -67,11 +67,11 @@ void RenderTargetsDumpLayer::Post(StateRestoreEndCommand& c) {
 
 void RenderTargetsDumpLayer::Post(ID3D12DeviceCreateRenderTargetViewCommand& c) {
   RenderTarget renderTarget{};
-  renderTarget.resource = c.m_pResource.Value;
+  renderTarget.Resource = c.m_pResource.Value;
   renderTarget.ResourceKey = c.m_pResource.Key;
   if (c.m_pDesc.Value) {
-    renderTarget.isDesc = true;
-    renderTarget.desc = *c.m_pDesc.Value;
+    renderTarget.IsDesc = true;
+    renderTarget.Desc = *c.m_pDesc.Value;
   }
 
   m_RenderTargetsByDescriptorHandle[std::make_pair(c.m_DestDescriptor.InterfaceKey,
@@ -80,11 +80,11 @@ void RenderTargetsDumpLayer::Post(ID3D12DeviceCreateRenderTargetViewCommand& c) 
 
 void RenderTargetsDumpLayer::Post(ID3D12DeviceCreateDepthStencilViewCommand& c) {
   DepthStencil depthStencil;
-  depthStencil.resource = c.m_pResource.Value;
+  depthStencil.Resource = c.m_pResource.Value;
   depthStencil.ResourceKey = c.m_pResource.Key;
   if (c.m_pDesc.Value) {
-    depthStencil.isDesc = true;
-    depthStencil.desc = *c.m_pDesc.Value;
+    depthStencil.IsDesc = true;
+    depthStencil.Desc = *c.m_pDesc.Value;
   }
 
   m_DepthStencilsByDescriptorHandle[std::make_pair(c.m_DestDescriptor.InterfaceKey,
@@ -96,11 +96,11 @@ void RenderTargetsDumpLayer::Post(ID3D12Device15TryCreateRenderTargetViewCommand
     return;
   }
   RenderTarget renderTarget{};
-  renderTarget.resource = c.m_pResource.Value;
+  renderTarget.Resource = c.m_pResource.Value;
   renderTarget.ResourceKey = c.m_pResource.Key;
   if (c.m_pDesc.Value) {
-    renderTarget.isDesc = true;
-    renderTarget.desc = *c.m_pDesc.Value;
+    renderTarget.IsDesc = true;
+    renderTarget.Desc = *c.m_pDesc.Value;
   }
 
   m_RenderTargetsByDescriptorHandle[std::make_pair(c.m_DestDescriptor.InterfaceKey,
@@ -112,11 +112,11 @@ void RenderTargetsDumpLayer::Post(ID3D12Device15TryCreateDepthStencilViewCommand
     return;
   }
   DepthStencil depthStencil;
-  depthStencil.resource = c.m_pResource.Value;
+  depthStencil.Resource = c.m_pResource.Value;
   depthStencil.ResourceKey = c.m_pResource.Key;
   if (c.m_pDesc.Value) {
-    depthStencil.isDesc = true;
-    depthStencil.desc = *c.m_pDesc.Value;
+    depthStencil.IsDesc = true;
+    depthStencil.Desc = *c.m_pDesc.Value;
   }
 
   m_DepthStencilsByDescriptorHandle[std::make_pair(c.m_DestDescriptor.InterfaceKey,
@@ -214,7 +214,7 @@ void RenderTargetsDumpLayer::Post(ID3D12GraphicsCommandListOMSetRenderTargetsCom
                     << heapIndex;
           continue;
         }
-        it->second.slot = i;
+        it->second.Slot = i;
         renderTargets.push_back(it->second);
       }
     }
@@ -252,9 +252,9 @@ void RenderTargetsDumpLayer::OnDraw(ID3D12GraphicsCommandList* commandList,
   auto itRenderTargets = m_RenderTargetsByCommandList.find(commandListKey);
   if (itRenderTargets != m_RenderTargetsByCommandList.end()) {
     for (RenderTarget& renderTarget : itRenderTargets->second) {
-      if (renderTarget.resource) {
+      if (renderTarget.Resource) {
         if (m_DryRun) {
-          m_DryRunInfo.drawsWithTextureByFrame[m_CurrentFrame].insert(m_DrawCount);
+          m_DryRunInfo.DrawsWithTextureByFrame[m_CurrentFrame].insert(m_DrawCount);
         } else {
           DumpRenderTarget(commandList, renderTarget, m_CurrentFrame, commandListDrawCount,
                            m_DrawCount);
@@ -265,9 +265,9 @@ void RenderTargetsDumpLayer::OnDraw(ID3D12GraphicsCommandList* commandList,
 
   auto itDepthStencil = m_DepthStencilByCommandList.find(commandListKey);
   if (itDepthStencil != m_DepthStencilByCommandList.end()) {
-    if (itDepthStencil->second.resource) {
+    if (itDepthStencil->second.Resource) {
       if (m_DryRun) {
-        m_DryRunInfo.drawsWithTextureByFrame[m_CurrentFrame].insert(m_DrawCount);
+        m_DryRunInfo.DrawsWithTextureByFrame[m_CurrentFrame].insert(m_DrawCount);
       } else {
         DumpDepthStencil(commandList, itDepthStencil->second, m_CurrentFrame, commandListDrawCount,
                          m_DrawCount);
@@ -281,7 +281,7 @@ void RenderTargetsDumpLayer::DumpRenderTarget(ID3D12GraphicsCommandList* command
                                               unsigned frame,
                                               unsigned commandListDraw,
                                               unsigned frameDraw) {
-  D3D12_RESOURCE_DESC desc = renderTarget.resource->GetDesc();
+  D3D12_RESOURCE_DESC desc = renderTarget.Resource->GetDesc();
   DXGI_FORMAT format = desc.Format;
 
   unsigned arraySize =
@@ -294,37 +294,37 @@ void RenderTargetsDumpLayer::DumpRenderTarget(ID3D12GraphicsCommandList* command
   unsigned maxSlice =
       desc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE3D ? desc.DepthOrArraySize - 1 : 0;
 
-  if (renderTarget.isDesc) {
-    format = renderTarget.desc.Format;
-    switch (renderTarget.desc.ViewDimension) {
+  if (renderTarget.IsDesc) {
+    format = renderTarget.Desc.Format;
+    switch (renderTarget.Desc.ViewDimension) {
     case D3D12_RTV_DIMENSION_TEXTURE1D:
-      mipLevel = renderTarget.desc.Texture1D.MipSlice;
+      mipLevel = renderTarget.Desc.Texture1D.MipSlice;
       break;
     case D3D12_RTV_DIMENSION_TEXTURE1DARRAY:
-      mipLevel = renderTarget.desc.Texture1DArray.MipSlice;
-      minArrayIndex = renderTarget.desc.Texture1DArray.FirstArraySlice;
-      maxArrayIndex = renderTarget.desc.Texture1DArray.FirstArraySlice +
-                      std::min(arraySize, renderTarget.desc.Texture1DArray.ArraySize) - 1;
+      mipLevel = renderTarget.Desc.Texture1DArray.MipSlice;
+      minArrayIndex = renderTarget.Desc.Texture1DArray.FirstArraySlice;
+      maxArrayIndex = renderTarget.Desc.Texture1DArray.FirstArraySlice +
+                      std::min(arraySize, renderTarget.Desc.Texture1DArray.ArraySize) - 1;
       break;
     case D3D12_RTV_DIMENSION_TEXTURE2D:
-      mipLevel = renderTarget.desc.Texture2D.MipSlice;
+      mipLevel = renderTarget.Desc.Texture2D.MipSlice;
       break;
     case D3D12_RTV_DIMENSION_TEXTURE2DARRAY:
-      mipLevel = renderTarget.desc.Texture2DArray.MipSlice;
-      minArrayIndex = renderTarget.desc.Texture2DArray.FirstArraySlice;
-      maxArrayIndex = renderTarget.desc.Texture2DArray.FirstArraySlice +
-                      std::min(arraySize, renderTarget.desc.Texture2DArray.ArraySize) - 1;
+      mipLevel = renderTarget.Desc.Texture2DArray.MipSlice;
+      minArrayIndex = renderTarget.Desc.Texture2DArray.FirstArraySlice;
+      maxArrayIndex = renderTarget.Desc.Texture2DArray.FirstArraySlice +
+                      std::min(arraySize, renderTarget.Desc.Texture2DArray.ArraySize) - 1;
       break;
     case D3D12_RTV_DIMENSION_TEXTURE2DMSARRAY:
-      minArrayIndex = renderTarget.desc.Texture2DMSArray.FirstArraySlice;
-      maxArrayIndex = renderTarget.desc.Texture2DMSArray.FirstArraySlice +
-                      std::min(arraySize, renderTarget.desc.Texture2DMSArray.ArraySize) - 1;
+      minArrayIndex = renderTarget.Desc.Texture2DMSArray.FirstArraySlice;
+      maxArrayIndex = renderTarget.Desc.Texture2DMSArray.FirstArraySlice +
+                      std::min(arraySize, renderTarget.Desc.Texture2DMSArray.ArraySize) - 1;
       break;
     case D3D12_RTV_DIMENSION_TEXTURE3D:
-      mipLevel = renderTarget.desc.Texture3D.MipSlice;
-      minSlice = renderTarget.desc.Texture3D.FirstWSlice;
-      if (renderTarget.desc.Texture3D.WSize != static_cast<UINT>(-1)) {
-        maxSlice = renderTarget.desc.Texture3D.FirstWSlice + renderTarget.desc.Texture3D.WSize - 1;
+      mipLevel = renderTarget.Desc.Texture3D.MipSlice;
+      minSlice = renderTarget.Desc.Texture3D.FirstWSlice;
+      if (renderTarget.Desc.Texture3D.WSize != static_cast<UINT>(-1)) {
+        maxSlice = renderTarget.Desc.Texture3D.FirstWSlice + renderTarget.Desc.Texture3D.WSize - 1;
       }
       break;
     }
@@ -334,7 +334,7 @@ void RenderTargetsDumpLayer::DumpRenderTarget(ID3D12GraphicsCommandList* command
   std::wstring formatNameW(formatName.begin(), formatName.end());
 
   Microsoft::WRL::ComPtr<ID3D12Device> device;
-  HRESULT hr = renderTarget.resource->GetDevice(IID_PPV_ARGS(&device));
+  HRESULT hr = renderTarget.Resource->GetDevice(IID_PPV_ARGS(&device));
   GITS_ASSERT(hr == S_OK);
   unsigned planeCount = D3D12GetFormatPlaneCount(device.Get(), format);
 
@@ -344,7 +344,7 @@ void RenderTargetsDumpLayer::DumpRenderTarget(ID3D12GraphicsCommandList* command
       std::wstring dumpName = m_DumpPath + L"/draw_e_" + m_ResourceDump.m_DumpNameExecutionMarker +
                               L"_f_" + std::to_wstring(frame) + L"_d_" +
                               std::to_wstring(m_DrawCount) + L"_rt_" +
-                              std::to_wstring(renderTarget.slot) + L"_O" +
+                              std::to_wstring(renderTarget.Slot) + L"_O" +
                               std::to_wstring(renderTarget.ResourceKey) + L"_" + formatNameW;
       if (planeCount > 1) {
         dumpName += L"_plane_" + std::to_wstring(planeSlice);
@@ -360,7 +360,7 @@ void RenderTargetsDumpLayer::DumpRenderTarget(ID3D12GraphicsCommandList* command
           D3D12CalcSubresource(mipLevel, arrayIndex, planeSlice, desc.MipLevels, arraySize);
       BarrierState resourceState{};
       resourceState.State = D3D12_RESOURCE_STATE_RENDER_TARGET;
-      m_ResourceDump.DumpResource(commandList, renderTarget.resource, subresource, resourceState,
+      m_ResourceDump.DumpResource(commandList, renderTarget.Resource, subresource, resourceState,
                                   dumpName, mipLevel, format, commandListDraw);
     }
   }
@@ -371,7 +371,7 @@ void RenderTargetsDumpLayer::DumpDepthStencil(ID3D12GraphicsCommandList* command
                                               unsigned frame,
                                               unsigned commandListDraw,
                                               unsigned frameDraw) {
-  D3D12_RESOURCE_DESC desc = depthStencil.resource->GetDesc();
+  D3D12_RESOURCE_DESC desc = depthStencil.Resource->GetDesc();
   DXGI_FORMAT format = desc.Format;
 
   unsigned arraySize =
@@ -381,31 +381,31 @@ void RenderTargetsDumpLayer::DumpDepthStencil(ID3D12GraphicsCommandList* command
       desc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE3D ? 0 : desc.DepthOrArraySize - 1;
   unsigned mipLevel = 0;
 
-  if (depthStencil.isDesc) {
-    format = depthStencil.desc.Format;
-    switch (depthStencil.desc.ViewDimension) {
+  if (depthStencil.IsDesc) {
+    format = depthStencil.Desc.Format;
+    switch (depthStencil.Desc.ViewDimension) {
     case D3D12_DSV_DIMENSION_TEXTURE1D:
-      mipLevel = depthStencil.desc.Texture1D.MipSlice;
+      mipLevel = depthStencil.Desc.Texture1D.MipSlice;
       break;
     case D3D12_DSV_DIMENSION_TEXTURE1DARRAY:
-      mipLevel = depthStencil.desc.Texture1DArray.MipSlice;
-      minArrayIndex = depthStencil.desc.Texture1DArray.FirstArraySlice;
-      maxArrayIndex = depthStencil.desc.Texture1DArray.FirstArraySlice +
-                      std::min(arraySize, depthStencil.desc.Texture1DArray.ArraySize) - 1;
+      mipLevel = depthStencil.Desc.Texture1DArray.MipSlice;
+      minArrayIndex = depthStencil.Desc.Texture1DArray.FirstArraySlice;
+      maxArrayIndex = depthStencil.Desc.Texture1DArray.FirstArraySlice +
+                      std::min(arraySize, depthStencil.Desc.Texture1DArray.ArraySize) - 1;
       break;
     case D3D12_DSV_DIMENSION_TEXTURE2D:
-      mipLevel = depthStencil.desc.Texture2D.MipSlice;
+      mipLevel = depthStencil.Desc.Texture2D.MipSlice;
       break;
     case D3D12_DSV_DIMENSION_TEXTURE2DARRAY:
-      mipLevel = depthStencil.desc.Texture2DArray.MipSlice;
-      minArrayIndex = depthStencil.desc.Texture2DArray.FirstArraySlice;
-      maxArrayIndex = depthStencil.desc.Texture2DArray.FirstArraySlice +
-                      std::min(arraySize, depthStencil.desc.Texture2DArray.ArraySize) - 1;
+      mipLevel = depthStencil.Desc.Texture2DArray.MipSlice;
+      minArrayIndex = depthStencil.Desc.Texture2DArray.FirstArraySlice;
+      maxArrayIndex = depthStencil.Desc.Texture2DArray.FirstArraySlice +
+                      std::min(arraySize, depthStencil.Desc.Texture2DArray.ArraySize) - 1;
       break;
     case D3D12_DSV_DIMENSION_TEXTURE2DMSARRAY:
-      minArrayIndex = depthStencil.desc.Texture2DMSArray.FirstArraySlice;
-      maxArrayIndex = depthStencil.desc.Texture2DMSArray.FirstArraySlice +
-                      std::min(arraySize, depthStencil.desc.Texture2DMSArray.ArraySize) - 1;
+      minArrayIndex = depthStencil.Desc.Texture2DMSArray.FirstArraySlice;
+      maxArrayIndex = depthStencil.Desc.Texture2DMSArray.FirstArraySlice +
+                      std::min(arraySize, depthStencil.Desc.Texture2DMSArray.ArraySize) - 1;
       break;
     }
   }
@@ -414,7 +414,7 @@ void RenderTargetsDumpLayer::DumpDepthStencil(ID3D12GraphicsCommandList* command
   std::wstring formatNameW(formatName.begin(), formatName.end());
 
   Microsoft::WRL::ComPtr<ID3D12Device> device;
-  HRESULT hr = depthStencil.resource->GetDevice(IID_PPV_ARGS(&device));
+  HRESULT hr = depthStencil.Resource->GetDevice(IID_PPV_ARGS(&device));
   GITS_ASSERT(hr == S_OK);
   unsigned planeCount = D3D12GetFormatPlaneCount(device.Get(), format);
 
@@ -445,7 +445,7 @@ void RenderTargetsDumpLayer::DumpDepthStencil(ID3D12GraphicsCommandList* command
           resourceState.State = D3D12_RESOURCE_STATE_DEPTH_WRITE | D3D12_RESOURCE_STATE_DEPTH_READ;
         }
       }
-      m_ResourceDump.DumpResource(commandList, depthStencil.resource, subresource, resourceState,
+      m_ResourceDump.DumpResource(commandList, depthStencil.Resource, subresource, resourceState,
                                   dumpName, mipLevel, format, commandListDraw);
     }
   }

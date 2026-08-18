@@ -17,22 +17,22 @@ namespace gits {
 namespace DirectX {
 
 struct ResourcePlacementInfo {
-  GITSKey heapKey{};
-  GITSKey key{};
-  UINT64 offset{};
-  UINT64 size{};
-  UINT64 alignment{};
-  D3D12_RESOURCE_DESC desc{};
+  GITSKey HeapKey{};
+  GITSKey Key{};
+  UINT64 Offset{};
+  UINT64 Size{};
+  UINT64 Alignment{};
+  D3D12_RESOURCE_DESC Desc{};
 };
 
 class ResourcePlacementCapture {
 public:
-  void createPlacedResource(GITSKey heapKey,
+  void CreatePlacedResource(GITSKey heapKey,
                             GITSKey resourceKey,
                             UINT64 offset,
                             ID3D12Device* device,
                             D3D12_RESOURCE_DESC& desc);
-  void storeResourcePlacement();
+  void StoreResourcePlacement();
 
 private:
   std::mutex m_Mutex;

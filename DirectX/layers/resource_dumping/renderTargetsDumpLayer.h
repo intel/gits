@@ -73,17 +73,17 @@ private:
   unsigned m_CurrentFrame{1};
 
   struct RenderTarget {
-    unsigned slot{};
-    ID3D12Resource* resource{};
+    unsigned Slot{};
+    ID3D12Resource* Resource{};
     GITSKey ResourceKey{};
-    bool isDesc{};
-    D3D12_RENDER_TARGET_VIEW_DESC desc{};
+    bool IsDesc{};
+    D3D12_RENDER_TARGET_VIEW_DESC Desc{};
   };
   struct DepthStencil {
-    ID3D12Resource* resource{};
+    ID3D12Resource* Resource{};
     GITSKey ResourceKey{};
-    bool isDesc{};
-    D3D12_DEPTH_STENCIL_VIEW_DESC desc{};
+    bool IsDesc{};
+    D3D12_DEPTH_STENCIL_VIEW_DESC Desc{};
   };
   std::map<std::pair<GITSKey, unsigned>, RenderTarget> m_RenderTargetsByDescriptorHandle;
   std::map<std::pair<GITSKey, unsigned>, DepthStencil> m_DepthStencilsByDescriptorHandle;
@@ -91,7 +91,7 @@ private:
   std::unordered_map<GITSKey, DepthStencil> m_DepthStencilByCommandList;
 
   struct DryRunInfo {
-    std::map<GITSKey, std::set<GITSKey>> drawsWithTextureByFrame;
+    std::map<GITSKey, std::set<GITSKey>> DrawsWithTextureByFrame;
   } m_DryRunInfo;
 
 private:

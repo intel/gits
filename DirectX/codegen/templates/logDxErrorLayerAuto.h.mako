@@ -84,24 +84,24 @@ public:
   virtual void Post(NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand& command) override;
 
 private:
-  bool isFailure(HRESULT result) {
+  bool IsFailure(HRESULT result) {
     return FAILED(result) && result != E_NOINTERFACE && result != DXGI_ERROR_NOT_FOUND &&
            (!m_IsPlayer || result != m_PreResult);
   }
-  std::string printResult(HRESULT result);
+  std::string PrintResult(HRESULT result);
 
-  bool isFailureXess(xess_result_t result) {
+  bool IsFailureXess(xess_result_t result) {
     return result != XESS_RESULT_SUCCESS && (!m_IsPlayer || result != m_PreResultXess);
   }
 
-  bool isFailureNvAPI(NvAPI_Status result);
-  std::string printResult(NvAPI_Status result);
+  bool IsFailureNvAPI(NvAPI_Status result);
+  std::string PrintResult(NvAPI_Status result);
 
-  bool isFailureXell(xell_result_t result) {
+  bool IsFailureXell(xell_result_t result) {
     return result != XELL_RESULT_SUCCESS && (!m_IsPlayer || result != m_PreResultXell);
   }
 
-  bool isFailureXefg(xefg_swapchain_result_t result) {
+  bool IsFailureXefg(xefg_swapchain_result_t result) {
     return result != XEFG_SWAPCHAIN_RESULT_SUCCESS && (!m_IsPlayer || result != m_PreResultXefg);
   }
 

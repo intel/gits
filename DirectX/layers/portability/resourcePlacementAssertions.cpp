@@ -19,17 +19,17 @@ namespace gits {
 namespace DirectX {
 
 ResourcePlacementAssertions::ResourcePlacementAssertions() {
-  loadResourcePlacementData();
+  LoadResourcePlacementData();
 }
 
-void ResourcePlacementAssertions::createPlacedResource(GITSKey resourceKey,
+void ResourcePlacementAssertions::CreatePlacedResource(GITSKey resourceKey,
                                                        const D3D12_RESOURCE_DESC& desc,
                                                        ID3D12Device* device) {
   if (!m_PlacementDataLoaded) {
     return;
   }
 
-  const ResourcePlacementInfo* placementInfo = findPlacementData(resourceKey);
+  const ResourcePlacementInfo* placementInfo = FindPlacementData(resourceKey);
 
   if (!placementInfo) {
     static bool logged = false;
@@ -41,19 +41,19 @@ void ResourcePlacementAssertions::createPlacedResource(GITSKey resourceKey,
   }
 
   AllocationInfo info{};
-  info.pre = {placementInfo->size, placementInfo->alignment};
-  info.post = queryAllocationFromDevice(device, desc, resourceKey);
-  checkCompatibility(info, desc, resourceKey);
+  info.Pre = {placementInfo->Size, placementInfo->Alignment};
+  info.Post = QueryAllocationFromDevice(device, desc, resourceKey);
+  CheckCompatibility(info, desc, resourceKey);
 }
 
-void ResourcePlacementAssertions::createPlacedResource(GITSKey resourceKey,
+void ResourcePlacementAssertions::CreatePlacedResource(GITSKey resourceKey,
                                                        const D3D12_RESOURCE_DESC1& desc,
                                                        ID3D12Device* device) {
   if (!m_PlacementDataLoaded) {
     return;
   }
 
-  const ResourcePlacementInfo* placementInfo = findPlacementData(resourceKey);
+  const ResourcePlacementInfo* placementInfo = FindPlacementData(resourceKey);
 
   if (!placementInfo) {
     static bool logged = false;
@@ -81,12 +81,12 @@ void ResourcePlacementAssertions::createPlacedResource(GITSKey resourceKey,
                                desc.Layout,           desc.Flags};
 
   AllocationInfo info{};
-  info.pre = {placementInfo->size, placementInfo->alignment};
-  info.post = queryAllocationFromDevice(device, baseDesc, resourceKey);
-  checkCompatibility(info, baseDesc, resourceKey);
+  info.Pre = {placementInfo->Size, placementInfo->Alignment};
+  info.Post = QueryAllocationFromDevice(device, baseDesc, resourceKey);
+  CheckCompatibility(info, baseDesc, resourceKey);
 }
 
-const ResourcePlacementInfo* ResourcePlacementAssertions::findPlacementData(GITSKey resourceKey) {
+const ResourcePlacementInfo* ResourcePlacementAssertions::FindPlacementData(GITSKey resourceKey) {
   const auto it = m_PlacementDataFromFile.find(resourceKey);
   if (it != m_PlacementDataFromFile.end()) {
     return &it->second;
@@ -94,7 +94,7 @@ const ResourcePlacementInfo* ResourcePlacementAssertions::findPlacementData(GITS
   return nullptr;
 }
 
-D3D12_RESOURCE_ALLOCATION_INFO ResourcePlacementAssertions::queryAllocationFromDevice(
+D3D12_RESOURCE_ALLOCATION_INFO ResourcePlacementAssertions::QueryAllocationFromDevice(
     ID3D12Device* device, const D3D12_RESOURCE_DESC& desc, GITSKey resourceKey) {
   D3D12_RESOURCE_ALLOCATION_INFO allocInfo = device->GetResourceAllocationInfo(0, 1, &desc);
   if (allocInfo.SizeInBytes == UINT64_MAX) {
@@ -103,7 +103,7 @@ D3D12_RESOURCE_ALLOCATION_INFO ResourcePlacementAssertions::queryAllocationFromD
   return allocInfo;
 }
 
-void ResourcePlacementAssertions::checkCompatibility(const AllocationInfo& allocationInfo,
+void ResourcePlacementAssertions::CheckCompatibility(const AllocationInfo& allocationInfo,
                                                      const D3D12_RESOURCE_DESC& desc,
                                                      GITSKey resourceKey) {
   const auto logResourceDesc = [](const D3D12_RESOURCE_DESC& resourceDesc) {
@@ -119,8 +119,8 @@ void ResourcePlacementAssertions::checkCompatibility(const AllocationInfo& alloc
   };
 
   // Compatible when playback alignment is <= capture alignment and capture alignment is a multiple of playback alignment
-  uint64_t captureAlignment = allocationInfo.pre.Alignment;
-  uint64_t currentAlignment = allocationInfo.post.Alignment;
+  uint64_t captureAlignment = allocationInfo.Pre.Alignment;
+  uint64_t currentAlignment = allocationInfo.Post.Alignment;
   bool alignmentCompatible = currentAlignment != 0 && captureAlignment >= currentAlignment &&
                              captureAlignment % currentAlignment == 0;
 
@@ -132,16 +132,16 @@ void ResourcePlacementAssertions::checkCompatibility(const AllocationInfo& alloc
   }
   GITS_ASSERT(alignmentCompatible);
 
-  if (allocationInfo.pre.SizeInBytes < allocationInfo.post.SizeInBytes) {
+  if (allocationInfo.Pre.SizeInBytes < allocationInfo.Post.SizeInBytes) {
     LOG_ERROR << "Portability - Incompatible size for resource: O" << resourceKey;
-    LOG_ERROR << "Portability - Capture size: " << allocationInfo.pre.SizeInBytes
-              << " Current size: " << allocationInfo.post.SizeInBytes;
+    LOG_ERROR << "Portability - Capture size: " << allocationInfo.Pre.SizeInBytes
+              << " Current size: " << allocationInfo.Post.SizeInBytes;
     logResourceDesc(desc);
   }
-  GITS_ASSERT(allocationInfo.pre.SizeInBytes >= allocationInfo.post.SizeInBytes);
+  GITS_ASSERT(allocationInfo.Pre.SizeInBytes >= allocationInfo.Post.SizeInBytes);
 }
 
-void ResourcePlacementAssertions::loadResourcePlacementData() {
+void ResourcePlacementAssertions::LoadResourcePlacementData() {
   std::filesystem::path filePath =
       Configurator::Get().common.player.streamDir / "resourcePlacementData.dat";
 
@@ -159,7 +159,7 @@ void ResourcePlacementAssertions::loadResourcePlacementData() {
 
   ResourcePlacementInfo info{};
   while (file.read(reinterpret_cast<char*>(&info), sizeof(ResourcePlacementInfo))) {
-    m_PlacementDataFromFile[info.key] = info;
+    m_PlacementDataFromFile[info.Key] = info;
   }
 
   m_PlacementDataLoaded = true;

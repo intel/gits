@@ -71,13 +71,13 @@ private:
   std::mutex m_Mutex;
 
   struct Command {
-    Command(const std::string& s, bool draw = false) : m_Str(s), m_IsDraw(draw) {}
-    std::string m_Str;
-    bool m_IsDraw;
+    Command(const std::string& s, bool draw = false) : Str(s), IsDraw(draw) {}
+    std::string Str;
+    bool IsDraw;
   };
 
   struct CommandQueueEvent : public GpuExecutionTracker::Executable {
-    std::string m_Str;
+    std::string Str;
   };
   void FenceSignal(GITSKey callKey, GITSKey fenceKey, UINT64 fenceValue);
   void StageCommandQueueEvent(GITSKey commandKey, GITSKey commandQueueKey, const std::string& str);

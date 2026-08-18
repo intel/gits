@@ -20,27 +20,27 @@ namespace DirectX {
 
 class ResourcePlacementCaptureNoExecute {
 public:
-  void createPlacedResource(GITSKey heapKey,
+  void CreatePlacedResource(GITSKey heapKey,
                             GITSKey resourceKey,
                             UINT64 offset,
                             ID3D12Device* device,
                             D3D12_RESOURCE_DESC& desc);
-  void getResourceAllocation(const D3D12_RESOURCE_DESC& desc,
+  void GetResourceAllocation(const D3D12_RESOURCE_DESC& desc,
                              uint64_t sizeInBytes,
                              uint64_t alignment);
-  void getResourceAllocation(const D3D12_RESOURCE_DESC1& desc,
+  void GetResourceAllocation(const D3D12_RESOURCE_DESC1& desc,
                              uint64_t sizeInBytes,
                              uint64_t alignment);
-  void storeResourcePlacement();
+  void StoreResourcePlacement();
 
 private:
   struct ResourcePlacementInfo {
-    GITSKey heapKey{};
-    GITSKey key{};
-    UINT64 offset{};
-    UINT64 size{};
-    UINT64 alignment{};
-    D3D12_RESOURCE_DESC desc{};
+    GITSKey HeapKey{};
+    GITSKey Key{};
+    UINT64 Offset{};
+    UINT64 Size{};
+    UINT64 Alignment{};
+    D3D12_RESOURCE_DESC Desc{};
   };
 
   struct D3D12_RESOURCE_DESC_Equal {

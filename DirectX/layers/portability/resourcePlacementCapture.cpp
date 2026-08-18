@@ -16,30 +16,30 @@
 namespace gits {
 namespace DirectX {
 
-void ResourcePlacementCapture::createPlacedResource(GITSKey heapKey,
+void ResourcePlacementCapture::CreatePlacedResource(GITSKey heapKey,
                                                     GITSKey resourceKey,
                                                     UINT64 offset,
                                                     ID3D12Device* device,
                                                     D3D12_RESOURCE_DESC& desc) {
   ResourcePlacementInfo info{};
-  info.heapKey = heapKey;
-  info.key = resourceKey;
-  info.offset = offset;
-  info.desc = desc;
+  info.HeapKey = heapKey;
+  info.Key = resourceKey;
+  info.Offset = offset;
+  info.Desc = desc;
 
   D3D12_RESOURCE_ALLOCATION_INFO allocInfo = device->GetResourceAllocationInfo(0, 1, &desc);
   if (allocInfo.SizeInBytes == UINT64_MAX) {
-    LOG_ERROR << "Portability - GetResourceAllocationInfo failed for resource O" << info.key;
+    LOG_ERROR << "Portability - GetResourceAllocationInfo failed for resource O" << info.Key;
     return;
   }
-  info.size = allocInfo.SizeInBytes;
-  info.alignment = allocInfo.Alignment;
+  info.Size = allocInfo.SizeInBytes;
+  info.Alignment = allocInfo.Alignment;
 
   std::lock_guard<std::mutex> lock(m_Mutex);
   m_ResourcePlacementInfos.push_back(info);
 }
 
-void ResourcePlacementCapture::storeResourcePlacement() {
+void ResourcePlacementCapture::StoreResourcePlacement() {
   std::filesystem::path filePath = Configurator::IsPlayer()
                                        ? Configurator::Get().common.player.streamDir
                                        : Configurator::Get().common.recorder.dumpPath;
