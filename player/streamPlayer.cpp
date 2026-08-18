@@ -280,11 +280,6 @@ void PlayStream(const std::filesystem::path& streamPath) {
 
   MessageBus::get().publish({PUBLISHER_PLAYER, TOPIC_END}, std::make_shared<ProgramMessage>());
 
-  if (header.GetApi() == stream::StreamHeader::Api::API_VULKAN ||
-      header.GetApi() == stream::StreamHeader::Api::API_DIRECTX) {
-    windowing::WindowManager::Get().DestroyAllWindows();
-  }
-
   LOG_INFO << "Playback completed";
   LOG_INFO << "  State restore duration: "
            << FormatDuration(std::chrono::nanoseconds(stateRestoreTimer.Get()));
@@ -295,6 +290,11 @@ void PlayStream(const std::filesystem::path& streamPath) {
 
   MessageBus::get().publish({PUBLISHER_PLAYER, TOPIC_PROGRAM_EXIT},
                             std::make_shared<ProgramMessage>());
+
+  if (header.GetApi() == stream::StreamHeader::Api::API_VULKAN ||
+      header.GetApi() == stream::StreamHeader::Api::API_DIRECTX) {
+    windowing::WindowManager::Get().DestroyAllWindows();
+  }
 }
 
 class ApiExtractor : public stream::CommandFactory {
