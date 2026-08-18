@@ -371,6 +371,9 @@ void INTC_DestroyDeviceExtensionContextRunner::Run() {
 
   if (manager.ExecuteCommands()) {
     if (!command.Skip) {
+      auto* context = reinterpret_cast<INTCExtensionContext*>(
+          manager.GetIntelExtensionsContextMap().GetContext(command.m_ppExtensionContext.Key));
+      command.m_ppExtensionContext.Data = context;
       command.m_Result.Value =
           INTC_DestroyDeviceExtensionContext(command.m_ppExtensionContext.Value);
     }
