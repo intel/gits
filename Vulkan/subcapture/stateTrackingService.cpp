@@ -4648,6 +4648,19 @@ void StateTrackingService::RestoreBufferContents() {
     if (buf->BufferSize == 0 || buf->BoundMemoryKey == 0) {
       continue;
     }
+    // RestoreBuffer inserts the buffer into m_RestoredThisPass and returns true
+    // even when its bound memory could not be restored, so that dependent
+    // buffer views are not skipped.  In that case no vkBindBufferMemory was
+    // emitted and the buffer has no memory at all on replay: a copy into it
+    // would be invalid, and the compare-and-skip below would drop it silently
+    // on the false premise that the mapped-memory restore covers it (that
+    // memory was never restored either).  Neither path can restore the
+    // contents, so exclude the buffer outright.
+    if (!m_RestoredThisPass.count(buf->BoundMemoryKey)) {
+      LOG_WARNING << "Vulkan subcapture: skipping buffer content restore for buffer key=" << key
+                  << " because bound memory key=" << buf->BoundMemoryKey << " was not restored";
+      continue;
+    }
     if (!(buf->UsageFlags & VK_BUFFER_USAGE_TRANSFER_SRC_BIT)) {
       continue;
     }
@@ -4807,6 +4820,16 @@ void StateTrackingService::RestoreImageContents() {
     }
     // Skip unbound images.
     if (img->BoundMemoryKey == 0) {
+      continue;
+    }
+    // RestoreImage has the same shape as RestoreBuffer: the image is marked
+    // restored and reported as success even when its bound memory could not be
+    // restored, in which case no vkBindImageMemory was emitted and the image
+    // has no memory on replay.  vkCmdCopyBufferToImage into it would be
+    // invalid, so exclude it from content restore.
+    if (!m_RestoredThisPass.count(img->BoundMemoryKey)) {
+      LOG_WARNING << "Vulkan subcapture: skipping image content restore for image key=" << key
+                  << " because bound memory key=" << img->BoundMemoryKey << " was not restored";
       continue;
     }
     // Multisampled images cannot be copied with vkCmdCopyImageToBuffer.
