@@ -195,6 +195,13 @@ struct ImageState : ObjectState {
   uint32_t ArrayLayers{1};
   VkSampleCountFlagBits Samples{VK_SAMPLE_COUNT_1_BIT};
   VkImageUsageFlags UsageFlags{};
+  // Sharing mode and, for VK_SHARING_MODE_CONCURRENT, the queue families the
+  // image was created over (VkImageCreateInfo::pQueueFamilyIndices).  Content
+  // restore needs them to tell whether its readback may be submitted on a queue
+  // family other than the one that pairing happened to pick
+  // (VUID-vkQueueSubmit-pSubmits-04626).
+  VkSharingMode SharingMode{VK_SHARING_MODE_EXCLUSIVE};
+  std::vector<uint32_t> ConcurrentFamilies{};
   // Set true by RestoreImageContents once pixel data has been copied into the
   // subcapture stream.  EmitImageLayoutTransitions skips these images because
   // the buffer-to-image copy already ends in the correct layout.

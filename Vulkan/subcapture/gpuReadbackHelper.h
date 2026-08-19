@@ -17,6 +17,13 @@ namespace vulkan {
 
 class PlayerManager;
 
+// Aspect mask to use in image barriers and barrier subresource ranges for a
+// format: DEPTH and/or STENCIL for depth/stencil formats, COLOR for every color
+// format including the multi-planar ones.  The recorder's readback barriers and
+// the player's upload barriers both go through this so they cannot disagree.
+// Not for copy regions - those need one plane bit per region instead.
+VkImageAspectFlags AspectMaskForFormat(VkFormat format);
+
 // Concrete implementation of IGpuReadbackHelper. Uses PlayerManager dispatch
 // tables (GetDeviceDispatchTable / GetInstanceDispatchTable), same pattern as DX12 player.
 class GpuReadbackHelper final : public IGpuReadbackHelper {

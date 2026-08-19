@@ -17,6 +17,7 @@
 #include "commandsAuto.h"
 #include "commandsCustom.h"
 #include "configurator.h"
+#include "gpuReadbackHelper.h" // for AspectMaskForFormat
 #include "log.h"
 #include "tools.h"
 
@@ -25,6 +26,7 @@
 #include <limits>
 #include <memory>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 
 namespace gits {
@@ -677,23 +679,6 @@ void StateTrackingService::RestoreOne(ObjectState* state) {
 // EmitImageLayoutTransitions
 // ---------------------------------------------------------------------------
 
-static VkImageAspectFlags AspectMaskFromFormat(VkFormat fmt) {
-  switch (fmt) {
-  case VK_FORMAT_D16_UNORM:
-  case VK_FORMAT_X8_D24_UNORM_PACK32:
-  case VK_FORMAT_D32_SFLOAT:
-    return VK_IMAGE_ASPECT_DEPTH_BIT;
-  case VK_FORMAT_S8_UINT:
-    return VK_IMAGE_ASPECT_STENCIL_BIT;
-  case VK_FORMAT_D16_UNORM_S8_UINT:
-  case VK_FORMAT_D24_UNORM_S8_UINT:
-  case VK_FORMAT_D32_SFLOAT_S8_UINT:
-    return VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
-  default:
-    return VK_IMAGE_ASPECT_COLOR_BIT;
-  }
-}
-
 namespace {
 
 // Find a queue key and command pool key that belong to deviceKey and share the
@@ -782,6 +767,74 @@ static bool FindQueueAndPoolForFamily(
   }
 
   return outQueueKey != 0 && outPoolKey != 0;
+}
+
+// Find a queue key and command pool key on deviceKey that share a queue family
+// supporting VK_QUEUE_GRAPHICS_BIT, `families` being that physical device's
+// queue family properties in family-index order.  Only a graphics-capable
+// family may copy a depth/stencil aspect
+// (VUID-vkCmdCopyImageToBuffer-commandBuffer-10216), and FindQueueAndPool
+// returns whichever family paired first, which need not be one - so a readback
+// of such an image needs this second pair to be legal at all.
+//
+// Unlike the pair FindQueueAndPool's callers use, this one is never named in
+// the stream: it exists only for the recorder's own readback submit, whose
+// handles are resolved live.  Membership of m_RestoredThisPass is therefore not
+// required of it, and demanding it would only narrow the search.
+static bool FindGraphicsQueueAndPool(const std::map<uint64_t, std::unique_ptr<ObjectState>>& states,
+                                     uint64_t deviceKey,
+                                     const std::vector<VkQueueFamilyProperties>& families,
+                                     uint64_t& outQueueKey,
+                                     uint64_t& outPoolKey,
+                                     uint32_t& outFamily) {
+  outQueueKey = 0;
+  outPoolKey = 0;
+  outFamily = UINT32_MAX;
+
+  // Collect the graphics-capable families that have a queue first, then take the
+  // first pool on one of them: a command buffer allocated from a pool of family
+  // X cannot be submitted to a queue of family Y, so both must share a family.
+  std::unordered_map<uint32_t, uint64_t> familyToQueue;
+  for (const auto& [k, sp] : states) {
+    if (sp->Destroyed || sp->ParentKey != deviceKey) {
+      continue;
+    }
+    if (sp->CreationCommandId != CommandId::ID_VKGETDEVICEQUEUE &&
+        sp->CreationCommandId != CommandId::ID_VKGETDEVICEQUEUE2) {
+      continue;
+    }
+    auto* qs = static_cast<QueueState*>(sp.get());
+    if (qs->QueueFamilyIndex >= families.size()) {
+      continue;
+    }
+    if ((families[qs->QueueFamilyIndex].queueFlags & VK_QUEUE_GRAPHICS_BIT) == 0) {
+      continue;
+    }
+    familyToQueue.emplace(qs->QueueFamilyIndex, k);
+  }
+
+  if (familyToQueue.empty()) {
+    return false;
+  }
+
+  for (const auto& [k, sp] : states) {
+    if (sp->Destroyed || sp->ParentKey != deviceKey) {
+      continue;
+    }
+    if (sp->CreationCommandId != CommandId::ID_VKCREATECOMMANDPOOL) {
+      continue;
+    }
+    auto* ps = static_cast<CommandPoolState*>(sp.get());
+    auto it = familyToQueue.find(ps->QueueFamilyIndex);
+    if (it != familyToQueue.end()) {
+      outQueueKey = it->second;
+      outPoolKey = k;
+      outFamily = ps->QueueFamilyIndex;
+      return true;
+    }
+  }
+
+  return false;
 }
 
 } // namespace
@@ -1132,7 +1185,7 @@ void StateTrackingService::EmitImageLayoutTransitions() {
       b.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
       b.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
       b.image = kDummyImageSentinel; // non-null so the player's null-check passes
-      b.subresourceRange.aspectMask = AspectMaskFromFormat(img->Format);
+      b.subresourceRange.aspectMask = AspectMaskForFormat(img->Format);
       b.subresourceRange.baseMipLevel = 0;
       b.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
       b.subresourceRange.baseArrayLayer = 0;
@@ -4918,6 +4971,60 @@ void StateTrackingService::RestoreImageContents() {
       continue;
     }
 
+    // FindQueueAndPool returns the first family that pairs a queue with a pool,
+    // which need not be a graphics one, and a depth/stencil
+    // vkCmdCopyImageToBuffer is only legal when the family the readback command
+    // pool was created on supports graphics
+    // (VUID-vkCmdCopyImageToBuffer-commandBuffer-10216).  Resolve that family's
+    // capabilities once here so the image loop below can route what it must not
+    // read back on this pair.  When the family cannot be identified we cannot
+    // show the copy to be illegal, and the readback family is almost always a
+    // universal one, so nothing is rerouted on a suspicion.
+    uint32_t readbackFamily = UINT32_MAX;
+    if (auto* poolState = GetState<CommandPoolState>(poolKey)) {
+      readbackFamily = poolState->QueueFamilyIndex;
+    }
+    bool readbackFamilyHasGraphics = true;
+    std::vector<VkQueueFamilyProperties> readbackFamilies;
+    if (readbackFamily != UINT32_MAX &&
+        m_GpuReadbackHelper->GetQueueFamilyProperties(physDevKey, readbackFamilies) &&
+        readbackFamily < readbackFamilies.size()) {
+      readbackFamilyHasGraphics =
+          (readbackFamilies[readbackFamily].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0;
+    }
+
+    // Dropping the image is the last resort, not the first one: the pair above
+    // is merely the one that paired first, and another family the application
+    // created a queue and a pool on may well be graphics-capable.  This second
+    // pair is used for the recorder's own readback submit only and is never
+    // named in the stream; the manifest goes on naming the pair FindQueueAndPool
+    // returned, so nothing about the emitted stream changes shape.
+    //
+    // That makes the readback legal, which is all this is about.  It does not
+    // make the player's upload copy legal: the player copies on the family the
+    // manifest names, so a depth/stencil upload there is still restricted by
+    // VUID-vkCmdCopyBufferToImage-commandBuffer-07739.  That is a separate,
+    // pre-existing gap on the replay side - the recorder cannot close it without
+    // a way to tell the player which family to upload through.
+    //
+    // readbackFamilies is populated whenever readbackFamilyHasGraphics is false,
+    // since that is the only way the flag can be cleared.
+    uint64_t graphicsQueueKey = 0, graphicsPoolKey = 0;
+    uint32_t graphicsFamily = UINT32_MAX;
+    if (!readbackFamilyHasGraphics &&
+        FindGraphicsQueueAndPool(m_States, deviceKey, readbackFamilies, graphicsQueueKey,
+                                 graphicsPoolKey, graphicsFamily)) {
+      LOG_INFO << "Vulkan subcapture: content-restore queue family=" << readbackFamily
+               << " on device key=" << deviceKey
+               << " does not support VK_QUEUE_GRAPHICS_BIT, so depth/stencil images are read back "
+                  "on graphics-capable queue family="
+               << graphicsFamily << " instead";
+    }
+    const bool haveGraphicsPair = graphicsQueueKey != 0 && graphicsPoolKey != 0;
+    // Depth/stencil images whose readback runs on the graphics pair rather than
+    // on the pair the manifest names.  Nothing else about them differs.
+    std::unordered_set<uint64_t> graphicsReadbackImages;
+
     // Build the manifest first (layout + size per image, no pixel data) so the
     // player knows the full footprint before any bytes stream in.  The layout
     // is computed the same way ReadImage lays out its readback, so the region
@@ -4934,6 +5041,37 @@ void StateTrackingService::RestoreImageContents() {
       if (!img) {
         continue;
       }
+      // Reading a depth/stencil aspect back on a family without graphics support
+      // is illegal (VUID-vkCmdCopyImageToBuffer-commandBuffer-10216), so such an
+      // image is read back on the graphics pair resolved above instead.  Only
+      // when there is no such pair is it excluded, the same way an
+      // unrestored-memory resource is, and what is lost is named.
+      const VkImageAspectFlags aspectMask = AspectMaskForFormat(img->Format);
+      const bool depthStencil =
+          (aspectMask & (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT)) != 0;
+      if (depthStencil && !readbackFamilyHasGraphics) {
+        // A CONCURRENT image may only be used on the families it was created
+        // over, so the graphics pair is no help to one that omits it
+        // (VUID-vkQueueSubmit-pSubmits-04626).  An EXCLUSIVE image carries no
+        // such list and may be used on any family.
+        const bool mayUseGraphicsPair =
+            haveGraphicsPair &&
+            (img->SharingMode == VK_SHARING_MODE_EXCLUSIVE ||
+             std::find(img->ConcurrentFamilies.begin(), img->ConcurrentFamilies.end(),
+                       graphicsFamily) != img->ConcurrentFamilies.end());
+        if (!mayUseGraphicsPair) {
+          LOG_WARNING << "Vulkan subcapture: image key=" << imgKey
+                      << " has a depth/stencil aspect, the content-restore queue family="
+                      << readbackFamily
+                      << " does not support VK_QUEUE_GRAPHICS_BIT and no other queue family on "
+                         "device key="
+                      << deviceKey
+                      << " may read it back - excluded from content restore, its contents will "
+                         "not be restored";
+          continue;
+        }
+        graphicsReadbackImages.insert(imgKey);
+      }
       RestoreContentManifestCommand::ImageEntry entry;
       entry.Size = m_GpuReadbackHelper->GetImageStagingLayout(
           img->Format, img->Extent, img->MipLevels, img->ArrayLayers, entry.Regions);
@@ -4943,7 +5081,7 @@ void StateTrackingService::RestoreImageContents() {
       entry.DstImageKey = imgKey;
       entry.Format = static_cast<uint32_t>(img->Format);
       entry.FinalLayout = static_cast<uint32_t>(img->CurrentLayout);
-      entry.AspectMask = static_cast<uint32_t>(AspectMaskFromFormat(img->Format));
+      entry.AspectMask = static_cast<uint32_t>(aspectMask);
       manifest.m_Images.push_back(std::move(entry));
       manifest.m_TotalBytes += manifest.m_Images.back().Size;
       orderedKeys.push_back(imgKey);
@@ -4963,8 +5101,14 @@ void StateTrackingService::RestoreImageContents() {
       std::vector<VkBufferImageCopy> regions;
       auto* img = static_cast<ImageState*>(GetState(imgKey));
       if (img) {
-        if (!m_GpuReadbackHelper->ReadImage(deviceKey, physDevKey, queueKey, poolKey, imgKey,
-                                            img->Format, img->Extent, img->MipLevels,
+        // Only the depth/stencil images the selection above could not read back
+        // on the manifest's pair take the graphics one; everything else is
+        // untouched by the legality route.
+        const bool useGraphicsPair = graphicsReadbackImages.count(imgKey) != 0;
+        const uint64_t readQueueKey = useGraphicsPair ? graphicsQueueKey : queueKey;
+        const uint64_t readPoolKey = useGraphicsPair ? graphicsPoolKey : poolKey;
+        if (!m_GpuReadbackHelper->ReadImage(deviceKey, physDevKey, readQueueKey, readPoolKey,
+                                            imgKey, img->Format, img->Extent, img->MipLevels,
                                             img->ArrayLayers, img->Samples, img->CurrentLayout,
                                             data, regions)) {
           LOG_WARNING << "Vulkan subcapture: GPU readback failed for image key=" << imgKey;

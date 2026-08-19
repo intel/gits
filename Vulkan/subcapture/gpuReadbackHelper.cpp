@@ -775,7 +775,10 @@ struct FormatBlockInfo {
   } Planes[3]{};
 };
 
-static FormatBlockInfo GetFormatBlockInfo(VkFormat fmt) {
+// warnOnUnknown is cleared by callers that only need the aspect mask: those run
+// for every restored image, not just the ones actually read back, and the
+// fallback block size they would be warned about does not affect their result.
+static FormatBlockInfo GetFormatBlockInfo(VkFormat fmt, bool warnOnUnknown = true) {
   switch (fmt) {
   // ---- Single-channel ----
   case VK_FORMAT_R8_UNORM:
@@ -981,8 +984,10 @@ static FormatBlockInfo GetFormatBlockInfo(VkFormat fmt) {
   case VK_FORMAT_D32_SFLOAT_S8_UINT:
     return {1, 1, 0, true, 4, 1};
   default:
-    LOG_WARNING << "GpuReadbackHelper: unknown format " << static_cast<uint32_t>(fmt)
-                << " for image readback, assuming 4 bytes/pixel";
+    if (warnOnUnknown) {
+      LOG_WARNING << "GpuReadbackHelper: unknown format " << static_cast<uint32_t>(fmt)
+                  << " for image readback, assuming 4 bytes/pixel";
+    }
     return {1, 1, 4};
   }
 }
@@ -1054,6 +1059,29 @@ static VkDeviceSize ComputeImageStagingLayout(VkFormat format,
 
 } // anonymous namespace
 
+VkImageAspectFlags AspectMaskForFormat(VkFormat format) {
+  const auto fi = GetFormatBlockInfo(format, /*warnOnUnknown=*/false);
+  if (fi.IsDepthStencil) {
+    VkImageAspectFlags aspect = 0;
+    if (fi.DepthBytes > 0) {
+      aspect |= VK_IMAGE_ASPECT_DEPTH_BIT;
+    }
+    if (fi.StencilBytes > 0) {
+      aspect |= VK_IMAGE_ASPECT_STENCIL_BIT;
+    }
+    return aspect;
+  }
+  // Multi-planar formats are color formats and fall through to COLOR too.  A
+  // barrier on a non-disjoint image *must* use COLOR (VUID-VkImageMemoryBarrier-
+  // image-09242), and a disjoint one may use COLOR just as well (VUID-
+  // VkImageMemoryBarrier-image-01672 permits either COLOR or plane bits).  Both
+  // rules are about disjointness, not about layout, and ImageState does not
+  // track VkImageCreateFlags, so per-plane bits could never be emitted safely.
+  // Copy regions are the opposite case and are built separately: each one needs
+  // a single plane bit (VUID-vkCmdCopyBufferToImage-dstImage-07981).
+  return VK_IMAGE_ASPECT_COLOR_BIT;
+}
+
 bool GpuReadbackHelper::ReadImage(uint64_t deviceKey,
                                   uint64_t physDevKey,
                                   uint64_t queueKey,
@@ -1106,31 +1134,7 @@ bool GpuReadbackHelper::ReadImage(uint64_t deviceKey,
   }
 
   // Determine the aspect mask for layout transitions.
-  const auto fi = GetFormatBlockInfo(format);
-  VkImageAspectFlags transitionAspect = VK_IMAGE_ASPECT_COLOR_BIT;
-  if (fi.IsDepthStencil) {
-    transitionAspect = 0;
-    if (fi.DepthBytes > 0) {
-      transitionAspect |= VK_IMAGE_ASPECT_DEPTH_BIT;
-    }
-    if (fi.StencilBytes > 0) {
-      transitionAspect |= VK_IMAGE_ASPECT_STENCIL_BIT;
-    }
-  } else if (fi.IsMultiPlanar) {
-    // Multi-planar images in video-decode layouts (VIDEO_DECODE_DST_KHR,
-    // VIDEO_DECODE_DPB_KHR) require per-plane aspect bits in barriers;
-    // VK_IMAGE_ASPECT_COLOR_BIT is only valid for GENERAL / UNDEFINED /
-    // TRANSFER_* layouts (VUID-VkImageMemoryBarrier-image-01672).
-    static constexpr VkImageAspectFlags kPlaneAspect[3] = {
-        VK_IMAGE_ASPECT_PLANE_0_BIT,
-        VK_IMAGE_ASPECT_PLANE_1_BIT,
-        VK_IMAGE_ASPECT_PLANE_2_BIT,
-    };
-    transitionAspect = 0;
-    for (uint8_t p = 0; p < fi.PlaneCount; ++p) {
-      transitionAspect |= kPlaneAspect[p];
-    }
-  }
+  const VkImageAspectFlags transitionAspect = AspectMaskForFormat(format);
 
   bool ok = SubmitOneShot(device, queue, pool, [&](VkCommandBuffer cb) {
     // Transition image: currentLayout ? TRANSFER_SRC_OPTIMAL.

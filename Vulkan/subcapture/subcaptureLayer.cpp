@@ -753,6 +753,11 @@ void SubcaptureLayer::Post(vkCreateImageCommand& command) {
   state->ArrayLayers = ci.arrayLayers;
   state->Samples = ci.samples;
   state->UsageFlags = ci.usage;
+  state->SharingMode = ci.sharingMode;
+  if (ci.sharingMode == VK_SHARING_MODE_CONCURRENT && ci.pQueueFamilyIndices != nullptr) {
+    state->ConcurrentFamilies.assign(ci.pQueueFamilyIndices,
+                                     ci.pQueueFamilyIndices + ci.queueFamilyIndexCount);
+  }
   StoreState(std::move(state), command);
 }
 
