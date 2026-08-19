@@ -71,7 +71,10 @@ public:
                          const std::vector<uint64_t>& beginInfoAttachmentKeys);
 
   // Buffer the finalLayout of every render-pass attachment into the recording
-  // command buffer and clear the per-CB render-pass tracking entry.
+  // command buffer, fall back to the recording pool's family as EXCLUSIVE
+  // owner for attachments this CB does not also touch via an explicit barrier
+  // (a render pass cannot itself perform a queue-family ownership transfer),
+  // and clear the per-CB render-pass tracking entry.
   void OnEndRenderPass(uint64_t cbKey);
 
   // Called when a command buffer is reset (vkResetCommandBuffer or
@@ -98,12 +101,38 @@ public:
   // Apply one command buffer's buffered layouts to the tracked images.
   void ApplyCommandBuffer(uint64_t cbKey);
 
+  // ---- Present-time completion --------------------------------------------
+
+  // Called from SubcaptureLayer::Post(vkQueuePresentKHRCommand&) for each
+  // image with a successful (VK_SUCCESS/VK_SUBOPTIMAL_KHR) per-image present
+  // result. vkQueuePresentKHR performs the acquire half of a queue-family
+  // ownership transfer implicitly on the presentation engine's behalf, so
+  // there is no acquire-half command buffer for ApplyCommandBuffer to route
+  // through. This resolves imageKey's pending transfer directly - a no-op
+  // unless the image is EXCLUSIVE and currently ExclusiveOwnershipPending.
+  void CompletePendingTransferOnPresent(uint64_t imageKey, uint32_t presentQueueFamily);
+
 private:
   // Per image key: the finalLayout to apply when the render pass ends.
   using ImageLayoutPairs = std::vector<std::pair<uint64_t, VkImageLayout>>;
 
   // Buffer newLayout for imageKey into cbKey's ImageLayoutAfterSubmit map.
   void RecordImageLayout(uint64_t cbKey, uint64_t imageKey, VkImageLayout newLayout);
+
+  void RecordExclusiveOwner(uint64_t cbKey, uint64_t imageKey, uint32_t ownerFamily);
+  void RecordExclusivePending(uint64_t cbKey, uint64_t imageKey);
+  // Permanently taint imageKey as having mixed/partial queue-family ownership
+  // (see NoteExclusiveQueueFamilyTransfer) - independent of, and never
+  // overwritten by, RecordExclusiveOwner/RecordExclusivePending's per-image
+  // "last write wins" map so a later whole-image update in the same CB cannot
+  // erase the taint.
+  void RecordExclusiveMixed(uint64_t cbKey, uint64_t imageKey);
+  void NoteExclusiveQueueFamilyUse(uint64_t cbKey, uint64_t imageKey);
+  void NoteExclusiveQueueFamilyTransfer(uint64_t cbKey,
+                                        uint64_t imageKey,
+                                        uint32_t srcFamily,
+                                        uint32_t dstFamily,
+                                        const VkImageSubresourceRange& range);
 
   StateTrackingService& m_StateTracking;
 

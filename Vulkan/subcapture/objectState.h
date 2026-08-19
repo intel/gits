@@ -202,6 +202,31 @@ struct ImageState : ObjectState {
   // (VUID-vkQueueSubmit-pSubmits-04626).
   VkSharingMode SharingMode{VK_SHARING_MODE_EXCLUSIVE};
   std::vector<uint32_t> ConcurrentFamilies{};
+  // For VK_SHARING_MODE_EXCLUSIVE, the queue family that currently owns the image
+  // (updated from ownership-transfer barriers and from submit-time use). UINT32_MAX
+  // means no family has been observed as owner yet.
+  uint32_t ExclusiveOwnerFamily{UINT32_MAX};
+  // True from the point a queue-family ownership *release* barrier is submitted
+  // until the matching *acquire* barrier is submitted on the destination
+  // family.  While pending, no family may legally read the image (a one-shot
+  // content-restore readback cannot perform the release+acquire handshake
+  // itself), so ExclusiveOwnerFamily must be ignored and the image excluded
+  // from content restore - see ImageLayoutService::NoteExclusiveQueueFamilyTransfer.
+  bool ExclusiveOwnershipPending{false};
+  // True once a queue-family ownership transfer barrier has been observed
+  // whose subresourceRange does not cover the whole image: ownership is
+  // tracked per whole image here, not per mip/layer/aspect, so such a
+  // barrier may leave some subresources on a different family than
+  // ExclusiveOwnerFamily records.  Sticky for simplicity (never cleared)
+  // rather than attempting to reconcile partial ranges - content restore
+  // always copies the whole image, so it must exclude any image that was
+  // ever partially transferred instead of guessing which parts are safe.
+  bool ExclusiveOwnershipMixed{false};
+  // From VkImageCreateInfo::flags & VK_IMAGE_CREATE_DISJOINT_BIT. A disjoint
+  // multi-planar image's barriers must use plane aspect bits rather than
+  // COLOR (VUID-VkImageMemoryBarrier-image-01672 / -image-09242) - see
+  // AspectMaskForFormat.
+  bool Disjoint{false};
   // Set true by RestoreImageContents once pixel data has been copied into the
   // subcapture stream.  EmitImageLayoutTransitions skips these images because
   // the buffer-to-image copy already ends in the correct layout.
@@ -358,6 +383,15 @@ struct PendingAsInputReadback {
   std::vector<StagedInputReadback> Staging; // parallel to Buffers
 };
 
+// Buffered per-CB owner update for one EXCLUSIVE image, applied to
+// ImageState::ExclusiveOwnerFamily / ExclusiveOwnershipPending at submit time.
+// See CommandBufferState::ExclusiveOwnerAfterSubmit and
+// ImageLayoutService::NoteExclusiveQueueFamilyTransfer.
+struct ExclusiveOwnerUpdate {
+  uint32_t Family{UINT32_MAX};
+  bool Pending{false};
+};
+
 struct CommandBufferState : ObjectState {
   // Needed for dependency-order restore: pool must exist before allocating buffers.
   uint64_t PoolKey{};
@@ -404,6 +438,18 @@ struct CommandBufferState : ObjectState {
   // layouts (e.g. the next frame's command buffers being recorded ahead).
   // Mirrors legacy CCommandBufferState::imageLayoutAfterSubmit.
   std::unordered_map<uint64_t, VkImageLayout> ImageLayoutAfterSubmit;
+  // For VK_SHARING_MODE_EXCLUSIVE images, the owner-family update each image
+  // gets once this CB is submitted (last write wins).  Populated from
+  // queue-family ownership barriers and from use on the recording pool's
+  // family; applied to ImageState::ExclusiveOwnerFamily /
+  // ExclusiveOwnershipPending at submit time, not at vkCmd* record time.
+  std::unordered_map<uint64_t, ExclusiveOwnerUpdate> ExclusiveOwnerAfterSubmit;
+  // EXCLUSIVE images this CB observed a partial-range ownership-transfer
+  // barrier for (see ImageLayoutService::RecordExclusiveMixed).  Kept
+  // separate from ExclusiveOwnerAfterSubmit's per-image "last write wins"
+  // map so a later whole-image owner update recorded on the same image in
+  // this CB cannot erase the taint before it is applied at submit time.
+  std::unordered_set<uint64_t> ExclusiveOwnerMixedAfterSubmit;
   // Acceleration-structure builds whose input buffers must be read back after this CB is
   // submitted. Folded onto the executing primary at vkCmdExecuteCommands. Cleared on CB
   // reset and one-time-submit invalidation.

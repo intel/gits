@@ -144,6 +144,7 @@ public:
                          uint32_t arrayLayers,
                          VkSampleCountFlagBits samples,
                          VkImageLayout currentLayout,
+                         bool disjoint,
                          std::vector<uint8_t>& outData,
                          std::vector<VkBufferImageCopy>& outRegions) = 0;
 

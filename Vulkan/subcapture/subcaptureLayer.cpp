@@ -73,11 +73,28 @@ void SubcaptureLayer::Post(vkQueuePresentKHRCommand& command) {
     m_SyncState.OnQueuePresent(*command.m_pPresentInfo.Value, command.m_pPresentInfo.HandleKeys);
   }
 
-  // Remove presented images from their swapchain's AcquiredImages set.
+  // Remove presented images from their swapchain's AcquiredImages set, and
+  // complete any pending EXCLUSIVE queue-family-ownership transfer for each
+  // successfully presented image.
+  //
+  // For the common exclusive-swapchain pattern (separate graphics and present
+  // queue families) the application only ever records the release half of the
+  // ownership-transfer barrier (srcFamily=graphics, dstFamily=present) on its
+  // own (graphics) command buffer - there is no application-recorded acquire
+  // barrier, because vkQueuePresentKHR itself performs that acquire
+  // implicitly on the presentation engine's behalf (Vulkan spec, "Queue
+  // Family Ownership Transfer"). Without resolving it here, such images stay
+  // ExclusiveOwnershipPending forever (see NoteExclusiveQueueFamilyTransfer),
+  // which permanently blocks EmitImageLayoutTransitions() from emitting their
+  // UNDEFINED -> PRESENT_SRC_KHR restore barrier at subcapture time.
   // HandleKeys layout: [waitSemaphoreKeys...][swapchainKeys...]
   if (command.m_pPresentInfo.Value) {
     const VkPresentInfoKHR& pi = *command.m_pPresentInfo.Value;
     const uint32_t swapchainKeyStart = pi.waitSemaphoreCount;
+    uint32_t presentQueueFamily = UINT32_MAX;
+    if (auto* queueState = m_StateTracking.GetState<QueueState>(command.m_queue.Key)) {
+      presentQueueFamily = queueState->QueueFamilyIndex;
+    }
     for (uint32_t i = 0; i < pi.swapchainCount && pi.pImageIndices; ++i) {
       const uint32_t keyIdx = swapchainKeyStart + i;
       if (keyIdx >= command.m_pPresentInfo.HandleKeys.size()) {
@@ -87,6 +104,15 @@ void SubcaptureLayer::Post(vkQueuePresentKHRCommand& command) {
       auto* sc = m_StateTracking.GetState<SwapchainState>(swapchainKey);
       if (sc) {
         sc->AcquiredImages.erase(pi.pImageIndices[i]);
+      }
+      // Per-image present result: pResults[i] when the caller asked for it,
+      // otherwise the single VkResult returned by vkQueuePresentKHR applies
+      // to every swapchain in the batch.
+      const VkResult presentResult = pi.pResults ? pi.pResults[i] : command.m_Return.Value;
+      const bool presentedOk = (presentResult == VK_SUCCESS || presentResult == VK_SUBOPTIMAL_KHR);
+      if (presentedOk && sc && pi.pImageIndices[i] < sc->ImageKeys.size()) {
+        m_ImageLayout.CompletePendingTransferOnPresent(sc->ImageKeys[pi.pImageIndices[i]],
+                                                       presentQueueFamily);
       }
     }
   }
@@ -754,6 +780,7 @@ void SubcaptureLayer::Post(vkCreateImageCommand& command) {
   state->Samples = ci.samples;
   state->UsageFlags = ci.usage;
   state->SharingMode = ci.sharingMode;
+  state->Disjoint = (ci.flags & VK_IMAGE_CREATE_DISJOINT_BIT) != 0;
   if (ci.sharingMode == VK_SHARING_MODE_CONCURRENT && ci.pQueueFamilyIndices != nullptr) {
     state->ConcurrentFamilies.assign(ci.pQueueFamilyIndices,
                                      ci.pQueueFamilyIndices + ci.queueFamilyIndexCount);
@@ -2761,6 +2788,33 @@ void SubcaptureLayer::Post(vkGetSwapchainImagesKHRCommand& command) {
   if (!swapchainState) {
     return;
   }
+
+  // Swapchain images have no vkCreateImageCommand of their own, so
+  // MaySubmitImageOperationOnQueueFamily (stateTrackingService.cpp) would otherwise see
+  // every swapchain ImageState with the ImageState defaults (EXCLUSIVE, no
+  // ConcurrentFamilies) even when the application requested
+  // VK_SHARING_MODE_CONCURRENT in VkSwapchainCreateInfoKHR. Decode the swapchain's
+  // retained creation command (the same encode/decode round-trip RestoreImage uses
+  // for CreationCommandBuffer) to recover the real imageSharingMode /
+  // pQueueFamilyIndices and propagate them onto each image below, so family-routing
+  // for swapchain images works the same as for regular ones.
+  VkSharingMode imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+  std::vector<uint32_t> concurrentFamilies;
+  if (!swapchainState->CreationCommandBuffer.empty()) {
+    std::vector<char> scratch = swapchainState->CreationCommandBuffer;
+    vkCreateSwapchainKHRCommand createCmd;
+    Decode(scratch.data(), createCmd);
+    if (createCmd.m_pCreateInfo.Value) {
+      imageSharingMode = createCmd.m_pCreateInfo.Value->imageSharingMode;
+      if (imageSharingMode == VK_SHARING_MODE_CONCURRENT &&
+          createCmd.m_pCreateInfo.Value->pQueueFamilyIndices != nullptr) {
+        concurrentFamilies.assign(createCmd.m_pCreateInfo.Value->pQueueFamilyIndices,
+                                  createCmd.m_pCreateInfo.Value->pQueueFamilyIndices +
+                                      createCmd.m_pCreateInfo.Value->queueFamilyIndexCount);
+      }
+    }
+  }
+
   for (uint32_t i = 0; i < command.m_pSwapchainImages.Size; ++i) {
     uint64_t imgKey = command.m_pSwapchainImages.Keys[i];
 
@@ -2770,6 +2824,8 @@ void SubcaptureLayer::Post(vkGetSwapchainImagesKHRCommand& command) {
       auto state = std::make_unique<ImageState>();
       state->Key = imgKey;
       state->ParentKey = command.m_swapchain.Key;
+      state->SharingMode = imageSharingMode;
+      state->ConcurrentFamilies = concurrentFamilies;
       StoreState(std::move(state), command);
     }
   }

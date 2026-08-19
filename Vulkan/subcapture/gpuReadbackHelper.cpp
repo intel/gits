@@ -1059,7 +1059,7 @@ static VkDeviceSize ComputeImageStagingLayout(VkFormat format,
 
 } // anonymous namespace
 
-VkImageAspectFlags AspectMaskForFormat(VkFormat format) {
+VkImageAspectFlags AspectMaskForFormat(VkFormat format, bool disjoint) {
   const auto fi = GetFormatBlockInfo(format, /*warnOnUnknown=*/false);
   if (fi.IsDepthStencil) {
     VkImageAspectFlags aspect = 0;
@@ -1071,14 +1071,19 @@ VkImageAspectFlags AspectMaskForFormat(VkFormat format) {
     }
     return aspect;
   }
-  // Multi-planar formats are color formats and fall through to COLOR too.  A
-  // barrier on a non-disjoint image *must* use COLOR (VUID-VkImageMemoryBarrier-
-  // image-09242), and a disjoint one may use COLOR just as well (VUID-
-  // VkImageMemoryBarrier-image-01672 permits either COLOR or plane bits).  Both
-  // rules are about disjointness, not about layout, and ImageState does not
-  // track VkImageCreateFlags, so per-plane bits could never be emitted safely.
-  // Copy regions are the opposite case and are built separately: each one needs
-  // a single plane bit (VUID-vkCmdCopyBufferToImage-dstImage-07981).
+  // A barrier on a disjoint multi-planar image must name its plane(s)
+  // (VUID-VkImageMemoryBarrier-image-01672 forbids COLOR there); a
+  // non-disjoint one must use COLOR instead (VUID-VkImageMemoryBarrier-image-
+  // 09242 forbids plane bits there).  Copy regions are unaffected by this:
+  // each one already names a single plane bit, built separately from this
+  // mask (VUID-vkCmdCopyBufferToImage-dstImage-07981).
+  if (fi.IsMultiPlanar && disjoint) {
+    VkImageAspectFlags aspect = VK_IMAGE_ASPECT_PLANE_0_BIT | VK_IMAGE_ASPECT_PLANE_1_BIT;
+    if (fi.PlaneCount >= 3) {
+      aspect |= VK_IMAGE_ASPECT_PLANE_2_BIT;
+    }
+    return aspect;
+  }
   return VK_IMAGE_ASPECT_COLOR_BIT;
 }
 
@@ -1093,6 +1098,7 @@ bool GpuReadbackHelper::ReadImage(uint64_t deviceKey,
                                   uint32_t arrayLayers,
                                   VkSampleCountFlagBits samples,
                                   VkImageLayout currentLayout,
+                                  bool disjoint,
                                   std::vector<uint8_t>& outData,
                                   std::vector<VkBufferImageCopy>& outRegions) {
   // Multisampled images cannot be copied with vkCmdCopyImageToBuffer.
@@ -1134,10 +1140,16 @@ bool GpuReadbackHelper::ReadImage(uint64_t deviceKey,
   }
 
   // Determine the aspect mask for layout transitions.
-  const VkImageAspectFlags transitionAspect = AspectMaskForFormat(format);
+  const VkImageAspectFlags transitionAspect = AspectMaskForFormat(format, disjoint);
 
   bool ok = SubmitOneShot(device, queue, pool, [&](VkCommandBuffer cb) {
-    // Transition image: currentLayout ? TRANSFER_SRC_OPTIMAL.
+    // Transition image: currentLayout ? TRANSFER_SRC_OPTIMAL.  No ownership
+    // transfer is attempted here: an EXCLUSIVE image's queue family must
+    // already be the one this is submitted on, since a legal transfer needs
+    // a release submitted on the owning queue and a matching acquire
+    // submitted on this one, which a single one-shot submission cannot do
+    // (see MaySubmitImageOperationOnQueueFamily, the caller that
+    // enforces this precondition for depth/stencil images).
     VkImageMemoryBarrier toSrc{};
     toSrc.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
     toSrc.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT;

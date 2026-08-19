@@ -25,6 +25,7 @@
 #include <cstring>
 #include <limits>
 #include <memory>
+#include <sstream>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -769,21 +770,41 @@ static bool FindQueueAndPoolForFamily(
   return outQueueKey != 0 && outPoolKey != 0;
 }
 
-// Find a queue key and command pool key on deviceKey that share a queue family
-// supporting VK_QUEUE_GRAPHICS_BIT, `families` being that physical device's
-// queue family properties in family-index order.  Only a graphics-capable
-// family may copy a depth/stencil aspect
-// (VUID-vkCmdCopyImageToBuffer-commandBuffer-10216), and FindQueueAndPool
-// returns whichever family paired first, which need not be one - so a readback
-// of such an image needs this second pair to be legal at all.
-//
-// Unlike the pair FindQueueAndPool's callers use, this one is never named in
-// the stream: it exists only for the recorder's own readback submit, whose
-// handles are resolved live.  Membership of m_RestoredThisPass is therefore not
-// required of it, and demanding it would only narrow the search.
+// Whether an operation on an image (content-restore readback/upload, or a
+// bare layout-transition barrier) may legally be submitted on queueFamily.
+// CONCURRENT images require the family in pQueueFamilyIndices.  EXCLUSIVE
+// images require ExclusiveOwnerFamily == family (or no owner observed yet),
+// and must not be mid queue-family-ownership transfer (ExclusiveOwnershipPending)
+// - a real transfer needs synchronized release/acquire submits on two queues,
+// which a one-shot submit cannot perform.  Nor may it have ever seen a
+// partial-range ownership transfer (ExclusiveOwnershipMixed): ownership is
+// tracked per whole image, so a family recorded as "owner" from a partial
+// transfer may not actually own every subresource a whole-image operation
+// would touch - including a barrier's, which would otherwise (re)establish
+// that family as the image's owner.
+static bool MaySubmitImageOperationOnQueueFamily(const ImageState& img, uint32_t queueFamily) {
+  if (queueFamily == UINT32_MAX) {
+    return false;
+  }
+  if (img.SharingMode == VK_SHARING_MODE_CONCURRENT) {
+    return std::find(img.ConcurrentFamilies.begin(), img.ConcurrentFamilies.end(), queueFamily) !=
+           img.ConcurrentFamilies.end();
+  }
+  if (img.ExclusiveOwnershipPending || img.ExclusiveOwnershipMixed) {
+    return false;
+  }
+  return img.ExclusiveOwnerFamily == UINT32_MAX || img.ExclusiveOwnerFamily == queueFamily;
+}
+
+// Find a restored queue key and command pool key on deviceKey that share a queue
+// family supporting VK_QUEUE_GRAPHICS_BIT.  Depth/stencil aspects require a
+// graphics-capable family (VUID-vkCmdCopyImageToBuffer-commandBuffer-10216).
+// Content restore manifests name concrete queue/pool keys, so only restored
+// handles are returned.
 static bool FindGraphicsQueueAndPool(const std::map<uint64_t, std::unique_ptr<ObjectState>>& states,
                                      uint64_t deviceKey,
                                      const std::vector<VkQueueFamilyProperties>& families,
+                                     const std::unordered_set<uint64_t>& restored,
                                      uint64_t& outQueueKey,
                                      uint64_t& outPoolKey,
                                      uint32_t& outFamily) {
@@ -801,6 +822,9 @@ static bool FindGraphicsQueueAndPool(const std::map<uint64_t, std::unique_ptr<Ob
     }
     if (sp->CreationCommandId != CommandId::ID_VKGETDEVICEQUEUE &&
         sp->CreationCommandId != CommandId::ID_VKGETDEVICEQUEUE2) {
+      continue;
+    }
+    if (!restored.count(k)) {
       continue;
     }
     auto* qs = static_cast<QueueState*>(sp.get());
@@ -824,6 +848,9 @@ static bool FindGraphicsQueueAndPool(const std::map<uint64_t, std::unique_ptr<Ob
     if (sp->CreationCommandId != CommandId::ID_VKCREATECOMMANDPOOL) {
       continue;
     }
+    if (!restored.count(k)) {
+      continue;
+    }
     auto* ps = static_cast<CommandPoolState*>(sp.get());
     auto it = familyToQueue.find(ps->QueueFamilyIndex);
     if (it != familyToQueue.end()) {
@@ -835,6 +862,46 @@ static bool FindGraphicsQueueAndPool(const std::map<uint64_t, std::unique_ptr<Ob
   }
 
   return false;
+}
+
+// Build family -> (queueKey, poolKey) for every queue family on deviceKey that
+// has both a restored VkQueue and a restored VkCommandPool, so an image whose
+// permitted family is neither the default readback pair nor the graphics
+// fallback pair can still be routed to a legal restored pair (unlike
+// FindGraphicsQueueAndPool, this does not filter by VK_QUEUE_GRAPHICS_BIT -
+// callers apply that requirement themselves for depth/stencil images).
+// std::map, not unordered_map, so callers iterate families in a stable order.
+static std::map<uint32_t, std::pair<uint64_t, uint64_t>> FindAllRestoredQueueAndPools(
+    const std::map<uint64_t, std::unique_ptr<ObjectState>>& states,
+    uint64_t deviceKey,
+    const std::unordered_set<uint64_t>& restored) {
+  std::unordered_map<uint32_t, uint64_t> familyToQueue;
+  for (const auto& [k, sp] : states) {
+    if (sp->Destroyed || sp->ParentKey != deviceKey || !restored.count(k)) {
+      continue;
+    }
+    if (sp->CreationCommandId == CommandId::ID_VKGETDEVICEQUEUE ||
+        sp->CreationCommandId == CommandId::ID_VKGETDEVICEQUEUE2) {
+      auto* qs = static_cast<QueueState*>(sp.get());
+      familyToQueue.emplace(qs->QueueFamilyIndex, k);
+    }
+  }
+
+  std::map<uint32_t, std::pair<uint64_t, uint64_t>> familyToQueuePool;
+  for (const auto& [k, sp] : states) {
+    if (sp->Destroyed || sp->ParentKey != deviceKey || !restored.count(k)) {
+      continue;
+    }
+    if (sp->CreationCommandId != CommandId::ID_VKCREATECOMMANDPOOL) {
+      continue;
+    }
+    auto* ps = static_cast<CommandPoolState*>(sp.get());
+    auto it = familyToQueue.find(ps->QueueFamilyIndex);
+    if (it != familyToQueue.end()) {
+      familyToQueuePool.emplace(ps->QueueFamilyIndex, std::make_pair(it->second, k));
+    }
+  }
+  return familyToQueuePool;
 }
 
 } // namespace
@@ -1059,6 +1126,14 @@ void StateTrackingService::EmitImageLayoutTransitions() {
       continue;
     }
 
+    // RestoreImage leaves disjoint multi-planar images unbound (plane
+    // bindings are not tracked - see the ImageState::Disjoint branch there),
+    // so a barrier against one here would be invalid: the image never got
+    // any memory to transition.
+    if (img->Disjoint) {
+      continue;
+    }
+
     // Layout-restore policy at the cut:
     //   * Regular image: transition to its tracked CurrentLayout; skip
     //     UNDEFINED / PREINITIALIZED (the second player creates it UNDEFINED).
@@ -1119,152 +1194,258 @@ void StateTrackingService::EmitImageLayoutTransitions() {
                   << deviceKey;
       continue;
     }
-
-    // Allocate a temporary command buffer using the existing command pool.
-    {
-      VkCommandBufferAllocateInfo allocInfo{};
-      allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-      allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-      allocInfo.commandBufferCount = 1;
-      // allocInfo.commandPool is a handle (set to sentinel); the pool key
-      // is in HandleKeys and will be remapped by the player.
-      allocInfo.commandPool = reinterpret_cast<VkCommandPool>(0x1ULL);
-
-      static VkCommandBuffer kDummyCBSlot = VK_NULL_HANDLE;
-
-      vkAllocateCommandBuffersCommand allocCmd;
-      allocCmd.m_device.Key = deviceKey;
-      allocCmd.m_pAllocateInfo.Value = &allocInfo;
-      allocCmd.m_pAllocateInfo.HandleKeys = {commandPoolKey};
-      allocCmd.m_pCommandBuffers.Value = &kDummyCBSlot;
-      allocCmd.m_pCommandBuffers.Size = 1;
-      allocCmd.m_pCommandBuffers.Keys = {kTempCBKey};
-      allocCmd.m_Return.Value = VK_SUCCESS;
-      m_Recorder.Record(vkAllocateCommandBuffersSerializer(allocCmd));
+    uint32_t defaultFamily = UINT32_MAX;
+    if (auto* poolState = GetState<CommandPoolState>(commandPoolKey)) {
+      defaultFamily = poolState->QueueFamilyIndex;
     }
 
-    // Begin the temporary command buffer.
-    {
-      VkCommandBufferBeginInfo beginInfo{};
-      beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-      beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    // Every other restored (queueKey, poolKey) pair on this device, for
+    // images the default pair cannot legally carry a barrier for (e.g. an
+    // EXCLUSIVE image already owned by a different restored family: issuing
+    // its barrier on the default family would (re)establish that family as
+    // owner, which is illegitimate and may not even be legal if the image is
+    // mid-transfer or CONCURRENT over a different family set).
+    const std::map<uint32_t, std::pair<uint64_t, uint64_t>> allFamilyPairs =
+        FindAllRestoredQueueAndPools(m_States, deviceKey, m_RestoredThisPass);
 
-      vkBeginCommandBufferCommand beginCmd;
-      beginCmd.m_commandBuffer.Key = kTempCBKey;
-      beginCmd.m_pBeginInfo.Value = &beginInfo;
-      beginCmd.m_Return.Value = VK_SUCCESS;
-      m_Recorder.Record(vkBeginCommandBufferSerializer(beginCmd));
-    }
-
-    // Build image memory barriers: UNDEFINED ? currentLayout for each image.
-    std::vector<VkImageMemoryBarrier> barriers;
-    std::vector<uint64_t> barrierImageKeys;
-
-    static const VkImage kDummyImageSentinel = reinterpret_cast<VkImage>(0x1ULL);
-
+    std::map<uint32_t, std::vector<uint64_t>> groupsByFamily;
     for (uint64_t imgKey : imgKeys) {
       auto* img = static_cast<ImageState*>(GetState(imgKey));
       if (!img) {
         continue;
       }
-      const bool isSwapchain = (img->CreationCommandId == CommandId::ID_VKGETSWAPCHAINIMAGESKHR);
-      VkImageLayout targetLayout;
-      if (isSwapchain && !IsAcquiredSwapchainImage(img)) {
-        // Non-acquired swapchain image: force PRESENT_SRC_KHR for present rewind.
-        targetLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+      const bool isSwapchainImg = (img->CreationCommandId == CommandId::ID_VKGETSWAPCHAINIMAGESKHR);
+      const bool forcePresentSrc = isSwapchainImg && !IsAcquiredSwapchainImage(img);
+      uint32_t chosenFamily = UINT32_MAX;
+      if (forcePresentSrc) {
+        // This barrier's job is to hand the image to its recorded present-time
+        // owner (see the srcQueueFamilyIndex/dstQueueFamilyIndex handling below),
+        // not to prove some family already has legitimate access to it - so it
+        // must NOT go through the MaySubmitImageOperationOnQueueFamily/
+        // allFamilyPairs search below, which answers exactly that (different)
+        // question. For an EXCLUSIVE image, CompletePendingTransferOnPresent
+        // records ExclusiveOwnerFamily as the *present* family, and that search
+        // would then require a restored VkCommandPool ON the present family -
+        // which, for the common separate-graphics/present-queue application, is
+        // a queue family the app may never have created a pool for at all (a
+        // present-only family need not support any command-buffer-submittable
+        // queue capability). Route through the default restored family instead;
+        // it always has a real pool by construction (see the FindQueueAndPool
+        // check earlier in this function).
+        chosenFamily = defaultFamily;
+      } else if (defaultFamily != UINT32_MAX &&
+                 MaySubmitImageOperationOnQueueFamily(*img, defaultFamily)) {
+        chosenFamily = defaultFamily;
       } else {
-        // Regular image or acquired swapchain image: restore its tracked layout.
-        targetLayout = img->CurrentLayout;
+        for (const auto& entry : allFamilyPairs) {
+          if (MaySubmitImageOperationOnQueueFamily(*img, entry.first)) {
+            chosenFamily = entry.first;
+            break;
+          }
+        }
       }
-      VkImageMemoryBarrier b{};
-      b.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-      b.srcAccessMask = 0;
-      b.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
-      b.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-      b.newLayout = targetLayout;
-      b.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-      b.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-      b.image = kDummyImageSentinel; // non-null so the player's null-check passes
-      b.subresourceRange.aspectMask = AspectMaskForFormat(img->Format);
-      b.subresourceRange.baseMipLevel = 0;
-      b.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
-      b.subresourceRange.baseArrayLayer = 0;
-      b.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
-      barriers.push_back(b);
-      barrierImageKeys.push_back(imgKey);
+      if (chosenFamily == UINT32_MAX) {
+        LOG_WARNING << "Vulkan subcapture: image key=" << imgKey
+                    << " cannot have its layout restored on any restored queue family compatible "
+                       "with its sharing mode/ownership on device key="
+                    << deviceKey << " - its layout will not be restored";
+        continue;
+      }
+      groupsByFamily[chosenFamily].push_back(imgKey);
     }
 
-    if (!barriers.empty()) {
-      vkCmdPipelineBarrierCommand barrierCmd;
-      barrierCmd.m_commandBuffer.Key = kTempCBKey;
-      barrierCmd.m_srcStageMask.Value = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-      barrierCmd.m_dstStageMask.Value = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
-      barrierCmd.m_dependencyFlags.Value = 0;
-      barrierCmd.m_memoryBarrierCount.Value = 0;
-      barrierCmd.m_bufferMemoryBarrierCount.Value = 0;
-      barrierCmd.m_imageMemoryBarrierCount.Value = static_cast<uint32_t>(barriers.size());
-      barrierCmd.m_pImageMemoryBarriers.Value = barriers.data();
-      barrierCmd.m_pImageMemoryBarriers.Size = static_cast<uint32_t>(barriers.size());
-      barrierCmd.m_pImageMemoryBarriers.HandleKeys = barrierImageKeys;
-      m_Recorder.Record(vkCmdPipelineBarrierSerializer(barrierCmd));
+    static const VkImage kDummyImageSentinel = reinterpret_cast<VkImage>(0x1ULL);
+
+    // Emits one temporary command buffer transitioning every image in `keys`
+    // on (targetQueueKey, targetPoolKey), so a group routed away from the
+    // default pair never shares a submission with images that stayed on it.
+    // submittingFamily is the queue family the batch is actually submitted on
+    // (== the family the barriers' srcQueueFamilyIndex would name for a real
+    // ownership transfer): needed to tell a same-family barrier (no transfer)
+    // apart from a genuine hand-off to a different recorded owner family.
+    auto emitBatch = [&](uint64_t targetQueueKey, uint64_t targetPoolKey, uint32_t submittingFamily,
+                         const std::vector<uint64_t>& keys) {
+      if (keys.empty()) {
+        return;
+      }
+      // Allocate a temporary command buffer using the existing command pool.
+      {
+        VkCommandBufferAllocateInfo allocInfo{};
+        allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        allocInfo.commandBufferCount = 1;
+        // allocInfo.commandPool is a handle (set to sentinel); the pool key
+        // is in HandleKeys and will be remapped by the player.
+        allocInfo.commandPool = reinterpret_cast<VkCommandPool>(0x1ULL);
+
+        static VkCommandBuffer kDummyCBSlot = VK_NULL_HANDLE;
+
+        vkAllocateCommandBuffersCommand allocCmd;
+        allocCmd.m_device.Key = deviceKey;
+        allocCmd.m_pAllocateInfo.Value = &allocInfo;
+        allocCmd.m_pAllocateInfo.HandleKeys = {targetPoolKey};
+        allocCmd.m_pCommandBuffers.Value = &kDummyCBSlot;
+        allocCmd.m_pCommandBuffers.Size = 1;
+        allocCmd.m_pCommandBuffers.Keys = {kTempCBKey};
+        allocCmd.m_Return.Value = VK_SUCCESS;
+        m_Recorder.Record(vkAllocateCommandBuffersSerializer(allocCmd));
+      }
+
+      // Begin the temporary command buffer.
+      {
+        VkCommandBufferBeginInfo beginInfo{};
+        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+        vkBeginCommandBufferCommand beginCmd;
+        beginCmd.m_commandBuffer.Key = kTempCBKey;
+        beginCmd.m_pBeginInfo.Value = &beginInfo;
+        beginCmd.m_Return.Value = VK_SUCCESS;
+        m_Recorder.Record(vkBeginCommandBufferSerializer(beginCmd));
+      }
+
+      // Build image memory barriers: UNDEFINED ? currentLayout for each image.
+      std::vector<VkImageMemoryBarrier> barriers;
+      std::vector<uint64_t> barrierImageKeys;
+
+      for (uint64_t imgKey : keys) {
+        auto* img = static_cast<ImageState*>(GetState(imgKey));
+        if (!img) {
+          continue;
+        }
+        const bool isSwapchain = (img->CreationCommandId == CommandId::ID_VKGETSWAPCHAINIMAGESKHR);
+        const bool forcePresentSrc = isSwapchain && !IsAcquiredSwapchainImage(img);
+        VkImageLayout targetLayout;
+        if (forcePresentSrc) {
+          // Non-acquired swapchain image: force PRESENT_SRC_KHR for present rewind.
+          targetLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        } else {
+          // Regular image or acquired swapchain image: restore its tracked layout.
+          targetLayout = img->CurrentLayout;
+        }
+        VkImageMemoryBarrier b{};
+        b.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        b.srcAccessMask = 0;
+        b.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
+        b.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        b.newLayout = targetLayout;
+        b.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        b.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        // A non-acquired swapchain image whose recorded owner (ExclusiveOwnerFamily,
+        // set by CompletePendingTransferOnPresent) is a different family than the
+        // one this barrier is actually submitted on needs a genuine queue-family-
+        // ownership release: this batch runs on submittingFamily (chosen above
+        // specifically because it has a restored pool), but the image's last known
+        // owner is its present family, which commonly has none. Per the Vulkan spec
+        // ("Queue Family Ownership Transfer"), a release-only barrier naming the
+        // real src/dst family pair is legal and sufficient here - the matching
+        // acquire is performed implicitly by vkQueuePresentKHR on the presentation
+        // engine's behalf, so no acquire submission on the present family is
+        // required or possible. CONCURRENT images, images with no recorded owner
+        // yet, and images already owned by submittingFamily need no transfer at
+        // all, so they keep IGNORED/IGNORED.
+        if (forcePresentSrc && img->SharingMode == VK_SHARING_MODE_EXCLUSIVE &&
+            img->ExclusiveOwnerFamily != UINT32_MAX &&
+            img->ExclusiveOwnerFamily != submittingFamily) {
+          b.srcQueueFamilyIndex = submittingFamily;
+          b.dstQueueFamilyIndex = img->ExclusiveOwnerFamily;
+        }
+        b.image = kDummyImageSentinel; // non-null so the player's null-check passes
+        b.subresourceRange.aspectMask = AspectMaskForFormat(img->Format, img->Disjoint);
+        b.subresourceRange.baseMipLevel = 0;
+        b.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
+        b.subresourceRange.baseArrayLayer = 0;
+        b.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
+        barriers.push_back(b);
+        barrierImageKeys.push_back(imgKey);
+      }
+
+      if (!barriers.empty()) {
+        vkCmdPipelineBarrierCommand barrierCmd;
+        barrierCmd.m_commandBuffer.Key = kTempCBKey;
+        barrierCmd.m_srcStageMask.Value = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+        barrierCmd.m_dstStageMask.Value = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+        barrierCmd.m_dependencyFlags.Value = 0;
+        barrierCmd.m_memoryBarrierCount.Value = 0;
+        barrierCmd.m_bufferMemoryBarrierCount.Value = 0;
+        barrierCmd.m_imageMemoryBarrierCount.Value = static_cast<uint32_t>(barriers.size());
+        barrierCmd.m_pImageMemoryBarriers.Value = barriers.data();
+        barrierCmd.m_pImageMemoryBarriers.Size = static_cast<uint32_t>(barriers.size());
+        barrierCmd.m_pImageMemoryBarriers.HandleKeys = barrierImageKeys;
+        m_Recorder.Record(vkCmdPipelineBarrierSerializer(barrierCmd));
+      }
+
+      // End and submit the command buffer.
+      {
+        vkEndCommandBufferCommand endCmd;
+        endCmd.m_commandBuffer.Key = kTempCBKey;
+        endCmd.m_Return.Value = VK_SUCCESS;
+        m_Recorder.Record(vkEndCommandBufferSerializer(endCmd));
+      }
+
+      {
+        static VkCommandBuffer kDummyCBSlot2 = VK_NULL_HANDLE;
+        kDummyCBSlot2 = reinterpret_cast<VkCommandBuffer>(kTempCBKey);
+
+        VkSubmitInfo submitInfo{};
+        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers = &kDummyCBSlot2; // non-null sentinel
+
+        vkQueueSubmitCommand submitCmd;
+        submitCmd.m_queue.Key = targetQueueKey;
+        submitCmd.m_fence.Key = 0;
+        submitCmd.m_Return.Value = VK_SUCCESS;
+        submitCmd.m_submitCount.Value = 1;
+        submitCmd.m_pSubmits.Value = &submitInfo;
+        submitCmd.m_pSubmits.Size = 1;
+        // HandleKeys layout: [waitSem*][cmdBuf*][signalSem*]); only one CB key.
+        submitCmd.m_pSubmits.HandleKeys = {kTempCBKey};
+        m_Recorder.Record(vkQueueSubmitSerializer(submitCmd));
+      }
+
+      // Wait for the GPU to finish before freeing the temporary command buffer.
+      // Without this, the driver may still be executing the layout transitions
+      // when vkFreeCommandBuffers is called, causing the validation layer to
+      // lose track of the CB state and crash on the next vkWaitForFences.
+      {
+        vkQueueWaitIdleCommand waitCmd;
+        waitCmd.m_queue.Key = targetQueueKey;
+        waitCmd.m_Return.Value = VK_SUCCESS;
+        m_Recorder.Record(vkQueueWaitIdleSerializer(waitCmd));
+      }
+
+      // Free the temporary command buffer.
+      {
+        static VkCommandBuffer kDummyCBSlot3 = VK_NULL_HANDLE;
+
+        vkFreeCommandBuffersCommand freeCmd;
+        freeCmd.m_device.Key = deviceKey;
+        freeCmd.m_commandPool.Key = targetPoolKey;
+        freeCmd.m_commandBufferCount.Value = 1;
+        freeCmd.m_pCommandBuffers.Value = &kDummyCBSlot3;
+        freeCmd.m_pCommandBuffers.Size = 1;
+        freeCmd.m_pCommandBuffers.Keys = {kTempCBKey};
+        m_Recorder.Record(vkFreeCommandBuffersSerializer(freeCmd));
+      }
+
+      LOG_INFO << "Vulkan subcapture: emitted layout transitions for " << barriers.size()
+               << " image(s) on device key=" << deviceKey << " queue key=" << targetQueueKey;
+    };
+
+    for (const auto& [family, keys] : groupsByFamily) {
+      uint64_t targetQueueKey = 0, targetPoolKey = 0;
+      if (family == defaultFamily) {
+        targetQueueKey = queueKey;
+        targetPoolKey = commandPoolKey;
+      } else if (auto it = allFamilyPairs.find(family); it != allFamilyPairs.end()) {
+        targetQueueKey = it->second.first;
+        targetPoolKey = it->second.second;
+      } else {
+        continue; // unreachable: chosenFamily always came from one of the above
+      }
+      emitBatch(targetQueueKey, targetPoolKey, family, keys);
     }
-
-    // End and submit the command buffer.
-    {
-      vkEndCommandBufferCommand endCmd;
-      endCmd.m_commandBuffer.Key = kTempCBKey;
-      endCmd.m_Return.Value = VK_SUCCESS;
-      m_Recorder.Record(vkEndCommandBufferSerializer(endCmd));
-    }
-
-    {
-      static VkCommandBuffer kDummyCBSlot2 = VK_NULL_HANDLE;
-      kDummyCBSlot2 = reinterpret_cast<VkCommandBuffer>(kTempCBKey);
-
-      VkSubmitInfo submitInfo{};
-      submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-      submitInfo.commandBufferCount = 1;
-      submitInfo.pCommandBuffers = &kDummyCBSlot2; // non-null sentinel
-
-      vkQueueSubmitCommand submitCmd;
-      submitCmd.m_queue.Key = queueKey;
-      submitCmd.m_fence.Key = 0;
-      submitCmd.m_Return.Value = VK_SUCCESS;
-      submitCmd.m_submitCount.Value = 1;
-      submitCmd.m_pSubmits.Value = &submitInfo;
-      submitCmd.m_pSubmits.Size = 1;
-      // HandleKeys layout: [waitSem*][cmdBuf*][signalSem*]); only one CB key.
-      submitCmd.m_pSubmits.HandleKeys = {kTempCBKey};
-      m_Recorder.Record(vkQueueSubmitSerializer(submitCmd));
-    }
-
-    // Wait for the GPU to finish before freeing the temporary command buffer.
-    // Without this, the driver may still be executing the layout transitions
-    // when vkFreeCommandBuffers is called, causing the validation layer to
-    // lose track of the CB state and crash on the next vkWaitForFences.
-    {
-      vkQueueWaitIdleCommand waitCmd;
-      waitCmd.m_queue.Key = queueKey;
-      waitCmd.m_Return.Value = VK_SUCCESS;
-      m_Recorder.Record(vkQueueWaitIdleSerializer(waitCmd));
-    }
-
-    // Free the temporary command buffer.
-    {
-      static VkCommandBuffer kDummyCBSlot3 = VK_NULL_HANDLE;
-
-      vkFreeCommandBuffersCommand freeCmd;
-      freeCmd.m_device.Key = deviceKey;
-      freeCmd.m_commandPool.Key = commandPoolKey;
-      freeCmd.m_commandBufferCount.Value = 1;
-      freeCmd.m_pCommandBuffers.Value = &kDummyCBSlot3;
-      freeCmd.m_pCommandBuffers.Size = 1;
-      freeCmd.m_pCommandBuffers.Keys = {kTempCBKey};
-      m_Recorder.Record(vkFreeCommandBuffersSerializer(freeCmd));
-    }
-
-    LOG_INFO << "Vulkan subcapture: emitted layout transitions for " << barriers.size()
-             << " image(s) on device key=" << deviceKey;
   }
 }
 
@@ -2272,6 +2453,18 @@ bool StateTrackingService::RestoreImage(ObjectState* state) {
   // command above has already registered the handle in HandleMapService, so the
   // "restored = handle registered" contract still holds.
   m_RestoredThisPass.insert(state->Key);
+
+  if (img->Disjoint) {
+    LOG_WARNING << "Vulkan subcapture: skipping image memory bind for disjoint image key="
+                << img->Key
+                << " (multi-planar plane bindings are not tracked yet; content restore is "
+                   "unsupported)";
+    // Same reason RestoreImageView skips other unbound images: this image is left
+    // with no bound memory at all, so a view created against it would violate
+    // VUID-VkImageViewCreateInfo-image-01020.
+    img->MemoryBindFailed = true;
+    return true;
+  }
 
   if (img->BoundMemoryKey && img->ParentKey) {
     RestoreOne(GetState(img->BoundMemoryKey));
@@ -4914,6 +5107,11 @@ void StateTrackingService::RestoreImageContents() {
     if (img->BoundMemoryKey == 0) {
       continue;
     }
+    // Disjoint multi-planar images bind each plane separately; only the last bind
+    // is tracked in BoundMemoryKey, so content restore cannot verify all planes.
+    if (img->Disjoint) {
+      continue;
+    }
     // RestoreImage has the same shape as RestoreBuffer: the image is marked
     // restored and reported as success even when its bound memory could not be
     // restored, in which case no vkBindImageMemory was emitted and the image
@@ -4991,154 +5189,204 @@ void StateTrackingService::RestoreImageContents() {
     if (auto* poolState = GetState<CommandPoolState>(poolKey)) {
       readbackFamily = poolState->QueueFamilyIndex;
     }
+    std::vector<VkQueueFamilyProperties> queueFamilyProps;
+    if (!m_GpuReadbackHelper->GetQueueFamilyProperties(physDevKey, queueFamilyProps)) {
+      queueFamilyProps.clear();
+    }
     bool readbackFamilyHasGraphics = true;
-    std::vector<VkQueueFamilyProperties> readbackFamilies;
-    if (readbackFamily != UINT32_MAX &&
-        m_GpuReadbackHelper->GetQueueFamilyProperties(physDevKey, readbackFamilies) &&
-        readbackFamily < readbackFamilies.size()) {
+    if (readbackFamily != UINT32_MAX && readbackFamily < queueFamilyProps.size()) {
       readbackFamilyHasGraphics =
-          (readbackFamilies[readbackFamily].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0;
+          (queueFamilyProps[readbackFamily].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0;
     }
 
-    // Dropping the image is the last resort, not the first one: the pair above
-    // is merely the one that paired first, and another family the application
-    // created a queue and a pool on may well be graphics-capable.  This second
-    // pair is used for the recorder's own readback submit only and is never
-    // named in the stream; the manifest goes on naming the pair FindQueueAndPool
-    // returned, so nothing about the emitted stream changes shape.
-    //
-    // That makes the readback legal, which is all this is about.  It does not
-    // make the player's upload copy legal: the player copies on the family the
-    // manifest names, so a depth/stencil upload there is still restricted by
-    // VUID-vkCmdCopyBufferToImage-commandBuffer-07739.  That is a separate,
-    // pre-existing gap on the replay side - the recorder cannot close it without
-    // a way to tell the player which family to upload through.
-    //
-    // readbackFamilies is populated whenever readbackFamilyHasGraphics is false,
-    // since that is the only way the flag can be cleared.
+    // A graphics-capable restored pair is used when the default readback family
+    // lacks graphics (depth/stencil copies) or when an image cannot legally be
+    // submitted on the readback family due to sharing mode / ownership.
     uint64_t graphicsQueueKey = 0, graphicsPoolKey = 0;
     uint32_t graphicsFamily = UINT32_MAX;
-    if (!readbackFamilyHasGraphics &&
-        FindGraphicsQueueAndPool(m_States, deviceKey, readbackFamilies, graphicsQueueKey,
-                                 graphicsPoolKey, graphicsFamily)) {
-      LOG_INFO << "Vulkan subcapture: content-restore queue family=" << readbackFamily
-               << " on device key=" << deviceKey
-               << " does not support VK_QUEUE_GRAPHICS_BIT, so depth/stencil images are read back "
-                  "on graphics-capable queue family="
-               << graphicsFamily << " instead";
+    if (FindGraphicsQueueAndPool(m_States, deviceKey, queueFamilyProps, m_RestoredThisPass,
+                                 graphicsQueueKey, graphicsPoolKey, graphicsFamily)) {
+      if (!readbackFamilyHasGraphics) {
+        LOG_INFO << "Vulkan subcapture: content-restore queue family=" << readbackFamily
+                 << " on device key=" << deviceKey
+                 << " does not support VK_QUEUE_GRAPHICS_BIT, so depth/stencil images are read "
+                    "back and restored through graphics-capable queue family="
+                 << graphicsFamily << " instead";
+      }
     }
     const bool haveGraphicsPair = graphicsQueueKey != 0 && graphicsPoolKey != 0;
-    // Depth/stencil images whose readback runs on the graphics pair rather than
-    // on the pair the manifest names.  Nothing else about them differs.
-    std::unordered_set<uint64_t> graphicsReadbackImages;
 
-    // Build the manifest first (layout + size per image, no pixel data) so the
-    // player knows the full footprint before any bytes stream in.  The layout
-    // is computed the same way ReadImage lays out its readback, so the region
-    // offsets match the bytes streamed below.
-    RestoreContentManifestCommand manifest;
-    manifest.m_DeviceKey = deviceKey;
-    manifest.m_PhysDevKey = physDevKey;
-    manifest.m_QueueKey = queueKey;
-    manifest.m_CommandPoolKey = poolKey;
+    // Every other restored (queueKey, poolKey) pair on this device, keyed by
+    // family, for images that the default readback pair and the graphics
+    // fallback pair both cannot legally read (e.g. a color image EXCLUSIVE to
+    // some other restored transfer-family pair, or a CONCURRENT image that
+    // does not list either family).  readbackFamily / graphicsFamily are
+    // tried first below and are not special-cased out of this map: looking
+    // them up here again is harmless, it just repeats a check already done.
+    const std::map<uint32_t, std::pair<uint64_t, uint64_t>> allFamilyPairs =
+        FindAllRestoredQueueAndPools(m_States, deviceKey, m_RestoredThisPass);
 
-    std::vector<uint64_t> orderedKeys;
+    // Group images by the restored family each will use for *both* the
+    // recorder's own readback and the manifest the player later replays the
+    // upload through, so the two can never disagree about which family does
+    // the copy.  Depth/stencil aspects additionally require the chosen family
+    // to support VK_QUEUE_GRAPHICS_BIT (VUID-vkCmdCopyImageToBuffer-
+    // commandBuffer-10216); color aspects do not.
+    std::map<uint32_t, std::vector<uint64_t>> groupsByFamily;
     for (uint64_t imgKey : imgKeys) {
       auto* img = static_cast<ImageState*>(GetState(imgKey));
       if (!img) {
         continue;
       }
-      // Reading a depth/stencil aspect back on a family without graphics support
-      // is illegal (VUID-vkCmdCopyImageToBuffer-commandBuffer-10216), so such an
-      // image is read back on the graphics pair resolved above instead.  Only
-      // when there is no such pair is it excluded, the same way an
-      // unrestored-memory resource is, and what is lost is named.
-      const VkImageAspectFlags aspectMask = AspectMaskForFormat(img->Format);
+      const VkImageAspectFlags aspectMask = AspectMaskForFormat(img->Format, img->Disjoint);
       const bool depthStencil =
           (aspectMask & (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT)) != 0;
-      if (depthStencil && !readbackFamilyHasGraphics) {
-        // A CONCURRENT image may only be used on the families it was created
-        // over, so the graphics pair is no help to one that omits it
-        // (VUID-vkQueueSubmit-pSubmits-04626).  An EXCLUSIVE image carries no
-        // such list and may be used on any family.
-        const bool mayUseGraphicsPair =
-            haveGraphicsPair &&
-            (img->SharingMode == VK_SHARING_MODE_EXCLUSIVE ||
-             std::find(img->ConcurrentFamilies.begin(), img->ConcurrentFamilies.end(),
-                       graphicsFamily) != img->ConcurrentFamilies.end());
-        if (!mayUseGraphicsPair) {
-          LOG_WARNING << "Vulkan subcapture: image key=" << imgKey
-                      << " has a depth/stencil aspect, the content-restore queue family="
-                      << readbackFamily
-                      << " does not support VK_QUEUE_GRAPHICS_BIT and no other queue family on "
-                         "device key="
-                      << deviceKey
-                      << " may read it back - excluded from content restore, its contents will "
-                         "not be restored";
-          continue;
+
+      auto familyIsUsable = [&](uint32_t family) {
+        if (family == UINT32_MAX || !MaySubmitImageOperationOnQueueFamily(*img, family)) {
+          return false;
         }
-        graphicsReadbackImages.insert(imgKey);
+        // Family properties are required regardless of aspect: a
+        // video-decode/encode- or sparse-binding-only family owning the
+        // image must not be selected just because MaySubmit allowed it.
+        if (family >= queueFamilyProps.size()) {
+          return false;
+        }
+        const VkQueueFlags flags = queueFamilyProps[family].queueFlags;
+        // GRAPHICS and COMPUTE queues implicitly support transfer commands
+        // even without VK_QUEUE_TRANSFER_BIT set (Vulkan spec, "Queues"),
+        // so any of the three makes the family usable for the copy itself.
+        constexpr VkQueueFlags kImpliesTransfer =
+            VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT | VK_QUEUE_TRANSFER_BIT;
+        if ((flags & kImpliesTransfer) == 0) {
+          return false;
+        }
+        return !depthStencil || (flags & VK_QUEUE_GRAPHICS_BIT) != 0;
+      };
+
+      uint32_t chosenFamily = UINT32_MAX;
+      if (familyIsUsable(readbackFamily)) {
+        chosenFamily = readbackFamily;
+      } else if (haveGraphicsPair && familyIsUsable(graphicsFamily)) {
+        chosenFamily = graphicsFamily;
+      } else {
+        for (const auto& entry : allFamilyPairs) {
+          if (familyIsUsable(entry.first)) {
+            chosenFamily = entry.first;
+            break;
+          }
+        }
       }
-      RestoreContentManifestCommand::ImageEntry entry;
-      entry.Size = m_GpuReadbackHelper->GetImageStagingLayout(
-          img->Format, img->Extent, img->MipLevels, img->ArrayLayers, entry.Regions);
-      if (entry.Size == 0 || entry.Regions.empty()) {
+
+      if (chosenFamily == UINT32_MAX) {
+        std::ostringstream reason;
+        reason << "Vulkan subcapture: image key=" << imgKey
+               << " cannot be read back on any restored queue family compatible with its "
+                  "sharing mode/ownership on device key="
+               << deviceKey;
+        if (depthStencil) {
+          reason << " (depth/stencil aspect additionally requires a graphics-capable family)";
+        }
+        reason << " - excluded from content restore, its contents will not be restored";
+        LOG_WARNING << reason.str();
         continue;
       }
-      entry.DstImageKey = imgKey;
-      entry.Format = static_cast<uint32_t>(img->Format);
-      entry.FinalLayout = static_cast<uint32_t>(img->CurrentLayout);
-      entry.AspectMask = static_cast<uint32_t>(aspectMask);
-      manifest.m_Images.push_back(std::move(entry));
-      manifest.m_TotalBytes += manifest.m_Images.back().Size;
-      orderedKeys.push_back(imgKey);
+      groupsByFamily[chosenFamily].push_back(imgKey);
     }
-    if (manifest.m_Images.empty()) {
-      continue;
-    }
-    m_Recorder.Record(RestoreContentManifestSerializer(manifest));
 
-    // Stream each image's bytes one at a time.  Emit exactly one data token per
-    // manifest entry (zero-length on failure) so the player can detect stream
-    // completion by counting tokens, without a separate end token.
+    // Builds one manifest naming (targetQueueKey, targetPoolKey) for every
+    // image in `keys`, then streams each image's readback bytes as one data
+    // token per manifest entry (zero-length on failure), so the player can
+    // detect stream completion by counting tokens without a separate end
+    // token.  Because the manifest and the readback below always use the
+    // same pair, the player's upload copy runs on a family known to support
+    // it.
     static char sEmptyByte = 0;
-    for (size_t i = 0; i < orderedKeys.size(); ++i) {
-      const uint64_t imgKey = orderedKeys[i];
-      std::vector<uint8_t> data;
-      std::vector<VkBufferImageCopy> regions;
-      auto* img = static_cast<ImageState*>(GetState(imgKey));
-      if (img) {
-        // Only the depth/stencil images the selection above could not read back
-        // on the manifest's pair take the graphics one; everything else is
-        // untouched by the legality route.
-        const bool useGraphicsPair = graphicsReadbackImages.count(imgKey) != 0;
-        const uint64_t readQueueKey = useGraphicsPair ? graphicsQueueKey : queueKey;
-        const uint64_t readPoolKey = useGraphicsPair ? graphicsPoolKey : poolKey;
-        if (!m_GpuReadbackHelper->ReadImage(deviceKey, physDevKey, readQueueKey, readPoolKey,
-                                            imgKey, img->Format, img->Extent, img->MipLevels,
-                                            img->ArrayLayers, img->Samples, img->CurrentLayout,
-                                            data, regions)) {
-          LOG_WARNING << "Vulkan subcapture: GPU readback failed for image key=" << imgKey;
-          data.clear();
-        } else {
-          // The player's upload leaves the image in its tracked layout, so
-          // EmitImageLayoutTransitions must skip it.
-          img->ContentRestored = true;
-        }
+    auto emitGroup = [&](const std::vector<uint64_t>& keys, uint64_t targetQueueKey,
+                         uint64_t targetPoolKey) {
+      if (keys.empty()) {
+        return;
       }
+      RestoreContentManifestCommand manifest;
+      manifest.m_DeviceKey = deviceKey;
+      manifest.m_PhysDevKey = physDevKey;
+      manifest.m_QueueKey = targetQueueKey;
+      manifest.m_CommandPoolKey = targetPoolKey;
 
-      RestoreContentDataCommand dataCmd;
-      dataCmd.m_DeviceKey = deviceKey;
-      MemoryRegions::Region region;
-      region.Offset = static_cast<uint64_t>(i); // resource index, not a byte offset
-      region.Size = static_cast<uint64_t>(data.size());
-      region.Data = data.empty() ? &sEmptyByte : reinterpret_cast<char*>(data.data());
-      dataCmd.m_Regions.Regions.push_back(region);
-      dataCmd.m_Regions.Size = 1;
-      m_Recorder.Record(RestoreContentDataSerializer(dataCmd));
+      std::vector<uint64_t> orderedKeys;
+      for (uint64_t imgKey : keys) {
+        auto* img = static_cast<ImageState*>(GetState(imgKey));
+        if (!img) {
+          continue;
+        }
+        RestoreContentManifestCommand::ImageEntry entry;
+        entry.Size = m_GpuReadbackHelper->GetImageStagingLayout(
+            img->Format, img->Extent, img->MipLevels, img->ArrayLayers, entry.Regions);
+        if (entry.Size == 0 || entry.Regions.empty()) {
+          continue;
+        }
+        entry.DstImageKey = imgKey;
+        entry.Format = static_cast<uint32_t>(img->Format);
+        entry.FinalLayout = static_cast<uint32_t>(img->CurrentLayout);
+        entry.AspectMask = static_cast<uint32_t>(AspectMaskForFormat(img->Format, img->Disjoint));
+        manifest.m_Images.push_back(std::move(entry));
+        manifest.m_TotalBytes += manifest.m_Images.back().Size;
+        orderedKeys.push_back(imgKey);
+      }
+      if (manifest.m_Images.empty()) {
+        return;
+      }
+      m_Recorder.Record(RestoreContentManifestSerializer(manifest));
 
-      LOG_TRACE << "Vulkan subcapture: streamed image content, key=" << imgKey
-                << " size=" << data.size();
+      for (size_t i = 0; i < orderedKeys.size(); ++i) {
+        const uint64_t imgKey = orderedKeys[i];
+        std::vector<uint8_t> data;
+        std::vector<VkBufferImageCopy> regions;
+        auto* img = static_cast<ImageState*>(GetState(imgKey));
+        if (img) {
+          if (!m_GpuReadbackHelper->ReadImage(deviceKey, physDevKey, targetQueueKey, targetPoolKey,
+                                              imgKey, img->Format, img->Extent, img->MipLevels,
+                                              img->ArrayLayers, img->Samples, img->CurrentLayout,
+                                              img->Disjoint, data, regions)) {
+            LOG_WARNING << "Vulkan subcapture: GPU readback failed for image key=" << imgKey;
+            data.clear();
+          } else {
+            // The player's upload leaves the image in its tracked layout, so
+            // EmitImageLayoutTransitions must skip it.
+            img->ContentRestored = true;
+          }
+        }
+
+        RestoreContentDataCommand dataCmd;
+        dataCmd.m_DeviceKey = deviceKey;
+        MemoryRegions::Region region;
+        region.Offset = static_cast<uint64_t>(i); // resource index, not a byte offset
+        region.Size = static_cast<uint64_t>(data.size());
+        region.Data = data.empty() ? &sEmptyByte : reinterpret_cast<char*>(data.data());
+        dataCmd.m_Regions.Regions.push_back(region);
+        dataCmd.m_Regions.Size = 1;
+        m_Recorder.Record(RestoreContentDataSerializer(dataCmd));
+
+        LOG_TRACE << "Vulkan subcapture: streamed image content, key=" << imgKey
+                  << " size=" << data.size();
+      }
+    };
+
+    for (const auto& [family, keys] : groupsByFamily) {
+      uint64_t targetQueueKey = 0, targetPoolKey = 0;
+      if (family == readbackFamily) {
+        targetQueueKey = queueKey;
+        targetPoolKey = poolKey;
+      } else if (haveGraphicsPair && family == graphicsFamily) {
+        targetQueueKey = graphicsQueueKey;
+        targetPoolKey = graphicsPoolKey;
+      } else if (auto it = allFamilyPairs.find(family); it != allFamilyPairs.end()) {
+        targetQueueKey = it->second.first;
+        targetPoolKey = it->second.second;
+      } else {
+        continue; // unreachable: chosenFamily always came from one of the above
+      }
+      emitGroup(keys, targetQueueKey, targetPoolKey);
     }
   }
 }

@@ -33,6 +33,8 @@ void CommandBufferLifecycleService::ClearState(CommandBufferState& state) {
   state.ResetQueriesAfterSubmit.clear();
   state.UsedQueriesAfterSubmit.clear();
   state.ImageLayoutAfterSubmit.clear();
+  state.ExclusiveOwnerAfterSubmit.clear();
+  state.ExclusiveOwnerMixedAfterSubmit.clear();
   state.AsInputReadbacksAfterSubmit.clear();
 }
 
