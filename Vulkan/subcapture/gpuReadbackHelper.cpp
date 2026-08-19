@@ -74,6 +74,27 @@ uint32_t GpuReadbackHelper::FindStagingMemoryType(uint64_t physDevKey, uint32_t 
   return FindStagingMemoryTypeForPhysDevice(physDevice, memoryTypeBits);
 }
 
+bool GpuReadbackHelper::GetQueueFamilyProperties(uint64_t physDevKey,
+                                                 std::vector<VkQueueFamilyProperties>& outProps) {
+  outProps.clear();
+  auto physDevice =
+      reinterpret_cast<VkPhysicalDevice>(HandleMapService::Get().TryGetHandle(physDevKey));
+  if (!physDevice) {
+    return false;
+  }
+  auto& instDt = m_Player.GetInstanceDispatchTable(physDevice);
+  uint32_t count = 0;
+  instDt.vkGetPhysicalDeviceQueueFamilyProperties(physDevice, &count, nullptr);
+  if (count == 0) {
+    return false;
+  }
+  outProps.resize(count);
+  instDt.vkGetPhysicalDeviceQueueFamilyProperties(physDevice, &count, outProps.data());
+  // The driver may report back fewer families than the count query announced.
+  outProps.resize(count);
+  return !outProps.empty();
+}
+
 // ---------------------------------------------------------------------------
 // QueryStagingBufferRequirements
 //

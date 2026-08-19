@@ -32,29 +32,51 @@ namespace vulkan {
 
 namespace {
 
-// Maximum queue families we query in one synthetic vkGetPhysicalDeviceQueueFamilyProperties
-// during state restore.  Vulkan guarantees a small count (spec uses implementation-dependent
-// upper bound; 64 matches legacy restore practice and all known drivers).
-constexpr uint32_t kQueueFamilyQueryCapacity = 64;
-
 // Mirrors VulkanLegacy/recorder/vulkanStateRestore.cpp RestoreVkDevices: emit
 // vkGetPhysicalDeviceQueueFamilyProperties before vkCreateDevice so validation and
-// player-side remapping see up-to-date queue family counts on the replayed physical device.
+// player-side remapping see the queue family properties of the physical device the
+// subcapture was taken on.  Like the legacy path, the properties are the ones the live
+// driver reports; the generic array coder streams them by value, so whatever is passed
+// here is what a later replay reads back as the recorded (source) queue families.
 void EmitGetPhysicalDeviceQueueFamilyProperties(SubcaptureRecorder& recorder,
+                                                IGpuReadbackHelper* readbackHelper,
                                                 uint64_t physicalDeviceKey) {
   if (!physicalDeviceKey) {
     return;
   }
-  static uint32_t s_queueFamilyCount;
-  static VkQueueFamilyProperties s_queueFamilies[kQueueFamilyQueryCapacity];
-  s_queueFamilyCount = kQueueFamilyQueryCapacity;
-  std::memset(s_queueFamilies, 0, sizeof(s_queueFamilies));
+  // The subcapture library cannot reach PlayerManager or HandleMapService directly, so the
+  // live physical device and the instance-level dispatch table are obtained through the
+  // readback helper the player injects.
+  std::vector<VkQueueFamilyProperties> queueFamilies;
+  if (readbackHelper == nullptr ||
+      !readbackHelper->GetQueueFamilyProperties(physicalDeviceKey, queueFamilies)) {
+    // Recording placeholder properties here is what the player would build its queue-family
+    // remap from, so omitting the command entirely is the safer failure: the portability
+    // layer then finds no recorded families and passes queue family indices through.
+    LOG_WARNING << "Vulkan subcapture: could not query the queue family properties of physical "
+                   "device key="
+                << physicalDeviceKey
+                << "; omitting the state-restore vkGetPhysicalDeviceQueueFamilyProperties.";
+    return;
+  }
+  // No capacity cap: the array coder below is size-prefixed and encodes
+  // queueFamilies by value regardless of length (the same coder every other
+  // variable-length array argument in this file uses), so there is no fixed-size
+  // buffer to overflow.  Vulkan does not cap the number of queue families a
+  // physical device may report, and the portability layer's queue-family
+  // remapper needs the complete source list to map indices correctly -
+  // truncating here would silently and incorrectly drop families a later
+  // device-creation call or a restored resource might reference.
+  uint32_t queueFamilyCount = static_cast<uint32_t>(queueFamilies.size());
 
+  // The serializer encodes the whole command into its own buffer in its constructor, and
+  // SubcaptureRecorder::Record copies that buffer into the stream, so the count and the array
+  // only have to outlive the Record call below.
   vkGetPhysicalDeviceQueueFamilyPropertiesCommand cmd{};
   cmd.m_physicalDevice.Key = physicalDeviceKey;
-  cmd.m_pQueueFamilyPropertyCount.Value = &s_queueFamilyCount;
-  cmd.m_pQueueFamilyProperties.Value = s_queueFamilies;
-  cmd.m_pQueueFamilyProperties.Size = kQueueFamilyQueryCapacity;
+  cmd.m_pQueueFamilyPropertyCount.Value = &queueFamilyCount;
+  cmd.m_pQueueFamilyProperties.Value = queueFamilies.data();
+  cmd.m_pQueueFamilyProperties.Size = queueFamilyCount;
   recorder.Record(vkGetPhysicalDeviceQueueFamilyPropertiesSerializer(cmd));
 }
 
@@ -1509,7 +1531,7 @@ bool StateTrackingService::EmitCreationCommand(ObjectState* state) {
   case CommandId::ID_VKENUMERATEPHYSICALDEVICEGROUPSKHR:
     EMIT_DECODED(vkEnumeratePhysicalDeviceGroupsKHR)
   case CommandId::ID_VKCREATEDEVICE:
-    EmitGetPhysicalDeviceQueueFamilyProperties(m_Recorder, state->ParentKey);
+    EmitGetPhysicalDeviceQueueFamilyProperties(m_Recorder, m_GpuReadbackHelper, state->ParentKey);
     EMIT_DECODED(vkCreateDevice)
   case CommandId::ID_VKGETDEVICEQUEUE:
     EMIT_DECODED(vkGetDeviceQueue)

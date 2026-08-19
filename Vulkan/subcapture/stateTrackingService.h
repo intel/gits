@@ -47,6 +47,15 @@ public:
   // staging buffer of 'memoryTypeBits' requirements.  Returns UINT32_MAX on failure.
   virtual uint32_t FindStagingMemoryType(uint64_t physDevKey, uint32_t memoryTypeBits) = 0;
 
+  // Replaces outProps with the properties of every queue family of physDevKey, in
+  // family-index order.  Returns false (leaving outProps empty) when the physical
+  // device handle cannot be resolved or the driver reports no families.  The
+  // recorder needs the properties themselves, not just the flags of one family,
+  // to record a truthful synthetic vkGetPhysicalDeviceQueueFamilyProperties
+  // during state restore.
+  virtual bool GetQueueFamilyProperties(uint64_t physDevKey,
+                                        std::vector<VkQueueFamilyProperties>& outProps) = 0;
+
   // Query memory requirements for a hypothetical staging buffer of the given
   // size+usage on the given device.  The recorder uses this when emitting
   // staging-buffer creation commands during state-restore content upload, to

@@ -27,6 +27,9 @@ public:
 
   uint32_t FindStagingMemoryType(uint64_t physDevKey, uint32_t memoryTypeBits) override;
 
+  bool GetQueueFamilyProperties(uint64_t physDevKey,
+                                std::vector<VkQueueFamilyProperties>& outProps) override;
+
   bool QueryStagingBufferRequirements(uint64_t deviceKey,
                                       VkDeviceSize size,
                                       VkBufferUsageFlags usage,
