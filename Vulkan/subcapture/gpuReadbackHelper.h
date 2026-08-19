@@ -49,6 +49,13 @@ public:
                                const VkBufferCreateInfo& createInfo,
                                VkMemoryRequirements& outReq) override;
 
+  bool QueryImageRequirements(uint64_t deviceKey,
+                              const VkImageCreateInfo& createInfo,
+                              VkMemoryRequirements& outReq,
+                              bool& outRequiresDedicatedAllocation) override;
+
+  uint32_t FindCompatibleMemoryType(uint64_t physDevKey, uint32_t memoryTypeBits) override;
+
   // Query a bound buffer because a parent trim may omit the original address command.
   VkDeviceAddress QueryBufferDeviceAddress(uint64_t deviceKey, uint64_t bufferKey);
 

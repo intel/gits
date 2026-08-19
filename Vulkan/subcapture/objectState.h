@@ -231,6 +231,15 @@ struct ImageState : ObjectState {
   // subcapture stream.  EmitImageLayoutTransitions skips these images because
   // the buffer-to-image copy already ends in the correct layout.
   bool ContentRestored{false};
+  // True once RestoreImage has determined that this image's backing memory
+  // (BoundMemoryKey) could not be restored - e.g. an external/host-pointer
+  // imported allocation that cannot be re-imported at replay time.  The image
+  // handle itself still exists (vkCreateImage was emitted) but it has no
+  // valid GPU-visible storage from the original capture: RestoreImage tries a
+  // substitute vkAllocateMemory + vkBindImageMemory so views can be restored;
+  // when that fails, do not create views against it, emit barriers referencing
+  // it, or attempt content restore on it.
+  bool MemoryBindFailed{false};
 };
 
 struct BufferViewState : ObjectState {};

@@ -143,6 +143,75 @@ bool GpuReadbackHelper::QueryBufferRequirements(uint64_t deviceKey,
   return true;
 }
 
+bool GpuReadbackHelper::QueryImageRequirements(uint64_t deviceKey,
+                                               const VkImageCreateInfo& createInfo,
+                                               VkMemoryRequirements& outReq,
+                                               bool& outRequiresDedicatedAllocation) {
+  outRequiresDedicatedAllocation = false;
+  auto device = reinterpret_cast<VkDevice>(HandleMapService::Get().TryGetHandle(deviceKey));
+  if (!device) {
+    LOG_WARNING << "GpuReadbackHelper: QueryImageRequirements: invalid device key=" << deviceKey;
+    return false;
+  }
+  auto& dt = m_Player.GetDeviceDispatchTable(device);
+
+  VkImage tempImg = VK_NULL_HANDLE;
+  if (dt.vkCreateImage(device, &createInfo, nullptr, &tempImg) != VK_SUCCESS) {
+    LOG_WARNING << "GpuReadbackHelper: QueryImageRequirements: vkCreateImage failed";
+    return false;
+  }
+  outReq = {};
+  // Prefer *2: it is the only entry point that can report
+  // VkMemoryDedicatedRequirements - plain vkGetImageMemoryRequirements has no way to
+  // signal that this image mandates a dedicated allocation
+  // (VUID-vkBindImageMemory-image-01445). Both the 1.1 core and KHR entry points are
+  // resolved unconditionally by the dispatch table (getProcAddr returns null for an
+  // unsupported one), so fall back to the plain query only if neither is available.
+  PFN_vkGetImageMemoryRequirements2 getReq2 = dt.vkGetImageMemoryRequirements2 != nullptr
+                                                  ? dt.vkGetImageMemoryRequirements2
+                                                  : dt.vkGetImageMemoryRequirements2KHR;
+  if (getReq2 != nullptr) {
+    VkImageMemoryRequirementsInfo2 info2{VK_STRUCTURE_TYPE_IMAGE_MEMORY_REQUIREMENTS_INFO_2};
+    info2.image = tempImg;
+
+    VkMemoryDedicatedRequirements dedicatedReq{VK_STRUCTURE_TYPE_MEMORY_DEDICATED_REQUIREMENTS};
+    VkMemoryRequirements2 req2{VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2};
+    req2.pNext = &dedicatedReq;
+
+    getReq2(device, &info2, &req2);
+    outReq = req2.memoryRequirements;
+    outRequiresDedicatedAllocation = (dedicatedReq.requiresDedicatedAllocation == VK_TRUE);
+  } else {
+    dt.vkGetImageMemoryRequirements(device, tempImg, &outReq);
+  }
+  dt.vkDestroyImage(device, tempImg, nullptr);
+  return true;
+}
+
+uint32_t GpuReadbackHelper::FindCompatibleMemoryType(uint64_t physDevKey, uint32_t memoryTypeBits) {
+  auto physDevice =
+      reinterpret_cast<VkPhysicalDevice>(HandleMapService::Get().TryGetHandle(physDevKey));
+  if (!physDevice) {
+    return UINT32_MAX;
+  }
+  VkPhysicalDeviceMemoryProperties props{};
+  m_Player.GetInstanceDispatchTable(physDevice)
+      .vkGetPhysicalDeviceMemoryProperties(physDevice, &props);
+
+  for (uint32_t i = 0; i < props.memoryTypeCount; ++i) {
+    if ((memoryTypeBits & (1u << i)) &&
+        (props.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)) {
+      return i;
+    }
+  }
+  for (uint32_t i = 0; i < props.memoryTypeCount; ++i) {
+    if (memoryTypeBits & (1u << i)) {
+      return i;
+    }
+  }
+  return UINT32_MAX;
+}
+
 VkDeviceAddress GpuReadbackHelper::QueryBufferDeviceAddress(uint64_t deviceKey,
                                                             uint64_t bufferKey) {
   auto device = reinterpret_cast<VkDevice>(HandleMapService::Get().TryGetHandle(deviceKey));

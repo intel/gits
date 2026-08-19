@@ -225,6 +225,7 @@ void StateTrackingService::RestoreState() {
   m_CommandBuffersRecordingReplaySkipped.clear();
   m_TransientlyRestored.clear();
   m_RestoredInputRegionHashes.clear();
+  m_NextSyntheticKey = kSyntheticKeyBase;
 
   // Emit StateRestoreBegin marker
   {
@@ -1134,6 +1135,15 @@ void StateTrackingService::EmitImageLayoutTransitions() {
       continue;
     }
 
+    // RestoreImage marks an image restored (handle registered) even when its
+    // bound memory could not be restored - see ImageState::MemoryBindFailed.
+    // Such an image has no valid GPU-visible storage, so a barrier against it
+    // would be invalid (VUID-VkImageMemoryBarrier-image-01932), the same
+    // class of problem as the Disjoint case just above.
+    if (img->MemoryBindFailed) {
+      continue;
+    }
+
     // Layout-restore policy at the cut:
     //   * Regular image: transition to its tracked CurrentLayout; skip
     //     UNDEFINED / PREINITIALIZED (the second player creates it UNDEFINED).
@@ -1541,8 +1551,10 @@ void StateTrackingService::RestoreQueryPools() {
 
   // Synthetic high-value key for the temporary command buffer; must not collide
   // with any recording key.  EmitImageLayoutTransitions already allocated and
-  // freed its own (-2) CB before we run, but use a distinct value anyway.
-  constexpr uint64_t kTempCBKey = static_cast<uint64_t>(-3);
+  // freed its own (-2) CB before we run, but use a distinct value anyway - see
+  // the fixed-sentinel list near kStagingBufKey's definition for the full set
+  // this must (and does) stay disjoint from.
+  constexpr uint64_t kTempCBKey = static_cast<uint64_t>(-6);
 
   for (auto& [deviceKey, poolsByFamily] : poolsByDeviceAndFamily) {
     for (auto& [familyIndex, poolKeys] : poolsByFamily) {
@@ -2388,6 +2400,111 @@ bool StateTrackingService::RestoreVideoSession(ObjectState* stateBase) {
   return true;
 }
 
+// Shared allocator for every synthetic GITSKey minted for an object that has no real
+// captured key of its own and must stay live/registered beyond a single create-use-
+// destroy call (see m_NextSyntheticKey's declaration for the full list of users). Keys
+// are sequential integers starting from 1 (see the fixed-sentinel comment block near
+// kStagingBufKey's definition for the same reasoning applied to those), so decrementing
+// from just under UINT64_MAX can only approach that range after on the order of
+// UINT64_MAX allocations in a single restore pass - not a realistic stream - but this is
+// checked defensively rather than silently wrapping into the real key range, since a
+// collision there would corrupt an unrelated restored object instead of merely failing
+// loudly. kMinSafeSyntheticKey leaves a very wide margin (4 billion allocations) under
+// which this can never fire for any stream this codebase could plausibly encounter.
+uint64_t StateTrackingService::AllocateSyntheticKey() {
+  constexpr uint64_t kMinSafeSyntheticKey = static_cast<uint64_t>(-1) - 0xFFFFFFFFULL;
+  GITS_ASSERT(m_NextSyntheticKey > kMinSafeSyntheticKey);
+  if (m_NextSyntheticKey <= kMinSafeSyntheticKey) {
+    LOG_ERROR << "Vulkan subcapture: synthetic state-restore key allocator exhausted its "
+                 "safe range; state restore may emit colliding GITSKeys from here on";
+  }
+  return m_NextSyntheticKey--;
+}
+
+bool StateTrackingService::EmitSubstituteImageMemoryBind(ImageState* img) {
+  GITS_ASSERT(m_GpuReadbackHelper);
+  if (!img->ParentKey) {
+    return false;
+  }
+  ObjectState* deviceState = GetState(img->ParentKey);
+  if (!deviceState || !deviceState->ParentKey) {
+    return false;
+  }
+  const uint64_t deviceKey = img->ParentKey;
+  const uint64_t physDevKey = deviceState->ParentKey;
+
+  if (img->CreationCommandBuffer.empty()) {
+    return false;
+  }
+  std::vector<char> scratch = img->CreationCommandBuffer;
+  vkCreateImageCommand createCmd;
+  Decode(scratch.data(), createCmd);
+  if (!createCmd.m_pCreateInfo.Value) {
+    return false;
+  }
+  VkImageCreateInfo imageCi = *createCmd.m_pCreateInfo.Value;
+  if (!(imageCi.usage & VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT)) {
+    imageCi.usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+  }
+
+  VkMemoryRequirements req{};
+  bool requiresDedicatedAllocation = false;
+  if (!m_GpuReadbackHelper->QueryImageRequirements(deviceKey, imageCi, req,
+                                                   requiresDedicatedAllocation)) {
+    LOG_WARNING << "Vulkan subcapture: substitute image memory bind failed for image key="
+                << img->Key << " (could not query memory requirements)";
+    return false;
+  }
+  const uint32_t memType =
+      m_GpuReadbackHelper->FindCompatibleMemoryType(physDevKey, req.memoryTypeBits);
+  if (memType == UINT32_MAX) {
+    LOG_WARNING << "Vulkan subcapture: substitute image memory bind failed for image key="
+                << img->Key
+                << " (no compatible memory type for memoryTypeBits=" << req.memoryTypeBits << ")";
+    return false;
+  }
+
+  const uint64_t memKey = AllocateSyntheticKey();
+  VkMemoryDedicatedAllocateInfo dedicatedInfo{};
+  VkMemoryAllocateInfo mai{};
+  mai.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+  mai.allocationSize = req.size;
+  mai.memoryTypeIndex = memType;
+
+  vkAllocateMemoryCommand allocMemCmd;
+  allocMemCmd.m_device.Key = deviceKey;
+  if (requiresDedicatedAllocation) {
+    // VUID-vkBindImageMemory-image-01445: an image whose
+    // VkMemoryDedicatedRequirements::requiresDedicatedAllocation is VK_TRUE must be
+    // bound to memory allocated with a VkMemoryDedicatedAllocateInfo naming exactly
+    // this image. HandleKeys carries the image key first and the (unused) buffer key
+    // second, the same [image, buffer] order ResolvePNextHandleKeys expects for
+    // VkMemoryDedicatedAllocateInfo (see handleArgumentUpdatersPlayerAuto.cpp.mako);
+    // the second player resolves img->Key to this image's handle, already registered
+    // in HandleMapService by the vkCreateImage RestoreImage emitted earlier.
+    dedicatedInfo.sType = VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO;
+    mai.pNext = &dedicatedInfo;
+    allocMemCmd.m_pAllocateInfo.HandleKeys = {img->Key, 0};
+  }
+  allocMemCmd.m_pAllocateInfo.Value = &mai;
+  allocMemCmd.m_pMemory.Key = memKey;
+  allocMemCmd.m_Return.Value = VK_SUCCESS;
+  m_Recorder.Record(vkAllocateMemorySerializer(allocMemCmd));
+
+  vkBindImageMemoryCommand bind;
+  bind.m_device.Key = deviceKey;
+  bind.m_image.Key = img->Key;
+  bind.m_memory.Key = memKey;
+  bind.m_memoryOffset.Value = 0;
+  bind.m_Return.Value = VK_SUCCESS;
+  m_Recorder.Record(vkBindImageMemorySerializer(bind));
+
+  LOG_WARNING << "Vulkan subcapture: bound substitute memory key=" << memKey
+              << " to image key=" << img->Key
+              << " (original bound memory key=" << img->BoundMemoryKey << " could not be restored)";
+  return true;
+}
+
 bool StateTrackingService::RestoreImage(ObjectState* state) {
   auto* img = static_cast<ImageState*>(state);
 
@@ -2472,8 +2589,17 @@ bool StateTrackingService::RestoreImage(ObjectState* state) {
       LOG_WARNING << "Vulkan subcapture: skipping image memory bind for image key=" << img->Key
                   << " because bound memory key=" << img->BoundMemoryKey
                   << " could not be restored";
-      // The image handle IS registered; return true so dependent image views
-      // are not skipped unnecessarily.
+      // Handle restored: vkCreateImage was emitted and the key is already in
+      // m_RestoredThisPass (see insert above).  Return true so dependency
+      // ordering and other restore paths that only need the handle key do not
+      // treat RestoreImage as failed.  Try binding fresh device memory so
+      // dependent image views can still be created (VUID-VkImageViewCreateInfo-
+      // image-01020) and register handles for trimmed-stream playback.
+      // Content restore still skips this image because BoundMemoryKey was not
+      // restored; set MemoryBindFailed only if the substitute bind fails.
+      if (!EmitSubstituteImageMemoryBind(img)) {
+        img->MemoryBindFailed = true;
+      }
       return true;
     }
 
@@ -2511,6 +2637,15 @@ bool StateTrackingService::RestoreImageView(ObjectState* state) {
     if (!m_RestoredThisPass.count(iv->ImageKey)) {
       LOG_WARNING << "Vulkan subcapture: skipping image view key=" << iv->Key
                   << " because image key=" << iv->ImageKey << " could not be restored";
+      return false;
+    }
+    // When substitute binding also failed, the image has no memory and creating
+    // a view against it is illegal (VUID-VkImageViewCreateInfo-image-01020).
+    auto* imgState = static_cast<ImageState*>(GetState(iv->ImageKey));
+    if (imgState && imgState->MemoryBindFailed) {
+      LOG_WARNING << "Vulkan subcapture: skipping image view key=" << iv->Key
+                  << " because image key=" << iv->ImageKey
+                  << " has no bound memory (memory restore failed)";
       return false;
     }
   }
@@ -2941,21 +3076,34 @@ void StateTrackingService::RestoreMappedMemory(ObjectState* state) {
 // time so peak host memory stays bounded to a single resource.
 // ---------------------------------------------------------------------------
 
-// Synthetic GITSKeys for temporary staging resources created in the stream.
-// Must not collide with real keys (which are sequential starting from 1).
-// kTempCBKey = UINT64_MAX-1 is used by EmitImageLayoutTransitions.
+// Fixed (never-growing) synthetic GITSKeys for temporary staging resources created in
+// the stream. Each is create-use-destroy within a single call before the next call of
+// the same kind reuses the same value, and RestoreState() runs every phase below
+// sequentially and synchronously (content restore, then EmitImageLayoutTransitions,
+// then RestoreQueryPools), so none of these are ever simultaneously live - safe to keep
+// as small fixed values rather than pulling from the shared allocator below. Must not
+// collide with real keys (which are sequential starting from 1) *or with each other*;
+// kept in one place so a future addition can pick an unused value at a glance.
+//   -2 EmitImageLayoutTransitions' per-batch temporary command buffer (declared locally
+//      as kTempCBKey there).
+//   -3 kStagingBufKey (content restore's staging buffer, below).
+//   -4 kStagingMemKey (content restore's staging memory, below).
+//   -5 kContentCBKey (content restore's one-shot command buffer, below).
+//   -6 RestoreQueryPools' per-batch temporary command buffer (declared locally as
+//      kTempCBKey there; previously also -3, silently aliasing kStagingBufKey - see
+//      the synthetic-key-allocator audit near AllocateSyntheticKey's definition).
 static constexpr uint64_t kStagingBufKey = static_cast<uint64_t>(-3);
 static constexpr uint64_t kStagingMemKey = static_cast<uint64_t>(-4);
 static constexpr uint64_t kContentCBKey = static_cast<uint64_t>(-5);
-// Base for the (buffer,memory) key pairs synthesized during a single
-// EmitAccelerationStructureRebuild: its scratch buffer(s) and any transient build-input
-// buffers. Allocated downward within one rebuild call and torn down at its end, so the
-// range is reused across acceleration structures.
-static constexpr uint64_t kRebuildTransientKeyBase = static_cast<uint64_t>(-64);
-// Base for the (buffer,memory) key pairs synthesized by RestoreBlasChain for a relocated
-// acceleration structure. Allocated downward across the whole chain replay, so it must
-// stay disjoint from kRebuildTransientKeyBase, which every rebuild in the chain reuses.
-static constexpr uint64_t kChainTransientKeyBase = static_cast<uint64_t>(-4096);
+// Every OTHER synthetic key this file mints - i.e. one that must remain live/registered
+// beyond a single create-use-destroy call, for a potentially unbounded number of
+// allocations across a restore pass (relocated acceleration structures, their transient
+// rebuild inputs/scratch, substitute image memory) - comes from the single shared
+// StateTrackingService::AllocateSyntheticKey() allocator (m_NextSyntheticKey) instead of
+// its own independently-based range. See that method's definition for why one shared,
+// monotonically-decrementing counter is required here (an unbounded per-user range can
+// silently walk into a different user's "independent" range) and why it cannot collide
+// with the small fixed set above.
 
 // Defined below, next to EmitCaptureReplayBufferCreate. Declared here so the
 // serialize/deserialize path can build its staging buffer the same way.
@@ -3786,9 +3934,8 @@ void StateTrackingService::EmitAccelerationStructureRebuildBytes(
   cmd.m_commandBuffer.Key = kContentCBKey;
 
   // Synthetic (buffer,memory) keys for this rebuild's transients - recreated inputs and
-  // fresh scratch - allocated downward and destroyed after the build.
-  uint64_t nextTransientKey = kRebuildTransientKeyBase;
-  auto newTransientKey = [&nextTransientKey]() { return nextTransientKey--; };
+  // fresh scratch - pulled from the shared allocator and destroyed after the build.
+  auto newTransientKey = [this]() { return AllocateSyntheticKey(); };
   std::vector<std::pair<uint64_t, uint64_t>> transientBufs; // (bufKey, memKey)
 
   // A build input recreated at a freshly reserved address needs the build command's baked
@@ -4582,7 +4729,6 @@ void StateTrackingService::RestoreBlasChain() {
     uint64_t MemoryKey{}; // 0 when the allocation was already live
   };
   std::unordered_map<uint64_t, TransientAs> transientAs;
-  uint64_t nextChainTransientKey = kChainTransientKeyBase;
 
   // Destroy whichever of a transient acceleration structure's storage resources
   // we created ourselves (either may be 0 when it was already live).
@@ -4622,8 +4768,8 @@ void StateTrackingService::RestoreBlasChain() {
       RestoreOne(as);
       return m_RestoredThisPass.count(asKey) != 0;
     }
-    const uint64_t bufKey = nextChainTransientKey--;
-    const uint64_t memKey = nextChainTransientKey--;
+    const uint64_t bufKey = AllocateSyntheticKey();
+    const uint64_t memKey = AllocateSyntheticKey();
     const DevCtx* dev = resolveDev(as->ParentKey);
     if (!dev || !EmitRelocatedAccelerationStructureCreate(as->ParentKey, dev->PhysDev, *as, bufKey,
                                                           memKey)) {
