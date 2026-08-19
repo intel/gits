@@ -2237,17 +2237,20 @@ bool StateTrackingService::RestoreImage(ObjectState* state) {
   // the create command that the SECOND player will run during state restore.
   // Re-emit with TRANSFER_DST, except for incompatible transient attachments.
   //
-  // KNOWN LIMITATION / FUTURE WORK:
-  // Adding TRANSFER_DST here can legitimately change the image's
-  // vkGetImageMemoryRequirements (size / alignment / memoryTypeBits), which
-  // means the original vkAllocateMemory (sized for the app's requested usage
-  // only) may no longer satisfy the new bind on some drivers.  The
-  // spec-correct path is to promote TRANSFER_SRC | TRANSFER_DST in the legacy
-  // interceptor (recExecWrap_vkCreateImage in
-  // VulkanLegacy/interceptor/include/vulkanExecWrap.h) so the captured
-  // vkAllocateMemory is sized for the worst-case usage from day one.  Then
-  // this state-restore-side OR becomes a no-op (usage already includes both
-  // flags) and there is no requirements mismatch.  Tracking as follow-up.
+  // The recorded vkAllocateMemory covers application usage plus TRANSFER_SRC, so
+  // TRANSFER_DST can push vkGetImageMemoryRequirements past it -- a real risk for
+  // images, where usage feeds tiling and compression choices.  State restore runs
+  // in the player, so there is no capture-time alternative.
+  //
+  // Transient attachments are the exception.  VUID-VkImageCreateInfo-usage-00963: if usage
+  // includes VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT, bits other than COLOR_ATTACHMENT,
+  // DEPTH_STENCIL_ATTACHMENT and INPUT_ATTACHMENT must not be set.  Promoting TRANSFER_DST
+  // would make the re-emitted vkCreateImage itself invalid, and can drop the lazily
+  // allocated memory type from memoryTypeBits so that the verbatim vkAllocateMemory no
+  // longer satisfies the bind.  Nothing is lost: content restore requires TRANSFER_SRC,
+  // which a transient image cannot legally carry either, so it is never a
+  // vkCmdCopyBufferToImage destination.  The recorder guards its own TRANSFER_SRC
+  // promotion the same way, in CaptureCustomizationLayer::Pre(vkCreateImageCommand&).
   {
     std::vector<char> scratch = img->CreationCommandBuffer;
     char* buf = scratch.data();
@@ -2336,9 +2339,7 @@ void StateTrackingService::RestoreSwapchain(ObjectState* state) {
   // Mirrors legacy VulkanLegacy/recorder/vulkanStateRestore.cpp line ~622:
   //   swapchainCreateInfo.imageUsage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
   //
-  // Same KNOWN LIMITATION as RestoreImage above re: memory requirements
-  // delta vs the original allocation.  Long-term: do the imageUsage promotion
-  // at the legacy interceptor (recExecWrap_vkCreateSwapchainKHR).
+  // Same memory-requirements caveat as RestoreImage; no capture-time alternative.
   if (!state->CreationCommandBuffer.empty()) {
     std::vector<char> scratch = state->CreationCommandBuffer;
     char* buf = scratch.data();
@@ -4928,13 +4929,19 @@ void StateTrackingService::RestoreImageContents() {
       continue;
     }
     // Skip images without VK_IMAGE_USAGE_TRANSFER_SRC_BIT -- cannot use as copy source.
+    // UsageFlags is the usage as recorded, which is the application's plus the
+    // TRANSFER_SRC that CaptureCustomizationLayer::Pre(vkCreateImageCommand&) promotes onto
+    // every image allowed to carry it.  That guard skips transient attachments
+    // (VUID-VkImageCreateInfo-usage-00963), so this test keeps them out of content restore
+    // too, which is what lets RestoreImage skip the TRANSFER_DST promotion for them; the
+    // two sides must stay in step, and an explicit transient test here would be
+    // unreachable.
     // There is deliberately no matching VK_IMAGE_USAGE_TRANSFER_DST_BIT check,
     // even though the player's upload needs that bit
     // (VUID-vkCmdCopyBufferToImage-dstImage-00177,
-    // VUID-VkImageMemoryBarrier-oldLayout-01213): UsageFlags holds what the
-    // application asked for, while RestoreImage ORs TRANSFER_DST into the
-    // vkCreateImage it re-emits, so the image the second player copies into
-    // always has it.  Testing UsageFlags here would skip images that restore
+    // VUID-VkImageMemoryBarrier-oldLayout-01213): RestoreImage ORs TRANSFER_DST
+    // into the vkCreateImage it re-emits, so the image the second player copies
+    // into always has it.  Testing UsageFlags here would skip images that restore
     // correctly.
     if (!(img->UsageFlags & VK_IMAGE_USAGE_TRANSFER_SRC_BIT)) {
       continue;
