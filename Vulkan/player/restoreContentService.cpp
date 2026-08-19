@@ -133,13 +133,17 @@ void RestoreContentService::Manifest(const RestoreContentManifestCommand& comman
   // Flatten the manifest into the dense resource-index order the recorder used
   // (buffers first, then images).
   VkDeviceSize maxResource = 0;
+  uint64_t maxResourceKey = 0;
   for (const auto& buf : command.m_Buffers) {
     ResourceDesc desc;
     desc.IsImage = false;
     desc.DstKey = buf.DstBufferKey;
     desc.Size = buf.Size;
     session->Resources.push_back(std::move(desc));
-    maxResource = std::max(maxResource, buf.Size);
+    if (buf.Size > maxResource) {
+      maxResource = buf.Size;
+      maxResourceKey = buf.DstBufferKey;
+    }
   }
   for (const auto& img : command.m_Images) {
     ResourceDesc desc;
@@ -151,7 +155,10 @@ void RestoreContentService::Manifest(const RestoreContentManifestCommand& comman
     desc.AspectMask = static_cast<VkImageAspectFlags>(img.AspectMask);
     desc.Regions = img.Regions;
     session->Resources.push_back(std::move(desc));
-    maxResource = std::max(maxResource, img.Size);
+    if (img.Size > maxResource) {
+      maxResource = img.Size;
+      maxResourceKey = img.DstImageKey;
+    }
   }
 
   if (session->Resources.empty() || maxResource == 0) {
@@ -234,23 +241,21 @@ void RestoreContentService::Manifest(const RestoreContentManifestCommand& comman
   if (stagingBudget > 0) {
     target = std::min(target, stagingBudget);
   }
-  target = std::max(target, maxResource); // a single resource must always fit
-  session->StagingSize = AlignUp(target, kStagingAlign);
-
-  // ---- Pack resources into batches that each fit in one staging buffer ----
-  size_t batch = 0;
-  VkDeviceSize cursor = 0;
-  for (auto& r : session->Resources) {
-    VkDeviceSize base = AlignUp(cursor, kResourceAlign);
-    if (cursor != 0 && base + r.Size > session->StagingSize) {
-      ++batch;
-      base = 0;
-    }
-    r.BatchIdx = batch;
-    r.BaseOffset = base;
-    cursor = base + r.Size;
+  // A resource is uploaded in one piece - it is never split across slots - so
+  // the slot has to be at least as large as the largest resource.  Growing past
+  // kMaxStagingBytes for that reason is routine; growing past the live memory
+  // budget is not, because the ring is then already down to a single slot and
+  // the one-slot retry below has nothing left to fall back to.
+  const VkDeviceSize budgetedSize = AlignUp(target, kStagingAlign);
+  session->StagingSize = std::max(budgetedSize, AlignUp(maxResource, kStagingAlign));
+  if (stagingBudget > 0 && session->StagingSize > stagingBudget) {
+    LOG_WARNING << "RestoreContentService: manifest: resource key=" << maxResourceKey << " needs "
+                << maxResource << " staging bytes, more than the " << stagingBudget
+                << " bytes budgeted from free host-visible memory on device key="
+                << command.m_DeviceKey << " - growing the staging slot to fit it.";
   }
-  session->NumBatches = batch + 1;
+
+  PackBatches(*session);
 
   // ---- Choose the pipeline depth ----
   // Start from the configured depth (bounded by the batch count) and shrink it
@@ -271,11 +276,27 @@ void RestoreContentService::Manifest(const RestoreContentManifestCommand& comman
   if (!ok && ring > 1) {
     // Live budget is only an estimate and the heap may be fragmented, so an
     // allocation can still fail.  Retry with a single slot: this halves (or
-    // more) the footprint at the cost of pipelining, and is the only fallback
-    // that helps when the whole ring, but not one slot, exceeds what is free.
+    // more) the footprint at the cost of pipelining.  It only helps when the
+    // whole ring, but not one slot, exceeds what is free; a slot that is itself
+    // too large is handled by the budgeted-size retry below.
     LOG_WARNING << "RestoreContentService: manifest: staging allocation for ring=" << ring
                 << " failed on device key=" << command.m_DeviceKey
                 << " - retrying with a single slot (no pipelining).";
+    ring = 1;
+    ok = BuildSlots(*session, ring, memType, probeCi);
+  }
+  if (!ok && session->StagingSize > budgetedSize) {
+    // The slot was grown past the budget so an oversized resource would fit, and
+    // even one slot of that size could not be allocated.  Shrink back to the
+    // budgeted size: repacking then leaves every resource that does not fit out
+    // of the batches, so the rest of the manifest is still restored instead of
+    // the whole session being lost.
+    LOG_ERROR << "RestoreContentService: manifest: could not allocate a " << session->StagingSize
+              << " byte staging slot on device key=" << command.m_DeviceKey << " - retrying with "
+              << budgetedSize << " bytes; resources larger than that are not restored.";
+    session->StagingSize = budgetedSize;
+    PackBatches(*session);
+    probeCi.size = session->StagingSize;
     ring = 1;
     ok = BuildSlots(*session, ring, memType, probeCi);
   }
@@ -292,6 +313,37 @@ void RestoreContentService::Manifest(const RestoreContentManifestCommand& comman
   }
 
   m_Sessions[command.m_DeviceKey] = std::move(session);
+}
+
+void RestoreContentService::PackBatches(Session& session) {
+  size_t batch = 0;
+  VkDeviceSize cursor = 0;
+  for (auto& r : session.Resources) {
+    if (r.Size > session.StagingSize) {
+      // Larger than a whole slot, and a resource is never split across slots.
+      // Keep it in the current batch so the data tokens still advance batches in
+      // order, but give it no space; OnData's bounds check drops its bytes.
+      LOG_WARNING << "RestoreContentService: resource key=" << r.DstKey << " needs " << r.Size
+                  << " staging bytes but a slot is only " << session.StagingSize
+                  << " bytes - its content is not restored"
+                  << (r.IsImage ? " (a barrier-only layout transition will still be emitted)."
+                                : ".");
+      r.BatchIdx = batch;
+      r.BaseOffset = 0;
+      r.SkippedNoSpace = true;
+      continue;
+    }
+    r.SkippedNoSpace = false;
+    VkDeviceSize base = AlignUp(cursor, kResourceAlign);
+    if (cursor != 0 && base + r.Size > session.StagingSize) {
+      ++batch;
+      base = 0;
+    }
+    r.BatchIdx = batch;
+    r.BaseOffset = base;
+    cursor = base + r.Size;
+  }
+  session.NumBatches = batch + 1;
 }
 
 bool RestoreContentService::BuildSlots(Session& session,
@@ -364,7 +416,10 @@ void RestoreContentService::FlushBatch(Session& session, size_t batchIdx) {
 
   std::vector<ResourceDesc*> items;
   for (auto& r : session.Resources) {
-    if (r.BatchIdx == batchIdx && r.Received) {
+    // A SkippedNoSpace image never gets Received (OnData drops its bytes for
+    // lack of staging space), but still needs its barrier-only fallback
+    // transition below - see ResourceDesc::SkippedNoSpace.
+    if (r.BatchIdx == batchIdx && (r.Received || (r.IsImage && r.SkippedNoSpace))) {
       items.push_back(&r);
     }
   }
@@ -434,6 +489,33 @@ void RestoreContentService::FlushBatch(Session& session, size_t batchIdx) {
         LOG_WARNING << "RestoreContentService: unresolved dst image key=" << r->DstKey;
         continue;
       }
+
+      if (r->SkippedNoSpace) {
+        // Too large for the staging path (see ResourceDesc::SkippedNoSpace):
+        // no data was uploaded, so skip straight to the barrier the
+        // subcapture recorder's plain layout-transition path would have
+        // emitted for this image had it not assumed this copy would happen -
+        // mirrors EmitImageLayoutTransitions' UNDEFINED -> targetLayout
+        // barrier (stateTrackingService.cpp) exactly, since there is no
+        // TRANSFER_DST_OPTIMAL intermediate layout to come from here.
+        VkImageMemoryBarrier toFinalOnly{};
+        toFinalOnly.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        toFinalOnly.srcAccessMask = 0;
+        toFinalOnly.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
+        toFinalOnly.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        toFinalOnly.newLayout = r->FinalLayout;
+        toFinalOnly.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        toFinalOnly.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        toFinalOnly.image = dstImage;
+        toFinalOnly.subresourceRange = {r->AspectMask, 0, VK_REMAINING_MIP_LEVELS, 0,
+                                        VK_REMAINING_ARRAY_LAYERS};
+        dt.vkCmdPipelineBarrier(slot.Cb, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                                VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr, 0, nullptr, 1,
+                                &toFinalOnly);
+        appliedImageLayouts.emplace_back(r->DstKey, r->FinalLayout);
+        continue;
+      }
+
       VkImageMemoryBarrier toDst{};
       toDst.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
       toDst.srcAccessMask = 0;
@@ -540,9 +622,20 @@ void RestoreContentService::OnData(const RestoreContentDataCommand& command) {
     if (slot.Mapped == nullptr) {
       continue;
     }
+    // Resources too large for a slot were packed with no space of their own
+    // (see PackBatches); copying them would run past the end of the mapping.
+    if (r.BaseOffset + r.Size > session.StagingSize) {
+      continue;
+    }
     VkDeviceSize copySize = std::min<VkDeviceSize>(region.Size, r.Size);
     std::memcpy(static_cast<char*>(slot.Mapped) + r.BaseOffset, region.Data,
                 static_cast<size_t>(copySize));
+    // The copy commands always transfer the manifest size, so a short token
+    // would otherwise upload whatever an earlier batch left in the slot.
+    if (copySize < r.Size) {
+      std::memset(static_cast<char*>(slot.Mapped) + r.BaseOffset + copySize, 0,
+                  static_cast<size_t>(r.Size - copySize));
+    }
     r.Received = true;
   }
 

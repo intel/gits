@@ -32,11 +32,13 @@ class PlayerManager;
 //
 //   * On the manifest it queries live free device memory (VK_EXT_memory_budget,
 //     falling back to the total host-visible heap), sizes a single reusable
-//     staging buffer (bounded by an 80 MB cap, a fraction of the available
+//     staging buffer (bounded by a 128 MB cap, a fraction of the available
 //     memory, and the total footprint of the resources), and packs the
 //     resources into batches that each fit inside one staging buffer.  The
 //     pipeline depth is reduced when a slot is a large fraction of available
-//     memory so the combined staging footprint stays within budget.
+//     memory so the combined staging footprint stays within budget.  A single
+//     resource larger than those bounds grows the slot to fit it, and is left
+//     unrestored only if even that one slot cannot be allocated.
 //   * As Data tokens arrive it copies the bytes into the current batch's
 //     staging slot; when a batch fills it records copy commands and submits
 //     them, cycling through a small ring of staging slots so GPU upload of one
@@ -78,6 +80,18 @@ private:
     size_t BatchIdx{0};
     VkDeviceSize BaseOffset{0};
     bool Received{false};
+    // Set by PackBatches when Size is larger than a whole staging slot, so
+    // this resource is never given staging space and its bytes are dropped by
+    // OnData's bounds check (Received stays false). The subcapture recorder's
+    // EmitImageLayoutTransitions skips the plain UNDEFINED -> FinalLayout
+    // transition for any image whose content was expected to be restored
+    // (ImageState::ContentRestored), on the assumption that this service's
+    // own copy would leave it in FinalLayout as a side effect. When that
+    // assumption is broken by an oversized resource, FlushBatch must still
+    // emit that barrier (with no copy) for an image so it is not left at
+    // VK_IMAGE_LAYOUT_UNDEFINED after replay. Buffers have no analogous
+    // layout to fix, so only IsImage resources use this.
+    bool SkippedNoSpace{false};
   };
 
   // One reusable staging slot in the pipeline ring.
@@ -114,6 +128,13 @@ private:
   // Record + submit the copies for every received resource of batchIdx.
   void FlushBatch(Session& session, size_t batchIdx);
   void DestroySession(Session& session);
+
+  // Assign every resource a batch and an offset inside that batch's staging
+  // slot, for the slot size currently in session.StagingSize, and set
+  // session.NumBatches.  Resources larger than one slot are left without space
+  // (nothing is ever split across slots) and are not restored.  Re-runnable, so
+  // the caller can repack after shrinking the slot size.
+  void PackBatches(Session& session);
 
   // Allocate `ring` staging slots of session.StagingSize bytes.  On any failure
   // it tears down whatever it created and returns false so the caller can retry
