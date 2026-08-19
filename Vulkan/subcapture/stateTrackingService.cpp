@@ -2030,15 +2030,26 @@ bool StateTrackingService::RestoreBuffer(ObjectState* state) {
   // is emitted; otherwise ResolvePNextHandleKeys crashes on the missing key.
   // For non-dedicated allocations the order makes no difference.
   //
-  // EmitCreationCommand is not used here: the stored usage is what the application
-  // requested, which may not include TRANSFER_DST, and the content-restore paths upload
-  // through vkCmdCopyBuffer. Mirrors RestoreImage's OR-in of TRANSFER_DST below,
-  // including its KNOWN LIMITATION about memory requirements shifting.
+  // Like RestoreImage, this does not use the generic EmitCreationCommand: the
+  // stored usage is what the application asked for, plus the TRANSFER_SRC the
+  // recorder promotes for readback, which for a vertex, index or uniform buffer
+  // does not include TRANSFER_DST.  RestoreBufferContents has the second player
+  // upload the contents with vkCmdCopyBuffer into this buffer, and that requires
+  // the destination to carry VK_BUFFER_USAGE_TRANSFER_DST_BIT
+  // (VUID-vkCmdCopyBuffer-dstBuffer-00120).  Excluding such buffers from the
+  // content restore instead would drop the contents of nearly every buffer the
+  // application does not itself copy into, so promote the bit here exactly as
+  // RestoreImage promotes VK_IMAGE_USAGE_TRANSFER_DST_BIT.
+  //
+  // The recorded vkAllocateMemory covers application usage plus TRANSFER_SRC, so
+  // TRANSFER_DST could in principle push vkGetBufferMemoryRequirements past it;
+  // state restore runs in the player, so there is no capture-time alternative.
+  // No alignment rule is tied to that bit for buffers, and legacy does the same.
   {
     std::vector<char> scratch = buf->CreationCommandBuffer;
-    char* bufPtr = scratch.data();
+    char* raw = scratch.data();
     vkCreateBufferCommand cmd;
-    Decode(bufPtr, cmd);
+    Decode(raw, cmd);
     if (cmd.m_pCreateInfo.Value) {
       cmd.m_pCreateInfo.Value->usage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     }
@@ -4661,6 +4672,11 @@ void StateTrackingService::RestoreBufferContents() {
                   << " because bound memory key=" << buf->BoundMemoryKey << " was not restored";
       continue;
     }
+    // As for images, there is no VK_BUFFER_USAGE_TRANSFER_DST_BIT check to go
+    // with this one even though vkCmdCopyBuffer needs that bit on the
+    // destination (VUID-vkCmdCopyBuffer-dstBuffer-00120): RestoreBuffer ORs it
+    // into the vkCreateBuffer it re-emits, so the buffer the second player
+    // copies into always has it, whatever the application requested.
     if (!(buf->UsageFlags & VK_BUFFER_USAGE_TRANSFER_SRC_BIT)) {
       continue;
     }
@@ -4837,6 +4853,14 @@ void StateTrackingService::RestoreImageContents() {
       continue;
     }
     // Skip images without VK_IMAGE_USAGE_TRANSFER_SRC_BIT -- cannot use as copy source.
+    // There is deliberately no matching VK_IMAGE_USAGE_TRANSFER_DST_BIT check,
+    // even though the player's upload needs that bit
+    // (VUID-vkCmdCopyBufferToImage-dstImage-00177,
+    // VUID-VkImageMemoryBarrier-oldLayout-01213): UsageFlags holds what the
+    // application asked for, while RestoreImage ORs TRANSFER_DST into the
+    // vkCreateImage it re-emits, so the image the second player copies into
+    // always has it.  Testing UsageFlags here would skip images that restore
+    // correctly.
     if (!(img->UsageFlags & VK_IMAGE_USAGE_TRANSFER_SRC_BIT)) {
       continue;
     }
