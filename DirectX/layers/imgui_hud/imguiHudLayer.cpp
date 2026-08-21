@@ -16,6 +16,7 @@
 #include "keyUtils.h"
 #include "gits.h"
 #include "imGuiHUD.h"
+#include "messageBus.h"
 
 namespace gits {
 namespace DirectX {
@@ -456,6 +457,11 @@ void ImGuiHUDLayer::Present() {
   barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
 
   m_CommandList->Reset(frameCtx.commandAllocator.Get(), nullptr);
+
+  gits::MessageBus::get().publish(
+      {PUBLISHER_PLAYER, TOPIC_GITS_WORKLOAD_BEGIN},
+      std::make_shared<GitsWorkloadMessage>(m_CommandList.Get(), "GITS_ImGuiHUD", m_SwapChainKey));
+
   m_CommandList->ResourceBarrier(1, &barrier);
 
   m_CommandList->OMSetRenderTargets(1, &frameCtx.rtvHandle, FALSE, nullptr);
@@ -468,6 +474,11 @@ void ImGuiHUDLayer::Present() {
   barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
 
   m_CommandList->ResourceBarrier(1, &barrier);
+
+  gits::MessageBus::get().publish(
+      {PUBLISHER_PLAYER, TOPIC_GITS_WORKLOAD_END},
+      std::make_shared<GitsWorkloadMessage>(m_CommandList.Get(), "GITS_ImGuiHUD", m_SwapChainKey));
+
   m_CommandList->Close();
 
   m_CommandQueue->ExecuteCommandLists(
