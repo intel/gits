@@ -71,6 +71,17 @@ void CommandListSplitLayer::Pre(ID3D12CommandQueueSignalCommand& c) {
   m_SplitService.CommandQueueSignal(c.m_Object.Key, c.m_pFence.Key, c.m_Value.Value);
 }
 
+void CommandListSplitLayer::Pre(ID3D12Device3EnqueueMakeResidentCommand& c) {
+  m_SplitService.GetKeyAllocator().RemapCommandKey(c.Key);
+  m_Recorder.Record(ID3D12Device3EnqueueMakeResidentSerializer(c));
+
+  ID3D12FenceGetCompletedValueCommand getCompletedValue;
+  getCompletedValue.Key = m_SplitService.GetUniqueCommandKey();
+  getCompletedValue.m_Object.Key = c.m_pFenceToSignal.Key;
+  getCompletedValue.m_Result.Value = c.m_FenceValueToSignal.Value;
+  m_Recorder.Record(ID3D12FenceGetCompletedValueSerializer(getCompletedValue));
+}
+
 void CommandListSplitLayer::Pre(ID3D12FenceSignalCommand& c) {
   GITS_ASSERT(false, "Invalid command type");
 }
