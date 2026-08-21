@@ -35,7 +35,7 @@ void RenderTargetsDump::DumpResource(ID3D12GraphicsCommandList* commandList,
   StageResource(commandList, resource, resourceState, *dumpInfo);
 }
 
-void RenderTargetsDump::ExecuteCommandLists(GITSKey key,
+void RenderTargetsDump::ExecuteCommandLists(CommandKey key,
                                             GITSKey commandQueueKey,
                                             ID3D12CommandQueue* commandQueue,
                                             ID3D12CommandList** commandLists,

@@ -16,17 +16,17 @@ namespace DirectX {
 
 class ExecutionSerializationKeyAllocator {
 public:
-  GITSKey GetUniqueCommandKey() {
+  CommandKey GetUniqueCommandKey() {
     return ++m_CommandKey;
   }
-  void RemapCommandKey(GITSKey& key) {
+  void RemapCommandKey(CommandKey& key) {
     if (key & EXECUTION_SERIALIZATION_KEY_MASK) {
       key = GetUniqueCommandKey();
     }
   }
 
 private:
-  GITSKey m_CommandKey{EXECUTION_SERIALIZATION_KEY_MASK};
+  CommandKey m_CommandKey{EXECUTION_SERIALIZATION_KEY_MASK};
 };
 
 } // namespace DirectX

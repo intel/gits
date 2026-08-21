@@ -107,24 +107,24 @@ private:
   std::string GetPlacedToCommittedIncompatibilityReasons(
       const D3D12_HEAP_DESC& heapDesc, const D3D12_RESOURCE_DESC& resourceDesc) const;
   std::string GetPlacedToCommittedFailureContext(const char* apiName,
-                                                 GITSKey commandKey,
+                                                 CommandKey commandKey,
                                                  GITSKey heapKey,
                                                  const D3D12_HEAP_DESC& heapDesc,
                                                  const D3D12_RESOURCE_DESC& resourceDesc) const;
   void FailPlacedToCommittedIncompatibility(const char* apiName,
-                                            GITSKey commandKey,
+                                            CommandKey commandKey,
                                             GITSKey heapKey,
                                             const D3D12_HEAP_DESC& heapDesc,
                                             const D3D12_RESOURCE_DESC& resourceDesc) const;
   void FailPlacedToCommittedCreation(const char* apiName,
-                                     GITSKey commandKey,
+                                     CommandKey commandKey,
                                      GITSKey heapKey,
                                      UINT64 heapOffset,
                                      const D3D12_RESOURCE_DESC& resourceDesc,
                                      D3D12_RESOURCE_STATES initialState,
                                      HRESULT hr) const;
   void FailPlacedToCommittedCreation(const char* apiName,
-                                     GITSKey commandKey,
+                                     CommandKey commandKey,
                                      GITSKey heapKey,
                                      UINT64 heapOffset,
                                      const D3D12_RESOURCE_DESC& resourceDesc,

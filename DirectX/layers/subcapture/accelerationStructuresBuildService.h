@@ -50,8 +50,8 @@ public:
   void ExecuteCommandLists(ID3D12CommandQueueExecuteCommandListsCommand& c);
   void CommandQueueWait(ID3D12CommandQueueWaitCommand& c);
   void CommandQueueSignal(ID3D12CommandQueueSignalCommand& c);
-  void FenceSignal(GITSKey key, GITSKey fenceKey, UINT64 fenceValue);
-  void DestroyResource(GITSKey commandKey, GITSKey resourceKey);
+  void FenceSignal(CommandKey key, GITSKey fenceKey, UINT64 fenceValue);
+  void DestroyResource(CommandKey commandKey, GITSKey resourceKey);
 
 private:
   StateTrackingService& m_StateService;
@@ -72,7 +72,7 @@ private:
     };
     std::unordered_map<GITSKey, ResourceState*> Buffers;
     std::unordered_map<GITSKey, ReservedResourcesService::TiledResource> TiledResources;
-    GITSKey Key{};
+    CommandKey Key{};
     GITSKey CommandListKey{};
     CommandType Type{};
     GITSKey DestKey{};
@@ -159,8 +159,8 @@ private:
     std::unordered_map<GITSKey,
                        std::vector<std::unique_ptr<RaytracingAccelerationStructureCommand>>>
         m_CommandsByCommandList;
-    std::unordered_map<GITSKey, std::unique_ptr<CommandNode>> m_CommandById;
-    std::unordered_map<GITSKey, RaytracingAccelerationStructureCommand*> m_CommandByBuildKey;
+    std::unordered_map<unsigned, std::unique_ptr<CommandNode>> m_CommandById;
+    std::unordered_map<CommandKey, RaytracingAccelerationStructureCommand*> m_CommandByBuildKey;
     std::vector<CommandNode*> m_RestoreCommands;
   };
   OptimizationService m_OptimizationService;
@@ -169,18 +169,18 @@ private:
   class BufferLifetimeService {
   public:
     BufferLifetimeService(StateTrackingService& stateService) : m_StateService(stateService) {}
-    void AddInputBuffer(GITSKey commandKey, GITSKey bufferKey);
-    void AddRtasBuffer(GITSKey commandKey, GITSKey bufferKey);
-    void AddRelease(GITSKey commandKey, GITSKey bufferKey);
-    void CreateBuffers(GITSKey commandKey);
-    void ReleaseBuffers(GITSKey commandKey);
+    void AddInputBuffer(CommandKey commandKey, GITSKey bufferKey);
+    void AddRtasBuffer(CommandKey commandKey, GITSKey bufferKey);
+    void AddRelease(CommandKey commandKey, GITSKey bufferKey);
+    void CreateBuffers(CommandKey commandKey);
+    void ReleaseBuffers(CommandKey commandKey);
 
   private:
     StateTrackingService& m_StateService;
-    std::unordered_map<GITSKey, std::unordered_set<GITSKey>> m_InputBuffersByBuild;
-    std::unordered_map<GITSKey, std::unordered_set<GITSKey>> m_RtasBuffersByBuild;
+    std::unordered_map<CommandKey, std::unordered_set<GITSKey>> m_InputBuffersByBuild;
+    std::unordered_map<CommandKey, std::unordered_set<GITSKey>> m_RtasBuffersByBuild;
     std::unordered_set<GITSKey> m_Buffers;
-    std::map<GITSKey, GITSKey> m_Releases;
+    std::map<CommandKey, GITSKey> m_Releases;
   };
   BufferLifetimeService m_BufferLifetimeService;
 };

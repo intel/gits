@@ -26,7 +26,7 @@ void CommandListExecutionService::CommandListCommand(GITSKey commandListKey,
   commandList.Commands.push_back(createCommandSerializer(&command));
 }
 
-void CommandListExecutionService::ExecuteCommandLists(GITSKey callKey,
+void CommandListExecutionService::ExecuteCommandLists(CommandKey callKey,
                                                       GITSKey commandQueueKey,
                                                       std::vector<GITSKey>& commandListKeys) {
   Execute* execute = new Execute();
@@ -51,7 +51,7 @@ void CommandListExecutionService::CreateCommandList(GITSKey commandListKey, GITS
   }
 }
 
-void CommandListExecutionService::CommandListReset(GITSKey commandKey,
+void CommandListExecutionService::CommandListReset(CommandKey commandKey,
                                                    GITSKey commandListKey,
                                                    GITSKey allocatorKey) {
   CommandList& commandList = m_CommandListsByKey[commandListKey];
@@ -59,14 +59,14 @@ void CommandListExecutionService::CommandListReset(GITSKey commandKey,
   commandList.Reset = true;
 }
 
-void CommandListExecutionService::CommandQueueWait(GITSKey callKey,
+void CommandListExecutionService::CommandQueueWait(CommandKey callKey,
                                                    GITSKey commandQueueKey,
                                                    GITSKey fenceKey,
                                                    UINT64 fenceValue) {
   m_ExecutionTracker.CommandQueueWait(callKey, commandQueueKey, fenceKey, fenceValue);
 }
 
-void CommandListExecutionService::CommandQueueSignal(GITSKey callKey,
+void CommandListExecutionService::CommandQueueSignal(CommandKey callKey,
                                                      GITSKey commandQueueKey,
                                                      GITSKey fenceKey,
                                                      UINT64 fenceValue) {
@@ -74,7 +74,7 @@ void CommandListExecutionService::CommandQueueSignal(GITSKey callKey,
   ExecuteReadyExecutables();
 }
 
-void CommandListExecutionService::FenceSignal(GITSKey callKey,
+void CommandListExecutionService::FenceSignal(CommandKey callKey,
                                               GITSKey fenceKey,
                                               UINT64 fenceValue) {
   m_ExecutionTracker.FenceSignal(callKey, fenceKey, fenceValue);

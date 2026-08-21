@@ -19,7 +19,7 @@ void RaytracingInstancesDump::BuildTlas(ID3D12GraphicsCommandList* commandList,
                                         unsigned offset,
                                         unsigned size,
                                         BarrierState state,
-                                        GITSKey buildCall) {
+                                        CommandKey buildCall) {
   InstancesInfo* info = new InstancesInfo();
   info->Offset = offset;
   info->Size = size;
@@ -33,7 +33,7 @@ void RaytracingInstancesDump::BuildTlasArrayOfPointers(
     unsigned offset,
     unsigned size,
     BarrierState state,
-    GITSKey buildCall,
+    CommandKey buildCall,
     std::vector<unsigned>& arrayOfPointersOffsets) {
   InstancesInfo* info = new InstancesInfo();
   info->Offset = offset;

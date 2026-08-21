@@ -642,12 +642,12 @@ void CaptureCustomizationLayer::Pre(ID3D12GraphicsCommandList2WriteBufferImmedia
 }
 
 void CaptureCustomizationLayer::Post(ID3D12FenceGetCompletedValueCommand& c) {
-  static constexpr GITSKey maxCommandKeyDifference = 10;
+  static constexpr CommandKey maxCommandKeyDifference(10);
 
-  static thread_local GITSKey prevCommandKey = 0;
+  static thread_local CommandKey prevCommandKey{};
   static thread_local GITSKey prevFenceKey = 0;
   static thread_local UINT64 prevValue = 0;
-  GITSKey commandKey = c.Key;
+  CommandKey commandKey = c.Key;
   GITSKey fenceKey = c.m_Object.Key;
   UINT64 value = c.m_Result.Value;
   if (commandKey <= prevCommandKey + maxCommandKeyDifference) {

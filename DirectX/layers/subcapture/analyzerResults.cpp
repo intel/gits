@@ -8,6 +8,7 @@
 
 #include "analyzerResults.h"
 #include "arguments.h"
+#include "command.h"
 #include "log.h"
 #include "configurator.h"
 
@@ -45,22 +46,27 @@ AnalyzerResults::AnalyzerResults() {
         tlases = false;
         blases = true;
       } else {
-        GITSKey key = std::stoull(str);
         if (commandLists) {
+          GITSKey key = std::stoull(str);
           m_CommandListKeys.insert(key);
         } else if (commandQueues) {
+          CommandKey key = std::stoull(str);
           m_CommandQueueCommands.insert(key);
         } else if (objects) {
+          GITSKey key = std::stoull(str);
           m_ObjectKeys.insert(key);
         } else if (descriptors) {
+          GITSKey key = std::stoull(str);
           analysis >> str;
           unsigned index = std::stoi(str);
           m_Descriptors.insert(std::make_pair(key, index));
         } else if (tlases) {
+          CommandKey key = std::stoull(str);
           m_Tlases.insert(key);
         } else if (blases) {
+          CommandKey key = std::stoull(str);
           analysis >> str;
-          GITSKey source = std::stoull(str);
+          CommandKey source = std::stoull(str);
           m_Blases.insert(std::make_pair(key, source));
         }
       }
@@ -86,23 +92,23 @@ bool AnalyzerResults::RestoreDescriptor(GITSKey heapKey, unsigned index) {
   return m_Descriptors.find(std::make_pair(heapKey, index)) != m_Descriptors.end();
 }
 
-bool AnalyzerResults::RestoreTlas(GITSKey buildKey) {
+bool AnalyzerResults::RestoreTlas(CommandKey buildKey) {
   return m_Tlases.contains(buildKey);
 }
 
-bool AnalyzerResults::RestoreBlas(GITSKey buildKey) {
+bool AnalyzerResults::RestoreBlas(CommandKey buildKey) {
   if (!m_Optimize) {
     return true;
   }
   return m_Blases.contains(buildKey);
 }
 
-GITSKey AnalyzerResults::GetBlasSourceBuild(GITSKey buildKey) {
+CommandKey AnalyzerResults::GetBlasSourceBuild(CommandKey buildKey) {
   auto it = m_Blases.find(buildKey);
   if (it != m_Blases.end()) {
     return it->second;
   }
-  return 0;
+  return CommandKey{};
 }
 
 bool AnalyzerResults::IsAnalysis() {

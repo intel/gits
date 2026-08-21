@@ -32,7 +32,7 @@ AnalyzerCommandListService::AnalyzerCommandListService(
   m_Optimize = Configurator::Get().common.player.subcapture.optimize;
 }
 
-std::set<GITSKey>& AnalyzerCommandListService::GetTlases() {
+std::set<CommandKey>& AnalyzerCommandListService::GetTlases() {
   if (m_DispatchRays && m_TlasBuildKeys.empty()) {
     m_RaytracingService.GetTlases(m_TlasBuildKeys);
   }
@@ -574,7 +574,7 @@ void AnalyzerCommandListService::CommandAnalysis(
     ID3D12GraphicsCommandListSetComputeRootShaderResourceViewCommand& c) {
   AddObjectForRestore(c.m_BufferLocation.InterfaceKey);
 
-  GITSKey tlasBuildKey = m_RaytracingService.FindTlas(AnalyzerRaytracingService::KeyOffset(
+  CommandKey tlasBuildKey = m_RaytracingService.FindTlas(AnalyzerRaytracingService::KeyOffset(
       c.m_BufferLocation.InterfaceKey, c.m_BufferLocation.Offset));
   if (tlasBuildKey) {
     m_TlasBuildKeys.insert(tlasBuildKey);

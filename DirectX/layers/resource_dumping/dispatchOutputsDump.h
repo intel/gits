@@ -26,7 +26,7 @@ public:
                     unsigned mipLevel,
                     DXGI_FORMAT format,
                     unsigned commandListDispatchCount);
-  void ExecuteCommandLists(GITSKey key,
+  void ExecuteCommandLists(CommandKey key,
                            GITSKey commandQueueKey,
                            ID3D12CommandQueue* commandQueue,
                            ID3D12CommandList** commandLists,

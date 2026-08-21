@@ -60,7 +60,7 @@ void GpuPatchDumpService::DumpInstances(ID3D12GraphicsCommandList* commandList,
                                         GITSKey resourceKey,
                                         unsigned size,
                                         BarrierState resourceState,
-                                        GITSKey callKey,
+                                        CommandKey callKey,
                                         bool prePatch) {
 
   if (!(m_DumpInstancesPre && prePatch || m_DumpInstancesPost && !prePatch)) {
@@ -84,7 +84,7 @@ void GpuPatchDumpService::DumpInstancesArrayOfPointers(ID3D12GraphicsCommandList
                                                        unsigned offset,
                                                        unsigned size,
                                                        BarrierState resourceState,
-                                                       GITSKey callKey,
+                                                       CommandKey callKey,
                                                        bool prePatch) {
   if (!(m_DumpInstancesPre && prePatch || m_DumpInstancesPost && !prePatch)) {
     return;
@@ -108,7 +108,7 @@ void GpuPatchDumpService::DumpBindingTable(ID3D12GraphicsCommandList* commandLis
                                            unsigned size,
                                            unsigned stride,
                                            BarrierState resourceState,
-                                           GITSKey callKey,
+                                           CommandKey callKey,
                                            BindingTableType bindingTableType,
                                            bool prePatch) {
 
@@ -152,7 +152,7 @@ void GpuPatchDumpService::DumpExecuteIndirectArgumentBuffer(
     ID3D12Resource* countBuffer,
     unsigned countBufferOffset,
     BarrierState countBufferState,
-    GITSKey callKey,
+    CommandKey callKey,
     bool prePatch) {
 
   if (!(m_DumpArgumentBufferPre && prePatch || m_DumpArgumentBufferPost && !prePatch)) {
@@ -172,7 +172,7 @@ void GpuPatchDumpService::DumpExecuteIndirectArgumentBuffer(
                                            countBufferState, dumpName.str(), prePatch);
 }
 
-void GpuPatchDumpService::ExecuteCommandLists(GITSKey key,
+void GpuPatchDumpService::ExecuteCommandLists(CommandKey key,
                                               GITSKey commandQueueKey,
                                               ID3D12CommandQueue* commandQueue,
                                               ID3D12CommandList** commandLists,
@@ -188,7 +188,7 @@ void GpuPatchDumpService::ExecuteCommandLists(GITSKey key,
   }
 }
 
-void GpuPatchDumpService::CommandQueueWait(GITSKey key,
+void GpuPatchDumpService::CommandQueueWait(CommandKey key,
                                            GITSKey commandQueueKey,
                                            GITSKey fenceKey,
                                            UINT64 fenceValue) {
@@ -201,7 +201,7 @@ void GpuPatchDumpService::CommandQueueWait(GITSKey key,
   }
 }
 
-void GpuPatchDumpService::CommandQueueSignal(GITSKey key,
+void GpuPatchDumpService::CommandQueueSignal(CommandKey key,
                                              GITSKey commandQueueKey,
                                              GITSKey fenceKey,
                                              UINT64 fenceValue) {
@@ -214,7 +214,7 @@ void GpuPatchDumpService::CommandQueueSignal(GITSKey key,
   }
 }
 
-void GpuPatchDumpService::FenceSignal(GITSKey key, GITSKey fenceKey, UINT64 fenceValue) {
+void GpuPatchDumpService::FenceSignal(CommandKey key, GITSKey fenceKey, UINT64 fenceValue) {
   if (m_DumpInstancesPre || m_DumpInstancesPost || m_DumpBindingTablesPre ||
       m_DumpBindingTablesPost) {
     m_ResourceDump.FenceSignal(key, fenceKey, fenceValue);

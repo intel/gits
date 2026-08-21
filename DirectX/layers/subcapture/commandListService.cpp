@@ -37,7 +37,7 @@ void CommandListService::RestoreCommandLists() {
     return;
   }
 
-  std::map<GITSKey, CommandListCommand*> commandsByKey;
+  std::map<CommandKey, CommandListCommand*> commandsByKey;
   std::map<GITSKey, GITSKey> commandListAllocatorsForReset;
 
   for (auto& it : m_CommandListsByKey) {

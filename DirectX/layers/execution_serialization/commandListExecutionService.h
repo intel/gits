@@ -31,22 +31,22 @@ public:
                               CpuDescriptorsService& cpuDescriptorsService)
       : m_Recorder(recorder), m_CpuDescriptorsService(cpuDescriptorsService) {}
   void CommandListCommand(GITSKey commandListKey, const Command& command);
-  void ExecuteCommandLists(GITSKey callKey,
+  void ExecuteCommandLists(CommandKey callKey,
                            GITSKey commandQueueKey,
                            std::vector<GITSKey>& commandListKeys);
   void CreateCommandList(GITSKey commandListKey, GITSKey allocatorKey);
-  void CommandListReset(GITSKey commandKey, GITSKey commandListKey, GITSKey allocatorKey);
-  void CommandQueueWait(GITSKey callKey,
+  void CommandListReset(CommandKey commandKey, GITSKey commandListKey, GITSKey allocatorKey);
+  void CommandQueueWait(CommandKey callKey,
                         GITSKey commandQueueKey,
                         GITSKey fenceKey,
                         UINT64 fenceValue);
-  void CommandQueueSignal(GITSKey callKey,
+  void CommandQueueSignal(CommandKey callKey,
                           GITSKey commandQueueKey,
                           GITSKey fenceKey,
                           UINT64 fenceValue);
-  void FenceSignal(GITSKey callKey, GITSKey fenceKey, UINT64 fenceValue);
+  void FenceSignal(CommandKey callKey, GITSKey fenceKey, UINT64 fenceValue);
   void CreateCommandQueue(GITSKey deviceKey, GITSKey commandQueueKey);
-  GITSKey GetUniqueCommandKey() {
+  CommandKey GetUniqueCommandKey() {
     return ++m_RestoreCommandKey;
   };
   GITSKey GetUniqueObjectKey() {
@@ -74,7 +74,7 @@ private:
   std::unordered_map<GITSKey, GITSKey> m_DeviceByCommandQueue;
   std::unordered_map<GITSKey, std::pair<GITSKey, UINT64>> m_FenceByCommandQueue;
   std::unordered_map<GITSKey, GITSKey> m_CommandListCreationAllocators;
-  GITSKey m_RestoreCommandKey{EXECUTION_SERIALIZATION_KEY_MASK};
+  CommandKey m_RestoreCommandKey{EXECUTION_SERIALIZATION_KEY_MASK};
   GITSKey m_RestoreObjectKey{EXECUTION_SERIALIZATION_KEY_MASK};
 };
 

@@ -26,7 +26,7 @@ public:
   RtasSerializer(const RtasSerializer&) = delete;
   RtasSerializer& operator=(const RtasSerializer&) = delete;
 
-  void Serialize(GITSKey buildKey,
+  void Serialize(CommandKey buildKey,
                  ID3D12GraphicsCommandList4* commandList,
                  D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC& desc);
   void WriteCache();
@@ -51,8 +51,8 @@ private:
   std::wstring m_TmpCacheDir;
   std::filesystem::path m_CacheFile;
   bool m_DumpCacheInfo{false};
-  std::vector<GITSKey> m_BuildKeys;
-  std::map<GITSKey, CacheInfo> m_CacheInfoByBuildKey;
+  std::vector<CommandKey> m_BuildKeys;
+  std::map<CommandKey, CacheInfo> m_CacheInfoByBuildKey;
 };
 
 } // namespace DirectX

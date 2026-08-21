@@ -33,17 +33,20 @@ public:
   void ExecuteIndirect(ID3D12GraphicsCommandListExecuteIndirectCommand& c);
 
   void Flush();
-  void ExecuteCommandLists(GITSKey key,
+  void ExecuteCommandLists(CommandKey key,
                            GITSKey commandQueueKey,
                            ID3D12CommandQueue* commandQueue,
                            ID3D12CommandList** commandLists,
                            unsigned commandListNum);
-  void CommandQueueWait(GITSKey key, GITSKey commandQueueKey, GITSKey fenceKey, UINT64 fenceValue);
-  void CommandQueueSignal(GITSKey key,
+  void CommandQueueWait(CommandKey key,
+                        GITSKey commandQueueKey,
+                        GITSKey fenceKey,
+                        UINT64 fenceValue);
+  void CommandQueueSignal(CommandKey key,
                           GITSKey commandQueueKey,
                           GITSKey fenceKey,
                           UINT64 fenceValue);
-  void FenceSignal(GITSKey key, GITSKey fenceKey, UINT64 fenceValue);
+  void FenceSignal(CommandKey key, GITSKey fenceKey, UINT64 fenceValue);
 
   std::unordered_set<GITSKey>& GetArgumentBuffersResources() {
     return m_ExecuteIndirectDump.GetArgumentBuffersResources();
@@ -63,7 +66,7 @@ private:
   AnalyzerCommandListService& m_CommandListService;
   AnalyzerExecuteIndirectDump m_ExecuteIndirectDump;
 
-  std::unordered_map<GITSKey, D3D12_DISPATCH_RAYS_DESC> m_ExecuteIndirectDispatchRays;
+  std::unordered_map<CommandKey, D3D12_DISPATCH_RAYS_DESC> m_ExecuteIndirectDispatchRays;
   std::unordered_map<GITSKey, D3D12_COMMAND_SIGNATURE_DESC> m_CommandSignatures;
 };
 

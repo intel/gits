@@ -2058,7 +2058,7 @@ void ReplayCustomizationLayer::FillCpuDescriptorHandleArgument(
       arg.InterfaceKey, ReplayDescriptorHandleService::HandleType::CpuHandle, arg.Index);
 }
 
-void ReplayCustomizationLayer::WaitForFence(GITSKey commandKey,
+void ReplayCustomizationLayer::WaitForFence(CommandKey commandKey,
                                             GITSKey fenceKey,
                                             ID3D12Fence* fence,
                                             UINT64 fenceValue) {
@@ -2069,7 +2069,7 @@ void ReplayCustomizationLayer::WaitForFence(GITSKey commandKey,
   }
 }
 
-void ReplayCustomizationLayer::WaitForFenceIncremental(GITSKey commandKey,
+void ReplayCustomizationLayer::WaitForFenceIncremental(CommandKey commandKey,
                                                        ID3D12Fence* fence,
                                                        UINT64 fenceValue) {
   UINT64 value = fence->GetCompletedValue();
@@ -2094,7 +2094,7 @@ void ReplayCustomizationLayer::WaitForFenceIncremental(GITSKey commandKey,
   }
 }
 
-void ReplayCustomizationLayer::WaitForFenceNonIncremental(GITSKey commandKey,
+void ReplayCustomizationLayer::WaitForFenceNonIncremental(CommandKey commandKey,
                                                           GITSKey fenceKey,
                                                           ID3D12Fence* fence,
                                                           UINT64 fenceValue) {

@@ -99,7 +99,8 @@ private:
 
   std::unordered_map<GITSKey, std::unique_ptr<PointerArgument<D3D12_COMMAND_SIGNATURE_DESC>>>
       m_CommandSignatures;
-  std::unordered_map<GITSKey, std::vector<D3D12_DISPATCH_RAYS_DESC>> m_ExecuteIndirectDispatchRays;
+  std::unordered_map<CommandKey, std::vector<D3D12_DISPATCH_RAYS_DESC>>
+      m_ExecuteIndirectDispatchRays;
   UINT64 m_ExecuteIndirectLastArgumentBufferOffset{};
 
   CapturePlayerGpuAddressService& m_AddressService;

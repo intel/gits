@@ -107,7 +107,7 @@ public:
   void AddBackBuffer(unsigned buffer, GITSKey resourceKey, ID3D12Resource* resource);
   void SetXefgSwapChainFlag();
 
-  GITSKey GetUniqueCommandKey() {
+  CommandKey GetUniqueCommandKey() {
     return ++m_RestoreCommandKey;
   };
   GITSKey GetUniqueObjectKey() {
@@ -144,13 +144,13 @@ public:
     void AddSetNvShaderExtnSlotSpaceLocalThreadCommand(
         const NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& Command);
     void RestoreInitializeCount();
-    void RestoreCreatePipelineStateOptionsBeforeCommand(GITSKey commandKey);
-    void RestoreShaderExtnSlotSpaceBeforeCommand(GITSKey commandKey);
+    void RestoreCreatePipelineStateOptionsBeforeCommand(CommandKey commandKey);
+    void RestoreShaderExtnSlotSpaceBeforeCommand(CommandKey commandKey);
     void FinalizeRestore();
 
   private:
     struct OrderedCommand {
-      GITSKey Key{};
+      CommandKey Key{};
       std::unique_ptr<Command> SerializedCommand;
     };
 
@@ -226,7 +226,7 @@ private:
   SubcaptureRecorder& m_Recorder;
   ResourceContentRestore m_ResourceContentRestore;
   std::map<GITSKey, ObjectState*> m_StatesByKey;
-  GITSKey m_RestoreCommandKey{STATE_RESTORE_KEY_MASK};
+  CommandKey m_RestoreCommandKey{STATE_RESTORE_KEY_MASK};
   GITSKey m_RestoreObjectKey{STATE_RESTORE_KEY_MASK};
   unsigned m_RestoreFakePointer{};
   AnalyzerResults& m_AnalyzerResults;

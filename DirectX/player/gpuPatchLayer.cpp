@@ -503,7 +503,7 @@ void GpuPatchLayer::PatchDispatchRays(ID3D12GraphicsCommandList* commandList,
                                       D3D12_DISPATCH_RAYS_DESC& dispatchRaysDesc,
                                       unsigned patchBufferIndex,
                                       unsigned mappingBufferIndex,
-                                      GITSKey callKey) {
+                                      CommandKey callKey) {
 
   D3D12_GPU_VIRTUAL_ADDRESS patchBufferAddress =
       m_PatchBuffers[patchBufferIndex]->GetGPUVirtualAddress();
@@ -1853,7 +1853,7 @@ void GpuPatchLayer::LoadExecuteIndirectDispatchRays() {
   std::filesystem::path dumpPath = Configurator::Get().common.player.streamDir;
   std::ifstream stream(dumpPath / "executeIndirectRaytracing.txt");
   while (true) {
-    GITSKey callKey{};
+    CommandKey callKey{};
     D3D12_DISPATCH_RAYS_DESC desc{};
     stream >> callKey;
     if (!stream) {
@@ -1884,7 +1884,7 @@ void GpuPatchLayer::LoadInstancesArraysOfPointers() {
   std::filesystem::path dumpPath = Configurator::Get().common.player.streamDir;
   std::ifstream stream(dumpPath / "raytracingArraysOfPointers.dat", std::ios::binary);
   while (true) {
-    GITSKey callKey{};
+    CommandKey callKey{};
     stream.read(reinterpret_cast<char*>(&callKey), sizeof(GITSKey));
     if (!stream) {
       break;

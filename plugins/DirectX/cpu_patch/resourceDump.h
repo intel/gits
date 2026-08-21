@@ -33,17 +33,20 @@ public:
                     const std::wstring& dumpName,
                     unsigned mipLevel = 0,
                     DXGI_FORMAT format = DXGI_FORMAT_UNKNOWN);
-  void ExecuteCommandLists(GITSKey key,
+  void ExecuteCommandLists(CommandKey key,
                            GITSKey commandQueueKey,
                            ID3D12CommandQueue* commandQueue,
                            ID3D12CommandList** commandLists,
                            unsigned commandListNum);
-  void CommandQueueWait(GITSKey key, GITSKey commandQueueKey, GITSKey fenceKey, UINT64 fenceValue);
-  void CommandQueueSignal(GITSKey key,
+  void CommandQueueWait(CommandKey key,
+                        GITSKey commandQueueKey,
+                        GITSKey fenceKey,
+                        UINT64 fenceValue);
+  void CommandQueueSignal(CommandKey key,
                           GITSKey commandQueueKey,
                           GITSKey fenceKey,
                           UINT64 fenceValue);
-  void FenceSignal(GITSKey key, GITSKey fenceKey, UINT64 fenceValue);
+  void FenceSignal(CommandKey key, GITSKey fenceKey, UINT64 fenceValue);
   void WaitUntilDumped();
 
 protected:

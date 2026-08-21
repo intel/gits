@@ -39,7 +39,7 @@ public:
   ExecutionSerializationKeyAllocator& GetKeyAllocator() {
     return m_KeyAllocator;
   }
-  GITSKey GetUniqueCommandKey() {
+  CommandKey GetUniqueCommandKey() {
     return m_KeyAllocator.GetUniqueCommandKey();
   }
 
@@ -53,16 +53,16 @@ private:
 
   std::vector<CommandList> SplitCommandList(CommandList commandList);
   bool IsBeginEndCommand(const Command& command);
-  void AddInterval(GITSKey a, GITSKey b);
-  std::optional<std::pair<GITSKey, GITSKey>> GetInterval(GITSKey key);
+  void AddInterval(CommandKey a, CommandKey b);
+  std::optional<std::pair<CommandKey, CommandKey>> GetInterval(CommandKey key);
 
   CommandListSplitRecorder& m_Recorder;
   ExecutionSerializationKeyAllocator m_KeyAllocator;
   std::unordered_map<GITSKey, CommandList> m_CommandListsByKey;
   std::unordered_map<GITSKey, GITSKey> m_AllocatorByCommandList;
   std::string m_Split;
-  std::map<GITSKey, GITSKey> m_SplitIntervals;
-  std::unordered_set<GITSKey> m_ExecutedIntervalStarts;
+  std::map<CommandKey, CommandKey> m_SplitIntervals;
+  std::unordered_set<CommandKey> m_ExecutedIntervalStarts;
 
   struct ExecuteInfo {
     GITSKey commandQueueKey{};

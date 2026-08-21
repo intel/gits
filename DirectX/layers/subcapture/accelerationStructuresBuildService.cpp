@@ -794,7 +794,7 @@ void AccelerationStructuresBuildService::RestoreAccelerationStructures() {
     return;
   }
 
-  std::vector<GITSKey> commandKeys;
+  std::vector<CommandKey> commandKeys;
   commandKeys.reserve(m_OptimizationService.GetCommands().size());
   for (OptimizationService::CommandNode* node : m_OptimizationService.GetCommands()) {
     commandKeys.push_back(node->Command->Key);
@@ -971,13 +971,14 @@ void AccelerationStructuresBuildService::CommandQueueSignal(ID3D12CommandQueueSi
   m_InputBuffersService.CommandQueueSignal(c);
 }
 
-void AccelerationStructuresBuildService::FenceSignal(GITSKey key,
+void AccelerationStructuresBuildService::FenceSignal(CommandKey key,
                                                      GITSKey fenceKey,
                                                      UINT64 fenceValue) {
   m_InputBuffersService.FenceSignal(key, fenceKey, fenceValue);
 }
 
-void AccelerationStructuresBuildService::DestroyResource(GITSKey commandKey, GITSKey resourceKey) {
+void AccelerationStructuresBuildService::DestroyResource(CommandKey commandKey,
+                                                         GITSKey resourceKey) {
   m_BufferLifetimeService.AddRelease(commandKey, resourceKey);
 }
 
@@ -1194,7 +1195,8 @@ void AccelerationStructuresBuildService::OptimizationService::StoreCommand(
 
   // skip intermediate update build command
   if (node->Command->Update) {
-    GITSKey sourceKey = m_StateService.GetAnalyzerResults().GetBlasSourceBuild(node->Command->Key);
+    CommandKey sourceKey =
+        m_StateService.GetAnalyzerResults().GetBlasSourceBuild(node->Command->Key);
     if (sourceKey) {
       auto it = m_CommandByBuildKey.find(sourceKey);
       GITS_ASSERT(it != m_CommandByBuildKey.end());
@@ -1233,15 +1235,15 @@ void AccelerationStructuresBuildService::OptimizationService::Cleanup() {
   m_RestoreCommands.clear();
 }
 
-void AccelerationStructuresBuildService::BufferLifetimeService::AddInputBuffer(GITSKey commandKey,
-                                                                               GITSKey bufferKey) {
+void AccelerationStructuresBuildService::BufferLifetimeService::AddInputBuffer(
+    CommandKey commandKey, GITSKey bufferKey) {
   if (bufferKey) {
     m_InputBuffersByBuild[commandKey].insert(bufferKey);
     m_Buffers.insert(bufferKey);
   }
 }
 
-void AccelerationStructuresBuildService::BufferLifetimeService::AddRtasBuffer(GITSKey commandKey,
+void AccelerationStructuresBuildService::BufferLifetimeService::AddRtasBuffer(CommandKey commandKey,
                                                                               GITSKey bufferKey) {
   if (bufferKey) {
     m_RtasBuffersByBuild[commandKey].insert(bufferKey);
@@ -1249,7 +1251,7 @@ void AccelerationStructuresBuildService::BufferLifetimeService::AddRtasBuffer(GI
   }
 }
 
-void AccelerationStructuresBuildService::BufferLifetimeService::AddRelease(GITSKey commandKey,
+void AccelerationStructuresBuildService::BufferLifetimeService::AddRelease(CommandKey commandKey,
                                                                            GITSKey bufferKey) {
   auto it = m_Buffers.find(bufferKey);
   if (it != m_Buffers.end()) {
@@ -1258,7 +1260,8 @@ void AccelerationStructuresBuildService::BufferLifetimeService::AddRelease(GITSK
   }
 }
 
-void AccelerationStructuresBuildService::BufferLifetimeService::CreateBuffers(GITSKey commandKey) {
+void AccelerationStructuresBuildService::BufferLifetimeService::CreateBuffers(
+    CommandKey commandKey) {
   for (GITSKey bufferKey : m_InputBuffersByBuild[commandKey]) {
     ResourceState* bufferState = static_cast<ResourceState*>(m_StateService.GetState(bufferKey));
     GITS_ASSERT(bufferState);
@@ -1272,7 +1275,8 @@ void AccelerationStructuresBuildService::BufferLifetimeService::CreateBuffers(GI
   }
 }
 
-void AccelerationStructuresBuildService::BufferLifetimeService::ReleaseBuffers(GITSKey commandKey) {
+void AccelerationStructuresBuildService::BufferLifetimeService::ReleaseBuffers(
+    CommandKey commandKey) {
   auto endIt = m_Releases.lower_bound(commandKey);
   for (auto it = m_Releases.begin(); it != endIt;) {
     IUnknownReleaseCommand release{};

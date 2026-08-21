@@ -100,7 +100,7 @@ private:
                          D3D12_DISPATCH_RAYS_DESC& dispatchRaysDesc,
                          unsigned patchBufferIndex,
                          unsigned mappingBufferIndex,
-                         GITSKey callKey);
+                         CommandKey callKey);
   size_t GetDispatchRaysPatchSize(const D3D12_DISPATCH_RAYS_DESC& desc) const;
   void WaitForFence(ID3D12Fence* fence, unsigned fenceValue);
 
@@ -211,8 +211,9 @@ private:
 
   std::unordered_map<GITSKey, std::unique_ptr<PointerArgument<D3D12_COMMAND_SIGNATURE_DESC>>>
       m_CommandSignatures;
-  std::unordered_map<GITSKey, D3D12_DISPATCH_RAYS_DESC> m_ExecuteIndirectDispatchRays;
-  std::unordered_map<GITSKey, std::vector<D3D12_GPU_VIRTUAL_ADDRESS>> m_InstancesArraysOfPointers;
+  std::unordered_map<CommandKey, D3D12_DISPATCH_RAYS_DESC> m_ExecuteIndirectDispatchRays;
+  std::unordered_map<CommandKey, std::vector<D3D12_GPU_VIRTUAL_ADDRESS>>
+      m_InstancesArraysOfPointers;
 
   std::unordered_map<GITSKey, ID3D12Resource*> m_ResourceByKey;
 

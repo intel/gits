@@ -14,7 +14,7 @@
 namespace gits {
 namespace DirectX {
 
-void ShaderIdentifierService::AddCaptureShaderIdentifier(GITSKey commandKey,
+void ShaderIdentifierService::AddCaptureShaderIdentifier(CommandKey commandKey,
                                                          ShaderIdentifier captureIdentifier,
                                                          LPWSTR exportName) {
   std::lock_guard<std::mutex> lock(m_Mutex);
@@ -25,7 +25,7 @@ void ShaderIdentifierService::AddCaptureShaderIdentifier(GITSKey commandKey,
   }
 }
 
-void ShaderIdentifierService::AddPlayerShaderIdentifier(GITSKey commandKey,
+void ShaderIdentifierService::AddPlayerShaderIdentifier(CommandKey commandKey,
                                                         ShaderIdentifier playerIdentifier,
                                                         LPWSTR exportName) {
   std::lock_guard<std::mutex> lock(m_Mutex);

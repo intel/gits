@@ -226,8 +226,8 @@ void RaytracingOptimizationService::Optimize(
   for (auto& it : m_CommandById) {
     RaytracingCommand* command = it.second.get();
     if (command->Restore) {
-      GITSKey commandKey = command->Key;
-      GITSKey sourceKey = 0;
+      CommandKey commandKey = command->Key;
+      CommandKey sourceKey{};
       if (command->Source) {
         sourceKey = command->Source->Key;
       }

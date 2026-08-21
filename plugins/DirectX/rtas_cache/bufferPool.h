@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include "arguments.h"
+#include "command.h"
 
 #include <vector>
 #include <unordered_map>
@@ -28,8 +28,8 @@ public:
   ~BufferPool() = default;
 
   void Initialize(ID3D12Device* device, size_t bufferSize, unsigned initialCount = 0);
-  ID3D12Resource* AcquireBuffer(GITSKey key);
-  void ReleaseBuffer(GITSKey key);
+  ID3D12Resource* AcquireBuffer(CommandKey key);
+  void ReleaseBuffer(CommandKey key);
   size_t Size() const;
 
 private:
@@ -37,7 +37,7 @@ private:
   size_t m_BufferSize{0};
 
   std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> m_Buffers;
-  std::unordered_map<GITSKey, unsigned> m_KeyToIndex;
+  std::unordered_map<CommandKey, unsigned> m_KeyToIndex;
   std::stack<unsigned> m_FreeIndices;
 };
 

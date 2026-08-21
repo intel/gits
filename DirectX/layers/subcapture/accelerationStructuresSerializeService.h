@@ -43,7 +43,7 @@ private:
   SubcaptureRecorder& m_Recorder;
 
   struct AccelerationStructure {
-    GITSKey CallKey{};
+    CommandKey CallKey{};
     GITSKey Key{};
     unsigned Offset{};
     D3D12_GPU_VIRTUAL_ADDRESS Address{};

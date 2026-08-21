@@ -30,7 +30,7 @@ void ResourceUsageTrackingService::CommandListReset(GITSKey commandListKey) {
   m_CommandListResourceUsage[commandListKey].clear();
 }
 
-void ResourceUsageTrackingService::ExecuteCommandLists(GITSKey commandKey,
+void ResourceUsageTrackingService::ExecuteCommandLists(CommandKey commandKey,
                                                        GITSKey commandQueueKey,
                                                        std::vector<GITSKey>& commandListKeys) {
   std::vector<GITSKey> usedResources;
@@ -57,14 +57,14 @@ void ResourceUsageTrackingService::DestroyResource(GITSKey resourceKey) {
   m_UsageByResource.erase(resourceKey);
 }
 
-void ResourceUsageTrackingService::CommandQueueWait(GITSKey commandKey,
+void ResourceUsageTrackingService::CommandQueueWait(CommandKey commandKey,
                                                     GITSKey commandQueueKey,
                                                     GITSKey fenceKey,
                                                     UINT64 fenceValue) {
   m_GpuExecutionTracker.CommandQueueWait(commandKey, commandQueueKey, fenceKey, fenceValue);
 }
 
-void ResourceUsageTrackingService::CommandQueueSignal(GITSKey commandKey,
+void ResourceUsageTrackingService::CommandQueueSignal(CommandKey commandKey,
                                                       GITSKey commandQueueKey,
                                                       GITSKey fenceKey,
                                                       UINT64 fenceValue) {
@@ -72,7 +72,7 @@ void ResourceUsageTrackingService::CommandQueueSignal(GITSKey commandKey,
   ProcessReadyExecutables();
 }
 
-void ResourceUsageTrackingService::FenceSignal(GITSKey commandKey,
+void ResourceUsageTrackingService::FenceSignal(CommandKey commandKey,
                                                GITSKey fenceKey,
                                                UINT64 fenceValue) {
   m_GpuExecutionTracker.FenceSignal(commandKey, fenceKey, fenceValue);

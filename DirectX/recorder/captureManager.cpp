@@ -185,12 +185,12 @@ void CaptureManager::InterceptDirectStorageFunctions() {
   GITS_ASSERT(ret == NO_ERROR);
 }
 
-std::pair<GITSKey, GITSKey> CaptureManager::CreateCommandKeyRange(unsigned rangeSize) {
-  std::pair<GITSKey, GITSKey> range;
+std::pair<CommandKey, CommandKey> CaptureManager::CreateCommandKeyRange(unsigned rangeSize) {
+  std::pair<CommandKey, CommandKey> range;
   range.first =
-      m_CommandUniqueKey.fetch_add(static_cast<GITSKey>(rangeSize), std::memory_order_relaxed) +
-      GITSKey{1};
-  range.second = range.first + static_cast<GITSKey>(rangeSize - 1);
+      m_CommandUniqueKey.fetch_add(static_cast<CommandKey>(rangeSize), std::memory_order_relaxed) +
+      CommandKey{1};
+  range.second = range.first + static_cast<CommandKey>(rangeSize - 1);
   return range;
 }
 

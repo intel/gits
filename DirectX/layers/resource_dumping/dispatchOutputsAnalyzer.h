@@ -53,14 +53,14 @@ public:
     bool Unbounded{};
     std::vector<GITSKey> Resources;
   };
-  std::vector<Bindings>* GetDispatchBindings(GITSKey dispatchKey);
+  std::vector<Bindings>* GetDispatchBindings(CommandKey dispatchKey);
 
 private:
   DescriptorRootSignatureService m_RootSignatureService;
   DescriptorHeapTracker m_DescriptorService;
 
   std::filesystem::path m_AnalysisFilePath;
-  std::unordered_map<GITSKey, std::vector<Bindings>> m_DispatchBindings;
+  std::unordered_map<CommandKey, std::vector<Bindings>> m_DispatchBindings;
 
   std::unordered_map<GITSKey, ID3D12Resource*> m_ResourceByKey;
 
@@ -83,14 +83,14 @@ private:
   std::unordered_map<GITSKey, std::unordered_map<unsigned, DesciptorTable>>
       m_DescriptorTableBySlotByCommandList;
   std::unordered_map<GITSKey,
-                     std::unordered_map<GITSKey, std::unordered_map<unsigned, DesciptorTable>>>
+                     std::unordered_map<CommandKey, std::unordered_map<unsigned, DesciptorTable>>>
       m_DescriptorTableBySlotByDispatchByCommandList;
 
   struct AnalysisBindings {
     bool Unbounded{};
     std::unordered_set<GITSKey> Resources;
   };
-  std::map<GITSKey, std::map<unsigned, AnalysisBindings>> m_BindingsBySlotByDispatch;
+  std::map<CommandKey, std::map<unsigned, AnalysisBindings>> m_BindingsBySlotByDispatch;
 };
 
 } // namespace DirectX

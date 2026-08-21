@@ -62,17 +62,20 @@ public:
     m_Sources.insert(std::make_pair(key, offset));
   }
   void Flush();
-  void ExecuteCommandLists(GITSKey key,
+  void ExecuteCommandLists(CommandKey key,
                            GITSKey commandQueueKey,
                            ID3D12CommandQueue* commandQueue,
                            ID3D12CommandList** commandLists,
                            unsigned commandListNum);
-  void CommandQueueWait(GITSKey key, GITSKey commandQueueKey, GITSKey fenceKey, UINT64 fenceValue);
-  void CommandQueueSignal(GITSKey key,
+  void CommandQueueWait(CommandKey key,
+                        GITSKey commandQueueKey,
+                        GITSKey fenceKey,
+                        UINT64 fenceValue);
+  void CommandQueueSignal(CommandKey key,
                           GITSKey commandQueueKey,
                           GITSKey fenceKey,
                           UINT64 fenceValue);
-  void FenceSignal(GITSKey key, GITSKey fenceKey, UINT64 fenceValue);
+  void FenceSignal(CommandKey key, GITSKey fenceKey, UINT64 fenceValue);
   void GetGPUVirtualAddress(ID3D12ResourceGetGPUVirtualAddressCommand& c);
 
   CapturePlayerGpuAddressService& GetGpuAddressService() {
@@ -93,7 +96,7 @@ public:
 
   std::set<GITSKey> GetStateObjectAllSubobjects(GITSKey stateObjectKey);
   using KeyOffset = std::pair<GITSKey, unsigned>;
-  std::vector<KeyOffset>& GetBlases(GITSKey tlasBuildKey) {
+  std::vector<KeyOffset>& GetBlases(CommandKey tlasBuildKey) {
     return m_BlasesByTlas[tlasBuildKey];
   }
   std::set<KeyOffset>& GetSources() {
@@ -106,8 +109,8 @@ public:
     return m_BindingTablesDump.GetBindingTablesDescriptors();
   }
 
-  GITSKey FindTlas(const KeyOffset& tlas);
-  void GetTlases(std::set<GITSKey>& tlases);
+  CommandKey FindTlas(const KeyOffset& tlas);
+  void GetTlases(std::set<CommandKey>& tlases);
 
 private:
   void FillStateObjectInfo(D3D12_STATE_OBJECT_DESC_Argument& stateObjectDesc,
@@ -131,11 +134,12 @@ private:
 
   RaytracingInstancesDump m_InstancesDump;
   BindingTablesDump m_BindingTablesDump;
-  std::unordered_map<GITSKey, std::vector<KeyOffset>> m_BlasesByTlas;
-  std::map<KeyOffset, GITSKey> m_TlasBuildKeys;
+  std::unordered_map<CommandKey, std::vector<KeyOffset>> m_BlasesByTlas;
+  std::map<KeyOffset, CommandKey> m_TlasBuildKeys;
   std::set<KeyOffset> m_Sources;
   std::unordered_map<GITSKey, ID3D12Resource*> m_ResourceByKey;
-  std::unordered_map<GITSKey, std::vector<D3D12_GPU_VIRTUAL_ADDRESS>> m_InstancesArraysOfPointers;
+  std::unordered_map<CommandKey, std::vector<D3D12_GPU_VIRTUAL_ADDRESS>>
+      m_InstancesArraysOfPointers;
 };
 
 } // namespace DirectX

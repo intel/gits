@@ -299,7 +299,7 @@ void AnalyzerRaytracingService::Flush() {
   m_BindingTablesDump.WaitUntilDumped();
 }
 
-void AnalyzerRaytracingService::ExecuteCommandLists(GITSKey key,
+void AnalyzerRaytracingService::ExecuteCommandLists(CommandKey key,
                                                     GITSKey commandQueueKey,
                                                     ID3D12CommandQueue* commandQueue,
                                                     ID3D12CommandList** commandLists,
@@ -310,7 +310,7 @@ void AnalyzerRaytracingService::ExecuteCommandLists(GITSKey key,
                                           commandListNum);
 }
 
-void AnalyzerRaytracingService::CommandQueueWait(GITSKey key,
+void AnalyzerRaytracingService::CommandQueueWait(CommandKey key,
                                                  GITSKey commandQueueKey,
                                                  GITSKey fenceKey,
                                                  UINT64 fenceValue) {
@@ -318,7 +318,7 @@ void AnalyzerRaytracingService::CommandQueueWait(GITSKey key,
   m_BindingTablesDump.CommandQueueWait(key, commandQueueKey, fenceKey, fenceValue);
 }
 
-void AnalyzerRaytracingService::CommandQueueSignal(GITSKey key,
+void AnalyzerRaytracingService::CommandQueueSignal(CommandKey key,
                                                    GITSKey commandQueueKey,
                                                    GITSKey fenceKey,
                                                    UINT64 fenceValue) {
@@ -326,7 +326,7 @@ void AnalyzerRaytracingService::CommandQueueSignal(GITSKey key,
   m_BindingTablesDump.CommandQueueSignal(key, commandQueueKey, fenceKey, fenceValue);
 }
 
-void AnalyzerRaytracingService::FenceSignal(GITSKey key, GITSKey fenceKey, UINT64 fenceValue) {
+void AnalyzerRaytracingService::FenceSignal(CommandKey key, GITSKey fenceKey, UINT64 fenceValue) {
   m_InstancesDump.FenceSignal(key, fenceKey, fenceValue);
   m_BindingTablesDump.FenceSignal(key, fenceKey, fenceValue);
 }
@@ -368,8 +368,8 @@ void AnalyzerRaytracingService::LoadInstancesArraysOfPointers() {
   std::filesystem::path dumpPath = Configurator::Get().common.player.streamDir;
   std::ifstream stream(dumpPath / "raytracingArraysOfPointers.dat", std::ios::binary);
   while (true) {
-    GITSKey callKey{};
-    stream.read(reinterpret_cast<char*>(&callKey), sizeof(GITSKey));
+    CommandKey callKey{};
+    stream.read(reinterpret_cast<char*>(&callKey), sizeof(CommandKey));
     if (!stream) {
       break;
     }
@@ -383,15 +383,15 @@ void AnalyzerRaytracingService::LoadInstancesArraysOfPointers() {
   }
 }
 
-GITSKey AnalyzerRaytracingService::FindTlas(const KeyOffset& tlas) {
+CommandKey AnalyzerRaytracingService::FindTlas(const KeyOffset& tlas) {
   auto it = m_TlasBuildKeys.find(tlas);
   if (it != m_TlasBuildKeys.end()) {
     return it->second;
   }
-  return GITSKey{};
+  return CommandKey{};
 }
 
-void AnalyzerRaytracingService::GetTlases(std::set<GITSKey>& tlases) {
+void AnalyzerRaytracingService::GetTlases(std::set<CommandKey>& tlases) {
   for (auto& it : m_TlasBuildKeys) {
     tlases.insert(it.second);
   }

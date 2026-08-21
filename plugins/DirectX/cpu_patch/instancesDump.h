@@ -30,8 +30,8 @@ public:
                  unsigned offset,
                  unsigned size,
                  D3D12_RESOURCE_STATES state,
-                 GITSKey commandKey);
-  void ExecuteCommandLists(GITSKey key,
+                 CommandKey commandKey);
+  void ExecuteCommandLists(CommandKey key,
                            GITSKey commandQueueKey,
                            ID3D12CommandQueue* commandQueue,
                            ID3D12CommandList** commandLists,

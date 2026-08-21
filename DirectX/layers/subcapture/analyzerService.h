@@ -49,22 +49,22 @@ public:
   void NotifyObjects(const std::vector<GITSKey>& objectKeys);
 
   void CommandListCommand(GITSKey commandListKey);
-  void Present(GITSKey callKey, GITSKey swapChainKey);
-  void ExecuteCommandLists(GITSKey callKey,
+  void Present(CommandKey callKey, GITSKey swapChainKey);
+  void ExecuteCommandLists(CommandKey callKey,
                            GITSKey commandQueueKey,
                            std::vector<GITSKey>& commandListKeys);
   void CommandListReset(GITSKey commandListKey, GITSKey allocatorKey, GITSKey initialStateKey);
   void ExecutionStart();
   void ExecutionEnd();
-  void CommandQueueWait(GITSKey callKey,
+  void CommandQueueWait(CommandKey callKey,
                         GITSKey commandQueueKey,
                         GITSKey fenceKey,
                         UINT64 fenceValue);
-  void CommandQueueSignal(GITSKey callKey,
+  void CommandQueueSignal(CommandKey callKey,
                           GITSKey commandQueueKey,
                           GITSKey fenceKey,
                           UINT64 fenceValue);
-  void FenceSignal(GITSKey callKey, GITSKey fenceKey, UINT64 fenceValue);
+  void FenceSignal(CommandKey callKey, GITSKey fenceKey, UINT64 fenceValue);
   void MappedDataMeta(GITSKey resourceKey);
   void CreateXessContext(xessD3D12CreateContextCommand& c);
   void CreateXellContext(xellD3D12CreateContextCommand& c);
@@ -104,7 +104,7 @@ private:
   std::set<GITSKey> m_CommandListsReset;
   std::set<GITSKey> m_CommandListsForRestore;
 
-  std::map<GITSKey, std::vector<GITSKey>> m_CommandQueueCommandsForRestore;
+  std::map<CommandKey, std::vector<GITSKey>> m_CommandQueueCommandsForRestore;
 
   std::set<GITSKey> m_ObjectsForRestore;
 };

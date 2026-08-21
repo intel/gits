@@ -220,7 +220,7 @@ void ResourceDump::StageResource(ID3D12GraphicsCommandList* commandList,
   }
 }
 
-void ResourceDump::ExecuteCommandLists(GITSKey key,
+void ResourceDump::ExecuteCommandLists(CommandKey key,
                                        GITSKey commandQueueKey,
                                        ID3D12CommandQueue* commandQueue,
                                        ID3D12CommandList** commandLists,
@@ -265,21 +265,21 @@ void ResourceDump::ExecuteCommandLists(GITSKey key,
   m_GpuExecutionTracker.Execute(key, commandQueueKey, threadInfo);
 }
 
-void ResourceDump::CommandQueueWait(GITSKey key,
+void ResourceDump::CommandQueueWait(CommandKey key,
                                     GITSKey commandQueueKey,
                                     GITSKey fenceKey,
                                     UINT64 fenceValue) {
   m_GpuExecutionTracker.CommandQueueWait(key, commandQueueKey, fenceKey, fenceValue);
 }
 
-void ResourceDump::CommandQueueSignal(GITSKey key,
+void ResourceDump::CommandQueueSignal(CommandKey key,
                                       GITSKey commandQueueKey,
                                       GITSKey fenceKey,
                                       UINT64 fenceValue) {
   m_GpuExecutionTracker.CommandQueueSignal(key, commandQueueKey, fenceKey, fenceValue);
 }
 
-void ResourceDump::FenceSignal(GITSKey key, GITSKey fenceKey, UINT64 fenceValue) {
+void ResourceDump::FenceSignal(CommandKey key, GITSKey fenceKey, UINT64 fenceValue) {
   m_GpuExecutionTracker.FenceSignal(key, fenceKey, fenceValue);
 }
 

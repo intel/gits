@@ -33,7 +33,7 @@ void AccelerationStructuresInputBuffersService::CommandQueueSignal(
   m_BufferInputDump.CommandQueueSignal(c.Key, c.m_Object.Key, c.m_pFence.Key, c.m_Value.Value);
 }
 
-void AccelerationStructuresInputBuffersService::FenceSignal(GITSKey key,
+void AccelerationStructuresInputBuffersService::FenceSignal(CommandKey key,
                                                             GITSKey fenceKey,
                                                             UINT64 fenceValue) {
   m_BufferInputDump.FenceSignal(key, fenceKey, fenceValue);
@@ -46,7 +46,7 @@ void AccelerationStructuresInputBuffersService::StoreBufferRegion(GITSKey buffer
 }
 
 void AccelerationStructuresInputBuffersService::StoreBuffers(
-    GITSKey commandKey, ID3D12GraphicsCommandList* commandList) {
+    CommandKey commandKey, ID3D12GraphicsCommandList* commandList) {
 
   InputBuffers* inputBuffers = new InputBuffers();
   m_InputBuffers[commandKey].reset(inputBuffers);
@@ -105,12 +105,12 @@ void AccelerationStructuresInputBuffersService::StoreBuffers(
 }
 
 void AccelerationStructuresInputBuffersService::RestoreBuffersInitialization(
-    std::vector<GITSKey>& commandKeys, GITSKey deviceKey) {
+    std::vector<CommandKey>& commandKeys, GITSKey deviceKey) {
 
   m_BufferInputDump.WaitUntilDumped();
 
   size_t maxPerBuildUploadSize = 0;
-  for (GITSKey commandKey : commandKeys) {
+  for (CommandKey commandKey : commandKeys) {
     std::vector<BufferInputDump::InputBuffer>& inputBuffers =
         m_BufferInputDump.GetInputBuffers(commandKey);
     size_t uploadSize = 0;
@@ -208,13 +208,13 @@ void AccelerationStructuresInputBuffersService::RestoreBuffersInitialization(
 }
 
 void AccelerationStructuresInputBuffersService::MakeBuffersResident(
-    GITSKey commandKey, ResourceResidencyService& residencyService) {
+    CommandKey commandKey, ResourceResidencyService& residencyService) {
   for (BufferInputDump::InputBuffer& inputBuffer : m_BufferInputDump.GetInputBuffers(commandKey)) {
     residencyService.AddResource(inputBuffer.BufferKey);
   }
 }
 
-void AccelerationStructuresInputBuffersService::RestoreBuffers(GITSKey commandKey,
+void AccelerationStructuresInputBuffersService::RestoreBuffers(CommandKey commandKey,
                                                                GITSKey commandListBarriersKey) {
   std::vector<BufferInputDump::InputBuffer>& inputBufferDumps =
       m_BufferInputDump.GetInputBuffers(commandKey);
@@ -417,7 +417,7 @@ void AccelerationStructuresInputBuffersService::BufferInputDump::DumpBuffer(
     unsigned offset,
     unsigned size,
     BarrierState resourceState,
-    GITSKey buildCallKey,
+    CommandKey buildCallKey,
     bool isMappable) {
   BufferInfo* info = new BufferInfo();
   info->Offset = offset;

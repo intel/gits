@@ -73,7 +73,7 @@ void AnalyzerService::CommandListCommand(GITSKey commandListKey) {
   }
 }
 
-void AnalyzerService::Present(GITSKey callKey, GITSKey swapChainKey) {
+void AnalyzerService::Present(CommandKey callKey, GITSKey swapChainKey) {
   if (m_SubcaptureRange.CommandListSubcapture()) {
     m_ObjectsForRestore.insert(swapChainKey);
     m_SubcaptureRange.FrameEnd(IsStateRestoreKey(callKey));
@@ -123,7 +123,7 @@ void AnalyzerService::Present(GITSKey callKey, GITSKey swapChainKey) {
   }
 }
 
-void AnalyzerService::ExecuteCommandLists(GITSKey callKey,
+void AnalyzerService::ExecuteCommandLists(CommandKey callKey,
                                           GITSKey commandQueueKey,
                                           std::vector<GITSKey>& commandListKeys) {
   if (m_SubcaptureRange.CommandListSubcapture()) {
@@ -181,7 +181,7 @@ void AnalyzerService::ExecutionEnd() {
   }
 }
 
-void AnalyzerService::CommandQueueWait(GITSKey callKey,
+void AnalyzerService::CommandQueueWait(CommandKey callKey,
                                        GITSKey commandQueueKey,
                                        GITSKey fenceKey,
                                        UINT64 fenceValue) {
@@ -190,7 +190,7 @@ void AnalyzerService::CommandQueueWait(GITSKey callKey,
   }
 }
 
-void AnalyzerService::CommandQueueSignal(GITSKey callKey,
+void AnalyzerService::CommandQueueSignal(CommandKey callKey,
                                          GITSKey commandQueueKey,
                                          GITSKey fenceKey,
                                          UINT64 fenceValue) {
@@ -199,7 +199,7 @@ void AnalyzerService::CommandQueueSignal(GITSKey callKey,
   }
 }
 
-void AnalyzerService::FenceSignal(GITSKey callKey, GITSKey fenceKey, UINT64 fenceValue) {
+void AnalyzerService::FenceSignal(CommandKey callKey, GITSKey fenceKey, UINT64 fenceValue) {
   if (m_BeforeRange) {
     m_GpuExecutionTracker.FenceSignal(callKey, fenceKey, fenceValue);
   }
@@ -285,7 +285,7 @@ void AnalyzerService::DumpAnalysisFile() {
 
   // optimize raytracing
   std::unordered_set<std::pair<GITSKey, unsigned>, UnsignedPairHash> blases;
-  for (GITSKey buildKey : m_CommandListService.GetTlases()) {
+  for (CommandKey buildKey : m_CommandListService.GetTlases()) {
     for (auto& as : m_RaytracingService.GetBlases(buildKey)) {
       blases.insert(as);
     }
@@ -335,7 +335,7 @@ void AnalyzerService::DumpAnalysisFile() {
   }
 
   out << "TLASES\n";
-  for (GITSKey buildKey : m_CommandListService.GetTlases()) {
+  for (CommandKey buildKey : m_CommandListService.GetTlases()) {
     out << buildKey << "\n";
   }
 

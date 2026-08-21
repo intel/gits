@@ -39,7 +39,7 @@ public:
                      GITSKey resourceKey,
                      unsigned size,
                      BarrierState resourceState,
-                     GITSKey callKey,
+                     CommandKey callKey,
                      bool prePatch);
   void DumpInstancesArrayOfPointers(ID3D12GraphicsCommandList* commandList,
                                     ID3D12Resource* resource,
@@ -47,7 +47,7 @@ public:
                                     unsigned offset,
                                     unsigned size,
                                     BarrierState resourceState,
-                                    GITSKey callKey,
+                                    CommandKey callKey,
                                     bool prePatch);
   void DumpBindingTable(ID3D12GraphicsCommandList* commandList,
                         ID3D12Resource* resource,
@@ -55,7 +55,7 @@ public:
                         unsigned size,
                         unsigned stride,
                         BarrierState resourceState,
-                        GITSKey callKey,
+                        CommandKey callKey,
                         BindingTableType bindingTableType,
                         bool prePatch);
   void DumpExecuteIndirectArgumentBuffer(ID3D12GraphicsCommandList* commandList,
@@ -67,19 +67,22 @@ public:
                                          ID3D12Resource* countBuffer,
                                          unsigned countBufferOffset,
                                          BarrierState countBufferState,
-                                         GITSKey callKey,
+                                         CommandKey callKey,
                                          bool prePatch);
-  void ExecuteCommandLists(GITSKey key,
+  void ExecuteCommandLists(CommandKey key,
                            GITSKey commandQueueKey,
                            ID3D12CommandQueue* commandQueue,
                            ID3D12CommandList** commandLists,
                            unsigned commandListNum);
-  void CommandQueueWait(GITSKey key, GITSKey commandQueueKey, GITSKey fenceKey, UINT64 fenceValue);
-  void CommandQueueSignal(GITSKey key,
+  void CommandQueueWait(CommandKey key,
+                        GITSKey commandQueueKey,
+                        GITSKey fenceKey,
+                        UINT64 fenceValue);
+  void CommandQueueSignal(CommandKey key,
                           GITSKey commandQueueKey,
                           GITSKey fenceKey,
                           UINT64 fenceValue);
-  void FenceSignal(GITSKey key, GITSKey fenceKey, UINT64 fenceValue);
+  void FenceSignal(CommandKey key, GITSKey fenceKey, UINT64 fenceValue);
 
 private:
   RaytracingResourceDump m_ResourceDump;

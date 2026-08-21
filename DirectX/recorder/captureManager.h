@@ -103,10 +103,10 @@ public:
   GITSKey CreateWrapperKey() {
     return m_WrapperUniqueKey.fetch_add(GITSKey{1}, std::memory_order_relaxed) + GITSKey{1};
   }
-  GITSKey CreateCommandKey() {
-    return m_CommandUniqueKey.fetch_add(GITSKey{1}, std::memory_order_relaxed) + GITSKey{1};
+  CommandKey CreateCommandKey() {
+    return m_CommandUniqueKey.fetch_add(CommandKey{1}, std::memory_order_relaxed) + CommandKey{1};
   }
-  std::pair<GITSKey, GITSKey> CreateCommandKeyRange(unsigned rangeSize);
+  std::pair<CommandKey, CommandKey> CreateCommandKeyRange(unsigned rangeSize);
 
   void UpdateCommandKey(Command& command) {
     m_Recorder->Skip(command.Key);
@@ -187,7 +187,7 @@ private:
   static thread_local unsigned m_LocalStackDepth;
 
   std::atomic<GITSKey> m_WrapperUniqueKey{0};
-  std::atomic<GITSKey> m_CommandUniqueKey{0};
+  std::atomic<CommandKey> m_CommandUniqueKey{};
 
   std::unordered_map<IUnknown*, IUnknownWrapper*> m_Wrappers;
   std::mutex m_WrappersMutex;

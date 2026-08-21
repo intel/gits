@@ -48,7 +48,8 @@ void ResourceDumpService::DestroyResource(GITSKey resourceKey) {
   m_Resources.erase(resourceKey);
 }
 
-void ResourceDumpService::CommandListCall(GITSKey callKey, ID3D12GraphicsCommandList* commandList) {
+void ResourceDumpService::CommandListCall(CommandKey callKey,
+                                          ID3D12GraphicsCommandList* commandList) {
   if (!m_CallKeys.Contains(callKey)) {
     return;
   }
@@ -109,7 +110,7 @@ void ResourceDumpService::ResourceBarrier(ID3D12GraphicsCommandListResourceBarri
                                          c.m_NumBarriers.Value, c.m_pBarriers.ResourceKeys.data());
 }
 
-void ResourceDumpService::ExecuteCommandLists(GITSKey key,
+void ResourceDumpService::ExecuteCommandLists(CommandKey key,
                                               GITSKey commandQueueKey,
                                               ID3D12CommandQueue* commandQueue,
                                               ID3D12CommandList** commandLists,
@@ -120,21 +121,21 @@ void ResourceDumpService::ExecuteCommandLists(GITSKey key,
                                      commandListNum);
 }
 
-void ResourceDumpService::CommandQueueWait(GITSKey key,
+void ResourceDumpService::CommandQueueWait(CommandKey key,
                                            GITSKey commandQueueKey,
                                            GITSKey fenceKey,
                                            UINT64 fenceValue) {
   m_ResourceDump.CommandQueueWait(key, commandQueueKey, fenceKey, fenceValue);
 }
 
-void ResourceDumpService::CommandQueueSignal(GITSKey key,
+void ResourceDumpService::CommandQueueSignal(CommandKey key,
                                              GITSKey commandQueueKey,
                                              GITSKey fenceKey,
                                              UINT64 fenceValue) {
   m_ResourceDump.CommandQueueSignal(key, commandQueueKey, fenceKey, fenceValue);
 }
 
-void ResourceDumpService::FenceSignal(GITSKey key, GITSKey fenceKey, UINT64 fenceValue) {
+void ResourceDumpService::FenceSignal(CommandKey key, GITSKey fenceKey, UINT64 fenceValue) {
   m_ResourceDump.FenceSignal(key, fenceKey, fenceValue);
 }
 

@@ -16,6 +16,8 @@
 namespace gits {
 namespace DirectX {
 
+using CommandKey = GITSKey;
+
 class Command {
 public:
   Command(CommandId id, unsigned threadId) : ThreadId(threadId), m_Id(id) {}
@@ -27,7 +29,7 @@ public:
   }
 
 public:
-  GITSKey Key{};
+  CommandKey Key{};
   unsigned ThreadId{};
   bool Skip{false};
 

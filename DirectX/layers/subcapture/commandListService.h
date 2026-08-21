@@ -22,17 +22,17 @@ namespace gits {
 namespace DirectX {
 
 struct CommandListCommand {
-  CommandListCommand(CommandId id_, GITSKey key, GITSKey commandListKey)
+  CommandListCommand(CommandId id_, CommandKey key, GITSKey commandListKey)
       : Id(id_), Key(key), CommandListKey(commandListKey) {}
   virtual ~CommandListCommand() = default;
   CommandId Id{};
-  GITSKey Key{};
+  CommandKey Key{};
   GITSKey CommandListKey{};
   std::unique_ptr<stream::CommandSerializer> CommandSerializer;
 };
 
 struct CommandListOMSetRenderTargets : public CommandListCommand {
-  CommandListOMSetRenderTargets(GITSKey key, GITSKey commandListKey)
+  CommandListOMSetRenderTargets(CommandKey key, GITSKey commandListKey)
       : CommandListCommand(
             CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_OMSETRENDERTARGETS, key, commandListKey) {}
   std::vector<std::unique_ptr<D3D12RenderTargetViewState>> RenderTargetViews;
@@ -41,7 +41,7 @@ struct CommandListOMSetRenderTargets : public CommandListCommand {
 };
 
 struct CommandListClearRenderTargetView : public CommandListCommand {
-  CommandListClearRenderTargetView(GITSKey key, GITSKey commandListKey)
+  CommandListClearRenderTargetView(CommandKey key, GITSKey commandListKey)
       : CommandListCommand(
             CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_CLEARRENDERTARGETVIEW, key, commandListKey) {}
   std::unique_ptr<D3D12RenderTargetViewState> RenderTargetView;
@@ -50,7 +50,7 @@ struct CommandListClearRenderTargetView : public CommandListCommand {
 };
 
 struct CommandListClearDepthStencilView : public CommandListCommand {
-  CommandListClearDepthStencilView(GITSKey key, GITSKey commandListKey)
+  CommandListClearDepthStencilView(CommandKey key, GITSKey commandListKey)
       : CommandListCommand(
             CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_CLEARDEPTHSTENCILVIEW, key, commandListKey) {}
   std::unique_ptr<D3D12DepthStencilViewState> m_DepthStencilView;
@@ -60,7 +60,7 @@ struct CommandListClearDepthStencilView : public CommandListCommand {
 };
 
 struct CommandListClearUnorderedAccessViewUint : public CommandListCommand {
-  CommandListClearUnorderedAccessViewUint(GITSKey key, GITSKey commandListKey)
+  CommandListClearUnorderedAccessViewUint(CommandKey key, GITSKey commandListKey)
       : CommandListCommand(CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_CLEARUNORDEREDACCESSVIEWUINT,
                            key,
                            commandListKey) {}
@@ -72,7 +72,7 @@ struct CommandListClearUnorderedAccessViewUint : public CommandListCommand {
 };
 
 struct CommandListClearUnorderedAccessViewFloat : public CommandListCommand {
-  CommandListClearUnorderedAccessViewFloat(GITSKey key, GITSKey commandListKey)
+  CommandListClearUnorderedAccessViewFloat(CommandKey key, GITSKey commandListKey)
       : CommandListCommand(CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_CLEARUNORDEREDACCESSVIEWFLOAT,
                            key,
                            commandListKey) {}

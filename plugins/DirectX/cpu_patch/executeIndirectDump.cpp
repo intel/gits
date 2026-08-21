@@ -142,7 +142,7 @@ void ExecuteIndirectDump::ExecuteIndirect(
   }
 }
 
-void ExecuteIndirectDump::ExecuteCommandLists(GITSKey key,
+void ExecuteIndirectDump::ExecuteCommandLists(CommandKey key,
                                               GITSKey commandQueueKey,
                                               ID3D12CommandQueue* commandQueue,
                                               ID3D12CommandList** commandLists,
@@ -209,7 +209,7 @@ void ExecuteIndirectDump::LoadExecuteIndirectDispatchRays() {
   std::filesystem::path dumpPath = m_GitsConfig.common.player.streamDir;
   std::ifstream stream(dumpPath / "executeIndirectRaytracing.txt");
   while (true) {
-    GITSKey callKey{};
+    CommandKey callKey{};
     D3D12_DISPATCH_RAYS_DESC desc{};
     stream >> callKey;
     if (!stream) {

@@ -24,20 +24,20 @@ public:
   void CommandListResourceUsage(GITSKey commandListKey, GITSKey resourceKey);
   void CommandListResourceUsage(GITSKey commandListKey, std::vector<GITSKey>& resourceKeys);
   void CommandListReset(GITSKey commandListKey);
-  void ExecuteCommandLists(GITSKey commandKey,
+  void ExecuteCommandLists(CommandKey commandKey,
                            GITSKey commandQueueKey,
                            std::vector<GITSKey>& commandListKeys);
   void DestroyResource(GITSKey resourceKey);
 
-  void CommandQueueWait(GITSKey commandKey,
+  void CommandQueueWait(CommandKey commandKey,
                         GITSKey commandQueueKey,
                         GITSKey fenceKey,
                         UINT64 fenceValue);
-  void CommandQueueSignal(GITSKey commandKey,
+  void CommandQueueSignal(CommandKey commandKey,
                           GITSKey commandQueueKey,
                           GITSKey fenceKey,
                           UINT64 fenceValue);
-  void FenceSignal(GITSKey commandKey, GITSKey fenceKey, UINT64 fenceValue);
+  void FenceSignal(CommandKey commandKey, GITSKey fenceKey, UINT64 fenceValue);
 
   std::vector<GITSKey> GetOrderedResources();
 

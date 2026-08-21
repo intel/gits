@@ -15,7 +15,7 @@
 namespace gits {
 namespace DirectX {
 
-void GpuExecutionTracker::CommandQueueWait(GITSKey callKey,
+void GpuExecutionTracker::CommandQueueWait(CommandKey callKey,
                                            GITSKey commandQueueKey,
                                            GITSKey fenceKey,
                                            UINT64 fenceValue) {
@@ -32,7 +32,7 @@ void GpuExecutionTracker::CommandQueueWait(GITSKey callKey,
   m_QueueEvents[commandQueueKey].push_back(waitEvent);
 }
 
-void GpuExecutionTracker::CommandQueueSignal(GITSKey callKey,
+void GpuExecutionTracker::CommandQueueSignal(CommandKey callKey,
                                              GITSKey commandQueueKey,
                                              GITSKey fenceKey,
                                              UINT64 fenceValue) {
@@ -49,7 +49,7 @@ void GpuExecutionTracker::CommandQueueSignal(GITSKey callKey,
   }
 }
 
-void GpuExecutionTracker::FenceSignal(GITSKey callKey, GITSKey fenceKey, UINT64 fenceValue) {
+void GpuExecutionTracker::FenceSignal(CommandKey callKey, GITSKey fenceKey, UINT64 fenceValue) {
   std::queue<SignalEvent*> signaled;
   auto* initialSignal = new SignalEvent{};
   initialSignal->CallKey = callKey;
@@ -93,7 +93,7 @@ bool GpuExecutionTracker::IsCommandQueueWaiting(GITSKey commandQueueKey) {
   return true;
 }
 
-void GpuExecutionTracker::Execute(GITSKey callKey,
+void GpuExecutionTracker::Execute(CommandKey callKey,
                                   GITSKey commandQueueKey,
                                   Executable* executable) {
   executable->CallKey = callKey;

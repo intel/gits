@@ -1022,7 +1022,7 @@ void StateTrackingService::NvAPIGlobalStateService::RestoreInitializeCount() {
 }
 
 void StateTrackingService::NvAPIGlobalStateService::RestoreCreatePipelineStateOptionsBeforeCommand(
-    GITSKey commandKey) {
+    CommandKey commandKey) {
   while (!m_SetCreatePipelineStateOptionsCommands.empty()) {
     const auto& command = m_SetCreatePipelineStateOptionsCommands.top();
     if (command.Key >= commandKey) {
@@ -1034,7 +1034,7 @@ void StateTrackingService::NvAPIGlobalStateService::RestoreCreatePipelineStateOp
 }
 
 void StateTrackingService::NvAPIGlobalStateService::RestoreShaderExtnSlotSpaceBeforeCommand(
-    GITSKey commandKey) {
+    CommandKey commandKey) {
   while (!m_SetNvShaderExtnSlotSpaceCommands.empty()) {
     const auto& command = m_SetNvShaderExtnSlotSpaceCommands.top();
     if (command.Key >= commandKey) {

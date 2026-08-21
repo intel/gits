@@ -43,14 +43,14 @@ public:
   void ExecuteCommandLists(ID3D12CommandQueueExecuteCommandListsCommand& c);
   void CommandQueueWait(ID3D12CommandQueueWaitCommand& c);
   void CommandQueueSignal(ID3D12CommandQueueSignalCommand& c);
-  void FenceSignal(GITSKey key, GITSKey fenceKey, UINT64 fenceValue);
+  void FenceSignal(CommandKey key, GITSKey fenceKey, UINT64 fenceValue);
 
   void StoreBufferRegion(GITSKey bufferKey, unsigned bufferOffset, unsigned bufferSize);
-  void StoreBuffers(GITSKey commandKey, ID3D12GraphicsCommandList* commandList);
+  void StoreBuffers(CommandKey commandKey, ID3D12GraphicsCommandList* commandList);
 
-  void RestoreBuffersInitialization(std::vector<GITSKey>& commandKeys, GITSKey deviceKey);
-  void MakeBuffersResident(GITSKey commandKey, ResourceResidencyService& residencyService);
-  void RestoreBuffers(GITSKey commandKey, GITSKey commandListBarriersKey);
+  void RestoreBuffersInitialization(std::vector<CommandKey>& commandKeys, GITSKey deviceKey);
+  void MakeBuffersResident(CommandKey commandKey, ResourceResidencyService& residencyService);
+  void RestoreBuffers(CommandKey commandKey, GITSKey commandListBarriersKey);
   void RestoreBuffersCleanup();
 
 private:
@@ -70,7 +70,7 @@ private:
     std::unordered_map<GITSKey, ResourceState*> Buffers;
     std::unordered_map<GITSKey, ReservedResourcesService::TiledResource> TiledResources;
   };
-  std::unordered_map<GITSKey, std::unique_ptr<InputBuffers>> m_InputBuffers;
+  std::unordered_map<CommandKey, std::unique_ptr<InputBuffers>> m_InputBuffers;
 
   std::unordered_map<std::pair<GITSKey, unsigned>, uint64_t, UnsignedPairHash>
       m_BufferHashesByKeyOffset;
@@ -93,7 +93,7 @@ private:
                     unsigned offset,
                     unsigned size,
                     BarrierState resourceState,
-                    GITSKey buildCallKey,
+                    CommandKey buildCallKey,
                     bool isMappable);
 
   public:
@@ -104,18 +104,18 @@ private:
       bool IsMappable{};
       std::unique_ptr<std::vector<char>> BufferData;
     };
-    std::vector<InputBuffer>& GetInputBuffers(GITSKey buildKey) {
+    std::vector<InputBuffer>& GetInputBuffers(CommandKey buildKey) {
       return m_InputBuffersByBuildKey[buildKey];
     }
 
   private:
-    std::unordered_map<GITSKey, std::vector<InputBuffer>> m_InputBuffersByBuildKey;
+    std::unordered_map<CommandKey, std::vector<InputBuffer>> m_InputBuffersByBuildKey;
     std::mutex m_Mutex;
 
   protected:
     struct BufferInfo : public DumpInfo {
       GITSKey ResourceKey;
-      GITSKey BuildCallKey;
+      CommandKey BuildCallKey;
       bool IsMappable;
     };
     void DumpBuffer(DumpInfo& dumpInfo, void* data) override;

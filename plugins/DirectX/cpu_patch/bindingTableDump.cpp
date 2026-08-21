@@ -45,7 +45,7 @@ void BindingTableDump::DispatchRays(ID3D12GraphicsCommandList* commandList,
                                     unsigned offset,
                                     unsigned size,
                                     D3D12_RESOURCE_STATES state,
-                                    GITSKey commandKey,
+                                    CommandKey commandKey,
                                     std::string type) {
   Initialize();
 
@@ -56,7 +56,7 @@ void BindingTableDump::DispatchRays(ID3D12GraphicsCommandList* commandList,
   StageResource(commandList, resource, state, *info);
 }
 
-void BindingTableDump::ExecuteCommandLists(GITSKey key,
+void BindingTableDump::ExecuteCommandLists(CommandKey key,
                                            GITSKey commandQueueKey,
                                            ID3D12CommandQueue* commandQueue,
                                            ID3D12CommandList** commandLists,

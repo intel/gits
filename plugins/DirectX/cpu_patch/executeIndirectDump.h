@@ -34,7 +34,7 @@ public:
   ExecuteIndirectDump& operator=(const ExecuteIndirectDump&) = delete;
 
   void ExecuteIndirect(ID3D12GraphicsCommandListExecuteIndirectCommand& command);
-  void ExecuteCommandLists(GITSKey key,
+  void ExecuteCommandLists(CommandKey key,
                            GITSKey commandQueueKey,
                            ID3D12CommandQueue* commandQueue,
                            ID3D12CommandList** commandLists,
@@ -67,7 +67,8 @@ private:
   size_t m_NumFiles{};
   size_t m_FilesTotalSize{};
 
-  std::unordered_map<GITSKey, std::vector<D3D12_DISPATCH_RAYS_DESC>> m_ExecuteIndirectDispatchRays;
+  std::unordered_map<CommandKey, std::vector<D3D12_DISPATCH_RAYS_DESC>>
+      m_ExecuteIndirectDispatchRays;
   std::unordered_map<GITSKey, std::unique_ptr<PointerArgument<D3D12_COMMAND_SIGNATURE_DESC>>>
       m_CommandSignatures;
 };

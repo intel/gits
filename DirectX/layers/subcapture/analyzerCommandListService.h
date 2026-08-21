@@ -45,7 +45,7 @@ public:
     return m_CommandListInfos[commandListKey].computeRootSignature;
   }
 
-  std::set<GITSKey>& GetTlases();
+  std::set<CommandKey>& GetTlases();
 
   void AddObjectForRestore(GITSKey key) {
     if (key && m_Optimize) {
@@ -170,7 +170,7 @@ private:
   std::set<std::pair<GITSKey, unsigned>> m_Descriptors;
 
   bool m_RestoreTlases{};
-  std::set<GITSKey> m_TlasBuildKeys;
+  std::set<CommandKey> m_TlasBuildKeys;
 };
 
 template <typename CommandListCommand>

@@ -9,6 +9,7 @@
 #pragma once
 
 #include "arguments.h"
+#include "command.h"
 
 #include <vector>
 #include <unordered_map>
@@ -30,7 +31,7 @@ public:
   struct QueueEvent {
     QueueEvent(QueueEventKind kind) : Kind(kind) {}
     virtual ~QueueEvent() = default;
-    GITSKey CallKey{};
+    CommandKey CallKey{};
     GITSKey CommandQueueKey{};
     QueueEventKind Kind{};
   };
@@ -56,17 +57,17 @@ public:
   };
 
 public:
-  void CommandQueueWait(GITSKey callKey,
+  void CommandQueueWait(CommandKey callKey,
                         GITSKey commandQueueKey,
                         GITSKey fenceKey,
                         UINT64 fenceValue);
-  void CommandQueueSignal(GITSKey callKey,
+  void CommandQueueSignal(CommandKey callKey,
                           GITSKey commandQueueKey,
                           GITSKey fenceKey,
                           UINT64 fenceValue);
-  void FenceSignal(GITSKey callKey, GITSKey fenceKey, UINT64 fenceValue);
+  void FenceSignal(CommandKey callKey, GITSKey fenceKey, UINT64 fenceValue);
   bool IsCommandQueueWaiting(GITSKey commandQueueKey);
-  void Execute(GITSKey callKey, GITSKey commandQueueKey, Executable* executable);
+  void Execute(CommandKey callKey, GITSKey commandQueueKey, Executable* executable);
   std::vector<Executable*>& GetReadyExecutables() {
     return m_ReadyExecutables;
   }

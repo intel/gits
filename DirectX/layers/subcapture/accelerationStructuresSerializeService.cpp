@@ -187,7 +187,7 @@ void AccelerationStructuresSerializeService::RestoreAccelerationStructures() {
                                          IID_PPV_ARGS(&infoStagingResource));
   GITS_ASSERT(hr == S_OK);
 
-  std::map<GITSKey, AccelerationStructure> accelerationStructuresByCallKey;
+  std::map<CommandKey, AccelerationStructure> accelerationStructuresByCallKey;
   for (auto& it : m_AccelerationStructures) {
     accelerationStructuresByCallKey[it.second.CallKey] = it.second;
   }

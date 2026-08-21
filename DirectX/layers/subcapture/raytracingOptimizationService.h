@@ -32,7 +32,7 @@ public:
   void NvapiBuildOpacityMicromapArray(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& c);
   void ExecuteCommandLists(ID3D12CommandQueueExecuteCommandListsCommand& c);
   void Optimize(std::unordered_set<std::pair<GITSKey, unsigned>, UnsignedPairHash>& ases);
-  std::vector<std::pair<GITSKey, GITSKey>>& GetOptimizedCommands() {
+  std::vector<std::pair<CommandKey, CommandKey>>& GetOptimizedCommands() {
     return m_OptimizedCommandsWithSources;
   }
   std::unordered_set<GITSKey>& GetExistingBuffers() {
@@ -42,7 +42,7 @@ public:
 private:
   struct RaytracingCommand {
     unsigned Id{};
-    GITSKey Key{};
+    CommandKey Key{};
     GITSKey DestKey{};
     unsigned DestOffset{};
     GITSKey SourceKey{};
@@ -60,9 +60,9 @@ private:
       m_CommandsByCommandList;
   std::unordered_map<std::pair<GITSKey, unsigned>, RaytracingCommand*, UnsignedPairHash>
       m_CommandByKeyOffset;
-  std::unordered_map<GITSKey, std::unique_ptr<RaytracingCommand>> m_CommandById;
+  std::unordered_map<unsigned, std::unique_ptr<RaytracingCommand>> m_CommandById;
 
-  std::vector<std::pair<GITSKey, GITSKey>> m_OptimizedCommandsWithSources;
+  std::vector<std::pair<CommandKey, CommandKey>> m_OptimizedCommandsWithSources;
   std::unordered_set<GITSKey> m_ExistingBuffers;
 
 private:

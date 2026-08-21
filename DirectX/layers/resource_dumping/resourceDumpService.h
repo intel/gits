@@ -28,19 +28,22 @@ public:
                       ID3D12Resource* resource,
                       D3D12_RESOURCE_STATES initialState);
   void DestroyResource(GITSKey resourceKey);
-  void CommandListCall(GITSKey callKey, ID3D12GraphicsCommandList* commandList);
+  void CommandListCall(CommandKey callKey, ID3D12GraphicsCommandList* commandList);
   void ResourceBarrier(ID3D12GraphicsCommandListResourceBarrierCommand& c);
-  void ExecuteCommandLists(GITSKey key,
+  void ExecuteCommandLists(CommandKey key,
                            GITSKey commandQueueKey,
                            ID3D12CommandQueue* commandQueue,
                            ID3D12CommandList** commandLists,
                            unsigned commandListNum);
-  void CommandQueueWait(GITSKey key, GITSKey commandQueueKey, GITSKey fenceKey, UINT64 fenceValue);
-  void CommandQueueSignal(GITSKey key,
+  void CommandQueueWait(CommandKey key,
+                        GITSKey commandQueueKey,
+                        GITSKey fenceKey,
+                        UINT64 fenceValue);
+  void CommandQueueSignal(CommandKey key,
                           GITSKey commandQueueKey,
                           GITSKey fenceKey,
                           UINT64 fenceValue);
-  void FenceSignal(GITSKey key, GITSKey fenceKey, UINT64 fenceValue);
+  void FenceSignal(CommandKey key, GITSKey fenceKey, UINT64 fenceValue);
 
 private:
   ConfigKeySet m_ResourceKeys;

@@ -1047,7 +1047,7 @@ std::string PortabilityLayer::GetPlacedToCommittedIncompatibilityReasons(
 
 std::string PortabilityLayer::GetPlacedToCommittedFailureContext(
     const char* apiName,
-    GITSKey commandKey,
+    CommandKey commandKey,
     GITSKey heapKey,
     const D3D12_HEAP_DESC& heapDesc,
     const D3D12_RESOURCE_DESC& resourceDesc) const {
@@ -1063,7 +1063,7 @@ std::string PortabilityLayer::GetPlacedToCommittedFailureContext(
 
 void PortabilityLayer::FailPlacedToCommittedIncompatibility(
     const char* apiName,
-    GITSKey commandKey,
+    CommandKey commandKey,
     GITSKey heapKey,
     const D3D12_HEAP_DESC& heapDesc,
     const D3D12_RESOURCE_DESC& resourceDesc) const {
@@ -1078,7 +1078,7 @@ void PortabilityLayer::FailPlacedToCommittedIncompatibility(
 }
 
 void PortabilityLayer::FailPlacedToCommittedCreation(const char* apiName,
-                                                     GITSKey commandKey,
+                                                     CommandKey commandKey,
                                                      GITSKey heapKey,
                                                      UINT64 heapOffset,
                                                      const D3D12_RESOURCE_DESC& resourceDesc,
@@ -1096,7 +1096,7 @@ void PortabilityLayer::FailPlacedToCommittedCreation(const char* apiName,
 }
 
 void PortabilityLayer::FailPlacedToCommittedCreation(const char* apiName,
-                                                     GITSKey commandKey,
+                                                     CommandKey commandKey,
                                                      GITSKey heapKey,
                                                      UINT64 heapOffset,
                                                      const D3D12_RESOURCE_DESC& resourceDesc,

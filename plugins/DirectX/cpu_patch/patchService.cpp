@@ -793,7 +793,7 @@ void PatchService::LoadExecuteIndirectDispatchRays() {
   std::filesystem::path dumpPath = m_GitsConfig.common.player.streamDir;
   std::ifstream stream(dumpPath / "executeIndirectRaytracing.txt");
   while (true) {
-    GITSKey callKey{};
+    CommandKey callKey{};
     D3D12_DISPATCH_RAYS_DESC desc{};
     stream >> callKey;
     if (!stream) {

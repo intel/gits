@@ -118,7 +118,7 @@ void AnalyzerExecuteIndirectService::Flush() {
   m_ExecuteIndirectDump.WaitUntilDumped();
 }
 
-void AnalyzerExecuteIndirectService::ExecuteCommandLists(GITSKey key,
+void AnalyzerExecuteIndirectService::ExecuteCommandLists(CommandKey key,
                                                          GITSKey commandQueueKey,
                                                          ID3D12CommandQueue* commandQueue,
                                                          ID3D12CommandList** commandLists,
@@ -127,21 +127,23 @@ void AnalyzerExecuteIndirectService::ExecuteCommandLists(GITSKey key,
                                             commandListNum);
 }
 
-void AnalyzerExecuteIndirectService::CommandQueueWait(GITSKey key,
+void AnalyzerExecuteIndirectService::CommandQueueWait(CommandKey key,
                                                       GITSKey commandQueueKey,
                                                       GITSKey fenceKey,
                                                       UINT64 fenceValue) {
   m_ExecuteIndirectDump.CommandQueueWait(key, commandQueueKey, fenceKey, fenceValue);
 }
 
-void AnalyzerExecuteIndirectService::CommandQueueSignal(GITSKey key,
+void AnalyzerExecuteIndirectService::CommandQueueSignal(CommandKey key,
                                                         GITSKey commandQueueKey,
                                                         GITSKey fenceKey,
                                                         UINT64 fenceValue) {
   m_ExecuteIndirectDump.CommandQueueSignal(key, commandQueueKey, fenceKey, fenceValue);
 }
 
-void AnalyzerExecuteIndirectService::FenceSignal(GITSKey key, GITSKey fenceKey, UINT64 fenceValue) {
+void AnalyzerExecuteIndirectService::FenceSignal(CommandKey key,
+                                                 GITSKey fenceKey,
+                                                 UINT64 fenceValue) {
   m_ExecuteIndirectDump.FenceSignal(key, fenceKey, fenceValue);
 }
 
@@ -149,7 +151,7 @@ void AnalyzerExecuteIndirectService::LoadExecuteIndirectDispatchRays() {
   std::filesystem::path dumpPath = Configurator::Get().common.player.streamDir;
   std::ifstream stream(dumpPath / "executeIndirectRaytracing.txt");
   while (true) {
-    GITSKey callKey{};
+    CommandKey callKey{};
     D3D12_DISPATCH_RAYS_DESC desc{};
     stream >> callKey;
     if (!stream) {

@@ -75,7 +75,7 @@ bool RtasDeserializer::PreloadCache(ID3D12Device5* device) {
 
   // Read the cache file
   while (cacheFile) {
-    GITSKey key{};
+    CommandKey key{};
     unsigned size{};
     cacheFile.read(reinterpret_cast<char*>(&key), sizeof(key));
     cacheFile.read(reinterpret_cast<char*>(&size), sizeof(size));
@@ -103,7 +103,7 @@ bool RtasDeserializer::IsCompatible(std::ifstream& cacheFile, ID3D12Device5* dev
 
   auto initialPos = cacheFile.tellg();
   // Read the key and size
-  GITSKey key{};
+  CommandKey key{};
   unsigned size{};
   cacheFile.read(reinterpret_cast<char*>(&key), sizeof(key));
   cacheFile.read(reinterpret_cast<char*>(&size), sizeof(size));
@@ -126,7 +126,7 @@ bool RtasDeserializer::IsCompatible(std::ifstream& cacheFile, ID3D12Device5* dev
   return true;
 }
 
-bool RtasDeserializer::Deserialize(GITSKey buildKey,
+bool RtasDeserializer::Deserialize(CommandKey buildKey,
                                    ID3D12GraphicsCommandList4* commandList,
                                    D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC& desc) {
 
@@ -183,7 +183,7 @@ bool RtasDeserializer::Deserialize(GITSKey buildKey,
   return true;
 }
 
-void RtasDeserializer::ExecuteCommandLists(GITSKey key,
+void RtasDeserializer::ExecuteCommandLists(CommandKey key,
                                            GITSKey commandQueueKey,
                                            ID3D12CommandQueue* commandQueue,
                                            ID3D12CommandList** commandLists,

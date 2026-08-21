@@ -42,13 +42,13 @@ CommandListSplitService::CommandListSplitService(CommandListSplitRecorder& recor
       GITS_ASSERT(!token.empty(), "CommandListSplit - Failed to parse split intervals");
       const size_t dash = token.find('-');
       if (dash == std::string::npos) {
-        AddInterval(static_cast<GITSKey>(std::stoull(token)),
-                    static_cast<GITSKey>(std::stoull(token)));
+        AddInterval(static_cast<CommandKey>(std::stoull(token)),
+                    static_cast<CommandKey>(std::stoull(token)));
       } else {
         GITS_ASSERT(token.find('-', dash + 1) == std::string::npos,
                     "CommandListSplit - Failed to parse split intervals (multiple '-' in token)");
-        AddInterval(static_cast<GITSKey>(std::stoull(token.substr(0, dash))),
-                    static_cast<GITSKey>(std::stoull(token.substr(dash + 1))));
+        AddInterval(static_cast<CommandKey>(std::stoull(token.substr(0, dash))),
+                    static_cast<CommandKey>(std::stoull(token.substr(dash + 1))));
       }
     } while (*p++);
   } catch (...) {
@@ -118,13 +118,13 @@ void CommandListSplitService::CommandQueueSignal(GITSKey commandQueueKey,
   m_CommandListsByKey.erase(it);
 
   if (originalCommandList.Split) {
-    std::unordered_set<GITSKey> intervalStartsInThisExecution;
+    std::unordered_set<CommandKey> intervalStartsInThisExecution;
     for (const auto& command : originalCommandList.Commands) {
       if (auto interval = GetInterval(command->Key)) {
         intervalStartsInThisExecution.insert(interval->first);
       }
     }
-    for (GITSKey start : intervalStartsInThisExecution) {
+    for (CommandKey start : intervalStartsInThisExecution) {
       auto [insertedIt, inserted] = m_ExecutedIntervalStarts.insert(start);
       GITS_ASSERT(inserted,
                   "CommandListSplit - Interval spans across multiple command list executions");
@@ -220,7 +220,7 @@ std::vector<CommandListSplitService::CommandList> CommandListSplitService::Split
     CommandListStateService commandListState(commandList.CommandListKey);
     CommandListPiece* currentPiece = &commandListPieces.emplace_back(
         CommandList{commandList.CommandListKey, commandList.InitialState, false}, false);
-    std::optional<std::pair<GITSKey, GITSKey>> prevInterval;
+    std::optional<std::pair<CommandKey, CommandKey>> prevInterval;
     for (size_t i = 0; i < commandList.Commands.size(); ++i) {
       auto& command = commandList.Commands[i];
       auto interval = GetInterval(command->Key);
@@ -295,14 +295,15 @@ bool CommandListSplitService::IsBeginEndCommand(const Command& command) {
   }
 }
 
-void CommandListSplitService::AddInterval(GITSKey a, GITSKey b) {
+void CommandListSplitService::AddInterval(CommandKey a, CommandKey b) {
   GITS_ASSERT(a <= b, "CommandListSplit - Invalid interval");
   GITS_ASSERT(!GetInterval(a).has_value(), "CommandListSplit - Overlapping intervals not handled");
   GITS_ASSERT(!GetInterval(b).has_value(), "CommandListSplit - Overlapping intervals not handled");
   m_SplitIntervals[a] = b;
 }
 
-std::optional<std::pair<GITSKey, GITSKey>> CommandListSplitService::GetInterval(GITSKey key) {
+std::optional<std::pair<CommandKey, CommandKey>> CommandListSplitService::GetInterval(
+    CommandKey key) {
   if (m_SplitIntervals.empty()) {
     return std::nullopt;
   }
@@ -315,7 +316,7 @@ std::optional<std::pair<GITSKey, GITSKey>> CommandListSplitService::GetInterval(
   if (key > it->second) {
     return std::nullopt;
   }
-  return std::pair<GITSKey, GITSKey>{it->first, it->second};
+  return std::pair<CommandKey, CommandKey>{it->first, it->second};
 }
 
 } // namespace DirectX

@@ -32,7 +32,7 @@ void BufferPool::Initialize(ID3D12Device* device, size_t bufferSize, unsigned in
   }
 }
 
-ID3D12Resource* BufferPool::AcquireBuffer(GITSKey key) {
+ID3D12Resource* BufferPool::AcquireBuffer(CommandKey key) {
   unsigned index = 0;
   if (!m_FreeIndices.empty()) {
     // Use an existing free buffer
@@ -48,7 +48,7 @@ ID3D12Resource* BufferPool::AcquireBuffer(GITSKey key) {
   return m_Buffers[index].Get();
 }
 
-void BufferPool::ReleaseBuffer(GITSKey key) {
+void BufferPool::ReleaseBuffer(CommandKey key) {
   auto it = m_KeyToIndex.find(key);
   if (it != m_KeyToIndex.end()) {
     unsigned index = it->second;

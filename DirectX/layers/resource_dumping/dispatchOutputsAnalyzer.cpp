@@ -56,7 +56,7 @@ void DispatchOutputsAnalyzer::ReadAnalysisFile() {
   std::string line;
   while (std::getline(analysisFile, line)) {
     std::istringstream iss(line);
-    GITSKey dispatchKey{};
+    CommandKey dispatchKey{};
     iss >> dispatchKey;
     Bindings bindings{};
     iss >> bindings.Slot;
@@ -76,7 +76,7 @@ void DispatchOutputsAnalyzer::ReadAnalysisFile() {
 }
 
 std::vector<DispatchOutputsAnalyzer::Bindings>* DispatchOutputsAnalyzer::GetDispatchBindings(
-    GITSKey dispatchKey) {
+    CommandKey dispatchKey) {
   auto it = m_DispatchBindings.find(dispatchKey);
   if (it != m_DispatchBindings.end()) {
     return &it->second;

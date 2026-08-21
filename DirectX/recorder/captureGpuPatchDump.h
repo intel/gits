@@ -8,7 +8,7 @@
 
 #pragma once
 #include "arguments.h"
-
+#include "command.h"
 #include "resourceDump.h"
 
 #include <fstream>
@@ -30,23 +30,23 @@ public:
                           ID3D12Resource* countBuffer,
                           unsigned countBufferOffset,
                           BarrierState countBufferState,
-                          GITSKey callKey);
+                          CommandKey callKey);
   void DumpInstancesArrayOfPointers(ID3D12GraphicsCommandList* commandList,
                                     ID3D12Resource* instancesBuffer,
                                     unsigned offset,
                                     unsigned pointersCount,
                                     BarrierState bufferState,
-                                    GITSKey callKey);
+                                    CommandKey callKey);
   void Flush();
 
 protected:
   struct ExecuteIndirectDumpInfo : public DumpInfo {
     D3D12_COMMAND_SIGNATURE_DESC* CommandSignature{};
     DumpInfo CountDumpInfo;
-    GITSKey CallKey{};
+    CommandKey CallKey{};
   };
   struct InstancesArrayOfPointersDumpInfo : public DumpInfo {
-    GITSKey CallKey{};
+    CommandKey CallKey{};
   };
 
   void DumpStagedResource(DumpInfo& dumpInfo) override;
