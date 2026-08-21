@@ -143,6 +143,9 @@ public:
   CloseRecorderMessage() {}
 };
 
+// Brackets GPU commands issued by GITS (not part of the original workload)
+// context: API command list pointer (e.g., ID3D12GraphicsCommandList*)
+// value: Stream command list key (use 0 when the list is not a stream object)
 class GitsWorkloadMessage : public Message {
 public:
   GitsWorkloadMessage(void* context, const std::string& label, unsigned value)

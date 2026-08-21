@@ -460,7 +460,7 @@ void ImGuiHUDLayer::Present() {
 
   gits::MessageBus::get().publish(
       {PUBLISHER_PLAYER, TOPIC_GITS_WORKLOAD_BEGIN},
-      std::make_shared<GitsWorkloadMessage>(m_CommandList.Get(), "GITS_ImGuiHUD", m_SwapChainKey));
+      std::make_shared<GitsWorkloadMessage>(m_CommandList.Get(), "GITS_ImGuiHUD", 0));
 
   m_CommandList->ResourceBarrier(1, &barrier);
 
@@ -477,7 +477,7 @@ void ImGuiHUDLayer::Present() {
 
   gits::MessageBus::get().publish(
       {PUBLISHER_PLAYER, TOPIC_GITS_WORKLOAD_END},
-      std::make_shared<GitsWorkloadMessage>(m_CommandList.Get(), "GITS_ImGuiHUD", m_SwapChainKey));
+      std::make_shared<GitsWorkloadMessage>(m_CommandList.Get(), "GITS_ImGuiHUD", 0));
 
   m_CommandList->Close();
 
