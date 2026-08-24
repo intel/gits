@@ -36,6 +36,8 @@ set(SERVICES_SRC
   ${CMAKE_CURRENT_SOURCE_DIR}/restoreContentService.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/descriptorUpdateTemplateService.h
   ${CMAKE_CURRENT_SOURCE_DIR}/descriptorUpdateTemplateService.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/deviceDiagnosticService.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/deviceDiagnosticService.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/swapchainImageSyncService.h
   ${CMAKE_CURRENT_SOURCE_DIR}/swapchainImageSyncService.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/fencePendingSignalService.h

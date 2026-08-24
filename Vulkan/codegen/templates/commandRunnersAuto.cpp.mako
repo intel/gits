@@ -11,6 +11,7 @@ ${header}
 #include "commandsAuto.h"
 #include "layerAuto.h"
 #include "playerManager.h"
+#include "deviceDiagnosticService.h"
 #include "handleMapService.h"
 #include "handleArgumentUpdaters.h"
 
@@ -62,11 +63,21 @@ void ${command.name}Runner::Run() {
   }
 
   if (manager.ExecuteCommands() && !command.m_Skip) {
+    % if command.name.startswith('vkCmd') and command.params and command.params[0].base_type == 'VkCommandBuffer' and command.name != 'vkCmdSetCheckpointNV':
+    manager.GetDeviceDiagnosticService().InsertCheckpoint(
+        command.m_${command.params[0].name}.Value, command.m_Key, "${command.name}");
+    % endif
     ${'command.m_Return.Value = ' if command.return_type != 'void' else ''}manager.${dispatch_table}(${f'command.m_{command.params[0].name}.Value' if dispatch_table != 'GetGlobalDispatchTable' else ''}).${command.name}(
       % for arg in args:
       ${arg}${',' if not loop.last else ''}
       % endfor
 	);
+
+    % if command.name == 'vkCmdSetCheckpointNV':
+    // Preserve GITS' command-key marker after a checkpoint recorded by the application.
+    manager.GetDeviceDiagnosticService().InsertCheckpoint(
+        command.m_commandBuffer.Value, command.m_Key, "${command.name}");
+    % endif
 
 
     % for param in command.params:
@@ -94,6 +105,14 @@ void ${command.name}Runner::Run() {
     % endif
     % endif
     % endfor
+
+    % if command.return_type == 'VkResult':
+    if (command.m_Return.Value == VK_ERROR_DEVICE_LOST) {
+      manager.GetDeviceDiagnosticService().OnDeviceLost(
+          "${command.name}", command.m_Key,
+          ${f'command.m_{command.params[0].name}.Value' if command.dispatch_level == 'device' else 'nullptr'});
+    }
+    % endif
   }
 
   for (Layer* layer : manager.GetPostLayers()) {

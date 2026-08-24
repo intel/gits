@@ -32,6 +32,7 @@ enum TopicId {
   TOPIC_END,
   TOPIC_STREAM_SAVED,
   TOPIC_CLOSE_RECORDER,
+  TOPIC_CLOSE_PLAYER, // Stops playback at the current token
   TOPIC_GITS_WORKLOAD_BEGIN,
   TOPIC_GITS_WORKLOAD_END,
   // This topic is a part of playback, GitsEventMessage contains the id of the token associated with the message

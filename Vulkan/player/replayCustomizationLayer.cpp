@@ -21,6 +21,17 @@
 namespace gits {
 namespace vulkan {
 
+namespace {
+bool SkipTraceRays() {
+  const auto& cfg = Configurator::Get().vulkan.player;
+  return cfg.skipTraceRays || cfg.skipAllRayTracing;
+}
+
+bool SkipAccelerationStructureWork() {
+  return Configurator::Get().vulkan.player.skipAllRayTracing;
+}
+} // namespace
+
 thread_local VkResult ReplayCustomizationLayer::tl_recorderReturnValue{VK_SUCCESS};
 thread_local uint64_t ReplayCustomizationLayer::tl_recorderSemaphoreCounterValue{0};
 thread_local std::vector<const char*> ReplayCustomizationLayer::tl_instanceLayerNames;
@@ -32,18 +43,58 @@ void ReplayCustomizationLayer::Post(vkCreateInstanceCommand& command) {
 }
 
 void ReplayCustomizationLayer::Post(vkCreateDeviceCommand& command) {
+  if (command.m_Return.Value != VK_SUCCESS || !command.m_pDevice.Value) {
+    return;
+  }
   void* dispatchKey = *reinterpret_cast<void**>(command.m_physicalDevice.Value);
   m_Manager.LoadDeviceFunctions(dispatchKey, *command.m_pDevice.Value);
+  m_Manager.GetDeviceDiagnosticService().TrackDevice(
+      command.m_physicalDevice.Value, *command.m_pDevice.Value, command.m_pCreateInfo.Value);
+}
+
+void ReplayCustomizationLayer::Pre(vkDestroyDeviceCommand& command) {
+  m_Manager.GetDeviceDiagnosticService().UntrackDevice(command.m_device.Value);
 }
 
 void ReplayCustomizationLayer::Post(vkGetDeviceQueueCommand& command) {
   m_Manager.GetSwapchainImageSyncService().TrackQueue(command.m_device.Value,
                                                       *command.m_pQueue.Value);
+  m_Manager.GetDeviceDiagnosticService().TrackQueue(command.m_device.Value,
+                                                    *command.m_pQueue.Value);
 }
 
 void ReplayCustomizationLayer::Post(vkGetDeviceQueue2Command& command) {
   m_Manager.GetSwapchainImageSyncService().TrackQueue(command.m_device.Value,
                                                       *command.m_pQueue.Value);
+  m_Manager.GetDeviceDiagnosticService().TrackQueue(command.m_device.Value,
+                                                    *command.m_pQueue.Value);
+}
+
+void ReplayCustomizationLayer::Post(vkCreateCommandPoolCommand& command) {
+  if (command.m_Return.Value == VK_SUCCESS && command.m_pCreateInfo.Value &&
+      command.m_pCommandPool.Value) {
+    m_Manager.GetDeviceDiagnosticService().TrackCommandPool(
+        command.m_device.Value, *command.m_pCommandPool.Value,
+        command.m_pCreateInfo.Value->queueFamilyIndex);
+  }
+}
+
+void ReplayCustomizationLayer::Pre(vkDestroyCommandPoolCommand& command) {
+  m_Manager.GetDeviceDiagnosticService().UntrackCommandPool(command.m_commandPool.Value);
+}
+
+void ReplayCustomizationLayer::Post(vkAllocateCommandBuffersCommand& command) {
+  if (command.m_Return.Value == VK_SUCCESS && command.m_pAllocateInfo.Value &&
+      command.m_pCommandBuffers.Value) {
+    m_Manager.GetDeviceDiagnosticService().TrackCommandBuffers(
+        command.m_device.Value, command.m_pAllocateInfo.Value->commandPool,
+        command.m_pAllocateInfo.Value->commandBufferCount, command.m_pCommandBuffers.Value);
+  }
+}
+
+void ReplayCustomizationLayer::Pre(vkFreeCommandBuffersCommand& command) {
+  m_Manager.GetDeviceDiagnosticService().UntrackCommandBuffers(command.m_commandBufferCount.Value,
+                                                               command.m_pCommandBuffers.Value);
 }
 
 #ifdef VK_USE_PLATFORM_WIN32_KHR
@@ -535,6 +586,9 @@ void ReplayCustomizationLayer::Pre(vkCreateDeviceCommand& command) {
       LOG_INFO << "ReplayCustomization: suppressed " << suppressedFeatures
                << " physical device feature(s) during vkCreateDevice.";
     }
+
+    m_Manager.GetDeviceDiagnosticService().PrepareDeviceCreate(command.m_physicalDevice.Value,
+                                                               createInfo);
   }
 }
 
@@ -629,24 +683,28 @@ void ReplayCustomizationLayer::Post(vkQueueSubmitCommand& command) {
   if (command.m_Return.Value == VK_SUCCESS) {
     m_Manager.GetFencePendingSignalService().MarkPending(command.m_fence.Value);
   }
+  WaitAfterQueueSubmit(command.m_queue, command.m_Return.Value);
 }
 
 void ReplayCustomizationLayer::Post(vkQueueSubmit2Command& command) {
   if (command.m_Return.Value == VK_SUCCESS) {
     m_Manager.GetFencePendingSignalService().MarkPending(command.m_fence.Value);
   }
+  WaitAfterQueueSubmit(command.m_queue, command.m_Return.Value);
 }
 
 void ReplayCustomizationLayer::Post(vkQueueSubmit2KHRCommand& command) {
   if (command.m_Return.Value == VK_SUCCESS) {
     m_Manager.GetFencePendingSignalService().MarkPending(command.m_fence.Value);
   }
+  WaitAfterQueueSubmit(command.m_queue, command.m_Return.Value);
 }
 
 void ReplayCustomizationLayer::Post(vkQueueBindSparseCommand& command) {
   if (command.m_Return.Value == VK_SUCCESS) {
     m_Manager.GetFencePendingSignalService().MarkPending(command.m_fence.Value);
   }
+  WaitAfterQueueSubmit(command.m_queue, command.m_Return.Value);
 }
 
 void ReplayCustomizationLayer::Post(vkAcquireNextImageKHRCommand& command) {
@@ -682,6 +740,64 @@ void ReplayCustomizationLayer::Post(vkDestroyFenceCommand& command) {
 
 void ReplayCustomizationLayer::Pre(vkCreateRayTracingPipelinesKHRCommand& command) {
   m_RayTracingService.OnPreCreateRayTracingPipelines(command);
+}
+
+void ReplayCustomizationLayer::WaitAfterQueueSubmit(HandleArgument<VkQueue>& queue,
+                                                    VkResult submitResult) {
+  if (!Configurator::Get().vulkan.player.waitAfterQueueSubmitWA) {
+    return;
+  }
+  CALL_ONCE[] {
+    LOG_INFO << "Vulkan.Player.WaitAfterQueueSubmitWA is enabled - waiting for the queue to go "
+                "idle after every submission. Expect a large slowdown.";
+  };
+  if ((submitResult != VK_SUCCESS) || !queue.Value) {
+    return;
+  }
+  m_Manager.GetDeviceDispatchTable(queue.Value).vkQueueWaitIdle(queue.Value);
+}
+
+void ReplayCustomizationLayer::Pre(vkCmdBuildAccelerationStructuresKHRCommand& command) {
+  if (SkipAccelerationStructureWork()) {
+    command.m_Skip = true;
+  }
+}
+
+void ReplayCustomizationLayer::Pre(vkCmdBuildAccelerationStructuresIndirectKHRCommand& command) {
+  if (SkipAccelerationStructureWork()) {
+    command.m_Skip = true;
+  }
+}
+
+void ReplayCustomizationLayer::Pre(vkBuildAccelerationStructuresKHRCommand& command) {
+  if (SkipAccelerationStructureWork()) {
+    command.m_Skip = true;
+  }
+}
+
+// Copies read a source structure that was never built once builds are skipped
+void ReplayCustomizationLayer::Pre(vkCmdCopyAccelerationStructureKHRCommand& command) {
+  if (SkipAccelerationStructureWork()) {
+    command.m_Skip = true;
+  }
+}
+
+void ReplayCustomizationLayer::Pre(vkCmdTraceRaysKHRCommand& command) {
+  if (SkipTraceRays()) {
+    command.m_Skip = true;
+  }
+}
+
+void ReplayCustomizationLayer::Pre(vkCmdTraceRaysIndirectKHRCommand& command) {
+  if (SkipTraceRays()) {
+    command.m_Skip = true;
+  }
+}
+
+void ReplayCustomizationLayer::Pre(vkCmdTraceRaysIndirect2KHRCommand& command) {
+  if (SkipTraceRays()) {
+    command.m_Skip = true;
+  }
 }
 
 } // namespace vulkan

@@ -27,8 +27,13 @@ public:
   void Post(vkCreateInstanceCommand& command) override;
   void Pre(vkCreateDeviceCommand& command) override;
   void Post(vkCreateDeviceCommand& command) override;
+  void Pre(vkDestroyDeviceCommand& command) override;
   void Post(vkGetDeviceQueueCommand& command) override;
   void Post(vkGetDeviceQueue2Command& command) override;
+  void Post(vkCreateCommandPoolCommand& command) override;
+  void Pre(vkDestroyCommandPoolCommand& command) override;
+  void Post(vkAllocateCommandBuffersCommand& command) override;
+  void Pre(vkFreeCommandBuffersCommand& command) override;
 #ifdef VK_USE_PLATFORM_WIN32_KHR
   void Pre(vkCreateWin32SurfaceKHRCommand& command) override;
 #endif
@@ -54,6 +59,15 @@ public:
 
   void Pre(vkGetFenceStatusCommand& command) override;
   void Post(vkGetFenceStatusCommand& command) override;
+
+  // Vulkan.Player.Skip* diagnostics
+  void Pre(vkCmdBuildAccelerationStructuresKHRCommand& command) override;
+  void Pre(vkCmdBuildAccelerationStructuresIndirectKHRCommand& command) override;
+  void Pre(vkBuildAccelerationStructuresKHRCommand& command) override;
+  void Pre(vkCmdCopyAccelerationStructureKHRCommand& command) override;
+  void Pre(vkCmdTraceRaysKHRCommand& command) override;
+  void Pre(vkCmdTraceRaysIndirectKHRCommand& command) override;
+  void Pre(vkCmdTraceRaysIndirect2KHRCommand& command) override;
 
   void Pre(vkGetEventStatusCommand& command) override;
   void Post(vkGetEventStatusCommand& command) override;
@@ -115,6 +129,9 @@ public:
 private:
   PlayerManager& m_Manager;
   RayTracingReplayService m_RayTracingService;
+
+  // Serializes the playback thread behind the GPU after every queue submission
+  void WaitAfterQueueSubmit(HandleArgument<VkQueue>& queue, VkResult submitResult);
   static thread_local VkResult tl_recorderReturnValue;
   static thread_local uint64_t tl_recorderSemaphoreCounterValue;
   // Backing storage for the filtered ppEnabled{Layer,Extension}Names arrays

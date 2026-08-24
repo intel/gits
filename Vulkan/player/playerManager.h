@@ -10,6 +10,7 @@
 
 #include "gits.h"
 #include "descriptorUpdateTemplateService.h"
+#include "deviceDiagnosticService.h"
 #include "fencePendingSignalService.h"
 #include "dispatchTableAuto.h"
 #include "dispatchTablesHolder.h"
@@ -98,6 +99,10 @@ public:
     return m_RestoreContentService;
   }
 
+  DeviceDiagnosticService& GetDeviceDiagnosticService() {
+    return m_DeviceDiagnosticService;
+  }
+
 private:
   PlayerManager();
 
@@ -120,6 +125,7 @@ private:
   SwapchainImageSyncService m_SwapchainImageSyncService;
   FencePendingSignalService m_FencePendingSignalService;
   RestoreContentService m_RestoreContentService{*this};
+  DeviceDiagnosticService m_DeviceDiagnosticService{*this};
 };
 
 } // namespace vulkan

@@ -1834,6 +1834,33 @@ Configuration:
             Default: false
             Arguments: [exitOnVkQueueSubmitFail]
             Description: Stop playback when vkQueueSubmit returns error value.
+          - Name: skipTraceRays
+            Type: bool
+            Default: false
+            Arguments: [vkSkipTraceRays]
+            Description:
+              Diagnostic option. Skip vkCmdTraceRaysKHR and its indirect variants while
+              still building acceleration structures. 
+          - Name: skipAllRayTracing
+            Type: bool
+            Default: false
+            Arguments: [vkSkipAllRayTracing]
+            Description:
+              Diagnostic option. Skip acceleration structure builds and copies as well as
+              every trace rays command.
+          - Name: enableNvDeviceDiagnosticCheckpoints
+            Type: bool
+            Default: false
+            Description:
+              Enable VK_NV_device_diagnostic_checkpoints during replay. GITS inserts a checkpoint
+              before each recorded command-buffer command and reports the last reached command
+              when the device is lost.
+          - Name: enableExtDeviceFault
+            Type: bool
+            Default: false
+            Description:
+              Enable VK_EXT_device_fault during replay and report device fault addresses and
+              vendor diagnostics when the device is lost.
           - Name: Portability
             Type: Group
             Description:

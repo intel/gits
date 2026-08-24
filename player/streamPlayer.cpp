@@ -274,9 +274,16 @@ void PlayStream(const std::filesystem::path& streamPath) {
 #endif
 
   commonCommandFactory.Initialize(streamReader.get(), &stateRestoreTimer, &playbackTimer);
+
+  auto closeSubscription = MessageBus::get().subscribe(
+      {PUBLISHER_PLAYER, TOPIC_CLOSE_PLAYER},
+      [&streamReader](Topic, const MessagePtr&) { streamReader->Close(); });
+
   playbackTimer.Start();
   streamReader->Run();
   playbackTimer.Pause();
+
+  MessageBus::get().unsubscribe(closeSubscription);
 
   MessageBus::get().publish({PUBLISHER_PLAYER, TOPIC_END}, std::make_shared<ProgramMessage>());
 

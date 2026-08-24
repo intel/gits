@@ -13,6 +13,7 @@ ${header}
 #include "configurator.h"
 #include "vulkanHeader2.h"
 
+#include <atomic>
 #include <string>
 
 namespace gits {
@@ -43,9 +44,12 @@ private:
     return static_cast<int32_t>(result) < 0 && (!m_IsPlayer || result != m_PreReturn);
   }
 
+  void OnDeviceLost(const char* commandName, uint64_t commandKey);
+
 private:
   bool m_IsPlayer{};
   VkResult m_PreReturn{};
+  std::atomic<bool> m_DeviceLostHandled{false};
 };
 
 } // namespace vulkan
