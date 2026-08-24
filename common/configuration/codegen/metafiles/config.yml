@@ -757,7 +757,7 @@ Configuration:
         Options:
           - Name: plugins
             Type: std::vector<std::string>
-            Default: []
+            Default: [Benchmark]
             Description: List of plugins to enable during recording
             LongDescription: |
               GITS plugins are shared libraries that are loaded by GITS Recorder at runtime.
