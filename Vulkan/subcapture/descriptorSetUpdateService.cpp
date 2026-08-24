@@ -627,6 +627,7 @@ void DescriptorSetUpdateService::RestoreUpdates(uint64_t setKey,
     cmd.m_descriptorCopyCount.Value = 0;
     cmd.m_pDescriptorCopies.Value = nullptr;
     cmd.m_pDescriptorCopies.Size = 0;
+    cmd.m_Key = recorder.CreateStateRestoreKey();
 
     recorder.Record(vkUpdateDescriptorSetsSerializer(cmd));
   }

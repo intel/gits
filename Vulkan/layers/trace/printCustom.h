@@ -21,6 +21,12 @@ namespace gits {
 namespace vulkan {
 
 FastOStream& PrintObjectKey(FastOStream& stream, unsigned key);
+// Object/handle GITSKeys in trace output (HandleArgument, etc.).
+FastOStream& PrintGitsObjectKey(FastOStream& stream, GITSKey key);
+// Prints a command's own key (Command::m_Key), rendering state-restore-synthesized keys
+// (see STATE_RESTORE_KEY_MASK in arguments.h) as "S<n>" so they read distinctly from real
+// captured command keys in the trace log instead of colliding visually with them.
+FastOStream& PrintKey(FastOStream& stream, GITSKey key);
 FastOStream& PrintString(FastOStream& stream, const char* s);
 FastOStream& PrintStringArray(FastOStream& stream, uint32_t count, const char* const* s);
 

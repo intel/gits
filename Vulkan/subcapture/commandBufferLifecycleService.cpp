@@ -90,6 +90,7 @@ void CommandBufferLifecycleService::OnAllocate(vkAllocateCommandBuffersCommand& 
     singleCmd.m_pCommandBuffers.Size = 1;
     singleCmd.m_pCommandBuffers.Keys = {command.m_pCommandBuffers.Keys[i]};
     singleCmd.m_Return.Value = VK_SUCCESS;
+    singleCmd.m_Key = command.m_Key;
 
     state->CreationCommandId = singleCmd.GetId();
     uint32_t size = GetSize(singleCmd);

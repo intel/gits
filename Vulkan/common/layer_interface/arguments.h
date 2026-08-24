@@ -15,6 +15,26 @@
 
 typedef uint64_t GITSKey;
 
+// During real-time recording every command's key is minted sequentially from 1 by
+// CaptureManager::CreateCommandKey() (see wrappersAuto.cpp.mako), before the command is
+// ever touched by a Serializer.  Commands synthesized purely for subcapture state restore
+// (see Vulkan/subcapture) never go through that path, so without an explicit key they
+// default to 0 - printing as an indistinguishable, misleading "0" in the trace log instead
+// of a stable per-command identity. Mint those from the top of the GITSKey range instead
+// (top bit set), mirroring the DirectX subcapture convention (see
+// DirectX/common/utils/keyUtils.h): the range can never collide with a real captured key,
+// and the trace layer renders it with a distinguishing 'S' prefix (see keyToStr in
+// printCustom.h).
+inline constexpr GITSKey STATE_RESTORE_KEY_MASK = GITSKey{1} << 63;
+
+inline bool IsStateRestoreKey(GITSKey key) {
+  return (key & STATE_RESTORE_KEY_MASK) != 0;
+}
+
+inline GITSKey ExtractStateRestoreKey(GITSKey key) {
+  return key & ~STATE_RESTORE_KEY_MASK;
+}
+
 namespace gits {
 namespace vulkan {
 

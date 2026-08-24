@@ -48,6 +48,18 @@ public:
     m_Stream << arg;
   }
 
+  // Like addArgument, but for a raw Command::m_Key value printed as an explicit argument
+  // (e.g. MappedDataMetaCommand). Renders state-restore keys with the same "S<n>" form as
+  // the command's own leading key (see PrintKey) instead of the raw, mask-bit-set integer.
+  void addKeyArgument(GITSKey key) {
+    if (m_FirstArgumentPrinted && !m_ReturnPrinted) {
+      m_Stream << ", ";
+    }
+    m_FirstArgumentPrinted = true;
+
+    PrintKey(m_Stream, key);
+  }
+
   template <typename T>
   void addResult(T& arg) {
     m_ReturnPrinted = true;

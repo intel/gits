@@ -120,7 +120,7 @@ void TraceLayer::Pre(MappedDataMetaCommand& command) {
   if (printPre_) {
     CommandPrinter p(streamPre_, statePre_, command, "MappedDataMetaCommand");
     p.addArgument(command.m_Device);
-    p.addArgument(command.m_Key);
+    p.addKeyArgument(command.m_Key);
     p.addArgument(command.m_Memory);
     p.addArgument(command.m_Regions);
     p.print(flush_);
@@ -131,7 +131,7 @@ void TraceLayer::Post(MappedDataMetaCommand& command) {
   if (printPost_) {
     CommandPrinter p(streamPost_, statePost_, command, "MappedDataMetaCommand");
     p.addArgument(command.m_Device);
-    p.addArgument(command.m_Key);
+    p.addKeyArgument(command.m_Key);
     p.addArgument(command.m_Memory);
     p.addArgument(command.m_Regions);
     p.print(flush_);
@@ -174,7 +174,8 @@ void TraceLayer::Pre(RestoreContentDataCommand& command) {
   if (printPre_) {
     CommandPrinter p(streamPre_, statePre_, command, "RestoreContentDataCommand");
     p.addArgument(command.m_DeviceKey);
-    p.addArgument(command.m_Regions);
+    ContentDataRegionsPrintView regionsView{command.m_Regions};
+    p.addArgument(regionsView);
     p.print(flush_);
   }
 }
@@ -183,7 +184,8 @@ void TraceLayer::Post(RestoreContentDataCommand& command) {
   if (printPost_) {
     CommandPrinter p(streamPost_, statePost_, command, "RestoreContentDataCommand");
     p.addArgument(command.m_DeviceKey);
-    p.addArgument(command.m_Regions);
+    ContentDataRegionsPrintView regionsView{command.m_Regions};
+    p.addArgument(regionsView);
     p.print(flush_);
   }
 }

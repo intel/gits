@@ -53,7 +53,7 @@ CommandPrinter::CommandPrinter(FastOStream& stream,
   if (command.m_Skip) {
     m_Stream << "[SKIPPED] ";
   }
-  m_Stream << command.m_Key;
+  PrintKey(m_Stream, command.m_Key);
   m_Stream << " T" << command.m_ThreadId;
   if (objectId) {
     m_Stream << " ";

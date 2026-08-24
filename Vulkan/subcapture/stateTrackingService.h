@@ -368,8 +368,8 @@ private:
   // device memory and bind it so vkCreateImageView remains spec-legal and view
   // keys register in the player handle map.
   bool EmitSubstituteImageMemoryBind(ImageState* img);
-  // Hands out the next key from the shared m_NextSyntheticKey allocator (see its
-  // declaration below for what it must stay disjoint from and why).
+  // Mints a fresh, unique state-restore object key (see its definition for the full
+  // list of callers and why they all share one allocator).
   uint64_t AllocateSyntheticKey();
   bool RestoreImageView(ObjectState* state);
   bool RestoreAccelerationStructure(ObjectState* state);
@@ -558,19 +558,17 @@ private:
   // dependencies; destroy commands for these are emitted after all pipelines
   // have been created, mirroring the old Vulkan state-restore approach.
   std::unordered_set<uint64_t> m_TransientlyRestored;
-  // Single shared downward allocator for every synthetic GITSKey this file mints on
+  // AllocateSyntheticKey() (below) mints every synthetic GITSKey this file creates on
   // behalf of an object created purely for state-restore purposes and that must stay
   // live/registered across (part of) the restore pass: substitute memory allocated by
   // EmitSubstituteImageMemoryBind, relocated acceleration structures/storage created by
-  // RestoreBlasChain, and the transient rebuild-input/scratch buffers EmitAccelerationStructure-
-  // RebuildBytes creates for each build it replays. These previously each kept their own
-  // independently-based downward range (bases -8192, -4096 and -64 respectively) with no
-  // upper bound on how far any of them could walk, so a stream with enough relocated/
-  // rebuilt objects could silently walk one range into another (see AllocateSyntheticKey's
-  // definition for the reasoning on why a single shared counter fixes this by construction).
-  // Reset once per RestoreState() pass, alongside the other per-pass state below.
-  static constexpr uint64_t kSyntheticKeyBase = static_cast<uint64_t>(-100);
-  uint64_t m_NextSyntheticKey{kSyntheticKeyBase};
+  // RestoreBlasChain, transient rebuild-input/scratch buffers EmitAccelerationStructure-
+  // RebuildBytes creates for each build it replays, and the various fixed-role temporary
+  // objects (staging buffer/memory, one-shot command buffers) formerly declared as ad hoc
+  // fixed sentinel constants. It delegates to SubcaptureRecorder::CreateStateRestoreObjectKey(),
+  // a single monotonically-increasing counter shared by the whole recorder (mirroring
+  // DirectX's GetUniqueObjectKey()), so callers can never collide with each other, with a
+  // real captured object key, or with a real captured command key.
   // AS keys already covered by a rebuild emitted this pass, directly or as a sibling
   // destination of the same multi-info build command.
   std::unordered_set<uint64_t> m_RebuiltAsKeys;

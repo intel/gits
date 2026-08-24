@@ -32,14 +32,14 @@ FastOStream& operator<<(FastOStream& stream, PointerArgument<T>& arg) {
 
 template <typename T>
 FastOStream& operator<<(FastOStream& stream, HandleArgument<T>& arg) {
-  stream << "O" << arg.Key;
+  PrintGitsObjectKey(stream, arg.Key);
   return stream;
 }
 
 template <typename T>
 FastOStream& operator<<(FastOStream& stream, HandleOutputArgument<T>& arg) {
   if (arg.Value) {
-    stream << "O" << arg.Key;
+    PrintGitsObjectKey(stream, arg.Key);
   } else {
     stream << "nullptr";
   }
@@ -54,7 +54,7 @@ FastOStream& operator<<(FastOStream& stream, HandleArrayArgument<T>& arg) {
       if (i > 0) {
         stream << ", ";
       }
-      stream << "O" << arg.Keys[i];
+      PrintGitsObjectKey(stream, arg.Keys[i]);
     }
     stream << "}";
   } else {
@@ -71,7 +71,7 @@ FastOStream& operator<<(FastOStream& stream, HandleArrayOutputArgument<T>& arg) 
       if (i > 0) {
         stream << ", ";
       }
-      stream << "O" << arg.Keys[i];
+      PrintGitsObjectKey(stream, arg.Keys[i]);
     }
     stream << "}";
   } else {
@@ -181,6 +181,29 @@ inline FastOStream& operator<<(FastOStream& stream, MemoryRegions& arg) {
     stream << "{" << arg.Regions[i].Offset << ", " << arg.Regions[i].Size << "}";
   }
   stream << "}";
+  return stream;
+}
+
+// RestoreContentDataCommand repurposes MemoryRegions to carry one restored resource's
+// bytes per region, with Region.Offset holding the manifest resource index (not a byte
+// offset) and Region.Size the byte count - see RestoreContentDataCommand's declaration in
+// commandsCustom.h. Printing it through the generic MemoryRegions{{offset, size}} format
+// above reads exactly like a real byte range, which is misleading, so wrap it in this
+// distinct view for trace output instead.
+struct ContentDataRegionsPrintView {
+  MemoryRegions& Regions;
+};
+
+inline FastOStream& operator<<(FastOStream& stream, ContentDataRegionsPrintView& arg) {
+  stream << "[";
+  for (uint32_t i = 0; i < arg.Regions.Regions.size(); ++i) {
+    if (i > 0) {
+      stream << ", ";
+    }
+    stream << "{ResourceIndex=" << arg.Regions.Regions[i].Offset
+           << ", Bytes=" << arg.Regions.Regions[i].Size << "}";
+  }
+  stream << "]";
   return stream;
 }
 

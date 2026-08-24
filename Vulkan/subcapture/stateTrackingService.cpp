@@ -80,6 +80,7 @@ void EmitGetPhysicalDeviceQueueFamilyProperties(SubcaptureRecorder& recorder,
   cmd.m_pQueueFamilyPropertyCount.Value = &queueFamilyCount;
   cmd.m_pQueueFamilyProperties.Value = queueFamilies.data();
   cmd.m_pQueueFamilyProperties.Size = queueFamilyCount;
+  cmd.m_Key = recorder.CreateStateRestoreKey();
   recorder.Record(vkGetPhysicalDeviceQueueFamilyPropertiesSerializer(cmd));
 }
 
@@ -106,6 +107,7 @@ void StateTrackingService::EmitGetBufferDeviceAddress(uint64_t deviceKey,
     cmd.m_pInfo.Value = &info;
     cmd.m_pInfo.HandleKeys = {bufferKey};
     cmd.m_Return.Value = address;
+    cmd.m_Key = m_Recorder.CreateStateRestoreKey();
     m_Recorder.Record(vkGetBufferDeviceAddressKHRSerializer(cmd));
   } else if (deviceState->HasBufferDeviceAddressEXT) {
     vkGetBufferDeviceAddressEXTCommand cmd;
@@ -113,6 +115,7 @@ void StateTrackingService::EmitGetBufferDeviceAddress(uint64_t deviceKey,
     cmd.m_pInfo.Value = &info;
     cmd.m_pInfo.HandleKeys = {bufferKey};
     cmd.m_Return.Value = address;
+    cmd.m_Key = m_Recorder.CreateStateRestoreKey();
     m_Recorder.Record(vkGetBufferDeviceAddressEXTSerializer(cmd));
   } else {
     vkGetBufferDeviceAddressCommand cmd;
@@ -120,6 +123,7 @@ void StateTrackingService::EmitGetBufferDeviceAddress(uint64_t deviceKey,
     cmd.m_pInfo.Value = &info;
     cmd.m_pInfo.HandleKeys = {bufferKey};
     cmd.m_Return.Value = address;
+    cmd.m_Key = m_Recorder.CreateStateRestoreKey();
     m_Recorder.Record(vkGetBufferDeviceAddressSerializer(cmd));
   }
 }
@@ -225,7 +229,6 @@ void StateTrackingService::RestoreState() {
   m_CommandBuffersRecordingReplaySkipped.clear();
   m_TransientlyRestored.clear();
   m_RestoredInputRegionHashes.clear();
-  m_NextSyntheticKey = kSyntheticKeyBase;
 
   // Emit StateRestoreBegin marker
   {
@@ -311,16 +314,19 @@ void StateTrackingService::RestoreState() {
       vkDestroyShaderModuleCommand destroyCmd;
       destroyCmd.m_device.Key = state->ParentKey;
       destroyCmd.m_shaderModule.Key = state->Key;
+      destroyCmd.m_Key = m_Recorder.CreateStateRestoreKey();
       m_Recorder.Record(vkDestroyShaderModuleSerializer(destroyCmd));
     } else if (state->CreationCommandId == CommandId::ID_VKCREATEPIPELINELAYOUT) {
       vkDestroyPipelineLayoutCommand destroyCmd;
       destroyCmd.m_device.Key = state->ParentKey;
       destroyCmd.m_pipelineLayout.Key = state->Key;
+      destroyCmd.m_Key = m_Recorder.CreateStateRestoreKey();
       m_Recorder.Record(vkDestroyPipelineLayoutSerializer(destroyCmd));
     } else if (state->CreationCommandId == CommandId::ID_VKCREATEDESCRIPTORSETLAYOUT) {
       vkDestroyDescriptorSetLayoutCommand destroyCmd;
       destroyCmd.m_device.Key = state->ParentKey;
       destroyCmd.m_descriptorSetLayout.Key = state->Key;
+      destroyCmd.m_Key = m_Recorder.CreateStateRestoreKey();
       m_Recorder.Record(vkDestroyDescriptorSetLayoutSerializer(destroyCmd));
     }
   }
@@ -393,6 +399,7 @@ void StateTrackingService::RestoreState() {
       for (uint64_t semKey : semKeys) {
         submitCmd.m_pSubmits.HandleKeys.push_back(semKey);
       }
+      submitCmd.m_Key = m_Recorder.CreateStateRestoreKey();
       m_Recorder.Record(vkQueueSubmitSerializer(submitCmd));
     }
   }
@@ -417,6 +424,7 @@ void StateTrackingService::RestoreState() {
     setCmd.m_device.Key = state->ParentKey;
     setCmd.m_event.Key = state->Key;
     setCmd.m_Return.Value = VK_SUCCESS;
+    setCmd.m_Key = m_Recorder.CreateStateRestoreKey();
     m_Recorder.Record(vkSetEventSerializer(setCmd));
   }
 
@@ -468,6 +476,7 @@ void StateTrackingService::RestoreState() {
     vkDeviceWaitIdleCommand waitCmd;
     waitCmd.m_device.Key = state->Key;
     waitCmd.m_Return.Value = VK_SUCCESS;
+    waitCmd.m_Key = m_Recorder.CreateStateRestoreKey();
     m_Recorder.Record(vkDeviceWaitIdleSerializer(waitCmd));
   }
 
@@ -1185,10 +1194,13 @@ void StateTrackingService::EmitImageLayoutTransitions() {
     return;
   }
 
-  // Synthetic high-value key for the temporary command buffer.  Must not
-  // collide with any key assigned during the original recording.  Keys are
-  // sequential integers starting from 1, so UINT64_MAX - 1 is safe.
-  constexpr uint64_t kTempCBKey = static_cast<uint64_t>(-2);
+  // Synthetic key for the temporary command buffer, minted fresh from the shared
+  // state-restore object-key counter so it can never collide with a real captured
+  // key or with any other synthetic object minted this pass (see
+  // StateTrackingService::AllocateSyntheticKey()). Reused across every emitBatch()
+  // call below only because each call's create-use-destroy cycle fully completes
+  // before the next begins.
+  const uint64_t kTempCBKey = AllocateSyntheticKey();
 
   for (auto& [deviceKey, imgKeys] : imagesByDevice) {
     uint64_t queueKey = 0;
@@ -1298,6 +1310,7 @@ void StateTrackingService::EmitImageLayoutTransitions() {
         allocCmd.m_pCommandBuffers.Size = 1;
         allocCmd.m_pCommandBuffers.Keys = {kTempCBKey};
         allocCmd.m_Return.Value = VK_SUCCESS;
+        allocCmd.m_Key = m_Recorder.CreateStateRestoreKey();
         m_Recorder.Record(vkAllocateCommandBuffersSerializer(allocCmd));
       }
 
@@ -1311,6 +1324,7 @@ void StateTrackingService::EmitImageLayoutTransitions() {
         beginCmd.m_commandBuffer.Key = kTempCBKey;
         beginCmd.m_pBeginInfo.Value = &beginInfo;
         beginCmd.m_Return.Value = VK_SUCCESS;
+        beginCmd.m_Key = m_Recorder.CreateStateRestoreKey();
         m_Recorder.Record(vkBeginCommandBufferSerializer(beginCmd));
       }
 
@@ -1382,6 +1396,7 @@ void StateTrackingService::EmitImageLayoutTransitions() {
         barrierCmd.m_pImageMemoryBarriers.Value = barriers.data();
         barrierCmd.m_pImageMemoryBarriers.Size = static_cast<uint32_t>(barriers.size());
         barrierCmd.m_pImageMemoryBarriers.HandleKeys = barrierImageKeys;
+        barrierCmd.m_Key = m_Recorder.CreateStateRestoreKey();
         m_Recorder.Record(vkCmdPipelineBarrierSerializer(barrierCmd));
       }
 
@@ -1390,6 +1405,7 @@ void StateTrackingService::EmitImageLayoutTransitions() {
         vkEndCommandBufferCommand endCmd;
         endCmd.m_commandBuffer.Key = kTempCBKey;
         endCmd.m_Return.Value = VK_SUCCESS;
+        endCmd.m_Key = m_Recorder.CreateStateRestoreKey();
         m_Recorder.Record(vkEndCommandBufferSerializer(endCmd));
       }
 
@@ -1411,6 +1427,7 @@ void StateTrackingService::EmitImageLayoutTransitions() {
         submitCmd.m_pSubmits.Size = 1;
         // HandleKeys layout: [waitSem*][cmdBuf*][signalSem*]); only one CB key.
         submitCmd.m_pSubmits.HandleKeys = {kTempCBKey};
+        submitCmd.m_Key = m_Recorder.CreateStateRestoreKey();
         m_Recorder.Record(vkQueueSubmitSerializer(submitCmd));
       }
 
@@ -1422,6 +1439,7 @@ void StateTrackingService::EmitImageLayoutTransitions() {
         vkQueueWaitIdleCommand waitCmd;
         waitCmd.m_queue.Key = targetQueueKey;
         waitCmd.m_Return.Value = VK_SUCCESS;
+        waitCmd.m_Key = m_Recorder.CreateStateRestoreKey();
         m_Recorder.Record(vkQueueWaitIdleSerializer(waitCmd));
       }
 
@@ -1436,6 +1454,7 @@ void StateTrackingService::EmitImageLayoutTransitions() {
         freeCmd.m_pCommandBuffers.Value = &kDummyCBSlot3;
         freeCmd.m_pCommandBuffers.Size = 1;
         freeCmd.m_pCommandBuffers.Keys = {kTempCBKey};
+        freeCmd.m_Key = m_Recorder.CreateStateRestoreKey();
         m_Recorder.Record(vkFreeCommandBuffersSerializer(freeCmd));
       }
 
@@ -1549,12 +1568,11 @@ void StateTrackingService::RestoreQueryPools() {
     return;
   }
 
-  // Synthetic high-value key for the temporary command buffer; must not collide
-  // with any recording key.  EmitImageLayoutTransitions already allocated and
-  // freed its own (-2) CB before we run, but use a distinct value anyway - see
-  // the fixed-sentinel list near kStagingBufKey's definition for the full set
-  // this must (and does) stay disjoint from.
-  constexpr uint64_t kTempCBKey = static_cast<uint64_t>(-6);
+  // Synthetic key for the temporary command buffer, minted fresh from the shared
+  // state-restore object-key counter (see StateTrackingService::AllocateSyntheticKey()),
+  // so it can never collide with a real captured key, with EmitImageLayoutTransitions'
+  // own temporary CB, or with any other synthetic object minted this pass.
+  const uint64_t kTempCBKey = AllocateSyntheticKey();
 
   for (auto& [deviceKey, poolsByFamily] : poolsByDeviceAndFamily) {
     for (auto& [familyIndex, poolKeys] : poolsByFamily) {
@@ -1591,6 +1609,7 @@ void StateTrackingService::RestoreQueryPools() {
         allocCmd.m_pCommandBuffers.Size = 1;
         allocCmd.m_pCommandBuffers.Keys = {kTempCBKey};
         allocCmd.m_Return.Value = VK_SUCCESS;
+        allocCmd.m_Key = m_Recorder.CreateStateRestoreKey();
         m_Recorder.Record(vkAllocateCommandBuffersSerializer(allocCmd));
       }
 
@@ -1604,6 +1623,7 @@ void StateTrackingService::RestoreQueryPools() {
         beginCmd.m_commandBuffer.Key = kTempCBKey;
         beginCmd.m_pBeginInfo.Value = &beginInfo;
         beginCmd.m_Return.Value = VK_SUCCESS;
+        beginCmd.m_Key = m_Recorder.CreateStateRestoreKey();
         m_Recorder.Record(vkBeginCommandBufferSerializer(beginCmd));
       }
 
@@ -1632,6 +1652,7 @@ void StateTrackingService::RestoreQueryPools() {
             resetCmd.m_queryPool.Key = poolKey;
             resetCmd.m_firstQuery.Value = firstQuery;
             resetCmd.m_queryCount.Value = queryCount;
+            resetCmd.m_Key = m_Recorder.CreateStateRestoreKey();
             m_Recorder.Record(vkCmdResetQueryPoolSerializer(resetCmd));
           };
           for (uint32_t i = 0; i < resetCountTotal; ++i) {
@@ -1662,6 +1683,7 @@ void StateTrackingService::RestoreQueryPools() {
             tsCmd.m_pipelineStage.Value = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
             tsCmd.m_queryPool.Key = poolKey;
             tsCmd.m_query.Value = i;
+            tsCmd.m_Key = m_Recorder.CreateStateRestoreKey();
             m_Recorder.Record(vkCmdWriteTimestampSerializer(tsCmd));
           } else if (qp->QueryType == static_cast<uint32_t>(VK_QUERY_TYPE_RESULT_STATUS_ONLY_KHR)) {
             // vkCmdBeginQuery for result-status queries requires an active video
@@ -1675,12 +1697,14 @@ void StateTrackingService::RestoreQueryPools() {
             beginQueryCmd.m_queryPool.Key = poolKey;
             beginQueryCmd.m_query.Value = i;
             beginQueryCmd.m_flags.Value = 0;
+            beginQueryCmd.m_Key = m_Recorder.CreateStateRestoreKey();
             m_Recorder.Record(vkCmdBeginQuerySerializer(beginQueryCmd));
 
             vkCmdEndQueryCommand endQueryCmd;
             endQueryCmd.m_commandBuffer.Key = kTempCBKey;
             endQueryCmd.m_queryPool.Key = poolKey;
             endQueryCmd.m_query.Value = i;
+            endQueryCmd.m_Key = m_Recorder.CreateStateRestoreKey();
             m_Recorder.Record(vkCmdEndQuerySerializer(endQueryCmd));
           }
           ++fakeQueryCount;
@@ -1692,6 +1716,7 @@ void StateTrackingService::RestoreQueryPools() {
         vkEndCommandBufferCommand endCmd;
         endCmd.m_commandBuffer.Key = kTempCBKey;
         endCmd.m_Return.Value = VK_SUCCESS;
+        endCmd.m_Key = m_Recorder.CreateStateRestoreKey();
         m_Recorder.Record(vkEndCommandBufferSerializer(endCmd));
       }
 
@@ -1712,6 +1737,7 @@ void StateTrackingService::RestoreQueryPools() {
         submitCmd.m_pSubmits.Value = &submitInfo;
         submitCmd.m_pSubmits.Size = 1;
         submitCmd.m_pSubmits.HandleKeys = {kTempCBKey};
+        submitCmd.m_Key = m_Recorder.CreateStateRestoreKey();
         m_Recorder.Record(vkQueueSubmitSerializer(submitCmd));
       }
 
@@ -1720,6 +1746,7 @@ void StateTrackingService::RestoreQueryPools() {
         vkQueueWaitIdleCommand waitCmd;
         waitCmd.m_queue.Key = queueKey;
         waitCmd.m_Return.Value = VK_SUCCESS;
+        waitCmd.m_Key = m_Recorder.CreateStateRestoreKey();
         m_Recorder.Record(vkQueueWaitIdleSerializer(waitCmd));
       }
 
@@ -1734,6 +1761,7 @@ void StateTrackingService::RestoreQueryPools() {
         freeCmd.m_pCommandBuffers.Value = &kDummyCBSlot3;
         freeCmd.m_pCommandBuffers.Size = 1;
         freeCmd.m_pCommandBuffers.Keys = {kTempCBKey};
+        freeCmd.m_Key = m_Recorder.CreateStateRestoreKey();
         m_Recorder.Record(vkFreeCommandBuffersSerializer(freeCmd));
       }
 
@@ -1759,10 +1787,18 @@ bool StateTrackingService::EmitCreationCommand(ObjectState* state) {
   std::vector<char> scratch = state->CreationCommandBuffer;
   char* buf = scratch.data();
 
+// Mirrors DirectX's StateTrackingService::GetUniqueCommandKey(), which is called
+// unconditionally for every command re-emitted during state restore (see
+// DirectX/layers/subcapture/stateTrackingService.cpp) rather than only when the
+// decoded command has no key of its own. The original captured key decoded here
+// belongs to a different stream position/thread and is misleading if left on a
+// command now being replayed synthetically during state restore, so it is always
+// replaced.
 #define EMIT_DECODED(Prefix)                                                                       \
   {                                                                                                \
     Prefix##Command cmd;                                                                           \
     Decode(buf, cmd);                                                                              \
+    cmd.m_Key = m_Recorder.CreateStateRestoreKey();                                                \
     m_Recorder.Record(Prefix##Serializer(cmd));                                                    \
     break;                                                                                         \
   }
@@ -1871,6 +1907,7 @@ bool StateTrackingService::EmitCreationCommand(ObjectState* state) {
                 << "] 0x" << std::hex << originalFlags << " -> 0x" << ci.flags << std::dec
                 << (consumesLibraries ? " (GPL link)" : " (standalone)");
     }
+    cmd.m_Key = m_Recorder.CreateStateRestoreKey();
     m_Recorder.Record(vkCreateGraphicsPipelinesSerializer(cmd));
     break;
   }
@@ -1896,6 +1933,7 @@ bool StateTrackingService::EmitCreationCommand(ObjectState* state) {
                   << "] 0x" << std::hex << originalFlags << " -> 0x" << ci.flags << std::dec;
       }
     }
+    cmd.m_Key = m_Recorder.CreateStateRestoreKey();
     m_Recorder.Record(vkCreateComputePipelinesSerializer(cmd));
     break;
   }
@@ -1918,6 +1956,7 @@ bool StateTrackingService::EmitCreationCommand(ObjectState* state) {
             << "] 0x" << std::hex << originalFlags << " -> 0x" << ci.flags << std::dec;
       }
     }
+    cmd.m_Key = m_Recorder.CreateStateRestoreKey();
     m_Recorder.Record(vkCreateRayTracingPipelinesKHRSerializer(cmd));
     break;
   }
@@ -1940,6 +1979,7 @@ bool StateTrackingService::EmitCreationCommand(ObjectState* state) {
             << "] 0x" << std::hex << originalFlags << " -> 0x" << ci.flags << std::dec;
       }
     }
+    cmd.m_Key = m_Recorder.CreateStateRestoreKey();
     m_Recorder.Record(vkCreateRayTracingPipelinesNVSerializer(cmd));
     break;
   }
@@ -1991,6 +2031,7 @@ bool StateTrackingService::EmitCreationCommand(ObjectState* state) {
         }
       }
     }
+    cmd.m_Key = m_Recorder.CreateStateRestoreKey();
     m_Recorder.Record(vkCreateDescriptorPoolSerializer(cmd));
     break;
   }
@@ -2057,12 +2098,14 @@ bool StateTrackingService::EmitCreationCommand(ObjectState* state) {
         cmd.m_pCreateInfo.Value->flags &= ~VK_FENCE_CREATE_SIGNALED_BIT;
       }
     }
+    cmd.m_Key = m_Recorder.CreateStateRestoreKey();
     m_Recorder.Record(vkCreateFenceSerializer(cmd));
     break;
   }
   case CommandId::ID_VKCREATESEMAPHORE: {
     vkCreateSemaphoreCommand cmd;
     Decode(buf, cmd);
+    cmd.m_Key = m_Recorder.CreateStateRestoreKey();
     m_Recorder.Record(vkCreateSemaphoreSerializer(cmd));
     // For timeline semaphores that were signaled beyond their create-time
     // initialValue, emit a host-side vkSignalSemaphore to advance the
@@ -2084,6 +2127,7 @@ bool StateTrackingService::EmitCreationCommand(ObjectState* state) {
         signalCmd.m_pSignalInfo.Value = &signalInfo;
         signalCmd.m_pSignalInfo.HandleKeys = {sem->Key};
         signalCmd.m_Return.Value = VK_SUCCESS;
+        signalCmd.m_Key = m_Recorder.CreateStateRestoreKey();
         m_Recorder.Record(vkSignalSemaphoreKHRSerializer(signalCmd));
       } else {
         vkSignalSemaphoreCommand signalCmd;
@@ -2091,6 +2135,7 @@ bool StateTrackingService::EmitCreationCommand(ObjectState* state) {
         signalCmd.m_pSignalInfo.Value = &signalInfo;
         signalCmd.m_pSignalInfo.HandleKeys = {sem->Key};
         signalCmd.m_Return.Value = VK_SUCCESS;
+        signalCmd.m_Key = m_Recorder.CreateStateRestoreKey();
         m_Recorder.Record(vkSignalSemaphoreSerializer(signalCmd));
       }
     }
@@ -2150,6 +2195,7 @@ bool StateTrackingService::RestorePhysicalDevice(ObjectState* state) {
   cmd.m_pPhysicalDevices.Value = &kDummyPDSlot;
   cmd.m_pPhysicalDevices.Size = count;
   cmd.m_pPhysicalDevices.Keys = pdKeys;
+  cmd.m_Key = m_Recorder.CreateStateRestoreKey();
   m_Recorder.Record(vkEnumeratePhysicalDevicesSerializer(cmd));
 
   // Mark every sibling PD as restored so subsequent RestoreOne calls for
@@ -2187,6 +2233,7 @@ bool StateTrackingService::RestoreAccelerationStructure(ObjectState* state) {
   addressCmd.m_pInfo.Value = &info;
   addressCmd.m_pInfo.HandleKeys = {state->Key};
   addressCmd.m_Return.Value = asState->DeviceAddress;
+  addressCmd.m_Key = m_Recorder.CreateStateRestoreKey();
   m_Recorder.Record(vkGetAccelerationStructureDeviceAddressKHRSerializer(addressCmd));
   return true;
 }
@@ -2203,6 +2250,7 @@ void StateTrackingService::RestoreSurface(ObjectState* state) {
     win.m_Visible.Value = surf->WindowVisible;
     win.m_Hwnd.Value = surf->HwndKey;
     win.m_Hinstance.Value = surf->HinstanceKey;
+    win.m_Key = m_Recorder.CreateStateRestoreKey();
     m_Recorder.Record(CreateWindowMetaSerializer(win));
   }
 
@@ -2226,6 +2274,7 @@ void StateTrackingService::RestoreSurface(ObjectState* state) {
       cmd.m_pCreateInfo.Value->hwnd = reinterpret_cast<HWND>(surf->HwndKey);
       cmd.m_pCreateInfo.Value->hinstance = reinterpret_cast<HINSTANCE>(surf->HinstanceKey);
     }
+    cmd.m_Key = m_Recorder.CreateStateRestoreKey();
     m_Recorder.Record(vkCreateWin32SurfaceKHRSerializer(cmd));
     return;
   }
@@ -2242,6 +2291,7 @@ void StateTrackingService::RestoreSurface(ObjectState* state) {
       cmd.m_pCreateInfo.Value->dpy = reinterpret_cast<Display*>(surf->HwndKey);
       cmd.m_pCreateInfo.Value->window = reinterpret_cast<Window>(surf->HinstanceKey);
     }
+    cmd.m_Key = m_Recorder.CreateStateRestoreKey();
     m_Recorder.Record(vkCreateXlibSurfaceKHRSerializer(cmd));
     return;
   }
@@ -2258,6 +2308,7 @@ void StateTrackingService::RestoreSurface(ObjectState* state) {
       cmd.m_pCreateInfo.Value->connection = reinterpret_cast<xcb_connection_t*>(surf->HwndKey);
       cmd.m_pCreateInfo.Value->window = static_cast<xcb_window_t>(surf->HinstanceKey);
     }
+    cmd.m_Key = m_Recorder.CreateStateRestoreKey();
     m_Recorder.Record(vkCreateXcbSurfaceKHRSerializer(cmd));
     return;
   }
@@ -2274,6 +2325,7 @@ void StateTrackingService::RestoreSurface(ObjectState* state) {
       cmd.m_pCreateInfo.Value->display = reinterpret_cast<wl_display*>(surf->HwndKey);
       cmd.m_pCreateInfo.Value->surface = reinterpret_cast<wl_surface*>(surf->HinstanceKey);
     }
+    cmd.m_Key = m_Recorder.CreateStateRestoreKey();
     m_Recorder.Record(vkCreateWaylandSurfaceKHRSerializer(cmd));
     return;
   }
@@ -2321,6 +2373,7 @@ bool StateTrackingService::RestoreBuffer(ObjectState* state) {
     if (cmd.m_pCreateInfo.Value) {
       cmd.m_pCreateInfo.Value->usage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     }
+    cmd.m_Key = m_Recorder.CreateStateRestoreKey();
     m_Recorder.Record(vkCreateBufferSerializer(cmd));
   }
 
@@ -2351,6 +2404,7 @@ bool StateTrackingService::RestoreBuffer(ObjectState* state) {
     bind.m_memory.Key = buf->BoundMemoryKey;
     bind.m_memoryOffset.Value = buf->MemoryOffset;
     bind.m_Return.Value = VK_SUCCESS;
+    bind.m_Key = m_Recorder.CreateStateRestoreKey();
     m_Recorder.Record(vkBindBufferMemorySerializer(bind));
   }
 
@@ -2395,30 +2449,24 @@ bool StateTrackingService::RestoreVideoSession(ObjectState* stateBase) {
     char* buf = scratch.data();
     vkBindVideoSessionMemoryKHRCommand bindCmd;
     Decode(buf, bindCmd);
+    bindCmd.m_Key = m_Recorder.CreateStateRestoreKey();
     m_Recorder.Record(vkBindVideoSessionMemoryKHRSerializer(bindCmd));
   }
   return true;
 }
 
 // Shared allocator for every synthetic GITSKey minted for an object that has no real
-// captured key of its own and must stay live/registered beyond a single create-use-
-// destroy call (see m_NextSyntheticKey's declaration for the full list of users). Keys
-// are sequential integers starting from 1 (see the fixed-sentinel comment block near
-// kStagingBufKey's definition for the same reasoning applied to those), so decrementing
-// from just under UINT64_MAX can only approach that range after on the order of
-// UINT64_MAX allocations in a single restore pass - not a realistic stream - but this is
-// checked defensively rather than silently wrapping into the real key range, since a
-// collision there would corrupt an unrelated restored object instead of merely failing
-// loudly. kMinSafeSyntheticKey leaves a very wide margin (4 billion allocations) under
-// which this can never fire for any stream this codebase could plausibly encounter.
+// captured key of its own (a temporary command buffer, staging buffer/memory, relocated
+// acceleration structure, substitute image memory, etc.) and must stay live/registered
+// beyond a single create-use-destroy call. Mirrors DirectX's
+// StateTrackingService::GetUniqueObjectKey(): draws from SubcaptureRecorder's dedicated
+// state-restore *object*-key counter (STATE_RESTORE_KEY_MASK-flagged, independent of the
+// *command*-key counter CreateStateRestoreKey() uses), so every caller shares one
+// allocator and can never collide with each other, with a real captured object key, or
+// (via the mask) with a real captured command key. PrintKey()/PrintGitsObjectKey() render
+// these distinctly as "S<n>"/"O(S<n>)" - see printCustom.cpp.
 uint64_t StateTrackingService::AllocateSyntheticKey() {
-  constexpr uint64_t kMinSafeSyntheticKey = static_cast<uint64_t>(-1) - 0xFFFFFFFFULL;
-  GITS_ASSERT(m_NextSyntheticKey > kMinSafeSyntheticKey);
-  if (m_NextSyntheticKey <= kMinSafeSyntheticKey) {
-    LOG_ERROR << "Vulkan subcapture: synthetic state-restore key allocator exhausted its "
-                 "safe range; state restore may emit colliding GITSKeys from here on";
-  }
-  return m_NextSyntheticKey--;
+  return m_Recorder.CreateStateRestoreObjectKey();
 }
 
 bool StateTrackingService::EmitSubstituteImageMemoryBind(ImageState* img) {
@@ -2489,6 +2537,7 @@ bool StateTrackingService::EmitSubstituteImageMemoryBind(ImageState* img) {
   allocMemCmd.m_pAllocateInfo.Value = &mai;
   allocMemCmd.m_pMemory.Key = memKey;
   allocMemCmd.m_Return.Value = VK_SUCCESS;
+  allocMemCmd.m_Key = m_Recorder.CreateStateRestoreKey();
   m_Recorder.Record(vkAllocateMemorySerializer(allocMemCmd));
 
   vkBindImageMemoryCommand bind;
@@ -2497,6 +2546,7 @@ bool StateTrackingService::EmitSubstituteImageMemoryBind(ImageState* img) {
   bind.m_memory.Key = memKey;
   bind.m_memoryOffset.Value = 0;
   bind.m_Return.Value = VK_SUCCESS;
+  bind.m_Key = m_Recorder.CreateStateRestoreKey();
   m_Recorder.Record(vkBindImageMemorySerializer(bind));
 
   LOG_WARNING << "Vulkan subcapture: bound substitute memory key=" << memKey
@@ -2558,6 +2608,7 @@ bool StateTrackingService::RestoreImage(ObjectState* state) {
         !(cmd.m_pCreateInfo.Value->usage & VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT)) {
       cmd.m_pCreateInfo.Value->usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     }
+    cmd.m_Key = m_Recorder.CreateStateRestoreKey();
     m_Recorder.Record(vkCreateImageSerializer(cmd));
   }
 
@@ -2609,6 +2660,7 @@ bool StateTrackingService::RestoreImage(ObjectState* state) {
     bind.m_memory.Key = img->BoundMemoryKey;
     bind.m_memoryOffset.Value = img->MemoryOffset;
     bind.m_Return.Value = VK_SUCCESS;
+    bind.m_Key = m_Recorder.CreateStateRestoreKey();
     m_Recorder.Record(vkBindImageMemorySerializer(bind));
   }
   return true;
@@ -2699,6 +2751,7 @@ void StateTrackingService::RestoreSwapchain(ObjectState* state) {
         }
       }
     }
+    cmd.m_Key = m_Recorder.CreateStateRestoreKey();
     m_Recorder.Record(vkCreateSwapchainKHRSerializer(cmd));
   } else {
     LOG_WARNING << "Vulkan subcapture: failed to emit vkCreateSwapchainKHR for swapchain key="
@@ -2735,6 +2788,7 @@ void StateTrackingService::RestoreSwapchain(ObjectState* state) {
     for (uint64_t imgKey : sc->ImageKeys) {
       cmd.m_pSwapchainImages.Keys.push_back(imgKey);
     }
+    cmd.m_Key = m_Recorder.CreateStateRestoreKey();
     m_Recorder.Record(vkGetSwapchainImagesKHRSerializer(cmd));
     emittedGetImages = true;
   }
@@ -2767,6 +2821,7 @@ void StateTrackingService::RestoreSwapchain(ObjectState* state) {
     acquireCmd.m_fence.Key = 0;
     acquireCmd.m_pImageIndex.Value = &imageIndex;
     acquireCmd.m_Return.Value = VK_SUCCESS;
+    acquireCmd.m_Key = m_Recorder.CreateStateRestoreKey();
     m_Recorder.Record(vkAcquireNextImageKHRSerializer(acquireCmd));
   }
 }
@@ -2889,6 +2944,7 @@ void StateTrackingService::AllocateDescriptorSetBatchForPool(uint64_t poolKey) {
   cmd.m_pDescriptorSets.Size = count;
   cmd.m_pDescriptorSets.Keys = setKeys;
   cmd.m_Return.Value = VK_SUCCESS;
+  cmd.m_Key = m_Recorder.CreateStateRestoreKey();
   m_Recorder.Record(vkAllocateDescriptorSetsSerializer(cmd));
 
   for (uint64_t setKey : setKeys) {
@@ -3016,6 +3072,7 @@ void StateTrackingService::RestoreMappedMemory(ObjectState* state) {
       map.m_size.Value = mapSize;
       map.m_flags.Value = mapFlags;
       map.m_Return.Value = VK_SUCCESS;
+      map.m_Key = m_Recorder.CreateStateRestoreKey();
       m_Recorder.Record(vkMapMemorySerializer(map));
     }
 
@@ -3032,6 +3089,7 @@ void StateTrackingService::RestoreMappedMemory(ObjectState* state) {
           reinterpret_cast<const char*>(mem->ShadowBuffer.data() + mem->ShadowDirtyBegin));
       mdc.m_Regions.Regions.push_back(region);
       mdc.m_Regions.Size = 1;
+      mdc.m_Key = m_Recorder.CreateStateRestoreKey();
       m_Recorder.Record(MappedDataMetaSerializer(mdc));
     }
 
@@ -3041,6 +3099,7 @@ void StateTrackingService::RestoreMappedMemory(ObjectState* state) {
       vkUnmapMemoryCommand unmap;
       unmap.m_device.Key = mem->ParentKey;
       unmap.m_memory.Key = mem->Key;
+      unmap.m_Key = m_Recorder.CreateStateRestoreKey();
       m_Recorder.Record(vkUnmapMemorySerializer(unmap));
     }
   }
@@ -3056,6 +3115,7 @@ void StateTrackingService::RestoreMappedMemory(ObjectState* state) {
     map.m_size.Value = mem->MappingSize;
     map.m_flags.Value = mem->MappingFlags;
     map.m_Return.Value = VK_SUCCESS;
+    map.m_Key = m_Recorder.CreateStateRestoreKey();
     m_Recorder.Record(vkMapMemorySerializer(map));
   }
 }
@@ -3076,34 +3136,16 @@ void StateTrackingService::RestoreMappedMemory(ObjectState* state) {
 // time so peak host memory stays bounded to a single resource.
 // ---------------------------------------------------------------------------
 
-// Fixed (never-growing) synthetic GITSKeys for temporary staging resources created in
-// the stream. Each is create-use-destroy within a single call before the next call of
-// the same kind reuses the same value, and RestoreState() runs every phase below
-// sequentially and synchronously (content restore, then EmitImageLayoutTransitions,
-// then RestoreQueryPools), so none of these are ever simultaneously live - safe to keep
-// as small fixed values rather than pulling from the shared allocator below. Must not
-// collide with real keys (which are sequential starting from 1) *or with each other*;
-// kept in one place so a future addition can pick an unused value at a glance.
-//   -2 EmitImageLayoutTransitions' per-batch temporary command buffer (declared locally
-//      as kTempCBKey there).
-//   -3 kStagingBufKey (content restore's staging buffer, below).
-//   -4 kStagingMemKey (content restore's staging memory, below).
-//   -5 kContentCBKey (content restore's one-shot command buffer, below).
-//   -6 RestoreQueryPools' per-batch temporary command buffer (declared locally as
-//      kTempCBKey there; previously also -3, silently aliasing kStagingBufKey - see
-//      the synthetic-key-allocator audit near AllocateSyntheticKey's definition).
-static constexpr uint64_t kStagingBufKey = static_cast<uint64_t>(-3);
-static constexpr uint64_t kStagingMemKey = static_cast<uint64_t>(-4);
-static constexpr uint64_t kContentCBKey = static_cast<uint64_t>(-5);
-// Every OTHER synthetic key this file mints - i.e. one that must remain live/registered
-// beyond a single create-use-destroy call, for a potentially unbounded number of
-// allocations across a restore pass (relocated acceleration structures, their transient
-// rebuild inputs/scratch, substitute image memory) - comes from the single shared
-// StateTrackingService::AllocateSyntheticKey() allocator (m_NextSyntheticKey) instead of
-// its own independently-based range. See that method's definition for why one shared,
-// monotonically-decrementing counter is required here (an unbounded per-user range can
-// silently walk into a different user's "independent" range) and why it cannot collide
-// with the small fixed set above.
+// Temporary staging resources created for content restore (staging buffer/memory, the
+// one-shot command buffer) and for EmitImageLayoutTransitions/RestoreQueryPools' per-batch
+// command buffers no longer use fixed sentinel constants here. Each call site mints its
+// own kStagingBufKey/kStagingMemKey/kContentCBKey/kTempCBKey locally via
+// AllocateSyntheticKey() (member functions) or recorder.CreateStateRestoreObjectKey()
+// (the free functions below, which only have a SubcaptureRecorder& to work with) - see
+// AllocateSyntheticKey()'s definition for why one shared, monotonically-increasing
+// counter across every caller in this file is required (a fixed or independently-based
+// value here previously aliased another user's - see git history) and why that counter
+// also makes these keys print distinctly from real captured keys in the trace log.
 
 // Defined below, next to EmitCaptureReplayBufferCreate. Declared here so the
 // serialize/deserialize path can build its staging buffer the same way.
@@ -3190,6 +3232,12 @@ static void EmitStagingUploadAndCopyBuffer(SubcaptureRecorder& recorder,
                                            VkDeviceSize stagingAllocationSize,
                                            uint32_t stagingMemTypeIndex,
                                            const std::vector<uint8_t>& data) {
+  // Fresh, unique keys for this call's staging buffer/memory/CB - see the comment
+  // above this function's forward declarations for why these are minted per-call
+  // instead of reused from fixed sentinel constants.
+  const uint64_t kStagingBufKey = recorder.CreateStateRestoreObjectKey();
+  const uint64_t kStagingMemKey = recorder.CreateStateRestoreObjectKey();
+  const uint64_t kContentCBKey = recorder.CreateStateRestoreObjectKey();
 
   // --- Create staging buffer ---
   // bci.size is the buffer's logical length. The memory allocated must be >= the
@@ -3205,6 +3253,7 @@ static void EmitStagingUploadAndCopyBuffer(SubcaptureRecorder& recorder,
   createBufCmd.m_pCreateInfo.Value = &bci;
   createBufCmd.m_pBuffer.Key = kStagingBufKey;
   createBufCmd.m_Return.Value = VK_SUCCESS;
+  createBufCmd.m_Key = recorder.CreateStateRestoreKey();
   recorder.Record(vkCreateBufferSerializer(createBufCmd));
 
   VkMemoryAllocateInfo mai{};
@@ -3217,6 +3266,7 @@ static void EmitStagingUploadAndCopyBuffer(SubcaptureRecorder& recorder,
   allocMemCmd.m_pAllocateInfo.Value = &mai;
   allocMemCmd.m_pMemory.Key = kStagingMemKey;
   allocMemCmd.m_Return.Value = VK_SUCCESS;
+  allocMemCmd.m_Key = recorder.CreateStateRestoreKey();
   recorder.Record(vkAllocateMemorySerializer(allocMemCmd));
 
   vkBindBufferMemoryCommand bindCmd;
@@ -3225,6 +3275,7 @@ static void EmitStagingUploadAndCopyBuffer(SubcaptureRecorder& recorder,
   bindCmd.m_memory.Key = kStagingMemKey;
   bindCmd.m_memoryOffset.Value = 0;
   bindCmd.m_Return.Value = VK_SUCCESS;
+  bindCmd.m_Key = recorder.CreateStateRestoreKey();
   recorder.Record(vkBindBufferMemorySerializer(bindCmd));
 
   // --- Upload data into staging via map + MappedDataMetaCommand ---
@@ -3235,6 +3286,7 @@ static void EmitStagingUploadAndCopyBuffer(SubcaptureRecorder& recorder,
   mapCmd.m_size.Value = VK_WHOLE_SIZE;
   mapCmd.m_flags.Value = 0;
   mapCmd.m_Return.Value = VK_SUCCESS;
+  mapCmd.m_Key = recorder.CreateStateRestoreKey();
   recorder.Record(vkMapMemorySerializer(mapCmd));
 
   MappedDataMetaCommand mdc;
@@ -3246,11 +3298,13 @@ static void EmitStagingUploadAndCopyBuffer(SubcaptureRecorder& recorder,
   region.Data = const_cast<char*>(reinterpret_cast<const char*>(data.data()));
   mdc.m_Regions.Regions.push_back(region);
   mdc.m_Regions.Size = 1;
+  mdc.m_Key = recorder.CreateStateRestoreKey();
   recorder.Record(MappedDataMetaSerializer(mdc));
 
   vkUnmapMemoryCommand unmapCmd;
   unmapCmd.m_device.Key = deviceKey;
   unmapCmd.m_memory.Key = kStagingMemKey;
+  unmapCmd.m_Key = recorder.CreateStateRestoreKey();
   recorder.Record(vkUnmapMemorySerializer(unmapCmd));
 
   // --- Allocate one-shot CB and issue copy ---
@@ -3269,6 +3323,7 @@ static void EmitStagingUploadAndCopyBuffer(SubcaptureRecorder& recorder,
   allocCBCmd.m_pCommandBuffers.Size = 1;
   allocCBCmd.m_pCommandBuffers.Keys = {kContentCBKey};
   allocCBCmd.m_Return.Value = VK_SUCCESS;
+  allocCBCmd.m_Key = recorder.CreateStateRestoreKey();
   recorder.Record(vkAllocateCommandBuffersSerializer(allocCBCmd));
 
   VkCommandBufferBeginInfo cbbi{};
@@ -3278,6 +3333,7 @@ static void EmitStagingUploadAndCopyBuffer(SubcaptureRecorder& recorder,
   beginCBCmd.m_commandBuffer.Key = kContentCBKey;
   beginCBCmd.m_pBeginInfo.Value = &cbbi;
   beginCBCmd.m_Return.Value = VK_SUCCESS;
+  beginCBCmd.m_Key = recorder.CreateStateRestoreKey();
   recorder.Record(vkBeginCommandBufferSerializer(beginCBCmd));
 
   // Barrier: staging TRANSFER_SRC → dstBuf TRANSFER_DST
@@ -3304,6 +3360,7 @@ static void EmitStagingUploadAndCopyBuffer(SubcaptureRecorder& recorder,
   preBarrierCmd.m_pBufferMemoryBarriers.Size = 2;
   preBarrierCmd.m_pBufferMemoryBarriers.HandleKeys = {dstBufKey, kStagingBufKey};
   preBarrierCmd.m_imageMemoryBarrierCount.Value = 0;
+  preBarrierCmd.m_Key = recorder.CreateStateRestoreKey();
   recorder.Record(vkCmdPipelineBarrierSerializer(preBarrierCmd));
 
   VkBufferCopy copyRegion{0, dstOffset, bufSize};
@@ -3315,6 +3372,7 @@ static void EmitStagingUploadAndCopyBuffer(SubcaptureRecorder& recorder,
   copyCmd.m_regionCount.Value = 1;
   copyCmd.m_pRegions.Value = &copyRegion;
   copyCmd.m_pRegions.Size = 1;
+  copyCmd.m_Key = recorder.CreateStateRestoreKey();
   recorder.Record(vkCmdCopyBufferSerializer(copyCmd));
 
   // Post-barrier: TRANSFER_DST → MEMORY_READ|WRITE (generic)
@@ -3325,11 +3383,13 @@ static void EmitStagingUploadAndCopyBuffer(SubcaptureRecorder& recorder,
   preBarrierCmd.m_bufferMemoryBarrierCount.Value = 1;
   preBarrierCmd.m_pBufferMemoryBarriers.Size = 1;
   preBarrierCmd.m_pBufferMemoryBarriers.HandleKeys = {dstBufKey};
+  preBarrierCmd.m_Key = recorder.CreateStateRestoreKey();
   recorder.Record(vkCmdPipelineBarrierSerializer(preBarrierCmd));
 
   vkEndCommandBufferCommand endCBCmd;
   endCBCmd.m_commandBuffer.Key = kContentCBKey;
   endCBCmd.m_Return.Value = VK_SUCCESS;
+  endCBCmd.m_Key = recorder.CreateStateRestoreKey();
   recorder.Record(vkEndCommandBufferSerializer(endCBCmd));
 
   static VkCommandBuffer kDummyCBSlot = VK_NULL_HANDLE;
@@ -3344,11 +3404,13 @@ static void EmitStagingUploadAndCopyBuffer(SubcaptureRecorder& recorder,
   submitCmd.m_pSubmits.Value = &si;
   submitCmd.m_pSubmits.Size = 1;
   submitCmd.m_pSubmits.HandleKeys = {kContentCBKey};
+  submitCmd.m_Key = recorder.CreateStateRestoreKey();
   recorder.Record(vkQueueSubmitSerializer(submitCmd));
 
   vkQueueWaitIdleCommand waitCmd;
   waitCmd.m_queue.Key = queueKey;
   waitCmd.m_Return.Value = VK_SUCCESS;
+  waitCmd.m_Key = recorder.CreateStateRestoreKey();
   recorder.Record(vkQueueWaitIdleSerializer(waitCmd));
 
   static VkCommandBuffer kDummyCBFree = VK_NULL_HANDLE;
@@ -3359,16 +3421,19 @@ static void EmitStagingUploadAndCopyBuffer(SubcaptureRecorder& recorder,
   freeCBCmd.m_pCommandBuffers.Value = &kDummyCBFree;
   freeCBCmd.m_pCommandBuffers.Size = 1;
   freeCBCmd.m_pCommandBuffers.Keys = {kContentCBKey};
+  freeCBCmd.m_Key = recorder.CreateStateRestoreKey();
   recorder.Record(vkFreeCommandBuffersSerializer(freeCBCmd));
 
   vkDestroyBufferCommand destroyBufCmd;
   destroyBufCmd.m_device.Key = deviceKey;
   destroyBufCmd.m_buffer.Key = kStagingBufKey;
+  destroyBufCmd.m_Key = recorder.CreateStateRestoreKey();
   recorder.Record(vkDestroyBufferSerializer(destroyBufCmd));
 
   vkFreeMemoryCommand freeMemCmd;
   freeMemCmd.m_device.Key = deviceKey;
   freeMemCmd.m_memory.Key = kStagingMemKey;
+  freeMemCmd.m_Key = recorder.CreateStateRestoreKey();
   recorder.Record(vkFreeMemorySerializer(freeMemCmd));
 }
 
@@ -3395,6 +3460,13 @@ void StateTrackingService::EmitAccelerationStructureDeserialize(
     uint64_t capturedOpaqueCaptureAddress,
     uint64_t capturedMemoryOpaqueCaptureAddress,
     const std::vector<uint8_t>& data) {
+  // Fresh, unique keys for this call's staging buffer/memory/CB - see the comment
+  // above this function's forward declarations for why these are minted per-call
+  // instead of reused from fixed sentinel constants.
+  const uint64_t kStagingBufKey = AllocateSyntheticKey();
+  const uint64_t kStagingMemKey = AllocateSyntheticKey();
+  const uint64_t kContentCBKey = AllocateSyntheticKey();
+
   // --- Create staging buffer (capture/replay-stable address) ---
   VkBufferOpaqueCaptureAddressCreateInfo opaqueAddrCI{};
   opaqueAddrCI.sType = VK_STRUCTURE_TYPE_BUFFER_OPAQUE_CAPTURE_ADDRESS_CREATE_INFO;
@@ -3408,6 +3480,7 @@ void StateTrackingService::EmitAccelerationStructureDeserialize(
   createBufCmd.m_pCreateInfo.Value = &bci;
   createBufCmd.m_pBuffer.Key = kStagingBufKey;
   createBufCmd.m_Return.Value = VK_SUCCESS;
+  createBufCmd.m_Key = m_Recorder.CreateStateRestoreKey();
   m_Recorder.Record(vkCreateBufferSerializer(createBufCmd));
 
   VkMemoryOpaqueCaptureAddressAllocateInfo memOpaqueAddrCI{};
@@ -3431,6 +3504,7 @@ void StateTrackingService::EmitAccelerationStructureDeserialize(
   allocMemCmd.m_pAllocateInfo.Value = &mai;
   allocMemCmd.m_pMemory.Key = kStagingMemKey;
   allocMemCmd.m_Return.Value = VK_SUCCESS;
+  allocMemCmd.m_Key = m_Recorder.CreateStateRestoreKey();
   m_Recorder.Record(vkAllocateMemorySerializer(allocMemCmd));
 
   vkBindBufferMemoryCommand bindCmd;
@@ -3439,6 +3513,7 @@ void StateTrackingService::EmitAccelerationStructureDeserialize(
   bindCmd.m_memory.Key = kStagingMemKey;
   bindCmd.m_memoryOffset.Value = 0;
   bindCmd.m_Return.Value = VK_SUCCESS;
+  bindCmd.m_Key = m_Recorder.CreateStateRestoreKey();
   m_Recorder.Record(vkBindBufferMemorySerializer(bindCmd));
   EmitGetBufferDeviceAddress(deviceKey, kStagingBufKey, capturedDeviceAddress);
 
@@ -3450,6 +3525,7 @@ void StateTrackingService::EmitAccelerationStructureDeserialize(
   mapCmd.m_size.Value = VK_WHOLE_SIZE;
   mapCmd.m_flags.Value = 0;
   mapCmd.m_Return.Value = VK_SUCCESS;
+  mapCmd.m_Key = m_Recorder.CreateStateRestoreKey();
   m_Recorder.Record(vkMapMemorySerializer(mapCmd));
 
   MappedDataMetaCommand mdc;
@@ -3461,11 +3537,13 @@ void StateTrackingService::EmitAccelerationStructureDeserialize(
   region.Data = const_cast<char*>(reinterpret_cast<const char*>(data.data()));
   mdc.m_Regions.Regions.push_back(region);
   mdc.m_Regions.Size = 1;
+  mdc.m_Key = m_Recorder.CreateStateRestoreKey();
   m_Recorder.Record(MappedDataMetaSerializer(mdc));
 
   vkUnmapMemoryCommand unmapCmd;
   unmapCmd.m_device.Key = deviceKey;
   unmapCmd.m_memory.Key = kStagingMemKey;
+  unmapCmd.m_Key = m_Recorder.CreateStateRestoreKey();
   m_Recorder.Record(vkUnmapMemorySerializer(unmapCmd));
 
   // --- Allocate one-shot CB and issue the deserialize copy ---
@@ -3484,6 +3562,7 @@ void StateTrackingService::EmitAccelerationStructureDeserialize(
   allocCBCmd.m_pCommandBuffers.Size = 1;
   allocCBCmd.m_pCommandBuffers.Keys = {kContentCBKey};
   allocCBCmd.m_Return.Value = VK_SUCCESS;
+  allocCBCmd.m_Key = m_Recorder.CreateStateRestoreKey();
   m_Recorder.Record(vkAllocateCommandBuffersSerializer(allocCBCmd));
 
   VkCommandBufferBeginInfo cbbi{};
@@ -3493,6 +3572,7 @@ void StateTrackingService::EmitAccelerationStructureDeserialize(
   beginCBCmd.m_commandBuffer.Key = kContentCBKey;
   beginCBCmd.m_pBeginInfo.Value = &cbbi;
   beginCBCmd.m_Return.Value = VK_SUCCESS;
+  beginCBCmd.m_Key = m_Recorder.CreateStateRestoreKey();
   m_Recorder.Record(vkBeginCommandBufferSerializer(beginCBCmd));
 
   // Barrier: staging buffer host-write -> the AS-build stage that performs the
@@ -3517,6 +3597,7 @@ void StateTrackingService::EmitAccelerationStructureDeserialize(
   barrierCmd.m_pBufferMemoryBarriers.Size = 1;
   barrierCmd.m_pBufferMemoryBarriers.HandleKeys = {kStagingBufKey};
   barrierCmd.m_imageMemoryBarrierCount.Value = 0;
+  barrierCmd.m_Key = m_Recorder.CreateStateRestoreKey();
   m_Recorder.Record(vkCmdPipelineBarrierSerializer(barrierCmd));
 
   VkCopyMemoryToAccelerationStructureInfoKHR copyInfo{};
@@ -3528,11 +3609,13 @@ void StateTrackingService::EmitAccelerationStructureDeserialize(
   copyCmd.m_commandBuffer.Key = kContentCBKey;
   copyCmd.m_pInfo.Value = &copyInfo;
   copyCmd.m_pInfo.HandleKeys = {dstAsKey};
+  copyCmd.m_Key = m_Recorder.CreateStateRestoreKey();
   m_Recorder.Record(vkCmdCopyMemoryToAccelerationStructureKHRSerializer(copyCmd));
 
   vkEndCommandBufferCommand endCBCmd;
   endCBCmd.m_commandBuffer.Key = kContentCBKey;
   endCBCmd.m_Return.Value = VK_SUCCESS;
+  endCBCmd.m_Key = m_Recorder.CreateStateRestoreKey();
   m_Recorder.Record(vkEndCommandBufferSerializer(endCBCmd));
 
   static VkCommandBuffer kDummyCBSlot = VK_NULL_HANDLE;
@@ -3547,11 +3630,13 @@ void StateTrackingService::EmitAccelerationStructureDeserialize(
   submitCmd.m_pSubmits.Value = &si;
   submitCmd.m_pSubmits.Size = 1;
   submitCmd.m_pSubmits.HandleKeys = {kContentCBKey};
+  submitCmd.m_Key = m_Recorder.CreateStateRestoreKey();
   m_Recorder.Record(vkQueueSubmitSerializer(submitCmd));
 
   vkQueueWaitIdleCommand waitCmd;
   waitCmd.m_queue.Key = queueKey;
   waitCmd.m_Return.Value = VK_SUCCESS;
+  waitCmd.m_Key = m_Recorder.CreateStateRestoreKey();
   m_Recorder.Record(vkQueueWaitIdleSerializer(waitCmd));
 
   static VkCommandBuffer kDummyCBFree = VK_NULL_HANDLE;
@@ -3562,16 +3647,19 @@ void StateTrackingService::EmitAccelerationStructureDeserialize(
   freeCBCmd.m_pCommandBuffers.Value = &kDummyCBFree;
   freeCBCmd.m_pCommandBuffers.Size = 1;
   freeCBCmd.m_pCommandBuffers.Keys = {kContentCBKey};
+  freeCBCmd.m_Key = m_Recorder.CreateStateRestoreKey();
   m_Recorder.Record(vkFreeCommandBuffersSerializer(freeCBCmd));
 
   vkDestroyBufferCommand destroyBufCmd;
   destroyBufCmd.m_device.Key = deviceKey;
   destroyBufCmd.m_buffer.Key = kStagingBufKey;
+  destroyBufCmd.m_Key = m_Recorder.CreateStateRestoreKey();
   m_Recorder.Record(vkDestroyBufferSerializer(destroyBufCmd));
 
   vkFreeMemoryCommand freeMemCmd2;
   freeMemCmd2.m_device.Key = deviceKey;
   freeMemCmd2.m_memory.Key = kStagingMemKey;
+  freeMemCmd2.m_Key = m_Recorder.CreateStateRestoreKey();
   m_Recorder.Record(vkFreeMemorySerializer(freeMemCmd2));
 }
 
@@ -3589,6 +3677,12 @@ static void EmitStagingUploadAndCopyImage(SubcaptureRecorder& recorder,
                                           uint32_t stagingMemTypeIndex,
                                           const std::vector<uint8_t>& data,
                                           const std::vector<VkBufferImageCopy>& regions) {
+  // Fresh, unique keys for this call's staging buffer/memory/CB - see the comment
+  // above this function's forward declarations for why these are minted per-call
+  // instead of reused from fixed sentinel constants.
+  const uint64_t kStagingBufKey = recorder.CreateStateRestoreObjectKey();
+  const uint64_t kStagingMemKey = recorder.CreateStateRestoreObjectKey();
+  const uint64_t kContentCBKey = recorder.CreateStateRestoreObjectKey();
 
   // Create staging buffer - see EmitStagingUploadAndCopyBuffer for the
   // rationale behind the bci.size vs mai.allocationSize split.
@@ -3603,6 +3697,7 @@ static void EmitStagingUploadAndCopyImage(SubcaptureRecorder& recorder,
   createBufCmd.m_pCreateInfo.Value = &bci;
   createBufCmd.m_pBuffer.Key = kStagingBufKey;
   createBufCmd.m_Return.Value = VK_SUCCESS;
+  createBufCmd.m_Key = recorder.CreateStateRestoreKey();
   recorder.Record(vkCreateBufferSerializer(createBufCmd));
 
   VkMemoryAllocateInfo mai{};
@@ -3615,6 +3710,7 @@ static void EmitStagingUploadAndCopyImage(SubcaptureRecorder& recorder,
   allocMemCmd.m_pAllocateInfo.Value = &mai;
   allocMemCmd.m_pMemory.Key = kStagingMemKey;
   allocMemCmd.m_Return.Value = VK_SUCCESS;
+  allocMemCmd.m_Key = recorder.CreateStateRestoreKey();
   recorder.Record(vkAllocateMemorySerializer(allocMemCmd));
 
   vkBindBufferMemoryCommand bindCmd;
@@ -3623,6 +3719,7 @@ static void EmitStagingUploadAndCopyImage(SubcaptureRecorder& recorder,
   bindCmd.m_memory.Key = kStagingMemKey;
   bindCmd.m_memoryOffset.Value = 0;
   bindCmd.m_Return.Value = VK_SUCCESS;
+  bindCmd.m_Key = recorder.CreateStateRestoreKey();
   recorder.Record(vkBindBufferMemorySerializer(bindCmd));
 
   // Upload data
@@ -3633,6 +3730,7 @@ static void EmitStagingUploadAndCopyImage(SubcaptureRecorder& recorder,
   mapCmd.m_size.Value = VK_WHOLE_SIZE;
   mapCmd.m_flags.Value = 0;
   mapCmd.m_Return.Value = VK_SUCCESS;
+  mapCmd.m_Key = recorder.CreateStateRestoreKey();
   recorder.Record(vkMapMemorySerializer(mapCmd));
 
   MappedDataMetaCommand mdc;
@@ -3644,11 +3742,13 @@ static void EmitStagingUploadAndCopyImage(SubcaptureRecorder& recorder,
   region.Data = const_cast<char*>(reinterpret_cast<const char*>(data.data()));
   mdc.m_Regions.Regions.push_back(region);
   mdc.m_Regions.Size = 1;
+  mdc.m_Key = recorder.CreateStateRestoreKey();
   recorder.Record(MappedDataMetaSerializer(mdc));
 
   vkUnmapMemoryCommand unmapCmd;
   unmapCmd.m_device.Key = deviceKey;
   unmapCmd.m_memory.Key = kStagingMemKey;
+  unmapCmd.m_Key = recorder.CreateStateRestoreKey();
   recorder.Record(vkUnmapMemorySerializer(unmapCmd));
 
   // Allocate content CB
@@ -3667,6 +3767,7 @@ static void EmitStagingUploadAndCopyImage(SubcaptureRecorder& recorder,
   allocCBCmd.m_pCommandBuffers.Size = 1;
   allocCBCmd.m_pCommandBuffers.Keys = {kContentCBKey};
   allocCBCmd.m_Return.Value = VK_SUCCESS;
+  allocCBCmd.m_Key = recorder.CreateStateRestoreKey();
   recorder.Record(vkAllocateCommandBuffersSerializer(allocCBCmd));
 
   VkCommandBufferBeginInfo cbbi{};
@@ -3676,6 +3777,7 @@ static void EmitStagingUploadAndCopyImage(SubcaptureRecorder& recorder,
   beginCBCmd.m_commandBuffer.Key = kContentCBKey;
   beginCBCmd.m_pBeginInfo.Value = &cbbi;
   beginCBCmd.m_Return.Value = VK_SUCCESS;
+  beginCBCmd.m_Key = recorder.CreateStateRestoreKey();
   recorder.Record(vkBeginCommandBufferSerializer(beginCBCmd));
 
   // Barrier: UNDEFINED → TRANSFER_DST_OPTIMAL
@@ -3701,6 +3803,7 @@ static void EmitStagingUploadAndCopyImage(SubcaptureRecorder& recorder,
   preBarrierCmd.m_pImageMemoryBarriers.Value = &toDst;
   preBarrierCmd.m_pImageMemoryBarriers.Size = 1;
   preBarrierCmd.m_pImageMemoryBarriers.HandleKeys = {dstImageKey};
+  preBarrierCmd.m_Key = recorder.CreateStateRestoreKey();
   recorder.Record(vkCmdPipelineBarrierSerializer(preBarrierCmd));
 
   // vkCmdCopyBufferToImage
@@ -3712,6 +3815,7 @@ static void EmitStagingUploadAndCopyImage(SubcaptureRecorder& recorder,
   copyCmd.m_regionCount.Value = static_cast<uint32_t>(regions.size());
   copyCmd.m_pRegions.Value = const_cast<VkBufferImageCopy*>(regions.data());
   copyCmd.m_pRegions.Size = static_cast<uint32_t>(regions.size());
+  copyCmd.m_Key = recorder.CreateStateRestoreKey();
   recorder.Record(vkCmdCopyBufferToImageSerializer(copyCmd));
 
   // Barrier: TRANSFER_DST_OPTIMAL → finalLayout
@@ -3737,11 +3841,13 @@ static void EmitStagingUploadAndCopyImage(SubcaptureRecorder& recorder,
   postBarrierCmd.m_pImageMemoryBarriers.Value = &toFinal;
   postBarrierCmd.m_pImageMemoryBarriers.Size = 1;
   postBarrierCmd.m_pImageMemoryBarriers.HandleKeys = {dstImageKey};
+  postBarrierCmd.m_Key = recorder.CreateStateRestoreKey();
   recorder.Record(vkCmdPipelineBarrierSerializer(postBarrierCmd));
 
   vkEndCommandBufferCommand endCBCmd;
   endCBCmd.m_commandBuffer.Key = kContentCBKey;
   endCBCmd.m_Return.Value = VK_SUCCESS;
+  endCBCmd.m_Key = recorder.CreateStateRestoreKey();
   recorder.Record(vkEndCommandBufferSerializer(endCBCmd));
 
   static VkCommandBuffer kDummyCBSlotImg = VK_NULL_HANDLE;
@@ -3756,11 +3862,13 @@ static void EmitStagingUploadAndCopyImage(SubcaptureRecorder& recorder,
   submitCmd.m_pSubmits.Value = &si;
   submitCmd.m_pSubmits.Size = 1;
   submitCmd.m_pSubmits.HandleKeys = {kContentCBKey};
+  submitCmd.m_Key = recorder.CreateStateRestoreKey();
   recorder.Record(vkQueueSubmitSerializer(submitCmd));
 
   vkQueueWaitIdleCommand waitCmd;
   waitCmd.m_queue.Key = queueKey;
   waitCmd.m_Return.Value = VK_SUCCESS;
+  waitCmd.m_Key = recorder.CreateStateRestoreKey();
   recorder.Record(vkQueueWaitIdleSerializer(waitCmd));
 
   static VkCommandBuffer kDummyCBFreeImg = VK_NULL_HANDLE;
@@ -3771,16 +3879,19 @@ static void EmitStagingUploadAndCopyImage(SubcaptureRecorder& recorder,
   freeCBCmd.m_pCommandBuffers.Value = &kDummyCBFreeImg;
   freeCBCmd.m_pCommandBuffers.Size = 1;
   freeCBCmd.m_pCommandBuffers.Keys = {kContentCBKey};
+  freeCBCmd.m_Key = recorder.CreateStateRestoreKey();
   recorder.Record(vkFreeCommandBuffersSerializer(freeCBCmd));
 
   vkDestroyBufferCommand destroyBufCmd;
   destroyBufCmd.m_device.Key = deviceKey;
   destroyBufCmd.m_buffer.Key = kStagingBufKey;
+  destroyBufCmd.m_Key = recorder.CreateStateRestoreKey();
   recorder.Record(vkDestroyBufferSerializer(destroyBufCmd));
 
   vkFreeMemoryCommand freeMemCmd;
   freeMemCmd.m_device.Key = deviceKey;
   freeMemCmd.m_memory.Key = kStagingMemKey;
+  freeMemCmd.m_Key = recorder.CreateStateRestoreKey();
   recorder.Record(vkFreeMemorySerializer(freeMemCmd));
 }
 
@@ -3832,6 +3943,7 @@ void StateTrackingService::EmitCaptureReplayBufferCreate(uint64_t deviceKey,
   createBufCmd.m_pCreateInfo.Value = &bci;
   createBufCmd.m_pBuffer.Key = bufKey;
   createBufCmd.m_Return.Value = VK_SUCCESS;
+  createBufCmd.m_Key = m_Recorder.CreateStateRestoreKey();
   m_Recorder.Record(vkCreateBufferSerializer(createBufCmd));
 
   VkMemoryOpaqueCaptureAddressAllocateInfo memOpaqueAddrCI{};
@@ -3855,6 +3967,7 @@ void StateTrackingService::EmitCaptureReplayBufferCreate(uint64_t deviceKey,
   allocMemCmd.m_pAllocateInfo.Value = &mai;
   allocMemCmd.m_pMemory.Key = memKey;
   allocMemCmd.m_Return.Value = VK_SUCCESS;
+  allocMemCmd.m_Key = m_Recorder.CreateStateRestoreKey();
   m_Recorder.Record(vkAllocateMemorySerializer(allocMemCmd));
 
   vkBindBufferMemoryCommand bindCmd;
@@ -3863,6 +3976,7 @@ void StateTrackingService::EmitCaptureReplayBufferCreate(uint64_t deviceKey,
   bindCmd.m_memory.Key = memKey;
   bindCmd.m_memoryOffset.Value = 0;
   bindCmd.m_Return.Value = VK_SUCCESS;
+  bindCmd.m_Key = m_Recorder.CreateStateRestoreKey();
   m_Recorder.Record(vkBindBufferMemorySerializer(bindCmd));
   EmitGetBufferDeviceAddress(deviceKey, bufKey, deviceAddress);
 }
@@ -3879,11 +3993,13 @@ static void EmitCaptureReplayBufferDestroy(SubcaptureRecorder& recorder,
   vkDestroyBufferCommand destroyBufCmd;
   destroyBufCmd.m_device.Key = deviceKey;
   destroyBufCmd.m_buffer.Key = bufKey;
+  destroyBufCmd.m_Key = recorder.CreateStateRestoreKey();
   recorder.Record(vkDestroyBufferSerializer(destroyBufCmd));
 
   vkFreeMemoryCommand freeMemCmd;
   freeMemCmd.m_device.Key = deviceKey;
   freeMemCmd.m_memory.Key = memKey;
+  freeMemCmd.m_Key = recorder.CreateStateRestoreKey();
   recorder.Record(vkFreeMemorySerializer(freeMemCmd));
 }
 
@@ -3928,10 +4044,16 @@ void StateTrackingService::EmitAccelerationStructureRebuildBytes(
   // holds the original app CB's key, which refers to nothing at restore-emission time and
   // is patched to the one-shot CB allocated below - after the input uploads, which each
   // run their own one-shot submit and must not nest inside this recording.
+  // Fresh, unique key for this call's one-shot command buffer - see the comment above
+  // this function's forward declarations for why these are minted per-call instead of
+  // reused from a fixed sentinel constant.
+  const uint64_t kContentCBKey = AllocateSyntheticKey();
+
   std::vector<char> scratch = commandBytes;
   vkCmdBuildAccelerationStructuresKHRCommand cmd;
   Decode(scratch.data(), cmd);
   cmd.m_commandBuffer.Key = kContentCBKey;
+  cmd.m_Key = m_Recorder.CreateStateRestoreKey();
 
   // Synthetic (buffer,memory) keys for this rebuild's transients - recreated inputs and
   // fresh scratch - pulled from the shared allocator and destroyed after the build.
@@ -4355,6 +4477,7 @@ void StateTrackingService::EmitAccelerationStructureRebuildBytes(
   allocCBCmd.m_pCommandBuffers.Size = 1;
   allocCBCmd.m_pCommandBuffers.Keys = {kContentCBKey};
   allocCBCmd.m_Return.Value = VK_SUCCESS;
+  allocCBCmd.m_Key = m_Recorder.CreateStateRestoreKey();
   m_Recorder.Record(vkAllocateCommandBuffersSerializer(allocCBCmd));
 
   VkCommandBufferBeginInfo cbbi{};
@@ -4364,6 +4487,7 @@ void StateTrackingService::EmitAccelerationStructureRebuildBytes(
   beginCBCmd.m_commandBuffer.Key = kContentCBKey;
   beginCBCmd.m_pBeginInfo.Value = &cbbi;
   beginCBCmd.m_Return.Value = VK_SUCCESS;
+  beginCBCmd.m_Key = m_Recorder.CreateStateRestoreKey();
   m_Recorder.Record(vkBeginCommandBufferSerializer(beginCBCmd));
 
   m_Recorder.Record(vkCmdBuildAccelerationStructuresKHRSerializer(cmd));
@@ -4371,6 +4495,7 @@ void StateTrackingService::EmitAccelerationStructureRebuildBytes(
   vkEndCommandBufferCommand endCBCmd;
   endCBCmd.m_commandBuffer.Key = kContentCBKey;
   endCBCmd.m_Return.Value = VK_SUCCESS;
+  endCBCmd.m_Key = m_Recorder.CreateStateRestoreKey();
   m_Recorder.Record(vkEndCommandBufferSerializer(endCBCmd));
 
   static VkCommandBuffer kDummyCBSlot = VK_NULL_HANDLE;
@@ -4385,11 +4510,13 @@ void StateTrackingService::EmitAccelerationStructureRebuildBytes(
   submitCmd.m_pSubmits.Value = &si;
   submitCmd.m_pSubmits.Size = 1;
   submitCmd.m_pSubmits.HandleKeys = {kContentCBKey};
+  submitCmd.m_Key = m_Recorder.CreateStateRestoreKey();
   m_Recorder.Record(vkQueueSubmitSerializer(submitCmd));
 
   vkQueueWaitIdleCommand waitCmd;
   waitCmd.m_queue.Key = queueKey;
   waitCmd.m_Return.Value = VK_SUCCESS;
+  waitCmd.m_Key = m_Recorder.CreateStateRestoreKey();
   m_Recorder.Record(vkQueueWaitIdleSerializer(waitCmd));
 
   static VkCommandBuffer kDummyCBFree = VK_NULL_HANDLE;
@@ -4400,6 +4527,7 @@ void StateTrackingService::EmitAccelerationStructureRebuildBytes(
   freeCBCmd.m_pCommandBuffers.Value = &kDummyCBFree;
   freeCBCmd.m_pCommandBuffers.Size = 1;
   freeCBCmd.m_pCommandBuffers.Keys = {kContentCBKey};
+  freeCBCmd.m_Key = m_Recorder.CreateStateRestoreKey();
   m_Recorder.Record(vkFreeCommandBuffersSerializer(freeCBCmd));
 
   // Tear down every transient (recreated input + fresh scratch) now the build
@@ -4487,12 +4615,18 @@ void StateTrackingService::EmitAccelerationStructureCopyReplay(
   if (commandBytes.empty()) {
     return;
   }
+  // Fresh, unique key for this call's one-shot command buffer - see the comment above
+  // this function's forward declarations for why these are minted per-call instead of
+  // reused from a fixed sentinel constant.
+  const uint64_t kContentCBKey = AllocateSyntheticKey();
+
   // Decode mutates the buffer in place (AddPtrs), so work on a copy. The stored
   // bytes carry the original app CB key, which is patched to the one-shot CB.
   std::vector<char> scratch = commandBytes;
   vkCmdCopyAccelerationStructureKHRCommand cmd;
   Decode(scratch.data(), cmd);
   cmd.m_commandBuffer.Key = kContentCBKey;
+  cmd.m_Key = m_Recorder.CreateStateRestoreKey();
 
   VkCommandBufferAllocateInfo cbai{};
   cbai.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -4508,6 +4642,7 @@ void StateTrackingService::EmitAccelerationStructureCopyReplay(
   allocCBCmd.m_pCommandBuffers.Size = 1;
   allocCBCmd.m_pCommandBuffers.Keys = {kContentCBKey};
   allocCBCmd.m_Return.Value = VK_SUCCESS;
+  allocCBCmd.m_Key = m_Recorder.CreateStateRestoreKey();
   m_Recorder.Record(vkAllocateCommandBuffersSerializer(allocCBCmd));
 
   VkCommandBufferBeginInfo cbbi{};
@@ -4517,6 +4652,7 @@ void StateTrackingService::EmitAccelerationStructureCopyReplay(
   beginCBCmd.m_commandBuffer.Key = kContentCBKey;
   beginCBCmd.m_pBeginInfo.Value = &cbbi;
   beginCBCmd.m_Return.Value = VK_SUCCESS;
+  beginCBCmd.m_Key = m_Recorder.CreateStateRestoreKey();
   m_Recorder.Record(vkBeginCommandBufferSerializer(beginCBCmd));
 
   m_Recorder.Record(vkCmdCopyAccelerationStructureKHRSerializer(cmd));
@@ -4524,6 +4660,7 @@ void StateTrackingService::EmitAccelerationStructureCopyReplay(
   vkEndCommandBufferCommand endCBCmd;
   endCBCmd.m_commandBuffer.Key = kContentCBKey;
   endCBCmd.m_Return.Value = VK_SUCCESS;
+  endCBCmd.m_Key = m_Recorder.CreateStateRestoreKey();
   m_Recorder.Record(vkEndCommandBufferSerializer(endCBCmd));
 
   static VkCommandBuffer kDummyCBSlot = VK_NULL_HANDLE;
@@ -4538,11 +4675,13 @@ void StateTrackingService::EmitAccelerationStructureCopyReplay(
   submitCmd.m_pSubmits.Value = &si;
   submitCmd.m_pSubmits.Size = 1;
   submitCmd.m_pSubmits.HandleKeys = {kContentCBKey};
+  submitCmd.m_Key = m_Recorder.CreateStateRestoreKey();
   m_Recorder.Record(vkQueueSubmitSerializer(submitCmd));
 
   vkQueueWaitIdleCommand waitCmd;
   waitCmd.m_queue.Key = queueKey;
   waitCmd.m_Return.Value = VK_SUCCESS;
+  waitCmd.m_Key = m_Recorder.CreateStateRestoreKey();
   m_Recorder.Record(vkQueueWaitIdleSerializer(waitCmd));
 
   static VkCommandBuffer kDummyCBFree = VK_NULL_HANDLE;
@@ -4553,6 +4692,7 @@ void StateTrackingService::EmitAccelerationStructureCopyReplay(
   freeCBCmd.m_pCommandBuffers.Value = &kDummyCBFree;
   freeCBCmd.m_pCommandBuffers.Size = 1;
   freeCBCmd.m_pCommandBuffers.Keys = {kContentCBKey};
+  freeCBCmd.m_Key = m_Recorder.CreateStateRestoreKey();
   m_Recorder.Record(vkFreeCommandBuffersSerializer(freeCBCmd));
 }
 
@@ -4608,6 +4748,7 @@ bool StateTrackingService::EmitRelocatedAccelerationStructureCreate(
   cmd.m_pCreateInfo.Value->createFlags &= ~static_cast<VkAccelerationStructureCreateFlagsKHR>(
       VK_ACCELERATION_STRUCTURE_CREATE_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT_KHR);
   cmd.m_Return.Value = VK_SUCCESS;
+  cmd.m_Key = m_Recorder.CreateStateRestoreKey();
   m_Recorder.Record(vkCreateAccelerationStructureKHRSerializer(cmd));
   return true;
 }
@@ -4737,6 +4878,7 @@ void StateTrackingService::RestoreBlasChain() {
       vkDestroyBufferCommand destroyBuf;
       destroyBuf.m_device.Key = deviceKey;
       destroyBuf.m_buffer.Key = bufKey;
+      destroyBuf.m_Key = m_Recorder.CreateStateRestoreKey();
       m_Recorder.Record(vkDestroyBufferSerializer(destroyBuf));
       m_RestoredThisPass.erase(bufKey);
     }
@@ -4744,6 +4886,7 @@ void StateTrackingService::RestoreBlasChain() {
       vkFreeMemoryCommand freeMem;
       freeMem.m_device.Key = deviceKey;
       freeMem.m_memory.Key = memKey;
+      freeMem.m_Key = m_Recorder.CreateStateRestoreKey();
       m_Recorder.Record(vkFreeMemorySerializer(freeMem));
       m_RestoredThisPass.erase(memKey);
     }
@@ -4803,6 +4946,7 @@ void StateTrackingService::RestoreBlasChain() {
     vkDestroyAccelerationStructureKHRCommand destroyAs;
     destroyAs.m_device.Key = transient.DeviceKey;
     destroyAs.m_accelerationStructure.Key = asKey;
+    destroyAs.m_Key = m_Recorder.CreateStateRestoreKey();
     m_Recorder.Record(vkDestroyAccelerationStructureKHRSerializer(destroyAs));
     m_RestoredThisPass.erase(asKey);
 
@@ -5189,6 +5333,7 @@ void StateTrackingService::RestoreBufferContents() {
     if (manifest.m_Buffers.empty()) {
       continue;
     }
+    manifest.m_Key = m_Recorder.CreateStateRestoreKey();
     m_Recorder.Record(RestoreContentManifestSerializer(manifest));
 
     // Stream each surviving buffer's bytes one at a time so peak host RAM stays
@@ -5219,6 +5364,7 @@ void StateTrackingService::RestoreBufferContents() {
       region.Data = data.empty() ? &sEmptyByte : reinterpret_cast<char*>(data.data());
       dataCmd.m_Regions.Regions.push_back(region);
       dataCmd.m_Regions.Size = 1;
+      dataCmd.m_Key = m_Recorder.CreateStateRestoreKey();
       m_Recorder.Record(RestoreContentDataSerializer(dataCmd));
 
       LOG_TRACE << "Vulkan subcapture: streamed buffer content, key=" << bufKey
@@ -5482,6 +5628,7 @@ void StateTrackingService::RestoreImageContents() {
       if (manifest.m_Images.empty()) {
         return;
       }
+      manifest.m_Key = m_Recorder.CreateStateRestoreKey();
       m_Recorder.Record(RestoreContentManifestSerializer(manifest));
 
       for (size_t i = 0; i < orderedKeys.size(); ++i) {
@@ -5511,6 +5658,7 @@ void StateTrackingService::RestoreImageContents() {
         region.Data = data.empty() ? &sEmptyByte : reinterpret_cast<char*>(data.data());
         dataCmd.m_Regions.Regions.push_back(region);
         dataCmd.m_Regions.Size = 1;
+        dataCmd.m_Key = m_Recorder.CreateStateRestoreKey();
         m_Recorder.Record(RestoreContentDataSerializer(dataCmd));
 
         LOG_TRACE << "Vulkan subcapture: streamed image content, key=" << imgKey
@@ -5545,6 +5693,20 @@ void StateTrackingService::EmitRawCommand(CommandId id, const std::vector<char>&
   if (encoded.empty()) {
     return;
   }
+  // Every generated Command's Encode()/Decode() writes m_Key (a GITSKey, i.e. a plain
+  // 8-byte scalar with no variable-length encoding) as the very first field, followed
+  // by m_ThreadId - see e.g. Encode(const vkCmdDrawCommand&, char*) and
+  // Encode(const vkCmdBindVertexBuffersCommand&, char*) in commandCodersAuto.cpp, which
+  // both start with Encode(dest, offset, command.m_Key) at offset 0. That layout is
+  // universal across every CommandId, so the original captured key - which belongs to a
+  // different stream position/thread and is misleading on a command now being replayed
+  // during state restore (see EMIT_DECODED above for the same reasoning) - can be
+  // overwritten in place here without a per-type decode/re-encode round trip.
+  std::vector<char> rekeyed = encoded;
+  if (rekeyed.size() >= sizeof(GITSKey)) {
+    GITSKey freshKey = m_Recorder.CreateStateRestoreKey();
+    std::memcpy(rekeyed.data(), &freshKey, sizeof(GITSKey));
+  }
   class RawSerializer : public stream::CommandSerializer {
   public:
     RawSerializer(CommandId cmdId, const std::vector<char>& data) : m_CmdId(cmdId) {
@@ -5561,7 +5723,7 @@ void StateTrackingService::EmitRawCommand(CommandId id, const std::vector<char>&
   private:
     CommandId m_CmdId;
   };
-  m_Recorder.Record(RawSerializer(id, encoded));
+  m_Recorder.Record(RawSerializer(id, rekeyed));
 }
 
 } // namespace vulkan
