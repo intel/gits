@@ -49,16 +49,19 @@ export VK_INSTANCE_LAYERS=VK_LAYER_INTEL_vulkan_GITS_recorder
 The layer works even when replacing the loader DLL is not feasible, and it can
 coexist with other layers (for example validation).
 
-> **Instance-level suppression caveat:** `Common.Vulkan.Shared.SuppressExtensions`
-> and `SuppressLayers` are **not** applied to *instance*-level extensions and
-> layers in layer mode. The Vulkan loader answers the pre-instance queries
-> (`vkEnumerateInstanceExtensionProperties` /
+> **Instance-level suppression caveat:** `Vulkan.Shared.SuppressExtensions`
+> and `Vulkan.Recorder.SuppressLayers` are **not** applied to *instance*-level
+> extensions and layers in layer mode. The Vulkan loader answers the
+> pre-instance queries (`vkEnumerateInstanceExtensionProperties` /
 > `vkEnumerateInstanceLayerProperties`) itself and does not route them through an
 > explicit layer, so GITS cannot hide them during capture this way. Instance-level
-> entries are instead filtered at **replay** time; capturing through the
-> [interceptor](#method-2-copy-the-interceptor-dll-windows) additionally suppresses
-> them during capture. Device-level extension suppression and
-> `SuppressPhysicalDeviceFeatures` work in both layer and interceptor modes.
+> entries are instead filtered at **replay** time via `Vulkan.Player.SuppressLayers`
+> (independent from the recorder-side list, so a layer that must stay loaded while
+> capturing to avoid crashing the app can still be dropped on replay, or vice versa);
+> capturing through the [interceptor](#method-2-copy-the-interceptor-dll-windows)
+> additionally suppresses `Vulkan.Recorder.SuppressLayers` entries during capture.
+> Device-level extension suppression and `SuppressPhysicalDeviceFeatures` work in
+> both layer and interceptor modes.
 
 ## Method 2: Copy the interceptor DLL (Windows)
 

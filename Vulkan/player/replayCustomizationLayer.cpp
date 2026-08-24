@@ -536,9 +536,9 @@ void ReplayCustomizationLayer::Pre(vkCreateInstanceCommand& command) {
     VkInstanceCreateInfo* createInfo = command.m_pCreateInfo.Value;
     const auto& vulkanShared = Configurator::Get().vulkan.shared;
 
-    const uint32_t removedLayers =
-        RemoveSuppressedNames(vulkanShared.suppressLayers, createInfo->enabledLayerCount,
-                              createInfo->ppEnabledLayerNames, tl_instanceLayerNames);
+    const uint32_t removedLayers = RemoveSuppressedNames(
+        Configurator::Get().vulkan.player.suppressLayers, createInfo->enabledLayerCount,
+        createInfo->ppEnabledLayerNames, tl_instanceLayerNames);
     if (removedLayers > 0) {
       LOG_INFO << "ReplayCustomization: suppressed " << removedLayers
                << " instance layer(s) during vkCreateInstance.";

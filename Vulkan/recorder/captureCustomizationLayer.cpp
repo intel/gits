@@ -19,7 +19,7 @@ namespace vulkan {
 thread_local CaptureCustomizationLayer::AllocateInfo CaptureCustomizationLayer::s_AllocateInfo;
 
 void CaptureCustomizationLayer::Pre(vkEnumerateInstanceLayerPropertiesCommand& command) {
-  const auto& suppressLayers = Configurator::Get().vulkan.shared.suppressLayers;
+  const auto& suppressLayers = Configurator::Get().vulkan.recorder.suppressLayers;
   if (suppressLayers.empty()) {
     return;
   }
@@ -35,7 +35,7 @@ void CaptureCustomizationLayer::Pre(vkEnumerateInstanceLayerPropertiesCommand& c
 }
 
 void CaptureCustomizationLayer::Pre(vkEnumerateDeviceLayerPropertiesCommand& command) {
-  const auto& suppressLayers = Configurator::Get().vulkan.shared.suppressLayers;
+  const auto& suppressLayers = Configurator::Get().vulkan.recorder.suppressLayers;
   if (suppressLayers.empty()) {
     return;
   }

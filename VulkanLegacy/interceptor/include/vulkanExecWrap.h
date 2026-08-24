@@ -864,7 +864,7 @@ VkResult recExecWrap_vkEnumerateInstanceLayerProperties(uint32_t* pPropertyCount
 
   if (CGitsPluginVulkan::Configuration().common.recorder.enabled &&
       !CGitsPluginVulkan::_recorderFinished &&
-      !CGitsPluginVulkan::Configuration().vulkan.shared.suppressLayers.empty()) {
+      !CGitsPluginVulkan::Configuration().vulkan.recorder.suppressLayers.empty()) {
     uint32_t propertyCount = 0;
     std::vector<VkLayerProperties> properties;
 
@@ -878,7 +878,7 @@ VkResult recExecWrap_vkEnumerateInstanceLayerProperties(uint32_t* pPropertyCount
             std::remove_if(properties.begin(), properties.end(),
                            [](VkLayerProperties& element) {
                              auto& suppressLayers =
-                                 CGitsPluginVulkan::Configuration().vulkan.shared.suppressLayers;
+                                 CGitsPluginVulkan::Configuration().vulkan.recorder.suppressLayers;
                              return std::find(suppressLayers.begin(), suppressLayers.end(),
                                               element.layerName) != suppressLayers.end();
                            }),
@@ -974,7 +974,7 @@ VkResult recExecWrap_vkEnumerateDeviceLayerProperties(VkPhysicalDevice physicalD
 
   if (CGitsPluginVulkan::Configuration().common.recorder.enabled &&
       !CGitsPluginVulkan::_recorderFinished &&
-      !CGitsPluginVulkan::Configuration().vulkan.shared.suppressLayers.empty()) {
+      !CGitsPluginVulkan::Configuration().vulkan.recorder.suppressLayers.empty()) {
     uint32_t propertyCount = 0;
     std::vector<VkLayerProperties> properties;
 
@@ -989,7 +989,7 @@ VkResult recExecWrap_vkEnumerateDeviceLayerProperties(VkPhysicalDevice physicalD
             std::remove_if(properties.begin(), properties.end(),
                            [](VkLayerProperties& element) {
                              auto& suppressLayers =
-                                 CGitsPluginVulkan::Configuration().vulkan.shared.suppressLayers;
+                                 CGitsPluginVulkan::Configuration().vulkan.recorder.suppressLayers;
                              return std::find(suppressLayers.begin(), suppressLayers.end(),
                                               element.layerName) != suppressLayers.end();
                            }),

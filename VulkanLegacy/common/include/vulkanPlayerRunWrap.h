@@ -438,7 +438,7 @@ inline void vkCreateInstance_WRAPRUN(CVkResult& recorderSideReturnValue,
 
   suppressRequestedNames(requestedExtensions, Configurator::Get().vulkan.shared.suppressExtensions,
                          createInfo.enabledExtensionCount, createInfo.ppEnabledExtensionNames);
-  suppressRequestedNames(requestedLayers, Configurator::Get().vulkan.shared.suppressLayers,
+  suppressRequestedNames(requestedLayers, Configurator::Get().vulkan.player.suppressLayers,
                          createInfo.enabledLayerCount, createInfo.ppEnabledLayerNames);
 
   bool allSupported = true;
@@ -1653,7 +1653,7 @@ inline void vkCreateDevice_WRAPRUN(CVkResult& recorderSideReturnValue,
       const_cast<VkPhysicalDeviceFeatures*>(createInfo.pEnabledFeatures));
   suppressRequestedNames(requestedExtensions, Configurator::Get().vulkan.shared.suppressExtensions,
                          createInfo.enabledExtensionCount, createInfo.ppEnabledExtensionNames);
-  suppressRequestedNames(requestedLayers, Configurator::Get().vulkan.shared.suppressLayers,
+  suppressRequestedNames(requestedLayers, Configurator::Get().vulkan.player.suppressLayers,
                          createInfo.enabledLayerCount, createInfo.ppEnabledLayerNames);
 
   // Don't use capture/replay features (if available) together with shader group handles patching

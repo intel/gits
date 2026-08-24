@@ -1819,16 +1819,17 @@ Configuration:
             Description:
               Disable extensions during instance and/or logical device creation.
               Option accepts list of comma (,) separated names of extensions.
+      - Name: Player
+        Type: Group
+        Options:
           - Name: suppressLayers
             Type: std::vector<std::string>
             Default: []
             Arguments: [suppressVKLayers]
             Description:
-              Disable layers during instance and/or logical device creation.
+              Disable layers requested by the recorded stream during replay.
               Option accepts list of comma (,) separated names of layers.
-      - Name: Player
-        Type: Group
-        Options:
+            LegacyPaths: ["Vulkan.Shared.SuppressLayers"]
           - Name: exitOnVkQueueSubmitFail
             Type: bool
             Default: false
@@ -2201,6 +2202,13 @@ Configuration:
       - Name: Recorder
         Type: Group
         Options:
+          - Name: suppressLayers
+            Type: std::vector<std::string>
+            Default: []
+            Description:
+              Disable layers during instance and/or logical device creation while recording.
+              Option accepts list of comma (,) separated names of layers.
+            LegacyPaths: ["Vulkan.Shared.SuppressLayers"]
           - Name: mode
             Type: VulkanRecorderMode
             Default: All
