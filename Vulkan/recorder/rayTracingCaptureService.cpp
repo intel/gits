@@ -192,16 +192,15 @@ void RayTracingCaptureService::OnPostCreateDevice(vkCreateDeviceCommand& command
   m_Caps[command.m_pDevice.Key] = s_DeviceCaps;
 }
 
-void RayTracingCaptureService::OnPreCreateBuffer(vkCreateBufferCommand& command) {
-  auto* pCreateInfo = command.m_pCreateInfo.Value;
-
-  if (isBitSet(pCreateInfo->usage, VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR)) {
-    pCreateInfo->usage |= VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+void RayTracingCaptureService::ModifyBufferCreateInfo(GITSKey deviceKey,
+                                                      VkBufferCreateInfo& createInfo) {
+  if (isBitSet(createInfo.usage, VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR)) {
+    createInfo.usage |= VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
   }
 
-  if (isBitSet(pCreateInfo->usage, VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT) &&
-      m_Caps[command.m_device.Key].m_BufferDeviceAddressCaptureReplay) {
-    pCreateInfo->flags |= VK_BUFFER_CREATE_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT;
+  if (isBitSet(createInfo.usage, VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT) &&
+      m_Caps[deviceKey].m_BufferDeviceAddressCaptureReplay) {
+    createInfo.flags |= VK_BUFFER_CREATE_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT;
   }
 }
 

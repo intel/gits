@@ -20,7 +20,8 @@ public:
 
   void OnPreCreateDevice(vkCreateDeviceCommand& command);
   void OnPostCreateDevice(vkCreateDeviceCommand& command);
-  void OnPreCreateBuffer(vkCreateBufferCommand& command);
+  // Applied both when creating a buffer and when querying its memory requirements
+  void ModifyBufferCreateInfo(GITSKey deviceKey, VkBufferCreateInfo& createInfo);
   void OnPostCreateBuffer(vkCreateBufferCommand& command);
   void OnPreAllocateMemory(vkAllocateMemoryCommand& command);
   void OnPostAllocateMemory(vkAllocateMemoryCommand& command);

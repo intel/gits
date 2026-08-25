@@ -17,6 +17,12 @@ namespace gits {
 namespace vulkan {
 
 thread_local CaptureCustomizationLayer::AllocateInfo CaptureCustomizationLayer::s_AllocateInfo;
+thread_local VkDeviceBufferMemoryRequirements
+    CaptureCustomizationLayer::s_BufferMemoryRequirementsInfo;
+thread_local VkBufferCreateInfo CaptureCustomizationLayer::s_BufferCreateInfo;
+thread_local VkDeviceImageMemoryRequirements
+    CaptureCustomizationLayer::s_ImageMemoryRequirementsInfo;
+thread_local VkImageCreateInfo CaptureCustomizationLayer::s_ImageCreateInfo;
 
 void CaptureCustomizationLayer::Pre(vkEnumerateInstanceLayerPropertiesCommand& command) {
   const auto& suppressLayers = Configurator::Get().vulkan.recorder.suppressLayers;
@@ -386,14 +392,79 @@ void CaptureCustomizationLayer::Post(vkCreateWaylandSurfaceKHRCommand& command) 
 }
 #endif
 
+void CaptureCustomizationLayer::ModifyBufferCreateInfo(GITSKey deviceKey,
+                                                       VkBufferCreateInfo& createInfo) {
+  createInfo.usage |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+
+  m_RayTracingService.ModifyBufferCreateInfo(deviceKey, createInfo);
+}
+
+void CaptureCustomizationLayer::ModifyImageCreateInfo(VkImageCreateInfo& createInfo) {
+  if (!isBitSet(createInfo.usage, VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT)) {
+    createInfo.usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+  }
+}
+
+// Requirements queried from a create info instead of a handle bypass the modifications GITS applies
+// on resource creation, so the application would size its allocations for a resource it never gets
+void CaptureCustomizationLayer::PatchMemoryRequirementsInfo(
+    HandleArgument<VkDevice>& device, PointerArgument<VkDeviceBufferMemoryRequirements>& pInfo) {
+  if (!pInfo.Value || !pInfo.Value->pCreateInfo) {
+    return;
+  }
+
+  s_BufferCreateInfo = *pInfo.Value->pCreateInfo;
+  ModifyBufferCreateInfo(device.Key, s_BufferCreateInfo);
+
+  s_BufferMemoryRequirementsInfo = *pInfo.Value;
+  s_BufferMemoryRequirementsInfo.pCreateInfo = &s_BufferCreateInfo;
+  pInfo.Value = &s_BufferMemoryRequirementsInfo;
+}
+
+void CaptureCustomizationLayer::PatchMemoryRequirementsInfo(
+    PointerArgument<VkDeviceImageMemoryRequirements>& pInfo) {
+  if (!pInfo.Value || !pInfo.Value->pCreateInfo) {
+    return;
+  }
+
+  s_ImageCreateInfo = *pInfo.Value->pCreateInfo;
+  ModifyImageCreateInfo(s_ImageCreateInfo);
+
+  s_ImageMemoryRequirementsInfo = *pInfo.Value;
+  s_ImageMemoryRequirementsInfo.pCreateInfo = &s_ImageCreateInfo;
+  pInfo.Value = &s_ImageMemoryRequirementsInfo;
+}
+
 void CaptureCustomizationLayer::Pre(vkCreateBufferCommand& command) {
   if (!command.m_pCreateInfo.Value) {
     return;
   }
 
-  command.m_pCreateInfo.Value->usage |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+  ModifyBufferCreateInfo(command.m_device.Key, *command.m_pCreateInfo.Value);
+}
 
-  m_RayTracingService.OnPreCreateBuffer(command);
+void CaptureCustomizationLayer::Pre(vkGetDeviceBufferMemoryRequirementsCommand& command) {
+  PatchMemoryRequirementsInfo(command.m_device, command.m_pInfo);
+}
+
+void CaptureCustomizationLayer::Pre(vkGetDeviceBufferMemoryRequirementsKHRCommand& command) {
+  PatchMemoryRequirementsInfo(command.m_device, command.m_pInfo);
+}
+
+void CaptureCustomizationLayer::Pre(vkGetDeviceImageMemoryRequirementsCommand& command) {
+  PatchMemoryRequirementsInfo(command.m_pInfo);
+}
+
+void CaptureCustomizationLayer::Pre(vkGetDeviceImageMemoryRequirementsKHRCommand& command) {
+  PatchMemoryRequirementsInfo(command.m_pInfo);
+}
+
+void CaptureCustomizationLayer::Pre(vkGetDeviceImageSparseMemoryRequirementsCommand& command) {
+  PatchMemoryRequirementsInfo(command.m_pInfo);
+}
+
+void CaptureCustomizationLayer::Pre(vkGetDeviceImageSparseMemoryRequirementsKHRCommand& command) {
+  PatchMemoryRequirementsInfo(command.m_pInfo);
 }
 
 void CaptureCustomizationLayer::Post(vkCreateBufferCommand& command) {
@@ -409,9 +480,7 @@ void CaptureCustomizationLayer::Pre(vkCreateImageCommand& command) {
     return;
   }
 
-  if (!isBitSet(command.m_pCreateInfo.Value->usage, VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT)) {
-    command.m_pCreateInfo.Value->usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
-  }
+  ModifyImageCreateInfo(*command.m_pCreateInfo.Value);
 }
 
 void CaptureCustomizationLayer::Post(vkCreateSwapchainKHRCommand& command) {

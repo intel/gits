@@ -65,6 +65,13 @@ public:
   void Post(vkCreateBufferCommand& command) override;
   void Pre(vkCreateImageCommand& command) override;
 
+  void Pre(vkGetDeviceBufferMemoryRequirementsCommand& command) override;
+  void Pre(vkGetDeviceBufferMemoryRequirementsKHRCommand& command) override;
+  void Pre(vkGetDeviceImageMemoryRequirementsCommand& command) override;
+  void Pre(vkGetDeviceImageMemoryRequirementsKHRCommand& command) override;
+  void Pre(vkGetDeviceImageSparseMemoryRequirementsCommand& command) override;
+  void Pre(vkGetDeviceImageSparseMemoryRequirementsKHRCommand& command) override;
+
   void Post(vkGetPhysicalDeviceMemoryPropertiesCommand& command) override;
   void Post(vkGetPhysicalDeviceMemoryProperties2Command& command) override;
   void Post(vkGetPhysicalDeviceMemoryProperties2KHRCommand& command) override;
@@ -97,6 +104,13 @@ public:
   void Post(vkCreateRayTracingPipelinesKHRCommand& command) override;
 
 private:
+  void ModifyBufferCreateInfo(GITSKey deviceKey, VkBufferCreateInfo& createInfo);
+  void ModifyImageCreateInfo(VkImageCreateInfo& createInfo);
+  // The queried create info has to match the one GITS creates the resource with
+  void PatchMemoryRequirementsInfo(HandleArgument<VkDevice>& device,
+                                   PointerArgument<VkDeviceBufferMemoryRequirements>& pInfo);
+  void PatchMemoryRequirementsInfo(PointerArgument<VkDeviceImageMemoryRequirements>& pInfo);
+
   struct AllocateInfo {
     // Pointer to the original data
     VkMemoryAllocateInfo* AllocateInfoPtr{nullptr};
@@ -115,6 +129,10 @@ private:
   };
 
   static thread_local AllocateInfo s_AllocateInfo;
+  static thread_local VkDeviceBufferMemoryRequirements s_BufferMemoryRequirementsInfo;
+  static thread_local VkBufferCreateInfo s_BufferCreateInfo;
+  static thread_local VkDeviceImageMemoryRequirements s_ImageMemoryRequirementsInfo;
+  static thread_local VkImageCreateInfo s_ImageCreateInfo;
 
   CaptureManager& m_Manager;
   stream::OrderingRecorder& m_Recorder;
