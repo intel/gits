@@ -541,11 +541,10 @@ struct AccelerationStructureState : ObjectState {
   // Encoded bytes of the last vkCmdBuildAccelerationStructuresKHR that built this AS.
   // The rebuild content-restore path replays this build against re-uploaded inputs
   // instead of serializing/deserializing the AS itself.
+  // A multi-info build is stored whole on each of its destinations and replayed once per
+  // destination, filtered to that one's info - the captured inputs are per destination.
   CommandId LastBuildCommandId{static_cast<CommandId>(0)};
   std::vector<char> LastBuildCommandBytes;
-  // Every destination AS key touched by the same build call, including this one, so a
-  // multi-info build is emitted once rather than per destination AS.
-  std::vector<uint64_t> LastBuildSiblingAsKeys;
   // True if the last build's instances geometry used arrayOfPointers layout. Such a TLAS
   // is not rebuilt at state restore (its scattered instance structs cannot be captured at
   // record time) but in-range by the application. Its referenced BLASes are retained via

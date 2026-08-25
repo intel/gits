@@ -436,15 +436,14 @@ private:
       uint64_t asKey, uint64_t deviceKey, uint64_t physDevKey, uint64_t queueKey, uint64_t poolKey);
 
   // Replays asState's stored build command bytes in a one-shot command buffer, patching
-  // their CB key (the stored one is the original app CB's, dead by restore time).
-  // keepDstAsKeys names the destinations this replay is for - see
-  // EmitAccelerationStructureRebuildBytes.
+  // their CB key (the stored one is the original app CB's, dead by restore time). asState is
+  // the sole destination replayed, every other one the command writes being dropped, since
+  // the captured inputs travelling with it are that destination's alone.
   void EmitAccelerationStructureRebuild(uint64_t deviceKey,
                                         uint64_t physDevKey,
                                         uint64_t queueKey,
                                         uint64_t poolKey,
-                                        const AccelerationStructureState& asState,
-                                        const std::unordered_set<uint64_t>& keepDstAsKeys);
+                                        const AccelerationStructureState& asState);
 
   // Core replay used by both the per-AS wrapper above and the chain replay. Replays the
   // build command bytes verbatim - each info keeps the mode the application recorded -

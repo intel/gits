@@ -2285,14 +2285,6 @@ void SubcaptureLayer::Post(vkCmdBuildAccelerationStructuresKHRCommand& command) 
   m_CommandBufferLifecycle.TrackHandleDependencies(command.m_commandBuffer.Key,
                                                    command.m_pInfos.HandleKeys);
 
-  std::vector<uint64_t> dstKeys;
-  for (uint32_t i = 0; i < infoCount; ++i) {
-    uint64_t dstKey = command.m_pInfos.HandleKeys[AsBuildDstKeyIndex(i)];
-    if (dstKey) {
-      dstKeys.push_back(dstKey);
-    }
-  }
-
   uint32_t sz = GetSize(command);
   std::vector<char> encoded(sz);
   Encode(command, encoded.data());
@@ -2363,7 +2355,6 @@ void SubcaptureLayer::Post(vkCmdBuildAccelerationStructuresKHRCommand& command) 
     }
     dstState->LastBuildCommandId = cmdId;
     dstState->LastBuildCommandBytes = encoded;
-    dstState->LastBuildSiblingAsKeys = dstKeys;
     dstState->ArrayOfPointersInstances = arrayOfPointers;
   }
 

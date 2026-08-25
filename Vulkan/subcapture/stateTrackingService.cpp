@@ -3795,14 +3795,13 @@ void StateTrackingService::EmitAccelerationStructureRebuild(
     uint64_t physDevKey,
     uint64_t queueKey,
     uint64_t poolKey,
-    const AccelerationStructureState& asState,
-    const std::unordered_set<uint64_t>& keepDstAsKeys) {
+    const AccelerationStructureState& asState) {
   // The per-AS last-build path replays the AS's single stored build command. No source
   // map: only that one op is retained, so nothing produced the contents an update would
   // refit from, and an update-mode info aborts the run instead of becoming a build.
   EmitAccelerationStructureRebuildBytes(deviceKey, physDevKey, queueKey, poolKey,
                                         asState.LastBuildCommandBytes, asState.CapturedBuildInputs,
-                                        asState.Key, keepDstAsKeys);
+                                        asState.Key, {asState.Key});
 }
 
 bool StateTrackingService::QueryCaptureReplayBufferRequirements(uint64_t deviceKey,
@@ -4405,30 +4404,11 @@ void StateTrackingService::RestoreAccelerationStructureByRebuild(
         useBlobs);
   }
 
-  // The captured command may write several destinations at once (LastBuildSiblingAsKeys).
-  // Only the top-level ones belong to this path - RestoreBlasChain owns every BLAS, and
-  // replaying a bottom-level info from here would overwrite what the chain just produced
-  // with whatever this one command happened to build.
-  std::unordered_set<uint64_t> keepDstAsKeys{asKey};
-  for (uint64_t sibling : asState->LastBuildSiblingAsKeys) {
-    auto* sibState = GetState<AccelerationStructureState>(sibling);
-    if (sibState && sibState->Type == VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR) {
-      keepDstAsKeys.insert(sibling);
-    }
-  }
-
   // An update-mode build's source AS (src != dst) is carried in DependencyKeys. Rebuild it
-  // first so this AS does not refit from uninitialized source content. Walked for every
-  // destination the replay keeps, each of which refits from its own source.
-  for (uint64_t sibKey : keepDstAsKeys) {
-    auto* sibState = GetState<AccelerationStructureState>(sibKey);
-    if (!sibState) {
-      continue;
-    }
-    for (uint64_t dep : sibState->DependencyKeys) {
-      if (GetState<AccelerationStructureState>(dep)) {
-        RestoreAccelerationStructureByRebuild(dep, deviceKey, physDevKey, queueKey, poolKey);
-      }
+  // first so this AS does not refit from uninitialized source content.
+  for (uint64_t dep : asState->DependencyKeys) {
+    if (GetState<AccelerationStructureState>(dep)) {
+      RestoreAccelerationStructureByRebuild(dep, deviceKey, physDevKey, queueKey, poolKey);
     }
   }
 
@@ -4436,12 +4416,9 @@ void StateTrackingService::RestoreAccelerationStructureByRebuild(
   MarkAccelerationStructureBackingContentRestored(asKey);
 
   // The rebuild is self-contained: it recreates the build inputs from the captured content
-  // and reserves a fresh scratch, so no live input buffers are required here.
-  EmitAccelerationStructureRebuild(deviceKey, physDevKey, queueKey, poolKey, *asState,
-                                   keepDstAsKeys);
-  for (uint64_t sibling : keepDstAsKeys) {
-    m_RebuiltAsKeys.insert(sibling);
-  }
+  // and reserves a fresh scratch, so no live input buffers are required here. A batched build
+  // is replayed filtered to this AS, so each sibling that needs restoring gets its own call.
+  EmitAccelerationStructureRebuild(deviceKey, physDevKey, queueKey, poolKey, *asState);
   m_RebuiltAsKeys.insert(asKey);
   LOG_TRACE << "Vulkan subcapture: restored acceleration structure content via rebuild, key="
             << asKey;
