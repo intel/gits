@@ -39,7 +39,7 @@ void Decode(const ${union.name}* dst, uint32_t count, char* src, uint32_t& offse
 % for structure in structures:
 <%
 define = get_define(structure.platform)
-needs_coder = struct_needs_coder(structure, structures)
+needs_coder = struct_needs_coder(structure, structures, unions)
 %>\
 % if needs_coder and structure.name not in custom_handle_structs:
 % if define:

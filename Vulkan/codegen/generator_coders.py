@@ -70,6 +70,13 @@ def union_member_needs_coding(member, structures_by_name, structures_list):
         if member.is_pointer:
             return True
         return struct_needs_coder(structures_by_name[member.base_type], structures_list)
+    if member.is_pointer:
+        # Non-struct pointer union members cannot be raw-copied: the union storage
+        # holds a live pointer, not the pointee.
+        if member.is_null_terminated:
+            return True
+        if member.length:
+            return True
     return False
 
 def union_needs_coder(union, structures_by_name, structures_list):
@@ -108,12 +115,18 @@ def get_union_size_switch(union, structures_by_name, structures_list, var_name):
         for label in labels:
             lines.append(f'    case {label}:')
         if m.is_pointer:
-            lines.append(f'      if ({var_name}->{m.name}) {{')
-            if complex_struct:
-                lines.append(f'        blobSize += GetSize({var_name}->{m.name}, 1);')
+            if m.is_null_terminated:
+                lines.append(f'      blobSize += GetStringSize({var_name}->{m.name});')
             else:
-                lines.append(f'        blobSize += sizeof({m.base_type});')
-            lines.append(f'      }}')
+                lines.append(f'      if ({var_name}->{m.name}) {{')
+                if complex_struct:
+                    lines.append(f'        blobSize += GetSize({var_name}->{m.name}, 1);')
+                elif m.length:
+                    length_expr = get_length_expression(m.length, var_name)
+                    lines.append(f'        blobSize += sizeof({m.base_type}) * {length_expr};')
+                else:
+                    lines.append(f'        blobSize += sizeof({m.base_type});')
+                lines.append(f'      }}')
         else:
             lines.append(f'      blobSize += GetSize(&{var_name}->{m.name}, 1);')
         lines.append(f'      break;')
@@ -131,16 +144,35 @@ def get_union_encode_switch(union, structures_by_name, structures_list, src, dst
         for label in labels:
             lines.append(f'    case {label}:')
         if m.is_pointer:
-            lines.append(f'      if ({src}->{m.name}) {{')
-            lines.append(f'        {dst}->{m.name} = reinterpret_cast<{m.base_type}*>(static_cast<uintptr_t>(offset));')
-            if complex_struct:
+            if m.is_null_terminated:
+                lines.append(f'      if ({src}->{m.name}) {{')
+                lines.append(f'        {dst}->{m.name} = reinterpret_cast<const char*>(static_cast<uintptr_t>(offset));')
+                lines.append(f'      }}')
+                lines.append(f'      EncodeString({src}->{m.name}, dst, offset);')
+            elif complex_struct:
+                lines.append(f'      if ({src}->{m.name}) {{')
+                lines.append(f'        {dst}->{m.name} = reinterpret_cast<{m.base_type}*>(static_cast<uintptr_t>(offset));')
                 lines.append(f'        Encode({src}->{m.name}, 1, dst, offset);')
+                lines.append(f'      }} else {{')
+                lines.append(f'        {dst}->{m.name} = nullptr;')
+                lines.append(f'      }}')
+            elif m.length:
+                length_expr = get_length_expression(m.length, src)
+                lines.append(f'      if ({src}->{m.name} && {length_expr} > 0) {{')
+                lines.append(f'        {dst}->{m.name} = reinterpret_cast<{m.base_type}*>(static_cast<uintptr_t>(offset));')
+                lines.append(f'        std::memcpy(dst + offset, {src}->{m.name}, sizeof({m.base_type}) * {length_expr});')
+                lines.append(f'        offset += sizeof({m.base_type}) * {length_expr};')
+                lines.append(f'      }} else {{')
+                lines.append(f'        {dst}->{m.name} = nullptr;')
+                lines.append(f'      }}')
             else:
+                lines.append(f'      if ({src}->{m.name}) {{')
+                lines.append(f'        {dst}->{m.name} = reinterpret_cast<{m.base_type}*>(static_cast<uintptr_t>(offset));')
                 lines.append(f'        std::memcpy(dst + offset, {src}->{m.name}, sizeof({m.base_type}));')
                 lines.append(f'        offset += sizeof({m.base_type});')
-            lines.append(f'      }} else {{')
-            lines.append(f'        {dst}->{m.name} = nullptr;')
-            lines.append(f'      }}')
+                lines.append(f'      }} else {{')
+                lines.append(f'        {dst}->{m.name} = nullptr;')
+                lines.append(f'      }}')
         else:
             lines.append(f'      {{')
             lines.append(f'        uint32_t memberBase = offset;')
@@ -162,20 +194,32 @@ def get_union_decode_switch(union, structures_by_name, structures_list, var_name
         for label in labels:
             lines.append(f'    case {label}:')
         if m.is_pointer:
-            lines.append(f'      if ({var_name}->{m.name}) {{')
-            lines.append(f'        {var_name}->{m.name} = AddPtrs({var_name}->{m.name}, src);')
-            if complex_struct:
+            if m.is_null_terminated:
+                lines.append(f'      DecodeString(src, offset, &{var_name}->{m.name});')
+            elif complex_struct:
+                lines.append(f'      if ({var_name}->{m.name}) {{')
+                lines.append(f'        {var_name}->{m.name} = AddPtrs({var_name}->{m.name}, src);')
                 lines.append(f'        Decode({var_name}->{m.name}, 1, src, offset);')
+                lines.append(f'      }}')
+            elif m.length:
+                length_expr = get_length_expression(m.length, var_name)
+                lines.append(f'      if ({var_name}->{m.name} && {length_expr} > 0) {{')
+                lines.append(f'        {var_name}->{m.name} = AddPtrs({var_name}->{m.name}, src);')
+                lines.append(f'        offset += sizeof({m.base_type}) * {length_expr};')
+                lines.append(f'      }}')
             else:
+                lines.append(f'      if ({var_name}->{m.name}) {{')
+                lines.append(f'        {var_name}->{m.name} = AddPtrs({var_name}->{m.name}, src);')
                 lines.append(f'        offset += sizeof({m.base_type});')
-            lines.append(f'      }}')
+                lines.append(f'      }}')
         else:
             lines.append(f'      Decode(&{var_name}->{m.name}, 1, src, offset);')
         lines.append(f'      break;')
     return lines
 
-def struct_needs_coder(structure, structures_list):
+def struct_needs_coder(structure, structures_list, unions_list=None):
     structures_by_name = {s.name: s for s in structures_list}
+    unions_by_name = {u.name: u for u in unions_list} if unions_list else {}
     for m in structure.members:
         if m.is_handle:
             return True
@@ -183,6 +227,10 @@ def struct_needs_coder(structure, structures_list):
             return True
         elif m.is_pointer:
             return True
+        elif m.is_union and m.selector:
+            union = unions_by_name.get(m.base_type)
+            if union is not None and union_needs_coder(union, structures_by_name, structures_list):
+                return True
         elif is_complex_struct(m.base_type, structures_by_name):
             return True
     return False

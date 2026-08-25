@@ -39,7 +39,7 @@ ${action(s)}\
 </%def>\
 
 <%def name="getsize_action(s)">\
-% if struct_needs_coder(s, structures):
+% if struct_needs_coder(s, structures, unions):
         size += GetSize(reinterpret_cast<const ${s.name}*>(node), 1);
 % else:
         size += static_cast<uint32_t>(sizeof(${s.name}));
@@ -50,7 +50,7 @@ ${action(s)}\
 <%def name="encode_action(s)">\
         std::memcpy(dst + offset, &node->sType, sizeof(VkStructureType));
         offset += sizeof(VkStructureType);
-% if struct_needs_coder(s, structures):
+% if struct_needs_coder(s, structures, unions):
         Encode(reinterpret_cast<const ${s.name}*>(node), 1, dst, offset);
 % else:
         std::memcpy(dst + offset, node, sizeof(${s.name}));
@@ -137,7 +137,7 @@ void DecodePNextChainInput(char* src, uint32_t& offset, void** pNext) {
 % endif
       case ${s.stype_value}: {
         auto* node = reinterpret_cast<${s.name}*>(src + offset);
-% if struct_needs_coder(s, structures):
+% if struct_needs_coder(s, structures, unions):
         Decode(node, 1, src, offset);
 % else:
         offset += static_cast<uint32_t>(sizeof(${s.name}));
@@ -179,7 +179,7 @@ void DecodePNextChainOutput(char* src, uint32_t& offset, void** pNext) {
 #ifdef ${define}
 % endif
       case ${s.stype_value}: {
-% if struct_needs_coder(s, structures):
+% if struct_needs_coder(s, structures, unions):
         if (node) {
           Decode(reinterpret_cast<${s.name}*>(node), 1, src, offset);
         } else {
@@ -274,7 +274,7 @@ void Decode(const ${union.name}* dst, uint32_t count, char* src, uint32_t& offse
 % for structure in structures:
 <% 
 define = get_define(structure.platform)
-needs_coder = struct_needs_coder(structure, structures)
+needs_coder = struct_needs_coder(structure, structures, unions)
 %>\
 % if needs_coder and structure.name not in custom_handle_structs:
 % if define:
