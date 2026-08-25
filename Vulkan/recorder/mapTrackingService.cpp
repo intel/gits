@@ -96,6 +96,21 @@ void* MapTrackingService::EnableExternalMemory(
 #endif
 }
 
+// Undo the EnableExternalMemory injection once the driver call is done. The import must never reach
+// the stream - pHostPointer is a capture-process address, and a replay that honours the struct gets
+// a NULL import instead of the allocation the app asked for.
+void MapTrackingService::UnlinkExternalMemory(
+    VkMemoryAllocateInfo* allocationInfo,
+    std::optional<VkImportMemoryHostPointerInfoEXT>& hostPointerInfo) {
+  if (!hostPointerInfo.has_value()) {
+    return;
+  }
+  GITS_ASSERT(allocationInfo->pNext == &hostPointerInfo.value(),
+              "pNext head changed after the write-watch import was injected.");
+  allocationInfo->pNext = hostPointerInfo->pNext;
+  hostPointerInfo.reset();
+}
+
 void MapTrackingService::StoreAllocationInfo(GITSKey deviceKey,
                                              GITSKey deviceMemoryKey,
                                              VkDeviceMemory memory,

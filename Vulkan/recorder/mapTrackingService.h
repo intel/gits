@@ -31,6 +31,8 @@ public:
   void* EnableExternalMemory(GITSKey deviceKey,
                              VkMemoryAllocateInfo* allocationInfo,
                              std::optional<VkImportMemoryHostPointerInfoEXT>& hostPointerInfo);
+  void UnlinkExternalMemory(VkMemoryAllocateInfo* allocationInfo,
+                            std::optional<VkImportMemoryHostPointerInfoEXT>& hostPointerInfo);
   void StoreAllocationInfo(GITSKey deviceKey,
                            GITSKey deviceMemoryKey,
                            VkDeviceMemory memory,

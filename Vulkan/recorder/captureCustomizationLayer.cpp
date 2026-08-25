@@ -501,15 +501,20 @@ void CaptureCustomizationLayer::Post(vkAllocateMemoryCommand& command) {
     return;
   }
 
+  auto& mapTrackingService = m_Manager.GetMapTrackingService();
+  // Must run before OnPostAllocateMemory, which prepends its own pNext node and would otherwise
+  // chain it onto the import struct, leaving the import in what the encoder serializes.
+  mapTrackingService.UnlinkExternalMemory(command.m_pAllocateInfo.Value,
+                                          s_AllocateInfo.HostPointerInfo);
+
   m_RayTracingService.OnPostAllocateMemory(command);
 
-  auto& mapTrackingService = m_Manager.GetMapTrackingService();
   if (!mapTrackingService.IsMemoryMappable(command.m_device.Key,
                                            s_AllocateInfo.AllocateInfoModified.memoryTypeIndex)) {
     return;
   }
 
-  m_Manager.GetMapTrackingService().StoreAllocationInfo(
+  mapTrackingService.StoreAllocationInfo(
       command.m_device.Key, command.m_pMemory.Key, *command.m_pMemory.Value,
       s_AllocateInfo.AllocateInfoModified, s_AllocateInfo.ExternalMemory);
 }
