@@ -201,6 +201,76 @@ void DecodePNextChainOutput(char* src, uint32_t& offset, void** pNext) {
   }
 }
 
+<%
+union_selector_types = get_union_selector_types(structures, unions)
+%>\
+% for union in unions_needing_coder(unions, structures):
+<%
+udefine = get_define(union.platform)
+seltype = union_selector_types.get(union.name, 'uint32_t')
+%>\
+% if udefine:
+#ifdef ${udefine}
+% endif
+// ${union.name} (selected by ${seltype})
+uint32_t GetSize(const ${union.name}* src, uint32_t count, ${seltype} selector) {
+  if (!src) {
+    return 0;
+  }
+  auto blobSize = sizeof(${union.name}) * count;
+  for (uint32_t i = 0; i < count; ++i) {
+    auto* currentSrcDesc = &src[i];
+    switch (selector) {
+% for line in get_union_size_switch(union, {s.name: s for s in structures}, structures, 'currentSrcDesc'):
+    ${line}
+% endfor
+    default:
+      break;
+    }
+  }
+  return blobSize;
+}
+
+void Encode(const ${union.name}* src, uint32_t count, char* dst, uint32_t& offset, ${seltype} selector) {
+  if (!src || !dst) {
+    return;
+  }
+  auto* dstDesc = reinterpret_cast<${union.name}*>(&dst[offset]);
+  WriteData(reinterpret_cast<const char*>(src), sizeof(${union.name}) * count, dst, offset);
+
+  for (uint32_t i = 0; i < count; ++i) {
+    auto* currentSrcDesc = const_cast<${union.name}*>(&src[i]);
+    auto* currentDstDesc = &dstDesc[i];
+    switch (selector) {
+% for line in get_union_encode_switch(union, {s.name: s for s in structures}, structures, 'currentSrcDesc', 'currentDstDesc'):
+    ${line}
+% endfor
+    default:
+      break;
+    }
+  }
+}
+
+void Decode(const ${union.name}* dst, uint32_t count, char* src, uint32_t& offset, ${seltype} selector) {
+  offset += sizeof(${union.name}) * count;
+
+  for (uint32_t i = 0; i < count; ++i) {
+    auto* currentDstDesc = const_cast<${union.name}*>(&dst[i]);
+    switch (selector) {
+% for line in get_union_decode_switch(union, {s.name: s for s in structures}, structures, 'currentDstDesc'):
+    ${line}
+% endfor
+    default:
+      break;
+    }
+  }
+}
+
+% if udefine:
+#endif
+% endif
+% endfor
+
 % for structure in structures:
 <% 
 define = get_define(structure.platform)
@@ -217,7 +287,7 @@ uint32_t GetSize(const ${structure.name}* src, uint32_t count) {
   auto blobSize = sizeof(${structure.name}) * count;
   for (uint32_t i = 0; i < count; ++i) {
     auto* currentSrcDesc = &src[i];
-    % for line in get_size_lines(structure, structures, 'currentSrcDesc'):
+    % for line in get_size_lines(structure, structures, unions, 'currentSrcDesc'):
     ${line}
     % endfor
   }
@@ -235,7 +305,7 @@ void Encode(const ${structure.name}* src, uint32_t count, char* dst, uint32_t& o
   for (uint32_t i = 0; i < count; ++i) {
     auto* currentSrcDesc = const_cast<${structure.name}*>(&srcDesc[i]);
     auto* currentDstDesc = &dstDesc[i];
-    % for line in get_encode_lines(structure, structures, 'currentSrcDesc', 'currentDstDesc'):
+    % for line in get_encode_lines(structure, structures, unions, 'currentSrcDesc', 'currentDstDesc'):
     ${line}
     % endfor
   }
@@ -246,7 +316,7 @@ void Decode(const ${structure.name}* dst, uint32_t count, char* src, uint32_t& o
   
   for (uint32_t i = 0; i < count; ++i) {
     auto* currentDstDesc = const_cast<${structure.name}*>(&dst[i]);
-    % for line in get_decode_lines(structure, structures, 'currentDstDesc'):
+    % for line in get_decode_lines(structure, structures, unions, 'currentDstDesc'):
     ${line}
     % endfor
   }

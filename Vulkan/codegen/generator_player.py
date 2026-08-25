@@ -9,12 +9,14 @@
 # ===================== end_copyright_notice ==============================
 
 from generator_helpers import generate_file
-from generator_coders import collect_pnext_handle_structs, collect_structs_needing_handle_updater, CUSTOM_HANDLE_STRUCTS
+from generator_coders import collect_pnext_handle_structs, collect_structs_needing_handle_updater, generate_child_handle_resolve, entries_need_handle_data, CUSTOM_HANDLE_STRUCTS
 
 def generate_player_files(context, output_path):
     additional_context = {
       'collect_pnext_handle_structs': collect_pnext_handle_structs,
       'collect_structs_needing_handle_updater': collect_structs_needing_handle_updater,
+      'generate_child_handle_resolve': generate_child_handle_resolve,
+      'entries_need_handle_data': entries_need_handle_data,
       'custom_handle_structs': CUSTOM_HANDLE_STRUCTS
     }
     files_to_generate = [

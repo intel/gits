@@ -27,29 +27,7 @@ void CollectPNextHandleKeys(std::vector<GITSKey>& keys, const void* pNext) {
 % endif
       case ${structure.stype_value}: {
         const auto& s = *reinterpret_cast<const ${structure.name}*>(node);
-% for kind, access, length, base_type, member_name in handle_members:
-% if kind == 'handle_single':
-        keys.push_back(HandleMapService::Get().GetKeyLenient(s.${access}));
-% elif kind == 'handle_typed_uint64':
-        keys.push_back(HandleMapService::Get().GetKeyLenient(s.${access}));
-% elif kind == 'handle_ptr':
-        if (s.${access}) {
-          keys.push_back(HandleMapService::Get().GetKeyLenient(*s.${access}));
-        } else {
-          keys.push_back(0);
-        }
-% elif kind == 'handle_array_ptr':
-        if (s.${access} && s.${length} > 0) {
-          for (uint32_t handleIdx = 0; handleIdx < s.${length}; ++handleIdx) {
-            keys.push_back(HandleMapService::Get().GetKeyLenient(s.${access}[handleIdx]));
-          }
-        }
-% elif kind == 'handle_fixed_array':
-        for (uint32_t handleIdx = 0; handleIdx < s.${length}; ++handleIdx) {
-          keys.push_back(HandleMapService::Get().GetKeyLenient(s.${access}[handleIdx]));
-        }
-% endif
-% endfor
+${generate_child_handle_keys(handle_members, 's', 0, 8)}
         break;
       }
 % if define:
@@ -76,41 +54,7 @@ define = entry['define']
 #ifdef ${define}
 % endif
 void CollectHandleKeys(std::vector<GITSKey>& keys, const ${struct_name}& s) {
-% for kind, access, length, base_type, member_name in handle_members:
-% if kind == 'handle_single':
-  keys.push_back(HandleMapService::Get().GetKeyLenient(s.${access}));
-% elif kind == 'handle_typed_uint64':
-  keys.push_back(HandleMapService::Get().GetKeyLenient(s.${access}));
-% elif kind == 'handle_ptr':
-  if (s.${access}) {
-    keys.push_back(HandleMapService::Get().GetKeyLenient(*s.${access}));
-  } else {
-    keys.push_back(0);
-  }
-% elif kind == 'handle_array_ptr':
-  if (s.${access} && s.${length} > 0) {
-    for (uint32_t handleIdx = 0; handleIdx < s.${length}; ++handleIdx) {
-      keys.push_back(HandleMapService::Get().GetKeyLenient(s.${access}[handleIdx]));
-    }
-  }
-% elif kind == 'handle_fixed_array':
-  for (uint32_t handleIdx = 0; handleIdx < s.${length}; ++handleIdx) {
-    keys.push_back(HandleMapService::Get().GetKeyLenient(s.${access}[handleIdx]));
-  }
-% elif kind == 'handle_struct_array_ptr':
-  if (s.${access} && s.${length} > 0) {
-    for (uint32_t elemIdx = 0; elemIdx < s.${length}; ++elemIdx) {
-      const auto& elem = s.${access}[elemIdx];
-${generate_child_handle_keys(member_name)}
-    }
-  }
-% elif kind == 'handle_struct_ptr':
-  if (s.${access}) {
-    const auto& elem = *s.${access};
-${generate_child_handle_keys(member_name)}
-  }
-% endif
-% endfor
+${generate_child_handle_keys(handle_members, 's', 0)}
 }
 
 void UpdateHandle(CaptureManager& manager, PointerArgument<${struct_name}>& arg) {

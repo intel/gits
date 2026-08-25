@@ -65,6 +65,16 @@ class Member:
     is_union: bool = False
     is_opaque_pointer: bool = False
     is_typed_handle: bool = False  # uint64_t member with objecttype="..." in vk.xml (type-erased handle)
+    # Union discrimination (vk.xml). On a struct member whose type is a union, `selector` names the
+    # sibling field that picks the active union member. On a union's own members, `selection` lists
+    # the enum value(s) (comma-separated) that select that member.
+    selector: str = ''
+    selection: str = ''
+    # True if this member's type (struct or union) transitively yields handle keys, i.e. the handle
+    # updater must descend into it. Covers handles reachable via nested members, union members, and
+    # pNext-extension structs. Set in postprocess().
+    contributes_keys: bool = False
+    union_ref: object = None  # the Union object, for members whose type is a union
 
 @dataclass
 class Structure:
@@ -77,12 +87,18 @@ class Structure:
     pnext_output: bool = False
     stype_value: str = ''
     struct_extends: list[str] = field(default_factory=list)
+    # True if this struct is extended (via pNext) by at least one handle-bearing struct, so its
+    # pNext chain must be walked for handle keys even when nested inside another struct.
+    pnext_extendable: bool = False
+    # True if this struct transitively yields handle keys (members / unions / pNext extensions).
+    contributes_keys: bool = False
 
 @dataclass
 class Union:
     name: str = ''
     members: list[Member] = field(default_factory=list)
     platform: str = ''
+    contributes_keys: bool = False
     
 @dataclass
 class Handle:

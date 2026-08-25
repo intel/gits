@@ -83,6 +83,8 @@ def parse_member(node) -> Member:
     fixed_array_size = [dim.strip() for dim in re.findall(r'\[([^\]]+)\]', full_type)]
     length, is_null_terminated = get_length(node)
     values = node.get('values') or ''
+    selector = node.get('selector') or ''
+    selection = node.get('selection') or ''
     is_pointer_to_pointer=bool(re.search(r'\*\s*(const\s*)?\*', full_type))
     is_pointer='*' in full_type and not is_pointer_to_pointer
     # objecttype attribute marks a uint64_t member that carries a type-erased Vulkan handle
@@ -103,6 +105,8 @@ def parse_member(node) -> Member:
         bitfield=int(full_type.split(':')[1]) if ':' in full_type else None,
         values=values,
         is_typed_handle=is_typed_handle,
+        selector=selector,
+        selection=selection,
     )
 
     return member
@@ -514,19 +518,106 @@ def postprocess(commands, structures, unions, handles, enums, bitmasks, flags, e
             if member.base_type in OPAQUE_POINTER_TYPES:
                 member.is_opaque_pointer = True
 
-    # Second pass to transitively mark structs that contain (directly or indirectly)
-    # members whose type is a struct with handles, until convergence.
+    # postprocess() skips unions in the loop above, so union members never get their type flags
+    # resolved. Set them here so the coder/handle-updater generators can recurse into the active
+    # union member (selected via the parent's `selector` field).
+    for union in unions:
+        for member in union.members:
+            if member.base_type in handle_names:
+                member.is_handle = True
+            if member.base_type in structure_names:
+                member.is_struct = True
+            if member.base_type in union_names:
+                member.is_union = True
+            if member.base_type in OPAQUE_POINTER_TYPES:
+                member.is_opaque_pointer = True
+
+    # Second pass to transitively mark structs (and unions) that contain, directly or indirectly,
+    # members whose type is a struct/union with handles, until convergence. Handles reachable only
+    # through a union member (e.g. VkDescriptorGetInfoEXT.data, VkAccelerationStructureGeometryKHR.
+    # geometry) are covered here so the aggregate that owns the union is treated as handle-bearing.
+    union_with_handles = set()
     changed = True
     while changed:
         changed = False
+        for union in unions:
+            if union.name in union_with_handles:
+                continue
+            for member in union.members:
+                if (member.is_handle or member.is_typed_handle
+                        or member.base_type in structure_with_handles
+                        or member.base_type in union_with_handles):
+                    union_with_handles.add(union.name)
+                    changed = True
+                    break
         for structure in structures:
             for member in structure.members:
-                if member.base_type in structure_with_handles:
+                if member.base_type in structure_with_handles or member.base_type in union_with_handles:
                     if not member.is_struct_with_handles:
                         member.is_struct_with_handles = True
                     if structure.name not in structure_with_handles:
                         structure_with_handles.add(structure.name)
+                        structure.has_handles = True
                         changed = True
+
+    # Contribution graph for the handle-key updater. A struct/union "contributes keys" if the
+    # recorder must descend into it to collect (and the player to remap) handle keys. Unlike the
+    # structure_with_handles set above this also follows union members and pNext-extension structs,
+    # so handles reachable only through e.g. VkAccelerationStructureGeometryKHR.geometry.triangles.
+    # pNext -> VkAccelerationStructureTrianglesOpacityMicromapEXT.micromap are covered.
+    union_by_name = {u.name: u for u in unions}
+    pnext_extendable = set()
+    for structure in structures:
+        if structure.pnext_input and structure.name in structure_with_handles:
+            for extended in structure.struct_extends:
+                pnext_extendable.add(extended)
+    for structure in structures:
+        structure.pnext_extendable = structure.name in pnext_extendable
+
+    struct_contributes = set()
+    union_contributes = set()
+    changed = True
+    while changed:
+        changed = False
+        for union in unions:
+            if union.name in union_contributes:
+                continue
+            for member in union.members:
+                if (member.is_handle or member.is_typed_handle
+                        or member.base_type in struct_contributes
+                        or member.base_type in union_contributes):
+                    union_contributes.add(union.name)
+                    changed = True
+                    break
+        for structure in structures:
+            if structure.name in struct_contributes:
+                continue
+            contributes = structure.name in pnext_extendable
+            if not contributes:
+                for member in structure.members:
+                    if member.name == 'sType':
+                        continue
+                    if (member.is_handle or member.is_typed_handle
+                            or member.base_type in struct_contributes
+                            or member.base_type in union_contributes):
+                        contributes = True
+                        break
+            if contributes:
+                struct_contributes.add(structure.name)
+                changed = True
+
+    for union in unions:
+        union.contributes_keys = union.name in union_contributes
+        for member in union.members:
+            member.contributes_keys = (member.base_type in struct_contributes
+                                       or member.base_type in union_contributes)
+    for structure in structures:
+        structure.contributes_keys = structure.name in struct_contributes
+        for member in structure.members:
+            member.contributes_keys = (member.base_type in struct_contributes
+                                       or member.base_type in union_contributes)
+            if member.base_type in union_names:
+                member.union_ref = union_by_name.get(member.base_type)
 
     for command in commands:
         first_param_type = command.params[0].base_type
