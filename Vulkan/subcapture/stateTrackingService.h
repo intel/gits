@@ -451,6 +451,9 @@ private:
   // against re-uploaded captured inputs and a freshly reserved scratch buffer. logAsKey
   // is used only for logging.
   //
+  // capturedInputs may hold several entries for one buffer - a multi-info build accumulates
+  // them per destination - and they are merged by buffer key before use.
+  //
   // keepDstAsKeys is the set of destinations this replay exists to produce. A captured command
   // can write many structures at once and the rest are dropped before it is emitted (see
   // RemoveUnreferencedAsBuildInfos) - replaying them at worst runs an update whose source the

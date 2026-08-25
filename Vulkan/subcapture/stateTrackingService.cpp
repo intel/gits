@@ -3927,11 +3927,42 @@ void StateTrackingService::EmitAccelerationStructureRebuildBytes(
     }
   }
 
+  // Captured inputs are accumulated once per destination (see ApplyAsInputReadbacksAfterSubmit).
+  // Merge them by buffer key before anything below acts on them.
+  std::vector<CapturedBuildInputBuffer> mergedInputs;
+  std::unordered_map<uint64_t, size_t> mergedInputIndexByBufferKey;
+  mergedInputs.reserve(capturedInputs.size());
+  for (const auto& in : capturedInputs) {
+    auto [it, isNew] = mergedInputIndexByBufferKey.emplace(in.BufferKey, mergedInputs.size());
+    if (isNew) {
+      mergedInputs.push_back(in);
+      continue;
+    }
+    CapturedBuildInputBuffer& into = mergedInputs[it->second];
+    for (const auto& region : in.Regions) {
+      // Both entries were read back from the same buffer at the same submit, so an
+      // identical range carries identical bytes and only needs uploading once.
+      const bool alreadyKnown =
+          std::any_of(into.Regions.begin(), into.Regions.end(), [&region](const auto& r) {
+            return r.SrcOffset == region.SrcOffset && r.RangeSize == region.RangeSize &&
+                   r.Hash == region.Hash;
+          });
+      if (!alreadyKnown) {
+        into.Regions.push_back(region);
+      }
+    }
+  }
+  for (auto& in : mergedInputs) {
+    // Keep CapturedBuildInputBuffer::Regions sorted by offset as documented.
+    std::sort(in.Regions.begin(), in.Regions.end(),
+              [](const auto& a, const auto& b) { return a.SrcOffset < b.SrcOffset; });
+  }
+
   // Inputs that shared one backing allocation cannot each be recreated as a dedicated
   // allocation at its captured address - the second would request an address the first
   // already took. Count the uses so those are relocated instead.
   std::unordered_map<uint64_t, uint32_t> capturedInputsPerAllocation;
-  for (const auto& in : capturedInputs) {
+  for (const auto& in : mergedInputs) {
     if (in.Size && in.MemoryOpaqueCaptureAddress) {
       ++capturedInputsPerAllocation[in.MemoryOpaqueCaptureAddress];
     }
@@ -3947,7 +3978,7 @@ void StateTrackingService::EmitAccelerationStructureRebuildBytes(
   // geometry addresses resolve unchanged) and upload the snapshotted bytes. An input still
   // restored as a normal object this pass is reused instead - its address is already claimed
   // - and only refilled, since RestoreBufferContents runs later than the build.
-  for (const auto& in : capturedInputs) {
+  for (const auto& in : mergedInputs) {
     if (in.Size == 0) {
       continue;
     }
