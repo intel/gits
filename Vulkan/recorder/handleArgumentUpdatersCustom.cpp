@@ -13,8 +13,6 @@
 namespace gits {
 namespace vulkan {
 
-/////////////////////////////////////////////////////////////////////////////////////////////////
-
 void CollectHandleKeys(std::vector<GITSKey>& keys, const VkWriteDescriptorSet& s) {
   keys.push_back(HandleMapService::Get().GetKeyLenient(s.dstSet));
   if (s.descriptorCount == 0) {

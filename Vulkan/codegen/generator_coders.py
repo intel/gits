@@ -9,6 +9,7 @@
 # ===================== end_copyright_notice ==============================
 
 import re
+import sys
 
 from generator_helpers import generate_file, get_define
 
@@ -102,6 +103,19 @@ def get_union_selector_types(structures, unions):
 
 def _selection_labels(member):
     return [v.strip() for v in member.selection.split(',') if v.strip()]
+
+# Unions skipped by the handle updater because vk.xml gave no way to discriminate their arms.
+# Reported once per site so a new vk.xml that drops a selector is visible instead of silently
+# losing handle remapping for that member.
+_UNSELECTABLE_UNIONS = set()
+
+def _warn_unselectable_union(struct_name, member_name, union_name):
+    site = (struct_name, member_name, union_name)
+    if site in _UNSELECTABLE_UNIONS:
+        return
+    _UNSELECTABLE_UNIONS.add(site)
+    print(f'Warning: {struct_name}.{member_name} ({union_name}) carries handles but has no '
+          f'vk.xml selector; its handles will not be remapped.', file=sys.stderr)
 
 def get_union_size_switch(union, structures_by_name, structures_list, var_name):
     lines = []
@@ -683,6 +697,13 @@ def collect_handle_members(structure, structures_by_name, include_pnext=False):
             else:
                 results.append(('handle_single', member.name, None, member.base_type, None))
         elif member.is_union and member.union_ref is not None and member.contributes_keys:
+            # A union arm can only be walked when vk.xml says which sibling field selects it.
+            # Without a selector there is no way to tell which arm is live, and reading the wrong
+            # one yields a bit pattern that is not a handle, so skip the member entirely (the
+            # pre-union behaviour) rather than guessing.
+            if not member.selector:
+                _warn_unselectable_union(structure.name, member.name, member.base_type)
+                continue
             cases = _collect_union_cases(member, structures_by_name)
             if cases:
                 results.append(('handle_union', member.name, member.selector, member.base_type, cases))
@@ -860,21 +881,47 @@ def generate_child_handle_resolve(entries, elem_expr='s', depth=0, indent=2):
                 lines.append(f'{p2}{elem_expr}.{access} = key ? HandleMapService::Get().GetHandle(key) : 0;')
                 lines.append(f'{p}}}')
         elif kind == 'handle_ptr':
+            # The key is consumed unconditionally to stay aligned with the recorder, which always
+            # pushes one slot here. The pointee is only patched when the recorded pointer was
+            # non-null: writing scratch into a null member would turn "argument not provided" into
+            # "provided as VK_NULL_HANDLE", which the driver sees as a different call.
             lines.append(f'{p}if (idx < keys.size()) {{')
             lines.append(f'{p2}GITSKey key = keys[idx++];')
-            lines.append(f'{p2}size_t dataOffset = handleData.size();')
-            lines.append(f'{p2}handleData.push_back(key ? HandleMapService::Get().GetHandle(key) : 0);')
-            lines.append(f'{p2}{elem_expr}.{access} = reinterpret_cast<{base_type}*>(&handleData[dataOffset]);')
+            lines.append(f'{p2}if ({elem_expr}.{access}) {{')
+            lines.append(f'{p3}size_t dataOffset = handleData.size();')
+            lines.append(f'{p3}handleData.push_back(key ? HandleMapService::Get().GetHandle(key) : 0);')
+            lines.append(f'{p3}{elem_expr}.{access} = reinterpret_cast<{base_type}*>(&handleData[dataOffset]);')
+            lines.append(f'{p2}}}')
             lines.append(f'{p}}}')
         elif kind == 'handle_array_ptr':
+            # handleData must not reallocate: pointers into it were handed to already-resolved
+            # members. UpdateHandle reserves keys.size() slots, so the number of slots taken here is
+            # clamped to the keys actually left, keeping total slots <= keys even if the array count
+            # disagrees with the recorded key stream. The member's own count field is clamped to
+            # match: leaving it at the original (larger) value while backing only `count` handles
+            # would let the replayed call read past the end of handleData through a pointer that
+            # looks fully sized. When no keys are left at all, drop the pointer instead of keeping
+            # the capture-time address, which is meaningless in the player process.
+            p4 = ' ' * (indent + 6)
+            avail = f'available{depth}'
+            count = f'count{depth}'
+            requested = f'requested{depth}'
             lines.append(f'{p}if ({elem_expr}.{access} && {elem_expr}.{length} > 0) {{')
-            lines.append(f'{p2}size_t dataOffset = handleData.size();')
-            lines.append(f'{p2}handleData.resize(handleData.size() + {elem_expr}.{length});')
-            lines.append(f'{p2}for (uint32_t handleIdx = 0; handleIdx < {elem_expr}.{length} && idx < keys.size(); ++handleIdx) {{')
-            lines.append(f'{p3}GITSKey key = keys[idx++];')
-            lines.append(f'{p3}handleData[dataOffset + handleIdx] = key ? HandleMapService::Get().GetHandle(key) : 0;')
+            lines.append(f'{p2}const uint32_t {requested} = static_cast<uint32_t>({elem_expr}.{length});')
+            lines.append(f'{p2}const uint32_t {avail} = static_cast<uint32_t>(keys.size() - idx);')
+            lines.append(f'{p2}const uint32_t {count} = {requested} < {avail} ? {requested} : {avail};')
+            lines.append(f'{p2}if ({count} > 0) {{')
+            lines.append(f'{p3}size_t dataOffset = handleData.size();')
+            lines.append(f'{p3}handleData.resize(dataOffset + {count});')
+            lines.append(f'{p3}for (uint32_t handleIdx = 0; handleIdx < {count}; ++handleIdx) {{')
+            lines.append(f'{p4}GITSKey key = keys[idx++];')
+            lines.append(f'{p4}handleData[dataOffset + handleIdx] = key ? HandleMapService::Get().GetHandle(key) : 0;')
+            lines.append(f'{p3}}}')
+            lines.append(f'{p3}{elem_expr}.{access} = reinterpret_cast<{base_type}*>(&handleData[dataOffset]);')
+            lines.append(f'{p2}}} else {{')
+            lines.append(f'{p3}{elem_expr}.{access} = nullptr;')
             lines.append(f'{p2}}}')
-            lines.append(f'{p2}{elem_expr}.{access} = reinterpret_cast<{base_type}*>(&handleData[dataOffset]);')
+            lines.append(f'{p2}{elem_expr}.{length} = {count};')
             lines.append(f'{p}}}')
         elif kind == 'handle_fixed_array':
             lines.append(f'{p}for (uint32_t handleIdx = 0; handleIdx < {elem_expr}.{length} && idx < keys.size(); ++handleIdx) {{')
@@ -929,11 +976,14 @@ def generate_child_handle_resolve(entries, elem_expr='s', depth=0, indent=2):
                 body = []
                 if um_kind == 'handle':
                     if um_ptr:
+                        p4 = ' ' * (indent + 6)
                         body.append(f'{p2}if (idx < keys.size()) {{')
                         body.append(f'{p3}GITSKey key = keys[idx++];')
-                        body.append(f'{p3}size_t dataOffset = handleData.size();')
-                        body.append(f'{p3}handleData.push_back(key ? HandleMapService::Get().GetHandle(key) : 0);')
-                        body.append(f'{p3}const_cast<{um_base}*&>({base_expr}) = reinterpret_cast<{um_base}*>(&handleData[dataOffset]);')
+                        body.append(f'{p3}if ({base_expr}) {{')
+                        body.append(f'{p4}size_t dataOffset = handleData.size();')
+                        body.append(f'{p4}handleData.push_back(key ? HandleMapService::Get().GetHandle(key) : 0);')
+                        body.append(f'{p4}const_cast<{um_base}*&>({base_expr}) = reinterpret_cast<{um_base}*>(&handleData[dataOffset]);')
+                        body.append(f'{p3}}}')
                         body.append(f'{p2}}}')
                     else:
                         body.append(f'{p2}if (idx < keys.size()) {{')
