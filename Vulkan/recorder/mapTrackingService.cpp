@@ -215,8 +215,8 @@ void MapTrackingService::ScheduleMemoryUpdate(GITSKey deviceMemoryKey) {
   uint64_t currentSize = granularity;
   char* currentPage = static_cast<char*>(touchedPages[0]);
   if (currentPage < baseAddress) {
-    currentPage = baseAddress;
     currentSize -= (baseAddress - currentPage);
+    currentPage = baseAddress;
   }
 
   for (uint64_t i = 1; i < pageCount; ++i) {
