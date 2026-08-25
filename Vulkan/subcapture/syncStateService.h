@@ -79,6 +79,15 @@ public:
   // semKey: GITS key of the semaphore.  value: VkSemaphoreSignalInfo::value.
   void OnSignalSemaphore(uint64_t semKey, uint64_t value);
 
+  // Called from Post(vkCmdExecuteCommands) for each secondary CB: folds the
+  // secondary's buffered vkCmdSetEvent/vkCmdResetEvent net effects into the
+  // primary (last write wins) so ApplyCommandBufferEventStates sees them when
+  // the primary is submitted - a secondary's own commands never reach
+  // vkQueueSubmit directly. Mirrors legacy vkCmdExecuteCommands_SD folding
+  // eventStatesAfterSubmit into the primary (vulkanStateTracking.h:4244-4247).
+  // A no-op if either key is not a tracked command buffer.
+  void MergeCommandBufferEventStates(uint64_t primaryKey, uint64_t secondaryKey);
+
 private:
   void SignalFence(uint64_t fenceKey);
   void UnsignalBinarySemaphore(uint64_t semKey);

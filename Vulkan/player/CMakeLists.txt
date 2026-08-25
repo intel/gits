@@ -42,6 +42,8 @@ set(SERVICES_SRC
   ${CMAKE_CURRENT_SOURCE_DIR}/swapchainImageSyncService.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/fencePendingSignalService.h
   ${CMAKE_CURRENT_SOURCE_DIR}/fencePendingSignalService.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/eventPendingSignalService.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/eventPendingSignalService.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/rayTracingReplayService.h
   ${CMAKE_CURRENT_SOURCE_DIR}/rayTracingReplayService.cpp
 )

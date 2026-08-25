@@ -1983,13 +1983,15 @@ void SubcaptureLayer::Post(vkCmdCopyQueryPoolResultsCommand& command) {
 void SubcaptureLayer::Post(vkCmdExecuteCommandsCommand& command) {
   m_CommandBufferLifecycle.TrackHandleDependencies(command.m_commandBuffer.Key,
                                                    command.m_pCommandBuffers.Keys);
-  // Fold each secondary's buffered query effects and image-layout transitions
-  // into the primary so they are applied when the primary is submitted.
+  // Fold each secondary's buffered query effects, image-layout transitions and
+  // event set/reset effects into the primary so they are applied when the
+  // primary is submitted.
   for (uint64_t secondaryKey : command.m_pCommandBuffers.Keys) {
     m_StateTracking.GetQueryPoolStateService().MergeSecondary(command.m_commandBuffer.Key,
                                                               secondaryKey);
     m_ImageLayout.MergeSecondary(command.m_commandBuffer.Key, secondaryKey);
     m_StateTracking.MergeSecondaryAsInputReadbacks(command.m_commandBuffer.Key, secondaryKey);
+    m_SyncState.MergeCommandBufferEventStates(command.m_commandBuffer.Key, secondaryKey);
     if (m_AnalyzerRaytracingService) {
       m_AnalyzerRaytracingService->MergeSecondary(command.m_commandBuffer.Key, secondaryKey);
     }

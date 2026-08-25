@@ -11,6 +11,7 @@
 #include "gits.h"
 #include "descriptorUpdateTemplateService.h"
 #include "deviceDiagnosticService.h"
+#include "eventPendingSignalService.h"
 #include "fencePendingSignalService.h"
 #include "dispatchTableAuto.h"
 #include "dispatchTablesHolder.h"
@@ -95,6 +96,10 @@ public:
     return m_FencePendingSignalService;
   }
 
+  EventPendingSignalService& GetEventPendingSignalService() {
+    return m_EventPendingSignalService;
+  }
+
   RestoreContentService& GetRestoreContentService() {
     return m_RestoreContentService;
   }
@@ -124,6 +129,7 @@ private:
   DescriptorUpdateTemplateService m_DescriptorUpdateTemplateService;
   SwapchainImageSyncService m_SwapchainImageSyncService;
   FencePendingSignalService m_FencePendingSignalService;
+  EventPendingSignalService m_EventPendingSignalService;
   RestoreContentService m_RestoreContentService{*this};
   DeviceDiagnosticService m_DeviceDiagnosticService{*this};
 };

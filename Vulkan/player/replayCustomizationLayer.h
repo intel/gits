@@ -72,6 +72,31 @@ public:
   void Pre(vkGetEventStatusCommand& command) override;
   void Post(vkGetEventStatusCommand& command) override;
 
+  // Per-event "pending signal" tracking, delegated to EventPendingSignalService.
+  // It mirrors the legacy player's SD()._eventstates[event]->eventUsed guard
+  // (vulkanStateTracking.h:2448-2454, applied post-submit from
+  // vulkanPlayerRunWrap.h:3120-3230): an event is pending once a host
+  // vkSetEvent, or a vkCmdSetEvent (2/2KHR) recorded into a submitted command
+  // buffer, has been replayed, and stays pending until it is reset (or
+  // destroyed). The event catch-up wait in Post(vkGetEventStatus) is only
+  // injected for pending events; polling an event with no pending signal (e.g.
+  // one whose SET state was only established by state restore, with nothing
+  // left in this replay range to reproduce it) must NOT wait, otherwise the
+  // player spins forever.
+  void Post(vkSetEventCommand& command) override;
+  void Post(vkResetEventCommand& command) override;
+  void Post(vkDestroyEventCommand& command) override;
+  void Pre(vkBeginCommandBufferCommand& command) override;
+  void Post(vkCmdSetEventCommand& command) override;
+  void Post(vkCmdSetEvent2Command& command) override;
+  void Post(vkCmdSetEvent2KHRCommand& command) override;
+  void Post(vkCmdResetEventCommand& command) override;
+  void Post(vkCmdResetEvent2Command& command) override;
+  void Post(vkCmdResetEvent2KHRCommand& command) override;
+  void Post(vkCmdExecuteCommandsCommand& command) override;
+  void Post(vkResetCommandBufferCommand& command) override;
+  void Post(vkResetCommandPoolCommand& command) override;
+
   void Pre(vkGetSemaphoreCounterValueCommand& command) override;
   void Post(vkGetSemaphoreCounterValueCommand& command) override;
 
@@ -132,6 +157,10 @@ private:
 
   // Serializes the playback thread behind the GPU after every queue submission
   void WaitAfterQueueSubmit(HandleArgument<VkQueue>& queue, VkResult submitResult);
+  // Feeds each submitted command buffer's buffered vkCmdSetEvent/vkCmdResetEvent
+  // net effects (see EventPendingSignalService) into the pending-event set.
+  void ApplySubmittedCommandBufferEventStates(const VkSubmitInfo* pSubmits, uint32_t submitCount);
+  void ApplySubmittedCommandBufferEventStates(const VkSubmitInfo2* pSubmits, uint32_t submitCount);
   static thread_local VkResult tl_recorderReturnValue;
   static thread_local uint64_t tl_recorderSemaphoreCounterValue;
   // Backing storage for the filtered ppEnabled{Layer,Extension}Names arrays

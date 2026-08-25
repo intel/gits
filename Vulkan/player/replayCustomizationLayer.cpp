@@ -81,6 +81,10 @@ void ReplayCustomizationLayer::Post(vkCreateCommandPoolCommand& command) {
 
 void ReplayCustomizationLayer::Pre(vkDestroyCommandPoolCommand& command) {
   m_Manager.GetDeviceDiagnosticService().UntrackCommandPool(command.m_commandPool.Value);
+  // Destroying a pool implicitly frees every command buffer allocated from it,
+  // so drop their buffered event state too, mirroring legacy
+  // vkDestroyCommandPool_SD (vulkanStateTracking.h:689-716).
+  m_Manager.GetEventPendingSignalService().UntrackCommandPool(command.m_commandPool.Value);
 }
 
 void ReplayCustomizationLayer::Post(vkAllocateCommandBuffersCommand& command) {
@@ -89,12 +93,39 @@ void ReplayCustomizationLayer::Post(vkAllocateCommandBuffersCommand& command) {
     m_Manager.GetDeviceDiagnosticService().TrackCommandBuffers(
         command.m_device.Value, command.m_pAllocateInfo.Value->commandPool,
         command.m_pAllocateInfo.Value->commandBufferCount, command.m_pCommandBuffers.Value);
+    for (uint32_t i = 0; i < command.m_pAllocateInfo.Value->commandBufferCount; ++i) {
+      m_Manager.GetEventPendingSignalService().TrackCommandBuffer(
+          command.m_pCommandBuffers.Value[i], command.m_pAllocateInfo.Value->commandPool);
+    }
   }
 }
 
 void ReplayCustomizationLayer::Pre(vkFreeCommandBuffersCommand& command) {
   m_Manager.GetDeviceDiagnosticService().UntrackCommandBuffers(command.m_commandBufferCount.Value,
                                                                command.m_pCommandBuffers.Value);
+  if (command.m_pCommandBuffers.Value != nullptr) {
+    for (uint32_t i = 0; i < command.m_commandBufferCount.Value; ++i) {
+      m_Manager.GetEventPendingSignalService().UntrackCommandBuffer(
+          command.m_pCommandBuffers.Value[i]);
+    }
+  }
+}
+
+// vkResetCommandPool/vkResetCommandBuffer discard whatever vkCmdSetEvent/
+// vkCmdResetEvent effects were buffered for the affected command buffer(s)'
+// previous contents (they must return to the initial state before they can be
+// recorded again). Mirrors legacy vkResetCommandPool_SD/vkResetCommandBuffer_SD
+// (vulkanStateTracking.h:679-687,2572-2588).
+void ReplayCustomizationLayer::Post(vkResetCommandBufferCommand& command) {
+  if (command.m_Return.Value == VK_SUCCESS) {
+    m_Manager.GetEventPendingSignalService().ClearCommandBuffer(command.m_commandBuffer.Value);
+  }
+}
+
+void ReplayCustomizationLayer::Post(vkResetCommandPoolCommand& command) {
+  if (command.m_Return.Value == VK_SUCCESS) {
+    m_Manager.GetEventPendingSignalService().ResetCommandPool(command.m_commandPool.Value);
+  }
 }
 
 #ifdef VK_USE_PLATFORM_WIN32_KHR
@@ -283,12 +314,123 @@ void ReplayCustomizationLayer::Pre(vkGetEventStatusCommand& command) {
 }
 
 void ReplayCustomizationLayer::Post(vkGetEventStatusCommand& command) {
+  // Only wait on events that have a pending signal, mirroring legacy
+  // vkGetEventStatus_WRAPRUN's eventUsed guard (vulkanPlayerRunWrap.h:1012-1013).
+  // An event with no pending signal (its setting vkSetEvent/vkCmdSetEvent lies
+  // before the replay range, or it was reset and not re-set) will never become
+  // set in this replay range, so waiting on it spins forever.
   while (command.m_Return.Value != VK_EVENT_SET &&
-         command.m_Return.Value != tl_recorderReturnValue) {
+         command.m_Return.Value != tl_recorderReturnValue &&
+         m_Manager.GetEventPendingSignalService().IsPending(command.m_event.Value)) {
     std::this_thread::sleep_for(std::chrono::milliseconds(5));
     auto& dispatchTable = m_Manager.GetDeviceDispatchTable(command.m_device.Value);
     command.m_Return.Value =
         dispatchTable.vkGetEventStatus(command.m_device.Value, command.m_event.Value);
+  }
+}
+
+// Per-event pending-signal tracking is owned by EventPendingSignalService; the
+// handlers below simply feed it the signalling/reset events. Events always
+// start unsignalled (Vulkan has no VK_EVENT_CREATE_SIGNALED_BIT equivalent to
+// VK_FENCE_CREATE_SIGNALED_BIT), so vkCreateEvent needs no handler here.
+
+void ReplayCustomizationLayer::Post(vkSetEventCommand& command) {
+  if (command.m_Return.Value == VK_SUCCESS) {
+    m_Manager.GetEventPendingSignalService().MarkPending(command.m_event.Value);
+  }
+}
+
+void ReplayCustomizationLayer::Post(vkResetEventCommand& command) {
+  if (command.m_Return.Value == VK_SUCCESS) {
+    m_Manager.GetEventPendingSignalService().ClearPending(command.m_event.Value);
+  }
+}
+
+// Drop tracking on destroy so a recycled VkEvent handle does not inherit stale
+// pending state.
+void ReplayCustomizationLayer::Post(vkDestroyEventCommand& command) {
+  m_Manager.GetEventPendingSignalService().ClearPending(command.m_event.Value);
+}
+
+// (Re-)recording a command buffer discards whatever vkCmdSetEvent/vkCmdResetEvent
+// effects were buffered for its previous contents (it must be in the initial
+// state to begin, so nothing buffered here can be applied again via submit).
+void ReplayCustomizationLayer::Pre(vkBeginCommandBufferCommand& command) {
+  m_Manager.GetEventPendingSignalService().ClearCommandBuffer(command.m_commandBuffer.Value);
+}
+
+// vkCmdSetEvent/vkCmdResetEvent (and the 2/2KHR variants) only take effect once
+// the command buffer they were recorded into is submitted, so buffer the net
+// effect per event instead of updating the pending set directly (applied from
+// Post(vkQueueSubmit*) via ApplySubmittedCommandBufferEventStates). Mirrors
+// legacy CommandBufferState::eventStatesAfterSubmit
+// (vulkanPlayerRunWrap.h:3120-3230).
+void ReplayCustomizationLayer::Post(vkCmdSetEventCommand& command) {
+  m_Manager.GetEventPendingSignalService().RecordCmdEvent(command.m_commandBuffer.Value,
+                                                          command.m_event.Value, true);
+}
+
+void ReplayCustomizationLayer::Post(vkCmdSetEvent2Command& command) {
+  m_Manager.GetEventPendingSignalService().RecordCmdEvent(command.m_commandBuffer.Value,
+                                                          command.m_event.Value, true);
+}
+
+void ReplayCustomizationLayer::Post(vkCmdSetEvent2KHRCommand& command) {
+  m_Manager.GetEventPendingSignalService().RecordCmdEvent(command.m_commandBuffer.Value,
+                                                          command.m_event.Value, true);
+}
+
+void ReplayCustomizationLayer::Post(vkCmdResetEventCommand& command) {
+  m_Manager.GetEventPendingSignalService().RecordCmdEvent(command.m_commandBuffer.Value,
+                                                          command.m_event.Value, false);
+}
+
+void ReplayCustomizationLayer::Post(vkCmdResetEvent2Command& command) {
+  m_Manager.GetEventPendingSignalService().RecordCmdEvent(command.m_commandBuffer.Value,
+                                                          command.m_event.Value, false);
+}
+
+void ReplayCustomizationLayer::Post(vkCmdResetEvent2KHRCommand& command) {
+  m_Manager.GetEventPendingSignalService().RecordCmdEvent(command.m_commandBuffer.Value,
+                                                          command.m_event.Value, false);
+}
+
+// A secondary command buffer cannot be submitted directly - its commands only
+// take effect through the primary that executes it via vkCmdExecuteCommands -
+// so fold each secondary's buffered vkCmdSetEvent/vkCmdResetEvent net effects
+// into the primary here. Mirrors legacy vkCmdExecuteCommands_SD
+// (vulkanStateTracking.h:4205-4247).
+void ReplayCustomizationLayer::Post(vkCmdExecuteCommandsCommand& command) {
+  auto& eventService = m_Manager.GetEventPendingSignalService();
+  for (uint32_t i = 0; i < command.m_commandBufferCount.Value; ++i) {
+    eventService.MergeCommandBuffer(command.m_commandBuffer.Value,
+                                    command.m_pCommandBuffers.Value[i]);
+  }
+}
+
+void ReplayCustomizationLayer::ApplySubmittedCommandBufferEventStates(const VkSubmitInfo* pSubmits,
+                                                                      uint32_t submitCount) {
+  if (pSubmits == nullptr) {
+    return;
+  }
+  auto& eventService = m_Manager.GetEventPendingSignalService();
+  for (uint32_t i = 0; i < submitCount; ++i) {
+    for (uint32_t c = 0; c < pSubmits[i].commandBufferCount; ++c) {
+      eventService.ApplyCommandBuffer(pSubmits[i].pCommandBuffers[c]);
+    }
+  }
+}
+
+void ReplayCustomizationLayer::ApplySubmittedCommandBufferEventStates(const VkSubmitInfo2* pSubmits,
+                                                                      uint32_t submitCount) {
+  if (pSubmits == nullptr) {
+    return;
+  }
+  auto& eventService = m_Manager.GetEventPendingSignalService();
+  for (uint32_t i = 0; i < submitCount; ++i) {
+    for (uint32_t c = 0; c < pSubmits[i].commandBufferInfoCount; ++c) {
+      eventService.ApplyCommandBuffer(pSubmits[i].pCommandBufferInfos[c].commandBuffer);
+    }
   }
 }
 
@@ -682,6 +824,7 @@ void ReplayCustomizationLayer::Post(vkCreateFenceCommand& command) {
 void ReplayCustomizationLayer::Post(vkQueueSubmitCommand& command) {
   if (command.m_Return.Value == VK_SUCCESS) {
     m_Manager.GetFencePendingSignalService().MarkPending(command.m_fence.Value);
+    ApplySubmittedCommandBufferEventStates(command.m_pSubmits.Value, command.m_submitCount.Value);
   }
   WaitAfterQueueSubmit(command.m_queue, command.m_Return.Value);
 }
@@ -689,6 +832,7 @@ void ReplayCustomizationLayer::Post(vkQueueSubmitCommand& command) {
 void ReplayCustomizationLayer::Post(vkQueueSubmit2Command& command) {
   if (command.m_Return.Value == VK_SUCCESS) {
     m_Manager.GetFencePendingSignalService().MarkPending(command.m_fence.Value);
+    ApplySubmittedCommandBufferEventStates(command.m_pSubmits.Value, command.m_submitCount.Value);
   }
   WaitAfterQueueSubmit(command.m_queue, command.m_Return.Value);
 }
@@ -696,6 +840,7 @@ void ReplayCustomizationLayer::Post(vkQueueSubmit2Command& command) {
 void ReplayCustomizationLayer::Post(vkQueueSubmit2KHRCommand& command) {
   if (command.m_Return.Value == VK_SUCCESS) {
     m_Manager.GetFencePendingSignalService().MarkPending(command.m_fence.Value);
+    ApplySubmittedCommandBufferEventStates(command.m_pSubmits.Value, command.m_submitCount.Value);
   }
   WaitAfterQueueSubmit(command.m_queue, command.m_Return.Value);
 }

@@ -174,6 +174,17 @@ void SyncStateService::ApplyCommandBufferEventStates(uint64_t cbKey) {
   }
 }
 
+void SyncStateService::MergeCommandBufferEventStates(uint64_t primaryKey, uint64_t secondaryKey) {
+  auto* prim = m_StateTracking.GetState<CommandBufferState>(primaryKey);
+  auto* sec = m_StateTracking.GetState<CommandBufferState>(secondaryKey);
+  if (!prim || !sec) {
+    return;
+  }
+  for (const auto& [eventKey, signaled] : sec->EventStatesAfterSubmit) {
+    prim->EventStatesAfterSubmit[eventKey] = signaled;
+  }
+}
+
 void SyncStateService::OnSignalSemaphore(uint64_t semKey, uint64_t value) {
   UpdateTimelineSemaphoreValue(semKey, value);
 }
