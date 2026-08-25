@@ -158,6 +158,7 @@ struct BufferState : ObjectState {
   // Populated by vkBindBufferMemory* - not part of the creation command.
   uint64_t BoundMemoryKey{};
   VkDeviceSize MemoryOffset{};
+  bool SparseBinding{}; // VK_BUFFER_CREATE_SPARSE_BINDING_BIT
   // Stored at vkCreateBuffer time for GPU-readback content restore.
   VkDeviceSize BufferSize{};
   VkBufferUsageFlags UsageFlags{};
@@ -189,6 +190,7 @@ struct ImageState : ObjectState {
   // Populated by vkBindImageMemory* - not part of the creation command.
   uint64_t BoundMemoryKey{};
   VkDeviceSize MemoryOffset{};
+  bool SparseBinding{}; // VK_IMAGE_CREATE_SPARSE_BINDING_BIT
   // Stored at vkCreateImage time for GPU-readback content restore.
   VkExtent3D Extent{};
   uint32_t MipLevels{1};

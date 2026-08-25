@@ -24,6 +24,12 @@ CUSTOM_HANDLE_STRUCTS = {
     'VkRayTracingPipelineCreateInfoKHR',
 }
 
+# Structs that need a custom key layout but keep their generated GetSize/Encode/Decode. Unlike
+# CUSTOM_HANDLE_STRUCTS this only opts out of CollectHandleKeys/ResolveHandleKeys/UpdateHandle.
+CUSTOM_HANDLE_UPDATER_STRUCTS = {
+    'VkAccelerationStructureBuildGeometryInfoKHR',
+}
+
 def is_complex_struct(base_type, structures_by_name):
     s = structures_by_name.get(base_type)
     if s is None:
@@ -1070,7 +1076,7 @@ def collect_structs_needing_handle_updater(commands, structures):
         structure = structures_by_name.get(struct_name)
         if structure is None:
             continue
-        if struct_name in CUSTOM_HANDLE_STRUCTS:
+        if struct_name in CUSTOM_HANDLE_STRUCTS or struct_name in CUSTOM_HANDLE_UPDATER_STRUCTS:
             continue
         has_pnext = any(m.name == 'pNext' for m in structure.members)
         handle_members = collect_handle_members(structure, structures_by_name)

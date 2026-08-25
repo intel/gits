@@ -24,7 +24,7 @@ void AnalyzerRaytracingService::StageTlasInstanceReadbacks(
     const vkCmdBuildAccelerationStructuresKHRCommand& command) {
   const uint32_t infoCount = command.m_infoCount.Value;
   if (infoCount == 0 || !command.m_pInfos.Value ||
-      command.m_pInfos.HandleKeys.size() < 2 * static_cast<size_t>(infoCount)) {
+      !HasAsBuildKeys(command.m_pInfos.HandleKeys, infoCount)) {
     return;
   }
 
@@ -33,8 +33,7 @@ void AnalyzerRaytracingService::StageTlasInstanceReadbacks(
     if (info.type != VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR || info.geometryCount == 0) {
       continue;
     }
-    // TODO: 2 handles per info will not hold after we add pNext OMM handle
-    const uint64_t dstKey = command.m_pInfos.HandleKeys[2 * i + 1];
+    const uint64_t dstKey = command.m_pInfos.HandleKeys[AsBuildDstKeyIndex(i)];
     if (!dstKey) {
       continue;
     }

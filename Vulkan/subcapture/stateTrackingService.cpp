@@ -8,6 +8,7 @@
 
 #include "stateTrackingService.h"
 #include "analyzerResults.h"
+#include "asBuildCommandPatching.h"
 #include "subcaptureFatal.h"
 #include "commandSerializersAuto.h"
 #include "commandSerializersCustom.h"
@@ -2344,6 +2345,14 @@ bool StateTrackingService::RestoreBuffer(ObjectState* state) {
     return false;
   }
 
+  // A sparse buffer gets its pages from vkQueueBindSparse, which SubcaptureLayer
+  // does not track currently.
+  if (buf->SparseBinding) {
+    FatalSubcaptureError("buffer key=" + std::to_string(buf->Key) +
+                         " was created with VK_BUFFER_CREATE_SPARSE_BINDING_BIT. Sparse memory "
+                         "binding is not supported in subcapture yet.");
+  }
+
   // Emit vkCreateBuffer BEFORE restoring bound memory. For dedicated
   // allocations VkMemoryDedicatedAllocateInfo::buffer references this buffer,
   // so its handle must be registered in HandleMapService before vkAllocateMemory
@@ -2560,6 +2569,16 @@ bool StateTrackingService::RestoreImage(ObjectState* state) {
 
   if (img->CreationCommandBuffer.empty()) {
     return false;
+  }
+
+  // Same gap as in RestoreBuffer: no vkQueueBindSparse tracking means a sparse
+  // image would replay with no memory bound and no content, silently.
+  if (img->SparseBinding) {
+    FatalSubcaptureError(
+        "image key=" + std::to_string(img->Key) +
+        " was created with VK_IMAGE_CREATE_SPARSE_BINDING_BIT and is needed by the recording "
+        "range, but sparse memory binding is not restored yet, so the image would replay with no "
+        "memory and no content");
   }
 
   // Emit vkCreateImage BEFORE restoring bound memory. For dedicated
@@ -3776,13 +3795,14 @@ void StateTrackingService::EmitAccelerationStructureRebuild(
     uint64_t physDevKey,
     uint64_t queueKey,
     uint64_t poolKey,
-    const AccelerationStructureState& asState) {
+    const AccelerationStructureState& asState,
+    const std::unordered_set<uint64_t>& keepDstAsKeys) {
   // The per-AS last-build path replays the AS's single stored build command. No source
   // map: only that one op is retained, so nothing produced the contents an update would
   // refit from, and an update-mode info aborts the run instead of becoming a build.
   EmitAccelerationStructureRebuildBytes(deviceKey, physDevKey, queueKey, poolKey,
                                         asState.LastBuildCommandBytes, asState.CapturedBuildInputs,
-                                        asState.Key);
+                                        asState.Key, keepDstAsKeys);
 }
 
 bool StateTrackingService::QueryCaptureReplayBufferRequirements(uint64_t deviceKey,
@@ -3804,10 +3824,16 @@ void StateTrackingService::EmitAccelerationStructureRebuildBytes(
     const std::vector<char>& commandBytes,
     const std::vector<CapturedBuildInputBuffer>& capturedInputs,
     uint64_t logAsKey,
+    const std::unordered_set<uint64_t>& keepDstAsKeys,
     const std::unordered_map<uint64_t, uint64_t>* updateSourceByDstAs) {
   if (commandBytes.empty()) {
     return;
   }
+  // Every address reserved from here on backs a transient this function also emits a destroy
+  // for, so only those may be released at the end. Reservations already held belong to the
+  // caller - the BLAS chain keeps a relocated structure alive across many rebuilds.
+  const size_t reservationMark = m_GpuReadbackHelper->MarkReservedAddresses();
+
   // Decode mutates the source buffer (AddPtrs), so work on a copy. Its m_commandBuffer
   // holds the original app CB's key, which refers to nothing at restore-emission time and
   // is patched to the one-shot CB allocated below - after the input uploads, which each
@@ -3822,6 +3848,21 @@ void StateTrackingService::EmitAccelerationStructureRebuildBytes(
   Decode(scratch.data(), cmd);
   cmd.m_commandBuffer.Key = kContentCBKey;
   cmd.m_Key = m_Recorder.CreateStateRestoreKey();
+
+  // Drop the destinations this replay is not for, before anything below walks the infos.
+  // A refusal means the handle key layout is not the one the recorder documents, which
+  // leaves no safe way to tell one info's keys from the next.
+  if (!RemoveUnreferencedAsBuildInfos(cmd, keepDstAsKeys)) {
+    FatalSubcaptureError(
+        "acceleration structure build command key=" + std::to_string(cmd.m_Key) +
+        " carries an unexpected handle key layout, so the destinations this restore does not "
+        "need cannot be dropped from it");
+  }
+  if (cmd.m_infoCount.Value == 0) {
+    LOG_TRACE << "Vulkan subcapture: acceleration structure build command key=" << cmd.m_Key
+              << " writes no needed destination, so it is not replayed";
+    return;
+  }
 
   // Synthetic (buffer,memory) keys for this rebuild's transients - recreated inputs and
   // fresh scratch - pulled from the shared allocator and destroyed after the build.
@@ -4114,15 +4155,16 @@ void StateTrackingService::EmitAccelerationStructureRebuildBytes(
   // VUID-vkCmdBuildAccelerationStructuresKHR-pInfos-10126 allows to be as small as its
   // COMPACTED_SIZE query result while a build must satisfy the full build size.
   for (uint32_t i = 0; i < cmd.m_infoCount.Value && cmd.m_pInfos.Value &&
-                       2 * static_cast<size_t>(i) + 1 < cmd.m_pInfos.HandleKeys.size();
+                       HasAsBuildKeys(cmd.m_pInfos.HandleKeys, i + 1);
        ++i) {
     VkAccelerationStructureBuildGeometryInfoKHR& info = cmd.m_pInfos.Value[i];
     const bool isUpdate = info.mode == VK_BUILD_ACCELERATION_STRUCTURE_MODE_UPDATE_KHR;
-    const uint64_t dstAsKey = cmd.m_pInfos.HandleKeys[2 * static_cast<size_t>(i) + 1];
+    const uint64_t dstAsKey = cmd.m_pInfos.HandleKeys[AsBuildDstKeyIndex(i)];
 
     // Repoint an update at the source the reduced chain actually produced. The recorded
     // one may be an intermediate the reduction dropped. Handles travel only via
-    // HandleKeys (see generator_coders.py), so that slot is the one to write.
+    // HandleKeys (see UpdateHandle in handleArgumentUpdatersCustom.cpp), so that slot is
+    // the one to write.
     if (isUpdate) {
       uint64_t chainSrcAsKey = 0;
       if (updateSourceByDstAs) {
@@ -4132,25 +4174,17 @@ void StateTrackingService::EmitAccelerationStructureRebuildBytes(
         }
       }
       if (!chainSrcAsKey) {
-        const std::string what =
+        // Only destinations this replay is for reach here - the rest were dropped above - so
+        // this is a structure the restore does need whose predecessor was never produced.
+        FatalSubcaptureError(
             "acceleration structure key=" + std::to_string(dstAsKey) +
             " must be restored by replaying an update (command key=" + std::to_string(cmd.m_Key) +
-            "), but the structure that update refits from is not known, so it cannot be replayed";
-        if (!updateSourceByDstAs) {
-          // The per-AS path: no operation chain is tracked for this structure, so
-          // there is no predecessor to refit from. Top-level structures live here.
-          FatalSubcaptureError(
-              what +
-              ". No operation chain is tracked for it - TLAS update (refit) "
-              "by the application are not supported yet. Set "
-              "Common.Player.Subcapture.Vulkan.CaptureASBuildInputs=false to restore all "
-              "acceleration structures from serialized blobs instead (replayable only on this GPU "
-              "and driver)");
-        }
-        FatalSubcaptureError(what + ". Delete '" + AnalyzerResults::GetAnalysisFileName() +
-                             "' and re-run so the analysis pass regenerates it");
+            "), but the structure that update refits from is not known, so it cannot be replayed. "
+            "Set Common.Player.Subcapture.Vulkan.CaptureASBuildInputs=false to restore all "
+            "acceleration structures from serialized blobs instead (replayable only on this GPU "
+            "and driver)");
       }
-      cmd.m_pInfos.HandleKeys[2 * static_cast<size_t>(i)] = chainSrcAsKey;
+      cmd.m_pInfos.HandleKeys[AsBuildSrcKeyIndex(i)] = chainSrcAsKey;
     }
 
     std::vector<uint32_t> maxPrimitiveCounts(info.geometryCount, 0);
@@ -4304,9 +4338,10 @@ void StateTrackingService::EmitAccelerationStructureRebuildBytes(
     EmitCaptureReplayBufferDestroy(m_Recorder, deviceKey, bufKey, memKey);
   }
 
-  // All transient addresses for this rebuild have been authored. A later rebuild may
-  // safely reuse the freed addresses: its transients live in a separate command stream.
-  m_GpuReadbackHelper->ReleaseReservedAddresses();
+  // All transient addresses for this rebuild have been authored and destroyed above, so a
+  // later reservation may reuse them. Anything reserved before the mark is still live in
+  // the stream and stays held.
+  m_GpuReadbackHelper->ReleaseReservedAddressesSince(reservationMark);
 }
 
 // Restore TLAS asKey's content by replaying the last build command against re-uploaded inputs.
@@ -4339,17 +4374,22 @@ void StateTrackingService::RestoreAccelerationStructureByRebuild(
         useBlobs);
   }
 
-  // An update-mode build's source AS (src != dst) is carried in DependencyKeys. Rebuild it
-  // first so this AS does not refit from uninitialized source content.
-  //
-  // EmitAccelerationStructureRebuild replays the *entire* captured build command, which may
-  // update several destinations at once (LastBuildSiblingAsKeys), each refitting from its
-  // own source. So every sibling's sources are walked here, not just this AS's.
-  std::vector<uint64_t> siblingKeys = asState->LastBuildSiblingAsKeys;
-  if (siblingKeys.empty()) {
-    siblingKeys.push_back(asKey);
+  // The captured command may write several destinations at once (LastBuildSiblingAsKeys).
+  // Only the top-level ones belong to this path - RestoreBlasChain owns every BLAS, and
+  // replaying a bottom-level info from here would overwrite what the chain just produced
+  // with whatever this one command happened to build.
+  std::unordered_set<uint64_t> keepDstAsKeys{asKey};
+  for (uint64_t sibling : asState->LastBuildSiblingAsKeys) {
+    auto* sibState = GetState<AccelerationStructureState>(sibling);
+    if (sibState && sibState->Type == VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR) {
+      keepDstAsKeys.insert(sibling);
+    }
   }
-  for (uint64_t sibKey : siblingKeys) {
+
+  // An update-mode build's source AS (src != dst) is carried in DependencyKeys. Rebuild it
+  // first so this AS does not refit from uninitialized source content. Walked for every
+  // destination the replay keeps, each of which refits from its own source.
+  for (uint64_t sibKey : keepDstAsKeys) {
     auto* sibState = GetState<AccelerationStructureState>(sibKey);
     if (!sibState) {
       continue;
@@ -4366,8 +4406,9 @@ void StateTrackingService::RestoreAccelerationStructureByRebuild(
 
   // The rebuild is self-contained: it recreates the build inputs from the captured content
   // and reserves a fresh scratch, so no live input buffers are required here.
-  EmitAccelerationStructureRebuild(deviceKey, physDevKey, queueKey, poolKey, *asState);
-  for (uint64_t sibling : asState->LastBuildSiblingAsKeys) {
+  EmitAccelerationStructureRebuild(deviceKey, physDevKey, queueKey, poolKey, *asState,
+                                   keepDstAsKeys);
+  for (uint64_t sibling : keepDstAsKeys) {
     m_RebuiltAsKeys.insert(sibling);
   }
   m_RebuiltAsKeys.insert(asKey);
@@ -4529,6 +4570,10 @@ void StateTrackingService::RestoreBlasChain() {
   if (chain.empty()) {
     return;
   }
+  GITS_ASSERT(m_GpuReadbackHelper);
+  // Held for the whole chain: a relocated structure stays live across the rebuilds that follow
+  // it, and each of those releases only what it reserved itself.
+  const size_t chainReservationMark = m_GpuReadbackHelper->MarkReservedAddresses();
 
   // Per-device queue/pool/physDev context, resolved lazily and cached.
   struct DevCtx {
@@ -4561,19 +4606,28 @@ void StateTrackingService::RestoreBlasChain() {
   // structure this chain really produces. Multi-info commands contribute one entry per
   // destination.
   std::unordered_map<uint64_t, std::unordered_map<uint64_t, uint64_t>> updateSourceByCmd;
+  // Destinations the reduction kept, per command. A captured command writes every structure
+  // the application batched into it, of which the chain usually needs only some. The rest are
+  // dropped before the command is emitted, so they neither need a live handle here nor get
+  // written by the replay.
+  std::unordered_map<uint64_t, std::unordered_set<uint64_t>> retainedDstByCmd;
   for (const BlasChainOp& op : chain) {
-    if (!op.IsCopy && op.SrcAsKey) {
+    if (op.IsCopy) {
+      continue;
+    }
+    retainedDstByCmd[op.CommandKey].insert(op.DstAsKey);
+    if (op.SrcAsKey) {
       updateSourceByCmd[op.CommandKey][op.DstAsKey] = op.SrcAsKey;
     }
   }
 
   // Acceleration-structure handles a retained command references when it replays, i.e. the
-  // set the player resolves through HandleMapService. Destinations come straight out of the
-  // encoded HandleKeys, since a multi-info command replays wholesale, including destinations
-  // that are not themselves retained. Sources come from the reduced chain rather than the
-  // bytes, because that is what the emit patches the source slot to. A copy is replayed
-  // verbatim and reads both [src, dst] by handle.
-  auto referencedAsKeys = [&updateSourceByCmd](const RetainedAsCommand& rc, uint64_t commandKey) {
+  // set the player resolves through HandleMapService. Destinations are the retained ones only,
+  // matching what RemoveUnreferencedAsBuildInfos leaves in the emitted command. Sources come
+  // from the reduced chain rather than the bytes, because that is what the emit patches the
+  // source slot to. A copy is replayed verbatim and reads both [src, dst] by handle.
+  auto referencedAsKeys = [&updateSourceByCmd, &retainedDstByCmd](const RetainedAsCommand& rc,
+                                                                  uint64_t commandKey) {
     std::vector<uint64_t> keys;
     std::vector<char> scratch = rc.CommandBytes;
     if (rc.IsCopy) {
@@ -4587,10 +4641,14 @@ void StateTrackingService::RestoreBlasChain() {
     } else {
       vkCmdBuildAccelerationStructuresKHRCommand cmd;
       Decode(scratch.data(), cmd);
-      const auto& handleKeys = cmd.m_pInfos.HandleKeys; // [src, dst] per info
-      for (size_t i = 1; i < handleKeys.size(); i += 2) {
-        if (handleKeys[i]) {
-          keys.push_back(handleKeys[i]);
+      const auto& handleKeys = cmd.m_pInfos.HandleKeys;
+      const uint32_t infoCount = cmd.m_infoCount.Value;
+      auto dstIt = retainedDstByCmd.find(commandKey);
+      // Only the leading pair block holds destinations - the pNext payload follows it
+      for (uint32_t i = 0; i < infoCount && HasAsBuildKeys(handleKeys, i + 1); ++i) {
+        const uint64_t dstAsKey = handleKeys[AsBuildDstKeyIndex(i)];
+        if (dstAsKey && dstIt != retainedDstByCmd.end() && dstIt->second.count(dstAsKey)) {
+          keys.push_back(dstAsKey);
         }
       }
       auto cmdIt = updateSourceByCmd.find(commandKey);
@@ -4781,12 +4839,13 @@ void StateTrackingService::RestoreBlasChain() {
         EmitAccelerationStructureCopyReplay(dstState->ParentKey, dev->Queue, dev->Pool,
                                             rcIt->second.CommandBytes);
       } else if (replayedBuildCmds.insert(op.CommandKey).second) {
-        // Replayed in its recorded mode. updateSourceByCmd repoints each update info at the
-        // structure this chain produces, which the loop above has already made live.
+        // Replayed in its recorded mode, reduced to the destinations the chain kept.
+        // updateSourceByCmd repoints each retained update info at the structure this chain
+        // produces, which the loop above has already made live.
         auto srcMapIt = updateSourceByCmd.find(op.CommandKey);
         EmitAccelerationStructureRebuildBytes(
             dstState->ParentKey, dev->PhysDev, dev->Queue, dev->Pool, rcIt->second.CommandBytes,
-            rcIt->second.Inputs, op.DstAsKey,
+            rcIt->second.Inputs, op.DstAsKey, retainedDstByCmd[op.CommandKey],
             srcMapIt != updateSourceByCmd.end() ? &srcMapIt->second : nullptr);
       }
     }();
@@ -4804,6 +4863,9 @@ void StateTrackingService::RestoreBlasChain() {
   while (!transientAs.empty()) {
     teardown(transientAs.begin()->first);
   }
+
+  // Every relocated structure is torn down by now, so their addresses are free again.
+  m_GpuReadbackHelper->ReleaseReservedAddressesSince(chainReservationMark);
 }
 
 // An acceleration structure's storage is opaque: the only spec-sanctioned way to populate it

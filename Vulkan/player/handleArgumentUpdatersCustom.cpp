@@ -275,6 +275,83 @@ void UpdateOutputHandle(PlayerManager& manager, HandleArrayOutputArgument<VkPhys
   }
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+namespace {
+
+void ResolveAsBuildPairKeys(const std::vector<GITSKey>& keys,
+                            uint32_t& idx,
+                            VkAccelerationStructureBuildGeometryInfoKHR& s) {
+  if (idx < keys.size()) {
+    GITSKey key = keys[idx++];
+    s.srcAccelerationStructure =
+        key ? reinterpret_cast<VkAccelerationStructureKHR>(HandleMapService::Get().GetHandle(key))
+            : VK_NULL_HANDLE;
+  }
+  if (idx < keys.size()) {
+    GITSKey key = keys[idx++];
+    s.dstAccelerationStructure =
+        key ? reinterpret_cast<VkAccelerationStructureKHR>(HandleMapService::Get().GetHandle(key))
+            : VK_NULL_HANDLE;
+  }
+}
+
+void ResolveAsBuildPNextKeys(const std::vector<GITSKey>& keys,
+                             uint32_t& idx,
+                             std::vector<uint64_t>& handleData,
+                             VkAccelerationStructureBuildGeometryInfoKHR& s) {
+  for (uint32_t i = 0; i < s.geometryCount; ++i) {
+    const VkAccelerationStructureGeometryKHR* geometry = nullptr;
+    if (s.pGeometries) {
+      geometry = &s.pGeometries[i];
+    } else if (s.ppGeometries) {
+      geometry = s.ppGeometries[i];
+    }
+    if (!geometry || geometry->geometryType != VK_GEOMETRY_TYPE_TRIANGLES_KHR) {
+      continue;
+    }
+    ResolvePNextHandleKeys(keys, idx, handleData, geometry->geometry.triangles.pNext);
+  }
+  ResolvePNextHandleKeys(keys, idx, handleData, s.pNext);
+}
+
+} // namespace
+
+void ResolveHandleKeys(const std::vector<GITSKey>& keys,
+                       uint32_t& idx,
+                       std::vector<uint64_t>& handleData,
+                       VkAccelerationStructureBuildGeometryInfoKHR& s) {
+  ResolveAsBuildPairKeys(keys, idx, s);
+  ResolveAsBuildPNextKeys(keys, idx, handleData, s);
+}
+
+void UpdateHandle(PlayerManager& manager,
+                  PointerArgument<VkAccelerationStructureBuildGeometryInfoKHR>& arg) {
+  if (!arg.Value || arg.HandleKeys.empty()) {
+    return;
+  }
+  uint32_t idx = 0;
+  arg.HandleData.reserve(arg.HandleKeys.size());
+  ResolveHandleKeys(arg.HandleKeys, idx, arg.HandleData, *arg.Value);
+}
+
+void UpdateHandle(PlayerManager& manager,
+                  ArrayArgument<VkAccelerationStructureBuildGeometryInfoKHR>& arg) {
+  if (!arg.Value || arg.Size == 0 || arg.HandleKeys.empty()) {
+    return;
+  }
+  uint32_t idx = 0;
+  arg.HandleData.reserve(arg.HandleKeys.size());
+  for (uint32_t i = 0; i < arg.Size; ++i) {
+    ResolveAsBuildPairKeys(arg.HandleKeys, idx, arg.Value[i]);
+  }
+  for (uint32_t i = 0; i < arg.Size; ++i) {
+    ResolveAsBuildPNextKeys(arg.HandleKeys, idx, arg.HandleData, arg.Value[i]);
+  }
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
 void UpdateOutputHandle(PlayerManager& manager,
                         ArrayArgument<VkPhysicalDeviceGroupProperties>& arg) {
   if (!arg.Value || arg.Size == 0 || arg.HandleKeys.empty()) {

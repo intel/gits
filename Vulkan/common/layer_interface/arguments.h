@@ -81,6 +81,21 @@ struct ArrayArgument {
   ArrayArgument(const T* v, int s) : Value(const_cast<T*>(v)), Size(static_cast<uint32_t>(s)) {}
 };
 
+// UpdateHandle(ArrayArgument<VkAccelerationStructureBuildGeometryInfoKHR>&) collects every
+// element's [src, dst] acceleration structure pair before any of the variable length pNext payload,
+// so element i keeps a fixed pair position whatever its geometries carry.
+inline size_t AsBuildSrcKeyIndex(uint32_t infoIndex) {
+  return 2 * static_cast<size_t>(infoIndex);
+}
+
+inline size_t AsBuildDstKeyIndex(uint32_t infoIndex) {
+  return 2 * static_cast<size_t>(infoIndex) + 1;
+}
+
+inline bool HasAsBuildKeys(const std::vector<GITSKey>& keys, uint32_t infoCount) {
+  return keys.size() >= 2 * static_cast<size_t>(infoCount);
+}
+
 template <>
 struct ArrayArgument<VkRayTracingPipelineCreateInfoKHR> {
   VkRayTracingPipelineCreateInfoKHR* Value{};

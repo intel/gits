@@ -43,6 +43,17 @@ void ResolveHandleKeys(const std::vector<GITSKey>& keys,
 void UpdateHandle(PlayerManager& manager, PointerArgument<VkRayTracingPipelineCreateInfoKHR>& arg);
 void UpdateHandle(PlayerManager& manager, ArrayArgument<VkRayTracingPipelineCreateInfoKHR>& arg);
 
+// Mirrors the hand written recorder layout - every [src, dst] pair of an array of infos comes
+// before the variable length pNext payload.
+void ResolveHandleKeys(const std::vector<GITSKey>& keys,
+                       uint32_t& idx,
+                       std::vector<uint64_t>& handleData,
+                       VkAccelerationStructureBuildGeometryInfoKHR& s);
+void UpdateHandle(PlayerManager& manager,
+                  PointerArgument<VkAccelerationStructureBuildGeometryInfoKHR>& arg);
+void UpdateHandle(PlayerManager& manager,
+                  ArrayArgument<VkAccelerationStructureBuildGeometryInfoKHR>& arg);
+
 void UpdateOutputHandle(PlayerManager& manager, HandleArrayOutputArgument<VkPhysicalDevice>& arg);
 void UpdateOutputHandle(PlayerManager& manager,
                         ArrayArgument<VkPhysicalDeviceGroupProperties>& arg);

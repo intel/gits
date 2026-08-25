@@ -43,6 +43,8 @@ set(STATE_TRACKING_SRC
   ${SRC_DIR}/raytracingOptimizationService.cpp
   ${SRC_DIR}/raytracingInstancesDump.h
   ${SRC_DIR}/raytracingInstancesDump.cpp
+  ${SRC_DIR}/asBuildCommandPatching.h
+  ${SRC_DIR}/asBuildCommandPatching.cpp
 )
 source_group("state_tracking" FILES ${STATE_TRACKING_SRC})
 

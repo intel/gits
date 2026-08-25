@@ -204,10 +204,15 @@ public:
                                            uint64_t& outOpaqueCaptureAddress,
                                            uint64_t& outMemoryOpaqueCaptureAddress) = 0;
 
-  // Destroys every throwaway buffer that ReserveScratchBufferAddress kept alive. Call
-  // it once a rebuild's transient creation commands have all been authored: until then
-  // the addresses must stay reserved so two coexisting transients cannot alias.
-  virtual void ReleaseReservedAddresses() = 0;
+  // Marks the current reservation set, for a later ReleaseReservedAddressesSince.
+  virtual size_t MarkReservedAddresses() = 0;
+
+  // Destroys the throwaway buffers ReserveScratchBufferAddress kept alive since 'mark'.
+  // Call it once the destroy commands for the matching transients have been authored -
+  // until then the addresses must stay reserved so two coexisting transients cannot alias.
+  // Reservations taken before the mark back objects that outlive this scope, so releasing
+  // them would let the driver hand their address to an object the stream still has live.
+  virtual void ReleaseReservedAddressesSince(size_t mark) = 0;
 };
 
 // Owns and manages the per-object state tables populated by SubcaptureLayer.
@@ -432,16 +437,24 @@ private:
 
   // Replays asState's stored build command bytes in a one-shot command buffer, patching
   // their CB key (the stored one is the original app CB's, dead by restore time).
+  // keepDstAsKeys names the destinations this replay is for - see
+  // EmitAccelerationStructureRebuildBytes.
   void EmitAccelerationStructureRebuild(uint64_t deviceKey,
                                         uint64_t physDevKey,
                                         uint64_t queueKey,
                                         uint64_t poolKey,
-                                        const AccelerationStructureState& asState);
+                                        const AccelerationStructureState& asState,
+                                        const std::unordered_set<uint64_t>& keepDstAsKeys);
 
   // Core replay used by both the per-AS wrapper above and the chain replay. Replays the
   // build command bytes verbatim - each info keeps the mode the application recorded -
   // against re-uploaded captured inputs and a freshly reserved scratch buffer. logAsKey
   // is used only for logging.
+  //
+  // keepDstAsKeys is the set of destinations this replay exists to produce. A captured command
+  // can write many structures at once and the rest are dropped before it is emitted (see
+  // RemoveUnreferencedAsBuildInfos) - replaying them at worst runs an update whose source the
+  // chain reduction deliberately did not produce.
   //
   // updateSourceByDstAs maps a destination AS key to the source an UPDATE-mode info
   // targeting it must refit from, replacing the recorded source that the chain reduction
@@ -456,6 +469,7 @@ private:
       const std::vector<char>& commandBytes,
       const std::vector<CapturedBuildInputBuffer>& capturedInputs,
       uint64_t logAsKey,
+      const std::unordered_set<uint64_t>& keepDstAsKeys,
       const std::unordered_map<uint64_t, uint64_t>* updateSourceByDstAs = nullptr);
 
   // Probed with the exact create-info EmitCaptureReplayBufferCreate uses. Never probe

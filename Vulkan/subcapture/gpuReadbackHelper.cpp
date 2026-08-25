@@ -805,19 +805,27 @@ bool GpuReadbackHelper::ReserveScratchBufferAddress(uint64_t deviceKey,
 
   dt.vkUnmapMemory(device, scratchMem);
   // Kept alive so a subsequent reservation does not get the same address back.
-  // ReleaseReservedAddresses tears them all down.
+  // ReleaseReservedAddressesSince tears them down.
   m_ReservedAddressBuffers.push_back({device, scratchBuf, scratchMem});
 
   return true;
 }
 
-void GpuReadbackHelper::ReleaseReservedAddresses() {
-  for (const auto& r : m_ReservedAddressBuffers) {
+size_t GpuReadbackHelper::MarkReservedAddresses() {
+  return m_ReservedAddressBuffers.size();
+}
+
+void GpuReadbackHelper::ReleaseReservedAddressesSince(size_t mark) {
+  if (mark >= m_ReservedAddressBuffers.size()) {
+    return;
+  }
+  for (size_t i = mark; i < m_ReservedAddressBuffers.size(); ++i) {
+    const auto& r = m_ReservedAddressBuffers[i];
     auto& dt = m_Player.GetDeviceDispatchTable(r.Device);
     dt.vkDestroyBuffer(r.Device, r.Buffer, nullptr);
     dt.vkFreeMemory(r.Device, r.Memory, nullptr);
   }
-  m_ReservedAddressBuffers.clear();
+  m_ReservedAddressBuffers.resize(mark);
 }
 
 // ---------------------------------------------------------------------------

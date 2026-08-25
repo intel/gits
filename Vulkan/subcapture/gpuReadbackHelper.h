@@ -125,11 +125,13 @@ public:
                                    uint64_t& outOpaqueCaptureAddress,
                                    uint64_t& outMemoryOpaqueCaptureAddress) override;
 
-  void ReleaseReservedAddresses() override;
+  size_t MarkReservedAddresses() override;
+
+  void ReleaseReservedAddressesSince(size_t mark) override;
 
 private:
   // Kept alive so their reserved capture/replay addresses are not handed back to a
-  // later reservation in the same rebuild. Freed by ReleaseReservedAddresses.
+  // later reservation. Freed by ReleaseReservedAddressesSince.
   struct ReservedBuffer {
     VkDevice Device;
     VkBuffer Buffer;

@@ -675,6 +675,8 @@ void SubcaptureLayer::Post(vkCreateBufferCommand& command) {
   if (command.m_pCreateInfo.Value) {
     state->BufferSize = command.m_pCreateInfo.Value->size;
     state->UsageFlags = command.m_pCreateInfo.Value->usage;
+    state->SparseBinding =
+        (command.m_pCreateInfo.Value->flags & VK_BUFFER_CREATE_SPARSE_BINDING_BIT) != 0;
     // Detect a capture/replay opaque address via pNext chain (unlike AS,
     // VkBufferCreateInfo has no direct opaqueCaptureAddress field).
     const auto* pNext = static_cast<const VkBaseInStructure*>(command.m_pCreateInfo.Value->pNext);
@@ -781,6 +783,7 @@ void SubcaptureLayer::Post(vkCreateImageCommand& command) {
   state->UsageFlags = ci.usage;
   state->SharingMode = ci.sharingMode;
   state->Disjoint = (ci.flags & VK_IMAGE_CREATE_DISJOINT_BIT) != 0;
+  state->SparseBinding = (ci.flags & VK_IMAGE_CREATE_SPARSE_BINDING_BIT) != 0;
   if (ci.sharingMode == VK_SHARING_MODE_CONCURRENT && ci.pQueueFamilyIndices != nullptr) {
     state->ConcurrentFamilies.assign(ci.pQueueFamilyIndices,
                                      ci.pQueueFamilyIndices + ci.queueFamilyIndexCount);
@@ -2167,7 +2170,7 @@ void SubcaptureLayer::Pre(vkCmdBuildAccelerationStructuresKHRCommand& command) {
   }
   const uint32_t infoCount = command.m_infoCount.Value;
   if (infoCount == 0 || !command.m_pInfos.Value ||
-      command.m_pInfos.HandleKeys.size() < 2 * static_cast<size_t>(infoCount)) {
+      !HasAsBuildKeys(command.m_pInfos.HandleKeys, infoCount)) {
     return;
   }
   const uint64_t cbKey = command.m_commandBuffer.Key;
@@ -2188,7 +2191,7 @@ void SubcaptureLayer::Pre(vkCmdBuildAccelerationStructuresKHRCommand& command) {
 
   for (uint32_t i = 0; i < infoCount; ++i) {
     const VkAccelerationStructureBuildGeometryInfoKHR& info = command.m_pInfos.Value[i];
-    const uint64_t dstKey = command.m_pInfos.HandleKeys[2 * i + 1];
+    const uint64_t dstKey = command.m_pInfos.HandleKeys[AsBuildDstKeyIndex(i)];
     if (!dstKey) {
       continue;
     }
@@ -2273,7 +2276,7 @@ void SubcaptureLayer::RequireBlasChainForRaytracing(const char* commandName) {
 void SubcaptureLayer::Post(vkCmdBuildAccelerationStructuresKHRCommand& command) {
   const uint32_t infoCount = command.m_infoCount.Value;
   if (infoCount == 0 || !command.m_pInfos.Value ||
-      command.m_pInfos.HandleKeys.size() < 2 * static_cast<size_t>(infoCount)) {
+      !HasAsBuildKeys(command.m_pInfos.HandleKeys, infoCount)) {
     return;
   }
 
@@ -2284,7 +2287,7 @@ void SubcaptureLayer::Post(vkCmdBuildAccelerationStructuresKHRCommand& command) 
 
   std::vector<uint64_t> dstKeys;
   for (uint32_t i = 0; i < infoCount; ++i) {
-    uint64_t dstKey = command.m_pInfos.HandleKeys[2 * i + 1];
+    uint64_t dstKey = command.m_pInfos.HandleKeys[AsBuildDstKeyIndex(i)];
     if (dstKey) {
       dstKeys.push_back(dstKey);
     }
@@ -2297,8 +2300,8 @@ void SubcaptureLayer::Post(vkCmdBuildAccelerationStructuresKHRCommand& command) 
 
   for (uint32_t i = 0; i < infoCount; ++i) {
     const VkAccelerationStructureBuildGeometryInfoKHR& info = command.m_pInfos.Value[i];
-    uint64_t srcKey = command.m_pInfos.HandleKeys[2 * i];
-    uint64_t dstKey = command.m_pInfos.HandleKeys[2 * i + 1];
+    uint64_t srcKey = command.m_pInfos.HandleKeys[AsBuildSrcKeyIndex(i)];
+    uint64_t dstKey = command.m_pInfos.HandleKeys[AsBuildDstKeyIndex(i)];
     if (!dstKey) {
       continue;
     }

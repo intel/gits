@@ -159,6 +159,67 @@ void UpdateHandle(CaptureManager& manager, ArrayArgument<VkRayTracingPipelineCre
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
+namespace {
+
+void CollectAsBuildPairKeys(std::vector<GITSKey>& keys,
+                            const VkAccelerationStructureBuildGeometryInfoKHR& s) {
+  keys.push_back(HandleMapService::Get().GetKeyLenient(
+      reinterpret_cast<uint64_t>(s.srcAccelerationStructure)));
+  keys.push_back(HandleMapService::Get().GetKeyLenient(
+      reinterpret_cast<uint64_t>(s.dstAccelerationStructure)));
+}
+
+// The variable part - a micromap handle chained onto a triangle geometry, plus the info's own chain
+void CollectAsBuildPNextKeys(std::vector<GITSKey>& keys,
+                             const VkAccelerationStructureBuildGeometryInfoKHR& s) {
+  for (uint32_t i = 0; i < s.geometryCount; ++i) {
+    const VkAccelerationStructureGeometryKHR* geometry = nullptr;
+    if (s.pGeometries) {
+      geometry = &s.pGeometries[i];
+    } else if (s.ppGeometries) {
+      geometry = s.ppGeometries[i];
+    }
+    if (!geometry || geometry->geometryType != VK_GEOMETRY_TYPE_TRIANGLES_KHR) {
+      continue;
+    }
+    CollectPNextHandleKeys(keys, geometry->geometry.triangles.pNext);
+  }
+  CollectPNextHandleKeys(keys, s.pNext);
+}
+
+} // namespace
+
+void CollectHandleKeys(std::vector<GITSKey>& keys,
+                       const VkAccelerationStructureBuildGeometryInfoKHR& s) {
+  CollectAsBuildPairKeys(keys, s);
+  CollectAsBuildPNextKeys(keys, s);
+}
+
+void UpdateHandle(CaptureManager& manager,
+                  PointerArgument<VkAccelerationStructureBuildGeometryInfoKHR>& arg) {
+  if (!arg.Value) {
+    return;
+  }
+  CollectHandleKeys(arg.HandleKeys, *arg.Value);
+}
+
+void UpdateHandle(CaptureManager& manager,
+                  ArrayArgument<VkAccelerationStructureBuildGeometryInfoKHR>& arg) {
+  if (!arg.Value || arg.Size == 0) {
+    return;
+  }
+  // Pairs first, so the subcapture can reach element i's source and destination by index without
+  // walking the payload the elements before it collected. ResolveHandleKeys mirrors the split.
+  for (uint32_t i = 0; i < arg.Size; ++i) {
+    CollectAsBuildPairKeys(arg.HandleKeys, arg.Value[i]);
+  }
+  for (uint32_t i = 0; i < arg.Size; ++i) {
+    CollectAsBuildPNextKeys(arg.HandleKeys, arg.Value[i]);
+  }
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+
 void UpdateOutputHandle(CaptureManager& manager,
                         ArrayArgument<VkPhysicalDeviceGroupProperties>& arg) {
   if (!arg.Value || arg.Size == 0) {

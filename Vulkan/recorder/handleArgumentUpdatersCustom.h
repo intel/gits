@@ -31,6 +31,15 @@ void CollectHandleKeys(std::vector<GITSKey>& keys, const VkRayTracingPipelineCre
 void UpdateHandle(CaptureManager& manager, PointerArgument<VkRayTracingPipelineCreateInfoKHR>& arg);
 void UpdateHandle(CaptureManager& manager, ArrayArgument<VkRayTracingPipelineCreateInfoKHR>& arg);
 
+// Hand written so that an array of infos keeps every [src, dst] pair at AsBuildSrcKeyIndex(i) -
+// the generated per element walk would let a pNext micromap handle shift the following pairs.
+void CollectHandleKeys(std::vector<GITSKey>& keys,
+                       const VkAccelerationStructureBuildGeometryInfoKHR& s);
+void UpdateHandle(CaptureManager& manager,
+                  PointerArgument<VkAccelerationStructureBuildGeometryInfoKHR>& arg);
+void UpdateHandle(CaptureManager& manager,
+                  ArrayArgument<VkAccelerationStructureBuildGeometryInfoKHR>& arg);
+
 void UpdateOutputHandle(CaptureManager& manager,
                         ArrayArgument<VkPhysicalDeviceGroupProperties>& arg);
 
