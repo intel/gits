@@ -88,6 +88,13 @@ void IntelExtensionsService::SetApplicationInfo() {
   m_AppName = std::wstring(appName.begin(), appName.end());
   m_AppInfo.pApplicationName = m_AppName.c_str();
 
+  if (m_AppName == L"gitsPlayer.exe") {
+    LOG_WARNING << "Intel Extensions - Application name is set to \"gitsPlayer.exe\". Will skip "
+                   "INTC_D3D12_SetApplicationInfo call.";
+    m_ApplicationNameSet = true;
+    return;
+  }
+
   HRESULT hr = INTC_D3D12_SetApplicationInfo(&m_AppInfo);
   if (hr != S_OK) {
     LOG_ERROR << "INTC_D3D12_SetApplicationInfo failed - Application name is not set.";

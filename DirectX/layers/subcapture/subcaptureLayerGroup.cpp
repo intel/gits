@@ -13,22 +13,43 @@
 #include "commandPreservationLayer.h"
 #include "analyzerLayerAuto.h"
 #include "analyzerResults.h"
+#include "streamHeader.h"
 #include "log.h"
+
+#include <filesystem>
+#include <vector>
+
+#include <Windows.h>
 
 namespace gits {
 namespace DirectX {
 
 void SubcaptureLayerGroup::LoadLayers() {
+  const auto& cfg = Configurator::Get();
 
-  if (!Configurator::Get().common.player.subcapture.enabled ||
-      Configurator::Get().common.player.subcapture.directx.executionSerialization ||
-      !Configurator::Get().common.player.subcapture.directx.commandListSplit.empty()) {
+  if (!cfg.common.player.subcapture.enabled ||
+      cfg.common.player.subcapture.directx.executionSerialization ||
+      !cfg.common.player.subcapture.directx.commandListSplit.empty()) {
     return;
   }
 
-  const std::string& frames = Configurator::Get().common.player.subcapture.frames;
-  const std::string& executions =
-      Configurator::Get().common.player.subcapture.directx.commandListExecutions;
+  // Check if the executable name matches the application name stored in the stream
+  // Note: ApplicationInfoOverride is used to set custom application info for the stream and will disable this check (so the user can explictly set the executable name)
+  if (!cfg.directx.player.applicationInfoOverride.enabled) {
+    std::vector<char> moduleFilename(MAX_PATH + 1, 0);
+    GetModuleFileNameA(nullptr, moduleFilename.data(), static_cast<DWORD>(moduleFilename.size()));
+    const std::string exeName = std::filesystem::path(moduleFilename.data()).filename().string();
+    const std::string appName = stream::StreamHeader::Get().GetApplicationName();
+    if (exeName != appName) {
+      LOG_ERROR << "Subcapture - Executable name \"" << exeName
+                << "\" does not match the application name stored in the stream \"" << appName
+                << "\". Set Common.Player.ExecutableNameOverride.Enabled.";
+      exit(EXIT_FAILURE);
+    }
+  }
+
+  const std::string& frames = cfg.common.player.subcapture.frames;
+  const std::string& executions = cfg.common.player.subcapture.directx.commandListExecutions;
   bool trimmingMode = false;
   try {
     if (executions.empty()) {
@@ -45,8 +66,7 @@ void SubcaptureLayerGroup::LoadLayers() {
       }
     }
   } catch (...) {
-    LOG_ERROR << "Invalid subcapture range: '" +
-                     Configurator::Get().common.player.subcapture.frames + "'";
+    LOG_ERROR << "Invalid subcapture range: '" + cfg.common.player.subcapture.frames + "'";
     exit(EXIT_FAILURE);
   }
 
@@ -60,8 +80,7 @@ void SubcaptureLayerGroup::LoadLayers() {
     AddLayer(std::make_unique<StateTrackingLayer>(*m_Recorder, *m_SubcaptureRange));
     AddLayer(std::make_unique<RecordingLayer>(*m_Recorder, *m_SubcaptureRange));
     AddLayer(std::make_unique<CommandPreservationLayer>());
-    const_cast<gits::Configuration&>(Configurator::Get())
-        .directx.player.multithreadedShaderCompilation = false;
+    const_cast<gits::Configuration&>(cfg).directx.player.multithreadedShaderCompilation = false;
   } else {
     AddLayer(std::make_unique<AnalyzerLayer>(*m_SubcaptureRange));
     LOG_INFO << "SUBCAPTURE ANALYSIS. RUN AGAIN FOR SUBCAPTURE RECORDING.";
