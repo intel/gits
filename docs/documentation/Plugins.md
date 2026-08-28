@@ -44,14 +44,17 @@ At runtime, plugins load this file through `gits::LoadPluginConfig` defined in `
 
 # Enabling plugins
 
-Which YAML keys enable plugins depends on the API backend:
+Both DirectX 12 and Vulkan share the same YAML keys:
 
-| API | Recorder | Player |
-|-----|----------|--------|
-| DirectX 12 | `DirectX.Recorder.Plugins` | `DirectX.Player.Plugins` |
-| Vulkan | `Common.Recorder.Plugins` | `Common.Player.Plugins` |
+| Recorder | Player |
+|----------|--------|
+| `Common.Recorder.Plugins` | `Common.Player.Plugins` |
 
 Each list entry must match `IPlugin::getName()` / `Info.Name`. See [DirectX plugins](DirectX/Plugins.md#usage) and [Vulkan plugins](Vulkan/Plugins.md#usage) for examples.
+
+> The older `DirectX.Player.Plugins` / `DirectX.Playback.Plugins` (Player) and `DirectX.Recorder.Plugins` / `DirectX.Capture.Plugins` (Recorder) paths are still accepted for backward compatibility, but are deprecated in favor of the `Common.*.Plugins` options above.
+
+> `Common.Recorder.Plugins` defaults to `[Benchmark]`, so the [`Benchmark`](DirectX/Plugins.md#directx-plugins) plugin is enabled during recording out of the box. Set `Common.Recorder.Plugins: []` (or list only the plugins you want) to disable it.
 
 # Environment overrides
 
@@ -74,7 +77,7 @@ Example for **HelloPlugin** during DirectX playback:
 ```cmd
 set GITS_PLUGIN_HELLOPLUGIN_PRINTFRAMES=false
 set GITS_PLUGIN_HELLOPLUGIN_PRINTGPUSUBMISSIONS=false
-gitsPlayer --DirectX.Player.Plugins="[HelloPlugin]" path\to\stream.gits2
+gitsPlayer --Common.Player.Plugins="[HelloPlugin]" path\to\stream.gits2
 ```
 
 Example for **HelloPlugin** during Vulkan playback:

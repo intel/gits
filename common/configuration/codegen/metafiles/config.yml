@@ -233,8 +233,8 @@ Configuration:
             Description: List of plugins to enable during playback
             LongDescription: |
               GITS plugins are shared libraries that are loaded by GITS Player at runtime.
-              For now, this option is only used by the new Vulkan backend. For DirectX12 plugins use the
-              older DirectX.Player.Plugins option.
+              This option is shared by all backends (DirectX12 and Vulkan).
+            LegacyPaths: ["DirectX.Player.Plugins", "DirectX.Playback.Plugins"]
           - Name: Subcapture
             Type: Group
             Description:
@@ -761,8 +761,8 @@ Configuration:
             Description: List of plugins to enable during recording
             LongDescription: |
               GITS plugins are shared libraries that are loaded by GITS Recorder at runtime.
-              For now, this option is only used by the new Vulkan backend. For DirectX12 plugins use the
-              older DirectX.Recorder.Plugins option.
+              This option is shared by all backends (DirectX12 and Vulkan).
+            LegacyPaths: ["DirectX.Recorder.Plugins", "DirectX.Capture.Plugins"]
           - Name: enabled
             Type: bool
             Default: true
@@ -999,11 +999,6 @@ Configuration:
               Enable patching of IABs and SBTs on the GPU.
               This will translate GPUVAs and other runtime data on captured GPU buffers.
             LegacyPaths: ["DirectX.Playback.PatchGpuBuffers"]
-          - Name: plugins
-            Type: std::vector<std::string>
-            Default: []
-            Description: List of plugins to enable
-            LegacyPaths: ["DirectX.Playback.Plugins"]
           - Name: AdapterOverride
             Type: Group
             Description:
@@ -1183,11 +1178,6 @@ Configuration:
               All the D3D12 calls are serialized and processed from a single thread. This will 
               make the capture process very slow. Recommended for GITS developers only.
             LegacyPaths: ["DirectX.Capture.ForceGlobalSynchronization"]
-          - Name: plugins
-            Type: std::vector<std::string>
-            Default: [Benchmark]
-            Description: List of plugins to enable
-            LegacyPaths: ["DirectX.Capture.Plugins"]
           - Name: Portability
             Type: Group
             Options:

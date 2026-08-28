@@ -114,10 +114,11 @@ void Configuration::CheckLegacyEnvironmentPaths() {
 % if len(option.get_legacy_paths()) > 0:
 ${whitespace(2)}if (!getEnvVar("${option.get_environment_string()}")){
 % for access_path in option.get_legacy_paths():
-${whitespace(2)}const char* env_${option.name} = getEnvVar("${access_path[2]}");
-${whitespace(2)}if (env_${option.name}) {
+<% legacy_var = f"env_{option.get_environment_string()}_{access_path[2]}" %>\
+${whitespace(2)}const char* ${legacy_var} = getEnvVar("${access_path[2]}");
+${whitespace(2)}if (${legacy_var}) {
 ${whitespace(3)}try {
-${whitespace(4)}${option.instance_path}.${option.instance_name} = stringTo<${option.type}>(env_${option.name});
+${whitespace(4)}${option.instance_path}.${option.instance_name} = stringTo<${option.type}>(${legacy_var});
 ${whitespace(3)}} catch (const std::exception& e) {
 ${whitespace(4)}LOG_ERROR << "Error parsing environment variable ${access_path[2]}: " << e.what() << std::endl;
 ${whitespace(3)}}
@@ -125,7 +126,6 @@ ${whitespace(3)}LOG_WARNING << "Deprecated environment variable found: ${access_
 ${whitespace(2)}}
 % endfor
 ${whitespace(2)}}
-// ${access_path[2]}
 % endif
 % endfor
 }

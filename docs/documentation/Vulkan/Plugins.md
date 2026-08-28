@@ -44,7 +44,7 @@ Scalar `Config:` keys can be overridden with `GITS_PLUGIN_*` environment variabl
 | Name | Folder | Summary |
 |------|--------|---------|
 | `HelloPlugin` | `hello_plugin` | Example plugin; logs queue presents and queue submits when enabled. |
-| `Benchmark` | `benchmark` | Writes CPU present-to-present frame times to a CSV file and logs average FPS. |
+| `Benchmark` | `benchmark` | Writes CPU present-to-present frame times to a CSV file and logs average FPS. Enabled by default. |
 | `Statistics` | `statistics` | Aggregates Vulkan API call statistics to a YAML report. |
 
 **Benchmark** measures CPU time between presents. **Statistics** counts API usage. They are complementary, not interchangeable.

@@ -64,7 +64,7 @@ PlayerManager::PlayerManager() {
   // CpuPatch plugin is required for CCode generation
   if (Configurator::Get().common.player.execute &&
       Configurator::Get().directx.player.cCode.enabled) {
-    Configurator::GetMutable().directx.player.plugins.push_back("CpuPatch");
+    Configurator::GetMutable().common.player.plugins.push_back("CpuPatch");
   }
 
   // Load plugins

@@ -45,7 +45,7 @@ void PluginService::LoadPlugins() {
 
   auto& cfg = Configurator::Get();
   auto pluginNames =
-      Configurator::IsPlayer() ? cfg.directx.player.plugins : cfg.directx.recorder.plugins;
+      Configurator::IsPlayer() ? cfg.common.player.plugins : cfg.common.recorder.plugins;
   if (pluginNames.empty()) {
     return;
   }

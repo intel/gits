@@ -7,27 +7,29 @@ DirectX 12 plugins extend capture and replay for the **DirectX** backend. Built 
 
 # Usage
 
-Enable plugins under `DirectX.Recorder` or `DirectX.Player` using the `Plugins` list. Each entry must match the name returned by the DLL (`IPlugin::getName()`), which should match the `Info.Name` value in that plugin’s `config.yml`.
+Enable plugins under `Common.Recorder` or `Common.Player` using the `Plugins` list. Each entry must match the name returned by the DLL (`IPlugin::getName()`), which should match the `Info.Name` value in that plugin’s `config.yml`.
 
-``` yaml
-DirectX:
+```yaml
+Common:
   Recorder:
-    Plugins: [] # List of plugins to enable
+    Plugins: [] # List of plugins to enable during capture
 ```
 
-``` yaml
-DirectX:
+```yaml
+Common:
   Player:
-    Plugins: [] # List of plugins to enable
+    Plugins: [] # List of plugins to enable during playback
 ```
 
 Example: enable `HelloPlugin` or `HelloHUD` during playback.
 
-``` yaml
-DirectX:
+```yaml
+Common:
   Player:
     Plugins: ['HelloPlugin', 'HelloHUD']
 ```
+
+> The older `DirectX.Player.Plugins` / `DirectX.Playback.Plugins` (Player) and `DirectX.Recorder.Plugins` / `DirectX.Capture.Plugins` (Recorder) paths are still accepted for backward compatibility, but are deprecated in favor of the `Common.*.Plugins` options above.
 
 ## Plugin names
 
@@ -43,7 +45,7 @@ Scalar `Config:` keys can be overridden with `GITS_PLUGIN_*` environment variabl
 |------|--------|---------|
 | `HelloPlugin` | `hello_plugin` | Example plugin; logs presents and GPU submissions. |
 | `HelloHUD` | `hello_hud` | Example DirectX HUD plugin; shows configurable text in the GITS HUD (`Text` in `config.yml`). |
-| `Benchmark` | `benchmark` | Writes CPU present-to-present frame times to a CSV file. |
+| `Benchmark` | `benchmark` | Writes CPU present-to-present frame times to a CSV file. Enabled by default. |
 | `RtasCache` | `rtas_cache` | Caches BLAS data via `CopyRaytracingAccelerationStructure` to reduce rebuild cost. |
 | `RtasSizeCheck` | `rtas_size_check` | Compares RTAS prebuild sizes between capture and replay on `GetRaytracingAccelerationStructurePrebuildInfo`. |
 | `AdapterSpoof` | `adapter_spoof` | Overrides fields from `IDXGIAdapter::GetDesc` for vendor or device testing. |
