@@ -17,7 +17,7 @@ namespace DirectX {
 namespace ccode {
 
 // directx::DescriptorHeapService::Get().GetHandle
-static std::string descriptorHeapHandleStr(GITSKey key,
+static std::string descriptorHeapHandleStr(ObjectKey key,
                                            unsigned index,
                                            const std::string& typeStr) {
   GITS_ASSERT(typeStr == "CpuHandle" || typeStr == "GpuHandle");
@@ -30,7 +30,7 @@ static std::string descriptorHeapHandleStr(GITSKey key,
 }
 
 // directx::GpuAddressService::Get().GetGpuAddress
-static std::string gpuAddressStr(GITSKey key, unsigned offset) {
+static std::string gpuAddressStr(ObjectKey key, unsigned offset) {
   const auto& keyStr = key ? objKeyToStr(key) : "0";
   std::ostringstream ss;
   ss << "directx::GpuAddressService::Get().GetGpuAddress(" << keyStr << ", " << offset << ")";
@@ -39,7 +39,7 @@ static std::string gpuAddressStr(GITSKey key, unsigned offset) {
 
 static void appendGpuVirtualAddress(std::ostringstream& ss,
                                     const std::string& field,
-                                    GITSKey key,
+                                    ObjectKey key,
                                     unsigned offset) {
   ss << field << " = " << gpuAddressStr(key, offset) << ";" << std::endl;
 }
@@ -47,8 +47,8 @@ static void appendGpuVirtualAddress(std::ostringstream& ss,
 static void appendRenderPassEndingAccess(std::ostringstream& ss,
                                          const D3D12_RENDER_PASS_ENDING_ACCESS& value,
                                          const std::string& name,
-                                         GITSKey srcResourceKey,
-                                         GITSKey dstResourceKey) {
+                                         ObjectKey srcResourceKey,
+                                         ObjectKey dstResourceKey) {
   CppParameterInfo parentInfo("D3D12_RENDER_PASS_ENDING_ACCESS", name);
   std::ostringstream ssUnion;
 
@@ -111,7 +111,7 @@ static void appendRenderPassEndingAccess(std::ostringstream& ss,
 static void appendPostbuildInfoDescElement(
     std::ostringstream& ss,
     const std::string& field,
-    GITSKey destBufferKey,
+    ObjectKey destBufferKey,
     unsigned destBufferOffset,
     D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_TYPE infoType) {
   ss << "D3D12_GPU_VIRTUAL_ADDRESS " << field
@@ -124,12 +124,12 @@ static void appendD3D12BuildRaytracingInputs(
     std::ostringstream& ss,
     const std::string& inputsVar,
     const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS& inputs,
-    const std::vector<GITSKey>& inputKeys,
+    const std::vector<ObjectKey>& inputKeys,
     const std::vector<unsigned>& inputOffsets) {
   auto appendD3D12RaytracingGeometryDesc =
       [&](const std::string& prefix, const D3D12_RAYTRACING_GEOMETRY_DESC& desc,
-          const std::vector<GITSKey>& geomInputKeys, const std::vector<unsigned>& geomInputOffsets,
-          unsigned geomInputIndex) -> unsigned {
+          const std::vector<ObjectKey>& geomInputKeys,
+          const std::vector<unsigned>& geomInputOffsets, unsigned geomInputIndex) -> unsigned {
     ss << prefix << ".Type = " << toStr(desc.Type) << ";" << std::endl;
     ss << prefix << ".Flags = " << toStr(desc.Flags) << ";" << std::endl;
 
@@ -290,9 +290,9 @@ static void appendD3D12BuildRaytracingInputs(
   }
 }
 
-void declareObject(const std::string& type, GITSKey key) {
-  static std::unordered_set<GITSKey> s_declaredKeys;
-  if (key == 0) {
+void declareObject(const std::string& type, ObjectKey key) {
+  static std::unordered_set<ObjectKey> s_declaredKeys;
+  if (key == ObjectKey{}) {
     return;
   }
 
@@ -832,9 +832,9 @@ void argumentToCpp(D3D12_STATE_OBJECT_DESC_Argument& arg,
   auto appendStateSubobjectDesc = [&](std::ostringstream& ss, const std::string& varPrefix,
                                       const D3D12_STATE_SUBOBJECT& subobject,
                                       unsigned subobjectIndex) -> std::string {
-    auto interfaceKeyForSubobject = [&](unsigned index) -> GITSKey {
+    auto interfaceKeyForSubobject = [&](unsigned index) -> ObjectKey {
       auto it = arg.InterfaceKeysBySubobject.find(index);
-      return it != arg.InterfaceKeysBySubobject.end() ? it->second : GITSKey{0};
+      return it != arg.InterfaceKeysBySubobject.end() ? it->second : ObjectKey{0};
     };
 
     switch (subobject.Type) {
@@ -1085,7 +1085,7 @@ void argumentToCpp(PointerArgument<D3D12_DISPATCH_RAYS_DESC>& arg,
        << std::endl;
   }
 
-  auto appendGpuVirtualAddressRangeAndStride = [&](const std::string& field, GITSKey key,
+  auto appendGpuVirtualAddressRangeAndStride = [&](const std::string& field, ObjectKey key,
                                                    unsigned offset, UINT64 sizeInBytes,
                                                    UINT strideInBytes) {
     ss << "D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE " << field << " = {};" << std::endl;
@@ -1278,8 +1278,8 @@ void argumentToCpp(D3D12_RENDER_PASS_RENDER_TARGET_DESCs_Argument& arg,
        << std::endl;
 
     const std::string endingAccessVar = info.name + "_endingAccess" + std::to_string(i);
-    GITSKey srcResourceKey = 0;
-    GITSKey dstResourceKey = 0;
+    ObjectKey srcResourceKey{};
+    ObjectKey dstResourceKey{};
     if (arg.Value[i].EndingAccess.Type == D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_RESOLVE) {
       GITS_ASSERT(resolveKeyIndex < arg.ResolveSrcResourceKeys.size() &&
                   resolveKeyIndex < arg.ResolveDstResourceKeys.size());
@@ -1329,27 +1329,27 @@ void argumentToCpp(D3D12_RENDER_PASS_DEPTH_STENCIL_DESC_Argument& arg,
      << std::endl;
 
   const std::string depthEndingAccessVar = info.name + "_depthEndingAccess";
-  const GITSKey depthSrcKey =
+  const ObjectKey depthSrcKey =
       arg.Value->DepthEndingAccess.Type == D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_RESOLVE
           ? arg.ResolveSrcDepthKey
-          : 0u;
-  const GITSKey depthDstKey =
+          : ObjectKey{};
+  const ObjectKey depthDstKey =
       arg.Value->DepthEndingAccess.Type == D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_RESOLVE
           ? arg.ResolveDstDepthKey
-          : 0u;
+          : ObjectKey{};
   appendRenderPassEndingAccess(ss, arg.Value->DepthEndingAccess, depthEndingAccessVar, depthSrcKey,
                                depthDstKey);
   ss << info.name << ".DepthEndingAccess = " << depthEndingAccessVar << ";" << std::endl;
 
   const std::string stencilEndingAccessVar = info.name + "_stencilEndingAccess";
-  const GITSKey stencilSrcKey =
+  const ObjectKey stencilSrcKey =
       arg.Value->StencilEndingAccess.Type == D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_RESOLVE
           ? arg.ResolveSrcStencilKey
-          : 0u;
-  const GITSKey stencilDstKey =
+          : ObjectKey{};
+  const ObjectKey stencilDstKey =
       arg.Value->StencilEndingAccess.Type == D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_RESOLVE
           ? arg.ResolveDstStencilKey
-          : 0u;
+          : ObjectKey{};
   appendRenderPassEndingAccess(ss, arg.Value->StencilEndingAccess, stencilEndingAccessVar,
                                stencilSrcKey, stencilDstKey);
   ss << info.name << ".StencilEndingAccess = " << stencilEndingAccessVar << ";" << std::endl;
@@ -2045,7 +2045,7 @@ void argumentToCpp(PointerArgument<NVAPI_BUILD_RAYTRACING_ACCELERATION_STRUCTURE
 
   auto appendNvapiRaytracingGeometryDescEx =
       [&](const std::string& prefix, const NVAPI_D3D12_RAYTRACING_GEOMETRY_DESC_EX& desc,
-          const std::vector<GITSKey>& inputKeys, const std::vector<unsigned>& inputOffsets,
+          const std::vector<ObjectKey>& inputKeys, const std::vector<unsigned>& inputOffsets,
           unsigned inputIndex) -> unsigned {
     ss << prefix << ".type = " << toStr(desc.type) << ";" << std::endl;
     ss << prefix << ".flags = " << toStr(desc.flags) << ";" << std::endl;

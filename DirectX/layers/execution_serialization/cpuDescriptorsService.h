@@ -30,8 +30,8 @@ public:
         m_RtvDescriptorHeap(*this, D3D12_DESCRIPTOR_HEAP_TYPE_RTV),
         m_DsvDescriptorHeap(*this, D3D12_DESCRIPTOR_HEAP_TYPE_DSV) {}
 
-  void CreateCommandList(GITSKey deviceKey);
-  void ExecuteCommandLists(std::vector<GITSKey>& commandListKeys);
+  void CreateCommandList(ObjectKey deviceKey);
+  void ExecuteCommandLists(std::vector<ObjectKey>& commandListKeys);
   void PreserveDescriptor(ID3D12GraphicsCommandListOMSetRenderTargetsCommand& c);
   void PreserveDescriptor(ID3D12GraphicsCommandListClearDepthStencilViewCommand& c);
   void PreserveDescriptor(ID3D12GraphicsCommandListClearRenderTargetViewCommand& c);
@@ -41,18 +41,18 @@ public:
 private:
   ExecutionSerializationRecorder& m_Recorder;
   CommandListExecutionService& m_CommandListExecutionService;
-  GITSKey m_DeviceKey{};
+  ObjectKey m_DeviceKey{};
 
   template <unsigned SIZE>
   class DescriptorHeap {
   public:
     DescriptorHeap(CpuDescriptorsService& service, D3D12_DESCRIPTOR_HEAP_TYPE type)
         : m_Service(service), m_Type(type) {}
-    unsigned PreserveDescriptor(GITSKey heapKey, unsigned heapIndex);
+    unsigned PreserveDescriptor(ObjectKey heapKey, unsigned heapIndex);
     void ClearDescriptor(unsigned index);
 
   public:
-    GITSKey m_DescriptorHeapKey{};
+    ObjectKey m_DescriptorHeapKey{};
 
   private:
     void CreateDescriptorHeap();
@@ -73,7 +73,7 @@ private:
     D3D12_DESCRIPTOR_HEAP_TYPE Type{};
     unsigned Index{};
   };
-  std::unordered_map<GITSKey, std::vector<DescriptorHandle>> m_DescriptorsByCommandList;
+  std::unordered_map<ObjectKey, std::vector<DescriptorHandle>> m_DescriptorsByCommandList;
 };
 
 } // namespace DirectX

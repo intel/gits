@@ -31,8 +31,8 @@ struct INTCExtensionVersion;
 namespace gits {
 namespace DirectX {
 
-typedef uint32_t GITSKey;
-static_assert(sizeof(GITSKey) == 4);
+using GITSKey = uint32_t;
+using ObjectKey = GITSKey;
 
 #pragma region Generic
 
@@ -122,7 +122,7 @@ struct OutputBufferArgument {
 template <typename T>
 struct InterfaceArgument {
   T* Value{};
-  GITSKey Key{};
+  ObjectKey Key{};
 };
 
 template <typename T>
@@ -142,7 +142,7 @@ struct InterfaceArrayArgument {
   ~InterfaceArrayArgument() {}
   T** Value{};
   size_t Size{};
-  std::vector<GITSKey> Keys{};
+  std::vector<ObjectKey> Keys{};
   std::vector<T*> Data;
 };
 
@@ -158,7 +158,7 @@ struct InterfaceOutputArgument {
   InterfaceOutputArgument& operator=(const InterfaceOutputArgument&) = delete;
   ~InterfaceOutputArgument() {}
   T** Value{};
-  GITSKey Key{};
+  ObjectKey Key{};
   T* Data{};
 };
 
@@ -193,7 +193,7 @@ using PCSTR_Argument = LPCSTR_Argument;
 template <typename T>
 struct DescriptorHandleArgument {
   T Value{};
-  GITSKey InterfaceKey{};
+  ObjectKey InterfaceKey{};
   unsigned Index{};
 };
 
@@ -217,14 +217,14 @@ struct DescriptorHandleArrayArgument {
   ~DescriptorHandleArrayArgument() {}
   T* Value{};
   size_t Size{};
-  std::vector<GITSKey> InterfaceKeys{};
+  std::vector<ObjectKey> InterfaceKeys{};
   std::vector<unsigned> Indexes{};
   std::vector<T> Data;
 };
 
 struct D3D12_GPU_VIRTUAL_ADDRESS_Argument {
   D3D12_GPU_VIRTUAL_ADDRESS Value{};
-  GITSKey InterfaceKey{};
+  ObjectKey InterfaceKey{};
   unsigned Offset{};
 };
 
@@ -241,7 +241,7 @@ struct D3D12_GPU_VIRTUAL_ADDRESSs_Argument {
   ~D3D12_GPU_VIRTUAL_ADDRESSs_Argument();
   D3D12_GPU_VIRTUAL_ADDRESS* Value{};
   size_t Size{};
-  std::vector<GITSKey> InterfaceKeys{};
+  std::vector<ObjectKey> InterfaceKeys{};
   std::vector<unsigned> Offsets{};
   bool Copy{};
 };
@@ -290,7 +290,7 @@ struct D3D12_GRAPHICS_PIPELINE_STATE_DESC_Argument {
       const D3D12_GRAPHICS_PIPELINE_STATE_DESC_Argument&) = delete;
   ~D3D12_GRAPHICS_PIPELINE_STATE_DESC_Argument();
   D3D12_GRAPHICS_PIPELINE_STATE_DESC* Value{};
-  GITSKey RootSignatureKey{};
+  ObjectKey RootSignatureKey{};
   bool Copy{};
 };
 
@@ -303,7 +303,7 @@ struct D3D12_COMPUTE_PIPELINE_STATE_DESC_Argument {
       const D3D12_COMPUTE_PIPELINE_STATE_DESC_Argument&) = delete;
   ~D3D12_COMPUTE_PIPELINE_STATE_DESC_Argument();
   D3D12_COMPUTE_PIPELINE_STATE_DESC* Value{};
-  GITSKey RootSignatureKey{};
+  ObjectKey RootSignatureKey{};
   bool Copy{};
 };
 
@@ -316,7 +316,7 @@ struct D3D12_TEXTURE_COPY_LOCATION_Argument {
       delete;
   ~D3D12_TEXTURE_COPY_LOCATION_Argument();
   D3D12_TEXTURE_COPY_LOCATION* Value{};
-  GITSKey ResourceKey{};
+  ObjectKey ResourceKey{};
   bool Copy{};
 };
 
@@ -332,8 +332,8 @@ struct D3D12_RESOURCE_BARRIERs_Argument {
   ~D3D12_RESOURCE_BARRIERs_Argument();
   D3D12_RESOURCE_BARRIER* Value{};
   size_t Size{};
-  std::vector<GITSKey> ResourceKeys{};
-  std::vector<GITSKey> ResourceAfterKeys{};
+  std::vector<ObjectKey> ResourceKeys{};
+  std::vector<ObjectKey> ResourceAfterKeys{};
   bool Copy{};
 };
 
@@ -346,7 +346,7 @@ struct D3D12_SHADER_RESOURCE_VIEW_DESC_Argument {
       const D3D12_SHADER_RESOURCE_VIEW_DESC_Argument&) = delete;
   ~D3D12_SHADER_RESOURCE_VIEW_DESC_Argument();
   D3D12_SHADER_RESOURCE_VIEW_DESC* Value{};
-  GITSKey RaytracingLocationKey{};
+  ObjectKey RaytracingLocationKey{};
   unsigned RaytracingLocationOffset{};
   bool Copy{};
 };
@@ -359,7 +359,7 @@ struct D3D12_INDEX_BUFFER_VIEW_Argument {
   D3D12_INDEX_BUFFER_VIEW_Argument& operator=(const D3D12_INDEX_BUFFER_VIEW_Argument&) = delete;
   ~D3D12_INDEX_BUFFER_VIEW_Argument();
   D3D12_INDEX_BUFFER_VIEW* Value{};
-  GITSKey BufferLocationKey{};
+  ObjectKey BufferLocationKey{};
   unsigned BufferLocationOffset{};
   bool Copy{};
 };
@@ -373,7 +373,7 @@ struct D3D12_CONSTANT_BUFFER_VIEW_DESC_Argument {
       const D3D12_CONSTANT_BUFFER_VIEW_DESC_Argument&) = delete;
   ~D3D12_CONSTANT_BUFFER_VIEW_DESC_Argument();
   D3D12_CONSTANT_BUFFER_VIEW_DESC* Value{};
-  GITSKey BufferLocationKey{};
+  ObjectKey BufferLocationKey{};
   unsigned BufferLocationOffset{};
   bool Copy{};
 };
@@ -390,7 +390,7 @@ struct D3D12_VERTEX_BUFFER_VIEWs_Argument {
   ~D3D12_VERTEX_BUFFER_VIEWs_Argument();
   D3D12_VERTEX_BUFFER_VIEW* Value{};
   size_t Size{};
-  std::vector<GITSKey> BufferLocationKeys{};
+  std::vector<ObjectKey> BufferLocationKeys{};
   std::vector<unsigned> BufferLocationOffsets{};
   bool Copy{};
 };
@@ -411,9 +411,9 @@ struct D3D12_STREAM_OUTPUT_BUFFER_VIEWs_Argument {
   ~D3D12_STREAM_OUTPUT_BUFFER_VIEWs_Argument();
   D3D12_STREAM_OUTPUT_BUFFER_VIEW* Value{};
   size_t Size{};
-  std::vector<GITSKey> BufferLocationKeys{};
+  std::vector<ObjectKey> BufferLocationKeys{};
   std::vector<unsigned> BufferLocationOffsets{};
-  std::vector<GITSKey> BufferFilledSizeLocationKeys{};
+  std::vector<ObjectKey> BufferFilledSizeLocationKeys{};
   std::vector<unsigned> BufferFilledSizeLocationOffsets{};
   bool Copy{};
 };
@@ -433,7 +433,7 @@ struct D3D12_WRITEBUFFERIMMEDIATE_PARAMETERs_Argument {
   ~D3D12_WRITEBUFFERIMMEDIATE_PARAMETERs_Argument();
   D3D12_WRITEBUFFERIMMEDIATE_PARAMETER* Value{};
   size_t Size{};
-  std::vector<GITSKey> DestKeys{};
+  std::vector<ObjectKey> DestKeys{};
   std::vector<unsigned> DestOffsets{};
   bool Copy{};
 };
@@ -447,7 +447,7 @@ struct D3D12_PIPELINE_STATE_STREAM_DESC_Argument {
       const D3D12_PIPELINE_STATE_STREAM_DESC_Argument&) = delete;
   ~D3D12_PIPELINE_STATE_STREAM_DESC_Argument();
   D3D12_PIPELINE_STATE_STREAM_DESC* Value{};
-  GITSKey RootSignatureKey{};
+  ObjectKey RootSignatureKey{};
   bool Copy{};
 };
 
@@ -459,7 +459,7 @@ struct D3D12_STATE_OBJECT_DESC_Argument {
   D3D12_STATE_OBJECT_DESC_Argument& operator=(const D3D12_STATE_OBJECT_DESC_Argument&) = delete;
   ~D3D12_STATE_OBJECT_DESC_Argument();
   D3D12_STATE_OBJECT_DESC* Value{};
-  std::map<unsigned, GITSKey> InterfaceKeysBySubobject;
+  std::map<unsigned, ObjectKey> InterfaceKeysBySubobject;
   bool Copy{};
 };
 
@@ -471,7 +471,7 @@ struct D3D12_EXTENSION_ARGUMENTS_Argument {
   D3D12_EXTENSION_ARGUMENTS_Argument& operator=(const D3D12_EXTENSION_ARGUMENTS_Argument&) = delete;
   ~D3D12_EXTENSION_ARGUMENTS_Argument();
   D3D12_EXTENSION_ARGUMENTS* Value{};
-  std::vector<GITSKey> ObjectKeys{};
+  std::vector<ObjectKey> ObjectKeys{};
   bool Copy{};
 };
 
@@ -484,7 +484,7 @@ struct D3D12_EXTENDED_OPERATION_DATA_Argument {
       delete;
   ~D3D12_EXTENDED_OPERATION_DATA_Argument();
   D3D12_EXTENDED_OPERATION_DATA* Value{};
-  std::vector<GITSKey> ObjectKeys{};
+  std::vector<ObjectKey> ObjectKeys{};
   bool Copy{};
 };
 
@@ -498,7 +498,7 @@ struct PointerArgument<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS> {
       const PointerArgument<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS>&) = delete;
   ~PointerArgument();
   D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS* Value{};
-  std::vector<GITSKey> InputKeys{};
+  std::vector<ObjectKey> InputKeys{};
   std::vector<unsigned> InputOffsets{};
   bool Copy{};
 };
@@ -513,13 +513,13 @@ struct PointerArgument<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC> {
       const PointerArgument<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC>&) = delete;
   ~PointerArgument();
   D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC* Value{};
-  GITSKey DestAccelerationStructureKey{};
+  ObjectKey DestAccelerationStructureKey{};
   unsigned DestAccelerationStructureOffset{};
-  GITSKey SourceAccelerationStructureKey{};
+  ObjectKey SourceAccelerationStructureKey{};
   unsigned SourceAccelerationStructureOffset{};
-  GITSKey ScratchAccelerationStructureKey{};
+  ObjectKey ScratchAccelerationStructureKey{};
   unsigned ScratchAccelerationStructureOffset{};
-  std::vector<GITSKey> InputKeys{};
+  std::vector<ObjectKey> InputKeys{};
   std::vector<unsigned> InputOffsets{};
   bool Copy{};
 };
@@ -538,7 +538,7 @@ struct ArrayArgument<D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC
   ~ArrayArgument();
   D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC* Value{};
   size_t Size{};
-  std::vector<GITSKey> DestBufferKeys{};
+  std::vector<ObjectKey> DestBufferKeys{};
   std::vector<unsigned> DestBufferOffsets{};
   bool Copy{};
 };
@@ -554,7 +554,7 @@ struct PointerArgument<D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DE
       const PointerArgument<D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC>&) = delete;
   ~PointerArgument();
   D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC* Value{};
-  GITSKey destBufferKey{};
+  ObjectKey destBufferKey{};
   unsigned destBufferOffset{};
   bool Copy{};
 };
@@ -568,13 +568,13 @@ struct PointerArgument<D3D12_DISPATCH_RAYS_DESC> {
   PointerArgument& operator=(const PointerArgument<D3D12_DISPATCH_RAYS_DESC>&) = delete;
   ~PointerArgument();
   D3D12_DISPATCH_RAYS_DESC* Value{};
-  GITSKey RayGenerationShaderRecordKey{};
+  ObjectKey RayGenerationShaderRecordKey{};
   unsigned RayGenerationShaderRecordOffset{};
-  GITSKey MissShaderTableKey{};
+  ObjectKey MissShaderTableKey{};
   unsigned MissShaderTableOffset{};
-  GITSKey HitGroupTableKey{};
+  ObjectKey HitGroupTableKey{};
   unsigned HitGroupTableOffset{};
-  GITSKey CallableShaderTableKey{};
+  ObjectKey CallableShaderTableKey{};
   unsigned CallableShaderTableOffset{};
   bool Copy{};
 };
@@ -591,10 +591,10 @@ struct D3D12_RENDER_PASS_RENDER_TARGET_DESCs_Argument {
   ~D3D12_RENDER_PASS_RENDER_TARGET_DESCs_Argument();
   D3D12_RENDER_PASS_RENDER_TARGET_DESC* Value{};
   size_t Size{};
-  std::vector<GITSKey> DescriptorKeys{};
+  std::vector<ObjectKey> DescriptorKeys{};
   std::vector<unsigned> DescriptorIndexes{};
-  std::vector<GITSKey> ResolveSrcResourceKeys{};
-  std::vector<GITSKey> ResolveDstResourceKeys{};
+  std::vector<ObjectKey> ResolveSrcResourceKeys{};
+  std::vector<ObjectKey> ResolveDstResourceKeys{};
   bool Copy{};
 };
 
@@ -608,12 +608,12 @@ struct D3D12_RENDER_PASS_DEPTH_STENCIL_DESC_Argument {
   D3D12_RENDER_PASS_DEPTH_STENCIL_DESC_Argument& operator=(
       const D3D12_RENDER_PASS_DEPTH_STENCIL_DESC_Argument&) = delete;
   ~D3D12_RENDER_PASS_DEPTH_STENCIL_DESC_Argument();
-  GITSKey DescriptorKey{};
+  ObjectKey DescriptorKey{};
   unsigned DescriptorIndex{};
-  GITSKey ResolveSrcDepthKey{};
-  GITSKey ResolveDstDepthKey{};
-  GITSKey ResolveSrcStencilKey{};
-  GITSKey ResolveDstStencilKey{};
+  ObjectKey ResolveSrcDepthKey{};
+  ObjectKey ResolveDstDepthKey{};
+  ObjectKey ResolveSrcStencilKey{};
+  ObjectKey ResolveDstStencilKey{};
   bool Copy{};
 };
 
@@ -660,7 +660,7 @@ struct D3D12_BARRIER_GROUPs_Argument {
   ~D3D12_BARRIER_GROUPs_Argument();
   D3D12_BARRIER_GROUP* Value{};
   size_t Size{};
-  std::vector<GITSKey> ResourceKeys{};
+  std::vector<ObjectKey> ResourceKeys{};
   bool Copy{};
 };
 
@@ -675,9 +675,9 @@ struct ArrayArgument<D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO> {
   ~ArrayArgument();
   D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO* Value{};
   size_t Size{};
-  std::vector<GITSKey> DestKey{};
+  std::vector<ObjectKey> DestKey{};
   std::vector<unsigned> DestOffset{};
-  std::vector<GITSKey> SourceKey{};
+  std::vector<ObjectKey> SourceKey{};
   std::vector<unsigned> SourceOffset{};
   bool Copy{};
 };
@@ -692,7 +692,7 @@ struct ContextArgument {
   ContextArgument(void* value_) : Value(reinterpret_cast<T>(value_)) {}
   ContextArgument() {}
   T Value{};
-  GITSKey Key{};
+  ObjectKey Key{};
 };
 
 template <typename T>
@@ -708,7 +708,7 @@ struct ContextOutputArgument {
   ~ContextOutputArgument() {}
   T* Value{};
   T Data{};
-  GITSKey Key{};
+  ObjectKey Key{};
 };
 
 using INTCExtensionContextArgument = ContextArgument<INTCExtensionContext*>;
@@ -733,7 +733,7 @@ struct PointerArgument<INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC> {
   const void* Cs{};
   const void* CompileOptions{};
   const void* InternalOptions{};
-  GITSKey RootSignatureKey{};
+  ObjectKey RootSignatureKey{};
   bool Copy{};
 };
 
@@ -891,10 +891,10 @@ struct DML_BINDING_TABLE_DESC_Argument {
   ~DML_BINDING_TABLE_DESC_Argument();
   DML_BINDING_TABLE_DESC* Value{};
   struct BindingTableFields {
-    GITSKey DispatchableKey{};
-    GITSKey CpuDescHandleKey{};
+    ObjectKey DispatchableKey{};
+    ObjectKey CpuDescHandleKey{};
     unsigned CpuDescHandleIndex{};
-    GITSKey GpuDescHandleKey{};
+    ObjectKey GpuDescHandleKey{};
     unsigned GpuDescHandleIndex{};
   } TableFields;
   bool Copy{};
@@ -909,7 +909,7 @@ struct DML_BINDING_DESC_Argument {
   ~DML_BINDING_DESC_Argument();
   DML_BINDING_DESC* Value{};
   size_t ResourceKeysSize{};
-  std::vector<GITSKey> ResourceKeys{};
+  std::vector<ObjectKey> ResourceKeys{};
   bool Copy{};
 };
 
@@ -923,7 +923,7 @@ struct DML_BINDING_DESCs_Argument {
   DML_BINDING_DESC* Value{};
   size_t Size{};
   size_t ResourceKeysSize{};
-  std::vector<GITSKey> ResourceKeys{};
+  std::vector<ObjectKey> ResourceKeys{};
   bool Copy{};
 };
 
@@ -936,7 +936,7 @@ struct DML_GRAPH_DESC_Argument {
   ~DML_GRAPH_DESC_Argument();
   DML_GRAPH_DESC* Value{};
   size_t OperatorKeysSize{};
-  std::vector<GITSKey> OperatorKeys{};
+  std::vector<ObjectKey> OperatorKeys{};
   bool Copy{};
 };
 
@@ -977,6 +977,7 @@ struct DSTORAGE_QUEUE_DESC_Argument {
   DSTORAGE_QUEUE_DESC_Argument& operator=(const DSTORAGE_QUEUE_DESC_Argument&) = delete;
   ~DSTORAGE_QUEUE_DESC_Argument();
   DSTORAGE_QUEUE_DESC* Value{};
+  // TODO: replace size_t to ObjectKey after changing ObjectKey to uint64_t
   size_t DeviceKey{};
   bool Copy{};
 };
@@ -989,8 +990,8 @@ struct DSTORAGE_REQUEST_Argument {
   DSTORAGE_REQUEST_Argument& operator=(const DSTORAGE_REQUEST_Argument&) = delete;
   ~DSTORAGE_REQUEST_Argument();
   DSTORAGE_REQUEST* Value{};
-  GITSKey FileKey{};
-  GITSKey ResourceKey{};
+  ObjectKey FileKey{};
+  ObjectKey ResourceKey{};
   UINT64 NewOffset{};
   bool Copy{};
 };
@@ -1007,10 +1008,10 @@ struct xess_d3d12_init_params_t_Argument {
   xess_d3d12_init_params_t_Argument& operator=(const xess_d3d12_init_params_t_Argument&) = delete;
   ~xess_d3d12_init_params_t_Argument();
   xess_d3d12_init_params_t* Value{};
-  GITSKey Key{}; // Used for subcapture restore order
-  GITSKey TempBufferHeapKey{};
-  GITSKey TempTextureHeapKey{};
-  GITSKey PipelineLibraryKey{};
+  ObjectKey Key{}; // Used for subcapture restore order
+  ObjectKey TempBufferHeapKey{};
+  ObjectKey TempTextureHeapKey{};
+  ObjectKey PipelineLibraryKey{};
   bool Copy{};
 };
 
@@ -1023,13 +1024,13 @@ struct xess_d3d12_execute_params_t_Argument {
       delete;
   ~xess_d3d12_execute_params_t_Argument();
   xess_d3d12_execute_params_t* Value{};
-  GITSKey ColorTextureKey{};
-  GITSKey VelocityTextureKey{};
-  GITSKey DepthTextureKey{};
-  GITSKey ExposureScaleTextureKey{};
-  GITSKey ResponsivePixelMaskTextureKey{};
-  GITSKey OutputTextureKey{};
-  GITSKey DescriptorHeapKey{};
+  ObjectKey ColorTextureKey{};
+  ObjectKey VelocityTextureKey{};
+  ObjectKey DepthTextureKey{};
+  ObjectKey ExposureScaleTextureKey{};
+  ObjectKey ResponsivePixelMaskTextureKey{};
+  ObjectKey OutputTextureKey{};
+  ObjectKey DescriptorHeapKey{};
   bool Copy{};
 };
 
@@ -1048,15 +1049,15 @@ struct PointerArgument<NVAPI_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_EX_PARAMS> 
       const PointerArgument<NVAPI_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_EX_PARAMS>&) = delete;
   ~PointerArgument();
   NVAPI_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_EX_PARAMS* Value{};
-  GITSKey DestAccelerationStructureKey{};
+  ObjectKey DestAccelerationStructureKey{};
   unsigned DestAccelerationStructureOffset{};
-  GITSKey SourceAccelerationStructureKey{};
+  ObjectKey SourceAccelerationStructureKey{};
   unsigned SourceAccelerationStructureOffset{};
-  GITSKey ScratchAccelerationStructureKey{};
+  ObjectKey ScratchAccelerationStructureKey{};
   unsigned ScratchAccelerationStructureOffset{};
-  std::vector<GITSKey> InputKeys{};
+  std::vector<ObjectKey> InputKeys{};
   std::vector<unsigned> InputOffsets{};
-  std::vector<GITSKey> DestPostBuildBufferKeys{};
+  std::vector<ObjectKey> DestPostBuildBufferKeys{};
   std::vector<unsigned> DestPostBuildBufferOffsets{};
   bool Copy{};
 };
@@ -1071,15 +1072,15 @@ struct PointerArgument<NVAPI_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_PARAMS> {
       const PointerArgument<NVAPI_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_PARAMS>&) = delete;
   ~PointerArgument();
   NVAPI_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_PARAMS* Value{};
-  GITSKey DestOpacityMicromapArrayDataKey{};
+  ObjectKey DestOpacityMicromapArrayDataKey{};
   unsigned DestOpacityMicromapArrayDataOffset{};
-  GITSKey InputBufferKey{};
+  ObjectKey InputBufferKey{};
   unsigned InputBufferOffset{};
-  GITSKey PerOMMDescsKey{};
+  ObjectKey PerOMMDescsKey{};
   unsigned PerOMMDescsOffset{};
-  GITSKey ScratchOpacityMicromapArrayDataKey{};
+  ObjectKey ScratchOpacityMicromapArrayDataKey{};
   unsigned ScratchOpacityMicromapArrayDataOffset{};
-  std::vector<GITSKey> DestPostBuildBufferKeys{};
+  std::vector<ObjectKey> DestPostBuildBufferKeys{};
   std::vector<unsigned> DestPostBuildBufferOffsets{};
   bool Copy{};
 };
@@ -1098,17 +1099,17 @@ struct PointerArgument<NVAPI_RAYTRACING_EXECUTE_MULTI_INDIRECT_CLUSTER_OPERATION
       delete;
   ~PointerArgument();
   NVAPI_RAYTRACING_EXECUTE_MULTI_INDIRECT_CLUSTER_OPERATION_PARAMS* Value{};
-  GITSKey BatchResultDataKey{};
+  ObjectKey BatchResultDataKey{};
   unsigned BatchResultDataOffset{};
-  GITSKey BatchScratchDataKey{};
+  ObjectKey BatchScratchDataKey{};
   unsigned BatchScratchDataOffset{};
-  GITSKey DestinationAddressArrayKey{};
+  ObjectKey DestinationAddressArrayKey{};
   unsigned DestinationAddressArrayOffset{};
-  GITSKey ResultSizeArrayKey{};
+  ObjectKey ResultSizeArrayKey{};
   unsigned ResultSizeArrayOffset{};
-  GITSKey IndirectArgArrayKey{};
+  ObjectKey IndirectArgArrayKey{};
   unsigned IndirectArgArrayOffset{};
-  GITSKey IndirectArgCountKey{};
+  ObjectKey IndirectArgCountKey{};
   unsigned IndirectArgCountOffset{};
   bool Copy{};
 };
@@ -1142,11 +1143,11 @@ struct xefg_swapchain_d3d12_init_params_t_Argument {
       const xefg_swapchain_d3d12_init_params_t_Argument&) = delete;
   ~xefg_swapchain_d3d12_init_params_t_Argument();
   xefg_swapchain_d3d12_init_params_t* Value{};
-  GITSKey Key{};
-  GITSKey ApplicationSwapChainKey{};
-  GITSKey TempBufferHeapKey{};
-  GITSKey TempTextureHeapKey{};
-  GITSKey PipelineLibraryKey{};
+  ObjectKey Key{};
+  ObjectKey ApplicationSwapChainKey{};
+  ObjectKey TempBufferHeapKey{};
+  ObjectKey TempTextureHeapKey{};
+  ObjectKey PipelineLibraryKey{};
   bool Copy{};
 };
 
@@ -1160,7 +1161,7 @@ struct xefg_swapchain_d3d12_resource_data_t_Argument {
       const xefg_swapchain_d3d12_resource_data_t_Argument&) = delete;
   ~xefg_swapchain_d3d12_resource_data_t_Argument();
   xefg_swapchain_d3d12_resource_data_t* Value{};
-  GITSKey ResourceKey{};
+  ObjectKey ResourceKey{};
   bool Copy{};
 };
 

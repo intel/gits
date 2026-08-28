@@ -24,10 +24,10 @@ namespace DirectX {
 namespace ccode {
 
 // Get the object name (e.g 615 -> "O615")
-std::string objKeyToStr(GITSKey key);
+std::string objKeyToStr(ObjectKey key);
 // Get the global ComPtr access to Ptr (e.g. 615 -> "g_O615.Get()")
 // Note: Returns "nullptr" if the key is 0
-std::string objKeyToPtrStr(GITSKey key);
+std::string objKeyToPtrStr(ObjectKey key);
 
 template <typename T>
 std::string toHex(const T& value) {

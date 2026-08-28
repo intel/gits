@@ -19,10 +19,10 @@ namespace DirectX {
 
 class PipelineLibraryService {
 public:
-  void ReleasePipelineState(GITSKey pipelineStateKey, unsigned refCount);
-  void AddRefPipelineState(GITSKey pipelineStateKey);
+  void ReleasePipelineState(ObjectKey pipelineStateKey, unsigned refCount);
+  void AddRefPipelineState(ObjectKey pipelineStateKey);
   void CreatePipelineLibrary(ID3D12Device1CreatePipelineLibraryCommand& c);
-  void CreatePipelineState(GITSKey pipelineStateKey);
+  void CreatePipelineState(ObjectKey pipelineStateKey);
   HRESULT LoadComputePipeline(ID3D12PipelineLibraryLoadComputePipelineCommand& c);
   HRESULT LoadGraphicsPipeline(ID3D12PipelineLibraryLoadGraphicsPipelineCommand& c);
   HRESULT LoadPipeline(ID3D12PipelineLibrary1LoadPipelineCommand& c);
@@ -32,11 +32,11 @@ public:
                             LPCWSTR name,
                             Desc* desc,
                             REFIID iid,
-                            GITSKey pipelineStateKey,
+                            ObjectKey pipelineStateKey,
                             void** ppPipelineState);
 
 private:
-  std::unordered_map<GITSKey, unsigned> m_PipelineStateRefCounts;
+  std::unordered_map<ObjectKey, unsigned> m_PipelineStateRefCounts;
   std::mutex m_Mutex;
 };
 

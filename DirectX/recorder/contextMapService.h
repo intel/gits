@@ -18,14 +18,14 @@ namespace DirectX {
 
 class ContextMapService {
 public:
-  void SetContext(std::uintptr_t context, GITSKey key) {
+  void SetContext(std::uintptr_t context, ObjectKey key) {
     std::lock_guard<std::mutex> lock(m_Mutex);
     m_ContextMap[context] = key;
   }
 
-  GITSKey GetKey(std::uintptr_t context) {
+  ObjectKey GetKey(std::uintptr_t context) {
     if (!context) {
-      return 0;
+      return ObjectKey{};
     }
     std::lock_guard<std::mutex> lock(m_Mutex);
     auto it = m_ContextMap.find(context);
@@ -39,7 +39,7 @@ public:
   }
 
 private:
-  std::unordered_map<std::uintptr_t, GITSKey> m_ContextMap{};
+  std::unordered_map<std::uintptr_t, ObjectKey> m_ContextMap{};
   std::mutex m_Mutex;
 };
 

@@ -18,10 +18,10 @@ namespace DirectX {
 void GraphicsPipelineState::Reset() {
   m_StateDesc = nullptr;
   m_StateStreamDesc = nullptr;
-  m_RootSignatureKey = 0;
+  m_RootSignatureKey = ObjectKey{};
   m_RootSignatureDesc = nullptr;
   m_BindingState.Reset();
-  m_IndexBufferKey = 0;
+  m_IndexBufferKey = ObjectKey{};
   m_IndexBufferOffset = 0;
   m_VertexBuffers.fill(VertexBuffer{});
   m_DepthStencil.reset();
@@ -31,7 +31,7 @@ void GraphicsPipelineState::Reset() {
   m_ScissorRects.clear();
 }
 
-void GraphicsPipelineState::SetRootSignature(GITSKey rootSignatureKey,
+void GraphicsPipelineState::SetRootSignature(ObjectKey rootSignatureKey,
                                              D3D12_ROOT_SIGNATURE_DESC2* desc) {
   m_RootSignatureKey = rootSignatureKey;
   m_RootSignatureDesc = desc;

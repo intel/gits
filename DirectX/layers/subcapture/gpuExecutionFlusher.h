@@ -19,8 +19,8 @@ namespace DirectX {
 
 class GpuExecutionFlusher : public GpuExecutionTracker {
 public:
-  void ExecuteCommandLists(GITSKey commandQueueKey, ID3D12CommandQueue* commandQueue);
-  void DestroyCommandQueue(GITSKey commandQueueKey);
+  void ExecuteCommandLists(ObjectKey commandQueueKey, ID3D12CommandQueue* commandQueue);
+  void DestroyCommandQueue(ObjectKey commandQueueKey);
   void FlushCommandQueues();
 
 private:
@@ -29,7 +29,7 @@ private:
     Microsoft::WRL::ComPtr<ID3D12Fence> Fence;
     UINT64 FenceValue{};
   };
-  std::unordered_map<GITSKey, CommandQueueInfo> m_CommandQueues;
+  std::unordered_map<ObjectKey, CommandQueueInfo> m_CommandQueues;
 };
 
 } // namespace DirectX

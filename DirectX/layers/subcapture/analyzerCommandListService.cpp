@@ -39,13 +39,13 @@ std::set<CommandKey>& AnalyzerCommandListService::GetTlases() {
   return m_TlasBuildKeys;
 }
 
-void AnalyzerCommandListService::CommandListsRestore(const std::set<GITSKey>& commandLists) {
-  for (GITSKey commandListKey : commandLists) {
+void AnalyzerCommandListService::CommandListsRestore(const std::set<ObjectKey>& commandLists) {
+  for (ObjectKey commandListKey : commandLists) {
     CommandListRestore(commandListKey);
   }
 }
 
-void AnalyzerCommandListService::CommandListRestore(GITSKey commandListKey) {
+void AnalyzerCommandListService::CommandListRestore(ObjectKey commandListKey) {
   auto itCommandList = m_CommandsByCommandList.find(commandListKey);
   if (itCommandList == m_CommandsByCommandList.end()) {
     return;
@@ -338,7 +338,7 @@ void AnalyzerCommandListService::CopyDescriptors(ID3D12DeviceCopyDescriptorsComm
       AddObjectForRestore(c.m_pSrcDescriptorRangeStarts.InterfaceKeys[i]);
     }
 
-    for (GITSKey key : c.m_pDestDescriptorRangeStarts.InterfaceKeys) {
+    for (ObjectKey key : c.m_pDestDescriptorRangeStarts.InterfaceKeys) {
       AddObjectForRestore(key);
     }
   }
@@ -348,8 +348,8 @@ void AnalyzerCommandListService::Present() {
   m_FirstFrame = false;
 }
 
-void AnalyzerCommandListService::SetBindlessDescriptors(GITSKey rootSignatureKey,
-                                                        GITSKey descriptorHeapKey,
+void AnalyzerCommandListService::SetBindlessDescriptors(ObjectKey rootSignatureKey,
+                                                        ObjectKey descriptorHeapKey,
                                                         D3D12_DESCRIPTOR_HEAP_TYPE heapType,
                                                         unsigned heapNumDescriptors) {
   if (!rootSignatureKey || !descriptorHeapKey) {
@@ -459,10 +459,10 @@ void AnalyzerCommandListService::CommandAnalysis(
 
 void AnalyzerCommandListService::CommandAnalysis(
     ID3D12GraphicsCommandListResourceBarrierCommand& c) {
-  for (GITSKey key : c.m_pBarriers.ResourceKeys) {
+  for (ObjectKey key : c.m_pBarriers.ResourceKeys) {
     AddObjectForRestore(key);
   }
-  for (GITSKey key : c.m_pBarriers.ResourceAfterKeys) {
+  for (ObjectKey key : c.m_pBarriers.ResourceAfterKeys) {
     AddObjectForRestore(key);
   }
 }
@@ -487,9 +487,9 @@ void AnalyzerCommandListService::CommandAnalysis(
   m_RaytracingService.SetDescriptorHeaps(c.m_Object.Key, infos);
 
   CommandListInfo& commandListInfo = m_CommandListInfos[c.m_Object.Key];
-  commandListInfo.viewDescriptorHeap = 0;
-  commandListInfo.samplerDescriptorHeap = 0;
-  for (GITSKey key : c.m_ppDescriptorHeaps.Keys) {
+  commandListInfo.viewDescriptorHeap = ObjectKey{};
+  commandListInfo.samplerDescriptorHeap = ObjectKey{};
+  for (ObjectKey key : c.m_ppDescriptorHeaps.Keys) {
     AddObjectForRestore(key);
     DescriptorHeapInfo& info = m_DescriptorHeapInfos[key];
     if (info.type == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV) {
@@ -517,8 +517,8 @@ void AnalyzerCommandListService::CommandAnalysis(
   if (!c.m_BaseDescriptor.Value.ptr) {
     return;
   }
-  GITSKey rootSignatureKey = m_CommandListInfos[c.m_Object.Key].computeRootSignature;
-  GITS_ASSERT(rootSignatureKey);
+  ObjectKey rootSignatureKey = m_CommandListInfos[c.m_Object.Key].computeRootSignature;
+  GITS_ASSERT(rootSignatureKey != ObjectKey{});
   unsigned numDescriptors = m_DescriptorHeapInfos[c.m_BaseDescriptor.InterfaceKey].numDescriptors;
   GITS_ASSERT(numDescriptors);
   std::vector<unsigned> Indexes = m_RootSignatureService.GetDescriptorTableIndexes(
@@ -541,8 +541,8 @@ void AnalyzerCommandListService::CommandAnalysis(
   if (!c.m_BaseDescriptor.Value.ptr) {
     return;
   }
-  GITSKey rootSignatureKey = m_CommandListInfos[c.m_Object.Key].graphicsRootSignature;
-  GITS_ASSERT(rootSignatureKey);
+  ObjectKey rootSignatureKey = m_CommandListInfos[c.m_Object.Key].graphicsRootSignature;
+  GITS_ASSERT(rootSignatureKey != ObjectKey{});
   unsigned numDescriptors = m_DescriptorHeapInfos[c.m_BaseDescriptor.InterfaceKey].numDescriptors;
   GITS_ASSERT(numDescriptors);
   std::vector<unsigned> Indexes = m_RootSignatureService.GetDescriptorTableIndexes(
@@ -619,7 +619,7 @@ void AnalyzerCommandListService::CommandAnalysis(
     ID3D12GraphicsCommandListOMSetRenderTargetsCommand& c) {
   if (!c.m_RTsSingleHandleToDescriptorRange.Value) {
     for (unsigned i = 0; i < c.m_NumRenderTargetDescriptors.Value; ++i) {
-      GITSKey key = c.m_pRenderTargetDescriptors.InterfaceKeys[i];
+      ObjectKey key = c.m_pRenderTargetDescriptors.InterfaceKeys[i];
       unsigned index = c.m_pRenderTargetDescriptors.Indexes[i];
       if (key) {
         AddObjectForRestore(key);
@@ -632,7 +632,7 @@ void AnalyzerCommandListService::CommandAnalysis(
       }
     }
   } else if (c.m_NumRenderTargetDescriptors.Value) {
-    GITSKey key = c.m_pRenderTargetDescriptors.InterfaceKeys[0];
+    ObjectKey key = c.m_pRenderTargetDescriptors.InterfaceKeys[0];
     unsigned index = c.m_pRenderTargetDescriptors.Indexes[0];
     if (key) {
       AddObjectForRestore(key);
@@ -648,7 +648,7 @@ void AnalyzerCommandListService::CommandAnalysis(
     }
   }
   if (c.m_pDepthStencilDescriptor.Value) {
-    GITSKey key = c.m_pDepthStencilDescriptor.InterfaceKeys[0];
+    ObjectKey key = c.m_pDepthStencilDescriptor.InterfaceKeys[0];
     unsigned index = c.m_pDepthStencilDescriptor.Indexes[0];
     if (key) {
       AddObjectForRestore(key);
@@ -802,7 +802,7 @@ void AnalyzerCommandListService::CommandAnalysis(
     ID3D12GraphicsCommandList1AtomicCopyBufferUINTCommand& c) {
   AddObjectForRestore(c.m_pDstBuffer.Key);
   AddObjectForRestore(c.m_pSrcBuffer.Key);
-  for (GITSKey key : c.m_ppDependentResources.Keys) {
+  for (ObjectKey key : c.m_ppDependentResources.Keys) {
     AddObjectForRestore(key);
   }
 }
@@ -811,7 +811,7 @@ void AnalyzerCommandListService::CommandAnalysis(
     ID3D12GraphicsCommandList1AtomicCopyBufferUINT64Command& c) {
   AddObjectForRestore(c.m_pDstBuffer.Key);
   AddObjectForRestore(c.m_pSrcBuffer.Key);
-  for (GITSKey key : c.m_ppDependentResources.Keys) {
+  for (ObjectKey key : c.m_ppDependentResources.Keys) {
     AddObjectForRestore(key);
   }
 }
@@ -824,7 +824,7 @@ void AnalyzerCommandListService::CommandAnalysis(
 
 void AnalyzerCommandListService::CommandAnalysis(
     ID3D12GraphicsCommandList2WriteBufferImmediateCommand& c) {
-  for (GITSKey key : c.m_pParams.DestKeys) {
+  for (ObjectKey key : c.m_pParams.DestKeys) {
     AddObjectForRestore(key);
   }
 }
@@ -837,7 +837,7 @@ void AnalyzerCommandListService::CommandAnalysis(
 void AnalyzerCommandListService::CommandAnalysis(
     ID3D12GraphicsCommandList4BeginRenderPassCommand& c) {
   for (unsigned i = 0; i < c.m_pRenderTargets.Size; ++i) {
-    GITSKey DescriptorKey = c.m_pRenderTargets.DescriptorKeys[i];
+    ObjectKey DescriptorKey = c.m_pRenderTargets.DescriptorKeys[i];
     if (DescriptorKey) {
       AddObjectForRestore(DescriptorKey);
       DescriptorState* state = m_DescriptorService.GetDescriptorState(
@@ -849,10 +849,10 @@ void AnalyzerCommandListService::CommandAnalysis(
       m_Descriptors.insert({DescriptorKey, c.m_pRenderTargets.DescriptorIndexes[i]});
     }
   }
-  for (GITSKey key : c.m_pRenderTargets.ResolveSrcResourceKeys) {
+  for (ObjectKey key : c.m_pRenderTargets.ResolveSrcResourceKeys) {
     AddObjectForRestore(key);
   }
-  for (GITSKey key : c.m_pRenderTargets.ResolveDstResourceKeys) {
+  for (ObjectKey key : c.m_pRenderTargets.ResolveDstResourceKeys) {
     AddObjectForRestore(key);
   }
   if (c.m_pDepthStencil.DescriptorKey) {
@@ -923,10 +923,10 @@ void AnalyzerCommandListService::CommandAnalysis(
   if (!IsStateRestoreKey(c.m_pDesc.ScratchAccelerationStructureKey)) {
     AddObjectForRestore(c.m_pDesc.ScratchAccelerationStructureKey);
   }
-  for (GITSKey key : c.m_pDesc.InputKeys) {
+  for (ObjectKey key : c.m_pDesc.InputKeys) {
     AddObjectForRestore(key);
   }
-  for (GITSKey key : c.m_pPostbuildInfoDescs.DestBufferKeys) {
+  for (ObjectKey key : c.m_pPostbuildInfoDescs.DestBufferKeys) {
     AddObjectForRestore(key);
   }
   AddObjectForRestore(c.m_pDesc.DestAccelerationStructureKey);
@@ -936,10 +936,10 @@ void AnalyzerCommandListService::CommandAnalysis(
   if (!IsStateRestoreKey(c.m_pDesc.ScratchAccelerationStructureKey)) {
     AddObjectForRestore(c.m_pDesc.ScratchAccelerationStructureKey);
   }
-  for (GITSKey key : c.m_pDesc.InputKeys) {
+  for (ObjectKey key : c.m_pDesc.InputKeys) {
     AddObjectForRestore(key);
   }
-  for (GITSKey key : c.m_pPostbuildInfoDescs.DestBufferKeys) {
+  for (ObjectKey key : c.m_pPostbuildInfoDescs.DestBufferKeys) {
     AddObjectForRestore(key);
   }
 }
@@ -961,7 +961,7 @@ void AnalyzerCommandListService::Command(
     m_TlasBuildKeys.insert(c.Key);
     m_RaytracingService.BuildTlas(c);
     AddObjectForRestore(c.m_pDesc.DestAccelerationStructureKey);
-    for (GITSKey key : c.m_pDesc.InputKeys) {
+    for (ObjectKey key : c.m_pDesc.InputKeys) {
       AddObjectForRestore(key);
     }
   }
@@ -1016,10 +1016,10 @@ void AnalyzerCommandListService::CommandAnalysis(
   if (!IsStateRestoreKey(c.m_pParams.ScratchAccelerationStructureKey)) {
     AddObjectForRestore(c.m_pParams.ScratchAccelerationStructureKey);
   }
-  for (GITSKey key : c.m_pParams.InputKeys) {
+  for (ObjectKey key : c.m_pParams.InputKeys) {
     AddObjectForRestore(key);
   }
-  for (GITSKey key : c.m_pParams.DestPostBuildBufferKeys) {
+  for (ObjectKey key : c.m_pParams.DestPostBuildBufferKeys) {
     AddObjectForRestore(key);
   }
   AddObjectForRestore(c.m_pParams.DestAccelerationStructureKey);
@@ -1029,10 +1029,10 @@ void AnalyzerCommandListService::CommandAnalysis(
   if (!IsStateRestoreKey(c.m_pParams.ScratchAccelerationStructureKey)) {
     AddObjectForRestore(c.m_pParams.ScratchAccelerationStructureKey);
   }
-  for (GITSKey key : c.m_pParams.InputKeys) {
+  for (ObjectKey key : c.m_pParams.InputKeys) {
     AddObjectForRestore(key);
   }
-  for (GITSKey key : c.m_pParams.DestPostBuildBufferKeys) {
+  for (ObjectKey key : c.m_pParams.DestPostBuildBufferKeys) {
     AddObjectForRestore(key);
   }
 }
@@ -1066,7 +1066,7 @@ void AnalyzerCommandListService::CommandAnalysis(
   if (!IsStateRestoreKey(c.m_pParams.ScratchOpacityMicromapArrayDataKey)) {
     AddObjectForRestore(c.m_pParams.ScratchOpacityMicromapArrayDataKey);
   }
-  for (GITSKey key : c.m_pParams.DestPostBuildBufferKeys) {
+  for (ObjectKey key : c.m_pParams.DestPostBuildBufferKeys) {
     AddObjectForRestore(key);
   }
 }
@@ -1128,9 +1128,9 @@ void AnalyzerCommandListService::CommandAnalysis(
   AddObjectForRestore(c.m_pStateObject.Key);
   if (m_CheckedStateObjectSubobjects.find(c.m_pStateObject.Key) ==
       m_CheckedStateObjectSubobjects.end()) {
-    const std::set<GITSKey> subobjects =
+    const std::set<ObjectKey> subobjects =
         m_RaytracingService.GetStateObjectAllSubobjects(c.m_pStateObject.Key);
-    for (GITSKey key : subobjects) {
+    for (ObjectKey key : subobjects) {
       AddObjectForRestore(key);
     }
     m_CheckedStateObjectSubobjects.insert(c.m_pStateObject.Key);
@@ -1178,7 +1178,7 @@ void AnalyzerCommandListService::CommandAnalysis(ID3D12GraphicsCommandList6Dispa
 }
 
 void AnalyzerCommandListService::CommandAnalysis(ID3D12GraphicsCommandList7BarrierCommand& c) {
-  for (GITSKey key : c.m_pBarrierGroups.ResourceKeys) {
+  for (ObjectKey key : c.m_pBarrierGroups.ResourceKeys) {
     AddObjectForRestore(key);
   }
 }

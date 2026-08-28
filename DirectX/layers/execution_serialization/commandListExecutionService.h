@@ -30,32 +30,32 @@ public:
   CommandListExecutionService(ExecutionSerializationRecorder& recorder,
                               CpuDescriptorsService& cpuDescriptorsService)
       : m_Recorder(recorder), m_CpuDescriptorsService(cpuDescriptorsService) {}
-  void CommandListCommand(GITSKey commandListKey, const Command& command);
+  void CommandListCommand(ObjectKey commandListKey, const Command& command);
   void ExecuteCommandLists(CommandKey callKey,
-                           GITSKey commandQueueKey,
-                           std::vector<GITSKey>& commandListKeys);
-  void CreateCommandList(GITSKey commandListKey, GITSKey allocatorKey);
-  void CommandListReset(CommandKey commandKey, GITSKey commandListKey, GITSKey allocatorKey);
+                           ObjectKey commandQueueKey,
+                           std::vector<ObjectKey>& commandListKeys);
+  void CreateCommandList(ObjectKey commandListKey, ObjectKey allocatorKey);
+  void CommandListReset(CommandKey commandKey, ObjectKey commandListKey, ObjectKey allocatorKey);
   void CommandQueueWait(CommandKey callKey,
-                        GITSKey commandQueueKey,
-                        GITSKey fenceKey,
+                        ObjectKey commandQueueKey,
+                        ObjectKey fenceKey,
                         UINT64 fenceValue);
   void CommandQueueSignal(CommandKey callKey,
-                          GITSKey commandQueueKey,
-                          GITSKey fenceKey,
+                          ObjectKey commandQueueKey,
+                          ObjectKey fenceKey,
                           UINT64 fenceValue);
-  void FenceSignal(CommandKey callKey, GITSKey fenceKey, UINT64 fenceValue);
-  void CreateCommandQueue(GITSKey deviceKey, GITSKey commandQueueKey);
+  void FenceSignal(CommandKey callKey, ObjectKey fenceKey, UINT64 fenceValue);
+  void CreateCommandQueue(ObjectKey deviceKey, ObjectKey commandQueueKey);
   CommandKey GetUniqueCommandKey() {
     return ++m_RestoreCommandKey;
   };
-  GITSKey GetUniqueObjectKey() {
+  ObjectKey GetUniqueObjectKey() {
     return ++m_RestoreObjectKey;
   };
 
 private:
   struct CommandList {
-    GITSKey CommandListKey{};
+    ObjectKey CommandListKey{};
     bool Reset{};
     std::vector<std::unique_ptr<stream::CommandSerializer>> Commands;
   };
@@ -70,12 +70,12 @@ private:
   ExecutionSerializationRecorder& m_Recorder;
   CpuDescriptorsService& m_CpuDescriptorsService;
   GpuExecutionTracker m_ExecutionTracker;
-  std::unordered_map<GITSKey, CommandList> m_CommandListsByKey;
-  std::unordered_map<GITSKey, GITSKey> m_DeviceByCommandQueue;
-  std::unordered_map<GITSKey, std::pair<GITSKey, UINT64>> m_FenceByCommandQueue;
-  std::unordered_map<GITSKey, GITSKey> m_CommandListCreationAllocators;
+  std::unordered_map<ObjectKey, CommandList> m_CommandListsByKey;
+  std::unordered_map<ObjectKey, ObjectKey> m_DeviceByCommandQueue;
+  std::unordered_map<ObjectKey, std::pair<ObjectKey, UINT64>> m_FenceByCommandQueue;
+  std::unordered_map<ObjectKey, ObjectKey> m_CommandListCreationAllocators;
   CommandKey m_RestoreCommandKey{EXECUTION_SERIALIZATION_KEY_MASK};
-  GITSKey m_RestoreObjectKey{EXECUTION_SERIALIZATION_KEY_MASK};
+  ObjectKey m_RestoreObjectKey{EXECUTION_SERIALIZATION_KEY_MASK};
 };
 
 } // namespace DirectX

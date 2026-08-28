@@ -31,11 +31,11 @@ public:
       NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& c);
   void NvapiBuildOpacityMicromapArray(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& c);
   void ExecuteCommandLists(ID3D12CommandQueueExecuteCommandListsCommand& c);
-  void Optimize(std::unordered_set<std::pair<GITSKey, unsigned>, UnsignedPairHash>& ases);
+  void Optimize(std::unordered_set<std::pair<ObjectKey, unsigned>, UnsignedPairHash>& ases);
   std::vector<std::pair<CommandKey, CommandKey>>& GetOptimizedCommands() {
     return m_OptimizedCommandsWithSources;
   }
-  std::unordered_set<GITSKey>& GetExistingBuffers() {
+  std::unordered_set<ObjectKey>& GetExistingBuffers() {
     return m_ExistingBuffers;
   }
 
@@ -43,27 +43,27 @@ private:
   struct RaytracingCommand {
     unsigned Id{};
     CommandKey Key{};
-    GITSKey DestKey{};
+    ObjectKey DestKey{};
     unsigned DestOffset{};
-    GITSKey SourceKey{};
+    ObjectKey SourceKey{};
     unsigned SourceOffset{};
     bool UpdateBuild{};
     RaytracingCommand* Source{};
     bool Restore{};
-    std::unordered_set<GITSKey> Buffers;
-    std::unordered_set<std::pair<GITSKey, unsigned>, UnsignedPairHash> OmmLinkages;
+    std::unordered_set<ObjectKey> Buffers;
+    std::unordered_set<std::pair<ObjectKey, unsigned>, UnsignedPairHash> OmmLinkages;
     std::vector<RaytracingCommand*> OpacityMicromapArrays;
   };
 
   unsigned m_CommandUniqueId{};
-  std::unordered_map<GITSKey, std::vector<std::unique_ptr<RaytracingCommand>>>
+  std::unordered_map<ObjectKey, std::vector<std::unique_ptr<RaytracingCommand>>>
       m_CommandsByCommandList;
-  std::unordered_map<std::pair<GITSKey, unsigned>, RaytracingCommand*, UnsignedPairHash>
+  std::unordered_map<std::pair<ObjectKey, unsigned>, RaytracingCommand*, UnsignedPairHash>
       m_CommandByKeyOffset;
   std::unordered_map<unsigned, std::unique_ptr<RaytracingCommand>> m_CommandById;
 
   std::vector<std::pair<CommandKey, CommandKey>> m_OptimizedCommandsWithSources;
-  std::unordered_set<GITSKey> m_ExistingBuffers;
+  std::unordered_set<ObjectKey> m_ExistingBuffers;
 
 private:
   void StoreCommand(std::unique_ptr<RaytracingCommand>& command);

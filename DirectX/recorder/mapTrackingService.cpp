@@ -40,7 +40,7 @@ void MapTrackingService::EnableWriteWatch(D3D12_HEAP_PROPERTIES& properties,
   }
 }
 
-void MapTrackingService::MapResource(GITSKey resourceKey,
+void MapTrackingService::MapResource(ObjectKey resourceKey,
                                      ID3D12Resource* resource,
                                      unsigned subresourceIndex,
                                      void** mappedData) {
@@ -97,7 +97,7 @@ void MapTrackingService::MapResource(GITSKey resourceKey,
   m_Mutex.unlock();
 }
 
-void MapTrackingService::UnmapResource(GITSKey resourceKey, unsigned subresourceIndex) {
+void MapTrackingService::UnmapResource(ObjectKey resourceKey, unsigned subresourceIndex) {
 
   std::lock_guard<std::mutex> lock(m_Mutex);
 
@@ -125,7 +125,7 @@ void MapTrackingService::ExecuteCommandLists() {
   }
 }
 
-void MapTrackingService::DestroyResource(GITSKey resourceKey) {
+void MapTrackingService::DestroyResource(ObjectKey resourceKey) {
 
   std::lock_guard<std::mutex> lock(m_Mutex);
 
@@ -194,7 +194,7 @@ void MapTrackingService::CaptureModifiedData(MappedInfo* info) {
 }
 
 void MapTrackingService::CaptureData(
-    GITSKey resourceKey, void* mappedAddress, unsigned offset, void* data, unsigned dataSize) {
+    ObjectKey resourceKey, void* mappedAddress, unsigned offset, void* data, unsigned dataSize) {
 
   MappedDataMetaCommand command(GetCurrentThreadId());
   command.Key = CaptureManager::Get().CreateCommandKey();

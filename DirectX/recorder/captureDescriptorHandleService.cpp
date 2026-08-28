@@ -15,7 +15,7 @@
 namespace gits {
 namespace DirectX {
 
-void CaptureDescriptorHandleService::CreateDescriptorHeap(GITSKey descriptorHeapKey,
+void CaptureDescriptorHandleService::CreateDescriptorHeap(ObjectKey descriptorHeapKey,
                                                           ID3D12DescriptorHeap* descriptorHeap,
                                                           const D3D12_DESCRIPTOR_HEAP_DESC* desc) {
   tbb::spin_rw_mutex::scoped_lock lock(m_RwMutex);
@@ -76,7 +76,7 @@ CaptureDescriptorHandleService::HandleInfo CaptureDescriptorHandleService::GetDe
   return handleInfo;
 }
 
-void CaptureDescriptorHandleService::DestroyDescriptorHeap(GITSKey descriptorHeapKey) {
+void CaptureDescriptorHandleService::DestroyDescriptorHeap(ObjectKey descriptorHeapKey) {
 
   tbb::spin_rw_mutex::scoped_lock lock(m_RwMutex);
 

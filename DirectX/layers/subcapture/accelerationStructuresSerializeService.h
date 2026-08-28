@@ -30,13 +30,13 @@ public:
       ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c);
   void CopyAccelerationStructure(
       ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& c);
-  void SetDevice(ID3D12Device* device, GITSKey deviceKey) {
+  void SetDevice(ID3D12Device* device, ObjectKey deviceKey) {
     m_Device = device;
     m_DeviceKey = deviceKey;
   }
   void RestoreAccelerationStructures();
   void ExecuteCommandLists(ID3D12CommandQueueExecuteCommandListsCommand& c);
-  void DestroyResource(GITSKey resourceKey);
+  void DestroyResource(ObjectKey resourceKey);
 
 private:
   StateTrackingService& m_StateService;
@@ -44,15 +44,15 @@ private:
 
   struct AccelerationStructure {
     CommandKey CallKey{};
-    GITSKey Key{};
+    ObjectKey Key{};
     unsigned Offset{};
     D3D12_GPU_VIRTUAL_ADDRESS Address{};
   };
   using AccelerationStructures = std::map<D3D12_GPU_VIRTUAL_ADDRESS, AccelerationStructure>;
-  std::map<GITSKey, AccelerationStructures> m_AccelerationStructuresByCommandList;
+  std::map<ObjectKey, AccelerationStructures> m_AccelerationStructuresByCommandList;
   AccelerationStructures m_AccelerationStructures;
 
-  std::unordered_map<GITSKey, std::unordered_set<D3D12_GPU_VIRTUAL_ADDRESS>>
+  std::unordered_map<ObjectKey, std::unordered_set<D3D12_GPU_VIRTUAL_ADDRESS>>
       m_AccelerationStructuresByResource;
 
   bool m_SerializeMode{};
@@ -62,11 +62,11 @@ private:
   ID3D12GraphicsCommandList4* m_CommandList{};
   ID3D12Fence* m_Fence{};
   UINT64 m_CurrentFenceValue{};
-  GITSKey m_DeviceKey{};
-  GITSKey m_CommandQueueKey{};
-  GITSKey m_CommandAllocatorKey{};
-  GITSKey m_CommandListKey{};
-  GITSKey m_FenceKey{};
+  ObjectKey m_DeviceKey{};
+  ObjectKey m_CommandQueueKey{};
+  ObjectKey m_CommandAllocatorKey{};
+  ObjectKey m_CommandListKey{};
+  ObjectKey m_FenceKey{};
   UINT64 m_RecordedFenceValue{};
 };
 

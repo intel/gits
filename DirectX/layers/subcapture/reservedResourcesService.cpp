@@ -41,7 +41,7 @@ void ReservedResourcesService::AddUpdateTileMappings(
     InitTiledResource(*tiledResource);
   }
 
-  GITSKey heapKey = c.m_pHeap.Key;
+  ObjectKey heapKey = c.m_pHeap.Key;
 
   if (heapKey) {
     m_ResourcesByHeapKey[heapKey].insert(c.m_pResource.Key);
@@ -79,7 +79,7 @@ void ReservedResourcesService::AddUpdateTileMappings(
 
     auto updateTile = [&](Tile& tile) {
       if (!heapKey) {
-        tile.HeapKey = 0;
+        tile.HeapKey = ObjectKey{};
         tile.HeapOffset = 0;
         return;
       }
@@ -105,7 +105,7 @@ void ReservedResourcesService::AddUpdateTileMappings(
         tile.HeapKey = heapKey;
         tile.HeapOffset = heapOffset;
       } else if (heapRangeFlag == D3D12_TILE_RANGE_FLAG_NULL) {
-        tile.HeapKey = 0;
+        tile.HeapKey = ObjectKey{};
         tile.HeapOffset = 0;
       } else if (heapRangeFlag == D3D12_TILE_RANGE_FLAG_SKIP) {
         static bool logged = false;
@@ -241,7 +241,7 @@ void ReservedResourcesService::InitTiledResource(TiledResource& tiledResource) {
 }
 
 void ReservedResourcesService::CopySourceBarrier(ID3D12Resource* resource,
-                                                 GITSKey resourceKey,
+                                                 ObjectKey resourceKey,
                                                  bool restoreState) {
   ResourceStateTrackingService::ResourceStates& resourceStates =
       m_StateService.GetResourceStateTrackingService().GetResourceStates(resourceKey);
@@ -370,7 +370,7 @@ void ReservedResourcesService::MarkSubresourceNotFullyMapped(
   }
 }
 
-void ReservedResourcesService::DestroyObject(GITSKey objectKey) {
+void ReservedResourcesService::DestroyObject(ObjectKey objectKey) {
   auto itResource = m_Resources.find(objectKey);
   if (itResource != m_Resources.end()) {
     itResource->second->Destroyed = true;
@@ -381,14 +381,14 @@ void ReservedResourcesService::DestroyObject(GITSKey objectKey) {
   if (itHeap == m_ResourcesByHeapKey.end()) {
     return;
   }
-  for (GITSKey ResourceKey : itHeap->second) {
+  for (ObjectKey ResourceKey : itHeap->second) {
     auto itResource = m_Resources.find(ResourceKey);
     if (itResource == m_Resources.end()) {
       continue;
     }
     for (Tile& tile : itResource->second->Tiles) {
       if (tile.HeapKey == objectKey) {
-        tile.HeapKey = 0;
+        tile.HeapKey = ObjectKey{};
         tile.HeapOffset = 0;
       }
     }
@@ -397,7 +397,7 @@ void ReservedResourcesService::DestroyObject(GITSKey objectKey) {
 }
 
 ReservedResourcesService::TiledResource* ReservedResourcesService::GetTiledResource(
-    GITSKey resourceKey) {
+    ObjectKey resourceKey) {
   auto it = m_Resources.find(resourceKey);
   if (it == m_Resources.end()) {
     return nullptr;
@@ -406,20 +406,20 @@ ReservedResourcesService::TiledResource* ReservedResourcesService::GetTiledResou
 }
 
 void ReservedResourcesService::UpdateTileMappings(TiledResource& tiledResource,
-                                                  GITSKey commandQueueKey,
+                                                  ObjectKey commandQueueKey,
                                                   TileRegionsBySubresource* tileRegions) {
   unsigned arraySize = tiledResource.Desc.Dimension != D3D12_RESOURCE_DIMENSION_TEXTURE3D
                            ? tiledResource.Desc.DepthOrArraySize
                            : 1;
 
-  std::set<GITSKey> heapKeys;
+  std::set<ObjectKey> heapKeys;
   for (Tile& tile : tiledResource.Tiles) {
     if (tile.HeapKey) {
       heapKeys.insert(tile.HeapKey);
     }
   }
 
-  for (GITSKey heapKey : heapKeys) {
+  for (ObjectKey heapKey : heapKeys) {
     m_StateService.RestoreState(heapKey);
 
     ID3D12CommandQueueUpdateTileMappingsCommand Command;
@@ -503,14 +503,14 @@ void ReservedResourcesService::UpdateTileMappings(TiledResource& tiledResource,
   }
 }
 
-void ReservedResourcesService::RestoreContent(const std::vector<GITSKey>& resourceKeys) {
+void ReservedResourcesService::RestoreContent(const std::vector<ObjectKey>& resourceKeys) {
   if (m_Resources.empty()) {
     return;
   }
 
   InitRestore();
 
-  for (GITSKey ResourceKey : resourceKeys) {
+  for (ObjectKey ResourceKey : resourceKeys) {
     if (m_Resources.find(ResourceKey) == m_Resources.end()) {
       continue;
     }
@@ -531,7 +531,7 @@ void ReservedResourcesService::RestoreContent(const std::vector<GITSKey>& resour
     // copy resources contents into readback resource
 
     std::vector<bool> subresourceFullyMappedFlags(tiledResource->Subresources.size(), true);
-    std::set<GITSKey> heapKeys;
+    std::set<ObjectKey> heapKeys;
     for (const auto& tile : tiledResource->Tiles) {
       if (!tile.HeapKey) {
         MarkSubresourceNotFullyMapped(*tiledResource, tile, subresourceFullyMappedFlags);
@@ -659,7 +659,7 @@ void ReservedResourcesService::RestoreContent(const std::vector<GITSKey>& resour
 
     // create upload resource with resources contents in subcaptured stream
 
-    GITSKey deviceKey = m_StateService.GetDeviceKey();
+    ObjectKey deviceKey = m_StateService.GetDeviceKey();
 
     void* mappedData{};
     hr = readbackResource->Map(0, nullptr, &mappedData);
@@ -776,7 +776,7 @@ void ReservedResourcesService::RestoreContent(const std::vector<GITSKey>& resour
       ID3D12Pageable* fakePtr = reinterpret_cast<ID3D12Pageable*>(1);
       MakeResident.m_ppObjects.Value = &fakePtr;
       MakeResident.m_ppObjects.Size = heapKeys.size();
-      for (GITSKey key : heapKeys) {
+      for (ObjectKey key : heapKeys) {
         MakeResident.m_ppObjects.Keys.push_back(key);
       }
       m_StateService.GetRecorder().Record(ID3D12DeviceMakeResidentSerializer(MakeResident));
@@ -816,7 +816,7 @@ void ReservedResourcesService::RestoreContent(const std::vector<GITSKey>& resour
     CommandListReset.Key = m_StateService.GetUniqueCommandKey();
     CommandListReset.m_Object.Key = m_CommandListKey;
     CommandListReset.m_pAllocator.Key = m_CommandAllocatorKey;
-    CommandListReset.m_pInitialState.Key = 0;
+    CommandListReset.m_pInitialState.Key = ObjectKey{};
     m_StateService.GetRecorder().Record(ID3D12GraphicsCommandListResetSerializer(CommandListReset));
 
     // decrese residency count or Evict
@@ -829,7 +829,7 @@ void ReservedResourcesService::RestoreContent(const std::vector<GITSKey>& resour
       ID3D12Pageable* fakePtr = reinterpret_cast<ID3D12Pageable*>(1);
       Evict.m_ppObjects.Value = &fakePtr;
       Evict.m_ppObjects.Size = heapKeys.size();
-      for (GITSKey key : heapKeys) {
+      for (ObjectKey key : heapKeys) {
         Evict.m_ppObjects.Keys.push_back(key);
       }
       m_StateService.GetRecorder().Record(ID3D12DeviceEvictSerializer(Evict));
@@ -879,7 +879,7 @@ void ReservedResourcesService::InitRestore() {
 
   m_UploadResourceSize = maxUploadSize;
 
-  GITSKey deviceKey = m_StateService.GetDeviceKey();
+  ObjectKey deviceKey = m_StateService.GetDeviceKey();
 
   if (m_UploadResourceSize) {
     m_UploadResourceKey = m_StateService.GetUniqueObjectKey();

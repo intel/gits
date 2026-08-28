@@ -20,30 +20,30 @@ namespace DirectX {
 
 class ResourceUsageTrackingService {
 public:
-  void AddResource(GITSKey resourceKey);
-  void CommandListResourceUsage(GITSKey commandListKey, GITSKey resourceKey);
-  void CommandListResourceUsage(GITSKey commandListKey, std::vector<GITSKey>& resourceKeys);
-  void CommandListReset(GITSKey commandListKey);
+  void AddResource(ObjectKey resourceKey);
+  void CommandListResourceUsage(ObjectKey commandListKey, ObjectKey resourceKey);
+  void CommandListResourceUsage(ObjectKey commandListKey, std::vector<ObjectKey>& resourceKeys);
+  void CommandListReset(ObjectKey commandListKey);
   void ExecuteCommandLists(CommandKey commandKey,
-                           GITSKey commandQueueKey,
-                           std::vector<GITSKey>& commandListKeys);
-  void DestroyResource(GITSKey resourceKey);
+                           ObjectKey commandQueueKey,
+                           std::vector<ObjectKey>& commandListKeys);
+  void DestroyResource(ObjectKey resourceKey);
 
   void CommandQueueWait(CommandKey commandKey,
-                        GITSKey commandQueueKey,
-                        GITSKey fenceKey,
+                        ObjectKey commandQueueKey,
+                        ObjectKey fenceKey,
                         UINT64 fenceValue);
   void CommandQueueSignal(CommandKey commandKey,
-                          GITSKey commandQueueKey,
-                          GITSKey fenceKey,
+                          ObjectKey commandQueueKey,
+                          ObjectKey fenceKey,
                           UINT64 fenceValue);
-  void FenceSignal(CommandKey commandKey, GITSKey fenceKey, UINT64 fenceValue);
+  void FenceSignal(CommandKey commandKey, ObjectKey fenceKey, UINT64 fenceValue);
 
-  std::vector<GITSKey> GetOrderedResources();
+  std::vector<ObjectKey> GetOrderedResources();
 
 private:
   struct UsageNumber {
-    GITSKey ExecuteKey{};
+    unsigned ExecuteKey{};
     unsigned CommandNumber{};
 
     bool operator<(const UsageNumber& rhs) const {
@@ -55,16 +55,16 @@ private:
     }
   };
   struct ResourceUsage : public GpuExecutionTracker::Executable {
-    std::vector<GITSKey> UsedResources;
+    std::vector<ObjectKey> UsedResources;
   };
 
   void ProcessReadyExecutables();
-  void UpdateUsage(const std::vector<GITSKey>& usedResources);
+  void UpdateUsage(const std::vector<ObjectKey>& usedResources);
 
   unsigned m_ExecuteNumber{};
   GpuExecutionTracker m_GpuExecutionTracker;
-  std::map<GITSKey, UsageNumber> m_UsageByResource;
-  std::unordered_map<GITSKey, std::vector<GITSKey>> m_CommandListResourceUsage;
+  std::map<ObjectKey, UsageNumber> m_UsageByResource;
+  std::unordered_map<ObjectKey, std::vector<ObjectKey>> m_CommandListResourceUsage;
 };
 
 } // namespace DirectX

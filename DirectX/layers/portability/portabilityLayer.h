@@ -26,7 +26,7 @@ class PortabilityLayer : public Layer {
 
 public:
   using ResourceRegistrationCallback =
-      std::function<void(GITSKey resourceKey, ID3D12Resource* resource)>;
+      std::function<void(ObjectKey resourceKey, ID3D12Resource* resource)>;
 
   PortabilityLayer();
   PortabilityLayer(ResourceRegistrationCallback registerResource);
@@ -57,7 +57,7 @@ public:
 
 private:
   void ConfigureHeapMemoryPool(ID3D12Device* device, D3D12_HEAP_DESC* heapDesc);
-  void CheckHeapCreationFlags(GITSKey heapKey, ID3D12Device* device, D3D12_HEAP_DESC* desc);
+  void CheckHeapCreationFlags(ObjectKey heapKey, ID3D12Device* device, D3D12_HEAP_DESC* desc);
 
   HRESULT CreateCommittedResource(ID3D12Heap* heap,
                                   const D3D12_RESOURCE_DESC* desc,
@@ -108,24 +108,24 @@ private:
       const D3D12_HEAP_DESC& heapDesc, const D3D12_RESOURCE_DESC& resourceDesc) const;
   std::string GetPlacedToCommittedFailureContext(const char* apiName,
                                                  CommandKey commandKey,
-                                                 GITSKey heapKey,
+                                                 ObjectKey heapKey,
                                                  const D3D12_HEAP_DESC& heapDesc,
                                                  const D3D12_RESOURCE_DESC& resourceDesc) const;
   void FailPlacedToCommittedIncompatibility(const char* apiName,
                                             CommandKey commandKey,
-                                            GITSKey heapKey,
+                                            ObjectKey heapKey,
                                             const D3D12_HEAP_DESC& heapDesc,
                                             const D3D12_RESOURCE_DESC& resourceDesc) const;
   void FailPlacedToCommittedCreation(const char* apiName,
                                      CommandKey commandKey,
-                                     GITSKey heapKey,
+                                     ObjectKey heapKey,
                                      UINT64 heapOffset,
                                      const D3D12_RESOURCE_DESC& resourceDesc,
                                      D3D12_RESOURCE_STATES initialState,
                                      HRESULT hr) const;
   void FailPlacedToCommittedCreation(const char* apiName,
                                      CommandKey commandKey,
-                                     GITSKey heapKey,
+                                     ObjectKey heapKey,
                                      UINT64 heapOffset,
                                      const D3D12_RESOURCE_DESC& resourceDesc,
                                      D3D12_BARRIER_LAYOUT initialLayout,
@@ -149,7 +149,7 @@ private:
   float m_AccelerationStructurePadding{1.0};
   float m_AccelerationStructureScratchPadding{1.0};
   uint32_t m_AccelerationStructureScratchMinSizeInBytes{0};
-  std::unordered_set<GITSKey> m_ForcedCommittedResources{};
+  std::unordered_set<ObjectKey> m_ForcedCommittedResources{};
 };
 
 } // namespace DirectX

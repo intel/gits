@@ -43,15 +43,15 @@ public:
   void NvapiBuildAccelerationStructureEx(
       NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& c);
   void NvapiBuildOpacityMicromapArray(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& c);
-  void SetDeviceKey(GITSKey deviceKey) {
+  void SetDeviceKey(ObjectKey deviceKey) {
     m_DeviceKey = deviceKey;
   }
   void RestoreAccelerationStructures();
   void ExecuteCommandLists(ID3D12CommandQueueExecuteCommandListsCommand& c);
   void CommandQueueWait(ID3D12CommandQueueWaitCommand& c);
   void CommandQueueSignal(ID3D12CommandQueueSignalCommand& c);
-  void FenceSignal(CommandKey key, GITSKey fenceKey, UINT64 fenceValue);
-  void DestroyResource(CommandKey commandKey, GITSKey resourceKey);
+  void FenceSignal(CommandKey key, ObjectKey fenceKey, UINT64 fenceValue);
+  void DestroyResource(CommandKey commandKey, ObjectKey resourceKey);
 
 private:
   StateTrackingService& m_StateService;
@@ -70,14 +70,14 @@ private:
       NvAPIBuild,
       NvAPIOMM
     };
-    std::unordered_map<GITSKey, ResourceState*> Buffers;
-    std::unordered_map<GITSKey, ReservedResourcesService::TiledResource> TiledResources;
+    std::unordered_map<ObjectKey, ResourceState*> Buffers;
+    std::unordered_map<ObjectKey, ReservedResourcesService::TiledResource> TiledResources;
     CommandKey Key{};
-    GITSKey CommandListKey{};
+    ObjectKey CommandListKey{};
     CommandType Type{};
-    GITSKey DestKey{};
+    ObjectKey DestKey{};
     unsigned DestOffset{};
-    GITSKey SourceKey{};
+    ObjectKey SourceKey{};
     unsigned SourceOffset{};
     bool Update{};
     bool TlasBuild{};
@@ -106,16 +106,16 @@ private:
     std::unique_ptr<PointerArgument<NVAPI_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_PARAMS>> Desc{};
   };
 
-  std::unordered_set<std::pair<GITSKey, unsigned>, UnsignedPairHash> m_TlasesKeyOffsets;
+  std::unordered_set<std::pair<ObjectKey, unsigned>, UnsignedPairHash> m_TlasesKeyOffsets;
 
   unsigned m_MaxBuildScratchSpace{};
-  GITSKey m_DeviceKey{};
+  ObjectKey m_DeviceKey{};
 
-  GITSKey m_CommandQueueKey{};
-  GITSKey m_CommandAllocatorKey{};
-  GITSKey m_CommandListKey{};
-  GITSKey m_FenceKey{};
-  GITSKey m_ScratchResourceKey{};
+  ObjectKey m_CommandQueueKey{};
+  ObjectKey m_CommandAllocatorKey{};
+  ObjectKey m_CommandListKey{};
+  ObjectKey m_FenceKey{};
+  ObjectKey m_ScratchResourceKey{};
   UINT64 m_RecordedFenceValue{};
 
   bool m_Restored{};
@@ -134,10 +134,10 @@ private:
   class OptimizationService {
   public:
     OptimizationService(StateTrackingService& stateService) : m_StateService(stateService) {}
-    void AddCommand(GITSKey commandListKey, RaytracingAccelerationStructureCommand* command) {
+    void AddCommand(ObjectKey commandListKey, RaytracingAccelerationStructureCommand* command) {
       m_CommandsByCommandList[commandListKey].emplace_back(command);
     }
-    void OnExecute(std::vector<GITSKey>& commandListKeys);
+    void OnExecute(std::vector<ObjectKey>& commandListKeys);
     void ProcessCommands();
     void Cleanup();
 
@@ -156,7 +156,7 @@ private:
   private:
     StateTrackingService& m_StateService;
     unsigned m_CommandUniqueId{};
-    std::unordered_map<GITSKey,
+    std::unordered_map<ObjectKey,
                        std::vector<std::unique_ptr<RaytracingAccelerationStructureCommand>>>
         m_CommandsByCommandList;
     std::unordered_map<unsigned, std::unique_ptr<CommandNode>> m_CommandById;
@@ -169,18 +169,18 @@ private:
   class BufferLifetimeService {
   public:
     BufferLifetimeService(StateTrackingService& stateService) : m_StateService(stateService) {}
-    void AddInputBuffer(CommandKey commandKey, GITSKey bufferKey);
-    void AddRtasBuffer(CommandKey commandKey, GITSKey bufferKey);
-    void AddRelease(CommandKey commandKey, GITSKey bufferKey);
+    void AddInputBuffer(CommandKey commandKey, ObjectKey bufferKey);
+    void AddRtasBuffer(CommandKey commandKey, ObjectKey bufferKey);
+    void AddRelease(CommandKey commandKey, ObjectKey bufferKey);
     void CreateBuffers(CommandKey commandKey);
     void ReleaseBuffers(CommandKey commandKey);
 
   private:
     StateTrackingService& m_StateService;
-    std::unordered_map<CommandKey, std::unordered_set<GITSKey>> m_InputBuffersByBuild;
-    std::unordered_map<CommandKey, std::unordered_set<GITSKey>> m_RtasBuffersByBuild;
-    std::unordered_set<GITSKey> m_Buffers;
-    std::map<CommandKey, GITSKey> m_Releases;
+    std::unordered_map<CommandKey, std::unordered_set<ObjectKey>> m_InputBuffersByBuild;
+    std::unordered_map<CommandKey, std::unordered_set<ObjectKey>> m_RtasBuffersByBuild;
+    std::unordered_set<ObjectKey> m_Buffers;
+    std::map<CommandKey, ObjectKey> m_Releases;
   };
   BufferLifetimeService m_BufferLifetimeService;
 };

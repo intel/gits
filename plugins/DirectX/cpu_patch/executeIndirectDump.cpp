@@ -19,7 +19,7 @@ ExecuteIndirectDump::ExecuteIndirectDump(
     const Configuration& gitsConfig,
     ResourceStateTracker& resourceStateTracker,
     CapturePlayerGpuAddressService& addressService,
-    std::unordered_map<GITSKey, ID3D12Resource*>& resourceByKey)
+    std::unordered_map<ObjectKey, ID3D12Resource*>& resourceByKey)
     : ResourceDump(),
       m_GitsConfig(gitsConfig),
       m_ResourceStateTracker(resourceStateTracker),
@@ -143,7 +143,7 @@ void ExecuteIndirectDump::ExecuteIndirect(
 }
 
 void ExecuteIndirectDump::ExecuteCommandLists(CommandKey key,
-                                              GITSKey commandQueueKey,
+                                              ObjectKey commandQueueKey,
                                               ID3D12CommandQueue* commandQueue,
                                               ID3D12CommandList** commandLists,
                                               unsigned commandListNum,

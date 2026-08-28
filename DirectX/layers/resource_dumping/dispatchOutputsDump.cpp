@@ -35,7 +35,7 @@ void DispatchOutputsDump::DumpResource(ID3D12GraphicsCommandList* commandList,
 }
 
 void DispatchOutputsDump::ExecuteCommandLists(CommandKey key,
-                                              GITSKey commandQueueKey,
+                                              ObjectKey commandQueueKey,
                                               ID3D12CommandQueue* commandQueue,
                                               ID3D12CommandList** commandLists,
                                               unsigned commandListNum,

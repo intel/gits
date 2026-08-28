@@ -119,7 +119,7 @@ void AnalyzerExecuteIndirectService::Flush() {
 }
 
 void AnalyzerExecuteIndirectService::ExecuteCommandLists(CommandKey key,
-                                                         GITSKey commandQueueKey,
+                                                         ObjectKey commandQueueKey,
                                                          ID3D12CommandQueue* commandQueue,
                                                          ID3D12CommandList** commandLists,
                                                          unsigned commandListNum) {
@@ -128,21 +128,21 @@ void AnalyzerExecuteIndirectService::ExecuteCommandLists(CommandKey key,
 }
 
 void AnalyzerExecuteIndirectService::CommandQueueWait(CommandKey key,
-                                                      GITSKey commandQueueKey,
-                                                      GITSKey fenceKey,
+                                                      ObjectKey commandQueueKey,
+                                                      ObjectKey fenceKey,
                                                       UINT64 fenceValue) {
   m_ExecuteIndirectDump.CommandQueueWait(key, commandQueueKey, fenceKey, fenceValue);
 }
 
 void AnalyzerExecuteIndirectService::CommandQueueSignal(CommandKey key,
-                                                        GITSKey commandQueueKey,
-                                                        GITSKey fenceKey,
+                                                        ObjectKey commandQueueKey,
+                                                        ObjectKey fenceKey,
                                                         UINT64 fenceValue) {
   m_ExecuteIndirectDump.CommandQueueSignal(key, commandQueueKey, fenceKey, fenceValue);
 }
 
 void AnalyzerExecuteIndirectService::FenceSignal(CommandKey key,
-                                                 GITSKey fenceKey,
+                                                 ObjectKey fenceKey,
                                                  UINT64 fenceValue) {
   m_ExecuteIndirectDump.FenceSignal(key, fenceKey, fenceValue);
 }

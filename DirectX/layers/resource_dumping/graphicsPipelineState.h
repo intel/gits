@@ -38,7 +38,7 @@ public:
   void DumpState(const std::wstring& dumpDir, ID3D12GraphicsCommandListDrawInstancedCommand& c);
   void DumpState(const std::wstring& dumpDir,
                  ID3D12GraphicsCommandListDrawIndexedInstancedCommand& c);
-  void SetRootSignature(GITSKey rootSignatureKey, D3D12_ROOT_SIGNATURE_DESC2* desc);
+  void SetRootSignature(ObjectKey rootSignatureKey, D3D12_ROOT_SIGNATURE_DESC2* desc);
   void IASetIndexBuffer(ID3D12GraphicsCommandListIASetIndexBufferCommand& c);
   void IASetVertexBuffers(ID3D12GraphicsCommandListIASetVertexBuffersCommand& c);
   void IASetPrimitiveTopology(ID3D12GraphicsCommandListIASetPrimitiveTopologyCommand& c);
@@ -72,13 +72,13 @@ private:
   DescriptorHeapTracker& m_DescriptorService;
   const D3D12_GRAPHICS_PIPELINE_STATE_DESC_Argument* m_StateDesc{};
   const D3D12_PIPELINE_STATE_STREAM_DESC_Argument* m_StateStreamDesc{};
-  GITSKey m_RootSignatureKey{};
+  ObjectKey m_RootSignatureKey{};
   D3D12_ROOT_SIGNATURE_DESC2* m_RootSignatureDesc{};
-  GITSKey m_IndexBufferKey{};
+  ObjectKey m_IndexBufferKey{};
   unsigned m_IndexBufferOffset{};
 
   struct VertexBuffer {
-    GITSKey Key{};
+    ObjectKey Key{};
     unsigned Offset{};
     unsigned Size{};
     unsigned Stride{};

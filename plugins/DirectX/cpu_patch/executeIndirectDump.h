@@ -27,7 +27,7 @@ public:
   ExecuteIndirectDump(const Configuration& gitsConfig,
                       ResourceStateTracker& resourceStateTracker,
                       CapturePlayerGpuAddressService& addressService,
-                      std::unordered_map<GITSKey, ID3D12Resource*>& resourceByKey);
+                      std::unordered_map<ObjectKey, ID3D12Resource*>& resourceByKey);
   ~ExecuteIndirectDump();
 
   ExecuteIndirectDump(const ExecuteIndirectDump&) = delete;
@@ -35,7 +35,7 @@ public:
 
   void ExecuteIndirect(ID3D12GraphicsCommandListExecuteIndirectCommand& command);
   void ExecuteCommandLists(CommandKey key,
-                           GITSKey commandQueueKey,
+                           ObjectKey commandQueueKey,
                            ID3D12CommandQueue* commandQueue,
                            ID3D12CommandList** commandLists,
                            unsigned commandListNum,
@@ -59,7 +59,7 @@ private:
   const Configuration& m_GitsConfig;
   ResourceStateTracker& m_ResourceStateTracker;
   CapturePlayerGpuAddressService& m_AddressService;
-  std::unordered_map<GITSKey, ID3D12Resource*>& m_ResourceByKey;
+  std::unordered_map<ObjectKey, ID3D12Resource*>& m_ResourceByKey;
   BitRange m_Frames;
   BitRange m_Executions;
   bool m_Initialized{false};
@@ -69,7 +69,7 @@ private:
 
   std::unordered_map<CommandKey, std::vector<D3D12_DISPATCH_RAYS_DESC>>
       m_ExecuteIndirectDispatchRays;
-  std::unordered_map<GITSKey, std::unique_ptr<PointerArgument<D3D12_COMMAND_SIGNATURE_DESC>>>
+  std::unordered_map<ObjectKey, std::unique_ptr<PointerArgument<D3D12_COMMAND_SIGNATURE_DESC>>>
       m_CommandSignatures;
 };
 

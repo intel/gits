@@ -499,7 +499,7 @@ void PortabilityLayer::ConfigureHeapMemoryPool(ID3D12Device* device, D3D12_HEAP_
   }
 }
 
-void PortabilityLayer::CheckHeapCreationFlags(GITSKey heapKey,
+void PortabilityLayer::CheckHeapCreationFlags(ObjectKey heapKey,
                                               ID3D12Device* device,
                                               D3D12_HEAP_DESC* desc) {
   D3D12_FEATURE_DATA_D3D12_OPTIONS featureOptions{};
@@ -1048,7 +1048,7 @@ std::string PortabilityLayer::GetPlacedToCommittedIncompatibilityReasons(
 std::string PortabilityLayer::GetPlacedToCommittedFailureContext(
     const char* apiName,
     CommandKey commandKey,
-    GITSKey heapKey,
+    ObjectKey heapKey,
     const D3D12_HEAP_DESC& heapDesc,
     const D3D12_RESOURCE_DESC& resourceDesc) const {
   std::ostringstream stream;
@@ -1064,7 +1064,7 @@ std::string PortabilityLayer::GetPlacedToCommittedFailureContext(
 void PortabilityLayer::FailPlacedToCommittedIncompatibility(
     const char* apiName,
     CommandKey commandKey,
-    GITSKey heapKey,
+    ObjectKey heapKey,
     const D3D12_HEAP_DESC& heapDesc,
     const D3D12_RESOURCE_DESC& resourceDesc) const {
   std::ostringstream stream;
@@ -1079,7 +1079,7 @@ void PortabilityLayer::FailPlacedToCommittedIncompatibility(
 
 void PortabilityLayer::FailPlacedToCommittedCreation(const char* apiName,
                                                      CommandKey commandKey,
-                                                     GITSKey heapKey,
+                                                     ObjectKey heapKey,
                                                      UINT64 heapOffset,
                                                      const D3D12_RESOURCE_DESC& resourceDesc,
                                                      D3D12_RESOURCE_STATES initialState,
@@ -1097,7 +1097,7 @@ void PortabilityLayer::FailPlacedToCommittedCreation(const char* apiName,
 
 void PortabilityLayer::FailPlacedToCommittedCreation(const char* apiName,
                                                      CommandKey commandKey,
-                                                     GITSKey heapKey,
+                                                     ObjectKey heapKey,
                                                      UINT64 heapOffset,
                                                      const D3D12_RESOURCE_DESC& resourceDesc,
                                                      D3D12_BARRIER_LAYOUT initialLayout,

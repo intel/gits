@@ -35,7 +35,7 @@ public:
                    ID3D12GraphicsCommandList4* commandList,
                    D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC& desc);
   void ExecuteCommandLists(CommandKey key,
-                           GITSKey commandQueueKey,
+                           ObjectKey commandQueueKey,
                            ID3D12CommandQueue* commandQueue,
                            ID3D12CommandList** commandLists,
                            unsigned commandListNum);

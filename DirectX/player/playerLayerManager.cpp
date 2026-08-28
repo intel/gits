@@ -29,7 +29,8 @@ namespace DirectX {
 void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService& pluginService) {
   auto& cfg = Configurator::Get().directx;
 
-  auto registerResourceCallback = [&playerManager](GITSKey resourceKey, ID3D12Resource* resource) {
+  auto registerResourceCallback = [&playerManager](ObjectKey resourceKey,
+                                                   ID3D12Resource* resource) {
     if (!resource) {
       return;
     }

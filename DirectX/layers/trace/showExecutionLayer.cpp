@@ -586,7 +586,7 @@ void ShowExecutionLayer::Post(ID3D12CommandQueueWaitCommand& command) {
   }
 }
 
-void ShowExecutionLayer::FenceSignal(CommandKey callKey, GITSKey fenceKey, UINT64 fenceValue) {
+void ShowExecutionLayer::FenceSignal(CommandKey callKey, ObjectKey fenceKey, UINT64 fenceValue) {
   m_GpuExecutionTracker.FenceSignal(callKey, fenceKey, fenceValue);
   auto count = m_GpuExecutionTracker.GetReadyExecutables().size();
   if (count > 0) {
@@ -597,7 +597,7 @@ void ShowExecutionLayer::FenceSignal(CommandKey callKey, GITSKey fenceKey, UINT6
 }
 
 void ShowExecutionLayer::StageCommandQueueEvent(CommandKey commandKey,
-                                                GITSKey commandQueueKey,
+                                                ObjectKey commandQueueKey,
                                                 const std::string& str) {
   auto* event = new CommandQueueEvent{};
   event->Str = str;

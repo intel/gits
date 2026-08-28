@@ -19,12 +19,12 @@ namespace DirectX {
 void ComputePipelineState::Reset() {
   m_StateDesc = nullptr;
   m_StateStreamDesc = nullptr;
-  m_RootSignatureKey = 0;
+  m_RootSignatureKey = ObjectKey{};
   m_RootSignatureDesc = nullptr;
   m_BindingState.Reset();
 }
 
-void ComputePipelineState::SetRootSignature(GITSKey rootSignatureKey,
+void ComputePipelineState::SetRootSignature(ObjectKey rootSignatureKey,
                                             D3D12_ROOT_SIGNATURE_DESC2* desc) {
   m_RootSignatureKey = rootSignatureKey;
   m_RootSignatureDesc = desc;

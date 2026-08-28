@@ -24,13 +24,13 @@ class AnalyzerRaytracingService;
 class BindingTablesDump : public ResourceDump {
 public:
   struct StateObjectInfo {
-    GITSKey GlobalRootSignature{};
-    std::unordered_map<std::wstring, GITSKey> ExportToRootSignature;
+    ObjectKey GlobalRootSignature{};
+    std::unordered_map<std::wstring, ObjectKey> ExportToRootSignature;
   };
   struct DescriptorHeaps {
-    GITSKey ViewDescriptorHeapKey;
+    ObjectKey ViewDescriptorHeapKey;
     unsigned ViewDescriptorHeapSize;
-    GITSKey SamplerHeapKey;
+    ObjectKey SamplerHeapKey;
     unsigned SamplerHeapSize;
   };
 
@@ -45,12 +45,12 @@ public:
                         BarrierState state,
                         StateObjectInfo* stateObjectInfo,
                         DescriptorHeaps descriptorHeaps,
-                        GITSKey rootSignatureKey);
+                        ObjectKey rootSignatureKey);
 
-  std::unordered_set<GITSKey>& GetBindingTablesResources() {
+  std::unordered_set<ObjectKey>& GetBindingTablesResources() {
     return m_BindingTablesResources;
   }
-  std::set<std::pair<GITSKey, unsigned>>& GetBindingTablesDescriptors() {
+  std::set<std::pair<ObjectKey, unsigned>>& GetBindingTablesDescriptors() {
     return m_BindingTablesDescriptors;
   }
 
@@ -61,14 +61,14 @@ private:
 private:
   AnalyzerRaytracingService& m_RaytracingService;
   std::mutex m_Mutex;
-  std::unordered_set<GITSKey> m_BindingTablesResources;
-  std::set<std::pair<GITSKey, unsigned>> m_BindingTablesDescriptors;
+  std::unordered_set<ObjectKey> m_BindingTablesResources;
+  std::set<std::pair<ObjectKey, unsigned>> m_BindingTablesDescriptors;
 
   struct BindingTablesInfo : DumpInfo {
     unsigned Stride{};
     StateObjectInfo* StateObjectInfo{};
     DescriptorHeaps DescriptorHeaps{};
-    GITSKey RootSignatureKey{};
+    ObjectKey RootSignatureKey{};
   };
 };
 

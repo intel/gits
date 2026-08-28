@@ -47,16 +47,16 @@ AnalyzerResults::AnalyzerResults() {
         blases = true;
       } else {
         if (commandLists) {
-          GITSKey key = std::stoull(str);
+          ObjectKey key = std::stoull(str);
           m_CommandListKeys.insert(key);
         } else if (commandQueues) {
           CommandKey key = std::stoull(str);
           m_CommandQueueCommands.insert(key);
         } else if (objects) {
-          GITSKey key = std::stoull(str);
+          ObjectKey key = std::stoull(str);
           m_ObjectKeys.insert(key);
         } else if (descriptors) {
-          GITSKey key = std::stoull(str);
+          ObjectKey key = std::stoull(str);
           analysis >> str;
           unsigned index = std::stoi(str);
           m_Descriptors.insert(std::make_pair(key, index));
@@ -75,14 +75,14 @@ AnalyzerResults::AnalyzerResults() {
   m_Optimize = Configurator::Get().common.player.subcapture.optimize;
 }
 
-bool AnalyzerResults::RestoreObject(GITSKey objectKey) {
+bool AnalyzerResults::RestoreObject(ObjectKey objectKey) {
   if (!m_Optimize || m_ObjectKeys.empty()) {
     return true;
   }
   return m_ObjectKeys.find(objectKey) != m_ObjectKeys.end();
 }
 
-bool AnalyzerResults::RestoreDescriptor(GITSKey heapKey, unsigned index) {
+bool AnalyzerResults::RestoreDescriptor(ObjectKey heapKey, unsigned index) {
   if (!m_Optimize) {
     return true;
   }

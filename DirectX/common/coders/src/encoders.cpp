@@ -209,7 +209,7 @@ unsigned GetSize(const D3D12_RESOURCE_BARRIERs_Argument& arg) {
     return sizeof(void*);
   }
   return sizeof(void*) + sizeof(arg.Size) + sizeof(D3D12_RESOURCE_BARRIER) * arg.Size +
-         sizeof(GITSKey) * arg.Size * 2;
+         sizeof(ObjectKey) * arg.Size * 2;
 }
 
 void Encode(char* dest, unsigned& offset, const D3D12_RESOURCE_BARRIERs_Argument& arg) {
@@ -222,11 +222,11 @@ void Encode(char* dest, unsigned& offset, const D3D12_RESOURCE_BARRIERs_Argument
   memcpy(dest + offset, arg.Value, sizeof(D3D12_RESOURCE_BARRIER) * arg.Size);
   offset += sizeof(D3D12_RESOURCE_BARRIER) * arg.Size;
 
-  memcpy(dest + offset, arg.ResourceKeys.data(), sizeof(GITSKey) * arg.Size);
-  offset += sizeof(GITSKey) * arg.Size;
+  memcpy(dest + offset, arg.ResourceKeys.data(), sizeof(ObjectKey) * arg.Size);
+  offset += sizeof(ObjectKey) * arg.Size;
 
-  memcpy(dest + offset, arg.ResourceAfterKeys.data(), sizeof(GITSKey) * arg.Size);
-  offset += sizeof(GITSKey) * arg.Size;
+  memcpy(dest + offset, arg.ResourceAfterKeys.data(), sizeof(ObjectKey) * arg.Size);
+  offset += sizeof(ObjectKey) * arg.Size;
 }
 
 unsigned GetSize(const PointerArgument<D3D12_ROOT_SIGNATURE_DESC>& arg) {
@@ -418,7 +418,7 @@ unsigned GetSize(const D3D12_INDEX_BUFFER_VIEW_Argument& arg) {
   if (!arg.Value) {
     return sizeof(void*);
   }
-  return sizeof(void*) + sizeof(D3D12_INDEX_BUFFER_VIEW) + sizeof(GITSKey) + sizeof(unsigned);
+  return sizeof(void*) + sizeof(D3D12_INDEX_BUFFER_VIEW) + sizeof(ObjectKey) + sizeof(unsigned);
 }
 
 void Encode(char* dest, unsigned& offset, const D3D12_INDEX_BUFFER_VIEW_Argument& arg) {
@@ -439,7 +439,7 @@ unsigned GetSize(const D3D12_CONSTANT_BUFFER_VIEW_DESC_Argument& arg) {
   if (!arg.Value) {
     return sizeof(void*);
   }
-  return sizeof(void*) + sizeof(D3D12_CONSTANT_BUFFER_VIEW_DESC) + sizeof(GITSKey) +
+  return sizeof(void*) + sizeof(D3D12_CONSTANT_BUFFER_VIEW_DESC) + sizeof(ObjectKey) +
          sizeof(unsigned);
 }
 
@@ -462,7 +462,7 @@ unsigned GetSize(const D3D12_VERTEX_BUFFER_VIEWs_Argument& arg) {
     return sizeof(void*);
   }
   return sizeof(void*) + sizeof(arg.Size) + sizeof(D3D12_VERTEX_BUFFER_VIEW) * arg.Size +
-         sizeof(GITSKey) * arg.Size + sizeof(unsigned) * arg.Size;
+         sizeof(ObjectKey) * arg.Size + sizeof(unsigned) * arg.Size;
 }
 
 void Encode(char* dest, unsigned& offset, const D3D12_VERTEX_BUFFER_VIEWs_Argument& arg) {
@@ -476,8 +476,8 @@ void Encode(char* dest, unsigned& offset, const D3D12_VERTEX_BUFFER_VIEWs_Argume
   memcpy(dest + offset, arg.Value, sizeof(D3D12_VERTEX_BUFFER_VIEW) * arg.Size);
   offset += sizeof(D3D12_VERTEX_BUFFER_VIEW) * arg.Size;
 
-  memcpy(dest + offset, arg.BufferLocationKeys.data(), sizeof(GITSKey) * arg.Size);
-  offset += sizeof(GITSKey) * arg.Size;
+  memcpy(dest + offset, arg.BufferLocationKeys.data(), sizeof(ObjectKey) * arg.Size);
+  offset += sizeof(ObjectKey) * arg.Size;
 
   memcpy(dest + offset, arg.BufferLocationOffsets.data(), sizeof(unsigned) * arg.Size);
   offset += sizeof(unsigned) * arg.Size;
@@ -488,7 +488,7 @@ unsigned GetSize(const D3D12_STREAM_OUTPUT_BUFFER_VIEWs_Argument& arg) {
     return sizeof(void*);
   }
   return sizeof(void*) + sizeof(arg.Size) + sizeof(D3D12_STREAM_OUTPUT_BUFFER_VIEW) * arg.Size +
-         sizeof(GITSKey) * arg.Size * 2 + sizeof(unsigned) * arg.Size * 2;
+         sizeof(ObjectKey) * arg.Size * 2 + sizeof(unsigned) * arg.Size * 2;
 }
 
 void Encode(char* dest, unsigned& offset, const D3D12_STREAM_OUTPUT_BUFFER_VIEWs_Argument& arg) {
@@ -502,14 +502,14 @@ void Encode(char* dest, unsigned& offset, const D3D12_STREAM_OUTPUT_BUFFER_VIEWs
   memcpy(dest + offset, arg.Value, sizeof(D3D12_STREAM_OUTPUT_BUFFER_VIEW) * arg.Size);
   offset += sizeof(D3D12_STREAM_OUTPUT_BUFFER_VIEW) * arg.Size;
 
-  memcpy(dest + offset, arg.BufferLocationKeys.data(), sizeof(GITSKey) * arg.Size);
-  offset += sizeof(GITSKey) * arg.Size;
+  memcpy(dest + offset, arg.BufferLocationKeys.data(), sizeof(ObjectKey) * arg.Size);
+  offset += sizeof(ObjectKey) * arg.Size;
 
   memcpy(dest + offset, arg.BufferLocationOffsets.data(), sizeof(unsigned) * arg.Size);
   offset += sizeof(unsigned) * arg.Size;
 
-  memcpy(dest + offset, arg.BufferFilledSizeLocationKeys.data(), sizeof(GITSKey) * arg.Size);
-  offset += sizeof(GITSKey) * arg.Size;
+  memcpy(dest + offset, arg.BufferFilledSizeLocationKeys.data(), sizeof(ObjectKey) * arg.Size);
+  offset += sizeof(ObjectKey) * arg.Size;
 
   memcpy(dest + offset, arg.BufferFilledSizeLocationOffsets.data(), sizeof(unsigned) * arg.Size);
   offset += sizeof(unsigned) * arg.Size;
@@ -520,7 +520,7 @@ unsigned GetSize(const D3D12_WRITEBUFFERIMMEDIATE_PARAMETERs_Argument& arg) {
     return sizeof(void*);
   }
   return sizeof(void*) + sizeof(arg.Size) +
-         sizeof(D3D12_WRITEBUFFERIMMEDIATE_PARAMETER) * arg.Size + sizeof(GITSKey) * arg.Size +
+         sizeof(D3D12_WRITEBUFFERIMMEDIATE_PARAMETER) * arg.Size + sizeof(ObjectKey) * arg.Size +
          sizeof(unsigned) * arg.Size;
 }
 
@@ -537,8 +537,8 @@ void Encode(char* dest,
   memcpy(dest + offset, arg.Value, sizeof(D3D12_WRITEBUFFERIMMEDIATE_PARAMETER) * arg.Size);
   offset += sizeof(D3D12_WRITEBUFFERIMMEDIATE_PARAMETER) * arg.Size;
 
-  memcpy(dest + offset, arg.DestKeys.data(), sizeof(GITSKey) * arg.Size);
-  offset += sizeof(GITSKey) * arg.Size;
+  memcpy(dest + offset, arg.DestKeys.data(), sizeof(ObjectKey) * arg.Size);
+  offset += sizeof(ObjectKey) * arg.Size;
 
   memcpy(dest + offset, arg.DestOffsets.data(), sizeof(unsigned) * arg.Size);
   offset += sizeof(unsigned) * arg.Size;
@@ -642,8 +642,8 @@ unsigned GetSize(const D3D12_STATE_OBJECT_DESC_Argument& arg) {
 
   size += sizeof(unsigned) + associationsCount * sizeof(unsigned) * 2;
 
-  size +=
-      sizeof(unsigned) + arg.InterfaceKeysBySubobject.size() * (sizeof(unsigned) + sizeof(GITSKey));
+  size += sizeof(unsigned) +
+          arg.InterfaceKeysBySubobject.size() * (sizeof(unsigned) + sizeof(ObjectKey));
 
   return size;
 }
@@ -831,7 +831,7 @@ void Encode(char* dest, unsigned& offset, const D3D12_STATE_OBJECT_DESC_Argument
   }
 
   {
-    std::map<GITSKey, GITSKey> subobjectAssociations;
+    std::map<ObjectKey, ObjectKey> subobjectAssociations;
     for (unsigned index = 0; index < arg.Value->NumSubobjects; ++index) {
       D3D12_STATE_SUBOBJECT& subobject =
           const_cast<D3D12_STATE_SUBOBJECT&>(arg.Value->pSubobjects[index]);
@@ -865,8 +865,8 @@ void Encode(char* dest, unsigned& offset, const D3D12_STATE_OBJECT_DESC_Argument
     for (auto& it : arg.InterfaceKeysBySubobject) {
       memcpy(dest + offset, &it.first, sizeof(unsigned));
       offset += sizeof(unsigned);
-      memcpy(dest + offset, &it.second, sizeof(GITSKey));
-      offset += sizeof(GITSKey);
+      memcpy(dest + offset, &it.second, sizeof(ObjectKey));
+      offset += sizeof(ObjectKey);
     }
   }
 }

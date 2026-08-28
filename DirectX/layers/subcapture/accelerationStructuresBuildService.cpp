@@ -287,7 +287,7 @@ void AccelerationStructuresBuildService::BuildAccelerationStructure(
 
   m_BufferLifetimeService.AddRtasBuffer(c.Key, c.m_pDesc.DestAccelerationStructureKey);
   m_BufferLifetimeService.AddRtasBuffer(c.Key, c.m_pDesc.SourceAccelerationStructureKey);
-  for (GITSKey key : c.m_pDesc.InputKeys) {
+  for (ObjectKey key : c.m_pDesc.InputKeys) {
     m_BufferLifetimeService.AddInputBuffer(c.Key, key);
   }
 }
@@ -689,7 +689,7 @@ void AccelerationStructuresBuildService::NvapiBuildAccelerationStructureEx(
 
   m_BufferLifetimeService.AddRtasBuffer(c.Key, c.m_pParams.DestAccelerationStructureKey);
   m_BufferLifetimeService.AddRtasBuffer(c.Key, c.m_pParams.SourceAccelerationStructureKey);
-  for (GITSKey key : c.m_pParams.InputKeys) {
+  for (ObjectKey key : c.m_pParams.InputKeys) {
     m_BufferLifetimeService.AddInputBuffer(c.Key, key);
   }
 }
@@ -972,13 +972,13 @@ void AccelerationStructuresBuildService::CommandQueueSignal(ID3D12CommandQueueSi
 }
 
 void AccelerationStructuresBuildService::FenceSignal(CommandKey key,
-                                                     GITSKey fenceKey,
+                                                     ObjectKey fenceKey,
                                                      UINT64 fenceValue) {
   m_InputBuffersService.FenceSignal(key, fenceKey, fenceValue);
 }
 
 void AccelerationStructuresBuildService::DestroyResource(CommandKey commandKey,
-                                                         GITSKey resourceKey) {
+                                                         ObjectKey resourceKey) {
   m_BufferLifetimeService.AddRelease(commandKey, resourceKey);
 }
 
@@ -1093,7 +1093,7 @@ void AccelerationStructuresBuildService::RestoreCommand(
   residencyService.AddResource(command->Desc->DestOpacityMicromapArrayDataKey);
   residencyService.AddResource(command->Desc->InputBufferKey);
   residencyService.AddResource(command->Desc->PerOMMDescsKey);
-  for (GITSKey key : command->Desc->DestPostBuildBufferKeys) {
+  for (ObjectKey key : command->Desc->DestPostBuildBufferKeys) {
     residencyService.AddResource(key);
   }
   residencyService.RecordMakeResident();
@@ -1168,13 +1168,13 @@ void AccelerationStructuresBuildService::RecordExecuteCommandLists() {
   commandListReset.Key = m_StateService.GetUniqueCommandKey();
   commandListReset.m_Object.Key = m_CommandListKey;
   commandListReset.m_pAllocator.Key = m_CommandAllocatorKey;
-  commandListReset.m_pInitialState.Key = 0;
+  commandListReset.m_pInitialState.Key = ObjectKey{};
   m_StateService.GetRecorder().Record(ID3D12GraphicsCommandListResetSerializer(commandListReset));
 }
 
 void AccelerationStructuresBuildService::OptimizationService::OnExecute(
-    std::vector<GITSKey>& commandListKeys) {
-  for (GITSKey commandListKey : commandListKeys) {
+    std::vector<ObjectKey>& commandListKeys) {
+  for (ObjectKey commandListKey : commandListKeys) {
     auto itStates = m_CommandsByCommandList.find(commandListKey);
     if (itStates != m_CommandsByCommandList.end()) {
       for (auto& command : itStates->second) {
@@ -1236,7 +1236,7 @@ void AccelerationStructuresBuildService::OptimizationService::Cleanup() {
 }
 
 void AccelerationStructuresBuildService::BufferLifetimeService::AddInputBuffer(
-    CommandKey commandKey, GITSKey bufferKey) {
+    CommandKey commandKey, ObjectKey bufferKey) {
   if (bufferKey) {
     m_InputBuffersByBuild[commandKey].insert(bufferKey);
     m_Buffers.insert(bufferKey);
@@ -1244,7 +1244,7 @@ void AccelerationStructuresBuildService::BufferLifetimeService::AddInputBuffer(
 }
 
 void AccelerationStructuresBuildService::BufferLifetimeService::AddRtasBuffer(CommandKey commandKey,
-                                                                              GITSKey bufferKey) {
+                                                                              ObjectKey bufferKey) {
   if (bufferKey) {
     m_RtasBuffersByBuild[commandKey].insert(bufferKey);
     m_Buffers.insert(bufferKey);
@@ -1252,7 +1252,7 @@ void AccelerationStructuresBuildService::BufferLifetimeService::AddRtasBuffer(Co
 }
 
 void AccelerationStructuresBuildService::BufferLifetimeService::AddRelease(CommandKey commandKey,
-                                                                           GITSKey bufferKey) {
+                                                                           ObjectKey bufferKey) {
   auto it = m_Buffers.find(bufferKey);
   if (it != m_Buffers.end()) {
     m_Releases[commandKey] = bufferKey;
@@ -1262,12 +1262,12 @@ void AccelerationStructuresBuildService::BufferLifetimeService::AddRelease(Comma
 
 void AccelerationStructuresBuildService::BufferLifetimeService::CreateBuffers(
     CommandKey commandKey) {
-  for (GITSKey bufferKey : m_InputBuffersByBuild[commandKey]) {
+  for (ObjectKey bufferKey : m_InputBuffersByBuild[commandKey]) {
     ResourceState* bufferState = static_cast<ResourceState*>(m_StateService.GetState(bufferKey));
     GITS_ASSERT(bufferState);
     m_StateService.RestoreState(bufferKey);
   }
-  for (GITSKey bufferKey : m_RtasBuffersByBuild[commandKey]) {
+  for (ObjectKey bufferKey : m_RtasBuffersByBuild[commandKey]) {
     ResourceState* bufferState = static_cast<ResourceState*>(m_StateService.GetState(bufferKey));
     GITS_ASSERT(bufferState);
     m_StateService.RestoreState(bufferKey);

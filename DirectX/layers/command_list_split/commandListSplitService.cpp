@@ -56,9 +56,9 @@ CommandListSplitService::CommandListSplitService(CommandListSplitRecorder& recor
   }
 }
 
-void CommandListSplitService::CreateCommandList(GITSKey commandListKey,
-                                                GITSKey allocatorKey,
-                                                GITSKey initialState) {
+void CommandListSplitService::CreateCommandList(ObjectKey commandListKey,
+                                                ObjectKey allocatorKey,
+                                                ObjectKey initialState) {
   m_AllocatorByCommandList[commandListKey] = allocatorKey;
   CommandList& commandList = m_CommandListsByKey[commandListKey];
   commandList.CommandListKey = commandListKey;
@@ -71,7 +71,7 @@ void CommandListSplitService::CreateCommandList(GITSKey commandListKey,
   }
 }
 
-void CommandListSplitService::CommandListCommand(GITSKey commandListKey, const Command& command) {
+void CommandListSplitService::CommandListCommand(ObjectKey commandListKey, const Command& command) {
   CommandList& commandList = m_CommandListsByKey[commandListKey];
   commandList.CommandListKey = commandListKey;
   if (m_Split == "all" && !CommandListStateService::IsStateCommand(command.GetId()) &&
@@ -84,9 +84,9 @@ void CommandListSplitService::CommandListCommand(GITSKey commandListKey, const C
   commandList.Commands.push_back(CreateCommandCopy(&command));
 }
 
-void CommandListSplitService::CommandListReset(GITSKey commandListKey,
-                                               GITSKey allocatorKey,
-                                               GITSKey initialState) {
+void CommandListSplitService::CommandListReset(ObjectKey commandListKey,
+                                               ObjectKey allocatorKey,
+                                               ObjectKey initialState) {
   m_AllocatorByCommandList[commandListKey] = allocatorKey;
   CommandList& commandList = m_CommandListsByKey[commandListKey];
   commandList.CommandListKey = commandListKey;
@@ -95,14 +95,14 @@ void CommandListSplitService::CommandListReset(GITSKey commandListKey,
   commandList.Commands.clear();
 }
 
-void CommandListSplitService::ExecuteCommandLists(GITSKey commandQueueKey,
-                                                  std::vector<GITSKey>& commandListKeys) {
+void CommandListSplitService::ExecuteCommandLists(ObjectKey commandQueueKey,
+                                                  std::vector<ObjectKey>& commandListKeys) {
   GITS_ASSERT(commandListKeys.size() == 1);
   m_LastExecuteInfo = {commandQueueKey, commandListKeys.back()};
 }
 
-void CommandListSplitService::CommandQueueSignal(GITSKey commandQueueKey,
-                                                 GITSKey fenceKey,
+void CommandListSplitService::CommandQueueSignal(ObjectKey commandQueueKey,
+                                                 ObjectKey fenceKey,
                                                  uint64_t fenceValue) {
   GITS_ASSERT(m_LastExecuteInfo.commandQueueKey == commandQueueKey);
 

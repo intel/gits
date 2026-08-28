@@ -85,15 +85,15 @@ PlayerManager::PlayerManager() {
   m_ExecuteCommands = Configurator::Get().common.player.execute;
 }
 
-void PlayerManager::AddObject(GITSKey objectKey, IUnknown* object) {
+void PlayerManager::AddObject(ObjectKey objectKey, IUnknown* object) {
   m_Objects[objectKey] = object;
 }
 
-void PlayerManager::RemoveObject(GITSKey objectKey) {
+void PlayerManager::RemoveObject(ObjectKey objectKey) {
   m_Objects.erase(objectKey);
 }
 
-IUnknown* PlayerManager::FindObject(GITSKey objectKey) {
+IUnknown* PlayerManager::FindObject(ObjectKey objectKey) {
   auto it = m_Objects.find(objectKey);
   if (it == m_Objects.end()) {
     return nullptr;

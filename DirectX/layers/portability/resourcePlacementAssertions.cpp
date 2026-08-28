@@ -22,7 +22,7 @@ ResourcePlacementAssertions::ResourcePlacementAssertions() {
   LoadResourcePlacementData();
 }
 
-void ResourcePlacementAssertions::CreatePlacedResource(GITSKey resourceKey,
+void ResourcePlacementAssertions::CreatePlacedResource(ObjectKey resourceKey,
                                                        const D3D12_RESOURCE_DESC& desc,
                                                        ID3D12Device* device) {
   if (!m_PlacementDataLoaded) {
@@ -46,7 +46,7 @@ void ResourcePlacementAssertions::CreatePlacedResource(GITSKey resourceKey,
   CheckCompatibility(info, desc, resourceKey);
 }
 
-void ResourcePlacementAssertions::CreatePlacedResource(GITSKey resourceKey,
+void ResourcePlacementAssertions::CreatePlacedResource(ObjectKey resourceKey,
                                                        const D3D12_RESOURCE_DESC1& desc,
                                                        ID3D12Device* device) {
   if (!m_PlacementDataLoaded) {
@@ -86,7 +86,7 @@ void ResourcePlacementAssertions::CreatePlacedResource(GITSKey resourceKey,
   CheckCompatibility(info, baseDesc, resourceKey);
 }
 
-const ResourcePlacementInfo* ResourcePlacementAssertions::FindPlacementData(GITSKey resourceKey) {
+const ResourcePlacementInfo* ResourcePlacementAssertions::FindPlacementData(ObjectKey resourceKey) {
   const auto it = m_PlacementDataFromFile.find(resourceKey);
   if (it != m_PlacementDataFromFile.end()) {
     return &it->second;
@@ -95,7 +95,7 @@ const ResourcePlacementInfo* ResourcePlacementAssertions::FindPlacementData(GITS
 }
 
 D3D12_RESOURCE_ALLOCATION_INFO ResourcePlacementAssertions::QueryAllocationFromDevice(
-    ID3D12Device* device, const D3D12_RESOURCE_DESC& desc, GITSKey resourceKey) {
+    ID3D12Device* device, const D3D12_RESOURCE_DESC& desc, ObjectKey resourceKey) {
   D3D12_RESOURCE_ALLOCATION_INFO allocInfo = device->GetResourceAllocationInfo(0, 1, &desc);
   if (allocInfo.SizeInBytes == UINT64_MAX) {
     LOG_ERROR << "Portability - GetResourceAllocationInfo failed for resource: O" << resourceKey;
@@ -105,7 +105,7 @@ D3D12_RESOURCE_ALLOCATION_INFO ResourcePlacementAssertions::QueryAllocationFromD
 
 void ResourcePlacementAssertions::CheckCompatibility(const AllocationInfo& allocationInfo,
                                                      const D3D12_RESOURCE_DESC& desc,
-                                                     GITSKey resourceKey) {
+                                                     ObjectKey resourceKey) {
   const auto logResourceDesc = [](const D3D12_RESOURCE_DESC& resourceDesc) {
     LOG_ERROR << "Portability - Resource desc:"
               << " Dimension=" << toStr(resourceDesc.Dimension)

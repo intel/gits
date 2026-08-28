@@ -17,8 +17,8 @@ namespace gits {
 namespace DirectX {
 
 struct ResourcePlacementInfo {
-  GITSKey HeapKey{};
-  GITSKey Key{};
+  ObjectKey HeapKey{};
+  ObjectKey Key{};
   UINT64 Offset{};
   UINT64 Size{};
   UINT64 Alignment{};
@@ -27,8 +27,8 @@ struct ResourcePlacementInfo {
 
 class ResourcePlacementCapture {
 public:
-  void CreatePlacedResource(GITSKey heapKey,
-                            GITSKey resourceKey,
+  void CreatePlacedResource(ObjectKey heapKey,
+                            ObjectKey resourceKey,
                             UINT64 offset,
                             ID3D12Device* device,
                             D3D12_RESOURCE_DESC& desc);

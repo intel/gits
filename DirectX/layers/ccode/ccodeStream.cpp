@@ -187,7 +187,7 @@ size_t CCodeStream::getDataOffset() const {
   return m_DataOffset;
 }
 
-void CCodeStream::addInterface(GITSKey key, REFIID iid) {
+void CCodeStream::addInterface(ObjectKey key, REFIID iid) {
   const auto& latestIID = getLatestInterface(iid);
   auto iidStr = toStr(latestIID);
   if (iidStr.starts_with("IID_")) {
@@ -196,7 +196,7 @@ void CCodeStream::addInterface(GITSKey key, REFIID iid) {
   m_InterfaceMap[key] = std::move(iidStr);
 }
 
-std::string CCodeStream::getInterfaceName(GITSKey key) const {
+std::string CCodeStream::getInterfaceName(ObjectKey key) const {
   auto it = m_InterfaceMap.find(key);
   return (it != m_InterfaceMap.end()) ? it->second : std::string();
 }

@@ -84,7 +84,7 @@ NestedCaptureScope::~NestedCaptureScope() {
   }
 }
 
-GITSKey getWrapperKey(const IUnknown* object) {
+ObjectKey getWrapperKey(const IUnknown* object) {
   if (object) {
     IUnknownWrapper* wrapper = nullptr;
     if (SUCCEEDED(const_cast<IUnknown*>(object)->QueryInterface(
@@ -92,7 +92,7 @@ GITSKey getWrapperKey(const IUnknown* object) {
       return wrapper->GetKey();
     }
   }
-  return 0;
+  return ObjectKey{};
 }
 
 } // namespace DirectX

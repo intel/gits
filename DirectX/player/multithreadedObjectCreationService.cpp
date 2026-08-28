@@ -53,7 +53,7 @@ void MultithreadedObjectCreationService::Shutdown() {
 }
 
 void MultithreadedObjectCreationService::Schedule(CreationFunction creationFunction,
-                                                  GITSKey objectKey) {
+                                                  ObjectKey objectKey) {
   Initialize();
 
   std::lock_guard<std::mutex> guard(m_Mutex);
@@ -73,7 +73,8 @@ void MultithreadedObjectCreationService::Schedule(CreationFunction creationFunct
   }
 }
 
-void MultithreadedObjectCreationService::AddDependency(GITSKey providerKey, GITSKey consumerKey) {
+void MultithreadedObjectCreationService::AddDependency(ObjectKey providerKey,
+                                                       ObjectKey consumerKey) {
   if (!providerKey || !consumerKey) {
     return;
   }
@@ -82,7 +83,7 @@ void MultithreadedObjectCreationService::AddDependency(GITSKey providerKey, GITS
   it->second.push_back(consumerKey);
 }
 
-std::vector<GITSKey> MultithreadedObjectCreationService::CollectConsumers(GITSKey providerKey) {
+std::vector<ObjectKey> MultithreadedObjectCreationService::CollectConsumers(ObjectKey providerKey) {
   auto it = m_Dependencies.find(providerKey);
   if (it == m_Dependencies.end()) {
     return {};
@@ -95,7 +96,7 @@ std::vector<GITSKey> MultithreadedObjectCreationService::CollectConsumers(GITSKe
 
 // Ensure the object has been created (either returns the collected result from a worker thread or creates the object)
 std::optional<MultithreadedObjectCreationService::ObjectCreationOutput>
-MultithreadedObjectCreationService::Complete(GITSKey objectKey) {
+MultithreadedObjectCreationService::Complete(ObjectKey objectKey) {
   std::unique_lock<std::mutex> lock(m_Mutex);
 
   auto it = m_Tasks.find(objectKey);
@@ -117,11 +118,11 @@ MultithreadedObjectCreationService::Complete(GITSKey objectKey) {
   }
 }
 
-std::vector<std::pair<GITSKey, MultithreadedObjectCreationService::ObjectCreationOutput>>
+std::vector<std::pair<ObjectKey, MultithreadedObjectCreationService::ObjectCreationOutput>>
 MultithreadedObjectCreationService::CompleteAll() {
-  std::vector<std::pair<GITSKey, ObjectCreationOutput>> results;
+  std::vector<std::pair<ObjectKey, ObjectCreationOutput>> results;
   while (!m_Tasks.empty()) {
-    GITSKey key = m_Tasks.begin()->first;
+    ObjectKey key = m_Tasks.begin()->first;
     auto creationOutput = Complete(key);
     GITS_ASSERT(creationOutput.has_value());
     results.emplace_back(key, creationOutput.value());
@@ -129,7 +130,7 @@ MultithreadedObjectCreationService::CompleteAll() {
   return results;
 }
 
-bool MultithreadedObjectCreationService::ScheduleUpdateRefCount(GITSKey objectKey, int count) {
+bool MultithreadedObjectCreationService::ScheduleUpdateRefCount(ObjectKey objectKey, int count) {
   std::lock_guard<std::mutex> guard(m_Mutex);
 
   auto it = m_Tasks.find(objectKey);
@@ -201,7 +202,7 @@ MultithreadedObjectCreationService::ObjectCreationOutput MultithreadedObjectCrea
 }
 
 MultithreadedObjectCreationService::ObjectCreationTask::ObjectCreationTask(
-    CreationFunction creationFunction, GITSKey objectKey)
+    CreationFunction creationFunction, ObjectKey objectKey)
     : CreationFunctor(std::move(creationFunction)), Key(objectKey) {}
 
 } // namespace DirectX

@@ -27,7 +27,7 @@ public:
                     DXGI_FORMAT format,
                     unsigned commandListDispatchCount);
   void ExecuteCommandLists(CommandKey key,
-                           GITSKey commandQueueKey,
+                           ObjectKey commandQueueKey,
                            ID3D12CommandQueue* commandQueue,
                            ID3D12CommandList** commandLists,
                            unsigned commandListNum,

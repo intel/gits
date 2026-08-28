@@ -26,10 +26,10 @@ struct ObjectState {
   ObjectState() {}
   virtual ~ObjectState() = default;
   std::unique_ptr<Command> CreationCommand;
-  GITSKey Key{};
-  GITSKey ParentKey{};
-  GITSKey LinkedLifetimeKey{};
-  std::unordered_set<GITSKey> ChildrenKeys{};
+  ObjectKey Key{};
+  ObjectKey ParentKey{};
+  ObjectKey LinkedLifetimeKey{};
+  std::unordered_set<ObjectKey> ChildrenKeys{};
   IUnknown* Object{};
   std::wstring Name;
   D3D12_RESIDENCY_PRIORITY ResidencyPriority{};
@@ -41,7 +41,7 @@ struct ObjectState {
 
 struct ResourceState : public ObjectState {
   ResourceState() {}
-  GITSKey DeviceKey{};
+  ObjectKey DeviceKey{};
   D3D12_RESOURCE_STATES InitialState{};
   D3D12_BARRIER_LAYOUT InitialLayout{};
   D3D12_RESOURCE_DIMENSION Dimension{};
@@ -51,12 +51,12 @@ struct ResourceState : public ObjectState {
   bool BarrierRestricted{};
   bool DenyShaderResource{};
   D3D12_RESOURCE_STATES CurrentState{};
-  GITSKey HeapKey{};
+  ObjectKey HeapKey{};
   bool IsRtas{};
 };
 
 struct HeapState : public ObjectState {
-  GITSKey DeviceKey{};
+  ObjectKey DeviceKey{};
 };
 
 struct D3D12DescriptorHeapState : public ObjectState {

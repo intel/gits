@@ -177,7 +177,7 @@ void GpuPatchLayer::Pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStr
   commandList->CopyResource(m_MappingCountBuffers[mappingBufferIndex].Get(),
                             m_MappingCountStagingBuffers[mappingBufferIndex].Get());
 
-  GITSKey instanceDescsKey = c.m_pDesc.InputKeys[0];
+  ObjectKey instanceDescsKey = c.m_pDesc.InputKeys[0];
   ID3D12Resource* instanceDescs = m_ResourceByKey[instanceDescsKey];
   GITS_ASSERT(instanceDescs);
 
@@ -262,11 +262,11 @@ void GpuPatchLayer::Pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStr
     struct InstanceInfo {
       ID3D12Resource* resource{};
       unsigned patchBufferIndex{};
-      GITSKey resourceKey{};
+      ObjectKey resourceKey{};
       D3D12_GPU_VIRTUAL_ADDRESS captureStart;
       std::set<unsigned> offsets;
     };
-    std::unordered_map<GITSKey, InstanceInfo> instancesByResourceKey;
+    std::unordered_map<ObjectKey, InstanceInfo> instancesByResourceKey;
 
     std::vector<InstanceInfo*> instanceInfos(arrayOfPointers.size());
     for (unsigned i = 0; i < arrayOfPointers.size(); ++i) {
@@ -1062,7 +1062,7 @@ void GpuPatchLayer::Pre(ID3D12CommandQueueExecuteCommandListsCommand& c) {
     return;
   }
   std::vector<unsigned> mappingBuffers;
-  for (GITSKey key : c.m_ppCommandLists.Keys) {
+  for (ObjectKey key : c.m_ppCommandLists.Keys) {
     auto it = m_CurrentMappingsByCommandList.find(key);
     if (it != m_CurrentMappingsByCommandList.end()) {
       mappingBuffers.push_back(it->second);
@@ -1170,7 +1170,7 @@ void GpuPatchLayer::Post(ID3D12CommandQueueExecuteCommandListsCommand& c) {
   if (c.Skip) {
     return;
   }
-  for (GITSKey key : c.m_ppCommandLists.Keys) {
+  for (ObjectKey key : c.m_ppCommandLists.Keys) {
     auto itMappings = m_CurrentMappingsByCommandList.find(key);
     if (itMappings != m_CurrentMappingsByCommandList.end()) {
       unsigned mappingBufferIndex = itMappings->second;
@@ -1724,7 +1724,7 @@ void GpuPatchLayer::GetPatchOffsets(const D3D12_COMMAND_SIGNATURE_DESC& commandS
   }
 }
 
-unsigned GpuPatchLayer::GetMappingBufferIndex(GITSKey commandListKey,
+unsigned GpuPatchLayer::GetMappingBufferIndex(ObjectKey commandListKey,
                                               ID3D12GraphicsCommandList* commandList) {
   auto it = m_CurrentMappingsByCommandList.find(commandListKey);
   if (it != m_CurrentMappingsByCommandList.end()) {
@@ -1755,7 +1755,7 @@ unsigned GpuPatchLayer::GetMappingBufferIndex(GITSKey commandListKey,
   return newIndex;
 }
 
-unsigned GpuPatchLayer::GetPatchBufferIndex(GITSKey commandListKey,
+unsigned GpuPatchLayer::GetPatchBufferIndex(ObjectKey commandListKey,
                                             ID3D12GraphicsCommandList* commandList,
                                             size_t size) {
   std::optional<unsigned> smallestFittingBuffer;
@@ -1807,7 +1807,7 @@ unsigned GpuPatchLayer::GetPatchBufferIndex(GITSKey commandListKey,
   return patchBufferIndex;
 }
 
-unsigned GpuPatchLayer::GetInstancesAoPPatchBufferIndex(GITSKey commandListKey) {
+unsigned GpuPatchLayer::GetInstancesAoPPatchBufferIndex(ObjectKey commandListKey) {
   for (unsigned i = 0; i < INSTANCES_AOP_PATCH_BUFFER_POOL_SIZE; ++i) {
     if (m_InstancesAopPatchBufferFences[i].WaitingForExecute) {
       continue;
@@ -1828,7 +1828,7 @@ unsigned GpuPatchLayer::GetInstancesAoPPatchBufferIndex(GITSKey commandListKey) 
   exit(EXIT_FAILURE);
 }
 
-unsigned GpuPatchLayer::GetInstancesAoPStagingBufferIndex(GITSKey commandListKey) {
+unsigned GpuPatchLayer::GetInstancesAoPStagingBufferIndex(ObjectKey commandListKey) {
   for (unsigned i = 0; i < INSTANCES_AOP_STAGING_BUFFER_POOL_SIZE; ++i) {
     if (m_InstancesAopStagingBufferFences[i].WaitingForExecute) {
       continue;
@@ -1885,7 +1885,7 @@ void GpuPatchLayer::LoadInstancesArraysOfPointers() {
   std::ifstream stream(dumpPath / "raytracingArraysOfPointers.dat", std::ios::binary);
   while (true) {
     CommandKey callKey{};
-    stream.read(reinterpret_cast<char*>(&callKey), sizeof(GITSKey));
+    stream.read(reinterpret_cast<char*>(&callKey), sizeof(ObjectKey));
     if (!stream) {
       break;
     }

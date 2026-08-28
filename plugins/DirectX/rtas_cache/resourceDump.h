@@ -34,19 +34,19 @@ public:
                     unsigned mipLevel = 0,
                     DXGI_FORMAT format = DXGI_FORMAT_UNKNOWN);
   void ExecuteCommandLists(CommandKey key,
-                           GITSKey commandQueueKey,
+                           ObjectKey commandQueueKey,
                            ID3D12CommandQueue* commandQueue,
                            ID3D12CommandList** commandLists,
                            unsigned commandListNum);
   void CommandQueueWait(CommandKey key,
-                        GITSKey commandQueueKey,
-                        GITSKey fenceKey,
+                        ObjectKey commandQueueKey,
+                        ObjectKey fenceKey,
                         UINT64 fenceValue);
   void CommandQueueSignal(CommandKey key,
-                          GITSKey commandQueueKey,
-                          GITSKey fenceKey,
+                          ObjectKey commandQueueKey,
+                          ObjectKey fenceKey,
                           UINT64 fenceValue);
-  void FenceSignal(CommandKey key, GITSKey fenceKey, UINT64 fenceValue);
+  void FenceSignal(CommandKey key, ObjectKey fenceKey, UINT64 fenceValue);
   void WaitUntilDumped();
 
 protected:

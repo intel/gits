@@ -38,12 +38,12 @@ void DispatchOutputsAnalyzer::DumpAnalysisFile() {
       analysisFile << dispatchKey << " " << slot << " " << bindings.Resources.size() << " "
                    << (bindings.Unbounded ? 'u' : 'b');
 
-      std::vector<GITSKey> sortedResources;
+      std::vector<ObjectKey> sortedResources;
       sortedResources.resize(bindings.Resources.size());
       std::copy(bindings.Resources.cbegin(), bindings.Resources.cend(), sortedResources.begin());
       std::sort(sortedResources.begin(), sortedResources.end());
 
-      for (GITSKey resourceKey : sortedResources) {
+      for (ObjectKey resourceKey : sortedResources) {
         analysisFile << " " << resourceKey;
       }
       analysisFile << "\n";
@@ -67,7 +67,7 @@ void DispatchOutputsAnalyzer::ReadAnalysisFile() {
     if (unbounded == 'u') {
       bindings.Unbounded = true;
     }
-    GITSKey resourceKey{};
+    ObjectKey resourceKey{};
     while (iss >> resourceKey) {
       bindings.Resources.push_back(resourceKey);
     }
@@ -90,7 +90,7 @@ void DispatchOutputsAnalyzer::CreateDescriptorHeap(ID3D12DeviceCreateDescriptorH
   desc.NumDescriptors = c.m_pDescriptorHeapDesc.Value->NumDescriptors;
 }
 
-void DispatchOutputsAnalyzer::CreateResource(ID3D12Resource* resource, GITSKey resourceKey) {
+void DispatchOutputsAnalyzer::CreateResource(ID3D12Resource* resource, ObjectKey resourceKey) {
   m_ResourceByKey[resourceKey] = resource;
 }
 
@@ -136,8 +136,8 @@ void DispatchOutputsAnalyzer::SetComputeRootDescriptorTable(
   if (!c.m_BaseDescriptor.Value.ptr) {
     return;
   }
-  GITSKey rootSignatureKey = m_RootSignatureByCommandList[c.m_Object.Key];
-  GITS_ASSERT(rootSignatureKey);
+  ObjectKey rootSignatureKey = m_RootSignatureByCommandList[c.m_Object.Key];
+  GITS_ASSERT(rootSignatureKey != ObjectKey{});
   unsigned numDescriptors = m_DescriptorHeaps[c.m_BaseDescriptor.InterfaceKey].NumDescriptors;
   GITS_ASSERT(numDescriptors);
 
@@ -196,14 +196,14 @@ void DispatchOutputsAnalyzer::ExecuteCommandLists(ID3D12CommandQueueExecuteComma
   }
 }
 
-void DispatchOutputsAnalyzer::ClearCommandList(GITSKey commandListKey) {
+void DispatchOutputsAnalyzer::ClearCommandList(ObjectKey commandListKey) {
   m_RootSignatureByCommandList.erase(commandListKey);
   m_DescriptorBySlotByCommandList.erase(commandListKey);
   m_DescriptorTableBySlotByCommandList.erase(commandListKey);
   m_DescriptorTableBySlotByDispatchByCommandList.erase(commandListKey);
 }
 
-void DispatchOutputsAnalyzer::DestroyInterface(GITSKey interfaceKey) {
+void DispatchOutputsAnalyzer::DestroyInterface(ObjectKey interfaceKey) {
   m_RootSignatureByCommandList.erase(interfaceKey);
   m_DescriptorBySlotByCommandList.erase(interfaceKey);
   m_DescriptorTableBySlotByCommandList.erase(interfaceKey);

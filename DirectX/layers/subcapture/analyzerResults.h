@@ -25,14 +25,14 @@ public:
   bool RestoreCommandLists() {
     return !m_CommandListKeys.empty();
   }
-  bool RestoreCommandList(GITSKey commandListKey) {
+  bool RestoreCommandList(ObjectKey commandListKey) {
     return m_CommandListKeys.find(commandListKey) != m_CommandListKeys.end();
   }
   bool RestoreCommandQueueCommand(CommandKey commandKey) {
     return m_CommandQueueCommands.find(commandKey) != m_CommandQueueCommands.end();
   }
-  bool RestoreObject(GITSKey objectKey);
-  bool RestoreDescriptor(GITSKey heapKey, unsigned index);
+  bool RestoreObject(ObjectKey objectKey);
+  bool RestoreDescriptor(ObjectKey heapKey, unsigned index);
   bool RestoreTlas(CommandKey buildKey);
   bool RestoreBlas(CommandKey buildKey);
   CommandKey GetBlasSourceBuild(CommandKey buildKey);
@@ -42,10 +42,10 @@ public:
 
 private:
   bool m_Optimize{};
-  std::unordered_set<GITSKey> m_CommandListKeys;
+  std::unordered_set<ObjectKey> m_CommandListKeys;
   std::unordered_set<CommandKey> m_CommandQueueCommands;
-  std::unordered_set<GITSKey> m_ObjectKeys;
-  std::unordered_set<std::pair<GITSKey, unsigned>, UnsignedPairHash> m_Descriptors;
+  std::unordered_set<ObjectKey> m_ObjectKeys;
+  std::unordered_set<std::pair<ObjectKey, unsigned>, UnsignedPairHash> m_Descriptors;
   std::unordered_set<CommandKey> m_Tlases;
   std::unordered_map<CommandKey, CommandKey> m_Blases;
 };

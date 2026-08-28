@@ -86,9 +86,9 @@ public:
     return m_PipelineLibraryService;
   }
 
-  void AddObject(GITSKey objectKey, IUnknown* object);
-  void RemoveObject(GITSKey objectKey);
-  IUnknown* FindObject(GITSKey objectKey);
+  void AddObject(ObjectKey objectKey, IUnknown* object);
+  void RemoveObject(ObjectKey objectKey);
+  IUnknown* FindObject(ObjectKey objectKey);
 
   ContextMapService& GetIntelExtensionsContextMap() {
     return m_IntelExtensionsContextMap;
@@ -137,7 +137,7 @@ private:
   HMODULE m_DStorageDll{};
   HMODULE m_DStorageCoreDll{};
 
-  std::unordered_map<GITSKey, IUnknown*> m_Objects;
+  std::unordered_map<ObjectKey, IUnknown*> m_Objects;
   ContextMapService m_IntelExtensionsContextMap;
   ContextMapService m_XessContextMap;
   ContextMapService m_XellContextMap;

@@ -13,7 +13,7 @@
 namespace gits {
 namespace DirectX {
 
-void GpuExecutionFlusher::ExecuteCommandLists(GITSKey commandQueueKey,
+void GpuExecutionFlusher::ExecuteCommandLists(ObjectKey commandQueueKey,
                                               ID3D12CommandQueue* commandQueue) {
   if (m_CommandQueues.contains(commandQueueKey)) {
     return;
@@ -28,7 +28,7 @@ void GpuExecutionFlusher::ExecuteCommandLists(GITSKey commandQueueKey,
   m_CommandQueues[commandQueueKey] = info;
 }
 
-void GpuExecutionFlusher::DestroyCommandQueue(GITSKey commandQueueKey) {
+void GpuExecutionFlusher::DestroyCommandQueue(ObjectKey commandQueueKey) {
   m_CommandQueues.erase(commandQueueKey);
 }
 

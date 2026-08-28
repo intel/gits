@@ -60,7 +60,7 @@ void InterceptorCustomizationLayer::Pre(IUnknownReleaseCommand& c) {
   m_BuffersBySwapChainKey.erase(itBuffers);
 }
 
-void InterceptorCustomizationLayer::RemoveSwapChainBufferWrappersOnResize(GITSKey swapChainKey) {
+void InterceptorCustomizationLayer::RemoveSwapChainBufferWrappersOnResize(ObjectKey swapChainKey) {
   // XeFG keeps an extra reference on swap chain buffers and drops it internally on resize.
   // Should be done in pre call, removing wrappers in post could to late
   // for object creation in other threads.

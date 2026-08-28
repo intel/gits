@@ -49,8 +49,8 @@ public:
 
 private:
   std::optional<MultithreadedObjectCreationService::ObjectCreationOutput> CollectResult(
-      GITSKey objectKey);
-  bool CompleteObject(GITSKey key, bool forceCompletePendingObject = false);
+      ObjectKey objectKey);
+  bool CompleteObject(ObjectKey key, bool forceCompletePendingObject = false);
   template <typename T>
   void CompleteArgument(InterfaceArgument<T>& commandObject);
   template <typename T>
@@ -58,7 +58,7 @@ private:
 
 private:
   PlayerManager& m_Manager;
-  std::unordered_map<GITSKey, MultithreadedObjectCreationService::ObjectCreationOutput>
+  std::unordered_map<ObjectKey, MultithreadedObjectCreationService::ObjectCreationOutput>
       m_PreCollectedOutputs;
 };
 

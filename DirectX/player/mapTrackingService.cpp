@@ -13,7 +13,7 @@
 namespace gits {
 namespace DirectX {
 
-void MapTrackingService::MapResource(GITSKey resourceKey,
+void MapTrackingService::MapResource(ObjectKey resourceKey,
                                      unsigned subresourceIndex,
                                      void* captureAddress,
                                      void** currentAddress) {
@@ -23,7 +23,7 @@ void MapTrackingService::MapResource(GITSKey resourceKey,
   m_MappedData[captureAddress] = MappedInfo{*currentAddress, resourceKey};
 }
 
-void MapTrackingService::DestroyResource(GITSKey resourceKey) {
+void MapTrackingService::DestroyResource(ObjectKey resourceKey) {
 
   auto itAddresses = m_MappedDataByResource.find(resourceKey);
   if (itAddresses == m_MappedDataByResource.end()) {

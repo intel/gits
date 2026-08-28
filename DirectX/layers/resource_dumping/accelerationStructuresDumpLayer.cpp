@@ -149,7 +149,7 @@ void AccelerationStructuresDumpLayer::CommandListModuloStep::Parse(const std::st
 }
 
 bool AccelerationStructuresDumpLayer::CommandListModuloStep::CheckNextCommandListCall(
-    GITSKey commandListKey) {
+    ObjectKey commandListKey) {
   if (!m_Step) {
     return true;
   }
@@ -162,7 +162,7 @@ bool AccelerationStructuresDumpLayer::CommandListModuloStep::CheckNextCommandLis
 }
 
 void AccelerationStructuresDumpLayer::CommandListModuloStep::ResetCommandList(
-    GITSKey commandListKey) {
+    ObjectKey commandListKey) {
   m_CommandListCalls.erase(commandListKey);
 }
 

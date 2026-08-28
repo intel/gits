@@ -36,20 +36,20 @@ DispatchOutputsDumpService::DispatchOutputsDumpService(
 }
 
 void DispatchOutputsDumpService::CreateResource(ID3D12Resource* resource,
-                                                GITSKey resourceKey,
+                                                ObjectKey resourceKey,
                                                 D3D12_RESOURCE_STATES initialState) {
   m_ResourceByKey[resourceKey] = resource;
   m_ResourceStateTracker.AddResource(resource, resourceKey, initialState);
 }
 
 void DispatchOutputsDumpService::CreateResource(ID3D12Resource* resource,
-                                                GITSKey resourceKey,
+                                                ObjectKey resourceKey,
                                                 D3D12_BARRIER_LAYOUT initialLayout) {
   m_ResourceByKey[resourceKey] = resource;
   m_ResourceStateTracker.AddResource(resource, resourceKey, initialLayout);
 }
 
-void DispatchOutputsDumpService::DestroyInterface(GITSKey interfaceKey) {
+void DispatchOutputsDumpService::DestroyInterface(ObjectKey interfaceKey) {
   m_ResourceByKey.erase(interfaceKey);
 }
 
@@ -79,7 +79,7 @@ void DispatchOutputsDumpService::Dispatch(ID3D12GraphicsCommandListDispatchComma
       }
       unsigned resourceIndex{};
       unsigned resourceCount{};
-      for (GITSKey resourceKey : slotBindings.Resources) {
+      for (ObjectKey resourceKey : slotBindings.Resources) {
         ++resourceIndex;
         if (m_SlotResourcesRange[resourceIndex]) {
           ID3D12Resource* resource = m_ResourceByKey[resourceKey];
@@ -134,7 +134,7 @@ void DispatchOutputsDumpService::Barrier(ID3D12GraphicsCommandList7BarrierComman
 }
 
 bool DispatchOutputsDumpService::DumpComputeOutput(ID3D12GraphicsCommandList* commandList,
-                                                   GITSKey resourceKey,
+                                                   ObjectKey resourceKey,
                                                    ID3D12Resource* resource,
                                                    unsigned slot,
                                                    unsigned frame,

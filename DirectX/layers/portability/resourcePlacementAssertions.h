@@ -21,10 +21,10 @@ class ResourcePlacementAssertions {
 public:
   ResourcePlacementAssertions();
 
-  void CreatePlacedResource(GITSKey resourceKey,
+  void CreatePlacedResource(ObjectKey resourceKey,
                             const D3D12_RESOURCE_DESC& desc,
                             ID3D12Device* device);
-  void CreatePlacedResource(GITSKey resourceKey,
+  void CreatePlacedResource(ObjectKey resourceKey,
                             const D3D12_RESOURCE_DESC1& desc,
                             ID3D12Device* device);
 
@@ -34,17 +34,17 @@ private:
     D3D12_RESOURCE_ALLOCATION_INFO Post{};
   };
 
-  const ResourcePlacementInfo* FindPlacementData(GITSKey resourceKey);
+  const ResourcePlacementInfo* FindPlacementData(ObjectKey resourceKey);
   D3D12_RESOURCE_ALLOCATION_INFO QueryAllocationFromDevice(ID3D12Device* device,
                                                            const D3D12_RESOURCE_DESC& desc,
-                                                           GITSKey resourceKey);
+                                                           ObjectKey resourceKey);
   void CheckCompatibility(const AllocationInfo& allocationInfo,
                           const D3D12_RESOURCE_DESC& desc,
-                          GITSKey resourceKey);
+                          ObjectKey resourceKey);
 
   void LoadResourcePlacementData();
 
-  std::unordered_map<GITSKey, ResourcePlacementInfo> m_PlacementDataFromFile;
+  std::unordered_map<ObjectKey, ResourcePlacementInfo> m_PlacementDataFromFile;
   bool m_PlacementDataLoaded{};
 };
 

@@ -17,7 +17,7 @@
 namespace gits {
 namespace DirectX {
 
-void ResourcePlacementPlayback::CreateHeap(ID3D12Device* device, GITSKey heapKey, UINT64& size) {
+void ResourcePlacementPlayback::CreateHeap(ID3D12Device* device, ObjectKey heapKey, UINT64& size) {
   if (!m_Initialized) {
     CalculateResourcePlacement(device);
     m_Initialized = true;
@@ -31,7 +31,7 @@ void ResourcePlacementPlayback::CreateHeap(ID3D12Device* device, GITSKey heapKey
   }
 }
 
-void ResourcePlacementPlayback::CreatePlacedResource(GITSKey resourceKey, UINT64& offset) {
+void ResourcePlacementPlayback::CreatePlacedResource(ObjectKey resourceKey, UINT64& offset) {
   auto it = m_ChangedResourceOffsets.find(resourceKey);
   if (it != m_ChangedResourceOffsets.end()) {
     offset = it->second;
@@ -79,7 +79,7 @@ void ResourcePlacementPlayback::CalculateResourcePlacement(ID3D12Device* device)
 }
 
 void ResourcePlacementPlayback::CalculateResourcePlacement(
-    ID3D12Device* device, GITSKey heapKey, std::vector<ResourcePlacementShiftInfo>& infos) {
+    ID3D12Device* device, ObjectKey heapKey, std::vector<ResourcePlacementShiftInfo>& infos) {
 
   unsigned sizeChanged = 0;
   for (ResourcePlacementShiftInfo& info : infos) {

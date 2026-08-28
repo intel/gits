@@ -79,17 +79,17 @@ private:
   struct CommandQueueEvent : public GpuExecutionTracker::Executable {
     std::string Str;
   };
-  void FenceSignal(CommandKey callKey, GITSKey fenceKey, UINT64 fenceValue);
+  void FenceSignal(CommandKey callKey, ObjectKey fenceKey, UINT64 fenceValue);
   void StageCommandQueueEvent(CommandKey commandKey,
-                              GITSKey commandQueueKey,
+                              ObjectKey commandQueueKey,
                               const std::string& str);
   void DumpReadyCommandQueueEvents();
   std::string ReplaceSubstring(const std::string& str,
                                const std::string& from,
                                const std::string& to);
 
-  std::map<GITSKey, std::vector<Command>> m_CommandListCommands;
-  std::map<GITSKey, D3D12_COMMAND_LIST_TYPE> m_CommandQueueTypes;
+  std::map<ObjectKey, std::vector<Command>> m_CommandListCommands;
+  std::map<ObjectKey, D3D12_COMMAND_LIST_TYPE> m_CommandQueueTypes;
   unsigned m_ExecuteCount{};
   unsigned m_CurrentFrame{1};
   GpuExecutionTracker m_GpuExecutionTracker;

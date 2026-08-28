@@ -14,7 +14,7 @@
 namespace gits {
 namespace DirectX {
 
-void ResourceResidencyService::AddResource(GITSKey resourceKey) {
+void ResourceResidencyService::AddResource(ObjectKey resourceKey) {
   if (!resourceKey) {
     return;
   }
@@ -63,7 +63,7 @@ void ResourceResidencyService::AddResource(GITSKey resourceKey) {
   case CommandId::ID_ID3D12DEVICE8_CREATEPLACEDRESOURCE1:
   case CommandId::ID_ID3D12DEVICE10_CREATEPLACEDRESOURCE2:
   case CommandId::INTC_D3D12_CREATEPLACEDRESOURCE: {
-    GITSKey heapKey = static_cast<ResourceState*>(state)->HeapKey;
+    ObjectKey heapKey = static_cast<ResourceState*>(state)->HeapKey;
     ObjectState* heapState = m_StateService.GetState(heapKey);
     if (!heapState) {
       return;
@@ -104,7 +104,7 @@ void ResourceResidencyService::RecordMakeResident() {
   ID3D12Pageable* fakePtr = reinterpret_cast<ID3D12Pageable*>(1);
   makeResident.m_ppObjects.Value = &fakePtr;
   makeResident.m_ppObjects.Size = m_ResidencyKeys.size();
-  for (GITSKey key : m_ResidencyKeys) {
+  for (ObjectKey key : m_ResidencyKeys) {
     makeResident.m_ppObjects.Keys.push_back(key);
   }
   m_StateService.GetRecorder().Record(ID3D12DeviceMakeResidentSerializer(makeResident));
@@ -121,7 +121,7 @@ void ResourceResidencyService::RecordEvict() {
   ID3D12Pageable* fakePtr = reinterpret_cast<ID3D12Pageable*>(1);
   evict.m_ppObjects.Value = &fakePtr;
   evict.m_ppObjects.Size = m_ResidencyKeys.size();
-  for (GITSKey key : m_ResidencyKeys) {
+  for (ObjectKey key : m_ResidencyKeys) {
     evict.m_ppObjects.Keys.push_back(key);
   }
   m_StateService.GetRecorder().Record(ID3D12DeviceEvictSerializer(evict));

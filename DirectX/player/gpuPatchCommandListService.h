@@ -32,9 +32,9 @@ public:
   void StoreCommand(ID3D12GraphicsCommandList4SetPipelineState1Command& c);
   void StoreCommand(ID3D12DeviceCreateCommandListCommand& c);
   void StoreCommand(ID3D12GraphicsCommandListSetPipelineStateCommand& c);
-  void Remove(GITSKey commandListKey);
-  void Reset(GITSKey commandListKey, ID3D12PipelineState* initialState);
-  void RestoreState(GITSKey commandListKey, ID3D12GraphicsCommandList* commandList);
+  void Remove(ObjectKey commandListKey);
+  void Reset(ObjectKey commandListKey, ID3D12PipelineState* initialState);
+  void RestoreState(ObjectKey commandListKey, ID3D12GraphicsCommandList* commandList);
 
 private:
   struct CommandState {
@@ -70,7 +70,7 @@ private:
     std::map<unsigned, std::unique_ptr<CommandState>> CurrentRootArguments;
   };
 
-  std::unordered_map<GITSKey, CommandListState> m_CommandLists;
+  std::unordered_map<ObjectKey, CommandListState> m_CommandLists;
 };
 
 } // namespace DirectX

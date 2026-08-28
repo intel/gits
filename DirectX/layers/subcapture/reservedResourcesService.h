@@ -26,7 +26,7 @@ class ResourceStateTrackingService;
 class ReservedResourcesService {
 public:
   struct Tile {
-    GITSKey HeapKey{};
+    ObjectKey HeapKey{};
     unsigned HeapOffset{};
     unsigned SubresourceIndex{};
     bool Packed{};
@@ -34,7 +34,7 @@ public:
   struct TiledResource {
     ID3D12Resource* Resource{};
     D3D12_RESOURCE_DESC Desc{};
-    GITSKey ResourceKey{};
+    ObjectKey ResourceKey{};
     D3D12_PACKED_MIP_INFO PackedMipInfo{};
     std::vector<D3D12_SUBRESOURCE_TILING> Subresources;
     std::vector<Tile> Tiles;
@@ -53,17 +53,17 @@ public:
 public:
   ReservedResourcesService(StateTrackingService& stateService) : m_StateService(stateService) {}
   void AddUpdateTileMappings(ID3D12CommandQueueUpdateTileMappingsCommand& c);
-  void DestroyObject(GITSKey objectKey);
+  void DestroyObject(ObjectKey objectKey);
   void UpdateTileMappings(TiledResource& tiledResource,
-                          GITSKey commandQueueKey,
+                          ObjectKey commandQueueKey,
                           TileRegionsBySubresource* tileRegions);
-  TiledResource* GetTiledResource(GITSKey resourceKey);
-  void RestoreContent(const std::vector<GITSKey>& resourceKeys);
+  TiledResource* GetTiledResource(ObjectKey resourceKey);
+  void RestoreContent(const std::vector<ObjectKey>& resourceKeys);
   void CleanupRestore();
 
 private:
-  std::unordered_map<GITSKey, std::unique_ptr<TiledResource>> m_Resources;
-  std::unordered_map<GITSKey, std::unordered_set<GITSKey>> m_ResourcesByHeapKey;
+  std::unordered_map<ObjectKey, std::unique_ptr<TiledResource>> m_Resources;
+  std::unordered_map<ObjectKey, std::unordered_set<ObjectKey>> m_ResourcesByHeapKey;
 
 private:
   void InitRestore();
@@ -72,7 +72,7 @@ private:
       D3D12_RESOURCE_DESC& desc,
       std::vector<std::pair<unsigned, D3D12_PLACED_SUBRESOURCE_FOOTPRINT>>& sizes);
   void InitTiledResource(TiledResource& tiledResource);
-  void CopySourceBarrier(ID3D12Resource* resource, GITSKey resourceKey, bool restoreState);
+  void CopySourceBarrier(ID3D12Resource* resource, ObjectKey resourceKey, bool restoreState);
   void MarkSubresourceNotFullyMapped(const TiledResource& tiledResource,
                                      const Tile& tile,
                                      std::vector<bool>& subresourceFullyMappedFlags);
@@ -86,11 +86,11 @@ private:
   ID3D12GraphicsCommandList* m_CommandList{};
   ID3D12Fence* m_Fence{};
   UINT64 m_CurrentFenceValue{};
-  GITSKey m_CommandQueueKey{};
-  GITSKey m_CommandAllocatorKey{};
-  GITSKey m_CommandListKey{};
-  GITSKey m_FenceKey{};
-  GITSKey m_UploadResourceKey{};
+  ObjectKey m_CommandQueueKey{};
+  ObjectKey m_CommandAllocatorKey{};
+  ObjectKey m_CommandListKey{};
+  ObjectKey m_FenceKey{};
+  ObjectKey m_UploadResourceKey{};
   UINT64 m_RecordedFenceValue{};
   size_t m_UploadResourceSize{};
   bool m_ContentRestoreInitialized{};

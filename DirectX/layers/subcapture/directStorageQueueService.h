@@ -27,19 +27,19 @@ public:
   DirectStorageQueueService& operator=(const DirectStorageQueueService&) = delete;
 
   void AddEnqueueStatus(IDStorageQueueEnqueueStatusCommand& c);
-  void DestroyObject(GITSKey objectKey);
+  void DestroyObject(ObjectKey objectKey);
   void RestoreDirectStorageQueues();
 
 private:
   struct EnqueueStatus {
-    GITSKey QueueKey{};
+    ObjectKey QueueKey{};
     std::unique_ptr<IDStorageQueueEnqueueStatusSerializer> Serializer;
   };
 
-  void RecordQueueSubmit(GITSKey queueKey);
+  void RecordQueueSubmit(ObjectKey queueKey);
 
   StateTrackingService& m_StateService;
-  std::map<GITSKey, std::map<unsigned, EnqueueStatus>> m_EnqueueStatusByIndexByArray;
+  std::map<ObjectKey, std::map<unsigned, EnqueueStatus>> m_EnqueueStatusByIndexByArray;
 };
 
 } // namespace DirectX

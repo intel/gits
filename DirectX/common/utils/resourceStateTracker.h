@@ -35,23 +35,23 @@ struct BarrierState {
 class ResourceStateTracker {
 public:
   void AddResource(ID3D12Resource* resource,
-                   GITSKey resourceKey,
+                   ObjectKey resourceKey,
                    D3D12_RESOURCE_STATES initialState);
   void AddResource(ID3D12Resource* resource,
-                   GITSKey resourceKey,
+                   ObjectKey resourceKey,
                    D3D12_BARRIER_LAYOUT initialState);
   void ResourceBarrier(ID3D12GraphicsCommandList* commandList,
                        D3D12_RESOURCE_BARRIER* barriers,
                        unsigned barriersNum,
-                       GITSKey* resourceKeys);
+                       ObjectKey* resourceKeys);
   void ResourceBarrier(ID3D12GraphicsCommandList* commandList,
                        D3D12_BARRIER_GROUP* barriers,
                        unsigned barriersNum,
-                       GITSKey* resourceKeys);
+                       ObjectKey* resourceKeys);
   void ExecuteCommandLists(ID3D12GraphicsCommandList** commandLists, unsigned commandListNum);
-  BarrierState GetResourceState(ID3D12GraphicsCommandList* commandList, GITSKey resourceKey);
+  BarrierState GetResourceState(ID3D12GraphicsCommandList* commandList, ObjectKey resourceKey);
   BarrierState GetSubresourceState(ID3D12GraphicsCommandList* commandList,
-                                   GITSKey resourceKey,
+                                   ObjectKey resourceKey,
                                    unsigned subresource);
 
 private:
@@ -59,7 +59,7 @@ private:
     std::vector<BarrierState> SubresourceStates;
     bool AllEqual{true};
   };
-  using ResourceStatesByKey = std::unordered_map<GITSKey, ResourceStates>;
+  using ResourceStatesByKey = std::unordered_map<ObjectKey, ResourceStates>;
   ResourceStatesByKey m_ResourceStates;
   std::unordered_map<ID3D12GraphicsCommandList*, ResourceStatesByKey> m_ResourceStatesByCommandList;
 };
@@ -67,7 +67,7 @@ private:
 BarrierState GetAdjustedCurrentState(ResourceStateTracker& stateTracker,
                                      ID3D12GraphicsCommandList* commandList,
                                      ID3D12Resource* resource,
-                                     GITSKey resourceKey,
+                                     ObjectKey resourceKey,
                                      D3D12_RESOURCE_STATES expectedState,
                                      bool resourceOverlapping);
 
@@ -76,7 +76,7 @@ BarrierState GetAdjustedCurrentState(ResourceStateTracker& stateTracker,
                                      ID3D12GraphicsCommandList* commandList,
                                      D3D12_GPU_VIRTUAL_ADDRESS captureGpuAddress,
                                      ID3D12Resource* resource,
-                                     GITSKey resourceKey,
+                                     ObjectKey resourceKey,
                                      D3D12_RESOURCE_STATES expectedState);
 
 BarrierState GetAdjustedCurrentState(ResourceStateTracker& stateTracker,
@@ -84,7 +84,7 @@ BarrierState GetAdjustedCurrentState(ResourceStateTracker& stateTracker,
                                      ID3D12GraphicsCommandList* commandList,
                                      ID3D12Resource* resource,
                                      UINT64 resourceOffset,
-                                     GITSKey resourceKey,
+                                     ObjectKey resourceKey,
                                      D3D12_RESOURCE_STATES expectedState);
 
 } // namespace DirectX

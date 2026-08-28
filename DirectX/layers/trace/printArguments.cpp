@@ -1299,7 +1299,7 @@ FastOStream& operator<<(FastOStream& stream, DML_BINDING_DESCs_Argument& arg) {
   if (!arg.Value) {
     return stream << "nullptr";
   }
-  unsigned currentKey = 0;
+  ObjectKey currentKey{};
   stream << "DML_BINDING_DESC[";
   for (unsigned i = 0; i < arg.Size; ++i) {
     if (i > 0) {

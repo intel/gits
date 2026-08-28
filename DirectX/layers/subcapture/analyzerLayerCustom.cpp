@@ -1700,7 +1700,7 @@ void AnalyzerLayer::Post(ID3D12Device5GetRaytracingAccelerationStructurePrebuild
   }
   m_AnalyzerService.NotifyObject(c.m_Object.Key);
   if (m_Optimize) {
-    for (GITSKey key : c.m_pDesc.InputKeys) {
+    for (ObjectKey key : c.m_pDesc.InputKeys) {
       m_AnalyzerService.NotifyObject(key);
     }
   }
@@ -1947,7 +1947,7 @@ void AnalyzerLayer::Post(IDMLDeviceCreateOperatorInitializerCommand& c) {
   m_AnalyzerService.NotifyObjects(c.m_operators.Keys);
   m_AnalyzerService.NotifyObject(c.m_ppv.Key);
   m_AnalyzerService.AddParent(c.m_ppv.Key, c.m_Object.Key);
-  for (GITSKey key : c.m_operators.Keys) {
+  for (ObjectKey key : c.m_operators.Keys) {
     m_AnalyzerService.AddParent(c.m_ppv.Key, key);
   }
 }
@@ -2315,7 +2315,7 @@ void AnalyzerLayer::Post(IDMLDevice1CompileGraphCommand& c) {
   m_AnalyzerService.NotifyObject(c.m_ppv.Key);
   m_AnalyzerService.NotifyObjects(c.m_desc.OperatorKeys);
   m_AnalyzerService.AddParent(c.m_ppv.Key, c.m_Object.Key);
-  for (GITSKey key : c.m_desc.OperatorKeys) {
+  for (ObjectKey key : c.m_desc.OperatorKeys) {
     m_AnalyzerService.AddParent(c.m_ppv.Key, key);
   }
 }

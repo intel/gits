@@ -61,7 +61,7 @@ void AccelerationStructuresSerializeService::CopyAccelerationStructure(
 
 void AccelerationStructuresSerializeService::ExecuteCommandLists(
     ID3D12CommandQueueExecuteCommandListsCommand& c) {
-  for (GITSKey commandListKey : c.m_ppCommandLists.Keys) {
+  for (ObjectKey commandListKey : c.m_ppCommandLists.Keys) {
     auto itByKey = m_AccelerationStructuresByCommandList.find(commandListKey);
     if (itByKey != m_AccelerationStructuresByCommandList.end()) {
       for (auto& it : itByKey->second) {
@@ -72,7 +72,7 @@ void AccelerationStructuresSerializeService::ExecuteCommandLists(
   }
 }
 
-void AccelerationStructuresSerializeService::DestroyResource(GITSKey resourceKey) {
+void AccelerationStructuresSerializeService::DestroyResource(ObjectKey resourceKey) {
   if (!m_SerializeMode) {
     return;
   }
@@ -238,7 +238,7 @@ void AccelerationStructuresSerializeService::RestoreAccelerationStructures() {
       continue;
     }
 
-    GITSKey DestKey = it.second.Key;
+    ObjectKey DestKey = it.second.Key;
     unsigned DestOffset = it.second.Offset;
 
     // serialize acceleration structure
@@ -290,7 +290,7 @@ void AccelerationStructuresSerializeService::RestoreAccelerationStructures() {
 
     // create upload resource with serialize acceleration structure in subcaptured stream
 
-    GITSKey uploadResourceKey = m_StateService.GetUniqueObjectKey();
+    ObjectKey uploadResourceKey = m_StateService.GetUniqueObjectKey();
     heapProperties.Type = D3D12_HEAP_TYPE_UPLOAD;
     ID3D12DeviceCreateCommittedResourceCommand createUploadResource;
     createUploadResource.Key = m_StateService.GetUniqueCommandKey();
@@ -388,7 +388,7 @@ void AccelerationStructuresSerializeService::RestoreAccelerationStructures() {
     CommandListReset.Key = m_StateService.GetUniqueCommandKey();
     CommandListReset.m_Object.Key = m_CommandListKey;
     CommandListReset.m_pAllocator.Key = m_CommandAllocatorKey;
-    CommandListReset.m_pInitialState.Key = 0;
+    CommandListReset.m_pInitialState.Key = ObjectKey{};
     m_StateService.GetRecorder().Record(ID3D12GraphicsCommandListResetSerializer(CommandListReset));
 
     IUnknownReleaseCommand releaseCommand;

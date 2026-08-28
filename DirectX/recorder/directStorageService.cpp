@@ -44,7 +44,7 @@ void DirectStorageService::EnqueueRequest(IDStorageQueueEnqueueRequestCommand& c
       (request.Options.SourceType == DSTORAGE_REQUEST_SOURCE_MEMORY)) {
     return;
   }
-  GITS_ASSERT(c.m_request.FileKey);
+  GITS_ASSERT(c.m_request.FileKey != ObjectKey{});
 
   std::lock_guard<std::mutex> lock(m_MapMutex);
   const std::filesystem::path& filePath = m_StorageFiles[c.m_request.FileKey];

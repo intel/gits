@@ -18,16 +18,16 @@ class StateTrackingService;
 
 class ResourceResidencyService {
 public:
-  ResourceResidencyService(StateTrackingService& stateService, GITSKey deviceKey)
+  ResourceResidencyService(StateTrackingService& stateService, ObjectKey deviceKey)
       : m_StateService(stateService), m_DeviceKey(deviceKey) {}
-  void AddResource(GITSKey resourceKey);
+  void AddResource(ObjectKey resourceKey);
   void RecordMakeResident();
   void RecordEvict();
 
 private:
   StateTrackingService& m_StateService;
-  GITSKey m_DeviceKey{};
-  std::unordered_set<GITSKey> m_ResidencyKeys;
+  ObjectKey m_DeviceKey{};
+  std::unordered_set<ObjectKey> m_ResidencyKeys;
 };
 
 } // namespace DirectX

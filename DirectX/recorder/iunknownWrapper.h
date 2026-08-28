@@ -52,7 +52,7 @@ public:
     return GetRootIUnknown(m_Object);
   }
 
-  GITSKey GetKey() {
+  ObjectKey GetKey() {
     return m_Key;
   }
 
@@ -69,7 +69,7 @@ private:
 private:
   IID m_Iid;
   IUnknown* m_Object;
-  GITSKey m_Key;
+  ObjectKey m_Key;
   std::unordered_set<IID, IIDHash> m_Iids;
   std::vector<std::unique_ptr<IUnknownWrapper>> m_SecondaryWrappers;
 };

@@ -16,15 +16,15 @@
 namespace gits {
 namespace DirectX {
 
-void ResourceForCBVRestoreService::AddResourceCreationCommand(GITSKey resourceKey,
-                                                              GITSKey heapKey,
+void ResourceForCBVRestoreService::AddResourceCreationCommand(ObjectKey resourceKey,
+                                                              ObjectKey heapKey,
                                                               Command* creationCommand) {
   auto& info = m_ResourceCreationInfo[resourceKey];
   info.HeapKey = heapKey;
   info.CreationCommand.reset(creationCommand);
 }
 
-bool ResourceForCBVRestoreService::RestoreResourceObject(GITSKey resourceKey) {
+bool ResourceForCBVRestoreService::RestoreResourceObject(ObjectKey resourceKey) {
   if (m_RestoredResourceObjects.find(resourceKey) != m_RestoredResourceObjects.end()) {
     return true;
   }
@@ -48,7 +48,7 @@ bool ResourceForCBVRestoreService::RestoreResourceObject(GITSKey resourceKey) {
 }
 
 void ResourceForCBVRestoreService::ReleaseResources() {
-  for (GITSKey key : m_RestoredResourceObjects) {
+  for (ObjectKey key : m_RestoredResourceObjects) {
     IUnknownReleaseCommand c;
     c.Key = m_StateService.GetUniqueCommandKey();
     c.m_Object.Key = key;
@@ -56,7 +56,7 @@ void ResourceForCBVRestoreService::ReleaseResources() {
   }
 }
 
-bool ResourceForCBVRestoreService::ResourceRestored(GITSKey resourceKey) {
+bool ResourceForCBVRestoreService::ResourceRestored(ObjectKey resourceKey) {
   auto it = m_RestoredResourceObjects.find(resourceKey);
   return it != m_RestoredResourceObjects.end();
 }

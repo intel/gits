@@ -21,11 +21,11 @@ public:
   ContextMapService() = default;
   ~ContextMapService() = default;
 
-  void SetContext(GITSKey key, std::uintptr_t context) {
+  void SetContext(ObjectKey key, std::uintptr_t context) {
     m_ContextMap[key] = context;
   }
 
-  std::uintptr_t GetContext(GITSKey key) {
+  std::uintptr_t GetContext(ObjectKey key) {
     if (!key) {
       return {};
     }
@@ -34,12 +34,12 @@ public:
     return it->second;
   }
 
-  void RemoveContext(GITSKey key) {
+  void RemoveContext(ObjectKey key) {
     m_ContextMap.erase(key);
   }
 
 private:
-  std::unordered_map<GITSKey, std::uintptr_t> m_ContextMap{};
+  std::unordered_map<ObjectKey, std::uintptr_t> m_ContextMap{};
 };
 
 } // namespace DirectX

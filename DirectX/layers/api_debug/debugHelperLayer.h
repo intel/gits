@@ -49,8 +49,8 @@ public:
   void Post(IDXGISwapChainGetBufferCommand& c) override;
 
 private:
-  void SetD3D12ObjectName(void* object, GITSKey key);
-  void SetDXGIObjectName(void* object, GITSKey key);
+  void SetD3D12ObjectName(void* object, ObjectKey key);
+  void SetDXGIObjectName(void* object, ObjectKey key);
 
   bool m_MultithreadedShaderCompilation;
 };

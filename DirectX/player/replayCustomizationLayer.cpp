@@ -431,7 +431,7 @@ void ReplayCustomizationLayer::Pre(xessD3D12ExecuteCommand& c) {
 }
 
 void ReplayCustomizationLayer::Post(ID3D12CommandQueueExecuteCommandListsCommand& c) {
-  for (unsigned commandListKey : c.m_ppCommandLists.Keys) {
+  for (ObjectKey commandListKey : c.m_ppCommandLists.Keys) {
     if (m_XessCommandLists.contains(commandListKey)) {
       m_XessQueues.insert(c.m_Object.Key);
       break;
@@ -1567,7 +1567,7 @@ void ReplayCustomizationLayer::Pre(ID3D12GraphicsCommandList4DispatchRaysCommand
 
   auto& desc = *c.m_pDesc.Value;
   auto patchStartAddressIfEmptyTable = [this](D3D12_GPU_VIRTUAL_ADDRESS& start, UINT64 sizeInBytes,
-                                              GITSKey key, unsigned offset) {
+                                              ObjectKey key, unsigned offset) {
     if (!sizeInBytes && start) {
       start = m_Manager.GetGpuAddressService().GetGpuAddress(key, offset);
     }
@@ -2059,7 +2059,7 @@ void ReplayCustomizationLayer::FillCpuDescriptorHandleArgument(
 }
 
 void ReplayCustomizationLayer::WaitForFence(CommandKey commandKey,
-                                            GITSKey fenceKey,
+                                            ObjectKey fenceKey,
                                             ID3D12Fence* fence,
                                             UINT64 fenceValue) {
   if (m_NonIncrementalFenceWait) {
@@ -2095,7 +2095,7 @@ void ReplayCustomizationLayer::WaitForFenceIncremental(CommandKey commandKey,
 }
 
 void ReplayCustomizationLayer::WaitForFenceNonIncremental(CommandKey commandKey,
-                                                          GITSKey fenceKey,
+                                                          ObjectKey fenceKey,
                                                           ID3D12Fence* fence,
                                                           UINT64 fenceValue) {
   std::optional<UINT64> trackedValue = m_GpuExecutionTracker.GetFenceValue(fenceKey);

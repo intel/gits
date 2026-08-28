@@ -209,7 +209,7 @@ public:
 
 private:
   struct NvAPIShaderExtnSlot {
-    GITSKey DeviceKey{};
+    ObjectKey DeviceKey{};
     unsigned UavSlot{};
     unsigned UavSpace{};
 
@@ -222,10 +222,13 @@ private:
   void FillGpuAddressArgument(D3D12_GPU_VIRTUAL_ADDRESS_Argument& arg);
   void FillGpuDescriptorHandleArgument(DescriptorHandleArgument<D3D12_GPU_DESCRIPTOR_HANDLE>& arg);
   void FillCpuDescriptorHandleArgument(DescriptorHandleArgument<D3D12_CPU_DESCRIPTOR_HANDLE>& arg);
-  void WaitForFence(CommandKey commandKey, GITSKey fenceKey, ID3D12Fence* fence, UINT64 fenceValue);
+  void WaitForFence(CommandKey commandKey,
+                    ObjectKey fenceKey,
+                    ID3D12Fence* fence,
+                    UINT64 fenceValue);
   void WaitForFenceIncremental(CommandKey commandKey, ID3D12Fence* fence, UINT64 fenceValue);
   void WaitForFenceNonIncremental(CommandKey commandKey,
-                                  GITSKey fenceKey,
+                                  ObjectKey fenceKey,
                                   ID3D12Fence* fence,
                                   UINT64 fenceValue);
   void RemoveCachedPso(D3D12_PIPELINE_STATE_STREAM_DESC& desc);
@@ -235,11 +238,11 @@ private:
   PipelineLibraryService& m_PipelineLibraryService;
   HANDLE m_WaitForFenceEvent{};
   UINT64 m_CapturedFenceValue{};
-  std::set<unsigned> m_XessCommandLists;
-  std::unordered_set<unsigned> m_XessQueues;
+  std::set<ObjectKey> m_XessCommandLists;
+  std::unordered_set<ObjectKey> m_XessQueues;
   Microsoft::WRL::ComPtr<ID3D12Fence> m_XessProgressFence;
   UINT64 m_XessSubmittedValue{};
-  GITSKey m_XessFenceKey{};
+  ObjectKey m_XessFenceKey{};
   std::vector<NvAPIShaderExtnSlot> m_NvapiShaderExtnSlotsUsed;
   bool m_UseAddressPinning{};
   bool m_NonIncrementalFenceWait{};

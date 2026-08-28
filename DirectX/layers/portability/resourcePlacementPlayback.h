@@ -20,8 +20,8 @@ namespace DirectX {
 
 class ResourcePlacementPlayback {
 public:
-  void CreateHeap(ID3D12Device* device, GITSKey heapKey, UINT64& size);
-  void CreatePlacedResource(GITSKey resourceKey, UINT64& offset);
+  void CreateHeap(ID3D12Device* device, ObjectKey heapKey, UINT64& size);
+  void CreatePlacedResource(ObjectKey resourceKey, UINT64& offset);
   void UpdateTileMappings(ID3D12CommandQueueUpdateTileMappingsCommand& c);
   void CalculateResourcePlacement(ID3D12Device* device);
 
@@ -32,14 +32,14 @@ private:
   };
 
   std::mutex m_Mutex;
-  std::unordered_map<GITSKey, UINT64> m_ChangedResourceOffsets;
-  std::unordered_map<GITSKey, UINT64> m_HeapSizeShifts;
+  std::unordered_map<ObjectKey, UINT64> m_ChangedResourceOffsets;
+  std::unordered_map<ObjectKey, UINT64> m_HeapSizeShifts;
   bool m_Initialized{};
-  std::unordered_map<GITSKey, std::vector<ResourcePlacementShiftInfo>> m_Infos;
+  std::unordered_map<ObjectKey, std::vector<ResourcePlacementShiftInfo>> m_Infos;
 
 private:
   void CalculateResourcePlacement(ID3D12Device* device,
-                                  GITSKey heapKey,
+                                  ObjectKey heapKey,
                                   std::vector<ResourcePlacementShiftInfo>& infos);
   UINT64 GetAlignedOffset(UINT64 alignment, UINT64 offset);
 };

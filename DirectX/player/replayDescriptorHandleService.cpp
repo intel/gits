@@ -15,7 +15,7 @@
 namespace gits {
 namespace DirectX {
 
-void ReplayDescriptorHandleService::CreateDescriptorHeap(GITSKey DescriptorHeapKey,
+void ReplayDescriptorHandleService::CreateDescriptorHeap(ObjectKey DescriptorHeapKey,
                                                          ID3D12DescriptorHeap* descriptorHeap,
                                                          const D3D12_DESCRIPTOR_HEAP_DESC* desc) {
 
@@ -41,7 +41,7 @@ void ReplayDescriptorHandleService::CreateDescriptorHeap(GITSKey DescriptorHeapK
   m_DescriptorHeaps[DescriptorHeapKey] = heapInfo;
 }
 
-size_t ReplayDescriptorHandleService::GetDescriptorHandle(GITSKey descriptorHeapKey,
+size_t ReplayDescriptorHandleService::GetDescriptorHandle(ObjectKey descriptorHeapKey,
                                                           HandleType handleType,
                                                           unsigned index) {
   if (!descriptorHeapKey) {
@@ -55,7 +55,7 @@ size_t ReplayDescriptorHandleService::GetDescriptorHandle(GITSKey descriptorHeap
   return start + index * info.Increment;
 }
 
-void ReplayDescriptorHandleService::DestroyDescriptorHeap(GITSKey descriptorHeapKey) {
+void ReplayDescriptorHandleService::DestroyDescriptorHeap(ObjectKey descriptorHeapKey) {
   m_DescriptorHeaps.erase(descriptorHeapKey);
 }
 

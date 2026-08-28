@@ -37,7 +37,7 @@ private:
   std::filesystem::path m_OutFilePath{};
   std::ofstream m_OutFile{};
   std::mutex m_MapMutex{};
-  std::unordered_map<GITSKey, std::filesystem::path> m_StorageFiles{};
+  std::unordered_map<ObjectKey, std::filesystem::path> m_StorageFiles{};
   std::unordered_map<std::filesystem::path, std::unordered_map<uint64_t, DataBlock>>
       m_FileBlockByPathByOffset;
 };

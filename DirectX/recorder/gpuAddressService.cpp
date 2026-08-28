@@ -15,7 +15,7 @@
 namespace gits {
 namespace DirectX {
 
-void GpuAddressService::CreateResource(GITSKey resourceKey, ID3D12Resource* resource) {
+void GpuAddressService::CreateResource(ObjectKey resourceKey, ID3D12Resource* resource) {
 
   D3D12_RESOURCE_DESC desc = resource->GetDesc();
   if (desc.Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
@@ -53,9 +53,9 @@ void GpuAddressService::CreateResource(GITSKey resourceKey, ID3D12Resource* reso
   m_ResourcesByKey[resourceKey].reset(resourceInfo);
 }
 
-void GpuAddressService::CreatePlacedResource(GITSKey resourceKey,
+void GpuAddressService::CreatePlacedResource(ObjectKey resourceKey,
                                              ID3D12Resource* resource,
-                                             GITSKey heapKey,
+                                             ObjectKey heapKey,
                                              ID3D12Heap* heap,
                                              UINT64 heapOffset,
                                              bool raytracingAS) {
@@ -116,7 +116,7 @@ void GpuAddressService::CreatePlacedResource(GITSKey resourceKey,
   m_PlacedResourcesByHeap[resourceInfo->HeapInfo->Key].insert(resourceInfo->Key);
 }
 
-void GpuAddressService::CreateHeap(GITSKey heapKey, ID3D12Heap* heap) {
+void GpuAddressService::CreateHeap(ObjectKey heapKey, ID3D12Heap* heap) {
 
   D3D12_HEAP_DESC desc = heap->GetDesc();
   if (desc.Flags & D3D12_HEAP_FLAG_DENY_BUFFERS) {
@@ -300,7 +300,7 @@ const GpuAddressService::ResourceInfo* GpuAddressService::GetResourceFromHeap(
   return resourceInfo;
 }
 
-void GpuAddressService::DestroyInterface(GITSKey interfaceKey) {
+void GpuAddressService::DestroyInterface(ObjectKey interfaceKey) {
 
   tbb::spin_rw_mutex::scoped_lock lock(m_RwMutex);
 
@@ -336,7 +336,7 @@ void GpuAddressService::DestroyInterface(GITSKey interfaceKey) {
 
     auto itPlacedResourceHeap = m_PlacedResourcesByHeap.find(interfaceKey);
     if (itPlacedResourceHeap != m_PlacedResourcesByHeap.end()) {
-      for (GITSKey placedResourceKey : itPlacedResourceHeap->second) {
+      for (ObjectKey placedResourceKey : itPlacedResourceHeap->second) {
         m_PlacedResourcesByKey.erase(placedResourceKey);
       }
 

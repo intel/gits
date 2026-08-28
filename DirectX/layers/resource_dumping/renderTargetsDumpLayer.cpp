@@ -124,9 +124,9 @@ void RenderTargetsDumpLayer::Post(ID3D12Device15TryCreateDepthStencilViewCommand
 }
 
 void RenderTargetsDumpLayer::Post(ID3D12DeviceCopyDescriptorsSimpleCommand& c) {
-  GITSKey srcHeapKey = c.m_SrcDescriptorRangeStart.InterfaceKey;
+  ObjectKey srcHeapKey = c.m_SrcDescriptorRangeStart.InterfaceKey;
   unsigned srcHeapIndex = c.m_SrcDescriptorRangeStart.Index;
-  GITSKey destHeapKey = c.m_DestDescriptorRangeStart.InterfaceKey;
+  ObjectKey destHeapKey = c.m_DestDescriptorRangeStart.InterfaceKey;
   unsigned destHeapIndex = c.m_DestDescriptorRangeStart.Index;
 
   for (unsigned i = 0; i < c.m_NumDescriptors.Value; ++i) {
@@ -148,13 +148,13 @@ void RenderTargetsDumpLayer::Post(ID3D12DeviceCopyDescriptorsCommand& c) {
   unsigned destIndex = 0;
   unsigned destRangeSize =
       c.m_pDestDescriptorRangeSizes.Value ? c.m_pDestDescriptorRangeSizes.Value[destRangeIndex] : 1;
-  GITSKey destHeapKey = c.m_pDestDescriptorRangeStarts.InterfaceKeys[destRangeIndex];
+  ObjectKey destHeapKey = c.m_pDestDescriptorRangeStarts.InterfaceKeys[destRangeIndex];
 
   for (unsigned srcRangeIndex = 0; srcRangeIndex < c.m_NumSrcDescriptorRanges.Value;
        ++srcRangeIndex) {
     unsigned srcRangeSize =
         c.m_pSrcDescriptorRangeSizes.Value ? c.m_pSrcDescriptorRangeSizes.Value[srcRangeIndex] : 1;
-    GITSKey srcHeapKey = c.m_pSrcDescriptorRangeStarts.InterfaceKeys[srcRangeIndex];
+    ObjectKey srcHeapKey = c.m_pSrcDescriptorRangeStarts.InterfaceKeys[srcRangeIndex];
     unsigned srcHeapIndex = c.m_pSrcDescriptorRangeStarts.Indexes[srcRangeIndex];
     for (unsigned srcIndex = 0; srcIndex < srcRangeSize; ++srcIndex, ++destIndex) {
       if (destIndex == destRangeSize) {
@@ -177,9 +177,9 @@ void RenderTargetsDumpLayer::Post(ID3D12DeviceCopyDescriptorsCommand& c) {
 
 template <typename Descriptors>
 void RenderTargetsDumpLayer::CopyDescriptors(Descriptors& descriptors,
-                                             GITSKey srcHeapKey,
+                                             ObjectKey srcHeapKey,
                                              unsigned srcHeapIndex,
-                                             GITSKey destHeapKey,
+                                             ObjectKey destHeapKey,
                                              unsigned destHeapIndex) {
   auto itSrc = descriptors.find(std::make_pair(srcHeapKey, srcHeapIndex));
   if (itSrc != descriptors.end()) {
@@ -198,7 +198,7 @@ void RenderTargetsDumpLayer::Post(ID3D12GraphicsCommandListOMSetRenderTargetsCom
   renderTargets.clear();
 
   {
-    GITSKey heapKey{};
+    ObjectKey heapKey{};
     unsigned heapIndex{};
     for (unsigned i = 0; i < c.m_NumRenderTargetDescriptors.Value; ++i) {
       if (i == 0 || !c.m_RTsSingleHandleToDescriptorRange.Value) {
@@ -242,7 +242,7 @@ void RenderTargetsDumpLayer::Post(ID3D12GraphicsCommandListDrawIndexedInstancedC
 }
 
 void RenderTargetsDumpLayer::OnDraw(ID3D12GraphicsCommandList* commandList,
-                                    GITSKey commandListKey) {
+                                    ObjectKey commandListKey) {
   ++m_DrawCount;
   unsigned commandListDrawCount = ++m_DrawCountByCommandList[commandListKey];
   if (!m_FrameRange[m_CurrentFrame] || !m_DrawRange[m_DrawCount]) {
@@ -453,7 +453,7 @@ void RenderTargetsDumpLayer::DumpDepthStencil(ID3D12GraphicsCommandList* command
 
 void RenderTargetsDumpLayer::Post(ID3D12CommandQueueExecuteCommandListsCommand& c) {
   for (unsigned i = 0; i < c.m_NumCommandLists.Value; ++i) {
-    GITSKey commandListKey = c.m_ppCommandLists.Keys[i];
+    ObjectKey commandListKey = c.m_ppCommandLists.Keys[i];
     m_RenderTargetsByCommandList.erase(commandListKey);
     m_DepthStencilByCommandList.erase(commandListKey);
     m_DrawCountByCommandList.erase(commandListKey);

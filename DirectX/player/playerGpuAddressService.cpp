@@ -15,7 +15,7 @@
 namespace gits {
 namespace DirectX {
 
-void PlayerGpuAddressService::CreateResource(GITSKey resourceKey, ID3D12Resource* resource) {
+void PlayerGpuAddressService::CreateResource(ObjectKey resourceKey, ID3D12Resource* resource) {
 
   D3D12_RESOURCE_DESC desc = resource->GetDesc();
   if (desc.Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
@@ -28,9 +28,9 @@ void PlayerGpuAddressService::CreateResource(GITSKey resourceKey, ID3D12Resource
   m_StartAddressesByKey[resourceKey] = startAddress;
 }
 
-void PlayerGpuAddressService::CreatePlacedResource(GITSKey resourceKey,
+void PlayerGpuAddressService::CreatePlacedResource(ObjectKey resourceKey,
                                                    ID3D12Resource* resource,
-                                                   GITSKey heapKey,
+                                                   ObjectKey heapKey,
                                                    ID3D12Heap* heap,
                                                    UINT64 heapOffset) {
 
@@ -53,7 +53,7 @@ void PlayerGpuAddressService::CreatePlacedResource(GITSKey resourceKey,
   m_PlacedResources.insert(resourceKey);
 }
 
-void PlayerGpuAddressService::CreateHeap(GITSKey heapKey, ID3D12Heap* heap) {
+void PlayerGpuAddressService::CreateHeap(ObjectKey heapKey, ID3D12Heap* heap) {
 
   D3D12_HEAP_DESC desc = heap->GetDesc();
   if (desc.Flags & D3D12_HEAP_FLAG_DENY_BUFFERS) {
@@ -105,7 +105,7 @@ D3D12_GPU_VIRTUAL_ADDRESS PlayerGpuAddressService::GetHeapGpuVirtualAddress(ID3D
   return gpuAddress;
 }
 
-D3D12_GPU_VIRTUAL_ADDRESS PlayerGpuAddressService::GetGpuAddress(GITSKey resourceKey,
+D3D12_GPU_VIRTUAL_ADDRESS PlayerGpuAddressService::GetGpuAddress(ObjectKey resourceKey,
                                                                  unsigned offset) {
   if (!resourceKey) {
     return 0;
@@ -126,7 +126,7 @@ D3D12_GPU_VIRTUAL_ADDRESS PlayerGpuAddressService::GetGpuAddress(GITSKey resourc
   }
 }
 
-void PlayerGpuAddressService::DestroyInterface(GITSKey interfaceKey) {
+void PlayerGpuAddressService::DestroyInterface(ObjectKey interfaceKey) {
 
   if (m_PlacedResources.contains(interfaceKey)) {
     m_ReleasedPlacedResources[interfaceKey] = m_StartAddressesByKey[interfaceKey];

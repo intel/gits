@@ -469,7 +469,7 @@ UpdateInterfaceT<PointerArgument<INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC>,
   }
 }
 
-static unsigned getDmlBindingCount(const DML_BINDING_DESC* bindings, unsigned count) {
+static unsigned GetDmlBindingCount(const DML_BINDING_DESC* bindings, unsigned count) {
   unsigned bindingCount = 0;
   for (unsigned i = 0; i < count; ++i) {
     if (bindings[i].Type == DML_BINDING_TYPE_BUFFER) {
@@ -483,11 +483,11 @@ static unsigned getDmlBindingCount(const DML_BINDING_DESC* bindings, unsigned co
   return bindingCount;
 }
 
-static unsigned updateDmlBinding(const void* srcBinding, DML_BUFFER_BINDING* dstBinding) {
+static ObjectKey UpdateDmlBinding(const void* srcBinding, DML_BUFFER_BINDING* dstBinding) {
   auto* binding = static_cast<DML_BUFFER_BINDING*>(const_cast<void*>(srcBinding));
   GITS_ASSERT(binding);
   if (!binding->Buffer) {
-    return 0;
+    return ObjectKey{};
   }
 
   // Copy DML_BUFFER_BINDING into the temporary data and replace its pointer
@@ -524,7 +524,7 @@ UpdateInterfaceT<DML_BINDING_DESC_Argument, DML_BINDING_DESC>::UpdateInterfaceT(
   arg.Value = &m_UnwrapStructure;
   *arg.Value = *value;
 
-  arg.ResourceKeysSize = getDmlBindingCount(arg.Value, 1);
+  arg.ResourceKeysSize = GetDmlBindingCount(arg.Value, 1);
   arg.ResourceKeys.resize(arg.ResourceKeysSize);
   m_Bindings.resize(arg.ResourceKeysSize);
 
@@ -533,13 +533,13 @@ UpdateInterfaceT<DML_BINDING_DESC_Argument, DML_BINDING_DESC>::UpdateInterfaceT(
   }
 
   if (arg.Value->Type == DML_BINDING_TYPE_BUFFER) {
-    arg.ResourceKeys[0] = updateDmlBinding(arg.Value->Desc, &m_Bindings[0]);
+    arg.ResourceKeys[0] = UpdateDmlBinding(arg.Value->Desc, &m_Bindings[0]);
     arg.Value->Desc = m_Bindings.data();
   } else if (arg.Value->Type == DML_BINDING_TYPE_BUFFER_ARRAY) {
     auto* bindingArray = static_cast<DML_BUFFER_ARRAY_BINDING*>(const_cast<void*>(arg.Value->Desc));
     GITS_ASSERT(bindingArray);
     for (unsigned i = 0; i < bindingArray->BindingCount; ++i) {
-      arg.ResourceKeys[i] = updateDmlBinding(&bindingArray->Bindings[i], &m_Bindings[i]);
+      arg.ResourceKeys[i] = UpdateDmlBinding(&bindingArray->Bindings[i], &m_Bindings[i]);
     }
     m_BindingArray = *bindingArray;
     m_BindingArray.Bindings = m_Bindings.data();
@@ -559,7 +559,7 @@ UpdateInterfaceT<DML_BINDING_DESCs_Argument, DML_BINDING_DESC>::UpdateInterfaceT
   m_UnwrapStructure = m_UnwrapStructures.data();
   arg.Value = m_UnwrapStructure;
 
-  auto bindingCount = getDmlBindingCount(value, arg.Size);
+  auto bindingCount = GetDmlBindingCount(value, arg.Size);
   m_Bindings.resize(bindingCount);
   arg.ResourceKeysSize = bindingCount;
   arg.ResourceKeys.resize(bindingCount);
@@ -574,7 +574,7 @@ UpdateInterfaceT<DML_BINDING_DESCs_Argument, DML_BINDING_DESC>::UpdateInterfaceT
     auto* bindingSrc = &arg.Value[i];
     auto* bindingDst = &m_Bindings[bindingIdx];
     if (bindingSrc->Type == DML_BINDING_TYPE_BUFFER) {
-      arg.ResourceKeys[bindingIdx] = updateDmlBinding(bindingSrc->Desc, bindingDst);
+      arg.ResourceKeys[bindingIdx] = UpdateDmlBinding(bindingSrc->Desc, bindingDst);
       bindingSrc->Desc = bindingDst;
       ++bindingIdx;
     } else if (bindingSrc->Type == DML_BINDING_TYPE_BUFFER_ARRAY) {
@@ -584,7 +584,7 @@ UpdateInterfaceT<DML_BINDING_DESCs_Argument, DML_BINDING_DESC>::UpdateInterfaceT
       m_BindingArrays[i] = *bindingArray;
       bindingArray = &m_BindingArrays[i];
       for (unsigned j = 0; j < bindingArray->BindingCount; ++j) {
-        arg.ResourceKeys[bindingIdx] = updateDmlBinding(&bindingArray->Bindings[j], &bindingDst[j]);
+        arg.ResourceKeys[bindingIdx] = UpdateDmlBinding(&bindingArray->Bindings[j], &bindingDst[j]);
         ++bindingIdx;
       }
       bindingArray->Bindings = bindingDst;

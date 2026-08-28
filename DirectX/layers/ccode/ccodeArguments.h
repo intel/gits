@@ -24,7 +24,7 @@ namespace gits {
 namespace DirectX {
 namespace ccode {
 
-void declareObject(const std::string& type, GITSKey key);
+void declareObject(const std::string& type, ObjectKey key);
 
 template <template <typename> typename Arg, typename T>
 void argumentToCpp(Arg<T>& arg, CppParameterInfo& info, CppParameterOutput& out) {
@@ -70,7 +70,7 @@ void argumentToCpp(InterfaceOutputArgument<T>& arg,
   out.initialization = "";
   out.decorator = "";
 
-  if (arg.Key != 0) {
+  if (arg.Key != ObjectKey{}) {
     out.value = "g_" + objKeyToStr(arg.Key);
     out.decorator = "(" + info.type + "**)&";
   } else {
@@ -111,7 +111,7 @@ void argumentToCpp(ContextArgument<T>& arg, CppParameterInfo& info, CppParameter
   out.initialization = "";
   out.decorator = "";
   // arg.Value may be nullptr but arg.Key can still be valid (e.g. for Intel Extension calls)
-  if (arg.Key != 0) {
+  if (arg.Key != ObjectKey{}) {
     out.value = "g_" + objKeyToStr(arg.Key);
   } else {
     out.value = "nullptr";
@@ -123,7 +123,7 @@ void argumentToCpp(ContextOutputArgument<T>& arg, CppParameterInfo& info, CppPar
   out.initialization = "";
   out.decorator = "";
 
-  if (arg.Key != 0) {
+  if (arg.Key != ObjectKey{}) {
     out.value = "g_" + objKeyToStr(arg.Key);
     out.decorator = "&";
   } else {

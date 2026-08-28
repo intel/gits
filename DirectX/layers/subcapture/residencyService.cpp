@@ -17,12 +17,12 @@
 namespace gits {
 namespace DirectX {
 
-void ResidencyService::CreateNotResident(GITSKey key, GITSKey deviceKey) {
+void ResidencyService::CreateNotResident(ObjectKey key, ObjectKey deviceKey) {
   GITS_ASSERT(m_Residency.find(key) == m_Residency.end());
   m_Residency[key] = {0, deviceKey, true};
 }
 
-void ResidencyService::MakeResident(const std::vector<GITSKey>& keys, GITSKey deviceKey) {
+void ResidencyService::MakeResident(const std::vector<ObjectKey>& keys, ObjectKey deviceKey) {
   for (const auto key : keys) {
     if (m_Residency.find(key) == m_Residency.end()) {
       m_Residency[key] = {2, deviceKey};
@@ -32,7 +32,7 @@ void ResidencyService::MakeResident(const std::vector<GITSKey>& keys, GITSKey de
   }
 }
 
-void ResidencyService::Evict(const std::vector<GITSKey>& keys, GITSKey deviceKey) {
+void ResidencyService::Evict(const std::vector<ObjectKey>& keys, ObjectKey deviceKey) {
   for (const auto key : keys) {
     if (m_Residency.find(key) == m_Residency.end()) {
       m_Residency[key] = {0, deviceKey};
@@ -44,7 +44,7 @@ void ResidencyService::Evict(const std::vector<GITSKey>& keys, GITSKey deviceKey
   }
 }
 
-void ResidencyService::DestroyObject(GITSKey key) {
+void ResidencyService::DestroyObject(ObjectKey key) {
   m_Residency.erase(key);
 }
 
@@ -57,7 +57,7 @@ void gits::DirectX::ResidencyService::RestoreResidency() {
         (residencyInfo.CreatedNotResident && residencyInfo.ResidencyCount == 1)) {
       const auto repeatCount = residencyInfo.CreatedNotResident ? residencyInfo.ResidencyCount
                                                                 : residencyInfo.ResidencyCount - 1;
-      std::vector<GITSKey> objectKeyRepeat(repeatCount, objectKey);
+      std::vector<ObjectKey> objectKeyRepeat(repeatCount, objectKey);
 
       ID3D12DeviceMakeResidentCommand c;
       c.Key = m_StateService.GetUniqueCommandKey();

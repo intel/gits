@@ -26,14 +26,14 @@ void MetaCommandsService::InitializeMetaCommand(
          command.m_InitializationParametersDataSizeInBytes.Value);
 }
 
-void MetaCommandsService::SetDeviceKey(GITSKey deviceKey) {
+void MetaCommandsService::SetDeviceKey(ObjectKey deviceKey) {
   if (m_DeviceKey && m_DeviceKey != deviceKey) {
     LOG_ERROR << "MetaCommandsService - multiple devices not supported!";
   }
   m_DeviceKey = deviceKey;
 }
 
-void MetaCommandsService::DestroyMetaCommand(GITSKey key) {
+void MetaCommandsService::DestroyMetaCommand(ObjectKey key) {
   m_MetaCommandData.erase(key);
 }
 
@@ -152,7 +152,7 @@ void MetaCommandsService::RestoreStateFinalize() {
     commandListReset.Key = m_StateService.GetUniqueCommandKey();
     commandListReset.m_Object.Key = m_CommandListKey;
     commandListReset.m_pAllocator.Key = m_CommandAllocatorKey;
-    commandListReset.m_pInitialState.Key = 0;
+    commandListReset.m_pInitialState.Key = ObjectKey{};
     m_StateService.GetRecorder().Record(ID3D12GraphicsCommandListResetSerializer(commandListReset));
   }
   {

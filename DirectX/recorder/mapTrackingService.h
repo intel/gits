@@ -25,13 +25,13 @@ public:
   MapTrackingService(stream::OrderingRecorder& recorder);
 
   void EnableWriteWatch(D3D12_HEAP_PROPERTIES& properties, D3D12_HEAP_FLAGS& flags);
-  void MapResource(GITSKey resourceKey,
+  void MapResource(ObjectKey resourceKey,
                    ID3D12Resource* resource,
                    unsigned subresourceIndex,
                    void** mappedData);
-  void UnmapResource(GITSKey resourceKey, unsigned subresourceIndex);
+  void UnmapResource(ObjectKey resourceKey, unsigned subresourceIndex);
   void ExecuteCommandLists();
-  void DestroyResource(GITSKey resourceKey);
+  void DestroyResource(ObjectKey resourceKey);
 
 private:
   bool m_ShadowMemory{false};
@@ -45,14 +45,14 @@ private:
     MappedInfo(const MappedInfo&) = delete;
     MappedInfo& operator=(const MappedInfo&) = delete;
 
-    GITSKey ResourceKey{};
+    ObjectKey ResourceKey{};
     char* MappedAddress{};
     char* ShadowAddress{};
     size_t Size{};
     int MapCount{};
     std::vector<void*> WatchedPages;
   };
-  std::unordered_map<GITSKey, std::map<unsigned, std::unique_ptr<MappedInfo>>> m_MappedData;
+  std::unordered_map<ObjectKey, std::map<unsigned, std::unique_ptr<MappedInfo>>> m_MappedData;
 
   size_t m_PageSize{0};
   std::mutex m_Mutex;
@@ -63,7 +63,7 @@ private:
   bool IsUploadHeap(D3D12_HEAP_TYPE heapType, D3D12_CPU_PAGE_PROPERTY cpuPageProperty);
   void CaptureModifiedData(MappedInfo* info);
   void CaptureData(
-      GITSKey resourceKey, void* mappedAddress, unsigned offset, void* data, unsigned dataSize);
+      ObjectKey resourceKey, void* mappedAddress, unsigned offset, void* data, unsigned dataSize);
   size_t GetSubresourceSize(ID3D12Resource* resource, unsigned subresource);
 };
 

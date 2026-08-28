@@ -89,11 +89,11 @@ IDXGIAdapter1* AdapterService::GetAdapter() const {
   return m_Adapter.Get();
 }
 
-void AdapterService::SetCaptureAdapterLuid(GITSKey key, LUID captureLuid) {
+void AdapterService::SetCaptureAdapterLuid(ObjectKey key, LUID captureLuid) {
   m_CaptureLuids[key] = captureLuid;
 }
 
-void AdapterService::SetCurrentAdapterLuid(GITSKey key, LUID currentLuid) {
+void AdapterService::SetCurrentAdapterLuid(ObjectKey key, LUID currentLuid) {
   auto it = m_CaptureLuids.find(key);
   GITS_ASSERT(it != m_CaptureLuids.end());
   m_LuidsByCaptureLuid[it->second] = currentLuid;

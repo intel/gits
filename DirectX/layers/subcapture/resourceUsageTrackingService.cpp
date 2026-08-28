@@ -12,29 +12,29 @@
 
 namespace gits {
 namespace DirectX {
-void ResourceUsageTrackingService::AddResource(GITSKey resourceKey) {
+void ResourceUsageTrackingService::AddResource(ObjectKey resourceKey) {
   m_UsageByResource[resourceKey] = {};
 }
 
-void ResourceUsageTrackingService::CommandListResourceUsage(GITSKey commandListKey,
-                                                            GITSKey resourceKey) {
+void ResourceUsageTrackingService::CommandListResourceUsage(ObjectKey commandListKey,
+                                                            ObjectKey resourceKey) {
   m_CommandListResourceUsage[commandListKey].push_back(resourceKey);
 }
 
-void ResourceUsageTrackingService::CommandListResourceUsage(GITSKey commandListKey,
-                                                            std::vector<GITSKey>& resourceKeys) {
+void ResourceUsageTrackingService::CommandListResourceUsage(ObjectKey commandListKey,
+                                                            std::vector<ObjectKey>& resourceKeys) {
   m_CommandListResourceUsage[commandListKey].insert(
       m_CommandListResourceUsage[commandListKey].end(), resourceKeys.begin(), resourceKeys.end());
 }
-void ResourceUsageTrackingService::CommandListReset(GITSKey commandListKey) {
+void ResourceUsageTrackingService::CommandListReset(ObjectKey commandListKey) {
   m_CommandListResourceUsage[commandListKey].clear();
 }
 
 void ResourceUsageTrackingService::ExecuteCommandLists(CommandKey commandKey,
-                                                       GITSKey commandQueueKey,
-                                                       std::vector<GITSKey>& commandListKeys) {
-  std::vector<GITSKey> usedResources;
-  for (GITSKey commandListKey : commandListKeys) {
+                                                       ObjectKey commandQueueKey,
+                                                       std::vector<ObjectKey>& commandListKeys) {
+  std::vector<ObjectKey> usedResources;
+  for (ObjectKey commandListKey : commandListKeys) {
     auto it = m_CommandListResourceUsage.find(commandListKey);
     if (it == m_CommandListResourceUsage.end()) {
       continue;
@@ -53,39 +53,39 @@ void ResourceUsageTrackingService::ExecuteCommandLists(CommandKey commandKey,
   }
 }
 
-void ResourceUsageTrackingService::DestroyResource(GITSKey resourceKey) {
+void ResourceUsageTrackingService::DestroyResource(ObjectKey resourceKey) {
   m_UsageByResource.erase(resourceKey);
 }
 
 void ResourceUsageTrackingService::CommandQueueWait(CommandKey commandKey,
-                                                    GITSKey commandQueueKey,
-                                                    GITSKey fenceKey,
+                                                    ObjectKey commandQueueKey,
+                                                    ObjectKey fenceKey,
                                                     UINT64 fenceValue) {
   m_GpuExecutionTracker.CommandQueueWait(commandKey, commandQueueKey, fenceKey, fenceValue);
 }
 
 void ResourceUsageTrackingService::CommandQueueSignal(CommandKey commandKey,
-                                                      GITSKey commandQueueKey,
-                                                      GITSKey fenceKey,
+                                                      ObjectKey commandQueueKey,
+                                                      ObjectKey fenceKey,
                                                       UINT64 fenceValue) {
   m_GpuExecutionTracker.CommandQueueSignal(commandKey, commandQueueKey, fenceKey, fenceValue);
   ProcessReadyExecutables();
 }
 
 void ResourceUsageTrackingService::FenceSignal(CommandKey commandKey,
-                                               GITSKey fenceKey,
+                                               ObjectKey fenceKey,
                                                UINT64 fenceValue) {
   m_GpuExecutionTracker.FenceSignal(commandKey, fenceKey, fenceValue);
   ProcessReadyExecutables();
 }
 
-std::vector<GITSKey> ResourceUsageTrackingService::GetOrderedResources() {
-  std::map<UsageNumber, std::vector<GITSKey>> resourceByCommandKey;
+std::vector<ObjectKey> ResourceUsageTrackingService::GetOrderedResources() {
+  std::map<UsageNumber, std::vector<ObjectKey>> resourceByCommandKey;
   for (const auto& [resourceKey, usageNumber] : m_UsageByResource) {
     resourceByCommandKey[usageNumber].push_back(resourceKey);
   }
 
-  std::vector<GITSKey> orderedResources;
+  std::vector<ObjectKey> orderedResources;
   for (const auto& [usageNumber, keys] : resourceByCommandKey) {
     orderedResources.insert(orderedResources.end(), keys.begin(), keys.end());
   }
@@ -103,11 +103,11 @@ void ResourceUsageTrackingService::ProcessReadyExecutables() {
   executables.clear();
 }
 
-void ResourceUsageTrackingService::UpdateUsage(const std::vector<GITSKey>& usedResources) {
+void ResourceUsageTrackingService::UpdateUsage(const std::vector<ObjectKey>& usedResources) {
   ++m_ExecuteNumber;
 
   unsigned commandNumber{};
-  for (GITSKey resourceKey : usedResources) {
+  for (ObjectKey resourceKey : usedResources) {
     m_UsageByResource[resourceKey] = {m_ExecuteNumber, ++commandNumber};
   }
 }

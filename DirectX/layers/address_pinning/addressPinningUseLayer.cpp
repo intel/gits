@@ -357,7 +357,7 @@ void AddressPinningUseLayer::ReadAddressRanges() {
     }
 
     std::istringstream lineStream(line);
-    GITSKey key{};
+    ObjectKey key{};
     D3D12_GPU_VIRTUAL_ADDRESS_RANGE range{};
     UINT64 alignment{};
 

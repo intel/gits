@@ -92,25 +92,25 @@ public:
   StateTrackingService& operator=(StateTrackingService&) = delete;
 
   void RestoreState();
-  void KeepState(GITSKey objectKey);
+  void KeepState(ObjectKey objectKey);
   void StoreState(ObjectState* state);
-  void RemoveState(GITSKey key);
+  void RemoveState(ObjectKey key);
   void StoreINTCFeature(INTC_D3D12_FEATURE feature);
   void StoreINTCApplicationInfo(INTC_D3D12_SetApplicationInfoCommand& c);
   void StoreD3D12EnableExperimentalFeatures(const D3D12EnableExperimentalFeaturesCommand& c);
   void StoreDllContainer(const DllContainerMetaCommand& c);
-  void ReleaseObject(GITSKey key, ULONG result);
-  void SetReferenceCount(GITSKey objectKey, ULONG referenceCount);
-  ObjectState* GetState(GITSKey key);
-  void RestoreState(GITSKey key);
-  bool StateRestored(GITSKey key);
-  void AddBackBuffer(unsigned buffer, GITSKey resourceKey, ID3D12Resource* resource);
+  void ReleaseObject(ObjectKey key, ULONG result);
+  void SetReferenceCount(ObjectKey objectKey, ULONG referenceCount);
+  ObjectState* GetState(ObjectKey key);
+  void RestoreState(ObjectKey key);
+  bool StateRestored(ObjectKey key);
+  void AddBackBuffer(unsigned buffer, ObjectKey resourceKey, ID3D12Resource* resource);
   void SetXefgSwapChainFlag();
 
   CommandKey GetUniqueCommandKey() {
     return ++m_RestoreCommandKey;
   };
-  GITSKey GetUniqueObjectKey() {
+  ObjectKey GetUniqueObjectKey() {
     return ++m_RestoreObjectKey;
   };
   void* GetUniqueFakePointer() {
@@ -128,7 +128,7 @@ public:
   ResourceStateTrackingService& GetResourceStateTrackingService() {
     return m_ResourceStateTrackingService;
   }
-  GITSKey GetDeviceKey() {
+  ObjectKey GetDeviceKey() {
     return m_DeviceKey;
   }
 
@@ -180,7 +180,7 @@ public:
 
   private:
     StateTrackingService& m_StateService;
-    std::unordered_map<GITSKey,
+    std::unordered_map<ObjectKey,
                        std::unique_ptr<ID3D12ApplicationIdentitySetApplicationIdentitySerializer>>
         m_ApplicationIdentities;
   };
@@ -202,8 +202,8 @@ private:
   void RestoreD3D12EnableExperimentalFeatures();
   void RestoreDllContainers();
   void RestoreStateObjectProperties();
-  void RestoreResidencyPriority(GITSKey deviceKey,
-                                GITSKey objectKey,
+  void RestoreResidencyPriority(ObjectKey deviceKey,
+                                ObjectKey objectKey,
                                 D3D12_RESIDENCY_PRIORITY residencyPriority);
   void RestoreDXGISwapChain(ObjectState* state);
   void RestoreDXGIAdapter(ObjectState* state);
@@ -225,9 +225,9 @@ private:
 private:
   SubcaptureRecorder& m_Recorder;
   ResourceContentRestore m_ResourceContentRestore;
-  std::map<GITSKey, ObjectState*> m_StatesByKey;
+  std::map<ObjectKey, ObjectState*> m_StatesByKey;
   CommandKey m_RestoreCommandKey{STATE_RESTORE_KEY_MASK};
-  GITSKey m_RestoreObjectKey{STATE_RESTORE_KEY_MASK};
+  ObjectKey m_RestoreObjectKey{STATE_RESTORE_KEY_MASK};
   unsigned m_RestoreFakePointer{};
   AnalyzerResults& m_AnalyzerResults;
   FenceTrackingService& m_FenceTrackingService;
@@ -247,7 +247,7 @@ private:
   ResourceUsageTrackingService& m_ResourceUsageTrackingService;
   ResourceForCBVRestoreService& m_ResourceForCBVRestoreService;
   MetaCommandsService& m_MetaCommandsService;
-  GITSKey m_DeviceKey{};
+  ObjectKey m_DeviceKey{};
   INTC_D3D12_FEATURE m_IntcFeature{};
   std::unique_ptr<INTC_D3D12_SetApplicationInfoCommand> m_SetApplicationInfoCommand;
   std::unique_ptr<D3D12EnableExperimentalFeaturesCommand> m_EnableExperimentalFeaturesCommand;
@@ -261,27 +261,27 @@ private:
   class SwapChainService {
   public:
     SwapChainService(StateTrackingService& stateService) : m_StateService(stateService) {}
-    void SetSwapChain(GITSKey commandQueueKey,
+    void SetSwapChain(ObjectKey commandQueueKey,
                       ID3D12CommandQueue* commandQueue,
-                      GITSKey swapChainKey,
+                      ObjectKey swapChainKey,
                       IDXGISwapChain* swapChain,
                       unsigned backBuffersCount);
     void RestoreBackBufferSequence(bool CommandListSubcapture);
     void RecordSwapChainPresent();
-    void AddBackBuffer(unsigned buffer, GITSKey resourceKey, ID3D12Resource* resource);
+    void AddBackBuffer(unsigned buffer, ObjectKey resourceKey, ID3D12Resource* resource);
     unsigned GetBackBuffersCount() {
       return m_BackBuffersCount;
     }
 
   private:
     StateTrackingService& m_StateService;
-    GITSKey m_SwapChainKey{};
+    ObjectKey m_SwapChainKey{};
     ID3D12CommandQueue* m_CommandQueue{};
-    GITSKey m_CommandQueueKey{};
+    ObjectKey m_CommandQueueKey{};
     IDXGISwapChain* m_SwapChain{};
     unsigned m_BackBufferShift{};
     unsigned m_BackBuffersCount{};
-    std::unordered_map<GITSKey, std::pair<unsigned, ID3D12Resource*>> m_BackBuffers;
+    std::unordered_map<unsigned, std::pair<ObjectKey, ID3D12Resource*>> m_BackBuffers;
   };
   SwapChainService m_SwapChainService;
 };

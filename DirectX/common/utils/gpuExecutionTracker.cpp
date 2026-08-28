@@ -16,8 +16,8 @@ namespace gits {
 namespace DirectX {
 
 void GpuExecutionTracker::CommandQueueWait(CommandKey callKey,
-                                           GITSKey commandQueueKey,
-                                           GITSKey fenceKey,
+                                           ObjectKey commandQueueKey,
+                                           ObjectKey fenceKey,
                                            UINT64 fenceValue) {
   auto it = m_SignaledFences.find(fenceKey);
   if (it != m_SignaledFences.end() && it->second >= fenceValue) {
@@ -33,8 +33,8 @@ void GpuExecutionTracker::CommandQueueWait(CommandKey callKey,
 }
 
 void GpuExecutionTracker::CommandQueueSignal(CommandKey callKey,
-                                             GITSKey commandQueueKey,
-                                             GITSKey fenceKey,
+                                             ObjectKey commandQueueKey,
+                                             ObjectKey fenceKey,
                                              UINT64 fenceValue) {
   auto it = m_QueueEvents.find(commandQueueKey);
   if (it == m_QueueEvents.end() || it->second.empty()) {
@@ -49,7 +49,7 @@ void GpuExecutionTracker::CommandQueueSignal(CommandKey callKey,
   }
 }
 
-void GpuExecutionTracker::FenceSignal(CommandKey callKey, GITSKey fenceKey, UINT64 fenceValue) {
+void GpuExecutionTracker::FenceSignal(CommandKey callKey, ObjectKey fenceKey, UINT64 fenceValue) {
   std::queue<SignalEvent*> signaled;
   auto* initialSignal = new SignalEvent{};
   initialSignal->CallKey = callKey;
@@ -85,7 +85,7 @@ void GpuExecutionTracker::FenceSignal(CommandKey callKey, GITSKey fenceKey, UINT
   }
 }
 
-bool GpuExecutionTracker::IsCommandQueueWaiting(GITSKey commandQueueKey) {
+bool GpuExecutionTracker::IsCommandQueueWaiting(ObjectKey commandQueueKey) {
   auto it = m_QueueEvents.find(commandQueueKey);
   if (it == m_QueueEvents.end() || it->second.empty()) {
     return false;
@@ -94,7 +94,7 @@ bool GpuExecutionTracker::IsCommandQueueWaiting(GITSKey commandQueueKey) {
 }
 
 void GpuExecutionTracker::Execute(CommandKey callKey,
-                                  GITSKey commandQueueKey,
+                                  ObjectKey commandQueueKey,
                                   Executable* executable) {
   executable->CallKey = callKey;
   executable->CommandQueueKey = commandQueueKey;
@@ -106,7 +106,7 @@ void GpuExecutionTracker::Execute(CommandKey callKey,
   }
 }
 
-std::optional<UINT64> GpuExecutionTracker::GetFenceValue(GITSKey fenceKey) const {
+std::optional<UINT64> GpuExecutionTracker::GetFenceValue(ObjectKey fenceKey) const {
   auto it = m_SignaledFences.find(fenceKey);
   if (it == m_SignaledFences.end()) {
     return std::nullopt;

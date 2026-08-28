@@ -30,7 +30,7 @@ void RaytracingOptimizationService::BuildAccelerationStructure(
   if (c.m_pDesc.SourceAccelerationStructureKey) {
     command->Buffers.insert(c.m_pDesc.SourceAccelerationStructureKey);
   }
-  for (GITSKey key : c.m_pDesc.InputKeys) {
+  for (ObjectKey key : c.m_pDesc.InputKeys) {
     command->Buffers.insert(key);
   }
   if (c.m_pDesc.Value->Inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL) {
@@ -91,7 +91,7 @@ void RaytracingOptimizationService::NvapiBuildAccelerationStructureEx(
   if (c.m_pParams.SourceAccelerationStructureKey) {
     command->Buffers.insert(c.m_pParams.SourceAccelerationStructureKey);
   }
-  for (GITSKey key : c.m_pParams.InputKeys) {
+  for (ObjectKey key : c.m_pParams.InputKeys) {
     command->Buffers.insert(key);
   }
   if (c.m_pParams.Value->pDesc->inputs.type ==
@@ -147,7 +147,7 @@ void RaytracingOptimizationService::NvapiBuildOpacityMicromapArray(
 
 void RaytracingOptimizationService::ExecuteCommandLists(
     ID3D12CommandQueueExecuteCommandListsCommand& c) {
-  for (GITSKey commandListKey : c.m_ppCommandLists.Keys) {
+  for (ObjectKey commandListKey : c.m_ppCommandLists.Keys) {
     auto it = m_CommandsByCommandList.find(commandListKey);
     if (it != m_CommandsByCommandList.end()) {
       for (auto& command : it->second) {
@@ -195,7 +195,7 @@ void RaytracingOptimizationService::StoreCommand(std::unique_ptr<RaytracingComma
 }
 
 void RaytracingOptimizationService::Optimize(
-    std::unordered_set<std::pair<GITSKey, unsigned>, UnsignedPairHash>& ases) {
+    std::unordered_set<std::pair<ObjectKey, unsigned>, UnsignedPairHash>& ases) {
   for (auto& [keyOffset, command] : m_CommandByKeyOffset) {
     if (ases.contains(keyOffset)) {
       command->Restore = true;

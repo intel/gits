@@ -24,7 +24,7 @@ void BindingTablesDump::DumpBindingTable(ID3D12GraphicsCommandList* commandList,
                                          BarrierState state,
                                          StateObjectInfo* StateObjectInfo,
                                          DescriptorHeaps descriptorHeaps,
-                                         GITSKey rootSignatureKey) {
+                                         ObjectKey rootSignatureKey) {
   BindingTablesInfo* info = new BindingTablesInfo();
   info->Offset = offset;
   info->Size = size;
@@ -44,7 +44,7 @@ void BindingTablesDump::DumpBuffer(DumpInfo& dumpInfo, void* data) {
   for (unsigned recordIndex = 0; recordIndex < recordCount; ++recordIndex) {
     uint8_t* p = static_cast<uint8_t*>(data) + recordIndex * info.Stride;
 
-    GITSKey rootSignatureKey = info.StateObjectInfo->GlobalRootSignature;
+    ObjectKey rootSignatureKey = info.StateObjectInfo->GlobalRootSignature;
     if (!rootSignatureKey) {
       rootSignatureKey = info.RootSignatureKey;
     }
@@ -97,7 +97,7 @@ void BindingTablesDump::DumpBuffer(DumpInfo& dumpInfo, void* data) {
 
         UINT64* descriptor = reinterpret_cast<UINT64*>(p + byteOffset);
         if (*descriptor) {
-          GITSKey descriptorHeapKey{};
+          ObjectKey descriptorHeapKey{};
           unsigned descriptorHeapSize{};
           CapturePlayerDescriptorHandleService::DescriptorHeapInfo* heapInfo{};
 

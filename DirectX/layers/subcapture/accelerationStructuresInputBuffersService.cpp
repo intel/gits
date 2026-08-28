@@ -34,12 +34,12 @@ void AccelerationStructuresInputBuffersService::CommandQueueSignal(
 }
 
 void AccelerationStructuresInputBuffersService::FenceSignal(CommandKey key,
-                                                            GITSKey fenceKey,
+                                                            ObjectKey fenceKey,
                                                             UINT64 fenceValue) {
   m_BufferInputDump.FenceSignal(key, fenceKey, fenceValue);
 }
 
-void AccelerationStructuresInputBuffersService::StoreBufferRegion(GITSKey bufferKey,
+void AccelerationStructuresInputBuffersService::StoreBufferRegion(ObjectKey bufferKey,
                                                                   unsigned bufferOffset,
                                                                   unsigned bufferSize) {
   m_BufferRegionsByInputKey[bufferKey].emplace_back(bufferOffset, bufferOffset + bufferSize);
@@ -105,7 +105,7 @@ void AccelerationStructuresInputBuffersService::StoreBuffers(
 }
 
 void AccelerationStructuresInputBuffersService::RestoreBuffersInitialization(
-    std::vector<CommandKey>& commandKeys, GITSKey deviceKey) {
+    std::vector<CommandKey>& commandKeys, ObjectKey deviceKey) {
 
   m_BufferInputDump.WaitUntilDumped();
 
@@ -215,12 +215,12 @@ void AccelerationStructuresInputBuffersService::MakeBuffersResident(
 }
 
 void AccelerationStructuresInputBuffersService::RestoreBuffers(CommandKey commandKey,
-                                                               GITSKey commandListBarriersKey) {
+                                                               ObjectKey commandListBarriersKey) {
   std::vector<BufferInputDump::InputBuffer>& inputBufferDumps =
       m_BufferInputDump.GetInputBuffers(commandKey);
   InputBuffers* inputBuffers = m_InputBuffers[commandKey].get();
 
-  std::unordered_set<GITSKey> restoredBuffers;
+  std::unordered_set<ObjectKey> restoredBuffers;
   size_t uploadBufferOffset{};
   for (BufferInputDump::InputBuffer& info : inputBufferDumps) {
     auto itHash = m_BufferHashesByKeyOffset.find(std::pair(info.BufferKey, info.Offset));
@@ -283,7 +283,7 @@ void AccelerationStructuresInputBuffersService::RestoreBuffers(CommandKey comman
     commandListReset.Key = m_StateService.GetUniqueCommandKey();
     commandListReset.m_Object.Key = m_CommandListKey;
     commandListReset.m_pAllocator.Key = m_CommandAllocatorKey;
-    commandListReset.m_pInitialState.Key = 0;
+    commandListReset.m_pInitialState.Key = ObjectKey{};
     m_StateService.GetRecorder().Record(ID3D12GraphicsCommandListResetSerializer(commandListReset));
   }
 
@@ -413,7 +413,7 @@ size_t AccelerationStructuresInputBuffersService::RestoreBuffer(
 void AccelerationStructuresInputBuffersService::BufferInputDump::DumpBuffer(
     ID3D12GraphicsCommandList* commandList,
     ID3D12Resource* resource,
-    GITSKey resourceKey,
+    ObjectKey resourceKey,
     unsigned offset,
     unsigned size,
     BarrierState resourceState,

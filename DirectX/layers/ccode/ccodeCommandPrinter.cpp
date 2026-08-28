@@ -15,7 +15,7 @@ namespace gits {
 namespace DirectX {
 namespace ccode {
 
-CommandPrinter::CommandPrinter(Command& command, const char* name, GITSKey objectKey)
+CommandPrinter::CommandPrinter(Command& command, const char* name, ObjectKey objectKey)
     : m_Command(command), m_Name(name), m_ObjectKey(objectKey) {}
 
 CommandPrinter::~CommandPrinter() {}
@@ -65,13 +65,13 @@ void CommandPrinter::print() {
   if (Configurator::Get().directx.player.cCode.wrapApiCalls) {
     // Wrapped: CC_Function(g_OX, a0, a1, ...);
     ss << "CC_" << m_Name << "(";
-    if (m_ObjectKey != 0) {
+    if (m_ObjectKey != ObjectKey{}) {
       hasObjectAsArgument = true;
       ss << objKeyToPtrStr(m_ObjectKey);
     }
   } else {
     // Default: g_OX->Function(a0, a1, ...);
-    if (m_ObjectKey != 0) {
+    if (m_ObjectKey != ObjectKey{}) {
       ss << "g_" << objKeyToStr(m_ObjectKey) << "->";
     }
     ss << m_Name << "(";

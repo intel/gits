@@ -17,15 +17,15 @@ namespace DirectX {
 
 class FenceTrackingService {
 public:
-  void SetFenceValue(GITSKey fenceKey, UINT64 fenceValue) {
+  void SetFenceValue(ObjectKey fenceKey, UINT64 fenceValue) {
     m_FenceValues[fenceKey] = fenceValue;
   }
-  UINT64 GetFenceValue(GITSKey fenceKey) {
+  UINT64 GetFenceValue(ObjectKey fenceKey) {
     return m_FenceValues[fenceKey];
   }
 
 private:
-  std::unordered_map<GITSKey, UINT64> m_FenceValues;
+  std::unordered_map<ObjectKey, UINT64> m_FenceValues;
 };
 
 } // namespace DirectX

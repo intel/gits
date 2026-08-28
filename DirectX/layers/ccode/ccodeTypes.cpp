@@ -32,12 +32,12 @@ std::string makeRawStringLiteral(const std::string& content, const char* prefix)
 
 } // namespace
 
-std::string objKeyToStr(GITSKey key) {
-  GITS_ASSERT(key);
+std::string objKeyToStr(ObjectKey key) {
+  GITS_ASSERT(key != ObjectKey{});
   return "O" + keyToStr(key);
 }
 
-std::string objKeyToPtrStr(GITSKey key) {
+std::string objKeyToPtrStr(ObjectKey key) {
   if (!key) {
     return "nullptr";
   }

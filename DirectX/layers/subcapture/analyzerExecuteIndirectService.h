@@ -34,21 +34,21 @@ public:
 
   void Flush();
   void ExecuteCommandLists(CommandKey key,
-                           GITSKey commandQueueKey,
+                           ObjectKey commandQueueKey,
                            ID3D12CommandQueue* commandQueue,
                            ID3D12CommandList** commandLists,
                            unsigned commandListNum);
   void CommandQueueWait(CommandKey key,
-                        GITSKey commandQueueKey,
-                        GITSKey fenceKey,
+                        ObjectKey commandQueueKey,
+                        ObjectKey fenceKey,
                         UINT64 fenceValue);
   void CommandQueueSignal(CommandKey key,
-                          GITSKey commandQueueKey,
-                          GITSKey fenceKey,
+                          ObjectKey commandQueueKey,
+                          ObjectKey fenceKey,
                           UINT64 fenceValue);
-  void FenceSignal(CommandKey key, GITSKey fenceKey, UINT64 fenceValue);
+  void FenceSignal(CommandKey key, ObjectKey fenceKey, UINT64 fenceValue);
 
-  std::unordered_set<GITSKey>& GetArgumentBuffersResources() {
+  std::unordered_set<ObjectKey>& GetArgumentBuffersResources() {
     return m_ExecuteIndirectDump.GetArgumentBuffersResources();
   }
 
@@ -67,7 +67,7 @@ private:
   AnalyzerExecuteIndirectDump m_ExecuteIndirectDump;
 
   std::unordered_map<CommandKey, D3D12_DISPATCH_RAYS_DESC> m_ExecuteIndirectDispatchRays;
-  std::unordered_map<GITSKey, D3D12_COMMAND_SIGNATURE_DESC> m_CommandSignatures;
+  std::unordered_map<ObjectKey, D3D12_COMMAND_SIGNATURE_DESC> m_CommandSignatures;
 };
 
 } // namespace DirectX

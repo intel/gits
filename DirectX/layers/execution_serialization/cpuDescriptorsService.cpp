@@ -16,15 +16,15 @@
 namespace gits {
 namespace DirectX {
 
-void CpuDescriptorsService::CreateCommandList(GITSKey deviceKey) {
+void CpuDescriptorsService::CreateCommandList(ObjectKey deviceKey) {
   if (m_DeviceKey && m_DeviceKey != deviceKey) {
     LOG_ERROR << "Execution serialization - multiple devices not handled";
   }
   m_DeviceKey = deviceKey;
 }
 
-void CpuDescriptorsService::ExecuteCommandLists(std::vector<GITSKey>& commandListKeys) {
-  for (GITSKey key : commandListKeys) {
+void CpuDescriptorsService::ExecuteCommandLists(std::vector<ObjectKey>& commandListKeys) {
+  for (ObjectKey key : commandListKeys) {
     auto it = m_DescriptorsByCommandList.find(key);
     if (it != m_DescriptorsByCommandList.end()) {
       for (DescriptorHandle& descriptor : it->second) {
@@ -48,7 +48,7 @@ void CpuDescriptorsService::ExecuteCommandLists(std::vector<GITSKey>& commandLis
 void CpuDescriptorsService::PreserveDescriptor(
     ID3D12GraphicsCommandListOMSetRenderTargetsCommand& c) {
 
-  GITSKey heapKey{};
+  ObjectKey heapKey{};
   unsigned heapIndex{};
   for (unsigned i = 0; i < c.m_NumRenderTargetDescriptors.Value; ++i) {
     if (i == 0 || !c.m_RTsSingleHandleToDescriptorRange.Value) {
@@ -117,7 +117,7 @@ void CpuDescriptorsService::PreserveDescriptor(
 }
 
 template <unsigned SIZE>
-unsigned CpuDescriptorsService::DescriptorHeap<SIZE>::PreserveDescriptor(GITSKey heapKey,
+unsigned CpuDescriptorsService::DescriptorHeap<SIZE>::PreserveDescriptor(ObjectKey heapKey,
                                                                          unsigned heapIndex) {
   if (!m_DescriptorHeapKey) {
     CreateDescriptorHeap();

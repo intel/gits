@@ -26,15 +26,19 @@ public:
   void Reset();
   void SetRootSignature(D3D12_ROOT_SIGNATURE_DESC2* desc);
   void SetDescriptorTable(unsigned parameterIndex,
-                          GITSKey descriptorHeapKey,
+                          ObjectKey descriptorHeapKey,
                           unsigned descriptorHeapIndex);
   void SetConstant(unsigned parameterIndex, unsigned data, unsigned offset);
   void SetConstants(unsigned parameterIndex, unsigned* data, unsigned offset, unsigned size);
-  void SetConstantBufferView(unsigned parameterIndex, GITSKey resourceKey, unsigned resourceOffset);
+  void SetConstantBufferView(unsigned parameterIndex,
+                             ObjectKey resourceKey,
+                             unsigned resourceOffset);
   void SetUnorderedAccessView(unsigned parameterIndex,
-                              GITSKey resourceKey,
+                              ObjectKey resourceKey,
                               unsigned resourceOffset);
-  void SetShaderResourceView(unsigned parameterIndex, GITSKey resourceKey, unsigned resourceOffset);
+  void SetShaderResourceView(unsigned parameterIndex,
+                             ObjectKey resourceKey,
+                             unsigned resourceOffset);
   void DumpState(std::ofstream& stream);
 
 private:
@@ -50,11 +54,11 @@ private:
     D3D12_ROOT_PARAMETER_TYPE Type{};
     union {
       struct {
-        GITSKey DescriptorHeapKey;
+        ObjectKey DescriptorHeapKey;
         unsigned DescriptorHeapIndex;
       } DescriptorTable{};
       struct {
-        GITSKey ResourceKey;
+        ObjectKey ResourceKey;
         unsigned ResourceOffset;
       } Descriptor;
       struct {

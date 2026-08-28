@@ -18,7 +18,7 @@ void DescriptorHeapTracker::CreateDescriptor(Descriptor* descriptor) {
   m_DescriptorByHeapByIndex[descriptor->HeapKey][descriptor->DescriptorIndex].reset(descriptor);
 }
 
-void DescriptorHeapTracker::DestroyObject(GITSKey key) {
+void DescriptorHeapTracker::DestroyObject(ObjectKey key) {
   auto itHeap = m_DescriptorByHeapByIndex.find(key);
   if (itHeap != m_DescriptorByHeapByIndex.end()) {
     m_DescriptorByHeapByIndex.erase(itHeap);
@@ -55,7 +55,7 @@ void DescriptorHeapTracker::CopyDescriptors(ID3D12DeviceCopyDescriptorsCommand& 
   unsigned destRangeSize =
       c.m_pDestDescriptorRangeSizes.Value ? c.m_pDestDescriptorRangeSizes.Value[destRangeIndex] : 1;
 
-  GITSKey destHeapKey = c.m_pDestDescriptorRangeStarts.InterfaceKeys[destRangeIndex];
+  ObjectKey destHeapKey = c.m_pDestDescriptorRangeStarts.InterfaceKeys[destRangeIndex];
 
   for (unsigned srcRangeIndex = 0; srcRangeIndex < c.m_NumSrcDescriptorRanges.Value;
        ++srcRangeIndex) {
@@ -85,7 +85,7 @@ void DescriptorHeapTracker::CopyDescriptors(ID3D12DeviceCopyDescriptorsCommand& 
 }
 
 DescriptorHeapTracker::Descriptor* DescriptorHeapTracker::CopyDescriptor(
-    Descriptor* descriptor, GITSKey destHeapKey, unsigned destDescriptorIndex) {
+    Descriptor* descriptor, ObjectKey destHeapKey, unsigned destDescriptorIndex) {
   Descriptor* dest = new Descriptor(*descriptor);
   dest->HeapKey = destHeapKey;
   dest->DescriptorIndex = destDescriptorIndex;

@@ -23,7 +23,7 @@ namespace DirectX {
 
 class CommandListStateService {
 public:
-  explicit CommandListStateService(GITSKey commandListKey);
+  explicit CommandListStateService(ObjectKey commandListKey);
   static bool IsStateCommand(CommandId id);
   void StoreCommand(const Command& c);
   std::vector<std::unique_ptr<Command>> RestoreState() const;
@@ -130,11 +130,11 @@ private:
     std::vector<std::unique_ptr<ID3D12GraphicsCommandListSOSetTargetsCommand>> StreamOutput;
   };
 
-  void SetPipelineState(GITSKey pipelineStateKey);
+  void SetPipelineState(ObjectKey pipelineStateKey);
   void AppendRootCommands(const std::map<unsigned, std::unique_ptr<Command>>& args,
                           std::vector<std::unique_ptr<Command>>& out) const;
 
-  GITSKey m_CommandListKey{};
+  ObjectKey m_CommandListKey{};
   std::unique_ptr<CommandListState> m_State{std::make_unique<CommandListState>()};
 };
 

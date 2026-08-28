@@ -33,7 +33,7 @@ CommandPrinter::CommandPrinter(FastOStream& stream,
                                CommandPrinterState& state,
                                Command& command,
                                const char* name,
-                               GITSKey objectKey)
+                               ObjectKey objectKey)
     : m_State(state), m_Command(command), m_Stream(stream), m_Lock(state.Mutex) {
 
   if (m_Command.GetId() == CommandId::ID_INIT_START) {

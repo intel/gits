@@ -15,7 +15,7 @@
 namespace gits {
 namespace DirectX {
 
-void HeapAllocationService::CreateHeapAllocation(GITSKey heapKey,
+void HeapAllocationService::CreateHeapAllocation(ObjectKey heapKey,
                                                  void* captureAddress,
                                                  void* data,
                                                  size_t size) {
@@ -32,7 +32,7 @@ void* HeapAllocationService::GetHeapAllocation(void* captureAddress) {
   return it->second;
 }
 
-void HeapAllocationService::DestroyHeapAllocation(GITSKey heapKey) {
+void HeapAllocationService::DestroyHeapAllocation(ObjectKey heapKey) {
   auto itCaptureAddress = m_HeapAllocationsCaptureAddressByHeapKey.find(heapKey);
   if (itCaptureAddress == m_HeapAllocationsCaptureAddressByHeapKey.end()) {
     return;

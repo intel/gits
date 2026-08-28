@@ -15,7 +15,7 @@
 namespace gits {
 namespace DirectX {
 
-void PipelineLibraryService::ReleasePipelineState(GITSKey pipelineStateKey, unsigned refCount) {
+void PipelineLibraryService::ReleasePipelineState(ObjectKey pipelineStateKey, unsigned refCount) {
   std::lock_guard<std::mutex> lock(m_Mutex);
   if (refCount == 0) {
     m_PipelineStateRefCounts.erase(pipelineStateKey);
@@ -29,7 +29,7 @@ void PipelineLibraryService::ReleasePipelineState(GITSKey pipelineStateKey, unsi
   }
 }
 
-void PipelineLibraryService::AddRefPipelineState(GITSKey pipelineStateKey) {
+void PipelineLibraryService::AddRefPipelineState(ObjectKey pipelineStateKey) {
   std::lock_guard<std::mutex> lock(m_Mutex);
   auto it = m_PipelineStateRefCounts.find(pipelineStateKey);
   if (it != m_PipelineStateRefCounts.end()) {
@@ -43,7 +43,7 @@ void PipelineLibraryService::CreatePipelineLibrary(ID3D12Device1CreatePipelineLi
   c.m_BlobLength.Value = 0;
 }
 
-void PipelineLibraryService::CreatePipelineState(GITSKey pipelineStateKey) {
+void PipelineLibraryService::CreatePipelineState(ObjectKey pipelineStateKey) {
   std::lock_guard<std::mutex> lock(m_Mutex);
   m_PipelineStateRefCounts[pipelineStateKey] = 1;
 }
@@ -70,7 +70,7 @@ HRESULT PipelineLibraryService::LoadPipelineState(PipelineLibrary* pipelineLibra
                                                   LPCWSTR name,
                                                   Desc* desc,
                                                   REFIID iid,
-                                                  GITSKey pipelineStateKey,
+                                                  ObjectKey pipelineStateKey,
                                                   void** ppPipelineState) {
   ID3D12PipelineState* pipelineState{};
   GITS_ASSERT(iid == IID_ID3D12PipelineState);

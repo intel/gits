@@ -32,7 +32,7 @@ DirectStorageLayer::~DirectStorageLayer() {
   }
 }
 
-void DirectStorageLayer::ClearCompletedBatches(GITSKey queueKey) {
+void DirectStorageLayer::ClearCompletedBatches(ObjectKey queueKey) {
   auto itDeque = m_InflightBatches.find(queueKey);
   if (itDeque == m_InflightBatches.end()) {
     return;

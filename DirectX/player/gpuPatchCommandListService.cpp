@@ -99,11 +99,12 @@ void GpuPatchCommandListService::StoreCommand(ID3D12GraphicsCommandListSetPipeli
   m_CommandLists[c.m_Object.Key].CurrentPipelineState = {c.m_pPipelineState.Value, false};
 }
 
-void GpuPatchCommandListService::Remove(GITSKey commandListKey) {
+void GpuPatchCommandListService::Remove(ObjectKey commandListKey) {
   m_CommandLists.erase(commandListKey);
 }
 
-void GpuPatchCommandListService::Reset(GITSKey commandListKey, ID3D12PipelineState* initialState) {
+void GpuPatchCommandListService::Reset(ObjectKey commandListKey,
+                                       ID3D12PipelineState* initialState) {
   if (initialState) {
     m_CommandLists[commandListKey] = CommandListState{};
     m_CommandLists[commandListKey].CurrentPipelineState = {initialState, false};
@@ -112,7 +113,7 @@ void GpuPatchCommandListService::Reset(GITSKey commandListKey, ID3D12PipelineSta
   }
 }
 
-void GpuPatchCommandListService::RestoreState(GITSKey commandListKey,
+void GpuPatchCommandListService::RestoreState(ObjectKey commandListKey,
                                               ID3D12GraphicsCommandList* commandList) {
   auto itCommandLists = m_CommandLists.find(commandListKey);
   if (itCommandLists == m_CommandLists.end()) {

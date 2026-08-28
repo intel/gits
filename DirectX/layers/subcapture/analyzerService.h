@@ -45,39 +45,41 @@ public:
     return !m_BeforeRange && !m_InRange;
   }
 
-  void NotifyObject(GITSKey objectKey);
-  void NotifyObjects(const std::vector<GITSKey>& objectKeys);
+  void NotifyObject(ObjectKey objectKey);
+  void NotifyObjects(const std::vector<ObjectKey>& objectKeys);
 
-  void CommandListCommand(GITSKey commandListKey);
-  void Present(CommandKey callKey, GITSKey swapChainKey);
+  void CommandListCommand(ObjectKey commandListKey);
+  void Present(CommandKey callKey, ObjectKey swapChainKey);
   void ExecuteCommandLists(CommandKey callKey,
-                           GITSKey commandQueueKey,
-                           std::vector<GITSKey>& commandListKeys);
-  void CommandListReset(GITSKey commandListKey, GITSKey allocatorKey, GITSKey initialStateKey);
+                           ObjectKey commandQueueKey,
+                           std::vector<ObjectKey>& commandListKeys);
+  void CommandListReset(ObjectKey commandListKey,
+                        ObjectKey allocatorKey,
+                        ObjectKey initialStateKey);
   void ExecutionStart();
   void ExecutionEnd();
   void CommandQueueWait(CommandKey callKey,
-                        GITSKey commandQueueKey,
-                        GITSKey fenceKey,
+                        ObjectKey commandQueueKey,
+                        ObjectKey fenceKey,
                         UINT64 fenceValue);
   void CommandQueueSignal(CommandKey callKey,
-                          GITSKey commandQueueKey,
-                          GITSKey fenceKey,
+                          ObjectKey commandQueueKey,
+                          ObjectKey fenceKey,
                           UINT64 fenceValue);
-  void FenceSignal(CommandKey callKey, GITSKey fenceKey, UINT64 fenceValue);
-  void MappedDataMeta(GITSKey resourceKey);
+  void FenceSignal(CommandKey callKey, ObjectKey fenceKey, UINT64 fenceValue);
+  void MappedDataMeta(ObjectKey resourceKey);
   void CreateXessContext(xessD3D12CreateContextCommand& c);
   void CreateXellContext(xellD3D12CreateContextCommand& c);
   void CreateXefgContext(xefgSwapChainD3D12CreateContextCommand& c);
-  void ForceApplicationSwapChainRestore(GITSKey key);
+  void ForceApplicationSwapChainRestore(ObjectKey key);
   void CreateDeviceExtensionContext(INTC_D3D12_CreateDeviceExtensionContextCommand& c);
   void CreateDeviceExtensionContext(INTC_D3D12_CreateDeviceExtensionContext1Command& c);
   void CreateDeviceExtensionContext(INTC_D3D12_CreateDeviceExtensionContext2Command& c);
 
-  void AddParent(GITSKey key, GITSKey parentKey);
+  void AddParent(ObjectKey key, ObjectKey parentKey);
 
 private:
-  void FindParents(GITSKey key, std::set<GITSKey>& objectKeys);
+  void FindParents(ObjectKey key, std::set<ObjectKey>& objectKeys);
   void ClearReadyExecutables();
   void DumpAnalysisFile();
 
@@ -89,24 +91,24 @@ private:
   RaytracingOptimizationService& m_RaytracingOptimizationService;
   bool m_Optimize{};
 
-  std::unordered_map<GITSKey, std::vector<GITSKey>> m_ParentKeys;
+  std::unordered_map<ObjectKey, std::vector<ObjectKey>> m_ParentKeys;
 
   struct ExecuteCommandListCommand : public GpuExecutionTracker::Executable {
-    std::vector<GITSKey> CommandListKeys;
+    std::vector<ObjectKey> CommandListKeys;
   };
 
   GpuExecutionTracker m_GpuExecutionTracker;
   bool m_BeforeRange{true};
   bool m_InRange{};
 
-  std::set<GITSKey> m_CommandListsResetBeforeExecution;
-  std::set<GITSKey> m_CommandListsExecuted;
-  std::set<GITSKey> m_CommandListsReset;
-  std::set<GITSKey> m_CommandListsForRestore;
+  std::set<ObjectKey> m_CommandListsResetBeforeExecution;
+  std::set<ObjectKey> m_CommandListsExecuted;
+  std::set<ObjectKey> m_CommandListsReset;
+  std::set<ObjectKey> m_CommandListsForRestore;
 
-  std::map<CommandKey, std::vector<GITSKey>> m_CommandQueueCommandsForRestore;
+  std::map<CommandKey, std::vector<ObjectKey>> m_CommandQueueCommandsForRestore;
 
-  std::set<GITSKey> m_ObjectsForRestore;
+  std::set<ObjectKey> m_ObjectsForRestore;
 };
 
 } // namespace DirectX

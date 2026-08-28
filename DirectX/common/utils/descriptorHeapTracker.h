@@ -20,10 +20,10 @@ namespace DirectX {
 class DescriptorHeapTracker {
 public:
   struct Descriptor {
-    GITSKey HeapKey{};
+    ObjectKey HeapKey{};
     unsigned DescriptorIndex{};
-    GITSKey ResourceKey{};
-    GITSKey UavCounterResourceKey{};
+    ObjectKey ResourceKey{};
+    ObjectKey UavCounterResourceKey{};
     enum class DescriptorType {
       Unknown,
       RTV,
@@ -46,20 +46,20 @@ public:
   };
 
   void CreateDescriptor(Descriptor* descriptor);
-  void DestroyObject(GITSKey key);
+  void DestroyObject(ObjectKey key);
   void CopyDescriptors(ID3D12DeviceCopyDescriptorsSimpleCommand& c);
   void CopyDescriptors(ID3D12DeviceCopyDescriptorsCommand& c);
-  Descriptor* GetDescriptor(GITSKey heapKey, unsigned descriptorIndex) {
+  Descriptor* GetDescriptor(ObjectKey heapKey, unsigned descriptorIndex) {
     return m_DescriptorByHeapByIndex[heapKey][descriptorIndex].get();
   }
 
 private:
   Descriptor* CopyDescriptor(Descriptor* descriptor,
-                             GITSKey destHeapKey,
+                             ObjectKey destHeapKey,
                              unsigned destDescriptorIndex);
 
 private:
-  std::unordered_map<GITSKey, std::unordered_map<unsigned, std::unique_ptr<Descriptor>>>
+  std::unordered_map<ObjectKey, std::unordered_map<unsigned, std::unique_ptr<Descriptor>>>
       m_DescriptorByHeapByIndex;
 };
 

@@ -33,12 +33,12 @@ struct DescriptorState {
   DescriptorState(StateId id_) : Id(id_) {}
   virtual ~DescriptorState() = default;
   StateId Id{};
-  GITSKey DeviceKey{};
+  ObjectKey DeviceKey{};
   D3D12_CPU_DESCRIPTOR_HANDLE DestDescriptor{};
-  GITSKey DestDescriptorKey{};
+  ObjectKey DestDescriptorKey{};
   unsigned DestDescriptorIndex{};
-  GITSKey ResourceKey{};
-  GITSKey AuxiliaryResourceKey{};
+  ObjectKey ResourceKey{};
+  ObjectKey AuxiliaryResourceKey{};
 };
 
 struct D3D12RenderTargetViewState : public DescriptorState {
@@ -89,16 +89,16 @@ public:
       : m_StateService(stateService),
         m_ResourceForCBVRestoreService(resourceForCBVRestoreService) {}
   void StoreState(DescriptorState* state);
-  void RemoveState(GITSKey key);
+  void RemoveState(ObjectKey key);
   void RestoreState();
   void CopyDescriptors(ID3D12DeviceCopyDescriptorsSimpleCommand& c);
   void CopyDescriptors(ID3D12DeviceCopyDescriptorsCommand& c);
-  DescriptorState* GetDescriptorState(GITSKey heapKey, unsigned DescriptorIndex);
+  DescriptorState* GetDescriptorState(ObjectKey heapKey, unsigned DescriptorIndex);
 
 private:
   void RestoreState(DescriptorState* state);
   DescriptorState* CopyDescriptor(DescriptorState* state,
-                                  GITSKey destHeapKey,
+                                  ObjectKey destHeapKey,
                                   unsigned destHeapIndex);
   void RestoreD3D12RenderTargetView(D3D12RenderTargetViewState* state);
   void RestoreD3D12DepthStencilView(D3D12DepthStencilViewState* state);
@@ -110,8 +110,8 @@ private:
 private:
   StateTrackingService* m_StateService{};
   ResourceForCBVRestoreService* m_ResourceForCBVRestoreService{};
-  std::map<GITSKey, std::map<unsigned, std::unique_ptr<DescriptorState>>> m_StatesByHeapIndex;
-  std::set<GITSKey> m_Resources;
+  std::map<ObjectKey, std::map<unsigned, std::unique_ptr<DescriptorState>>> m_StatesByHeapIndex;
+  std::set<ObjectKey> m_Resources;
   std::mutex m_Mutex;
 };
 

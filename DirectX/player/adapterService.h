@@ -22,8 +22,8 @@ public:
   bool IsAdapterOverride() const;
   IDXGIAdapter1* GetAdapter() const;
 
-  void SetCaptureAdapterLuid(GITSKey key, LUID captureLuid);
-  void SetCurrentAdapterLuid(GITSKey key, LUID currentLuid);
+  void SetCaptureAdapterLuid(ObjectKey key, LUID captureLuid);
+  void SetCurrentAdapterLuid(ObjectKey key, LUID currentLuid);
   LUID GetCurrentLuid(LUID captureLuid);
 
 private:
@@ -36,7 +36,7 @@ private:
   };
 
   Microsoft::WRL::ComPtr<IDXGIAdapter1> m_Adapter;
-  std::map<GITSKey, LUID> m_CaptureLuids;
+  std::map<ObjectKey, LUID> m_CaptureLuids;
   std::map<LUID, LUID, LessLuid> m_LuidsByCaptureLuid;
 };
 

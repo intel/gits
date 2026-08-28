@@ -21,7 +21,7 @@ namespace DirectX {
 DirectStorageQueueService::DirectStorageQueueService(StateTrackingService& stateService)
     : m_StateService(stateService) {}
 
-void DirectStorageQueueService::RecordQueueSubmit(GITSKey queueKey) {
+void DirectStorageQueueService::RecordQueueSubmit(ObjectKey queueKey) {
   IDStorageQueueSubmitCommand submit;
   submit.Key = m_StateService.GetUniqueCommandKey();
   submit.m_Object.Key = queueKey;
@@ -35,13 +35,13 @@ void DirectStorageQueueService::AddEnqueueStatus(IDStorageQueueEnqueueStatusComm
   enqueueStatus.Serializer = std::make_unique<IDStorageQueueEnqueueStatusSerializer>(c);
 }
 
-void DirectStorageQueueService::DestroyObject(GITSKey objectKey) {
+void DirectStorageQueueService::DestroyObject(ObjectKey objectKey) {
   m_EnqueueStatusByIndexByArray.erase(objectKey);
 }
 
 void DirectStorageQueueService::RestoreDirectStorageQueues() {
   AnalyzerResults& analyzerResults = m_StateService.GetAnalyzerResults();
-  std::map<GITSKey, std::vector<IDStorageQueueEnqueueStatusSerializer*>> enqueueStatusByQueue;
+  std::map<ObjectKey, std::vector<IDStorageQueueEnqueueStatusSerializer*>> enqueueStatusByQueue;
 
   for (const auto& [statusArrayKey, enqueueStatusByIndex] : m_EnqueueStatusByIndexByArray) {
     if (!analyzerResults.RestoreObject(statusArrayKey)) {

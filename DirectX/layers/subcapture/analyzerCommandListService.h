@@ -35,25 +35,25 @@ public:
                              AnalyzerExecuteIndirectService& executeIndirectService,
                              bool CommandListSubcapture);
 
-  std::unordered_set<GITSKey>& GetObjectsForRestore() {
+  std::unordered_set<ObjectKey>& GetObjectsForRestore() {
     return m_ObjectsForRestore;
   }
-  std::set<std::pair<GITSKey, unsigned>>& GetDescriptors() {
+  std::set<std::pair<ObjectKey, unsigned>>& GetDescriptors() {
     return m_Descriptors;
   }
-  GITSKey GetComputeRootSignatureKey(GITSKey commandListKey) {
+  ObjectKey GetComputeRootSignatureKey(ObjectKey commandListKey) {
     return m_CommandListInfos[commandListKey].computeRootSignature;
   }
 
   std::set<CommandKey>& GetTlases();
 
-  void AddObjectForRestore(GITSKey key) {
+  void AddObjectForRestore(ObjectKey key) {
     if (key && m_Optimize) {
       m_ObjectsForRestore.insert(key);
     }
   }
 
-  void CommandListsRestore(const std::set<GITSKey>& commandLists);
+  void CommandListsRestore(const std::set<ObjectKey>& commandLists);
   void CommandListReset(ID3D12GraphicsCommandListResetCommand& c);
   void CreateDescriptorHeap(ID3D12DeviceCreateDescriptorHeapCommand& c);
   void CreateCommandSignature(ID3D12DeviceCreateCommandSignatureCommand& c);
@@ -69,9 +69,9 @@ public:
   void Command(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& c);
 
 private:
-  void CommandListRestore(GITSKey commandListKey);
-  void SetBindlessDescriptors(GITSKey rootSignatureKey,
-                              GITSKey descriptorHeapKey,
+  void CommandListRestore(ObjectKey commandListKey);
+  void SetBindlessDescriptors(ObjectKey rootSignatureKey,
+                              ObjectKey descriptorHeapKey,
                               D3D12_DESCRIPTOR_HEAP_TYPE heapType,
                               unsigned heapNumDescriptors);
   bool InRange();
@@ -146,28 +146,28 @@ private:
   bool m_FirstFrame{true};
 
   struct CommandListInfo {
-    GITSKey computeRootSignature{};
-    GITSKey graphicsRootSignature{};
-    GITSKey viewDescriptorHeap{};
-    GITSKey samplerDescriptorHeap{};
+    ObjectKey computeRootSignature{};
+    ObjectKey graphicsRootSignature{};
+    ObjectKey viewDescriptorHeap{};
+    ObjectKey samplerDescriptorHeap{};
   };
-  std::unordered_map<GITSKey, CommandListInfo> m_CommandListInfos;
+  std::unordered_map<ObjectKey, CommandListInfo> m_CommandListInfos;
 
   struct DescriptorHeapInfo {
     D3D12_DESCRIPTOR_HEAP_TYPE type{};
     unsigned numDescriptors{};
   };
-  std::unordered_map<GITSKey, DescriptorHeapInfo> m_DescriptorHeapInfos;
-  std::unordered_set<GITSKey> m_DispatchRaysCommandSignatures;
+  std::unordered_map<ObjectKey, DescriptorHeapInfo> m_DescriptorHeapInfos;
+  std::unordered_set<ObjectKey> m_DispatchRaysCommandSignatures;
 
-  std::unordered_map<GITSKey, std::vector<std::unique_ptr<::gits::DirectX::Command>>>
+  std::unordered_map<ObjectKey, std::vector<std::unique_ptr<::gits::DirectX::Command>>>
       m_CommandsByCommandList;
-  std::unordered_map<GITSKey, bool> m_ResetCommandLists;
+  std::unordered_map<ObjectKey, bool> m_ResetCommandLists;
 
-  std::set<GITSKey> m_CheckedStateObjectSubobjects;
+  std::set<ObjectKey> m_CheckedStateObjectSubobjects;
 
-  std::unordered_set<GITSKey> m_ObjectsForRestore;
-  std::set<std::pair<GITSKey, unsigned>> m_Descriptors;
+  std::unordered_set<ObjectKey> m_ObjectsForRestore;
+  std::set<std::pair<ObjectKey, unsigned>> m_Descriptors;
 
   bool m_RestoreTlases{};
   std::set<CommandKey> m_TlasBuildKeys;

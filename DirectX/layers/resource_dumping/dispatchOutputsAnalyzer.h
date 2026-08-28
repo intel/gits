@@ -27,9 +27,9 @@ public:
   DispatchOutputsAnalyzer();
 
   void ExecuteCommandLists(ID3D12CommandQueueExecuteCommandListsCommand& c);
-  void ClearCommandList(GITSKey commandListKey);
+  void ClearCommandList(ObjectKey commandListKey);
   void CreateDescriptorHeap(ID3D12DeviceCreateDescriptorHeapCommand& c);
-  void CreateResource(ID3D12Resource* resource, GITSKey resourceKey);
+  void CreateResource(ID3D12Resource* resource, ObjectKey resourceKey);
   void CreateRootSignature(ID3D12DeviceCreateRootSignatureCommand& c);
   void CreateDescriptor(DescriptorHeapTracker::Descriptor* descriptor);
   void CopyDescriptors(ID3D12DeviceCopyDescriptorsSimpleCommand& c);
@@ -40,7 +40,7 @@ public:
   void SetComputeRootDescriptorTable(
       ID3D12GraphicsCommandListSetComputeRootDescriptorTableCommand& c);
   void Dispatch(ID3D12GraphicsCommandListDispatchCommand& c);
-  void DestroyInterface(GITSKey interfaceKey);
+  void DestroyInterface(ObjectKey interfaceKey);
 
   void DumpAnalysisFile();
   void ReadAnalysisFile();
@@ -51,7 +51,7 @@ public:
   struct Bindings {
     unsigned Slot{};
     bool Unbounded{};
-    std::vector<GITSKey> Resources;
+    std::vector<ObjectKey> Resources;
   };
   std::vector<Bindings>* GetDispatchBindings(CommandKey dispatchKey);
 
@@ -62,33 +62,33 @@ private:
   std::filesystem::path m_AnalysisFilePath;
   std::unordered_map<CommandKey, std::vector<Bindings>> m_DispatchBindings;
 
-  std::unordered_map<GITSKey, ID3D12Resource*> m_ResourceByKey;
+  std::unordered_map<ObjectKey, ID3D12Resource*> m_ResourceByKey;
 
   struct DescriptorHeap {
     D3D12_DESCRIPTOR_HEAP_TYPE Type{};
     unsigned NumDescriptors{};
   };
-  std::unordered_map<GITSKey, DescriptorHeap> m_DescriptorHeaps;
+  std::unordered_map<ObjectKey, DescriptorHeap> m_DescriptorHeaps;
 
-  std::unordered_map<GITSKey, GITSKey> m_RootSignatureByCommandList;
+  std::unordered_map<ObjectKey, ObjectKey> m_RootSignatureByCommandList;
 
-  std::unordered_map<GITSKey, std::unordered_map<unsigned, GITSKey>>
+  std::unordered_map<ObjectKey, std::unordered_map<unsigned, ObjectKey>>
       m_DescriptorBySlotByCommandList;
 
   struct DesciptorTable {
     std::vector<unsigned> Indexes;
-    GITSKey DescriptorHeap{};
+    ObjectKey DescriptorHeap{};
     bool Unbounded{};
   };
-  std::unordered_map<GITSKey, std::unordered_map<unsigned, DesciptorTable>>
+  std::unordered_map<ObjectKey, std::unordered_map<unsigned, DesciptorTable>>
       m_DescriptorTableBySlotByCommandList;
-  std::unordered_map<GITSKey,
+  std::unordered_map<ObjectKey,
                      std::unordered_map<CommandKey, std::unordered_map<unsigned, DesciptorTable>>>
       m_DescriptorTableBySlotByDispatchByCommandList;
 
   struct AnalysisBindings {
     bool Unbounded{};
-    std::unordered_set<GITSKey> Resources;
+    std::unordered_set<ObjectKey> Resources;
   };
   std::map<CommandKey, std::map<unsigned, AnalysisBindings>> m_BindingsBySlotByDispatch;
 };

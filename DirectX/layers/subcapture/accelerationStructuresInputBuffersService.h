@@ -43,14 +43,14 @@ public:
   void ExecuteCommandLists(ID3D12CommandQueueExecuteCommandListsCommand& c);
   void CommandQueueWait(ID3D12CommandQueueWaitCommand& c);
   void CommandQueueSignal(ID3D12CommandQueueSignalCommand& c);
-  void FenceSignal(CommandKey key, GITSKey fenceKey, UINT64 fenceValue);
+  void FenceSignal(CommandKey key, ObjectKey fenceKey, UINT64 fenceValue);
 
-  void StoreBufferRegion(GITSKey bufferKey, unsigned bufferOffset, unsigned bufferSize);
+  void StoreBufferRegion(ObjectKey bufferKey, unsigned bufferOffset, unsigned bufferSize);
   void StoreBuffers(CommandKey commandKey, ID3D12GraphicsCommandList* commandList);
 
-  void RestoreBuffersInitialization(std::vector<CommandKey>& commandKeys, GITSKey deviceKey);
+  void RestoreBuffersInitialization(std::vector<CommandKey>& commandKeys, ObjectKey deviceKey);
   void MakeBuffersResident(CommandKey commandKey, ResourceResidencyService& residencyService);
-  void RestoreBuffers(CommandKey commandKey, GITSKey commandListBarriersKey);
+  void RestoreBuffers(CommandKey commandKey, ObjectKey commandListBarriersKey);
   void RestoreBuffersCleanup();
 
 private:
@@ -64,23 +64,23 @@ private:
     unsigned Start{};
     unsigned End{};
   };
-  std::unordered_map<GITSKey, std::vector<BufferRegion>> m_BufferRegionsByInputKey;
+  std::unordered_map<ObjectKey, std::vector<BufferRegion>> m_BufferRegionsByInputKey;
 
   struct InputBuffers {
-    std::unordered_map<GITSKey, ResourceState*> Buffers;
-    std::unordered_map<GITSKey, ReservedResourcesService::TiledResource> TiledResources;
+    std::unordered_map<ObjectKey, ResourceState*> Buffers;
+    std::unordered_map<ObjectKey, ReservedResourcesService::TiledResource> TiledResources;
   };
   std::unordered_map<CommandKey, std::unique_ptr<InputBuffers>> m_InputBuffers;
 
-  std::unordered_map<std::pair<GITSKey, unsigned>, uint64_t, UnsignedPairHash>
+  std::unordered_map<std::pair<ObjectKey, unsigned>, uint64_t, UnsignedPairHash>
       m_BufferHashesByKeyOffset;
-  std::unordered_map<GITSKey, std::unordered_set<GITSKey>> m_TiledResourceUpdatesRestored;
+  std::unordered_map<ObjectKey, std::unordered_set<unsigned>> m_TiledResourceUpdatesRestored;
 
-  GITSKey m_CommandQueueKey{};
-  GITSKey m_CommandAllocatorKey{};
-  GITSKey m_CommandListKey{};
-  GITSKey m_FenceKey{};
-  GITSKey m_UploadBufferKey{};
+  ObjectKey m_CommandQueueKey{};
+  ObjectKey m_CommandAllocatorKey{};
+  ObjectKey m_CommandListKey{};
+  ObjectKey m_FenceKey{};
+  ObjectKey m_UploadBufferKey{};
   UINT64 m_RecordedFenceValue{};
   size_t m_UploadBufferSize{};
 
@@ -89,7 +89,7 @@ private:
   public:
     void DumpBuffer(ID3D12GraphicsCommandList* commandList,
                     ID3D12Resource* resource,
-                    GITSKey resourceKey,
+                    ObjectKey resourceKey,
                     unsigned offset,
                     unsigned size,
                     BarrierState resourceState,
@@ -98,7 +98,7 @@ private:
 
   public:
     struct InputBuffer {
-      GITSKey BufferKey{};
+      ObjectKey BufferKey{};
       unsigned Offset{};
       unsigned BufferHash{};
       bool IsMappable{};
@@ -114,7 +114,7 @@ private:
 
   protected:
     struct BufferInfo : public DumpInfo {
-      GITSKey ResourceKey;
+      ObjectKey ResourceKey;
       CommandKey BuildCallKey;
       bool IsMappable;
     };

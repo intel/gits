@@ -33,12 +33,12 @@ public:
     QueueEvent(QueueEventKind kind) : Kind(kind) {}
     virtual ~QueueEvent() = default;
     CommandKey CallKey{};
-    GITSKey CommandQueueKey{};
+    ObjectKey CommandQueueKey{};
     QueueEventKind Kind{};
   };
 
   struct TrackedFence {
-    GITSKey Key{};
+    ObjectKey Key{};
     UINT64 Value{};
   };
 
@@ -59,27 +59,27 @@ public:
 
 public:
   void CommandQueueWait(CommandKey callKey,
-                        GITSKey commandQueueKey,
-                        GITSKey fenceKey,
+                        ObjectKey commandQueueKey,
+                        ObjectKey fenceKey,
                         UINT64 fenceValue);
   void CommandQueueSignal(CommandKey callKey,
-                          GITSKey commandQueueKey,
-                          GITSKey fenceKey,
+                          ObjectKey commandQueueKey,
+                          ObjectKey fenceKey,
                           UINT64 fenceValue);
-  void FenceSignal(CommandKey callKey, GITSKey fenceKey, UINT64 fenceValue);
-  bool IsCommandQueueWaiting(GITSKey commandQueueKey);
-  void Execute(CommandKey callKey, GITSKey commandQueueKey, Executable* executable);
-  std::optional<UINT64> GetFenceValue(GITSKey fenceKey) const;
+  void FenceSignal(CommandKey callKey, ObjectKey fenceKey, UINT64 fenceValue);
+  bool IsCommandQueueWaiting(ObjectKey commandQueueKey);
+  void Execute(CommandKey callKey, ObjectKey commandQueueKey, Executable* executable);
+  std::optional<UINT64> GetFenceValue(ObjectKey fenceKey) const;
   std::vector<Executable*>& GetReadyExecutables() {
     return m_ReadyExecutables;
   }
-  std::unordered_map<GITSKey, std::deque<QueueEvent*>>& GetQueueEvents() {
+  std::unordered_map<ObjectKey, std::deque<QueueEvent*>>& GetQueueEvents() {
     return m_QueueEvents;
   }
 
 private:
-  std::unordered_map<GITSKey, std::deque<QueueEvent*>> m_QueueEvents;
-  std::unordered_map<GITSKey, UINT64> m_SignaledFences;
+  std::unordered_map<ObjectKey, std::deque<QueueEvent*>> m_QueueEvents;
+  std::unordered_map<ObjectKey, UINT64> m_SignaledFences;
   std::vector<Executable*> m_ReadyExecutables;
 };
 

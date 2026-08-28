@@ -18,20 +18,20 @@ namespace DirectX {
 
 class MapTrackingService {
 public:
-  void MapResource(GITSKey resourceKey,
+  void MapResource(ObjectKey resourceKey,
                    unsigned subresourceIndex,
                    void* captureAddress,
                    void** currentAddress);
-  void DestroyResource(GITSKey resourceKey);
+  void DestroyResource(ObjectKey resourceKey);
   void* GetCurrentAddress(void* captureAddress);
 
 private:
   struct MappedInfo {
     void* CurrentAddress{};
-    GITSKey ResourceKey{};
+    ObjectKey ResourceKey{};
   };
   std::unordered_map<void*, MappedInfo> m_MappedData;
-  std::unordered_map<GITSKey, std::unordered_set<void*>> m_MappedDataByResource;
+  std::unordered_map<ObjectKey, std::unordered_set<void*>> m_MappedDataByResource;
 };
 
 } // namespace DirectX

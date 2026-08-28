@@ -16,7 +16,7 @@ namespace gits {
 namespace DirectX {
 
 void ResourceStateTracker::AddResource(ID3D12Resource* resource,
-                                       GITSKey resourceKey,
+                                       ObjectKey resourceKey,
                                        D3D12_RESOURCE_STATES initialState) {
   ResourceStates& states = m_ResourceStates[resourceKey];
   states.SubresourceStates.resize(GetSubresourcesCount(resource));
@@ -27,7 +27,7 @@ void ResourceStateTracker::AddResource(ID3D12Resource* resource,
 }
 
 void ResourceStateTracker::AddResource(ID3D12Resource* resource,
-                                       GITSKey resourceKey,
+                                       ObjectKey resourceKey,
                                        D3D12_BARRIER_LAYOUT initialState) {
   ResourceStates& states = m_ResourceStates[resourceKey];
   states.SubresourceStates.resize(GetSubresourcesCount(resource));
@@ -42,7 +42,7 @@ void ResourceStateTracker::AddResource(ID3D12Resource* resource,
 void ResourceStateTracker::ResourceBarrier(ID3D12GraphicsCommandList* commandList,
                                            D3D12_RESOURCE_BARRIER* barriers,
                                            unsigned barriersNum,
-                                           GITSKey* resourceKeys) {
+                                           ObjectKey* resourceKeys) {
   ResourceStatesByKey* resourceStatesByCommandList =
       commandList ? &m_ResourceStatesByCommandList[commandList] : nullptr;
 
@@ -96,11 +96,11 @@ void ResourceStateTracker::ResourceBarrier(ID3D12GraphicsCommandList* commandLis
 void ResourceStateTracker::ResourceBarrier(ID3D12GraphicsCommandList* commandList,
                                            D3D12_BARRIER_GROUP* barriers,
                                            unsigned barriersNum,
-                                           GITSKey* resourceKeys) {
+                                           ObjectKey* resourceKeys) {
   ResourceStatesByKey* resourceStatesByCommandList =
       commandList ? &m_ResourceStatesByCommandList[commandList] : nullptr;
 
-  auto getResourceStates = [&](GITSKey resourceKey) {
+  auto getResourceStates = [&](ObjectKey resourceKey) {
     ResourceStates* states{};
     if (resourceStatesByCommandList) {
       auto it = resourceStatesByCommandList->find(resourceKey);
@@ -201,12 +201,12 @@ void ResourceStateTracker::ExecuteCommandLists(ID3D12GraphicsCommandList** comma
 }
 
 BarrierState ResourceStateTracker::GetResourceState(ID3D12GraphicsCommandList* commandList,
-                                                    GITSKey resourceKey) {
+                                                    ObjectKey resourceKey) {
   return GetSubresourceState(commandList, resourceKey, 0);
 }
 
 BarrierState ResourceStateTracker::GetSubresourceState(ID3D12GraphicsCommandList* commandList,
-                                                       GITSKey resourceKey,
+                                                       ObjectKey resourceKey,
                                                        unsigned subresource) {
   bool found = false;
   ResourceStatesByKey::iterator itState;
@@ -231,7 +231,7 @@ BarrierState ResourceStateTracker::GetSubresourceState(ID3D12GraphicsCommandList
 BarrierState GetAdjustedCurrentState(ResourceStateTracker& stateTracker,
                                      ID3D12GraphicsCommandList* commandList,
                                      ID3D12Resource* resource,
-                                     GITSKey resourceKey,
+                                     ObjectKey resourceKey,
                                      D3D12_RESOURCE_STATES expectedState,
                                      bool resourceOverlapping) {
   BarrierState barrierState = stateTracker.GetResourceState(commandList, resourceKey);
@@ -283,7 +283,7 @@ BarrierState GetAdjustedCurrentState(ResourceStateTracker& stateTracker,
                                      ID3D12GraphicsCommandList* commandList,
                                      D3D12_GPU_VIRTUAL_ADDRESS captureGpuAddress,
                                      ID3D12Resource* resource,
-                                     GITSKey resourceKey,
+                                     ObjectKey resourceKey,
                                      D3D12_RESOURCE_STATES expectedState) {
   bool overlapping = false;
   CapturePlayerGpuAddressService::ResourceInfo* resourceInfo =
@@ -300,7 +300,7 @@ BarrierState GetAdjustedCurrentState(ResourceStateTracker& stateTracker,
                                      ID3D12GraphicsCommandList* commandList,
                                      ID3D12Resource* resource,
                                      UINT64 resourceOffset,
-                                     GITSKey resourceKey,
+                                     ObjectKey resourceKey,
                                      D3D12_RESOURCE_STATES expectedState) {
   D3D12_GPU_VIRTUAL_ADDRESS playerGpuAddress = resource->GetGPUVirtualAddress();
   GITS_ASSERT(playerGpuAddress);

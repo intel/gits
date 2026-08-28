@@ -21,17 +21,18 @@ namespace DirectX {
 
 class RootSignatureService {
 public:
-  void SerializeRootSignature(D3D12_ROOT_SIGNATURE_DESC* desc, GITSKey blobKey);
-  void SerializeVersionedRootSignature(D3D12_VERSIONED_ROOT_SIGNATURE_DESC* desc, GITSKey blobKey);
-  void SetBlobBufferPointer(GITSKey blobKey, void* blobPointer);
-  void CreateRootSignature(void* blobPointer, unsigned blobLength, GITSKey rootSignatureKey);
+  void SerializeRootSignature(D3D12_ROOT_SIGNATURE_DESC* desc, ObjectKey blobKey);
+  void SerializeVersionedRootSignature(D3D12_VERSIONED_ROOT_SIGNATURE_DESC* desc,
+                                       ObjectKey blobKey);
+  void SetBlobBufferPointer(ObjectKey blobKey, void* blobPointer);
+  void CreateRootSignature(void* blobPointer, unsigned blobLength, ObjectKey rootSignatureKey);
 
-  void SetGraphicsRootSignature(GITSKey commandListKey, GITSKey rootSignatureKey);
-  void SetComputeRootSignature(GITSKey commandListKey, GITSKey rootSignatureKey);
-  void ResetRootSignatures(GITSKey commandListKey);
-  D3D12_DESCRIPTOR_HEAP_TYPE GetGraphicsRootSignatureDescriptorHeapType(GITSKey commandListKey,
+  void SetGraphicsRootSignature(ObjectKey commandListKey, ObjectKey rootSignatureKey);
+  void SetComputeRootSignature(ObjectKey commandListKey, ObjectKey rootSignatureKey);
+  void ResetRootSignatures(ObjectKey commandListKey);
+  D3D12_DESCRIPTOR_HEAP_TYPE GetGraphicsRootSignatureDescriptorHeapType(ObjectKey commandListKey,
                                                                         unsigned parameterIndex);
-  D3D12_DESCRIPTOR_HEAP_TYPE GetComputeRootSignatureDescriptorHeapType(GITSKey commandListKey,
+  D3D12_DESCRIPTOR_HEAP_TYPE GetComputeRootSignatureDescriptorHeapType(ObjectKey commandListKey,
                                                                        unsigned parameterIndex);
 
 private:
@@ -56,12 +57,12 @@ private:
   void ParseRootSignatureDesc(ROOT_SIGNATURE_DESC& desc, RootSignatureInfo* rootSignatureInfo);
 
 private:
-  std::unordered_map<GITSKey, RootSignatureInfo*> m_RootSignatureByBlobKey;
+  std::unordered_map<ObjectKey, RootSignatureInfo*> m_RootSignatureByBlobKey;
   std::unordered_map<void*, RootSignatureInfo*> m_RootSignatureByBlobPointer;
-  std::unordered_map<GITSKey, RootSignatureInfo*> m_RootSignatureByRootSignatureKey;
+  std::unordered_map<ObjectKey, RootSignatureInfo*> m_RootSignatureByRootSignatureKey;
 
-  std::unordered_map<GITSKey, RootSignatureInfo*> m_GraphicsRootSignatureByCommandListKey;
-  std::unordered_map<GITSKey, RootSignatureInfo*> m_ComputeRootSignatureByCommandListKey;
+  std::unordered_map<ObjectKey, RootSignatureInfo*> m_GraphicsRootSignatureByCommandListKey;
+  std::unordered_map<ObjectKey, RootSignatureInfo*> m_ComputeRootSignatureByCommandListKey;
 
   std::mutex m_Mutex;
 };

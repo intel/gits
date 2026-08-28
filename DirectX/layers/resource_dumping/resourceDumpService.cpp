@@ -31,7 +31,7 @@ ResourceDumpService::ResourceDumpService()
   m_DumpPath = dumpPath;
 }
 
-void ResourceDumpService::CreateResource(GITSKey resourceKey,
+void ResourceDumpService::CreateResource(ObjectKey resourceKey,
                                          ID3D12Resource* resource,
                                          D3D12_RESOURCE_STATES initialState) {
   if (!m_ResourceKeys.Contains(resourceKey)) {
@@ -41,7 +41,7 @@ void ResourceDumpService::CreateResource(GITSKey resourceKey,
   m_Resources[resourceKey] = resource;
 }
 
-void ResourceDumpService::DestroyResource(GITSKey resourceKey) {
+void ResourceDumpService::DestroyResource(ObjectKey resourceKey) {
   if (!m_ResourceKeys.Contains(resourceKey)) {
     return;
   }
@@ -53,7 +53,7 @@ void ResourceDumpService::CommandListCall(CommandKey callKey,
   if (!m_CallKeys.Contains(callKey)) {
     return;
   }
-  for (GITSKey resourceKey : m_ResourceKeys) {
+  for (ObjectKey resourceKey : m_ResourceKeys) {
     auto it = m_Resources.find(resourceKey);
     if (it != m_Resources.end()) {
 
@@ -111,7 +111,7 @@ void ResourceDumpService::ResourceBarrier(ID3D12GraphicsCommandListResourceBarri
 }
 
 void ResourceDumpService::ExecuteCommandLists(CommandKey key,
-                                              GITSKey commandQueueKey,
+                                              ObjectKey commandQueueKey,
                                               ID3D12CommandQueue* commandQueue,
                                               ID3D12CommandList** commandLists,
                                               unsigned commandListNum) {
@@ -122,20 +122,20 @@ void ResourceDumpService::ExecuteCommandLists(CommandKey key,
 }
 
 void ResourceDumpService::CommandQueueWait(CommandKey key,
-                                           GITSKey commandQueueKey,
-                                           GITSKey fenceKey,
+                                           ObjectKey commandQueueKey,
+                                           ObjectKey fenceKey,
                                            UINT64 fenceValue) {
   m_ResourceDump.CommandQueueWait(key, commandQueueKey, fenceKey, fenceValue);
 }
 
 void ResourceDumpService::CommandQueueSignal(CommandKey key,
-                                             GITSKey commandQueueKey,
-                                             GITSKey fenceKey,
+                                             ObjectKey commandQueueKey,
+                                             ObjectKey fenceKey,
                                              UINT64 fenceValue) {
   m_ResourceDump.CommandQueueSignal(key, commandQueueKey, fenceKey, fenceValue);
 }
 
-void ResourceDumpService::FenceSignal(CommandKey key, GITSKey fenceKey, UINT64 fenceValue) {
+void ResourceDumpService::FenceSignal(CommandKey key, ObjectKey fenceKey, UINT64 fenceValue) {
   m_ResourceDump.FenceSignal(key, fenceKey, fenceValue);
 }
 

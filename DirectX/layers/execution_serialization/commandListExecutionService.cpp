@@ -19,7 +19,7 @@
 namespace gits {
 namespace DirectX {
 
-void CommandListExecutionService::CommandListCommand(GITSKey commandListKey,
+void CommandListExecutionService::CommandListCommand(ObjectKey commandListKey,
                                                      const Command& command) {
   CommandList& commandList = m_CommandListsByKey[commandListKey];
   commandList.CommandListKey = commandListKey;
@@ -27,10 +27,10 @@ void CommandListExecutionService::CommandListCommand(GITSKey commandListKey,
 }
 
 void CommandListExecutionService::ExecuteCommandLists(CommandKey callKey,
-                                                      GITSKey commandQueueKey,
-                                                      std::vector<GITSKey>& commandListKeys) {
+                                                      ObjectKey commandQueueKey,
+                                                      std::vector<ObjectKey>& commandListKeys) {
   Execute* execute = new Execute();
-  for (GITSKey commandListKey : commandListKeys) {
+  for (ObjectKey commandListKey : commandListKeys) {
     auto it = m_CommandListsByKey.find(commandListKey);
     if (it != m_CommandListsByKey.end()) {
       execute->CommandLists.push_back(std::move(it->second));
@@ -41,7 +41,8 @@ void CommandListExecutionService::ExecuteCommandLists(CommandKey callKey,
   ExecuteReadyExecutables();
 }
 
-void CommandListExecutionService::CreateCommandList(GITSKey commandListKey, GITSKey allocatorKey) {
+void CommandListExecutionService::CreateCommandList(ObjectKey commandListKey,
+                                                    ObjectKey allocatorKey) {
   m_CommandListCreationAllocators[commandListKey] = allocatorKey;
   {
     ID3D12GraphicsCommandListCloseCommand closeCommand;
@@ -52,36 +53,37 @@ void CommandListExecutionService::CreateCommandList(GITSKey commandListKey, GITS
 }
 
 void CommandListExecutionService::CommandListReset(CommandKey commandKey,
-                                                   GITSKey commandListKey,
-                                                   GITSKey allocatorKey) {
+                                                   ObjectKey commandListKey,
+                                                   ObjectKey allocatorKey) {
   CommandList& commandList = m_CommandListsByKey[commandListKey];
   commandList.Commands.clear();
   commandList.Reset = true;
 }
 
 void CommandListExecutionService::CommandQueueWait(CommandKey callKey,
-                                                   GITSKey commandQueueKey,
-                                                   GITSKey fenceKey,
+                                                   ObjectKey commandQueueKey,
+                                                   ObjectKey fenceKey,
                                                    UINT64 fenceValue) {
   m_ExecutionTracker.CommandQueueWait(callKey, commandQueueKey, fenceKey, fenceValue);
 }
 
 void CommandListExecutionService::CommandQueueSignal(CommandKey callKey,
-                                                     GITSKey commandQueueKey,
-                                                     GITSKey fenceKey,
+                                                     ObjectKey commandQueueKey,
+                                                     ObjectKey fenceKey,
                                                      UINT64 fenceValue) {
   m_ExecutionTracker.CommandQueueSignal(callKey, commandQueueKey, fenceKey, fenceValue);
   ExecuteReadyExecutables();
 }
 
 void CommandListExecutionService::FenceSignal(CommandKey callKey,
-                                              GITSKey fenceKey,
+                                              ObjectKey fenceKey,
                                               UINT64 fenceValue) {
   m_ExecutionTracker.FenceSignal(callKey, fenceKey, fenceValue);
   ExecuteReadyExecutables();
 }
 
-void CommandListExecutionService::CreateCommandQueue(GITSKey deviceKey, GITSKey commandQueueKey) {
+void CommandListExecutionService::CreateCommandQueue(ObjectKey deviceKey,
+                                                     ObjectKey commandQueueKey) {
   m_DeviceByCommandQueue[commandQueueKey] = deviceKey;
 }
 
@@ -97,13 +99,13 @@ void CommandListExecutionService::ExecuteReadyExecutables() {
 }
 
 void CommandListExecutionService::ExecuteExecutable(Execute& executable) {
-  GITSKey fenceKey{};
+  ObjectKey fenceKey{};
   auto it = m_FenceByCommandQueue.find(executable.CommandQueueKey);
   if (it == m_FenceByCommandQueue.end()) {
     fenceKey = GetUniqueObjectKey();
     m_FenceByCommandQueue[executable.CommandQueueKey].first = fenceKey;
-    GITSKey deviceKey = m_DeviceByCommandQueue[executable.CommandQueueKey];
-    GITS_ASSERT(deviceKey);
+    ObjectKey deviceKey = m_DeviceByCommandQueue[executable.CommandQueueKey];
+    GITS_ASSERT(deviceKey != ObjectKey{});
     ID3D12DeviceCreateFenceCommand createFence;
     createFence.Key = GetUniqueCommandKey();
     createFence.m_Object.Key = deviceKey;
@@ -166,7 +168,7 @@ void CommandListExecutionService::ExecuteExecutable(Execute& executable) {
     }
   }
 
-  std::vector<GITSKey> commandListKeys;
+  std::vector<ObjectKey> commandListKeys;
   for (CommandList& commandList : executable.CommandLists) {
     commandListKeys.push_back(commandList.CommandListKey);
   }

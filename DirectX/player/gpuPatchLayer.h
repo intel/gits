@@ -86,12 +86,12 @@ private:
                                          unsigned patchBufferSize);
   void AddMappingBuffer(ID3D12GraphicsCommandList* commandList);
   void CreateMappingBufferObjects(ID3D12Device* device, unsigned mappingBufferIndex);
-  unsigned GetMappingBufferIndex(GITSKey commandListKey, ID3D12GraphicsCommandList* commandList);
-  unsigned GetPatchBufferIndex(GITSKey commandListKey,
+  unsigned GetMappingBufferIndex(ObjectKey commandListKey, ID3D12GraphicsCommandList* commandList);
+  unsigned GetPatchBufferIndex(ObjectKey commandListKey,
                                ID3D12GraphicsCommandList* commandList,
                                size_t size);
-  unsigned GetInstancesAoPPatchBufferIndex(GITSKey commandListKey);
-  unsigned GetInstancesAoPStagingBufferIndex(GITSKey commandListKey);
+  unsigned GetInstancesAoPPatchBufferIndex(ObjectKey commandListKey);
+  unsigned GetInstancesAoPStagingBufferIndex(ObjectKey commandListKey);
   void GetPatchOffsets(const D3D12_COMMAND_SIGNATURE_DESC& commandSignature,
                        std::vector<unsigned>& patchOffsets);
   void LoadExecuteIndirectDispatchRays();
@@ -185,16 +185,17 @@ private:
     size_t Size{};
   };
   std::vector<FenceInfo> m_MappingFences;
-  std::unordered_map<GITSKey, GITSKey> m_CurrentMappingsByCommandList;
+  std::unordered_map<ObjectKey, unsigned> m_CurrentMappingsByCommandList;
 
   std::vector<PatchBufferInfo> m_PatchBufferInfos;
-  std::unordered_map<GITSKey, std::vector<GITSKey>> m_CurrentPatchBuffersByCommandList;
+  std::unordered_map<ObjectKey, std::vector<unsigned>> m_CurrentPatchBuffersByCommandList;
 
   std::array<FenceInfo, INSTANCES_AOP_PATCH_BUFFER_POOL_SIZE> m_InstancesAopPatchBufferFences{};
-  std::unordered_map<GITSKey, std::vector<GITSKey>> m_CurrentInstancesAopPatchBuffersByCommandList;
+  std::unordered_map<ObjectKey, std::vector<unsigned>>
+      m_CurrentInstancesAopPatchBuffersByCommandList;
 
   std::array<FenceInfo, INSTANCES_AOP_STAGING_BUFFER_POOL_SIZE> m_InstancesAopStagingBufferFences{};
-  std::unordered_map<GITSKey, std::vector<GITSKey>>
+  std::unordered_map<ObjectKey, std::vector<unsigned>>
       m_CurrentInstancesAopStagingBuffersByCommandList;
 
   bool m_Initialized{};
@@ -209,13 +210,13 @@ private:
   GpuPatchDumpService m_DumpService;
   ResourceStateTracker m_ResourceStateTracker;
 
-  std::unordered_map<GITSKey, std::unique_ptr<PointerArgument<D3D12_COMMAND_SIGNATURE_DESC>>>
+  std::unordered_map<ObjectKey, std::unique_ptr<PointerArgument<D3D12_COMMAND_SIGNATURE_DESC>>>
       m_CommandSignatures;
   std::unordered_map<CommandKey, D3D12_DISPATCH_RAYS_DESC> m_ExecuteIndirectDispatchRays;
   std::unordered_map<CommandKey, std::vector<D3D12_GPU_VIRTUAL_ADDRESS>>
       m_InstancesArraysOfPointers;
 
-  std::unordered_map<GITSKey, ID3D12Resource*> m_ResourceByKey;
+  std::unordered_map<ObjectKey, ID3D12Resource*> m_ResourceByKey;
 
   UINT64 m_ExecuteIndirectLastArgumentBufferOffset{};
 };

@@ -36,59 +36,59 @@ public:
 
 public:
   ResourceStateTrackingService(StateTrackingService& stateService) : m_StateService(stateService) {}
-  void AddResource(GITSKey deviceKey,
+  void AddResource(ObjectKey deviceKey,
                    ID3D12Resource* resource,
-                   GITSKey resourceKey,
+                   ObjectKey resourceKey,
                    D3D12_RESOURCE_STATES initialState,
                    bool recreateState);
-  void AddResource(GITSKey deviceKey,
+  void AddResource(ObjectKey deviceKey,
                    ID3D12Resource* resource,
-                   GITSKey resourceKey,
+                   ObjectKey resourceKey,
                    D3D12_BARRIER_LAYOUT initialState,
                    bool recreateState);
-  void ResourceBarrier(GITSKey commandListKey,
+  void ResourceBarrier(ObjectKey commandListKey,
                        D3D12_RESOURCE_BARRIER* barriers,
-                       std::vector<GITSKey>& resourceKeys,
-                       std::vector<GITSKey>& resourceAfterKeys);
-  void ResourceBarrier(GITSKey commandListKey,
+                       std::vector<ObjectKey>& resourceKeys,
+                       std::vector<ObjectKey>& resourceAfterKeys);
+  void ResourceBarrier(ObjectKey commandListKey,
                        D3D12_BARRIER_GROUP* barriers,
                        unsigned barriersNum,
-                       std::vector<GITSKey>& resourceKeys);
-  void ExecuteCommandLists(std::vector<GITSKey>& commandListKeys);
-  void DestroyResource(GITSKey resourceKey);
-  ResourceStates& GetResourceStates(GITSKey resourceKey);
-  D3D12_RESOURCE_STATES GetResourceState(GITSKey resourceKey);
-  D3D12_BARRIER_LAYOUT GetResourceLayout(GITSKey resourceKey);
-  void RestoreResourceStates(const std::vector<GITSKey>& orderedResources);
-  void RestoreBackBufferState(GITSKey commandQueueKey,
-                              GITSKey resourceKey,
+                       std::vector<ObjectKey>& resourceKeys);
+  void ExecuteCommandLists(std::vector<ObjectKey>& commandListKeys);
+  void DestroyResource(ObjectKey resourceKey);
+  ResourceStates& GetResourceStates(ObjectKey resourceKey);
+  D3D12_RESOURCE_STATES GetResourceState(ObjectKey resourceKey);
+  D3D12_BARRIER_LAYOUT GetResourceLayout(ObjectKey resourceKey);
+  void RestoreResourceStates(const std::vector<ObjectKey>& orderedResources);
+  void RestoreBackBufferState(ObjectKey commandQueueKey,
+                              ObjectKey resourceKey,
                               D3D12_RESOURCE_STATES beforeState);
 
 private:
   void ResourceBarrier(std::vector<D3D12_RESOURCE_BARRIER>& barriers,
-                       std::vector<GITSKey>& resourceKeys,
-                       std::vector<GITSKey>& resourceAfterKeys);
+                       std::vector<ObjectKey>& resourceKeys,
+                       std::vector<ObjectKey>& resourceAfterKeys);
   void ResourceBarrier(std::vector<D3D12_TEXTURE_BARRIER>& barriers,
-                       std::vector<GITSKey>& resourceKeys);
+                       std::vector<ObjectKey>& resourceKeys);
   D3D12_RESOURCE_STATES GetResourceState(D3D12_BARRIER_LAYOUT layout);
   D3D12_BARRIER_LAYOUT GetResourceLayout(D3D12_RESOURCE_STATES layout);
-  GITSKey GetDeviceKeyForRestore() const;
+  ObjectKey GetDeviceKeyForRestore() const;
 
 private:
   struct ResourceBarriers {
     std::vector<D3D12_RESOURCE_BARRIER> Barriers;
     std::vector<D3D12_TEXTURE_BARRIER> Layouts;
-    std::vector<GITSKey> ResourceKeys;
-    std::vector<GITSKey> ResourceAfterKeys;
+    std::vector<ObjectKey> ResourceKeys;
+    std::vector<ObjectKey> ResourceAfterKeys;
   };
-  std::unordered_map<GITSKey, std::vector<ResourceBarriers>> m_BarriersByCommandList;
+  std::unordered_map<ObjectKey, std::vector<ResourceBarriers>> m_BarriersByCommandList;
 
   StateTrackingService& m_StateService;
-  std::unordered_map<GITSKey, ResourceStates> m_ResourceStates;
-  std::unordered_set<GITSKey> m_RecreateStateResources;
-  GITSKey m_DeviceKey{};
+  std::unordered_map<ObjectKey, ResourceStates> m_ResourceStates;
+  std::unordered_set<ObjectKey> m_RecreateStateResources;
+  ObjectKey m_DeviceKey{};
 
-  using AliasingBarrierKeys = std::pair<GITSKey, GITSKey>;
+  using AliasingBarrierKeys = std::pair<ObjectKey, ObjectKey>;
   std::map<AliasingBarrierKeys, unsigned> m_AliasingBarriersCounted;
   std::vector<std::pair<AliasingBarrierKeys, unsigned>> m_AliasingBarriersOrdered;
 };

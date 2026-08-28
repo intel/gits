@@ -65,7 +65,7 @@ StateTrackingLayer::StateTrackingLayer(SubcaptureRecorder& recorder,
       m_ResidencyService(m_StateService),
       m_MetaCommandsService(m_StateService) {}
 
-void StateTrackingLayer::SetAsChildInParent(GITSKey parentKey, GITSKey childKey) {
+void StateTrackingLayer::SetAsChildInParent(ObjectKey parentKey, ObjectKey childKey) {
   ObjectState* parentState = m_StateService.GetState(parentKey);
   if (!parentState) {
     return;
@@ -73,7 +73,7 @@ void StateTrackingLayer::SetAsChildInParent(GITSKey parentKey, GITSKey childKey)
   parentState->ChildrenKeys.insert(childKey);
 }
 
-bool StateTrackingLayer::IsResourceHeapMappable(GITSKey heapKey,
+bool StateTrackingLayer::IsResourceHeapMappable(ObjectKey heapKey,
                                                 const D3D12_TEXTURE_LAYOUT& textureLayout) {
   ObjectState* state = m_StateService.GetState(heapKey);
   if (state->CreationCommand->GetId() == CommandId::ID_ID3D12DEVICE_CREATEHEAP) {
@@ -157,7 +157,7 @@ void StateTrackingLayer::Pre(IUnknownReleaseCommand& c) {
 
     auto it = m_ResourceHeaps.find(c.m_Object.Key);
     if (it != m_ResourceHeaps.end()) {
-      for (GITSKey resourceKey : it->second) {
+      for (ObjectKey resourceKey : it->second) {
         m_StateService.ReleaseObject(resourceKey, 0);
         m_MapStateService.DestroyResource(resourceKey);
         m_ResourceStateTrackingService.DestroyResource(resourceKey);
@@ -171,7 +171,7 @@ void StateTrackingLayer::Pre(IUnknownReleaseCommand& c) {
 
     m_GpuExecutionFlusher.DestroyCommandQueue(c.m_Object.Key);
 
-    GITSKey commandQueueKey =
+    ObjectKey commandQueueKey =
         m_CommandQueueSwapChainRefCountTracker.DestroySwapChain(c.m_Object.Key);
     if (commandQueueKey) {
       m_StateService.ReleaseObject(commandQueueKey, 0);
@@ -180,7 +180,7 @@ void StateTrackingLayer::Pre(IUnknownReleaseCommand& c) {
   }
 }
 
-void StateTrackingLayer::ReleaseSwapChainBuffers(GITSKey key, unsigned referenceCount) {
+void StateTrackingLayer::ReleaseSwapChainBuffers(ObjectKey key, unsigned referenceCount) {
   if (referenceCount > 0) {
     return;
   }
@@ -194,8 +194,8 @@ void StateTrackingLayer::ReleaseSwapChainBuffers(GITSKey key, unsigned reference
   // Remove all buffers from the same SwapChain if one of them has 0 references
   IDXGISwapChainGetBufferCommand* command =
       static_cast<IDXGISwapChainGetBufferCommand*>(state->CreationCommand.get());
-  GITSKey swapChainKey = command->m_Object.Key;
-  for (GITSKey bufferKey : m_SwapchainBuffers[swapChainKey]) {
+  ObjectKey swapChainKey = command->m_Object.Key;
+  for (ObjectKey bufferKey : m_SwapchainBuffers[swapChainKey]) {
     if (bufferKey == key) {
       continue;
     }
@@ -625,8 +625,8 @@ void StateTrackingLayer::Post(IDXGISwapChainResizeBuffersCommand& c) {
     }
   }
 
-  GITSKey swapChainKey = c.m_Object.Key;
-  for (GITSKey bufferKey : m_SwapchainBuffers[swapChainKey]) {
+  ObjectKey swapChainKey = c.m_Object.Key;
+  for (ObjectKey bufferKey : m_SwapchainBuffers[swapChainKey]) {
     m_ResourceStateTrackingService.DestroyResource(bufferKey);
     m_DescriptorService.RemoveState(bufferKey);
     m_StateService.RemoveState(bufferKey);
@@ -688,8 +688,8 @@ void StateTrackingLayer::Post(IDXGISwapChain3ResizeBuffers1Command& c) {
     }
   }
 
-  GITSKey swapChainKey = c.m_Object.Key;
-  for (GITSKey bufferKey : m_SwapchainBuffers[swapChainKey]) {
+  ObjectKey swapChainKey = c.m_Object.Key;
+  for (ObjectKey bufferKey : m_SwapchainBuffers[swapChainKey]) {
     m_ResourceStateTrackingService.DestroyResource(bufferKey);
     m_DescriptorService.RemoveState(bufferKey);
     m_StateService.RemoveState(bufferKey);
@@ -816,7 +816,8 @@ void StateTrackingLayer::Post(IDXGISwapChainGetBufferCommand& c) {
   state->CreationCommand.reset(new IDXGISwapChainGetBufferCommand(c));
   m_StateService.StoreState(state);
 
-  m_ResourceStateTrackingService.AddResource(0, static_cast<ID3D12Resource*>(*c.m_ppSurface.Value),
+  m_ResourceStateTrackingService.AddResource(ObjectKey{},
+                                             static_cast<ID3D12Resource*>(*c.m_ppSurface.Value),
                                              state->Key, D3D12_RESOURCE_STATE_COMMON, false);
   m_StateService.AddBackBuffer(c.m_Buffer.Value, state->Key,
                                static_cast<ID3D12Resource*>(*c.m_ppSurface.Value));
@@ -2591,7 +2592,7 @@ void StateTrackingLayer::Post(ID3D12GraphicsCommandListOMSetRenderTargetsCommand
   CommandListOMSetRenderTargets* command = new CommandListOMSetRenderTargets(c.Key, c.m_Object.Key);
   command->RenderTargetViews.resize(c.m_NumRenderTargetDescriptors.Value);
   {
-    GITSKey heapKey{};
+    ObjectKey heapKey{};
     unsigned heapIndex{};
     for (unsigned i = 0; i < c.m_NumRenderTargetDescriptors.Value; ++i) {
       if (i == 0 || !c.m_RTsSingleHandleToDescriptorRange.Value) {
@@ -3361,7 +3362,7 @@ void StateTrackingLayer::Post(DllContainerMetaCommand& c) {
 }
 
 void StateTrackingLayer::CommandQueueSwapChainRefCountTracker::PreCreateSwapChain(
-    GITSKey commandQueueKey, ID3D12CommandQueue* commandQueue, GITSKey swapChainKey) {
+    ObjectKey commandQueueKey, ID3D12CommandQueue* commandQueue, ObjectKey swapChainKey) {
   if (!commandQueue) {
     return;
   }
@@ -3373,7 +3374,7 @@ void StateTrackingLayer::CommandQueueSwapChainRefCountTracker::PreCreateSwapChai
 }
 
 void StateTrackingLayer::CommandQueueSwapChainRefCountTracker::PostCreateSwapChain(
-    GITSKey commandQueueKey, ID3D12CommandQueue* commandQueue, GITSKey swapChainKey) {
+    ObjectKey commandQueueKey, ID3D12CommandQueue* commandQueue, ObjectKey swapChainKey) {
   if (!commandQueue) {
     return;
   }
@@ -3383,14 +3384,14 @@ void StateTrackingLayer::CommandQueueSwapChainRefCountTracker::PostCreateSwapCha
   m_RefCountIncrements[commandQueueKey][swapChainKey] = refCountPost - m_RefCountPre;
 }
 
-unsigned StateTrackingLayer::CommandQueueSwapChainRefCountTracker::DestroySwapChain(
-    GITSKey swapChainKey) {
+ObjectKey StateTrackingLayer::CommandQueueSwapChainRefCountTracker::DestroySwapChain(
+    ObjectKey swapChainKey) {
   const auto it = m_CommandQueueBySwapChain.find(swapChainKey);
   if (it == m_CommandQueueBySwapChain.end()) {
-    return 0;
+    return ObjectKey{};
   }
 
-  GITSKey commandQueueKey = it->second;
+  ObjectKey commandQueueKey = it->second;
   unsigned refCountIncrement = m_RefCountIncrements[commandQueueKey][swapChainKey];
   ID3D12CommandQueue* commandQueue = m_CommandQueues[commandQueueKey];
   GITS_ASSERT(commandQueue);
@@ -3399,7 +3400,7 @@ unsigned StateTrackingLayer::CommandQueueSwapChainRefCountTracker::DestroySwapCh
   if (refCount == refCountIncrement) {
     return commandQueueKey;
   }
-  return 0;
+  return ObjectKey{};
 }
 
 void StateTrackingLayer::Post(xellD3D12CreateContextCommand& c) {

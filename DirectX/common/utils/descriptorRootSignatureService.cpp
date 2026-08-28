@@ -67,8 +67,8 @@ void DescriptorRootSignatureService::CreateRootSignature(
 }
 
 std::vector<unsigned> DescriptorRootSignatureService::GetDescriptorTableIndexes(
-    GITSKey rootSignatureKey,
-    GITSKey descriptorHeapKey,
+    ObjectKey rootSignatureKey,
+    ObjectKey descriptorHeapKey,
     unsigned parameterIndex,
     unsigned baseIndex,
     unsigned heapNumDescriptors,
@@ -118,8 +118,8 @@ std::vector<unsigned> DescriptorRootSignatureService::GetDescriptorTableIndexes(
 }
 
 std::vector<unsigned> DescriptorRootSignatureService::GetBindlessDescriptorIndexes(
-    GITSKey rootSignatureKey,
-    GITSKey descriptorHeapKey,
+    ObjectKey rootSignatureKey,
+    ObjectKey descriptorHeapKey,
     D3D12_DESCRIPTOR_HEAP_TYPE heapType,
     unsigned heapNumDescriptors,
     bool checkRetrieved) {
@@ -146,12 +146,13 @@ std::vector<unsigned> DescriptorRootSignatureService::GetBindlessDescriptorIndex
 }
 
 D3D12_ROOT_SIGNATURE_DESC* DescriptorRootSignatureService::GetRootSignatureDesc(
-    GITSKey rootSignatureKey) {
+    ObjectKey rootSignatureKey) {
   std::lock_guard<std::mutex> lock(m_Mutex);
   return m_RootSignatureDescs[rootSignatureKey];
 }
 
-bool DescriptorRootSignatureService::UnboundedRetrieved(GITSKey descriptorHeapKey, unsigned index) {
+bool DescriptorRootSignatureService::UnboundedRetrieved(ObjectKey descriptorHeapKey,
+                                                        unsigned index) {
   auto it = m_UnboundedRetrieved.find(descriptorHeapKey);
   if (it != m_UnboundedRetrieved.end() && it->second <= index) {
     return true;
@@ -160,7 +161,7 @@ bool DescriptorRootSignatureService::UnboundedRetrieved(GITSKey descriptorHeapKe
   return false;
 }
 
-bool DescriptorRootSignatureService::BoundedRetrieved(GITSKey descriptorHeapKey,
+bool DescriptorRootSignatureService::BoundedRetrieved(ObjectKey descriptorHeapKey,
                                                       unsigned index,
                                                       unsigned numDescriptors) {
   auto itHeap = m_BoundedRetrieved.find(descriptorHeapKey);

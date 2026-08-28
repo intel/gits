@@ -30,11 +30,11 @@ class CommandListSplitService {
 public:
   explicit CommandListSplitService(CommandListSplitRecorder& recorder);
 
-  void CreateCommandList(GITSKey commandListKey, GITSKey allocatorKey, GITSKey initialState);
-  void CommandListCommand(GITSKey commandListKey, const Command& command);
-  void CommandListReset(GITSKey commandListKey, GITSKey allocatorKey, GITSKey initialState);
-  void ExecuteCommandLists(GITSKey commandQueueKey, std::vector<GITSKey>& commandListKeys);
-  void CommandQueueSignal(GITSKey commandQueueKey, GITSKey fenceKey, uint64_t fenceValue);
+  void CreateCommandList(ObjectKey commandListKey, ObjectKey allocatorKey, ObjectKey initialState);
+  void CommandListCommand(ObjectKey commandListKey, const Command& command);
+  void CommandListReset(ObjectKey commandListKey, ObjectKey allocatorKey, ObjectKey initialState);
+  void ExecuteCommandLists(ObjectKey commandQueueKey, std::vector<ObjectKey>& commandListKeys);
+  void CommandQueueSignal(ObjectKey commandQueueKey, ObjectKey fenceKey, uint64_t fenceValue);
 
   ExecutionSerializationKeyAllocator& GetKeyAllocator() {
     return m_KeyAllocator;
@@ -45,8 +45,8 @@ public:
 
 private:
   struct CommandList {
-    GITSKey CommandListKey{};
-    GITSKey InitialState{};
+    ObjectKey CommandListKey{};
+    ObjectKey InitialState{};
     bool Split{};
     std::vector<std::unique_ptr<Command>> Commands;
   };
@@ -58,18 +58,18 @@ private:
 
   CommandListSplitRecorder& m_Recorder;
   ExecutionSerializationKeyAllocator m_KeyAllocator;
-  std::unordered_map<GITSKey, CommandList> m_CommandListsByKey;
-  std::unordered_map<GITSKey, GITSKey> m_AllocatorByCommandList;
+  std::unordered_map<ObjectKey, CommandList> m_CommandListsByKey;
+  std::unordered_map<ObjectKey, ObjectKey> m_AllocatorByCommandList;
   std::string m_Split;
   std::map<CommandKey, CommandKey> m_SplitIntervals;
   std::unordered_set<CommandKey> m_ExecutedIntervalStarts;
 
   struct ExecuteInfo {
-    GITSKey commandQueueKey{};
-    GITSKey commandListKey{};
+    ObjectKey commandQueueKey{};
+    ObjectKey commandListKey{};
   } m_LastExecuteInfo;
 
-  std::unordered_map<GITSKey, uint64_t> m_FenceValueByFenceKey;
+  std::unordered_map<ObjectKey, uint64_t> m_FenceValueByFenceKey;
 };
 
 } // namespace DirectX

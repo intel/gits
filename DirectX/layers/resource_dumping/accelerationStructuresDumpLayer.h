@@ -44,11 +44,11 @@ private:
   class CommandListModuloStep {
   public:
     void Parse(const std::string& range);
-    bool CheckNextCommandListCall(GITSKey commandListKey);
-    void ResetCommandList(GITSKey commandListKey);
+    bool CheckNextCommandListCall(ObjectKey commandListKey);
+    void ResetCommandList(ObjectKey commandListKey);
 
   private:
-    std::unordered_map<GITSKey, unsigned> m_CommandListCalls;
+    std::unordered_map<ObjectKey, unsigned> m_CommandListCalls;
     unsigned m_Start{};
     unsigned m_Step{};
   };

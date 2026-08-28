@@ -16,7 +16,7 @@
 namespace gits {
 namespace DirectX {
 
-FastOStream& PrintObjectKey(FastOStream& stream, GITSKey key) {
+FastOStream& PrintObjectKey(FastOStream& stream, ObjectKey key) {
   if (!key) {
     stream << "nullptr";
   } else {

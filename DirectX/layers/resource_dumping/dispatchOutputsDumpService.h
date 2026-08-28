@@ -23,12 +23,12 @@ class DispatchOutputsDumpService {
 public:
   DispatchOutputsDumpService(DispatchOutputsAnalyzer& dispatchOutputsAnalyzer);
   void CreateResource(ID3D12Resource* resource,
-                      GITSKey resourceKey,
+                      ObjectKey resourceKey,
                       D3D12_RESOURCE_STATES initialState);
   void CreateResource(ID3D12Resource* resource,
-                      GITSKey resourceKey,
+                      ObjectKey resourceKey,
                       D3D12_BARRIER_LAYOUT initialLayout);
-  void DestroyInterface(GITSKey interfaceKey);
+  void DestroyInterface(ObjectKey interfaceKey);
   void ExecuteCommandLists(ID3D12CommandQueueExecuteCommandListsCommand& c,
                            unsigned frame,
                            unsigned execution);
@@ -48,7 +48,7 @@ public:
 
 private:
   bool DumpComputeOutput(ID3D12GraphicsCommandList* commandList,
-                         GITSKey resourceKey,
+                         ObjectKey resourceKey,
                          ID3D12Resource* resource,
                          unsigned slot,
                          unsigned frame,
@@ -58,7 +58,7 @@ private:
 
 private:
   ResourceStateTracker m_ResourceStateTracker;
-  std::unordered_map<GITSKey, ID3D12Resource*> m_ResourceByKey;
+  std::unordered_map<ObjectKey, ID3D12Resource*> m_ResourceByKey;
   DispatchOutputsDump m_ResourceDump;
   DispatchOutputsAnalyzer& m_DispatchOutputsAnalyzer;
   bool m_SkipUnboundedHeaps{};
@@ -75,7 +75,7 @@ private:
     }
 
   private:
-    std::map<GITSKey, std::set<GITSKey>> m_DispatchesWithTextureByFrame;
+    std::map<unsigned, std::set<unsigned>> m_DispatchesWithTextureByFrame;
   };
   DispatchOutputsDryRun m_DispatchOutputsDryRun;
 };

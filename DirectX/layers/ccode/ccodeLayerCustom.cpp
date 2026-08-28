@@ -17,7 +17,7 @@
 namespace gits {
 namespace DirectX {
 
-static void createResource(ccode::CommandPrinter& p, GITSKey resourceKey) {
+static void createResource(ccode::CommandPrinter& p, ObjectKey resourceKey) {
   std::ostringstream ss;
   ss << "directx::GpuAddressService::Get().CreateResource(" << resourceKey << ", "
      << ccode::objKeyToPtrStr(resourceKey) << ");" << std::endl;
@@ -25,8 +25,8 @@ static void createResource(ccode::CommandPrinter& p, GITSKey resourceKey) {
 }
 
 static void createPlacedResource(ccode::CommandPrinter& p,
-                                 GITSKey resourceKey,
-                                 GITSKey heapKey,
+                                 ObjectKey resourceKey,
+                                 ObjectKey heapKey,
                                  uint64_t heapOffset,
                                  const char* flagsExpr = "pDesc.Flags") {
   std::ostringstream ss;
@@ -38,14 +38,16 @@ static void createPlacedResource(ccode::CommandPrinter& p,
   p.setPostCommand(ss.str());
 }
 
-static void createHeap(ccode::CommandPrinter& p, GITSKey heapKey) {
+static void createHeap(ccode::CommandPrinter& p, ObjectKey heapKey) {
   std::ostringstream ss;
   ss << "directx::GpuAddressService::Get().CreateHeap(" << heapKey << ", "
      << ccode::objKeyToPtrStr(heapKey) << ");" << std::endl;
   p.setPostCommand(ss.str());
 }
 
-static void createSwapChain(ccode::CommandPrinter& p, GITSKey swapChainKey, GITSKey cmdQueueKey) {
+static void createSwapChain(ccode::CommandPrinter& p,
+                            ObjectKey swapChainKey,
+                            ObjectKey cmdQueueKey) {
   using namespace ccode;
   std::ostringstream ss;
   ss << "directx::ScreenshotService::Get().RegisterSwapChain(" << swapChainKey << ", "
@@ -53,7 +55,7 @@ static void createSwapChain(ccode::CommandPrinter& p, GITSKey swapChainKey, GITS
   p.setPostCommand(ss.str());
 }
 
-static void present(ccode::CommandPrinter& p, GITSKey swapChainKey) {
+static void present(ccode::CommandPrinter& p, ObjectKey swapChainKey) {
   std::ostringstream ss;
   ss << "directx::ScreenshotService::Get().CaptureFrame(" << swapChainKey << ");" << std::endl;
   p.setPreCommand(ss.str());

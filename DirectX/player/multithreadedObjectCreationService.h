@@ -35,18 +35,18 @@ public:
   using CreationFunction = std::function<ObjectCreationOutput()>;
 
   void Shutdown();
-  void Schedule(CreationFunction creationFunction, GITSKey objectKey);
-  void AddDependency(GITSKey providerKey, GITSKey consumerKey);
-  std::vector<GITSKey> CollectConsumers(GITSKey providerKey);
-  std::optional<ObjectCreationOutput> Complete(GITSKey objectKey);
-  std::vector<std::pair<GITSKey, ObjectCreationOutput>> CompleteAll();
-  bool ScheduleUpdateRefCount(GITSKey objectKey, int count);
+  void Schedule(CreationFunction creationFunction, ObjectKey objectKey);
+  void AddDependency(ObjectKey providerKey, ObjectKey consumerKey);
+  std::vector<ObjectKey> CollectConsumers(ObjectKey providerKey);
+  std::optional<ObjectCreationOutput> Complete(ObjectKey objectKey);
+  std::vector<std::pair<ObjectKey, ObjectCreationOutput>> CompleteAll();
+  bool ScheduleUpdateRefCount(ObjectKey objectKey, int count);
 
 private:
   struct ObjectCreationTask {
-    ObjectCreationTask(CreationFunction creationFunction, GITSKey objectKey);
+    ObjectCreationTask(CreationFunction creationFunction, ObjectKey objectKey);
     CreationFunction CreationFunctor;
-    GITSKey Key{};
+    ObjectKey Key{};
     std::future<CreationFunction::result_type> StartedTask;
   };
 
@@ -55,10 +55,10 @@ private:
   void WorkerThread();
 
   bool m_Initialized = false;
-  std::unordered_map<GITSKey, std::vector<GITSKey>> m_Dependencies;
+  std::unordered_map<ObjectKey, std::vector<ObjectKey>> m_Dependencies;
   std::vector<std::thread> m_Workers;
-  std::unordered_map<GITSKey, std::unique_ptr<ObjectCreationTask>> m_Tasks;
-  std::unordered_map<GITSKey, int> m_RefCounts;
+  std::unordered_map<ObjectKey, std::unique_ptr<ObjectCreationTask>> m_Tasks;
+  std::unordered_map<ObjectKey, int> m_RefCounts;
   std::deque<ObjectCreationTask*> m_TasksQueue;
   std::mutex m_Mutex;
   std::condition_variable m_Cv;

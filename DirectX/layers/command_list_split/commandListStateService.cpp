@@ -20,7 +20,7 @@
 namespace gits {
 namespace DirectX {
 
-CommandListStateService::CommandListStateService(GITSKey commandListKey)
+CommandListStateService::CommandListStateService(ObjectKey commandListKey)
     : m_CommandListKey(commandListKey) {}
 
 bool CommandListStateService::IsStateCommand(CommandId id) {
@@ -326,13 +326,13 @@ void CommandListStateService::StoreCommand(
 void CommandListStateService::StoreCommand(
     const ID3D12GraphicsCommandListSetDescriptorHeapsCommand& c) {
   GITS_ASSERT(c.m_Object.Key == m_CommandListKey);
-  const auto sameDescriptorHeapSet = [](const std::vector<GITSKey>& a,
-                                        const std::vector<GITSKey>& b) {
+  const auto sameDescriptorHeapSet = [](const std::vector<ObjectKey>& a,
+                                        const std::vector<ObjectKey>& b) {
     if (a.size() != b.size()) {
       return false;
     }
-    std::vector<GITSKey> sortedA = a;
-    std::vector<GITSKey> sortedB = b;
+    std::vector<ObjectKey> sortedA = a;
+    std::vector<ObjectKey> sortedB = b;
     std::sort(sortedA.begin(), sortedA.end());
     std::sort(sortedB.begin(), sortedB.end());
     return sortedA == sortedB;
@@ -526,7 +526,7 @@ void CommandListStateService::StoreCommand(const ID3D12GraphicsCommandListResetC
   SetPipelineState(c.m_pInitialState.Key);
 }
 
-void CommandListStateService::SetPipelineState(GITSKey pipelineStateKey) {
+void CommandListStateService::SetPipelineState(ObjectKey pipelineStateKey) {
   if (!pipelineStateKey) {
     return;
   }

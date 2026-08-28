@@ -100,8 +100,8 @@ public:
     return --m_LocalStackDepth;
   }
 
-  GITSKey CreateWrapperKey() {
-    return m_WrapperUniqueKey.fetch_add(GITSKey{1}, std::memory_order_relaxed) + GITSKey{1};
+  ObjectKey CreateWrapperKey() {
+    return m_WrapperUniqueKey.fetch_add(ObjectKey{1}, std::memory_order_relaxed) + ObjectKey{1};
   }
   CommandKey CreateCommandKey() {
     return m_CommandUniqueKey.fetch_add(CommandKey{1}, std::memory_order_relaxed) + CommandKey{1};
@@ -186,7 +186,7 @@ private:
   std::atomic<unsigned> m_GlobalStackDepth{0};
   static thread_local unsigned m_LocalStackDepth;
 
-  std::atomic<GITSKey> m_WrapperUniqueKey{0};
+  std::atomic<ObjectKey> m_WrapperUniqueKey{};
   std::atomic<CommandKey> m_CommandUniqueKey{};
 
   std::unordered_map<IUnknown*, IUnknownWrapper*> m_Wrappers;

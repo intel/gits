@@ -33,10 +33,10 @@ public:
   void Post(D3D12CreateDeviceCommand& command) override;
 
 private:
-  void RemoveSwapChainBufferWrappersOnResize(GITSKey swapChainKey);
+  void RemoveSwapChainBufferWrappersOnResize(ObjectKey swapChainKey);
 
-  std::unordered_map<GITSKey, GITSKey> m_SwapChainByBufferKey;
-  std::unordered_map<GITSKey, std::unordered_set<IUnknown*>> m_BuffersBySwapChainKey;
+  std::unordered_map<ObjectKey, ObjectKey> m_SwapChainByBufferKey;
+  std::unordered_map<ObjectKey, std::unordered_set<IUnknown*>> m_BuffersBySwapChainKey;
   std::mutex m_Mutex;
 };
 

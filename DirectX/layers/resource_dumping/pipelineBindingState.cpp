@@ -23,7 +23,7 @@ void PipelineBindingState::SetRootSignature(D3D12_ROOT_SIGNATURE_DESC2* desc) {
 }
 
 void PipelineBindingState::SetDescriptorTable(unsigned parameterIndex,
-                                              GITSKey descriptorHeapKey,
+                                              ObjectKey descriptorHeapKey,
                                               unsigned descriptorHeapIndex) {
   Binding& binding = m_Bindings[parameterIndex];
   binding.Type = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
@@ -45,7 +45,7 @@ void PipelineBindingState::SetConstants(unsigned parameterIndex,
 }
 
 void PipelineBindingState::SetConstantBufferView(unsigned parameterIndex,
-                                                 GITSKey resourceKey,
+                                                 ObjectKey resourceKey,
                                                  unsigned resourceOffset) {
   Binding& binding = m_Bindings[parameterIndex];
   binding.Type = D3D12_ROOT_PARAMETER_TYPE_CBV;
@@ -54,7 +54,7 @@ void PipelineBindingState::SetConstantBufferView(unsigned parameterIndex,
 }
 
 void PipelineBindingState::SetUnorderedAccessView(unsigned parameterIndex,
-                                                  GITSKey resourceKey,
+                                                  ObjectKey resourceKey,
                                                   unsigned resourceOffset) {
   Binding& binding = m_Bindings[parameterIndex];
   binding.Type = D3D12_ROOT_PARAMETER_TYPE_UAV;
@@ -63,7 +63,7 @@ void PipelineBindingState::SetUnorderedAccessView(unsigned parameterIndex,
 }
 
 void PipelineBindingState::SetShaderResourceView(unsigned parameterIndex,
-                                                 GITSKey resourceKey,
+                                                 ObjectKey resourceKey,
                                                  unsigned resourceOffset) {
   Binding& binding = m_Bindings[parameterIndex];
   binding.Type = D3D12_ROOT_PARAMETER_TYPE_SRV;

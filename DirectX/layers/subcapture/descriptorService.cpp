@@ -27,7 +27,7 @@ void DescriptorService::StoreState(DescriptorState* state) {
   m_Resources.insert(state->ResourceKey);
 }
 
-void DescriptorService::RemoveState(GITSKey key) {
+void DescriptorService::RemoveState(ObjectKey key) {
   std::lock_guard<std::mutex> lock(m_Mutex);
 
   auto itHeap = m_StatesByHeapIndex.find(key);
@@ -79,7 +79,7 @@ void DescriptorService::RestoreState(DescriptorState* state) {
 }
 
 DescriptorState* DescriptorService::CopyDescriptor(DescriptorState* state,
-                                                   GITSKey destHeapKey,
+                                                   ObjectKey destHeapKey,
                                                    unsigned destHeapIndex) {
   DescriptorState* destState = nullptr;
   switch (state->Id) {
@@ -148,7 +148,7 @@ void DescriptorService::CopyDescriptors(ID3D12DeviceCopyDescriptorsCommand& c) {
   unsigned destRangeSize =
       c.m_pDestDescriptorRangeSizes.Value ? c.m_pDestDescriptorRangeSizes.Value[destRangeIndex] : 1;
 
-  GITSKey destHeapKey = c.m_pDestDescriptorRangeStarts.InterfaceKeys[destRangeIndex];
+  ObjectKey destHeapKey = c.m_pDestDescriptorRangeStarts.InterfaceKeys[destRangeIndex];
 
   for (unsigned srcRangeIndex = 0; srcRangeIndex < c.m_NumSrcDescriptorRanges.Value;
        ++srcRangeIndex) {
@@ -182,7 +182,8 @@ void DescriptorService::CopyDescriptors(ID3D12DeviceCopyDescriptorsCommand& c) {
   }
 }
 
-DescriptorState* DescriptorService::GetDescriptorState(GITSKey heapKey, unsigned DescriptorIndex) {
+DescriptorState* DescriptorService::GetDescriptorState(ObjectKey heapKey,
+                                                       unsigned DescriptorIndex) {
   std::lock_guard<std::mutex> lock(m_Mutex);
 
   auto heapIt = m_StatesByHeapIndex.find(heapKey);
@@ -248,7 +249,7 @@ void DescriptorService::RestoreD3D12ShaderResourceView(D3D12ShaderResourceViewSt
     if (c.m_pDesc.Value->ViewDimension == D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE) {
       c.m_pDesc.RaytracingLocationKey = state->ResourceKey;
       c.m_pDesc.RaytracingLocationOffset = state->RaytracingLocationOffset;
-      c.m_pResource.Key = 0;
+      c.m_pResource.Key = ObjectKey{};
     }
   }
   c.m_DestDescriptor.Value = state->DestDescriptor;

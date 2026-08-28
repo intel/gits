@@ -21,10 +21,10 @@
 namespace gits {
 namespace DirectX {
 
-void ResourceStateTrackingService::ResourceBarrier(GITSKey commandListKey,
+void ResourceStateTrackingService::ResourceBarrier(ObjectKey commandListKey,
                                                    D3D12_RESOURCE_BARRIER* barriers,
-                                                   std::vector<GITSKey>& resourceKeys,
-                                                   std::vector<GITSKey>& resourceAfterKeys) {
+                                                   std::vector<ObjectKey>& resourceKeys,
+                                                   std::vector<ObjectKey>& resourceAfterKeys) {
   ResourceBarriers resourceBarriers;
   resourceBarriers.Barriers.resize(resourceKeys.size());
   for (unsigned i = 0; i < resourceKeys.size(); ++i) {
@@ -35,10 +35,10 @@ void ResourceStateTrackingService::ResourceBarrier(GITSKey commandListKey,
   m_BarriersByCommandList[commandListKey].push_back(std::move(resourceBarriers));
 }
 
-void ResourceStateTrackingService::ResourceBarrier(GITSKey commandListKey,
+void ResourceStateTrackingService::ResourceBarrier(ObjectKey commandListKey,
                                                    D3D12_BARRIER_GROUP* barriers,
                                                    unsigned barriersNum,
-                                                   std::vector<GITSKey>& resourceKeys) {
+                                                   std::vector<ObjectKey>& resourceKeys) {
   ResourceBarriers resourceBarriers;
   unsigned resourceKeyIndex = 0;
   for (unsigned i = 0; i < barriersNum; ++i) {
@@ -58,8 +58,8 @@ void ResourceStateTrackingService::ResourceBarrier(GITSKey commandListKey,
   m_BarriersByCommandList[commandListKey].push_back(std::move(resourceBarriers));
 }
 
-void ResourceStateTrackingService::ExecuteCommandLists(std::vector<GITSKey>& commandListKeys) {
-  for (GITSKey key : commandListKeys) {
+void ResourceStateTrackingService::ExecuteCommandLists(std::vector<ObjectKey>& commandListKeys) {
+  for (ObjectKey key : commandListKeys) {
     auto it = m_BarriersByCommandList.find(key);
     if (it != m_BarriersByCommandList.end()) {
       for (ResourceBarriers& barriers : it->second) {
@@ -75,8 +75,8 @@ void ResourceStateTrackingService::ExecuteCommandLists(std::vector<GITSKey>& com
 }
 
 void ResourceStateTrackingService::ResourceBarrier(std::vector<D3D12_RESOURCE_BARRIER>& barriers,
-                                                   std::vector<GITSKey>& resourceKeys,
-                                                   std::vector<GITSKey>& resourceAfterKeys) {
+                                                   std::vector<ObjectKey>& resourceKeys,
+                                                   std::vector<ObjectKey>& resourceAfterKeys) {
   for (unsigned i = 0; i < barriers.size(); ++i) {
     if (barriers[i].Type == D3D12_RESOURCE_BARRIER_TYPE_TRANSITION) {
       D3D12_RESOURCE_STATES stateAfter = barriers[i].Transition.StateAfter;
@@ -103,7 +103,7 @@ void ResourceStateTrackingService::ResourceBarrier(std::vector<D3D12_RESOURCE_BA
 }
 
 void ResourceStateTrackingService::ResourceBarrier(std::vector<D3D12_TEXTURE_BARRIER>& barriers,
-                                                   std::vector<GITSKey>& resourceKeys) {
+                                                   std::vector<ObjectKey>& resourceKeys) {
   for (unsigned i = 0; i < barriers.size(); ++i) {
     ResourceStates& states = GetResourceStates(resourceKeys[i]);
     D3D12_BARRIER_SUBRESOURCE_RANGE& range = barriers[i].Subresources;
@@ -140,9 +140,9 @@ void ResourceStateTrackingService::ResourceBarrier(std::vector<D3D12_TEXTURE_BAR
   }
 }
 
-void ResourceStateTrackingService::AddResource(GITSKey deviceKey,
+void ResourceStateTrackingService::AddResource(ObjectKey deviceKey,
                                                ID3D12Resource* resource,
-                                               GITSKey resourceKey,
+                                               ObjectKey resourceKey,
                                                D3D12_RESOURCE_STATES initialState,
                                                bool recreateState) {
   if (deviceKey) {
@@ -160,9 +160,9 @@ void ResourceStateTrackingService::AddResource(GITSKey deviceKey,
   }
 }
 
-void ResourceStateTrackingService::AddResource(GITSKey deviceKey,
+void ResourceStateTrackingService::AddResource(ObjectKey deviceKey,
                                                ID3D12Resource* resource,
-                                               GITSKey resourceKey,
+                                               ObjectKey resourceKey,
                                                D3D12_BARRIER_LAYOUT initialState,
                                                bool recreateState) {
   if (deviceKey) {
@@ -272,25 +272,25 @@ D3D12_BARRIER_LAYOUT ResourceStateTrackingService::GetResourceLayout(D3D12_RESOU
   return layout;
 }
 
-void ResourceStateTrackingService::DestroyResource(GITSKey resourceKey) {
+void ResourceStateTrackingService::DestroyResource(ObjectKey resourceKey) {
   m_RecreateStateResources.erase(resourceKey);
 }
 
-GITSKey ResourceStateTrackingService::GetDeviceKeyForRestore() const {
-  if (m_DeviceKey != 0) {
+ObjectKey ResourceStateTrackingService::GetDeviceKeyForRestore() const {
+  if (m_DeviceKey != ObjectKey{}) {
     return m_DeviceKey;
   }
   return m_StateService.GetDeviceKey();
 }
 
 ResourceStateTrackingService::ResourceStates& ResourceStateTrackingService::GetResourceStates(
-    GITSKey resourceKey) {
+    ObjectKey resourceKey) {
   auto it = m_ResourceStates.find(resourceKey);
   GITS_ASSERT(it != m_ResourceStates.end());
   return it->second;
 }
 
-D3D12_RESOURCE_STATES ResourceStateTrackingService::GetResourceState(GITSKey resourceKey) {
+D3D12_RESOURCE_STATES ResourceStateTrackingService::GetResourceState(ObjectKey resourceKey) {
   ResourceStates& states = GetResourceStates(resourceKey);
   if (states.SubresourceStates[0].Enhanced) {
     static bool logged = false;
@@ -303,7 +303,7 @@ D3D12_RESOURCE_STATES ResourceStateTrackingService::GetResourceState(GITSKey res
   return states.SubresourceStates[0].State;
 }
 
-D3D12_BARRIER_LAYOUT ResourceStateTrackingService::GetResourceLayout(GITSKey resourceKey) {
+D3D12_BARRIER_LAYOUT ResourceStateTrackingService::GetResourceLayout(ObjectKey resourceKey) {
   ResourceStates& states = GetResourceStates(resourceKey);
   if (!states.SubresourceStates[0].Enhanced) {
     static bool logged = false;
@@ -317,15 +317,15 @@ D3D12_BARRIER_LAYOUT ResourceStateTrackingService::GetResourceLayout(GITSKey res
 }
 
 void ResourceStateTrackingService::RestoreResourceStates(
-    const std::vector<GITSKey>& orderedResources) {
+    const std::vector<ObjectKey>& orderedResources) {
   if (orderedResources.empty() && m_AliasingBarriersOrdered.empty()) {
     return;
   }
 
-  const GITSKey deviceKey = GetDeviceKeyForRestore();
-  GITS_ASSERT(deviceKey != 0, "Device key must be available for resource state restore");
+  const ObjectKey deviceKey = GetDeviceKeyForRestore();
+  GITS_ASSERT(deviceKey != ObjectKey{}, "Device key must be available for resource state restore");
 
-  GITSKey commandQueueKey = m_StateService.GetUniqueObjectKey();
+  ObjectKey commandQueueKey = m_StateService.GetUniqueObjectKey();
   D3D12_COMMAND_QUEUE_DESC commandQueueDesc{};
   commandQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
   ID3D12DeviceCreateCommandQueueCommand createCommandQueue;
@@ -336,7 +336,7 @@ void ResourceStateTrackingService::RestoreResourceStates(
   createCommandQueue.m_ppCommandQueue.Key = commandQueueKey;
   m_StateService.GetRecorder().Record(ID3D12DeviceCreateCommandQueueSerializer(createCommandQueue));
 
-  GITSKey commandAllocatorKey = m_StateService.GetUniqueObjectKey();
+  ObjectKey commandAllocatorKey = m_StateService.GetUniqueObjectKey();
   ID3D12DeviceCreateCommandAllocatorCommand createCommandAllocator;
   createCommandAllocator.Key = m_StateService.GetUniqueCommandKey();
   createCommandAllocator.m_Object.Key = deviceKey;
@@ -346,7 +346,7 @@ void ResourceStateTrackingService::RestoreResourceStates(
   m_StateService.GetRecorder().Record(
       ID3D12DeviceCreateCommandAllocatorSerializer(createCommandAllocator));
 
-  GITSKey commandListKey = m_StateService.GetUniqueObjectKey();
+  ObjectKey commandListKey = m_StateService.GetUniqueObjectKey();
   ID3D12DeviceCreateCommandListCommand createCommandList;
   createCommandList.Key = m_StateService.GetUniqueCommandKey();
   createCommandList.m_Object.Key = deviceKey;
@@ -358,7 +358,7 @@ void ResourceStateTrackingService::RestoreResourceStates(
   createCommandList.m_ppCommandList.Key = commandListKey;
   m_StateService.GetRecorder().Record(ID3D12DeviceCreateCommandListSerializer(createCommandList));
 
-  GITSKey fenceKey = m_StateService.GetUniqueObjectKey();
+  ObjectKey fenceKey = m_StateService.GetUniqueObjectKey();
   ID3D12DeviceCreateFenceCommand createFence;
   createFence.Key = m_StateService.GetUniqueCommandKey();
   createFence.m_Object.Key = deviceKey;
@@ -370,7 +370,7 @@ void ResourceStateTrackingService::RestoreResourceStates(
 
   ResourceResidencyService residencyService(m_StateService, m_DeviceKey);
 
-  for (GITSKey resourceKey : orderedResources) {
+  for (ObjectKey resourceKey : orderedResources) {
     if (m_RecreateStateResources.find(resourceKey) == m_RecreateStateResources.end()) {
       continue;
     }
@@ -559,11 +559,12 @@ void ResourceStateTrackingService::RestoreResourceStates(
   residencyService.RecordEvict();
 }
 
-void ResourceStateTrackingService::RestoreBackBufferState(GITSKey commandQueueKey,
-                                                          GITSKey resourceKey,
+void ResourceStateTrackingService::RestoreBackBufferState(ObjectKey commandQueueKey,
+                                                          ObjectKey resourceKey,
                                                           D3D12_RESOURCE_STATES beforeState) {
-  const GITSKey deviceKey = GetDeviceKeyForRestore();
-  GITS_ASSERT(deviceKey != 0, "Device key must be available for back buffer state restore");
+  const ObjectKey deviceKey = GetDeviceKeyForRestore();
+  GITS_ASSERT(deviceKey != ObjectKey{},
+              "Device key must be available for back buffer state restore");
 
   ResourceStates& resourceStates = GetResourceStates(resourceKey);
   D3D12_RESOURCE_STATES afterState = D3D12_RESOURCE_STATE_COMMON;
@@ -573,7 +574,7 @@ void ResourceStateTrackingService::RestoreBackBufferState(GITSKey commandQueueKe
     afterState = GetResourceState(resourceStates.SubresourceStates[0].Layout);
   }
 
-  GITSKey commandAllocatorKey = m_StateService.GetUniqueObjectKey();
+  ObjectKey commandAllocatorKey = m_StateService.GetUniqueObjectKey();
   ID3D12DeviceCreateCommandAllocatorCommand createCommandAllocator;
   createCommandAllocator.Key = m_StateService.GetUniqueCommandKey();
   createCommandAllocator.m_Object.Key = deviceKey;
@@ -583,7 +584,7 @@ void ResourceStateTrackingService::RestoreBackBufferState(GITSKey commandQueueKe
   m_StateService.GetRecorder().Record(
       ID3D12DeviceCreateCommandAllocatorSerializer(createCommandAllocator));
 
-  GITSKey commandListKey = m_StateService.GetUniqueObjectKey();
+  ObjectKey commandListKey = m_StateService.GetUniqueObjectKey();
   ID3D12DeviceCreateCommandListCommand createCommandList;
   createCommandList.Key = m_StateService.GetUniqueCommandKey();
   createCommandList.m_Object.Key = deviceKey;
@@ -595,7 +596,7 @@ void ResourceStateTrackingService::RestoreBackBufferState(GITSKey commandQueueKe
   createCommandList.m_ppCommandList.Key = commandListKey;
   m_StateService.GetRecorder().Record(ID3D12DeviceCreateCommandListSerializer(createCommandList));
 
-  GITSKey fenceKey = m_StateService.GetUniqueObjectKey();
+  ObjectKey fenceKey = m_StateService.GetUniqueObjectKey();
   ID3D12DeviceCreateFenceCommand createFence;
   createFence.Key = m_StateService.GetUniqueCommandKey();
   createFence.m_Object.Key = deviceKey;

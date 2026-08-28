@@ -24,8 +24,8 @@ public:
   MetaCommandsService(StateTrackingService& stateService) : m_StateService(stateService) {}
   void RestoreState();
   void InitializeMetaCommand(ID3D12GraphicsCommandList4InitializeMetaCommandCommand& command);
-  void SetDeviceKey(GITSKey deviceKey);
-  void DestroyMetaCommand(GITSKey key);
+  void SetDeviceKey(ObjectKey deviceKey);
+  void DestroyMetaCommand(ObjectKey key);
 
 private:
   void RestoreStateInitialize();
@@ -33,12 +33,12 @@ private:
 
 private:
   StateTrackingService& m_StateService;
-  GITSKey m_DeviceKey{};
-  GITSKey m_CommandQueueKey{};
-  GITSKey m_CommandAllocatorKey{};
-  GITSKey m_CommandListKey{};
-  GITSKey m_FenceKey{};
-  std::unordered_map<GITSKey, std::vector<uint8_t>> m_MetaCommandData;
+  ObjectKey m_DeviceKey{};
+  ObjectKey m_CommandQueueKey{};
+  ObjectKey m_CommandAllocatorKey{};
+  ObjectKey m_CommandListKey{};
+  ObjectKey m_FenceKey{};
+  std::unordered_map<ObjectKey, std::vector<uint8_t>> m_MetaCommandData;
 };
 
 } // namespace DirectX

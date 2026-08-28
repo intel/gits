@@ -328,7 +328,9 @@ void UpdateInterface(PlayerManager& manager, DML_BINDING_TABLE_DESC_Argument& ar
   }
 }
 
-static void updateDmlBinding(PlayerManager& manager, GITSKey resourceKey, const void* bindingDesc) {
+static void updateDmlBinding(PlayerManager& manager,
+                             ObjectKey resourceKey,
+                             const void* bindingDesc) {
   if (!manager.ExecuteCommands()) {
     return;
   }

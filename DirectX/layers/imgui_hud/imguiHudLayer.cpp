@@ -49,7 +49,7 @@ void ImGuiHUDLayer::ReleaseHud() {
   m_CommandQueue.Reset();
   m_CommandList.Reset();
   m_SwapChain = nullptr;
-  m_SwapChainKey = 0;
+  m_SwapChainKey = ObjectKey{};
 
   m_Initialized = false;
   m_Owner = HudOwner::None;
@@ -61,7 +61,7 @@ void ImGuiHUDLayer::ReleaseHud() {
 void ImGuiHUDLayer::Shutdown() {
   ReleaseHud();
   m_XefgCmdQueue = nullptr;
-  m_XefgContextKey = 0;
+  m_XefgContextKey = ObjectKey{};
 }
 
 void ImGuiHUDLayer::Post(IDXGISwapChainGetBufferCommand& c) {
@@ -118,7 +118,7 @@ void ImGuiHUDLayer::Post(IDXGIFactory2CreateSwapChainForHwndCommand& c) {
 
 void ImGuiHUDLayer::Pre(xefgSwapChainDestroyCommand& c) {
   std::lock_guard<std::mutex> lock(m_Mutex);
-  if (m_XefgContextKey == 0 || c.m_hSwapChain.Key != m_XefgContextKey) {
+  if (m_XefgContextKey == ObjectKey{} || c.m_hSwapChain.Key != m_XefgContextKey) {
     return;
   }
   Shutdown();
@@ -162,7 +162,7 @@ void ImGuiHUDLayer::Post(xefgSwapChainD3D12GetSwapChainPtrCommand& c) {
   }
 
   GITS_ASSERT(m_XefgCmdQueue != nullptr);
-  GITS_ASSERT(m_XefgContextKey != 0);
+  GITS_ASSERT(m_XefgContextKey != ObjectKey{});
   GITS_ASSERT(c.m_hSwapChain.Key == m_XefgContextKey);
 
   auto* swapChain = static_cast<IDXGISwapChain*>(*c.m_ppSwapChain.Value);
@@ -289,7 +289,7 @@ bool ImGuiHUDLayer::CreateFrameContext(unsigned bufferCount) {
 
 void ImGuiHUDLayer::EnsureInitialized(IUnknown* device,
                                       IDXGISwapChain* swapChain,
-                                      GITSKey swapChainKey,
+                                      ObjectKey swapChainKey,
                                       bool isXefgProxy) {
   // The first valid swapchain owns the HUD. Subsequent app swapchains are
   // ignored; the XeFG presenter supersedes an app-owned HUD via a clean re-init.

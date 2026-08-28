@@ -68,34 +68,34 @@ private:
   bool m_DryRun{};
   unsigned m_DrawCount{};
   unsigned m_ExecuteCount{};
-  std::unordered_map<GITSKey, unsigned> m_DrawCountByCommandList;
+  std::unordered_map<ObjectKey, unsigned> m_DrawCountByCommandList;
   ResourceStateTracker m_ResourceStateTracker;
   unsigned m_CurrentFrame{1};
 
   struct RenderTarget {
     unsigned Slot{};
     ID3D12Resource* Resource{};
-    GITSKey ResourceKey{};
+    ObjectKey ResourceKey{};
     bool IsDesc{};
     D3D12_RENDER_TARGET_VIEW_DESC Desc{};
   };
   struct DepthStencil {
     ID3D12Resource* Resource{};
-    GITSKey ResourceKey{};
+    ObjectKey ResourceKey{};
     bool IsDesc{};
     D3D12_DEPTH_STENCIL_VIEW_DESC Desc{};
   };
-  std::map<std::pair<GITSKey, unsigned>, RenderTarget> m_RenderTargetsByDescriptorHandle;
-  std::map<std::pair<GITSKey, unsigned>, DepthStencil> m_DepthStencilsByDescriptorHandle;
-  std::unordered_map<GITSKey, std::vector<RenderTarget>> m_RenderTargetsByCommandList;
-  std::unordered_map<GITSKey, DepthStencil> m_DepthStencilByCommandList;
+  std::map<std::pair<ObjectKey, unsigned>, RenderTarget> m_RenderTargetsByDescriptorHandle;
+  std::map<std::pair<ObjectKey, unsigned>, DepthStencil> m_DepthStencilsByDescriptorHandle;
+  std::unordered_map<ObjectKey, std::vector<RenderTarget>> m_RenderTargetsByCommandList;
+  std::unordered_map<ObjectKey, DepthStencil> m_DepthStencilByCommandList;
 
   struct DryRunInfo {
-    std::map<GITSKey, std::set<GITSKey>> DrawsWithTextureByFrame;
+    std::map<unsigned, std::set<unsigned>> DrawsWithTextureByFrame;
   } m_DryRunInfo;
 
 private:
-  void OnDraw(ID3D12GraphicsCommandList* commandList, GITSKey commandListKey);
+  void OnDraw(ID3D12GraphicsCommandList* commandList, ObjectKey commandListKey);
   void DumpRenderTarget(ID3D12GraphicsCommandList* commandList,
                         RenderTarget& renderTarget,
                         unsigned frame,
@@ -108,9 +108,9 @@ private:
                         unsigned frameDraw);
   template <typename Descriptors>
   void CopyDescriptors(Descriptors& descriptors,
-                       GITSKey srcHeapKey,
+                       ObjectKey srcHeapKey,
                        unsigned srcHeapIndex,
-                       GITSKey destHeapKey,
+                       ObjectKey destHeapKey,
                        unsigned destHeapIndex);
 };
 
