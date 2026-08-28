@@ -17,9 +17,9 @@ occurrence of pointer inside allocation before kernel execution.
 
 ``` c++
 void zeGitsIndirectAllocationOffsets(
-void *pAlloc,
-uint32_t numOffsets,
-size_t *pOffsets
+  void *pAlloc,
+  uint32_t numOffsets,
+  size_t *pOffsets
 );
 ```
 
@@ -45,13 +45,13 @@ void zeGitsIndirectAllocationOffsets(
 );
 ```
 
-
-
-|                                     |                                                                                                                                                                      |
-| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| *pAlloc*                            | A pointer to an USM memory allocation where data contains indirect pointers addresses. It **must** be the value returned by a call responsible for USM creation.     |
-| *numOffsets*                        | A number of offsets inside pOffsets.                                                                                                                                 |
-| *pOffsets* \[range(0, numOffsets)\] | A pointer to the array of offsets, where each offset specify beginning of the indirect address inside pAlloc. The addresses might be pointers to allocation regions. |
+- `pAlloc` is the pointer to an USM memory allocation where data contains
+indirect pointers addresses. It **must** be the value returned by a call
+responsible for USM creation.
+- `numOffsets` is the number of offsets inside pOffsets.
+- `pOffsets` \[range(0, numOffsets)\] is a pointer to the array of
+offsets, where each offset specify beginning of the indirect address
+inside pAlloc. The addresses might be pointers to USM regions.
 
 ## Sample pseudocode {#_sample_pseudocode}
 

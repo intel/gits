@@ -4,84 +4,16 @@ title: Player
 ---
 # General information
 
-## Resource files handling
+The GITS player binary allows to playback a GITS stream passed via command line. It contains the default configuration values and only needs to be passed the stream as a commandline argument. 
 
-To optimize binary data handling, GITS uses memory mapped files to
-access any GL resources (buffers, textures, etc\...). All this data is
-aggregated in .dat files (`gitsTextures.dat` contains all texture data).
-This data is referenced through hash value which is translated to
-correct offset in right file by the use of separate index file
-(`gitsDataIndex.dat`).
+There are multiple ways how the GITS player can be configured:
 
-All data is fed to GL (if possible) through memory mapping obtained by
-mapping a part of correct dat file. This has a consequence, that actual
-IO is performed by OS on demand when accessing the data (which, usually,
-will be done by the driver). If this is undesirable (for example, given
-tool that measures execution time of GL function) then it should be
-hedged against by either forcing GITS to load binary data immediately,
-or by warming up data files (see performance affecting options on how to
-do that).
+- via command line argument,
+- via environment argument and
+- via config file `gits_config.yml`.
 
-Non-binary files (like shaders) are kept in separate files. Unlike
-binary data, they can be edited for the purpose of debugging without
-compromising stream integrity. All text files are loaded by GITS in load
-phase, so IO impact is minimized for this type of resources.
+The details of the options as well as how to use each method is described in the documentation's [configuration section](../configuration/how_to.md).
 
-Actual tokens replayed by GITS are stored in .gits file. This file is
-loaded in separate thread and ran in main thread (assuming single
-threaded playback). Up to specified amount of token bursts containing
-specified amount of tokens are loaded by the loader thread before
-blocking and waiting for the main thread to execute enough stream data.
-This is done to minimize total playback time (loading of some of the
-stream will generally overlap with stream playback) and to efficiently
-support playback of long streams (such that won't fit entirely in memory
-during playback).
+# Example usage
 
-# Command line options {#sec:PlayerOpts}
-
-Long options can be specified with either single or double dash.
-
-All of the options need to be specified in the command line. If no
-options are specified in the command line, and GITS finds a file
-`gitsPlayer.rsp` in current working directory, this file will be used as
-a response file. Response file will be read and behavior of the GITS
-player will be as if the contents of the response file were passed
-through the command line. Each line of the response file will be treated
-as separate parameter passed to player binary. Be wary of any trailing
-whitespace in the response file as it will be passed to GITS player
-verbatim.
-
-For sample command line player invocation:
-
-```bash
-$ gitsPlayer "/mnt/repo/my stream/stream.gits" -exitFrame 10
-```
-
-Corresponding response file will have following content:
-
-```bash
-/mnt/repo/my stream/stream.gits
--exitFrame
-10
-```
-
-Options in GITS player are divided into a number of groups. To list the
-help on a specific option group use `-hh <group_name>` option.
-Currently the following API-based groups are available:
-
-| group       | description                                          |
-| ----------- | ---------------------------------------------------- |
-| Common      | Options common to all APIs                           |
-| Vulkan      | Vulkan specific options                              |
-| OpenGL      | OpenGL specific options                              |
-| OpenCL      | OpenCL specific options                              |
-| LevelZero   | LevelZero specific options                           |
-| all         | all the options (union of prev. mentioned groups)    |
-
-More groups will be coming in the future, and will be based on their intended
-target audience and usage.
-
-## Vulkan: VulkanLegacy vs Vulkan streams
-
-There are two Vulkan recording backends (see [Vulkan: VulkanLegacy vs Vulkan backends](../usage.md#vulkan-vulkanlegacy-vs-vulkan-backends)). Each stream is tagged in its header with the producing API: `API_VULKAN_LEGACY` for the `VulkanLegacy/` backend and `API_VULKAN` for the new `Vulkan/` backend. `gitsPlayer` reads this tag and automatically routes a VulkanLegacy stream to the VulkanLegacy replay path and a Vulkan stream to the Vulkan replay path. There is no command-line switch to choose the Vulkan backend at playback time; a stream recorded with one backend replays with the same backend.
-
+--8<-- "player_steps.md"

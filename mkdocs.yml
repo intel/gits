@@ -72,7 +72,9 @@ nav:
   - Home:
     - 'index.md'
     - 'building.md'
-    - 'usage.md'
+    - Using GITS:
+      - 'usingLauncher.md'
+      - 'usingCLI.md'
   - Configuration: 
     - 'configuration/how_to.md'
     - Common: 'configuration/CommonAuto.md'
@@ -88,8 +90,6 @@ nav:
     - 'documentation/launcher.md'
     - 'documentation/terminology.md'
     - 'documentation/Plugins.md'
-    - Streams:
-      - 'documentation/streams/binary_stream.md'
     - API:
       - DirectX: 
         - 'documentation/DirectX/Overview.md'
@@ -103,6 +103,7 @@ nav:
         - 'documentation/Vulkan/Overview.md'
         - 'documentation/Vulkan/Subcapture.md'
         - 'documentation/Vulkan/Plugins.md'
+        - 'documentation/Vulkan/VulkanLegacy.md'
       - Level Zero:
         - 'documentation/LevelZero/l0_gits_indirect_access_pointers_locations.md'
         - 'documentation/LevelZero/lua.md'
@@ -122,13 +123,16 @@ nav:
     - 'development/documentation.md'
     - Community:
       - 'development/community/how_to_reproducer.md'
-  - 'faq.md'
 
 markdown_extensions:
+  - admonition
   - toc:
       baselevel: 3
-  - pymdownx.striphtml:
-      strip_comments: true
+  # - pymdownx.striphtml:
+  #     strip_comments: true
+  - pymdownx.snippets:
+      base_path: "docs/snippets/"
+      check_paths: true
   - pymdownx.critic   # {--deleted--}, {++added++}, {~~1~>2 is a pair~~}, {==Highlighting==}, {>>inline comments<<}
   - pymdownx.caret    # ^^Insert me^^ (underline), A^T^A (superscript)
   - pymdownx.mark     # ==This was marked== (highlight)

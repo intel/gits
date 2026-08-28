@@ -23,7 +23,7 @@ A directory named `CCode/` will be created in the stream directory (or GITS outp
 
 Use CMake to build the project.
 
-```batch
+``` bash
 mkdir Build
 cd Build
 cmake -A x64 ..\

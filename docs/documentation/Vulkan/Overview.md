@@ -10,17 +10,7 @@ by an application into a stream and replays them with `gitsPlayer`. Common
 features such as [frame sub-capture](Subcapture.md), resource dumping, and
 screenshots are supported.
 
-> GITS also ships an older **VulkanLegacy** backend, installed side by side.
-> Both are available by default and you enable exactly one per run. See
-> [VulkanLegacy vs Vulkan backends](../../usage.md#vulkan-vulkanlegacy-vs-vulkan-backends)
-> for the differences and how streams are routed at playback time.
-
 # Recording a stream
-
-There are **two interchangeable ways** to intercept an application's Vulkan
-calls with the new backend. Use **one** of them per run — never both at once,
-and never together with a legacy layer, or the recorders chain and produce a
-corrupt stream.
 
 ## Method 1: Vulkan layer (recommended, Windows and Linux)
 
@@ -35,33 +25,19 @@ Because it is explicit, it records nothing until you enable it:
   `VK_LAYER_PATH=<install>/Recorder/VulkanLayer`, as on Linux.
 - **Linux:** point the loader at the layer directory and enable it:
 
-```bash
-export VK_LAYER_PATH=<install>/Recorder/VulkanLayer
-export VK_INSTANCE_LAYERS=VK_LAYER_INTEL_vulkan_GITS_recorder
-```
+  ``` bash
+  export VK_LAYER_PATH=<install>/Recorder/VulkanLayer
+  export VK_INSTANCE_LAYERS=VK_LAYER_INTEL_vulkan_GITS_recorder
+  ```
 
-> **Note:** the **Vulkan Configurator** GUI (`vkconfig`) is part of the
-> [LunarG Vulkan SDK](https://vulkan.lunarg.com/), so enabling the layer that way
-> requires the SDK to be installed. The `VK_INSTANCE_LAYERS` (and, on Linux,
-> `VK_LAYER_PATH`) environment-variable method needs only the Vulkan
-> loader/runtime that ships with the GPU driver and does **not** require the SDK.
+!!! note
+    The **Vulkan Configurator** GUI (`vkconfig`) is part of the [LunarG Vulkan SDK](https://vulkan.lunarg.com/), so enabling the layer that way requires the SDK to be installed. The `VK_INSTANCE_LAYERS` (and, on Linux, `VK_LAYER_PATH`) environment-variable method needs only the Vulkan loader/runtime that ships with the GPU driver and does **not** require the SDK.
 
 The layer works even when replacing the loader DLL is not feasible, and it can
 coexist with other layers (for example validation).
 
-> **Instance-level suppression caveat:** `Vulkan.Shared.SuppressExtensions`
-> and `Vulkan.Recorder.SuppressLayers` are **not** applied to *instance*-level
-> extensions and layers in layer mode. The Vulkan loader answers the
-> pre-instance queries (`vkEnumerateInstanceExtensionProperties` /
-> `vkEnumerateInstanceLayerProperties`) itself and does not route them through an
-> explicit layer, so GITS cannot hide them during capture this way. Instance-level
-> entries are instead filtered at **replay** time via `Vulkan.Player.SuppressLayers`
-> (independent from the recorder-side list, so a layer that must stay loaded while
-> capturing to avoid crashing the app can still be dropped on replay, or vice versa);
-> capturing through the [interceptor](#method-2-copy-the-interceptor-dll-windows)
-> additionally suppresses `Vulkan.Recorder.SuppressLayers` entries during capture.
-> Device-level extension suppression and `SuppressPhysicalDeviceFeatures` work in
-> both layer and interceptor modes.
+!!! note "Instance-level suppression caveat"
+    `Vulkan.Shared.SuppressExtensions` and `Vulkan.Recorder.SuppressLayers` are **not** applied to *instance*-level extensions and layers in layer mode. The Vulkan loader answers the pre-instance queries (`vkEnumerateInstanceExtensionProperties` / `vkEnumerateInstanceLayerProperties`) itself and does not route them through an explicit layer, so GITS cannot hide them during capture this way. Instance-level entries are instead filtered at **replay** time via `Vulkan.Player.SuppressLayers` (independent from the recorder-side list, so a layer that must stay loaded while capturing to avoid crashing the app can still be dropped on replay, or vice versa); capturing through the [interceptor](#method-2-copy-the-interceptor-dll-windows) additionally suppresses `Vulkan.Recorder.SuppressLayers` entries during capture. Device-level extension suppression and `SuppressPhysicalDeviceFeatures` work in both layer and interceptor modes.
 
 ## Method 2: Copy the interceptor DLL (Windows)
 

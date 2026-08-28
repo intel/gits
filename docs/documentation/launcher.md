@@ -8,157 +8,140 @@ title: Launcher
 /// caption
 ///
 
-The **GITS Launcher** provides a simple way to **record gits streams** as well as use **gits's playback** and **subcapture functionality** with a **graphical user interface**.
+The **GITS Launcher** is a GUI application that handles all required steps in the background to capture, playback and subcapture a GITS stream. It provides a UI for the most frequently used config options, along with ability to edit the full config file including validation.
 
-!!! info
 
-    GITS Launcher is currently designed to support DirectX. Not all features work for other APIs.
-
-# Overview
-
-It currently has the following features:  
-
-- Choose the *gits distribution/executables* as well as the *configuration*.  
-- A *text editor* for the current *configuration* along with the ability to *validate* it.  
-- A *GUI* for *frequently used configuration options*.  
-- Getting a *trace, stream stats & diagnostics* as well as *subcapturing* is abstracted to *simple button presses*.
-
-## General UI Overview
-
-Here's a general overview of GITS Launcher:
-
-![Playback Mode: editing the config](../assets/images/launcher/Playback_config.png){width="888"}
-/// caption
-The main playback mode view, editing the configuration.
-///
-
-Here are the main elements (top down):
-
-1. Main Bar:
-   1. GITS Launcher Menu
-   2. Mode selector
-   3. Action Button
-2. GITS directories panel  
-   Select the GITS install directory or a custom player.
-3. Mode-specific panel  
-   - Capture: workload + arguments 
-   - Playback: stream + custom player arguments 
-   - Subcapture: subcapture options
-4. Main Panel  
-   1. Vertical tabs  
-      1. Textual config editing  
-      2. Log output of the last GITS run  
-      3. Log output of the GITS Launcher  
-      4. UI Scale  
-      5. UI Theme  
-   2. Content panel, based on the selected tab
 
 # Typical workflows
 
-## Capture an application
+This section gives a brief step-by-step overview on how to use the **GITS Launcher**.
 
-![Capture Mode: editing the config](../assets/images/launcher/Capture_config.png){width="888"}
+--8<-- "launcher_steps.md"
+
+# GITS Launcher in detail
+
+This section discusses the details of the GITS Launcher UI.
+
+## UI Overview
+
+The **GITS Launcher** consists of several distinct UI sections:  
+
+- A **top bar** containaing the GITS Menu, the mode selector and the main action button(s).
+- A mode specific **source panel** that specifies target application, source stream, output folder, ... .
+- The **main window area** devided in
+  - a **left sidebar** with mode specific entries that switch through various panels and
+  - the **main content panel area** that shows the content of the panel selected on the right side.
+
+![Capture configuration options](../assets/images/launcher/Capture_options.png)
 /// caption
-The main capture mode view, editing the configuration.
+A screenshot of the default view when starting the **GITS Launcher**
 ///
 
-To capture an application:
+## Sidebar Panels
 
-1. Select the capture mode.
-2. Ensure the gits base path is set to the install directory (to find the capture dlls).
-3. Choose the application to capture:
-   - Set the proper API.
-   - Set commandline arguments if needed.
-4. Select the output path where to store the captured stream.
-5. Adjust the configuration as desired.
-6. Start capturing
+This section offers a description of all panels that can be reached via the left sidebar in the main window area. Not all panels are available in all modes and the panel content depends on the mode and selected API. A panel can have multiple tabs to view certain aspects.
 
-## Playback a stream
+### Configuration
 
-![Capture Mode: editing the config](../assets/images/launcher/Playback_options.png){width="888"}
+The configuration panel offers a user interface to edit two aspects of gits:
+
+- most used configuration options
+- plugins that are run alongside gits.
+
+#### Options
+
+This panel contains the most frequently used or most useful configuration options.
+
+![Configuration options panel in Capture Mode, DirectX](../assets/images/launcher/Capture_options.png)
 /// caption
-The main playback mode view, using UI config options.
+The configuration options panel in capture mode with API set to DirectX 12
 ///
 
-To playback a gits stream:
+#### Plugins
 
-1. Select the playback mode.
-2. Ensure the gits base path is set to the install directory 
-   - or you've got a custom gitsPlayer selected.
-3. Choose the stream to playback.
-4. Setup the config as needed:
-   - Either by using the UI config options or
-   - Editing the configuration textually. Don't forget to validate.
-5. Start the playback.
+The plugins panel allows the enable API-specific plugins as well as editing the associated YAML-configuration file (*without validation*).
 
-## Subcapture a stream
-
-!!! info
-
-    Subcapturing using the GITS Launcher currently **only works with  DirectX**.
-
-![Subcapture Mode: editing the config](../assets/images/launcher/Subcapture_config.png){width="888"}
+![Configuration options plugins in Capture Mode, DirectX](../assets/images/launcher/Capture_plugins.png)
 /// caption
-The main subcapture mode view, editing the configuration.
+The configuration plugins panel in capture mode with API set to DirectX 12
 ///
 
-To subcapture a gits stream:
+### YAML Config
 
-1. Select the subcapture mode.
-2. Ensure the gits base path is set to the install directory 
-   - or you've got a custom gitsPlayer selected.
-3. Choose the stream to subcapture.
-4. Select the subcapture path.
-5. Setup the config as needed:
-   - Either by using the UI config options or
-   - Editing the configuration textually. Don't forget to validate.
-6. Start subcapturing. Note that it will playback the stream twice.
+The YAML Config editor allows to edit the full config file with all options. The editoer provides syntax highlighting and validates the file while editing. It contains two tabs:
 
-# Details
+- the first tab shows the current configuration that will be used when GITS is running.
+- the second tab is a read only view of the selected (file path set in the **source panel**) or the default gits configuration.
 
-This section introduces the details of the GITS Launcher UI.
+To better see the changes between the default (or selected) and the current in-memory configuration the **In-Memory Config**-tab provides a difference mode to only show differences.
 
-## Config editor
+#### In-Memory Config
 
-![Capture Mode: editing the config](../assets/images/launcher/ConfigEditor.png){width="888"}
+![YAML config In-Memory panel](../assets/images/launcher/Capture_config_delta.png)
 /// caption
-The Config editor
+The In-Memory Config editor in the YAML config panel showing *the difference*
 ///
 
-The toolbar buttons on the left side jump directly to top level sections of the config file.  
-The buttons on the right side are mostly self-explanatory.  
+#### gits_config.yml
 
-The rightmost `Check` button checks if the current content of the editor is a valid config file. The button turns green on success or red on failure - until the config editor content is changed. The validation result can also be read in the GITS Launcher Log (`Main Panel > Tabs > Launcher Log`). 
+The name of the tab shows the filename of the currently selected gits config file, falling to `gits_config.yml` by default.
 
-## Options for playback & subcapture
-
-There are specific panels for playback and subcapture mode that contain a ui to easily change frequently used and/or important configuration options.
-
-### Playback options
-
-![Capture Mode: capture options](../assets/images/launcher/Playback_options.png){width="888"}
+![YAML config selected/default panel](../assets/images/launcher/Capture_config.png)
 /// caption
-Capture options
+The read-only viewer of the selected or default `gits_config.yml`.
 ///
 
-The Capture options allow the user to: 
+### Resource Dump
 
-- Turn the HUD on/off,
-- Enable taking screenshots, including ranges with step size into a specific capture path, and
-- Dump a trace to a target folder.
+The **Resource Dump** panel allows the user to dump resources of the selected stream as described in the [documentation](DirectX/ResourceDumping.md). There are various resources that can be dumped:
 
-### Subcapture options
+- Resources: selectable via `ResourceKeys`, `CommandKeys` using a rescale range in a selectable format.
+- RenderTargets: defined by a `Frame range` or `Draw range` in a selectable format.
+- DispatchOutputs: defined by a `Frame range` or `Dispatch range` in a selectable format.
+- Raytracing: defined by `CommandKeys` and `CommandListModulStep` with `BindingTables`, `Instances` and `Blases`.
+- ExecuteIndirect: defined by `CommandKeys` with `ArgumentBuffers`.
+- RootSignature: defined by `RootSignatureKeys`.
 
-![Subapture Mode: subcapture options](../assets/images/launcher/Subcapture_options.png){width="888"}
+![Resource dump panel in playback mode](../assets/images/launcher/Playback_resources.png)
 /// caption
-Subcapture options
+The resource dump panel with selected `Resources` and `RenderTargets` options.
 ///
 
-The subcapture options allow the user to:
+### Metadata
 
-- Specify the subcapture range and the output folder,
-- Disable the subcapture optimization, and
-- Serialize CPU and GPU execution.
+The **Metadata** panel shows the metadata that is baked into a GITS stream - the configuration that was used to create it as well as dignostics data from the system it was created on.
+
+#### Metadata - Configuration
+
+![Metadata configuration panel in playback mode](../assets/images/launcher/Playback_metadata_config.png)
+/// caption
+Metadata embedded in the stream: the configuration that was used to capture the loaded stream.
+///
+
+#### Metadata - Diagnostics
+
+![MMetadata diagnostics panel in playback mode](../assets/images/launcher/Playback_metadata_diagnostic.png)
+/// caption
+Metadata embedded in the stream: the diagnostics data that was stored when the loaded stream was captured.
+///
+
+### GITS & Launcher LOG
+
+There are two log panels:
+
+- **GITS Log** shows the output of GITS itself. This is helpful when there are issues with GITS itself, e.g. capturing or playing back.
+- **Launcher Log** is the log of the GITS Launcher and can help track down issues if the GITS operations aren't executed as expected.
+
+### UI Settings
+
+At the bottom of the sidebar there's a section that can be used to change the look of the UI.
+
+![UI settings](../assets/images/launcher/UISettings.png){width="200"}
+/// caption
+UI settings
+///
+
+The UI can dynamically scale to accommodate for various resolutions and currently features a light and a dark mode.
 
 ## Launcher Menu
 
@@ -169,12 +152,3 @@ GITS Launcher Menu
 ///
 
 The GITS Launcher Menu provides shortcuts to open the currently setup paths in external applications (e.g. Windows: explorer).
-
-## UI settings
-
-![UI settings](../assets/images/launcher/UISettings.png){width="200"}
-/// caption
-UI settings
-///
-
-The UI can dynamically scale to accommodate for various resolutions and features a light and a dark mode.

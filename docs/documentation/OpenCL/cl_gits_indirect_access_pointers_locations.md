@@ -22,9 +22,9 @@ occurrence of pointer inside USM allocation before kernel execution.
 
 ``` c++
 void clGitsIndirectAllocationOffsets(
-void *pAlloc,
-uint32_t numOffsets,
-size_t *pOffsets
+  void *pAlloc,
+  uint32_t numOffsets,
+  size_t *pOffsets
 );
 ```
 
@@ -35,7 +35,7 @@ Availability can be queried via:
 ``` c++
 void* clGetExtensionFunctionAddressForPlatform (
   cl_platform_id platform,
-    const char *funcname
+  const char *funcname
 );
 ```
 
@@ -43,23 +43,21 @@ The function
 
 ``` c++
 void clGitsIndirectAllocationOffsets(
-void *pAlloc,
-uint32_t numOffsets,
-size_t *pOffsets
+  void *pAlloc,
+  uint32_t numOffsets,
+  size_t *pOffsets
 );
 ```
 
 saves information to GITS stream about indirect access pointers
 locations that will be translated into Player address space during
-playback.
+playback:
 
-*pAlloc* is the pointer to an USM memory allocation where data contains
+- `pAlloc` is the pointer to an USM memory allocation where data contains
 indirect pointers addresses. It **must** be the value returned by a call
 responsible for USM creation.
-
-*numOffsets* is the number of offsets inside pOffsets.
-
-*pOffsets* \[range(0, numOffsets)\] is a pointer to the array of
+- `numOffsets` is the number of offsets inside pOffsets.
+- `pOffsets` \[range(0, numOffsets)\] is a pointer to the array of
 offsets, where each offset specify beginning of the indirect address
 inside pAlloc. The addresses might be pointers to USM regions.
 

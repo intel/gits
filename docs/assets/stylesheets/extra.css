@@ -93,6 +93,10 @@ table>thead:has(> tr > th:empty):not(:has(> tr > th:not(:empty))) {
 		border: 1px solid #3f4547;
 	}
 
+	.md-typeset .admonition p {
+		font-size: 0.8rem;
+	}
+
 	.md-typeset .admonition.note,
 	.md-typeset details.note {
 		border-color: #2c5293;

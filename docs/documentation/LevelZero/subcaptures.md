@@ -66,23 +66,18 @@ range subcapture is as follows
 
 ## Limitations
 
--   It is only possible to specify only one start and one end point for
-    the subcapture. For instance, a kernel range such as
-    `1-3,6/3-5,7-8/4-20` would be invalid.
+- It is only possible to specify only one start and one end point for the subcapture. For instance, a kernel range such as `1-3,6/3-5,7-8/4-20` would be invalid.
 
--   When recording a subcapture of multiple command queues the end
-    kernel has to be the last kernel in the end command list. For a
-    detailed example, refer to [Example 3](#example-3).
+- When recording a subcapture of multiple command queues the end kernel has to be the last kernel in the end command list. For a detailed example, refer to [Example 3](#example-3).
 
--   A range subcapture cannot be created where the start kernel is
-    greater than the stop kernel.
+- A range subcapture cannot be created where the start kernel is greater than the stop kernel.
 
 Warning: Range subcapture can cause GITS to use a significant amount of
 memory. This could potentially lead to crashes in some workloads.
 
 # Numbering examples
 
-## Example 1:
+## Example 1
 
 ``` c++
 // CommandQueueSubmit = 0; CommandList = 0; AppendKernels = 0;
@@ -99,7 +94,7 @@ Subcapture creation of the first execution of kernel_2:
 
 `LevelZero.Capture.Kernel 1/2/2`
 
-## Example 2:
+## Example 2
 
 ``` c++
 // CommandQueueSubmit = 0; CommandList = 0; AppendKernels = 0;
@@ -122,7 +117,7 @@ cmd_list_4(immediate):
 
 `LevelZero.Capture.Kernel 1/4/6`
 
-## Example 3:
+## Example 3
 
 ``` c++
 // CommandQueueSubmit = 0; CommandList = 0; AppendKernels = 0;
@@ -161,6 +156,6 @@ the end point is in the middle of the command list and the range
 includes multiple command queues. Attempting to do so could result in
 undefined behavior.
 
-# Recording subcapture by kernel name and execution number 
+# Recording subcapture by kernel name and execution number
 
 <span style="font-size:30px;">:writing_hand: TODO</span>

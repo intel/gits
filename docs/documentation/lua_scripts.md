@@ -13,7 +13,7 @@ to the driver (if it chooses to do so). This can be done to modify the
 stream in a specific way. For example to cause all `glDrawElements`
 functions to render `GL_POINTS`, one could use a script as follows.
 
-```lua
+``` lua
 GL_POINTS = 0x0000
 function glDrawElements(mode, count, type, indices)
   drv.glDrawElements(GL_POINTS, count, type, indices)
@@ -59,8 +59,10 @@ Apart from these, GITS has capability to call any API via structures:
 
 - `drvCl` for OpenCL,
 
-- `drvVk` for Vulkan.  
-  >Note: Vulkan API does not support structures (structure members cannot be used or modified inside scripts).
+- `drvVk` for Vulkan.
+  
+  !!! note
+      Vulkan API does not support structures (structure members cannot be used or modified inside scripts).
 
 # Utility functions
 
@@ -198,7 +200,7 @@ functions to support passing Lua functions as callbacks:
 
 # Example
 
-```lua
+``` lua
 local GL_SCISSOR_TEST = 0x0C11
 local GL_SCISSOR_BOX = 0x0C10
 local GL_COLOR_BUFFER_BIT = 0x4000
@@ -298,4 +300,3 @@ GITS comes with a set of scripts for common use cases.
 - `vulkanLogNumDraws.lua`  
   Counts and displays draw calls order numbers (useful for
   `vulkanKeepDraws.lua` script).
-

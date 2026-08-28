@@ -14,15 +14,6 @@ workflow as [DirectX sub-capture](../DirectX/Subcapture.md): the trimming
 happens while `gitsPlayer.exe` replays the full stream, driven by the shared
 `Common.Player.Subcapture` options.
 
-> **New vs. legacy backend.** The older **VulkanLegacy** backend trims a stream
-> **during recording** instead (copy the recorder into the app directory and set
-> a recorder mode such as `Vulkan.Recorder.Mode = Frames`). That recorder-side
-> flow does **not** apply to the new backend, and the player-side flow described
-> here does **not** apply to legacy streams. You never pick the backend at
-> playback time — see
-> [VulkanLegacy vs Vulkan backends](../../usage.md#vulkan-vulkanlegacy-vs-vulkan-backends)
-> for how streams are routed.
-
 ## Frame sub-capture
 
 Frame sub-capture is done with `gitsPlayer.exe` replaying a full Vulkan stream.
@@ -40,17 +31,10 @@ the command line:
 The output stream is written under `Common.Player.SubcapturePath` (see
 `gits_config.yml`).
 
-> **Notes**
->
-> - `Frames` accepts a single frame (`5`) or an inclusive range (`3-6`). A frame
->   boundary is a `vkQueuePresentKHR`; frame *N* is the *N*-th presented frame
->   (1-based).
-> - The player restores the full Vulkan state (memory contents, image layouts,
->   descriptor sets, pipelines, synchronization state, ...) at the start of the
->   range, then records the in-range commands, so the trimmed stream stands on
->   its own.
-> - Output-stream compression is controlled by
->   `Common.Player.Subcapture.CompressionType` (`ZSTD` by default, or `LZ4`).
+!!! notes
+    - `Frames` accepts a single frame (`5`) or an inclusive range (`3-6`). A frame boundary is a `vkQueuePresentKHR`; frame *N* is the *N*-th presented frame (1-based).
+    - The player restores the full Vulkan state (memory contents, image layouts, descriptor sets, pipelines, synchronization state, ...) at the start of the range, then records the in-range commands, so the trimmed stream stands on its own.
+    - Output-stream compression is controlled by `Common.Player.Subcapture.CompressionType` (`ZSTD` by default, or `LZ4`).
 
 ### Two-pass workflow (optimized, default)
 
@@ -62,7 +46,7 @@ file exists yet, the player performs two passes:
    analysis file next to the working directory named
    `<streamName>_frames-<range>_analysis.yml` and logs:
 
-   ```text
+   ``` text
    SUBCAPTURE ANALYSIS. RUN AGAIN FOR SUBCAPTURE RECORDING.
    ```
 
@@ -74,13 +58,13 @@ file exists yet, the player performs two passes:
 
 Example (analysis, then recording):
 
-```text
+``` bash
 gitsPlayer.exe --Common.Player.Subcapture.Enabled --Common.Player.Subcapture.Frames 3-6 C:\path\to\full_trace.gits2   # analysis pass
 gitsPlayer.exe --Common.Player.Subcapture.Enabled --Common.Player.Subcapture.Frames 3-6 C:\path\to\full_trace.gits2   # recording pass
 ```
 
-> An incomplete or corrupt analysis file (for example from an interrupted first
-> run) is ignored and regenerated automatically on the next run.
+!!! note
+    An incomplete or corrupt analysis file (for example from an interrupted first run) is ignored and regenerated automatically on the next run.
 
 ### Single-pass workflow (restore everything)
 
@@ -89,7 +73,7 @@ A single run then produces the trimmed stream, restoring **every** live object
 regardless of whether the range uses it. This is simpler and needs only one
 run, at the cost of a larger sub-capture.
 
-```text
+``` bash
 gitsPlayer.exe --Common.Player.Subcapture.Enabled --Common.Player.Subcapture.Frames 3-6 --Common.Player.Subcapture.Optimize false C:\path\to\full_trace.gits2
 ```
 
@@ -108,10 +92,7 @@ DirectX backend:
 The output location is `Common.Player.SubcapturePath` (default
 `{install_path}\dump\%f%_%r%`).
 
-> **DirectX-only options do not apply to Vulkan.** The
-> `Common.Player.Subcapture.DirectX.*` options (`ExecutionSerialization`,
-> `CommandListExecutions`, `CommandListSplit`, `SerializeAccelerationStructures`,
-> `RestoreTLASes`) are used only by the DirectX backend and are ignored by the
-> Vulkan backend, which supports frame-range sub-capture only.
+!!! warning "DirectX-only options do not apply to Vulkan."
+    The `Common.Player.Subcapture.DirectX.*` options (`ExecutionSerialization`, `CommandListExecutions`, `CommandListSplit`, `SerializeAccelerationStructures`, `RestoreTLASes`) are used only by the DirectX backend and are ignored by the Vulkan backend, which supports frame-range sub-capture only.
 
 

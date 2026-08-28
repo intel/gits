@@ -22,12 +22,11 @@ To add a new dependency:
 2. Create a new `cmake/import_<dependency_name>.cmake` file.
 3. Include the `.cmake` file in the appropriate `CMakeLists.txt`.
 
-
 ### Dependencies.yaml
 
 Every dependency is registered in `/third_party/dependencies.yaml`, here's an example:
 
-```yaml
+``` yaml
 dependencies:
   NugetPackages:
     - name: AgilitySDK
@@ -54,8 +53,8 @@ dependencies:
 - The optional `os` attribute allows to limit the installation to certain platforms
 - The optional `argument` allows to define a simple/unique dependency name that can be used when passing it as an argument to the python install script, e.g. `--withagility-sdk`, `--with-yamlcpp`, `--with-argshxx` and `--with-detours` for the above example.
 
-
 ### CMake
+
 For each dependency a .`cmake` file needs to be created (e.g. `import_imgui.cmake`) that adds the dependency to the install system and sets up required cmake variables, ...
 
 #### Dependency without post-install function
@@ -96,4 +95,3 @@ function(init_detours)
   include_directories(SYSTEM ${DETOURS_ROOT})
 endfunction()
 ```
-

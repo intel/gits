@@ -9,13 +9,13 @@ Vulkan plugins extend capture and replay for the **Vulkan** backend. Built plugi
 
 Enable plugins under `Common.Recorder` or `Common.Player` using the `Plugins` list. Each entry must match the name returned by the DLL (`IPlugin::getName()`), which should match the `Info.Name` value in that plugin’s `config.yml`.
 
-```yaml
+``` yaml
 Common:
   Recorder:
     Plugins: [] # List of plugins to enable during capture
 ```
 
-```yaml
+``` yaml
 Common:
   Player:
     Plugins: [] # List of plugins to enable during playback
@@ -23,7 +23,7 @@ Common:
 
 Example: enable `HelloPlugin` during Vulkan playback:
 
-```yaml
+``` yaml
 Common:
   Player:
     Plugins: ['HelloPlugin']

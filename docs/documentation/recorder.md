@@ -4,32 +4,20 @@ title: Recorder
 ---
 # General information
 
-Recorder configuration is performed through `gits_config.txt` file.
-Configuration options stored there affect various facets of operation.
-They can be used to specify scope of recording, define additional
-channels of communication with recorder (signals), where supported, and
-do performance tuning of the recorder.
+GITS recorder intercepts API calls and stores a binary representation - `token`s - of these calls in the GITS stream file. The file `gits_config.yml` configures various faects of this operation. A `token` represents all information neccessary to play back the function it represents. Alongside the function call itself all other relevant binary data - such as arguments, binary data, etc. are stored. The resulting stream can be played back and will reproduce the recorded API calls.
 
-Recorder operates, by creating a `token` for each recorder function in
-the thread that invoked that API function. `Token` represents all the
-information necessary to play back function it represents. Recorder then
-passes each newly created `token` to a separate thread which is used to
-persist data to hdd.
+GITS recorder consists of:
 
-Normally all IO is done in separate threads of execution to minimize
-impact on the recorded application. Binary data (texture, buffers) has
-to be fingerprinted (hashed) before it can be written to disk, later on
-GITS player will reference all binary data through these hashes. Hashing
-can become a bottleneck for some workloads. For this reason GITS
-provides an option to use sequential numbers as hashes. This allows to
-send data to disk much quicker, but will write to disk redundant data if
-such is fed to the API by recorded application. This can cause
-`gitsTextures.dat`/`gitsBuffers.dat` to become very large.
+- GITS recorder binary,
+- API interceptors and
+- optional: *configuration file `gits_config.yml`*, *plugins*.
 
-# Configuration options
+Details regarding the configuration options can be found in the documentation's [configuration section](../configuration/how_to.md).
 
-Recorder part of GITS is configured by gits_config.txt configuration
-file. This file will be searched for in the location of recorder
-library, or in the directory specified with `GITS_CONFIG_DIR`
-environment variable (if set).
+For information about the [Vulkan legacy](Vulkan/VulkanLegacy.md) backend, please see the documentation.
+
+# Example usage
+
+--8<-- "recorder_steps.md"
+
 

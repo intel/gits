@@ -75,24 +75,31 @@ Before you can use **GITS** you need to perform the _install step_. Installing i
 
 To install **GITS** in the folder `<gits-root-folder>\build\dist` use the following command:
 
-```bash
+``` bash
 cd build
 cmake --install . --config Release --prefix dist
 ```
 
-> Note:
-> If you move the install folder somewhere else, you will need to manually adjust paths in config files.
+!!! note
+	If you move the install folder somewhere else, you will need to manually adjust paths in the config files.
 
 ## Optional CMake options
 
 | Option | Default | Description |
 | ------ | ------- | ----------- |
-| `REGISTER_VULKAN_LAYER` | `ON` | Windows only. When `ON` (default), the install step registers the new Vulkan GITS recorder layer (`Recorder\VulkanLayer\VkLayer_vulkan_GITS_recorder.json`) with the OS alongside the VulkanLegacy layer. Both are explicit layers, so neither records until enabled - see [Vulkan: VulkanLegacy vs Vulkan backends](usage.md#vulkan-vulkanlegacy-vs-vulkan-backends). Set to `OFF` to register the VulkanLegacy layer only. |
+| `REGISTER_VULKAN_LAYER` | `ON` | :material-microsoft-windows: When `ON`, the install step registers the new Vulkan GITS recorder layer (`Recorder\VulkanLayer\VkLayer_vulkan_GITS_recorder.json`) with the OS alongside the [Vulkan legacy](documentation/Vulkan/VulkanLegacy.md) layer. Set to `OFF` to register the VulkanLegacy layer only. |
+| `WITH_VULKAN` | `ON` | Build the Vulkan backend, new and legacy. |
+| `WITH_DIRECTX` | `ON` | :material-microsoft-windows: Build the DirectX backend. |
+| `WITH_OPENCL` | `ON` | Build the OpenCL backend. |
+| `WITH_LEVELZERO` | `ON` | Build the LevelZero backend. |
+| `WITH_OCLOC` | `ON` | Build the Ocloc backend. |
+| `WITH_LAUNCHER` | `ON` | :material-microsoft-windows: Build the Launcher. |
+| `SKIP_THIRDPARTY_FETCH` | `OFF` | Skip fetching third-party dependencies. |
+| `OFFLINE_MODE` | `OFF` | Offline Mode: no download of third party libraries, assuming folders are prepopulated. |
 
-Example (register the legacy Vulkan layer only on Windows):
+!!! example ":material-microsoft-windows: Register only the [Vulkan legacy](documentation/Vulkan/VulkanLegacy.md) layer"
+	``` bash
+	cmake -A x64 -DREGISTER_VULKAN_LAYER=OFF ..\
+	```
 
-```batch
-cmake -A x64 -DREGISTER_VULKAN_LAYER=OFF ..\
-```
-
-Find how to use GITS [here](usage.md).
+Find how to use GITS with the [GITS Launcher](usingLauncher.md) or via [cli](usingCLI.md).

@@ -20,7 +20,7 @@ For larger edits it's recommended to use a dedicated editor such as [MS VisualSt
 
 ??? tip "Recommended extensions (extensions.json)"
 
-    ```json
+    ``` json
     {
       "recommendations": [
         "bierner.github-markdown-preview",
@@ -34,7 +34,7 @@ For larger edits it's recommended to use a dedicated editor such as [MS VisualSt
 
 [MkDocs-Material](https://squidfunk.github.io/mkdocs-material/) is the underlying documentation framework in use. Here is a brief overview of documentation relevant files & folders:
 
-```
+``` text
 <root>/ 
 ├── docs/ 
 │ ├── assets/ 
@@ -66,21 +66,23 @@ For larger edits it's recommended to use a dedicated editor such as [MS VisualSt
 | :fontawesome-regular-file-code: | `\Scripts\docs\run_mkdocs.py`     | Script to launch `mkdocs serve` with `strip comments` support    |
 | :fontawesome-regular-file-code: | `\Scripts\docs\strip_comments.py` | Script that removes all HTML-comments from a markdown page       |
 
-
 ### Live preview
 
 [MkDocs-Material](https://squidfunk.github.io/mkdocs-material/) supports a local live preview. In order to use it several python packages need to be installed as mkdocs itself is python based:
 
-```bash
+``` bash
 pip install -r Scripts/docs/requirements.txt
 ```
-> Note: please be sure to use the correct version of pip.
+
+!!! note
+    Please be sure to use the correct version of pip.
 
 Since HTML-comments can have a negative effect on some of the markdown-features we've added a (local) plugin for **mkdocs** to strip them. To make use of it the `PYTHONPATH` needs to include the `\Scripts\docs\` folder which is done by the `run_mkdocs.py` script:
 
-```bash
+``` bash
 python ./Scripts/docs/serve_mkdocs.py
 ```
+
 The documentation can now be viewed in a browser by visiting [http://127.0.0.1:8000/](http://127.0.0.1:8000/).
 
 ### Adding new pages

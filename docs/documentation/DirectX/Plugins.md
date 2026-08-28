@@ -9,13 +9,13 @@ DirectX 12 plugins extend capture and replay for the **DirectX** backend. Built 
 
 Enable plugins under `DirectX.Recorder` or `DirectX.Player` using the `Plugins` list. Each entry must match the name returned by the DLL (`IPlugin::getName()`), which should match the `Info.Name` value in that plugin’s `config.yml`.
 
-```yaml
+``` yaml
 DirectX:
   Recorder:
     Plugins: [] # List of plugins to enable
 ```
 
-```yaml
+``` yaml
 DirectX:
   Player:
     Plugins: [] # List of plugins to enable
@@ -23,7 +23,7 @@ DirectX:
 
 Example: enable `HelloPlugin` or `HelloHUD` during playback.
 
-```yaml
+``` yaml
 DirectX:
   Player:
     Plugins: ['HelloPlugin', 'HelloHUD']

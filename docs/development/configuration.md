@@ -6,14 +6,14 @@ title: Args & Config
 
 The configuration and relevant enums of GITS are created at build time using mako-templates based on the metafiles
 
-- `common\configuration\codegen\metafiles\config.yml` and 
-- `common\configuration\codegen\metafiles\enums.yml`. 
+- `common\configuration\codegen\metafiles\config.yml` and
+- `common\configuration\codegen\metafiles\enums.yml`.
 
 ## Enums
 
 Here's the structure that defines an enum:
 
-```yaml
+``` yaml
 - Name: string                  # req.     cpp name
   Description: string           #     opt. short: one sentence
   LongDescription: string       #     opt. long:  for md-file
@@ -25,9 +25,11 @@ Here's the structure that defines an enum:
 ```
 
 The `Value`-string defines the cpp value name. The system generates a string-to-enum mapping `stringTo<EnumName>()` based on the value's attributes:
+
 - if `Labels` is set all list entries can be used and are converted to the `Value`.
 - otherwise the `Value` is converted as follows:
-  ```py
+  
+  ``` py
   label_parts = value.split('_')
   label_parts = [part.capitalize() for part in label_parts]
   self.labels = [''.join(label_parts)]
@@ -36,9 +38,10 @@ The `Value`-string defines the cpp value name. The system generates a string-to-
 ## Configuration
 
 ### Option
+
 Here's the structure to define a configuration option:
 
-```yaml
+``` yaml
 - Name: string              # req.     cpp and config name
   Type: string              # req.     cpp type - can't be "Group"
   Default: string           # req.     cpp default value
@@ -84,7 +87,7 @@ Here's the structure to define a configuration option:
 
 The following defines a configuration options group:
 
-```yaml
+``` yaml
 - Name: string              # req.     cpp and config name
   Type: "Group"             # req.     Marks this to be a group.
   Options: [Option]         # req.     A list of options in a group.
@@ -104,11 +107,11 @@ The following defines a configuration options group:
 | `LongDescription` | A long description, e.g. for the markdown documentation. |
 | `OSVisibility`    | OS(s) that use the group: `WINDOWS`,`X11`.               |
 
-
 ## Generation
 
 The entrypoint for the generation is `common\configuration\codegen\scripts\generate.py`:
-```
+
+``` bash
 generate.py --step <Step>                       # generation step to run
             --configYML <configurationMetafile> # path to configuration metafile
             --enumYML <enumMetafile>            # path to enum metafile
@@ -120,14 +123,15 @@ generate.py --step <Step>                       # generation step to run
 
 where `Step` can be one of the following:
 
-| Step                 | Description                                     |
+| Step                   | Description                                     |
 | ---------------------- | ----------------------------------------------- |
 | `Enum`                 | 1. Generate all enum related cpp files.         |
 | `Configuration`        | 2. Generate the configuration system cpp files. |
 | `Argumentparser`       | 3. Generate the argument parser cpp files.      |
 | `DefaultConfiguration` | 4. Generate the default configuration file.     |
 
-*Note: the steps can be run in an arbitrary order. However, the steps with cpp files build up and higher numbered steps require to lower ones to work.*
+!!! note
+    The steps can be run in an arbitrary order. However, the steps with cpp files build up and higher numbered steps require to lower ones to work.*
 
 ### Details
 
@@ -147,9 +151,9 @@ The codegen consists of 6 scripts:
   The `TemplateManager` stores which templates are used to create which files for a given step. Does the actual "fill in the context" file generation
 4. `configuration_element.py`  
   Transforms the configuration metafile in a nested structure of python objects that represent either a configuration group or an option. These objects are filled into the mako files.
-1. `configuration_enum.py`  
+5. `configuration_enum.py`  
   Transforms the enum metafile in a structure of python objects that represent either an enum or its values. These objects are filled into the mako files.
-1. `utils.py`  
+6. `utils.py`  
   Various helper functions used by the scripts.
 
 ### Additional Notes

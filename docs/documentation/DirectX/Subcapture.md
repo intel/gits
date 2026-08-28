@@ -18,10 +18,9 @@ Configure sub-capture in `gits_config.yml` (next to the player) or override on t
 
 Run `gitsPlayer.exe` twice; use `--Common.Player.ExitFrame` to stop right after the sub-capture range finishes.
 
-> **Notes**
->
-> - To pick a range, use screenshots, or `--showWindowBorder --showFrameNumberInTitle` so the window title shows the frame number (`--showWindowBorder` is required for the title bar to be visible).
-> - Output streams are written under `Common.Player.SubcapturePath` (see `gits_config.yml`).
+!!! Notes
+    - To pick a range, use screenshots, or `--showWindowBorder --showFrameNumberInTitle` so the window title shows the frame number (`--showWindowBorder` is required for the title bar to be visible).
+    - Output streams are written under `Common.Player.SubcapturePath` (see `gits_config.yml`).
 
 ## Serialized sub-capture
 
@@ -35,13 +34,13 @@ Point the player at your original trace. Enable sub-capture and **execution seri
 
 Example **1-frame source trace** (target frame 1):
 
-```text
+``` bash
 gitsPlayer.exe --Common.Player.Subcapture.Enabled --Common.Player.Subcapture.DirectX.ExecutionSerialization --Common.Player.Subcapture.Frames 1 --Common.Player.ExitFrame 1 C:\path\to\1frame_trace.gits2
 ```
 
 Example **3-frame source trace** (serialize executions for frames 1–2, exit after frame 2):
 
-```text
+``` bash
 gitsPlayer.exe --Common.Player.Subcapture.Enabled --Common.Player.Subcapture.DirectX.ExecutionSerialization --Common.Player.Subcapture.Frames 1-2 --Common.Player.ExitFrame 2 C:\path\to\3frame_trace.gits2
 ```
 
@@ -55,7 +54,7 @@ Command list sub-capture applies only to **serialized-execution** streams. Build
 
 Play the **serialized** trace with tracing enabled:
 
-```text
+``` bash
 gitsPlayer.exe --Common.Shared.Trace.Enabled C:\path\to\serialized_trace.gits2
 ```
 
@@ -67,7 +66,7 @@ The tracefile records API activity, including **`Execute #N from frame #F`** on 
 
 Example lines:
 
-```text
+``` text
 E6294 T0 O23 ID3D12CommandQueue::ExecuteCommandLists(1, [O2374]) Frame #2 Frame Execute #10
 57080383 T12464 O2926 ID3D12GraphicsCommandList::DrawIndexedInstanced(48, 1, 0, 0, 0) Frame #2 Frame Draw #57
 57081721 T12464 O2375 ID3D12GraphicsCommandList::DrawIndexedInstanced(3, 1, 6, 0, 0) Frame #2 Frame Draw #59
@@ -91,7 +90,7 @@ Use the **serialized** trace from [Serialized sub-capture](#serialized-sub-captu
 
 Example for **1-frame serialized trace** (`--Common.Player.Subcapture.Frames 1`, `--Common.Player.ExitFrame 1`):
 
-```text
+``` bash
 gitsPlayer.exe --Common.Player.Subcapture.Enabled --Common.Player.Subcapture.Frames 1 --Common.Player.Subcapture.DirectX.CommandListExecutions 7-11 --Common.Player.ExitFrame 1 --showWindowBorder --showFrameNumberInTitle C:\path\to\serialized_trace.gits2
 ```
 
@@ -100,7 +99,7 @@ Replace `7-11` with the range of Command Lists you want to sub-capture.
 
 If subsection **2** reports **50** executions on the target frame, you can generate **50** Command List sub-captures. Example for the 1-frame case:
 
-```text
+``` bash
 gitsPlayer.exe ... --Common.Player.Subcapture.DirectX.CommandListExecutions 1 --Common.Player.ExitFrame 1 ...   # analysis
 gitsPlayer.exe ... --Common.Player.Subcapture.DirectX.CommandListExecutions 1 --Common.Player.ExitFrame 1 ...   # sub-capture
 gitsPlayer.exe ... --Common.Player.Subcapture.DirectX.CommandListExecutions 2 --Common.Player.ExitFrame 1 ...   # analysis
@@ -134,7 +133,7 @@ Each pair emits a separate `*.gits2` under `Common.Player.SubcapturePath`.
 
 Example split pass (adjust keys and paths):
 
-```text
+``` bash
 gitsPlayer.exe --Common.Player.Subcapture.Enabled --Common.Player.Subcapture.DirectX.CommandListSplit 100-105,200 C:\path\to\serialized_trace.gits2
 ```
 

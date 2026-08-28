@@ -11,7 +11,7 @@ Generator for GITS OpenCL
 
 ## generatorCreatorCL.py
 
-1. `utils/fake_libc_include` - from pycparser [1]
+1. `utils/fake_libc_include` - from [pycparser](https://github.com/eliben/pycparser)
 2. CL headers to generate definitions from in `CL` directory
 
 # Running
@@ -22,4 +22,3 @@ headers to generator_cl.py, CL-version will be put in functions' version field
 
 3. `python generate.py update` - will add new API calls to existing files using mako templates
 
-[1] https://github.com/eliben/pycparser

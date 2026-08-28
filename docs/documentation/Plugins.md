@@ -3,7 +3,7 @@ icon: material/puzzle
 title: Plugins
 ---
 
-GITS supports **plugins** for both capture and replay on DirectX 12 and Vulkan. Plugins are dynamic libraries loaded at runtime by `gitsPlayer.exe` or `gitsRecorder.dll`. Each plugin implements [`IPlugin`](../../plugins/IPlugin.h) and exposes a layer or service hooked into the recorder or player.
+GITS supports **plugins** for both capture and replay on DirectX 12 and Vulkan. Plugins are dynamic libraries loaded at runtime by `gitsPlayer.exe` or `gitsRecorder.dll`. Each plugin implements `IPlugin` defined in `plugins/IPlugin.h` and exposes a layer or service hooked into the recorder or player.
 
 Built plugins install under an API-specific tree:
 
@@ -40,7 +40,7 @@ Config:
 
 The **Name** in `Info` must match the string returned by `IPlugin::getName()` and the name you list in GITS configuration when enabling the plugin. Defaults and detailed comments live in each plugin’s `config.yml`.
 
-At runtime, plugins load this file through `gits::LoadPluginConfig` in [`plugins/common/pluginUtils.h`](../../plugins/common/pluginUtils.h), which applies [environment overrides](#environment-overrides) before the plugin reads `Config` keys.
+At runtime, plugins load this file through `gits::LoadPluginConfig` defined in `plugins/common/pluginUtils.h`, which applies [environment overrides](#environment-overrides) before the plugin reads `Config` keys.
 
 # Enabling plugins
 
@@ -90,7 +90,7 @@ When an override is applied, `gitsPlayer` logs the environment variable name and
 
 Plugins can run without recording a stream. Disable the recorder and load a plugin as usual:
 
-```yml
+``` yaml
 Common:
   Recorder:
     Enabled: false

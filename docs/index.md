@@ -8,10 +8,10 @@ title: About GITS
 **Graphics Intercept and Trace Solution** (**GITS**) is an opensource capture-replay tool by [Intel](https://www.intel.com) for  
 
 - [Vulkan :fontawesome-solid-arrow-up-right-from-square:](https://vulkan.org/)
+- [DirectX12 :fontawesome-solid-arrow-up-right-from-square:](https://learn.microsoft.com/en-us/windows/win32/direct3d12/direct3d-12-graphics)
 - [OpenCL :fontawesome-solid-arrow-up-right-from-square:](https://www.khronos.org/opencl/)
 - [Intel oneAPI Level Zero :fontawesome-solid-arrow-up-right-from-square:](https://spec.oneapi.io/level-zero/latest/core/INTRO.html)
-- [OpenGL :fontawesome-solid-arrow-up-right-from-square:](https://www.khronos.org/opengl/) and 
-- [DirectX12 :fontawesome-solid-arrow-up-right-from-square:](https://learn.microsoft.com/en-us/windows/win32/direct3d12/direct3d-12-graphics)
+- [OpenGL :fontawesome-solid-arrow-up-right-from-square:](https://www.khronos.org/opengl/)
 
 **GITS** allows you to record sequences of API calls into binary traces that can be replayed later (we call them '*streams*'). See the [Usage section](#usage) for more info.
 
@@ -46,9 +46,10 @@ flowchart LR
 
 # Target audience
 
-**GITS** is a collection of *command line tools* which has been used for years to help develop and validate *Intel GPU drivers*, but we think it can be useful to other users as well. 
+**GITS** is a collection of *command line tools* bundled with a *launcher* which has been used for years to help develop and validate *Intel GPU drivers*, but we think it can be useful to other users as well.
 
-*Please note: if you are a game developer who wants to analyze frames using a graphical tool, [GPA](https://www.intel.com/content/www/us/en/developer/tools/graphics-performance-analyzers/overview.html) or a similar tool is what you should look at.*
+!!! note
+    If you are a game developer who wants to analyze frames using a graphical tool we'd recommend to use other tools, such as [RenderDoc](https://renderdoc.org/), [PIX](https://devblogs.microsoft.com/pix/) or a similar tools.
 
 # Install & Building
 
@@ -56,6 +57,8 @@ Currently we do not provide prebuilt binaries, so you have to [build it yourself
 
 # Usage
 
-To **record an application**, you will have to inject our dynamic library (called '*the interceptor*') into it. On *Windows*, this is typically done by copying a DLL into the app directory. On *Linux*, by manipulating loader environment variables. When recording *Vulkan*, it is also possible to use **GITS** as a *Vulkan layer* instead.
+To **record an application**, you will have to inject our dynamic library (called '*the interposer*') into it. On *Windows*, this is typically done by copying a DLL into the app directory. On *Linux* by manipulating loader environment variables. When recording *Vulkan* it is also possible to use **GITS** as a *Vulkan layer* instead.
 
-To **replay a stream**, pass it as an argument to the **gitsPlayer**-executable. 
+To **replay a stream**, pass it as an argument to the **gitsPlayer**-executable.
+
+To simplify the usage we've created the [GITS Launcher](usingLauncher.md), a GUI application that takes care of the required steps for you as well as setting up GITS options.
