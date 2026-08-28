@@ -737,6 +737,22 @@ struct PointerArgument<INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC> {
   bool Copy{};
 };
 
+// Intel Extensions may mutate INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC fields in place during
+// CreateComputePipelineState. Save and restore around the driver call so capture/replay state
+// stays consistent with stream data.
+struct INTC_ComputePipelineStateDescSnapshot {
+  D3D12_SHADER_BYTECODE D3D12_Cs{};
+  D3D12_SHADER_BYTECODE INTC_Cs{};
+  const void* CompileOptions{};
+  const void* InternalOptions{};
+};
+
+INTC_ComputePipelineStateDescSnapshot SaveSnapshot(
+    const PointerArgument<INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC>& arg);
+
+void RestoreSnapshot(PointerArgument<INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC>& arg,
+                     const INTC_ComputePipelineStateDescSnapshot& snapshot);
+
 template <>
 struct PointerArgument<INTCExtensionAppInfo> {
   PointerArgument(const INTCExtensionAppInfo* value_)

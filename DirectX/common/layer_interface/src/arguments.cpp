@@ -1711,6 +1711,33 @@ PointerArgument<INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC>::~PointerArgument() {
   }
 }
 
+INTC_ComputePipelineStateDescSnapshot SaveSnapshot(
+    const PointerArgument<INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC>& arg) {
+  INTC_ComputePipelineStateDescSnapshot snapshot{};
+  if (!arg.Value || !arg.Value->pD3D12Desc) {
+    return snapshot;
+  }
+  snapshot.D3D12_Cs = arg.Value->pD3D12Desc->CS;
+  snapshot.INTC_Cs = arg.Value->CS;
+  snapshot.CompileOptions = arg.Value->CompileOptions;
+  snapshot.InternalOptions = arg.Value->InternalOptions;
+  return snapshot;
+}
+
+void RestoreSnapshot(PointerArgument<INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC>& arg,
+                     const INTC_ComputePipelineStateDescSnapshot& snapshot) {
+  if (!arg.Value || !arg.Value->pD3D12Desc) {
+    return;
+  }
+  arg.Value->pD3D12Desc->CS = snapshot.D3D12_Cs;
+  arg.Value->CS = snapshot.INTC_Cs;
+  if (arg.Cs) {
+    arg.Value->CS.pShaderBytecode = arg.Cs;
+  }
+  arg.Value->CompileOptions = const_cast<void*>(snapshot.CompileOptions);
+  arg.Value->InternalOptions = const_cast<void*>(snapshot.InternalOptions);
+}
+
 PointerArgument<INTCExtensionAppInfo>::PointerArgument(
     const PointerArgument<INTCExtensionAppInfo>& arg) {
   if (!arg.Value) {

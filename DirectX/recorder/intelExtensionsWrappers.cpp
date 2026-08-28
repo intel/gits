@@ -311,12 +311,16 @@ HRESULT INTC_D3D12_CreateComputePipelineStateWrapper(
       layer->Pre(command);
     }
 
+    const auto snapshot = SaveSnapshot(command.m_pDesc);
+
     command.Key = manager.CreateCommandKey();
     if (!command.Skip) {
       result =
           pfnCreateComputePipelineState(command.m_pExtensionContext.Value, command.m_pDesc.Value,
                                         command.m_riid.Value, command.m_ppPipelineState.Value);
     }
+
+    RestoreSnapshot(command.m_pDesc, snapshot);
 
     UpdateOutputInterface<InterfaceOutputArgument<void>, void> update_ppPipelineState(
         command.m_ppPipelineState, result, riid, ppPipelineState);

@@ -453,12 +453,16 @@ void INTC_D3D12_CreateComputePipelineStateRunner::Run() {
   }
 
   if (manager.ExecuteCommands()) {
+    const auto snapshot = SaveSnapshot(command.m_pDesc);
+
     if (!command.Skip) {
       auto* context = reinterpret_cast<INTCExtensionContext*>(
           manager.GetIntelExtensionsContextMap().GetContext(command.m_pExtensionContext.Key));
       command.m_Result.Value = INTC_D3D12_CreateComputePipelineState(
           context, command.m_pDesc.Value, command.m_riid.Value, command.m_ppPipelineState.Value);
     }
+
+    RestoreSnapshot(command.m_pDesc, snapshot);
 
     if (command.m_Result.Value == S_OK) {
       UpdateOutputInterface(manager, command.m_ppPipelineState);
