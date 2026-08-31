@@ -26,6 +26,8 @@ PTR_SIZE = gits.getPtrSize()
 MAX_NUMBER_OF_EVENTS_PER_EVENT_POOL = 1024  -- Maximum number of events within the pool
 EVENT_INDEX = 0                             -- Index of created event in the GITS event pool
 EVENT_POOL_HANDLE = nil                     -- Global GITS handle of ze_event_pool_handle_t
+EVENT_POOL_CONTEXT = nil                    -- Context owning the GITS event pool
+EVENT_POOL_CONTEXT_DESTROYED = false        -- Whether the event pool context has been destroyed
 GITS_EVENTS = {}                            -- List of events created by script to be deleted at the end
 
 
@@ -189,6 +191,16 @@ function GetObject(table, handle)
   return nil
 end
 
+function GetPendingEvent(handle)
+  for i = #EVENT_LIST, 1, -1 do
+    local event = EVENT_LIST[i]
+    if not event.isDestroyed and not event.isCompleted and event.handle == handle then
+      return event
+    end
+  end
+  return nil
+end
+
 function CreateGitsEventPool(hContext)
   if EVENT_POOL_HANDLE == nil then
     local desc = drvl0.create_ze_event_pool_desc_t()
@@ -202,6 +214,7 @@ function CreateGitsEventPool(hContext)
       error("zeEventPoolCreate API call couldn't create event pool.")
     end
     EVENT_POOL_HANDLE = gits.getUdt(eventPoolPtr, 0)
+    EVENT_POOL_CONTEXT = hContext
     drvl0.free(desc)
     gits.freeBytes(eventPoolPtr)
   end
@@ -319,7 +332,10 @@ function UpdateEvent(event, cqNumber)
   if not event.isCompleted then
     Log("Updating event of kernel("..cqNumber.."_"..event.cmdListNumber.."_"..event.kernelLaunchNumber.."): "..event.kernel.name)
     if not event.gatheredData then
-      drvl0.zeEventQueryKernelTimestamp(event.handle, event.appendTimestampResult)
+      local retVal = drvl0.zeEventQueryKernelTimestamp(event.handle, event.appendTimestampResult)
+      if retVal ~= ZE_RESULT_SUCCESS then
+        return
+      end
     else
       event.appendTimestampResult = drvl0.create_ze_kernel_timestamp_result_t(event.appendTimestampResult.__self)
     end
@@ -451,40 +467,49 @@ function CompareGitsNomenclature(a, b)
 end
 
 function gitsProgramExit()
-    local path = 'benchmark.csv'
-    out_dir = gits.getOutDir()
-    if out_dir ~= gits.nullUdt() and out_dir ~= '' then
-      path = out_dir .. ossep .. path
-    end
-    local csvFile = io.open(path, 'w')
-    if csvFile == nil then
-      error('Failed to open results file for writing.')
-      return
-    end
-
-    io.output(csvFile)
-
-    local header = ''
-    for index, col_name in ipairs(CSV_HEADER) do
-      header = header .. col_name
-      if index ~= #CSV_HEADER then
-        header = header .. ','
+  if not EVENT_POOL_CONTEXT_DESTROYED then
+    for _, event in ipairs(EVENT_LIST) do
+      if not event.isDestroyed and not event.isCompleted and
+          drvl0.zeEventQueryStatus(event.handle) == ZE_RESULT_SUCCESS then
+        UpdateEvent(event, event.cqNumber)
       end
     end
-    io.write(header .. '\n')
+  end
 
-    table.sort(EVENT_LIST, CompareGitsNomenclature)
-    for _, event in ipairs(EVENT_LIST) do
-      io.write(event:getCsvLine() .. '\n')
-    end
+  local path = 'benchmark.csv'
+  out_dir = gits.getOutDir()
+  if out_dir ~= gits.nullUdt() and out_dir ~= '' then
+    path = out_dir .. ossep .. path
+  end
+  local csvFile = io.open(path, 'w')
+  if csvFile == nil then
+    error('Failed to open results file for writing.')
+    return
+  end
 
-    io.close(csvFile)
-    for _, v in ipairs(GITS_EVENTS) do
-      drvl0.zeEventDestroy(v)
+  io.output(csvFile)
+
+  local header = ''
+  for index, col_name in ipairs(CSV_HEADER) do
+    header = header .. col_name
+    if index ~= #CSV_HEADER then
+      header = header .. ','
     end
-    if EVENT_POOL_HANDLE ~= nil then
-      drvl0.zeEventPoolDestroy(EVENT_POOL_HANDLE)
-    end
+  end
+  io.write(header .. '\n')
+
+  table.sort(EVENT_LIST, CompareGitsNomenclature)
+  for _, event in ipairs(EVENT_LIST) do
+    io.write(event:getCsvLine() .. '\n')
+  end
+
+  io.close(csvFile)
+  for _, v in ipairs(GITS_EVENTS) do
+    drvl0.zeEventDestroy(v)
+  end
+  if EVENT_POOL_HANDLE ~= nil then
+    drvl0.zeEventPoolDestroy(EVENT_POOL_HANDLE)
+  end
 end
 
 -- API CALLS --
@@ -517,6 +542,14 @@ function zeDeviceGetProperties(hDevice, pDeviceProperties)
     KERNEL_TIMESTAMP_VALID_BITS = pDeviceProperties.kernelTimestampValidBits
     Log("Timer Resolution: "..TIMER_RESOLUTION)
     Log("Kernel Timestamp Valid Bits: "..KERNEL_TIMESTAMP_VALID_BITS)
+  end
+  return retVal
+end
+
+function zeContextDestroy(hContext)
+  local retVal = drvl0.zeContextDestroy(hContext)
+  if retVal == ZE_RESULT_SUCCESS and hContext == EVENT_POOL_CONTEXT then
+    EVENT_POOL_CONTEXT_DESTROYED = true
   end
   return retVal
 end
@@ -648,7 +681,7 @@ end
 
 function zeEventHostSynchronize(hEvent, timeout)
   local retVal = drvl0.zeEventHostSynchronize(hEvent, timeout)
-  local event = GetObject(EVENT_LIST, hEvent)
+  local event = GetPendingEvent(hEvent)
   if event ~= nil and retVal == ZE_RESULT_SUCCESS then
     -- Immediate async command list case.
     local cq = GetObject(COMMAND_QUEUE_LIST, event.hCommandList)
@@ -675,6 +708,25 @@ function zeEventHostSynchronize(hEvent, timeout)
   return retVal
 end
 
+function zeEventQueryStatus(hEvent)
+  local retVal = drvl0.zeEventQueryStatus(hEvent)
+  if retVal == ZE_RESULT_SUCCESS then
+    local event = GetPendingEvent(hEvent)
+    if event ~= nil then
+      UpdateEvent(event, event.cqNumber)
+    end
+  end
+  return retVal
+end
+
+function zeEventHostReset(hEvent)
+  local event = GetPendingEvent(hEvent)
+  if event ~= nil then
+    UpdateEvent(event, event.cqNumber)
+  end
+  return drvl0.zeEventHostReset(hEvent)
+end
+
 function zeFenceHostSynchronize(hFence, timeout)
   local retVal = drvl0.zeFenceHostSynchronize(hFence, timeout)
   if retVal == ZE_RESULT_SUCCESS then
@@ -697,9 +749,11 @@ function zeCommandListAppendEventReset(hCommandList, hEvent)
 end
 
 function zeEventPoolCreate(hContext, desc, numDevices, phDevices, phEventPool)
-  if desc.flags & ZE_EVENT_POOL_FLAG_IPC then
-    desc.flags = ZE_EVENT_POOL_FLAG_KERNEL_TIMESTAMP
-  else
+  if (desc.flags & ZE_EVENT_POOL_FLAG_IPC) ~= 0 then
+    Log("Removing ZE_EVENT_POOL_FLAG_IPC to enable kernel timestamp collection.")
+    desc.flags = desc.flags & ~ZE_EVENT_POOL_FLAG_IPC
+  end
+  if (desc.flags & ZE_EVENT_POOL_FLAG_KERNEL_MAPPED_TIMESTAMP) == 0 then
     desc.flags = desc.flags | ZE_EVENT_POOL_FLAG_KERNEL_TIMESTAMP
   end
   return drvl0.zeEventPoolCreate(hContext, desc, numDevices, phDevices, phEventPool)

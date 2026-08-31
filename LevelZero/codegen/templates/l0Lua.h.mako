@@ -79,9 +79,7 @@ namespace gits {
       const auto type = lua_type(L, pos);
       const char* typeName = lua_typename(L, type);
       if (!std::strcmp(typeName, "table")) {
-        lua_getfield(L, pos, "__self");
-        auto val = *reinterpret_cast<${arg.get('name')}*>(lua_touserdata(L, -1));
-        lua_pop(L, 1);
+        ${arg.get('name')} val{};
     %for var in arg['vars']:
         lua_getfield(L, pos, "${get_name(var['name'])}");
       %if '[' in var['name']:
@@ -107,6 +105,9 @@ namespace gits {
         lua_getfield(L, pos, "__self");
         auto val = static_cast<${arg.get('name')}*>(lua_touserdata(L, -1));
         lua_pop(L, 1);
+        if (val == nullptr) {
+          throw EOperationFailed(EXCEPTION_MESSAGE + std::string("\nLua structure table has no __self storage."));
+        }
     %for var in arg['vars']:
         lua_getfield(L, pos, "${get_name(var['name'])}");
       %if '[' in var['name']:
@@ -133,6 +134,9 @@ namespace gits {
         lua_getfield(L, pos, "__self");
         auto val = static_cast<${arg.get('name')}*>(lua_touserdata(L, -1));
         lua_pop(L, 1);
+        if (val == nullptr) {
+          throw EOperationFailed(EXCEPTION_MESSAGE + std::string("\nLua structure table has no __self storage."));
+        }
     %for var in arg['vars']:
         lua_getfield(L, pos, "${get_name(var['name'])}");
       %if '[' in var['name']:
@@ -155,8 +159,6 @@ namespace gits {
     inline void lua_push_ext(lua_State* L, std::conditional_t<std::is_trivially_constructible_v<${arg.get('name')}>, ${arg.get('name')}, ${arg.get('name')}&> val) {
       lua_newtable(L);
       int pos = lua_gettop(L);
-      gits::lua::lua_push(L, &val);
-      lua_setfield(L, pos, "__self");
       lua_setTableFields(L, pos, val);
     }
     template<>
