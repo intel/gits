@@ -72,6 +72,9 @@ private:
   struct ResourceDesc {
     bool IsImage{false};
     uint64_t DstKey{0};
+    // Where in the destination buffer these bytes go. Non-zero only for a
+    // sparse buffer, whose resident ranges arrive as separate resources.
+    VkDeviceSize DstOffset{0};
     VkDeviceSize Size{0};
     VkFormat Format{VK_FORMAT_UNDEFINED};
     VkImageLayout FinalLayout{VK_IMAGE_LAYOUT_UNDEFINED};

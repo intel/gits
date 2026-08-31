@@ -386,6 +386,15 @@ private:
   // Query every bound address buffer because a parent trim may omit the original query.
   void TrackBoundBufferDeviceAddress(uint64_t bufferKey);
 
+  // Fold a sparse bind's per-buffer page binds into BufferState::SparseRanges so
+  // state restore can re-issue them. Image binds are not tracked - a sparse
+  // image is still a fatal error in RestoreImage.
+  void TrackSparseBufferBinds(vkQueueBindSparseCommand& command);
+
+  // Freeing memory that still has pages bound to a sparse buffer is legal - the
+  // regions just stop being resident.
+  void DropSparseRangesBackedBy(uint64_t memoryKey);
+
   // Feed the per-event VkDependencyInfo image barriers carried by a sync2
   // event wait (vkCmdWaitEvents2/KHR) into image-layout tracking, mirroring the
   // sync2 pipeline-barrier path.  handleKeys is the flat, array-order
@@ -475,6 +484,9 @@ private:
   ImageLayoutService m_ImageLayout;
   CommandBufferLifecycleService m_CommandBufferLifecycle;
   MappedMemoryService m_MappedMemory;
+  // Sparse buffers holding pages from each allocation, so vkFreeMemory only has
+  // to visit the buffers that allocation actually backs.
+  std::unordered_map<uint64_t, std::unordered_set<uint64_t>> m_SparseMemoryUsers;
   // Recording pass: consumed by StateTrackingService to gate restore.
   AnalyzerResults m_AnalyzerResults;
   // Analysis pass only: collects in-range object usage and dumps the analysis

@@ -363,7 +363,31 @@ void SubcaptureLayer::Post(vkAllocateMemoryCommand& command) {
   StoreState(std::move(state), command);
 }
 
+void SubcaptureLayer::DropSparseRangesBackedBy(uint64_t memoryKey) {
+  auto it = m_SparseMemoryUsers.find(memoryKey);
+  if (it == m_SparseMemoryUsers.end()) {
+    return;
+  }
+  for (uint64_t bufKey : it->second) {
+    auto* buf = m_StateTracking.GetState<BufferState>(bufKey);
+    if (buf == nullptr) {
+      continue;
+    }
+    for (auto r = buf->SparseRanges.begin(); r != buf->SparseRanges.end();) {
+      if (r->second.MemoryKey == memoryKey) {
+        r = buf->SparseRanges.erase(r);
+      } else {
+        ++r;
+      }
+    }
+  }
+  m_SparseMemoryUsers.erase(it);
+}
+
 void SubcaptureLayer::Post(vkFreeMemoryCommand& command) {
+  // Before the AsBacking branch below: the pages are gone either way.
+  DropSparseRangesBackedBy(command.m_memory.Key);
+
   // RestoreBlasChain needs the AS backing memory, so it is flagged Destroyed rather than
   // erased. Other memory is erased as before.
   auto* state = m_StateTracking.GetState<DeviceMemoryState>(command.m_memory.Key);
@@ -536,6 +560,125 @@ void SubcaptureLayer::Post(vkQueueSubmit2KHRCommand& command) {
                                command.m_pSubmits.HandleKeys);
 }
 
+namespace {
+
+// Apply one VkSparseMemoryBind to a buffer's residency map. memory == null is an
+// unbind, and a bind over a live range implicitly replaces it, so both kinds have
+// to clear the range first - and the range need not line up with what is there.
+void ApplySparseBufferBind(BufferState& buf, const VkSparseMemoryBind& bind, uint64_t memoryKey) {
+  if (bind.size == 0) {
+    return;
+  }
+  const VkDeviceSize begin = bind.resourceOffset;
+  const VkDeviceSize end = begin + bind.size;
+
+  // Ranges never overlap, so only the range starting at or before begin can
+  // straddle it - step back one to catch that case.
+  auto it = buf.SparseRanges.upper_bound(begin);
+  if (it != buf.SparseRanges.begin()) {
+    --it;
+  }
+  while (it != buf.SparseRanges.end() && it->first < end) {
+    const VkDeviceSize curBegin = it->first;
+    const VkDeviceSize curEnd = curBegin + it->second.Size;
+    if (curEnd <= begin) {
+      ++it;
+      continue;
+    }
+    const SparseBindRange cur = it->second;
+    it = buf.SparseRanges.erase(it);
+    // Whatever of the old range sticks out past the new bind stays resident.
+    // Both inserts land below it, so the iterator stays valid and the walk
+    // still terminates.
+    if (curBegin < begin) {
+      SparseBindRange head = cur;
+      head.Size = begin - curBegin;
+      buf.SparseRanges[curBegin] = head;
+    }
+    if (curEnd > end) {
+      SparseBindRange tail;
+      tail.Size = curEnd - end;
+      tail.MemoryKey = cur.MemoryKey;
+      tail.MemoryOffset = cur.MemoryOffset + (end - curBegin);
+      buf.SparseRanges[end] = tail;
+    }
+  }
+
+  if (memoryKey != 0) {
+    SparseBindRange range;
+    range.Size = bind.size;
+    range.MemoryKey = memoryKey;
+    range.MemoryOffset = bind.memoryOffset;
+    buf.SparseRanges[begin] = range;
+  }
+}
+
+} // namespace
+
+void SubcaptureLayer::TrackSparseBufferBinds(vkQueueBindSparseCommand& command) {
+  const VkBindSparseInfo* infos = command.m_pBindInfo.Value;
+  if (infos == nullptr) {
+    return;
+  }
+  const auto& keys = command.m_pBindInfo.HandleKeys;
+  size_t k = 0; // running index into the flat, array-order key list
+  const auto takeKey = [&keys, &k]() { return (k < keys.size()) ? keys[k++] : 0; };
+  std::unordered_set<uint64_t> touchedBuffers;
+
+  // Key order per element must match CollectHandleKeys(const VkBindSparseInfo&):
+  // wait semaphores, then each buffer bind (buffer then its memories), then the
+  // opaque image binds, then the image binds, then the signal semaphores. Walk
+  // all of them so the buffer slice stays aligned even when the other arrays are
+  // non-empty.
+  for (uint32_t i = 0; i < command.m_pBindInfo.Size; ++i) {
+    const VkBindSparseInfo& info = infos[i];
+
+    if (info.pWaitSemaphores) {
+      k += info.waitSemaphoreCount;
+    }
+    if (info.pBufferBinds) {
+      for (uint32_t b = 0; b < info.bufferBindCount; ++b) {
+        const VkSparseBufferMemoryBindInfo& bufBind = info.pBufferBinds[b];
+        const uint64_t bufKey = takeKey();
+        auto* buf = m_StateTracking.GetState<BufferState>(bufKey);
+        if (bufBind.pBinds == nullptr) {
+          continue;
+        }
+        for (uint32_t j = 0; j < bufBind.bindCount; ++j) {
+          const uint64_t memKey = takeKey();
+          if (buf) {
+            ApplySparseBufferBind(*buf, bufBind.pBinds[j], memKey);
+            touchedBuffers.insert(bufKey);
+            if (memKey != 0) {
+              m_SparseMemoryUsers[memKey].insert(bufKey);
+            }
+          }
+        }
+      }
+    }
+    if (info.pImageOpaqueBinds) {
+      for (uint32_t b = 0; b < info.imageOpaqueBindCount; ++b) {
+        k += 1 + (info.pImageOpaqueBinds[b].pBinds ? info.pImageOpaqueBinds[b].bindCount : 0);
+      }
+    }
+    if (info.pImageBinds) {
+      for (uint32_t b = 0; b < info.imageBindCount; ++b) {
+        k += 1 + (info.pImageBinds[b].pBinds ? info.pImageBinds[b].bindCount : 0);
+      }
+    }
+    if (info.pSignalSemaphores) {
+      k += info.signalSemaphoreCount;
+    }
+  }
+
+  // A sparse buffer never reaches vkBindBufferMemory*, so this is its only hook
+  // for the address query. Legal at any residency, including none:
+  // VUID-vkGetBufferDeviceAddress-bufferDeviceAddress-03324 accepts "buffer is sparse".
+  for (uint64_t bufKey : touchedBuffers) {
+    TrackBoundBufferDeviceAddress(bufKey);
+  }
+}
+
 void SubcaptureLayer::Post(vkQueueBindSparseCommand& command) {
   if (command.m_Return.Value != VK_SUCCESS) {
     return;
@@ -547,6 +690,8 @@ void SubcaptureLayer::Post(vkQueueBindSparseCommand& command) {
   // pSignalSemaphores are intentionally not tracked here, matching legacy, which
   // also tracks only the fence for sparse binds.
   m_SyncState.OnFenceSignaled(command.m_fence.Key);
+
+  TrackSparseBufferBinds(command);
 }
 
 void SubcaptureLayer::Post(vkResetFencesCommand& command) {

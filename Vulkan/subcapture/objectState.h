@@ -11,6 +11,7 @@
 #include "vulkanHeader2.h"
 #include "command.h"
 
+#include <map>
 #include <memory>
 #include <unordered_map>
 #include <unordered_set>
@@ -151,6 +152,14 @@ struct EventState : ObjectState {
 
 // ---- Buffers / images --------------------------------------------------
 
+// One resident range of a sparse buffer, as established by vkQueueBindSparse.
+// A range is only ever present when it is backed - an unbind erases it.
+struct SparseBindRange {
+  VkDeviceSize Size{};
+  uint64_t MemoryKey{};
+  VkDeviceSize MemoryOffset{};
+};
+
 // size, usage and sharingMode are re-readable from creationCommandBuffer,
 // but kept here for cheap access by memory-restore and layout-tracking logic
 // without re-decoding the full command.
@@ -159,6 +168,8 @@ struct BufferState : ObjectState {
   uint64_t BoundMemoryKey{};
   VkDeviceSize MemoryOffset{};
   bool SparseBinding{}; // VK_BUFFER_CREATE_SPARSE_BINDING_BIT
+  // For sparse buffer BoundMemoryKey = 0, its pages come from SparseRanges
+  std::map<VkDeviceSize, SparseBindRange> SparseRanges{};
   // Stored at vkCreateBuffer time for GPU-readback content restore.
   VkDeviceSize BufferSize{};
   VkBufferUsageFlags UsageFlags{};

@@ -82,9 +82,17 @@ void AnalyzerService::AddClosure(uint64_t key, std::set<uint64_t>& outKeys) {
   // image-layout transitions, content upload, descriptor allocation, etc.) have
   // every object they reference available.
   switch (state->CreationCommandId) {
-  case CommandId::ID_VKCREATEBUFFER:
-    AddClosure(static_cast<BufferState*>(state)->BoundMemoryKey, outKeys);
+  case CommandId::ID_VKCREATEBUFFER: {
+    auto* buf = static_cast<BufferState*>(state);
+    AddClosure(buf->BoundMemoryKey, outKeys);
+    // A sparse buffer has no single bound memory - its pages come from any
+    // number of allocations, and all of them have to survive the trim or the
+    // buffer replays with holes.
+    for (const auto& [offset, range] : buf->SparseRanges) {
+      AddClosure(range.MemoryKey, outKeys);
+    }
     break;
+  }
   case CommandId::ID_VKCREATEIMAGE:
     AddClosure(static_cast<ImageState*>(state)->BoundMemoryKey, outKeys);
     break;

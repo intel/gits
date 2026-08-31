@@ -138,6 +138,7 @@ void RestoreContentService::Manifest(const RestoreContentManifestCommand& comman
     ResourceDesc desc;
     desc.IsImage = false;
     desc.DstKey = buf.DstBufferKey;
+    desc.DstOffset = buf.DstOffset;
     desc.Size = buf.Size;
     session->Resources.push_back(std::move(desc));
     if (buf.Size > maxResource) {
@@ -469,12 +470,14 @@ void RestoreContentService::FlushBatch(Session& session, size_t batchIdx) {
       toDst.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
       toDst.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
       toDst.buffer = dstBuffer;
-      toDst.offset = 0;
-      toDst.size = VK_WHOLE_SIZE;
+      // Scope the barrier to the range being written - a sparse buffer holds
+      // several resources and its non-resident pages are not ours to barrier.
+      toDst.offset = r->DstOffset;
+      toDst.size = r->Size;
       dt.vkCmdPipelineBarrier(slot.Cb, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
                               VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 1, &toDst, 0, nullptr);
 
-      VkBufferCopy region{r->BaseOffset, 0, r->Size};
+      VkBufferCopy region{r->BaseOffset, r->DstOffset, r->Size};
       dt.vkCmdCopyBuffer(slot.Cb, slot.Buffer, dstBuffer, 1, &region);
 
       VkBufferMemoryBarrier toRead = toDst;

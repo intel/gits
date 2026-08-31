@@ -128,6 +128,10 @@ class RestoreContentManifestCommand : public Command {
 public:
   struct BufferEntry {
     uint64_t DstBufferKey{0};
+    // Byte offset in the destination buffer the bytes belong at. Non-zero only
+    // for a sparse buffer, which contributes one entry per resident range, so
+    // DstBufferKey is not unique across m_Buffers in that case.
+    uint64_t DstOffset{0};
     uint64_t Size{0};
   };
   struct ImageEntry {

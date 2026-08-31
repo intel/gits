@@ -396,6 +396,11 @@ private:
   bool RestorePhysicalDevice(ObjectState* state);
   CommandBufferRestoreOutcome RestoreCommandBuffers(ObjectState* state);
   void RestoreMappedMemory(ObjectState* state);
+  // Re-issue the page bindings of every restored sparse buffer. Runs as its own
+  // pass after the object pass: the bind needs a restored queue, which the
+  // map-order object pass cannot guarantee is available yet when a buffer is
+  // reached.
+  void RestoreSparseBufferBinds();
   void RestoreBufferContents();
   void RestoreImageContents();
   void RestoreAccelerationStructureContents();

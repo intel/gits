@@ -124,7 +124,7 @@ uint32_t GetSize(const RestoreContentManifestCommand& command) {
                   GetSize(command.m_QueueKey) + GetSize(command.m_CommandPoolKey) +
                   GetSize(command.m_TotalBytes);
   size += static_cast<uint32_t>(sizeof(uint32_t)); // buffer count
-  size += static_cast<uint32_t>(command.m_Buffers.size() * (sizeof(uint64_t) + sizeof(uint64_t)));
+  size += static_cast<uint32_t>(command.m_Buffers.size() * 3 * sizeof(uint64_t));
   size += static_cast<uint32_t>(sizeof(uint32_t)); // image count
   for (const auto& img : command.m_Images) {
     size += static_cast<uint32_t>(sizeof(uint64_t));     // DstImageKey
@@ -150,6 +150,7 @@ void Encode(const RestoreContentManifestCommand& command, char* dest) {
   Encode(dest, offset, bufferCount);
   for (const auto& buf : command.m_Buffers) {
     Encode(dest, offset, buf.DstBufferKey);
+    Encode(dest, offset, buf.DstOffset);
     Encode(dest, offset, buf.Size);
   }
 
@@ -185,6 +186,7 @@ void Decode(char* src, RestoreContentManifestCommand& command) {
   command.m_Buffers.resize(bufferCount);
   for (auto& buf : command.m_Buffers) {
     Decode(src, offset, buf.DstBufferKey);
+    Decode(src, offset, buf.DstOffset);
     Decode(src, offset, buf.Size);
   }
 

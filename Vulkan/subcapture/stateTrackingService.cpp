@@ -431,6 +431,11 @@ void StateTrackingService::RestoreState() {
 
   recordStatus(MarkerUInt64Command::Value::STATE_RESTORE_OBJECTS_END);
 
+  // Bind the pages of sparse buffers before anything reads or writes them: the
+  // acceleration-structure and content passes below copy into these buffers, and
+  // a copy into an unbound page is undefined.
+  RestoreSparseBufferBinds();
+
   // Restore GPU-local resource contents.  Must run after all objects are
   // created (m_RestoredThisPass is fully populated) and before
   // EmitImageLayoutTransitions (which skips images whose copy ends in the
@@ -913,6 +918,36 @@ static std::map<uint32_t, std::pair<uint64_t, uint64_t>> FindAllRestoredQueueAnd
     }
   }
   return familyToQueuePool;
+}
+
+// Find a restored queue on deviceKey whose family supports
+// VK_QUEUE_SPARSE_BINDING_BIT (VUID-vkQueueBindSparse-queuetype).  No command
+// pool is paired here: a sparse bind is a queue operation, not a command
+// recorded into a command buffer, so the family-sharing constraint that
+// FindQueueAndPool exists for does not apply.
+static uint64_t FindSparseBindingQueue(
+    const std::map<uint64_t, std::unique_ptr<ObjectState>>& states,
+    uint64_t deviceKey,
+    const std::vector<VkQueueFamilyProperties>& families,
+    const std::unordered_set<uint64_t>& restored) {
+  for (const auto& [k, sp] : states) {
+    if (sp->Destroyed || sp->ParentKey != deviceKey || !restored.count(k)) {
+      continue;
+    }
+    if (sp->CreationCommandId != CommandId::ID_VKGETDEVICEQUEUE &&
+        sp->CreationCommandId != CommandId::ID_VKGETDEVICEQUEUE2) {
+      continue;
+    }
+    auto* qs = static_cast<QueueState*>(sp.get());
+    if (qs->QueueFamilyIndex >= families.size()) {
+      continue;
+    }
+    if ((families[qs->QueueFamilyIndex].queueFlags & VK_QUEUE_SPARSE_BINDING_BIT) == 0) {
+      continue;
+    }
+    return k;
+  }
+  return 0;
 }
 
 } // namespace
@@ -2345,14 +2380,6 @@ bool StateTrackingService::RestoreBuffer(ObjectState* state) {
     return false;
   }
 
-  // A sparse buffer gets its pages from vkQueueBindSparse, which SubcaptureLayer
-  // does not track currently.
-  if (buf->SparseBinding) {
-    FatalSubcaptureError("buffer key=" + std::to_string(buf->Key) +
-                         " was created with VK_BUFFER_CREATE_SPARSE_BINDING_BIT. Sparse memory "
-                         "binding is not supported in subcapture yet.");
-  }
-
   // Emit vkCreateBuffer BEFORE restoring bound memory. For dedicated
   // allocations VkMemoryDedicatedAllocateInfo::buffer references this buffer,
   // so its handle must be registered in HandleMapService before vkAllocateMemory
@@ -2396,6 +2423,12 @@ bool StateTrackingService::RestoreBuffer(ObjectState* state) {
   // "restored = handle registered" contract still holds.
   m_RestoredThisPass.insert(state->Key);
 
+  // Sparse buffer - restore the backing allocations.
+  // The sparse binds are emitted later by RestoreSparseBufferBinds.
+  for (const auto& [offset, range] : buf->SparseRanges) {
+    RestoreOne(GetState(range.MemoryKey));
+  }
+
   if (buf->BoundMemoryKey && buf->ParentKey) {
     RestoreOne(GetState(buf->BoundMemoryKey));
     if (!m_RestoredThisPass.count(buf->BoundMemoryKey)) {
@@ -2418,7 +2451,9 @@ bool StateTrackingService::RestoreBuffer(ObjectState* state) {
   }
 
   // Preserve the buffer-address association for nested subcaptures.
-  if (buf->BoundMemoryKey && (buf->UsageFlags & VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT)) {
+  // A sparse buffer is backed by SparseRanges.
+  const bool hasBacking = buf->BoundMemoryKey != 0 || !buf->SparseRanges.empty();
+  if (hasBacking && (buf->UsageFlags & VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT)) {
     GITS_ASSERT(buf->DeviceAddress);
     EmitGetBufferDeviceAddress(state->ParentKey, state->Key, buf->DeviceAddress);
   }
@@ -5035,6 +5070,118 @@ void StateTrackingService::RestoreAccelerationStructureContents() {
   }
 }
 
+void StateTrackingService::RestoreSparseBufferBinds() {
+  // Group by device: the queue and the family properties are per device.
+  std::unordered_map<uint64_t, std::vector<uint64_t>> buffersByDevice;
+  for (auto& [key, statePtr] : m_States) {
+    ObjectState* state = statePtr.get();
+    if (state->Destroyed || state->CreationCommandId != CommandId::ID_VKCREATEBUFFER) {
+      continue;
+    }
+    if (!m_RestoredThisPass.count(key)) {
+      continue;
+    }
+    auto* buf = static_cast<BufferState*>(state);
+    if (!buf->SparseBinding || buf->SparseRanges.empty() || buf->ParentKey == 0) {
+      continue;
+    }
+    buffersByDevice[buf->ParentKey].push_back(key);
+  }
+
+  for (const auto& [deviceKey, bufKeys] : buffersByDevice) {
+    auto* devState = GetState(deviceKey);
+    if (devState == nullptr) {
+      continue;
+    }
+    std::vector<VkQueueFamilyProperties> families;
+    if (!m_GpuReadbackHelper->GetQueueFamilyProperties(devState->ParentKey, families)) {
+      FatalSubcaptureError("could not query queue family properties of physical device key=" +
+                           std::to_string(devState->ParentKey) +
+                           ", needed to pick a sparse binding queue for " +
+                           std::to_string(bufKeys.size()) + " sparse buffer(s)");
+    }
+    const uint64_t queueKey =
+        FindSparseBindingQueue(m_States, deviceKey, families, m_RestoredThisPass);
+    if (queueKey == 0) {
+      // Nothing to fall back on: without a sparse-capable queue the pages cannot
+      // be bound, and the buffer would replay unbacked.
+      FatalSubcaptureError("device key=" + std::to_string(deviceKey) + " has " +
+                           std::to_string(bufKeys.size()) +
+                           " sparse buffer(s) to restore but no restored queue on a family with "
+                           "VK_QUEUE_SPARSE_BINDING_BIT, so their pages cannot be bound");
+    }
+
+    for (uint64_t bufKey : bufKeys) {
+      auto* buf = static_cast<BufferState*>(GetState(bufKey));
+      if (buf == nullptr) {
+        continue;
+      }
+
+      std::vector<VkSparseMemoryBind> binds;
+      std::vector<uint64_t> handleKeys;
+      binds.reserve(buf->SparseRanges.size());
+      handleKeys.reserve(buf->SparseRanges.size() + 1);
+      handleKeys.push_back(bufKey); // VkSparseBufferMemoryBindInfo::buffer comes first
+
+      for (const auto& [offset, range] : buf->SparseRanges) {
+        // A range with unrestorable memory means the page would replay unbound.
+        if (!m_RestoredThisPass.count(range.MemoryKey)) {
+          FatalSubcaptureError("sparse buffer key=" + std::to_string(bufKey) +
+                               " has a range at offset " + std::to_string(offset) + " size " +
+                               std::to_string(range.Size) + " backed by memory key=" +
+                               std::to_string(range.MemoryKey) + " that could not be restored");
+        }
+        VkSparseMemoryBind bind{};
+        bind.resourceOffset = offset;
+        bind.size = range.Size;
+        bind.memoryOffset = range.MemoryOffset;
+        // memory is resolved from handleKeys by the player, so the encoded value
+        // is irrelevant - only the key order matters.
+        binds.push_back(bind);
+        handleKeys.push_back(range.MemoryKey);
+      }
+
+      if (binds.empty()) {
+        continue;
+      }
+
+      VkSparseBufferMemoryBindInfo bufferBind{};
+      bufferBind.bindCount = static_cast<uint32_t>(binds.size());
+      bufferBind.pBinds = binds.data();
+
+      VkBindSparseInfo info{};
+      info.sType = VK_STRUCTURE_TYPE_BIND_SPARSE_INFO;
+      info.bufferBindCount = 1;
+      info.pBufferBinds = &bufferBind;
+
+      vkQueueBindSparseCommand cmd;
+      cmd.m_queue.Key = queueKey;
+      cmd.m_fence.Key = 0;
+      cmd.m_Return.Value = VK_SUCCESS;
+      cmd.m_bindInfoCount.Value = 1;
+      cmd.m_pBindInfo.Value = &info;
+      cmd.m_pBindInfo.Size = 1;
+      // Key order must match CollectHandleKeys(const VkBindSparseInfo&): no wait
+      // semaphores, then the buffer followed by one memory key per bind, then no
+      // image binds and no signal semaphores.
+      cmd.m_pBindInfo.HandleKeys = handleKeys;
+      cmd.m_Key = m_Recorder.CreateStateRestoreKey();
+      m_Recorder.Record(vkQueueBindSparseSerializer(cmd));
+
+      LOG_TRACE << "Vulkan subcapture: restored sparse binding, buffer key=" << bufKey
+                << " ranges=" << binds.size();
+    }
+
+    // The binds must complete before RestoreBufferContents copies into these
+    // pages - the per-device vkDeviceWaitIdle only runs after content restore.
+    vkQueueWaitIdleCommand waitCmd;
+    waitCmd.m_queue.Key = queueKey;
+    waitCmd.m_Return.Value = VK_SUCCESS;
+    waitCmd.m_Key = m_Recorder.CreateStateRestoreKey();
+    m_Recorder.Record(vkQueueWaitIdleSerializer(waitCmd));
+  }
+}
+
 void StateTrackingService::RestoreBufferContents() {
   // Group buffers by device.
   std::unordered_map<uint64_t, std::vector<uint64_t>> buffersByDevice;
@@ -5053,7 +5200,10 @@ void StateTrackingService::RestoreBufferContents() {
     if (buf->ContentRestored) {
       continue;
     }
-    if (buf->BufferSize == 0 || buf->BoundMemoryKey == 0) {
+    // A sparse buffer is backed through SparseRanges instead of BoundMemoryKey,
+    // so gating on the latter alone would skip its content entirely.
+    const bool sparse = buf->SparseBinding && !buf->SparseRanges.empty();
+    if (buf->BufferSize == 0 || (buf->BoundMemoryKey == 0 && !sparse)) {
       continue;
     }
     // RestoreBuffer inserts the buffer into m_RestoredThisPass and returns true
@@ -5064,7 +5214,9 @@ void StateTrackingService::RestoreBufferContents() {
     // on the false premise that the mapped-memory restore covers it (that
     // memory was never restored either).  Neither path can restore the
     // contents, so exclude the buffer outright.
-    if (!m_RestoredThisPass.count(buf->BoundMemoryKey)) {
+    // For a sparse buffer the equivalent check is per range, in the manifest loop
+    // below: an unrestored allocation costs that range, not the whole buffer.
+    if (!sparse && !m_RestoredThisPass.count(buf->BoundMemoryKey)) {
       LOG_WARNING << "Vulkan subcapture: skipping buffer content restore for buffer key=" << key
                   << " because bound memory key=" << buf->BoundMemoryKey << " was not restored";
       continue;
@@ -5134,10 +5286,47 @@ void StateTrackingService::RestoreBufferContents() {
     manifest.m_QueueKey = queueKey;
     manifest.m_CommandPoolKey = poolKey;
 
-    std::vector<uint64_t> orderedKeys;
+    // One entry per resource the data pass will stream. A non-sparse buffer
+    // contributes exactly one covering the whole buffer, a sparse one contributes
+    // one per resident run of pages - reading the holes would fault, and reading
+    // whole buffers here would stage the full virtual size instead of what is
+    // actually backed.
+    struct ContentSlice {
+      uint64_t BufKey{};
+      VkDeviceSize Offset{};
+      VkDeviceSize Size{};
+    };
+    std::vector<ContentSlice> slices;
     for (uint64_t bufKey : bufKeys) {
       auto* buf = static_cast<BufferState*>(GetState(bufKey));
       if (!buf) {
+        continue;
+      }
+
+      if (buf->SparseBinding && !buf->SparseRanges.empty()) {
+        // Merge ranges that are adjacent in the buffer into one slice: a copy
+        // does not care which allocation backs which page, and fewer, larger
+        // slices mean fewer manifest entries and fewer readbacks.
+        VkDeviceSize runBegin = 0;
+        VkDeviceSize runEnd = 0;
+        bool inRun = false;
+        // Every range here is backed and bound - RestoreSparseBufferBinds ran
+        // first and aborts otherwise - so the whole map is readable.
+        for (const auto& [offset, range] : buf->SparseRanges) {
+          if (inRun && offset == runEnd) {
+            runEnd = offset + range.Size;
+            continue;
+          }
+          if (inRun) {
+            slices.push_back({bufKey, runBegin, runEnd - runBegin});
+          }
+          runBegin = offset;
+          runEnd = offset + range.Size;
+          inRun = true;
+        }
+        if (inRun) {
+          slices.push_back({bufKey, runBegin, runEnd - runBegin});
+        }
         continue;
       }
 
@@ -5161,12 +5350,16 @@ void StateTrackingService::RestoreBufferContents() {
         }
       }
 
+      slices.push_back({bufKey, 0, buf->BufferSize});
+    }
+
+    for (const auto& slice : slices) {
       RestoreContentManifestCommand::BufferEntry entry;
-      entry.DstBufferKey = bufKey;
-      entry.Size = buf->BufferSize;
+      entry.DstBufferKey = slice.BufKey;
+      entry.DstOffset = slice.Offset;
+      entry.Size = slice.Size;
       manifest.m_Buffers.push_back(entry);
-      manifest.m_TotalBytes += buf->BufferSize;
-      orderedKeys.push_back(bufKey);
+      manifest.m_TotalBytes += slice.Size;
     }
     if (manifest.m_Buffers.empty()) {
       continue;
@@ -5182,13 +5375,13 @@ void StateTrackingService::RestoreBufferContents() {
     // is still emitted so the player's token count matches the manifest and the
     // stream terminates cleanly without a separate end token.
     static char sEmptyByte = 0;
-    for (size_t i = 0; i < orderedKeys.size(); ++i) {
-      const uint64_t bufKey = orderedKeys[i];
+    for (size_t i = 0; i < slices.size(); ++i) {
+      const uint64_t bufKey = slices[i].BufKey;
       std::vector<uint8_t> data;
       auto* buf = static_cast<BufferState*>(GetState(bufKey));
       if (buf) {
         if (!m_GpuReadbackHelper->ReadBuffer(deviceKey, physDevKey, queueKey, poolKey, bufKey,
-                                             /*srcOffset=*/0, buf->BufferSize, data)) {
+                                             slices[i].Offset, slices[i].Size, data)) {
           LOG_WARNING << "Vulkan subcapture: GPU readback failed for buffer key=" << bufKey;
           data.clear();
         }
