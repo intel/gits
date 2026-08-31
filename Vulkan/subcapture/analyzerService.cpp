@@ -18,6 +18,7 @@
 #include "yaml-cpp/yaml.h"
 
 #include <fstream>
+#include <sstream>
 
 namespace gits {
 namespace vulkan {
@@ -55,6 +56,18 @@ void AnalyzerService::AddObjectsForRestore(const std::vector<uint64_t>& objectKe
     if (key) {
       m_ObjectsForRestore.insert(key);
     }
+  }
+}
+
+void AnalyzerService::NoteInRangeAsWrite(uint64_t asKey) {
+  if (m_Optimize && asKey && m_SubcaptureRange.InRange()) {
+    m_AsWrittenInRange.insert(asKey);
+  }
+}
+
+void AnalyzerService::NoteInRangeAsRead(uint64_t asKey) {
+  if (m_Optimize && asKey && m_SubcaptureRange.InRange()) {
+    m_AsReadInRange.insert(asKey);
   }
 }
 
@@ -186,10 +199,10 @@ void AnalyzerService::DumpAnalysisFile() {
   if (m_OptimizationService) {
     std::unordered_set<uint64_t> usedBlasKeys;
     for (uint64_t key : closure) {
-      // Destroyed acceleration structures stay in the state map for the chain replay,
-      // but nothing live can reference one, so they are not "used".
+      // Only a structure destroyed before the range is unusable by an in-range command.
       auto* as = m_StateTracking.GetState<AccelerationStructureState>(key);
-      if (as && !as->Destroyed && as->Type == VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR) {
+      if (as && !as->DestroyedBeforeRange &&
+          as->Type == VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR) {
         usedBlasKeys.insert(key);
       }
     }
@@ -201,6 +214,47 @@ void AnalyzerService::DumpAnalysisFile() {
     for (const auto& op : blasChain) {
       AddClosure(op.DstAsKey, closure);
       AddClosure(op.SrcAsKey, closure);
+    }
+
+    // Anything the range reads but never writes has to come out of the restore. A structure
+    // no retained op produces replays uninitialized, which the driver reads as a malformed
+    // acceleration structure - typically a device loss a frame or two later, far from the
+    // cause. Most structures the restore leaves empty are fine (nothing reads them, or an
+    // in-range build fills them first), so only this set is worth reporting.
+    std::unordered_set<uint64_t> chainDstKeys;
+    for (const auto& op : blasChain) {
+      chainDstKeys.insert(op.DstAsKey);
+    }
+    std::vector<uint64_t> unproduced;
+    // Only meaningful when the recording pass will actually restore from this chain. With
+    // captureASBuildInputs off every structure comes from a serialized blob instead, so an
+    // empty chain says nothing (AnalyzerResults::UseAsChainRestore).
+    if (Configurator::Get().common.player.subcapture.vulkan.captureASBuildInputs) {
+      for (uint64_t key : m_AsReadInRange) {
+        if (m_AsWrittenInRange.count(key) || chainDstKeys.count(key) || !closure.count(key)) {
+          continue;
+        }
+        // Top-level structures come from the separate TLAS rebuild path, not the chain.
+        auto* as = m_StateTracking.GetState<AccelerationStructureState>(key);
+        if (as && as->Type == VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR) {
+          unproduced.push_back(key);
+        }
+      }
+    }
+    if (!unproduced.empty()) {
+      std::ostringstream keys;
+      for (size_t i = 0; i < unproduced.size() && i < 8; ++i) {
+        keys << (i ? ", " : "") << unproduced[i];
+      }
+      if (unproduced.size() > 8) {
+        keys << ", ... (" << unproduced.size() << " total)";
+      }
+      LOG_WARNING << "Vulkan subcapture: " << unproduced.size()
+                  << " bottom-level acceleration structure(s) are read inside the range but "
+                     "never written there, and no retained chain operation produces them - "
+                     "they will replay uninitialized and the stream is likely to lose the "
+                     "device: keys "
+                  << keys.str();
     }
   }
 

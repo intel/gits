@@ -2458,6 +2458,16 @@ void SubcaptureLayer::Post(vkCmdBuildAccelerationStructuresKHRCommand& command) 
                                                    dstKey, srcKey, isUpdate);
     }
 
+    // Analysis pass: an in-range build fills its destination itself, while an update
+    // refits from a source the restore has to have produced.
+    if (m_AnalysisMode && m_AnalyzerService) {
+      m_AnalyzerService->NoteInRangeAsWrite(dstKey);
+      if (info.mode == VK_BUILD_ACCELERATION_STRUCTURE_MODE_UPDATE_KHR && srcKey &&
+          srcKey != dstKey) {
+        m_AnalyzerService->NoteInRangeAsRead(srcKey);
+      }
+    }
+
     // Resolve all buffers this build touches for command-buffer lifecycle tracking, but
     // deliberately not for the AS's DependencyKeys: the app may destroy the scratch and
     // geometry buffers right after a one-time build, and gating AS creation or the analyzer
@@ -2622,6 +2632,12 @@ void SubcaptureLayer::Post(vkCmdCopyAccelerationStructureKHRCommand& command) {
     m_RaytracingOptimizationService->RecordCopy(command.m_commandBuffer.Key, command.m_Key, dstKey,
                                                 command.m_pInfo.HandleKeys[0],
                                                 command.m_pInfo.Value->mode);
+  }
+
+  // Analysis pass: diagnostic for BLAS used in range
+  if (m_AnalysisMode && m_AnalyzerService && command.m_pInfo.HandleKeys.size() >= 2) {
+    m_AnalyzerService->NoteInRangeAsRead(command.m_pInfo.HandleKeys[0]);
+    m_AnalyzerService->NoteInRangeAsWrite(dstKey);
   }
 }
 
@@ -3097,6 +3113,7 @@ void SubcaptureLayer::Post(vkDestroyAccelerationStructureKHRCommand& command) {
       m_StateTracking.GetState<AccelerationStructureState>(command.m_accelerationStructure.Key);
   if (state) {
     state->Destroyed = true;
+    state->DestroyedBeforeRange = m_SubcaptureRange.BeforeRange();
   }
 }
 

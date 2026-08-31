@@ -12,6 +12,7 @@
 
 #include <cstdint>
 #include <set>
+#include <unordered_set>
 #include <vector>
 
 namespace gits {
@@ -45,6 +46,16 @@ public:
   // Add a batch of object keys (e.g. a handle array / struct HandleKeys).
   void AddObjectsForRestore(const std::vector<uint64_t>& objectKeys);
 
+  // Note an in-range acceleration structure write (a build or copy destination) and an
+  // in-range read (a copy source, or an update build's source). A structure the range
+  // reads but never writes can only be satisfied by the restore, so DumpAnalysisFile
+  // checks the retained chain actually produces it. Deliberately "never written" rather
+  // than "not written yet": these fire at record time, and a command buffer recorded
+  // after another can still execute before it, so record order cannot decide which of a
+  // read and a write came first. No-op outside the range or when optimization is off.
+  void NoteInRangeAsWrite(uint64_t asKey);
+  void NoteInRangeAsRead(uint64_t asKey);
+
   // Compute the dependency closure of the collected roots and write the
   // analysis file.  Idempotent: only the first call writes.
   void DumpAnalysisFile();
@@ -76,6 +87,10 @@ private:
   bool m_Optimize{};
   bool m_Dumped{false};
   std::set<uint64_t> m_ObjectsForRestore;
+  // Acceleration structures written inside the range, and those read inside it. What the
+  // restore must produce is the difference: read but never written.
+  std::unordered_set<uint64_t> m_AsWrittenInRange;
+  std::set<uint64_t> m_AsReadInRange;
 };
 
 } // namespace vulkan

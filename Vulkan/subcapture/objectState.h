@@ -561,6 +561,8 @@ struct AccelerationStructureState : ObjectState {
   // record time) but in-range by the application. Its referenced BLASes are retained via
   // analysis-pass discovery.
   bool ArrayOfPointersInstances{false};
+  // Destroyed before the range started, so no in-range command can have used it
+  bool DestroyedBeforeRange{false};
 
   // Referenced sub-ranges of each build input buffer (vertex/index/transform/instances/
   // aabbs). The rebuild content-restore recreates each input at its original
