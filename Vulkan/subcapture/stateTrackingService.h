@@ -147,24 +147,37 @@ public:
   // vkQueueWaitIdle, so a staged copy is finished before ReadStaged maps it.
   virtual bool WaitQueueIdle(uint64_t deviceKey, uint64_t queueKey) = 0;
 
-  // Reads the contents of a GPU-local VkImage into outData.
-  // outRegions is populated with one VkBufferImageCopy per subresource
-  // (layer, mip, aspect), matching outData's layout.
-  // Returns false when readback is not possible (multisampled, etc.).
-  virtual bool ReadImage(uint64_t deviceKey,
-                         uint64_t physDevKey,
-                         uint64_t queueKey,
-                         uint64_t commandPoolKey,
-                         uint64_t imageKey,
-                         VkFormat format,
-                         const VkExtent3D& extent,
-                         uint32_t mipLevels,
-                         uint32_t arrayLayers,
-                         VkSampleCountFlagBits samples,
-                         VkImageLayout currentLayout,
-                         bool disjoint,
-                         std::vector<uint8_t>& outData,
-                         std::vector<VkBufferImageCopy>& outRegions) = 0;
+  // One image to read back, as passed to ReadImages.
+  struct ImageReadbackRequest {
+    uint64_t ImageKey{};
+    VkFormat Format{};
+    VkExtent3D Extent{};
+    uint32_t MipLevels{};
+    uint32_t ArrayLayers{};
+    VkSampleCountFlagBits Samples{VK_SAMPLE_COUNT_1_BIT};
+    VkImageLayout CurrentLayout{};
+    bool Disjoint{};
+  };
+
+  // Delivers one request's bytes. index is its position in the requests vector, data
+  // points into the staging allocation and is only valid for the duration of the call,
+  // so a consumer that needs to keep the bytes must copy them. data == nullptr means
+  // that image could not be read.
+  using ImageReadbackSink =
+      std::function<void(size_t index, const uint8_t* data, VkDeviceSize size)>;
+
+  // Reads the contents of GPU-local VkImages, packing as many as fit into one reused
+  // staging allocation per submission, and hands each image's bytes to onImage in
+  // request order. Batching is what keeps the submission count proportional to total
+  // bytes rather than to image count: one command buffer copies every image of a batch
+  // and only that batch is waited on. Returns false only when nothing at all could be
+  // read - individual failures are reported through onImage with data == nullptr.
+  virtual bool ReadImages(uint64_t deviceKey,
+                          uint64_t physDevKey,
+                          uint64_t queueKey,
+                          uint64_t commandPoolKey,
+                          const std::vector<ImageReadbackRequest>& requests,
+                          const ImageReadbackSink& onImage) = 0;
 
   // Reads the serialized bytes of a VkAccelerationStructureKHR into outData, via a
   // throwaway capture/replay buffer. outDeviceAddress is that buffer's device address.

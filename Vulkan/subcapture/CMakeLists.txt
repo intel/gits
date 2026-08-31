@@ -94,6 +94,7 @@ target_link_libraries(Vulkan_subcapture PRIVATE
   Vulkan_layer_interface
   Vulkan_coders
   Vulkan_services
+  Vulkan_trace
   yamlcpp
 )
 

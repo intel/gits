@@ -9,8 +9,10 @@
 #include "gpuReadbackHelper.h"
 #include "playerManager.h"
 #include "handleMapService.h"
+#include "enumToStrAuto.h"
 #include "log.h"
 
+#include <algorithm>
 #include <cstring>
 
 namespace gits {
@@ -316,13 +318,38 @@ bool GpuReadbackHelper::AllocateStagingBuffer(VkDevice device,
 }
 
 // ---------------------------------------------------------------------------
+// AllocateStagingBufferShrinking
+// ---------------------------------------------------------------------------
+
+bool GpuReadbackHelper::AllocateStagingBufferShrinking(VkDevice device,
+                                                       VkPhysicalDevice physDevice,
+                                                       VkDeviceSize preferredSize,
+                                                       VkDeviceSize minSize,
+                                                       VkBuffer& outBuf,
+                                                       VkDeviceMemory& outMem,
+                                                       void*& outMapped,
+                                                       VkDeviceSize& outSize) {
+  for (VkDeviceSize size = std::max(preferredSize, minSize);; size /= 2) {
+    const VkDeviceSize attempt = std::max(size, minSize);
+    if (AllocateStagingBuffer(device, physDevice, attempt, outBuf, outMem, outMapped)) {
+      outSize = attempt;
+      return true;
+    }
+    if (attempt == minSize) {
+      return false;
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
 // SubmitOneShot
 // ---------------------------------------------------------------------------
 
 bool GpuReadbackHelper::SubmitOneShot(VkDevice device,
                                       VkQueue queue,
                                       VkCommandPool pool,
-                                      std::function<void(VkCommandBuffer)> recordFn) {
+                                      std::function<void(VkCommandBuffer)> recordFn,
+                                      const char* what) {
   auto& dt = m_Player.GetDeviceDispatchTable(device);
 
   VkCommandBufferAllocateInfo ai{};
@@ -332,7 +359,10 @@ bool GpuReadbackHelper::SubmitOneShot(VkDevice device,
   ai.commandBufferCount = 1;
 
   VkCommandBuffer cb = VK_NULL_HANDLE;
-  if (dt.vkAllocateCommandBuffers(device, &ai, &cb) != VK_SUCCESS) {
+  VkResult allocResult = dt.vkAllocateCommandBuffers(device, &ai, &cb);
+  if (allocResult != VK_SUCCESS) {
+    LOG_WARNING << "GpuReadbackHelper: vkAllocateCommandBuffers for " << what << " failed "
+                << toStr(allocResult);
     return false;
   }
 
@@ -350,10 +380,19 @@ bool GpuReadbackHelper::SubmitOneShot(VkDevice device,
   si.commandBufferCount = 1;
   si.pCommandBuffers = &cb;
   VkResult result = dt.vkQueueSubmit(queue, 1, &si, VK_NULL_HANDLE);
-  dt.vkQueueWaitIdle(queue);
+  VkResult waitResult = dt.vkQueueWaitIdle(queue);
   dt.vkFreeCommandBuffers(device, pool, 1, &cb);
 
-  return result == VK_SUCCESS;
+  if (result != VK_SUCCESS) {
+    LOG_WARNING << "GpuReadbackHelper: vkQueueSubmit for " << what << " failed " << toStr(result);
+    return false;
+  }
+  if (waitResult != VK_SUCCESS) {
+    LOG_WARNING << "GpuReadbackHelper: vkQueueWaitIdle after " << what << " failed "
+                << toStr(waitResult);
+    return false;
+  }
+  return true;
 }
 
 // ---------------------------------------------------------------------------
@@ -829,7 +868,7 @@ void GpuReadbackHelper::ReleaseReservedAddressesSince(size_t mark) {
 }
 
 // ---------------------------------------------------------------------------
-// ReadImage
+// ReadImages
 // ---------------------------------------------------------------------------
 
 namespace {
@@ -1134,6 +1173,20 @@ static VkDeviceSize ComputeImageStagingLayout(VkFormat format,
   return offset;
 }
 
+// Basing an image's regions at a multiple of this keeps them all legally aligned.
+static VkDeviceSize StagingOffsetAlignment(VkFormat format) {
+  const auto fi = GetFormatBlockInfo(format, /*warnOnUnknown=*/false);
+  uint32_t maxUnit = fi.BytesPerBlock;
+  if (fi.IsMultiPlanar) {
+    for (uint8_t p = 0; p < fi.PlaneCount; ++p) {
+      maxUnit = std::max(maxUnit, fi.Planes[p].BytesPerPixel);
+    }
+  } else if (fi.IsDepthStencil) {
+    maxUnit = std::max(fi.DepthBytes, fi.StencilBytes);
+  }
+  return std::max(4u, maxUnit);
+}
+
 } // anonymous namespace
 
 VkImageAspectFlags AspectMaskForFormat(VkFormat format, bool disjoint) {
@@ -1164,135 +1217,237 @@ VkImageAspectFlags AspectMaskForFormat(VkFormat format, bool disjoint) {
   return VK_IMAGE_ASPECT_COLOR_BIT;
 }
 
-bool GpuReadbackHelper::ReadImage(uint64_t deviceKey,
-                                  uint64_t physDevKey,
-                                  uint64_t queueKey,
-                                  uint64_t commandPoolKey,
-                                  uint64_t imageKey,
-                                  VkFormat format,
-                                  const VkExtent3D& extent,
-                                  uint32_t mipLevels,
-                                  uint32_t arrayLayers,
-                                  VkSampleCountFlagBits samples,
-                                  VkImageLayout currentLayout,
-                                  bool disjoint,
-                                  std::vector<uint8_t>& outData,
-                                  std::vector<VkBufferImageCopy>& outRegions) {
-  // Multisampled images cannot be copied with vkCmdCopyImageToBuffer.
-  if (samples != VK_SAMPLE_COUNT_1_BIT) {
-    return false;
-  }
-  // Zero-size images have nothing to copy.
-  if (extent.width == 0 || extent.height == 0 || extent.depth == 0) {
-    return false;
-  }
+bool GpuReadbackHelper::ReadImages(uint64_t deviceKey,
+                                   uint64_t physDevKey,
+                                   uint64_t queueKey,
+                                   uint64_t commandPoolKey,
+                                   const std::vector<ImageReadbackRequest>& requests,
+                                   const ImageReadbackSink& onImage) {
+  // Trimmed below to the total to be read and raised
+  // to the largest single image, so neither a tiny nor a huge set overshoots.
+  constexpr VkDeviceSize kStagingBudget = 64ull * 1024 * 1024;
 
   auto& hms = HandleMapService::Get();
   auto device = reinterpret_cast<VkDevice>(hms.TryGetHandle(deviceKey));
   auto physDevice = reinterpret_cast<VkPhysicalDevice>(hms.TryGetHandle(physDevKey));
   auto queue = reinterpret_cast<VkQueue>(hms.TryGetHandle(queueKey));
   auto pool = reinterpret_cast<VkCommandPool>(hms.TryGetHandle(commandPoolKey));
-  auto image = reinterpret_cast<VkImage>(hms.TryGetHandle(imageKey));
 
-  if (!device || !physDevice || !queue || !pool || !image) {
+  // onImage must fire exactly once per request, in request order: the caller streams one
+  // token per manifest entry and the player pairs them up by position. Successes are
+  // delivered as their batch completes, and the gaps left by requests that never made it
+  // into a batch are filled in just before the next success.
+  size_t nextToDeliver = 0;
+  auto deliverGap = [&](size_t upTo) {
+    while (nextToDeliver < upTo) {
+      onImage(nextToDeliver++, nullptr, 0);
+    }
+  };
+  auto deliver = [&](size_t index, const uint8_t* data, VkDeviceSize size) {
+    deliverGap(index);
+    onImage(index, data, size);
+    nextToDeliver = index + 1;
+  };
+
+  if (!device || !physDevice || !queue || !pool) {
+    deliverGap(requests.size());
     return false;
   }
 
-  // Compute staging buffer layout.
-  VkDeviceSize stagingSize =
-      ComputeImageStagingLayout(format, extent, mipLevels, arrayLayers, outRegions);
-  if (stagingSize == 0 || outRegions.empty()) {
+  // Staging layout per request, computed once up front so the packing below knows every
+  // size. Requests that cannot be copied at all - multisampled (vkCmdCopyImageToBuffer
+  // rejects them), zero-extent, unresolvable handle, empty layout - never enter a batch
+  // and are left to deliverGap.
+  struct Prepared {
+    size_t Index;
+    VkImage Image;
+    VkDeviceSize Size;
+    VkDeviceSize Alignment;
+    std::vector<VkBufferImageCopy> Regions;
+  };
+  std::vector<Prepared> prepared;
+  prepared.reserve(requests.size());
+  VkDeviceSize largest = 0;
+  VkDeviceSize total = 0;
+
+  for (size_t i = 0; i < requests.size(); ++i) {
+    const auto& r = requests[i];
+    if (r.Samples != VK_SAMPLE_COUNT_1_BIT || r.Extent.width == 0 || r.Extent.height == 0 ||
+        r.Extent.depth == 0) {
+      continue;
+    }
+    auto image = reinterpret_cast<VkImage>(hms.TryGetHandle(r.ImageKey));
+    if (!image) {
+      continue;
+    }
+    Prepared p;
+    p.Index = i;
+    p.Image = image;
+    p.Size = ComputeImageStagingLayout(r.Format, r.Extent, r.MipLevels, r.ArrayLayers, p.Regions);
+    if (p.Size == 0 || p.Regions.empty()) {
+      continue;
+    }
+    p.Alignment = StagingOffsetAlignment(r.Format);
+    largest = std::max(largest, p.Size);
+    total += p.Size;
+    prepared.push_back(std::move(p));
+  }
+
+  if (prepared.empty()) {
+    deliverGap(requests.size());
+    return false;
+  }
+
+  VkBuffer stagingBuf = VK_NULL_HANDLE;
+  VkDeviceMemory stagingMem = VK_NULL_HANDLE;
+  void* mappedPtr = nullptr;
+  VkDeviceSize stagingSize = 0;
+  if (!AllocateStagingBufferShrinking(device, physDevice, std::min(kStagingBudget, total), largest,
+                                      stagingBuf, stagingMem, mappedPtr, stagingSize)) {
+    LOG_WARNING << "GpuReadbackHelper: no staging buffer for image readback - the largest image "
+                   "alone needs "
+                << largest << " bytes";
+    deliverGap(requests.size());
     return false;
   }
 
   auto& dt = m_Player.GetDeviceDispatchTable(device);
 
-  VkBuffer stagingBuf = VK_NULL_HANDLE;
-  VkDeviceMemory stagingMem = VK_NULL_HANDLE;
-  void* mappedPtr = nullptr;
+  // Images packed at disjoint offsets of the one staging buffer, copied by a single
+  // command buffer. Only the batch is waited on, not each image.
+  struct BatchEntry {
+    const Prepared* Item;
+    VkDeviceSize Offset;
+  };
+  std::vector<BatchEntry> batch;
+  std::vector<VkBufferImageCopy> regions; // rebased copy of one entry's regions
+  size_t batchCount = 0;
+  size_t readCount = 0;
 
-  if (!AllocateStagingBuffer(device, physDevice, stagingSize, stagingBuf, stagingMem, mappedPtr)) {
-    outRegions.clear();
-    return false;
+  auto flush = [&]() {
+    if (batch.empty()) {
+      return;
+    }
+    ++batchCount;
+
+    const bool ok = SubmitOneShot(
+        device, queue, pool,
+        [&](VkCommandBuffer cb) {
+          // One barrier array for the whole batch, so a batch costs two barrier commands
+          // rather than two per image.
+          std::vector<VkImageMemoryBarrier> barriers;
+          barriers.reserve(batch.size());
+          for (const auto& e : batch) {
+            const auto& r = requests[e.Item->Index];
+            VkImageMemoryBarrier b{};
+            b.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+            b.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT;
+            b.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+            b.oldLayout = r.CurrentLayout;
+            b.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+            // No ownership transfer is attempted: an EXCLUSIVE image's queue family must
+            // already be the one this is submitted on, since a legal transfer needs a
+            // release submitted on the owning queue and a matching acquire submitted on
+            // this one, which a single one-shot submission cannot do (see
+            // MaySubmitImageOperationOnQueueFamily, the caller that enforces this
+            // precondition for depth/stencil images).
+            b.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            b.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            b.image = e.Item->Image;
+            b.subresourceRange = {AspectMaskForFormat(r.Format, r.Disjoint), 0,
+                                  VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_ARRAY_LAYERS};
+            barriers.push_back(b);
+          }
+          dt.vkCmdPipelineBarrier(cb, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+                                  VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr,
+                                  static_cast<uint32_t>(barriers.size()), barriers.data());
+
+          for (const auto& e : batch) {
+            regions = e.Item->Regions;
+            for (auto& region : regions) {
+              region.bufferOffset += e.Offset;
+            }
+            dt.vkCmdCopyImageToBuffer(cb, e.Item->Image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                                      stagingBuf, static_cast<uint32_t>(regions.size()),
+                                      regions.data());
+          }
+
+          // The same barriers reversed: TRANSFER_SRC_OPTIMAL back to each image's layout.
+          for (auto& b : barriers) {
+            std::swap(b.oldLayout, b.newLayout);
+            b.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+            b.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
+          }
+          dt.vkCmdPipelineBarrier(cb, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                                  VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr, 0, nullptr,
+                                  static_cast<uint32_t>(barriers.size()), barriers.data());
+
+          VkBufferMemoryBarrier dstBarrier{};
+          dstBarrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+          dstBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+          dstBarrier.dstAccessMask = VK_ACCESS_HOST_READ_BIT;
+          dstBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+          dstBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+          dstBarrier.buffer = stagingBuf;
+          dstBarrier.offset = 0;
+          dstBarrier.size = VK_WHOLE_SIZE;
+          dt.vkCmdPipelineBarrier(cb, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_HOST_BIT, 0,
+                                  0, nullptr, 1, &dstBarrier, 0, nullptr);
+        },
+        "image content readback");
+
+    if (ok) {
+      VkMappedMemoryRange range{};
+      range.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+      range.memory = stagingMem;
+      range.offset = 0;
+      range.size = VK_WHOLE_SIZE;
+      dt.vkInvalidateMappedMemoryRanges(device, 1, &range);
+    }
+
+    // The bytes stay in the staging buffer: onImage consumes them before the next batch
+    // overwrites them, so peak host memory is the budget rather than the total.
+    for (const auto& e : batch) {
+      if (ok) {
+        deliver(e.Item->Index, static_cast<const uint8_t*>(mappedPtr) + e.Offset, e.Item->Size);
+        ++readCount;
+      } else {
+        deliver(e.Item->Index, nullptr, 0);
+      }
+    }
+    batch.clear();
+  };
+
+  VkDeviceSize cursor = 0;
+  for (const auto& item : prepared) {
+    VkDeviceSize offset = (cursor + item.Alignment - 1) & ~(item.Alignment - 1);
+    if (offset + item.Size > stagingSize) {
+      flush();
+      cursor = 0;
+      offset = 0;
+    }
+    if (item.Size > stagingSize) {
+      // Unreachable while stagingSize >= largest, but flush first either way so a pending
+      // batch's lower indices are delivered before this one.
+      flush();
+      deliver(item.Index, nullptr, 0);
+      continue;
+    }
+    batch.push_back({&item, offset});
+    cursor = offset + item.Size;
   }
-
-  // Determine the aspect mask for layout transitions.
-  const VkImageAspectFlags transitionAspect = AspectMaskForFormat(format, disjoint);
-
-  bool ok = SubmitOneShot(device, queue, pool, [&](VkCommandBuffer cb) {
-    // Transition image: currentLayout ? TRANSFER_SRC_OPTIMAL.  No ownership
-    // transfer is attempted here: an EXCLUSIVE image's queue family must
-    // already be the one this is submitted on, since a legal transfer needs
-    // a release submitted on the owning queue and a matching acquire
-    // submitted on this one, which a single one-shot submission cannot do
-    // (see MaySubmitImageOperationOnQueueFamily, the caller that
-    // enforces this precondition for depth/stencil images).
-    VkImageMemoryBarrier toSrc{};
-    toSrc.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    toSrc.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT;
-    toSrc.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-    toSrc.oldLayout = currentLayout;
-    toSrc.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-    toSrc.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    toSrc.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    toSrc.image = image;
-    toSrc.subresourceRange = {transitionAspect, 0, VK_REMAINING_MIP_LEVELS, 0,
-                              VK_REMAINING_ARRAY_LAYERS};
-    dt.vkCmdPipelineBarrier(cb, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-                            0, 0, nullptr, 0, nullptr, 1, &toSrc);
-
-    // Copy all subresources to staging buffer.
-    dt.vkCmdCopyImageToBuffer(cb, image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, stagingBuf,
-                              static_cast<uint32_t>(outRegions.size()), outRegions.data());
-
-    // Transition image back: TRANSFER_SRC_OPTIMAL ? currentLayout.
-    VkImageMemoryBarrier restore{};
-    restore.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    restore.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-    restore.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
-    restore.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-    restore.newLayout = currentLayout;
-    restore.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    restore.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    restore.image = image;
-    restore.subresourceRange = {transitionAspect, 0, VK_REMAINING_MIP_LEVELS, 0,
-                                VK_REMAINING_ARRAY_LAYERS};
-    dt.vkCmdPipelineBarrier(cb, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-                            0, 0, nullptr, 0, nullptr, 1, &restore);
-
-    // Staging buffer barrier: TRANSFER_WRITE ? HOST_READ.
-    VkBufferMemoryBarrier dstBarrier{};
-    dstBarrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-    dstBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-    dstBarrier.dstAccessMask = VK_ACCESS_HOST_READ_BIT;
-    dstBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    dstBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    dstBarrier.buffer = stagingBuf;
-    dstBarrier.offset = 0;
-    dstBarrier.size = VK_WHOLE_SIZE;
-    dt.vkCmdPipelineBarrier(cb, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_HOST_BIT, 0, 0,
-                            nullptr, 1, &dstBarrier, 0, nullptr);
-  });
-
-  if (ok) {
-    VkMappedMemoryRange range{};
-    range.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
-    range.memory = stagingMem;
-    range.offset = 0;
-    range.size = VK_WHOLE_SIZE;
-    dt.vkInvalidateMappedMemoryRanges(device, 1, &range);
-
-    outData.resize(static_cast<size_t>(stagingSize));
-    std::memcpy(outData.data(), mappedPtr, static_cast<size_t>(stagingSize));
-  } else {
-    outRegions.clear();
-  }
+  flush();
+  deliverGap(requests.size());
 
   dt.vkUnmapMemory(device, stagingMem);
   dt.vkDestroyBuffer(device, stagingBuf, nullptr);
   dt.vkFreeMemory(device, stagingMem, nullptr);
 
-  return ok;
+  LOG_INFO << "Vulkan subcapture: read back " << readCount << " of " << requests.size()
+           << " image(s) in " << batchCount << " submission(s) through a "
+           << (stagingSize / (1024 * 1024)) << " MB staging buffer";
+
+  return readCount > 0;
 }
 
 VkDeviceSize GpuReadbackHelper::GetImageStagingLayout(VkFormat format,

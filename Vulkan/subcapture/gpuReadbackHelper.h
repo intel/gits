@@ -87,20 +87,12 @@ public:
 
   bool WaitQueueIdle(uint64_t deviceKey, uint64_t queueKey) override;
 
-  bool ReadImage(uint64_t deviceKey,
-                 uint64_t physDevKey,
-                 uint64_t queueKey,
-                 uint64_t commandPoolKey,
-                 uint64_t imageKey,
-                 VkFormat format,
-                 const VkExtent3D& extent,
-                 uint32_t mipLevels,
-                 uint32_t arrayLayers,
-                 VkSampleCountFlagBits samples,
-                 VkImageLayout currentLayout,
-                 bool disjoint,
-                 std::vector<uint8_t>& outData,
-                 std::vector<VkBufferImageCopy>& outRegions) override;
+  bool ReadImages(uint64_t deviceKey,
+                  uint64_t physDevKey,
+                  uint64_t queueKey,
+                  uint64_t commandPoolKey,
+                  const std::vector<ImageReadbackRequest>& requests,
+                  const ImageReadbackSink& onImage) override;
 
   bool ReadAccelerationStructureSerialized(uint64_t deviceKey,
                                            uint64_t physDevKey,
@@ -153,12 +145,27 @@ private:
                              VkBufferUsageFlags extraUsage = 0,
                              VkBufferCreateFlags extraCreateFlags = 0);
 
+  // Allocate a staging buffer of 'preferredSize', halving down to 'minSize' if the
+  // driver refuses. outSize reports what was actually allocated. Lets a batched
+  // readback ask for a large budget without failing outright on a tight driver.
+  bool AllocateStagingBufferShrinking(VkDevice device,
+                                      VkPhysicalDevice physDevice,
+                                      VkDeviceSize preferredSize,
+                                      VkDeviceSize minSize,
+                                      VkBuffer& outBuf,
+                                      VkDeviceMemory& outMem,
+                                      void*& outMapped,
+                                      VkDeviceSize& outSize);
+
   // Allocate a one-shot command buffer, let the caller record into it, submit
   // it to queue and wait idle.  Frees the CB afterwards.  Returns false on error.
+  // 'what' names the operation in the failure log - every failure here is silent
+  // otherwise, which has cost real debugging time.
   bool SubmitOneShot(VkDevice device,
                      VkQueue queue,
                      VkCommandPool pool,
-                     std::function<void(VkCommandBuffer)> recordFn);
+                     std::function<void(VkCommandBuffer)> recordFn,
+                     const char* what = "one-shot submission");
 
   // Internal helper: find a HOST_VISIBLE staging memory type given a resolved
   // VkPhysicalDevice handle directly, avoiding a handle?key?handle round-trip.

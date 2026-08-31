@@ -5662,39 +5662,60 @@ void StateTrackingService::RestoreImageContents() {
       manifest.m_Key = m_Recorder.CreateStateRestoreKey();
       m_Recorder.Record(RestoreContentManifestSerializer(manifest));
 
-      for (size_t i = 0; i < orderedKeys.size(); ++i) {
-        const uint64_t imgKey = orderedKeys[i];
-        std::vector<uint8_t> data;
-        std::vector<VkBufferImageCopy> regions;
+      // One request per manifest entry, read back in batches. The sink fires once per
+      // request in manifest order, so the one-data-token-per-entry pairing the player
+      // relies on holds whether or not an individual image could be read.
+      std::vector<IGpuReadbackHelper::ImageReadbackRequest> requests;
+      requests.reserve(orderedKeys.size());
+      for (uint64_t imgKey : orderedKeys) {
         auto* img = static_cast<ImageState*>(GetState(imgKey));
+        IGpuReadbackHelper::ImageReadbackRequest req;
+        req.ImageKey = imgKey;
         if (img) {
-          if (!m_GpuReadbackHelper->ReadImage(deviceKey, physDevKey, targetQueueKey, targetPoolKey,
-                                              imgKey, img->Format, img->Extent, img->MipLevels,
-                                              img->ArrayLayers, img->Samples, img->CurrentLayout,
-                                              img->Disjoint, data, regions)) {
-            LOG_WARNING << "Vulkan subcapture: GPU readback failed for image key=" << imgKey;
-            data.clear();
-          } else {
-            // The player's upload leaves the image in its tracked layout, so
-            // EmitImageLayoutTransitions must skip it.
-            img->ContentRestored = true;
-          }
+          req.Format = img->Format;
+          req.Extent = img->Extent;
+          req.MipLevels = img->MipLevels;
+          req.ArrayLayers = img->ArrayLayers;
+          req.Samples = img->Samples;
+          req.CurrentLayout = img->CurrentLayout;
+          req.Disjoint = img->Disjoint;
+        } else {
+          req.Extent = {}; // zero extent - the helper reports it as unreadable
         }
-
-        RestoreContentDataCommand dataCmd;
-        dataCmd.m_DeviceKey = deviceKey;
-        MemoryRegions::Region region;
-        region.Offset = static_cast<uint64_t>(i); // resource index, not a byte offset
-        region.Size = static_cast<uint64_t>(data.size());
-        region.Data = data.empty() ? &sEmptyByte : reinterpret_cast<char*>(data.data());
-        dataCmd.m_Regions.Regions.push_back(region);
-        dataCmd.m_Regions.Size = 1;
-        dataCmd.m_Key = m_Recorder.CreateStateRestoreKey();
-        m_Recorder.Record(RestoreContentDataSerializer(dataCmd));
-
-        LOG_TRACE << "Vulkan subcapture: streamed image content, key=" << imgKey
-                  << " size=" << data.size();
+        requests.push_back(req);
       }
+
+      m_GpuReadbackHelper->ReadImages(
+          deviceKey, physDevKey, targetQueueKey, targetPoolKey, requests,
+          [&](size_t i, const uint8_t* data, VkDeviceSize size) {
+            const uint64_t imgKey = orderedKeys[i];
+            if (data == nullptr) {
+              LOG_WARNING << "Vulkan subcapture: GPU readback failed for image key=" << imgKey;
+              size = 0;
+            } else if (auto* img = static_cast<ImageState*>(GetState(imgKey))) {
+              // The player's upload leaves the image in its tracked layout, so
+              // EmitImageLayoutTransitions must skip it.
+              img->ContentRestored = true;
+            }
+
+            RestoreContentDataCommand dataCmd;
+            dataCmd.m_DeviceKey = deviceKey;
+            MemoryRegions::Region region;
+            region.Offset = static_cast<uint64_t>(i); // resource index, not a byte offset
+            region.Size = static_cast<uint64_t>(size);
+            // The serializer copies the bytes in its constructor, so pointing straight at
+            // the staging mapping is safe and saves a copy of every image.
+            region.Data = (data == nullptr)
+                              ? &sEmptyByte
+                              : const_cast<char*>(reinterpret_cast<const char*>(data));
+            dataCmd.m_Regions.Regions.push_back(region);
+            dataCmd.m_Regions.Size = 1;
+            dataCmd.m_Key = m_Recorder.CreateStateRestoreKey();
+            m_Recorder.Record(RestoreContentDataSerializer(dataCmd));
+
+            LOG_TRACE << "Vulkan subcapture: streamed image content, key=" << imgKey
+                      << " size=" << size;
+          });
     };
 
     for (const auto& [family, keys] : groupsByFamily) {
