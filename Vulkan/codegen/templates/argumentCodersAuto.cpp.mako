@@ -40,7 +40,16 @@ ${action(s)}\
 
 <%def name="getsize_action(s)">\
 % if struct_needs_coder(s, structures, unions):
-        size += GetSize(reinterpret_cast<const ${s.name}*>(node), 1);
+        {
+          // The enclosing while loop already walks the rest of the chain via
+          // node->pNext, so GetSize() must not also do it (its own pNext
+          // handling would otherwise re-measure everything after this node,
+          // making the total cost exponential in chain length). Measure just
+          // this node's own fields by nulling pNext on a local copy.
+          ${s.name} nodeCopy = *reinterpret_cast<const ${s.name}*>(node);
+          nodeCopy.pNext = nullptr;
+          size += GetSize(&nodeCopy, 1);
+        }
 % else:
         size += static_cast<uint32_t>(sizeof(${s.name}));
 % endif
@@ -51,7 +60,14 @@ ${action(s)}\
         std::memcpy(dst + offset, &node->sType, sizeof(VkStructureType));
         offset += sizeof(VkStructureType);
 % if struct_needs_coder(s, structures, unions):
-        Encode(reinterpret_cast<const ${s.name}*>(node), 1, dst, offset);
+        {
+          // See getsize_action() above: encode just this node's own fields,
+          // the caller's loop encodes the rest of the chain as separate
+          // entries in the flat [sType][bytes]... blob layout.
+          ${s.name} nodeCopy = *reinterpret_cast<const ${s.name}*>(node);
+          nodeCopy.pNext = nullptr;
+          Encode(&nodeCopy, 1, dst, offset);
+        }
 % else:
         std::memcpy(dst + offset, node, sizeof(${s.name}));
         offset += static_cast<uint32_t>(sizeof(${s.name}));
