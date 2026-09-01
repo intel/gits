@@ -41,6 +41,7 @@ public:
   % endif
   % endfor
 
+
   // TraceLayerCustom
   void Pre(StateRestoreBeginCommand& command) override;
   void Post(StateRestoreBeginCommand& command) override;

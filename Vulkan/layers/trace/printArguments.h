@@ -163,6 +163,39 @@ inline FastOStream& operator<<(FastOStream& stream, BufferOutputArgument& arg) {
   return stream;
 }
 
+inline FastOStream& operator<<(FastOStream& stream, OutputCStringArrayArgument& arg) {
+  if (!arg.OwnedStrings.empty()) {
+    stream << "[";
+    for (size_t i = 0; i < arg.OwnedStrings.size(); ++i) {
+      if (i > 0) {
+        stream << ", ";
+      }
+      PrintString(stream, arg.OwnedStrings[i].c_str());
+    }
+    stream << "]";
+    return stream;
+  }
+
+  const uint32_t count = arg.CountPtr ? *arg.CountPtr : arg.Size;
+  if (!arg.Value || !*arg.Value) {
+    if (count == 0) {
+      return stream << "[]";
+    }
+    stream << "[count=" << count << "]";
+    return stream;
+  }
+
+  stream << "[";
+  for (uint32_t i = 0; i < count; ++i) {
+    if (i > 0) {
+      stream << ", ";
+    }
+    PrintString(stream, (*arg.Value)[i]);
+  }
+  stream << "]";
+  return stream;
+}
+
 inline FastOStream& operator<<(FastOStream& stream, DescriptorTemplateDataArgument& arg) {
   if (arg.Value) {
     stream << arg.Value;

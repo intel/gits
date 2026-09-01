@@ -67,8 +67,16 @@ def get_array_len_expr(member) -> str:
     # E.g. ("geometryCount,1"). 
     return f'value.{parse_multidimensional_len(member.length)[0]}'
 
-# Contains all vk.xml types that are printable and scalars.
-# Other types (e.g. the StdVideo* structures) are not printable.
+def member_name(member) -> str:
+    """Bare member name with any array suffix from the registry name node removed."""
+    return re.sub(r'\s*\[[^\]]*\]', '', member.name)
+
+def is_pointer_to_array(member) -> bool:
+    """True when full_type is a pointer to array syntax, not a built-in array member."""
+    return bool(re.search(r'\(\s*\*\s*[A-Za-z_]\w*\s*\)', member.full_type))
+
+# Scalar types (and vk.xml aliases) that trace can print element-wise via PrintArray.
+# Opaque or externally defined aggregate types are excluded until added below via registry walk.
 printable_types = {
     'char', 'int', 'float', 'double', 'size_t', 'int8_t', 'int16_t', 'int32_t',
     'int64_t', 'uint8_t', 'uint16_t', 'uint32_t', 'uint64_t', 'VkBool32',
@@ -85,6 +93,31 @@ def is_printable_pointer(member) -> bool:
 
 bitmasks_dict = {}
 
+def print_inline_struct(access, nested_members, separator):
+    """Emit member-wise printing for an anonymous inline struct or union nested in full_type."""
+    result = '  stream << "{";\n'
+    for i, nested in enumerate(nested_members):
+        is_last = (i == (len(nested_members) - 1))
+        nested_separator = '' if is_last else ' << ", "'
+        nested_access = f'{access}.{nested.name}' if nested.name else access
+        if nested.is_inline_struct:
+            result += print_inline_struct(nested_access, nested.nested_members, nested_separator)
+        elif nested.is_pointer or nested.is_pointer_to_pointer or nested.is_triple_pointer:
+            result += f'  stream << {nested_access}{nested_separator};\n'
+        elif len(nested.fixed_array_size) == 1:
+            result += f'  PrintStaticArray(stream, {nested_access}){nested_separator};\n'
+        elif len(nested.fixed_array_size) == 2:
+            result += f'  PrintStatic2DArray(stream, {nested_access}){nested_separator};\n'
+        elif nested.bitfield is not None:
+            result += (
+                f'  stream << static_cast<{nested.base_type}>({nested_access})'
+                f'{nested_separator};\n'
+            )
+        else:
+            result += f'  stream << {nested_access}{nested_separator};\n'
+    result += f'  stream << "}}"{separator};\n'
+    return result
+
 def print_members(name, members, bitmasks):
     global bitmasks_dict
     if not bitmasks_dict:
@@ -94,28 +127,32 @@ def print_members(name, members, bitmasks):
     for i, member in enumerate(members):
         is_last = (i == (len(members) - 1))
         separator = '' if is_last else ' << ", "'
-        memberVal = f'value.{member.name}'
+        accessName = member_name(member)
+        memberVal = f'value.{accessName}' if accessName else 'value'
         
         bitmask = bitmasks_dict.get(member.base_type)
 
-        if member.name == 'pNext' and member.is_void and member.is_pointer:
+        if accessName == 'pNext' and member.is_void and member.is_pointer:
             str += f'  PrintPNext(stream, value.pNext){separator};\n'
+        elif member.is_inline_struct:
+            access = memberVal if accessName else 'value'
+            str += print_inline_struct(access, member.nested_members, separator)
         elif bitmask is not None:
             if member.is_pointer:
                 length = '1'
                 if member.length:
                     length = f'value.{member.length}'
-                str += f'  Print{bitmask.flag_name}(stream, {length}, value.{member.name}){separator};\n'
+                str += f'  Print{bitmask.flag_name}(stream, {length}, {memberVal}){separator};\n'
             else:
-                str += f'  Print{bitmask.flag_name}(stream, value.{member.name}){separator};\n'
+                str += f'  Print{bitmask.flag_name}(stream, {memberVal}){separator};\n'
         elif member.base_type == 'char' and member.is_pointer:
-            str += f'  PrintString(stream, value.{member.name}){separator};\n'
+            str += f'  PrintString(stream, {memberVal}){separator};\n'
         elif member.base_type == 'char' and member.is_pointer_to_pointer:
-            str += f'  PrintStringArray(stream, value.{member.length}, value.{member.name}){separator};\n'
-        elif len(member.fixed_array_size) == 1:
-            str += f'  PrintStaticArray(stream, value.{member.name}){separator};\n'
-        elif len(member.fixed_array_size) == 2:
-            str += f'  PrintStatic2DArray(stream, value.{member.name}){separator};\n'
+            str += f'  PrintStringArray(stream, value.{member.length}, {memberVal}){separator};\n'
+        elif len(member.fixed_array_size) == 1 and not is_pointer_to_array(member):
+            str += f'  PrintStaticArray(stream, {memberVal}){separator};\n'
+        elif len(member.fixed_array_size) == 2 and not is_pointer_to_array(member):
+            str += f'  PrintStatic2DArray(stream, {memberVal}){separator};\n'
         elif member.length != '' and is_printable_pointer(member):
             str += f'  PrintArray(stream, {get_array_len_expr(member)}, {memberVal}){separator};\n'
         elif member.length != '':
@@ -126,6 +163,11 @@ def print_members(name, members, bitmasks):
             str += f'  else {{\n'
             str += f'    stream << "nullptr"{separator};\n'
             str += f'  }}\n'
+        elif member.bitfield is not None:
+            str += (
+                f'  stream << static_cast<{member.base_type}>({memberVal})'
+                f'{separator};\n'
+            )
         else:
             str += f'  stream << {memberVal}{separator};\n'
     str += '  stream << "}";\n'
@@ -178,3 +220,4 @@ def generate_trace_files(context, out_path):
     ]
     for file_name in files_to_generate:
         generate_file(context | additional_context, file_name, out_path)
+
