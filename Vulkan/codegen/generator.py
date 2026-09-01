@@ -13,7 +13,7 @@ import os
 import argparse
 from pathlib import Path
 
-from intermediates_creator import get_xml_root, parse_enums, parse_bitmasks, parse_flags, parse_unions, parse_structures, parse_handles, parse_commands, get_platform_names, postprocess
+from intermediates_creator import get_xml_root, parse_enums, parse_bitmasks, parse_flags, parse_unions, parse_structures, parse_handles, parse_commands, get_platform_names, postprocess, get_dispatch_level, parse_api_constants, parse_function_pointers
 from command_ids import build_command_ids
 from generator_layer import generate_layer_files
 from generator_recorder import generate_recorder_files
@@ -48,6 +48,7 @@ def main():
 
     postprocess(commands, structures, unions, handles, enums, bitmasks, flags, excluded_names, platform_map)
 
+
     context = {
         'enums': enums,
         'bitmasks': bitmasks,
@@ -55,7 +56,7 @@ def main():
         'unions': unions,
         'structures': structures,
         'handles': handles,
-        'commands': commands
+        'commands': commands,
     }
 
     context['command_ids'] = build_command_ids(context, os.path.join(output_path, 'codegen'))

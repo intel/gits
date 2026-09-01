@@ -483,6 +483,21 @@ void CaptureCustomizationLayer::Pre(vkCreateImageCommand& command) {
   ModifyImageCreateInfo(*command.m_pCreateInfo.Value);
 }
 
+void CaptureCustomizationLayer::Post(vkCreateInstanceCommand& command) {}
+
+void CaptureCustomizationLayer::Post(vkEnumeratePhysicalDevicesCommand& command) {
+  if ((command.m_Return.Value != VK_SUCCESS && command.m_Return.Value != VK_INCOMPLETE) ||
+      !command.m_pPhysicalDevices.Value) {
+    return;
+  }
+}
+
+void CaptureCustomizationLayer::Post(vkCreateImageCommand& command) {
+  if (command.m_Return.Value != VK_SUCCESS) {
+    return;
+  }
+}
+
 void CaptureCustomizationLayer::Post(vkCreateSwapchainKHRCommand& command) {
   if (command.m_Return.Value != VK_SUCCESS || !command.m_pCreateInfo.Value ||
       !command.m_pSwapchain.Value) {
@@ -529,6 +544,22 @@ void CaptureCustomizationLayer::Post(vkCreateDeviceCommand& command) {
 
   m_RayTracingService.OnPostCreateDevice(command);
 }
+
+void CaptureCustomizationLayer::Post(vkAllocateCommandBuffersCommand& command) {
+  if (command.m_Return.Value != VK_SUCCESS) {
+    return;
+  }
+}
+
+void CaptureCustomizationLayer::Post(vkCmdPipelineBarrierCommand& command) {}
+
+void CaptureCustomizationLayer::Post(vkCmdPipelineBarrier2Command& command) {}
+
+void CaptureCustomizationLayer::Post(vkCmdPipelineBarrier2KHRCommand& command) {}
+
+void CaptureCustomizationLayer::Post(vkGetDeviceQueueCommand& command) {}
+
+void CaptureCustomizationLayer::Post(vkGetDeviceQueue2Command& command) {}
 
 void CaptureCustomizationLayer::Post(vkGetPhysicalDeviceMemoryPropertiesCommand& command) {
   m_Manager.GetMapTrackingService().StorePhysicalDeviceMemoryProperties(

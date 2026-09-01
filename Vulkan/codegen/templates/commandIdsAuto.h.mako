@@ -27,11 +27,13 @@ enum class CommandId {
   ID_META_UPDATE_WINDOW = 0xe0003,
   ID_META_RESTORE_CONTENT_MANIFEST = 0xe0004,
   ID_META_RESTORE_CONTENT_DATA = 0xe0005,
+  // ID_META_RESERVED_E0006 = 0xe0006,
 
   ID_COMMON_BEGIN = 0xe0500,
   %for cmd_name, cmd_id in command_ids.items():
   ${f'{cmd_name} = 0x{cmd_id:X},'}
   %endfor
+
 
   ID_END
 };

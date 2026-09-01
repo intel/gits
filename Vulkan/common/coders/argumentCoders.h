@@ -235,6 +235,86 @@ void Encode(char* dest, uint32_t& offset, const HandleArrayOutputArgument<T>& ar
   offset += sizeof(GITSKey) * arg.Size;
 }
 
+template <typename T>
+uint32_t GetSize(const ArrayOutputArgument<T>& arg) {
+  if (!arg.Value) {
+    return sizeof(void*);
+  }
+  uint32_t size = sizeof(void*) + sizeof(arg.Size);
+  if (*arg.Value && arg.Size > 0) {
+    size += sizeof(T) * arg.Size;
+  }
+  return size;
+}
+
+template <typename T>
+void Encode(char* dest, uint32_t& offset, const ArrayOutputArgument<T>& arg) {
+  if (EncodeNullPtr(dest, offset, arg.Value)) {
+    return;
+  }
+  std::memcpy(dest + offset, &arg.Size, sizeof(arg.Size));
+  offset += sizeof(arg.Size);
+  if (arg.Value && *arg.Value && arg.Size > 0) {
+    std::memcpy(dest + offset, *arg.Value, sizeof(T) * arg.Size);
+    offset += sizeof(T) * arg.Size;
+  }
+}
+
+template <typename T>
+uint32_t GetSize(const ConstArrayOutputArgument<T>& arg) {
+  if (!arg.Value) {
+    return sizeof(void*);
+  }
+  const uint32_t count = arg.CountPtr ? *arg.CountPtr : arg.Size;
+  uint32_t size = sizeof(void*) + sizeof(count);
+  if (arg.Value && *arg.Value && count > 0) {
+    size += sizeof(T) * count;
+  }
+  return size;
+}
+
+template <typename T>
+void Encode(char* dest, uint32_t& offset, const ConstArrayOutputArgument<T>& arg) {
+  if (EncodeNullPtr(dest, offset, arg.Value)) {
+    return;
+  }
+  const uint32_t count = arg.CountPtr ? *arg.CountPtr : arg.Size;
+  std::memcpy(dest + offset, &count, sizeof(count));
+  offset += sizeof(count);
+  if (arg.Value && *arg.Value && count > 0) {
+    std::memcpy(dest + offset, *arg.Value, sizeof(T) * count);
+    offset += sizeof(T) * count;
+  }
+}
+
+inline uint32_t GetSize(const OutputCStringArrayArgument& arg) {
+  if (!arg.Value) {
+    return sizeof(void*);
+  }
+  const uint32_t count = arg.CountPtr ? *arg.CountPtr : arg.Size;
+  uint32_t size = sizeof(void*) + sizeof(count);
+  if (arg.Value && *arg.Value && count > 0) {
+    for (uint32_t i = 0; i < count; ++i) {
+      size += GetStringSize((*arg.Value)[i]);
+    }
+  }
+  return size;
+}
+
+inline void Encode(char* dest, uint32_t& offset, const OutputCStringArrayArgument& arg) {
+  if (EncodeNullPtr(dest, offset, arg.Value)) {
+    return;
+  }
+  const uint32_t count = arg.CountPtr ? *arg.CountPtr : arg.Size;
+  std::memcpy(dest + offset, &count, sizeof(count));
+  offset += sizeof(count);
+  if (arg.Value && *arg.Value && count > 0) {
+    for (uint32_t i = 0; i < count; ++i) {
+      EncodeString((*arg.Value)[i], dest, offset);
+    }
+  }
+}
+
 inline uint32_t GetSize(const BufferArgument& arg) {
   if (!arg.Value) {
     return sizeof(void*);
@@ -441,6 +521,90 @@ void Decode(char* src, uint32_t& offset, HandleArrayOutputArgument<T>& arg) {
   std::memcpy(arg.Keys.data(), src + offset, sizeof(GITSKey) * arg.Size);
   offset += sizeof(GITSKey) * arg.Size;
   arg.Value = new T[arg.Size]{};
+}
+
+template <typename T>
+void Decode(char* src, uint32_t& offset, ArrayOutputArgument<T>& arg) {
+  if (DecodeNullPtr(src, offset, arg)) {
+    arg.Size = 0;
+    arg.Data = nullptr;
+    return;
+  }
+  std::memcpy(&arg.Size, src + offset, sizeof(arg.Size));
+  offset += sizeof(arg.Size);
+  if (arg.Size > 0) {
+    arg.Data = new T[arg.Size]{};
+    std::memcpy(arg.Data, src + offset, sizeof(T) * arg.Size);
+    offset += sizeof(T) * arg.Size;
+    if (arg.Value) {
+      *arg.Value = arg.Data;
+    }
+  } else {
+    arg.Data = nullptr;
+    if (arg.Value) {
+      *arg.Value = nullptr;
+    }
+  }
+}
+
+template <typename T>
+void Decode(char* src, uint32_t& offset, ConstArrayOutputArgument<T>& arg) {
+  if (DecodeNullPtr(src, offset, arg)) {
+    arg.Size = 0;
+    arg.Data = nullptr;
+    arg.Pointer = nullptr;
+    return;
+  }
+  std::memcpy(&arg.Size, src + offset, sizeof(arg.Size));
+  offset += sizeof(arg.Size);
+  if (arg.Size > 0) {
+    arg.Data = new T[arg.Size]{};
+    std::memcpy(arg.Data, src + offset, sizeof(T) * arg.Size);
+    offset += sizeof(T) * arg.Size;
+    arg.Pointer = arg.Data;
+  } else {
+    arg.Data = nullptr;
+    arg.Pointer = nullptr;
+  }
+  arg.Value = &arg.Pointer;
+}
+
+inline void Decode(char* src, uint32_t& offset, OutputCStringArrayArgument& arg) {
+  if (DecodeNullPtr(src, offset, arg)) {
+    arg.Size = 0;
+    arg.OwnedStrings.clear();
+    arg.Pointers.clear();
+    arg.PointerSlot = nullptr;
+    return;
+  }
+  std::memcpy(&arg.Size, src + offset, sizeof(arg.Size));
+  offset += sizeof(arg.Size);
+  arg.OwnedStrings.clear();
+  if (arg.Size == 0) {
+    arg.Pointers.clear();
+    arg.PointerSlot = nullptr;
+    arg.Value = &arg.PointerSlot;
+    return;
+  }
+  arg.OwnedStrings.resize(arg.Size);
+  for (uint32_t i = 0; i < arg.Size; ++i) {
+    uint32_t len = 0;
+    std::memcpy(&len, src + offset, sizeof(len));
+    offset += sizeof(len);
+    if (len > 0) {
+      arg.OwnedStrings[i].assign(src + offset, len - 1);
+      offset += len;
+    } else {
+      arg.OwnedStrings[i].clear();
+    }
+  }
+  arg.Pointers.clear();
+  arg.Pointers.reserve(arg.OwnedStrings.size());
+  for (std::string& s : arg.OwnedStrings) {
+    arg.Pointers.push_back(s.data());
+  }
+  arg.PointerSlot = arg.Pointers.empty() ? nullptr : arg.Pointers.data();
+  arg.Value = &arg.PointerSlot;
 }
 
 inline void Decode(char* src, uint32_t& offset, BufferArgument& arg) {

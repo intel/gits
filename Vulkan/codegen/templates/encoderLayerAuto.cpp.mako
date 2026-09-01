@@ -32,5 +32,6 @@ void EncoderLayer::Post(${command.name}Command& command) {
 % endif
 
 % endfor
+
 } // namespace vulkan
 } // namespace gits

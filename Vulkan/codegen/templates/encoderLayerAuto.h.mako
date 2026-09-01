@@ -30,6 +30,7 @@ public:
   % endif
   % endfor
 
+
 private:
   stream::OrderingRecorder& m_Recorder;
 };

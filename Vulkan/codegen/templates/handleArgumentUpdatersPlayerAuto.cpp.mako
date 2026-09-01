@@ -20,7 +20,7 @@ void ResolvePNextHandleKeys(const std::vector<GITSKey>& keys, uint32_t& idx, std
   auto* node = reinterpret_cast<VkBaseOutStructure*>(const_cast<void*>(pNext));
   while (node) {
     switch (node->sType) {
-% for structure, handle_members in pnext_handle_structs:
+% for structure, handle_members in collect_pnext_handle_structs(structures):
 <% define = get_define(structure.platform) %>
 % if define:
 #ifdef ${define}

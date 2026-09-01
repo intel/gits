@@ -272,6 +272,14 @@ def get_length_expression(length, var_name):
     expression = '(' + re.sub(r'[a-zA-Z_]\w*', lambda m: m.group() if is_constant(m.group()) else f'{var_name}->{m.group()}', length) + ')'
     return expression
 
+def is_fixed_void_pointer_array(member):
+    return (
+        member.is_pointer
+        and member.base_type == 'void'
+        and not member.length
+        and len(member.fixed_array_size) == 1
+    )
+
 def get_size_lines(structure, structures_list, unions_list, var_name):
     structures_by_name = {s.name: s for s in structures_list}
     unions_by_name = {u.name: u for u in unions_list}
@@ -300,7 +308,10 @@ def get_size_lines(structure, structures_list, unions_list, var_name):
             lines.append(f'  blobSize += GetStringArraySize({var_name}->{member.name}, {var_name}->{member.length});')
             lines.append('}')
         elif member.is_pointer and member.base_type == 'void':
-            if member.length:
+            if is_fixed_void_pointer_array(member):
+                dim = member.fixed_array_size[0]
+                lines.append(f'blobSize += sizeof(void*) * {dim};')
+            elif member.length:
                 length_expr = get_length_expression(member.length, var_name)
                 lines.append('blobSize += sizeof(void*);')
                 lines.append(f'if ({var_name}->{member.name} && {length_expr} > 0) {{')
@@ -397,16 +408,28 @@ def get_encode_lines(structure, structures_list, unions_list, var_name_src, var_
             pass
         elif member.is_pointer and member.is_null_terminated:
             lines.append(f'if ({var_name_src}->{member.name}) {{')
-            lines.append(f'  {var_name_dst}->{member.name} = reinterpret_cast<const char*>(static_cast<uintptr_t>(offset));')
+            lines.append(
+                f'  {var_name_dst}->{member.name} = reinterpret_cast<decltype({var_name_dst}->{member.name})>(static_cast<uintptr_t>(offset));')
             lines.append('}')
             lines.append(f'EncodeString({var_name_src}->{member.name}, dst, offset);')
         elif member.is_pointer_to_pointer and member.is_null_terminated:
             lines.append(f'if ({var_name_src}->{member.name} && {var_name_src}->{member.length}) {{')
-            lines.append(f'  {var_name_dst}->{member.name} = reinterpret_cast<const char* const*>(static_cast<uintptr_t>(offset));')
+            lines.append(
+                f'  {var_name_dst}->{member.name} = reinterpret_cast<decltype({var_name_dst}->{member.name})>(static_cast<uintptr_t>(offset));')
             lines.append(f'  EncodeStringArray({var_name_src}->{member.name}, {var_name_src}->{member.length}, dst, offset);')
             lines.append('}')
         elif member.is_pointer and member.base_type == 'void':
-            if member.length:
+            if is_fixed_void_pointer_array(member):
+                dim = member.fixed_array_size[0]
+                lines.append('{')
+                lines.append(f'  for (uint32_t arrIdx = 0; arrIdx < {dim}; ++arrIdx) {{')
+                lines.append(f'    void* marker = const_cast<void*>({var_name_src}->{member.name}[arrIdx]);')
+                lines.append(f'    std::memcpy(dst + offset, &marker, sizeof(void*));')
+                lines.append(f'    offset += sizeof(void*);')
+                lines.append(f'    {var_name_dst}->{member.name}[arrIdx] = nullptr;')
+                lines.append('  }')
+                lines.append('}')
+            elif member.length:
                 length_expr = get_length_expression(member.length, var_name_src)
                 lines.append('{')
                 lines.append(f'  void* marker = const_cast<void*>({var_name_src}->{member.name});')
@@ -549,13 +572,31 @@ def get_decode_lines(structure, structures_list, unions_list, var_name):
             # No blob decoding needed - ResolveHandleKeys allocates and sets pointers.
             pass
         elif member.is_pointer and member.is_null_terminated:
-            lines.append(f'DecodeString(src, offset, &{var_name}->{member.name});')
+            field_out = f'&{var_name}->{member.name}'
+            if member.base_type == 'char' and not member.is_const:
+                field_out = f'const_cast<const char**>({field_out})'
+            lines.append(f'DecodeString(src, offset, {field_out});')
         elif member.is_pointer_to_pointer and member.is_null_terminated:
             lines.append(f'if ({var_name}->{member.name} && {var_name}->{member.length}) {{')
-            lines.append(f'  DecodeStringArray(src, offset, const_cast<const char***>(reinterpret_cast<const char* const**>(&{var_name}->{member.name})), {var_name}->{member.length});')
+            if re.search(r'\*\s*const\s*\*', member.full_type):
+                lines.append(
+                    f'  DecodeStringArray(src, offset, const_cast<const char***>(reinterpret_cast<const char* const**>(&{var_name}->{member.name})), {var_name}->{member.length});')
+            else:
+                lines.append(
+                    f'  DecodeStringArray(src, offset, &{var_name}->{member.name}, {var_name}->{member.length});')
             lines.append('}')
         elif member.is_pointer and member.base_type == 'void':
-            if member.length:
+            if is_fixed_void_pointer_array(member):
+                dim = member.fixed_array_size[0]
+                lines.append('{')
+                lines.append(f'  for (uint32_t arrIdx = 0; arrIdx < {dim}; ++arrIdx) {{')
+                lines.append(f'    void* marker;')
+                lines.append(f'    std::memcpy(&marker, src + offset, sizeof(void*));')
+                lines.append(f'    offset += sizeof(void*);')
+                lines.append(f'    {var_name}->{member.name}[arrIdx] = nullptr;')
+                lines.append('  }')
+                lines.append('}')
+            elif member.length:
                 length_expr = get_length_expression(member.length, var_name)
                 lines.append('{')
                 lines.append(f'  void* marker;')

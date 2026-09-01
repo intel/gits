@@ -10,6 +10,7 @@
 
 import xml.etree.ElementTree
 import re
+import html
 import os
 from datetime import datetime
 from mako.template import Template
@@ -20,25 +21,126 @@ AUTO_GENERATED_HEADER = f"""
 // GENERATED ON: {datetime.now()}
 //"""
 
-def get_full_decl(node):
-    comment = node.find("comment")
-    if comment is not None:
-        node.remove(comment)
-    name = node.find("name").text.strip()
-    base_type = node.find("type").text.strip()
+def _get_decl_text(node):
     parts = []
     if node.text:
-      parts.append(node.text.strip())
+        parts.append(node.text.strip())
     for child_node in node:
         if child_node.text:
             parts.append(child_node.text.strip())
         if child_node.tail:
             parts.append(child_node.tail.strip())
-    full_type = ' '.join(parts)
-    full_type = re.sub(' +', ' ', full_type)
-    full_type = full_type.replace(' *', '*')
-    full_type = full_type.replace(' :', ':')
+    full_decl = ' '.join(parts)
+    full_decl = re.sub(' +', ' ', full_decl)
+    full_decl = full_decl.replace(' *', '*')
+    full_decl = full_decl.replace(' :', ':')
+    return full_decl.strip().rstrip(';').strip()
+
+_CAST = re.compile(r'^\(\s*[A-Za-z_]\w*\s*\)\s*')
+_SYM_OFFSET = re.compile(r'^\s*(?P<base>[A-Za-z_]\w*)\s*(?:(?P<op>[+-])\s*(?P<offset>\d+))?\s*$')
+_ARITH = re.compile(r'^[\d\s+\-*/()<>]+$')
+_BIT_SHIFT = re.compile(r'^(\d+)\s*<<\s*(\d+)$')
+
+def split_array_suffix_from_name(name: str) -> tuple[str, list[str]]:
+    """Split registry-style member names like field[N] into field and [N]."""
+    match = re.match(r'^([A-Za-z_]\w*)\[(.+)\]$', name)
+    if match is None:
+        return name, []
+    return match.group(1), [match.group(2).strip()]
+
+def infer_base_type(type_decl):
+    no_brace_decl = re.sub(r'\{.*\}', '', type_decl)
+    tokens = re.findall(r'[A-Za-z_]\w*', no_brace_decl)
+    qualifiers = {'const', 'volatile', 'signed', 'unsigned', 'long', 'short', 'struct', 'union'}
+    filtered_tokens = [token for token in tokens if token not in qualifiers]
+    if filtered_tokens:
+        return filtered_tokens[-1]
+    if tokens:
+        return tokens[-1]
+    return type_decl
+
+def get_full_decl(node):
+    comment = node.find("comment")
+    if comment is not None:
+        node.remove(comment)
+    full_type = _get_decl_text(node)
+
+    name_node = node.find("name")
+    type_node = node.find("type")
+    if name_node is not None and type_node is not None:
+        name = name_node.text.strip()
+        base_type = type_node.text.strip()
+        return name, base_type, full_type
+
+    match = re.match(r'(.+?)\s+([A-Za-z_]\w*)((?:\s*(?:\[[^\]]+\]|:\s*\d+))*)$', full_type)
+    if match is None:
+        pointer_declarator_match = re.match(r'(.+?)\s*\(\s*\*\s*([A-Za-z_]\w*)\s*\)\s*((?:\[[^\]]+\]\s*)+)$', full_type)
+        if pointer_declarator_match is not None:
+            name = pointer_declarator_match.group(2)
+            type_decl = pointer_declarator_match.group(1).strip()
+            base_type = infer_base_type(type_decl)
+            return name, base_type, full_type
+
+        anonymous_aggregate_match = re.match(r'((?:struct|union)\s*\{.*\})$', full_type)
+        if anonymous_aggregate_match is None:
+            raise ValueError(f"Unable to parse declaration from XML member node: '{full_type}'")
+        type_decl = anonymous_aggregate_match.group(1).strip()
+        base_type = infer_base_type(type_decl)
+        return '', base_type, full_type
+
+    name = match.group(2)
+    type_decl = match.group(1).strip()
+    base_type = infer_base_type(type_decl)
     return name, base_type, full_type
+
+def resolve_value_text(value_str, lookup):
+    if value_str is None:
+        return None
+    lookup = lookup or {}
+
+    def resolve(value, depth=0):
+        if isinstance(value, int):
+            return value
+        if value is None or depth > 8:
+            return None
+        text = html.unescape(_CAST.sub('', str(value).strip()))
+        while text.startswith('(') and text.endswith(')'):
+            inner = text[1:-1].strip()
+            if '(' in inner or ')' in inner:
+                break
+            text = _CAST.sub('', inner)
+        shift_match = _BIT_SHIFT.match(text)
+        if shift_match:
+            return int(shift_match.group(1)) << int(shift_match.group(2))
+        try:
+            return int(text, 0)
+        except ValueError:
+            pass
+        match = _SYM_OFFSET.match(text)
+        if match:
+            base = resolve(lookup.get(match.group('base')), depth + 1)
+            if base is None:
+                return None
+            offset = match.group('offset')
+            if offset is None:
+                return base
+            return base + int(offset) if match.group('op') == '+' else base - int(offset)
+        expr = text
+        for name in sorted((n for n, v in lookup.items() if isinstance(v, int)), key=len, reverse=True):
+            expr = re.sub(r'\b' + re.escape(name) + r'\b', str(lookup[name]), expr)
+        expr = expr.strip()
+        if re.search(r'[A-Za-z_]', expr) or not _ARITH.fullmatch(expr):
+            return None
+        try:
+            number = eval(expr, {'__builtins__': {}}, {})
+        except (SyntaxError, TypeError, ZeroDivisionError):
+            return None
+        return number if isinstance(number, int) else None
+
+    return resolve(value_str)
+
+def resolve_value(enum_node, lookup):
+    return resolve_value_text(enum_node.get('value'), lookup)
 
 def get_length(node):
     length = node.get('altlen') or node.get('len') or ''
@@ -53,16 +155,22 @@ def get_enum_value(enum_node, ext_number=None) -> (int|None):
     bitpos = enum_node.get('bitpos')
     if value_str is not None:
         base = 16 if value_str.startswith('0x') else 10
-        value = int(value_str, base)
+        try:
+            value = int(value_str, base)
+        except ValueError:
+            raise ValueError(value_str) from None
     elif bitpos is not None:
         value = 1 << int(bitpos)
-    else:
-        extnumber = int(enum_node.get('extnumber')) if enum_node.get('extnumber') is not None else (int(ext_number) if ext_number is not None else 0)
+    elif enum_node.get('offset') is not None or enum_node.get('extnumber') is not None or ext_number is not None:
+        extnumber = int(enum_node.get('extnumber')) if enum_node.get('extnumber') is not None else int(ext_number)
         offset = int(enum_node.get('offset')) if enum_node.get('offset') is not None else 0
         dir = enum_node.get('dir') if enum_node.get('dir') is not None else ''
         value = 1000000000 + (extnumber - 1) * 1000 + offset
         if dir == '-':
             value = -value
+    # Anything else carries no value in the registry, so the enumerator takes its implicit position
+    # in the C enum. Returning None keeps that distinct from a real number; computing the extension
+    # formula from all-zero defaults would collapse every such enumerator onto 999999000.
     return value
 
 def generate_args(command):
@@ -92,8 +200,8 @@ def get_define(platform):
     }
     return platform_define_map[platform]
 
-def generate_file(context, file_name, out_path):
-    in_file = os.path.join("templates", os.path.basename(file_name) + ".mako")
+def generate_file(context, file_name, out_path, template_dir='templates'):
+    in_file = os.path.join(template_dir, os.path.basename(file_name) + ".mako")
     out_file = os.path.join(out_path, file_name)
     
     base_context = {

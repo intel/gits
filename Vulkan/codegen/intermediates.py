@@ -19,6 +19,7 @@ class Parameter:
     is_void: bool = False
     is_pointer: bool = False
     is_pointer_to_pointer: bool = False
+    is_triple_pointer: bool = False
     length: (str|list[str]) = ''
     is_null_terminated: bool = False
     fixed_array_size: list[str] = field(default_factory=list)
@@ -46,6 +47,20 @@ class Command:
     tasks: list[str] = field(default_factory=list)
 
 @dataclass
+class NestedStructMember:
+    name: str = ''
+    base_type: str = ''
+    full_type: str = ''
+    is_const: bool = False
+    is_pointer: bool = False
+    is_pointer_to_pointer: bool = False
+    is_triple_pointer: bool = False
+    fixed_array_size: list[str] = field(default_factory=list)
+    bitfield: (int|None) = None
+    is_inline_struct: bool = False
+    nested_members: list['NestedStructMember'] = field(default_factory=list)
+
+@dataclass
 class Member:
     name: str = ''
     base_type: str = ''
@@ -54,6 +69,7 @@ class Member:
     is_void: bool = False
     is_pointer: bool = False
     is_pointer_to_pointer: bool = False
+    is_triple_pointer: bool = False
     length: (str|list[str]) = ''
     is_null_terminated: bool = False
     fixed_array_size: list[str] = field(default_factory=list)
@@ -75,6 +91,9 @@ class Member:
     # pNext-extension structs. Set in postprocess().
     contributes_keys: bool = False
     union_ref: object = None  # the Union object, for members whose type is a union
+    is_inline_struct: bool = False
+    inline_struct_decl: str = ''
+    nested_members: list[NestedStructMember] = field(default_factory=list)
 
 @dataclass
 class Structure:
@@ -106,6 +125,12 @@ class Handle:
     type: str = ''
     parent: str = ''
     dispatchable: bool = False
+
+@dataclass
+class FunctionPointer:
+    name: str = ''
+    full_decl: str = ''
+    platform: str = ''
 
 @dataclass
 class Enum:

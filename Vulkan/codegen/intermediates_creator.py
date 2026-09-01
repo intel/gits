@@ -8,14 +8,74 @@
 #
 # ===================== end_copyright_notice ==============================
 
-from intermediates import Parameter, Command, Member, Enum, Bitmask, Flag, Union, Structure, Handle
-from generator_helpers import get_full_decl, get_length, get_enum_value
+from intermediates import Parameter, Command, Member, Enum, Bitmask, Flag, Union, Structure, Handle, NestedStructMember, FunctionPointer
+from generator_helpers import get_full_decl, get_length, get_enum_value, infer_base_type, resolve_value, split_array_suffix_from_name
 import xml.etree.ElementTree
 import re
+
+INLINE_STRUCT_RE = re.compile(r'^\s*(?:struct|union)\s*\{(.*)\}\s*([A-Za-z_]\w*)\s*$')
+INLINE_MEMBER_RE = re.compile(r'(.+?)\s+([A-Za-z_]\w*)((?:\s*(?:\[[^\]]+\]|:\s*\d+))*)$')
+ANONYMOUS_AGGREGATE_RE = re.compile(r'^\s*(?:struct|union)\s*\{(.*)\}\s*$')
 
 def get_xml_root(xml_path):
     vk_xml_root = xml.etree.ElementTree.parse(xml_path).getroot()
     return vk_xml_root
+
+def split_declarations(aggregate_body) -> list[str]:
+    """
+    Splits an aggregate body on the semicolons that separate its own members, ignoring the ones
+    belonging to nested aggregates.
+    """
+    declarations = []
+    depth = 0
+    current = ''
+    for character in aggregate_body:
+        if character == '{':
+            depth += 1
+        elif character == '}':
+            depth -= 1
+        elif character == ';' and depth == 0:
+            declarations.append(current.strip())
+            current = ''
+            continue
+        current += character
+    declarations.append(current.strip())
+    return [declaration for declaration in declarations if declaration]
+
+def parse_inline_struct_members(inline_struct_decl) -> list[NestedStructMember]:
+    nested_members = []
+    for declaration in split_declarations(inline_struct_decl):
+        match = INLINE_MEMBER_RE.match(declaration)
+        if match is None:
+            raise ValueError(f"Unable to parse inline struct member declaration: '{declaration}'")
+        type_decl = match.group(1).strip()
+        name = match.group(2)
+        suffix = match.group(3) or ''
+        full_type = f'{type_decl} {name}{suffix}'.strip()
+        fixed_array_size = [dim.strip() for dim in re.findall(r'\[([^\]]+)\]', full_type)]
+        is_triple_pointer = bool(re.search(r'\*\s*(const\s*)?\*\s*(const\s*)?\*', full_type))
+        is_pointer_to_pointer = not is_triple_pointer and bool(re.search(r'\*\s*(const\s*)?\*', full_type))
+        inline_struct_match = INLINE_STRUCT_RE.match(declaration)
+        is_inline_struct = inline_struct_match is not None
+        bitfield = None
+        if ':' in full_type and not is_inline_struct:
+            bitfield = int(full_type.split(':')[1])
+        nested_member = NestedStructMember(
+            name=name,
+            base_type=infer_base_type(type_decl),
+            full_type=full_type,
+            is_const=bool(re.search(r'\bconst\b', full_type)),
+            is_triple_pointer=is_triple_pointer,
+            is_pointer_to_pointer=is_pointer_to_pointer,
+            is_pointer='*' in full_type and not is_pointer_to_pointer and not is_triple_pointer,
+            fixed_array_size=fixed_array_size,
+            bitfield=bitfield,
+            is_inline_struct=is_inline_struct,
+            nested_members=parse_inline_struct_members(inline_struct_match.group(1).strip())
+                           if is_inline_struct else [],
+        )
+        nested_members.append(nested_member)
+    return nested_members
 
 def parse_commands(vk_xml_root) -> list[Command]:
     commands_map = {}
@@ -40,15 +100,20 @@ def parse_commands(vk_xml_root) -> list[Command]:
                 if api is not None and "vulkan" not in api.split(","):
                     continue
                 name, base_type, full_type = get_full_decl(param_node)
+                name, name_array_dims = split_array_suffix_from_name(name)
                 param = Parameter()
                 param.name = name
                 param.base_type = base_type
                 param.full_type = full_type
                 param.is_const = 'const' in full_type
-                param.is_pointer_to_pointer = bool(re.search(r'\*\s*(const\s*)?\*', full_type))
-                param.is_pointer = '*' in full_type and not param.is_pointer_to_pointer
+                param.is_triple_pointer = bool(re.search(r'\*\s*(const\s*)?\*\s*(const\s*)?\*', full_type))
+                param.is_pointer_to_pointer = not param.is_triple_pointer and bool(re.search(r'\*\s*(const\s*)?\*', full_type))
+                param.is_pointer = '*' in full_type and not param.is_pointer_to_pointer and not param.is_triple_pointer
                 param.is_void = base_type == 'void'
                 fixed_array_size = [dim.strip() for dim in re.findall(r'\[([^\]]+)\]', full_type)]
+                for dim in name_array_dims:
+                    if dim not in fixed_array_size:
+                        fixed_array_size.append(dim)
                 param.fixed_array_size = fixed_array_size
                 length, is_null_terminated = get_length(param_node)
                 param.length = length
@@ -80,33 +145,56 @@ def parse_commands(vk_xml_root) -> list[Command]:
 
 def parse_member(node) -> Member:
     name, base_type, full_type = get_full_decl(node)
+    name, name_array_dims = split_array_suffix_from_name(name)
     fixed_array_size = [dim.strip() for dim in re.findall(r'\[([^\]]+)\]', full_type)]
+    for dim in name_array_dims:
+        if dim not in fixed_array_size:
+            fixed_array_size.append(dim)
     length, is_null_terminated = get_length(node)
     values = node.get('values') or ''
     selector = node.get('selector') or ''
     selection = node.get('selection') or ''
-    is_pointer_to_pointer=bool(re.search(r'\*\s*(const\s*)?\*', full_type))
-    is_pointer='*' in full_type and not is_pointer_to_pointer
+    is_triple_pointer = bool(re.search(r'\*\s*(const\s*)?\*\s*(const\s*)?\*', full_type))
+    is_pointer_to_pointer = not is_triple_pointer and bool(re.search(r'\*\s*(const\s*)?\*', full_type))
+    is_pointer = '*' in full_type and not is_pointer_to_pointer and not is_triple_pointer
     # objecttype attribute marks a uint64_t member that carries a type-erased Vulkan handle
     # whose concrete type is indicated by a sibling enum member (e.g. VkObjectType).
     is_typed_handle = node.get('objecttype') is not None and base_type == 'uint64_t'
+
+    # An aggregate without a member name is anonymous, so its members are reached directly
+    # through the enclosing structure.
+    inline_struct_match = INLINE_STRUCT_RE.match(full_type) or ANONYMOUS_AGGREGATE_RE.match(full_type)
+    is_inline_struct = inline_struct_match is not None
+    inline_struct_decl = ''
+    nested_members = []
+    if is_inline_struct:
+        inline_struct_decl = full_type
+        nested_members = parse_inline_struct_members(inline_struct_match.group(1).strip())
+
+    bitfield = None
+    if ':' in full_type and not is_inline_struct and '{' not in full_type and '}' not in full_type:
+        bitfield = int(full_type.split(':')[1])
 
     member = Member(
         name=name,
         base_type=base_type,
         full_type=full_type,
-        is_const='const' in full_type,
+        is_const=bool(re.search(r'\bconst\b', full_type)),
         is_void=base_type == 'void',
+        is_triple_pointer=is_triple_pointer,
         is_pointer_to_pointer=is_pointer_to_pointer,
         is_pointer=is_pointer,
         length=length,
         is_null_terminated=is_null_terminated,
         fixed_array_size=fixed_array_size,
-        bitfield=int(full_type.split(':')[1]) if ':' in full_type else None,
+        bitfield=bitfield,
         values=values,
         is_typed_handle=is_typed_handle,
         selector=selector,
         selection=selection,
+        is_inline_struct=is_inline_struct,
+        inline_struct_decl=inline_struct_decl,
+        nested_members=nested_members,
     )
 
     return member
@@ -212,26 +300,111 @@ def parse_handles(vk_xml_root) -> list[Handle]:
         handles_map[name] = aliased_handle
     return list(handles_map.values())
 
-def parse_enums(vk_xml_root) -> list[Enum]:
-    enums_map = {}
+def parse_function_pointers(vk_xml_root) -> list[FunctionPointer]:
+    function_pointers_map = {}
+    for type_node in vk_xml_root.findall("./types/type[@category='funcpointer']"):
+        proto_node = type_node.find('proto')
+        if proto_node is None:
+            continue
+        name_node = proto_node.find('name')
+        type_name_node = proto_node.find('type')
+        if name_node is None or name_node.text is None or type_name_node is None or type_name_node.text is None:
+            continue
+        name = name_node.text.strip()
 
-    enum_nodes = vk_xml_root.findall("./enums[@type='enum']")
+        return_type = type_name_node.text.strip()
+        params = []
+        for param_node in type_node.findall('param'):
+            _param_name, _param_base_type, param_full_type = get_full_decl(param_node)
+            params.append(param_full_type)
+
+        params_str = ', '.join(params) if params else 'void'
+        full_decl = f"typedef {return_type} (VKAPI_PTR *{name})({params_str});"
+        function_pointers_map[name] = FunctionPointer(
+            name=name,
+            full_decl=full_decl,
+            platform=type_node.get('platform', ''),
+        )
+    return list(function_pointers_map.values())
+
+def _lookup_for_enum_values(api_constants, values):
+    lookup = {}
+    for name, value in (api_constants or {}).items():
+        if value is None:
+            continue
+        try:
+            lookup[name] = int(str(value).strip(), 0)
+        except ValueError:
+            continue
+    for name, value in (values or {}).items():
+        if isinstance(value, int):
+            lookup[name] = value
+    return lookup
+
+def _resolve_enumerator(enum_node, values, api_constants, ext_number=None):
+    try:
+        return get_enum_value(enum_node, ext_number)
+    except ValueError:
+        return resolve_value(enum_node, _lookup_for_enum_values(api_constants, values))
+
+def _finish_unresolved_enum_values(values, nodes_by_name, api_constants):
+    for _ in range(len(values) + 1):
+        lookup = _lookup_for_enum_values(api_constants, values)
+        progress = False
+        for name, value in values.items():
+            if isinstance(value, int):
+                continue
+            enum_node = nodes_by_name.get(name)
+            if enum_node is None:
+                continue
+            resolved = resolve_value(enum_node, lookup)
+            if resolved is not None:
+                values[name] = resolved
+                progress = True
+        if not progress:
+            break
+
+def parse_enums(vk_xml_root, api_constants=None) -> list[Enum]:
+    api_constants = api_constants or {}
+    enums_map = {}
+    bitmask_enum_names = {
+        (bitmask_type.get('requires') or bitmask_type.get('bitvalues'))
+        for bitmask_type in vk_xml_root.findall("./types/type[@category='bitmask']")
+        if (bitmask_type.get('requires') or bitmask_type.get('bitvalues')) is not None
+    }
+
+    enum_nodes = []
+    enum_nodes.extend(vk_xml_root.findall("./enums[@type='enum']"))
+    for enum_node in vk_xml_root.findall("./enums"):
+        enum_name = enum_node.get('name')
+        enum_type = enum_node.get('type')
+        if enum_type is None and enum_name is not None and enum_name not in bitmask_enum_names:
+            enum_nodes.append(enum_node)
+
+    enum_nodes_by_name = {}
+
     for enum_node in enum_nodes:
         name = enum_node.get('name')
+        if name is None or name == 'API Constants':
+            continue
         enumerator_nodes = enum_node.findall("enum")
         values = {}
+        nodes_by_name = {}
         for enumerator_node in enumerator_nodes:
             alias = enumerator_node.get("alias")
             if alias is not None:
                 continue
             enumerator_name = enumerator_node.get('name')
-            enumerator_value = get_enum_value(enumerator_node)
-            values[enumerator_name] = enumerator_value
+            nodes_by_name[enumerator_name] = enumerator_node
+            values[enumerator_name] = _resolve_enumerator(
+                enumerator_node, values, api_constants)
+        _finish_unresolved_enum_values(values, nodes_by_name, api_constants)
         enum = Enum(
             name=name,
             values=values
         )
         enums_map[name] = enum
+        enum_nodes_by_name[name] = nodes_by_name
 
     for feature_node in vk_xml_root.findall("./feature"):
         api = feature_node.get("api")
@@ -249,8 +422,10 @@ def parse_enums(vk_xml_root) -> list[Enum]:
                 if alias is not None:
                     continue
                 name = enum_node.get("name")
-                value = get_enum_value(enum_node)
-                enums_map[extends].values[name] = value
+                sibling_values = enums_map[extends].values
+                enums_map[extends].values[name] = _resolve_enumerator(
+                    enum_node, sibling_values, api_constants)
+                enum_nodes_by_name.setdefault(extends, {})[name] = enum_node
 
     for ext_node in vk_xml_root.findall("./extensions/extension"):
         supported = ext_node.get("supported")
@@ -269,12 +444,48 @@ def parse_enums(vk_xml_root) -> list[Enum]:
                 if alias is not None:
                     continue
                 name = enum_node.get("name")
-                value = get_enum_value(enum_node, ext_number)
-                enums_map[extends].values[name] = value
+                sibling_values = enums_map[extends].values
+                enums_map[extends].values[name] = _resolve_enumerator(
+                    enum_node, sibling_values, api_constants, ext_number)
+                enum_nodes_by_name.setdefault(extends, {})[name] = enum_node
+
+    for enum_name, enum in enums_map.items():
+        _finish_unresolved_enum_values(
+            enum.values,
+            enum_nodes_by_name.get(enum_name, {}),
+            api_constants,
+        )
+
     return list(enums_map.values())
 
-def parse_bitmasks(vk_xml_root) -> list[Bitmask]:
+def parse_api_constants(vk_xml_root) -> dict[str, str]:
+    constants = {}
+    api_constants_node = vk_xml_root.find("./enums[@name='API Constants']")
+    if api_constants_node is None:
+        return constants
+
+    for enumerator_node in api_constants_node.findall('enum'):
+        alias = enumerator_node.get('alias')
+        if alias is not None:
+            continue
+        name = enumerator_node.get('name')
+        if name is None:
+            continue
+        value = enumerator_node.get('value')
+        if value is None:
+            continue
+        constants[name] = value
+    return constants
+
+def parse_bitmasks(vk_xml_root, api_constants=None) -> list[Bitmask]:
+    api_constants = api_constants or {}
     bitmasks_map = {}
+    bitmask_enum_names = {
+        (bitmask_type.get('requires') or bitmask_type.get('bitvalues'))
+        for bitmask_type in vk_xml_root.findall("./types/type[@category='bitmask']")
+        if (bitmask_type.get('requires') or bitmask_type.get('bitvalues')) is not None
+    }
+    bitmask_nodes_by_name = {}
 
     for bitmask_node in vk_xml_root.findall("./enums[@type='bitmask']"):
         name = bitmask_node.get('name')
@@ -282,10 +493,14 @@ def parse_bitmasks(vk_xml_root) -> list[Bitmask]:
         flag_name = name.replace('FlagBits', 'Flags')
         flagbit_nodes = bitmask_node.findall("enum")
         bits = {}
+        nodes_by_name = {}
         for flagbit_node in flagbit_nodes:
+            if flagbit_node.get('alias') is not None:
+                continue
             bit_name = flagbit_node.get('name')
-            value = get_enum_value(flagbit_node)
-            bits[bit_name] = value
+            nodes_by_name[bit_name] = flagbit_node
+            bits[bit_name] = _resolve_enumerator(flagbit_node, bits, api_constants)
+        _finish_unresolved_enum_values(bits, nodes_by_name, api_constants)
         bitmask = Bitmask(
             name=name,
             bitwidth=bitwidth,
@@ -293,6 +508,34 @@ def parse_bitmasks(vk_xml_root) -> list[Bitmask]:
             bits=bits
         )
         bitmasks_map[name] = bitmask
+        bitmask_nodes_by_name[name] = nodes_by_name
+
+    for bitmask_node in vk_xml_root.findall("./enums"):
+        if bitmask_node.get('type') is not None:
+            continue
+        name = bitmask_node.get('name')
+        if name is None or name not in bitmask_enum_names or name in bitmasks_map:
+            continue
+        bitwidth = int(bitmask_node.get('bitwidth', '32'))
+        flag_name = name.replace('FlagBits', 'Flags')
+        bits = {}
+        nodes_by_name = {}
+        for flagbit_node in bitmask_node.findall("enum"):
+            if flagbit_node.get('alias') is not None:
+                continue
+            bit_name = flagbit_node.get('name')
+            nodes_by_name[bit_name] = flagbit_node
+            bits[bit_name] = _resolve_enumerator(flagbit_node, bits, api_constants)
+        _finish_unresolved_enum_values(bits, nodes_by_name, api_constants)
+        bitmask = Bitmask(
+            name=name,
+            bitwidth=bitwidth,
+            flag_name=flag_name,
+            bits=bits
+        )
+        bitmasks_map[name] = bitmask
+        bitmask_nodes_by_name[name] = nodes_by_name
+
     for feature_node in vk_xml_root.findall("./feature"):
         api = feature_node.get("api")
         if api is not None and 'vulkan' not in api.split(","):
@@ -309,8 +552,10 @@ def parse_bitmasks(vk_xml_root) -> list[Bitmask]:
                 if alias is not None:
                     continue
                 name = enum_node.get("name")
-                value = get_enum_value(enum_node)
-                bitmasks_map[extends].bits[name] = value
+                sibling_bits = bitmasks_map[extends].bits
+                bitmasks_map[extends].bits[name] = _resolve_enumerator(
+                    enum_node, sibling_bits, api_constants)
+                bitmask_nodes_by_name.setdefault(extends, {})[name] = enum_node
 
     for ext_node in vk_xml_root.findall("./extensions/extension"):
         supported = ext_node.get("supported")
@@ -329,8 +574,17 @@ def parse_bitmasks(vk_xml_root) -> list[Bitmask]:
                 if alias is not None:
                     continue
                 name = enum_node.get("name")
-                value = get_enum_value(enum_node, ext_number)
-                bitmasks_map[extends].bits[name] = value
+                sibling_bits = bitmasks_map[extends].bits
+                bitmasks_map[extends].bits[name] = _resolve_enumerator(
+                    enum_node, sibling_bits, api_constants, ext_number)
+                bitmask_nodes_by_name.setdefault(extends, {})[name] = enum_node
+
+    for bitmask_name, bitmask in bitmasks_map.items():
+        _finish_unresolved_enum_values(
+            bitmask.bits,
+            bitmask_nodes_by_name.get(bitmask_name, {}),
+            api_constants,
+        )
 
     return list(bitmasks_map.values())
 

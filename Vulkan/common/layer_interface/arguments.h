@@ -11,6 +11,7 @@
 #include "vulkanHeader2.h"
 
 #include <cstdint>
+#include <string>
 #include <vector>
 
 typedef uint64_t GITSKey;
@@ -79,6 +80,31 @@ struct ArrayArgument {
   ArrayArgument(const T* v, uint32_t s) : Value(const_cast<T*>(v)), Size(s) {}
   ArrayArgument(const T* v, uint32_t* s) : Value(const_cast<T*>(v)), Size(*s) {}
   ArrayArgument(const T* v, int s) : Value(const_cast<T*>(v)), Size(static_cast<uint32_t>(s)) {}
+  ArrayArgument(const T* v, size_t s) : Value(const_cast<T*>(v)), Size(static_cast<uint32_t>(s)) {}
+};
+
+template <typename T>
+struct ArrayOutputArgument {
+  T** Value{};
+  T* Data{};
+  uint32_t Size{};
+  ArrayOutputArgument() {}
+  ArrayOutputArgument(T** v, uint32_t s) : Value(v), Size(s) {}
+  ArrayOutputArgument(T** v, uint32_t* s) : Value(v), Size(*s) {}
+};
+
+template <typename T>
+struct ConstArrayOutputArgument {
+  const T** Value{};
+  T* Data{};
+  // Replay-owned inner pointer; Decode sets Value = &Pointer (see BufferOutputArgument).
+  const T* Pointer{};
+  uint32_t Size{};
+  // When set, element count is read in GetSize/Encode (not in the constructor).
+  uint32_t* CountPtr{};
+  ConstArrayOutputArgument() {}
+  ConstArrayOutputArgument(const T** v, uint32_t s) : Value(v), Size(s) {}
+  ConstArrayOutputArgument(const T** v, uint32_t* countPtr) : Value(v), CountPtr(countPtr) {}
 };
 
 // UpdateHandle(ArrayArgument<VkAccelerationStructureBuildGeometryInfoKHR>&) collects every
@@ -272,6 +298,22 @@ struct MemoryRegions {
 
   uint32_t Size{};
   std::vector<Region> Regions{};
+};
+
+struct OutputCStringArrayArgument {
+  char*** Value{};
+  // Replay-owned char**; Decode sets Value = &PointerSlot (see BufferOutputArgument).
+  char** PointerSlot{};
+  // Capture: points at the API's name-count output parameter; never read in the constructor.
+  uint32_t* CountPtr{};
+  // Replay / stream: element count (Encode writes *CountPtr after the call; Decode sets this).
+  uint32_t Size{};
+
+  std::vector<std::string> OwnedStrings{};
+  std::vector<char*> Pointers{};
+
+  OutputCStringArrayArgument() = default;
+  OutputCStringArrayArgument(char*** v, uint32_t* countPtr) : Value(v), CountPtr(countPtr) {}
 };
 
 } // namespace vulkan

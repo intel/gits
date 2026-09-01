@@ -14,11 +14,11 @@ import os
 ID_META_BEGIN = 14 * 0x10000
 ID_VK_BEGIN = ID_META_BEGIN + 0x500
 
-def cache_command(cache, cmd_name):
+def cache_command(cache, cmd_name, id_base):
     if cmd_name in cache['command_ids']:
         return
 
-    cmd_id = ID_VK_BEGIN + cache['command_count']
+    cmd_id = id_base + cache['command_count']
     cache['command_count'] += 1
     cache['command_ids'][cmd_name] = cmd_id
 
@@ -35,9 +35,10 @@ def build_command_ids(context, out_path):
 
     for command in context['commands']:
         cmd_name = f"ID_{command.name.upper()}"
-        cache_command(command_ids_cache, cmd_name)
+        cache_command(command_ids_cache, cmd_name, ID_VK_BEGIN)
 
     with open(command_ids_file, 'w') as f:
         json.dump(command_ids_cache, f, indent = 4)
 
     return command_ids_cache['command_ids']
+

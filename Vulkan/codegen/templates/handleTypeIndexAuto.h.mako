@@ -16,7 +16,9 @@ ${header}
 namespace gits {
 namespace vulkan {
 
-<% handle_types = collect_unique_handle_types(handles) %>\
+<%
+handle_types = collect_unique_handle_types(handles)
+%>\
 // Number of distinct Vulkan handle types. Each maps to one bucket in the
 // recorder-side handle->key store (see HandleMapService), so that non-unique
 // non-dispatchable handle values are disambiguated by object type.
@@ -47,8 +49,10 @@ constexpr std::size_t HandleTypeIndex<${h.name}>() {
 inline std::size_t HandleTypeIndexFromObjectType(VkObjectType type) {
   switch (type) {
 % for i, h in enumerate(handle_types):
+% if h.type:
   case ${h.type}:
     return ${i};
+% endif
 % endfor
   default:
     return kInvalidHandleTypeIndex;

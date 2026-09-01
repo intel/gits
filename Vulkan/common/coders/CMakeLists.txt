@@ -17,6 +17,8 @@ set(CODERS_SRC
   ${CMAKE_CURRENT_SOURCE_DIR}/argumentCodersAuto.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/argumentCodersCustom.h
   ${CMAKE_CURRENT_SOURCE_DIR}/argumentCodersCustom.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/pNextChainSkip.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/pNextChainSkip.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/commandCodersCustom.h
   ${CMAKE_CURRENT_SOURCE_DIR}/commandCodersCustom.cpp
 )

@@ -45,6 +45,9 @@ public:
 #endif
   void Pre(vkQueuePresentKHRCommand& command) override;
 
+  void Post(vkCreateInstanceCommand& command) override;
+  void Post(vkEnumeratePhysicalDevicesCommand& command) override;
+
   void Pre(vkCreateDeviceCommand& command) override;
   void Post(vkCreateDeviceCommand& command) override;
 
@@ -64,6 +67,16 @@ public:
   void Pre(vkCreateBufferCommand& command) override;
   void Post(vkCreateBufferCommand& command) override;
   void Pre(vkCreateImageCommand& command) override;
+  void Post(vkCreateImageCommand& command) override;
+
+  void Post(vkAllocateCommandBuffersCommand& command) override;
+
+  void Post(vkCmdPipelineBarrierCommand& command) override;
+  void Post(vkCmdPipelineBarrier2Command& command) override;
+  void Post(vkCmdPipelineBarrier2KHRCommand& command) override;
+
+  void Post(vkGetDeviceQueueCommand& command) override;
+  void Post(vkGetDeviceQueue2Command& command) override;
 
   void Pre(vkGetDeviceBufferMemoryRequirementsCommand& command) override;
   void Pre(vkGetDeviceBufferMemoryRequirementsKHRCommand& command) override;

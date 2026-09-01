@@ -53,6 +53,7 @@ public:
   virtual void Pre(RestoreContentDataCommand& command) {}
   virtual void Post(RestoreContentDataCommand& command) {}
 
+
   %for command in commands:
   <% define = get_define(command.platform) %>\
   % if define:
@@ -65,6 +66,7 @@ public:
   % endif
 
   %endfor
+
 private:
   std::string m_Name;
 };

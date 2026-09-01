@@ -8,6 +8,7 @@
 ${header}
 
 #include "handleArgumentUpdatersAuto.h"
+#include "pNextChainSkip.h"
 
 namespace gits {
 namespace vulkan {
@@ -19,8 +20,12 @@ pnext_handle_structs = collect_pnext_handle_structs(structures)
 void CollectPNextHandleKeys(std::vector<GITSKey>& keys, const void* pNext) {
   const auto* node = reinterpret_cast<const VkBaseInStructure*>(pNext);
   while (node) {
+    if (ShouldSkipPNext(node->sType)) {
+      node = node->pNext;
+      continue;
+    }
     switch (node->sType) {
-% for structure, handle_members in pnext_handle_structs:
+% for structure, handle_members in collect_pnext_handle_structs(structures):
 <% define = get_define(structure.platform) %>
 % if define:
 #ifdef ${define}

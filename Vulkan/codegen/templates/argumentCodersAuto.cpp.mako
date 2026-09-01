@@ -9,6 +9,7 @@ ${header}
 
 #include "argumentCodersAuto.h"
 #include "argumentCoders.h"
+#include "pNextChainSkip.h"
 
 namespace gits {
 namespace vulkan {
@@ -22,14 +23,14 @@ pnext_output_structs = [s for s in structures if s.pnext_output and s.stype_valu
 // terminated by VK_STRUCTURE_TYPE_MAX_ENUM
 // ============================================================================
 
-<%def name="pnext_switch_cases(structs, action)">\
+<%def name="pnext_switch_cases(structs, action, structs_for_coder)">\
 % for s in structs:
 <% define = get_define(s.platform) %>
 % if define:
 #ifdef ${define}
 % endif
       case ${s.stype_value}: {
-${action(s)}\
+${action(s, structs_for_coder)}\
         break;
       }
 % if define:
@@ -38,8 +39,8 @@ ${action(s)}\
 % endfor
 </%def>\
 
-<%def name="getsize_action(s)">\
-% if struct_needs_coder(s, structures, unions):
+<%def name="getsize_action(s, structs_for_coder)">\
+% if struct_needs_coder(s, structs_for_coder, unions):
         {
           // The enclosing while loop already walks the rest of the chain via
           // node->pNext, so GetSize() must not also do it (its own pNext
@@ -56,10 +57,10 @@ ${action(s)}\
         size += sizeof(VkStructureType);
 </%def>\
 
-<%def name="encode_action(s)">\
+<%def name="encode_action(s, structs_for_coder)">\
         std::memcpy(dst + offset, &node->sType, sizeof(VkStructureType));
         offset += sizeof(VkStructureType);
-% if struct_needs_coder(s, structures, unions):
+% if struct_needs_coder(s, structs_for_coder, unions):
         {
           // See getsize_action() above: encode just this node's own fields,
           // the caller's loop encodes the rest of the chain as separate
@@ -78,8 +79,13 @@ uint32_t GetPNextChainSizeInput(const void* pNext) {
   uint32_t size = sizeof(VkStructureType);
   const auto* node = reinterpret_cast<const VkBaseInStructure*>(pNext);
   while (node) {
+    if (ShouldSkipPNext(node->sType)) {
+      LogSkippedPNext("GetPNextChainSizeInput", node->sType);
+      node = node->pNext;
+      continue;
+    }
     switch (node->sType) {
-${pnext_switch_cases(pnext_input_structs, getsize_action)}\
+${pnext_switch_cases(pnext_input_structs, getsize_action, structures)}\
       default:
         break;
     }
@@ -92,8 +98,13 @@ uint32_t GetPNextChainSizeOutput(const void* pNext) {
   uint32_t size = sizeof(VkStructureType);
   const auto* node = reinterpret_cast<const VkBaseOutStructure*>(pNext);
   while (node) {
+    if (ShouldSkipPNext(node->sType)) {
+      LogSkippedPNext("GetPNextChainSizeOutput", node->sType);
+      node = node->pNext;
+      continue;
+    }
     switch (node->sType) {
-${pnext_switch_cases(pnext_output_structs, getsize_action)}\
+${pnext_switch_cases(pnext_output_structs, getsize_action, structures)}\
       default:
         break;
     }
@@ -105,8 +116,12 @@ ${pnext_switch_cases(pnext_output_structs, getsize_action)}\
 void EncodePNextChainInput(char* dst, uint32_t& offset, const void* pNext) {
   const auto* node = reinterpret_cast<const VkBaseInStructure*>(pNext);
   while (node) {
+    if (ShouldSkipPNext(node->sType)) {
+      node = node->pNext;
+      continue;
+    }
     switch (node->sType) {
-${pnext_switch_cases(pnext_input_structs, encode_action)}\
+${pnext_switch_cases(pnext_input_structs, encode_action, structures)}\
       default:
         break;
     }
@@ -120,8 +135,12 @@ ${pnext_switch_cases(pnext_input_structs, encode_action)}\
 void EncodePNextChainOutput(char* dst, uint32_t& offset, const void* pNext) {
   const auto* node = reinterpret_cast<const VkBaseOutStructure*>(pNext);
   while (node) {
+    if (ShouldSkipPNext(node->sType)) {
+      node = node->pNext;
+      continue;
+    }
     switch (node->sType) {
-${pnext_switch_cases(pnext_output_structs, encode_action)}\
+${pnext_switch_cases(pnext_output_structs, encode_action, structures)}\
       default:
         break;
     }

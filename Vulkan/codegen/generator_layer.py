@@ -9,6 +9,7 @@
 # ===================== end_copyright_notice ==============================
 
 from generator_helpers import generate_file
+import re
 
 def generate_params_for_function(command):
     list = []
@@ -44,8 +45,14 @@ def generate_params_for_function(command):
         elif param.is_pointer_to_pointer:
             if param.is_void:
                 s += f"BufferOutputArgument"
-            else:
+            elif re.search(r'\*\s*const\s*\*', param.full_type):
                 s += f"ArrayOfArrays<{param.base_type}>"
+            elif param.is_const:
+                s += f"ConstArrayOutputArgument<{param.base_type}>"
+            else:
+                s += f"ArrayOutputArgument<{param.base_type}>"
+        elif param.is_triple_pointer and param.base_type == 'char':
+            s += f"OutputCStringArrayArgument"
         else:
             s += f"Argument<{param.base_type}>"
         s += ' m_' + param.name
@@ -53,13 +60,23 @@ def generate_params_for_function(command):
     return list
 
 def generate_initializer_list(command):
+    POINTER_TO_POINTER_INNER_LENGTH_SOURCE = {
+        ('vkCmdBuildAccelerationStructuresKHR', 'ppBuildRangeInfos'): 'pInfos',
+        ('vkBuildAccelerationStructuresKHR', 'ppBuildRangeInfos'): 'pInfos',
+        ('vkCmdBuildAccelerationStructuresIndirectKHR', 'ppMaxPrimitiveCounts'): 'pInfos',
+    }
+    
     initializer_list = []
     for param in command.params:
         s = 'm_' + param.name + '{' + param.name
         if param.length:
             s += ', ' + param.length
         if param.is_pointer_to_pointer and not param.is_void:
-            s += ', pInfos'
+            inner_source = POINTER_TO_POINTER_INNER_LENGTH_SOURCE.get((command.name, param.name))
+            if inner_source is not None:
+                s += f', {inner_source}'
+        if param.is_triple_pointer and param.base_type == 'char':
+            s += ', pNameCount'
         s += '}'
         initializer_list.append(s)
     return initializer_list
@@ -97,3 +114,4 @@ def generate_layer_files(context, out_path):
     ]
     for file_name in files_to_generate:
         generate_file(context | additional_context, file_name, out_path)
+        
