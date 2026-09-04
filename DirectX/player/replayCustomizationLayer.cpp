@@ -1602,6 +1602,14 @@ void ReplayCustomizationLayer::Pre(D3D12CreateRootSignatureDeserializerCommand& 
 }
 
 void ReplayCustomizationLayer::Pre(ID3D12DeviceOpenSharedHandleCommand& c) {
+  if (!c.Skip && (c.m_riid.Value == IID_ID3D12Fence || c.m_riid.Value == IID_ID3D12Fence1)) {
+    static bool printed = false;
+    if (!printed) {
+      LOG_WARNING << "Shared fences are not fully handled. Some fence signals might be missing "
+                     "during replay.";
+      printed = true;
+    }
+  }
   c.Skip = true;
 }
 
