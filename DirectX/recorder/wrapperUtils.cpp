@@ -11,19 +11,24 @@
 #include "wrapperCreatorsAuto.h"
 #include "captureManager.h"
 #include "exception.h"
+#include "log.h"
+#include "to_string/toStr.h"
 
 namespace gits {
 namespace DirectX {
 
-void wrapObject(REFIID riid, void** object) {
+bool wrapObject(REFIID riid, void** object) {
 
   if (object && *object) {
     auto it = g_wrapperCreatorsDispatchTable.find(riid);
-    GITS_ASSERT(it != g_wrapperCreatorsDispatchTable.end());
     if (it != g_wrapperCreatorsDispatchTable.end()) {
       it->second(riid, object);
+      return true;
     }
+    LOG_ERROR << "wrapObject failed: no wrapper creator for " << toStr(riid);
+    return false;
   }
+  return true;
 }
 
 bool wrapObjectNoStore(REFIID riid, void** object) {

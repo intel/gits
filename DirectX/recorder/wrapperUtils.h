@@ -19,7 +19,7 @@
 namespace gits {
 namespace DirectX {
 
-void wrapObject(REFIID riid, void** object);
+bool wrapObject(REFIID riid, void** object);
 bool wrapObjectNoStore(REFIID riid, void** object);
 
 class AtTopOfStackGlobal {

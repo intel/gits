@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "playerManager.h"
+#include "log.h"
 
 namespace gits {
 namespace DirectX {
@@ -34,6 +35,10 @@ void UpdateInterface(PlayerManager& manager, InterfaceArgument<T>& arg) {
 template <typename T>
 void UpdateOutputInterface(PlayerManager& manager, InterfaceOutputArgument<T>& arg) {
   if (!arg.Value || !*arg.Value) {
+    return;
+  }
+  if (!arg.Key) {
+    LOG_ERROR << "UpdateOutputInterface failed: no object key for output interface";
     return;
   }
   manager.AddObject(arg.Key, static_cast<IUnknown*>(*arg.Value));

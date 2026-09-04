@@ -86,7 +86,10 @@ public:
 
     if (hr == S_OK && m_Object && *m_Object) {
       T* wrappedObject = *m_Object;
-      wrapObject(riid, reinterpret_cast<void**>(&wrappedObject));
+      if (!wrapObject(riid, reinterpret_cast<void**>(&wrappedObject))) {
+        m_Wrapper = reinterpret_cast<IUnknownWrapper*>(wrappedObject);
+        return;
+      }
       m_Wrapper = reinterpret_cast<IUnknownWrapper*>(wrappedObject);
 
       arg.Key = m_Wrapper->GetKey();
