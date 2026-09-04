@@ -84,7 +84,7 @@ void IUnknownQueryInterfaceRunner::Run() {
     if (command.m_Result.Value == S_OK) {
       command.m_ppvObject.Data = ppvObject;
       command.m_ppvObject.Value = &command.m_ppvObject.Data;
-      if (command.m_ppvObject.Key != command.m_Object.Key) {
+      if (command.m_ppvObject.Key != 0 && command.m_ppvObject.Key != command.m_Object.Key) {
         UpdateOutputInterface(manager, command.m_ppvObject);
       }
     }
