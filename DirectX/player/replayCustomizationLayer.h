@@ -111,6 +111,8 @@ public:
   void Pre(ID3D12ObjectSetNameCommand& command) override;
   void Pre(ID3D12ObjectSetPrivateDataCommand& command) override;
   void Pre(ID3D12ObjectSetPrivateDataInterfaceCommand& command) override;
+  void Pre(IDXGIObjectSetPrivateDataCommand& command) override;
+  void Pre(IDXGIObjectSetPrivateDataInterfaceCommand& command) override;
   void Pre(ID3D12PipelineLibrarySerializeCommand& command) override;
   void Pre(ID3D12PipelineLibraryGetSerializedSizeCommand& command) override;
   void Pre(ID3D12PipelineLibraryStorePipelineCommand& command) override;

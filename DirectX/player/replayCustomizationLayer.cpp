@@ -946,6 +946,18 @@ void ReplayCustomizationLayer::Pre(ID3D12ObjectSetPrivateDataInterfaceCommand& c
   }
 }
 
+void ReplayCustomizationLayer::Pre(IDXGIObjectSetPrivateDataCommand& c) {
+  if (!c.m_Object.Value) {
+    c.Skip = true;
+  }
+}
+
+void ReplayCustomizationLayer::Pre(IDXGIObjectSetPrivateDataInterfaceCommand& c) {
+  if (!c.m_Object.Value) {
+    c.Skip = true;
+  }
+}
+
 void ReplayCustomizationLayer::Pre(ID3D12PipelineLibrarySerializeCommand& c) {
   c.Skip = true;
 }
