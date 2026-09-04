@@ -819,7 +819,7 @@ void StateTrackingLayer::Post(IDXGISwapChainGetBufferCommand& c) {
   m_ResourceStateTrackingService.AddResource(ObjectKey{},
                                              static_cast<ID3D12Resource*>(*c.m_ppSurface.Value),
                                              state->Key, D3D12_RESOURCE_STATE_COMMON, false);
-  m_StateService.AddBackBuffer(c.m_Buffer.Value, state->Key,
+  m_StateService.AddBackBuffer(c.m_Object.Key, c.m_Buffer.Value, state->Key,
                                static_cast<ID3D12Resource*>(*c.m_ppSurface.Value));
 
   // Keep track of the buffer key

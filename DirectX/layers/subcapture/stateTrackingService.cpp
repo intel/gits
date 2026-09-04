@@ -93,11 +93,10 @@ void StateTrackingService::RestoreState() {
   m_DirectStorageQueueService.RestoreDirectStorageQueues();
   RestoreReferenceCount();
   m_NvapiGlobalStateService.FinalizeRestore();
-  m_SwapChainService.RestoreBackBufferSequence(m_Recorder.CommandListSubcapture());
+  SwapChainService* postRestorePresentSwapChain = RestoreSwapChains();
   m_Recorder.Record(StateRestoreEndSerializer(StateRestoreEndCommand()));
-  if (!m_Recorder.CommandListSubcapture()) {
-    // one Present after ID_INIT_END to enable PIX first frame capture in gits interactive mode
-    m_SwapChainService.RecordSwapChainPresent();
+  if (postRestorePresentSwapChain) {
+    postRestorePresentSwapChain->RecordSwapChainPresent();
   }
 }
 
@@ -133,10 +132,40 @@ bool StateTrackingService::StateRestored(ObjectKey key) {
   }
 }
 
-void StateTrackingService::AddBackBuffer(unsigned buffer,
+void StateTrackingService::AddBackBuffer(ObjectKey swapChainKey,
+                                         unsigned buffer,
                                          ObjectKey resourceKey,
                                          ID3D12Resource* resource) {
-  m_SwapChainService.AddBackBuffer(buffer, resourceKey, resource);
+  GetSwapChainService(swapChainKey).AddBackBuffer(buffer, resourceKey, resource);
+}
+
+StateTrackingService::SwapChainService& StateTrackingService::GetSwapChainService(
+    ObjectKey swapChainKey) {
+  auto it = m_SwapChainServices.find(swapChainKey);
+  if (it == m_SwapChainServices.end()) {
+    it = m_SwapChainServices.emplace(swapChainKey, std::make_unique<SwapChainService>(*this)).first;
+  }
+  return *it->second;
+}
+
+StateTrackingService::SwapChainService* StateTrackingService::RestoreSwapChains() {
+  // one Present after ID_INIT_END to enable PIX first frame capture in gits interactive mode
+  SwapChainService* postRestorePresentSwapChain = nullptr;
+
+  if (!m_Recorder.CommandListSubcapture()) {
+    for (auto& swapChainService : m_SwapChainServices) {
+      if (swapChainService.second->ShouldRecordPresent()) {
+        postRestorePresentSwapChain = swapChainService.second.get();
+        break;
+      }
+    }
+  }
+  for (auto& swapChainService : m_SwapChainServices) {
+    swapChainService.second->RestoreBackBufferSequence(m_Recorder.CommandListSubcapture(),
+                                                       swapChainService.second.get() ==
+                                                           postRestorePresentSwapChain);
+  }
+  return postRestorePresentSwapChain;
 }
 
 void StateTrackingService::SetXefgSwapChainFlag() {
@@ -358,8 +387,10 @@ void StateTrackingService::RestoreReferenceCount() {
         state->CreationCommand->GetId() == CommandId::ID_ID3D12PIPELINELIBRARY1_LOADPIPELINE) {
       refCount = state->RefCount;
     } else if (state->CreationCommand->GetId() == CommandId::ID_IDXGISWAPCHAIN_GETBUFFER) {
-      refCount = std::max(
-          state->RefCount - static_cast<int>(m_SwapChainService.GetBackBuffersCount()) + 1, 1);
+      auto swapChainIt = m_SwapChainServices.find(state->ParentKey);
+      GITS_ASSERT(swapChainIt != m_SwapChainServices.end());
+      const unsigned swapChainBackBuffersCount = swapChainIt->second->GetBackBuffersCount();
+      refCount = std::max(state->RefCount - static_cast<int>(swapChainBackBuffersCount) + 1, 1);
     } else {
       state->Object->AddRef();
       refCount = state->Object->Release();
@@ -510,9 +541,10 @@ void StateTrackingService::RestoreDXGISwapChain(ObjectState* state) {
     createWindowCommand.m_height.Value = height;
     m_Recorder.Record(CreateWindowMetaSerializer(createWindowCommand));
 
-    m_SwapChainService.SetSwapChain(
-        command->m_pDevice.Key, reinterpret_cast<ID3D12CommandQueue*>(command->m_pDevice.Value),
-        state->Key, *command->m_ppSwapChain.Value, command->m_pDesc.Value->BufferCount);
+    GetSwapChainService(state->Key)
+        .SetSwapChain(command->m_pDevice.Key,
+                      reinterpret_cast<ID3D12CommandQueue*>(command->m_pDevice.Value), state->Key,
+                      *command->m_ppSwapChain.Value, command->m_pDesc.Value->BufferCount);
   } else if (state->CreationCommand->GetId() ==
              CommandId::ID_IDXGIFACTORY2_CREATESWAPCHAINFORHWND) {
     auto* command =
@@ -534,9 +566,10 @@ void StateTrackingService::RestoreDXGISwapChain(ObjectState* state) {
     m_Recorder.Record(CreateWindowMetaSerializer(createWindowCommand));
 
     if (!m_IsXefgSwapChain) {
-      m_SwapChainService.SetSwapChain(
-          command->m_pDevice.Key, reinterpret_cast<ID3D12CommandQueue*>(command->m_pDevice.Value),
-          state->Key, *command->m_ppSwapChain.Value, command->m_pDesc.Value->BufferCount);
+      GetSwapChainService(state->Key)
+          .SetSwapChain(command->m_pDevice.Key,
+                        reinterpret_cast<ID3D12CommandQueue*>(command->m_pDevice.Value), state->Key,
+                        *command->m_ppSwapChain.Value, command->m_pDesc.Value->BufferCount);
     }
   } else if (state->CreationCommand->GetId() == CommandId::ID_XEFGSWAPCHAIND3D12GETSWAPCHAINPTR) {
     auto* command =
@@ -557,9 +590,9 @@ void StateTrackingService::RestoreDXGISwapChain(ObjectState* state) {
     DXGI_SWAP_CHAIN_DESC desc{};
     swapChainInfo.SwapChain->GetDesc(&desc);
     unsigned bufferCount = desc.BufferCount;
-    m_SwapChainService.SetSwapChain(xefgContextState->DeviceKey, cmdQueue,
-                                    swapChainInfo.SwapChainKey, swapChainInfo.SwapChain,
-                                    bufferCount);
+    GetSwapChainService(swapChainInfo.SwapChainKey)
+        .SetSwapChain(xefgContextState->DeviceKey, cmdQueue, swapChainInfo.SwapChainKey,
+                      swapChainInfo.SwapChain, bufferCount);
     return;
   }
   m_Recorder.Record(*createCommandSerializer(state->CreationCommand.get()));
@@ -938,11 +971,26 @@ void StateTrackingService::SwapChainService::SetSwapChain(ObjectKey commandQueue
   m_BackBufferShift = swapChain3->GetCurrentBackBufferIndex();
 }
 
-void StateTrackingService::SwapChainService::RestoreBackBufferSequence(bool CommandListSubcapture) {
+bool StateTrackingService::SwapChainService::ShouldRecordPresent() const {
+  if (!m_SwapChainKey) {
+    return false;
+  }
+  ObjectState* state = m_StateService.GetState(m_SwapChainKey);
+  if (!state) {
+    return false;
+  }
+  return !state->Destroyed || state->KeepDestroyed;
+}
+
+void StateTrackingService::SwapChainService::RestoreBackBufferSequence(
+    bool CommandListSubcapture, bool AccountForPostRestorePresent) {
+  if (!ShouldRecordPresent()) {
+    return;
+  }
 
   int backBufferShift = m_BackBufferShift;
-  if (!CommandListSubcapture) {
-    // taking into account one Present that will be always recorded later
+  if (!CommandListSubcapture && AccountForPostRestorePresent) {
+    // taking into account one Present that will be recorded later after state restore
     backBufferShift -= 1;
   }
   if (backBufferShift < 0) {
@@ -970,6 +1018,9 @@ void StateTrackingService::SwapChainService::RestoreBackBufferSequence(bool Comm
 }
 
 void StateTrackingService::SwapChainService::RecordSwapChainPresent() {
+  if (!ShouldRecordPresent()) {
+    return;
+  }
   IDXGISwapChainPresentCommand presentCommand;
   presentCommand.Key = m_StateService.GetUniqueCommandKey();
   presentCommand.m_Object.Key = m_SwapChainKey;

@@ -14,6 +14,7 @@
 #include "keyUtils.h"
 #include "commandSerializersAuto.h"
 
+#include <memory>
 #include <vector>
 #include <unordered_map>
 #include <queue>
@@ -66,7 +67,6 @@ public:
       MetaCommandsService& metaCommandsService)
       : m_Recorder(recorder),
         m_ResourceContentRestore(*this),
-        m_SwapChainService(*this),
         m_AnalyzerResults(analyzerResults),
         m_FenceTrackingService(fenceTrackingService),
         m_MapStateService(mapStateService),
@@ -104,7 +104,10 @@ public:
   ObjectState* GetState(ObjectKey key);
   void RestoreState(ObjectKey key);
   bool StateRestored(ObjectKey key);
-  void AddBackBuffer(unsigned buffer, ObjectKey resourceKey, ID3D12Resource* resource);
+  void AddBackBuffer(ObjectKey swapChainKey,
+                     unsigned buffer,
+                     ObjectKey resourceKey,
+                     ID3D12Resource* resource);
   void SetXefgSwapChainFlag();
 
   CommandKey GetUniqueCommandKey() {
@@ -266,12 +269,13 @@ private:
                       ObjectKey swapChainKey,
                       IDXGISwapChain* swapChain,
                       unsigned backBuffersCount);
-    void RestoreBackBufferSequence(bool CommandListSubcapture);
+    void RestoreBackBufferSequence(bool CommandListSubcapture, bool AccountForPostRestorePresent);
     void RecordSwapChainPresent();
     void AddBackBuffer(unsigned buffer, ObjectKey resourceKey, ID3D12Resource* resource);
     unsigned GetBackBuffersCount() {
       return m_BackBuffersCount;
     }
+    bool ShouldRecordPresent() const;
 
   private:
     StateTrackingService& m_StateService;
@@ -283,7 +287,9 @@ private:
     unsigned m_BackBuffersCount{};
     std::unordered_map<unsigned, std::pair<ObjectKey, ID3D12Resource*>> m_BackBuffers;
   };
-  SwapChainService m_SwapChainService;
+  SwapChainService& GetSwapChainService(ObjectKey swapChainKey);
+  SwapChainService* RestoreSwapChains();
+  std::unordered_map<ObjectKey, std::unique_ptr<SwapChainService>> m_SwapChainServices;
 };
 
 } // namespace DirectX
