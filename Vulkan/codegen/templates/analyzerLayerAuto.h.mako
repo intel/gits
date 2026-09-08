@@ -34,6 +34,7 @@ public:
   AnalyzerLayer& operator=(const AnalyzerLayer&) = delete;
 
   // Custom-handled commands (implemented in analyzerLayerCustom.cpp).
+  void Post(MappedDataMetaCommand& command) override;
   void Post(vkCmdBuildAccelerationStructuresKHRCommand& command) override;
   void Post(vkCmdTraceRaysKHRCommand& command) override;
   void Post(vkCmdTraceRaysIndirectKHRCommand& command) override;

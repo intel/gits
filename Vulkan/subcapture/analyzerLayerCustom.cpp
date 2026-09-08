@@ -15,6 +15,17 @@ namespace vulkan {
 // is emitted only once (avoids MSVC LNK1163 COMDAT conflicts).
 AnalyzerLayer::~AnalyzerLayer() = default;
 
+// Meta commands are not part of the generated command list, so the auto-generated
+// handle collection never sees this one. Memory the application writes through a
+// mapping it took before the range is named by no in-range handle argument, so the
+// closure walk would trim the allocation while the recording pass still writes the
+// in-range MappedDataMeta token - leaving the subcapture player with a token whose
+// memory was never allocated or mapped.
+void AnalyzerLayer::Post(MappedDataMetaCommand& command) {
+  m_AnalyzerService.AddObjectForRestore(command.m_Device.Key);
+  m_AnalyzerService.AddObjectForRestore(command.m_Memory.Key);
+}
+
 // Custom-handled for TLAS instance buffer readback.
 void AnalyzerLayer::Post(vkCmdBuildAccelerationStructuresKHRCommand& command) {
   m_AnalyzerService.AddObjectForRestore(command.m_commandBuffer.Key);
