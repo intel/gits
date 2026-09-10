@@ -50,7 +50,8 @@ bool ConfigurePlayer(const std::filesystem::path& playerPath, ArgumentParser& ar
       args.ConfigFile ? std::filesystem::absolute(args.ConfigFile.Get())
                       : playerPath.parent_path() / Configurator::ConfigFileName();
 
-  if (std::filesystem::exists(configPath)) {
+  const bool configFileExists = std::filesystem::exists(configPath);
+  if (configFileExists) {
     LOG_INFO << "Using configuration from: " << configPath;
     const auto result = Configurator::Instance().Load(configPath);
     if (!result) {
@@ -74,8 +75,15 @@ bool ConfigurePlayer(const std::filesystem::path& playerPath, ArgumentParser& ar
 #elif defined GITS_PLATFORM_LINUX
   const auto& processName = GetLinuxProcessName(getpid());
 #endif
-  if (Configurator::Instance().ApplyOverrides(configPath, processName)) {
-    LOG_INFO << "Found and loaded overrides for process: " << processName;
+  if (configFileExists) {
+    const auto overridesResult = Configurator::Instance().ApplyOverrides(configPath, processName);
+    if (overridesResult.has_value()) {
+      if (!*overridesResult) {
+        LOG_ERROR << "Failed to load overrides for process: " << processName;
+        return false;
+      }
+      LOG_INFO << "Found and loaded overrides for process: " << processName;
+    }
   }
 
   auto& cfg = Configurator::GetMutable();

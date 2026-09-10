@@ -241,8 +241,8 @@ bool Configurator::Emit(YAML::Emitter& out,
   }
 }
 
-bool Configurator::ApplyOverrides(const std::filesystem::path& filepath,
-                                  const std::string& processName) {
+std::optional<bool> Configurator::ApplyOverrides(const std::filesystem::path& filepath,
+                                                 const std::string& processName) {
   GITS_ASSERT(!m_configurationLocked, "Configurator::ApplyOverrides() called after Lock()");
   std::ifstream fin(filepath);
   if (!fin) {
@@ -253,7 +253,7 @@ bool Configurator::ApplyOverrides(const std::filesystem::path& filepath,
   try {
     YAML::Node node = YAML::Load(fin);
     if (!node["Overrides"]) {
-      return false;
+      return std::nullopt;
     }
 
     if (node["Overrides"].IsSequence()) {
@@ -267,6 +267,9 @@ bool Configurator::ApplyOverrides(const std::filesystem::path& filepath,
               LOG_ERROR << "Failed to decode YAML to Configuration" << std::endl;
               return false;
             }
+          } else {
+            LOG_ERROR << "The Config field is missing in overrides for process: " << processName;
+            return false;
           }
         }
       }
@@ -284,8 +287,11 @@ bool Configurator::ApplyOverrides(const std::filesystem::path& filepath,
   } catch (const YAML::Exception& e) {
     LOG_ERROR << "YAML Exception reading overrides: " << e.what() << std::endl;
     return false;
+  } catch (const std::exception& e) {
+    LOG_ERROR << "Exception reading overrides: " << e.what() << std::endl;
+    return false;
   }
-  return false;
+  return std::nullopt;
 }
 
 void Configurator::ClearChangedFieldsVector() {

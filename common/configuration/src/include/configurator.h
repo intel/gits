@@ -111,7 +111,11 @@ public: // Singleton
                    bool annotate = true,
                    std::optional<YAML::Node> overrides = std::nullopt);
 
-  bool ApplyOverrides(const std::filesystem::path& filepath, const std::string& processName);
+  // This returns nullopt in case no overrides for given process name were found
+  // True if overrides were applied
+  // False if either the whole file parsing failed, or parsing the configuration under the matched process name failed
+  std::optional<bool> ApplyOverrides(const std::filesystem::path& filepath,
+                                     const std::string& processName);
   void DeriveData();
 
   void ClearChangedFieldsVector();

@@ -67,7 +67,12 @@ bool ConfigureRecorder(const std::filesystem::path& configPath, bool legacyMode)
   const auto& processName = GetLinuxProcessName(pid);
 #endif
   const auto& processNameHUD = processName.empty() ? "<unknown>" : processName;
-  if (Configurator::Instance().ApplyOverrides(configPath, processName)) {
+  const auto overridesResult = Configurator::Instance().ApplyOverrides(configPath, processName);
+  if (overridesResult.has_value()) {
+    if (!*overridesResult) {
+      LOG_ERROR << "Failed to load overrides for process: " << processName;
+      return false;
+    }
     LOG_INFO << "Found and loaded overrides for process: " << processName;
   }
 
