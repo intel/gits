@@ -133,6 +133,8 @@ FastOStream& operator<<(FastOStream& stream, D3D12_RENDER_PASS_DEPTH_STENCIL_DES
 FastOStream& operator<<(FastOStream& stream, D3D12_EXTENSION_ARGUMENTS_Argument& arg);
 FastOStream& operator<<(FastOStream& stream, D3D12_EXTENDED_OPERATION_DATA_Argument& arg);
 FastOStream& operator<<(FastOStream& stream,
+                        PointerArgument<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS>& arg);
+FastOStream& operator<<(FastOStream& stream,
                         PointerArgument<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC>& arg);
 FastOStream& operator<<(
     FastOStream& stream,
