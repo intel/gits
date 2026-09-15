@@ -24,6 +24,7 @@
 #include "directStorageQueueService.h"
 #include "xessStateService.h"
 #include "accelerationStructuresBuildService.h"
+#include "accelerationStructuresPrebuildInfoService.h"
 #include "accelerationStructuresSerializeService.h"
 #include "residencyService.h"
 #include "analyzerResults.h"
@@ -70,6 +71,7 @@ void StateTrackingService::RestoreState() {
   m_XefgStateService.RestoreState();
 
   recordStatus(MarkerUInt64Command::Value::STATE_RESTORE_RTAS_BEGIN);
+  m_AccelerationStructuresPrebuildInfoService.RestorePrebuildInfos();
   m_AccelerationStructuresSerializeService.RestoreAccelerationStructures();
   m_AccelerationStructuresBuildService.RestoreAccelerationStructures();
   recordStatus(MarkerUInt64Command::Value::STATE_RESTORE_RTAS_END);

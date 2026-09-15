@@ -1704,6 +1704,7 @@ void AnalyzerLayer::Post(ID3D12Device5GetRaytracingAccelerationStructurePrebuild
       m_AnalyzerService.NotifyObject(key);
     }
   }
+  m_CommandListService.GetRaytracingAccelerationStructurePrebuildInfo(c);
 }
 
 void AnalyzerLayer::Post(ID3D12Device7CreateProtectedResourceSession1Command& c) {

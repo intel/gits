@@ -22,6 +22,7 @@
 #include "commandQueueService.h"
 #include "directStorageQueueService.h"
 #include "xessStateService.h"
+#include "accelerationStructuresPrebuildInfoService.h"
 #include "accelerationStructuresBuildService.h"
 #include "accelerationStructuresSerializeService.h"
 #include "gpuExecutionFlusher.h"
@@ -95,6 +96,7 @@ public:
   void Post(ID3D12DeviceCreateComputePipelineStateCommand& c) override;
   void Post(ID3D12Device2CreatePipelineStateCommand& c) override;
   void Post(ID3D12Device5CreateStateObjectCommand& c) override;
+  void Pre(ID3D12Device5GetRaytracingAccelerationStructurePrebuildInfoCommand& c) override;
   void Post(ID3D12Device7AddToStateObjectCommand& c) override;
   void Post(ID3D12DeviceCreateCommandListCommand& c) override;
   void Post(ID3D12Device4CreateCommandList1Command& c) override;
@@ -300,6 +302,7 @@ private:
   XellStateService m_XellStateService;
   XefgStateService m_XefgStateService;
   AccelerationStructuresSerializeService m_AccelerationStructuresSerializeService;
+  AccelerationStructuresPrebuildInfoService m_AccelerationStructuresPrebuildInfoService;
   AccelerationStructuresBuildService m_AccelerationStructuresBuildService;
   ResidencyService m_ResidencyService;
   ResourceUsageTrackingService m_ResourceUsageTrackingService;

@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "accelerationStructuresBuildService.h"
+#include "accelerationStructuresPrebuildInfoService.h"
 #include "stateTrackingService.h"
 #include "analyzerResults.h"
 #include "resourceStateEnhanced.h"
@@ -20,6 +21,8 @@
 #include "nvapi.h"
 
 #include <algorithm>
+#include <cmath>
+#include <limits>
 
 namespace gits {
 namespace DirectX {
@@ -29,12 +32,14 @@ AccelerationStructuresBuildService::AccelerationStructuresBuildService(
     SubcaptureRecorder& recorder,
     ReservedResourcesService& reservedResourcesService,
     ResourceStateTracker& resourceStateTracker,
-    CapturePlayerGpuAddressService& gpuAddressService)
+    CapturePlayerGpuAddressService& gpuAddressService,
+    AccelerationStructuresPrebuildInfoService& prebuildInfoService)
     : m_StateService(stateService),
       m_Recorder(recorder),
       m_ReservedResourcesService(reservedResourcesService),
       m_ResourceStateTracker(resourceStateTracker),
       m_GpuAddressService(gpuAddressService),
+      m_PrebuildInfoService(prebuildInfoService),
       m_OptimizationService(stateService),
       m_InputBuffersService(stateService,
                             reservedResourcesService,
@@ -73,19 +78,57 @@ void AccelerationStructuresBuildService::BuildAccelerationStructure(
 
   D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS& inputs = c.m_pDesc.Value->Inputs;
 
-  // get scratch space size
   {
-    D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO info{};
+    D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO liveInfo{};
     Microsoft::WRL::ComPtr<ID3D12Device5> device;
     HRESULT hr = c.m_Object.Value->GetDevice(IID_PPV_ARGS(&device));
     GITS_ASSERT(hr == S_OK);
-    device->GetRaytracingAccelerationStructurePrebuildInfo(&inputs, &info);
-    if (info.ScratchDataSizeInBytes > m_MaxBuildScratchSpace) {
-      m_MaxBuildScratchSpace = info.ScratchDataSizeInBytes;
+    device->GetRaytracingAccelerationStructurePrebuildInfo(&inputs, &liveInfo);
+
+    const auto captureInfo = m_PrebuildInfoService.GetPrebuildInfoForInputs(inputs);
+    D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO info{};
+    if (captureInfo) {
+      info = *captureInfo;
+      if (info.ScratchDataSizeInBytes < liveInfo.ScratchDataSizeInBytes ||
+          info.UpdateScratchDataSizeInBytes < liveInfo.UpdateScratchDataSizeInBytes) {
+        static bool logged = false;
+        if (!logged) {
+          logged = true;
+          LOG_ERROR << "Capture-time RTAS scratch sizes below live requirements";
+        }
+      }
+    } else {
+      info = liveInfo;
+
+      const auto& raytracingConfig = Configurator::Get().directx.recorder.portability.raytracing;
+      GITS_ASSERT(std::isfinite(raytracingConfig.accelerationStructureScratchPadding),
+                  "RTAS scratch padding must be finite");
+      const float scratchPadding =
+          std::max(1.0f, raytracingConfig.accelerationStructureScratchPadding);
+      const UINT64 scratchMinSizeInBytes =
+          raytracingConfig.accelerationStructureScratchMinSizeInBytes;
+
+      static bool logged = false;
+      if (!logged) {
+        logged = true;
+        LOG_WARNING << "No capture-time RTAS prebuild info. Using live scratch sizes with padding "
+                    << scratchPadding << ", minimum " << scratchMinSizeInBytes << " bytes";
+      }
+
+      const auto scaleScratchSize = [scratchPadding, scratchMinSizeInBytes](UINT64 size) {
+        if (scratchPadding == 1.0f) {
+          return std::max(scratchMinSizeInBytes, size);
+        }
+        const double scaledSize = std::ceil(static_cast<double>(size) * scratchPadding);
+        GITS_ASSERT(scaledSize < static_cast<double>(std::numeric_limits<UINT64>::max()),
+                    "RTAS scratch size exceeds UINT64 range");
+        return std::max({size, scratchMinSizeInBytes, static_cast<UINT64>(scaledSize)});
+      };
+      info.ScratchDataSizeInBytes = scaleScratchSize(info.ScratchDataSizeInBytes);
+      info.UpdateScratchDataSizeInBytes = scaleScratchSize(info.UpdateScratchDataSizeInBytes);
     }
-    if (info.UpdateScratchDataSizeInBytes > m_MaxBuildScratchSpace) {
-      m_MaxBuildScratchSpace = info.UpdateScratchDataSizeInBytes;
-    }
+    m_MaxBuildScratchSpace = std::max(
+        {m_MaxBuildScratchSpace, info.ScratchDataSizeInBytes, info.UpdateScratchDataSizeInBytes});
   }
 
   BuildRaytracingAccelerationStructureCommand* command =

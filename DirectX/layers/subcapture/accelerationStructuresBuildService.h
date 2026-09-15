@@ -28,14 +28,17 @@ namespace gits {
 namespace DirectX {
 
 class StateTrackingService;
+class AccelerationStructuresPrebuildInfoService;
 
 class AccelerationStructuresBuildService {
 public:
-  AccelerationStructuresBuildService(StateTrackingService& stateService,
-                                     SubcaptureRecorder& recorder,
-                                     ReservedResourcesService& reservedResourcesService,
-                                     ResourceStateTracker& resourceStateTracker,
-                                     CapturePlayerGpuAddressService& gpuAddressService);
+  AccelerationStructuresBuildService(
+      StateTrackingService& stateService,
+      SubcaptureRecorder& recorder,
+      ReservedResourcesService& reservedResourcesService,
+      ResourceStateTracker& resourceStateTracker,
+      CapturePlayerGpuAddressService& gpuAddressService,
+      AccelerationStructuresPrebuildInfoService& prebuildInfoService);
   void BuildAccelerationStructure(
       ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c);
   void CopyAccelerationStructure(
@@ -60,6 +63,7 @@ private:
   AccelerationStructuresInputBuffersService m_InputBuffersService;
   ResourceStateTracker& m_ResourceStateTracker;
   CapturePlayerGpuAddressService& m_GpuAddressService;
+  AccelerationStructuresPrebuildInfoService& m_PrebuildInfoService;
 
   struct RaytracingAccelerationStructureCommand {
     virtual ~RaytracingAccelerationStructureCommand() {}
@@ -108,7 +112,7 @@ private:
 
   std::unordered_set<std::pair<ObjectKey, unsigned>, UnsignedPairHash> m_TlasesKeyOffsets;
 
-  unsigned m_MaxBuildScratchSpace{};
+  UINT64 m_MaxBuildScratchSpace{};
   ObjectKey m_DeviceKey{};
 
   ObjectKey m_CommandQueueKey{};

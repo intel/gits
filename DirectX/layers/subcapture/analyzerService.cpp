@@ -295,6 +295,17 @@ void AnalyzerService::DumpAnalysisFile() {
   }
   m_RaytracingOptimizationService.Optimize(blases);
 
+  // add pre build info for optimized builds
+  for (CommandKey buildKey : m_CommandListService.GetTlases()) {
+    m_CommandListService.AddPrebuildInfoForRestore(buildKey);
+  }
+  for (auto& [buildKey, source] : m_RaytracingOptimizationService.GetOptimizedCommands()) {
+    m_CommandListService.AddPrebuildInfoForRestore(buildKey);
+    if (source) {
+      m_CommandListService.AddPrebuildInfoForRestore(source);
+    }
+  }
+
   out << "OBJECTS\n";
   for (ObjectKey key : m_ObjectsForRestore) {
     objectKeys.insert(key);
@@ -342,6 +353,11 @@ void AnalyzerService::DumpAnalysisFile() {
   out << "BLASES\n";
   for (auto& [buildKey, source] : m_RaytracingOptimizationService.GetOptimizedCommands()) {
     out << buildKey << " " << source << "\n";
+  }
+
+  out << "PREBUILD_INFOS\n";
+  for (CommandKey prebuildKey : m_CommandListService.GetPrebuildInfosForRestore()) {
+    out << prebuildKey << "\n";
   }
 }
 

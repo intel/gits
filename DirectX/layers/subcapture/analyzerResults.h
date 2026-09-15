@@ -36,6 +36,7 @@ public:
   bool RestoreTlas(CommandKey buildKey);
   bool RestoreBlas(CommandKey buildKey);
   CommandKey GetBlasSourceBuild(CommandKey buildKey);
+  bool RestorePrebuildInfo(CommandKey prebuildCommandKey) const;
 
   static bool IsAnalysis();
   static std::string GetAnalysisFileName();
@@ -48,6 +49,7 @@ private:
   std::unordered_set<std::pair<ObjectKey, unsigned>, UnsignedPairHash> m_Descriptors;
   std::unordered_set<CommandKey> m_Tlases;
   std::unordered_map<CommandKey, CommandKey> m_Blases;
+  std::unordered_set<CommandKey> m_PrebuildInfoCommandKeys;
 };
 
 } // namespace DirectX

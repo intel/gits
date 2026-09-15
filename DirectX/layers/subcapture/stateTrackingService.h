@@ -34,6 +34,7 @@ class DirectStorageQueueService;
 class XessStateService;
 class AccelerationStructuresSerializeService;
 class AccelerationStructuresBuildService;
+class AccelerationStructuresPrebuildInfoService;
 class ResidencyService;
 class AnalyzerResults;
 class ResourceUsageTrackingService;
@@ -58,6 +59,7 @@ public:
       XessStateService& xessStateService,
       AccelerationStructuresSerializeService& accelerationStructuresSerializeService,
       AccelerationStructuresBuildService& accelerationStructuresBuildService,
+      AccelerationStructuresPrebuildInfoService& accelerationStructuresPrebuildInfoService,
       ResidencyService& residencyService,
       AnalyzerResults& analyzerResults,
       ResourceUsageTrackingService& resourceUsageTrackingService,
@@ -79,6 +81,7 @@ public:
         m_XessStateService(xessStateService),
         m_AccelerationStructuresSerializeService(accelerationStructuresSerializeService),
         m_AccelerationStructuresBuildService(accelerationStructuresBuildService),
+        m_AccelerationStructuresPrebuildInfoService(accelerationStructuresPrebuildInfoService),
         m_ResidencyService(residencyService),
         m_ResourceUsageTrackingService(resourceUsageTrackingService),
         m_ResourceForCBVRestoreService(resourceForCBVRestoreService),
@@ -246,6 +249,7 @@ private:
   XefgStateService& m_XefgStateService;
   AccelerationStructuresSerializeService& m_AccelerationStructuresSerializeService;
   AccelerationStructuresBuildService& m_AccelerationStructuresBuildService;
+  AccelerationStructuresPrebuildInfoService& m_AccelerationStructuresPrebuildInfoService;
   ResidencyService& m_ResidencyService;
   ResourceUsageTrackingService& m_ResourceUsageTrackingService;
   ResourceForCBVRestoreService& m_ResourceForCBVRestoreService;

@@ -29,6 +29,7 @@ AnalyzerResults::AnalyzerResults() {
     bool descriptors = false;
     bool tlases = false;
     bool blases = false;
+    bool prebuildInfos = false;
     while (analysis >> str) {
       if (str == "COMMAND_QUEUE_COMMANDS") {
         commandLists = false;
@@ -45,6 +46,9 @@ AnalyzerResults::AnalyzerResults() {
       } else if (str == "BLASES") {
         tlases = false;
         blases = true;
+      } else if (str == "PREBUILD_INFOS") {
+        blases = false;
+        prebuildInfos = true;
       } else {
         if (commandLists) {
           ObjectKey key = std::stoull(str);
@@ -68,6 +72,9 @@ AnalyzerResults::AnalyzerResults() {
           analysis >> str;
           CommandKey source = std::stoull(str);
           m_Blases.insert(std::make_pair(key, source));
+        } else if (prebuildInfos) {
+          CommandKey key = std::stoull(str);
+          m_PrebuildInfoCommandKeys.insert(key);
         }
       }
     }
@@ -109,6 +116,13 @@ CommandKey AnalyzerResults::GetBlasSourceBuild(CommandKey buildKey) {
     return it->second;
   }
   return CommandKey{};
+}
+
+bool AnalyzerResults::RestorePrebuildInfo(CommandKey prebuildCommandKey) const {
+  if (!m_Optimize) {
+    return true;
+  }
+  return m_PrebuildInfoCommandKeys.contains(prebuildCommandKey);
 }
 
 bool AnalyzerResults::IsAnalysis() {

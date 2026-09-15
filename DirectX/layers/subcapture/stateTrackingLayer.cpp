@@ -36,6 +36,7 @@ StateTrackingLayer::StateTrackingLayer(SubcaptureRecorder& recorder,
                      m_XessStateService,
                      m_AccelerationStructuresSerializeService,
                      m_AccelerationStructuresBuildService,
+                     m_AccelerationStructuresPrebuildInfoService,
                      m_ResidencyService,
                      m_AnalyzerResults,
                      m_ResourceUsageTrackingService,
@@ -57,11 +58,13 @@ StateTrackingLayer::StateTrackingLayer(SubcaptureRecorder& recorder,
       m_XellStateService(m_StateService, m_Recorder),
       m_XefgStateService(m_StateService, m_Recorder),
       m_AccelerationStructuresSerializeService(m_StateService, m_Recorder),
+      m_AccelerationStructuresPrebuildInfoService(m_StateService, m_Recorder),
       m_AccelerationStructuresBuildService(m_StateService,
                                            m_Recorder,
                                            m_ReservedResourcesService,
                                            m_ResourceStateTracker,
-                                           m_GpuAddressService),
+                                           m_GpuAddressService,
+                                           m_AccelerationStructuresPrebuildInfoService),
       m_ResidencyService(m_StateService),
       m_MetaCommandsService(m_StateService) {}
 
@@ -1089,6 +1092,14 @@ void StateTrackingLayer::Post(ID3D12Device5CreateStateObjectCommand& c) {
 
   m_AccelerationStructuresSerializeService.SetDevice(c.m_Object.Value, c.m_Object.Key);
   m_AccelerationStructuresBuildService.SetDeviceKey(c.m_Object.Key);
+}
+
+void StateTrackingLayer::Pre(
+    ID3D12Device5GetRaytracingAccelerationStructurePrebuildInfoCommand& c) {
+  if (m_StateRestored) {
+    return;
+  }
+  m_AccelerationStructuresPrebuildInfoService.AddPrebuildInfo(c);
 }
 
 void StateTrackingLayer::Post(ID3D12Device7AddToStateObjectCommand& c) {

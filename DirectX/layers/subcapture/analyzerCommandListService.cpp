@@ -39,6 +39,13 @@ std::set<CommandKey>& AnalyzerCommandListService::GetTlases() {
   return m_TlasBuildKeys;
 }
 
+void AnalyzerCommandListService::AddPrebuildInfoForRestore(CommandKey buildKey) {
+  const auto prebuildIt = m_PrebuildInfoKeysByBuild.find(buildKey);
+  if (prebuildIt != m_PrebuildInfoKeysByBuild.end()) {
+    m_PrebuildInfosForRestore.insert(prebuildIt->second);
+  }
+}
+
 void AnalyzerCommandListService::CommandListsRestore(const std::set<ObjectKey>& commandLists) {
   for (ObjectKey commandListKey : commandLists) {
     CommandListRestore(commandListKey);
@@ -342,6 +349,18 @@ void AnalyzerCommandListService::CopyDescriptors(ID3D12DeviceCopyDescriptorsComm
       AddObjectForRestore(key);
     }
   }
+}
+
+void AnalyzerCommandListService::GetRaytracingAccelerationStructurePrebuildInfo(
+    ID3D12Device5GetRaytracingAccelerationStructurePrebuildInfoCommand& c) {
+  if (!c.m_pDesc.Value || !c.m_pInfo.Value) {
+    return;
+  }
+  if (!m_AnalyzerService.BeforeRange()) {
+    m_PrebuildInfoKeysByInputs.erase(c.m_pDesc);
+    return;
+  }
+  m_PrebuildInfoKeysByInputs[c.m_pDesc] = c.Key;
 }
 
 void AnalyzerCommandListService::Present() {
@@ -942,10 +961,17 @@ void AnalyzerCommandListService::CommandAnalysis(
   for (ObjectKey key : c.m_pPostbuildInfoDescs.DestBufferKeys) {
     AddObjectForRestore(key);
   }
+  AddPrebuildInfoForRestore(c.Key);
 }
 
 void AnalyzerCommandListService::Command(
     ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c) {
+  if (c.m_pDesc.Value) {
+    const auto prebuildIt = m_PrebuildInfoKeysByInputs.find(&c.m_pDesc.Value->Inputs);
+    if (prebuildIt != m_PrebuildInfoKeysByInputs.end()) {
+      m_PrebuildInfoKeysByBuild[c.Key] = prebuildIt->second;
+    }
+  }
   if (m_AnalyzerService.InRange()) {
     if (!m_ResetCommandLists[c.m_Object.Key]) {
       CommandListRestore(c.m_Object.Key);

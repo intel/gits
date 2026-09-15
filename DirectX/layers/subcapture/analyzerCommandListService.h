@@ -15,6 +15,7 @@
 #include "descriptorRootSignatureService.h"
 #include "analyzerRaytracingService.h"
 #include "analyzerExecuteIndirectService.h"
+#include "raytracingBuildInputsHash.h"
 
 #include <unordered_map>
 #include <unordered_set>
@@ -47,11 +48,16 @@ public:
 
   std::set<CommandKey>& GetTlases();
 
+  const std::set<CommandKey>& GetPrebuildInfosForRestore() const {
+    return m_PrebuildInfosForRestore;
+  }
+
   void AddObjectForRestore(ObjectKey key) {
     if (key && m_Optimize) {
       m_ObjectsForRestore.insert(key);
     }
   }
+  void AddPrebuildInfoForRestore(CommandKey buildKey);
 
   void CommandListsRestore(const std::set<ObjectKey>& commandLists);
   void CommandListReset(ID3D12GraphicsCommandListResetCommand& c);
@@ -59,6 +65,8 @@ public:
   void CreateCommandSignature(ID3D12DeviceCreateCommandSignatureCommand& c);
   void CopyDescriptors(ID3D12DeviceCopyDescriptorsSimpleCommand& c);
   void CopyDescriptors(ID3D12DeviceCopyDescriptorsCommand& c);
+  void GetRaytracingAccelerationStructurePrebuildInfo(
+      ID3D12Device5GetRaytracingAccelerationStructurePrebuildInfoCommand& c);
   void Present();
 
   template <typename CommandListCommand>
@@ -171,6 +179,10 @@ private:
 
   bool m_RestoreTlases{};
   std::set<CommandKey> m_TlasBuildKeys;
+
+  RaytracingBuildInputsMap<CommandKey> m_PrebuildInfoKeysByInputs;
+  std::unordered_map<CommandKey, CommandKey> m_PrebuildInfoKeysByBuild;
+  std::set<CommandKey> m_PrebuildInfosForRestore;
 };
 
 template <typename CommandListCommand>
