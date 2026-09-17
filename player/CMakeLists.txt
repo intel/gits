@@ -50,7 +50,7 @@ endif()
 
 if(WITH_VULKAN)
   target_link_libraries(gits_player PRIVATE VulkanLegacy_common)
-  target_link_libraries(gits_player PRIVATE Vulkan_player)
+  target_link_libraries(gits_player PRIVATE Vulkan_player hud)
 endif()
 
 if(WITH_OCLOC)

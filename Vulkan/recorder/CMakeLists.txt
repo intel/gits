@@ -72,4 +72,8 @@ target_link_libraries(Vulkan_recorder PRIVATE
   tbb
 )
 
+target_link_libraries(Vulkan_recorder PRIVATE
+  Vulkan_hud
+)
+
 set_target_properties(Vulkan_recorder PROPERTIES FOLDER Vulkan)

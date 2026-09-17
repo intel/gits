@@ -59,7 +59,7 @@
 #include "streamPlayer.h"
 #include "streamHeader.h"
 
-#if defined GITS_PLATFORM_WINDOWS && (WITH_DIRECTX || WITH_VULKAN)
+#if WITH_DIRECTX || WITH_VULKAN
 #include "imGuiHUD.h"
 #endif
 
@@ -267,7 +267,7 @@ int MainBody(int argc, char* argv[]) {
   bool legacyMode = false;
 
   try {
-#if defined GITS_PLATFORM_WINDOWS && (WITH_DIRECTX || WITH_VULKAN)
+#if WITH_DIRECTX || WITH_VULKAN
     auto pImGuiHUD = std::make_unique<ImGuiHUD>();
     CGits::Instance().SetImGuiHUD(std::move(pImGuiHUD));
 #endif
@@ -400,7 +400,7 @@ int MainBody(int argc, char* argv[]) {
     auto processName = GetLinuxProcessName(pid);
 #endif
     processName = processName.empty() ? "<unknown>" : processName;
-#if defined GITS_PLATFORM_WINDOWS && (WITH_DIRECTX || WITH_VULKAN)
+#if WITH_DIRECTX || WITH_VULKAN
     CGits::Instance().GetImGuiHUD()->SetApplicationInfo(processName, pid);
 #endif
 

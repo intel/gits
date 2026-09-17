@@ -73,7 +73,7 @@ set(frameworks ${frameworks} "-framework OpenGL")
 
 if(WITH_VULKAN)
   set(recorderIfaceLibs ${recorderIfaceLibs} ${libPrefix} VulkanLegacy_recorder Vulkan_recorder)
-  set(recorderCommonLibs ${recorderCommonLibs} VulkanLegacy_common)
+  set(recorderCommonLibs ${recorderCommonLibs} VulkanLegacy_common hud)
 endif()
 if(WITH_OPENCL)
   set(recorderIfaceLibs ${recorderIfaceLibs} ${libPrefix} OpenCL_recorder)

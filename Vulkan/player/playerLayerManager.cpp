@@ -19,6 +19,7 @@
 #include "analyzerResults.h"
 #include "configurator.h"
 #include "logVkErrorLayerAuto.h"
+#include "hudLayer.h"
 
 namespace gits {
 namespace vulkan {
@@ -138,11 +139,21 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
   enablePreLayer(analyzerLayer);
   enablePreLayer(logVkErrorLayer);
 
+  std::unique_ptr<Layer> hudLayer;
+  if (Configurator::IsHudEnabledForApi(gits::ApiBool::VK)) {
+    hudLayer = std::make_unique<HudLayer>(playerManager.GetDispatchTablesHolder());
+    enablePreLayer(hudLayer);
+  }
+
   auto enablePostLayer = [this](std::unique_ptr<Layer>& layer) {
     if (layer) {
       m_PostLayers.push_back(layer.get());
     }
   };
+
+  if (Configurator::IsHudEnabledForApi(gits::ApiBool::VK)) {
+    enablePostLayer(hudLayer);
+  }
 
   enablePostLayer(portabilityLayer);
   enablePostLayer(logVkErrorLayer);
@@ -175,6 +186,9 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
   retainLayer(std::move(subcaptureLayer));
   retainLayer(std::move(analyzerLayer));
   retainLayer(std::move(recordingLayer));
+  if (Configurator::IsHudEnabledForApi(gits::ApiBool::VK)) {
+    retainLayer(std::move(hudLayer));
+  }
 
   for (const auto& plugin : pluginService.GetPlugins()) {
     Layer* layer = static_cast<Layer*>(plugin.Impl->getImpl());

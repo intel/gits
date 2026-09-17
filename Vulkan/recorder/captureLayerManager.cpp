@@ -13,6 +13,7 @@
 #include "encoderLayerAuto.h"
 #include "captureCustomizationLayer.h"
 #include "logVkErrorLayerAuto.h"
+#include "hudLayer.h"
 
 namespace gits {
 namespace vulkan {
@@ -25,6 +26,7 @@ void CaptureLayerManager::LoadLayers(CaptureManager& captureManager,
   std::unique_ptr<Layer> logVkErrorLayer = std::make_unique<LogVkErrorLayer>();
   std::unique_ptr<Layer> encoderLayer;
   std::unique_ptr<Layer> captureCustomizationLayer;
+  std::unique_ptr<Layer> hudLayer;
 
   const auto& traceCfg = Configurator::Get().common.shared.trace;
   const auto& screenshotsCfg = Configurator::Get().common.shared.screenshots;
@@ -63,11 +65,20 @@ void CaptureLayerManager::LoadLayers(CaptureManager& captureManager,
     m_PreLayers.push_back(screenshotLayer);
   }
 
+  if (Configurator::IsHudEnabledForApi(gits::ApiBool::VK)) {
+    hudLayer = std::make_unique<HudLayer>(captureManager.GetDispatchTablesHolder());
+    enablePreLayer(hudLayer);
+  }
+
   auto enablePostLayer = [this](std::unique_ptr<Layer>& layer) {
     if (layer) {
       m_PostLayers.push_back(layer.get());
     }
   };
+
+  if (Configurator::IsHudEnabledForApi(gits::ApiBool::VK)) {
+    enablePostLayer(hudLayer);
+  }
 
   enablePostLayer(logVkErrorLayer);
   enablePostLayer(captureCustomizationLayer);
@@ -77,6 +88,7 @@ void CaptureLayerManager::LoadLayers(CaptureManager& captureManager,
   if (screenshotsCfg.enabled) {
     m_PostLayers.push_back(screenshotLayer);
   }
+
   // The encoder must run last
   enablePostLayer(encoderLayer);
 
@@ -89,6 +101,11 @@ void CaptureLayerManager::LoadLayers(CaptureManager& captureManager,
   retainLayer(std::move(captureCustomizationLayer));
   retainLayer(std::move(logVkErrorLayer));
   retainLayer(std::move(traceLayer));
+
+  if (Configurator::IsHudEnabledForApi(gits::ApiBool::VK)) {
+    retainLayer(std::move(hudLayer));
+  }
+
   retainLayer(std::move(encoderLayer));
 
   for (const auto& plugin : pluginService.GetPlugins()) {

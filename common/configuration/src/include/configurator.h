@@ -67,7 +67,6 @@ public:
     return Get().common.mode == GITSMode::MODE_PLAYER;
   }
 
-#ifdef GITS_PLATFORM_WINDOWS
   // If more options start to use the ApiBool then we can come up with a generic helper
   static bool IsHudEnabledForApi(gits::ApiBool api) {
     if (std::find(Get().common.shared.hud.enabled.begin(), Get().common.shared.hud.enabled.end(),
@@ -77,7 +76,6 @@ public:
       return false;
     }
   }
-#endif
 
   static void PrepareSubcapturePath();
 

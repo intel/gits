@@ -95,4 +95,8 @@ target_link_libraries(Vulkan_player PRIVATE
   Vulkan_api_debug
 )
 
+target_link_libraries(Vulkan_player PRIVATE
+  Vulkan_hud
+)
+
 set_target_properties(Vulkan_player PROPERTIES FOLDER Vulkan)
