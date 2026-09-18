@@ -29,27 +29,26 @@ class CSequentialExecutor : public CAction {
   typedef std::vector<int> CThreadsIdList;
   class CThreadLoop;
 
-  std::mutex _mutex;
-  std::condition_variable _condition;
-  std::unique_lock<std::mutex> _actionLock;
-  std::vector<std::thread> _executionThreads;
-  CThreadsIdList _activeThreadsIdList;
+  std::mutex m_Mutex;
+  std::condition_variable m_Condition;
+  std::vector<std::thread> m_ExecutionThreads;
+  CThreadsIdList m_ActiveThreadsIdList;
 
   // variables shared between threads
-  int _syncThreadId;
-  CToken* _token;
+  int m_SyncThreadId;
+  CToken* m_Token;
 
   // Dispatches actions to threads
   void Dispatch(CToken& token, int thread);
 
 public:
-  CSequentialExecutor() : _syncThreadId(0), _token(0) {}
+  CSequentialExecutor() : m_SyncThreadId(0), m_Token(0) {}
   ~CSequentialExecutor();
   CSequentialExecutor(const CSequentialExecutor& other) = delete;
   CSequentialExecutor& operator=(const CSequentialExecutor& other) = delete;
   void Run(CToken& token) override;
   const CThreadsIdList& ActiveThreadsIdList() const {
-    return _activeThreadsIdList;
+    return m_ActiveThreadsIdList;
   }
 };
 

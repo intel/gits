@@ -277,6 +277,7 @@ if(WITH_OCLOC)
 endif()
 
 add_subdirectory(OpenGL)
+add_subdirectory(playerLib)
 add_subdirectory(player)
 add_subdirectory(recorder)
 if(WITH_DIRECTX)

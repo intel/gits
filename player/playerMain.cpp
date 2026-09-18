@@ -6,514 +6,131 @@
 //
 // ===================== end_copyright_notice ==============================
 
-/**
- * @file   playerMain.cpp
- *
- * @brief main() function of gitsPlayer.
- *
- */
-
-#include "argumentParser.h"
-
 #include "platform.h"
-#if defined GITS_PLATFORM_WINDOWS
-#include "StackWalker.h"
-#include <psapi.h>
-#ifdef WITH_VULKAN
-#include "vulkanRenderDocUtil.h"
-#endif
-#endif
-
-#include "gits.h"
-#include "openglLibrary.h"
-#ifdef WITH_OPENCL
-#include "openclLibrary.h"
-#endif
-#ifdef WITH_VULKAN
-#include "vulkanLibrary.h"
-#endif
-#if defined WITH_LEVELZERO
-#include "l0Library.h"
-#endif
-#if defined WITH_OCLOC
-#include "oclocLibrary.h"
-#endif
-
-#include "player.h"
-#include "exception.h"
 #include "log.h"
-#include "performance.h"
-#include "windowing.h"
-#include "timer.h"
-#include "runner.h"
-#include "sequentialExecutor.h"
-#include "pragmas.h"
-#include "playerOptions.h"
-#include "message_pump.h"
+#include "playerLib.h"
+
 #if defined GITS_PLATFORM_WINDOWS
-#include "recorder.h"
+#include <windows.h>
 #endif
-#include "configurationLib.h"
-#include "diagnostic.h"
-#include "playerUtils.h"
-#include "streamPlayer.h"
-#include "streamHeader.h"
-
-#if WITH_DIRECTX || WITH_VULKAN
-#include "imGuiHUD.h"
+#if defined GITS_PLATFORM_LINUX
+#include <sys/wait.h>
+#include <unistd.h>
 #endif
 
-#include <sstream>
-#include <iostream>
-#include <map>
-#include <string>
-#include <memory>
 #include <filesystem>
+#include <vector>
+#include <string>
 
 namespace gits {
 
-// Gits player message loop
-//    - play gits, when state is RUNNING
-//    - stop processing messages if state is FINISHED
-//    - pass any keypresses to player handles
-class GitsMessagePump : public MessagePump {
-public:
-  GitsMessagePump(CPlayer& player) : MessagePump(), player_(player) {}
-
-protected:
-  void idle() {
-    if (player_.State() == CPlayer::STATE_RUNNING) {
-      player_.Play();
-    }
-    if (player_.State() == CPlayer::STATE_FINISHED) {
-      stop();
-    }
-  }
-  void key_down(int key) {
-    player_.Key(key);
+#if defined GITS_PLATFORM_WINDOWS
+int RelaunchWindows(const std::filesystem::path& newPlayerPath,
+                    const std::vector<std::string>& args) {
+  std::string cmdLine = "\"" + newPlayerPath.string() + "\"";
+  for (const auto& arg : args) {
+    cmdLine += " \"" + arg + "\"";
   }
 
-private:
-  CPlayer& player_;
+  STARTUPINFOA si{};
+  PROCESS_INFORMATION pi{};
+  si.cb = sizeof(si);
+
+  BOOL success = CreateProcessA(nullptr,        // lpApplicationName
+                                cmdLine.data(), // lpCommandLine (needs to be mutable)
+                                nullptr,        // lpProcessAttributes
+                                nullptr,        // lpThreadAttributes
+                                FALSE,          // bInheritHandles
+                                0,              // dwCreationFlags
+                                nullptr,        // lpEnvironment
+                                nullptr,        // lpCurrentDirectory
+                                &si,            // lpStartupInfo
+                                &pi             // lpProcessInformation
+  );
+
+  if (!success) {
+    LOG_ERROR << "Failed to create renamed player executable process. Error: " << GetLastError();
+    return 1;
+  }
+
+  WaitForSingleObject(pi.hProcess, INFINITE);
+
+  DWORD exitCode;
+  GetExitCodeProcess(pi.hProcess, &exitCode);
+
+  CloseHandle(pi.hProcess);
+  CloseHandle(pi.hThread);
+
+  return static_cast<int>(exitCode);
 };
+#endif
 
-namespace {
-std::filesystem::path parseConfigFileOption(int& argc, char** argv) {
-  std::vector<char*> tmpArgs;
-  std::filesystem::path cfgFilePath{};
-  for (int i = 0; i < argc; i++) {
-    if (caseInsensitiveEquals(argv[i], "--configfile")) {
-      cfgFilePath = std::filesystem::absolute(argv[++i]);
-    } else {
-      tmpArgs.push_back(argv[i]);
-    }
+#if defined GITS_PLATFORM_LINUX
+int RelaunchLinux(const std::filesystem::path& newPlayerPath,
+                  const std::vector<std::string>& args) {
+  std::vector<char*> argv;                           // Execv needs char* array
+  auto newPlayerPathString = newPlayerPath.string(); // We need a copy for lifetime purpose
+  argv.push_back(newPlayerPathString.data());
+
+  for (const auto& arg : args) {
+    argv.push_back(const_cast<char*>(arg.c_str()));
   }
-  argc = static_cast<int>(tmpArgs.size());
-  for (int i = 0; i < argc; i++) {
-    argv[i] = tmpArgs[i];
-  }
-  return cfgFilePath;
-}
+  argv.push_back(nullptr);
 
-std::set<std::string> argsFilterTags = {};
-
-bool argsFilterTagsFunc(const args::Base& item) {
-  if (argsFilterTags.size() <= 0) {
-    return true;
-  }
-
-  // The lambdas are used to make the filtering case insensitive
-  auto toUpper = [](const std::string& str) {
-    std::string upperStr = str;
-    std::transform(upperStr.begin(), upperStr.end(), upperStr.begin(), ::toupper);
-    return upperStr;
-  };
-
-  for (const auto& entry : item.GetTags()) {
-    auto comparisonFunc = [&toUpper, &entry](const std::string& tag) {
-      return toUpper(tag) == toUpper(entry);
-    };
-
-    if (std::find_if(argsFilterTags.begin(), argsFilterTags.end(), comparisonFunc) !=
-        argsFilterTags.end()) {
-      return true;
-    }
-  }
-  return false;
-}
-
-std::string GetRequestedPlayerName(bool legacyMode) {
-  const auto& cfg = Configurator::Get();
-
-  if (!cfg.common.player.executableNameOverride.enabled) {
-    return std::string();
-  }
-
-  // Custom player name takes priority over the original name
-  if (!cfg.common.player.executableNameOverride.customName.empty()) {
-    return cfg.common.player.executableNameOverride.customName;
-  }
-
-  std::string requestedName;
-  if (legacyMode) {
-    requestedName = CGits::Instance().FilePlayer().GetApplicationName();
+  pid_t pid = fork();
+  if (pid == 0) {
+    // Child process
+    execv(newPlayerPathString.c_str(), argv.data());
+    // If we get here, execv failed
+    _exit(1);
+  } else if (pid > 0) {
+    // Parent process - wait for child
+    int status;
+    waitpid(pid, &status, 0);
+    return WEXITSTATUS(status);
   } else {
-    requestedName = stream::StreamHeader::Get().GetApplicationName();
+    LOG_ERROR << "Failed to relaunch the renamed player executable. Failed to fork process";
+    return 1;
   }
-  if (requestedName.empty()) {
-    LOG_WARNING << "Couldn't obtain the original application name, Player will not be renamed.";
-  }
-
-  return requestedName;
 }
-} // namespace
-
-int MainBody(int argc, char* argv[]) {
-  log::Initialize(gits::LogLevel::INFO);
-  log::AddConsoleAppender(); // Will be removed after config parsing if disabled in config.
-
-  std::filesystem::path playerPath = "";
-  auto argsVector = std::vector<std::string>(argv, argv + argc);
-  if (argsVector.size() >= 1) {
-    playerPath = argsVector[0];
-    argsVector.erase(argsVector.begin());
-  }
-  auto args = ArgumentParser(argsVector);
-
-  args::HideGroupSection = true;
-  args::HiddenOptionSuffixMarker = '!';
-
-  args.Parser.helpParams.helpindent = 30;
-  args.Parser.helpParams.eachgroupindent = 0;
-  args.Parser.helpParams.programName = "gitsPlayer";
-  args.Parser.helpParams.addNewlineBeforeDescription = true;
-  args.Parser.helpParams.showCommandFullHelp = true;
-
-  switch (args.ParsingResult) {
-  case ParsingSyntaxError:
-    LOG_ERROR << "Error during command line parsing:\n" << args.Output.str();
-    LOG_ERROR << "Please run player with the \"--help\" argument to see usage info.";
-    return 1;
-  case ParsingSemanticError:
-    LOG_ERROR << "Error during command line parsing:\n" << args.Output.str();
-    return 1;
-  default:
-    break;
-  }
-
-  if ((args.ParsingResult == ShowHelp) || (args.HelpMenu)) {
-    if (args.HelpMenu) {
-      argsFilterTags.insert(args.HelpMenu.Get());
-      args::GlobalFilterOption = argsFilterTagsFunc;
-    }
-    std::cout
-        << std::endl
-        << std::endl
-        << args.Parser.Help() << std::endl
-        << "All options of a configfile can be set via commandline by using the keypath and value."
-        << std::endl;
-    return 0;
-  }
-
-  if (args.Version) {
-    // Print version and quit.
-    CGits& inst = CGits::Instance();
-    std::cout << inst << std::endl;
-    return 0;
-  }
-
-  try {
-    if (!ConfigurePlayer(playerPath, args)) {
-      LOG_ERROR << "Encountered error while configuring player";
-      LOG_ERROR << "Please run player with the \"--help\" argument to see usage info.";
-      return 1;
-    }
-  } catch (const std::exception& e) {
-    LOG_ERROR << "Encountered error while configuring player:\n" << e.what();
-    LOG_ERROR << "Please run player with the \"--help\" argument to see usage info.";
-    return 1;
-  }
-
-  // Input (arguments, environment and configuration) validated
-  // Quit if --validate is used
-  if (args.Validate) {
-    LOG_INFO << "Used \"--validate\". Will not start the playback session.";
-    return 0;
-  }
-
-  // Print version.
-  CGits& inst = CGits::Instance();
-  LOG_INFO << inst;
-
-  Configurator::Instance().LogChangedFields();
-
-  const auto& cfg = Configurator::Get();
-  log::SetMaxSeverity(cfg.common.shared.thresholdLogLevel);
-  if (!cfg.common.shared.logToConsole.value_or(true)) {
-    log::RemoveConsoleAppender();
-  }
-  if (!cfg.common.player.outputTracePath.empty()) {
-    log::AddFileAppender(cfg.common.player.outputTracePath);
-  }
-
-  if (cfg.common.shared.waitForInput) {
-    // Always print to console
-    std::cout << "Press ENTER to continue..." << std::endl;
-    std::cin.get();
-  }
-
-  int returnValue = EXIT_SUCCESS;
-
-  bool legacyMode = false;
-
-  try {
-#if WITH_DIRECTX || WITH_VULKAN
-    auto pImGuiHUD = std::make_unique<ImGuiHUD>();
-    CGits::Instance().SetImGuiHUD(std::move(pImGuiHUD));
 #endif
+
+int RenameAndRelaunch(const std::string& newPlayerName,
+                      std::filesystem::path originalPlayerPath,
+                      std::vector<std::string> args) {
 
 #if defined GITS_PLATFORM_WINDOWS
-    if (cfg.common.player.escalatePriority) {
-      if (SetPriorityClass(GetCurrentProcess(), REALTIME_PRIORITY_CLASS)) {
-        LOG_INFO << "Escalated process priority to realtime priority";
-      } else {
-        LOG_WARNING << "Priority escalation failed";
-      }
-    }
-
-    int previousDesktopWidth = GetSystemMetrics(SM_CXSCREEN);
-    int previousDesktopHeight = GetSystemMetrics(SM_CYSCREEN);
-    if (cfg.common.player.forceDesktopResolution.enabled) {
-      DEVMODE devmode;
-      devmode.dmPelsWidth = cfg.common.player.forceDesktopResolution.width;
-      devmode.dmPelsHeight = cfg.common.player.forceDesktopResolution.height;
-      ;
-      devmode.dmFields = DM_PELSWIDTH | DM_PELSHEIGHT;
-      devmode.dmSize = sizeof(DEVMODE);
-
-      ChangeDisplaySettings(&devmode, 0);
-    }
-
-#ifdef WITH_VULKAN
-    if (cfg.vulkan.player.renderDoc.mode != TVkRenderDocCaptureMode::NONE) {
-      if (!cfg.vulkan.player.renderDoc.dllPath.empty()) {
-        Vulkan::RenderDocUtil::dllpath = cfg.vulkan.player.renderDoc.dllPath.string();
-      } else {
-        Vulkan::RenderDocUtil::dllpath = GetRenderDocDllPath();
-      }
-      Vulkan::RenderDocUtil::GetInstance();
-    }
-#endif
-#endif
-
-    if (cfg.common.shared.useEvents) {
-      CGits::Instance().ProcessLuaFunctionsRegistrators();
-    }
-    // initialize GITS
-    LOG_INFO << "Initializing...";
-#if WITH_OPENCL
-    if (!cfg.opencl.player.noOpenCL) {
-      inst.Register(std::shared_ptr<CLibrary>(new OpenCL::CLibrary));
-    }
-#endif
-    inst.Register(std::shared_ptr<CLibrary>(new OpenGL::CLibrary));
-#ifdef WITH_VULKAN
-    inst.Register(std::shared_ptr<CLibrary>(new Vulkan::CLibrary));
-#endif
-#ifdef WITH_LEVELZERO
-    inst.Register(std::shared_ptr<CLibrary>(new l0::CLibrary));
-#endif
-#ifdef WITH_OCLOC
-    inst.Register(std::shared_ptr<CLibrary>(new ocloc::CLibrary));
-#endif
-
-    legacyMode = IsLegacyStream(cfg.common.player.streamPath);
-    // create player
-    CPlayer player;
-    LOG_INFO << "Loading...";
-
-    if (legacyMode) {
-      // load function calls from a file
-      player.Load(cfg.common.player.streamPath);
-    }
-
-    // Compare capture vs replay machine RAM and warn if replay has less.
-    CheckSystemMemoryCompatibility(legacyMode);
-
-    if (cfg.common.player.executableNameOverride.enabled) {
-      const auto requestedPlayerName = GetRequestedPlayerName(legacyMode);
-      if (!requestedPlayerName.empty()) {
-        if (playerPath.filename().string() == requestedPlayerName) {
-          LOG_INFO << "Player name matches requested name.";
-        } else {
-          LOG_INFO << "Player name differs from the requested name, Player will be renamed and "
-                      "relaunched.";
-          player.RenameAndRelaunch(requestedPlayerName, std::filesystem::absolute(playerPath),
-                                   std::move(argsVector));
-          return 0;
-        }
-      }
-    }
-
-#if defined WITH_DIRECTX
-    if (cfg.common.player.subcapture.enabled && legacyMode) {
-      CGits::Instance().FileRecorder().SetProperty(
-          "diag.original_app.name", CGits::Instance().FilePlayer().GetApplicationName());
-    }
-#endif
-
-    if (legacyMode) {
-      inst.ResourceManagerInit(cfg.common.player.streamDir);
-    }
-    if (cfg.common.player.diags) {
-      if (legacyMode) {
-        std::cout << CGits::Instance().FilePlayer().ReadProperties();
-      } else {
-        std::cout << stream::StreamHeader::Get().GetPropertiesDump();
-      }
-      return 0;
-    }
-
-    if (cfg.common.player.stats && legacyMode) {
-      // print statistics
-      player.StatisticsPrint();
-      return 0;
-    }
-
-    // register tokens executor
-    if (cfg.common.player.faithfulThreading) {
-      player.Register(std::make_unique<CSequentialExecutor>());
-    } else {
-      player.Register(std::make_unique<CAction>());
-    }
-
-    // print not supported functions if exist
-    if (legacyMode) {
-      player.NotSupportedFunctionsPrint();
-    }
-
-#ifdef GITS_PLATFORM_WINDOWS
-    auto pid = _getpid();
-    auto processName = gits::GetWindowsProcessName(pid);
-#elif defined GITS_PLATFORM_LINUX
-    auto pid = getpid();
-    auto processName = GetLinuxProcessName(pid);
-#endif
-    processName = processName.empty() ? "<unknown>" : processName;
-#if WITH_DIRECTX || WITH_VULKAN
-    CGits::Instance().GetImGuiHUD()->SetApplicationInfo(processName, pid);
-#endif
-
-    // check if all functions can be run on that system
-    LOG_INFO << "Playing...";
-    CGits::Instance().GetMessageBus().publish({PUBLISHER_PLAYER, TOPIC_PROGRAM_START},
-                                              std::make_shared<ProgramMessage>());
-
-    // process events - enter message loop
-    GitsMessagePump pump(player);
-
-    int64_t tillInitTime = CGits::Instance().Timers().program.Get();
-    CGits::Instance().Timers().init.Restart();
-    if (legacyMode) {
-      pump.process_messages();
-    } else {
-      PlayStream(cfg.common.player.streamPath);
-    }
-    player.GLResourceCleanup();
-    player.GLContextsCleanup();
-
-    if (legacyMode) {
-      int64_t playbackTime = CGits::Instance().Timers().playback.Get();
-      int64_t initTime = CGits::Instance().Timers().init.Get();
-      int64_t restorationTime = CGits::Instance().Timers().restoration.Get();
-      int64_t loadingTime = CGits::Instance().Timers().loading.Get();
-      int64_t programTime = CGits::Instance().Timers().program.Get();
-
-      LOG_INFO << "";
-      LOG_INFO << "Startup time: " << tillInitTime / 1e6 << "ms";
-      LOG_INFO << "Initialized in: " << initTime / 1e6 << "ms";
-      LOG_INFO << "State restored in: " << restorationTime / 1e6 << "ms";
-      LOG_INFO << "Stalled loading: " << loadingTime / 1e6 << "ms";
-      LOG_INFO << "Played back in: " << playbackTime / 1e6 << "ms";
-      LOG_INFO << "Total runtime: " << programTime / 1e6 << "ms";
-    }
-
-    if (gits::CGits::Instance().apis.HasCompute()) {
-      gits::CGits::Instance().apis.IfaceCompute().PrintMaxLocalMemoryUsage();
-    }
-
-    // Writes performance results to .csv file
-    if (legacyMode && cfg.common.player.benchmark) {
-      std::filesystem::path outBench = cfg.common.player.outputDir.empty()
-                                           ? cfg.common.player.applicationPath
-                                           : cfg.common.player.outputDir;
-      std::filesystem::create_directories(outBench);
-      outBench /= "benchmark.csv";
-      std::ofstream timeDataFile(outBench, std::ios::binary | std::ios::out);
-      CGits::Instance().TimeSheet().OutputTimeData(timeDataFile);
-    }
-
-    // Close OpenGL programs zip file
-    CGits::Instance().CloseUnZipFileGLPrograms();
-
-#ifdef GITS_PLATFORM_WINDOWS
-    if (cfg.common.player.forceDesktopResolution.enabled) {
-      DEVMODE devmode;
-      devmode.dmPelsWidth = previousDesktopWidth;
-      devmode.dmPelsHeight = previousDesktopHeight;
-      devmode.dmFields = DM_PELSWIDTH | DM_PELSHEIGHT;
-      devmode.dmSize = sizeof(DEVMODE);
-
-      ChangeDisplaySettings(&devmode, 0);
-    }
-#endif
-
-    LOG_INFO << "Finishing...";
-  } catch (Exception& ex) {
-    LOG_ERROR << ex.what();
-    returnValue = EXIT_FAILURE;
-  } catch (std::exception& ex) {
-    LOG_ERROR << ex.what();
-    returnValue = EXIT_FAILURE;
-  } catch (...) {
-    LOG_ERROR << "Unrecognized exception was raised during GITS execution!!!";
-    returnValue = EXIT_FAILURE;
+  if (originalPlayerPath.extension() != ".exe") {
+    originalPlayerPath += ".exe";
   }
+#endif
+  std::filesystem::path newPlayerPath = originalPlayerPath.parent_path() / newPlayerName;
 
-  CGits::Instance().GetMessageBus().publish({PUBLISHER_PLAYER, TOPIC_PROGRAM_EXIT},
-                                            std::make_shared<ProgramMessage>());
+  std::filesystem::copy_file(originalPlayerPath, newPlayerPath,
+                             std::filesystem::copy_options::overwrite_existing);
 
+  int result = EXIT_FAILURE;
 #if defined GITS_PLATFORM_WINDOWS
-  if (legacyMode && Configurator::Get().common.player.subcapture.enabled &&
-      CRecorder::Instance().IsMarkedForDeletion()) {
-    CRecorder::Instance().Close();
-  }
+  result = RelaunchWindows(newPlayerPath, args);
 #endif
-  CGits::Instance().Dispose();
-  return returnValue;
+#if defined GITS_PLATFORM_LINUX
+  result = RelaunchLinux(newPlayerPath, args);
+#endif
+
+  LOG_INFO << "Removing the renamed player executable: " << newPlayerPath;
+  try {
+    std::filesystem::remove(newPlayerPath);
+  } catch (const std::filesystem::filesystem_error& e) {
+    LOG_ERROR << "Failed to remove the renamed player executable. Error: " << e.what();
+  }
+
+  return result;
 }
 
-#ifdef GITS_PLATFORM_WINDOWS
-void ShowCallstack(PEXCEPTION_POINTERS exceptionPtr) {
-  class StackWalkerToConsole : public StackWalker {
-  public:
-    StackWalkerToConsole() : StackWalker(OptionsAll, ".") {}
-    virtual void OnOutput(LPCSTR szText) {
-      LOG_ERROR << szText;
-    }
-  } sw;
-  sw.ShowCallstack(GetCurrentThread(), exceptionPtr->ContextRecord);
-}
-LONG WINAPI ExceptionFilter(PEXCEPTION_POINTERS exceptionPtr) {
-  ShowExceptionInfo(exceptionPtr);
-  ShowCallstack(exceptionPtr);
-  return EXCEPTION_CONTINUE_SEARCH;
-}
-#endif
 } // namespace gits
 
-int main2(int argc, char* argv[]) {
-  using namespace gits;
+int main(int argc, char* argv[]) {
+
 #ifdef GITS_PLATFORM_WINDOWS
   // Prevent OS from scaling our windows.
   SetProcessDPIAware();
@@ -525,23 +142,43 @@ int main2(int argc, char* argv[]) {
   SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_NOGPFAULTERRORBOX | SEM_NOALIGNMENTFAULTEXCEPT |
                SEM_FAILCRITICALERRORS);
 #endif
-
-  PEXCEPTION_POINTERS exceptionPtr = 0;
-  __try {
-    return MainBody(argc, argv);
-  } __except (ExceptionFilter(GetExceptionInformation())) {
-    return 1;
-  }
-#else
-  return MainBody(argc, argv);
 #endif
-}
 
-// Normal program entry point.
-int main(int argc, char* argv[]) {
-  try {
-    return main2(argc, argv);
-  } catch (...) {
-    topmost_exception_handler("main");
+  int ret = Initialize(argc, argv);
+  if (ret) {
+    return ret;
   }
+
+  std::filesystem::path playerPath = "";
+  auto argsVector = std::vector<std::string>(argv, argv + argc);
+  if (argsVector.size() >= 1) {
+    playerPath = argsVector[0];
+    argsVector.erase(argsVector.begin());
+  }
+
+  auto trimExtension = [](std::string name) {
+    constexpr std::string_view ext = ".exe";
+    if (name.size() > ext.size() &&
+        std::equal(ext.rbegin(), ext.rend(), name.rbegin(), [](char a, char b) {
+          return std::tolower(static_cast<unsigned char>(a)) ==
+                 std::tolower(static_cast<unsigned char>(b));
+        })) {
+      name.resize(name.size() - ext.size());
+    }
+    return name;
+  };
+
+  std::string requestedPlayerName = GetApplicationName();
+  if (!requestedPlayerName.empty()) {
+    if (trimExtension(playerPath.filename().string()) == trimExtension(requestedPlayerName)) {
+      LOG_INFO << "Player name matches requested name.";
+    } else {
+      LOG_INFO << "Player name differs from the requested name, Player will be renamed and "
+                  "relaunched.";
+      return gits::RenameAndRelaunch(requestedPlayerName, std::filesystem::absolute(playerPath),
+                                     std::move(argsVector));
+    }
+  }
+
+  return Play();
 }

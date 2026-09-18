@@ -8,4 +8,10 @@
 
 #pragma once
 
-namespace gits {} // namespace gits
+#include "platform.h"
+
+extern "C" {
+int STDCALL Initialize(int argc, char* argv[]) VISIBLE;
+const char* STDCALL GetApplicationName() VISIBLE;
+int STDCALL Play() VISIBLE;
+}

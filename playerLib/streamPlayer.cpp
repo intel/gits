@@ -9,7 +9,6 @@
 #include "streamPlayer.h"
 #include "configurationLib.h"
 #include "log.h"
-#include "argumentParser.h"
 #include "messageBus.h"
 #include "streamReader.h"
 #include "streamLegacyReader.h"

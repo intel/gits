@@ -17,7 +17,6 @@
 
 #include "configurationLib.h"
 #include "argumentParser.h"
-#include "streamHeader.h"
 #include "tools.h"
 #include "log.h"
 #include "gits.h"
@@ -30,11 +29,11 @@
 #endif
 
 namespace gits {
-bool ends_with(const std::string& str, const std::string& ending) {
+
+bool EndsWith(const std::string& str, const std::string& ending) {
   if (str.size() < ending.size()) {
     return false;
   }
-
   return str.substr(str.size() - ending.size()) == ending;
 }
 
@@ -112,7 +111,7 @@ bool ConfigurePlayer(const std::filesystem::path& playerPath, ArgumentParser& ar
           continue;
         }
         auto entryPathStr = dirEntry.path().string();
-        if (ends_with(entryPathStr, ".gits2") || ends_with(entryPathStr, ".gits2.gz")) {
+        if (EndsWith(entryPathStr, ".gits2") || EndsWith(entryPathStr, ".gits2.gz")) {
           matching_paths.push_back(dirEntry.path());
         }
       }
@@ -163,54 +162,6 @@ bool ConfigurePlayer(const std::filesystem::path& playerPath, ArgumentParser& ar
   Configurator::PrepareSubcapturePath();
 
   return true;
-}
-
-void CheckSystemMemoryCompatibility(bool legacyMode) {
-#ifdef GITS_PLATFORM_WINDOWS
-  // Read the total physical memory recorded during capture from stream metadata.
-  // This value comes from WMI Win32_ComputerSystem and is stored as a string.
-  std::string property("diag.os_specific.Win32_ComputerSystem.TotalPhysicalMemory");
-  auto capturedMemoryOpt = legacyMode ? CGits::Instance().FilePlayer().FindProperty(property)
-                                      : stream::StreamHeader::Get().FindProperty(property);
-  if (!capturedMemoryOpt) {
-    LOG_TRACE << "Stream metadata does not contain capture machine memory info.";
-    return;
-  }
-
-  uint64_t capturedMemoryBytes = 0;
-  try {
-    auto capturedMemoryStr = capturedMemoryOpt->get<std::string>();
-    capturedMemoryBytes = std::stoull(capturedMemoryStr);
-  } catch (const std::exception&) {
-    LOG_TRACE << "Could not parse capture machine memory from stream metadata.";
-    return;
-  }
-
-  // Query the current (replay) machine's physical memory.
-  MEMORYSTATUSEX memStatus{};
-  memStatus.dwLength = sizeof(memStatus);
-  if (!GlobalMemoryStatusEx(&memStatus)) {
-    LOG_TRACE << "Failed to query replay machine memory info.";
-    return;
-  }
-
-  uint64_t replayMemoryBytes = memStatus.ullTotalPhys;
-
-  auto toGB = [](uint64_t bytes) {
-    return static_cast<double>(bytes) / (1024.0 * 1024.0 * 1024.0);
-  };
-
-  LOG_INFO << "Capture machine RAM: " << std::fixed << std::setprecision(1)
-           << toGB(capturedMemoryBytes) << " GB, Replay machine RAM: " << toGB(replayMemoryBytes)
-           << " GB";
-
-  if (replayMemoryBytes < capturedMemoryBytes) {
-    LOG_WARNING << "The replay machine has less physical memory (" << std::fixed
-                << std::setprecision(1) << toGB(replayMemoryBytes)
-                << " GB) than the capture machine (" << toGB(capturedMemoryBytes)
-                << " GB). This may cause out-of-memory errors or degraded performance.";
-  }
-#endif
 }
 
 } // namespace gits

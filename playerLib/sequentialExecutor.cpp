@@ -41,21 +41,21 @@ public:
   void operator()() {
     try {
       for (;;) {
-        std::unique_lock<std::mutex> localLock(_seqExec._mutex);
+        std::unique_lock<std::mutex> localLock(_seqExec.m_Mutex);
 
         // wait for action for this thread
-        while (!(_seqExec._syncThreadId == _threadId && _seqExec._token != nullptr)) {
-          _seqExec._condition.wait(localLock);
+        while (!(_seqExec.m_SyncThreadId == _threadId && _seqExec.m_Token != nullptr)) {
+          _seqExec.m_Condition.wait(localLock);
         }
 
-        if (_seqExec._token != nullptr) {
+        if (_seqExec.m_Token != nullptr) {
           if (!Configurator::Get().common.player.nullRun) {
-            _seqExec._token->Run();
+            _seqExec.m_Token->Run();
           }
         }
 
-        _seqExec._token = nullptr;
-        _seqExec._condition.notify_all();
+        _seqExec.m_Token = nullptr;
+        _seqExec.m_Condition.notify_all();
       }
     } catch (gits::Exception& ex) {
       LOG_ERROR << "Unhandled exception: " << ex.what() << " on thread: " << _threadId;
@@ -74,7 +74,7 @@ public:
 
 gits::CSequentialExecutor::~CSequentialExecutor() {
   try {
-    for (auto& t : _executionThreads) {
+    for (auto& t : m_ExecutionThreads) {
       if (t.joinable()) {
         t.join();
       }
@@ -85,16 +85,16 @@ gits::CSequentialExecutor::~CSequentialExecutor() {
 }
 
 void gits::CSequentialExecutor::Dispatch(CToken& token, int thread) {
-  std::unique_lock<std::mutex> localLock(_mutex);
+  std::unique_lock<std::mutex> localLock(m_Mutex);
 
   // Set target thread and action
-  _syncThreadId = thread;
-  _token = &token;
-  _condition.notify_all();
+  m_SyncThreadId = thread;
+  m_Token = &token;
+  m_Condition.notify_all();
 
   // Wait for thread to finish execution
-  while (_token != nullptr) {
-    _condition.wait(localLock);
+  while (m_Token != nullptr) {
+    m_Condition.wait(localLock);
   }
 }
 
@@ -108,10 +108,10 @@ void gits::CSequentialExecutor::Run(CToken& token) {
     }
   } else {
     // create additional thread if needed
-    if (find(begin(_activeThreadsIdList), end(_activeThreadsIdList), threadId) ==
-        end(_activeThreadsIdList)) {
-      _executionThreads.emplace_back([this, threadId]() { CThreadLoop(*this, threadId)(); });
-      _activeThreadsIdList.push_back(threadId);
+    if (find(begin(m_ActiveThreadsIdList), end(m_ActiveThreadsIdList), threadId) ==
+        end(m_ActiveThreadsIdList)) {
+      m_ExecutionThreads.emplace_back([this, threadId]() { CThreadLoop(*this, threadId)(); });
+      m_ActiveThreadsIdList.push_back(threadId);
     }
 
     // dispatch action to thread

@@ -6,13 +6,6 @@
 //
 // ===================== end_copyright_notice ==============================
 
-/**
- * @file   player.h
- *
- * @brief Declaration of function calls player.
- *
- */
-
 #pragma once
 
 #include "gits.h"
@@ -41,22 +34,22 @@ public:
   };
 
 private:
-  TState _state;     /**< @brief defines current player state */
-  bool _interactive; /**< @brief defines if player is running in interactive mode */
-  StreamingContext _sc;
+  TState m_State;     /**< @brief defines current player state */
+  bool m_Interactive; /**< @brief defines if player is running in interactive mode */
+  StreamingContext m_Sc;
 
 public:
   CPlayer();
   ~CPlayer();
 
   void Register(std::unique_ptr<CAction> action) {
-    _sc.action.reset(action.release());
+    m_Sc.action.reset(action.release());
   }
 
   TState State() const;
   void Load(const std::filesystem::path& fileName);
   CScheduler& Scheduler() {
-    return *_sc.scheduler;
+    return *m_Sc.scheduler;
   }
   void Play();
   void Key(unsigned code);

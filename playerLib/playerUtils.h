@@ -21,9 +21,7 @@
 struct ArgumentParser;
 
 namespace gits {
-bool ends_with(const std::string& str, const std::string& ending);
 
 bool ConfigurePlayer(const std::filesystem::path& playerPath, ArgumentParser& args);
 
-void CheckSystemMemoryCompatibility(bool legacyMode);
 } // namespace gits
