@@ -28,8 +28,7 @@ class CpuDescriptorsService;
 class CommandListExecutionService {
 public:
   CommandListExecutionService(ExecutionSerializationRecorder& recorder,
-                              CpuDescriptorsService& cpuDescriptorsService)
-      : m_Recorder(recorder), m_CpuDescriptorsService(cpuDescriptorsService) {}
+                              CpuDescriptorsService& cpuDescriptorsService);
   void CommandListCommand(ObjectKey commandListKey, const Command& command);
   void ExecuteCommandLists(CommandKey callKey,
                            ObjectKey commandQueueKey,
@@ -54,6 +53,7 @@ public:
   };
 
 private:
+  bool m_CommandListsSeparated{true};
   struct CommandList {
     ObjectKey CommandListKey{};
     bool Reset{};

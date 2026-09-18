@@ -62,9 +62,10 @@ void RecordingLayer::Post(IDXGISwapChain1Present1Command& Command) {
 void RecordingLayer::Post(ID3D12GraphicsCommandListResetCommand& Command) {
   m_SubcaptureRange.ExecutionStart();
   if (m_SubcaptureRange.InRange()) {
-    if (m_SubcaptureRange.CommandListSubcapture()) {
+    if (m_SubcaptureRange.CommandListSubcapture() && !m_InsideCommandListExecution) {
       m_Recorder.Record(MarkerUInt64Serializer(
           MarkerUInt64Command(MarkerUInt64Command::Value::GPU_EXECUTION_BEGIN)));
+      m_InsideCommandListExecution = true;
     }
     m_Recorder.Record(ID3D12GraphicsCommandListResetSerializer(Command));
   }
@@ -76,6 +77,7 @@ void RecordingLayer::Post(ID3D12FenceGetCompletedValueCommand& Command) {
     if (m_SubcaptureRange.CommandListSubcapture()) {
       m_Recorder.Record(MarkerUInt64Serializer(
           MarkerUInt64Command(MarkerUInt64Command::Value::GPU_EXECUTION_END)));
+      m_InsideCommandListExecution = false;
     }
   }
   bool InRange = m_SubcaptureRange.InRange();

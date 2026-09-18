@@ -167,7 +167,19 @@ void AnalyzerService::CommandListReset(ObjectKey commandListKey,
   }
 }
 
+void AnalyzerService::StateRestoreBegin() {
+  m_StateRestore = true;
+}
+
+void AnalyzerService::StateRestoreEnd() {
+  m_StateRestore = false;
+}
+
 void AnalyzerService::ExecutionStart() {
+  if (m_StateRestore || m_InsideExecution) {
+    return;
+  }
+  m_InsideExecution = true;
   if (m_SubcaptureRange.IsExecutionRangeStart()) {
     m_InRange = true;
     m_BeforeRange = false;
@@ -175,6 +187,10 @@ void AnalyzerService::ExecutionStart() {
 }
 
 void AnalyzerService::ExecutionEnd() {
+  if (m_StateRestore) {
+    return;
+  }
+  m_InsideExecution = false;
   if (m_SubcaptureRange.CommandListSubcapture() && !m_SubcaptureRange.InRange() && m_InRange) {
     m_InRange = false;
     DumpAnalysisFile();

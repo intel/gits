@@ -72,6 +72,7 @@ public:
 private:
   SubcaptureRecorder& m_Recorder;
   SubcaptureRange& m_SubcaptureRange;
+  bool m_InsideCommandListExecution{};
 };
 
 } // namespace DirectX

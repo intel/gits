@@ -19,7 +19,8 @@ SubcaptureRange::SubcaptureRange() {
   const gits::Configuration& config = Configurator::Get();
 
   if (!config.common.player.subcapture.enabled ||
-      config.common.player.subcapture.directx.executionSerialization) {
+      config.common.player.subcapture.directx.executionSerialization ||
+      config.common.player.subcapture.directx.executionSerializationNonSeparated) {
     return;
   }
 
@@ -87,16 +88,22 @@ bool SubcaptureRange::IsFrameRangeStart(bool stateRestore) {
 }
 
 void SubcaptureRange::ExecutionStart() {
+  if (m_StateRestore || m_InsideExecution) {
+    return;
+  }
   ++m_ExecutionCount;
   m_InsideExecution = true;
 }
 
 void SubcaptureRange::ExecutionEnd() {
+  if (m_StateRestore) {
+    return;
+  }
   m_InsideExecution = false;
 }
 
 bool SubcaptureRange::IsExecutionRangeStart() {
-  if (m_StateRestore || !m_ExecutionRangeStart || !m_InFrameRange) {
+  if (m_StateRestore || !m_ExecutionRangeStart || !m_InFrameRange || m_InsideExecution) {
     return false;
   }
   return m_ExecutionCount == m_ExecutionRangeStart - 1;

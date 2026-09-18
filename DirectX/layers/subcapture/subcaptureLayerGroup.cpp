@@ -29,6 +29,7 @@ void SubcaptureLayerGroup::LoadLayers() {
 
   if (!cfg.common.player.subcapture.enabled ||
       cfg.common.player.subcapture.directx.executionSerialization ||
+      cfg.common.player.subcapture.directx.executionSerializationNonSeparated ||
       !cfg.common.player.subcapture.directx.commandListSplit.empty()) {
     return;
   }

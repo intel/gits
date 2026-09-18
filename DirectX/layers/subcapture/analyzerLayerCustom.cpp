@@ -48,10 +48,12 @@ AnalyzerLayer::AnalyzerLayer(SubcaptureRange& subcaptureRange)
 
 void AnalyzerLayer::Post(StateRestoreBeginCommand& c) {
   m_SubcaptureRange.StateRestoreBegin();
+  m_AnalyzerService.StateRestoreBegin();
 }
 
 void AnalyzerLayer::Post(StateRestoreEndCommand& c) {
   m_SubcaptureRange.StateRestoreEnd();
+  m_AnalyzerService.StateRestoreEnd();
 }
 
 void AnalyzerLayer::Post(IDXGISwapChainPresentCommand& c) {

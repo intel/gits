@@ -17,7 +17,9 @@ namespace DirectX {
 void ExecutionSerializationLayerGroup::LoadLayers() {
 
   if (!Configurator::Get().common.player.subcapture.enabled ||
-      !Configurator::Get().common.player.subcapture.directx.executionSerialization) {
+      !Configurator::Get().common.player.subcapture.directx.executionSerialization &&
+          !Configurator::Get()
+               .common.player.subcapture.directx.executionSerializationNonSeparated) {
     return;
   }
 

@@ -56,6 +56,8 @@ public:
   void CommandListReset(ObjectKey commandListKey,
                         ObjectKey allocatorKey,
                         ObjectKey initialStateKey);
+  void StateRestoreBegin();
+  void StateRestoreEnd();
   void ExecutionStart();
   void ExecutionEnd();
   void CommandQueueWait(CommandKey callKey,
@@ -100,6 +102,8 @@ private:
   GpuExecutionTracker m_GpuExecutionTracker;
   bool m_BeforeRange{true};
   bool m_InRange{};
+  bool m_InsideExecution{};
+  bool m_StateRestore{};
 
   std::set<ObjectKey> m_CommandListsResetBeforeExecution;
   std::set<ObjectKey> m_CommandListsExecuted;
