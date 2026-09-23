@@ -202,6 +202,7 @@ void MicromapStateService::OnCmdBuild(vkCmdBuildMicromapsEXTCommand& command) {
   }
 
   RequireChainRestore("vkCmdBuildMicromapsEXT");
+  RequireMicromapChain("vkCmdBuildMicromapsEXT");
 
   m_CommandBufferLifecycle.TrackHandleDependencies(command.m_commandBuffer.Key,
                                                    command.m_pInfos.HandleKeys);
@@ -255,7 +256,7 @@ void MicromapStateService::OnCmdBuild(vkCmdBuildMicromapsEXTCommand& command) {
 // to the compacted one, so "last build wins" no longer describes the content.
 void MicromapStateService::OnCmdCopy(vkCmdCopyMicromapEXTCommand& command) {
   RequireChainRestore("vkCmdCopyMicromapEXT");
-  RequireChainForCopy("vkCmdCopyMicromapEXT");
+  RequireMicromapChain("vkCmdCopyMicromapEXT");
 
   m_CommandBufferLifecycle.TrackHandleDependencies(command.m_commandBuffer.Key,
                                                    command.m_pInfo.HandleKeys);
@@ -409,17 +410,22 @@ void MicromapStateService::RequireChainRestore(const char* commandName) {
                        reason);
 }
 
-void MicromapStateService::RequireChainForCopy(const char* commandName) {
-  const bool unrestorable = !m_AnalysisMode && m_AnalyzerResults.UseAsChainRestore() &&
+// The BlasChain of a pre-micromap analysis file still satisfies UseAsChainRestore, so
+// RequireChainRestore stays quiet while the micromap chain is empty - the restore would replay no
+// micromap at all and leave a retained acceleration structure build naming an unrestored one.
+void MicromapStateService::RequireMicromapChain(const char* commandName) {
+  const bool unrestorable = !m_AnalysisMode && m_SubcaptureRange.BeforeRange() &&
+                            m_AnalyzerResults.UseAsChainRestore() &&
                             !m_AnalyzerResults.HasMicromapChain();
   if (!unrestorable) {
     return;
   }
   FatalSubcaptureError(
-      std::string("the stream calls ") + commandName + ", but the analysis file '" +
+      std::string("the stream calls ") + commandName +
+      " before the subcapture range, but the analysis file '" +
       AnalyzerResults::GetAnalysisFileName() +
-      "' carries no MicromapChain section, so it was written before micromap copies were "
-      "supported. Delete that file and re-run so the analysis pass regenerates it");
+      "' carries no MicromapChain section, so it was written before micromaps were supported. "
+      "Delete that file and re-run so the analysis pass regenerates it");
 }
 
 } // namespace vulkan

@@ -74,9 +74,9 @@ private:
   // Recording pass: abort when a pre-range micromap op is seen but no reduced chain was loaded.
   // A micromap has no serialized restore to fall back on, unlike an acceleration structure.
   void RequireChainRestore(const char* commandName);
-  // Recording pass: abort when the stream copies micromaps but the loaded analysis file has no
-  // MicromapChain section, i.e. it was written before micromap copies were supported.
-  void RequireChainForCopy(const char* commandName);
+  // Recording pass: abort when a pre-range micromap op is seen but the loaded analysis file has
+  // no MicromapChain section, i.e. it was written before micromaps were supported.
+  void RequireMicromapChain(const char* commandName);
 
   // Duplicates SubcaptureLayer::StoreState - sharing it would pull commandCodersAuto.h into
   // stateTrackingService.h for every dependent TU.
