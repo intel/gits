@@ -505,15 +505,16 @@ private:
   AnalyzerResults m_AnalyzerResults;
   // Must be constructed after m_CommandBufferLifecycle and m_AnalyzerResults - it binds both.
   MicromapStateService m_Micromap;
-  // Analysis pass only: collects in-range object usage and dumps the analysis
-  // file.  Null in recording mode.
-  std::unique_ptr<AnalyzerService> m_AnalyzerService;
   // Analysis pass only: TLAS->BLAS discovery via GPU readback of TLAS instance
   // buffers. Null in recording mode.
   std::unique_ptr<AnalyzerRaytracingService> m_AnalyzerRaytracingService;
   // Analysis pass only: reduces pre-range BLAS build/update/copy chains to the
   // minimal restore set. Null in recording mode.
   std::unique_ptr<RaytracingOptimizationService> m_RaytracingOptimizationService;
+  // Analysis pass only: collects in-range object usage and dumps the analysis
+  // file.  Null in recording mode. Declared last so its destructor-time dump, which
+  // reaches back into the services above, runs while they are still alive.
+  std::unique_ptr<AnalyzerService> m_AnalyzerService;
 
   // Pending window geometry: set when a CreateWindowMetaCommand is observed,
   // consumed when the next surface creation command is processed.

@@ -23,6 +23,7 @@
 #include "tools.h"
 
 #include <algorithm>
+#include <iterator>
 #include <cstring>
 #include <limits>
 #include <memory>
@@ -230,7 +231,8 @@ void StateTrackingService::RestoreState() {
   m_DescriptorSetsAllocated.clear();
   m_CommandBuffersRecordingReplaySkipped.clear();
   m_TransientlyRestored.clear();
-  m_RestoredInputRegionHashes.clear();
+  m_RestoredInputRegions.clear();
+  m_AsBuildInputStats = {};
 
   // Emit StateRestoreBegin marker
   {
@@ -448,6 +450,8 @@ void StateTrackingService::RestoreState() {
   m_MicromapRestore.RestoreContents();
   RestoreAccelerationStructureContents();
   m_MicromapRestore.DestroyResurrected();
+  // Both restores above go through EmitCapturedBuildInputs, so report once for the pair.
+  LogAsBuildInputStats();
   recordStatus(MarkerUInt64Command::Value::STATE_RESTORE_RTAS_END);
   recordStatus(MarkerUInt64Command::Value::STATE_RESTORE_RESOURCES_BEGIN);
   RestoreBufferContents();
@@ -994,6 +998,57 @@ const std::vector<uint8_t>* StateTrackingService::GetAsBuildInputContent(uint64_
   return it == m_AsBuildInputContent.end() ? nullptr : &it->second;
 }
 
+std::vector<CapturedBuildInputBuffer> StateTrackingService::RetainedBuildInputsFor(
+    uint64_t commandKey, const std::unordered_set<uint64_t>& keepDstKeys) {
+  std::vector<CapturedBuildInputBuffer> kept;
+  auto rcIt = m_RetainedAsCommands.find(commandKey);
+  if (rcIt == m_RetainedAsCommands.end()) {
+    return kept;
+  }
+  const auto& inputsByDst = rcIt->second.InputsByDst;
+  for (const auto& [dstKey, inputs] : inputsByDst) {
+    if (!keepDstKeys.count(dstKey)) {
+      ++m_AsBuildInputStats.DestinationsDropped;
+      continue;
+    }
+    kept.insert(kept.end(), inputs.begin(), inputs.end());
+    ++m_AsBuildInputStats.DestinationsKept;
+  }
+  // A kept destination with no captured inputs is normal - its geometry may name no buffer
+  // this path tracks - so absence here is not counted either way.
+  //
+  // Destinations of one batched build commonly read overlapping ranges of a shared buffer;
+  // EmitCapturedBuildInputs merges by buffer key and drops duplicate regions, so no dedup here.
+  return kept;
+}
+
+void StateTrackingService::InvalidateRestoredInputRegions(uint64_t bufferKey,
+                                                          VkDeviceSize offset,
+                                                          VkDeviceSize size) {
+  if (size == 0) {
+    return;
+  }
+  const VkDeviceSize end = offset + size;
+  // The map is ordered by (buffer key, dst offset), so start at the first slot of this buffer
+  // that begins at or after the range.
+  auto it = m_RestoredInputRegions.lower_bound({bufferKey, offset});
+  // A slot beginning before the range can still reach into it. Slots are block-aligned and
+  // block-sized, so this steps back over one at most.
+  while (it != m_RestoredInputRegions.begin()) {
+    auto prev = std::prev(it);
+    if (prev->first.first != bufferKey || prev->first.second + prev->second.Size <= offset) {
+      break;
+    }
+    it = prev;
+  }
+  // Everything from there up to the range end overlaps it: the stepped-back slots by the test
+  // above, and any slot starting inside the range trivially.
+  while (it != m_RestoredInputRegions.end() && it->first.first == bufferKey &&
+         it->first.second < end) {
+    it = m_RestoredInputRegions.erase(it);
+  }
+}
+
 void StateTrackingService::ApplyAsInputReadbacksAfterSubmit(uint64_t cbKey,
                                                             uint64_t submitQueueKey) {
   GITS_ASSERT(m_GpuReadbackHelper);
@@ -1095,11 +1150,11 @@ void StateTrackingService::ApplyAsInputReadbacksAfterSubmit(uint64_t cbKey,
     if (restoreThisCommand) {
       auto& rc = m_RetainedAsCommands[pending.CommandKey];
       if (clearedRetainedThisCall.insert(pending.CommandKey).second) {
-        rc.Inputs.clear();
+        rc.InputsByDst.clear();
       }
-      for (const auto& b : finalized) {
-        rc.Inputs.push_back(b);
-      }
+      // Keyed by destination, so the replay can drop the inputs of the infos it drops.
+      auto& perDst = rc.InputsByDst[pending.AsKey];
+      perDst.insert(perDst.end(), finalized.begin(), finalized.end());
     }
     if (!pending.IsMicromap) {
       // Last submit before the cut wins (matches "only the latest build per AS is retained").
@@ -4191,15 +4246,25 @@ void StateTrackingService::EmitCapturedBuildInputs(
     }
 
     // Upload each referenced sub-range from the content store via a host-visible staging
-    // buffer. For a reused buffer, skip a range whose identical bytes an earlier rebuild
-    // this pass already uploaded to the same (buffer, offset) slot. A freshly recreated
-    // transient buffer is empty, so it is never deduped.
+    // buffer, in two steps.
+    //
+    // First drop the ranges already present in the destination: for a reused buffer, a range
+    // whose identical bytes an earlier rebuild this pass uploaded to the same (buffer, offset)
+    // slot needs no second upload. With inputs captured in fixed buffer-relative blocks that
+    // slot repeats across builds, so this is where the overlapping reads of a shared input
+    // buffer collapse onto one stored copy. A freshly recreated transient buffer is empty, so
+    // nothing may be skipped for it.
+    //
+    // Then upload the survivors in runs. Regions are block-sized and sorted, so consecutive
+    // survivors are usually contiguous, and one staging buffer per run rather than per region
+    // saves the create/allocate/map/submit/wait round-trip on each.
+    std::vector<const CapturedBuildInputRegion*> pendingUpload;
+    pendingUpload.reserve(in.Regions.size());
     for (const auto& region : in.Regions) {
       if (region.RangeSize == 0) {
         continue;
       }
-      const std::vector<uint8_t>* bytes = GetAsBuildInputContent(region.Hash);
-      if (!bytes) {
+      if (!GetAsBuildInputContent(region.Hash)) {
         // Replaying the op without this range builds the structure over whatever the
         // recreated input buffer happens to contain - for instance data, addresses that
         // point nowhere.
@@ -4212,17 +4277,47 @@ void StateTrackingService::EmitCapturedBuildInputs(
       }
       if (reuseExisting) {
         const auto slot = std::make_pair(in.BufferKey, region.SrcOffset);
-        auto it = m_RestoredInputRegionHashes.find(slot);
-        if (it != m_RestoredInputRegionHashes.end() && it->second == region.Hash) {
+        auto it = m_RestoredInputRegions.find(slot);
+        if (it != m_RestoredInputRegions.end() && it->second.Hash == region.Hash &&
+            it->second.Size == region.RangeSize) {
+          ++m_AsBuildInputStats.RegionsSkipped;
           continue; // identical bytes already uploaded to this stable buffer slot
         }
-        m_RestoredInputRegionHashes[slot] = region.Hash;
+        m_RestoredInputRegions[slot] = {region.Hash, region.RangeSize};
       }
+      pendingUpload.push_back(&region);
+    }
+
+    for (size_t first = 0; first < pendingUpload.size();) {
+      // Extend the run while the next region starts exactly where this one ends. Sizes are
+      // summed rather than derived from offsets so a short final block still adds up.
+      size_t last = first;
+      VkDeviceSize runSize = pendingUpload[first]->RangeSize;
+      while (last + 1 < pendingUpload.size() &&
+             pendingUpload[last + 1]->SrcOffset ==
+                 pendingUpload[last]->SrcOffset + pendingUpload[last]->RangeSize) {
+        ++last;
+        runSize += pendingUpload[last]->RangeSize;
+      }
+
+      std::vector<uint8_t> runBytes;
+      if (first == last) {
+        runBytes = *GetAsBuildInputContent(pendingUpload[first]->Hash);
+      } else {
+        runBytes.reserve(static_cast<size_t>(runSize));
+        for (size_t i = first; i <= last; ++i) {
+          // Non-null: every region was probed above before reaching pendingUpload.
+          const std::vector<uint8_t>& part = *GetAsBuildInputContent(pendingUpload[i]->Hash);
+          runBytes.insert(runBytes.end(), part.begin(), part.end());
+        }
+      }
+
+      const VkDeviceSize runOffset = pendingUpload[first]->SrcOffset;
       // As above: skipping the upload would leave this range of the input buffer
       // holding whatever it holds, and the replayed op would build over it.
       VkMemoryRequirements stagingReq{};
       if (!m_GpuReadbackHelper->QueryStagingBufferRequirements(
-              deviceKey, region.RangeSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, stagingReq)) {
+              deviceKey, runBytes.size(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, stagingReq)) {
         FatalSubcaptureError(
             std::string("failed to query staging requirements for a build input of ") +
             logObjectKind + " key=" + std::to_string(logObjectKey) +
@@ -4236,9 +4331,12 @@ void StateTrackingService::EmitCapturedBuildInputs(
                              " (input buffer key=" + std::to_string(in.BufferKey) +
                              ", memoryTypeBits=" + std::to_string(stagingReq.memoryTypeBits) + ")");
       }
-      EmitStagingUploadAndCopyBuffer(m_Recorder, deviceKey, queueKey, poolKey, dstBufKey,
-                                     region.SrcOffset, region.RangeSize, stagingReq.size,
-                                     stagingMemType, *bytes);
+      EmitStagingUploadAndCopyBuffer(m_Recorder, deviceKey, queueKey, poolKey, dstBufKey, runOffset,
+                                     runBytes.size(), stagingReq.size, stagingMemType, runBytes);
+      ++m_AsBuildInputStats.UploadsEmitted;
+      m_AsBuildInputStats.RegionsUploaded += last - first + 1;
+      m_AsBuildInputStats.BytesEmitted += runBytes.size();
+      first = last + 1;
     }
   }
 }
@@ -4902,18 +5000,32 @@ void StateTrackingService::RestoreBlasChain() {
         }
       }
 
+      // Each replay writes its destinations' storage. When an application suballocates that
+      // storage and its build inputs from one buffer - common for ray tracing pools - the
+      // write lands on ranges a later op may read as input, so the record of what those
+      // ranges hold has to go with it. Done per destination right after the emit, so the
+      // ordering matches what the player will see.
       if (op.IsCopy) {
         EmitAccelerationStructureCopyReplay(dstState->ParentKey, dev->Queue, dev->Pool,
                                             rcIt->second.CommandBytes);
+        InvalidateRestoredInputRegionsOfStorage<AccelerationStructureState>(op.DstAsKey);
       } else if (replayedBuildCmds.insert(op.CommandKey).second) {
         // Replayed in its recorded mode, reduced to the destinations the chain kept.
         // updateSourceByCmd repoints each retained update info at the structure this chain
         // produces, which the loop above has already made live.
         auto srcMapIt = updateSourceByCmd.find(op.CommandKey);
+        // Same destination set as the RemoveUnreferencedAsBuildInfos inside the call, so the
+        // inputs uploaded are exactly the ones the reduced command reads.
+        const std::unordered_set<uint64_t>& keepDst = retainedDstByCmd[op.CommandKey];
         EmitAccelerationStructureRebuildBytes(
             dstState->ParentKey, dev->PhysDev, dev->Queue, dev->Pool, rcIt->second.CommandBytes,
-            rcIt->second.Inputs, op.DstAsKey, retainedDstByCmd[op.CommandKey],
+            RetainedBuildInputsFor(op.CommandKey, keepDst), op.DstAsKey, keepDst,
             srcMapIt != updateSourceByCmd.end() ? &srcMapIt->second : nullptr);
+        // A multi-info build is emitted once for all the destinations the chain kept, so
+        // invalidate every one of them, not just this op's.
+        for (uint64_t retainedDst : retainedDstByCmd[op.CommandKey]) {
+          InvalidateRestoredInputRegionsOfStorage<AccelerationStructureState>(retainedDst);
+        }
       }
     }();
 
@@ -5092,6 +5204,31 @@ void StateTrackingService::RestoreAccelerationStructureContents() {
                 << " size=" << data.size() << " allocSize=" << stagingReq.size;
     }
   }
+}
+
+void StateTrackingService::LogAsBuildInputStats() {
+  const auto& stats = m_AsBuildInputStats;
+  const uint64_t regions = stats.RegionsUploaded + stats.RegionsSkipped;
+  if (regions == 0) {
+    return;
+  }
+  uint64_t capturedBytes = 0;
+  for (const auto& [hash, bytes] : m_AsBuildInputContent) {
+    capturedBytes += bytes.size();
+  }
+  // The kept/dropped destination split is the number to watch. A batched build can name
+  // thousands of destinations while the chain keeps a handful, and emitting the inputs of the
+  // ones it drops costs orders of magnitude more stream than the restore needs. "Shared"
+  // counts regions an earlier op had already uploaded to the same buffer slot with the same
+  // content, which only overlaps when destinations of one command read the same bytes.
+  const uint64_t dsts = stats.DestinationsKept + stats.DestinationsDropped;
+  LOG_INFO << "Vulkan subcapture: build inputs - kept " << stats.DestinationsKept << " of " << dsts
+           << " destination(s); " << regions << " region(s) resolved to "
+           << m_AsBuildInputContent.size() << " distinct blob(s) (" << capturedBytes
+           << " B captured); emitted " << stats.RegionsUploaded << " region(s) in "
+           << stats.UploadsEmitted << " upload(s) totalling " << stats.BytesEmitted << " B, shared "
+           << stats.RegionsSkipped << " (" << (regions ? stats.RegionsSkipped * 100 / regions : 0)
+           << "%)";
 }
 
 void StateTrackingService::RestoreSparseBufferBinds() {

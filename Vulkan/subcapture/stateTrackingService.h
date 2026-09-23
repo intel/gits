@@ -436,6 +436,17 @@ private:
   void RestoreImageContents();
   void RestoreAccelerationStructureContents();
 
+  // Report what the acceleration structure and micromap build-input restore emitted versus
+  // what it shared between builds. Call once, after both restores.
+  void LogAsBuildInputStats();
+
+  // The captured inputs of one retained command, restricted to the destinations the replay
+  // will actually build. Must be given the same key set as RemoveUnreferencedAsBuildInfos, or
+  // the replay and its inputs disagree: a superset uploads data no replayed info reads, a
+  // subset leaves a replayed info building over whatever its input buffer happens to hold.
+  std::vector<CapturedBuildInputBuffer> RetainedBuildInputsFor(
+      uint64_t commandKey, const std::unordered_set<uint64_t>& keepDstKeys);
+
   void EmitAccelerationStructureDeserialize(uint64_t deviceKey,
                                             uint64_t queueKey,
                                             uint64_t commandPoolKey,
@@ -582,6 +593,23 @@ private:
   // Look up previously stored AS build-input bytes by hash, or nullptr.
   const std::vector<uint8_t>* GetAsBuildInputContent(uint64_t hash) const;
 
+  // Forget which content the given range of an input buffer holds, so the next op reading it
+  // re-uploads instead of trusting the record. Needed because an application may suballocate
+  // acceleration structure storage and build inputs from one buffer: replaying a build writes
+  // its destination's storage over whatever shared the range, and a later op's inputs there
+  // would otherwise be skipped as already present.
+  void InvalidateRestoredInputRegions(uint64_t bufferKey, VkDeviceSize offset, VkDeviceSize size);
+
+  // The same, for the backing storage of one replayed op's destination. StateT is
+  // AccelerationStructureState or MicromapState - both carry BufferKey/Offset/Size. Call it
+  // after emitting a replay, for every destination that replay produces.
+  template <typename StateT>
+  void InvalidateRestoredInputRegionsOfStorage(uint64_t objectKey) {
+    if (auto* state = GetState<StateT>(objectKey)) {
+      InvalidateRestoredInputRegions(state->BufferKey, state->Offset, state->Size);
+    }
+  }
+
   // Emit the stored creation command bytes directly as a serializer.
   // Returns false if CommandId is not handled (no bytes emitted).
   bool EmitCreationCommand(ObjectState* state);
@@ -660,17 +688,42 @@ private:
   // StoreRetainedAsCommandBytes (bytes) and ApplyAsInputReadbacksAfterSubmit (inputs).
   struct RetainedAsCommand {
     std::vector<char> CommandBytes;
-    std::vector<CapturedBuildInputBuffer> Inputs; // build/update only
+    // Build/update only, grouped by destination. Grouped rather than flattened because the
+    // replay drops the infos whose destinations the chain did not keep
+    // (RemoveUnreferencedAsBuildInfos), and their inputs have to go with them - a batched
+    // build can name thousands of destinations while the chain keeps a handful.
+    std::unordered_map<uint64_t, std::vector<CapturedBuildInputBuffer>> InputsByDst;
     bool IsCopy{};
   };
   std::unordered_map<uint64_t, RetainedAsCommand> m_RetainedAsCommands;
   // AS build-input byte ranges keyed by content hash, deduplicating identical input
   // bytes across builds, buffers and frames.
   std::map<uint64_t, std::vector<uint8_t>> m_AsBuildInputContent;
-  // Per-restore-pass dedup of emitted input uploads: (buffer key, dst offset) -> last
-  // uploaded content hash. Lets a re-referenced range of a reused input buffer skip a
-  // redundant upload. Reset at the start of RestoreState.
-  std::map<std::pair<uint64_t, uint64_t>, uint64_t> m_RestoredInputRegionHashes;
+  // Per-restore-pass dedup of emitted input uploads: (buffer key, dst offset) -> what was
+  // last uploaded there. Lets a re-referenced range of a reused input buffer skip a redundant
+  // upload. The length is kept alongside the hash so InvalidateRestoredInputRegions can tell
+  // which slots a replayed build overwrote instead of guessing. Reset at the start of
+  // RestoreState.
+  struct RestoredInputRegion {
+    uint64_t Hash{};
+    VkDeviceSize Size{};
+  };
+  std::map<std::pair<uint64_t, uint64_t>, RestoredInputRegion> m_RestoredInputRegions;
+  // What the build-input restore actually emitted, reported once at the end of the AS
+  // content restore. Worth watching: this restore has been the dominant term in subcapture
+  // stream size, and an emitted volume far above what the live structures could plausibly
+  // need is the signature of a regression here.
+  struct AsBuildInputStats {
+    uint64_t RegionsSkipped{};
+    uint64_t RegionsUploaded{};
+    uint64_t UploadsEmitted{};
+    uint64_t BytesEmitted{};
+    // Destinations whose inputs the replay needs, against those a batched build named but the
+    // chain discarded. A large drop count is the normal, healthy case for this title.
+    uint64_t DestinationsKept{};
+    uint64_t DestinationsDropped{};
+  };
+  AsBuildInputStats m_AsBuildInputStats;
   // See SetSubmittedCommandBufferCallback.
   std::function<void(uint64_t, uint64_t)> m_OnCommandBufferSubmitted;
 };
