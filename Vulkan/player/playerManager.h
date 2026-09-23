@@ -9,6 +9,7 @@
 #pragma once
 
 #include "gits.h"
+#include "log.h"
 #include "descriptorUpdateTemplateService.h"
 #include "deviceDiagnosticService.h"
 #include "eventPendingSignalService.h"
@@ -67,13 +68,54 @@ public:
   template <typename Handle>
   VkInstanceLevelDispatchTable& GetInstanceDispatchTable(Handle handle) {
     void* dispatchKey = *reinterpret_cast<void**>(handle);
-    return m_InstanceDispatchTable[dispatchKey];
+    std::shared_lock lock(m_DispatchTablesMutex);
+    auto it = m_InstanceDispatchTable.find(dispatchKey);
+    if (it == m_InstanceDispatchTable.end()) {
+      // Mirrors CaptureManager::GetInstanceDispatchTable (Vulkan/recorder/captureManager.h):
+      // operator[]'s silent default-insertion would hand back a zero-filled table whose
+      // function pointers are all nullptr, so the caller jumps to address 0 on the very next
+      // call instead of getting a diagnosable failure. A miss here means this handle's first
+      // qword (the loader/ICD dispatch key) does not match any VkInstance/VkPhysicalDevice
+      // registered via LoadInstanceFunctions during replay.
+      LOG_ERROR << "PlayerManager::GetInstanceDispatchTable: handle=0x" << std::hex
+                << reinterpret_cast<uint64_t>(handle) << " dispatchKey=0x"
+                << reinterpret_cast<uint64_t>(dispatchKey) << std::dec
+                << " has no registered instance dispatch table. The vkCreateInstance for this "
+                   "handle's dispatch key was never replayed, or this is a foreign/wrapped "
+                   "handle.";
+      GITS_ASSERT(it != m_InstanceDispatchTable.end());
+      static VkInstanceLevelDispatchTable emptyInstanceDispatchTable{};
+      return emptyInstanceDispatchTable;
+    }
+    return it->second;
   }
 
   template <typename Handle>
   VkDeviceLevelDispatchTable& GetDeviceDispatchTable(Handle handle) {
     void* dispatchKey = *reinterpret_cast<void**>(handle);
-    return m_DeviceDispatchTable[dispatchKey];
+    std::shared_lock lock(m_DispatchTablesMutex);
+    auto it = m_DeviceDispatchTable.find(dispatchKey);
+    if (it == m_DeviceDispatchTable.end()) {
+      // Same class of bug as GetInstanceDispatchTable above, and the same fix as
+      // CaptureManager::GetDeviceDispatchTable on the recorder side: fail loudly instead of
+      // silently inserting a zero-filled table via operator[] (also unsafe under only the
+      // shared/reader lock taken above, since operator[] mutates on insertion). Known replay
+      // causes: a queue/command buffer whose loader dispatch data was never associated with a
+      // replayed device (e.g. a VkQueue created through a non-standard, vendor-extension path
+      // rather than vkGetDeviceQueue/vkAllocateCommandBuffers -- see AliasDeviceDispatchTable
+      // below), or a genuinely foreign/wrapped handle.
+      LOG_ERROR << "PlayerManager::GetDeviceDispatchTable: handle=0x" << std::hex
+                << reinterpret_cast<uint64_t>(handle) << " dispatchKey=0x"
+                << reinterpret_cast<uint64_t>(dispatchKey) << std::dec
+                << " has no registered device dispatch table. The vkCreateDevice for this "
+                   "handle's dispatch key was never replayed, the handle was created via a "
+                   "non-standard path that never got aliased to its device's table, or this is "
+                   "a foreign/wrapped handle.";
+      GITS_ASSERT(it != m_DeviceDispatchTable.end());
+      static VkDeviceLevelDispatchTable emptyDeviceDispatchTable{};
+      return emptyDeviceDispatchTable;
+    }
+    return it->second;
   }
 
   WindowService& GetWindowService() {

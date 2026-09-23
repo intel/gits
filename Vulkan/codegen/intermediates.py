@@ -25,6 +25,13 @@ class Parameter:
     fixed_array_size: list[str] = field(default_factory=list)
     is_handle: bool = False
     is_handle_output: bool = False
+    # True for a handle-typed *input* parameter that is known to sometimes carry a
+    # handle the recorder never registered a GITSKey for -- e.g. a view created by
+    # the driver on a RecursionGuard-elided nested call. See the vendor-extension
+    # codegen helpers for the full rationale and the curated list this applies to.
+    # Codegen emits UpdateHandleLenient instead of the strict, asserting UpdateHandle
+    # for these.
+    is_lenient_handle: bool = False
     is_struct: bool = False
     is_struct_with_handles: bool = False
     is_struct_with_output_handles: bool = False
