@@ -117,14 +117,6 @@ void CaptureCustomizationLayer::Post(vkGetPhysicalDeviceFeatures2KHRCommand& com
 void CaptureCustomizationLayer::Pre(vkCreateWin32SurfaceKHRCommand& command) {
   RECT clientRect;
   BOOL ret = GetClientRect(command.m_pCreateInfo.Value->hwnd, &clientRect);
-
-  HWND hwnd = command.m_pCreateInfo.Value->hwnd;
-  if (!ret) {
-    DWORD error = GetLastError();
-    LOG_ERROR << "GetClientRect failed for HWND " << hwnd << ", GetLastError=" << error
-              << ", IsWindow=" << (IsWindow(hwnd) == TRUE);
-    return;
-  }
   GITS_ASSERT(ret);
   int32_t width = clientRect.right - clientRect.left;
   int32_t height = clientRect.bottom - clientRect.top;
@@ -157,13 +149,6 @@ void CaptureCustomizationLayer::Post(vkCreateWin32SurfaceKHRCommand& command) {
     HWND hwnd = command.m_pCreateInfo.Value->hwnd;
     RECT clientRect;
     BOOL ret = GetClientRect(hwnd, &clientRect);
-    if (!ret) {
-      DWORD error = GetLastError();
-      LOG_ERROR << "GetClientRect failed for HWND " << hwnd << ", GetLastError=" << error
-                << ", IsWindow=" << (IsWindow(hwnd) == TRUE);
-      return;
-    }
-
     GITS_ASSERT(ret);
     int32_t width = clientRect.right - clientRect.left;
     int32_t height = clientRect.bottom - clientRect.top;
