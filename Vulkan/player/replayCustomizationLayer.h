@@ -65,6 +65,16 @@ public:
   void Pre(vkCmdBuildAccelerationStructuresIndirectKHRCommand& command) override;
   void Pre(vkBuildAccelerationStructuresKHRCommand& command) override;
   void Pre(vkCmdCopyAccelerationStructureKHRCommand& command) override;
+  void Pre(vkCmdBuildMicromapsEXTCommand& command) override;
+  void Pre(vkBuildMicromapsEXTCommand& command) override;
+  void Pre(vkCmdCopyMicromapEXTCommand& command) override;
+  void Pre(vkCopyMicromapEXTCommand& command) override;
+  void Pre(vkCmdCopyMicromapToMemoryEXTCommand& command) override;
+  void Pre(vkCopyMicromapToMemoryEXTCommand& command) override;
+  void Pre(vkCmdCopyMemoryToMicromapEXTCommand& command) override;
+  void Pre(vkCopyMemoryToMicromapEXTCommand& command) override;
+  void Pre(vkCmdWriteMicromapsPropertiesEXTCommand& command) override;
+  void Pre(vkWriteMicromapsPropertiesEXTCommand& command) override;
   void Pre(vkCmdTraceRaysKHRCommand& command) override;
   void Pre(vkCmdTraceRaysIndirectKHRCommand& command) override;
   void Pre(vkCmdTraceRaysIndirect2KHRCommand& command) override;

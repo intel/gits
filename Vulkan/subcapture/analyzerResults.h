@@ -32,6 +32,18 @@ struct BlasChainOp {
   VkCopyAccelerationStructureModeKHR CopyMode{}; // valid only when IsCopy
 };
 
+// One retained micromap operation loaded from the analysis file's MicromapChain section, in
+// replay (execution) order. The micromap counterpart of BlasChainOp, with no update-mode
+// source to carry - VkBuildMicromapModeEXT has only BUILD, so a non-zero source means a copy.
+struct MicromapChainOp {
+  uint64_t CommandKey{};
+  uint64_t DstMicromapKey{};
+  uint64_t SourceCommandKey{};
+  uint64_t SrcMicromapKey{};
+  bool IsCopy{};
+  VkCopyMicromapModeEXT CopyMode{}; // valid only when IsCopy
+};
+
 // Loads the subcapture analysis file produced by a prior analysis pass and
 // answers per-object "should this object be restored?" queries during the
 // recording pass.  Mirrors the DirectX AnalyzerResults design.
@@ -54,6 +66,11 @@ public:
   // builds any before the range (see SubcaptureLayer::RequireBlasChainForRaytracing).
   bool HasBlasChain() const {
     return m_BlasChainLoaded;
+  }
+
+  // True if the analysis file carried a MicromapChain section (absent before micromap copies).
+  bool HasMicromapChain() const {
+    return m_MicromapChainLoaded;
   }
 
   bool CaptureAsBuildInputs() const {
@@ -86,6 +103,17 @@ public:
     return m_BlasChain;
   }
 
+  // The micromap counterparts of RestoreBlasCommand / IsRetainedBlasCommand / GetBlasChain.
+  bool RestoreMicromapCommand(uint64_t commandKey) const;
+
+  bool IsRetainedMicromapCommand(uint64_t commandKey) const {
+    return m_RetainedMicromapCommands.find(commandKey) != m_RetainedMicromapCommands.end();
+  }
+
+  const std::vector<MicromapChainOp>& GetMicromapChain() const {
+    return m_MicromapChain;
+  }
+
   // True if a previous analysis pass already wrote the analysis file.  Used by
   // the layer manager to choose between analysis and recording passes.
   static bool IsAnalysis();
@@ -108,6 +136,9 @@ private:
   std::vector<BlasChainOp> m_BlasChain;
   std::unordered_set<uint64_t> m_RetainedBlasCommands;
   std::unordered_map<uint64_t, uint64_t> m_BlasSourceByCommand;
+  bool m_MicromapChainLoaded{false};
+  std::vector<MicromapChainOp> m_MicromapChain;
+  std::unordered_set<uint64_t> m_RetainedMicromapCommands;
 };
 
 } // namespace vulkan

@@ -69,6 +69,25 @@ AnalyzerResults::AnalyzerResults() {
         m_BlasChain.push_back(op);
       }
     }
+    const YAML::Node micromapChain = root["MicromapChain"];
+    if (micromapChain && micromapChain.IsSequence()) {
+      m_MicromapChainLoaded = true;
+      for (const auto& node : micromapChain) {
+        MicromapChainOp op;
+        // Throws exception when key is not found
+        op.CommandKey = node["Cmd"].as<uint64_t>();
+        op.DstMicromapKey = node["DstMicromap"].as<uint64_t>();
+        op.SourceCommandKey = node["SrcCmd"].as<uint64_t>();
+        op.SrcMicromapKey = node["SrcMicromap"] ? node["SrcMicromap"].as<uint64_t>() : 0;
+        op.IsCopy = node["IsCopy"].as<int>() != 0;
+        if (op.IsCopy) {
+          // Required for a copy. A missing one would silently mean MODE_CLONE.
+          op.CopyMode = static_cast<VkCopyMicromapModeEXT>(node["CopyMode"].as<int>());
+        }
+        m_RetainedMicromapCommands.insert(op.CommandKey);
+        m_MicromapChain.push_back(op);
+      }
+    }
   } catch (const std::exception& e) {
     // Treat any parse error as no valid analysis: nothing is loaded, so the recording
     // pass restores everything rather than acting on half-read data. IsAnalysis() only
@@ -81,6 +100,9 @@ AnalyzerResults::AnalyzerResults() {
     m_BlasChain.clear();
     m_RetainedBlasCommands.clear();
     m_BlasSourceByCommand.clear();
+    m_MicromapChainLoaded = false;
+    m_MicromapChain.clear();
+    m_RetainedMicromapCommands.clear();
   }
 }
 
@@ -98,6 +120,14 @@ bool AnalyzerResults::RestoreBlasCommand(uint64_t commandKey) const {
     return true;
   }
   return m_RetainedBlasCommands.find(commandKey) != m_RetainedBlasCommands.end();
+}
+
+bool AnalyzerResults::RestoreMicromapCommand(uint64_t commandKey) const {
+  // Same fallback as RestoreBlasCommand: with nothing loaded, keep every micromap op.
+  if (!m_Optimize || !m_MicromapChainLoaded) {
+    return true;
+  }
+  return m_RetainedMicromapCommands.find(commandKey) != m_RetainedMicromapCommands.end();
 }
 
 uint64_t AnalyzerResults::GetBlasSourceCommand(uint64_t commandKey) const {

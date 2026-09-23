@@ -927,6 +927,69 @@ void ReplayCustomizationLayer::Pre(vkCmdCopyAccelerationStructureKHRCommand& com
   }
 }
 
+// Micromaps only ever feed acceleration structure builds, so once those are skipped building one
+// is dead work. The readers below are skipped for the same reason as the AS copy above - they
+// would otherwise read a micromap that was never built.
+void ReplayCustomizationLayer::Pre(vkCmdBuildMicromapsEXTCommand& command) {
+  if (SkipAccelerationStructureWork()) {
+    command.m_Skip = true;
+  }
+}
+
+void ReplayCustomizationLayer::Pre(vkBuildMicromapsEXTCommand& command) {
+  if (SkipAccelerationStructureWork()) {
+    command.m_Skip = true;
+  }
+}
+
+void ReplayCustomizationLayer::Pre(vkCmdCopyMicromapEXTCommand& command) {
+  if (SkipAccelerationStructureWork()) {
+    command.m_Skip = true;
+  }
+}
+
+void ReplayCustomizationLayer::Pre(vkCopyMicromapEXTCommand& command) {
+  if (SkipAccelerationStructureWork()) {
+    command.m_Skip = true;
+  }
+}
+
+void ReplayCustomizationLayer::Pre(vkCmdCopyMicromapToMemoryEXTCommand& command) {
+  if (SkipAccelerationStructureWork()) {
+    command.m_Skip = true;
+  }
+}
+
+void ReplayCustomizationLayer::Pre(vkCopyMicromapToMemoryEXTCommand& command) {
+  if (SkipAccelerationStructureWork()) {
+    command.m_Skip = true;
+  }
+}
+
+void ReplayCustomizationLayer::Pre(vkCmdCopyMemoryToMicromapEXTCommand& command) {
+  if (SkipAccelerationStructureWork()) {
+    command.m_Skip = true;
+  }
+}
+
+void ReplayCustomizationLayer::Pre(vkCopyMemoryToMicromapEXTCommand& command) {
+  if (SkipAccelerationStructureWork()) {
+    command.m_Skip = true;
+  }
+}
+
+void ReplayCustomizationLayer::Pre(vkCmdWriteMicromapsPropertiesEXTCommand& command) {
+  if (SkipAccelerationStructureWork()) {
+    command.m_Skip = true;
+  }
+}
+
+void ReplayCustomizationLayer::Pre(vkWriteMicromapsPropertiesEXTCommand& command) {
+  if (SkipAccelerationStructureWork()) {
+    command.m_Skip = true;
+  }
+}
+
 void ReplayCustomizationLayer::Pre(vkCmdTraceRaysKHRCommand& command) {
   if (SkipTraceRays()) {
     command.m_Skip = true;

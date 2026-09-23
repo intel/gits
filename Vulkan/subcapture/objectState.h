@@ -73,6 +73,10 @@ struct DeviceState : ObjectState {
   // command variant.
   bool HasBufferDeviceAddressKHR{false};
   bool HasBufferDeviceAddressEXT{false};
+  // True if VK_EXT_opacity_micromap was listed in ppEnabledExtensionNames at vkCreateDevice
+  // time. Gates VK_BUFFER_USAGE_MICROMAP_* on the transient input buffers state restore
+  // creates - the bit is invalid without the extension, so a non-OMM stream must not get it.
+  bool HasOpacityMicromapEXT{false};
 };
 
 // ---- Memory ------------------------------------------------------------
@@ -381,6 +385,14 @@ struct CapturedBuildInputBuffer {
   std::vector<CapturedBuildInputRegion> Regions; // merged, sorted by SrcOffset
 };
 
+// A build input recreated at a freshly reserved address. The caller must relocate the
+// addresses baked into its build command from OldBase to NewBase.
+struct BuildInputRemap {
+  VkDeviceAddress OldBase;
+  VkDeviceSize Size;
+  VkDeviceAddress NewBase;
+};
+
 // Live staging resources for an acceleration-structure build-input readback. These are
 // raw driver handles, not GITS keys. They live as long as the command buffer may be
 // resubmitted and are released when its staged list is cleared.
@@ -403,6 +415,9 @@ struct PendingAsInputReadback {
   uint64_t CommandKey{};
   std::vector<CapturedBuildInputBuffer> Buffers;
   std::vector<StagedInputReadback> Staging; // parallel to Buffers
+  // AsKey names a MicromapState, not an AccelerationStructureState. vkCmdBuildMicromapsEXT
+  // reuses this whole readback path - only the state lookup on completion differs.
+  bool IsMicromap{false};
 };
 
 // Buffered per-CB owner update for one EXCLUSIVE image, applied to
@@ -571,6 +586,15 @@ struct AccelerationStructureState : ObjectState {
   // baked addresses with no patching. Scratch is regenerated fresh instead.
   std::vector<CapturedBuildInputBuffer> CapturedBuildInputs;
 };
+
+struct MicromapState : ObjectState {
+  // From VkMicromapCreateInfoEXT.
+  VkMicromapTypeEXT Type{};
+  uint64_t BufferKey{}; // backing VkBuffer (createInfo.buffer)
+  VkDeviceSize Offset{};
+  VkDeviceSize Size{};
+};
+
 struct DeferredOperationState : ObjectState {};
 
 // ---- Video session objects ---------------------------------------------

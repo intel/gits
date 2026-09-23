@@ -54,3 +54,16 @@ target_link_libraries(Vulkan_coders PRIVATE
 )
 
 set_target_properties(Vulkan_coders PROPERTIES FOLDER Vulkan/Vulkan_common)
+
+# Host-only gate for the generated coders: no GPU, no driver, no stream. Run the executable;
+# it prints failures and exits non-zero.
+add_executable(Vulkan_coders_test
+  ${CMAKE_CURRENT_SOURCE_DIR}/tests/coderRoundTripTest.cpp
+)
+
+target_link_libraries(Vulkan_coders_test PRIVATE
+  Vulkan_coders
+  Vulkan_layer_interface
+)
+
+set_target_properties(Vulkan_coders_test PROPERTIES FOLDER Vulkan/Vulkan_common)

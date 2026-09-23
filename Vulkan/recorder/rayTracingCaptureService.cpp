@@ -29,7 +29,9 @@ void RayTracingCaptureService::GetPhysicalDeviceCapabilities(
       false, // bool m_BufferDeviceAddressCaptureReplay;
       false, // bool m_AccelerationStructureCaptureReplay;
       false, // bool m_RayTracingPipelineShaderGroupHandleCaptureReplay;
-      0      // uint32_t m_ShaderGroupCaptureReplayHandleSize;
+      0,     // uint32_t m_ShaderGroupCaptureReplayHandleSize;
+      false, // bool m_Micromap;
+      false  // bool m_MicromapCaptureReplay;
   };
   const auto& dt = m_Manager.GetInstanceDispatchTable(physicalDevice.Value);
 
@@ -57,9 +59,13 @@ void RayTracingCaptureService::GetPhysicalDeviceCapabilities(
         VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR;
     rayTracingPipelineFeatures.pNext = &accelerationStructureFeatures;
 
+    VkPhysicalDeviceOpacityMicromapFeaturesEXT opacityMicromapFeatures = {};
+    opacityMicromapFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_OPACITY_MICROMAP_FEATURES_EXT;
+    opacityMicromapFeatures.pNext = &rayTracingPipelineFeatures;
+
     VkPhysicalDeviceFeatures2 features = {};
     features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
-    features.pNext = &rayTracingPipelineFeatures;
+    features.pNext = &opacityMicromapFeatures;
 
     vkGetPhysicalDeviceFeatures2Unified(physicalDevice.Value, &features);
 
@@ -75,6 +81,8 @@ void RayTracingCaptureService::GetPhysicalDeviceCapabilities(
     if (rayTracingPipelineFeatures.rayTracingPipelineShaderGroupHandleCaptureReplay) {
       caps.m_RayTracingPipelineShaderGroupHandleCaptureReplay = true;
     }
+    caps.m_Micromap = opacityMicromapFeatures.micromap == VK_TRUE;
+    caps.m_MicromapCaptureReplay = opacityMicromapFeatures.micromapCaptureReplay == VK_TRUE;
   }
   // Properties
   {
@@ -186,6 +194,34 @@ void RayTracingCaptureService::OnPreCreateDevice(vkCreateDeviceCommand& command)
           physicalDeviceCaps.m_ShaderGroupCaptureReplayHandleSize;
     }
   }
+  // Opacity micromap - EXT
+  //
+  // Note the asymmetry with every block above: micromapCaptureReplay is deliberately NOT
+  // force-enabled, and VkMicromapCreateInfoEXT::deviceAddress is left at 0. A micromap is only
+  // ever referenced by handle (dstMicromap, VkAccelerationStructureTrianglesOpacityMicromapEXT::
+  // micromap, VkCopyMicromapInfoEXT), the EXT has no vkGetMicromapDeviceAddressEXT to query an
+  // address with, and pinning the storage buffer's address already reproduces the placement the
+  // spec's "identically created micromap" precondition asks for. See OnPostCreateMicromapEXT.
+  {
+    auto* pOpacityMicromapFeatures = (VkPhysicalDeviceOpacityMicromapFeaturesEXT*)getPNextStructure(
+        pCreateInfo->pNext, VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_OPACITY_MICROMAP_FEATURES_EXT);
+    if (pOpacityMicromapFeatures && pOpacityMicromapFeatures->micromap) {
+      s_DeviceCaps.m_Micromap = true;
+      s_DeviceCaps.m_MicromapCaptureReplay = physicalDeviceCaps.m_MicromapCaptureReplay;
+
+      // Only warned about for apps that actually use micromaps - otherwise every non-OMM title
+      // on a driver without the feature would log this.
+      if (!physicalDeviceCaps.m_MicromapCaptureReplay && !m_MicromapCaptureReplayWarningIssued) {
+        m_MicromapCaptureReplayWarningIssued = true;
+        LOG_WARNING << "Application enabled VkPhysicalDeviceOpacityMicromapFeaturesEXT::micromap "
+                       "but physical device "
+                    << command.m_physicalDevice.Key
+                    << " reports micromapCaptureReplay == VK_FALSE. Micromap content is restored "
+                       "by rebuilding it from captured inputs, which does not need the feature, "
+                       "but no address-pinning fallback is available on this driver.";
+      }
+    }
+  }
 }
 
 void RayTracingCaptureService::OnPostCreateDevice(vkCreateDeviceCommand& command) {
@@ -194,7 +230,13 @@ void RayTracingCaptureService::OnPostCreateDevice(vkCreateDeviceCommand& command
 
 void RayTracingCaptureService::ModifyBufferCreateInfo(GITSKey deviceKey,
                                                       VkBufferCreateInfo& createInfo) {
-  if (isBitSet(createInfo.usage, VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR)) {
+  // MICROMAP_STORAGE is what makes a replayed micromap land on the same storage address: GITS
+  // pins no micromap address of its own, so the buffer's pinned address plus the verbatim
+  // createInfo.offset is the entire reproduction mechanism. MICROMAP_BUILD_INPUT_READ_ONLY is
+  // deliberately not listed - build inputs are ordinary buffers, already pinned via
+  // SHADER_DEVICE_ADDRESS.
+  if (isBitSet(createInfo.usage, VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR) ||
+      isBitSet(createInfo.usage, VK_BUFFER_USAGE_MICROMAP_STORAGE_BIT_EXT)) {
     createInfo.usage |= VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
   }
 
@@ -292,10 +334,11 @@ void RayTracingCaptureService::OnPostCreateAccelerationStructureKHR(
 }
 
 void RayTracingCaptureService::OnPostCreateMicromapEXT(vkCreateMicromapEXTCommand& command) {
-  // Empty - currently device address of a micromap is not used anywhere in the Vulkan API.
-  // What's more, there is actually no way to acquire it (except for calculating it manually
-  // based on a device address of a buffer in which micromap is stored).
-  TODO("Update this function when micromap's device address starts being actually used anywhere!");
+  // Intentionally a no-op, unlike its acceleration structure counterpart above. No micromap
+  // capture/replay address is requested: nothing consumes one (every reference is by handle, and
+  // the EXT has no vkGetMicromapDeviceAddressEXT to query an address with), and pinning the
+  // storage buffer's address already gives the spec's own precondition for a requested address -
+  // identically created micromap and buffer, same offset. Content comes from a rebuild.
 }
 
 void RayTracingCaptureService::OnPreCreateRayTracingPipelinesKHR(

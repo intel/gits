@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "subcaptureLayer.h"
+#include "buildInputCapture.h"
 #include "playerManager.h"
 #include "commandSerializersCustom.h"
 #include "commandSerializersAuto.h"
@@ -33,7 +34,13 @@ SubcaptureLayer::SubcaptureLayer(PlayerManager& playerManager,
       m_SyncState(m_StateTracking),
       m_ImageLayout(m_StateTracking),
       m_CommandBufferLifecycle(m_StateTracking),
-      m_MappedMemory(m_StateTracking) {
+      m_MappedMemory(m_StateTracking),
+      m_Micromap(m_StateTracking,
+                 m_GpuReadbackHelper,
+                 m_CommandBufferLifecycle,
+                 m_AnalyzerResults,
+                 m_SubcaptureRange,
+                 analysisMode) {
   m_StateTracking.SetGpuReadbackHelper(&m_GpuReadbackHelper);
   if (m_AnalysisMode) {
     // Analysis pass: collect in-range object usage; never restore.
@@ -43,6 +50,8 @@ SubcaptureLayer::SubcaptureLayer(PlayerManager& playerManager,
     m_RaytracingOptimizationService = std::make_unique<RaytracingOptimizationService>();
     m_AnalyzerService->SetRaytracingService(m_AnalyzerRaytracingService.get());
     m_AnalyzerService->SetOptimizationService(m_RaytracingOptimizationService.get());
+    m_Micromap.SetAnalyzerService(m_AnalyzerService.get());
+    m_Micromap.SetRaytracingOptimizationService(m_RaytracingOptimizationService.get());
     // Drive the analyzer's TLAS instance readback and flush the chain-reduction graph at
     // submit time, once the staged builds/copies have executed. Flushing at submit gives
     // the chain graph true GPU execution order across command buffers.
@@ -310,6 +319,8 @@ void SubcaptureLayer::Post(vkCreateDeviceCommand& command) {
         state->HasBufferDeviceAddressKHR = true;
       } else if (strcmp(extensionName, VK_EXT_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME) == 0) {
         state->HasBufferDeviceAddressEXT = true;
+      } else if (strcmp(extensionName, VK_EXT_OPACITY_MICROMAP_EXTENSION_NAME) == 0) {
+        state->HasOpacityMicromapEXT = true;
       }
     }
   }
@@ -2150,162 +2161,8 @@ void SubcaptureLayer::Post(vkCmdExecuteCommandsCommand& command) {
 }
 
 // ---- Acceleration structure build/copy dependency tracking -------------
-// Beyond ordinary CB-dependency tracking, a build snapshots its own raw command bytes onto
-// the destination AS state(s) for the rebuild-from-inputs content restore, and folds every
-// source-AS key it can resolve into that AS's DependencyKeys. That single list is then
-// consumed generically by RestoreOne's dependency walk and AnalyzerService::AddClosure.
-namespace {
-void ResolveAndTrackBufferAddress(StateTrackingService& stateTracking,
-                                  VkDeviceAddress address,
-                                  std::vector<uint64_t>& depKeys) {
-  if (address == 0) {
-    return;
-  }
-  auto found = stateTracking.GetDeviceAddressTracking().FindContaining(address);
-  if (found) {
-    depKeys.push_back(found->first);
-  }
-}
-
-void CollectGeometryInputBufferKeys(StateTrackingService& stateTracking,
-                                    const VkAccelerationStructureGeometryKHR& geometry,
-                                    std::vector<uint64_t>& depKeys) {
-  switch (geometry.geometryType) {
-  case VK_GEOMETRY_TYPE_TRIANGLES_KHR: {
-    const VkAccelerationStructureGeometryTrianglesDataKHR& tri = geometry.geometry.triangles;
-    ResolveAndTrackBufferAddress(stateTracking, tri.vertexData.deviceAddress, depKeys);
-    if (tri.indexType != VK_INDEX_TYPE_NONE_KHR) {
-      ResolveAndTrackBufferAddress(stateTracking, tri.indexData.deviceAddress, depKeys);
-    }
-    ResolveAndTrackBufferAddress(stateTracking, tri.transformData.deviceAddress, depKeys);
-    break;
-  }
-  case VK_GEOMETRY_TYPE_AABBS_KHR:
-    ResolveAndTrackBufferAddress(stateTracking, geometry.geometry.aabbs.data.deviceAddress,
-                                 depKeys);
-    break;
-  case VK_GEOMETRY_TYPE_INSTANCES_KHR:
-    if (!geometry.geometry.instances.arrayOfPointers) {
-      ResolveAndTrackBufferAddress(stateTracking, geometry.geometry.instances.data.deviceAddress,
-                                   depKeys);
-    }
-    break;
-  default:
-    break;
-  }
-}
-
-// A raw [Start, End) byte interval within an input buffer, before merging.
-struct RawInputRegion {
-  VkDeviceSize Start{};
-  VkDeviceSize End{};
-};
-
-// Append the exact referenced byte range(s) of one geometry to regionsByBuffer, keyed by the
-// owning buffer. Everything the range math needs - stride/count/format plus the
-// per-geometry build range - is available at build-record time. Vertex spans round the last
-// vertex up to a full stride, so they may run one trailing stride past a tightly-packed
-// buffer. MergeInputRegions clamps that to the buffer size.
-void ComputeGeometryInputRegions(StateTrackingService& stateTracking,
-                                 const VkAccelerationStructureGeometryKHR& geometry,
-                                 const VkAccelerationStructureBuildRangeInfoKHR& range,
-                                 std::map<uint64_t, std::vector<RawInputRegion>>& regionsByBuffer) {
-  auto addRegion = [&](VkDeviceAddress address, VkDeviceSize extraOffset, VkDeviceSize size) {
-    if (address == 0 || size == 0) {
-      return;
-    }
-    auto found = stateTracking.GetDeviceAddressTracking().FindContaining(address);
-    if (!found) {
-      return;
-    }
-    const VkDeviceSize start = found->second + extraOffset;
-    regionsByBuffer[found->first].push_back({start, start + size});
-  };
-
-  switch (geometry.geometryType) {
-  case VK_GEOMETRY_TYPE_TRIANGLES_KHR: {
-    const VkAccelerationStructureGeometryTrianglesDataKHR& tri = geometry.geometry.triangles;
-    if (tri.transformData.deviceAddress != 0) {
-      addRegion(tri.transformData.deviceAddress, range.transformOffset,
-                sizeof(VkTransformMatrixKHR));
-    }
-    if (tri.indexType != VK_INDEX_TYPE_NONE_KHR) {
-      const VkDeviceSize elem = (tri.indexType == VK_INDEX_TYPE_UINT16) ? 2 : 4;
-      addRegion(tri.indexData.deviceAddress, range.primitiveOffset,
-                static_cast<VkDeviceSize>(range.primitiveCount) * 3 * elem);
-      // Indexed: vertices are addressed at vertexData + stride*(firstVertex + index), where
-      // maxVertex is already the highest *effective* index (VUID-...-10774), so firstVertex
-      // must not be added on top of it. Span: [firstVertex, maxVertex + 1) strides.
-      addRegion(tri.vertexData.deviceAddress,
-                static_cast<VkDeviceSize>(range.firstVertex) * tri.vertexStride,
-                (static_cast<VkDeviceSize>(tri.maxVertex) + 1 - range.firstVertex) *
-                    tri.vertexStride);
-    } else {
-      // Non-indexed: vertices are addressed at
-      // vertexData + primitiveOffset + stride*(firstVertex + i), i in [0, primitiveCount*3).
-      addRegion(tri.vertexData.deviceAddress,
-                range.primitiveOffset +
-                    static_cast<VkDeviceSize>(range.firstVertex) * tri.vertexStride,
-                static_cast<VkDeviceSize>(range.primitiveCount) * 3 * tri.vertexStride);
-    }
-    break;
-  }
-  case VK_GEOMETRY_TYPE_AABBS_KHR: {
-    const VkAccelerationStructureGeometryAabbsDataKHR& aabbs = geometry.geometry.aabbs;
-    addRegion(aabbs.data.deviceAddress, range.primitiveOffset,
-              static_cast<VkDeviceSize>(range.primitiveCount) * aabbs.stride);
-    break;
-  }
-  case VK_GEOMETRY_TYPE_INSTANCES_KHR: {
-    const VkAccelerationStructureGeometryInstancesDataKHR& inst = geometry.geometry.instances;
-    if (!inst.arrayOfPointers) {
-      addRegion(inst.data.deviceAddress, range.primitiveOffset,
-                static_cast<VkDeviceSize>(range.primitiveCount) *
-                    sizeof(VkAccelerationStructureInstanceKHR));
-    }
-    // arrayOfPointers instance data is not captured (parity with the analyzer's
-    // TLAS->BLAS discovery, which also skips it).
-    break;
-  }
-  default:
-    break;
-  }
-}
-
-// Merge overlapping/adjacent raw regions into minimal sorted intervals, clamped to the
-// buffer size. Hash is left 0, filled at submit-time readback.
-std::vector<CapturedBuildInputRegion> MergeInputRegions(std::vector<RawInputRegion> regions,
-                                                        VkDeviceSize bufferSize) {
-  std::vector<CapturedBuildInputRegion> merged;
-  if (regions.empty()) {
-    return merged;
-  }
-  std::sort(regions.begin(), regions.end(),
-            [](const RawInputRegion& a, const RawInputRegion& b) { return a.Start < b.Start; });
-  VkDeviceSize curStart = regions[0].Start;
-  VkDeviceSize curEnd = regions[0].End;
-  // A region may run one trailing vertex-stride past a tightly-packed buffer. Clamping is
-  // safe, since the GPU cannot read past the buffer end either.
-  auto flush = [&]() {
-    VkDeviceSize s = std::min(curStart, bufferSize);
-    VkDeviceSize e = std::min(curEnd, bufferSize);
-    if (e > s) {
-      merged.push_back({s, e - s, 0});
-    }
-  };
-  for (size_t i = 1; i < regions.size(); ++i) {
-    if (regions[i].Start <= curEnd) {
-      curEnd = std::max(curEnd, regions[i].End);
-    } else {
-      flush();
-      curStart = regions[i].Start;
-      curEnd = regions[i].End;
-    }
-  }
-  flush();
-  return merged;
-}
-} // namespace
+// The region math and readback staging live in buildInputCapture.{h,cpp}, the micromap hooks in
+// micromapStateService.{h,cpp}.
 
 void SubcaptureLayer::Pre(vkCmdBuildAccelerationStructuresKHRCommand& command) {
   // Record the input-buffer readback copies into the application's command buffer before the
@@ -2365,49 +2222,23 @@ void SubcaptureLayer::Pre(vkCmdBuildAccelerationStructuresKHRCommand& command) {
     PendingAsInputReadback pending;
     pending.AsKey = dstKey;
     pending.CommandKey = command.m_Key;
-    for (auto& [bufKey, raw] : regionsByBuffer) {
-      // Destroyed buffers are retained only when they back an acceleration structure, and
-      // their handles are dead, so a stale device-address hit means "no such buffer".
-      auto* buf = m_StateTracking.GetState<BufferState>(bufKey);
-      if (!buf || buf->Destroyed || buf->BufferSize == 0 || buf->BoundMemoryKey == 0) {
-        continue;
-      }
-      auto* mem = m_StateTracking.GetState<DeviceMemoryState>(buf->BoundMemoryKey);
-      if (!mem || mem->Destroyed) {
-        continue;
-      }
-      CapturedBuildInputBuffer cbuf;
-      cbuf.BufferKey = bufKey;
-      cbuf.Size = buf->BufferSize;
-      cbuf.BufferOpaqueCaptureAddress = buf->OpaqueCaptureAddress;
-      cbuf.MemoryOpaqueCaptureAddress = mem->OpaqueCaptureAddress;
-      cbuf.MemoryTypeIndex = mem->MemoryTypeIndex;
-      cbuf.MemoryOffset = buf->MemoryOffset;
-      cbuf.BaseDeviceAddress = buf->DeviceAddress;
-      cbuf.Regions = MergeInputRegions(std::move(raw), buf->BufferSize);
-      if (cbuf.Regions.empty()) {
-        continue;
-      }
-      StagedInputReadback staging;
-      if (!m_GpuReadbackHelper.StageBufferRegions(deviceKey, physDevKey, cbKey, bufKey,
-                                                  cbuf.Regions, staging)) {
-        LOG_WARNING << "Vulkan subcapture: failed to stage acceleration structure build input copy "
-                       "(buffer key="
-                    << bufKey << "); rebuild may be incomplete if this buffer is freed";
-        continue;
-      }
-      pending.Buffers.push_back(std::move(cbuf));
-      pending.Staging.push_back(staging);
-    }
+    StageBuildInputReadbacks(m_StateTracking, m_GpuReadbackHelper, deviceKey, physDevKey, cbKey,
+                             regionsByBuffer, "acceleration structure", pending);
     if (!pending.Buffers.empty()) {
       cbState->AsInputReadbacksAfterSubmit.push_back(std::move(pending));
     }
   }
 }
 
+void SubcaptureLayer::Pre(vkCmdBuildMicromapsEXTCommand& command) {
+  m_Micromap.OnCmdBuildPre(command);
+}
+
 void SubcaptureLayer::RequireBlasChainForRaytracing(const char* commandName) {
-  if (m_AnalysisMode || !m_SubcaptureRange.BeforeRange() ||
-      !m_AnalyzerResults.CaptureAsBuildInputs() || m_AnalyzerResults.HasBlasChain()) {
+  const bool unrestorable = !m_AnalysisMode && m_SubcaptureRange.BeforeRange() &&
+                            m_AnalyzerResults.CaptureAsBuildInputs() &&
+                            !m_AnalyzerResults.HasBlasChain();
+  if (!unrestorable) {
     return;
   }
   FatalSubcaptureError(
@@ -2516,6 +2347,18 @@ void SubcaptureLayer::Post(vkCmdBuildAccelerationStructuresKHRCommand& command) 
   // Recording pass: keep the whole command's bytes for chain replay if it is a
   // retained BLAS op (no-op in analysis mode / without a loaded BlasChain).
   m_StateTracking.StoreRetainedAsCommandBytes(command.m_Key, encoded, /*isCopy=*/false);
+
+  // Analysis pass: remember which micromaps this build reads, so a build retained in the reduced
+  // BLAS chain can pull them into the restore closure.
+  m_Micromap.NoteAsBuildMicromapReads(command);
+}
+
+void SubcaptureLayer::Post(vkCmdBuildMicromapsEXTCommand& command) {
+  m_Micromap.OnCmdBuild(command);
+}
+
+void SubcaptureLayer::Post(vkCmdCopyMicromapEXTCommand& command) {
+  m_Micromap.OnCmdCopy(command);
 }
 
 // VK_ACCELERATION_STRUCTURE_TYPE_GENERIC_KHR is currently not supported.
@@ -2542,8 +2385,23 @@ void SubcaptureLayer::RefuseUnsupportedRaytracingCommand(const char* commandName
       ", which subcapture does not track. Acceleration structure and micromap content "
       "written by it cannot be restored, and structures and buffers it reads are invisible "
       "to the analysis pass, so they may be dropped from the restore set. Only "
-      "vkCmdBuildAccelerationStructuresKHR and vkCmdCopyAccelerationStructureKHR are "
-      "supported so far; subcapturing this stream is not possible yet");
+      "vkCmdBuildAccelerationStructuresKHR, vkCmdCopyAccelerationStructureKHR, "
+      "vkCmdBuildMicromapsEXT and vkCmdCopyMicromapEXT are supported so far; subcapturing this "
+      "stream is not possible yet");
+}
+
+// Split out from the device-side refusal because "not possible yet" is misleading for the host
+// build/copy family - those are not a missing feature but a structural limitation.
+void SubcaptureLayer::RefuseUnsupportedHostRaytracingCommand(const char* commandName) {
+  if (!m_SubcaptureRange.BeforeRange() && !m_SubcaptureRange.InRange()) {
+    return; // after the range: cannot affect the subcapture
+  }
+  FatalSubcaptureError(
+      std::string("the stream calls ") + commandName +
+      ", a host-side build or copy. Subcapture cannot restore what it writes, by construction: "
+      "its inputs are VkDeviceOrHostAddress host pointers, which the recorder byte-copies "
+      "without ever following, so the source data is not in the stream at all. Only the "
+      "device-side vkCmd* variants can be subcaptured");
 }
 
 // Untracked writers of acceleration structure or micromap content. See the declarations
@@ -2553,11 +2411,11 @@ void SubcaptureLayer::Post(vkCmdBuildAccelerationStructuresIndirectKHRCommand& c
 }
 
 void SubcaptureLayer::Post(vkBuildAccelerationStructuresKHRCommand& command) {
-  RefuseUnsupportedRaytracingCommand("vkBuildAccelerationStructuresKHR");
+  RefuseUnsupportedHostRaytracingCommand("vkBuildAccelerationStructuresKHR");
 }
 
 void SubcaptureLayer::Post(vkCopyAccelerationStructureKHRCommand& command) {
-  RefuseUnsupportedRaytracingCommand("vkCopyAccelerationStructureKHR");
+  RefuseUnsupportedHostRaytracingCommand("vkCopyAccelerationStructureKHR");
 }
 
 void SubcaptureLayer::Post(vkCmdCopyMemoryToAccelerationStructureKHRCommand& command) {
@@ -2565,7 +2423,7 @@ void SubcaptureLayer::Post(vkCmdCopyMemoryToAccelerationStructureKHRCommand& com
 }
 
 void SubcaptureLayer::Post(vkCopyMemoryToAccelerationStructureKHRCommand& command) {
-  RefuseUnsupportedRaytracingCommand("vkCopyMemoryToAccelerationStructureKHR");
+  RefuseUnsupportedHostRaytracingCommand("vkCopyMemoryToAccelerationStructureKHR");
 }
 
 void SubcaptureLayer::Post(vkCmdBuildAccelerationStructureNVCommand& command) {
@@ -2576,20 +2434,12 @@ void SubcaptureLayer::Post(vkCmdCopyAccelerationStructureNVCommand& command) {
   RefuseUnsupportedRaytracingCommand("vkCmdCopyAccelerationStructureNV");
 }
 
-void SubcaptureLayer::Post(vkCmdBuildMicromapsEXTCommand& command) {
-  RefuseUnsupportedRaytracingCommand("vkCmdBuildMicromapsEXT");
-}
-
 void SubcaptureLayer::Post(vkBuildMicromapsEXTCommand& command) {
-  RefuseUnsupportedRaytracingCommand("vkBuildMicromapsEXT");
-}
-
-void SubcaptureLayer::Post(vkCmdCopyMicromapEXTCommand& command) {
-  RefuseUnsupportedRaytracingCommand("vkCmdCopyMicromapEXT");
+  RefuseUnsupportedHostRaytracingCommand("vkBuildMicromapsEXT");
 }
 
 void SubcaptureLayer::Post(vkCopyMicromapEXTCommand& command) {
-  RefuseUnsupportedRaytracingCommand("vkCopyMicromapEXT");
+  RefuseUnsupportedHostRaytracingCommand("vkCopyMicromapEXT");
 }
 
 void SubcaptureLayer::Post(vkCmdCopyMemoryToMicromapEXTCommand& command) {
@@ -2597,7 +2447,7 @@ void SubcaptureLayer::Post(vkCmdCopyMemoryToMicromapEXTCommand& command) {
 }
 
 void SubcaptureLayer::Post(vkCopyMemoryToMicromapEXTCommand& command) {
-  RefuseUnsupportedRaytracingCommand("vkCopyMemoryToMicromapEXT");
+  RefuseUnsupportedHostRaytracingCommand("vkCopyMemoryToMicromapEXT");
 }
 
 void SubcaptureLayer::Post(vkCmdCopyAccelerationStructureKHRCommand& command) {
@@ -3143,6 +2993,16 @@ void SubcaptureLayer::Post(vkCreateAccelerationStructureNVCommand& command) {
 
 void SubcaptureLayer::Post(vkDestroyAccelerationStructureNVCommand& command) {
   m_StateTracking.RemoveState(command.m_accelerationStructure.Key);
+}
+
+// ---- Micromaps -----------------------------------------------------------
+
+void SubcaptureLayer::Post(vkCreateMicromapEXTCommand& command) {
+  m_Micromap.OnCreate(command);
+}
+
+void SubcaptureLayer::Post(vkDestroyMicromapEXTCommand& command) {
+  m_Micromap.OnDestroy(command);
 }
 
 // ---- Deferred operations -------------------------------------------------

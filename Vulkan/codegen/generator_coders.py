@@ -325,7 +325,11 @@ def get_size_lines(structure, structures_list, unions_list, var_name):
             if member.length and member.is_pointer_to_pointer:
                 outer = member.length[0]
                 inner = get_inner_count(member.length[1], var_name)
+                # A pointer-to-pointer member needs its own offset table in the blob - one slot per
+                # outer element - because the pointers the application handed us are meaningless in
+                # the player process. Same layout as GetStringArraySize: [table][payloads].
                 lines.append(f'if ({var_name}->{member.name} && {var_name}->{outer} > 0) {{')
+                lines.append(f'  blobSize += sizeof({member.base_type}*) * {var_name}->{outer};')
                 lines.append(f'  for (uint32_t j = 0; j < {var_name}->{outer}; ++j) {{')
                 lines.append(f'    blobSize += GetSize({var_name}->{member.name}[j], {inner});')
                 lines.append('  }')
@@ -344,7 +348,10 @@ def get_size_lines(structure, structures_list, unions_list, var_name):
             if member.length and member.is_pointer_to_pointer:
                 outer = member.length[0]
                 inner = get_inner_count(member.length[1], var_name)
+                # See the complex_struct branch above - the offset table is what makes the member
+                # round-trip. Without it the payload bytes were both over-read and unreachable.
                 lines.append(f'if ({var_name}->{member.name} && {var_name}->{outer} > 0) {{')
+                lines.append(f'  blobSize += sizeof({member.base_type}*) * {var_name}->{outer};')
                 lines.append(f'  blobSize += sizeof({member.base_type}) * {var_name}->{outer} * {inner};')
                 lines.append('}')
             elif member.length and member.is_pointer:
@@ -460,11 +467,25 @@ def get_encode_lines(structure, structures_list, unions_list, var_name_src, var_
             if member.length and member.is_pointer_to_pointer:
                 outer = member.length[0]
                 inner = get_inner_count(member.length[1], var_name_src)
+                # The table must never be written through {dst}->{member}: {dst} is the struct
+                # memcpy'd into the blob, so that member still holds the application's table pointer
+                # and the writes would land in application memory. Reserve a table in the blob,
+                # point the member at it, and fill the slots through the blob pointer instead.
                 lines.append(f'if ({var_name_src}->{member.name} && {var_name_src}->{outer} > 0) {{')
+                lines.append(f'  const uint32_t tableBase_{member.name} = offset;')
+                lines.append(f'  offset += static_cast<uint32_t>(sizeof({member.base_type}*)) * {var_name_src}->{outer};')
+                lines.append(f'  {var_name_dst}->{member.name} = reinterpret_cast<decltype({var_name_dst}->{member.name})>(static_cast<uintptr_t>(tableBase_{member.name}));')
+                lines.append(f'  auto** table_{member.name} = reinterpret_cast<{member.base_type}**>(dst + tableBase_{member.name});')
                 lines.append(f'  for (uint32_t j = 0; j < {var_name_src}->{outer}; ++j) {{')
-                lines.append(f'    const_cast<{member.base_type}*&>({var_name_dst}->{member.name}[j]) = reinterpret_cast<{member.base_type}*>(static_cast<uintptr_t>(offset));')
-                lines.append(f'    Encode({var_name_src}->{member.name}[j], {inner}, dst, offset);')
+                lines.append(f'    if ({var_name_src}->{member.name}[j]) {{')
+                lines.append(f'      table_{member.name}[j] = reinterpret_cast<{member.base_type}*>(static_cast<uintptr_t>(offset));')
+                lines.append(f'      Encode({var_name_src}->{member.name}[j], {inner}, dst, offset);')
+                lines.append('    } else {')
+                lines.append(f'      table_{member.name}[j] = nullptr;')
+                lines.append('    }')
                 lines.append('  }')
+                lines.append('} else {')
+                lines.append(f'  {var_name_dst}->{member.name} = nullptr;')
                 lines.append('}')
             elif member.length and member.is_pointer:
                 lines.append(f'if ({var_name_src}->{member.name} && {var_name_src}->{member.length} > 0) {{')
@@ -487,10 +508,25 @@ def get_encode_lines(structure, structures_list, unions_list, var_name_src, var_
             if member.length and member.is_pointer_to_pointer:
                 outer = member.length[0]
                 inner = get_inner_count(member.length[1], var_name_src)
+                # See the complex_struct branch above for why the table lives in the blob. The old
+                # code memcpy'd sizeof(T) * outer bytes straight out of an outer-pointer table,
+                # over-reading the heap and storing pointer bit patterns where values belong.
                 lines.append(f'if ({var_name_src}->{member.name} && {var_name_src}->{outer} > 0) {{')
-                lines.append(f'  {var_name_dst}->{member.name} = reinterpret_cast<{member.base_type}**>(static_cast<uintptr_t>(offset));')
-                lines.append(f'  std::memcpy(dst + offset, {var_name_src}->{member.name}, sizeof({member.base_type}) * {var_name_src}->{outer} * {inner});')
-                lines.append(f'  offset += sizeof({member.base_type}) * {var_name_src}->{outer} * {inner};')
+                lines.append(f'  const uint32_t tableBase_{member.name} = offset;')
+                lines.append(f'  offset += static_cast<uint32_t>(sizeof({member.base_type}*)) * {var_name_src}->{outer};')
+                lines.append(f'  {var_name_dst}->{member.name} = reinterpret_cast<decltype({var_name_dst}->{member.name})>(static_cast<uintptr_t>(tableBase_{member.name}));')
+                lines.append(f'  auto** table_{member.name} = reinterpret_cast<{member.base_type}**>(dst + tableBase_{member.name});')
+                lines.append(f'  for (uint32_t j = 0; j < {var_name_src}->{outer}; ++j) {{')
+                lines.append(f'    if ({var_name_src}->{member.name}[j]) {{')
+                lines.append(f'      table_{member.name}[j] = reinterpret_cast<{member.base_type}*>(static_cast<uintptr_t>(offset));')
+                lines.append(f'      std::memcpy(dst + offset, {var_name_src}->{member.name}[j], sizeof({member.base_type}) * {inner});')
+                lines.append(f'      offset += sizeof({member.base_type}) * {inner};')
+                lines.append('    } else {')
+                lines.append(f'      table_{member.name}[j] = nullptr;')
+                lines.append('    }')
+                lines.append('  }')
+                lines.append('} else {')
+                lines.append(f'  {var_name_dst}->{member.name} = nullptr;')
                 lines.append('}')
             elif member.length and member.is_pointer:
                 lines.append(f'if ({var_name_src}->{member.name} && {var_name_src}->{member.length} > 0) {{')
@@ -627,10 +663,15 @@ def get_decode_lines(structure, structures_list, unions_list, var_name):
             if member.length and member.is_pointer_to_pointer:
                 outer = member.length[0]
                 inner = get_inner_count(member.length[1], var_name)
+                # Reach the blob's offset table first, then relocate each slot within it.
                 lines.append(f'if ({var_name}->{member.name} && {var_name}->{outer} > 0) {{')
+                lines.append(f'  {var_name}->{member.name} = AddPtrs({var_name}->{member.name}, src);')
+                lines.append(f'  offset += static_cast<uint32_t>(sizeof({member.base_type}*)) * {var_name}->{outer};')
                 lines.append(f'  for (uint32_t j = 0; j < {var_name}->{outer}; ++j) {{')
-                lines.append(f'    const_cast<{member.base_type}*&>({var_name}->{member.name}[j]) = AddPtrs({var_name}->{member.name}[j], src);')
-                lines.append(f'    Decode({var_name}->{member.name}[j], {inner}, src, offset);')
+                lines.append(f'    if ({var_name}->{member.name}[j]) {{')
+                lines.append(f'      const_cast<{member.base_type}*&>({var_name}->{member.name}[j]) = AddPtrs({var_name}->{member.name}[j], src);')
+                lines.append(f'      Decode({var_name}->{member.name}[j], {inner}, src, offset);')
+                lines.append('    }')
                 lines.append('  }')
                 lines.append('}')
             elif member.length and member.is_pointer:
@@ -649,9 +690,16 @@ def get_decode_lines(structure, structures_list, unions_list, var_name):
             if member.length and member.is_pointer_to_pointer:
                 outer = member.length[0]
                 inner = get_inner_count(member.length[1], var_name)
+                # See the complex_struct branch above.
                 lines.append(f'if ({var_name}->{member.name} && {var_name}->{outer} > 0) {{')
                 lines.append(f'  {var_name}->{member.name} = AddPtrs({var_name}->{member.name}, src);')
-                lines.append(f'  offset += sizeof({member.base_type}) * {var_name}->{outer} * {inner};')
+                lines.append(f'  offset += static_cast<uint32_t>(sizeof({member.base_type}*)) * {var_name}->{outer};')
+                lines.append(f'  for (uint32_t j = 0; j < {var_name}->{outer}; ++j) {{')
+                lines.append(f'    if ({var_name}->{member.name}[j]) {{')
+                lines.append(f'      const_cast<{member.base_type}*&>({var_name}->{member.name}[j]) = AddPtrs({var_name}->{member.name}[j], src);')
+                lines.append(f'      offset += sizeof({member.base_type}) * {inner};')
+                lines.append('    }')
+                lines.append('  }')
                 lines.append('}')
             elif member.length and member.is_pointer:
                 lines.append(f'if ({var_name}->{member.name} && {var_name}->{member.length} > 0) {{')

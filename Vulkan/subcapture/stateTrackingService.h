@@ -13,6 +13,7 @@
 #include "descriptorSetUpdateService.h"
 #include "queryPoolStateService.h"
 #include "deviceAddressTrackingService.h"
+#include "micromapRestoreService.h"
 
 #include <functional>
 #include <map>
@@ -206,6 +207,12 @@ public:
       const uint32_t* pMaxPrimitiveCounts,
       VkAccelerationStructureBuildSizesInfoKHR& outSizes) = 0;
 
+  // Same for a micromap build. Sizes are driven by pUsageCounts/ppUsageCounts, not by
+  // dstMicromap or mode, and the captured scratch is just as untrustworthy.
+  virtual bool QueryMicromapBuildSizes(uint64_t deviceKey,
+                                       const VkMicromapBuildInfoEXT& buildInfo,
+                                       VkMicromapBuildSizesInfoEXT& outSizes) = 0;
+
   // Reserves a capture/replay-stable VkDeviceAddress for a not-yet-created scratch
   // buffer of 'size' bytes. The caller emits creation commands supplying these same
   // opaque addresses, so the driver reproduces outDeviceAddress and it can be hardcoded
@@ -230,6 +237,10 @@ public:
 
 // Owns and manages the per-object state tables populated by SubcaptureLayer.
 // All public methods are called from the player thread only (no locking needed).
+//
+// The micromap half of the content-restore pass lives in MicromapRestoreService, a friend
+// declared below. Its record-time counterpart MicromapStateService is owned by SubcaptureLayer
+// and uses only the public API.
 class StateTrackingService {
 public:
   explicit StateTrackingService(SubcaptureRecorder& recorder);
@@ -349,6 +360,13 @@ public:
                                    const std::vector<char>& bytes,
                                    bool isCopy);
 
+  // The same, for a retained micromap chain command. Shares the store: command keys are
+  // unique across command types, so only the retention predicate differs. Read back by
+  // MicromapRestoreService, which only ever looks up keys named by the loaded MicromapChain.
+  void StoreRetainedMicromapCommandBytes(uint64_t commandKey,
+                                         const std::vector<char>& bytes,
+                                         bool isCopy);
+
   // Release the live staging buffers behind a command buffer's staged AS build-input
   // readbacks. Call before its staged list is cleared, so they are not leaked.
   void FreeCommandBufferStagedReadbacks(CommandBufferState& cb);
@@ -441,10 +459,45 @@ private:
                                      uint64_t memoryOpaqueCaptureAddress,
                                      VkDeviceAddress deviceAddress);
 
+  // Tear down what EmitCaptureReplayBufferCreate made: one vkDestroyBuffer plus one vkFreeMemory.
+  void EmitCaptureReplayBufferDestroy(uint64_t deviceKey, uint64_t bufKey, uint64_t memKey);
+
   // Flag asKey's backing buffer as content-restored so RestoreBufferContents leaves it
   // alone. Must be called for every acceleration structure whose content a restore path
   // regenerates. See the definition for why a raw byte copy over its storage is invalid.
+  // The micromap counterpart is MicromapRestoreService::MarkBackingContentRestored.
   void MarkAccelerationStructureBackingContentRestored(uint64_t asKey);
+
+  // Recreate each captured input at - or, where its captured address is unreproducible,
+  // relocated from - its original device address and upload its bytes. Shared by the
+  // acceleration structure and micromap rebuild paths. Entries are merged by buffer key first,
+  // since a multi-info build accumulates them per destination. Appends every transient
+  // (buffer, memory) pair to outTransients for the caller to destroy, and every relocation the
+  // caller must apply to outRemaps. logObjectKey/logObjectKind only shape diagnostics.
+  void EmitCapturedBuildInputs(uint64_t deviceKey,
+                               uint64_t physDevKey,
+                               uint64_t queueKey,
+                               uint64_t poolKey,
+                               const std::vector<CapturedBuildInputBuffer>& capturedInputs,
+                               VkBufferUsageFlags inputUsage,
+                               uint64_t logObjectKey,
+                               const char* logObjectKind,
+                               std::vector<std::pair<uint64_t, uint64_t>>& outTransients,
+                               std::vector<BuildInputRemap>& outRemaps);
+
+  // Allocate a one-shot command buffer under cbKey, begin it, run recordBody (which records
+  // the single command, already patched to cbKey), then end, submit, wait idle and free.
+  // Every content-restore GPU op needs exactly this scaffolding.
+  void EmitOneShotCommandBuffer(uint64_t deviceKey,
+                                uint64_t queueKey,
+                                uint64_t poolKey,
+                                uint64_t cbKey,
+                                const std::function<void()>& recordBody);
+
+  // Buffer usage for build inputs the restore recreates. The opacity micromap read-only bit
+  // is added only when the device enabled VK_EXT_opacity_micromap, since the bit is invalid
+  // without it - a non-OMM stream must not acquire it.
+  VkBufferUsageFlags BuildInputBufferUsage(uint64_t deviceKey, bool forMicromap);
 
   // Rebuild-from-inputs content restore: replays asKey's last captured
   // vkCmdBuildAccelerationStructuresKHR (re-uploading its input buffers first), and its update
@@ -463,24 +516,17 @@ private:
                                         uint64_t poolKey,
                                         const AccelerationStructureState& asState);
 
-  // Core replay used by both the per-AS wrapper above and the chain replay. Replays the
-  // build command bytes verbatim - each info keeps the mode the application recorded -
-  // against re-uploaded captured inputs and a freshly reserved scratch buffer. logAsKey
-  // is used only for logging.
+  // Core replay used by both the per-AS wrapper above and the chain replay. Replays the build
+  // command bytes verbatim - each info keeps the mode the application recorded - against
+  // re-uploaded captured inputs and a freshly reserved scratch buffer. logAsKey only shapes
+  // diagnostics.
   //
-  // capturedInputs may hold several entries for one buffer - a multi-info build accumulates
-  // them per destination - and they are merged by buffer key before use.
+  // keepDstAsKeys is the set of destinations this replay exists to produce, the rest being
+  // dropped before the command is emitted (see RemoveUnreferencedAsBuildInfos).
   //
-  // keepDstAsKeys is the set of destinations this replay exists to produce. A captured command
-  // can write many structures at once and the rest are dropped before it is emitted (see
-  // RemoveUnreferencedAsBuildInfos) - replaying them at worst runs an update whose source the
-  // chain reduction deliberately did not produce.
-  //
-  // updateSourceByDstAs maps a destination AS key to the source an UPDATE-mode info
-  // targeting it must refit from, replacing the recorded source that the chain reduction
-  // may have dropped. Only the chain replay supplies it, since the per-AS path retains no
-  // predecessor. An UPDATE-mode info with no source available aborts the run rather
-  // than being rewritten into a BUILD, which would emit a different operation.
+  // updateSourceByDstAs repoints an UPDATE-mode info at the source the chain reduction retained,
+  // replacing the recorded one it may have dropped. Only the chain replay supplies it. An UPDATE
+  // with no source aborts the run rather than being rewritten into a BUILD, a different operation.
   void EmitAccelerationStructureRebuildBytes(
       uint64_t deviceKey,
       uint64_t physDevKey,
@@ -563,12 +609,16 @@ private:
   // replaying in-flight command buffer commands during state restore).
   void EmitRawCommand(CommandId id, const std::vector<char>& encoded);
 
+  // MicromapRestoreService is the opacity micromap half of the content-restore pass.
+  friend class MicromapRestoreService;
+
   SubcaptureRecorder& m_Recorder;
   IGpuReadbackHelper* m_GpuReadbackHelper{nullptr};
   const AnalyzerResults* m_AnalyzerResults{nullptr};
   DescriptorSetUpdateService m_DescriptorSetUpdateService;
   QueryPoolStateService m_QueryPoolState{*this};
   DeviceAddressTrackingService m_DeviceAddressTracking;
+  MicromapRestoreService m_MicromapRestore{*this};
   // Single ordered container: key (sequential integer) -> owned state.
   // std::map keeps entries sorted by key, which equals creation order because
   // Vulkan keys are sequential integers assigned by the coder, exactly the

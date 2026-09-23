@@ -13,6 +13,7 @@
 #include "stateTrackingService.h"
 #include "objectState.h"
 #include "configurator.h"
+#include "subcaptureFatal.h"
 #include "log.h"
 
 #include "yaml-cpp/yaml.h"
@@ -68,6 +69,18 @@ void AnalyzerService::NoteInRangeAsWrite(uint64_t asKey) {
 void AnalyzerService::NoteInRangeAsRead(uint64_t asKey) {
   if (m_Optimize && asKey && m_SubcaptureRange.InRange()) {
     m_AsReadInRange.insert(asKey);
+  }
+}
+
+void AnalyzerService::NoteInRangeMicromapWrite(uint64_t micromapKey) {
+  if (m_Optimize && micromapKey && m_SubcaptureRange.InRange()) {
+    m_MicromapWrittenInRange.insert(micromapKey);
+  }
+}
+
+void AnalyzerService::NoteInRangeMicromapRead(uint64_t micromapKey) {
+  if (m_Optimize && micromapKey && m_SubcaptureRange.InRange()) {
+    m_MicromapReadInRange.insert(micromapKey);
   }
 }
 
@@ -196,6 +209,7 @@ void AnalyzerService::DumpAnalysisFile() {
   // set is every BLAS in the closure, which covers both "referenced by an in-range
   // TLAS" and "used directly by an in-range command".
   std::vector<RaytracingOptimizationService::OptimizedAsCommand> blasChain;
+  std::vector<RaytracingOptimizationService::OptimizedMicromapCommand> micromapChain;
   if (m_OptimizationService) {
     std::unordered_set<uint64_t> usedBlasKeys;
     for (uint64_t key : closure) {
@@ -214,6 +228,82 @@ void AnalyzerService::DumpAnalysisFile() {
     for (const auto& op : blasChain) {
       AddClosure(op.DstAsKey, closure);
       AddClosure(op.SrcAsKey, closure);
+      if (!op.IsCopy) {
+        for (uint64_t mmKey : m_OptimizationService->GetAsBuildMicromaps(op.CommandKey)) {
+          AddClosure(mmKey, closure);
+        }
+      }
+    }
+
+    // Reduce the micromap chains the same way, seeded from the closure the acceleration
+    // structure pass just grew - a micromap matters if an in-range command or a retained
+    // pre-range build can reach it. Must run after Optimize, which decides retention.
+    std::unordered_set<uint64_t> retainedAsCommandKeys;
+    for (const auto& op : blasChain) {
+      retainedAsCommandKeys.insert(op.CommandKey);
+    }
+    // No DestroyedBeforeRange filter, unlike the acceleration structures above: a micromap
+    // destroyed before the range is still needed when a retained pre-range build names it,
+    // because that build is replayed during state restore. Being in the closure is the test.
+    std::unordered_set<uint64_t> usedMicromapKeys;
+    for (uint64_t key : closure) {
+      if (m_StateTracking.GetState<MicromapState>(key)) {
+        usedMicromapKeys.insert(key);
+      }
+    }
+    m_OptimizationService->OptimizeMicromaps(usedMicromapKeys, retainedAsCommandKeys);
+    micromapChain = m_OptimizationService->GetOptimizedMicromapCommands();
+    // A compaction source no consumer names directly still has to survive to be rebuilt
+    // during the chain replay, exactly as for acceleration structures.
+    for (const auto& op : micromapChain) {
+      AddClosure(op.DstMicromapKey, closure);
+      AddClosure(op.SrcMicromapKey, closure);
+    }
+
+    // Same failure mode as the unproduced structures below: a micromap the range reads but
+    // never writes replays uninitialized, and an acceleration structure built over it is
+    // malformed. A micromap the range builds itself is legitimately left empty by the restore.
+    if (Configurator::Get().common.player.subcapture.vulkan.captureASBuildInputs) {
+      std::unordered_set<uint64_t> micromapChainDstKeys;
+      for (const auto& op : micromapChain) {
+        micromapChainDstKeys.insert(op.DstMicromapKey);
+      }
+      std::vector<uint64_t> unproducedMicromaps;
+      for (uint64_t key : m_MicromapReadInRange) {
+        if (!m_MicromapWrittenInRange.count(key) && !micromapChainDstKeys.count(key) &&
+            closure.count(key)) {
+          unproducedMicromaps.push_back(key);
+        }
+      }
+      if (!unproducedMicromaps.empty()) {
+        std::ostringstream keys;
+        for (size_t i = 0; i < unproducedMicromaps.size() && i < 8; ++i) {
+          keys << (i ? ", " : "") << unproducedMicromaps[i];
+        }
+        if (unproducedMicromaps.size() > 8) {
+          keys << ", ... (" << unproducedMicromaps.size() << " total)";
+        }
+        LOG_WARNING << "Vulkan subcapture: " << unproducedMicromaps.size()
+                    << " micromap(s) are read inside the range but never written there, and no "
+                       "retained operation produces them - the acceleration structures built "
+                       "over them will be malformed: keys "
+                    << keys.str();
+      }
+    }
+
+    // The restore reproduces one content per micromap - whatever its last pre-range op wrote.
+    // A retained build that read an earlier content would be replayed over the wrong opacity
+    // data, which no later pass can detect, so refuse instead.
+    for (const auto& conflict : m_OptimizationService->GetMicromapOverwriteConflicts()) {
+      FatalSubcaptureError(
+          "micromap key=" + std::to_string(conflict.MicromapKey) +
+          " is overwritten by command key=" + std::to_string(conflict.OverwritingCommandKey) +
+          " after acceleration structure build command key=" +
+          std::to_string(conflict.AsBuildCommandKey) + " consumed the content written by " +
+          "command key=" + std::to_string(conflict.ConsumedCommandKey) +
+          ". That build is retained by the restore, which can only reproduce the micromap's "
+          "final content, so subcapturing this stream would rebuild it over the wrong opacity "
+          "data");
     }
 
     // Anything the range reads but never writes has to come out of the restore. A structure
@@ -280,6 +370,23 @@ void AnalyzerService::DumpAnalysisFile() {
     emitter << YAML::Key << "DstAs" << YAML::Value << op.DstAsKey;
     emitter << YAML::Key << "SrcCmd" << YAML::Value << op.SourceCommandKey;
     emitter << YAML::Key << "SrcAs" << YAML::Value << op.SrcAsKey;
+    emitter << YAML::Key << "IsCopy" << YAML::Value << (op.IsCopy ? 1 : 0);
+    if (op.IsCopy) {
+      emitter << YAML::Key << "CopyMode" << YAML::Value << static_cast<int>(op.CopyMode);
+    }
+    emitter << YAML::EndMap;
+  }
+  emitter << YAML::EndSeq;
+  // Retained micromap chain ops, same shape and ordering guarantees as BlasChain above.
+  // Always emitted, even when empty: its absence is what tells the recording pass the file
+  // predates micromap copy support (AnalyzerResults::HasMicromapChain).
+  emitter << YAML::Key << "MicromapChain" << YAML::Value << YAML::BeginSeq;
+  for (const auto& op : micromapChain) {
+    emitter << YAML::Flow << YAML::BeginMap;
+    emitter << YAML::Key << "Cmd" << YAML::Value << op.CommandKey;
+    emitter << YAML::Key << "DstMicromap" << YAML::Value << op.DstMicromapKey;
+    emitter << YAML::Key << "SrcCmd" << YAML::Value << op.SourceCommandKey;
+    emitter << YAML::Key << "SrcMicromap" << YAML::Value << op.SrcMicromapKey;
     emitter << YAML::Key << "IsCopy" << YAML::Value << (op.IsCopy ? 1 : 0);
     if (op.IsCopy) {
       emitter << YAML::Key << "CopyMode" << YAML::Value << static_cast<int>(op.CopyMode);

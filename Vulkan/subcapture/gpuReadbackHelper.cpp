@@ -791,6 +791,37 @@ bool GpuReadbackHelper::QueryAccelerationStructureBuildSizes(
 }
 
 // ---------------------------------------------------------------------------
+// QueryMicromapBuildSizes
+// ---------------------------------------------------------------------------
+bool GpuReadbackHelper::QueryMicromapBuildSizes(uint64_t deviceKey,
+                                                const VkMicromapBuildInfoEXT& buildInfo,
+                                                VkMicromapBuildSizesInfoEXT& outSizes) {
+  auto device = reinterpret_cast<VkDevice>(HandleMapService::Get().TryGetHandle(deviceKey));
+  if (!device) {
+    LOG_WARNING << "GpuReadbackHelper: QueryMicromapBuildSizes: invalid device key=" << deviceKey;
+    return false;
+  }
+  auto& dt = m_Player.GetDeviceDispatchTable(device);
+  if (!dt.vkGetMicromapBuildSizesEXT) {
+    LOG_WARNING << "GpuReadbackHelper: QueryMicromapBuildSizes: vkGetMicromapBuildSizesEXT is not "
+                   "available on device key="
+                << deviceKey;
+    return false;
+  }
+
+  // The sizes depend only on pUsageCounts/ppUsageCounts, so zero the handle members in a local
+  // copy - the decoded ones belong to the recorded process and must not reach the driver.
+  VkMicromapBuildInfoEXT sizeQueryInfo = buildInfo;
+  sizeQueryInfo.dstMicromap = VK_NULL_HANDLE;
+
+  outSizes = {};
+  outSizes.sType = VK_STRUCTURE_TYPE_MICROMAP_BUILD_SIZES_INFO_EXT;
+  dt.vkGetMicromapBuildSizesEXT(device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR,
+                                &sizeQueryInfo, &outSizes);
+  return true;
+}
+
+// ---------------------------------------------------------------------------
 // ReserveScratchBufferAddress
 //
 // Creates a throwaway buffer with capture/replay addressing and captures its

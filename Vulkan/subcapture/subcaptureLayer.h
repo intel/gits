@@ -16,6 +16,7 @@
 #include "imageLayoutService.h"
 #include "commandBufferLifecycleService.h"
 #include "mappedMemoryService.h"
+#include "micromapStateService.h"
 #include "subcaptureRange.h"
 #include "subcaptureRecorder.h"
 #include "analyzerResults.h"
@@ -293,6 +294,14 @@ public:
   void Pre(vkCmdBuildAccelerationStructuresKHRCommand& command) override;
   void Post(vkCmdBuildAccelerationStructuresKHRCommand& command) override;
   void Post(vkCmdCopyAccelerationStructureKHRCommand& command) override;
+  // Micromaps: forwarders to MicromapStateService, declared here only because Layer's dispatch is
+  // virtual. A micromap has exactly one build mode, so its chain only ever holds root builds and
+  // CLONE/COMPACT copies - no updates to collapse.
+  void Pre(vkCmdBuildMicromapsEXTCommand& command) override;
+  void Post(vkCmdBuildMicromapsEXTCommand& command) override;
+  void Post(vkCmdCopyMicromapEXTCommand& command) override;
+  void Post(vkCreateMicromapEXTCommand& command) override;
+  void Post(vkDestroyMicromapEXTCommand& command) override;
 
   // Every other way of writing acceleration structure or micromap content. None is tracked -
   // not by the chain graph, the build-input capture, or the analysis pass's TLAS->BLAS
@@ -302,6 +311,9 @@ public:
   //
   // Deliberately absent are the readers (*ToMemory, WriteProperties), which write no
   // structure content. WriteProperties is part of the supported compaction flow.
+  //
+  // vkCmdCopyMemoryToMicromapEXT is refused for a narrower reason than the rest: it
+  // deserializes an opaque driver blob out of memory nothing tracks. Nothing yet demands it.
   void Post(vkCmdBuildAccelerationStructuresIndirectKHRCommand& command) override;
   void Post(vkBuildAccelerationStructuresKHRCommand& command) override;
   void Post(vkCopyAccelerationStructureKHRCommand& command) override;
@@ -309,9 +321,7 @@ public:
   void Post(vkCopyMemoryToAccelerationStructureKHRCommand& command) override;
   void Post(vkCmdBuildAccelerationStructureNVCommand& command) override;
   void Post(vkCmdCopyAccelerationStructureNVCommand& command) override;
-  void Post(vkCmdBuildMicromapsEXTCommand& command) override;
   void Post(vkBuildMicromapsEXTCommand& command) override;
-  void Post(vkCmdCopyMicromapEXTCommand& command) override;
   void Post(vkCopyMicromapEXTCommand& command) override;
   void Post(vkCmdCopyMemoryToMicromapEXTCommand& command) override;
   void Post(vkCopyMemoryToMicromapEXTCommand& command) override;
@@ -473,6 +483,10 @@ private:
   // after the range has finished is ignored, since it cannot affect the output.
   void RefuseUnsupportedRaytracingCommand(const char* commandName);
 
+  // As above, for the host-side build/copy family, which is refused for a different reason:
+  // not a missing feature, but host pointers the recorder never follows.
+  void RefuseUnsupportedHostRaytracingCommand(const char* commandName);
+
   // True for the analysis pass.  Declared first so it can be used in the
   // member initializer list (e.g. to keep the recorder closed).
   bool m_AnalysisMode{false};
@@ -489,6 +503,8 @@ private:
   std::unordered_map<uint64_t, std::unordered_set<uint64_t>> m_SparseMemoryUsers;
   // Recording pass: consumed by StateTrackingService to gate restore.
   AnalyzerResults m_AnalyzerResults;
+  // Must be constructed after m_CommandBufferLifecycle and m_AnalyzerResults - it binds both.
+  MicromapStateService m_Micromap;
   // Analysis pass only: collects in-range object usage and dumps the analysis
   // file.  Null in recording mode.
   std::unique_ptr<AnalyzerService> m_AnalyzerService;

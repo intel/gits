@@ -69,6 +69,21 @@ bool IsPayloadValid(const VkAccelerationStructureBuildGeometryInfoKHR* infos,
 
 } // namespace
 
+const VkAccelerationStructureTrianglesOpacityMicromapEXT* FindOpacityMicromapGeometry(
+    const void* pNext) {
+  for (const auto* node = static_cast<const VkBaseInStructure*>(pNext); node; node = node->pNext) {
+    if (node->sType == VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_TRIANGLES_OPACITY_MICROMAP_EXT) {
+      return reinterpret_cast<const VkAccelerationStructureTrianglesOpacityMicromapEXT*>(node);
+    }
+  }
+  return nullptr;
+}
+
+VkAccelerationStructureTrianglesOpacityMicromapEXT* FindOpacityMicromapGeometry(void* pNext) {
+  return const_cast<VkAccelerationStructureTrianglesOpacityMicromapEXT*>(
+      FindOpacityMicromapGeometry(static_cast<const void*>(pNext)));
+}
+
 bool RemoveUnreferencedAsBuildInfos(vkCmdBuildAccelerationStructuresKHRCommand& cmd,
                                     const std::unordered_set<uint64_t>& keepDstAsKeys) {
   const uint32_t infoCount = cmd.m_infoCount.Value;
@@ -160,6 +175,87 @@ bool RemoveUnreferencedAsBuildInfos(vkCmdBuildAccelerationStructuresKHRCommand& 
   LOG_TRACE << "Vulkan subcapture: acceleration structure build command key=" << cmd.m_Key
             << " replays " << keptCount << " of " << infoCount
             << " recorded infos - the rest write structures this restore does not need";
+  return true;
+}
+
+bool CollectAsBuildMicromapKeys(const vkCmdBuildAccelerationStructuresKHRCommand& cmd,
+                                std::vector<uint64_t>& outMicromapKeys) {
+  const uint32_t infoCount = cmd.m_infoCount.Value;
+  if (infoCount == 0 || !cmd.m_pInfos.Value) {
+    return true;
+  }
+
+  const std::vector<GITSKey>& handleKeys = cmd.m_pInfos.HandleKeys;
+  std::vector<size_t> payloadCount(infoCount, 0);
+  if (!IsPayloadValid(cmd.m_pInfos.Value, infoCount, handleKeys.size(), payloadCount)) {
+    return false;
+  }
+
+  // Everything after the leading [src, dst] pair block is a micromap key. Read from HandleKeys,
+  // not the decoded structs - on the player side omm->micromap holds a handle, not a key.
+  for (size_t i = 2 * static_cast<size_t>(infoCount); i < handleKeys.size(); ++i) {
+    if (handleKeys[i]) {
+      outMicromapKeys.push_back(handleKeys[i]);
+    }
+  }
+  return true;
+}
+
+bool RemoveUnreferencedMicromapBuildInfos(vkCmdBuildMicromapsEXTCommand& cmd,
+                                          const std::unordered_set<uint64_t>& keepDstMicromapKeys) {
+  const uint32_t infoCount = cmd.m_infoCount.Value;
+  if (infoCount == 0 || !cmd.m_pInfos.Value) {
+    return true;
+  }
+
+  std::vector<GITSKey>& handleKeys = cmd.m_pInfos.HandleKeys;
+  // One key per info and nothing else. A future handle-bearing pNext would break that, and
+  // failing here beats compacting a key layout we no longer understand.
+  if (handleKeys.size() != infoCount) {
+    return false;
+  }
+
+  VkMicromapBuildInfoEXT* infos = cmd.m_pInfos.Value;
+
+  std::vector<bool> keep(infoCount, false);
+  uint32_t keptCount = 0;
+  for (uint32_t i = 0; i < infoCount; ++i) {
+    if (keepDstMicromapKeys.count(handleKeys[i])) {
+      keep[i] = true;
+      ++keptCount;
+    }
+  }
+  if (keptCount == infoCount) {
+    return true; // nothing to drop - leave the command byte for byte as recorded
+  }
+
+  std::vector<GITSKey> newKeys;
+  newKeys.reserve(keptCount);
+  for (uint32_t i = 0; i < infoCount; ++i) {
+    if (keep[i]) {
+      newKeys.push_back(handleKeys[i]);
+    }
+  }
+
+  // Encode walks Size structs from Value, so closing the gaps in place is enough - a dropped
+  // info's usage counts are never visited. Same reasoning as the acceleration structure path.
+  uint32_t write = 0;
+  for (uint32_t read = 0; read < infoCount; ++read) {
+    if (!keep[read]) {
+      continue;
+    }
+    if (write != read) {
+      infos[write] = infos[read];
+    }
+    ++write;
+  }
+
+  cmd.m_pInfos.Size = keptCount;
+  cmd.m_infoCount.Value = keptCount;
+  handleKeys = std::move(newKeys);
+  LOG_TRACE << "Vulkan subcapture: micromap build command key=" << cmd.m_Key << " replays "
+            << keptCount << " of " << infoCount
+            << " recorded infos - the rest write micromaps this restore does not need";
   return true;
 }
 

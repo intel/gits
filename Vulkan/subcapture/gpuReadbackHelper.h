@@ -110,6 +110,10 @@ public:
       const uint32_t* pMaxPrimitiveCounts,
       VkAccelerationStructureBuildSizesInfoKHR& outSizes) override;
 
+  bool QueryMicromapBuildSizes(uint64_t deviceKey,
+                               const VkMicromapBuildInfoEXT& buildInfo,
+                               VkMicromapBuildSizesInfoEXT& outSizes) override;
+
   bool ReserveScratchBufferAddress(uint64_t deviceKey,
                                    uint64_t physDevKey,
                                    VkDeviceSize size,

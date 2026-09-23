@@ -56,6 +56,12 @@ public:
   void NoteInRangeAsWrite(uint64_t asKey);
   void NoteInRangeAsRead(uint64_t asKey);
 
+  // The same pair for micromaps, with the same "read but never written" question: a micromap
+  // an in-range build reads has to come out of the restore, while one the range builds itself
+  // is legitimately left empty by it.
+  void NoteInRangeMicromapWrite(uint64_t micromapKey);
+  void NoteInRangeMicromapRead(uint64_t micromapKey);
+
   // Compute the dependency closure of the collected roots and write the
   // analysis file.  Idempotent: only the first call writes.
   void DumpAnalysisFile();
@@ -91,6 +97,8 @@ private:
   // restore must produce is the difference: read but never written.
   std::unordered_set<uint64_t> m_AsWrittenInRange;
   std::set<uint64_t> m_AsReadInRange;
+  std::unordered_set<uint64_t> m_MicromapWrittenInRange;
+  std::set<uint64_t> m_MicromapReadInRange;
 };
 
 } // namespace vulkan

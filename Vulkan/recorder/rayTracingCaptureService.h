@@ -38,10 +38,15 @@ private:
     bool m_AccelerationStructureCaptureReplay;
     bool m_RayTracingPipelineShaderGroupHandleCaptureReplay;
     uint32_t m_ShaderGroupCaptureReplayHandleSize;
+    // Diagnostic only - GITS deliberately does not pin micromap addresses.
+    // See OnPostCreateMicromapEXT for the reasoning.
+    bool m_Micromap;
+    bool m_MicromapCaptureReplay;
   };
 
   CaptureManager& m_Manager;
   std::map<GITSKey, RayTracingCapabilities> m_Caps; // Both per physical device and per device
+  bool m_MicromapCaptureReplayWarningIssued = false;
   static thread_local VkBufferOpaqueCaptureAddressCreateInfo s_BufferOpaqueCaptureAddress;
   static thread_local VkMemoryOpaqueCaptureAddressAllocateInfo s_MemoryOpaqueCaptureAddress;
   static thread_local RayTracingCapabilities s_DeviceCaps;

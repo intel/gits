@@ -45,6 +45,12 @@ set(STATE_TRACKING_SRC
   ${SRC_DIR}/raytracingInstancesDump.cpp
   ${SRC_DIR}/asBuildCommandPatching.h
   ${SRC_DIR}/asBuildCommandPatching.cpp
+  ${SRC_DIR}/buildInputCapture.h
+  ${SRC_DIR}/buildInputCapture.cpp
+  ${SRC_DIR}/micromapStateService.h
+  ${SRC_DIR}/micromapStateService.cpp
+  ${SRC_DIR}/micromapRestoreService.h
+  ${SRC_DIR}/micromapRestoreService.cpp
 )
 source_group("state_tracking" FILES ${STATE_TRACKING_SRC})
 
@@ -99,3 +105,17 @@ target_link_libraries(Vulkan_subcapture PRIVATE
 )
 
 set_target_properties(Vulkan_subcapture PROPERTIES FOLDER Vulkan)
+
+# Host-only gate for the chain reduction: no GPU, no driver, no stream. Run the executable;
+# it prints failures and exits non-zero. Only raytracingOptimizationService.obj is pulled out
+# of the static library, so the test needs none of the layer's dependencies.
+add_executable(Vulkan_subcapture_test
+  ${SRC_DIR}/tests/chainReductionTest.cpp
+)
+
+target_link_libraries(Vulkan_subcapture_test PRIVATE
+  Vulkan_subcapture
+  Vulkan_layer_interface
+)
+
+set_target_properties(Vulkan_subcapture_test PROPERTIES FOLDER Vulkan)
