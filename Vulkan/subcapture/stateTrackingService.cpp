@@ -23,7 +23,6 @@
 #include "tools.h"
 
 #include <algorithm>
-#include <iterator>
 #include <cstring>
 #include <limits>
 #include <memory>
@@ -231,7 +230,6 @@ void StateTrackingService::RestoreState() {
   m_DescriptorSetsAllocated.clear();
   m_CommandBuffersRecordingReplaySkipped.clear();
   m_TransientlyRestored.clear();
-  m_RestoredInputRegions.clear();
   m_AsBuildInputStats = {};
 
   // Emit StateRestoreBegin marker
@@ -1020,33 +1018,6 @@ std::vector<CapturedBuildInputBuffer> StateTrackingService::RetainedBuildInputsF
   // Destinations of one batched build commonly read overlapping ranges of a shared buffer;
   // EmitCapturedBuildInputs merges by buffer key and drops duplicate regions, so no dedup here.
   return kept;
-}
-
-void StateTrackingService::InvalidateRestoredInputRegions(uint64_t bufferKey,
-                                                          VkDeviceSize offset,
-                                                          VkDeviceSize size) {
-  if (size == 0) {
-    return;
-  }
-  const VkDeviceSize end = offset + size;
-  // The map is ordered by (buffer key, dst offset), so start at the first slot of this buffer
-  // that begins at or after the range.
-  auto it = m_RestoredInputRegions.lower_bound({bufferKey, offset});
-  // A slot beginning before the range can still reach into it. Slots are block-aligned and
-  // block-sized, so this steps back over one at most.
-  while (it != m_RestoredInputRegions.begin()) {
-    auto prev = std::prev(it);
-    if (prev->first.first != bufferKey || prev->first.second + prev->second.Size <= offset) {
-      break;
-    }
-    it = prev;
-  }
-  // Everything from there up to the range end overlaps it: the stepped-back slots by the test
-  // above, and any slot starting inside the range trivially.
-  while (it != m_RestoredInputRegions.end() && it->first.first == bufferKey &&
-         it->first.second < end) {
-    it = m_RestoredInputRegions.erase(it);
-  }
 }
 
 void StateTrackingService::ApplyAsInputReadbacksAfterSubmit(uint64_t cbKey,
@@ -4248,16 +4219,16 @@ void StateTrackingService::EmitCapturedBuildInputs(
     // Upload each referenced sub-range from the content store via a host-visible staging
     // buffer, in two steps.
     //
-    // First drop the ranges already present in the destination: for a reused buffer, a range
-    // whose identical bytes an earlier rebuild this pass uploaded to the same (buffer, offset)
-    // slot needs no second upload. With inputs captured in fixed buffer-relative blocks that
-    // slot repeats across builds, so this is where the overlapping reads of a shared input
-    // buffer collapse onto one stored copy. A freshly recreated transient buffer is empty, so
-    // nothing may be skipped for it.
+    // Every referenced range is uploaded. Skipping one because an earlier rebuild this pass put
+    // identical bytes at the same (buffer, offset) is not safe: the replayed builds in between
+    // write their destinations' storage, which an application may have suballocated from this
+    // same buffer, so the record of what a range holds cannot be trusted across them.
+    // Deduplication happens where it is sound instead - by content hash in m_AsBuildInputContent
+    // and by dropping non-retained destinations' inputs in RetainedBuildInputsFor.
     //
-    // Then upload the survivors in runs. Regions are block-sized and sorted, so consecutive
-    // survivors are usually contiguous, and one staging buffer per run rather than per region
-    // saves the create/allocate/map/submit/wait round-trip on each.
+    // Uploads go out in runs. Regions are sorted, so consecutive ones are often contiguous, and
+    // one staging buffer per run rather than per region saves the
+    // create/allocate/map/submit/wait round-trip on each.
     std::vector<const CapturedBuildInputRegion*> pendingUpload;
     pendingUpload.reserve(in.Regions.size());
     for (const auto& region : in.Regions) {
@@ -4274,16 +4245,6 @@ void StateTrackingService::EmitCapturedBuildInputs(
                              ", offset=" + std::to_string(region.SrcOffset) + ", " +
                              std::to_string(region.RangeSize) +
                              " bytes), so its build cannot be replayed");
-      }
-      if (reuseExisting) {
-        const auto slot = std::make_pair(in.BufferKey, region.SrcOffset);
-        auto it = m_RestoredInputRegions.find(slot);
-        if (it != m_RestoredInputRegions.end() && it->second.Hash == region.Hash &&
-            it->second.Size == region.RangeSize) {
-          ++m_AsBuildInputStats.RegionsSkipped;
-          continue; // identical bytes already uploaded to this stable buffer slot
-        }
-        m_RestoredInputRegions[slot] = {region.Hash, region.RangeSize};
       }
       pendingUpload.push_back(&region);
     }
@@ -5000,15 +4961,9 @@ void StateTrackingService::RestoreBlasChain() {
         }
       }
 
-      // Each replay writes its destinations' storage. When an application suballocates that
-      // storage and its build inputs from one buffer - common for ray tracing pools - the
-      // write lands on ranges a later op may read as input, so the record of what those
-      // ranges hold has to go with it. Done per destination right after the emit, so the
-      // ordering matches what the player will see.
       if (op.IsCopy) {
         EmitAccelerationStructureCopyReplay(dstState->ParentKey, dev->Queue, dev->Pool,
                                             rcIt->second.CommandBytes);
-        InvalidateRestoredInputRegionsOfStorage<AccelerationStructureState>(op.DstAsKey);
       } else if (replayedBuildCmds.insert(op.CommandKey).second) {
         // Replayed in its recorded mode, reduced to the destinations the chain kept.
         // updateSourceByCmd repoints each retained update info at the structure this chain
@@ -5021,11 +4976,6 @@ void StateTrackingService::RestoreBlasChain() {
             dstState->ParentKey, dev->PhysDev, dev->Queue, dev->Pool, rcIt->second.CommandBytes,
             RetainedBuildInputsFor(op.CommandKey, keepDst), op.DstAsKey, keepDst,
             srcMapIt != updateSourceByCmd.end() ? &srcMapIt->second : nullptr);
-        // A multi-info build is emitted once for all the destinations the chain kept, so
-        // invalidate every one of them, not just this op's.
-        for (uint64_t retainedDst : retainedDstByCmd[op.CommandKey]) {
-          InvalidateRestoredInputRegionsOfStorage<AccelerationStructureState>(retainedDst);
-        }
       }
     }();
 
@@ -5208,8 +5158,7 @@ void StateTrackingService::RestoreAccelerationStructureContents() {
 
 void StateTrackingService::LogAsBuildInputStats() {
   const auto& stats = m_AsBuildInputStats;
-  const uint64_t regions = stats.RegionsUploaded + stats.RegionsSkipped;
-  if (regions == 0) {
+  if (stats.RegionsUploaded == 0) {
     return;
   }
   uint64_t capturedBytes = 0;
@@ -5218,17 +5167,13 @@ void StateTrackingService::LogAsBuildInputStats() {
   }
   // The kept/dropped destination split is the number to watch. A batched build can name
   // thousands of destinations while the chain keeps a handful, and emitting the inputs of the
-  // ones it drops costs orders of magnitude more stream than the restore needs. "Shared"
-  // counts regions an earlier op had already uploaded to the same buffer slot with the same
-  // content, which only overlaps when destinations of one command read the same bytes.
+  // ones it drops costs orders of magnitude more stream than the restore needs.
   const uint64_t dsts = stats.DestinationsKept + stats.DestinationsDropped;
   LOG_INFO << "Vulkan subcapture: build inputs - kept " << stats.DestinationsKept << " of " << dsts
-           << " destination(s); " << regions << " region(s) resolved to "
-           << m_AsBuildInputContent.size() << " distinct blob(s) (" << capturedBytes
-           << " B captured); emitted " << stats.RegionsUploaded << " region(s) in "
-           << stats.UploadsEmitted << " upload(s) totalling " << stats.BytesEmitted << " B, shared "
-           << stats.RegionsSkipped << " (" << (regions ? stats.RegionsSkipped * 100 / regions : 0)
-           << "%)";
+           << " destination(s); resolved to " << m_AsBuildInputContent.size()
+           << " distinct blob(s) (" << capturedBytes << " B captured); emitted "
+           << stats.RegionsUploaded << " region(s) in " << stats.UploadsEmitted
+           << " upload(s) totalling " << stats.BytesEmitted << " B";
 }
 
 void StateTrackingService::RestoreSparseBufferBinds() {

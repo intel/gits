@@ -408,21 +408,14 @@ void MicromapRestoreService::RestoreChain() {
     // The op below regenerates the destination's backing-buffer content.
     MarkBackingContentRestored(op.DstMicromapKey);
 
-    // As in RestoreBlasChain: the replay writes its destinations' storage, which an
-    // application may have suballocated from the same buffer as the build inputs, so drop
-    // the record of what those ranges hold.
     if (op.IsCopy) {
       EmitCopyReplay(dstState->ParentKey, dev->Queue, dev->Pool, rcIt->second.CommandBytes);
-      m_Sts.InvalidateRestoredInputRegionsOfStorage<MicromapState>(op.DstMicromapKey);
     } else if (replayedBuildCmds.insert(op.CommandKey).second) {
       // Inputs restricted to the destinations this replay keeps, as in RestoreBlasChain.
       const std::unordered_set<uint64_t>& keepDst = retainedDstByCmd[op.CommandKey];
       EmitRebuildBytes(
           dstState->ParentKey, dev->PhysDev, dev->Queue, dev->Pool, rcIt->second.CommandBytes,
           m_Sts.RetainedBuildInputsFor(op.CommandKey, keepDst), op.DstMicromapKey, keepDst);
-      for (uint64_t retainedDst : keepDst) {
-        m_Sts.InvalidateRestoredInputRegionsOfStorage<MicromapState>(retainedDst);
-      }
     }
   }
 }
