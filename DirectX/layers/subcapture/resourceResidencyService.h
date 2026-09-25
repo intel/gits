@@ -10,6 +10,7 @@
 #include "arguments.h"
 
 #include <unordered_set>
+#include <vector>
 
 namespace gits {
 namespace DirectX {
@@ -21,6 +22,7 @@ public:
   ResourceResidencyService(StateTrackingService& stateService, ObjectKey deviceKey)
       : m_StateService(stateService), m_DeviceKey(deviceKey) {}
   void AddResource(ObjectKey resourceKey);
+  void AddResources(const std::vector<ObjectKey>& resourceKeys);
   void RecordMakeResident();
   void RecordEvict();
 

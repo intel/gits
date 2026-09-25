@@ -207,13 +207,6 @@ void AccelerationStructuresInputBuffersService::RestoreBuffersInitialization(
   m_StateService.GetRecorder().Record(ID3D12DeviceCreateFenceSerializer(createFence));
 }
 
-void AccelerationStructuresInputBuffersService::MakeBuffersResident(
-    CommandKey commandKey, ResourceResidencyService& residencyService) {
-  for (BufferInputDump::InputBuffer& inputBuffer : m_BufferInputDump.GetInputBuffers(commandKey)) {
-    residencyService.AddResource(inputBuffer.BufferKey);
-  }
-}
-
 void AccelerationStructuresInputBuffersService::RestoreBuffers(CommandKey commandKey,
                                                                ObjectKey commandListBarriersKey) {
   std::vector<BufferInputDump::InputBuffer>& inputBufferDumps =

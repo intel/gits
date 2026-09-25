@@ -14,6 +14,12 @@
 namespace gits {
 namespace DirectX {
 
+void ResourceResidencyService::AddResources(const std::vector<ObjectKey>& resourceKeys) {
+  for (ObjectKey resourceKey : resourceKeys) {
+    AddResource(resourceKey);
+  }
+}
+
 void ResourceResidencyService::AddResource(ObjectKey resourceKey) {
   if (!resourceKey) {
     return;

@@ -1029,7 +1029,7 @@ void AccelerationStructuresBuildService::RestoreCommand(
     BuildRaytracingAccelerationStructureCommand* command) {
 
   ResourceResidencyService residencyService(m_StateService, m_DeviceKey);
-  m_InputBuffersService.MakeBuffersResident(command->Key, residencyService);
+  residencyService.AddResources(command->Desc->InputKeys);
   residencyService.AddResource(command->Desc->DestAccelerationStructureKey);
   residencyService.AddResource(command->Desc->SourceAccelerationStructureKey);
   residencyService.RecordMakeResident();
@@ -1092,7 +1092,7 @@ void AccelerationStructuresBuildService::RestoreCommand(
     NvAPIBuildRaytracingAccelerationStructureExCommand* command) {
 
   ResourceResidencyService residencyService(m_StateService, m_DeviceKey);
-  m_InputBuffersService.MakeBuffersResident(command->Key, residencyService);
+  residencyService.AddResources(command->Desc->InputKeys);
   residencyService.AddResource(command->Desc->DestAccelerationStructureKey);
   residencyService.AddResource(command->Desc->SourceAccelerationStructureKey);
   residencyService.RecordMakeResident();
@@ -1132,7 +1132,6 @@ void AccelerationStructuresBuildService::RestoreCommand(
     NvAPIBuildRaytracingOpacityMicromapArrayCommand* command) {
 
   ResourceResidencyService residencyService(m_StateService, m_DeviceKey);
-  m_InputBuffersService.MakeBuffersResident(command->Key, residencyService);
   residencyService.AddResource(command->Desc->DestOpacityMicromapArrayDataKey);
   residencyService.AddResource(command->Desc->InputBufferKey);
   residencyService.AddResource(command->Desc->PerOMMDescsKey);

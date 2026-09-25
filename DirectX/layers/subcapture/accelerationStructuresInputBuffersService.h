@@ -14,7 +14,6 @@
 #include "objectState.h"
 #include "resourceStateTracker.h"
 #include "capturePlayerGpuAddressService.h"
-#include "resourceResidencyService.h"
 #include "subcaptureRecorder.h"
 #include "hashUtils.h"
 #include "resourceDump.h"
@@ -49,7 +48,6 @@ public:
   void StoreBuffers(CommandKey commandKey, ID3D12GraphicsCommandList* commandList);
 
   void RestoreBuffersInitialization(std::vector<CommandKey>& commandKeys, ObjectKey deviceKey);
-  void MakeBuffersResident(CommandKey commandKey, ResourceResidencyService& residencyService);
   void RestoreBuffers(CommandKey commandKey, ObjectKey commandListBarriersKey);
   void RestoreBuffersCleanup();
 
