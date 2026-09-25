@@ -89,7 +89,7 @@ void AccelerationStructuresPrebuildInfoService::RecordDummyResource() {
 
   D3D12_RESOURCE_DESC resourceDesc{};
   resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-  resourceDesc.Width = sizeof(float) * 3 * 4;
+  resourceDesc.Width = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
   resourceDesc.Height = 1;
   resourceDesc.DepthOrArraySize = 1;
   resourceDesc.MipLevels = 1;
@@ -125,8 +125,11 @@ void AccelerationStructuresPrebuildInfoService::StripRaytracingBuildInputs(
     inputArgument.InputKeys.push_back(ObjectKey{});
     inputArgument.InputOffsets.push_back(0);
   };
-  auto stripOptionalGpuVirtualAddressInUse = [this,
-                                              &inputArgument](D3D12_GPU_VIRTUAL_ADDRESS& address) {
+  auto stripBufferStride = [&stripGpuVirtualAddress](D3D12_GPU_VIRTUAL_ADDRESS_AND_STRIDE& buffer) {
+    stripGpuVirtualAddress(buffer.StartAddress);
+    buffer.StrideInBytes = 0;
+  };
+  auto stripRequiredGpuVirtualAddress = [this, &inputArgument](D3D12_GPU_VIRTUAL_ADDRESS& address) {
     if (address) {
       if (!m_DummyResourceKey) {
         RecordDummyResource();
@@ -138,14 +141,15 @@ void AccelerationStructuresPrebuildInfoService::StripRaytracingBuildInputs(
     }
     inputArgument.InputOffsets.push_back(0);
   };
-  auto stripBufferStride = [&stripGpuVirtualAddress](D3D12_GPU_VIRTUAL_ADDRESS_AND_STRIDE& buffer) {
-    stripGpuVirtualAddress(buffer.StartAddress);
-    buffer.StrideInBytes = 0;
-  };
+  auto stripRequiredBufferStride =
+      [&stripRequiredGpuVirtualAddress](D3D12_GPU_VIRTUAL_ADDRESS_AND_STRIDE& buffer) {
+        stripRequiredGpuVirtualAddress(buffer.StartAddress);
+        buffer.StrideInBytes = 0;
+      };
 
-  const auto stripTriangles = [&stripOptionalGpuVirtualAddressInUse, &stripGpuVirtualAddress,
+  const auto stripTriangles = [&stripRequiredGpuVirtualAddress, &stripGpuVirtualAddress,
                                &stripBufferStride](D3D12_RAYTRACING_GEOMETRY_TRIANGLES_DESC& desc) {
-    stripOptionalGpuVirtualAddressInUse(desc.Transform3x4);
+    stripRequiredGpuVirtualAddress(desc.Transform3x4);
     stripGpuVirtualAddress(desc.IndexBuffer);
     stripBufferStride(desc.VertexBuffer);
   };
@@ -199,8 +203,18 @@ void AccelerationStructuresPrebuildInfoService::StripRaytracingBuildInputs(
     D3D12_RAYTRACING_OPACITY_MICROMAP_ARRAY_DESC& desc =
         *const_cast<D3D12_RAYTRACING_OPACITY_MICROMAP_ARRAY_DESC*>(
             inputs.pOpacityMicromapArrayDesc);
-    stripGpuVirtualAddress(desc.InputBuffer);
-    stripBufferStride(desc.PerOmmDescs);
+    GITS_ASSERT(desc.NumOmmHistogramEntries == 0 || desc.pOmmHistogram);
+    UINT totalOmmCount = 0;
+    for (unsigned i = 0; i < desc.NumOmmHistogramEntries; ++i) {
+      totalOmmCount += desc.pOmmHistogram[i].Count;
+    }
+    if (totalOmmCount > 0) {
+      stripRequiredGpuVirtualAddress(desc.InputBuffer);
+      stripRequiredBufferStride(desc.PerOmmDescs);
+    } else {
+      stripGpuVirtualAddress(desc.InputBuffer);
+      stripBufferStride(desc.PerOmmDescs);
+    }
   }
 
   GITS_ASSERT(inputArgument.InputKeys.size() == inputKeysCountBeforeStrip);
