@@ -32,6 +32,7 @@ public:
     std::vector<SubresourceState> SubresourceStates;
     bool AllEqual{true};
     bool IsBuffer{};
+    D3D12_RESOURCE_FLAGS Flags{};
   };
 
 public:
@@ -59,6 +60,8 @@ public:
   ResourceStates& GetResourceStates(ObjectKey resourceKey);
   D3D12_RESOURCE_STATES GetResourceState(ObjectKey resourceKey);
   D3D12_BARRIER_LAYOUT GetResourceLayout(ObjectKey resourceKey);
+  static D3D12_BARRIER_LAYOUT GetCopySourceLayout(D3D12_RESOURCE_FLAGS flags);
+  static D3D12_BARRIER_LAYOUT GetCopyDestLayout(D3D12_RESOURCE_FLAGS flags);
   void RestoreResourceStates(const std::vector<ObjectKey>& orderedResources);
   void RestoreBackBufferState(ObjectKey commandQueueKey,
                               ObjectKey resourceKey,

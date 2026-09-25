@@ -150,7 +150,9 @@ void ResourceStateTrackingService::AddResource(ObjectKey deviceKey,
   }
   ResourceStates& states = m_ResourceStates[resourceKey];
   states.SubresourceStates.resize(GetSubresourcesCount(resource));
-  states.IsBuffer = resource->GetDesc().Dimension == D3D12_RESOURCE_DIMENSION_BUFFER;
+  D3D12_RESOURCE_DESC desc = resource->GetDesc();
+  states.IsBuffer = desc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER;
+  states.Flags = desc.Flags;
   for (unsigned i = 0; i < states.SubresourceStates.size(); ++i) {
     states.SubresourceStates[i].State = initialState;
     states.SubresourceStates[i].Enhanced = false;
@@ -170,7 +172,9 @@ void ResourceStateTrackingService::AddResource(ObjectKey deviceKey,
   }
   ResourceStates& states = m_ResourceStates[resourceKey];
   states.SubresourceStates.resize(GetSubresourcesCount(resource));
-  states.IsBuffer = resource->GetDesc().Dimension == D3D12_RESOURCE_DIMENSION_BUFFER;
+  D3D12_RESOURCE_DESC desc = resource->GetDesc();
+  states.IsBuffer = desc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER;
+  states.Flags = desc.Flags;
   for (unsigned i = 0; i < states.SubresourceStates.size(); ++i) {
     states.SubresourceStates[i].Layout = initialState;
     states.SubresourceStates[i].Enhanced = true;
@@ -270,6 +274,20 @@ D3D12_BARRIER_LAYOUT ResourceStateTrackingService::GetResourceLayout(D3D12_RESOU
     break;
   }
   return layout;
+}
+
+D3D12_BARRIER_LAYOUT ResourceStateTrackingService::GetCopySourceLayout(D3D12_RESOURCE_FLAGS flags) {
+  if (flags & D3D12_RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS) {
+    return D3D12_BARRIER_LAYOUT_COMMON;
+  }
+  return D3D12_BARRIER_LAYOUT_COPY_SOURCE;
+}
+
+D3D12_BARRIER_LAYOUT ResourceStateTrackingService::GetCopyDestLayout(D3D12_RESOURCE_FLAGS flags) {
+  if (flags & D3D12_RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS) {
+    return D3D12_BARRIER_LAYOUT_COMMON;
+  }
+  return D3D12_BARRIER_LAYOUT_COPY_DEST;
 }
 
 void ResourceStateTrackingService::DestroyResource(ObjectKey resourceKey) {
@@ -433,6 +451,7 @@ void ResourceStateTrackingService::RestoreResourceStates(
     };
 
     ResourceStates& resourceStates = GetResourceStates(resourceKey);
+    const D3D12_BARRIER_LAYOUT copyDestLayout = GetCopyDestLayout(resourceStates.Flags);
 
     if (resourceStates.AllEqual) {
       if (!resourceStates.SubresourceStates[0].Enhanced) {
@@ -443,10 +462,9 @@ void ResourceStateTrackingService::RestoreResourceStates(
         }
       } else {
         if (!resourceStates.IsBuffer &&
-            resourceStates.SubresourceStates[0].Layout != D3D12_BARRIER_LAYOUT_COPY_DEST &&
+            resourceStates.SubresourceStates[0].Layout != copyDestLayout &&
             resourceStates.SubresourceStates[0].Layout != D3D12_BARRIER_LAYOUT_UNDEFINED) {
-          writeResourceEnhancedBarrier(D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
-                                       D3D12_BARRIER_LAYOUT_COPY_DEST,
+          writeResourceEnhancedBarrier(D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, copyDestLayout,
                                        resourceStates.SubresourceStates[0].Layout);
         }
       }
@@ -459,9 +477,9 @@ void ResourceStateTrackingService::RestoreResourceStates(
           }
         } else {
           if (!resourceStates.IsBuffer &&
-              resourceStates.SubresourceStates[i].Layout != D3D12_BARRIER_LAYOUT_COPY_DEST &&
+              resourceStates.SubresourceStates[i].Layout != copyDestLayout &&
               resourceStates.SubresourceStates[i].Layout != D3D12_BARRIER_LAYOUT_UNDEFINED) {
-            writeResourceEnhancedBarrier(i, D3D12_BARRIER_LAYOUT_COPY_DEST,
+            writeResourceEnhancedBarrier(i, copyDestLayout,
                                          resourceStates.SubresourceStates[i].Layout);
           }
         }

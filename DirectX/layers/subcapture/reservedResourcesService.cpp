@@ -245,6 +245,8 @@ void ReservedResourcesService::CopySourceBarrier(ID3D12Resource* resource,
                                                  bool restoreState) {
   ResourceStateTrackingService::ResourceStates& resourceStates =
       m_StateService.GetResourceStateTrackingService().GetResourceStates(resourceKey);
+  const D3D12_BARRIER_LAYOUT copySourceLayout =
+      ResourceStateTrackingService::GetCopySourceLayout(resourceStates.Flags);
   std::vector<D3D12_RESOURCE_BARRIER> barriers;
   std::vector<std::unique_ptr<D3D12_TEXTURE_BARRIER>> enhancedBarriers;
   std::vector<D3D12_BARRIER_GROUP> enhancedBarrierGroups;
@@ -263,7 +265,7 @@ void ReservedResourcesService::CopySourceBarrier(ID3D12Resource* resource,
         barriers.push_back(barrier);
       }
     } else {
-      if (resourceStates.SubresourceStates[0].Layout != D3D12_BARRIER_LAYOUT_COPY_SOURCE &&
+      if (resourceStates.SubresourceStates[0].Layout != copySourceLayout &&
           resourceStates.SubresourceStates[0].Layout != D3D12_BARRIER_LAYOUT_UNDEFINED) {
         D3D12_TEXTURE_BARRIER* barrier = new D3D12_TEXTURE_BARRIER{};
         barrier->SyncBefore = D3D12_BARRIER_SYNC_ALL;
@@ -272,10 +274,10 @@ void ReservedResourcesService::CopySourceBarrier(ID3D12Resource* resource,
             restoreState ? D3D12_BARRIER_ACCESS_COPY_SOURCE : D3D12_BARRIER_ACCESS_COMMON;
         barrier->AccessAfter =
             restoreState ? D3D12_BARRIER_ACCESS_COMMON : D3D12_BARRIER_ACCESS_COPY_SOURCE;
-        barrier->LayoutBefore = restoreState ? D3D12_BARRIER_LAYOUT_COPY_SOURCE
-                                             : resourceStates.SubresourceStates[0].Layout;
-        barrier->LayoutAfter = restoreState ? resourceStates.SubresourceStates[0].Layout
-                                            : D3D12_BARRIER_LAYOUT_COPY_SOURCE;
+        barrier->LayoutBefore =
+            restoreState ? copySourceLayout : resourceStates.SubresourceStates[0].Layout;
+        barrier->LayoutAfter =
+            restoreState ? resourceStates.SubresourceStates[0].Layout : copySourceLayout;
         barrier->pResource = resource;
         barrier->Subresources.IndexOrFirstMipLevel = 0;
         enhancedBarriers.emplace_back(barrier);
@@ -301,7 +303,7 @@ void ReservedResourcesService::CopySourceBarrier(ID3D12Resource* resource,
           barriers.push_back(barrier);
         }
       } else {
-        if (resourceStates.SubresourceStates[i].Layout != D3D12_BARRIER_LAYOUT_COPY_SOURCE &&
+        if (resourceStates.SubresourceStates[i].Layout != copySourceLayout &&
             resourceStates.SubresourceStates[i].Layout != D3D12_BARRIER_LAYOUT_UNDEFINED) {
           D3D12_TEXTURE_BARRIER* barrier = new D3D12_TEXTURE_BARRIER{};
           barrier->SyncBefore = D3D12_BARRIER_SYNC_ALL;
@@ -310,10 +312,10 @@ void ReservedResourcesService::CopySourceBarrier(ID3D12Resource* resource,
               restoreState ? D3D12_BARRIER_ACCESS_COPY_SOURCE : D3D12_BARRIER_ACCESS_COMMON;
           barrier->AccessAfter =
               restoreState ? D3D12_BARRIER_ACCESS_COMMON : D3D12_BARRIER_ACCESS_COPY_SOURCE;
-          barrier->LayoutBefore = restoreState ? D3D12_BARRIER_LAYOUT_COPY_SOURCE
-                                               : resourceStates.SubresourceStates[i].Layout;
-          barrier->LayoutAfter = restoreState ? resourceStates.SubresourceStates[i].Layout
-                                              : D3D12_BARRIER_LAYOUT_COPY_SOURCE;
+          barrier->LayoutBefore =
+              restoreState ? copySourceLayout : resourceStates.SubresourceStates[i].Layout;
+          barrier->LayoutAfter =
+              restoreState ? resourceStates.SubresourceStates[i].Layout : copySourceLayout;
           barrier->pResource = resource;
           barrier->Subresources.IndexOrFirstMipLevel = i;
           enhancedBarriers.emplace_back(barrier);
