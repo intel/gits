@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "portabilityLayerGroup.h"
+#include "raytracingAssertionsLayer.h"
 #include "configurationLib.h"
 
 namespace gits {
@@ -36,6 +37,9 @@ void PortabilityLayerGroup::LoadLayers(
       } else {
         AddLayer(std::make_unique<PortabilityLayer>());
       }
+    }
+    if (execute && playerConfig.portability.raytracingAssertions) {
+      AddLayer(std::make_unique<RaytracingAssertionsLayer>());
     }
   }
 }

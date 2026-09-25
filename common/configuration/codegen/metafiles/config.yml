@@ -1082,6 +1082,17 @@ Configuration:
                 Default: true
                 Description: Ends playback if any incompatibility is detected
                 LegacyPaths: ["DirectX.Playback.Portability.PortabilityAssertions"]
+              - Name: raytracingAssertions
+                Type: bool
+                Default: false
+                Description: Ends playback when raytracing acceleration structure validation fails
+                LongDescription: |
+                  Validates raytracing acceleration structure builds, copies, and uses in GPU execution order.
+                  Checks post-build sizes and that each build fits its buffer or heap range. Validates scratch buffer
+                  size against live prebuild info for each build. Tracks TLAS, BLAS and OMM dependencies.
+                  Aborts playback when a structure is overwritten, released, never built or otherwise invalid.
+                  Uses extra GPU readbacks and barriers during replay.
+                  Does not validate shader or dispatch usage of acceleration structures.
               - Name: forcePlacedToCommittedResources
                 Type: bool
                 Default: false

@@ -54,6 +54,7 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
   Layer* traceLayer = m_TraceLayerGroup.GetLayer("Trace");
   Layer* showExecutionLayer = m_TraceLayerGroup.GetLayer("ShowExecution");
   Layer* portabilityLayer = m_PortabilityLayerGroup.GetLayer("Portability");
+  Layer* raytracingAssertionsLayer = m_PortabilityLayerGroup.GetLayer("RaytracingAssertions");
   Layer* stateTrackingLayer = m_SubcaptureLayerGroup.GetLayer("StateTracking");
   Layer* recordingLayer = m_SubcaptureLayerGroup.GetLayer("Recording");
   Layer* commandPreservationLayer = m_SubcaptureLayerGroup.GetLayer("CommandPreservation");
@@ -139,6 +140,7 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
   enablePreLayer(gpuPatchLayer.get());
   enablePreLayer(addressPinningLayer);
   enablePreLayer(replayCustomizationLayer.get());
+  enablePreLayer(raytracingAssertionsLayer);
   enablePreLayer(screenshotsLayer);
   enablePreLayer(debugInfoLayer.get());
   enablePreLayer(recordingLayer);
@@ -158,6 +160,7 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
   };
   enablePostLayer(debugInfoLayer.get());
   enablePostLayer(portabilityLayer);
+  enablePostLayer(raytracingAssertionsLayer);
   enablePostLayer(logDxErrorLayer.get());
   enablePostLayer(directStorageLayer.get());
   enablePostLayer(addressPinningLayer);

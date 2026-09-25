@@ -22,6 +22,8 @@ set(ALL_SRC
   ${SRC_DIR}/resourcePlacementPlayback.cpp
   ${SRC_DIR}/resourcePlacementAssertions.h
   ${SRC_DIR}/resourcePlacementAssertions.cpp
+  ${SRC_DIR}/raytracingAssertionsLayer.h
+  ${SRC_DIR}/raytracingAssertionsLayer.cpp
 )
 source_group("" FILES ${ALL_SRC})
 
