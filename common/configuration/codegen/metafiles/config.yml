@@ -278,6 +278,10 @@ Configuration:
                     Type: bool
                     Default: false
                     Description: Restore released placed resource object for constant buffer view
+                  - Name: forceDirectCommandListType
+                    Type: bool
+                    Default: false
+                    Description: During subcapture state tracking, create compute command queues, allocators, and command lists as direct
                   - Name: commandListExecutions
                     Type: std::string
                     Default: ""

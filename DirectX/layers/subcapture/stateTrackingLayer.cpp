@@ -439,37 +439,47 @@ void StateTrackingLayer::Post(D3D12GetInterfaceCommand& c) {
 }
 
 void StateTrackingLayer::Pre(ID3D12DeviceCreateCommandQueueCommand& c) {
-  m_ForceDirectCommandListType = c.m_pDesc.Value->Type == D3D12_COMMAND_LIST_TYPE_COMPUTE;
-  if (m_ForceDirectCommandListType) {
-    c.m_pDesc.Value->Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
+  if (Configurator::Get().common.player.subcapture.directx.forceDirectCommandListType) {
+    m_ForceDirectCommandListType = c.m_pDesc.Value->Type == D3D12_COMMAND_LIST_TYPE_COMPUTE;
+    if (m_ForceDirectCommandListType) {
+      c.m_pDesc.Value->Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
+    }
   }
 }
 
 void StateTrackingLayer::Pre(ID3D12Device9CreateCommandQueue1Command& c) {
-  m_ForceDirectCommandListType = c.m_pDesc.Value->Type == D3D12_COMMAND_LIST_TYPE_COMPUTE;
-  if (m_ForceDirectCommandListType) {
-    c.m_pDesc.Value->Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
+  if (Configurator::Get().common.player.subcapture.directx.forceDirectCommandListType) {
+    m_ForceDirectCommandListType = c.m_pDesc.Value->Type == D3D12_COMMAND_LIST_TYPE_COMPUTE;
+    if (m_ForceDirectCommandListType) {
+      c.m_pDesc.Value->Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
+    }
   }
 }
 
 void StateTrackingLayer::Pre(ID3D12DeviceCreateCommandListCommand& c) {
-  m_ForceDirectCommandListType = c.m_type.Value == D3D12_COMMAND_LIST_TYPE_COMPUTE;
-  if (m_ForceDirectCommandListType) {
-    c.m_type.Value = D3D12_COMMAND_LIST_TYPE_DIRECT;
+  if (Configurator::Get().common.player.subcapture.directx.forceDirectCommandListType) {
+    m_ForceDirectCommandListType = c.m_type.Value == D3D12_COMMAND_LIST_TYPE_COMPUTE;
+    if (m_ForceDirectCommandListType) {
+      c.m_type.Value = D3D12_COMMAND_LIST_TYPE_DIRECT;
+    }
   }
 }
 
 void StateTrackingLayer::Pre(ID3D12Device4CreateCommandList1Command& c) {
-  m_ForceDirectCommandListType = c.m_type.Value == D3D12_COMMAND_LIST_TYPE_COMPUTE;
-  if (m_ForceDirectCommandListType) {
-    c.m_type.Value = D3D12_COMMAND_LIST_TYPE_DIRECT;
+  if (Configurator::Get().common.player.subcapture.directx.forceDirectCommandListType) {
+    m_ForceDirectCommandListType = c.m_type.Value == D3D12_COMMAND_LIST_TYPE_COMPUTE;
+    if (m_ForceDirectCommandListType) {
+      c.m_type.Value = D3D12_COMMAND_LIST_TYPE_DIRECT;
+    }
   }
 }
 
 void StateTrackingLayer::Pre(ID3D12DeviceCreateCommandAllocatorCommand& c) {
-  m_ForceDirectCommandListType = c.m_type.Value == D3D12_COMMAND_LIST_TYPE_COMPUTE;
-  if (m_ForceDirectCommandListType) {
-    c.m_type.Value = D3D12_COMMAND_LIST_TYPE_DIRECT;
+  if (Configurator::Get().common.player.subcapture.directx.forceDirectCommandListType) {
+    m_ForceDirectCommandListType = c.m_type.Value == D3D12_COMMAND_LIST_TYPE_COMPUTE;
+    if (m_ForceDirectCommandListType) {
+      c.m_type.Value = D3D12_COMMAND_LIST_TYPE_DIRECT;
+    }
   }
 }
 
