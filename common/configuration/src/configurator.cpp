@@ -234,6 +234,10 @@ bool Configurator::Emit(YAML::Emitter& out,
                         std::optional<YAML::Node> overrides) {
   try {
     YAML::convert<Configuration>::emit(out, config, annotate, overrides);
+    if (!out.good()) {
+      LOG_ERROR << "Error when emitting configuration: " << out.GetLastError();
+      return false;
+    }
     return true;
   } catch (const std::exception& e) {
     LOG_ERROR << "Exception when emitting configuration: " << e.what();

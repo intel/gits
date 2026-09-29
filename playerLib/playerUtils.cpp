@@ -142,9 +142,9 @@ bool ConfigurePlayer(const std::filesystem::path& playerPath, ArgumentParser& ar
   }
 
   Configurator::Instance().DeriveData();
+  Configurator::PrepareSubcapturePath();
 
-  // TODO: Config - This should store current config, not only the file
-#if defined(WITH_DIRECTX) && defined(GITS_PLATFORM_WINDOWS)
+#if defined(GITS_PLATFORM_WINDOWS) && (defined(WITH_DIRECTX) || defined(WITH_VULKAN))
   if ((Configurator::Get().common.mode == GITSMode::MODE_PLAYER) &&
       (Configurator::Get().common.player.subcapture.enabled)) {
     // create file data and register it in GITS
@@ -153,13 +153,11 @@ bool ConfigurePlayer(const std::filesystem::path& playerPath, ArgumentParser& ar
 
     file->SetDiagnosticInfo(configPath);
 
-    file->SetConfig(std::move(configPath));
+    file->SetConfig();
 
     inst.RegisterFileRecorder(std::move(file));
   }
 #endif
-
-  Configurator::PrepareSubcapturePath();
 
   return true;
 }

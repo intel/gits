@@ -84,7 +84,7 @@ public:
   std::optional<nlohmann::ordered_json> FindProperty(const std::string& keyPath) const;
   std::string GetApplicationName() const;
   void SetDiagnosticInfo(std::filesystem::path configPath);
-  void SetConfig(std::filesystem::path configPath);
+  void SetConfig();
 
   template <typename T>
   void SetProperty(const std::string& keyPath, const T& value) {

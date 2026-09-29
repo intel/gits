@@ -114,6 +114,7 @@ void DeriveConfigData<Configuration::Common::Shared>(Configuration::Common::Shar
     if (config.common.shared.logToConsole.has_value()) {
       LOG_WARNING << "Option Common.Shared.LogToConsole is deprecated, please use the player "
                      "(Common.Player.LogToConsole) specific option";
+      config.common.player.logToConsole = config.common.shared.logToConsole.value();
     } else {
       obj.logToConsole = config.common.player.logToConsole;
     }
@@ -132,6 +133,7 @@ void DeriveConfigData<Configuration::Common::Shared>(Configuration::Common::Shar
     if (config.common.shared.logToConsole.has_value()) {
       LOG_WARNING << "Option Common.Shared.LogToConsole is deprecated, please use the recorder "
                      "(Common.Recorder.LogToConsole) specific option";
+      config.common.recorder.logToConsole = config.common.shared.logToConsole.value();
     } else {
       obj.logToConsole = config.common.recorder.logToConsole;
     }

@@ -560,17 +560,13 @@ void CFile::SetDiagnosticInfo(std::filesystem::path configPath) {
   (*_properties)["diag"]["gits"]["config_path"] = configPath;
 }
 
-void CFile::SetConfig(std::filesystem::path configPath) {
-  std::ifstream fin(configPath);
-  if (!fin) {
-    std::cerr << "Failed to open file: " << configPath << std::endl;
-    return;
+void CFile::SetConfig() {
+  YAML::Emitter configYaml;
+  if (!Configurator::Emit(configYaml, Configurator::Get(), false)) {
+    LOG_ERROR << "Failed to serialize the configuration for the stream metadata";
+    throw EOperationFailed(EXCEPTION_MESSAGE);
   }
-
-  YAML::Node configYaml = YAML::Load(fin);
-  std::stringstream configStrStream;
-  configStrStream << configYaml;
-  (*_properties)["diag"]["gits"]["config"] = configStrStream.str();
+  (*_properties)["diag"]["gits"]["config"] = std::string(configYaml.c_str());
 }
 
 void CGits::ResourceManagerInit(const std::filesystem::path& dump_dir) {

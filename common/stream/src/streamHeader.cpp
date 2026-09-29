@@ -9,6 +9,7 @@
 #include "streamHeader.h"
 #include "diagnostic.h"
 #include "configurator.h"
+#include "exception.h"
 #include "log.h"
 #include "yaml-cpp/yaml.h"
 
@@ -141,12 +142,12 @@ void StreamHeader::WriteProperties(std::ostream& stream) {
 
   gits::gather_diagnostic_info(m_Properties);
   m_Properties["diag"]["gits"]["config_path"] = Configurator::Get().configFilePath;
-  std::ifstream configFile(Configurator::Get().configFilePath);
-  GITS_ASSERT(configFile.is_open());
-  YAML::Node configYaml = YAML::Load(configFile);
-  std::stringstream configStrStream;
-  configStrStream << configYaml;
-  m_Properties["diag"]["gits"]["config"] = configStrStream.str();
+  YAML::Emitter configYaml;
+  if (!Configurator::Emit(configYaml, Configurator::Get(), false)) {
+    LOG_ERROR << "Failed to serialize the configuration for the stream metadata";
+    throw EOperationFailed(EXCEPTION_MESSAGE);
+  }
+  m_Properties["diag"]["gits"]["config"] = std::string(configYaml.c_str());
 
   std::string properties = m_Properties.dump();
   unsigned propertiesSize = properties.size();

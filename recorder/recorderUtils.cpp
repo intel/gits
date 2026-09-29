@@ -82,8 +82,6 @@ bool ConfigureRecorder(const std::filesystem::path& configPath, bool legacyMode)
 
   Configurator::Instance().DeriveData();
 
-  // TODO: Config - This should store current config, not only the file
-
   if (legacyMode) {
     // create file data and register it in GITS
     gits::CGits& inst = gits::CGits::Instance();
@@ -91,7 +89,7 @@ bool ConfigureRecorder(const std::filesystem::path& configPath, bool legacyMode)
 
     file->SetDiagnosticInfo(configPath);
 
-    file->SetConfig(configPath);
+    file->SetConfig();
 
     inst.RegisterFileRecorder(std::move(file));
   }
