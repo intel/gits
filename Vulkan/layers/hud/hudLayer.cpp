@@ -293,6 +293,11 @@ void HudLayer::SetWindowHandle(HWND hwnd) {
     return;
   }
 
+  if (m_Initialized && hwnd != m_Hwnd) {
+    ImGui_ImplWin32_Shutdown();
+    ImGui_ImplWin32_Init(hwnd);
+  }
+
   m_Hwnd = hwnd;
 }
 #endif
