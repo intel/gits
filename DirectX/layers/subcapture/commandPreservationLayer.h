@@ -64,11 +64,14 @@ public:
       override;
   void Post(ID3D12GraphicsCommandList4EmitRaytracingAccelerationStructurePostbuildInfoCommand& c)
       override;
+  void Pre(ID3D12Device5GetRaytracingAccelerationStructurePrebuildInfoCommand& c) override;
+  void Post(ID3D12Device5GetRaytracingAccelerationStructurePrebuildInfoCommand& c) override;
 
 private:
   std::vector<D3D12_GPU_VIRTUAL_ADDRESS> m_CaptureGpuAddresses;
   std::array<uint8_t, D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES> m_CaptureShaderIdentifier{};
   D3D12_GPU_DESCRIPTOR_HANDLE m_CaptureGpuDescriptorHandle{};
+  D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO m_CapturePrebuildInfo{};
 };
 
 } // namespace DirectX

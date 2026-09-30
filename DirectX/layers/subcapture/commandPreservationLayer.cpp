@@ -413,5 +413,19 @@ void CommandPreservationLayer::Post(
   m_CaptureGpuAddresses.clear();
 }
 
+void CommandPreservationLayer::Pre(
+    ID3D12Device5GetRaytracingAccelerationStructurePrebuildInfoCommand& c) {
+  if (c.m_pInfo.Value) {
+    m_CapturePrebuildInfo = *c.m_pInfo.Value;
+  }
+}
+
+void CommandPreservationLayer::Post(
+    ID3D12Device5GetRaytracingAccelerationStructurePrebuildInfoCommand& c) {
+  if (c.m_pInfo.Value) {
+    *c.m_pInfo.Value = m_CapturePrebuildInfo;
+  }
+}
+
 } // namespace DirectX
 } // namespace gits
