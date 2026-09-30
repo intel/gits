@@ -108,6 +108,10 @@ public:
   void Pre(INTC_D3D12_CreateComputePipelineStateCommand& command) override;
   void Pre(INTC_D3D12_CreateHeapCommand& command) override;
   void Post(INTC_D3D12_CreateHeapCommand& command) override;
+  void Pre(INTC_D3D12_CreateCommittedResourceCommand& command) override;
+  void Post(INTC_D3D12_CreateCommittedResourceCommand& command) override;
+  void Post(INTC_D3D12_CreatePlacedResourceCommand& command) override;
+  void Post(INTC_D3D12_CreateReservedResourceCommand& command) override;
   void Pre(IDMLDeviceCreateBindingTableCommand& command) override;
   void Pre(IDMLBindingTableResetCommand& command) override;
   void Pre(NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& command) override;

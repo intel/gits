@@ -409,9 +409,11 @@ HRESULT INTC_D3D12_CreateCommittedResourceWrapper(
 
     command.Key = manager.CreateCommandKey();
     if (!command.Skip) {
-      result = pfnCreateCommittedResource(pExtensionContext, pHeapProperties, HeapFlags, pDesc,
-                                          InitialResourceState, pOptimizedClearValue, riidResource,
-                                          ppvResource);
+      result = pfnCreateCommittedResource(
+          command.m_pExtensionContext.Value, command.m_pHeapProperties.Value,
+          command.m_HeapFlags.Value, command.m_pDesc.Value, command.m_InitialResourceState.Value,
+          command.m_pOptimizedClearValue.Value, command.m_riidResource.Value,
+          command.m_ppvResource.Value);
     }
 
     UpdateOutputInterface<InterfaceOutputArgument<void>, void> update_ppvResource(
