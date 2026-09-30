@@ -86,9 +86,11 @@ void RaytracingResourceDump::DumpInstancesBuffer(RaytracingDumpInfo& dumpInfo, v
     CapturePlayerGpuAddressService::ResourceInfo* info{};
     unsigned offset{};
     if (dumpInfo.FromCapture) {
-      info = m_AddressService.GetResourceInfoByCaptureAddress(instances[i].AccelerationStructure);
+      info = m_AddressService.GetResourceInfoByCaptureAddress(instances[i].AccelerationStructure,
+                                                              true);
     } else {
-      info = m_AddressService.GetResourceInfoByPlayerAddress(instances[i].AccelerationStructure);
+      info =
+          m_AddressService.GetResourceInfoByPlayerAddress(instances[i].AccelerationStructure, true);
     }
     if (!info) {
       stream << " NOT FOUND\n";

@@ -1364,7 +1364,7 @@ void StateTrackingLayer::Post(ID3D12DeviceCreatePlacedResourceCommand& c) {
     state->IsRtas = true;
   }
   m_GpuAddressService.CreatePlacedResource(c.m_pHeap.Key, c.m_ppvResource.Key,
-                                           c.m_pDesc.Value->Flags);
+                                           c.m_pDesc.Value->Flags, c.m_InitialState.Value);
 }
 
 void StateTrackingLayer::Post(ID3D12Device8CreatePlacedResource1Command& c) {
@@ -1408,7 +1408,7 @@ void StateTrackingLayer::Post(ID3D12Device8CreatePlacedResource1Command& c) {
     state->IsRtas = true;
   }
   m_GpuAddressService.CreatePlacedResource(c.m_pHeap.Key, c.m_ppvResource.Key,
-                                           c.m_pDesc.Value->Flags);
+                                           c.m_pDesc.Value->Flags, c.m_InitialState.Value);
 }
 
 void StateTrackingLayer::Post(ID3D12Device10CreatePlacedResource2Command& c) {
@@ -1448,7 +1448,7 @@ void StateTrackingLayer::Post(ID3D12Device10CreatePlacedResource2Command& c) {
   m_ResourceStateTracker.AddResource(*reinterpret_cast<ID3D12Resource**>(c.m_ppvResource.Value),
                                      c.m_ppvResource.Key, c.m_InitialLayout.Value);
   m_GpuAddressService.CreatePlacedResource(c.m_pHeap.Key, c.m_ppvResource.Key,
-                                           c.m_pDesc.Value->Flags);
+                                           c.m_pDesc.Value->Flags, c.m_InitialLayout.Value);
 }
 
 void StateTrackingLayer::Post(ID3D12DeviceCreateReservedResourceCommand& c) {

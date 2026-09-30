@@ -340,7 +340,7 @@ void CpuPatchLayer::Post(ID3D12DeviceCreatePlacedResourceCommand& command) {
     return;
   }
   m_AddressService.CreatePlacedResource(command.m_pHeap.Key, command.m_ppvResource.Key,
-                                        command.m_pDesc.Value->Flags);
+                                        command.m_pDesc.Value->Flags, command.m_InitialState.Value);
   if (m_Mode == Mode::Store) {
     m_ResourceStateTracker.AddResource(
         reinterpret_cast<ID3D12Resource*>(*command.m_ppvResource.Value), command.m_ppvResource.Key,
@@ -355,7 +355,7 @@ void CpuPatchLayer::Post(ID3D12Device8CreatePlacedResource1Command& command) {
     return;
   }
   m_AddressService.CreatePlacedResource(command.m_pHeap.Key, command.m_ppvResource.Key,
-                                        command.m_pDesc.Value->Flags);
+                                        command.m_pDesc.Value->Flags, command.m_InitialState.Value);
   if (m_Mode == Mode::Store) {
     m_ResourceStateTracker.AddResource(
         reinterpret_cast<ID3D12Resource*>(*command.m_ppvResource.Value), command.m_ppvResource.Key,
@@ -370,7 +370,8 @@ void CpuPatchLayer::Post(ID3D12Device10CreatePlacedResource2Command& command) {
     return;
   }
   m_AddressService.CreatePlacedResource(command.m_pHeap.Key, command.m_ppvResource.Key,
-                                        command.m_pDesc.Value->Flags);
+                                        command.m_pDesc.Value->Flags,
+                                        command.m_InitialLayout.Value);
   if (m_Mode == Mode::Store) {
     m_ResourceStateTracker.AddResource(
         reinterpret_cast<ID3D12Resource*>(*command.m_ppvResource.Value), command.m_ppvResource.Key,
@@ -385,7 +386,8 @@ void CpuPatchLayer::Post(INTC_D3D12_CreatePlacedResourceCommand& command) {
     return;
   }
   m_AddressService.CreatePlacedResource(command.m_pHeap.Key, command.m_ppvResource.Key,
-                                        command.m_pDesc.Value->pD3D12Desc->Flags);
+                                        command.m_pDesc.Value->pD3D12Desc->Flags,
+                                        command.m_InitialState.Value);
   if (m_Mode == Mode::Store) {
     m_ResourceStateTracker.AddResource(
         reinterpret_cast<ID3D12Resource*>(*command.m_ppvResource.Value), command.m_ppvResource.Key,

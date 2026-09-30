@@ -1561,7 +1561,8 @@ void GpuPatchLayer::Post(ID3D12DeviceCreatePlacedResourceCommand& c) {
       c.m_pDesc.Value->Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
     return;
   }
-  m_AddressService.CreatePlacedResource(c.m_pHeap.Key, c.m_ppvResource.Key, c.m_pDesc.Value->Flags);
+  m_AddressService.CreatePlacedResource(c.m_pHeap.Key, c.m_ppvResource.Key, c.m_pDesc.Value->Flags,
+                                        c.m_InitialState.Value);
   m_ResourceStateTracker.AddResource(*reinterpret_cast<ID3D12Resource**>(c.m_ppvResource.Value),
                                      c.m_ppvResource.Key, c.m_InitialState.Value);
 }
@@ -1571,7 +1572,8 @@ void GpuPatchLayer::Post(ID3D12Device8CreatePlacedResource1Command& c) {
       c.m_pDesc.Value->Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
     return;
   }
-  m_AddressService.CreatePlacedResource(c.m_pHeap.Key, c.m_ppvResource.Key, c.m_pDesc.Value->Flags);
+  m_AddressService.CreatePlacedResource(c.m_pHeap.Key, c.m_ppvResource.Key, c.m_pDesc.Value->Flags,
+                                        c.m_InitialState.Value);
   m_ResourceStateTracker.AddResource(*reinterpret_cast<ID3D12Resource**>(c.m_ppvResource.Value),
                                      c.m_ppvResource.Key, c.m_InitialState.Value);
 }
@@ -1581,7 +1583,8 @@ void GpuPatchLayer::Post(ID3D12Device10CreatePlacedResource2Command& c) {
       c.m_pDesc.Value->Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
     return;
   }
-  m_AddressService.CreatePlacedResource(c.m_pHeap.Key, c.m_ppvResource.Key, c.m_pDesc.Value->Flags);
+  m_AddressService.CreatePlacedResource(c.m_pHeap.Key, c.m_ppvResource.Key, c.m_pDesc.Value->Flags,
+                                        c.m_InitialLayout.Value);
   m_ResourceStateTracker.AddResource(*reinterpret_cast<ID3D12Resource**>(c.m_ppvResource.Value),
                                      c.m_ppvResource.Key, c.m_InitialLayout.Value);
 }

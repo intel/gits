@@ -56,7 +56,7 @@ void RaytracingInstancesDump::DumpBuffer(DumpInfo& dumpInfo, void* data) {
     for (unsigned i = 0; i < numInstances; ++i) {
       CapturePlayerGpuAddressService::ResourceInfo* info =
           m_RaytracingService.GetGpuAddressService().GetResourceInfoByCaptureAddress(
-              instances[i].AccelerationStructure);
+              instances[i].AccelerationStructure, true);
       if (info) {
         unsigned offset = instances[i].AccelerationStructure - info->CaptureStart;
         blases.push_back(std::make_pair(info->Key, offset));
@@ -68,7 +68,8 @@ void RaytracingInstancesDump::DumpBuffer(DumpInfo& dumpInfo, void* data) {
       unsigned index = instancesInfo.ArrayOfPointersOffsets[i];
       D3D12_GPU_VIRTUAL_ADDRESS blasAddress = instances[index].AccelerationStructure;
       CapturePlayerGpuAddressService::ResourceInfo* info =
-          m_RaytracingService.GetGpuAddressService().GetResourceInfoByCaptureAddress(blasAddress);
+          m_RaytracingService.GetGpuAddressService().GetResourceInfoByCaptureAddress(blasAddress,
+                                                                                     true);
       if (info) {
         unsigned offset = instances[index].AccelerationStructure - info->CaptureStart;
         blases.push_back(std::make_pair(info->Key, offset));

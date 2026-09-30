@@ -15,8 +15,103 @@
 namespace gits {
 namespace DirectX {
 
+void CapturePlayerGpuAddressService::CreatePlacedResource(ObjectKey heapKey,
+                                                          ObjectKey resourceKey,
+                                                          D3D12_RESOURCE_FLAGS flags,
+                                                          D3D12_RESOURCE_STATES initialState) {
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  bool raytracingAS = false;
+  if (initialState & D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE) {
+    raytracingAS = true;
+  }
+  if (flags & D3D12_RESOURCE_FLAG_RAYTRACING_ACCELERATION_STRUCTURE) {
+    raytracingAS = true;
+  }
+  m_GpuAddressService.CreatePlacedResource(heapKey, resourceKey, flags, raytracingAS);
+  if (m_GpuPlayerAddress) {
+    m_GpuPlayerAddress->CreatePlacedResource(heapKey, resourceKey, flags, raytracingAS);
+  }
+}
+
+void CapturePlayerGpuAddressService::CreatePlacedResource(ObjectKey heapKey,
+                                                          ObjectKey resourceKey,
+                                                          D3D12_RESOURCE_FLAGS flags,
+                                                          D3D12_BARRIER_LAYOUT initialLayout) {
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  bool raytracingAS = false;
+  if (flags & D3D12_RESOURCE_FLAG_RAYTRACING_ACCELERATION_STRUCTURE) {
+    raytracingAS = true;
+  }
+  m_GpuAddressService.CreatePlacedResource(heapKey, resourceKey, flags, raytracingAS);
+  if (m_GpuPlayerAddress) {
+    m_GpuPlayerAddress->CreatePlacedResource(heapKey, resourceKey, flags, raytracingAS);
+  }
+}
+
+void CapturePlayerGpuAddressService::AddGpuCaptureAddress(
+    ID3D12Resource* resource,
+    ObjectKey resourceKey,
+    unsigned size,
+    D3D12_GPU_VIRTUAL_ADDRESS captureAddress) {
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  m_GpuAddressService.AddGpuCaptureAddress(resource, resourceKey, size, captureAddress);
+}
+
+void CapturePlayerGpuAddressService::AddGpuPlayerAddress(ID3D12Resource* resource,
+                                                         ObjectKey resourceKey,
+                                                         unsigned size,
+                                                         D3D12_GPU_VIRTUAL_ADDRESS playerAddress) {
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  m_GpuAddressService.AddGpuPlayerAddress(resourceKey, playerAddress);
+  if (m_GpuPlayerAddress) {
+    m_GpuPlayerAddress->AddGpuCaptureAddress(resource, resourceKey, size, playerAddress);
+    m_GpuPlayerAddress->AddGpuPlayerAddress(resourceKey, playerAddress);
+  }
+}
+
+void CapturePlayerGpuAddressService::DestroyInterface(ObjectKey interfaceKey) {
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  m_GpuAddressService.DestroyInterface(interfaceKey);
+  if (m_GpuPlayerAddress) {
+    m_GpuPlayerAddress->DestroyInterface(interfaceKey);
+  }
+}
+
+CapturePlayerGpuAddressService::ResourceInfo* CapturePlayerGpuAddressService::
+    GetResourceInfoByCaptureAddress(D3D12_GPU_VIRTUAL_ADDRESS address, bool raytracingAS) {
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  return m_GpuAddressService.GetResourceInfo(address, raytracingAS);
+}
+
+CapturePlayerGpuAddressService::ResourceInfo* CapturePlayerGpuAddressService::
+    GetResourceInfoByPlayerAddress(D3D12_GPU_VIRTUAL_ADDRESS address, bool raytracingAS) {
+  if (m_GpuPlayerAddress) {
+    std::lock_guard<std::mutex> lock(m_Mutex);
+    return m_GpuPlayerAddress->GetResourceInfo(address, raytracingAS);
+  }
+  return nullptr;
+}
+
+void CapturePlayerGpuAddressService::GetMappings(std::vector<GpuAddressMapping>& mappings) {
+  {
+    std::lock_guard<std::mutex> lock(m_Mutex);
+    m_GpuAddressService.GetMappings(mappings);
+  }
+  std::sort(mappings.begin(), mappings.end(),
+            [](CapturePlayerGpuAddressService::GpuAddressMapping& m1,
+               CapturePlayerGpuAddressService::GpuAddressMapping& m2) {
+              return m1.CaptureStart < m2.CaptureStart;
+            });
+}
+
+void CapturePlayerGpuAddressService::EnablePlayerAddressLookup() {
+  if (!m_GpuPlayerAddress) {
+    m_GpuPlayerAddress.reset(new GpuAddressService());
+  }
+}
+
 void CapturePlayerGpuAddressService::GpuAddressService::CreatePlacedResource(
-    ObjectKey heapKey, ObjectKey resourceKey, D3D12_RESOURCE_FLAGS flags) {
+    ObjectKey heapKey, ObjectKey resourceKey, D3D12_RESOURCE_FLAGS flags, bool raytracingAS) {
   HeapInfo* heapInfo{};
   auto it = m_HeapsByKey.find(heapKey);
   if (it != m_HeapsByKey.end()) {
@@ -26,11 +121,16 @@ void CapturePlayerGpuAddressService::GpuAddressService::CreatePlacedResource(
     m_HeapsByKey[heapKey].reset(heapInfo);
   }
   heapInfo->Resources.insert(resourceKey);
-  m_HeapsByResourceKey[resourceKey] = heapInfo;
 
+  PlacedResourceInfo* info = new PlacedResourceInfo();
+  info->Key = resourceKey;
+  info->HeapKey = heapKey;
   if (flags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE) {
-    m_DeniedShaderResources.insert(resourceKey);
+    info->DeniedShaderResource = true;
   }
+  info->RaytracingAS = raytracingAS;
+
+  m_PlacedResourcesByKey[resourceKey].reset(info);
 }
 
 void CapturePlayerGpuAddressService::GpuAddressService::AddGpuCaptureAddress(
@@ -41,14 +141,13 @@ void CapturePlayerGpuAddressService::GpuAddressService::AddGpuCaptureAddress(
   if (!captureAddress) {
     return;
   }
-  auto itHeap = m_HeapsByResourceKey.find(resourceKey);
-  if (itHeap != m_HeapsByResourceKey.end()) {
-    auto it = m_PlacedResourcesByKey.find(resourceKey);
-    if (it != m_PlacedResourcesByKey.end()) {
+  auto it = m_PlacedResourcesByKey.find(resourceKey);
+  if (it != m_PlacedResourcesByKey.end()) {
+    if (it->second->CaptureStart) {
       return;
     }
 
-    PlacedResourceInfo* info = new PlacedResourceInfo{};
+    PlacedResourceInfo* info = it->second.get();
     info->CaptureStart = captureAddress;
     info->Key = resourceKey;
     info->Size = size;
@@ -82,8 +181,6 @@ void CapturePlayerGpuAddressService::GpuAddressService::AddGpuCaptureAddress(
       inf->Intersecting.insert(info);
     }
 
-    m_PlacedResourcesByKey[resourceKey].reset(info);
-
   } else {
     auto it = m_ResourcesByKey.find(resourceKey);
     if (it != m_ResourcesByKey.end()) {
@@ -102,12 +199,14 @@ void CapturePlayerGpuAddressService::GpuAddressService::AddGpuCaptureAddress(
 
 void CapturePlayerGpuAddressService::GpuAddressService::AddGpuPlayerAddress(
     ObjectKey resourceKey, D3D12_GPU_VIRTUAL_ADDRESS playerAddress) {
-  auto itHeap = m_HeapsByResourceKey.find(resourceKey);
-  if (itHeap != m_HeapsByResourceKey.end()) {
-    PlacedResourceInfo* info = m_PlacedResourcesByKey[resourceKey].get();
+  auto it = m_PlacedResourcesByKey.find(resourceKey);
+  if (it != m_PlacedResourcesByKey.end()) {
+    PlacedResourceInfo* info = it->second.get();
     info->PlayerStart = playerAddress;
 
-    HeapInfo* heapInfo = itHeap->second;
+    auto itHeap = m_HeapsByKey.find(info->HeapKey);
+    GITS_ASSERT(itHeap != m_HeapsByKey.end());
+    HeapInfo* heapInfo = itHeap->second.get();
     if (!heapInfo->CaptureStart || heapInfo->CaptureStart > info->CaptureStart) {
       heapInfo->CaptureStart = info->CaptureStart;
       heapInfo->PlayerStart = info->PlayerStart;
@@ -141,15 +240,16 @@ void CapturePlayerGpuAddressService::GpuAddressService::DestroyInterface(ObjectK
     auto it = m_PlacedResourcesByKey.find(interfaceKey);
     if (it != m_PlacedResourcesByKey.end()) {
       PlacedResourceInfo* info = it->second.get();
-      for (PlacedResourceInfo* intersecting : info->Intersecting) {
-        intersecting->Intersecting.erase(info);
+      if (info->CaptureStart) {
+        for (PlacedResourceInfo* intersecting : info->Intersecting) {
+          intersecting->Intersecting.erase(info);
+        }
+        m_PlacedResourcesByAddress[info->Layer].erase(info->CaptureStart);
       }
-      m_PlacedResourcesByAddress[info->Layer].erase(info->CaptureStart);
+      auto itHeap = m_HeapsByKey.find(it->second->HeapKey);
+      GITS_ASSERT(itHeap != m_HeapsByKey.end());
+      itHeap->second->Resources.erase(interfaceKey);
       m_PlacedResourcesByKey.erase(it);
-      auto heapIt = m_HeapsByResourceKey.find(interfaceKey);
-      GITS_ASSERT(heapIt != m_HeapsByResourceKey.end());
-      heapIt->second->Resources.erase(interfaceKey);
-      m_HeapsByResourceKey.erase(heapIt);
       return;
     }
   }
@@ -167,11 +267,10 @@ void CapturePlayerGpuAddressService::GpuAddressService::DestroyInterface(ObjectK
       m_HeapsByKey.erase(it);
     }
   }
-  m_DeniedShaderResources.erase(interfaceKey);
 }
 
 CapturePlayerGpuAddressService::ResourceInfo* CapturePlayerGpuAddressService::GpuAddressService::
-    GetResourceInfo(D3D12_GPU_VIRTUAL_ADDRESS address) {
+    GetResourceInfo(D3D12_GPU_VIRTUAL_ADDRESS address, bool raytracingAS) {
 
   ResourceInfo* resourceInfo{};
   if (!address) {
@@ -213,10 +312,17 @@ CapturePlayerGpuAddressService::ResourceInfo* CapturePlayerGpuAddressService::Gp
       D3D12_GPU_VIRTUAL_ADDRESS start = info->CaptureStart;
       D3D12_GPU_VIRTUAL_ADDRESS end = start + info->Size;
       if (address >= start && address < end) {
-        if (end > selectedEnd) {
-          auto deniedIt = m_DeniedShaderResources.find(info->Key);
-          if (deniedIt == m_DeniedShaderResources.end()) {
-            selectedInfo = info;
+        if (raytracingAS) {
+          if (!selectedInfo->RaytracingAS || end > selectedEnd) {
+            if (info->RaytracingAS) {
+              selectedInfo = info;
+            }
+          }
+        } else {
+          if (end > selectedEnd) {
+            if (!info->DeniedShaderResource) {
+              selectedInfo = info;
+            }
           }
         }
       }
@@ -242,18 +348,6 @@ void CapturePlayerGpuAddressService::GpuAddressService::GetMappings(
     mappings[index].Size = it.second->CaptureEnd - it.second->CaptureStart;
     ++index;
   }
-}
-
-void CapturePlayerGpuAddressService::GetMappings(std::vector<GpuAddressMapping>& mappings) {
-  {
-    std::lock_guard<std::mutex> lock(m_Mutex);
-    m_GpuAddressService.GetMappings(mappings);
-  }
-  std::sort(mappings.begin(), mappings.end(),
-            [](CapturePlayerGpuAddressService::GpuAddressMapping& m1,
-               CapturePlayerGpuAddressService::GpuAddressMapping& m2) {
-              return m1.CaptureStart < m2.CaptureStart;
-            });
 }
 
 } // namespace DirectX

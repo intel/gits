@@ -888,7 +888,7 @@ D3D12_GPU_VIRTUAL_ADDRESS RaytracingAssertionsLayer::GetReplayAddressFromMapping
 CapturePlayerGpuAddressService::ResourceInfo& RaytracingAssertionsLayer::FindReplayResource(
     D3D12_GPU_VIRTUAL_ADDRESS replayAddress) {
   CapturePlayerGpuAddressService::ResourceInfo* info =
-      m_AddressService.GetResourceInfoByPlayerAddress(replayAddress);
+      m_AddressService.GetResourceInfoByPlayerAddress(replayAddress, true);
   if (!info) {
     LOG_ERROR << "RaytracingAssertionsLayer: unresolved replay GPUVA 0x" << std::hex
               << replayAddress << std::dec;
@@ -902,7 +902,7 @@ CapturePlayerGpuAddressService::ResourceInfo& RaytracingAssertionsLayer::FindRep
 CapturePlayerGpuAddressService::ResourceInfo& RaytracingAssertionsLayer::FindCaptureResource(
     D3D12_GPU_VIRTUAL_ADDRESS captureAddress) {
   CapturePlayerGpuAddressService::ResourceInfo* info =
-      m_AddressService.GetResourceInfoByCaptureAddress(captureAddress);
+      m_AddressService.GetResourceInfoByCaptureAddress(captureAddress, true);
   if (!info) {
     LOG_ERROR << "RaytracingAssertionsLayer: unresolved capture GPUVA 0x" << std::hex
               << captureAddress << std::dec;
@@ -1015,7 +1015,7 @@ void RaytracingAssertionsLayer::AddResource(Command& c, State initialState, Obje
     GITS_ASSERT(hr == S_OK);
   }
   if (heapKey) {
-    m_AddressService.CreatePlacedResource(heapKey, key, c.m_pDesc.Value->Flags);
+    m_AddressService.CreatePlacedResource(heapKey, key, c.m_pDesc.Value->Flags, initialState);
     m_PlacedResources.insert(key);
     m_ResourceHeap[key] = heapKey;
   } else {
