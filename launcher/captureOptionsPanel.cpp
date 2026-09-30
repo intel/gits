@@ -38,22 +38,24 @@ void CaptureOptionsPanel::Render() {
   auto& context = Context::GetInstance();
   auto api = context.SelectedApiForCapture;
 
-  if (api == Api::DIRECTX) {
+  if (api == Api::DIRECTX || api == Api::VULKAN) {
+    const auto hudApi = api == Api::DIRECTX ? gits::ApiBool::DX : gits::ApiBool::VK;
     auto& hudApis = config_options::HudEnabled(Mode::CAPTURE);
-    auto dxHudEnabled =
-        std::find(hudApis.begin(), hudApis.end(), gits::ApiBool::DX) != hudApis.end();
-    changed |= ImGui::Checkbox(Labels::HUD_ENABLED, &dxHudEnabled);
-    if (changed) {
-      auto it = std::find(hudApis.begin(), hudApis.end(), gits::ApiBool::DX);
-      if (dxHudEnabled && it == hudApis.end()) {
-        hudApis.push_back(gits::ApiBool::DX);
-      } else if (!dxHudEnabled && it != hudApis.end()) {
+    auto hudEnabled = std::find(hudApis.begin(), hudApis.end(), hudApi) != hudApis.end();
+    if (ImGui::Checkbox(Labels::HUD_ENABLED, &hudEnabled)) {
+      changed = true;
+      auto it = std::find(hudApis.begin(), hudApis.end(), hudApi);
+      if (hudEnabled && it == hudApis.end()) {
+        hudApis.push_back(hudApi);
+      } else if (!hudEnabled && it != hudApis.end()) {
         hudApis.erase(it);
       }
     }
     config_options_gui_helpers::ConfigOptionHelpButton(
         ConfigMetadata::Common::Shared::HUD::GroupMetadata);
+  }
 
+  if (api == Api::DIRECTX) {
     changed |= ImGui::Checkbox(Labels::SHADOW_MEMORY, &config_options::ShadowMemory(Mode::CAPTURE));
     config_options_gui_helpers::ConfigOptionHelpButton(
         ConfigMetadata::DirectX::Recorder::shadowMemory);

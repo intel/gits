@@ -67,16 +67,16 @@ void SubcaptureOptionsPanel::Render() {
 
   auto api = context.GetStreamAPI();
 
-  if (api == Api::DIRECTX) {
+  if (api == Api::DIRECTX || api == Api::VULKAN) {
+    const auto hudApi = api == Api::DIRECTX ? gits::ApiBool::DX : gits::ApiBool::VK;
     auto& hudApis = config_options::HudEnabled(Mode::SUBCAPTURE);
-    auto dxHudEnabled =
-        std::find(hudApis.begin(), hudApis.end(), gits::ApiBool::DX) != hudApis.end();
-    changed |= ImGui::Checkbox(Labels::HUD_ENABLED, &dxHudEnabled);
-    if (changed) {
-      auto it = std::find(hudApis.begin(), hudApis.end(), gits::ApiBool::DX);
-      if (dxHudEnabled && it == hudApis.end()) {
-        hudApis.push_back(gits::ApiBool::DX);
-      } else if (!dxHudEnabled && it != hudApis.end()) {
+    auto hudEnabled = std::find(hudApis.begin(), hudApis.end(), hudApi) != hudApis.end();
+    if (ImGui::Checkbox(Labels::HUD_ENABLED, &hudEnabled)) {
+      changed = true;
+      auto it = std::find(hudApis.begin(), hudApis.end(), hudApi);
+      if (hudEnabled && it == hudApis.end()) {
+        hudApis.push_back(hudApi);
+      } else if (!hudEnabled && it != hudApis.end()) {
         hudApis.erase(it);
       }
     }
