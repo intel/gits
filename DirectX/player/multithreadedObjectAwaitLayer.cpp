@@ -9,6 +9,7 @@
 #include "multithreadedObjectAwaitLayer.h"
 #include "arguments.h"
 #include "interfaceArgumentUpdaters.h"
+#include "pipelineLibraryService.h"
 
 namespace gits {
 namespace DirectX {
@@ -94,6 +95,12 @@ void MultithreadedObjectAwaitLayer::Pre(IUnknownAddRefCommand& c) {
 void MultithreadedObjectAwaitLayer::Pre(IUnknownReleaseCommand& c) {
   auto& service = m_Manager.GetMultithreadedObjectCreationService();
   if (c.m_Result.Value == 0) {
+    if (!c.Skip && service.CancelPendingTask(c.m_Object.Key)) {
+      m_Manager.GetPipelineLibraryService().ReleasePipelineState(c.m_Object.Key, 0);
+      c.Skip = true;
+      return;
+    }
+
     CompleteArgument(c.m_Object);
 
     // If the object is being released we need to create all objects that depend on it

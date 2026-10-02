@@ -41,6 +41,7 @@ public:
   std::optional<ObjectCreationOutput> Complete(ObjectKey objectKey);
   std::vector<std::pair<ObjectKey, ObjectCreationOutput>> CompleteAll();
   bool ScheduleUpdateRefCount(ObjectKey objectKey, int count);
+  bool CancelPendingTask(ObjectKey objectKey);
 
 private:
   struct ObjectCreationTask {
@@ -51,6 +52,7 @@ private:
   };
 
   ObjectCreationOutput CreateObject(ObjectCreationTask* task);
+  void ApplyPendingReferenceCount(ObjectKey objectKey, void* object);
   void Initialize();
   void WorkerThread();
 

@@ -109,7 +109,9 @@ MultithreadedObjectCreationService::Complete(ObjectKey objectKey) {
 
   if (task->StartedTask.valid()) {
     lock.unlock();
-    return task->StartedTask.get();
+    ObjectCreationOutput output = task->StartedTask.get();
+    ApplyPendingReferenceCount(objectKey, output.object);
+    return output;
   } else {
     m_TasksQueue.erase(std::remove(m_TasksQueue.begin(), m_TasksQueue.end(), task.get()),
                        m_TasksQueue.end());
@@ -138,13 +140,32 @@ bool MultithreadedObjectCreationService::ScheduleUpdateRefCount(ObjectKey object
     return false;
   }
 
-  // Task is not pending
+  m_RefCounts[objectKey] += count;
+  return true;
+}
+
+bool MultithreadedObjectCreationService::CancelPendingTask(ObjectKey objectKey) {
+  std::lock_guard<std::mutex> guard(m_Mutex);
+
+  auto it = m_Tasks.find(objectKey);
+  if (it == m_Tasks.end()) {
+    return false;
+  }
+
   if (it->second.get()->StartedTask.valid()) {
     return false;
   }
 
-  // Update the reference count for pending objects
-  m_RefCounts[objectKey] += count;
+  auto refIt = m_RefCounts.find(objectKey);
+  if (refIt != m_RefCounts.end() && refIt->second != 0) {
+    return false;
+  }
+
+  ObjectCreationTask* task = it->second.get();
+  m_TasksQueue.erase(std::remove(m_TasksQueue.begin(), m_TasksQueue.end(), task),
+                     m_TasksQueue.end());
+  m_Tasks.erase(it);
+  m_RefCounts.erase(objectKey);
   return true;
 }
 
@@ -170,34 +191,43 @@ void MultithreadedObjectCreationService::WorkerThread() {
   }
 }
 
+void MultithreadedObjectCreationService::ApplyPendingReferenceCount(ObjectKey objectKey,
+                                                                    void* object) {
+  int refCount = 0;
+  {
+    std::lock_guard<std::mutex> guard(m_Mutex);
+    auto it = m_RefCounts.find(objectKey);
+    if (it == m_RefCounts.end()) {
+      return;
+    }
+    refCount = it->second;
+    m_RefCounts.erase(it);
+  }
+
+  if (refCount == 0 || !object) {
+    return;
+  }
+
+  IUnknown* unknown = static_cast<IUnknown*>(object);
+  if (refCount < 0) {
+    for (int i = 0; i < -refCount; ++i) {
+      unknown->Release();
+    }
+  } else {
+    for (int i = 0; i < refCount; ++i) {
+      unknown->AddRef();
+    }
+  }
+}
+
 MultithreadedObjectCreationService::ObjectCreationOutput MultithreadedObjectCreationService::
     CreateObject(ObjectCreationTask* task) {
-  // Create object
   ObjectCreationOutput r = task->CreationFunctor();
   if (r.result != S_OK) {
     return r;
   }
 
-  // Get the reference count and remove it from the map
-  int refCount = 0;
-  {
-    std::lock_guard<std::mutex> guard(m_Mutex);
-    refCount = m_RefCounts[task->Key];
-    m_RefCounts.erase(task->Key);
-  }
-
-  // Set the reference count on newly created object
-  if (refCount != 0) {
-    IUnknown* object = static_cast<IUnknown*>(r.object);
-    if (refCount < 0) {
-      GITS_ASSERT(refCount == -1);
-      object->Release();
-    }
-    for (int i = 0; i < refCount; ++i) {
-      object->AddRef();
-    }
-  }
-
+  ApplyPendingReferenceCount(task->Key, r.object);
   return r;
 }
 
