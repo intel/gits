@@ -328,7 +328,9 @@ void SubcaptureLayer::Post(vkCreateDeviceCommand& command) {
 }
 
 void SubcaptureLayer::Post(vkDestroyDeviceCommand& command) {
-  m_StateTracking.RemoveState(command.m_device.Key);
+  // Children go too: a VkQueue is never explicitly destroyed, so its state would survive the
+  // device and later make state restore emit a vkGetDeviceQueue on a device that no longer exists.
+  m_StateTracking.RemoveStateWithChildren(command.m_device.Key);
 }
 
 // ---- Memory --------------------------------------------------------------

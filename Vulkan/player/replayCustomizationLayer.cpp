@@ -39,6 +39,10 @@ thread_local std::vector<const char*> ReplayCustomizationLayer::tl_instanceExten
 thread_local std::vector<const char*> ReplayCustomizationLayer::tl_deviceExtensionNames;
 
 void ReplayCustomizationLayer::Post(vkCreateInstanceCommand& command) {
+  // A failed create leaves pInstance untouched, so dereferencing it would fault.
+  if (command.m_Return.Value != VK_SUCCESS || !command.m_pInstance.Value) {
+    return;
+  }
   m_Manager.LoadInstanceFunctions(*command.m_pInstance.Value);
 }
 

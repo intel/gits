@@ -137,6 +137,13 @@ void HandleMapService::SetHandle(GITSKey key, uint64_t handle) {
 uint64_t HandleMapService::GetHandle(GITSKey key) {
   std::lock_guard<std::mutex> lock(m_Mutex);
   auto it = m_KeyToHandle.find(key);
+  if (it == m_KeyToHandle.end()) {
+    // Naming the key matters - a subcapture that forgot to restore one object dies here with no
+    // other clue about which object it was.
+    LOG_ERROR << "HandleMapService::GetHandle: key=" << key
+              << " is not mapped to a live handle - the object was either never created during "
+                 "this playback or already destroyed.";
+  }
   GITS_ASSERT(it != m_KeyToHandle.end());
   return it->second;
 }

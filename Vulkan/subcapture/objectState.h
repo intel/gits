@@ -192,6 +192,15 @@ struct BufferState : ObjectState {
   bool AsBacking{};
 };
 
+// Per-subresource progress of an in-flight partial queue-family ownership transfer. Release and
+// acquire arrive as separate barriers on separate queues, so a subresource sits in Released until
+// its acquire is submitted - see ImageLayoutService::ApplyPartialOwnershipTransfer.
+enum class PartialOwnerState : uint8_t {
+  Untouched = 0, // still on the family that owned it before the transfer started
+  Released,      // release submitted, acquire not yet - no family may read it
+  Acquired,      // acquire submitted on ImageState::PartialOwnerDstFamily
+};
+
 // format, extent, mipLevels etc. are kept for resource-content restore helpers
 // that need them without re-decoding the creation command each time.
 // currentLayout is mutable state updated by barrier tracking - never in the
@@ -230,15 +239,20 @@ struct ImageState : ObjectState {
   // itself), so ExclusiveOwnerFamily must be ignored and the image excluded
   // from content restore - see ImageLayoutService::NoteExclusiveQueueFamilyTransfer.
   bool ExclusiveOwnershipPending{false};
-  // True once a queue-family ownership transfer barrier has been observed
-  // whose subresourceRange does not cover the whole image: ownership is
-  // tracked per whole image here, not per mip/layer/aspect, so such a
-  // barrier may leave some subresources on a different family than
-  // ExclusiveOwnerFamily records.  Sticky for simplicity (never cleared)
-  // rather than attempting to reconcile partial ranges - content restore
-  // always copies the whole image, so it must exclude any image that was
-  // ever partially transferred instead of guessing which parts are safe.
+  // True once partial-range ownership transfers leave the image genuinely split (ranges heading
+  // to two different destination families), so no single owner can be named. Sticky - content
+  // restore copies the whole image, so a split one stays excluded rather than guessing.
   bool ExclusiveOwnershipMixed{false};
+  // Progress of an in-flight partial ownership transfer, indexed mipLevel * ArrayLayers + layer.
+  // Apps move a texture a mip (or a layer) at a time, so the image is uniformly owned again only
+  // once every entry is Acquired. Empty while no partial transfer is in flight.
+  std::vector<PartialOwnerState> PartialOwnerStates{};
+  // Number of PartialOwnerStates entries that are Acquired. Reaching the subresource count
+  // resolves the transfer.
+  uint32_t PartialOwnerAcquiredCount{0};
+  // Destination family every range of the in-flight partial transfer names. A range naming a
+  // different one means the image really is split, which sets ExclusiveOwnershipMixed.
+  uint32_t PartialOwnerDstFamily{UINT32_MAX};
   // From VkImageCreateInfo::flags & VK_IMAGE_CREATE_DISJOINT_BIT. A disjoint
   // multi-planar image's barriers must use plane aspect bits rather than
   // COLOR (VUID-VkImageMemoryBarrier-image-01672 / -image-09242) - see
@@ -429,6 +443,19 @@ struct ExclusiveOwnerUpdate {
   bool Pending{false};
 };
 
+// One buffered partial-range queue-family ownership transfer, applied at submit time. See
+// CommandBufferState::PartialOwnerTransfersAfterSubmit.
+struct PartialOwnerTransfer {
+  uint64_t ImageKey{0};
+  uint32_t BaseMipLevel{0};
+  uint32_t LevelCount{0};
+  uint32_t BaseArrayLayer{0};
+  uint32_t LayerCount{0};
+  uint32_t DstFamily{UINT32_MAX};
+  // The barrier was recorded on a pool of DstFamily, i.e. it is the acquire half of the transfer.
+  bool Acquire{false};
+};
+
 struct CommandBufferState : ObjectState {
   // Needed for dependency-order restore: pool must exist before allocating buffers.
   uint64_t PoolKey{};
@@ -487,6 +514,11 @@ struct CommandBufferState : ObjectState {
   // map so a later whole-image owner update recorded on the same image in
   // this CB cannot erase the taint before it is applied at submit time.
   std::unordered_set<uint64_t> ExclusiveOwnerMixedAfterSubmit;
+  // Partial-range ownership transfers recorded by this CB, in record order. Order matters: each
+  // range advances ImageState::PartialOwnerStates and only the one acquiring the last subresource
+  // resolves the owner, so they cannot collapse into a per-image map like the whole-image updates
+  // above.
+  std::vector<PartialOwnerTransfer> PartialOwnerTransfersAfterSubmit;
   // Acceleration-structure builds whose input buffers must be read back after this CB is
   // submitted. Folded onto the executing primary at vkCmdExecuteCommands. Cleared on CB
   // reset and one-time-submit invalidation.

@@ -254,6 +254,11 @@ public:
   // Remove a Destroyed object (if it exists).
   void RemoveState(uint64_t key);
 
+  // Remove a Destroyed object together with every state parented to it. Needed for
+  // vkDestroyDevice: a VkQueue has no destroy call of its own, so its state would otherwise
+  // outlive the device forever.
+  void RemoveStateWithChildren(uint64_t key);
+
   // Retrieve a typed state pointer; returns nullptr if not found or wrong type.
   template <typename T>
   T* GetState(uint64_t key) {

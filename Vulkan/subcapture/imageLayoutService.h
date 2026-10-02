@@ -19,6 +19,8 @@ namespace gits {
 namespace vulkan {
 
 class StateTrackingService;
+struct ImageState;
+struct PartialOwnerTransfer;
 
 // Tracks the current layout of VkImages as the command stream executes.
 // Handles both explicit pipeline barriers and implicit render-pass final-layout
@@ -127,6 +129,14 @@ private:
   // "last write wins" map so a later whole-image update in the same CB cannot
   // erase the taint.
   void RecordExclusiveMixed(uint64_t cbKey, uint64_t imageKey);
+  // Buffer a partial-range ownership transfer, to be folded into the image's coverage at submit
+  // time by ApplyPartialOwnershipTransfer.
+  void RecordPartialOwnerTransfer(uint64_t cbKey,
+                                  uint64_t imageKey,
+                                  const ImageState& img,
+                                  const VkImageSubresourceRange& range,
+                                  uint32_t dstFamily);
+  void ApplyPartialOwnershipTransfer(const PartialOwnerTransfer& transfer);
   void NoteExclusiveQueueFamilyUse(uint64_t cbKey, uint64_t imageKey);
   void NoteExclusiveQueueFamilyTransfer(uint64_t cbKey,
                                         uint64_t imageKey,

@@ -24,6 +24,7 @@
 
 #include <algorithm>
 #include <cstring>
+#include <iterator>
 #include <limits>
 #include <memory>
 #include <sstream>
@@ -177,6 +178,16 @@ void StateTrackingService::StoreState(std::unique_ptr<ObjectState> state) {
 }
 
 void StateTrackingService::RemoveState(uint64_t key) {
+  m_States.erase(key);
+}
+
+void StateTrackingService::RemoveStateWithChildren(uint64_t key) {
+  if (!key) {
+    return;
+  }
+  for (auto it = m_States.begin(); it != m_States.end();) {
+    it = (it->second->ParentKey == key) ? m_States.erase(it) : std::next(it);
+  }
   m_States.erase(key);
 }
 
@@ -537,6 +548,15 @@ void StateTrackingService::RestoreOne(ObjectState* state) {
   // Restore parent before child (device before buffer, pool before set, etc.)
   if (state->ParentKey) {
     RestoreOne(GetState(state->ParentKey));
+    // A child of a parent that is gone (or failed to restore) would be emitted with a handle key
+    // the player never maps, aborting replay in HandleMapService::GetHandle. Skip it, the same way
+    // the DependencyKeys loop below does.
+    if (!m_RestoredThisPass.count(state->ParentKey)) {
+      LOG_WARNING << "Vulkan subcapture: skipping object key=" << state->Key
+                  << " (commandId=" << static_cast<uint32_t>(state->CreationCommandId)
+                  << ") because parent key=" << state->ParentKey << " could not be restored.";
+      return;
+    }
   }
 
   // Restore sibling dependencies before emitting creation commands.  For
@@ -5721,6 +5741,13 @@ void StateTrackingService::RestoreImageContents() {
         if (depthStencil) {
           reason << " (depth/stencil aspect additionally requires a graphics-capable family)";
         }
+        // Without the ownership state there is no way to tell an unrestored owner family from a
+        // mid-transfer image, and the two need completely different fixes.
+        reason << " [sharingMode=" << static_cast<uint32_t>(img->SharingMode)
+               << " exclusiveOwnerFamily=" << img->ExclusiveOwnerFamily
+               << " pending=" << img->ExclusiveOwnershipPending
+               << " mixed=" << img->ExclusiveOwnershipMixed
+               << " concurrentFamilies=" << img->ConcurrentFamilies.size() << "]";
         reason << " - excluded from content restore, its contents will not be restored";
         LOG_WARNING << reason.str();
         continue;

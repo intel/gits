@@ -10,6 +10,9 @@
 #include "stateTrackingService.h"
 #include "objectState.h"
 #include "gpuReadbackHelper.h" // for AspectMaskForFormat
+#include "log.h"
+
+#include <algorithm>
 
 namespace gits {
 namespace vulkan {
@@ -86,6 +89,102 @@ void ImageLayoutService::RecordExclusiveMixed(uint64_t cbKey, uint64_t imageKey)
   cb->ExclusiveOwnerMixedAfterSubmit.insert(imageKey);
 }
 
+// Buffer one partial-range ownership transfer. Apps routinely move a texture a mip (or a layer)
+// at a time, so a single partial barrier is not evidence that the image ends up split - only the
+// accumulated coverage is, which is why this is resolved at submit time rather than here.
+void ImageLayoutService::RecordPartialOwnerTransfer(uint64_t cbKey,
+                                                    uint64_t imageKey,
+                                                    const ImageState& img,
+                                                    const VkImageSubresourceRange& range,
+                                                    uint32_t dstFamily) {
+  auto* cb = m_StateTracking.GetState<CommandBufferState>(cbKey);
+  if (!cb) {
+    return;
+  }
+  // Coverage is tracked per mip/layer, so a barrier naming only some of the aspects cannot be
+  // accumulated - fall back to tainting the image.
+  if (range.aspectMask != AspectMaskForFormat(img.Format, img.Disjoint)) {
+    RecordExclusiveMixed(cbKey, imageKey);
+    return;
+  }
+  auto* pool = m_StateTracking.GetState<CommandPoolState>(cb->PoolKey);
+  PartialOwnerTransfer transfer;
+  transfer.ImageKey = imageKey;
+  transfer.BaseMipLevel = range.baseMipLevel;
+  transfer.LevelCount = (range.levelCount == VK_REMAINING_MIP_LEVELS)
+                            ? img.MipLevels - range.baseMipLevel
+                            : range.levelCount;
+  transfer.BaseArrayLayer = range.baseArrayLayer;
+  transfer.LayerCount = (range.layerCount == VK_REMAINING_ARRAY_LAYERS)
+                            ? img.ArrayLayers - range.baseArrayLayer
+                            : range.layerCount;
+  transfer.DstFamily = dstFamily;
+  transfer.Acquire = pool && pool->QueueFamilyIndex == dstFamily;
+  cb->PartialOwnerTransfersAfterSubmit.push_back(transfer);
+}
+
+// Advance the per-subresource state of one buffered partial transfer. Release and acquire of the
+// same subresource arrive as two separate barriers, so state is tracked per subresource rather
+// than as plain coverage - an acquire must be able to advance an entry a release already touched.
+void ImageLayoutService::ApplyPartialOwnershipTransfer(const PartialOwnerTransfer& transfer) {
+  auto* img = m_StateTracking.GetState<ImageState>(transfer.ImageKey);
+  if (!img || img->SharingMode != VK_SHARING_MODE_EXCLUSIVE || img->ExclusiveOwnershipMixed) {
+    return;
+  }
+  const uint32_t total = img->MipLevels * img->ArrayLayers;
+  if (total == 0) {
+    return;
+  }
+
+  if (img->PartialOwnerStates.empty()) {
+    img->PartialOwnerStates.assign(total, PartialOwnerState::Untouched);
+    img->PartialOwnerAcquiredCount = 0;
+    img->PartialOwnerDstFamily = transfer.DstFamily;
+  } else if (img->PartialOwnerDstFamily != transfer.DstFamily) {
+    // Subresources heading to two different families: the image really is split, and no single
+    // family can be named for a whole-image copy.
+    img->ExclusiveOwnershipMixed = true;
+    img->PartialOwnerStates.clear();
+    img->PartialOwnerAcquiredCount = 0;
+    img->PartialOwnerDstFamily = UINT32_MAX;
+    return;
+  }
+
+  const PartialOwnerState newState =
+      transfer.Acquire ? PartialOwnerState::Acquired : PartialOwnerState::Released;
+  const uint32_t lastMip = std::min(transfer.BaseMipLevel + transfer.LevelCount, img->MipLevels);
+  const uint32_t lastLayer =
+      std::min(transfer.BaseArrayLayer + transfer.LayerCount, img->ArrayLayers);
+  for (uint32_t mip = transfer.BaseMipLevel; mip < lastMip; ++mip) {
+    for (uint32_t layer = transfer.BaseArrayLayer; layer < lastLayer; ++layer) {
+      PartialOwnerState& state = img->PartialOwnerStates[mip * img->ArrayLayers + layer];
+      if (state == newState) {
+        continue;
+      }
+      if (state == PartialOwnerState::Acquired) {
+        --img->PartialOwnerAcquiredCount;
+      } else if (newState == PartialOwnerState::Acquired) {
+        ++img->PartialOwnerAcquiredCount;
+      }
+      state = newState;
+    }
+  }
+
+  if (img->PartialOwnerAcquiredCount != total) {
+    // Part of the image has reached the destination family and part has not, so no family may
+    // read the whole image yet.
+    img->ExclusiveOwnershipPending = true;
+    return;
+  }
+
+  // Every subresource acquired - same outcome as a single whole-image barrier would have produced.
+  img->ExclusiveOwnerFamily = transfer.DstFamily;
+  img->ExclusiveOwnershipPending = false;
+  img->PartialOwnerStates.clear();
+  img->PartialOwnerAcquiredCount = 0;
+  img->PartialOwnerDstFamily = UINT32_MAX;
+}
+
 void ImageLayoutService::NoteExclusiveQueueFamilyUse(uint64_t cbKey, uint64_t imageKey) {
   auto* cb = m_StateTracking.GetState<CommandBufferState>(cbKey);
   if (!cb) {
@@ -110,11 +209,9 @@ void ImageLayoutService::NoteExclusiveQueueFamilyUse(uint64_t cbKey, uint64_t im
 //    read the image until the matching acquire is submitted - mark it
 //    pending instead of guessing an owner.
 //
-// Ownership transfers apply per subresourceRange, so a valid stream may move
-// only some mips/layers/aspects while the rest stay on the other family.
-// Without per-subresource tracking we cannot represent that split, so a
-// range that is not the whole image permanently taints it as mixed-ownership
-// instead of guessing a single owner - see RecordExclusiveMixed.
+// Ownership transfers apply per subresourceRange, so a valid stream may move only some
+// mips/layers/aspects while the rest stay on the other family. Such a range is accumulated per
+// subresource and resolves once the image is whole again - see RecordPartialOwnerTransfer.
 void ImageLayoutService::NoteExclusiveQueueFamilyTransfer(uint64_t cbKey,
                                                           uint64_t imageKey,
                                                           uint32_t srcFamily,
@@ -129,7 +226,7 @@ void ImageLayoutService::NoteExclusiveQueueFamilyTransfer(uint64_t cbKey,
     return;
   }
   if (!CoversWholeImage(*img, range)) {
-    RecordExclusiveMixed(cbKey, imageKey);
+    RecordPartialOwnerTransfer(cbKey, imageKey, *img, range, dstFamily);
     return;
   }
   auto* cb = m_StateTracking.GetState<CommandBufferState>(cbKey);
@@ -315,6 +412,11 @@ void ImageLayoutService::ApplyCommandBuffer(uint64_t cbKey) {
       imgState->ExclusiveOwnershipMixed = true;
     }
   }
+  // In record order, unlike the whole-image updates above: each range advances the per-subresource
+  // state and only the one acquiring the last subresource resolves the owner.
+  for (const PartialOwnerTransfer& transfer : cb->PartialOwnerTransfersAfterSubmit) {
+    ApplyPartialOwnershipTransfer(transfer);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -400,6 +502,9 @@ void ImageLayoutService::MergeSecondary(uint64_t primaryKey, uint64_t secondaryK
   }
   prim->ExclusiveOwnerMixedAfterSubmit.insert(sec->ExclusiveOwnerMixedAfterSubmit.begin(),
                                               sec->ExclusiveOwnerMixedAfterSubmit.end());
+  prim->PartialOwnerTransfersAfterSubmit.insert(prim->PartialOwnerTransfersAfterSubmit.end(),
+                                                sec->PartialOwnerTransfersAfterSubmit.begin(),
+                                                sec->PartialOwnerTransfersAfterSubmit.end());
 }
 
 } // namespace vulkan
