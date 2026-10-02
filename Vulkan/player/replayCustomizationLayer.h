@@ -21,7 +21,7 @@ class PlayerManager;
 class ReplayCustomizationLayer : public Layer {
 public:
   ReplayCustomizationLayer(PlayerManager& manager)
-      : Layer("ReplayCustomization"), m_Manager(manager) {}
+      : Layer("ReplayCustomization"), m_Manager(manager), m_RayTracingService(manager) {}
 
   void Pre(vkCreateInstanceCommand& command) override;
   void Post(vkCreateInstanceCommand& command) override;
@@ -60,7 +60,6 @@ public:
   void Pre(vkGetFenceStatusCommand& command) override;
   void Post(vkGetFenceStatusCommand& command) override;
 
-  // Vulkan.Player.Skip* diagnostics
   void Pre(vkCmdBuildAccelerationStructuresKHRCommand& command) override;
   void Pre(vkCmdBuildAccelerationStructuresIndirectKHRCommand& command) override;
   void Pre(vkBuildAccelerationStructuresKHRCommand& command) override;
@@ -75,8 +74,15 @@ public:
   void Pre(vkCopyMemoryToMicromapEXTCommand& command) override;
   void Pre(vkCmdWriteMicromapsPropertiesEXTCommand& command) override;
   void Pre(vkWriteMicromapsPropertiesEXTCommand& command) override;
+  void Pre(vkCreateRayTracingPipelinesKHRCommand& command) override;
+  void Post(vkCreateRayTracingPipelinesKHRCommand& command) override;
+  void Post(vkDestroyPipelineCommand& command) override;
+  void Pre(vkGetRayTracingShaderGroupHandlesKHRCommand& command) override;
+  void Post(vkGetRayTracingShaderGroupHandlesKHRCommand& command) override;
   void Pre(vkCmdTraceRaysKHRCommand& command) override;
+  void Post(vkCmdTraceRaysKHRCommand& command) override;
   void Pre(vkCmdTraceRaysIndirectKHRCommand& command) override;
+  void Post(vkCmdTraceRaysIndirectKHRCommand& command) override;
   void Pre(vkCmdTraceRaysIndirect2KHRCommand& command) override;
 
   void Pre(vkGetEventStatusCommand& command) override;
@@ -138,6 +144,9 @@ public:
   void Pre(vkCmdPushDescriptorSetWithTemplateCommand& command) override;
   void Pre(vkCmdPushDescriptorSetWithTemplateKHRCommand& command) override;
 
+  void Post(vkCmdBindPipelineCommand& command) override;
+  void Post(vkCmdPushConstantsCommand& command) override;
+
   void Pre(vkCreateGraphicsPipelinesCommand& command) override;
   void Pre(vkAcquireNextImageKHRCommand& command) override;
   void Pre(vkAcquireNextImage2KHRCommand& command) override;
@@ -159,7 +168,6 @@ public:
   void Post(vkAcquireNextImage2KHRCommand& command) override;
   void Post(vkResetFencesCommand& command) override;
   void Post(vkDestroyFenceCommand& command) override;
-  void Pre(vkCreateRayTracingPipelinesKHRCommand& command) override;
 
 private:
   PlayerManager& m_Manager;

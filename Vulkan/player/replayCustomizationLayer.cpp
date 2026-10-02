@@ -51,13 +51,18 @@ void ReplayCustomizationLayer::Post(vkCreateDeviceCommand& command) {
     return;
   }
   void* dispatchKey = *reinterpret_cast<void**>(command.m_physicalDevice.Value);
-  m_Manager.LoadDeviceFunctions(dispatchKey, *command.m_pDevice.Value);
+  auto device = *command.m_pDevice.Value;
+
+  m_Manager.LoadDeviceFunctions(dispatchKey, device);
   m_Manager.GetDeviceDiagnosticService().TrackDevice(
       command.m_physicalDevice.Value, *command.m_pDevice.Value, command.m_pCreateInfo.Value);
+
+  m_RayTracingService.OnPostCreateDevice(command);
 }
 
 void ReplayCustomizationLayer::Pre(vkDestroyDeviceCommand& command) {
   m_Manager.GetDeviceDiagnosticService().UntrackDevice(command.m_device.Value);
+  m_RayTracingService.OnPreDestroyDevice(command);
 }
 
 void ReplayCustomizationLayer::Post(vkGetDeviceQueueCommand& command) {
@@ -89,6 +94,8 @@ void ReplayCustomizationLayer::Pre(vkDestroyCommandPoolCommand& command) {
   // so drop their buffered event state too, mirroring legacy
   // vkDestroyCommandPool_SD (vulkanStateTracking.h:689-716).
   m_Manager.GetEventPendingSignalService().UntrackCommandPool(command.m_commandPool.Value);
+
+  m_RayTracingService.OnPreDestroyCommandPool(command);
 }
 
 void ReplayCustomizationLayer::Post(vkAllocateCommandBuffersCommand& command) {
@@ -101,6 +108,8 @@ void ReplayCustomizationLayer::Post(vkAllocateCommandBuffersCommand& command) {
       m_Manager.GetEventPendingSignalService().TrackCommandBuffer(
           command.m_pCommandBuffers.Value[i], command.m_pAllocateInfo.Value->commandPool);
     }
+
+    m_RayTracingService.OnPostAllocateCommandBuffers(command);
   }
 }
 
@@ -112,6 +121,8 @@ void ReplayCustomizationLayer::Pre(vkFreeCommandBuffersCommand& command) {
       m_Manager.GetEventPendingSignalService().UntrackCommandBuffer(
           command.m_pCommandBuffers.Value[i]);
     }
+
+    m_RayTracingService.OnPreFreeCommandBuffers(command);
   }
 }
 
@@ -735,6 +746,7 @@ void ReplayCustomizationLayer::Pre(vkCreateDeviceCommand& command) {
 
     m_Manager.GetDeviceDiagnosticService().PrepareDeviceCreate(command.m_physicalDevice.Value,
                                                                createInfo);
+    m_RayTracingService.OnPreCreateDevice(command);
   }
 }
 
@@ -788,6 +800,22 @@ void ReplayCustomizationLayer::Pre(vkCmdPushDescriptorSetWithTemplateCommand& co
 void ReplayCustomizationLayer::Pre(vkCmdPushDescriptorSetWithTemplateKHRCommand& command) {
   m_Manager.GetDescriptorUpdateTemplateService().RemapHandles(
       command.m_descriptorUpdateTemplate.Value, command.m_pData);
+}
+
+void ReplayCustomizationLayer::Post(vkCmdBindPipelineCommand& command) {
+  if (SkipTraceRays()) {
+    return;
+  }
+
+  m_RayTracingService.OnPostBindPipeline(command);
+}
+
+void ReplayCustomizationLayer::Post(vkCmdPushConstantsCommand& command) {
+  if (SkipTraceRays()) {
+    return;
+  }
+
+  m_RayTracingService.OnPostPushConstants(command);
 }
 
 void ReplayCustomizationLayer::Pre(vkCreateGraphicsPipelinesCommand& command) {
@@ -887,10 +915,6 @@ void ReplayCustomizationLayer::Post(vkDestroyFenceCommand& command) {
   m_Manager.GetFencePendingSignalService().ClearPending(command.m_fence.Value);
 }
 
-void ReplayCustomizationLayer::Pre(vkCreateRayTracingPipelinesKHRCommand& command) {
-  m_RayTracingService.OnPreCreateRayTracingPipelines(command);
-}
-
 void ReplayCustomizationLayer::WaitAfterQueueSubmit(HandleArgument<VkQueue>& queue,
                                                     VkResult submitResult) {
   if (!Configurator::Get().vulkan.player.waitAfterQueueSubmitWA) {
@@ -909,18 +933,21 @@ void ReplayCustomizationLayer::WaitAfterQueueSubmit(HandleArgument<VkQueue>& que
 void ReplayCustomizationLayer::Pre(vkCmdBuildAccelerationStructuresKHRCommand& command) {
   if (SkipAccelerationStructureWork()) {
     command.m_Skip = true;
+    return;
   }
 }
 
 void ReplayCustomizationLayer::Pre(vkCmdBuildAccelerationStructuresIndirectKHRCommand& command) {
   if (SkipAccelerationStructureWork()) {
     command.m_Skip = true;
+    return;
   }
 }
 
 void ReplayCustomizationLayer::Pre(vkBuildAccelerationStructuresKHRCommand& command) {
   if (SkipAccelerationStructureWork()) {
     command.m_Skip = true;
+    return;
   }
 }
 
@@ -928,6 +955,7 @@ void ReplayCustomizationLayer::Pre(vkBuildAccelerationStructuresKHRCommand& comm
 void ReplayCustomizationLayer::Pre(vkCmdCopyAccelerationStructureKHRCommand& command) {
   if (SkipAccelerationStructureWork()) {
     command.m_Skip = true;
+    return;
   }
 }
 
@@ -994,21 +1022,86 @@ void ReplayCustomizationLayer::Pre(vkWriteMicromapsPropertiesEXTCommand& command
   }
 }
 
+void ReplayCustomizationLayer::Pre(vkCreateRayTracingPipelinesKHRCommand& command) {
+  if (SkipTraceRays()) {
+    command.m_Skip = true;
+    return;
+  }
+
+  m_RayTracingService.OnPreCreateRayTracingPipelines(command);
+}
+
+void ReplayCustomizationLayer::Post(vkCreateRayTracingPipelinesKHRCommand& command) {
+  if (SkipTraceRays()) {
+    return;
+  }
+
+  m_RayTracingService.OnPostCreateRayTracingPipelines(command);
+}
+
+void ReplayCustomizationLayer::Post(vkDestroyPipelineCommand& command) {
+  if (SkipTraceRays()) {
+    return;
+  }
+
+  m_RayTracingService.OnPostDestroyPipeline(command);
+}
+
+void ReplayCustomizationLayer::Pre(vkGetRayTracingShaderGroupHandlesKHRCommand& command) {
+  if (SkipTraceRays()) {
+    command.m_Skip = true;
+    return;
+  }
+
+  m_RayTracingService.OnPreGetShaderGroupHandles(command);
+}
+
+void ReplayCustomizationLayer::Post(vkGetRayTracingShaderGroupHandlesKHRCommand& command) {
+  if (SkipTraceRays()) {
+    return;
+  }
+
+  m_RayTracingService.OnPostGetShaderGroupHandles(command);
+}
+
 void ReplayCustomizationLayer::Pre(vkCmdTraceRaysKHRCommand& command) {
   if (SkipTraceRays()) {
     command.m_Skip = true;
+    return;
   }
+
+  m_RayTracingService.OnPreTraceRays(command);
+}
+
+void ReplayCustomizationLayer::Post(vkCmdTraceRaysKHRCommand& command) {
+  if (SkipTraceRays()) {
+    return;
+  }
+
+  m_RayTracingService.OnPostTraceRays(command);
 }
 
 void ReplayCustomizationLayer::Pre(vkCmdTraceRaysIndirectKHRCommand& command) {
   if (SkipTraceRays()) {
     command.m_Skip = true;
+    return;
   }
+
+  m_RayTracingService.OnPreTraceRaysIndirect(command);
+}
+
+void ReplayCustomizationLayer::Post(vkCmdTraceRaysIndirectKHRCommand& command) {
+  if (SkipTraceRays()) {
+    return;
+  }
+
+  m_RayTracingService.OnPostTraceRaysIndirect(command);
 }
 
 void ReplayCustomizationLayer::Pre(vkCmdTraceRaysIndirect2KHRCommand& command) {
   if (SkipTraceRays()) {
     command.m_Skip = true;
+    return;
   }
 }
 

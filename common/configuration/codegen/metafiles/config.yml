@@ -1888,6 +1888,15 @@ Configuration:
                   family properties stored in the stream are matched against the
                   replay (target) device queue families by capability in a single
                   replay pass; colliding logical-device queue requests are merged.
+              - Name: patchShaderGroupHandles
+                Type: bool
+                Default: false
+                Description:
+                  Enables Shader Group Handles patching in Shader Binding Tables during stream playback.
+                  The patching mechanism injects a compute shader before ray tracing commands which
+                  updates Shader Group Handles, potentially improving cross-platform compatibility of
+                  streams. When patching is disabled, stream replay depends on a driver's support for
+                  per ray tracing pipeline capture/replay features.
           - Name: captureVulkanSubmits
             Type: BitRange
             Default: "-"
@@ -2134,11 +2143,12 @@ Configuration:
             Default: false
             Accessibility: ArgumentOnly
             Arguments: [disableShaderGroupHandlesPatching]
+            Deprecated: true
             Description:
-              Vulkan specific option. Forces shader group handles patching in
+              DEPRECATED Vulkan specific option. Forces shader group handles patching in
               Shader Binding Tables  to be disabled during playback.
             LongDescription:
-              Vulkan specific option. Forces shader group handles patching
+              DEPRECATED Vulkan specific option. Forces shader group handles patching
               in Shader Binding Tables to be  disabled during playback. The patching mechanism
               injects a compute shader before ray  tracing commands which updates shader
               group handles, potentially improving cross-platform  compatiblity of streams.
