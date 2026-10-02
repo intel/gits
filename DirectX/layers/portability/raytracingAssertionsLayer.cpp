@@ -505,11 +505,11 @@ void RaytracingAssertionsLayer::ValidateOperation(
         destinationOffset != newBuild->RecordedLocation.Offset) {
       static bool logged = false;
       if (!logged) {
-        LOG_ERROR << "RaytracingAssertionsLayer: " << keyToStr(newBuild->Key)
-                  << " RTAS build replay address resolves to O" << keyToStr(destinationResource.Key)
-                  << " offset " << destinationOffset << " but was recorded as O"
-                  << keyToStr(newBuild->RecordedLocation.ResourceKey) << " offset "
-                  << newBuild->RecordedLocation.Offset;
+        LOG_WARNING << "RaytracingAssertionsLayer: " << keyToStr(newBuild->Key)
+                    << " RTAS build replay address resolves to O"
+                    << keyToStr(destinationResource.Key) << " offset " << destinationOffset
+                    << " but was recorded as O" << keyToStr(newBuild->RecordedLocation.ResourceKey)
+                    << " offset " << newBuild->RecordedLocation.Offset;
         logged = true;
       }
     }
@@ -695,12 +695,17 @@ void RaytracingAssertionsLayer::ValidateBuildFitsAllocation(
   const UINT64 buildEnd = resourceOffset + sizeInBytes;
 
   if (buildEnd > resourceBytes) {
-    LOG_ERROR << "RaytracingAssertionsLayer: " << keyToStr(commandKey) << " RTAS build in O"
-              << keyToStr(resource.Key) << " offset " << resourceOffset << " size " << sizeInBytes
-              << " exceeds " << (placed ? "placed" : "committed") << " buffer (" << resourceBytes
-              << " bytes) by " << buildEnd - resourceBytes << " bytes";
+    std::stringstream message;
+    message << "RaytracingAssertionsLayer: " << keyToStr(commandKey) << " RTAS build in O"
+            << keyToStr(resource.Key) << " offset " << resourceOffset << " size " << sizeInBytes
+            << " exceeds " << (placed ? "placed" : "committed") << " buffer (" << resourceBytes
+            << " bytes) by " << buildEnd - resourceBytes << " bytes";
+
     if (!placed) {
+      LOG_ERROR << message.str();
       GITS_ASSERT(false, "RaytracingAssertionsLayer: RTAS build exceeds committed resource");
+    } else {
+      LOG_WARNING << message.str();
     }
   }
 
