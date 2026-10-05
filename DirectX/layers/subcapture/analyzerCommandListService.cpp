@@ -982,13 +982,22 @@ void AnalyzerCommandListService::Command(
         new ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand(c));
   }
   if (c.m_pDesc.Value->Inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL &&
-      m_AnalyzerService.BeforeRange() &&
-      (m_FirstFrame || m_RestoreTlases || m_CommandListSubcapture)) {
-    m_TlasBuildKeys.insert(c.Key);
-    m_RaytracingService.BuildTlas(c);
-    AddObjectForRestore(c.m_pDesc.DestAccelerationStructureKey);
-    for (ObjectKey key : c.m_pDesc.InputKeys) {
-      AddObjectForRestore(key);
+      m_AnalyzerService.BeforeRange()) {
+
+    auto it = m_TlasesBeforeRange.find(std::make_pair(c.m_pDesc.DestAccelerationStructureKey,
+                                                      c.m_pDesc.DestAccelerationStructureOffset));
+    if (it != m_TlasesBeforeRange.end()) {
+      m_TlasBuildKeys.erase(it->second);
+    }
+    if (m_FirstFrame || m_RestoreTlases || m_CommandListSubcapture) {
+      m_TlasesBeforeRange[std::make_pair(c.m_pDesc.DestAccelerationStructureKey,
+                                         c.m_pDesc.DestAccelerationStructureOffset)] = c.Key;
+      m_TlasBuildKeys.insert(c.Key);
+      m_RaytracingService.BuildTlas(c);
+      AddObjectForRestore(c.m_pDesc.DestAccelerationStructureKey);
+      for (ObjectKey key : c.m_pDesc.InputKeys) {
+        AddObjectForRestore(key);
+      }
     }
   }
 }
