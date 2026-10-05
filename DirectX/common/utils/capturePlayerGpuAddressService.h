@@ -36,6 +36,8 @@ public:
     ObjectKey Key{};
   };
 
+  CapturePlayerGpuAddressService();
+
   void CreatePlacedResource(ObjectKey heapKey,
                             ObjectKey resourceKey,
                             D3D12_RESOURCE_FLAGS flags,
@@ -74,6 +76,7 @@ private:
     void AddGpuPlayerAddress(ObjectKey resourceKey, D3D12_GPU_VIRTUAL_ADDRESS playerAddress);
     void DestroyInterface(ObjectKey interfaceKey);
     void GetMappings(std::vector<GpuAddressMapping>& mappings);
+    void GetMappingsResourcePlacement(std::vector<GpuAddressMapping>& mappings);
     ResourceInfo* GetResourceInfo(D3D12_GPU_VIRTUAL_ADDRESS address, bool raytracingAS);
 
   private:
@@ -107,6 +110,7 @@ private:
   GpuAddressService m_GpuAddressService;
   std::unique_ptr<GpuAddressService> m_GpuPlayerAddress;
   std::mutex m_Mutex;
+  bool m_ResourcePlacement{};
 };
 
 } // namespace DirectX

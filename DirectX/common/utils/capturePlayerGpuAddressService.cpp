@@ -9,11 +9,17 @@
 #include "capturePlayerGpuAddressService.h"
 #include "arguments.h"
 #include "log.h"
+#include "configurationLib.h"
 
 #include <algorithm>
 
 namespace gits {
 namespace DirectX {
+
+CapturePlayerGpuAddressService::CapturePlayerGpuAddressService() {
+  m_ResourcePlacement = Configurator::IsPlayer() &&
+                        Configurator::Get().directx.player.portability.resourcePlacement == "use";
+}
 
 void CapturePlayerGpuAddressService::CreatePlacedResource(ObjectKey heapKey,
                                                           ObjectKey resourceKey,
@@ -95,7 +101,11 @@ CapturePlayerGpuAddressService::ResourceInfo* CapturePlayerGpuAddressService::
 void CapturePlayerGpuAddressService::GetMappings(std::vector<GpuAddressMapping>& mappings) {
   {
     std::lock_guard<std::mutex> lock(m_Mutex);
-    m_GpuAddressService.GetMappings(mappings);
+    if (m_ResourcePlacement) {
+      m_GpuAddressService.GetMappingsResourcePlacement(mappings);
+    } else {
+      m_GpuAddressService.GetMappings(mappings);
+    }
   }
   std::sort(mappings.begin(), mappings.end(),
             [](CapturePlayerGpuAddressService::GpuAddressMapping& m1,
@@ -347,6 +357,57 @@ void CapturePlayerGpuAddressService::GpuAddressService::GetMappings(
     mappings[index].PlayerStart = it.second->PlayerStart;
     mappings[index].Size = it.second->CaptureEnd - it.second->CaptureStart;
     ++index;
+  }
+}
+
+void CapturePlayerGpuAddressService::GpuAddressService::GetMappingsResourcePlacement(
+    std::vector<CapturePlayerGpuAddressService::GpuAddressMapping>& mappings) {
+  mappings.clear();
+  mappings.reserve(m_ResourcesByAddress.size() + m_PlacedResourcesByKey.size());
+  for (auto& it : m_ResourcesByAddress) {
+    mappings.push_back({it.second->CaptureStart, it.second->PlayerStart, it.second->Size});
+  }
+  // Resource placement may shift placed resources within the heap so per-resource mappings are needed for changed heaps
+  std::vector<PlacedResourceInfo*> heapResources;
+  for (auto& it : m_HeapsByKey) {
+    HeapInfo* heapInfo = it.second.get();
+    heapResources.clear();
+    bool heapChanged = false;
+    D3D12_GPU_VIRTUAL_ADDRESS heapDelta = heapInfo->PlayerStart - heapInfo->CaptureStart;
+    for (ObjectKey resourceKey : heapInfo->Resources) {
+      PlacedResourceInfo* info = m_PlacedResourcesByKey[resourceKey].get();
+      if (info->CaptureStart && info->PlayerStart) {
+        heapResources.push_back(info);
+        if (info->PlayerStart - info->CaptureStart != heapDelta) {
+          heapChanged = true;
+        }
+      }
+    }
+    if (!heapChanged) {
+      mappings.push_back({heapInfo->CaptureStart, heapInfo->PlayerStart,
+                          heapInfo->CaptureEnd - heapInfo->CaptureStart});
+      continue;
+    }
+    static bool logged = false;
+    if (!logged) {
+      LOG_WARNING << "Resource placement changed - using per resource GPU address mappings";
+      logged = true;
+    }
+    // Mappings are binary searched on GPU so aliased resources are clipped to non-overlapping segments
+    std::sort(heapResources.begin(), heapResources.end(),
+              [](PlacedResourceInfo* a, PlacedResourceInfo* b) {
+                return a->CaptureStart != b->CaptureStart ? a->CaptureStart < b->CaptureStart
+                                                          : a->Size > b->Size;
+              });
+    D3D12_GPU_VIRTUAL_ADDRESS coveredEnd = 0;
+    for (PlacedResourceInfo* info : heapResources) {
+      D3D12_GPU_VIRTUAL_ADDRESS start = std::max(info->CaptureStart, coveredEnd);
+      D3D12_GPU_VIRTUAL_ADDRESS end = info->CaptureStart + info->Size;
+      if (start < end) {
+        mappings.push_back({start, info->PlayerStart + (start - info->CaptureStart), end - start});
+        coveredEnd = end;
+      }
+    }
   }
 }
 
