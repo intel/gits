@@ -51,11 +51,24 @@ ReplayCustomizationLayer::ReplayCustomizationLayer(PlayerManager& manager)
   m_NonIncrementalFenceWait = Configurator::Get().directx.player.nonIncrementalFenceWait;
 }
 
+void ReplayCustomizationLayer::Pre(IUnknownReleaseCommand& c) {
+  // DXGI requires SetFullscreenState(FALSE) to be called on the swap chain when it is released
+  // This will be done on the first Release command for the swap chain
+  if (!c.Skip && c.m_Object.Value && m_ExclusiveFullscreenSwapChains.erase(c.m_Object.Key)) {
+    Microsoft::WRL::ComPtr<IDXGISwapChain> swapChain;
+    HRESULT hr = c.m_Object.Value->QueryInterface(IID_PPV_ARGS(&swapChain));
+    GITS_ASSERT(hr == S_OK);
+    hr = swapChain->SetFullscreenState(FALSE, nullptr);
+    GITS_ASSERT(hr == S_OK);
+  }
+}
+
 void ReplayCustomizationLayer::Post(IUnknownReleaseCommand& c) {
   if (c.Skip) {
     return;
   }
   if (c.m_Result.Value == 0) {
+    m_ExclusiveFullscreenSwapChains.erase(c.m_Object.Key);
     m_Manager.GetDescriptorHandleService().DestroyDescriptorHeap(c.m_Object.Key);
     m_Manager.GetMapTrackingService().DestroyResource(c.m_Object.Key);
     m_Manager.GetGpuAddressService().DestroyInterface(c.m_Object.Key);
@@ -104,6 +117,9 @@ void ReplayCustomizationLayer::Pre(IDXGISwapChainSetFullscreenStateCommand& c) {
   if (c.Skip) {
     return;
   }
+  if (Configurator::Get().common.player.windowMode == WindowMode::EXCLUSIVE_FULLSCREEN) {
+    return;
+  }
   if (c.m_Fullscreen.Value && Configurator::Get().common.player.showWindowBorder) {
     c.m_Fullscreen.Value = false;
     LOG_INFO << "SetFullscreenState: Force windowed mode due to 'showWindowBorder'";
@@ -116,9 +132,13 @@ void ReplayCustomizationLayer::Pre(IDXGIFactoryCreateSwapChainCommand& c) {
   }
   c.m_pDesc.Value->OutputWindow =
       m_Manager.GetWindowService().GetCurrentHwnd(c.m_pDesc.Value->OutputWindow);
-  if (Configurator::Get().common.player.showWindowBorder) {
+  if (Configurator::Get().common.player.windowMode == WindowMode::EXCLUSIVE_FULLSCREEN) {
+    c.m_pDesc.Value->Windowed = false;
+    m_ExclusiveFullscreenSwapChains.insert(c.m_ppSwapChain.Key);
+    LOG_INFO << "CreateSwapChain - Force exclusive fullscreen due to 'fullscreen'";
+  } else if (Configurator::Get().common.player.showWindowBorder) {
     c.m_pDesc.Value->Windowed = true;
-    LOG_INFO << "CreateSwapChain: Force windowed mode due to 'showWindowBorder'";
+    LOG_INFO << "CreateSwapChain - Force windowed mode due to 'showWindowBorder'";
   }
 }
 
@@ -127,9 +147,29 @@ void ReplayCustomizationLayer::Pre(IDXGIFactory2CreateSwapChainForHwndCommand& c
     return;
   }
   c.m_hWnd.Value = m_Manager.GetWindowService().GetCurrentHwnd(c.m_hWnd.Value);
-  if (c.m_pFullscreenDesc.Value && Configurator::Get().common.player.showWindowBorder) {
+  if (Configurator::Get().common.player.windowMode == WindowMode::EXCLUSIVE_FULLSCREEN) {
+    if (!c.m_pFullscreenDesc.Value) {
+      static DXGI_SWAP_CHAIN_FULLSCREEN_DESC fullscreenDesc{};
+      c.m_pFullscreenDesc.Value = &fullscreenDesc;
+    }
+    c.m_pFullscreenDesc.Value->Windowed = false;
+    m_ExclusiveFullscreenSwapChains.insert(c.m_ppSwapChain.Key);
+    LOG_INFO << "CreateSwapChainForHwnd - Force exclusive fullscreen due to 'fullscreen'";
+  } else if (c.m_pFullscreenDesc.Value && Configurator::Get().common.player.showWindowBorder) {
     c.m_pFullscreenDesc.Value->Windowed = true;
-    LOG_INFO << "CreateSwapChainForHwnd: Force windowed mode due to 'showWindowBorder'";
+    LOG_INFO << "CreateSwapChainForHwnd - Force windowed mode due to 'showWindowBorder'";
+  }
+}
+
+void ReplayCustomizationLayer::Pre(IDXGISwapChainPresentCommand& c) {
+  if (!c.Skip && Configurator::Get().common.player.windowMode == WindowMode::EXCLUSIVE_FULLSCREEN) {
+    c.m_Flags.Value &= ~DXGI_PRESENT_ALLOW_TEARING;
+  }
+}
+
+void ReplayCustomizationLayer::Pre(IDXGISwapChain1Present1Command& c) {
+  if (!c.Skip && Configurator::Get().common.player.windowMode == WindowMode::EXCLUSIVE_FULLSCREEN) {
+    c.m_PresentFlags.Value &= ~DXGI_PRESENT_ALLOW_TEARING;
   }
 }
 
@@ -1978,9 +2018,19 @@ void ReplayCustomizationLayer::Pre(xefgSwapChainD3D12InitFromSwapChainDescComman
     return;
   }
   command.m_hWnd.Value = m_Manager.GetWindowService().GetCurrentHwnd(command.m_hWnd.Value);
-  if (command.m_pFullscreenDesc.Value && Configurator::Get().common.player.showWindowBorder) {
+  if (Configurator::Get().common.player.windowMode == WindowMode::EXCLUSIVE_FULLSCREEN) {
+    if (!command.m_pFullscreenDesc.Value) {
+      static DXGI_SWAP_CHAIN_FULLSCREEN_DESC fullscreenDesc{};
+      command.m_pFullscreenDesc.Value = &fullscreenDesc;
+    }
+    command.m_pFullscreenDesc.Value->Windowed = false;
+    LOG_INFO << "xefgSwapChainD3D12InitFromSwapChainDesc - Force exclusive fullscreen due to "
+                "'fullscreen'";
+  } else if (command.m_pFullscreenDesc.Value &&
+             Configurator::Get().common.player.showWindowBorder) {
     command.m_pFullscreenDesc.Value->Windowed = true;
-    LOG_INFO << "CreateSwapChainForHwnd: Force windowed mode due to 'showWindowBorder'";
+    LOG_INFO << "xefgSwapChainD3D12InitFromSwapChainDesc - Force windowed mode due to "
+                "'showWindowBorder'";
   }
 }
 

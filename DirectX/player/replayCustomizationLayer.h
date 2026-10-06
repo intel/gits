@@ -26,6 +26,7 @@ class PlayerManager;
 class ReplayCustomizationLayer : public Layer {
 public:
   ReplayCustomizationLayer(PlayerManager& manager);
+  void Pre(IUnknownReleaseCommand& command) override;
   void Post(IUnknownReleaseCommand& command) override;
   void Pre(xessD3D12ExecuteCommand& command) override;
   void Pre(xessDestroyContextCommand& command) override;
@@ -34,6 +35,8 @@ public:
   void Pre(IDXGISwapChainSetFullscreenStateCommand& command) override;
   void Pre(IDXGIFactoryCreateSwapChainCommand& command) override;
   void Pre(IDXGIFactory2CreateSwapChainForHwndCommand& command) override;
+  void Pre(IDXGISwapChainPresentCommand& command) override;
+  void Pre(IDXGISwapChain1Present1Command& command) override;
   void Post(IDXGISwapChainResizeBuffersCommand& command) override;
   void Post(IDXGISwapChain3ResizeBuffers1Command& command) override;
   void Pre(IDXGIFactoryMakeWindowAssociationCommand& command) override;
@@ -250,6 +253,7 @@ private:
   bool m_NonIncrementalFenceWait{};
   bool m_AfterAddRef{};
   HWND m_Hwnd{};
+  std::unordered_set<ObjectKey> m_ExclusiveFullscreenSwapChains;
   GpuExecutionTracker m_GpuExecutionTracker;
 };
 
