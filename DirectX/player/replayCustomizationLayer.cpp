@@ -52,9 +52,12 @@ ReplayCustomizationLayer::ReplayCustomizationLayer(PlayerManager& manager)
 }
 
 void ReplayCustomizationLayer::Pre(IUnknownReleaseCommand& c) {
+  if (c.Skip) {
+    return;
+  }
   // DXGI requires SetFullscreenState(FALSE) to be called on the swap chain when it is released
-  // This will be done on the first Release command for the swap chain
-  if (!c.Skip && c.m_Object.Value && m_ExclusiveFullscreenSwapChains.erase(c.m_Object.Key)) {
+  if (c.m_Object.Value && c.m_Result.Value == 0 &&
+      m_ExclusiveFullscreenSwapChains.erase(c.m_Object.Key)) {
     Microsoft::WRL::ComPtr<IDXGISwapChain> swapChain;
     HRESULT hr = c.m_Object.Value->QueryInterface(IID_PPV_ARGS(&swapChain));
     GITS_ASSERT(hr == S_OK);
@@ -118,6 +121,10 @@ void ReplayCustomizationLayer::Pre(IDXGISwapChainSetFullscreenStateCommand& c) {
     return;
   }
   if (Configurator::Get().common.player.windowMode == WindowMode::EXCLUSIVE_FULLSCREEN) {
+    if (!c.m_Fullscreen.Value) {
+      c.m_Fullscreen.Value = true;
+      LOG_INFO << "SetFullscreenState: Force exclusive fullscreen due to 'fullscreen'";
+    }
     return;
   }
   if (c.m_Fullscreen.Value && Configurator::Get().common.player.showWindowBorder) {
