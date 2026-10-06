@@ -133,6 +133,16 @@ void ReplayCustomizationLayer::Pre(IDXGISwapChainSetFullscreenStateCommand& c) {
   }
 }
 
+void ReplayCustomizationLayer::Pre(IDXGISwapChainGetFullscreenStateCommand& c) {
+  if (c.Skip) {
+    return;
+  }
+  // No output was captured during capture, so don't request one during replay
+  if (!c.m_ppTarget.Key) {
+    c.m_ppTarget.Value = nullptr;
+  }
+}
+
 void ReplayCustomizationLayer::Pre(IDXGIFactoryCreateSwapChainCommand& c) {
   if (c.Skip) {
     return;

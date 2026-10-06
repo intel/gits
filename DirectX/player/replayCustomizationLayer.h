@@ -33,6 +33,7 @@ public:
   void Post(IUnknownAddRefCommand& command) override;
   void Pre(D3D12CreateDeviceCommand& command) override;
   void Pre(IDXGISwapChainSetFullscreenStateCommand& command) override;
+  void Pre(IDXGISwapChainGetFullscreenStateCommand& command) override;
   void Pre(IDXGIFactoryCreateSwapChainCommand& command) override;
   void Pre(IDXGIFactory2CreateSwapChainForHwndCommand& command) override;
   void Pre(IDXGISwapChainPresentCommand& command) override;
