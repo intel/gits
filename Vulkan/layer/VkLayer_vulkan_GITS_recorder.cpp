@@ -9,6 +9,7 @@
 #include "vulkanHeader2.h"
 #include "gitsLoader.h"
 #include "vulkanRecorderInterface.h"
+#include "log.h"
 
 #if defined(GITS_PLATFORM_WINDOWS)
 #define VK_LAYER_EXPORT extern "C" __declspec(dllexport)
@@ -18,6 +19,9 @@
 
 std::unique_ptr<gits::CGitsLoader> g_GitsLoader;
 gits::vulkan::IRecorderWrapper* g_RecorderWrapper = nullptr;
+// Next-in-chain lookups, captured during instance/device creation.
+PFN_vkGetInstanceProcAddr g_NextGetInstanceProcAddr = nullptr;
+PFN_vkGetDeviceProcAddr g_NextGetDeviceProcAddr = nullptr;
 
 void Initialize() {
   static bool s_Initialized = false;
@@ -47,6 +51,7 @@ vkCreateInstanceGITSLayer(const VkInstanceCreateInfo* pCreateInfo,
   PFN_vkGetInstanceProcAddr vkGetInstanceProcAddrFunction =
       chainInfo->u.pLayerInfo->pfnNextGetInstanceProcAddr;
   chainInfo->u.pLayerInfo = chainInfo->u.pLayerInfo->pNext;
+  g_NextGetInstanceProcAddr = vkGetInstanceProcAddrFunction;
 
   g_RecorderWrapper->LoadGlobalLevelFunctions(vkGetInstanceProcAddrFunction);
   auto vkCreateInstanceWrapper = reinterpret_cast<PFN_vkCreateInstance>(
@@ -88,6 +93,7 @@ vkCreateDeviceGITSLayer(VkPhysicalDevice physicalDevice,
   PFN_vkGetDeviceProcAddr vkGetDeviceProcAddrFunction =
       chainInfo->u.pLayerInfo->pfnNextGetDeviceProcAddr;
   chainInfo->u.pLayerInfo = chainInfo->u.pLayerInfo->pNext;
+  g_NextGetDeviceProcAddr = vkGetDeviceProcAddrFunction;
 
   VkResult result = vkCreateDeviceWrapper(physicalDevice, pCreateInfo, pAllocator, pDevice);
   if (result != VK_SUCCESS) {
@@ -104,6 +110,20 @@ vkGetDeviceProcAddrGITSLayer(VkDevice device, const char* pName) {
   if (strcmp(pName, "vkGetDeviceProcAddr") == 0) {
     return reinterpret_cast<PFN_vkVoidFunction>(vkGetDeviceProcAddrGITSLayer);
   }
+  // Only expose entry points that the rest of the chain actually provides.
+  if (g_NextGetDeviceProcAddr != nullptr) {
+    PFN_vkVoidFunction nextFunction = g_NextGetDeviceProcAddr(device, pName);
+    if (nextFunction == nullptr) {
+      return nullptr;
+    }
+    PFN_vkVoidFunction wrapper = g_RecorderWrapper->GetFunctionWrapper(pName);
+    if (wrapper != nullptr) {
+      return wrapper;
+    }
+    // GITS does not wrap this function - pass the driver's implementation through.
+    LOG_WARNING << "vkGetDeviceProcAddr() returned driver function for: " << pName;
+    return nextFunction;
+  }
   return g_RecorderWrapper->GetFunctionWrapper(pName);
 }
 
@@ -117,6 +137,21 @@ vkGetInstanceProcAddrGITSLayer(VkInstance instance, const char* pName) {
     return reinterpret_cast<PFN_vkVoidFunction>(vkCreateDeviceGITSLayer);
   } else if (strcmp(pName, "vkGetDeviceProcAddr") == 0) {
     return reinterpret_cast<PFN_vkVoidFunction>(vkGetDeviceProcAddrGITSLayer);
+  }
+
+  // Only expose entry points that the rest of the chain actually provides.
+  if (g_NextGetInstanceProcAddr != nullptr && instance != VK_NULL_HANDLE) {
+    PFN_vkVoidFunction nextFunction = g_NextGetInstanceProcAddr(instance, pName);
+    if (nextFunction == nullptr) {
+      return nullptr;
+    }
+    PFN_vkVoidFunction wrapper = g_RecorderWrapper->GetFunctionWrapper(pName);
+    if (wrapper != nullptr) {
+      return wrapper;
+    }
+    // GITS does not wrap this function - pass the driver's implementation through.
+    LOG_WARNING << "vkGetInstanceProcAddr() returned driver function for: " << pName;
+    return nextFunction;
   }
 
   return g_RecorderWrapper->GetFunctionWrapper(pName);
