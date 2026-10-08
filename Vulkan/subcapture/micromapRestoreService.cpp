@@ -326,6 +326,10 @@ void MicromapRestoreService::RestoreChain() {
     return;
   }
   GITS_ASSERT(m_Sts.m_GpuReadbackHelper);
+  // Held past the end of this function, unlike the acceleration structure chain's mark: a
+  // relocated storage buffer stays live in the stream until DestroyResurrected emits its destroy,
+  // so its address may not be handed out again before then.
+  m_ReservationMark = m_Sts.m_GpuReadbackHelper->MarkReservedAddresses();
 
   // Per-device queue/pool/physDev context, resolved lazily and cached.
   struct DevCtx {
@@ -436,6 +440,7 @@ void MicromapRestoreService::RestoreChain() {
 // Emitted after RestoreAccelerationStructureContents, so every retained build that names one
 // has already replayed. Reproduces the application's own destroy.
 void MicromapRestoreService::DestroyResurrected() {
+  size_t relocatedCount = 0;
   for (const ResurrectedMicromap& r : m_ResurrectedMicromaps) {
     vkDestroyMicromapEXTCommand destroyCmd;
     destroyCmd.m_device.Key = r.DeviceKey;
@@ -446,9 +451,20 @@ void MicromapRestoreService::DestroyResurrected() {
     // Only set when this restore created a dedicated relocated storage buffer for it.
     if (r.BufferKey || r.MemoryKey) {
       m_Sts.EmitCaptureReplayBufferDestroy(r.DeviceKey, r.BufferKey, r.MemoryKey);
+      ++relocatedCount;
     }
   }
   m_ResurrectedMicromaps.clear();
+
+  // Every relocated storage buffer is destroyed in the stream by now, so the player-side buffers
+  // holding their addresses can go. ReleaseReservedAddressesSince truncates, so the assert guards
+  // against silently freeing a reservation the acceleration structure restore leaked in between.
+  if (m_ReservationMark != SIZE_MAX) {
+    GITS_ASSERT(m_Sts.m_GpuReadbackHelper->MarkReservedAddresses() ==
+                m_ReservationMark + relocatedCount);
+    m_Sts.m_GpuReadbackHelper->ReleaseReservedAddressesSince(m_ReservationMark);
+    m_ReservationMark = SIZE_MAX;
+  }
 }
 
 } // namespace vulkan

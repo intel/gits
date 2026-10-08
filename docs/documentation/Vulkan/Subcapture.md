@@ -100,7 +100,8 @@ again afterwards.
 | `vkCmdCopyAccelerationStructureKHR` (CLONE/COMPACT) | yes |
 | `vkCmdBuildMicromapsEXT` | yes, `VK_BUILD_MICROMAP_MODE_BUILD_EXT` only |
 | `vkCmdCopyMicromapEXT` (CLONE/COMPACT) | yes |
-| `vkBuildAccelerationStructuresKHR`, `vkBuildMicromapsEXT`, `vkCopyAccelerationStructureKHR`, `vkCopyMicromapEXT`, `vkCopyMemoryToMicromapEXT` | no - host-side builds and copies take `VkDeviceOrHostAddress` host pointers, which the recorder never follows, so the source data is not in the stream |
+| `vkBuildAccelerationStructuresKHR`, `vkBuildMicromapsEXT`, `vkCopyMemoryToAccelerationStructureKHR`, `vkCopyMemoryToMicromapEXT` | no - their inputs are `VkDeviceOrHostAddress` host pointers, which the recorder never follows, so the source data is not in the stream |
+| `vkCopyAccelerationStructureKHR`, `vkCopyMicromapEXT` | no - the source is a tracked handle, but a host-side copy runs outside the command buffer timeline, so neither the written contents nor the source dependency is visible |
 | `vkCmdCopyMemoryToAccelerationStructureKHR`, `vkCmdCopyMemoryToMicromapEXT` | no - deserialize paths write content GITS cannot see |
 | `vkCmdBuildAccelerationStructuresIndirectKHR` | no |
 

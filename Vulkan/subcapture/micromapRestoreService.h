@@ -10,6 +10,7 @@
 
 #include "objectState.h"
 
+#include <cstddef>
 #include <cstdint>
 #include <unordered_set>
 #include <vector>
@@ -33,7 +34,8 @@ public:
   // built before a build that names it (VUID-vkCmdBuildAccelerationStructuresKHR-micromap-11632).
   void RestoreContents();
 
-  // Destroy the micromaps RestoreContents resurrected. Must run after
+  // Destroy the micromaps RestoreContents resurrected and release the addresses their relocated
+  // storage buffers reserved. Must run after
   // StateTrackingService::RestoreAccelerationStructureContents, because any retained build in it
   // may name one.
   void DestroyResurrected();
@@ -89,6 +91,10 @@ private:
     uint64_t MemoryKey{};
   };
   std::vector<ResurrectedMicromap> m_ResurrectedMicromaps;
+
+  // Address reservations held by EmitRelocatedCreate, released in DestroyResurrected. SIZE_MAX
+  // when none was taken, which must stay distinct from 0 - that would release everything.
+  size_t m_ReservationMark{SIZE_MAX};
 
   StateTrackingService& m_Sts;
 };
