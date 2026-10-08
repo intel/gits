@@ -16,6 +16,7 @@ ipch/
 .idea/
 .vs/
 .vscode/
+.venv/
 *.sln
 *.pyproj
 *.aps
