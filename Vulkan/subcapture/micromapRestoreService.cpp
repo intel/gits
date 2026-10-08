@@ -16,9 +16,11 @@
 #include "commandsAuto.h"
 #include "log.h"
 
+#include <algorithm>
 #include <string>
 #include <unordered_map>
 #include <utility>
+#include <vector>
 
 namespace gits {
 namespace vulkan {
@@ -390,10 +392,21 @@ void MicromapRestoreService::RestoreChain() {
           std::to_string(op.CommandKey) + ") cannot be replayed");
     }
 
-    // Give both endpoints a live handle, re-creating the ones the application already
-    // destroyed (build-then-compact destroys the uncompacted intermediate right after the
-    // copy that reads it).
-    for (uint64_t key : {op.SrcMicromapKey, op.DstMicromapKey}) {
+    // Give every micromap the emitted command names a live handle, re-creating the ones the
+    // application already destroyed (build-then-compact destroys the uncompacted intermediate
+    // right after the copy that reads it). For a build that is the whole retained destination
+    // set, not just this op's: the command is emitted once below and writes all of them, so a
+    // co-destination resurrected on its own later iteration would come up after the build that
+    // needs it. Sorted so the keys Resurrect allocates do not depend on set iteration order.
+    std::vector<uint64_t> required;
+    if (op.IsCopy) {
+      required = {op.SrcMicromapKey, op.DstMicromapKey};
+    } else {
+      const std::unordered_set<uint64_t>& keepDst = retainedDstByCmd[op.CommandKey];
+      required.assign(keepDst.begin(), keepDst.end());
+      std::sort(required.begin(), required.end());
+    }
+    for (uint64_t key : required) {
       if (!key || m_Sts.m_RestoredThisPass.count(key)) {
         continue;
       }

@@ -111,6 +111,8 @@ void ComputeGeometryInputRegions(StateTrackingService& stateTracking,
         // tri.indexData. Spanning through the final index keeps a legal zero indexStride from
         // collapsing to an empty region. indexType here is only UINT16, UINT32 or NONE
         // (VUID-VkAccelerationStructureTrianglesOpacityMicromapEXT-indexType-10719).
+        // baseTriangle is added to the fetched index to pick a triangle inside the micromap - it
+        // is not an offset into indexBuffer.
         const VkDeviceSize indexSize =
             omm->indexType == VK_INDEX_TYPE_UINT16 ? sizeof(uint16_t) : sizeof(uint32_t);
         const VkDeviceSize indexSpan =
