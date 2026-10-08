@@ -116,6 +116,13 @@ public:
   void Pre(vkCreateRayTracingPipelinesKHRCommand& command) override;
   void Post(vkCreateRayTracingPipelinesKHRCommand& command) override;
 
+  // Report-only: nothing relocates their VkDeviceOrHostAddress input pointer, so the player
+  // cannot run them. See GetUnreplayableHostInputMessage.
+  void Post(vkBuildAccelerationStructuresKHRCommand& command) override;
+  void Post(vkBuildMicromapsEXTCommand& command) override;
+  void Post(vkCopyMemoryToAccelerationStructureKHRCommand& command) override;
+  void Post(vkCopyMemoryToMicromapEXTCommand& command) override;
+
 private:
   void ModifyBufferCreateInfo(GITSKey deviceKey, VkBufferCreateInfo& createInfo);
   void ModifyImageCreateInfo(VkImageCreateInfo& createInfo);

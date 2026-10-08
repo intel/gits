@@ -16,6 +16,7 @@
 #include <thread>
 #include <chrono>
 #include <cstdint>
+#include <string>
 #include <vector>
 
 namespace gits {
@@ -29,6 +30,16 @@ bool SkipTraceRays() {
 
 bool SkipAccelerationStructureWork() {
   return Configurator::Get().vulkan.player.skipAllRayTracing;
+}
+
+// vk.xml gives VkDeviceOrHostAddress no selector, so the coder byte-copies the union and the
+// capture-process hostAddress these entry points use reaches the player verbatim. Call sites guard
+// this with CALL_ONCE - see the host-address section of docs/documentation/Vulkan/Overview.md.
+std::string GetSkippedHostAddressMessage(const char* commandName) {
+  return std::string(commandName) +
+         ": skipped. It addresses its payload through VkDeviceOrHostAddress host pointers, which "
+         "are capture-process addresses the recorder never followed. Content it would have "
+         "written is missing unless the stream carries it as a mapped-memory update.";
 }
 } // namespace
 
@@ -949,6 +960,10 @@ void ReplayCustomizationLayer::Pre(vkBuildAccelerationStructuresKHRCommand& comm
     command.m_Skip = true;
     return;
   }
+  CALL_ONCE[] {
+    LOG_ERROR << GetSkippedHostAddressMessage("vkBuildAccelerationStructuresKHR");
+  };
+  command.m_Skip = true;
 }
 
 // Copies read a source structure that was never built once builds are skipped
@@ -971,7 +986,12 @@ void ReplayCustomizationLayer::Pre(vkCmdBuildMicromapsEXTCommand& command) {
 void ReplayCustomizationLayer::Pre(vkBuildMicromapsEXTCommand& command) {
   if (SkipAccelerationStructureWork()) {
     command.m_Skip = true;
+    return;
   }
+  CALL_ONCE[] {
+    LOG_ERROR << GetSkippedHostAddressMessage("vkBuildMicromapsEXT");
+  };
+  command.m_Skip = true;
 }
 
 void ReplayCustomizationLayer::Pre(vkCmdCopyMicromapEXTCommand& command) {
@@ -995,6 +1015,13 @@ void ReplayCustomizationLayer::Pre(vkCmdCopyMicromapToMemoryEXTCommand& command)
 void ReplayCustomizationLayer::Pre(vkCopyMicromapToMemoryEXTCommand& command) {
   if (SkipAccelerationStructureWork()) {
     command.m_Skip = true;
+    return;
+  }
+  if (command.m_pInfo.Value && command.m_pInfo.Value->dst.hostAddress) {
+    CALL_ONCE[] {
+      LOG_ERROR << GetSkippedHostAddressMessage("vkCopyMicromapToMemoryEXT");
+    };
+    command.m_Skip = true;
   }
 }
 
@@ -1006,6 +1033,39 @@ void ReplayCustomizationLayer::Pre(vkCmdCopyMemoryToMicromapEXTCommand& command)
 
 void ReplayCustomizationLayer::Pre(vkCopyMemoryToMicromapEXTCommand& command) {
   if (SkipAccelerationStructureWork()) {
+    command.m_Skip = true;
+    return;
+  }
+  if (command.m_pInfo.Value && command.m_pInfo.Value->src.hostAddress) {
+    CALL_ONCE[] {
+      LOG_ERROR << GetSkippedHostAddressMessage("vkCopyMemoryToMicromapEXT");
+    };
+    command.m_Skip = true;
+  }
+}
+
+void ReplayCustomizationLayer::Pre(vkCopyAccelerationStructureToMemoryKHRCommand& command) {
+  if (SkipAccelerationStructureWork()) {
+    command.m_Skip = true;
+    return;
+  }
+  if (command.m_pInfo.Value && command.m_pInfo.Value->dst.hostAddress) {
+    CALL_ONCE[] {
+      LOG_ERROR << GetSkippedHostAddressMessage("vkCopyAccelerationStructureToMemoryKHR");
+    };
+    command.m_Skip = true;
+  }
+}
+
+void ReplayCustomizationLayer::Pre(vkCopyMemoryToAccelerationStructureKHRCommand& command) {
+  if (SkipAccelerationStructureWork()) {
+    command.m_Skip = true;
+    return;
+  }
+  if (command.m_pInfo.Value && command.m_pInfo.Value->src.hostAddress) {
+    CALL_ONCE[] {
+      LOG_ERROR << GetSkippedHostAddressMessage("vkCopyMemoryToAccelerationStructureKHR");
+    };
     command.m_Skip = true;
   }
 }
@@ -1020,6 +1080,35 @@ void ReplayCustomizationLayer::Pre(vkWriteMicromapsPropertiesEXTCommand& command
   if (SkipAccelerationStructureWork()) {
     command.m_Skip = true;
   }
+}
+
+// Skipping the conversion loses nothing when dstData is mapped memory: MapTrackingService
+// write-watches every host-visible allocation, so the driver's write is recorded as a
+// MappedDataMeta token and replays before the next submit could read it. A destination outside any
+// tracked allocation is not restored at all, which the warning below cannot distinguish.
+//
+// A size query is dstData null alone - VUID-vkConvertCooperativeVectorMatrixNV-pInfo-10073 only
+// forbids the reverse. It writes nothing but pDstSize, which the coder relocates into the decoded
+// blob, so it is safe to run unless srcData is set, since nothing stops the driver reading it.
+void ReplayCustomizationLayer::Pre(vkConvertCooperativeVectorMatrixNVCommand& command) {
+  const auto* info = command.m_pInfo.Value;
+  if (info == nullptr) {
+    return;
+  }
+  if (info->dstData.hostAddress == nullptr) {
+    // A non-null srcData is a capture-process address, and nothing in the spec stops the driver
+    // reading it to size the result, so only a query with no pointer at all is safe to run.
+    const bool driverMayReadStaleSource = info->srcData.hostAddress != nullptr;
+    command.m_Skip = driverMayReadStaleSource;
+    return; // a query converts nothing, so there is nothing to report either
+  }
+
+  command.m_Skip = true;
+  CALL_ONCE[] {
+    LOG_WARNING << "vkConvertCooperativeVectorMatrixNV: skipping the host-side matrix conversion. "
+                   "Its srcData/dstData are capture-process host pointers that cannot be replayed. "
+                   "The converted data is restored from the recorded mapped-memory update instead.";
+  };
 }
 
 void ReplayCustomizationLayer::Pre(vkCreateRayTracingPipelinesKHRCommand& command) {

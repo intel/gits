@@ -10,8 +10,11 @@
 #include "captureManager.h"
 #include "commandSerializersCustom.h"
 #include "configurator.h"
+#include "log.h"
 #include "suppressNames.h"
 #include "vulkanHelpers.h"
+
+#include <string>
 
 namespace gits {
 namespace vulkan {
@@ -741,6 +744,44 @@ void CaptureCustomizationLayer::Post(vkCreateRayTracingPipelinesKHRCommand& comm
   }
 
   m_RayTracingService.OnPostCreateRayTracingPipelinesKHR(command);
+}
+
+namespace {
+// These commands read their inputs through a VkDeviceOrHostAddress host pointer. A mapped-memory
+// update can restore the bytes - it is addressed by memory key and offset - but nothing relocates
+// the pointer, so the command is unusable on replay however the inputs were stored. Say so while
+// the application is still running rather than on the user's first replay attempt.
+std::string GetUnreplayableHostInputMessage(const char* commandName) {
+  return "The application called " + std::string(commandName) +
+         ", a host-side build or deserialization. It reads its inputs through a "
+         "VkDeviceOrHostAddress host pointer, a capture-process address that nothing relocates "
+         "for replay, so the player has to skip the command even where the stream carries the "
+         "input bytes. Use the device-side vkCmd* variant if the application can be configured to.";
+}
+} // namespace
+
+void CaptureCustomizationLayer::Post(vkBuildAccelerationStructuresKHRCommand& command) {
+  CALL_ONCE[] {
+    LOG_ERROR << GetUnreplayableHostInputMessage("vkBuildAccelerationStructuresKHR");
+  };
+}
+
+void CaptureCustomizationLayer::Post(vkBuildMicromapsEXTCommand& command) {
+  CALL_ONCE[] {
+    LOG_ERROR << GetUnreplayableHostInputMessage("vkBuildMicromapsEXT");
+  };
+}
+
+void CaptureCustomizationLayer::Post(vkCopyMemoryToAccelerationStructureKHRCommand& command) {
+  CALL_ONCE[] {
+    LOG_ERROR << GetUnreplayableHostInputMessage("vkCopyMemoryToAccelerationStructureKHR");
+  };
+}
+
+void CaptureCustomizationLayer::Post(vkCopyMemoryToMicromapEXTCommand& command) {
+  CALL_ONCE[] {
+    LOG_ERROR << GetUnreplayableHostInputMessage("vkCopyMemoryToMicromapEXT");
+  };
 }
 
 } // namespace vulkan

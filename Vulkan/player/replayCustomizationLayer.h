@@ -72,8 +72,13 @@ public:
   void Pre(vkCopyMicromapToMemoryEXTCommand& command) override;
   void Pre(vkCmdCopyMemoryToMicromapEXTCommand& command) override;
   void Pre(vkCopyMemoryToMicromapEXTCommand& command) override;
+  void Pre(vkCopyAccelerationStructureToMemoryKHRCommand& command) override;
+  void Pre(vkCopyMemoryToAccelerationStructureKHRCommand& command) override;
   void Pre(vkCmdWriteMicromapsPropertiesEXTCommand& command) override;
   void Pre(vkWriteMicromapsPropertiesEXTCommand& command) override;
+
+  // Skips the conversion form, runs the size query. See the definition.
+  void Pre(vkConvertCooperativeVectorMatrixNVCommand& command) override;
   void Pre(vkCreateRayTracingPipelinesKHRCommand& command) override;
   void Post(vkCreateRayTracingPipelinesKHRCommand& command) override;
   void Post(vkDestroyPipelineCommand& command) override;

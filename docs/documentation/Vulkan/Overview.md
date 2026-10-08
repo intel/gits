@@ -70,4 +70,30 @@ Plugins can extend the **Vulkan** backend during capture and replay (Windows tod
 Sub-capture trims a stream down to a frame range, producing a smaller,
 self-contained stream. See the [sub-capture section](Subcapture.md) for details.
 
+# Host-side commands using `VkDeviceOrHostAddress`
+
+A handful of entry points address their payload through `VkDeviceOrHostAddress[Const]KHR`. On the
+`vkCmd*` forms the live union member is `deviceAddress`, which GITS tracks and relocates. On the
+host-side forms it is `hostAddress` - a raw capture-process pointer. `vk.xml` attaches no
+`selector` to the union, so the generated coder cannot tell which member is live and copies the
+union verbatim; the capture-process pointer reaches the player unchanged and dereferencing it
+faults inside the driver.
+
+The player therefore skips these commands rather than crash, logging the reason once per command:
+
+| Command | Replay behaviour |
+|---------|------------------|
+| `vkConvertCooperativeVectorMatrixNV` | A size query (`dstData` null) executes when `srcData` is null too, since then no host pointer can be dereferenced; one carrying a `srcData` is skipped instead, as nothing stops the driver reading it. The conversion form is skipped - its only output is `dstData`, and when that is mapped memory the driver's write is already captured as a mapped-memory update that replays right after, so the converted data still arrives. |
+| `vkCopyAccelerationStructureToMemoryKHR`, `vkCopyMicromapToMemoryEXT` | Skipped when `dst` is a host address. Same reasoning: the destination contents, if they matter, come from the recorded memory update. |
+| `vkBuildAccelerationStructuresKHR`, `vkBuildMicromapsEXT`, `vkCopyMemoryToAccelerationStructureKHR`, `vkCopyMemoryToMicromapEXT` | Skipped, but **not** repaired - these *read* through the host pointer, and a mapped-memory update cannot supply one, so the target keeps whatever content it had. The recorder reports this at capture time so the problem surfaces before a long capture is finished. |
+
+The asymmetry between the two groups is the direction of the transfer, not whether the data was
+captured. `MappedDataMeta` is addressed by memory key and offset, so it can reproduce *contents* at
+whatever host address the replay process happens to use. It cannot reproduce a *pointer*. A command
+whose host address is a destination is therefore recoverable - the driver's write was captured and
+replays into the equivalent memory - while a command whose host address is a source needs that
+pointer to be valid, and nothing relocates it even when the bytes themselves are in the stream.
+
+Prefer the device-side `vkCmd*` variants when the application can be configured to use them.
+
 
