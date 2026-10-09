@@ -30,6 +30,7 @@ RaytracingAssertionsLayer::~RaytracingAssertionsLayer() {
 
 void RaytracingAssertionsLayer::Pre(
     ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c) {
+  m_BuildSkipped = c.Skip;
   if (c.Skip) {
     return;
   }
@@ -124,6 +125,9 @@ void RaytracingAssertionsLayer::Pre(
 
 void RaytracingAssertionsLayer::Post(
     ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c) {
+  GITS_ASSERT(c.Skip == m_BuildSkipped,
+              "RaytracingAssertionsLayer: Skip modified between RTAS build Pre and Post, "
+              "possibly by another enabled feature");
   auto& postbuildInfoOverride = m_PostbuildInfoOverride;
   if (!postbuildInfoOverride.Patched.empty()) {
     c.m_pPostbuildInfoDescs.Value = postbuildInfoOverride.Descs;

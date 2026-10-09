@@ -223,6 +223,7 @@ private:
   std::queue<std::unique_ptr<ValidationEvent>> m_PendingValidationEvents;
 
   PostbuildInfoOverride m_PostbuildInfoOverride;
+  bool m_BuildSkipped{};
 
   std::unordered_map<CommandKey, std::vector<D3D12_GPU_VIRTUAL_ADDRESS>> m_InstancePointers;
   bool m_InstancePointersLoaded{};
