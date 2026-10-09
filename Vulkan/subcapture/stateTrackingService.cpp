@@ -4164,7 +4164,8 @@ void StateTrackingService::EmitCapturedBuildInputs(
       //  - it was suballocated at a non-zero offset of its backing allocation, or shared
       //    that allocation with another input of this build, so a dedicated allocation
       //    based at the captured allocation address reproduces neither, or
-      //  - nothing pins its address at all (neither opaque address was captured).
+      //  - nothing pins its address at all (neither opaque address was captured), or
+      //  - the live driver refuses to hold its captured address (see below).
       // Each case is relocated to a freshly reserved address instead, with the build's
       // baked geometry addresses patched to match.
       const bool addressRecycled = collidesWithClaimed(in.BufferOpaqueCaptureAddress, req.size) ||
@@ -4173,7 +4174,7 @@ void StateTrackingService::EmitCapturedBuildInputs(
           in.MemoryOffset != 0 || sharesCapturedAllocation(in.MemoryOpaqueCaptureAddress);
       const bool addressUnpinned =
           in.BufferOpaqueCaptureAddress == 0 && in.MemoryOpaqueCaptureAddress == 0;
-      const bool mustRelocate = addressRecycled || allocationNotReproducible || addressUnpinned;
+      bool addressTakenLive = false;
 
       uint64_t bufOpaque = in.BufferOpaqueCaptureAddress;
       uint64_t memOpaque = in.MemoryOpaqueCaptureAddress;
@@ -4181,33 +4182,7 @@ void StateTrackingService::EmitCapturedBuildInputs(
       VkDeviceSize allocSize = req.size;
       VkDeviceAddress replayDeviceAddress = in.BaseDeviceAddress;
 
-      if (mustRelocate) {
-        // Reserve a brand-new address and record a remap so the build command's baked
-        // geometry addresses into this buffer are relocated below. Relocation needs the
-        // original base address. Without it the build cannot be patched.
-        VkDeviceAddress freshDeviceAddress = 0;
-        VkMemoryRequirements freshReq{};
-        if (in.BaseDeviceAddress != 0 &&
-            m_GpuReadbackHelper->ReserveScratchBufferAddress(
-                deviceKey, physDevKey, in.Size, freshDeviceAddress, bufOpaque, memOpaque) &&
-            QueryCaptureReplayBufferRequirements(deviceKey, in.Size, usage, freshReq)) {
-          memType = m_GpuReadbackHelper->FindStagingMemoryType(physDevKey, freshReq.memoryTypeBits);
-          allocSize = freshReq.size;
-        }
-        if (memType == UINT32_MAX) {
-          LOG_WARNING << "Vulkan subcapture: could not relocate " << logObjectKind
-                      << " build input buffer that cannot be recreated at its captured address "
-                         "(orig key="
-                      << in.BufferKey << ", " << logObjectKind << " key=" << logObjectKey
-                      << ", recycled=" << addressRecycled
-                      << ", suballocated=" << allocationNotReproducible
-                      << ", unpinned=" << addressUnpinned
-                      << "); the rebuild is emitted without this input";
-          continue;
-        }
-        outRemaps.push_back({in.BaseDeviceAddress, in.Size, freshDeviceAddress});
-        replayDeviceAddress = freshDeviceAddress;
-      } else {
+      if (!addressRecycled && !allocationNotReproducible && !addressUnpinned) {
         memType = in.MemoryTypeIndex;
         if (memType == UINT32_MAX || !((req.memoryTypeBits >> memType) & 1u)) {
           memType = UINT32_MAX;
@@ -4223,6 +4198,43 @@ void StateTrackingService::EmitCapturedBuildInputs(
                       << " input buffer (orig key=" << in.BufferKey << ")";
           continue;
         }
+        // The input exists only in the stream, so hold its captured addresses live to keep
+        // later reservations off them. A refusal means a live object owns them: relocate.
+        if (!m_GpuReadbackHelper->ReserveCapturedBufferAddress(deviceKey, in.Size, usage, allocSize,
+                                                               memType, bufOpaque, memOpaque)) {
+          addressTakenLive = true;
+          memType = UINT32_MAX;
+        }
+      }
+      const bool mustRelocate =
+          addressRecycled || allocationNotReproducible || addressUnpinned || addressTakenLive;
+
+      if (mustRelocate) {
+        // Reserve a brand-new address and record a remap so the build command's baked
+        // geometry addresses into this buffer are relocated below. Relocation needs the
+        // original base address. Without it the build cannot be patched.
+        VkDeviceAddress freshDeviceAddress = 0;
+        VkMemoryRequirements freshReq{};
+        if (in.BaseDeviceAddress != 0 &&
+            m_GpuReadbackHelper->ReserveFreshBufferAddress(
+                deviceKey, physDevKey, in.Size, freshDeviceAddress, bufOpaque, memOpaque) &&
+            QueryCaptureReplayBufferRequirements(deviceKey, in.Size, usage, freshReq)) {
+          memType = m_GpuReadbackHelper->FindStagingMemoryType(physDevKey, freshReq.memoryTypeBits);
+          allocSize = freshReq.size;
+        }
+        if (memType == UINT32_MAX) {
+          LOG_WARNING << "Vulkan subcapture: could not relocate " << logObjectKind
+                      << " build input buffer that cannot be recreated at its captured address "
+                         "(orig key="
+                      << in.BufferKey << ", " << logObjectKind << " key=" << logObjectKey
+                      << ", recycled=" << addressRecycled
+                      << ", suballocated=" << allocationNotReproducible
+                      << ", unpinned=" << addressUnpinned << ", takenLive=" << addressTakenLive
+                      << "); the rebuild is emitted without this input";
+          continue;
+        }
+        outRemaps.push_back({in.BaseDeviceAddress, in.Size, freshDeviceAddress});
+        replayDeviceAddress = freshDeviceAddress;
       }
       const uint64_t bufKey = AllocateSyntheticKey();
       const uint64_t memKey = AllocateSyntheticKey();
@@ -4528,9 +4540,9 @@ void StateTrackingService::EmitAccelerationStructureRebuildBytes(
     uint64_t scratchMemOpaqueAddress = 0;
     VkMemoryRequirements scratchReq{};
     uint32_t scratchMemType = UINT32_MAX;
-    if (m_GpuReadbackHelper->ReserveScratchBufferAddress(deviceKey, physDevKey, scratchSize,
-                                                         scratchAddress, scratchOpaqueAddress,
-                                                         scratchMemOpaqueAddress) &&
+    if (m_GpuReadbackHelper->ReserveFreshBufferAddress(deviceKey, physDevKey, scratchSize,
+                                                       scratchAddress, scratchOpaqueAddress,
+                                                       scratchMemOpaqueAddress) &&
         QueryCaptureReplayBufferRequirements(deviceKey, scratchSize,
                                              VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, scratchReq)) {
       scratchMemType =
@@ -4668,8 +4680,8 @@ bool StateTrackingService::EmitRelocatedAccelerationStructureCreate(
   uint64_t bufOpaque = 0;
   uint64_t memOpaque = 0;
   VkMemoryRequirements req{};
-  if (!m_GpuReadbackHelper->ReserveScratchBufferAddress(deviceKey, physDevKey, asState.Size,
-                                                        freshDeviceAddress, bufOpaque, memOpaque) ||
+  if (!m_GpuReadbackHelper->ReserveFreshBufferAddress(deviceKey, physDevKey, asState.Size,
+                                                      freshDeviceAddress, bufOpaque, memOpaque) ||
       !QueryCaptureReplayBufferRequirements(deviceKey, asState.Size, usage, req)) {
     return false;
   }

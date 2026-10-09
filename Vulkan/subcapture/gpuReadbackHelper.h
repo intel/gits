@@ -114,12 +114,20 @@ public:
                                const VkMicromapBuildInfoEXT& buildInfo,
                                VkMicromapBuildSizesInfoEXT& outSizes) override;
 
-  bool ReserveScratchBufferAddress(uint64_t deviceKey,
-                                   uint64_t physDevKey,
-                                   VkDeviceSize size,
-                                   VkDeviceAddress& outDeviceAddress,
-                                   uint64_t& outOpaqueCaptureAddress,
-                                   uint64_t& outMemoryOpaqueCaptureAddress) override;
+  bool ReserveFreshBufferAddress(uint64_t deviceKey,
+                                 uint64_t physDevKey,
+                                 VkDeviceSize size,
+                                 VkDeviceAddress& outDeviceAddress,
+                                 uint64_t& outOpaqueCaptureAddress,
+                                 uint64_t& outMemoryOpaqueCaptureAddress) override;
+
+  bool ReserveCapturedBufferAddress(uint64_t deviceKey,
+                                    VkDeviceSize size,
+                                    VkBufferUsageFlags usage,
+                                    VkDeviceSize allocationSize,
+                                    uint32_t memoryTypeIndex,
+                                    uint64_t opaqueCaptureAddress,
+                                    uint64_t memoryOpaqueCaptureAddress) override;
 
   size_t MarkReservedAddresses() override;
 

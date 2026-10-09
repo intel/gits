@@ -213,21 +213,32 @@ public:
                                        const VkMicromapBuildInfoEXT& buildInfo,
                                        VkMicromapBuildSizesInfoEXT& outSizes) = 0;
 
-  // Reserves a capture/replay-stable VkDeviceAddress for a not-yet-created scratch
-  // buffer of 'size' bytes. The caller emits creation commands supplying these same
-  // opaque addresses, so the driver reproduces outDeviceAddress and it can be hardcoded
-  // into the replayed build's scratchData.deviceAddress.
-  virtual bool ReserveScratchBufferAddress(uint64_t deviceKey,
-                                           uint64_t physDevKey,
-                                           VkDeviceSize size,
-                                           VkDeviceAddress& outDeviceAddress,
-                                           uint64_t& outOpaqueCaptureAddress,
-                                           uint64_t& outMemoryOpaqueCaptureAddress) = 0;
+  // Reserves a fresh, driver-chosen capture/replay address for a buffer of 'size' bytes the
+  // caller emits later at the same opaque addresses, so outDeviceAddress can be hardcoded
+  // into replayed commands. Held until ReleaseReservedAddressesSince.
+  virtual bool ReserveFreshBufferAddress(uint64_t deviceKey,
+                                         uint64_t physDevKey,
+                                         VkDeviceSize size,
+                                         VkDeviceAddress& outDeviceAddress,
+                                         uint64_t& outOpaqueCaptureAddress,
+                                         uint64_t& outMemoryOpaqueCaptureAddress) = 0;
+
+  // Holds caller-supplied capture/replay addresses with a live buffer and allocation, so a
+  // buffer emitted there only in the stream is not overlapped by a later reservation.
+  // Returns false if a live object already owns either address.
+  virtual bool ReserveCapturedBufferAddress(uint64_t deviceKey,
+                                            VkDeviceSize size,
+                                            VkBufferUsageFlags usage,
+                                            VkDeviceSize allocationSize,
+                                            uint32_t memoryTypeIndex,
+                                            uint64_t opaqueCaptureAddress,
+                                            uint64_t memoryOpaqueCaptureAddress) = 0;
 
   // Marks the current reservation set, for a later ReleaseReservedAddressesSince.
   virtual size_t MarkReservedAddresses() = 0;
 
-  // Destroys the throwaway buffers ReserveScratchBufferAddress kept alive since 'mark'.
+  // Destroys the throwaway buffers ReserveFreshBufferAddress and
+  // ReserveCapturedBufferAddress kept alive since 'mark'.
   // Call it once the destroy commands for the matching transients have been authored -
   // until then the addresses must stay reserved so two coexisting transients cannot alias.
   // Reservations taken before the mark back objects that outlive this scope, so releasing

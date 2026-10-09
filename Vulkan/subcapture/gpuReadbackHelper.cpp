@@ -822,30 +822,30 @@ bool GpuReadbackHelper::QueryMicromapBuildSizes(uint64_t deviceKey,
 }
 
 // ---------------------------------------------------------------------------
-// ReserveScratchBufferAddress
+// ReserveFreshBufferAddress
 //
 // Creates a throwaway buffer with capture/replay addressing and captures its
-// addresses, so a restored build can use them for its scratch buffer.
+// addresses, so a buffer the stream creates later can be placed at them.
 // ---------------------------------------------------------------------------
-bool GpuReadbackHelper::ReserveScratchBufferAddress(uint64_t deviceKey,
-                                                    uint64_t physDevKey,
-                                                    VkDeviceSize size,
-                                                    VkDeviceAddress& outDeviceAddress,
-                                                    uint64_t& outOpaqueCaptureAddress,
-                                                    uint64_t& outMemoryOpaqueCaptureAddress) {
+bool GpuReadbackHelper::ReserveFreshBufferAddress(uint64_t deviceKey,
+                                                  uint64_t physDevKey,
+                                                  VkDeviceSize size,
+                                                  VkDeviceAddress& outDeviceAddress,
+                                                  uint64_t& outOpaqueCaptureAddress,
+                                                  uint64_t& outMemoryOpaqueCaptureAddress) {
   auto& hms = HandleMapService::Get();
   auto device = reinterpret_cast<VkDevice>(hms.TryGetHandle(deviceKey));
   auto physDevice = reinterpret_cast<VkPhysicalDevice>(hms.TryGetHandle(physDevKey));
   if (!device || !physDevice) {
-    LOG_WARNING << "GpuReadbackHelper: ReserveScratchBufferAddress: invalid device/physDevice key";
+    LOG_WARNING << "GpuReadbackHelper: ReserveFreshBufferAddress: invalid device/physDevice key";
     return false;
   }
   auto& dt = m_Player.GetDeviceDispatchTable(device);
 
-  VkBuffer scratchBuf = VK_NULL_HANDLE;
-  VkDeviceMemory scratchMem = VK_NULL_HANDLE;
+  VkBuffer buffer = VK_NULL_HANDLE;
+  VkDeviceMemory memory = VK_NULL_HANDLE;
   void* mappedPtr = nullptr;
-  if (!AllocateStagingBuffer(device, physDevice, size, scratchBuf, scratchMem, mappedPtr,
+  if (!AllocateStagingBuffer(device, physDevice, size, buffer, memory, mappedPtr,
                              VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
                                  VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
                              VK_BUFFER_CREATE_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT)) {
@@ -854,7 +854,7 @@ bool GpuReadbackHelper::ReserveScratchBufferAddress(uint64_t deviceKey,
 
   VkBufferDeviceAddressInfo addressInfo{};
   addressInfo.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
-  addressInfo.buffer = scratchBuf;
+  addressInfo.buffer = buffer;
   auto vkGetBufferDeviceAddressUnified =
       dt.vkGetBufferDeviceAddress ? dt.vkGetBufferDeviceAddress : dt.vkGetBufferDeviceAddressKHR;
   outDeviceAddress = vkGetBufferDeviceAddressUnified(device, &addressInfo);
@@ -866,18 +866,87 @@ bool GpuReadbackHelper::ReserveScratchBufferAddress(uint64_t deviceKey,
 
   VkDeviceMemoryOpaqueCaptureAddressInfo memAddressInfo{};
   memAddressInfo.sType = VK_STRUCTURE_TYPE_DEVICE_MEMORY_OPAQUE_CAPTURE_ADDRESS_INFO;
-  memAddressInfo.memory = scratchMem;
+  memAddressInfo.memory = memory;
   auto vkGetDeviceMemoryOpaqueCaptureAddressUnified =
       dt.vkGetDeviceMemoryOpaqueCaptureAddress ? dt.vkGetDeviceMemoryOpaqueCaptureAddress
                                                : dt.vkGetDeviceMemoryOpaqueCaptureAddressKHR;
   outMemoryOpaqueCaptureAddress =
       vkGetDeviceMemoryOpaqueCaptureAddressUnified(device, &memAddressInfo);
 
-  dt.vkUnmapMemory(device, scratchMem);
+  dt.vkUnmapMemory(device, memory);
   // Kept alive so a subsequent reservation does not get the same address back.
   // ReleaseReservedAddressesSince tears them down.
-  m_ReservedAddressBuffers.push_back({device, scratchBuf, scratchMem});
+  m_ReservedAddressBuffers.push_back({device, buffer, memory});
 
+  return true;
+}
+
+// ---------------------------------------------------------------------------
+// ReserveCapturedBufferAddress
+//
+// Creates a live buffer and allocation at caller-supplied capture/replay addresses, so the
+// driver cannot hand that range to a later reservation while the stream still has a buffer
+// there. Mirrors the create info the stream uses for the same buffer.
+// ---------------------------------------------------------------------------
+bool GpuReadbackHelper::ReserveCapturedBufferAddress(uint64_t deviceKey,
+                                                     VkDeviceSize size,
+                                                     VkBufferUsageFlags usage,
+                                                     VkDeviceSize allocationSize,
+                                                     uint32_t memoryTypeIndex,
+                                                     uint64_t opaqueCaptureAddress,
+                                                     uint64_t memoryOpaqueCaptureAddress) {
+  auto device = reinterpret_cast<VkDevice>(HandleMapService::Get().TryGetHandle(deviceKey));
+  if (!device) {
+    LOG_WARNING << "GpuReadbackHelper: ReserveCapturedBufferAddress: invalid device key";
+    return false;
+  }
+  auto& dt = m_Player.GetDeviceDispatchTable(device);
+
+  VkBufferOpaqueCaptureAddressCreateInfo opaqueAddrCI{};
+  opaqueAddrCI.sType = VK_STRUCTURE_TYPE_BUFFER_OPAQUE_CAPTURE_ADDRESS_CREATE_INFO;
+  opaqueAddrCI.opaqueCaptureAddress = opaqueCaptureAddress;
+
+  VkBufferCreateInfo bci{};
+  bci.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+  bci.pNext = &opaqueAddrCI;
+  bci.flags = VK_BUFFER_CREATE_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT;
+  bci.size = size;
+  bci.usage = usage | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+  bci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+  VkBuffer buffer = VK_NULL_HANDLE;
+  if (dt.vkCreateBuffer(device, &bci, nullptr, &buffer) != VK_SUCCESS) {
+    return false;
+  }
+
+  VkMemoryOpaqueCaptureAddressAllocateInfo memOpaqueAddrCI{};
+  memOpaqueAddrCI.sType = VK_STRUCTURE_TYPE_MEMORY_OPAQUE_CAPTURE_ADDRESS_ALLOCATE_INFO;
+  memOpaqueAddrCI.opaqueCaptureAddress = memoryOpaqueCaptureAddress;
+
+  VkMemoryAllocateFlagsInfo allocFlagsInfo{};
+  allocFlagsInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO;
+  allocFlagsInfo.pNext = &memOpaqueAddrCI;
+  allocFlagsInfo.flags =
+      VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT | VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT;
+
+  VkMemoryAllocateInfo mai{};
+  mai.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+  mai.pNext = &allocFlagsInfo;
+  mai.allocationSize = allocationSize;
+  mai.memoryTypeIndex = memoryTypeIndex;
+
+  VkDeviceMemory memory = VK_NULL_HANDLE;
+  if (dt.vkAllocateMemory(device, &mai, nullptr, &memory) != VK_SUCCESS) {
+    dt.vkDestroyBuffer(device, buffer, nullptr);
+    return false;
+  }
+  if (dt.vkBindBufferMemory(device, buffer, memory, 0) != VK_SUCCESS) {
+    dt.vkFreeMemory(device, memory, nullptr);
+    dt.vkDestroyBuffer(device, buffer, nullptr);
+    return false;
+  }
+
+  m_ReservedAddressBuffers.push_back({device, buffer, memory});
   return true;
 }
 

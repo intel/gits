@@ -77,7 +77,7 @@ bool MicromapRestoreService::EmitRelocatedCreate(uint64_t deviceKey,
   uint64_t bufOpaque = 0;
   uint64_t memOpaque = 0;
   VkMemoryRequirements req{};
-  if (!m_Sts.m_GpuReadbackHelper->ReserveScratchBufferAddress(
+  if (!m_Sts.m_GpuReadbackHelper->ReserveFreshBufferAddress(
           deviceKey, physDevKey, state.Size, freshDeviceAddress, bufOpaque, memOpaque) ||
       !m_Sts.QueryCaptureReplayBufferRequirements(deviceKey, state.Size, usage, req)) {
     return false;
@@ -209,7 +209,7 @@ void MicromapRestoreService::EmitRebuildBytes(
     uint64_t scratchMemOpaqueAddress = 0;
     VkMemoryRequirements scratchReq{};
     uint32_t scratchMemType = UINT32_MAX;
-    if (m_Sts.m_GpuReadbackHelper->ReserveScratchBufferAddress(
+    if (m_Sts.m_GpuReadbackHelper->ReserveFreshBufferAddress(
             deviceKey, physDevKey, sizes.buildScratchSize, scratchAddress, scratchOpaqueAddress,
             scratchMemOpaqueAddress) &&
         m_Sts.QueryCaptureReplayBufferRequirements(
