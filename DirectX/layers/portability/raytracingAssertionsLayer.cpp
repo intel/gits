@@ -34,7 +34,7 @@ void RaytracingAssertionsLayer::Pre(
   if (c.Skip) {
     return;
   }
-  ValidateBuildScratchSize(c);
+  RecordBuildScratch(c);
   const auto& desc = *c.m_pDesc.Value;
   const bool update =
       desc.Inputs.Flags & D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PERFORM_UPDATE;
@@ -232,6 +232,26 @@ void RaytracingAssertionsLayer::Pre(
   LOG_ERROR << "RaytracingAssertionsLayer: NvAPI cluster operation not handled";
 }
 
+void RaytracingAssertionsLayer::Pre(ID3D12CommandQueueExecuteCommandListsCommand& c) {
+  if (c.Skip) {
+    return;
+  }
+  std::vector<const ScratchUsage*> concurrentScratch;
+  for (UINT i = 0; i < c.m_NumCommandLists.Value; ++i) {
+    auto recorded = m_RecordedScratch.find(c.m_ppCommandLists.Keys[i]);
+    if (recorded == m_RecordedScratch.end()) {
+      continue;
+    }
+    for (const ScratchEvent& event : recorded->second) {
+      if (const auto* usage = std::get_if<ScratchUsage>(&event)) {
+        ValidateBuildScratch(*usage, concurrentScratch);
+        continue;
+      }
+      concurrentScratch.clear();
+    }
+  }
+}
+
 void RaytracingAssertionsLayer::Post(ID3D12CommandQueueExecuteCommandListsCommand& c) {
   if (c.Skip) {
     return;
@@ -420,6 +440,7 @@ void RaytracingAssertionsLayer::Post(IUnknownReleaseCommand& c) {
   ProcessReadyEvents();
   m_AddressService.DestroyInterface(c.m_Object.Key);
   m_RecordedOperations.erase(c.m_Object.Key);
+  m_RecordedScratch.erase(c.m_Object.Key);
   m_QueueFences.erase(c.m_Object.Key);
 }
 
@@ -429,6 +450,7 @@ void RaytracingAssertionsLayer::Post(ID3D12GraphicsCommandListResourceBarrierCom
   }
   m_ResourceStates.ResourceBarrier(c.m_Object.Value, c.m_pBarriers.Value, c.m_NumBarriers.Value,
                                    c.m_pBarriers.ResourceKeys.data());
+  RecordScratchBarrier(c.m_Object.Key);
 }
 
 void RaytracingAssertionsLayer::Post(ID3D12GraphicsCommandList7BarrierCommand& c) {
@@ -438,6 +460,7 @@ void RaytracingAssertionsLayer::Post(ID3D12GraphicsCommandList7BarrierCommand& c
   m_ResourceStates.ResourceBarrier(c.m_Object.Value, c.m_pBarrierGroups.Value,
                                    c.m_NumBarrierGroups.Value,
                                    c.m_pBarrierGroups.ResourceKeys.data());
+  RecordScratchBarrier(c.m_Object.Key);
 }
 
 void RaytracingAssertionsLayer::Post(ID3D12GraphicsCommandListResetCommand& c) {
@@ -445,6 +468,7 @@ void RaytracingAssertionsLayer::Post(ID3D12GraphicsCommandListResetCommand& c) {
     return;
   }
   m_RecordedOperations.erase(c.m_Object.Key);
+  m_RecordedScratch.erase(c.m_Object.Key);
 }
 
 void RaytracingAssertionsLayer::ProcessReadyEvents(bool block) {
@@ -740,7 +764,16 @@ void RaytracingAssertionsLayer::ValidateBuildFitsAllocation(
   }
 }
 
-void RaytracingAssertionsLayer::ValidateBuildScratchSize(
+void RaytracingAssertionsLayer::LogMissingBuild(CommandKey commandKey,
+                                                D3D12_GPU_VIRTUAL_ADDRESS replayAddress) {
+  const CapturePlayerGpuAddressService::ResourceInfo& resource = FindReplayResource(replayAddress);
+  const UINT64 offset = replayAddress - resource.PlayerStart;
+  LOG_ERROR << "RaytracingAssertionsLayer: " << keyToStr(commandKey) << " uses RTAS in O"
+            << keyToStr(resource.Key) << " offset " << offset;
+  GITS_ASSERT(false, "RaytracingAssertionsLayer: used RTAS was erased or never built");
+}
+
+void RaytracingAssertionsLayer::RecordBuildScratch(
     const ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c) {
   const ObjectKey scratchKey = c.m_pDesc.ScratchAccelerationStructureKey;
   if (!scratchKey) {
@@ -759,33 +792,70 @@ void RaytracingAssertionsLayer::ValidateBuildScratchSize(
   D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO liveInfo{};
   device->GetRaytracingAccelerationStructurePrebuildInfo(&inputs, &liveInfo);
 
-  const bool update =
-      inputs.Flags & D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PERFORM_UPDATE;
-  const UINT64 requiredScratch =
-      update ? liveInfo.UpdateScratchDataSizeInBytes : liveInfo.ScratchDataSizeInBytes;
-  const UINT64 offset = c.m_pDesc.ScratchAccelerationStructureOffset;
-  const UINT64 scratchBytes = scratch->second->GetDesc().Width;
-  const UINT64 availableScratch = offset <= scratchBytes ? scratchBytes - offset : 0;
-  if (offset > scratchBytes || requiredScratch > availableScratch) {
-    const UINT64 exceeding =
-        requiredScratch > availableScratch ? requiredScratch - availableScratch : requiredScratch;
-    LOG_ERROR << "RaytracingAssertionsLayer: " << keyToStr(c.Key) << " scratch buffer O"
-              << keyToStr(scratchKey) << " has " << scratchBytes << " bytes at offset " << offset
-              << " but live prebuild info requires " << requiredScratch << " bytes for "
-              << (update ? "update" : "build") << " scratch, exceeding by " << exceeding
-              << " bytes";
+  ScratchUsage usage;
+  usage.Key = c.Key;
+  usage.ResourceKey = scratchKey;
+  usage.Offset = c.m_pDesc.ScratchAccelerationStructureOffset;
+  usage.ResourceSize = scratch->second->GetDesc().Width;
+  usage.ReplayAddress = scratch->second->GetGPUVirtualAddress() + usage.Offset;
+  usage.Update = inputs.Flags & D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PERFORM_UPDATE;
+  usage.RequiredSize =
+      usage.Update ? liveInfo.UpdateScratchDataSizeInBytes : liveInfo.ScratchDataSizeInBytes;
+  m_RecordedScratch[c.m_Object.Key].emplace_back(std::move(usage));
+}
+
+void RaytracingAssertionsLayer::RecordScratchBarrier(ObjectKey commandListKey) {
+  std::vector<ScratchEvent>& events = m_RecordedScratch[commandListKey];
+  if (events.empty() || !std::holds_alternative<ScratchBarrier>(events.back())) {
+    events.emplace_back(ScratchBarrier{});
+  }
+}
+
+void RaytracingAssertionsLayer::ValidateBuildScratch(
+    const ScratchUsage& usage, std::vector<const ScratchUsage*>& concurrentScratch) {
+  ValidateBuildScratchSize(usage);
+  if (!usage.RequiredSize) {
+    return;
+  }
+  for (const ScratchUsage* concurrent : concurrentScratch) {
+    ValidateBuildScratchOverlap(usage, *concurrent);
+  }
+  concurrentScratch.push_back(&usage);
+}
+
+void RaytracingAssertionsLayer::ValidateBuildScratchSize(const ScratchUsage& usage) {
+  const UINT64 availableScratch =
+      usage.Offset <= usage.ResourceSize ? usage.ResourceSize - usage.Offset : 0;
+  if (usage.Offset > usage.ResourceSize || usage.RequiredSize > availableScratch) {
+    const UINT64 exceeding = usage.RequiredSize > availableScratch
+                                 ? usage.RequiredSize - availableScratch
+                                 : usage.RequiredSize;
+    LOG_ERROR << "RaytracingAssertionsLayer: " << keyToStr(usage.Key) << " scratch buffer O"
+              << keyToStr(usage.ResourceKey) << " has " << usage.ResourceSize << " bytes at offset "
+              << usage.Offset << " but live prebuild info requires " << usage.RequiredSize
+              << " bytes for " << (usage.Update ? "update" : "build") << " scratch, exceeding by "
+              << exceeding << " bytes";
     GITS_ASSERT(false,
                 "RaytracingAssertionsLayer: scratch buffer too small for live prebuild info");
   }
 }
 
-void RaytracingAssertionsLayer::LogMissingBuild(CommandKey commandKey,
-                                                D3D12_GPU_VIRTUAL_ADDRESS replayAddress) {
-  const CapturePlayerGpuAddressService::ResourceInfo& resource = FindReplayResource(replayAddress);
-  const UINT64 offset = replayAddress - resource.PlayerStart;
-  LOG_ERROR << "RaytracingAssertionsLayer: " << keyToStr(commandKey) << " uses RTAS in O"
-            << keyToStr(resource.Key) << " offset " << offset;
-  GITS_ASSERT(false, "RaytracingAssertionsLayer: used RTAS was erased or never built");
+void RaytracingAssertionsLayer::ValidateBuildScratchOverlap(const ScratchUsage& usage,
+                                                            const ScratchUsage& concurrent) {
+  const D3D12_GPU_VIRTUAL_ADDRESS overlapStart =
+      std::max(usage.ReplayAddress, concurrent.ReplayAddress);
+  const D3D12_GPU_VIRTUAL_ADDRESS overlapEnd = std::min(
+      usage.ReplayAddress + usage.RequiredSize, concurrent.ReplayAddress + concurrent.RequiredSize);
+  if (overlapStart >= overlapEnd) {
+    return;
+  }
+  LOG_ERROR << "RaytracingAssertionsLayer: " << keyToStr(usage.Key) << " scratch in O"
+            << keyToStr(usage.ResourceKey) << " offset " << usage.Offset << " size "
+            << usage.RequiredSize << " overlaps scratch of " << keyToStr(concurrent.Key) << " in O"
+            << keyToStr(concurrent.ResourceKey) << " offset " << concurrent.Offset << " size "
+            << concurrent.RequiredSize << " by " << overlapEnd - overlapStart
+            << " bytes without a barrier between the builds";
+  GITS_ASSERT(false, "RaytracingAssertionsLayer: concurrent RTAS builds overlap in scratch buffer");
 }
 
 void RaytracingAssertionsLayer::LoadInstancePointers() {

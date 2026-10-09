@@ -20,6 +20,7 @@
 #include <set>
 #include <unordered_map>
 #include <unordered_set>
+#include <variant>
 #include <vector>
 #include <wrl/client.h>
 
@@ -40,6 +41,7 @@ public:
   void Pre(NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& c) override;
   void Pre(NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand& c) override;
 
+  void Pre(ID3D12CommandQueueExecuteCommandListsCommand& c) override;
   void Post(ID3D12CommandQueueExecuteCommandListsCommand& c) override;
   void Post(ID3D12CommandQueueWaitCommand& c) override;
   void Post(ID3D12CommandQueueSignalCommand& c) override;
@@ -135,6 +137,18 @@ private:
     std::vector<D3D12_GPU_VIRTUAL_ADDRESS> OmmArrayReplayAddresses;
   };
 
+  struct ScratchUsage {
+    CommandKey Key{};
+    ObjectKey ResourceKey{};
+    UINT64 Offset{};
+    UINT64 ResourceSize{};
+    D3D12_GPU_VIRTUAL_ADDRESS ReplayAddress{};
+    UINT64 RequiredSize{};
+    bool Update{};
+  };
+  struct ScratchBarrier {};
+  using ScratchEvent = std::variant<ScratchUsage, ScratchBarrier>;
+
   struct QueueFence {
     ComPtr<ID3D12Fence> Fence;
     UINT64 Value{};
@@ -167,9 +181,15 @@ private:
                                    D3D12_GPU_VIRTUAL_ADDRESS replayAddress,
                                    UINT64 sizeInBytes,
                                    const CapturePlayerGpuAddressService::ResourceInfo& resource);
-  void ValidateBuildScratchSize(
-      const ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c);
   void LogMissingBuild(CommandKey commandKey, D3D12_GPU_VIRTUAL_ADDRESS replayAddress);
+
+  void RecordBuildScratch(
+      const ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c);
+  void RecordScratchBarrier(ObjectKey commandListKey);
+  void ValidateBuildScratch(const ScratchUsage& usage,
+                            std::vector<const ScratchUsage*>& concurrentScratch);
+  void ValidateBuildScratchSize(const ScratchUsage& usage);
+  void ValidateBuildScratchOverlap(const ScratchUsage& usage, const ScratchUsage& concurrent);
 
   void LoadInstancePointers();
   ReadbackBuffer StageReadback(ID3D12GraphicsCommandList* commandList,
@@ -219,6 +239,7 @@ private:
       m_ResourceReplayBounds;
 
   std::unordered_map<ObjectKey, std::vector<Operation>> m_RecordedOperations;
+  std::unordered_map<ObjectKey, std::vector<ScratchEvent>> m_RecordedScratch;
   std::unordered_map<ObjectKey, QueueFence> m_QueueFences;
   std::queue<std::unique_ptr<ValidationEvent>> m_PendingValidationEvents;
 
