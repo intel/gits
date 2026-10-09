@@ -578,6 +578,11 @@ void RaytracingAssertionsLayer::ValidateOperationTlasInputs(
         ValidateBuildDependency(operation.Key, *build);
         inputs.insert(std::move(build));
       } else {
+        LOG_ERROR << "RaytracingAssertionsLayer: TLAS build " << keyToStr(operation.Key)
+                  << " INSTANCE " << i + 1 << " (InstanceID " << instance.InstanceID
+                  << ") references missing BLAS at capture address 0x" << std::hex
+                  << instance.AccelerationStructure << " replay address 0x" << replayBlasAddress
+                  << std::dec;
         LogMissingBuild(operation.Key, replayBlasAddress);
       }
     }
