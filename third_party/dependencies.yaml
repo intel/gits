@@ -73,6 +73,7 @@ dependencies:
     - name: fast_io
       argument: fastio
       url: https://github.com/cppfastio/fast_io.git
+      branch: old-outdated-master
       commit_id: 788cb9810f0ca881d15fe594b0dd1144901d14d8
     - name: renderdoc
       url: https://github.com/baldurk/renderdoc.git
