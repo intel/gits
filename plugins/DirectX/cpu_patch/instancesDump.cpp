@@ -38,8 +38,8 @@ InstancesDump::InstancesDump(const Configuration& gitsConfig) : ResourceDump() {
 InstancesDump::~InstancesDump() {
   try {
     WaitUntilDumped();
-    LOG_INFO << "CpuPatch - InstancesDump - files dumped: " << std::to_string(m_NumFiles)
-             << ", total size: " << gits::FormatMemorySize(m_FilesTotalSize);
+    LOG_INFO << "CpuPatch - InstancesDump - files dumped: " << std::to_string(m_NumFiles.load())
+             << ", total size: " << gits::FormatMemorySize(m_FilesTotalSize.load());
   } catch (...) {
     topmost_exception_handler("InstancesDump::~InstancesDump");
   }

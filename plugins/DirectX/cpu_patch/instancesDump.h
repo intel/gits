@@ -12,6 +12,7 @@
 #include "resourceDump.h"
 #include "bit_range.h"
 
+#include <atomic>
 #include <filesystem>
 
 namespace gits {
@@ -40,7 +41,7 @@ public:
                            unsigned executeCount);
 
 protected:
-  void DumpStagedResource(DumpInfo& dumpInfo);
+  void DumpStagedResource(DumpInfo& dumpInfo) override;
 
 private:
   struct InstancesDumpInfo : DumpInfo {
@@ -54,8 +55,8 @@ private:
   BitRange m_Executions;
   bool m_Initialized{false};
   std::filesystem::path m_DumpDir;
-  size_t m_NumFiles{};
-  size_t m_FilesTotalSize{};
+  std::atomic<size_t> m_NumFiles{};
+  std::atomic<size_t> m_FilesTotalSize{};
 };
 
 } // namespace DirectX

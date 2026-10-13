@@ -38,8 +38,8 @@ BindingTableDump::BindingTableDump(const Configuration& gitsConfig) : ResourceDu
 BindingTableDump::~BindingTableDump() {
   try {
     WaitUntilDumped();
-    LOG_INFO << "CpuPatch - BindingTableDump - files dumped: " << std::to_string(m_NumFiles)
-             << ", total size: " << gits::FormatMemorySize(m_FilesTotalSize);
+    LOG_INFO << "CpuPatch - BindingTableDump - files dumped: " << std::to_string(m_NumFiles.load())
+             << ", total size: " << gits::FormatMemorySize(m_FilesTotalSize.load());
   } catch (...) {
     topmost_exception_handler("BindingTableDump::~BindingTableDump");
   }

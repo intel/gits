@@ -16,6 +16,7 @@
 #include "commandsAuto.h"
 #include "commandsCustom.h"
 
+#include <atomic>
 #include <filesystem>
 #include <unordered_map>
 
@@ -45,7 +46,7 @@ public:
   void CreateCommandSignature(ID3D12DeviceCreateCommandSignatureCommand& command);
 
 protected:
-  void DumpStagedResource(DumpInfo& dumpInfo);
+  void DumpStagedResource(DumpInfo& dumpInfo) override;
 
 private:
   struct ExecuteIndirectDumpInfo : DumpInfo {
@@ -64,8 +65,8 @@ private:
   BitRange m_Executions;
   bool m_Initialized{false};
   std::filesystem::path m_DumpDir;
-  size_t m_NumFiles{};
-  size_t m_FilesTotalSize{};
+  std::atomic<size_t> m_NumFiles{};
+  std::atomic<size_t> m_FilesTotalSize{};
 
   std::unordered_map<CommandKey, std::vector<D3D12_DISPATCH_RAYS_DESC>>
       m_ExecuteIndirectDispatchRays;
