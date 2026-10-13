@@ -26,6 +26,7 @@ ImGuiHUDLayer::ImGuiHUDLayer() : Layer("ImGuiHUDLayer") {
 }
 
 ImGuiHUDLayer::~ImGuiHUDLayer() {
+  std::lock_guard<std::mutex> lock(m_Mutex);
   Shutdown();
 }
 
@@ -291,6 +292,7 @@ void ImGuiHUDLayer::EnsureInitialized(IUnknown* device,
                                       IDXGISwapChain* swapChain,
                                       ObjectKey swapChainKey,
                                       bool isXefgProxy) {
+  std::lock_guard<std::mutex> lock(m_Mutex);
   // The first valid swapchain owns the HUD. Subsequent app swapchains are
   // ignored; the XeFG presenter supersedes an app-owned HUD via a clean re-init.
   if (m_Owner == HudOwner::XefgProxy) {

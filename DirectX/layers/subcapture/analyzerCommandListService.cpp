@@ -981,7 +981,8 @@ void AnalyzerCommandListService::Command(
     m_CommandsByCommandList[c.m_Object.Key].emplace_back(
         new ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand(c));
   }
-  if (c.m_pDesc.Value->Inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL &&
+  if (c.m_pDesc.Value &&
+      c.m_pDesc.Value->Inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL &&
       m_AnalyzerService.BeforeRange()) {
 
     auto it = m_TlasesBeforeRange.find(std::make_pair(c.m_pDesc.DestAccelerationStructureKey,
