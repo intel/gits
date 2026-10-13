@@ -21,14 +21,14 @@ BindingTableDump::BindingTableDump(const Configuration& gitsConfig) : ResourceDu
     m_DumpDir = gitsConfig.common.player.subcapturePath;
     m_Frames = BitRange(gitsConfig.common.player.subcapture.frames);
     if (gitsConfig.common.player.subcapture.directx.commandListExecutions.empty()) {
-      m_Executions = BitRange("all");
+      m_Executions = BitRange(true);
     } else {
       m_Executions = BitRange(gitsConfig.common.player.subcapture.directx.commandListExecutions);
     }
   } else {
     m_DumpDir = gitsConfig.common.player.streamDir;
-    m_Frames = BitRange("all");
-    m_Executions = BitRange("all");
+    m_Frames = BitRange(true);
+    m_Executions = BitRange(true);
   }
   m_DumpDir /= "cpu_patch";
   m_DumpDir /= "binding_table_dump";
