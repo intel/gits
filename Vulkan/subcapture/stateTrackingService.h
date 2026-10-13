@@ -255,7 +255,7 @@ public:
 class StateTrackingService {
 public:
   explicit StateTrackingService(SubcaptureRecorder& recorder);
-  ~StateTrackingService() = default;
+  ~StateTrackingService() {}
   StateTrackingService(const StateTrackingService&) = delete;
   StateTrackingService& operator=(const StateTrackingService&) = delete;
 

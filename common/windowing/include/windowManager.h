@@ -29,7 +29,7 @@ enum class WindowProtocol {
 class WindowManager {
 public:
   static WindowManager& Get();
-  ~WindowManager() = default;
+  ~WindowManager() {}
 
   std::pair<uint64_t, uint64_t> CreatePlayerWindow(
       WindowProtocol protocol, int x, int y, int width, int height, bool visible);

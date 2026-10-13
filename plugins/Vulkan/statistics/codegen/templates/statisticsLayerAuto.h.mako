@@ -23,7 +23,7 @@ namespace vulkan {
 class StatisticsLayer : public Layer {
 public:
   StatisticsLayer(const StatisticsConfig& cfg, gits::MessageBus& msgBus);
-  ~StatisticsLayer() = default;
+  ~StatisticsLayer() {}
   StatisticsLayer(const StatisticsLayer&) = delete;
   StatisticsLayer& operator=(const StatisticsLayer&) = delete;
 

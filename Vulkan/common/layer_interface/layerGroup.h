@@ -20,7 +20,7 @@ namespace vulkan {
 
 class LayerGroup {
 public:
-  virtual ~LayerGroup() = default;
+  virtual ~LayerGroup() {}
   LayerGroup(const LayerGroup&) = delete;
   LayerGroup& operator=(const LayerGroup&) = delete;
 

@@ -41,6 +41,8 @@ public:
   }
 
   ~PlayerManager();
+  PlayerManager(const PlayerManager&) = delete;
+  PlayerManager& operator=(const PlayerManager&) = delete;
 
   std::vector<Layer*>& GetPreLayers() {
     return m_LayerManager.GetPreLayers();

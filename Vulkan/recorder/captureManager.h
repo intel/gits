@@ -165,6 +165,9 @@ private:
 
 class RecursionGuard : public gits::noncopyable {
 public:
+  RecursionGuard() = default;
+  RecursionGuard(const RecursionGuard&) = delete;
+  RecursionGuard& operator=(const RecursionGuard&) = delete;
   ~RecursionGuard() {
     try {
       auto& manager = CaptureManager::Get();
