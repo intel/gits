@@ -1004,10 +1004,8 @@ uint64_t StateTrackingService::StoreAsBuildInputContent(std::vector<uint8_t> byt
         std::equal(it->second.begin(), it->second.end(), bytes.begin())) {
       return key; // identical content already stored - dedup
     }
-    key = key * 0x100000001B3ull + 0x9E3779B1ull; // probe past a rare true collision
-    if (key == 0) {
-      key = 1;
-    }
+    // Probe past a rare true collision, skipping the reserved 0.
+    key = key == std::numeric_limits<uint64_t>::max() ? 1 : key + 1;
   }
 }
 
