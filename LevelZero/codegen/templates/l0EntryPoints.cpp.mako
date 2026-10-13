@@ -30,6 +30,21 @@ ${func.get('type')} __zecall ${func.get('name')}(${make_params(func, with_types=
   %endif
 ${"" if func.get('driver_extension') else "VISIBLE "}${func.get('type')} __zecall ${func.get('name')}(${make_params(func, with_types=True, with_array=True)})
 {
+<%
+  if func.get('name') == 'zelCheckIsLoaderInTearDown':
+    shutdown_value = 'true'
+  elif func.get('type') == 'ze_result_t':
+    shutdown_value = 'ZE_RESULT_ERROR_UNINITIALIZED'
+  elif func.get('type') in ('uint32_t', 'ze_bool_t'):
+    shutdown_value = '0'
+  elif func.get('type') == 'void':
+    shutdown_value = ''
+  else:
+    shutdown_value = 'nullptr'
+%>\
+  if (IsProcessShuttingDown()) {
+    return${' ' + shutdown_value if shutdown_value else ''};
+  }
   %if func.get('recExecWrap'):
     %if func.get('name') == 'zeDriverGetExtensionFunctionAddress':
       %for (_, extension_string, dditable, extension_functions, versions) in npu_extensions:

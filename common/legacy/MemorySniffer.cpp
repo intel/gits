@@ -417,9 +417,6 @@ bool MemorySniffer::RemoveRegion(PagedMemoryRegionHandle handle) {
 
   _memRegions.erase(**handle);
   _regionPointersToHandles.erase(*handle);
-
-  //Set pointer to NULL to mark handle as empty
-  *handle = nullptr;
   return true;
 }
 

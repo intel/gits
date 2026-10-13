@@ -1416,6 +1416,7 @@ var119=VarDef(name='ZE_STRUCTURE_TYPE_RUNTIME_REQUIREMENTS_OUTPUT',value='0x0002
 var500=VarDef(name='ZEX_STRUCTURE_COUNTER_BASED_EVENT_DESC',value='0x0003001C',struct='zex_counter_based_event_desc_t'),
 var501=VarDef(name='ZEX_STRUCTURE_COUNTER_BASED_EVENT_EXTERNAL_SYNC_ALLOC_PROPERTIES',value='0x0003001D',struct='zex_counter_based_event_external_sync_alloc_properties_t'),
 var502=VarDef(name='ZE_STRUCTURE_TYPE_QUEUE_PRIORITY_DESC',value='0x00030028',struct='ze_queue_priority_desc_t'),
+var503=VarDef(name='ZEX_INTEL_STRUCTURE_TYPE_QUEUE_COPY_OPERATIONS_OFFLOAD_HINT_EXP_PROPERTIES',value='0x0003001B',struct='zex_intel_queue_copy_operations_offload_hint_exp_desc_t'),
 )
 
 Enum(name='zel_structure_type_t',
@@ -4596,6 +4597,12 @@ var4=VarDef(name='hostAddress',type='uint64_t*',tag='in',wrapType='CUSMPtr'),
 var5=VarDef(name='completionValue',type='uint64_t',tag='in'),
 )
 
+Argument(name='zex_intel_queue_copy_operations_offload_hint_exp_desc_t',
+var1=VarDef(name='stype',type='ze_structure_type_t',tag='in'),
+var2=VarDef(name='pNext',type='const void*',tag='in',wrapType='CExtensionStructCore'),
+var3=VarDef(name='copyOffloadEnabled',type='ze_bool_t',tag='in'),
+)
+
 Argument(name='ze_queue_priority_desc_t',
 var1=VarDef(name='stype',type='ze_structure_type_t',tag='in'),
 var2=VarDef(name='pNext',type='const void*',tag='in',wrapType='CExtensionStructCore'),
@@ -4713,7 +4720,7 @@ arg2=ArgDef(name='lowestPriority',type='int32_t*',tag='out'),
 arg3=ArgDef(name='highestPriority',type='int32_t*',tag='out'),
 )
 
-Function(name='zexCounterBasedEventCreate2',component='zex_event',driver_extension=True,extension=True,enabled=True,ddi_pos=0,
+Function(name='zexCounterBasedEventCreate2',component='zex_event',driver_extension=True,extension=True,enabled=True,ddi_pos=0,stateTrack=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hContext',type='ze_context_handle_t',tag='in'),
 arg2=ArgDef(name='hDevice',type='ze_device_handle_t',tag='in'),
@@ -8189,25 +8196,25 @@ arg1=ArgDef(name='version',type='ze_api_version_t',tag='in'),
 arg2=ArgDef(name='pDdiTable',type='ze_physical_mem_dditable_t*',tag='inout',wrapType='COutArgument'),
 )
 
-Function(name='zeGetRtasBuilderProcAddrTable',component='ze_dditable',enabled=True,skipRun=True,
+Function(name='zeGetRTASBuilderProcAddrTable',component='ze_dditable',enabled=True,skipRun=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='version',type='ze_api_version_t',tag='in'),
 arg2=ArgDef(name='pDdiTable',type='ze_rtas_builder_dditable_t*',tag='inout',wrapType='COutArgument'),
 )
 
-Function(name='zeGetRtasBuilderExpProcAddrTable',component='ze_dditable',extension=True,enabled=True,skipRun=True,
+Function(name='zeGetRTASBuilderExpProcAddrTable',component='ze_dditable',extension=True,enabled=True,skipRun=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='version',type='ze_api_version_t',tag='in'),
 arg2=ArgDef(name='pDdiTable',type='ze_rtas_builder_exp_dditable_t*',tag='inout',wrapType='COutArgument'),
 )
 
-Function(name='zeGetRtasParallelOperationProcAddrTable',component='ze_dditable',enabled=True,skipRun=True,
+Function(name='zeGetRTASParallelOperationProcAddrTable',component='ze_dditable',enabled=True,skipRun=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='version',type='ze_api_version_t',tag='in'),
 arg2=ArgDef(name='pDdiTable',type='ze_rtas_parallel_operation_dditable_t*',tag='inout',wrapType='COutArgument'),
 )
 
-Function(name='zeGetRtasParallelOperationExpProcAddrTable',component='ze_dditable',extension=True,enabled=True,skipRun=True,
+Function(name='zeGetRTASParallelOperationExpProcAddrTable',component='ze_dditable',extension=True,enabled=True,skipRun=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='version',type='ze_api_version_t',tag='in'),
 arg2=ArgDef(name='pDdiTable',type='ze_rtas_parallel_operation_exp_dditable_t*',tag='inout',wrapType='COutArgument'),
@@ -8369,7 +8376,7 @@ arg1=ArgDef(name='version',type='ze_api_version_t',tag='in'),
 arg2=ArgDef(name='pDdiTable',type='zes_temperature_dditable_t*',tag='inout',wrapType='COutArgument'),
 )
 
-Function(name='zesGetVfManagementExpProcAddrTable',component='ze_dditable',extension=True,enabled=True,skipRun=True,
+Function(name='zesGetVFManagementExpProcAddrTable',component='ze_dditable',extension=True,enabled=True,skipRun=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='version',type='ze_api_version_t',tag='in'),
 arg2=ArgDef(name='pDdiTable',type='zes_vf_management_exp_dditable_t*',tag='inout',wrapType='COutArgument'),

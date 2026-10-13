@@ -16,16 +16,34 @@
 
 #include <mutex>
 
+#ifdef GITS_PLATFORM_WINDOWS
+#include <Windows.h>
+#endif
+
 namespace {
 // Avoid recording API - recursive functions.
 uint32_t recursionDepth = 0;
 constexpr uint32_t disableDepth = 1000;
+
+#ifdef GITS_PLATFORM_WINDOWS
+using RtlDllShutdownInProgressFunc = BOOLEAN(NTAPI*)();
+const auto rtlDllShutdownInProgress = reinterpret_cast<RtlDllShutdownInProgressFunc>(
+    GetProcAddress(GetModuleHandleW(L"ntdll.dll"), "RtlDllShutdownInProgress"));
+#endif
 } // namespace
 
 using namespace gits::l0;
 
 void PrePostDisableLevelZero() {
   recursionDepth = disableDepth;
+}
+
+inline bool IsProcessShuttingDown() {
+#ifdef GITS_PLATFORM_WINDOWS
+  return rtlDllShutdownInProgress != nullptr && rtlDllShutdownInProgress();
+#else
+  return false;
+#endif
 }
 
 #define GITS_WRAPPER_PRE                                                                           \
@@ -260,6 +278,7 @@ inline ze_result_t zeMemFreeExt_RECEXECWRAP(ze_context_handle_t hContext,
   GITS_ENTRY_L0
   ze_result_t return_value = ZE_RESULT_SUCCESS;
   GITS_WRAPPER_PRE
+  wrapper.DestroySniffedRegion(ptr);
   if (!wrapper.DeallocateVirtualMemory(ptr)) {
     return_value = driver.zeMemFreeExt(hContext, pMemFreeDesc, ptr);
     wrapper.zeMemFreeExt(return_value, hContext, pMemFreeDesc, ptr);

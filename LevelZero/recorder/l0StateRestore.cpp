@@ -473,6 +473,11 @@ void RestoreEvents(CScheduler& scheduler, CStateDynamic& sd) {
   for (auto& state : sd.Map<CEventState>()) {
     if (!state.second->Restored()) {
       auto stateInstance = state.first;
+      if (state.second->counterBasedCreate) {
+        scheduler.Register(state.second->counterBasedCreate.release());
+        state.second->RestoreFinished();
+        continue;
+      }
       scheduler.Register(new CzeEventCreate(ZE_RESULT_SUCCESS, state.second->hEventPool,
                                             &state.second->desc, &stateInstance));
       const auto& l0IFace = gits::CGits::Instance().apis.IfaceCompute();

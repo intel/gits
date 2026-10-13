@@ -588,6 +588,21 @@ inline void zeEventCreate_SD(ze_result_t return_value,
   }
 }
 
+inline void zexCounterBasedEventCreate2_SD(ze_result_t return_value,
+                                           ze_context_handle_t hContext,
+                                           ze_device_handle_t hDevice,
+                                           const zex_counter_based_event_desc_t* desc,
+                                           ze_event_handle_t* phEvent) {
+  if (return_value == ZE_RESULT_SUCCESS) {
+    auto& eventState = SD().Map<CEventState>()[*phEvent];
+    eventState = std::make_unique<CEventState>();
+    if (Configurator::IsRecorder()) {
+      eventState->counterBasedCreate = std::make_unique<CzexCounterBasedEventCreate2>(
+          return_value, hContext, hDevice, desc, phEvent);
+    }
+  }
+}
+
 inline void zeEventPoolDestroy_SD(ze_result_t return_value, ze_event_pool_handle_t hEventPool) {
   if (return_value == ZE_RESULT_SUCCESS) {
     SD().Release<CEventPoolState>(hEventPool);

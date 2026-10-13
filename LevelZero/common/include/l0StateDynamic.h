@@ -10,6 +10,7 @@
 
 #include "exception.h"
 #include "l0Header.h"
+#include "l0Function.h"
 #include "l0Log.h"
 #include "l0Tools.h"
 #include "MemorySniffer.h"
@@ -490,6 +491,7 @@ struct CEventState : public CState {
   ze_command_list_handle_t immediateCmdListExecutingCmdLists = nullptr;
   bool canBeSynced = false;
   bool executionIsSynced = false;
+  std::unique_ptr<CFunction> counterBasedCreate;
 
 public:
   CEventState() = default;

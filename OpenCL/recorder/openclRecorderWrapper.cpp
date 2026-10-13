@@ -121,12 +121,14 @@ void CRecorderWrapper::DestroySniffedRegion(void* ptr) const {
       auto& state = SD().GetUSMAllocState(ptr, EXCEPTION_MESSAGE);
       if (state.sniffedRegionHandle) {
         MemorySniffer::Get().RemoveRegion(state.sniffedRegionHandle);
+        state.sniffedRegionHandle = nullptr;
       }
     }
     if (SD().CheckIfSVMAllocExists(ptr)) {
       auto& state = SD().GetSVMAllocState(ptr, EXCEPTION_MESSAGE);
       if (state.sniffedRegionHandle) {
         MemorySniffer::Get().RemoveRegion(state.sniffedRegionHandle);
+        state.sniffedRegionHandle = nullptr;
       }
     }
   }
