@@ -162,7 +162,9 @@ void ImageLayoutService::ApplyPartialOwnershipTransfer(const PartialOwnerTransfe
         continue;
       }
       if (state == PartialOwnerState::Acquired) {
-        --img->PartialOwnerAcquiredCount;
+        if (img->PartialOwnerAcquiredCount > 0) {
+          --img->PartialOwnerAcquiredCount;
+        }
       } else if (newState == PartialOwnerState::Acquired) {
         ++img->PartialOwnerAcquiredCount;
       }

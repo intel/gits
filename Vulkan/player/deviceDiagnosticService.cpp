@@ -274,13 +274,12 @@ void DeviceDiagnosticService::TrackDevice(VkPhysicalDevice physicalDevice,
     }
   }
 
+  LOG_INFO << "Vulkan device diagnostics enabled: checkpoints="
+           << (state.CheckpointsEnabled ? "true" : "false")
+           << ", device fault=" << (state.DeviceFaultEnabled ? "true" : "false") << ".";
+
   ReplaceOrAppend(m_Devices, std::move(state),
                   [device](const DeviceState& current) { return current.Device == device; });
-
-  LOG_INFO << "Vulkan device diagnostics enabled: checkpoints="
-           << (FindDevice(device)->CheckpointsEnabled ? "true" : "false")
-           << ", device fault=" << (FindDevice(device)->DeviceFaultEnabled ? "true" : "false")
-           << ".";
 }
 
 void DeviceDiagnosticService::UntrackDevice(VkDevice device) {
