@@ -37,7 +37,8 @@ static void SigsegvHandler(int sig, siginfo_t* si, [[maybe_unused]] void* unused
 namespace gits {
 namespace vulkan {
 
-MapTrackingService::MapTrackingService(stream::OrderingRecorder& recorder) : m_Recorder(recorder) {
+MapTrackingService::MapTrackingService(CaptureManager& manager, stream::OrderingRecorder& recorder)
+    : m_Manager(manager), m_Recorder(recorder) {
 #ifdef GITS_PLATFORM_WINDOWS
   SYSTEM_INFO si;
   GetSystemInfo(&si);
@@ -326,7 +327,7 @@ void MapTrackingService::ScheduleMemoryUpdate(GITSKey deviceMemoryKey) {
 void MapTrackingService::RecordMappedDataMetaCommand(
     GITSKey deviceKey, GITSKey memoryKey, const std::vector<MemoryRegions::Region>& regions) {
   MappedDataMetaCommand command(GITS_GET_THREAD_ID());
-  command.m_Key = CaptureManager::Get().CreateCommandKey();
+  command.m_Key = m_Manager.CreateCommandKey();
   command.m_Device.Key = deviceKey;
   command.m_Memory.Key = memoryKey;
   command.m_Regions.Size = static_cast<uint32_t>(regions.size());

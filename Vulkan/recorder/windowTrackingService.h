@@ -18,13 +18,15 @@
 namespace gits {
 namespace vulkan {
 
+class CaptureManager;
+
 // Tracks the surface/swapchain/window relationships needed to record the
 // application's live window timeline (visibility/size) during capture. Owned by
 // CaptureManager and emits UpdateWindowMetaCommand itself, mirroring
 // MapTrackingService.
 class WindowTrackingService {
 public:
-  WindowTrackingService(stream::OrderingRecorder& recorder);
+  WindowTrackingService(CaptureManager& manager, stream::OrderingRecorder& recorder);
 
   void StoreSurface(VkSurfaceKHR surface,
                     uint32_t displayProtocol,
@@ -75,6 +77,7 @@ private:
   std::unordered_map<VkSurfaceKHR, SurfaceWindow> m_SurfaceWindow;
   std::unordered_map<uint64_t, WindowState> m_WindowState;
   std::unordered_map<VkSwapchainKHR, VkSurfaceKHR> m_SwapchainSurface;
+  CaptureManager& m_Manager;
   stream::OrderingRecorder& m_Recorder;
   std::mutex m_Mutex;
 };

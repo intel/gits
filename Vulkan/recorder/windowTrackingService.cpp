@@ -17,8 +17,9 @@
 namespace gits {
 namespace vulkan {
 
-WindowTrackingService::WindowTrackingService(stream::OrderingRecorder& recorder)
-    : m_Recorder(recorder) {}
+WindowTrackingService::WindowTrackingService(CaptureManager& manager,
+                                             stream::OrderingRecorder& recorder)
+    : m_Manager(manager), m_Recorder(recorder) {}
 
 void WindowTrackingService::StoreSurface(VkSurfaceKHR surface,
                                          uint32_t displayProtocol,
@@ -65,7 +66,7 @@ void WindowTrackingService::StoreSwapchain(VkSwapchainKHR swapchain,
   height = imageHeight;
 
   UpdateWindowMetaCommand updateWindowMetaCommand(threadId);
-  updateWindowMetaCommand.m_Key = CaptureManager::Get().CreateCommandKey();
+  updateWindowMetaCommand.m_Key = m_Manager.CreateCommandKey();
   updateWindowMetaCommand.m_Hwnd.Value = it->second.Hwnd;
   updateWindowMetaCommand.m_Hinstance.Value = it->second.Hinstance;
   updateWindowMetaCommand.m_X.Value = x;
@@ -213,7 +214,7 @@ void WindowTrackingService::RecordUpdateIfChanged(uint32_t threadId,
   }
 
   UpdateWindowMetaCommand updateWindowMetaCommand(threadId);
-  updateWindowMetaCommand.m_Key = CaptureManager::Get().CreateCommandKey();
+  updateWindowMetaCommand.m_Key = m_Manager.CreateCommandKey();
   updateWindowMetaCommand.m_Hwnd.Value = window.Hwnd;
   updateWindowMetaCommand.m_Hinstance.Value = window.Hinstance;
   updateWindowMetaCommand.m_X.Value = x;

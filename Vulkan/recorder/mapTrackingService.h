@@ -21,9 +21,11 @@
 namespace gits {
 namespace vulkan {
 
+class CaptureManager;
+
 class MapTrackingService {
 public:
-  MapTrackingService(stream::OrderingRecorder& recorder);
+  MapTrackingService(CaptureManager& manager, stream::OrderingRecorder& recorder);
   void StorePhysicalDevice(GITSKey deviceKey, GITSKey physicalDeviceKey);
   void StorePhysicalDeviceMemoryProperties(
       GITSKey physicalDeviceKey, const VkPhysicalDeviceMemoryProperties& memoryProperties);
@@ -72,6 +74,7 @@ private:
   std::unordered_map<GITSKey, GITSKey> m_DeviceToPhysicalDevice;
   std::unordered_map<GITSKey, VkPhysicalDeviceMemoryProperties> m_PhysicalDeviceMemoryProperties;
   std::unordered_map<GITSKey, AllocationInfo> m_Allocations;
+  CaptureManager& m_Manager;
   stream::OrderingRecorder& m_Recorder;
   std::mutex m_Mutex;
 };
