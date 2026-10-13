@@ -298,12 +298,18 @@ bool FileActions::LaunchExecutableWindows(const fs::path& executablePath,
 
   // Read output
   char buffer[4096];
-  DWORD bytesRead;
+  DWORD bytesRead = 0;
   while (ReadFile(hStdOutRead, buffer, sizeof(buffer) - 1, &bytesRead, nullptr) && bytesRead > 0) {
+    if (bytesRead >= sizeof(buffer)) {
+      break;
+    }
     const std::string msg(buffer, bytesRead);
     ProcessOutputLogger::log(msg, onOutput);
   }
   while (ReadFile(hStdErrRead, buffer, sizeof(buffer) - 1, &bytesRead, nullptr) && bytesRead > 0) {
+    if (bytesRead >= sizeof(buffer)) {
+      break;
+    }
     const std::string msg(buffer, bytesRead);
     ProcessOutputLogger::log(msg, onOutput);
   }
