@@ -1508,7 +1508,7 @@ void StateTrackingService::EmitImageLayoutTransitions() {
         barrierCmd.m_imageMemoryBarrierCount.Value = static_cast<uint32_t>(barriers.size());
         barrierCmd.m_pImageMemoryBarriers.Value = barriers.data();
         barrierCmd.m_pImageMemoryBarriers.Size = static_cast<uint32_t>(barriers.size());
-        barrierCmd.m_pImageMemoryBarriers.HandleKeys = barrierImageKeys;
+        barrierCmd.m_pImageMemoryBarriers.HandleKeys = std::move(barrierImageKeys);
         barrierCmd.m_Key = m_Recorder.CreateStateRestoreKey();
         m_Recorder.Record(vkCmdPipelineBarrierSerializer(barrierCmd));
       }
@@ -5302,7 +5302,7 @@ void StateTrackingService::RestoreSparseBufferBinds() {
       // Key order must match CollectHandleKeys(const VkBindSparseInfo&): no wait
       // semaphores, then the buffer followed by one memory key per bind, then no
       // image binds and no signal semaphores.
-      cmd.m_pBindInfo.HandleKeys = handleKeys;
+      cmd.m_pBindInfo.HandleKeys = std::move(handleKeys);
       cmd.m_Key = m_Recorder.CreateStateRestoreKey();
       m_Recorder.Record(vkQueueBindSparseSerializer(cmd));
 

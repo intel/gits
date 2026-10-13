@@ -123,7 +123,7 @@ void MapTrackingService::StoreAllocationInfo(GITSKey deviceKey,
   allocationInfo.AllocationSize = allocateInfo.allocationSize;
   allocationInfo.MemoryTypeIndex = allocateInfo.memoryTypeIndex;
   allocationInfo.ExternalMemory = externalPtr;
-  m_Allocations[deviceMemoryKey] = allocationInfo;
+  m_Allocations[deviceMemoryKey] = std::move(allocationInfo);
 }
 
 void MapTrackingService::FreeExternalMemory(GITSKey deviceMemoryKey) {

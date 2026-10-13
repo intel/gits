@@ -623,7 +623,7 @@ void DescriptorSetUpdateService::RestoreUpdates(uint64_t setKey,
     cmd.m_descriptorWriteCount.Value = static_cast<uint32_t>(writes.size());
     cmd.m_pDescriptorWrites.Value = writes.data();
     cmd.m_pDescriptorWrites.Size = static_cast<uint32_t>(writes.size());
-    cmd.m_pDescriptorWrites.HandleKeys = writeHandleKeys;
+    cmd.m_pDescriptorWrites.HandleKeys = std::move(writeHandleKeys);
     cmd.m_descriptorCopyCount.Value = 0;
     cmd.m_pDescriptorCopies.Value = nullptr;
     cmd.m_pDescriptorCopies.Size = 0;

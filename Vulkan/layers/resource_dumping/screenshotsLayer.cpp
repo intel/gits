@@ -18,6 +18,7 @@
 #include <iomanip>
 #include <sstream>
 #include <memory>
+#include <utility>
 #include <vector>
 
 namespace gits {
@@ -47,7 +48,7 @@ ScreenshotsLayer::ScreenshotsLayer(DispatchTablesHolder& dispatchTablesHolder)
   if (!dumpPath.empty() && !std::filesystem::exists(dumpPath)) {
     std::filesystem::create_directories(dumpPath);
   }
-  m_DumpPath = dumpPath;
+  m_DumpPath = std::move(dumpPath);
 
   if (!Configurator::Get().common.player.captureFrames.empty()) {
     m_ScreenshotRange = Configurator::Get().common.player.captureFrames;
