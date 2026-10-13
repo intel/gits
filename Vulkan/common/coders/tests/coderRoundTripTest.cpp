@@ -23,6 +23,7 @@
 
 #include <cstdio>
 #include <cstring>
+#include <exception>
 #include <vector>
 
 namespace {
@@ -294,10 +295,18 @@ void TestOpacityMicromapInPNextOfPpGeometries() {
 } // namespace
 
 int main() {
-  TestMicromapBuildInfoPpUsageCounts();
-  TestOpacityMicromapPpUsageCounts();
-  TestAsBuildGeometryInfoPpGeometries();
-  TestOpacityMicromapInPNextOfPpGeometries();
+  try {
+    TestMicromapBuildInfoPpUsageCounts();
+    TestOpacityMicromapPpUsageCounts();
+    TestAsBuildGeometryInfoPpGeometries();
+    TestOpacityMicromapInPNextOfPpGeometries();
+  } catch (const std::exception& e) {
+    std::printf("coderRoundTripTest: unexpected exception: %s\n", e.what());
+    return 1;
+  } catch (...) {
+    std::printf("coderRoundTripTest: unexpected exception\n");
+    return 1;
+  }
 
   if (g_Failures != 0) {
     std::printf("coderRoundTripTest: %d check(s) failed\n", g_Failures);

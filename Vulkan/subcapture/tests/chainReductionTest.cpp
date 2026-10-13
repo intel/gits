@@ -14,6 +14,7 @@
 #include "raytracingOptimizationService.h"
 
 #include <cstdio>
+#include <exception>
 #include <vector>
 
 namespace {
@@ -277,16 +278,24 @@ void TestGraphsAreIndependent() {
 } // namespace
 
 int main() {
-  TestMicromapCompactionChainRetained();
-  TestUnusedMicromapChainPruned();
-  TestMicromapRebuildSupersedes();
-  TestMicromapOverwriteAfterConsumingBuildConflicts();
-  TestMicromapOverwriteFalsePositives();
-  TestSubmitOrderDrivesTheChain();
-  TestAsUpdateRunCollapses();
-  TestAsCompactionChainRetained();
-  TestSecondaryCommandBufferMerge();
-  TestGraphsAreIndependent();
+  try {
+    TestMicromapCompactionChainRetained();
+    TestUnusedMicromapChainPruned();
+    TestMicromapRebuildSupersedes();
+    TestMicromapOverwriteAfterConsumingBuildConflicts();
+    TestMicromapOverwriteFalsePositives();
+    TestSubmitOrderDrivesTheChain();
+    TestAsUpdateRunCollapses();
+    TestAsCompactionChainRetained();
+    TestSecondaryCommandBufferMerge();
+    TestGraphsAreIndependent();
+  } catch (const std::exception& e) {
+    std::printf("chainReductionTest: unexpected exception: %s\n", e.what());
+    return 1;
+  } catch (...) {
+    std::printf("chainReductionTest: unexpected exception\n");
+    return 1;
+  }
 
   if (g_Failures != 0) {
     std::printf("chainReductionTest: %d check(s) failed\n", g_Failures);
