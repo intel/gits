@@ -93,6 +93,10 @@ void BindingTableDump::DumpStagedResource(DumpInfo& dumpInfo) {
 
   void* data{};
   HRESULT hr = dumpInfo.StagingBuffer->Map(0, nullptr, &data);
+  if (FAILED(hr)) {
+    LOG_ERROR << "CpuPatch - BindingTableDump - Map failed for " << dumpInfo.DumpName;
+    return;
+  }
 
   std::ofstream stream(dumpInfo.DumpName, std::ios_base::binary);
   stream.write(static_cast<char*>(data), dumpInfo.Size);

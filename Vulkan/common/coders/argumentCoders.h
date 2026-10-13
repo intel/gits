@@ -337,7 +337,7 @@ inline uint32_t GetSize(const OpaqueBufferArgument& arg) {
 }
 
 inline void Encode(char* dest, uint32_t& offset, const OpaqueBufferArgument& arg) {
-  EncodeNullPtr(dest, offset, arg.Value);
+  (void)EncodeNullPtr(dest, offset, arg.Value);
 }
 
 inline uint32_t GetSize(const BufferOutputArgument& arg) {
@@ -345,7 +345,7 @@ inline uint32_t GetSize(const BufferOutputArgument& arg) {
 }
 
 inline void Encode(char* dest, uint32_t& offset, const BufferOutputArgument& arg) {
-  EncodeNullPtr(dest, offset, arg.Value);
+  (void)EncodeNullPtr(dest, offset, arg.Value);
 }
 
 template <typename T>
@@ -389,7 +389,7 @@ uint32_t GetSize(const OpaquePointerArgument<T>& arg) {
 
 template <typename T>
 void Encode(char* dest, uint32_t& offset, const OpaquePointerArgument<T>& arg) {
-  EncodeNullPtr(dest, offset, arg.Value);
+  (void)EncodeNullPtr(dest, offset, arg.Value);
 }
 
 inline uint32_t GetSize(const MemoryRegions& arg) {

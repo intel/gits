@@ -430,8 +430,11 @@ bool xcb_handle::is_visible() const {
 xlib_handle::xlib_handle(Display* display, Window window) : display_(display), window_(window) {}
 
 void xlib_handle::get_dimensions(int& x, int& y, int& width, int& height) const {
-  XWindowAttributes xwAttr;
-  XGetWindowAttributes(display_, window_, &xwAttr);
+  XWindowAttributes xwAttr{};
+  if (!XGetWindowAttributes(display_, window_, &xwAttr)) {
+    x = y = width = height = 0;
+    return;
+  }
   width = xwAttr.width;
   height = xwAttr.height;
 
