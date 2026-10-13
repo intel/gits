@@ -555,7 +555,7 @@ std::string CFile::GetApplicationName() const {
   return {};
 }
 
-void CFile::SetDiagnosticInfo(std::filesystem::path configPath) {
+void CFile::SetDiagnosticInfo(const std::filesystem::path& configPath) {
   gits::gather_diagnostic_info(*_properties);
   (*_properties)["diag"]["gits"]["config_path"] = configPath;
 }

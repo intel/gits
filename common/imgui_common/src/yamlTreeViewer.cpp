@@ -210,7 +210,7 @@ void YamlTreeViewer::BuildNodeInfoWithMarks(const YAML::Node& node,
   }
 
   info.EndLine = endLine;
-  m_NodeInfoMap[currentPath] = info;
+  m_NodeInfoMap[currentPath] = std::move(info);
 }
 
 void YamlTreeViewer::BuildNodeInfoEstimated(const YAML::Node& node,
@@ -289,7 +289,7 @@ void YamlTreeViewer::BuildNodeInfoEstimated(const YAML::Node& node,
   }
   }
 
-  m_NodeInfoMap[currentPath] = info;
+  m_NodeInfoMap[currentPath] = std::move(info);
 }
 
 int YamlTreeViewer::FindKeyLineInText(const std::string& key,

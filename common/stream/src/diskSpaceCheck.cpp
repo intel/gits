@@ -10,6 +10,7 @@
 #include "log.h"
 
 #include <system_error>
+#include <utility>
 
 namespace gits {
 namespace stream {
@@ -24,7 +25,7 @@ std::filesystem::path NearestExistingParent(const std::filesystem::path& dir) {
     if (parent == probe) {
       break;
     }
-    probe = parent;
+    probe = std::move(parent);
   }
   return probe;
 }
