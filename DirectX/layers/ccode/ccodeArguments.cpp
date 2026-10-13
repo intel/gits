@@ -37,6 +37,13 @@ static std::string gpuAddressStr(ObjectKey key, unsigned offset) {
   return ss.str();
 }
 
+static std::string capturedPtrStr(const void* ptr, const std::string& castType) {
+  if (!ptr) {
+    return "nullptr";
+  }
+  return "reinterpret_cast<" + castType + ">(" + toHex(reinterpret_cast<uintptr_t>(ptr)) + "ULL)";
+}
+
 static void appendGpuVirtualAddress(std::ostringstream& ss,
                                     const std::string& field,
                                     ObjectKey key,
@@ -1226,7 +1233,7 @@ void argumentToCpp(D3D12_SHADER_RESOURCE_VIEW_DESC_Argument& arg,
   ss << ssUnion.str();
 
   out.initialization = ss.str();
-  out.value = name;
+  out.value = std::move(name);
   out.decorator = "&";
 }
 void argumentToCpp(ArrayArgument<D3D12_RESIDENCY_PRIORITY>& arg,
@@ -1379,11 +1386,11 @@ void argumentToCpp(PointerArgument<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE
   }
 
   std::ostringstream ss;
-  const std::string name = info.getIndexedName();
+  std::string name = info.getIndexedName();
   appendD3D12BuildRaytracingInputs(ss, name, *arg.Value, arg.InputKeys, arg.InputOffsets);
 
   out.initialization = ss.str();
-  out.value = name;
+  out.value = std::move(name);
   out.decorator = info.isPtr ? "&" : "";
 }
 
@@ -1479,7 +1486,7 @@ void argumentToCpp(
   }
 
   std::ostringstream ss;
-  const std::string name = info.getIndexedName();
+  std::string name = info.getIndexedName();
   if (!info.isArrayElement) {
     ss << info.type << " " << name << " = {};" << std::endl;
   }
@@ -1487,7 +1494,7 @@ void argumentToCpp(
                                  arg.Value->InfoType);
 
   out.initialization = ss.str();
-  out.value = name;
+  out.value = std::move(name);
   out.decorator = info.isPtr ? "&" : "";
 }
 void argumentToCpp(D3D12_BARRIER_GROUPs_Argument& arg,
@@ -1891,7 +1898,7 @@ void argumentToCpp(DSTORAGE_REQUEST_Argument& arg,
   }
 
   const auto& value = *arg.Value;
-  const std::string req = info.name;
+  std::string req = info.name;
   std::ostringstream ss;
   ss << info.type << " " << req << " = {};" << std::endl;
 
@@ -1902,18 +1909,10 @@ void argumentToCpp(DSTORAGE_REQUEST_Argument& arg,
      << enumFlagsToCpp(toStr(value.Options.CompressionFormat), "DSTORAGE_COMPRESSION_FORMAT") << ";"
      << std::endl;
 
-  const auto voidPtrFromCapture = [](const void* ptr) {
-    return ptr ? "reinterpret_cast<void*>(" + toHex(reinterpret_cast<uintptr_t>(ptr)) + "ULL)"
-               : "nullptr";
-  };
-  const auto constVoidPtrFromCapture = [](const void* ptr) {
-    return ptr ? "reinterpret_cast<void const*>(" + toHex(reinterpret_cast<uintptr_t>(ptr)) + "ULL)"
-               : "nullptr";
-  };
-
   switch (value.Options.SourceType) {
   case DSTORAGE_REQUEST_SOURCE_MEMORY:
-    ss << req << ".Source.Memory.Source = " << constVoidPtrFromCapture(value.Source.Memory.Source)
+    ss << req
+       << ".Source.Memory.Source = " << capturedPtrStr(value.Source.Memory.Source, "void const*")
        << ";" << std::endl;
     ss << req << ".Source.Memory.Size = " << value.Source.Memory.Size << ";" << std::endl;
     break;
@@ -1931,9 +1930,8 @@ void argumentToCpp(DSTORAGE_REQUEST_Argument& arg,
 
   switch (value.Options.DestinationType) {
   case DSTORAGE_REQUEST_DESTINATION_MEMORY:
-    ss << req
-       << ".Destination.Memory.Buffer = " << voidPtrFromCapture(value.Destination.Memory.Buffer)
-       << ";" << std::endl;
+    ss << req << ".Destination.Memory.Buffer = "
+       << capturedPtrStr(value.Destination.Memory.Buffer, "void*") << ";" << std::endl;
     ss << req << ".Destination.Memory.Size = " << value.Destination.Memory.Size << ";" << std::endl;
     break;
   case DSTORAGE_REQUEST_DESTINATION_BUFFER:
@@ -2003,7 +2001,7 @@ void argumentToCpp(DSTORAGE_REQUEST_Argument& arg,
   ss << req << ".Name = " << charPtrToCpp(value.Name) << ";" << std::endl;
 
   out.initialization = ss.str();
-  out.value = req;
+  out.value = std::move(req);
   out.decorator = "&";
 }
 
@@ -2017,7 +2015,7 @@ void argumentToCpp(PointerArgument<NVAPI_D3D12_SET_CREATE_PIPELINE_STATE_OPTIONS
     return;
   }
 
-  const std::string name = info.getIndexedName();
+  std::string name = info.getIndexedName();
   std::ostringstream ss;
   ss << info.type << " " << name << " = {};" << std::endl;
   ss << name << ".version = " << arg.Value->version << ";" << std::endl;
@@ -2027,7 +2025,7 @@ void argumentToCpp(PointerArgument<NVAPI_D3D12_SET_CREATE_PIPELINE_STATE_OPTIONS
      << std::endl;
 
   out.initialization = ss.str();
-  out.value = name;
+  out.value = std::move(name);
   out.decorator = info.isPtr ? "&" : "";
 }
 
