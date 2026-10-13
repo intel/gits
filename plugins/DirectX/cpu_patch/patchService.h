@@ -26,9 +26,6 @@ class PatchService {
 public:
   PatchService(const Configuration& gitsConfig, CapturePlayerGpuAddressService& addressService);
 
-  PatchService(const PatchService&) = delete;
-  PatchService& operator=(const PatchService&) = delete;
-
   void PreBuildRTAS(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& command);
   void PreDispatchRays(ID3D12GraphicsCommandList4DispatchRaysCommand& command);
   void PreExecuteIndirect(ID3D12GraphicsCommandListExecuteIndirectCommand& command);
@@ -77,7 +74,7 @@ private:
   void PatchExecuteIndirect(
       const PatchInfo& patchInfo,
       const std::vector<CapturePlayerGpuAddressService::GpuAddressMapping>& gpuAddressMappings);
-  std::vector<char> ReadFile(std::filesystem::path path);
+  std::vector<char> ReadFile(const std::filesystem::path& path);
   UINT64 GetPlayerAddress(
       UINT64 captureAddress,
       const std::vector<CapturePlayerGpuAddressService::GpuAddressMapping>& gpuAddressMappings);

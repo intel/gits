@@ -743,7 +743,7 @@ void PatchService::PatchExecuteIndirect(
   }
 }
 
-std::vector<char> PatchService::ReadFile(std::filesystem::path path) {
+std::vector<char> PatchService::ReadFile(const std::filesystem::path& path) {
   std::vector<char> data;
 
   if (!std::filesystem::exists(path)) {

@@ -23,8 +23,6 @@ class StateTrackingService;
 class DirectStorageQueueService {
 public:
   explicit DirectStorageQueueService(StateTrackingService& stateService);
-  DirectStorageQueueService(const DirectStorageQueueService&) = delete;
-  DirectStorageQueueService& operator=(const DirectStorageQueueService&) = delete;
 
   void AddEnqueueStatus(IDStorageQueueEnqueueStatusCommand& c);
   void DestroyObject(ObjectKey objectKey);
