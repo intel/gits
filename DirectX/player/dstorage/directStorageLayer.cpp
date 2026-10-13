@@ -10,6 +10,7 @@
 #include "arguments.h"
 #include "configurationLib.h"
 #include "log.h"
+#include "exception.h"
 #include "to_string/toStr.h"
 
 #include <chrono>
@@ -23,12 +24,14 @@ DirectStorageLayer::DirectStorageLayer()
                           "DirectStorageResources.bin") {}
 
 DirectStorageLayer::~DirectStorageLayer() {
-  CompleteAllBatches();
-  if (!m_Buffers.empty()) {
+  try {
+    CompleteAllBatches();
     for (const auto& [queueKey, buffers] : m_Buffers) {
       LOG_WARNING << "DirectStorageLayer - Queue O" << keyToStr(queueKey) << " has "
                   << buffers.size() << " unsubmitted memory destination request(s) at shutdown";
     }
+  } catch (...) {
+    topmost_exception_handler("DirectStorageLayer::~DirectStorageLayer");
   }
 }
 

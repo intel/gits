@@ -9,6 +9,7 @@
 #include "instancesDump.h"
 #include "pluginUtils.h"
 #include "log.h"
+#include "exception.h"
 
 #include <fstream>
 
@@ -35,9 +36,13 @@ InstancesDump::InstancesDump(const Configuration& gitsConfig) : ResourceDump() {
 }
 
 InstancesDump::~InstancesDump() {
-  WaitUntilDumped();
-  LOG_INFO << "CpuPatch - InstancesDump - files dumped: " << std::to_string(m_NumFiles)
-           << ", total size: " << gits::FormatMemorySize(m_FilesTotalSize);
+  try {
+    WaitUntilDumped();
+    LOG_INFO << "CpuPatch - InstancesDump - files dumped: " << std::to_string(m_NumFiles)
+             << ", total size: " << gits::FormatMemorySize(m_FilesTotalSize);
+  } catch (...) {
+    topmost_exception_handler("InstancesDump::~InstancesDump");
+  }
 }
 
 void InstancesDump::BuildTlas(ID3D12GraphicsCommandList* commandList,

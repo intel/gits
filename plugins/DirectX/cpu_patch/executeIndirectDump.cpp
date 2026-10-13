@@ -9,6 +9,7 @@
 #include "executeIndirectDump.h"
 #include "pluginUtils.h"
 #include "log.h"
+#include "exception.h"
 
 #include <fstream>
 
@@ -44,9 +45,13 @@ ExecuteIndirectDump::ExecuteIndirectDump(
 }
 
 ExecuteIndirectDump::~ExecuteIndirectDump() {
-  WaitUntilDumped();
-  LOG_INFO << "CpuPatch - ExecuteIndirectDump - files dumped: " << std::to_string(m_NumFiles)
-           << ", total size: " << gits::FormatMemorySize(m_FilesTotalSize);
+  try {
+    WaitUntilDumped();
+    LOG_INFO << "CpuPatch - ExecuteIndirectDump - files dumped: " << std::to_string(m_NumFiles)
+             << ", total size: " << gits::FormatMemorySize(m_FilesTotalSize);
+  } catch (...) {
+    topmost_exception_handler("ExecuteIndirectDump::~ExecuteIndirectDump");
+  }
 }
 
 void ExecuteIndirectDump::ExecuteIndirect(

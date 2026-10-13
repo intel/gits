@@ -9,6 +9,7 @@
 #include "bindingTableDump.h"
 #include "pluginUtils.h"
 #include "log.h"
+#include "exception.h"
 
 #include <fstream>
 
@@ -35,9 +36,13 @@ BindingTableDump::BindingTableDump(const Configuration& gitsConfig) : ResourceDu
 }
 
 BindingTableDump::~BindingTableDump() {
-  WaitUntilDumped();
-  LOG_INFO << "CpuPatch - BindingTableDump - files dumped: " << std::to_string(m_NumFiles)
-           << ", total size: " << gits::FormatMemorySize(m_FilesTotalSize);
+  try {
+    WaitUntilDumped();
+    LOG_INFO << "CpuPatch - BindingTableDump - files dumped: " << std::to_string(m_NumFiles)
+             << ", total size: " << gits::FormatMemorySize(m_FilesTotalSize);
+  } catch (...) {
+    topmost_exception_handler("BindingTableDump::~BindingTableDump");
+  }
 }
 
 void BindingTableDump::DispatchRays(ID3D12GraphicsCommandList* commandList,

@@ -14,12 +14,17 @@
 #include <sstream>
 #include <iomanip>
 #include "log.h"
+#include "exception.h"
 
 namespace gits {
 namespace DirectX {
 
 ResourceDump::~ResourceDump() {
-  WaitUntilDumped();
+  try {
+    WaitUntilDumped();
+  } catch (...) {
+    topmost_exception_handler("ResourceDump::~ResourceDump");
+  }
 }
 
 void ResourceDump::WaitUntilDumped() {

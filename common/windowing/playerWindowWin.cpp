@@ -57,7 +57,9 @@ public:
     int posX = x;
     int posY = y;
 
-    if (Configurator::Get().common.player.windowMode == gits::WindowMode::EXCLUSIVE_FULLSCREEN) {
+    m_ExclusiveFullscreen =
+        Configurator::Get().common.player.windowMode == gits::WindowMode::EXCLUSIVE_FULLSCREEN;
+    if (m_ExclusiveFullscreen) {
       style = WS_POPUP;
       exStyle = WS_EX_APPWINDOW | WS_EX_TOPMOST;
       posX = 0;
@@ -101,7 +103,7 @@ public:
 
   ~PlayerWindowWin() override {
     if (m_Hwnd != nullptr) {
-      if (Configurator::Get().common.player.windowMode == gits::WindowMode::EXCLUSIVE_FULLSCREEN) {
+      if (m_ExclusiveFullscreen) {
         ShowCursor(TRUE);
         ChangeDisplaySettings(nullptr, 0);
       }
@@ -248,6 +250,7 @@ public:
 
   HINSTANCE m_HInstance{};
   HWND m_Hwnd{};
+  bool m_ExclusiveFullscreen{};
   std::vector<WindowEvent> m_PendingEvents;
 };
 #endif
