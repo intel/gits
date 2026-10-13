@@ -8,6 +8,7 @@
 
 #include "platform.h"
 #include "log.h"
+#include "exception.h"
 #include "playerLib.h"
 
 #if defined GITS_PLATFORM_WINDOWS
@@ -129,8 +130,8 @@ int RenameAndRelaunch(const std::string& newPlayerName,
 
 } // namespace gits
 
-int main(int argc, char* argv[]) {
-
+namespace {
+int MainBody(int argc, char* argv[]) {
 #ifdef GITS_PLATFORM_WINDOWS
   // Prevent OS from scaling our windows.
   SetProcessDPIAware();
@@ -181,4 +182,14 @@ int main(int argc, char* argv[]) {
   }
 
   return Play();
+}
+} // namespace
+
+int main(int argc, char* argv[]) {
+  try {
+    return MainBody(argc, argv);
+  } catch (...) {
+    topmost_exception_handler("main");
+  }
+  return EXIT_FAILURE;
 }

@@ -326,7 +326,7 @@ int Initialize(int argc, char* argv[]) {
 
 int Play() {
   auto cleanup = []() {
-    g_Player.release();
+    g_Player.reset();
     CGits::Instance().Dispose();
     g_InitializedForPlay = false;
   };
