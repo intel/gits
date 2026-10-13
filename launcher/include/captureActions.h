@@ -22,8 +22,8 @@ namespace gits::gui::capture_actions {
 constexpr auto QUIET_PERIOD = std::chrono::seconds(3);
 
 bool UpdateConfigDumpPath();
-bool CopyRecorderFiles(std::filesystem::path gitsBasePath,
-                       std::filesystem::path targetDirectory,
+bool CopyRecorderFiles(const std::filesystem::path& gitsBasePath,
+                       const std::filesystem::path& targetDirectory,
                        Api api);
 std::filesystem::path FindLatestRecorderLog(std::filesystem::path directory);
 std::optional<std::filesystem::path> GetStreamDirectoryFromLog(const std::string& log);

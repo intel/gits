@@ -52,7 +52,7 @@ struct ContextEvent : Event {
     ConfigFileLoaded
   };
 
-  Type EventType;
+  Type EventType{};
   std::optional<Mode> Mode = std::nullopt;
 
   ContextEvent() {}

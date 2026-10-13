@@ -232,7 +232,7 @@ STREAM_META_DATA GetStreamMetaData(const std::filesystem::path& streamPath) {
 } // namespace
 
 STREAM_META_DATA LoadStreamMetaData(std::filesystem::path streamPath) {
-  auto normalizedPath = normalizeStreamPath(streamPath);
+  auto normalizedPath = normalizeStreamPath(std::move(streamPath));
   if (!normalizedPath) {
     return STREAM_META_DATA();
   }

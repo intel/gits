@@ -165,8 +165,7 @@ void PlaybackStream() {
   auto& context = Context::GetInstance();
   const auto gitsPlayerPath = context.GetGITSPlayerPath();
 
-  const auto tmpConfigInfo =
-      PrepareTemporaryConfigFile(Mode::PLAYBACK, gitsPlayerPath.parent_path());
+  auto tmpConfigInfo = PrepareTemporaryConfigFile(Mode::PLAYBACK, gitsPlayerPath.parent_path());
   if (tmpConfigInfo.TemporaryConfigPath.empty()) {
     LOG_ERROR << "Couldn't playback the stream, couldn't create a temporary config file";
   }
@@ -184,7 +183,7 @@ void PlaybackStream() {
   FileActions::LaunchExecutableThreadCallbackOnExit(
       gitsPlayerPath, argsWithTmpConfig, gitsPlayerPath.parent_path(),
       [&context](const std::string& log) { context.GITSLog(log); },
-      [&context, tmpConfigInfo]() {
+      [&context, tmpConfigInfo = std::move(tmpConfigInfo)]() {
         // Check log for errors and publish result
         const auto& logText = context.GITSLogEditor->GetText();
         bool oom = logText.find("E_OUTOFMEMORY") != std::string::npos;
@@ -199,10 +198,9 @@ void PlaybackStream() {
 
 void SubcaptureStream() {
   auto& context = Context::GetInstance();
-  const auto gitsPlayerPath = context.GetGITSPlayerPath();
+  auto gitsPlayerPath = context.GetGITSPlayerPath();
 
-  const auto tmpConfigInfo =
-      PrepareTemporaryConfigFile(Mode::SUBCAPTURE, gitsPlayerPath.parent_path());
+  auto tmpConfigInfo = PrepareTemporaryConfigFile(Mode::SUBCAPTURE, gitsPlayerPath.parent_path());
   if (tmpConfigInfo.TemporaryConfigPath.empty()) {
     LOG_ERROR << "Couldn't playback the stream, couldn't create a temporary config file";
   }
@@ -216,7 +214,9 @@ void SubcaptureStream() {
 
   context.GITSLogEditor->SetText("");
   // TODO: Create a generic solution for this
-  std::thread([gitsPlayerPath, &context, tmpConfigInfo, argsWithTmpConfig]() {
+  std::thread([gitsPlayerPath = std::move(gitsPlayerPath), &context,
+               tmpConfigInfo = std::move(tmpConfigInfo),
+               argsWithTmpConfig = std::move(argsWithTmpConfig)]() {
     context.SubcaptureInProgress = true;
     // since we need to run player twice, consecutively & blocking, we do it in a separate thread
     FileActions::LaunchExecutable(gitsPlayerPath, argsWithTmpConfig, true,
@@ -395,7 +395,7 @@ TemporaryConfigInfo PrepareTemporaryConfigFile(Mode mode, const std::filesystem:
     }
   }
 
-  const auto tmpConfigPath =
+  auto tmpConfigPath =
       directory /
       (mode == Mode::CAPTURE
            ? filesystem_names::RECORDER_CONFIG_FILENAME
@@ -425,7 +425,7 @@ TemporaryConfigInfo PrepareTemporaryConfigFile(Mode mode, const std::filesystem:
     return TemporaryConfigInfo();
   }
 
-  return {tmpConfigPath, originalNeedsRestoring, originalNeedsRestoring ? originalBackupPath : ""};
+  return {std::move(tmpConfigPath), originalNeedsRestoring, std::move(originalBackupPath)};
 }
 
 void LoadConfigFile(Mode mode) {
@@ -676,7 +676,8 @@ void OpenURL(const std::string& url) {
 }
 
 bool OpenFolder(const std::filesystem::path& path) {
-  const auto normalizedPath = std::filesystem::path(path).make_preferred();
+  std::filesystem::path normalizedPath = path;
+  normalizedPath.make_preferred();
 
   if (normalizedPath.empty()) {
     LOG_ERROR << "Couldn't open directory. No path was provided.";

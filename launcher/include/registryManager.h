@@ -58,6 +58,8 @@ public:
 
   // Singleton
   static RegistryManager& Instance();
+  RegistryManager(const RegistryManager&) = delete;
+  RegistryManager& operator=(const RegistryManager&) = delete;
 
   void AddEntry(RegistryEntry entry);
   bool LoadEntriesFromYamlFile(const std::filesystem::path& filePath);

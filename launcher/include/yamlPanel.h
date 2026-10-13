@@ -36,8 +36,8 @@ public:
 
 private:
   void UpdateContent();
-  bool UpdateInMemoryConfig(std::filesystem::path filePath);
-  void SaveInMemoryConfigToFile(std::filesystem::path filePath);
+  bool UpdateInMemoryConfig(const std::filesystem::path& filePath);
+  void SaveInMemoryConfigToFile(const std::filesystem::path& filePath);
 
   gits::ImGuiHelper::TextEditorWidget m_ConfigEditor;
 

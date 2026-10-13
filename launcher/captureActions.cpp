@@ -33,10 +33,11 @@ namespace {
 std::optional<uint32_t> FindMatchingProcessPid(const std::filesystem::path& executablePath) {
 #ifdef _WIN32
   std::error_code targetPathError;
-  const auto normalizedTargetProcessPath =
+  auto targetProcessPath =
       std::filesystem::weakly_canonical(executablePath, targetPathError).wstring();
-  const auto targetProcessPath =
-      targetPathError ? executablePath.wstring() : normalizedTargetProcessPath;
+  if (targetPathError) {
+    targetProcessPath = executablePath.wstring();
+  }
 
   HANDLE processSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
   if (processSnapshot == INVALID_HANDLE_VALUE) {
@@ -169,8 +170,8 @@ bool UpdateConfigDumpPath() {
                                            (captureOutputPath / "%n%_%p%").string(), true);
 }
 
-bool CopyRecorderFiles(std::filesystem::path gitsBasePath,
-                       std::filesystem::path targetDirectory,
+bool CopyRecorderFiles(const std::filesystem::path& gitsBasePath,
+                       const std::filesystem::path& targetDirectory,
                        Api api) {
   if (!FileActions::Exists(gitsBasePath)) {
     LOG_ERROR << "GITS base path: " << gitsBasePath.string() << " doesn't exist";

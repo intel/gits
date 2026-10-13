@@ -161,7 +161,7 @@ void YAMLPanel::UpdateContent() {
   }
 }
 
-bool YAMLPanel::UpdateInMemoryConfig(std::filesystem::path filePath) {
+bool YAMLPanel::UpdateInMemoryConfig(const std::filesystem::path& filePath) {
   auto& context = Context::GetInstance();
   auto& currentModeConfiguration = context.ConfigurationForMode();
 
@@ -182,13 +182,13 @@ bool YAMLPanel::UpdateInMemoryConfig(std::filesystem::path filePath) {
   } else {
     LOG_ERROR << "Couldn't serialize GITS configuration from the YAML editor";
   }
-  currentModeConfiguration.ModifiedGitsConfigurationStr = text;
+  currentModeConfiguration.ModifiedGitsConfigurationStr = std::move(text);
 
   context.UpdateInMemoryConfig();
   return success;
 }
 
-void YAMLPanel::SaveInMemoryConfigToFile(std::filesystem::path filePath) {
+void YAMLPanel::SaveInMemoryConfigToFile(const std::filesystem::path& filePath) {
   UpdateInMemoryConfig(filePath);
   auto& context = Context::GetInstance();
   auto exportPath = std::filesystem::path();
