@@ -25,6 +25,8 @@ class StatisticsService {
 public:
   StatisticsService(const StatisticsConfig& cfg, gits::MessageBus& msgBus);
   ~StatisticsService();
+  StatisticsService(const StatisticsService&) = delete;
+  StatisticsService& operator=(const StatisticsService&) = delete;
 
   void StateRestoreBegin();
   void StateRestoreEnd();
