@@ -12,6 +12,7 @@
 
 #include <cstdint>
 #include <string>
+#include <utility>
 #include <vector>
 
 typedef uint64_t GITSKey;
@@ -51,13 +52,33 @@ struct PointerArgument {
   PointerArgument(const T* v) : Value(const_cast<T*>(v)) {}
   PointerArgument() {}
   PointerArgument(const PointerArgument<T>& arg) {
-    if (arg.Value) {
-      Value = new T();
-      *Value = *arg.Value;
+    CopyFrom(arg);
+  }
+  // A non-owning source points at caller memory that may not outlive it, so only an owned
+  // value can be taken over - anything else is deep-copied like in the copy constructor.
+  PointerArgument(PointerArgument<T>&& arg) {
+    if (!arg.Copy) {
+      CopyFrom(arg);
+      return;
     }
-    HandleKeys = arg.HandleKeys;
-    HandleData = arg.HandleData;
-    Copy = true;
+    Value = std::exchange(arg.Value, nullptr);
+    HandleKeys = std::move(arg.HandleKeys);
+    HandleData = std::move(arg.HandleData);
+    Copy = std::exchange(arg.Copy, false);
+  }
+  PointerArgument& operator=(const PointerArgument<T>& arg) {
+    if (this != &arg) {
+      PointerArgument<T> tmp(arg);
+      Swap(tmp);
+    }
+    return *this;
+  }
+  PointerArgument& operator=(PointerArgument<T>&& arg) {
+    if (this != &arg) {
+      PointerArgument<T> tmp(std::move(arg));
+      Swap(tmp);
+    }
+    return *this;
   }
   ~PointerArgument() {
     if (Copy) {
@@ -68,6 +89,23 @@ struct PointerArgument {
   std::vector<GITSKey> HandleKeys{};
   std::vector<uint64_t> HandleData{};
   bool Copy{};
+
+private:
+  void CopyFrom(const PointerArgument<T>& arg) {
+    if (arg.Value) {
+      Value = new T();
+      *Value = *arg.Value;
+    }
+    HandleKeys = arg.HandleKeys;
+    HandleData = arg.HandleData;
+    Copy = true;
+  }
+  void Swap(PointerArgument<T>& other) {
+    std::swap(Value, other.Value);
+    HandleKeys.swap(other.HandleKeys);
+    HandleData.swap(other.HandleData);
+    std::swap(Copy, other.Copy);
+  }
 };
 
 template <typename T>
