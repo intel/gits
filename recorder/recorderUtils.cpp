@@ -21,10 +21,10 @@
 #include "gits.h"
 #include "diagnostic.h"
 
-#if WITH_DIRECTX || WITH_VULKAN
+#if defined(WITH_DIRECTX) || defined(WITH_VULKAN)
 #include "imGuiHUD.h"
 #endif
-#if defined GITS_PLATFORM_WINDOWS && (WITH_DIRECTX || WITH_VULKAN)
+#if defined GITS_PLATFORM_WINDOWS && (defined(WITH_DIRECTX) || defined(WITH_VULKAN))
 #include <windows.h>
 #endif
 
@@ -104,7 +104,7 @@ bool ConfigureRecorder(const std::filesystem::path& configPath, bool legacyMode)
   }
 #endif
 
-#if WITH_DIRECTX || WITH_VULKAN
+#if defined(WITH_DIRECTX) || defined(WITH_VULKAN)
   auto pImGuiHUD = std::make_unique<ImGuiHUD>();
   CGits::Instance().SetImGuiHUD(std::move(pImGuiHUD));
   CGits::Instance().GetImGuiHUD()->SetApplicationInfo(processNameHUD, pid);

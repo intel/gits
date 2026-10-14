@@ -18,7 +18,7 @@
 #include "sequentialExecutor.h"
 #include "recorder.h"
 #include "playerUtils.h"
-#if WITH_DIRECTX || WITH_VULKAN
+#if defined(WITH_DIRECTX) || defined(WITH_VULKAN)
 #include "imGuiHUD.h"
 #endif
 #ifdef WITH_VULKAN
@@ -247,7 +247,7 @@ int Initialize(int argc, char* argv[]) {
     std::cin.get();
   }
 
-#if defined GITS_PLATFORM_WINDOWS && (WITH_DIRECTX || WITH_VULKAN)
+#if defined(WITH_DIRECTX) || defined(WITH_VULKAN)
   auto pImGuiHUD = std::make_unique<ImGuiHUD>();
   CGits::Instance().SetImGuiHUD(std::move(pImGuiHUD));
 #endif
@@ -402,7 +402,7 @@ int Play() {
     auto processName = GetLinuxProcessName(pid);
 #endif
     processName = processName.empty() ? "<unknown>" : processName;
-#if defined GITS_PLATFORM_WINDOWS && (WITH_DIRECTX || WITH_VULKAN)
+#if defined(WITH_DIRECTX) || defined(WITH_VULKAN)
     CGits::Instance().GetImGuiHUD()->SetApplicationInfo(processName, pid);
 #endif
 
