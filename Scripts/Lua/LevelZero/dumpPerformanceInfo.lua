@@ -759,6 +759,17 @@ function zeEventPoolCreate(hContext, desc, numDevices, phDevices, phEventPool)
   return drvl0.zeEventPoolCreate(hContext, desc, numDevices, phDevices, phEventPool)
 end
 
+function zexCounterBasedEventCreate2(hContext, hDevice, desc, phEvent)
+  if (desc.flags & ZEX_COUNTER_BASED_EVENT_FLAG_IPC) ~= 0 then
+    Log("Removing ZEX_COUNTER_BASED_EVENT_FLAG_IPC to enable kernel timestamp collection.")
+    desc.flags = desc.flags & ~ZEX_COUNTER_BASED_EVENT_FLAG_IPC
+  end
+  if (desc.flags & ZEX_COUNTER_BASED_EVENT_FLAG_KERNEL_MAPPED_TIMESTAMP) == 0 then
+    desc.flags = desc.flags | ZEX_COUNTER_BASED_EVENT_FLAG_KERNEL_TIMESTAMP
+  end
+  return drvl0.zexCounterBasedEventCreate2(hContext, hDevice, desc, phEvent)
+end
+
 function zeEventDestroy(hEvent)
   -- Check for not explicitly finished events.
   for _, event in ipairs(EVENT_LIST) do
