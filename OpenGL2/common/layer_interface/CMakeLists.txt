@@ -31,6 +31,7 @@ add_library(OpenGL2_layer_interface STATIC
   layerBase.h
   mappedDataMetaTypes.h
   unsupportedCommandTypes.h
+  windowGeometryMetaTypes.h
   pixelTransferSize.h
   pixelTransferSize.cpp
 )

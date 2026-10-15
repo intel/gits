@@ -10,6 +10,7 @@
 
 #include "encoderLayerAuto.h"
 #include "unsupportedCommandTypes.h"
+#include "windowGeometryTrackingLayer.h"
 
 namespace gits::opengl2 {
 
@@ -51,8 +52,16 @@ void CaptureManager::SkipCommandKey(uint64_t key) {
 
 void CaptureManager::LoadLayers() {
   // See the header comment: heap-allocated and intentionally never deleted, matching this
-  // singleton's own never-destroyed pattern (Get()'s comment above) - EncoderLayer holds no
-  // resources that need releasing, so this introduces no static-destruction-order risk.
+  // singleton's own never-destroyed pattern (Get()'s comment above) - EncoderLayer/
+  // WindowGeometryTrackingLayer hold no resources that need releasing (the latter's actual
+  // state lives in the separately-singleton WindowGeometryTrackingService), so this introduces
+  // no static-destruction-order risk.
+  //
+  // WindowGeometryTrackingLayer is this backend's first real Pre layer (m_PreLayers was empty
+  // before it - see this class's own header comment) - see that layer's own header comment
+  // for why running in Pre(), ahead of EncoderLayer's Post-side serialization of the WGL call
+  // a given hook is attached to, matters for window-creation ordering on replay.
+  m_PreLayers.push_back(new WindowGeometryTrackingLayer());
   m_PostLayers.push_back(new EncoderLayer());
 }
 

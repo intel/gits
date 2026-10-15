@@ -119,6 +119,25 @@ public:
   // higher-keyed command from ever reaching the stream.
   void SkipCommandKey(uint64_t key);
 
+  // Re-keys an already-key-reserved command to a NEW, strictly later key than any key minted
+  // so far - mirrors DirectX's identically-named CaptureManager::UpdateCommandKey (DirectX/
+  // recorder/captureManager.h). Skips `command.m_Key`'s current (pre-dispatch-reserved, see
+  // recorderWrappersAuto.cpp.mako's own header comment) key - it will never be filled now -
+  // and mints a fresh one in its place.
+  //
+  // Used when a Pre-layer hook needs to record a SEPARATE, synthetic command (e.g.
+  // WindowGeometryTrackingLayer's WindowGeometryMetaCommand) that must decode/replay BEFORE
+  // the command it is hooked on: minting the synthetic command's own key first and then
+  // pushing the hooked command's key later (via this method) is the only way to achieve that
+  // ordering, since CreateCommandKey() is a monotonically-increasing counter - a key handed
+  // out later can never sort earlier than one handed out before it. Calling this bumps the
+  // hooked command later than it would otherwise have been (a small, deliberate trade-off:
+  // see the call site's own comment for why this is safe for that specific hook).
+  void UpdateCommandKey(Command& command) {
+    SkipCommandKey(command.m_Key);
+    command.m_Key = CreateCommandKey();
+  }
+
   std::vector<Layer*>& GetPreLayers() {
     return m_PreLayers;
   }

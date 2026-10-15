@@ -231,4 +231,36 @@ void WglSetPixelFormatRunner::Run() {
   }
 }
 
+void GlViewportRunner::Run() {
+  auto& manager = PlayerManager::Get();
+  for (Layer* layer : manager.GetPreLayers()) {
+    layer->Pre(command);
+  }
+  auto realFunction = player::g_DispatchTable.glViewport.load(std::memory_order_acquire);
+  realFunction(command.m_x.Value, command.m_y.Value, command.m_width.Value, command.m_height.Value);
+  // See HdcVirtualizationService::GrowToFit()'s own header comment for the full rationale:
+  // this is a DEFENSIVE FALLBACK ONLY. This backend's single skeleton window starts at an
+  // arbitrary, hardcoded 640x480 solely as Resolve()'s own fallback default - for a stream
+  // with successful Win32 geometry capture (WindowGeometryTrackingService), SetGeometry()
+  // normally supplies the real size before Resolve() ever creates the window, and GrowToFit()
+  // then stays permanently disabled (see m_HasRealGeometry). Only when that capture never
+  // happened (an older stream, or one where WindowFromDC/GetClientRect failed) does the window
+  // actually start at 640x480 and need growing - GrowToFit() is called unconditionally here
+  // regardless, since it already no-ops correctly once real geometry is in effect; an
+  // origin-anchored (x==0, y==0) glViewport call remains the substitute signal for that
+  // fallback case, same as before this capture existed.
+  // Deliberately unconditional on which framebuffer is currently bound: this player does not
+  // track framebuffer-binding state (a real per-context GL_DRAW_FRAMEBUFFER_BINDING query would
+  // require an extra live driver call on every glViewport just to decide whether to skip this),
+  // and growing the window too far for an FBO-only viewport is a harmless, purely cosmetic
+  // no-op (the default framebuffer is simply larger than the app ever draws into) - unlike
+  // never growing it at all, which is the actual bug this fixes.
+  if (command.m_x.Value == 0 && command.m_y.Value == 0) {
+    HdcVirtualizationService::Get().GrowToFit(command.m_width.Value, command.m_height.Value);
+  }
+  for (Layer* layer : manager.GetPostLayers()) {
+    layer->Post(command);
+  }
+}
+
 } // namespace gits::opengl2

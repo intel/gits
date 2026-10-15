@@ -29,6 +29,10 @@ enum class CommandId {
   ID_META_UNSUPPORTED_COMMAND = 0xF0001,
   // See docs/development/opengl2-buffer-map-tracking-plan.md's Decision 6.
   ID_META_MAPPED_DATA = 0xF0002,
+  // Real Win32 window geometry captured at record time - see WindowGeometryMetaCommand's own
+  // header comment (common/layer_interface/windowGeometryMetaTypes.h) for the full rationale and
+  // the DX12/Vulkan precedent this mirrors.
+  ID_META_WINDOW_GEOMETRY = 0xF0003,
 
   // ID_META_BEGIN + 0x500
   ID_GL_BEGIN = 0xF0500,

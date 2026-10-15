@@ -27,6 +27,8 @@ add_library(OpenGL2_recorder STATIC
   include/recursionGuard.h
   include/recorderWrappers.h
   include/unsupportedCommand.h
+  include/windowGeometryTrackingLayer.h
+  include/windowGeometryTrackingService.h
   captureManager.cpp
   clientMemoryCapture.cpp
   mapTrackingWrappers.cpp
@@ -34,6 +36,8 @@ add_library(OpenGL2_recorder STATIC
   recorder.cpp
   recursionGuard.cpp
   unsupportedCommand.cpp
+  windowGeometryTrackingLayer.cpp
+  windowGeometryTrackingService.cpp
 )
 
 add_dependencies(OpenGL2_recorder OpenGL2_codegen)

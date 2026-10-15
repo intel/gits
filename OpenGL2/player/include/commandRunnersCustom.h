@@ -135,4 +135,32 @@ private:
   glUseProgramCommand command;
 };
 
+// glViewport's Run() - beyond the generic real-call forward, also grows the player's single
+// skeleton window to fit this call's (width, height) when it targets the window origin - see
+// HdcVirtualizationService::GrowToFit()'s header comment for the full rationale.
+//
+// DEFENSIVE FALLBACK ONLY as of WindowGeometryMetaCommand/WindowGeometryMetaRunner (see
+// windowGeometryMetaTypes.h): this backend now captures real Win32 window geometry at record
+// time (WindowGeometryTrackingService, mirroring the legacy OpenGL backend's own
+// OpenGL/common/wglFunctions.cpp's GetWindowParams()/CwglSetPixelFormat capture, and DX12/
+// Vulkan's own CreateWindowMetaCommand-shaped idiom), so a stream recorded after this change
+// reaches HdcVirtualizationService::Resolve() with the correct real size already known - this
+// glViewport-inferred substitute signal never actually fires a visible resize for such a
+// stream (GrowToFit() only grows past whatever SetGeometry() already set, and the real size is
+// never smaller than any legitimate full-window glViewport call). Kept, not removed, only for
+// a stream recorded BEFORE this change, or one where WindowFromDC/GetClientRect failed at
+// capture time.
+class GlViewportRunner : public stream::CommandRunner {
+public:
+  void Run() override;
+
+protected:
+  void DecodeCommand() override {
+    Decode(m_Data, command);
+  }
+
+private:
+  glViewportCommand command;
+};
+
 } // namespace gits::opengl2

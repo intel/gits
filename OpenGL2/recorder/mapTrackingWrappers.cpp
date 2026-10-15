@@ -11,6 +11,7 @@
 #include "captureManager.h"
 #include "glEnumsAuto.h"
 #include "handleArgumentUpdaters.h"
+#include "handleMapService.h"
 #include "log.h"
 #include "mappedDataMetaTypes.h"
 #include "mapTrackingService.h"

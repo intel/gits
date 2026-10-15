@@ -55,4 +55,19 @@ CUSTOM_PLAYER_RUNNERS: dict[str, str] = {
     # (a hardcoded per-command-name branch in a shared generated template, rather than in this
     # table of hand-written exceptions).
     'glUseProgram': 'GlUseProgramRunner',
+    # Grows the player's single skeleton window (created at an arbitrary, hardcoded 640x480
+    # fallback default by HdcVirtualizationService::Resolve() - see
+    # docs/development/opengl2-player-skeleton-plan.md's Decision 1) to fit the app's real
+    # rendering resolution - see GlViewportRunner::Run()'s own comment and
+    # HdcVirtualizationService::GrowToFit()'s header comment for the full rationale.
+    #
+    # DEFENSIVE FALLBACK ONLY: this backend now captures the app's REAL Win32 window geometry
+    # at record time (WindowGeometryTrackingService, windowGeometryMetaTypes.h's
+    # WindowGeometryMetaCommand), so a stream recorded after that feature normally reaches
+    # Resolve() with the correct size already known and this glViewport-inferred substitute
+    # signal never fires a visible resize for it. Still needed - hence this custom runner
+    # staying excluded from the generic per-command codegen loop - for a stream recorded before
+    # that capture existed, or one where WindowFromDC/GetClientRect failed at capture time; not
+    # because glViewport remains the only size signal available.
+    'glViewport': 'GlViewportRunner',
 }
