@@ -24,6 +24,7 @@
 #include <cstdint>
 #include <mutex>
 #include <unordered_map>
+#include <unordered_set>
 
 namespace gits::opengl2 {
 
@@ -87,6 +88,10 @@ public:
   // service can meaningfully partition further).
   uint64_t GroupFor(HGLRC context);
 
+  // True if `context` was passed to RegisterNewContext(), i.e. its creation was captured, so
+  // every object created on it went through a captured command.
+  bool IsCreationCaptured(HGLRC context);
+
 private:
   ShareGroupService() = default;
 
@@ -94,6 +99,7 @@ private:
 
   std::mutex m_Mutex;
   std::unordered_map<HGLRC, uint64_t> m_ContextToGroup;
+  std::unordered_set<HGLRC> m_CapturedContexts;
   uint64_t m_NextGroup{1};
 };
 

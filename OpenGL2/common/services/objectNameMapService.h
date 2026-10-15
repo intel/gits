@@ -218,6 +218,10 @@ public:
   // player-side counterpart used by UpdateHandleOrCreate for the identical reason.
   GLuint TryGetHandle(GLObjectKind kind, GITSKey key);
 
+  // A name no key maps to and `isObject` reports unused, for a call that creates the object
+  // named by any unused name. `isObject` runs under this kind's lock.
+  GLuint UnusedName(GLObjectKind kind, const std::function<bool(GLuint)>& isObject);
+
   // Permanent sanity check for a share-group-scoped kind's TryGetKey miss inside
   // ConfirmImplicitCreate (recorder/include/handleArgumentUpdaters.h - see that function's own
   // comment): scans this kind's WHOLE bucket (every identity, not just `identity`) for `name`
@@ -239,6 +243,14 @@ public:
   // LOOKUP_OR_CREATE miss (first-ever reference to a given name), never in any hot per-frame
   // path, so this is not a perf concern at the frequency it actually runs.
   uint64_t FindOtherIdentityForName(GLObjectKind kind, uint64_t identity, GLuint name);
+
+  // The key `name` is registered under for some identity other than `identity` that `accept`
+  // returns true for, or 0. Same linear scan as FindOtherIdentityForName; `accept` runs under
+  // this kind's lock, so it must not call back into this service.
+  GITSKey FindKeyInOtherIdentity(GLObjectKind kind,
+                                 uint64_t identity,
+                                 GLuint name,
+                                 const std::function<bool(uint64_t)>& accept);
 
 private:
   ObjectNameMapService() = default;
@@ -269,6 +281,10 @@ private:
     std::unordered_set<NameKey, NameKeyHash> WarnedMissingNames;
     std::unordered_map<GITSKey, GLuint> KeyToName;
     std::unordered_set<GITSKey> WarnedMissingKeys;
+    // Every name KeyToName has held, for UnusedName: a generated name is not an object until
+    // first bound, so glIs* alone cannot tell it is taken.
+    std::unordered_set<GLuint> Names;
+    GLuint NextUnusedName{1};
   };
 
   Bucket& BucketFor(GLObjectKind kind);

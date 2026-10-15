@@ -49,8 +49,10 @@
 #include "openglDriversAuto.h"
 
 #include <atomic>
+#include <cstddef>
 #include <mutex>
 #include <string>
+#include <type_traits>
 #include <unordered_set>
 
 namespace gits::opengl2 {
@@ -156,10 +158,15 @@ inline void UpdateOutputHandle(HandleArgument<GLuint>& arg, GLObjectKind kind) {
 // TryGetHandle's own header comment (objectNameMapService.h). A zero key (unbind) and
 // UNMAPPED_OBJECT_NAME_KEY (a bind the recorder saw rejected) are handled exactly as by the
 // plain UpdateHandle overload above, including its return value.
-template <typename GenFn>
+//
+// Where `gen` yields no name although the call itself is legal - glGenQueries while another
+// query is active, on some drivers - an unused name is picked instead, with `isObject` (the
+// family's glIs* entry point), for the call to create exactly as it did at capture.
+template <typename GenFn, typename IsObjectFn = std::nullptr_t>
 [[nodiscard]] inline bool UpdateHandleOrCreate(HandleArgument<GLuint>& arg,
                                                GLObjectKind kind,
-                                               GenFn gen) {
+                                               GenFn gen,
+                                               IsObjectFn isObject = nullptr) {
   if (arg.Key == 0 || arg.Key == UNMAPPED_OBJECT_NAME_KEY) {
     return UpdateHandle(arg, kind);
   }
@@ -168,6 +175,12 @@ template <typename GenFn>
   if (liveName == 0) {
     if (gen != nullptr) {
       gen(1, &liveName);
+    }
+    if constexpr (!std::is_same_v<IsObjectFn, std::nullptr_t>) {
+      if (liveName == 0 && isObject != nullptr) {
+        liveName =
+            service.UnusedName(kind, [isObject](GLuint name) { return isObject(name) != 0; });
+      }
     }
     service.SetHandle(kind, arg.Key, liveName);
   }

@@ -367,6 +367,24 @@ _EXPLICIT_OVERRIDES: dict[tuple[str, str], ObjectNameOverride] = {
     ('glBindVertexArrayAPPLE', 'array'): ObjectNameOverride(
         kind=GLObjectKind.VERTEX_ARRAY, role=ObjectNameRole.LOOKUP_OR_CREATE,
         gen_command='glGenVertexArraysAPPLE', is_command='glIsVertexArrayAPPLE'),
+
+    # GL 1.5 / ARB_occlusion_query: "If BeginQuery is called with an unused id, that name is
+    # marked as used and associated with a new query object." Compatibility drivers still accept
+    # it, and so do glBeginQueryIndexed and glQueryCounter on them; applications start queries
+    # this way without ever calling glGenQueries. The is_command check after the call keeps a
+    # driver that rejects the name an ordinary lookup miss.
+    ('glBeginQuery', 'id'): ObjectNameOverride(
+        kind=GLObjectKind.QUERY, role=ObjectNameRole.LOOKUP_OR_CREATE,
+        gen_command='glGenQueries', is_command='glIsQuery'),
+    ('glBeginQueryARB', 'id'): ObjectNameOverride(
+        kind=GLObjectKind.QUERY, role=ObjectNameRole.LOOKUP_OR_CREATE,
+        gen_command='glGenQueriesARB', is_command='glIsQueryARB'),
+    ('glBeginQueryIndexed', 'id'): ObjectNameOverride(
+        kind=GLObjectKind.QUERY, role=ObjectNameRole.LOOKUP_OR_CREATE,
+        gen_command='glGenQueries', is_command='glIsQuery'),
+    ('glQueryCounter', 'id'): ObjectNameOverride(
+        kind=GLObjectKind.QUERY, role=ObjectNameRole.LOOKUP_OR_CREATE,
+        gen_command='glGenQueries', is_command='glIsQuery'),
 }
 
 

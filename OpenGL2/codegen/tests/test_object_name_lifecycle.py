@@ -432,19 +432,28 @@ class EndToEndClassificationTests(unittest.TestCase):
                 self.assertEqual(override.role, role)
                 self.assertEqual(wrapper_for(param.type_facts, override), 'HandleArrayArgument')
 
-    def test_glbeginquery_id_param_is_remapped(self) -> None:
-        # glBeginQuery is already enabled=True (plain scalar params, no pointer to gate on) -
-        # auto-derived from class_="query" + the default LOOKUP role (no currently tested
-        # sample calls it, but the classification is free/automatic either way now).
-        cmd = self._get_command(Api.GL, 'glBeginQuery')
-        self.assertTrue(cmd.enabled)
-        param = next(p for p in cmd.params if p.name == 'id')
-        override = object_name_override_for('glBeginQuery', 'id', param.class_)
-        self.assertIsNotNone(override)
-        assert override is not None
-        self.assertEqual(override.kind, GLObjectKind.QUERY)
-        self.assertEqual(override.role, ObjectNameRole.LOOKUP)
-        self.assertEqual(wrapper_for(param.type_facts, override), 'HandleArgument')
+    def test_query_id_params_create_unused_names(self) -> None:
+        # Plain scalar params, no pointer to gate on. An unused id creates the query, so each is
+        # LOOKUP_OR_CREATE with its own family's Gen/Is commands.
+        cases = {
+            'glBeginQuery': ('glGenQueries', 'glIsQuery'),
+            'glBeginQueryARB': ('glGenQueriesARB', 'glIsQueryARB'),
+            'glBeginQueryIndexed': ('glGenQueries', 'glIsQuery'),
+            'glQueryCounter': ('glGenQueries', 'glIsQuery'),
+        }
+        for name, (gen_command, is_command) in cases.items():
+            with self.subTest(command=name):
+                cmd = self._get_command(Api.GL, name)
+                self.assertTrue(cmd.enabled)
+                param = next(p for p in cmd.params if p.name == 'id')
+                override = object_name_override_for(name, 'id', param.class_)
+                self.assertIsNotNone(override)
+                assert override is not None
+                self.assertEqual(override.kind, GLObjectKind.QUERY)
+                self.assertEqual(override.role, ObjectNameRole.LOOKUP_OR_CREATE)
+                self.assertEqual(override.gen_command, gen_command)
+                self.assertEqual(override.is_command, is_command)
+                self.assertEqual(wrapper_for(param.type_facts, override), 'HandleArgument')
 
     def test_renderbuffer_sampler_program_pipeline_gen_delete_commands_are_remapped(self) -> None:
         # Renderbuffer/Sampler/ProgramPipeline (see

@@ -304,7 +304,8 @@ void ${cmd.name}Runner::Run() {
   // not a stream gap, so it mints a fresh replay-time name, through this bind's own family's
   // Gen command, instead of skipping the call.
   if (!UpdateHandleOrCreate(command.m_${p.name}, GLObjectKind::${kind},
-                            player::g_DispatchTable.${resolve_override.gen_command}.load(std::memory_order_acquire))) {
+                            player::g_DispatchTable.${resolve_override.gen_command}.load(std::memory_order_acquire),
+                            player::g_DispatchTable.${resolve_override.is_command}.load(std::memory_order_acquire))) {
     SkipUnmappedObjectNameCall(command, "${cmd.name}");
   }
 % else:

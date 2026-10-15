@@ -124,6 +124,24 @@ uint64_t ObjectNameMapService::FindOtherIdentityForName(GLObjectKind kind,
   return 0;
 }
 
+GITSKey ObjectNameMapService::FindKeyInOtherIdentity(GLObjectKind kind,
+                                                     uint64_t identity,
+                                                     GLuint name,
+                                                     const std::function<bool(uint64_t)>& accept) {
+  if (name == 0) {
+    return 0;
+  }
+  Bucket& bucket = BucketFor(kind);
+  std::lock_guard<std::mutex> lock(bucket.Mutex);
+  for (const auto& entry : bucket.NameToKey) {
+    if (entry.first.Name == name && entry.first.ShareGroup != identity &&
+        accept(entry.first.ShareGroup)) {
+      return entry.second;
+    }
+  }
+  return 0;
+}
+
 void ObjectNameMapService::Delete(GLObjectKind kind, uint64_t shareGroup, GLuint name) {
   if (name == 0) {
     return;
@@ -154,6 +172,20 @@ void ObjectNameMapService::SetHandle(GLObjectKind kind, GITSKey key, GLuint name
   Bucket& bucket = BucketFor(kind);
   std::lock_guard<std::mutex> lock(bucket.Mutex);
   bucket.KeyToName[key] = name;
+  bucket.Names.insert(name);
+}
+
+GLuint ObjectNameMapService::UnusedName(GLObjectKind kind,
+                                        const std::function<bool(GLuint)>& isObject) {
+  Bucket& bucket = BucketFor(kind);
+  std::lock_guard<std::mutex> lock(bucket.Mutex);
+  for (GLuint name = bucket.NextUnusedName; name != 0; ++name) {
+    if (bucket.Names.count(name) == 0 && !isObject(name)) {
+      bucket.NextUnusedName = name + 1;
+      return name;
+    }
+  }
+  return 0;
 }
 
 GLuint ObjectNameMapService::GetHandle(GLObjectKind kind, GITSKey key) {

@@ -38,6 +38,7 @@ void ShareGroupService::RegisterNewContext(HGLRC newContext, HGLRC shareContext)
   std::lock_guard<std::mutex> lock(m_Mutex);
   const uint64_t group = shareContext ? GroupForLocked(shareContext) : m_NextGroup++;
   m_ContextToGroup[newContext] = group;
+  m_CapturedContexts.insert(newContext);
 }
 
 void ShareGroupService::MergeGroups(HGLRC hglrc1, HGLRC hglrc2) {
@@ -65,6 +66,11 @@ void ShareGroupService::MergeGroups(HGLRC hglrc1, HGLRC hglrc2) {
 uint64_t ShareGroupService::GroupFor(HGLRC context) {
   std::lock_guard<std::mutex> lock(m_Mutex);
   return GroupForLocked(context);
+}
+
+bool ShareGroupService::IsCreationCaptured(HGLRC context) {
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  return m_CapturedContexts.count(context) != 0;
 }
 
 } // namespace gits::opengl2

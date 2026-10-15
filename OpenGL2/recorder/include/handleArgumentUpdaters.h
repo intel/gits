@@ -44,6 +44,9 @@
 #include "openglDriversAuto.h"
 #include "shareGroupService.h"
 
+#include <array>
+#include <atomic>
+
 namespace gits::opengl2 {
 
 // The share group of whichever HGLRC is current on this thread right now, per the real
@@ -238,6 +241,26 @@ inline void ConfirmImplicitCreate(HandleArgument<GLuint>& arg,
   }
   const uint64_t groupIdentity = GroupIdentityFor(kind);
   ObjectNameMapService& service = ObjectNameMapService::Get();
+  if (existedBefore && IsPerContextObjectKind(kind) &&
+      ShareGroupService::Get().IsCreationCaptured(reinterpret_cast<HGLRC>(groupIdentity))) {
+    // Not shared by spec, but some drivers share these objects within a share group. Every
+    // object created on this context was captured and has no key for this name, so the object
+    // came from another context of the group.
+    const uint64_t shareGroup = CurrentShareGroup();
+    arg.Key = service.FindKeyInOtherIdentity(
+        kind, groupIdentity, arg.Value, [shareGroup](uint64_t context) {
+          return ShareGroupService::Get().GroupFor(reinterpret_cast<HGLRC>(context)) == shareGroup;
+        });
+    if (arg.Key != 0) {
+      static std::array<std::atomic<bool>, static_cast<size_t>(GLObjectKind::kCount)> logged{};
+      if (!logged[static_cast<size_t>(kind)].exchange(true)) {
+        LOG_INFO << "GLObjectKind " << static_cast<int>(kind)
+                 << " names are shared by the driver between contexts of a share group";
+      }
+      service.Register(kind, groupIdentity, arg.Value, arg.Key);
+      return;
+    }
+  }
   if (existedBefore || isObject == nullptr || isObject(arg.Value) == GL_FALSE) {
     arg.Key = service.GetKey(kind, groupIdentity, arg.Value);
     if (arg.Key == 0) {
