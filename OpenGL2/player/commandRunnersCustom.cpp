@@ -15,6 +15,7 @@
 #include "openglDriversAuto.h"
 #include "playerManager.h"
 #include "replayContextCaps.h"
+#include "threadContextService.h"
 #include "uniformLocationMapService.h"
 
 namespace gits::opengl2 {
@@ -31,6 +32,7 @@ void NoteActiveTextureUnit() {
 } // namespace
 
 void WglCreateContextRunner::Run() {
+  ThreadContextService::Get().SwitchTo(command.m_ThreadId);
   auto& manager = PlayerManager::Get();
   HDC real_hDc = HdcVirtualizationService::Get().Resolve(command.m_hDc.Value);
   // Defensive fallback for an app that never called (or that called an unsupported variant
@@ -52,6 +54,7 @@ void WglCreateContextRunner::Run() {
 }
 
 void WglCreateContextAttribsARBRunner::Run() {
+  ThreadContextService::Get().SwitchTo(command.m_ThreadId);
   auto& manager = PlayerManager::Get();
   UpdateHandle(command.m_hShareContext);
   HDC real_hDC = HdcVirtualizationService::Get().Resolve(command.m_hDC.Value);
@@ -85,6 +88,7 @@ void WglCreateContextAttribsARBRunner::Run() {
 }
 
 void WglMakeCurrentRunner::Run() {
+  ThreadContextService::Get().SwitchTo(command.m_ThreadId);
   auto& manager = PlayerManager::Get();
   UpdateHandle(command.m_newContext);
   // A recorded wglMakeCurrent(NULL, NULL) - the Win32 API's own "detach the current context"
@@ -127,6 +131,7 @@ void WglMakeCurrentRunner::Run() {
 }
 
 void GlGetUniformLocationRunner::Run() {
+  ThreadContextService::Get().SwitchTo(command.m_ThreadId);
   auto& manager = PlayerManager::Get();
   if (!UpdateHandle(command.m_program, GLObjectKind::Program)) {
     SkipUnmappedObjectNameCall(command, "glGetUniformLocation");
@@ -164,6 +169,7 @@ void GlGetUniformLocationRunner::Run() {
 }
 
 void GlUseProgramRunner::Run() {
+  ThreadContextService::Get().SwitchTo(command.m_ThreadId);
   auto& manager = PlayerManager::Get();
   if (!UpdateHandle(command.m_program, GLObjectKind::Program)) {
     SkipUnmappedObjectNameCall(command, "glUseProgram");
@@ -200,6 +206,7 @@ void GlUseProgramRunner::Run() {
 }
 
 void WglSetPixelFormatRunner::Run() {
+  ThreadContextService::Get().SwitchTo(command.m_ThreadId);
   auto& manager = PlayerManager::Get();
   HdcVirtualizationService::Get().Resolve(command.m_hdc.Value);
   for (Layer* layer : manager.GetPreLayers()) {
@@ -246,6 +253,7 @@ void WglSetPixelFormatRunner::Run() {
 }
 
 void GlViewportRunner::Run() {
+  ThreadContextService::Get().SwitchTo(command.m_ThreadId);
   auto& manager = PlayerManager::Get();
   for (Layer* layer : manager.GetPreLayers()) {
     layer->Pre(command);
@@ -281,6 +289,7 @@ void GlViewportRunner::Run() {
 }
 
 void WglSwapBuffersRunner::Run() {
+  ThreadContextService::Get().SwitchTo(command.m_ThreadId);
   auto& manager = PlayerManager::Get();
   HDC real_hdc = HdcVirtualizationService::Get().Resolve(command.m_hdc.Value);
   for (Layer* layer : manager.GetPreLayers()) {
@@ -303,6 +312,7 @@ void WglSwapBuffersRunner::Run() {
 }
 
 void WglSwapLayerBuffersRunner::Run() {
+  ThreadContextService::Get().SwitchTo(command.m_ThreadId);
   auto& manager = PlayerManager::Get();
   HDC real_hdc = HdcVirtualizationService::Get().Resolve(command.m_hdc.Value);
   for (Layer* layer : manager.GetPreLayers()) {
@@ -321,6 +331,7 @@ void WglSwapLayerBuffersRunner::Run() {
 }
 
 void GlBindTextureRunner::Run() {
+  ThreadContextService::Get().SwitchTo(command.m_ThreadId);
   auto& manager = PlayerManager::Get();
   // See ObjectNameRole.LOOKUP_OR_CREATE's own comment - a never-seen key here is the recorder
   // having minted one right at this same Bind call (see the recorder-side ConfirmImplicitCreate),
@@ -350,6 +361,7 @@ void GlBindTextureRunner::Run() {
 }
 
 void GlBindTextureEXTRunner::Run() {
+  ThreadContextService::Get().SwitchTo(command.m_ThreadId);
   auto& manager = PlayerManager::Get();
   // See GlBindTextureRunner::Run()'s own comment above - identical fixup, same rationale.
   if (!UpdateHandleOrCreate(
@@ -374,6 +386,7 @@ void GlBindTextureEXTRunner::Run() {
 }
 
 void GlBindTextureUnitRunner::Run() {
+  ThreadContextService::Get().SwitchTo(command.m_ThreadId);
   auto& manager = PlayerManager::Get();
   if (!UpdateHandle(command.m_texture, GLObjectKind::Texture)) {
     SkipUnmappedObjectNameCall(command, "glBindTextureUnit");
@@ -394,6 +407,7 @@ void GlBindTextureUnitRunner::Run() {
 }
 
 void GlBindSamplerRunner::Run() {
+  ThreadContextService::Get().SwitchTo(command.m_ThreadId);
   auto& manager = PlayerManager::Get();
   if (!UpdateHandle(command.m_sampler, GLObjectKind::Sampler)) {
     SkipUnmappedObjectNameCall(command, "glBindSampler");
@@ -414,6 +428,7 @@ void GlBindSamplerRunner::Run() {
 }
 
 void GlNewListRunner::Run() {
+  ThreadContextService::Get().SwitchTo(command.m_ThreadId);
   auto& manager = PlayerManager::Get();
   for (Layer* layer : manager.GetPreLayers()) {
     layer->Pre(command);
@@ -430,6 +445,7 @@ void GlNewListRunner::Run() {
 }
 
 void GlEndListRunner::Run() {
+  ThreadContextService::Get().SwitchTo(command.m_ThreadId);
   auto& manager = PlayerManager::Get();
   for (Layer* layer : manager.GetPreLayers()) {
     layer->Pre(command);

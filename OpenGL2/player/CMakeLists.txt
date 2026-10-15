@@ -30,6 +30,7 @@ add_library(OpenGL2_player STATIC
   include/mappedTextureDataMetaRunner.h
   include/mipmapCompletionService.h
   include/replayContextCaps.h
+  include/threadContextService.h
   include/unsupportedCommandRunner.h
   include/uniformArrayMetaRunner.h
   include/uniformLocationMapService.h
@@ -45,6 +46,7 @@ add_library(OpenGL2_player STATIC
   mappedTextureDataMetaRunner.cpp
   mipmapCompletionService.cpp
   replayContextCaps.cpp
+  threadContextService.cpp
   unsupportedCommandRunner.cpp
   uniformArrayMetaRunner.cpp
   uniformLocationMapService.cpp

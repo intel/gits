@@ -15,6 +15,7 @@
 #include "objectNameMapService.h"
 #include "openglDriversAuto.h"
 #include "playerManager.h"
+#include "threadContextService.h"
 
 #include <cstring>
 
@@ -59,6 +60,7 @@ void ReplayMappedData(MappedDataMetaCommand& command) {
 } // namespace
 
 void MappedDataMetaRunner::Run() {
+  ThreadContextService::Get().SwitchTo(command.m_ThreadId);
   auto& manager = PlayerManager::Get();
   if (!UpdateHandle(command.m_Buffer, GLObjectKind::Buffer)) {
     SkipUnmappedObjectNameCall(command, "MappedDataMetaCommand");

@@ -11,10 +11,12 @@
 #include "hdcVirtualizationService.h"
 #include "layerAuto.h"
 #include "playerManager.h"
+#include "threadContextService.h"
 
 namespace gits::opengl2 {
 
 void WindowGeometryMetaRunner::Run() {
+  ThreadContextService::Get().SwitchTo(command.m_ThreadId);
   auto& manager = PlayerManager::Get();
   for (Layer* layer : manager.GetPreLayers()) {
     layer->Pre(command);

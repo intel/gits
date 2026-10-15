@@ -15,6 +15,7 @@
 #include "objectNameMapService.h"
 #include "openglDriversAuto.h"
 #include "playerManager.h"
+#include "threadContextService.h"
 
 #include <algorithm>
 #include <cstring>
@@ -76,6 +77,7 @@ void ReplayMappedTextureData(const MappedTextureDataMetaCommand& command) {
 } // namespace
 
 void MappedTextureDataMetaRunner::Run() {
+  ThreadContextService::Get().SwitchTo(command.m_ThreadId);
   auto& manager = PlayerManager::Get();
   if (!UpdateHandleArray(command.m_Textures, GLObjectKind::Texture)) {
     static std::once_flag warned;

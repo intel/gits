@@ -77,6 +77,7 @@ ${AUTO_GENERATED_HEADER}
 #include "objectNameMapService.h"
 #include "openglDriversAuto.h"
 #include "playerManager.h"
+#include "threadContextService.h"
 #include "uniformLocationMapService.h"
 
 #include <algorithm>
@@ -278,6 +279,7 @@ T* DiscardedOutputScratch(size_t listElements) {
   call_indent = ' ' * 6 if pixel_transfer_size_params else ' ' * 4
 %>\
 void ${cmd.name}Runner::Run() {
+  ThreadContextService::Get().SwitchTo(command.m_ThreadId);
   auto& manager = PlayerManager::Get();
 % for p in handle_params:
   UpdateHandle(command.m_${p.name});

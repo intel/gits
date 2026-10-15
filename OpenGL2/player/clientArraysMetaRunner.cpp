@@ -14,6 +14,7 @@
 #include "openglDriversAuto.h"
 #include "playerManager.h"
 #include "replayContextCaps.h"
+#include "threadContextService.h"
 
 #include <mutex>
 #include <unordered_map>
@@ -218,6 +219,7 @@ void ReplayClientArrays(const ClientArraysMetaCommand& command) {
 } // namespace
 
 void ClientArraysMetaRunner::Run() {
+  ThreadContextService::Get().SwitchTo(command.m_ThreadId);
   auto& manager = PlayerManager::Get();
   for (Layer* layer : manager.GetPreLayers()) {
     layer->Pre(command);

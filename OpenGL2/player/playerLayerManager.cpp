@@ -9,6 +9,7 @@
 #include "playerLayerManager.h"
 
 #include "layerAuto.h"
+#include "threadContextService.h"
 #include "traceLayerAuto.h"
 #include "traceLayerGroup.h"
 
@@ -25,6 +26,9 @@ void PlayerLayerManager::LoadLayers() {
     m_PreLayers.push_back(layer.get());
     m_LayersOwner.push_back(std::move(layer));
   }
+  auto threadContextLayer = std::make_unique<ThreadContextLayer>();
+  m_PostLayers.push_back(threadContextLayer.get());
+  m_LayersOwner.push_back(std::move(threadContextLayer));
 }
 
 void PlayerLayerManager::Shutdown() {

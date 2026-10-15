@@ -11,12 +11,14 @@
 #include "layerAuto.h"
 #include "log.h"
 #include "playerManager.h"
+#include "threadContextService.h"
 
 #include <unordered_set>
 
 namespace gits::opengl2 {
 
 void UnsupportedCommandRunner::Run() {
+  ThreadContextService::Get().SwitchTo(command.m_ThreadId);
   auto& manager = PlayerManager::Get();
   for (Layer* layer : manager.GetPreLayers()) {
     layer->Pre(command);

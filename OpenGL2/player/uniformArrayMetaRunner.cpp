@@ -12,6 +12,7 @@
 #include "objectNameMapService.h"
 #include "openglDriversAuto.h"
 #include "playerManager.h"
+#include "threadContextService.h"
 #include "uniformLocationMapService.h"
 
 namespace gits::opengl2 {
@@ -52,6 +53,7 @@ void ReplayUniformArray(const UniformArrayMetaCommand& command) {
 } // namespace
 
 void UniformArrayMetaRunner::Run() {
+  ThreadContextService::Get().SwitchTo(command.m_ThreadId);
   auto& manager = PlayerManager::Get();
   for (Layer* layer : manager.GetPreLayers()) {
     layer->Pre(command);
