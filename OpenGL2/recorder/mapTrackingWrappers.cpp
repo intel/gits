@@ -230,12 +230,12 @@ void* APIENTRY CustomWrapper_MapNamedBuffer(GLuint buffer, GLenum access) {
   return result;
 }
 
-enum class NamedRangeFamily {
+enum class NamedBufferFamily {
   Core,
   EXT
 };
 
-template <NamedRangeFamily Family, auto MapRangeEntry, auto ParameterEntry, auto SubDataEntry>
+template <NamedBufferFamily Family, auto MapRangeEntry, auto ParameterEntry, auto SubDataEntry>
 void* APIENTRY CustomWrapper_MapNamedBufferRange(GLuint buffer,
                                                  GLintptr offset,
                                                  GLsizeiptr length,
@@ -245,7 +245,7 @@ void* APIENTRY CustomWrapper_MapNamedBufferRange(GLuint buffer,
   std::vector<uint8_t> initialBytes;
   if (record && MapTrackingService::NeedsInitialShadowContents(access)) {
     const int major = CurrentContextGLVersion().first;
-    constexpr bool ext = Family == NamedRangeFamily::EXT;
+    constexpr bool ext = Family == NamedBufferFamily::EXT;
     // EXT entry points require GL_EXT_direct_state_access; core DSA support does not imply it.
     const bool supported = ext ? CurrentContextHasExtension(major, "GL_EXT_direct_state_access")
                                : ContextSupportsDirectStateAccess();
@@ -330,22 +330,58 @@ void APIENTRY CustomWrapper_FlushMappedNamedBufferRange(GLuint buffer,
                                              [=] { realFlush(buffer, offset, length); });
 }
 
-template <auto GetEntry>
+enum class TargetPointerFamily {
+  Core,
+  ARB,
+  OES
+};
+
+template <TargetPointerFamily Family, auto GetEntry>
 void APIENTRY CustomWrapper_GetBufferPointerv(GLenum target, GLenum pname, void** params) {
   const RecursionGuard guard;
   (g_DispatchTable.*GetEntry).load(std::memory_order_acquire)(target, pname, params);
-  if (!guard.IsNested() && pname == GL_BUFFER_MAP_POINTER && params != nullptr) {
-    MapTrackingService::Get().AssertNoShadowPointerQuery(
+  if (guard.IsNested() || pname != GL_BUFFER_MAP_POINTER || params == nullptr ||
+      *params == nullptr) {
+    return;
+  }
+  const auto [major, minor] = CurrentContextGLVersion();
+  bool supported = false;
+  const char* name = nullptr;
+  if constexpr (Family == TargetPointerFamily::Core) {
+    supported = major > 1 || (major == 1 && minor >= 5);
+    name = "glGetBufferPointerv";
+  } else if constexpr (Family == TargetPointerFamily::ARB) {
+    supported = CurrentContextHasExtension(major, "GL_ARB_vertex_buffer_object");
+    name = "glGetBufferPointervARB";
+  } else {
+    supported = CurrentContextHasExtension(major, "GL_OES_mapbuffer");
+    name = "glGetBufferPointervOES";
+  }
+  if (!supported || !CanQueryBufferBinding(target, major, minor)) {
+    return;
+  }
+  if (TryResolveRealFunction(name)) {
+    *params = MapTrackingService::Get().TranslateShadowPointerQuery(
         MapTrackingService::Get().ResolveBoundBuffer(target), *params);
   }
 }
 
-template <auto GetEntry>
+template <NamedBufferFamily Family, auto GetEntry>
 void APIENTRY CustomWrapper_GetNamedBufferPointerv(GLuint buffer, GLenum pname, void** params) {
   const RecursionGuard guard;
   (g_DispatchTable.*GetEntry).load(std::memory_order_acquire)(buffer, pname, params);
-  if (!guard.IsNested() && pname == GL_BUFFER_MAP_POINTER && params != nullptr) {
-    MapTrackingService::Get().AssertNoShadowPointerQuery(buffer, *params);
+  if (guard.IsNested() || pname != GL_BUFFER_MAP_POINTER || params == nullptr ||
+      *params == nullptr) {
+    return;
+  }
+  const bool supported = Family == NamedBufferFamily::Core
+                             ? ContextSupportsDirectStateAccess()
+                             : CurrentContextHasExtension(CurrentContextGLVersion().first,
+                                                          "GL_EXT_direct_state_access");
+  const char* name = Family == NamedBufferFamily::Core ? "glGetNamedBufferPointerv"
+                                                       : "glGetNamedBufferPointervEXT";
+  if (supported && TryResolveRealFunction(name)) {
+    *params = MapTrackingService::Get().TranslateShadowPointerQuery(buffer, *params);
   }
 }
 
@@ -464,19 +500,24 @@ const CustomWrapper CUSTOM_WRAPPERS[] = {
      reinterpret_cast<void*>(&CustomWrapper_glFlushMappedBufferRangeAPPLE)},
     {"glGetBufferPointerv",
      reinterpret_cast<void*>(
-         &CustomWrapper_GetBufferPointerv<&OpenGLDispatchTable::glGetBufferPointerv>)},
+         &CustomWrapper_GetBufferPointerv<TargetPointerFamily::Core,
+                                          &OpenGLDispatchTable::glGetBufferPointerv>)},
     {"glGetBufferPointervARB",
      reinterpret_cast<void*>(
-         &CustomWrapper_GetBufferPointerv<&OpenGLDispatchTable::glGetBufferPointervARB>)},
+         &CustomWrapper_GetBufferPointerv<TargetPointerFamily::ARB,
+                                          &OpenGLDispatchTable::glGetBufferPointervARB>)},
     {"glGetBufferPointervOES",
      reinterpret_cast<void*>(
-         &CustomWrapper_GetBufferPointerv<&OpenGLDispatchTable::glGetBufferPointervOES>)},
+         &CustomWrapper_GetBufferPointerv<TargetPointerFamily::OES,
+                                          &OpenGLDispatchTable::glGetBufferPointervOES>)},
     {"glGetNamedBufferPointerv",
      reinterpret_cast<void*>(
-         &CustomWrapper_GetNamedBufferPointerv<&OpenGLDispatchTable::glGetNamedBufferPointerv>)},
+         &CustomWrapper_GetNamedBufferPointerv<NamedBufferFamily::Core,
+                                               &OpenGLDispatchTable::glGetNamedBufferPointerv>)},
     {"glGetNamedBufferPointervEXT",
      reinterpret_cast<void*>(
-         &CustomWrapper_GetNamedBufferPointerv<&OpenGLDispatchTable::glGetNamedBufferPointervEXT>)},
+         &CustomWrapper_GetNamedBufferPointerv<NamedBufferFamily::EXT,
+                                               &OpenGLDispatchTable::glGetNamedBufferPointervEXT>)},
     {"glUnmapBuffer", reinterpret_cast<void*>(&CustomWrapper_glUnmapBuffer)},
     {"glMapBuffer", reinterpret_cast<void*>(&CustomWrapper_glMapBuffer)},
     {"glMapBufferARB", reinterpret_cast<void*>(&CustomWrapper_glMapBufferARB)},
@@ -492,13 +533,13 @@ const CustomWrapper CUSTOM_WRAPPERS[] = {
                                        &ExtNamedBufferSize>)},
     {"glMapNamedBufferRange",
      reinterpret_cast<void*>(
-         &CustomWrapper_MapNamedBufferRange<NamedRangeFamily::Core,
+         &CustomWrapper_MapNamedBufferRange<NamedBufferFamily::Core,
                                             &OpenGLDispatchTable::glMapNamedBufferRange,
                                             &OpenGLDispatchTable::glGetNamedBufferParameteri64v,
                                             &OpenGLDispatchTable::glGetNamedBufferSubData>)},
     {"glMapNamedBufferRangeEXT",
      reinterpret_cast<void*>(
-         &CustomWrapper_MapNamedBufferRange<NamedRangeFamily::EXT,
+         &CustomWrapper_MapNamedBufferRange<NamedBufferFamily::EXT,
                                             &OpenGLDispatchTable::glMapNamedBufferRangeEXT,
                                             &OpenGLDispatchTable::glGetNamedBufferParameterivEXT,
                                             &OpenGLDispatchTable::glGetNamedBufferSubDataEXT>)},

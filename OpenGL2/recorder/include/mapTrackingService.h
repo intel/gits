@@ -97,7 +97,7 @@ public:
                         GLsizeiptr length,
                         uint64_t key,
                         const std::function<void()>& realFlush);
-  void AssertNoShadowPointerQuery(GLuint buffer, void* pointer);
+  void* TranslateShadowPointerQuery(GLuint buffer, void* pointer);
 
   // Uses its own real driver entry point; glUnmapBuffer and glUnmapBufferARB may resolve
   // independently.

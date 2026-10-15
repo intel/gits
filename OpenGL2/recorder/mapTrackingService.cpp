@@ -281,14 +281,18 @@ void* MapTrackingService::RegisterRange(GLuint buffer,
   return applicationPointer;
 }
 
-void MapTrackingService::AssertNoShadowPointerQuery(GLuint buffer, void* pointer) {
+void* MapTrackingService::TranslateShadowPointerQuery(GLuint buffer, void* pointer) {
   if (pointer == nullptr) {
-    return;
+    return nullptr;
   }
   std::lock_guard<std::mutex> lock(m_MappedBuffersMutex);
   const auto it = m_MappedBuffers.find(Key{CurrentShareGroup(), buffer});
-  GITS_ASSERT(it == m_MappedBuffers.end() || it->second.Shadow.empty(),
-              "Buffer map pointer queries are not supported for shadow mappings");
+  if (it == m_MappedBuffers.end() || it->second.Shadow.empty()) {
+    return pointer;
+  }
+  GITS_ASSERT(pointer == it->second.DriverPointer,
+              "Buffer map pointer query does not match the tracked driver mapping");
+  return it->second.ApplicationPointer;
 }
 
 void MapTrackingService::FlushMappedRange(GLuint buffer,

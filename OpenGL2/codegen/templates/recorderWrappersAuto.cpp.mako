@@ -57,6 +57,7 @@ ${AUTO_GENERATED_HEADER}
 #include "handleArgumentUpdaters.h"
 #include "handleMapService.h"
 #include "layerAuto.h"
+#include "log.h"
 #include "mapTrackingService.h"
 #include "mapTrackingWrappers.h"
 #include "objectNameMapService.h"
@@ -327,6 +328,16 @@ ${ret} APIENTRY Wrapper_${cmd.name}(${param_decls}) {
   // type - turns "T*" into "const T*", changing the pointee's constness instead of the
   // pointer's, which then fails to convert back to `ret` at the return statement below.
   ${ret} result = realFunction(${param_names});
+% endif
+% if cmd.name == 'wglCreateContextAttribsARB':
+    if (record && result != nullptr && attribList != nullptr) {
+        for (const int* attribute = attribList; *attribute != 0; attribute += 2) {
+            if (*attribute == WGL_CONTEXT_PROFILE_MASK_ARB) {
+                GITS_ASSERT((attribute[1] & WGL_CONTEXT_ES_PROFILE_BIT_EXT) == 0,
+                                        "OpenGL ES contexts are not supported by the recorder");
+            }
+        }
+    }
 % endif
 % if cmd.name in buffer_content_hooks:
 <% hook = buffer_content_hooks[cmd.name] %>\
