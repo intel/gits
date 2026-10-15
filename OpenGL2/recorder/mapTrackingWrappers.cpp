@@ -77,6 +77,18 @@ std::mutex g_WarnedTargetsMutex;
 std::unordered_set<GLenum> g_WarnedUnrecognizedTargets;
 std::unordered_set<GLenum> g_WarnedNoBufferBound;
 
+std::once_flag g_WarnedCoherentMapping;
+
+void ReportUnsupportedCoherentMapping(GLuint buffer) {
+  std::call_once(g_WarnedCoherentMapping, [buffer] {
+    LOG_ERROR << "CustomWrapper_glMapBufferRange: application created a persistent coherent "
+                 "mapping for buffer "
+              << buffer
+              << ". Capturing coherent mapped-memory updates "
+                 "is not supported yet; the recorded stream is expected to replay incorrectly.";
+  });
+}
+
 // Resolves the real, live GLuint currently bound to `target` via glGetIntegerv - see
 // Decision 4. Returns 0 (with a single warning per unique target) if `target` is not one of
 // the buffer targets this plan tracks, or if the query succeeds but nothing is bound there.
@@ -142,7 +154,13 @@ void* APIENTRY CustomWrapper_glMapBufferRange(GLenum target,
   if (record && result != nullptr) {
     const GLuint buffer = ResolveBoundBuffer(target);
     if (buffer != 0) {
-      MapTrackingService::Get().StoreData(CurrentShareGroup(), buffer,
+      const uint64_t shareGroup = CurrentShareGroup();
+      if (access & GL_MAP_COHERENT_BIT) {
+        ReportUnsupportedCoherentMapping(buffer);
+      }
+      // TODO: Phase 2 should return a GITS-owned shadow for write-only explicit-flush maps so
+      // each flushed range can be captured before unmap without reading a write-only pointer.
+      MapTrackingService::Get().StoreData(shareGroup, buffer,
                                           MappedRange{result, offset, length, access});
     }
   }
@@ -204,6 +222,8 @@ GLboolean APIENTRY CustomWrapper_glUnmapBuffer(GLenum target) {
   // result is what the app's own call returns), then a temporary read-only remap/memcpy/unmap
   // purely for capture, mirroring CgitsUnmapBuffer's own fallback.
   const GLboolean result = realFunction(target);
+  // TODO: Phase 1 storage tracking should avoid a knowingly invalid read remap for immutable
+  // storage without GL_MAP_READ_BIT and use glGetBufferSubData as the correctness fallback.
   auto realMapBufferRange = g_DispatchTable.glMapBufferRange.load(std::memory_order_acquire);
   void* readPointer = realMapBufferRange(target, range->Offset, range->Length, GL_MAP_READ_BIT);
   if (readPointer != nullptr) {
