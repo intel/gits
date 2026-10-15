@@ -47,8 +47,12 @@ ${AUTO_GENERATED_HEADER}
 // object-name (GLuint) fields the same way handle_lifecycle.py does for HGLRC - see
 // docs/development/opengl2-object-name-mapping-plan.md.
 
+#include "bufferShadowService.h"
 #include "captureManager.h"
+#include "clientArraysMetaTypes.h"
+#include "clientArraysService.h"
 #include "clientMemoryCapture.h"
+#include "glEnumsAuto.h"
 #include "commandSerializersAuto.h"
 #include "handleArgumentUpdaters.h"
 #include "handleMapService.h"
@@ -110,11 +114,12 @@ ${ret} APIENTRY Wrapper_${cmd.name}(${param_decls}) {
   // `orderingKey`, not `key`, to avoid colliding with the handful of real GL/WGL parameters
   // literally named `key`/`key0`/`key1` (e.g. glAcquireKeyedMutexWin32EXT).
 % if cmd.name in pre_hook_key_pair_commands:
-  // This command is one of generator_recorder.py's PRE_HOOK_KEY_PAIR_COMMANDS - see that
-  // table's own header comment and CaptureManager::CreateCommandKeyPair()'s own header
-  // comment (captureManager.h) for the full rationale. Reserves BOTH this command's own
-  // orderingKey and a second, spare key for WindowGeometryTrackingLayer's own Pre() override
-  // (the sole consumer, via TakePendingPreHookKey() below) as ONE atomic pair, right here -
+  // This command is one of generator_recorder.py's pre_hook_key_pair_commands() - see that
+  // function's and PRE_HOOK_KEY_PAIR_COMMANDS' own comments and
+  // CaptureManager::CreateCommandKeyPair()'s own header comment (captureManager.h) for the
+  // full rationale. Reserves BOTH this command's own orderingKey and a second, spare key for
+  // the one Pre layer hooking this command (WindowGeometryTrackingLayer or ClientArraysLayer,
+  // via TakePendingPreHookKey()) as ONE atomic pair, right here -
   // the same point a lone CreateCommandKey() call would otherwise occupy - rather than
   // reserving the spare key separately, later, inside that Pre() override itself: reserving
   // them together, before either is ever exposed to another thread, is what actually
@@ -125,11 +130,20 @@ ${ret} APIENTRY Wrapper_${cmd.name}(${param_decls}) {
       record ? CaptureManager::Get().CreateCommandKeyPair() : std::pair<uint64_t, uint64_t>{0, 0};
   const uint64_t orderingKey = preHookKeyPair.second;
   if (record) {
-    // Handed off to WindowGeometryTrackingLayer::Pre() (the sole consumer) via
+    // Handed off to the hooking Pre layer (the sole consumer for this command) via
     // CaptureManager::TakePendingPreHookKey() - see SetPendingPreHookKey()'s own header
     // comment for why this thread-local handoff is safe: the Pre layer loop a few lines below
     // runs on this very thread, before this thread does anything else.
     CaptureManager::Get().SetPendingPreHookKey(preHookKeyPair.first);
+  }
+% elif cmd.name in post_hook_key_pair_commands:
+  // See generator_recorder.py's POST_HOOK_KEY_PAIR_COMMANDS: the second key of the pair is for
+  // a Post layer's metacommand, which must replay right after this command.
+  const auto postHookKeyPair =
+      record ? CaptureManager::Get().CreateCommandKeyPair() : std::pair<uint64_t, uint64_t>{0, 0};
+  const uint64_t orderingKey = postHookKeyPair.first;
+  if (record) {
+    CaptureManager::Get().SetPendingPostHookKey(postHookKeyPair.second);
   }
 % else:
   const uint64_t orderingKey = record ? CaptureManager::Get().CreateCommandKey() : 0;
@@ -170,11 +184,15 @@ ${ret} APIENTRY Wrapper_${cmd.name}(${param_decls}) {
     is_unpack_pbo_guard_in = in_override is not None and in_override.unpack_pbo_guard
     is_indirect_in = (in_override is not None and
                       in_override.length_source_kind == LengthSourceKind.INDIRECT_COMMANDS_BYTE_SIZE)
+    is_element_indices_in = (in_override is not None and
+                             in_override.length_source_kind == LengthSourceKind.ELEMENT_INDICES_BYTE_SIZE)
 %>\
 % if is_pixel_transfer_in or is_unpack_pbo_guard_in:
 , static_cast<${p.type}>(GuardUnpackPixelsPointer("${cmd.name}", ${p.name}))\
 % elif is_indirect_in:
 , GuardDrawIndirectPointer(${p.name})\
+% elif is_element_indices_in:
+, GuardElementArrayPointer(${p.name})\
 % else:
 , ${p.name}\
 % endif
@@ -272,6 +290,20 @@ ${ret} APIENTRY Wrapper_${cmd.name}(${param_decls}) {
     }
   }
 % endif
+% if cmd.name in client_array_setters:
+<%
+    setter = client_array_setters[cmd.name]
+%>\
+  // Reported whether or not this command is enabled - see client_array_draws.py's setter table.
+  if (record) {
+% if setter.kind == 'Interleaved':
+    ClientArraysService::Get().NoteInterleavedArrays(pointer);
+% else:
+    ClientArraysService::Get().NoteArrayPointer(ClientArrayKind::${setter.kind}, ${setter.slot_expr},
+                                                pointer, ${setter.flags});
+% endif
+  }
+% endif
 % if is_void:
   realFunction(${param_names});
 % else:
@@ -280,6 +312,13 @@ ${ret} APIENTRY Wrapper_${cmd.name}(${param_decls}) {
   // type - turns "T*" into "const T*", changing the pointee's constness instead of the
   // pointer's, which then fails to convert back to `ret` at the return statement below.
   ${ret} result = realFunction(${param_names});
+% endif
+% if cmd.name in buffer_content_hooks:
+<% hook = buffer_content_hooks[cmd.name] %>\
+  // Reported whether or not this command is enabled - see buffer_content_hooks.py.
+  if (record${f' && {hook.guard}' if hook.guard else ''}) {
+    BufferShadowService::Get().${hook.call};
+  }
 % endif
   if (record) {
 % if cmd.enabled:
@@ -530,6 +569,9 @@ ${ret} APIENTRY Wrapper_${cmd.name}(${param_decls}) {
     }
 % else:
     ReportUnsupportedCommand("${cmd.name}", orderingKey);
+% endif
+% if cmd.name in post_hook_key_pair_commands:
+    CaptureManager::Get().ReleasePendingPostHookKey();
 % endif
   }
 % if not is_void:

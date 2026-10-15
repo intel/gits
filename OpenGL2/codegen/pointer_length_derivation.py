@@ -287,9 +287,8 @@ _GENERIC_DERIVATION_DENYLIST: frozenset[str] = frozenset({
     # Semaphore object names - a namespace this backend has no object-name mapping for.
     'glAsyncCopyBufferSubDataNVX', 'glAsyncCopyImageSubDataNVX',
     'glClientWaitSemaphoreui64NVX', 'glSignalSemaphoreui64NVX', 'glWaitSemaphoreui64NVX',
-    # `const void *` with a sibling length that is not client data: an element-array-buffer
-    # offset (len="count" counts indices, not bytes), and memory ranges the driver retains.
-    'glDrawElementsInstancedBaseInstance', 'glDrawElementsInstancedBaseInstanceEXT',
+    # `const void *` with a sibling length for memory ranges the driver retains. (Element draws'
+    # `indices` are handled by derive_element_indices_override() before this list applies.)
     'glPixelDataRangeNV', 'glTextureRangeAPPLE',
     # Bindless texture handles / GPU addresses: driver-assigned 64-bit values with no replay-time
     # mapping, so replaying the captured values would reference the wrong memory.
@@ -301,6 +300,9 @@ _GENERIC_DERIVATION_DENYLIST: frozenset[str] = frozenset({
     # replay warning noise" decision.
     'glDebugMessageControl', 'glDebugMessageControlARB', 'glDebugMessageControlKHR',
     'glDebugMessageEnableAMD',
+    # Multi-draws through the APPLE_element_array pointer, whose client-memory vertex arrays
+    # ClientArraysLayer cannot bound (client_array_draws.py).
+    'glMultiDrawElementArrayAPPLE', 'glMultiDrawRangeElementArrayAPPLE',
 })
 
 _GEN_CREATE_DELETE_RE = re.compile(r'^gl(?:Gen|Create|Delete)(?:$|[A-Z])')
@@ -399,6 +401,30 @@ def derive_indirect_draw_override(
     )
 
 
+# glDrawElements*/glDrawRangeElements* single draws. glMultiDrawElements* take an array of index
+# pointers and are classified separately (OPAQUE_BIT_PATTERN_ARRAY).
+_ELEMENT_DRAW_RE = re.compile(r'^glDraw(?:Range)?Elements(?!Indirect)')
+
+
+def derive_element_indices_override(
+    command_name: str, param: Parameter, other_params: list[Parameter],
+) -> PointerParamOverride | None:
+    """ELEMENT_INDICES_BYTE_SIZE override for a single element draw's `indices`, or None.
+    gl.xml's len= is COMPSIZE(count,type) or plain `count` for the same shape."""
+    if (not _ELEMENT_DRAW_RE.match(command_name) or param.name != 'indices' or
+            param.type != 'const void *'):
+        return None
+    scalars = {p.name for p in other_params if p.type_facts.is_scalar}
+    if not {'count', 'type'} <= scalars:
+        return None
+    return PointerParamOverride(
+        direction=PointerDirection.IN,
+        length_source_kind=LengthSourceKind.ELEMENT_INDICES_BYTE_SIZE,
+        length_source_value='count',
+        index_type_param='type',
+    )
+
+
 def derive_pointer_param_override(
     command_name: str, param: Parameter, other_params: list[Parameter],
 ) -> PointerParamOverride | None:
@@ -428,9 +454,10 @@ def derive_pointer_param_override(
     """
     if command_name in _GENERIC_DERIVATION_DENYLIST:
         return None
-    indirect = derive_indirect_draw_override(command_name, param, other_params)
-    if indirect is not None:
-        return indirect
+    for derive in (derive_indirect_draw_override, derive_element_indices_override):
+        derived_draw = derive(command_name, param, other_params)
+        if derived_draw is not None:
+            return derived_draw
     facts = param.type_facts
     if facts.pointer_depth != 1:
         return None

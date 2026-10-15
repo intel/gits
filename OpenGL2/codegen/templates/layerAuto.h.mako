@@ -9,6 +9,7 @@ ${AUTO_GENERATED_HEADER}
 
 #pragma once
 
+#include "clientArraysMetaTypes.h"
 #include "commandsAuto.h"
 #include "layerBase.h"
 #include "mappedDataMetaTypes.h"
@@ -69,6 +70,12 @@ public:
     Pre(static_cast<Command&>(command));
   }
   virtual void Post(WindowGeometryMetaCommand& command) {
+    Post(static_cast<Command&>(command));
+  }
+  virtual void Pre(ClientArraysMetaCommand& command) {
+    Pre(static_cast<Command&>(command));
+  }
+  virtual void Post(ClientArraysMetaCommand& command) {
     Post(static_cast<Command&>(command));
   }
   virtual void Pre(UniformArrayMetaCommand& command) {

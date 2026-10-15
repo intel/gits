@@ -181,6 +181,29 @@ public:
     return key;
   }
 
+  // Post-layer counterpart of SetPendingPreHookKey()/TakePendingPreHookKey(), for
+  // generator_recorder.py's POST_HOOK_KEY_PAIR_COMMANDS: the wrapper keeps the FIRST key of the
+  // pair as its own orderingKey and hands the second to the Post layer that may record a
+  // metacommand replaying right after the hooked call. The layer records under the key only when
+  // it has something to record, so the wrapper calls ReleasePendingPostHookKey() after its Post
+  // loop to skip a key left unconsumed.
+  void SetPendingPostHookKey(uint64_t key) {
+    GITS_ASSERT(s_PendingPostHookKey == 0);
+    s_PendingPostHookKey = key;
+  }
+  uint64_t TakePendingPostHookKey() {
+    GITS_ASSERT(s_PendingPostHookKey != 0);
+    const uint64_t key = s_PendingPostHookKey;
+    s_PendingPostHookKey = 0;
+    return key;
+  }
+  void ReleasePendingPostHookKey() {
+    if (s_PendingPostHookKey != 0) {
+      SkipCommandKey(s_PendingPostHookKey);
+      s_PendingPostHookKey = 0;
+    }
+  }
+
   std::vector<Layer*>& GetPreLayers() {
     return m_PreLayers;
   }
@@ -218,6 +241,7 @@ private:
   // instance - there is only ever one CaptureManager instance anyway, see Get()) rather than a
   // non-static member, since C++ does not allow a non-static thread_local class member at all.
   static thread_local uint64_t s_PendingPreHookKey;
+  static thread_local uint64_t s_PendingPostHookKey;
 };
 
 } // namespace gits::opengl2

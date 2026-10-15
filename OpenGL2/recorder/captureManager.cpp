@@ -8,6 +8,7 @@
 
 #include "captureManager.h"
 
+#include "clientArraysLayerAuto.h"
 #include "encoderLayerAuto.h"
 #include "pixelFormatCaptureLayer.h"
 #include "uniformArrayCaptureLayer.h"
@@ -18,6 +19,7 @@ namespace gits::opengl2 {
 
 // See SetPendingPreHookKey()/TakePendingPreHookKey()'s own header comment (captureManager.h).
 thread_local uint64_t CaptureManager::s_PendingPreHookKey = 0;
+thread_local uint64_t CaptureManager::s_PendingPostHookKey = 0;
 
 CaptureManager& CaptureManager::Get() {
   // Thread-safe function-local static initialization (C++11 "magic statics") replaces a
@@ -68,6 +70,9 @@ void CaptureManager::LoadLayers() {
   // for why running in Pre(), ahead of EncoderLayer's Post-side serialization of the WGL call
   // a given hook is attached to, matters for window-creation ordering on replay.
   m_PreLayers.push_back(new WindowGeometryTrackingLayer());
+  // Records client-memory vertex arrays ahead of the draws that read them - see
+  // clientArraysService.h.
+  m_PreLayers.push_back(new ClientArraysLayer());
   // PixelFormatCaptureLayer must run BEFORE EncoderLayer (see that layer's own header comment
   // for why) - pushed first, since m_PostLayers runs in push_back order and EncoderLayer must
   // stay the LAST entry (see this class's own header comment on that invariant).

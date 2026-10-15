@@ -11,6 +11,8 @@ set(GENERATED_SRC
   ${CMAKE_CURRENT_SOURCE_DIR}/openglDriversAuto.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/encoderLayerAuto.h
   ${CMAKE_CURRENT_SOURCE_DIR}/encoderLayerAuto.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/clientArraysLayerAuto.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/clientArraysLayerAuto.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/recorderWrappersAuto.cpp
 )
 set_source_files_properties(${GENERATED_SRC} PROPERTIES GENERATED TRUE)
@@ -18,7 +20,9 @@ source_group("Generated Files" FILES ${GENERATED_SRC})
 
 add_library(OpenGL2_recorder STATIC
   ${GENERATED_SRC}
+  include/bufferShadowService.h
   include/captureManager.h
+  include/clientArraysService.h
   include/clientMemoryCapture.h
   include/handleArgumentUpdaters.h
   include/mapTrackingService.h
@@ -33,7 +37,9 @@ add_library(OpenGL2_recorder STATIC
   include/unsupportedCommand.h
   include/windowGeometryTrackingLayer.h
   include/windowGeometryTrackingService.h
+  bufferShadowService.cpp
   captureManager.cpp
+  clientArraysService.cpp
   clientMemoryCapture.cpp
   mapTrackingService.cpp
   mapTrackingWrappers.cpp
@@ -65,7 +71,8 @@ target_link_libraries(OpenGL2_recorder
   # GetWindowRect()/IsWindowVisible() User32 exports directly - declared explicitly rather
   # than relying on some other dependency injecting it implicitly, mirroring
   # common/windowing/CMakeLists.txt's own explicit `user32` link on Win32.
-  PRIVATE OpenGL2_services log tbb gdi32 user32
+  # common_interface: messageBus.h, for clientArraysService.cpp's program-exit statistics.
+  PRIVATE OpenGL2_services common_interface log tbb gdi32 user32
 )
 
 set_target_properties(OpenGL2_recorder PROPERTIES FOLDER OpenGL2)

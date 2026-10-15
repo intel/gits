@@ -301,6 +301,15 @@ uint64_t ComputeListNameArrayByteSize(GLsizei n, GLenum type);
 // driver rejects without reading.
 uint64_t ComputeIndirectCommandsByteSize(GLsizei count, GLsizei stride, uint32_t commandSize);
 
+// Size in bytes of one element index of `type` (GL_UNSIGNED_BYTE/SHORT/INT), or 0 for any other
+// value, which the driver rejects.
+uint32_t ElementIndexTypeSize(GLenum type);
+
+// Bytes the driver reads for `count` element indices of `type` - see pointer_metadata.py's
+// LengthSourceKind.ELEMENT_INDICES_BYTE_SIZE. Returns 0 for a non-positive `count` or an
+// unrecognized `type`, which the driver rejects without reading.
+uint64_t ComputeElementIndicesByteSize(GLsizei count, GLenum type);
+
 // Distinguishes the two command families that share ComputeTexOrSamplerParameterValueCount()
 // below - see that function's own comment for why this matters.
 // GL_TEXTURE_SWIZZLE_RGBA (and its single-channel GL_TEXTURE_SWIZZLE_R/G/B/A siblings) is a

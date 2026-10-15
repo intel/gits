@@ -48,6 +48,23 @@ void TraceLayer::Pre(WindowGeometryMetaCommand& command) {
   printer.Finish(m_Flush);
 }
 
+void TraceLayer::Pre(ClientArraysMetaCommand& command) {
+  CommandPrinter printer(m_Stream, m_Mutex, command, "ClientArraysMeta");
+  printer.Add(command.m_ReleasedBlocks);
+  printer.Add(command.m_BlockIds);
+  printer.Add(command.m_BlockSizes);
+  printer.Add(command.m_Data);
+  printer.Add(command.m_Kinds);
+  printer.Add(command.m_Slots);
+  printer.Add(command.m_Sizes);
+  printer.AddEnumArray(command.m_Types, GLenumApi::GL, GLenumGroup::Unknown);
+  printer.Add(command.m_Strides);
+  printer.Add(command.m_Flags);
+  printer.Add(command.m_ArrayBlocks);
+  printer.Add(command.m_ArrayOffsets);
+  printer.Finish(m_Flush);
+}
+
 void TraceLayer::Pre(UniformArrayMetaCommand& command) {
   CommandPrinter printer(m_Stream, m_Mutex, command, "UniformArrayMeta");
   printer.Add(command.m_Program);

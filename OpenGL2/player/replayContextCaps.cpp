@@ -71,6 +71,20 @@ ReplayContextCaps QueryCaps() {
   const ExtensionChecker extensions(version);
   caps.MultiTextureCore = GlVersionAtLeast(version, 1, 3);
   caps.MultiTexture = caps.MultiTextureCore || extensions.Has("GL_ARB_multitexture");
+  caps.SecondaryColorCore = GlVersionAtLeast(version, 1, 4);
+  caps.SecondaryColor = caps.SecondaryColorCore || extensions.Has("GL_EXT_secondary_color");
+  caps.FogCoordCore = GlVersionAtLeast(version, 1, 4);
+  caps.FogCoord = caps.FogCoordCore || extensions.Has("GL_EXT_fog_coord");
+  caps.BufferObjectsCore = GlVersionAtLeast(version, 1, 5);
+  caps.BufferObjects = caps.BufferObjectsCore || extensions.Has("GL_ARB_vertex_buffer_object");
+  caps.GenericAttribsCore = GlVersionAtLeast(version, 2, 0);
+  caps.GenericAttribs = caps.GenericAttribsCore || extensions.Has("GL_ARB_vertex_shader") ||
+                        extensions.Has("GL_ARB_vertex_program");
+  caps.IntegerAttribsCore = GlVersionAtLeast(version, 3, 0);
+  caps.IntegerAttribs = caps.IntegerAttribsCore || extensions.Has("GL_EXT_gpu_shader4");
+  caps.LongAttribsCore =
+      GlVersionAtLeast(version, 4, 1) || extensions.Has("GL_ARB_vertex_attrib_64bit");
+  caps.LongAttribs = caps.LongAttribsCore || extensions.Has("GL_EXT_vertex_attrib_64bit");
   caps.TextureMaxLevel = GlVersionAtLeast(version, 1, 2) || extensions.Has("GL_SGIS_texture_lod");
   caps.SamplerObjects = GlVersionAtLeast(version, 3, 3) || extensions.Has("GL_ARB_sampler_objects");
   caps.DirectStateAccess =
@@ -99,6 +113,16 @@ ReplayContextCaps QueryCaps() {
     getIntegerv(GL_MAX_TEXTURE_UNITS, &units);
   }
   caps.TextureUnits = units > 0 ? units : 1;
+  GLint coordUnits = 1;
+  if (GlVersionAtLeast(version, 2, 0)) {
+    // Core and forward-compatible contexts removed it with the client arrays it limits.
+    if (!core) {
+      getIntegerv(GL_MAX_TEXTURE_COORDS, &coordUnits);
+    }
+  } else if (caps.MultiTexture) {
+    getIntegerv(GL_MAX_TEXTURE_UNITS, &coordUnits);
+  }
+  caps.TextureCoordUnits = coordUnits > 0 ? coordUnits : 1;
   return caps;
 }
 

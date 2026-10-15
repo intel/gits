@@ -163,7 +163,8 @@ def pointer_needs_raw_offset_capture(override: PointerParamOverride | None) -> b
     """True for a pointer-shaped parameter whose ArrayArgument<T> capture
     is routed through one of the buffer-object-aware guards (GuardUnpackPixelsPointer/
     GuardPackPixelsPointer for PIXEL_TRANSFER_SIZE and unpack_pbo_guard, GuardQueryBufferPointer
-    for query_buffer_guard, GuardDrawIndirectPointer for INDIRECT_COMMANDS_BYTE_SIZE - see
+    for query_buffer_guard, GuardDrawIndirectPointer for INDIRECT_COMMANDS_BYTE_SIZE,
+    GuardElementArrayPointer for ELEMENT_INDICES_BYTE_SIZE - see
     clientMemoryCapture.h) - i.e. every case where a bound
     buffer object can turn this parameter's real, live value into a byte offset rather than a
     dereferenceable client pointer, and the guard responds by suppressing the ArrayArgument<T>
@@ -185,7 +186,8 @@ def pointer_needs_raw_offset_capture(override: PointerParamOverride | None) -> b
         return False
     return (override.unpack_pbo_guard or override.query_buffer_guard or
             override.length_source_kind in (LengthSourceKind.PIXEL_TRANSFER_SIZE,
-                                             LengthSourceKind.INDIRECT_COMMANDS_BYTE_SIZE))
+                                             LengthSourceKind.INDIRECT_COMMANDS_BYTE_SIZE,
+                                             LengthSourceKind.ELEMENT_INDICES_BYTE_SIZE))
 
 
 def pointer_needs_pixel_transfer_unknown_flag(override: PointerParamOverride | None) -> bool:

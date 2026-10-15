@@ -605,9 +605,35 @@ class EndToEndEnabledGateTests(unittest.TestCase):
         # See docs/development/opengl2-rendering-pipeline-pointer-support-plan.md's
         # offset-vs-pointer decision - the pointer's bit pattern is captured, never
         # dereferenced.
-        for name in ('glVertexAttribPointer', 'glDrawElements'):
+        self.assertTrue(self._get_command(Api.GL, 'glVertexAttribPointer').enabled)
+
+    def test_element_draws_capture_client_indices(self) -> None:
+        # `indices` is client memory unless a GL_ELEMENT_ARRAY_BUFFER is bound; both forms are
+        # captured (bytes plus raw pointer), so every single element draw is enabled.
+        from generator_helpers import pointer_override_for, pointer_needs_raw_offset_capture
+        from pointer_metadata import LengthSourceKind
+        for name in (
+            'glDrawElements', 'glDrawElementsBaseVertex', 'glDrawElementsInstanced',
+            'glDrawElementsInstancedBaseVertex', 'glDrawElementsInstancedBaseInstance',
+            'glDrawElementsInstancedBaseVertexBaseInstance', 'glDrawRangeElements',
+            'glDrawRangeElementsBaseVertex',
+        ):
             with self.subTest(command=name):
-                self.assertTrue(self._get_command(Api.GL, name).enabled)
+                cmd = self._get_command(Api.GL, name)
+                self.assertTrue(cmd.enabled)
+                override = pointer_override_for(cmd, 'indices')
+                self.assertEqual(override.length_source_kind,
+                                 LengthSourceKind.ELEMENT_INDICES_BYTE_SIZE)
+                self.assertEqual(override.length_source_value, 'count')
+                self.assertEqual(override.index_type_param, 'type')
+                self.assertTrue(pointer_needs_raw_offset_capture(override))
+
+    def test_multi_draw_elements_keep_opaque_index_pointers(self) -> None:
+        from generator_helpers import pointer_override_for
+        from pointer_metadata import LengthSourceKind
+        cmd = self._get_command(Api.GL, 'glMultiDrawElementsBaseVertex')
+        self.assertEqual(pointer_override_for(cmd, 'indices').length_source_kind,
+                         LengthSourceKind.OPAQUE_BIT_PATTERN_ARRAY)
 
     def test_legacy_client_vertex_array_pointers_are_enabled(self) -> None:
         # glVertexPointer/glColorPointer/glNormalPointer/glTexCoordPointer/
@@ -626,8 +652,7 @@ class EndToEndEnabledGateTests(unittest.TestCase):
                 self.assertTrue(self._get_command(Api.GL, name).enabled)
 
     def test_draw_elements_base_vertex_is_enabled(self) -> None:
-        # glDrawElementsBaseVertex's `indices` shares glDrawElements' exact OPAQUE_BIT_PATTERN
-        # shape; `basevertex` is a plain GLint scalar needing no override.
+        # `basevertex` is a plain GLint scalar needing no override.
         self.assertTrue(self._get_command(Api.GL, 'glDrawElementsBaseVertex').enabled)
 
     def test_material_and_point_parameter_commands_are_enabled(self) -> None:
@@ -876,7 +901,6 @@ class EndToEndEnabledGateTests(unittest.TestCase):
             'glCullParameterfvEXT',                         # IN array declared without const
             'glGenFencesNV', 'glDeleteFencesNV',            # names without object-name mapping
             'glGetAttachedShaders',                         # OUT existing-object names
-            'glDrawElementsInstancedBaseInstance',          # element-array offset, not bytes
             'glGetTexImage',                                # OUT void*, pack-buffer offset
         ):
             with self.subTest(command=name):

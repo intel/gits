@@ -22,6 +22,7 @@ add_library(OpenGL2_player STATIC
   include/playerLayerManager.h
   include/playerManager.h
   include/realDriver.h
+  include/clientArraysMetaRunner.h
   include/discardedOutputElements.h
   include/hdcVirtualizationService.h
   include/handleArgumentUpdaters.h
@@ -36,6 +37,7 @@ add_library(OpenGL2_player STATIC
   realDriver.cpp
   playerLayerManager.cpp
   playerManager.cpp
+  clientArraysMetaRunner.cpp
   discardedOutputElements.cpp
   hdcVirtualizationService.cpp
   mappedDataMetaRunner.cpp

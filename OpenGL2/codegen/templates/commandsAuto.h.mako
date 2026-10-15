@@ -185,6 +185,10 @@ TexOrSamplerParameterCommand::${'kTexParameter' if override.tex_sampler_family =
 ## GuardDrawIndirectPointer() found a GL_DRAW_INDIRECT_BUFFER bound. IN direction only.
 , m_${p.name}(${arg_expr}, ComputeIndirectCommandsByteSize(\
 ${override.length_source_value or '1'}, ${override.indirect_stride_param or '0'}, ${override.indirect_command_size}u))\
+% elif override.length_source_kind == LengthSourceKind.ELEMENT_INDICES_BYTE_SIZE:
+## Indices read from client memory; null (no capture) when the recorder's
+## GuardElementArrayPointer() found a GL_ELEMENT_ARRAY_BUFFER bound. IN direction only.
+, m_${p.name}(${arg_expr}, ComputeElementIndicesByteSize(${override.length_source_value}, ${override.index_type_param}))\
 % elif override.length_source_kind == LengthSourceKind.LIST_NAME_ARRAY_BYTE_SIZE:
 ## glCallLists' COMPSIZE(n,type). IN direction only.
 , m_${p.name}(${arg_expr}, ComputeListNameArrayByteSize(${override.length_source_value}, ${override.list_type_param}))\

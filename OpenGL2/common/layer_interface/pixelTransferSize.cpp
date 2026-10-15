@@ -506,6 +506,26 @@ uint64_t ComputeIndirectCommandsByteSize(GLsizei count, GLsizei stride, uint32_t
   return (static_cast<uint64_t>(count) - 1) * step + commandSize;
 }
 
+uint32_t ElementIndexTypeSize(GLenum type) {
+  switch (type) {
+  case 0x1401: // GL_UNSIGNED_BYTE
+    return 1;
+  case 0x1403: // GL_UNSIGNED_SHORT
+    return 2;
+  case 0x1405: // GL_UNSIGNED_INT
+    return 4;
+  default:
+    return 0;
+  }
+}
+
+uint64_t ComputeElementIndicesByteSize(GLsizei count, GLenum type) {
+  if (count <= 0) {
+    return 0;
+  }
+  return static_cast<uint64_t>(count) * ElementIndexTypeSize(type);
+}
+
 uint32_t ComputeClearBufferValueCount(GLenum buffer) {
   switch (buffer) {
   case 0x1800: // GL_COLOR

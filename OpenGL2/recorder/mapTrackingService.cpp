@@ -8,6 +8,7 @@
 
 #include "mapTrackingService.h"
 
+#include "bufferShadowService.h"
 #include "captureManager.h"
 #include "clientMemoryCapture.h"
 #include "glEnumsAuto.h"
@@ -70,10 +71,13 @@ GLenum BindingPnameForTarget(GLenum target) {
 // narrowing here would reintroduce the exact truncation bug MappedDataMetaCommand's already
 // 64-bit coding path was fixed to avoid (see mappedDataMetaTypes.h).
 void RecordMappedDataMetaCommand(uint64_t key,
+                                 uint64_t shareGroup,
                                  GLuint buffer,
                                  GLintptr offset,
                                  GLsizeiptr length,
                                  const std::vector<uint8_t>& bytes) {
+  BufferShadowService::Get().OnMappedBytes(shareGroup, buffer, static_cast<uint64_t>(offset),
+                                           bytes);
   MappedDataMetaCommand command(static_cast<uint32_t>(GetCurrentThreadId()));
   command.m_Buffer.Value = buffer;
   UpdateHandle(command.m_Buffer, GLObjectKind::Buffer);
@@ -129,8 +133,9 @@ void MapTrackingService::OnMapBufferRange(
 GLboolean MapTrackingService::UnmapBufferAndCapture(GLenum target) {
   auto realUnmapBuffer = g_DispatchTable.glUnmapBuffer.load(std::memory_order_acquire);
   const GLuint buffer = ResolveBoundBuffer(target);
+  const uint64_t shareGroup = CurrentShareGroup();
   std::optional<MappedRange> range =
-      buffer != 0 ? TakeMappedRange(CurrentShareGroup(), buffer) : std::nullopt;
+      buffer != 0 ? TakeMappedRange(shareGroup, buffer) : std::nullopt;
   // Nothing tracked (the mapping did not come through glMapBufferRange, the buffer did not
   // resolve, ...), or a genuinely read-only mapping - see Decision 5's third bullet. There is
   // nothing to snapshot, so no ordering key is reserved for this call at all.
@@ -152,7 +157,7 @@ GLboolean MapTrackingService::UnmapBufferAndCapture(GLenum target) {
     std::memcpy(bytes.data(), range->Pointer, bytes.size());
     const GLboolean result = realUnmapBuffer(target);
     if (result == GL_TRUE) {
-      RecordMappedDataMetaCommand(key, buffer, range->Offset, range->Length, bytes);
+      RecordMappedDataMetaCommand(key, shareGroup, buffer, range->Offset, range->Length, bytes);
     } else {
       // GL_FALSE means the data store became corrupted and its contents are undefined for an
       // implementation-specific reason. `bytes` was copied while the pointer was still valid,
@@ -177,7 +182,7 @@ GLboolean MapTrackingService::UnmapBufferAndCapture(GLenum target) {
     std::memcpy(bytes.data(), readPointer, bytes.size());
     realUnmapBuffer(target); // Second, purely internal unmap - its result is not the app's.
     if (result == GL_TRUE) {
-      RecordMappedDataMetaCommand(key, buffer, range->Offset, range->Length, bytes);
+      RecordMappedDataMetaCommand(key, shareGroup, buffer, range->Offset, range->Length, bytes);
     } else {
       // GL_FALSE means the data store became corrupted and its contents are undefined for an
       // implementation-specific reason. Do not read or record those undefined contents.
@@ -235,9 +240,14 @@ void MapTrackingService::OnMapBuffer(GLenum target, GLenum access, void* mappedP
   // same "ask the driver, don't hand-roll tracking" precedent Decision 4 already established
   // for the bound-buffer lookup itself, applied to a second piece of state this function's own
   // parameter list simply does not carry.
-  GLint size = 0;
-  GetBoundBufferParameter(target, GL_BUFFER_SIZE, size);
-  StoreWholeBufferMap(CurrentShareGroup(), buffer, access, mappedPointer, size);
+  GLint64 size = 0;
+  if (!GetBoundBufferSize(target, size) || size <= 0) {
+    LOG_WARNING << "MapTrackingService: GL_BUFFER_SIZE of buffer " << buffer
+                << " could not be queried - buffer-map tracking skipped for this map";
+    return;
+  }
+  StoreWholeBufferMap(CurrentShareGroup(), buffer, access, mappedPointer,
+                      static_cast<GLsizeiptr>(size));
 }
 
 void MapTrackingService::OnMapNamedBufferEXT(GLuint buffer, GLenum access, void* mappedPointer) {
@@ -248,12 +258,28 @@ void MapTrackingService::OnMapNamedBufferEXT(GLuint buffer, GLenum access, void*
   // is queried the same way, but via the DSA-EXT getter (glGetNamedBufferParameterivEXT):
   // this backend has only been observed capturing the EXT-suffixed DSA family, not core
   // (GL 4.5) DSA, so the EXT-suffixed getter is used for consistency rather than assuming core
-  // DSA support also exists.
-  GLint size = 0;
-  auto realGetNamedBufferParameterivEXT =
-      g_DispatchTable.glGetNamedBufferParameterivEXT.load(std::memory_order_acquire);
-  realGetNamedBufferParameterivEXT(buffer, GL_BUFFER_SIZE, &size);
-  StoreWholeBufferMap(CurrentShareGroup(), buffer, access, mappedPointer, size);
+  // DSA support also exists. The EXT family has no 64-bit getter, so a GL 4.5 context's core
+  // glGetNamedBufferParameteri64v is used when available, since GL_BUFFER_SIZE is a GLsizeiptr.
+  GLint64 size = 0;
+  const auto [major, minor] = CurrentContextGLVersion();
+  if (major > 4 || (major == 4 && minor >= 5)) {
+    auto realGetNamedBufferParameteri64v =
+        g_DispatchTable.glGetNamedBufferParameteri64v.load(std::memory_order_acquire);
+    realGetNamedBufferParameteri64v(buffer, GL_BUFFER_SIZE, &size);
+  } else {
+    GLint size32 = 0;
+    auto realGetNamedBufferParameterivEXT =
+        g_DispatchTable.glGetNamedBufferParameterivEXT.load(std::memory_order_acquire);
+    realGetNamedBufferParameterivEXT(buffer, GL_BUFFER_SIZE, &size32);
+    size = size32;
+  }
+  if (size <= 0) {
+    LOG_WARNING << "MapTrackingService: GL_BUFFER_SIZE of buffer " << buffer
+                << " could not be queried - buffer-map tracking skipped for this map";
+    return;
+  }
+  StoreWholeBufferMap(CurrentShareGroup(), buffer, access, mappedPointer,
+                      static_cast<GLsizeiptr>(size));
 }
 
 void MapTrackingService::OnMapNamedBufferRangeEXT(
@@ -294,7 +320,7 @@ GLboolean MapTrackingService::SnapshotBufferAndUnmap(
     std::memcpy(bytes.data(), range->Pointer, bytes.size());
     const GLboolean result = realUnmap();
     if (result == GL_TRUE) {
-      RecordMappedDataMetaCommand(key, buffer, range->Offset, range->Length, bytes);
+      RecordMappedDataMetaCommand(key, shareGroup, buffer, range->Offset, range->Length, bytes);
     } else {
       LOG_WARNING << "MapTrackingService (" << callerName << "): real unmap of buffer " << buffer
                   << " returned GL_FALSE (data store contents corrupted per spec) - no "
@@ -313,7 +339,7 @@ GLboolean MapTrackingService::SnapshotBufferAndUnmap(
     std::memcpy(bytes.data(), readPointer, bytes.size());
     realInternalUnmap(); // Second, purely internal unmap - its result is not the app's.
     if (result == GL_TRUE) {
-      RecordMappedDataMetaCommand(key, buffer, range->Offset, range->Length, bytes);
+      RecordMappedDataMetaCommand(key, shareGroup, buffer, range->Offset, range->Length, bytes);
     } else {
       LOG_WARNING << "MapTrackingService (" << callerName << "): real unmap of buffer " << buffer
                   << " returned GL_FALSE (data store contents corrupted per spec) - no "
@@ -406,6 +432,9 @@ void MapTrackingService::ReportUnsupportedCoherentMapping(GLuint buffer) {
 void MapTrackingService::StoreMappedRange(uint64_t shareGroup,
                                           GLuint buffer,
                                           const MappedRange& range) {
+  if (range.Access & GL_MAP_WRITE_BIT) {
+    BufferShadowService::Get().OnMapWrite(shareGroup, buffer, range.Access);
+  }
   const Key key{shareGroup, buffer};
   std::lock_guard<std::mutex> lock(m_MappedBuffersMutex);
   m_MappedBuffers[key] = range;

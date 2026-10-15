@@ -28,6 +28,7 @@ add_library(OpenGL2_layer_interface STATIC
   ${GENERATED_SRC}
   arguments.h
   argumentCoders.h
+  clientArraysMetaTypes.h
   command.h
   layerBase.h
   mappedDataMetaTypes.h

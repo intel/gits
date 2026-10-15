@@ -239,6 +239,12 @@ class LengthSourceKind(StrEnum):
         # `indirect_command_size` the size of one Draw*IndirectCommand. See
         # gits::opengl2::ComputeIndirectCommandsByteSize() (pixelTransferSize.h) and
         # GuardDrawIndirectPointer() (clientMemoryCapture.h). IN direction only.
+    ELEMENT_INDICES_BYTE_SIZE = 'element_indices_byte_size'  # glDraw[Range]Elements*'s
+        # `indices`: client memory only when no GL_ELEMENT_ARRAY_BUFFER is bound, otherwise a
+        # byte offset into it. length_source_value names the `count` sibling and
+        # `index_type_param` the index `type` sibling. See
+        # gits::opengl2::ComputeElementIndicesByteSize() (pixelTransferSize.h) and
+        # GuardElementArrayPointer() (clientMemoryCapture.h). IN direction only.
     LIST_NAME_ARRAY_BYTE_SIZE = 'list_name_array_byte_size'  # glCallLists' COMPSIZE(n,type):
         # length_source_value names the count sibling, `list_type_param` the ListNameType enum
         # sibling (GL_UNSIGNED_BYTE, GL_2_BYTES, ...). See
@@ -301,6 +307,10 @@ class PointerParamOverride:
     # comment. None/0 for every other kind.
     indirect_stride_param: str | None = None
     indirect_command_size: int = 0
+
+    # Only meaningful when length_source_kind is ELEMENT_INDICES_BYTE_SIZE - the sibling index
+    # `type` param name. None for every other kind.
+    index_type_param: str | None = None
 
     # Only meaningful when length_source_kind is TEX_SAMPLER_PARAMETER_VALUE_COUNT,
     # PATCH_PARAMETER_VALUE_COUNT, MATERIAL_PARAMETER_VALUE_COUNT, POINT_PARAMETER_VALUE_COUNT,
@@ -530,18 +540,10 @@ POINTER_PARAM_OVERRIDES: dict[tuple[str, str], PointerParamOverride] = {
     # LengthSourceKind.OPAQUE_BIT_PATTERN's own comment above.
     ('glVertexAttribPointer', 'pointer'): PointerParamOverride(
         direction=PointerDirection.IN, length_source_kind=LengthSourceKind.OPAQUE_BIT_PATTERN),
-    ('glDrawElements', 'indices'): PointerParamOverride(
-        direction=PointerDirection.IN, length_source_kind=LengthSourceKind.OPAQUE_BIT_PATTERN),
-    ('glDrawElementsInstanced', 'indices'): PointerParamOverride(
-        direction=PointerDirection.IN, length_source_kind=LengthSourceKind.OPAQUE_BIT_PATTERN),
-    ('glDrawElementsInstancedBaseVertex', 'indices'): PointerParamOverride(
-        direction=PointerDirection.IN, length_source_kind=LengthSourceKind.OPAQUE_BIT_PATTERN),
-    # glDrawElementsBaseVertex(mode, count, type, indices, basevertex): identical `indices` shape
-    # to glDrawElements above (gl.xml: same `len="COMPSIZE(count,type)"` const void* pointer) -
-    # `basevertex` is a plain GLint scalar needing no override, same as glDrawElementsInstanced-
-    # BaseVertex's own `basevertex`. Missing table entry only.
-    ('glDrawElementsBaseVertex', 'indices'): PointerParamOverride(
-        direction=PointerDirection.IN, length_source_kind=LengthSourceKind.OPAQUE_BIT_PATTERN),
+    # glDrawElements*'s `indices` USED TO be OPAQUE_BIT_PATTERN here too. That is only correct
+    # with a GL_ELEMENT_ARRAY_BUFFER bound; the whole family is now derived as
+    # ELEMENT_INDICES_BYTE_SIZE - see pointer_length_derivation.py's
+    # derive_element_indices_override().
 
     # Legacy fixed-function client vertex-array pointers (glVertexPointer/glColorPointer/
     # glNormalPointer/glTexCoordPointer/glSecondaryColorPointer): gl.xml gives each `pointer`
@@ -550,6 +552,9 @@ POINTER_PARAM_OVERRIDES: dict[tuple[str, str], PointerParamOverride] = {
     # byte-offset duality (these predate generic vertex attributes but share GL_ARRAY_BUFFER
     # binding semantics via glBindBuffer since GL 1.5) - same OPAQUE_BIT_PATTERN shape, missing
     # table entries only. `size`/`type`/`stride` on each are plain scalars needing no override.
+    # The pointer value alone is enough: client-memory arrays are re-specified before every draw
+    # that reads them, from data captured at that draw (see ClientArraysMetaCommand,
+    # clientArraysMetaTypes.h).
     ('glVertexPointer', 'pointer'): PointerParamOverride(
         direction=PointerDirection.IN, length_source_kind=LengthSourceKind.OPAQUE_BIT_PATTERN),
     ('glColorPointer', 'pointer'): PointerParamOverride(
@@ -1090,15 +1095,6 @@ POINTER_PARAM_OVERRIDES: dict[tuple[str, str], PointerParamOverride] = {
     # compatibility profile sources the command from client memory when none is bound. The
     # whole indirect-draw family is now derived as INDIRECT_COMMANDS_BYTE_SIZE - see
     # pointer_length_derivation.py's derive_indirect_draw_override().
-
-    # glDrawElementsInstancedBaseVertexBaseInstance's `indices`: len="count" structurally, but
-    # (like glDrawElements/glDrawElementsInstanced/glDrawElementsInstancedBaseVertex above) the
-    # real semantics are the client-memory-pointer-or-GL_ELEMENT_ARRAY_BUFFER-relative-offset
-    # duality that len= cannot express - same OPAQUE_BIT_PATTERN treatment as those three,
-    # ignoring the len="count" annotation entirely, exactly as they already do.
-    ('glDrawElementsInstancedBaseVertexBaseInstance', 'indices'): PointerParamOverride(
-        direction=PointerDirection.IN, length_source_kind=LengthSourceKind.OPAQUE_BIT_PATTERN),
-
     # glGetSubroutineIndex/glGetSubroutineUniformLocation/glGetAttribLocation's `name`: no len=
     # at all - a plain null-terminated GLchar*, identical shape to glGetUniformLocation/
     # glBindAttribLocation's own `name` above, just missing table entries.

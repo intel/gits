@@ -10,6 +10,8 @@
 
 #include "glTypes.h"
 
+#include <utility>
+
 namespace gits::opengl2 {
 
 // Guards against treating a pixel-transfer "pointer" as client memory when it is actually a
@@ -103,10 +105,37 @@ const void* GuardQueryBufferPointer(const char* commandName, const void* params)
 // guards exists only where GL_DRAW_INDIRECT_BUFFER_BINDING is a legal enum.
 const void* GuardDrawIndirectPointer(const void* indirect);
 
+// Returns nullptr when a GL_ELEMENT_ARRAY_BUFFER is bound, in which case an element draw's
+// `indices` is a byte offset into that buffer; returns `indices` unchanged otherwise (client
+// memory). No warning, for the same reason as GuardDrawIndirectPointer(). Probes buffer object
+// support first: glDrawElements predates GL 1.5, where the binding enum does not exist.
+const void* GuardElementArrayPointer(const void* indices);
+
+// Whether the current context has a GL_ELEMENT_ARRAY_BUFFER bound. False on contexts without
+// buffer object support.
+bool ElementArrayBufferIsBound();
+
+// Whether the current context has glCopyBufferSubData (GL 3.1 / ARB_copy_buffer). Cached per
+// context, like the feature probes behind the guards above.
+bool ContextSupportsCopyBuffer();
+
+// (major, minor) parsed from the current context's GL_VERSION; (0, 0) if it cannot be parsed,
+// which callers treat as "supports nothing".
+std::pair<int, int> CurrentContextGLVersion();
+
+// Whether the current context (of GL major version `major`, from CurrentContextGLVersion())
+// lists `extensionName`, using only the enumeration form legal on that version.
+bool CurrentContextHasExtension(int major, const char* extensionName);
+
 // glGetBufferParameteriv of the buffer bound to `target`, through the core entry point or, on a
 // context exposing only ARB_vertex_buffer_object, glGetBufferParameterivARB. False (and `value`
 // untouched) if neither resolved.
 bool GetBoundBufferParameter(GLenum target, GLenum pname, GLint& value);
+
+// GL_BUFFER_SIZE of the buffer bound to `target`. GL_BUFFER_SIZE is a GLsizeiptr, so it is
+// queried through glGetBufferParameteri64v on a GL 3.2+ context; older contexts only have the
+// 32-bit getter of GetBoundBufferParameter. False (and `size` untouched) if no getter resolved.
+bool GetBoundBufferSize(GLenum target, GLint64& size);
 
 // Note: pixelTransferSize.h's QueryUnpackAlignment()/QueryPackAlignment() are declared there
 // (shared common/layer_interface code) but DEFINED in this file's .cpp, not this header - see

@@ -15,6 +15,7 @@ ${AUTO_GENERATED_HEADER}
 // for every backend (see docs/development/opengl2-player-skeleton-plan.md's Decision 2).
 
 #include "openGL2CommandFactory.h"
+#include "clientArraysMetaRunner.h"
 #include "commandIdsAuto.h"
 #include "commandRunnersAuto.h"
 #include "commandRunnersCustom.h"
@@ -29,13 +30,16 @@ stream::CommandRunner* OpenGL2CommandFactory::CreateCommand(unsigned id) {
   switch (static_cast<CommandId>(id)) {
   // Hand-written cases; not part of the per-command loop below - see
   // player/include/unsupportedCommandRunner.h, player/include/mappedDataMetaRunner.h,
-  // player/include/windowGeometryMetaRunner.h and player/include/uniformArrayMetaRunner.h.
+  // player/include/windowGeometryMetaRunner.h, player/include/clientArraysMetaRunner.h and
+  // player/include/uniformArrayMetaRunner.h.
   case CommandId::ID_META_UNSUPPORTED_COMMAND:
     return new UnsupportedCommandRunner();
   case CommandId::ID_META_MAPPED_DATA:
     return new MappedDataMetaRunner();
   case CommandId::ID_META_WINDOW_GEOMETRY:
     return new WindowGeometryMetaRunner();
+  case CommandId::ID_META_CLIENT_ARRAYS:
+    return new ClientArraysMetaRunner();
   case CommandId::ID_META_UNIFORM_ARRAY:
     return new UniformArrayMetaRunner();
 % for name, runner_class in custom_player_runners.items():

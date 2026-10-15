@@ -13,6 +13,8 @@ set_target_properties(OpenGL2_codegen PROPERTIES FOLDER OpenGL2)
 
 set(SCRIPTS_SRC
   array_of_arrays_metadata.py
+  buffer_content_hooks.py
+  client_array_draws.py
   command_ids.py
   custom_player_runners.py
   intermediates.py
@@ -76,6 +78,8 @@ set(OPENGL2_GENERATED_RECORDER_FILES
   ${OPENGL2_RECORDER_DIR}/openglDriversAuto.cpp
   ${OPENGL2_RECORDER_DIR}/encoderLayerAuto.h
   ${OPENGL2_RECORDER_DIR}/encoderLayerAuto.cpp
+  ${OPENGL2_RECORDER_DIR}/clientArraysLayerAuto.h
+  ${OPENGL2_RECORDER_DIR}/clientArraysLayerAuto.cpp
   ${OPENGL2_RECORDER_DIR}/recorderWrappersAuto.cpp
 )
 set(OPENGL2_PLAYER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../player)

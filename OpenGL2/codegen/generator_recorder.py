@@ -8,6 +8,8 @@
 #
 # ===================== end_copyright_notice ==============================
 
+from buffer_content_hooks import buffer_content_hooks
+from client_array_draws import client_array_draws, client_array_setters
 from generator_helpers import mako_write
 from handle_lifecycle import (
     CONTEXT_SHARE_PARAM,
@@ -51,8 +53,38 @@ PRE_HOOK_KEY_PAIR_COMMANDS: frozenset[str] = frozenset({
 })
 
 
+# Commands whose Wrapper_<cmd> reserves a key pair whose SECOND key goes to a Post layer, for a
+# metacommand that must replay right after the hooked call with no other thread's command in
+# between - see CaptureManager::SetPendingPostHookKey() (captureManager.h). Exclusively
+# UniformArrayCaptureLayer's glGetUniformLocation today: a glUniform* on another thread using a
+# computed array-element location must not replay before the UniformArrayMetaCommand that maps it.
+POST_HOOK_KEY_PAIR_COMMANDS: frozenset[str] = frozenset({
+    'glGetUniformLocation',
+})
+
+
+def pre_hook_key_pair_commands(commands: list[Command]) -> frozenset[str]:
+    """PRE_HOOK_KEY_PAIR_COMMANDS plus ClientArraysLayer's draws (client_array_draws.py), which
+    record a ClientArraysMetaCommand under the spare key the same way. The two sets must not
+    overlap: the pending key has a single consumer per call."""
+    draws = frozenset(client_array_draws(commands))
+    overlap = draws & PRE_HOOK_KEY_PAIR_COMMANDS
+    if overlap:
+        raise ValueError(f"pre-hook key pair commands with two consumers: {sorted(overlap)}")
+    pre_hook = PRE_HOOK_KEY_PAIR_COMMANDS | draws
+    if pre_hook & POST_HOOK_KEY_PAIR_COMMANDS:
+        raise ValueError("commands with both a pre-hook and a post-hook key pair: "
+                         f"{sorted(pre_hook & POST_HOOK_KEY_PAIR_COMMANDS)}")
+    return pre_hook
+
+
 def generate_recorder_files(commands: list[Command]) -> None:
     """Generate forwarding wrappers and real-driver dispatch for interceptor commands."""
+    draws = client_array_draws(commands)
+    mako_write('templates/clientArraysLayerAuto.h.mako',
+               'recorder/clientArraysLayerAuto.h', client_array_draws=draws)
+    mako_write('templates/clientArraysLayerAuto.cpp.mako',
+               'recorder/clientArraysLayerAuto.cpp', client_array_draws=draws)
     mako_write('templates/openglDriversAuto.h.mako',
                'recorder/include/openglDriversAuto.h', commands=commands)
     mako_write('templates/openglDriversAuto.cpp.mako',
@@ -64,7 +96,10 @@ def generate_recorder_files(commands: list[Command]) -> None:
                mapped_handle_service_names=MAPPED_HANDLE_SERVICE_NAMES,
                context_share_param=CONTEXT_SHARE_PARAM,
                share_lists_commands=SHARE_LISTS_COMMANDS,
-               pre_hook_key_pair_commands=PRE_HOOK_KEY_PAIR_COMMANDS)
+               pre_hook_key_pair_commands=pre_hook_key_pair_commands(commands),
+               post_hook_key_pair_commands=POST_HOOK_KEY_PAIR_COMMANDS,
+               client_array_setters=client_array_setters(commands),
+               buffer_content_hooks=buffer_content_hooks(commands))
     # EncoderLayer (docs/development/opengl2-layer-architecture-alignment-plan.md): the sole,
     # last-registered Post layer, dispatched through by the wrapper above via its
     # GetPostLayers() loop instead of calling CaptureManager::RecordCommand() inline.

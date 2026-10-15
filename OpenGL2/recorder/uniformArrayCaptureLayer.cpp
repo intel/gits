@@ -25,7 +25,7 @@ void UniformArrayCaptureLayer::Post(glGetUniformLocationCommand& command) {
         command.m_program.Value, name, location);
     if (element.ArraySize > 1) {
       UniformArrayMetaCommand meta(command.m_ThreadId);
-      meta.m_Key = CaptureManager::Get().CreateCommandKey();
+      meta.m_Key = CaptureManager::Get().TakePendingPostHookKey();
       meta.m_Program.Value = command.m_program.Key;
       meta.m_Name = command.m_name;
       meta.m_Location.Value = location;

@@ -26,7 +26,7 @@ CODEGEN_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(CODEGEN_DIR))
 
 from generator_helpers import mako_render
-from generator_recorder import PRE_HOOK_KEY_PAIR_COMMANDS
+from generator_recorder import POST_HOOK_KEY_PAIR_COMMANDS, PRE_HOOK_KEY_PAIR_COMMANDS
 from intermediates import Api, CmdType, Command, ReturnValue
 
 TEMPLATE_PATH = str(CODEGEN_DIR / 'templates' / 'recorderWrappersAuto.cpp.mako')
@@ -42,13 +42,16 @@ def fake_command(name: str) -> Command:
         return_value=ReturnValue(type='void'), params=[])
 
 
-def render_wrappers(command_names: tuple[str, ...], pre_hook_key_pair_commands: frozenset[str]) -> str:
+def render_wrappers(command_names: tuple[str, ...], pre_hook_key_pair_commands: frozenset[str],
+                    post_hook_key_pair_commands: frozenset[str] = frozenset()) -> str:
     commands = [fake_command(name) for name in command_names]
     rendered = mako_render(
         TEMPLATE_PATH, commands=commands, handle_creating_commands=frozenset(),
         handle_param_to_erase_on_success={}, mapped_handle_service_names={},
         context_share_param={}, share_lists_commands={},
-        pre_hook_key_pair_commands=pre_hook_key_pair_commands)
+        pre_hook_key_pair_commands=pre_hook_key_pair_commands,
+        post_hook_key_pair_commands=post_hook_key_pair_commands, client_array_setters={},
+        buffer_content_hooks={})
     assert rendered is not None, 'recorderWrappersAuto.cpp.mako failed to render - see stderr'
     return rendered
 
@@ -125,6 +128,21 @@ class PreHookKeyPairWrapperShapeTests(unittest.TestCase):
         self.assertIn('CaptureManager::Get().CreateCommandKeyPair()', body)
         self.assertIn(
             'CaptureManager::Get().SetPendingPreHookKey(preHookKeyPair.first);', body)
+
+
+class PostHookKeyPairTests(unittest.TestCase):
+    def test_exact_membership(self) -> None:
+        self.assertEqual(POST_HOOK_KEY_PAIR_COMMANDS, frozenset({'glGetUniformLocation'}))
+
+    def test_wrapper_keeps_the_first_key_and_releases_an_unconsumed_second(self) -> None:
+        rendered = render_wrappers(('glGetUniformLocation',), frozenset(),
+                                   POST_HOOK_KEY_PAIR_COMMANDS)
+        body = extract_wrapper_body(rendered, 'glGetUniformLocation')
+        self.assertIn('CaptureManager::Get().CreateCommandKeyPair()', body)
+        self.assertIn('const uint64_t orderingKey = postHookKeyPair.first;', body)
+        self.assertIn('CaptureManager::Get().SetPendingPostHookKey(postHookKeyPair.second);', body)
+        self.assertIn('CaptureManager::Get().ReleasePendingPostHookKey();', body)
+        self.assertNotIn('SetPendingPreHookKey', body)
 
 
 if __name__ == '__main__':

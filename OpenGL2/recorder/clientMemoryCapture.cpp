@@ -9,12 +9,12 @@
 #include "clientMemoryCapture.h"
 
 #include "glEnumsAuto.h"
+#include "glVersionString.h"
 #include "handleMapService.h"
 #include "log.h"
 #include "openglDriversAuto.h"
 #include "pixelTransferSize.h"
 
-#include <cstdio>
 #include <mutex>
 #include <string>
 #include <unordered_map>
@@ -37,47 +37,38 @@ GLuint QueryBoundBufferQuiet(GLenum bindingPname) {
   return static_cast<GLuint>(value);
 }
 
-// Parses a GL_VERSION string's leading "<major>.<minor>" (e.g. "3.3.0 NVIDIA 555.85",
-// "4.6 (Core Profile) Mesa 24.0.5") into (major, minor). Returns (0, 0) - deliberately "older
-// than every real version" rather than some sentinel that could accidentally compare >= a
-// small requested version - if the string is null or does not start with two dot-separated
-// integers, matching ContextSupportsGLFeature's own fail-closed philosophy (see that
-// function's own header comment): a version this cannot parse is treated as "does not support
-// the feature being probed for," never as "must be new enough."
-std::pair<int, int> ParseGlVersionMajorMinor(const char* versionString) {
-  if (versionString == nullptr) {
-    return {0, 0};
-  }
-  int major = 0;
-  int minor = 0;
-  if (std::sscanf(versionString, "%d.%d", &major, &minor) != 2) {
-    return {0, 0};
-  }
-  return {major, minor};
+} // namespace
+
+std::pair<int, int> CurrentContextGLVersion() {
+  auto realGetString = g_DispatchTable.glGetString.load(std::memory_order_acquire);
+  return ParseGlVersionMajorMinor(reinterpret_cast<const char*>(realGetString(GL_VERSION)));
 }
 
-// True if the GL_EXTENSIONS space-separated legacy string contains `extensionName` as a whole
-// word - not merely as a substring of some other, longer extension's name (e.g.
-// "GL_ARB_query_buffer_object" must not match inside a hypothetical
-// "GL_ARB_query_buffer_object_v2").
-bool ExtensionsStringContainsWholeWord(const char* extensions, const char* extensionName) {
-  if (extensions == nullptr) {
+bool CurrentContextHasExtension(int major, const char* extensionName) {
+  if (major >= 3) {
+    // GL_NUM_EXTENSIONS/glGetStringi are themselves only legal from 3.0 on.
+    GLint numExtensions = 0;
+    auto realGetIntegerv = g_DispatchTable.glGetIntegerv.load(std::memory_order_acquire);
+    realGetIntegerv(GL_NUM_EXTENSIONS, &numExtensions);
+    auto realGetStringi = g_DispatchTable.glGetStringi.load(std::memory_order_acquire);
+    for (GLint i = 0; i < numExtensions; ++i) {
+      const char* extension =
+          reinterpret_cast<const char*>(realGetStringi(GL_EXTENSIONS, static_cast<GLuint>(i)));
+      if (extension != nullptr && std::string(extension) == extensionName) {
+        return true;
+      }
+    }
     return false;
   }
-  const std::string haystack = extensions;
-  const std::string needle = extensionName;
-  size_t pos = haystack.find(needle);
-  while (pos != std::string::npos) {
-    const bool leftOk = (pos == 0 || haystack[pos - 1] == ' ');
-    const size_t rightIdx = pos + needle.size();
-    const bool rightOk = (rightIdx == haystack.size() || haystack[rightIdx] == ' ');
-    if (leftOk && rightOk) {
-      return true;
-    }
-    pos = haystack.find(needle, pos + 1);
-  }
-  return false;
+  // Pre-3.0: no profile concept exists yet (core/compatibility profiles start at 3.2), so the
+  // legacy single-string form is always legal here - and it is the only enumeration strategy
+  // that even exists pre-3.0.
+  auto realGetString = g_DispatchTable.glGetString.load(std::memory_order_acquire);
+  return ExtensionsStringContainsWholeWord(
+      reinterpret_cast<const char*>(realGetString(GL_EXTENSIONS)), extensionName);
 }
+
+namespace {
 
 // Whether the CURRENT context (whichever HGLRC is current on this thread right
 // now, per the real driver) supports a given GL feature that is core as of
@@ -181,42 +172,13 @@ bool ContextSupportsGLFeature(std::mutex& cacheMutex,
       return it->second;
     }
   }
-  auto realGetString = g_DispatchTable.glGetString.load(std::memory_order_acquire);
-  const char* versionString = reinterpret_cast<const char*>(realGetString(GL_VERSION));
-  const auto [major, minor] = ParseGlVersionMajorMinor(versionString);
-  bool supported = false;
-  if (major > coreSinceMajor || (major == coreSinceMajor && minor >= coreSinceMinor)) {
-    // Unconditionally part of core as of this version - no extension string lookup needed.
-    supported = true;
-  } else if (major >= 3) {
-    // GL_NUM_EXTENSIONS/glGetStringi are themselves only legal from 3.0 on - safe here only
-    // because of the version check just performed.
-    GLint numExtensions = 0;
-    auto realGetIntegerv = g_DispatchTable.glGetIntegerv.load(std::memory_order_acquire);
-    realGetIntegerv(GL_NUM_EXTENSIONS, &numExtensions);
-    auto realGetStringi = g_DispatchTable.glGetStringi.load(std::memory_order_acquire);
-    for (GLint i = 0; i < numExtensions && !supported; ++i) {
-      const char* extension =
-          reinterpret_cast<const char*>(realGetStringi(GL_EXTENSIONS, static_cast<GLuint>(i)));
-      if (extension == nullptr) {
-        continue;
-      }
-      // Either candidate name is sufficient - see ContextSupportsPixelBufferObject()'s own
-      // comment for why GL_EXT_pixel_buffer_object is passed as `extensionNameAlias` here.
-      if (std::string(extension) == extensionName ||
-          (extensionNameAlias != nullptr && std::string(extension) == extensionNameAlias)) {
-        supported = true;
-      }
-    }
-  } else {
-    // Pre-3.0: no profile concept exists yet (core/compatibility profiles start at 3.2), so
-    // the legacy single-string form is always legal here - and it is the only enumeration
-    // strategy that even exists pre-3.0.
-    const char* extensions = reinterpret_cast<const char*>(realGetString(GL_EXTENSIONS));
-    supported = ExtensionsStringContainsWholeWord(extensions, extensionName) ||
-                (extensionNameAlias != nullptr &&
-                 ExtensionsStringContainsWholeWord(extensions, extensionNameAlias));
-  }
+  const auto [major, minor] = CurrentContextGLVersion();
+  // Either candidate name is sufficient - see ContextSupportsPixelBufferObject()'s own comment
+  // for why GL_EXT_pixel_buffer_object is passed as `extensionNameAlias` there.
+  const bool supported =
+      major > coreSinceMajor || (major == coreSinceMajor && minor >= coreSinceMinor) ||
+      CurrentContextHasExtension(major, extensionName) ||
+      (extensionNameAlias != nullptr && CurrentContextHasExtension(major, extensionNameAlias));
   if (cacheable) {
     std::lock_guard<std::mutex> lock(cacheMutex);
     cache[contextKey] = supported;
@@ -365,6 +327,28 @@ const void* GuardDrawIndirectPointer(const void* indirect) {
   return QueryBoundBufferQuiet(GL_DRAW_INDIRECT_BUFFER_BINDING) != 0 ? nullptr : indirect;
 }
 
+namespace {
+std::mutex g_BufferObjectFeatureMutex;
+std::unordered_map<GITSKey, bool> g_BufferObjectFeatureByContext;
+std::mutex g_CopyBufferFeatureMutex;
+std::unordered_map<GITSKey, bool> g_CopyBufferFeatureByContext;
+} // namespace
+
+bool ContextSupportsCopyBuffer() {
+  return ContextSupportsGLFeature(g_CopyBufferFeatureMutex, g_CopyBufferFeatureByContext,
+                                  "GL_ARB_copy_buffer", 3, 1);
+}
+
+bool ElementArrayBufferIsBound() {
+  return ContextSupportsGLFeature(g_BufferObjectFeatureMutex, g_BufferObjectFeatureByContext,
+                                  "GL_ARB_vertex_buffer_object", 1, 5) &&
+         QueryBoundBufferQuiet(GL_ELEMENT_ARRAY_BUFFER_BINDING) != 0;
+}
+
+const void* GuardElementArrayPointer(const void* indices) {
+  return ElementArrayBufferIsBound() ? nullptr : indices;
+}
+
 GLint QueryUnpackAlignment() {
   GLint value = 4;
   auto realGetIntegerv = g_DispatchTable.glGetIntegerv.load(std::memory_order_acquire);
@@ -461,6 +445,21 @@ bool GetBoundBufferParameter(GLenum target, GLenum pname, GLint& value) {
     return false;
   }
   get(target, pname, &value);
+  return true;
+}
+
+bool GetBoundBufferSize(GLenum target, GLint64& size) {
+  const auto [major, minor] = CurrentContextGLVersion();
+  if (major > 3 || (major == 3 && minor >= 2)) {
+    auto get = g_DispatchTable.glGetBufferParameteri64v.load(std::memory_order_acquire);
+    get(target, GL_BUFFER_SIZE, &size);
+    return true;
+  }
+  GLint value = 0;
+  if (!GetBoundBufferParameter(target, GL_BUFFER_SIZE, value)) {
+    return false;
+  }
+  size = value;
   return true;
 }
 

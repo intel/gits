@@ -10,9 +10,10 @@
 
 // Post layer that records a UniformArrayMetaCommand (uniformArrayMetaTypes.h) after every
 // glGetUniformLocation returning an element of a uniform array, with the array's capture-time
-// size and the element's index, queried from the capture driver. Its key is reserved after the
-// real call, so it replays after the glGetUniformLocation and before any later use of the
-// locations on this thread.
+// size and the element's index, queried from the capture driver. It is recorded under the second
+// key of the wrapper's post-hook key pair (generator_recorder.py's POST_HOOK_KEY_PAIR_COMMANDS),
+// so it replays right after the glGetUniformLocation, before any use of the locations on any
+// thread.
 #include "commandsAuto.h"
 #include "layerAuto.h"
 
