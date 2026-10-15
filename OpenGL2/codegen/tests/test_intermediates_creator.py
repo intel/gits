@@ -319,6 +319,13 @@ class EndToEndSystemicGateTests(unittest.TestCase):
             self.assertIsNone(param.class_)
             self.assertTrue(param.type_facts.is_scalar)
 
+    def test_named_buffer_flushes_are_force_disabled(self) -> None:
+        # Capturable (a mapped buffer name and two scalars), but replay never leaves the buffer
+        # mapped for them to flush.
+        for cmd_name in ('glFlushMappedNamedBufferRange', 'glFlushMappedNamedBufferRangeEXT'):
+            with self.subTest(command=cmd_name):
+                self.assertFalse(get_command(Api.GL, cmd_name).enabled)
+
     def test_pbuffer_commands(self) -> None:
         for cmd_name in (
             'wglCreatePbufferARB', 'wglGetPbufferDCARB', 'wglReleasePbufferDCARB',

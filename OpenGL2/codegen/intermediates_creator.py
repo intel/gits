@@ -892,8 +892,10 @@ _FORCE_DISABLED_COMMANDS: frozenset[str] = frozenset({
     # supporting it needs the custom map-tracking lifecycle extended to record real
     # per-command flushed sub-ranges (and, for a GL_MAP_FLUSH_EXPLICIT_BIT mapping, snapshot
     # only those flushed sub-ranges instead of the whole mapped range on unmap) - out of scope
-    # here.
+    # here. The named-buffer forms flush a mapping the player never leaves open either.
     'glFlushMappedBufferRange',
+    'glFlushMappedNamedBufferRange',
+    'glFlushMappedNamedBufferRangeEXT',
 
     # glImportSyncEXT(external_sync_type, external_sync, flags) -> GLsync (GL_EXT_EGL_sync)
     # creates a new sync object by importing an EXTERNAL fence - `external_sync` is a raw OS
